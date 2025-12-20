@@ -8,3 +8,8 @@ name = "Zkdtt"
 [[lean_exe]]
 name = "zkdtt"
 root = "Main"
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+

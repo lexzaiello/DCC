@@ -36,11 +36,7 @@
             '';
         });
         papers = [
-          { name = "overview"; path = "papers/overview"; }
-          { name = "semantics"; path = "papers/semantics"; }
-          { name = "vm"; path = "papers/vm"; }
-          { name = "uncurry"; path = "papers/uncurry"; }
-          { name = "proposal"; path = "papers/proposal"; } ];
+          { name = "paper"; path = "papers/paper"; } ];
       in rec {
         devShells.default = pkgs.mkShell {
           buildInputs = [ pkgs.coreutils tex ];

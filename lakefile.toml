@@ -1,0 +1,10 @@
+name = "zkdtt"
+version = "0.1.0"
+defaultTargets = ["zkdtt"]
+
+[[lean_lib]]
+name = "Zkdtt"
+
+[[lean_exe]]
+name = "zkdtt"
+root = "Main"

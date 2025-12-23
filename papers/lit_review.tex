@@ -1,0 +1,60 @@
+\input{./papers/template.tex}
+\usepackage{bbm}
+\usepackage{stmaryrd}
+\usepackage{hyperref}
+\usepackage{mathrsfs}
+\usepackage{mathtools}
+\usepackage{rsfso}
+\usepackage{graphicx}
+\usepackage[
+  backend=biber,
+  style=alphabetic,
+  sorting=ynt
+]{biblatex}
+\addbibresource{./refs.bib}
+\usepackage{tikz}
+\usepackage{tikz-inet}
+
+\author{Alexandra Aiello}
+\date{December 19, 2025}
+\title{Project Literature Review}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\section{CAM}
+
+Hypothesis: we don't need the LAM. It has some advantages, but its instruction set is quite large.
+The CAM supports intuitionistic logic by construction. We might do the same by adapting it to LCCC's.
+
+Slice categories (\(C / A\)) are easy to identify in the LAM. They are the canonical combinators for the type \(A\). We might do the same for the CAM.
+
+To upgrade to LCCC's, we need every slice category to also be cartesian closed. So, what are the slice categories in CAM? We can just adapt the notion of canonical combinators to CAM:
+
+\begin{itemize}
+  \item \(\text{id}: A \rightarrow A\)
+  \item 
+\end{itemize}
+
+\section{LAM}
+
+For this section of the literature review, I focus on Lafont's Linear Abstract Machine \cite{imachine}.
+
+\subsection{Hypothesis: LAM Supports Dependent Typing}
+
+A system corresponding with locally cartesian-closed categories would support DTT. The LAM has identifiable \textbf{slice categories} (\(C / A\)), corresponding to \textit{canonical combinators} for some primitive type \(A\).
+
+However, the LAM does not actually correspond to CCC's, but symmetric monoidal closed categories (with finite products and coproducts). These categories are subsets of CCC's.
+
+Indexed monoidal categories are we want to support.
+
+\begin{itemize}
+  \item The \textit{canonical combinators} for some type \(A\) correspond roughly to the \textbf{slice category} \(C / A\) \autocite[165]{imachine}.
+  \item Canonical combinators are function terms. For example, \(\text{id}: A \rightarrow A\) is the canonical combinator for an primitive type \(A\) \autocite[165]{imachine}.
+  \item Atomic types correspond to builtin basic terms, but pairs (i.e, tensor products) of them are more compatible with a binary tree execution, and constitute \textit{primitive types} \autocite[165]{imachine}.
+  \item 
+\end{itemize}
+
+\end{document}

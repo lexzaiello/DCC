@@ -1,12 +1,12 @@
-name = "zkdtt"
+name = "Dam"
 version = "0.1.0"
-defaultTargets = ["zkdtt"]
+defaultTargets = ["dam"]
 
 [[lean_lib]]
-name = "Zkdtt"
+name = "Dam"
 
 [[lean_exe]]
-name = "zkdtt"
+name = "dam"
 root = "Main"
 
 [[require]]

@@ -36,7 +36,8 @@
             '';
         });
         papers = [
-          { name = "paper"; path = "papers/paper"; } ];
+          { name = "paper"; path = "papers/paper"; }
+          { name = "adapting_equations"; path = "papers/adapting_equations"; } ];
       in rec {
         devShells.default = pkgs.mkShell {
           buildInputs = [ pkgs.coreutils tex ];

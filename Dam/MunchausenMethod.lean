@@ -134,6 +134,52 @@ class CombLang.{u} extends FamLang.{u} where
   )
 
 class SLang.{u} extends CombLang.{u} where
-  
+  s_ty_yx_comb : ∀ X (_Y : Tm (Fam X)), Tm (Fam X)
+  step_s_ty_yx_comb : ∀ X Y {x : Tm X}, s_ty_yx_comb X Y $f x = Fam (Y $f x)
+
+  s_π_yx_zx : ∀ X (Y : Tm (Fam X)), (Z : Tm (Pi X $f s_ty_yx_comb X Y)) → Tm (Fam X)
+  step_s_π_yx_zx : ∀ X Y Z {x : Tm X}, s_π_yx_zx X Y Z $f x = Pi (Y $f x) $f (by
+    have h := Z $. x
+    rw [step_s_ty_yx_comb] at h
+    exact h
+  )
+
+  s_zxgx : ∀ X (Y : Tm (Fam X)) (_Z : Tm (Pi X $f s_ty_yx_comb X Y)),
+    Tm (Pi X $f Y) → Tm (Fam X)
+  step_s_zxgx : ∀ X Y Z g {x}, s_zxgx X Y Z g $f x = (by
+    have f :=  Z $. x
+    have a := (g $. x)
+    rw [step_s_ty_yx_comb] at f
+    exact f $f a
+  )
+
+  s_π_x_zx_gx : ∀ X (Y : Tm (Fam X)) (Z : Tm (Pi X $f s_ty_yx_comb X Y)),
+    Tm (Fam (Pi X $f Y))
+  step_s_π_x_zx_gx : ∀ X Y Z g, s_π_x_zx_gx X Y Z $f g = Pi X $f (s_zxgx X Y Z g)
+
+  s_comb : {Y : Tm (Fam X)}
+    → {Z : Tm (Pi X $f s_ty_yx_comb X Y)}
+    → Tm ((Pi X $f s_π_yx_zx X Y Z) ⇒ (Pi (Pi X $f Y) $f (s_π_x_zx_gx X Y Z)))
+  step_s_comb : {Y : Tm (Fam X)}
+    → {Z : Tm (Pi X $f s_ty_yx_comb X Y)}
+    → {f : Tm (Pi X $f s_π_yx_zx X Y Z)}
+    → {g : Tm (Pi X $f Y)}
+    → {x : Tm X}
+    → (by
+      -- left side of eq, S f g x
+      have h := s_comb $. f
+      change TyUniv.Tm (app_fam (fam_of_ty (Pi (Pi X $f Y) $f s_π_x_zx_gx X Y Z)) f) at h
+      rw [step_fam_of_ty] at h
+      have h' := h $. g
+      rw [step_s_π_x_zx_gx] at h'
+      have left := h' $. x
+      rw [step_s_zxgx] at left
+
+      have right := f $. x
+      rw [step_s_π_yx_zx] at right
+      have right' :=  right $. (g $. x)
+
+      exact left = right'
+    )
 
 end Comb

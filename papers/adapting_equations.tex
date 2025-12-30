@@ -26,9 +26,9 @@
 
 \section{Overview}
 
-Lafont's linear abstract machine (\textit{LAM}) \cite{imachine} and the categorical abstract machine devised by Cousineau et al. (\textit{CAM}) \cite{cmachine} provide efficient execution schemes for \(\lambda\)-like calculi. Notably, the LAM provides an execution environment for \textit{classical intuitionistic logic}, thereby corresponding to symmetric monoidal closed categories with finite products and coproducts \autocite[161]{imachine}. It is unclear what advantages classical linear logic would provide for zero-knowledge proofs, but Lafont's adaptation of the CAM may provide insight to our own adaptation of the CAM.
+Lafont's linear abstract machine (\textit{LAM}) \cite{imachine} and the categorical abstract machine devised by Cousineau et al. (\textit{CAM}) \cite{cmachine} provide efficient execution schemes for \(\lambda\)-like calculi. Notably, the LAM provides an execution environment for \textit{classical intuitionistic logic}, thereby corresponding to symmetric monoidal closed categories with finite products and coproducts \autocite[161]{imachine}. It is unclear what advantages classical linear logic would provide for zero-knowledge proofs, but Lafont's adaptation of the CAM may provide insight to our adaptation of the CAM.
 
-Ideally, we would extend the CAM's correspondence with cartesian closed categories (\textit{CCC}'s) \autocite[178]{cmachine} to locally cartesian closed categories (\textit{LCCC}'s), thereby enabling Martin-Löf Type Theory (\textit{MLTTT}). Here, I outline two potential approaches for adapting the CAM to achieve this goal: explicit dependent type arguments with corresponding meta-combinator registers, and \textit{TODO}.
+Ideally, we would extend the CAM's correspondence with cartesian closed categories (\textit{CCC}'s) \autocite[178]{cmachine} to locally cartesian closed categories (\textit{LCCC}'s), thereby enabling Martin-Löf Type Theory (\textit{MLTT}). Here, I outline a potential approach for adapting the CAM to achieve this goal by adding explicit dependent type arguments with corresponding meta-combinator registers.
 
 \section[Equational Semantics in the CAM]{The CAM Achieves its Correspondence via Equational Semantics}
 
@@ -50,15 +50,24 @@ Ideally, we would extend the CAM's correspondence with cartesian closed categori
 
 \begin{figure}
   \begin{equation}
-    \begin{split}
-      0!(x, y) = y,&(n + 1)!(x, y) = n!x,&\\
+    \begin{aligned}
+      0!(x, y) = y,&\quad (n + 1)!(x, y) = n!x,&\\
       ('x)y = x,&&\\
       S(x, y)z = xz(yz),&&\\
-      \Lambda(x)yz = x(y, z)&&
-    \end{split}
+      \Lambda(x)yz = x(y, z)&&\\
+    \end{aligned}
   \end{equation}
-  \caption{Syntactic rules motivating the CAM, bearing similarity to the \(SK\)-calculus \autocite[176]{cmachine}.}
+  \caption{Syntactic rules motivating the CAM, bearing similarity to the \(SK\)-calculus \autocite[176]{cmachine}.}\label{skequations}
 \end{figure}
+
+\begin{itemize}
+  \item The first 3 equations \eqref{skequations} correspond to the \(K\) rule, while the second two correspond to \(S\).
+  \item We don't extend \(SK\) with additional combinators, and we will still need pairs. But, our \(\beta\)-reduction ruels for \(SK\) differ, in that they have explicit type arguments that are also ``forgotten'', except at the meta-level.
+  \item We will likely add some kind of meta register with its own pattern-matching rules to enforce our type discipline.
+  \item The linear abstract machine doesn't have types at its base level, either. We are somewhat forced to do our typing \textit{by construction.}
+  \item Doing dependent typing is kind of difficult, since it requires beta reduction. This contradicts the ``by construction'' viewpoint. There is no beta reduction required in standard linear logic.
+  \item LCCC's are just a category where all the slice categories are CCC's.
+\end{itemize}  
 
 \printbibliography{}
 

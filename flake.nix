@@ -12,7 +12,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
         tex = pkgs.texliveFull.withPackages (ps: with ps;
-          [ biblatex biber xetex tikz-inet pgf graphbox mathtools hyphenat url bbm fontspec xcharter fvextra stmaryrd ulem fancyhdr ]);
+          [ biblatex biber xetex tikz-inet pgf graphbox mathtools hyphenat url bbm fontspec xcharter fvextra stmaryrd ulem fancyhdr fitch ]);
         buildtex = (pkg-name: pkgs.stdenvNoCC.mkDerivation rec {
             name = pkg-name;
             src = self;
@@ -37,7 +37,8 @@
         });
         papers = [
           { name = "paper"; path = "papers/paper"; }
-          { name = "adapting_equations"; path = "papers/adapting_equations"; } ];
+          { name = "adapting_equations"; path = "papers/adapting_equations"; }
+          { name = "lit_review"; path = "papers/lit_review"; } ];
       in rec {
         devShells.default = pkgs.mkShell {
           buildInputs = [ pkgs.coreutils tex ];

@@ -35,7 +35,7 @@ To upgrade to LCCC's, we need every slice category to also be cartesian closed. 
 
 \begin{itemize}
   \item \(\text{id}: A \rightarrow A\)
-  \item 
+  \item 50
 \end{itemize}
 
 \section{LAM}
@@ -54,7 +54,23 @@ Indexed monoidal categories are we want to support.
   \item The \textit{canonical combinators} for some type \(A\) correspond roughly to the \textbf{slice category} \(C / A\) \autocite[165]{imachine}.
   \item Canonical combinators are function terms. For example, \(\text{id}: A \rightarrow A\) is the canonical combinator for an primitive type \(A\) \autocite[165]{imachine}.
   \item Atomic types correspond to builtin basic terms, but pairs (i.e, tensor products) of them are more compatible with a binary tree execution, and constitute \textit{primitive types} \autocite[165]{imachine}.
-  \item 
+\end{itemize}
+
+\subsection{Hypothesis: we can do debruijn decomposition, like in the CAM, to realize dependent typing}
+
+\subsection{Hypothesis: We can appropriate the Munchhausen method to make our dependent typing for combinators more robust}
+
+Notes on the Munchausen method:
+
+\begin{itemize}
+  \item Can ``postpone'' value assignments when a type depends on itself. For example, church-encoding a \(\Sigma\) type: \(\Sigma A B = \lambda b, \text{if } b \text{ then } A \text{ else } \texttt{decl}\)
+  \item \(\texttt{decl}\) gets set ``later'', after the church-encoding is defined.
+  \item They also give an application to the \(SK\) combinators to define dependent types, using the munchausen method.
+  \item \(Tm\) represents a well-typed term
+  \item I don't think we can do what's done in the paper in Lean
+  \item I think this is only possible in Agda, not Lean, although we can use Quotients maybe to do this.
+  \item Lean doesn't actually support forward declarations, or rewrite rules the way Agda does, but we can probably do this with quotients
+  
 \end{itemize}
 
 \end{document}

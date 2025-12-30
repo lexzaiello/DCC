@@ -118,7 +118,7 @@ infixr:65 " ⇒ " => arr
 
 class CombLang.{u} extends FamLang.{u} where
   /-
-    Helper "meta combinator"
+    Helper "meta combinator" for K's type
   -/
   k_ty_comb : ∀ X (_Y : Tm (Fam X)), (Z : Ty) → Tm (Fam X)
   step_k_ty_comb : ∀ X Y Z {x : Tm X}, k_ty_comb X Y Z $f x = ((Y $f x) ⇒ Z)
@@ -127,8 +127,13 @@ class CombLang.{u} extends FamLang.{u} where
   step_k_comb : ∀ {Y : Tm (Fam X)} {x : Tm X} {y : Tm (Y $f x)}, (by
     have h := (@k_comb X Y) $. x
     rw [step_k_ty_comb] at h
-    exact h $. y = x
+    have h' := h $. y
+    change TyUniv.Tm (app_fam (fam_of_ty X) y) at h'
+    rw [@step_fam_of_ty _ X y] at h'
+    exact h' = x
   )
 
+class SLang.{u} extends CombLang.{u} where
+  
 
 end Comb

@@ -33,7 +33,7 @@ def up.{u, v} (A : Type u) (G : A → Type v) : VeryDependent.{u, v} A G →
 end VeryDependent
 
 /-
-P 10:6 Altenkirch. Dependent pairs without using our VeryDependent class.
+P 10:6 Altenkirch. Dependent pairs.
 -/
 
 abbrev DPair.choose.{u} (A : Type u) (B : A → Type u) (h : A) (b : Bool) : Type u := if b then A else B h
@@ -52,7 +52,7 @@ def mk'.{u} (A : Type u) (B : A → Type u) (a : A) (b : B a) : DPair.{u} A B wh
   | false => b
   heq := rfl
 
-instance VeryDependent.{u} (A : Type u) (B : A → Type u) (e : DPair A B) : VeryDependent A B where
+instance instVeryDependent.{u} (A : Type u) (B : A → Type u) (e : DPair A B) : VeryDependent A B where
   a := e.h
   x := e.f false
   α o _ := o
@@ -75,3 +75,60 @@ instance equivSigma.{u} (A : Type u) (B : A → Type u) : Sigma B ≃ DPair A B 
 
 end DPair
 
+namespace Comb
+
+/-
+Dependently-typed combinators:
+-/
+
+/-
+A language with a sort for terms indexed by types.
+-/
+class TyUniv.{u} where
+  Ty : Type u
+  Tm : Ty → Type u
+  U : Ty
+  heq : Tm U = Ty
+
+/-
+A language with pi types and rules for applying families and terms
+-/
+class AppLang.{u} extends TyUniv.{u} where
+  Fam     : Ty
+    → Ty
+  app_fam : Tm (Fam X)
+    → Tm X
+    → Ty
+  Pi      : (X : Ty)
+    → Tm (Fam (Fam X))
+  app     {X : Ty} {Y : Tm (Fam X)} : Tm (app_fam (Pi X) Y)
+    → (a : Tm X)
+    → Tm (app_fam Y a)
+
+infixl:65 " $f " => AppLang.app_fam
+infixl:65 " $. " => AppLang.app
+
+class FamLang.{u} extends AppLang.{u} where
+  fam_of_ty : (Y : Ty) → Tm (Fam X)
+  step_fam_of_ty : ∀ {a : Tm X}, (fam_of_ty Y) $f a = Y
+
+abbrev arr [h : FamLang.{u}] (X Y : h.Ty) : h.Ty := h.Pi X $f (h.fam_of_ty Y)
+
+infixr:65 " ⇒ " => arr
+
+class CombLang.{u} extends FamLang.{u} where
+  /-
+    Helper "meta combinator"
+  -/
+  k_ty_comb : ∀ X (_Y : Tm (Fam X)), (Z : Ty) → Tm (Fam X)
+  step_k_ty_comb : ∀ X Y Z {x : Tm X}, k_ty_comb X Y Z $f x = ((Y $f x) ⇒ Z)
+
+  k_comb : {Y : Tm (Fam X)} → Tm (Pi X $f (k_ty_comb X Y X))
+  step_k_comb : ∀ {Y : Tm (Fam X)} {x : Tm X} {y : Tm (Y $f x)}, (by
+    have h := (@k_comb X Y) $. x
+    rw [step_k_ty_comb] at h
+    exact h $. y = x
+  )
+
+
+end Comb

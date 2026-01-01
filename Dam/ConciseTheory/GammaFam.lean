@@ -163,7 +163,7 @@ def step : Expr → Option Expr
   | ⟪₂ snd (, :_a :b) ⟫ => b
   | ⟪₂ read_data (, :Γ :_Ξ) ⟫ => do
     ⟪₂ ,
-      (:: (K Ty (I Ty) Ty) (:: (K Ty (I Data) Data) (:: (K Ty (I Data) Data) nil)))
+      (:: (K Ty (I Data) Data) (:: (K Ty (I Data) Data) nil))
       (,
         (:: (read :Γ) nil)
         (:: Data nil)) ⟫
@@ -226,7 +226,9 @@ def infer : Expr → Option Expr
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ nil ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
   | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
-  | ⟪₂ read ⟫ => ⟪₂ , (:: (K Ty (I Data) Data) (:: (K Ty (I Data) Data) nil)) (, nil nil) ⟫
+  | ⟪₂ read ⟫
+  | ⟪₂ fst ⟫
+  | ⟪₂ snd ⟫ => ⟪₂ , (:: (K Ty (I Data) Data) (:: (K Ty (I Data) Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
     let t_arg := (← infer arg).display_infer
@@ -251,8 +253,8 @@ def infer : Expr → Option Expr
       let norm_expected := norm_ctx (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
       let norm_actual := norm_ctx t_arg
 
-      dbg_trace norm_expected
-      dbg_trace norm_actual
+      --dbg_trace norm_expected
+      --dbg_trace norm_actual
 
       if norm_expected == norm_actual then
         if claims.length.succ == asserts.length then
@@ -266,8 +268,12 @@ def infer : Expr → Option Expr
     | _ => .none
   | _ => .none
 
-#eval infer ⟪₂ >> (I Data) ⟫
+#eval Expr.display_infer <$> infer ⟪₂ >> (I Data) (I Data) (, I I) ⟫
 
+#eval infer ⟪₂ >> read ⟫
+
+#eval infer ⟪₂ (, ((:: (((K Ty) (I Ty)) Ty)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ⟫
+#eval infer ⟪₂ ((, ((:: (((K Ty) (I Ty)) Ty)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
 #eval infer ⟪₂ I ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫

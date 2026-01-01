@@ -96,7 +96,7 @@ def Expr.as_list : Expr → Option (List Expr)
   | x => pure [x]
 
 def Expr.display_infer : Expr → Expr
-  | ⟪₂ , :_Γ (:: :t :_xs) ⟫ => t
+  | ⟪₂ , nil (:: :t nil) ⟫ => t
   | e => e
 
 example : Expr.as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫, ⟪₁ Ty ⟫] := rfl
@@ -129,14 +129,12 @@ def infer : Expr → Option Expr
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
 
-      dbg_trace t_arg
-
       if (← step ⟪₂ :check_with :Δ' ⟫) == t_arg then
         -- We have found the final β-normal form's type
         -- the combinator should be asserting more types
         -- in the context than we have arguments, exactly one more (the return type)
         if claims.length.succ == asserts.length then
-          let t_out ← step ⟪₂ (#← claims.getLast?) :Δ' ⟫
+          let t_out ← step ⟪₂ (#← asserts.getLast?) :Δ' ⟫
 
           pure ⟪₂ , nil (:: :t_out nil) ⟫
         else
@@ -147,5 +145,6 @@ def infer : Expr → Option Expr
   | _ => .none
 
 #eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫
+#eval Expr.display_infer <$> infer ⟪₂ I Ty Ty ⟫
 
 end Idea

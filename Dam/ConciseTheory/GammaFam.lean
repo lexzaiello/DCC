@@ -264,15 +264,15 @@ def infer : Expr → Option Expr
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
-      dbg_trace norm_expected
-      dbg_trace t_arg
-      dbg_trace norm_context (← infer arg)
+      --dbg_trace norm_expected
+      --dbg_trace t_arg
+      --dbg_trace norm_context (← infer arg)
 
       if norm_expected == t_arg then
         if claims.length.succ == asserts.length then
           let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
 
-          pure ⟪₂ , (:: :t_out nil) (, nil :Ξ') ⟫
+          pure ⟪₂ , (:: :t_out nil) (, :Δ' :Ξ') ⟫
         else
           pure ⟪₂ , :Γ (, :Δ' :Ξ') ⟫
       else

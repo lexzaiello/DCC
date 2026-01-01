@@ -146,10 +146,6 @@ def Expr.display_infer : Expr → Expr
   | ⟪₂ , (:: :t nil) (, nil :_Ξ) ⟫ => t
   | e => e
 
-def Expr.pop_infer : Expr → Expr
-  | ⟪₂ , :t (, nil :_Ξ) ⟫ => t
-  | e => e
-
 example : Expr.as_list ⟪₂ :: Data (:: K Data) ⟫ = [⟪₁ Data ⟫, ⟪₁ K ⟫, ⟪₁ Data ⟫] := rfl
 
 example : Expr.push_in ⟪₂ Data ⟫ ⟪₂ :: Data K ⟫ = ⟪₂ :: Data (:: K Data) ⟫ := rfl
@@ -177,8 +173,11 @@ def step : Expr → Option Expr
         (:: Data nil)) ⟫
   | ⟪₂ read_y (, :Γ :_Ξ) ⟫ =>
     ⟪₂ (read (next :Γ)) (read (next (next :Γ))) ⟫
-  | ⟪₂ :f :x ⟫ => do
-    ⟪₂ (# (step f).getD f) (#(step x).getD x) ⟫
+  | ⟪₂ :f :x ⟫ =>
+    (do ⟪₂ (# ← step f) (#← step x) ⟫) <|>
+    (do
+    ⟪₂ (# ← (step f)) (#(step x).getD x) ⟫)
+    <|> (do ⟪₂ (# (step f).getD f) (#← step x) ⟫)
   | _ => .none
 
 def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
@@ -194,7 +193,7 @@ def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).getD e
 -- returns all of the applied assertions, in order
 def sub_context : Expr → Expr
   | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
-    Expr.mk_tup <| (do (← Γ.as_list).mapM (fun f => step ⟪₂ :f (, :Δ :Ξ) ⟫)).getD []
+    Expr.mk_tup <| (do (← Γ.as_list).mapM (fun f => (step ⟪₂ :f (, :Δ :Ξ) ⟫).getD f)).getD []
   | e => e
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
@@ -263,9 +262,9 @@ def infer : Expr → Option Expr
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
-      --dbg_trace norm_expected
-      --dbg_trace t_arg
-      --dbg_trace ← infer arg
+      dbg_trace norm_expected
+      dbg_trace t_arg
+      dbg_trace ← infer arg
 
       if norm_expected == t_arg then
         if claims.length.succ == asserts.length then
@@ -287,7 +286,6 @@ def infer : Expr → Option Expr
 def t_k : Expr := ⟪₂ ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil))))) ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ K' Data Data Data Data ⟫
-
 #eval Expr.display_infer <$> infer ⟪₂ >> read read (, I I) ⟫
 
 #eval Expr.display_infer <$> (infer <=< infer) ⟪₂ K ⟫
@@ -295,8 +293,6 @@ def t_k : Expr := ⟪₂ ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>
 
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
-
-#eval Expr.as_list =<< Expr.as_asserts =<< infer ⟪₂ Data ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫

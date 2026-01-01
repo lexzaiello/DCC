@@ -252,7 +252,9 @@ def infer : Expr → Option Expr
     let t_f ← infer f
     let t_arg := norm_context (← infer arg)
 
-    -- In here:
+    /- In here:
+    Need to lift t_f when it is now β-normal
+    -/
 
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
@@ -270,15 +272,15 @@ def infer : Expr → Option Expr
       -- This should become t_f instead of being treated like another arg.
       -- We need some mechanism to elevate the context to the main context
       
-      dbg_trace arg
-      dbg_trace check_with
-      dbg_trace (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
-      dbg_trace norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+      --dbg_trace arg
+      --dbg_trace check_with
+      --dbg_trace (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+      --dbg_trace norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
       --dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
-      dbg_trace norm_expected
-      dbg_trace t_arg
+      --dbg_trace norm_expected
+      --dbg_trace t_arg
 
       --dbg_trace norm_expected
       --dbg_trace t_arg
@@ -292,7 +294,7 @@ def infer : Expr → Option Expr
           let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
 
           -- THIS is the culprit. WRONG.
-          pure ⟪₂ , (:: (K Data Data :t_out) nil) (, nil nil) ⟫
+          pure t_out
         else
           pure ⟪₂ , :Γ (, :Δ' :Ξ') ⟫
       else

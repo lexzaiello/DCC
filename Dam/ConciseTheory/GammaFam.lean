@@ -287,7 +287,7 @@ def infer : Expr → Option Expr
 
 def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫
 
-#eval infer ⟪₂ I :t_k ⟫
+#eval infer ⟪₂ I :t_k K ⟫
 
 #eval norm_context <$> infer ⟪₂ K ⟫
 

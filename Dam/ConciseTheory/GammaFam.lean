@@ -154,6 +154,8 @@ def step : Expr → Option Expr
   | ⟪₂ >> :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫ => x
+  | e@⟪₂ next (:: :_x nil) ⟫ => e
+  | ⟪₂ read nil ⟫ => .none
   | ⟪₂ next (:: :_x :xs) ⟫ => xs
   | ⟪₂ read (:: :x :_xs) ⟫ => x
   | ⟪₂ fst (, :a :_b) ⟫ => a
@@ -283,7 +285,11 @@ def infer : Expr → Option Expr
 
 #eval Expr.display_infer <$> infer ⟪₂ ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil))))) ⟫
 
-def t_k : Expr := ⟪₂ ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil))))) ⟫
+def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫
+
+#eval infer ⟪₂ I :t_k ⟫
+
+#eval norm_context <$> infer ⟪₂ K ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ K' Data Data Data Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ >> read read (, I I) ⟫

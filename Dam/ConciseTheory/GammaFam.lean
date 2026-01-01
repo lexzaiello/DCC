@@ -120,6 +120,10 @@ def Expr.from_list : List Expr → Expr
   | [] => ⟪₂ nil ⟫
   | x::xs => ⟪₂ :: :x (#Expr.from_list xs) ⟫
 
+def Expr.mk_tup : List Expr → Expr := List.foldr (fun e acc => ⟪₂ :: :e :acc ⟫) ⟪₂ nil ⟫
+
+example : Expr.mk_tup [⟪₂ Ty ⟫, ⟪₂ S ⟫, ⟪₂ K ⟫] = ⟪₂ ((:: Ty) ((:: S) ((:: K) nil))) ⟫ := rfl
+
 def Expr.map_list (f : Expr → Expr) : Expr → Option Expr
   | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#← f x) (#← xs.map_list f) ⟫
   | e@⟪₂ nil ⟫ => e
@@ -148,8 +152,12 @@ def step : Expr → Option Expr
   | ⟪₂ snd (, :_a :b) ⟫ => b
   | ⟪₂ read_α (, :Γ :_Ξ) ⟫ => do
     let term_α := ⟪₂ read :Γ ⟫
-    pure ⟪₂ , (:: (K Ty Ty :term_α) (:: read (:: (K Ty Ty Ty) nil))) (, (:: :term_α nil) (:: Ty nil)) ⟫
-  | ⟪₂ read_y :Γ ⟫ =>
+    pure ⟪₂ ,
+      (:: (K Ty Ty :term_α) (:: (>> fst read) (:: (K Ty Ty Ty) nil)))
+      (,
+        (:: :term_α nil)
+        (:: Ty nil)) ⟫
+  | ⟪₂ read_y (, :Γ :_Ξ) ⟫ =>
     ⟪₂ (read (next :Γ)) (read (next (next :Γ))) ⟫
   | ⟪₂ :f :x ⟫ => do
     ⟪₂ (# (step f).getD f) (#(step x).getD x) ⟫
@@ -164,13 +172,13 @@ def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
 
 -- Applies the Δ claims context to all handlers in the app context
 -- returns all of the applied assertions, in order
-def sub_context : Expr → Option (List Expr)
-  | ⟪₂ , :Γ :Δ :Ξ ⟫ => do
-    (← Γ.as_list).mapM (fun f => step ⟪₂ :f (, :Δ :Ξ) ⟫)
-  | _ => .none
+def sub_context : Expr → Expr
+  | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
+    Expr.from_list <| (do (← Γ.as_list).mapM (fun f => step ⟪₂ :f (, :Δ :Ξ) ⟫)).getD []
+  | e => e
 
 def infer : Expr → Option Expr
-  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) (, nil nil) ⟫
+  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ K Ty Ty Ty ⟫
     let t_β := ⟪₂ read_α ⟫
@@ -194,7 +202,15 @@ def infer : Expr → Option Expr
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
 
-      if sub_context (← try_step_n 10 ⟪₂ :check_with :Δ' ⟫) == sub_context t_arg then
+      --dbg_trace sub_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+      --dbg_trace sub_context t_arg
+
+      --dbg_trace check_with
+
+      dbg_trace sub_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+      dbg_trace sub_context t_arg
+
+      if sub_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫) == sub_context t_arg then
         --match asserts.getLast? >>= (fun e => step ⟪₂ :e :Δ' ⟫) with
         --| .some t_out => pure ⟪₂ , nil (:: :t_out nil) ⟫
         --| _ => pure ⟪₂ , :Γ :Δ' ⟫
@@ -205,7 +221,7 @@ def infer : Expr → Option Expr
         -- the combinator should be asserting more types
         -- in the context than we have arguments, exactly one more (the return type)
         if claims.length.succ == asserts.length then
-          let t_out ← step ⟪₂ (#← asserts.getLast?) :Δ' ⟫
+          let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
 
           pure ⟪₂ , nil (, (:: :t_out nil) :Ξ') ⟫
         else

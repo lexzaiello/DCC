@@ -38,7 +38,7 @@ class FamLang.{u} extends AppLang.{u} where
   step_fam_of_ty : ∀ {a : Tm X}, (fam_of_ty Y) $f a = Y
 
 abbrev arr [h : FamLang.{u}] (X Y : h.Ty) : h.Ty := h.Pi X $f (h.fam_of_ty Y)
-
+w
 infixr:65 " ⇒ " => arr
 
 class CombLang.{u} extends FamLang.{u} where
@@ -114,6 +114,30 @@ the version of these combinators that internalises this quantification within U.
 no conceptual problem in doing so, but the resulting terms become incredibly large and
 inconvenient to work with. Specifically, the one for the dependent S combinator. It is not
 clear whether there is a more elegant way of doing this.
+
+More notes on this:
+- U kind of behaves like the index in the placeholder equality, like the bool value in the DPair example
+- I'm not really sure what makes combinator types "very dependent" - is it possible to do these examples without referencing typeclass properties in funky ways? Felt like the process was pretty linear ngl.
+- What is the purpose of the index on Tm? This is what allows us to do dependent types, but it's not exactly clear why. It's pretty obtuse.
+
+Take AppLang.Pi for example:
+
+So U is the sort of types, and we need a placeholder for it so that we can refer to "all types"
+while still declaring new ones later? This feels like it's really only useful for doing this flavor of metaprogramming in a proof assistant. e.g., we didn't particualrly have this problem in freestanding ZKombinator. Also, where as the universe levels? What?
+
+Ty are the universe levels I guess?
+Ty is the type of all types, but we don't declare it proactively and have a mechanism to add more types to it.
+
+heq says that a type is a term in the sort U
+U is analogous to our "placeholder" value, while Ty is like our A.
+
+this rewrite rule seems kind of busted. I don't get how it works logically.
+Also probably isn't actually logically sound. Conclusion: munchhausen method is IRRELEVANT.
+
+Ty = Tm U
+
+Fam : Ty → Ty
+Pi (X : Ty) : Tm (Fam (Fam X))
 -/
 
 end Comb

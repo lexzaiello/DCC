@@ -355,5 +355,3 @@ CppProperties.json
 /_cache/
 /.ccls-cache
 *.ast.json/.lake
-
-.todo/

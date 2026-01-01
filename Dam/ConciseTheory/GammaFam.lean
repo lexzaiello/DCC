@@ -197,7 +197,6 @@ def infer : Expr → Option Expr
     match t_f with
     | ⟪₂ , :Γ :Δ ⟫ =>
       let Δ' := Expr.push_in arg Δ
-      let t_f' := render_context_with arg t_f
 
       let asserts ← Γ.ctx_as_list
       let claims  ← Δ'.ctx_as_list
@@ -205,18 +204,10 @@ def infer : Expr → Option Expr
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.ctx_as_list).length]?
 
-      --dbg_trace try_step_n 10 ⟪₂ :check_with :Δ' ⟫
-      --dbg_trace render_context_with arg t_arg
+      dbg_trace ← try_step_n 10 ⟪₂ :check_with :Δ' ⟫
+      dbg_trace t_arg
 
-      let arg_pos := (← Δ.ctx_as_list).length
-
-      let t_arg_actual := render_context_with arg t_arg
-      let t_arg_expected ← ((·[arg_pos]?) <=< Expr.ctx_as_list <=< Expr.fst) t_f'
-
-      dbg_trace t_arg_actual
-      dbg_trace t_arg_expected
-
-      if t_arg_expected == t_arg_actual then
+      if (← try_step_n 10 ⟪₂ :check_with :Δ' ⟫) == t_arg then
         -- We have found the final β-normal form's type
         -- the combinator should be asserting more types
         -- in the context than we have arguments, exactly one more (the return type)
@@ -266,10 +257,30 @@ So whenever we instantiate a context, we should instantiate ALL contexts.
 we're putting stuff at the END of the context, not the front,
 so if an item doesn't use the new context item, no biggie.
 
+((, ((:: Ty) ((:: Ty) ((:: Ty) nil)))) ((:: Ty) ((:: (I Ty)) nil)))
+((, ((:: (((K Ty) Ty) (read ((:: Ty) ((:: (I Ty)) nil))))) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil)))
+
+uh what? Why are there three assertions for I Ty?
+Don't know where those came from.
+
+render_context_with doesn't make sense for the argument at all.
+the types look fine ish for actual (produced by infer)
+
+Γ should NEVER be updated, except for quality.
+render is kind of useless.
+no idea what the point of it is.
+
+assertion, then the claim:
+
+((, ((:: (((K Ty) Ty) Ty)) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil)))
+((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil))
+
+We're so close holy moly.
+
+Still confused why the assertion isn't beta reduced more.
+
 That is, 
 -/
 #eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) ⟫
-
-#eval step ⟪₂ ((, ((:: (((K Ty) Ty) (read ((:: Ty) ((:: (I Ty)) nil))))) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil))) ⟫
 
 end Idea

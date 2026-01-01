@@ -173,6 +173,8 @@ def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
     let e' ← step e
     pure <| (try_step_n (n - 1) e').getD e'
 
+def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).getD e
+
 -- Applies the Δ claims context to all handlers in the app context
 -- returns all of the applied assertions, in order
 def sub_context : Expr → Expr
@@ -185,7 +187,7 @@ def infer : Expr → Option Expr
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ K Ty Ty Ty ⟫
     let t_β := ⟪₂ read_α ⟫
-    let t_x := ⟪₂ read ⟫
+    let t_x := ⟪₂ (>> fst read) ⟫
     let t_y := ⟪₂ read_y ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
@@ -210,10 +212,15 @@ def infer : Expr → Option Expr
 
       --dbg_trace check_with
 
-      dbg_trace sub_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
-      dbg_trace sub_context t_arg
+      let norm_ctx := (try_step_n! 10 ∘ sub_context)
 
-      if sub_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫) == sub_context t_arg then
+      let norm_expected := norm_ctx (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+      let norm_actual := norm_ctx t_arg
+
+      dbg_trace norm_expected
+      dbg_trace norm_actual
+
+      if norm_expected == norm_actual then
         --match asserts.getLast? >>= (fun e => step ⟪₂ :e :Δ' ⟫) with
         --| .some t_out => pure ⟪₂ , nil (:: :t_out nil) ⟫
         --| _ => pure ⟪₂ , :Γ :Δ' ⟫

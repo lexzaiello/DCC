@@ -271,6 +271,9 @@ def infer : Expr → Option Expr
 
       if norm_expected == t_arg then
         if claims.length.succ == asserts.length then
+          dbg_trace asserts
+          dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
+          dbg_trace try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
           let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
 
           pure ⟪₂ , (:: :t_out nil) (, :Δ' :Ξ') ⟫

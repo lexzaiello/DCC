@@ -130,7 +130,7 @@ def Expr.display_infer : Expr → Expr
   | ⟪₂ , nil (:: :t nil) ⟫ => t
   | e => e
 
-example : Expr.as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫, ⟪₁ Ty ⟫] := rfl
+example : Expr.ctx_as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫, ⟪₁ Ty ⟫] := rfl
 
 example : Expr.push_in ⟪₂ Ty ⟫ ⟪₂ :: Ty K ⟫ = ⟪₂ :: Ty (:: K Ty) ⟫ := rfl
 
@@ -166,25 +166,15 @@ def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
     let e' ← step e
     pure <| (try_step_n (n - 1) e').getD e'
 
-def render_context_with (with_v : Expr) (Γ : Expr) : Expr :=
+def render_context_with (with_v Γ : Expr) : Expr :=
   match Γ with
   | ⟪₂ , nil (:: :_t nil) ⟫ => Γ
-  | ⟪₂ , :Γ :Δ ⟫ => (do
+  | ⟪₂ , :Γ :Δ ⟫ =>
     let Δ' := Expr.push_in with_v Δ
 
-    -- Update the entry in the context depending on it
-    let asserts ← Γ.as_list
-
-    let pos_arg := (← Δ.as_list).length
-    let check_with ← asserts[pos_arg]?
-
-    let asserts' := asserts.set pos_arg (← try_step_n 10 ⟪₂ :check_with :Δ' ⟫)
-
-    let Γ' := 
-    
     match Γ.map_list (fun f => (step ⟪₂ :f :Δ' ⟫).getD ⟪₂ :f :Δ' ⟫) with
     | .some Γ' =>
-      ⟪₂ , :Γ' :Δ' ⟫).getD ⟪₂ , :Γ :Δ ⟫
+      ⟪₂ , :Γ' :Δ' ⟫
     | _ => ⟪₂ :Γ :Δ ⟫
   | e => e
 
@@ -207,17 +197,26 @@ def infer : Expr → Option Expr
     match t_f with
     | ⟪₂ , :Γ :Δ ⟫ =>
       let Δ' := Expr.push_in arg Δ
+      let t_f' := render_context_with arg t_f
 
-      let asserts ← Γ.as_list
-      let claims  ← Δ'.as_list
+      let asserts ← Γ.ctx_as_list
+      let claims  ← Δ'.ctx_as_list
 
       -- Assertion to check that we provided the right type
-      let check_with ← asserts[(← Δ.as_list).length]?
+      let check_with ← asserts[(← Δ.ctx_as_list).length]?
 
-      dbg_trace try_step_n 10 ⟪₂ :check_with :Δ' ⟫
-      dbg_trace render_context_with arg t_arg
+      --dbg_trace try_step_n 10 ⟪₂ :check_with :Δ' ⟫
+      --dbg_trace render_context_with arg t_arg
 
-      if (← try_step_n 10 ⟪₂ :check_with :Δ' ⟫) == render_context_with arg t_arg then
+      let arg_pos := (← Δ.ctx_as_list).length
+
+      let t_arg_actual := render_context_with arg t_arg
+      let t_arg_expected ← ((·[arg_pos]?) <=< Expr.ctx_as_list <=< Expr.fst) t_f'
+
+      dbg_trace t_arg_actual
+      dbg_trace t_arg_expected
+
+      if t_arg_expected == t_arg_actual then
         -- We have found the final β-normal form's type
         -- the combinator should be asserting more types
         -- in the context than we have arguments, exactly one more (the return type)
@@ -262,6 +261,10 @@ Here's the more CBV-'d helper I Ty type:
 ((, ((:: (((K Ty) Ty) (read ((:: Ty) ((:: (I Ty)) nil))))) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil))))
 still a read call here though that should be reduced.
 If reduced, it would be the same K Ty Ty Ty.
+
+So whenever we instantiate a context, we should instantiate ALL contexts.
+we're putting stuff at the END of the context, not the front,
+so if an item doesn't use the new context item, no biggie.
 
 That is, 
 -/

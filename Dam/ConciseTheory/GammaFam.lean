@@ -243,6 +243,7 @@ def infer : Expr → Option Expr
   | ⟪₂ nil ⟫ => ⟪₂ , (:: (K Data Data Data) nil) (, nil nil) ⟫
   | ⟪₂ Data ⟫ => ⟪₂ , (:: (K Data Data Data) nil) (, nil nil) ⟫
   | ⟪₂ read ⟫
+  | ⟪₂ next ⟫
   | ⟪₂ read_α ⟫
   | ⟪₂ read_y ⟫
   | ⟪₂ fst ⟫
@@ -264,9 +265,9 @@ def infer : Expr → Option Expr
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
-      --dbg_trace norm_expected
-      --dbg_trace t_arg
-      --dbg_trace norm_context (← infer arg)
+      dbg_trace norm_expected
+      dbg_trace t_arg
+      dbg_trace norm_context (← infer arg)
 
       if norm_expected == t_arg then
         if claims.length.succ == asserts.length then
@@ -314,6 +315,13 @@ but what about partially applied things?
 All of the constraints are relevant...
 what is the point of this norm_context thing?
 We're just applying their respective contexts.
+
+Normalizing contexts pre-emptively is a bad idea, probably.
+We end up with nil values.
+
+Should probably persist in un-normalized.
+
+The issue is with norm_context. Reliably injects a read nil.
 -/
 
 end Idea

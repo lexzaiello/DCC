@@ -222,6 +222,8 @@ def infer : Expr → Option Expr
   | ⟪₂ nil ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
   | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
   | ⟪₂ read ⟫
+  | ⟪₂ read_α ⟫
+  | ⟪₂ read_y ⟫
   | ⟪₂ fst ⟫
   | ⟪₂ snd ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
@@ -265,7 +267,9 @@ def infer : Expr → Option Expr
 
 #eval Expr.display_infer <$> infer ⟪₂ >> read read (, I I) ⟫
 
-#eval infer ⟪₂ I ⟫
+#eval Expr.display_infer <$> (infer <=< infer) ⟪₂ K ⟫
+
+#eval Expr.display_infer <$> (infer <=< infer) ⟪₂ I ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫

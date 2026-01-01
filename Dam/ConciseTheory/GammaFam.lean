@@ -78,7 +78,7 @@ macro_rules
 def Expr.toString : Expr → String
   | ⟪₂ Ty ⟫ => "Ty"
   | ⟪₂ read_α ⟫ => "read_α"
-  | ⟪₂ read_y ⟫ => "read_α"
+  | ⟪₂ read_y ⟫ => "read_y"
   | ⟪₂ :: ⟫ => "::"
   | ⟪₂ nil ⟫ => "nil"
   | ⟪₂ read ⟫ => "read"
@@ -118,25 +118,38 @@ def step : Expr → Option Expr
   | ⟪₂ read (:: :x :_xs) ⟫ => x
   | ⟪₂ read (, :a :_b) ⟫ => a
   | ⟪₂ next (, :_a :b) ⟫ => b
+  | ⟪₂ read_α :Γ ⟫ => do
+    let term_α := ⟪₂ read :Γ ⟫
+    pure ⟪₂ , (:: (K Ty Ty :term_α) (:: (K Ty Ty Ty) nil)) :Γ ⟫
+  | ⟪₂ read_y :Γ ⟫ => do
+    -- y : β x
+    -- β is in the second slot
+    -- x is in the third slot
+    -- β x : α
+    -- α is in the first slot
+    let term_α := ⟪₂ read :Γ ⟫
+    let term_β := ⟪₂ read (next :Γ) ⟫
+    let term_x := ⟪₂ read (next (next :Γ)) ⟫
+
+    pure ⟪₂ , (:: (K :term_α :term_α :term_β :term_x) nil) :Γ ⟫
   | _ => .none
 
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) nil ⟫
-  | ⟪₂ read_α :Γ ⟫ =>
-    let term_α := ⟪₂ read :Γ ⟫
-    pure ⟪₂ , (:: (K Ty Ty :term_α) (:: (K Ty Ty Ty) nil)) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ K Ty Ty Ty ⟫
     let t_β := ⟪₂ read_α ⟫
-    let 
-    ⟪₂ , (:: :t_α (:: :t_β (:: read (:: 
+    let t_x := ⟪₂ read ⟫
+    let t_y := ⟪₂ read_y ⟫
+
+    ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y nil)))) nil ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (:: Ty nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
-    let t_arg ← infer arg
+    let t_arg := (← infer arg).display_infer
 
-    match t_f, t_arg with
-    | ⟪₂ , :Γ :Δ ⟫, ⟪₂ , nil (:: :t_arg nil) ⟫ =>
+    match t_f with
+    | ⟪₂ , :Γ :Δ ⟫ =>
       let Δ' := Expr.push_in arg Δ
 
       let asserts ← Γ.as_list
@@ -144,6 +157,9 @@ def infer : Expr → Option Expr
 
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
+
+      dbg_trace step ⟪₂ :check_with :Δ' ⟫
+      dbg_trace t_arg
 
       if (← step ⟪₂ :check_with :Δ' ⟫) == t_arg then
         -- We have found the final β-normal form's type
@@ -157,10 +173,11 @@ def infer : Expr → Option Expr
           pure ⟪₂ , :Γ :Δ' ⟫
       else
         .none
-    | _, _ => .none
+    | _ => .none
   | _ => .none
 
 #eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Ty Ty ⟫
+#eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) ⟫
 
 end Idea

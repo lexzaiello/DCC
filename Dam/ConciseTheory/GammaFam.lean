@@ -120,9 +120,12 @@ def Expr.from_list : List Expr → Expr
   | [] => ⟪₂ nil ⟫
   | x::xs => ⟪₂ :: :x (#Expr.from_list xs) ⟫
 
-def Expr.mk_tup : List Expr → Expr := List.foldr (fun e acc => ⟪₂ :: :e :acc ⟫) ⟪₂ nil ⟫
+def Expr.mk_tup : List Expr → Expr
+  | [] => ⟪₂ nil ⟫
+  | [x, xs] => ⟪₂ , :x :xs ⟫
+  | x :: xs => ⟪₂ , :x (#Expr.mk_tup xs) ⟫
 
-example : Expr.mk_tup [⟪₂ Ty ⟫, ⟪₂ S ⟫, ⟪₂ K ⟫] = ⟪₂ ((:: Ty) ((:: S) ((:: K) nil))) ⟫ := rfl
+example : Expr.mk_tup [⟪₂ Ty ⟫, ⟪₂ S ⟫, ⟪₂ K ⟫] = ⟪₂ ((, Ty) (, S K)) ⟫ := rfl
 
 def Expr.map_list (f : Expr → Expr) : Expr → Option Expr
   | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#← f x) (#← xs.map_list f) ⟫
@@ -174,7 +177,7 @@ def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
 -- returns all of the applied assertions, in order
 def sub_context : Expr → Expr
   | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
-    Expr.from_list <| (do (← Γ.as_list).mapM (fun f => step ⟪₂ :f (, :Δ :Ξ) ⟫)).getD []
+    Expr.mk_tup <| (do (← Γ.as_list).mapM (fun f => step ⟪₂ :f (, :Δ :Ξ) ⟫)).getD []
   | e => e
 
 def infer : Expr → Option Expr

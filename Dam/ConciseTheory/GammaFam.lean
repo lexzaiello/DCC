@@ -207,29 +207,12 @@ def infer : Expr → Option Expr
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
 
-      --dbg_trace sub_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
-      --dbg_trace sub_context t_arg
-
-      --dbg_trace check_with
-
       let norm_ctx := (try_step_n! 10 ∘ sub_context)
 
       let norm_expected := norm_ctx (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
       let norm_actual := norm_ctx t_arg
 
-      dbg_trace norm_expected
-      dbg_trace norm_actual
-
       if norm_expected == norm_actual then
-        --match asserts.getLast? >>= (fun e => step ⟪₂ :e :Δ' ⟫) with
-        --| .some t_out => pure ⟪₂ , nil (:: :t_out nil) ⟫
-        --| _ => pure ⟪₂ , :Γ :Δ' ⟫
-        --dbg_trace claims.length
-        --dbg_trace claims
-        --dbg_trace asserts.length
-        -- We have found the final β-normal form's type
-        -- the combinator should be asserting more types
-        -- in the context than we have arguments, exactly one more (the return type)
         if claims.length.succ == asserts.length then
           let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
 

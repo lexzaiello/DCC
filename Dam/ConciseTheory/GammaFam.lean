@@ -75,7 +75,7 @@ def Expr.toString : Expr → String
   | ⟪₂ nil ⟫ => "nil"
   | ⟪₂ read ⟫ => "read"
   | ⟪₂ , ⟫ => ","
-  | ⟪₂ :f :x ⟫ => s!"{f.toString} {x.toString}"
+  | ⟪₂ :f :x ⟫ => s!"({f.toString} {x.toString})"
   | ⟪₂ next ⟫ => "next"
   | ⟪₂ I ⟫ => "I"
   | ⟪₂ K ⟫ => "K"
@@ -85,12 +85,14 @@ instance Expr.instToString : ToString Expr where
   toString := Expr.toString
 
 def Expr.push_in (with_e : Expr) : Expr → Expr
-  | ⟪₂ :: :x (:: :y :xs) ⟫ => ⟪₂ :: :x (:: :y (#.push_in with_e xs)) ⟫
+  | ⟪₂ :: :x nil ⟫ => ⟪₂ :: :x (:: :with_e nil) ⟫
+  | ⟪₂ nil ⟫ => ⟪₂ :: :with_e nil ⟫
   | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (:: :xs :with_e) ⟫
   | e => e
 
 def Expr.as_list : Expr → Option (List Expr)
   | ⟪₂ :: :x :xs ⟫ => do return x :: (← xs.as_list)
+  | ⟪₂ nil ⟫ => pure []
   | x => pure [x]
 
 example : Expr.as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫, ⟪₁ Ty ⟫] := rfl
@@ -107,14 +109,14 @@ def step : Expr → Option Expr
   | _ => .none
 
 def infer : Expr → Option Expr
-  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read read)) nil ⟫
-  | ⟪₂ Ty ⟫ => ⟪₂ Ty ⟫
+  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) nil ⟫
+  | ⟪₂ Ty ⟫ => ⟪₂ , nil (:: Ty nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
     let t_arg ← infer arg
 
-    match t_f with
-    | ⟪₂ , :Γ :Δ ⟫ =>
+    match t_f, t_arg with
+    | ⟪₂ , :Γ :Δ ⟫, ⟪₂ , nil (:: :t_arg nil) ⟫ =>
       let Δ' := Expr.push_in arg Δ
 
       let asserts ← Γ.as_list
@@ -123,19 +125,23 @@ def infer : Expr → Option Expr
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
 
+      dbg_trace t_arg
+
       if (← step ⟪₂ :check_with :Δ' ⟫) == t_arg then
         -- We have found the final β-normal form's type
         -- the combinator should be asserting more types
         -- in the context than we have arguments, exactly one more (the return type)
         if claims.length.succ == asserts.length then
-          step ⟪₂ (#← claims.getLast?) :Δ' ⟫
+          let t_out ← step ⟪₂ (#← claims.getLast?) :Δ' ⟫
+
+          pure ⟪₂ , nil (:: :t_out nil) ⟫
         else
           pure ⟪₂ , :Γ :Δ' ⟫
       else
         .none
-    | _ => .none
+    | _, _ => .none
   | _ => .none
 
-
+#eval infer ⟪₂ I Ty ⟫
 
 end Idea

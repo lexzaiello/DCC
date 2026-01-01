@@ -270,10 +270,8 @@ def infer : Expr → Option Expr
 
 #eval Expr.display_infer <$> infer ⟪₂ >> (I Data) (I Data) (, I I) ⟫
 
-#eval infer ⟪₂ >> read ⟫
+#eval Expr.display_infer <$> infer ⟪₂ ((, ((:: (((K Ty) (I Ty)) Ty)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
 
-#eval infer ⟪₂ (, ((:: (((K Ty) (I Ty)) Ty)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ⟫
-#eval infer ⟪₂ ((, ((:: (((K Ty) (I Ty)) Ty)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
 #eval infer ⟪₂ I ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫

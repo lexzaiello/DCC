@@ -69,6 +69,7 @@ def step : Expr → Option Expr
   | ⟪₂ I :_α :x ⟫ => pure ⟪₁ :x ⟫
   | ⟪₂ read (ΓI :_α) ⟫ => pure ⟪₁ Ty ⟫
   | ⟪₂ read (next (ΓI :α :_x)) ⟫ => α
+  | ⟪₂ read (next (read (next (ΓI :α :_x)))) ⟫ => α
   | ⟪₂ read (ΓK :_α) ⟫ => pure ⟪₁ Ty ⟫
   | ⟪₂ read (ΓK :α :_β) ⟫ => pure ⟪₁ Ty ⟫
   | _ => .none

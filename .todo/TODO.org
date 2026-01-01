@@ -140,6 +140,56 @@ K : \forall (\alpha : Type) (\beta : \alpha \rightarrow Type) (x : \alpha) (y : 
 #check read (\Gamma
 
 This is where things might get epic?
+We need to create ad-hoc \Gamma combinators.
+
+For example, the \beta : \alpha \rightarrow Type
+
+Can we replace arrow altogether?
+This is a future context / infer rule, kinda an ad-hoc \Gamma combinator.
+
+If we can avoid arrows altogether that would be insane, but probably unnecessary.
+
+\alpha \rightarrow \alpha corresponds to the rule (assuming \alpha is known, not a variable):
+
+read (next \Gamma \alpha x) = \alpha
+read (next (read (next \Gamma \alpha x))) = \alpha
+
+If we can dynamically make these rules, that would be crazy.
+Then we're just passing around contexts.
+
+The rules are characterized solely by their arity, for one thing.
+
+Combinators are equipped with local reduction rules.
+
+Kinda like a fixedpoint.
+Weird church encoding: \Gamma combinator = create context
+
+\Gamma : (\Gamma \rightarrow Expr (assertion)) \rightarrow \Gamma
+
+need to concat them somehow, but the idea is, \alpha \rightarrow \alpha corresponds to:
+
+\Gamma read (B read next)
+
+(B read next) :: (init read) -- this is of type \Gamma
+
+\Gamma := (B read next) :: (init read)
+
+these are our "assertion rules:" (B read next) :: (init read)
+
+these are our "claims" / arguments: init \alpha
+
+Example: simply-typed I combinator
+
+I : ((init (K Ty)) :: read :: read)
+
+((init (K Ty)) :: read :: read) : \Gamma
+
+I \alpha x : (((init (K Ty)) :: read :: read), \alpha :: x)
+
+#+BEGIN_SRC
+infer : Expr \rightarrow Option Expr
+
+#+END_SRC
 
 K : fun (c : \Gamma)
 

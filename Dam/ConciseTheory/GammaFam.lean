@@ -215,8 +215,12 @@ def infer : Expr → Option Expr
     | _ => .none
   | _ => .none
 
+#eval infer ⟪₂ ((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil)) ⟫
+
 #eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Ty Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) Ty Ty ⟫
+
+#eval infer ⟪₂ K ((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil)) Ty I ⟫
 
 end Idea

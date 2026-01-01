@@ -131,7 +131,7 @@ def Expr.map_listM {m : Type → Type} [Monad m] (f : Expr → m Expr) : Expr �
   | _ => OptionT.mk (pure .none)
 
 def Expr.display_infer : Expr → Expr
-  | ⟪₂ , nil (:: :t nil) ⟫ => t
+  | ⟪₂ , nil (, (:: :t nil) :_Ξ) ⟫ => t
   | e => e
 
 example : Expr.as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫, ⟪₁ Ty ⟫] := rfl
@@ -144,11 +144,11 @@ def step : Expr → Option Expr
   | ⟪₂ K :_α :_β :x :_y ⟫ => x
   | ⟪₂ next (:: :_x :xs) ⟫ => xs
   | ⟪₂ read (:: :x :_xs) ⟫ => x
-  | ⟪₂ read (, :a :_b) ⟫ => a
-  | ⟪₂ next (, :_a :b) ⟫ => b
-  | ⟪₂ read_α :Γ ⟫ => do
+  | ⟪₂ fst (, :a :_b) ⟫ => a
+  | ⟪₂ snd (, :_a :b) ⟫ => b
+  | ⟪₂ read_α (, :Γ :_Ξ) ⟫ => do
     let term_α := ⟪₂ read :Γ ⟫
-    pure ⟪₂ , (:: (K Ty Ty :term_α) (:: read (:: (K Ty Ty Ty) nil))) (:: :term_α nil) ⟫
+    pure ⟪₂ , (:: (K Ty Ty :term_α) (:: read (:: (K Ty Ty Ty) nil))) (, (:: :term_α nil) (:: Ty nil)) ⟫
   | ⟪₂ read_y :Γ ⟫ =>
     ⟪₂ (read (next :Γ)) (read (next (next :Γ))) ⟫
   | ⟪₂ :f :x ⟫ => do
@@ -165,27 +165,28 @@ def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
 -- Applies the Δ claims context to all handlers in the app context
 -- returns all of the applied assertions, in order
 def sub_context : Expr → Option (List Expr)
-  | ⟪₂ , :Γ :Δ ⟫ => do
-    (← Γ.as_list).mapM (fun f => step ⟪₂ :f :Δ ⟫)
+  | ⟪₂ , :Γ :Δ :Ξ ⟫ => do
+    (← Γ.as_list).mapM (fun f => step ⟪₂ :f (, :Δ :Ξ) ⟫)
   | _ => .none
 
 def infer : Expr → Option Expr
-  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) nil ⟫
+  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ K Ty Ty Ty ⟫
     let t_β := ⟪₂ read_α ⟫
     let t_x := ⟪₂ read ⟫
     let t_y := ⟪₂ read_y ⟫
 
-    ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) nil ⟫
-  | ⟪₂ Ty ⟫ => ⟪₂ , nil (:: Ty nil) ⟫
+    ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
+  | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
     let t_arg := (← infer arg).display_infer
 
     match t_f with
-    | ⟪₂ , :Γ :Δ ⟫ =>
+    | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
       let Δ' := Expr.push_in arg Δ
+      let Ξ' := Expr.push_in t_arg Ξ
 
       let asserts ← Γ.as_list
       let claims  ← Δ'.as_list
@@ -206,9 +207,9 @@ def infer : Expr → Option Expr
         if claims.length.succ == asserts.length then
           let t_out ← step ⟪₂ (#← asserts.getLast?) :Δ' ⟫
 
-          pure ⟪₂ , nil (:: :t_out nil) ⟫
+          pure ⟪₂ , nil (, (:: :t_out nil) :Ξ') ⟫
         else
-          pure ⟪₂ , :Γ :Δ' ⟫
+          pure ⟪₂ , :Γ (, :Δ' :Ξ') ⟫
       else
         .none
     | _ => .none

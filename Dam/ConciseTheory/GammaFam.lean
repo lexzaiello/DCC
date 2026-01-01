@@ -12,6 +12,7 @@ inductive Expr where
   | tup    : Expr
   | cons   : Expr
   | nil    : Expr
+  | seq    : Expr
   | k      : Expr
   | s      : Expr
   | i      : Expr
@@ -29,6 +30,7 @@ declare_syntax_cat app
 declare_syntax_cat expr
 
 syntax "Ty"                  : atom
+syntax ">>"                  : atom
 syntax "(" app ")"           : atom
 syntax "#" term              : atom
 syntax ":" ident             : atom
@@ -67,6 +69,7 @@ macro_rules
   | `(⟪₁ read_y ⟫) => `(Expr.read_y)
   | `(⟪₁ :: ⟫) => `(Expr.cons)
   | `(⟪₁ next ⟫) => `(Expr.next)
+  | `(⟪₁ >> ⟫) => `(Expr.seq)
   | `(⟪₁ nil ⟫) => `(Expr.nil)
   | `(⟪₁ , ⟫) => `(Expr.tup)
   | `(⟪₂ ($e:app) ⟫) => `(⟪₂ $e ⟫)
@@ -78,6 +81,7 @@ macro_rules
 
 def Expr.toString : Expr → String
   | ⟪₂ Ty ⟫ => "Ty"
+  | ⟪₂ >> ⟫ => ">>"
   | ⟪₂ read_α ⟫ => "read_α"
   | ⟪₂ read_y ⟫ => "read_y"
   | ⟪₂ :: ⟫ => "::"
@@ -136,6 +140,7 @@ example : Expr.as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫
 example : Expr.push_in ⟪₂ Ty ⟫ ⟪₂ :: Ty K ⟫ = ⟪₂ :: Ty (:: K Ty) ⟫ := rfl
 
 def step : Expr → Option Expr
+  | ⟪₂ >> :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫ => x
   | ⟪₂ next (:: :_x :xs) ⟫ => xs
@@ -212,27 +217,6 @@ def infer : Expr → Option Expr
 
 #eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Ty Ty ⟫
-
-/-
-More notes on debugging:
-
-assert: ((, ((:: (((K Ty) Ty) Ty)) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil)))
-claim:  ((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil))
-
-Note that the claim's last 2 members, ((:: read) ((:: read) nil)),
-would produce Ty, Ty if they were made away that α = Ty
-
-the assert's first 2 members correspond exactly, but they are already substituted,
-but still have a binder.
-
-One thing we could do instead of making these fake expressions is
-also use read and plug α in as our Δ. I will try this.
-
-We just need to equate every element in the contexts,
-and step them.
-
-Also slice off the extra item.
--/
 #eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) Ty Ty ⟫
 
 end Idea

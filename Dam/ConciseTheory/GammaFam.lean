@@ -132,6 +132,8 @@ def step : Expr → Option Expr
     let term_x := ⟪₂ read (next (next :Γ)) ⟫
 
     pure ⟪₂ , (:: (K :term_α :term_α :term_β :term_x) nil) :Γ ⟫
+  | ⟪₂ :f :x ⟫ => do
+    ⟪₂ (# (step f).getD f) (#(step x).getD x) ⟫
   | _ => .none
 
 def infer : Expr → Option Expr
@@ -178,6 +180,39 @@ def infer : Expr → Option Expr
 
 #eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Ty Ty ⟫
+
+/-
+Notes on debugging this example:
+- infer always produces contexts, not just the raw type
+- we can't just compare them like that willy nilly
+
+For example, partial application produces a context
+that isn't fully filled out.
+We're interested in whether the contexts are observably
+the same.
+
+((, ((:: (((K Ty) Ty) (read ((:: Ty) ((:: (I Ty)) nil))))) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil)))
+((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil))
+
+(asserts, claims) of the claimed I Ty type and the actual I Ty type
+They are quite different. For one thing,
+the actual I Ty has K Ty Ty Ty, while the helper combinator one
+has this as the weakened term (read ((:: Ty) ((:: (I Ty)) nil)))
+
+note that these two things might behave the same.
+It might be worth checking if they are the same AFTER we fill in the new context, Δ'
+Also this is just a CBV thing. At least somewhat.
+
+Here's the more CBV-'d helper I Ty type:
+
+((, ((:: (((K Ty) Ty) (read ((:: Ty) ((:: (I Ty)) nil))))) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil))))
+still a read call here though that should be reduced.
+If reduced, it would be the same K Ty Ty Ty.
+
+That is, 
+-/
 #eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) ⟫
+
+#eval step ⟪₂ ((, ((:: (((K Ty) Ty) (read ((:: Ty) ((:: (I Ty)) nil))))) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil))) ⟫
 
 end Idea

@@ -2,6 +2,7 @@
   An approach to dependently-typed combinators that models contexts as combinatory objects in and of themselves.
 -/
 
+import Mathlib.Data.Nat.Notation
 import Mathlib.Data.List.Monad
 
 namespace Idea
@@ -136,6 +137,19 @@ def step : Expr → Option Expr
     ⟪₂ (# (step f).getD f) (#(step x).getD x) ⟫
   | _ => .none
 
+def render_context_with (with_v : Expr) (Γ : Expr) : Expr :=
+  match Γ with
+  | ⟪₂ , :asserts :claims ⟫ =>
+    sorry
+  | e => e
+
+def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
+  if n = 0 then
+    pure e
+  else
+    let e' ← step e
+    pure <| (try_step_n (n - 1) e').getD e'
+
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) nil ⟫
   | ⟪₂ K ⟫ =>
@@ -160,10 +174,10 @@ def infer : Expr → Option Expr
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
 
-      dbg_trace step ⟪₂ :check_with :Δ' ⟫
+      dbg_trace try_step_n 10 ⟪₂ :check_with :Δ' ⟫
       dbg_trace t_arg
 
-      if (← step ⟪₂ :check_with :Δ' ⟫) == t_arg then
+      if (← try_step_n 10 ⟪₂ :check_with :Δ' ⟫) == t_arg then
         -- We have found the final β-normal form's type
         -- the combinator should be asserting more types
         -- in the context than we have arguments, exactly one more (the return type)

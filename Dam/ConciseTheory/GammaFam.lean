@@ -14,6 +14,7 @@ inductive Expr where
   | nil       : Expr
   | seq       : Expr
   | k         : Expr
+  | k'        : Expr
   | s         : Expr
   | i         : Expr
   | fst       : Expr
@@ -39,6 +40,7 @@ syntax "#" term              : atom
 syntax ":" ident             : atom
 syntax "::"                  : atom
 syntax "K"                   : atom
+syntax "K'"                  : atom
 syntax "I"                   : atom
 syntax "S"                   : atom
 syntax "read"                : atom
@@ -64,6 +66,7 @@ macro_rules
   | `(⟪₁ #$e:term ⟫) => `($e)
   | `(⟪₁ :$id:ident ⟫) => `($id)
   | `(⟪₁ K ⟫) => `(Expr.k)
+  | `(⟪₁ K' ⟫) => `(Expr.k')
   | `(⟪₁ I ⟫) => `(Expr.i)
   | `(⟪₁ S ⟫) => `(Expr.s)
   | `(⟪₁ fst ⟫) => `(Expr.fst)
@@ -100,6 +103,7 @@ def Expr.toString : Expr → String
   | ⟪₂ next ⟫ => "next"
   | ⟪₂ I ⟫ => "I"
   | ⟪₂ K ⟫ => "K"
+  | ⟪₂ K' ⟫ => "K"
   | ⟪₂ S ⟫ => "S"
 
 instance Expr.instToString : ToString Expr where
@@ -179,6 +183,8 @@ def sub_context : Expr → Expr
     Expr.mk_tup <| (do (← Γ.as_list).mapM (fun f => step ⟪₂ :f (, :Δ :Ξ) ⟫)).getD []
   | e => e
 
+def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
+
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
@@ -228,14 +234,8 @@ def infer : Expr → Option Expr
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
 
-      let norm_ctx := (try_step_n! 10 ∘ sub_context)
-
-      --dbg_trace check_with
-      --dbg_trace Ξ'
-      --dbg_trace try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
-
-      let norm_expected := norm_ctx (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
-      let norm_actual := norm_ctx t_arg
+      let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+      let norm_actual := norm_context t_arg
 
       --dbg_trace norm_expected
       --dbg_trace norm_actual
@@ -252,10 +252,15 @@ def infer : Expr → Option Expr
     | _ => .none
   | _ => .none
 
+#eval (norm_context ∘ Expr.display_infer) <$> infer ⟪₂ K ⟫
+
+#eval Expr.display_infer <$> infer ⟪₂ ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil))))) ⟫
+
+def t_k : Expr := ⟪₂ ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil))))) ⟫
+
 #eval Expr.display_infer <$> infer ⟪₂ >> read read (, I I) ⟫
 
 #eval Expr.display_infer <$> (infer <=< infer) ⟪₂ K ⟫
-
 #eval Expr.display_infer <$> (infer <=< infer) ⟪₂ I ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫

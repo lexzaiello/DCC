@@ -161,11 +161,12 @@ def step : Expr → Option Expr
   | ⟪₂ read (:: :x :_xs) ⟫ => x
   | ⟪₂ fst (, :a :_b) ⟫ => a
   | ⟪₂ snd (, :_a :b) ⟫ => b
-  /-| ⟪₂ read_data (, :Γ :Ξ) ⟫ => do
-    -- Data are asserted like such:
-    -- K 
-    let t_arg := ⟪₂ read :Ξ ⟫
-    -/
+  | ⟪₂ read_data (, :Γ :_Ξ) ⟫ => do
+    ⟪₂ ,
+      (:: (K Ty (I Ty) Ty) (:: (K Ty (I Data) Data) (:: (K Ty (I Data) Data) nil)))
+      (,
+        (:: (read :Γ) nil)
+        (:: Data nil)) ⟫
   | ⟪₂ read_α (, :Γ :_Ξ) ⟫ => do
     let term_α := ⟪₂ read :Γ ⟫
     pure ⟪₂ ,
@@ -215,11 +216,7 @@ def infer : Expr → Option Expr
           nil)))
       (, nil nil) ⟫
   | ⟪₂ >> ⟫ =>
-    let assert_data_map := ⟪₂ ,
-      (:: (K Ty (I Data) Data) (:: (K Ty (I Data) Data) nil))
-      (,
-        nil
-        nil) ⟫
+    let assert_data_map := ⟪₂ read_data ⟫
     let assert_data_term := ⟪₂ K Ty (I Data) Data ⟫
     ⟪₂ ,
       (:: :assert_data_map (:: :assert_data_map (:: :assert_data_term (:: :assert_data_term nil))))
@@ -254,8 +251,8 @@ def infer : Expr → Option Expr
       let norm_expected := norm_ctx (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
       let norm_actual := norm_ctx t_arg
 
-      --dbg_trace norm_expected
-      --dbg_trace norm_actual
+      dbg_trace norm_expected
+      dbg_trace norm_actual
 
       if norm_expected == norm_actual then
         if claims.length.succ == asserts.length then

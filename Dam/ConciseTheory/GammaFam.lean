@@ -252,6 +252,8 @@ def infer : Expr → Option Expr
     let t_f ← infer f
     let t_arg := norm_context (← infer arg)
 
+    --dbg_trace arg
+
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
       let Δ' := Expr.push_in arg Δ
@@ -263,6 +265,11 @@ def infer : Expr → Option Expr
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
 
+      -- TODO: (I :t_k K) Data errors out here because we're looking at K's type,
+      -- which is a context and trying to apply it.
+      --dbg_trace arg
+      --dbg_trace check_with
+      --dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
       --dbg_trace norm_expected
@@ -276,7 +283,8 @@ def infer : Expr → Option Expr
           --dbg_trace try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
           let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
 
-          pure ⟪₂ , (:: :t_out nil) (, nil nil) ⟫
+          -- THIS is the culprit. WRONG.
+          pure ⟪₂ , (:: (K Data Data :t_out) nil) (, nil nil) ⟫
         else
           pure ⟪₂ , :Γ (, :Δ' :Ξ') ⟫
       else
@@ -328,6 +336,17 @@ Should probably persist in un-normalized.
 The issue is with norm_context. Reliably injects a read nil.
 
 We need to somehow cut out some of the context information to continue..
+
+Galaxy brain move would be to build our own context in the last item in the assertion list.
+Then we can just swap with the last element high key.
+
+Issue is we have sub-contexts, or something is uninitialized, because we're trying to call
+a context like a function
+
+It's because this is the last assert.
+This is where the β-normal stuff should wipe it.
+
+
 -/
 
 end Idea

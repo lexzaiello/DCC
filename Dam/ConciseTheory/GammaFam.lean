@@ -99,14 +99,14 @@ def Expr.push_in (with_e : Expr) : Expr → Expr
   | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (:: :xs :with_e) ⟫
   | e => e
 
-def Expr.ctx_as_list : Expr → Option (List Expr)
-  | ⟪₂ :: :x :xs ⟫ => do return x :: (← xs.ctx_as_list)
+def Expr.as_list : Expr → Option (List Expr)
+  | ⟪₂ :: :x :xs ⟫ => do return x :: (← xs.as_list)
   | ⟪₂ nil ⟫ => pure []
   | x => pure [x]
 
-def Expr.ctx_from_list : List Expr → Expr
+def Expr.from_list : List Expr → Expr
   | [] => ⟪₂ nil ⟫
-  | x::xs => ⟪₂ :: :x (#Expr.ctx_from_list xs) ⟫
+  | x::xs => ⟪₂ :: :x (#Expr.from_list xs) ⟫
 
 def Expr.map_list (f : Expr → Expr) : Expr → Option Expr
   | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#← f x) (#← xs.map_list f) ⟫
@@ -130,7 +130,7 @@ def Expr.display_infer : Expr → Expr
   | ⟪₂ , nil (:: :t nil) ⟫ => t
   | e => e
 
-example : Expr.ctx_as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫, ⟪₁ Ty ⟫] := rfl
+example : Expr.as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫, ⟪₁ Ty ⟫] := rfl
 
 example : Expr.push_in ⟪₂ Ty ⟫ ⟪₂ :: Ty K ⟫ = ⟪₂ :: Ty (:: K Ty) ⟫ := rfl
 
@@ -143,7 +143,7 @@ def step : Expr → Option Expr
   | ⟪₂ next (, :_a :b) ⟫ => b
   | ⟪₂ read_α :Γ ⟫ => do
     let term_α := ⟪₂ read :Γ ⟫
-    pure ⟪₂ , (:: (K Ty Ty :term_α) (:: (K Ty Ty Ty) nil)) :Γ ⟫
+    pure ⟪₂ , (:: (K Ty Ty :term_α) (:: read (:: (K Ty Ty Ty) nil))) (:: :term_α nil) ⟫
   | ⟪₂ read_y :Γ ⟫ => do
     -- y : β x
     -- β is in the second slot
@@ -166,19 +166,12 @@ def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
     let e' ← step e
     pure <| (try_step_n (n - 1) e').getD e'
 
-def render_context_with (with_v Γ : Expr) : Expr :=
-  match Γ with
-  | ⟪₂ , nil (:: :_t nil) ⟫ => Γ
-  | ⟪₂ , :Γ :Δ ⟫ =>
-    let Δ' := Expr.push_in with_v Δ
-
-    match Γ.map_list (fun f => (step ⟪₂ :f :Δ' ⟫).getD ⟪₂ :f :Δ' ⟫) with
-    | .some Γ' =>
-      ⟪₂ , :Γ' :Δ' ⟫
-    | _ => ⟪₂ :Γ :Δ ⟫
-  | e => e
-
-example : render_context_with ⟪₂ Ty ⟫ ⟪₂ , (:: read nil) nil ⟫ == ⟪₂ ((, ((:: Ty) nil)) ((:: Ty) nil)) ⟫ := rfl
+-- Applies the Δ claims context to all handlers in the app context
+-- returns all of the applied assertions, in order
+def sub_context : Expr → Option (List Expr)
+  | ⟪₂ , :Γ :Δ ⟫ => do
+    (← Γ.as_list).mapM (fun f => step ⟪₂ :f :Δ ⟫)
+  | _ => .none
 
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) nil ⟫
@@ -198,11 +191,11 @@ def infer : Expr → Option Expr
     | ⟪₂ , :Γ :Δ ⟫ =>
       let Δ' := Expr.push_in arg Δ
 
-      let asserts ← Γ.ctx_as_list
-      let claims  ← Δ'.ctx_as_list
+      let asserts ← Γ.as_list
+      let claims  ← Δ'.as_list
 
       -- Assertion to check that we provided the right type
-      let check_with ← asserts[(← Δ.ctx_as_list).length]?
+      let check_with ← asserts[(← Δ.as_list).length]?
 
       dbg_trace ← try_step_n 10 ⟪₂ :check_with :Δ' ⟫
       dbg_trace t_arg
@@ -226,60 +219,24 @@ def infer : Expr → Option Expr
 #eval Expr.display_infer <$> infer ⟪₂ I Ty Ty ⟫
 
 /-
-Notes on debugging this example:
-- infer always produces contexts, not just the raw type
-- we can't just compare them like that willy nilly
+More notes on debugging:
 
-For example, partial application produces a context
-that isn't fully filled out.
-We're interested in whether the contexts are observably
-the same.
+assert: ((, ((:: (((K Ty) Ty) Ty)) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil)))
+claim:  ((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil))
 
-((, ((:: (((K Ty) Ty) (read ((:: Ty) ((:: (I Ty)) nil))))) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil)))
-((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil))
+Note that the claim's last 2 members, ((:: read) ((:: read) nil)),
+would produce Ty, Ty if they were made away that α = Ty
 
-(asserts, claims) of the claimed I Ty type and the actual I Ty type
-They are quite different. For one thing,
-the actual I Ty has K Ty Ty Ty, while the helper combinator one
-has this as the weakened term (read ((:: Ty) ((:: (I Ty)) nil)))
+the assert's first 2 members correspond exactly, but they are already substituted,
+but still have a binder.
 
-note that these two things might behave the same.
-It might be worth checking if they are the same AFTER we fill in the new context, Δ'
-Also this is just a CBV thing. At least somewhat.
+One thing we could do instead of making these fake expressions is
+also use read and plug α in as our Δ. I will try this.
 
-Here's the more CBV-'d helper I Ty type:
+We just need to equate every element in the contexts,
+and step them.
 
-((, ((:: (((K Ty) Ty) (read ((:: Ty) ((:: (I Ty)) nil))))) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil))))
-still a read call here though that should be reduced.
-If reduced, it would be the same K Ty Ty Ty.
-
-So whenever we instantiate a context, we should instantiate ALL contexts.
-we're putting stuff at the END of the context, not the front,
-so if an item doesn't use the new context item, no biggie.
-
-((, ((:: Ty) ((:: Ty) ((:: Ty) nil)))) ((:: Ty) ((:: (I Ty)) nil)))
-((, ((:: (((K Ty) Ty) (read ((:: Ty) ((:: (I Ty)) nil))))) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil)))
-
-uh what? Why are there three assertions for I Ty?
-Don't know where those came from.
-
-render_context_with doesn't make sense for the argument at all.
-the types look fine ish for actual (produced by infer)
-
-Γ should NEVER be updated, except for quality.
-render is kind of useless.
-no idea what the point of it is.
-
-assertion, then the claim:
-
-((, ((:: (((K Ty) Ty) Ty)) ((:: (((K Ty) Ty) Ty)) nil))) ((:: Ty) ((:: (I Ty)) nil)))
-((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil))
-
-We're so close holy moly.
-
-Still confused why the assertion isn't beta reduced more.
-
-That is, 
+Also slice off the extra item.
 -/
 #eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) ⟫
 

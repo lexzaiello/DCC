@@ -169,7 +169,7 @@ def step : Expr → Option Expr
   | ⟪₂ read_α (, :Γ :_Ξ) ⟫ => do
     let term_α := ⟪₂ read :Γ ⟫
     pure ⟪₂ ,
-      (:: (K Ty Ty :term_α) (:: (>> fst read) (:: (K Ty Ty Ty) nil)))
+      (:: (K Ty (I Ty) :term_α) (:: (>> fst read) (:: (K Ty (I Ty) Ty) nil)))
       (,
         (:: :term_α nil)
         (:: Ty nil)) ⟫
@@ -196,9 +196,9 @@ def sub_context : Expr → Expr
   | e => e
 
 def infer : Expr → Option Expr
-  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
+  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty (I Ty) Ty) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
-    let t_α := ⟪₂ K Ty Ty Ty ⟫
+    let t_α := ⟪₂ K Ty (I Ty) Ty ⟫
     let t_β := ⟪₂ read_α ⟫
     let t_x := ⟪₂ (>> fst read) ⟫
     let t_y := ⟪₂ read_y ⟫
@@ -211,13 +211,16 @@ def infer : Expr → Option Expr
       (::
         (>> snd (>> next read))
         (::
-          (K Data Data Data)
+          (K Data (I Data) Data)
           nil)))
       (, nil nil) ⟫
+  | ⟪₂ >> ⟫ =>
+    let assert_data_map 
+    sorry
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ nil ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
   | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
-  | ⟪₂ read ⟫ => ⟪₂ , (:: (K Data Data Data) (:: (K Data Data Data) nil)) (, nil nil) ⟫
+  | ⟪₂ read ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
     let t_arg := (← infer arg).display_infer
@@ -242,8 +245,8 @@ def infer : Expr → Option Expr
       let norm_expected := norm_ctx (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
       let norm_actual := norm_ctx t_arg
 
-      dbg_trace norm_expected
-      dbg_trace norm_actual
+      --dbg_trace norm_expected
+      --dbg_trace norm_actual
 
       if norm_expected == norm_actual then
         if claims.length.succ == asserts.length then
@@ -257,7 +260,7 @@ def infer : Expr → Option Expr
     | _ => .none
   | _ => .none
 
-#eval infer ⟪₂ ((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil)) ⟫
+#eval infer ⟪₂ I ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫

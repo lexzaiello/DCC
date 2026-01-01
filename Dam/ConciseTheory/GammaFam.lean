@@ -228,7 +228,7 @@ def infer : Expr → Option Expr
         nil) ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ nil ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
-  | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
+  | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ read ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f

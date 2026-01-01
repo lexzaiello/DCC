@@ -195,8 +195,12 @@ def infer : Expr → Option Expr
     let t_y := ⟪₂ read_y ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
-  | ⟪₂ :: ⟫ => ⟪₂ , (:: (>> snd read) (:: (>> snd (>> next read)) (:: (K Data Data Data) nil))) (, nil nil) ⟫
+  | ⟪₂ :: ⟫
+  | ⟪₂ , ⟫ => ⟪₂ , (:: (>> snd read) (:: (>> snd (>> next read)) (:: (K Data Data Data) nil))) (, nil nil) ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
+  | ⟪₂ nil ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
+  | ⟪₂ read ⟫ =>
+    
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
     let t_arg := (← infer arg).display_infer

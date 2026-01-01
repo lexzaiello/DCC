@@ -19,6 +19,8 @@ inductive Expr where
   | i         : Expr
   | fst       : Expr
   | snd       : Expr
+  | map_fst   : Expr
+  | map_snd   : Expr
   | read      : Expr
   | read_α    : Expr
   | read_y    : Expr
@@ -53,6 +55,8 @@ syntax "snd"                 : atom
 syntax "nil"                 : atom
 syntax "::"                  : atom
 syntax "next"                : atom
+syntax "map_fst"             : atom
+syntax "map_snd"             : atom
 syntax "read_α"              : atom
 syntax "read_data"           : atom
 syntax "read_y"              : atom
@@ -77,6 +81,8 @@ macro_rules
   | `(⟪₁ K' ⟫) => `(Expr.k')
   | `(⟪₁ I ⟫) => `(Expr.i)
   | `(⟪₁ S ⟫) => `(Expr.s)
+  | `(⟪₁ map_fst ⟫) => `(Expr.map_fst)
+  | `(⟪₁ map_snd ⟫) => `(Expr.map_snd)
   | `(⟪₁ fst ⟫) => `(Expr.fst)
   | `(⟪₁ snd ⟫) => `(Expr.snd)
   | `(⟪₁ read ⟫) => `(Expr.read)
@@ -104,6 +110,8 @@ def Expr.toString : Expr → String
   | ⟪₂ fst ⟫ => "fst"
   | ⟪₂ snd ⟫ => "snd"
   | ⟪₂ >> ⟫ => ">>"
+  | ⟪₂ map_fst ⟫ => "map_fst"
+  | ⟪₂ map_snd ⟫ => "map_snd"
   | ⟪₂ read_α ⟫ => "read_α"
   | ⟪₂ read_data ⟫ => "read_data"
   | ⟪₂ read_y ⟫ => "read_y"
@@ -176,6 +184,10 @@ def step : Expr → Option Expr
   | ⟪₂ read (:: :x :_xs) ⟫ => x
   | ⟪₂ fst (, :a :_b) ⟫ => a
   | ⟪₂ snd (, :_a :b) ⟫ => b
+  | ⟪₂ map_fst :f (, :a :b) ⟫ => do
+    ⟪₂ (, (#← step ⟪₂ :f :a ⟫) :b) ⟫
+  | ⟪₂ map_snd :f (, :a :b) ⟫ => do
+    ⟪₂ (, :a (#← step ⟪₂ :f :b ⟫)) ⟫
   | ⟪₂ read_data (, :Γ :_Ξ) ⟫ => do
     ⟪₂ ,
       (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil))
@@ -219,6 +231,54 @@ def sub_context : Expr → Expr
   | e => e
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
+
+/-
+An optimization for UX:
+
+It can be quite annoying to create binders on the fly.
+Sometimes you even need to make meta-combinators.
+
+These are two separate issues in one package:
+
+Issue 1:
+rearranging the types in meta combinators often requires something like S,
+but that's overkill.
+
+Even if we wanted to use S, we have to manually type it, which isn't necessary,
+since our Data are opaque.
+
+Issue 2:
+It can be confusing to create simple binders, especially when already underneath another binder.
+
+For example, in K, we have β : α → Type
+
+For this we need a meta combinator, read_α
+It would be ideal if we could remove this entirely. Small goal.
+
+read_α copies term_α and rearranges. this is issue 1, which is mechanical
+read_α creates a binder by:
+
+receiving the old context, and returning a new context tuple, where the Δ and Ξ are the terms used
+in the meta combinator
+
+This is a frequent operation.
+
+This seems to be somewhat of a common pattern - mapping on the context.
+Some kind of traversal would be interesting, although we want to be selective.
+
+We want term_α, but we only want to insert it in the first position.
+So we are "mapping" the context in the sense that we retain the Δ and Ξ,
+but the Γ assertions are completely different.
+
+This is a tuple combinator we might want to support.
+
+map_fst
+map_snd
+
+Now, we don't need to replicate the Δ and Ξ.
+
+Still the question of inserting term_α surgically.
+-/
 
 /-
 S type:

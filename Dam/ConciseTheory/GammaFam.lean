@@ -295,6 +295,12 @@ S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
 
 - every ∀ parameter needs a meta combinator, most likely, though we can get around this later somehow
 
+TODO HIGHEST PRIORITY: sometimes contexts have extra arguments that aren't needed
+- intuition is that this is because Ξ can append types sometimes but not at other times
+- I think this is because we don't append the known type for the expected
+
+TODO: we're treating apps like list cons, but they're not the same - how will our mapping methods actually work?
+
 TODO: Meta combinators
 - γ
 - x
@@ -310,6 +316,15 @@ Another TODO later:
 Another potential TODO later:
 - Since our contexts are just data, we can probably rearrange them however we want somehow
   with kinda "stringly" typing
+
+BIG TODO:
+- further assertions don't acutally depend on previous assertions,
+- just arguments?
+- when we apply something, we should be poping, somewhere.
+
+Instead of locating assertions,
+we just pop them?
+we know we've got the output type once we've reached nil
 
 x also with a meta combinator
 y also with a meta combinator
@@ -348,6 +363,15 @@ def infer : Expr → Option Expr
           (K Data (I Data) Data)
           nil)))
       (, nil nil) ⟫
+  | ⟪₂ map_fst ⟫
+  | ⟪₂ map_snd ⟫ =>
+    let assert_data_map := ⟪₂ read_data ⟫
+    let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
+    ⟪₂ ,
+      (:: :assert_data_map (:: :assert_data_term (:: :assert_data_term nil)))
+      (,
+        nil
+        nil) ⟫
   | ⟪₂ >> ⟫ =>
     let assert_data_map := ⟪₂ read_data ⟫
     let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
@@ -379,6 +403,12 @@ def infer : Expr → Option Expr
       let check_with ← asserts[(← Δ.as_list).length]?
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+
+      --dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
+      --dbg_trace check_with
+      --dbg_trace try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
+      --dbg_trace norm_expected
+      --dbg_trace t_arg
 
       if norm_expected == t_arg then
         if claims.length.succ == asserts.length then
@@ -417,6 +447,7 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((::
 #eval Expr.display_infer <$> (infer <=< infer) ⟪₂ K ⟫
 #eval Expr.display_infer <$> (infer <=< infer) ⟪₂ I ⟫
 
+--#eval Expr.display_infer <$> infer ⟪₂ map_fst (I Data) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
 

@@ -39,9 +39,6 @@ syntax "#" term              : atom
 syntax ":" ident             : atom
 syntax "::"                  : atom
 syntax "K"                   : atom
-syntax "ΓK"                  : atom
-syntax "ΓI"                  : atom
-syntax "ΓS"                  : atom
 syntax "I"                   : atom
 syntax "S"                   : atom
 syntax "read"                : atom
@@ -240,8 +237,8 @@ def infer : Expr → Option Expr
       let norm_expected := norm_ctx (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
       let norm_actual := norm_ctx t_arg
 
-      dbg_trace norm_expected
-      dbg_trace norm_actual
+      --dbg_trace norm_expected
+      --dbg_trace norm_actual
 
       if norm_expected == norm_actual then
         if claims.length.succ == asserts.length then

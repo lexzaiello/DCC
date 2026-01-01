@@ -16,6 +16,8 @@ inductive Expr where
   | k      : Expr
   | s      : Expr
   | i      : Expr
+  | fst    : Expr
+  | snd    : Expr
   | read   : Expr
   | read_α : Expr
   | read_y : Expr
@@ -42,7 +44,8 @@ syntax "ΓS"                  : atom
 syntax "I"                   : atom
 syntax "S"                   : atom
 syntax "read"                : atom
-syntax "tup"                 : atom
+syntax "fst"                 : atom
+syntax "snd"                 : atom
 syntax "nil"                 : atom
 syntax "::"                  : atom
 syntax "next"                : atom
@@ -64,6 +67,8 @@ macro_rules
   | `(⟪₁ K ⟫) => `(Expr.k)
   | `(⟪₁ I ⟫) => `(Expr.i)
   | `(⟪₁ S ⟫) => `(Expr.s)
+  | `(⟪₁ fst ⟫) => `(Expr.fst)
+  | `(⟪₁ snd ⟫) => `(Expr.snd)
   | `(⟪₁ read ⟫) => `(Expr.read)
   | `(⟪₁ read_α ⟫) => `(Expr.read_α)
   | `(⟪₁ read_y ⟫) => `(Expr.read_y)
@@ -81,6 +86,8 @@ macro_rules
 
 def Expr.toString : Expr → String
   | ⟪₂ Ty ⟫ => "Ty"
+  | ⟪₂ fst ⟫ => "fst"
+  | ⟪₂ snd ⟫ => "snd"
   | ⟪₂ >> ⟫ => ">>"
   | ⟪₂ read_α ⟫ => "read_α"
   | ⟪₂ read_y ⟫ => "read_y"
@@ -122,14 +129,6 @@ def Expr.map_listM {m : Type → Type} [Monad m] (f : Expr → m Expr) : Expr �
   | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#← f x) (#← xs.map_listM f) ⟫
   | e@⟪₂ nil ⟫ => pure e
   | _ => OptionT.mk (pure .none)
-
-def Expr.fst : Expr → Option Expr
-  | ⟪₂ , :a :_b ⟫ => a
-  | _ => .none
-
-def Expr.snd : Expr → Option Expr
-  | ⟪₂ , :_a :b ⟫ => b
-  | _ => .none
 
 def Expr.display_infer : Expr → Expr
   | ⟪₂ , nil (:: :t nil) ⟫ => t
@@ -220,7 +219,5 @@ def infer : Expr → Option Expr
 #eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Ty Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) Ty Ty ⟫
-
-#eval infer ⟪₂ K ((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil)) Ty I ⟫
 
 end Idea

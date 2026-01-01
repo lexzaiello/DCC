@@ -116,8 +116,17 @@ def Expr.push_in (with_e : Expr) : Expr → Expr
   | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (:: :xs :with_e) ⟫
   | e => e
 
+def Expr.as_asserts : Expr → Option Expr
+  | ⟪₂ , :Γ (, :_Δ :_Ξ) ⟫ => Γ
+  | _ => .none
+
 def Expr.as_list : Expr → Option (List Expr)
   | ⟪₂ :: :x :xs ⟫ => do return x :: (← xs.as_list)
+  | ⟪₂ nil ⟫ => pure []
+  | x => pure [x]
+
+def Expr.as_tup_list : Expr → Option (List Expr)
+  | ⟪₂ , :x :xs ⟫ => do return x :: (← xs.as_tup_list)
   | ⟪₂ nil ⟫ => pure []
   | x => pure [x]
 
@@ -127,13 +136,18 @@ def Expr.from_list : List Expr → Expr
 
 def Expr.mk_tup : List Expr → Expr
   | [] => ⟪₂ nil ⟫
+  | [x] => x
   | [x, xs] => ⟪₂ , :x :xs ⟫
   | x :: xs => ⟪₂ , :x (#Expr.mk_tup xs) ⟫
 
 example : Expr.mk_tup [⟪₂ Data ⟫, ⟪₂ S ⟫, ⟪₂ K ⟫] = ⟪₂ ((, Data) (, S K)) ⟫ := rfl
 
 def Expr.display_infer : Expr → Expr
-  | ⟪₂ , nil (, (:: :t nil) :_Ξ) ⟫ => t
+  | ⟪₂ , (:: :t nil) (, nil :_Ξ) ⟫ => t
+  | e => e
+
+def Expr.pop_infer : Expr → Expr
+  | ⟪₂ , :t (, nil :_Ξ) ⟫ => t
   | e => e
 
 example : Expr.as_list ⟪₂ :: Data (:: K Data) ⟫ = [⟪₁ Data ⟫, ⟪₁ K ⟫, ⟪₁ Data ⟫] := rfl
@@ -225,8 +239,8 @@ def infer : Expr → Option Expr
       (,
         nil
         nil) ⟫
-  | ⟪₂ nil ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
-  | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
+  | ⟪₂ nil ⟫ => ⟪₂ , (:: (K Data Data Data) nil) (, nil nil) ⟫
+  | ⟪₂ Data ⟫ => ⟪₂ , (:: (K Data Data Data) nil) (, nil nil) ⟫
   | ⟪₂ read ⟫
   | ⟪₂ read_α ⟫
   | ⟪₂ read_y ⟫
@@ -234,12 +248,12 @@ def infer : Expr → Option Expr
   | ⟪₂ snd ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
-    let t_arg := (← infer arg).display_infer
+    let t_arg := norm_context (← infer arg)
 
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
       let Δ' := Expr.push_in arg Δ
-      let Ξ' := Expr.push_in t_arg Ξ
+      let Ξ' := Expr.push_in (← infer arg) Ξ
 
       let asserts ← Γ.as_list
       let claims  ← Δ'.as_list
@@ -248,16 +262,16 @@ def infer : Expr → Option Expr
       let check_with ← asserts[(← Δ.as_list).length]?
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
-      let norm_actual := norm_context t_arg
 
       --dbg_trace norm_expected
-      --dbg_trace norm_actual
+      --dbg_trace t_arg
+      --dbg_trace ← infer arg
 
-      if norm_expected == norm_actual then
+      if norm_expected == t_arg then
         if claims.length.succ == asserts.length then
           let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
 
-          pure ⟪₂ , nil (, (:: :t_out nil) :Ξ') ⟫
+          pure ⟪₂ , (:: :t_out nil) (, nil :Ξ') ⟫
         else
           pure ⟪₂ , :Γ (, :Δ' :Ξ') ⟫
       else
@@ -265,6 +279,7 @@ def infer : Expr → Option Expr
     | _ => .none
   | _ => .none
 
+#eval Expr.display_infer <$> infer ⟪₂ Data ⟫
 #eval (norm_context ∘ Expr.display_infer) <$> infer ⟪₂ K ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil))))) ⟫
@@ -281,9 +296,22 @@ def t_k : Expr := ⟪₂ ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
 
+#eval Expr.as_list =<< Expr.as_asserts =<< infer ⟪₂ Data ⟫
+
 #eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ K Data (I Data) Data Data ⟫
+
+/-
+Question:
+for β-normal arguments, we can assume we might apply the contexts
+to the last non-nil element,
+but what about partially applied things?
+
+All of the constraints are relevant...
+what is the point of this norm_context thing?
+We're just applying their respective contexts.
+-/
 
 end Idea

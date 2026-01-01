@@ -8,6 +8,7 @@ import Mathlib.Data.List.Monad
 namespace Idea
 
 inductive Expr where
+  | data   : Expr
   | ty     : Expr
   | tup    : Expr
   | cons   : Expr
@@ -32,6 +33,7 @@ declare_syntax_cat app
 declare_syntax_cat expr
 
 syntax "Ty"                  : atom
+syntax "Data"                : atom
 syntax ">>"                  : atom
 syntax "(" app ")"           : atom
 syntax "#" term              : atom
@@ -61,6 +63,7 @@ syntax "⟪₁" atom "⟫"     : term
 syntax "⟪₂" app "⟫"      : term
 
 macro_rules
+  | `(⟪₁ Data ⟫) => `(Expr.data)
   | `(⟪₁ Ty ⟫) => `(Expr.ty)
   | `(⟪₁ #$e:term ⟫) => `($e)
   | `(⟪₁ :$id:ident ⟫) => `($id)
@@ -85,6 +88,7 @@ macro_rules
   | `(⟪₂ $e₁:app $e₂:atom ⟫) => `(Expr.app ⟪₂ $e₁ ⟫ ⟪₁ $e₂ ⟫)
 
 def Expr.toString : Expr → String
+  | ⟪₂ Data ⟫ => "Data"
   | ⟪₂ Ty ⟫ => "Ty"
   | ⟪₂ fst ⟫ => "fst"
   | ⟪₂ snd ⟫ => "snd"
@@ -191,7 +195,7 @@ def infer : Expr → Option Expr
     let t_y := ⟪₂ read_y ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
-  | ⟪₂ :: ⟫ => ⟪₂ , (:: (>> snd read) (:: (>> snd (>> next read)) nil)) (, nil nil) ⟫
+  | ⟪₂ :: ⟫ => ⟪₂ , (:: (>> snd read) (:: (>> snd (>> next read)) (:: (K Data Data Data) nil))) (, nil nil) ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
@@ -234,7 +238,7 @@ def infer : Expr → Option Expr
 
 #eval infer ⟪₂ ((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil)) ⟫
 
-#eval Expr.display_infer <$> infer ⟪₂ :: K ⟫
+#eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Ty Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) Ty Ty ⟫

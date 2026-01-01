@@ -186,9 +186,24 @@ I : ((init (K Ty)) :: read :: read)
 
 I \alpha x : (((init (K Ty)) :: read :: read), \alpha :: x)
 
+type-check by repeatedly doing:
+- read on left element of the tuple (the assertions), read on the right element of the tuple (the claims / the argument)
+  - the read on the left elem will give a term of type \Gamma \rightarrow Expr, let's call it "a"
+  - the read on the right elem will be the argument, some expr, let's call it arg
+  - let \Delta denote \alpha :: x, \Delta : \Gamma
+  - check: a \Delta = infer arg. if so, then proceed. if not, raise a type error.
+
 #+BEGIN_SRC
 infer : Expr \rightarrow Option Expr
+  | f x => do
+    let t_f \leftarrow infer f
+    let t_x \leftarrow infer x
 
+    match t_f with
+    | (asserts, claims) =>
+      let t_out := asserts.reverse[0]
+      List.zip asserts claims
+        |> .all (fun 
 #+END_SRC
 
 K : fun (c : \Gamma)

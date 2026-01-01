@@ -6,13 +6,11 @@ import Mathlib.Data.List.Monad
 
 namespace Idea
 
-inductive ExprΓ where
-  | k : ExprΓ
-  | i : ExprΓ
-
 inductive Expr where
-  | Γ    : ExprΓ → Expr
   | ty   : Expr
+  | tup  : Expr
+  | cons : Expr
+  | nil  : Expr
   | k    : Expr
   | s    : Expr
   | i    : Expr
@@ -21,6 +19,7 @@ inductive Expr where
   | app  : Expr
     → Expr
     → Expr
+deriving BEq
 
 declare_syntax_cat atom
 declare_syntax_cat app
@@ -38,7 +37,11 @@ syntax "ΓS"                  : atom
 syntax "I"                   : atom
 syntax "S"                   : atom
 syntax "read"                : atom
+syntax "tup"                 : atom
+syntax "nil"                 : atom
+syntax "::"                  : atom
 syntax "next"                : atom
+syntax ","                   : atom
 
 syntax atom     : app
 syntax app atom : app
@@ -52,12 +55,13 @@ macro_rules
   | `(⟪₁ #$e:term ⟫) => `($e)
   | `(⟪₁ :$id:ident ⟫) => `($id)
   | `(⟪₁ K ⟫) => `(Expr.k)
-  | `(⟪₁ ΓK ⟫) => `(Expr.Γ ExprΓ.k)
-  | `(⟪₁ ΓI ⟫) => `(Expr.Γ ExprΓ.i)
   | `(⟪₁ I ⟫) => `(Expr.i)
   | `(⟪₁ S ⟫) => `(Expr.s)
   | `(⟪₁ read ⟫) => `(Expr.read)
+  | `(⟪₁ :: ⟫) => `(Expr.cons)
   | `(⟪₁ next ⟫) => `(Expr.next)
+  | `(⟪₁ nil ⟫) => `(Expr.nil)
+  | `(⟪₁ , ⟫) => `(Expr.tup)
   | `(⟪₂ ($e:app) ⟫) => `(⟪₂ $e ⟫)
   | `(⟪₂ $e:atom ⟫) => `(⟪₁ $e ⟫)
   | `(⟪₁ ($e:atom) ⟫) => `(⟪₁ $e ⟫)
@@ -65,50 +69,73 @@ macro_rules
   | `(⟪₂ ($e₁:app) $e₂:atom ⟫) => `(⟪₂ $e₁ $e₂ ⟫)
   | `(⟪₂ $e₁:app $e₂:atom ⟫) => `(Expr.app ⟪₂ $e₁ ⟫ ⟪₁ $e₂ ⟫)
 
+def Expr.toString : Expr → String
+  | ⟪₂ Ty ⟫ => "Ty"
+  | ⟪₂ :: ⟫ => "::"
+  | ⟪₂ nil ⟫ => "nil"
+  | ⟪₂ read ⟫ => "read"
+  | ⟪₂ , ⟫ => ","
+  | ⟪₂ :f :x ⟫ => s!"{f.toString} {x.toString}"
+  | ⟪₂ next ⟫ => "next"
+  | ⟪₂ I ⟫ => "I"
+  | ⟪₂ K ⟫ => "K"
+  | ⟪₂ S ⟫ => "S"
+
+instance Expr.instToString : ToString Expr where
+  toString := Expr.toString
+
+def Expr.push_in (with_e : Expr) : Expr → Expr
+  | ⟪₂ :: :x (:: :y :xs) ⟫ => ⟪₂ :: :x (:: :y (#.push_in with_e xs)) ⟫
+  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (:: :xs :with_e) ⟫
+  | e => e
+
+def Expr.as_list : Expr → Option (List Expr)
+  | ⟪₂ :: :x :xs ⟫ => do return x :: (← xs.as_list)
+  | x => pure [x]
+
+example : Expr.as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫, ⟪₁ Ty ⟫] := rfl
+
+example : Expr.push_in ⟪₂ Ty ⟫ ⟪₂ :: Ty K ⟫ = ⟪₂ :: Ty (:: K Ty) ⟫ := rfl
+
 def step : Expr → Option Expr
-  | ⟪₂ I :_α :x ⟫ => pure ⟪₁ :x ⟫
-  | ⟪₂ read (ΓI :_α) ⟫ => pure ⟪₁ Ty ⟫
-  | ⟪₂ read (next (ΓI :α :_x)) ⟫ => α
-  | ⟪₂ read (next (read (next (ΓI :α :_x)))) ⟫ => α
-  | ⟪₂ read (ΓK :_α) ⟫ => pure ⟪₁ Ty ⟫
-  | ⟪₂ read (ΓK :α :_β) ⟫ => pure ⟪₁ Ty ⟫
+  | ⟪₂ I :_α :x ⟫ => x
+  | ⟪₂ K :_α :_β :x :_y ⟫ => x
+  | ⟪₂ next (:: :_x :xs) ⟫ => xs
+  | ⟪₂ read (:: :x :_xs) ⟫ => x
+  | ⟪₂ read (, :a :_b) ⟫ => a
+  | ⟪₂ next (, :_a :b) ⟫ => b
   | _ => .none
 
-/-
-  A context in dependent typing is kind of like a monad.
-  "Pure" elements have no type dependency on the context, and are self-contained.
-  bind is analogous to a type in the context that refers to a previous item in the context
--/
-class Γ (m : Type u → Type v) (α : Type u) where
-  -- A context formed by a type with no dependency on the context
-  pure : α → m α
+def infer : Expr → Option Expr
+  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read read)) nil ⟫
+  | ⟪₂ Ty ⟫ => ⟪₂ Ty ⟫
+  | ⟪₂ :f :arg ⟫ => do
+    let t_f ← infer f
+    let t_arg ← infer arg
 
-  -- Push a nondependent argument type claim to the context
-  push : m α → α → m α
+    match t_f with
+    | ⟪₂ , :Γ :Δ ⟫ =>
+      let Δ' := Expr.push_in arg Δ
 
-  -- A type formed by appending a type that depends on Γ to Γ, giving Γ'
-  bind : m α → (m α → α) → m α
+      let asserts ← Γ.as_list
+      let claims  ← Δ'.as_list
 
-  -- The context asserts that the arguments are of an expected type
-  -- and this can be done even when the function hasn't been fully
-  -- applied
-  -- this is stuff below the bar in an inference rule
-  pop : m α → α × m α
+      -- Assertion to check that we provided the right type
+      let check_with ← asserts[(← Δ.as_list).length]?
 
-abbrev ListContext {α : Type} := List α
+      if (← step ⟪₂ :check_with :Δ' ⟫) == t_arg then
+        -- We have found the final β-normal form's type
+        -- the combinator should be asserting more types
+        -- in the context than we have arguments, exactly one more (the return type)
+        if claims.length.succ == asserts.length then
+          step ⟪₂ (#← claims.getLast?) :Δ' ⟫
+        else
+          pure ⟪₂ , :Γ :Δ' ⟫
+      else
+        .none
+    | _ => .none
+  | _ => .none
 
--- A context that models type-checking for the K combinator
--- Pure and bind are stateless, since the map on m α encodes
--- the assertion logic, not bind itself
-instance listContext.instΓK : Γ List Expr where
-  pure := Pure.pure
-  bind Γ f := f Γ :: Γ
-  pop Γ := match Γ.length, Γ with
-  | 0, x::xs => (.ty, xs)
-  
+
 
 end Idea
-
-inductive Expr where
-  | ty : Expr
-  | 

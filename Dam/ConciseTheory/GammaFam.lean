@@ -95,6 +95,10 @@ def Expr.as_list : Expr → Option (List Expr)
   | ⟪₂ nil ⟫ => pure []
   | x => pure [x]
 
+def Expr.display_infer : Expr → Expr
+  | ⟪₂ , :_Γ (:: :t :_xs) ⟫ => t
+  | e => e
+
 example : Expr.as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫, ⟪₁ Ty ⟫] := rfl
 
 example : Expr.push_in ⟪₂ Ty ⟫ ⟪₂ :: Ty K ⟫ = ⟪₂ :: Ty (:: K Ty) ⟫ := rfl
@@ -142,6 +146,6 @@ def infer : Expr → Option Expr
     | _, _ => .none
   | _ => .none
 
-#eval infer ⟪₂ I Ty ⟫
+#eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫
 
 end Idea

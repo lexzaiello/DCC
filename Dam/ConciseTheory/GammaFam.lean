@@ -211,25 +211,25 @@ def infer : Expr → Option Expr
       (::
         (>> snd (>> next read))
         (::
-          (K Data (I Data) Data)
+          (K Ty (I Data) Data)
           nil)))
       (, nil nil) ⟫
   | ⟪₂ >> ⟫ =>
     let assert_data_map := ⟪₂ ,
-      (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil))
+      (:: (K Ty (I Data) Data) (:: (K Ty (I Data) Data) nil))
       (,
         nil
         nil) ⟫
-    let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
+    let assert_data_term := ⟪₂ K Ty (I Data) Data ⟫
     ⟪₂ ,
-      (:: :assert_data_map (:: :assert_data_map (:: :assert_data_term nil)))
+      (:: :assert_data_map (:: :assert_data_map (:: :assert_data_term (:: :assert_data_term nil))))
       (,
         nil
         nil) ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ nil ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
   | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
-  | ⟪₂ read ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) (, nil nil) ⟫
+  | ⟪₂ read ⟫ => ⟪₂ , (:: (K Ty (I Data) Data) (:: (K Ty (I Data) Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
     let t_arg := (← infer arg).display_infer
@@ -269,7 +269,7 @@ def infer : Expr → Option Expr
     | _ => .none
   | _ => .none
 
-#eval infer ⟪₂ >> (I Data) (I Data) (, K I) ⟫
+#eval infer ⟪₂ >> (I Data) ⟫
 
 #eval infer ⟪₂ I ⟫
 

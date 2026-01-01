@@ -252,7 +252,7 @@ def infer : Expr → Option Expr
     let t_f ← infer f
     let t_arg := norm_context (← infer arg)
 
-    --dbg_trace arg
+    -- In here:
 
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
@@ -267,10 +267,18 @@ def infer : Expr → Option Expr
 
       -- TODO: (I :t_k K) Data errors out here because we're looking at K's type,
       -- which is a context and trying to apply it.
-      --dbg_trace arg
-      --dbg_trace check_with
+      -- This should become t_f instead of being treated like another arg.
+      -- We need some mechanism to elevate the context to the main context
+      
+      dbg_trace arg
+      dbg_trace check_with
+      dbg_trace (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+      dbg_trace norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
       --dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+
+      dbg_trace norm_expected
+      dbg_trace t_arg
 
       --dbg_trace norm_expected
       --dbg_trace t_arg

@@ -131,16 +131,6 @@ def Expr.mk_tup : List Expr → Expr
 
 example : Expr.mk_tup [⟪₂ Data ⟫, ⟪₂ S ⟫, ⟪₂ K ⟫] = ⟪₂ ((, Data) (, S K)) ⟫ := rfl
 
-def Expr.map_list (f : Expr → Expr) : Expr → Option Expr
-  | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#← f x) (#← xs.map_list f) ⟫
-  | e@⟪₂ nil ⟫ => e
-  | _ => .none
-
-def Expr.map_listM {m : Type → Type} [Monad m] (f : Expr → m Expr) : Expr → OptionT m Expr
-  | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#← f x) (#← xs.map_listM f) ⟫
-  | e@⟪₂ nil ⟫ => pure e
-  | _ => OptionT.mk (pure .none)
-
 def Expr.display_infer : Expr → Expr
   | ⟪₂ , nil (, (:: :t nil) :_Ξ) ⟫ => t
   | e => e

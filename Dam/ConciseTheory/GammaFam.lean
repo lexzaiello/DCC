@@ -8,22 +8,23 @@ import Mathlib.Data.List.Monad
 namespace Idea
 
 inductive Expr where
-  | data   : Expr
-  | ty     : Expr
-  | tup    : Expr
-  | cons   : Expr
-  | nil    : Expr
-  | seq    : Expr
-  | k      : Expr
-  | s      : Expr
-  | i      : Expr
-  | fst    : Expr
-  | snd    : Expr
-  | read   : Expr
-  | read_α : Expr
-  | read_y : Expr
-  | next   : Expr
-  | app    : Expr
+  | data      : Expr
+  | ty        : Expr
+  | tup       : Expr
+  | cons      : Expr
+  | nil       : Expr
+  | seq       : Expr
+  | k         : Expr
+  | s         : Expr
+  | i         : Expr
+  | fst       : Expr
+  | snd       : Expr
+  | read      : Expr
+  | read_α    : Expr
+  | read_y    : Expr
+  | read_data : Expr
+  | next      : Expr
+  | app       : Expr
     → Expr
     → Expr
 deriving BEq
@@ -52,6 +53,7 @@ syntax "nil"                 : atom
 syntax "::"                  : atom
 syntax "next"                : atom
 syntax "read_α"              : atom
+syntax "read_data"           : atom
 syntax "read_y"              : atom
 syntax ","                   : atom
 
@@ -74,6 +76,7 @@ macro_rules
   | `(⟪₁ snd ⟫) => `(Expr.snd)
   | `(⟪₁ read ⟫) => `(Expr.read)
   | `(⟪₁ read_α ⟫) => `(Expr.read_α)
+  | `(⟪₁ read_data ⟫) => `(Expr.read_data)
   | `(⟪₁ read_y ⟫) => `(Expr.read_y)
   | `(⟪₁ :: ⟫) => `(Expr.cons)
   | `(⟪₁ next ⟫) => `(Expr.next)
@@ -94,6 +97,7 @@ def Expr.toString : Expr → String
   | ⟪₂ snd ⟫ => "snd"
   | ⟪₂ >> ⟫ => ">>"
   | ⟪₂ read_α ⟫ => "read_α"
+  | ⟪₂ read_data ⟫ => "read_data"
   | ⟪₂ read_y ⟫ => "read_y"
   | ⟪₂ :: ⟫ => "::"
   | ⟪₂ nil ⟫ => "nil"
@@ -157,6 +161,11 @@ def step : Expr → Option Expr
   | ⟪₂ read (:: :x :_xs) ⟫ => x
   | ⟪₂ fst (, :a :_b) ⟫ => a
   | ⟪₂ snd (, :_a :b) ⟫ => b
+  /-| ⟪₂ read_data (, :Γ :Ξ) ⟫ => do
+    -- Data are asserted like such:
+    -- K 
+    let t_arg := ⟪₂ read :Ξ ⟫
+    -/
   | ⟪₂ read_α (, :Γ :_Ξ) ⟫ => do
     let term_α := ⟪₂ read :Γ ⟫
     pure ⟪₂ ,
@@ -196,11 +205,19 @@ def infer : Expr → Option Expr
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
   | ⟪₂ :: ⟫
-  | ⟪₂ , ⟫ => ⟪₂ , (:: (>> snd read) (:: (>> snd (>> next read)) (:: (K Data Data Data) nil))) (, nil nil) ⟫
+  | ⟪₂ , ⟫ => ⟪₂ ,
+    (::
+      (>> snd read)
+      (::
+        (>> snd (>> next read))
+        (::
+          (K Data Data Data)
+          nil)))
+      (, nil nil) ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ nil ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
-  | ⟪₂ read ⟫ =>
-    
+  | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
+  | ⟪₂ read ⟫ => ⟪₂ , (:: (K Data Data Data) (:: (K Data Data Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
     let t_arg := (← infer arg).display_infer
@@ -241,6 +258,9 @@ def infer : Expr → Option Expr
   | _ => .none
 
 #eval infer ⟪₂ ((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil)) ⟫
+
+#eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
+#eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫

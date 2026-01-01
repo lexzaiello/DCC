@@ -23,6 +23,10 @@ inductive Expr where
   | read_α    : Expr
   | read_y    : Expr
   | read_data : Expr
+  | read_γ_s  : Expr
+  | read_x_s  : Expr
+  | read_y_s  : Expr
+  | read_βx   : Expr
   | next      : Expr
   | app       : Expr
     → Expr
@@ -52,6 +56,10 @@ syntax "next"                : atom
 syntax "read_α"              : atom
 syntax "read_data"           : atom
 syntax "read_y"              : atom
+syntax "read_γ_s"            : atom
+syntax "read_x_s"            : atom
+syntax "read_y_s"            : atom
+syntax "read_βx"             : atom
 syntax ","                   : atom
 
 syntax atom     : app
@@ -72,6 +80,10 @@ macro_rules
   | `(⟪₁ fst ⟫) => `(Expr.fst)
   | `(⟪₁ snd ⟫) => `(Expr.snd)
   | `(⟪₁ read ⟫) => `(Expr.read)
+  | `(⟪₁ read_γ_s ⟫) => `(Expr.read_γ_s)
+  | `(⟪₁ read_x_s ⟫) => `(Expr.read_x_s)
+  | `(⟪₁ read_y_s ⟫) => `(Expr.read_y_s)
+  | `(⟪₁ read_βx ⟫) => `(Expr.read_βx)
   | `(⟪₁ read_α ⟫) => `(Expr.read_α)
   | `(⟪₁ read_data ⟫) => `(Expr.read_data)
   | `(⟪₁ read_y ⟫) => `(Expr.read_y)
@@ -95,6 +107,10 @@ def Expr.toString : Expr → String
   | ⟪₂ read_α ⟫ => "read_α"
   | ⟪₂ read_data ⟫ => "read_data"
   | ⟪₂ read_y ⟫ => "read_y"
+  | ⟪₂ read_γ_s ⟫ => "read_γ_s"
+  | ⟪₂ read_x_s ⟫ => "read_x_s"
+  | ⟪₂ read_y_s ⟫ => "read_y_s"
+  | ⟪₂ read_βx ⟫ => "read_βx"
   | ⟪₂ :: ⟫ => "::"
   | ⟪₂ nil ⟫ => "nil"
   | ⟪₂ read ⟫ => "read"
@@ -175,6 +191,10 @@ def step : Expr → Option Expr
         (:: Data nil)) ⟫
   | ⟪₂ read_y (, :Γ :_Ξ) ⟫ =>
     ⟪₂ (read (next :Γ)) (read (next (next :Γ))) ⟫
+  | ⟪₂ read_βx :β (, :Γ :_Ξ) ⟫ =>
+    let term_x := ⟪₂ >> read :Γ ⟫
+
+    ⟪₂ :β :term_x ⟫
   | ⟪₂ :f :x ⟫ =>
     (do ⟪₂ (# ← step f) (#← step x) ⟫) <|>
     (do
@@ -199,6 +219,42 @@ def sub_context : Expr → Expr
   | e => e
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
+
+/-
+S type:
+
+S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
+  (x : ∀ (z : α), (y : β z), γ z y)
+  (y : ∀ (z : α), β z)
+  (z : α), γ z (y z)
+
+α is also easy.
+β is slightly harder, but not too hard.
+γ is also slightly harder, but easy with a helper meta combinator, which are legal now
+- Note that γ has a binder within, as well. this is why we need a meta combinator
+
+- every ∀ parameter needs a meta combinator, most likely, though we can get around this later somehow
+
+TODO: Meta combinators
+- γ
+- x
+- y
+
+TODO: confusing how we can mismatch binders and other elements in the list
+
+TODO: confusing how we can model an arrow without mentioning the specific argument term, extra context entry?
+
+Another TODO later:
+- remove pattern matching inside step for contexts. should use tuple accessors instead
+
+Another potential TODO later:
+- Since our contexts are just data, we can probably rearrange them however we want somehow
+  with kinda "stringly" typing
+
+x also with a meta combinator
+y also with a meta combinator
+z argument is very simple. easy assertion.
+-/
 
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
@@ -252,10 +308,6 @@ def infer : Expr → Option Expr
     let t_f ← infer f
     let t_arg := norm_context (← infer arg)
 
-    /- In here:
-    Need to lift t_f when it is now β-normal
-    -/
-
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
       let Δ' := Expr.push_in arg Δ
@@ -264,36 +316,13 @@ def infer : Expr → Option Expr
       let asserts ← Γ.as_list
       let claims  ← Δ'.as_list
 
-      -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
 
-      -- TODO: (I :t_k K) Data errors out here because we're looking at K's type,
-      -- which is a context and trying to apply it.
-      -- This should become t_f instead of being treated like another arg.
-      -- We need some mechanism to elevate the context to the main context
-      
-      --dbg_trace arg
-      --dbg_trace check_with
-      --dbg_trace (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
-      --dbg_trace norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
-      --dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
-
-      --dbg_trace norm_expected
-      --dbg_trace t_arg
-
-      --dbg_trace norm_expected
-      --dbg_trace t_arg
-      --dbg_trace norm_context (← infer arg)
 
       if norm_expected == t_arg then
         if claims.length.succ == asserts.length then
-          --dbg_trace asserts
-          --dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
-          --dbg_trace try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
           let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
-
-          -- THIS is the culprit. WRONG.
           pure t_out
         else
           pure ⟪₂ , :Γ (, :Δ' :Ξ') ⟫
@@ -302,8 +331,15 @@ def infer : Expr → Option Expr
     | _ => .none
   | _ => .none
 
+/-
+Potential tasks for today:
+
+- Dependent S type (mildly boring, but a fun puzzle)
+  - This unlocks a TON, would be epic
+- Ironing out more bugs (very boring)
+-/
+
 #eval Expr.display_infer <$> infer ⟪₂ Data ⟫
-#eval (norm_context ∘ Expr.display_infer) <$> infer ⟪₂ K ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil))))) ⟫
 
@@ -328,36 +364,6 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((::
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ K Data (I Data) Data Data ⟫
-
-/-
-Question:
-for β-normal arguments, we can assume we might apply the contexts
-to the last non-nil element,
-but what about partially applied things?
-
-All of the constraints are relevant...
-what is the point of this norm_context thing?
-We're just applying their respective contexts.
-
-Normalizing contexts pre-emptively is a bad idea, probably.
-We end up with nil values.
-
-Should probably persist in un-normalized.
-
-The issue is with norm_context. Reliably injects a read nil.
-
-We need to somehow cut out some of the context information to continue..
-
-Galaxy brain move would be to build our own context in the last item in the assertion list.
-Then we can just swap with the last element high key.
-
-Issue is we have sub-contexts, or something is uninitialized, because we're trying to call
-a context like a function
-
-It's because this is the last assert.
-This is where the β-normal stuff should wipe it.
-
-
--/
+#eval Expr.display_infer <$> infer ⟪₂ I Data ⟫
 
 end Idea

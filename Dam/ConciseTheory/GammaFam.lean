@@ -181,7 +181,7 @@ def infer : Expr → Option Expr
     let t_x := ⟪₂ read ⟫
     let t_y := ⟪₂ read_y ⟫
 
-    ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y nil)))) nil ⟫
+    ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) nil ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (:: Ty nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
@@ -197,8 +197,8 @@ def infer : Expr → Option Expr
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
 
-      --dbg_trace ← try_step_n 10 ⟪₂ :check_with :Δ' ⟫
-      --dbg_trace t_arg
+      dbg_trace ← try_step_n 10 ⟪₂ :check_with :Δ' ⟫
+      dbg_trace t_arg
 
       if sub_context (← try_step_n 10 ⟪₂ :check_with :Δ' ⟫) == sub_context t_arg then
         -- We have found the final β-normal form's type
@@ -238,6 +238,6 @@ and step them.
 
 Also slice off the extra item.
 -/
-#eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) ⟫
+#eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) Ty Ty ⟫
 
 end Idea

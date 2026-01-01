@@ -191,6 +191,7 @@ def infer : Expr → Option Expr
     let t_y := ⟪₂ read_y ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
+  | ⟪₂ :: ⟫ => ⟪₂ , (:: (>> snd read) (:: (>> snd (>> next read)) nil)) (, nil nil) ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
@@ -209,8 +210,15 @@ def infer : Expr → Option Expr
 
       let norm_ctx := (try_step_n! 10 ∘ sub_context)
 
+      --dbg_trace check_with
+      --dbg_trace Ξ'
+      --dbg_trace try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
+
       let norm_expected := norm_ctx (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
       let norm_actual := norm_ctx t_arg
+
+      dbg_trace norm_expected
+      dbg_trace norm_actual
 
       if norm_expected == norm_actual then
         if claims.length.succ == asserts.length then
@@ -226,6 +234,7 @@ def infer : Expr → Option Expr
 
 #eval infer ⟪₂ ((, ((:: (((K Ty) Ty) Ty)) ((:: read) ((:: read) nil)))) ((:: Ty) nil)) ⟫
 
+#eval Expr.display_infer <$> infer ⟪₂ :: K ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Ty Ty ⟫
 #eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) Ty Ty ⟫

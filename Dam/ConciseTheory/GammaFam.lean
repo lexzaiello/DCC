@@ -215,8 +215,17 @@ def infer : Expr → Option Expr
           nil)))
       (, nil nil) ⟫
   | ⟪₂ >> ⟫ =>
-    let assert_data_map 
-    sorry
+    let assert_data_map := ⟪₂ ,
+      (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil))
+      (,
+        nil
+        nil) ⟫
+    let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
+    ⟪₂ ,
+      (:: :assert_data_map (:: :assert_data_map (:: :assert_data_term nil)))
+      (,
+        nil
+        nil) ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ nil ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
   | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
@@ -259,6 +268,8 @@ def infer : Expr → Option Expr
         .none
     | _ => .none
   | _ => .none
+
+#eval infer ⟪₂ >> (I Data) (I Data) (, K I) ⟫
 
 #eval infer ⟪₂ I ⟫
 

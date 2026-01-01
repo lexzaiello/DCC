@@ -265,18 +265,18 @@ def infer : Expr → Option Expr
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
-      dbg_trace norm_expected
-      dbg_trace t_arg
-      dbg_trace norm_context (← infer arg)
+      --dbg_trace norm_expected
+      --dbg_trace t_arg
+      --dbg_trace norm_context (← infer arg)
 
       if norm_expected == t_arg then
         if claims.length.succ == asserts.length then
-          dbg_trace asserts
-          dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
-          dbg_trace try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
+          --dbg_trace asserts
+          --dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
+          --dbg_trace try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
           let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
 
-          pure ⟪₂ , (:: :t_out nil) (, :Δ' :Ξ') ⟫
+          pure ⟪₂ , (:: :t_out nil) (, nil nil) ⟫
         else
           pure ⟪₂ , :Γ (, :Δ' :Ξ') ⟫
       else
@@ -292,6 +292,7 @@ def infer : Expr → Option Expr
 def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫
 
 #eval infer ⟪₂ (I :t_k K) Data ⟫
+#eval infer ⟪₂ (I :t_k K) ⟫
 
 #eval norm_context <$> infer ⟪₂ K ⟫
 
@@ -325,6 +326,8 @@ We end up with nil values.
 Should probably persist in un-normalized.
 
 The issue is with norm_context. Reliably injects a read nil.
+
+We need to somehow cut out some of the context information to continue..
 -/
 
 end Idea

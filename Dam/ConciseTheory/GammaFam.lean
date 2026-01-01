@@ -9,7 +9,6 @@ namespace Idea
 
 inductive Expr where
   | data      : Expr
-  | ty        : Expr
   | tup       : Expr
   | cons      : Expr
   | nil       : Expr
@@ -33,7 +32,6 @@ declare_syntax_cat atom
 declare_syntax_cat app
 declare_syntax_cat expr
 
-syntax "Ty"                  : atom
 syntax "Data"                : atom
 syntax ">>"                  : atom
 syntax "(" app ")"           : atom
@@ -66,7 +64,6 @@ syntax "⟪₂" app "⟫"      : term
 
 macro_rules
   | `(⟪₁ Data ⟫) => `(Expr.data)
-  | `(⟪₁ Ty ⟫) => `(Expr.ty)
   | `(⟪₁ #$e:term ⟫) => `($e)
   | `(⟪₁ :$id:ident ⟫) => `($id)
   | `(⟪₁ K ⟫) => `(Expr.k)
@@ -92,7 +89,6 @@ macro_rules
 
 def Expr.toString : Expr → String
   | ⟪₂ Data ⟫ => "Data"
-  | ⟪₂ Ty ⟫ => "Ty"
   | ⟪₂ fst ⟫ => "fst"
   | ⟪₂ snd ⟫ => "snd"
   | ⟪₂ >> ⟫ => ">>"
@@ -133,7 +129,7 @@ def Expr.mk_tup : List Expr → Expr
   | [x, xs] => ⟪₂ , :x :xs ⟫
   | x :: xs => ⟪₂ , :x (#Expr.mk_tup xs) ⟫
 
-example : Expr.mk_tup [⟪₂ Ty ⟫, ⟪₂ S ⟫, ⟪₂ K ⟫] = ⟪₂ ((, Ty) (, S K)) ⟫ := rfl
+example : Expr.mk_tup [⟪₂ Data ⟫, ⟪₂ S ⟫, ⟪₂ K ⟫] = ⟪₂ ((, Data) (, S K)) ⟫ := rfl
 
 def Expr.map_list (f : Expr → Expr) : Expr → Option Expr
   | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#← f x) (#← xs.map_list f) ⟫
@@ -149,9 +145,9 @@ def Expr.display_infer : Expr → Expr
   | ⟪₂ , nil (, (:: :t nil) :_Ξ) ⟫ => t
   | e => e
 
-example : Expr.as_list ⟪₂ :: Ty (:: K Ty) ⟫ = [⟪₁ Ty ⟫, ⟪₁ K ⟫, ⟪₁ Ty ⟫] := rfl
+example : Expr.as_list ⟪₂ :: Data (:: K Data) ⟫ = [⟪₁ Data ⟫, ⟪₁ K ⟫, ⟪₁ Data ⟫] := rfl
 
-example : Expr.push_in ⟪₂ Ty ⟫ ⟪₂ :: Ty K ⟫ = ⟪₂ :: Ty (:: K Ty) ⟫ := rfl
+example : Expr.push_in ⟪₂ Data ⟫ ⟪₂ :: Data K ⟫ = ⟪₂ :: Data (:: K Data) ⟫ := rfl
 
 def step : Expr → Option Expr
   | ⟪₂ >> :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
@@ -163,17 +159,17 @@ def step : Expr → Option Expr
   | ⟪₂ snd (, :_a :b) ⟫ => b
   | ⟪₂ read_data (, :Γ :_Ξ) ⟫ => do
     ⟪₂ ,
-      (:: (K Ty (I Data) Data) (:: (K Ty (I Data) Data) nil))
+      (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil))
       (,
         (:: (read :Γ) nil)
         (:: Data nil)) ⟫
   | ⟪₂ read_α (, :Γ :_Ξ) ⟫ => do
     let term_α := ⟪₂ read :Γ ⟫
     pure ⟪₂ ,
-      (:: (K Ty (I Ty) :term_α) (:: (>> fst read) (:: (K Ty (I Ty) Ty) nil)))
+      (:: (K Data (I Data) :term_α) (:: (>> fst read) (:: (K Data (I Data) Data) nil)))
       (,
         (:: :term_α nil)
-        (:: Ty nil)) ⟫
+        (:: Data nil)) ⟫
   | ⟪₂ read_y (, :Γ :_Ξ) ⟫ =>
     ⟪₂ (read (next :Γ)) (read (next (next :Γ))) ⟫
   | ⟪₂ :f :x ⟫ => do
@@ -197,9 +193,9 @@ def sub_context : Expr → Expr
   | e => e
 
 def infer : Expr → Option Expr
-  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty (I Ty) Ty) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
+  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
-    let t_α := ⟪₂ K Ty (I Ty) Ty ⟫
+    let t_α := ⟪₂ K Data (I Data) Data ⟫
     let t_β := ⟪₂ read_α ⟫
     let t_x := ⟪₂ (>> fst read) ⟫
     let t_y := ⟪₂ read_y ⟫
@@ -212,23 +208,22 @@ def infer : Expr → Option Expr
       (::
         (>> snd (>> next read))
         (::
-          (K Ty (I Data) Data)
+          (K Data (I Data) Data)
           nil)))
       (, nil nil) ⟫
   | ⟪₂ >> ⟫ =>
     let assert_data_map := ⟪₂ read_data ⟫
-    let assert_data_term := ⟪₂ K Ty (I Data) Data ⟫
+    let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
     ⟪₂ ,
       (:: :assert_data_map (:: :assert_data_map (:: :assert_data_term (:: :assert_data_term nil))))
       (,
         nil
         nil) ⟫
-  | ⟪₂ Ty ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
   | ⟪₂ nil ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
-  | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Ty nil) nil) ⟫
+  | ⟪₂ Data ⟫ => ⟪₂ , nil (, (:: Data nil) nil) ⟫
   | ⟪₂ read ⟫
   | ⟪₂ fst ⟫
-  | ⟪₂ snd ⟫ => ⟪₂ , (:: (K Ty (I Data) Data) (:: (K Ty (I Data) Data) nil)) (, nil nil) ⟫
+  | ⟪₂ snd ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
     let t_arg := (← infer arg).display_infer
@@ -270,18 +265,14 @@ def infer : Expr → Option Expr
 
 #eval Expr.display_infer <$> infer ⟪₂ >> (I Data) (I Data) (, I I) ⟫
 
-#eval Expr.display_infer <$> infer ⟪₂ ((, ((:: (((K Ty) (I Ty)) Ty)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
-
 #eval infer ⟪₂ I ⟫
-
-#eval infer ⟪₂ I (((, ((:: (((K Ty) (I Ty)) Ty)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil))) ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
-#eval Expr.display_infer <$> infer ⟪₂ I Ty ⟫
-#eval Expr.display_infer <$> infer ⟪₂ I Ty Ty ⟫
-#eval Expr.display_infer <$> infer ⟪₂ K Ty (I Ty) Ty Ty ⟫
+#eval Expr.display_infer <$> infer ⟪₂ I Data ⟫
+#eval Expr.display_infer <$> infer ⟪₂ I Data Data ⟫
+#eval Expr.display_infer <$> infer ⟪₂ K Data (I Data) Data Data ⟫
 
 end Idea

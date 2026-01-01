@@ -248,8 +248,8 @@ def infer : Expr → Option Expr
       let norm_expected := norm_ctx (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
       let norm_actual := norm_ctx t_arg
 
-      --dbg_trace norm_expected
-      --dbg_trace norm_actual
+      dbg_trace norm_expected
+      dbg_trace norm_actual
 
       if norm_expected == norm_actual then
         if claims.length.succ == asserts.length then
@@ -263,7 +263,7 @@ def infer : Expr → Option Expr
     | _ => .none
   | _ => .none
 
-#eval Expr.display_infer <$> infer ⟪₂ >> (I Data) (I Data) (, I I) ⟫
+#eval Expr.display_infer <$> infer ⟪₂ >> read read (, I I) ⟫
 
 #eval infer ⟪₂ I ⟫
 

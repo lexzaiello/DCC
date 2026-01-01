@@ -7,16 +7,18 @@ import Mathlib.Data.List.Monad
 namespace Idea
 
 inductive Expr where
-  | ty   : Expr
-  | tup  : Expr
-  | cons : Expr
-  | nil  : Expr
-  | k    : Expr
-  | s    : Expr
-  | i    : Expr
-  | read : Expr
-  | next : Expr
-  | app  : Expr
+  | ty     : Expr
+  | tup    : Expr
+  | cons   : Expr
+  | nil    : Expr
+  | k      : Expr
+  | s      : Expr
+  | i      : Expr
+  | read   : Expr
+  | read_α : Expr
+  | read_y : Expr
+  | next   : Expr
+  | app    : Expr
     → Expr
     → Expr
 deriving BEq
@@ -41,6 +43,8 @@ syntax "tup"                 : atom
 syntax "nil"                 : atom
 syntax "::"                  : atom
 syntax "next"                : atom
+syntax "read_α"              : atom
+syntax "read_y"              : atom
 syntax ","                   : atom
 
 syntax atom     : app
@@ -58,6 +62,8 @@ macro_rules
   | `(⟪₁ I ⟫) => `(Expr.i)
   | `(⟪₁ S ⟫) => `(Expr.s)
   | `(⟪₁ read ⟫) => `(Expr.read)
+  | `(⟪₁ read_α ⟫) => `(Expr.read_α)
+  | `(⟪₁ read_y ⟫) => `(Expr.read_y)
   | `(⟪₁ :: ⟫) => `(Expr.cons)
   | `(⟪₁ next ⟫) => `(Expr.next)
   | `(⟪₁ nil ⟫) => `(Expr.nil)
@@ -71,6 +77,8 @@ macro_rules
 
 def Expr.toString : Expr → String
   | ⟪₂ Ty ⟫ => "Ty"
+  | ⟪₂ read_α ⟫ => "read_α"
+  | ⟪₂ read_y ⟫ => "read_α"
   | ⟪₂ :: ⟫ => "::"
   | ⟪₂ nil ⟫ => "nil"
   | ⟪₂ read ⟫ => "read"
@@ -114,6 +122,14 @@ def step : Expr → Option Expr
 
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) nil ⟫
+  | ⟪₂ read_α :Γ ⟫ =>
+    let term_α := ⟪₂ read :Γ ⟫
+    pure ⟪₂ , (:: (K Ty Ty :term_α) (:: (K Ty Ty Ty) nil)) ⟫
+  | ⟪₂ K ⟫ =>
+    let t_α := ⟪₂ K Ty Ty Ty ⟫
+    let t_β := ⟪₂ read_α ⟫
+    let 
+    ⟪₂ , (:: :t_α (:: :t_β (:: read (:: 
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (:: Ty nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f

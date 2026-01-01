@@ -186,6 +186,18 @@ I : ((init (K Ty)) :: read :: read)
 
 I \alpha x : (((init (K Ty)) :: read :: read), \alpha :: x)
 
+K : 
+
+K Ty Ty Ty
+
+- read \alpha
+- first argument
+read \alpha :: (K Ty Ty Ty)
+
+we have \Gamma
+
+read
+
 type-check by repeatedly doing:
 - read on left element of the tuple (the assertions), read on the right element of the tuple (the claims / the argument)
   - the read on the left elem will give a term of type \Gamma \rightarrow Expr, let's call it "a"

@@ -274,6 +274,8 @@ def infer : Expr → Option Expr
 
 #eval infer ⟪₂ I ⟫
 
+#eval infer ⟪₂ I (((, ((:: (((K Ty) (I Ty)) Ty)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil))) ⟫
+
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
 

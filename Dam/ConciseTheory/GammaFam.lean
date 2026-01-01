@@ -99,10 +99,32 @@ def Expr.push_in (with_e : Expr) : Expr → Expr
   | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (:: :xs :with_e) ⟫
   | e => e
 
-def Expr.as_list : Expr → Option (List Expr)
-  | ⟪₂ :: :x :xs ⟫ => do return x :: (← xs.as_list)
+def Expr.ctx_as_list : Expr → Option (List Expr)
+  | ⟪₂ :: :x :xs ⟫ => do return x :: (← xs.ctx_as_list)
   | ⟪₂ nil ⟫ => pure []
   | x => pure [x]
+
+def Expr.ctx_from_list : List Expr → Expr
+  | [] => ⟪₂ nil ⟫
+  | x::xs => ⟪₂ :: :x (#Expr.ctx_from_list xs) ⟫
+
+def Expr.map_list (f : Expr → Expr) : Expr → Option Expr
+  | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#← f x) (#← xs.map_list f) ⟫
+  | e@⟪₂ nil ⟫ => e
+  | _ => .none
+
+def Expr.map_listM {m : Type → Type} [Monad m] (f : Expr → m Expr) : Expr → OptionT m Expr
+  | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#← f x) (#← xs.map_listM f) ⟫
+  | e@⟪₂ nil ⟫ => pure e
+  | _ => OptionT.mk (pure .none)
+
+def Expr.fst : Expr → Option Expr
+  | ⟪₂ , :a :_b ⟫ => a
+  | _ => .none
+
+def Expr.snd : Expr → Option Expr
+  | ⟪₂ , :_a :b ⟫ => b
+  | _ => .none
 
 def Expr.display_infer : Expr → Expr
   | ⟪₂ , nil (:: :t nil) ⟫ => t
@@ -137,18 +159,36 @@ def step : Expr → Option Expr
     ⟪₂ (# (step f).getD f) (#(step x).getD x) ⟫
   | _ => .none
 
-def render_context_with (with_v : Expr) (Γ : Expr) : Expr :=
-  match Γ with
-  | ⟪₂ , :asserts :claims ⟫ =>
-    sorry
-  | e => e
-
 def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
   if n = 0 then
     pure e
   else
     let e' ← step e
     pure <| (try_step_n (n - 1) e').getD e'
+
+def render_context_with (with_v : Expr) (Γ : Expr) : Expr :=
+  match Γ with
+  | ⟪₂ , nil (:: :_t nil) ⟫ => Γ
+  | ⟪₂ , :Γ :Δ ⟫ => (do
+    let Δ' := Expr.push_in with_v Δ
+
+    -- Update the entry in the context depending on it
+    let asserts ← Γ.as_list
+
+    let pos_arg := (← Δ.as_list).length
+    let check_with ← asserts[pos_arg]?
+
+    let asserts' := asserts.set pos_arg (← try_step_n 10 ⟪₂ :check_with :Δ' ⟫)
+
+    let Γ' := 
+    
+    match Γ.map_list (fun f => (step ⟪₂ :f :Δ' ⟫).getD ⟪₂ :f :Δ' ⟫) with
+    | .some Γ' =>
+      ⟪₂ , :Γ' :Δ' ⟫).getD ⟪₂ , :Γ :Δ ⟫
+    | _ => ⟪₂ :Γ :Δ ⟫
+  | e => e
+
+example : render_context_with ⟪₂ Ty ⟫ ⟪₂ , (:: read nil) nil ⟫ == ⟪₂ ((, ((:: Ty) nil)) ((:: Ty) nil)) ⟫ := rfl
 
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) nil ⟫
@@ -175,9 +215,9 @@ def infer : Expr → Option Expr
       let check_with ← asserts[(← Δ.as_list).length]?
 
       dbg_trace try_step_n 10 ⟪₂ :check_with :Δ' ⟫
-      dbg_trace t_arg
+      dbg_trace render_context_with arg t_arg
 
-      if (← try_step_n 10 ⟪₂ :check_with :Δ' ⟫) == t_arg then
+      if (← try_step_n 10 ⟪₂ :check_with :Δ' ⟫) == render_context_with arg t_arg then
         -- We have found the final β-normal form's type
         -- the combinator should be asserting more types
         -- in the context than we have arguments, exactly one more (the return type)

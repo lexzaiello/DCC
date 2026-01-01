@@ -96,6 +96,7 @@ instance Expr.instToString : ToString Expr where
 def Expr.push_in (with_e : Expr) : Expr → Expr
   | ⟪₂ :: :x nil ⟫ => ⟪₂ :: :x (:: :with_e nil) ⟫
   | ⟪₂ nil ⟫ => ⟪₂ :: :with_e nil ⟫
+  | ⟪₂ :: :x (:: :y :xs) ⟫ => ⟪₂ :: :x (:: :y (#Expr.push_in with_e xs)) ⟫
   | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (:: :xs :with_e) ⟫
   | e => e
 
@@ -144,19 +145,8 @@ def step : Expr → Option Expr
   | ⟪₂ read_α :Γ ⟫ => do
     let term_α := ⟪₂ read :Γ ⟫
     pure ⟪₂ , (:: (K Ty Ty :term_α) (:: read (:: (K Ty Ty Ty) nil))) (:: :term_α nil) ⟫
-  | ⟪₂ read_y :Γ ⟫ => do
-    -- y : β x
-    -- β is in the second slot
-    -- x is in the third slot
-    -- β x : α
-    -- α is in the first slot
-    let term_α := ⟪₂ read :Γ ⟫
-    let term_β := ⟪₂ read (next :Γ) ⟫
-    let term_x := ⟪₂ read (next (next :Γ)) ⟫
-
-    pure ⟪₂ :β 
-
-    pure ⟪₂ , (:: (K :term_α :term_α :term_β :term_x) nil) :Γ ⟫
+  | ⟪₂ read_y :Γ ⟫ =>
+    ⟪₂ (read (next :Γ)) (read (next (next :Γ))) ⟫
   | ⟪₂ :f :x ⟫ => do
     ⟪₂ (# (step f).getD f) (#(step x).getD x) ⟫
   | _ => .none
@@ -178,13 +168,10 @@ def sub_context : Expr → Option (List Expr)
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) nil ⟫
   | ⟪₂ K ⟫ =>
-    let term_β := ⟪₂ read next ⟫
-    let term_x := ⟪₂ 
-
     let t_α := ⟪₂ K Ty Ty Ty ⟫
     let t_β := ⟪₂ read_α ⟫
     let t_x := ⟪₂ read ⟫
-    let t_y := ⟪₂ read (next :Γ)read_y ⟫
+    let t_y := ⟪₂ read_y ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) nil ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (:: Ty nil) ⟫
@@ -202,10 +189,13 @@ def infer : Expr → Option Expr
       -- Assertion to check that we provided the right type
       let check_with ← asserts[(← Δ.as_list).length]?
 
-      dbg_trace ← try_step_n 10 ⟪₂ :check_with :Δ' ⟫
-      dbg_trace t_arg
-
       if sub_context (← try_step_n 10 ⟪₂ :check_with :Δ' ⟫) == sub_context t_arg then
+        --match asserts.getLast? >>= (fun e => step ⟪₂ :e :Δ' ⟫) with
+        --| .some t_out => pure ⟪₂ , nil (:: :t_out nil) ⟫
+        --| _ => pure ⟪₂ , :Γ :Δ' ⟫
+        --dbg_trace claims.length
+        --dbg_trace claims
+        --dbg_trace asserts.length
         -- We have found the final β-normal form's type
         -- the combinator should be asserting more types
         -- in the context than we have arguments, exactly one more (the return type)

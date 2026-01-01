@@ -154,6 +154,8 @@ def step : Expr → Option Expr
     let term_β := ⟪₂ read (next :Γ) ⟫
     let term_x := ⟪₂ read (next (next :Γ)) ⟫
 
+    pure ⟪₂ :β 
+
     pure ⟪₂ , (:: (K :term_α :term_α :term_β :term_x) nil) :Γ ⟫
   | ⟪₂ :f :x ⟫ => do
     ⟪₂ (# (step f).getD f) (#(step x).getD x) ⟫
@@ -176,10 +178,13 @@ def sub_context : Expr → Option (List Expr)
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Ty Ty Ty) (:: read (:: read nil))) nil ⟫
   | ⟪₂ K ⟫ =>
+    let term_β := ⟪₂ read next ⟫
+    let term_x := ⟪₂ 
+
     let t_α := ⟪₂ K Ty Ty Ty ⟫
     let t_β := ⟪₂ read_α ⟫
     let t_x := ⟪₂ read ⟫
-    let t_y := ⟪₂ read_y ⟫
+    let t_y := ⟪₂ read (next :Γ)read_y ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) nil ⟫
   | ⟪₂ Ty ⟫ => ⟪₂ , nil (:: Ty nil) ⟫

@@ -264,6 +264,10 @@ def infer : Expr → Option Expr
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
+      dbg_trace norm_expected
+      dbg_trace t_arg
+      dbg_trace norm_context (← infer arg)
+
       if norm_expected == t_arg then
         if claims.length.succ == asserts.length then
           let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
@@ -283,7 +287,7 @@ def infer : Expr → Option Expr
 
 def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫
 
-#eval infer ⟪₂ I :t_k K ⟫
+#eval infer ⟪₂ (I :t_k K) Data ⟫
 
 #eval norm_context <$> infer ⟪₂ K ⟫
 

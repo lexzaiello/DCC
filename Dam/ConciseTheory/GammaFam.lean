@@ -468,6 +468,11 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((::
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
 
+/-
+Context truncation for tup_map meta comb.:
+- not the Δ, it's the Ξ register
+-/
+
 #eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data Data ⟫

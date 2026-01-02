@@ -343,11 +343,15 @@ y also with a meta combinator
 z argument is very simple. easy assertion.
 -/
 
+def read_α' : Expr :=
+  ⟪₂ map_fst
+    (K Data (I Data) (:: (>> fst read) (:: (K Data (I Data) Data) nil))) ⟫
+
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ K Data (I Data) Data ⟫
-    let t_β := ⟪₂ read_α ⟫
+    let t_β := read_α'
     let t_x := ⟪₂ (>> fst read) ⟫
     let t_y := ⟪₂ read_y ⟫
 
@@ -433,6 +437,14 @@ Potential tasks for today:
   - This unlocks a TON, would be epic
 - Ironing out more bugs (very boring)
 -/
+
+/-
+Note on map_fst for meta-combinators:
+- need to truncate context for some reason?
+-/
+
+#eval Expr.display_infer <$> try_step_n 10 ⟪₂ read_α (, (:: Data nil) (, (:: Data nil) (:: Data nil))) ⟫
+#eval Expr.display_infer <$> try_step_n 10 ⟪₂ :read_α' (, (:: Data nil) (, (:: Data nil) (:: Data nil))) ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ Data ⟫
 

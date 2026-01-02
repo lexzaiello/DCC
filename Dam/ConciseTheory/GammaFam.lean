@@ -23,7 +23,6 @@ inductive Expr where
   | map_snd   : Expr
   | read      : Expr
   | read_y    : Expr
-  | read_data : Expr
   | read_γ_s  : Expr
   | read_x_s  : Expr
   | read_y_s  : Expr
@@ -56,7 +55,6 @@ syntax "::"                  : atom
 syntax "next"                : atom
 syntax "map_fst"             : atom
 syntax "map_snd"             : atom
-syntax "read_data"           : atom
 syntax "read_y"              : atom
 syntax "read_γ_s"            : atom
 syntax "read_x_s"            : atom
@@ -88,7 +86,6 @@ macro_rules
   | `(⟪₁ read_x_s ⟫) => `(Expr.read_x_s)
   | `(⟪₁ read_y_s ⟫) => `(Expr.read_y_s)
   | `(⟪₁ read_βx ⟫) => `(Expr.read_βx)
-  | `(⟪₁ read_data ⟫) => `(Expr.read_data)
   | `(⟪₁ read_y ⟫) => `(Expr.read_y)
   | `(⟪₁ :: ⟫) => `(Expr.cons)
   | `(⟪₁ next ⟫) => `(Expr.next)
@@ -109,7 +106,6 @@ def Expr.toString : Expr → String
   | ⟪₂ >> ⟫ => ">>"
   | ⟪₂ map_fst ⟫ => "map_fst"
   | ⟪₂ map_snd ⟫ => "map_snd"
-  | ⟪₂ read_data ⟫ => "read_data"
   | ⟪₂ read_y ⟫ => "read_y"
   | ⟪₂ read_γ_s ⟫ => "read_γ_s"
   | ⟪₂ read_x_s ⟫ => "read_x_s"
@@ -196,12 +192,6 @@ def step : Expr → Option Expr
     ⟪₂ (, (#← step ⟪₂ :f :a ⟫) :b) ⟫
   | ⟪₂ map_snd :f (, :a :b) ⟫ => do
     ⟪₂ (, :a (#← step ⟪₂ :f :b ⟫)) ⟫
-  | ⟪₂ read_data (, :Γ :_Ξ) ⟫ => do
-    ⟪₂ ,
-      (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil))
-      (,
-        (:: (read :Γ) nil)
-        (:: Data nil)) ⟫
   | ⟪₂ , :a :b ⟫ => do ⟪₂ , (#(step a).getD a) (#(step b).getD b) ⟫
   | ⟪₂ read_y (, :Γ :_Ξ) ⟫ =>
     ⟪₂ (read (next :Γ)) (read (next (next :Γ))) ⟫
@@ -344,6 +334,9 @@ I don't think we even need this whack pushing shit.
 The left elem doesn't depend on the context at all.
 -/
 
+def read_data : Expr :=
+  ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) ⟫
+
 def read_α : Expr :=
   ⟪₂ , (:: (>> fst read) (:: (K Data (I Data) Data) nil)) ⟫
 
@@ -381,7 +374,7 @@ def infer : Expr → Option Expr
       (, nil nil) ⟫
   | ⟪₂ map_fst ⟫
   | ⟪₂ map_snd ⟫ =>
-    let assert_data_map := ⟪₂ read_data ⟫
+    let assert_data_map := read_data
     let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
     ⟪₂ ,
       (:: :assert_data_map (:: :assert_data_term (:: :assert_data_term nil)))
@@ -389,7 +382,7 @@ def infer : Expr → Option Expr
         nil
         nil) ⟫
   | ⟪₂ >> ⟫ =>
-    let assert_data_map := ⟪₂ read_data ⟫
+    let assert_data_map := read_data
     let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
     ⟪₂ ,
       (:: :assert_data_map (:: :assert_data_map (:: :assert_data_term (:: :assert_data_term nil))))

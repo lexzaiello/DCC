@@ -144,6 +144,18 @@ def Expr.as_asserts : Expr → Option Expr
   | ⟪₂ , :Γ (, :_Δ :_Ξ) ⟫ => Γ
   | _ => .none
 
+def Expr.as_singleton : Expr → Option Expr
+  | ⟪₂ :: :x nil ⟫ => x
+  | _ => .none
+
+def Expr.list_pop : Expr → Option Expr
+  | ⟪₂ :: :_x :xs ⟫ => xs
+  | _ => .none
+
+def Expr.list_head : Expr → Option Expr
+  | ⟪₂ :: :x :_xs ⟫ => x
+  | _ => .none
+
 def Expr.as_list : Expr → Option (List Expr)
   | ⟪₂ :: :x :xs ⟫ => do return x :: (← xs.as_list)
   | ⟪₂ nil ⟫ => pure []
@@ -397,10 +409,7 @@ def infer : Expr → Option Expr
       let Δ' := Expr.push_in arg Δ
       let Ξ' := Expr.push_in (← infer arg) Ξ
 
-      let asserts ← Γ.as_list
-      let claims  ← Δ'.as_list
-
-      let check_with ← asserts[(← Δ.as_list).length]?
+      let check_with ← Γ.list_head
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
@@ -411,11 +420,13 @@ def infer : Expr → Option Expr
       --dbg_trace t_arg
 
       if norm_expected == t_arg then
-        if claims.length.succ == asserts.length then
-          let t_out ← try_step_n 10 ⟪₂ (#← asserts.getLast?) (, :Δ' :Ξ') ⟫
-          pure t_out
-        else
-          pure ⟪₂ , :Γ (, :Δ' :Ξ') ⟫
+        let Γ' ← Γ.list_pop
+
+        match Γ'.as_singleton with
+        | .some t_out =>
+          try_step_n 10 ⟪₂ :t_out (, :Δ' :Ξ') ⟫
+        | _ =>
+          pure ⟪₂ , :Γ' (, :Δ' :Ξ') ⟫
       else
         .none
     | _ => .none
@@ -450,6 +461,8 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((::
 --#eval Expr.display_infer <$> infer ⟪₂ map_fst (I Data) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
+
+#eval Expr.display_infer <$> infer ⟪₂ I ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫

@@ -225,116 +225,6 @@ def sub_context : Expr → Expr
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
 
-/-
-An optimization for UX:
-
-It can be quite annoying to create binders on the fly.
-Sometimes you even need to make meta-combinators.
-
-These are two separate issues in one package:
-
-Issue 1:
-rearranging the types in meta combinators often requires something like S,
-but that's overkill.
-
-Even if we wanted to use S, we have to manually type it, which isn't necessary,
-since our Data are opaque.
-
-Issue 2:
-It can be confusing to create simple binders, especially when already underneath another binder.
-
-For example, in K, we have β : α → Type
-
-For this we need a meta combinator, read_α
-It would be ideal if we could remove this entirely. Small goal.
-
-read_α copies term_α and rearranges. this is issue 1, which is mechanical
-read_α creates a binder by:
-
-receiving the old context, and returning a new context tuple, where the Δ and Ξ are the terms used
-in the meta combinator
-
-This is a frequent operation.
-
-This seems to be somewhat of a common pattern - mapping on the context.
-Some kind of traversal would be interesting, although we want to be selective.
-
-We want term_α, but we only want to insert it in the first position.
-So we are "mapping" the context in the sense that we retain the Δ and Ξ,
-but the Γ assertions are completely different.
-
-This is a tuple combinator we might want to support.
-
-map_fst
-map_snd
-
-Now, we don't need to replicate the Δ and Ξ.
-
-Still the question of inserting term_α surgically.
--/
-
-/-
-S type:
-
-S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
-  (x : ∀ (z : α), (y : β z), γ z y)
-  (y : ∀ (z : α), β z)
-  (z : α), γ z (y z)
-
-α is also easy.
-β is slightly harder, but not too hard.
-γ is also slightly harder, but easy with a helper meta combinator, which are legal now
-- Note that γ has a binder within, as well. this is why we need a meta combinator
-
-- every ∀ parameter needs a meta combinator, most likely, though we can get around this later somehow
-
-TODO HIGHEST PRIORITY: sometimes contexts have extra arguments that aren't needed
-- intuition is that this is because Ξ can append types sometimes but not at other times
-- I think this is because we don't append the known type for the expected
-
-TODO: we're treating apps like list cons, but they're not the same - how will our mapping methods actually work?
-
-TODO: Meta combinators
-- γ
-- x
-- y
-
-TODO: confusing how we can mismatch binders and other elements in the list
-
-TODO: confusing how we can model an arrow without mentioning the specific argument term, extra context entry?
-
-Another TODO later:
-- remove pattern matching inside step for contexts. should use tuple accessors instead
-
-Another potential TODO later:
-- Since our contexts are just data, we can probably rearrange them however we want somehow
-  with kinda "stringly" typing
-
-BIG TODO:
-- further assertions don't acutally depend on previous assertions,
-- just arguments?
-- when we apply something, we should be poping, somewhere.
-
-Instead of locating assertions,
-we just pop them?
-we know we've got the output type once we've reached nil
-
-x also with a meta combinator
-y also with a meta combinator
-z argument is very simple. easy assertion.
--/
-
-/-
-map_fst is not what we want.
-types don't have access to the assertions in the context anyway.
-we just want to push something to the tuple in a nice way.
-
-pushM (f : Data → Data)
-
-I don't think we even need this whack pushing shit.
-The left elem doesn't depend on the context at all.
--/
-
 def read_data : Expr :=
   ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) ⟫
 
@@ -410,15 +300,6 @@ def infer : Expr → Option Expr
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
-      --dbg_trace s!"arg: {arg}"
-
-      --dbg_trace s!"check: {check_with}"
-      --dbg_trace s!"red: {⟪₂ :check_with (, :Δ' :Ξ') ⟫}"
-      --dbg_trace try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
-      --dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
-      --dbg_trace norm_expected
-      --dbg_trace t_arg
-
       if norm_expected == t_arg then
         let Γ' ← Γ.list_pop
 
@@ -431,35 +312,6 @@ def infer : Expr → Option Expr
         .none
     | _ => .none
   | _ => .none
-
-/-
-Potential tasks for today:
-
-- Dependent S type (mildly boring, but a fun puzzle)
-  - This unlocks a TON, would be epic
-- Ironing out more bugs (very boring)
--/
-
-/-
-Another new UX thing:
-t_y involves
-  ⟪₂ (read (next :Γ)) (read (next (next :Γ))) ⟫
-
-so we want to be able to sequence operations on data,
-but also split them.
-
-kinda like sum vs product ig
-
-both (next >> read) (next >> next >> read)
-
-This is legit just S combinator.
-Would be cool if we had an S combinator that worked on data though.
--/
-
-/-
-Note on map_fst for meta-combinators:
-- need to truncate context for some reason?
--/
 
 #eval Expr.display_infer <$> infer ⟪₂ Data ⟫
 
@@ -485,11 +337,6 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (, ((:: ((>> 
 
 -- Context here looks like
 #eval Expr.display_infer <$> infer ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) (, (:: Data (:: (I Data) (:: Data nil))) (:: Data (:: Data (:: Data nil)))) ⟫
-
-/-
-Context truncation for tup_map meta comb.:
-- not the Δ, it's the Ξ register
--/
 
 #eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫

@@ -169,6 +169,14 @@ def Expr.display_infer : Expr → Expr
   | ⟪₂ , (:: :t nil) (, nil :_Ξ) ⟫ => t
   | e => e
 
+/-
+  For rejecting a context and emitting a value.
+-/
+syntax "quot" : atom
+macro_rules
+  | `(⟪₁ quot ⟫) => `(⟪₂ K Data (I Data) ⟫)
+
+
 example : Expr.as_list ⟪₂ :: Data (:: K Data) ⟫ = [⟪₁ Data ⟫, ⟪₁ K ⟫, ⟪₁ Data ⟫] := rfl
 
 example : Expr.push_in ⟪₂ Data ⟫ ⟪₂ :: Data K ⟫ = ⟪₂ :: Data (:: K Data) ⟫ := rfl
@@ -230,10 +238,10 @@ def sub_context : Expr → Expr
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
 
 def read_data : Expr :=
-  ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) ⟫
+  ⟪₂ , (:: (quot Data) (:: (quot Data) nil)) ⟫
 
 def read_α : Expr :=
-  ⟪₂ , (:: (>> fst read) (:: (K Data (I Data) Data) nil)) ⟫
+  ⟪₂ , (:: (>> fst read) (:: (quot Data) nil)) ⟫
 
 /-
 S type:
@@ -246,13 +254,12 @@ S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
 
 namespace s
 
-def then_quote : Expr := ⟪₂ both (K Data (I Data) (K Data (I Data))) ⟫
-def quote_now : Expr := ⟪₂ K Data (I Data) ⟫
+def then_quote : Expr := ⟪₂ both (quot quot) ⟫
 
-def α : Expr := ⟪₂ K Data (I Data) Data ⟫
+def α : Expr := ⟪₂ quot Data ⟫
 
 -- β : α → Type
-def β : Expr := ⟪₂ >> fst (>> (:then_quote read) (>> (push_on (:: (K Data (I Data) Data) nil)) (push_on (, nil nil)))) ⟫
+def β : Expr := ⟪₂ >> fst (>> (:then_quote read) (>> (push_on (:: (quot Data) nil)) (push_on (, nil nil)))) ⟫
 
 /- γ : ∀ (x : α), β x → Type
 Our types are already in order
@@ -279,8 +286,20 @@ we could do this in some other way outside both though.
 
 both does an app though, so we're set.
 -/
+
+/-
+Nicer quotation.
+Our contexts are lists of Data → Data
+sometimes we want to quote something inside a Data → Data
+We can introduce notation for quotation, since it happens a lot.
+Quotation is always
+
+K Data (I Data) :x
+
+
+-/
 def γ : Expr :=
-  let ty_end := ⟪₂ (push_on (:: (K Data (I Data) Data) nil)) ⟫
+  let ty_end := ⟪₂ (push_on (:: (quot Data) nil)) ⟫
 
   -- both is exactly what we want for β x, since it just concatenates as data (kinda like an app syntactically)
   -- skip α, then fetch β, concat via app with x
@@ -295,7 +314,7 @@ def γ : Expr :=
   -- so we can leave our read
   -- but then we need to be able to accept the new context
   -- so we need another both
-  let read_quote_discard_ctx := ⟪₂ :quote_now read ⟫
+  let read_quote_discard_ctx := ⟪₂ quot read ⟫
   let do_on_βx := ⟪₂ >> next (>> (both ) :ty_end) ⟫
   let do_on_α := ⟪₂ :then_quote read ⟫
 
@@ -313,9 +332,9 @@ def γ : Expr :=
 end s
 
 def infer : Expr → Option Expr
-  | ⟪₂ I ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
+  | ⟪₂ I ⟫ => ⟪₂ , (:: (quot Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
-    let t_α := ⟪₂ K Data (I Data) Data ⟫
+    let t_α := ⟪₂ quot Data ⟫
     let t_β := read_α
     let t_x := ⟪₂ (>> fst read) ⟫
     let t_y := read_y
@@ -323,9 +342,9 @@ def infer : Expr → Option Expr
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
   | ⟪₂ K' ⟫ =>
     ⟪₂ , (::
-      (K Data (I Data) Data)
+      (quot Data)
       (::
-        (K Data (I Data) Data)
+        (quot Data)
         (::
           (>> fst read)
           (::
@@ -342,13 +361,13 @@ def infer : Expr → Option Expr
       (::
         (>> snd (>> next read))
         (::
-          (K Data (I Data) Data)
+          (quot Data)
           nil)))
       (, nil nil) ⟫
   | ⟪₂ map_fst ⟫
   | ⟪₂ map_snd ⟫ =>
     let assert_data_map := read_data
-    let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
+    let assert_data_term := ⟪₂ quot Data ⟫
     ⟪₂ ,
       (:: :assert_data_map (:: :assert_data_term (:: :assert_data_term nil)))
       (,
@@ -358,18 +377,18 @@ def infer : Expr → Option Expr
   | ⟪₂ both ⟫
   | ⟪₂ bothM ⟫ =>
     let assert_data_map := read_data
-    let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
+    let assert_data_term := ⟪₂ quot Data ⟫
     ⟪₂ ,
       (:: :assert_data_map (:: :assert_data_map (:: :assert_data_term (:: :assert_data_term nil))))
       (,
         nil
         nil) ⟫
-  | ⟪₂ nil ⟫ => ⟪₂ , (:: (K Data Data Data) nil) (, nil nil) ⟫
-  | ⟪₂ Data ⟫ => ⟪₂ , (:: (K Data Data Data) nil) (, nil nil) ⟫
+  | ⟪₂ nil ⟫ => ⟪₂ , (:: (quot Data) nil) (, nil nil) ⟫
+  | ⟪₂ Data ⟫ => ⟪₂ , (:: (quot Data) nil) (, nil nil) ⟫
   | ⟪₂ read ⟫
   | ⟪₂ next ⟫
   | ⟪₂ fst ⟫
-  | ⟪₂ snd ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) (, nil nil) ⟫
+  | ⟪₂ snd ⟫ => ⟪₂ , (:: (quot Data) (:: (quot Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
     let t_arg := norm_context (← infer arg)
@@ -401,7 +420,7 @@ def infer : Expr → Option Expr
 #eval Expr.display_infer <$> infer ⟪₂ push_on (:: Data nil) nil ⟫
 #eval Expr.display_infer <$> infer ⟪₂ Data ⟫
 
-def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (, ((:: ((>> fst) read)) ((:: (((K Data) (I Data)) Data)) nil)))) ((:: ((>> fst) read)) ((:: (#read_y)) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫
+def t_k : Expr := ⟪₂ ((, ((:: (quot Data)) ((:: (, ((:: ((>> fst) read)) ((:: ((quot) Data)) nil)))) ((:: ((>> fst) read)) ((:: (#read_y)) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ K ⟫
 
@@ -428,7 +447,7 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (, ((:: ((>> 
 #eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data Data ⟫
-#eval Expr.display_infer <$> infer ⟪₂ K Data (I Data) Data Data ⟫
+#eval Expr.display_infer <$> infer ⟪₂ quot Data Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫
 
 end Idea

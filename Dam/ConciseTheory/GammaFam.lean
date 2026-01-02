@@ -47,7 +47,6 @@ syntax "K"                   : atom
 syntax "K'"                  : atom
 syntax "I"                   : atom
 syntax "S"                   : atom
-syntax "$"                   : atom
 syntax "read"                : atom
 syntax "fst"                 : atom
 syntax "snd"                 : atom

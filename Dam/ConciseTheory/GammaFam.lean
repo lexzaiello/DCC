@@ -23,7 +23,6 @@ inductive Expr where
   | map_fst   : Expr
   | map_snd   : Expr
   | read      : Expr
-  | read_y    : Expr
   | read_γ_s  : Expr
   | read_x_s  : Expr
   | read_y_s  : Expr
@@ -58,7 +57,6 @@ syntax "both"                : atom
 syntax "next"                : atom
 syntax "map_fst"             : atom
 syntax "map_snd"             : atom
-syntax "read_y"              : atom
 syntax "read_γ_s"            : atom
 syntax "read_x_s"            : atom
 syntax "read_y_s"            : atom
@@ -89,7 +87,6 @@ macro_rules
   | `(⟪₁ read_x_s ⟫) => `(Expr.read_x_s)
   | `(⟪₁ read_y_s ⟫) => `(Expr.read_y_s)
   | `(⟪₁ read_βx ⟫) => `(Expr.read_βx)
-  | `(⟪₁ read_y ⟫) => `(Expr.read_y)
   | `(⟪₁ both ⟫) => `(Expr.both)
   | `(⟪₁ :: ⟫) => `(Expr.cons)
   | `(⟪₁ next ⟫) => `(Expr.next)
@@ -111,7 +108,6 @@ def Expr.toString : Expr → String
   | ⟪₂ >> ⟫ => ">>"
   | ⟪₂ map_fst ⟫ => "map_fst"
   | ⟪₂ map_snd ⟫ => "map_snd"
-  | ⟪₂ read_y ⟫ => "read_y"
   | ⟪₂ read_γ_s ⟫ => "read_γ_s"
   | ⟪₂ read_x_s ⟫ => "read_x_s"
   | ⟪₂ read_y_s ⟫ => "read_y_s"
@@ -183,7 +179,7 @@ example : Expr.as_list ⟪₂ :: Data (:: K Data) ⟫ = [⟪₁ Data ⟫, ⟪₁
 
 example : Expr.push_in ⟪₂ Data ⟫ ⟪₂ :: Data K ⟫ = ⟪₂ :: Data (:: K Data) ⟫ := rfl
 
-def read_y' : Expr := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
+def read_y : Expr := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
 
 def step : Expr → Option Expr
   | ⟪₂ >> :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
@@ -201,8 +197,6 @@ def step : Expr → Option Expr
   | ⟪₂ map_snd :f (, :a :b) ⟫ => do
     ⟪₂ (, :a (#← step ⟪₂ :f :b ⟫)) ⟫
   | ⟪₂ , :a :b ⟫ => do ⟪₂ , (#(step a).getD a) (#(step b).getD b) ⟫
-  | ⟪₂ read_y (, :Γ :_Ξ) ⟫ =>
-    ⟪₂ (read (next :Γ)) (read (next (next :Γ))) ⟫
   | ⟪₂ read_βx :β (, :Γ :_Ξ) ⟫ =>
     let term_x := ⟪₂ >> read :Γ ⟫
 
@@ -354,7 +348,7 @@ def infer : Expr → Option Expr
     let t_α := ⟪₂ K Data (I Data) Data ⟫
     let t_β := read_α
     let t_x := ⟪₂ (>> fst read) ⟫
-    let t_y := read_y'
+    let t_y := read_y
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
   | ⟪₂ K' ⟫ =>
@@ -402,7 +396,6 @@ def infer : Expr → Option Expr
   | ⟪₂ Data ⟫ => ⟪₂ , (:: (K Data Data Data) nil) (, nil nil) ⟫
   | ⟪₂ read ⟫
   | ⟪₂ next ⟫
-  | ⟪₂ read_y ⟫
   | ⟪₂ fst ⟫
   | ⟪₂ snd ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (K Data (I Data) Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
@@ -471,7 +464,7 @@ Note on map_fst for meta-combinators:
 
 #eval Expr.display_infer <$> infer ⟪₂ Data ⟫
 
-def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (, ((:: ((>> fst) read)) ((:: (((K Data) (I Data)) Data)) nil)))) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫
+def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (, ((:: ((>> fst) read)) ((:: (((K Data) (I Data)) Data)) nil)))) ((:: ((>> fst) read)) ((:: (#read_y)) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ K ⟫
 

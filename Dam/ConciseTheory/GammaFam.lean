@@ -20,6 +20,7 @@ inductive Expr where
   | fst       : Expr
   | snd       : Expr
   | both      : Expr
+  | bothM     : Expr
   | push_on   : Expr
   | map_fst   : Expr
   | map_snd   : Expr
@@ -51,6 +52,7 @@ syntax "nil"                 : atom
 syntax "::"                  : atom
 syntax "push_on"             : atom
 syntax "both"                : atom
+syntax "bothM"               : atom
 syntax "next"                : atom
 syntax "map_fst"             : atom
 syntax "map_snd"             : atom
@@ -77,6 +79,7 @@ macro_rules
   | `(⟪₁ snd ⟫) => `(Expr.snd)
   | `(⟪₁ read ⟫) => `(Expr.read)
   | `(⟪₁ both ⟫) => `(Expr.both)
+  | `(⟪₁ bothM ⟫) => `(Expr.bothM)
   | `(⟪₁ :: ⟫) => `(Expr.cons)
   | `(⟪₁ push_on ⟫) => `(Expr.push_on)
   | `(⟪₁ next ⟫) => `(Expr.next)
@@ -93,6 +96,7 @@ macro_rules
 def Expr.toString : Expr → String
   | ⟪₂ Data ⟫ => "Data"
   | ⟪₂ push_on ⟫ => "push_on"
+  | ⟪₂ bothM ⟫ => "bothM"
   | ⟪₂ fst ⟫ => "fst"
   | ⟪₂ snd ⟫ => "snd"
   | ⟪₂ both ⟫ => "both"
@@ -177,6 +181,7 @@ def step : Expr → Option Expr
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫ => x
   | ⟪₂ both :f :g :Γ ⟫ => ⟪₂ (:f :Γ) (:g :Γ) ⟫
+  | ⟪₂ bothM :f :g :Γ ⟫ => ⟪₂ :: (:f :Γ) (:: (:g :Γ) nil) ⟫
   | e@⟪₂ next (:: :_x nil) ⟫ => e
   | ⟪₂ read nil ⟫ => .none
   | ⟪₂ next (:: :_x :xs) ⟫ => xs
@@ -233,11 +238,46 @@ namespace s
 def α : Expr := ⟪₂ K Data (I Data) Data ⟫
 
 -- β : α → Type
-def β : Expr := ⟪₂ >> fst (>> read (>> (push_on (:: Data nil)) (push_on (, nil nil)))) ⟫
+def β : Expr := ⟪₂ >> fst (>> read (>> (push_on (:: (K Data (I Data) Data) nil)) (push_on (, nil nil)))) ⟫
+
+/- γ : ∀ (x : α), β x → Type
+Our types are already in order
+S α β x
+
+in that order
+
+So, we just map over them, and concatenate them cleverly,
+then use push_on (:: (K Data (I Data) Data) nil) to put a Type as the final output type
+
+if we just left α β x intact in the list, that would be close,
+but we can just merge the β and x elements to form an application
+read gets us the head, α,
+and next gets us β, x
+then, we drop everything afterwards...
+
+>> (both read (>> next >> (both read (>> next read)))) (push_on (:: (K Data (I Data) Data) nil))
+
+this is the general order we want,
+but we need to be careful about concatenation
+
+for α, we want to cons
+we could do this in some other way outside both though.
+
+both does an app though, so we're set.
+-/
+def γ : Expr :=
+  let ty_end := ⟪₂ (push_on (:: (K Data (I Data) Data) nil)) ⟫
+
+  -- both is exactly what we want for β x, since it just concatenates as data (kinda like an app syntactically)
+  -- skip α, then fetch β, concat via app with x
+  let do_on_βx := ⟪₂ >> next (both read (>> next read)) ⟫
+  let do_on_α := ⟪₂ read ⟫
+
+  let asserts := ⟪₂ bothM :do_on_α :do_on_βx ⟫
+
+  ⟪₂ >> :asserts :ty_end ⟫
 
 end s
-
-#eval try_step_n 10 ⟪₂ :s.β (, (:: Data nil) nil) ⟫
 
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
@@ -282,7 +322,8 @@ def infer : Expr → Option Expr
         nil
         nil) ⟫
   | ⟪₂ >> ⟫
-  | ⟪₂ both ⟫ =>
+  | ⟪₂ both ⟫
+  | ⟪₂ bothM ⟫ =>
     let assert_data_map := read_data
     let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
     ⟪₂ ,

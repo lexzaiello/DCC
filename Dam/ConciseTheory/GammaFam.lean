@@ -206,6 +206,7 @@ def step : Expr → Option Expr
       (,
         (:: (read :Γ) nil)
         (:: Data nil)) ⟫
+  | ⟪₂ , :a :b ⟫ => do ⟪₂ , (#(step a).getD a) (#(step b).getD b) ⟫
   | ⟪₂ read_α (, :Γ :_Ξ) ⟫ => do
     let term_α := ⟪₂ read :Γ ⟫
     pure ⟪₂ ,

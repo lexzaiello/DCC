@@ -402,12 +402,21 @@ def infer : Expr → Option Expr
     -/
     let Ξ := ⟪₂ snd ⟫
 
+    -- this if the type of g. it is this tuple (Γ, Δ, Ξ)
+    -- we need Δ to compute values in Γ
     let t_arg_map_2 := ⟪₂ >> :Ξ (>> next read) ⟫
+
+    -- takes ctx for g, gets its args / Δ register
+    let Δ_map_2 := ⟪₂ >> snd fst ⟫
 
     -- this is the α, the output type of the second map
     let t_out := ⟪₂ >> fst (>> next read) ⟫
 
-    let get_t_out := ⟪₂ >> :t_arg_map_2 (>> :t_out (both (I Data) (quot (, (:: Data nil) (:: Data nil))))) ⟫
+    -- we need to plug in the argument's Δ register to see its types
+    -- we do this with both t_out Δ_map_2
+    let get_t_out := ⟪₂ >> :t_arg_map_2 (>> both :t_out :Δ_map_2) ⟫
+
+    dbg_trace s!"get_t_out: {get_t_out}"
 
     let assert_data_map := read_data
 
@@ -451,8 +460,9 @@ def infer : Expr → Option Expr
 
       let norm_expected := try_step_n! 10 <| norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
-      dbg_trace norm_expected
-      dbg_trace t_arg
+      --dbg_trace Ξ'
+      --dbg_trace norm_expected
+      --dbg_trace t_arg
 
       if norm_expected == t_arg then
         let Γ' ← Γ.list_pop
@@ -502,6 +512,14 @@ def t_k : Expr := ⟪₂ ((, ((:: (quot Data)) ((:: (, ((:: ((>> fst) read)) ((:
 #eval Expr.display_infer <$> infer ⟪₂ quot Data Data ⟫
 #eval infer ⟪₂ I Data ⟫
 
-#eval Expr.display_infer <$> infer ⟪₂ >>* read read (, I I) ⟫
+def t_i : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
+
+def test_Ξ : Expr := ⟪₂ ((:: ((, ((:: (((K Data) (I Data)) Data)) ((:: (((K Data) (I Data)) Data)) nil))) ((, nil) nil))) ((:: ((, ((:: ((>> fst) ((>> next) read))) ((:: ((>> fst) read)) nil))) ((, ((:: ((, ((:: (((K Data) (I Data)) Data)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil))) ((:: Data) ((:: I) nil)))) ((:: Data) ((:: ((, ((:: (((K Data) (I Data)) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: (((K Data) (I Data)) Data)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil))) nil)))))) nil)) ⟫
+
+#eval try_step_n 10 ⟪₂ ((>> ((>> snd) ((>> next) read))) (((>> both) ((>> fst) ((>> next) read))) ((>> snd) fst))) :test_Ξ ⟫
+
+#eval try_step_n 10 ⟪₂ ((>> snd) ((>> next) read)) :test_Ξ ⟫
+
+#eval Expr.display_infer <$> infer ⟪₂ >>* read (K' :t_i Data I) (, I I) ⟫
 
 end Idea

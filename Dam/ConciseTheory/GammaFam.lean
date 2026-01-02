@@ -232,32 +232,12 @@ namespace s
 
 def α : Expr := ⟪₂ K Data (I Data) Data ⟫
 
-/-
-Need to create a new binder,
-but also capture α from the external one.
-
-α = >> fst read, but we will need to carry the context,
-and read directly from it.
-
-α → Type doesn't depend on the context, only α does
-
-this is independent: :: Data nil
-
-:: α (:: Data nil)
-
-
--- get Δ, get α, push α into ":: α (:: Data nil)",
--- then use push_on to push it on top of the nil Δ and Ξ contexts
-
->> fst (>> read (>> (push_on (:: Data nil)) (push_on (, nil nil))))
-
->> fst (>> read (>> (push_on (:: Data nil)) (>> )
-
->> fst (>> read (push_on (:: Data nil)
--/
+-- β : α → Type
 def β : Expr := ⟪₂ >> fst (>> read (>> (push_on (:: Data nil)) (push_on (, nil nil)))) ⟫
 
 end s
+
+#eval try_step_n 10 ⟪₂ :s.β (, (:: Data nil) nil) ⟫
 
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫

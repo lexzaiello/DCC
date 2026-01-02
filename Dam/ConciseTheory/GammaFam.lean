@@ -343,9 +343,19 @@ y also with a meta combinator
 z argument is very simple. easy assertion.
 -/
 
+/-
+map_fst is not what we want.
+types don't have access to the assertions in the context anyway.
+we just want to push something to the tuple in a nice way.
+
+pushM (f : Data → Data)
+
+I don't think we even need this whack pushing shit.
+The left elem doesn't depend on the context at all.
+-/
+
 def read_α' : Expr :=
-  ⟪₂ map_fst
-    (K Data (I Data) (:: (>> fst read) (:: (K Data (I Data) Data) nil))) ⟫
+  ⟪₂ , (:: (>> fst read) (:: (K Data (I Data) Data) nil)) ⟫
 
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
@@ -417,6 +427,15 @@ def infer : Expr → Option Expr
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
+      --dbg_trace s!"arg: {arg}"
+
+      --dbg_trace s!"check: {check_with}"
+      --dbg_trace s!"red: {⟪₂ :check_with (, :Δ' :Ξ') ⟫}"
+      --dbg_trace try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
+      --dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
+      --dbg_trace norm_expected
+      --dbg_trace t_arg
+
       if norm_expected == t_arg then
         let Γ' ← Γ.list_pop
 
@@ -444,7 +463,6 @@ Note on map_fst for meta-combinators:
 -/
 
 #eval Expr.display_infer <$> try_step_n 10 ⟪₂ read_α (, (:: Data nil) (, (:: Data nil) (:: Data nil))) ⟫
-#eval Expr.display_infer <$> try_step_n 10 ⟪₂ :read_α' (, (:: Data nil) (, (:: Data nil) (:: Data nil))) ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ Data ⟫
 

@@ -20,13 +20,10 @@ inductive Expr where
   | fst       : Expr
   | snd       : Expr
   | both      : Expr
+  | push_on   : Expr
   | map_fst   : Expr
   | map_snd   : Expr
   | read      : Expr
-  | read_γ_s  : Expr
-  | read_x_s  : Expr
-  | read_y_s  : Expr
-  | read_βx   : Expr
   | next      : Expr
   | app       : Expr
     → Expr
@@ -52,14 +49,11 @@ syntax "fst"                 : atom
 syntax "snd"                 : atom
 syntax "nil"                 : atom
 syntax "::"                  : atom
+syntax "push_on"             : atom
 syntax "both"                : atom
 syntax "next"                : atom
 syntax "map_fst"             : atom
 syntax "map_snd"             : atom
-syntax "read_γ_s"            : atom
-syntax "read_x_s"            : atom
-syntax "read_y_s"            : atom
-syntax "read_βx"             : atom
 syntax ","                   : atom
 
 syntax atom     : app
@@ -82,12 +76,9 @@ macro_rules
   | `(⟪₁ fst ⟫) => `(Expr.fst)
   | `(⟪₁ snd ⟫) => `(Expr.snd)
   | `(⟪₁ read ⟫) => `(Expr.read)
-  | `(⟪₁ read_γ_s ⟫) => `(Expr.read_γ_s)
-  | `(⟪₁ read_x_s ⟫) => `(Expr.read_x_s)
-  | `(⟪₁ read_y_s ⟫) => `(Expr.read_y_s)
-  | `(⟪₁ read_βx ⟫) => `(Expr.read_βx)
   | `(⟪₁ both ⟫) => `(Expr.both)
   | `(⟪₁ :: ⟫) => `(Expr.cons)
+  | `(⟪₁ push_on ⟫) => `(Expr.push_on)
   | `(⟪₁ next ⟫) => `(Expr.next)
   | `(⟪₁ >> ⟫) => `(Expr.seq)
   | `(⟪₁ nil ⟫) => `(Expr.nil)
@@ -101,16 +92,13 @@ macro_rules
 
 def Expr.toString : Expr → String
   | ⟪₂ Data ⟫ => "Data"
+  | ⟪₂ push_on ⟫ => "push_on"
   | ⟪₂ fst ⟫ => "fst"
   | ⟪₂ snd ⟫ => "snd"
   | ⟪₂ both ⟫ => "both"
   | ⟪₂ >> ⟫ => ">>"
   | ⟪₂ map_fst ⟫ => "map_fst"
   | ⟪₂ map_snd ⟫ => "map_snd"
-  | ⟪₂ read_γ_s ⟫ => "read_γ_s"
-  | ⟪₂ read_x_s ⟫ => "read_x_s"
-  | ⟪₂ read_y_s ⟫ => "read_y_s"
-  | ⟪₂ read_βx ⟫ => "read_βx"
   | ⟪₂ :: ⟫ => "::"
   | ⟪₂ nil ⟫ => "nil"
   | ⟪₂ read ⟫ => "read"
@@ -181,6 +169,7 @@ example : Expr.push_in ⟪₂ Data ⟫ ⟪₂ :: Data K ⟫ = ⟪₂ :: Data (::
 def read_y : Expr := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
 
 def step : Expr → Option Expr
+  | ⟪₂ push_on :l :a ⟫ => ⟪₂ :: :a :l ⟫
   | ⟪₂ >> :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫ => x
@@ -196,10 +185,6 @@ def step : Expr → Option Expr
   | ⟪₂ map_snd :f (, :a :b) ⟫ => do
     ⟪₂ (, :a (#← step ⟪₂ :f :b ⟫)) ⟫
   | ⟪₂ , :a :b ⟫ => do ⟪₂ , (#(step a).getD a) (#(step b).getD b) ⟫
-  | ⟪₂ read_βx :β (, :Γ :_Ξ) ⟫ =>
-    let term_x := ⟪₂ >> read :Γ ⟫
-
-    ⟪₂ :β :term_x ⟫
   | ⟪₂ :f :x ⟫ =>
     (do ⟪₂ (# ← step f) (#← step x) ⟫) <|>
     (do
@@ -231,6 +216,40 @@ def read_data : Expr :=
 def read_α : Expr :=
   ⟪₂ , (:: (>> fst read) (:: (K Data (I Data) Data) nil)) ⟫
 
+/-
+S type:
+
+S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
+  (x : ∀ (z : α) (y : β z), γ z y)
+  (y : ∀ (z : α), β z)
+  (z : α), γ z (y z)
+-/
+
+/-namespace s
+
+def α : Expr := ⟪₂ K Data (I Data) Data ⟫
+
+/-
+Need to create a new binder,
+but also capture α from the external one.
+
+α = >> fst read, but we will need to carry the context,
+and read directly from it.
+
+α → Type doesn't depend on the context, only α does
+
+this is independent: :: Data nil
+
+:: α (:: Data nil)
+
+both 
+
+>> fst (>> read (push_on (:: Data nil)
+-/
+def β : Expr := ⟪₂ , (:: 
+
+end s-/
+
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
@@ -254,6 +273,7 @@ def infer : Expr → Option Expr
               nil)))))
       (, nil nil) ⟫
   | ⟪₂ :: ⟫
+  | ⟪₂ push_on ⟫
   | ⟪₂ , ⟫ => ⟪₂ ,
     (::
       (>> snd read)

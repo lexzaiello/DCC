@@ -249,7 +249,7 @@ namespace s
 def α : Expr := ⟪₂ K Data (I Data) Data ⟫
 
 -- β : α → Type
-def β : Expr := ⟪₂ >> fst (>> read (>> (push_on (:: (K Data (I Data) Data) nil)) (push_on (, nil nil)))) ⟫
+def β : Expr := ⟪₂ >> fst (>> (both (K Data (I Data) (K Data (I Data))) read) (>> (push_on (:: (K Data (I Data) Data) nil)) (push_on (, nil nil)))) ⟫
 
 /- γ : ∀ (x : α), β x → Type
 Our types are already in order

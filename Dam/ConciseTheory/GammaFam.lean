@@ -169,6 +169,9 @@ example : Expr.push_in ⟪₂ Data ⟫ ⟪₂ :: Data K ⟫ = ⟪₂ :: Data (::
 def read_y : Expr := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
 
 def step : Expr → Option Expr
+  | ⟪₂ push_on nil :a ⟫ => ⟪₂ :: :a nil ⟫
+  | ⟪₂ push_on (:: :x :xs) :a ⟫ => ⟪₂ :: :a (:: :x :xs) ⟫
+  | ⟪₂ push_on (, :a :b) :c ⟫ => ⟪₂ (, :c (, :a :b)) ⟫
   | ⟪₂ push_on :l :a ⟫ => ⟪₂ :: :a :l ⟫
   | ⟪₂ >> :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
   | ⟪₂ I :_α :x ⟫ => x
@@ -225,7 +228,7 @@ S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
   (z : α), γ z (y z)
 -/
 
-/-namespace s
+namespace s
 
 def α : Expr := ⟪₂ K Data (I Data) Data ⟫
 
@@ -242,13 +245,19 @@ this is independent: :: Data nil
 
 :: α (:: Data nil)
 
-both 
+
+-- get Δ, get α, push α into ":: α (:: Data nil)",
+-- then use push_on to push it on top of the nil Δ and Ξ contexts
+
+>> fst (>> read (>> (push_on (:: Data nil)) (push_on (, nil nil))))
+
+>> fst (>> read (>> (push_on (:: Data nil)) (>> )
 
 >> fst (>> read (push_on (:: Data nil)
 -/
-def β : Expr := ⟪₂ , (:: 
+def β : Expr := ⟪₂ >> fst (>> read (>> (push_on (:: Data nil)) (push_on (, nil nil)))) ⟫
 
-end s-/
+end s
 
 def infer : Expr → Option Expr
   | ⟪₂ I ⟫ => ⟪₂ , (:: (K Data (I Data) Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
@@ -333,6 +342,7 @@ def infer : Expr → Option Expr
     | _ => .none
   | _ => .none
 
+#eval Expr.display_infer <$> infer ⟪₂ push_on (:: Data nil) nil ⟫
 #eval Expr.display_infer <$> infer ⟪₂ Data ⟫
 
 def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (, ((:: ((>> fst) read)) ((:: (((K Data) (I Data)) Data)) nil)))) ((:: ((>> fst) read)) ((:: (#read_y)) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫

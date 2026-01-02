@@ -296,24 +296,35 @@ Quotation is always
 
 K Data (I Data) :x
 
+We need to capture α and β, but quote "read" for x.
+α is just normal read, and β is >> next read
+x is just quot read
+
+∀ (x : α), β x → Type
+
+we need to read and then quote, which is really nasty.
+α gets read from the current context, then quoted.
+
+just ugly.
+
+Δ doesn't have K's.
+we could probably solve this with a map function for data,
+then quote each of them respectively.
+
+we already have mapping. is she stupid?
+we can do mapping with both I think?
+
+read is not the same as map.
+we already have read and next.
+
+I want >> to be more powerful.
 
 -/
 def γ : Expr :=
+  -- reads from the context and returns the quoted value
+  --let read_quot := ⟪₂ 
   let ty_end := ⟪₂ (push_on (:: (quot Data) nil)) ⟫
 
-  -- both is exactly what we want for β x, since it just concatenates as data (kinda like an app syntactically)
-  -- skip α, then fetch β, concat via app with x
-  -- just need to antiquote a read for x so that it isn't captured
-  -- just wrap in another quotation to prevent this, and it will
-  -- be deferred to the next binder
-
-  -- prepend a both which inserts a quotation block
-  -- to allow the β read,
-  -- which preventing the x read
-  -- the x will also receive the context, but we can choose to discard it
-  -- so we can leave our read
-  -- but then we need to be able to accept the new context
-  -- so we need another both
   let read_quote_discard_ctx := ⟪₂ quot read ⟫
   let do_on_βx := ⟪₂ >> next (>> (both ) :ty_end) ⟫
   let do_on_α := ⟪₂ :then_quote read ⟫
@@ -449,5 +460,7 @@ def t_k : Expr := ⟪₂ ((, ((:: (quot Data)) ((:: (, ((:: ((>> fst) read)) ((:
 #eval Expr.display_infer <$> infer ⟪₂ I Data Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ quot Data Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫
+
+#eval Expr.display_infer <$> infer ⟪₂ >> read quot (:: Data nil) ⟫
 
 end Idea

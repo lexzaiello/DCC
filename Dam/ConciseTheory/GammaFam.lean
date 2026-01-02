@@ -469,7 +469,9 @@ Note on map_fst for meta-combinators:
 
 #eval Expr.display_infer <$> infer ⟪₂ ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil))))) ⟫
 
-def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫
+def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (, ((:: ((>> fst) read)) ((:: (((K Data) (I Data)) Data)) nil)))) ((:: ((>> fst) read)) ((:: read_y) ((:: ((>> fst) read)) nil)))))) ((, nil) nil)) ⟫
+
+#eval Expr.display_infer <$> infer ⟪₂ K ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ (I :t_k K) Data (I Data) Data Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ((I :t_k K) Data (I Data) Data Data) ⟫

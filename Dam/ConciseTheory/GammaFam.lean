@@ -47,6 +47,7 @@ syntax "K"                   : atom
 syntax "K'"                  : atom
 syntax "I"                   : atom
 syntax "S"                   : atom
+syntax "$"                   : atom
 syntax "read"                : atom
 syntax "fst"                 : atom
 syntax "snd"                 : atom
@@ -437,6 +438,10 @@ Potential tasks for today:
 - Dependent S type (mildly boring, but a fun puzzle)
   - This unlocks a TON, would be epic
 - Ironing out more bugs (very boring)
+-/
+
+/-
+Another new UX thing:
 -/
 
 /-

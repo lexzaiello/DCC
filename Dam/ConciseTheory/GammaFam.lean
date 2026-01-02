@@ -209,7 +209,7 @@ def step : Expr → Option Expr
   | ⟪₂ read_α (, :Γ :_Ξ) ⟫ => do
     let term_α := ⟪₂ read :Γ ⟫
     pure ⟪₂ ,
-      (:: (K Data (I Data) :term_α) (:: (>> fst read) (:: (K Data (I Data) Data) nil)))
+      (:: (>> fst read) (:: (K Data (I Data) Data) nil))
       (,
         (:: :term_α nil)
         (:: Data nil)) ⟫
@@ -461,8 +461,6 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((::
 --#eval Expr.display_infer <$> infer ⟪₂ map_fst (I Data) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
-
-#eval Expr.display_infer <$> infer ⟪₂ I ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫

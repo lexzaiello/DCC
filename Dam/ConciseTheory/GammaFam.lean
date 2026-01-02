@@ -145,6 +145,9 @@ def Expr.as_list : Expr → Option (List Expr)
   | ⟪₂ nil ⟫ => pure []
   | x => pure [x]
 
+def Expr.list_pretty (e : Expr) : String :=
+  (e.as_list.map (·.toString)).getD e.toString
+
 def Expr.as_tup_list : Expr → Option (List Expr)
   | ⟪₂ , :x :xs ⟫ => do return x :: (← xs.as_tup_list)
   | ⟪₂ nil ⟫ => pure []
@@ -185,7 +188,11 @@ def step : Expr → Option Expr
     let right := ⟪₂ :g :Γ ⟫
 
     ⟪₂ (# (step left).getD left) (# (step right).getD right) ⟫
-  | ⟪₂ bothM :f :g :Γ ⟫ => ⟪₂ :: (:f :Γ) (:: (:g :Γ) nil) ⟫
+  | ⟪₂ bothM :f :g :Γ ⟫ =>
+    let left := ⟪₂ :f :Γ ⟫
+    let right := ⟪₂ :g :Γ ⟫
+
+    ⟪₂ :: (# (step left).getD left) (# (step right).getD right) ⟫
   | e@⟪₂ next (:: :_x nil) ⟫ => e
   | ⟪₂ read nil ⟫ => .none
   | ⟪₂ next (:: :_x :xs) ⟫ => xs
@@ -274,15 +281,15 @@ def γ : Expr :=
 
   -- both is exactly what we want for β x, since it just concatenates as data (kinda like an app syntactically)
   -- skip α, then fetch β, concat via app with x
-  let do_on_βx := ⟪₂ >> next (both read (>> next read)) ⟫
+  let do_on_βx := ⟪₂ >> next (>> (both read (>> next read)) :ty_end) ⟫
   let do_on_α := ⟪₂ read ⟫
 
-  let asserts := ⟪₂ bothM :do_on_α :do_on_βx ⟫
+  let asserts := ⟪₂ >> fst (bothM :do_on_α :do_on_βx) ⟫
 
-  ⟪₂ >> :asserts :ty_end ⟫
+  asserts
 
 #eval try_step_n 10 ⟪₂ :β (, (:: Data nil) nil) ⟫ 
-#eval try_step_n 10 ⟪₂ :γ (, (:: Data (:: (I Data) (:: Data nil))) nil) ⟫
+#eval Expr.list_pretty <$> try_step_n 10 ⟪₂ :γ (, (:: Data (:: (I Data) (:: Data nil))) nil) ⟫
 
 end s
 

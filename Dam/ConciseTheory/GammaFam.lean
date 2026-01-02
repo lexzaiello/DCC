@@ -180,7 +180,11 @@ def step : Expr → Option Expr
   | ⟪₂ >> :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫ => x
-  | ⟪₂ both :f :g :Γ ⟫ => ⟪₂ (:f :Γ) (:g :Γ) ⟫
+  | ⟪₂ both :f :g :Γ ⟫ =>
+    let left := ⟪₂ :f :Γ ⟫
+    let right := ⟪₂ :g :Γ ⟫
+
+    ⟪₂ (# (step left).getD left) (# (step right).getD right) ⟫
   | ⟪₂ bothM :f :g :Γ ⟫ => ⟪₂ :: (:f :Γ) (:: (:g :Γ) nil) ⟫
   | e@⟪₂ next (:: :_x nil) ⟫ => e
   | ⟪₂ read nil ⟫ => .none
@@ -276,6 +280,9 @@ def γ : Expr :=
   let asserts := ⟪₂ bothM :do_on_α :do_on_βx ⟫
 
   ⟪₂ >> :asserts :ty_end ⟫
+
+#eval try_step_n 10 ⟪₂ :β (, (:: Data nil) nil) ⟫ 
+#eval try_step_n 10 ⟪₂ :γ (, (:: Data (:: (I Data) (:: Data nil))) nil) ⟫
 
 end s
 
@@ -388,6 +395,7 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (, ((:: ((>> 
 
 -- Context here looks like
 #eval Expr.display_infer <$> infer ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) (, (:: Data (:: (I Data) (:: Data nil))) (:: Data (:: Data (:: Data nil)))) ⟫
+#eval Expr.display_infer <$> infer ⟪₂ bothM (>> fst (>> next read)) (>> fst (>> next (>> next read))) (, (:: Data (:: (I Data) (:: Data nil))) (:: Data (:: Data (:: Data nil)))) ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ :: K I ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫

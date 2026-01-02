@@ -218,10 +218,9 @@ def step : Expr → Option Expr
     ⟪₂ (, :a (#← step ⟪₂ :f :b ⟫)) ⟫
   | ⟪₂ , :a :b ⟫ => do ⟪₂ , (#(step a).getD a) (#(step b).getD b) ⟫
   | ⟪₂ :f :x ⟫ =>
-    (do ⟪₂ (# ← step f) (#← step x) ⟫) <|>
-    (do
-    ⟪₂ (# ← (step f)) (#(step x).getD x) ⟫)
-    <|> (do ⟪₂ (# (step f).getD f) (#← step x) ⟫)
+    let f' := (step f).getD f
+    let x' := (step x).getD x
+    ⟪₂ :f' :x' ⟫
   | _ => .none
 
 def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
@@ -408,13 +407,13 @@ def infer : Expr → Option Expr
     -- this is the α, the output type of the second map
     let t_out := ⟪₂ >> fst (>> next read) ⟫
 
-    let get_t_out := ⟪₂ >> :t_arg_map_2 :t_out ⟫
+    let get_t_out := ⟪₂ >> :t_arg_map_2 (>> :t_out (both (I Data) (quot (, (:: Data nil) (:: Data nil))))) ⟫
 
     let assert_data_map := read_data
 
     -- fetch the α, then push it as the output type
-    let in_data := ⟪₂ quot Data ⟫
-    let assert_some_data_map := ⟪₂ >> :get_t_out (>> (push_on nil) (:: :in_data)) ⟫
+    let in_data := ⟪₂ Data ⟫
+    let assert_some_data_map := ⟪₂ >> :get_t_out (, :in_data) ⟫
 
     -- first argument is just Data -> Data
     -- second argument is polymoprhic
@@ -450,7 +449,7 @@ def infer : Expr → Option Expr
 
       let check_with ← Γ.list_head
 
-      let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+      let norm_expected := try_step_n! 10 <| norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
       dbg_trace norm_expected
       dbg_trace t_arg
@@ -503,6 +502,6 @@ def t_k : Expr := ⟪₂ ((, ((:: (quot Data)) ((:: (, ((:: ((>> fst) read)) ((:
 #eval Expr.display_infer <$> infer ⟪₂ quot Data Data ⟫
 #eval infer ⟪₂ I Data ⟫
 
-#eval Expr.display_infer <$> infer ⟪₂ >>* read read ⟫
+#eval Expr.display_infer <$> infer ⟪₂ >>* read read (, I I) ⟫
 
 end Idea

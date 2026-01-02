@@ -19,6 +19,7 @@ inductive Expr where
   | i         : Expr
   | fst       : Expr
   | snd       : Expr
+  | both      : Expr
   | map_fst   : Expr
   | map_snd   : Expr
   | read      : Expr
@@ -53,6 +54,7 @@ syntax "fst"                 : atom
 syntax "snd"                 : atom
 syntax "nil"                 : atom
 syntax "::"                  : atom
+syntax "both"                : atom
 syntax "next"                : atom
 syntax "map_fst"             : atom
 syntax "map_snd"             : atom
@@ -88,6 +90,7 @@ macro_rules
   | `(⟪₁ read_y_s ⟫) => `(Expr.read_y_s)
   | `(⟪₁ read_βx ⟫) => `(Expr.read_βx)
   | `(⟪₁ read_y ⟫) => `(Expr.read_y)
+  | `(⟪₁ both ⟫) => `(Expr.both)
   | `(⟪₁ :: ⟫) => `(Expr.cons)
   | `(⟪₁ next ⟫) => `(Expr.next)
   | `(⟪₁ >> ⟫) => `(Expr.seq)
@@ -104,6 +107,7 @@ def Expr.toString : Expr → String
   | ⟪₂ Data ⟫ => "Data"
   | ⟪₂ fst ⟫ => "fst"
   | ⟪₂ snd ⟫ => "snd"
+  | ⟪₂ both ⟫ => "both"
   | ⟪₂ >> ⟫ => ">>"
   | ⟪₂ map_fst ⟫ => "map_fst"
   | ⟪₂ map_snd ⟫ => "map_snd"
@@ -183,6 +187,7 @@ def step : Expr → Option Expr
   | ⟪₂ >> :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫ => x
+  | ⟪₂ both :f :g :Γ ⟫ => ⟪₂ (:f :Γ) (:g :Γ) ⟫
   | e@⟪₂ next (:: :_x nil) ⟫ => e
   | ⟪₂ read nil ⟫ => .none
   | ⟪₂ next (:: :_x :xs) ⟫ => xs
@@ -382,7 +387,8 @@ def infer : Expr → Option Expr
       (,
         nil
         nil) ⟫
-  | ⟪₂ >> ⟫ =>
+  | ⟪₂ >> ⟫
+  | ⟪₂ both ⟫ =>
     let assert_data_map := read_data
     let assert_data_term := ⟪₂ K Data (I Data) Data ⟫
     ⟪₂ ,
@@ -442,6 +448,18 @@ Potential tasks for today:
 
 /-
 Another new UX thing:
+t_y involves
+  ⟪₂ (read (next :Γ)) (read (next (next :Γ))) ⟫
+
+so we want to be able to sequence operations on data,
+but also split them.
+
+kinda like sum vs product ig
+
+both (next >> read) (next >> next >> read)
+
+This is legit just S combinator.
+Would be cool if we had an S combinator that worked on data though.
 -/
 
 /-
@@ -470,6 +488,8 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (, ((:: ((>> 
 #eval Expr.display_infer <$> infer ⟪₂ map_fst (I Data) (, I I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
+
+#eval Expr.display_infer <$> infer ⟪₂ 
 
 /-
 Context truncation for tup_map meta comb.:

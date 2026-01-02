@@ -413,12 +413,6 @@ def infer : Expr → Option Expr
 
       let norm_expected := norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
-      --dbg_trace ⟪₂ (, :Δ' :Ξ') ⟫
-      --dbg_trace check_with
-      --dbg_trace try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
-      --dbg_trace norm_expected
-      --dbg_trace t_arg
-
       if norm_expected == t_arg then
         let Γ' ← Γ.list_pop
 
@@ -458,7 +452,7 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: read_α) ((::
 #eval Expr.display_infer <$> (infer <=< infer) ⟪₂ K ⟫
 #eval Expr.display_infer <$> (infer <=< infer) ⟪₂ I ⟫
 
---#eval Expr.display_infer <$> infer ⟪₂ map_fst (I Data) ⟫
+#eval Expr.display_infer <$> infer ⟪₂ map_fst (I Data) (, I I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
 

@@ -13,6 +13,7 @@ inductive Expr where
   | cons      : Expr
   | nil       : Expr
   | seq       : Expr
+  | seq_smart : Expr
   | k         : Expr
   | k'        : Expr
   | s         : Expr
@@ -37,6 +38,7 @@ declare_syntax_cat expr
 
 syntax "Data"                : atom
 syntax ">>"                  : atom
+syntax ">>*"                 : atom
 syntax "(" app ")"           : atom
 syntax "#" term              : atom
 syntax ":" ident             : atom
@@ -84,6 +86,7 @@ macro_rules
   | `(⟪₁ push_on ⟫) => `(Expr.push_on)
   | `(⟪₁ next ⟫) => `(Expr.next)
   | `(⟪₁ >> ⟫) => `(Expr.seq)
+  | `(⟪₁ >>* ⟫) => `(Expr.seq_smart)
   | `(⟪₁ nil ⟫) => `(Expr.nil)
   | `(⟪₁ , ⟫) => `(Expr.tup)
   | `(⟪₂ ($e:app) ⟫) => `(⟪₂ $e ⟫)
@@ -101,6 +104,7 @@ def Expr.toString : Expr → String
   | ⟪₂ snd ⟫ => "snd"
   | ⟪₂ both ⟫ => "both"
   | ⟪₂ >> ⟫ => ">>"
+  | ⟪₂ >>* ⟫ => ">>*"
   | ⟪₂ map_fst ⟫ => "map_fst"
   | ⟪₂ map_snd ⟫ => "map_snd"
   | ⟪₂ :: ⟫ => "::"
@@ -188,7 +192,8 @@ def step : Expr → Option Expr
   | ⟪₂ push_on (:: :x :xs) :a ⟫ => ⟪₂ :: :a (:: :x :xs) ⟫
   | ⟪₂ push_on (, :a :b) :c ⟫ => ⟪₂ (, :c (, :a :b)) ⟫
   | ⟪₂ push_on :l :a ⟫ => ⟪₂ :: :a :l ⟫
-  | ⟪₂ >> :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
+  | ⟪₂ >> :f :g :Γ ⟫
+  | ⟪₂ >>* :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫ => x
   | ⟪₂ both :f :g :Γ ⟫ =>
@@ -384,6 +389,40 @@ def infer : Expr → Option Expr
       (,
         nil
         nil) ⟫
+  | ⟪₂ >>* ⟫ =>
+    /-
+      >>* : ∀ (α : Type), (Data -> Data) -> (Data -> α) -> Data -> α,
+      except α is inferred through Ξ and manipulating the type of the second argument to fetch
+      α via patern matching
+
+      Ξ is the second register we have access to. it is a list of the known types of our arguments,
+      and we should have access to the Data -> α as the second argument in it. its value should look like this:
+
+      ((, ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: (((K Data) (I Data)) Data)) nil)) ((, nil) nil))) nil)))
+      its output type is the second element in its assertions
+    -/
+    let Ξ := ⟪₂ snd ⟫
+
+    let t_arg_map_2 := ⟪₂ >> :Ξ (>> next read) ⟫
+
+    -- this is the α, the output type of the second map
+    let t_out := ⟪₂ >> fst (>> next read) ⟫
+
+    let get_t_out := ⟪₂ >> :t_arg_map_2 :t_out ⟫
+
+    let assert_data_map := read_data
+
+    -- fetch the α, then push it as the output type
+    let in_data := ⟪₂ quot Data ⟫
+    let assert_some_data_map := ⟪₂ >> :get_t_out (>> (push_on nil) (:: :in_data)) ⟫
+
+    -- first argument is just Data -> Data
+    -- second argument is polymoprhic
+    -- third argument is the datum
+    -- output is the α
+    ⟪₂ ,
+      (:: :assert_data_map (:: :assert_some_data_map (:: (quot Data) (:: :get_t_out nil))))
+      (, nil nil) ⟫
   | ⟪₂ >> ⟫
   | ⟪₂ both ⟫
   | ⟪₂ bothM ⟫ =>
@@ -459,7 +498,7 @@ def t_k : Expr := ⟪₂ ((, ((:: (quot Data)) ((:: (, ((:: ((>> fst) read)) ((:
 #eval Expr.display_infer <$> infer ⟪₂ I Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ I Data Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ quot Data Data ⟫
-#eval Expr.display_infer <$> infer ⟪₂ I Data ⟫
+#eval infer ⟪₂ I Data ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ >> read quot (:: Data nil) ⟫
 

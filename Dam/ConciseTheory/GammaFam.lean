@@ -246,10 +246,12 @@ S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
 
 namespace s
 
+def then_quote (e : Expr) : Expr := ⟪₂ both (K Data (I Data) (K Data (I Data))) :e ⟫
+
 def α : Expr := ⟪₂ K Data (I Data) Data ⟫
 
 -- β : α → Type
-def β : Expr := ⟪₂ >> fst (>> (both (K Data (I Data) (K Data (I Data))) read) (>> (push_on (:: (K Data (I Data) Data) nil)) (push_on (, nil nil)))) ⟫
+def β : Expr := ⟪₂ >> fst (>> (#then_quote ⟪₂ read ⟫) (>> (push_on (:: (K Data (I Data) Data) nil)) (push_on (, nil nil)))) ⟫
 
 /- γ : ∀ (x : α), β x → Type
 Our types are already in order
@@ -281,15 +283,20 @@ def γ : Expr :=
 
   -- both is exactly what we want for β x, since it just concatenates as data (kinda like an app syntactically)
   -- skip α, then fetch β, concat via app with x
+  -- just need to antiquote a read for x so that it isn't captured
   let do_on_βx := ⟪₂ >> next (>> (both read (>> next read)) :ty_end) ⟫
-  let do_on_α := ⟪₂ read ⟫
+  let do_on_α := then_quote ⟪₂ read ⟫
 
-  let asserts := ⟪₂ >> fst (bothM :do_on_α :do_on_βx) ⟫
+  -- TOOD: x is captured, instead of referring to our own context with dynamic read
+
+  -- Create a new empty context here with push_on
+  let asserts := ⟪₂ >> fst (>> (bothM :do_on_α :do_on_βx) (push_on (, nil nil))) ⟫
 
   asserts
 
-#eval try_step_n 10 ⟪₂ :β (, (:: Data nil) nil) ⟫ 
-#eval Expr.list_pretty <$> try_step_n 10 ⟪₂ :γ (, (:: Data (:: (I Data) (:: Data nil))) nil) ⟫
+#eval try_step_n 10 ⟪₂ :β (, (:: Data nil) nil) ⟫  -- this one is right. we bind a new context, just as we should for arrows
+
+#eval try_step_n 10 ⟪₂ :γ (, (:: Data (:: (I Data) (:: Data nil))) nil) ⟫
 
 end s
 

@@ -246,12 +246,13 @@ S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
 
 namespace s
 
-def then_quote (e : Expr) : Expr := ⟪₂ both (K Data (I Data) (K Data (I Data))) :e ⟫
+def then_quote : Expr := ⟪₂ both (K Data (I Data) (K Data (I Data))) ⟫
+def quote_now : Expr := ⟪₂ K Data (I Data) ⟫
 
 def α : Expr := ⟪₂ K Data (I Data) Data ⟫
 
 -- β : α → Type
-def β : Expr := ⟪₂ >> fst (>> (#then_quote ⟪₂ read ⟫) (>> (push_on (:: (K Data (I Data) Data) nil)) (push_on (, nil nil)))) ⟫
+def β : Expr := ⟪₂ >> fst (>> (:then_quote read) (>> (push_on (:: (K Data (I Data) Data) nil)) (push_on (, nil nil)))) ⟫
 
 /- γ : ∀ (x : α), β x → Type
 Our types are already in order
@@ -284,8 +285,19 @@ def γ : Expr :=
   -- both is exactly what we want for β x, since it just concatenates as data (kinda like an app syntactically)
   -- skip α, then fetch β, concat via app with x
   -- just need to antiquote a read for x so that it isn't captured
-  let do_on_βx := ⟪₂ >> next (>> (both read (>> next read)) :ty_end) ⟫
-  let do_on_α := then_quote ⟪₂ read ⟫
+  -- just wrap in another quotation to prevent this, and it will
+  -- be deferred to the next binder
+
+  -- prepend a both which inserts a quotation block
+  -- to allow the β read,
+  -- which preventing the x read
+  -- the x will also receive the context, but we can choose to discard it
+  -- so we can leave our read
+  -- but then we need to be able to accept the new context
+  -- so we need another both
+  let read_quote_discard_ctx := ⟪₂ :quote_now read ⟫
+  let do_on_βx := ⟪₂ >> next (>> (both ) :ty_end) ⟫
+  let do_on_α := ⟪₂ :then_quote read ⟫
 
   -- TOOD: x is captured, instead of referring to our own context with dynamic read
 
@@ -383,6 +395,8 @@ def infer : Expr → Option Expr
         .none
     | _ => .none
   | _ => .none
+
+#eval Expr.display_infer <$> infer ⟪₂ read ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ push_on (:: Data nil) nil ⟫
 #eval Expr.display_infer <$> infer ⟪₂ Data ⟫

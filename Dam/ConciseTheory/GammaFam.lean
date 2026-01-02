@@ -183,6 +183,8 @@ example : Expr.as_list ⟪₂ :: Data (:: K Data) ⟫ = [⟪₁ Data ⟫, ⟪₁
 
 example : Expr.push_in ⟪₂ Data ⟫ ⟪₂ :: Data K ⟫ = ⟪₂ :: Data (:: K Data) ⟫ := rfl
 
+def read_y' : Expr := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
+
 def step : Expr → Option Expr
   | ⟪₂ >> :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
   | ⟪₂ I :_α :x ⟫ => x
@@ -352,7 +354,7 @@ def infer : Expr → Option Expr
     let t_α := ⟪₂ K Data (I Data) Data ⟫
     let t_β := read_α
     let t_x := ⟪₂ (>> fst read) ⟫
-    let t_y := ⟪₂ read_y ⟫
+    let t_y := read_y'
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
   | ⟪₂ K' ⟫ =>
@@ -489,7 +491,8 @@ def t_k : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (, ((:: ((>> 
 #eval Expr.display_infer <$> infer ⟪₂ read (, K I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ , K I ⟫
 
-#eval Expr.display_infer <$> infer ⟪₂ 
+-- Context here looks like
+#eval Expr.display_infer <$> infer ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) (, (:: Data (:: (I Data) (:: Data nil))) (:: Data (:: Data (:: Data nil)))) ⟫
 
 /-
 Context truncation for tup_map meta comb.:

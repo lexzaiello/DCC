@@ -303,13 +303,14 @@ def infer : Expr → Option Expr
     let t_out_f := ⟪₂ >> :Ξ (>> read (>> fst (>> next read))) ⟫
     let t_out_g := ⟪₂ >> :Ξ (>> next (>> read (>> fst next))) ⟫
 
+    let ctx_f := ⟪₂ >> :Ξ (>> read snd) ⟫
     let ctx_g := ⟪₂ >> :Ξ (>> next (>> read snd)) ⟫
 
     let asserts_g' := ⟪₂ (bothM :t_out_f :t_out_g) ⟫
     let t_g' := ⟪₂ (both (both (quot ,) :asserts_g') :ctx_g) ⟫
 
     ⟪₂ ,
-      (:: :t_map_f (:: :t_g' (:: :t_in_f (:: :t_out_g nil))))
+      (:: :t_map_f (:: :t_g' (:: (both :t_in_f :ctx_f) (:: :t_out_g nil))))
       (, nil nil) ⟫
   | ⟪₂ >> ⟫
   | ⟪₂ both ⟫
@@ -341,11 +342,11 @@ def infer : Expr → Option Expr
         let expected' ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
-        --dbg_trace raw_t_arg
-        --dbg_trace expected'
-        --dbg_trace stolen
-        --dbg_trace t_arg
-        --dbg_trace arg
+        dbg_trace raw_t_arg
+        dbg_trace expected'
+        dbg_trace stolen
+        dbg_trace t_arg
+        dbg_trace arg
 
         if stolen == t_arg then
           let Γ' ← Γ.list_pop
@@ -408,7 +409,7 @@ My guess is it's the both part.
 
 def t_i : Expr := ⟪₂ ((, ((:: (((K' Data) Data) Data)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
 
-#eval infer ⟪₂ >>* read (K' :t_i Data I Data) ⟫
+#eval infer ⟪₂ >>* read (K' :t_i Data I Data) (:: Data nil) ⟫
 #eval infer ⟪₂ :: Data nil ⟫
 #eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
 

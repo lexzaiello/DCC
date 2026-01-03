@@ -333,11 +333,11 @@ x : ∀ (z : Data) (y : I Data z), I z y
 
 ((:: (((K Data) (I Data)) Data)) ((:: ((both (((K Data) (I Data)) (I Data))) ((>> fst) read))) ((:: ((both ((both (((K Data) (I Data)) I)) ((>> fst) read))) ((>> fst) ((>> next) read)))) nil)))
 
-first arg = Data
-snd arg = 
+See tests below
 -/
 #eval try_step_n 10 ⟪₂ ((both (((K Data) (I Data)) (I Data))) ((>> fst) read)) (, (:: I nil) nil) ⟫
 #eval try_step_n 10 ⟪₂ :arg_x :test_context_arg_x ⟫
+#eval try_step_n 10 ⟪₂ ((both ((both (((K Data) (I Data)) I)) ((>> fst) read))) ((>> fst) ((>> next) read))) (, (:: Data (:: Data nil)) nil) ⟫
 
 end s
 

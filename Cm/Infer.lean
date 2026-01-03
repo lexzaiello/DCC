@@ -7,10 +7,7 @@ def steal_context (from_e for_e : Expr) : Expr :=
   | _, _ => for_e
 
 def do_or_unquote (to_do : Expr) (in_e : Expr) : Option Expr :=
-  match in_e with
-  | ⟪₂ quote :e ⟫ =>
-    e
-  | in_e => try_step_n 10 ⟪₂ exec :in_e :to_do ⟫
+  try_step_n 10 ⟪₂ exec :in_e :to_do ⟫
 
 -- Applies the Δ claims context to all handlers in the app context
 -- returns all of the applied assertions, in order
@@ -23,8 +20,9 @@ def sub_context : Expr → Expr
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
 
 def Expr.display_infer : Expr → Option Expr
-  | ⟪₂ , :Γ :X ⟫ =>
-    step ⟪₂ exec :Γ :X ⟫
+  | ⟪₂ , :Γ :X ⟫ => do
+    let out ← (← Γ.as_list).getLast?
+    step ⟪₂ exec :out :X ⟫
   | e => e
 
 def read_data : Expr :=
@@ -224,15 +222,15 @@ def infer : Expr → Option Expr
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
   | ⟪₂ K' ⟫ =>
     ⟪₂ , (::
-      (quote Data)
+      :ass_data
       (::
-        (quote Data)
+        :ass_data
         (::
-          (>> fst read)
+          (:: fst (:: assert nil))
           (::
-            (>> fst (>> next read))
+            (:: fst (:: next (:: assert nil)))
             (::
-              (>> fst read)
+              (:: fst (:: assert nil))
               nil)))))
       (, nil nil) ⟫
   | ⟪₂ quote ⟫
@@ -251,12 +249,11 @@ def infer : Expr → Option Expr
     (, nil nil) ⟫
   | ⟪₂ , ⟫ => ⟪₂ ,
     (::
-      (>> snd read)
+      :ass_data
       (::
-        (>> snd (>> next read))
+        :ass_data
         (::
-          (quote Data)
-          nil)))
+          :ass_data nil)))
       (, nil nil) ⟫
   | ⟪₂ map_fst ⟫
   | ⟪₂ map_snd ⟫ =>
@@ -349,7 +346,7 @@ def infer : Expr → Option Expr
   | ⟪₂ read ⟫
   | ⟪₂ next ⟫
   | ⟪₂ fst ⟫
-  | ⟪₂ snd ⟫ => ⟪₂ , (:: (quote Data) (:: (quote Data) nil)) (, nil nil) ⟫
+  | ⟪₂ snd ⟫ => ⟪₂ , (:: :ass_data (:: :ass_data nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => match infer f, infer arg with
     | .some t_f, .some raw_t_arg => do
       let t_arg := norm_context raw_t_arg
@@ -438,6 +435,8 @@ My guess is it's the both part.
 #eval Expr.display_infer =<< infer ⟪₂ nil ⟫
 
 #eval infer ⟪₂ I Data Data ⟫
+
+#eval infer ⟪₂ K' Data Data Data Data⟫
 
 #eval step ⟪₂ exec ((:: fst) ((:: assert) nil)) (, (:: Data (:: Data nil)) (:: Data (:: Data nil))) ⟫
 

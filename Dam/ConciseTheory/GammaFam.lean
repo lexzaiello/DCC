@@ -339,7 +339,23 @@ See tests below
 #eval try_step_n 10 ⟪₂ :arg_x :test_context_arg_x ⟫
 #eval try_step_n 10 ⟪₂ ((both ((both (((K Data) (I Data)) I)) ((>> fst) read))) ((>> fst) ((>> next) read))) (, (:: Data (:: Data nil)) nil) ⟫
 
-def arg_y
+/-
+y : ∀ (z : α), β z
+
+
+-/
+def arg_y : Expr :=
+  let Δ := ⟪₂ fst ⟫
+
+  let α := ⟪₂ read ⟫
+  let β := ⟪₂ >> next read ⟫
+
+  let x := ⟪₂ >> fst read ⟫
+  let mk_βx := ⟪₂ (both (both (quot both) quot) (quot :x)) ⟫
+
+  let asserts := ⟪₂ >> :Δ (bothM (>>* :α quot) (>> (>> :β :mk_βx) (push_on nil))) ⟫
+
+  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
 
 end s
 

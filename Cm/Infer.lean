@@ -38,12 +38,15 @@ S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
 
 namespace s
 
-def then_quote : Expr := ⟪₂ both (quot quot) ⟫
+def t_quot : Expr := ⟪₂ ((, ((:: ((>> fst) read)) ((:: ((both ((>> fst) ((>> next) read))) ((>> fst) ((>> next) ((>> next) read))))) ((:: ((>> fst) read)) nil)))) ((, ((:: Data) ((:: (I Data)) nil))) ((:: ((, ((:: (((K Data) (I Data)) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: (((K Data) (I Data)) Data)) nil)) ((, nil) nil))) nil)))) nil)))) ⟫
+
+def then_quote : Expr := ⟪₂ both (K' :t_quot Data quot) ⟫
 
 def α : Expr := ⟪₂ quot Data ⟫
 
 -- β : α → Type
-def β : Expr := ⟪₂ >> fst (>> (:then_quote read) (>> (push_on (:: (quot Data) nil)) (push_on (, nil nil)))) ⟫
+def β : Expr :=
+  ⟪₂ >> fst (>> (:then_quote read) (>> (push_on (:: (quot Data) nil)) (push_on (, nil nil)))) ⟫
 
 /- γ : ∀ (x : α), β x → Type
 -/
@@ -280,6 +283,7 @@ def infer : Expr → Option Expr
   | ⟪₂ >> ⟫
   | ⟪₂ both ⟫
   | ⟪₂ bothM ⟫ =>
+    
     let assert_data_map := read_data
     let assert_data_term := ⟪₂ quot Data ⟫
     ⟪₂ ,
@@ -345,8 +349,9 @@ My guess is it's the both part.
 
 -/
 
+#eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
+
+#eval infer ⟪₂ quot ⟫
+
 #eval infer s.then_quote
 
-#eval infer ⟪₂ (((K Data) (I Data)) ((K Data) (I Data))) ⟫
-#eval infer ⟪₂ (>> ((both (((K Data) (I Data)) ((K Data) (I Data)))) read)) ⟫
-#eval infer ⟪₂ ((>> fst) ((>> ((both (((K Data) (I Data)) ((K Data) (I Data)))) read)) ((>> (push_on ((:: (((K Data) (I Data)) Data)) nil))) (push_on ((, nil) nil))))) ⟫

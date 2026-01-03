@@ -17,8 +17,10 @@ inductive Expr where
   | i         : Expr
   | fst       : Expr
   | snd       : Expr
+  | both'     : Expr
   | both      : Expr
   | bothM     : Expr
+  | bothM'    : Expr
   | push_on   : Expr
   | map_fst   : Expr
   | map_snd   : Expr
@@ -51,6 +53,8 @@ syntax "nil"                 : atom
 syntax "::"                  : atom
 syntax "push_on"             : atom
 syntax "both"                : atom
+syntax "both'"               : atom
+syntax "bothM'"              : atom
 syntax "bothM"               : atom
 syntax "next"                : atom
 syntax "map_fst"             : atom
@@ -79,6 +83,8 @@ macro_rules
   | `(⟪₁ read ⟫) => `(Expr.read)
   | `(⟪₁ both ⟫) => `(Expr.both)
   | `(⟪₁ bothM ⟫) => `(Expr.bothM)
+  | `(⟪₁ both' ⟫) => `(Expr.both')
+  | `(⟪₁ bothM' ⟫) => `(Expr.bothM')
   | `(⟪₁ :: ⟫) => `(Expr.cons)
   | `(⟪₁ push_on ⟫) => `(Expr.push_on)
   | `(⟪₁ next ⟫) => `(Expr.next)
@@ -96,6 +102,8 @@ macro_rules
 def Expr.toString : Expr → String
   | ⟪₂ Data ⟫ => "Data"
   | ⟪₂ push_on ⟫ => "push_on"
+  | ⟪₂ both' ⟫ => "both'"
+  | ⟪₂ bothM' ⟫ => "both'"
   | ⟪₂ bothM ⟫ => "bothM"
   | ⟪₂ fst ⟫ => "fst"
   | ⟪₂ snd ⟫ => "snd"

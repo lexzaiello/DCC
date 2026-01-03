@@ -10,12 +10,14 @@ def step : Expr → Option Expr
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫
   | ⟪₂ K' :_α :_β :x :_y ⟫ => x
-  | ⟪₂ both :f :g :Γ ⟫ =>
+  | ⟪₂ both :f :g :Γ ⟫
+  | ⟪₂ both' :f :g :Γ ⟫ =>
     let left := ⟪₂ :f :Γ ⟫
     let right := ⟪₂ :g :Γ ⟫
 
     ⟪₂ (# (step left).getD left) (# (step right).getD right) ⟫
-  | ⟪₂ bothM :f :g :Γ ⟫ =>
+  | ⟪₂ bothM :f :g :Γ ⟫
+  | ⟪₂ bothM' :f :g :Γ ⟫ =>
     let left := ⟪₂ :f :Γ ⟫
     let right := ⟪₂ :g :Γ ⟫
 

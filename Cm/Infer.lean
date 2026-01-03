@@ -283,7 +283,6 @@ def infer : Expr → Option Expr
   | ⟪₂ >> ⟫
   | ⟪₂ both ⟫
   | ⟪₂ bothM ⟫ =>
-    
     let assert_data_map := read_data
     let assert_data_term := ⟪₂ quot Data ⟫
     ⟪₂ ,
@@ -327,6 +326,28 @@ def infer : Expr → Option Expr
           .none
       | _ => .none
     | _, _ => .none
+  | ⟪₂ both' ⟫ =>
+    /-
+      both' : (α → β) → (β → γ) → α → γ
+    -/
+    let Ξ := ⟪₂ snd ⟫
+
+    let t_map_f := ⟪₂ >> :Ξ read ⟫
+    let t_map_g := ⟪₂ >> :Ξ (>> next read) ⟫
+
+    let ctx_map_f := ⟪₂ snd ⟫
+    let ctx_map_g := ⟪₂ snd ⟫
+
+    let α := ⟪₂ >> fst read ⟫
+    let β := ⟪₂ >> fst (>> next read) ⟫
+
+    let γ := ⟪₂ >> fst (>> next read) ⟫
+
+    
+
+    let 
+    sorry
+  | _ => .none
 
 def infer_list (e : Expr) : List (List (Option Expr)) :=
   (e.any_data_as_list.getD []).map (·.any_data_as_list.getD [] |> List.map infer)
@@ -352,6 +373,8 @@ My guess is it's the both part.
 #eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
 
 #eval infer ⟪₂ quot ⟫
+
+#eval infer ⟪₂ I Data ⟫
 
 #eval infer s.then_quote
 

@@ -526,7 +526,8 @@ def infer : Expr → Option Expr
   | ⟪₂ snd ⟫ => ⟪₂ , (:: (quot Data) (:: (quot Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f
-    let t_arg := norm_context (← infer arg)
+    let raw_t_arg ← infer arg
+    let t_arg := norm_context raw_t_arg
 
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
@@ -535,8 +536,11 @@ def infer : Expr → Option Expr
 
       let check_with ← Γ.list_head
 
-      let norm_expected := try_step_n! 10 <| norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
+      let expected' ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
+      let stolen := norm_context <| steal_context raw_t_arg expected'
+      let norm_expected := try_step_n! 10 <| norm_context expected'
 
+      dbg_trace stolen
       dbg_trace s!"subst: {← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫}"
       dbg_trace s!"check fn: {check_with}"
       dbg_trace s!"norm expected: {norm_expected}"

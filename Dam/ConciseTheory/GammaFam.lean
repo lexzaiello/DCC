@@ -537,16 +537,16 @@ def infer : Expr → Option Expr
       let check_with ← Γ.list_head
 
       let expected' ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
-      let stolen := norm_context <| steal_context raw_t_arg expected'
+      let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
       let norm_expected := try_step_n! 10 <| norm_context expected'
 
-      dbg_trace stolen
-      dbg_trace s!"subst: {← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫}"
-      dbg_trace s!"check fn: {check_with}"
-      dbg_trace s!"norm expected: {norm_expected}"
-      dbg_trace s!"norm t arg: {t_arg}"
-      dbg_trace s!"raw infer arg: {← infer arg}"
-      dbg_trace s!"Δ: {Δ'}"
+      --dbg_trace stolen
+      --dbg_trace s!"subst: {← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫}"
+      --dbg_trace s!"check fn: {check_with}"
+      --dbg_trace s!"norm expected: {norm_expected}"
+      --dbg_trace s!"norm t arg: {t_arg}"
+      --dbg_trace s!"raw infer arg: {← infer arg}"
+      --dbg_trace s!"Δ: {Δ'}"
 
       if norm_expected == t_arg then
         let Γ' ← Γ.list_pop

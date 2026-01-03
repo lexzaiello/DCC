@@ -32,6 +32,9 @@ def read_data : Expr :=
 def read_α : Expr :=
   ⟪₂ , (:: (>> fst read) (:: (quote Data) nil)) ⟫
 
+def ass_data : Expr :=
+  ⟪₂ (:: (:: assert (:: Data nil)) nil) ⟫
+
 /-
 S type:
 
@@ -43,20 +46,11 @@ S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
 
 namespace s
 
-def t_quot : Expr := ⟪₂ ((, ((:: ((>> fst) read)) ((:: ((both ((>> fst) ((>> next) read))) ((>> fst) ((>> next) ((>> next) read))))) ((:: ((>> fst) read)) nil)))) ((, ((:: Data) ((:: (I Data)) nil))) ((:: ((, ((:: (((K Data) (I Data)) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: (((K Data) (I Data)) Data)) nil)) ((, nil) nil))) nil)))) nil)))) ⟫
-
-def then_quote : Expr := ⟪₂ both (K' :t_quot Data quot) ⟫
-
-def α : Expr := ⟪₂ quot Data ⟫
+def α : Expr := ⟪₂ :ass_data ⟫
 
 -- β : α → Type
 def β : Expr :=
-  let Δ := ⟪₂ fst ⟫
-  let α := ⟪₂ read ⟫
-
-  let asserts := ⟪₂ >> :Δ (>> (>> :α quote) (push_on (:: (quot Data) nil))) ⟫
-
-  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
+  ⟪₂ (:: both (:: (:: fst (:: assert nil)) (:: :ass_data nil))) ⟫
 
 /- γ : ∀ (x : α), β x → Type
 -/
@@ -205,9 +199,6 @@ def s_rule : Expr :=
   ⟪₂ , (:: :α (:: :β (:: :γ (:: :arg_x (:: :arg_y (:: :arg_z (:: :t_out nil))))))) (, nil nil) ⟫
 
 end s
-
-def ass_data : Expr :=
-  ⟪₂ (:: (:: assert (:: Data nil)) nil) ⟫
 
 def ass_data_here : Expr :=
   ⟪₂ (:: assert (:: Data nil)) ⟫
@@ -443,8 +434,6 @@ My guess is it's the both part.
 #eval step ⟪₂ exec ((:: fst) ((:: assert) nil)) (, (:: Data (:: Data nil)) (:: Data (:: Data nil))) ⟫
 
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
-
-#eval step ⟪₂ ((exec ((:: fst) ((:: next) nil))) ((, ((:: Data) ((:: (I Data)) ((:: Data) ((:: Data) nil))))) ((:: ((, ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: assert) nil))) ((:: ((:: fst) ((:: assert) nil))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) ((, nil) nil))) nil)))))) ⟫
 
 /-
 this is what we get. we forgot to review the head. whoops.

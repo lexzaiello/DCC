@@ -4,8 +4,6 @@ import Cm.Infer
 
 example : infer ⟪₂ read ⟫ = (some ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (((K Data) (I Data)) Data)) nil))) ((, nil) nil)) ⟫) := rfl
 
-#eval infer ⟪₂ :: Data ⟫
-
 example : infer ⟪₂ :: ⟫ = (some ⟪₂ ((, ((:: ((>> snd) read)) ((:: ((>> snd) ((>> next) read))) ((:: (((K Data) (I Data)) Data)) nil)))) ((, nil) nil)) ⟫) := rfl
 
 example : infer ⟪₂ Data ⟫ = (some ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) nil)) ((, nil) nil)) ⟫) := rfl

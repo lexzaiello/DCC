@@ -307,6 +307,10 @@ def infer : Expr → Option Expr
         let expected' ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
+        --dbg_trace stolen
+        --dbg_trace t_arg
+        --dbg_trace arg
+
         if stolen == t_arg then
           let Γ' ← Γ.list_pop
 
@@ -320,3 +324,29 @@ def infer : Expr → Option Expr
       | _ => .none
     | _, _ => .none
 
+def infer_list (e : Expr) : List (List (Option Expr)) :=
+  (e.any_data_as_list.getD []).map (·.any_data_as_list.getD [] |> List.map infer)
+
+--#eval infer_list ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: ((>> fst) ((>> ((both (((K Data) (I Data)) ((K Data) (I Data)))) read)) ((>> (push_on ((:: (((K Data) (I Data)) Data)) nil))) (push_on ((, nil) nil)))))) ((:: ((>> ((>> fst) ((bothM ((>>* read) ((K Data) (I Data)))) ((>> ((>> ((>> next) read)) ((both ((both (((K Data) (I Data)) both)) ((K Data) (I Data)))) (((K Data) (I Data)) ((>> fst) read))))) (push_on ((:: (((K Data) (I Data)) Data)) nil)))))) (push_on ((, nil) nil)))) ((:: ((>> ((>> fst) ((bothM ((>>* read) ((K Data) (I Data)))) ((bothM ((>> ((>> next) read)) ((both ((both (((K Data) (I Data)) both)) ((K Data) (I Data)))) (((K Data) (I Data)) ((>> fst) read))))) ((>> ((both ((both (((K Data) (I Data)) both)) ((both ((both (((K Data) (I Data)) both)) ((>> ((>> next) ((>> next) read))) ((K Data) (I Data))))) (((K Data) (I Data)) ((>> fst) read))))) (((K Data) (I Data)) ((>> fst) ((>> next) read))))) (push_on nil)))))) (push_on ((, nil) nil)))) ((:: ((>> ((>> fst) ((bothM ((>>* read) ((K Data) (I Data)))) ((>> ((>> ((>> next) read)) ((both ((both (((K Data) (I Data)) both)) ((K Data) (I Data)))) (((K Data) (I Data)) ((>> fst) read))))) (push_on nil))))) (push_on ((, nil) nil)))) ((:: ((>> fst) read)) ((:: ((>> fst) ((both ((both ((>> next) ((>> next) read))) ((>> ((>> next) ((>> next) next))) ((>> next) ((>> next) read))))) ((both ((>> ((>> next) ((>> next) next))) ((>> next) read))) ((>> ((>> next) ((>> next) next))) ((>> next) ((>> next) read))))))) nil)))))))) ((, nil) nil)) ⟫
+
+/-
+TODO next:
+
+((, ((:: (((K Data) (I Data)) Data)) ((:: ((>> fst) ((>> ((both (((K Data) (I Data)) ((K Data) (I Data)))) read)) ((>> (push_on ((:: (((K Data) (I Data)) Data)) nil))) (push_on ((, nil) nil)))))) ((:: ((>> ((>> fst) ((bothM ((>>* read) ((K Data) (I Data)))) ((>> ((>> ((>> next) read)) ((both ((both (((K Data) (I Data)) both)) ((K Data) (I Data)))) (((K Data) (I Data)) ((>> fst) read))))) (push_on ((:: (((K Data) (I Data)) Data)) nil)))))) (push_on ((, nil) nil)))) ((:: ((>> ((>> fst) ((bothM ((>>* read) ((K Data) (I Data)))) ((bothM ((>> ((>> next) read)) ((both ((both (((K Data) (I Data)) both)) ((K Data) (I Data)))) (((K Data) (I Data)) ((>> fst) read))))) ((>> ((both ((both (((K Data) (I Data)) both)) ((both ((both (((K Data) (I Data)) both)) ((>> ((>> next) ((>> next) read))) ((K Data) (I Data))))) (((K Data) (I Data)) ((>> fst) read))))) (((K Data) (I Data)) ((>> fst) ((>> next) read))))) (push_on nil)))))) (push_on ((, nil) nil)))) ((:: ((>> ((>> fst) ((bothM ((>>* read) ((K Data) (I Data)))) ((>> ((>> ((>> next) read)) ((both ((both (((K Data) (I Data)) both)) ((K Data) (I Data)))) (((K Data) (I Data)) ((>> fst) read))))) (push_on nil))))) (push_on ((, nil) nil)))) ((:: ((>> fst) read)) ((:: ((>> fst) ((both ((both ((>> next) ((>> next) read))) ((>> ((>> next) ((>> next) next))) ((>> next) ((>> next) read))))) ((both ((>> ((>> next) ((>> next) next))) ((>> next) read))) ((>> ((>> next) ((>> next) next))) ((>> next) ((>> next) read))))))) nil)))))))) ((, nil) nil))
+
+This does not type-check. This is the type of S.
+
+second assertion errors out.
+
+((>> fst) ((>> ((both (((K Data) (I Data)) ((K Data) (I Data)))) read)) ((>> (push_on ((:: (((K Data) (I Data)) Data)) nil))) (push_on ((, nil) nil)))))
+
+My guess is it's the both part.
+
+
+-/
+
+#eval infer s.then_quote
+
+#eval infer ⟪₂ (((K Data) (I Data)) ((K Data) (I Data))) ⟫
+#eval infer ⟪₂ (>> ((both (((K Data) (I Data)) ((K Data) (I Data)))) read)) ⟫
+#eval infer ⟪₂ ((>> fst) ((>> ((both (((K Data) (I Data)) ((K Data) (I Data)))) read)) ((>> (push_on ((:: (((K Data) (I Data)) Data)) nil))) (push_on ((, nil) nil))))) ⟫

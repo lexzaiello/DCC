@@ -149,6 +149,12 @@ def Expr.as_list : Expr → Option (List Expr)
 def Expr.list_pretty (e : Expr) : String :=
   (e.as_list.map (·.toString)).getD e.toString
 
+def Expr.any_data_as_list : Expr → Option (List Expr)
+  | e@⟪₂ :: :_x :_xs ⟫ => e.as_list
+  | ⟪₂ , :a :b ⟫ => do return a :: (← b.any_data_as_list)
+  | ⟪₂ nil ⟫ => pure []
+  | x => pure [x]
+
 def Expr.as_tup_list : Expr → Option (List Expr)
   | ⟪₂ , :x :xs ⟫ => do return x :: (← xs.as_tup_list)
   | ⟪₂ nil ⟫ => pure []

@@ -80,7 +80,11 @@ def γ : Expr :=
   -- α properly quoted
   let append_tuple : Expr := ⟪₂ (:: (:: push_on (, nil nil)) nil) ⟫
   let asserts := ⟪₂
-    (:: both (:: (:: :α (:: assert nil)) (:: (:: (:: :β (:: :mk_βx nil)) (:: (push_on (:: (quote Data) nil)) nil)) :append_tuple))) ⟫
+    (:: both (::
+      (:: :α (:: assert nil)) -- TODO: have to capture α twice
+      (::
+        (:: (:: :β (:: :mk_βx nil)) (:: (push_on (:: (quote Data) nil)) nil))
+        :append_tuple))) ⟫
 
   ⟪₂ :: :Δ :asserts ⟫
 

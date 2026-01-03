@@ -8,8 +8,10 @@ inductive Expr where
   | data      : Expr
   | tup       : Expr
   | cons      : Expr
+  | assert    : Expr
   | unquote   : Expr
   | quote     : Expr
+  | exec      : Expr
   | nil       : Expr
   | seq       : Expr
   | seq_smart : Expr
@@ -48,8 +50,10 @@ syntax "K"                   : atom
 syntax "K'"                  : atom
 syntax "I"                   : atom
 syntax "S"                   : atom
+syntax "exec"                : atom
 syntax "read"                : atom
 syntax "fst"                 : atom
+syntax "assert"              : atom
 syntax "quote"               : atom
 syntax "unquote"             : atom
 syntax "snd"                 : atom
@@ -73,6 +77,8 @@ syntax "⟪₁" atom "⟫"     : term
 syntax "⟪₂" app "⟫"      : term
 
 macro_rules
+  | `(⟪₁ exec ⟫) => `(Expr.exec)
+  | `(⟪₁ assert ⟫) => `(Expr.assert)
   | `(⟪₁ unquote ⟫) => `(Expr.unquote)
   | `(⟪₁ quote ⟫) => `(Expr.quote)
   | `(⟪₁ Data ⟫) => `(Expr.data)
@@ -106,6 +112,8 @@ macro_rules
   | `(⟪₂ $e₁:app $e₂:atom ⟫) => `(Expr.app ⟪₂ $e₁ ⟫ ⟪₁ $e₂ ⟫)
 
 def Expr.toString : Expr → String
+  | ⟪₂ assert ⟫ => "assert"
+  | ⟪₂ exec ⟫ => "exec"
   | ⟪₂ unquote ⟫ => "unquote"
   | ⟪₂ quote ⟫ => "quote"
   | ⟪₂ Data ⟫ => "Data"

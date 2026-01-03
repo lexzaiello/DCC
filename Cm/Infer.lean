@@ -81,6 +81,7 @@ def γ : Expr :=
   -- this doesn't work any way you spin it.
   -- our argument here is β
   -- I don't know how this worked at all ngl.
+  -- ah, >> fst read is quoted.
   let mk_βx := ⟪₂ (both (both (quot both) quot) (quot :x)) ⟫
 
   let asserts := ⟪₂ >> :Δ (bothM (>> :α quote) (>> (>> :β :mk_βx) (push_on (:: (quot Data) nil)))) ⟫
@@ -338,6 +339,9 @@ def infer : Expr → Option Expr
         nil) ⟫
   | ⟪₂ nil ⟫ => ⟪₂ , (:: (quote Data) nil) (, nil nil) ⟫
   | ⟪₂ Data ⟫ => ⟪₂ , (:: (quote Data) nil) (, nil nil) ⟫
+  | ⟪₂ exec ⟫ => ⟪₂ ,
+    (:: (quote Data) (:: (quote Data) (:: (quote Data) nil)))
+    (, nil nil) ⟫
   | ⟪₂ read ⟫
   | ⟪₂ next ⟫
   | ⟪₂ fst ⟫
@@ -358,10 +362,10 @@ def infer : Expr → Option Expr
 
         --dbg_trace raw_t_arg
         --dbg_trace expected'
-        dbg_trace check_with
-        dbg_trace expected'
-        dbg_trace stolen
-        dbg_trace t_arg
+        --dbg_trace check_with
+        --dbg_trace expected'
+        --dbg_trace stolen
+        --dbg_trace t_arg
         --dbg_trace arg
 
         if stolen == t_arg then

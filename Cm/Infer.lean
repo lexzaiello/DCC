@@ -220,6 +220,16 @@ def infer : Expr → Option Expr
       (, nil nil) ⟫
   | ⟪₂ :: ⟫
   | ⟪₂ push_on ⟫
+  | ⟪₂ quote ⟫ =>
+    /-
+      Quote turns any well-typed expression into a data.
+    -/
+
+    let t_x := ⟪₂ >> snd read ⟫
+
+    ⟪₂ ,
+      (:: :t_x (:: (quot Data) nil))
+      (, nil nil) ⟫
   | ⟪₂ , ⟫ => ⟪₂ ,
     (::
       (>> snd read)
@@ -377,5 +387,4 @@ My guess is it's the both part.
 #eval infer ⟪₂ quot ⟫
 
 #eval infer ⟪₂ I Data ⟫
-
 

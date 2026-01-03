@@ -8,6 +8,7 @@ inductive Expr where
   | data      : Expr
   | tup       : Expr
   | cons      : Expr
+  | quote     : Expr
   | nil       : Expr
   | seq       : Expr
   | seq_smart : Expr
@@ -48,6 +49,7 @@ syntax "I"                   : atom
 syntax "S"                   : atom
 syntax "read"                : atom
 syntax "fst"                 : atom
+syntax "quote"               : atom
 syntax "snd"                 : atom
 syntax "nil"                 : atom
 syntax "::"                  : atom
@@ -69,6 +71,7 @@ syntax "⟪₁" atom "⟫"     : term
 syntax "⟪₂" app "⟫"      : term
 
 macro_rules
+  | `(⟪₁ quote ⟫) => `(Expr.quote)
   | `(⟪₁ Data ⟫) => `(Expr.data)
   | `(⟪₁ #$e:term ⟫) => `($e)
   | `(⟪₁ :$id:ident ⟫) => `($id)
@@ -100,6 +103,7 @@ macro_rules
   | `(⟪₂ $e₁:app $e₂:atom ⟫) => `(Expr.app ⟪₂ $e₁ ⟫ ⟪₁ $e₂ ⟫)
 
 def Expr.toString : Expr → String
+  | ⟪₂ quote ⟫ => "quote"
   | ⟪₂ Data ⟫ => "Data"
   | ⟪₂ push_on ⟫ => "push_on"
   | ⟪₂ both' ⟫ => "both'"

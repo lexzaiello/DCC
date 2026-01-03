@@ -14,7 +14,7 @@ def do_or_unquote (to_do : Expr) (in_e : Expr) : Option Expr :=
   match in_e with
   | ⟪₂ quote :e ⟫ =>
     e
-  | in_e => try_step_n 10 ⟪₂ :in_e :to_do ⟫
+  | in_e => try_step_n 10 ⟪₂ exec :in_e :to_do ⟫
 
 -- Applies the Δ claims context to all handlers in the app context
 -- returns all of the applied assertions, in order
@@ -208,9 +208,17 @@ def s_rule : Expr :=
 
 end s
 
+def ass_data : Expr :=
+  ⟪₂ (:: (:: assert (:: Data nil)) nil) ⟫
+
+def this_arg : Expr :=
+  ⟪₂ (:: fst (:: assert nil)) ⟫
+
 def infer : Expr → Option Expr
   | ⟪₂ S ⟫ => s.s_rule
-  | ⟪₂ I ⟫ => ⟪₂ , (:: (quote Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
+  | ⟪₂ I ⟫ =>
+    let α := ⟪₂ (:: fst (:: assert nil)) ⟫
+    ⟪₂ , (:: :ass_data (:: :α (:: :α nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ quote Data ⟫
     let t_β := read_α
@@ -338,7 +346,7 @@ def infer : Expr → Option Expr
         nil
         nil) ⟫
   | ⟪₂ nil ⟫ => ⟪₂ , (:: (quote Data) nil) (, nil nil) ⟫
-  | ⟪₂ Data ⟫ => ⟪₂ , (:: (quote Data) nil) (, nil nil) ⟫
+  | ⟪₂ Data ⟫ => ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ exec ⟫ => ⟪₂ ,
     (:: (quote Data) (:: (quote Data) (:: (quote Data) nil)))
     (, nil nil) ⟫
@@ -368,12 +376,17 @@ def infer : Expr → Option Expr
         --dbg_trace t_arg
         --dbg_trace arg
 
+        dbg_trace check_with
+        dbg_trace expected'
+        dbg_trace stolen
+        dbg_trace t_arg
+
         if stolen == t_arg then
           let Γ' ← Γ.list_pop
 
           match Γ'.as_singleton with
           | .some t_out =>
-            try_step_n 10 ⟪₂ :t_out (, :Δ' :Ξ') ⟫
+            do_or_unquote ⟪₂ (, :Δ' :Ξ') ⟫ t_out
           | _ =>
             pure ⟪₂ , :Γ' (, :Δ' :Ξ') ⟫
         else
@@ -426,7 +439,9 @@ My guess is it's the both part.
 #eval Expr.display_infer <$> infer ⟪₂ I Data Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
 
+#eval infer ⟪₂ I Data Data ⟫
 
+#eval step ⟪₂ exec ((:: fst) ((:: assert) nil)) (, (:: Data (:: Data nil)) (:: Data (:: Data nil))) ⟫
 
 /-
 Another idea:

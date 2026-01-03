@@ -5,11 +5,11 @@ def step : Expr → Option Expr
   | ⟪₂ exec (:: fst :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst (:: :a nil) ⟫
   | ⟪₂ exec (:: snd :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst (:: :b nil) ⟫
   | ⟪₂ exec (:: next :rst) (:: :x :xs) ⟫ => step ⟪₂ exec :rst :xs ⟫
-  | ⟪₂ exec (:: (:: :x :xs) (:: :y :ys) :rst) :l ⟫ =>
+  /-| ⟪₂ exec (:: (:: :x :xs) (:: (:: :y :ys) :rst)) :l ⟫ =>
     let fx := (step ⟪₂ exec (:: :x :xs) :l ⟫).getD l
     let gx := (step ⟪₂ exec (:: :y :ys) :l ⟫).getD l
 
-    ⟪₂ exec :rst (:: :fx (:: :gx nil)) ⟫
+    ⟪₂ exec :rst (:: :fx (:: :gx nil)) ⟫-/
   | ⟪₂ exec (:: (:: push_on (:: :onto (:: :l nil))) :rst) (:: :x :xs) ⟫ =>
     ⟪₂ exec :rst (:: :x :l) ⟫
   /-
@@ -57,9 +57,9 @@ def step : Expr → Option Expr
     ⟪₂ :f' :x' ⟫
   | _ => .none
 
-#eval step ⟪₂ exec
-  (:: (:: assert (:: Data nil)) (:: (:: fst (:: read nil)) (:: (:: fst (:: read nil))) nil))
-  (:: Data (:: Data nil)) ⟫
+--#eval step ⟪₂ exec
+--  (:: (:: assert (:: Data nil)) (:: (:: fst (:: read nil)) (:: (:: fst (:: read nil))) nil))
+--  (:: Data (:: Data nil)) ⟫
 
 def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
   if n = 0 then

@@ -52,6 +52,8 @@ def α : Expr := ⟪₂ :ass_data ⟫
 def β : Expr :=
   ⟪₂ (:: both (:: (:: fst (:: assert nil)) (:: :ass_data nil))) ⟫
 
+#eval step ⟪₂ exec :β (, (:: Data nil) nil) ⟫
+
 /- γ : ∀ (x : α), β x → Type
 -/
 def γ : Expr :=
@@ -73,17 +75,17 @@ def γ : Expr :=
   -- our argument here is β
   -- I don't know how this worked at all ngl.
   -- ah, >> fst read is quoted.
-  let mk_βx := ⟪₂ (:: both (:: ((:: both (:: (:: quote (:: both nil)) (:: quote nil)))) (:: ((:: quote (:: :x nil))) nil))) ⟫
+  let mk_βx := ⟪₂ (:: both (:: (:: both (:: (:: quote (:: both nil)) (:: quote nil))) (:: ((:: quote (:: :x nil))) nil))) ⟫
 
   -- α properly quoted
-  let asserts := ⟪₂ (:: :Δ (:: (both (:: :α (:: assert nil)) (:: (:: :β (:: :mk_βx nil)) (:: (push_on (:: (quot Data) nil)) nil))) nil)) ⟫
+  let append_tuple : Expr := ⟪₂ (:: (push_on (, nil nil)) nil) ⟫
+  let asserts := ⟪₂
+    (:: both (:: (:: :α (:: assert nil)) (:: (:: (:: :β (:: :mk_βx nil)) (:: (push_on (:: (quote Data) nil)) nil)) :append_tuple))) ⟫
 
-  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
+  ⟪₂ :: :Δ :asserts ⟫
 
-#eval try_step_n 10 ⟪₂ exec :β (, (:: Data nil) nil) ⟫  -- this one is right. we bind a new context, just as we should for arrows
 
 #eval ⟪₂ :γ ⟫
-#eval try_step_n 10 ⟪₂ exec ((:: both) ((:: ((:: apply) ((:: both) ((:: ((:: fst) ((:: next) ((:: assert) nil)))) ((:: ((:: assert) ((:: ((:: fst) ((:: assert) nil))) nil))) nil))))) ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil))) (, (:: Data (:: (I Data) nil)) nil) ⟫
 #eval try_step_n 10 ⟪₂ exec :γ (, (:: Data (:: (I Data) nil)) nil) ⟫
 #eval try_step_n 10 ⟪₂ ((both (((K Data) (I Data)) (I Data))) ((>> fst) read)) (, (:: I nil) nil) ⟫
 

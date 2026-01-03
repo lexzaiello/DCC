@@ -24,8 +24,15 @@ def step : Expr → Option Expr
     let gx ← step ⟪₂ exec :g :ctx ⟫
 
     pure ⟪₂ (:: :fx (:: :gx nil)) ⟫
-  | ⟪₂ exec (:: (:: push_on (:: :onto (:: :l nil))) :rst) (:: :x :xs) ⟫ =>
-    ⟪₂ exec :rst (:: :x :l) ⟫
+  | ⟪₂ exec (:: both (:: :f (:: :g :rst))) :ctx ⟫ => do
+    let fx ← step ⟪₂ exec :f :ctx ⟫
+    let gx ← step ⟪₂ exec :g :ctx ⟫
+
+    pure ⟪₂ exec :rst (:: :fx (:: :gx nil)) ⟫
+  | ⟪₂ exec (:: (:: push_on (, :a :b)) :rst) (:: :x :xs) ⟫ =>
+    ⟪₂ exec :rst (, (:: :x :xs) (, :a :b)) ⟫
+  | ⟪₂ exec (:: (:: push_on (:: :l nil)) :rst) (:: :x :xs) ⟫ =>
+    ⟪₂ exec :rst (:: (:: :x :xs) :l) ⟫
   /-
     Drops context, giving a value.
   -/

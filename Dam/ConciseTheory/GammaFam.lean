@@ -393,9 +393,20 @@ def t_out : Expr :=
   let y := ⟪₂ >> :start_val_args (>> next read) ⟫
   let z := ⟪₂ >> :start_val_args (>> next (>> next read)) ⟫
 
-  let asserts := ⟪₂ >> :Δ (both (both :γ :z) (both :y :z)) ⟫
+  ⟪₂ >> :Δ (both (both :γ :z) (both :y :z)) ⟫
 
-  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
+def full_test_context : Expr :=
+  let α := ⟪₂ Data ⟫
+  let β := ⟪₂ I Data ⟫
+  let γ := ⟪₂ I ⟫
+
+  let x := ⟪₂ I ⟫
+  let y := ⟪₂ I Data ⟫
+  let z := ⟪₂ Data ⟫
+
+  ⟪₂ (, (:: :α (:: :β (:: :γ (:: :x (:: :y (:: :z nil)))))) nil) ⟫
+
+#eval try_step_n 10 ⟪₂ :t_out :full_test_context ⟫
 
 end s
 

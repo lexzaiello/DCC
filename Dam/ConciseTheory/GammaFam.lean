@@ -532,11 +532,12 @@ def infer : Expr → Option Expr
 
       let norm_expected := try_step_n! 10 <| norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
-      dbg_trace ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
-      dbg_trace check_with
-      dbg_trace norm_expected
-      dbg_trace t_arg
-      dbg_trace Δ'
+      --dbg_trace ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
+      --dbg_trace check_with
+      --dbg_trace norm_expected
+      --dbg_trace t_arg
+      --dbg_trace ← infer arg
+      --dbg_trace Δ'
 
       if norm_expected == t_arg then
         let Γ' ← Γ.list_pop
@@ -549,7 +550,6 @@ def infer : Expr → Option Expr
       else
         .none
     | _ => .none
-  | _ => .none
 
 #eval Expr.display_infer <$> infer ⟪₂ read ⟫
 
@@ -603,8 +603,10 @@ I = S K K
 S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data
 
 Check each component first.
+
+We just need to streal the context from the actual argument,
+probably.
 -/
-#eval Expr.display_infer <$> infer ⟪₂ (K' Data Data) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) ⟫
 
 end Idea

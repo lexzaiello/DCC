@@ -141,7 +141,6 @@ second is the both thing. let's test
 -/
 #eval try_step_n 10 ⟪₂ :arg_y :test_context_arg_x ⟫
 
--- Some I. epic
 #eval try_step_n 10 ⟪₂ ((both (((K Data) (I Data)) (I Data))) ((>> fst) read)) (, (:: I nil) nil) ⟫
 
 /-
@@ -302,7 +301,7 @@ def infer : Expr → Option Expr
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
       let Δ' := Expr.push_in arg Δ
-      let Ξ' := Expr.push_in (← infer arg) Ξ
+      let Ξ' := Expr.push_in raw_t_arg Ξ
 
       let check_with ← Γ.list_head
 

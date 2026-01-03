@@ -2,7 +2,16 @@ import Cm.Ast
 import Cm.Eval
 import Cm.Infer
 
-#eval Expr.display_infer <$> infer ⟪₂ read ⟫
+example : infer ⟪₂ read ⟫ = (some ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: (((K Data) (I Data)) Data)) nil))) ((, nil) nil)) ⟫) := rfl
+
+#eval infer ⟪₂ :: Data ⟫
+
+example : infer ⟪₂ :: ⟫ = (some ⟪₂ ((, ((:: ((>> snd) read)) ((:: ((>> snd) ((>> next) read))) ((:: (((K Data) (I Data)) Data)) nil)))) ((, nil) nil)) ⟫) := rfl
+
+example : infer ⟪₂ Data ⟫ = (some ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) nil)) ((, nil) nil)) ⟫) := rfl
+
+#eval infer ⟪₂ :: Data nil ⟫
+#eval infer ⟪₂ push_on (:: Data nil) nil ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ push_on (:: Data nil) nil ⟫
 #eval Expr.display_infer <$> infer ⟪₂ Data ⟫
@@ -62,3 +71,4 @@ probably.
 #eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
 
 #eval try_step_n! 10 ⟪₂ ((, Data) ((, Data) ((((K' Data) Data) Data) Data))) ⟫
+

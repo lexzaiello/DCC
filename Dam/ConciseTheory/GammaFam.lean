@@ -357,6 +357,18 @@ def arg_y : Expr :=
 
   ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
 
+/-
+y test, pretty similar. use the same test context.
+should be ∀ (x : α), β x
+first arg in asserts is the data quoted, nice
+second is the both thing. let's test
+((, ((:: (((K Data) (I Data)) Data)) ((:: ((both (((K Data) (I Data)) (I Data))) ((>> fst) read))) nil))) ((, nil) nil))
+-/
+#eval try_step_n 10 ⟪₂ :arg_y :test_context_arg_x ⟫
+
+-- Some I. epic
+#eval try_step_n 10 ⟪₂ ((both (((K Data) (I Data)) (I Data))) ((>> fst) read)) (, (:: I nil) nil) ⟫
+
 end s
 
 def infer : Expr → Option Expr

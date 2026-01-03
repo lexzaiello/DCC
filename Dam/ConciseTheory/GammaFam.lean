@@ -415,7 +415,7 @@ def full_test_context : Expr :=
 #eval try_step_n 10 ⟪₂ :t_out :full_test_context ⟫
 
 def s_rule : Expr :=
-  ⟪₂ , (:: :α (:: :β (:: :γ (:: :arg_x (:: :arg_y (:: :arg_z nil)))))) (, nil nil) ⟫
+  ⟪₂ , (:: :α (:: :β (:: :γ (:: :arg_x (:: :arg_y (:: :arg_z (:: :t_out nil))))))) (, nil nil) ⟫
 
 end s
 
@@ -616,7 +616,7 @@ Check each component first.
 We just need to streal the context from the actual argument,
 probably.
 -/
-#eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) ⟫
+#eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
 
 #eval try_step_n! 10 ⟪₂ ((, Data) ((, Data) ((((K' Data) Data) Data) Data))) ⟫
 

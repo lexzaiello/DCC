@@ -426,6 +426,8 @@ def infer : Expr → Option Expr
     let in_data := ⟪₂ Data ⟫
     let assert_some_data_map := ⟪₂ >> :get_t_out (, :in_data) ⟫
 
+    dbg_trace s!"my map: {assert_some_data_map}"
+
     -- first argument is just Data -> Data
     -- second argument is polymoprhic
     -- third argument is the datum
@@ -525,5 +527,7 @@ def test_Ξ : Expr := ⟪₂ ((:: ((, ((:: (((K Data) (I Data)) Data)) ((:: (((K
 #eval try_step_n 10 ⟪₂ (>> (((>> next) read)) ((>> fst) ((>> next) read))) :test_Ξ ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ >>* read (K' :t_i Data I) (, I I) ⟫
+
+#eval try_step_n 10 ⟪₂ ((>> ((>> ((>> snd) ((>> next) read))) ((both ((>> fst) ((>> next) read))) snd))) (, Data)) (, nil :test_Ξ) ⟫
 
 end Idea

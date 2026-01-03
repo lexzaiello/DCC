@@ -339,6 +339,8 @@ See tests below
 #eval try_step_n 10 ⟪₂ :arg_x :test_context_arg_x ⟫
 #eval try_step_n 10 ⟪₂ ((both ((both (((K Data) (I Data)) I)) ((>> fst) read))) ((>> fst) ((>> next) read))) (, (:: Data (:: Data nil)) nil) ⟫
 
+def arg_y
+
 end s
 
 def infer : Expr → Option Expr

@@ -218,6 +218,7 @@ def infer : Expr → Option Expr
   | ⟪₂ fst ⟫
   | ⟪₂ snd ⟫
   | ⟪₂ both ⟫
+  | ⟪₂ apply ⟫
   | ⟪₂ push_on ⟫ => ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ S ⟫ => s.s_rule
   | ⟪₂ I ⟫ =>
@@ -227,7 +228,7 @@ def infer : Expr → Option Expr
     let t_α := ⟪₂ :ass_data ⟫
     let t_β := ⟪₂ (:: both (:: (:: fst (:: assert nil)) (:: :ass_data nil))) ⟫
     let t_x := ⟪₂ (:: fst (:: assert nil)) ⟫
-    let t_y := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
+    let t_y := ⟪₂ (:: apply (:: (:: fst (:: next nil)) (:: (:: fst (:: next (:: next nil))) nil))) ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
   | ⟪₂ K' ⟫ =>

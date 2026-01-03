@@ -15,6 +15,7 @@ def sub_context : Expr → Expr
   | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
     Expr.from_list <| (do (← Γ.as_list).mapM (fun f =>
     (do_or_unquote ⟪₂ , :Δ :Ξ ⟫ f).getD f)).getD []
+  | e@⟪₂ (:: :_e :_rst) ⟫ => e
   | e => ⟪₂ (:: :e nil) ⟫
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)

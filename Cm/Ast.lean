@@ -186,4 +186,4 @@ example : Expr.push_in ⟪₂ Data ⟫ ⟪₂ :: Data K ⟫ = ⟪₂ :: Data (::
 
 syntax "quot" : atom
 macro_rules
-  | `(⟪₁ quot ⟫) => `(⟪₂ K Data (I Data) ⟫)
+  | `(⟪₁ quot ⟫) => `(⟪₂ K' Data Data ⟫)

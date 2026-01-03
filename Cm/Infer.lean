@@ -46,7 +46,12 @@ def α : Expr := ⟪₂ quot Data ⟫
 
 -- β : α → Type
 def β : Expr :=
-  ⟪₂ >> fst (>> (:then_quote read) (>> (push_on (:: (quot Data) nil)) (push_on (, nil nil)))) ⟫
+  let Δ := ⟪₂ fst ⟫
+  let α := ⟪₂ read ⟫
+
+  let asserts := ⟪₂ >> :Δ (>> (>>* :α quot) (push_on (:: (quot Data) nil))) ⟫
+
+  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
 
 /- γ : ∀ (x : α), β x → Type
 -/
@@ -326,27 +331,24 @@ def infer : Expr → Option Expr
           .none
       | _ => .none
     | _, _ => .none
-  | ⟪₂ both' ⟫ =>
+  /-| ⟪₂ both' ⟫ =>
     /-
-      both' : (α → β) → (β → γ) → α → γ
+      both' f g data = (f x) (g x)
+      both' : (data → (β → 
     -/
     let Ξ := ⟪₂ snd ⟫
 
     let t_map_f := ⟪₂ >> :Ξ read ⟫
     let t_map_g := ⟪₂ >> :Ξ (>> next read) ⟫
 
-    let ctx_map_f := ⟪₂ snd ⟫
-    let ctx_map_g := ⟪₂ snd ⟫
-
     let α := ⟪₂ >> fst read ⟫
     let β := ⟪₂ >> fst (>> next read) ⟫
 
     let γ := ⟪₂ >> fst (>> next read) ⟫
 
-    
-
-    let 
-    sorry
+    ⟪₂ ,
+      (:: :t_map_f (:: (bothM (>> :t_map_g :β) (>> :t_map_g :γ)) (:: (>> :t_map_f :α) nil)))
+      (, nil nil) ⟫-/
   | _ => .none
 
 def infer_list (e : Expr) : List (List (Option Expr)) :=
@@ -376,5 +378,4 @@ My guess is it's the both part.
 
 #eval infer ⟪₂ I Data ⟫
 
-#eval infer s.then_quote
 

@@ -293,30 +293,30 @@ def infer : Expr → Option Expr
   | ⟪₂ next ⟫
   | ⟪₂ fst ⟫
   | ⟪₂ snd ⟫ => ⟪₂ , (:: (quot Data) (:: (quot Data) nil)) (, nil nil) ⟫
-  | ⟪₂ :f :arg ⟫ => do
-    let t_f ← infer f
-    let raw_t_arg ← infer arg
-    let t_arg := norm_context raw_t_arg
+  | ⟪₂ :f :arg ⟫ => match infer f, infer arg with
+    | .some t_f, .some raw_t_arg => do
+      let t_arg := norm_context raw_t_arg
 
-    match t_f with
-    | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
-      let Δ' := Expr.push_in arg Δ
-      let Ξ' := Expr.push_in raw_t_arg Ξ
+      match t_f with
+      | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
+        let Δ' := Expr.push_in arg Δ
+        let Ξ' := Expr.push_in raw_t_arg Ξ
 
-      let check_with ← Γ.list_head
+        let check_with ← Γ.list_head
 
-      let expected' ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
-      let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
+        let expected' ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
+        let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
-      if stolen == t_arg then
-        let Γ' ← Γ.list_pop
+        if stolen == t_arg then
+          let Γ' ← Γ.list_pop
 
-        match Γ'.as_singleton with
-        | .some t_out =>
-          try_step_n 10 ⟪₂ :t_out (, :Δ' :Ξ') ⟫
-        | _ =>
-          pure ⟪₂ , :Γ' (, :Δ' :Ξ') ⟫
-      else
-        .none
-    | _ => .none
+          match Γ'.as_singleton with
+          | .some t_out =>
+            try_step_n 10 ⟪₂ :t_out (, :Δ' :Ξ') ⟫
+          | _ =>
+            pure ⟪₂ , :Γ' (, :Δ' :Ξ') ⟫
+        else
+          .none
+      | _ => .none
+    | _, _ => .none
 

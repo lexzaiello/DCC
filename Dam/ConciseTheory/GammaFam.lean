@@ -424,7 +424,7 @@ def infer : Expr → Option Expr
 
     -- fetch the α, then push it as the output type
     let in_data := ⟪₂ Data ⟫
-    let assert_some_data_map := ⟪₂ >> :get_t_out (, :in_data) ⟫
+    let assert_some_data_map := ⟪₂ >> (>> :get_t_out (, :in_data)) (push_on (, nil nil)) ⟫
 
     dbg_trace s!"my map: {assert_some_data_map}"
 

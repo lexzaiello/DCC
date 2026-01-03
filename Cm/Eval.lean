@@ -12,7 +12,9 @@ def step : Expr → Option Expr
       dbg_trace s!"hi again: {⟪₂ :a :b ⟫}"
       ⟪₂ :a :b ⟫
     | _ => .none
-  | ⟪₂ exec (:: read :rst) (:: :x :xs) ⟫ => step ⟪₂ exec :rst :x ⟫
+  | ⟪₂ exec (:: (:: quote (:: :c nil)) :rst) (:: :x :xs) ⟫ =>
+    step ⟪₂ exec (:: :c (:: :rst nil)) :xs ⟫
+  | ⟪₂ exec (:: read :rst) (:: :x :xs) ⟫ => step ⟪₂ exec :rst (:: :x nil) ⟫
   | ⟪₂ exec (:: fst :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :a ⟫
   | ⟪₂ exec (:: snd :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :b ⟫
   | ⟪₂ exec (:: next nil) (:: :x :xs) ⟫ => xs

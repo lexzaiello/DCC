@@ -55,27 +55,36 @@ def β : Expr :=
 /- γ : ∀ (x : α), β x → Type
 -/
 def γ : Expr :=
-  /-
-    Now, since we have list-encoded application,
-    we can be very particular.
-  -/
+  let Δ := ⟪₂ fst ⟫
 
-  -- this is capturing S's context
-  -- we don't have to do any real quotation work here
-  -- we need to put the commas in to make a full new context
-  -- the both is what is able to make it into a new context. magic. fr.
-  let x_α := ⟪₂ (:: fst (:: assert nil)) ⟫
-  let β := ⟪₂ (:: fst (:: next (:: assert nil))) ⟫
+  -- α is the first argument in Δ. we don't do anything to it
+  let α := ⟪₂ read ⟫
+  let β := ⟪₂ (:: next (:: read nil)) ⟫
 
-  let x := ⟪₂ (:: (:: assert (:: (:: fst (:: assert nil)) nil)) nil) ⟫
+  -- x is a quoted operation that shouldn't run until the later context
+  -- flow starts by getting our dependents, then building the new context via quotation
+  -- x is the first argument in the later context
+  -- it selects the Δ register, then reads
+  let x := ⟪₂ (:: fst (:: read nil)) ⟫
 
-  let β_x := ⟪₂ (:: apply (:: both (:: :β (:: :x nil)))) ⟫
+  -- right hand quot is fine, since x is a data.
+  -- inner both is inserting "both", quoted
+  -- this doesn't work any way you spin it.
+  -- our argument here is β
+  -- I don't know how this worked at all ngl.
+  -- ah, >> fst read is quoted.
+  let mk_βx := ⟪₂ (:: both (:: ((:: both (:: (:: quote (:: both nil)) (:: quote nil)))) (:: ((:: quote (:: :x nil))) nil))) ⟫
 
-  ⟪₂ (:: both (:: :x_α (:: :β_x (:: :ass_data nil)))) ⟫
+  -- α properly quoted
+  let asserts := ⟪₂ (:: :Δ (:: (both (:: :α (:: assert nil)) (:: (:: :β (:: :mk_βx nil)) (:: (push_on (:: (quot Data) nil)) nil))) nil)) ⟫
+
+  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
 
 #eval try_step_n 10 ⟪₂ exec :β (, (:: Data nil) nil) ⟫  -- this one is right. we bind a new context, just as we should for arrows
 
-#eval try_step_n 10 ⟪₂ :γ (, (:: Data (:: (I Data) nil)) nil) ⟫
+#eval ⟪₂ :γ ⟫
+#eval try_step_n 10 ⟪₂ exec ((:: both) ((:: ((:: apply) ((:: both) ((:: ((:: fst) ((:: next) ((:: assert) nil)))) ((:: ((:: assert) ((:: ((:: fst) ((:: assert) nil))) nil))) nil))))) ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil))) (, (:: Data (:: (I Data) nil)) nil) ⟫
+#eval try_step_n 10 ⟪₂ exec :γ (, (:: Data (:: (I Data) nil)) nil) ⟫
 #eval try_step_n 10 ⟪₂ ((both (((K Data) (I Data)) (I Data))) ((>> fst) read)) (, (:: I nil) nil) ⟫
 
 /-
@@ -229,7 +238,6 @@ def infer : Expr → Option Expr
               (:: fst (:: assert nil))
               nil)))))
       (, nil nil) ⟫
-  | ⟪₂ quote ⟫
   | ⟪₂ unquote ⟫ =>
     /-
       Quotes prevent a data from being given context.
@@ -490,4 +498,13 @@ If we wanted to support apps with lists,
 we could easily use both to make this work.
 
 We did it in a preivous example.
+
+Making new contexts is still god awful.
+
+We would end up making one of those comma'd lists.
+
+For one thing, I don't know how that works now that
+we're using data instruction lists.
+
+
 -/

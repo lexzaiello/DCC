@@ -46,6 +46,9 @@ def t_k : Expr := ⟪₂ ((, ((:: (quot Data)) ((:: (, ((:: ((>> fst) read)) ((:
 
 def t_i : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
 
+#eval infer ⟪₂ (:: Data nil) ⟫
+
+#eval Expr.display_infer <$> infer ⟪₂ (, I I) ⟫
 #eval Expr.display_infer <$> infer ⟪₂ (>>* read (K' :t_i Data I) (, I I)) Data Data ⟫
 
 /-

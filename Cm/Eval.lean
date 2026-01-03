@@ -32,6 +32,7 @@ def step : Expr → Option Expr
     ⟪₂ (, (#← step ⟪₂ :f :a ⟫) :b) ⟫
   | ⟪₂ map_snd :f (, :a :b) ⟫ => do
     ⟪₂ (, :a (#← step ⟪₂ :f :b ⟫)) ⟫
+  | ⟪₂ quote :x ⟫ => ⟪₂ quote (# (step x).getD x) ⟫
   | ⟪₂ , :a :b ⟫ => do ⟪₂ , (#(step a).getD a) (#(step b).getD b) ⟫
   | ⟪₂ :f :x ⟫ =>
     let f' := (step f).getD f

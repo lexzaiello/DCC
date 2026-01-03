@@ -218,8 +218,7 @@ def infer : Expr → Option Expr
               (>> fst read)
               nil)))))
       (, nil nil) ⟫
-  | ⟪₂ :: ⟫
-  | ⟪₂ push_on ⟫
+  
   | ⟪₂ quote ⟫ =>
     /-
       Quote turns any well-typed expression into a data.
@@ -230,6 +229,8 @@ def infer : Expr → Option Expr
     ⟪₂ ,
       (:: :t_x (:: (quot Data) nil))
       (, nil nil) ⟫
+  | ⟪₂ :: ⟫
+  | ⟪₂ push_on ⟫
   | ⟪₂ , ⟫ => ⟪₂ ,
     (::
       (>> snd read)
@@ -260,7 +261,7 @@ def infer : Expr → Option Expr
       ((, ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: (((K Data) (I Data)) Data)) nil)) ((, nil) nil))) nil)))
       its output type is the second element in its assertions
     -/
-    let Ξ := ⟪₂ snd ⟫
+    /-let Ξ := ⟪₂ snd ⟫
 
     -- this if the type of g. it is this tuple (Γ, Δ, Ξ)
     -- we need Δ to compute values in Γ
@@ -294,6 +295,22 @@ def infer : Expr → Option Expr
     -- output is the α
     ⟪₂ ,
       (:: :assert_data_map (:: :assert_some_data_map (:: (quot Data) (:: :get_t_out nil))))
+      (, nil nil) ⟫-/
+    let Ξ := ⟪₂ snd ⟫
+
+    let t_map_f := ⟪₂ >> :Ξ read ⟫
+
+    let t_in_f := ⟪₂ >> :Ξ (>> read (>> fst read)) ⟫
+    let t_out_f := ⟪₂ >> :Ξ (>> read (>> fst (>> next read))) ⟫
+    let t_out_g := ⟪₂ >> :Ξ (>> next (>> read (>> fst next))) ⟫
+
+    let ctx_g := ⟪₂ >> :Ξ (>> next (>> read snd)) ⟫
+
+    let asserts_g' := ⟪₂ (bothM :t_out_f :t_out_g) ⟫
+    let t_g' := ⟪₂ (both (both (quot ,) :asserts_g') :ctx_g) ⟫
+
+    ⟪₂ ,
+      (:: :t_map_f (:: :t_g' (:: :t_in_f (:: :t_out_g nil))))
       (, nil nil) ⟫
   | ⟪₂ >> ⟫
   | ⟪₂ both ⟫
@@ -325,9 +342,9 @@ def infer : Expr → Option Expr
         let expected' ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
-        --dbg_trace stolen
-        --dbg_trace t_arg
-        --dbg_trace arg
+        dbg_trace stolen
+        dbg_trace t_arg
+        dbg_trace arg
 
         if stolen == t_arg then
           let Γ' ← Γ.list_pop
@@ -382,6 +399,10 @@ My guess is it's the both part.
 
 -/
 
+--#eval step ⟪₂ ((bothM ((>> snd) ((>> read) ((>> fst) ((>> next) read))))) ((push_on nil) ((>> snd) ((>> next) ((>> read) ((>> fst) ((>> next) read))))))) ((, ((:: read) nil)) ((:: ((, ((:: (((K' Data) Data) Data)) ((:: (((K' Data) Data) Data)) nil))) ((, nil) nil))) nil)) ⟫
+#eval infer ⟪₂ read ⟫
+#eval infer ⟪₂ >>* read read ⟫
+#eval infer ⟪₂ :: Data nil ⟫
 #eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
 
 #eval infer ⟪₂ quot ⟫

@@ -1,6 +1,10 @@
 import Cm.Ast
 
 def step : Expr → Option Expr
+  | ⟪₂ exec (:: apply (:: :a (:: :b nil))) :ctx ⟫ =>
+    let a_elem := ⟪₂ exec :a :ctx ⟫
+    let b_elem := ⟪₂ exec :b :ctx ⟫
+    ⟪₂ :a_elem :b_elem ⟫
   | ⟪₂ exec (:: fst :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :a ⟫
   | ⟪₂ exec (:: snd :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :b ⟫
   | ⟪₂ exec (:: next :rst) (:: :x :xs) ⟫ => step ⟪₂ exec :rst :xs ⟫

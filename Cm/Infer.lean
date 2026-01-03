@@ -213,6 +213,12 @@ def ass_data_here : Expr :=
   ⟪₂ (:: assert (:: Data nil)) ⟫
 
 def infer : Expr → Option Expr
+  | ⟪₂ assert ⟫
+  | ⟪₂ next ⟫
+  | ⟪₂ fst ⟫
+  | ⟪₂ snd ⟫
+  | ⟪₂ both ⟫
+  | ⟪₂ push_on ⟫ => ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ S ⟫ => s.s_rule
   | ⟪₂ I ⟫ =>
     let α := ⟪₂ (:: fst (:: assert nil)) ⟫
@@ -248,9 +254,6 @@ def infer : Expr → Option Expr
       (:: (quote Data) (:: (quote Data) nil))
       (, nil nil) ⟫
   | ⟪₂ :: ⟫
-  | ⟪₂ push_on ⟫ => ⟪₂ ,
-    (:: :ass_data (:: :ass_data (:: :ass_data nil)))
-    (, nil nil) ⟫
   | ⟪₂ , ⟫ => ⟪₂ ,
     (::
       :ass_data
@@ -333,7 +336,6 @@ def infer : Expr → Option Expr
       (:: :t_map_f (:: :t_g' (:: (both :t_in_f :ctx_f) (:: (both :t_out_g :ctx_g) nil))))
       (, nil nil) ⟫
   | ⟪₂ >> ⟫
-  | ⟪₂ both ⟫
   | ⟪₂ bothM ⟫ =>
     let assert_data_map := read_data
     let assert_data_term := ⟪₂ quote Data ⟫
@@ -347,10 +349,7 @@ def infer : Expr → Option Expr
   | ⟪₂ exec ⟫ => ⟪₂ ,
     (:: :ass_data (:: :ass_data (:: :ass_data nil)))
     (, nil nil) ⟫
-  | ⟪₂ read ⟫
-  | ⟪₂ next ⟫
-  | ⟪₂ fst ⟫
-  | ⟪₂ snd ⟫ => ⟪₂ , (:: :ass_data (:: :ass_data nil)) (, nil nil) ⟫
+  | ⟪₂ read ⟫ => ⟪₂ , (:: :ass_data (:: :ass_data nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => match infer f, infer arg with
     | .some t_f, .some raw_t_arg => do
       let t_arg := norm_context raw_t_arg
@@ -442,7 +441,7 @@ My guess is it's the both part.
 
 #eval step ⟪₂ exec ((:: fst) ((:: assert) nil)) (, (:: Data (:: Data nil)) (:: Data (:: Data nil))) ⟫
 
-#eval infer ⟪₂ K Data (I Data) Data ⟫
+#eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
 /-
 ((:: both) ((:: ((:: fst) ((:: assert) nil))) ((:: ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) nil)))

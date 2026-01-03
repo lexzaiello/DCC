@@ -444,6 +444,14 @@ My guess is it's the both part.
 
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
+#eval step ⟪₂ ((exec ((:: fst) ((:: next) nil))) ((, ((:: Data) ((:: (I Data)) ((:: Data) ((:: Data) nil))))) ((:: ((, ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: assert) nil))) ((:: ((:: fst) ((:: assert) nil))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) ((, nil) nil))) nil)))))) ⟫
+
+/-
+this is what we get. we forgot to review the head. whoops.
+(some ((:: (I Data)) ((:: Data) ((:: Data) nil))))
+-/
+
+
 /-
 ((:: both) ((:: ((:: fst) ((:: assert) nil))) ((:: ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) nil)))
 -/

@@ -295,7 +295,7 @@ def γ : Expr :=
 /-
 x : ∀ (z : α) (y : β z), γ z y
 -/
-def x : Expr :=
+def arg_x : Expr :=
   -- arguments in the first register
   let Δ := ⟪₂ fst ⟫
 
@@ -304,9 +304,9 @@ def x : Expr :=
   let γ := ⟪₂ >> next (>> next read) ⟫
 
   -- sequence after β
+  let x := ⟪₂ >> fst read ⟫
   let mk_βx := ⟪₂ (both (both (quot both) quot) (quot :x)) ⟫
 
-  let x := ⟪₂ >> fst read ⟫
   let y := ⟪₂ >> fst (>> next read) ⟫
 
   -- similar pattern for output, γ z y
@@ -317,6 +317,27 @@ def x : Expr :=
   let asserts := ⟪₂ >> :Δ (bothM (>>* :α quot) (bothM (>> :β :mk_βx) (>> :mk_γzy (push_on nil)))) ⟫
 
   ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
+
+/-
+For testing the x type, S's context:
+- α = Data
+- β = I Data
+- γ = I
+-/
+def test_context_arg_x : Expr := ⟪₂ (, (:: Data (:: (I Data) (:: I nil))) nil) ⟫
+
+/-
+this should be:
+γ = I
+x : ∀ (z : Data) (y : I Data z), I z y
+
+((:: (((K Data) (I Data)) Data)) ((:: ((both (((K Data) (I Data)) (I Data))) ((>> fst) read))) ((:: ((both ((both (((K Data) (I Data)) I)) ((>> fst) read))) ((>> fst) ((>> next) read)))) nil)))
+
+first arg = Data
+snd arg = 
+-/
+#eval try_step_n 10 ⟪₂ ((both (((K Data) (I Data)) (I Data))) ((>> fst) read)) (, (:: I nil) nil) ⟫
+#eval try_step_n 10 ⟪₂ :arg_x :test_context_arg_x ⟫
 
 end s
 

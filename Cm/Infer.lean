@@ -310,7 +310,7 @@ def infer : Expr → Option Expr
     let t_g' := ⟪₂ (both (both (quot ,) :asserts_g') :ctx_g) ⟫
 
     ⟪₂ ,
-      (:: :t_map_f (:: :t_g' (:: (both :t_in_f :ctx_f) (:: :t_out_g nil))))
+      (:: :t_map_f (:: :t_g' (:: (both :t_in_f :ctx_f) (:: (both (both (quot ,) :t_out_g) :ctx_g) nil))))
       (, nil nil) ⟫
   | ⟪₂ >> ⟫
   | ⟪₂ both ⟫

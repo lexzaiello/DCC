@@ -532,6 +532,12 @@ def infer : Expr → Option Expr
 
       let norm_expected := try_step_n! 10 <| norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
+      dbg_trace ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
+      dbg_trace check_with
+      dbg_trace norm_expected
+      dbg_trace t_arg
+      dbg_trace Δ'
+
       if norm_expected == t_arg then
         let Γ' ← Γ.list_pop
 
@@ -585,8 +591,20 @@ def t_i : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: ((>> fst) rea
 #eval Expr.display_infer <$> infer ⟪₂ (>>* read (K' :t_i Data I) (, I I)) Data Data ⟫
 
 /-
-S combinator test:
+S combinator test: I combinator derivation.
+
+S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
+  (x : ∀ (z : α) (y : β z), γ z y)
+  (y : ∀ (z : α), β z)
+  (z : α), γ z (y z)
+
+I = S K K
+
+S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data
+
+Check each component first.
 -/
-#eval Expr.display_infer <$> infer ⟪₂ 
+#eval Expr.display_infer <$> infer ⟪₂ (K' Data Data) ⟫
+#eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) ⟫
 
 end Idea

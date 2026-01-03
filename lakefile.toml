@@ -1,12 +1,12 @@
-name = "Dam"
+name = "Cm"
 version = "0.1.0"
-defaultTargets = ["dam"]
+defaultTargets = ["Cm"]
 
 [[lean_lib]]
-name = "Dam"
+name = "Cm"
 
 [[lean_exe]]
-name = "dam"
+name = "cm"
 root = "Main"
 
 [[require]]

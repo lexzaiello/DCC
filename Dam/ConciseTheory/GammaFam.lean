@@ -281,7 +281,9 @@ def γ : Expr :=
   -- it selects the Δ register, then reads
   let x := ⟪₂ >> fst read ⟫
 
-  let asserts := ⟪₂ >> :Δ (bothM (>>* :α quot) (>> (>> :β (both (both (quot both) quot) (quot :x))) (push_on (:: (quot Data) nil)))) ⟫
+  let mk_βx := ⟪₂ (both (both (quot both) quot) (quot :x)) ⟫
+
+  let asserts := ⟪₂ >> :Δ (bothM (>>* :α quot) (>> (>> :β :mk_βx) (push_on (:: (quot Data) nil)))) ⟫
 
   ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
 
@@ -289,6 +291,32 @@ def γ : Expr :=
 
 #eval try_step_n 10 ⟪₂ :γ (, (:: Data (:: (I Data) nil)) nil) ⟫
 #eval try_step_n 10 ⟪₂ ((both (((K Data) (I Data)) (I Data))) ((>> fst) read)) (, (:: I nil) nil) ⟫
+
+/-
+x : ∀ (z : α) (y : β z), γ z y
+-/
+def x : Expr :=
+  -- arguments in the first register
+  let Δ := ⟪₂ fst ⟫
+
+  let α := ⟪₂ read ⟫
+  let β := ⟪₂ >> next read ⟫
+  let γ := ⟪₂ >> next (>> next read) ⟫
+
+  -- sequence after β
+  let mk_βx := ⟪₂ (both (both (quot both) quot) (quot :x)) ⟫
+
+  let x := ⟪₂ >> fst read ⟫
+  let y := ⟪₂ >> fst (>> next read) ⟫
+
+  -- similar pattern for output, γ z y
+  -- assume entire Δ in scope
+  let mk_γz := ⟪₂ both (both (quot both) (>> :γ quot)) (quot :x) ⟫
+  let mk_γzy := ⟪₂ both (both (quot both) :mk_γz) (quot :y) ⟫
+
+  let asserts := ⟪₂ >> :Δ (bothM (>>* :α quot) (bothM (>> :β :mk_βx) (>> :mk_γzy (push_on nil)))) ⟫
+
+  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
 
 end s
 

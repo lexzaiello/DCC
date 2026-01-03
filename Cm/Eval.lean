@@ -1,7 +1,6 @@
 import Cm.Ast
 
 def step : Expr → Option Expr
-  | ⟪₂ exec nil :x ⟫ => x
   | ⟪₂ exec (:: fst :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :a ⟫
   | ⟪₂ exec (:: snd :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :b ⟫
   | ⟪₂ exec (:: next :rst) (:: :x :xs) ⟫ => step ⟪₂ exec :rst :xs ⟫
@@ -18,6 +17,7 @@ def step : Expr → Option Expr
   | ⟪₂ exec (:: (:: assert (:: :x nil)) :rst) :ctx ⟫ =>
     x
   | ⟪₂ exec (:: assert nil) (:: :x :_xs) ⟫ => x
+  | ⟪₂ exec nil :x ⟫ => x
   | ⟪₂ push_on nil :a ⟫ => ⟪₂ :: :a nil ⟫
   | ⟪₂ push_on (:: :x :xs) :a ⟫ => ⟪₂ :: :a (:: :x :xs) ⟫
   | ⟪₂ push_on (, :a :b) :c ⟫ => ⟪₂ (, :c (, :a :b)) ⟫

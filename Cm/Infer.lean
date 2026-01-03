@@ -1,10 +1,6 @@
 import Cm.Ast
 import Cm.Eval
 
-def Expr.display_infer : Expr → Expr
-  | ⟪₂ , (:: :t nil) (, nil :_Ξ) ⟫ => t
-  | e => e
-
 def steal_context (from_e for_e : Expr) : Expr :=
   match from_e, for_e with
   | ⟪₂ :_Γ (, :Δ :Ξ) ⟫, ⟪₂ :Γ₂ (, nil nil) ⟫ => ⟪₂ :Γ₂ (, :Δ :Ξ) ⟫
@@ -26,7 +22,10 @@ def sub_context : Expr → Expr
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
 
-def read_y : Expr := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
+def Expr.display_infer : Expr → Option Expr
+  | ⟪₂ , :Γ :X ⟫ =>
+    step ⟪₂ exec :Γ :X ⟫
+  | e => e
 
 def read_data : Expr :=
   ⟪₂ , (:: (quote Data) (:: (quote Data) nil)) ⟫
@@ -211,19 +210,16 @@ end s
 def ass_data : Expr :=
   ⟪₂ (:: (:: assert (:: Data nil)) nil) ⟫
 
-def this_arg : Expr :=
-  ⟪₂ (:: fst (:: assert nil)) ⟫
-
 def infer : Expr → Option Expr
   | ⟪₂ S ⟫ => s.s_rule
   | ⟪₂ I ⟫ =>
     let α := ⟪₂ (:: fst (:: assert nil)) ⟫
     ⟪₂ , (:: :ass_data (:: :α (:: :α nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
-    let t_α := ⟪₂ quote Data ⟫
-    let t_β := read_α
-    let t_x := ⟪₂ (>> fst read) ⟫
-    let t_y := read_y
+    let t_α := ⟪₂ :ass_data ⟫
+    let t_β := ⟪₂ , (:: (:: fst (:: assert nil)) (:: :ass_data nil)) ⟫
+    let t_x := ⟪₂ (:: fst (:: assert (>> fst read))) ⟫
+    let t_y := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
   | ⟪₂ K' ⟫ =>
@@ -251,7 +247,7 @@ def infer : Expr → Option Expr
       (, nil nil) ⟫
   | ⟪₂ :: ⟫
   | ⟪₂ push_on ⟫ => ⟪₂ ,
-    (:: (quote Data) (:: (quote Data) (:: (quote Data) nil)))
+    (:: :ass_data (:: :ass_data (:: :ass_data nil)))
     (, nil nil) ⟫
   | ⟪₂ , ⟫ => ⟪₂ ,
     (::
@@ -345,10 +341,10 @@ def infer : Expr → Option Expr
       (,
         nil
         nil) ⟫
-  | ⟪₂ nil ⟫ => ⟪₂ , (:: (quote Data) nil) (, nil nil) ⟫
+  | ⟪₂ nil ⟫ => ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ Data ⟫ => ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ exec ⟫ => ⟪₂ ,
-    (:: (quote Data) (:: (quote Data) (:: (quote Data) nil)))
+    (:: :ass_data (:: :ass_data (:: :ass_data nil)))
     (, nil nil) ⟫
   | ⟪₂ read ⟫
   | ⟪₂ next ⟫
@@ -436,8 +432,10 @@ My guess is it's the both part.
 
 --#eval step ⟪₂ ((bothM ((>> snd) ((>> read) ((>> fst) ((>> next) read))))) ((push_on nil) ((>> snd) ((>> next) ((>> read) ((>> fst) ((>> next) read))))))) ((, ((:: read) nil)) ((:: ((, ((:: (((K' Data) Data) Data)) ((:: (((K' Data) Data) Data)) nil))) ((, nil) nil))) nil)) ⟫
 
-#eval Expr.display_infer <$> infer ⟪₂ I Data Data ⟫
-#eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
+#eval Expr.display_infer =<< infer ⟪₂ I Data Data ⟫
+#eval Expr.display_infer =<< infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
+
+#eval Expr.display_infer =<< infer ⟪₂ nil ⟫
 
 #eval infer ⟪₂ I Data Data ⟫
 

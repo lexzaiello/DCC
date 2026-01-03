@@ -266,79 +266,24 @@ def α : Expr := ⟪₂ quot Data ⟫
 def β : Expr := ⟪₂ >> fst (>> (:then_quote read) (>> (push_on (:: (quot Data) nil)) (push_on (, nil nil)))) ⟫
 
 /- γ : ∀ (x : α), β x → Type
-Our types are already in order
-S α β x
-
-in that order
-
-So, we just map over them, and concatenate them cleverly,
-then use push_on (:: (K Data (I Data) Data) nil) to put a Type as the final output type
-
-if we just left α β x intact in the list, that would be close,
-but we can just merge the β and x elements to form an application
-read gets us the head, α,
-and next gets us β, x
-then, we drop everything afterwards...
-
->> (both read (>> next >> (both read (>> next read)))) (push_on (:: (K Data (I Data) Data) nil))
-
-this is the general order we want,
-but we need to be careful about concatenation
-
-for α, we want to cons
-we could do this in some other way outside both though.
-
-both does an app though, so we're set.
--/
-
-/-
-Nicer quotation.
-Our contexts are lists of Data → Data
-sometimes we want to quote something inside a Data → Data
-We can introduce notation for quotation, since it happens a lot.
-Quotation is always
-
-K Data (I Data) :x
-
-We need to capture α and β, but quote "read" for x.
-α is just normal read, and β is >> next read
-x is just quot read
-
-∀ (x : α), β x → Type
-
-we need to read and then quote, which is really nasty.
-α gets read from the current context, then quoted.
-
-just ugly.
-
-Δ doesn't have K's.
-we could probably solve this with a map function for data,
-then quote each of them respectively.
-
-we already have mapping. is she stupid?
-we can do mapping with both I think?
-
-read is not the same as map.
-we already have read and next.
-
-I want >> to be more powerful.
-
 -/
 def γ : Expr :=
-  -- reads from the context and returns the quoted value
-  --let read_quot := ⟪₂ 
-  let ty_end := ⟪₂ (push_on (:: (quot Data) nil)) ⟫
+  -- arguments in the first register
+  let Δ := ⟪₂ fst ⟫
 
-  let read_quote_discard_ctx := ⟪₂ quot read ⟫
-  let do_on_βx := ⟪₂ >> next (>> (both ) :ty_end) ⟫
-  let do_on_α := ⟪₂ :then_quote read ⟫
+  -- α is the first argument in Δ. we don't do anything to it
+  let α := ⟪₂ read ⟫
+  let β := ⟪₂ >> next read ⟫
 
-  -- TOOD: x is captured, instead of referring to our own context with dynamic read
+  -- x is a quoted operation that shouldn't run until the later context
+  -- flow starts by getting our dependents, then building the new context via quotation
+  -- x is the first argument in the later context
+  -- it selects the Δ register, then reads
+  let x := ⟪₂ >> fst read ⟫
 
-  -- Create a new empty context here with push_on
-  let asserts := ⟪₂ >> fst (>> (bothM :do_on_α :do_on_βx) (push_on (, nil nil))) ⟫
+  let asserts := ⟪₂ >> :Δ (>> bothM (>>* :α quot) (>> (>> :β (both (both (quot both) quot) (quot :x))) (push_on (:: (quot Data) nil)))) ⟫
 
-  asserts
+  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
 
 #eval try_step_n 10 ⟪₂ :β (, (:: Data nil) nil) ⟫  -- this one is right. we bind a new context, just as we should for arrows
 
@@ -514,10 +459,6 @@ def t_k : Expr := ⟪₂ ((, ((:: (quot Data)) ((:: (, ((:: ((>> fst) read)) ((:
 
 def t_i : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
 
-/-
-The context of the inner combiantor probably is getting inserted at the wrong depth, is my guess.
-the data arg should be one level deeper, I think.
--/
 #eval Expr.display_infer <$> infer ⟪₂ (>>* read (K' :t_i Data I) (, I I)) Data Data ⟫
 
 end Idea

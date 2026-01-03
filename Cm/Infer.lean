@@ -301,7 +301,7 @@ def infer : Expr → Option Expr
 
     let t_in_f := ⟪₂ >> :Ξ (>> read (>> fst read)) ⟫
     let t_out_f := ⟪₂ >> :Ξ (>> read (>> fst (>> next read))) ⟫
-    let t_out_g := ⟪₂ >> :Ξ (>> next (>> read (>> fst next))) ⟫
+    let t_out_g := ⟪₂ >> :Ξ (>> next (>> read (>> fst (>> next read)))) ⟫
 
     let ctx_f := ⟪₂ >> :Ξ (>> read snd) ⟫
     let ctx_g := ⟪₂ >> :Ξ (>> next (>> read snd)) ⟫
@@ -310,7 +310,7 @@ def infer : Expr → Option Expr
     let t_g' := ⟪₂ (both (both (quot ,) :asserts_g') :ctx_g) ⟫
 
     ⟪₂ ,
-      (:: :t_map_f (:: :t_g' (:: (both :t_in_f :ctx_f) (:: (both (both (quot ,) :t_out_g) :ctx_g) nil))))
+      (:: :t_map_f (:: :t_g' (:: (both :t_in_f :ctx_f) (:: (both :t_out_g :ctx_g) nil))))
       (, nil nil) ⟫
   | ⟪₂ >> ⟫
   | ⟪₂ both ⟫
@@ -409,7 +409,8 @@ My guess is it's the both part.
 
 def t_i : Expr := ⟪₂ ((, ((:: (((K' Data) Data) Data)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
 
-#eval infer ⟪₂ >>* read (K' :t_i Data I Data) (:: Data nil) ⟫
+#eval infer ⟪₂ (K' :t_i Data I) ⟫
+#eval infer ⟪₂ >>* read (K' :t_i Data I) (:: Data nil) Data Data ⟫
 #eval infer ⟪₂ :: Data nil ⟫
 #eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
 

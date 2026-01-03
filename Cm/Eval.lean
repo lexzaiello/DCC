@@ -4,10 +4,14 @@ def step : Expr → Option Expr
   | ⟪₂ exec (:: apply (:: both (:: :f (:: :g nil)))) :ctx ⟫ => do
     let inner' ← step ⟪₂ exec (:: both (:: :f (:: :g nil))) :ctx ⟫
 
-    dbg_trace s!"inner: {inner'}"
-    dbg_trace s!"ctx: {ctx}"
+    dbg_trace "hi"
+    dbg_trace inner'
 
-    ⟪₂ (:: apply :inner') ⟫
+    match inner' with
+    | ⟪₂ ((:: :a) ((:: :b) nil)) ⟫ =>
+      dbg_trace s!"hi again: {⟪₂ :a :b ⟫}"
+      ⟪₂ :a :b ⟫
+    | _ => .none
   | ⟪₂ exec (:: read :rst) (:: :x :xs) ⟫ => step ⟪₂ exec :rst :x ⟫
   | ⟪₂ exec (:: fst :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :a ⟫
   | ⟪₂ exec (:: snd :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :b ⟫

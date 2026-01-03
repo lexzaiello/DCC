@@ -369,6 +369,34 @@ second is the both thing. let's test
 -- Some I. epic
 #eval try_step_n 10 ⟪₂ ((both (((K Data) (I Data)) (I Data))) ((>> fst) read)) (, (:: I nil) nil) ⟫
 
+/-
+z is pretty easy, since it's not even under a binder. Assume we're given (, Δ Ξ)
+-/
+
+def arg_z : Expr :=
+  let Δ := ⟪₂ fst ⟫
+  ⟪₂ >> :Δ read ⟫
+
+/-
+Final output:
+γ z (y z)
+-/
+def t_out : Expr :=
+  let Δ := ⟪₂ fst ⟫
+
+  -- x is in register 4
+  -- y is in register 5
+  -- z is in register 6
+
+  let start_val_args := ⟪₂ >> next (>> next next) ⟫
+  let γ := ⟪₂ >> next (>> next read) ⟫
+  let y := ⟪₂ >> :start_val_args (>> next read) ⟫
+  let z := ⟪₂ >> :start_val_args (>> next (>> next read)) ⟫
+
+  let asserts := ⟪₂ >> :Δ (both (both :γ :z) (both :y :z)) ⟫
+
+  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
+
 end s
 
 def infer : Expr → Option Expr

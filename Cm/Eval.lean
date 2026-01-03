@@ -9,6 +9,8 @@ def step : Expr → Option Expr
     | ⟪₂ (:: :a :_rst) ⟫, ⟪₂ (:: :b :_rst2) ⟫ =>
       ⟪₂ :a :b ⟫
     | _, _ => .none
+  -- doesn't just read the cell value - safely wraps it as a list element
+  | ⟪₂ exec (:: read :rst) (:: :x :xs) ⟫ => step ⟪₂ exec :rst (:: :x nil) ⟫
   | ⟪₂ exec (:: fst :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :a ⟫
   | ⟪₂ exec (:: snd :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :b ⟫
   | ⟪₂ exec (:: next nil) (:: :x :xs) ⟫ => xs

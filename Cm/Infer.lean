@@ -55,6 +55,29 @@ def β : Expr :=
 /- γ : ∀ (x : α), β x → Type
 -/
 def γ : Expr :=
+  let x_α := ⟪₂ (:: fst (:: assert nil)) ⟫
+  -- ⟪₂ (:: apply (:: (:: fst (:: next nil)) (:: (:: fst (:: next (:: next nil))) nil))) ⟫
+  -- go in order, get β first
+
+  -- read gets piped into whatever we want
+  -- to drop the next context, we just need to..
+  -- wrap in assert? put in a new list?
+  -- read will already give us that value
+  -- then we can use apply to fetch the x argument
+  -- since we're inside our own binder right now.
+  let β := ⟪₂ (:: fst (:: next read)) ⟫
+  let quoted := ⟪₂ 
+
+  --let mk_βx := ⟪₂ (both (both (quot both) quot) (quot :x)) ⟫
+  let x_lower_binder := ⟪₂ fst ⟫
+  let unshadow_x := ⟪₂ (:: (:: assert (:: :x_lower_binder nil)) nil) ⟫
+
+  -- need to make sure the β gets seen immediately
+  -- need to copy the context information to both
+  -- can do this with both, obviously,
+  -- then app
+  -- outer both 
+  let mk_βx := ⟪₂ (:: both ((both (quot both) quot) :unshadow_x) ⟫
   -- arguments in the first register
   let Δ := ⟪₂ fst ⟫
 
@@ -209,6 +232,7 @@ def infer : Expr → Option Expr
   | ⟪₂ fst ⟫
   | ⟪₂ snd ⟫
   | ⟪₂ both ⟫
+  | ⟪₂ read ⟫
   | ⟪₂ apply ⟫
   | ⟪₂ push_on ⟫ => ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ S ⟫ => s.s_rule
@@ -462,4 +486,41 @@ We shall see.
 This seems very sus, but ....
 
 It must be done.
+
+Would be cool if we could make apps lazy.
+
+I want a nicer way to do apps with respect to our contexts.
+
+I don't like how finnicky it is to make right now.
+
+like, why is this hard?
+
+because of the quoting, usually.
+
+we can just sequence into getting rid of the context, somehow.
+perhaps would be nice to have a combinator on the fly to exit the context.
+
+I want the app members to just be in a list,
+and for the context to get passed in.
+
+This is a bit different.
+
+Perhaps not a good idea.
+
+for example, in βx, we need tons of quoting to resolve the dependencies.
+
+really, we should be able to do this in a sequence.
+
+1. β
+2. quote to reject inner binder with (:: (:: assert (:: β nil))) nil
+3. get x
+2. wrap them in both? does this need to be quoted to? we lose the bigger context after we fetch β, so we're fine.
+
+this is very difficult. we should make apps easier to work with potentially.
+that sounds like so much work.
+
+If we wanted to support apps with lists,
+we could easily use both to make this work.
+
+We did it in a preivous example.
 -/

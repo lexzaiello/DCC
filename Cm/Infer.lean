@@ -13,9 +13,9 @@ def do_or_unquote (to_do : Expr) (in_e : Expr) : Option Expr :=
 -- returns all of the applied assertions, in order
 def sub_context : Expr → Expr
   | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
-    Expr.mk_tup <| (do (← Γ.as_list).mapM (fun f =>
+    Expr.from_list <| (do (← Γ.as_list).mapM (fun f =>
     (do_or_unquote ⟪₂ , :Δ :Ξ ⟫ f).getD f)).getD []
-  | e => e
+  | e => ⟪₂ (:: :e nil) ⟫
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
 
@@ -215,7 +215,7 @@ def infer : Expr → Option Expr
     ⟪₂ , (:: :ass_data (:: :α (:: :α nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ :ass_data ⟫
-    let t_β := ⟪₂ (:: (:: fst (:: assert nil)) (:: :ass_data nil)) ⟫
+    let t_β := ⟪₂ (:: (:: both (:: (:: fst (:: assert nil)) (:: (:: :ass_data nil) nil))) nil) ⟫
     let t_x := ⟪₂ (:: fst (:: assert (>> fst read))) ⟫
     let t_y := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
 
@@ -369,10 +369,10 @@ def infer : Expr → Option Expr
         --dbg_trace t_arg
         --dbg_trace arg
 
-        --dbg_trace check_with
-        --dbg_trace expected'
-        --dbg_trace stolen
-        --dbg_trace t_arg
+        dbg_trace check_with
+        dbg_trace expected'
+        dbg_trace stolen
+        dbg_trace t_arg
 
         if stolen == t_arg then
           let Γ' ← Γ.list_pop
@@ -441,42 +441,13 @@ My guess is it's the both part.
 #eval infer ⟪₂ K Data (I Data) ⟫
 
 /-
-Another idea:
-interpreting data?
-
-User cannot compute with the data, but the kernel can?
-unquote just seems kinda dumb.
-
-I want quote to be itself data, but it also needs to act as a function.
-
-
+((:: both) ((:: ((:: fst) ((:: assert) nil))) ((:: ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) nil)))
 -/
 
 /-
-Post infer:
-(some ((, ((:: ((:: fst) ((:: assert) nil))) ((:: ((:: fst) ((:: assert) nil))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) ((, nil) nil))) nil))))
+really annoying that norm_context makes tuples instead of lists. can we change that?
 
-How do we make binders now?
-Making binders has always been a mega pain, we could fix this too.
+this both function might be helpful?
 
-we get our context substituted anyhow.
-
-so, ∀ (x : α), β x → Type
-
-is just (and we can't insert a comma at the beginning like before. all lists)
-
-(:: :assert_data (:: (:: fst (::
-
-what if we somehow make like a "new context" pseudo-register?
-
-you can push onto the "new context"
-in quoted form.
-
-under the hood, this would have to
-put it after assert.
-
-Thing is, will the inner code even execute?
-
-I really want to get rid off the tuple stuff.
-Norm_context seems really dumb in general.
+yeah we can use it to map our elements. the implementation is wrong though.
 -/

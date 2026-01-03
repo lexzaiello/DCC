@@ -4,11 +4,12 @@ def step : Expr → Option Expr
   | ⟪₂ exec (:: fst :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :a ⟫
   | ⟪₂ exec (:: snd :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :b ⟫
   | ⟪₂ exec (:: next :rst) (:: :x :xs) ⟫ => step ⟪₂ exec :rst :xs ⟫
-  | ⟪₂ exec (:: (:: both (:: :f (:: :g nil))) :rst) (:: :x :xs) ⟫ => do
-    let fx ← step ⟪₂ exec :f (:: :x :xs) ⟫
-    let gx ← step ⟪₂ exec :g (:: :x :xs) ⟫
+  | ⟪₂ exec (:: both (:: :f (:: :g nil))) :ctx ⟫ => do
+    dbg_trace "hi"
+    let fx ← step ⟪₂ exec :f :ctx ⟫
+    let gx ← step ⟪₂ exec :g :ctx ⟫
 
-    pure ⟪₂ :rst (:: :fx (:: :gx nil)) ⟫
+    pure ⟪₂ (:: :fx (:: :gx nil)) ⟫
   | ⟪₂ exec (:: (:: push_on (:: :onto (:: :l nil))) :rst) (:: :x :xs) ⟫ =>
     ⟪₂ exec :rst (:: :x :l) ⟫
   /-

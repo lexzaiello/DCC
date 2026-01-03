@@ -281,7 +281,7 @@ def γ : Expr :=
   -- it selects the Δ register, then reads
   let x := ⟪₂ >> fst read ⟫
 
-  let asserts := ⟪₂ >> :Δ (>> bothM (>>* :α quot) (>> (>> :β (both (both (quot both) quot) (quot :x))) (push_on (:: (quot Data) nil)))) ⟫
+  let asserts := ⟪₂ >> :Δ (bothM (>>* :α quot) (>> (>> :β (both (both (quot both) quot) (quot :x))) (push_on (:: (quot Data) nil)))) ⟫
 
   ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
 

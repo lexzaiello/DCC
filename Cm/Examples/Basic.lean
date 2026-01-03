@@ -38,12 +38,9 @@ def t_k : Expr := ⟪₂ ((, ((:: (quot Data)) ((:: (, ((:: ((>> fst) read)) ((:
 #eval Expr.display_infer <$> infer ⟪₂ quot Data Data ⟫
 #eval infer ⟪₂ I Data ⟫
 
-def t_i : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
-
 #eval infer ⟪₂ (:: Data nil) ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ (, I I) ⟫
-#eval Expr.display_infer <$> infer ⟪₂ (>>* read (K' :t_i Data I) (, I I)) Data Data ⟫
 
 /-
 S combinator test: I combinator derivation.
@@ -67,3 +64,16 @@ probably.
 
 #eval try_step_n! 10 ⟪₂ ((, Data) ((, Data) ((((K' Data) Data) Data) Data))) ⟫
 
+#eval infer ⟪₂ read ⟫
+#eval infer ⟪₂ >>* read read ⟫
+
+#eval infer ⟪₂ I ⟫
+
+#eval infer ⟪₂ (K' :t_i Data I) ⟫
+#eval infer ⟪₂ >>* read (K' :t_i Data I) (:: Data nil) Data Data ⟫
+#eval infer ⟪₂ :: Data nil ⟫
+#eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
+
+#eval infer ⟪₂ quot ⟫
+
+#eval infer ⟪₂ I Data ⟫

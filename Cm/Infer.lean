@@ -342,11 +342,11 @@ def infer : Expr → Option Expr
         let expected' ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
-        dbg_trace raw_t_arg
-        dbg_trace expected'
-        dbg_trace stolen
-        dbg_trace t_arg
-        dbg_trace arg
+        --dbg_trace raw_t_arg
+        --dbg_trace expected'
+        --dbg_trace stolen
+        --dbg_trace t_arg
+        --dbg_trace arg
 
         if stolen == t_arg then
           let Γ' ← Γ.list_pop
@@ -402,19 +402,3 @@ My guess is it's the both part.
 -/
 
 --#eval step ⟪₂ ((bothM ((>> snd) ((>> read) ((>> fst) ((>> next) read))))) ((push_on nil) ((>> snd) ((>> next) ((>> read) ((>> fst) ((>> next) read))))))) ((, ((:: read) nil)) ((:: ((, ((:: (((K' Data) Data) Data)) ((:: (((K' Data) Data) Data)) nil))) ((, nil) nil))) nil)) ⟫
-#eval infer ⟪₂ read ⟫
-#eval infer ⟪₂ >>* read read ⟫
-
-#eval infer ⟪₂ I ⟫
-
-def t_i : Expr := ⟪₂ ((, ((:: (((K' Data) Data) Data)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
-
-#eval infer ⟪₂ (K' :t_i Data I) ⟫
-#eval infer ⟪₂ >>* read (K' :t_i Data I) (:: Data nil) Data Data ⟫
-#eval infer ⟪₂ :: Data nil ⟫
-#eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
-
-#eval infer ⟪₂ quot ⟫
-
-#eval infer ⟪₂ I Data ⟫
-

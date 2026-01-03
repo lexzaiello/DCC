@@ -2,16 +2,11 @@ import Cm.Ast
 
 def step : Expr → Option Expr
   | ⟪₂ exec (:: apply (:: :a (:: :b nil))) :ctx ⟫ => do
-    dbg_trace s!"hi: {⟪₂ exec :a :ctx ⟫}"
-    let a_elem ← ⟪₂ exec :a :ctx ⟫
-    dbg_trace s!"hi: {⟪₂ exec :b :ctx ⟫}"
-    let b_elem ← ⟪₂ exec :b :ctx ⟫
-
-    dbg_trace s!"bruh: {a_elem} {b_elem}"
+    let a_elem ← step ⟪₂ exec :a :ctx ⟫
+    let b_elem ← step ⟪₂ exec :b :ctx ⟫
 
     match a_elem, b_elem with
     | ⟪₂ (:: :a :_rst) ⟫, ⟪₂ (:: :b :_rst2) ⟫ =>
-      dbg_trace s!"{a} {b}"
       ⟪₂ :a :b ⟫
     | _, _ => .none
   | ⟪₂ exec (:: fst :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :a ⟫

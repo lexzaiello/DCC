@@ -10,11 +10,18 @@ def steal_context (from_e for_e : Expr) : Expr :=
   | ⟪₂ :_Γ (, :Δ :Ξ) ⟫, ⟪₂ :Γ₂ (, nil nil) ⟫ => ⟪₂ :Γ₂ (, :Δ :Ξ) ⟫
   | _, _ => for_e
 
+def do_or_unquote (to_do : Expr) (in_e : Expr) : Option Expr :=
+  match in_e with
+  | ⟪₂ quote :e ⟫ =>
+    e
+  | in_e => try_step_n 10 ⟪₂ :in_e :to_do ⟫
+
 -- Applies the Δ claims context to all handlers in the app context
 -- returns all of the applied assertions, in order
 def sub_context : Expr → Expr
   | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
-    Expr.mk_tup <| (do (← Γ.as_list).mapM (fun f => (step ⟪₂ :f (, :Δ :Ξ) ⟫).getD f)).getD []
+    Expr.mk_tup <| (do (← Γ.as_list).mapM (fun f =>
+    (do_or_unquote ⟪₂ , :Δ :Ξ ⟫ f).getD f)).getD []
   | e => e
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
@@ -49,7 +56,7 @@ def β : Expr :=
   let Δ := ⟪₂ fst ⟫
   let α := ⟪₂ read ⟫
 
-  let asserts := ⟪₂ >> :Δ (>> (>>* :α quot) (push_on (:: (quot Data) nil))) ⟫
+  let asserts := ⟪₂ >> :Δ (>> (>> :α quote) (push_on (:: (quot Data) nil))) ⟫
 
   ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
 
@@ -197,7 +204,7 @@ end s
 
 def infer : Expr → Option Expr
   | ⟪₂ S ⟫ => s.s_rule
-  | ⟪₂ I ⟫ => ⟪₂ , (:: (quot Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
+  | ⟪₂ I ⟫ => ⟪₂ , (:: (quote Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ quot Data ⟫
     let t_β := read_α
@@ -341,14 +348,15 @@ def infer : Expr → Option Expr
 
         let check_with ← Γ.list_head
 
-        let expected' ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
-          >>= (fun e => try_step_n 10 ⟪₂ unquote :e ⟫)
+        let expected' ← do_or_unquote ⟪₂ , :Δ' :Ξ' ⟫ check_with
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
         --dbg_trace raw_t_arg
         --dbg_trace expected'
-        --dbg_trace stolen
-        --dbg_trace t_arg
+        dbg_trace check_with
+        dbg_trace expected'
+        dbg_trace stolen
+        dbg_trace t_arg
         --dbg_trace arg
 
         if stolen == t_arg then
@@ -406,5 +414,20 @@ My guess is it's the both part.
 
 --#eval step ⟪₂ ((bothM ((>> snd) ((>> read) ((>> fst) ((>> next) read))))) ((push_on nil) ((>> snd) ((>> next) ((>> read) ((>> fst) ((>> next) read))))))) ((, ((:: read) nil)) ((:: ((, ((:: (((K' Data) Data) Data)) ((:: (((K' Data) Data) Data)) nil))) ((, nil) nil))) nil)) ⟫
 
+#eval Expr.display_infer <$> infer ⟪₂ I Data Data ⟫
 #eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (K' Data Data Data) Data ⟫
+
+
+
+/-
+Another idea:
+interpreting data?
+
+User cannot compute with the data, but the kernel can?
+unquote just seems kinda dumb.
+
+I want quote to be itself data, but it also needs to act as a function.
+
+
+-/
 

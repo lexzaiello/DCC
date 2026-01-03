@@ -11,7 +11,7 @@ def step : Expr → Option Expr
   | ⟪₂ K :_α :_β :x :_y ⟫
   | ⟪₂ K' :_α :_β :x :_y ⟫ => x
   | ⟪₂ unquote (quote :x) ⟫ => x
-  | ⟪₂ unquote :x ⟫ => x
+  | ⟪₂ unquote :_x ⟫ => .none
   | ⟪₂ both :f :g :Γ ⟫
   | ⟪₂ both' :f :g :Γ ⟫ =>
     let left := ⟪₂ :f :Γ ⟫

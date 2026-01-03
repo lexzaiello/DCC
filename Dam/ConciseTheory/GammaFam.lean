@@ -115,7 +115,7 @@ def Expr.toString : Expr → String
   | ⟪₂ next ⟫ => "next"
   | ⟪₂ I ⟫ => "I"
   | ⟪₂ K ⟫ => "K"
-  | ⟪₂ K' ⟫ => "K"
+  | ⟪₂ K' ⟫ => "K'"
   | ⟪₂ S ⟫ => "S"
 
 instance Expr.instToString : ToString Expr where
@@ -231,6 +231,11 @@ def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
     pure <| (try_step_n (n - 1) e').getD e'
 
 def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).getD e
+
+def steal_context (from_e for_e : Expr) : Expr :=
+  match from_e, for_e with
+  | ⟪₂ :_Γ (, :Δ :Ξ) ⟫, ⟪₂ :Γ₂ (, nil nil) ⟫ => ⟪₂ :Γ₂ (, :Δ :Ξ) ⟫
+  | _, _ => for_e
 
 -- Applies the Δ claims context to all handlers in the app context
 -- returns all of the applied assertions, in order
@@ -532,12 +537,12 @@ def infer : Expr → Option Expr
 
       let norm_expected := try_step_n! 10 <| norm_context (← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫)
 
-      --dbg_trace ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
-      --dbg_trace check_with
-      --dbg_trace norm_expected
-      --dbg_trace t_arg
-      --dbg_trace ← infer arg
-      --dbg_trace Δ'
+      dbg_trace s!"subst: {← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫}"
+      dbg_trace s!"check fn: {check_with}"
+      dbg_trace s!"norm expected: {norm_expected}"
+      dbg_trace s!"norm t arg: {t_arg}"
+      dbg_trace s!"raw infer arg: {← infer arg}"
+      dbg_trace s!"Δ: {Δ'}"
 
       if norm_expected == t_arg then
         let Γ' ← Γ.list_pop

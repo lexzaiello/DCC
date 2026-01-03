@@ -29,10 +29,10 @@ def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
 def read_y : Expr := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
 
 def read_data : Expr :=
-  ⟪₂ , (:: (quot Data) (:: (quot Data) nil)) ⟫
+  ⟪₂ , (:: (quote Data) (:: (quote Data) nil)) ⟫
 
 def read_α : Expr :=
-  ⟪₂ , (:: (>> fst read) (:: (quot Data) nil)) ⟫
+  ⟪₂ , (:: (>> fst read) (:: (quote Data) nil)) ⟫
 
 /-
 S type:
@@ -206,7 +206,7 @@ def infer : Expr → Option Expr
   | ⟪₂ S ⟫ => s.s_rule
   | ⟪₂ I ⟫ => ⟪₂ , (:: (quote Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
-    let t_α := ⟪₂ quot Data ⟫
+    let t_α := ⟪₂ quote Data ⟫
     let t_β := read_α
     let t_x := ⟪₂ (>> fst read) ⟫
     let t_y := read_y
@@ -214,9 +214,9 @@ def infer : Expr → Option Expr
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
   | ⟪₂ K' ⟫ =>
     ⟪₂ , (::
-      (quot Data)
+      (quote Data)
       (::
-        (quot Data)
+        (quote Data)
         (::
           (>> fst read)
           (::
@@ -233,11 +233,11 @@ def infer : Expr → Option Expr
     -/
 
     ⟪₂ ,
-      (:: (quot Data) (:: (quot Data) nil))
+      (:: (quote Data) (:: (quote Data) nil))
       (, nil nil) ⟫
   | ⟪₂ :: ⟫
   | ⟪₂ push_on ⟫ => ⟪₂ ,
-    (:: (quot Data) (:: (quot Data) (:: (quot Data) nil)))
+    (:: (quote Data) (:: (quote Data) (:: (quote Data) nil)))
     (, nil nil) ⟫
   | ⟪₂ , ⟫ => ⟪₂ ,
     (::
@@ -245,13 +245,13 @@ def infer : Expr → Option Expr
       (::
         (>> snd (>> next read))
         (::
-          (quot Data)
+          (quote Data)
           nil)))
       (, nil nil) ⟫
   | ⟪₂ map_fst ⟫
   | ⟪₂ map_snd ⟫ =>
     let assert_data_map := read_data
-    let assert_data_term := ⟪₂ quot Data ⟫
+    let assert_data_term := ⟪₂ quote Data ⟫
     ⟪₂ ,
       (:: :assert_data_map (:: :assert_data_term (:: :assert_data_term nil)))
       (,
@@ -325,18 +325,18 @@ def infer : Expr → Option Expr
   | ⟪₂ both ⟫
   | ⟪₂ bothM ⟫ =>
     let assert_data_map := read_data
-    let assert_data_term := ⟪₂ quot Data ⟫
+    let assert_data_term := ⟪₂ quote Data ⟫
     ⟪₂ ,
       (:: :assert_data_map (:: :assert_data_map (:: :assert_data_term (:: :assert_data_term nil))))
       (,
         nil
         nil) ⟫
-  | ⟪₂ nil ⟫ => ⟪₂ , (:: (quot Data) nil) (, nil nil) ⟫
-  | ⟪₂ Data ⟫ => ⟪₂ , (:: (quot Data) nil) (, nil nil) ⟫
+  | ⟪₂ nil ⟫ => ⟪₂ , (:: (quote Data) nil) (, nil nil) ⟫
+  | ⟪₂ Data ⟫ => ⟪₂ , (:: (quote Data) nil) (, nil nil) ⟫
   | ⟪₂ read ⟫
   | ⟪₂ next ⟫
   | ⟪₂ fst ⟫
-  | ⟪₂ snd ⟫ => ⟪₂ , (:: (quot Data) (:: (quot Data) nil)) (, nil nil) ⟫
+  | ⟪₂ snd ⟫ => ⟪₂ , (:: (quote Data) (:: (quote Data) nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => match infer f, infer arg with
     | .some t_f, .some raw_t_arg => do
       let t_arg := norm_context raw_t_arg

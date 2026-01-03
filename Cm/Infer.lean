@@ -66,7 +66,7 @@ def γ : Expr :=
   -- then we can use apply to fetch the x argument
   -- since we're inside our own binder right now.
   let β := ⟪₂ (:: fst (:: next read)) ⟫
-  let quoted := ⟪₂ 
+  /-let quoted := ⟪₂ 
 
   --let mk_βx := ⟪₂ (both (both (quot both) quot) (quot :x)) ⟫
   let x_lower_binder := ⟪₂ fst ⟫
@@ -77,7 +77,7 @@ def γ : Expr :=
   -- can do this with both, obviously,
   -- then app
   -- outer both 
-  let mk_βx := ⟪₂ (:: both ((both (quot both) quot) :unshadow_x) ⟫
+  let mk_βx := ⟪₂ (:: both ((both (quot both) quot) :unshadow_x) ⟫-/
   -- arguments in the first register
   let Δ := ⟪₂ fst ⟫
 
@@ -243,7 +243,7 @@ def infer : Expr → Option Expr
     let t_α := ⟪₂ :ass_data ⟫
     let t_β := ⟪₂ (:: both (:: (:: fst (:: assert nil)) (:: :ass_data nil))) ⟫
     let t_x := ⟪₂ (:: fst (:: assert nil)) ⟫
-    let t_y := ⟪₂ (:: apply (:: (:: fst (:: next nil)) (:: (:: fst (:: next (:: next nil))) nil))) ⟫
+    let t_y := ⟪₂ (:: apply (:: both (:: (:: fst (:: next (:: read nil))) (:: (:: fst (:: next (:: next (:: read nil)))) nil)))) ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
   | ⟪₂ K' ⟫ =>
@@ -365,7 +365,6 @@ def infer : Expr → Option Expr
   | ⟪₂ exec ⟫ => ⟪₂ ,
     (:: :ass_data (:: :ass_data (:: :ass_data nil)))
     (, nil nil) ⟫
-  | ⟪₂ read ⟫ => ⟪₂ , (:: :ass_data (:: :ass_data nil)) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => match infer f, infer arg with
     | .some t_f, .some raw_t_arg => do
       let t_arg := norm_context raw_t_arg

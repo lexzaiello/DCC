@@ -76,9 +76,14 @@ def γ : Expr :=
   -- it selects the Δ register, then reads
   let x := ⟪₂ >> fst read ⟫
 
+  -- right hand quot is fine, since x is a data.
+  -- inner both is inserting "both", quoted
+  -- this doesn't work any way you spin it.
+  -- our argument here is β
+  -- I don't know how this worked at all ngl.
   let mk_βx := ⟪₂ (both (both (quot both) quot) (quot :x)) ⟫
 
-  let asserts := ⟪₂ >> :Δ (bothM (>>* :α quot) (>> (>> :β :mk_βx) (push_on (:: (quot Data) nil)))) ⟫
+  let asserts := ⟪₂ >> :Δ (bothM (>> :α quote) (>> (>> :β :mk_βx) (push_on (:: (quot Data) nil)))) ⟫
 
   ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
 

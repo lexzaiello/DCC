@@ -220,7 +220,7 @@ def infer : Expr → Option Expr
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ :ass_data ⟫
     let t_β := ⟪₂ (:: both (:: (:: fst (:: assert nil)) (:: :ass_data nil))) ⟫
-    let t_x := ⟪₂ (:: fst (:: assert (>> fst read))) ⟫
+    let t_x := ⟪₂ (:: fst (:: assert nil)) ⟫
     let t_y := ⟪₂ both (>> fst (>> next read)) (>> fst (>> next (>> next read))) ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
@@ -442,7 +442,7 @@ My guess is it's the both part.
 
 #eval step ⟪₂ exec ((:: fst) ((:: assert) nil)) (, (:: Data (:: Data nil)) (:: Data (:: Data nil))) ⟫
 
-#eval infer ⟪₂ K Data (I Data) ⟫
+#eval infer ⟪₂ K Data (I Data) Data ⟫
 
 /-
 ((:: both) ((:: ((:: fst) ((:: assert) nil))) ((:: ((:: ((:: ((:: assert) ((:: Data) nil))) nil)) nil)) nil)))
@@ -454,4 +454,15 @@ really annoying that norm_context makes tuples instead of lists. can we change t
 this both function might be helpful?
 
 yeah we can use it to map our elements. the implementation is wrong though.
+
+Ok, something we can't handle yet.
+
+Making new expr's from the list. Concatentation.
+The question is how we make this safe.
+
+We shall see.
+
+This seems very sus, but ....
+
+It must be done.
 -/

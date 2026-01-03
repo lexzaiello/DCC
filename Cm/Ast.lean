@@ -12,6 +12,7 @@ inductive Expr where
   | unquote   : Expr
   | quote     : Expr
   | exec      : Expr
+  | apply     : Expr
   | nil       : Expr
   | seq       : Expr
   | seq_smart : Expr
@@ -50,6 +51,7 @@ syntax "K"                   : atom
 syntax "K'"                  : atom
 syntax "I"                   : atom
 syntax "S"                   : atom
+syntax "apply"               : atom
 syntax "exec"                : atom
 syntax "read"                : atom
 syntax "fst"                 : atom
@@ -77,6 +79,7 @@ syntax "⟪₁" atom "⟫"     : term
 syntax "⟪₂" app "⟫"      : term
 
 macro_rules
+  | `(⟪₁ apply ⟫) => `(Expr.apply)
   | `(⟪₁ exec ⟫) => `(Expr.exec)
   | `(⟪₁ assert ⟫) => `(Expr.assert)
   | `(⟪₁ unquote ⟫) => `(Expr.unquote)
@@ -112,6 +115,7 @@ macro_rules
   | `(⟪₂ $e₁:app $e₂:atom ⟫) => `(Expr.app ⟪₂ $e₁ ⟫ ⟪₁ $e₂ ⟫)
 
 def Expr.toString : Expr → String
+  | ⟪₂ apply ⟫ => "apply"
   | ⟪₂ assert ⟫ => "assert"
   | ⟪₂ exec ⟫ => "exec"
   | ⟪₂ unquote ⟫ => "unquote"

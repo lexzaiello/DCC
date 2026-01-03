@@ -288,6 +288,7 @@ def γ : Expr :=
 #eval try_step_n 10 ⟪₂ :β (, (:: Data nil) nil) ⟫  -- this one is right. we bind a new context, just as we should for arrows
 
 #eval try_step_n 10 ⟪₂ :γ (, (:: Data (:: (I Data) (:: Data nil))) nil) ⟫
+#eval try_step_n 10 ⟪₂ ((both (((K Data) (I Data)) (I Data))) ((>> fst) read)) (, (:: Data nil) nil) ⟫
 
 end s
 

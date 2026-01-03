@@ -424,7 +424,13 @@ def infer : Expr → Option Expr
 
     -- fetch the α, then push it as the output type
     let in_data := ⟪₂ Data ⟫
-    let assert_some_data_map := ⟪₂ >> (>> :get_t_out (, :in_data)) (push_on (, nil nil)) ⟫
+
+    -- We need to add a fake context for quotation
+    let assert_some_data_map := ⟪₂ >>
+      (>> :get_t_out (, :in_data))
+      (>>
+        quot
+        (push_on (, nil nil))) ⟫
 
     dbg_trace s!"my map: {assert_some_data_map}"
 
@@ -526,6 +532,10 @@ def test_Ξ : Expr := ⟪₂ ((:: ((, ((:: (((K Data) (I Data)) Data)) ((:: (((K
 
 #eval try_step_n 10 ⟪₂ (>> (((>> next) read)) ((>> fst) ((>> next) read))) :test_Ξ ⟫
 
+/-
+The context of the inner combiantor probably is getting inserted at the wrong depth, is my guess.
+the data arg should be one level deeper, I think.
+-/
 #eval Expr.display_infer <$> infer ⟪₂ >>* read (K' :t_i Data I) (, I I) ⟫
 
 #eval try_step_n 10 ⟪₂ ((>> ((>> ((>> snd) ((>> next) read))) ((both ((>> fst) ((>> next) read))) snd))) (, Data)) (, nil :test_Ξ) ⟫

@@ -218,15 +218,15 @@ def infer : Expr → Option Expr
               (>> fst read)
               nil)))))
       (, nil nil) ⟫
-  | ⟪₂ quote ⟫ =>
+  | ⟪₂ quote ⟫
+  | ⟪₂ unquote ⟫ =>
     /-
-      Quote turns any well-typed expression into a data.
+      Quotes prevent a data from being given context.
+      unquote removes the quotation.
     -/
 
-    let t_x := ⟪₂ >> snd read ⟫
-
     ⟪₂ ,
-      (:: :t_x (:: (quot Data) nil))
+      (:: (quot Data) (:: (quot Data) nil))
       (, nil nil) ⟫
   | ⟪₂ :: ⟫
   | ⟪₂ push_on ⟫ => ⟪₂ ,
@@ -342,6 +342,7 @@ def infer : Expr → Option Expr
         let check_with ← Γ.list_head
 
         let expected' ← try_step_n 10 ⟪₂ :check_with (, :Δ' :Ξ') ⟫
+          >>= (fun e => try_step_n 10 ⟪₂ unquote :e ⟫)
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
         --dbg_trace raw_t_arg

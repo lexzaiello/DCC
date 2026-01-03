@@ -10,6 +10,8 @@ def step : Expr → Option Expr
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫
   | ⟪₂ K' :_α :_β :x :_y ⟫ => x
+  | ⟪₂ unquote (quote :x) ⟫ => x
+  | ⟪₂ unquote :x ⟫ => x
   | ⟪₂ both :f :g :Γ ⟫
   | ⟪₂ both' :f :g :Γ ⟫ =>
     let left := ⟪₂ :f :Γ ⟫

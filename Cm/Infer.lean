@@ -78,7 +78,7 @@ def γ : Expr :=
   let mk_βx := ⟪₂ (:: both (:: (:: both (:: (:: quote (:: both nil)) (:: quote nil))) (:: ((:: quote (:: :x nil))) nil))) ⟫
 
   -- α properly quoted
-  let append_tuple : Expr := ⟪₂ (:: (push_on (, nil nil)) nil) ⟫
+  let append_tuple : Expr := ⟪₂ (:: (:: push_on (, nil nil)) nil) ⟫
   let asserts := ⟪₂
     (:: both (:: (:: :α (:: assert nil)) (:: (:: (:: :β (:: :mk_βx nil)) (:: (push_on (:: (quote Data) nil)) nil)) :append_tuple))) ⟫
 

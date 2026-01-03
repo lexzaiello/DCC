@@ -30,9 +30,9 @@ def step : Expr → Option Expr
 
     pure ⟪₂ exec :rst (:: :fx (:: :gx nil)) ⟫
   | ⟪₂ exec (:: (:: push_on (, :a :b)) :rst) (:: :x :xs) ⟫ =>
-    ⟪₂ exec :rst (, (:: :x :xs) (, :a :b)) ⟫
+    step ⟪₂ exec :rst (, (:: :x :xs) (, :a :b)) ⟫
   | ⟪₂ exec (:: (:: push_on (:: :l nil)) :rst) (:: :x :xs) ⟫ =>
-    ⟪₂ exec :rst (:: (:: :x :xs) :l) ⟫
+    step ⟪₂ exec :rst (:: (:: :x :xs) :l) ⟫
   /-
     Drops context, giving a value.
   -/

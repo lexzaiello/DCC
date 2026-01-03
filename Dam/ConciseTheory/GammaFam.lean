@@ -408,9 +408,13 @@ def full_test_context : Expr :=
 
 #eval try_step_n 10 ⟪₂ :t_out :full_test_context ⟫
 
+def s_rule : Expr :=
+  ⟪₂ , (:: :α (:: :β (:: :γ (:: :arg_x (:: :arg_y (:: :arg_z nil)))))) (, nil nil) ⟫
+
 end s
 
 def infer : Expr → Option Expr
+  | ⟪₂ S ⟫ => s.s_rule
   | ⟪₂ I ⟫ => ⟪₂ , (:: (quot Data) (:: (>> fst read) (:: (>> fst read) nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ quot Data ⟫
@@ -579,5 +583,10 @@ def t_k : Expr := ⟪₂ ((, ((:: (quot Data)) ((:: (, ((:: ((>> fst) read)) ((:
 def t_i : Expr := ⟪₂ ((, ((:: (((K Data) (I Data)) Data)) ((:: ((>> fst) read)) ((:: ((>> fst) read)) nil)))) ((, nil) nil)) ⟫
 
 #eval Expr.display_infer <$> infer ⟪₂ (>>* read (K' :t_i Data I) (, I I)) Data Data ⟫
+
+/-
+S combinator test:
+-/
+#eval Expr.display_infer <$> infer ⟪₂ 
 
 end Idea

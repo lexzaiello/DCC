@@ -208,6 +208,9 @@ end s
 def ass_data : Expr :=
   ⟪₂ (:: (:: assert (:: Data nil)) nil) ⟫
 
+def ass_data_here : Expr :=
+  ⟪₂ (:: assert (:: Data nil)) ⟫
+
 def infer : Expr → Option Expr
   | ⟪₂ S ⟫ => s.s_rule
   | ⟪₂ I ⟫ =>

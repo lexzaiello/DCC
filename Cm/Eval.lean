@@ -58,21 +58,10 @@ def step : Expr → Option Expr
   | ⟪₂ push_on (:: :x :xs) :a ⟫ => ⟪₂ :: :a (:: :x :xs) ⟫
   | ⟪₂ push_on (, :a :b) :c ⟫ => ⟪₂ (, :c (, :a :b)) ⟫
   | ⟪₂ push_on :l :a ⟫ => ⟪₂ :: :a :l ⟫
-  | ⟪₂ >> :f :g :Γ ⟫
-  | ⟪₂ >>* :f :g :Γ ⟫ => step ⟪₂ :g (:f :Γ) ⟫
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫
   | ⟪₂ K' :_α :_β :x :_y ⟫ => x
-  | ⟪₂ unquote (quote :x) ⟫ => x
-  | ⟪₂ unquote :_x ⟫ => .none
-  | ⟪₂ both :f :g :Γ ⟫
-  | ⟪₂ both' :f :g :Γ ⟫ =>
-    let left := ⟪₂ :f :Γ ⟫
-    let right := ⟪₂ :g :Γ ⟫
-
-    ⟪₂ (# (step left).getD left) (# (step right).getD right) ⟫
-  | ⟪₂ bothM :f :g :Γ ⟫
-  | ⟪₂ bothM' :f :g :Γ ⟫ =>
+  | ⟪₂ both :f :g :Γ ⟫ =>
     let left := ⟪₂ :f :Γ ⟫
     let right := ⟪₂ :g :Γ ⟫
 
@@ -83,10 +72,6 @@ def step : Expr → Option Expr
   | ⟪₂ read (:: :x :_xs) ⟫ => x
   | ⟪₂ fst (, :a :_b) ⟫ => a
   | ⟪₂ snd (, :_a :b) ⟫ => b
-  | ⟪₂ map_fst :f (, :a :b) ⟫ => do
-    ⟪₂ (, (#← step ⟪₂ :f :a ⟫) :b) ⟫
-  | ⟪₂ map_snd :f (, :a :b) ⟫ => do
-    ⟪₂ (, :a (#← step ⟪₂ :f :b ⟫)) ⟫
   | ⟪₂ , :a :b ⟫ => do ⟪₂ , (#(step a).getD a) (#(step b).getD b) ⟫
   | ⟪₂ :f :x ⟫ =>
     let f' := (step f).getD f

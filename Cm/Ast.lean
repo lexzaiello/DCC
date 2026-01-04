@@ -11,26 +11,18 @@ inductive Expr where
   | tup       : Expr
   | cons      : Expr
   | assert    : Expr
-  | unquote   : Expr
   | quote     : Expr
   | exec      : Expr
   | apply     : Expr
   | nil       : Expr
-  | seq       : Expr
-  | seq_smart : Expr
   | k         : Expr
   | k'        : Expr
   | s         : Expr
   | i         : Expr
   | fst       : Expr
   | snd       : Expr
-  | both'     : Expr
   | both      : Expr
-  | bothM     : Expr
-  | bothM'    : Expr
   | push_on   : Expr
-  | map_fst   : Expr
-  | map_snd   : Expr
   | read      : Expr
   | next      : Expr
   | app       : Expr
@@ -44,8 +36,6 @@ declare_syntax_cat expr
 
 syntax "quoted" atom         : atom 
 syntax "Data"                : atom
-syntax ">>"                  : atom
-syntax ">>*"                 : atom
 syntax "(" app ")"           : atom
 syntax "#" term              : atom
 syntax ":" ident             : atom
@@ -60,18 +50,12 @@ syntax "read"                : atom
 syntax "fst"                 : atom
 syntax "assert"              : atom
 syntax "quote"               : atom
-syntax "unquote"             : atom
 syntax "snd"                 : atom
 syntax "nil"                 : atom
 syntax "::"                  : atom
 syntax "push_on"             : atom
 syntax "both"                : atom
-syntax "both'"               : atom
-syntax "bothM'"              : atom
-syntax "bothM"               : atom
 syntax "next"                : atom
-syntax "map_fst"             : atom
-syntax "map_snd"             : atom
 syntax ","                   : atom
 
 syntax atom     : app
@@ -86,7 +70,6 @@ macro_rules
   | `(⟪₁ apply ⟫) => `(Expr.apply)
   | `(⟪₁ exec ⟫) => `(Expr.exec)
   | `(⟪₁ assert ⟫) => `(Expr.assert)
-  | `(⟪₁ unquote ⟫) => `(Expr.unquote)
   | `(⟪₁ quote ⟫) => `(Expr.quote)
   | `(⟪₁ Data ⟫) => `(Expr.data)
   | `(⟪₁ #$e:term ⟫) => `($e)
@@ -95,20 +78,13 @@ macro_rules
   | `(⟪₁ K' ⟫) => `(Expr.k')
   | `(⟪₁ I ⟫) => `(Expr.i)
   | `(⟪₁ S ⟫) => `(Expr.s)
-  | `(⟪₁ map_fst ⟫) => `(Expr.map_fst)
-  | `(⟪₁ map_snd ⟫) => `(Expr.map_snd)
   | `(⟪₁ fst ⟫) => `(Expr.fst)
   | `(⟪₁ snd ⟫) => `(Expr.snd)
   | `(⟪₁ read ⟫) => `(Expr.read)
   | `(⟪₁ both ⟫) => `(Expr.both)
-  | `(⟪₁ bothM ⟫) => `(Expr.bothM)
-  | `(⟪₁ both' ⟫) => `(Expr.both')
-  | `(⟪₁ bothM' ⟫) => `(Expr.bothM')
   | `(⟪₁ :: ⟫) => `(Expr.cons)
   | `(⟪₁ push_on ⟫) => `(Expr.push_on)
   | `(⟪₁ next ⟫) => `(Expr.next)
-  | `(⟪₁ >> ⟫) => `(Expr.seq)
-  | `(⟪₁ >>* ⟫) => `(Expr.seq_smart)
   | `(⟪₁ nil ⟫) => `(Expr.nil)
   | `(⟪₁ , ⟫) => `(Expr.tup)
   | `(⟪₂ ($e:app) ⟫) => `(⟪₂ $e ⟫)
@@ -123,20 +99,12 @@ def Expr.toString : Expr → String
   | ⟪₂ apply ⟫ => "apply"
   | ⟪₂ assert ⟫ => "assert"
   | ⟪₂ exec ⟫ => "exec"
-  | ⟪₂ unquote ⟫ => "unquote"
   | ⟪₂ quote ⟫ => "quote"
   | ⟪₂ Data ⟫ => "Data"
   | ⟪₂ push_on ⟫ => "push_on"
-  | ⟪₂ both' ⟫ => "both'"
-  | ⟪₂ bothM' ⟫ => "both'"
-  | ⟪₂ bothM ⟫ => "bothM"
   | ⟪₂ fst ⟫ => "fst"
   | ⟪₂ snd ⟫ => "snd"
   | ⟪₂ both ⟫ => "both"
-  | ⟪₂ >> ⟫ => ">>"
-  | ⟪₂ >>* ⟫ => ">>*"
-  | ⟪₂ map_fst ⟫ => "map_fst"
-  | ⟪₂ map_snd ⟫ => "map_snd"
   | ⟪₂ :: ⟫ => "::"
   | ⟪₂ nil ⟫ => "nil"
   | ⟪₂ read ⟫ => "read"

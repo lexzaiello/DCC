@@ -459,8 +459,6 @@ def nested_k_example : Except Error Expr := do
   Context stealing should not really matter.
   It's nice to have, but it can confuse things.
 
-  
-
   --let reg_2 ← -/
 
 #eval nested_k_example >>= infer
@@ -504,5 +502,4 @@ The context looks fine. I guess there's some machinery somewhere going haywire.
 
 #eval nested_k_example >>=
   (fun e => infer ⟪₂ :e Data Data ⟫ true)
-
 

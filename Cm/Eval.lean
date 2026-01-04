@@ -34,7 +34,11 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
     let f' := exec_op f Γ
     let g' := exec_op g Γ
 
-    ⟪₂ :f' :g' ⟫
+    match f', g' with
+    | ⟪₂ quoted :f' ⟫, ⟪₂ quoted :g' ⟫ =>
+      ⟪₂ quoted (:f' :g') ⟫
+    | f', g' =>
+      ⟪₂ :f' :g' ⟫
   | ⟪₂ (:: both (:: :f :g)) ⟫, Γ =>
     let f' := exec_op f Γ
     let g' := exec_op g Γ

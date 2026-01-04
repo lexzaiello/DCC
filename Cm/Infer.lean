@@ -250,6 +250,18 @@ end s
 def ass_data_here : Expr :=
   ⟪₂ (:: assert (:: Data nil)) ⟫
 
+def unquote_all (e : Expr) : Expr :=
+  match e with
+  | ⟪₂ quoted :e ⟫ => e
+  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: (#unquote_all x) (#unquote_all xs) ⟫
+  | ⟪₂ , :a :b ⟫ => ⟪₂ , (#unquote_all a) (#unquote_all b) ⟫
+    | ⟪₂ :f :x ⟫ =>
+    let f' := unquote_all f
+    let x' := unquote_all x
+
+    (try_step_n 10 ⟪₂ :f' :x' ⟫).getD ⟪₂ :f' :x' ⟫
+  | e => e
+
 def infer : Expr → Option Expr
   | ⟪₂ assert ⟫
   | ⟪₂ next ⟫
@@ -315,7 +327,15 @@ def infer : Expr → Option Expr
         let expected' ← do_or_unquote ⟪₂ , :Δ' :Ξ' ⟫ check_with
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
-        if stolen == t_arg then
+        let unquoted_expected := unquote_all stolen
+        let unquoted_actual   := unquote_all t_arg
+
+        dbg_trace stolen
+        dbg_trace t_arg
+        dbg_trace unquoted_expected
+        dbg_trace unquoted_actual
+
+        if unquoted_expected == unquoted_actual then
           let Γ' ← Γ.list_pop
 
           match Γ'.as_singleton with

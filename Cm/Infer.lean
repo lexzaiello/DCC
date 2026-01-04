@@ -78,9 +78,12 @@ def γ : Expr :=
   -/
   let mk_βx := ⟪₂ (:: both (::
     (:: assert apply)
+    (:: (:: :β quote) (:: push_on (:: assert :x))))) ⟫
+  /-let mk_βx := ⟪₂ (:: both (::
+    (:: assert apply)
     (:: both (::
       (:: :β quote)
-      (:: assert :x))))) ⟫
+      (:: assert :x))))) ⟫-/
 
   -- α properly quoted
   let asserts := ⟪₂ (:: both (::
@@ -102,7 +105,7 @@ there's just an extra both.
 -/
 
 #eval ⟪₂ :γ ⟫
-#eval try_step_n 10 ⟪₂ exec ((:: fst) ((:: ((:: both) ((:: ((:: ((:: read) assert)) quote)) ((:: ((:: both) ((:: ((:: assert) apply)) ((:: both) ((:: ((:: ((:: next) ((:: read) assert))) quote)) ((:: assert) ((:: fst) ((:: read) assert)))))))) ((:: push_on) ((:: assert) Data)))))) ((:: push_on) ((, nil) nil)))) (, (:: Data (:: (I Data) nil)) nil) ⟫
+#eval try_step_n 10 ⟪₂ exec ((:: fst) ((:: ((:: both) ((:: ((:: ((:: read) assert)) quote)) ((:: ((:: both) ((:: ((:: assert) apply)) ((:: ((:: ((:: next) ((:: read) assert))) quote)) ((:: push_on) ((:: assert) ((:: fst) ((:: read) assert)))))))) ((:: push_on) ((:: assert) Data)))))) ((:: push_on) ((, nil) nil)))) (, (:: Data (:: (I Data) nil)) nil) ⟫
 
 /-
 x : ∀ (z : α) (y : β z), γ z y

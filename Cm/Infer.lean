@@ -428,3 +428,6 @@ we're using data instruction lists.
 #eval infer ⟪₂ I Data Data ⟫
 #eval infer ⟪₂ K' Data Data Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
+
+#eval (infer <=< infer) ⟪₂ I ⟫
+#eval (infer <=< infer) ⟪₂ K ⟫

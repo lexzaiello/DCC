@@ -23,7 +23,7 @@ def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
 def Expr.display_infer : Expr → Option Expr
   | ⟪₂ , :Γ :X ⟫ => do
     let out ← (← Γ.as_list).getLast?
-    step ⟪₂ exec :out :X ⟫
+    try_step_n 10 ⟪₂ exec :out :X ⟫
   | e => e
 
 def read_data : Expr :=

@@ -5,11 +5,23 @@ import Cm.Infer
 /-
 I derived from S with any t_x
 -/
-def mk_i (t_x : Expr) : Expr :=
-  dbg_trace ⟪₂ K' :t_x Data ⟫
-  ⟪₂ S :t_x (K' Data :t_x Data) (K' :t_x Data) (K' :t_x Data) (K' Data :t_x Data) ⟫
+def mk_i (t_x : Expr) : Option Expr := do
+  /-
+    γ gets x and y, should return t_x
+    γ (x :t_x) Data = t_x
+  -/
+  let assert_t_x := ⟪₂ K' Data Data :t_x ⟫
+  let t_assert_t_x ← infer assert_t_x
 
-def nested_example : Option Expr := do
+  let aa_t_x := ⟪₂ K' :t_assert_t_x :t_x :assert_t_x ⟫
+  pure aa_t_x
+  --⟪₂ S :t_x (K' Data :t_x Data) (K' :t_x Data) (K' :t_x Data) (K' Data :t_x Data) ⟫
+
+#eval mk_i ⟪₂ Data ⟫ >>=
+  (fun e => infer ⟪₂ :e Data ⟫)
+  >>= Expr.display_infer
+
+/-def nested_example : Option Expr := do
   let inner_k := ⟪₂ K' Data Data ⟫
   let t_k ← infer inner_k
 
@@ -43,4 +55,4 @@ def mk_test : Option Expr := do
 #eval mk_test
 
 def mk_church (t_f t_x : Expr) : Option Expr :=
-  
+  -/

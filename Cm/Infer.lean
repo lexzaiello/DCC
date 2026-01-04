@@ -211,7 +211,7 @@ z is pretty easy, since it's not even under a binder. Assume we're given (, Δ �
 
 def arg_z : Expr :=
   let Δ := ⟪₂ fst ⟫
-  ⟪₂ >> :Δ read ⟫
+  ⟪₂ :: :Δ (:: read assert) ⟫
 
 /-
 Final output:
@@ -224,12 +224,12 @@ def t_out : Expr :=
   -- y is in register 5
   -- z is in register 6
 
-  let start_val_args := ⟪₂ >> next (>> next next) ⟫
-  let γ := ⟪₂ >> next (>> next read) ⟫
-  let y := ⟪₂ >> :start_val_args (>> next read) ⟫
-  let z := ⟪₂ >> :start_val_args (>> next (>> next read)) ⟫
+  let start_val_args := ⟪₂ :: next (:: next next) ⟫
+  let γ := ⟪₂ :: next (:: next read) ⟫
+  let y := ⟪₂ :: :start_val_args (:: next read) ⟫
+  let z := ⟪₂ :: :start_val_args (:: next (:: next read)) ⟫
 
-  ⟪₂ >> :Δ (both (both :γ :z) (both :y :z)) ⟫
+  ⟪₂ :: :Δ (:: apply (:: (:: apply (:: :γ :z)) (:: apply (:: :y :z)))) ⟫
 
 def full_test_context : Expr :=
   let α := ⟪₂ Data ⟫
@@ -470,7 +470,9 @@ essentially lifting a value into an assert.
 #eval infer ⟪₂ K' Data Data Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
-#eval infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (I Data) ⟫
+#eval infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (I Data) Data ⟫
+
+--⟪₂ , (:: Data (:: (I Data) (:: (K' Data Data) (:: (K' Data Data) (:: (I Data) (:: Data nil)))))) nil ⟫
 
 #eval step ⟪₂ exec ((:: apply) ((:: ((:: assert) (I Data))) ((:: ((:: fst) ((:: read) assert))) nil))) (, (:: Data nil) nil) ⟫
 
@@ -478,4 +480,6 @@ essentially lifting a value into an assert.
 
 #eval (infer <=< infer) ⟪₂ I ⟫
 #eval (infer <=< infer) ⟪₂ K ⟫
+
+#eval try_step_n 10 ⟪₂ exec (((:: fst) ((:: apply) ((:: ((:: apply) ((:: ((:: next) ((:: next) read))) ((:: ((:: next) ((:: next) next))) ((:: next) ((:: next) read)))))) ((:: apply) ((:: ((:: ((:: next) ((:: next) next))) ((:: next) read))) ((:: ((:: next) ((:: next) next))) ((:: next) ((:: next) read)))))))) ((, ((:: Data) ((:: (I Data)) ((:: ((K' Data) Data)) ((:: ((K' Data) Data)) ((:: (I Data)) ((:: Data) nil))))))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil)))) ((, ((:: Data) ((:: Data) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil))))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil)))) ((, ((:: Data) ((:: Data) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil))))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))))) (, (:: Data (:: (I Data) (:: (K' Data Data) (:: (K' Data Data) (:: (I Data) (:: Data nil)))))) nil) ⟫
 

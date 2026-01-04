@@ -259,6 +259,7 @@ def infer : Expr → Option Expr
   | ⟪₂ both ⟫
   | ⟪₂ read ⟫
   | ⟪₂ apply ⟫
+  | ⟪₂ quote ⟫
   | ⟪₂ push_on ⟫ => ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ S ⟫ => s.s_rule
   | ⟪₂ I ⟫ =>
@@ -471,13 +472,6 @@ essentially lifting a value into an assert.
 
 #eval infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (I Data) Data ⟫
 
---⟪₂ , (:: Data (:: (I Data) (:: (K' Data Data) (:: (K' Data Data) (:: (I Data) (:: Data nil)))))) nil ⟫
+#eval (infer <=< infer) ⟪₂ S ⟫
 
-#eval step ⟪₂ exec ((:: apply) ((:: ((:: assert) (I Data))) ((:: ((:: fst) ((:: read) assert))) nil))) (, (:: Data nil) nil) ⟫
-
-#eval step ⟪₂ exec ((:: apply) ((:: ((:: assert) (I Data))) ((:: ((:: fst) ((:: read) assert)))))) (, (:: Data nil) nil) ⟫
-
-#eval (infer <=< infer) ⟪₂ I ⟫
-#eval (infer <=< infer) ⟪₂ K ⟫
-
-#eval (step <=< step <=< step <=< step) ⟪₂ ((exec ((:: fst) ((:: apply) ((:: ((:: apply) ((:: ((:: next) ((:: next) read))) ((:: ((:: next) ((:: next) next))) ((:: next) ((:: next) read)))))) ((:: apply) ((:: ((:: ((:: next) ((:: next) next))) ((:: next) read))) ((:: ((:: next) ((:: next) next))) ((:: next) ((:: next) read))))))))) ((, ((:: Data) ((:: (I Data)) ((:: ((K' Data) Data)) ((:: ((K' Data) Data)) ((:: (I Data)) ((:: Data) nil))))))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil)))) ((, ((:: Data) ((:: Data) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil))))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil)))) ((, ((:: Data) ((:: Data) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil))))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))))) ⟫
+#eval (infer) ⟪₂ S ⟫

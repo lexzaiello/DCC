@@ -7,7 +7,6 @@ def steal_context (from_e for_e : Expr) : Expr :=
   | _, _ => for_e
 
 def do_or_unquote (to_do : Expr) (in_e : Expr) : Option Expr :=
-  dbg_trace ⟪₂ exec :in_e :to_do ⟫
   try_step_n 10 ⟪₂ exec :in_e :to_do ⟫
 
 -- Applies the Δ claims context to all handlers in the app context
@@ -312,19 +311,6 @@ def infer : Expr → Option Expr
 
         let expected' ← do_or_unquote ⟪₂ , :Δ' :Ξ' ⟫ check_with
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
-
-        --dbg_trace raw_t_arg
-        --dbg_trace expected'
-        --dbg_trace check_with
-        --dbg_trace expected'
-        --dbg_trace stolen
-        --dbg_trace t_arg
-        --dbg_trace arg
-
-        dbg_trace check_with
-        dbg_trace expected'
-        dbg_trace stolen
-        dbg_trace t_arg
 
         if stolen == t_arg then
           let Γ' ← Γ.list_pop

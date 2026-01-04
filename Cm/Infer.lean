@@ -41,6 +41,16 @@ def norm_quoted_contexts : Expr → Expr
   | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (#norm_quoted_contexts xs) ⟫
   | x => x
 
+def norm_all_contexts : Expr → Expr
+  | ⟪₂ :: (, :Γ :C) :xs ⟫ =>
+    match norm_context ⟪₂ (, :Γ :C) ⟫ with
+    | ⟪₂ :: :t nil ⟫ =>
+      ⟪₂ :: :t (#norm_all_contexts xs) ⟫
+    | t =>
+      ⟪₂ :: :t (#norm_all_contexts xs) ⟫
+  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (#norm_all_contexts xs) ⟫
+  | x => x
+
 /-
   Converts a rendered context, a list of types,
   into a normal context, where all the assertions don't depend on actual arguments.
@@ -349,8 +359,8 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
       let expected' ← do_or_unquote ⟪₂ , :Δ' :Ξ' ⟫ check_with |> unwrap_with (.stuck ⟪₂ exec :check_with (, :Δ' :Ξ') ⟫)
       let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
-      let unquoted_expected := (reduce_unquote stolen).getD stolen
-      let unquoted_actual   := (reduce_unquote t_arg).getD stolen
+      let unquoted_expected := (norm_all_contexts <$> reduce_unquote stolen).getD stolen
+      let unquoted_actual   := (norm_all_contexts <$> reduce_unquote t_arg).getD t_arg
 
       /-if with_dbg_logs then
         dbg_trace raw_t_arg

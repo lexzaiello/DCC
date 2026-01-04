@@ -461,7 +461,7 @@ essentially lifting a value into an assert.
 #eval infer ⟪₂ K' Data Data Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
-#eval infer ⟪₂ S Data (I Data) (K' Data Data) ⟫
+#eval infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data)  ⟫
 
 #eval step ⟪₂ exec ((:: apply) ((:: ((:: assert) (I Data))) ((:: ((:: fst) ((:: read) assert))) nil))) (, (:: Data nil) nil) ⟫
 

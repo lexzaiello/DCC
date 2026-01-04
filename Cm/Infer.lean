@@ -7,6 +7,7 @@ def steal_context (from_e for_e : Expr) : Expr :=
   | _, _ => for_e
 
 def do_or_unquote (to_do : Expr) (in_e : Expr) : Option Expr :=
+  dbg_trace ⟪₂ :in_e :to_do ⟫
   try_step_n 10 ⟪₂ exec :in_e :to_do ⟫
 
 -- Applies the Δ claims context to all handlers in the app context
@@ -33,7 +34,7 @@ def read_α : Expr :=
   ⟪₂ , (:: (>> fst read) (:: (quote Data) nil)) ⟫
 
 def ass_data : Expr :=
-  ⟪₂ (:: (:: assert (:: Data nil)) nil) ⟫
+  ⟪₂ (:: assert Data) ⟫
 
 /-
 S type:
@@ -222,7 +223,7 @@ def infer : Expr → Option Expr
   | ⟪₂ push_on ⟫ => ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ S ⟫ => s.s_rule
   | ⟪₂ I ⟫ =>
-    let α := ⟪₂ (:: fst (:: assert nil)) ⟫
+    let α := ⟪₂ (:: fst (:: read assert)) ⟫
     ⟪₂ , (:: :ass_data (:: :α (:: :α nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ :ass_data ⟫
@@ -514,3 +515,5 @@ we're using data instruction lists.
 
 
 -/
+
+#eval infer ⟪₂ I Data Data ⟫

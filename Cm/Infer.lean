@@ -312,13 +312,6 @@ def infer : Expr → Option Expr
         let expected' ← do_or_unquote ⟪₂ , :Δ' :Ξ' ⟫ check_with
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
-        dbg_trace check_with
-        dbg_trace expected'
-        dbg_trace raw_t_arg
-        dbg_trace t_arg
-        dbg_trace stolen
-        dbg_trace arg
-
         if stolen == t_arg then
           let Γ' ← Γ.list_pop
 
@@ -352,3 +345,18 @@ def example_return_S : Option Expr := do
   infer ⟪₂ I :t_s S ⟫
 
 #eval example_return_S
+
+/-
+Next task: prevent leaking non-data stuff into data lists.
+
+This isn't that hard. The main place is the Δ register.
+
+Ξ doesn't exist anymore anyway.
+
+This means we will need some actual quotation mechanism though.
+Annoying.
+
+Not too bad, just Δ though.
+
+Can add an AST expr for "quoted".
+-/

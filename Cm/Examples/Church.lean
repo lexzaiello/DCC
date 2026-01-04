@@ -14,13 +14,8 @@ def mk_i (t_x : Expr) : Option Expr := do
   let t_assert_t_x ← infer assert_t_x
 
   let aa_t_x := ⟪₂ K' :t_assert_t_x :t_x :assert_t_x ⟫
-  let t ← infer aa_t_x
 
-  let norm_t := norm_context t
-
-  ⟪₂ I :norm_t :aa_t_x ⟫
-
-  --⟪₂ S :t_x (K' Data :t_x Data) :aa_t_x (K' :t_x Data) (K' Data :t_x Data) ⟫
+  ⟪₂ S :t_x (K' Data :t_x Data) :aa_t_x (K' :t_x Data) (K' Data :t_x Data) ⟫
 
 #eval mk_i ⟪₂ Data ⟫
   >>= infer

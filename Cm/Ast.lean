@@ -5,6 +5,8 @@
 import Mathlib.Data.Nat.Notation
 
 inductive Expr where
+  | quoted    : Expr
+    → Expr
   | data      : Expr
   | tup       : Expr
   | cons      : Expr
@@ -40,6 +42,7 @@ declare_syntax_cat atom
 declare_syntax_cat app
 declare_syntax_cat expr
 
+syntax "quoted" atom         : atom 
 syntax "Data"                : atom
 syntax ">>"                  : atom
 syntax ">>*"                 : atom
@@ -79,6 +82,7 @@ syntax "⟪₁" atom "⟫"     : term
 syntax "⟪₂" app "⟫"      : term
 
 macro_rules
+  | `(⟪₁ quoted $e ⟫) => `(Expr.quoted ⟪₁ $e ⟫)
   | `(⟪₁ apply ⟫) => `(Expr.apply)
   | `(⟪₁ exec ⟫) => `(Expr.exec)
   | `(⟪₁ assert ⟫) => `(Expr.assert)
@@ -115,6 +119,7 @@ macro_rules
   | `(⟪₂ $e₁:app $e₂:atom ⟫) => `(Expr.app ⟪₂ $e₁ ⟫ ⟪₁ $e₂ ⟫)
 
 def Expr.toString : Expr → String
+  | ⟪₂ quoted :e ⟫ => s!"quoted {e.toString}"
   | ⟪₂ apply ⟫ => "apply"
   | ⟪₂ assert ⟫ => "assert"
   | ⟪₂ exec ⟫ => "exec"

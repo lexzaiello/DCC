@@ -111,9 +111,6 @@ def γ_e_1 : Option Expr := try_step_n 10 ⟪₂ exec :γ :test_γ_ctx ⟫
 
 #eval Expr.as_list <$> (γ_e_1 >>= (fun e => try_step_n 10 ⟪₂ exec fst :e ⟫))
 
-def test_γ : Expr :=
-  
-
 /-
 x : ∀ (z : α) (y : β z), γ z y
 -/
@@ -449,6 +446,8 @@ essentially lifting a value into an assert.
 #eval infer ⟪₂ I Data Data ⟫
 #eval infer ⟪₂ K' Data Data Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
+
+#eval infer ⟪₂ S Data (I Data) (K' Data Data) ⟫
 
 #eval (infer <=< infer) ⟪₂ I ⟫
 #eval (infer <=< infer) ⟪₂ K ⟫

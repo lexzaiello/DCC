@@ -71,13 +71,16 @@ def γ : Expr :=
   -- it selects the Δ register, then reads
   let x := ⟪₂ (:: fst (:: read assert)) ⟫
 
-  -- right hand quot is fine, since x is a data.
-  -- inner both is inserting "both", quoted
-  -- this doesn't work any way you spin it.
-  -- our argument here is β
-  -- I don't know how this worked at all ngl.
-  -- ah, >> fst read is quoted.
-  let mk_βx := ⟪₂ (:: both (:: (:: both (:: (:: quote (:: both nil)) (:: quote nil))) (:: ((:: quote (:: :x nil))) nil))) ⟫
+  /-
+    Need to quote the apply so it doesn't get run until later.
+    Can pipe into it.
+    Can use both to quote.
+  -/
+  let mk_βx := ⟪₂ (:: both (::
+    (:: assert apply)
+    (:: both (::
+      :β
+      (:: assert :x))))) ⟫
 
   -- α properly quoted
   let asserts := ⟪₂ (:: both (::

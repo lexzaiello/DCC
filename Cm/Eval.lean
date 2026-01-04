@@ -10,65 +10,36 @@ The format looks like:
 
 exec (:: f (:: g nil)) data
 
+assert returns the current value in the tape,
+or a specified value.
+
+assert discards the context, producing a value.
+assert does not expect (, Δ Ξ), but
+
 -/
-def exec_op (my_op : Expr) (ctx : Expr) : Option Expr := do
+def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   match my_op, ctx with
   | ⟪₂ read ⟫, ⟪₂ (:: :x :_xs) ⟫ => x
+  | ⟪₂ next ⟫, ⟪₂ (:: :_x :xs) ⟫ => xs
   | ⟪₂ fst ⟫, ⟪₂ (, :a :_b) ⟫ => a
   | ⟪₂ snd ⟫, ⟪₂ (, :_a :b) ⟫ => b
+  | ⟪₂ push_on (:: :x :xs) ⟫, c => ⟪₂ :: :c (:: :x :xs) ⟫
+  | ⟪₂ push_on (, :a :b) ⟫, c => ⟪₂ (, :c (, :a :b)) ⟫
+  | ⟪₂ assert ⟫, a => a
   | ⟪₂ (:: both (:: :f :g)) ⟫, Γ =>
-    let f' ← exec_op f Γ
-    let g' ← exec_op g Γ
+    let f' := exec_op f Γ
+    let g' := exec_op g Γ
 
     ⟪₂ (:: :f' :g') ⟫
   -- pipelining operations
   | ⟪₂ :: :f :g ⟫, ctx =>
-    let x ← exec_op f ctx
+    let x := exec_op f ctx
 
-    pure ⟪₂ exec :g :x ⟫
-  
-  sorry
+    ⟪₂ exec :g :x ⟫
+  | _, _ => ⟪₂ nil ⟫
 
 def step : Expr → Option Expr
-  | ⟪₂ exec (:: apply (:: both (:: :f (:: :g nil)))) :ctx ⟫ => do
-    let inner' ← step ⟪₂ exec (:: both (:: :f (:: :g nil))) :ctx ⟫
-
-    dbg_trace "hi"
-    dbg_trace inner'
-
-    match inner' with
-    | ⟪₂ ((:: :a) ((:: :b) nil)) ⟫ =>
-      dbg_trace s!"hi again: {⟪₂ :a :b ⟫}"
-      ⟪₂ :a :b ⟫
-    | _ => .none
-  | ⟪₂ exec (:: (:: quote (:: :c nil)) :rst) (:: :x :xs) ⟫ =>
-    step ⟪₂ exec (:: :c (:: :rst nil)) :xs ⟫
-  | ⟪₂ exec (:: read :rst) (:: :x :xs) ⟫ => step ⟪₂ exec :rst (:: :x nil) ⟫
-  | ⟪₂ exec (:: fst :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :a ⟫
-  | ⟪₂ exec (:: snd :rst) (, :a :b) ⟫ => step ⟪₂ exec :rst :b ⟫
-  | ⟪₂ exec (:: next nil) (:: :x :xs) ⟫ => xs
-  | ⟪₂ exec (:: next :rst) (:: :x :xs) ⟫ => step ⟪₂ exec :rst :xs ⟫
-  | ⟪₂ exec (:: both (:: :f (:: :g nil))) :ctx ⟫ => do
-    let fx ← step ⟪₂ exec :f :ctx ⟫
-    let gx ← step ⟪₂ exec :g :ctx ⟫
-
-    pure ⟪₂ (:: :fx (:: :gx nil)) ⟫
-  | ⟪₂ exec (:: both (:: :f (:: :g :rst))) :ctx ⟫ => do
-    let fx ← step ⟪₂ exec :f :ctx ⟫
-    let gx ← step ⟪₂ exec :g :ctx ⟫
-
-    pure ⟪₂ exec :rst (:: :fx (:: :gx nil)) ⟫
-  | ⟪₂ exec (:: (:: push_on (, :a :b)) :rst) (:: :x :xs) ⟫ =>
-    step ⟪₂ exec :rst (, (:: :x :xs) (, :a :b)) ⟫
-  | ⟪₂ exec (:: (:: push_on (:: :l nil)) :rst) (:: :x :xs) ⟫ =>
-    step ⟪₂ exec :rst (:: (:: :x :xs) :l) ⟫
-  /-
-    Drops context, giving a value.
-  -/
-  | ⟪₂ exec (:: (:: assert (:: :x nil)) :rst) :ctx ⟫ =>
-    x
-  | ⟪₂ exec (:: assert nil) (:: :x :_xs) ⟫ => x
-  | ⟪₂ exec nil :x ⟫ => x
+  | ⟪₂ exec :f :ctx ⟫ => exec_op f ctx
   | ⟪₂ push_on nil :a ⟫ => ⟪₂ :: :a nil ⟫
   | ⟪₂ push_on (:: :x :xs) :a ⟫ => ⟪₂ :: :a (:: :x :xs) ⟫
   | ⟪₂ push_on (, :a :b) :c ⟫ => ⟪₂ (, :c (, :a :b)) ⟫

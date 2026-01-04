@@ -119,24 +119,37 @@ def arg_x : Expr :=
   -- arguments in the first register
   let Δ := ⟪₂ fst ⟫
 
-  let α := ⟪₂ read ⟫
-  let β := ⟪₂ >> next read ⟫
-  let γ := ⟪₂ >> next (>> next read) ⟫
+  let α := ⟪₂ (:: read assert) ⟫
+  let β := ⟪₂ (:: next (:: read assert)) ⟫
+  let γ := ⟪₂ (:: next (:: next (:: read assert))) ⟫
+
+  let x := ⟪₂ (:: fst (:: read assert)) ⟫
+  let mk_βx := ⟪₂ (:: both (::
+    (:: assert apply)
+    (:: both (::
+      (:: :β quote) (:: assert :x))))) ⟫
 
   -- sequence after β
-  let x := ⟪₂ >> fst read ⟫
-  let mk_βx := ⟪₂ (both (both (quot both) quot) (quot :x)) ⟫
 
-  let y := ⟪₂ >> fst (>> next read) ⟫
+  let y := ⟪₂ (:: fst (:: next (:: read assert))) ⟫
 
-  -- similar pattern for output, γ z y
-  -- assume entire Δ in scope
-  let mk_γz := ⟪₂ both (both (quot both) (>> :γ quot)) (quot :x) ⟫
-  let mk_γzy := ⟪₂ both (both (quot both) :mk_γz) (quot :y) ⟫
+  let mk_γz := ⟪₂ (:: both (::
+    (:: assert apply)
+    (:: both (::
+      (:: :γ quote) (:: assert :x))))) ⟫
+  let mk_γzy := ⟪₂ (:: both (::
+    (:: assert apply)
+    (:: both (::
+      :mk_γz (:: assert :y))))) ⟫
 
-  let asserts := ⟪₂ >> :Δ (bothM (>>* :α quot) (bothM (>> :β :mk_βx) (>> :mk_γzy (push_on nil)))) ⟫
+  let asserts := ⟪₂ (:: both (::
+    (:: :α quote)
+    (:: both (::
+      :mk_βx (:: :mk_γzy (:: push_on nil)))))) ⟫
 
-  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
+  let append_tuple_ctx : Expr := ⟪₂ (:: push_on (, nil nil)) ⟫
+
+  ⟪₂ :: :Δ (:: :asserts :append_tuple_ctx) ⟫
 
 /-
 For testing the x type, S's context:

@@ -11,14 +11,39 @@ def do_or_unquote (to_do : Expr) (in_e : Expr) : Option Expr :=
 
 -- Applies the Δ claims context to all handlers in the app context
 -- returns all of the applied assertions, in order
+-- this will also 
 def sub_context : Expr → Expr
   | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
     Expr.from_list <| (do (← Γ.as_list).mapM (fun f =>
-    (do_or_unquote ⟪₂ , :Δ :Ξ ⟫ f).getD f)).getD []
+    (do_or_unquote ⟪₂ , :Δ :Ξ ⟫ (Expr.unquote_once f)).getD f)).getD []
   | e@⟪₂ (:: :_e :_rst) ⟫ => e
   | e => ⟪₂ (:: :e nil) ⟫
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
+
+def norm_quoted_contexts : Expr → Expr
+  | ⟪₂ :: (quoted (, :Γ :C)) :xs ⟫ =>
+    let x' := norm_context ⟪₂ , :Γ :C ⟫
+
+    match xs with
+    | ⟪₂ nil ⟫ => x'
+    | _ =>  ⟪₂ :: (quoted :x') (#norm_quoted_contexts xs) ⟫
+  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (#norm_quoted_contexts xs) ⟫
+  | x => x
+
+/-
+  Converts a rendered context, a list of types,
+  into a normal context, where all the assertions don't depend on actual arguments.
+-/
+def assert_all_with_context (e : Expr) : Expr :=
+  let rec add_asserts : Expr → Expr
+  | ⟪₂ nil ⟫ => ⟪₂ nil ⟫
+  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: (:: assert :x) (#add_asserts xs) ⟫
+  | x => x
+
+  match e with
+  | ⟪₂ :: :_x :_xs ⟫ => ⟪₂ , (#add_asserts e) (, nil nil) ⟫
+  | x => x
 
 def read_data : Expr :=
   ⟪₂ , (:: (quote Data) (:: (quote Data) nil)) ⟫
@@ -304,9 +329,9 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Option Expr :=
   | ⟪₂ exec ⟫ => ⟪₂ ,
     (:: :ass_data (:: :ass_data (:: :ass_data nil)))
     (, nil nil) ⟫
-  | ⟪₂ :f :arg ⟫ => match infer f, infer arg with
+  | ⟪₂ :f :arg ⟫ => match infer f with_dbg_logs, infer arg with_dbg_logs with
     | .some t_f, .some raw_t_arg => do
-      let t_arg := norm_context raw_t_arg
+      let t_arg := (norm_quoted_contexts ∘ norm_context) raw_t_arg
 
       match t_f with
       | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
@@ -318,8 +343,8 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Option Expr :=
         let expected' ← do_or_unquote ⟪₂ , :Δ' :Ξ' ⟫ check_with
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
-        let unquoted_expected := reduce_unquote stolen
-        let unquoted_actual   := reduce_unquote t_arg
+        let unquoted_expected := (reduce_unquote stolen).getD stolen
+        let unquoted_actual   := (reduce_unquote t_arg).getD stolen
 
         if with_dbg_logs then
           dbg_trace raw_t_arg
@@ -367,3 +392,10 @@ def example_return_S : Option Expr := do
 def mk_tre (t_a t_b : Expr) : Expr :=
   ⟪₂ K' :t_a :t_b ⟫
 
+/-
+Question: if we can normalize contexts,
+why are we carrying them around all the time?
+
+theoretically, if we make an empty context, we can just make a list with a bunch of asserts,
+no dependency.
+-/

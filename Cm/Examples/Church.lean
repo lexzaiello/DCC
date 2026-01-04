@@ -15,18 +15,36 @@ def mk_i (t_x : Expr) : Option Expr := do
 
   let aa_t_x := ⟪₂ K' :t_assert_t_x :t_x :assert_t_x ⟫
 
-  --⟪₂ S :t_x (K' Data :t_x Data) :aa_t_x (K' :t_x Data) (K' Data :t_x Data) ⟫
+  ⟪₂ S :t_x (K' Data :t_x Data) :aa_t_x (K' :t_x Data) (K' Data :t_x Data) ⟫
 
-  aa_t_x
+/-
+Type of our γ
+((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) ((:: quoted Data) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))) ((:: quoted Data) ((:: quoted (((K' Data) Data) Data)) nil)))) ((:: Data) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) ((:: quoted Data) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))) nil)))))
+
+type checks as data, so what's the problem?
+
+we have this nested context that should also be normalized.
+
+I feel like we ought to just normalize contexts eagerly.
+normalize as many as we can?
+
+its context seemingly got wiped out somehow though.
+
+the expected was able to figure out its context, though.
+-/
 
 #eval mk_i ⟪₂ Data ⟫
-  >>= infer
+  >>= (fun e => infer ⟪₂ :e Data ⟫ true >>= Expr.display_infer)
 
 /-
 ((:: Data) ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))) nil))
 -/
 
 /-
+
+I think norm_context isn't playing nicely with quotations.
+
+
 Aha. The fight isn't over.
 Normalized contexts leak non-data values.
 -/

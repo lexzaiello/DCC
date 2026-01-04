@@ -252,7 +252,8 @@ def Expr.display_infer : Expr → Option Expr
     (reduce_unquote <=< try_step_n 10) ⟪₂ exec :out :X ⟫
   | e => reduce_unquote e
 
-def infer : Expr → Option Expr
+def infer (e : Expr) (with_dbg_logs : Bool := false) : Option Expr :=
+  match e with
   | ⟪₂ assert ⟫
   | ⟪₂ next ⟫
   | ⟪₂ fst ⟫
@@ -320,13 +321,14 @@ def infer : Expr → Option Expr
         let unquoted_expected := reduce_unquote stolen
         let unquoted_actual   := reduce_unquote t_arg
 
-        dbg_trace raw_t_arg
-        dbg_trace expected'
+        if with_dbg_logs then
+          dbg_trace raw_t_arg
+          dbg_trace expected'
 
-        dbg_trace stolen
-        dbg_trace t_arg
-        dbg_trace unquoted_expected
-        dbg_trace unquoted_actual
+          dbg_trace stolen
+          dbg_trace t_arg
+          dbg_trace unquoted_expected
+          dbg_trace unquoted_actual
 
         if Expr.unquote_once expected' == raw_t_arg || unquoted_expected == unquoted_actual then
           let Γ' ← Γ.list_pop
@@ -362,23 +364,6 @@ def example_return_S : Option Expr := do
 
 #eval example_return_S
 
-/-
-Next task: prevent leaking non-data stuff into data lists.
+def mk_tre (t_a t_b : Expr) : Expr :=
+  ⟪₂ K' :t_a :t_b ⟫
 
-This isn't that hard. The main place is the Δ register.
-
-Ξ doesn't exist anymore anyway.
-
-This means we will need some actual quotation mechanism though.
-Annoying.
-
-Not too bad, just Δ though.
-
-Can add an AST expr for "quoted".
--/
-
-
-/-
-TODO, for tomorrow, need to work on quotation a bit more. need to make it more elegant, and
-prevent apps from going undone.
--/

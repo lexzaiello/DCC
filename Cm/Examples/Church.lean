@@ -15,7 +15,9 @@ def mk_i (t_x : Expr) : Option Expr := do
 
   let aa_t_x := ⟪₂ K' :t_assert_t_x :t_x :assert_t_x ⟫
 
-  ⟪₂ S :t_x (K' Data :t_x Data) :aa_t_x (K' :t_x Data) (K' Data :t_x Data) ⟫
+  --⟪₂ S :t_x (K' Data :t_x Data) :aa_t_x (K' :t_x Data) (K' Data :t_x Data) ⟫
+
+  aa_t_x
 
 #eval mk_i ⟪₂ Data ⟫
   >>= infer

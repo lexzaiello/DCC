@@ -52,9 +52,9 @@ def α : Expr := ⟪₂ :ass_data ⟫
 -- β : α → Type
 def β : Expr :=
   let α := ⟪₂ :: fst (:: read assert) ⟫
-  ⟪₂ (:: both (:: :α :ass_data)) ⟫
+  ⟪₂ (:: both (:: :α (:: :ass_data (:: push_on nil)))) ⟫
 
-#eval step ⟪₂ exec :β (, (:: Data nil) nil) ⟫
+#eval try_step_n 10 ⟪₂ exec :β (, (:: Data nil) nil) ⟫
 
 /- γ : ∀ (x : α), β x → Type
 -/

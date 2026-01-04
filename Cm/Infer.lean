@@ -346,14 +346,14 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Option Expr :=
         let unquoted_expected := (reduce_unquote stolen).getD stolen
         let unquoted_actual   := (reduce_unquote t_arg).getD stolen
 
-        if with_dbg_logs then
+        /-if with_dbg_logs then
           dbg_trace raw_t_arg
           dbg_trace expected'
 
           dbg_trace stolen
           dbg_trace t_arg
           dbg_trace unquoted_expected
-          dbg_trace unquoted_actual
+          dbg_trace unquoted_actual-/
 
         if Expr.unquote_once expected' == raw_t_arg || unquoted_expected == unquoted_actual then
           let Γ' ← Γ.list_pop
@@ -398,4 +398,103 @@ why are we carrying them around all the time?
 
 theoretically, if we make an empty context, we can just make a list with a bunch of asserts,
 no dependency.
+
+Todo, tomorrow:
+normalizing contexts more consistently.
+Also need to make quotation a little more careful.
+
+Need to figure out how to make quotation more consistent.
+
+The issue is when we pass around partially applied functions.
+
+We end up with this deeply nested context thing.
+
+For example:
+
+K t_k Data (K Data Data Data)
+
+
 -/
+
+def t_k : Option Expr :=
+  infer ⟪₂ K ⟫
+
+def nested_k_example : Option Expr := do
+  let inner_k := ⟪₂ K' Data Data Data ⟫
+  let t_inner_k ← infer inner_k
+
+  ⟪₂ K' :t_inner_k Data :inner_k ⟫
+
+--#eval nested_k_example >>= infer
+
+/-def inspect_its_type : Option Expr := do
+  let nested ← nested_k_example
+  let t_nested ← infer nested
+
+  /-
+    K _ Data (K Data Data Data)
+    Next argument it expects should be Data.
+    Then, the next argument will be Data again.
+    But, what is in the second register before popping?
+
+    See this is really suspicious. Not sure why it only has two elements in its context.
+    It's actually fine. the output type refers to the first quoted thing in the register.
+    That's the "chaining" we're trying to do.
+  -/
+
+  All of this has to do with context normalization.
+  A nice way around this is we can normalize the context early.
+  This also has to do with quotation seemingly.
+
+  Ideally what we do is normalize the context as soon as possible.
+  The only reason we can't do that is because of this "context stealing" thing,
+  where we match an argument based on its context,
+  which is itself sus.
+
+  Context stealing should not really matter.
+  It's nice to have, but it can confuse things.
+
+  
+
+  --let reg_2 ← -/
+
+#eval nested_k_example >>= infer
+
+/-
+This is K _ Data (K Data Data Data)
+
+inner K: Data → Data
+outter K: Data → (Data → Data)
+
+Our type looks correct.
+Assertions are correct.
+Except, we plugged in a Data argument.
+
+What was the type prior to that?
+
+Type prior to that is:
+
+We need to keep the Δ context,
+so that we can check partial apps,
+but we need to be more careful about how we sequence contexts
+and pass them around.
+
+-/
+
+/-
+K _ Data (K Data Data Data) Data = K Data Data Data
+
+K Data Data Data : Data → Data
+
+The context looks fine. I guess there's some machinery somewhere going haywire.
+-/
+
+/-
+  This is failing silently,
+  not sure where.
+  Last logs indicate the argument checked successfully.
+-/
+#eval nested_k_example >>=
+  (fun e => infer ⟪₂ :e Data Data ⟫ true)
+  >>= Expr.display_infer
+

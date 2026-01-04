@@ -460,4 +460,11 @@ essentially lifting a value into an assert.
 
 #eval (infer <=< infer) ⟪₂ S ⟫
 
-#eval (infer) ⟪₂ S ⟫
+#eval infer ⟪₂ S ⟫
+
+def example_return_S : Option Expr := do
+  let t_s ← infer ⟪₂ S ⟫
+
+  infer ⟪₂ I :t_s S ⟫
+
+#eval example_return_S

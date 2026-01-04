@@ -227,8 +227,8 @@ def infer : Expr → Option Expr
     ⟪₂ , (:: :ass_data (:: :α (:: :α nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ :ass_data ⟫
-    let t_β := ⟪₂ (:: both (:: (:: fst (:: assert nil)) (:: :ass_data nil))) ⟫
-    let t_x := ⟪₂ (:: fst (:: assert nil)) ⟫
+    let t_β := ⟪₂ (:: both (:: (:: fst (:: read assert)) :ass_data)) ⟫
+    let t_x := ⟪₂ (:: fst (:: read assert)) ⟫
     let t_y := ⟪₂ (:: apply (:: both (:: (:: fst (:: next (:: read nil))) (:: (:: fst (:: next (:: next (:: read nil)))) nil)))) ⟫
 
     ⟪₂ , (:: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_x nil))))) (, nil nil) ⟫
@@ -244,15 +244,6 @@ def infer : Expr → Option Expr
             (::
               (:: fst (:: read assert))
               nil)))))
-      (, nil nil) ⟫
-  | ⟪₂ unquote ⟫ =>
-    /-
-      Quotes prevent a data from being given context.
-      unquote removes the quotation.
-    -/
-
-    ⟪₂ ,
-      (:: (quote Data) (:: (quote Data) nil))
       (, nil nil) ⟫
   | ⟪₂ :: ⟫
   | ⟪₂ , ⟫ => ⟪₂ ,
@@ -436,4 +427,4 @@ we're using data instruction lists.
 
 #eval infer ⟪₂ I Data Data ⟫
 #eval infer ⟪₂ K' Data Data Data Data ⟫
-
+#eval infer ⟪₂ K Data (I Data) Data ⟫

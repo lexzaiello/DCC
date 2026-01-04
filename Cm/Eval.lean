@@ -31,7 +31,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
     let f' := exec_op f Γ
     let g' := exec_op g Γ
 
-    ⟪₂ (:: :f' :g') ⟫
+    ⟪₂ (:: :f' (:: :g' nil)) ⟫
   -- pipelining operations
   | ⟪₂ :: :f :g ⟫, ctx =>
     let x := exec_op f ctx

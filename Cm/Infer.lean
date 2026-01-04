@@ -88,7 +88,7 @@ def γ : Expr :=
   -- α properly quoted
   let asserts := ⟪₂ (:: both (::
     (:: :α quote)
-    (:: :mk_βx (:: push_on :ass_data)))) ⟫
+    (:: :mk_βx (:: push_on (:: :ass_data nil))))) ⟫
 
   let append_tuple_ctx : Expr := ⟪₂ (:: push_on (, nil nil)) ⟫
 
@@ -104,8 +104,15 @@ and quoted the rest.
 there's just an extra both.
 -/
 
-#eval ⟪₂ :γ ⟫
-#eval try_step_n 10 ⟪₂ exec ((:: fst) ((:: ((:: both) ((:: ((:: ((:: read) assert)) quote)) ((:: ((:: both) ((:: ((:: assert) apply)) ((:: ((:: ((:: next) ((:: read) assert))) quote)) ((:: push_on) ((:: assert) ((:: fst) ((:: read) assert)))))))) ((:: push_on) ((:: assert) Data)))))) ((:: push_on) ((, nil) nil)))) (, (:: Data (:: (I Data) nil)) nil) ⟫
+def test_γ_ctx : Expr := ⟪₂ , (:: Data (:: (I Data) nil)) nil ⟫
+def γ_e_1 : Option Expr := try_step_n 10 ⟪₂ exec :γ :test_γ_ctx ⟫
+
+#eval γ_e_1
+
+#eval Expr.as_list <$> (γ_e_1 >>= (fun e => try_step_n 10 ⟪₂ exec fst :e ⟫))
+
+def test_γ : Expr :=
+  
 
 /-
 x : ∀ (z : α) (y : β z), γ z y

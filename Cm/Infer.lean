@@ -78,7 +78,7 @@ def γ : Expr :=
   -/
   let mk_βx := ⟪₂ (:: both (::
     (:: assert apply)
-    (:: (:: :β quote) (:: push_on (:: assert :x))))) ⟫
+    (:: (:: :β quote) (:: push_on (:: :x nil))))) ⟫
   /-let mk_βx := ⟪₂ (:: both (::
     (:: assert apply)
     (:: both (::
@@ -448,6 +448,10 @@ essentially lifting a value into an assert.
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
 #eval infer ⟪₂ S Data (I Data) (K' Data Data) ⟫
+
+#eval step ⟪₂ exec ((:: apply) ((:: ((:: assert) (I Data))) ((:: ((:: fst) ((:: read) assert))) nil))) (, (:: Data nil) nil) ⟫
+
+#eval step ⟪₂ exec ((:: apply) ((:: ((:: assert) (I Data))) ((:: ((:: fst) ((:: read) assert)))))) (, (:: Data nil) nil) ⟫
 
 #eval (infer <=< infer) ⟪₂ I ⟫
 #eval (infer <=< infer) ⟪₂ K ⟫

@@ -339,6 +339,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
     let t_arg := (norm_quoted_contexts ∘ norm_context) raw_t_arg
 
     match t_f with
+    | ⟪₂ quoted (, :Γ (, :Δ :Ξ)) ⟫
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
       let Δ' := Expr.push_in ⟪₂ quoted :arg ⟫ Δ
       let Ξ' := Expr.push_in raw_t_arg Ξ
@@ -370,7 +371,8 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
         do_or_unquote ⟪₂ (, :Δ' :Ξ') ⟫ t_out |> unwrap_with (.stuck ⟪₂ exec :t_out (, :Δ' :Ξ') ⟫)
       | _ =>
         pure ⟪₂ , :Γ' (, :Δ' :Ξ') ⟫
-    | _ => .error <| .not_type t_f
+    | _ =>
+      .error <| .not_type t_f
 
 def infer_list (e : Expr) : List (List (Except Error Expr)) :=
   (e.any_data_as_list.getD []).map (·.any_data_as_list.getD [] |> List.map infer)
@@ -385,7 +387,7 @@ def infer_list (e : Expr) : List (List (Except Error Expr)) :=
 
 #eval infer ⟪₂ S ⟫
 
-def example_return_S : Option Expr := do
+def example_return_S : Except Error Expr := do
   let t_s ← infer ⟪₂ S ⟫
 
   infer ⟪₂ I :t_s S ⟫
@@ -419,16 +421,16 @@ K t_k Data (K Data Data Data)
 
 -/
 
-def t_k : Option Expr :=
+def t_k : Except Error Expr :=
   infer ⟪₂ K ⟫
 
-def nested_k_example : Option Expr := do
+def nested_k_example : Except Error Expr := do
   let inner_k := ⟪₂ K' Data Data Data ⟫
   let t_inner_k ← infer inner_k
 
-  ⟪₂ K' :t_inner_k Data :inner_k ⟫
+  pure ⟪₂ K' :t_inner_k Data :inner_k ⟫
 
---#eval nested_k_example >>= infer
+#eval nested_k_example >>= infer
 
 /-def inspect_its_type : Option Expr := do
   let nested ← nested_k_example
@@ -499,7 +501,8 @@ The context looks fine. I guess there's some machinery somewhere going haywire.
 
   Getting stuck at the Data argument somehow.
 -/
+
 #eval nested_k_example >>=
   (fun e => infer ⟪₂ :e Data Data ⟫ true)
-  >>= Expr.display_infer
+
 

@@ -20,12 +20,6 @@ def sub_context : Expr → Expr
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
 
-def Expr.display_infer : Expr → Option Expr
-  | ⟪₂ , :Γ :X ⟫ => do
-    let out ← (← Γ.as_list).getLast?
-    try_step_n 10 ⟪₂ exec :out :X ⟫
-  | e => e
-
 def read_data : Expr :=
   ⟪₂ , (:: (quote Data) (:: (quote Data) nil)) ⟫
 
@@ -250,17 +244,13 @@ end s
 def ass_data_here : Expr :=
   ⟪₂ (:: assert (:: Data nil)) ⟫
 
-def unquote_all (e : Expr) : Expr :=
-  match e with
-  | ⟪₂ quoted :e ⟫ => e
-  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: (#unquote_all x) (#unquote_all xs) ⟫
-  | ⟪₂ , :a :b ⟫ => ⟪₂ , (#unquote_all a) (#unquote_all b) ⟫
-    | ⟪₂ :f :x ⟫ =>
-    let f' := unquote_all f
-    let x' := unquote_all x
+def reduce_unquote : Expr → Option Expr := (try_step_n 10) ∘ Expr.unquote_pure
 
-    (try_step_n 10 ⟪₂ :f' :x' ⟫).getD ⟪₂ :f' :x' ⟫
-  | e => e
+def Expr.display_infer : Expr → Option Expr
+  | ⟪₂ , :Γ :X ⟫ => do
+    let out ← (← Γ.as_list).getLast?
+    (reduce_unquote <=< try_step_n 10) ⟪₂ exec :out :X ⟫
+  | e => reduce_unquote e
 
 def infer : Expr → Option Expr
   | ⟪₂ assert ⟫
@@ -327,15 +317,18 @@ def infer : Expr → Option Expr
         let expected' ← do_or_unquote ⟪₂ , :Δ' :Ξ' ⟫ check_with
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
-        let unquoted_expected := unquote_all stolen
-        let unquoted_actual   := unquote_all t_arg
+        let unquoted_expected := reduce_unquote stolen
+        let unquoted_actual   := reduce_unquote t_arg
+
+        dbg_trace raw_t_arg
+        dbg_trace expected'
 
         dbg_trace stolen
         dbg_trace t_arg
         dbg_trace unquoted_expected
         dbg_trace unquoted_actual
 
-        if unquoted_expected == unquoted_actual then
+        if Expr.unquote_once expected' == raw_t_arg || unquoted_expected == unquoted_actual then
           let Γ' ← Γ.list_pop
 
           match Γ'.as_singleton with
@@ -356,7 +349,7 @@ def infer_list (e : Expr) : List (List (Option Expr)) :=
 #eval infer ⟪₂ K' Data Data Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
-#eval infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (I Data) Data ⟫
+#eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (I Data) Data ⟫
 
 #eval (infer <=< infer) ⟪₂ S ⟫
 
@@ -385,3 +378,7 @@ Can add an AST expr for "quoted".
 -/
 
 
+/-
+TODO, for tomorrow, need to work on quotation a bit more. need to make it more elegant, and
+prevent apps from going undone.
+-/

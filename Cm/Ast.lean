@@ -203,6 +203,15 @@ def Expr.mk_tup : List Expr → Expr
   | [x, xs] => ⟪₂ , :x :xs ⟫
   | x :: xs => ⟪₂ , :x (#Expr.mk_tup xs) ⟫
 
+def Expr.unquote_pure : Expr → Expr
+  | ⟪₂ quoted :e ⟫ => e.unquote_pure
+  | ⟪₂ :f :x ⟫ => ⟪₂ (#f.unquote_pure) (#x.unquote_pure) ⟫
+  | e => e
+
+def Expr.unquote_once : Expr → Expr
+  | ⟪₂ quoted :e ⟫ => e
+  | e => e
+
 example : Expr.mk_tup [⟪₂ Data ⟫, ⟪₂ S ⟫, ⟪₂ K ⟫] = ⟪₂ ((, Data) (, S K)) ⟫ := rfl
 
 example : Expr.as_list ⟪₂ :: Data (:: K Data) ⟫ = [⟪₁ Data ⟫, ⟪₁ K ⟫, ⟪₁ Data ⟫] := rfl

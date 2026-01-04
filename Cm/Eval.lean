@@ -36,7 +36,8 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
 
     match f', g' with
     | ⟪₂ quoted :f' ⟫, ⟪₂ quoted :g' ⟫ =>
-      ⟪₂ quoted (:f' :g') ⟫
+      let unquoted := ⟪₂ :f' :g' ⟫.unquote_pure
+      ⟪₂ quoted :unquoted ⟫
     | f', g' =>
       ⟪₂ :f' :g' ⟫
   | ⟪₂ (:: both (:: :f :g)) ⟫, Γ =>

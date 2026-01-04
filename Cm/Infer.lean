@@ -7,7 +7,7 @@ def steal_context (from_e for_e : Expr) : Expr :=
   | _, _ => for_e
 
 def do_or_unquote (to_do : Expr) (in_e : Expr) : Option Expr :=
-  dbg_trace ⟪₂ :in_e :to_do ⟫
+  dbg_trace ⟪₂ exec :in_e :to_do ⟫
   try_step_n 10 ⟪₂ exec :in_e :to_do ⟫
 
 -- Applies the Δ claims context to all handlers in the app context
@@ -224,10 +224,9 @@ def t_out : Expr :=
   -- y is in register 5
   -- z is in register 6
 
-  let start_val_args := ⟪₂ :: next (:: next next) ⟫
   let γ := ⟪₂ :: next (:: next read) ⟫
-  let y := ⟪₂ :: :start_val_args (:: next read) ⟫
-  let z := ⟪₂ :: :start_val_args (:: next (:: next read)) ⟫
+  let y := ⟪₂ :: next (:: next (:: next (:: next read))) ⟫
+  let z := ⟪₂ :: next (:: next (:: next (:: next (:: next read)))) ⟫
 
   ⟪₂ :: :Δ (:: apply (:: (:: apply (:: :γ :z)) (:: apply (:: :y :z)))) ⟫
 
@@ -481,5 +480,4 @@ essentially lifting a value into an assert.
 #eval (infer <=< infer) ⟪₂ I ⟫
 #eval (infer <=< infer) ⟪₂ K ⟫
 
-#eval try_step_n 10 ⟪₂ exec (((:: fst) ((:: apply) ((:: ((:: apply) ((:: ((:: next) ((:: next) read))) ((:: ((:: next) ((:: next) next))) ((:: next) ((:: next) read)))))) ((:: apply) ((:: ((:: ((:: next) ((:: next) next))) ((:: next) read))) ((:: ((:: next) ((:: next) next))) ((:: next) ((:: next) read)))))))) ((, ((:: Data) ((:: (I Data)) ((:: ((K' Data) Data)) ((:: ((K' Data) Data)) ((:: (I Data)) ((:: Data) nil))))))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil)))) ((, ((:: Data) ((:: Data) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil))))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil)))) ((, ((:: Data) ((:: Data) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil))))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))))) (, (:: Data (:: (I Data) (:: (K' Data Data) (:: (K' Data Data) (:: (I Data) (:: Data nil)))))) nil) ⟫
-
+#eval (step <=< step <=< step <=< step) ⟪₂ ((exec ((:: fst) ((:: apply) ((:: ((:: apply) ((:: ((:: next) ((:: next) read))) ((:: ((:: next) ((:: next) next))) ((:: next) ((:: next) read)))))) ((:: apply) ((:: ((:: ((:: next) ((:: next) next))) ((:: next) read))) ((:: ((:: next) ((:: next) next))) ((:: next) ((:: next) read))))))))) ((, ((:: Data) ((:: (I Data)) ((:: ((K' Data) Data)) ((:: ((K' Data) Data)) ((:: (I Data)) ((:: Data) nil))))))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil)))) ((, ((:: Data) ((:: Data) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil))))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil)))) ((, ((:: Data) ((:: Data) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil))))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) nil)) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))))) ⟫

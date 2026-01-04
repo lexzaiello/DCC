@@ -284,6 +284,9 @@ def infer : Expr → Option Expr
               (:: fst (:: read assert))
               nil)))))
       (, nil nil) ⟫
+  | ⟪₂ quoted :_e ⟫ => ⟪₂ ,
+    (:: :ass_data nil)
+    (, nil nil) ⟫
   | ⟪₂ :: ⟫
   | ⟪₂ , ⟫ => ⟪₂ ,
     (::
@@ -304,7 +307,7 @@ def infer : Expr → Option Expr
 
       match t_f with
       | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
-        let Δ' := Expr.push_in arg Δ
+        let Δ' := Expr.push_in ⟪₂ quoted :arg ⟫ Δ
         let Ξ' := Expr.push_in raw_t_arg Ξ
 
         let check_with ← Γ.list_head
@@ -360,3 +363,5 @@ Not too bad, just Δ though.
 
 Can add an AST expr for "quoted".
 -/
+
+

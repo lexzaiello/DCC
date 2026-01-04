@@ -238,11 +238,11 @@ def infer : Expr → Option Expr
       (::
         :ass_data
         (::
-          (:: fst (:: assert nil))
+          (:: fst (:: read assert))
           (::
-            (:: fst (:: next (:: assert nil)))
+            (:: fst (:: next (:: read assert)))
             (::
-              (:: fst (:: assert nil))
+              (:: fst (:: read assert))
               nil)))))
       (, nil nil) ⟫
   | ⟪₂ unquote ⟫ =>
@@ -517,3 +517,5 @@ we're using data instruction lists.
 -/
 
 #eval infer ⟪₂ I Data Data ⟫
+#eval infer ⟪₂ K' Data Data Data Data ⟫
+

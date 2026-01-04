@@ -312,6 +312,13 @@ def infer : Expr → Option Expr
         let expected' ← do_or_unquote ⟪₂ , :Δ' :Ξ' ⟫ check_with
         let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
+        dbg_trace check_with
+        dbg_trace expected'
+        dbg_trace raw_t_arg
+        dbg_trace t_arg
+        dbg_trace stolen
+        dbg_trace arg
+
         if stolen == t_arg then
           let Γ' ← Γ.list_pop
 

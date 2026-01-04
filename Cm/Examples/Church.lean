@@ -14,12 +14,53 @@ def mk_i (t_x : Expr) : Option Expr := do
   let t_assert_t_x ← infer assert_t_x
 
   let aa_t_x := ⟪₂ K' :t_assert_t_x :t_x :assert_t_x ⟫
-  pure aa_t_x
-  --⟪₂ S :t_x (K' Data :t_x Data) (K' :t_x Data) (K' :t_x Data) (K' Data :t_x Data) ⟫
+  let t ← infer aa_t_x
 
-#eval mk_i ⟪₂ Data ⟫ >>=
+  --⟪₂ I :t ⟫
+  t
+
+  --⟪₂ S :t_x (K' Data :t_x Data) :aa_t_x (K' :t_x Data) (K' Data :t_x Data) ⟫
+
+#eval mk_i ⟪₂ Data ⟫
+
+#eval infer ⟪₂ (((K' Data) Data) Data) ⟫
+#eval infer ⟪₂ ((:: Data) ((:: (((K' Data) Data) Data)) nil)) ⟫
+
+/-
+Aha. The fight isn't over.
+Normalized contexts leak non-data values.
+-/
+
+/-
+This type isn't type-checking:
+Is it the K' Data Data Data? everything else looks like data.
+
+(some ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))) ((:: Data) ((:: (((K' Data) Data) Data)) nil)))) ((:: Data) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))) nil))))))
+-/
+
+/-
+aa_t_x type-checks with Data Data inputs, but S doesn't like it.
+maybe it's because we're leaving the context intact?
+
+-/
+/-#eval mk_i ⟪₂ Data ⟫
+  >>= (fun e => infer ⟪₂ :e Data Data ⟫)
+
+#eval mk_i ⟪₂ Data ⟫-/
+
+/-
+γ binds (x : α) and (y : β x)
+
+
+(((K' ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))) Data) (((K' Data) Data) Data))
+
+this is what we're type-checking.
+type should be data -> that gigantic thing.
+-/
+
+/-#eval mk_i ⟪₂ Data ⟫ >>=
   (fun e => infer ⟪₂ :e Data ⟫)
-  >>= Expr.display_infer
+  >>= Expr.display_infer-/
 
 /-def nested_example : Option Expr := do
   let inner_k := ⟪₂ K' Data Data ⟫

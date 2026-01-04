@@ -1,5 +1,34 @@
 import Cm.Ast
 
+/-
+Upon user request, a list may be treated as a series of instructions
+for processing some datum.
+
+There is support for piping, quotation, and some list operations.
+
+The format looks like:
+
+exec (:: f (:: g nil)) data
+
+-/
+def exec_op (my_op : Expr) (ctx : Expr) : Option Expr := do
+  match my_op, ctx with
+  | ⟪₂ read ⟫, ⟪₂ (:: :x :_xs) ⟫ => x
+  | ⟪₂ fst ⟫, ⟪₂ (, :a :_b) ⟫ => a
+  | ⟪₂ snd ⟫, ⟪₂ (, :_a :b) ⟫ => b
+  | ⟪₂ (:: both (:: :f :g)) ⟫, Γ =>
+    let f' ← exec_op f Γ
+    let g' ← exec_op g Γ
+
+    ⟪₂ (:: :f' :g') ⟫
+  -- pipelining operations
+  | ⟪₂ :: :f :g ⟫, ctx =>
+    let x ← exec_op f ctx
+
+    pure ⟪₂ exec :g :x ⟫
+  
+  sorry
+
 def step : Expr → Option Expr
   | ⟪₂ exec (:: apply (:: both (:: :f (:: :g nil)))) :ctx ⟫ => do
     let inner' ← step ⟪₂ exec (:: both (:: :f (:: :g nil))) :ctx ⟫

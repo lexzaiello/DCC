@@ -172,18 +172,27 @@ See tests below
 #eval try_step_n 10 ⟪₂ :arg_x :test_context_arg_x ⟫
 #eval try_step_n 10 ⟪₂ ((both ((both (((K Data) (I Data)) I)) ((>> fst) read))) ((>> fst) ((>> next) read))) (, (:: Data (:: Data nil)) nil) ⟫
 
+/-
+(y : ∀ (z : α), β z)
+-/
 def arg_y : Expr :=
   let Δ := ⟪₂ fst ⟫
 
-  let α := ⟪₂ read ⟫
-  let β := ⟪₂ >> next read ⟫
+  let α := ⟪₂ (:: read assert) ⟫
+  let β := ⟪₂ (:: next (:: read assert)) ⟫
 
-  let x := ⟪₂ >> fst read ⟫
-  let mk_βx := ⟪₂ (both (both (quot both) quot) (quot :x)) ⟫
+  let x := ⟪₂ (:: fst (:: read assert)) ⟫
+  let mk_βx := ⟪₂ (:: both (::
+    (:: assert apply)
+    (:: both (::
+      (:: :β quote) (:: assert :x))))) ⟫
 
-  let asserts := ⟪₂ >> :Δ (bothM (>>* :α quot) (>> (>> :β :mk_βx) (push_on nil))) ⟫
+  let asserts := ⟪₂ (:: both (::
+    (:: :α quote) (:: :mk_βx (:: push_on nil)))) ⟫
 
-  ⟪₂ >> :asserts (push_on (, nil nil)) ⟫
+  let append_tuple_ctx : Expr := ⟪₂ (:: push_on (, nil nil)) ⟫
+
+  ⟪₂ :: :Δ (:: :asserts :append_tuple_ctx) ⟫
 
 /-
 y test, pretty similar. use the same test context.
@@ -461,7 +470,7 @@ essentially lifting a value into an assert.
 #eval infer ⟪₂ K' Data Data Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
-#eval infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data)  ⟫
+#eval infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (I Data) ⟫
 
 #eval step ⟪₂ exec ((:: apply) ((:: ((:: assert) (I Data))) ((:: ((:: fst) ((:: read) assert))) nil))) (, (:: Data nil) nil) ⟫
 

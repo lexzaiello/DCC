@@ -51,7 +51,8 @@ def α : Expr := ⟪₂ :ass_data ⟫
 
 -- β : α → Type
 def β : Expr :=
-  ⟪₂ (:: both (:: (:: fst (:: assert nil)) (:: :ass_data nil))) ⟫
+  let α := ⟪₂ :: fst (:: read assert) ⟫
+  ⟪₂ (:: both (:: :α :ass_data)) ⟫
 
 #eval step ⟪₂ exec :β (, (:: Data nil) nil) ⟫
 
@@ -431,3 +432,4 @@ we're using data instruction lists.
 
 #eval (infer <=< infer) ⟪₂ I ⟫
 #eval (infer <=< infer) ⟪₂ K ⟫
+

@@ -78,7 +78,8 @@ def γ : Expr :=
   -/
   let mk_βx := ⟪₂ (:: both (::
     (:: assert apply)
-    (:: (:: :β quote) (:: push_on (:: :x nil))))) ⟫
+    (:: both (::
+      (:: :β quote) (:: assert :x))))) ⟫
   /-let mk_βx := ⟪₂ (:: both (::
     (:: assert apply)
     (:: both (::

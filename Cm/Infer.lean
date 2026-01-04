@@ -62,14 +62,14 @@ def γ : Expr :=
   let Δ := ⟪₂ fst ⟫
 
   -- α is the first argument in Δ. we don't do anything to it
-  let α := ⟪₂ read ⟫
-  let β := ⟪₂ (:: next (:: read nil)) ⟫
+  let α := ⟪₂ (:: read assert) ⟫
+  let β := ⟪₂ (:: next (:: read assert)) ⟫
 
   -- x is a quoted operation that shouldn't run until the later context
   -- flow starts by getting our dependents, then building the new context via quotation
   -- x is the first argument in the later context
   -- it selects the Δ register, then reads
-  let x := ⟪₂ (:: fst (:: read nil)) ⟫
+  let x := ⟪₂ (:: fst (:: read assert)) ⟫
 
   -- right hand quot is fine, since x is a data.
   -- inner both is inserting "both", quoted
@@ -80,15 +80,14 @@ def γ : Expr :=
   let mk_βx := ⟪₂ (:: both (:: (:: both (:: (:: quote (:: both nil)) (:: quote nil))) (:: ((:: quote (:: :x nil))) nil))) ⟫
 
   -- α properly quoted
-  let append_tuple : Expr := ⟪₂ (:: (:: push_on (, nil nil)) nil) ⟫
-  let asserts := ⟪₂
+  let asserts := ⟪₂ (:: both (::
+    (:: :α quote)
     (:: both (::
-      (:: :α (:: assert nil)) -- TODO: have to capture α twice
-      (::
-        (:: (:: :β (:: :mk_βx nil)) (:: (push_on (:: (quote Data) nil)) nil))
-        :append_tuple))) ⟫
+      :mk_βx
+      :ass_data)))) ⟫
+  let append_tuple_ctx : Expr := ⟪₂ (:: push_on (, nil nil)) ⟫
 
-  ⟪₂ :: :Δ :asserts ⟫
+  ⟪₂ :: :Δ (:: :asserts :append_tuple_ctx) ⟫
 
 
 #eval ⟪₂ :γ ⟫
@@ -423,7 +422,8 @@ We would end up making one of those comma'd lists.
 For one thing, I don't know how that works now that
 we're using data instruction lists.
 
-
+quote would be really nice to have.
+essentially lifting a value into an assert.
 -/
 
 #eval infer ⟪₂ I Data Data ⟫

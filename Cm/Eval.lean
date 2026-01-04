@@ -26,6 +26,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   | ⟪₂ (:: push_on (:: :x :xs)) ⟫, c => ⟪₂ :: :c (:: :x :xs) ⟫
   | ⟪₂ (:: push_on (, :a :b)) ⟫, c => ⟪₂ (, :c (, :a :b)) ⟫
   | ⟪₂ (:: assert :x) ⟫, _ => x
+  | ⟪₂ quote ⟫, a => ⟪₂ assert :a ⟫
   | ⟪₂ assert ⟫, a => a
   | ⟪₂ (:: apply (:: :f :g)) ⟫, Γ =>
     let f' := exec_op f Γ

@@ -16,15 +16,18 @@ def mk_i (t_x : Expr) : Option Expr := do
   let aa_t_x := ⟪₂ K' :t_assert_t_x :t_x :assert_t_x ⟫
   let t ← infer aa_t_x
 
-  --⟪₂ I :t ⟫
-  t
+  let norm_t := norm_context t
+
+  ⟪₂ I :norm_t :aa_t_x ⟫
 
   --⟪₂ S :t_x (K' Data :t_x Data) :aa_t_x (K' :t_x Data) (K' Data :t_x Data) ⟫
 
 #eval mk_i ⟪₂ Data ⟫
+  >>= infer
 
-#eval infer ⟪₂ (((K' Data) Data) Data) ⟫
-#eval infer ⟪₂ ((:: Data) ((:: (((K' Data) Data) Data)) nil)) ⟫
+/-
+((:: Data) ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))) nil))
+-/
 
 /-
 Aha. The fight isn't over.
@@ -34,6 +37,9 @@ Normalized contexts leak non-data values.
 /-
 This type isn't type-checking:
 Is it the K' Data Data Data? everything else looks like data.
+
+This is from the Δ register.
+We need to quote the entire thing somehow.
 
 (some ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))) ((:: Data) ((:: (((K' Data) Data) Data)) nil)))) ((:: Data) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) nil)))))) nil))))))
 -/

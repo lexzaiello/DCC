@@ -23,6 +23,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   | ⟪₂ next ⟫, ⟪₂ (:: :_x :xs) ⟫ => xs
   | ⟪₂ fst ⟫, ⟪₂ (, :a :_b) ⟫ => a
   | ⟪₂ snd ⟫, ⟪₂ (, :_a :b) ⟫ => b
+  | ⟪₂ (:: push_on nil) ⟫, c => ⟪₂ :: :c nil ⟫
   | ⟪₂ (:: push_on (:: :x :xs)) ⟫, c => ⟪₂ :: :c (:: :x :xs) ⟫
   | ⟪₂ (:: push_on (, :a :b)) ⟫, c => ⟪₂ (, :c (, :a :b)) ⟫
   | ⟪₂ (:: assert :x) ⟫, _ => x
@@ -37,7 +38,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
     let f' := exec_op f Γ
     let g' := exec_op g Γ
 
-    ⟪₂ (:: :f' (:: :g' nil)) ⟫
+    ⟪₂ (:: :f' :g') ⟫
   -- pipelining operations
   | ⟪₂ :: :f :g ⟫, ctx =>
     let x := exec_op f ctx

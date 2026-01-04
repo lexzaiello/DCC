@@ -240,7 +240,7 @@ def infer : Expr → Option Expr
     ⟪₂ , (:: :ass_data (:: :α (:: :α nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ :ass_data ⟫
-    let t_β := ⟪₂ (:: both (:: (:: fst (:: read assert)) :ass_data)) ⟫
+    let t_β := ⟪₂ (:: both (:: (:: fst (:: read assert)) (:: :ass_data (:: push_on nil)))) ⟫
     let t_x := ⟪₂ (:: fst (:: read assert)) ⟫
     let t_y := ⟪₂ (:: apply (:: (:: fst (:: next (:: read assert))) (:: fst (:: next (::next (:: read assert)))))) ⟫
 

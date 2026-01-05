@@ -341,6 +341,7 @@ def flatten_context (Γ : Expr) : Expr :=
   | ⟪₂ :: (:: assert (quoted (, :tys (, nil nil)))) nil ⟫ =>
     (do Option.some ⟪₂ (#← unfold_quoted_list tys) ⟫)
       |> (Option.getD · Γ)
+  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (#flatten_context xs) ⟫
   | e => e
 
 /-
@@ -353,12 +354,13 @@ Attaches an empty Δ and Ξ context.
 -/
 def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
   -- ((:: ((:: assert) quoted ((, ((:: quoted Data) ((:: quoted Data) nil))) ((, nil) nil)))) nil)
-  match Γ with
-  | ⟪₂ (:: :x :xs) ⟫ => do
+  match Γ, c with
+  | ⟪₂ (:: :_x :_xs) ⟫, ⟪₂, nil nil ⟫ => pure Γ
+  | ⟪₂ (:: :x :xs) ⟫, _ => do
     let x' ← do_step ⟪₂ (:: exec (:: :x :c)) ⟫
     .ok ⟪₂ :: (:: assert (# flatten_normal_assert x')) (#← freeze_context xs c) ⟫
-  | ⟪₂ nil ⟫ => .ok ⟪₂ nil ⟫
-  | e => .error <| .not_type e
+  | ⟪₂ nil ⟫, _ => .ok ⟪₂ nil ⟫
+  | e, _ => .error <| .not_type e
 
 def guard_is_ty (Γ : Expr) : Except Error Unit :=
   match Γ with

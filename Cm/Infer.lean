@@ -83,10 +83,10 @@ def assert_all_with_context (e : Expr) : Expr :=
   | x => x
 
 def read_data : Expr :=
-  ⟪₂ , (:: (quote Data) (:: (quote Data) nil)) ⟫
+  ⟪₂ , (:: (quote (quoted Data)) (:: (quote (quoted Data)) nil)) ⟫
 
 def ass_data : Expr :=
-  ⟪₂ (:: assert Data) ⟫
+  ⟪₂ (:: assert (quoted Data)) ⟫
 
 /-
 S type:
@@ -295,9 +295,6 @@ def s_rule : Expr :=
   ⟪₂ , (:: :α (:: :β (:: :γ (:: :arg_x (:: :arg_y (:: :arg_z (:: :t_out nil))))))) (, nil nil) ⟫
 
 end s
-
-def ass_data_here : Expr :=
-  ⟪₂ (:: assert (:: Data nil)) ⟫
 
 def reduce_unquote : Expr → Option Expr := (try_step_n 10) ∘ Expr.unquote_pure
 

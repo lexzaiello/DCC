@@ -271,16 +271,25 @@ def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let t_t_f ← infer (church_t_f t_in t_out)
 
   -- K f : t_x → t_f
-  let t_k_right : Expr := ⟪₂ , (:: (:: assert (quoted :t_in)) (:: (:: assert (quoted (#church_t_f t_in t_out))) nil)) (, nil nil) ⟫
+  let t_k_right : Expr := ⟪₂ ,
+      (:: (:: assert (quoted :t_in)) (:: (:: assert (quoted (#church_t_f t_in t_out))) nil))
+      (, nil nil) ⟫
   let t_t_k_right ← infer t_k_right
 
-  let t_inner_s ← (church_succ_innermost_s t_in t_out) >>= infer
-  let t_t_inner_s ← infer t_inner_s
+  -- γ = (t_in → t_out) → (t_in → t_out)
+  let t_γ : Expr := ⟪₂ , (::
+    (:: assert (quoted (#church_t_f t_in t_out)))
+    (:: (:: assert (quoted (#t_in)))
+      (:: assert (quoted (#t_out)) nil))) (, nil nil) ⟫
+  let t_t_γ ← infer t_γ
 
-  let β := ⟪₂ K' :t_t_k_right (#church_t_f t_in t_out) :t_k_right ⟫
+  let ret_γ := ⟪₂ K' :t_t_γ :t_k_right :t_γ ⟫
+  let t_ret_γ ← infer ret_γ
+  let γ := ⟪₂ K' :t_ret_γ (#church_t_f t_in t_out) :ret_γ ⟫
 
-  let k_s := ⟪₂ K' :t_t_inner_s
-  let γ := ⟪₂ K' 
+  let β := ⟪₂ K' :t_t_k_right :α :t_k_right ⟫
+
+  pure ⟪₂ S :α :β :γ ⟫
 
 --def church_succ_outer_s (t_in t_out : Expr) : Except Error Expr := do
   

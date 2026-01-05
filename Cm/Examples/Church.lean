@@ -283,10 +283,19 @@ n_f = , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) ni
 γ = (t_in → t_out) → t_in → t_out
 γ = , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) (:: (:: fst (:: next (:: next (:: read asssert)))) nil))) (, (:: :n_f (:: :t_in (:: :t_out nil))) nil)
 
+(S(KS)K) f
 
+(KS f) (K f)
+= S (K f) -- γ is this type
 
 S (K f) (n f) x
 -/
+
+def t_k_f_app (t_in t_out : Expr) : Except Error Expr := do match ← infer (church_succ_k_f t_in t_out) with
+  | ⟪₂ , :Γ :C ⟫ =>
+    let Γ' ← ((Γ.list_pop).map Except.ok).getD (Except.error <| Error.not_type Γ)
+    pure ⟪₂ , :Γ' :C ⟫
+  | x => pure x
 
 def far_left_s_γ (t_in t_out : Expr) : Except Error Expr := do
   let α := church_t_f t_in t_out

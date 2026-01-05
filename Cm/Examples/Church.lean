@@ -154,7 +154,7 @@ def church_t_f (t_in t_out : Expr) : Expr :=
 def church_t_x (t_in _t_out : Expr) : Expr :=
   ⟪₂ , (:: (:: fst (:: read assert)) nil) (, (:: :t_in nil) nil) ⟫
 
-def church_succ_innermost_k (t_in t_out : Expr) : Expr :=
+def church_succ_k_f (t_in t_out : Expr) : Expr :=
   let t_f := church_t_f t_in t_out
   let t_x := t_in
 
@@ -164,7 +164,7 @@ def test_kf : Except Error Expr := do
   let t_data ← infer ⟪₂ Data ⟫
   let my_f := ⟪₂ I :t_data ⟫
 
-  let kf := church_succ_innermost_k t_data t_data
+  let kf := church_succ_k_f t_data t_data
 
   infer ⟪₂ :kf :my_f Data ⟫
 

@@ -184,6 +184,20 @@ def Expr.unquote_once : Expr → Expr
   | ⟪₂ quoted :e ⟫ => e
   | e => e
 
+def Expr.list_max (l₁ l₂ : Expr) : Option Expr := do
+  if (← l₁.as_list).length ≥ (← l₂.as_list).length then
+    pure l₂
+  else
+    pure l₂
+
+def Expr.list_concat (l₁ l₂ : Expr) : Option Expr := do
+  match l₁, l₂ with
+  | _, ⟪₂ nil ⟫ => l₁
+  | ⟪₂ nil ⟫, _ => l₂
+  | ⟪₂ :: :x nil ⟫, l₂ => ⟪₂ :: :x :l₂ ⟫
+  | ⟪₂ :: :x :xs ⟫, l₂ => do pure ⟪₂ :: :x (#← Expr.list_concat xs l₂) ⟫
+  | _, _ => .none
+
 example : Expr.mk_tup [⟪₂ Data ⟫, ⟪₂ S ⟫, ⟪₂ K ⟫] = ⟪₂ ((, Data) (, S K)) ⟫ := rfl
 
 example : Expr.as_list ⟪₂ :: Data (:: K Data) ⟫ = [⟪₁ Data ⟫, ⟪₁ K ⟫, ⟪₁ Data ⟫] := rfl

@@ -306,100 +306,19 @@ def Expr.display_infer : Expr → Option Expr
   | e => reduce_unquote e
 
 /-
-Substitutes a context into all of the assertions in a Γ expression.
-Produces a new type object, prepending all output assertions with assert,
-and attaching nil Δ and Ξ contexts.
+Substitutes the given (, Δ Ξ) pair into all assertions of the Γ context.
+Prepends an assertions to all of the output values.
 
-This assumes that the expression is in β-normal form.
-That is, the (, Δ Ξ) registers are nillable.
+Does not detect whether nil values were produced.
 
-To freeze the context,
-
-map runs exec on all the items of a list.
-
-Then, we prepend an assert before each element.
-
-map works in reverse, which is whack.
-works on a list of functions, instead of list of data
-
-This map function is whack.
-
-Should be map f xs
-
-And repeat for all members of the list, not for all members of the map.
-
-Usually we would do this with exec. But we're already doing exec_op.
-
-the Γ register is our context.
-We're mapping over the elements in it, which are functions.
-
-And then we want to apply the actual context to each one with exec.
-
-(:: map (:: (:: 
-
-(:: map (::
-
-Feel like we can do this with just both.
-
-If we put a both at every level, we will re-make the list.
-
-(:: both
-
-If we put a both around each element, we're good to go.
-
-(:: f (:: g nil))
-
-This is way too complicated.
-
-I feel like map should work.
-
-the data we're mapping over are the functions.
-
-then, when we have an assertion in context,
-exec it with the context.
-
-except we have no way to do this.
-
-We could just change the map definition.
-
-But then map literally becomes exec.
-This is fine.
-
-If the context couldn't be frozen, none is returned.
-
-Ok, the map definition matches now.
-
-Could use map on that again.
-
-But map works the reverse way.
-
-Oh just pipe the execs into each other.
-
-What if we use a normal map? Then I think we need exec.
-We need both.
-
-We already kinda have dynamic exec. both does dynamic exec.
-
-so we can do normal map?
-
-map = both, so make map the other way.
-
-so, map is dead, but we can use both.
-
-both Γ C does what we want.
-
-Then, we pipe into map to add our asserts.
-
-(:: (:: both :Γ) (:: map quote))
-
-But we want to put asserts in.
+Attaches an empty Δ and Ξ context.
 -/
 def freeze_context (Γ : Expr) (c : Expr) : Option Expr :=
-  try_step_n 10 ⟪₂ exec (:: (:: both :Γ) (:: map quote)) :c ⟫
+  try_step_n 10 ⟪₂ exec (:: (:: (:: both :Γ) (:: map quote)) (:: push_on (, nil nil))) :c ⟫
 
-#eval try_step_n 10 ⟪₂ exec (:: map quote) (:: Data nil) ⟫
-#eval try_step_n 10 ⟪₂ exec (:: both ((:: ((:: assert) Data)) nil)) (, (:: Data nil) nil) ⟫
-#eval freeze_context ⟪₂ ((:: ((:: assert) Data)) nil) ⟫ ⟪₂ , (:: Data nil) nil ⟫
+def n_args (Γ : Expr) : ℕ := (do
+  let all_asserts ← Γ.as_list
+  return all_asserts.length - 1).getD 0
 
 /-
 To check equality of types:
@@ -419,9 +338,32 @@ Note that types are uniquely identified by the triple (, Γ (, Δ Ξ))
 
 So, we can do recursive descent and compare each one by normalization.
 -/
+def tys_are_eq (expected actual : Expr) : Except Error Unit :=
+  match expected, actual with
+  | ⟪₂ , :Γ₁ (, :Δ₁ :Ξ₁) ⟫, ⟪₂ , :Γ₂ (, :Δ₂ :Ξ₂) ⟫ =>
+    /-
+      To compare the types, see how many input assertions the contexts are making.
+      Then, extend the smallest of the two Δ registers with unique quoted data
+      until enough have been supplied.
 
-def tys_are_eq : Expr → Expr → Bool
-  
+      Use the same context for both.
+      Use the larger of the two contexts if possible.
+
+      Note that the Δ context will contain existing values.
+      So we should extend by as many args are left.
+
+      Also note that we aren't using these test contexts to type-check.
+      Just to compare def eq.
+
+      Also note that the type shouldn't be looking inside the element, so
+      its value doesn't matter, as long as it is somewhat unique.
+    -/
+    let n_args_wanted := (List.range (max (n_args Γ₁) (n_args Γ₂))).map (fun arg_n =>
+      (List.replicate arg_n ⟪₂ Data ⟫).foldl (fun acc x => ⟪₂ , :acc :x ⟫) ⟪₂ Data ⟫
+        |> (fun test_e => ⟪₂ quoted :test_e ⟫))
+    let Δ_test := Expr.list_max Δ₁ Δ₂
+    sorry
+  | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)
 
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   match e with

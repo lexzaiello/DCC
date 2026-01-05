@@ -294,7 +294,8 @@ def reduce_unquote : Expr → Option Expr := (try_step_n 10) ∘ Expr.unquote_pu
 def Expr.display_infer : Expr → Option Expr
   | ⟪₂ , :Γ :X ⟫ => do
     let out ← (← Γ.as_list).getLast?
-    (reduce_unquote <=< try_step_n 10) ⟪₂ exec :out :X ⟫
+    let out ← try_step_n 10 ⟪₂ exec :out :X ⟫
+    try_step_n 10 out.unquote_pure <|> (pure out)
   | e => reduce_unquote e
 
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=

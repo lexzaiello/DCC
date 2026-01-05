@@ -27,21 +27,11 @@ def my_example : Except Error Expr := do
   let t_data ← infer ⟪₂ Data ⟫
   mk_i t_data
 
-#eval my_example >>= infer
-#eval my_example
-
-#eval Expr.display_infer <$> (mk_i ⟪₂ Data ⟫
-  >>= (fun e => infer ⟪₂ :e Data ⟫ true))
-
 def mk_flse (t_a t_b : Expr) : Except Error Expr := do
   let my_i ← ⟪₂ (#mk_i t_b) ⟫
   let t_my_i ← infer my_i
 
   pure ⟪₂ K' :t_my_i :t_a :my_i ⟫
-
-#eval Expr.display_infer <$> (mk_flse ⟪₂ Data ⟫ ⟪₂ Data ⟫
-  >>= (fun c =>
-    infer ⟪₂ :c Data Data ⟫ true))
 
 def test_my_i : Except Error Expr := do
   let t_data ← infer ⟪₂ Data ⟫
@@ -78,40 +68,7 @@ def mk_flse_test (a b : Expr) : Except Error Expr := do
 
   pure ⟪₂ :my_false :a :b ⟫
 
-
-def complex_ty_test : Except Error Expr := do
-  let t_k ← infer ⟪₂ K ⟫
-
-  pure ⟪₂ I :t_k K ⟫
-
-#eval complex_ty_test >>= infer
-
-/-
-Like I suspected, functions are fine with us giving them complex / non-human readable types.
-
-What about with Data? Also fine. So this should work.
--/
-
-def complex_ty_test2 : Except Error Expr := do
-  let t_data ← infer ⟪₂ Data ⟫
-
-  pure ⟪₂ I :t_data Data ⟫
-
-#eval complex_ty_test2 >>= infer
-
-#eval Expr.display_infer <$> (mk_flse_test ⟪₂ K ⟫ ⟪₂ Data ⟫
-  >>= infer)
-
+#eval infer ⟪₂ Data ⟫
+#eval Expr.display_infer <$> (infer ⟪₂ Data ⟫)
 #eval Expr.display_infer <$> (mk_flse_test ⟪₂ Data ⟫ ⟪₂ Data ⟫
   >>= infer)
-
-/-
-Mild inconsistency in behavior:
-- seems like our combinators are expecting "human readable" format
-I think we can just fix this in our examples by normalizing first?
-
-We are really inconsistent in whether we refer to data types in the type arguments,
-or something else.
-
-
--/

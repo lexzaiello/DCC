@@ -8,7 +8,7 @@ def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
 def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
   -- Throw a nicer error with a location if we the data are lists
   match Expr.as_list expected, Expr.as_list actual with
-  | .some l₁, .some l₂ =>
+  /-| .some l₁, .some l₂ =>
     let append (acc : Option Error) (err : Error) : Option Error :=
       acc.map (Error.combine err) <|> (pure err)
 
@@ -18,7 +18,10 @@ def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
       else
         append acc <| Error.mismatch_arg (e₁.getD ⟪₂ nil ⟫) (e₂.getD ⟪₂ nil ⟫) in_app idx) .none
 
-    (e.map Except.error).getD (pure ())
+    let root_err : Error :=
+      Error.mismatch_arg expected actual in_app .none
+
+    (e.map (Except.error ∘ (Error.combine root_err))).getD (pure ())-/
   | _, _ =>
     if expected == actual then
       pure ()
@@ -511,7 +514,7 @@ Type prior to that is:
 
 We need to keep the Δ context,
 so that we can check partial apps,
-but we need to be more careful about how we sequence contexts
+but we need to be more careful about how we sequence contexts9
 and pass them around.
 
 -/

@@ -21,14 +21,20 @@ def mk_i (t_x : Expr) : Except Error Expr := do
 
   let t_t_data ← infer t_data
 
-  pure ⟪₂ S :t_x (K' :t_t_data :t_x :t_data) :aa_t_x (K' :t_x Data) (K' :t_data :t_x Data) ⟫
+  pure ⟪₂ S :t_x (K' :t_t_data :t_x :t_data) :aa_t_x (K' :t_x :t_data) (K' :t_data :t_x Data) ⟫
 
 def my_example : Except Error Expr := do
   let t_data ← infer ⟪₂ Data ⟫
   mk_i t_data
 
+/-
+I works, but we're probably messing up in at least one place.
+-/
+#eval Expr.display_infer <$> (my_example >>= (fun e => infer ⟪₂ :e Data ⟫))
+
 def mk_flse (t_a t_b : Expr) : Except Error Expr := do
   let my_i ← ⟪₂ (#mk_i t_b) ⟫
+  dbg_trace my_i
   let t_my_i ← infer my_i
 
   pure ⟪₂ K' :t_my_i :t_a :my_i ⟫
@@ -72,5 +78,6 @@ def mk_flse_test (a b : Expr) : Except Error Expr := do
 #eval Expr.display_infer <$> (infer ⟪₂ Data ⟫)
 #eval Expr.display_infer <$> (mk_flse_test ⟪₂ Data ⟫ ⟪₂ Data ⟫
   >>= infer)
+
 
 #eval mk_flse_test ⟪₂ K ⟫ ⟪₂ S ⟫

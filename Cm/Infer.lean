@@ -317,24 +317,6 @@ def Expr.display_infer : Expr → Option Expr
   | e => reduce_unquote e
 
 /-
-Substitutes the given (, Δ Ξ) pair into all assertions of the Γ context.
-Prepends an assertions to all of the output values.
-
-Does not detect whether nil values were produced.
-
-Attaches an empty Δ and Ξ context.
--/
-def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
-  /-match Γ with
-  | ⟪₂ -/
-  do_step ⟪₂ (:: exec (:: (:: (:: (:: both :Γ) (:: map quote)) (:: push_on (, nil nil))) :c)) ⟫
-
-def guard_is_ty (Γ : Expr) : Except Error Unit :=
-  match Γ with
-  | ⟪₂ , :_Γ (, :_Δ :_Ξ) ⟫ => pure ()
-  | t => .error <| .not_type t
-
-/-
 If a context is explicitly produced, keep it.
 Otherwise, assume this is a free-standing well-typed value,
 and wrap it in an empty context.
@@ -343,6 +325,36 @@ def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
   match ← do_step ⟪₂ (:: exec (:: :Γ_elem :c)) ⟫ with
   | ⟪₂ , :Γ :C ⟫ => pure ⟪₂ , :Γ :C ⟫
   | t => do_step ⟪₂ (:: exec (:: :mk_singleton_ctx :t)) ⟫
+
+def flatten_normal_assert : Expr → Expr
+  | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ => (do
+    if (← Δ.as_list).length ≥ (← Γ.as_list).length then
+      .some <| (do_step ⟪₂ (:: exec (:: :Γ (, :Δ :Ξ))) ⟫).toOption.getD ⟪₂ , :Γ (, :Δ :Ξ) ⟫
+    else
+      .none).getD ⟪₂ , :Γ (, :Δ :Ξ) ⟫
+  | ⟪₂ quoted :e ⟫ => ⟪₂ quoted (#flatten_normal_assert e) ⟫
+  | e => e
+
+/-
+Substitutes the given (, Δ Ξ) pair into all assertions of the Γ context.
+Prepends an assertions to all of the output values.
+
+Does not detect whether nil values were produced.
+
+Attaches an empty Δ and Ξ context.
+-/
+def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
+  match Γ with
+  | ⟪₂ (:: :x :xs) ⟫ => do
+    let x' ← do_step ⟪₂ (:: exec (:: :x :c)) ⟫
+    .ok ⟪₂ :: (:: assert (# flatten_normal_assert x')) (#← freeze_context xs c) ⟫
+  | ⟪₂ nil ⟫ => .ok ⟪₂ nil ⟫
+  | e => .error <| .not_type e
+
+def guard_is_ty (Γ : Expr) : Except Error Unit :=
+  match Γ with
+  | ⟪₂ , :_Γ (, :_Δ :_Ξ) ⟫ => pure ()
+  | t => .error <| .not_type t
 
 def n_args (Γ : Expr) : ℕ := (do
   let all_asserts ← Γ.as_list
@@ -403,6 +415,9 @@ def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
 
     assert_eq expected' actual' at_app
   | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)
+
+/-def flatten_assert : Expr → Expr
+  | ⟪₂ -/
 
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   match e with
@@ -553,6 +568,12 @@ def nested_k_example : Except Error Expr := do
 
 #eval infer ⟪₂ (((K' Data) Data) Data) ⟫
 #eval nested_k_example >>= infer
+
+/-
+((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) ((:: quoted Data) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))))
+-/
+
+
 
 /-def inspect_its_type : Option Expr := do
   let nested ← nested_k_example
@@ -864,5 +885,4 @@ The solution to the current problem is to make sure that we introduce an explici
 -/
 
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
-
 

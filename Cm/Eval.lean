@@ -21,6 +21,10 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   match my_op, ctx with
   | ⟪₂ (:: map :_f) ⟫, ⟪₂ nil ⟫ =>
     ⟪₂ nil ⟫
+  | ⟪₂ (:: map :f) ⟫, ⟪₂ :: :x nil ⟫ =>
+    let x' := exec_op f x
+
+    ⟪₂ (:: :x' nil) ⟫
   | ⟪₂ (:: map :f) ⟫, ⟪₂ :: :x :xs ⟫  =>
     let x' := exec_op f x
     let xs' := exec_op f xs

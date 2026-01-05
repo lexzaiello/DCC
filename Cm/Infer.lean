@@ -384,10 +384,22 @@ so we can do normal map?
 
 map = both, so make map the other way.
 
+so, map is dead, but we can use both.
+
+both Γ C does what we want.
+
+Then, we pipe into map to add our asserts.
+
+(:: (:: both :Γ) (:: map quote))
+
 But we want to put asserts in.
 -/
 def freeze_context (Γ : Expr) (c : Expr) : Option Expr :=
-  try_step_n 10 ⟪₂ exec (:: map :Γ) :c ⟫
+  try_step_n 10 ⟪₂ exec (:: (:: both :Γ) (:: map quote)) :c ⟫
+
+#eval try_step_n 10 ⟪₂ exec (:: map quote) (:: Data nil) ⟫
+#eval try_step_n 10 ⟪₂ exec (:: both ((:: ((:: assert) Data)) nil)) (, (:: Data nil) nil) ⟫
+#eval freeze_context ⟪₂ ((:: ((:: assert) Data)) nil) ⟫ ⟪₂ , (:: Data nil) nil ⟫
 
 /-
 To check equality of types:
@@ -696,3 +708,5 @@ It's more of a sequential thing.
 
 map combinator.
 -/
+
+#eval infer ⟪₂ Data ⟫

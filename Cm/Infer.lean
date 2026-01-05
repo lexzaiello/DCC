@@ -337,7 +337,7 @@ def flatten_context (Γ : Expr) : Expr :=
   -- ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil)))) ((:: ((:: assert) quoted Data)) nil)),
   match Γ with
   | ⟪₂ :: (:: assert (quoted (, (:: (:: assert (quoted :t_out)) nil) (, nil nil)))) :xs ⟫ =>
-    ⟪₂ :: (:: assert (quoted :t_out) nil) (#flatten_context xs) ⟫
+    ⟪₂ :: (:: assert (quoted :t_out)) (#flatten_context xs) ⟫
   | ⟪₂ :: (:: assert (quoted (, :tys (, nil nil)))) nil ⟫ =>
     (do Option.some ⟪₂ (#← unfold_quoted_list tys) ⟫)
       |> (Option.getD · Γ)

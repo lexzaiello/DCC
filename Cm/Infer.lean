@@ -302,8 +302,12 @@ This mk_singleton_ctx thing is the opposite of what we want, potentially.
 -/
 def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
   match ← do_step ⟪₂ (:: exec (:: :Γ_elem :c)) ⟫ with
-  | ⟪₂ , :Γ :C ⟫ => pure ⟪₂ , :Γ :C ⟫
+  | ⟪₂ , :Γ :C ⟫
+  | ⟪₂ quoted (, :Γ :C) ⟫ => pure ⟪₂ , :Γ :C ⟫
   | t => do_step ⟪₂ (:: exec (:: :mk_singleton_ctx :t)) ⟫
+
+--def push_singleton_context : Expr → Expr
+--  | ⟪₂ 
 
 def pop_singleton_context : Expr → Expr
   | ⟪₂ , (:: (:: assert (, :Γ :C)) nil) (, nil nil) ⟫ => pop_singleton_context ⟪₂ , :Γ :C ⟫

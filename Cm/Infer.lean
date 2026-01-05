@@ -325,6 +325,8 @@ Does not detect whether nil values were produced.
 Attaches an empty Δ and Ξ context.
 -/
 def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
+  /-match Γ with
+  | ⟪₂ -/
   do_step ⟪₂ (:: exec (:: (:: (:: (:: both :Γ) (:: map quote)) (:: push_on (, nil nil))) :c)) ⟫
 
 def guard_is_ty (Γ : Expr) : Except Error Unit :=
@@ -470,7 +472,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
       dbg_trace s!"check with: {check_with}"
       dbg_trace ⟪₂ , :Δ' :Ξ' ⟫
       dbg_trace "after sub: {expected''}"
-      dbg_trace raw_t_arg
+      dbg_trace s!"app {f} {arg}: {raw_t_arg}"
 
       let _ ← tys_are_eq expected'' raw_t_arg e
 
@@ -547,6 +549,9 @@ def nested_k_example : Except Error Expr := do
 
   pure ⟪₂ K' :t_inner_k Data :inner_k ⟫
 
+-- (, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) ((:: quoted Data) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil))))
+
+#eval infer ⟪₂ (((K' Data) Data) Data) ⟫
 #eval nested_k_example >>= infer
 
 /-def inspect_its_type : Option Expr := do
@@ -701,13 +706,6 @@ exactly one assertion remains.
 #eval infer ⟪₂ I Data Data ⟫
 
 #eval infer ⟪₂ Data ⟫
-
-def test_ty_eq : Except Error Unit := do
-  let my_t ← infer ⟪₂ Data ⟫
-
-  tys_are_eq my_t my_t ⟪₂ nil ⟫
-
-#eval test_ty_eq
 
 /-
 Notes on quoting:

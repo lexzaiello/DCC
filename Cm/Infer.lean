@@ -344,6 +344,19 @@ def flatten_context (Γ : Expr) : Expr :=
   | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (#flatten_context xs) ⟫
   | e => e
 
+def ctxs_eq (e₁ e₂ at_app : Expr) : Except Error Unit :=
+  match e₁, e₂ with
+  | ⟪₂ , (:: :x :xs) (, :Δ :Ξ) ⟫, ⟪₂ , (:: :y :ys) (, :Δ₂ :Ξ₂) ⟫ => do
+    let x' ← do_step ⟪₂ :: exec (:: :x (, :Δ :Ξ)) ⟫
+    let y' ← do_step ⟪₂ :: exec (:: :y (, :Δ₂ :Ξ₂)) ⟫
+
+    if x' == y' then
+      ctxs_eq ⟪₂ , :xs (, :Δ :Ξ) ⟫ ⟪₂ , :ys (, :Δ₂ :Ξ₂) ⟫ at_app
+    else
+      .error <| .mismatch_arg x' y' at_app .none
+  | ⟪₂ , nil :_c ⟫, ⟪₂ , nil :_b ⟫ => pure ()
+  | a, b => if a == b then pure () else .error <| .mismatch_arg a b at_app .none
+
 /-
 Substitutes the given (, Δ Ξ) pair into all assertions of the Γ context.
 Prepends an assertions to all of the output values.
@@ -390,6 +403,8 @@ Note that types are uniquely identified by the triple (, Γ (, Δ Ξ))
 So, we can do recursive descent and compare each one by normalization.
 -/
 def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
+  dbg_trace expected
+  dbg_trace actual
   match expected, actual with
   | ⟪₂ , :Γ₁ (, :Δ₁ :Ξ₁) ⟫, ⟪₂ , :Γ₂ (, :Δ₂ :Ξ₂) ⟫ => do
     /-
@@ -911,12 +926,16 @@ The solution to the current problem is to make sure that we introduce an explici
 
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
+#eval ctxs_eq ⟪₂ ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)) ⟫
+  ⟪₂ ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil))) ⟫ ⟪₂ nil ⟫
+
 def my_example' : Except Error Expr := do
   let t_i ← infer ⟪₂ I ⟫
 
   infer ⟪₂ I :t_i I Data Data ⟫
 
 #eval my_example'
+
 
 
 /-

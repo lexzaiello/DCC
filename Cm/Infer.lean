@@ -168,14 +168,14 @@ and quoted the rest.
 there's just an extra both.
 -/
 
-def test_γ_ctx : Expr := ⟪₂ , (:: Data (:: (I Data) nil)) nil ⟫
+def test_γ_ctx : Expr := ⟪₂ , (:: (quoted Data) (:: (quoted (I Data)) nil)) nil ⟫
 def γ_e_1 := do_step ⟪₂ (:: exec (:: :γ :test_γ_ctx)) ⟫
 
 #eval γ_e_1
 
 #eval do_step ⟪₂ (:: exec (:: ((:: apply) ((:: ((:: assert) (I Data))) ((:: fst) ((:: read) assert)))) (, (:: Data nil) nil))) ⟫
 
-#eval (γ_e_1 >>= (fun e => do_step ⟪₂ (:: exec (:: :e (, (:: Data nil) nil))) ⟫))
+#eval (γ_e_1 >>= (fun e => do_step ⟪₂ (:: exec (:: :e (, (:: (quoted Data) nil) nil))) ⟫))
 
 /-
 x : ∀ (z : α) (y : β z), γ z y

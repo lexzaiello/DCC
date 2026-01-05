@@ -19,6 +19,8 @@ assert does not expect (, Δ Ξ), but
 
 -/
 def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
+  dbg_trace my_op
+  dbg_trace ctx
   match my_op, ctx with
   | ⟪₂ (:: map :_f) ⟫, ⟪₂ nil ⟫ =>
     ⟪₂ nil ⟫
@@ -61,6 +63,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   | _, _ => ⟪₂ nil ⟫
 
 def step (e : Expr) : Option Expr :=
+  dbg_trace "hi"
   match e with
   | ⟪₂ (:: exec (:: both (:: (:: exec :m) (:: exec :n)))) ⟫ => do
     let m' ← step ⟪₂ :: exec :m ⟫
@@ -78,6 +81,10 @@ def step (e : Expr) : Option Expr :=
   | ⟪₂ (:: exec (:: :f (:: exec :c))) ⟫ => do
     let c' ← step ⟪₂ :: exec :c ⟫
     ⟪₂ :: exec (:: :f :c') ⟫
+  | ⟪₂ (:: exec (:: apply (:: (quoted :f) (quoted :g)))) ⟫ => do
+    let x' := (step ⟪₂ :f :g ⟫).getD ⟪₂ :f :g ⟫
+
+    ⟪₂ quoted :x' ⟫
   | ⟪₂ (:: exec (:: apply (:: (:: exec :f) (:: exec :g)))) ⟫ => do
     let f' ← step ⟪₂ :: exec :f ⟫
     let g' ← step ⟪₂ :: exec :g ⟫
@@ -91,12 +98,9 @@ def step (e : Expr) : Option Expr :=
     let g' ← step ⟪₂ :: exec :g ⟫
 
     pure ⟪₂ :: exec (:: apply (:: :f :g')) ⟫
-  | ⟪₂ (:: exec (:: apply (:: (quoted :f) (quoted :g)))) ⟫ => do
-    let x' := (step ⟪₂ :f :g ⟫).getD ⟪₂ :f :g ⟫
-
-    ⟪₂ quoted :x' ⟫
   | ⟪₂ (:: exec (:: :f :ctx)) ⟫ =>
     let e' := exec_op f ctx
+    dbg_trace s!"e: {e'}"
     e'
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫
@@ -171,12 +175,11 @@ Ops should always take the same number of arguments.
 def mk_const_ctx : Expr :=
   ⟪₂ (:: (:: map quote) (:: push_on (, nil nil))) ⟫
 
-#eval do_step ⟪₂ (:: exec (:: (:: map :mk_singleton_ctx) Data)) ⟫
-#eval do_step ⟪₂ (:: exec (:: :mk_const_ctx (:: Data (:: Data nil)))) ⟫
+--#eval do_step ⟪₂ (:: exec (:: (:: map :mk_singleton_ctx) Data)) ⟫
+--#eval do_step ⟪₂ (:: exec (:: :mk_const_ctx (:: Data (:: Data nil)))) ⟫
 
 end test
 
-#eval do_step ⟪₂ exec (:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))
-((, ((:: quoted Data) ((:: quoted (I Data)) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))) nil)))) ⟫
+/-#eval do_step ⟪₂ exec (:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))
+((, ((:: quoted Data) ((:: quoted (I Data)) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))) nil)))) ⟫-/
 
-#eval do_step ⟪₂ (:: exec (:: ((:: apply) ((:: ((:: assert) (I Data))) ((:: fst) ((:: read) assert)))) (, (:: Data nil) nil))) ⟫

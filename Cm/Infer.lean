@@ -323,11 +323,21 @@ Note that types are uniquely identified by the triple (, Γ (, Δ Ξ))
 
 So, we can do recursive descent and compare each one by normalization.
 -/
+
+/-
+Substitutes a context into all of the assertions in a Γ expression.
+Produces a new type object, prepending all output assertions with assert,
+and attaching nil Δ and Ξ contexts.
+-/
+def freeze_context (with_args : Expr) (c : Expr) : Except Error Expr :=
+  
+
 def tys_are_eq : Expr → Expr → Bool
   
 
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   match e with
+  | ⟪₂ map ⟫
   | ⟪₂ assert ⟫
   | ⟪₂ next ⟫
   | ⟪₂ fst ⟫
@@ -595,4 +605,18 @@ Also, with quotation:
 We're just unquoting and re-quoting kind of haphazardly.
 
 Just seems like we're doing a lot of work. We should normalize if possible, and insert assert.
+
+Our type list things are kind of like a list generator.
+New combinator just dropped.
+
+Oh wait I think both can actually handle this.
+
+Maybe?
+
+An alternative idea is to change our type assertions to natively use both,
+but I don't like that.
+
+It's more of a sequential thing.
+
+map combinator.
 -/

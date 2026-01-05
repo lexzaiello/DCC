@@ -8,6 +8,7 @@ inductive Expr where
   | quoted    : Expr
     → Expr
   | data      : Expr
+  | map       : Expr
   | tup       : Expr
   | cons      : Expr
   | assert    : Expr
@@ -34,7 +35,8 @@ declare_syntax_cat atom
 declare_syntax_cat app
 declare_syntax_cat expr
 
-syntax "quoted" atom         : atom 
+syntax "map"                 : atom
+syntax "quoted" atom         : atom
 syntax "Data"                : atom
 syntax "(" app ")"           : atom
 syntax "#" term              : atom
@@ -66,6 +68,7 @@ syntax "⟪₁" atom "⟫"     : term
 syntax "⟪₂" app "⟫"      : term
 
 macro_rules
+  | `(⟪₁ map ⟫) => `(Expr.map)
   | `(⟪₁ quoted $e ⟫) => `(Expr.quoted ⟪₁ $e ⟫)
   | `(⟪₁ apply ⟫) => `(Expr.apply)
   | `(⟪₁ exec ⟫) => `(Expr.exec)
@@ -95,6 +98,7 @@ macro_rules
   | `(⟪₂ $e₁:app $e₂:atom ⟫) => `(Expr.app ⟪₂ $e₁ ⟫ ⟪₁ $e₂ ⟫)
 
 def Expr.toString : Expr → String
+  | ⟪₂ map ⟫ => "map"
   | ⟪₂ quoted :e ⟫ => s!"quoted {e.toString}"
   | ⟪₂ apply ⟫ => "apply"
   | ⟪₂ assert ⟫ => "assert"

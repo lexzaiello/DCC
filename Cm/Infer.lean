@@ -523,9 +523,6 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
       --dbg_trace fold_ctx raw_t_arg
       --dbg_trace fold_ctx expected''
 
-      dbg_trace expected''
-      dbg_trace raw_t_arg
-
       let _ ← tys_are_eq expected'' raw_t_arg e
 
       let Γ' ← Γ.list_pop |> unwrap_with (.short_context Γ)

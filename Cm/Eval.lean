@@ -76,9 +76,8 @@ def step (e : Expr) : Option Expr :=
   | ⟪₂ (:: exec (:: both (:: :f :g))) ⟫ =>
     ⟪₂ (:: :f :g) ⟫
   | ⟪₂ (:: exec (:: :f (:: exec :c))) ⟫ => do
-    let f' ← step ⟪₂ :: exec :f ⟫
     let c' ← step ⟪₂ :: exec :c ⟫
-    ⟪₂ :: exec (:: :f' :c') ⟫
+    ⟪₂ :: exec (:: :f :c') ⟫
   | ⟪₂ (:: exec (:: apply (:: (:: exec :f) (:: exec :g)))) ⟫ => do
     let f' ← step ⟪₂ :: exec :f ⟫
     let g' ← step ⟪₂ :: exec :g ⟫

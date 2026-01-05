@@ -268,7 +268,6 @@ K f : t_x → t_f
 
 def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let α := church_t_f t_in t_out
-  let t_t_f ← infer (church_t_f t_in t_out)
 
   -- K f : t_x → t_f
   let t_k_right : Expr := ⟪₂ ,
@@ -280,7 +279,7 @@ def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let t_γ : Expr := ⟪₂ , (::
     (:: assert (quoted (#church_t_f t_in t_out)))
     (:: (:: assert (quoted (#t_in)))
-      (:: assert (quoted (#t_out)) nil))) (, nil nil) ⟫
+      (:: (:: assert (quoted (#t_out))) nil))) (, nil nil) ⟫
   let t_t_γ ← infer t_γ
 
   let ret_γ := ⟪₂ K' :t_t_γ :t_k_right :t_γ ⟫
@@ -290,6 +289,8 @@ def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let β := ⟪₂ K' :t_t_k_right :α :t_k_right ⟫
 
   pure ⟪₂ S :α :β :γ ⟫
+
+#eval far_left_s ⟪₂ Data ⟫ ⟪₂ Data ⟫
 
 --def church_succ_outer_s (t_in t_out : Expr) : Except Error Expr := do
   

@@ -332,6 +332,8 @@ def test_far_left_s_β : Except Error Expr := do
   dbg_trace infer ⟪₂ (#church_succ_k_f t_x t_x) :my_f ⟫
   dbg_trace do_step ⟪₂ :β :my_f ⟫
 
+  dbg_trace tys_are_eq (← infer ⟪₂ (#church_succ_k_f t_x t_x) :my_f ⟫) (← do_step ⟪₂ :β :my_f ⟫) ⟪₂ nil ⟫
+
   pure ⟪₂ :β :my_f ⟫
 
 /-

@@ -345,29 +345,28 @@ def flatten_context (Γ : Expr) : Expr :=
   | e => e
 
 /-
-Whenever a context only has an output,
+Whenever a context only has one output,
 just use the expr.
 
 Also removes quotations.
 -/
 def fold_ctx : Expr → Expr
-  | ⟪₂ (:: assert :x) ⟫ => fold_ctx x
-  | ⟪₂ quoted :t ⟫ => fold_ctx t
-  | ⟪₂ , (:: (:: :t) nil) (, nil nil) ⟫ => fold_ctx t
-  | ⟪₂ , (:: :x :xs) :C ⟫ =>
-    let x' := fold_ctx x
-    match fold_ctx ⟪₂ , :xs :C ⟫ with
-    | ⟪₂ , :xs' :_C' ⟫ => ⟪₂ , (:: :x' :xs') :C ⟫
-    | t => ⟪₂ , (:: :x :t) :C ⟫
-  | t => t
+  | ⟪₂ , (:: (:: assert (quote (, :Γ (, :Δ :Ξ)))) nil) :C ⟫ => fold_ctx ⟪₂ (, :Γ (, :Δ :Ξ)) ⟫
+  | ⟪₂ , (:: (:: assert (quoted :e)) nil) :C ⟫ => ⟪₂ (quoted (#fold_ctx e)) ⟫
+  | ⟪₂ , (:: (:: assert :e) nil) :C ⟫ => fold_ctx e
+  | ⟪₂ , (:: (:: assert :x) :xs) :c ⟫ => ⟪₂ , (:: (:: assert (#fold_ctx x)) (#fold_ctx xs)) :c ⟫
+  | e => e
 
+#eval fold_ctx ⟪₂ , (:: ((:: assert) quoted Data) nil) (, nil nil) ⟫
 #eval fold_ctx ⟪₂ ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)) ⟫
 
 def ctxs_eq (e₁ e₂ at_app : Expr) : Except Error Unit :=
   match e₁, e₂ with
   | ⟪₂ , (:: :x :xs) (, :Δ :Ξ) ⟫, ⟪₂ , (:: :y :ys) (, :Δ₂ :Ξ₂) ⟫ => do
-    let x' ← do_step ⟪₂ :: exec (:: :x (, :Δ :Ξ)) ⟫
-    let y' ← do_step ⟪₂ :: exec (:: :y (, :Δ₂ :Ξ₂)) ⟫
+    dbg_trace e₁
+    dbg_trace e₂
+    let x' := (do_step ⟪₂ :: exec (:: :x (, :Δ :Ξ)) ⟫).toOption.getD x
+    let y' := (do_step ⟪₂ :: exec (:: :y (, :Δ₂ :Ξ₂)) ⟫).toOption.getD y
 
     if x' == y' then
       ctxs_eq ⟪₂ , :xs (, :Δ :Ξ) ⟫ ⟪₂ , :ys (, :Δ₂ :Ξ₂) ⟫ at_app
@@ -375,6 +374,8 @@ def ctxs_eq (e₁ e₂ at_app : Expr) : Except Error Unit :=
       .error <| .mismatch_arg x' y' at_app .none
   | ⟪₂ , nil :_c ⟫, ⟪₂ , nil :_b ⟫ => pure ()
   | a, b => if a == b then pure () else .error <| .mismatch_arg a b at_app .none
+
+--dbg_trace ctxs_eq
 
 /-
 Substitutes the given (, Δ Ξ) pair into all assertions of the Γ context.
@@ -422,8 +423,6 @@ Note that types are uniquely identified by the triple (, Γ (, Δ Ξ))
 So, we can do recursive descent and compare each one by normalization.
 -/
 def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
-  dbg_trace expected
-  dbg_trace actual
   match expected, actual with
   | ⟪₂ , :Γ₁ (, :Δ₁ :Ξ₁) ⟫, ⟪₂ , :Γ₂ (, :Δ₂ :Ξ₂) ⟫ => do
     /-
@@ -521,6 +520,9 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
 
       let expected'' := (← run_context check_with ⟪₂ (, :Δ' :Ξ') ⟫) |> pop_singleton_context
+
+      --dbg_trace fold_ctx raw_t_arg
+      --dbg_trace fold_ctx expected''
 
       let _ ← tys_are_eq expected'' raw_t_arg e
 
@@ -953,7 +955,6 @@ but found ((:: ((:: assert) ((, ((:: ((:: assert) quoted Data)) ((:: ((:: apply)
 --#eval ctxs_eq ⟪₂ ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil)))) ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)))) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ⟫ ⟪₂ ((:: ((:: assert) ((, ((:: ((:: assert) quoted Data)) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data))) ((:: fst) ((:: read) assert))))) ((:: ((:: apply) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: quoted Data) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))))) Data) (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data) Data)))) ((:: fst) ((:: read) assert))))) ((:: fst) ((:: next) ((:: read) assert)))))) nil)))) ((, nil) nil)))) ((:: ((:: assert) ((, ((:: ((:: assert) quoted Data)) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data))) ((:: fst) ((:: read) assert))))) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil)))) ⟫ ⟪₂ nil ⟫
 
 #eval fold_ctx ⟪₂ ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)) ⟫
-
 #eval ctxs_eq ⟪₂ ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)) ⟫
   ⟪₂ ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil))) ⟫ ⟪₂ nil ⟫
 
@@ -965,15 +966,3 @@ def my_example' : Except Error Expr := do
 #eval my_example'
 
 
-
-/-
-Interesting idea:
-I feel like the freezing stuff is probably unnecessary.
-Maybe?
-
-Just leave the empty registers the same.
-Render the existing ones.
-
-Also,
-I still don't like how much nesting there is.
--/

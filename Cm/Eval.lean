@@ -178,3 +178,5 @@ end test
 
 #eval do_step ⟪₂ exec (:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))
 ((, ((:: quoted Data) ((:: quoted (I Data)) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))) nil)))) ⟫
+
+#eval do_step ⟪₂ (:: exec (:: ((:: apply) ((:: ((:: assert) (I Data))) ((:: fst) ((:: read) assert)))) (, (:: Data nil) nil))) ⟫

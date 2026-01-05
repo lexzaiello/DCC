@@ -173,7 +173,9 @@ def γ_e_1 := do_step ⟪₂ (:: exec (:: :γ :test_γ_ctx)) ⟫
 
 #eval γ_e_1
 
-#eval Expr.as_list <$> (γ_e_1 >>= (fun e => do_step ⟪₂ (:: exec (:: fst :e)) ⟫))
+#eval do_step ⟪₂ (:: exec (:: ((:: apply) ((:: ((:: assert) (I Data))) ((:: fst) ((:: read) assert)))) (, (:: Data nil) nil))) ⟫
+
+#eval (γ_e_1 >>= (fun e => do_step ⟪₂ (:: exec (:: :e (, (:: Data nil) nil))) ⟫))
 
 /-
 x : ∀ (z : α) (y : β z), γ z y

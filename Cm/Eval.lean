@@ -19,8 +19,6 @@ assert does not expect (, Δ Ξ), but
 
 -/
 def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
-  dbg_trace s!"op: {my_op}"
-  dbg_trace s!"ctx: {ctx}"
   match my_op, ctx with
   | ⟪₂ (:: map :_f) ⟫, ⟪₂ nil ⟫ =>
     ⟪₂ nil ⟫
@@ -63,7 +61,6 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   | _, _ => ⟪₂ nil ⟫
 
 def step (e : Expr) : Option Expr :=
-  dbg_trace e
   match e with
   | ⟪₂ (:: exec (:: both (:: (:: exec :m) (:: exec :n)))) ⟫ => do
     let m' ← step ⟪₂ :: exec :m ⟫
@@ -79,9 +76,9 @@ def step (e : Expr) : Option Expr :=
   | ⟪₂ (:: exec (:: both (:: :f :g))) ⟫ =>
     ⟪₂ (:: :f :g) ⟫
   | ⟪₂ (:: exec (:: :f (:: exec :c))) ⟫ => do
-    dbg_trace "b"
+    let f' ← step ⟪₂ :: exec :f ⟫
     let c' ← step ⟪₂ :: exec :c ⟫
-    ⟪₂ :: exec (:: :f :c') ⟫
+    ⟪₂ :: exec (:: :f' :c') ⟫
   | ⟪₂ (:: exec (:: apply (:: (:: exec :f) (:: exec :g)))) ⟫ => do
     let f' ← step ⟪₂ :: exec :f ⟫
     let g' ← step ⟪₂ :: exec :g ⟫
@@ -101,9 +98,7 @@ def step (e : Expr) : Option Expr :=
 
     ⟪₂ :f' :g' ⟫
   | ⟪₂ (:: exec (:: :f :ctx)) ⟫ =>
-    dbg_trace "c"
     let e' := exec_op f ctx
-    dbg_trace s!"hi: {e'}"
     e'
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫
@@ -127,7 +122,7 @@ def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error ε)
 
 def do_step (e : Expr) : Except Error Expr :=
-  unwrap_with (Error.stuck e) (try_step_n 10 e)
+  unwrap_with (Error.stuck e) (try_step_n 20 e)
 
 def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).getD e
 
@@ -183,12 +178,3 @@ def mk_const_ctx : Expr :=
 
 end test
 
-#eval do_step ⟪₂ (:: exec (:: (:: read read) (:: (:: Data nil) nil))) ⟫
-
-#eval 
-#eval do_step ⟪₂ ((:: exec) ((:: ((:: push_on) ((, nil) nil))) ((:: exec) ((:: ((:: map) quote)) ((:: quoted Data) ((:: quoted Data) nil)))))) ⟫
-
-#eval do_step ⟪₂ ((:: exec) ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((, ((:: quoted Data) ((:: quoted (I Data)) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))) nil))))) ⟫
-
-#eval do_step ⟪₂ (:: exec (:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))
-((, ((:: quoted Data) ((:: quoted (I Data)) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))) nil))))) ⟫

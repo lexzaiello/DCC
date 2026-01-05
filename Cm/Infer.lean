@@ -522,7 +522,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
       match Γ'.as_singleton with
       | .some t_out =>
-        let t_out' ← run_context t_out ⟪₂ (, :Δ' :Ξ') ⟫
+        let t_out' := (← run_context t_out ⟪₂ (, :Δ' :Ξ') ⟫) |> pop_singleton_context
         guard_is_ty t_out'
         pure t_out'
       | _ =>
@@ -942,7 +942,7 @@ The solution to the current problem is to make sure that we introduce an explici
 def my_example' : Except Error Expr := do
   let t_i ← infer ⟪₂ I ⟫
 
-  infer ⟪₂ I :t_i I ⟫
+  infer ⟪₂ I :t_i I Data Data ⟫
 
 #eval my_example'
 

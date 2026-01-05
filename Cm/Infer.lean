@@ -325,11 +325,25 @@ and wrap it in an empty context.
 
 Also, if a context only contains quoted values,
 then we can just lift it.
+
+Another thing I'm thinking:
+we could do context flattening recursively somehow.
+
+We basically always want to drop the container around elements with just one thing in them.
+This comes from the mk_singleton thing.
+
+No shot.
+This mk_singleton_ctx thing is the opposite of what we want, potentially.
 -/
 def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
   match ← do_step ⟪₂ (:: exec (:: :Γ_elem :c)) ⟫ with
   | ⟪₂ , :Γ :C ⟫ => pure ⟪₂ , :Γ :C ⟫
   | t => do_step ⟪₂ (:: exec (:: :mk_singleton_ctx :t)) ⟫
+
+def pop_singleton_context : Expr → Expr
+  | ⟪₂ , (:: (:: assert (, :Γ :C)) nil) (, nil nil) ⟫ => ⟪₂ , :Γ :C ⟫
+  | ⟪₂ , (:: (:: assert (quoted (, :Γ :C))) nil) (, nil nil) ⟫ => ⟪₂ , :Γ :C ⟫
+  | x => x
 
 def flatten_normal_assert (e : Expr) : Expr :=
   dbg_trace s!"to flatten: {e}"
@@ -504,7 +518,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
 
-      let expected'' ← run_context check_with ⟪₂ (, :Δ' :Ξ') ⟫
+      let expected'' := (← run_context check_with ⟪₂ (, :Δ' :Ξ') ⟫) |> pop_singleton_context
 
       dbg_trace s!"check with: {check_with}"
       dbg_trace ⟪₂ , :Δ' :Ξ' ⟫

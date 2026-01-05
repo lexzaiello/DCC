@@ -21,13 +21,6 @@ def mk_i (t_x : Expr) : Except Error Expr := do
 
   let t_t_data ← infer t_data
 
-  /-
-    It keeps getting stuck at the x argument.
-    Why is this?
-    x : ∀ (x : α) (y : β x), γ x y
-    We've seen that γ works already.
-  -/
-
   pure ⟪₂ S :t_x (K' :t_t_data :t_x :t_data) :aa_t_x (K' :t_x :t_data) (K' :t_data :t_x Data) ⟫
 
 def my_examplebruh : Except Error Expr := do
@@ -60,11 +53,6 @@ def mk_flse (t_a t_b : Expr) : Except Error Expr := do
   let t_my_i ← infer my_i
 
   pure ⟪₂ K' :t_my_i :t_a :my_i ⟫
-
-def test_my_i : Except Error Expr := do
-  let t_data ← infer ⟪₂ Data ⟫
-
-  mk_i t_data
 
 def mk_flse_test (a b : Expr) : Except Error Expr := do
   let t_a ← infer a

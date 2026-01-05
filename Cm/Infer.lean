@@ -344,6 +344,25 @@ def flatten_context (Γ : Expr) : Expr :=
   | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (#flatten_context xs) ⟫
   | e => e
 
+/-
+Whenever a context only has an output,
+just use the expr.
+
+Also removes quotations.
+-/
+def fold_ctx : Expr → Expr
+  | ⟪₂ (:: assert :x) ⟫ => fold_ctx x
+  | ⟪₂ quoted :t ⟫ => fold_ctx t
+  | ⟪₂ , (:: (:: :t) nil) (, nil nil) ⟫ => fold_ctx t
+  | ⟪₂ , (:: :x :xs) :C ⟫ =>
+    let x' := fold_ctx x
+    match fold_ctx ⟪₂ , :xs :C ⟫ with
+    | ⟪₂ , :xs' :_C' ⟫ => ⟪₂ , (:: :x' :xs') :C ⟫
+    | t => ⟪₂ , (:: :x :t) :C ⟫
+  | t => t
+
+#eval fold_ctx ⟪₂ ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)) ⟫
+
 def ctxs_eq (e₁ e₂ at_app : Expr) : Except Error Unit :=
   match e₁, e₂ with
   | ⟪₂ , (:: :x :xs) (, :Δ :Ξ) ⟫, ⟪₂ , (:: :y :ys) (, :Δ₂ :Ξ₂) ⟫ => do
@@ -925,6 +944,15 @@ The solution to the current problem is to make sure that we introduce an explici
 -/
 
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
+
+/-
+expected ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil)))) ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)))) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))),
+but found ((:: ((:: assert) ((, ((:: ((:: assert) quoted Data)) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data))) ((:: fst) ((:: read) assert))))) ((:: ((:: apply) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: quoted Data) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))))) Data) (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data) Data)))) ((:: fst) ((:: read) assert))))) ((:: fst) ((:: next) ((:: read) assert)))))) nil)))) ((, nil) nil)))) ((:: ((:: assert) ((, ((:: ((:: assert) quoted Data)) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data))) ((:: fst) ((:: read) assert))))) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))))
+-/
+
+--#eval ctxs_eq ⟪₂ ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil)))) ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)))) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ⟫ ⟪₂ ((:: ((:: assert) ((, ((:: ((:: assert) quoted Data)) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data))) ((:: fst) ((:: read) assert))))) ((:: ((:: apply) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: quoted Data) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))))) Data) (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data) Data)))) ((:: fst) ((:: read) assert))))) ((:: fst) ((:: next) ((:: read) assert)))))) nil)))) ((, nil) nil)))) ((:: ((:: assert) ((, ((:: ((:: assert) quoted Data)) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data))) ((:: fst) ((:: read) assert))))) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil)))) ⟫ ⟪₂ nil ⟫
+
+#eval fold_ctx ⟪₂ ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)) ⟫
 
 #eval ctxs_eq ⟪₂ ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)) ⟫
   ⟪₂ ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil))) ⟫ ⟪₂ nil ⟫

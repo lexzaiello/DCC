@@ -363,8 +363,6 @@ def fold_ctx : Expr → Expr
 def ctxs_eq (e₁ e₂ at_app : Expr) : Except Error Unit :=
   match e₁, e₂ with
   | ⟪₂ , (:: :x :xs) (, :Δ :Ξ) ⟫, ⟪₂ , (:: :y :ys) (, :Δ₂ :Ξ₂) ⟫ => do
-    dbg_trace e₁
-    dbg_trace e₂
     let x' := (do_step ⟪₂ :: exec (:: :x (, :Δ :Ξ)) ⟫).toOption.getD x
     let y' := (do_step ⟪₂ :: exec (:: :y (, :Δ₂ :Ξ₂)) ⟫).toOption.getD y
 
@@ -455,6 +453,7 @@ def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
     let actual' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
 
     assert_eq expected' actual' at_app
+      <|> assert_eq (fold_ctx ⟪₂ , :expected' (, nil nil) ⟫) (fold_ctx ⟪₂ , :actual' (, nil nil) ⟫) at_app
   | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)
 
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
@@ -523,6 +522,9 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
       --dbg_trace fold_ctx raw_t_arg
       --dbg_trace fold_ctx expected''
+
+      dbg_trace expected''
+      dbg_trace raw_t_arg
 
       let _ ← tys_are_eq expected'' raw_t_arg e
 

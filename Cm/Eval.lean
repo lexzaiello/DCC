@@ -91,11 +91,10 @@ def step (e : Expr) : Option Expr :=
     let g' ← step ⟪₂ :: exec :g ⟫
 
     pure ⟪₂ :: exec (:: apply (:: :f :g')) ⟫
-  | ⟪₂ (:: exec (:: apply (:: :f :g))) ⟫ => do
-    let f' ← step ⟪₂ :f ⟫
-    let g' ← step ⟪₂ :g ⟫
+  | ⟪₂ (:: exec (:: apply (:: (quoted :f) (quoted :g)))) ⟫ => do
+    let x' := (step ⟪₂ :f :g ⟫).getD ⟪₂ :f :g ⟫
 
-    ⟪₂ :f' :g' ⟫
+    ⟪₂ quoted :x' ⟫
   | ⟪₂ (:: exec (:: :f :ctx)) ⟫ =>
     let e' := exec_op f ctx
     e'

@@ -115,9 +115,9 @@ def α : Expr := ⟪₂ :ass_data ⟫
 -- β : α → Type
 def β : Expr :=
   let α := ⟪₂ :: fst (:: read assert) ⟫
-  ⟪₂ (:: both (:: :α (:: :ass_data (:: push_on nil)))) ⟫
+  ⟪₂ (:: (:: both (:: :α (:: :ass_data (:: push_on nil)))) :mk_const_ctx) ⟫
 
-#eval try_step_n 10 ⟪₂ (:: exec (:: :β (, (:: Data nil) nil))) ⟫
+#eval try_step_n 20 ⟪₂ (:: exec (:: :β (, (:: Data nil) nil))) ⟫
 
 /- γ : ∀ (x : α), β x → Type
 -/
@@ -169,11 +169,11 @@ there's just an extra both.
 -/
 
 def test_γ_ctx : Expr := ⟪₂ , (:: Data (:: (I Data) nil)) nil ⟫
-def γ_e_1 : Option Expr := try_step_n 10 ⟪₂ exec :γ :test_γ_ctx ⟫
+def γ_e_1 := do_step ⟪₂ (:: exec (:: :γ :test_γ_ctx)) ⟫
 
 #eval γ_e_1
 
-#eval Expr.as_list <$> (γ_e_1 >>= (fun e => try_step_n 10 ⟪₂ (:: exec (:: fst :e)) ⟫))
+#eval Expr.as_list <$> (γ_e_1 >>= (fun e => do_step ⟪₂ (:: exec (:: fst :e)) ⟫))
 
 /-
 x : ∀ (z : α) (y : β z), γ z y

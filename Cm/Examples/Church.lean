@@ -160,6 +160,13 @@ def church_succ_innermost_k (t_in t_out : Expr) : Expr :=
 
   ⟪₂ K' :t_f :t_x ⟫
 
+def test_kf : Except Error Expr := do
+  let t_data ← infer ⟪₂ Data ⟫
+  let my_f := ⟪₂ I :t_data ⟫
+
+  let kf := church_succ_innermost_k t_data t_data
+
+  infer ⟪₂ :kf :my_f Data ⟫
 
 /-
 S (K f) (n f) x
@@ -303,25 +310,13 @@ def far_left_s_γ (t_in t_out : Expr) : Except Error Expr := do
   pure ⟪₂ K' :t_ret_γ :α :ret_γ ⟫
 
 def far_left_s (t_in t_out : Expr) : Except Error Expr := do
+  let γ ← far_left_s_γ t_in t_out
   let α := church_t_f t_in t_out
-
-  let t_nf := ⟪₂ , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) nil)) (, (:: :t_in (:: :t_out nil)) nil) ⟫
-
-  let t_γ := ⟪₂ , (::
-    (:: fst (:: read assert))
-    (:: (:: fst (:: next (:: read assert))) (:: (:: fst (:: next (:: next (:: read assert)))) nil))) (, (:: :t_nf (:: :t_in (:: :t_out nil))) nil) ⟫
-  let t_t_γ ← infer t_γ
 
   let t_k_f := ⟪₂ , (::
     (:: fst (:: read assert))
     (:: (:: fst (:: next (:: read assert))) nil))
     (, (:: :t_in (:: :α nil)) nil) ⟫
-
-  -- γ receives f and ((K f) : t_x → t_f)
-  let ret_γ := ⟪₂ K' :t_t_γ :t_k_f :t_γ ⟫
-  let t_ret_γ ← infer ret_γ
-
-  let γ := ⟪₂ K' :t_ret_γ :α :ret_γ ⟫
 
   let t_t_k_f ← infer t_k_f
 

@@ -146,11 +146,13 @@ that would be (in → out)
 ezpz, I think.
 -/
 
+#eval infer ⟪₂ I Data ⟫
+
 def church_t_f (t_in t_out : Expr) : Expr :=
-  ⟪₂ , (:: (:: assert (quoted :t_in)) (:: (:: assert (quoted :t_out)) nil)) (, nil nil) ⟫
+  ⟪₂ , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) nil)) (, (:: :t_in (:: :t_out nil)) nil) ⟫
 
 def church_t_x (t_in _t_out : Expr) : Expr :=
-  ⟪₂ , (:: (:: assert (quoted :t_in)) nil) (, nil nil) ⟫
+  ⟪₂ , (:: (:: fst (:: read assert)) nil) (, (:: :t_in nil) nil) ⟫
 
 def church_succ_innermost_k (t_in t_out : Expr) : Expr :=
   let t_f := church_t_f t_in t_out
@@ -209,17 +211,6 @@ This is very obvious.
 -/
 
 def church_succ_return_s_k (t_in t_out : Expr) : Except Error Expr := do
-  let my_s ← church_succ_innermost_s t_in t_out
-  let t_my_s ← infer my_s
-
-  let t_x := church_t_x t_in t_out
-  let t_f := church_t_f t_in t_out
-
-  --α = t_in
-  --β = K t_out
-  --γ = K (K t_out)
-
-  -- innermost S : (t_x → t_f) → t_out → t_out
   let t_my_s ← infer (← church_succ_innermost_s t_in t_out)
 
   pure ⟪₂ K' :t_my_s (#church_t_f t_in t_out) ⟫
@@ -229,11 +220,6 @@ def return_s (t_in t_out : Expr) : Except Error Expr := do
 
 #eval (church_succ_innermost_s ⟪₂ Data ⟫ ⟪₂ Data ⟫)
   >>= infer
-
-/-
-The main issue is not on our end, but in forming types.
-
--/
 
 #eval return_s ⟪₂ Data ⟫ ⟪₂ Data ⟫ >>= infer
 
@@ -271,6 +257,13 @@ K f : t_x → t_f
 α = t_f
 β = K _ t_f (#church_t_f t_in t_out)
 γ = K (K t_inner_s)
+
+Far left is is hard to make ourselves.
+
+(S(KS)K) f
+= S (K f) --
+
+((S(KS)K) f) (n f) x
 -/
 
 def far_left_s (t_in t_out : Expr) : Except Error Expr := do
@@ -278,8 +271,8 @@ def far_left_s (t_in t_out : Expr) : Except Error Expr := do
 
   -- K f : t_x → t_f
   let t_k_right : Expr := ⟪₂ ,
-      (:: (:: assert (quoted :t_in)) (:: (:: assert (quoted (#church_t_f t_in t_out))) nil))
-      (, nil nil) ⟫
+      (:: (:: fst (:: read ::assert)) (:: (:: fst (:: next (:: read assert))) nil))
+      (, (:: :t_in (:: (#church_t_f t_in t_out) nil)) nil) ⟫
   let t_t_k_right ← infer t_k_right
 
   -- γ = (t_in → t_out) → (t_in → t_out)
@@ -297,8 +290,14 @@ def far_left_s (t_in t_out : Expr) : Except Error Expr := do
 
   pure ⟪₂ S :α :β :γ ⟫
 
+#eval far_left_s ⟪₂ Data ⟫ ⟪₂ Data ⟫
+
 def inner_combs (t_in t_out : Expr) : Except Error Expr := do
   pure ⟪₂ (#← far_left_s t_in t_out) (#← return_s t_in t_out) (#church_succ_innermost_k t_in t_out) ⟫
+
+#eval fold_ctx ⟪₂ ((, ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted ((, ((:: ((:: assert) Data)) ((:: ((:: assert) ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)))) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil)))) ((, nil) nil)))) nil)))) ((, nil) nil)), ⟫
+
+#eval fold_ctx ⟪₂ ((, ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted ((, ((:: ((:: fst) ((:: ((:: both) ((:: ((:: ((:: read) assert)) quote)) ((:: both) ((:: ((:: both) ((:: ((:: assert) apply)) ((:: both) ((:: ((:: ((:: next) ((:: read) assert))) quote)) ((:: assert) ((:: fst) ((:: read) assert)))))))) ((:: ((:: both) ((:: ((:: assert) apply)) ((:: both) ((:: ((:: both) ((:: ((:: assert) apply)) ((:: both) ((:: ((:: ((:: next) ((:: next) ((:: read) assert)))) quote)) ((:: assert) ((:: fst) ((:: read) assert)))))))) ((:: assert) ((:: fst) ((:: next) ((:: read) assert))))))))) ((:: push_on) nil))))))) ((:: push_on) ((, nil) nil))))) ((:: ((:: fst) ((:: ((:: both) ((:: ((:: ((:: read) assert)) quote)) ((:: ((:: both) ((:: ((:: assert) apply)) ((:: both) ((:: ((:: ((:: next) ((:: read) assert))) quote)) ((:: assert) ((:: fst) ((:: read) assert)))))))) ((:: push_on) nil))))) ((:: push_on) ((, nil) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: apply) ((:: ((:: apply) ((:: ((:: next) ((:: next) read))) ((:: next) ((:: next) ((:: next) ((:: next) ((:: next) read)))))))) ((:: apply) ((:: ((:: next) ((:: next) ((:: next) ((:: next) read))))) ((:: next) ((:: next) ((:: next) ((:: next) ((:: next) read))))))))))) nil))))) ((, ((:: quoted Data) ((:: quoted (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data)) ((:: quoted (((K' ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: quoted Data) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))))) Data) (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data) Data))) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))))) ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: quoted Data) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))))) ((:: quoted Data) ((:: quoted (((K' ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) Data) Data)) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: quoted Data) ((:: quoted Data) nil)))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))))) nil)))))) nil))))))) nil))) ((, nil) nil)) ⟫
 
 #eval inner_combs ⟪₂ Data ⟫ ⟪₂ Data ⟫ >>= infer
 

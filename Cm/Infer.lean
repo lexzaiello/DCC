@@ -5,6 +5,9 @@ import Cm.Error
 def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error ε)
 
+def do_step (e : Expr) : Except Error Expr :=
+  unwrap_with (Error.stuck e) (try_step_n 10 e)
+
 def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
   -- Throw a nicer error with a location if we the data are lists
   match Expr.as_list expected, Expr.as_list actual with
@@ -313,8 +316,8 @@ Does not detect whether nil values were produced.
 
 Attaches an empty Δ and Ξ context.
 -/
-def freeze_context (Γ : Expr) (c : Expr) : Option Expr :=
-  try_step_n 10 ⟪₂ exec (:: (:: (:: both :Γ) (:: map quote)) (:: push_on (, nil nil))) :c ⟫
+def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
+  do_step ⟪₂ exec (:: (:: (:: both :Γ) (:: map quote)) (:: push_on (, nil nil))) :c ⟫
 
 def n_args (Γ : Expr) : ℕ := (do
   let all_asserts ← Γ.as_list
@@ -338,9 +341,9 @@ Note that types are uniquely identified by the triple (, Γ (, Δ Ξ))
 
 So, we can do recursive descent and compare each one by normalization.
 -/
-def tys_are_eq (expected actual : Expr) : Except Error Unit :=
+def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
   match expected, actual with
-  | ⟪₂ , :Γ₁ (, :Δ₁ :Ξ₁) ⟫, ⟪₂ , :Γ₂ (, :Δ₂ :Ξ₂) ⟫ =>
+  | ⟪₂ , :Γ₁ (, :Δ₁ :Ξ₁) ⟫, ⟪₂ , :Γ₂ (, :Δ₂ :Ξ₂) ⟫ => do
     /-
       To compare the types, see how many input assertions the contexts are making.
       Then, extend the smallest of the two Δ registers with unique quoted data
@@ -358,11 +361,19 @@ def tys_are_eq (expected actual : Expr) : Except Error Unit :=
       Also note that the type shouldn't be looking inside the element, so
       its value doesn't matter, as long as it is somewhat unique.
     -/
-    let n_args_wanted := (List.range (max (n_args Γ₁) (n_args Γ₂))).map (fun arg_n =>
+    let dummy_args := (List.range (max (n_args Γ₁) (n_args Γ₂))).map (fun arg_n =>
       (List.replicate arg_n ⟪₂ Data ⟫).foldl (fun acc x => ⟪₂ , :acc :x ⟫) ⟪₂ Data ⟫
         |> (fun test_e => ⟪₂ quoted :test_e ⟫))
-    let Δ_test := Expr.list_max Δ₁ Δ₂
-    sorry
+        |> Expr.from_list
+    let Δ_test ← unwrap_with (Error.short_context Δ₁) (Expr.list_max Δ₁ Δ₂ >>= (Expr.list_concat · dummy_args))
+
+    /-
+      Now, reduce by plugging in our "fake" context, and comparing the remaining values.
+    -/
+    let expected' ← freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
+    let actual' ← freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
+
+    assert_eq expected' actual' at_app
   | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)
 
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
@@ -649,6 +660,9 @@ but I don't like that.
 It's more of a sequential thing.
 
 map combinator.
+
+Note:
+we still haven't really dealt with quotation.
 -/
 
 #eval infer ⟪₂ Data ⟫

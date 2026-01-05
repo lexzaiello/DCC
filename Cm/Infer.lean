@@ -865,6 +865,6 @@ Don't even remember what we've changed at this point.
 The solution to the current problem is to make sure that we introduce an explicit context whenever we want one.
 -/
 
-#eval infer ⟪₂ K Data (I Data) ⟫
+#eval infer ⟪₂ K Data (I Data) Data ⟫
 
 

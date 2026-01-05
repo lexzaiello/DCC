@@ -181,6 +181,8 @@ def mk_const_ctx : Expr :=
 #eval do_step ⟪₂ (:: exec (:: (:: map :mk_singleton_ctx) Data)) ⟫
 #eval do_step ⟪₂ (:: exec (:: :mk_const_ctx (:: Data (:: Data nil)))) ⟫
 
+#eval do_step ⟪₂ (:: exec (:: (:: both (:: read read)) (:: Data nil))) ⟫
+
 end test
 
 #eval do_step ⟪₂ (:: exec (:: (:: read read) (:: (:: Data nil) nil))) ⟫

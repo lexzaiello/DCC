@@ -316,10 +316,15 @@ def Expr.display_infer : Expr → Option Expr
     try_step_n 10 out.unquote_pure <|> (pure out)
   | e => reduce_unquote e
 
+--#eval do_step ⟪₂ (:: exec (:: ( ((:: fst) ((:: read) assert))) ((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil))) ((:: quoted K) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) ((:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil))) nil))))) ⟫
+
 /-
 If a context is explicitly produced, keep it.
 Otherwise, assume this is a free-standing well-typed value,
 and wrap it in an empty context.
+
+Also, if a context only contains quoted values,
+then we can just lift it.
 -/
 def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
   match ← do_step ⟪₂ (:: exec (:: :Γ_elem :c)) ⟫ with
@@ -436,9 +441,6 @@ def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
     assert_eq expected' actual' at_app
   | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)
 
-/-def flatten_assert : Expr → Expr
-  | ⟪₂ -/
-
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   match e with
   | ⟪₂ map ⟫
@@ -523,8 +525,25 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
     | _ =>
       .error <| .not_type t_f
 
+/-
+We got that nested K example working.
+That's nice.
+
+But now we need to deal with flattening contexts.
+Feels like this is still really ugly.
+
+The problem is when we supply contexts inside arguments.
+Then, they get quoted like normal data,
+when they should almost always be noramlized.
+
+At the very least, ty_eq should be able to recognize this.
+
+An easy strategy we could do is:
+- 
+-/
+
 #eval infer ⟪₂ I Data Data ⟫
-#eval infer ⟪₂ K Data (I Data) ⟫
+#eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
 def infer_list (e : Expr) : List (List (Except Error Expr)) :=
   (e.any_data_as_list.getD []).map (·.any_data_as_list.getD [] |> List.map infer)
@@ -540,6 +559,15 @@ def infer_list (e : Expr) : List (List (Except Error Expr)) :=
 #eval (infer <=< infer) ⟪₂ S ⟫
 
 #eval infer ⟪₂ S ⟫
+
+def example_return_K : Except Error Expr := do
+  let t_x ← infer ⟪₂ K ⟫
+
+  infer ⟪₂ I :t_x K ⟫
+
+/-#eval do_step ⟪₂ (:: exec (:: ((:: fst) ((:: read) assert))
+((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil))) ((:: quoted K) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) ((:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil))) nil))))) ⟫-/
+#eval example_return_K
 
 def example_return_S : Except Error Expr := do
   let t_s ← infer ⟪₂ S ⟫

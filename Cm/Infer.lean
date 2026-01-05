@@ -45,43 +45,6 @@ def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
     else
       .error <| .mismatch_arg expected actual in_app .none
 
-def steal_context (from_e for_e : Expr) : Expr :=
-  match from_e, for_e with
-  | ⟪₂ :_Γ (, :Δ :Ξ) ⟫, ⟪₂ :Γ₂ (, nil nil) ⟫ => ⟪₂ :Γ₂ (, :Δ :Ξ) ⟫
-  | _, _ => for_e
-
-def do_or_unquote (to_do : Expr) (in_e : Expr) : Option Expr :=
-  try_step_n 10 ⟪₂ (:: exec (:: :in_e :to_do)) ⟫
-
--- Applies the Δ claims context to all handlers in the app context
--- returns all of the applied assertions, in order
--- this will also
-def sub_context : Expr → Expr
-  | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
-    Expr.from_list <| (do (← Γ.as_list).mapM (fun f =>
-    (do_or_unquote ⟪₂ , :Δ :Ξ ⟫ (Expr.unquote_once f)).getD f)).getD []
-  | e@⟪₂ (:: :_e :_rst) ⟫ => e
-  | e => ⟪₂ (:: :e nil) ⟫
-
-def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
-
-def norm_all_contexts : Expr → Expr
-  | ⟪₂ :: (quoted (, :Γ :C)) :xs ⟫ =>
-    let x' := norm_context ⟪₂ , :Γ :C ⟫
-
-    match xs with
-    | ⟪₂ nil ⟫ => x'
-    | _ =>  ⟪₂ :: (quoted :x') (#norm_all_contexts xs) ⟫
-  | ⟪₂ :: (, :Γ :C) :xs ⟫ =>
-    match norm_context ⟪₂ (, :Γ :C) ⟫ with
-    | ⟪₂ :: :t nil ⟫ =>
-      ⟪₂ :: :t (#norm_all_contexts xs) ⟫
-    | t =>
-      ⟪₂ :: :t (#norm_all_contexts xs) ⟫
-  | ⟪₂ :: (:: :t nil) :xs ⟫ => ⟪₂ :: :t (#norm_all_contexts xs) ⟫
-  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (#norm_all_contexts xs) ⟫
-  | x => x
-
 /-
   Converts a rendered context, a list of types,
   into a normal context, where all the assertions don't depend on actual arguments.

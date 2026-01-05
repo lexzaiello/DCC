@@ -19,6 +19,13 @@ assert does not expect (, Δ Ξ), but
 -/
 def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   match my_op, ctx with
+  | ⟪₂ (:: map :_f) ⟫, ⟪₂ nil ⟫ =>
+    ⟪₂ nil ⟫
+  | ⟪₂ (:: map :f) ⟫, ⟪₂ :: :x :xs ⟫  =>
+    let x' := exec_op f x
+    let xs' := exec_op f xs
+
+    ⟪₂ (:: :x' :xs') ⟫
   | ⟪₂ read ⟫, ⟪₂ (:: :x :_xs) ⟫ => x
   | ⟪₂ next ⟫, ⟪₂ (:: :_x :xs) ⟫ => xs
   | ⟪₂ fst ⟫, ⟪₂ (, :a :_b) ⟫ => a
@@ -53,12 +60,6 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   | _, _ => ⟪₂ nil ⟫
 
 def step : Expr → Option Expr
-  | ⟪₂ map nil :_ctx ⟫ => ⟪₂ nil ⟫
-  | ⟪₂ map (:: :x :xs) :ctx ⟫ => do
-    let x' := exec_op x ctx
-    let xs' := (step xs).getD xs
-
-    pure ⟪₂ (:: :x' :xs') ⟫
   | ⟪₂ exec :f :ctx ⟫ => exec_op f ctx
   | ⟪₂ push_on nil :a ⟫ => ⟪₂ :: :a nil ⟫
   | ⟪₂ push_on (:: :x :xs) :a ⟫ => ⟪₂ :: :a (:: :x :xs) ⟫

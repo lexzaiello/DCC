@@ -316,9 +316,78 @@ That is, the (, Δ Ξ) registers are nillable.
 To freeze the context,
 
 map runs exec on all the items of a list.
+
+Then, we prepend an assert before each element.
+
+map works in reverse, which is whack.
+works on a list of functions, instead of list of data
+
+This map function is whack.
+
+Should be map f xs
+
+And repeat for all members of the list, not for all members of the map.
+
+Usually we would do this with exec. But we're already doing exec_op.
+
+the Γ register is our context.
+We're mapping over the elements in it, which are functions.
+
+And then we want to apply the actual context to each one with exec.
+
+(:: map (:: (:: 
+
+(:: map (::
+
+Feel like we can do this with just both.
+
+If we put a both at every level, we will re-make the list.
+
+(:: both
+
+If we put a both around each element, we're good to go.
+
+(:: f (:: g nil))
+
+This is way too complicated.
+
+I feel like map should work.
+
+the data we're mapping over are the functions.
+
+then, when we have an assertion in context,
+exec it with the context.
+
+except we have no way to do this.
+
+We could just change the map definition.
+
+But then map literally becomes exec.
+This is fine.
+
+If the context couldn't be frozen, none is returned.
+
+Ok, the map definition matches now.
+
+Could use map on that again.
+
+But map works the reverse way.
+
+Oh just pipe the execs into each other.
+
+What if we use a normal map? Then I think we need exec.
+We need both.
+
+We already kinda have dynamic exec. both does dynamic exec.
+
+so we can do normal map?
+
+map = both, so make map the other way.
+
+But we want to put asserts in.
 -/
-def freeze_context (with_args : Expr) (c : Expr) : Except Error Expr :=
-  ⟪₂ 
+def freeze_context (Γ : Expr) (c : Expr) : Option Expr :=
+  try_step_n 10 ⟪₂ exec (:: map :Γ) :c ⟫
 
 /-
 To check equality of types:

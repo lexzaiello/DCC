@@ -72,3 +72,5 @@ def mk_flse_test (a b : Expr) : Except Error Expr := do
 #eval Expr.display_infer <$> (infer ⟪₂ Data ⟫)
 #eval Expr.display_infer <$> (mk_flse_test ⟪₂ Data ⟫ ⟪₂ Data ⟫
   >>= infer)
+
+#eval mk_flse_test ⟪₂ K ⟫ ⟪₂ S ⟫

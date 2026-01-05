@@ -6,10 +6,24 @@ def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error ε)
 
 def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
-  if expected == actual then
-    pure ()
-  else
-    .error <| .mismatch_arg expected actual in_app
+  -- Throw a nicer error with a location if we the data are lists
+  match Expr.as_list expected, Expr.as_list actual with
+  | .some l₁, .some l₂ =>
+    let append (acc : Option Error) (err : Error) : Option Error :=
+      acc.map (Error.combine err) <|> (pure err)
+
+    let e : Option Error := (l₁.zipWithAll Prod.mk l₂).zipIdx.foldl (fun (acc : Option Error) ((e₁, e₂), idx)  =>
+      if e₁ == e₂ then
+        acc
+      else
+        append acc <| Error.mismatch_arg (e₁.getD ⟪₂ nil ⟫) (e₂.getD ⟪₂ nil ⟫) in_app idx) .none
+
+    (e.map Except.error).getD (pure ())
+  | _, _ =>
+    if expected == actual then
+      pure ()
+    else
+      .error <| .mismatch_arg expected actual in_app .none
 
 def steal_context (from_e for_e : Expr) : Expr :=
   match from_e, for_e with

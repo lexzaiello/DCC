@@ -66,28 +66,6 @@ def test_my_i : Except Error Expr := do
 
   mk_i t_data
 
-/-
-Testing a tuple / church-encoded bool storing the combinators S and K
-next to each other.
-
-false K S = S, but does it type-check?
-
-An issue:
-- in the explict type arguments for K' and S, we assume they are in "human readable format".
-
-We were able to do mk_flse with just Data and Data,which is strange,
-but we couldn't use the list formal.
-
-Curious.
-
-But we've been able to get nested examples working.
-
-We did nested K.
-So this shouldn't be a problem.
-It's probably that we're assuming Data somewhere.
-
-The issue is with our custom I.
--/
 def mk_flse_test (a b : Expr) : Except Error Expr := do
   let t_a ← infer a
   let t_b ← infer b
@@ -101,16 +79,10 @@ def mk_flse_test (a b : Expr) : Except Error Expr := do
 #eval Expr.display_infer <$> (mk_flse_test ⟪₂ Data ⟫ ⟪₂ Data ⟫
   >>= infer)
 
-#eval mk_flse_test ⟪₂ K ⟫ ⟪₂ S ⟫
+#eval (mk_flse_test ⟪₂ K ⟫ ⟪₂ S ⟫
+  >>= infer)
+  >>= (fun t_out => do
+    pure (t_out == (← infer ⟪₂ S ⟫)))
 
-/-
-Notes:
-How does context normalization work for nil contexts on both sides?
-If there is no way to compare.
-I feel like then we can't normalize.
 
-Difference is an extra colon.
-Regardless, I feel like we shouldn't be normalizing nil contexts.
 
-Just an extra nil. something is getting put inside a list twice.
--/

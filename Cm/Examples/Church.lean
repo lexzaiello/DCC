@@ -249,6 +249,8 @@ f (n f x)
 
 ((S(KS)K) f) (n f) x
 
+S (K f) (n f) x
+
 S (KS) K f
 S (K f)
 
@@ -264,10 +266,44 @@ Far left is is hard to make ourselves.
 = S (K f) --
 
 ((S(KS)K) f) (n f) x
+
+S(KS)K) f = S (K f)
+
+S (K f) : (type of n f) → (type of x) → t_out
+
+n f : t_in → t_out
+n_f = , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) nil)) (, (:: :t_in (:: :t_out nil)))
+γ = (t_in → t_out) → t_in → t_out
+γ = , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) (:: (:: fst (:: next (:: next (:: read asssert)))) nil))) (, (:: :n_f (:: :t_in (:: :t_out nil))) nil)
+
+
+
+S (K f) (n f) x
+
+γ 
 -/
 
 def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let α := church_t_f t_in t_out
+
+  let t_nf := ⟪₂ , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) nil)) (, (:: :t_in (:: :t_out nil)) nil) ⟫
+  let t_t_nf ← infer t_nf
+
+  let t_γ := ⟪₂ , (::
+    (:: fst (:: read assert))
+    (:: (:: fst (:: next (:: read assert))) (:: (:: fst (:: next (:: next (:: read assert)))) nil))) (, (:: :t_nf (:: :t_in (:: :t_out nil))) nil) ⟫
+  let t_t_γ ← infer t_γ
+
+  let t_k_f := ⟪₂ , (::
+    (:: fst (:: read assert))
+    (:: (:: fst (:: next (:: read assert))) nil))
+    (, (:: :t_in (:: :α nil)) nil) ⟫
+
+  -- γ receives f and ((K f) : t_x → t_f)
+  let ret_γ := ⟪₂ K' :t_t_γ
+
+  let k_γ := ⟪₂ K' :t_t_nf 
+  let γ := ⟪₂ K' 
 
   -- K f : t_x → t_f
   let t_k_right : Expr := ⟪₂ ,

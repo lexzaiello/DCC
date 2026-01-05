@@ -281,6 +281,27 @@ n_f = , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) ni
 S (K f) (n f) x
 -/
 
+def far_left_s_γ (t_in t_out : Expr) : Except Error Expr := do
+  let α := church_t_f t_in t_out
+
+  let t_nf := ⟪₂ , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) nil)) (, (:: :t_in (:: :t_out nil)) nil) ⟫
+
+  let t_γ := ⟪₂ , (::
+    (:: fst (:: read assert))
+    (:: (:: fst (:: next (:: read assert))) (:: (:: fst (:: next (:: next (:: read assert)))) nil))) (, (:: :t_nf (:: :t_in (:: :t_out nil))) nil) ⟫
+  let t_t_γ ← infer t_γ
+
+  let t_k_f := ⟪₂ , (::
+    (:: fst (:: read assert))
+    (:: (:: fst (:: next (:: read assert))) nil))
+    (, (:: :t_in (:: :α nil)) nil) ⟫
+
+  -- γ receives f and ((K f) : t_x → t_f)
+  let ret_γ := ⟪₂ K' :t_t_γ :t_k_f :t_γ ⟫
+  let t_ret_γ ← infer ret_γ
+
+  pure ⟪₂ K' :t_ret_γ :α :ret_γ ⟫
+
 def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let α := church_t_f t_in t_out
 
@@ -306,9 +327,16 @@ def far_left_s (t_in t_out : Expr) : Except Error Expr := do
 
   let β := ⟪₂ K' :t_t_k_f :α :t_k_f ⟫
 
-  dbg_trace γ
-
   pure ⟪₂ S :α :β :γ ⟫
+
+def test_γ_f_app : Except Error Expr := do
+  let t_data ← infer ⟪₂ Data ⟫
+  let my_f := ⟪₂ I :t_data ⟫
+
+  let γ ← far_left_s_γ t_data t_data
+  infer ⟪₂ :γ :my_f ⟫
+
+#eval test_γ_f_app
 
 #eval far_left_s ⟪₂ Data ⟫ ⟪₂ Data ⟫ >>= infer
 
@@ -325,3 +353,8 @@ def inner_combs (t_in t_out : Expr) : Except Error Expr := do
 
 --def zero (t_in t_out : Expr) : Except Error Expr := do
   
+
+/-
+Potentially based design decision for later:
+- don't normalize β normal value contexts.
+-/

@@ -165,8 +165,8 @@ def church_t_x (t_in _t_out : Expr) : Expr :=
   ⟪₂ , (:: (:: assert (quoted :t_in)) nil) (, nil nil) ⟫
 
 def church_succ_innermost_k (t_in t_out : Expr) : Expr :=
-  let t_f := ⟪₂ , (:: (:: assert (quoted :t_in)) (:: (:: assert (quoted :t_out)) nil)) (, nil nil) ⟫
-  let t_x := ⟪₂ , (:: (:: assert (quoted :t_in)) nil) (, nil nil) ⟫
+  let t_f := church_t_f t_in t_out
+  let t_x := t_in
 
   ⟪₂ K' :t_f :t_x ⟫
 
@@ -205,7 +205,82 @@ def church_succ_innermost_s (t_in t_out : Expr) : Except Error Expr := do
 
   pure ⟪₂ S :α :β :γ ⟫
 
+/-
+((S(KS)K) f) (n f) x
 
+Got innermost S and innermost K,
+now need the K that returns the innermost S.
+
+(((KS) f) (K f))
+This is how it works.
+
+This is very obvious.
+α = t_s
+β = t_f
+-/
+
+def church_succ_return_s_k (t_in t_out : Expr) : Except Error Expr := do
+  let my_s ← church_succ_innermost_s t_in t_out
+  let t_my_s ← infer my_s
+
+  pure ⟪₂ K' :t_my_s (#church_t_f t_in t_out) ⟫
+
+def return_s (t_in t_out : Expr) : Except Error Expr := do
+  pure ⟪₂ (#← (church_succ_return_s_k t_in t_out)) (#← (church_succ_innermost_s t_in t_out)) ⟫
+
+#eval return_s ⟪₂ Data ⟫ ⟪₂ Data ⟫
+
+/-
+Now need the S on the very far left
+
+((S(KS)K) f)
+K f : t_x → t_f
+(KS) f (K f)
+S (K f)
+
+S (K f)
+
+n f : t_in → t_out
+x : t_in
+S (K f) : (t_in → t_out) → (t_in → t_out)
+
+S far left
+
+S α = t_f
+S β = t_x → t_f
+S γ = (t_in → t_out) → (t_in → t_out)
+
+S (K f) (n f) x
+
+f (n f x)
+
+((S(KS)K) f) (n f) x
+
+S (KS) K f
+S (K f)
+
+K f : t_x → t_f
+
+α = t_f
+β = K _ t_f (#church_t_f t_in t_out)
+γ = K (K t_inner_s)
+-/
+
+def far_left_s (t_in t_out : Expr) : Except Error Expr := do
+  let α := church_t_f t_in t_out
+  let t_t_f ← infer (church_t_f t_in t_out)
+
+  -- K f : t_x → t_f
+  let t_k_right : Expr := ⟪₂ , (:: (:: assert (quoted :t_in)) (:: (:: assert (quoted (#church_t_f t_in t_out))) nil)) (, nil nil) ⟫
+  let t_t_k_right ← infer t_k_right
+
+  let t_inner_s ← (church_succ_innermost_s t_in t_out) >>= infer
+  let t_t_inner_s ← infer t_inner_s
+
+  let β := ⟪₂ K' :t_t_k_right (#church_t_f t_in t_out) :t_k_right ⟫
+
+  let k_s := ⟪₂ K' :t_t_inner_s
+  let γ := ⟪₂ K' 
 
 --def church_succ_outer_s (t_in t_out : Expr) : Except Error Expr := do
   

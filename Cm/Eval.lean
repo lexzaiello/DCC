@@ -26,14 +26,14 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
     ⟪₂ nil ⟫
   | ⟪₂ (:: map :f) ⟫, ⟪₂ :: :x nil ⟫ =>
     let x' := ⟪₂ :: exec (:: :f :x) ⟫
-    dbg_trace ⟪₂ (:: :x' nil) ⟫
-    ⟪₂ (:: :x' nil) ⟫
+    ⟪₂ (:: exec (:: both (:: :x' nil))) ⟫
   | ⟪₂ (:: map :f) ⟫, ⟪₂ :: :x :xs ⟫  =>
     let x' := ⟪₂ (:: exec (:: :f :x)) ⟫
     let xs' := ⟪₂ (:: exec (:: (:: map :f) :xs)) ⟫
 
-    ⟪₂ (:: :x' :xs') ⟫
-  | ⟪₂ (:: map :f) ⟫, e => ⟪₂ (:: exec :f :e) ⟫
+    ⟪₂ (:: exec (:: both (:: :x' :xs'))) ⟫
+  | ⟪₂ (:: map :f) ⟫, e =>
+    ⟪₂ (:: exec (:: :f :e)) ⟫
   | ⟪₂ read ⟫, ⟪₂ (:: :x :_xs) ⟫ => x
   | ⟪₂ next ⟫, ⟪₂ (:: :_x :xs) ⟫ => xs
   | ⟪₂ fst ⟫, ⟪₂ (, :a :_b) ⟫ => a
@@ -49,12 +49,12 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
     let f' := ⟪₂ (:: exec (:: :f :Γ)) ⟫
     let g' := ⟪₂ (:: exec (:: :g :Γ)) ⟫
 
-    ⟪₂ (:: apply (:: :f' :g')) ⟫
+    ⟪₂ (:: exec (:: apply (:: :f' :g'))) ⟫
   | ⟪₂ (:: both (:: :f :g)) ⟫, Γ =>
     let f' := ⟪₂ (:: exec (:: :f :Γ)) ⟫
     let g' := ⟪₂ (:: exec (:: :g :Γ)) ⟫
 
-    ⟪₂ (:: :f' :g') ⟫
+    ⟪₂ (:: exec (:: both (:: :f' :g'))) ⟫
   -- pipelining operations
   | ⟪₂ :: :f :g ⟫, ctx =>
     let x := ⟪₂ (:: exec (:: :f :ctx)) ⟫
@@ -65,33 +65,41 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
 def step (e : Expr) : Option Expr :=
   dbg_trace e
   match e with
-  | ⟪₂ (:: (:: exec :m) (:: exec :n)) ⟫ => do
+  | ⟪₂ (:: exec (:: both (:: (:: exec :m) (:: exec :n)))) ⟫ => do
     let m' ← step ⟪₂ :: exec :m ⟫
     let n' ← step ⟪₂ :: exec :n ⟫
 
-    pure ⟪₂ (:: :m' :n') ⟫
+    pure ⟪₂ (:: exec (:: both (:: :m' :n'))) ⟫
+  | ⟪₂ (:: exec (:: both (:: (:: exec :c) :g))) ⟫ => do
+    let m' ← step ⟪₂ :: exec :c ⟫
+    pure ⟪₂ (:: exec (:: both (:: :m' :g))) ⟫
+  | ⟪₂ (:: exec (:: both (:: :f (:: exec :c)))) ⟫ => do
+    let n' ← step ⟪₂ :: exec :c ⟫
+    pure ⟪₂ (:: exec (:: both (:: :f :n'))) ⟫
+  | ⟪₂ (:: exec (:: both (:: :f :g))) ⟫ =>
+    ⟪₂ (:: :f :g) ⟫
   | ⟪₂ (:: exec (:: :f (:: exec :c))) ⟫ => do
     dbg_trace "b"
     let c' ← step ⟪₂ :: exec :c ⟫
-    ⟪₂ :: exec :f :c' ⟫
-  | ⟪₂ (:: (:: exec :m) :v) ⟫ => do
-    let m' ← step ⟪₂ :: exec :m ⟫
-    pure ⟪₂ (:: :m' :v) ⟫
-  | ⟪₂ (:: :v (:: exec :m)) ⟫ => do
-    let m' ← step ⟪₂ :: exec :m ⟫
-    pure ⟪₂ (:: :v :m') ⟫
-  | ⟪₂ (:: apply (:: :f :g)) ⟫ => do
-    dbg_trace "app"
-    let f' ← step f
-    let g' ← step g
+    ⟪₂ :: exec (:: :f :c') ⟫
+  | ⟪₂ (:: exec (:: apply (:: (:: exec :f) (:: exec :g)))) ⟫ => do
+    let f' ← step ⟪₂ :: exec :f ⟫
+    let g' ← step ⟪₂ :: exec :g ⟫
 
-    match f', g' with
-    | ⟪₂ (:: exec :_c₁) ⟫, ⟪₂ (:: exec :_c₂) ⟫ =>
-      ⟪₂ (:: apply (:: :f' :g')) ⟫
-    | ⟪₂ (:: (:: exec :_c₁₁) :_c₁₂) ⟫, _r
-    | _r, ⟪₂ (:: (:: exec :_c₁₁) :_c₁₂) ⟫ =>
-      ⟪₂ (:: apply (:: :f' :g')) ⟫
-    | _, _ => ⟪₂ :f' :g' ⟫
+    pure ⟪₂ :: exec (:: apply (:: :f' :g')) ⟫
+  | ⟪₂ (:: exec (:: apply (:: (:: exec :f) :g))) ⟫ => do
+    let f' ← step ⟪₂ :: exec :f ⟫
+
+    pure ⟪₂ :: exec (:: apply (:: :f' :g)) ⟫
+  | ⟪₂ (:: exec (:: apply (:: :f (:: exec :g)))) ⟫ => do
+    let g' ← step ⟪₂ :: exec :g ⟫
+
+    pure ⟪₂ :: exec (:: apply (:: :f :g')) ⟫
+  | ⟪₂ (:: exec (:: apply (:: :f :g))) ⟫ => do
+    let f' ← step ⟪₂ :f ⟫
+    let g' ← step ⟪₂ :g ⟫
+
+    ⟪₂ :f' :g' ⟫
   | ⟪₂ (:: exec (:: :f :ctx)) ⟫ =>
     dbg_trace "c"
     let e' := exec_op f ctx
@@ -147,7 +155,34 @@ We just don't want to get confused.
 We could give exec a special both interpretation.
 -/
 
-#eval do_step ⟪₂ (:: exec (:: (:: map assert) (:: Data nil))) ⟫
+namespace test
+
+def mk_singleton_ctx : Expr :=
+  ⟪₂ (:: quote (:: (:: push_on nil) (:: push_on (, nil nil)))) ⟫
+
+def ass_data : Expr :=
+  ⟪₂ (:: assert (quoted Data)) ⟫
+
+/-
+Turns a list of constant values into
+asserts in a context.
+
+NOTES:
+- chained operations are different from arguments. arguments should be in a different form from chaining
+For example, assert cannot be chained due to this.
+
+This is maybe fine but likely a problem for other ops.
+
+Ops should always take the same number of arguments.
+-/
+def mk_const_ctx : Expr :=
+  ⟪₂ (:: (:: map quote) (:: push_on (, nil nil))) ⟫
+
+#eval do_step ⟪₂ (:: exec (:: (:: map :mk_singleton_ctx) Data)) ⟫
+
+end test
+
+#eval do_step ⟪₂ (:: exec (:: (:: read read) (:: (:: Data nil) nil))) ⟫
 
 #eval do_step ⟪₂ (:: exec (:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))
 ((, ((:: quoted Data) ((:: quoted (I Data)) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))) nil))))) ⟫

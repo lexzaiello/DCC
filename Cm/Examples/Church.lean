@@ -220,8 +220,8 @@ def church_succ_return_s_k (t_in t_out : Expr) : Except Error Expr := do
   --γ = K (K t_out)
 
   -- innermost S : (t_x → t_f) → t_out → t_out
-  let t_x_t_f := ⟪₂ , (:: (:: assert (quoted :t_x)) (:: (:: assert (quoted :t_f)) nil)) (, nil  nil) ⟫
-  let t_my_s := ⟪₂ , (:: (:: assert (quoted :t_x_t_f)) (:: (:: assert (quoted :t_out)) (:: (:: assert (quoted :t_out)) nil))) (, nil nil) ⟫
+  let t_x_t_f := ⟪₂ , (:: (:: assert :t_x) (:: (:: assert :t_f) nil)) (, nil  nil) ⟫
+  let t_my_s := ⟪₂ , (:: (:: assert :t_x_t_f) (:: (:: assert :t_out) (:: (:: assert :t_out) nil))) (, nil nil) ⟫
 
 
   pure ⟪₂ K' :t_my_s (#church_t_f t_in t_out) ⟫

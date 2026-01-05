@@ -2,6 +2,16 @@ import Cm.Ast
 import Cm.Eval
 import Cm.Error
 
+/-
+Takes an assert value and builds it as the sole type
+of a context.
+
+e.g.,
+(, (:: (:: assert x) nil) (, nil nil))
+-/
+def mk_null_ctx : Expr :=
+  ⟪₂ (:: quote (:: (:: push_on nil) (:: push_on (, nil nil)))) ⟫
+
 def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error ε)
 
@@ -316,6 +326,11 @@ Attaches an empty Δ and Ξ context.
 def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
   do_step ⟪₂ exec (:: (:: (:: both :Γ) (:: map quote)) (:: push_on (, nil nil))) :c ⟫
 
+def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
+  match ← do_step ⟪₂ exec :Γ_elem :c ⟫ with
+  | ⟪₂ , :Γ :C ⟫ => pure ⟪₂ , :Γ :C ⟫
+  | t => pure t
+
 def n_args (Γ : Expr) : ℕ := (do
   let all_asserts ← Γ.as_list
   return all_asserts.length - 1).getD 0
@@ -440,7 +455,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
 
       dbg_trace check_with
-      let expected'' ← freeze_context ⟪₂ (:: :check_with nil) ⟫ ⟪₂ (, :Δ' :Ξ') ⟫
+      let expected'' ← run_context check_with ⟪₂ (, :Δ' :Ξ') ⟫
 
       dbg_trace expected''
 
@@ -752,9 +767,42 @@ TODO:
 - change assert to introduce a nil context
 - See where S's type breaks
 - Use our new freeze function
+
+Ok, so we won't use assert to introduce new contexts.
+That feels dumb.
+
+It's just unclear when we're making new contexts and when we're not.
+
+I don't know what is intrinsically wrong with assert
+being kind of a fixed point.
+
+Asserts don't make a new context.
+I guess it's fine as it is.
+
+So, before we run freeze_context,
+we should wrap anything that's hanging.
+
+This is mildly suspicious though,
+that we can just mix and match the comma part. We'll see
 -/
 
 #eval infer ⟪₂ K Data (I Data) ⟫
 
 #eval infer ⟪₂ K ⟫
 
+
+/-
+S type is broken, for now.
+Now that pretty much all argument position elements
+introduce a context, be it a nil one or one with arguments,
+we can compare pretty easily.
+
+Now, freeze context isn't necessary for the check_with.
+We get the context immediately.
+
+TODO: change assert.
+I don't think this breaks much.
+
+It feels like the most natural way to do it,
+
+-/

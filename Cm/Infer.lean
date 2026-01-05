@@ -173,7 +173,7 @@ def γ_e_1 := do_step ⟪₂ (:: exec (:: :γ :test_γ_ctx)) ⟫
 
 #eval γ_e_1
 
-#eval do_step ⟪₂ (:: exec (:: ((:: apply) ((:: ((:: assert) (I Data))) ((:: fst) ((:: read) assert)))) (, (:: Data nil) nil))) ⟫
+#eval do_step ⟪₂ (:: exec (:: ((:: apply) ((:: ((:: assert) (quoted (I Data)))) ((:: fst) ((:: read) assert)))) (, (:: (quoted Data) nil) nil))) ⟫
 
 #eval (γ_e_1 >>= (fun e => do_step ⟪₂ (:: exec (:: :e (, (:: (quoted Data) nil) nil))) ⟫))
 
@@ -222,7 +222,7 @@ For testing the x type, S's context:
 - β = I Data
 - γ = I
 -/
-def test_context_arg_x : Expr := ⟪₂ (, (:: Data (:: (I Data) (:: I nil))) nil) ⟫
+def test_context_arg_x : Expr := ⟪₂ (, (:: (quoted Data) (:: (quoted (I Data)) (:: (quoted I) nil))) nil) ⟫
 
 /-
 this should be:

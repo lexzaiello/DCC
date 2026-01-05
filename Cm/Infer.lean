@@ -42,12 +42,19 @@ def norm_quoted_contexts : Expr → Expr
   | x => x
 
 def norm_all_contexts : Expr → Expr
+  | ⟪₂ :: (quoted (, :Γ :C)) :xs ⟫ =>
+    let x' := norm_context ⟪₂ , :Γ :C ⟫
+
+    match xs with
+    | ⟪₂ nil ⟫ => x'
+    | _ =>  ⟪₂ :: (quoted :x') (#norm_all_contexts xs) ⟫
   | ⟪₂ :: (, :Γ :C) :xs ⟫ =>
     match norm_context ⟪₂ (, :Γ :C) ⟫ with
     | ⟪₂ :: :t nil ⟫ =>
       ⟪₂ :: :t (#norm_all_contexts xs) ⟫
     | t =>
       ⟪₂ :: :t (#norm_all_contexts xs) ⟫
+  | ⟪₂ :: (:: :t nil) :xs ⟫ => ⟪₂ :: :t (#norm_all_contexts xs) ⟫
   | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (#norm_all_contexts xs) ⟫
   | x => x
 
@@ -346,7 +353,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f with_dbg_logs
     let raw_t_arg ← infer arg with_dbg_logs
-    let t_arg := (norm_quoted_contexts ∘ norm_context) raw_t_arg
+    let t_arg := (norm_all_contexts ∘ norm_context) raw_t_arg
 
     match t_f with
     | ⟪₂ quoted (, :Γ (, :Δ :Ξ)) ⟫

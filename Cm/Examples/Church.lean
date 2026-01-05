@@ -27,8 +27,8 @@ def my_example : Except Error Expr := do
   let t_data ← infer ⟪₂ Data ⟫
   mk_i t_data
 
-#eval norm_all_contexts ⟪₂ ((:: ((:: Data) nil)) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: Data) nil))) ⟫
 #eval my_example >>= infer
+#eval my_example
 
 #eval Expr.display_infer <$> (mk_i ⟪₂ Data ⟫
   >>= (fun e => infer ⟪₂ :e Data ⟫ true))

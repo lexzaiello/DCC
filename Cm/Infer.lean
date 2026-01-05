@@ -439,6 +439,11 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
 
+      dbg_trace check_with
+      let expected'' ← freeze_context ⟪₂ (:: :check_with nil) ⟫ ⟪₂ (, :Δ' :Ξ') ⟫
+
+      dbg_trace expected''
+
       let expected' ← do_or_unquote ⟪₂ , :Δ' :Ξ' ⟫ check_with |> unwrap_with (.stuck ⟪₂ exec :check_with (, :Δ' :Ξ') ⟫)
       let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
 
@@ -702,4 +707,54 @@ The purpose of quoted is to prevent non-data arguments from getting in the regis
 
 The quotation is fine, actually.
 We should just be consistent about it.
+
+Expected args are not themselves contexts,
+just instructions, so we can always execute them successfully.
+
+Another confusing thing:
+- our tys are eq should be able to compare raw values and nil contexts.
+Note that some of our types don't produce a context / type object from the assert function
+
+If we're going to normalize anyway in apps, I feel like we should be using contexts all the time?
+
+check_with will produce a context that we compare against the argument.
+The argument will itself be a context.
+
+So, we should be also producing a context.
+
+The challenge is the S type. I don't want to add contexts in one layer, and then mess up S. We'll try it though.
+
+Note that freeze_context is pretty much perfect for this.
+
+I think there are definitely places where we aren't adding an extra layer.
+
+This is another inconsistency, I think.
+We need to actually put it in an empty context.
+
+For this one, especially, we should either render the α,
+or supply an explicit context. Kinda surprised this worked, ngl.
+
+New policy from now on:
+
+All asserts introduce a context.
+Also, even simple types should have a context. It's just empty.
+
+Assert should always introduce a context,
+but there might be places where we assume it doesn't do that.
+
+Let's not change assert yet.
+
+HOWEVER:
+The function itself should dictate fully what its context is for the assertions.
+This will prevent shaddowing additionally.
+
+TODO:
+- change assert to introduce a nil context
+- See where S's type breaks
+- Use our new freeze function
 -/
+
+#eval infer ⟪₂ K Data (I Data) ⟫
+
+#eval infer ⟪₂ K ⟫
+

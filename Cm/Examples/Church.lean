@@ -21,13 +21,29 @@ def mk_i (t_x : Expr) : Except Error Expr := do
 
   let t_t_data ← infer t_data
 
-  dbg_trace ⟪₂ K' :t_x :t_data ⟫
+  /-
+    It keeps getting stuck at the x argument.
+    Why is this?
+    x : ∀ (x : α) (y : β x), γ x y
+    We've seen that γ works already.
+  -/
 
   pure ⟪₂ S :t_x (K' :t_t_data :t_x :t_data) :aa_t_x (K' :t_x :t_data) (K' :t_data :t_x Data) ⟫
 
 def my_example : Except Error Expr := do
   let t_data ← infer ⟪₂ Data ⟫
-  mk_i t_data
+  let my_i ← mk_i t_data
+  pure ⟪₂ :my_i Data ⟫
+
+def my_example' : Except Error Expr := do
+  let t_data ← infer ⟪₂ K ⟫
+  let my_i ← mk_i t_data
+  pure ⟪₂ :my_i ⟫
+
+#eval my_example'
+  >>= infer
+
+#eval Expr.display_infer <$> (my_example >>= infer)
 
 def mk_i_example (x : Expr) : Except Error Expr := do
   let t_x ← infer x
@@ -51,12 +67,12 @@ def test_γ : Except Error Expr := do
 #eval test_γ >>= infer
 
 #eval mk_i_example ⟪₂ K ⟫
+  >>= infer
 
 
 /-
 I works, but we're probably messing up in at least one place.
 -/
-#eval Expr.display_infer <$> (my_example >>= (fun e => infer ⟪₂ :e Data ⟫))
 
 def mk_flse (t_a t_b : Expr) : Except Error Expr := do
   let my_i ← ⟪₂ (#mk_i t_b) ⟫
@@ -104,5 +120,16 @@ def mk_flse_test (a b : Expr) : Except Error Expr := do
 #eval Expr.display_infer <$> (mk_flse_test ⟪₂ Data ⟫ ⟪₂ Data ⟫
   >>= infer)
 
-
 #eval mk_flse_test ⟪₂ K ⟫ ⟪₂ S ⟫
+
+/-
+Notes:
+How does context normalization work for nil contexts on both sides?
+If there is no way to compare.
+I feel like then we can't normalize.
+
+Difference is an extra colon.
+Regardless, I feel like we shouldn't be normalizing nil contexts.
+
+Just an extra nil. something is getting put inside a list twice.
+-/

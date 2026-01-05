@@ -48,16 +48,6 @@ def sub_context : Expr → Expr
 
 def norm_context : Expr → Expr := (try_step_n! 10 ∘ sub_context)
 
-def norm_quoted_contexts : Expr → Expr
-  | ⟪₂ :: (quoted (, :Γ :C)) :xs ⟫ =>
-    let x' := norm_context ⟪₂ , :Γ :C ⟫
-
-    match xs with
-    | ⟪₂ nil ⟫ => x'
-    | _ =>  ⟪₂ :: (quoted :x') (#norm_quoted_contexts xs) ⟫
-  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: :x (#norm_quoted_contexts xs) ⟫
-  | x => x
-
 def norm_all_contexts : Expr → Expr
   | ⟪₂ :: (quoted (, :Γ :C)) :xs ⟫ =>
     let x' := norm_context ⟪₂ , :Γ :C ⟫
@@ -315,8 +305,28 @@ def Expr.display_infer : Expr → Option Expr
     try_step_n 10 out.unquote_pure <|> (pure out)
   | e => reduce_unquote e
 
+/-
+To check equality of types:
+- types will always be in the form (, (:: f (:: g nil)) (, Δ Ξ))
+
+for some values, Δ may be already filled in.
+
+Also, Δ may not have enough values in it to compare. If Δ does not have enough values,
+that is, one of the assertions will produce nil, simply plug in a list with unique values
+into both types. TODO: This seems suspicious.
+
+Also note, this may need to be done recursively.
+For example, if a type mentions another context, you might want to normalize it, too
+before comparing.
+
+Note that types are uniquely identified by the triple (, Γ (, Δ Ξ))
+
+So, we can do recursive descent and compare each one by normalization.
+-/
+def tys_are_eq : Expr → Expr → Bool
+  
+
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
-  --dbg_trace s!"check arg: {e}"
   match e with
   | ⟪₂ assert ⟫
   | ⟪₂ next ⟫
@@ -386,15 +396,6 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
       let unquoted_expected := (norm_all_contexts <$> reduce_unquote stolen).getD stolen
       let unquoted_actual   := (norm_all_contexts <$> reduce_unquote t_arg).getD t_arg
-
-      /-if with_dbg_logs then
-        dbg_trace raw_t_arg
-        dbg_trace expected'
-
-        dbg_trace stolen
-        dbg_trace t_arg
-        dbg_trace unquoted_expected
-        dbg_trace unquoted_actual-/
 
       let _ ← assert_eq (Expr.unquote_once expected') raw_t_arg e
         <|> assert_eq unquoted_expected unquoted_actual e
@@ -538,3 +539,60 @@ The context looks fine. I guess there's some machinery somewhere going haywire.
 #eval nested_k_example >>=
   (fun e => infer ⟪₂ :e Data Data ⟫ true)
 
+
+/-
+We keep getting messed up by context normalization.
+We need to figure out a more exact way to debug this.
+
+context normalization is really annoying.
+
+Questions:
+- when we have an argument that has a Π, that is, a context that not been initialized yet,
+how do we handle that?
+
+It's really unclear when we're quoting, when we're making new contexts, when we're normalizing, etc.
+
+We really should consolidate these things and make more concrete.
+
+Why can't we normalize as soon as possible?
+Because then we don't know what to initialize an expected context with.
+
+We ought to attempt to remove as much extraneous shuffling as possible.
+
+Normalization:
+
+- we shouldn't be normalizing nil contexts.
+- I wonder how much breaks if we do this.
+
+At the very least, we should centralize it all.
+
+- First, substitute the current context in. this is to check the current argument.
+- then, we normalize both to compare
+
+Context stealing feels super sus.
+
+if we're checking the argument, we probably have an empty context.
+we should always use theirs.
+
+Quotation feels like probably the most sus thing right now.
+
+Order seems vaguely wrong for stolen.
+Why are we running norm_context one one but not both?
+
+Ok, looks mostly fine.
+I'm just confused on the extra nil.
+
+There is one layer of extra nesting in expected.
+
+We're doing too much normalization.
+
+We only need to normalize:
+- to get the current argument "checker"
+- in case the types we're comparing are not exactly the same.
+
+Also, with quotation:
+- quotation is somewhat fine. Apps should work.
+We're just unquoting and re-quoting kind of haphazardly.
+
+Just seems like we're doing a lot of work. We should normalize if possible, and insert assert.
+-/

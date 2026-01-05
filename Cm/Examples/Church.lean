@@ -287,7 +287,6 @@ def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let α := church_t_f t_in t_out
 
   let t_nf := ⟪₂ , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) nil)) (, (:: :t_in (:: :t_out nil)) nil) ⟫
-  let t_t_nf ← infer t_nf
 
   let t_γ := ⟪₂ , (::
     (:: fst (:: read assert))
@@ -300,29 +299,14 @@ def far_left_s (t_in t_out : Expr) : Except Error Expr := do
     (, (:: :t_in (:: :α nil)) nil) ⟫
 
   -- γ receives f and ((K f) : t_x → t_f)
-  let ret_γ := ⟪₂ K' :t_t_γ
-
-  let k_γ := ⟪₂ K' :t_t_nf 
-  let γ := ⟪₂ K' 
-
-  -- K f : t_x → t_f
-  let t_k_right : Expr := ⟪₂ ,
-      (:: (:: fst (:: read ::assert)) (:: (:: fst (:: next (:: read assert))) nil))
-      (, (:: :t_in (:: (#church_t_f t_in t_out) nil)) nil) ⟫
-  let t_t_k_right ← infer t_k_right
-
-  -- γ = (t_in → t_out) → (t_in → t_out)
-  let t_γ : Expr := ⟪₂ , (::
-    (:: assert (quoted (#church_t_f t_in t_out)))
-    (:: (:: assert (quoted (#t_in)))
-      (:: (:: assert (quoted (#t_out))) nil))) (, nil nil) ⟫
-  let t_t_γ ← infer t_γ
-
-  let ret_γ := ⟪₂ K' :t_t_γ :t_k_right :t_γ ⟫
+  let ret_γ := ⟪₂ K' :t_t_γ :t_k_f :t_γ ⟫
   let t_ret_γ ← infer ret_γ
-  let γ := ⟪₂ K' :t_ret_γ (#church_t_f t_in t_out) :ret_γ ⟫
 
-  let β := ⟪₂ K' :t_t_k_right :α :t_k_right ⟫
+  let γ := ⟪₂ K' :t_ret_γ :α :ret_γ ⟫
+
+  let t_t_k_f ← infer t_k_f
+
+  let β := ⟪₂ K' :t_t_k_f :α :t_k_f ⟫
 
   pure ⟪₂ S :α :β :γ ⟫
 

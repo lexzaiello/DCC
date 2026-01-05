@@ -27,6 +27,13 @@ def my_example : Except Error Expr := do
   let t_data ← infer ⟪₂ Data ⟫
   mk_i t_data
 
+def mk_i_example (x : Expr) : Except Error Expr := do
+  let t_x ← infer x
+  (fun e => ⟪₂ :e :x ⟫) <$> mk_i t_x
+
+#eval mk_i_example ⟪₂ K ⟫
+
+
 /-
 I works, but we're probably messing up in at least one place.
 -/
@@ -34,7 +41,6 @@ I works, but we're probably messing up in at least one place.
 
 def mk_flse (t_a t_b : Expr) : Except Error Expr := do
   let my_i ← ⟪₂ (#mk_i t_b) ⟫
-  dbg_trace my_i
   let t_my_i ← infer my_i
 
   pure ⟪₂ K' :t_my_i :t_a :my_i ⟫

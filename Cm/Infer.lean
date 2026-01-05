@@ -418,8 +418,8 @@ def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
     /-
       Now, reduce by plugging in our "fake" context, and comparing the remaining values.
     -/
-    let expected' ← flatten_context <$> freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
-    let actual' ← flatten_context <$> freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
+    let expected' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
+    let actual' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
 
     assert_eq expected' actual' at_app
   | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)

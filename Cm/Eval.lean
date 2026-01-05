@@ -19,8 +19,6 @@ assert does not expect (, Δ Ξ), but
 
 -/
 def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
-  dbg_trace my_op
-  dbg_trace ctx
   match my_op, ctx with
   | ⟪₂ (:: map :_f) ⟫, ⟪₂ nil ⟫ =>
     ⟪₂ nil ⟫
@@ -63,7 +61,6 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   | _, _ => ⟪₂ nil ⟫
 
 def step (e : Expr) : Option Expr :=
-  dbg_trace "hi"
   match e with
   | ⟪₂ (:: exec (:: both (:: (:: exec :m) (:: exec :n)))) ⟫ => do
     let m' ← step ⟪₂ :: exec :m ⟫
@@ -100,7 +97,6 @@ def step (e : Expr) : Option Expr :=
     pure ⟪₂ :: exec (:: apply (:: :f :g')) ⟫
   | ⟪₂ (:: exec (:: :f :ctx)) ⟫ =>
     let e' := exec_op f ctx
-    dbg_trace s!"e: {e'}"
     e'
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫

@@ -348,7 +348,6 @@ def pop_singleton_context : Expr → Expr
   | x => x
 
 def flatten_normal_assert (e : Expr) : Expr :=
-  dbg_trace s!"to flatten: {e}"
   match e with
   | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
     (do
@@ -384,7 +383,6 @@ Attaches an empty Δ and Ξ context.
 -/
 def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
   -- ((:: ((:: assert) quoted ((, ((:: quoted Data) ((:: quoted Data) nil))) ((, nil) nil)))) nil)
-  dbg_trace s!"to freeze: {Γ}"
   match Γ with
   | ⟪₂ (:: :x :xs) ⟫ => do
     let x' ← do_step ⟪₂ (:: exec (:: :x :c)) ⟫
@@ -451,9 +449,6 @@ def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
     let expected' ← flatten_context <$> freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
     let actual' ← flatten_context <$> freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
 
-    dbg_trace expected'
-    dbg_trace actual'
-
     assert_eq expected' actual' at_app
   | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)
 
@@ -509,7 +504,6 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   | ⟪₂ nil ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ Data ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
-    dbg_trace s!"app: {⟪₂ :f :arg ⟫}"
     let t_f ← infer f with_dbg_logs
     let raw_t_arg ← infer arg with_dbg_logs
 
@@ -521,11 +515,6 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
 
       let expected'' := (← run_context check_with ⟪₂ (, :Δ' :Ξ') ⟫) |> pop_singleton_context
-
-      dbg_trace s!"check with: {check_with}"
-      dbg_trace ⟪₂ , :Δ' :Ξ' ⟫
-      dbg_trace "after sub: {expected''}"
-      dbg_trace s!"app {f} {arg}: {raw_t_arg}"
 
       let _ ← tys_are_eq expected'' raw_t_arg e
 
@@ -949,4 +938,11 @@ The solution to the current problem is to make sure that we introduce an explici
 -/
 
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
+
+def my_example' : Except Error Expr := do
+  let t_i ← infer ⟪₂ I ⟫
+
+  infer ⟪₂ I :t_i I ⟫
+
+#eval my_example'
 

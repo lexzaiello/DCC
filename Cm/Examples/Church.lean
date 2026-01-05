@@ -241,9 +241,10 @@ def church_succ_return_s_k (t_in t_out : Expr) : Except Error Expr := do
 def return_s (t_in t_out : Expr) : Except Error Expr := do
   pure ⟪₂ (#← (church_succ_return_s_k t_in t_out)) (#← (church_succ_innermost_s t_in t_out)) ⟫
 
-#eval return_s ⟪₂ Data ⟫ ⟪₂ Data ⟫ >>= infer
+#eval (church_succ_innermost_s ⟪₂ Data ⟫ ⟪₂ Data ⟫)
+  >>= infer
 
-#eval return_s ⟪₂ Data ⟫ ⟪₂ Data ⟫
+#eval return_s ⟪₂ Data ⟫ ⟪₂ Data ⟫ >>= infer
 
 /-
 Now need the S on the very far left

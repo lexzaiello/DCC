@@ -918,3 +918,15 @@ def my_example' : Except Error Expr := do
 
 #eval my_example'
 
+
+/-
+Interesting idea:
+I feel like the freezing stuff is probably unnecessary.
+Maybe?
+
+Just leave the empty registers the same.
+Render the existing ones.
+
+Also,
+I still don't like how much nesting there is.
+-/

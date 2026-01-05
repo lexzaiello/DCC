@@ -212,6 +212,7 @@ Got innermost S and innermost K,
 now need the K that returns the innermost S.
 
 (((KS) f) (K f))
+S (K f)
 This is how it works.
 
 This is very obvious.
@@ -223,7 +224,21 @@ def church_succ_return_s_k (t_in t_out : Expr) : Except Error Expr := do
   let my_s ← church_succ_innermost_s t_in t_out
   let t_my_s ← infer my_s
 
+  let t_x := church_t_x t_in t_out
+  let t_f := church_t_f t_in t_out
+
+  --α = t_in
+  --β = K t_out
+  --γ = K (K t_out)
+
+  -- innermost S : (t_x → t_f) → t_out → t_out
+  let t_x_t_f := ⟪₂ , (:: (:: assert (quoted :t_x)) (:: (:: assert (quoted :t_f)) nil)) (, nil  nil) ⟫
+  let t_my_s := ⟪₂ , (:: (:: assert (quoted :t_x_t_f)) (:: (:: assert (quoted :t_out)) (:: (:: assert (quoted :t_out)) nil))) (, nil nil) ⟫
+
+
   pure ⟪₂ K' :t_my_s (#church_t_f t_in t_out) ⟫
+
+
 
 def return_s (t_in t_out : Expr) : Except Error Expr := do
   pure ⟪₂ (#← (church_succ_return_s_k t_in t_out)) (#← (church_succ_innermost_s t_in t_out)) ⟫

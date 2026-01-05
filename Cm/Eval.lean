@@ -179,6 +179,7 @@ def mk_const_ctx : Expr :=
   ⟪₂ (:: (:: map quote) (:: push_on (, nil nil))) ⟫
 
 #eval do_step ⟪₂ (:: exec (:: (:: map :mk_singleton_ctx) Data)) ⟫
+#eval do_step ⟪₂ (:: exec (:: :mk_const_ctx (:: Data (:: Data nil)))) ⟫
 
 end test
 

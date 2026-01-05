@@ -21,18 +21,12 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   match my_op, ctx with
   | ⟪₂ (:: map :_f) ⟫, ⟪₂ nil ⟫ =>
     ⟪₂ nil ⟫
-  | ⟪₂ (:: map :f) ⟫, ⟪₂ :: :x nil ⟫ =>
-    let x' := exec_op f x
-
-    ⟪₂ (:: :x' nil) ⟫
   | ⟪₂ (:: map :f) ⟫, ⟪₂ :: :x :xs ⟫  =>
-    let x' := exec_op f x
-    let xs' := exec_op ⟪₂ (:: map :f) ⟫ xs
+    let x' := ⟪₂ (:: exec (:: :f :x)) ⟫
+    let xs' := ⟪₂ (:: exec (:: (:: map :f) :xs)) ⟫
 
     ⟪₂ (:: :x' :xs') ⟫
-  | ⟪₂ (:: map :f) ⟫, e =>
-    let x' := exec_op f e
-    x'
+  | ⟪₂ (:: map :f) ⟫, e =>⟪₂ (:: exec :f :e) ⟫
   | ⟪₂ read ⟫, ⟪₂ (:: :x :_xs) ⟫ => x
   | ⟪₂ next ⟫, ⟪₂ (:: :_x :xs) ⟫ => xs
   | ⟪₂ fst ⟫, ⟪₂ (, :a :_b) ⟫ => a
@@ -45,57 +39,56 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   | ⟪₂ quote ⟫, a => ⟪₂ (:: assert :a) ⟫
   | ⟪₂ assert ⟫, a => a
   | ⟪₂ (:: apply (:: :f :g)) ⟫, Γ =>
-    let f' := exec_op f Γ
-    let g' := exec_op g Γ
+    let f' := ⟪₂ (:: exec (:: :f :Γ)) ⟫
+    let g' := ⟪₂ (:: exec (:: :g :Γ)) ⟫
 
-    match f', g' with
+    ⟪₂ (:: apply (:: :f' :g')) ⟫
+
+    /-match f', g' with
     | ⟪₂ quoted :f' ⟫, ⟪₂ quoted :g' ⟫ =>
       let unquoted := ⟪₂ :f' :g' ⟫.unquote_pure
       ⟪₂ quoted :unquoted ⟫
     | f', g' =>
-      ⟪₂ :f' :g' ⟫
+      ⟪₂ :f' :g' ⟫ TODO: move to step-/
   | ⟪₂ (:: both (:: :f :g)) ⟫, Γ =>
-    let f' := exec_op f Γ
-    let g' := exec_op g Γ
+    let f' := ⟪₂ (:: exec (:: :f :Γ)) ⟫
+    let g' := ⟪₂ (:: exec (:: :g :Γ)) ⟫
 
     ⟪₂ (:: :f' :g') ⟫
   -- pipelining operations
   | ⟪₂ :: :f :g ⟫, ctx =>
-    let x := exec_op f ctx
+    let x := ⟪₂ (:: exec (:: :f :ctx)) ⟫
 
-    ⟪₂ exec :g :x ⟫
+    ⟪₂ (:: exec (:: :g :x)) ⟫
   | _, _ => ⟪₂ nil ⟫
 
 def step : Expr → Option Expr
-  | ⟪₂ exec :f :ctx ⟫ => exec_op f ctx
-  | ⟪₂ push_on nil :a ⟫ => ⟪₂ :: :a nil ⟫
-  | ⟪₂ push_on (:: :x :xs) :a ⟫ => ⟪₂ :: :a (:: :x :xs) ⟫
-  | ⟪₂ push_on (, :a :b) :c ⟫ => ⟪₂ (, :c (, :a :b)) ⟫
-  | ⟪₂ push_on :l :a ⟫ => ⟪₂ :: :a :l ⟫
+  | ⟪₂ (:: (:: exec :m) :xs) ⟫ => do
+    let e' ← step ⟪₂ :: exec :m ⟫
+    let xs' ← (step xs).getD xs
+    pure ⟪₂ :: :e' :xs' ⟫
+  | ⟪₂ (:: apply (:: :f :g)) ⟫ => do
+    let f' ← step f
+    let g' ← step g
+
+    match f', g' with
+    | ⟪₂ (:: exec :_c₁) ⟫, ⟪₂ (:: exec :_c₂) ⟫ =>
+      ⟪₂ (:: apply (:: :f' :g')) ⟫
+    | ⟪₂ (:: (:: exec :_c₁₁) :_c₁₂) ⟫, _r
+    | _r, ⟪₂ (:: (:: exec :_c₁₁) :_c₁₂) ⟫ =>
+      ⟪₂ (:: apply (:: :f' :g')) ⟫
+    | _, _ => ⟪₂ :f' :g' ⟫
+  | ⟪₂ (:: exec (:: :f :ctx)) ⟫ => exec_op ((step f).getD f) ((step ctx).getD ctx)
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫
   | ⟪₂ K' :_α :_β :x :_y ⟫ => x
-  | ⟪₂ both :f :g :Γ ⟫ =>
-    let left := ⟪₂ :f :Γ ⟫
-    let right := ⟪₂ :g :Γ ⟫
-
-    ⟪₂ :: (# (step left).getD left) (# (step right).getD right) ⟫
-  | e@⟪₂ next (:: :_x nil) ⟫ => e
-  | ⟪₂ read nil ⟫ => .none
-  | ⟪₂ next (:: :_x :xs) ⟫ => xs
-  | ⟪₂ read (:: :x :_xs) ⟫ => x
-  | ⟪₂ fst (, :a :_b) ⟫ => a
-  | ⟪₂ snd (, :_a :b) ⟫ => b
-  | ⟪₂ , :a :b ⟫ => do ⟪₂ , (#(step a).getD a) (#(step b).getD b) ⟫
+  | ⟪₂ , :_a :_b ⟫ => .none
+  | ⟪₂ :: :_a :_b ⟫ => .none
   | ⟪₂ :f :x ⟫ =>
     let f' := (step f).getD f
     let x' := (step x).getD x
     ⟪₂ :f' :x' ⟫
   | _ => .none
-
-#eval step ⟪₂ exec
-  (:: (:: assert (:: Data nil)) (:: (:: fst (:: read nil)) (:: (:: fst (:: read nil))) nil))
-  (:: Data (:: Data nil)) ⟫
 
 def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
   if n = 0 then

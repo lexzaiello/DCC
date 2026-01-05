@@ -57,7 +57,7 @@ def steal_context (from_e for_e : Expr) : Expr :=
   | _, _ => for_e
 
 def do_or_unquote (to_do : Expr) (in_e : Expr) : Option Expr :=
-  try_step_n 10 ⟪₂ exec :in_e :to_do ⟫
+  try_step_n 10 ⟪₂ (:: exec (:: :in_e :to_do)) ⟫
 
 -- Applies the Δ claims context to all handlers in the app context
 -- returns all of the applied assertions, in order
@@ -123,7 +123,7 @@ def β : Expr :=
   let α := ⟪₂ :: fst (:: read assert) ⟫
   ⟪₂ (:: both (:: :α (:: :ass_data (:: push_on nil)))) ⟫
 
-#eval try_step_n 10 ⟪₂ exec :β (, (:: Data nil) nil) ⟫
+#eval try_step_n 10 ⟪₂ (:: exec (:: :β (, (:: Data nil) nil))) ⟫
 
 /- γ : ∀ (x : α), β x → Type
 -/
@@ -179,7 +179,7 @@ def γ_e_1 : Option Expr := try_step_n 10 ⟪₂ exec :γ :test_γ_ctx ⟫
 
 #eval γ_e_1
 
-#eval Expr.as_list <$> (γ_e_1 >>= (fun e => try_step_n 10 ⟪₂ exec fst :e ⟫))
+#eval Expr.as_list <$> (γ_e_1 >>= (fun e => try_step_n 10 ⟪₂ (:: exec (:: fst :e)) ⟫))
 
 /-
 x : ∀ (z : α) (y : β z), γ z y
@@ -318,7 +318,7 @@ def reduce_unquote : Expr → Option Expr := (try_step_n 10) ∘ Expr.unquote_pu
 def Expr.display_infer : Expr → Option Expr
   | ⟪₂ , :Γ :X ⟫ => do
     let out ← (← Γ.as_list).getLast?
-    let out ← try_step_n 10 ⟪₂ exec :out :X ⟫
+    let out ← try_step_n 10 ⟪₂ (:: exec (:: :out :X)) ⟫
     try_step_n 10 out.unquote_pure <|> (pure out)
   | e => reduce_unquote e
 
@@ -331,7 +331,7 @@ Does not detect whether nil values were produced.
 Attaches an empty Δ and Ξ context.
 -/
 def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
-  do_step ⟪₂ exec (:: (:: (:: both :Γ) (:: map quote)) (:: push_on (, nil nil))) :c ⟫
+  do_step ⟪₂ (:: exec (:: (:: (:: (:: both :Γ) (:: map quote)) (:: push_on (, nil nil))) :c)) ⟫
 
 def guard_is_ty (Γ : Expr) : Except Error Unit :=
   match Γ with
@@ -344,9 +344,9 @@ Otherwise, assume this is a free-standing well-typed value,
 and wrap it in an empty context.
 -/
 def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
-  match ← do_step ⟪₂ exec :Γ_elem :c ⟫ with
+  match ← do_step ⟪₂ (:: exec (:: :Γ_elem :c)) ⟫ with
   | ⟪₂ , :Γ :C ⟫ => pure ⟪₂ , :Γ :C ⟫
-  | t => do_step ⟪₂ exec :mk_singleton_ctx :t ⟫
+  | t => do_step ⟪₂ (:: exec (:: :mk_singleton_ctx :t)) ⟫
 
 def n_args (Γ : Expr) : ℕ := (do
   let all_asserts ← Γ.as_list
@@ -404,7 +404,6 @@ def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
 
     dbg_trace expected'
     dbg_trace actual'
-    
 
     assert_eq expected' actual' at_app
   | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)
@@ -417,6 +416,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   | ⟪₂ fst ⟫
   | ⟪₂ snd ⟫
   | ⟪₂ both ⟫
+  | ⟪₂ exec ⟫
   | ⟪₂ read ⟫
   | ⟪₂ apply ⟫
   | ⟪₂ quote ⟫
@@ -427,7 +427,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
     pure ⟪₂ , (:: :ass_data (:: :α (:: :α nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ :ass_data ⟫
-    let t_β := ⟪₂ (:: both (:: (:: fst (:: read assert)) (:: :ass_data (:: push_on nil)))) ⟫
+    let t_β := ⟪₂ (:: (:: both (:: (:: fst (:: read assert)) (:: :ass_data (:: push_on nil)))) :mk_const_ctx) ⟫
     let t_x := ⟪₂ (:: fst (:: read assert)) ⟫
     let t_y := ⟪₂ (:: apply (:: (:: fst (:: next (:: read assert))) (:: fst (:: next (::next (:: read assert)))))) ⟫
 
@@ -459,9 +459,6 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
       (, nil nil) ⟫
   | ⟪₂ nil ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ Data ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
-  | ⟪₂ exec ⟫ => pure ⟪₂ ,
-    (:: :ass_data (:: :ass_data (:: :ass_data nil)))
-    (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     dbg_trace s!"app: {⟪₂ :f :arg ⟫}"
     let t_f ← infer f with_dbg_logs
@@ -874,10 +871,4 @@ Don't even remember what we've changed at this point.
 The solution to the current problem is to make sure that we introduce an explicit context whenever we want one.
 -/
 
-#eval do_step ⟪₂ exec (:: map assert) ((:: Data) ((:: quoted Data) nil)) ⟫
-#eval do_step ⟪₂ exec :mk_const_ctx ((:: Data) ((:: quoted Data) nil)) ⟫
-
-#eval do_step ⟪₂ exec (:: map quote) ((:: Data) ((:: quoted Data) nil)) ⟫
-#eval do_step ⟪₂ exec ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil)))) (, (:: Data nil) nil) ⟫
-
-#eval infer ⟪₂ K ⟫
+#eval infer ⟪₂ I Data Data ⟫

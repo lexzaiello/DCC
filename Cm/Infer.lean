@@ -335,10 +335,23 @@ Attaches an empty Δ and Ξ context.
 def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
   do_step ⟪₂ exec (:: (:: (:: both :Γ) (:: map quote)) (:: push_on (, nil nil))) :c ⟫
 
+def guard_is_ty (Γ : Expr) : Except Error Unit :=
+  match Γ with
+  | ⟪₂ , :_Γ (, :_Δ :_Ξ) ⟫ => pure ()
+  | t => .error <| .not_type t
+
+/-
+If a context is explicitly produced, keep it.
+Otherwise, assume this is a free-standing well-typed value,
+and wrap it in an empty context.
+-/
 def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
   match ← do_step ⟪₂ exec :Γ_elem :c ⟫ with
   | ⟪₂ , :Γ :C ⟫ => pure ⟪₂ , :Γ :C ⟫
-  | t => pure t
+  | t =>
+    dbg_trace ⟪₂ exec :Γ_elem :c ⟫
+    dbg_trace s!"hi: {t}"
+    .error <| .not_type t
 
 def n_args (Γ : Expr) : ℕ := (do
   let all_asserts ← Γ.as_list
@@ -365,6 +378,8 @@ So, we can do recursive descent and compare each one by normalization.
 def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
   match expected, actual with
   | ⟪₂ , :Γ₁ (, :Δ₁ :Ξ₁) ⟫, ⟪₂ , :Γ₂ (, :Δ₂ :Ξ₂) ⟫ => do
+    dbg_trace expected
+    dbg_trace actual
     /-
       To compare the types, see how many input assertions the contexts are making.
       Then, extend the smallest of the two Δ registers with unique quoted data
@@ -411,7 +426,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   | ⟪₂ push_on ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ S ⟫ => pure s.s_rule
   | ⟪₂ I ⟫ =>
-    let α := ⟪₂ (:: fst (:: read (:: assert :mk_singleton_ctx))) ⟫
+    let α := ⟪₂ (:: fst (:: read assert)) ⟫
     pure ⟪₂ , (:: :ass_data (:: :α (:: :α nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ :ass_data ⟫
@@ -433,7 +448,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
               (:: fst (:: read assert))
               nil)))))
       (, nil nil) ⟫
-  | ⟪₂ quoted :_e ⟫ => pure ⟪₂ ,
+  | ⟪₁ quoted :_e ⟫ => pure ⟪₂ ,
     (:: :ass_data nil)
     (, nil nil) ⟫
   | ⟪₂ :: ⟫
@@ -453,35 +468,31 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f with_dbg_logs
     let raw_t_arg ← infer arg with_dbg_logs
-    let t_arg := (norm_all_contexts ∘ norm_context) raw_t_arg
+
+    dbg_trace s!"fn: {t_f}"
 
     match t_f with
-    | ⟪₂ quoted (, :Γ (, :Δ :Ξ)) ⟫
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
       let Δ' := Expr.push_in ⟪₂ quoted :arg ⟫ Δ
       let Ξ' := Expr.push_in raw_t_arg Ξ
 
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
 
+      dbg_trace s!"arg: {arg}"
       dbg_trace check_with
       let expected'' ← run_context check_with ⟪₂ (, :Δ' :Ξ') ⟫
 
       dbg_trace expected''
 
-      let expected' ← do_or_unquote ⟪₂ , :Δ' :Ξ' ⟫ check_with |> unwrap_with (.stuck ⟪₂ exec :check_with (, :Δ' :Ξ') ⟫)
-      let stolen := try_step_n! 10 <| norm_context <| steal_context raw_t_arg expected'
-
-      let unquoted_expected := (norm_all_contexts <$> reduce_unquote stolen).getD stolen
-      let unquoted_actual   := (norm_all_contexts <$> reduce_unquote t_arg).getD t_arg
-
-      let _ ← assert_eq (Expr.unquote_once expected') raw_t_arg e
-        <|> assert_eq unquoted_expected unquoted_actual e
+      let _ ← tys_are_eq expected'' raw_t_arg e
 
       let Γ' ← Γ.list_pop |> unwrap_with (.short_context Γ)
 
       match Γ'.as_singleton with
       | .some t_out =>
-        freeze_context ⟪₂ :: :t_out nil ⟫ ⟪₂ (, :Δ' :Ξ') ⟫
+        let t_out' ← run_context t_out ⟪₂ (, :Δ' :Ξ') ⟫
+        guard_is_ty t_out'
+        pure t_out'
       | _ =>
         pure ⟪₂ , :Γ' (, :Δ' :Ξ') ⟫
     | _ =>
@@ -793,12 +804,22 @@ we should wrap anything that's hanging.
 
 This is mildly suspicious though,
 that we can just mix and match the comma part. We'll see
+
+We should also use quotation consistently.
 -/
 
-#eval infer ⟪₂ K Data (I Data) ⟫
+def my_example : Except Error Expr := do
+  let t_data ← infer ⟪₂ Data ⟫
+  infer ⟪₂ I :t_data Data ⟫
+
+#eval infer ⟪₂ :: assert nil ⟫
+#eval infer ⟪₂ ((:: ((:: assert) quoted Data)) nil) ⟫
+#eval infer ⟪₂ ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil)) ⟫
+#eval my_example
 
 #eval infer ⟪₂ K ⟫
 
+#eval infer ⟪₂ :: Data nil ⟫
 
 /-
 S type is broken, for now.
@@ -814,4 +835,16 @@ I don't think this breaks much.
 
 It feels like the most natural way to do it,
 
+Problem:
+The type of Data in ass_data is not the same as in infer.
+This isn't too hard to change, but it will be annoying.
+
+This is why it would be easier to change assert to make an empty context.
+
+We still need to store things with frozen contexts.
+Our equality needs to be able to detect asserts without beta reduction.
+
+We're adding another context on every time when we shouldn't be.
+
+It's the freeze context, probably.
 -/

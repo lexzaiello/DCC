@@ -344,11 +344,7 @@ somehow, we end up with a loose nil in the Δ.
 def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let γ ← far_left_s_γ t_in t_out
   let α := church_t_f t_in t_out
-
-  let t_k_f ← t_k_f_app t_in t_out
-  let t_t_k_f ← infer t_k_f
-
-  let β := ⟪₂ K' :t_t_k_f :α :t_k_f ⟫
+  let β ← far_left_s_β t_in t_out
 
   pure ⟪₂ S :α :β :γ ⟫
 

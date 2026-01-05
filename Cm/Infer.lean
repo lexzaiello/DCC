@@ -306,6 +306,21 @@ def Expr.display_infer : Expr → Option Expr
   | e => reduce_unquote e
 
 /-
+Substitutes a context into all of the assertions in a Γ expression.
+Produces a new type object, prepending all output assertions with assert,
+and attaching nil Δ and Ξ contexts.
+
+This assumes that the expression is in β-normal form.
+That is, the (, Δ Ξ) registers are nillable.
+
+To freeze the context,
+
+map runs exec on all the items of a list.
+-/
+def freeze_context (with_args : Expr) (c : Expr) : Except Error Expr :=
+  ⟪₂ 
+
+/-
 To check equality of types:
 - types will always be in the form (, (:: f (:: g nil)) (, Δ Ξ))
 
@@ -323,14 +338,6 @@ Note that types are uniquely identified by the triple (, Γ (, Δ Ξ))
 
 So, we can do recursive descent and compare each one by normalization.
 -/
-
-/-
-Substitutes a context into all of the assertions in a Γ expression.
-Produces a new type object, prepending all output assertions with assert,
-and attaching nil Δ and Ξ contexts.
--/
-def freeze_context (with_args : Expr) (c : Expr) : Except Error Expr :=
-  
 
 def tys_are_eq : Expr → Expr → Bool
   

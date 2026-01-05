@@ -53,6 +53,12 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   | _, _ => ⟪₂ nil ⟫
 
 def step : Expr → Option Expr
+  | ⟪₂ map nil :_ctx ⟫ => ⟪₂ nil ⟫
+  | ⟪₂ map (:: :x :xs) :ctx ⟫ => do
+    let x' := exec_op x ctx
+    let xs' := (step xs).getD xs
+
+    pure ⟪₂ (:: :x' :xs') ⟫
   | ⟪₂ exec :f :ctx ⟫ => exec_op f ctx
   | ⟪₂ push_on nil :a ⟫ => ⟪₂ :: :a nil ⟫
   | ⟪₂ push_on (:: :x :xs) :a ⟫ => ⟪₂ :: :a (:: :x :xs) ⟫

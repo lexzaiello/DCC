@@ -30,10 +30,12 @@ def mk_i (t_x : Expr) : Except Error Expr := do
 
   pure ⟪₂ S :t_x (K' :t_t_data :t_x :t_data) :aa_t_x (K' :t_x :t_data) (K' :t_data :t_x Data) ⟫
 
-def my_example : Except Error Expr := do
+def my_examplebruh : Except Error Expr := do
   let t_data ← infer ⟪₂ Data ⟫
   let my_i ← mk_i t_data
   pure ⟪₂ :my_i Data ⟫
+
+#eval my_examplebruh >>= infer
 
 def my_example' : Except Error Expr := do
   let t_data ← infer ⟪₂ K ⟫

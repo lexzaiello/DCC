@@ -306,8 +306,8 @@ def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
   | t => do_step ⟪₂ (:: exec (:: :mk_singleton_ctx :t)) ⟫
 
 def pop_singleton_context : Expr → Expr
-  | ⟪₂ , (:: (:: assert (, :Γ :C)) nil) (, nil nil) ⟫ => ⟪₂ , :Γ :C ⟫
-  | ⟪₂ , (:: (:: assert (quoted (, :Γ :C))) nil) (, nil nil) ⟫ => ⟪₂ , :Γ :C ⟫
+  | ⟪₂ , (:: (:: assert (, :Γ :C)) nil) (, nil nil) ⟫ => pop_singleton_context ⟪₂ , :Γ :C ⟫
+  | ⟪₂ , (:: (:: assert (quoted (, :Γ :C))) nil) (, nil nil) ⟫ => pop_singleton_context ⟪₂ , :Γ :C ⟫
   | x => x
 
 def flatten_normal_assert (e : Expr) : Expr :=

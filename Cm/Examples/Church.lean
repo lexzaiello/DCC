@@ -293,6 +293,7 @@ def far_left_s (t_in t_out : Expr) : Except Error Expr := do
 def inner_combs (t_in t_out : Expr) : Except Error Expr := do
   pure ⟪₂ (#← far_left_s t_in t_out) (#← return_s t_in t_out) (#church_succ_innermost_k t_in t_out) ⟫
 
+#eval flatten_context ⟪₂ ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)))) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil))) ((, nil) nil)))) ((:: ((:: assert) quoted Data)) ((:: ((:: assert) quoted Data)) nil)))) ((, nil) nil)))) nil))) ⟫
 #eval inner_combs ⟪₂ Data ⟫ ⟪₂ Data ⟫ >>= infer
 
 def outermost_s (t_in t_out : Expr) : Except Error Expr := do

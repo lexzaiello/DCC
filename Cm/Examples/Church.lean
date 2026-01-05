@@ -84,5 +84,119 @@ def mk_flse_test (a b : Expr) : Except Error Expr := do
   >>= (fun t_out => do
     pure (t_out == (← infer ⟪₂ S ⟫)))
 
+/-
+Church numerals:
 
+zero f x = x
 
+This is the same as false.
+
+succ n f x = f (n f x)
+
+succ = S(S(KS)K)
+
+succ n f x =
+
+S(S(KS)K)nfx
+=
+((S(KS)K) f) (n f) x
+
+((S(KS)K) f) =
+((KS) f) (K f)
+
+=
+S (K f) (n f) x
+
+f (n f x)
+
+Types for this gonna be GNARLY.
+
+Outer S first:
+
+n : t_f → t_x → t_x
+
+n : (in → out) → in → out
+assume we have t_f = α → β
+
+α = (→ t_in t_out)
+β = (K t_out)
+γ gets f and n, in that order
+γ =
+
+S(S(KS)K)nfx
+=
+((S(KS)K) f) (n f) x
+
+(S(KS)K) f =
+  (((KS) f) (K f))
+
+=
+S (K f)
+
+Innermost S, and K
+
+S (K f) (n f) x
+
+=
+
+(K f x) (n f x)
+
+inner most K has the type that's pretty obvious
+
+K t_f t_x f x
+
+t_f = (t_in -> t_out) t_in
+
+so, β is the type of (n f)
+
+that would be (in → out)
+
+α = (in → out)
+β = (K (in → out))
+γ = (K (K (in → out)))
+
+ezpz, I think.
+-/
+
+def church_t_f (t_in t_out : Expr) : Expr :=
+  ⟪₂ , (:: (:: assert (quoted :t_in)) (:: (:: assert (quoted :t_out)) nil)) (, nil nil) ⟫
+
+def church_t_x (t_in _t_out : Expr) : Expr :=
+  ⟪₂ , (:: (:: assert (quoted :t_in)) nil) (, nil nil) ⟫
+
+def church_succ_innermost_k (t_in t_out : Expr) : Expr :=
+  let t_f := ⟪₂ , (:: (:: assert (quoted :t_in)) (:: (:: assert (quoted :t_out)) nil)) (, nil nil) ⟫
+  let t_x := ⟪₂ , (:: (:: assert (quoted :t_in)) nil) (, nil nil) ⟫
+
+  ⟪₂ K' :t_f :t_x ⟫
+
+/-
+S (K f) (n f) x
+
+K f x = f
+
+Innermost S.
+
+z = x
+x : t_in
+
+β = t_out
+γ = (t_in → t_out)
+
+α = t_in
+β = K t_out
+γ = K (K t_f)
+-/
+def church_succ_innermost_s (t_in t_out : Expr) : Except Error Expr := do
+  let t_t_out ← infer t_out
+  let t_t_α ← infer t_in
+
+  let α := t_in
+  let β := ⟪₂ K' :t_t_α :t_t_out :α ⟫
+  
+
+--def church_succ_outer_s (t_in t_out : Expr) : Except Error Expr := do
+  
+
+--def zero (t_in t_out : Expr) : Except Error Expr := do
+  

@@ -486,7 +486,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
     | _ =>
       .error <| .not_type t_f
 
-#eval infer ⟪₂ I Data ⟫
+#eval infer ⟪₂ I Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) ⟫
 
 def infer_list (e : Expr) : List (List (Except Error Expr)) :=

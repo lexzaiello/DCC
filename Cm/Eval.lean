@@ -181,11 +181,14 @@ def mk_const_ctx : Expr :=
 #eval do_step ⟪₂ (:: exec (:: (:: map :mk_singleton_ctx) Data)) ⟫
 #eval do_step ⟪₂ (:: exec (:: :mk_const_ctx (:: Data (:: Data nil)))) ⟫
 
-#eval do_step ⟪₂ (:: exec (:: (:: both (:: read read)) (:: Data nil))) ⟫
-
 end test
 
 #eval do_step ⟪₂ (:: exec (:: (:: read read) (:: (:: Data nil) nil))) ⟫
+
+#eval 
+#eval do_step ⟪₂ ((:: exec) ((:: ((:: push_on) ((, nil) nil))) ((:: exec) ((:: ((:: map) quote)) ((:: quoted Data) ((:: quoted Data) nil)))))) ⟫
+
+#eval do_step ⟪₂ ((:: exec) ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((, ((:: quoted Data) ((:: quoted (I Data)) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))) nil))))) ⟫
 
 #eval do_step ⟪₂ (:: exec (:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))
 ((, ((:: quoted Data) ((:: quoted (I Data)) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: fst) ((:: read) assert))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) nil)) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) nil)))) nil))))) ⟫

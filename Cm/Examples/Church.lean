@@ -36,12 +36,13 @@ def my_examplebruh : Except Error Expr := do
   pure ⟪₂ :my_i Data ⟫
 
 #eval my_examplebruh >>= infer
-def my_example' : Except Error Expr := do
+
+def my_examplebruh2 : Except Error Expr := do
   let t_data ← infer ⟪₂ K ⟫
   let my_i ← mk_i t_data
   pure ⟪₂ :my_i ⟫
 
-#eval my_example'
+#eval my_examplebruh2
   >>= infer
 
 #eval Expr.display_infer <$> (my_example >>= infer)

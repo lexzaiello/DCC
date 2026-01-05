@@ -28,8 +28,6 @@ def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
 def do_step (e : Expr) : Except Error Expr :=
   unwrap_with (Error.stuck e) (try_step_n 10 e)
 
-#eval do_step ⟪₂ exec (:: (:: both (:: (:: fst (:: read assert)) (:: :ass_data (:: push_on nil)))) :mk_const_ctx) (, (:: Data nil) nil) ⟫
-
 def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
   -- Throw a nicer error with a location if we the data are lists
   match Expr.as_list expected, Expr.as_list actual with
@@ -348,8 +346,7 @@ and wrap it in an empty context.
 def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
   match ← do_step ⟪₂ exec :Γ_elem :c ⟫ with
   | ⟪₂ , :Γ :C ⟫ => pure ⟪₂ , :Γ :C ⟫
-  | t =>
-    .error <| .not_type t
+  | t => do_step ⟪₂ exec :mk_singleton_ctx :t ⟫
 
 def n_args (Γ : Expr) : ℕ := (do
   let all_asserts ← Γ.as_list
@@ -404,6 +401,10 @@ def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
     -/
     let expected' ← freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
     let actual' ← freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
+
+    dbg_trace expected'
+    dbg_trace actual'
+    
 
     assert_eq expected' actual' at_app
   | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)
@@ -462,6 +463,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
     (:: :ass_data (:: :ass_data (:: :ass_data nil)))
     (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
+    dbg_trace s!"app: {⟪₂ :f :arg ⟫}"
     let t_f ← infer f with_dbg_logs
     let raw_t_arg ← infer arg with_dbg_logs
 
@@ -473,6 +475,11 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
 
       let expected'' ← run_context check_with ⟪₂ (, :Δ' :Ξ') ⟫
+
+      dbg_trace s!"check with: {check_with}"
+      dbg_trace ⟪₂ , :Δ' :Ξ' ⟫
+      dbg_trace "after sub: {expected''}"
+      dbg_trace raw_t_arg
 
       let _ ← tys_are_eq expected'' raw_t_arg e
 
@@ -488,8 +495,13 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
     | _ =>
       .error <| .not_type t_f
 
+#eval infer ⟪₂ I Data ⟫
+#eval infer ⟪₂ K Data (I Data) ⟫
+
 def infer_list (e : Expr) : List (List (Except Error Expr)) :=
   (e.any_data_as_list.getD []).map (·.any_data_as_list.getD [] |> List.map infer)
+
+#eval infer ⟪₂ (I Data) ⟫
 
 #eval infer ⟪₂ I Data Data ⟫
 #eval infer ⟪₂ K' Data Data Data Data ⟫
@@ -841,6 +853,31 @@ Our equality needs to be able to detect asserts without beta reduction.
 We're adding another context on every time when we shouldn't be.
 
 It's the freeze context, probably.
+
+It seems like we're adding another layer of context somewhere.
+
+This is stupid.
+
+I feel like this assert rule is really dumb.
+
+Really dumb.
+
+I feel like we should be able to detect an assert that is a final operation in forming a type,
+and form the context from that instead of changing the rule for assert.
+
+It's just like, do we want contexts or not?
+
+It feels like we should be able to omit the context.
+But if we omit the context, then we should attach something to it. idk.
+Don't even remember what we've changed at this point.
+
+The solution to the current problem is to make sure that we introduce an explicit context whenever we want one.
 -/
 
-#eval infer ⟪₂ K' Data Data Data Data ⟫
+#eval do_step ⟪₂ exec (:: map assert) ((:: Data) ((:: quoted Data) nil)) ⟫
+#eval do_step ⟪₂ exec :mk_const_ctx ((:: Data) ((:: quoted Data) nil)) ⟫
+
+#eval do_step ⟪₂ exec (:: map quote) ((:: Data) ((:: quoted Data) nil)) ⟫
+#eval do_step ⟪₂ exec ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil)))) (, (:: Data nil) nil) ⟫
+
+#eval infer ⟪₂ K ⟫

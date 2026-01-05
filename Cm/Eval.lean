@@ -27,9 +27,12 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
     ⟪₂ (:: :x' nil) ⟫
   | ⟪₂ (:: map :f) ⟫, ⟪₂ :: :x :xs ⟫  =>
     let x' := exec_op f x
-    let xs' := exec_op f xs
+    let xs' := exec_op ⟪₂ (:: map :f) ⟫ xs
 
     ⟪₂ (:: :x' :xs') ⟫
+  | ⟪₂ (:: map :f) ⟫, e =>
+    let x' := exec_op f e
+    x'
   | ⟪₂ read ⟫, ⟪₂ (:: :x :_xs) ⟫ => x
   | ⟪₂ next ⟫, ⟪₂ (:: :_x :xs) ⟫ => xs
   | ⟪₂ fst ⟫, ⟪₂ (, :a :_b) ⟫ => a
@@ -38,9 +41,9 @@ def exec_op (my_op : Expr) (ctx : Expr) : Expr :=
   | ⟪₂ (:: push_on :x nil) ⟫, c => ⟪₂ :: :c :x ⟫
   | ⟪₂ (:: push_on (:: :x :xs)) ⟫, c => ⟪₂ :: :c (:: :x :xs) ⟫
   | ⟪₂ (:: push_on (, :a :b)) ⟫, c => ⟪₂ (, :c (, :a :b)) ⟫
-  | ⟪₂ (:: assert :x) ⟫, _ => ⟪₂ , (:: (:: assert :x) nil) (, nil nil) ⟫
+  | ⟪₂ (:: assert :x) ⟫, _ => x
   | ⟪₂ quote ⟫, a => ⟪₂ (:: assert :a) ⟫
-  | ⟪₂ assert ⟫, a => ⟪₂ , (:: (:: assert :a) nil) (, nil nil) ⟫
+  | ⟪₂ assert ⟫, a => a
   | ⟪₂ (:: apply (:: :f :g)) ⟫, Γ =>
     let f' := exec_op f Γ
     let g' := exec_op g Γ

@@ -307,10 +307,7 @@ def far_left_s_γ (t_in t_out : Expr) : Except Error Expr := do
     (:: (:: fst (:: next (:: read assert))) (:: (:: fst (:: next (:: next (:: read assert)))) nil))) (, (:: :t_nf (:: :t_in (:: :t_out nil))) nil) ⟫
   let t_t_γ ← infer t_γ
 
-  let t_k_f := ⟪₂ , (::
-    (:: fst (:: read assert))
-    (:: (:: fst (:: next (:: read assert))) nil))
-    (, (:: :t_in (:: :α nil)) nil) ⟫
+  let t_k_f ← t_k_f_app t_in t_out
 
   -- γ receives f and ((K f) : t_x → t_f)
   let ret_γ := ⟪₂ K' :t_t_γ :t_k_f :t_γ ⟫
@@ -338,7 +335,10 @@ def test_γ_f_app : Except Error Expr := do
   let my_f := ⟪₂ I :t_data ⟫
 
   let γ ← far_left_s_γ t_data t_data
-  infer ⟪₂ :γ :my_f ⟫
+
+  let my_k := ⟪₂ (#church_succ_k_f t_data t_data) :my_f ⟫
+
+  infer ⟪₂ :γ :my_f :my_k ⟫
 
 #eval test_γ_f_app
 

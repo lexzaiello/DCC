@@ -349,8 +349,6 @@ def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
   match ← do_step ⟪₂ exec :Γ_elem :c ⟫ with
   | ⟪₂ , :Γ :C ⟫ => pure ⟪₂ , :Γ :C ⟫
   | t =>
-    dbg_trace ⟪₂ exec :Γ_elem :c ⟫
-    dbg_trace s!"hi: {t}"
     .error <| .not_type t
 
 def n_args (Γ : Expr) : ℕ := (do
@@ -378,8 +376,6 @@ So, we can do recursive descent and compare each one by normalization.
 def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
   match expected, actual with
   | ⟪₂ , :Γ₁ (, :Δ₁ :Ξ₁) ⟫, ⟪₂ , :Γ₂ (, :Δ₂ :Ξ₂) ⟫ => do
-    dbg_trace expected
-    dbg_trace actual
     /-
       To compare the types, see how many input assertions the contexts are making.
       Then, extend the smallest of the two Δ registers with unique quoted data
@@ -469,8 +465,6 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
     let t_f ← infer f with_dbg_logs
     let raw_t_arg ← infer arg with_dbg_logs
 
-    dbg_trace s!"fn: {t_f}"
-
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
       let Δ' := Expr.push_in ⟪₂ quoted :arg ⟫ Δ
@@ -478,11 +472,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
 
-      dbg_trace s!"arg: {arg}"
-      dbg_trace check_with
       let expected'' ← run_context check_with ⟪₂ (, :Δ' :Ξ') ⟫
-
-      dbg_trace expected''
 
       let _ ← tys_are_eq expected'' raw_t_arg e
 
@@ -806,15 +796,19 @@ This is mildly suspicious though,
 that we can just mix and match the comma part. We'll see
 
 We should also use quotation consistently.
+
+Ok this still lets us use Data as the argument,
+which is nice, but confusing,
+since we used ass_data.
 -/
 
 def my_example : Except Error Expr := do
-  let t_data ← infer ⟪₂ Data ⟫
-  infer ⟪₂ I :t_data Data ⟫
+  infer ⟪₂ I Data Data ⟫
 
 #eval infer ⟪₂ :: assert nil ⟫
 #eval infer ⟪₂ ((:: ((:: assert) quoted Data)) nil) ⟫
 #eval infer ⟪₂ ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil)) ⟫
+#eval infer ⟪₂ Data ⟫
 #eval my_example
 
 #eval infer ⟪₂ K ⟫
@@ -848,3 +842,5 @@ We're adding another context on every time when we shouldn't be.
 
 It's the freeze context, probably.
 -/
+
+#eval infer ⟪₂ K' Data Data Data Data ⟫

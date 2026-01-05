@@ -52,27 +52,6 @@ def mk_i_example (x : Expr) : Except Error Expr := do
   (fun e => ⟪₂ :e :x ⟫) <$> mk_i t_x
 
 /-
-γ should be the output type.
--/
-def test_γ : Except Error Expr := do
-  let γ := ⟪₂ (((K' ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: quoted Data) ((:: quoted ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: quoted ((, ((:: ((:: assert) Data)) ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) Data)) ((:: push_on) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil))) nil)))) ((:: ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((:: Data) ((:: Data) nil)))))) ((, ((:: ((:: assert) Data)) ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) Data)) ((:: push_on) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil))) (((K' Data) ((, ((:: ((:: assert) Data)) nil)) ((, nil) nil))) ((, ((:: ((:: assert) Data)) ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) Data)) ((:: push_on) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil)))) ⟫
-
-  pure ⟪₂ :γ K Data ⟫
-
-/-
-γ gives the type of K
--/
-#eval (try_step_n 10 <$> test_γ) >>=
-  (fun t => do pure (t == (← infer ⟪₂ K ⟫)))
-#eval try_step_n 10 <$> test_γ
-#eval infer ⟪₂ K ⟫
-#eval test_γ >>= infer
-
-#eval mk_i_example ⟪₂ K ⟫
-  >>= infer
-
-
-/-
 I works, but we're probably messing up in at least one place.
 -/
 

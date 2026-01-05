@@ -21,6 +21,8 @@ def mk_i (t_x : Expr) : Except Error Expr := do
 
   let t_t_data ← infer t_data
 
+  dbg_trace ⟪₂ K' :t_x :t_data ⟫
+
   pure ⟪₂ S :t_x (K' :t_t_data :t_x :t_data) :aa_t_x (K' :t_x :t_data) (K' :t_data :t_x Data) ⟫
 
 def my_example : Except Error Expr := do

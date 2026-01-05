@@ -315,6 +315,25 @@ def far_left_s_γ (t_in t_out : Expr) : Except Error Expr := do
 
   pure ⟪₂ K' :t_ret_γ :α :ret_γ ⟫
 
+def far_left_s_β (t_in t_out : Expr) : Except Error Expr := do
+  let α := church_t_f t_in t_out
+  let t_k_f ← t_k_f_app t_in t_out
+  let t_t_k_f ← infer t_k_f
+
+  pure ⟪₂ K' :t_t_k_f :α :t_k_f ⟫
+
+def test_far_left_s_β : Except Error Expr := do
+  let x := ⟪₂ Data ⟫
+  let t_x ← infer x
+  let my_f := ⟪₂ I :t_x ⟫
+
+  let β ← far_left_s_β t_x t_x
+
+  dbg_trace infer ⟪₂ (#church_succ_k_f t_x t_x) :my_f ⟫
+  dbg_trace do_step ⟪₂ :β :my_f ⟫
+
+  pure ⟪₂ :β :my_f ⟫
+
 def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let γ ← far_left_s_γ t_in t_out
   let α := church_t_f t_in t_out

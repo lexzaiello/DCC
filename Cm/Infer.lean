@@ -455,7 +455,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
       match Γ'.as_singleton with
       | .some t_out =>
-        do_or_unquote ⟪₂ (, :Δ' :Ξ') ⟫ t_out |> unwrap_with (.stuck ⟪₂ exec :t_out (, :Δ' :Ξ') ⟫)
+        freeze_context ⟪₂ :: :t_out nil ⟫ ⟪₂ (, :Δ' :Ξ') ⟫
       | _ =>
         pure ⟪₂ , :Γ' (, :Δ' :Ξ') ⟫
     | _ =>
@@ -663,6 +663,46 @@ map combinator.
 
 Note:
 we still haven't really dealt with quotation.
+
+Note: contexts should only be frozen when
+exactly one assertion remains.
 -/
 
+#eval infer ⟪₂ I Data Data ⟫
+
 #eval infer ⟪₂ Data ⟫
+
+def test_ty_eq : Except Error Unit := do
+  let my_t ← infer ⟪₂ Data ⟫
+
+  tys_are_eq my_t my_t ⟪₂ nil ⟫
+
+#eval test_ty_eq
+
+/-
+Notes on quoting:
+
+Where do most of the issues with quoting happen?
+
+App, mainly.
+They also came because we had a bunch of big contexts left around.
+Note, though, since we're subbing in the Δ register,
+these will be quoted as well.
+
+The main issue is we end up with a bunch of deeply quoted stuff in our final context.
+
+Exec should handle this somewhat, though.
+
+We already do kinda freeze the context, though, so this is confusing.
+
+The sus part is that we don't put it in a context format.
+This is where things get confusing.
+
+Another thought:
+
+I feel like we are insufficiently quoting things.
+The purpose of quoted is to prevent non-data arguments from getting in the registers.
+
+The quotation is fine, actually.
+We should just be consistent about it.
+-/

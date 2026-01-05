@@ -290,6 +290,14 @@ def far_left_s (t_in t_out : Expr) : Except Error Expr := do
 
   pure ⟪₂ S :α :β :γ ⟫
 
+def inner_combs (t_in t_out : Expr) : Except Error Expr := do
+  pure ⟪₂ (#← far_left_s t_in t_out) (#← return_s t_in t_out) (#church_succ_innermost_k t_in t_out) ⟫
+
+#eval inner_combs ⟪₂ Data ⟫ ⟪₂ Data ⟫ >>= infer
+
+def outermost_s (t_in t_out : Expr) : Except Error Expr := do
+  
+
 #eval far_left_s ⟪₂ Data ⟫ ⟪₂ Data ⟫
 
 --def church_succ_outer_s (t_in t_out : Expr) : Except Error Expr := do

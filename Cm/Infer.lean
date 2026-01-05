@@ -22,12 +22,6 @@ asserts in a context.
 def mk_const_ctx : Expr :=
   ⟪₂ (:: (:: map quote) (:: push_on (, nil nil))) ⟫
 
-def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
-  (o.map Except.ok).getD (.error ε)
-
-def do_step (e : Expr) : Except Error Expr :=
-  unwrap_with (Error.stuck e) (try_step_n 10 e)
-
 def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
   -- Throw a nicer error with a location if we the data are lists
   match Expr.as_list expected, Expr.as_list actual with
@@ -871,4 +865,6 @@ Don't even remember what we've changed at this point.
 The solution to the current problem is to make sure that we introduce an explicit context whenever we want one.
 -/
 
-#eval infer ⟪₂ I Data Data ⟫
+#eval infer ⟪₂ K Data (I Data) ⟫
+
+

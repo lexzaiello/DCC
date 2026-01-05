@@ -9,14 +9,26 @@ of a context.
 e.g.,
 (, (:: (:: assert x) nil) (, nil nil))
 -/
-def mk_null_ctx : Expr :=
+def mk_singleton_ctx : Expr :=
   ⟪₂ (:: quote (:: (:: push_on nil) (:: push_on (, nil nil)))) ⟫
+
+def ass_data : Expr :=
+  ⟪₂ (:: assert (quoted Data)) ⟫
+
+/-
+Turns a list of constant values into
+asserts in a context.
+-/
+def mk_const_ctx : Expr :=
+  ⟪₂ (:: (:: map quote) (:: push_on (, nil nil))) ⟫
 
 def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error ε)
 
 def do_step (e : Expr) : Except Error Expr :=
   unwrap_with (Error.stuck e) (try_step_n 10 e)
+
+#eval do_step ⟪₂ exec (:: (:: both (:: (:: fst (:: read assert)) (:: :ass_data (:: push_on nil)))) :mk_const_ctx) (, (:: Data nil) nil) ⟫
 
 def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
   -- Throw a nicer error with a location if we the data are lists
@@ -94,9 +106,6 @@ def assert_all_with_context (e : Expr) : Expr :=
 
 def read_data : Expr :=
   ⟪₂ , (:: (quote (quoted Data)) (:: (quote (quoted Data)) nil)) ⟫
-
-def ass_data : Expr :=
-  ⟪₂ (:: assert (quoted Data)) ⟫
 
 /-
 S type:
@@ -402,7 +411,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   | ⟪₂ push_on ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ S ⟫ => pure s.s_rule
   | ⟪₂ I ⟫ =>
-    let α := ⟪₂ (:: fst (:: read assert)) ⟫
+    let α := ⟪₂ (:: fst (:: read (:: assert :mk_singleton_ctx))) ⟫
     pure ⟪₂ , (:: :ass_data (:: :α (:: :α nil))) (, nil nil) ⟫
   | ⟪₂ K ⟫ =>
     let t_α := ⟪₂ :ass_data ⟫

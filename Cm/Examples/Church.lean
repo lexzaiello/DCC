@@ -170,8 +170,12 @@ def church_succ_innermost_k (t_in t_out : Expr) : Expr :=
 
   ⟪₂ K' :t_f :t_x ⟫
 
+
 /-
 S (K f) (n f) x
+
+S (K f) (n f) x
+= f (n f x)
 
 K f x = f
 
@@ -185,7 +189,9 @@ x : t_in
 
 α = t_in
 β = K t_out
-γ = K (K t_f)
+γ = K (K t_out)
+
+this is the S in KS
 -/
 def church_succ_innermost_s (t_in t_out : Expr) : Except Error Expr := do
   let t_t_out ← infer t_out
@@ -193,7 +199,13 @@ def church_succ_innermost_s (t_in t_out : Expr) : Except Error Expr := do
 
   let α := t_in
   let β := ⟪₂ K' :t_t_α :t_t_out :α ⟫
-  
+  let k_t_out := ⟪₂ K' :t_t_out :t_in :t_out ⟫
+  let t_k_t_out ← infer k_t_out
+  let γ := ⟪₂ K' :t_k_t_out :t_in :k_t_out ⟫
+
+  pure ⟪₂ S :α :β :γ ⟫
+
+
 
 --def church_succ_outer_s (t_in t_out : Expr) : Except Error Expr := do
   

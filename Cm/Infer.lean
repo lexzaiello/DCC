@@ -326,13 +326,31 @@ def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
   | ⟪₂ , :Γ :C ⟫ => pure ⟪₂ , :Γ :C ⟫
   | t => do_step ⟪₂ (:: exec (:: :mk_singleton_ctx :t)) ⟫
 
-def flatten_normal_assert : Expr → Expr
-  | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ => (do
+def flatten_normal_assert (e : Expr) : Expr :=
+  dbg_trace s!"to flatten: {e}"
+  match e with
+  | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
+    (do
     if (← Δ.as_list).length ≥ (← Γ.as_list).length then
-      .some <| (do_step ⟪₂ (:: exec (:: :Γ (, :Δ :Ξ))) ⟫).toOption.getD ⟪₂ , :Γ (, :Δ :Ξ) ⟫
+      let Γ' := (← Γ.as_list).map (fun Γ => (do_step ⟪₂ (:: exec (:: :Γ (, :Δ :Ξ))) ⟫).toOption.getD Γ)
+        |> Expr.from_list
+      .some ⟪₂ , :Γ' (, nil nil) ⟫
     else
       .none).getD ⟪₂ , :Γ (, :Δ :Ξ) ⟫
   | ⟪₂ quoted :e ⟫ => ⟪₂ quoted (#flatten_normal_assert e) ⟫
+  | e => e
+
+def unfold_quoted_list : Expr → Option Expr
+  | ⟪₂ (:: (quoted :x) :xs) ⟫ => do
+    ⟪₂ (:: (:: assert (quoted :x)) (#← unfold_quoted_list xs)) ⟫
+  | ⟪₂ nil ⟫ => ⟪₂ nil ⟫
+  | _ => .none
+
+def flatten_context (Γ : Expr) : Expr :=
+  match Γ with
+  | ⟪₂ :: (:: assert (quoted (, :tys (, nil nil)))) nil ⟫ =>
+    (do Option.some ⟪₂ (#← unfold_quoted_list tys) ⟫)
+      |> (Option.getD · Γ)
   | e => e
 
 /-
@@ -344,6 +362,8 @@ Does not detect whether nil values were produced.
 Attaches an empty Δ and Ξ context.
 -/
 def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
+  -- ((:: ((:: assert) quoted ((, ((:: quoted Data) ((:: quoted Data) nil))) ((, nil) nil)))) nil)
+  dbg_trace s!"to freeze: {Γ}"
   match Γ with
   | ⟪₂ (:: :x :xs) ⟫ => do
     let x' ← do_step ⟪₂ (:: exec (:: :x :c)) ⟫
@@ -407,8 +427,8 @@ def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
     /-
       Now, reduce by plugging in our "fake" context, and comparing the remaining values.
     -/
-    let expected' ← freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
-    let actual' ← freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
+    let expected' ← flatten_context <$> freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
+    let actual' ← flatten_context <$> freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
 
     dbg_trace expected'
     dbg_trace actual'

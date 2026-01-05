@@ -341,8 +341,6 @@ Note:
 somehow, we end up with a loose nil in the Δ.
 -/
 
-#eval test_far_left_s_β
-
 def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let γ ← far_left_s_γ t_in t_out
   let α := church_t_f t_in t_out

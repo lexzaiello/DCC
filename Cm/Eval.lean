@@ -120,7 +120,7 @@ def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error ε)
 
 def do_step (e : Expr) : Except Error Expr :=
-  unwrap_with (Error.stuck e) (try_step_n 20 e)
+  unwrap_with (Error.stuck e) (try_step_n 30 e)
 
 def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).getD e
 

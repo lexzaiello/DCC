@@ -28,7 +28,16 @@ def my_examplebruh : Except Error Expr := do
   let my_i ← mk_i t_data
   pure ⟪₂ :my_i Data ⟫
 
+#eval run_contexts ⟪₂ ((, ((:: ((:: assert) Data)) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' Data) Data) Data))) ((:: fst) ((:: read) assert))))) ((:: ((:: assert) Data)) nil)))) ((, nil) nil)) ⟫
+
 #eval run_contexts ⟪₂ ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: Data) ((:: Data) ((:: Data) nil))))) ⟫
+
+/-
+
+-/
+
+#eval run_contexts ⟪₂ ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: Data) ((:: Data) ((:: Data) nil)))))) ((:: Data) ((:: quoted (((K' Data) Data) Data)) nil)))) ((:: Data) ((:: Data) ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: Data) ((:: Data) ((:: Data) nil)))))) nil))))) ⟫
+
 #eval infer ⟪₂(((K' ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: Data) ((:: Data) ((:: Data) nil)))))) Data) (((K' Data) Data) Data)) ⟫
 
 #eval my_examplebruh >>= infer

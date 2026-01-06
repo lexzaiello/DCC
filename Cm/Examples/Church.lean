@@ -3,6 +3,32 @@ import Cm.Eval
 import Cm.Infer
 
 /-
+Idea:
+- global context,
+
+- something similar to exec,
+but for contexts.
+
+Two issues, but they all mainly stem from deeply nested contexts.
+We never know when will pop out, what form it will be in, and how to compare.
+
+I feel like the issue is with currying.
+
+The other issue is that the types we give to the user are also deeply nested.
+If the user inputs a context with state and reads, we should have some way to sequence that.
+
+Maybe having nested contexts overall is kinda sus.
+It seems sus.
+
+Also quotation is mega sus.
+
+One potential thought is that we can combine contexts, somehow.
+
+Even if the church numeral example is wrong,
+it's still insane to have these humongous types to haul around.
+-/
+
+/-
 I derived from S with any t_x
 -/
 def mk_i (t_x : Expr) : Except Error Expr := do
@@ -71,6 +97,43 @@ def mk_flse_test (a b : Expr) : Except Error Expr := do
   >>= infer)
   >>= (fun t_out => do
     pure (t_out == (← infer ⟪₂ S ⟫)))
+
+def church_t_f (t_in t_out : Expr) : Expr :=
+  ⟪₂ , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) nil)) (, (:: :t_in (:: :t_out nil)) nil) ⟫
+
+def church_t_x (t_in _t_out : Expr) : Expr :=
+  ⟪₂ , (:: (:: fst (:: read assert)) nil) (, (:: :t_in nil) nil) ⟫
+
+def church_t_n_f_app (t_in t_out : Expr) : Expr :=
+  ⟪₂ , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) nil)) (, (:: :t_in (:: :t_out nil)) nil) ⟫
+
+def s_outermost_β (t_in t_out : Expr) : Except Error Expr := do
+  let t_f := church_t_f t_in t_out
+  let t_f_app := church_t_n_f_app t_in t_out
+  let t_t_f_app ← infer t_f_app
+  pure ⟪₂ K' :t_t_f_app :t_f :t_f_app ⟫
+
+def test_s_outermost_β : Except Error Expr := do
+  let t_data ← infer ⟪₂ Data ⟫
+  let β ← s_outermost_β t_data t_data
+
+  let my_f := ⟪₂ I :t_data ⟫
+
+  pure ⟪₂ :β :my_f ⟫
+
+
+
+/-
+S(S(KS)K) n f
+
+n : (t_in → t_out) → t_in → t_out
+
+n f : t_in → t_out
+
+((S(KS)K) f) (n f)
+
+S(S(KS)K) n f x
+-/
 
 /-
 Church numerals:
@@ -147,12 +210,6 @@ ezpz, I think.
 -/
 
 #eval infer ⟪₂ I Data ⟫
-
-def church_t_f (t_in t_out : Expr) : Expr :=
-  ⟪₂ , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) nil)) (, (:: :t_in (:: :t_out nil)) nil) ⟫
-
-def church_t_x (t_in _t_out : Expr) : Expr :=
-  ⟪₂ , (:: (:: fst (:: read assert)) nil) (, (:: :t_in nil) nil) ⟫
 
 def church_succ_k_f (t_in t_out : Expr) : Expr :=
   let t_f := church_t_f t_in t_out
@@ -289,6 +346,8 @@ n_f = , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) ni
 = S (K f) -- γ is this type
 
 S (K f) (n f) x
+
+S (K f) : (t_in → t_out) → t_in → t_out
 -/
 
 def t_k_f_app (t_in t_out : Expr) : Except Error Expr := do match ← infer (church_succ_k_f t_in t_out) with
@@ -336,23 +395,17 @@ def test_far_left_s_β : Except Error Expr := do
 
   pure ⟪₂ :β :my_f ⟫
 
-/-
-Note:
-somehow, we end up with a loose nil in the Δ.
--/
+#eval test_far_left_s_β
 
 def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let γ ← far_left_s_γ t_in t_out
   let α := church_t_f t_in t_out
 
-  let t_k_f ← t_k_f_app t_in t_out
-  let t_t_k_f ← infer t_k_f
-
-  let β := ⟪₂ K' :t_t_k_f :α :t_k_f ⟫
+  let β ← far_left_s_β t_in t_in
 
   pure ⟪₂ S :α :β :γ ⟫
 
-#eval far_left_s ⟪₂ Data ⟫ ⟪₂ Data ⟫
+#eval far_left_s ⟪₂ Data ⟫  ⟪₂ Data ⟫
   >>= infer
 
 def test_γ_f_app : Except Error Expr := do
@@ -367,10 +420,8 @@ def test_γ_f_app : Except Error Expr := do
 
 #eval test_γ_f_app
 
-#eval far_left_s ⟪₂ Data ⟫ ⟪₂ Data ⟫ >>= infer
-
-def inner_combs (t_in t_out : Expr) : Except Error Expr := do
-  pure ⟪₂ (#← far_left_s t_in t_out) (#← return_s t_in t_out) (#church_succ_innermost_k t_in t_out) ⟫
+/-def inner_combs (t_in t_out : Expr) : Except Error Expr := do
+  pure ⟪₂ (#← far_left_s t_in t_out) (#← return_s t_in t_out) (#church_succ_innermost_k t_in t_out) ⟫-/
 
 --def outermost_s (t_in t_out : Expr) : Except Error Expr := do
   

@@ -2,6 +2,24 @@ import Cm.Ast
 import Cm.Eval
 import Cm.Error
 
+def quote_smart (e : Expr) : Expr :=
+  match e with
+  | ⟪₂ quoted :e ⟫
+  | ⟪₂ :: :_x :_xs ⟫
+  | ⟪₂ nil ⟫
+  | ⟪₂ map ⟫
+  | ⟪₂ fst ⟫
+  | ⟪₂ snd ⟫
+  | ⟪₂ both ⟫
+  | ⟪₂ exec ⟫
+  | ⟪₂ read ⟫
+  | ⟪₂ apply ⟫
+  | ⟪₂ quote ⟫
+  | ⟪₂ push_on ⟫
+  | ⟪₂ Data ⟫
+  | ⟪₂ , :_a :_b ⟫ => e
+  | e => ⟪₂ quoted :e ⟫
+
 /-
 Takes an assert value and builds it as the sole type
 of a context.
@@ -13,7 +31,7 @@ def mk_singleton_ctx : Expr :=
   ⟪₂ (:: quote (:: (:: push_on nil) (:: push_on (, nil nil)))) ⟫
 
 def ass_data : Expr :=
-  ⟪₂ (:: assert (quoted Data)) ⟫
+  ⟪₂ (:: assert Data) ⟫
 
 /-
 Turns a list of constant values into
@@ -46,7 +64,7 @@ def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
       .error <| .mismatch_arg expected actual in_app .none
 
 def read_data : Expr :=
-  ⟪₂ , (:: (quote (quoted Data)) (:: (quote (quoted Data)) nil)) ⟫
+  ⟪₂ , (:: (quote Data) (:: (quote Data) nil)) ⟫
 
 /-
 S type:
@@ -117,14 +135,14 @@ and quoted the rest.
 there's just an extra both.
 -/
 
-def test_γ_ctx : Expr := ⟪₂ , (:: (quoted Data) (:: (quoted (I Data)) nil)) nil ⟫
+def test_γ_ctx : Expr := ⟪₂ , (:: Data (:: (quoted (I Data)) nil)) nil ⟫
 def γ_e_1 := do_step ⟪₂ (:: exec (:: :γ :test_γ_ctx)) ⟫
 
 #eval γ_e_1
 
-#eval do_step ⟪₂ (:: exec (:: ((:: apply) ((:: ((:: assert) (quoted (I Data)))) ((:: fst) ((:: read) assert)))) (, (:: (quoted Data) nil) nil))) ⟫
+#eval do_step ⟪₂ (:: exec (:: ((:: apply) ((:: ((:: assert) (quoted (I Data)))) ((:: fst) ((:: read) assert)))) (, (:: Data nil) nil))) ⟫
 
-#eval (γ_e_1 >>= (fun e => do_step ⟪₂ (:: exec (:: :e (, (:: (quoted Data) nil) nil))) ⟫))
+#eval (γ_e_1 >>= (fun e => do_step ⟪₂ (:: exec (:: :e (, (:: Data nil) nil))) ⟫))
 
 /-
 x : ∀ (z : α) (y : β z), γ z y
@@ -171,7 +189,7 @@ For testing the x type, S's context:
 - β = I Data
 - γ = I
 -/
-def test_context_arg_x : Expr := ⟪₂ (, (:: (quoted Data) (:: (quoted (I Data)) (:: (quoted I) nil))) nil) ⟫
+def test_context_arg_x : Expr := ⟪₂ (, (:: Data (:: (quoted (I Data)) (:: (quoted I) nil))) nil) ⟫
 
 /-
 this should be:
@@ -420,7 +438,7 @@ def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
     -/
     let dummy_args := (List.range (max (n_args Γ₁) (n_args Γ₂))).map (fun arg_n =>
       (List.replicate arg_n ⟪₂ Data ⟫).foldl (fun acc x => ⟪₂ , :acc :x ⟫) ⟪₂ Data ⟫
-        |> (fun test_e => ⟪₂ quoted :test_e ⟫))
+        |> (fun test_e => quote_smart ⟪₂ :test_e ⟫))
         |> Expr.from_list
     let Δ_test ← unwrap_with (Error.short_context Δ₁) (Expr.list_max Δ₁ Δ₂ >>= (Expr.list_concat · dummy_args))
 
@@ -446,7 +464,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   | ⟪₂ read ⟫
   | ⟪₂ apply ⟫
   | ⟪₂ quote ⟫
-  | ⟪₂ push_on ⟫ => pure ⟪₂ quoted Data ⟫
+  | ⟪₂ push_on ⟫ => pure ⟪₂ Data ⟫
   | ⟪₂ S ⟫ => pure s.s_rule
   | ⟪₂ I ⟫ =>
     let α := ⟪₂ (:: fst (:: read assert)) ⟫
@@ -471,7 +489,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
               (:: fst (:: read assert))
               nil)))))
       (, nil nil) ⟫
-  | ⟪₁ quoted :_e ⟫ => pure ⟪₂ quoted Data ⟫
+  | ⟪₁ quoted :_e ⟫ => pure ⟪₂ Data ⟫
   | ⟪₂ :: ⟫
   | ⟪₂ , ⟫ => pure ⟪₂ ,
     (::
@@ -481,18 +499,21 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
         (::
           :ass_data nil)))
       (, nil nil) ⟫
-  | ⟪₂ nil ⟫ => pure ⟪₂ quoted Data ⟫
-  | ⟪₂ Data ⟫ => pure ⟪₂ quoted Data ⟫
+  | ⟪₂ nil ⟫ => pure ⟪₂ Data ⟫
+  | ⟪₂ Data ⟫ => pure ⟪₂ Data ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f with_dbg_logs
     let raw_t_arg ← infer arg with_dbg_logs
 
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
-      let Δ' := Expr.push_in ⟪₂ quoted :arg ⟫ Δ
+      dbg_trace Δ
+      let Δ' := Expr.push_in (quote_smart arg) Δ
       let Ξ' := Expr.push_in raw_t_arg Ξ
 
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
+
+      dbg_trace ⟪₂ :: exec (:: :check_with (, :Δ' :Ξ')) ⟫
 
       let expected'' ← do_step ⟪₂ :: exec (:: :check_with (, :Δ' :Ξ')) ⟫
 
@@ -526,6 +547,7 @@ An easy strategy we could do is:
 -/
 
 #eval infer ⟪₂ I Data Data ⟫
+#eval infer ⟪₂ (I Data) ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
 def infer_list (e : Expr) : List (List (Except Error Expr)) :=

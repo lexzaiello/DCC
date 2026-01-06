@@ -95,10 +95,6 @@ def step (e : Expr) : Option Expr :=
     let g' ← step ⟪₂ :: exec :g ⟫
 
     pure ⟪₂ :: exec (:: apply (:: :f :g')) ⟫
-  | ⟪₂ (:: exec (:: apply (:: (quoted :f) :g))) ⟫ => do
-    let x' := (step ⟪₂ :f :g ⟫).getD ⟪₂ :f :g ⟫
-
-    quote_smart x'
   | ⟪₂ (:: exec (:: :f :ctx)) ⟫ =>
     let e' := exec_op f ctx
     e'
@@ -124,7 +120,7 @@ def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error ε)
 
 def do_step (e : Expr) : Except Error Expr :=
-  unwrap_with (Error.stuck e) (try_step_n 50 e)
+  unwrap_with (Error.stuck e) (try_step_n 30 e)
 
 def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).getD e
 

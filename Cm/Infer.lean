@@ -13,7 +13,7 @@ def mk_singleton_ctx : Expr :=
   ⟪₂ (:: quote (:: (:: push_on nil) (:: push_on (, nil nil)))) ⟫
 
 def ass_data : Expr :=
-  ⟪₂ (:: assert Data) ⟫
+  ⟪₂ (:: assert (quoted Data)) ⟫
 
 /-
 Turns a list of constant values into
@@ -45,8 +45,22 @@ def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
     else
       .error <| .mismatch_arg expected actual in_app .none
 
+/-
+  Converts a rendered context, a list of types,
+  into a normal context, where all the assertions don't depend on actual arguments.
+-/
+def assert_all_with_context (e : Expr) : Expr :=
+  let rec add_asserts : Expr → Expr
+  | ⟪₂ nil ⟫ => ⟪₂ nil ⟫
+  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: (:: assert :x) (#add_asserts xs) ⟫
+  | x => x
+
+  match e with
+  | ⟪₂ :: :_x :_xs ⟫ => ⟪₂ , (#add_asserts e) (, nil nil) ⟫
+  | x => x
+
 def read_data : Expr :=
-  ⟪₂ , (:: (quote Data) (:: (quote Data) nil)) ⟫
+  ⟪₂ , (:: (quote (quoted Data)) (:: (quote (quoted Data)) nil)) ⟫
 
 /-
 S type:
@@ -117,14 +131,14 @@ and quoted the rest.
 there's just an extra both.
 -/
 
-def test_γ_ctx : Expr := ⟪₂ , (:: Data (:: (quoted (I Data)) nil)) nil ⟫
+def test_γ_ctx : Expr := ⟪₂ , (:: (quoted Data) (:: (quoted (I Data)) nil)) nil ⟫
 def γ_e_1 := do_step ⟪₂ (:: exec (:: :γ :test_γ_ctx)) ⟫
 
 #eval γ_e_1
 
-#eval do_step ⟪₂ (:: exec (:: ((:: apply) ((:: ((:: assert) (quoted (I Data)))) ((:: fst) ((:: read) assert)))) (, (:: Data nil) nil))) ⟫
+#eval do_step ⟪₂ (:: exec (:: ((:: apply) ((:: ((:: assert) (quoted (I Data)))) ((:: fst) ((:: read) assert)))) (, (:: (quoted Data) nil) nil))) ⟫
 
-#eval (γ_e_1 >>= (fun e => do_step ⟪₂ (:: exec (:: :e (, (:: Data nil) nil))) ⟫))
+#eval (γ_e_1 >>= (fun e => do_step ⟪₂ (:: exec (:: :e (, (:: (quoted Data) nil) nil))) ⟫))
 
 /-
 x : ∀ (z : α) (y : β z), γ z y
@@ -171,7 +185,7 @@ For testing the x type, S's context:
 - β = I Data
 - γ = I
 -/
-def test_context_arg_x : Expr := ⟪₂ (, (:: Data (:: (quoted (I Data)) (:: (quoted I) nil))) nil) ⟫
+def test_context_arg_x : Expr := ⟪₂ (, (:: (quoted Data) (:: (quoted (I Data)) (:: (quoted I) nil))) nil) ⟫
 
 /-
 this should be:
@@ -270,21 +284,35 @@ def Expr.display_infer : Expr → Option Expr
 --#eval do_step ⟪₂ (:: exec (:: ( ((:: fst) ((:: read) assert))) ((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil))) ((:: quoted K) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) ((:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil))) nil))))) ⟫
 
 /-
-No special formatting.
-Just a list of the output values after running,
-except if the output was nil given the context.
+If a context is explicitly produced, keep it.
+Otherwise, assume this is a free-standing well-typed value,
+and wrap it in an empty context.
+
+Also, if a context only contains quoted values,
+then we can just lift it.
+
+Another thing I'm thinking:
+we could do context flattening recursively somehow.
+
+We basically always want to drop the container around elements with just one thing in them.
+This comes from the mk_singleton thing.
+
+No shot.
+This mk_singleton_ctx thing is the opposite of what we want, potentially.
 -/
-def run_contexts (e : Expr) : Expr :=
-  match e with
-  | ⟪₂ , :l :C ⟫ =>
-    let maybe_run : Expr → Expr := fun x =>
-      let e' := (do_step ⟪₂ :: exec (:: :x :C) ⟫).map (fun v => ⟪₂ :: assert :v ⟫)
-      e'.toOption.getD x
+def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
+  match ← do_step ⟪₂ (:: exec (:: :Γ_elem :c)) ⟫ with
+  | ⟪₂ , :Γ :C ⟫
+  | ⟪₂ quoted (, :Γ :C) ⟫ => pure ⟪₂ , :Γ :C ⟫
+  | t => do_step ⟪₂ (:: exec (:: :mk_singleton_ctx :t)) ⟫
 
-    let l' := (Expr.from_list <$> (l.as_list.map (List.map maybe_run))).getD l
+--def push_singleton_context : Expr → Expr
+--  | ⟪₂ 
 
-    ⟪₂ , :l' :C ⟫
-  | e => e
+def pop_singleton_context : Expr → Expr
+  | ⟪₂ , (:: (:: assert (, :Γ :C)) nil) (, nil nil) ⟫ => pop_singleton_context ⟪₂ , :Γ :C ⟫
+  | ⟪₂ , (:: (:: assert (quoted (, :Γ :C))) nil) (, nil nil) ⟫ => pop_singleton_context ⟪₂ , :Γ :C ⟫
+  | x => x
 
 def flatten_normal_assert (e : Expr) : Expr :=
   match e with
@@ -365,6 +393,11 @@ def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
   | ⟪₂ nil ⟫, _ => .ok ⟪₂ nil ⟫
   | e, _ => .error <| .not_type e
 
+def guard_is_ty (Γ : Expr) : Except Error Unit :=
+  match Γ with
+  | ⟪₂ , :_Γ (, :_Δ :_Ξ) ⟫ => pure ()
+  | t => .error <| .not_type t
+
 def n_args (Γ : Expr) : ℕ := (do
   let all_asserts ← Γ.as_list
   return all_asserts.length - 1).getD 0
@@ -388,28 +421,40 @@ Note that types are uniquely identified by the triple (, Γ (, Δ Ξ))
 So, we can do recursive descent and compare each one by normalization.
 -/
 def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
-  dbg_trace expected
-  dbg_trace actual
   match expected, actual with
   | ⟪₂ , :Γ₁ (, :Δ₁ :Ξ₁) ⟫, ⟪₂ , :Γ₂ (, :Δ₂ :Ξ₂) ⟫ => do
-    if run_contexts expected == run_contexts actual then
-      pure ()
-    else
-      let dummy_args := (List.range (max (n_args Γ₁) (n_args Γ₂))).map (fun arg_n =>
-        (List.replicate arg_n ⟪₂ Data ⟫).foldl (fun acc x => ⟪₂ , :acc :x ⟫) ⟪₂ Data ⟫
-          |> (fun test_e => quote_smart ⟪₂ :test_e ⟫))
-          |> Expr.from_list
-      let Δ_test ← unwrap_with (Error.short_context Δ₁) (Expr.list_max Δ₁ Δ₂ >>= (Expr.list_concat · dummy_args))
+    /-
+      To compare the types, see how many input assertions the contexts are making.
+      Then, extend the smallest of the two Δ registers with unique quoted data
+      until enough have been supplied.
 
-      /-
-        Now, reduce by plugging in our "fake" context, and comparing the remaining values.
-      -/
-      let expected' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
-      let actual' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
+      Use the same context for both.
+      Use the larger of the two contexts if possible.
 
-      assert_eq expected' actual' at_app
-        <|> assert_eq (fold_ctx ⟪₂ , :expected' (, nil nil) ⟫) (fold_ctx ⟪₂ , :actual' (, nil nil) ⟫) at_app
-  | e₁, e₂ => if e₁ == e₂ then pure () else Except.error <| .combine (.not_type e₁) (.not_type e₂)
+      Note that the Δ context will contain existing values.
+      So we should extend by as many args are left.
+
+      Also note that we aren't using these test contexts to type-check.
+      Just to compare def eq.
+
+      Also note that the type shouldn't be looking inside the element, so
+      its value doesn't matter, as long as it is somewhat unique.
+    -/
+    let dummy_args := (List.range (max (n_args Γ₁) (n_args Γ₂))).map (fun arg_n =>
+      (List.replicate arg_n ⟪₂ Data ⟫).foldl (fun acc x => ⟪₂ , :acc :x ⟫) ⟪₂ Data ⟫
+        |> (fun test_e => ⟪₂ quoted :test_e ⟫))
+        |> Expr.from_list
+    let Δ_test ← unwrap_with (Error.short_context Δ₁) (Expr.list_max Δ₁ Δ₂ >>= (Expr.list_concat · dummy_args))
+
+    /-
+      Now, reduce by plugging in our "fake" context, and comparing the remaining values.
+    -/
+    let expected' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
+    let actual' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
+
+    assert_eq expected' actual' at_app
+      <|> assert_eq (fold_ctx ⟪₂ , :expected' (, nil nil) ⟫) (fold_ctx ⟪₂ , :actual' (, nil nil) ⟫) at_app
+  | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)
 
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   match e with
@@ -423,7 +468,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   | ⟪₂ read ⟫
   | ⟪₂ apply ⟫
   | ⟪₂ quote ⟫
-  | ⟪₂ push_on ⟫ => pure ⟪₂ Data ⟫
+  | ⟪₂ push_on ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ S ⟫ => pure s.s_rule
   | ⟪₂ I ⟫ =>
     let α := ⟪₂ (:: fst (:: read assert)) ⟫
@@ -448,7 +493,9 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
               (:: fst (:: read assert))
               nil)))))
       (, nil nil) ⟫
-  | ⟪₁ quoted :_e ⟫ => pure ⟪₂ Data ⟫
+  | ⟪₁ quoted :_e ⟫ => pure ⟪₂ ,
+    (:: :ass_data nil)
+    (, nil nil) ⟫
   | ⟪₂ :: ⟫
   | ⟪₂ , ⟫ => pure ⟪₂ ,
     (::
@@ -458,20 +505,23 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
         (::
           :ass_data nil)))
       (, nil nil) ⟫
-  | ⟪₂ nil ⟫ => pure ⟪₂ Data ⟫
-  | ⟪₂ Data ⟫ => pure ⟪₂ Data ⟫
+  | ⟪₂ nil ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
+  | ⟪₂ Data ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f with_dbg_logs
     let raw_t_arg ← infer arg with_dbg_logs
 
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
-      let Δ' := Expr.push_in (quote_smart arg) Δ
+      let Δ' := Expr.push_in ⟪₂ quoted :arg ⟫ Δ
       let Ξ' := Expr.push_in raw_t_arg Ξ
 
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
 
-      let expected'' ← do_step ⟪₂ :: exec (:: :check_with (, :Δ' :Ξ')) ⟫
+      let expected'' := (← run_context check_with ⟪₂ (, :Δ' :Ξ') ⟫) |> pop_singleton_context
+
+      --dbg_trace fold_ctx raw_t_arg
+      --dbg_trace fold_ctx expected''
 
       let _ ← tys_are_eq expected'' raw_t_arg e
 
@@ -479,7 +529,9 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
       match Γ'.as_singleton with
       | .some t_out =>
-        do_step ⟪₂ :: exec (:: :t_out (, :Δ' :Ξ')) ⟫
+        let t_out' := (← run_context t_out ⟪₂ (, :Δ' :Ξ') ⟫) |> pop_singleton_context
+        guard_is_ty t_out'
+        pure t_out'
       | _ =>
         pure ⟪₂ , :Γ' (, :Δ' :Ξ') ⟫
     | _ =>
@@ -503,7 +555,6 @@ An easy strategy we could do is:
 -/
 
 #eval infer ⟪₂ I Data Data ⟫
-#eval infer ⟪₂ (I Data) ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
 def infer_list (e : Expr) : List (List (Except Error Expr)) :=
@@ -515,7 +566,7 @@ def infer_list (e : Expr) : List (List (Except Error Expr)) :=
 #eval infer ⟪₂ K' Data Data Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
-#eval infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (I Data) Data ⟫
+#eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (I Data) Data ⟫
 
 #eval (infer <=< infer) ⟪₂ S ⟫
 

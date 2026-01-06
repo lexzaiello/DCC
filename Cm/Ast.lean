@@ -134,24 +134,6 @@ def Expr.as_asserts : Expr → Option Expr
   | ⟪₂ , :Γ (, :_Δ :_Ξ) ⟫ => Γ
   | _ => .none
 
-def quote_smart (e : Expr) : Expr :=
-  match e with
-  | ⟪₂ quoted :e ⟫
-  | ⟪₂ :: :_x :_xs ⟫
-  | ⟪₂ nil ⟫
-  | ⟪₂ map ⟫
-  | ⟪₂ fst ⟫
-  | ⟪₂ snd ⟫
-  | ⟪₂ both ⟫
-  | ⟪₂ exec ⟫
-  | ⟪₂ read ⟫
-  | ⟪₂ apply ⟫
-  | ⟪₂ quote ⟫
-  | ⟪₂ push_on ⟫
-  | ⟪₂ Data ⟫
-  | ⟪₂ , :_a :_b ⟫ => e
-  | e => ⟪₂ quoted :e ⟫
-
 def Expr.as_singleton : Expr → Option Expr
   | ⟪₂ :: :x nil ⟫ => x
   | _ => .none

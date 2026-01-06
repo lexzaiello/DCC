@@ -28,18 +28,6 @@ def my_examplebruh : Except Error Expr := do
   let my_i ← mk_i t_data
   pure ⟪₂ :my_i Data ⟫
 
-#eval run_contexts ⟪₂ ((, ((:: ((:: assert) Data)) ((:: ((:: apply) ((:: ((:: assert) quoted (((K' Data) Data) Data))) ((:: fst) ((:: read) assert))))) ((:: ((:: assert) Data)) nil)))) ((, nil) nil)) ⟫
-
-#eval run_contexts ⟪₂ ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: Data) ((:: Data) ((:: Data) nil))))) ⟫
-
-/-
-
--/
-
-#eval run_contexts ⟪₂ ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: Data) ((:: Data) ((:: Data) nil)))))) ((:: Data) ((:: quoted (((K' Data) Data) Data)) nil)))) ((:: Data) ((:: Data) ((:: ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: Data) ((:: Data) ((:: Data) nil)))))) nil))))) ⟫
-
-#eval infer ⟪₂(((K' ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: Data) ((:: Data) ((:: Data) nil)))))) Data) (((K' Data) Data) Data)) ⟫
-
 #eval my_examplebruh >>= infer
 
 def my_examplebruh2 : Except Error Expr := do
@@ -356,7 +344,11 @@ somehow, we end up with a loose nil in the Δ.
 def far_left_s (t_in t_out : Expr) : Except Error Expr := do
   let γ ← far_left_s_γ t_in t_out
   let α := church_t_f t_in t_out
-  let β ← far_left_s_β t_in t_out
+
+  let t_k_f ← t_k_f_app t_in t_out
+  let t_t_k_f ← infer t_k_f
+
+  let β := ⟪₂ K' :t_t_k_f :α :t_k_f ⟫
 
   pure ⟪₂ S :α :β :γ ⟫
 

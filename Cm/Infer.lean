@@ -2,24 +2,6 @@ import Cm.Ast
 import Cm.Eval
 import Cm.Error
 
-def quote_smart (e : Expr) : Expr :=
-  match e with
-  | ⟪₂ quoted :e ⟫
-  | ⟪₂ :: :_x :_xs ⟫
-  | ⟪₂ nil ⟫
-  | ⟪₂ map ⟫
-  | ⟪₂ fst ⟫
-  | ⟪₂ snd ⟫
-  | ⟪₂ both ⟫
-  | ⟪₂ exec ⟫
-  | ⟪₂ read ⟫
-  | ⟪₂ apply ⟫
-  | ⟪₂ quote ⟫
-  | ⟪₂ push_on ⟫
-  | ⟪₂ Data ⟫
-  | ⟪₂ , :_a :_b ⟫ => e
-  | e => ⟪₂ quoted :e ⟫
-
 /-
 Takes an assert value and builds it as the sole type
 of a context.

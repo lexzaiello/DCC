@@ -95,6 +95,10 @@ def step (e : Expr) : Option Expr :=
     let g' ← step ⟪₂ :: exec :g ⟫
 
     pure ⟪₂ :: exec (:: apply (:: :f :g')) ⟫
+  | ⟪₂ (:: exec (:: apply (:: (quoted :f) :g))) ⟫ => do
+    let x' := (step ⟪₂ :f :g ⟫).getD ⟪₂ :f :g ⟫
+
+    quote_smart x'
   | ⟪₂ (:: exec (:: :f :ctx)) ⟫ =>
     let e' := exec_op f ctx
     e'

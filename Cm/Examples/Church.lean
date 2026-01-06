@@ -136,10 +136,15 @@ def test_outer_γ : Except Error Expr := do
   let t_data ← infer ⟪₂ Data ⟫
   let my_f := ⟪₂ I :t_data ⟫
 
+  let t_f := church_t_f t_data t_data
+
+  let my_zero ← mk_flse t_f t_data
+
   let γ ← s_outermost_γ t_data t_data
-  pure ⟪₂ :γ :my_f ⟫
+  dbg_trace infer ⟪₂ (:my_zero :my_f) ⟫
+  pure ⟪₂ :γ :my_f (:my_zero :my_f) ⟫
 
-
+#eval test_outer_γ >>= infer
 
 /-
 S(S(KS)K) n f

@@ -489,13 +489,10 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
     match t_f with
     | ⟪₂ , :Γ (, :Δ :Ξ) ⟫ =>
-      dbg_trace Δ
       let Δ' := Expr.push_in (quote_smart arg) Δ
       let Ξ' := Expr.push_in raw_t_arg Ξ
 
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
-
-      dbg_trace ⟪₂ :: exec (:: :check_with (, :Δ' :Ξ')) ⟫
 
       let expected'' ← do_step ⟪₂ :: exec (:: :check_with (, :Δ' :Ξ')) ⟫
 

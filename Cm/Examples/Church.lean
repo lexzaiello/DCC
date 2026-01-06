@@ -121,6 +121,17 @@ def test_s_outermost_β : Except Error Expr := do
 
   pure ⟪₂ :β :my_f ⟫
 
+/-
+γ receives f and (n f), and output t_in → t_out
+n f : t_in → t_out?
+-/
+def s_outermost_γ (t_in t_out : Expr) : Except Error Expr := do
+  let t_f := church_t_f t_in t_out
+  let t_t_f ← infer t_f
+  let ret_nf := ⟪₂ K' :t_t_f :t_f :t_f ⟫
+  let t_ret_nf ← infer ret_nf
+  pure ⟪₂ K' :t_ret_nf :t_f :ret_nf ⟫
+
 
 
 /-
@@ -131,6 +142,12 @@ n : (t_in → t_out) → t_in → t_out
 n f : t_in → t_out
 
 ((S(KS)K) f) (n f)
+
+((S(KS)K) f) = ((KS) f) (K f) = S (K f)
+
+S (K f) (n f) : γ
+
+S (K f) (n f) : t_in → t_out
 
 S(S(KS)K) n f x
 -/

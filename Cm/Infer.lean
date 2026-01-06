@@ -270,32 +270,21 @@ def Expr.display_infer : Expr → Option Expr
 --#eval do_step ⟪₂ (:: exec (:: ( ((:: fst) ((:: read) assert))) ((, ((:: quoted ((, ((:: ((:: assert) quoted Data)) ((:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil))) ((:: quoted K) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) nil)) ((, nil) nil))) ((:: ((, ((:: ((:: assert) quoted Data)) ((:: ((:: ((:: both) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: assert) quoted Data)) ((:: push_on) nil))))) ((:: ((:: map) quote)) ((:: push_on) ((, nil) nil))))) ((:: ((:: fst) ((:: read) assert))) ((:: ((:: apply) ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: fst) ((:: next) ((:: next) ((:: read) assert))))))) ((:: ((:: fst) ((:: read) assert))) nil)))))) ((, nil) nil))) nil))))) ⟫
 
 /-
-If a context is explicitly produced, keep it.
-Otherwise, assume this is a free-standing well-typed value,
-and wrap it in an empty context.
-
-Also, if a context only contains quoted values,
-then we can just lift it.
-
-Another thing I'm thinking:
-we could do context flattening recursively somehow.
-
-We basically always want to drop the container around elements with just one thing in them.
-This comes from the mk_singleton thing.
-
-No shot.
-This mk_singleton_ctx thing is the opposite of what we want, potentially.
+No special formatting.
+Just a list of the output values after running,
+except if the output was nil given the context.
 -/
-def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
-  match ← do_step ⟪₂ (:: exec (:: :Γ_elem :c)) ⟫ with
-  | ⟪₂ , :Γ :C ⟫
-  | ⟪₂ quoted (, :Γ :C) ⟫ => pure ⟪₂ , :Γ :C ⟫
-  | t => do_step ⟪₂ (:: exec (:: :mk_singleton_ctx :t)) ⟫
+def run_contexts (e : Expr) : Expr :=
+  match e with
+  | ⟪₂ , :l :C ⟫ =>
+    let maybe_run : Expr → Expr := fun x =>
+      let e' := (do_step ⟪₂ :: exec (:: :x :C) ⟫).map (fun v => ⟪₂ :: assert :v ⟫)
+      e'.toOption.getD x
 
-def pop_singleton_context : Expr → Expr
-  | ⟪₂ , (:: (:: assert (, :Γ :C)) nil) (, nil nil) ⟫ => pop_singleton_context ⟪₂ , :Γ :C ⟫
-  | ⟪₂ , (:: (:: assert (quoted (, :Γ :C))) nil) (, nil nil) ⟫ => pop_singleton_context ⟪₂ , :Γ :C ⟫
-  | x => x
+    let l' := (Expr.from_list <$> (l.as_list.map (List.map maybe_run))).getD l
+
+    ⟪₂ , :l' :C ⟫
+  | e => e
 
 def flatten_normal_assert (e : Expr) : Expr :=
   match e with
@@ -399,39 +388,27 @@ Note that types are uniquely identified by the triple (, Γ (, Δ Ξ))
 So, we can do recursive descent and compare each one by normalization.
 -/
 def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
+  dbg_trace expected
+  dbg_trace actual
   match expected, actual with
   | ⟪₂ , :Γ₁ (, :Δ₁ :Ξ₁) ⟫, ⟪₂ , :Γ₂ (, :Δ₂ :Ξ₂) ⟫ => do
-    /-
-      To compare the types, see how many input assertions the contexts are making.
-      Then, extend the smallest of the two Δ registers with unique quoted data
-      until enough have been supplied.
+    if run_contexts expected == run_contexts actual then
+      pure ()
+    else
+      let dummy_args := (List.range (max (n_args Γ₁) (n_args Γ₂))).map (fun arg_n =>
+        (List.replicate arg_n ⟪₂ Data ⟫).foldl (fun acc x => ⟪₂ , :acc :x ⟫) ⟪₂ Data ⟫
+          |> (fun test_e => quote_smart ⟪₂ :test_e ⟫))
+          |> Expr.from_list
+      let Δ_test ← unwrap_with (Error.short_context Δ₁) (Expr.list_max Δ₁ Δ₂ >>= (Expr.list_concat · dummy_args))
 
-      Use the same context for both.
-      Use the larger of the two contexts if possible.
+      /-
+        Now, reduce by plugging in our "fake" context, and comparing the remaining values.
+      -/
+      let expected' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
+      let actual' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
 
-      Note that the Δ context will contain existing values.
-      So we should extend by as many args are left.
-
-      Also note that we aren't using these test contexts to type-check.
-      Just to compare def eq.
-
-      Also note that the type shouldn't be looking inside the element, so
-      its value doesn't matter, as long as it is somewhat unique.
-    -/
-    let dummy_args := (List.range (max (n_args Γ₁) (n_args Γ₂))).map (fun arg_n =>
-      (List.replicate arg_n ⟪₂ Data ⟫).foldl (fun acc x => ⟪₂ , :acc :x ⟫) ⟪₂ Data ⟫
-        |> (fun test_e => quote_smart ⟪₂ :test_e ⟫))
-        |> Expr.from_list
-    let Δ_test ← unwrap_with (Error.short_context Δ₁) (Expr.list_max Δ₁ Δ₂ >>= (Expr.list_concat · dummy_args))
-
-    /-
-      Now, reduce by plugging in our "fake" context, and comparing the remaining values.
-    -/
-    let expected' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₁ ⟪₂ , :Δ_test :Ξ₁ ⟫
-    let actual' ← (flatten_context ∘ flatten_context) <$> freeze_context Γ₂ ⟪₂ , :Δ_test :Ξ₂ ⟫
-
-    assert_eq expected' actual' at_app
-      <|> assert_eq (fold_ctx ⟪₂ , :expected' (, nil nil) ⟫) (fold_ctx ⟪₂ , :actual' (, nil nil) ⟫) at_app
+      assert_eq expected' actual' at_app
+        <|> assert_eq (fold_ctx ⟪₂ , :expected' (, nil nil) ⟫) (fold_ctx ⟪₂ , :actual' (, nil nil) ⟫) at_app
   | e₁, e₂ => if e₁ == e₂ then pure () else Except.error <| .combine (.not_type e₁) (.not_type e₂)
 
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=

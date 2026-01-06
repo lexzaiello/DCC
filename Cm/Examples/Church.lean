@@ -28,6 +28,9 @@ def my_examplebruh : Except Error Expr := do
   let my_i ← mk_i t_data
   pure ⟪₂ :my_i Data ⟫
 
+#eval run_contexts ⟪₂ ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: Data) ((:: Data) ((:: Data) nil))))) ⟫
+#eval infer ⟪₂(((K' ((, ((:: ((:: fst) ((:: next) ((:: read) assert)))) ((:: ((:: fst) ((:: read) assert))) nil))) ((, ((:: Data) ((:: Data) ((:: Data) nil)))) ((:: Data) ((:: Data) ((:: Data) nil)))))) Data) (((K' Data) Data) Data)) ⟫
+
 #eval my_examplebruh >>= infer
 
 def my_examplebruh2 : Except Error Expr := do

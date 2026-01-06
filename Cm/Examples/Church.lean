@@ -132,6 +132,13 @@ def s_outermost_γ (t_in t_out : Expr) : Except Error Expr := do
   let t_ret_nf ← infer ret_nf
   pure ⟪₂ K' :t_ret_nf :t_f :ret_nf ⟫
 
+def test_outer_γ : Except Error Expr := do
+  let t_data ← infer ⟪₂ Data ⟫
+  let my_f := ⟪₂ I :t_data ⟫
+
+  let γ ← s_outermost_γ t_data t_data
+  pure ⟪₂ :γ :my_f ⟫
+
 
 
 /-

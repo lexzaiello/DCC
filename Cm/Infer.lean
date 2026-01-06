@@ -45,20 +45,6 @@ def assert_eq (expected actual in_app : Expr) : Except Error Unit :=
     else
       .error <| .mismatch_arg expected actual in_app .none
 
-/-
-  Converts a rendered context, a list of types,
-  into a normal context, where all the assertions don't depend on actual arguments.
--/
-def assert_all_with_context (e : Expr) : Expr :=
-  let rec add_asserts : Expr → Expr
-  | ⟪₂ nil ⟫ => ⟪₂ nil ⟫
-  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: (:: assert :x) (#add_asserts xs) ⟫
-  | x => x
-
-  match e with
-  | ⟪₂ :: :_x :_xs ⟫ => ⟪₂ , (#add_asserts e) (, nil nil) ⟫
-  | x => x
-
 def read_data : Expr :=
   ⟪₂ , (:: (quote (quoted Data)) (:: (quote (quoted Data)) nil)) ⟫
 
@@ -306,9 +292,6 @@ def run_context (Γ_elem : Expr) (c : Expr) : Except Error Expr := do
   | ⟪₂ quoted (, :Γ :C) ⟫ => pure ⟪₂ , :Γ :C ⟫
   | t => do_step ⟪₂ (:: exec (:: :mk_singleton_ctx :t)) ⟫
 
---def push_singleton_context : Expr → Expr
---  | ⟪₂ 
-
 def pop_singleton_context : Expr → Expr
   | ⟪₂ , (:: (:: assert (, :Γ :C)) nil) (, nil nil) ⟫ => pop_singleton_context ⟪₂ , :Γ :C ⟫
   | ⟪₂ , (:: (:: assert (quoted (, :Γ :C))) nil) (, nil nil) ⟫ => pop_singleton_context ⟪₂ , :Γ :C ⟫
@@ -393,11 +376,6 @@ def freeze_context (Γ : Expr) (c : Expr) : Except Error Expr :=
   | ⟪₂ nil ⟫, _ => .ok ⟪₂ nil ⟫
   | e, _ => .error <| .not_type e
 
-def guard_is_ty (Γ : Expr) : Except Error Unit :=
-  match Γ with
-  | ⟪₂ , :_Γ (, :_Δ :_Ξ) ⟫ => pure ()
-  | t => .error <| .not_type t
-
 def n_args (Γ : Expr) : ℕ := (do
   let all_asserts ← Γ.as_list
   return all_asserts.length - 1).getD 0
@@ -454,7 +432,7 @@ def tys_are_eq (expected actual at_app : Expr) : Except Error Unit :=
 
     assert_eq expected' actual' at_app
       <|> assert_eq (fold_ctx ⟪₂ , :expected' (, nil nil) ⟫) (fold_ctx ⟪₂ , :actual' (, nil nil) ⟫) at_app
-  | e₁, e₂ => Except.error <| .combine (.not_type e₁) (.not_type e₂)
+  | e₁, e₂ => if e₁ == e₂ then pure () else Except.error <| .combine (.not_type e₁) (.not_type e₂)
 
 def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   match e with
@@ -468,7 +446,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
   | ⟪₂ read ⟫
   | ⟪₂ apply ⟫
   | ⟪₂ quote ⟫
-  | ⟪₂ push_on ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
+  | ⟪₂ push_on ⟫ => pure ⟪₂ quoted Data ⟫
   | ⟪₂ S ⟫ => pure s.s_rule
   | ⟪₂ I ⟫ =>
     let α := ⟪₂ (:: fst (:: read assert)) ⟫
@@ -493,9 +471,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
               (:: fst (:: read assert))
               nil)))))
       (, nil nil) ⟫
-  | ⟪₁ quoted :_e ⟫ => pure ⟪₂ ,
-    (:: :ass_data nil)
-    (, nil nil) ⟫
+  | ⟪₁ quoted :_e ⟫ => pure ⟪₂ quoted Data ⟫
   | ⟪₂ :: ⟫
   | ⟪₂ , ⟫ => pure ⟪₂ ,
     (::
@@ -505,8 +481,8 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
         (::
           :ass_data nil)))
       (, nil nil) ⟫
-  | ⟪₂ nil ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
-  | ⟪₂ Data ⟫ => pure ⟪₂ , (:: :ass_data nil) (, nil nil) ⟫
+  | ⟪₂ nil ⟫ => pure ⟪₂ quoted Data ⟫
+  | ⟪₂ Data ⟫ => pure ⟪₂ quoted Data ⟫
   | ⟪₂ :f :arg ⟫ => do
     let t_f ← infer f with_dbg_logs
     let raw_t_arg ← infer arg with_dbg_logs
@@ -518,10 +494,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
       let check_with ← Γ.list_head |> unwrap_with (.short_context Γ)
 
-      let expected'' := (← run_context check_with ⟪₂ (, :Δ' :Ξ') ⟫) |> pop_singleton_context
-
-      --dbg_trace fold_ctx raw_t_arg
-      --dbg_trace fold_ctx expected''
+      let expected'' ← do_step ⟪₂ :: exec (:: :check_with (, :Δ' :Ξ')) ⟫
 
       let _ ← tys_are_eq expected'' raw_t_arg e
 
@@ -529,9 +502,7 @@ def infer (e : Expr) (with_dbg_logs : Bool := false) : Except Error Expr :=
 
       match Γ'.as_singleton with
       | .some t_out =>
-        let t_out' := (← run_context t_out ⟪₂ (, :Δ' :Ξ') ⟫) |> pop_singleton_context
-        guard_is_ty t_out'
-        pure t_out'
+        do_step ⟪₂ :: exec (:: :t_out (, :Δ' :Ξ')) ⟫
       | _ =>
         pure ⟪₂ , :Γ' (, :Δ' :Ξ') ⟫
     | _ =>
@@ -566,7 +537,7 @@ def infer_list (e : Expr) : List (List (Except Error Expr)) :=
 #eval infer ⟪₂ K' Data Data Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
-#eval Expr.display_infer <$> infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (I Data) Data ⟫
+#eval infer ⟪₂ S Data (I Data) (K' Data Data) (K' Data Data) (I Data) Data ⟫
 
 #eval (infer <=< infer) ⟪₂ S ⟫
 

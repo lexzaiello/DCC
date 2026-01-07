@@ -344,11 +344,6 @@ def test_lazy_apply : Except Error Bool := do
 
 #eval test_lazy_apply
 
-#eval exec_op (lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: next (:: read quote)) nil)) ⟫) ⟪₂ :: Data (:: Data nil) ⟫
-#eval exec_op (lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: next (:: read quote)) nil)) ⟫) ⟪₂ :: Data nil ⟫
-  >>= (fun op => exec_op op ⟪₂ :: Data nil ⟫)
-#eval exec_op ⟪₂ ((:: ((:: both) ((:: read) read))) apply) ⟫ ⟪₂ :: Data nil ⟫
-
 /-def test_lazy_exec : Except Error Expr :=
   ⟪₂ :: exec (:: (#lazy_exec_apply -/
 
@@ -397,29 +392,9 @@ S Data (I Data) (K Data Data) (K Data Data) (I Data) Data
 def test_ctx_s_type : Expr :=
   ⟪₂ :: Data (:: (quoted (I Data)) (:: (quoted (K' Data Data)) (:: (quoted (K' Data Data)) (:: (quoted (I Data)) (:: Data nil))))) ⟫
 
-def my_test_γ : Expr :=
-  ⟪₂ ((:: Data) ((:: ((:: ((:: quoted (I Data)) read)) apply)) ((:: Data) nil))) ⟫
-
-#eval exec_op ⟪₂ ((:: exec) ((:: ((:: read) quote)) ((:: ((:: ((:: exec) ((:: ((:: assert) exec)) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil))))) ((:: push_on) apply))) ((:: ((:: assert) Data)) nil)))) ⟫ test_ctx_s_type
-
-def test_ctx_γ : Expr :=
-  ⟪₂ :: Data (:: Data nil) ⟫
-
-#eval do_step ⟪₂ :: exec (:: :my_test_γ :test_ctx_γ) ⟫
-
-#eval do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted ((K' Data) Data))) ((:: read) ((:: ((:: next) read)) nil))))) apply)) nil))) (:: Data (:: Data nil))) ⟫
-
-#eval do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) nil)) (:: Data (:: Data nil))) ⟫
-
-#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫
-
-#eval Expr.as_list <$> do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: Data) nil))) (:: Data (:: Data nil))) ⟫
+#eval do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: Data) nil))) (:: Data nil)) ⟫
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :s_type :test_ctx_s_type) ⟫
-#eval s_type
-#eval do_step ⟪₂ :: exec (:: :s_type (:: Data nil)) ⟫
-#eval do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: Data) ((:: Data) nil))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) read)) ((:: read) nil)))) apply)) ((:: Data) nil)))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) read)) ((:: read) nil)))) apply)) ((:: ((:: ((:: exec) ((:: ((:: assert) ((:: next) read))) ((:: read) ((:: ((:: next) read)) nil))))) apply)) nil)))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) read)) ((:: read) nil)))) apply)) nil))) ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: next) read)) ((:: ((:: next) ((:: next) ((:: next) ((:: next) ((:: next) read)))))) ((:: ((:: ((:: exec) ((:: ((:: next) ((:: next) ((:: next) ((:: next) read))))) ((:: ((:: next) ((:: next) ((:: next) ((:: next) ((:: next) read)))))) nil)))) apply)) nil))))) apply)) nil))))))) (:: (quoted (I Data)) nil)) ⟫
-
 
 /-
 How do we deal with non-beta-normal values?

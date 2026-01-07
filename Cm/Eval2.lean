@@ -182,7 +182,7 @@ def my_s_type : Expr :=
 
   -- γ := ∀ (x : α) (y : β x), Data
   let apply_later := ⟪₂ :: push_on apply ⟫
-  let βx' := lazy_exec_apply ⟪₂ 
+  let βx' := lazy_exec_apply ⟪₂ :: :β quote ⟫ ⟪₂ :: assert read ⟫
   let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
   let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 

@@ -20,12 +20,18 @@ Feels wrong.
 Piping could be a lot cleaner.
 
 I want to be really lazy with apply.
+
+What would be really powerful with apply is if it worked on the context
+instead of just arguments. This would remove a lot of the quotation shenanigans.
+
+:: (:: both _ ) apply
 -/
 
 def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
   match my_op, ctx with
   | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => x
   | ⟪₂ next ⟫, ⟪₂ :: :_x :xs ⟫ => xs
+  | ⟪₂ :: assert :x ⟫, _ => x
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => exec_op f xs
   | ⟪₂ :: read :f ⟫, ⟪₂ :: :x :_xs ⟫ => exec_op f x
   | ⟪₂ :: :f (:: push_on :l) ⟫, c => do
@@ -37,10 +43,11 @@ def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
     let g' ← exec_op g c
 
     ⟪₂ :: :f' :g' ⟫
-  | ⟪₂ :: apply (:: :f :g) ⟫, c => do
-    let f' ← exec_op f c
-    let x' ← exec_op g c
-    ⟪₂ quoted ((#f'.unquote_pure) (#x'.unquote_pure)) ⟫
+  | ⟪₂ :: (:: both :e) apply ⟫, c => do
+    match ← exec_op ⟪₂ :: both :e ⟫ c with
+    | ⟪₂ :: :f :x ⟫ => do
+      ⟪₂ quoted ((#f.unquote_pure) (#x.unquote_pure)) ⟫
+    | _ => .none
   | _, _ => .none
 
 def step (e : Expr) : Option Expr :=
@@ -84,7 +91,7 @@ def my_k_type : Expr :=
 
   let t_x := α
   -- y : β x
-  let t_y := ⟪₂ :: apply (:: :β :x) ⟫
+  let t_y := ⟪₂ :: (:: both (:: :β :x)) apply ⟫
 
   let t_out := α
 
@@ -139,4 +146,6 @@ def my_s_type : Expr :=
   let t_β := ⟪₂ :: :α (:: push_on (:: Data nil)) ⟫
 
   -- γ := ∀ (x : α) (y : β x), Data
-  let t_γ := ⟪₂ 
+  let apply_later := ⟪₂ :: push_on apply ⟫
+  let βx := ⟪₂ :: (:: :β (:: push_on read)) :apply_later ⟫
+  let t_γ := ⟪₂ :: both (:: read (:: 

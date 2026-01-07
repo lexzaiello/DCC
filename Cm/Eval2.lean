@@ -83,15 +83,15 @@ def step (e : Expr) : Except Error Expr :=
     match ops with
     | ⟪₂ (:: :x nil) ⟫ =>
       exec_op x Γ
-    | l => l.map_list (fun e => (exec_op e Γ).toOption.getD e)
-  | ⟪₂ I :_α :x ⟫ => x
+    | l => l.mapM_list (Except.error <| .stuck e) (fun e => (exec_op e Γ) <|> (pure e))
+  | ⟪₂ I :_α :x ⟫ => pure x
   | ⟪₂ K :_α :_β :x :_y ⟫
-  | ⟪₂ K' :_α :_β :x :_y ⟫ => x
-  | ⟪₂ S :_α :_β :_γ :x :y :z ⟫ => ⟪₂ (:x :z) (:y :z) ⟫
-  | ⟪₂ :: :_a :_b ⟫ => .none
+  | ⟪₂ K' :_α :_β :x :_y ⟫ => pure x
+  | ⟪₂ S :_α :_β :_γ :x :y :z ⟫ => pure ⟪₂ (:x :z) (:y :z) ⟫
+  | ⟪₂ :: :_a :_b ⟫ => Except.error <| .stuck e
   | ⟪₂ :f :x ⟫ => do
-    ⟪₂ (#← step f) :x ⟫
-  | _ => .none
+    pure ⟪₂ (#← step f) :x ⟫
+  | _ => .error <| .stuck e
 
 def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
   if n = 0 then

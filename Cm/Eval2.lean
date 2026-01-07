@@ -252,3 +252,5 @@ def test_ctx_γ : Expr :=
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: Data) nil))) (:: Data (:: Data nil))) ⟫
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :my_s_type :test_ctx_s_type) ⟫
+
+#eval do_step ⟪₂ ((((K' Data) Data) Data) ((I Data) Data)) ⟫

@@ -155,11 +155,15 @@ def infer_ctx_k_partial : Except Error Expr := do
 
 #eval (do pure <| (← infer_ctx_k_partial) == (← do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫))
 
+def lazy_exec (f g : Expr) : Expr :=
+  ⟪₂ (:: both (:: (:: assert exec) (:: :f (:: push_on :g)))) ⟫
+
+
+
 def my_s_type : Expr :=
   let α := ⟪₂ read ⟫
   let β := ⟪₂ :: next read ⟫
   let γ := ⟪₂ :: next (:: next read) ⟫
-  let x := ⟪₂ :: next (:: next (:: next read)) ⟫
   let y := ⟪₂ :: next (:: next (:: next (:: next read))) ⟫
   let z := ⟪₂ :: next (:: next (:: next (:: next (:: next read)))) ⟫
 
@@ -168,7 +172,7 @@ def my_s_type : Expr :=
 
   -- γ := ∀ (x : α) (y : β x), Data
   let apply_later := ⟪₂ :: push_on apply ⟫
-  let βx := ⟪₂ :: (:: :β (:: push_on read)) :apply_later ⟫
+  let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
   let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 
   -- x : ∀ (x : α) (y : β x), γ x y
@@ -184,4 +188,21 @@ def my_s_type : Expr :=
   let yz := ⟪₂ :: (:: exec (:: :y (:: :z nil))) apply ⟫
   let t_out := ⟪₂ :: (:: exec (:: :γ (:: :z (:: :yz nil)))) ⟫
 
-  
+  ⟪₂ :: :t_α (:: :t_β (:: :t_γ (:: :t_x (:: :t_y (:: :t_z (:: :t_out nil)))))) ⟫
+
+/-
+Test context for:
+S Data (I Data) (K Data Data) (K Data Data) (I Data) Data
+-/
+def test_ctx_s_type : Expr :=
+  ⟪₂ :: Data (:: (quoted (I Data)) (:: (quoted (K Data Data)) (:: (quoted (K Data Data)) (:: (quoted (I Data)) (:: Data nil))))) ⟫
+
+def my_test_γ : Expr :=
+  ⟪₂ ((:: Data) ((:: ((:: ((:: quoted (I Data)) read)) apply)) ((:: Data) nil))) ⟫
+
+def test_ctx_γ : Expr :=
+  ⟪₂ :: Data (:: Data nil) ⟫
+
+#eval do_step ⟪₂ :: exec (:: :my_test_γ :test_ctx_γ) ⟫
+
+#eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :my_s_type :test_ctx_s_type) ⟫

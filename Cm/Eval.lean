@@ -123,7 +123,6 @@ def do_step (e : Expr) : Except Error Expr :=
   unwrap_with (Error.stuck e) (try_step_n 30 e)
 
 def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).getD e
-
 /-
 Nested exec is bad.
 

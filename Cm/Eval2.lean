@@ -33,10 +33,9 @@ def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
 
     ⟪₂ :: :f' :g' ⟫
   | ⟪₂ :: apply (:: :f :g) ⟫, c => do
-    match ← exec_op f c, ← exec_op g c with
-    | ⟪₂ quoted :f ⟫, ⟪₂ quoted :x ⟫ =>
-      ⟪₂ quoted (:f :x) ⟫
-    | _, _ => .none
+    let f' ← exec_op f c
+    let x' ← exec_op g c
+    ⟪₂ quoted ((#f'.unquote_pure) (#x'.unquote_pure)) ⟫
   | _, _ => .none
 
 def step (e : Expr) : Option Expr :=
@@ -95,4 +94,7 @@ Also remember:
 - our (I Data) term will be quoted.
 -/
 
-def test_
+def test_ctx_k_type : Expr :=
+  ⟪₂ :: Data (:: (quoted (I Data)) (:: Data (:: Data nil))) ⟫
+
+#eval do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫

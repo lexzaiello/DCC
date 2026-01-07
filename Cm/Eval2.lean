@@ -1,6 +1,22 @@
 import Cm.Ast
 import Cm.Error
 
+-- Nondependent K
+def k'_type : Expr :=
+  let t_α := ⟪₂ Data ⟫
+  -- β : α → Type
+  let α := ⟪₂ read ⟫
+  let t_β := ⟪₂ Data ⟫
+  let β := ⟪₂ :: next read ⟫
+
+  let t_x := α
+  -- y : β x
+  let t_y := β
+
+  let t_out := α
+
+  ⟪₂ :: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_out nil)))) ⟫
+
 def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error ε)
 
@@ -72,10 +88,59 @@ We should be able to detect this in exec.
 
 def last_next (op ctx : Expr) : Except Error Expr :=
   match op, ctx with
-  | ⟪₂ :: :f quote ⟫, c =>do  pure ⟪₂ :: (#← last_next f c) quote⟫
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x nil ⟫ => pure f
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :x :xs ⟫ => last_next f xs
+  | ⟪₂ :: :f :g ⟫, c =>do  pure ⟪₂ :: (#← last_next f c) :g⟫
   | _, _ => Except.error <| .stuck op
+
+def exec_op' (my_op : Expr) (ctx : Expr) : Except Error Expr :=
+  match my_op, ctx with
+  | ⟪₂ nil ⟫, _c => pure ⟪₂ nil ⟫
+  | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => pure x
+  | ⟪₂ assert ⟫, c => pure c
+  | ⟪₂ :: assert :x ⟫, _ => pure x
+  | ⟪₂ quote ⟫, c => pure ⟪₂ :: assert :c ⟫
+  | ⟪₂ next ⟫, ⟪₂ :: :_x :xs ⟫ => pure xs
+  | ⟪₂ (:: push_on :l) ⟫, c => pure ⟪₂ :: :c :l ⟫
+  | ⟪₂ :: both (:: :f :g) ⟫, c => pure ⟪₂ :: exec (:: (:: :f (:: :g nil)) :c) ⟫
+  | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
+
+def step_seq (e : Expr) : Except Error Expr :=
+  dbg_trace e
+  match e with
+  | ⟪₂ :: exec (:: (:: nil nil) :_ctx) ⟫ => pure ⟪₂ nil ⟫
+  | ⟪₂ :: exec (:: (:: (:: :f :g) nil) :ctx) ⟫ =>
+    last_next ⟪₂ :: :f :g ⟫ ctx <|> (do
+    let c' ← exec_op' f ctx
+    pure ⟪₂ :: exec (:: (:: :g nil) :c') ⟫)
+  | ⟪₂ :: exec (:: (:: :op nil) :ctx) ⟫ =>
+    exec_op' op ctx  <|> (pure op)
+  | _ => .error <| .stuck e
+
+def step' (e : Expr) : Except Error Expr :=
+  match e with
+  | ⟪₂ :: exec (:: :l :ctx) ⟫ => do
+    let results ← (← unwrap_with (.stuck e) l.as_list).mapM (fun e => step_seq ⟪₂ :: exec (:: (:: :e nil) :ctx) ⟫)
+    pure <| Expr.from_list results
+  | ⟪₂ I :_α :x ⟫ => pure x
+  | ⟪₂ K :_α :_β :x :_y ⟫
+  | ⟪₂ K' :_α :_β :x :_y ⟫ => pure x
+  | ⟪₂ S :_α :_β :_γ :x :y :z ⟫ => pure ⟪₂ (:x :z) (:y :z) ⟫
+  | ⟪₂ :: :_a :_b ⟫ => Except.error <| .stuck e
+  | ⟪₂ :f :x ⟫ => do
+    pure ⟪₂ (#← step' f) :x ⟫
+  | _ => .error <| .stuck e
+
+def try_step_n' (n : ℕ) (e : Expr) : Except Error Expr := do
+  if n = 0 then
+    pure e
+  else
+    let e' ← step' e
+    (try_step_n' (n - 1) e') <|> (pure e')
+
+def do_step' : Expr → Except Error Expr := try_step_n' 50
+
+#eval do_step' ⟪₂ :: exec (:: :k'_type (:: Data nil)) ⟫
 
 def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   match my_op, ctx with
@@ -127,6 +192,16 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     | ⟪₂ :: :a :b ⟫ =>
       maybe_apply [a, b]
     | _ => .none) |> unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫)
+  | ⟪₂ :: :f apply ⟫, c => do
+    match last_next f c with
+    | .ok f' =>
+      pure ⟪₂ :: :f' apply ⟫
+    | .error _ =>
+      match ← exec_op f c with
+      | ⟪₂ :: exec :e ⟫ =>
+        pure ⟪₂ :: (:: exec :e) apply ⟫
+      | e =>
+        unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx)⟫) (e.as_list >>= do_apply)
   | ⟪₂ :: (:: exec :f) (:: (:: push_on apply) (:: both (:: assert exec) assert)) ⟫, c => do
     match ← exec_op ⟪₂ :: exec :f ⟫ c with
     | ⟪₂ :: exec :f ⟫ =>
@@ -134,17 +209,6 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     | e =>
       pure ⟪₂ (:: (:: exec :e) apply) ⟫
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
-
-def test_chain_exec : Except Error Bool := do
-  let f := ⟪₂ ((:: ((:: exec) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil)))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert))) ⟫
-  let a ← exec_op f ⟪₂ :: Data (:: Data nil) ⟫
-  let b ← exec_op f ⟪₂ :: Data nil ⟫ >>= (fun e => exec_op e ⟪₂ :: Data nil ⟫)
-  pure <| a == b
-
-#eval test_chain_exec
-
-#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil)))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert))) ⟫ ⟪₂ :: Data (:: Data nil) ⟫
-#eval exec_op ⟪₂ ((:: exec) ((:: read) ((:: ((:: ((:: exec) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil)))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert)))) ((:: ((:: assert) Data)) nil)))) ⟫ ⟪₂ (:: Data nil) ⟫
 
 /-def exec_op_no_next_elim (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   match my_op, ctx with
@@ -238,22 +302,6 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr := do
 def do_step : Expr → Except Error Expr := try_step_n 50
 
 def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).toOption.getD e
-
--- Nondependent K
-def k'_type : Expr :=
-  let t_α := ⟪₂ Data ⟫
-  -- β : α → Type
-  let α := ⟪₂ read ⟫
-  let t_β := ⟪₂ Data ⟫
-  let β := ⟪₂ :: next read ⟫
-
-  let t_x := α
-  -- y : β x
-  let t_y := β
-
-  let t_out := α
-
-  ⟪₂ :: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_out nil)))) ⟫
 
 def k_type : Expr :=
   let t_α := ⟪₂ Data ⟫
@@ -372,11 +420,14 @@ def s_type : Expr :=
   let t_β := ⟪₂ :: :α (:: push_on (:: Data nil)) ⟫
 
   -- γ := ∀ (x : α) (y : β x), Data
+  let βx' := ⟪₂ :: :β (:: (:: push_on (:: (:: assert read) nil)) (:: push_on apply)) ⟫
+  dbg_trace s!"bx: {βx'}"
   let βx := lazy_all_apply ⟪₂ :: (:: :β quote) (:: (:: assert read) nil) ⟫
   --let βx := lazy_exec_apply ⟪₂ :: :β quote ⟫ ⟪₂ :: (:: assert read) (:: (:: assert Data) nil) ⟫
   --dbg_trace βx'
   --let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
   let t_γ := ⟪₂ :: exec (:: :α (:: :βx (:: (:: assert Data) nil))) ⟫
+  dbg_trace s!"bruh: {⟪₂ :: exec (:: :α (:: :βx' (:: (:: assert Data) nil))) ⟫}"
 
   dbg_trace s!"γ: {t_γ}"
 
@@ -397,6 +448,8 @@ def s_type : Expr :=
   let t_out := ⟪₂ :: (:: exec (:: :γ (:: :z (:: :yz nil)))) apply ⟫
 
   ⟪₂ :: :t_α (:: :t_β (:: :t_γ (:: :t_x (:: :t_y (:: :t_z (:: :t_out nil)))))) ⟫
+
+--#eval exec_op ⟪₂ ((:: ((:: next) read)) ((:: ((:: push_on) ((:: ((:: assert) read)) nil))) ((:: push_on) apply))) ⟫ ⟪₂ (:: Data nil) ⟫
 
 /-
 Test context for:
@@ -429,6 +482,9 @@ def test_s_type_eq : Except Error Bool := do
   pure <| actual == (← test_s_type')
 
 
+/-
+((:: Data) ((:: ((:: Data) ((:: Data) nil))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: Data) nil)))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted ((K' Data) Data))) ((:: read) ((:: ((:: next) read)) nil))))) apply)) nil)))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) nil))) ((:: Data) ((:: quoted ((((K' Data) Data) Data) ((I Data) Data))) nil)))))))
+-/
 
 #eval test_s_type_eq
 

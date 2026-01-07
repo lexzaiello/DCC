@@ -280,21 +280,6 @@ def lazy_exec_apply (f g : Expr) : Expr :=
 #eval lazy_exec_apply ⟪₂ read ⟫ ⟪₂ read ⟫
 
 /-
-Prepends an application after processing the context
-
-in γ's β x, β gets seen immediately, but x does not.
-
-we can map these as a list.
-
-Apply later chains a function with a future list application.
--/
-def apply_later (f : Expr) : Expr :=
-  ⟪₂ :: (:: both (:: (:: assert exec) :f)) (:: push_on apply) ⟫
-
-def apply_all_later (f : Expr) : Expr :=
-  ⟪₂ :: (:: (:: exec (:: (:: assert exec) :f)) apply) (:: push_on apply) ⟫
-
-/-
 I don't think we need apply later.
 We can probably do this easier with both ngl.
 
@@ -303,27 +288,14 @@ both list
 (:: both (:: (:: assert both) :f)) this will wrap f with the oth.
 -/
 
-/-
-This assumes f is a list.
--/
-def lazy_both (f : Expr) : Expr :=
-  ⟪₂ (:: both (:: (:: assert both) :f)) ⟫
-
-def lazy_both_apply (f : Expr) : Expr :=
-  ⟪₂ :: (#lazy_both f) (:: push_on apply) ⟫
-
 def lazy_all (f : Expr) : Expr :=
   ⟪₂ (:: exec (:: (:: assert exec) :f)) ⟫
 
 def lazy_all_apply (f : Expr) : Expr :=
   ⟪₂ :: (#lazy_all f) (:: push_on apply) ⟫
 
-#eval exec_op (lazy_both ⟪₂ read ⟫) ⟪₂ :: Data nil ⟫
-#eval exec_op (lazy_both_apply ⟪₂ read ⟫) ⟪₂ :: (:: read read) nil ⟫
 #eval exec_op (lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: read quote) nil)) ⟫) ⟪₂ :: Data nil ⟫
 #eval exec_op ⟪₂ ((:: ((:: both) ((:: read) read))) apply) ⟫ ⟪₂ :: Data nil ⟫
-
-#eval do_step ⟪₂ :: exec (:: (:: (#apply_all_later ⟪₂ (:: read (:: read nil)) ⟫) nil) (:: Data nil)) ⟫
 
 /-def test_lazy_exec : Except Error Expr :=
   ⟪₂ :: exec (:: (#lazy_exec_apply -/
@@ -348,8 +320,6 @@ def s_type : Expr :=
   let t_γ := ⟪₂ :: exec (:: :α (:: :βx (:: (:: assert Data) nil))) ⟫
   --let t_γ := ⟪₂ :: (:: exec (:: read (:: :βx (:: assert (:: Data nil))))) apply ⟫
   --let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
-
-  dbg_trace t_γ
 
   -- x : ∀ (x : α) (y : β x), γ x y
   let γxy := lazy_all_apply ⟪₂ :: (:: :γ quote) (:: (:: assert read) (:: (:: assert (:: next read)) nil)) ⟫

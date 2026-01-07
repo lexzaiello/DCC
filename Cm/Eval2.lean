@@ -140,7 +140,7 @@ Also remember:
 def test_ctx_k_type : Expr :=
   ⟪₂ :: Data (:: (quoted (I Data)) (:: Data (:: Data nil))) ⟫
 
-#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: next) read)) ((:: next) ((:: next) read))))) apply) ⟫ test_ctx_k_type
+--#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: next) read)) ((:: next) ((:: next) read))))) apply) ⟫ test_ctx_k_type
 #eval do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫
 
 def test_ctx_k_partial : Expr :=
@@ -168,6 +168,48 @@ def lazy_exec_apply (f g : Expr) : Expr :=
 #eval lazy_exec ⟪₂ read ⟫ ⟪₂ read ⟫
 #eval lazy_exec_apply ⟪₂ read ⟫ ⟪₂ read ⟫
 
+/-
+Prepends an application after processing the context
+
+in γ's β x, β gets seen immediately, but x does not.
+
+we can map these as a list.
+
+Apply later chains a function with a future list application.
+-/
+def apply_later (f : Expr) : Expr :=
+  ⟪₂ :: (:: both (:: (:: assert exec) :f)) (:: push_on apply) ⟫
+
+def apply_all_later (f : Expr) : Expr :=
+  ⟪₂ :: (:: (:: exec (:: (:: assert exec) :f)) apply) (:: push_on apply) ⟫
+
+/-
+I don't think we need apply later.
+We can probably do this easier with both ngl.
+
+both list
+
+(:: both (:: (:: assert both) :f)) this will wrap f with the oth.
+-/
+
+/-
+This assumes f is a list.
+-/
+def lazy_both (f : Expr) : Expr :=
+  ⟪₂ (:: both (:: (:: assert both) :f)) ⟫
+
+def lazy_both_apply (f : Expr) : Expr :=
+  ⟪₂ :: (#lazy_both f) (:: push_on apply) ⟫
+
+#eval exec_op (lazy_both ⟪₂ read ⟫) ⟪₂ :: Data nil ⟫
+#eval exec_op (lazy_both_apply ⟪₂ read ⟫) ⟪₂ :: (:: read read) nil ⟫
+#eval exec_op ⟪₂ ((:: ((:: both) ((:: read) read))) apply) ⟫ ⟪₂ :: Data nil ⟫
+
+#eval do_step ⟪₂ :: exec (:: (:: (#apply_all_later ⟪₂ (:: read (:: read nil)) ⟫) nil) (:: Data nil)) ⟫
+
+/-def test_lazy_exec : Except Error Expr :=
+  ⟪₂ :: exec (:: (#lazy_exec_apply -/
+
 --((:: both) ((:: ((:: both) ((:: ((:: assert) exec)) ((:: read) ((:: push_on) read))))) ((:: assert) apply)))
 
 def my_s_type : Expr :=
@@ -182,9 +224,11 @@ def my_s_type : Expr :=
 
   -- γ := ∀ (x : α) (y : β x), Data
   let apply_later := ⟪₂ :: push_on apply ⟫
-  let βx' := lazy_exec_apply ⟪₂ :: :β quote ⟫ ⟪₂ :: assert read ⟫
-  let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
-  let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
+  let βx := lazy_exec_apply ⟪₂ :: :β quote ⟫ ⟪₂ :: (:: assert read) (:: (:: assert Data) nil) ⟫
+  --dbg_trace βx'
+  --let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
+  let t_γ := ⟪₂ :: (:: exec (:: read (:: :βx (:: assert (:: Data nil))))) apply ⟫
+  --let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 
   -- x : ∀ (x : α) (y : β x), γ x y
   let γxy := ⟪₂ :: (:: :γ (:: push_on (:: read (:: (:: next read) nil)))) :apply_later ⟫

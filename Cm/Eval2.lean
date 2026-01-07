@@ -31,15 +31,47 @@ def maybe_apply (es : List Expr) : Option Expr :=
       ⟪₂ :: (:: exec (#Expr.from_list (es.map assert_not_fn))) apply ⟫
   | _ => .none
 
+def do_apply (es : List Expr) : Option Expr :=
+  match es with
+  | .cons f xs =>
+    ⟪₂ quoted (#(xs.map Expr.unquote_pure).foldl Expr.app (f.unquote_pure)) ⟫
+  | _ => .none
+
+def cons_exec (e₁ e₂ : Expr) : Expr :=
+  match e₂ with
+  | ⟪₂ :: exec :xs ⟫ =>
+    ⟪₂ :: exec (:: :e₁ :xs) ⟫
+  | xs => ⟪₂ :: exec (:: :e₁ :xs) ⟫
+
+def assert_all : Expr → Expr
+  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: (:: assert :x) (#assert_all xs) ⟫
+  | ⟪₂ nil ⟫ => ⟪₂ nil ⟫
+  | e => ⟪₂ ::assert :e ⟫
+
+def exec_next_noop (e ctx : Expr) : Option Expr :=
+  match e, ctx with
+  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x nil ⟫ =>
+    pure f
+  | ⟪₂ :: next :f ⟫, ⟪₂ nil ⟫ => pure f
+  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => exec_next_noop f xs
+  | _, _ => .none
+
 def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   match my_op, ctx with
   | ⟪₂ nil ⟫, _c => pure ⟪₂ nil ⟫
   | ⟪₂ :: exec nil ⟫, _ => pure ⟪₂ nil ⟫
   | ⟪₂ :: exec (:: :x :xs) ⟫, c => do
-    let x' ← exec_op x c
     let xs' ← exec_op ⟪₂ :: exec :xs ⟫ c
-
-    pure ⟪₂ :: :x' :xs' ⟫
+    match exec_next_noop x c with
+    | .some f' =>
+      pure <| cons_exec f' xs
+    | _ =>
+      let x' ← exec_op x c
+      match xs' with
+      | ⟪₂ :: exec :xs ⟫ =>
+        pure <| ⟪₂ :: exec (:: (:: assert :x') :xs) ⟫
+      | xs =>
+        pure <| ⟪₂ :: :x' :xs ⟫
   | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => pure x
   | ⟪₂ :: :f quote ⟫, c => do
     let c' ← exec_op f c
@@ -61,9 +93,12 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     pure ⟪₂ :: :f' :g' ⟫
   | ⟪₂ :: (:: exec (:: :a :b)) apply ⟫, c => do
     let e' ← exec_op ⟪₂ :: exec (:: :a :b) ⟫ c
-      >>= ((unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx)⟫) ∘ Expr.as_list) >=> (pure ∘ (List.map Expr.unquote_pure)))
 
-    maybe_apply e' |> unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫)
+    match e' with
+    | ⟪₂ :: exec :e ⟫ =>
+      pure ⟪₂ :: (:: exec :e) apply ⟫
+    | e' =>
+      unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx)⟫) (e'.as_list >>= do_apply)
   | ⟪₂ :: (:: both :e) apply ⟫, c => do
     let e' ← exec_op ⟪₂ :: both :e ⟫ c
     (match e' with
@@ -114,8 +149,8 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     | _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫-/
 
-#eval exec_op ⟪₂ :: (:: exec (:: read (:: (:: next read) nil))) apply ⟫ ⟪₂ :: Data nil ⟫
-  >>= (fun op => exec_op op ⟪₂ :: Data nil ⟫)
+#eval exec_op ⟪₂ :: (:: exec (:: read (:: (:: next read) nil))) apply ⟫ ⟪₂ :: (quoted I) nil ⟫
+
 
 #eval exec_op ⟪₂ ((:: ((:: exec) ((:: Data) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫
 

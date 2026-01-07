@@ -75,7 +75,23 @@ def do_step : Expr → Except Error Expr := try_step_n 30
 
 def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).toOption.getD e
 
-def my_k_type : Expr :=
+-- Nondependent K
+def k'_type : Expr :=
+  let t_α := ⟪₂ Data ⟫
+  -- β : α → Type
+  let α := ⟪₂ read ⟫
+  let t_β := ⟪₂ Data ⟫
+  let β := ⟪₂ :: next read ⟫
+
+  let t_x := α
+  -- y : β x
+  let t_y := β
+
+  let t_out := α
+
+  ⟪₂ :: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_out nil)))) ⟫
+
+def k_type : Expr :=
   let t_α := ⟪₂ Data ⟫
   -- β : α → Type
   let α := ⟪₂ read ⟫
@@ -112,7 +128,7 @@ def test_ctx_k_type : Expr :=
   ⟪₂ :: Data (:: (quoted (I Data)) (:: Data (:: Data nil))) ⟫
 
 --#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: next) read)) ((:: next) ((:: next) read))))) apply) ⟫ test_ctx_k_type
-#eval do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫
+#eval do_step ⟪₂ :: exec (:: :k_type :test_ctx_k_type) ⟫
 
 def test_ctx_k_partial : Expr :=
   ⟪₂ :: Data nil ⟫
@@ -121,11 +137,11 @@ def test_ctx_k_partial : Expr :=
 Applying α arg then β, then x, then y
 -/
 def infer_ctx_k_partial : Except Error Expr := do
-  let t₁ ← do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_partial) ⟫
+  let t₁ ← do_step ⟪₂ :: exec (:: :k_type :test_ctx_k_partial) ⟫
   let t₂ ← do_step ⟪₂ :: exec (:: :t₁ (:: Data (:: (quoted (I Data)) nil))) ⟫
   do_step ⟪₂ :: exec (:: :t₂ (:: Data (:: (quoted (I Data)) (:: Data (:: Data nil))))) ⟫
 
-#eval (do pure <| (← infer_ctx_k_partial) == (← do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫))
+#eval (do pure <| (← infer_ctx_k_partial) == (← do_step ⟪₂ :: exec (:: :k_type :test_ctx_k_type) ⟫))
 
 /-
 Will run the function, but execute later.

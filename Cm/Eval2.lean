@@ -230,20 +230,20 @@ def my_s_type : Expr :=
   let t_β := ⟪₂ :: :α (:: push_on (:: Data nil)) ⟫
 
   -- γ := ∀ (x : α) (y : β x), Data
-  let apply_later := ⟪₂ :: push_on apply ⟫
-  let βx' := lazy_all_apply ⟪₂ :: (:: :β quote) (:: (:: assert read) nil) ⟫
-  let βx := lazy_exec_apply ⟪₂ :: :β quote ⟫ ⟪₂ :: (:: assert read) (:: (:: assert Data) nil) ⟫
+  let βx := lazy_all_apply ⟪₂ :: (:: :β quote) (:: (:: assert read) nil) ⟫
+  --let βx := lazy_exec_apply ⟪₂ :: :β quote ⟫ ⟪₂ :: (:: assert read) (:: (:: assert Data) nil) ⟫
   --dbg_trace βx'
   --let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
-  let t_γ := ⟪₂ :: (:: exec (:: read (:: :βx (:: assert (:: Data nil))))) apply ⟫
+  let t_γ := ⟪₂ :: exec (:: (:: :α quote) (:: :βx (:: (:: assert Data) nil))) ⟫
+  --let t_γ := ⟪₂ :: (:: exec (:: read (:: :βx (:: assert (:: Data nil))))) apply ⟫
   --let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 
   -- x : ∀ (x : α) (y : β x), γ x y
-  let γxy := ⟪₂ :: (:: :γ (:: push_on (:: read (:: (:: next read) nil)))) :apply_later ⟫
-  let t_x := ⟪₂ :: both (:: read (:: both (:: :βx (:: (:: :γxy (:: push_on nil)))))) ⟫
+  let γxy := lazy_all_apply ⟪₂ :: (:: :γ quote) (:: (:: assert read) (:: (:: assert (:: next read)) nil)) ⟫
+  let t_x := ⟪₂ :: exec (:: (:: read quote) (:: :βx (:: :γxy nil))) ⟫
 
   -- y : ∀ (x : α), β x
-  let t_y := ⟪₂ :: both (:: read (:: :βx (::push_on nil))) ⟫
+  let t_y := ⟪₂ :: exec (:: (:: read quote) (:: :βx nil)) ⟫
 
   let t_z := α
 

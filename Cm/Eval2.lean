@@ -72,6 +72,7 @@ We should be able to detect this in exec.
 
 def last_next (op ctx : Expr) : Except Error Expr :=
   match op, ctx with
+  | ⟪₂ :: :f quote ⟫, c =>do  pure ⟪₂ :: (#← last_next f c) quote⟫
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x nil ⟫ => pure f
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :x :xs ⟫ => last_next f xs
   | _, _ => Except.error <| .stuck op
@@ -133,6 +134,9 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     | e =>
       pure ⟪₂ :: (:: exec :e) apply ⟫
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
+
+#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil)))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert))) ⟫ ⟪₂ :: Data nil ⟫
+#eval exec_op ⟪₂ ((:: exec) ((:: read) ((:: ((:: ((:: exec) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil)))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert)))) ((:: ((:: assert) Data)) nil)))) ⟫ ⟪₂ (:: Data nil) ⟫
 
 /-def exec_op_no_next_elim (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   match my_op, ctx with
@@ -366,6 +370,8 @@ def s_type : Expr :=
   --let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
   let t_γ := ⟪₂ :: exec (:: :α (:: :βx (:: (:: assert Data) nil))) ⟫
 
+  dbg_trace s!"γ: {t_γ}"
+
   --let t_γ := ⟪₂ :: (:: exec (:: read (:: :βx (:: assert (:: Data nil))))) apply ⟫
   --let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 
@@ -398,11 +404,13 @@ def test_s_type' : Except Error Expr := do
 
 #eval test_s_type'
 
-def test_k_type_eq : Except Error Expr := do
+def test_k_type_eq : Except Error Bool := do
   let test_ctx := ⟪₂ :: Data (:: (quoted (I Data)) (:: Data (:: Data nil))) ⟫
   let l ← test_ctx.as_list |> unwrap_with (.stuck test_ctx_s_type)
-  l.foldlM (fun acc e =>
+  let t ← l.foldlM (fun acc e =>
     do_step ⟪₂ :: exec (:: :acc (:: :e nil)) ⟫) k_type
+  let actual ← do_step ⟪₂ :: exec (:: :k_type :test_ctx) ⟫
+  pure <| actual == t
 
 #eval test_k_type_eq
 
@@ -411,6 +419,8 @@ def test_s_type_eq : Except Error Bool := do
   dbg_trace test_s_type'
   dbg_trace actual
   pure <| actual == (← test_s_type')
+
+
 
 #eval test_s_type_eq
 

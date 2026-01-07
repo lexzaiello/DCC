@@ -245,6 +245,8 @@ def test_ctx_γ : Expr :=
 
 #eval do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted ((K' Data) Data))) ((:: read) ((:: ((:: next) read)) nil))))) apply)) nil))) (:: Data (:: Data nil))) ⟫
 
+#eval do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) nil)) (:: Data (:: Data nil))) ⟫
+
 #eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: Data) nil))) (:: Data (:: Data nil))) ⟫

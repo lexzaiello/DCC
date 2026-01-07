@@ -74,6 +74,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
       | xs =>
         pure <| ⟪₂ :: :x' :xs ⟫
   | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => pure x
+  | ⟪₂ assert ⟫, c => pure c
   | ⟪₂ :: :f quote ⟫, c => do
     let c' ← exec_op f c
     pure ⟪₂ :: assert :c' ⟫
@@ -106,6 +107,13 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     | ⟪₂ :: :a :b ⟫ =>
       maybe_apply [a, b]
     | _ => .none) |> unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫)
+  | ⟪₂ :: (:: exec :f) (:: (:: push_on apply) (:: both (:: assert exec) assert)) ⟫, c => do
+    let f' ← exec_op ⟪₂ :: exec :f ⟫ c
+    match f' with
+    | ⟪₂ :: exec :e ⟫ =>
+      pure ⟪₂ :: :f' (:: (:: push_on apply) (:: both (:: assert exec) assert)) ⟫
+    | c' =>
+      pure ⟪₂ :: (:: exec :c') apply ⟫
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
 
 /-def exec_op_no_next_elim (my_op : Expr) (ctx : Expr) : Except Error Expr :=
@@ -261,7 +269,6 @@ Applying α arg then β, then x, then y
 -/
 def infer_ctx_k_partial : Except Error Expr := do
   let t₁ ← do_step ⟪₂ :: exec (:: :k_type :test_ctx_k_partial) ⟫
-  dbg_trace t₁
   let t₂ ← do_step ⟪₂ :: exec (:: :t₁ (:: (quoted (I Data)) nil)) ⟫
   do_step ⟪₂ :: exec (:: :t₂ (:: Data (:: Data nil))) ⟫
 
@@ -284,21 +291,32 @@ def lazy_exec_apply (f g : Expr) : Expr :=
 #eval lazy_exec_apply ⟪₂ read ⟫ ⟪₂ read ⟫
 
 /-
-I don't think we need apply later.
-We can probably do this easier with both ngl.
+Assert exec it thinks is suspicious.
 
-both list
+I feel like we should use exec instead of push_on here.
 
-(:: both (:: (:: assert both) :f)) this will wrap f with the oth.
+I want a better pattern for this. It happens quite often.
+
+We could just use apply instead.
+Also, we should make a macro / helper for exec.
+
+((:: exec) ((:: read) ((:: ((:: ((:: exec) ((:: ((:: assert) exec)) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil))))) ((:: push_on) apply))) ((:: ((:: assert) Data)) nil))))
 -/
 
 def lazy_all (f : Expr) : Expr :=
   ⟪₂ (:: exec (:: (:: assert exec) :f)) ⟫
 
-def lazy_all_apply (f : Expr) : Expr :=
-  ⟪₂ :: (#lazy_all f) (:: push_on apply) ⟫
+/-
+Other lazy all:
+:: (:: exec :f) (:: (:: push_on apply) (:: both (:: assert exec) assert))
+-/
 
-#eval exec_op (lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: read quote) nil)) ⟫) ⟪₂ :: Data nil ⟫
+def lazy_all_apply (f : Expr) : Expr :=
+  ⟪₂ :: (:: exec :f) (:: (:: push_on apply) (:: both (:: assert exec) assert)) ⟫
+
+#eval lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: (:: next (:: read quote))) nil)) ⟫
+#eval lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: (:: next (:: read quote))) nil)) ⟫
+#eval exec_op (lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: (:: next (:: read quote))) nil)) ⟫) ⟪₂ :: Data nil ⟫
 #eval exec_op ⟪₂ ((:: ((:: both) ((:: read) read))) apply) ⟫ ⟪₂ :: Data nil ⟫
 
 /-def test_lazy_exec : Except Error Expr :=
@@ -322,6 +340,8 @@ def s_type : Expr :=
   --dbg_trace βx'
   --let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
   let t_γ := ⟪₂ :: exec (:: :α (:: :βx (:: (:: assert Data) nil))) ⟫
+
+  dbg_trace s!"γ: {t_γ}"
   --let t_γ := ⟪₂ :: (:: exec (:: read (:: :βx (:: assert (:: Data nil))))) apply ⟫
   --let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 

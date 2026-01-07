@@ -37,25 +37,44 @@ def do_apply (es : List Expr) : Option Expr :=
     ⟪₂ quoted (#(xs.map Expr.unquote_pure).foldl Expr.app (f.unquote_pure)) ⟫
   | _ => .none
 
-def cons_exec (e₁ e₂ : Expr) : Expr :=
-  match e₂ with
-  | ⟪₂ :: exec :xs ⟫ =>
-    ⟪₂ :: exec (:: :e₁ :xs) ⟫
-  | xs => ⟪₂ :: exec (:: :e₁ :xs) ⟫
+/-def wrap_assert : Expr → Expr
+  | ⟪₂ -/
 
-def assert_all : Expr → Expr
-  | ⟪₂ :: :x :xs ⟫ => ⟪₂ :: (:: assert :x) (#assert_all xs) ⟫
-  | ⟪₂ nil ⟫ => ⟪₂ nil ⟫
-  | e => ⟪₂ ::assert :e ⟫
+/-
+Why should exec_op have to worry about the details of next?
+Why can't we just make the list? Why do we have to assert?
+We need the next stuff because otherwise.... what?
+Actual values shouldn't have any issue.
+Why don't we just return the value if it fails.
 
-def exec_next_noop (e ctx : Expr) : Option Expr :=
-  match e, ctx with
-  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x nil ⟫ =>
-    pure f
-  | ⟪₂ :: next :f ⟫, ⟪₂ nil ⟫ => pure f
-  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :_xs ⟫ => .none
-  | ⟪₂ read ⟫, ⟪₂ nil ⟫ => pure ⟪₂ read ⟫
-  | _, _ => .none
+Why don't we just fail instead?
+
+Why don't we pop the next and
+make a new exec?
+
+exec in exec_op and exec in step
+are the only places where we should be dropping
+next.
+
+I feel like exec_op shouldn't be making new exec's.
+We just have no way of distinguishing what we're actually trying to execute.
+
+This is my question:
+why are we running exec in exec_op and not step?
+
+This is the problem. If we drop next in exec_op,
+then everything gets confused.
+
+Why don't we just drop beforehand? What?
+
+We should be able to detect this in exec.
+-/
+
+def last_next (op ctx : Expr) : Except Error Expr :=
+  match op, ctx with
+  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x nil ⟫ => pure f
+  | ⟪₂ :: next :f ⟫, ⟪₂ :: :x :xs ⟫ => last_next f xs
+  | _, _ => Except.error <| .stuck op
 
 def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   match my_op, ctx with
@@ -63,16 +82,16 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   | ⟪₂ :: exec nil ⟫, _ => pure ⟪₂ nil ⟫
   | ⟪₂ :: exec (:: :x :xs) ⟫, c => do
     let xs' ← exec_op ⟪₂ :: exec :xs ⟫ c
-    match exec_next_noop x c with
-    | .some f' =>
-      pure <| cons_exec f' xs
-    | _ =>
-      let x' ← exec_op x c
-      match xs' with
-      | ⟪₂ :: exec :xs ⟫ =>
-        pure <| ⟪₂ :: exec (:: (:: assert :x') :xs) ⟫
-      | xs =>
-        pure <| ⟪₂ :: :x' :xs ⟫
+    match xs' with
+    | ⟪₂ :: exec :e ⟫ =>
+      (last_next x c >>= (fun x' => pure ⟪₂ :: exec (:: :x' :e) ⟫))
+      <|> (do pure ⟪₂ :: exec (:: (:: assert (#← (exec_op x c))) :e) ⟫)
+    | ⟪₂ nil ⟫ =>
+      (last_next x c >>= (fun x' => pure ⟪₂ :: exec (:: :x' nil) ⟫))
+      <|> (do pure ⟪₂ :: (#← (exec_op x c)) nil ⟫)
+    | e =>
+      (last_next x c >>= (fun x' => pure ⟪₂ :: exec (:: :x' (:: assert :e)) ⟫))
+      <|> (do pure ⟪₂ :: (#← (exec_op x c)) :e ⟫)
   | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => pure x
   | ⟪₂ assert ⟫, c => pure c
   | ⟪₂ :: :f quote ⟫, c => do
@@ -81,7 +100,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   | ⟪₂ :: assert :x ⟫, _ => pure x
   | ⟪₂ quote ⟫, c => pure ⟪₂ :: assert :c ⟫
   | ⟪₂ :: next :f ⟫, ⟪₂ nil ⟫
-  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x nil ⟫ => pure f
+  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x nil ⟫ => Except.error <| .stuck my_op
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => exec_op f xs
   | ⟪₂ :: read :f ⟫, ⟪₂ :: :x :_xs ⟫ => exec_op f x
   | ⟪₂ :: :f (:: push_on :l) ⟫, c => do
@@ -107,13 +126,6 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     | ⟪₂ :: :a :b ⟫ =>
       maybe_apply [a, b]
     | _ => .none) |> unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫)
-  | ⟪₂ :: (:: exec :f) (:: (:: push_on apply) (:: both (:: assert exec) assert)) ⟫, c => do
-    let f' ← exec_op ⟪₂ :: exec :f ⟫ c
-    match f' with
-    | ⟪₂ :: exec :e ⟫ =>
-      pure ⟪₂ :: :f' (:: (:: push_on apply) (:: both (:: assert exec) assert)) ⟫
-    | c' =>
-      pure ⟪₂ :: (:: exec :c') apply ⟫
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
 
 /-def exec_op_no_next_elim (my_op : Expr) (ctx : Expr) : Except Error Expr :=
@@ -157,6 +169,9 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
       pure ⟪₂ quoted ((#f.unquote_pure) (#x.unquote_pure)) ⟫
     | _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫-/
+
+#eval exec_op ⟪₂ :: exec (:: (:: next read) (:: (:: next read) nil)) ⟫ ⟪₂ :: Data nil ⟫
+  >>= (fun op => exec_op op ⟪₂ :: Data nil ⟫)
 
 #eval exec_op ⟪₂ :: (:: exec (:: read (:: (:: next read) nil))) apply ⟫ ⟪₂ :: (quoted I) nil ⟫
   >>= (fun op => exec_op op ⟪₂ :: Data nil ⟫)

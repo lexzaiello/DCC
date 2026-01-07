@@ -132,10 +132,18 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     | ⟪₂ :: exec :f ⟫ =>
       pure ⟪₂ :: (:: exec :f) (:: (:: push_on apply) (:: both (:: assert exec) assert)) ⟫
     | e =>
-      pure ⟪₂ :: (:: exec :e) apply ⟫
+      pure ⟪₂ (:: (:: exec :e) apply) ⟫
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
 
-#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil)))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert))) ⟫ ⟪₂ :: Data nil ⟫
+def test_chain_exec : Except Error Bool := do
+  let f := ⟪₂ ((:: ((:: exec) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil)))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert))) ⟫
+  let a ← exec_op f ⟪₂ :: Data (:: Data nil) ⟫
+  let b ← exec_op f ⟪₂ :: Data nil ⟫ >>= (fun e => exec_op e ⟪₂ :: Data nil ⟫)
+  pure <| a == b
+
+#eval test_chain_exec
+
+#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil)))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert))) ⟫ ⟪₂ :: Data (:: Data nil) ⟫
 #eval exec_op ⟪₂ ((:: exec) ((:: read) ((:: ((:: ((:: exec) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil)))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert)))) ((:: ((:: assert) Data)) nil)))) ⟫ ⟪₂ (:: Data nil) ⟫
 
 /-def exec_op_no_next_elim (my_op : Expr) (ctx : Expr) : Except Error Expr :=

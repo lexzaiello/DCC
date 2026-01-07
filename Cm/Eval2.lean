@@ -212,17 +212,17 @@ def my_s_type : Expr :=
   dbg_trace t_γ
 
   -- x : ∀ (x : α) (y : β x), γ x y
-  let γxy := lazy_all_apply ⟪₂ :: :γ (:: (:: assert read) (:: (:: assert (:: next read)) nil)) ⟫
-  let t_x := ⟪₂ :: exec (:: read (:: :βx (:: :γxy nil))) ⟫
+  let γxy := lazy_all_apply ⟪₂ :: (:: :γ quote) (:: (:: assert read) (:: (:: assert (:: next read)) nil)) ⟫
+  let t_x := ⟪₂ :: exec (:: :α (:: :βx (:: :γxy nil))) ⟫
 
   -- y : ∀ (x : α), β x
-  let t_y := ⟪₂ :: exec (:: read (:: :βx nil)) ⟫
+  let t_y := ⟪₂ :: exec (:: :α (:: :βx nil)) ⟫
 
   let t_z := α
 
   -- S x y z : γ z (y z)
   let yz := ⟪₂ :: (:: exec (:: :y (:: :z nil))) apply ⟫
-  let t_out := ⟪₂ :: (:: exec (:: :γ (:: :z (:: :yz nil)))) ⟫
+  let t_out := ⟪₂ :: (:: exec (:: :γ (:: :z (:: :yz nil)))) apply ⟫
 
   ⟪₂ :: :t_α (:: :t_β (:: :t_γ (:: :t_x (:: :t_y (:: :t_z (:: :t_out nil)))))) ⟫
 
@@ -242,6 +242,8 @@ def test_ctx_γ : Expr :=
   ⟪₂ :: Data (:: Data nil) ⟫
 
 #eval do_step ⟪₂ :: exec (:: :my_test_γ :test_ctx_γ) ⟫
+
+#eval do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted ((K' Data) Data))) ((:: read) ((:: ((:: next) read)) nil))))) apply)) nil))) (:: Data (:: Data nil))) ⟫
 
 #eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫
 

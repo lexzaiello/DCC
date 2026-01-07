@@ -126,6 +126,12 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     | ⟪₂ :: :a :b ⟫ =>
       maybe_apply [a, b]
     | _ => .none) |> unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫)
+  | ⟪₂ :: (:: exec :f) (:: (:: push_on apply) (:: both (:: assert exec) assert)) ⟫, c => do
+    match ← exec_op ⟪₂ :: exec :f ⟫ c with
+    | ⟪₂ :: exec :f ⟫ =>
+      pure ⟪₂ :: (:: exec :f) (:: (:: push_on apply) (:: both (:: assert exec) assert)) ⟫
+    | e =>
+      pure ⟪₂ :: (:: exec :e) apply ⟫
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
 
 /-def exec_op_no_next_elim (my_op : Expr) (ctx : Expr) : Except Error Expr :=
@@ -330,8 +336,17 @@ def lazy_all_apply (f : Expr) : Expr :=
   ⟪₂ :: (:: exec :f) (:: (:: push_on apply) (:: both (:: assert exec) assert)) ⟫
 
 #eval lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: (:: next (:: read quote))) nil)) ⟫
-#eval lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: (:: next (:: read quote))) nil)) ⟫
-#eval exec_op (lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: (:: next (:: read quote))) nil)) ⟫) ⟪₂ :: Data nil ⟫
+#eval lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: next (:: read quote)) nil)) ⟫
+def test_lazy_apply : Except Error Bool := do
+  let my_l := ⟪₂ (:: (:: read quote) (:: (:: next (:: read quote)) nil)) ⟫
+  let my_f := lazy_all_apply my_l
+  pure <| (← exec_op my_f ⟪₂ :: Data (:: Data nil) ⟫) == (← (exec_op my_f ⟪₂ :: Data nil ⟫ >>= (exec_op · ⟪₂ :: Data nil⟫)))
+
+#eval test_lazy_apply
+
+#eval exec_op (lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: next (:: read quote)) nil)) ⟫) ⟪₂ :: Data (:: Data nil) ⟫
+#eval exec_op (lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: next (:: read quote)) nil)) ⟫) ⟪₂ :: Data nil ⟫
+  >>= (fun op => exec_op op ⟪₂ :: Data nil ⟫)
 #eval exec_op ⟪₂ ((:: ((:: both) ((:: read) read))) apply) ⟫ ⟪₂ :: Data nil ⟫
 
 /-def test_lazy_exec : Except Error Expr :=

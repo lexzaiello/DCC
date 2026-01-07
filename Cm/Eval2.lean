@@ -35,9 +35,10 @@ Now, the ultra pro gamer move is to allow exec.
 def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
   match my_op, ctx with
   | ⟪₂ nil ⟫, _c => ⟪₂ nil ⟫
+  | ⟪₂ :: exec nil ⟫, _ => ⟪₂ nil ⟫
   | ⟪₂ :: exec (:: :x :xs) ⟫, c => do
     let x' ← exec_op x c
-    let xs' ← exec_op xs c
+    let xs' ← exec_op ⟪₂ :: exec :xs ⟫ c
 
     ⟪₂ :: :x' :xs' ⟫
   | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => x
@@ -112,7 +113,7 @@ def my_k_type : Expr :=
 
   let t_x := α
   -- y : β x
-  let t_y := ⟪₂ :: (:: exec (:: :β :x)) apply ⟫
+  let t_y := ⟪₂ :: (:: exec (:: :β (:: :x nil))) apply ⟫
 
   let t_out := α
 
@@ -173,3 +174,12 @@ def my_s_type : Expr :=
   -- x : ∀ (x : α) (y : β x), γ x y
   let γxy := ⟪₂ :: (:: :γ (:: push_on (:: read (:: (:: next read) nil)))) :apply_later ⟫
   let t_x := ⟪₂ :: both (:: read (:: both (:: :βx (:: (:: :γxy (:: push_on nil)))))) ⟫
+
+  -- y : ∀ (x : α), β x
+  let t_y := ⟪₂ :: both (:: read (:: :βx (::push_on nil))) ⟫
+
+  let t_z := α
+
+  -- S x y z : γ z (y z)
+  let yz := ⟪₂ :: (:: exec (:: :y (:: :z nil))
+  let t_out := ⟪₂ :: (:: exec (:: :γ (:: :z

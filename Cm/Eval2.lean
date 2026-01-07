@@ -269,3 +269,19 @@ def test_ctx_γ : Expr :=
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :s_type :test_ctx_s_type) ⟫
 
+/-
+How do we deal with non-beta-normal values?
+i.e., contexts?
+
+Ideally, as much of the context is stripped out as possible.
+
+One way we could do this is by inserting it in an exec position where it is a no-op.
+
+The other INSANELY jank thing we could do is normalize but offset all the next's...
+
+The one thing I like about the offset idea is that things are nice and uniform.
+This is an interesting idea.
+
+I really like it actually.
+Really like it. Wait actually good ass idea.
+-/

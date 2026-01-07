@@ -15,6 +15,9 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     pure ⟪₂ :: :x' :xs' ⟫
   | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => pure x
   | ⟪₂ next ⟫, ⟪₂ :: :_x :xs ⟫ => pure xs
+  | ⟪₂ :: :f quote ⟫, c => do
+    let c' ← exec_op f c
+    pure ⟪₂ :: assert :c' ⟫
   | ⟪₂ :: assert :x ⟫, _ => pure x
   | ⟪₂ quote ⟫, c => pure ⟪₂ :: assert :c ⟫
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => exec_op f xs
@@ -198,22 +201,22 @@ def my_s_type : Expr :=
   let t_β := ⟪₂ :: :α (:: push_on (:: Data nil)) ⟫
 
   -- γ := ∀ (x : α) (y : β x), Data
-  let βx := lazy_all_apply ⟪₂ :: (:: :β quote) (:: (:: assert read) nil) ⟫
+  let βx := lazy_all_apply ⟪₂ :: :β (:: (:: assert read) nil) ⟫
   --let βx := lazy_exec_apply ⟪₂ :: :β quote ⟫ ⟪₂ :: (:: assert read) (:: (:: assert Data) nil) ⟫
   --dbg_trace βx'
   --let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
-  let t_γ := ⟪₂ :: exec (:: (:: :α quote) (:: :βx (:: (:: assert Data) nil))) ⟫
+  let t_γ := ⟪₂ :: exec (:: :α (:: :βx (:: (:: assert Data) nil))) ⟫
   --let t_γ := ⟪₂ :: (:: exec (:: read (:: :βx (:: assert (:: Data nil))))) apply ⟫
   --let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 
   dbg_trace t_γ
 
   -- x : ∀ (x : α) (y : β x), γ x y
-  let γxy := lazy_all_apply ⟪₂ :: (:: :γ quote) (:: (:: assert read) (:: (:: assert (:: next read)) nil)) ⟫
-  let t_x := ⟪₂ :: exec (:: (:: read quote) (:: :βx (:: :γxy nil))) ⟫
+  let γxy := lazy_all_apply ⟪₂ :: :γ (:: (:: assert read) (:: (:: assert (:: next read)) nil)) ⟫
+  let t_x := ⟪₂ :: exec (:: read (:: :βx (:: :γxy nil))) ⟫
 
   -- y : ∀ (x : α), β x
-  let t_y := ⟪₂ :: exec (:: (:: read quote) (:: :βx nil)) ⟫
+  let t_y := ⟪₂ :: exec (:: read (:: :βx nil)) ⟫
 
   let t_z := α
 
@@ -228,7 +231,7 @@ Test context for:
 S Data (I Data) (K Data Data) (K Data Data) (I Data) Data
 -/
 def test_ctx_s_type : Expr :=
-  ⟪₂ :: Data (:: (quoted (I Data)) (:: (quoted (K Data Data)) (:: (quoted (K Data Data)) (:: (quoted (I Data)) (:: Data nil))))) ⟫
+  ⟪₂ :: Data (:: (quoted (I Data)) (:: (quoted (K' Data Data)) (:: (quoted (K' Data Data)) (:: (quoted (I Data)) (:: Data nil))))) ⟫
 
 def my_test_γ : Expr :=
   ⟪₂ ((:: Data) ((:: ((:: ((:: quoted (I Data)) read)) apply)) ((:: Data) nil))) ⟫
@@ -239,5 +242,7 @@ def test_ctx_γ : Expr :=
   ⟪₂ :: Data (:: Data nil) ⟫
 
 #eval do_step ⟪₂ :: exec (:: :my_test_γ :test_ctx_γ) ⟫
+
+#eval exec_op ⟪₂ ((:: ((:: exec) ((:: quoted (I Data)) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :my_s_type :test_ctx_s_type) ⟫

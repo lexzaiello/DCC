@@ -260,10 +260,13 @@ Applying α arg then β, then x, then y
 -/
 def infer_ctx_k_partial : Except Error Expr := do
   let t₁ ← do_step ⟪₂ :: exec (:: :k_type :test_ctx_k_partial) ⟫
+  dbg_trace t₁
   let t₂ ← do_step ⟪₂ :: exec (:: :t₁ (:: (quoted (I Data)) nil)) ⟫
   do_step ⟪₂ :: exec (:: :t₂ (:: Data (:: Data nil))) ⟫
 
 #eval infer_ctx_k_partial
+
+#eval ⟪₂ :: exec (:: :k_type :test_ctx_k_partial) ⟫
 
 #eval (do pure <| (← infer_ctx_k_partial) == (← do_step ⟪₂ :: exec (:: :k_type :test_ctx_k_type) ⟫))
 

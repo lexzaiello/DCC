@@ -28,6 +28,9 @@ def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
   | ⟪₂ next ⟫, ⟪₂ :: :_x :xs ⟫ => xs
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => exec_op f xs
   | ⟪₂ :: read :f ⟫, ⟪₂ :: :x :_xs ⟫ => exec_op f x
+  | ⟪₂ :: :f (:: push_on :l) ⟫, c => do
+    let c' ← exec_op f c
+    ⟪₂ :: :c' :l ⟫
   | ⟪₂ (:: push_on :l) ⟫, c => ⟪₂ :: :c :l ⟫
   | ⟪₂ :: both (:: :f :g) ⟫, c => do
     let f' ← exec_op f c
@@ -123,3 +126,17 @@ def infer_ctx_k_partial : Except Error Expr := do
 #eval (do pure <| (← infer_ctx_k_partial) == (← do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫))
 
 #eval do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_partial) ⟫
+
+def my_s_type : Expr :=
+  let α := ⟪₂ read ⟫
+  let β := ⟪₂ :: next read ⟫
+  let γ := ⟪₂ :: next (:: next read) ⟫
+  let x := ⟪₂ :: next (:: next (:: next read)) ⟫
+  let y := ⟪₂ :: next (:: next (:: next (:: next read))) ⟫
+  let z := ⟪₂ :: next (:: next (:: next (:: next (:: next read)))) ⟫
+
+  let t_α := ⟪₂ Data ⟫
+  let t_β := ⟪₂ :: :α (:: push_on (:: Data nil)) ⟫
+
+  -- γ := ∀ (x : α) (y : β x), Data
+  let t_γ := ⟪₂ 

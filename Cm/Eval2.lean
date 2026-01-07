@@ -201,7 +201,7 @@ def my_s_type : Expr :=
   let t_β := ⟪₂ :: :α (:: push_on (:: Data nil)) ⟫
 
   -- γ := ∀ (x : α) (y : β x), Data
-  let βx := lazy_all_apply ⟪₂ :: :β (:: (:: assert read) nil) ⟫
+  let βx := lazy_all_apply ⟪₂ :: (:: :β quote) (:: (:: assert read) nil) ⟫
   --let βx := lazy_exec_apply ⟪₂ :: :β quote ⟫ ⟪₂ :: (:: assert read) (:: (:: assert Data) nil) ⟫
   --dbg_trace βx'
   --let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
@@ -243,6 +243,6 @@ def test_ctx_γ : Expr :=
 
 #eval do_step ⟪₂ :: exec (:: :my_test_γ :test_ctx_γ) ⟫
 
-#eval exec_op ⟪₂ ((:: ((:: exec) ((:: quoted (I Data)) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫
+#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :my_s_type :test_ctx_s_type) ⟫

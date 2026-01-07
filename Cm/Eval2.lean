@@ -91,13 +91,13 @@ def my_k_type : Expr :=
 
   ⟪₂ :: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_out nil)))) ⟫
 
-def my_i_type : Expr :=
+def i_type : Expr :=
   let t_α := ⟪₂ Data ⟫
   let α := ⟪₂ read ⟫
 
   ⟪₂ :: :t_α (:: :α (:: :α nil)) ⟫
 
-#eval do_step ⟪₂ :: exec (:: :my_i_type (:: Data (:: Data nil))) ⟫
+#eval do_step ⟪₂ :: exec (:: :i_type (:: Data (:: Data nil))) ⟫
 
 /-
 Example k type:
@@ -190,7 +190,7 @@ def lazy_all_apply (f : Expr) : Expr :=
 
 --((:: both) ((:: ((:: both) ((:: ((:: assert) exec)) ((:: read) ((:: push_on) read))))) ((:: assert) apply)))
 
-def my_s_type : Expr :=
+def s_type : Expr :=
   let α := ⟪₂ read ⟫
   let β := ⟪₂ :: next read ⟫
   let γ := ⟪₂ :: next (:: next read) ⟫
@@ -251,6 +251,5 @@ def test_ctx_γ : Expr :=
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: Data) nil))) (:: Data (:: Data nil))) ⟫
 
-#eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :my_s_type :test_ctx_s_type) ⟫
+#eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :s_type :test_ctx_s_type) ⟫
 
-#eval do_step ⟪₂ ((((K' Data) Data) Data) ((I Data) Data)) ⟫

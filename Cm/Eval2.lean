@@ -25,10 +25,20 @@ What would be really powerful with apply is if it worked on the context
 instead of just arguments. This would remove a lot of the quotation shenanigans.
 
 :: (:: both _ ) apply
+
+I want both to work nicer. more like a reverse map.
+Like, why use both when we can have a nice reverse map?
+
+Now, the ultra pro gamer move is to allow exec.
 -/
 
 def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
   match my_op, ctx with
+  | ⟪₂ :: exec (:: :x :xs) ⟫, c => do
+    let x' := (exec_op x c).getD x
+    let xs' := (exec_op xs c).getD xs
+
+    ⟪₂ :: :x' :xs' ⟫
   | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => x
   | ⟪₂ next ⟫, ⟪₂ :: :_x :xs ⟫ => xs
   | ⟪₂ :: assert :x ⟫, _ => x
@@ -43,12 +53,29 @@ def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
     let g' ← exec_op g c
 
     ⟪₂ :: :f' :g' ⟫
+  | ⟪₂ :: (:: exec (:: :a :b)) apply ⟫, c => do
+    let a' := (exec_op a c).getD a |> Expr.unquote_pure
+    let b' := ((exec_op ⟪₂ :: exec :b ⟫ c) <|> b)
+      >>= (Expr.as_list >=> (pure ∘ (List.map Expr.unquote_pure)))
+
+    pure <| b'.foldl
+
+    b'.
+
+--      >>= (Expr.as_list >=> (pure ∘ (List.map Expr.unquote_pure)))
+
+    match e' with
+    | .cons x xs =>
+      pure <| xs.foldl Expr.app x
+    | _ => .none
   | ⟪₂ :: (:: both :e) apply ⟫, c => do
     match ← exec_op ⟪₂ :: both :e ⟫ c with
     | ⟪₂ :: :f :x ⟫ => do
       ⟪₂ quoted ((#f.unquote_pure) (#x.unquote_pure)) ⟫
     | _ => .none
   | _, _ => .none
+
+#eval exec_op ⟪₂ :: (:: exec (:: read (:: read nil))) apply ⟫ ⟪₂ :: Data nil ⟫
 
 def step (e : Expr) : Option Expr :=
   match e with
@@ -91,7 +118,7 @@ def my_k_type : Expr :=
 
   let t_x := α
   -- y : β x
-  let t_y := ⟪₂ :: (:: both (:: :β :x)) apply ⟫
+  let t_y := ⟪₂ :: (:: exec (:: :β :x)) apply ⟫
 
   let t_out := α
 

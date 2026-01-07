@@ -4,9 +4,9 @@ import Cm.Error
 -- Nondependent K
 def k'_type : Expr :=
   let t_α := ⟪₂ Data ⟫
+  let t_β := ⟪₂ Data ⟫
   -- β : α → Type
   let α := ⟪₂ read ⟫
-  let t_β := ⟪₂ Data ⟫
   let β := ⟪₂ :: next read ⟫
 
   let t_x := α
@@ -106,7 +106,6 @@ def exec_op' (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
 
 def step_seq (e : Expr) : Except Error Expr :=
-  dbg_trace e
   match e with
   | ⟪₂ :: exec (:: (:: nil nil) :_ctx) ⟫ => pure ⟪₂ nil ⟫
   | ⟪₂ :: exec (:: (:: (:: :f :g) nil) :ctx) ⟫ =>
@@ -262,9 +261,9 @@ def step (e : Expr) : Except Error Expr :=
   match e with
   | ⟪₂ :: exec (:: :ops :Γ) ⟫ =>
     match ops with
-    | ⟪₂ (:: :x nil) ⟫ =>
-      exec_op x Γ
-    | l => l.mapM_list (Except.error <| .stuck e) (fun e => (exec_op e Γ) <|> (pure e))
+    | l =>
+      unwrap_with (.stuck e) <| l.map_list (fun e =>
+        (last_next e Γ <|> (exec_op e Γ)).toOption.getD e)
   | ⟪₂ I :_α :x ⟫ => pure x
   | ⟪₂ K :_α :_β :x :_y ⟫
   | ⟪₂ K' :_α :_β :x :_y ⟫ => pure x
@@ -300,6 +299,9 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr := do
     (try_step_n (n - 1) e') <|> (pure e')
 
 def do_step : Expr → Except Error Expr := try_step_n 50
+
+#eval k'_type
+#eval do_step ⟪₂ :: exec (:: :k'_type (:: Data (:: Data nil))) ⟫
 
 def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).toOption.getD e
 
@@ -421,16 +423,11 @@ def s_type : Expr :=
 
   -- γ := ∀ (x : α) (y : β x), Data
   let βx' := ⟪₂ :: :β (:: (:: push_on (:: (:: assert read) nil)) (:: push_on apply)) ⟫
-  dbg_trace s!"bx: {βx'}"
   let βx := lazy_all_apply ⟪₂ :: (:: :β quote) (:: (:: assert read) nil) ⟫
   --let βx := lazy_exec_apply ⟪₂ :: :β quote ⟫ ⟪₂ :: (:: assert read) (:: (:: assert Data) nil) ⟫
   --dbg_trace βx'
   --let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
   let t_γ := ⟪₂ :: exec (:: :α (:: :βx (:: (:: assert Data) nil))) ⟫
-  dbg_trace s!"bruh: {⟪₂ :: exec (:: :α (:: :βx' (:: (:: assert Data) nil))) ⟫}"
-
-  dbg_trace s!"γ: {t_γ}"
-
   --let t_γ := ⟪₂ :: (:: exec (:: read (:: :βx (:: assert (:: Data nil))))) apply ⟫
   --let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 
@@ -477,8 +474,6 @@ def test_k_type_eq : Except Error Bool := do
 
 def test_s_type_eq : Except Error Bool := do
   let actual ← do_step ⟪₂ :: exec (:: :s_type :test_ctx_s_type) ⟫
-  dbg_trace test_s_type'
-  dbg_trace actual
   pure <| actual == (← test_s_type')
 
 

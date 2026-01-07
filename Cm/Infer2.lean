@@ -53,5 +53,7 @@ def infer : Expr → Except Error Expr
 #eval infer ⟪₂ I Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
-#eval infer ⟪₂ S Data (I Data) ⟫
+#eval infer ⟪₂ K' Data Data Data Data ⟫
+
+#eval infer ⟪₂ S Data (I Data) (K' Data Data) ⟫
 

@@ -150,9 +150,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫-/
 
 #eval exec_op ⟪₂ :: (:: exec (:: read (:: (:: next read) nil))) apply ⟫ ⟪₂ :: (quoted I) nil ⟫
-
-
-#eval exec_op ⟪₂ ((:: ((:: exec) ((:: Data) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫
+  >>= (fun op => exec_op op ⟪₂ :: Data nil ⟫)
 
 def step (e : Expr) : Except Error Expr :=
   match e with

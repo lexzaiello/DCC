@@ -4,6 +4,27 @@ import Cm.Error
 def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error ε)
 
+def Expr.is_comb : Expr → Bool
+  | ⟪₂ K ⟫
+  | ⟪₂ S ⟫
+  | ⟪₂ I ⟫
+  | ⟪₂ K' ⟫ => true
+  | ⟪₂ :f :_x ⟫ => f.is_comb
+  | _ => false
+
+/-
+If an application includes instructions,
+it must be lifted into another application
+-/
+def maybe_apply (es : List Expr) : Option Expr :=
+  match es with
+  | .cons f xs =>
+    if f.is_comb then
+      ⟪₂ quoted (#(xs.map Expr.unquote_pure).foldl Expr.app (f.unquote_pure)) ⟫
+    else
+      ⟪₂ :: (:: exec (#Expr.from_list es)) apply ⟫
+  | _ => .none
+
 def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   match my_op, ctx with
   | ⟪₂ nil ⟫, _c => pure ⟪₂ nil ⟫
@@ -89,7 +110,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     | _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫-/
 
-#eval exec_op ⟪₂ :: (:: exec (:: read (:: read nil))) apply ⟫ ⟪₂ :: Data nil ⟫
+#eval exec_op ⟪₂ :: (:: exec (:: read (:: (:: next read) nil))) apply ⟫ ⟪₂ :: Data nil ⟫
 
 def step (e : Expr) : Except Error Expr :=
   match e with
@@ -199,8 +220,10 @@ Applying α arg then β, then x, then y
 -/
 def infer_ctx_k_partial : Except Error Expr := do
   let t₁ ← do_step ⟪₂ :: exec (:: :k_type :test_ctx_k_partial) ⟫
-  let t₂ ← do_step ⟪₂ :: exec (:: :t₁ (:: Data (:: (quoted (I Data)) nil))) ⟫
-  do_step ⟪₂ :: exec (:: :t₂ (:: Data (:: (quoted (I Data)) (:: Data (:: Data nil))))) ⟫
+  let t₂ ← do_step ⟪₂ :: exec (:: :t₁ (:: (quoted (I Data)) nil)) ⟫
+  do_step ⟪₂ :: exec (:: :t₂ (:: Data (:: Data nil))) ⟫
+
+#eval infer_ctx_k_partial
 
 #eval (do pure <| (← infer_ctx_k_partial) == (← do_step ⟪₂ :: exec (:: :k_type :test_ctx_k_type) ⟫))
 

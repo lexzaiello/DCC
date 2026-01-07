@@ -55,4 +55,3 @@ def infer : Expr → Except Error Expr
 
 #eval infer ⟪₂ S Data (I Data) ⟫
 
-#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: assert) read)) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫

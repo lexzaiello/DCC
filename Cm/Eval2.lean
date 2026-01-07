@@ -53,7 +53,8 @@ def exec_next_noop (e ctx : Expr) : Option Expr :=
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x nil ⟫ =>
     pure f
   | ⟪₂ :: next :f ⟫, ⟪₂ nil ⟫ => pure f
-  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => .none
+  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :_xs ⟫ => .none
+  | ⟪₂ read ⟫, ⟪₂ nil ⟫ => pure ⟪₂ read ⟫
   | _, _ => .none
 
 def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
@@ -365,7 +366,10 @@ def test_ctx_γ : Expr :=
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: Data) nil))) (:: Data (:: Data nil))) ⟫
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :s_type :test_ctx_s_type) ⟫
+#eval s_type
 #eval do_step ⟪₂ :: exec (:: :s_type (:: Data nil)) ⟫
+#eval do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: Data) ((:: Data) nil))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) read)) ((:: read) nil)))) apply)) ((:: Data) nil)))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) read)) ((:: read) nil)))) apply)) ((:: ((:: ((:: exec) ((:: ((:: assert) ((:: next) read))) ((:: read) ((:: ((:: next) read)) nil))))) apply)) nil)))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) read)) ((:: read) nil)))) apply)) nil))) ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: next) read)) ((:: ((:: next) ((:: next) ((:: next) ((:: next) ((:: next) read)))))) ((:: ((:: ((:: exec) ((:: ((:: next) ((:: next) ((:: next) ((:: next) read))))) ((:: ((:: next) ((:: next) ((:: next) ((:: next) ((:: next) read)))))) nil)))) apply)) nil))))) apply)) nil))))))) (:: (quoted (I Data)) nil)) ⟫
+
 
 /-
 How do we deal with non-beta-normal values?

@@ -34,9 +34,10 @@ Now, the ultra pro gamer move is to allow exec.
 
 def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
   match my_op, ctx with
+  | ⟪₂ nil ⟫, _c => ⟪₂ nil ⟫
   | ⟪₂ :: exec (:: :x :xs) ⟫, c => do
-    let x' := (exec_op x c).getD x
-    let xs' := (exec_op xs c).getD xs
+    let x' ← exec_op x c
+    let xs' ← exec_op xs c
 
     ⟪₂ :: :x' :xs' ⟫
   | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => x
@@ -152,8 +153,6 @@ def infer_ctx_k_partial : Except Error Expr := do
   do_step ⟪₂ :: exec (:: :t₂ (:: Data (:: (quoted (I Data)) (:: Data (:: Data nil))))) ⟫
 
 #eval (do pure <| (← infer_ctx_k_partial) == (← do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫))
-
-#eval do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_partial) ⟫
 
 def my_s_type : Expr :=
   let α := ⟪₂ read ⟫

@@ -44,6 +44,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
   | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => x
   | ⟪₂ next ⟫, ⟪₂ :: :_x :xs ⟫ => xs
   | ⟪₂ :: assert :x ⟫, _ => x
+  | ⟪₂ quote ⟫, c => ⟪₂ :: assert :c ⟫
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => exec_op f xs
   | ⟪₂ :: read :f ⟫, ⟪₂ :: :x :_xs ⟫ => exec_op f x
   | ⟪₂ :: :f (:: push_on :l) ⟫, c => do
@@ -155,10 +156,19 @@ def infer_ctx_k_partial : Except Error Expr := do
 
 #eval (do pure <| (← infer_ctx_k_partial) == (← do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫))
 
+/-
+Will run the function, but execute later.
+-/
 def lazy_exec (f g : Expr) : Expr :=
-  ⟪₂ (:: both (:: (:: assert exec) (:: :f (:: push_on :g)))) ⟫
+  ⟪₂ (:: both (:: (:: assert exec) (:: both (:: :f :g)))) ⟫
 
+def lazy_exec_apply (f g : Expr) : Expr :=
+  ⟪₂ (:: both (:: (:: both (:: (:: assert exec) (:: both (:: :f :g)))) (:: assert apply))) ⟫
 
+#eval lazy_exec ⟪₂ read ⟫ ⟪₂ read ⟫
+#eval lazy_exec_apply ⟪₂ read ⟫ ⟪₂ read ⟫
+
+--((:: both) ((:: ((:: both) ((:: ((:: assert) exec)) ((:: read) ((:: push_on) read))))) ((:: assert) apply)))
 
 def my_s_type : Expr :=
   let α := ⟪₂ read ⟫
@@ -172,6 +182,7 @@ def my_s_type : Expr :=
 
   -- γ := ∀ (x : α) (y : β x), Data
   let apply_later := ⟪₂ :: push_on apply ⟫
+  let βx' := lazy_exec_apply ⟪₂ 
   let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
   let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 

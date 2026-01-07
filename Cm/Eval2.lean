@@ -238,6 +238,8 @@ def my_s_type : Expr :=
   --let t_γ := ⟪₂ :: (:: exec (:: read (:: :βx (:: assert (:: Data nil))))) apply ⟫
   --let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 
+  dbg_trace t_γ
+
   -- x : ∀ (x : α) (y : β x), γ x y
   let γxy := lazy_all_apply ⟪₂ :: (:: :γ quote) (:: (:: assert read) (:: (:: assert (:: next read)) nil)) ⟫
   let t_x := ⟪₂ :: exec (:: (:: read quote) (:: :βx (:: :γxy nil))) ⟫
@@ -262,6 +264,8 @@ def test_ctx_s_type : Expr :=
 
 def my_test_γ : Expr :=
   ⟪₂ ((:: Data) ((:: ((:: ((:: quoted (I Data)) read)) apply)) ((:: Data) nil))) ⟫
+
+#eval exec_op ⟪₂ ((:: exec) ((:: ((:: read) quote)) ((:: ((:: ((:: exec) ((:: ((:: assert) exec)) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil))))) ((:: push_on) apply))) ((:: ((:: assert) Data)) nil)))) ⟫ test_ctx_s_type
 
 def test_ctx_γ : Expr :=
   ⟪₂ :: Data (:: Data nil) ⟫

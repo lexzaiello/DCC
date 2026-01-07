@@ -54,19 +54,12 @@ def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
 
     ⟪₂ :: :f' :g' ⟫
   | ⟪₂ :: (:: exec (:: :a :b)) apply ⟫, c => do
-    let a' := (exec_op a c).getD a |> Expr.unquote_pure
-    let b' := ((exec_op ⟪₂ :: exec :b ⟫ c) <|> b)
+    let e' ← exec_op ⟪₂ :: exec (:: :a :b) ⟫ c
       >>= (Expr.as_list >=> (pure ∘ (List.map Expr.unquote_pure)))
-
-    pure <| b'.foldl
-
-    b'.
-
---      >>= (Expr.as_list >=> (pure ∘ (List.map Expr.unquote_pure)))
 
     match e' with
     | .cons x xs =>
-      pure <| xs.foldl Expr.app x
+      pure <| ⟪₂ quoted (#xs.foldl Expr.app x) ⟫
     | _ => .none
   | ⟪₂ :: (:: both :e) apply ⟫, c => do
     match ← exec_op ⟪₂ :: both :e ⟫ c with
@@ -120,6 +113,8 @@ def my_k_type : Expr :=
   -- y : β x
   let t_y := ⟪₂ :: (:: exec (:: :β :x)) apply ⟫
 
+  dbg_trace t_y
+
   let t_out := α
 
   ⟪₂ :: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_out nil)))) ⟫
@@ -144,6 +139,7 @@ Also remember:
 def test_ctx_k_type : Expr :=
   ⟪₂ :: Data (:: (quoted (I Data)) (:: Data (:: Data nil))) ⟫
 
+#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: next) read)) ((:: next) ((:: next) read))))) apply) ⟫ test_ctx_k_type
 #eval do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫
 
 def test_ctx_k_partial : Expr :=

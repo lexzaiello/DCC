@@ -1,40 +1,8 @@
 import Cm.Ast
 import Cm.Error
 
-
 def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error ε)
-
-/-
-Minimal set of things we need:
-
-- K, just read and next
-- Dependent types, we need to be able to make new contexts. These are also represented by lists.
-- Apply
-- push_on
-
-Ideal K type:
-(:: Data (:: (:: read (:: push_on (:: Data nil))) (:: read (:: (:: apply (:: next read) (:: next (:: next read))) (:: read nil)))))
-
-Making arrows:
-
-Also don't really like nested exec.
-Feels wrong.
-
-Piping could be a lot cleaner.
-
-I want to be really lazy with apply.
-
-What would be really powerful with apply is if it worked on the context
-instead of just arguments. This would remove a lot of the quotation shenanigans.
-
-:: (:: both _ ) apply
-
-I want both to work nicer. more like a reverse map.
-Like, why use both when we can have a nice reverse map?
-
-Now, the ultra pro gamer move is to allow exec.
--/
 
 def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   match my_op, ctx with
@@ -93,17 +61,16 @@ def step (e : Expr) : Except Error Expr :=
     pure ⟪₂ (#← step f) :x ⟫
   | _ => .error <| .stuck e
 
-def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
+def try_step_n (n : ℕ) (e : Expr) : Except Error Expr := do
   if n = 0 then
     pure e
   else
     let e' ← step e
-    pure <| (try_step_n (n - 1) e').getD e'
+    (try_step_n (n - 1) e') <|> (pure e')
 
-def do_step (e : Expr) : Except Error Expr :=
-  unwrap_with (Error.stuck e) (try_step_n 30 e)
+def do_step : Expr → Except Error Expr := try_step_n 30
 
-def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).getD e
+def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).toOption.getD e
 
 def my_k_type : Expr :=
   let t_α := ⟪₂ Data ⟫

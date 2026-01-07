@@ -2,6 +2,10 @@ import Cm.Ast
 import Cm.Eval2
 import Cm.Error
 
+def reduce_unquote : Expr → Expr
+  | ⟪₂ quoted :e ⟫ => (do_step e).toOption.getD e
+  | e => (do_step e).toOption.getD e
+
 def infer : Expr → Except Error Expr
   | ⟪₂ map ⟫
   | ⟪₂ assert ⟫
@@ -27,10 +31,14 @@ def infer : Expr → Except Error Expr
     let t_f ← infer f
     let t_arg ← infer arg
 
-    match ← do_step ⟪₂ :: exec (:: :t_f (:: :arg nil)) ⟫ with
+    let quoted_arg := match t_arg with
+      | ⟪₂ Data ⟫ => arg
+      | _ => ⟪₂ quoted :arg ⟫
+
+    match ← do_step ⟪₂ :: exec (:: :t_f (:: :quoted_arg nil)) ⟫ with
     | ⟪₂ :: :t_in (:: :xs nil) ⟫
     | ⟪₂ :: :t_in :xs ⟫ =>
-      if t_in == t_arg then
+      if reduce_unquote t_in == t_arg then
         pure xs
       else
         Except.error <| .mismatch_arg t_in t_arg ⟪₂ :f :arg ⟫ .none
@@ -39,5 +47,5 @@ def infer : Expr → Except Error Expr
 
 #eval infer ⟪₂ :: Data (:: Data Data) ⟫
 #eval infer ⟪₂ I Data Data ⟫
-
+#eval infer ⟪₂ K Data (I Data) Data Data ⟫
 

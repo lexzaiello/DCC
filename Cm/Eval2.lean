@@ -148,4 +148,8 @@ def my_s_type : Expr :=
   -- γ := ∀ (x : α) (y : β x), Data
   let apply_later := ⟪₂ :: push_on apply ⟫
   let βx := ⟪₂ :: (:: :β (:: push_on read)) :apply_later ⟫
-  let t_γ := ⟪₂ :: both (:: read (:: 
+  let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
+
+  -- x : ∀ (x : α) (y : β x), γ x y
+  let γxy := ⟪₂ :: (:: :γ (:: push_on (:: read (:: (:: next read) nil)))) :apply_later ⟫
+  let t_x := ⟪₂ :: both (:: read (:: both (:: :βx (:: (:: :γxy (:: push_on nil)))))) ⟫

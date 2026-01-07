@@ -95,6 +95,9 @@ def mk_flse_test (a b : Expr) : Except Error Expr := do
 
 #eval (mk_flse_test ⟪₂ K ⟫ ⟪₂ S ⟫
   >>= infer)
+
+#eval (mk_flse_test ⟪₂ K ⟫ ⟪₂ S ⟫
+  >>= infer)
   >>= (fun t_out => do
     pure (t_out == (← infer ⟪₂ S ⟫)))
 
@@ -129,7 +132,8 @@ def s_outermost_γ (t_in t_out : Expr) : Except Error Expr := do
   let t_f := church_t_f t_in t_out
   let t_t_f ← infer t_f
   let ret_nf := ⟪₂ K' :t_t_f :t_f :t_f ⟫
-  let t_ret_nf ← infer ret_nf
+  let t_ret_nf := ⟪₂ , (:: (:: fst (:: read assert)) (:: (:: fst (:: next (:: read assert))) nil)) (, (:: :t_f (:: :t_t_f nil)) nil) ⟫
+  -- It's always the nested K's that mess things up
   pure ⟪₂ K' :t_ret_nf :t_f :ret_nf ⟫
 
 def test_outer_γ : Except Error Expr := do
@@ -144,7 +148,22 @@ def test_outer_γ : Except Error Expr := do
   --dbg_trace infer ⟪₂ (:my_zero :my_f) ⟫
   pure ⟪₂ :γ :my_f :my_f ⟫
 
+def s_outermost (t_in t_out : Expr) : Except Error Expr := do
+  let α := church_t_f t_in t_out
+  let β ← s_outermost_β t_in t_out
+  let γ ← s_outermost_γ t_in t_out
+
+  pure ⟪₂ S :α :β :γ ⟫
+
+def test_s_outermost : Except Error Expr := do
+  let t_data ← infer ⟪₂ Data ⟫
+
+  s_outermost t_data t_data
+
+#eval test_s_outermost >>= infer
+
 #eval test_outer_γ >>= infer
+--#eval do_step <$> test_outer_γ 
 
 /-
 S(S(KS)K) n f

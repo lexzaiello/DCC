@@ -151,6 +151,11 @@ def Expr.as_list : Expr → Option (List Expr)
   | ⟪₂ nil ⟫ => pure []
   | x => pure [x]
 
+def Expr.map_list (f : Expr → Expr) : Expr → Option Expr
+  | ⟪₂ nil ⟫ => ⟪₂ nil ⟫
+  | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#f x) (#← Expr.map_list f xs) ⟫
+  | _ => .none
+
 def Expr.list_pretty (e : Expr) : String :=
   (e.as_list.map (·.toString)).getD e.toString
 

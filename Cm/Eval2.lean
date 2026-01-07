@@ -1,6 +1,10 @@
 import Cm.Ast
 import Cm.Error
 
+
+def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
+  (o.map Except.ok).getD (.error ε)
+
 /-
 Minimal set of things we need:
 
@@ -32,54 +36,54 @@ Like, why use both when we can have a nice reverse map?
 Now, the ultra pro gamer move is to allow exec.
 -/
 
-def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
+def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   match my_op, ctx with
-  | ⟪₂ nil ⟫, _c => ⟪₂ nil ⟫
-  | ⟪₂ :: exec nil ⟫, _ => ⟪₂ nil ⟫
+  | ⟪₂ nil ⟫, _c => pure ⟪₂ nil ⟫
+  | ⟪₂ :: exec nil ⟫, _ => pure ⟪₂ nil ⟫
   | ⟪₂ :: exec (:: :x :xs) ⟫, c => do
     let x' ← exec_op x c
     let xs' ← exec_op ⟪₂ :: exec :xs ⟫ c
 
-    ⟪₂ :: :x' :xs' ⟫
-  | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => x
-  | ⟪₂ next ⟫, ⟪₂ :: :_x :xs ⟫ => xs
-  | ⟪₂ :: assert :x ⟫, _ => x
-  | ⟪₂ quote ⟫, c => ⟪₂ :: assert :c ⟫
+    pure ⟪₂ :: :x' :xs' ⟫
+  | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => pure x
+  | ⟪₂ next ⟫, ⟪₂ :: :_x :xs ⟫ => pure xs
+  | ⟪₂ :: assert :x ⟫, _ => pure x
+  | ⟪₂ quote ⟫, c => pure ⟪₂ :: assert :c ⟫
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => exec_op f xs
   | ⟪₂ :: read :f ⟫, ⟪₂ :: :x :_xs ⟫ => exec_op f x
   | ⟪₂ :: :f (:: push_on :l) ⟫, c => do
     let c' ← exec_op f c
-    ⟪₂ :: :c' :l ⟫
-  | ⟪₂ (:: push_on :l) ⟫, c => ⟪₂ :: :c :l ⟫
+    pure ⟪₂ :: :c' :l ⟫
+  | ⟪₂ (:: push_on :l) ⟫, c => pure ⟪₂ :: :c :l ⟫
   | ⟪₂ :: both (:: :f :g) ⟫, c => do
     let f' ← exec_op f c
     let g' ← exec_op g c
 
-    ⟪₂ :: :f' :g' ⟫
+    pure ⟪₂ :: :f' :g' ⟫
   | ⟪₂ :: (:: exec (:: :a :b)) apply ⟫, c => do
     let e' ← exec_op ⟪₂ :: exec (:: :a :b) ⟫ c
-      >>= (Expr.as_list >=> (pure ∘ (List.map Expr.unquote_pure)))
+      >>= ((unwrap_with (.stuck my_op) ∘ Expr.as_list) >=> (pure ∘ (List.map Expr.unquote_pure)))
 
     match e' with
     | .cons x xs =>
       pure <| ⟪₂ quoted (#xs.foldl Expr.app x) ⟫
-    | _ => .none
+    | _ => .error <| .stuck ⟪₂ :: exec (:: :my_op :ctx) ⟫
   | ⟪₂ :: (:: both :e) apply ⟫, c => do
     match ← exec_op ⟪₂ :: both :e ⟫ c with
     | ⟪₂ :: :f :x ⟫ => do
-      ⟪₂ quoted ((#f.unquote_pure) (#x.unquote_pure)) ⟫
-    | _ => .none
-  | _, _ => .none
+      pure ⟪₂ quoted ((#f.unquote_pure) (#x.unquote_pure)) ⟫
+    | _ => .error <| .stuck ⟪₂ :: exec (:: :my_op :ctx) ⟫
+  | _, _ => .error <| .stuck ⟪₂ :: exec (:: :my_op :ctx) ⟫
 
 #eval exec_op ⟪₂ :: (:: exec (:: read (:: read nil))) apply ⟫ ⟪₂ :: Data nil ⟫
 
-def step (e : Expr) : Option Expr :=
+def step (e : Expr) : Except Error Expr :=
   match e with
   | ⟪₂ :: exec (:: :ops :Γ) ⟫ =>
     match ops with
     | ⟪₂ (:: :x nil) ⟫ =>
       exec_op x Γ
-    | l => l.map_list (fun e => (exec_op e Γ).getD e)
+    | l => l.map_list (fun e => (exec_op e Γ).toOption.getD e)
   | ⟪₂ I :_α :x ⟫ => x
   | ⟪₂ K :_α :_β :x :_y ⟫
   | ⟪₂ K' :_α :_β :x :_y ⟫ => x
@@ -95,9 +99,6 @@ def try_step_n (n : ℕ) (e : Expr) : Option Expr := do
   else
     let e' ← step e
     pure <| (try_step_n (n - 1) e').getD e'
-
-def unwrap_with {α : Type} (ε : Error) (o : Option α) : Except Error α :=
-  (o.map Except.ok).getD (.error ε)
 
 def do_step (e : Expr) : Except Error Expr :=
   unwrap_with (Error.stuck e) (try_step_n 30 e)

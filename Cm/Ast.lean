@@ -156,6 +156,11 @@ def Expr.map_list (f : Expr → Expr) : Expr → Option Expr
   | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#f x) (#← Expr.map_list f xs) ⟫
   | _ => .none
 
+def Expr.mapM_list {m : Type → Type} [Monad m] (dflt : m Expr) (f : Expr → (m Expr)) : Expr → m Expr
+  | ⟪₂ nil ⟫ => pure ⟪₂ nil ⟫
+  | ⟪₂ :: :x :xs ⟫ => do pure ⟪₂ :: (#← f x) (#← Expr.mapM_list dflt f xs) ⟫
+  | _ => dflt
+
 def Expr.list_pretty (e : Expr) : String :=
   (e.as_list.map (·.toString)).getD e.toString
 

@@ -113,8 +113,6 @@ def my_k_type : Expr :=
   -- y : β x
   let t_y := ⟪₂ :: (:: exec (:: :β :x)) apply ⟫
 
-  dbg_trace t_y
-
   let t_out := α
 
   ⟪₂ :: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_out nil)))) ⟫

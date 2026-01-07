@@ -14,6 +14,49 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
 
     pure ⟪₂ :: :x' :xs' ⟫
   | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => pure x
+  | ⟪₂ :: :f quote ⟫, c => do
+    let c' ← exec_op f c
+    pure ⟪₂ :: assert :c' ⟫
+  | ⟪₂ :: assert :x ⟫, _ => pure x
+  | ⟪₂ quote ⟫, c => pure ⟪₂ :: assert :c ⟫
+  | ⟪₂ :: next :f ⟫, ⟪₂ nil ⟫
+  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x nil ⟫ => pure f
+  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => exec_op f xs
+  | ⟪₂ :: read :f ⟫, ⟪₂ :: :x :_xs ⟫ => exec_op f x
+  | ⟪₂ :: :f (:: push_on :l) ⟫, c => do
+    let c' ← exec_op f c
+    pure ⟪₂ :: :c' :l ⟫
+  | ⟪₂ (:: push_on :l) ⟫, c => pure ⟪₂ :: :c :l ⟫
+  | ⟪₂ :: both (:: :f :g) ⟫, c => do
+    let f' ← exec_op f c
+    let g' ← exec_op g c
+
+    pure ⟪₂ :: :f' :g' ⟫
+  | ⟪₂ :: (:: exec (:: :a :b)) apply ⟫, c => do
+    let e' ← exec_op ⟪₂ :: exec (:: :a :b) ⟫ c
+      >>= ((unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx)⟫) ∘ Expr.as_list) >=> (pure ∘ (List.map Expr.unquote_pure)))
+
+    match e' with
+    | .cons x xs =>
+      pure <| ⟪₂ quoted (#xs.foldl Expr.app x) ⟫
+    | _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
+  | ⟪₂ :: (:: both :e) apply ⟫, c => do
+    match ← exec_op ⟪₂ :: both :e ⟫ c with
+    | ⟪₂ :: :f :x ⟫ => do
+      pure ⟪₂ quoted ((#f.unquote_pure) (#x.unquote_pure)) ⟫
+    | _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
+  | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
+
+/-def exec_op_no_next_elim (my_op : Expr) (ctx : Expr) : Except Error Expr :=
+  match my_op, ctx with
+  | ⟪₂ nil ⟫, _c => pure ⟪₂ nil ⟫
+  | ⟪₂ :: exec nil ⟫, _ => pure ⟪₂ nil ⟫
+  | ⟪₂ :: exec (:: :x :xs) ⟫, c => do
+    let x' ← exec_op x c
+    let xs' ← exec_op ⟪₂ :: exec :xs ⟫ c
+
+    pure ⟪₂ :: :x' :xs' ⟫
+  | ⟪₂ read ⟫, ⟪₂ :: :x :_xs ⟫ => pure x
   | ⟪₂ next ⟫, ⟪₂ :: :_x :xs ⟫ => pure xs
   | ⟪₂ :: :f quote ⟫, c => do
     let c' ← exec_op f c
@@ -44,7 +87,7 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     | ⟪₂ :: :f :x ⟫ => do
       pure ⟪₂ quoted ((#f.unquote_pure) (#x.unquote_pure)) ⟫
     | _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
-  | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
+  | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫-/
 
 #eval exec_op ⟪₂ :: (:: exec (:: read (:: read nil))) apply ⟫ ⟪₂ :: Data nil ⟫
 
@@ -63,6 +106,24 @@ def step (e : Expr) : Except Error Expr :=
   | ⟪₂ :f :x ⟫ => do
     pure ⟪₂ (#← step f) :x ⟫
   | _ => .error <| .stuck e
+
+/-
+def step_no_step_elim (e : Expr) : Except Error Expr :=
+  match e with
+  | ⟪₂ :: exec (:: :ops :Γ) ⟫ =>
+    match ops with
+    | ⟪₂ (:: :x nil) ⟫ =>
+      exec_op x Γ
+    | l => l.mapM_list (Except.error <| .stuck e) (fun e => (exec_op e Γ) <|> (pure e))
+  | ⟪₂ I :_α :x ⟫ => pure x
+  | ⟪₂ K :_α :_β :x :_y ⟫
+  | ⟪₂ K' :_α :_β :x :_y ⟫ => pure x
+  | ⟪₂ S :_α :_β :_γ :x :y :z ⟫ => pure ⟪₂ (:x :z) (:y :z) ⟫
+  | ⟪₂ :: :_a :_b ⟫ => Except.error <| .stuck e
+  | ⟪₂ :f :x ⟫ => do
+    pure ⟪₂ (#← step f) :x ⟫
+  | _ => .error <| .stuck e
+-/
 
 def try_step_n (n : ℕ) (e : Expr) : Except Error Expr := do
   if n = 0 then

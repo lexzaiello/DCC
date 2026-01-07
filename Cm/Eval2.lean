@@ -30,18 +30,18 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     pure ⟪₂ :: :f' :g' ⟫
   | ⟪₂ :: (:: exec (:: :a :b)) apply ⟫, c => do
     let e' ← exec_op ⟪₂ :: exec (:: :a :b) ⟫ c
-      >>= ((unwrap_with (.stuck my_op) ∘ Expr.as_list) >=> (pure ∘ (List.map Expr.unquote_pure)))
+      >>= ((unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx)⟫) ∘ Expr.as_list) >=> (pure ∘ (List.map Expr.unquote_pure)))
 
     match e' with
     | .cons x xs =>
       pure <| ⟪₂ quoted (#xs.foldl Expr.app x) ⟫
-    | _ => .error <| .stuck ⟪₂ :: exec (:: :my_op :ctx) ⟫
+    | _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
   | ⟪₂ :: (:: both :e) apply ⟫, c => do
     match ← exec_op ⟪₂ :: both :e ⟫ c with
     | ⟪₂ :: :f :x ⟫ => do
       pure ⟪₂ quoted ((#f.unquote_pure) (#x.unquote_pure)) ⟫
-    | _ => .error <| .stuck ⟪₂ :: exec (:: :my_op :ctx) ⟫
-  | _, _ => .error <| .stuck ⟪₂ :: exec (:: :my_op :ctx) ⟫
+    | _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
+  | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
 
 #eval exec_op ⟪₂ :: (:: exec (:: read (:: read nil))) apply ⟫ ⟪₂ :: Data nil ⟫
 

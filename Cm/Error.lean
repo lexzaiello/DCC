@@ -11,6 +11,7 @@ inductive Error where
   | combine : Error
     → Error
     → Error
+deriving BEq
 
 def Error.toString : Error → String
   | .mismatch_arg expected actual in_e pos =>

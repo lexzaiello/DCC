@@ -18,6 +18,8 @@ Also don't really like nested exec.
 Feels wrong.
 
 Piping could be a lot cleaner.
+
+I want to be really lazy with apply.
 -/
 
 def exec_op (my_op : Expr) (ctx : Expr) : Option Expr :=
@@ -85,6 +87,14 @@ def my_k_type : Expr :=
 
   ⟪₂ :: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_out nil)))) ⟫
 
+def my_i_type : Expr :=
+  let t_α := ⟪₂ Data ⟫
+  let α := ⟪₂ read ⟫
+
+  ⟪₂ :: :t_α (:: :α (:: :α nil)) ⟫
+
+#eval do_step ⟪₂ :: exec (:: :my_i_type (:: Data (:: Data nil))) ⟫
+
 /-
 Example k type:
 
@@ -98,3 +108,18 @@ def test_ctx_k_type : Expr :=
   ⟪₂ :: Data (:: (quoted (I Data)) (:: Data (:: Data nil))) ⟫
 
 #eval do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫
+
+def test_ctx_k_partial : Expr :=
+  ⟪₂ :: Data nil ⟫
+
+/-
+Applying α arg then β, then x, then y
+-/
+def infer_ctx_k_partial : Except Error Expr := do
+  let t₁ ← do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_partial) ⟫
+  let t₂ ← do_step ⟪₂ :: exec (:: :t₁ (:: Data (:: (quoted (I Data)) nil))) ⟫
+  do_step ⟪₂ :: exec (:: :t₂ (:: Data (:: (quoted (I Data)) (:: Data (:: Data nil))))) ⟫
+
+#eval (do pure <| (← infer_ctx_k_partial) == (← do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_type) ⟫))
+
+#eval do_step ⟪₂ :: exec (:: :my_k_type :test_ctx_k_partial) ⟫

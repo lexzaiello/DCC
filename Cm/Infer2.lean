@@ -4,7 +4,11 @@ import Cm.Error
 
 def reduce_unquote : Expr → Expr
   | ⟪₂ quoted :e ⟫ => (do_step e).toOption.getD e
-  | e => (do_step e).toOption.getD e
+  | e => e
+
+/-
+Our read didn't run in time.
+-/
 
 def infer : Expr → Except Error Expr
   | ⟪₂ map ⟫
@@ -49,3 +53,6 @@ def infer : Expr → Except Error Expr
 #eval infer ⟪₂ I Data Data ⟫
 #eval infer ⟪₂ K Data (I Data) Data Data ⟫
 
+#eval infer ⟪₂ S Data (I Data) ⟫
+
+#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: assert) read)) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫

@@ -53,7 +53,7 @@ def exec_next_noop (e ctx : Expr) : Option Expr :=
   | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x nil ⟫ =>
     pure f
   | ⟪₂ :: next :f ⟫, ⟪₂ nil ⟫ => pure f
-  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => exec_next_noop f xs
+  | ⟪₂ :: next :f ⟫, ⟪₂ :: :_x :xs ⟫ => .none
   | _, _ => .none
 
 def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
@@ -365,6 +365,7 @@ def test_ctx_γ : Expr :=
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: Data) nil))) (:: Data (:: Data nil))) ⟫
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :s_type :test_ctx_s_type) ⟫
+#eval do_step ⟪₂ :: exec (:: :s_type (:: Data nil)) ⟫
 
 /-
 How do we deal with non-beta-normal values?

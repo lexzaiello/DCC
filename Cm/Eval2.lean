@@ -12,6 +12,12 @@ def Expr.is_comb : Expr → Bool
   | ⟪₂ :f :_x ⟫ => f.is_comb
   | _ => false
 
+def assert_not_fn : Expr → Expr
+  | ⟪₂ read ⟫ => ⟪₂ read ⟫
+  | ⟪₂ :: :a :b ⟫ => ⟪₂ :: :a :b ⟫
+  | ⟪₂ nil ⟫ => ⟪₂ nil ⟫
+  | e => ⟪₂ :: assert :e ⟫
+
 /-
 If an application includes instructions,
 it must be lifted into another application
@@ -22,7 +28,7 @@ def maybe_apply (es : List Expr) : Option Expr :=
     if f.is_comb then
       ⟪₂ quoted (#(xs.map Expr.unquote_pure).foldl Expr.app (f.unquote_pure)) ⟫
     else
-      ⟪₂ :: (:: exec (#Expr.from_list es)) apply ⟫
+      ⟪₂ :: (:: exec (#Expr.from_list (es.map assert_not_fn))) apply ⟫
   | _ => .none
 
 def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
@@ -57,15 +63,13 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
     let e' ← exec_op ⟪₂ :: exec (:: :a :b) ⟫ c
       >>= ((unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx)⟫) ∘ Expr.as_list) >=> (pure ∘ (List.map Expr.unquote_pure)))
 
-    match e' with
-    | .cons x xs =>
-      pure <| ⟪₂ quoted (#xs.foldl Expr.app x) ⟫
-    | _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
+    maybe_apply e' |> unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫)
   | ⟪₂ :: (:: both :e) apply ⟫, c => do
-    match ← exec_op ⟪₂ :: both :e ⟫ c with
-    | ⟪₂ :: :f :x ⟫ => do
-      pure ⟪₂ quoted ((#f.unquote_pure) (#x.unquote_pure)) ⟫
-    | _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
+    let e' ← exec_op ⟪₂ :: both :e ⟫ c
+    (match e' with
+    | ⟪₂ :: :a :b ⟫ =>
+      maybe_apply [a, b]
+    | _ => .none) |> unwrap_with (.stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫)
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫
 
 /-def exec_op_no_next_elim (my_op : Expr) (ctx : Expr) : Except Error Expr :=
@@ -111,6 +115,9 @@ def exec_op (my_op : Expr) (ctx : Expr) : Except Error Expr :=
   | _, _ => .error <| .stuck ⟪₂ :: exec (:: (:: :my_op nil) :ctx) ⟫-/
 
 #eval exec_op ⟪₂ :: (:: exec (:: read (:: (:: next read) nil))) apply ⟫ ⟪₂ :: Data nil ⟫
+  >>= (fun op => exec_op op ⟪₂ :: Data nil ⟫)
+
+#eval exec_op ⟪₂ ((:: ((:: exec) ((:: Data) ((:: read) nil)))) apply) ⟫ ⟪₂ :: Data nil ⟫
 
 def step (e : Expr) : Except Error Expr :=
   match e with

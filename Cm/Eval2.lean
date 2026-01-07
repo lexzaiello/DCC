@@ -201,8 +201,15 @@ def lazy_both (f : Expr) : Expr :=
 def lazy_both_apply (f : Expr) : Expr :=
   ⟪₂ :: (#lazy_both f) (:: push_on apply) ⟫
 
+def lazy_all (f : Expr) : Expr :=
+  ⟪₂ (:: exec (:: (:: assert exec) :f)) ⟫
+
+def lazy_all_apply (f : Expr) : Expr :=
+  ⟪₂ :: (#lazy_all f) (:: push_on apply) ⟫
+
 #eval exec_op (lazy_both ⟪₂ read ⟫) ⟪₂ :: Data nil ⟫
 #eval exec_op (lazy_both_apply ⟪₂ read ⟫) ⟪₂ :: (:: read read) nil ⟫
+#eval exec_op (lazy_all_apply ⟪₂ (:: (:: read quote) (:: (:: read quote) nil)) ⟫) ⟪₂ :: Data nil ⟫
 #eval exec_op ⟪₂ ((:: ((:: both) ((:: read) read))) apply) ⟫ ⟪₂ :: Data nil ⟫
 
 #eval do_step ⟪₂ :: exec (:: (:: (#apply_all_later ⟪₂ (:: read (:: read nil)) ⟫) nil) (:: Data nil)) ⟫
@@ -224,6 +231,7 @@ def my_s_type : Expr :=
 
   -- γ := ∀ (x : α) (y : β x), Data
   let apply_later := ⟪₂ :: push_on apply ⟫
+  let βx' := lazy_all_apply ⟪₂ :: (:: :β quote) (:: (:: assert read) nil) ⟫
   let βx := lazy_exec_apply ⟪₂ :: :β quote ⟫ ⟪₂ :: (:: assert read) (:: (:: assert Data) nil) ⟫
   --dbg_trace βx'
   --let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫

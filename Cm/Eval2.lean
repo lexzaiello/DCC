@@ -181,5 +181,7 @@ def my_s_type : Expr :=
   let t_z := α
 
   -- S x y z : γ z (y z)
-  let yz := ⟪₂ :: (:: exec (:: :y (:: :z nil))
-  let t_out := ⟪₂ :: (:: exec (:: :γ (:: :z
+  let yz := ⟪₂ :: (:: exec (:: :y (:: :z nil))) apply ⟫
+  let t_out := ⟪₂ :: (:: exec (:: :γ (:: :z (:: :yz nil)))) ⟫
+
+  

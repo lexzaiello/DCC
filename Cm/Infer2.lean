@@ -28,6 +28,7 @@ def infer : Expr → Except Error Expr
     let t_arg ← infer arg
 
     match ← do_step ⟪₂ :: exec (:: :t_f (:: :arg nil)) ⟫ with
+    | ⟪₂ :: :t_in (:: :xs nil) ⟫
     | ⟪₂ :: :t_in :xs ⟫ =>
       if t_in == t_arg then
         pure xs
@@ -35,3 +36,8 @@ def infer : Expr → Except Error Expr
         Except.error <| .mismatch_arg t_in t_arg ⟪₂ :f :arg ⟫ .none
     | t => Except.error <| .not_type t
   | ⟪₂ , ⟫ => Except.error <| .stuck ⟪₂ , ⟫
+
+#eval infer ⟪₂ :: Data (:: Data Data) ⟫
+#eval infer ⟪₂ I Data Data ⟫
+
+

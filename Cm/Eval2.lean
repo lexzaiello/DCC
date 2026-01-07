@@ -223,7 +223,7 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr := do
     let e' ← step e
     (try_step_n (n - 1) e') <|> (pure e')
 
-def do_step : Expr → Except Error Expr := try_step_n 30
+def do_step : Expr → Except Error Expr := try_step_n 50
 
 def try_step_n! (n : ℕ) (e : Expr) : Expr := (try_step_n n e).toOption.getD e
 
@@ -366,7 +366,6 @@ def s_type : Expr :=
   --let βx := ⟪₂ :: (:: both (:: (:: assert exec) (:: :β (:: push_on read)))) :apply_later ⟫
   let t_γ := ⟪₂ :: exec (:: :α (:: :βx (:: (:: assert Data) nil))) ⟫
 
-  dbg_trace s!"γ: {t_γ}"
   --let t_γ := ⟪₂ :: (:: exec (:: read (:: :βx (:: assert (:: Data nil))))) apply ⟫
   --let t_γ := ⟪₂ :: both (:: read (:: :βx (:: push_on (:: Data nil)))) ⟫
 
@@ -392,7 +391,28 @@ S Data (I Data) (K Data Data) (K Data Data) (I Data) Data
 def test_ctx_s_type : Expr :=
   ⟪₂ :: Data (:: (quoted (I Data)) (:: (quoted (K' Data Data)) (:: (quoted (K' Data Data)) (:: (quoted (I Data)) (:: Data nil))))) ⟫
 
-#eval do_step ⟪₂ :: exec (:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: Data) nil))) (:: Data nil)) ⟫
+def test_s_type' : Except Error Expr := do
+  let l ← test_ctx_s_type.as_list |> unwrap_with (.stuck test_ctx_s_type)
+  l.foldlM (fun acc e =>
+    do_step ⟪₂ :: exec (:: :acc (:: :e nil)) ⟫) s_type
+
+#eval test_s_type'
+
+def test_k_type_eq : Except Error Expr := do
+  let test_ctx := ⟪₂ :: Data (:: (quoted (I Data)) (:: Data (:: Data nil))) ⟫
+  let l ← test_ctx.as_list |> unwrap_with (.stuck test_ctx_s_type)
+  l.foldlM (fun acc e =>
+    do_step ⟪₂ :: exec (:: :acc (:: :e nil)) ⟫) k_type
+
+#eval test_k_type_eq
+
+def test_s_type_eq : Except Error Bool := do
+  let actual ← do_step ⟪₂ :: exec (:: :s_type :test_ctx_s_type) ⟫
+  dbg_trace test_s_type'
+  dbg_trace actual
+  pure <| actual == (← test_s_type')
+
+#eval test_s_type_eq
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :s_type :test_ctx_s_type) ⟫
 

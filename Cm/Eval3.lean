@@ -22,9 +22,13 @@ inductive Expr where
     → Expr
     → Expr
   | π      : Expr
-  | id     : Expr
+    → Expr
+    → Expr
+  | read   : Expr
   | const  : Expr
   | both   : Expr
+    → Expr
+    → Expr
   | nil    : Expr
   | quote  : Expr
     → Expr
@@ -46,10 +50,10 @@ def Expr.fmt (e : Expr) : Format :=
     ":: " ++ (.group <| .nest 2 <| x.fmt ++ Format.line ++ (.paren (Expr.cons a b).fmt))
   | .cons x xs =>
     ":: " ++ (.group <| .nest 2 <| x.fmt ++ Format.line ++ xs.fmt)
-  | .π => "π"
-  | .id => "id"
+  | .π f g => "π " ++ (.group <| .nest 2 <| (.paren f.fmt) ++ Format.line ++ (.paren g.fmt))
+  | .read => "read"
   | .const => "const"
-  | .both => "both"
+  | .both f g => "both " ++ (.group <| .nest 2 <| (.paren f.fmt) ++ Format.line ++ (.paren g.fmt))
   | .nil => "nil"
   | .quote e => "'" ++ e.fmt
   | symbol s => "symbol " ++ s
@@ -70,11 +74,10 @@ def Expr.push_back (val : Expr) : Expr → Option Expr
   | _ => .none
 
 def Expr.push_arg (arg in_e : Expr) : Option Expr :=
-  dbg_trace s!"push {arg} in {in_e}"
   match in_e with
-  | :: both _xs => .none
-  | :: π _xs => .none
-  | :: .id _ => .none
+  | both _f _g => .none
+  | π _a _b => .none
+  | :: .read _ => .none
   | :: .const _ => .none
   | :: f (:: x nil) => do pure <| :: f (:: x (:: arg nil))
   | :: f args => do pure <| :: f (← Expr.push_back arg args)
@@ -85,22 +88,22 @@ def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
     dbg_trace e
   match e with
   --| :: (:: both (:: _a _b)) nil => .none
-  | :: (:: both (:: a b)) (:: l nil)
-  | :: (:: both (:: a b)) l => do
+  | :: (both a b) (:: l nil)
+  | :: (both a b) l => do
     pure <| :: (← step (:: a l)) (← step (:: b l))
-  | :: (:: π (:: a nil)) (:: x xs) => step (:: a x)
-  | :: (:: π (:: nil b)) (:: x xs) =>
+  | :: (π a nil) (:: x xs) => step (:: a x)
+  | :: (π nil b) (:: x xs) =>
     step (:: b xs)
-  | :: (:: π (:: a b)) (:: x nil) => .none
-  | :: (:: π (:: a b)) (:: x xs) => do
+  | :: (π a b) (:: x nil) => .none
+  | :: (π a b) (:: x xs) => do
     pure <| :: (← step (:: a x)) (← step (:: b xs))
-  | :: .id nil => .none
-  | :: .id (:: x nil)
-  | :: .id x => pure x
+  | :: .read nil => .none
+  | :: .read (:: x nil)
+  | :: .read x => pure x
   | :: (:: .const x) _l => pure x
   | :: (:: f args) x => (do
     let f' ← step (:: f args) with_logs
-    pure <| :: f' x)
+    pure <| :: f' x) <|> push_arg x (:: f args)
   | _ => .none
 
 def try_step_n (n : ℕ) (e : Expr) (with_logs : Bool := false) : Option Expr := do
@@ -113,34 +116,34 @@ def try_step_n (n : ℕ) (e : Expr) (with_logs : Bool := false) : Option Expr :=
 def do_step (e : Expr) (with_logs : Bool := false):= try_step_n 20 e with_logs
 
 def k_untyped : Expr :=
-  :: π (:: id nil)
+  π read nil
 
-#eval step <| :: (:: π (:: id (:: const nil))) (:: (symbol "a") (:: (symbol "b") nil))
+#eval step <| :: (π read (:: const nil)) (:: (symbol "a") (:: (symbol "b") nil))
 
 #eval step <| :: k_untyped (:: (symbol "a") (:: (symbol "b") nil))
 
 def s_untyped : Expr :=
-  let z := :: π (:: nil id)
-  .cons π (:: id (:: both (:: z (:: π (:: id id)))))
+  let z := π nil read
+  π read (both z (π read read))
 
 def i_untyped : Expr :=
   (:: s_untyped (:: k_untyped (:: k_untyped nil)))
 
+#eval do_step =<< push_arg (symbol "hi") i_untyped
 #eval do_step (:: i_untyped (:: (symbol "hi") nil)) true
 
 #eval (step <=< step) <| :: s_untyped (:: k_untyped (:: k_untyped (:: (symbol "a") nil)))
 #eval (step <=< step <=< step) <| :: (:: s_untyped (:: k_untyped (:: k_untyped nil))) (symbol "a")
 #eval (step <=< step <=< step) <| :: i_untyped (:: (symbol "a") nil)
-#eval (step <=< step <=< step) <| (:: (:: s_untyped (:: k_untyped k_untyped)) (:: (symbol "a") nil))
 
 namespace church_example
 
 def tre  := k_untyped
 def flse := :: k_untyped (:: i_untyped nil)
 
-#eval do_step i_untyped
 #eval do_step (:: flse (:: i_untyped (:: (symbol "b") nil)))
 #eval do_step (:: tre (:: i_untyped (:: (symbol "b") nil)))
+  >>= (fun e => pure <| e == i_untyped)
 
 def zero := flse
 
@@ -185,12 +188,13 @@ def mk_church : ℕ → Expr
   | .succ n => (:: succ (:: (mk_church n) nil))
 
 def my_test : Option Expr := do
-  let f ← push_arg i_untyped (← push_arg zero succ)
-  dbg_trace ToFormat.format f
-  do_step (:: f (:: (symbol "hi") nil))
+  let t' ← match succ with
+  | :: f (:: x nil) =>
+    do_step <| :: f (:: x (:: zero (:: i_untyped nil)))
+  | _ => .none
+  do_step (:: t' (:: (symbol "hi") nil) )
 
 #eval ToFormat.format <$> my_test
-#eval do_step (:: (:: (:: π id) (:: (symbol "I") (:: (:: (symbol "K") (:: (symbol "I") nil)) (symbol "I")))) (:: (symbol "hi") nil))
 
 #eval my_example
 
@@ -201,3 +205,8 @@ def my_test : Option Expr := do
 --#eval do_step (:: (mk_church 0) (:: k_untyped (:: (symbol "hi") nil)))
 
 end church_example
+
+/-
+Always use as many arguments as possible.
+We will never use more than we mean to.
+-/

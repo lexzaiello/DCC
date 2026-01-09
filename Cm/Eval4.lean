@@ -198,19 +198,19 @@ zero f x = x
 def zero : Expr :=
   (:: next read)
 
-def test_succ'' : Option Expr :=
+def test_succ'' (f : Expr → Option Expr) : Option Expr :=
   let my_id := read
 
-  do_step step' (:: succ (:: zero (:: my_id (:: (:: (symbol "hi") nil) nil)))) true
+  do_step f (:: succ (:: zero (:: my_id (:: (:: (symbol "hi") nil) nil)))) true
 
-def test_succ'''' : Option Expr :=
+def test_succ'''' (f : Expr → Option Expr) : Option Expr :=
   let my_id := read
 
-  do_step step' (:: (:: succ (:: zero nil)) (:: my_id (:: (:: (symbol "hi") nil) nil)))
+  do_step f (:: (:: succ (:: zero nil)) (:: my_id (:: (:: (symbol "hi") nil) nil)))
 
-#eval test_succ''''
+#eval test_succ'''' step''
 
-#eval test_succ''
+#eval test_succ'' step''
 
 def mk_church' (n : ℕ) : Option Expr :=
   match n with

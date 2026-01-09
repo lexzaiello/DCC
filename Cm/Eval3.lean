@@ -208,6 +208,29 @@ def my_test' (n : Nat) : Option Expr := do
 def succ' : Expr :=
   both (π nil head) read
 
+def zero' : Expr :=
+  π nil read
+
+#eval do_step (:: zero' (:: (symbol "f") (:: (symbol "x") nil)))
+
+def test_succ' : Option Expr :=
+  let my_id := read
+  do_step (:: succ' (:: zero' (:: my_id (:: (symbol "hi") nil))))
+
+def test_succ'' : Option Expr :=
+  let my_id := read
+  let n := (:: succ' (:: (:: succ' (:: (:: succ' (:: zero nil)) nil)) nil))
+  do_step (:: n (:: my_id (:: (symbol "hi") nil)))
+
+/-
+λ m n f x => m f (n f x)
+-/
+
+def plus' : Expr :=
+  π read succ'
+
+#eval test_succ'' >>= do_step
+
 #eval ToFormat.format <$> do_step (:: succ' (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil)))) true
 
 #eval ToFormat.format <$> my_test

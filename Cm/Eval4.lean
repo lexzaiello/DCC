@@ -65,9 +65,34 @@ def Expr.push_back (val : Expr) : Expr → Option Expr
   | :: x xs => do pure <| :: x (← push_back val xs)
   | _ => .none
 
-/-def step' (e : Expr) (with_logs : Bool := false) : Option Expr := do
+def advance (e : Expr) (with_logs : Bool := false) : Option Expr := do
+  if with_logs then
+    dbg_trace e
   match e with
-  | :: (π cons_case-/
+  | :: (:: next f) (:: _x xs) => advance (:: f xs)
+  | :: .read (:: x _xs) => pure x
+  | :: (:: .const x) _l => pure x
+  | :: (both f g) l => do
+    :: (← advance (:: f l)) (← advance (:: g l))
+  | _ => .none
+
+def step' (e : Expr) (with_logs : Bool := false) : Option Expr := do
+  if with_logs then
+    dbg_trace e
+  match e with
+  | :: (both f g) l => do
+    match advance (:: f l), advance (:: g l) with
+    | .some f', .some g' =>
+      :: f' g'
+    | .some f', .none =>
+      :: (both (:: const f') g) l
+    | .none, .some g' =>
+      :: (both f (:: const g')) l
+    | .none, .none => .none
+  | :: f x => advance e <|> (do
+    let f' ← step' f
+    pure <| :: f' x) <|> Expr.push_back x f
+  | _ => .none
 
 def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
   if with_logs then
@@ -112,8 +137,6 @@ def succ : Expr :=
   let fx  := (both f (both x (:: const nil)))
   let nfx := (both (both n fx) (:: const nil))
 
-  dbg_trace nfx
-
   (both f nfx)
 
 /-
@@ -122,15 +145,27 @@ zero f x = x
 def zero : Expr :=
   (:: next read)
 
-#eval do_step (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
+#eval do_step (:: (:: succ (:: zero nil)) (:: (symbol "f") (:: (symbol "x") nil))) true
 
 def test_succ'' : Option Expr :=
   let my_id := read
 
   do_step (:: succ (:: zero (:: my_id (:: (:: (symbol "hi") nil) nil)))) true
 
-#eval do_step (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil)))) true
+def test_succ'''' : Option Expr :=
+  let my_id := read
+
+  (step' <=< step' <=< step' <=< step') (:: (:: succ (:: zero nil)) (:: my_id (:: (:: (symbol "hi") nil) nil)))
+
+#eval test_succ''''
+
+def test_succ : Option Expr :=
+  let my_id := read
+
+  do_step (:: (:: succ (:: zero nil)) (:: my_id (:: (:: (symbol "hi") nil) nil))) true
+
 #eval test_succ''
+#eval test_succ
 
 def mk_church' (n : ℕ) : Option Expr :=
   match n with

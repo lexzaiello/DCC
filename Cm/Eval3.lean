@@ -18,6 +18,7 @@ both should probably combine by default.
 -/
 
 inductive Expr where
+  | head   : Expr
   | cons   : Expr
     → Expr
     → Expr
@@ -42,6 +43,7 @@ def Expr.unquote_once : Expr → Expr
 
 def Expr.fmt (e : Expr) : Format :=
   match e with
+  | .head => "head"
   | .cons (.cons a b) (.cons c d) =>
     ":: " ++ (.group <| .nest 2 <| (.paren (Expr.cons a b).fmt) ++ Format.line ++ (.paren (Expr.cons c d).fmt))
   | .cons x@(.cons a b) xs =>
@@ -88,6 +90,7 @@ def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
     dbg_trace e
   match e with
   --| :: (:: both (:: _a _b)) nil => .none
+  | :: head (:: x xs) => pure x
   | :: (both a b) (:: l nil)
   | :: (both a b) l => do
     pure <| :: (← step (:: a l)) (← step (:: b l))
@@ -183,9 +186,13 @@ def my_example : Option Expr :=
 Discards n arguments
 -/
 
-def mk_church : ℕ → Expr
+def mk_church : ℕ → Option Expr
   | .zero => zero
-  | .succ n => (:: succ (:: (mk_church n) nil))
+  | .succ n =>
+    match succ with
+    | :: f (:: x nil) => do
+      pure <| :: f (:: x (:: (← mk_church n) nil))
+    | _ => .none
 
 def my_test : Option Expr := do
   let t' ← match succ with
@@ -194,7 +201,19 @@ def my_test : Option Expr := do
   | _ => .none
   do_step (:: t' (:: (symbol "hi") nil) )
 
+def my_test' (n : Nat) : Option Expr := do
+  let t' := (:: (← push_arg i_untyped (← mk_church n)) (:: (symbol "hi") nil))
+  try_step_n 100 t'
+
+def succ' : Expr :=
+  both (π nil head) read
+
+#eval ToFormat.format <$> do_step (:: succ' (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil)))) true
+
 #eval ToFormat.format <$> my_test
+#eval ToFormat.format <$> my_test' 1
+-- (succ (succ zero)) I
+#eval ToFormat.format <$> my_test' 2
 
 #eval my_example
 
@@ -205,8 +224,3 @@ def my_test : Option Expr := do
 --#eval do_step (:: (mk_church 0) (:: k_untyped (:: (symbol "hi") nil)))
 
 end church_example
-
-/-
-Always use as many arguments as possible.
-We will never use more than we mean to.
--/

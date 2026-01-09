@@ -193,8 +193,8 @@ def succ : Expr :=
   let f := (:: next read)
   let x := (:: next (:: next read))
 
-  let fx  := (both f (both x (:: const nil)))
-  let nfx := (both (both n fx) (:: const nil))
+  let fx  := (both f (both x nil))
+  let nfx := (both (both n fx) nil)
 
   (both f nfx)
 
@@ -214,9 +214,9 @@ def test_succ'' (f : Expr → Option Expr) : Option Expr :=
 def test_succ_curry (f : Expr → Option Expr) : Option Expr :=
   let my_id := read
 
-  do_step f (:: (:: succ (:: zero nil)) (:: my_id (:: (:: (symbol "hi") nil) nil))) true
+  do_step f (:: (:: succ zero) (:: my_id (:: (:: (symbol "hi") nil) nil))) true
 
-#eval do_step step'' (:: succ (:: zero nil))
+#eval do_step (step'' (with_logs := true)) (:: succ (:: zero nil))
 #eval test_succ_curry step''
 
 def test_succ'''' (f : Expr → Option Expr) : Option Expr :=

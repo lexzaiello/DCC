@@ -111,8 +111,14 @@ def step'' (e : Expr) (with_logs : Bool := false) : Option Expr := do
   | :: (:: .const x) _l => pure x
   | :: (:: next f) (:: _x nil) => .none
   | :: (:: next f) (:: _x xs) => step'' (:: f xs) with_logs
-  | :: (both f g) l => do
-    match step'' (:: f l), step'' (:: g l) with
+  | :: b@(both f nil) l@(:: _x _xs) => do
+    match step'' (:: f l) with_logs with
+    | .some f' =>
+      :: f' nil
+    | .none => do
+      both (← mk_append f l) nil
+  | :: b@(both f g) l@(:: _x _xs) => do
+    match step'' (:: f l) with_logs, step'' (:: g l) with_logs with
     | .some f', .some g' =>
       :: f' g'
     | .some f', .none => do
@@ -205,10 +211,20 @@ def test_succ'' (f : Expr → Option Expr) : Option Expr :=
 
   do_step f (:: succ (:: zero (:: my_id (:: (:: (symbol "hi") nil) nil)))) true
 
+def test_succ_curry (f : Expr → Option Expr) : Option Expr :=
+  let my_id := read
+
+  do_step f (:: (:: succ (:: zero nil)) (:: my_id (:: (:: (symbol "hi") nil) nil))) true
+
+#eval do_step step'' (:: succ (:: zero nil))
+#eval test_succ_curry step''
+
 def test_succ'''' (f : Expr → Option Expr) : Option Expr :=
   let my_id := read
 
-  do_step f (:: (:: succ (:: zero nil)) (:: my_id (:: (:: (symbol "hi") nil) nil)))
+  let n := (:: succ (:: zero nil))
+
+  (push_back (:: my_id (:: (:: (symbol "hi") nil) nil)) n) >>= do_step f
 
 #eval do_step step'' (:: succ (:: zero nil))
 #eval test_succ'''' step''
@@ -223,10 +239,17 @@ def mk_church' (n : ℕ) : Option Expr :=
 
     pure <| (:: succ (:: inner nil))
 
+def test_succ_next (n : ℕ) : Option Expr := do
+  let my_id := read
+  let n ← mk_church' n
+  do_step step'' (:: n (:: read (:: (:: (symbol "hi") (:: (symbol "hi") nil)) nil)))
+
+#eval test_succ_next 1
+
 def test_succ''' (n : ℕ) : Option Expr := do
   let my_id := read
   let n ← mk_church' n
-  do_step step' (:: n (:: next (:: (:: (symbol "hi") (:: (symbol "hi") nil)) nil)))
+  do_step step' (:: n (:: read (:: (:: (symbol "hi") (:: (symbol "hi") nil)) nil)))
 
 #eval test_succ''' 1
 

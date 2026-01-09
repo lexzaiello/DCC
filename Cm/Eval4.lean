@@ -198,6 +198,8 @@ zero f x = x
 def zero : Expr :=
   (:: next read)
 
+#eval do_step step'' (:: zero (:: read (:: (:: (symbol "hi") nil) nil)))
+
 def test_succ'' (f : Expr → Option Expr) : Option Expr :=
   let my_id := read
 
@@ -208,6 +210,7 @@ def test_succ'''' (f : Expr → Option Expr) : Option Expr :=
 
   do_step f (:: (:: succ (:: zero nil)) (:: my_id (:: (:: (symbol "hi") nil) nil)))
 
+#eval do_step step'' (:: succ (:: zero nil))
 #eval test_succ'''' step''
 
 #eval test_succ'' step''

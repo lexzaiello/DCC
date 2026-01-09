@@ -1,5 +1,8 @@
 import Mathlib.Data.Nat.Notation
 
+open Std (Format)
+open Std (ToFormat)
+
 /-
 Optimizing for ZK design:
 - List-oriented language is potentially ideal
@@ -33,21 +36,29 @@ def Expr.unquote_once : Expr → Expr
   | quote e => e
   | e => e
 
-def Expr.toString : Expr → String
-  | .quote e => s!"'{e.toString}"
-  | .cons a@(.cons a₁ a₂) b@(.cons b₁ b₂) => s!":: ({a.toString}) ({b.toString})"
-  | .cons a b@(.cons b₁ b₂) => s!":: {a.toString} ({b.toString})"
-  | .cons a@(.cons a₁ a₂) b => s!":: ({a.toString}) {b.toString}"
-  | .cons a b => s!":: {a.toString} {b.toString}"
+def Expr.fmt (e : Expr) : Format :=
+  match e with
+  | .cons (.cons a b) (.cons c d) =>
+    ":: " ++ (.group <| .nest 2 <| (.paren (Expr.cons a b).fmt) ++ Format.line ++ (.paren (Expr.cons c d).fmt))
+  | .cons x@(.cons a b) xs =>
+    ":: " ++ (.group <| .nest 2 <| (.paren (Expr.cons a b).fmt) ++ Format.line ++ xs.fmt)
+  | .cons x (.cons a b) =>
+    ":: " ++ (.group <| .nest 2 <| x.fmt ++ Format.line ++ (.paren (Expr.cons a b).fmt))
+  | .cons x xs =>
+    ":: " ++ (.group <| .nest 2 <| x.fmt ++ Format.line ++ xs.fmt)
   | .π => "π"
   | .id => "id"
   | .const => "const"
   | .both => "both"
   | .nil => "nil"
-  | .symbol s => s!"symbol {s}"
+  | .quote e => "'" ++ e.fmt
+  | symbol s => s
+
+instance Expr.instToFormat : ToFormat Expr where
+  format := Expr.fmt
 
 instance Expr.instToString : ToString Expr where
-  toString := Expr.toString
+  toString := toString ∘ Expr.fmt
 
 open Expr
 

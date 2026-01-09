@@ -321,13 +321,24 @@ def k_type : Expr :=
 
   ⟪₂ :: :t_α (:: :t_β (:: :t_x (:: :t_y (:: :t_out nil)))) ⟫
 
+#eval k_type
+
 def i_type : Expr :=
   let t_α := ⟪₂ Data ⟫
   let α := ⟪₂ read ⟫
 
   ⟪₂ :: :t_α (:: :α (:: :α nil)) ⟫
 
+#eval i_type
+
+#eval i_type
 #eval do_step ⟪₂ :: exec (:: :i_type (:: Data (:: Data nil))) ⟫
+
+/-
+I Data Data
+
+(:: Data nil)
+-/
 
 /-
 Example k type:
@@ -446,8 +457,6 @@ def s_type : Expr :=
 
   ⟪₂ :: :t_α (:: :t_β (:: :t_γ (:: :t_x (:: :t_y (:: :t_z (:: :t_out nil)))))) ⟫
 
---#eval exec_op ⟪₂ ((:: ((:: next) read)) ((:: ((:: push_on) ((:: ((:: assert) read)) nil))) ((:: push_on) apply))) ⟫ ⟪₂ (:: Data nil) ⟫
-
 /-
 Test context for:
 S Data (I Data) (K Data Data) (K Data Data) (I Data) Data
@@ -472,6 +481,9 @@ def test_k_type_eq : Except Error Bool := do
 
 #eval test_k_type_eq
 
+#eval s_type
+
+
 def test_s_type_eq : Except Error Bool := do
   let actual ← do_step ⟪₂ :: exec (:: :s_type :test_ctx_s_type) ⟫
   pure <| actual == (← test_s_type')
@@ -481,7 +493,15 @@ def test_s_type_eq : Except Error Bool := do
 ((:: Data) ((:: ((:: Data) ((:: Data) nil))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: Data) nil)))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted ((K' Data) Data))) ((:: read) ((:: ((:: next) read)) nil))))) apply)) nil)))) ((:: ((:: Data) ((:: ((:: ((:: exec) ((:: ((:: assert) quoted (I Data))) ((:: read) nil)))) apply)) nil))) ((:: Data) ((:: quoted ((((K' Data) Data) Data) ((I Data) Data))) nil)))))))
 -/
 
+#eval last_next ⟪₂ (:: ((:: next) read)) ((:: ((:: push_on) ((:: ((:: assert) read)) nil))) ((:: push_on) apply)) ⟫ ⟪₂ :: Data nil ⟫
+
+#eval exec_op ⟪₂ ((:: ((:: next) read)) ((:: ((:: push_on) ((:: ((:: assert) read)) nil))) ((:: push_on) apply))) ⟫ ⟪₂ :: Data (:: Data nil) ⟫
+
 #eval test_s_type_eq
+
+#eval exec_op ⟪₂ ((:: ((:: exec) ((:: ((:: read) quote)) ((:: assert) ((:: read) nil))))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert))) ⟫ ⟪₂ :: Data nil ⟫
+#eval Expr.as_list <$> exec_op ⟪₂ ((:: exec) ((:: read) ((:: ((:: ((:: exec) ((:: ((:: ((:: next) read)) quote)) ((:: ((:: assert) read)) nil)))) ((:: ((:: push_on) apply)) (((:: both) ((:: assert) exec)) assert)))) ((:: ((:: assert) Data)) nil)))) ⟫ ⟪₂ :: Data nil ⟫
+#eval s_type
 
 #eval Expr.as_list <$> do_step ⟪₂ :: exec (:: :s_type :test_ctx_s_type) ⟫
 

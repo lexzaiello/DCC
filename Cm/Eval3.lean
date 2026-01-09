@@ -112,7 +112,24 @@ def flse := :: k_untyped (:: i_untyped nil)
 
 def zero := flse
 
+/-
+S(S(KS)K)
+
+S(S(KS)K) n f x
+=
+(S(KS)K) f
+(n f)
+
+S (K f) (n f) x
+
+f (n f x)
+-/
+
 def succ := :: s_untyped (:: (:: s_untyped (:: (:: k_untyped (:: s_untyped nil)) (:: k_untyped nil))) nil)
+
+def succ' := :: (symbol "S") (:: (:: (symbol "S") (:: (:: (symbol "K") (:: (symbol "S") nil)) (:: (symbol "K") nil))) nil)
+
+#eval (Expr.toString succ')
 
 def my_example : Option Expr :=
   let my_f := k_untyped
@@ -127,7 +144,9 @@ def mk_church : ℕ → Expr
   | .zero => zero
   | .succ n => (:: succ (:: (mk_church n) nil))
 
---#eval my_example
+#eval my_example
+#eval do_step (:: succ (:: zero (:: i_untyped (:: (symbol "hi") nil))))
+#eval do_step (:: (:: succ (:: zero nil)) (:: i_untyped (:: (symbol "hi") nil)))
 --#eval do_step (:: succ (:: zero (:: i_untyped (:: (symbol "hi") nil))))
 --#eval do_step (:: (mk_church 0) (:: k_untyped (:: (symbol "hi") nil)))
 

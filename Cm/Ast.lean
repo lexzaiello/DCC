@@ -29,7 +29,7 @@ inductive Expr where
   | app       : Expr
     → Expr
     → Expr
-deriving BEq
+deriving BEq, Repr
 
 declare_syntax_cat atom
 declare_syntax_cat app

@@ -29,6 +29,10 @@ inductive Expr where
     → Expr
 deriving Repr, BEq
 
+def Expr.unquote_once : Expr → Expr
+  | quote e => e
+  | e => e
+
 def Expr.toString : Expr → String
   | .quote e => s!"'{e.toString}"
   | .cons a@(.cons a₁ a₂) b@(.cons b₁ b₂) => s!":: ({a.toString}) ({b.toString})"
@@ -48,6 +52,15 @@ instance Expr.instToString : ToString Expr where
 open Expr
 
 notation "::" => Expr.cons
+
+def Expr.push_back (val : Expr) : Expr → Option Expr
+  | nil => val
+  | :: x xs => do pure <| :: x (← push_back val xs)
+  | _ => .none
+
+def Expr.push_arg (arg : Expr) : Expr → Option Expr
+  | :: f args => do pure <| :: f (← Expr.push_back arg args)
+  | _ => .none
 
 def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
   if with_logs then
@@ -70,8 +83,7 @@ def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
   | :: .id x => pure x
   | :: (:: .const (:: x nil)) _l => pure x
   | :: (:: f args) x => do
-    -- This is some other curried function
-    let f' ← step (:: f args)
+    let f' ← step (:: f args) with_logs
     pure <| :: f' x
   | _ => .none
 
@@ -79,7 +91,7 @@ def try_step_n (n : ℕ) (e : Expr) (with_logs : Bool := false) : Option Expr :=
   if n = 0 then
     pure e
   else
-    let e' ← step e with_logs
+    let e' ← .unquote_once <$> step e with_logs
     (try_step_n (n - 1) e' with_logs) <|> (pure e')
 
 def do_step (e : Expr) (with_logs : Bool := false):= try_step_n 20 e with_logs
@@ -96,10 +108,12 @@ def s_untyped : Expr :=
 def i_untyped : Expr :=
   (:: s_untyped (:: k_untyped (:: k_untyped nil)))
 
+#eval do_step (:: i_untyped (:: (symbol "hi") nil)) true
+
 #eval (step <=< step) <| :: s_untyped (:: k_untyped (:: k_untyped (:: (symbol "a") nil)))
 #eval (step <=< step <=< step) <| :: (:: s_untyped (:: k_untyped (:: k_untyped nil))) (symbol "a")
 #eval (step <=< step <=< step) <| :: i_untyped (:: (symbol "a") nil)
-#eval (step <=< step <=< step) <| (:: (:: s_untyped (:: k_untyped k_untyped)) (:: (symbol "a") nil))
+#eval (step <=< step <=< step <=< step) <| (:: (:: s_untyped (:: k_untyped k_untyped)) (:: (symbol "a") nil))
 
 namespace church_example
 

@@ -1,3 +1,5 @@
+import Mathlib.Data.Nat.Notation
+
 /-
 Optimizing for ZK design:
 - List-oriented language is potentially ideal
@@ -47,16 +49,20 @@ open Expr
 
 notation "::" => Expr.cons
 
-def step (e : Expr) : Option Expr := do
+def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
+  if with_logs then
+    dbg_trace e
   match e with
-  | :: (:: both (:: _a _b)) nil => .none
+  --| :: (:: both (:: _a _b)) nil => .none
   | :: (:: both (:: a b)) (:: l nil)
   | :: (:: both (:: a b)) l => do
     pure <| :: (← step (:: a l)) (← step (:: b l))
-  | :: (:: π (:: nil b)) (:: x nil) => .none
-  | :: (:: π (:: a b)) (:: x nil)
   | :: (:: π (:: a nil)) (:: x xs) => step (:: a x)
-  | :: (:: π (:: nil b)) (:: x xs) => step (:: b xs)
+  | :: (:: π (:: nil b)) (:: x xs) =>
+    step (:: b xs)
+  | :: (:: π (:: a b)) (:: x nil) =>
+    let x' ← step (:: a x)
+    pure (:: both (:: (:: const (:: x' nil)) b))
   | :: (:: π (:: a b)) (:: x xs) => do
     pure <| :: (← step (:: a x)) (← step (:: b xs))
   | :: .id nil => .none
@@ -69,6 +75,15 @@ def step (e : Expr) : Option Expr := do
     pure <| :: f' x
   | _ => .none
 
+def try_step_n (n : ℕ) (e : Expr) (with_logs : Bool := false) : Option Expr := do
+  if n = 0 then
+    pure e
+  else
+    let e' ← step e with_logs
+    (try_step_n (n - 1) e' with_logs) <|> (pure e')
+
+def do_step (e : Expr) (with_logs : Bool := false):= try_step_n 20 e with_logs
+
 def k_untyped : Expr :=
   :: π (:: id nil)
 
@@ -78,15 +93,42 @@ def s_untyped : Expr :=
   let z := :: π (:: nil id)
   .cons π (:: id (:: both (:: z (:: π (:: id id)))))
 
+def i_untyped : Expr :=
+  (:: s_untyped (:: k_untyped (:: k_untyped nil)))
+
 #eval (step <=< step) <| :: s_untyped (:: k_untyped (:: k_untyped (:: (symbol "a") nil)))
 #eval (step <=< step <=< step) <| :: (:: s_untyped (:: k_untyped (:: k_untyped nil))) (symbol "a")
-
-#eval (step <=< step) <| (:: (:: s_untyped (:: k_untyped k_untyped)) (:: (symbol "a") nil))
+#eval (step <=< step <=< step) <| :: i_untyped (:: (symbol "a") nil)
+#eval (step <=< step <=< step) <| (:: (:: s_untyped (:: k_untyped k_untyped)) (:: (symbol "a") nil))
 
 namespace church_example
 
-def zero := k_untyped
+def tre  := k_untyped
+def flse := :: k_untyped (:: i_untyped nil)
 
---def succ := 
+#eval do_step i_untyped
+#eval do_step (:: flse (:: i_untyped (:: (symbol "b") nil))) true
+#eval do_step (:: tre (:: i_untyped (:: (symbol "b") nil))) true
+
+def zero := flse
+
+def succ := :: s_untyped (:: (:: s_untyped (:: (:: k_untyped (:: s_untyped nil)) (:: k_untyped nil))) nil)
+
+def my_example : Option Expr :=
+  let my_f := k_untyped
+  let my_v := symbol "hi"
+  do_step (:: (:: zero (:: my_f nil)) (:: my_v nil))
+
+/-
+Discards n arguments
+-/
+
+def mk_church : ℕ → Expr
+  | .zero => zero
+  | .succ n => (:: succ (:: (mk_church n) nil))
+
+--#eval my_example
+--#eval do_step (:: succ (:: zero (:: i_untyped (:: (symbol "hi") nil))))
+--#eval do_step (:: (mk_church 0) (:: k_untyped (:: (symbol "hi") nil)))
 
 end church_example

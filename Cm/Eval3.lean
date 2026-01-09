@@ -81,7 +81,7 @@ def Expr.push_arg (arg in_e : Expr) : Option Expr :=
   | π _a _b => .none
   | :: .read _ => .none
   | :: .const _ => .none
-  | :: f (:: x nil) => do pure <| :: f (:: x (:: arg nil))
+  | nil => arg
   | :: f args => do pure <| :: f (← Expr.push_back arg args)
   | _ => .none
 
@@ -91,15 +91,15 @@ def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
   match e with
   --| :: (:: both (:: _a _b)) nil => .none
   | :: head (:: x xs) => pure x
-  | :: (both a b) (:: l nil)
+  --| :: (both a b) (:: l nil)
   | :: (both a b) l => do
-    pure <| :: (← step (:: a l)) (← step (:: b l))
+    pure <| :: (← step (:: a l) with_logs) (← step (:: b l) with_logs)
   | :: (π a nil) (:: x xs) => step (:: a x)
   | :: (π nil b) (:: x xs) =>
     step (:: b xs)
   | :: (π a b) (:: x nil) => .none
   | :: (π a b) (:: x xs) => do
-    pure <| :: (← step (:: a x)) (← step (:: b xs))
+    pure <| :: (← step (:: a x) with_logs) (← step (:: b xs) with_logs)
   | :: .read nil => .none
   | :: .read (:: x nil)
   | :: .read x => pure x
@@ -206,26 +206,55 @@ def my_test' (n : Nat) : Option Expr := do
   try_step_n 100 t'
 
 def succ' : Expr :=
-  both (π nil head) read
+  let nfx := π read (π read (both head (:: const nil)))
+  both (π nil head) (both nfx (:: const nil))
 
 def zero' : Expr :=
-  π nil read
+  π nil head
 
 #eval do_step (:: zero' (:: (symbol "f") (:: (symbol "x") nil)))
+#eval do_step (:: (:: succ' (:: zero' nil)) (:: (symbol "f") (:: (:: (symbol "a") (:: (symbol "x") nil)) nil)))
 
 def test_succ' : Option Expr :=
   let my_id := read
-  do_step (:: succ' (:: zero' (:: my_id (:: (symbol "hi") nil))))
+  do_step (:: (:: succ' (:: (:: succ' (:: zero' nil)) nil)) (:: my_id (:: (symbol "hi") nil))) true
+
+#eval test_succ'
 
 def test_succ'' : Option Expr :=
   let my_id := read
-  let n := (:: succ' (:: (:: succ' (:: (:: succ' (:: zero nil)) nil)) nil))
+  let n := (:: succ' (:: (:: succ' (:: (:: succ' (:: zero' nil)) nil)) nil))
   do_step (:: n (:: my_id (:: (symbol "hi") nil)))
+
+#eval test_succ''
+
+def mk_church' (n : ℕ) : Option Expr :=
+  match n with
+  | .zero => zero'
+  | .succ n => do
+    let inner ← mk_church' n
+
+    pure <| (:: succ' (:: inner nil))
+
+def test_succ''' (n : ℕ) : Option Expr := do
+  let my_id := read
+  let n ← mk_church' n
+  do_step (:: n (:: my_id (:: (symbol "hi") nil)))
+
+#eval test_succ''' 3
+
+def get_index (n : ℕ) (l : Expr) : Option Expr :=
+  match n with
+  | .zero => do_step (:: head l)
+  | n => do
+    do_step (:: (← mk_church' n) (:: (π nil read) (:: l nil))) true
+
+
+#eval get_index 1 (:: (symbol "hi") (:: (symbol "a") (:: (symbol "b") nil)))
 
 /-
 λ m n f x => m f (n f x)
 -/
-
 def plus' : Expr :=
   π read succ'
 

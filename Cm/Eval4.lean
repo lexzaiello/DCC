@@ -11,6 +11,8 @@ inductive Expr where
     → Expr
   | next   : Expr
   | read   : Expr
+  | quote  : Expr
+    → Expr
   | π      : Expr
     → Expr
     → Expr
@@ -26,6 +28,7 @@ deriving Repr, BEq
 
 def Expr.fmt (e : Expr) : Format :=
   match e with
+  | .quote e => "quote " ++ e.fmt
   | .append => "append"
   | .π f g => .paren ("π " ++ f.fmt ++ Format.line ++ g.fmt)
   | .next => "next"
@@ -204,6 +207,12 @@ def succ.fx : Expr :=
 def succ.nfx : Expr :=
   (both succ.n succ.fx)
 
+/-
+Big note:
+order of operations.
+
+We need to sequence these in a smarter way.
+-/
 def succ : Expr :=
   (both succ.f succ.nfx)
 
@@ -221,6 +230,7 @@ def zero : Expr :=
 #eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: (symbol "f") (:: (symbol "x") nil)))
 --#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "x") (:: (symbol "y") nil)) nil)))
 --#eval do_step step'' (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "hi") nil) nil)))
+#eval do_step (step'' (with_logs := true)) (:: succ (:: zero (:: read (:: (:: (symbol "hi") nil) nil))))
 #eval do_step step'' (:: zero (:: read (:: (:: (symbol "hi") nil) nil)))
 
 def test_succ'' (f : Expr → Option Expr) : Option Expr :=

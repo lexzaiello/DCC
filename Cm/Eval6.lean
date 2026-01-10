@@ -140,5 +140,6 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
         step_apply (:: f x)
 
       eval_arg_first <|> eval_f_first <|> step_whole
-    | e => .error <| .stuck e
+    | e => .error <| .no_rule e
   )
+

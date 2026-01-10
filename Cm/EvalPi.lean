@@ -1,5 +1,36 @@
 import Mathlib.Data.Nat.Notation
 
+/-
+Would be nice if we could dictate the order of evaluation somehow.
+Both is nice, but we need the reverse as well.
+Perhaps we can derive it somewhat easily.
+
+:: (both f g) l = :: (:: f l) (:: g l)
+
+Technically :: is sequencing.
+:: f x = do f, then apply x.
+
+So, we can just do
+both
+
+The main tricky spot is in succ,
+f (n f x)
+
+This shouldn't be an issue, since there is an extra nil.
+We can remove the extra nil with our "anonymous function
+factory".
+
+Another thought:
+we can probably replace next and read with
+π and id.
+
+next = π (:: const (:: append nil))
+const is necessary, though.
+
+Is append necessary?
+Maybe.
+-/
+
 open Std (Format)
 open Std (ToFormat)
 
@@ -7,8 +38,10 @@ inductive Expr where
   | cons   : Expr
     → Expr
     → Expr
-  | next   : Expr
-  | read   : Expr
+  | id     : Expr
+  | π      : Expr
+    → Expr
+    → Expr
   | const  : Expr
   | append : Expr
   | both   : Expr
@@ -21,8 +54,11 @@ deriving Repr, BEq
 
 def Expr.fmt (e : Expr) : Format :=
   match e with
+  | .quote e => "quote " ++ e.fmt
   | .append => "append"
+  | .π f g => .paren ("π " ++ f.fmt ++ Format.line ++ g.fmt)
   | .next => "next"
+  | .nat n => ToFormat.format n
   | .cons (.cons a b) (.cons c d) =>
     ":: " ++ (.group <| .nest 2 <| (.paren (Expr.cons a b).fmt) ++ Format.line ++ (.paren (Expr.cons c d).fmt))
   | .cons (.cons a b) xs =>
@@ -46,14 +82,6 @@ instance Expr.instToString : ToString Expr where
 open Expr
 
 notation "::" => Expr.cons
-
-/-
-We should design step with deref in mind.
-But, this clashes with K for example.
-
-We want to be able just curry nicely,
-but then we can't distinguish K discarding its argument.
--/
 
 def Expr.push_back (val : Expr) : Expr → Option Expr
   | :: x nil => do pure <| :: x val
@@ -108,95 +136,37 @@ def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
   | :: f x => :: (← step f) x
   | _ => .none
 
-def try_step_n (f : Expr → Option Expr) (n : ℕ) (e : Expr) (with_logs : Bool := false) : Option Expr := do
-  if n = 0 then
-    pure e
-  else
-    let e' ← f e
-    (try_step_n f (n - 1) e' with_logs) <|> (pure e')
+namespace church
 
-def do_step (f : Expr → Option Expr) (e : Expr) (with_logs : Bool := false):= try_step_n f 20 e with_logs
-
-/-
-succ n f x = f (n f x)
--/
-
-def succ.n : Expr := read
-
-def succ.f : Expr :=
+def zero : Expr :=
   (:: next read)
 
-def succ.x : Expr :=
+namespace succ
+
+def n : Expr := read
+
+def f : Expr :=
+  (:: next read)
+
+def x : Expr :=
   (:: next (:: next read))
 
-def succ.fx : Expr :=
+def fx : Expr :=
   (both succ.f succ.x)
 
-def succ.nfx : Expr :=
+def nfx : Expr :=
   (both succ.n succ.fx)
+
+end succ
 
 def succ : Expr :=
   (both succ.f (both succ.nfx nil))
 
-/-
-zero f x = x
--/
-def zero : Expr :=
-  (:: next read)
-
---#eval ToFormat.format <$> do_step (step (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "x") (:: (symbol "y") nil)) nil)))
---#eval do_step step (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "hi") nil) nil)))
-#eval do_step (step (with_logs := true)) (:: succ (:: zero (:: read (:: (:: (symbol "hi") nil) nil))))
-#eval do_step (step (with_logs := true)) =<< (f$ (:: succ (:: zero (:: read nil))) (:: (symbol "hi") nil))
-#eval do_step (step (with_logs := true)) =<< (f* (f$ (:: succ (:: zero nil)) read) (:: (symbol "hi") nil))
-#eval ToFormat.format <$> (do_step ((step <=< step (with_logs := true))) =<< (f* (f* (:: succ (:: zero nil)) read) (:: (symbol "hi") nil)))
-
-#eval (f* (f$ (:: succ (:: zero nil)) read) (:: (symbol "hi") (:: (symbol "rest") nil)))
-  >>= do_step step
-  >>= (pure ∘ ToFormat.format)
-
-#eval (f* (f$ (:: succ (:: (:: succ zero) nil)) read) (:: (:: (symbol "hi") (:: (symbol "rest") nil)) nil))
-  >>= do_step step
-  >>= (pure ∘ ToFormat.format)
+end church
 
 def mk_church : ℕ → Option Expr
-  | .zero => zero
+  | .zero => church.zero
   | .succ n => do
     let inner ← mk_church n
-    pure (:: succ inner)
+    pure (:: church.succ inner)
 
-def app_church (n : ℕ) (f x : Expr) : Option Expr := do
-  match n with
-  | .zero => (:: zero (:: f (:: x nil))) >>= do_step step
-  | .succ n =>
-    let inner ← mk_church n
-    let my_n := (:: succ (:: inner nil))
-    (f* (f$ my_n f) x) >>= do_step step
-
-def mk_for_app : Expr → Expr
-  | :: f x => :: f (:: x nil)
-  | e => e
-
-def app_church' (n : ℕ) (f x : Expr) : Option Expr := do
-  match n with
-  | .zero => (:: zero (:: f (:: x nil))) >>= do_step step
-  | n =>
-    let my_n ← mk_for_app <$> mk_church n
-    (f* (f$ my_n f) x) >>= do_step step
-
-#eval app_church 2 read (:: (:: (symbol "hi") (:: (symbol "rest") nil)) nil) == .some (symbol "hi")
-#eval app_church' 2 read (:: (:: (symbol "hi") (:: (symbol "rest") nil)) nil) == .some (symbol "hi")
-
-def get_tail : Expr := next
-
-def get_index (n : ℕ) (l : Expr) (with_logs : Bool := false) : Option Expr := do
-  match n with
-  | .zero => do_step step (:: read l)
-  | n =>
-    let n ← mk_church n
-    let tail := (:: n (:: get_tail (:: (:: l nil) nil)))
-    dbg_trace tail
-    dbg_trace tail >>= (do_step (step (with_logs := with_logs)))
-    tail >>= (do_step (step (with_logs := with_logs)))
-
-#eval get_index 1 (:: (symbol "hi") (:: (symbol "a") (:: (symbol "b") nil)))

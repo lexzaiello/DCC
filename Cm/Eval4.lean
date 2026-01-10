@@ -145,7 +145,7 @@ def step'' (e : Expr) (with_logs : Bool := false) : Option Expr := do
     | .none, .some g' => do
       both (← mk_append f l) (:: const g')
     | .none, .none => .none
-  | :: f x => (do pure <| :: (← step'' f) (← step'' x)) <|> (do pure <| :: (← step'' f) x) <|> (do pure <| :: f (← step'' x))
+  | :: f x => :: (← step'' f) x
   | _ => .none
 
 #eval step'' (:: (both read (:: next read)) (:: (symbol "a") nil))
@@ -214,9 +214,15 @@ def succ.f : Expr :=
 def succ.x : Expr :=
   (:: next (:: next read))
 
-def succ.fx : Expr :=
-  (:: next (both read (:: next read)))
+/-
 
+-/
+def succ.fx : Expr :=
+  (both succ.f succ.x)
+
+/-
+
+-/
 def succ.nfx : Expr :=
   (both succ.n succ.fx)
 
@@ -235,6 +241,12 @@ Why can't we just wrap nfx in nil?
 Why can't we just eval what's inside read?
 
 Maybe the problem is that zero doesn't have its function?
+
+This is the sequencing issue again.
+
+Append would suffice.
+
+:: f x rule lets use pass in arguments.
 -/
 def succ : Expr :=
   (both succ.f (both succ.nfx nil))
@@ -251,56 +263,18 @@ def zero : Expr :=
 #eval do_step (step'' (with_logs := true)) =<< (f$ (:: succ (:: zero (:: read nil))) (:: (symbol "hi") nil))
 #eval do_step (step'' (with_logs := true)) =<< (f* (f$ (:: succ (:: zero nil)) read) (:: (symbol "hi") nil))
 #eval ToFormat.format <$> (do_step ((step'' <=< step'' (with_logs := true))) =<< (f* (f* (:: succ (:: zero nil)) read) (:: (symbol "hi") nil)))
-#eval do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero (:: read nil))))
-  (:: (:: (symbol "hi") nil) nil))
-#eval do_step (step'' (with_logs := true)) (:: (:: append (:: (:: append (:: succ (:: zero nil)))
-  (:: read nil))) (:: (:: (symbol "hi") nil) nil))
-#eval do_step (step'' (with_logs := true)) (:: (:: append (:: (:: append (:: succ (:: zero nil)))
-  (:: (:: (symbol "hi") nil) nil))) (:: read nil))
-#eval do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil)))
-  (:: (:: (symbol "hi") nil) nil))
-#eval do_step (step'' (with_logs := true)) (::
-  (:: append (:: (:: append (:: succ (:: zero nil))) (:: read nil)))
-  (:: (:: (symbol "hi") nil) nil))
-#eval do_step (step'' (with_logs := true)) (::
-  (:: succ (:: zero nil))
-  (:: read (:: (:: (symbol "hi") nil) nil)))
-#eval do_step step'' (:: zero (:: read (:: (:: (symbol "hi") nil) nil)))
 
-#eval do_step step'' (:: (:: next read) (:: read (:: (:: (symbol "hi") nil) nil)))
+#eval (f* (f$ (:: succ (:: zero nil)) read) (:: (symbol "hi") (:: (symbol "rest") nil)))
+  >>= do_step (step'' (with_logs := true))
+  >>= (pure ∘ ToFormat.format)
 
-def test_succ'' (f : Expr → Option Expr) : Option Expr :=
-  let my_id := read
+#eval (f* (f$ (:: succ (:: (:: succ (:: zero nil)) nil)) read) (:: (:: (:: (symbol "hi") nil) (:: (symbol "rest") nil)) nil))
+  >>= do_step (step'' (with_logs := true))
+  >>= (pure ∘ ToFormat.format)
 
-  do_step f (:: succ (:: zero (:: my_id (:: (:: (symbol "hi") nil) nil)))) true
-
-def test_succ_next (f : Expr → Option Expr) : Option Expr :=
-  let my_f := (:: next read)
-  do_step f (:: (:: append (:: succ (:: zero nil))) (:: (symbol "f") (:: (:: (symbol "hi") (:: (symbol "b") nil)) nil))) true
-
-#eval do_step step'' (:: (:: append (:: succ (:: (:: succ (:: zero nil)) nil))) (:: (symbol ("f")) (:: (:: (symbol "hi") (:: (symbol "b") (:: (symbol "c") nil))) nil))) true
-
-#eval ToFormat.format <$> test_succ_next (step'' (with_logs := true))
-
-def test_succ_curry (f : Expr → Option Expr) : Option Expr :=
-  let my_id := read
-
-  do_step f (:: (:: succ zero) (:: my_id (:: (:: (symbol "hi") (:: (symbol "b") nil)) nil))) true
-
-#eval do_step (step'' (with_logs := true)) (:: succ (:: zero nil))
-#eval test_succ_curry (step'' (with_logs := true))
-
-def test_succ'''' (f : Expr → Option Expr) : Option Expr :=
-  let my_id := read
-
-  let n := (:: succ (:: zero nil))
-
-  (push_back (:: my_id (:: (:: (symbol "hi") nil) nil)) n) >>= do_step f
-
-#eval do_step step'' (:: succ (:: zero nil))
-#eval test_succ'''' step''
-
-#eval test_succ'' step''
+#eval (f* (f$ (:: succ.n (:: (:: succ (:: zero nil)) nil)) read) (:: (:: (:: (symbol "hi") nil) (:: (symbol "rest") nil)) nil))
+  >>= do_step (step'' (with_logs := true))
+  >>= (pure ∘ ToFormat.format)
 
 def mk_church' (n : ℕ) : Option Expr :=
   match n with

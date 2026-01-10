@@ -213,7 +213,8 @@ def curry (e : Expr) : Expr :=
   | _ => :: const e
 
 #eval do_step step (:: (curry (symbol "curry")) (:: (symbol "fake arg") nil))
-#eval do_step step (:: (:: (curry church.zero) (:: (symbol "f") nil)) (:: (symbol "x") nil))
+#eval do pure <| (← do_step step (:: church.zero (:: (symbol "f") (:: (symbol "x") nil)))) ==
+  (← do_step step (:: (:: (curry church.zero) (:: (symbol "f") nil)) (:: (symbol "x") nil)))
 
 -- 1 id whatever = whatever
 #eval do_step step (:: church.succ (:: church.zero (:: id (:: (symbol "x") nil))))

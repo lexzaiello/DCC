@@ -46,6 +46,19 @@ with arbitrary parameters.
 Currying will handle more than that.
 -/
 
+/-
+I like our pattern matching, but we end up
+with a bunch of extra nil values.
+
+Non-obvious application should be made clear with a
+keyword.
+
+Apply should allow us to apply singleton
+lists.
+
+Even better, apply should be like pipelining.
+-/
+
 open Std (Format)
 open Std (ToFormat)
 open Std.ToFormat (format)
@@ -54,6 +67,7 @@ inductive Expr where
   | cons   : Expr
     → Expr
     → Expr
+  | apply  : Expr
   | π      : Expr
     → Expr
     → Expr
@@ -76,6 +90,7 @@ open Expr
 
 def Expr.fmt (e : Expr) : Format :=
   match e with
+  | .apply => "apply"
   | .π a b => .paren <| "π " ++ (.paren a.fmt) ++ .line ++ (.paren b.fmt)
   | .cons (.cons a b) (.cons c d) =>
     ":: " ++ (.group <| .nest 2 <| (.paren (Expr.cons a b).fmt) ++ Format.line ++ (.paren (Expr.cons c d).fmt))
@@ -139,12 +154,15 @@ def step (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     pure <| :: (← step (:: a x)) (← step (:: b xs))
   | :: (:: const x) _ => step x <|> (pure x)
   | :: (both f g) l =>
-    let g' ← step (:: g l)
-    match (← step (:: f l)) with
-    | .cons .id (:: v nil)
-    | :: v nil =>
-      pure <| :: v (:: g' nil)
-    | _ => .error <| .stuck e
+    pure <| :: (← step (:: f l)) (← step (:: g l))
+  -- Singleton values (i.e., with no arguments, we can apply instantly
+  | :: apply (:: (:: f nil) (:: (:: g nil) nil)) =>
+    step <| :: f (:: g nil)
+  | :: apply (:: f (:: g nil)) =>
+    let f' ← step f <|> (pure f)
+    let g' ← step g <|> (pure g)
+
+    pure <| :: apply (:: f' (:: g' nil))
   | :: f x => (do pure <| :: (← step f) (← step x))
     <|> (do pure <| :: f (← step x))
     <|> (do pure <| :: (← step f) x)
@@ -192,6 +210,8 @@ def succ : Expr :=
 #eval step (:: succ.nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 #eval do_step step (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 #eval do_step step (:: succ (:: (symbol "n") (:: id (:: (symbol "x") nil))))
+#eval do_step step (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+#eval do_step step (:: succ (:: zero (:: id (:: (symbol "x") nil))))
 #eval do_step step (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
 
 end church
@@ -206,27 +226,30 @@ but we will need to make π data first.
 -/
 def curry (e : Expr) : Except Error Expr :=
   match e with
-  | .id => pure .id
-  | :: .const e => pure (:: .const e)
-  /-
-    both expects only one argument, the
-    item to be copied.
-    the equivalent to currying is
-    accepting a singleton list.
-  -/
-  | both f g =>
-    pure (both (π f nil) (π g nil))
+  | π _a (:: const nil) => pure e
   | π _a nil => pure e
   | π a b => do
     let rst ← curry b
     pure <| π a (:: const rst)
-  | const => pure <| π id nil
-  | symbol s => pure <| :: const (symbol s)
   | e => .error <| .cant_curry e
 
+def test_curry_succ_f : Except Error Bool := do
+  let expected ← do_step step (:: church.succ.f (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+  let curr ← curry church.succ.f
+  dbg_trace do_step step (:: (:: (:: curr (:: (symbol "n") nil)) (:: (symbol "f") nil)) (:: (symbol "x") nil))
+  dbg_trace expected
+  let actual ← do_step step (:: (:: (:: curr (:: (symbol "n") nil)) (:: (symbol "f") nil)) (:: (symbol "x") nil))
+
+  pure <| actual == expected
+
+#eval test_curry_succ_f
+
+--def tests_curry_succ_f : Except Error Bool := do
+--  let actual ← do_step step 
+
 def test_curry_zero : Except Error Bool := do
-  let actual ← do_step step (:: church.zero (:: (symbol "f") (:: (symbol "x") nil)))
-  let ours ← do_step step (:: (:: (← curry church.zero) (:: (symbol "f") nil)) (:: (symbol "x") nil))
+  let actual ← do_step step (:: church.zero (:: (symbol "f") (:: church.zero nil)))
+  let ours ← do_step step (:: (:: (← curry church.zero) (:: (symbol "f") nil)) (:: church.zero nil))
 
   pure <| actual == ours
 
@@ -236,6 +259,7 @@ def test_curry_succ : Except Error Bool := do
   let ours ← do_step step (:: (:: (:: curr (:: church.zero nil)) (:: id nil)) (:: (symbol "x") nil))
 
   dbg_trace s!"theirs: {actual}"
+  dbg_trace s!"our curr: {curr}"
   dbg_trace s!"ours: {ours}"
 
   pure <| actual == ours

@@ -1,4 +1,5 @@
 import Mathlib.Data.Nat.Notation
+import Cm.EvalUtil
 
 open Std (Format)
 open Std (ToFormat)
@@ -80,7 +81,7 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     dbg_trace e
 
   match e with
-  | :: .id x => pure x
+  | :: .id (:: x nil) => pure x
   | :: (π a nil) (:: x nil) =>
     pure <| f$ a x
   | :: (π a b) (:: x xs) => do
@@ -93,7 +94,7 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     let b' := f$ b xs
 
     pure <| :: a' b'
-  | :: (:: const x) _ => pure x
+  | :: (:: const (:: x nil)) _ => pure x
   /-
     Assume l is a single value here.
   -/
@@ -137,9 +138,38 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
         let f' ← run f
         pure <| :: apply (:: (:: f' nil) (:: (:: x nil) nil))
       let step_whole : Except Error Expr := do
-        step_apply (:: f x)
+        run (:: f (:: x nil)) with_logs
 
       eval_arg_first <|> eval_f_first <|> step_whole
+    | :: a b => (do
+      let a' ← run a
+      let b' ← run b
+      pure <| :: a' b')
+      <|> (do
+      let a' ← run a
+      pure <| :: a' b)
+      <|> (do
+      let b' ← run b
+      pure <| :: a b')
     | e => .error <| .no_rule e
   )
 
+/-
+Notes on this design:
+- we expect that all values with no arguments are singleton lists. e.g.,
+(symbol "hi") is incorrect. (:: (symbol "hi") nil) is correct.
+-/
+
+namespace church
+
+/-
+zero f x = x
+(:: zero (:: (:: (symbol "f") nil) (:: (:: (symbol "x") nil) nil)))
+== (:: (symbol "x") nil)
+-/
+def zero : Expr :=
+  π (:: const (:: id nil)) (π id (:: const (:: nil nil)))
+
+#eval try_step_n run 4 (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
+
+end church

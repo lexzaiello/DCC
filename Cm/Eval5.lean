@@ -66,6 +66,10 @@ inductive Expr where
     → Expr
 deriving Repr, BEq
 
+inductive Error where
+  | stuck   : Expr → Error
+  | no_rule : Expr → Error
+
 open Expr
 
 def Expr.fmt (e : Expr) : Format :=
@@ -84,6 +88,10 @@ def Expr.fmt (e : Expr) : Format :=
   | .both f g => .paren ("both " ++ (.group <| .nest 2 <| (.paren f.fmt) ++ Format.line ++ (.paren g.fmt)))
   | .nil => "nil"
   | symbol s => .paren ("symbol " ++ ("\"" ++ s ++ "\""))
+
+def Error.fmt : Error → Format
+  | .stuck e => "got stuck evaluating: " ++ .line ++ e.fmt
+  | .no_rule e => "no rule to evaluate: " ++ .line ++ e.fmt
 
 instance Expr.instToFormat : ToFormat Expr where
   format := Expr.fmt
@@ -110,7 +118,7 @@ notation "f$" => mk_app
 example : Expr.push_back (:: (symbol "zero") nil) (:: (symbol "succ") nil) =
   (:: (symbol "succ") (:: (symbol "zero") nil)) := rfl
 
-def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
+def step (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   if with_logs then
     dbg_trace e
 
@@ -129,18 +137,18 @@ def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
     match (← step (:: f l)) with
     | :: v nil =>
       pure <| :: v g'
-    | _ => .none
-  | :: f x => :: (← step f) x
-  | _ => .none
+    | _ => .error <| .stuck e
+  | :: f x => do pure <| :: (← step f) x
+  | e => .error <| .no_rule e
 
-def try_step_n (f : Expr → Option Expr) (n : ℕ) (e : Expr) (with_logs : Bool := false) : Option Expr := do
+def try_step_n (f : Expr → Except Error Expr) (n : ℕ) (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   if n = 0 then
     pure e
   else
     let e' ← f e
     (try_step_n f (n - 1) e' with_logs) <|> (pure e')
 
-def do_step (f : Expr → Option Expr) (e : Expr) (with_logs : Bool := false):= try_step_n f 20 e with_logs
+def do_step (f : Expr → Except Error Expr) (e : Expr) (with_logs : Bool := false):= try_step_n f 20 e with_logs
 
 namespace church
 
@@ -193,9 +201,7 @@ def curry (e : Expr) : Expr :=
   | _ => :: const e
 
 #eval do_step step (:: (curry (symbol "curry")) (:: (symbol "fake arg") nil))
-#eval do_step step (:: (:: (curry church.zero) (:: (symbol "f") nil)) (:: (symbol "g") nil))
+#eval do_step step (:: (:: (curry church.zero) (:: (symbol "f") nil)) (:: (symbol "x") nil))
 
-/-
-TODO: another version of π, but both and π are list data,
-so we can map over them.
--/
+-- 1 id whatever = whatever
+#eval do_step (step (with_logs := true)) (:: church.succ (:: (curry church.zero) (:: id (:: (symbol "whatever") nil))))

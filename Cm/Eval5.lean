@@ -48,6 +48,7 @@ Currying will handle more than that.
 
 open Std (Format)
 open Std (ToFormat)
+open Std.ToFormat (format)
 
 inductive Expr where
   | cons   : Expr
@@ -74,7 +75,7 @@ open Expr
 
 def Expr.fmt (e : Expr) : Format :=
   match e with
-  | .π a b => .paren <| "π " ++ a.fmt ++ .line ++ b.fmt
+  | .π a b => .paren <| "π " ++ (.paren a.fmt) ++ .line ++ (.paren b.fmt)
   | .cons (.cons a b) (.cons c d) =>
     ":: " ++ (.group <| .nest 2 <| (.paren (Expr.cons a b).fmt) ++ Format.line ++ (.paren (Expr.cons c d).fmt))
   | .cons (.cons a b) xs =>
@@ -95,6 +96,12 @@ def Error.fmt : Error → Format
 
 instance Expr.instToFormat : ToFormat Expr where
   format := Expr.fmt
+
+instance Error.instToFormat : ToFormat Error where
+  format := Error.fmt
+
+instance Error.isntToString : ToString Error where
+  toString := toString ∘ Error.fmt
 
 instance Expr.instToString : ToString Expr where
   toString := toString ∘ Expr.fmt
@@ -124,6 +131,7 @@ def step (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
 
   match e with
   | :: .id x => pure x
+  | :: (π nil nil) nil => pure nil
   | :: (π a nil) (:: x nil) => do
     let a' ← step (:: a x)
     pure <| :: a' nil
@@ -138,7 +146,8 @@ def step (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     | :: v nil =>
       pure <| :: v g'
     | _ => .error <| .stuck e
-  | :: f x => do pure <| :: (← step f) x
+  | :: f x =>
+    do pure <| :: (← step f) x
   | e => .error <| .no_rule e
 
 def try_step_n (f : Expr → Except Error Expr) (n : ℕ) (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
@@ -175,11 +184,13 @@ Selects f out of succ(n, f, x) as
 (:: f nil)
 -/
 def succ.f : Expr :=
-  π (:: const id) (π id nil)
+  π (:: const id) (π id (:: const nil))
 
 def succ : Expr :=
   both succ.f succ.nfx
 
+#eval step (:: succ.nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+#eval (try_step_n step 10 (with_logs := true)) (:: succ.f (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 #eval do_step step (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
 
 end church

@@ -57,6 +57,11 @@ open Expr
 
 notation "::" => Expr.cons
 
+def mk_app (f x : Expr) : Expr :=
+  :: (:: append f) x
+
+notation "f$" => mk_app
+
 /-
 We should design step with deref in mind.
 But, this clashes with K for example.
@@ -70,7 +75,8 @@ def Expr.push_back (val : Expr) : Expr → Option Expr
   | :: x xs => do pure <| :: x (← push_back val xs)
   | _ => .none
 
-#eval ToFormat.format <$> Expr.push_back (:: (symbol "zero") nil) (:: (symbol "succ") nil)
+example : Expr.push_back (:: (symbol "zero") nil) (:: (symbol "succ") nil) =
+  (:: (symbol "succ") (:: (symbol "zero") nil)) := rfl
 
 def advance (e : Expr) (with_logs : Bool := false) : Option Expr := do
   if with_logs then
@@ -235,7 +241,6 @@ def zero : Expr :=
 --#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "x") (:: (symbol "y") nil)) nil)))
 --#eval do_step step'' (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "hi") nil) nil)))
 #eval do_step (step'' (with_logs := true)) (:: succ (:: zero (:: read (:: (:: (symbol "hi") nil) nil))))
-#eval do_step (step'' (with_logs := true)) (:: (:: append (:: (symbol "succ") nil)) (:: (symbol "zero") nil))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero (:: read nil))))
   (:: (:: (symbol "hi") nil) nil))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: (:: append (:: succ (:: zero nil)))

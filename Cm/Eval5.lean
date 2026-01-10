@@ -170,43 +170,26 @@ def succ.f : Expr :=
   π (:: const id) (π id nil)
 
 def succ : Expr :=
-  both (
+  both succ.f succ.nfx
 
 #eval do_step step_uncurry (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
 
-def succ.n : Expr := read
-
-def succ.f : Expr :=
-  (:: next read)
-
-def succ.x : Expr :=
-  (:: next (:: next read))
-
-def succ.fx : Expr :=
-  (both succ.f (both succ.x nil))
-
-def succ.nfx : Expr :=
-  (both succ.n succ.fx)
-
-def succ.f_append : Expr :=
-  (both (:: const append) (both succ.f nil))
-
-def succ : Expr :=
-  both succ.f_append (both succ.nfx nil)
-
-def succ' : Expr :=
-  both (both (:: const append) (both (:: const (symbol ("f"))) (:: const nil))) (:: const (symbol "nfx"))
-
--- nfx outputs the correct value
-#eval do_step step (:: succ.nfx (:: zero (:: (symbol "f") (:: (symbol "x") nil)))) == some (symbol "x")
-
--- succ outputs the correct value
--- succ 0 f x = :: f (:: (0 f x) nil)
--- we should assume this is a single argument
-#eval do_step step (:: succ (:: zero (:: (symbol "f") (:: (symbol "x") nil)))) == some (:: (symbol "f") (:: (symbol "x") nil))
-
--- curried form
-#eval do_step step (:: succ.nfx (:: zero nil))
-#eval ToFormat.format <$> do_step step (:: (:: succ.nfx (:: zero nil)) (:: (symbol "f") (:: (symbol "x") nil)))
-
 end church'
+
+/-
+Turns a function over a list of arguments
+into a partially applied function over a single argument.
+
+:: (:: (:: curry (:: zero nil)) (:: f nil)) (:: g nil) = (:: zero (:: f (:: g nil)))
+-/
+def curry (n_args : ℕ) : Expr :=
+  match n_args with
+  | .zero => const
+  | .succ n => π (curry n) nil
+
+
+
+/-
+TODO: another version of π, but both and π are list data,
+so we can map over them.
+-/

@@ -265,19 +265,11 @@ def zero : Expr :=
 #eval ToFormat.format <$> (do_step ((step'' <=< step'' (with_logs := true))) =<< (f* (f* (:: succ (:: zero nil)) read) (:: (symbol "hi") nil)))
 
 #eval (f* (f$ (:: succ (:: zero nil)) read) (:: (symbol "hi") (:: (symbol "rest") nil)))
-  >>= do_step (step'' (with_logs := true))
+  >>= do_step step''
   >>= (pure ∘ ToFormat.format)
 
 #eval (f* (f$ (:: succ (:: (:: succ zero) nil)) read) (:: (:: (symbol "hi") (:: (symbol "rest") nil)) nil))
-  >>= do_step (step'' (with_logs := true))
-  >>= (pure ∘ ToFormat.format)
-
-#eval (f* (f$ (:: succ (:: (:: succ (:: zero nil)) nil)) read) (:: (:: (:: (symbol "hi") nil) (:: (symbol "rest") nil)) nil))
-  >>= do_step (step'' (with_logs := true))
-  >>= (pure ∘ ToFormat.format)
-
-#eval (f* (f$ (:: succ.n (:: (:: succ (:: zero nil)) nil)) read) (:: (:: (:: (symbol "hi") nil) (:: (symbol "rest") nil)) nil))
-  >>= do_step (step'' (with_logs := true))
+  >>= do_step step''
   >>= (pure ∘ ToFormat.format)
 
 def mk_church' (n : ℕ) : Option Expr :=

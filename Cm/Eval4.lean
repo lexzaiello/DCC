@@ -57,13 +57,6 @@ open Expr
 
 notation "::" => Expr.cons
 
-def mk_app (f x : Expr) : Expr :=
-  :: (:: append f) (:: x nil)
-
-notation "f$" => mk_app
-
-#eval ToFormat.format <| (f$ (f$ (:: (symbol "succ") (:: (symbol "zero") nil)) read) (:: (symbol "hi") nil))
-
 /-
 We should design step with deref in mind.
 But, this clashes with K for example.
@@ -76,6 +69,15 @@ def Expr.push_back (val : Expr) : Expr → Option Expr
   | :: x nil => do pure <| :: x val
   | :: x xs => do pure <| :: x (← push_back val xs)
   | _ => .none
+
+def mk_app (f x : Expr) : Option Expr :=
+  Expr.push_back (:: x nil) f
+
+def mk_app' (f : Option Expr) (x : Expr) : Option Expr := do
+  Expr.push_back (:: x nil) (← f)
+
+notation "f*" => mk_app'
+notation "f$" => mk_app
 
 example : Expr.push_back (:: (symbol "zero") nil) (:: (symbol "succ") nil) =
   (:: (symbol "succ") (:: (symbol "zero") nil)) := rfl
@@ -120,9 +122,10 @@ def step'' (e : Expr) (with_logs : Bool := false) : Option Expr := do
   match e with
   | :: _ nil => .none
   | :: (:: append a) b =>
-    match step'' b with
-    | .some b' => Expr.push_back b' a
-    | .none => Expr.push_back b a
+    match (step'' a).getD a, (step'' b).getD b with
+    | a@(:: x xs), b =>
+      Expr.push_back b a
+    | v, b => :: (:: append v) b
   | :: .read (:: x xs) => pure x
   | :: (:: .const x) _l => pure x
   | :: (:: next f) (:: _x nil) => .none
@@ -245,9 +248,9 @@ def zero : Expr :=
 --#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "x") (:: (symbol "y") nil)) nil)))
 --#eval do_step step'' (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "hi") nil) nil)))
 #eval do_step (step'' (with_logs := true)) (:: succ (:: zero (:: read (:: (:: (symbol "hi") nil) nil))))
-#eval do_step (step'' (with_logs := true)) (f$ (:: succ (:: zero (:: read nil))) (:: (symbol "hi") nil))
-#eval do_step (step'' (with_logs := true)) (f$ (f$ (:: succ (:: zero nil)) read) (:: (symbol "hi") nil))
-#eval ToFormat.format <$> do_step ((step'' <=< step'' (with_logs := true))) (f$ (f$ (f$ succ zero) read) (:: (symbol "hi") nil))
+#eval do_step (step'' (with_logs := true)) =<< (f$ (:: succ (:: zero (:: read nil))) (:: (symbol "hi") nil))
+#eval do_step (step'' (with_logs := true)) =<< (f* (f$ (:: succ (:: zero nil)) read) (:: (symbol "hi") nil))
+#eval ToFormat.format <$> (do_step ((step'' <=< step'' (with_logs := true))) =<< (f* (f* (:: succ (:: zero nil)) read) (:: (symbol "hi") nil)))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero (:: read nil))))
   (:: (:: (symbol "hi") nil) nil))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: (:: append (:: succ (:: zero nil)))

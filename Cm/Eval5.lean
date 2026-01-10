@@ -57,6 +57,13 @@ Apply should allow us to apply singleton
 lists.
 
 Even better, apply should be like pipelining.
+
+Even better, apply should only run step.
+No magic.
+
+Even better, we should probably only apply
+when apply is run.
+Otherwise, it's just data.
 -/
 
 open Std (Format)
@@ -204,14 +211,19 @@ Selects f out of succ(n, f, x) as
 def succ.f : Expr :=
   π (:: const id) (π id (:: const nil))
 
+/-
+f and nfx should be evaluated separately,
+then pipelined.
+-/
 def succ : Expr :=
-  both succ.f succ.nfx
+  both (:: const apply) (both succ.f (both succ.nfx (:: const nil)))
 
+#eval do_step (step (with_logs := true)) (:: succ.f (:: (symbol "n") (:: id (:: (symbol "x") nil))))
 #eval step (:: succ.nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 #eval do_step step (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 #eval do_step step (:: succ (:: (symbol "n") (:: id (:: (symbol "x") nil))))
 #eval do_step step (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
-#eval do_step step (:: succ (:: zero (:: id (:: (symbol "x") nil))))
+#eval do_step (step (with_logs := true)) (:: succ (:: zero (:: id (:: (symbol "x") nil))))
 #eval do_step step (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
 
 end church

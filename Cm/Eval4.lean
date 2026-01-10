@@ -202,7 +202,7 @@ def succ.x : Expr :=
   (:: next (:: next read))
 
 def succ.fx : Expr :=
-  (:: next (both read (both (:: next read) nil)))
+  (:: next (both read (:: next read)))
 
 def succ.nfx : Expr :=
   (both succ.n succ.fx)
@@ -212,9 +212,17 @@ Big note:
 order of operations.
 
 We need to sequence these in a smarter way.
+
+Or we could just encode succ in a smarter way.
+
+Both seems problematic in general.
+There is no notion of sequence.
+
+Why can't we just wrap nfx in nil?
+Why can't we just eval what's inside read?
 -/
 def succ : Expr :=
-  (both succ.f succ.nfx)
+  (both succ.f (both succ.nfx nil))
 
 /-
 zero f x = x
@@ -232,6 +240,8 @@ def zero : Expr :=
 --#eval do_step step'' (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "hi") nil) nil)))
 #eval do_step (step'' (with_logs := true)) (:: succ (:: zero (:: read (:: (:: (symbol "hi") nil) nil))))
 #eval do_step step'' (:: zero (:: read (:: (:: (symbol "hi") nil) nil)))
+
+#eval do_step step'' (:: (:: next read) (:: read (:: (:: (symbol "hi") nil) nil)))
 
 def test_succ'' (f : Expr → Option Expr) : Option Expr :=
   let my_id := read

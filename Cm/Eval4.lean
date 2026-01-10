@@ -62,6 +62,8 @@ def mk_app (f x : Expr) : Expr :=
 
 notation "f$" => mk_app
 
+#eval ToFormat.format <| (f$ (f$ (:: (symbol "succ") (:: (symbol "zero") nil)) read) (:: (symbol "hi") nil))
+
 /-
 We should design step with deref in mind.
 But, this clashes with K for example.
@@ -228,6 +230,8 @@ There is no notion of sequence.
 
 Why can't we just wrap nfx in nil?
 Why can't we just eval what's inside read?
+
+Maybe the problem is that zero doesn't have its function?
 -/
 def succ : Expr :=
   (both succ.f (both succ.nfx nil))
@@ -242,6 +246,8 @@ def zero : Expr :=
 --#eval do_step step'' (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "hi") nil) nil)))
 #eval do_step (step'' (with_logs := true)) (:: succ (:: zero (:: read (:: (:: (symbol "hi") nil) nil))))
 #eval do_step (step'' (with_logs := true)) (f$ (:: succ (:: zero (:: read nil))) (:: (symbol "hi") nil))
+#eval do_step (step'' (with_logs := true)) (f$ (f$ (:: succ (:: zero nil)) read) (:: (symbol "hi") nil))
+#eval ToFormat.format <$> do_step ((step'' <=< step'' (with_logs := true))) (f$ (f$ (f$ succ zero) read) (:: (symbol "hi") nil))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero (:: read nil))))
   (:: (:: (symbol "hi") nil) nil))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: (:: append (:: succ (:: zero nil)))

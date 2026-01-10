@@ -137,17 +137,90 @@ def Expr.push_back (val : Expr) : Expr → Option Expr
   | :: x xs => do pure <| :: x (← push_back val xs)
   | _ => .none
 
-def mk_app (f x : Expr) : Option Expr :=
-  Expr.push_back (:: x nil) f
-
-def mk_app' (f : Option Expr) (x : Expr) : Option Expr := do
-  Expr.push_back (:: x nil) (← f)
-
-notation "f*" => mk_app'
-notation "f$" => mk_app
-
 example : Expr.push_back (:: (symbol "zero") nil) (:: (symbol "succ") nil) =
   (:: (symbol "succ") (:: (symbol "zero") nil)) := rfl
+
+/-
+Wraps f and x as singleton values,
+then applies.
+-/
+def mk_apply_now (f x : Expr) : Expr :=
+  :: apply (:: (:: f nil) (:: (:: x nil) nil))
+
+notation "f$" => mk_apply_now
+
+def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
+  if with_logs then
+    dbg_trace e
+
+  match e with
+  | :: .id x => pure x
+  | :: (π a nil) (:: x nil) =>
+    pure <| f$ a x
+  | :: (π a b) (:: x xs) => do
+    let a'  := f$ a x
+
+    -- f$ will pass the entire xs in as
+    -- a single value, but apply will
+    -- give it back to us
+    -- in full list form.
+    let b' := f$ b xs
+
+    pure <| :: a' b'
+  | :: (:: const x) _ => pure x
+  /-
+    Assume l is a single value here.
+  -/
+  | :: (both f g) (:: l nil) =>
+    let f' := f$ f l
+    let g' := f$ g l
+    pure <| :: f' g'
+  | e => .error <| .no_rule e
+
+def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
+  if with_logs then
+    dbg_trace e
+
+  /-
+    If this instruction can be done without nested applications, do it.
+    Otherwise, handle the applications.
+  -/
+  step_apply e with_logs
+    <|> (do
+    /-
+      Applications can happen at the top level,
+      or they can be deeply nested.
+      We will assume that applications have the
+      requisite arguments.
+    -/
+    match e with
+    /-
+      Apply calls always accept a singleton function,
+      and a singleton value.
+      We evaluate f and x in case there is nestesd
+      application.
+
+      If there is a nested application,
+      it will be bubbled up to us for free.
+    -/
+    | :: apply (:: (:: f nil) (:: (:: x nil) nil)) => do
+      let eval_arg_first : Except Error Expr := do
+        let x' ← run x
+        pure <| :: apply (:: (:: f nil) (:: (:: x' nil) nil))
+      let eval_f_first : Except Error Expr := do
+        let f' ← run f
+        pure <| :: apply (:: (:: f' nil) (:: (:: x nil) nil))
+      let step_whole : Except Error Expr := do
+        step_apply (:: f x)
+
+      eval_arg_first <|> eval_f_first <|> step_whole
+    | :: apply (:: f (:: g nil)) =>
+      let f' ← run f <|> (pure f)
+      let g' ← run g <|> (pure g)
+
+      pure <| :: apply (:: f' (:: g' nil))
+    sorry
+  )
 
 def step (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   if with_logs then

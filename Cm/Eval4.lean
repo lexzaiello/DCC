@@ -272,13 +272,21 @@ def zero : Expr :=
   >>= do_step step''
   >>= (pure ∘ ToFormat.format)
 
-def mk_church' (n : ℕ) : Option Expr :=
-  match n with
+def mk_church : ℕ → Option Expr
   | .zero => zero
   | .succ n => do
-    let inner ← mk_church' n
+    let inner ← mk_church n
+    pure (:: succ inner)
 
-    pure <| (:: append (:: succ inner))
+def app_church (n : ℕ) (f x : Expr) : Option Expr := do
+  match n with
+  | .zero => (:: zero (:: f (:: x nil))) >>= do_step step''
+  | .succ n =>
+    let inner ← mk_church n
+    let my_n := (:: succ (:: inner nil))
+    (f* (f$ my_n f) x) >>= do_step step''
+
+#eval app_church 2 read (:: (:: (symbol "hi") (:: (symbol "rest") nil)) nil)
 
 def test_succ_next (n : ℕ) : Option Expr := do
   let my_id := read

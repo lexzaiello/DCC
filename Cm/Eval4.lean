@@ -108,7 +108,7 @@ def step'' (e : Expr) (with_logs : Bool := false) : Option Expr := do
   | :: _ nil => .none
   | :: (:: append a) b =>
     match step'' b with
-    | .some b' => :: (:: append a) b'
+    | .some b' => Expr.push_back b' a
     | .none => Expr.push_back b a
   | :: .read (:: x xs) => pure x
   | :: (:: .const x) _l => pure x
@@ -129,7 +129,7 @@ def step'' (e : Expr) (with_logs : Bool := false) : Option Expr := do
     | .none, .some g' => do
       both (← mk_append f l) (:: const g')
     | .none, .none => .none
-  | :: f x => do pure <| :: (← step'' f) x
+  | :: f x => (do pure <| :: (← step'' f) (← step'' x)) <|> (do pure <| :: (← step'' f) x) <|> (do pure <| :: f (← step'' x))
   | _ => .none
 
 #eval step'' (:: (both read (:: next read)) (:: (symbol "a") nil))
@@ -213,9 +213,14 @@ zero f x = x
 def zero : Expr :=
   (:: next read)
 
+#eval ToFormat.format <$> do_step step'' (:: (:: append
+        (:: (both (:: next read) ((both (read) (:: next (both (read) (:: next read)))))) (:: (:: next read) nil)))
+     (:: (symbol "f") (symbol "x")))
+#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: (:: append (:: succ (:: zero nil))) nil))) (:: (symbol "f") (:: (symbol "x") nil)))
+#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: (:: append (:: succ (:: zero nil))) nil))) (:: (symbol "f") (:: (symbol "x") nil)))
 #eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: (symbol "f") (:: (symbol "x") nil)))
-#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "x") (:: (symbol "y") nil)) nil)))
-#eval do_step step'' (:: (:: succ zero) (:: read (:: (:: (symbol "hi") nil) nil)))
+--#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "x") (:: (symbol "y") nil)) nil)))
+--#eval do_step step'' (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "hi") nil) nil)))
 #eval do_step step'' (:: zero (:: read (:: (:: (symbol "hi") nil) nil)))
 
 def test_succ'' (f : Expr → Option Expr) : Option Expr :=
@@ -225,9 +230,11 @@ def test_succ'' (f : Expr → Option Expr) : Option Expr :=
 
 def test_succ_next (f : Expr → Option Expr) : Option Expr :=
   let my_f := (:: next read)
-  do_step f (:: (:: append (:: succ (:: zero nil))) (:: my_f (:: (:: (symbol "hi") (:: (symbol "b") nil)) nil))) true
+  do_step f (:: (:: append (:: succ (:: zero nil))) (:: (symbol "f") (:: (:: (symbol "hi") (:: (symbol "b") nil)) nil))) true
 
-#eval ToFormat.format <$> test_succ_next step''
+#eval do_step step'' (:: (:: append (:: succ (:: (:: succ (:: zero nil)) nil))) (:: (symbol ("f")) (:: (:: (symbol "hi") (:: (symbol "b") (:: (symbol "c") nil))) nil))) true
+
+#eval ToFormat.format <$> test_succ_next (step'' (with_logs := true))
 
 def test_succ_curry (f : Expr → Option Expr) : Option Expr :=
   let my_id := read
@@ -255,7 +262,7 @@ def mk_church' (n : ℕ) : Option Expr :=
   | .succ n => do
     let inner ← mk_church' n
 
-    pure <| (:: succ inner)
+    pure <| (:: append (:: succ inner))
 
 def test_succ_next (n : ℕ) : Option Expr := do
   let my_id := read

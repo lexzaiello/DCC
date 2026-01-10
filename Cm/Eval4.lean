@@ -120,7 +120,6 @@ def step'' (e : Expr) (with_logs : Bool := false) : Option Expr := do
     both (:: const f) (:: append args)
 
   match e with
-  | :: _ nil => .none
   | :: (:: append a) b =>
     match (step'' a).getD a, (step'' b).getD b with
     | a@(:: x xs), b =>
@@ -145,6 +144,7 @@ def step'' (e : Expr) (with_logs : Bool := false) : Option Expr := do
     | .none, .some g' => do
       both (← mk_append f l) (:: const g')
     | .none, .none => .none
+  | :: (both f g) nil => pure <| :: (← step'' (:: f nil)) (← step'' (:: g nil))
   | :: f x => :: (← step'' f) x
   | _ => .none
 
@@ -265,6 +265,10 @@ def zero : Expr :=
 #eval ToFormat.format <$> (do_step ((step'' <=< step'' (with_logs := true))) =<< (f* (f* (:: succ (:: zero nil)) read) (:: (symbol "hi") nil)))
 
 #eval (f* (f$ (:: succ (:: zero nil)) read) (:: (symbol "hi") (:: (symbol "rest") nil)))
+  >>= do_step (step'' (with_logs := true))
+  >>= (pure ∘ ToFormat.format)
+
+#eval (f* (f$ (:: succ (:: (:: succ zero) nil)) read) (:: (:: (symbol "hi") (:: (symbol "rest") nil)) nil))
   >>= do_step (step'' (with_logs := true))
   >>= (pure ∘ ToFormat.format)
 

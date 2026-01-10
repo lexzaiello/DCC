@@ -191,6 +191,7 @@ def succ : Expr :=
 
 #eval step (:: succ.nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 #eval do_step step (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+#eval do_step step (:: succ (:: (symbol "n") (:: id (:: (symbol "x") nil))))
 #eval do_step step (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
 
 end church
@@ -215,4 +216,7 @@ def curry (e : Expr) : Expr :=
 #eval do_step step (:: (:: (curry church.zero) (:: (symbol "f") nil)) (:: (symbol "x") nil))
 
 -- 1 id whatever = whatever
-#eval do_step (step (with_logs := true)) (:: church.succ (:: (curry church.zero) (:: id (:: (symbol "whatever") nil))))
+#eval do_step step (:: church.succ (:: church.zero (:: id (:: (symbol "x") nil))))
+
+#eval do_step step (:: (curry (:: church.succ (:: church.zero nil))) (:: id (:: (symbol "x") nil)))
+

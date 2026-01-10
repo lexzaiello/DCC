@@ -58,7 +58,7 @@ open Expr
 notation "::" => Expr.cons
 
 def mk_app (f x : Expr) : Expr :=
-  :: (:: append f) x
+  :: (:: append f) (:: x nil)
 
 notation "f$" => mk_app
 
@@ -241,6 +241,7 @@ def zero : Expr :=
 --#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "x") (:: (symbol "y") nil)) nil)))
 --#eval do_step step'' (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "hi") nil) nil)))
 #eval do_step (step'' (with_logs := true)) (:: succ (:: zero (:: read (:: (:: (symbol "hi") nil) nil))))
+#eval do_step (step'' (with_logs := true)) (f$ (:: succ (:: zero (:: read nil))) (:: (symbol "hi") nil))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero (:: read nil))))
   (:: (:: (symbol "hi") nil) nil))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: (:: append (:: succ (:: zero nil)))

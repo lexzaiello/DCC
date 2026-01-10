@@ -139,15 +139,15 @@ def step (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     let a' ← step (:: a x)
     let b' ← step (:: b xs)
     pure <| :: a' b'
-  | :: (:: const x) _ => pure x
+  | :: (:: const x) _ => step x <|> (pure x)
   | :: (both f g) l =>
     let g' ← step (:: g l)
     match (← step (:: f l)) with
+    | .cons .id (:: v nil)
     | :: v nil =>
-      pure <| :: v g'
+      pure <| :: v (:: g' nil)
     | _ => .error <| .stuck e
-  | :: f x =>
-    do pure <| :: (← step f) x
+  | :: f x => do pure <| :: (← step f) x
   | e => .error <| .no_rule e
 
 def try_step_n (f : Expr → Except Error Expr) (n : ℕ) (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
@@ -190,7 +190,7 @@ def succ : Expr :=
   both succ.f succ.nfx
 
 #eval step (:: succ.nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
-#eval (try_step_n step 10 (with_logs := true)) (:: succ.f (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+#eval do_step step (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 #eval do_step step (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
 
 end church

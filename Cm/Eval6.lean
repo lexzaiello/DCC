@@ -170,6 +170,32 @@ zero f x = x
 def zero : Expr :=
   π (:: const (:: id nil)) (π id (:: const (:: nil nil)))
 
+/-
+succ n f x = f (n f x)
+
+n is in position 0,
+f is in position 1,
+and x is in position 2
+
+zero has a similar signature, so we can use
+it to get f.
+
+The rest is essentially in the order we got
+the expression, just pattern matching
+to ensure we got the right number of arguments,
+and inserting an apply.
+-/
+
+def succ.nfx : Expr :=
+  both (:: const (:: apply nil)) (π id (π id (π id nil)))
+
+/-
+The entire succ also needs an apply,
+since f (n(f, x))
+-/
+def succ : Expr :=
+  both (:: const (:: apply nil)) (both zero succ.nfx)
+
 #eval try_step_n run 4 (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
 
 end church

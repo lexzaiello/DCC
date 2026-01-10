@@ -66,7 +66,7 @@ but then we can't distinguish K discarding its argument.
 -/
 
 def Expr.push_back (val : Expr) : Expr → Option Expr
-  | nil => val
+  | :: x nil => do pure <| :: x val
   | :: x xs => do pure <| :: x (← push_back val xs)
   | _ => .none
 
@@ -230,15 +230,21 @@ zero f x = x
 def zero : Expr :=
   (:: next read)
 
-#eval ToFormat.format <$> do_step step'' (:: (:: append
-        (:: (both (:: next read) ((both (read) (:: next (both (read) (:: next read)))))) (:: (:: next read) nil)))
-     (:: (symbol "f") (symbol "x")))
-#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: (:: append (:: succ (:: zero nil))) nil))) (:: (symbol "f") (:: (symbol "x") nil)))
-#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: (:: append (:: succ (:: zero nil))) nil))) (:: (symbol "f") (:: (symbol "x") nil)))
-#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: (symbol "f") (:: (symbol "x") nil)))
 --#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "x") (:: (symbol "y") nil)) nil)))
 --#eval do_step step'' (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "hi") nil) nil)))
 #eval do_step (step'' (with_logs := true)) (:: succ (:: zero (:: read (:: (:: (symbol "hi") nil) nil))))
+#eval do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero (:: read nil))))
+  (:: (:: (symbol "hi") nil) nil))
+#eval do_step (step'' (with_logs := true)) (:: (:: append (:: (:: append (:: succ (:: zero nil)))
+  (:: (:: (symbol "hi") nil) nil))) (:: read nil))
+#eval do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil)))
+  (:: (:: (symbol "hi") nil) nil))
+#eval do_step (step'' (with_logs := true)) (::
+  (:: append (:: (:: append (:: succ (:: zero nil))) (:: read nil)))
+  (:: (:: (symbol "hi") nil) nil))
+#eval do_step (step'' (with_logs := true)) (::
+  (:: succ (:: zero nil))
+  (:: read (:: (:: (symbol "hi") nil) nil)))
 #eval do_step step'' (:: zero (:: read (:: (:: (symbol "hi") nil) nil)))
 
 #eval do_step step'' (:: (:: next read) (:: read (:: (:: (symbol "hi") nil) nil)))

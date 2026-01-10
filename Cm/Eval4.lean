@@ -70,6 +70,8 @@ def Expr.push_back (val : Expr) : Expr → Option Expr
   | :: x xs => do pure <| :: x (← push_back val xs)
   | _ => .none
 
+#eval ToFormat.format <$> Expr.push_back (:: (symbol "zero") nil) (:: (symbol "succ") nil)
+
 def advance (e : Expr) (with_logs : Bool := false) : Option Expr := do
   if with_logs then
     dbg_trace e
@@ -233,8 +235,11 @@ def zero : Expr :=
 --#eval ToFormat.format <$> do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "x") (:: (symbol "y") nil)) nil)))
 --#eval do_step step'' (:: (:: append (:: succ (:: zero nil))) (:: read (:: (:: (symbol "hi") nil) nil)))
 #eval do_step (step'' (with_logs := true)) (:: succ (:: zero (:: read (:: (:: (symbol "hi") nil) nil))))
+#eval do_step (step'' (with_logs := true)) (:: (:: append (:: (symbol "succ") nil)) (:: (symbol "zero") nil))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero (:: read nil))))
   (:: (:: (symbol "hi") nil) nil))
+#eval do_step (step'' (with_logs := true)) (:: (:: append (:: (:: append (:: succ (:: zero nil)))
+  (:: read nil))) (:: (:: (symbol "hi") nil) nil))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: (:: append (:: succ (:: zero nil)))
   (:: (:: (symbol "hi") nil) nil))) (:: read nil))
 #eval do_step (step'' (with_logs := true)) (:: (:: append (:: succ (:: zero nil)))

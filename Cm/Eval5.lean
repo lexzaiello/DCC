@@ -214,12 +214,7 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
         step_apply (:: f x)
 
       eval_arg_first <|> eval_f_first <|> step_whole
-    | :: apply (:: f (:: g nil)) =>
-      let f' ← run f <|> (pure f)
-      let g' ← run g <|> (pure g)
-
-      pure <| :: apply (:: f' (:: g' nil))
-    sorry
+    | e => .error <| .stuck e
   )
 
 def step (e : Expr) (with_logs : Bool := false) : Except Error Expr := do

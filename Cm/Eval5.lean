@@ -68,8 +68,9 @@ inductive Expr where
 deriving Repr, BEq
 
 inductive Error where
-  | stuck   : Expr → Error
-  | no_rule : Expr → Error
+  | stuck      : Expr → Error
+  | no_rule    : Expr → Error
+  | cant_curry : Expr → Error
 
 open Expr
 
@@ -92,6 +93,7 @@ def Expr.fmt (e : Expr) : Format :=
 
 def Error.fmt : Error → Format
   | .stuck e => "got stuck evaluating: " ++ .line ++ e.fmt
+  | .cant_curry e => "couldn't curry: " ++ .line ++ e.fmt
   | .no_rule e => "no rule to evaluate: " ++ .line ++ e.fmt
 
 instance Expr.instToFormat : ToFormat Expr where
@@ -131,14 +133,10 @@ def step (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
 
   match e with
   | :: .id x => pure x
-  | :: (π nil nil) nil => pure nil
   | :: (π a nil) (:: x nil) => do
-    let a' ← step (:: a x)
-    pure <| :: a' nil
+    pure <| :: (← step (:: a x)) nil
   | :: (π a b) (:: x xs) => do
-    let a' ← step (:: a x)
-    let b' ← step (:: b xs)
-    pure <| :: a' b'
+    pure <| :: (← step (:: a x)) (← step (:: b xs))
   | :: (:: const x) _ => step x <|> (pure x)
   | :: (both f g) l =>
     let g' ← step (:: g l)
@@ -204,20 +202,35 @@ Exactly one argument.
 TODO: I want to make this accept literally only one argument,
 but we will need to make π data first.
 -/
-def curry (e : Expr) : Expr :=
+def curry (e : Expr) : Except Error Expr :=
   match e with
-  | π _a nil => e
-  | π a b =>
-    let rst := curry b
-    π a (:: const rst)
-  | _ => :: const e
+  | .id => pure .id
+  | :: .const e => pure (:: .const e)
+  | both f g => do
+    -- :: (:: both f g) l = (:: f' (:: g' nil))
+    -- both only really takes one argument,
+    -- but its children may expect multiple
+    let c_f ← curry f
+    let c_g ← curry g
 
-#eval do_step step (:: (curry (symbol "curry")) (:: (symbol "fake arg") nil))
+    pure <| both c_f c_g
+  | π _a nil => pure e
+  | π a b => do
+    let rst ← curry b
+    pure <| π a (:: const rst)
+  | symbol s => pure <| :: const (symbol s)
+  | e => .error <| .cant_curry e
+
+--def test_curry_both : Except Error Expr := do
+  -- both id (:: a nil) = 
+
+#eval (curry (symbol "curry")) >>= (fun c =>  do_step step (:: c (:: (symbol "fake arg") nil)))
 #eval do pure <| (← do_step step (:: church.zero (:: (symbol "f") (:: (symbol "x") nil)))) ==
-  (← do_step step (:: (:: (curry church.zero) (:: (symbol "f") nil)) (:: (symbol "x") nil)))
+  (← do_step step (:: (:: (← curry church.zero) (:: (symbol "f") nil)) (:: (symbol "x") nil)))
+
 
 -- 1 id whatever = whatever
 #eval do_step step (:: church.succ (:: church.zero (:: id (:: (symbol "x") nil))))
+#eval (curry church.succ) >>= (fun s => do_step step (:: s (:: church.zero nil)))
 
-#eval do_step step (:: (curry (:: church.succ (:: church.zero nil))) (:: id (:: (symbol "x") nil)))
 

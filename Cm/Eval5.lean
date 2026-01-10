@@ -145,7 +145,9 @@ def step (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     | :: v nil =>
       pure <| :: v (:: g' nil)
     | _ => .error <| .stuck e
-  | :: f x => do pure <| :: (← step f) x
+  | :: f x => (do pure <| :: (← step f) (← step x))
+    <|> (do pure <| :: f (← step x))
+    <|> (do pure <| :: (← step f) x)
   | e => .error <| .no_rule e
 
 def try_step_n (f : Expr → Except Error Expr) (n : ℕ) (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
@@ -206,23 +208,40 @@ def curry (e : Expr) : Except Error Expr :=
   match e with
   | .id => pure .id
   | :: .const e => pure (:: .const e)
-  | both f g => do
-    -- :: (:: both f g) l = (:: f' (:: g' nil))
-    -- both only really takes one argument,
-    -- but its children may expect multiple
-    let c_f ← curry f
-    let c_g ← curry g
-
-    pure <| both c_f c_g
+  /-
+    both expects only one argument, the
+    item to be copied.
+    the equivalent to currying is
+    accepting a singleton list.
+  -/
+  | both f g =>
+    pure (both (π f nil) (π g nil))
   | π _a nil => pure e
   | π a b => do
     let rst ← curry b
     pure <| π a (:: const rst)
+  | const => pure <| π id nil
   | symbol s => pure <| :: const (symbol s)
   | e => .error <| .cant_curry e
 
---def test_curry_both : Except Error Expr := do
-  -- both id (:: a nil) = 
+def test_curry_zero : Except Error Bool := do
+  let actual ← do_step step (:: church.zero (:: (symbol "f") (:: (symbol "x") nil)))
+  let ours ← do_step step (:: (:: (← curry church.zero) (:: (symbol "f") nil)) (:: (symbol "x") nil))
+
+  pure <| actual == ours
+
+def test_curry_succ : Except Error Bool := do
+  let actual ← do_step step (:: church.succ (:: church.zero (:: id (:: (symbol "x") nil))))
+  let curr ← curry church.succ
+  let ours ← do_step step (:: (:: (:: curr (:: church.zero nil)) (:: id nil)) (:: (symbol "x") nil))
+
+  dbg_trace s!"theirs: {actual}"
+  dbg_trace s!"ours: {ours}"
+
+  pure <| actual == ours
+
+#eval test_curry_zero
+#eval test_curry_succ
 
 #eval (curry (symbol "curry")) >>= (fun c =>  do_step step (:: c (:: (symbol "fake arg") nil)))
 #eval do pure <| (← do_step step (:: church.zero (:: (symbol "f") (:: (symbol "x") nil)))) ==
@@ -231,6 +250,6 @@ def curry (e : Expr) : Except Error Expr :=
 
 -- 1 id whatever = whatever
 #eval do_step step (:: church.succ (:: church.zero (:: id (:: (symbol "x") nil))))
-#eval (curry church.succ) >>= (fun s => do_step step (:: s (:: church.zero nil)))
+#eval 
 
 

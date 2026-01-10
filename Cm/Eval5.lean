@@ -110,27 +110,27 @@ notation "f$" => mk_app
 example : Expr.push_back (:: (symbol "zero") nil) (:: (symbol "succ") nil) =
   (:: (symbol "succ") (:: (symbol "zero") nil)) := rfl
 
-def step_uncurry (e : Expr) (with_logs : Bool := false) : Option Expr := do
+def step (e : Expr) (with_logs : Bool := false) : Option Expr := do
   if with_logs then
     dbg_trace e
 
   match e with
   | :: .id x => pure x
   | :: (π a nil) (:: x nil) => do
-    let a' ← step_uncurry (:: a x)
+    let a' ← step (:: a x)
     pure <| :: a' nil
   | :: (π a b) (:: x xs) => do
-    let a' ← step_uncurry (:: a x)
-    let b' ← step_uncurry (:: b xs)
+    let a' ← step (:: a x)
+    let b' ← step (:: b xs)
     pure <| :: a' b'
   | :: (:: const x) _ => pure x
   | :: (both f g) l =>
-    let g' ← step_uncurry (:: g l)
-    match (← step_uncurry (:: f l)) with
+    let g' ← step (:: g l)
+    match (← step (:: f l)) with
     | :: v nil =>
-      pure <| :: v (:: g' nil)
+      pure <| :: v g'
     | _ => .none
-  | :: f x => :: (← step_uncurry f) x
+  | :: f x => :: (← step f) x
   | _ => .none
 
 def try_step_n (f : Expr → Option Expr) (n : ℕ) (e : Expr) (with_logs : Bool := false) : Option Expr := do
@@ -142,7 +142,7 @@ def try_step_n (f : Expr → Option Expr) (n : ℕ) (e : Expr) (with_logs : Bool
 
 def do_step (f : Expr → Option Expr) (e : Expr) (with_logs : Bool := false):= try_step_n f 20 e with_logs
 
-namespace church'
+namespace church
 
 /-
 zero f x = x
@@ -172,22 +172,28 @@ def succ.f : Expr :=
 def succ : Expr :=
   both succ.f succ.nfx
 
-#eval do_step step_uncurry (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
+#eval do_step step (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
 
-end church'
+end church
 
 /-
 Turns a function over a list of arguments
 into a partially applied function over a single argument.
+Exactly one argument.
 
-:: (:: (:: curry (:: zero nil)) (:: f nil)) (:: g nil) = (:: zero (:: f (:: g nil)))
+TODO: I want to make this accept literally only one argument,
+but we will need to make π data first.
 -/
-def curry (n_args : ℕ) : Expr :=
-  match n_args with
-  | .zero => const
-  | .succ n => π (curry n) nil
+def curry (e : Expr) : Expr :=
+  match e with
+  | π _a nil => e
+  | π a b =>
+    let rst := curry b
+    π a (:: const rst)
+  | _ => :: const e
 
-
+#eval do_step step (:: (curry (symbol "curry")) (:: (symbol "fake arg") nil))
+#eval do_step step (:: (:: (curry church.zero) (:: (symbol "f") nil)) (:: (symbol "g") nil))
 
 /-
 TODO: another version of π, but both and π are list data,

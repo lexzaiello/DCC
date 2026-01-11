@@ -145,6 +145,9 @@ Skips the tail element in a projection.
 def skip : Expr :=
   (:: const (:: nil nil))
 
+def singleton_later : Expr :=
+  :: both (:: id (:: const (:: nil nil)))
+
 /-
 Notes on this design:
 - we expect that all values with no arguments are singleton lists. e.g.,
@@ -152,9 +155,6 @@ Notes on this design:
 -/
 
 namespace church
-
-def singleton_later : Expr :=
-  :: both (:: id (:: const (:: nil nil)))
 
 /-
 zero f x = x
@@ -232,14 +232,42 @@ succ zero (const (const "f")) "x" => (const (symbol "f"))
 end tests
 
 /-
+Gets the head of a list and runs some
+operation on it.
+
+This assumes the first argument is
+a map and the second argument is a list.
+
+(:: map_head nil) (:: my_f (:: (:: a (:: b ... nil)) nil))
+
+This assumes the function argument
+is not wrapped in a singleton
+-/
+def map_head : Expr :=
+  -- Our function should be wrapped (:: f nil)
+  -- like such
+  let my_f := singleton_later
+
+  -- the first element of the second
+  -- argument
+  -- is the head we are referring to
+  let my_head := (:: π (:: id skip))
+
+
+  :: both (:: const (:: apply nil)) (:: π (:: my_f (:: π (:: map_head nil))))
+
+/-
 prepend with_val onto
 
 π (:: both (:: const (:: both nil)) id) id
 
 π (:: both id prepend_to) nil
 -/
-def prepend : Expr :=
-  :: π (:: (:: both (:: (:: const (:: both nil)) id)) id)
+/-def prepend : Expr :=
+  
+  :: π (:: (:: both (:: (:: const (:: both nil)) id)) id)-/
+
+--#eval do_step run (:: apply (:: (:: prepend nil) (:: 
 
 namespace curry
 

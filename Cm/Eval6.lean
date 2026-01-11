@@ -243,7 +243,7 @@ a map and the second argument is a list.
 This assumes the function argument
 is not wrapped in a singleton
 -/
-def map_head : Expr :=
+def select_head : Expr :=
   -- Our function should be wrapped (:: f nil)
   -- like such
   let my_f := singleton_later
@@ -253,8 +253,15 @@ def map_head : Expr :=
   -- is the head we are referring to
   let my_head := (:: π (:: id skip))
 
+  .cons both (:: (:: const (:: apply nil)) (:: π (:: my_f (:: π (:: my_head nil)))))
 
-  :: both (:: const (:: apply nil)) (:: π (:: my_f (:: π (:: map_head nil))))
+#eval do_step
+  (run (with_logs := true))
+  (:: apply
+    (:: (:: select_head nil)
+      (::
+        (:: const (:: (symbol "hi") nil))
+        (:: (:: (symbol "head") nil) nil))))
 
 /-
 prepend with_val onto

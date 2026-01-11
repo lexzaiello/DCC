@@ -232,13 +232,41 @@ succ zero (const (const "f")) "x" => (const (symbol "f"))
 end tests
 
 /-
+Mutates the first element of a list, while leaving the rest in place.
+
+(:: map_head nil) (:: my_f (:: (:: a (:: b ... nil)) nil))
+
+TODO: is the extra apply even necessary here?
+-/
+def map_head: Expr :=
+  -- we generate a π instruction
+  -- :: π (:: !my_f id)
+
+  let insert_π := (:: const (:: π nil))
+
+  -- π id (const id) gets the mapper function,
+  -- then inserts literal "id" after
+  -- an extra apply / indirection is
+  -- required, since
+  -- we are using the list twice
+  let my_π := :: both (::
+    insert_π
+    (:: π
+      (:: id (:: const (:: id nil)))))
+
+  -- this inserts the literal "apply" word
+  let my_apply := (:: const (:: apply nil))
+
+  .cons both (:: my_apply (:: π (:: my_π (:: id nil))))
+
+/-
 Gets the head of a list and runs some
 operation on it.
 
 This assumes the first argument is
 a map and the second argument is a list.
 
-(:: map_head nil) (:: my_f (:: (:: a (:: b ... nil)) nil))
+(:: select_head nil) (:: my_f (:: (:: a (:: b ... nil)) nil))
 
 This assumes the function argument
 is not wrapped in a singleton

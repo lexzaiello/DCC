@@ -267,13 +267,15 @@ An example of using map_head that wraps the head
 of a list inside a singleton value.
 -/
 def map_head_example : Except Error Expr :=
-  do_step
-  (run (with_logs := true))
-  (:: apply
-    (:: (:: map_head nil)
-      (::
-        (:: const (:: (symbol "hi") nil))
-        (:: (:: (symbol "head") nil) nil))))
+  let my_list := :: (symbol "head") (:: (symbol "b") (:: (symbol "c") nil))
+
+  -- wrap the head as a singleton
+  -- by inserting nil at the end
+  let my_f := :: both (:: id (:: const (:: nil nil)))
+
+  do_step run (:: apply (:: (:: map_head nil) (:: my_f my_list)))
+
+#eval map_head_example
 
 #eval do_step
   (run (with_logs := true))

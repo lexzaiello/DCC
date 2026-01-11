@@ -189,12 +189,7 @@ to ensure we got the right number of arguments,
 and inserting an apply.
 -/
 
-/-
--> apply. Discards arguments.
--/
-#eval do_step run (:: (:: both (:: apply_later id)) (:: (symbol "a") nil))
-
-#eval do_step run (:: (:: π (:: id (:: π (:: id nil)))) (:: (symbol "a") (:: (symbol "b") nil)))
+#eval do_step (run (with_logs := true)) (:: (:: π (:: id (:: π (:: id nil)))) (:: (symbol "a") (:: (symbol "b") nil)))
 
 def succ.select_nfx : Expr :=
   (:: π (:: singleton_later (:: π (:: id (:: π (:: id nil))))))

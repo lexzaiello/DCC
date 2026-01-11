@@ -15,6 +15,9 @@ open Expr
 /-
 Singleton values: how necessary are they?
 Should π work on singletons or actual lists?
+
+TODO: remove sinngletones from examples
+that use both, since both will auto-inject them.
 -/
 
 def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do

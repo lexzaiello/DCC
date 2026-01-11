@@ -41,15 +41,32 @@ def set_tail_args : Expr :=
   let my_π := :: both (::
     insert_π
     (:: both
-      (:: (:: const (:: id nil)) id)))
+      (:: (:: const (:: id nil)) (:: both (::
+        (quote const)
+        id)))))
 
-  let my_π_singleton := Expr.cons both
-    (.cons my_π (.cons const (.cons nil nil)))
+  let my_π := :: both (::
+    insert_π
+    (:: both
+      (:: (:: const (:: id nil)) (:: both (::
+        (quote const)
+        id)))))
 
   -- this inserts the literal "apply" word
   let my_apply := apply_quoted
 
-  .cons both (:: my_apply (:: π (:: my_π_singleton id)))
+  -- TODO: try without singleton?
+
+  -- first element under π corresponds to replace_with
+  -- second element corresponds to replace_in
+  .cons both (:: my_apply (:: π (:: my_π id)))
+
+def example_set_tail_args : Except Error Expr :=
+  let replace_with := (:: (symbol "x") (:: (symbol "xs") nil))
+  let replace_in := (:: (symbol "replace") nil) -- args tail
+  do_step run (:: apply (:: (:: set_tail_args nil) (:: replace_with replace_in)))
+
+#eval example_set_tail_args
 
 /-
 Mutates the first element of the arguments, while leaving the rest in place.

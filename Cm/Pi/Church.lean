@@ -39,7 +39,7 @@ then_cons will cons the argument onto later arguments
 (:: (:: then_cons (:: (:: then_cons f) x)) y) =
 
 -/
-def example_curry : Except Error Expr :=
+/-def example_curry : Except Error Expr :=
   let my_fn := Expr.id
   let my_x  := (symbol "intact")
 
@@ -49,4 +49,4 @@ def example_curry : Except Error Expr :=
   do_step run (:: apply (:: curry zero))
     >>= (fun c => do_step run (:: apply ))
 
-#eval example_curry
+#eval example_curry-/

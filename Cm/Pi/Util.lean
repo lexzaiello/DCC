@@ -39,21 +39,6 @@ def example_flip_head_next : Except Error Expr := do
 #eval example_flip_head_next
 
 /-
-Reverses the argument order of a combinator accepting 2 arguments.
-Point-free, as well. Specify only the combinator as an argument
-with no nil value.
--/
---def reverse : Expr := .cons both
-  /-
-    id corresponds to the function
-    we're reversing the order of
-    we do this by making a π
-    expression where
-    the first element is (quote both)
-    
-  π (-/
-
-/-
 Set tail args, but more point-free.
 Supply only the replacement value for the tail.
 -/

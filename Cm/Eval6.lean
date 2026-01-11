@@ -232,6 +232,30 @@ succ zero (const (const "f")) "x" => (const (symbol "f"))
 end tests
 
 /-
+Mutates the first element of the arguments, while leaving the rest in place.
+
+(:: map_head nil) (:: my_f (:: (:: a (:: b ... nil)) nil))
+-/
+def map_head_arg : Expr :=
+  -- we generate a π instruction
+  -- :: π (:: !my_f id)
+
+  let insert_π := (:: const (:: π nil))
+
+  let my_π := :: both (::
+    insert_π
+    (:: both
+      (:: id (:: const (:: id nil)))))
+
+  let my_π_singleton := Expr.cons both
+    (.cons my_π (.cons const (.cons nil nil)))
+
+  -- this inserts the literal "apply" word
+  let my_apply := (:: const (:: apply nil))
+
+  .cons both (:: my_apply (:: π (:: my_π_singleton id)))
+
+/-
 Mutates the first element of a list, while leaving the rest in place.
 
 (:: map_head nil) (:: my_f (:: (:: a (:: b ... nil)) nil))
@@ -249,13 +273,25 @@ def map_head: Expr :=
   -- an extra apply / indirection is
   -- required, since
   -- we are using the list twice
-  let my_π := :: both (::
+  -- this generates :: π (:: the_map id)
+  -- id refers to the mapper
+  -- :: π (:: my_map id)
+  -- note: there should be an extra id
+  -- π should have another π
+  -- to select the first element,
+  -- the list
+  let my_π' := :: both (::
     insert_π
     (:: both
       (:: id (:: const (:: id nil)))))
+  let my_π_f := :: both (::
+    insert_π
+    (:: both (::
+      my_π'
+      (:: const (:: nil nil)))))
 
   let my_π_singleton := Expr.cons both
-    (.cons my_π (.cons const (.cons nil nil)))
+    (.cons my_π_f (.cons const (.cons nil nil)))
 
   -- this inserts the literal "apply" word
   let my_apply := (:: const (:: apply nil))
@@ -273,7 +309,7 @@ def map_head_example : Except Error Expr :=
   -- by inserting nil at the end
   let my_f := :: both (:: id (:: const (:: nil nil)))
 
-  do_step run (:: apply (:: (:: map_head nil) (:: my_f my_list)))
+  do_step run (:: apply (:: (:: map_head nil) (:: my_f (:: my_list nil))))
 
 #eval map_head_example
 

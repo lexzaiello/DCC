@@ -246,7 +246,39 @@ In that case, we just return e.
 π _ (const) indicates two arguments were expected,
 but one was unused. We treat this like the normal case.
 -/
+
 namespace curry
+
+def Expr.n_arguments_π : Expr → Except Error ℕ
+  | π _a nil => 1
+  | const => pure 1
+  | (:: const (:: _v nil)) => pure 1
+  | .id => pure 1
+  | both f g => do
+    let n_f ← (Expr.n_arguments_π f)
+    let n_g ← (Expr.n_arguments_π g)
+    if n_f == n_g then pure n_f else .error <| .cant_curry (both f g)
+  | symbol _s
+  | nil => pure 0
+  
+  | π a b => do pure <| 1 + (← Expr.n_arguments_π b)
+
+end curry
+
+/-namespace curry
+
+/-
+  In a curried π a b call,
+  a must be applied to the current argument and inserted as
+  a const.
+  :: (both (:: const (:: const nil)) a) arg =
+      ((:: const (:: const nil)) arg) (a arg)
+      const (:: a arg)
+-/
+def π.const_a_call (a : Expr) : Expr :=
+  both (:: const (:: const nil)) a
+
+#eval do_step run (:: apply (:: (:: 
 
 def curry (e : Expr) : Except Error Expr :=
   match e with
@@ -289,15 +321,21 @@ def curry (e : Expr) : Except Error Expr :=
       :: both (:: const (:: const nil)) a
 
       :: (both (:: const (:: const nil)) a) arg =
-      
+      ((:: const (:: const nil)) arg) (a arg)
+      const (:: a arg)
+
+      We will need some apply instructions as well.
     -/
 
-    let mk_const_a := both 
+    --let c := π.const_a_call a
 
-    both (:: const (:: rst nil)) a
+    --:: c
+
+    sorry
 
     -- we can get our argument
     -- back into π a b
     -- with both
+  | e => .error <| .cant_curry e
 
-end curry
+end curry-/

@@ -283,6 +283,19 @@ def π.const_a_call (a : Expr) : Expr :=
 #eval do_step run (:: apply (:: (:: (π.const_a_call (symbol "a")) nil) (:: (symbol "arg") nil)))
 
 /-
+:: apply (:: (:: push_list nil) (:: l (:: arg nil)))
+= (:: arg l)
+
+This is essentially reversing the context.
+-/
+def push_list : Expr :=
+  let arg := π (:: const (:: (:: id nil) nil)) (π id nil)
+
+  both arg (π id nil)
+
+#eval 
+
+/-
 Really whack currying:
 pass a "selector" in as the first argument to inner π,
 which determines where the argument will be placed.
@@ -290,15 +303,32 @@ which determines where the argument will be placed.
 inner selector arg
 outputs (selector arg)
 -/
-def to_curry (e : Expr) : Except Error Expr :=
+def to_curry (e : Expr) : Except Error Expr := do
   -- accepts all of the arguments as a parameter
   -- and applies to the inner
   let apply_all_lazy (for_e : Expr) : Expr :=
     both (:: const (:: apply nil)) (both (:: const (:: (:: for_e nil) nil)) id)
 
-  
-  | e => .error <| .cant_curry e
+  match ← n_arguments_π e with
+  | .zero => pure <| :: const (:: e nil)
+  | n =>
+    -- to curry, make n list append helpers
+    -- apply_all_lazy has all of the args so far
+    -- so we can generate a π tree n arguments long,
+    -- then feed it in
+    let my_args := (List.replicate n Expr.id).foldr π .nil
 
+    -- each argument we add on we put next to the argument buffer
+    -- both (:: const (:: my_args nil)) id
+    -- assume we only had one argument,
+    -- this would produce: my_args arg
+    -- which would insert arg into my_args
+    -- if we had two args:
+    -- both (:: const (both (:: const (:: my_args nil)) id)
+
+    -- we basically want every layer except the last
+    -- every call cons's something to the list
+    -- the issue is that we have to reverse it at the end
 /-
 This should take two arguments.
 -/

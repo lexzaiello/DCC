@@ -27,6 +27,8 @@ Should π work on singletons or actual lists?
 
 TODO: remove sinngletones from examples
 that use both, since both will auto-inject them.
+
+TODO: const doesn'y play nicely with apply.
 -/
 
 def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
@@ -40,7 +42,7 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     let b' := :: apply (:: b xs)
 
     pure <| :: a' b'
-  | :: (:: const x) _ => pure x
+  | :: (:: const x) _ | :: (:: apply (:: const x)) _ => pure x
   | :: (:: both (:: f g)) l => pure <| :: (:: apply (:: f l)) (:: apply (:: g l))
   | e => .error <| .no_rule e
 

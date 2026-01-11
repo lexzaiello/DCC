@@ -18,13 +18,26 @@ Skips the tail element in a projection.
 def skip : Expr := quote nil
 
 /-
-Lazy cons.
+Lazy cons. This accepts exactly one value.
+
 :: then_cons x = :: both (:: (:: const f) id)
 
 This will prepend the value to the next argument.
+
+Assumes that nil is not passed, and the argument is the value
+to prepend.
 -/
 def then_cons : Expr :=
-  :: both (:: (quote both) (:: both (:: const (quote id))))
+  .cons both (:: (quote both) (:: both (:: const (quote id))))
+
+def example_then_cons : Except Error Expr := do
+  let my_data := symbol "hi"
+  let my_l := :: (symbol "head") (:: (symbol "tail") nil)
+
+  do_step run (:: apply (:: then_cons my_data))
+    >>= (fun c => do_step run (:: apply (:: c my_l)))
+
+#eval example_then_cons
 
 /-
 Flips the head and next of a :: x (:: y ys) list, giving

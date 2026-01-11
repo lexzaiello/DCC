@@ -62,6 +62,9 @@ Prepends a value to the context
 -/
 def cons_ctx (with_val : Expr) : Expr → Expr := (:: with_val ·)
 
+def steal_context (x' : Expr) : Expr → Expr
+  | :: apply (:: f ctx) => :: apply (:: f (cons_ctx x' ctx))
+  | e => :: apply (:: e (:: x' nil))
 
 #eval do_step run (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") nil)))
 #eval do_step run (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
@@ -98,13 +101,7 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
 
     -- now we push the value onto the context
     -- if there is one
-    match f' with
-    | :: apply (:: f ctx) =>
-      -- TODO: this is also funky
-      pure <| :: apply (:: f (cons_ctx x' ctx))
-    | e =>
-      -- make a singleton context otherwise
-      pure <| :: apply (:: e (:: x' nil))
+    pure <| steal_context x' f'
   | .lam body => do
     abstract depth.succ body
 
@@ -114,16 +111,17 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
     let f' ← Expr.of_lc f
     let x' ← Expr.of_lc x
 
+    -- if f' has a context, this should be added to it
     -- this is the root value, so we give it an empty context? TODO: not sure about this
     -- TODO: major sus
-    pure <| :: apply (:: f' (:: x' nil))
+    pure <| steal_context x' f'
   | .lam body => do
     abstract 1 body
-  | .var n =>
+  | .var _n =>
     -- this is certainly free and a garbage value.
     -- TODO: how to handle this? shouldn't show up.
     -- throw an error?
-    pure <| quote (get_nth_pos n)
+    .error .var_in_output
 
 end
 
@@ -137,7 +135,20 @@ def test_hello_world : Except Error Expr := do
   dbg_trace cm_e
   do_step run cm_e
 
+/-
+Church encoding of true. should get the first argument.
+
+tre a b = a
+tre = λ λ.1
+-/
+def tre : Except Error Expr := do
+  let lam_e := f$ (f$ (λ! (λ! (.var 1))) (.symbol "Hello, world")) (.symbol "other")
+  let cm_e ← Expr.of_lc lam_e
+  dbg_trace cm_e
+  do_step run cm_e
+
 #eval test_hello_world
+#eval tre
 
 end positional
 

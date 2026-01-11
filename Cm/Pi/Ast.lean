@@ -27,6 +27,7 @@ inductive Error where
   | stuck      : Expr → Error
   | no_rule    : Expr → Error
   | cant_curry : Expr → Error
+  | var_in_output : Error -- for lambda translation
 
 open Expr
 
@@ -49,6 +50,7 @@ def Expr.fmt (e : Expr) : Format :=
   | symbol s => .paren ("symbol " ++ ("\"" ++ s ++ "\""))
 
 def Error.fmt : Error → Format
+  | .var_in_output => "variable in output!"
   | .stuck e => "got stuck evaluating: " ++ .line ++ e.fmt
   | .cant_curry e => "couldn't curry: " ++ .line ++ e.fmt
   | .no_rule e => "no rule to evaluate: " ++ .line ++ e.fmt

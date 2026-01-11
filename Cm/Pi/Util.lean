@@ -72,8 +72,9 @@ def example_cons_multiple : Except Error Expr := do
   let my_l := :: (symbol "head") (:: (symbol "tail") nil)
 
   let c  := (:: apply (:: then_cons my_data))
+  let o  := (:: apply (:: then_cons (symbol "other data")))
   let l := (:: apply (:: c my_l))
-  do_step run (:: apply (:: c l))
+  do_step run (:: apply (:: o l))
 
 #eval example_cons_multiple
 

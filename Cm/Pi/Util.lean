@@ -4,7 +4,7 @@ import Cm.Pi.Eval
 open Expr
 
 def quote (e : Expr) : Expr :=
-  (:: const (:: e nil))
+  (:: const (:: e (:: const nil)))
 
 def apply_quoted : Expr := quote apply
 
@@ -14,7 +14,7 @@ Skips the tail element in a projection.
 def skip : Expr := quote nil
 
 def singleton_later : Expr :=
-  :: both (:: id (:: const (:: nil nil)))
+  :: both (:: id (:: const nil))
 
 /-
 Utility functions for the list calculus.
@@ -41,14 +41,14 @@ def set_tail_args : Expr :=
   let my_π := :: both (::
     insert_π
     (:: both
-      (:: (:: const (:: id nil)) (:: both (::
+      (:: (:: const id) (:: both (::
         (quote const)
         id)))))
 
   let my_π := :: both (::
     insert_π
     (:: both
-      (:: (:: const (:: id nil)) (:: both (::
+      (:: (:: const id) (:: both (::
         (quote const)
         id)))))
 
@@ -64,7 +64,7 @@ def set_tail_args : Expr :=
 def example_set_tail_args : Except Error Expr :=
   let replace_with := (:: (symbol "x") (:: (symbol "xs") nil))
   let replace_in := (:: (symbol "replace") nil) -- args tail
-  do_step run (:: apply (:: (:: set_tail_args nil) (:: replace_with replace_in)))
+  do_step run (:: apply (:: set_tail_args (:: replace_with replace_in)))
 
 #eval example_set_tail_args
 
@@ -77,29 +77,27 @@ def map_head_arg : Expr :=
   -- we generate a π instruction
   -- :: π (:: !my_f id)
 
-  let insert_π := (:: const (:: π nil))
+  let insert_π := (:: const π)
 
   let my_π := :: both (::
     insert_π
     (:: both
-      (:: id (:: const (:: id nil)))))
-
-  let my_π_singleton := Expr.cons both
-    (.cons my_π (.cons const (.cons nil nil)))
+      (:: id (:: const id))))
 
   -- this inserts the literal "apply" word
   let my_apply := apply_quoted
 
-  .cons both (:: my_apply (:: π (:: my_π_singleton id)))
+  .cons both (:: my_apply (:: π (:: my_π id)))
 
 def example_map_head_arg : Except Error Expr :=
   let my_args := :: (symbol "head") (:: (symbol "b") (:: (symbol "c") nil))
 
   -- wrap the head as a singleton
   -- by inserting nil at the end
-  let my_f := :: both (:: id (:: const (:: nil nil)))
+  -- TODO: this is old. no singleton, this prob doesn't work anymore
+  let my_f := :: both (:: id (:: const nil))
 
-  do_step run (:: apply (:: (:: map_head_arg nil) (:: my_f my_args)))
+  do_step run (:: apply (:: map_head_arg (:: my_f my_args)))
 
 #eval example_map_head_arg
 
@@ -114,7 +112,7 @@ def map_head: Expr :=
   -- we generate a π instruction
   -- :: π (:: !my_f id)
 
-  let insert_π := (:: const (:: π nil))
+  let insert_π := (:: const π)
 
   -- π id (const id) gets the mapper function,
   -- then inserts literal "id" after
@@ -131,20 +129,17 @@ def map_head: Expr :=
   let my_π' := :: both (::
     insert_π
     (:: both
-      (:: id (:: const (:: id nil)))))
+      (:: id (:: const id))))
   let my_π_f := :: both (::
     insert_π
     (:: both (::
       my_π'
-      (:: const (:: nil nil)))))
-
-  let my_π_singleton := Expr.cons both
-    (.cons my_π_f (.cons const (.cons nil nil)))
+      (:: const nil))))
 
   -- this inserts the literal "apply" word
   let my_apply := apply_quoted
 
-  .cons both (:: my_apply (:: π (:: my_π_singleton id)))
+  .cons both (:: my_apply (:: π (:: my_π_f id)))
 
 /-
 An example of using map_head that wraps the head

@@ -101,7 +101,6 @@ and it generates a π expression.
 NOTE: this function does not expect nil as a final argument.
 -/
 def map_head: Expr :=
-  -- id corresponds to the map
   :: both (:: (quote π) (:: both (:: id (quote id))))
 
 /-
@@ -112,7 +111,7 @@ def map_head_example : Except Error Expr :=
   let my_list := :: (symbol "head") (:: (symbol "b") (:: (symbol "c") nil))
 
   -- replace the head of the list with "replaced"
-  let my_f := Expr.id
+  let my_f := (:: const (symbol "replaced"))
 
   do_step run (:: apply (:: map_head my_f))
     >>= (fun map => do_step run (:: apply (:: map my_list)))

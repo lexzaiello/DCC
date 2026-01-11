@@ -101,7 +101,7 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     pure <| :: x xs') <|> (do
     let x' ← run x with_logs
     pure <| :: x' xs)
-  | e => step_apply e <|> (.error <| .no_rule e)
+  | e => (.error <| .no_rule e)
 
 /-
 A basic test of the eval function:

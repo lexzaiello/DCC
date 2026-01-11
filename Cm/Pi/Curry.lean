@@ -14,3 +14,8 @@ def curry : Expr := then_cons
 /-
 See an example in Church.lean
 -/
+
+def example_curry : Except Error Expr :=
+  let my_f := const
+
+  -- const takes two arguments:

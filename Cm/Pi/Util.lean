@@ -38,6 +38,26 @@ def then_cons : Expr :=
   .cons both (:: (quote both) (:: both (:: const (quote id))))
 
 /-
+Lazy append. Lazy cons with the order reversed.
+
+(:: apply (:: apply (:: then_append f)) b) = (:: b f)
+-/
+def then_append : Expr :=
+  .cons both (:: (quote both) (:: both (:: (quote id) const)))
+
+/-
+Yep. Reverse of then_cons.
+-/
+def example_then_append : Except Error Expr := do
+  let my_data := symbol "hi"
+  let my_other := symbol "other"
+
+  do_step run (:: apply (:: then_append my_data))
+    >>= (fun c => do_step run (:: apply (:: c my_other)))
+
+#eval example_then_append
+
+/-
 Why can't we chain then_cons?
 What happens if we do?
 

@@ -82,54 +82,27 @@ def map_head_arg : Expr :=
 def example_map_head_arg : Except Error Expr :=
   let my_args := :: (symbol "head") (:: (symbol "b") (:: (symbol "c") nil))
 
-  -- wrap the head as a singleton
-  -- by inserting nil at the end
-  -- TODO: this is old. no singleton, this prob doesn't work anymore
-  let my_f := Expr.id
+  /-
+    Replace the head of the list with "replaced"
+  -/
+  let my_f := (:: const (symbol "replace"))
 
   do_step run (:: apply (:: map_head_arg (:: my_f my_args)))
 
 #eval example_map_head_arg
 
 /-
-Mutates the first element of a list, while leaving the rest in place.
+Point-free function to map the head of a list.
+This accepts only a function argument,
+and it generates a π expression.
 
-(:: map_head nil) (:: my_f (:: (:: a (:: b ... nil)) nil))
+(:: apply (:: map_head my_function))
 
-TODO: is the extra apply even necessary here?
+NOTE: this function does not expect nil as a final argument.
 -/
 def map_head: Expr :=
-  -- we generate a π instruction
-  -- :: π (:: !my_f id)
-
-  let insert_π := (:: const π)
-
-  -- π id (const id) gets the mapper function,
-  -- then inserts literal "id" after
-  -- an extra apply / indirection is
-  -- required, since
-  -- we are using the list twice
-  -- this generates :: π (:: the_map id)
-  -- id refers to the mapper
-  -- :: π (:: my_map id)
-  -- note: there should be an extra id
-  -- π should have another π
-  -- to select the first element,
-  -- the list
-  let my_π' := :: both (::
-    insert_π
-    (:: both
-      (:: id (:: const id))))
-  let my_π_f := :: both (::
-    insert_π
-    (:: both (::
-      my_π'
-      (:: const nil))))
-
-  -- this inserts the literal "apply" word
-  let my_apply := apply_quoted
-
-  .cons both (:: my_apply (:: π (:: my_π_f id)))
+  -- id corresponds to the map
+  :: both (:: (quote π) (:: both (:: id (quote id))))
 
 /-
 An example of using map_head that wraps the head
@@ -138,11 +111,11 @@ of a list inside a singleton value.
 def map_head_example : Except Error Expr :=
   let my_list := :: (symbol "head") (:: (symbol "b") (:: (symbol "c") nil))
 
-  -- wrap the head as a singleton
-  -- by inserting nil at the end
+  -- replace the head of the list with "replaced"
   let my_f := Expr.id
 
-  do_step run (:: apply (:: map_head (:: my_f (:: my_list nil))))
+  do_step run (:: apply (:: map_head my_f))
+    >>= (fun map => do_step run (:: apply (:: map my_list)))
 
 #eval map_head_example
 

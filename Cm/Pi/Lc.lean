@@ -62,6 +62,8 @@ Prepends a value to the context
 -/
 def cons_ctx (with_val : Expr) : Expr → Expr := (:: with_val ·)
 
+
+#eval do_step run (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") nil)))
 #eval do_step run (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 #eval do_step run (:: apply (:: (get_nth_pos 1) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 #eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
@@ -116,7 +118,7 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
     -- TODO: major sus
     pure <| :: apply (:: f' (:: x' nil))
   | .lam body => do
-    abstract 0 body
+    abstract 1 body
   | .var n =>
     -- this is certainly free and a garbage value.
     -- TODO: how to handle this? shouldn't show up.
@@ -126,8 +128,16 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
 end
 
 /-
-
+(λ x.x) (symbol "Hello, world")
 -/
+
+def test_hello_world : Except Error Expr := do
+  let lam_e := f$ (λ! (.var 0)) (.symbol "Hello, world")
+  let cm_e ← Expr.of_lc lam_e
+  dbg_trace cm_e
+  do_step run cm_e
+
+#eval test_hello_world
 
 end positional
 

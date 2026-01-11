@@ -13,6 +13,15 @@ with no terminal nil value.
 -/
 def zero : Expr := :: π (:: (:: const id) id)
 
+/-
+succ n f x = f (n f x)
+-/
+def succ : Expr :=
+  let f_root := (:: π (:: (quote id) id))
+  let nfx := (:: π (:: id (:: π (:: id id))))
+
+  .cons both (:: f_root nfx)
+
 def example_zero_church : Except Error Expr :=
   let my_fn := :: const (symbol "const")
   let my_x  := :: const (symbol "intact")

@@ -1,3 +1,5 @@
+import Mathlib.Data.Nat.Notation
+
 import Cm.Pi.Ast
 import Cm.Pi.Eval
 import Cm.Pi.Util
@@ -23,23 +25,78 @@ notation "λ!" => LcExpr.lam
 notation "f$" => LcExpr.app
 
 /-
-Fetches a variable without a nil value.
--/
-def get_var_no_nil (e : Expr) : Expr :=
-  (:: both (:: (:: const apply) e))
+Potential translation with positinal parameters:
 
-#eval do_step run (:: apply (:: (get_var_no_nil (:: π (:: const id))) (:: (symbol "var 1") (:: (symbol "var 2") nil))))
+Make a context of substitutions, which is the list of arguments.
+-/
+
+namespace positional
+
+open Expr
+
+def apply_now (op : Expr) : Expr :=
+  (:: both (:: (:: const apply) op))
+
+/-
+Fetches the nth value in the context / positional arguments,
+and strips the nil value
+-/
+def get_nth_pos : ℕ → Expr
+  | .zero => apply_now <| :: π (:: const (:: const nil))
+  | .succ n =>
+    -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
+    let inner := get_nth_pos n
+    apply_now <| :: π (:: (:: const const) inner)
+
+#eval 
+
+/-
+argument is the λ body
+
+bound variables just use get_nth_pos. we should have an entry in our context.
+
+free variables get the get_nth_pos of the context length - the depth
+
+We are using 0-indexed debruijn indices
+-/
+def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
+  | .var n =>
+    
+
+def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
+  
+
+end positional
+
+namespace curried
 
 /-
 Translation of de bruijn lambda calc expressions to our expressions.
 
-We will use positional parameters for this version.
+We will use curried parameters for this version.
 -/
+
+/-
+Converts the body of a lambda abstraction to an expression.
+-/
+def abstract : LcExpr DebruijnIdx → Except Error Expr
+  | .var (n + 1) => do
+    sorry
+  | .app f x => do
+    sorry
+  | _ => sorry
+
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   -- an n-height variable corresponds roughly to a nested π expression
   -- (:: referenced nil)
   -- for example, .var 0 => π id
-  | .var 0 =>
-    (:: both (:: (:: const apply) (:: π (:: const id))))
-  | .var n =>
-    
+  | .var v => pure <| .symbol (toString v)
+  | .app f x => do
+    let f' ← Expr.of_lc f
+    let x' ← Expr.of_lc x
+
+    sorry
+  | .lam body => do
+    sorry
+
+end curried

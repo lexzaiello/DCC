@@ -11,7 +11,7 @@ open Expr
 Forces an expression to be evaluated immediately.
 -/
 def apply_now (e : Expr) : Expr :=
-  :: both (:: (:: const apply)  e)
+  :: both (:: (:: const apply) e)
 
 def quote (e : Expr) : Expr :=
   (:: const e)

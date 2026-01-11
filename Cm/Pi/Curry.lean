@@ -1,10 +1,28 @@
+import Mathlib.Data.Nat.Notation
 import Cm.Pi.Ast
 import Cm.Pi.Eval
 import Cm.Pi.Util
 
 open Expr
 
-def curry (n : ℕ) : Expr := then_cons
+/-
+Applies the argument.
+-/
+def apply_now' : Expr :=
+  :: both (:: (:: const apply) id)
+
+def example_apply_now : Except Error Expr :=
+  do_step run (:: apply (:: apply_now' (:: id (symbol "applied!"))))
+
+#eval example_apply_now
+
+/-
+A 1-argument function can be curried with id.
+A 2-argument function can be curried with
+(:: apply 
+-/
+--def curry : ℕ → Expr :=
+--  | .zero => 
 
 def example_then_cons_late_apply : Except Error Expr := do
   let my_data := symbol "hi"

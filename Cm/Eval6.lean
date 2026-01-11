@@ -289,52 +289,14 @@ which determines where the argument will be placed.
 
 inner selector arg
 outputs (selector arg)
-
-
 -/
 def to_curry (e : Expr) : Except Error Expr :=
-  match e with
-  -- expecting only one argument
-  | π _ nil
-  -- both expects all arguments
-  --| both f g =>
-  | :: const (:: _x nil) => pure e
-  -- expecting another argument,
-  -- though we may not use it
-  | π a b => do
-    -- assume b is already curried
-    let rst ← to_curry b
+  -- accepts all of the arguments as a parameter
+  -- and applies to the inner
+  let apply_all_lazy (for_e : Expr) : Expr :=
+    both (:: const (:: apply nil)) (both (:: const (:: (:: for_e nil) nil)) id)
 
-    /-
-      this is what we want to make: (:: apply (:: (:: rst nil) (:: arg nil)))
-      both apply_later (both (:: const (:: rst nil)) (π id nil))
-    -/
-
-    pure <| both apply_later (both (:: const (:: (:: rst nil) nil)) (π a nil))
-
-    /-
-      const_a_call generates a const of the output of (a arg)
-      we can insert an apply before as a const
-
-      and make the apply run rst and our const
-    -/
-    -- once we have (a arg) and rst
-    -- in a list
-    -- we can extend our arguments by one
-    -- this tape contains the a handled data
-    -- and future actions
-    --let extend_tape := both a (:: const (:: rst nil))
-
-    -- b, the next item, gets a "selector"
-    -- where the first element is the a data,
-    -- and the second element is rst
-    --let select_later := π id (π id nil)
-
-    /-
-      Later, (a arg) is prepended to the user's argument.
-    -/
-
-    --pure <| π (both (:: const (:: select_later nil)) extend_tape) nil
+  
   | e => .error <| .cant_curry e
 
 /-

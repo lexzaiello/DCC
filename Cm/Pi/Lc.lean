@@ -55,9 +55,16 @@ def get_nth_pos (n : ℕ) : Expr :=
   let get_idx := mk_get_nth_pos n
   apply_now get_idx
 
+/-
+Prepends a value to the context
+-/
+def cons_ctx (with_val : Expr) : Expr → Expr := (:: with_val ·)
+
 #eval do_step run (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 #eval do_step run (:: apply (:: (get_nth_pos 1) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 #eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
+
+mutual
 
 /-
 argument is the λ body
@@ -80,10 +87,27 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
       -- TODO: something funky here probably
       let n' := n - depth
       pure <| quote (get_nth_pos n')
-  
+  | .app f x => do
+    let x' ← Expr.of_lc x
+    let f' ← Expr.of_lc f
+
+    -- now we push the value onto the context
+    -- if there is one
+    match f' with
+    | :: apply (:: f ctx) =>
+      -- TODO: this is also funky
+      pure <| :: apply (:: f (cons_ctx x' ctx))
+    | e =>
+      -- make a singleton context otherwise
+      pure <| :: apply (:: e (:: x' nil))
+  | .lam body => do
+    abstract depth.succ body
 
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
-  
+  | .app f x => do
+    let f' ← Expr.of
+
+end
 
 end positional
 

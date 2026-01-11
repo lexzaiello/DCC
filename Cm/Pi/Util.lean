@@ -1,6 +1,10 @@
 import Cm.Pi.Ast
 import Cm.Pi.Eval
 
+/-
+Utility functions for the list calculus.
+-/
+
 open Expr
 
 def quote (e : Expr) : Expr :=
@@ -13,9 +17,6 @@ Skips the tail element in a projection.
 -/
 def skip : Expr := quote nil
 
-/-
-Utility functions for the list calculus.
--/
 
 /-
 Flips the head and next of a :: x (:: y ys) list, giving

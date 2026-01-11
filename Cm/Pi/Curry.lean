@@ -15,11 +15,17 @@ The first argument must already be known.
 = (:: apply (:: f (:: x (:: (symbol "a") (:: (symbol "b") nil)))))
 
 This is essentially set_tail_args'.
-
-
 -/
 def curry_rest : Expr :=
   /-
-    This works by 
+    We need to make a new both expression to do this.
+    As in, we need to quote / insert it in the resulting expression.
+    We assume that f and x are in scope like such, in order:
+
+    π id id
+
+    for each, we can make "append" methods:
+    :: both (:: (:: const f) id)
+    π (
   -/
   let mk_my_map := 

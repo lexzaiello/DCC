@@ -3,6 +3,12 @@ import Cm.EvalUtil
 import Cm.Pi.Ast
 
 /-
+TODO:
+- removed singletons eval function argument. update examples
+- removed :: π (:: f nil), only function pattern matching now. update as well.
+-/
+
+/-
 This file used to live in Eval6.lean. I have split it up for organization.
 -/
 
@@ -26,16 +32,13 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
 
   match e with
   | :: .id x => pure x
-  | :: (:: π (:: a nil)) (:: x nil) =>
-    pure <| :: (:: apply (:: a x)) nil
   | :: (:: π (:: a b)) (:: x xs) => do
     let a' := :: apply (:: a x)
     let b' := :: apply (:: b xs)
 
     pure <| :: a' b'
   | :: (:: const x) _ => pure x
-  | :: (:: both (:: f g)) l =>
-    pure <| :: (:: apply (:: f l)) (:: apply (:: g l))
+  | :: (:: both (:: f g)) l => pure <| :: (:: apply (:: f l)) (:: apply (:: g l))
   | e => .error <| .no_rule e
 
 def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
@@ -85,6 +88,17 @@ A basic test of the eval function:
 -/
 
 def my_eval_test : Except Error Expr := do
+  let my_proj : Expr := :: π (:: id (:: π (:: id (:: const nil))))
+
+  let my_data : Expr := :: (symbol "a") (:: (symbol "b") nil)
+
+  do_step run (:: apply (:: my_proj my_data))
+
+/-
+Test showing that we can replace the nil value in a list
+with a constant.
+-/
+def my_eval_test₂ : Except Error Expr := do
   let my_proj : Expr := :: π (:: id (:: π (:: id nil)))
 
   let my_data : Expr := :: (symbol "a") (:: (symbol "b") nil)

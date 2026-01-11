@@ -255,6 +255,17 @@ def map_head_arg : Expr :=
 
   .cons both (:: my_apply (:: π (:: my_π_singleton id)))
 
+def example_map_head_arg : Except Error Expr :=
+  let my_args := :: (symbol "head") (:: (symbol "b") (:: (symbol "c") nil))
+
+  -- wrap the head as a singleton
+  -- by inserting nil at the end
+  let my_f := :: both (:: id (:: const (:: nil nil)))
+
+  do_step run (:: apply (:: (:: map_head_arg nil) (:: my_f my_args)))
+
+#eval example_map_head_arg
+
 /-
 Mutates the first element of a list, while leaving the rest in place.
 

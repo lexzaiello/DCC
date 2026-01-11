@@ -86,17 +86,17 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     dbg_trace e
 
   match e with
-  | :: .id (:: x nil) => pure x
+  | :: .id x => pure x
   | :: (π a nil) (:: x nil) =>
-    pure <| :: (f$ a x) nil
+    pure <| :: (:: a x) nil
   | :: (π a b) (:: x xs) => do
-    let a'  := f$ a x
+    let a'  := :: a x
 
     -- f$ will pass the entire xs in as
     -- a single value, but apply will
     -- give it back to us
     -- in full list form.
-    let b' := f$ b xs
+    let b' := :: b xs
 
     pure <| :: a' b'
   | :: (:: const (:: x nil)) _ => pure x
@@ -104,9 +104,7 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     Assume l is a single value here.
   -/
   | :: (both f g) l =>
-    let f' := f$ f l
-    let g' := f$ g l
-    pure <| :: f' g'
+    pure <| :: (:: f l) (:: (:: g l) nil)
   | e => .error <| .no_rule e
 
 def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
@@ -201,12 +199,12 @@ def apply_later : Expr :=
 -/
 #eval do_step run (:: (both apply_later id) (:: (symbol "a") nil))
 
-#eval do_step run (:: (π id nil) (:: (symbol "a") nil))
+#eval do_step run (:: (π id (π id nil)) (:: (symbol "a") (:: (symbol "b") nil)))
 
 def succ.select_nfx : Expr :=
   (π id (π id (π id nil)))
 
-#eval do_step run (:: succ.select_nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+#eval do_step (run (with_logs := true)) (:: succ.select_nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 
 def succ.nfx : Expr :=
   both apply_later (π id (π id (π id nil)))

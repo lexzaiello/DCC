@@ -36,6 +36,9 @@ that use both, since both will auto-inject them.
 TODO: const doesn'y play nicely with apply.
 
 TODO: apply in π is probably too aggressive.
+
+TODO: confusing how const doesn't add an apply
+but others do.
 -/
 
 def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do

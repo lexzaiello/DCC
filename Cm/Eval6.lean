@@ -254,14 +254,26 @@ Combines a list of arguments with a single argument / partial application.
 def curry_easy : Expr :=
   -- strip args from f
   -- gives :: f nil
-  let f_bare := (:: π (:: id (:: const (:: nil nil))))
+  let f_bare := (:: π (:: (:: π (:: id (:: const (:: nil nil)))) (:: const (:: nil nil))))
 
   -- get just x argument from (:: f x)
   -- :: x nil
   let x_app := church.zero
-  let rst := id
+  let rst := Expr.id
 
-  :: both (:: apply_later (:: both (:: f_bare (:: π (:: x_app rst)))))
+  -- how to nicely prepend x_app?
+  -- both (:: const (:: x_app_val nil)) id
+
+  Expr.cons both (:: apply_later (:: both (:: f_bare (:: π (:: x_app rst)))))
+
+#eval do_step run
+  (::
+    apply
+    (::
+      (:: curry_easy nil)
+      (::
+        (:: (symbol "f") (:: (symbol "x") nil))
+        (:: (:: (symbol "arg₁") nil) nil))))
 
 def n_arguments_π : Expr → Except Error ℕ
   | :: π (:: _a nil) => pure 1

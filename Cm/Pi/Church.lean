@@ -18,9 +18,11 @@ succ n f x = f (n f x)
 -/
 def succ : Expr :=
   let f_root := (:: π (:: (quote id) id))
-  let nfx := (:: π (:: id (:: π (:: id id))))
+  let nfx := :: (:: const apply) (:: π (:: id (:: π (:: id id))))
 
-  .cons both (:: f_root nfx)
+  let f_nfx := .cons both (:: f_root nfx)
+
+  .cons (:: const apply) f_nfx
 
 def example_zero_church : Except Error Expr :=
   let my_fn := :: const (symbol "const")

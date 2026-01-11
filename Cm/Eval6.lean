@@ -95,10 +95,6 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
 
     pure <| :: a' b'
   | :: (:: const (:: x nil)) _ => pure x
-  /-
-    We can assume (:: g l) will produce a valid list,
-    so no nil needs to be appended.
-  -/
   | :: (both f g) l =>
     pure <| :: (:: apply (:: (:: f nil) l)) (:: apply (:: (:: g nil) l))
   | e => .error <| .no_rule e

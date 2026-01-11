@@ -31,7 +31,7 @@ def set_tail_args' : Expr :=
         (quote const)
         id)))))
 
-def example_set_tail_args : Except Error Expr :=
+def example_set_tail_args_pointfree : Except Error Expr :=
   let replace_with := (:: (symbol "x") (:: (symbol "xs") nil))
   let replace_in := (:: (symbol "replace") nil) -- args tail
 
@@ -39,7 +39,7 @@ def example_set_tail_args : Except Error Expr :=
     >>= (fun rep =>
       do_step run (:: apply (:: rep replace_in)))
 
-#eval example_set_tail_args
+#eval example_set_tail_args_pointfree
 
 /-
 Replaces the tail of a list with the specified value.

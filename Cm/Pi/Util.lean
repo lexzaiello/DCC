@@ -18,48 +18,8 @@ Utility functions for the list calculus.
 -/
 
 /-
-Flips the head and nexte of a :: x (:: y ys) list, giving
+Flips the head and next of a :: x (:: y ys) list, giving
 :: y (:: x xs)
-
-(:: apply (:: flip_head_tail (::
-
-we can do this by inserting an ad-hoc
-quoted π expression in a both,
-and
-
-(π head tail)
-
-since we have the ys buffer room,
-and selecting x will incur no nil,
-
-(π id (π (:: const id) id)) - this will fetch x
-and place ys after it
-
-(π (:: const id) (π const id)) - this will fetch
-y via the π const, apply yx to it, giving just y,
-and the upper π will return y via id
-
-Giving:
-
-both (π (:: const id) (π const id)) (π id (π (:: const id) id))
-
-both (π (:: const id) (π const id))
-
-both xy_stuff (both (π id (π (:: const id))) id)
-
-probably need to insert an extra apply or something.
-(:: π (:: (:: const id) (:: π (:: const id)))) (:: x (:: y ys))
-= (:: id (:: (:: const y) (:: id ys)))
-
-(:: both (:: (quote both)
-  (:: π (:: (:: const id) (:: π (:: const id)))) (:: x (:: y ys))))
-
-we need to insert another apply at the beginning of this one.
-
-both 
-π x (π y ys)
-
-both (quote π) (
 -/
 def flip_head_next : Expr :=
   let y_const := :: both (:: (:: const const) id)

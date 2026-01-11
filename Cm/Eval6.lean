@@ -232,17 +232,14 @@ succ zero (const (const "f")) "x" => (const (symbol "f"))
 end tests
 
 /-
-The only list operation where argument number matters is
-π. π expects a sequence of arguments.
+prepend with_val onto
 
-However, we can be lazy.
+π (:: both (:: const (:: both nil)) id) id
 
-π _ nil indicates we are not expecting any more arguments.
-In that case, we just return e.
-
-π _ (const) indicates two arguments were expected,
-but one was unused. We treat this like the normal case.
+π (:: both id prepend_to) nil
 -/
+def prepend : Expr :=
+  :: π (:: (:: both (:: (:: const (:: both nil)) id)) id)
 
 namespace curry
 

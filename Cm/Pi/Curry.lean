@@ -10,13 +10,14 @@ expecting one argument and the rest of the arguments in a list.
 
 The first argument must already be known.
 
-(:: curry_rest nil) (:: f (:: x nil))
+(:: apply (:: (:: curry_rest nil) (:: f (:: x nil)) (:: (symbol "a") (:: (symbol "b") nil))))
+
+= (:: apply (:: f (:: x (:: (symbol "a") (:: (symbol "b") nil)))))
+
+This is essentially
 -/
 def curry_rest : Expr :=
-  -- this is just map_head, but we're inserting the specified argument.
-
-  let insert_π := (:: const (:: π nil))
-
-  -- our mapping function just prepends the x argument
-  -- we can do this by 
+  /-
+    This works by 
+  -/
   let mk_my_map := 

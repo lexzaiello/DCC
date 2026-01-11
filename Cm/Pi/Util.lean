@@ -18,6 +18,30 @@ Utility functions for the list calculus.
 -/
 
 /-
+Set tail args, but more point-free.
+Supply only the replacement value for the tail.
+-/
+def set_tail_args' : Expr :=
+  let insert_π := quote π
+
+  .cons both (::
+    insert_π
+    (:: both
+      (:: (:: const id) (:: both (::
+        (quote const)
+        id)))))
+
+def example_set_tail_args : Except Error Expr :=
+  let replace_with := (:: (symbol "x") (:: (symbol "xs") nil))
+  let replace_in := (:: (symbol "replace") nil) -- args tail
+
+  do_step run (:: apply (:: set_tail_args' replace_with))
+    >>= (fun rep =>
+      do_step run (:: apply (:: rep replace_in)))
+
+#eval example_set_tail_args
+
+/-
 Replaces the tail of a list with the specified value.
 
 (:: set_tail nil) (:: (:: a xs) (:: replace nil))

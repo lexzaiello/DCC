@@ -251,13 +251,24 @@ def map_head: Expr :=
   -- we are using the list twice
   let my_π := :: both (::
     insert_π
-    (:: π
+    (:: both
       (:: id (:: const (:: id nil)))))
+
+  let my_π_singleton := Expr.cons both
+    (.cons my_π (.cons const (.cons nil nil)))
 
   -- this inserts the literal "apply" word
   let my_apply := (:: const (:: apply nil))
 
-  .cons both (:: my_apply (:: π (:: my_π (:: id nil))))
+  .cons both (:: my_apply (:: π (:: my_π_singleton id)))
+
+#eval do_step
+  (run (with_logs := true))
+  (:: apply
+    (:: (:: map_head nil)
+      (::
+        (:: const (:: (symbol "hi") nil))
+        (:: (:: (symbol "head") nil) nil))))
 
 /-
 Gets the head of a list and runs some

@@ -29,11 +29,6 @@ def test_both_partial : Except Error Expr := do
 
 /-
 :: apply (:: f x) = (:: (:: apply_partial f) x)
-
-WHen f gets applied, we get (:: both (:: (:: const f) id))
-When x gets applied, we get (:: f x), but we need another apply in front
-replace (:: both (:: (:: const f) id)) with
-(:: both (quote apply) (:: both (:: (:: const f) id)))
 -/
 def apply_partial : Expr :=
   (:: both (:: (quote both) (:: both (:: (quote (quote apply)) (:: both (:: (quote both) (:: both (:: const (quote id)))))))))

@@ -233,3 +233,71 @@ succ zero (const (const "f")) "x" => (const (symbol "f"))
 #eval do_step run (:: apply (:: (:: succ nil) (:: zero (:: (:: const (:: (:: const (:: (symbol "f") nil)) nil)) (:: (symbol "x") nil)))))
 
 end tests
+
+/-
+The only list operation where argument number matters is
+π. π expects a sequence of arguments.
+
+However, we can be lazy.
+
+π _ nil indicates we are not expecting any more arguments.
+In that case, we just return e.
+
+π _ (const) indicates two arguments were expected,
+but one was unused. We treat this like the normal case.
+-/
+namespace curry
+
+def curry (e : Expr) : Except Error Expr :=
+  match e with
+  -- expecting only one argument
+  | π _ nil
+  | :: const (:: _x nil) => pure e
+  -- expecting another argument,
+  -- though we may not use it
+  | π a b => do
+    -- assume b is already curried
+    let rst ← curry b
+
+    -- (both curried a) arg =
+    --
+    -- both a curried arg =
+    -- :: (a arg) (:: curried _)
+    -- both (both const a
+
+    -- both const a allows us to
+    -- inject a back in later.
+    -- we need to wrap another both around
+    -- as well to permit the other argument
+    -- both
+
+    /-
+      Approach with π instead:
+      π a retains our current value,
+      and b = const curry
+      appends the rest
+
+      (π a (const curr)) arg =
+      :: (a arg) curr
+
+      we want
+      t' = both (:: const (a arg)) curr
+    -/
+
+    /-
+      To get t' inner (:: const (a arg)):
+      :: both (:: const (:: const nil)) a
+
+      :: (both (:: const (:: const nil)) a) arg =
+      
+    -/
+
+    let mk_const_a := both 
+
+    both (:: const (:: rst nil)) a
+
+    -- we can get our argument
+    -- back into π a b
+    -- with both
+
+end curry

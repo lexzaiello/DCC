@@ -246,6 +246,23 @@ but one was unused. We treat this like the normal case.
 
 namespace curry
 
+/-
+Combines a list of arguments with a single argument / partial application.
+
+(curry (:: f x) (:: arg₁ ...)) = (:: f nil) (:: x (:: arg₁ ...))
+-/
+def curry_easy : Expr :=
+  -- strip args from f
+  -- gives :: f nil
+  let f_bare := (:: π (:: id (:: const (:: nil nil))))
+
+  -- get just x argument from (:: f x)
+  -- :: x nil
+  let x_app := church.zero
+  let rst := id
+
+  :: both (:: apply_later (:: both (:: f_bare (:: π (:: x_app rst)))))
+
 def n_arguments_π : Expr → Except Error ℕ
   | :: π (:: _a nil) => pure 1
   | const => pure 1

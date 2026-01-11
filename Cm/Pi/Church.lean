@@ -79,7 +79,20 @@ def succ : Expr :=
   -- we are missing an apply.
   -- this apply is wrong.
   -- at the very least, we are missing a both
-  .cons both (:: (quote both) (:: both (:: f_beginning nfx)))
+  -- we're closer, but still missing a quoted apply after both
+  let f_nfx_call := (:: both (:: f_beginning nfx))
+
+  -- prepends apply in front of the entire expression
+  let join_apply := :: π (:: (:: both (:: (quote apply) id)) id)
+
+  let data := .cons both (:: (quote both) f_nfx_call)
+
+  -- wrap the whole thing inside an apply
+  -- and same with the inner both
+  -- we need to double quote those applies though,
+  -- since they get popped off twice.
+
+  data
 
 -- f = id
 -- x = (symbol "hi")
@@ -87,7 +100,7 @@ def succ : Expr :=
 -- :: (:: both (:: (:: const apply) (:: π (:: const id)))) (:: π (:: (:: const id) id))
 #eval do_step run (:: apply (:: succ (symbol "n")))
 #eval do_step run (:: apply (:: (:: apply (:: succ (symbol "n"))) (:: (symbol "f") (symbol "x"))))
-#eval do_step run (:: apply (:: (:: apply (:: succ zero)) (:: id (symbol "hi"))))
+#eval do_step run (:: apply (:: (:: apply (:: succ (symbol "n"))) (:: (symbol "f") (symbol "x"))))
 
 def example_zero_church : Except Error Expr :=
   let my_fn := :: const (symbol "const")

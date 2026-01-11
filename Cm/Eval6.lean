@@ -224,6 +224,14 @@ namespace tests
 open church
 
 /-
+succ zero =>
+:: apply (:: (:: (symbol "f") nil) (:: (symbol "x") nil))
+
+Looks perfect.
+-/
+#eval do_step run (:: apply (:: (:: succ nil) (:: zero (:: (symbol "f") (:: (symbol "x") nil)))))
+
+/-
 (succ zero) id x = x
 -/
 

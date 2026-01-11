@@ -14,6 +14,14 @@ with no terminal nil value.
 def zero : Expr := :: π (:: (:: const id) id)
 
 /-
+How do we get rid of this nil value?
+make a new both that allows us to insert n f x
+
+Let's keep this for now. We'll clean up later.
+-/
+#eval do_step run (:: apply (:: (:: both (:: (:: const apply) (:: π (:: const id)))) (:: (symbol "const") (symbol "xs"))))
+
+/-
 succ n f x = f (n f x)
 
 (:: (:: succ n) (:: f x)) = (:: f (:: n f x))
@@ -22,8 +30,6 @@ takes in n as the only positional argument,
 the accepts f, x as the next positional arguments
 -/
 def succ : Expr :=
-  let n := Expr.id
-
   -- we make a new "binder" by making a quoted π expression.
   -- NOT evaluating it.
 
@@ -35,30 +41,30 @@ def succ : Expr :=
   -- TODO: this might cause the apply both issue. really annoying
   -- we will want :: apply (:: f (:: apply (:: n (:: f x))))
   -- this is a quoted expression that we are generating.
-  let f_beginning := quote (:: π (:: const (:: const nil)))
+  -- f is in a nice spot to insert the apply for itself
+  -- prepending apply
+  -- TODO: not sure if we need to quote this?
+  -- this will properly drop the coming nil after f, but I'm not 100% sure why we need to quote it.
+  -- this produces just f, but the quoted instructions for the future arguments
+  -- this does not contain the very beginning apply just yet
+  let f_beginning := quote (:: both (:: (:: const apply) (:: π (:: const id))))
 
   -- assuming n is the only positional argument in scope
   -- we are generating a "both" expression
   -- (:: (quote both) n
-  let insert_id := quote id
-  let insert_apply := quote apply
+  -- this produces :: apply (:: n fx)
   let nfx := :: both (::
-    insert_apply
+    (quote apply)
     (:: both (::
-      .id
-      insert_id)))
-  
-  
-  -- we want to make "both (π 
+      const -- this should quote the current f TODO: maybe another quoted both required here?
+      (quote id))))
 
-  let f_root := (:: π (:: (quote id) (:: π (:: id (:: const nil)))))
+  -- we are missing an apply.
+  .cons both (:: (:: const apply) (:: f_beginning nfx))
 
-  -- nfx is all of the arguments anyway
-  let nfx := :: both (:: (:: const apply) (:: π (:: id (:: π (:: id id)))))
-
-  let f_nfx := .cons both (:: f_root nfx)
-
-  .cons both (.cons (:: const apply) f_nfx)
+-- f = id
+-- x = (symbol "hi")
+#eval do_step run (:: apply (:: (:: apply (:: succ zero)) (:: id (symbol "hi"))))
 
 def example_zero_church : Except Error Expr :=
   let my_fn := :: const (symbol "const")

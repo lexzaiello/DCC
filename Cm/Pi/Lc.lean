@@ -41,14 +41,20 @@ def apply_now (op : Expr) : Expr :=
 Fetches the nth value in the context / positional arguments,
 and strips the nil value
 -/
-def get_nth_pos : ℕ → Expr
-  | .zero => apply_now <| :: π (:: const (:: const nil))
-  | .succ n =>
-    -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
-    let inner := get_nth_pos n
-    apply_now <| :: π (:: (:: const const) inner)
+def get_nth_pos (n : ℕ) : Expr :=
+  let rec mk_get_nth_pos (n : ℕ) : Expr :=
+    match n with
+    | .zero => :: π (:: const (:: const nil))
+    | .succ n =>
+      -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
+      let inner := get_nth_pos n
+      :: π (:: (:: const const) inner)
 
-#eval 
+  let get_idx := mk_get_nth_pos n
+  apply_now get_idx
+
+#eval do_step run (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
+#eval do_step run (:: apply (:: (get_nth_pos 1) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 
 /-
 argument is the λ body

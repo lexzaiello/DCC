@@ -6,11 +6,14 @@ import Cm.Pi.Util
 open Expr
 
 /-
+Thought:
+- partial apply? We have partial both. Why not both?
+-/
+
+/-
 Expects the first both argument, but will wait for the second.
 
 (:: (:: both_partial f) x) = (:: f x)
-
-TODO: should this insert an apply by default? probably not.
 -/
 def both_partial : Expr :=
   (:: both (:: (quote both) (:: both (:: const (quote id)))))
@@ -25,76 +28,48 @@ def test_both_partial : Except Error Expr := do
 #eval test_both_partial
 
 /-
-Note: we just turned both into both_partial with the above.
-We removed one argument.
-Pattern?
+:: apply (:: f x) = (:: (:: apply_partial f) x)
 
-(:: both (:: (quote both) (:: both (:: const (quote id)))))
-
-both is what we're currying here, so we quoted it.
-Experiment time.
+WHen f gets applied, we get (:: both (:: (:: const f) id))
+When x gets applied, we get (:: f x), but we need another apply in front
+replace (:: both (:: (:: const f) id)) with
+(:: both (quote apply) (:: both (:: (:: const f) id)))
 -/
+def apply_partial : Expr :=
+  (:: both (:: (quote both) (:: both (:: (quote (quote apply)) (:: both (:: (quote both) (:: both (:: const (quote id)))))))))
+
+def test_apply_partial : Except Error Expr := do
+  let my_f := symbol "f"
+  let my_x := symbol "x"
+
+  do_step run (:: apply (:: (:: apply (:: apply_partial my_f)) my_x))
+
+-- :: "f" "x"
+#eval test_apply_partial
 
 /-
-To curry two arguments:
-- quote the function being called
+curry = prepend?
 
--/
-def test_curry (e : Expr) : Expr :=
-  (:: both (:: (quote e) (:: both (:: const (quote id)))))
+curry f = (:: then_cons f)
 
-/-
-Explicitly takes two arguments.
--/
-def test_fn : Expr :=
-  :: π (:: id (:: π (:: id (:: const nil))))
+curry f = both_partial (const (:: then_cons f)) then_cons
 
-def test_fn₁ : Expr :=
-  id
-
-/-
-To curry one argument (this is not really currying but
-just for demonstration):
-
-- quote the expression
-- both (quote apply) (both (quote e) id
--/
-
-def curr₁ (e : Expr) : Expr :=
-  :: both (:: (quote apply) (:: both (:: (quote e) id)))
-
-#eval do_step run (:: apply (:: (curr₁ test_fn₁) (symbol "a")))
-
-/-
-Currying:
-
-- create a new function returning our function,
-with whatever value substituted.
-
-(:: f (:: x y)) = (:: (:: (:: curry f) x) y)
-
-Each layer, just bubble up a partially applied
-
-(:: both (const me))
-
-Now this becomes just multiple both_partials.
-
-(:: (:: both_partial f) (:: both_partial x y))
+curry 
 -/
 def curry : Expr :=
-  let inner_f := :: both (::
-    
-    both_partial
   
-  -- (:: both (:: const (:: both (const me))) id)
-  /-let me := (:: (:: const const) id)
-  let mk_me := (:: both me)
-  :: both (::
-    (quote both)
-    (:: both
-      (:: both (::
-        (quote const)
-        (:: both (::
-          (quote both)
-          mk_me)))))
-      (quote id))-/
+
+
+/-
+Simple case: currying once.
+(X × Y) → Z => X → (Y → Z)
+
+This is just both_partial.
+-/
+
+/-
+curr 0 f = nil
+curr 1 f = 
+-/
+/-def curr : ℕ → Expr
+  | .zero => id-/

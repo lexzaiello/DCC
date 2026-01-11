@@ -17,12 +17,17 @@ def example_apply_now : Except Error Expr :=
 #eval example_apply_now
 
 /-
-A 1-argument function can be curried with id.
-A 2-argument function can be curried with
-(:: then_cons 
+We can chain then_cons, but the last thing we run then_cons with
+should be the function.
+
+So, currying with one argument should be
+let f' ← (:: apply (:: then_cons my_f))
+(:: apply (:: f' my_arg))
+
+Currying with zero arguments is the same, I believe.
 -/
---def curry : ℕ → Expr :=
---  | .zero => 
+def curry : ℕ → Except Error Expr
+  | .zero => 
 
 def example_then_cons_late_apply : Except Error Expr := do
   let my_data := symbol "hi"

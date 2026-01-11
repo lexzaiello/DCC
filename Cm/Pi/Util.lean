@@ -58,6 +58,15 @@ def example_cons_chain : Except Error Expr := do
 
 #eval example_cons_chain
 
+def example_cons_now : Except Error Expr := do
+  let my_data := symbol "hi"
+  let my_l := :: (symbol "head") (:: (symbol "tail") nil)
+
+  let c := (:: then_cons my_data)
+  do_step run (:: apply (:: (:: apply c) my_l))
+
+#eval example_cons_now
+
 def example_then_cons : Except Error Expr := do
   let my_data := symbol "hi"
   let my_l := :: (symbol "head") (:: (symbol "tail") nil)

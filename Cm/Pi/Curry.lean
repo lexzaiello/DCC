@@ -26,6 +26,9 @@ def curry_rest : Expr :=
 
     for each, we can make "append" methods:
     :: both (:: (:: const f) id)
-    π (
+
+    Our then_cons helper lets us give a value to prepend to a later list
+
+    π then_cons then_cons
   -/
   let mk_my_map := 

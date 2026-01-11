@@ -99,10 +99,13 @@ Test showing that we can replace the nil value in a list
 with a constant.
 -/
 def my_eval_test₂ : Except Error Expr := do
-  let my_proj : Expr := :: π (:: id (:: π (:: id nil)))
+  -- replace the last value
+  -- with "replace"
+  let my_proj : Expr := :: π (:: id (:: π (:: id (:: const (symbol "replace")))))
 
   let my_data : Expr := :: (symbol "a") (:: (symbol "b") nil)
 
   do_step run (:: apply (:: my_proj my_data))
 
 #eval my_eval_test
+#eval my_eval_test₂

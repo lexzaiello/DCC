@@ -4,7 +4,7 @@ import Cm.Pi.Eval
 open Expr
 
 def quote (e : Expr) : Expr :=
-  (:: const (:: e (:: const nil)))
+  (:: const e)
 
 def apply_quoted : Expr := quote apply
 
@@ -12,9 +12,6 @@ def apply_quoted : Expr := quote apply
 Skips the tail element in a projection.
 -/
 def skip : Expr := quote nil
-
-def singleton_later : Expr :=
-  :: both (:: id (:: const nil))
 
 /-
 Utility functions for the list calculus.
@@ -38,13 +35,6 @@ def set_tail_args : Expr :=
   -- with id as the head (corresponds to "replace")
   -- and the tail as (:: a xs)
   -- assume here that (:: a xs) is in scope for "id"
-  let my_π := :: both (::
-    insert_π
-    (:: both
-      (:: (:: const id) (:: both (::
-        (quote const)
-        id)))))
-
   let my_π := :: both (::
     insert_π
     (:: both
@@ -95,7 +85,7 @@ def example_map_head_arg : Except Error Expr :=
   -- wrap the head as a singleton
   -- by inserting nil at the end
   -- TODO: this is old. no singleton, this prob doesn't work anymore
-  let my_f := :: both (:: id (:: const nil))
+  let my_f := Expr.id
 
   do_step run (:: apply (:: map_head_arg (:: my_f my_args)))
 
@@ -150,9 +140,9 @@ def map_head_example : Except Error Expr :=
 
   -- wrap the head as a singleton
   -- by inserting nil at the end
-  let my_f := :: both (:: id (:: const (:: nil nil)))
+  let my_f := Expr.id
 
-  do_step run (:: apply (:: (:: map_head nil) (:: my_f (:: my_list nil))))
+  do_step run (:: apply (:: map_head (:: my_f (:: my_list nil))))
 
 #eval map_head_example
 
@@ -171,11 +161,11 @@ is not wrapped in a singleton
 def select_head : Expr :=
   -- Our function should be wrapped (:: f nil)
   -- like such
-  let my_f := singleton_later
+  let my_f := Expr.id
 
   -- the first element of the second
   -- argument
   -- is the head we are referring to
   let my_head := (:: π (:: id skip))
 
-  .cons both (:: (:: const (:: apply nil)) (:: π (:: my_f (:: π (:: my_head nil)))))
+  .cons both (:: (:: const apply) (:: π (:: my_f (:: π (:: my_head nil)))))

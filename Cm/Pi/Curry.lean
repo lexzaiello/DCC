@@ -75,14 +75,19 @@ def test_apply_partial' : Except Error Expr := do
 
   do_step run (:: apply (:: (:: apply (:: apply_partial my_f)) my_x))
 
-/-def test_apply_partial' : Except Error Expr := do
-  -- this will only work with an :: x xs argument
-  let my_f := π id id
-  let -/
-
--- :: "f" "x"
-
 #eval test_apply_partial'
+
+/-
+The original test, not partially applied.
+-/
+def test_apply_partial'' : Except Error Bool := do
+  let my_f := (:: π (:: id (:: π (:: id (:: const nil)))))
+  let my_arg := (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
+  let expected ←  do_step run (:: apply (:: my_f my_arg))
+  let actual ← do_step run (:: apply (:: (:: apply (:: apply_partial my_f)) my_arg))
+  pure <| actual == expected
+
+#eval test_apply_partial''
 
 --def curry : Expr :=
   

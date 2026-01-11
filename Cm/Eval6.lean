@@ -249,23 +249,22 @@ but one was unused. We treat this like the normal case.
 
 namespace curry
 
-def Expr.n_arguments_π : Expr → Except Error ℕ
-  | π _a nil => 1
+def n_arguments_π : Expr → Except Error ℕ
+  | π _a nil => pure 1
   | const => pure 1
   | (:: const (:: _v nil)) => pure 1
   | .id => pure 1
   | both f g => do
-    let n_f ← (Expr.n_arguments_π f)
-    let n_g ← (Expr.n_arguments_π g)
-    if n_f == n_g then pure n_f else .error <| .cant_curry (both f g)
+    let n_f ← (n_arguments_π f)
+    let n_g ← (n_arguments_π g)
+    pure <| max n_f n_g
   | symbol _s
   | nil => pure 0
-  
-  | π a b => do pure <| 1 + (← Expr.n_arguments_π b)
+  | π _a b => do pure <| 1 + (← n_arguments_π b)
+  | apply => .error <| .cant_curry apply
+  | e => .error <| .cant_curry e
 
-end curry
-
-/-namespace curry
+#eval n_arguments_π church.zero
 
 /-
   In a curried π a b call,
@@ -278,64 +277,51 @@ end curry
 def π.const_a_call (a : Expr) : Expr :=
   both (:: const (:: const nil)) a
 
-#eval do_step run (:: apply (:: (:: 
+/-
+:: const (:: apply (:: (:: (symbol "a") nil) (:: (symbol "arg") nil)))
+-/
+#eval do_step run (:: apply (:: (:: (π.const_a_call (symbol "a")) nil) (:: (symbol "arg") nil)))
 
-def curry (e : Expr) : Except Error Expr :=
+def to_curry (e : Expr) : Except Error Expr :=
   match e with
   -- expecting only one argument
   | π _ nil
+  -- both expects all arguments
+  --| both f g =>
   | :: const (:: _x nil) => pure e
   -- expecting another argument,
   -- though we may not use it
   | π a b => do
     -- assume b is already curried
-    let rst ← curry b
-
-    -- (both curried a) arg =
-    --
-    -- both a curried arg =
-    -- :: (a arg) (:: curried _)
-    -- both (both const a
-
-    -- both const a allows us to
-    -- inject a back in later.
-    -- we need to wrap another both around
-    -- as well to permit the other argument
-    -- both
+    let rst ← to_curry b
 
     /-
-      Approach with π instead:
-      π a retains our current value,
-      and b = const curry
-      appends the rest
+      const_a_call generates a const of the output of (a arg)
+      we can insert an apply before as a const
 
-      (π a (const curr)) arg =
-      :: (a arg) curr
-
-      we want
-      t' = both (:: const (a arg)) curr
+      and make the apply run rst and our const
     -/
+    -- once we have (a arg) and rst
+    -- in a list
+    -- we can extend our arguments by one
+    -- this tape contains the a handled data
+    -- and future actions
+    let extend_tape := both a (:: const (:: rst nil))
 
-    /-
-      To get t' inner (:: const (a arg)):
-      :: both (:: const (:: const nil)) a
+    -- b, the next item, gets a "selector"
+    -- where the first element is the a data,
+    -- and the second element is rst
+    let select_later := π id (π id nil)
 
-      :: (both (:: const (:: const nil)) a) arg =
-      ((:: const (:: const nil)) arg) (a arg)
-      const (:: a arg)
-
-      We will need some apply instructions as well.
-    -/
-
-    --let c := π.const_a_call a
-
-    --:: c
-
-    sorry
-
-    -- we can get our argument
-    -- back into π a b
-    -- with both
+    pure <| π (both (:: const (:: select_later nil)) extend_tape) nil
   | e => .error <| .cant_curry e
 
-end curry-/
+/-
+This should take two arguments.
+-/
+#eval to_curry (π (:: const (:: (:: id nil) nil)) (π id nil))
+#eval to_curry (π (:: const (:: (:: id nil) nil)) (π id nil))
+  >>= (fun c => do_step run (:: apply (:: (:: c nil) (:: (symbol "arg₁") nil))))
+  -->>= (fun c' => do_step run (:: apply (:: (:: c' nil) (:: (symbol "arg₂") nil))))
+
+end curry

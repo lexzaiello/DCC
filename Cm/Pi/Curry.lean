@@ -24,6 +24,11 @@ So, currying with one argument should be
 let f' ← (:: apply (:: then_cons my_f))
 (:: apply (:: f' my_arg))
 
+Or, alternatively:
+
+Hypothesis: just repeat this?
+(:: apply (:: then_cons f))
+
 Currying with zero arguments is the same, I believe.
 -/
 def curry : ℕ → Except Error Expr

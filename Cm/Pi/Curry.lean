@@ -5,21 +5,12 @@ import Cm.Pi.Util
 open Expr
 
 /-
-Curries a combinator expecting many arguments into a combinator
-expecting one argument and the rest of the arguments in a list.
+(:: (:: curry f) x) = (:: f x)
 
-The first argument must already be known.
-
-(:: apply (:: curry_rest (:: f x)))
-= (:: apply (:: f (:: x (:: (symbol "a") (:: (symbol "b") nil)))))
-
-This is essentially set_tail_args'.
+(:: (:: then_cons x) y) = (:: x y)
 -/
 def curry : Expr := then_cons
 
 /-
-Partially applying a function expecting two arguments.
-For example, partially applying the church numeral zero.
+See an example in Church.lean
 -/
-def example_curry : Except Error Expr :=
-  

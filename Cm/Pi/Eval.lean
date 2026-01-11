@@ -14,6 +14,9 @@ this can be inconvenient, so we may want a library method for that.
 THIS IS NEXT TODO.
 let a' := :: apply (:: a x)
 remove apply, and add back in apply where appropriate in the run method.
+
+NEXT TODO:
+- consider running step_apply as a last resort in run.
 -/
 
 /-
@@ -39,6 +42,9 @@ TODO: apply in π is probably too aggressive.
 
 TODO: confusing how const doesn't add an apply
 but others do.
+
+TODO: I like using our apply_now definition.
+We should ideally in the future remove apply calls in step_apply.
 -/
 
 def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
@@ -95,7 +101,7 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     pure <| :: x xs') <|> (do
     let x' ← run x with_logs
     pure <| :: x' xs)
-  | e => .error <| .no_rule e
+  | e => step_apply e <|> (.error <| .no_rule e)
 
 /-
 A basic test of the eval function:

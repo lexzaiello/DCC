@@ -53,7 +53,37 @@ curry = apply_partial?
 apply_partial only works for one argument, which is confusing.
 :: apply technically works for n-ary arguments.
 More like one single massive array argument.
+
+Note: x is parametric in full in apply_partial, meaning
+x itself could be derived partially, perhaps with both_partial.
+
+Example using apply_partial:
+
+(:: (:: apply_partial f) (:: (:: both_partial x) xs))
+  = (:: f (:: x xs))
+
+apply_partial probably won't let us easily pipeline the way we want,
+but we can pipeline the both right half.
 -/
+
+/-
+The same example as above, except my_x is partially applied
+-/
+def test_apply_partial' : Except Error Expr := do
+  let my_f := Expr.id
+  let my_x := symbol "x"
+
+  do_step run (:: apply (:: (:: apply (:: apply_partial my_f)) my_x))
+
+/-def test_apply_partial' : Except Error Expr := do
+  -- this will only work with an :: x xs argument
+  let my_f := π id id
+  let -/
+
+-- :: "f" "x"
+
+#eval test_apply_partial'
+
 --def curry : Expr :=
   
 

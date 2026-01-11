@@ -74,11 +74,7 @@ then applies.
 def mk_apply_now (f x : Expr) : Expr :=
   :: apply (:: (:: f nil) (:: (:: x nil) nil))
 
-def mk_apply_all (f x : Expr) : Expr :=
-  :: apply (:: f x)
-
 notation "f$" => mk_apply_now
-notation "f*" => mk_apply_all
 
 /-
 Singleton values: how necessary are they?
@@ -108,8 +104,8 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     Assume l is a single value here.
   -/
   | :: (both f g) l =>
-    let f' := f* f l
-    let g' := f* g l
+    let f' := f$ f l
+    let g' := f$ g l
     pure <| :: f' g'
   | e => .error <| .no_rule e
 

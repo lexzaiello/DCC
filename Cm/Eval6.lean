@@ -74,7 +74,16 @@ then applies.
 def mk_apply_now (f x : Expr) : Expr :=
   :: apply (:: (:: f nil) (:: (:: x nil) nil))
 
+def mk_apply_all (f x : Expr) : Expr :=
+  :: apply (:: f x)
+
 notation "f$" => mk_apply_now
+notation "f*" => mk_apply_all
+
+/-
+Singleton values: how necessary are they?
+Should π work on singletons or actual lists?
+-/
 
 def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   if with_logs then
@@ -98,9 +107,9 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   /-
     Assume l is a single value here.
   -/
-  | :: (both f g) (:: l nil) =>
-    let f' := f$ f l
-    let g' := f$ g l
+  | :: (both f g) l =>
+    let f' := f* f l
+    let g' := f* g l
     pure <| :: f' g'
   | e => .error <| .no_rule e
 
@@ -186,15 +195,37 @@ to ensure we got the right number of arguments,
 and inserting an apply.
 -/
 
+def apply_later : Expr :=
+  (:: const (:: apply nil))
+
+#eval do_step run (:: (both id id) (:: (symbol "a") nil))
+
+/-
+-> apply. Discards arguments.
+-/
+#eval do_step run (:: (both apply_later id) (:: (symbol "a") nil))
+
+def succ.select_nfx : Expr :=
+  (π id (π id (π id nil)))
+
 def succ.nfx : Expr :=
-  both (:: const (:: apply nil)) (π id (π id (π id nil)))
+  both apply_later (π id (π id (π id nil)))
 
 /-
 The entire succ also needs an apply,
 since f (n(f, x))
 -/
 def succ : Expr :=
-  both (:: const (:: apply nil)) (both zero succ.nfx)
+  both apply_later (both zero succ.nfx)
+
+/-
+:: apply
+  (:: (:: (symbol "zero") (:: (symbol "f") (:: (symbol "x") nil)))
+     (:: nil (:: apply (:: (:: id nil) (:: (:: nil nil) nil)))))
+
+≃ (n(f, x), (:: nil (:: apply (:: (:: id nil) (:: (:: nil nil) nil))))
+-/
+#eval try_step_n (run (with_logs := true)) 40 (:: succ.nfx (:: (symbol "zero") (:: (symbol "f") (:: (symbol "x") nil))))
 
 #eval try_step_n run 4 (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
 

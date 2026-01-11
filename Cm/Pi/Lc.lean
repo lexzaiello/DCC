@@ -150,5 +150,19 @@ def tre : Except Error Expr := do
 #eval test_hello_world
 #eval tre
 
+/-
+Church encoding of false. should get the second argument.
+
+tre a b = a
+tre = λ λ.1
+-/
+def flse : Except Error Expr := do
+  let lam_e := f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "other")
+  let cm_e ← Expr.of_lc lam_e
+  dbg_trace cm_e
+  do_step run cm_e
+
+#eval flse
+
 end positional
 

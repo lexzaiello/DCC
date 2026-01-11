@@ -20,6 +20,8 @@ inductive LcExpr (α : Type) where
   | lam : LcExpr α
     → LcExpr α
   | var : α → LcExpr α
+  | symbol : String -- our machine has these
+    → LcExpr α
 
 notation "λ!" => LcExpr.lam
 notation "f$" => LcExpr.app
@@ -76,6 +78,7 @@ free variables get the get_nth_pos of the context length - the depth
 We are using 0-indexed debruijn indices
 -/
 def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
+  | .symbol s => pure <| (:: const (symbol s))
   | .var n =>
     -- λ.0 has depth 1, so it is free
     -- its substitution should be the first thing in the context
@@ -104,6 +107,7 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
     abstract depth.succ body
 
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
+  | .symbol s => pure <| .symbol s
   | .app f x => do
     let f' ← Expr.of_lc f
     let x' ← Expr.of_lc x
@@ -121,37 +125,9 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
 
 end
 
+/-
+
+-/
+
 end positional
 
-namespace curried
-
-/-
-Translation of de bruijn lambda calc expressions to our expressions.
-
-We will use curried parameters for this version.
--/
-
-/-
-Converts the body of a lambda abstraction to an expression.
--/
-def abstract : LcExpr DebruijnIdx → Except Error Expr
-  | .var (n + 1) => do
-    sorry
-  | .app f x => do
-    sorry
-  | _ => sorry
-
-def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
-  -- an n-height variable corresponds roughly to a nested π expression
-  -- (:: referenced nil)
-  -- for example, .var 0 => π id
-  | .var v => pure <| .symbol (toString v)
-  | .app f x => do
-    let f' ← Expr.of_lc f
-    let x' ← Expr.of_lc x
-
-    sorry
-  | .lam body => do
-    sorry
-
-end curried

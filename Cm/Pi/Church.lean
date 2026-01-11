@@ -30,16 +30,6 @@ takes in n as the only positional argument,
 the accepts f, x as the next positional arguments
 -/
 
-def succ.f_beginning : Expr :=
-  quote (:: both (:: (:: const apply) (:: π (:: const id))))
-
-def succ.nfx : Expr :=
-  :: both (::
-    (quote apply)
-    (:: both (::
-      const -- this should quote the current f TODO: maybe another quoted both required here?
-      (quote id))))
-
 def succ : Expr :=
   -- we make a new "binder" by making a quoted π expression.
   -- NOT evaluating it.

@@ -152,13 +152,21 @@ Notes on this design:
 
 namespace church
 
+def singleton_later : Expr :=
+  both id (:: const (:: nil nil))
+
+def apply_later : Expr :=
+  (:: const (:: apply nil))
+
 /-
 zero f x = x
 (:: zero (:: (:: (symbol "f") nil) (:: (:: (symbol "x") nil) nil)))
 == (:: (symbol "x") nil)
 -/
 def zero : Expr :=
-  π (:: const (:: id nil)) (π id (:: const (:: nil nil)))
+  both apply_later <| π (:: const (:: (:: id nil) nil)) (π id nil)
+
+#eval do_step run (:: apply (:: (:: zero nil) (:: (symbol "f") (:: (symbol "x") nil))))
 
 /-
 succ n f x = f (n f x)
@@ -175,12 +183,6 @@ the expression, just pattern matching
 to ensure we got the right number of arguments,
 and inserting an apply.
 -/
-
-def apply_later : Expr :=
-  (:: const (:: apply nil))
-
-def singleton_later : Expr :=
-  both id (:: const (:: nil nil))
 
 /-
 -> apply. Discards arguments.
@@ -206,7 +208,7 @@ since f (n(f, x))
 def succ : Expr :=
   both apply_later (both zero succ.nfx)
 
-#eval do_step run (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+#eval do_step run (:: apply (:: (:: succ nil) (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil)))))
 
 end church
 

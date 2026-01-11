@@ -70,7 +70,17 @@ We are using 0-indexed debruijn indices
 -/
 def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
   | .var n =>
-    
+    -- λ.0 has depth 1, so it is free
+    -- its substitution should be the first thing in the context
+    if n < depth then
+      pure <| get_nth_pos n
+    else
+      -- future context. delete the binders so far
+      -- e.g., λ.1 is free if depth == 1, so substract one
+      -- TODO: something funky here probably
+      let n' := n - depth
+      pure <| quote (get_nth_pos n')
+  
 
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   

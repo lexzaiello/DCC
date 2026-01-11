@@ -17,6 +17,14 @@ Skips the tail element in a projection.
 -/
 def skip : Expr := quote nil
 
+/-
+Lazy cons.
+:: then_cons x = :: both (:: (:: const f) id)
+
+This will prepend the value to the next argument.
+-/
+def then_cons : Expr :=
+  :: both (:: (quote both) (:: both (:: const (quote id))))
 
 /-
 Flips the head and next of a :: x (:: y ys) list, giving

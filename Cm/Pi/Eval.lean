@@ -6,6 +6,9 @@ import Cm.Pi.Ast
 TODO:
 - removed singletons eval function argument. update examples
 - removed :: π (:: f nil), only function pattern matching now. update as well.
+
+- const will usually never apply the value it's being given.
+this can be inconvenient, so we may want a library method for that.
 -/
 
 /-

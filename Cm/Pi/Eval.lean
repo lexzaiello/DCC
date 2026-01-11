@@ -27,15 +27,15 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   match e with
   | :: .id x => pure x
   | :: (:: π (:: a nil)) (:: x nil) =>
-    pure <| :: (:: apply (:: (:: a nil) x)) nil
+    pure <| :: (:: apply (:: a x)) nil
   | :: (:: π (:: a b)) (:: x xs) => do
-    let a' := :: apply (:: (:: a nil) x)
-    let b' := :: apply (:: (:: b nil) xs)
+    let a' := :: apply (:: a x)
+    let b' := :: apply (:: b xs)
 
     pure <| :: a' b'
-  | :: (:: const (:: x nil)) _ => pure x
+  | :: (:: const x) _ => pure x
   | :: (:: both (:: f g)) l =>
-    pure <| :: (:: apply (:: (:: f nil) l)) (:: apply (:: (:: g nil) l))
+    pure <| :: (:: apply (:: f l)) (:: apply (:: g l))
   | e => .error <| .no_rule e
 
 def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
@@ -58,13 +58,13 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     NOTE: apply should always have the function as a singleton
     so as to be clear.
   -/
-  | :: apply (:: (:: f nil) x) => do
+  | :: apply (:: f x) => do
     let eval_arg_first : Except Error Expr := do
       let x' ← run x
-      pure <| :: apply (:: (:: f nil) x')
+      pure <| :: apply (:: f x')
     let eval_f_first : Except Error Expr := do
       let f' ← run f
-      pure <| :: apply (:: (:: f' nil) x)
+      pure <| :: apply (:: f' x)
     let step_whole : Except Error Expr := do
       step_apply (:: f x) with_logs
 
@@ -78,3 +78,17 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     let x' ← run x with_logs
     pure <| :: x' xs)
   | e => .error <| .no_rule e
+
+/-
+A basic test of the eval function:
+- projecting on a list
+-/
+
+def my_eval_test : Except Error Expr := do
+  let my_proj : Expr := :: π (:: id (:: π (:: id nil)))
+
+  let my_data : Expr := :: (symbol "a") (:: (symbol "b") nil)
+
+  do_step run (:: apply (:: my_proj my_data))
+
+#eval my_eval_test

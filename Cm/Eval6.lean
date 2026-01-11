@@ -282,6 +282,16 @@ def π.const_a_call (a : Expr) : Expr :=
 -/
 #eval do_step run (:: apply (:: (:: (π.const_a_call (symbol "a")) nil) (:: (symbol "arg") nil)))
 
+/-
+Really whack currying:
+pass a "selector" in as the first argument to inner π,
+which determines where the argument will be placed.
+
+inner selector arg
+outputs (selector arg)
+
+
+-/
 def to_curry (e : Expr) : Except Error Expr :=
   match e with
   -- expecting only one argument
@@ -296,6 +306,13 @@ def to_curry (e : Expr) : Except Error Expr :=
     let rst ← to_curry b
 
     /-
+      this is what we want to make: (:: apply (:: (:: rst nil) (:: arg nil)))
+      both apply_later (both (:: const (:: rst nil)) (π id nil))
+    -/
+
+    pure <| both apply_later (both (:: const (:: (:: rst nil) nil)) (π a nil))
+
+    /-
       const_a_call generates a const of the output of (a arg)
       we can insert an apply before as a const
 
@@ -306,14 +323,18 @@ def to_curry (e : Expr) : Except Error Expr :=
     -- we can extend our arguments by one
     -- this tape contains the a handled data
     -- and future actions
-    let extend_tape := both a (:: const (:: rst nil))
+    --let extend_tape := both a (:: const (:: rst nil))
 
     -- b, the next item, gets a "selector"
     -- where the first element is the a data,
     -- and the second element is rst
-    let select_later := π id (π id nil)
+    --let select_later := π id (π id nil)
 
-    pure <| π (both apply_later (both (:: const (:: select_later nil)) extend_tape)) nil
+    /-
+      Later, (a arg) is prepended to the user's argument.
+    -/
+
+    --pure <| π (both (:: const (:: select_later nil)) extend_tape) nil
   | e => .error <| .cant_curry e
 
 /-
@@ -321,7 +342,7 @@ This should take two arguments.
 -/
 #eval to_curry (π id (π id nil))
   >>= (fun c => do_step run (:: apply (:: (:: c nil) (:: (symbol "arg₁") nil))))
-  >>= (fun c => do_step run (:: apply (:: c (:: (symbol "arg₁") nil))))
+  >>= (fun c => do_step run (:: apply (:: (:: c nil) (:: (symbol "arg₂") nil))))
 
 #eval to_curry (π (:: const (:: (:: id nil) nil)) (π id nil))
 #eval to_curry (π (:: const (:: (:: id nil) nil)) (π id nil))

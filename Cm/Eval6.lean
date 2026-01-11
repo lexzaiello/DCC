@@ -88,7 +88,7 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   match e with
   | :: .id (:: x nil) => pure x
   | :: (π a nil) (:: x nil) =>
-    pure <| f$ a x
+    pure <| :: (f$ a x) nil
   | :: (π a b) (:: x xs) => do
     let a'  := f$ a x
 
@@ -201,8 +201,12 @@ def apply_later : Expr :=
 -/
 #eval do_step run (:: (both apply_later id) (:: (symbol "a") nil))
 
+#eval do_step run (:: (π id nil) (:: (symbol "a") nil))
+
 def succ.select_nfx : Expr :=
   (π id (π id (π id nil)))
+
+#eval do_step run (:: succ.select_nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 
 def succ.nfx : Expr :=
   both apply_later (π id (π id (π id nil)))

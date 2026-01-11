@@ -105,7 +105,19 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
 
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .app f x => do
-    let f' ← Expr.of
+    let f' ← Expr.of_lc f
+    let x' ← Expr.of_lc x
+
+    -- this is the root value, so we give it an empty context? TODO: not sure about this
+    -- TODO: major sus
+    pure <| :: apply (:: f' (:: x' nil))
+  | .lam body => do
+    abstract 0 body
+  | .var n =>
+    -- this is certainly free and a garbage value.
+    -- TODO: how to handle this? shouldn't show up.
+    -- throw an error?
+    pure <| quote (get_nth_pos n)
 
 end
 

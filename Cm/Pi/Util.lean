@@ -27,7 +27,7 @@ def skip : Expr := quote nil
 /-
 Lazy cons. This accepts exactly one value.
 
-:: then_cons x = :: both (:: (:: const f) id)
+:: then_cons x = :: both (:: (:: const x) id)
 
 This will prepend the value to the next argument.
 
@@ -37,8 +37,26 @@ to prepend.
 def then_cons : Expr :=
   .cons both (:: (quote both) (:: both (:: const (quote id))))
 
---def then_cons_n : ℕ → Expr
+/-
+Why can't we chain then_cons?
+What happens if we do?
 
+Then cons can be chained just fine.
+We just need to:
+- apply every then_cons with the data
+- apply the output of then_cons with preivous chain
+-/
+def example_cons_chain : Except Error Expr := do
+  let my_data := symbol "hi"
+  let my_l := :: (symbol "head") (:: (symbol "tail") nil)
+
+  do_step run (:: apply (:: then_cons my_data))
+    >>= (fun c => do_step run (:: apply (:: c my_l)))
+    >>= (fun c => do
+      let my_d ← do_step run (:: apply (:: then_cons (symbol "other data")))
+      do_step run (:: apply (:: my_d c)))
+
+#eval example_cons_chain
 
 def example_then_cons : Except Error Expr := do
   let my_data := symbol "hi"

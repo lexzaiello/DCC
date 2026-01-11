@@ -40,8 +40,6 @@ def succ.nfx : Expr :=
       const -- this should quote the current f TODO: maybe another quoted both required here?
       (quote id))))
 
-
-
 def succ : Expr :=
   -- we make a new "binder" by making a quoted π expression.
   -- NOT evaluating it.
@@ -100,59 +98,6 @@ def succ : Expr :=
 #eval do_step run (:: apply (:: (:: apply (:: succ (:: apply (:: succ zero)))) (:: id (symbol "x"))))
   >>= (fun c => do_step run (:: apply c))
   >>= (fun c => do_step run (:: apply c))
-#eval do_step run (:: apply (:: (:: apply (:: succ (symbol "n"))) (:: (symbol "f") (symbol "x"))))
-
-def example_zero_church : Except Error Expr :=
-  let my_fn := :: const (symbol "const")
-  let my_x  := :: const (symbol "intact")
-
-  do_step run (:: apply (:: zero (:: my_fn my_x)))
-
-def example_zero_church' : Except Error Expr :=
-  let my_fn := Expr.id
-  let my_x  := :: const (symbol "intact")
-
-  do_step run (:: apply (:: zero (:: my_fn my_x)))
-
-#eval example_zero_church'
-  >>= step_apply
-
-#eval example_zero_church
-  >>= step_apply
-
-def example_succ_church : Except Error Expr :=
-  let my_fn := Expr.id
-  let my_x := :: const (symbol "my_data")
-
-  do_step run (:: apply (:: succ (:: zero (:: my_fn my_x))))
-
-#eval example_succ_church
-
-/-
-Partially applying zero by only supplying one argument.
-:: then_cons x = :: both (:: (:: const f) id)
-
-(:: (:: then_cons f) x) = (:: f x)
-
-For currying, we want the opposite.
-We want append?
-
-We want something we can do to our function to make it curry.
-
-then_cons will cons the argument onto later arguments
-
-
-(:: (:: then_cons (:: (:: then_cons f) x)) y) =
-
--/
-/-def example_curry : Except Error Expr :=
-  let my_fn := Expr.id
-  let my_x  := (symbol "intact")
-
-  -- curry twice
-  -- so now we should be able to plug
-  -- stuff in
-  do_step run (:: apply (:: curry zero))
-    >>= (fun c => do_step run (:: apply ))
-
-#eval example_curry-/
+  >>= (fun c => do_step run (:: apply c))
+  >>= (fun c => do_step run (:: apply c))
+  >>= (fun c => do_step run (:: apply c))

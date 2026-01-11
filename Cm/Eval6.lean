@@ -197,7 +197,7 @@ def succ.select_nfx : Expr :=
 def succ.nfx : Expr :=
   both apply_later succ.select_nfx
 
-#eval do_step (run (with_logs := true)) (:: succ.nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+#eval do_step (run (with_logs := true)) (:: apply (:: (:: succ.nfx nil) (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil)))))
 
 /-
 The entire succ also needs an apply,

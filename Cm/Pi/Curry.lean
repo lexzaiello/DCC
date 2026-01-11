@@ -127,6 +127,14 @@ def test_append'' : Except Error Expr := do
 #eval test_append''
 
 /-
+:: (:: (:: (symbol "f") (symbol "a")) (symbol "b")) (symbol "c")
+
+And then for each layer, we smush them together somehow
+
+then_cons for each layer? and it outermost?
+-/
+
+/-
 Note: need apply at the very end.
 Another note: we may need to delay f evaluation somehow.
 

@@ -88,10 +88,10 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   match e with
   | :: .id x => pure x
   | :: (π a nil) (:: x nil) =>
-    pure <| :: (:: a x) nil
+    pure <| :: (:: apply (:: (:: a nil) x)) nil
   | :: (π a b) (:: x xs) => do
-    let a' := :: a x
-    let b' := :: b xs
+    let a' := :: apply (:: (:: a nil) x)
+    let b' := :: apply (:: (:: b nil) xs)
 
     pure <| :: a' b'
   | :: (:: const (:: x nil)) _ => pure x
@@ -100,7 +100,7 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     so no nil needs to be appended.
   -/
   | :: (both f g) l =>
-    pure <| :: (:: f l) (:: g l)
+    pure <| :: (:: apply (:: (:: f nil) l)) (:: apply (:: (:: g nil) l))
   | e => .error <| .no_rule e
 
 def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
@@ -111,43 +111,38 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     If this instruction can be done without nested applications, do it.
     Otherwise, handle the applications.
   -/
-  step_apply e with_logs
-    <|> (do
-    /-
-      Applications can happen at the top level,
-      or they can be deeply nested.
-      We will assume that applications have the
-      requisite arguments.
-    -/
-    match e with
-    /-
-      Apply calls accept a function and an arguments list.
-      NOTE: apply should always have the function as a singleton
-      so as to be clear.
-    -/
-    | :: apply (:: (:: f nil) (:: x nil)) => do
-      let eval_arg_first : Except Error Expr := do
-        let x' ← run x
-        pure <| :: apply (:: f (:: x' nil))
-      let eval_f_first : Except Error Expr := do
-        let f' ← run f
-        pure <| :: apply (:: f' (:: x nil))
-      let step_whole : Except Error Expr := do
-        run (:: f (:: x nil)) with_logs
+  /-
+    Applications can happen at the top level,
+    or they can be deeply nested.
+    We will assume that applications have the
+    requisite arguments.
+  -/
+  match e with
+  /-
+    Apply calls accept a function and an arguments list.
+    NOTE: apply should always have the function as a singleton
+    so as to be clear.
+  -/
+  | :: apply (:: (:: f nil) x) => do
+    let eval_arg_first : Except Error Expr := do
+      let x' ← run x
+      pure <| :: apply (:: (:: f nil) x')
+    let eval_f_first : Except Error Expr := do
+      let f' ← run f
+      pure <| :: apply (:: (:: f' nil) x)
+    let step_whole : Except Error Expr := do
+      step_apply (:: f x) with_logs
 
-      eval_arg_first <|> eval_f_first <|> step_whole
-    | :: a b => (do
-      let a' ← run a
-      let b' ← run b
-      pure <| :: a' b')
-      <|> (do
-      let a' ← run a
-      pure <| :: a' b)
-      <|> (do
-      let b' ← run b
-      pure <| :: a b')
-    | e => .error <| .no_rule e
-  )
+    eval_arg_first <|> eval_f_first <|> step_whole
+  | :: x xs => (do
+    let x' ← run x with_logs
+    let xs' ← run xs with_logs
+    pure <| :: x' xs') <|> (do
+    let xs' ← run xs with_logs
+    pure <| :: x xs') <|> (do
+    let x' ← run x with_logs
+    pure <| :: x' xs)
+  | e => .error <| .no_rule e
 
 /-
 Notes on this design:
@@ -197,7 +192,7 @@ def singleton_later : Expr :=
 def succ.select_nfx : Expr :=
   (π singleton_later (π id (π id nil)))
 
-#eval do_step (run (with_logs := true)) (:: succ.select_nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+#eval do_step (run (with_logs := true)) (:: apply (:: (:: succ.select_nfx nil) (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil)))))
 
 def succ.nfx : Expr :=
   both apply_later succ.select_nfx
@@ -213,15 +208,16 @@ def succ : Expr :=
 
 #eval do_step run (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 
-/-
-:: apply
-  (:: (:: (symbol "zero") (:: (symbol "f") (:: (symbol "x") nil)))
-     (:: nil (:: apply (:: (:: id nil) (:: (:: nil nil) nil)))))
-
-≃ (n(f, x), (:: nil (:: apply (:: (:: id nil) (:: (:: nil nil) nil))))
--/
-#eval try_step_n (run (with_logs := true)) 40 (:: succ.nfx (:: (symbol "zero") (:: (symbol "f") (:: (symbol "x") nil))))
-
-#eval try_step_n run 4 (:: zero (:: (symbol "f") (:: (symbol "x") nil)))
-
 end church
+
+namespace tests
+
+open church
+
+/-
+(succ zero) id x = x
+-/
+
+#eval do_step run (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+
+end tests

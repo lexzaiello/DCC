@@ -69,5 +69,8 @@ notation "::" => Expr.cons
 
 def Expr.as_list : Expr → Option (List Expr)
   | nil => pure []
-  | :: x xs => do pure <| .cons x (← xs.as_list)
+  | :: x xs => do pure <| .cons x (← (xs.as_list <|> (pure [xs])))
   | _ => .none
+
+def unwrap_with {α : Type} (e : Error) (o : Option α) : Except Error α :=
+  (o.map Except.ok).getD (.error e)

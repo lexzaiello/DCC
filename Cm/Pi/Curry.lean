@@ -16,43 +16,6 @@ def example_apply_now : Except Error Expr :=
 
 #eval example_apply_now
 
-/-
-We can chain then_cons, but the last thing we run then_cons with
-should be the function.
-
-So, currying with one argument should be
-let f' ← (:: apply (:: then_cons my_f))
-(:: apply (:: f' my_arg))
-
-Note:
-we can chain then_cons witth multiple data
-
-let c  := (:: apply (:: then_cons my_data))
-let l := (:: apply (:: c my_l))
-do_step run (:: apply (:: c l))
-
-So, the function is the outermost (:: apply (:: then_cons f))
-
-Then-cons left-associates.
-
-(:: f (:: a (:: b c))) = (:: apply (:: apply (:: then_cons f)) (:: apply (:: (:: apply (:: then_cons a)) (:: (:: apply (:: then_cons b) c)))))
-
-curry f = (:: both (:: const (:: apply (:: then_cons f)))
-
-We could make a "run_curry" method that does all the apps?
-
-Really, what I want is append.
-
-(:: apply (:: apply (:: then_append f)) b) = (:: b f)
-
-Doesn't seem particularly hard.
-
-This is not particularly helpful.
-HOWEVER, note that then_cons allows us to defer execution.
-
-
-Currying with zero arguments is the same, I believe.
--/
 --def curry : ℕ → Except Error Expr
 --  | .zero => 
 

@@ -55,6 +55,13 @@ def example_then_append : Except Error Expr := do
   do_step run (:: apply (:: then_append my_data))
     >>= (fun c => do_step run (:: apply (:: c my_other)))
 
+#eval example_then_append
+
+/-
+Note:
+we need to then_append in reverse consistently.
+Otherwise, we get a hanging :: at the end.
+-/
 def example_append_chain : Except Error Expr := do
   let my_data := symbol "hi"
   let my_other := (symbol "other")
@@ -65,7 +72,7 @@ def example_append_chain : Except Error Expr := do
       let my_d ← do_step run (:: apply (:: then_append (symbol "other data")))
       do_step run (:: apply (:: my_d c)))
 
-#eval example_then_append
+#eval example_append_chain
 
 /-
 Why can't we chain then_cons?
@@ -85,6 +92,17 @@ def example_cons_chain : Except Error Expr := do
     >>= (fun c => do
       let my_d ← do_step run (:: apply (:: then_cons (symbol "other data")))
       do_step run (:: apply (:: my_d c)))
+
+def cons_chain_is_reverse_append_chain : Except Error Bool := do
+  let a_l ← unwrap_with (.stuck nil) <| Expr.as_list (← example_cons_chain)
+  let b_l ← unwrap_with (.stuck nil) <| Expr.as_list (← example_append_chain)
+
+  dbg_trace a_l
+  dbg_trace b_l
+
+  pure (a_l == b_l.reverse)
+
+#eval cons_chain_is_reverse_append_chain
 
 #eval example_cons_chain
 #eval example_append_chain

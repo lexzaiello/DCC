@@ -40,6 +40,7 @@ def then_cons : Expr :=
 /-
 Lazy append. Lazy cons with the order reversed.
 
+
 (:: apply (:: apply (:: then_append f)) b) = (:: b f)
 -/
 def then_append : Expr :=

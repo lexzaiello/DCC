@@ -144,6 +144,12 @@ def apply_later : Expr :=
   (:: const (:: apply nil))
 
 /-
+Skips the tail element in a projection.
+-/
+def skip : Expr :=
+  (:: const (:: nil nil))
+
+/-
 Notes on this design:
 - we expect that all values with no arguments are singleton lists. e.g.,
 (symbol "hi") is incorrect. (:: (symbol "hi") nil) is correct.
@@ -283,62 +289,52 @@ def π.const_a_call (a : Expr) : Expr :=
 #eval do_step run (:: apply (:: (:: (π.const_a_call (symbol "a")) nil) (:: (symbol "arg") nil)))
 
 /-
-:: apply (:: (:: push_list nil) (:: l (:: arg nil)))
-= (:: arg l)
+Streaming appendable list.
+Contains the items in reverse order,
+and a pointer to the first element.
 
-This is essentially reversing the context.
+(:: data (:: instructions nil))
 -/
-def push_list : Expr :=
-  let arg := π (:: const (:: (:: id nil) nil)) (π id nil)
-
-  both arg (π id nil)
-
-#eval 
+def init_append_list : Expr :=
+  :: nil (:: nil nil)
 
 /-
-Really whack currying:
-pass a "selector" in as the first argument to inner π,
-which determines where the argument will be placed.
+:: apply (:: (:: push_append_list nil) (:: my_list (:: data nil)))
+this whole operation creates another list object
 
-inner selector arg
-outputs (selector arg)
+The new argument gets pushed on front,
+and a new instruction gets added for how to render the list
 -/
-def to_curry (e : Expr) : Except Error Expr := do
-  -- accepts all of the arguments as a parameter
-  -- and applies to the inner
-  let apply_all_lazy (for_e : Expr) : Expr :=
-    both (:: const (:: apply nil)) (both (:: const (:: (:: for_e nil) nil)) id)
+def push_append_list : Expr :=
+  let get_snd := π (:: const (:: id nil)) (π id (:: const (:: nil nil)))
+  let do_get_snd := get_snd
+    |> both apply_later
+  let data_arg := get_snd
 
-  match ← n_arguments_π e with
-  | .zero => pure <| :: const (:: e nil)
-  | n =>
-    -- to curry, make n list append helpers
-    -- apply_all_lazy has all of the args so far
-    -- so we can generate a π tree n arguments long,
-    -- then feed it in
-    let my_args := (List.replicate n Expr.id).foldr π .nil
+  -- the data and instructions components, respectively
+  let list_data := π (π id (:: const (:: nil nil))) (:: const (:: nil nil))
+  let list_instructions := π get_snd (:: const (:: nil nil))
 
-    -- each argument we add on we put next to the argument buffer
-    -- both (:: const (:: my_args nil)) id
-    -- assume we only had one argument,
-    -- this would produce: my_args arg
-    -- which would insert arg into my_args
-    -- if we had two args:
-    -- both (:: const (both (:: const (:: my_args nil)) id)
+  let data' := both data_arg list_data
+  let instructions' := both (:: const (:: get_snd nil)) list_instructions
 
-    -- we basically want every layer except the last
-    -- every call cons's something to the list
-    -- the issue is that we have to reverse it at the end
+  both data' instructions'
+
+#eval do_step run (:: apply (:: (:: push_append_list nil) (:: init_append_list (:: (symbol "hi") nil))))
+
 /-
-This should take two arguments.
--/
-#eval to_curry (π id (π id nil))
-  >>= (fun c => do_step run (:: apply (:: (:: c nil) (:: (symbol "arg₁") nil))))
-  >>= (fun c => do_step run (:: apply (:: (:: c nil) (:: (symbol "arg₂") nil))))
+curr only does one round of currying.
+(curr f)(x)
 
-#eval to_curry (π (:: const (:: (:: id nil) nil)) (π id nil))
-#eval to_curry (π (:: const (:: (:: id nil) nil)) (π id nil))
-  >>= (fun c => do_step run (:: apply (:: (:: c nil) (:: (symbol "arg₁") nil))))
-  -->>= (fun c' => do_step run (:: apply (:: (:: c' nil) (:: (symbol "arg₂") nil))))
+The next argument it expects is the remaining arguments.
+So, we are just cons'ing our immediate argument.
+-/
+
+/-def curr : Expr :=
+  let my_f := π id nil
+  let my_arg := π (:: const (:: (:: id nil) nil)) (π id nil)
+
+  -- const both is like currying?
+  both (:: const -/
 
 end curry

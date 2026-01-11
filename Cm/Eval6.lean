@@ -232,9 +232,8 @@ Looks perfect.
 #eval do_step run (:: apply (:: (:: succ nil) (:: zero (:: (symbol "f") (:: (symbol "x") nil)))))
 
 /-
-(succ zero) id x = x
+succ zero (const (const "f")) "x" => (const (symbol "f"))
 -/
-
-#eval do_step run (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
+#eval do_step run (:: apply (:: (:: succ nil) (:: zero (:: (:: const (:: (:: const (:: (symbol "f") nil)) nil)) (:: (symbol "x") nil)))))
 
 end tests

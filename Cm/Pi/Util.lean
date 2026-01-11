@@ -47,13 +47,26 @@ both (π (:: const id) (π const id))
 
 both xy_stuff (both (π id (π (:: const id))) id)
 
+probably need to insert an extra apply or something.
+(:: π (:: (:: const id) (:: π (:: const id)))) (:: x (:: y ys))
+= (:: id (:: (:: const y) (:: id ys)))
+
+(:: both (:: (quote both)
+  (:: π (:: (:: const id) (:: π (:: const id)))) (:: x (:: y ys))))
+
+we need to insert another apply at the beginning of this one.
+
 both 
 π x (π y ys)
 
 both (quote π) (
 -/
 def flip_head_next : Expr :=
-  (:: both (:: (:: π (:: (:: const id) (:: π (:: const id)))) (:: π (:: id (:: π (:: (:: const id) id))))))
+  let y_const := :: both (:: (:: const const) id)
+  let get_y := (:: π (:: (:: const apply) (:: π (:: y_const id))))
+  let get_xrst := (:: π (:: id (:: π (:: (:: const id) id))))
+
+  (:: both (:: get_y get_xrst))
 
 def example_flip_head_next : Except Error Expr := do
   let my_l := (:: (symbol "x") (:: (symbol "y") (symbol "ys")))

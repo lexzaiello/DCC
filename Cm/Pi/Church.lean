@@ -97,7 +97,7 @@ def succ : Expr :=
 -- :: (:: both (:: (:: const apply) (:: π (:: const id)))) (:: π (:: (:: const id) id))
 #eval do_step run (:: apply (:: succ (symbol "n")))
 #eval do_step run (:: apply (:: zero (:: id (symbol "x"))))
-#eval do_step run (:: apply (:: (:: apply (:: succ zero)) (:: id (symbol "x"))))
+#eval do_step run (:: apply (:: (:: apply (:: succ (:: apply (:: succ zero)))) (:: id (symbol "x"))))
   >>= (fun c => do_step run (:: apply c))
   >>= (fun c => do_step run (:: apply c))
 #eval do_step run (:: apply (:: (:: apply (:: succ (symbol "n"))) (:: (symbol "f") (symbol "x"))))

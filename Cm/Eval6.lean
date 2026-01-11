@@ -11,13 +11,9 @@ inductive Expr where
     → Expr
   | apply  : Expr
   | π      : Expr
-    → Expr
-    → Expr
   | id     : Expr
   | const  : Expr
   | both   : Expr
-    → Expr
-    → Expr
   | nil    : Expr
   | symbol : String
     → Expr
@@ -33,7 +29,7 @@ open Expr
 def Expr.fmt (e : Expr) : Format :=
   match e with
   | .apply => "apply"
-  | .π a b => .paren <| "π " ++ (.paren a.fmt) ++ .line ++ (.paren b.fmt)
+  | .π => "π"
   | .cons (.cons a b) (.cons c d) =>
     ":: " ++ (.group <| .nest 2 <| (.paren (Expr.cons a b).fmt) ++ Format.line ++ (.paren (Expr.cons c d).fmt))
   | .cons (.cons a b) xs =>
@@ -44,7 +40,7 @@ def Expr.fmt (e : Expr) : Format :=
     ":: " ++ (.group <| .nest 2 <| x.fmt ++ Format.line ++ xs.fmt)
   | id => "id"
   | .const => "const"
-  | .both f g => .paren ("both " ++ (.group <| .nest 2 <| (.paren f.fmt) ++ Format.line ++ (.paren g.fmt)))
+  | .both => "both"
   | .nil => "nil"
   | symbol s => .paren ("symbol " ++ ("\"" ++ s ++ "\""))
 
@@ -87,15 +83,15 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
 
   match e with
   | :: .id x => pure x
-  | :: (π a nil) (:: x nil) =>
+  | :: (:: π (:: a nil)) (:: x nil) =>
     pure <| :: (:: apply (:: (:: a nil) x)) nil
-  | :: (π a b) (:: x xs) => do
+  | :: (:: π (:: a b)) (:: x xs) => do
     let a' := :: apply (:: (:: a nil) x)
     let b' := :: apply (:: (:: b nil) xs)
 
     pure <| :: a' b'
   | :: (:: const (:: x nil)) _ => pure x
-  | :: (both f g) l =>
+  | :: (:: both (:: f g)) l =>
     pure <| :: (:: apply (:: (:: f nil) l)) (:: apply (:: (:: g nil) l))
   | e => .error <| .no_rule e
 
@@ -158,7 +154,7 @@ Notes on this design:
 namespace church
 
 def singleton_later : Expr :=
-  both id (:: const (:: nil nil))
+  :: both (:: id (:: const (:: nil nil)))
 
 /-
 zero f x = x
@@ -166,14 +162,14 @@ zero f x = x
 == (:: (symbol "x") nil)
 -/
 def zero : Expr :=
-  both apply_later <| π (:: const (:: (:: id nil) nil)) (π id nil)
+  :: both (:: apply_later <| (:: π (:: (:: const (:: (:: id nil) nil)) (:: π (:: id nil)))))
 
 /-
 zero, but it doesn't stop at the second argumnet.
 discards all after f.
 -/
 def succ.f_root : Expr :=
-  both apply_later <| π (:: const (:: (:: id nil) nil)) (π id (:: const (:: nil nil)))
+  :: both (:: apply_later <| (:: π (:: (:: const (:: (:: id nil) nil)) (:: π (:: id (:: const (:: nil nil)))))))
 
 #eval do_step run (:: apply (:: (:: zero nil) (:: (symbol "f") (:: (symbol "x") nil))))
 
@@ -196,17 +192,17 @@ and inserting an apply.
 /-
 -> apply. Discards arguments.
 -/
-#eval do_step run (:: (both apply_later id) (:: (symbol "a") nil))
+#eval do_step run (:: (:: both (:: apply_later id)) (:: (symbol "a") nil))
 
-#eval do_step run (:: (π id (π id nil)) (:: (symbol "a") (:: (symbol "b") nil)))
+#eval do_step run (:: (:: π (:: id (:: π (:: id nil)))) (:: (symbol "a") (:: (symbol "b") nil)))
 
 def succ.select_nfx : Expr :=
-  (π singleton_later (π id (π id nil)))
+  (:: π (:: singleton_later (:: π (:: id (:: π (:: id nil))))))
 
 #eval do_step (run (with_logs := true)) (:: apply (:: (:: succ.select_nfx nil) (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil)))))
 
 def succ.nfx : Expr :=
-  both apply_later succ.select_nfx
+  :: both (:: apply_later succ.select_nfx)
 
 #eval do_step (run (with_logs := true)) (:: apply (:: (:: succ.nfx nil) (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil)))))
 
@@ -215,7 +211,7 @@ The entire succ also needs an apply,
 since f (n(f, x))
 -/
 def succ : Expr :=
-  both apply_later (both succ.f_root succ.nfx)
+  :: both (:: apply_later (:: both (:: succ.f_root succ.nfx)))
 
 #eval do_step run (:: apply (:: (:: succ nil) (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil)))))
 
@@ -256,17 +252,17 @@ but one was unused. We treat this like the normal case.
 namespace curry
 
 def n_arguments_π : Expr → Except Error ℕ
-  | π _a nil => pure 1
+  | :: π (:: _a nil) => pure 1
   | const => pure 1
   | (:: const (:: _v nil)) => pure 1
   | .id => pure 1
-  | both f g => do
+  | :: both (:: f g) => do
     let n_f ← (n_arguments_π f)
     let n_g ← (n_arguments_π g)
     pure <| max n_f n_g
   | symbol _s
   | nil => pure 0
-  | π _a b => do pure <| 1 + (← n_arguments_π b)
+  | :: π (:: _a b) => do pure <| 1 + (← n_arguments_π b)
   | apply => .error <| .cant_curry apply
   | e => .error <| .cant_curry e
 
@@ -281,46 +277,12 @@ def n_arguments_π : Expr → Except Error ℕ
       const (:: a arg)
 -/
 def π.const_a_call (a : Expr) : Expr :=
-  both (:: const (:: const nil)) a
+  :: both (:: (:: const (:: const nil)) a)
 
 /-
 :: const (:: apply (:: (:: (symbol "a") nil) (:: (symbol "arg") nil)))
 -/
 #eval do_step run (:: apply (:: (:: (π.const_a_call (symbol "a")) nil) (:: (symbol "arg") nil)))
-
-/-
-Streaming appendable list.
-Contains the items in reverse order,
-and a pointer to the first element.
-
-(:: data (:: instructions nil))
--/
-def init_append_list : Expr :=
-  :: nil (:: nil nil)
-
-/-
-:: apply (:: (:: push_append_list nil) (:: my_list (:: data nil)))
-this whole operation creates another list object
-
-The new argument gets pushed on front,
-and a new instruction gets added for how to render the list
--/
-def push_append_list : Expr :=
-  let get_snd := π (:: const (:: id nil)) (π id (:: const (:: nil nil)))
-  let do_get_snd := get_snd
-    |> both apply_later
-  let data_arg := get_snd
-
-  -- the data and instructions components, respectively
-  let list_data := π (π id (:: const (:: nil nil))) (:: const (:: nil nil))
-  let list_instructions := π get_snd (:: const (:: nil nil))
-
-  let data' := both data_arg list_data
-  let instructions' := both (:: const (:: get_snd nil)) list_instructions
-
-  both data' instructions'
-
-#eval do_step run (:: apply (:: (:: push_append_list nil) (:: init_append_list (:: (symbol "hi") nil))))
 
 /-
 curr only does one round of currying.

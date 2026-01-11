@@ -82,10 +82,6 @@ def succ : Expr :=
   -- we're closer, but still missing a quoted apply after both
   let f_nfx_call := (:: both (:: f_beginning nfx))
 
-  -- to force evaluation
-  let prepend_apply := (:: both (:: (quote apply) both))
-  let wrap_both := (:: both (:: (quote apply) id))
-
   let data := .cons both (:: (quote both) f_nfx_call)
 
   -- wrap the whole thing inside an apply
@@ -100,6 +96,7 @@ def succ : Expr :=
 -- so this will create a new expression with f on the left
 -- :: (:: both (:: (:: const apply) (:: π (:: const id)))) (:: π (:: (:: const id) id))
 #eval do_step run (:: apply (:: succ (symbol "n")))
+#eval do_step run (:: apply (:: zero (:: id (symbol "x"))))
 #eval do_step run (:: apply (:: (:: apply (:: succ (symbol "n"))) (:: id (symbol "x"))))
 #eval do_step run (:: apply (:: (:: apply (:: succ (symbol "n"))) (:: (symbol "f") (symbol "x"))))
 

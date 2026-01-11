@@ -18,14 +18,67 @@ Utility functions for the list calculus.
 -/
 
 /-
+Flips the head and nexte of a :: x (:: y ys) list, giving
+:: y (:: x xs)
+
+(:: apply (:: flip_head_tail (::
+
+we can do this by inserting an ad-hoc
+quoted π expression in a both,
+and
+
+(π head tail)
+
+since we have the ys buffer room,
+and selecting x will incur no nil,
+
+(π id (π (:: const id) id)) - this will fetch x
+and place ys after it
+
+(π (:: const id) (π const id)) - this will fetch
+y via the π const, apply yx to it, giving just y,
+and the upper π will return y via id
+
+Giving:
+
+both (π (:: const id) (π const id)) (π id (π (:: const id) id))
+
+both (π (:: const id) (π const id))
+
+both xy_stuff (both (π id (π (:: const id))) id)
+
+both 
+π x (π y ys)
+
+both (quote π) (
+-/
+def flip_head_next : Expr :=
+  (:: both (:: (:: π (:: (:: const id) (:: π (:: const id)))) (:: π (:: id (:: π (:: (:: const id) id))))))
+
+
+
+/-
+Reverses the argument order of a combinator accepting 2 arguments.
+Point-free, as well. Specify only the combinator as an argument
+with no nil value.
+-/
+--def reverse : Expr := .cons both
+  /-
+    id corresponds to the function
+    we're reversing the order of
+    we do this by making a π
+    expression where
+    the first element is (quote both)
+    
+  π (-/
+
+/-
 Set tail args, but more point-free.
 Supply only the replacement value for the tail.
 -/
 def set_tail_args' : Expr :=
-  let insert_π := quote π
-
   .cons both (::
-    insert_π
+    (quote π)
     (:: both
       (:: (:: const id) (:: both (::
         (quote const)

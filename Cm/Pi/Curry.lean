@@ -14,7 +14,9 @@ The first argument must already be known.
 
 = (:: apply (:: f (:: x (:: (symbol "a") (:: (symbol "b") nil)))))
 
-This is essentially
+This is essentially set_tail_args'.
+
+
 -/
 def curry_rest : Expr :=
   /-

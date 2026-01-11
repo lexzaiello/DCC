@@ -140,6 +140,9 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     pure <| :: x' xs)
   | e => .error <| .no_rule e
 
+def apply_later : Expr :=
+  (:: const (:: apply nil))
+
 /-
 Notes on this design:
 - we expect that all values with no arguments are singleton lists. e.g.,
@@ -150,9 +153,6 @@ namespace church
 
 def singleton_later : Expr :=
   both id (:: const (:: nil nil))
-
-def apply_later : Expr :=
-  (:: const (:: apply nil))
 
 /-
 zero f x = x
@@ -313,12 +313,16 @@ def to_curry (e : Expr) : Except Error Expr :=
     -- and the second element is rst
     let select_later := π id (π id nil)
 
-    pure <| π (both (:: const (:: select_later nil)) extend_tape) nil
+    pure <| π (both apply_later (both (:: const (:: select_later nil)) extend_tape)) nil
   | e => .error <| .cant_curry e
 
 /-
 This should take two arguments.
 -/
+#eval to_curry (π id (π id nil))
+  >>= (fun c => do_step run (:: apply (:: (:: c nil) (:: (symbol "arg₁") nil))))
+  >>= (fun c => do_step run (:: apply (:: c (:: (symbol "arg₁") nil))))
+
 #eval to_curry (π (:: const (:: (:: id nil) nil)) (π id nil))
 #eval to_curry (π (:: const (:: (:: id nil) nil)) (π id nil))
   >>= (fun c => do_step run (:: apply (:: (:: c nil) (:: (symbol "arg₁") nil))))

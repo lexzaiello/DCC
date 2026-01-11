@@ -30,5 +30,7 @@ def curry_rest : Expr :=
     Our then_cons helper lets us give a value to prepend to a later list
 
     π then_cons then_cons
+
+    these will attempt to apply, which we don't want.
   -/
   let mk_my_map := 

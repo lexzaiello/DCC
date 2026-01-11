@@ -9,6 +9,11 @@ TODO:
 
 - const will usually never apply the value it's being given.
 this can be inconvenient, so we may want a library method for that.
+
+- may want to consider only bubbling down apply from within the exec method.
+THIS IS NEXT TODO.
+let a' := :: apply (:: a x)
+remove apply, and add back in apply where appropriate in the run method.
 -/
 
 /-

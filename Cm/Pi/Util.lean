@@ -39,11 +39,6 @@ def example_then_cons : Except Error Expr := do
 
 #eval example_then_cons
 
-def example_then_cons_shouldnt_apply : Except Error Expr := do
-  do_step run (:: apply (:: (:: π (:: then_cons then_cons)) (:: (symbol "a") (:: (symbol "b") nil))))
-
-#eval example_then_cons_shouldnt_apply
-
 /-
 Flips the head and next of a :: x (:: y ys) list, giving
 :: y (:: x xs)

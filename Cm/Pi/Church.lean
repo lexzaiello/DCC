@@ -29,6 +29,19 @@ succ n f x = f (n f x)
 takes in n as the only positional argument,
 the accepts f, x as the next positional arguments
 -/
+
+def succ.f_beginning : Expr :=
+  quote (:: both (:: (:: const apply) (:: π (:: const id))))
+
+def succ.nfx : Expr :=
+  :: both (::
+    (quote apply)
+    (:: both (::
+      const -- this should quote the current f TODO: maybe another quoted both required here?
+      (quote id))))
+
+
+
 def succ : Expr :=
   -- we make a new "binder" by making a quoted π expression.
   -- NOT evaluating it.
@@ -49,21 +62,31 @@ def succ : Expr :=
   -- this does not contain the very beginning apply just yet
   let f_beginning := quote (:: both (:: (:: const apply) (:: π (:: const id))))
 
+  -- assuming n is the only positional argument in scope, this is
+  -- is essentially just then_cons
   -- assuming n is the only positional argument in scope
   -- we are generating a "both" expression
   -- (:: (quote both) n
   -- this produces :: apply (:: n fx)
-  let nfx := :: both (::
+  -- gets passed n, then later appends
+  let nfx := (:: both (:: (:: const apply) (:: both (:: (:: const then_cons) id))))
+  /-let nfx := :: both (::
     (quote apply)
     (:: both (::
       const -- this should quote the current f TODO: maybe another quoted both required here?
-      (quote id))))
+      (quote id))))-/
 
   -- we are missing an apply.
-  .cons both (:: (:: const apply) (:: f_beginning nfx))
+  -- this apply is wrong.
+  -- at the very least, we are missing a both
+  .cons both (:: (quote both) (:: both (:: f_beginning nfx)))
 
 -- f = id
 -- x = (symbol "hi")
+-- so this will create a new expression with f on the left
+-- :: (:: both (:: (:: const apply) (:: π (:: const id)))) (:: π (:: (:: const id) id))
+#eval do_step run (:: apply (:: succ (symbol "n")))
+#eval do_step run (:: apply (:: (:: apply (:: succ (symbol "n"))) (:: (symbol "f") (symbol "x"))))
 #eval do_step run (:: apply (:: (:: apply (:: succ zero)) (:: id (symbol "hi"))))
 
 def example_zero_church : Except Error Expr :=

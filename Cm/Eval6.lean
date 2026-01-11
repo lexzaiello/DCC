@@ -122,8 +122,10 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     match e with
     /-
       Apply calls accept a function and an arguments list.
+      NOTE: apply should always have the function as a singleton
+      so as to be clear.
     -/
-    | :: apply (:: f (:: x nil)) => do
+    | :: apply (:: (:: f nil) (:: x nil)) => do
       let eval_arg_first : Except Error Expr := do
         let x' ← run x
         pure <| :: apply (:: f (:: x' nil))
@@ -182,6 +184,9 @@ and inserting an apply.
 def apply_later : Expr :=
   (:: const (:: apply nil))
 
+def singleton_later : Expr :=
+  both id (:: const (:: nil nil))
+
 /-
 -> apply. Discards arguments.
 -/
@@ -190,7 +195,7 @@ def apply_later : Expr :=
 #eval do_step run (:: (π id (π id nil)) (:: (symbol "a") (:: (symbol "b") nil)))
 
 def succ.select_nfx : Expr :=
-  (π id (π id (π id nil)))
+  (π singleton_later (π id (π id nil)))
 
 #eval do_step (run (with_logs := true)) (:: succ.select_nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 

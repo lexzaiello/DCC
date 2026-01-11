@@ -19,7 +19,7 @@ def example_apply_now : Except Error Expr :=
 /-
 A 1-argument function can be curried with id.
 A 2-argument function can be curried with
-(:: apply 
+(:: then_cons 
 -/
 --def curry : ℕ → Expr :=
 --  | .zero => 

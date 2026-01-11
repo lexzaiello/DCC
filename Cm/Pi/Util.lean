@@ -1,3 +1,4 @@
+import Mathlib.Data.Nat.Notation
 import Cm.Pi.Ast
 import Cm.Pi.Eval
 
@@ -35,6 +36,9 @@ to prepend.
 -/
 def then_cons : Expr :=
   .cons both (:: (quote both) (:: both (:: const (quote id))))
+
+--def then_cons_n : ℕ → Expr
+
 
 def example_then_cons : Except Error Expr := do
   let my_data := symbol "hi"

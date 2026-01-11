@@ -3,11 +3,15 @@ import Cm.Pi.Eval
 
 open Expr
 
+def quote (e : Expr) : Expr :=
+  (:: const (:: e nil))
+
+def apply_quoted : Expr := quote apply
+
 /-
 Skips the tail element in a projection.
 -/
-def skip : Expr :=
-  (:: const (:: nil nil))
+def skip : Expr := quote nil
 
 def singleton_later : Expr :=
   :: both (:: id (:: const (:: nil nil)))
@@ -15,6 +19,37 @@ def singleton_later : Expr :=
 /-
 Utility functions for the list calculus.
 -/
+
+/-
+Replaces the tail of a list with the specified value.
+
+(:: set_tail nil) (:: (:: a xs) (:: replace nil))
+= (:: replace (:: a xs))
+-/
+def set_tail_args : Expr :=
+  -- do this by generating a new π instruction
+  -- we fill in the tail of the π instruction
+  -- with the second argument
+  -- and set the head to correspond with "replace"
+
+  let insert_π := quote π
+
+  -- do this by making a π instruction
+  -- with id as the head (corresponds to "replace")
+  -- and the tail as (:: a xs)
+  -- assume here that (:: a xs) is in scope for "id"
+  let my_π := :: both (::
+    insert_π
+    (:: both
+      (:: (:: const (:: id nil)) id)))
+
+  let my_π_singleton := Expr.cons both
+    (.cons my_π (.cons const (.cons nil nil)))
+
+  -- this inserts the literal "apply" word
+  let my_apply := apply_quoted
+
+  .cons both (:: my_apply (:: π (:: my_π_singleton id)))
 
 /-
 Mutates the first element of the arguments, while leaving the rest in place.
@@ -36,7 +71,7 @@ def map_head_arg : Expr :=
     (.cons my_π (.cons const (.cons nil nil)))
 
   -- this inserts the literal "apply" word
-  let my_apply := (:: const (:: apply nil))
+  let my_apply := apply_quoted
 
   .cons both (:: my_apply (:: π (:: my_π_singleton id)))
 
@@ -90,7 +125,7 @@ def map_head: Expr :=
     (.cons my_π_f (.cons const (.cons nil nil)))
 
   -- this inserts the literal "apply" word
-  let my_apply := (:: const (:: apply nil))
+  let my_apply := apply_quoted
 
   .cons both (:: my_apply (:: π (:: my_π_singleton id)))
 

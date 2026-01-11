@@ -55,6 +55,16 @@ def example_then_append : Except Error Expr := do
   do_step run (:: apply (:: then_append my_data))
     >>= (fun c => do_step run (:: apply (:: c my_other)))
 
+def example_append_chain : Except Error Expr := do
+  let my_data := symbol "hi"
+  let my_other := (symbol "other")
+
+  do_step run (:: apply (:: then_append my_data))
+    >>= (fun c => do_step run (:: apply (:: c my_other)))
+    >>= (fun c => do
+      let my_d ← do_step run (:: apply (:: then_append (symbol "other data")))
+      do_step run (:: apply (:: my_d c)))
+
 #eval example_then_append
 
 /-
@@ -68,15 +78,16 @@ We just need to:
 -/
 def example_cons_chain : Except Error Expr := do
   let my_data := symbol "hi"
-  let my_l := :: (symbol "head") (:: (symbol "tail") nil)
+  let my_other := symbol "other"
 
   do_step run (:: apply (:: then_cons my_data))
-    >>= (fun c => do_step run (:: apply (:: c my_l)))
+    >>= (fun c => do_step run (:: apply (:: c my_other)))
     >>= (fun c => do
       let my_d ← do_step run (:: apply (:: then_cons (symbol "other data")))
       do_step run (:: apply (:: my_d c)))
 
 #eval example_cons_chain
+#eval example_append_chain
 
 def example_cons_now : Except Error Expr := do
   let my_data := symbol "hi"

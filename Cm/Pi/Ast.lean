@@ -66,3 +66,8 @@ instance Expr.instToString : ToString Expr where
   toString := toString ∘ Expr.fmt
 
 notation "::" => Expr.cons
+
+def Expr.as_list : Expr → Option (List Expr)
+  | nil => pure []
+  | :: x xs => do pure <| .cons x (← xs.as_list)
+  | _ => .none

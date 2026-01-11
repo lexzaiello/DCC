@@ -262,6 +262,19 @@ def map_head: Expr :=
 
   .cons both (:: my_apply (:: π (:: my_π_singleton id)))
 
+/-
+An example of using map_head that wraps the head
+of a list inside a singleton value.
+-/
+def map_head_example : Except Error Expr :=
+  do_step
+  (run (with_logs := true))
+  (:: apply
+    (:: (:: map_head nil)
+      (::
+        (:: const (:: (symbol "hi") nil))
+        (:: (:: (symbol "head") nil) nil))))
+
 #eval do_step
   (run (with_logs := true))
   (:: apply

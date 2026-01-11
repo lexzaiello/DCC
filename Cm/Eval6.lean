@@ -166,6 +166,13 @@ zero f x = x
 def zero : Expr :=
   both apply_later <| π (:: const (:: (:: id nil) nil)) (π id nil)
 
+/-
+zero, but it doesn't stop at the second argumnet.
+discards all after f.
+-/
+def succ.f_root : Expr :=
+  both apply_later <| π (:: const (:: (:: id nil) nil)) (π id (:: const (:: nil nil)))
+
 #eval do_step run (:: apply (:: (:: zero nil) (:: (symbol "f") (:: (symbol "x") nil))))
 
 /-
@@ -206,7 +213,7 @@ The entire succ also needs an apply,
 since f (n(f, x))
 -/
 def succ : Expr :=
-  both apply_later (both zero succ.nfx)
+  both apply_later (both succ.f_root succ.nfx)
 
 #eval do_step run (:: apply (:: (:: succ nil) (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil)))))
 

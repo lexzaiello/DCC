@@ -64,13 +64,11 @@ both (quote π) (
 def flip_head_next : Expr :=
   let y_const := :: both (:: (:: const const) id)
   let get_y := (:: π (:: (:: const apply) (:: π (:: y_const id))))
-  let get_xrst := (:: π (:: id (:: π (:: (:: const id) id))))
-
-  let get_xrst' := (:: π (:: id (:: both (::
+  let get_xrst := (:: π (:: id (:: both (::
     (quote apply)
     (:: π (:: (:: const id) id))))))
 
-  (:: both (:: get_y get_xrst'))
+  (:: both (:: get_y get_xrst))
 
 def example_flip_head_next : Except Error Expr := do
   let my_l := (:: (symbol "x") (:: (symbol "y") (symbol "ys")))

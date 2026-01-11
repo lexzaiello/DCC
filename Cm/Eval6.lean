@@ -90,21 +90,17 @@ def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   | :: (π a nil) (:: x nil) =>
     pure <| :: (:: a x) nil
   | :: (π a b) (:: x xs) => do
-    let a'  := :: a x
-
-    -- f$ will pass the entire xs in as
-    -- a single value, but apply will
-    -- give it back to us
-    -- in full list form.
+    let a' := :: a x
     let b' := :: b xs
 
     pure <| :: a' b'
   | :: (:: const (:: x nil)) _ => pure x
   /-
-    Assume l is a single value here.
+    We can assume (:: g l) will produce a valid list,
+    so no nil needs to be appended.
   -/
   | :: (both f g) l =>
-    pure <| :: (:: f l) (:: (:: g l) nil)
+    pure <| :: (:: f l) (:: g l)
   | e => .error <| .no_rule e
 
 def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
@@ -125,21 +121,15 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     -/
     match e with
     /-
-      Apply calls always accept a singleton function,
-      and a singleton value.
-      We evaluate f and x in case there is nestesd
-      application.
-
-      If there is a nested application,
-      it will be bubbled up to us for free.
+      Apply calls accept a function and an arguments list.
     -/
-    | :: apply (:: (:: f nil) (:: (:: x nil) nil)) => do
+    | :: apply (:: f (:: x nil)) => do
       let eval_arg_first : Except Error Expr := do
         let x' ← run x
-        pure <| :: apply (:: (:: f nil) (:: (:: x' nil) nil))
+        pure <| :: apply (:: f (:: x' nil))
       let eval_f_first : Except Error Expr := do
         let f' ← run f
-        pure <| :: apply (:: (:: f' nil) (:: (:: x nil) nil))
+        pure <| :: apply (:: f' (:: x nil))
       let step_whole : Except Error Expr := do
         run (:: f (:: x nil)) with_logs
 
@@ -192,8 +182,6 @@ and inserting an apply.
 def apply_later : Expr :=
   (:: const (:: apply nil))
 
-#eval do_step run (:: (both id id) (:: (symbol "a") nil))
-
 /-
 -> apply. Discards arguments.
 -/
@@ -207,7 +195,9 @@ def succ.select_nfx : Expr :=
 #eval do_step (run (with_logs := true)) (:: succ.select_nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 
 def succ.nfx : Expr :=
-  both apply_later (π id (π id (π id nil)))
+  both apply_later succ.select_nfx
+
+#eval do_step (run (with_logs := true)) (:: succ.nfx (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 
 /-
 The entire succ also needs an apply,
@@ -215,6 +205,8 @@ since f (n(f, x))
 -/
 def succ : Expr :=
   both apply_later (both zero succ.nfx)
+
+#eval do_step run (:: succ (:: (symbol "n") (:: (symbol "f") (:: (symbol "x") nil))))
 
 /-
 :: apply

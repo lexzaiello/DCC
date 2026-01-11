@@ -47,7 +47,7 @@ def apply_partial₂ : Expr :=
   let both_x := (quote both) -- dropped by f, left for x
   let both_y := (quote (quote both)) -- dropped by x, left for y
 
-  (:: both (:: (quote both) (:: both (:: app_at_end (:: both (:: (quote both) (:: both (:: f (:: both xy)))))))))
+  (:: both (:: both_x (:: both (:: both_y (:: both (:: app_at_end (:: both (:: both_x (:: both (:: both_y (:: both (:: f (:: both xy)))))))))))))
 
 def test_apply_partial : Except Error Expr := do
   let my_f := symbol "f"

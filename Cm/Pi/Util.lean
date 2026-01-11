@@ -55,7 +55,13 @@ both (quote π) (
 def flip_head_next : Expr :=
   (:: both (:: (:: π (:: (:: const id) (:: π (:: const id)))) (:: π (:: id (:: π (:: (:: const id) id))))))
 
+def example_flip_head_next : Except Error Expr := do
+  let my_l := (:: (symbol "x") (:: (symbol "y") (symbol "ys")))
+  let flip := (:: apply (:: flip_head_next my_l))
 
+  do_step run flip
+
+#eval example_flip_head_next
 
 /-
 Reverses the argument order of a combinator accepting 2 arguments.

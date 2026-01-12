@@ -125,15 +125,18 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
 
 end
 
+def mk_test (step_with : Expr → Except Error Expr) (lam_e : LcExpr DebruijnIdx) : Except Error Expr := do
+  let cm_e ← Expr.of_lc lam_e
+  do_step step_with cm_e
+
 /-
 (λ x.x) (symbol "Hello, world")
 -/
 
-def test_hello_world : Except Error Expr := do
-  let lam_e := f$ (λ! (.var 0)) (.symbol "Hello, world")
-  let cm_e ← Expr.of_lc lam_e
-  dbg_trace cm_e
-  do_step run cm_e
+def test_hello_world := (f$ (λ! (.var 0)) (.symbol "Hello, world"))
+  |> mk_test run
+
+#eval test_hello_world
 
 /-
 Church encoding of true. should get the first argument.

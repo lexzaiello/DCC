@@ -88,9 +88,22 @@ We can be lazy. Nested id is fine.
 We're not introducing any new nil values.
 -/
 
---#eval try_step_n run 2 (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") nil)))
---#eval try_step_n run 2 (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
---#eval try_step_n run 4 (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
+/-
+Assume we can fetch arguments in opposite order / appended order.
+-/
+def get_nth_pos (n : ℕ) : Expr :=
+  let rec mk_get_nth_pos (n : ℕ) : Expr :=
+    match n with
+    | .zero => :: π (:: (:: const nil) id)
+    | .succ n =>
+      -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
+      (List.replicate n (:: const nil)).foldl (fun acc e =>
+        :: π (:: acc e)) id
+
+  mk_get_nth_pos n
+
+#eval do_step run (:: apply (:: (get_nth_pos 0) (:: (:: (symbol "0th") (symbol "1th")) (symbol "2nd"))))
+#eval do_step run (:: apply (:: (get_nth_pos 2) (:: (:: (symbol "0th") (symbol "1th")) (symbol "2nd"))))
 --#eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 
 /-
@@ -149,26 +162,13 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     -- we should just be doing π id nil
     -- λ λ 1 => (:: const id)
     -- λ 0 => id
-    List.replicate depth const
-    |> (·.foldr (fun e acc => :: e acc) id)
+    :: both (:: (List.replicate (depth - 1) const
+    |> (·.foldr (fun e acc => :: e acc) const)) id)
   | .app f x =>
     let f' := abstract depth f
     let x' := abstract depth x
 
     (:: both (:: (quote apply) (:: both (:: (:: both (:: (quote apply) (:: both (:: (quote f') x')))) id))))
-  /-
-    Note on true bug:
-    - something strange happening with tre
-    - I'm guessing it's because we have a single .var 1 with no apps.
-    - we won't get our arguments in the reverse order like usual.
-    - hacky, but if we have a λ! (λ! .var 1) with no apps inside,
-    - we could make the inner .var into an id app.
-    - all of our other examples we have an app inside, or the item is .var 0
-    Yeah, maybe our jank hack will work.
-    - ctx order is kind of reversed
-    - but then handling an app inside a lambda kind of undos it
-    - probably shouldn't start depth off at 1 from lc
-  -/
   | .lam body => abstract depth.succ body
   -- symbol in body, so we should quote it
   | .symbol s => (symbol s)
@@ -182,6 +182,10 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
 def cons_ctx (with_val : Expr) : Expr → Expr
   | nil => with_val
   | l => :: with_val l
+
+def append_ctx (with_val : Expr) : Expr → Expr
+  | nil => with_val
+  | l => :: l with_val
 
 /-
 Things for tomorrow:
@@ -198,10 +202,7 @@ def Expr.of_lc_ctx : LcExpr DebruijnIdx → Except Error (Expr × TCtx)
       | nil => x'
       | ctx => (:: apply (:: x' ctx))
     let ⟨f', ctx_f⟩ ← Expr.of_lc_ctx f
-    let ctx' := (cons_ctx x_eval ctx_f)
-
-    dbg_trace s!"f': {f'} ctx': {ctx'}"
-    dbg_trace s!"{:: apply (:: f' ctx')}"
+    let ctx' := (append_ctx x_eval ctx_f)
 
     pure <| ⟨f', ctx'⟩
   | .symbol s => pure <| ⟨symbol s, nil⟩

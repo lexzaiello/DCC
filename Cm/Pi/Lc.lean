@@ -170,7 +170,7 @@ def flse_i_app := f$ (f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (λ!
 #eval flse_i_app
 
 def tre_i_app := f$ (f$ (f$ (λ! (λ! (.var 1))) (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "Hello, world")
-  |> mk_test run
+  |> mk_test (run (with_logs := true))
 
 #eval tre_i_app
 

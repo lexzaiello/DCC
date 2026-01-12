@@ -213,6 +213,11 @@ def mk_test (step_with : Expr → Except Error Expr) (lam_e : LcExpr DebruijnIdx
 def test_hello_world₀ := (f$ (λ! (.var 0)) (.symbol "Hello, world"))
   |> mk_test run
 
+def test_hello_world_nest := (f$ (f$ (f$ (λ! (λ! (λ! (.var 0)))) (.symbol "Hello, world")) (.symbol "a")) (.symbol "b"))
+  |> mk_test run
+
+#eval test_hello_world_nest
+
 def test_hello_world₁ := (f$ (f$ (f$ (λ! (λ! (λ! (f$ (.var 1) (.var 0))))) (.symbol "Hello, world")) (.symbol "hi")) (.symbol "a"))
   |> mk_test run
 

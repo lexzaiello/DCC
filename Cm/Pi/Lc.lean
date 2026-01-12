@@ -61,16 +61,41 @@ and strips the nil value
 
 Suspicion: const apply whatever should only happen at the very end
 recursively.
+
+We can just eval at the very end I guess.
+Or do a similar trick with nil.
+
+If inner is :: x nil, then
+we can do a π inside
+
+π id _
+
+I want to optimize this more.
+
+could do (:: const (:: both id (:: const nil)))
+
+(:: both (:: (:: const const) id))
+
+Perhaps opposite order.
+We're just continually popping off the stack.
+Shouldn't be too hard.
+
+Oh yo idea. :: then_cons
+
+Then we get something that we can lazilly put on our stack.
+
+We can be lazy. Nested id is fine.
+We're not introducing any new nil values.
 -/
 def get_nth_pos (n : ℕ) : Expr :=
   let rec mk_get_nth_pos (n : ℕ) : Expr :=
     match n with
-    | .zero => :: π (:: const (:: const nil))
+    | .zero => :: π (:: id (:: const nil))
     | .succ n =>
       -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
-      (:: π (:: const (mk_get_nth_pos n)))
+      (:: π (:: (:: const id) (mk_get_nth_pos n)))
 
-  apply_now <| mk_get_nth_pos n
+  mk_get_nth_pos n
 
 /-
 Prepends a value to the context
@@ -81,9 +106,9 @@ def steal_context (x' : Expr) : Expr → Expr
   | :: apply (:: f ctx) => :: apply (:: f (cons_ctx x' ctx))
   | e => :: apply (:: e (:: x' nil))
 
-#eval do_step run (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") nil)))
-#eval do_step run (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
-#eval do_step run (:: apply (:: (get_nth_pos 1) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
+#eval try_step_n run 2 (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") nil)))
+#eval try_step_n run 2 (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
+#eval try_step_n run 3 (:: apply (:: (get_nth_pos 1) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 #eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 
 /-
@@ -183,8 +208,9 @@ def tre_lc := (λ! (λ! (.var 1)))
 def tre := f$ (f$ tre_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
-#eval test_hello_world
+--#eval test_hello_world
 #eval tre
+--#eval Expr.of_lc tre_lc
 
 /-
 Church encoding of false. should get the second argument.
@@ -194,7 +220,7 @@ def flse_lc := (λ! (λ! (.var 0)))
 def flse := f$ (f$ flse_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
-#eval flse
+--#eval flse
 
 /-
 (flse "hello world" (λx.x)) ("hello world")
@@ -203,19 +229,19 @@ def flse := f$ (f$ flse_lc (.symbol "Hello, world")) (.symbol "other")
 def flse_i_app := f$ (f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
-#eval flse_i_app
+--#eval flse_i_app
 
 def tre_i_app := f$ (f$ (f$ (λ! (λ! (.var 1))) (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "Hello, world")
   |> mk_test run
 
-#eval tre_i_app
+--#eval tre_i_app
 
 def zero_lc := λ! (λ! (.var 0))
 
 def zero_hello_world_app := f$ (f$ zero_lc (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
-#eval zero_hello_world_app
+--#eval zero_hello_world_app
 
 -- succ n f x = f (n f x)
 -- f is bound to the second lambda
@@ -227,12 +253,12 @@ def succ_nfx_lc := λ! (λ! (λ! (f$ (f$ (.var 2) (.var 1)) (.var 0))))
 def one_hello_world_app := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
-#eval one_hello_world_app
+--#eval one_hello_world_app
 
 def two_hello_world_app := f$ (f$ (f$ succ_lc (f$ succ_lc zero_lc)) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
-#eval two_hello_world_app
+--#eval two_hello_world_app
 
 def three_hello_world_lc := f$ (f$ (f$ succ_lc (f$ succ_lc (f$ succ_lc zero_lc))) (λ! (.var 0))) (.symbol "Hello, world")
 
@@ -240,7 +266,7 @@ def test_three_hello_world : Except Error Expr := do
   let cm_e ← Expr.of_lc three_hello_world_lc
   try_step_n run 3 cm_e
 
-#eval test_three_hello_world
+--#eval test_three_hello_world
 
 def five_hello_world_lc := f$ (f$ (f$ succ_lc (f$ succ_lc (f$ succ_lc (f$ succ_lc (f$ succ_lc zero_lc))))) (λ! (.var 0))) (.symbol "Hello, world")
 
@@ -248,7 +274,7 @@ def test_five_hello_world : Except Error Expr := do
   let cm_e ← Expr.of_lc five_hello_world_lc
   try_step_n run 3 cm_e
 
-#eval test_five_hello_world
+--#eval test_five_hello_world
 
 def mk_test_hello_world_n (n max_steps : ℕ) : Except Error Expr := do
   let succ_e := List.replicate n succ_lc
@@ -259,14 +285,14 @@ def mk_test_hello_world_n (n max_steps : ℕ) : Except Error Expr := do
   let cc ← Expr.of_lc hello_e
   try_step_n run max_steps cc
 
-#eval mk_test_hello_world_n 80 3
+--#eval mk_test_hello_world_n 80 3
 
-#eval test_three_hello_world
+--#eval test_three_hello_world
 
 def three_hello_world_app := f$ (f$ (f$ succ_lc (f$ succ_lc (f$ succ_lc zero_lc))) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
-#eval three_hello_world_app
+--#eval three_hello_world_app
 
 /-
 Y = λ f (λ x.f(x x))(λ x. f(x x))
@@ -279,16 +305,25 @@ def y_comb_lc : LcExpr DebruijnIdx :=
 
 /-
 iszero = λn.n(λx.flse)tre
+iszero (succ(zero)) = (succ(zero)) (λx.flse) tre
 iszero zero = zero _ tre = tre
 iszero = λ! (f$ (f$ (.var 0) (λ! flse)) tre)
 -/
 def is_zero_lc : LcExpr DebruijnIdx :=
   λ! (f$ (f$ (.var 0) (λ! flse_lc)) tre_lc)
 
+/-
+If the output is true, then we should be able to plug in
+"a" and "b" and get out "a"
+-/
 def test_is_zero (max_steps : ℕ := 20) : Except Error Expr := do
-  let is_zero_app_zero := (f$ is_zero_lc zero_lc)
-  let cc ← Expr.of_lc is_zero_app_zero
+  let tre_test := (f$ (f$ tre_lc (.symbol "a")) (.symbol "b"))
+  let test := (f$ (f$ zero_lc (.symbol "a")) (.symbol "true"))
+  --let is_zero_app_zero := (f$ (f$ (f$ (f$ zero_lc (.symbol "a")) tre_lc) (.symbol "a")) (.symbol "b"))
+  let cc ← Expr.of_lc tre_test
   try_step_n run max_steps cc
+
+--#eval test_is_zero
 
 end positional
 

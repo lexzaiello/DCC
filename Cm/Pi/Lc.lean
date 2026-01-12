@@ -244,9 +244,20 @@ def five_hello_world_lc := f$ (f$ (f$ succ_lc (f$ succ_lc (f$ succ_lc (f$ succ_l
 
 def test_five_hello_world : Except Error Expr := do
   let cm_e ← Expr.of_lc five_hello_world_lc
-  try_step_n (run (with_logs := true)) 3 cm_e
+  try_step_n run 3 cm_e
 
 #eval test_five_hello_world
+
+def mk_test_hello_world_n (n max_steps : ℕ) : Except Error Expr := do
+  let succ_e := List.replicate n succ_lc
+    |> List.foldr (fun succ_e acc => (f$ succ_e acc)) zero_lc
+
+  let hello_e := (f$ (f$ succ_e (λ! (.var 0))) (.symbol "Hello, world"))
+
+  let cc ← Expr.of_lc hello_e
+  try_step_n run max_steps cc
+
+#eval mk_test_hello_world_n 80 3
 
 #eval test_three_hello_world
 

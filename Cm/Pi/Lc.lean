@@ -266,5 +266,10 @@ def three_hello_world_app := f$ (f$ (f$ succ_lc (f$ succ_lc (f$ succ_lc zero_lc)
 
 #eval three_hello_world_app
 
+/-
+Y = λ f (λ x.f(x x))(λ x. f(x x))
+-/
+--def y_comb_lc := λ! (λ! 
+
 end positional
 

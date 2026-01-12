@@ -147,6 +147,7 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     | :: apply s =>
       (:: both (:: (quote f') x'))
     | _ =>
+      -- this seems dubious.
       (:: both (:: (quote apply) (:: both (:: (quote f') x'))))
 
     /-match f', contains_free depth f with
@@ -190,10 +191,10 @@ def mk_test (step_with : Expr → Except Error Expr) (lam_e : LcExpr DebruijnIdx
 (λ x.x) (symbol "Hello, world")
 -/
 
-def test_hello_world := (f$ (λ! (f$ (λ! (f$ (λ! (.var 0)) (.var 0))) (.var 0))) (.symbol "Hello, world"))
-  |> mk_test run
+/-def test_hello_world := (f$ (λ! (f$ (λ! (f$ (λ! (.var 0)) (.var 0))) (.var 0))) (.symbol "Hello, world"))
+  |> mk_test run-/
 
-#eval test_hello_world
+--#eval test_hello_world
 
 /-
 Church encoding of true. should get the first argument.
@@ -207,7 +208,7 @@ def tre := f$ (f$ tre_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
 --#eval test_hello_world
---#eval tre
+#eval tre
 --#eval Expr.of_lc tre_lc
 
 /-
@@ -218,7 +219,7 @@ def flse_lc := (λ! (λ! (.var 0)))
 def flse := f$ (f$ flse_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
---#eval flse
+#eval flse
 
 /-
 (flse "hello world" (λx.x)) ("hello world")
@@ -255,9 +256,7 @@ def succ_nfx_lc := λ! (λ! (λ! (f$ (f$ (.var 2) (.var 1)) (.var 0))))
 def one_hello_world_app := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
-#eval one_hello_world_app
-  >>= do_step run
-  >>= do_step run
+--#eval one_hello_world_app
 
 def two_hello_world_app := f$ (f$ (f$ succ_lc (f$ succ_lc zero_lc)) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run

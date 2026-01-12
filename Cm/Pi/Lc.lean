@@ -226,10 +226,10 @@ def flse := f$ (f$ flse_lc (.symbol "Hello, world")) (.symbol "other")
 (flse "hello world" (λx.x)) ("hello world")
 -/
 
-def flse_i_app := f$ (f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (λ! (.var 0))) (.symbol "Hello, world")
+def flse_i_app := f$ (f$ (f$ (λ! (λ! (.var 0))) (.symbol "bruh")) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
---#eval flse_i_app
+#eval flse_i_app
 
 def tre_i_app := f$ (f$ (f$ (λ! (λ! (.var 1))) (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "Hello, world")
   |> mk_test run

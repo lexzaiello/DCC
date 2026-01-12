@@ -232,5 +232,10 @@ def two_hello_world_app := f$ (f$ (f$ succ_lc (f$ succ_lc zero_lc)) (λ! (.var 0
 
 #eval two_hello_world_app
 
+def three_hello_world_app := f$ (f$ (f$ succ_lc (f$ succ_lc (f$ succ_lc zero_lc))) (λ! (.var 0))) (.symbol "Hello, world")
+  |> mk_test run
+
+#eval three_hello_world_app
+
 end positional
 

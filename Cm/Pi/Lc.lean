@@ -153,33 +153,26 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     -- we should just be doing π id nil
     -- λ λ 1 => (:: const id)
     -- λ 0 => id
-    List.replicate (depth - 1) const
+    List.replicate depth const
     |> (·.foldr (fun e acc => :: e acc) id)
   | .app f x =>
-    /-
-      x is 
-    -/
     let f' := abstract depth f
     let x' := abstract depth x
 
-    dbg_trace f'
-    dbg_trace x'
-
-    -- both f' and x' may depend on the context
-    --(:: both (:: f' x'))
-    -- we should be making two apps.
-    -- one for x', one for the old context.
     (:: both (:: (quote apply) (:: both (:: (:: both (:: (quote apply) (:: both (:: (quote f') x')))) id))))
-    --(:: both (:: (quote apply) (:: both (:: (quote f') x'))))
-    --(:: both (:: (quote apply) (:: both (:: f' x'))))
-
-    /-match f', contains_free depth f with
-    | f', true =>
-      :: apply (:: f' nil)
-    | :: apply (:: f ctx), false =>
-      :: apply (:: f (:: x' ctx))
-    | f, false =>
-      :: apply (:: f (:: x' nil))-/
+  /-
+    Note on true bug:
+    - something strange happening with tre
+    - I'm guessing it's because we have a single .var 1 with no apps.
+    - we won't get our arguments in the reverse order like usual.
+    - hacky, but if we have a λ! (λ! .var 1) with no apps inside,
+    - we could make the inner .var into an id app.
+    - all of our other examples we have an app inside, or the item is .var 0
+    Yeah, maybe our jank hack will work.
+    - ctx order is kind of reversed
+    - but then handling an app inside a lambda kind of undos it
+    - probably shouldn't start depth off at 1 from lc
+  -/
   | .lam body => abstract depth.succ body
   -- symbol in body, so we should quote it
   | .symbol s => (symbol s)
@@ -190,7 +183,7 @@ def cons_ctx (with_val : Expr) : Expr → Expr
 
 def Expr.of_lc_ctx (ctx : Expr) : LcExpr DebruijnIdx → Except Error Expr
   | .var _n => .error .var_in_output
-  | .lam b => pure <| (abstract 1 b)
+  | .lam b => pure <| (abstract 0 b)
   | .app f x => do
     let x' ← Expr.of_lc_ctx ctx x
     let ctx' := (cons_ctx x' ctx)
@@ -217,23 +210,23 @@ def test_hello_world₀ := (f$ (λ! (.var 0)) (.symbol "Hello, world"))
 def test_hello_world_nest := (f$ (f$ (f$ (λ! (λ! (λ! (.var 0)))) (.symbol "Hello, world")) (.symbol "a")) (.symbol "b"))
   |> mk_test run
 
-#eval test_hello_world_nest
+#eval test_hello_world_nest >>= (pure <| · == (symbol "b"))
 
 def test_hello_world₁ := (f$ (f$ (f$ (λ! (λ! (λ! (f$ (.var 1) (.var 0))))) (.symbol "Hello, world")) (.symbol "hi")) (.symbol "a"))
   |> mk_test run
 
-#eval test_hello_world₁
-#eval test_hello_world₀
+#eval test_hello_world₁ >>= (pure <| · == :: apply (:: (symbol "hi") (symbol "a")))
+#eval test_hello_world₀ >>= (pure <| · == (symbol "Hello, world"))
 
 def test_hello_world_id := (f$ (f$ (f$ (λ! (λ! (λ! (f$ (.var 1) (.var 0))))) (.symbol "Hello, world")) (λ! (.var 0))) (.symbol "a"))
   |> mk_test run
 
-#eval test_hello_world_id
+#eval test_hello_world_id >>= (pure <| · == (symbol "a"))
 
 def test_hello_world := (f$ (λ! (f$ (λ! (f$ (λ! (.var 0)) (.var 0))) (.var 0))) (.symbol "Hello, world"))
   |> mk_test run
 
-#eval test_hello_world
+#eval test_hello_world >>= (pure <| ·== (symbol "Hello, world"))
 
 /-
 Church encoding of true. should get the first argument.
@@ -247,7 +240,7 @@ def tre := f$ (f$ tre_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
 --#eval test_hello_world
-#eval tre
+#eval tre >>= (pure <| · == (symbol "other"))
 --#eval Expr.of_lc tre_lc
 
 /-
@@ -258,7 +251,7 @@ def flse_lc := (λ! (λ! (.var 0)))
 def flse := f$ (f$ flse_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
-#eval flse
+#eval flse >>= (pure <| · == (symbol "other"))
 
 /-
 (flse "hello world" (λx.x)) ("hello world")

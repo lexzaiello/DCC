@@ -135,6 +135,7 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     -- we should just be doing π id nil
     -- λ λ 1 => (:: const id)
     -- λ 0 => id
+    dbg_trace s!"depth: {depth} n: {n}"
     get_nth_pos (n + 1)
     --:: both (:: (List.replicate (depth - 1) const
     --|> (·.foldr (fun e acc => :: e acc) const)) id)
@@ -177,7 +178,7 @@ def Expr.of_lc_ctx : LcExpr DebruijnIdx → Except Error (Expr × TCtx)
       | ctx => (:: apply (:: x' ctx))
     let ⟨f', ctx_f⟩ ← Expr.of_lc_ctx f
     let ctx' := (append_ctx x_eval ctx_f)
-    --dbg_trace s!"{ctx'}"
+    dbg_trace s!"{ctx'}"
 
     pure <| ⟨f', ctx'⟩
   | .symbol s => pure <| ⟨symbol s, nil⟩
@@ -201,10 +202,15 @@ def mk_test (step_with : Expr → Except Error Expr) (lam_e : LcExpr DebruijnIdx
 def test_hello_world₀ := (f$ (λ! (.var 0)) (.symbol "Hello, world"))
   |> mk_test run
 
-#eval test_hello_world₀
+#eval test_hello_world₀ >>= (pure <| · == (:: nil (symbol "Hello, world")))
 
 def test_hello_world_nest := (f$ (f$ (f$ (λ! (λ! (λ! (.var 0)))) (.symbol "Hello, world")) (.symbol "a")) (.symbol "b"))
   |> mk_test run
+
+def test_hello_world_nest_up := (f$ (f$ (f$ (λ! (λ! (λ! (.var 1)))) (.symbol "Hello, world")) (.symbol "a")) (.symbol "b"))
+  |> mk_test run
+
+#eval test_hello_world_nest_up
 
 #eval test_hello_world_nest
 #eval test_hello_world_nest >>= (pure <| · == (:: nil (symbol "b")))

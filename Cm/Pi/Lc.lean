@@ -97,6 +97,20 @@ bound variables just use get_nth_pos. we should have an entry in our context.
 free variables get the get_nth_pos of the context length - the depth
 
 We are using 0-indexed debruijn indices
+
+Issue is the free variables, and also substitution.
+When we substitute in, we should probably increment all the free variables.
+
+If bound, do not change.
+If free, increment by one every time substituted into a lambda.
+
+Apply now logic is very suspicious.
+Should only now_apply when lambda application invoked.
+
+Apply should be happening inside abstract, not in get thingy.
+
+Question one:
+- what happens if we remove the apply_now_pointfree?
 -/
 
 def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
@@ -207,10 +221,17 @@ def zero_hello_world_app := f$ (f$ zero_lc (λ! (.var 0))) (.symbol "Hello, worl
 -- n is bound to the top lambda
 def succ_lc := λ! (λ! (λ! (f$ (.var 1) (f$ (f$ (.var 2) (.var 1)) (.var 0)))))
 
+def succ_nfx_lc := λ! (λ! (λ! (f$ (f$ (.var 2) (.var 1)) (.var 0))))
+
 def one_hello_world_app_lc := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symbol "Hello, world")
 
 def one_hello_world_app := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
+
+def one_hello_world_app' := (f$ (f$ succ_lc zero_lc) (λ! (.var 0)))
+  |> mk_test run
+
+#eval one_hello_world_app'
 
 #eval one_hello_world_app_lc
 #eval one_hello_world_app

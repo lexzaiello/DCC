@@ -58,6 +58,9 @@ def apply_now_pointfree : Expr :=
 /-
 Fetches the nth value in the context / positional arguments,
 and strips the nil value
+
+Suspicion: const apply whatever should only happen at the very end
+recursively.
 -/
 def get_nth_pos (n : ℕ) : Expr :=
   let rec mk_get_nth_pos (n : ℕ) : Expr :=
@@ -119,14 +122,14 @@ free variables increment?
 /-
 Run this with depth := 0
 -/
-def incr_bound (depth : ℕ) : LcExpr DebruijnIdx → LcExpr DebruijnIdx
+def incr_free (depth : ℕ) : LcExpr DebruijnIdx → LcExpr DebruijnIdx
   | .var n =>
     if n > depth then
       .var n.succ
     else
       .var n
-  | .lam b => .lam <| incr_bound depth.succ b
-  | .app f x => .app (incr_bound depth f) (incr_bound depth x)
+  | .lam b => .lam <| incr_free depth.succ b
+  | .app f x => .app (incr_free depth f) (incr_free depth x)
   | .symbol s => .symbol s
 
 def contains_free (depth : ℕ) : LcExpr DebruijnIdx → Bool
@@ -175,11 +178,11 @@ def contains_free (depth : ℕ) : LcExpr DebruijnIdx → Bool
       :: apply (:: f (:: x' nil))
   | .lam body => abstract depth.succ body-/
 
-mutual
-
 def is_lam {α : Type} : LcExpr α → Bool
   | .lam _ => true
   | _ => false
+
+mutual
 
 /-
 ONLY for λ bodies. arg is the λ body

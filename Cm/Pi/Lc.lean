@@ -118,12 +118,6 @@ def is_lam {α : Type} : LcExpr α → Bool
 
 mutual
 
-def decrement_vars : LcExpr DebruijnIdx → LcExpr DebruijnIdx
-  | .var n => .var (n - 1)
-  | .lam e => .lam (decrement_vars e)
-  | .app f x => .app (decrement_vars f) (decrement_vars x)
-  | .symbol s => .symbol s
-
 /-
 ONLY for λ bodies. arg is the λ body
 Pretty sure we just need to fix incrementing bound variables
@@ -181,6 +175,10 @@ def cons_ctx (with_val : Expr) : Expr → Expr
   | nil => with_val
   | l => :: with_val l
 
+/-
+Do something similar in root instead of applying the context.
+This is mega dumb.
+-/
 def Expr.of_lc_ctx (ctx : Expr) : LcExpr DebruijnIdx → Except Error Expr
   | .var _n => .error .var_in_output
   | .lam b => pure <| (abstract 0 b)
@@ -238,6 +236,8 @@ tre = λ λ.1
 def tre_lc := (λ! (λ! (.var 1)))
 def tre := f$ (f$ tre_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
+
+#eval tre
 
 --#eval test_hello_world
 #eval tre >>= (pure <| · == (symbol "other"))

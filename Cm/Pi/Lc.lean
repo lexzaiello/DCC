@@ -158,7 +158,7 @@ def cons_ctx (with_val : Expr) : Expr → Expr
   | l => :: with_val l
 
 def append_ctx (with_val : Expr) : Expr → Expr
-  | nil => with_val
+  | nil => :: nil with_val
   | l => :: l with_val
 
 /-

@@ -144,11 +144,9 @@ Church encoding of true. should get the first argument.
 tre a b = a
 tre = λ λ.1
 -/
-def tre : Except Error Expr := do
-  let lam_e := f$ (f$ (λ! (λ! (.var 1))) (.symbol "Hello, world")) (.symbol "other")
-  let cm_e ← Expr.of_lc lam_e
-  dbg_trace cm_e
-  do_step run cm_e
+
+def tre := f$ (f$ (λ! (λ! (.var 1))) (.symbol "Hello, world")) (.symbol "other")
+  |> mk_test run
 
 #eval test_hello_world
 #eval tre
@@ -156,11 +154,9 @@ def tre : Except Error Expr := do
 /-
 Church encoding of false. should get the second argument.
 -/
-def flse : Except Error Expr := do
-  let lam_e := f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "other")
-  let cm_e ← Expr.of_lc lam_e
-  dbg_trace cm_e
-  do_step run cm_e
+
+def flse := f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "other")
+  |> mk_test run
 
 #eval flse
 

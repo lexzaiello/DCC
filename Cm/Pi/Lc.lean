@@ -179,7 +179,8 @@ tre a b = a
 tre = λ λ.1
 -/
 
-def tre := f$ (f$ (λ! (λ! (.var 1))) (.symbol "Hello, world")) (.symbol "other")
+def tre_lc := (λ! (λ! (.var 1)))
+def tre := f$ (f$ tre_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
 #eval test_hello_world
@@ -189,7 +190,8 @@ def tre := f$ (f$ (λ! (λ! (.var 1))) (.symbol "Hello, world")) (.symbol "other
 Church encoding of false. should get the second argument.
 -/
 
-def flse := f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "other")
+def flse_lc := (λ! (λ! (.var 0)))
+def flse := f$ (f$ flse_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
 #eval flse
@@ -271,9 +273,18 @@ Y = λ f (λ x.f(x x))(λ x. f(x x))
 λx.f(x x) = (λ! ($f (.var 1) ($f (.var 0) (.var0))))
 Y = λ! (
 -/
-def y_comb_lc :=
+def y_comb_lc : LcExpr DebruijnIdx :=
   let inner := (λ! (f$ (.var 1) (f$ (.var 0) (.var 0))))
   λ! (f$ inner inner)
+
+/-
+iszero = λn.n(λx.flse)tre
+iszero = λ! (f$ (f$ (.var 0) (λ! flse)) tre)
+-/
+def is_zero_lc : LcExpr DebruijnIdx :=
+  λ! (f$ (f$ (.var 0) (λ! flse_lc)) tre_lc)
+
+
 
 end positional
 

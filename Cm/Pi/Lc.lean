@@ -135,7 +135,8 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     -- we should just be doing π id nil
     -- λ λ 1 => (:: const id)
     -- λ 0 => id
-    get_nth_pos n
+    dbg_trace depth
+    get_nth_pos (n + 1)
     --:: both (:: (List.replicate (depth - 1) const
     --|> (·.foldr (fun e acc => :: e acc) const)) id)
   | .app f x =>

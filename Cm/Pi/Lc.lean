@@ -174,5 +174,22 @@ def tre_i_app := f$ (f$ (f$ (λ! (λ! (.var 1))) (λ! (.var 0))) (.symbol "Hello
 
 #eval tre_i_app
 
+def zero_lc := λ! (λ! (.var 0))
+
+def zero_hello_world_app := f$ (f$ zero_lc (λ! (.var 0))) (.symbol "Hello, world")
+  |> mk_test run
+
+#eval zero_hello_world_app
+
+-- succ n f x = f (n f x)
+-- f is bound to the second lambda
+-- n is bound to the top lambda
+def succ_lc := λ! (λ! (λ! (f$ (.var 1) (f$ (f$ (.var 2) (.var 1)) (.var 0)))))
+
+/-
+zero id ("hello world") = "hello world"
+-/
+--def zero_id_hello_world := f$ 
+
 end positional
 

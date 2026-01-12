@@ -87,6 +87,11 @@ If the body of a lambda contains only bound expressions, we should just const it
 λ λ 1 => (:: const id)
 -/
 
+def is_bound (var depth : ℕ) : Bool := var < depth
+
+/-
+Need to do the same "substitution" thing at the top level
+-/
 def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
   | .var 0 => .id
   | .var n =>
@@ -122,10 +127,19 @@ def example_t_idx_1 : Except Error Expr :=
   dbg_trace do_step run (:: apply (:: t (symbol "hi")))
   do_step run (:: apply (:: (:: apply (:: t (symbol "hi"))) (symbol "discard")))
 
+def example_t_idx_0 : Except Error Expr :=
+  -- λ (λ 0)
+  let t := abstract 1 (.lam (.var 0))
+  dbg_trace t
+  do_step run (:: apply (:: (:: apply (:: t (symbol "discard"))) (symbol "hi")))
+
+#eval example_t_idx_0 -- need to increment bound variables?
 #eval example_t_idx_1
 
 def example_t_idx_2 : Except Error Expr :=
+  -- (λ (λ (λ 1))) discard hi discard = hi
   let t := abstract 1 (.lam (.lam (.var 1)))
+  dbg_trace do_step run (:: apply (:: t (symbol "discard")))
   try_step_n run 200 (:: apply (:: (:: apply (:: (:: apply (:: t (symbol "discard"))) (symbol "hi"))) (symbol "discard")))
 
 #eval example_t_idx_1

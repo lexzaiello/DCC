@@ -52,9 +52,6 @@ namespace positional
 
 open Expr
 
-def apply_now (op : Expr) : Expr :=
-  (:: both (:: (:: const apply) op))
-
 def apply_now_pointfree : Expr :=
   (:: both (:: (:: const apply) id))
 
@@ -70,8 +67,7 @@ def get_nth_pos (n : ℕ) : Expr :=
       -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
       (:: π (:: (:: const apply_now_pointfree) (mk_get_nth_pos n)))
 
-  let get_idx := mk_get_nth_pos n
-  apply_now get_idx
+  apply_now <| mk_get_nth_pos n
 
 /-
 Prepends a value to the context
@@ -86,8 +82,6 @@ def steal_context (x' : Expr) : Expr → Expr
 #eval do_step run (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 #eval do_step run (:: apply (:: (get_nth_pos 1) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 #eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
-
-mutual
 
 /-
 argument is the λ body
@@ -111,34 +105,131 @@ Apply should be happening inside abstract, not in get thingy.
 
 Question one:
 - what happens if we remove the apply_now_pointfree?
+
+We need to increment free variables upon substitution.
+Increment them all by one.
 -/
 
-def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
-  | .symbol s => pure <| (symbol s)
+/-
+(λ.λ.1) λ.0
+bound variable does not change.
+free variables increment?
+-/
+
+/-
+Run this with depth := 0
+-/
+def incr_bound (depth : ℕ) : LcExpr DebruijnIdx → LcExpr DebruijnIdx
+  | .var n =>
+    if n > depth then
+      .var n.succ
+    else
+      .var n
+  | .lam b => .lam <| incr_bound depth.succ b
+  | .app f x => .app (incr_bound depth f) (incr_bound depth x)
+  | .symbol s => .symbol s
+
+def contains_free (depth : ℕ) : LcExpr DebruijnIdx → Bool
+  | .var n => n > depth
+  | .app f x => contains_free depth f || contains_free depth x
+  | .symbol _ => false
+  | .lam body => contains_free depth.succ body
+
+/-def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
+  | .symbol s => (symbol s)
   | .var n =>
     -- λ.0 has depth 1, so it is free
     -- its substitution should be the first thing in the context
     if n < depth then
-      pure <| get_nth_pos n
+      get_nth_pos n
     else
       -- future context. delete the binders so far
       -- e.g., λ.1 is free if depth == 1, so substract one
       -- TODO: something funky here probably
       let n' := n - depth
-      pure <| quote (get_nth_pos n')
-  | .app f x => do
+      quote (get_nth_pos n')
+  | .app f x =>
     -- to translate f, treat it as if it were a λ binder: potentially SUS
     -- however, the depth should not increase?
-    let x' ← abstract depth x
-    let f' ← abstract depth f
+    let x' := abstract depth x
+    let f' := abstract depth f
 
-    -- now we push the value onto the context
-    -- if there is one
-    pure <| steal_context x' f'
-  | .lam body => do
-    abstract depth.succ body
+    /- if 
+    match f', contains_free 0 f with
+    | :: apply (:: f ctx), true =>
+      pure <| :: apply (:: f (:: x' ctx))
+    | f, _ =>
+      pure <| :: apply (:: f (:: x' nil))-/
+    -- if f' contains no free variables, then
+    -- we are free to substitute the value in
+    -- e.g., (λ.0) x we can substitute,
+    -- but (λ.1) x we cannot
+    -- nonetheless, this is an application, so
+    --dbg_trace s!"free in {contains_free depth f}: original: {f} f': {f'}"
+    match f', contains_free depth f with
+    | _, true =>
+      :: apply (:: f' nil)
+    | :: apply (:: f ctx), false =>
+      :: apply (:: f (:: x' ctx))
+    | f, false =>
+      :: apply (:: f (:: x' nil))
+  | .lam body => abstract depth.succ body-/
 
-def Expr.of_lc := abstract 0
+mutual
+
+def is_lam {α : Type} : LcExpr α → Bool
+  | .lam _ => true
+  | _ => false
+
+/-
+ONLY for λ bodies. arg is the λ body
+Pretty sure we just need to fix incrementing bound variables
+-/
+def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
+  | .var n =>
+    if n < depth then
+      get_nth_pos n
+    else
+      -- TODO: suspicious
+      let n' := n - depth
+      quote (get_nth_pos n')
+  | .app f x =>
+    let x' := abstract depth x
+    let f' := abstract depth f
+
+    match f', contains_free depth f with
+    | _, true =>
+      :: apply (:: f' nil)
+    | :: apply (:: f ctx), false =>
+      :: apply (:: f (:: x' ctx))
+    | f, false =>
+      :: apply (:: f (:: x' nil))
+  | .lam body => abstract depth.succ body
+  -- symbol in body, so we should quote it
+  | .symbol s => quote (symbol s)
+
+def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
+  | .var _n =>
+    .error .var_in_output
+  | .lam b => pure <| abstract 1 b
+  | .app f x => do
+    let f' ← Expr.of_lc f
+    let x' ← Expr.of_lc x
+
+    -- TODO: sus, potentially change this to below
+    --pure <| :: apply (:: f' (:: x' nil))
+    match f', contains_free (if is_lam f then 1 else 0) f with
+    | _, true =>
+      pure <| :: apply (:: f' nil)
+    | :: apply (:: f ctx), false =>
+      pure <| :: apply (:: f (:: x' ctx))
+    | f, false =>
+      pure <| :: apply (:: f (:: x' nil))
+  | .symbol s => pure <| symbol s
+
+end
+
+--def Expr.of_lc := abstract 0
 
 /-
 SUS: Expr.of_lc potentially totally unnecessary?
@@ -157,8 +248,6 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .var _n =>
     .error .var_in_output
 -/
-
-end
 
 def mk_test (step_with : Expr → Except Error Expr) (lam_e : LcExpr DebruijnIdx) : Except Error Expr := do
   let cm_e ← Expr.of_lc lam_e

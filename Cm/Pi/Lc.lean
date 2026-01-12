@@ -234,14 +234,14 @@ def flse_i_app := f$ (f$ (f$ (λ! (λ! (.var 0))) (.symbol "bruh")) (λ! (.var 0
 def tre_i_app := f$ (f$ (f$ (λ! (λ! (.var 1))) (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "Hello, world")
   |> mk_test run
 
---#eval tre_i_app
+#eval tre_i_app
 
 def zero_lc := λ! (λ! (.var 0))
 
 def zero_hello_world_app := f$ (f$ zero_lc (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
---#eval zero_hello_world_app
+#eval zero_hello_world_app
 
 -- succ n f x = f (n f x)
 -- f is bound to the second lambda

@@ -171,21 +171,24 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
   -- symbol in body, so we should quote it
   | .symbol s => (symbol s)
 
+/-
+  Issue to fix:
+  we're adding onto ctx the wrong way in Expr.of_lc_ctx
+  Why doesn't f' receive ctx'? fuck it.
+-/
+
 def cons_ctx (with_val : Expr) : Expr → Expr
   | nil => with_val
   | l => :: with_val l
 
-/-
-Do something similar in root instead of applying the context.
-This is mega dumb.
--/
+
 def Expr.of_lc_ctx (ctx : Expr) : LcExpr DebruijnIdx → Except Error Expr
   | .var _n => .error .var_in_output
   | .lam b => pure <| (abstract 0 b)
   | .app f x => do
-    let x' ← Expr.of_lc_ctx ctx x
+    let x' ← Expr.of_lc_ctx nil x
     let ctx' := (cons_ctx x' ctx)
-    let f' ← Expr.of_lc_ctx ctx f
+    let f' ← Expr.of_lc_ctx nil f
 
     pure <| :: apply (:: f' ctx')
   | .symbol s => pure <| symbol s

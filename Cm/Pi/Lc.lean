@@ -93,15 +93,13 @@ Assume we can fetch arguments in opposite order / appended order.
 -/
 def get_nth_pos (n : ℕ) : Expr :=
   let rec mk_get_nth_pos (n : ℕ) : Expr :=
-    match n with
-    | .zero => :: π (:: (:: const nil) id)
-    | .succ n =>
-      -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
-      (List.replicate n (:: const nil)).foldl (fun acc e =>
-        :: π (:: acc e)) id
+    -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
+    (List.replicate n (:: const nil)).foldl (fun acc e =>
+      :: π (:: acc e)) id
 
   mk_get_nth_pos n
 
+#eval do_step run (:: apply (:: (get_nth_pos 1) (:: (:: (symbol "0th") (symbol "1th")) (symbol "2nd"))))
 #eval do_step run (:: apply (:: (get_nth_pos 0) (:: (:: (symbol "0th") (symbol "1th")) (symbol "2nd"))))
 #eval do_step run (:: apply (:: (get_nth_pos 2) (:: (:: (symbol "0th") (symbol "1th")) (symbol "2nd"))))
 --#eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))

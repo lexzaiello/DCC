@@ -5,6 +5,10 @@ import Cm.Pi.Eval
 import Cm.Pi.Util
 import Cm.Pi.Curry
 
+open Std (Format)
+open Std (ToFormat)
+open Std.ToFormat (format)
+
 open Expr
 
 abbrev DebruijnIdx := ℕ
@@ -22,6 +26,18 @@ inductive LcExpr (α : Type) where
   | var : α → LcExpr α
   | symbol : String -- our machine has these
     → LcExpr α
+
+def LcExpr.fmt : (LcExpr DebruijnIdx) → Format
+  | .app f x => .paren <| (.group <| .nest 2 <| f.fmt ++ Format.line ++ x.fmt)
+  | .var n => s!".var {n}"
+  | .lam body => "(λ! " ++ .paren body.fmt ++ ")"
+  | .symbol s => s!"(symbol {s})"
+
+instance LcExpr.instToFormat : ToFormat (LcExpr DebruijnIdx) where
+  format := LcExpr.fmt
+
+instance LcExpr.instToString : ToString (LcExpr DebruijnIdx) where
+  toString := toString ∘ format
 
 notation "λ!" => LcExpr.lam
 notation "f$" => LcExpr.app
@@ -84,7 +100,7 @@ We are using 0-indexed debruijn indices
 -/
 
 def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
-  | .symbol s => pure <| (:: const (symbol s))
+  | .symbol s => pure <| (symbol s)
   | .var n =>
     -- λ.0 has depth 1, so it is free
     -- its substitution should be the first thing in the context
@@ -97,8 +113,10 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
       let n' := n - depth
       pure <| quote (get_nth_pos n')
   | .app f x => do
-    let x' ← Expr.of_lc x
-    let f' ← Expr.of_lc f
+    -- to translate f, treat it as if it were a λ binder: potentially SUS
+    -- however, the depth should not increase?
+    let x' ← abstract depth x
+    let f' ← abstract depth f
 
     -- now we push the value onto the context
     -- if there is one
@@ -106,10 +124,14 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
   | .lam body => do
     abstract depth.succ body
 
+def Expr.of_lc := abstract 0
+
+/-
+SUS: Expr.of_lc potentially totally unnecessary?
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .symbol s => pure <| .symbol s
   | .app f x => do
-    let f' ← Expr.of_lc f
+    let f' ← abstract 1 f
     let x' ← Expr.of_lc x
 
     -- if f' has a context, this should be added to it
@@ -120,6 +142,7 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
     abstract 1 body
   | .var _n =>
     .error .var_in_output
+-/
 
 end
 
@@ -189,12 +212,13 @@ def one_hello_world_app_lc := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symb
 def one_hello_world_app := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
+#eval one_hello_world_app_lc
 #eval one_hello_world_app
 
 /-
 zero id ("hello world") = "hello world"
 -/
---def zero_id_hello_world := f$ 
+--def zero_id_hello_world := f$
 
 end positional
 

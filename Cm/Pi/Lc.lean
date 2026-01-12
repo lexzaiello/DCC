@@ -116,6 +116,8 @@ def is_lam {α : Type} : LcExpr α → Bool
   | .lam _ => true
   | _ => false
 
+abbrev TCtx := Expr
+
 mutual
 
 /-
@@ -181,19 +183,34 @@ def cons_ctx (with_val : Expr) : Expr → Expr
   | nil => with_val
   | l => :: with_val l
 
+/-
+Things for tomorrow:
+- ctx' always has only one thing in it.
+- depth should probably start at 1 in lam case
+-/
 
-def Expr.of_lc_ctx (ctx : Expr) : LcExpr DebruijnIdx → Except Error Expr
+def Expr.of_lc_ctx : LcExpr DebruijnIdx → Except Error (Expr × TCtx)
   | .var _n => .error .var_in_output
-  | .lam b => pure <| (abstract 0 b)
+  | .lam b => pure <| ⟨(abstract 0 b), nil⟩
   | .app f x => do
-    let x' ← Expr.of_lc_ctx nil x
-    let ctx' := (cons_ctx x' ctx)
-    let f' ← Expr.of_lc_ctx nil f
+    let ⟨x', ctx⟩ ← Expr.of_lc_ctx x
+    let x_eval := match ctx with
+      | nil => x'
+      | ctx => (:: apply (:: x' ctx))
+    let ⟨f', ctx_f⟩ ← Expr.of_lc_ctx f
+    let ctx' := (cons_ctx x_eval ctx_f)
 
-    pure <| :: apply (:: f' ctx')
-  | .symbol s => pure <| symbol s
+    dbg_trace s!"f': {f'} ctx': {ctx'}"
+    dbg_trace s!"{:: apply (:: f' ctx')}"
 
-def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr := Expr.of_lc_ctx nil
+    pure <| ⟨f', ctx'⟩
+  | .symbol s => pure <| ⟨symbol s, nil⟩
+
+def Expr.of_lc (e : LcExpr DebruijnIdx) : Except Error Expr := do
+  let ⟨e', ctx⟩ ← Expr.of_lc_ctx e
+  match ctx with
+  | nil => pure e'
+  | ctx => pure (:: apply (:: e' ctx))
 
 end
 
@@ -210,6 +227,8 @@ def test_hello_world₀ := (f$ (λ! (.var 0)) (.symbol "Hello, world"))
 
 def test_hello_world_nest := (f$ (f$ (f$ (λ! (λ! (λ! (.var 0)))) (.symbol "Hello, world")) (.symbol "a")) (.symbol "b"))
   |> mk_test run
+
+#eval test_hello_world_nest
 
 #eval test_hello_world_nest >>= (pure <| · == (symbol "b"))
 
@@ -237,7 +256,7 @@ tre = λ λ.1
 -/
 
 def tre_lc := (λ! (λ! (.var 1)))
-def tre := f$ (f$ tre_lc (.symbol "Hello, world")) (.symbol "other")
+def tre := (f$ (f$ tre_lc (.symbol "Hello, world")) (.symbol "other"))
   |> mk_test run
 
 #eval tre

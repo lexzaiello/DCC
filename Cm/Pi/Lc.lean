@@ -94,38 +94,13 @@ Assume we can fetch arguments in opposite order / appended order.
 def get_nth_pos (n : ℕ) : Expr :=
   let rec mk_get_nth_pos (n : ℕ) : Expr :=
     -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
-    (List.replicate n (:: const nil)).foldl (fun acc e =>
+    (List.replicate n (:: const nil)).foldr (fun acc e =>
       :: π (:: acc e)) id
 
   mk_get_nth_pos n
 
-#eval do_step run (:: apply (:: (get_nth_pos 1) (:: (:: (symbol "0th") (symbol "1th")) (symbol "2nd"))))
-#eval do_step run (:: apply (:: (get_nth_pos 0) (:: (:: (symbol "0th") (symbol "1th")) (symbol "2nd"))))
-#eval do_step run (:: apply (:: (get_nth_pos 2) (:: (:: (symbol "0th") (symbol "1th")) (symbol "2nd"))))
+#eval do_step run (:: apply (:: (get_nth_pos 1) (:: (:: (symbol "Hello, world") (symbol "a")) (symbol "b"))))
 --#eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
-
-/-
-Run this with depth := 0
--/
-def incr_free (depth : ℕ) : LcExpr DebruijnIdx → LcExpr DebruijnIdx
-  | .var n =>
-    if n > depth then
-      .var n.succ
-    else
-      .var n
-  | .lam b => .lam <| incr_free depth.succ b
-  | .app f x => .app (incr_free depth f) (incr_free depth x)
-  | .symbol s => .symbol s
-
-def contains_free (depth : ℕ) : LcExpr DebruijnIdx → Bool
-  | .var n => n > depth
-  | .app f x => contains_free depth f || contains_free depth x
-  | .symbol _ => false
-  | .lam body => contains_free depth.succ body
-
-def is_lam {α : Type} : LcExpr α → Bool
-  | .lam _ => true
-  | _ => false
 
 abbrev TCtx := Expr
 
@@ -160,8 +135,9 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     -- we should just be doing π id nil
     -- λ λ 1 => (:: const id)
     -- λ 0 => id
-    :: both (:: (List.replicate (depth - 1) const
-    |> (·.foldr (fun e acc => :: e acc) const)) id)
+    get_nth_pos n
+    --:: both (:: (List.replicate (depth - 1) const
+    --|> (·.foldr (fun e acc => :: e acc) const)) id)
   | .app f x =>
     let f' := abstract depth f
     let x' := abstract depth x
@@ -201,6 +177,7 @@ def Expr.of_lc_ctx : LcExpr DebruijnIdx → Except Error (Expr × TCtx)
       | ctx => (:: apply (:: x' ctx))
     let ⟨f', ctx_f⟩ ← Expr.of_lc_ctx f
     let ctx' := (append_ctx x_eval ctx_f)
+    dbg_trace s!"{ctx'}"
 
     pure <| ⟨f', ctx'⟩
   | .symbol s => pure <| ⟨symbol s, nil⟩

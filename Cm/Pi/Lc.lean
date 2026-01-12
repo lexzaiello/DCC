@@ -118,6 +118,12 @@ def is_lam {α : Type} : LcExpr α → Bool
 
 mutual
 
+def decrement_vars : LcExpr DebruijnIdx → LcExpr DebruijnIdx
+  | .var n => .var (n - 1)
+  | .lam e => .lam (decrement_vars e)
+  | .app f x => .app (decrement_vars f) (decrement_vars x)
+  | .symbol s => .symbol s
+
 /-
 ONLY for λ bodies. arg is the λ body
 Pretty sure we just need to fix incrementing bound variables

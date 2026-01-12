@@ -130,25 +130,45 @@ mutual
 /-
 ONLY for λ bodies. arg is the λ body
 Pretty sure we just need to fix incrementing bound variables
+
+vars will already be quoted if they are free.
+not free variables are not quoted.
+
+Not sure why we can't just do both inside the app case.
+
+if .var n == 0 then don't quote.
+otherwise,
+
+we should only ever be doing get_nth_pos 0.
+
+Otherwise,
+
+λ λ 1
+
+at each app in .of_lc, we prepend x
+to the context.
+
+For top-level lambdas, there is no context.
 -/
 def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
   | .var n =>
-    if n < depth then
-      get_nth_pos n
-    else
-      -- TODO: suspicious
-      let n' := n - depth
-      quote (get_nth_pos n')
+    -- by the time we get to this position,
+    -- we should just be doing π id nil
+    -- λ λ 1 => (:: const id)
+    -- λ 0 => id
+    List.replicate n const
+      |> (·.foldr (fun e acc => :: e acc) id)
   | .app f x =>
     let f' := abstract depth f
     let x' := abstract depth x
 
-    match f' with
-    | :: apply s =>
-      (:: both (:: (quote f') x'))
-    | _ =>
-      -- this seems dubious.
-      (:: both (:: (quote apply) (:: both (:: (quote f') x'))))
+    dbg_trace f'
+
+    -- both f' and x' may depend on the context
+    --(:: both (:: f' x'))
+    (:: both (:: (quote apply) (:: both (:: (quote (:: f' x')) id))))
+    --(:: both (:: (quote apply) (:: both (:: (quote f') x'))))
+    --(:: both (:: (quote apply) (:: both (:: f' x'))))
 
     /-match f', contains_free depth f with
     | f', true =>
@@ -157,29 +177,22 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
       :: apply (:: f (:: x' ctx))
     | f, false =>
       :: apply (:: f (:: x' nil))-/
-  | .lam body => abstract depth.succ body
+  | .lam body => quote <| abstract depth.succ body
   -- symbol in body, so we should quote it
   | .symbol s => quote (symbol s)
 
-def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
-  | .var _n =>
-    .error .var_in_output
-  | .lam b =>
-    pure <| abstract 1 b
+def Expr.of_lc_ctx (ctx : Expr) : LcExpr DebruijnIdx → Except Error Expr
+  | .var _n => .error .var_in_output
+  | .lam b => pure <| (abstract 1 b)
   | .app f x => do
-    let f' ← Expr.of_lc f
-    let x' ← Expr.of_lc x
+    let x' ← Expr.of_lc_ctx ctx x
+    let ctx' := (:: x' ctx)
+    let f' ← Expr.of_lc_ctx ctx f
 
-    -- TODO: sus, potentially change this to below
-    --pure <| :: apply (:: f' (:: x' nil))
-    match f', contains_free (if is_lam f then 1 else 0) f with
-    | _, true =>
-      pure <| :: apply (:: f' nil)
-    | :: apply (:: f ctx), false =>
-      pure <| :: apply (:: f (:: x' ctx))
-    | f, false =>
-      pure <| :: apply (:: f (:: x' nil))
+    pure <| :: apply (:: f' ctx')
   | .symbol s => pure <| symbol s
+
+def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr := Expr.of_lc_ctx nil
 
 end
 
@@ -191,10 +204,19 @@ def mk_test (step_with : Expr → Except Error Expr) (lam_e : LcExpr DebruijnIdx
 (λ x.x) (symbol "Hello, world")
 -/
 
-/-def test_hello_world := (f$ (λ! (f$ (λ! (f$ (λ! (.var 0)) (.var 0))) (.var 0))) (.symbol "Hello, world"))
-  |> mk_test run-/
+def test_hello_world₀ := (f$ (λ! (.var 0)) (.symbol "Hello, world"))
+  |> mk_test run
 
---#eval test_hello_world
+def test_hello_world₁ := (f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "hi"))
+  |> mk_test run
+
+#eval test_hello_world₁
+#eval test_hello_world₀
+
+def test_hello_world := (f$ (λ! (f$ (λ! (f$ (λ! (.var 0)) (.var 0))) (.var 0))) (.symbol "Hello, world"))
+  |> mk_test run
+
+#eval test_hello_world
 
 /-
 Church encoding of true. should get the first argument.

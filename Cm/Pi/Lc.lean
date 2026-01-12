@@ -43,12 +43,78 @@ notation "λ!" => LcExpr.lam
 notation "f$" => LcExpr.app
 
 /-
+We should be able to detect the arity of expressions before compiling.
+This is just the maximum lambda depth.
+
+λ 0 => this should always compile to id
+
+λ ($f 0 0) => this should compile to (:: both (:: (quote apply) (:: both id id)))
+
+λ 1 => this is a completely free variable. should compile to (quote const)
+λ 2 => this is a completely free variable. it should do the sasme substitution
+that λ λ 1 does. only makes sense within a 
+
+λ λ 0 => this should compile to (quote (quote id))
+
+λ λ 1 => this should compile to (:: both (:: (quote const) id))
+
+argument passing format:
+(:: both (:: (quote apply) (:: both T[x] T[x])))
+
+Why do free variables matter? Why can't we just pass eagerly call the inner lambda if we have nested lambdas?
+
+λ 1 => (quote const)
+λ 2 => (quote (quote const))
+
+λ λ 1 => (:: both (:: (quote const) id))
+
+we could also just decrement all free variables as we traverse under lambdas.
+λ λ 1 => don't decrement 1, since it is BOUND (:: both (:: (quote const) id))
+
+λ λ 2 => decrement 1,
+-/
+
+def mk_n_const (n : ℕ) : Expr := (List.replicate n Expr.const).foldr (fun _e acc => (quote acc)) const
+
+def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
+  | .var 0 => .id
+  | .var n =>
+    mk_n_const n -- depth is handled in lambda nesting case
+  | .symbol s => (:: const (symbol s))
+  | .lam b =>
+    -- nested lambda: this is like a unary function call where the operation is substitution in
+    -- the inner lambda
+    -- TODO: when to increase depth
+    let t_b := abstract depth.succ b
+    (:: both (:: t_b id))
+  | .app f x =>
+    let t_f := abstract depth f
+    let t_x := abstract depth x
+
+    (:: both (:: (quote apply) (:: both (:: t_f t_x))))
+/-
+-/
+def I : Expr :=
+  id
+
+
+/-
 Potential translation with positinal parameters:
+
+Argument lists always contain one thing, so
+
+outer lambda here should just return the inner lambda
+
+we should always be feeding arguments down the lambda chain.
+
+(λ λ 0) a b - in this one, the inner lambda has a depth of 1, so :: const id
+
+(λ λ 1) a b => (:: apply (:: (:: apply (:: f a)) b))
 
 Make a context of substitutions, which is the list of arguments.
 -/
 
-namespace positional
+/-namespace positional
 
 open Expr
 
@@ -91,14 +157,20 @@ We're not introducing any new nil values.
 /-
 Assume we can fetch arguments in opposite order / appended order.
 -/
+
+def append_ctx (with_val : Expr) : Expr → Expr
+  | nil => :: nil with_val
+  | :: nil xs => :: xs with_val
+  | :: x xs => :: (:: x xs) with_val
+  | l => :: l with_val
+
 def get_nth_pos (n : ℕ) : Expr :=
-  let rec mk_get_nth_pos (n : ℕ) : Expr :=
-    -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
-    (List.replicate n (:: const nil)).foldr (fun acc e =>
-      :: π (:: acc e)) id
+  match n with
+  | .succ n =>
+    
 
-  mk_get_nth_pos n
-
+#eval do_step run (:: apply (:: (get_nth_pos 1) (:: (:: (symbol "Hello, world") (symbol "a")) (symbol "b"))))
+#eval do_step run (:: apply (:: (get_nth_pos 0) (:: (:: (symbol "Hello, world") (symbol "a")) (symbol "b"))))
 #eval do_step run (:: apply (:: (get_nth_pos 1) (:: (:: (symbol "Hello, world") (symbol "a")) (symbol "b"))))
 --#eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 
@@ -157,11 +229,6 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
 def cons_ctx (with_val : Expr) : Expr → Expr
   | nil => with_val
   | l => :: with_val l
-
-def append_ctx (with_val : Expr) : Expr → Expr
-  | nil => :: nil with_val
-  | :: x xs => :: (:: x xs) with_val
-  | l => :: l with_val
 
 /-
 Things for tomorrow:
@@ -368,3 +435,4 @@ def test_is_zero (max_steps : ℕ := 20) : Except Error Expr := do
 
 end positional
 
+-/

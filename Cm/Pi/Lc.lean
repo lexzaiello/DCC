@@ -163,11 +163,9 @@ def flse := f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "othe
 /-
 (flse "hello world" (λx.x)) ("hello world")
 -/
-def flse_i_app : Except Error Expr := do
-  let lam_e := f$ (f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (λ! (.var 0))) (.symbol "Hello, world")
-  let cm_e ← Expr.of_lc lam_e
-  dbg_trace cm_e
-  do_step run cm_e
+
+def flse_i_app := f$ (f$ (f$ (λ! (λ! (.var 0))) (.symbol "Hello, world")) (λ! (.var 0))) (.symbol "Hello, world")
+  |> mk_test run
 
 #eval flse_i_app
 

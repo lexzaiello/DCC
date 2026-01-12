@@ -118,6 +118,7 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .lam body => do
     abstract 1 body
   | .var _n =>
+    
     -- this is certainly free and a garbage value.
     -- TODO: how to handle this? shouldn't show up.
     -- throw an error?
@@ -185,6 +186,13 @@ def zero_hello_world_app := f$ (f$ zero_lc (λ! (.var 0))) (.symbol "Hello, worl
 -- f is bound to the second lambda
 -- n is bound to the top lambda
 def succ_lc := λ! (λ! (λ! (f$ (.var 1) (f$ (f$ (.var 2) (.var 1)) (.var 0)))))
+
+def one_hello_world_app_lc := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symbol "Hello, world")
+
+def one_hello_world_app := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symbol "Hello, world")
+  |> mk_test run
+
+#eval one_hello_world_app
 
 /-
 zero id ("hello world") = "hello world"

@@ -208,7 +208,7 @@ def tre_lc := (λ! (λ! (.var 1)))
 def tre := f$ (f$ tre_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
---#eval test_hello_world
+#eval test_hello_world
 #eval tre
 --#eval Expr.of_lc tre_lc
 
@@ -220,7 +220,7 @@ def flse_lc := (λ! (λ! (.var 0)))
 def flse := f$ (f$ flse_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
---#eval flse
+#eval flse
 
 /-
 (flse "hello world" (λx.x)) ("hello world")

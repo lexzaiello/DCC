@@ -87,15 +87,6 @@ Then we get something that we can lazilly put on our stack.
 We can be lazy. Nested id is fine.
 We're not introducing any new nil values.
 -/
-def get_nth_pos (n : ℕ) : Expr :=
-  let rec mk_get_nth_pos (n : ℕ) : Expr :=
-    match n with
-    | .zero => :: π (:: id (:: const nil))
-    | .succ n =>
-      -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
-      (:: π (:: (:: const id) (mk_get_nth_pos n)))
-
-  mk_get_nth_pos n
 
 --#eval try_step_n run 2 (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") nil)))
 --#eval try_step_n run 2 (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
@@ -187,12 +178,16 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
   -- symbol in body, so we should quote it
   | .symbol s => (symbol s)
 
+def cons_ctx (with_val : Expr) : Expr → Expr
+  | nil => with_val
+  | l => :: with_val l
+
 def Expr.of_lc_ctx (ctx : Expr) : LcExpr DebruijnIdx → Except Error Expr
   | .var _n => .error .var_in_output
   | .lam b => pure <| (abstract 1 b)
   | .app f x => do
     let x' ← Expr.of_lc_ctx ctx x
-    let ctx' := (:: x' ctx)
+    let ctx' := (cons_ctx x' ctx)
     let f' ← Expr.of_lc_ctx ctx f
 
     pure <| :: apply (:: f' ctx')

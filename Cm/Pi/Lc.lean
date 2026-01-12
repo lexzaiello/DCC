@@ -279,12 +279,16 @@ def y_comb_lc : LcExpr DebruijnIdx :=
 
 /-
 iszero = λn.n(λx.flse)tre
+iszero zero = zero _ tre = tre
 iszero = λ! (f$ (f$ (.var 0) (λ! flse)) tre)
 -/
 def is_zero_lc : LcExpr DebruijnIdx :=
   λ! (f$ (f$ (.var 0) (λ! flse_lc)) tre_lc)
 
-
+def test_is_zero (max_steps : ℕ := 20) : Except Error Expr := do
+  let is_zero_app_zero := (f$ is_zero_lc zero_lc)
+  let cc ← Expr.of_lc is_zero_app_zero
+  try_step_n run max_steps cc
 
 end positional
 

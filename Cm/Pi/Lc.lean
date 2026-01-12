@@ -159,14 +159,20 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     List.replicate (depth - 1) const
     |> (·.foldr (fun e acc => :: e acc) id)
   | .app f x =>
+    /-
+      x is 
+    -/
     let f' := abstract depth f
     let x' := abstract depth x
 
     dbg_trace f'
+    dbg_trace x'
 
     -- both f' and x' may depend on the context
     --(:: both (:: f' x'))
-    (:: both (:: (quote apply) (:: both (:: (quote (:: f' x')) id))))
+    -- we should be making two apps.
+    -- one for x', one for the old context.
+    (:: both (:: (quote apply) (:: both (:: (:: both (:: (quote apply) (:: both (:: (quote f') x')))) id))))
     --(:: both (:: (quote apply) (:: both (:: (quote f') x'))))
     --(:: both (:: (quote apply) (:: both (:: f' x'))))
 
@@ -207,7 +213,7 @@ def mk_test (step_with : Expr → Except Error Expr) (lam_e : LcExpr DebruijnIdx
 def test_hello_world₀ := (f$ (λ! (.var 0)) (.symbol "Hello, world"))
   |> mk_test run
 
-def test_hello_world₁ := (f$ (f$ (f$ (λ! (λ! (λ! (.var 0)))) (.symbol "Hello, world")) (.symbol "hi")) (.symbol "a"))
+def test_hello_world₁ := (f$ (f$ (f$ (λ! (λ! (λ! (f$ (.var 1) (.var 0))))) (.symbol "Hello, world")) (.symbol "hi")) (.symbol "a"))
   |> mk_test run
 
 #eval test_hello_world₁

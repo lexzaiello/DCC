@@ -268,8 +268,12 @@ def three_hello_world_app := f$ (f$ (f$ succ_lc (f$ succ_lc (f$ succ_lc zero_lc)
 
 /-
 Y = λ f (λ x.f(x x))(λ x. f(x x))
+λx.f(x x) = (λ! ($f (.var 1) ($f (.var 0) (.var0))))
+Y = λ! (
 -/
---def y_comb_lc := λ! (λ! 
+def y_comb_lc :=
+  let inner := (λ! (f$ (.var 1) (f$ (.var 0) (.var 0))))
+  λ! (f$ inner inner)
 
 end positional
 

@@ -82,6 +82,7 @@ free variables get the get_nth_pos of the context length - the depth
 
 We are using 0-indexed debruijn indices
 -/
+
 def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
   | .symbol s => pure <| (:: const (symbol s))
   | .var n =>
@@ -118,10 +119,6 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .lam body => do
     abstract 1 body
   | .var _n =>
-    
-    -- this is certainly free and a garbage value.
-    -- TODO: how to handle this? shouldn't show up.
-    -- throw an error?
     .error .var_in_output
 
 end

@@ -224,6 +224,11 @@ def test_hello_world₁ := (f$ (f$ (f$ (λ! (λ! (λ! (f$ (.var 1) (.var 0))))) 
 #eval test_hello_world₁
 #eval test_hello_world₀
 
+def test_hello_world_id := (f$ (f$ (f$ (λ! (λ! (λ! (f$ (.var 1) (.var 0))))) (.symbol "Hello, world")) (λ! (.var 0))) (.symbol "a"))
+  |> mk_test run
+
+#eval test_hello_world_id
+
 def test_hello_world := (f$ (λ! (f$ (λ! (f$ (λ! (.var 0)) (.var 0))) (.var 0))) (.symbol "Hello, world"))
   |> mk_test run
 

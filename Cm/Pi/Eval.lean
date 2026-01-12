@@ -47,13 +47,10 @@ TODO: I like using our apply_now definition.
 We should ideally in the future remove apply calls in step_apply.
 -/
 
-def step_apply (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
-  if with_logs then
-    dbg_trace e
-
+def step_apply (e : Expr) : Except Error Expr := do
   match e with
   | :: .id x => pure x
-  | :: (:: π (:: a b)) (:: x xs) => do
+  | :: (:: π (:: a b)) (:: x xs) =>
     let a' := :: apply (:: a x)
     let b' := :: apply (:: b xs)
 
@@ -90,9 +87,9 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
       let f' ← run f
       pure <| :: apply (:: f' x)
     let step_whole : Except Error Expr := do
-      step_apply (:: f x) with_logs
+      step_apply (:: f x)
 
-    eval_arg_first <|> eval_f_first <|> step_whole
+    step_whole <|> eval_arg_first <|> eval_f_first
   | :: x xs => (do
     let x' ← run x with_logs
     let xs' ← run xs with_logs

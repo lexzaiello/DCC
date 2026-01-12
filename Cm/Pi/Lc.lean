@@ -232,6 +232,14 @@ def two_hello_world_app := f$ (f$ (f$ succ_lc (f$ succ_lc zero_lc)) (λ! (.var 0
 
 #eval two_hello_world_app
 
+def three_hello_world_lc := f$ (f$ (f$ succ_lc (f$ succ_lc (f$ succ_lc zero_lc))) (λ! (.var 0))) (.symbol "Hello, world")
+
+def test_three_hello_world : Except Error Expr := do
+  let cm_e ← Expr.of_lc three_hello_world_lc
+  try_step_n run 3 cm_e
+
+#eval test_three_hello_world
+
 def three_hello_world_app := f$ (f$ (f$ succ_lc (f$ succ_lc (f$ succ_lc zero_lc))) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 

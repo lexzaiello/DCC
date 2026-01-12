@@ -143,9 +143,11 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     let f' := abstract depth f
     let x' := abstract depth x
 
-    dbg_trace s!"f': {f'} x': {x'}"
-
-    (:: both (:: (quote apply) (:: both (:: (quote f') x'))))
+    match f' with
+    | :: apply s =>
+      (:: both (:: (quote f') x'))
+    | _ =>
+      (:: both (:: (quote apply) (:: both (:: (quote f') x'))))
 
     /-match f', contains_free depth f with
     | f', true =>
@@ -188,7 +190,7 @@ def mk_test (step_with : Expr → Except Error Expr) (lam_e : LcExpr DebruijnIdx
 (λ x.x) (symbol "Hello, world")
 -/
 
-def test_hello_world := (f$ (λ! (f$ (λ! (.var 0)) (.var 0))) (.symbol "Hello, world"))
+def test_hello_world := (f$ (λ! (f$ (λ! (f$ (λ! (.var 0)) (.var 0))) (.var 0))) (.symbol "Hello, world"))
   |> mk_test run
 
 #eval test_hello_world
@@ -246,14 +248,16 @@ def succ_lc := λ! (λ! (λ! (f$ (.var 1) (f$ (f$ (.var 2) (.var 1)) (.var 0))))
 
 --#eval succ_lc
 
-#eval Expr.of_lc succ_lc
+--#eval Expr.of_lc succ_lc
 
 def succ_nfx_lc := λ! (λ! (λ! (f$ (f$ (.var 2) (.var 1)) (.var 0))))
 
 def one_hello_world_app := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
---#eval one_hello_world_app
+#eval one_hello_world_app
+  >>= do_step run
+  >>= do_step run
 
 def two_hello_world_app := f$ (f$ (f$ succ_lc (f$ succ_lc zero_lc)) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run

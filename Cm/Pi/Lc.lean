@@ -68,7 +68,7 @@ def get_nth_pos (n : ℕ) : Expr :=
     | .zero => :: π (:: const (:: const nil))
     | .succ n =>
       -- arg 1: π (:: (:: const const) (:: π (:: const (:: const nil))))
-      (:: π (:: (:: const apply_now_pointfree) (mk_get_nth_pos n)))
+      (:: π (:: const (mk_get_nth_pos n)))
 
   apply_now <| mk_get_nth_pos n
 

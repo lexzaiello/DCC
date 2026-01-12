@@ -156,8 +156,8 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     -- we should just be doing π id nil
     -- λ λ 1 => (:: const id)
     -- λ 0 => id
-    List.replicate n const
-      |> (·.foldr (fun e acc => :: e acc) id)
+    List.replicate (depth - 1) const
+    |> (·.foldr (fun e acc => :: e acc) id)
   | .app f x =>
     let f' := abstract depth f
     let x' := abstract depth x
@@ -177,9 +177,9 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
       :: apply (:: f (:: x' ctx))
     | f, false =>
       :: apply (:: f (:: x' nil))-/
-  | .lam body => quote <| abstract depth.succ body
+  | .lam body => abstract depth.succ body
   -- symbol in body, so we should quote it
-  | .symbol s => quote (symbol s)
+  | .symbol s => (symbol s)
 
 def Expr.of_lc_ctx (ctx : Expr) : LcExpr DebruijnIdx → Except Error Expr
   | .var _n => .error .var_in_output

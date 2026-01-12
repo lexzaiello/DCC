@@ -28,7 +28,7 @@ inductive LcExpr (α : Type) where
     → LcExpr α
 
 def LcExpr.fmt : (LcExpr DebruijnIdx) → Format
-  | .app f x => .paren <| (.group <| .nest 2 <| f.fmt ++ Format.line ++ x.fmt)
+  | .app f x => "f$ " ++ Format.paren (.group <| .nest 2 <| f.fmt ++ Format.line ++ x.fmt)
   | .var n => s!".var {n}"
   | .lam body => "(λ! " ++ .paren body.fmt ++ ")"
   | .symbol s => s!"(symbol {s})"
@@ -97,19 +97,10 @@ def get_nth_pos (n : ℕ) : Expr :=
 
   mk_get_nth_pos n
 
-/-
-Prepends a value to the context
--/
-def cons_ctx (with_val : Expr) : Expr → Expr := (:: with_val ·)
-
-def steal_context (x' : Expr) : Expr → Expr
-  | :: apply (:: f ctx) => :: apply (:: f (cons_ctx x' ctx))
-  | e => :: apply (:: e (:: x' nil))
-
-#eval try_step_n run 2 (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") nil)))
-#eval try_step_n run 2 (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
-#eval try_step_n run 3 (:: apply (:: (get_nth_pos 1) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
-#eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
+--#eval try_step_n run 2 (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") nil)))
+--#eval try_step_n run 2 (:: apply (:: (get_nth_pos 0) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
+--#eval try_step_n run 4 (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
+--#eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 
 /-
 Run this with depth := 0
@@ -149,16 +140,20 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
       let n' := n - depth
       quote (get_nth_pos n')
   | .app f x =>
-    let x' := abstract depth x
     let f' := abstract depth f
+    let x' := abstract depth x
 
-    match f', contains_free depth f with
-    | _, true =>
+    dbg_trace s!"f': {f'} x': {x'}"
+
+    (:: both (:: (quote apply) (:: both (:: (quote f') x'))))
+
+    /-match f', contains_free depth f with
+    | f', true =>
       :: apply (:: f' nil)
     | :: apply (:: f ctx), false =>
       :: apply (:: f (:: x' ctx))
     | f, false =>
-      :: apply (:: f (:: x' nil))
+      :: apply (:: f (:: x' nil))-/
   | .lam body => abstract depth.succ body
   -- symbol in body, so we should quote it
   | .symbol s => quote (symbol s)
@@ -166,7 +161,8 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .var _n =>
     .error .var_in_output
-  | .lam b => pure <| abstract 1 b
+  | .lam b =>
+    pure <| abstract 1 b
   | .app f x => do
     let f' ← Expr.of_lc f
     let x' ← Expr.of_lc x
@@ -192,7 +188,7 @@ def mk_test (step_with : Expr → Except Error Expr) (lam_e : LcExpr DebruijnIdx
 (λ x.x) (symbol "Hello, world")
 -/
 
-def test_hello_world := (f$ (λ! (.var 0)) (.symbol "Hello, world"))
+def test_hello_world := (f$ (λ! (f$ (λ! (.var 0)) (.var 0))) (.symbol "Hello, world"))
   |> mk_test run
 
 #eval test_hello_world
@@ -208,8 +204,8 @@ def tre_lc := (λ! (λ! (.var 1)))
 def tre := f$ (f$ tre_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
-#eval test_hello_world
-#eval tre
+--#eval test_hello_world
+--#eval tre
 --#eval Expr.of_lc tre_lc
 
 /-
@@ -220,7 +216,7 @@ def flse_lc := (λ! (λ! (.var 0)))
 def flse := f$ (f$ flse_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
-#eval flse
+--#eval flse
 
 /-
 (flse "hello world" (λx.x)) ("hello world")
@@ -229,24 +225,28 @@ def flse := f$ (f$ flse_lc (.symbol "Hello, world")) (.symbol "other")
 def flse_i_app := f$ (f$ (f$ (λ! (λ! (.var 0))) (.symbol "bruh")) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
-#eval flse_i_app
+--#eval flse_i_app
 
 def tre_i_app := f$ (f$ (f$ (λ! (λ! (.var 1))) (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "Hello, world")
   |> mk_test run
 
-#eval tre_i_app
+--#eval tre_i_app
 
 def zero_lc := λ! (λ! (.var 0))
 
 def zero_hello_world_app := f$ (f$ zero_lc (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
-#eval zero_hello_world_app
+--#eval zero_hello_world_app
 
 -- succ n f x = f (n f x)
 -- f is bound to the second lambda
 -- n is bound to the top lambda
 def succ_lc := λ! (λ! (λ! (f$ (.var 1) (f$ (f$ (.var 2) (.var 1)) (.var 0)))))
+
+--#eval succ_lc
+
+#eval Expr.of_lc succ_lc
 
 def succ_nfx_lc := λ! (λ! (λ! (f$ (f$ (.var 2) (.var 1)) (.var 0))))
 

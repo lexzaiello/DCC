@@ -153,11 +153,12 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     -- we should just be doing π id nil
     -- λ λ 1 => (:: const id)
     -- λ 0 => id
-    List.replicate depth const
+    --dbg_trace s!"depth: {depth} n: {n}"
+    List.replicate (depth - 1 - n)  const
     |> (·.foldr (fun e acc => :: e acc) id)
   | .app f x =>
-    let f' := abstract depth f
-    let x' := abstract depth x
+    let f' := abstract depth.succ f
+    let x' := abstract depth.succ x
 
     (:: both (:: (quote apply) (:: both (:: (:: both (:: (quote apply) (:: both (:: (quote f') x')))) id))))
   /-
@@ -172,8 +173,15 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     - ctx order is kind of reversed
     - but then handling an app inside a lambda kind of undos it
     - probably shouldn't start depth off at 1 from lc
+    - we are completely disrespecting variable indices.
+    - it's because these don't have any apps inside the lambdas.
+    - reallly depth should only be increased inside the app case.
+    - or we could just update indices from within app
+    - and rely on those.
+    - we could just only succ in the app case
   -/
-  | .lam body => abstract depth.succ body
+  -- app case, this is working. need to handle only nested λ.
+  | .lam body => abstract depth body
   -- symbol in body, so we should quote it
   | .symbol s => (symbol s)
 
@@ -181,18 +189,18 @@ def cons_ctx (with_val : Expr) : Expr → Expr
   | nil => with_val
   | l => :: with_val l
 
-def Expr.of_lc_ctx (ctx : Expr) : LcExpr DebruijnIdx → Except Error Expr
+def Expr.of_lc_ctx (ctx : Expr) (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
   | .var _n => .error .var_in_output
-  | .lam b => pure <| (abstract 0 b)
+  | .lam b => pure <| (abstract depth b)
   | .app f x => do
-    let x' ← Expr.of_lc_ctx ctx x
+    let x' ← Expr.of_lc_ctx ctx depth x
     let ctx' := (cons_ctx x' ctx)
-    let f' ← Expr.of_lc_ctx ctx f
+    let f' ← Expr.of_lc_ctx ctx depth.succ f
 
     pure <| :: apply (:: f' ctx')
   | .symbol s => pure <| symbol s
 
-def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr := Expr.of_lc_ctx nil
+def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr := Expr.of_lc_ctx nil 0
 
 end
 
@@ -240,11 +248,20 @@ def tre := f$ (f$ tre_lc (.symbol "Hello, world")) (.symbol "other")
   |> mk_test run
 
 --#eval test_hello_world
-#eval tre >>= (pure <| · == (symbol "other"))
+#eval tre >>= (pure <| · == (symbol "Hello, world"))
 --#eval Expr.of_lc tre_lc
 
 /-
 Church encoding of false. should get the second argument.
+-/
+
+/-
+False and true are selecting the same thing because we totally ignore
+var n.
+
+Depth on both of these is 1, but flse has the correct index.
+
+Why are we using depth at all instead of just variable indices?
 -/
 
 def flse_lc := (λ! (λ! (.var 0)))
@@ -265,7 +282,7 @@ def flse_i_app := f$ (f$ (f$ (λ! (λ! (.var 0))) (.symbol "bruh")) (λ! (.var 0
 def tre_i_app := f$ (f$ (f$ (λ! (λ! (.var 1))) (λ! (.var 0))) (.symbol "Hello, world")) (.symbol "Hello, world")
   |> mk_test run
 
---#eval tre_i_app
+#eval tre_i_app
 
 def zero_lc := λ! (λ! (.var 0))
 

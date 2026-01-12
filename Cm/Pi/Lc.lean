@@ -87,39 +87,6 @@ def steal_context (x' : Expr) : Expr → Expr
 #eval do_step run (:: apply (:: (get_nth_pos 2) (:: (symbol "0th") (:: (symbol "1th") (:: (symbol "2nd") nil)))))
 
 /-
-argument is the λ body
-
-bound variables just use get_nth_pos. we should have an entry in our context.
-
-free variables get the get_nth_pos of the context length - the depth
-
-We are using 0-indexed debruijn indices
-
-Issue is the free variables, and also substitution.
-When we substitute in, we should probably increment all the free variables.
-
-If bound, do not change.
-If free, increment by one every time substituted into a lambda.
-
-Apply now logic is very suspicious.
-Should only now_apply when lambda application invoked.
-
-Apply should be happening inside abstract, not in get thingy.
-
-Question one:
-- what happens if we remove the apply_now_pointfree?
-
-We need to increment free variables upon substitution.
-Increment them all by one.
--/
-
-/-
-(λ.λ.1) λ.0
-bound variable does not change.
-free variables increment?
--/
-
-/-
 Run this with depth := 0
 -/
 def incr_free (depth : ℕ) : LcExpr DebruijnIdx → LcExpr DebruijnIdx
@@ -137,46 +104,6 @@ def contains_free (depth : ℕ) : LcExpr DebruijnIdx → Bool
   | .app f x => contains_free depth f || contains_free depth x
   | .symbol _ => false
   | .lam body => contains_free depth.succ body
-
-/-def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
-  | .symbol s => (symbol s)
-  | .var n =>
-    -- λ.0 has depth 1, so it is free
-    -- its substitution should be the first thing in the context
-    if n < depth then
-      get_nth_pos n
-    else
-      -- future context. delete the binders so far
-      -- e.g., λ.1 is free if depth == 1, so substract one
-      -- TODO: something funky here probably
-      let n' := n - depth
-      quote (get_nth_pos n')
-  | .app f x =>
-    -- to translate f, treat it as if it were a λ binder: potentially SUS
-    -- however, the depth should not increase?
-    let x' := abstract depth x
-    let f' := abstract depth f
-
-    /- if 
-    match f', contains_free 0 f with
-    | :: apply (:: f ctx), true =>
-      pure <| :: apply (:: f (:: x' ctx))
-    | f, _ =>
-      pure <| :: apply (:: f (:: x' nil))-/
-    -- if f' contains no free variables, then
-    -- we are free to substitute the value in
-    -- e.g., (λ.0) x we can substitute,
-    -- but (λ.1) x we cannot
-    -- nonetheless, this is an application, so
-    --dbg_trace s!"free in {contains_free depth f}: original: {f} f': {f'}"
-    match f', contains_free depth f with
-    | _, true =>
-      :: apply (:: f' nil)
-    | :: apply (:: f ctx), false =>
-      :: apply (:: f (:: x' ctx))
-    | f, false =>
-      :: apply (:: f (:: x' nil))
-  | .lam body => abstract depth.succ body-/
 
 def is_lam {α : Type} : LcExpr α → Bool
   | .lam _ => true
@@ -231,26 +158,6 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .symbol s => pure <| symbol s
 
 end
-
---def Expr.of_lc := abstract 0
-
-/-
-SUS: Expr.of_lc potentially totally unnecessary?
-def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
-  | .symbol s => pure <| .symbol s
-  | .app f x => do
-    let f' ← abstract 1 f
-    let x' ← Expr.of_lc x
-
-    -- if f' has a context, this should be added to it
-    -- this is the root value, so we give it an empty context? TODO: not sure about this
-    -- TODO: major sus
-    pure <| steal_context x' f'
-  | .lam body => do
-    abstract 1 body
-  | .var _n =>
-    .error .var_in_output
--/
 
 def mk_test (step_with : Expr → Except Error Expr) (lam_e : LcExpr DebruijnIdx) : Except Error Expr := do
   let cm_e ← Expr.of_lc lam_e
@@ -315,17 +222,9 @@ def succ_lc := λ! (λ! (λ! (f$ (.var 1) (f$ (f$ (.var 2) (.var 1)) (.var 0))))
 
 def succ_nfx_lc := λ! (λ! (λ! (f$ (f$ (.var 2) (.var 1)) (.var 0))))
 
-def one_hello_world_app_lc := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symbol "Hello, world")
-
 def one_hello_world_app := f$ (f$ (f$ succ_lc zero_lc) (λ! (.var 0))) (.symbol "Hello, world")
   |> mk_test run
 
-def one_hello_world_app' := (f$ (f$ succ_lc zero_lc) (λ! (.var 0)))
-  |> mk_test run
-
-#eval one_hello_world_app'
-
-#eval one_hello_world_app_lc
 #eval one_hello_world_app
 
 /-

@@ -212,14 +212,13 @@ def list.reverse.do_rec : Expr :=
 /-
 Should have just l in scope.
 -/
-def list.reverse.state₀ : Expr :=
-  :: both (:: id (quote nil))
+def list.reverse.state₀ : Expr := id
 
 def list.reverse.app_rec : Expr :=
   (:: apply list.reverse.do_rec)
 
 def list.reverse.mk_rec : Expr :=
-  (quote list.reverse.app_rec)
+  :: π (:: (quote apply) (quote list.reverse.do_rec))
 
 def list.reverse.start : Expr :=
   (:: both (:: (quote apply) (:: both (:: list.reverse.mk_rec list.reverse.state₀))))

@@ -91,18 +91,23 @@ def nat.plus : Expr :=
   let m := :: π (:: id nil)
   let n := :: π (:: nil const)
 
-  let zero_case := (:: both (:: (quote const) n))
+  let zero_case := n
 
   -- generates recursor
   let do_rec := (:: both
     (:: (quote apply) (:: both
       (:: (quote nat.rec_with) (:: both
         (:: (quote nat.rec_with)
-          (:: π (:: zero_case (quote do_succ)))))))))
+          (:: both (:: zero_case (quote do_succ)))))))))
 
   (:: both (:: (quote apply) (:: both (:: do_rec m))))
 
 namespace test_nat
+
+def nat_plus (m n : Expr) : Except Error Expr := do
+  try_step_n run 100 (:: apply (:: nat.plus (:: m n)))
+
+#eval nat_plus zero zero
 
 /-
 nat.rec_with tests:

@@ -29,7 +29,7 @@ def lam : Expr := Expr.id
 
 notation "λ!" => (fun bdy => (:: apply (:: lam bdy)))
 notation "v#" => (fun n => (:: apply (:: var (Nat'.of_nat n))))
-notation "f$" => (fun f x => (:: apply (:: f x)))
+notation "f$" => (fun f x => (:: apply (:: f (:: apply (:: list.reverse x)))))
 
 #eval try_step_n run 100 (:: apply (:: (:: apply (:: lam (:: apply (:: var Nat'.zero)))) test_ctx))
 
@@ -49,6 +49,6 @@ def test_id'_nice : Except Error Expr :=
 
 def test_tre : Except Error Expr :=
   let my_tre := λ! (λ! (v# 1))
-  try_step_n run 100 (f$ my_tre (:: (symbol "a") (:: (symbol "b") nil)))
+  try_step_n run 200 (f$ my_tre (:: (symbol "a") (:: (symbol "b") nil)))
 
 #eval test_tre

@@ -112,6 +112,10 @@ def test_rec_nat_symb : Except Error Expr := do
   let my_zero_case := Expr.id
   try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: (symbol "rec_nat") (:: my_zero_case my_succ_case)))) (:: succ zero)))
 
+/-
+:: (:: (symbol "rec_nat") (:: (symbol "rec_nat") (:: id id))) (symbol "zero") is output.
+so we can basically just insert an apply inside and outside at the beginnings.
+-/
 #eval test_rec_nat_symb
 
 /-
@@ -125,8 +129,14 @@ def test_rec_nat_return_is_same : Except Error Bool := do
 
 #eval test_rec_nat_return_is_same
 
+/-
+Running rec_nat again.
+Should give us zero, since we are running id in the last case.
+-/
 def test_rec_nat_descent : Except Error Expr := do
-  let my_succ_case := :: π (:: (:: π (:: id nil)) nil)
+  let my_succ_case := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
   let my_zero_case := Expr.id
   let out ← try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: rec_nat (:: my_zero_case my_succ_case)))) (:: succ zero)))
-  sorry
+  pure out
+
+#eval test_rec_nat_descent

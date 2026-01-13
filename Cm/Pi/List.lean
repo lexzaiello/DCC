@@ -127,33 +127,36 @@ def test_list_map_const (fn l : Expr) : Except Error Expr := do
   try_step_n run 100 (:: apply (:: list.map (:: fn l)))
 
 #eval test_list_map_const (:: both (:: (quote (symbol "hi")) id)) (:: (symbol "a") (:: (symbol "b") nil))
+#eval test_list_map_const (:: both (:: (quote (symbol "hi")) id)) (:: (symbol "a") (:: (symbol "b") nil))
   >>= (pure <| · == (:: (:: (symbol "hi") (symbol "a")) (:: (:: (symbol "hi") (symbol "b")) nil)))
 
 end test_list
 
+/-
+  (:: apply (:: list.reverse l))
+-/
 def list.reverse : Expr :=
   let my_l := Expr.id
 
-  /-
-    succ handler gets passed :: handler_data (:: our_acc list)
-    fetch the head element from list, then push onto our_acc
-  -/
   let acc := :: π (:: nil (:: π (:: id nil)))
-  let x := :: π (:: nil (:: π (:: nil id)))
-  let push_x := :: both (:: x acc)
+  let x := :: π (:: nil (:: π (:: nil (:: π (:: id nil)))))
+  let push_x := :: both (:: acc x)
 
   let then_fetch_acc := :: π (:: id nil)
   let quoted_fetch_acc := quote then_fetch_acc
 
-  let do_rec := (:: list.rec_with (:: list.rec_with
-    (:: (:: both (:: push_x list.rec_with.advance))
-    (:: both (:: push_x list.rec_with.advance)))))
-  let fill_acc := (:: both (:: (quote apply) (:: both (:: (quote (:: apply do_rec)) my_l))))
+  /-
+    succ_handler gets passed :: match_args (:: x xs)
+    list.rec_with advance will execute with the tail of the list
+    
+  -/
 
-  (:: both (::
-    (quote apply) (:: both (::
-      quoted_fetch_acc
-      fill_acc))))
+  let do_rec := (:: list.rec_with (:: list.rec_with
+    (:: (quote nil)
+    (:: both (:: push_x list.rec_with.advance)))))
+  let fill_acc := (:: both (:: (quote apply) (:: both (:: (:: both (:: (quote apply) (quote do_rec))) (:: both (:: my_l (quote nil)))))))
+
+  fill_acc
 
 namespace test_list
 

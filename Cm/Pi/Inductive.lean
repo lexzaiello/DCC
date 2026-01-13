@@ -117,9 +117,10 @@ def test_rec_nat_symb : Except Error Expr := do
 /-
 Just to print out the cases, prepend identifiers.
 -/
-def test_rec_nat_return_is_same : Except Error Expr := do
+def test_rec_nat_return_is_same : Except Error Bool := do
   let my_succ_case := :: π (:: (:: π (:: id nil)) nil)
   let my_zero_case := Expr.id
-  try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: rec_nat (:: my_zero_case my_succ_case)))) (:: succ zero)))
+  let out ← try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: rec_nat (:: my_zero_case my_succ_case)))) (:: succ zero)))
+  pure <| out == rec_nat
 
-#eval test_rec_nat_return_is_same >>= (pure <| · == rec_nat)
+--def test_rec_nat_descent : Except Error 

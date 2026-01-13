@@ -96,6 +96,9 @@ def all_bound (depth : ℕ) : LcExpr DebruijnIdx → Bool
   | .symbol _s => true
   | .app f x => all_bound depth f && all_bound depth x
 
+def quot_if_free (depth : ℕ) (e : Expr) : Expr :=
+  
+
 /-
 Need to do the same "substitution" thing at the top level
 -/
@@ -120,6 +123,15 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
   | .app f x =>
     let t_f := abstract depth f
     let t_x := abstract depth x
+
+    /-
+      Need to do something similar with free variables
+      We should treat f implicitly as if it were a lambda?
+    -/
+
+    dbg_trace s!"f: {t_f}, x: {t_x}"
+
+    --(:: both (:: t_f t_x))
 
     (:: both (:: (quote apply) (:: both (:: t_f t_x))))
 
@@ -160,7 +172,15 @@ def id' := λ! (# 0)
 
 def example_tre_app_i := mk_test (f$ (f$ (f$ tre_lc id') (.symbol "discard")) (.symbol "hello world")) (try_step_n run 1)
 
-#eval example_tre_app_i
+def one := λ! (λ! (f$ (# 1) (# 0)))
+
+def example_do_id := mk_test (f$ (f$ one id') (.symbol "hello world"))
+
+#eval example_do_id
+
+/-def example_do_app := mk_test (
+
+#eval example_tre_app_i-/
 
 /-
 Potential translation with positinal parameters:

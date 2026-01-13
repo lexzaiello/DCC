@@ -71,6 +71,13 @@ def list.rec_with : Expr :=
   .cons both (:: inner_eq (quote nil))
 
 /-
+Useful for writing functions using list.rec_with.
+Automatically advances the recursor on the next element.
+-/
+def list.rec_with.advance : Expr :=
+  :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
+
+/-
 (:: apply (:: list.map (:: f l)))
 -/
 def list.map : Expr :=
@@ -118,6 +125,26 @@ def test_list_map_const (fn l : Expr) : Except Error Expr := do
 
 #eval test_list_map_const (:: both (:: (quote (symbol "hi")) id)) (:: (symbol "a") (:: (symbol "b") nil))
   >>= (pure <| · == (:: (:: (symbol "hi") (symbol "a")) (:: (:: (symbol "hi") (symbol "b")) nil)))
+
+end test_list
+
+def list.reverse : Expr :=
+  let my_l := Expr.id
+
+  /-
+    succ handler gets passed :: handler_data (:: our_acc list)
+    fetch the head element from list, then push onto our_acc
+  -/
+  let acc := :: π (:: nil (:: π (:: id nil)))
+  let x := :: π (:: nil (:: π (:: nil id)))
+  let push_x := :: both (:: x acc)
+
+  let do_rec := (:: list.rec_with (:: list.rec_with
+    (:: (quote nil)
+    (:: both (:: push_x list.rec_with.advance)))))
+  (:: both (:: (quote apply) (:: both (:: (quote (:: apply do_rec)) my_l))))
+
+namespace test_list
 
 end test_list
 

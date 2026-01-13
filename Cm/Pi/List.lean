@@ -132,60 +132,66 @@ def test_list_map_const (fn l : Expr) : Except Error Expr := do
 
 end test_list
 
+def list.reverse.acc : Expr :=
+  (:: π (:: nil id))
+
+def list.reverse.x : Expr :=
+  (:: π (:: (:: π (:: id nil)) nil))
+
+def list.reverse.push_x : Expr :=
+  :: both (:: x acc)
+
+def list.reverse.xs : Expr :=
+  :: π (:: (:: π (:: nil id)) nil)
+
+def list.reverse.state' : Expr :=
+  :: both (:: xs push_x)
+
+def list.reverse.nil_handler : Expr :=
+  :: π (:: nil acc)
+
+def list.reverse.advance : Expr :=
+  (:: both (:: (quote apply) (:: π (:: id state'))))
+
+def list.reverse.do_rec : Expr :=
+  (:: list.rec_with (:: list.rec_with
+    (:: nil_handler advance)))
+
+/-
+Should have just l in scope.
+-/
+def list.reverse.state₀ : Expr :=
+  :: both (:: id (quote nil))
+
+def list.reverse.app_rec : Expr :=
+  (:: apply list.reverse.do_rec)
+
+def list.reverse.mk_rec : Expr :=
+  (quote list.reverse.app_rec)
+
+def list.reverse.start : Expr :=
+  (:: both (:: list.reverse.mk_rec list.reverse.state₀))
+
 /-
   (:: apply (:: list.reverse l))
   We do this by generating an accumulation buffer, and accessing it from within our pattern match
   once we get to nil, we return the buffer
 -/
 def list.reverse : Expr :=
-  let my_l := Expr.id
-
   /-
     Our succ handler always has access to the accumulation buffer.
   -/
-  let acc := :: π (:: nil (:: π (:: nil id)))
-  let x := :: π (:: nil (:: π (:: (:: π (:: id nil)) nil)))
-  let push_x := :: both (:: x acc)
-
-  let xs := :: π (:: (:: π (:: nil id)) nil)
-
-  let state' := :: both (:: xs push_x)
-
   /-
-    Nil just returns back the accumulator
+    These don't have match_args in scope
   -/
-  let nil_handler := acc
-
-  /-
-    succ_handler gets passed :: match_args (:: x xs)
-    list.rec_with advance will execute with the tail of the list
-  -/
-
-  /-
-    (:: (quote (symbol "zero"))
-      (:: both (:: (quote (symbol "succ")) advance)))
-  -/
-
-  /-
-  let do_rec := (:: list.rec_with (:: list.rec_with
-    (:: nil_handler advance)))
-  -/
-
-  -- feeds new state into next step
-  -- let advance := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
-  let advance : Expr :=
-    :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) state')))
-
-  let do_rec := (:: list.rec_with (:: list.rec_with
-    (:: nil_handler advance)))
-
-  (:: both (:: (quote apply) (:: both (:: (quote (:: apply do_rec)) (:: both (:: my_l (quote nil)))))))
+  list.reverse.start
 
 namespace test_list
 
 def test_list_reverse (l : Expr) : Except Error Expr :=
   try_step_n run 1000 (:: apply (:: list.reverse l))
 
+#eval try_step_n run 1000 (:: apply (:: list.reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
 #eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
 
 end test_list

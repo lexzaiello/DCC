@@ -99,7 +99,10 @@ the base case is just id
 -/
 def list.get_n : Expr :=
   --let n := :: π (:: id nil)
-  --let zero_handler := (:: const id)
+  --let zero_handler := (quote id)
+  -- do_app reduces the inner values
+  -- let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
+  -- let succ_handler := :: both (:: (quote π) (:: both (:: (quote const) do_app)))
   -- succ_handler has :: match_args n in scope
   --let succ_handler := (
   /-

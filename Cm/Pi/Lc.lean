@@ -121,18 +121,26 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     let t_b := abstract depth.succ b
     quot_if_free depth b t_b
   | .app f x =>
-    dbg_trace s!"{LcExpr.app f x }"
-    let t_f := abstract depth f
-    let t_x := abstract depth x
+    -- 1 here to treat f and x as if they were under a lambda
+    -- since we are applying x to f, t_f depth.succ
+    let t_f := quot_if_free depth f <| abstract depth f
+    let t_x := quot_if_free depth x <| abstract depth x
 
     /-
       Need to do something similar with free variables
       We should treat f implicitly as if it were a lambda?
+      Similar to S transformation
+      S (.lam f) (.lam x)
+
+      λ (#1 #0) => substitute into both, then apply the entire thing?
+      
     -/
 
-    dbg_trace s!"f: {t_f}, x: {t_x}"
-
-    --(:: both (:: t_f t_x))
+    -- prepend an outer application
+    -- but also apply the inner values
+    dbg_trace s!"f: {t_f} x: {t_x}"
+    dbg_trace s!"f': {(quot_if_free depth f t_f)} x': {(quot_if_free depth x t_x)}"
+    --(:: both (:: (quote apply) (:: both (:: (quot_if_free depth f t_f) (quot_if_free depth x t_x)))))
 
     (:: both (:: (quote apply) (:: both (:: t_f t_x))))
 
@@ -176,6 +184,10 @@ def example_tre_app_i := mk_test (f$ (f$ (f$ tre_lc id') (.symbol "discard")) (.
 #eval example_tre_app_i
 
 def one := λ! (λ! (f$ (# 1) (# 0)))
+
+def simple_inner_app := mk_test (f$ (λ! (f$ (# 0) (# 0))) (.symbol "hi"))
+
+#eval simple_inner_app
 
 def example_do_id := mk_test (f$ (f$ one id') (.symbol "hello world"))
 

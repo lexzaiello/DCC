@@ -174,7 +174,7 @@ def Expr.of_lc_ctx (ctx : List Expr) : LcExpr DebruijnIdx → Except Error Expr
     let ctx' := List.cons x' ctx
     let f' ← Expr.of_lc_ctx [] f -- f does not receive the context either
 
-    pure <| (:: apply (:: f' (Expr.from_list ctx.reverse)))
+    pure <| (:: apply (:: f' (Expr.from_list ctx'.reverse)))
 
 def Expr.of_lc' : LcExpr DebruijnIdx → Except Error Expr := Expr.of_lc_ctx []
 

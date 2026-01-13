@@ -181,7 +181,7 @@ def list.nil_handler' : Expr :=
   let x := :: π (:: nil (:: π (:: id nil))) -- this has match_args in scope
   --let nil_handler_old := :: π (:: (:: π nil (:: π (:: nil (:: π id nil)))))
   --let handler_e := ::
-  let nil_handler_old := :: π (:: π (:: nil (:: π (:: nil (:: π (:: id nil))))))
+  let nil_handler_old := :: π (:: (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) nil)
   .cons both (:: x nil_handler_old)
 
 def list.reverse.advance : Expr :=

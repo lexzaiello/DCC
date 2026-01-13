@@ -188,7 +188,7 @@ def list.reverse.nil_handler' : Expr :=
   --let nil_handler_old := :: π (:: (:: π nil (:: π (:: nil (:: π id nil)))))
   --let handler_e := ::
   let nil_handler_old := :: π (:: (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) nil)
-  .cons both (:: x (:: both (:: (quote apply) (:: both (:: nil_handler_old (quote nil))))))
+  .cons both (:: (quote const) (:: both (:: x (:: both (:: (quote apply) (:: both (:: nil_handler_old (quote nil))))))))
 
 def list.reverse.advance : Expr :=
   (:: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) state'))))

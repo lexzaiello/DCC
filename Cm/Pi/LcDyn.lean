@@ -17,11 +17,11 @@ Lambda calculus with De Bruijn-indexed arguments.
 De Bruijn indices correspond to variable lookups in the context.
 -/
 def var : Expr :=
-  (:: both (:: (quote apply) (:: both (:: (quote (quote (symbol "get_n"))) (:: both (:: (quote both)
-    (:: both (:: const (quote id)))))))))
+  (:: both (:: (quote apply) (:: both (:: (quote list.get_n') id))))
 
 def test_ctx := :: (symbol "a") (:: (symbol "discard") nil)
 
+#eval do_step run (:: apply (:: var Nat'.zero))
 #eval try_step_n run 100 (:: apply (:: (:: apply (:: var Nat'.zero)) test_ctx))
 
 /-

@@ -13,6 +13,7 @@ inductive Expr where
   | cons   : Expr
     → Expr
     → Expr
+  | eq     : Expr -- definitional equality
   | apply  : Expr
   | π      : Expr
   | id     : Expr
@@ -33,6 +34,7 @@ open Expr
 
 def Expr.fmt (e : Expr) : Format :=
   match e with
+  | .eq => "eq"
   | .apply => "apply"
   | .π => "π"
   | .cons (.cons a b) (.cons c d) =>

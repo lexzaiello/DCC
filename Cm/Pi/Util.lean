@@ -8,6 +8,7 @@ Utility functions for the list calculus.
 
 open Expr
 
+
 /-
 Forces an expression to be evaluated immediately.
 -/

@@ -230,10 +230,18 @@ def test_id_whack : Except Error Expr := do
   let my_data := .symbol "hi"
   let my_app := (f$ id' my_data)
   let cc ← Expr.of_lc'' my_app
-  dbg_trace cc
   do_step run cc
 
 #eval test_id_whack
+
+def mk_test (lam_e : LcExpr DebruijnIdx) (step_with : Expr → Except Error Expr := run) : Except Error Expr := do
+  let cm_e ← Expr.of_lc'' lam_e
+  do_step step_with cm_e
+
+def tre_lc : LcExpr DebruijnIdx := λ! (λ! (# 1))
+
+-- constant
+#eval mk_test (f$ (f$ (f$ (λ! tre_lc) (.symbol "discard")) (.symbol "hello world")) (.symbol "discard"))
 
 def abstract' : LcExpr DebruijnIdx → Except Error Expr
   | .var n => pure <| cc_variable n

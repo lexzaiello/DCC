@@ -139,12 +139,23 @@ def list.reverse : Expr :=
   let x := :: π (:: nil (:: π (:: nil id)))
   let push_x := :: both (:: x acc)
 
+  let then_fetch_acc := :: π (:: id nil)
+  let quoted_fetch_acc := quote then_fetch_acc
+
   let do_rec := (:: list.rec_with (:: list.rec_with
     (:: (quote nil)
     (:: both (:: push_x list.rec_with.advance)))))
-  (:: both (:: (quote apply) (:: both (:: (quote (:: apply do_rec)) my_l))))
+  let fill_acc := (:: both (:: (quote apply) (:: both (:: (quote (:: apply do_rec)) my_l))))
+
+  (:: both (::
+    (quote apply) (:: both (::
+      quoted_fetch_acc
+      fill_acc))))
 
 namespace test_list
+
+def test_list_reverse (l : Expr) : Except Error Expr :=
+  
 
 end test_list
 

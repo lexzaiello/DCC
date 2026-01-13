@@ -44,9 +44,10 @@ def list.rec_with.quoted_xs_case :=
 
 /-
 This is the only thing that changes
+we just get the entire list, since we can use
+π to project over it anyway.
 -/
-def list.rec_with.xs_num :=
-  :: π (:: nil id)
+def list.rec_with.xs_num := Expr.id
 
 def list.rec_with.quote_fix'' : Expr :=
   :: both (::
@@ -86,10 +87,11 @@ def list.append : Expr :=
     TODO: see if this receives the very top head element.
     may need to change recursor.
     not sure.
+    I think cons is actually offset.
+    need to get the head element as well.
   -/
   -- let do_cons' := :: π (:: (
   let x := :: π (:: nil (:: π (:: id nil)))
-  let xs := :: π (:: nil (:: π (:: nil id)))
   let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
   let do_cons := :: both (:: x do_app)
 
@@ -118,12 +120,12 @@ def list_append (a b : Expr) : Except Error Expr := do
 Continue running the recursor on a list until we get to nil,
 then display.
 -/
-def rec_with_descent : Except Error Expr := do
-  let my_succ_case := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
+/-def rec_with_descent : Except Error Expr := do
+  let my_succ_case := :: π (:: nil id)
   let my_zero_case := Expr.id
   let out ← try_step_n run 50 (:: apply (:: (:: apply (:: list.rec_with (:: list.rec_with (:: my_zero_case my_succ_case)))) (:: (symbol "discard") nil)))
   pure out
 
-#eval rec_with_descent
+#eval rec_with_descent-/
 
 end test_list

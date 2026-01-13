@@ -83,11 +83,16 @@ def rec_nat.quote_fix'' : Expr :=
       (quote rec_nat.xs_num)
         rec_nat.match_args)))))))
 
+def rec_nat.quote_fix_and_run : Expr :=
+  :: both (::
+    (quote both) (:: both (::
+      (quote (quote apply)) rec_nat.quote_fix'')))
+
 /-
 Assumes rec_nat is the first argument, zero_case 2nd, succ_case 3rd
 -/
 def rec_nat : Expr :=
-  let inner_eq := :: both (:: (quote eq) (:: both (:: rec_nat.zero_case rec_nat.quote_fix'')))
+  let inner_eq := :: both (:: (quote eq) (:: both (:: rec_nat.zero_case rec_nat.quote_fix_and_run)))
   .cons both (:: inner_eq (quote zero))
 
 /-
@@ -121,6 +126,7 @@ def test_rec_nat_symb : Except Error Expr := do
   -- succ should have args (:: rec_nat (:: zero_case (:: my_succ_case num)))
   let my_succ_case := Expr.id
   let my_zero_case := Expr.id
-  do_step run (:: apply (:: (:: apply (:: rec_nat (:: (symbol "rec_nat") (:: my_zero_case my_succ_case)))) (:: succ zero)))
+  try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: (symbol "rec_nat") (:: my_zero_case my_succ_case)))) (:: succ zero)))
 
 #eval test_rec_nat_symb
+

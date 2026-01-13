@@ -143,7 +143,7 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
     /-
       if f or x are all bound, then we can just Expr.of_lc them
     -/
-    match all_bound 0 f, all_bound 0 x with
+    /-match all_bound 0 f, all_bound 0 x with
     | true, true => -- if both elements are bound, then they are constant values. so just apply them. but, since the left is being applied, depth 1
       pure <| quote (:: apply (:: (← Expr.of_lc f) (← Expr.of_lc x)))
     | false, true =>
@@ -151,7 +151,12 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
     | true, false =>
       pure <| (:: both (:: (quote apply) (:: both (:: (quote (← Expr.of_lc f)) (← abstract depth x)))))
     | false, false =>
-      pure <| (:: both (:: (quote apply) (:: both (:: (← abstract depth f) (← abstract depth x)))))
+      pure <| (:: both (:: (quote apply) (:: both (:: (← abstract depth f) (← abstract depth x)))))-/
+    -- treat f and x as if they were lambdas. similar to S transformation. S (λ f) (λ x)
+    let t_f ← abstract 1 f
+    let t_x ← abstract 1 x
+
+    pure <| (:: both (:: (quote apply) (:: both (:: t_f t_x))))
 
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .lam b =>
@@ -237,6 +242,8 @@ iszero = λ! (f$ (f$ (.var 0) (λ! flse)) tre)
 def is_zero_lc : LcExpr DebruijnIdx :=
   λ! (f$ (f$ (# 0) (λ! flse_lc)) tre_lc)
 
+#eval (do pure <| (← Expr.of_lc (λ! flse_lc)) == (← mk_test (f$ is_zero_lc tre_lc)))
+
 /-
 is_zero zero = true
 is_zero zero a b = "a"
@@ -253,6 +260,7 @@ def test_is_zero_zero_tre : Except Error Bool := do
 #eval tre_lc |> Expr.of_lc
 
 #eval mk_test (f$ is_zero_lc zero_lc)
+#eval mk_test (f$ is_zero_lc one)
 #eval test_is_zero_zero_tre
 
 def test_is_zero_zero : Except Error Expr :=

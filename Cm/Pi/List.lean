@@ -137,7 +137,7 @@ end test_list
   We do this by generating an accumulation buffer, and accessing it from within our pattern match
   once we get to nil, we return the buffer
 -/
-/-def list.reverse : Expr :=
+def list.reverse : Expr :=
   let my_l := Expr.id
 
   /-
@@ -147,34 +147,46 @@ end test_list
   let x := :: π (:: nil (:: π (:: (:: π (:: id nil)) nil)))
   let push_x := :: both (:: x acc)
 
-  -- without match_args in scope
-  let advance_only_in_l := :: π (:: (:: π (:: nil id)) id)
+  let xs := :: π (:: (:: π (:: nil id)) nil)
 
-  let then_fetch_acc := :: π (:: id nil)
-  let quoted_fetch_acc := quote then_fetch_acc
+  let state' := :: both (:: xs push_x)
+
+  /-
+    Nil just returns back the accumulator
+  -/
+  let nil_handler := acc
 
   /-
     succ_handler gets passed :: match_args (:: x xs)
     list.rec_with advance will execute with the tail of the list
   -/
 
-  -- feeds new state into next step
-  let advance : Expr :=
-    :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) advance_only_in_l)))
+  /-
+    (:: (quote (symbol "zero"))
+      (:: both (:: (quote (symbol "succ")) advance)))
+  -/
 
+  /-
+  let do_rec := (:: list.rec_with (:: list.rec_with
+    (:: nil_handler advance)))
+  -/
+
+  -- feeds new state into next step
+  -- let advance := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
+  let advance : Expr :=
+    :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) state')))
 
   let do_rec := (:: list.rec_with (:: list.rec_with
-    (:: (quote nil) (:: both (:: both (:: (quote push_x) advance))))))
-  let fill_acc := (:: both (:: (quote apply) (:: both (:: (:: both (:: (quote apply) (quote do_rec))) (:: both (:: my_l (quote nil)))))))
+    (:: nil_handler advance)))
 
-  fill_acc-/
+  (:: both (:: (quote apply) (:: both (:: (quote (:: apply do_rec)) (:: both (:: my_l (quote nil)))))))
 
 namespace test_list
 
-/-def test_list_reverse (l : Expr) : Except Error Expr :=
+def test_list_reverse (l : Expr) : Except Error Expr :=
   try_step_n run 1000 (:: apply (:: list.reverse l))
 
-#eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))-/
+#eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
 
 end test_list
 

@@ -95,6 +95,7 @@ Need to do the same "substitution" thing at the top level
 def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
   | .var 0 => .id
   | .var n =>
+    -- this is the free variable case
     mk_n_const (n - depth) id -- depth is handled in lambda nesting case
   | .symbol s => (:: const (symbol s))
   | .lam b =>
@@ -102,6 +103,7 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     -- the inner lambda
     -- TODO: when to increase depth
     -- if all inner vars are bound, then this should just be a const
+    -- this is the "free" case. all inner lambdas are free
     let t_b := abstract depth.succ b
     (:: both (:: (quote const) t_b))
   | .app f x =>
@@ -110,8 +112,21 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
 
     (:: both (:: (quote apply) (:: both (:: t_f t_x))))
 
+def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
+  | .lam b => pure <| abstract 1 b
+  | .app f x => do
+    let t_f ← Expr.of_lc f
+    let t_x ← Expr.of_lc x
+    pure <| (:: apply (:: t_f t_x))
+  | .symbol s => pure <| symbol s
+  | _ => .error <| .var_in_output
+
 -- λ 0 => id
-#eval abstract 1 (.var 0)
+#eval Expr.of_lc (f$ (λ! (.var 0)) (.symbol "hi"))
+  >>= do_step run
+
+#eval Expr.of_lc (f$ (λ! (λ! (.var 0))) (.symbol "hi"))
+  >>= do_step run
 
 def example_id : Except Error Expr :=
   let t := abstract 1 (.var 0)

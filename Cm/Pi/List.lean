@@ -121,6 +121,24 @@ def test_list_map_const (fn l : Expr) : Except Error Expr := do
 
 end test_list
 
+def list.length : Expr :=
+  let my_l := Expr.id
+  let advance := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
+
+  let do_rec := (:: list.rec_with (:: list.rec_with
+    (:: (quote (symbol "zero"))
+    (:: both (:: (quote (symbol "succ")) advance)))))
+  (:: both (:: (quote apply) (:: both (:: (quote (:: apply do_rec)) my_l))))
+
+namespace test_list
+
+def test_list_length (l : Expr) : Except Error Expr :=
+  try_step_n run 100 (:: apply (:: list.length l))
+
+#eval test_list_length (:: (symbol "a") nil)
+
+end test_list
+
 /-
 (:: apply (:: list.prepend (:: m n)))
 Recurse on m, base case n.

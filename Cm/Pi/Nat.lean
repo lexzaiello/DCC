@@ -80,12 +80,14 @@ def nat.rec_with : Expr :=
   let inner_eq := :: both (:: (quote eq) (:: both (:: nat.rec_with.zero_case nat.rec_with.quote_fix_and_run)))
   .cons both (:: inner_eq (quote zero))
 
+namespace test_nat
+
 /-
 nat.rec_with tests:
 - just plug in names for the functions first, to see if it's doing the fixpoint right.
 -/
 
-def test_nat.rec_with_zero_works : Except Error Bool := do
+def rec_with_zero_works : Except Error Bool := do
   let zero_result ← do_step run (:: apply (:: (:: apply (:: nat.match_with (:: id id))) zero))
   let zero_rec ← do_step run (:: apply (:: (:: apply (:: nat.rec_with (:: nat.rec_with (:: id id)))) zero))
 
@@ -94,20 +96,20 @@ def test_nat.rec_with_zero_works : Except Error Bool := do
 
   pure <| zero_result == zero_rec
 
-#eval test_nat.rec_with_zero_works
+#eval rec_with_zero_works
 
-def test_nat.rec_with_zero_works' : Except Error Bool := do
+def rec_with_zero_works' : Except Error Bool := do
   let zero_result ← do_step run (:: apply (:: (:: apply (:: nat.match_with (:: (quote (symbol "hi")) id))) zero))
   let zero_result' ← do_step run (:: apply (:: (:: apply (:: nat.rec_with (:: nat.rec_with (:: (quote (symbol "hi")) id)))) zero))
 
   pure <| zero_result' == (symbol "hi") && zero_result' == zero_result
 
-#eval test_nat.rec_with_zero_works'
+#eval rec_with_zero_works'
 
 /-
 Just to print out the cases, prepend identifiers.
 -/
-def test_nat.rec_with_symb : Except Error Expr := do
+def rec_with_symb : Except Error Expr := do
   let my_succ_case := Expr.id
   let my_zero_case := Expr.id
   try_step_n run 100 (:: apply (:: (:: apply (:: nat.rec_with (:: (symbol "nat.rec_with") (:: my_zero_case my_succ_case)))) (:: succ zero)))
@@ -116,27 +118,29 @@ def test_nat.rec_with_symb : Except Error Expr := do
 :: (:: (symbol "nat.rec_with") (:: (symbol "nat.rec_with") (:: id id))) (symbol "zero") is output.
 so we can basically just insert an apply inside and outside at the beginnings.
 -/
-#eval test_nat.rec_with_symb
+#eval rec_with_symb
 
 /-
 Just to print out the cases, prepend identifiers.
 -/
-def test_nat.rec_with_return_is_same : Except Error Bool := do
+def rec_with_return_is_same : Except Error Bool := do
   let my_succ_case := :: π (:: (:: π (:: id nil)) nil)
   let my_zero_case := Expr.id
   let out ← try_step_n run 100 (:: apply (:: (:: apply (:: nat.rec_with (:: nat.rec_with (:: my_zero_case my_succ_case)))) (:: succ zero)))
   pure <| out == nat.rec_with
 
-#eval test_nat.rec_with_return_is_same
+#eval rec_with_return_is_same
 
 /-
 Running nat.rec_with again.
 Should give us zero, since we are running id in the last case.
 -/
-def test_nat.rec_with_descent : Except Error Expr := do
+def rec_with_descent : Except Error Expr := do
   let my_succ_case := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
   let my_zero_case := Expr.id
   let out ← try_step_n run 100 (:: apply (:: (:: apply (:: nat.rec_with (:: nat.rec_with (:: my_zero_case my_succ_case)))) (:: succ zero)))
   pure out
 
-#eval test_nat.rec_with_descent
+#eval rec_with_descent
+
+end test_nat

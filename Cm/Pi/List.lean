@@ -101,7 +101,7 @@ def list.get_n : Expr :=
   let zero_handler := (quote (:: π (:: id nil)))
   -- do_app reduces the inner values
   let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
-  let succ_handler := :: both (:: (quote π) (:: both (:: (quote const) do_app)))
+  let succ_handler := :: both (:: (quote π) (:: both (:: (quote nil) do_app)))
 
   -- this should be quoted. it does not depend on anything
   let do_rec := (:: apply (:: nat.rec_with
@@ -113,6 +113,7 @@ def list.get_n : Expr :=
   .cons both (:: (quote apply) (:: π (:: mk_getter id)))
 
 #eval try_step_n run 100 (:: apply (:: list.get_n (:: (symbol "zero") (:: (symbol "test") nil))))
+#eval try_step_n run 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (symbol "zero")) (:: (symbol "test") (:: (symbol "next") nil)))))
 
 /-
 (:: apply (:: list.map (:: f l)))

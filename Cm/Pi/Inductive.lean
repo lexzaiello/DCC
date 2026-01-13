@@ -51,7 +51,7 @@ def rec_nat.succ_case :=
 
 -- produces (:: const (:: rec_nat (:: zero_case succ_case)))
 def rec_nat.match_args : Expr :=
-  (:: both (:: (quote const) (:: both (:: rec_nat.self (:: both (:: rec_nat.zero_case rec_nat.succ_case))))))
+  (:: both (:: (quote const) (:: both (:: rec_nat.self (:: both (:: rec_nat.self (:: both (:: rec_nat.zero_case rec_nat.succ_case))))))))
 
 def rec_nat.quoted_succ_case :=
   (:: both (:: (quote const) rec_nat.succ_case))
@@ -123,4 +123,10 @@ def test_rec_nat_return_is_same : Except Error Bool := do
   let out ← try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: rec_nat (:: my_zero_case my_succ_case)))) (:: succ zero)))
   pure <| out == rec_nat
 
---def test_rec_nat_descent : Except Error 
+#eval test_rec_nat_return_is_same
+
+def test_rec_nat_descent : Except Error Expr := do
+  let my_succ_case := :: π (:: (:: π (:: id nil)) nil)
+  let my_zero_case := Expr.id
+  let out ← try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: rec_nat (:: my_zero_case my_succ_case)))) (:: succ zero)))
+  sorry

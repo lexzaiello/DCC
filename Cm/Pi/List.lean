@@ -26,6 +26,9 @@ NOTE:
 def list.rec_with.self :=
   :: π (:: id nil)
 
+/-
+the nil case is the second argument to :: list.rec (:: list.rec (:: nil_case cons_case))
+-/
 def list.rec_with.nil_case :=
   :: π (:: nil (:: π (:: id nil)))
 
@@ -36,6 +39,9 @@ def list.rec_with.xs_case :=
   :: π (:: nil (:: π (:: nil id)))
 
 -- produces (:: const (:: list.rec_with (:: nil_case xs_case)))
+/-
+for passing into our handlers
+-/
 def list.rec_with.match_args : Expr :=
   (:: both (:: (quote const) (:: both (:: list.rec_with.self (:: both (:: list.rec_with.self (:: both (:: list.rec_with.nil_case list.rec_with.xs_case))))))))
 
@@ -47,10 +53,11 @@ This is the only thing that changes
 we just get the entire list, since we can use
 π to project over it anyway.
 -/
-def list.rec_with.xs_num := Expr.id
+def list.rec_with.list := Expr.id
 
 /-
 case_e should be unquoted
+this has access to the entire context when :: list.rec_with is applied
 -/
 def list.rec_with.quote_fix'' (case_e : Expr) : Expr :=
   :: both (::
@@ -59,7 +66,7 @@ def list.rec_with.quote_fix'' (case_e : Expr) : Expr :=
     (:: both (::
       (quote both) (:: both (::
       list.rec_with.match_args
-      (quote list.rec_with.xs_num))))))))
+      (quote list.rec_with.list)))))))) -- xs_num is the list
 
 def list.rec_with.quote_fix_and_run (case_e : Expr) : Expr :=
   :: both (::
@@ -70,7 +77,7 @@ def list.rec_with.quote_fix_and_run (case_e : Expr) : Expr :=
 Assumes list.rec_with is the first argument, nil_case 2nd, xs_case 3rd
 -/
 def list.rec_with : Expr :=
-  let inner_eq := :: both (:: (quote eq) (:: both (:: list.rec_with.nil_case (list.rec_with.quote_fix_and_run list.rec_with.xs_case))))
+  let inner_eq := :: both (:: (quote eq) (:: both (:: (list.rec_with.quote_fix_and_run list.rec_with.nil_case) (list.rec_with.quote_fix_and_run list.rec_with.xs_case))))
   .cons both (:: inner_eq (quote nil))
 
 /-

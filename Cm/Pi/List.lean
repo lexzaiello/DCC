@@ -71,12 +71,36 @@ def list.rec_with : Expr :=
   .cons both (:: inner_eq (quote nil))
 
 /-
-(:: apply (:: nat.plus (:: m n)))
+(:: apply (:: list.map (:: f l)))
+-/
+def list.map : Expr :=
+  -- just run :: π (:: f id) each layer
+  let my_f := :: π (:: id nil)
+
+  let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
+  -- with all args in scope
+  let do_map := :: both (:: (quote π) (:: both (:: my_f (quote do_app))))
+
+  let my_l := :: π (:: nil id)
+
+  let nil_case := (quote id)
+
+  -- generates recursor
+  let do_rec := (:: both
+    (:: (quote apply) (:: both
+      (:: (quote list.rec_with) (:: both
+        (:: (quote list.rec_with)
+          (:: both (:: nil_case do_map))))))))
+
+  (:: both (:: (quote apply) (:: both (:: do_rec my_l))))
+
+/-
+(:: apply (:: list.prepend (:: m n)))
 Recurse on m, base case n.
 
 each level, cons on one of our own elements.
 -/
-def list.append : Expr :=
+def list.prepend : Expr :=
   /-
     For the xs case, we receive (:: (:: list.rec_with ... stuff) (:: x xs))
     so we just need to cons onto the (:: x xs).
@@ -111,10 +135,10 @@ def list.append : Expr :=
 
 namespace test_list
 
-def list_append (a b : Expr) : Except Error Expr := do
-  try_step_n run 100 (:: apply (:: list.append (:: a b)))
+def list_prepend (a b : Expr) : Except Error Expr := do
+  try_step_n run 100 (:: apply (:: list.prepend (:: a b)))
 
-#eval list_append (:: (symbol "a") (:: (symbol "b") nil)) (:: (symbol "a") (:: (symbol "b") nil))
+#eval list_prepend (:: (symbol "a") (:: (symbol "b") nil)) (:: (symbol "a") (:: (symbol "b") nil))
 
 /-
 Continue running the recursor on a list until we get to nil,

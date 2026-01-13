@@ -52,3 +52,9 @@ def test_tre : Except Error Expr :=
   try_step_n run 200 (f$ my_tre (:: (symbol "a") (:: (symbol "b") nil)))
 
 #eval test_tre
+
+def test_flse : Except Error Expr :=
+  let my_flse := λ! (λ! (v# 0))
+  try_step_n run 200 (f$ my_flse (:: (symbol "a") (:: (symbol "b") nil)))
+
+#eval test_flse

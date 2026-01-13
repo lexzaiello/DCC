@@ -127,6 +127,7 @@ def test_nat_plus_nat (m n : ℕ) (max_steps : ℕ := 100) : Except Error (Optio
 
 #eval test_nat_plus_nat 1 100 (max_steps := 57)
 #eval test_nat_plus_nat 100 1 (max_steps := 10000)
+#eval test_nat_plus_nat 20 20 (max_steps := 5000)
 
 /-
 nat.rec_with tests:

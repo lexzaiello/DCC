@@ -78,33 +78,29 @@ def list.map : Expr :=
     succ_case gets passed (:: match_args l)
   -/
 
-  let nil_handler := (quote nil)
+  let nil_handler := (quote (quote nil))
 
   let my_f := :: π (:: id nil)
+  let my_l := :: π (:: nil id)
 
   /-
     In succ handler.
     both'd to prepend the mapped head
   -/
   let advance := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
-  let quoted_advanced := :: both (:: const advance)
 
   /-
     This has all the original args in scope.
   -/
   let succ_handler := :: both (:: (quote both) (:: both (:: my_f (quote advance))))
 
-  /-
   let do_rec := (:: both
     (:: (quote apply) (:: both
       (:: (quote list.rec_with) (:: both
         (:: (quote list.rec_with)
-          (:: both (:: nil_case (quote do_cons)))))))))
+          (:: both (:: nil_handler succ_handler))))))))
 
-  (:: both (:: (quote apply) (:: both (:: do_rec m))))
-  -/
-
-  sorry
+  (:: both (:: (quote apply) (:: both (:: do_rec my_l))))
 
 namespace test_list
 

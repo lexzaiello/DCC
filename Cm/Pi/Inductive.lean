@@ -65,7 +65,7 @@ def rec_nat.quote_xs_succ : Expr :=
 -- eq function to feed (:: num (:: rec_nat (:: zero_case succ_case))) in
 def rec_nat.quote_fix' : Expr :=
   :: both (::
-    (quote both)
+    (quote apply)
       (:: both (::
         rec_nat.quote_succ
         (:: both (::

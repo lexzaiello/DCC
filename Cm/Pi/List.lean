@@ -111,27 +111,7 @@ def list.get_n : Expr :=
 
   let mk_getter := (:: both (:: (quote apply) (:: both (:: (quote do_rec) n))))
 
-  -- succ_handler has :: match_args n in scope
-  --let succ_handler := (
-  /-
-    let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
-    let do_succ := :: both (:: (quote succ) do_app)
-
-    let m := :: π (:: id nil)
-    let n := :: π (:: nil const)
-
-    let zero_case := n
-
-    -- generates recursor
-    let do_rec := (:: both
-      (:: (quote apply) (:: both
-        (:: (quote nat.rec_with) (:: both
-          (:: (quote nat.rec_with)
-            (:: both (:: zero_case (quote do_succ)))))))))
-    
-    (:: both (:: (quote apply) (:: both (:: do_rec m))))
-  -/
-  sorry
+  .cons both (:: (quote apply) (:: both (:: π (:: mk_getter id))))
 
 /-
 (:: apply (:: list.map (:: f l)))

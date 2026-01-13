@@ -52,9 +52,6 @@ def rec_nat.succ_case :=
 def rec_nat.quote_succ :=
   :: both (:: (quote const) rec_nat.succ_case)
 
-def rec_nat.quote_zero :=
-  :: both (:: (quote const) rec_nat.zero_case)
-
 -- produces (:: const (:: rec_nat (:: zero_case succ_case)))
 def rec_nat.quote_match_args : Expr :=
   :: both (:: (quote const) (:: both (:: rec_nat.self (:: both (:: rec_nat.zero_case rec_nat.succ_case)))))

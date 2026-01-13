@@ -134,6 +134,10 @@ def test_list_map_const (fn l : Expr) : Except Error Expr := do
 
 end test_list
 
+/-
+match args look fine.
+-/
+
 def list.reverse.acc : Expr :=
   (:: π (:: nil id))
 
@@ -153,7 +157,7 @@ def list.reverse.nil_handler : Expr :=
   :: π (:: nil acc)
 
 def list.reverse.advance : Expr :=
-  (:: both (:: (quote apply) (:: π (:: id state'))))
+  (:: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) state'))))
 
 def list.reverse.do_rec : Expr :=
   (:: list.rec_with (:: list.rec_with
@@ -172,7 +176,7 @@ def list.reverse.mk_rec : Expr :=
   (quote list.reverse.app_rec)
 
 def list.reverse.start : Expr :=
-  (:: both (:: list.reverse.mk_rec list.reverse.state₀))
+  (:: both (:: (quote apply) (:: both (:: list.reverse.mk_rec list.reverse.state₀))))
 
 /-
   (:: apply (:: list.reverse l))
@@ -193,7 +197,7 @@ namespace test_list
 def test_list_reverse (l : Expr) : Except Error Expr :=
   try_step_n run 1000 (:: apply (:: list.reverse l))
 
-#eval try_step_n run 1000 (:: apply (:: list.reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
+#eval try_step_n run 10000 (:: apply (:: list.reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
 #eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
 
 end test_list

@@ -118,6 +118,66 @@ def decr_all_vars : LcExpr DebruijnIdx → LcExpr DebruijnIdx
   | .lam bdy => .lam (decr_all_vars bdy)
   | .symbol s => .symbol s
 
+/-
+Idea:
+λ λ n => select nth items from context. what to do if we are a free variable?
+de bruijn index zero selects the last element in the context
+π ((const nil) (π (const nil) (π (const nil) id)
+we will put arguments in the original order.
+
+store arguments in cons order?
+so de bruijn index zero is just the head.
+-/
+
+def get_head : Expr := :: π (:: id (:: const nil))
+
+/-
+TODO: we can probably make cc_variable more efficient for apps.
+map_variable.
+-/
+def cc_variable : DebruijnIdx → Expr
+  | .zero => :: π (:: id nil)
+  | .succ n =>
+    (:: π (:: nil (cc_variable n)))
+
+def abstract' : LcExpr DebruijnIdx → Except Error Expr
+  | .var n => pure <| cc_variable n
+  | .symbol s => pure <| :: const (symbol s)
+  | .lam b => do
+    -- λ (λ 0) we just substitute our context in
+    -- this is actually a no-op
+    abstract' b
+  | .app f x => do
+    /-
+      Future application. λf (λx f x). To do this, we use both. Then, we apply.
+    -/
+    let f' ← abstract' f
+    let x' ← abstract' x
+    pure <| (:: both (:: (quote apply) (:: f' x')))
+
+def Expr.from_list : List Expr → Expr
+  | .nil => nil
+  | .cons x xs => (:: x (Expr.from_list xs))
+
+/-
+We store arguments in an order that matches our debruijn indices.
+f a b - (:: a (:: b nil))
+
+(λ λ 0) a b -> 0 corrresponds to b, not a, so we store lazily and then fold into a context.
+-/
+def Expr.of_lc_ctx (ctx : List Expr) : LcExpr DebruijnIdx → Except Error Expr
+  | .lam b => abstract' b
+  | .symbol s => pure <| .symbol s
+  | .var _ => .error <| .var_in_output
+  | .app f x => do
+    let x' ← Expr.of_lc_ctx [] x -- x does not receive the context, since it is associated on the right.
+    let ctx' := List.cons x' ctx
+    let f' ← Expr.of_lc_ctx [] f -- f does not receive the context either
+
+    pure <| (:: apply (:: f' (Expr.from_list ctx.reverse)))
+
+def Expr.of_lc' : LcExpr DebruijnIdx → Except Error Expr := Expr.of_lc_ctx []
+
 mutual
 /-
 Need to do the same "substitution" thing at the top level
@@ -161,10 +221,11 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
       pure <| (:: both (:: (quote apply) (:: both (:: (← abstract depth f) (← abstract depth x)))))-/
     -- treat f and x as if they were lambdas. similar to S transformation. S (λ f) (λ x)
     --dbg_trace s!"{f}: {abstract 1 f} {x}: {abstract 1 x}"
+    -- both f and x receive the context so far
     let t_f ← abstract depth f
     let t_x ← abstract depth x
 
-    pure <| (:: both (:: (quote apply) (:: both (:: t_f t_x))))
+    pure <| (:: both (:: t_f t_x))
 
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .lam b =>

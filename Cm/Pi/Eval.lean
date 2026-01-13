@@ -50,6 +50,10 @@ We should ideally in the future remove apply calls in step_apply.
 def step_apply (e : Expr) : Except Error Expr := do
   match e with
   | :: .id x => pure x
+  | :: (:: π (:: nil b)) (:: _x xs) =>
+    pure <| :: apply (:: b xs)
+  | :: (:: π (:: a nil)) (:: x xs) =>
+    pure <| :: apply (:: a x)
   | :: (:: π (:: a b)) (:: x xs) =>
     let a' := :: apply (:: a x)
     let b' := :: apply (:: b xs)

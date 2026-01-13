@@ -151,8 +151,10 @@ def tre_lc : LcExpr DebruijnIdx := λ! (λ! (# 1))
 def flse_lc : LcExpr DebruijnIdx := λ! (λ! (# 0))
 
 def example_tre := mk_test (f$ (f$ tre_lc (.symbol "a")) (.symbol "b"))
+def example_flse := mk_test (f$ (f$ flse_lc (.symbol "a")) (.symbol "b"))
 
 #eval example_tre
+#eval example_flse
 
 /-
 Potential translation with positinal parameters:

@@ -134,20 +134,6 @@ def test_list_map_const (fn l : Expr) : Except Error Expr := do
 
 end test_list
 
-/-
-match args look fine.
--/
-
-/-
-Issue here is that advance is making our list grow and grow,
-since it can't detect that we have two separate contexts.
-What we could do is update the nil handler inside
-and shrink the context.
--/
-
-/-
-:: match_args l in scope here
--/
 def list.reverse.state'' : Expr :=
   :: π (:: nil (:: π (:: nil id)))
 
@@ -161,14 +147,9 @@ def list.reverse.nil_handler₀ : Expr :=
   Push the head element into the list returned by the nil handler.
   this has :: match_args l in scope
   run the old nil handler to render the list.
-
-  TODO: probably have to apply the context here?
-  Maybe not?
 -/
 def list.reverse.nil_handler' : Expr :=
   let x := :: π (:: nil (:: π (:: id nil))) -- this has match_args in scope
-  --let nil_handler_old := :: π (:: (:: π nil (:: π (:: nil (:: π id nil)))))
-  --let handler_e := ::
   let nil_handler_old := :: π (:: (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) nil)
   .cons both (:: (quote const) (:: both (:: x (:: both (:: (quote apply) (:: both (:: nil_handler_old (quote nil))))))))
 

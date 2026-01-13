@@ -58,3 +58,16 @@ def test_flse : Except Error Expr :=
   try_step_n run 200 (f$ my_flse (:: (symbol "a") (:: (symbol "b") nil)))
 
 #eval test_flse
+
+def flse_lc : Expr := λ! (λ! (v# 0))
+
+def tre_lc : Expr := λ! (λ! (v# 1))
+
+/-
+0 f x = x
+-/
+def zero_lc : Expr := λ! (λ! (v# 0))
+
+def is_zero_lc : Expr := λ! (f$ (v# 0) (:: (λ! flse_lc) (:: tre_lc nil)))
+
+#eval try_step_n run 200 (f$ is_zero_lc zero_lc)

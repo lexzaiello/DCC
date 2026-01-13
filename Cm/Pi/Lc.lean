@@ -96,8 +96,10 @@ def all_bound (depth : ℕ) : LcExpr DebruijnIdx → Bool
   | .symbol _s => true
   | .app f x => all_bound depth f && all_bound depth x
 
-def quot_if_free (depth : ℕ) (e : Expr) : Expr :=
-  
+def quot_if_free (depth : ℕ) (original : LcExpr DebruijnIdx) (e : Expr) : Expr :=
+  if ¬ all_bound depth original then
+      (:: both (:: (quote const) e))
+  else e
 
 /-
 Need to do the same "substitution" thing at the top level
@@ -117,10 +119,9 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
       If all inner lambdas are free, then we should const the result after running it
     -/
     let t_b := abstract depth.succ b
-    if ¬ all_bound depth b then
-      (:: both (:: (quote const) t_b))
-    else t_b
+    quot_if_free depth b t_b
   | .app f x =>
+    dbg_trace s!"{LcExpr.app f x }"
     let t_f := abstract depth f
     let t_x := abstract depth x
 
@@ -171,6 +172,8 @@ def example_flse := mk_test (f$ (f$ flse_lc (.symbol "a")) (.symbol "b"))
 def id' := λ! (# 0)
 
 def example_tre_app_i := mk_test (f$ (f$ (f$ tre_lc id') (.symbol "discard")) (.symbol "hello world")) (try_step_n run 1)
+
+#eval example_tre_app_i
 
 def one := λ! (λ! (f$ (# 1) (# 0)))
 

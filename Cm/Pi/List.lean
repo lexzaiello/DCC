@@ -188,7 +188,7 @@ def list.reverse.nil_handler' : Expr :=
   --let nil_handler_old := :: π (:: (:: π nil (:: π (:: nil (:: π id nil)))))
   --let handler_e := ::
   let nil_handler_old := :: π (:: (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) nil)
-  .cons both (:: x nil_handler_old)
+  .cons both (:: x (:: both (:: (quote apply) (:: both (:: nil_handler_old (quote nil))))))
 
 def list.reverse.advance : Expr :=
   (:: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) state'))))
@@ -231,6 +231,7 @@ namespace test_list
 def test_list_reverse (l : Expr) : Except Error Expr :=
   try_step_n run 1000 (:: apply (:: list.reverse l))
 
+#eval try_step_n run 100 (:: apply (:: list.reverse.nil_handler' (:: (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (:: const nil) (symbol "cons_handler")))) (:: (symbol "x") (:: (symbol "xs") nil)))))
 #eval try_step_n run 100 (:: apply (:: list.reverse.state'' (:: (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "nil handler") (symbol "cons_handler")))) (:: (symbol "x") (:: (symbol "xs") nil)))))
 --#eval try_step_n run 100 (:: apply (:: list.reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
 --#eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))

@@ -69,7 +69,7 @@ def rec_nat.quote_xs_succ : Expr :=
 -- produces a quoted (:: both (quote succ_case) (:: (quote (:: zero_case succ_case)) id))
 -- assuming succ_case and zero_case are in scope
 def rec_nat.quote_fix : Expr :=
-  :: both (:: (quote both) (:: both (:: rec_nat.quote_succ (:: both (:: rec_nat.quote_xs_succ rec_nat.quote_match_args)))))
+  :: both (:: (quote apply) (:: both (:: rec_nat.quote_succ (:: both (:: rec_nat.quote_xs_succ rec_nat.quote_match_args)))))
 
 /-
 Assumes rec_nat is the first argument, zero_case 2nd, succ_case 3rd

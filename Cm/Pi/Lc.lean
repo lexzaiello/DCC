@@ -140,13 +140,110 @@ def cc_variable : DebruijnIdx → Expr
   | .succ n =>
     (:: π (:: nil (cc_variable n)))
 
+abbrev VariableMap := Expr → Expr
+
+/-
+Map indices
+- last operation in the program is a (:: π (:: id (:: const nil)))
+- this will keep the list intact except the nth argument
+-/
+def map_variable (n : DebruijnIdx) : VariableMap :=
+  match n with
+  | .zero => (fun fn => :: π (:: fn id))
+  | .succ n => (fun fn => :: π (:: id (map_variable n fn)))
+
+/-
+Arguments get pushed in in reverse de bruijn order.
+one f x has the context (:: x f)
+
+so we map the elements like this:
+map_variable (:: (:: both (:: const apply) id)) 1
+
+one := λ! (λ! (f$ (# 1) (# 0)))
+
+we translate this to:
+
+Our functions are just π expressions.
+
+one := id
+
+Final operation in the program is (:: apply (:: ops ctx))
+one id (symbol "hi") => (:: apply (:: id (symbol "hi")))
+
+succ n f x = f (n f x)
+
+first operation we need to do is to convert all arguments to lists.
+nested applications are fine.
+
+map variable is fine.
+
+λ x.x => map_variable ?
+
+So we're composing a bunch of map_variable calls.
+
+Variable maps map on the context.
+Symbol injects a new value into the context.
+
+nested lambdas are no-ops, since the de bruijn indices tell us what we need to do.
+λ λ 0
+
+Applications inside lambdas?
+(λx λ y => (x y)) (:: (symbol "a") (symbol "b"))
+
+This is composition of variable maps.
+
+-/
+
+def Expr.cons_ctx : Expr → List Expr → List Expr
+  | :: x nil, l => List.cons x l
+  | x, l => List.cons x l
+
+def Expr.from_list : List Expr → Expr
+  | .nil => nil
+  | .cons x xs => (:: x (Expr.from_list xs))
+
+def abstract'' : LcExpr DebruijnIdx → VariableMap
+  | .var n => map_variable n
+  | .symbol s => Expr.cons (.symbol s)
+  | .lam bdy => abstract'' bdy
+  | .app f x => (abstract'' f) ∘ (abstract'' x)
+
+def terminal_op : Expr := :: π (:: id nil)
+def terminal_map (ctx : Expr) : Expr := :: apply (:: terminal_op ctx)
+
+def Expr.of_lc_ctx' (ctx : List Expr) : LcExpr DebruijnIdx → Except Error Expr
+  | .app f x => do
+    let x' ← Expr.of_lc_ctx' [] x -- x does not receive the context
+    let ctx' := Expr.cons_ctx x' ctx
+    let f' ← Expr.of_lc_ctx' ctx' f
+    let out := pure <| (:: apply (:: f' (Expr.from_list ctx')))
+    out
+  | .lam b => pure <| abstract'' b id
+  | .symbol s => pure <| (:: (.symbol s) nil)
+  | .var _ => .error <| .var_in_output
+
+def Expr.of_lc'' : LcExpr DebruijnIdx → Except Error Expr := (Expr.of_lc_ctx' [])
+  >=> (pure ∘ terminal_map)
+
+def test_id_whack : Except Error Expr := do
+  let id' := λ! (# 0)
+  let my_data := .symbol "hi"
+  let my_app := (f$ id' my_data)
+  let cc ← Expr.of_lc'' my_app
+  dbg_trace cc
+  do_step run cc
+
+#eval test_id_whack
+
 def abstract' : LcExpr DebruijnIdx → Except Error Expr
   | .var n => pure <| cc_variable n
   | .symbol s => pure <| :: const (symbol s)
   | .lam b => do
     -- λ (λ 0) we just substitute our context in
     -- this is actually a no-op
-    abstract' b
+    -- nested lambda requires deferring apply
+    -- until we have all the arguments we're expecting
+    pure <| (:: both (:: (quote apply) (:: both (:: (quote (← abstract' b)) id))))
   | .app f x => do
     /-
       Future application. λf (λx f x). To do this, we use both. Then, we apply.
@@ -154,10 +251,6 @@ def abstract' : LcExpr DebruijnIdx → Except Error Expr
     let f' ← abstract' f
     let x' ← abstract' x
     pure <| (:: both (:: (quote apply) (:: f' x')))
-
-def Expr.from_list : List Expr → Expr
-  | .nil => nil
-  | .cons x xs => (:: x (Expr.from_list xs))
 
 /-
 We store arguments in an order that matches our debruijn indices.
@@ -172,13 +265,34 @@ def Expr.of_lc_ctx (ctx : List Expr) : LcExpr DebruijnIdx → Except Error Expr
   | .app f x => do
     let x' ← Expr.of_lc_ctx [] x -- x does not receive the context, since it is associated on the right.
     let ctx' := List.cons x' ctx
-    let f' ← Expr.of_lc_ctx [] f -- f does not receive the context either
+    let f' ← Expr.of_lc_ctx ctx' f -- f does not receive the context either
+
+    dbg_trace ctx'
 
     pure <| (:: apply (:: f' (Expr.from_list ctx'.reverse)))
 
 def Expr.of_lc' : LcExpr DebruijnIdx → Except Error Expr := Expr.of_lc_ctx []
 
-mutual
+namespace positional_tests
+
+def mk_test (lam_e : LcExpr DebruijnIdx) (step_with : Expr → Except Error Expr := run) : Except Error Expr := do
+  let cm_e ← Expr.of_lc' lam_e
+  do_step step_with cm_e
+
+def test_id : Except Error Expr :=
+  mk_test (f$ (λ! (# 0)) (.symbol "hi"))
+
+#eval test_id
+
+def test_second_arg : Except Error Expr :=
+  mk_test (f$ (f$ (λ! (λ! (# 0))) (.symbol "a")) (.symbol "hi"))
+
+
+#eval test_second_arg
+
+end positional_tests
+
+/-mutual
 /-
 Need to do the same "substitution" thing at the top level
 -/
@@ -354,3 +468,4 @@ def test_is_one_one : Except Error Expr :=
 
 #eval test_is_zero_zero
 #eval test_is_one_one
+-/

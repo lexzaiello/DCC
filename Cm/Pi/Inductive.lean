@@ -130,6 +130,6 @@ def test_rec_nat_symb : Except Error Expr := do
   -- succ should have args (:: rec_nat (:: zero_case (:: my_succ_case num)))
   let my_succ_case := Expr.id
   let my_zero_case := Expr.id
-  do_step run (:: apply (:: (:: apply (:: rec_nat (:: (symbol "rec_nat") (:: (symbol "zero_case") (symbol "succ_case"))))) (:: succ zero)))
+  do_step run (:: apply (:: (:: apply (:: rec_nat (:: (symbol "rec_nat") (:: my_zero_case my_succ_case)))) (:: succ zero)))
 
 #eval test_rec_nat_symb

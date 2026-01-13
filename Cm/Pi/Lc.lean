@@ -127,9 +127,11 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
     if is_bound n depth then
       -- if this variable is bound, then
       -- λ (λ 0) => (const (const id))
+      -- we are skipping variables here
       pure <| mk_n_const (depth - 1 - n) id
     else
       -- this is the free variable case
+      -- here, we are reaching backwards.
       pure <| mk_n_const (n - depth) id -- depth is handled in lambda nesting case
   | .symbol s => pure <| :: const (symbol s)
   | .lam b =>
@@ -158,9 +160,9 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
     | false, false =>
       pure <| (:: both (:: (quote apply) (:: both (:: (← abstract depth f) (← abstract depth x)))))-/
     -- treat f and x as if they were lambdas. similar to S transformation. S (λ f) (λ x)
-    dbg_trace s!"{f}: {abstract 1 f} {x}: {abstract 1 x}"
-    let t_f ← abstract 1 f
-    let t_x ← abstract 1 x
+    --dbg_trace s!"{f}: {abstract 1 f} {x}: {abstract 1 x}"
+    let t_f ← abstract depth f
+    let t_x ← abstract depth x
 
     pure <| (:: both (:: (quote apply) (:: both (:: t_f t_x))))
 
@@ -170,8 +172,6 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .app f x => do
     let t_f ← Expr.of_lc f
     let t_x ← Expr.of_lc x
-    dbg_trace t_f
-    dbg_trace t_x
     pure <| (:: apply (:: t_f t_x))
   | .symbol s => pure <| symbol s
   | _v => .error <| .var_in_output
@@ -212,6 +212,9 @@ def example_tre_app_i := mk_test (f$ (f$ (f$ tre_lc id') (.symbol "discard")) (.
 #eval example_tre_app_i
 
 def one := λ! (λ! (f$ (# 1) (# 0)))
+#eval Expr.of_lc one -- :: both (:: (:: const apply) (:: both (:: id id))). there should be another const
+
+#eval (f$ (f$ one (.symbol "f")) (.symbol "x")) |> mk_test
 
 def zero_lc := λ! (λ! (# 0))
 
@@ -251,7 +254,7 @@ def is_zero_lc : LcExpr DebruijnIdx :=
   λ! (f$ (f$ (# 0) (λ! flse_lc)) tre_lc)
 
 #eval Expr.of_lc flse_lc -- false is :: const id
-#eval Expr.of_lc one
+#eval Expr.of_lc one -- :: both (:: (:: const apply) (:: both (:: id id))). there should be another const
 #eval mk_test (f$ is_zero_lc one) -- true is giving us (:: const (:: const id)), so one should be applying tre which should give us (:: const id)
 #eval (do pure <| (← Expr.of_lc (λ! flse_lc)) == (← mk_test (f$ is_zero_lc tre_lc)))
 

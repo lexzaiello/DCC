@@ -107,6 +107,6 @@ def test_rec_nat_symb : Except Error Expr := do
   -- succ should have args (:: num (:: rec_nat (:: zero_case succ_case)))
   let my_succ_case := :: π (:: id nil)
   let my_zero_case := (:: both (:: (quote <| symbol "my_zero_case") id))
-  do_step (run (with_logs := true))  (:: apply (:: rec_nat.zero_case (:: (symbol "rec_nat") (:: my_zero_case my_succ_case))))
+  do_step run (:: apply (:: (:: apply (:: rec_nat (:: (symbol "rec_nat") (:: my_zero_case my_succ_case)))) (:: succ zero)))
 
 #eval test_rec_nat_symb

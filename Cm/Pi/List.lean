@@ -75,6 +75,8 @@ def list.rec_with.quote_fix_and_run (case_e : Expr) : Expr :=
 
 /-
 Assumes list.rec_with is the first argument, nil_case 2nd, xs_case 3rd
+We quote an extra nil since that is our comparison value.
+We are checking if the list is nil
 -/
 def list.rec_with : Expr :=
   let inner_eq := :: both (:: (quote eq) (:: both (:: (list.rec_with.quote_fix_and_run list.rec_with.nil_case) (list.rec_with.quote_fix_and_run list.rec_with.xs_case))))
@@ -191,9 +193,8 @@ namespace test_list
 def test_list_reverse (l : Expr) : Except Error Expr :=
   try_step_n run 1000 (:: apply (:: list.reverse l))
 
---#eval try_step_n run 1000 (:: apply (:: list.reverse.mk_rec (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
---#eval try_step_n run 1000 (:: apply (:: list.reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
---#eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
+#eval try_step_n run 1000 (:: apply (:: list.reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
+#eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
 
 end test_list
 

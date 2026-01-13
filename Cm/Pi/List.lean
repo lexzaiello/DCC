@@ -111,7 +111,9 @@ def list.get_n : Expr :=
 
   let mk_getter := (:: both (:: (quote apply) (:: both (:: (quote do_rec) n))))
 
-  .cons both (:: (quote apply) (:: both (:: π (:: mk_getter id))))
+  .cons both (:: (quote apply) (:: π (:: mk_getter id)))
+
+#eval try_step_n run 100 (:: apply (:: list.get_n (:: (symbol "zero") (:: (symbol "test") nil))))
 
 /-
 (:: apply (:: list.map (:: f l)))

@@ -109,8 +109,7 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     -- TODO: when to increase depth
     -- if all inner vars are bound, then this should just be a const
     -- this is the "free" case. all inner lambdas are free
-    let t_b := abstract depth.succ b
-    (:: both (:: (quote const) t_b))
+    abstract depth.succ b
   | .app f x =>
     let t_f := abstract depth f
     let t_x := abstract depth x
@@ -121,6 +120,7 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .lam b => pure <| abstract 1 b
   | .app f x => do
     let t_f ← Expr.of_lc f
+    dbg_trace t_f
     let t_x ← Expr.of_lc x
     pure <| (:: apply (:: t_f t_x))
   | .symbol s => pure <| symbol s

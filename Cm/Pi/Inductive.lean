@@ -65,8 +65,8 @@ def rec_nat.quote_fix'' : Expr :=
     rec_nat.quoted_succ_case
     (:: both (::
       (quote both) (:: both (::
-      (quote rec_nat.xs_num)
-        rec_nat.match_args)))))))
+      rec_nat.match_args
+      (quote rec_nat.xs_num))))))))
 
 def rec_nat.quote_fix_and_run : Expr :=
   :: both (::
@@ -115,14 +115,11 @@ def test_rec_nat_symb : Except Error Expr := do
 #eval test_rec_nat_symb
 
 /-
-Recurse?
-Succ case gets called with
-:: (symbol "zero") (:: rec_nat (:: id id))
-
-so we can apply it again.
+Just to print out the cases, prepend identifiers.
 -/
-def test_rec_nat_really_recursive : Except Error Expr := do
-  let succs_num := :: π (:: id nil)
-  let my_succ_case := :: π (:: id nil)
+def test_rec_nat_return_is_same : Except Error Expr := do
+  let my_succ_case := :: π (:: (:: π (:: id nil)) nil)
   let my_zero_case := Expr.id
   try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: rec_nat (:: my_zero_case my_succ_case)))) (:: succ zero)))
+
+#eval test_rec_nat_return_is_same >>= (pure <| · == rec_nat)

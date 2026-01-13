@@ -261,9 +261,11 @@ def list.prepend : Expr :=
 This is implemented by prepending then reversing.
 -/
 def list.append : Expr :=
-  let reversed_children : Expr := :: π (::
-    (:: both (:: (quote apply) (:: both (:: (quote list.reverse) id))))
-    (:: both (:: (quote apply) (:: both (:: (quote list.reverse) id)))))
+  let a := :: π (:: id nil)
+  let b := :: π (:: nil id)
+  let reversed_children : Expr := :: both (::
+    (:: both (:: (quote apply) (:: both (:: (quote list.reverse) b))))
+    (:: both (:: (quote apply) (:: both (:: (quote list.reverse) a)))))
 
   .cons both (:: (quote apply) (:: both (::
     (quote list.reverse)
@@ -282,7 +284,7 @@ def test_list_prepend (a b : Expr) : Except Error Expr := do
 def test_list_append (a b : Expr) : Except Error Expr := do
   try_step_n run 1000 (:: apply (:: list.append (:: a b)))
 
-#eval test_list_append (:: (symbol "a") (:: (symbol "b") nil)) (:: (symbol "a") (:: (symbol "b") nil))
+#eval test_list_append (:: (symbol "hi") (:: (symbol "b") nil)) (:: (symbol "a") (:: (symbol "b") nil))
 
 /-
 Continue running the recursor on a list until we get to nil,

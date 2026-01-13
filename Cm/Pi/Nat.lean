@@ -80,6 +80,28 @@ def nat.rec_with : Expr :=
   let inner_eq := :: both (:: (quote eq) (:: both (:: nat.rec_with.zero_case nat.rec_with.quote_fix_and_run)))
   .cons both (:: inner_eq (quote zero))
 
+/-
+(:: apply (:: nat.plus (:: m n)))
+Recurse on m, base case n
+-/
+def nat.plus : Expr :=
+  let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
+  let do_succ := :: both (:: (quote succ) do_app)
+
+  let m := :: π (:: id nil)
+  let n := :: π (:: nil const)
+
+  let zero_case := (:: both (:: (quote const) n))
+
+  -- generates recursor
+  let do_rec := (:: both
+    (:: (quote apply) (:: both
+      (:: (quote nat.rec_with) (:: both
+        (:: (quote nat.rec_with)
+          (:: π (:: zero_case (quote do_succ)))))))))
+
+  (:: both (:: (quote apply) (:: both (:: do_rec m))))
+
 namespace test_nat
 
 /-

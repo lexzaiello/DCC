@@ -96,6 +96,8 @@ and then we can just map over the number and list:
 (insert_apply :: π (:: (apply_stuff_n) id))
 
 the base case is just id
+
+TODO: error handling.
 -/
 def list.get_n : Expr :=
   let zero_handler := (quote (:: π (:: id nil)))

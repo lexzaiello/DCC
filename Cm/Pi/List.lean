@@ -190,12 +190,24 @@ def list.reverse.nil_handler' : Expr :=
   let nil_handler_old := :: π (:: (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) nil)
   .cons both (:: (quote const) (:: both (:: x (:: both (:: (quote apply) (:: both (:: nil_handler_old (quote nil))))))))
 
+def list.reverse.rec_with : Expr :=
+  :: π (:: (:: π (:: id nil)) nil)
+
+def list.reverse.succ_handler_old : Expr :=
+  :: π (:: (:: π (:: nil (:: π (:: nil (:: π (:: nil id)))))) nil)
+
+/-
+Has all match args in context.
+-/
+def list.reverse.match_args' : Expr :=
+  :: both (:: list.reverse.rec_with (:: list.reverse.rec_with (:: list.reverse.nil_handler' list.reverse.succ_handler_old)))
+
 def list.reverse.advance : Expr :=
-  (:: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) state'))))
+  (:: both (:: (quote apply) (:: both (:: (:: both (:: (quote apply) list.reverse.match_args')) list.reverse.state''))))
 
 def list.reverse.do_rec : Expr :=
   (:: list.rec_with (:: list.rec_with
-    (:: list.reverse.nil_handler' list.reverse.state'')))
+    (:: list.reverse.nil_handler₀ list.reverse.advance)))
 
 /-
 Should have just l in scope.

@@ -119,13 +119,14 @@ def nat_plus (m n : Expr) : Except Error Expr := do
 #eval nat_plus (:: succ (:: succ zero)) (:: succ (:: succ zero))
   >>= (pure <| · == :: (symbol "succ") (:: (symbol "succ") (:: (symbol "succ") (:: (symbol "succ") (symbol "zero")))))
 
-def test_nat_plus_nat (m n : ℕ) : Except Error (Option ℕ) := do
+def test_nat_plus_nat (m n max_steps : ℕ) : Except Error (Option ℕ) := do
   let m' := Nat'.of_nat m
   let n' := Nat'.of_nat n
-  try_step_n run 60 (:: apply (:: nat.plus (:: m' n')))
+  try_step_n run max_steps (:: apply (:: nat.plus (:: m' n')))
     >>= (pure ∘ Nat'.to_nat)
 
-#eval test_nat_plus_nat 1 100
+#eval test_nat_plus_nat 1 100 57
+#eval test_nat_plus_nat 100 1 10000
 
 /-
 nat.rec_with tests:

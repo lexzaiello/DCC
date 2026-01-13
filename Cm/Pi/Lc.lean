@@ -41,6 +41,7 @@ instance LcExpr.instToString : ToString (LcExpr DebruijnIdx) where
 
 notation "λ!" => LcExpr.lam
 notation "f$" => LcExpr.app
+notation:max "#" => @LcExpr.var DebruijnIdx
 
 /-
 We should be able to detect the arity of expressions before compiling.
@@ -126,7 +127,6 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .lam b => pure <| abstract 1 b
   | .app f x => do
     let t_f ← Expr.of_lc f
-    dbg_trace t_f
     let t_x ← Expr.of_lc x
     pure <| (:: apply (:: t_f t_x))
   | .symbol s => pure <| symbol s
@@ -142,50 +142,17 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
 #eval Expr.of_lc (f$ (f$ (λ! (λ! (.var 1))) (.symbol "hi")) (.symbol "discard"))
   >>= do_step run
 
-def example_id : Except Error Expr :=
-  let t := abstract 1 (.var 0)
-  do_step run (:: apply (:: t (symbol "hi")))
+def mk_test (lam_e : LcExpr DebruijnIdx) (step_with : Expr → Except Error Expr := run) : Except Error Expr := do
+  let cm_e ← Expr.of_lc lam_e
+  do_step step_with cm_e
 
-#eval example_id
+def tre_lc : LcExpr DebruijnIdx := λ! (λ! (# 1))
 
-/-
-const expression. λ λ 1
--/
-def example_t_idx_1 : Except Error Expr :=
-  let t := abstract 1 (.lam (.var 1))
-  dbg_trace do_step run (:: apply (:: t (symbol "hi")))
-  do_step run (:: apply (:: (:: apply (:: t (symbol "hi"))) (symbol "discard")))
+def flse_lc : LcExpr DebruijnIdx := λ! (λ! (# 0))
 
-def example_t_idx_0 : Except Error Expr :=
-  -- λ (λ 0)
-  let t := abstract 1 (.lam (.var 0))
-  dbg_trace t
-  do_step run (:: apply (:: (:: apply (:: t (symbol "discard"))) (symbol "hi")))
+def example_tre := mk_test (f$ (f$ tre_lc (.symbol "a")) (.symbol "b"))
 
-#eval example_t_idx_0 -- need to increment bound variables?
-#eval example_t_idx_1
-
-def example_t_idx_2 : Except Error Expr :=
-  -- (λ (λ (λ 1))) discard hi discard = hi
-  let t := abstract 1 (.lam (.lam (.var 1)))
-  dbg_trace do_step run (:: apply (:: t (symbol "discard")))
-  try_step_n run 200 (:: apply (:: (:: apply (:: (:: apply (:: t (symbol "discard"))) (symbol "hi"))) (symbol "discard")))
-
-#eval example_t_idx_1
-#eval example_t_idx_2
-
-def example_2_args : Except Error Expr :=
-  let t := abstract 1 (.lam (.var 0))
-  do_step run (:: apply (:: (:: apply (:: t (symbol "discard"))) (symbol "hi")))
-
-#eval example_t_idx_1
-#eval example_2_args
-
-/-
--/
-def I : Expr :=
-  id
-
+#eval example_tre
 
 /-
 Potential translation with positinal parameters:

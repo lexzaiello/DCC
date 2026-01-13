@@ -100,7 +100,7 @@ namespace test_list
 def test_list_map_const (fn l : Expr) : Except Error Expr := do
   try_step_n run 100 (:: apply (:: list.map (:: fn l)))
 
-#eval test_list_map_const (quote (symbol "test")) (:: (symbol "a") (:: (symbol "b") nil))
+#eval test_list_map_const (quote (quote (symbol "test"))) (:: (symbol "a") (:: (symbol "b") nil))
 
 end test_list
 

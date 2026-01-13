@@ -108,10 +108,21 @@ def test_rec_nat_zero_works' : Except Error Bool := do
 Just to print out the cases, prepend identifiers.
 -/
 def test_rec_nat_symb : Except Error Expr := do
-  -- succ should have args (:: rec_nat (:: zero_case (:: my_succ_case num)))
-  let my_succ_case := :: π (:: id nil)
+  let my_succ_case := Expr.id
   let my_zero_case := Expr.id
   try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: (symbol "rec_nat") (:: my_zero_case my_succ_case)))) (:: succ zero)))
 
 #eval test_rec_nat_symb
 
+/-
+Recurse?
+Succ case gets called with
+:: (symbol "zero") (:: rec_nat (:: id id))
+
+so we can apply it again.
+-/
+def test_rec_nat_really_recursive : Except Error Expr := do
+  let succs_num := :: π (:: id nil)
+  let my_succ_case := :: π (:: id nil)
+  let my_zero_case := Expr.id
+  try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: rec_nat (:: my_zero_case my_succ_case)))) (:: succ zero)))

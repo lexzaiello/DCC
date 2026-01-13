@@ -89,10 +89,13 @@ def list.map : Expr :=
   -/
   let advance := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
 
+  -- f should operate on the head element
+  let f_on_x := :: both (:: (quote π) (:: both (:: (quote nil) my_f)))
+
   /-
     This has all the original args in scope.
   -/
-  let succ_handler := :: both (:: (quote both) (:: both (:: my_f (quote advance))))
+  let succ_handler := :: both (:: (quote both) (:: both (:: f_on_x (quote advance))))
 
   let do_rec := (:: both
     (:: (quote apply) (:: both
@@ -107,7 +110,7 @@ namespace test_list
 def test_list_map_const (fn l : Expr) : Except Error Expr := do
   try_step_n run 100 (:: apply (:: list.map (:: fn l)))
 
-#eval test_list_map_const (quote (symbol "hi")) (:: (symbol "a") (:: (symbol "b") nil))
+#eval test_list_map_const id (:: (symbol "a") (:: (symbol "b") nil))
 
 end test_list
 

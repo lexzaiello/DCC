@@ -138,7 +138,7 @@ Should give us zero, since we are running id in the last case.
 def rec_with_descent : Except Error Expr := do
   let my_succ_case := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
   let my_zero_case := Expr.id
-  let out ← try_step_n run 100 (:: apply (:: (:: apply (:: nat.rec_with (:: nat.rec_with (:: my_zero_case my_succ_case)))) (:: succ zero)))
+  let out ← try_step_n run 50 (:: apply (:: (:: apply (:: nat.rec_with (:: nat.rec_with (:: my_zero_case my_succ_case)))) (:: succ zero)))
   pure out
 
 #eval rec_with_descent

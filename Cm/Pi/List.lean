@@ -163,21 +163,27 @@ What we could do is update the nil handler inside
 and shrink the context.
 -/
 
+/-
+:: match_args l in scope here
+-/
 def list.reverse.state'' : Expr :=
-  list.reverse.xs
+  :: π (:: nil (:: π (:: nil id)))
 
 /-
 nil_handler has :: match_args l in scope
 -/
-def list.nil_handler₀ : Expr :=
+def list.reverse.nil_handler₀ : Expr :=
   :: const nil
 
 /-
   Push the head element into the list returned by the nil handler.
   this has :: match_args l in scope
   run the old nil handler to render the list.
+
+  TODO: probably have to apply the context here?
+  Maybe not?
 -/
-def list.nil_handler' : Expr :=
+def list.reverse.nil_handler' : Expr :=
   let x := :: π (:: nil (:: π (:: id nil))) -- this has match_args in scope
   --let nil_handler_old := :: π (:: (:: π nil (:: π (:: nil (:: π id nil)))))
   --let handler_e := ::
@@ -225,7 +231,7 @@ namespace test_list
 def test_list_reverse (l : Expr) : Except Error Expr :=
   try_step_n run 1000 (:: apply (:: list.reverse l))
 
-#eval try_step_n run 100 (:: apply (:: list.nil_handler' (:: (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "nil handler") (symbol "cons_handler")))) (:: (symbol "x") (:: (symbol "xs") nil)))))
+#eval try_step_n run 100 (:: apply (:: list.reverse.state'' (:: (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "nil handler") (symbol "cons_handler")))) (:: (symbol "x") (:: (symbol "xs") nil)))))
 --#eval try_step_n run 100 (:: apply (:: list.reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
 --#eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
 

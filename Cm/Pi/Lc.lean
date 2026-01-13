@@ -96,8 +96,14 @@ def all_bound (depth : ℕ) : LcExpr DebruijnIdx → Bool
   | .symbol _s => true
   | .app f x => all_bound depth f && all_bound depth x
 
+def all_free (depth : ℕ) : LcExpr DebruijnIdx → Bool
+  | .var n => ¬ (is_bound n depth)
+  | .lam b => all_free depth.succ b
+  | .symbol _s => true
+  | .app f x => all_free depth f && all_free depth x
+
 def quot_if_free (depth : ℕ) (original : LcExpr DebruijnIdx) (e : Expr) : Expr :=
-  if ¬ all_bound depth original then
+  if all_free depth original then
       (:: both (:: (quote const) e))
   else e
 
@@ -138,9 +144,6 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
 
     -- prepend an outer application
     -- but also apply the inner values
-    dbg_trace s!"f: {t_f} x: {t_x}"
-    dbg_trace s!"f': {(quot_if_free depth f t_f)} x': {(quot_if_free depth x t_x)}"
-    --(:: both (:: (quote apply) (:: both (:: (quot_if_free depth f t_f) (quot_if_free depth x t_x)))))
 
     (:: both (:: (quote apply) (:: both (:: t_f t_x))))
 

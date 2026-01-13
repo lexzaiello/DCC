@@ -12,6 +12,15 @@ def zero : Expr := symbol "zero"
 
 def succ : Expr := symbol "succ"
 
+def Nat'.of_nat : ℕ → Expr
+  | .zero => zero
+  | .succ n => (:: succ (Nat'.of_nat n))
+
+def Nat'.to_nat : Expr → Option ℕ
+  | .symbol "zero" => pure .zero
+  | (:: (symbol "succ") n) => Nat.succ <$> (Nat'.to_nat n)
+  | _ => .none
+
 /-
 pattern matching on natural numbers.
 
@@ -109,6 +118,14 @@ def nat_plus (m n : Expr) : Except Error Expr := do
 
 #eval nat_plus (:: succ (:: succ zero)) (:: succ (:: succ zero))
   >>= (pure <| · == :: (symbol "succ") (:: (symbol "succ") (:: (symbol "succ") (:: (symbol "succ") (symbol "zero")))))
+
+def test_nat_plus_nat (m n : ℕ) : Except Error (Option ℕ) := do
+  let m' := Nat'.of_nat m
+  let n' := Nat'.of_nat n
+  try_step_n run 60 (:: apply (:: nat.plus (:: m' n')))
+    >>= (pure ∘ Nat'.to_nat)
+
+#eval test_nat_plus_nat 1 100
 
 /-
 nat.rec_with tests:

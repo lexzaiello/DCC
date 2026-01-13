@@ -153,6 +153,7 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
     | false, false =>
       pure <| (:: both (:: (quote apply) (:: both (:: (← abstract depth f) (← abstract depth x)))))-/
     -- treat f and x as if they were lambdas. similar to S transformation. S (λ f) (λ x)
+    dbg_trace s!"{f}: {abstract 1 f} {x}: {abstract 1 x}"
     let t_f ← abstract 1 f
     let t_x ← abstract 1 x
 
@@ -242,6 +243,9 @@ iszero = λ! (f$ (f$ (.var 0) (λ! flse)) tre)
 def is_zero_lc : LcExpr DebruijnIdx :=
   λ! (f$ (f$ (# 0) (λ! flse_lc)) tre_lc)
 
+#eval Expr.of_lc flse_lc -- false is :: const id
+#eval Expr.of_lc one
+#eval mk_test (f$ is_zero_lc one) -- true is giving us (:: const (:: const id)), so one should be applying tre which should give us (:: const id)
 #eval (do pure <| (← Expr.of_lc (λ! flse_lc)) == (← mk_test (f$ is_zero_lc tre_lc)))
 
 /-

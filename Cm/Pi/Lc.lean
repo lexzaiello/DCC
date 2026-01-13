@@ -112,51 +112,53 @@ def quot_if_bound (depth : ℕ) (original : LcExpr DebruijnIdx) (e : Expr) : Exp
       (:: both (:: (quote const) e))
   else e
 
+mutual
+
 /-
 Need to do the same "substitution" thing at the top level
 -/
-def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
+def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
   | .var n =>
     if is_bound n depth then
       -- if this variable is bound, then
       -- λ (λ 0) => (const (const id))
-      mk_n_const (depth - 1 - n) id
+      pure <| mk_n_const (depth - 1 - n) id
     else
       -- this is the free variable case
-      mk_n_const (n - depth) id -- depth is handled in lambda nesting case
-  | .symbol s => (:: const (symbol s))
+      pure <| mk_n_const (n - depth) id -- depth is handled in lambda nesting case
+  | .symbol s => pure <| :: const (symbol s)
   | .lam b =>
     /-
       If all inner lambdas are free, then we should const the result after running it
     -/
-    let t_b := abstract depth.succ b
-    quot_if_free depth b t_b
-  | .app f x =>
+    abstract depth.succ b
+      >>= (pure ∘ (quot_if_free depth b ·))
+  | .app f x => do
     -- 1 here to treat f and x as if they were under a lambda
     -- since we are applying x to f, t_f depth.succ
     /-
-      - this seems wrong.
-      we should be quoting the nested expressions if they are BOUND, not free.
-      - lambdas that contain only bound variables should be quoted.
-      - except f should be considered as being under the implicit lambda
-      - from applying x.
+      if f or x are all bound, then we can just Expr.of_lc them
     -/
-    let t_f := quot_if_bound 0 f <| abstract depth f
-    let t_x := quot_if_bound 0 x <| abstract depth x
-
-    -- prepend an outer application
-    -- but also apply the inner values
-
-    (:: both (:: (quote apply) (:: both (:: t_f t_x))))
+    match all_bound 0 f, all_bound 0 x with
+    | true, true => -- if both elements are bound, then they are constant values. so just apply them. but, since the left is being applied, depth 1
+      pure <| quote (:: apply (:: (← Expr.of_lc f) (← Expr.of_lc x)))
+    | false, true =>
+      pure <| (:: both (:: (quote apply) (:: both (:: (← abstract depth f) (quote (← Expr.of_lc x))))))
+    | true, false =>
+      pure <| (:: both (:: (quote apply) (:: both (:: (quote (← Expr.of_lc f)) (← abstract depth x)))))
+    | false, false =>
+      pure <| (:: both (:: (quote apply) (:: both (:: (← abstract depth f) (← abstract depth x)))))
 
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
-  | .lam b => pure <| abstract 1 b
+  | .lam b => abstract 1 b
   | .app f x => do
     let t_f ← Expr.of_lc f
     let t_x ← Expr.of_lc x
     pure <| (:: apply (:: t_f t_x))
   | .symbol s => pure <| symbol s
   | _ => .error <| .var_in_output
+
+end
 
 -- λ 0 => id
 #eval Expr.of_lc (f$ (λ! (.var 0)) (.symbol "hi"))
@@ -242,6 +244,7 @@ def test_is_zero_zero_tre : Except Error Bool := do
 
 #eval tre_lc |> Expr.of_lc
 
+#eval mk_test (f$ is_zero_lc zero_lc)
 #eval test_is_zero_zero_tre
 
 def test_is_zero_zero : Except Error Expr :=

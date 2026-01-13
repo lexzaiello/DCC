@@ -9,7 +9,9 @@ Natural numbers, featuring pattern matching.
 -/
 
 def zero : Expr := symbol "zero"
-abbrev Nat' := zero
+
+abbrev Nat'.zero := symbol "zero"
+abbrev Nat'.succ := symbol "succ"
 
 def succ : Expr := symbol "succ"
 

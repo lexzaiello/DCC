@@ -256,6 +256,17 @@ def list.prepend : Expr :=
 
   (:: both (:: (quote apply) (:: both (:: do_rec m))))
 
+/-
+(:: apply (:: list.append (:: a b))) = a ++ b
+This is implemented by prepending then reversing.
+-/
+def list.append : Expr :=
+  :: both (::
+    (quote apply) (:: both (::
+      (quote list.reverse) (:: both
+        (:: (quote apply) (:: both (::
+        (quote list.prepend) id)))))))
+
 namespace test_list
 
 def test_list_prepend (a b : Expr) : Except Error Expr := do

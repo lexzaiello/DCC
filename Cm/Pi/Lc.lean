@@ -89,6 +89,12 @@ If the body of a lambda contains only bound expressions, we should just const it
 
 def is_bound (var depth : ℕ) : Bool := var < depth
 
+def all_bound (depth : ℕ) : LcExpr DebruijnIdx → Bool
+  | .var n => is_bound n depth
+  | .lam b => all_bound depth.succ b
+  | .symbol _s => true
+  | .app f x => all_bound depth f && all_bound depth x
+
 /-
 Need to do the same "substitution" thing at the top level
 -/
@@ -97,19 +103,19 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     if is_bound n depth then
       -- if this variable is bound, then
       -- λ (λ 0) => (const (const id))
-      dbg_trace s!"is_bound at {depth} with {n} TODO fix: {mk_n_const (depth - 1 - n) id}"
       mk_n_const (depth - 1 - n) id
     else
       -- this is the free variable case
       mk_n_const (n - depth) id -- depth is handled in lambda nesting case
   | .symbol s => (:: const (symbol s))
   | .lam b =>
-    -- nested lambda: this is like a unary function call where the operation is substitution in
-    -- the inner lambda
-    -- TODO: when to increase depth
-    -- if all inner vars are bound, then this should just be a const
-    -- this is the "free" case. all inner lambdas are free
-    abstract depth.succ b
+    /-
+      If all inner lambdas are free, then we should const the result after running it
+    -/
+    let t_b := abstract depth.succ b
+    if ¬ all_bound depth b then
+      (:: both (:: (quote const) t_b))
+    else t_b
   | .app f x =>
     let t_f := abstract depth f
     let t_x := abstract depth x
@@ -131,6 +137,9 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   >>= do_step run
 
 #eval Expr.of_lc (f$ (f$ (λ! (λ! (.var 0))) (.symbol "discard")) (.symbol "hi"))
+  >>= do_step run
+
+#eval Expr.of_lc (f$ (f$ (λ! (λ! (.var 1))) (.symbol "hi")) (.symbol "discard"))
   >>= do_step run
 
 def example_id : Except Error Expr :=

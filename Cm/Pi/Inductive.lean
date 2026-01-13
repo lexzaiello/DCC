@@ -83,15 +83,6 @@ def rec_nat.quote_fix'' : Expr :=
       (quote rec_nat.xs_num)
         rec_nat.match_args)))))))
 
-def rec_nat.quote_fix' : Expr :=
-  :: both (::
-    (quote π)
-    (:: both (::
-      rec_nat.quoted_succ_case
-        (:: both (::
-        rec_nat.match_args
-        (quote id))))))
-
 /-
 Assumes rec_nat is the first argument, zero_case 2nd, succ_case 3rd
 -/

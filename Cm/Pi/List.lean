@@ -74,33 +74,44 @@ def list.rec_with : Expr :=
 (:: apply (:: list.map (:: f l)))
 -/
 def list.map : Expr :=
-  -- just run :: π (:: f id) each layer
+  /-
+    succ_case gets passed (:: match_args l)
+  -/
+
+  let nil_handler := (quote nil)
+
   let my_f := :: π (:: id nil)
-  -- with args in scope
 
-  let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
-  -- with all args in scope
-  let do_cons := :: both (:: (quote both) (:: both (:: my_f (quote do_app))))
+  /-
+    In succ handler.
+    both'd to prepend the mapped head
+  -/
+  let advance := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
+  let quoted_advanced := :: both (:: const advance)
 
-  let my_l := :: π (:: nil id)
+  /-
+    This has all the original args in scope.
+  -/
+  let succ_handler := :: both (:: (quote both) (:: both (:: my_f (quote advance))))
 
-  let nil_case := (quote id)
-
-  -- generates recursor
+  /-
   let do_rec := (:: both
     (:: (quote apply) (:: both
       (:: (quote list.rec_with) (:: both
         (:: (quote list.rec_with)
-          (:: both (:: nil_case do_cons))))))))
+          (:: both (:: nil_case (quote do_cons)))))))))
 
-  (:: both (:: (quote apply) (:: both (:: do_rec my_l))))
+  (:: both (:: (quote apply) (:: both (:: do_rec m))))
+  -/
+
+  sorry
 
 namespace test_list
 
 def test_list_map_const (fn l : Expr) : Except Error Expr := do
   try_step_n run 100 (:: apply (:: list.map (:: fn l)))
 
-#eval test_list_map_const (quote (quote (symbol "test"))) (:: (symbol "a") (:: (symbol "b") nil))
+#eval test_list_map_const (quote (symbol "hi")) (:: (symbol "a") (:: (symbol "b") nil))
 
 end test_list
 
@@ -154,12 +165,12 @@ def test_list_prepend (a b : Expr) : Except Error Expr := do
 Continue running the recursor on a list until we get to nil,
 then display.
 -/
-/-def rec_with_descent : Except Error Expr := do
+def rec_with_descent : Except Error Expr := do
   let my_succ_case := :: π (:: nil id)
   let my_zero_case := Expr.id
   let out ← try_step_n run 50 (:: apply (:: (:: apply (:: list.rec_with (:: list.rec_with (:: my_zero_case my_succ_case)))) (:: (symbol "discard") nil)))
   pure out
 
-#eval rec_with_descent-/
+#eval rec_with_descent
 
 end test_list

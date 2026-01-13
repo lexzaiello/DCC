@@ -93,10 +93,15 @@ def is_bound (var depth : ℕ) : Bool := var < depth
 Need to do the same "substitution" thing at the top level
 -/
 def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
-  | .var 0 => .id
   | .var n =>
-    -- this is the free variable case
-    mk_n_const (n - depth) id -- depth is handled in lambda nesting case
+    if is_bound n depth then
+      -- if this variable is bound, then
+      -- λ (λ 0) => (const (const id))
+      dbg_trace s!"is_bound at {depth} with {n} TODO fix: {mk_n_const (depth - 1 - n) id}"
+      mk_n_const (depth - 1 - n) id
+    else
+      -- this is the free variable case
+      mk_n_const (n - depth) id -- depth is handled in lambda nesting case
   | .symbol s => (:: const (symbol s))
   | .lam b =>
     -- nested lambda: this is like a unary function call where the operation is substitution in
@@ -125,7 +130,7 @@ def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
 #eval Expr.of_lc (f$ (λ! (.var 0)) (.symbol "hi"))
   >>= do_step run
 
-#eval Expr.of_lc (f$ (λ! (λ! (.var 0))) (.symbol "hi"))
+#eval Expr.of_lc (f$ (f$ (λ! (λ! (.var 0))) (.symbol "discard")) (.symbol "hi"))
   >>= do_step run
 
 def example_id : Except Error Expr :=

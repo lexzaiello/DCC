@@ -13,7 +13,7 @@ inductive Expr where
   | cons   : Expr
     → Expr
     → Expr
-  | eq     : Expr -- definitional equality
+  | eq     : Expr
   | apply  : Expr
   | π      : Expr
   | id     : Expr

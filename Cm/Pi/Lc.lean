@@ -137,9 +137,12 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
     /-
       - this seems wrong.
       we should be quoting the nested expressions if they are BOUND, not free.
+      - lambdas that contain only bound variables should be quoted.
+      - except f should be considered as being under the implicit lambda
+      - from applying x.
     -/
-    let t_f := quot_if_free depth f <| abstract depth f
-    let t_x := quot_if_free depth x <| abstract depth x
+    let t_f := quot_if_bound 0 f <| abstract depth f
+    let t_x := quot_if_bound 0 x <| abstract depth x
 
     -- prepend an outer application
     -- but also apply the inner values
@@ -234,7 +237,13 @@ def test_zero_app_flse_tre : Except Error Bool := do
 
 #eval test_zero_app_flse_tre
 
+def test_is_zero_zero_tre : Except Error Bool := do
+  pure <| (← mk_test (f$ is_zero_lc zero_lc)) == (← Expr.of_lc tre_lc)
+
 #eval tre_lc |> Expr.of_lc
+
+#eval test_is_zero_zero_tre
+
 def test_is_zero_zero : Except Error Expr :=
   mk_test (f$ is_zero_lc zero_lc)
   --mk_test (f$ (f$ (f$ is_zero_lc zero_lc) (.symbol "hello world")) (.symbol "discard"))

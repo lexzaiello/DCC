@@ -98,11 +98,19 @@ and then we can just map over the number and list:
 the base case is just id
 -/
 def list.get_n : Expr :=
-  --let n := :: π (:: id nil)
-  --let zero_handler := (quote id)
+  let n := :: π (:: id nil)
+  let zero_handler := (quote id)
   -- do_app reduces the inner values
-  -- let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
-  -- let succ_handler := :: both (:: (quote π) (:: both (:: (quote const) do_app)))
+  let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
+  let succ_handler := :: both (:: (quote π) (:: both (:: (quote const) do_app)))
+
+  -- this should be quoted. it does not depend on anything
+  let do_rec := (:: apply (:: nat.rec_with
+        (:: nat.rec_with
+          (:: zero_handler succ_handler))))
+
+  let mk_getter := (:: both (:: (quote apply) (:: both (:: (quote do_rec) n))))
+
   -- succ_handler has :: match_args n in scope
   --let succ_handler := (
   /-

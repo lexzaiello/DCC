@@ -1,6 +1,7 @@
 import Cm.Pi.Ast
 import Cm.Pi.Eval
 import Cm.Pi.Util
+import Cm.Pi.Nat
 
 open Expr
 
@@ -86,10 +87,39 @@ def list.rec_with : Expr :=
 :: apply (:: list.get_n (:: (:: succ n) l))
 we do this by using the recursor for nat.
 once we get to zero, we return the head of the list.
+
+we basically just generate a :: π (:: const (recursive_part)) expression
+that is n long, then apply it to the list.
+
+and then we can just map over the number and list:
+
+(insert_apply :: π (:: (apply_stuff_n) id))
+
+the base case is just id
 -/
 def list.get_n : Expr :=
   --let n := :: π (:: id nil)
-  --let succ_handler :=
+  --let zero_handler := (:: const id)
+  -- succ_handler has :: match_args n in scope
+  --let succ_handler := (
+  /-
+    let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
+    let do_succ := :: both (:: (quote succ) do_app)
+
+    let m := :: π (:: id nil)
+    let n := :: π (:: nil const)
+
+    let zero_case := n
+
+    -- generates recursor
+    let do_rec := (:: both
+      (:: (quote apply) (:: both
+        (:: (quote nat.rec_with) (:: both
+          (:: (quote nat.rec_with)
+            (:: both (:: zero_case (quote do_succ)))))))))
+    
+    (:: both (:: (quote apply) (:: both (:: do_rec m))))
+  -/
   sorry
 
 /-

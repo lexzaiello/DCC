@@ -114,6 +114,28 @@ def list.get_n : Expr :=
 
   .cons both (:: (quote apply) (:: π (:: mk_getter id)))
 
+/-
+get_n that curries better.
+(:: apply (:: apply (:: list.get_n n)) l)
+-/
+def list.get_n' : Expr :=
+  let zero_handler := (quote (:: π (:: id nil)))
+  -- do_app reduces the inner values
+  let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
+  let succ_handler := :: both (:: (quote π) (:: both (:: (quote nil) do_app)))
+
+  -- this should be quoted. it does not depend on anything
+  let do_rec := (:: apply (:: nat.rec_with
+        (:: nat.rec_with
+          (:: zero_handler succ_handler))))
+
+  let mk_getter := (:: both (:: (quote apply) (:: both (:: (quote do_rec) id))))
+
+  mk_getter
+
+#eval try_step_n run 100 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil)))
+#eval try_step_n run 100 (:: apply (:: (:: apply (:: list.get_n' (:: (symbol "succ") (symbol "zero")))) (:: (symbol "test") (:: (symbol "b") nil))))
+
 #eval try_step_n run 100 (:: apply (:: list.get_n (:: (symbol "zero") (:: (symbol "test") nil))))
 #eval try_step_n run 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (symbol "zero")) (:: (symbol "test") (:: (symbol "next") nil)))))
 #eval try_step_n run 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (:: (symbol "succ") (symbol "zero"))) (:: (symbol "test") (:: (symbol "next") (:: (symbol "next next") nil))))))

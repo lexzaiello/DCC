@@ -76,10 +76,11 @@ def list.rec_with : Expr :=
 def list.map : Expr :=
   -- just run :: π (:: f id) each layer
   let my_f := :: π (:: id nil)
+  -- with args in scope
 
   let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
   -- with all args in scope
-  let do_map := :: both (:: (quote π) (:: both (:: my_f (quote do_app))))
+  let do_cons := :: both (:: (quote both) (:: both (:: my_f (quote do_app))))
 
   let my_l := :: π (:: nil id)
 
@@ -90,9 +91,18 @@ def list.map : Expr :=
     (:: (quote apply) (:: both
       (:: (quote list.rec_with) (:: both
         (:: (quote list.rec_with)
-          (:: both (:: nil_case do_map))))))))
+          (:: both (:: nil_case do_cons))))))))
 
   (:: both (:: (quote apply) (:: both (:: do_rec my_l))))
+
+namespace test_list
+
+def test_list_map_const (fn l : Expr) : Except Error Expr := do
+  try_step_n run 100 (:: apply (:: list.map (:: fn l)))
+
+#eval test_list_map_const (quote (symbol "test")) (:: (symbol "a") (:: (symbol "b") nil))
+
+end test_list
 
 /-
 (:: apply (:: list.prepend (:: m n)))
@@ -135,10 +145,10 @@ def list.prepend : Expr :=
 
 namespace test_list
 
-def list_prepend (a b : Expr) : Except Error Expr := do
+def test_list_prepend (a b : Expr) : Except Error Expr := do
   try_step_n run 100 (:: apply (:: list.prepend (:: a b)))
 
-#eval list_prepend (:: (symbol "a") (:: (symbol "b") nil)) (:: (symbol "a") (:: (symbol "b") nil))
+#eval test_list_prepend (:: (symbol "a") (:: (symbol "b") nil)) (:: (symbol "a") (:: (symbol "b") nil))
 
 /-
 Continue running the recursor on a list until we get to nil,

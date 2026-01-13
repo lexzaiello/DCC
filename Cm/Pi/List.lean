@@ -138,24 +138,6 @@ end test_list
 match args look fine.
 -/
 
-def list.reverse.acc : Expr :=
-  (:: π (:: nil id))
-
-def list.reverse.x : Expr :=
-  (:: π (:: (:: π (:: id nil)) nil))
-
-def list.reverse.push_x : Expr :=
-  :: both (:: x acc)
-
-def list.reverse.xs : Expr :=
-  :: π (:: (:: π (:: nil id)) nil)
-
-def list.reverse.state' : Expr :=
-  :: both (:: xs push_x)
-
-def list.reverse.nil_handler : Expr :=
-  :: π (:: nil acc)
-
 /-
 Issue here is that advance is making our list grow and grow,
 since it can't detect that we have two separate contexts.
@@ -202,10 +184,6 @@ Has all match args in context.
 def list.reverse.match_args' : Expr :=
   :: both (:: list.reverse.rec_with (:: both (:: list.reverse.rec_with (:: both (:: list.reverse.nil_handler' list.reverse.succ_handler_old)))))
 
-/- seem to be nested applys here
-def list.reverse.advance : Expr :=
-  (:: both (:: (quote apply) (:: both (:: (:: both (:: (quote apply) list.reverse.match_args')) list.reverse.state''))))-/
-
 def list.reverse.advance : Expr :=
   (:: both (:: (quote apply) (:: both (:: (:: both (:: (quote apply) list.reverse.match_args')) list.reverse.state''))))
 
@@ -224,22 +202,11 @@ def list.reverse.app_rec : Expr :=
 def list.reverse.mk_rec : Expr :=
   :: π (:: (quote apply) (quote list.reverse.do_rec))
 
-def list.reverse.start : Expr :=
-  (:: both (:: (quote apply) (:: both (:: list.reverse.mk_rec list.reverse.state₀))))
-
 /-
   (:: apply (:: list.reverse l))
-  We do this by generating an accumulation buffer, and accessing it from within our pattern match
-  once we get to nil, we return the buffer
 -/
 def list.reverse : Expr :=
-  /-
-    Our succ handler always has access to the accumulation buffer.
-  -/
-  /-
-    These don't have match_args in scope
-  -/
-  list.reverse.start
+  (:: both (:: (quote apply) (:: both (:: list.reverse.mk_rec list.reverse.state₀))))
 
 namespace test_list
 

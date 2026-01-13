@@ -27,8 +27,9 @@ A lambda passes its future context onto its child.
 -/
 def lam : Expr := Expr.id
 
-notation "λ!" => (fun bdy => (:: apply (:: lam (:: apply bdy))))
+notation "λ!" => (fun bdy => (:: apply (:: lam bdy)))
 notation "v#" => (fun n => (:: apply (:: var (Nat'.of_nat n))))
+notation "f$" => (fun f x => (:: apply (:: f x)))
 
 #eval try_step_n run 100 (:: apply (:: (:: apply (:: lam (:: apply (:: var Nat'.zero)))) test_ctx))
 
@@ -38,3 +39,10 @@ def test_id : Except Error Expr :=
   try_step_n run 100 (:: apply (:: nested_id (:: (symbol "hello world") nil)))
 
 #eval test_id
+
+def test_id'_nice : Except Error Expr :=
+  let my_id := λ! (v# 0)
+  let nested_id := f$ my_id (:: my_id nil)
+  try_step_n run 100 (f$ nested_id (:: (symbol "hello world") nil))
+
+#eval test_id'_nice

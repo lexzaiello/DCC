@@ -47,25 +47,34 @@ TODO: I like using our apply_now definition.
 We should ideally in the future remove apply calls in step_apply.
 -/
 
+/-
+- Do not insert an apply before a const
+-/
+def cons_apply : Expr → Expr
+  | const => const
+  | :: const x => :: const x
+  | .id => id
+  | x => :: apply x
+
 def step_apply (e : Expr) : Except Error Expr := do
   match e with
   | :: (:: (:: eq (:: fn_yes fn_no)) a) b =>
     if a == b then
-      pure <| :: apply (:: fn_yes a)
+      pure <| cons_apply (:: fn_yes a)
     else
-      pure <| :: apply (:: fn_no b)
+      pure <| cons_apply (:: fn_no b)
   | :: .id x => pure x
   | :: (:: π (:: nil b)) (:: _x xs) =>
-    pure <| :: apply (:: b xs)
+    pure <| cons_apply (:: b xs)
   | :: (:: π (:: a nil)) (:: x xs) =>
-    pure <| :: apply (:: a x)
+    pure <| cons_apply (:: a x)
   | :: (:: π (:: a b)) (:: x xs) =>
-    let a' := :: apply (:: a x)
-    let b' := :: apply (:: b xs)
+    let a' := cons_apply (:: a x)
+    let b' := cons_apply (:: b xs)
 
     pure <| :: a' b'
-  | :: (:: const x) _ | :: (:: apply (:: const x)) _ => pure x
-  | :: (:: both (:: f g)) l => pure <| :: (:: apply (:: f l)) (:: apply (:: g l))
+  | :: (:: const x) _ => pure x
+  | :: (:: both (:: f g)) l => pure <| :: (cons_apply (:: f l)) (cons_apply (:: g l))
   | e => .error <| .no_rule e
 
 def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do

@@ -98,8 +98,7 @@ and then we can just map over the number and list:
 the base case is just id
 -/
 def list.get_n : Expr :=
-  let n := :: π (:: id nil)
-  let zero_handler := (quote id)
+  let zero_handler := (quote (:: π (:: id nil)))
   -- do_app reduces the inner values
   let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
   let succ_handler := :: both (:: (quote π) (:: both (:: (quote const) do_app)))
@@ -109,7 +108,7 @@ def list.get_n : Expr :=
         (:: nat.rec_with
           (:: zero_handler succ_handler))))
 
-  let mk_getter := (:: both (:: (quote apply) (:: both (:: (quote do_rec) n))))
+  let mk_getter := (:: both (:: (quote apply) (:: both (:: (quote do_rec) id))))
 
   .cons both (:: (quote apply) (:: π (:: mk_getter id)))
 

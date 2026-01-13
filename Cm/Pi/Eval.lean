@@ -108,6 +108,10 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     so as to be clear.
   -/
   | :: apply (:: f x) => do
+    let eval_both : Except Error Expr := do
+      let f' ← run f
+      let x' ← run x
+      pure <| :: apply (:: f' x')
     let eval_arg_first : Except Error Expr := do
       let x' ← run x
       pure <| :: apply (:: f x')
@@ -117,7 +121,7 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     let step_whole : Except Error Expr := do
       step_apply (:: f x)
 
-    eval_f_first <|> eval_arg_first <|> step_whole
+    eval_both <|> eval_f_first <|> eval_arg_first <|> step_whole
   | :: x xs => (do
     let x' ← run x with_logs
     let xs' ← run xs with_logs

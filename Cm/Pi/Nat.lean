@@ -125,9 +125,9 @@ def test_nat_plus_nat (m n : ℕ) (max_steps : ℕ := 100) : Except Error (Optio
   try_step_n run max_steps (:: apply (:: nat.plus (:: m' n')))
     >>= (pure ∘ Nat'.to_nat)
 
-#eval test_nat_plus_nat 1 100 (max_steps := 57)
+#eval test_nat_plus_nat 1 100 (max_steps := 55)
 #eval test_nat_plus_nat 100 1 (max_steps := 10000)
-#eval test_nat_plus_nat 20 20 (max_steps := 5000)
+#eval test_nat_plus_nat 20 19 (max_steps := 5000)
 
 /-
 nat.rec_with tests:

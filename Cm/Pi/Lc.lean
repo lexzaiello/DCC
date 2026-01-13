@@ -128,11 +128,15 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
       pure <| mk_n_const (n - depth) id -- depth is handled in lambda nesting case
   | .symbol s => pure <| :: const (symbol s)
   | .lam b =>
-    /-
-      If all inner lambdas are free, then we should const the result after running it
-    -/
-    abstract depth.succ b
-      >>= (pure ∘ (quot_if_free depth b ·))
+    -- If this is a constant value, compile the inside as usual, then const it
+    if all_bound 0 (.lam b) then
+      quote <$> Expr.of_lc (.lam b)
+    else
+      /-
+        If all inner lambdas are free, then we should const the result after running it
+      -/
+      abstract depth.succ b
+        >>= (pure ∘ (quot_if_free depth b ·))
   | .app f x => do
     -- 1 here to treat f and x as if they were under a lambda
     -- since we are applying x to f, t_f depth.succ
@@ -150,7 +154,8 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
       pure <| (:: both (:: (quote apply) (:: both (:: (← abstract depth f) (← abstract depth x)))))
 
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
-  | .lam b => abstract 1 b
+  | .lam b =>
+    abstract 1 b
   | .app f x => do
     let t_f ← Expr.of_lc f
     let t_x ← Expr.of_lc x
@@ -175,6 +180,9 @@ def mk_test (lam_e : LcExpr DebruijnIdx) (step_with : Expr → Except Error Expr
   do_step step_with cm_e
 
 def tre_lc : LcExpr DebruijnIdx := λ! (λ! (# 1))
+
+-- constant
+#eval mk_test (f$ (f$ (f$ (λ! tre_lc) (.symbol "discard")) (.symbol "hello world")) (.symbol "discard"))
 
 def flse_lc : LcExpr DebruijnIdx := λ! (λ! (# 0))
 
@@ -248,9 +256,13 @@ def test_is_zero_zero_tre : Except Error Bool := do
 #eval test_is_zero_zero_tre
 
 def test_is_zero_zero : Except Error Expr :=
-  mk_test (f$ (f$ (f$ is_zero_lc zero_lc) (.symbol "hello world")) (.symbol "discard"))
+  mk_test (f$ (f$ (f$ is_zero_lc zero_lc) (.symbol "hello world")) (.symbol "discard")) (try_step_n run 1)
+
+def test_is_one_one : Except Error Expr :=
+  mk_test (f$ (f$ (f$ is_zero_lc one) (.symbol "hello world")) (.symbol "discard"))
 
 #eval test_is_zero_zero
+#eval test_is_one_one
 
 /-def example_do_app := mk_test (
 

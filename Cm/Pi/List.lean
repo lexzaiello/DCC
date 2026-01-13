@@ -72,30 +72,19 @@ def list.rec_with : Expr :=
 
 /-
 (:: apply (:: list.map (:: f l)))
-
-Do this by generating a list of :: π (f ...) as long as the list,
-then applying at the end
 -/
 def list.map : Expr :=
+  -- just run :: π (:: f id) each layer
   let my_f := :: π (:: id nil)
-  let x := :: both (::
-    (quote π)
-    (:: both (::
-      (quote nil) (:: both (::
-        (quote nil) (:: both (::
-          (quote π)
-          (:: both (::
-            my_f
-            (quote nil))))))))))
+  -- with args in scope
 
-  -- This advances the recursor.
   let do_app := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
-
-  let do_cons := :: both (:: (quote both) (:: x (quote do_app)))
+  -- with all args in scope
+  let do_cons := :: both (:: (quote both) (:: both (:: my_f (quote do_app))))
 
   let my_l := :: π (:: nil id)
 
-  let nil_case := (quote nil)
+  let nil_case := (quote id)
 
   -- generates recursor
   let do_rec := (:: both
@@ -108,11 +97,10 @@ def list.map : Expr :=
 
 namespace test_list
 
-def test_list_map (fn l : Expr) : Except Error Expr := do
+def test_list_map_const (fn l : Expr) : Except Error Expr := do
   try_step_n run 100 (:: apply (:: list.map (:: fn l)))
 
-#eval test_list_map (quote (symbol "test")) (:: (symbol "a") (:: (symbol "b") nil))
-#eval test_list_map id (:: (symbol "a") (:: (symbol "b") nil))
+#eval test_list_map_const (quote (symbol "test")) (:: (symbol "a") (:: (symbol "b") nil))
 
 end test_list
 

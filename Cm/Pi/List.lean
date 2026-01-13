@@ -114,6 +114,7 @@ def list.get_n : Expr :=
 
 #eval try_step_n run 100 (:: apply (:: list.get_n (:: (symbol "zero") (:: (symbol "test") nil))))
 #eval try_step_n run 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (symbol "zero")) (:: (symbol "test") (:: (symbol "next") nil)))))
+#eval try_step_n run 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (:: (symbol "succ") (symbol "zero"))) (:: (symbol "test") (:: (symbol "next") (:: (symbol "next next") nil))))))
 
 /-
 (:: apply (:: list.map (:: f l)))

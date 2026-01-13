@@ -1,6 +1,5 @@
 import Cm.Pi.Ast
 import Cm.Pi.Eval
-import Cm.Pi.LcAst
 import Cm.Pi.Nat
 import Cm.Pi.List
 
@@ -27,6 +26,9 @@ def test_ctx := :: (symbol "a") (:: (symbol "discard") nil)
 A lambda passes its future context onto its child.
 -/
 def lam : Expr := Expr.id
+
+notation "λ!" => (fun bdy => (:: apply (:: lam (:: apply bdy))))
+notation "v#" => (fun n => (:: apply (:: var (Nat'.of_nat n))))
 
 #eval try_step_n run 100 (:: apply (:: (:: apply (:: lam (:: apply (:: var Nat'.zero)))) test_ctx))
 

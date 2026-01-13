@@ -107,7 +107,7 @@ namespace test_nat
 def nat_plus (m n : Expr) : Except Error Expr := do
   try_step_n run 100 (:: apply (:: nat.plus (:: m n)))
 
-#eval nat_plus (:: succ (:: succ zero)) (:: succ zero)
+#eval nat_plus (:: succ (:: succ zero)) (:: succ (:: succ zero))
 
 /-
 nat.rec_with tests:
@@ -168,6 +168,6 @@ def rec_with_descent : Except Error Expr := do
   let out ← try_step_n run 50 (:: apply (:: (:: apply (:: nat.rec_with (:: nat.rec_with (:: my_zero_case my_succ_case)))) (:: succ zero)))
   pure out
 
-#eval rec_with_descent
+#eval rec_with_descent >>= (pure <| · == zero)
 
 end test_nat

@@ -64,6 +64,8 @@ def deref : Expr → Option Expr
   | :: (:: const x) _ => (deref x) <|> (pure x)
   | _ => .none
 
+def derefD (e : Expr) : Expr := (deref e).getD e
+
 def step_apply (e : Expr) : Except Error Expr := do
   match e with
   | :: (:: (:: eq (:: fn_yes fn_no)) a) b =>

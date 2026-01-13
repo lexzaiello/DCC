@@ -32,6 +32,7 @@ def lam : Expr := Expr.id
 
 def test_id : Except Error Expr :=
   let my_id := (:: apply (:: lam (:: apply (:: var Nat'.zero))))
-  try_step_n run 100 (:: apply (:: my_id (:: (symbol "hello world") nil)))
+  let nested_id := (:: apply (:: my_id (:: my_id nil)))
+  try_step_n run 100 (:: apply (:: nested_id (:: (symbol "hello world") nil)))
 
 #eval test_id

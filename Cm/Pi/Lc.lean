@@ -188,6 +188,10 @@ def example_tre_app_i := mk_test (f$ (f$ (f$ tre_lc id') (.symbol "discard")) (.
 
 def one := λ! (λ! (f$ (# 1) (# 0)))
 
+def zero_lc := λ! (λ! (# 0))
+
+def succ_lc := λ! (λ! (λ! (f$ (# 1) (f$ (f$ (# 2) (# 1)) (# 0)))))
+
 def simple_inner_app := mk_test (f$ (λ! (f$ (# 0) (# 0))) (.symbol "hi"))
 
 #eval simple_inner_app
@@ -195,6 +199,10 @@ def simple_inner_app := mk_test (f$ (λ! (f$ (# 0) (# 0))) (.symbol "hi"))
 def example_do_id := mk_test (f$ (f$ one id') (.symbol "hello world"))
 
 #eval example_do_id
+
+def example_zero := mk_test (f$ (f$ zero_lc (.symbol "discard")) (.symbol "hello world"))
+
+#eval example_zero
 
 /-def example_do_app := mk_test (
 

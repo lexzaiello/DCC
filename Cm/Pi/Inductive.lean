@@ -69,19 +69,25 @@ def rec_nat.quote_xs_succ : Expr :=
 -- produces a quoted (:: both (quote succ_case) (:: (quote (:: zero_case succ_case)) id))
 -- assuming succ_case and zero_case are in scope
 def rec_nat.quote_fix : Expr :=
-  :: both (:: (quote apply) (:: both (:: rec_nat.quote_succ (:: both (:: rec_nat.quote_xs_succ rec_nat.quote_match_args)))))
+  :: both (::
+    (quote both)
+    (:: both
+      (:: rec_nat.quote_succ
+      (:: both (:: rec_nat.quote_xs_succ rec_nat.quote_match_args)))))
+
+-- eq function to feed (:: num (:: rec_nat (:: zero_case succ_case))) in
+def rec_nat.quote_fix' : Expr :=
+  :: both (::
+    (quote both)
+      (:: both (::
+      rec_nat.quote_xs_succ
+      rec_nat.quote_match_args)))
 
 /-
 Assumes rec_nat is the first argument, zero_case 2nd, succ_case 3rd
 -/
 def rec_nat : Expr :=
-  -- assuming zero_case and succ_case are in scope
-  -- mk_id is like id above in match_nat
-  -- we want to make a (:: both that inserts the quoted match args back in
-  -- this will take in our number as an argument
-  let mk_rec_succ := :: both (:: (quote π) (:: both (:: (quote nil) rec_nat.quote_fix)))
-
-  let inner_eq := :: both (:: (quote eq) (:: both (:: rec_nat.zero_case rec_nat.quote_fix)))
+  let inner_eq := :: both (:: (quote eq) (:: both (:: rec_nat.zero_case rec_nat.quote_fix')))
   .cons both (:: inner_eq (quote zero))
 
 /-
@@ -105,8 +111,8 @@ Just to print out the cases, prepend identifiers.
 -/
 def test_rec_nat_symb : Except Error Expr := do
   -- succ should have args (:: num (:: rec_nat (:: zero_case succ_case)))
-  let my_succ_case := :: π (:: id nil)
-  let my_zero_case := (:: both (:: (quote <| symbol "my_zero_case") id))
+  let my_succ_case := Expr.id
+  let my_zero_case := Expr.id
   do_step run (:: apply (:: (:: apply (:: rec_nat (:: (symbol "rec_nat") (:: my_zero_case my_succ_case)))) (:: succ zero)))
 
 #eval test_rec_nat_symb

@@ -191,6 +191,7 @@ namespace test_list
 def test_list_reverse (l : Expr) : Except Error Expr :=
   try_step_n run 1000 (:: apply (:: list.reverse l))
 
+#eval try_step_n run 1000 (:: apply (:: list.reverse.mk_rec (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
 #eval try_step_n run 1000 (:: apply (:: list.reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
 #eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
 

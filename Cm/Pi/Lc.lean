@@ -107,6 +107,11 @@ def quot_if_free (depth : ℕ) (original : LcExpr DebruijnIdx) (e : Expr) : Expr
       (:: both (:: (quote const) e))
   else e
 
+def quot_if_bound (depth : ℕ) (original : LcExpr DebruijnIdx) (e : Expr) : Expr :=
+  if all_bound depth original then
+      (:: both (:: (quote const) e))
+  else e
+
 /-
 Need to do the same "substitution" thing at the top level
 -/
@@ -129,18 +134,12 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Expr
   | .app f x =>
     -- 1 here to treat f and x as if they were under a lambda
     -- since we are applying x to f, t_f depth.succ
+    /-
+      - this seems wrong.
+      we should be quoting the nested expressions if they are BOUND, not free.
+    -/
     let t_f := quot_if_free depth f <| abstract depth f
     let t_x := quot_if_free depth x <| abstract depth x
-
-    /-
-      Need to do something similar with free variables
-      We should treat f implicitly as if it were a lambda?
-      Similar to S transformation
-      S (.lam f) (.lam x)
-
-      λ (#1 #0) => substitute into both, then apply the entire thing?
-      
-    -/
 
     -- prepend an outer application
     -- but also apply the inner values
@@ -203,6 +202,44 @@ def example_do_id := mk_test (f$ (f$ one id') (.symbol "hello world"))
 def example_zero := mk_test (f$ (f$ zero_lc (.symbol "discard")) (.symbol "hello world"))
 
 #eval example_zero
+
+def mk_test_hello_world_n (n max_steps : ℕ) : Except Error Expr := do
+  let succ_e := List.replicate n succ_lc
+    |> List.foldr (fun succ_e acc => (f$ succ_e acc)) zero_lc
+
+  let hello_e := (f$ (f$ succ_e id') (.symbol "Hello, world"))
+
+  let cc ← Expr.of_lc hello_e
+  try_step_n run max_steps cc
+
+#eval mk_test_hello_world_n 1 100
+#eval mk_test_hello_world_n 2 100
+
+/-
+iszero = λn.n(λx.flse)tre
+iszero (succ(zero)) = (succ(zero)) (λx.flse) tre
+iszero zero = zero _ tre = tre
+iszero = λ! (f$ (f$ (.var 0) (λ! flse)) tre)
+-/
+def is_zero_lc : LcExpr DebruijnIdx :=
+  λ! (f$ (f$ (# 0) (λ! flse_lc)) tre_lc)
+
+/-
+is_zero zero = true
+is_zero zero a b = "a"
+-/
+
+def test_zero_app_flse_tre : Except Error Bool := do
+  pure <| (← mk_test (f$ (f$ zero_lc flse_lc) tre_lc)) == (← Expr.of_lc tre_lc)
+
+#eval test_zero_app_flse_tre
+
+#eval tre_lc |> Expr.of_lc
+def test_is_zero_zero : Except Error Expr :=
+  mk_test (f$ is_zero_lc zero_lc)
+  --mk_test (f$ (f$ (f$ is_zero_lc zero_lc) (.symbol "hello world")) (.symbol "discard"))
+
+#eval test_is_zero_zero
 
 /-def example_do_app := mk_test (
 

@@ -53,11 +53,8 @@ def rec_nat.succ_case :=
 def rec_nat.match_args : Expr :=
   (:: both (:: (quote const) (:: both (:: rec_nat.self (:: both (:: rec_nat.zero_case rec_nat.succ_case))))))
 
-/-
-Slices off the head of the number.
--/
-def rec_nat.quote_xs_succ : Expr :=
-  (quote (:: π (:: nil id)))
+def rec_nat.quoted_succ_case :=
+  (:: both (:: (quote const) rec_nat.succ_case))
 
 /-
 Make a new both expression and a new π expression.
@@ -68,13 +65,17 @@ both may not be necessary either.
 
 We use the π to slice off the first element.
 TODO: Not sure if we need apply.
+
+Need to insert the succ function as well.
 -/
 def rec_nat.quote_fix' : Expr :=
   :: both (::
     (quote π)
     (:: both (::
+      rec_nat.quoted_succ_case
+      (:: both (::
       rec_nat.match_args
-      (quote id))))
+      (quote id))))))
 
 /-
 Assumes rec_nat is the first argument, zero_case 2nd, succ_case 3rd

@@ -258,6 +258,14 @@ def test_is_zero_zero_tre : Except Error Bool := do
 def test_is_zero_zero : Except Error Expr :=
   mk_test (f$ (f$ (f$ is_zero_lc zero_lc) (.symbol "hello world")) (.symbol "discard")) (try_step_n run 1)
 
+def test_is_zero_one : Except Error Expr :=
+  mk_test (f$ is_zero_lc one)
+
+def test_cons_flse : Except Error Bool := do
+  pure <| (← mk_test (f$ (λ! flse_lc) (.symbol "discard"))) == (← Expr.of_lc flse_lc)
+
+#eval test_is_zero_one
+
 def test_is_one_one : Except Error Expr :=
   mk_test (f$ (f$ (f$ is_zero_lc one) (.symbol "hello world")) (.symbol "discard"))
 

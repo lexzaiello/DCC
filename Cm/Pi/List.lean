@@ -284,7 +284,7 @@ def test_list_prepend (a b : Expr) : Except Error Expr := do
 def test_list_append (a b : Expr) : Except Error Expr := do
   try_step_n run 1000 (:: apply (:: list.append (:: a b)))
 
-#eval test_list_append (:: (symbol "hi") (:: (symbol "b") nil)) (:: (symbol "a") (:: (symbol "b") nil))
+#eval test_list_append (:: (symbol "hi") (:: (symbol "two") nil)) (:: (symbol "a") (:: (symbol "b") nil))
 
 /-
 Continue running the recursor on a list until we get to nil,

@@ -57,13 +57,19 @@ def rec_nat.quote_zero :=
 
 -- produces (:: const (:: rec_nat (:: zero_case succ_case)))
 def rec_nat.quote_match_args : Expr :=
-  :: both (:: (quote const) (:: both (:: rec_nat.self (:: rec_nat.zero_case rec_nat.succ_case))))
+  :: both (:: (quote const) (:: both (:: rec_nat.self (:: both (:: rec_nat.zero_case rec_nat.succ_case)))))
+
+/-
+Slices off the head of the number.
+-/
+def rec_nat.quote_xs_succ : Expr :=
+  (quote (:: π (:: nil id)))
 
 -- id is the number argument
 -- produces a quoted (:: both (quote succ_case) (:: (quote (:: zero_case succ_case)) id))
 -- assuming succ_case and zero_case are in scope
 def rec_nat.quote_fix : Expr :=
-  :: both (:: (quote both) (:: both (:: rec_nat.quote_succ (:: (quote id) rec_nat.quote_match_args))))
+  :: both (:: (quote both) (:: both (:: rec_nat.quote_succ (:: both (:: rec_nat.quote_xs_succ rec_nat.quote_match_args)))))
 
 /-
 Assumes rec_nat is the first argument, zero_case 2nd, succ_case 3rd
@@ -75,7 +81,7 @@ def rec_nat : Expr :=
   -- this will take in our number as an argument
   let mk_rec_succ := :: both (:: (quote π) (:: both (:: (quote nil) rec_nat.quote_fix)))
 
-  let inner_eq := :: both (:: (quote eq) (:: both (:: rec_nat.zero_case mk_rec_succ)))
+  let inner_eq := :: both (:: (quote eq) (:: both (:: rec_nat.zero_case rec_nat.quote_fix)))
   .cons both (:: inner_eq (quote zero))
 
 /-
@@ -97,6 +103,10 @@ def test_rec_nat_zero_works : Except Error Bool := do
 /-
 Just to print out the cases, prepend identifiers.
 -/
-/-def test_rec_nat_symb : Except Error Expr := do
-  let my_succ_case := symbol "my_succ_case"
-  let my_zero_case := symbol "my_zero_case"-/
+def test_rec_nat_symb : Except Error Expr := do
+  -- succ should have args (:: num (:: rec_nat (:: zero_case succ_case)))
+  let my_succ_case := :: π (:: id nil)
+  let my_zero_case := (:: both (:: (quote <| symbol "my_zero_case") id))
+  do_step (run (with_logs := true))  (:: apply (:: rec_nat.zero_case (:: (symbol "rec_nat") (:: my_zero_case my_succ_case))))
+
+#eval test_rec_nat_symb

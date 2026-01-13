@@ -195,7 +195,7 @@ def list.reverse.advance : Expr :=
 
 def list.reverse.do_rec : Expr :=
   (:: list.rec_with (:: list.rec_with
-    (:: nil_handler advance)))
+    (:: list.reverse.nil_handler' list.reverse.state'')))
 
 /-
 Should have just l in scope.
@@ -233,7 +233,7 @@ def test_list_reverse (l : Expr) : Except Error Expr :=
 
 #eval try_step_n run 100 (:: apply (:: list.reverse.nil_handler' (:: (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (:: const nil) (symbol "cons_handler")))) (:: (symbol "x") (:: (symbol "xs") nil)))))
 #eval try_step_n run 100 (:: apply (:: list.reverse.state'' (:: (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "nil handler") (symbol "cons_handler")))) (:: (symbol "x") (:: (symbol "xs") nil)))))
---#eval try_step_n run 100 (:: apply (:: list.reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
+#eval try_step_n run 100 (:: apply (:: list.reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))))
 --#eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
 
 end test_list

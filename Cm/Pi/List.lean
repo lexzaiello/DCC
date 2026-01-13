@@ -143,7 +143,7 @@ def list.reverse : Expr :=
   let quoted_fetch_acc := quote then_fetch_acc
 
   let do_rec := (:: list.rec_with (:: list.rec_with
-    (:: (quote nil)
+    (:: (:: both (:: push_x list.rec_with.advance))
     (:: both (:: push_x list.rec_with.advance)))))
   let fill_acc := (:: both (:: (quote apply) (:: both (:: (quote (:: apply do_rec)) my_l))))
 
@@ -155,7 +155,9 @@ def list.reverse : Expr :=
 namespace test_list
 
 def test_list_reverse (l : Expr) : Except Error Expr :=
-  
+  try_step_n run 1000 (:: apply (:: list.reverse l))
+
+#eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
 
 end test_list
 

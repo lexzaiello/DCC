@@ -83,6 +83,16 @@ def list.rec_with : Expr :=
   .cons both (:: inner_eq (quote nil))
 
 /-
+:: apply (:: list.get_n (:: (:: succ n) l))
+we do this by using the recursor for nat.
+once we get to zero, we return the head of the list.
+-/
+def list.get_n : Expr :=
+  --let n := :: π (:: id nil)
+  --let succ_handler :=
+  sorry
+
+/-
 (:: apply (:: list.map (:: f l)))
 -/
 def list.map : Expr :=

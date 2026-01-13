@@ -46,3 +46,9 @@ def test_id'_nice : Except Error Expr :=
   try_step_n run 100 (f$ nested_id (:: (symbol "hello world") nil))
 
 #eval test_id'_nice
+
+def test_tre : Except Error Expr :=
+  let my_tre := λ! (λ! (v# 1))
+  try_step_n run 100 (f$ my_tre (:: (symbol "a") (:: (symbol "b") nil)))
+
+#eval test_tre

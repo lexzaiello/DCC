@@ -49,25 +49,28 @@ we just get the entire list, since we can use
 -/
 def list.rec_with.xs_num := Expr.id
 
-def list.rec_with.quote_fix'' : Expr :=
+/-
+case_e should be unquoted
+-/
+def list.rec_with.quote_fix'' (case_e : Expr) : Expr :=
   :: both (::
     (quote both) (:: both (::
-    list.rec_with.quoted_xs_case
+    (:: both (:: (quote const) case_e))
     (:: both (::
       (quote both) (:: both (::
       list.rec_with.match_args
       (quote list.rec_with.xs_num))))))))
 
-def list.rec_with.quote_fix_and_run : Expr :=
+def list.rec_with.quote_fix_and_run (case_e : Expr) : Expr :=
   :: both (::
     (quote both) (:: both (::
-      (quote (quote apply)) list.rec_with.quote_fix'')))
+      (quote (quote apply)) (list.rec_with.quote_fix'' case_e))))
 
 /-
 Assumes list.rec_with is the first argument, nil_case 2nd, xs_case 3rd
 -/
 def list.rec_with : Expr :=
-  let inner_eq := :: both (:: (quote eq) (:: both (:: list.rec_with.nil_case list.rec_with.quote_fix_and_run)))
+  let inner_eq := :: both (:: (quote eq) (:: both (:: list.rec_with.nil_case (list.rec_with.quote_fix_and_run list.rec_with.xs_case))))
   .cons both (:: inner_eq (quote nil))
 
 /-

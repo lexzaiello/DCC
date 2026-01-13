@@ -112,12 +112,32 @@ def quot_if_bound (depth : ℕ) (original : LcExpr DebruijnIdx) (e : Expr) : Exp
       (:: both (:: (quote const) e))
   else e
 
+def decr_all_vars : LcExpr DebruijnIdx → LcExpr DebruijnIdx
+  | .var n => .var (n - 1)
+  | .app f x => .app (decr_all_vars f) (decr_all_vars x)
+  | .lam bdy => .lam (decr_all_vars bdy)
+  | .symbol s => .symbol s
+
 mutual
 
+def abstract' (offset : ℕ) : LcExpr DebruijnIdx → Except Error Expr
+  | .var 0 => pure .id
+  | .var n =>
+    if n - offset == 0 then .pure (:: const id) else .error <| .var_in_output
+  | .app f x => do
+    -- treat λx. f x as (λx. f) (λx. x)
+    let f' ← abstract' offset f -- abstrac for implicit lambda
+    let x' ← abstract' offset x
+
+    pure <| (:: both (:: (quote apply) (:: both (:: f' x'))))
+  | .lam b => do
+    let b' ← abstract' offset.succ b -- decrement vars by 1
+    pure <| :: const b'
+  | .symbol s => pure <| :: const (symbol s)
 /-
 Need to do the same "substitution" thing at the top level
 -/
-def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
+/-def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
   | .var n =>
     if is_bound n depth then
       -- if this variable is bound, then
@@ -157,17 +177,17 @@ def abstract (depth : ℕ) : LcExpr DebruijnIdx → Except Error Expr
     let t_f ← abstract 1 f
     let t_x ← abstract 1 x
 
-    pure <| (:: both (:: (quote apply) (:: both (:: t_f t_x))))
+    pure <| (:: both (:: (quote apply) (:: both (:: t_f t_x))))-/
 
 def Expr.of_lc : LcExpr DebruijnIdx → Except Error Expr
   | .lam b =>
-    abstract 1 b
+    abstract' 0 b
   | .app f x => do
     let t_f ← Expr.of_lc f
     let t_x ← Expr.of_lc x
     pure <| (:: apply (:: t_f t_x))
   | .symbol s => pure <| symbol s
-  | _ => .error <| .var_in_output
+  | _v => .error <| .var_in_output
 
 end
 

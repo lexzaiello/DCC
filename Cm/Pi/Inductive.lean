@@ -49,12 +49,9 @@ def rec_nat.zero_case :=
 def rec_nat.succ_case :=
   :: π (:: nil (:: π (:: nil id)))
 
-def rec_nat.quote_succ :=
-  :: both (:: (quote const) rec_nat.succ_case)
-
 -- produces (:: const (:: rec_nat (:: zero_case succ_case)))
-def rec_nat.quote_match_args : Expr :=
-  :: both (:: (quote const) (:: both (:: rec_nat.self (:: both (:: rec_nat.zero_case rec_nat.succ_case)))))
+def rec_nat.match_args : Expr :=
+  (:: both (:: (quote const) (:: both (:: rec_nat.self (:: both (:: rec_nat.zero_case rec_nat.succ_case))))))
 
 /-
 Slices off the head of the number.
@@ -62,15 +59,22 @@ Slices off the head of the number.
 def rec_nat.quote_xs_succ : Expr :=
   (quote (:: π (:: nil id)))
 
--- eq function to feed (:: num (:: rec_nat (:: zero_case succ_case))) in
+/-
+Make a new both expression and a new π expression.
+both should be inserting apply at the beginning to advance
+the program.
+the apply may not be necessary since we already have a both.
+both may not be necessary either.
+
+We use the π to slice off the first element.
+TODO: Not sure if we need apply.
+-/
 def rec_nat.quote_fix' : Expr :=
   :: both (::
-    (quote apply)
-      (:: both (::
-        rec_nat.quote_succ
-        (:: both (::
-        rec_nat.quote_xs_succ
-        rec_nat.quote_match_args)))))
+    (quote π)
+    (:: both (::
+      rec_nat.match_args
+      (quote id))))
 
 /-
 Assumes rec_nat is the first argument, zero_case 2nd, succ_case 3rd
@@ -107,8 +111,8 @@ def test_rec_nat_zero_works' : Except Error Bool := do
 Just to print out the cases, prepend identifiers.
 -/
 def test_rec_nat_symb : Except Error Expr := do
-  -- succ should have args (:: num (:: rec_nat (:: zero_case succ_case)))
-  let my_succ_case := (:: const (.symbol "hi"))
+  -- succ should have args (:: rec_nat (:: zero_case (:: my_succ_case num)))
+  let my_succ_case := Expr.id
   let my_zero_case := Expr.id
   do_step run (:: apply (:: (:: apply (:: rec_nat (:: rec_nat (:: my_zero_case my_succ_case)))) (:: succ zero)))
 

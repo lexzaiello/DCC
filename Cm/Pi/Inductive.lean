@@ -65,23 +65,15 @@ Slices off the head of the number.
 def rec_nat.quote_xs_succ : Expr :=
   (quote (:: π (:: nil id)))
 
--- id is the number argument
--- produces a quoted (:: both (quote succ_case) (:: (quote (:: zero_case succ_case)) id))
--- assuming succ_case and zero_case are in scope
-def rec_nat.quote_fix : Expr :=
-  :: both (::
-    (quote both)
-    (:: both
-      (:: rec_nat.quote_succ
-      (:: both (:: rec_nat.quote_xs_succ rec_nat.quote_match_args)))))
-
 -- eq function to feed (:: num (:: rec_nat (:: zero_case succ_case))) in
 def rec_nat.quote_fix' : Expr :=
   :: both (::
     (quote both)
       (:: both (::
-      rec_nat.quote_xs_succ
-      rec_nat.quote_match_args)))
+        rec_nat.quote_succ
+        (:: both (::
+        rec_nat.quote_xs_succ
+        rec_nat.quote_match_args)))))
 
 /-
 Assumes rec_nat is the first argument, zero_case 2nd, succ_case 3rd
@@ -106,13 +98,21 @@ def test_rec_nat_zero_works : Except Error Bool := do
 
 #eval test_rec_nat_zero_works
 
+def test_rec_nat_zero_works' : Except Error Bool := do
+  let zero_result ← do_step run (:: apply (:: (:: apply (:: match_nat (:: (quote (symbol "hi")) id))) zero))
+  let zero_result' ← do_step run (:: apply (:: (:: apply (:: rec_nat (:: rec_nat (:: (quote (symbol "hi")) id)))) zero))
+
+  pure <| zero_result' == (symbol "hi") && zero_result' == zero_result
+
+#eval test_rec_nat_zero_works'
+
 /-
 Just to print out the cases, prepend identifiers.
 -/
 def test_rec_nat_symb : Except Error Expr := do
   -- succ should have args (:: num (:: rec_nat (:: zero_case succ_case)))
-  let my_succ_case := Expr.id
+  let my_succ_case := (:: const (.symbol "hi"))
   let my_zero_case := Expr.id
-  do_step run (:: apply (:: (:: apply (:: rec_nat (:: (symbol "rec_nat") (:: my_zero_case my_succ_case)))) (:: succ zero)))
+  do_step run (:: apply (:: (:: apply (:: rec_nat (:: rec_nat (:: my_zero_case my_succ_case)))) (:: succ zero)))
 
 #eval test_rec_nat_symb

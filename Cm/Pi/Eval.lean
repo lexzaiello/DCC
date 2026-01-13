@@ -56,16 +56,6 @@ def cons_apply : Expr → Expr
   | .id => id
   | x => :: apply x
 
-/-
-const and id can usually be deref'd without a full apply step.
--/
-def deref : Expr → Option Expr
-  | :: .id x => (deref x) <|> (pure x)
-  | :: (:: const x) _ => (deref x) <|> (pure x)
-  | _ => .none
-
-def derefD (e : Expr) : Expr := (deref e).getD e
-
 def step_apply (e : Expr) : Except Error Expr := do
   match e with
   | :: (:: (:: eq (:: fn_yes fn_no)) a) b =>
@@ -73,7 +63,7 @@ def step_apply (e : Expr) : Except Error Expr := do
       pure <| cons_apply (:: fn_yes a)
     else
       pure <| cons_apply (:: fn_no b)
-  | :: .id x => pure <| (deref e).getD x
+  | :: .id x => pure <| x
   | :: (:: π (:: nil b)) (:: _x xs) =>
     pure <| cons_apply (:: b xs)
   | :: (:: π (:: a nil)) (:: x xs) =>
@@ -83,7 +73,7 @@ def step_apply (e : Expr) : Except Error Expr := do
     let b' := cons_apply (:: b xs)
 
     pure <| :: a' b'
-  | :: (:: const x) _ => pure <| (deref e).getD x
+  | :: (:: const x) _ => pure <| x
   | :: (:: both (:: f g)) l => pure <| :: (cons_apply (:: f l)) (cons_apply (:: g l))
   | e => .error <| .no_rule e
 

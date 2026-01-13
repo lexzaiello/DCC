@@ -35,14 +35,44 @@ zero_case only gets passed the number,
 but succ_case gets passed (:: num (:: rec_nat (:: zero_case succ_case)))
 
 (:: apply (:: apply (:: rec_nat (:: zero_case succ_case))) (:: succ zero)) =
-  (:: apply (:: succ_case (:: zero (:: zero_case succ_case))))
+  (:: apply (:: succ_case (:: (:: zero_case succ_case) zero)))
 -/
+
+def rec_nat.zero_case :=
+  :: π (:: id nil)
+
+def rec_nat.succ_case :=
+  :: π (:: nil id)
+
+def rec_nat.quote_succ :=
+  :: both (:: (quote const) rec_nat.succ_case)
+
+def rec_nat.quote_zero :=
+  :: both (:: (quote const) rec_nat.zero_case)
+
+-- produces (:: const (:: zero_case succ_case))
+def rec_nat.quote_match_args : Expr :=
+  :: both (:: (quote const) (:: both (:: rec_nat.zero_case rec_nat.succ_case)))
+
+-- id is the number argument
+-- produces a quoted (:: both (quote succ_case) (:: (quote (:: zero_case succ_case)) id))
+-- assuming succ_case and zero_case are in scope
+def rec_nat.quote_fix : Expr :=
+  :: both (:: (quote both) (:: rec_nat.quote_succ (:: rec_nat.quote_match_args (quote id))))
+
 def rec_nat : Expr :=
-  let my_zero_case := :: π (:: id nil)
-  let my_succ_case := :: π (:: nil id)
+  let my_zero_case := rec_nat.zero_case
+  let my_succ_case := rec_nat.succ_case
+
+  -- produces a quoted (:: my_zero_case my_succ_case)
+  let quoted_zero_succ := rec_nat.quote_match_args
 
   -- assuming zero_case and succ_case are in scope
-  let mk_match_succ := :: both 
+  -- mk_id is like id above in match_nat
+  -- we want to make a (:: both that inserts the quoted match args back in
+  -- this will take in our number as an argument
+  let mk_id := (:: both (:: 
+  let mk_match_succ := :: both (:: (quote π) (:: both (:: (quote nil) 
 
   let inner_eq := :: both (:: (quote eq) (:: both )
   .cons both (:: inner_eq (quote zero))

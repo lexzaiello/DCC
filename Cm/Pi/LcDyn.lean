@@ -21,15 +21,17 @@ def var : Expr :=
 
 def test_ctx := :: (symbol "a") (:: (symbol "discard") nil)
 
-#eval do_step run (:: apply (:: var Nat'.zero))
 #eval try_step_n run 100 (:: apply (:: (:: apply (:: var Nat'.zero)) test_ctx))
 
 /-
 A lambda passes its future context onto its child.
-It creates the context by prefixing the substitution with (:: (symbol "x") _)
 -/
-/-def lam : Expr :=
-  let my_bdy := :: π (:: nil id)
+def lam : Expr := Expr.id
 
-  let future_sub := quote <| :: π (:: id nil)
-  -/
+#eval try_step_n run 100 (:: apply (:: (:: apply (:: lam (:: apply (:: var Nat'.zero)))) test_ctx))
+
+def test_id : Except Error Expr :=
+  let my_id := (:: apply (:: lam (:: apply (:: var Nat'.zero))))
+  try_step_n run 100 (:: apply (:: my_id (:: (symbol "hello world") nil)))
+
+#eval test_id

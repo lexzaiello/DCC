@@ -90,7 +90,7 @@ def list.map : Expr :=
   let advance := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id)))))
 
   -- f should operate on the head element
-  let f_on_x := :: both (:: (quote π) (:: both (:: (quote nil) my_f)))
+  let f_on_x := :: both (:: (quote π) (:: both (:: (quote nil) (:: both (:: (quote π) (:: both (:: my_f (quote nil))))))))
 
   /-
     This has all the original args in scope.

@@ -158,7 +158,7 @@ def example_flse := mk_test (f$ (f$ flse_lc (.symbol "a")) (.symbol "b"))
 
 def id' := λ! (# 0)
 
-def example_tre_app_i := mk_test (f$ (f$ (f$ tre_lc id') (.symbol "discard")) (.symbol "hello world"))
+def example_tre_app_i := mk_test (f$ (f$ (f$ tre_lc id') (.symbol "discard")) (.symbol "hello world")) (try_step_n run 1)
 
 #eval example_tre_app_i
 

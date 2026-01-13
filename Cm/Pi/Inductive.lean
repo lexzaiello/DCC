@@ -56,21 +56,6 @@ def rec_nat.match_args : Expr :=
 def rec_nat.quoted_succ_case :=
   (:: both (:: (quote const) rec_nat.succ_case))
 
-/-
-Make a new both expression and a new π expression.
-both should be inserting apply at the beginning to advance
-the program.
-the apply may not be necessary since we already have a both.
-both may not be necessary either.
-
-We use the π to slice off the first element.
-TODO: Not sure if we need apply.
-
-Need to insert the succ function as well.
-
-The order I really want is (:: succ_case (:: num (:: match_args)))
--/
-
 def rec_nat.xs_num :=
   :: π (:: nil id)
 
@@ -124,7 +109,7 @@ Just to print out the cases, prepend identifiers.
 -/
 def test_rec_nat_symb : Except Error Expr := do
   -- succ should have args (:: rec_nat (:: zero_case (:: my_succ_case num)))
-  let my_succ_case := Expr.id
+  let my_succ_case := :: π (:: id nil)
   let my_zero_case := Expr.id
   try_step_n run 100 (:: apply (:: (:: apply (:: rec_nat (:: (symbol "rec_nat") (:: my_zero_case my_succ_case)))) (:: succ zero)))
 

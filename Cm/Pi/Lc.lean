@@ -248,8 +248,7 @@ def test_is_zero_zero_tre : Except Error Bool := do
 #eval test_is_zero_zero_tre
 
 def test_is_zero_zero : Except Error Expr :=
-  mk_test (f$ is_zero_lc zero_lc)
-  --mk_test (f$ (f$ (f$ is_zero_lc zero_lc) (.symbol "hello world")) (.symbol "discard"))
+  mk_test (f$ (f$ (f$ is_zero_lc zero_lc) (.symbol "hello world")) (.symbol "discard"))
 
 #eval test_is_zero_zero
 

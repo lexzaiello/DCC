@@ -48,6 +48,28 @@ prefix:60 "·'" => (fun f => (:: both (:: id f)))
   ((·' (quote (symbol "another")) ) ∘'
   ((quote (symbol "prefix")) ·')) (symbol "hi")))
 
+/-
+|> pipelining
+(f x)
+  |> my_op = (:: apply (:: my_op (:: apply (f x))))
+-/
+infixl:60 "|>'" => (fun x => (fun y => (:: apply (:: y (:: apply x)))))
+
+#eval do_step run ((::
+  ((·' (quote (symbol "another")) ) ∘'
+  ((quote (symbol "prefix")) ·')) (symbol "hi")) |>' Expr.id)
+
+/-
+<| pipelining
+my_op
+  <| (f x) = (:: apply (:: my_op (:: apply (f x))))
+-/
+infixr:60 "<|'" => (fun x y => y |>' x)
+
+#eval do_step run (Expr.id <|' (::
+  ((·' (quote (symbol "another")) ) ∘'
+  ((quote (symbol "prefix")) ·')) (symbol "hi")))
+
 def apply_quoted : Expr := quote apply
 
 /-

@@ -27,7 +27,7 @@ A lambda passes its future context onto its child.
 -/
 def lam : Expr := Expr.id
 
-notation "λ!" => (fun bdy => (:: apply (:: lam bdy)))
+notation "λ!" => (fun bdy => :: apply (:: lam bdy)) -- λ binders should steal their above contexts.
 notation "v#" => (fun n => (:: apply (:: var (Nat'.of_nat n))))
 notation "f$" => (fun f x => (:: apply (:: f (:: apply (:: list.reverse x)))))
 

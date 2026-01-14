@@ -25,7 +25,7 @@ def err : String → Expr := quote ∘ symbol
 def Arr : Expr := .symbol "→"
 
 def mk_arrow : Expr :=
-  .cons both (:: (quote Arr) (:: π (:: id (:: π (:: id nil)))))
+  .cons both (:: (quote Arr) (:: π (:: id id)))
 
 def infer.self : Expr :=
   :: π (:: id nil)
@@ -36,16 +36,22 @@ def infer.x (with_op : Expr := id) : Expr :=
 /-
 (:: apply (:: infer (:: infer (:: const x))))
 -/
+def infer_const.my_op :=
+  infer.x (:: π (:: id nil))
+
+def infer_const.my_data :=
+  infer.x (:: π (:: nil id))
+
+def infer_const.check_op_yes :=
+  :: both (:: (quote const) (:: both (:: (quote const) (:: both (:: (quote apply) (:: both (:: infer.self (:: both (:: infer.self infer_const.my_data)))))))))
+
 def infer_const : Expr :=
   -- if the op is "const", then fetch our infer component and run that
-  let check_op_yes := :: both (:: (quote apply) (:: π (:: id (:: nil id))))
   let check_op_no := err "not a const operation"
-  let my_op := infer.x (:: π (:: id nil))
-  .cons both (:: (:: both (:: (quote eq) (:: both (:: (:: check_op_yes (quote check_op_no)) (quote .const))))) my_op)
+  .cons both (:: (quote apply) (:: both (:: (:: both (:: (:: both (:: (quote eq) (:: both (:: infer_const.check_op_yes (quote check_op_no))))) (quote .const))) infer_const.my_op)))
 
 def infer_nil : Expr :=
   :: both (:: (quote apply) (:: π (:: (quote <| :: (:: eq (:: (quote TData) (quote TFail))) .nil) id)))
 
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") nil)))
-
-
+#eval try_step_n run 100 (:: apply (:: infer_const (:: infer_nil (:: const nil))))

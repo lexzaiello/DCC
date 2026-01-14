@@ -37,13 +37,15 @@ infixr:65 "∘'" => (fun (f : Expr) (g : Expr) => (:: both (:: (quote apply)
 
 /-
 (f ·') = (:: both (:: f id))
+
+These operators do not force evaluation.
 -/
 postfix:60 "·'" => (fun f => (:: both (:: f id)))
 
 prefix:60 "·'" => (fun f => (:: both (:: id f)))
 
 #eval do_step run (:: apply (::
-  (((quote (symbol "another")) ·') ∘'
+  ((·' (quote (symbol "another")) ) ∘'
   ((quote (symbol "prefix")) ·')) (symbol "hi")))
 
 def apply_quoted : Expr := quote apply

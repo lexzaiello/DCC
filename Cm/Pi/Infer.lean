@@ -43,12 +43,29 @@ def infer_const.my_data :=
   infer.x (:: π (:: nil id))
 
 def infer_const.check_op_yes :=
-  :: both (:: (quote const) (:: both (:: (quote const) (:: both (:: (quote apply) (:: both (:: infer.self (:: both (:: infer.self infer_const.my_data)))))))))
+  :: both (::
+    (quote const)
+    (:: both (::
+      (quote both)
+      (:: both (::
+        (:: both (::
+          (quote const)
+          (:: both (::
+            (quote apply) (:: both
+            (:: infer.self (:: both
+            (:: infer.self infer_const.my_data))))))))
+        (:: both (::
+          (quote both) (:: both (::
+            (quote const) (:: both (::
+            infer.self)
+
+def infer_const.check_op_no := err "not a const operation"
 
 def infer_const : Expr :=
   -- if the op is "const", then fetch our infer component and run that
-  let check_op_no := err "not a const operation"
-  .cons both (:: (quote apply) (:: both (:: (:: both (:: (:: both (:: (quote eq) (:: both (:: infer_const.check_op_yes (quote check_op_no))))) (quote .const))) infer_const.my_op)))
+  .cons both (:: (quote apply)
+    (:: both
+      (:: (:: both (:: (:: both (:: (quote eq) (:: both (:: infer_const.check_op_yes (quote infer_const.check_op_no))))) (quote .const))) infer_const.my_op)))
 
 def infer_nil : Expr :=
   :: both (:: (quote apply) (:: π (:: (quote <| :: (:: eq (:: (quote TData) (quote TFail))) .nil) id)))

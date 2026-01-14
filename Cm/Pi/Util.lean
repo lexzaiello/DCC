@@ -8,7 +8,6 @@ Utility functions for the list calculus.
 
 open Expr
 
-
 /-
 Forces an expression to be evaluated immediately.
 -/
@@ -17,6 +16,25 @@ def apply_now (e : Expr) : Expr :=
 
 def quote (e : Expr) : Expr :=
   (:: const e)
+
+/-
+Composition of functions:
+f ∘ g data = f(g(data))
+
+(:: both (:: (quote apply) (:: (quote f)
+  (:: both
+    (:: (quote apply)
+      (quote g)
+      id)))))
+-/
+
+infixr:65 "∘'" => (fun (f : Expr) (g : Expr) => (:: both (:: (quote apply) (:: both (:: (quote f)
+  (:: both
+    (:: (quote apply) (:: both (::
+      (quote g)
+      Expr.id)))))))))
+
+#eval do_step run (:: apply (:: ((:: both (:: (quote (symbol "another")) id)) ∘' (:: both (:: (quote (symbol "prefix")) Expr.id))) (symbol "hi")))
 
 def apply_quoted : Expr := quote apply
 

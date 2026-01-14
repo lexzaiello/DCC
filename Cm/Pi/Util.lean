@@ -28,13 +28,23 @@ f ∘ g data = f(g(data))
       id)))))
 -/
 
-infixr:65 "∘'" => (fun (f : Expr) (g : Expr) => (:: both (:: (quote apply) (:: both (:: (quote f)
+infixr:65 "∘'" => (fun (f : Expr) (g : Expr) => (:: both (:: (quote apply)
+  (:: both (:: (quote f)
   (:: both
     (:: (quote apply) (:: both (::
       (quote g)
       Expr.id)))))))))
 
-#eval do_step run (:: apply (:: ((:: both (:: (quote (symbol "another")) id)) ∘' (:: both (:: (quote (symbol "prefix")) Expr.id))) (symbol "hi")))
+/-
+(f ·') = (:: both (:: f id))
+-/
+postfix:60 "·'" => (fun f => (:: both (:: f id)))
+
+prefix:60 "·'" => (fun f => (:: both (:: id f)))
+
+#eval do_step run (:: apply (::
+  (((quote (symbol "another")) ·') ∘'
+  ((quote (symbol "prefix")) ·')) (symbol "hi")))
 
 def apply_quoted : Expr := quote apply
 

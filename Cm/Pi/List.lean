@@ -319,7 +319,7 @@ def list.zipWith.foldl_fn_mk_push_advance : Expr :=
             (:: both (:: (quote both) (:: both (:: (quote (quote const)) list.zipWith.foldl_fn_mk_apply))))))))))))
     (quote id)))))))))
 
-#eval try_step_n' 60 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x"))))
+example : try_step_n' 40 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x")))) = .ok (:: (symbol "acc") (:: (symbol "x") (symbol "y"))) := rfl
 
 def list.zipWith.mk_foldl_args : Expr :=
   /-

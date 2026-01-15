@@ -136,6 +136,11 @@ def infer_const.assert_well_typed :=
 
 #eval try_step_n run 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil))))
 
+/-
+infer const produces a curried function
+that checks if the argument to (:: const v) is well-typed,
+then returns the type of v.
+-/
 def infer_const : Expr :=
   -- if the op is "const", then fetch our infer component and run that
   sorry

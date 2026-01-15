@@ -70,9 +70,8 @@ example : try_step_n' 10 (:: apply (:: (:: apply
     (.ok (:: (:: const (symbol "var 1")) (:: const (symbol "var 1")))) := rfl
 
 example : try_step_n' 10 (:: apply (:: (:: apply
-  (:: (:: both
-    (:: (quote both)
-      (:: both (:: (var.read 1) (var.read 1)))))
+  (:: (λ' 1
+    (λ' 2 (:: (var.read 1) (var.read 1))))
       (quote (symbol "var 0"))))
       (quote (symbol "var 1")))) =
     (.ok (:: (:: const (symbol "var 1")) (:: const (symbol "var 1")))) := rfl

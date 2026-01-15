@@ -76,6 +76,33 @@ def step_apply (e : Expr) : Except Error Expr := do
   | :: (:: both (:: f g)) l => pure <| :: (cons_apply (:: f l)) (cons_apply (:: g l))
   | e => .error <| .no_rule e
 
+def run' (e : Expr) : Except Error Expr := do
+  match e with
+  | :: apply (:: f x) => do
+    let eval_both : Except Error Expr := do
+      let f' ← run' f
+      let x' ← run' x
+      pure <| :: apply (:: f' x')
+    let eval_arg_first : Except Error Expr := do
+      let x' ← run' x
+      pure <| :: apply (:: f x')
+    let eval_f_first : Except Error Expr := do
+      let f' ← run' f
+      pure <| :: apply (:: f' x)
+    let step_whole : Except Error Expr := do
+      step_apply (:: f x)
+
+    eval_both <|> eval_f_first <|> eval_arg_first <|> step_whole
+  | :: x xs => (do
+    let x' ← run' x
+    let xs' ← run' xs
+    pure <| :: x' xs') <|> (do
+    let xs' ← run' xs
+    pure <| :: x xs') <|> (do
+    let x' ← run' x
+    pure <| :: x' xs)
+  | e => (.error <| .no_rule e)
+
 def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   if with_logs then
     dbg_trace e

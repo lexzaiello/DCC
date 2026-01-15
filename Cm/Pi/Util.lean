@@ -51,10 +51,22 @@ and pushing up from lower binders.
 -/
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))
 -- returning a variable. this corresponds to (:: both (:: (quote const) id))
-notation "var.store" => (fun (n : ℕ) => List.foldr (:: both ·) (:: both (:: (quote const) id)) (List.replicate n (quote Expr.const)))
+notation "var.store" => (fun (n : ℕ) => List.foldr (fun _e acc  => (:: both (:: (quote const) acc))) Expr.id (List.replicate n (quote Expr.const)))
 --notation "binder" => (fun (n : ℕ) (fn : Expr := Expr.id) => List.replicate n
 
-example : try_step_n' 10 (:: apply (:: (:: apply (:: (:: both (:: (quote both) (:: both (:: (var.read 1) (var.read 1))))) (quote (symbol "var 0")))) (quote (symbol "var 1")))) = (.ok (:: (:: const (symbol "var 1")) (:: const (symbol "var 1")))) := rfl
+example : try_step_n' 10 (:: apply (:: (:: apply
+  (:: (:: both
+    (:: (quote both)
+      (:: both (:: (var.read 1) (var.read 1)))))
+      (quote (symbol "var 0"))))
+      (quote (symbol "var 1")))) =
+    (.ok (:: (:: const (symbol "var 1")) (:: const (symbol "var 1")))) := rfl
+
+example : try_step_n' 10 (:: apply (:: (:: apply
+  (:: (:: both (:: (quote both)
+    (:: both (:: (var.store 1) (var.store 1)))))
+  (quote (symbol "var 0")))) (quote (symbol "var 1")))) =
+    (.ok (:: (:: const (symbol "var 0")) (:: const (symbol "var 0")))) := rfl
 
 notation "$!" => Expr.cons apply
 notation "$?" => (fun e => (:: both (:: (quote apply) e))) -- for applying later

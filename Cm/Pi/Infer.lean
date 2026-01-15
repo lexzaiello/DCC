@@ -77,8 +77,9 @@ def assert_eq' : Expr :=
 
   (λ' 1
     (:: (λ' 1 (:: (:: (var.store 0) eq) (λ' 1 (:: eq_ok
-    (λ' 1 (λ' 2 (:: (:: (var.store 0) (:: (var.store 0) Except'.s_err))
-    (λ' 1 (:: (:: (var.store 0) apply) (λ' 1 (:: (:: (var.store 0) expected_but_found) my_v))))))))))) my_v))
+        (λ' 1 (λ' 2 (:: (:: (var.store 0) (:: (var.store 0) Except'.s_err))
+        (λ' 1 (:: (:: (var.store 0) apply) (λ' 1 (:: (:: (var.store 0) expected_but_found) my_v)))))))))))
+      my_v))
 
 example : assert_eq = assert_eq' := rfl
 
@@ -91,6 +92,19 @@ def assert_eq_unwrap : Expr :=
   (:: both
     (:: (:: both (:: (quote eq) (:: both (:: (:: both (:: (quote const) my_v))
     (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v)))))))))))) my_v))
+
+def assert_eq_unwrap' : Expr :=
+  let my_v := var.read 0
+
+  (λ' 1
+    (:: (λ' 1 (:: (:: (var.store 0) eq) (λ' 1 (:: (λ' 1 (:: (var.store 1) my_v))
+      (λ' 1
+        (λ' 2 (::
+          (:: (var.store 0) (:: (var.store 0) Except'.s_err))
+          (λ' 1 (:: (:: (var.store 0) apply) (λ' 1 (:: (:: (var.store 0) expected_but_found) my_v)))))))))))
+    my_v))
+
+example : assert_eq_unwrap = assert_eq_unwrap' := rfl
 
 /-def expected_but_found : Expr :=
   let expected := id

@@ -15,10 +15,10 @@ def quote (e : Expr) : Expr :=
 There is a distinction between loading dowm from higher binders
 and pushing up from lower binders.
 -/
-notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))
+notation "var.read" => (fun (n : ℕ) (e : Expr) => List.foldr Expr.cons e (List.replicate n Expr.const))
 -- returning a variable. this corresponds to (:: both (:: (quote const) id))
-notation "var.store" => (fun (n : ℕ) => List.foldr (fun _e acc  => (:: both (:: (:: const const) acc)))
-  Expr.id (List.replicate n (:: const const)))
+notation "var.store" => (fun (n : ℕ) (e : Expr) => List.foldr (fun _e acc  => (:: both (:: (:: const const) acc)))
+  e (List.replicate n (:: const const)))
 
 def mk_binder (n : ℕ) (e : Expr) :=
   match n with
@@ -31,21 +31,21 @@ notation "λ'" => mk_binder
 
 example : try_step_n' 10 (:: apply (:: (:: apply
   (:: (λ' 1 (
-    (λ' 2 (:: (var.read 1) (var.read 1)))))
+    (λ' 2 (:: (var.read 1 id) (var.read 1 id)))))
       (quote (symbol "var 0"))))
       (quote (symbol "var 1")))) =
     (.ok (:: (:: const (symbol "var 1")) (:: const (symbol "var 1")))) := rfl
 
 example : try_step_n' 10 (:: apply (:: (:: apply
   (:: (λ' 1
-    (λ' 2 (:: (var.read 1) (var.read 1))))
+    (λ' 2 (:: (var.read 1 id) (var.read 1 id))))
       (quote (symbol "var 0"))))
       (quote (symbol "var 1")))) =
     (.ok (:: (:: const (symbol "var 1")) (:: const (symbol "var 1")))) := rfl
 
 example : try_step_n' 10 (:: apply (:: (:: apply
   (:: (:: both (:: (quote both)
-    (:: both (:: (var.store 1) (var.store 1)))))
+    (:: both (:: (var.store 1 id) (var.store 1 id)))))
   (quote (symbol "var 0")))) (quote (symbol "var 1")))) =
     (.ok (:: (:: const (symbol "var 0")) (:: const (symbol "var 0")))) := rfl
 

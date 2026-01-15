@@ -308,13 +308,19 @@ def list.zipWith.foldl_fn_mk_apply : Expr :=
     (quote both) (:: both (::
     (quote (quote apply)) foldl_fn_lazy_apply))))
 
-example : try_step_n' 14 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
+example : try_step_n' 14 (:: apply (:: (:: apply
+  (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id))))
+  (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
 
+/-
+res is untouched, so we just make a quoted π expression and prepend it.
+-/
 def list.zipWith.foldl_fn_mk_push_advance' : Expr :=
-  (:: both (::
-    
+  (:: both (:: (quote both) (:: both (::
+    list.zipWith.foldl_fn_mk_apply
+    (quote list.zipWith.foldl.res)))))
 
-def list.zipWith.foldl_fn_mk_push_advance : Expr :=
+/-def list.zipWith.foldl_fn_mk_push_advance : Expr :=
   (:: both (::
     (quote both) (:: both (::
     (quote (quote apply))
@@ -326,9 +332,11 @@ def list.zipWith.foldl_fn_mk_push_advance : Expr :=
           (quote both)
           (:: both (::
             (quote (quote (:: π (:: nil id)))) -- tail of the remaining
-            (:: both (:: (quote both) (:: both (:: list.zipWith.foldl_fn_mk_apply (quote id)))))))))))))))))))
+            (:: both (:: (quote both) (:: both (:: list.zipWith.foldl_fn_mk_apply (quote id)))))))))))))))))))-/
 
-#eval try_step_n' 100 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x"))))
+#eval try_step_n' 100
+  (:: apply
+    (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance' (:: π (:: id id)))) (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x"))))
 
 def list.zipWith.mk_foldl_args : Expr :=
   /-

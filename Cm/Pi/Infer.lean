@@ -307,7 +307,7 @@ Note: eq_types won't produce an ok'd value.
 It unwraps the types.
 -/
 
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_eq.do_future_infer ∘' infer_eq.eq_types) (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_eq.do_future_infer ∘' (infer_eq.assert_op_eq_seq e>=> infer_eq.eq_types)) (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
 #eval try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_eq.yes_type e>=> infer_eq.do_future_infer) (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
 #eval try_step_n' 1000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq.mk_future_assert_eq₀ (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil)))
 #eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_eq.yes_type (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))

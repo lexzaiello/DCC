@@ -163,12 +163,15 @@ def infer_const.assert_op_ret_ty : Expr :=
   (:: both (:: (quote apply) (:: both (::
       (quote Except'.bind)
       (:: both (::
-        (:: both (:: (quote apply) (:: both (::
-          (quote infer_const.assert_op_seq)
-          id))))
+        ($? ((quote infer_const.assert_op_seq) ·'))
         (quote infer_const.assert_well_typed)))))))
 
-#eval try_step_n run 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: const nil))))
+def infer_const.assert_op_ret_ty' : Expr :=
+  Except'.bind ∘' (:: both (::
+        ($? <| (quote infer_const.assert_op_seq) ·')
+        (quote infer_const.assert_well_typed)))
+
+#eval try_step_n run 200 (:: apply (:: infer_const.assert_op_ret_ty' (:: infer_nil (:: const nil))))
 
 /-def infer_const : Expr :=
   (:: both (:: (quote apply) (:: both-/

@@ -36,6 +36,7 @@ infixr:65 "∘'" => (fun (f : Expr) (g : Expr) => (:: both (:: (quote apply)
       Expr.id)))))))))
 
 notation "$!" => Expr.cons apply
+notation "$?" => (fun e => (:: both (:: (quote apply) e))) -- for applying later
 
 /-
 (f ·') = (:: both (:: f id))

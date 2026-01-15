@@ -152,18 +152,33 @@ def infer_const.assert_op_ret_ty : Expr :=
 
 #eval try_step_n' 1000 (:: apply (:: (:: apply (:: (quote infer.assert_well_typed_unsafe) (:: infer_nil (:: const nil)))) (:: infer_nil nil)))
 
+def infer_const.cnst_out_ty : Expr :=
+  (:: both (:: (quote const)
+    (:: both (:: (quote apply) (:: both (::
+      (quote infer_const.assert_op_ret_ty)
+      id))))))
+
+def infer_const.future_infer : Expr :=
+  (quote infer.assert_well_typed_unsafe)
+
+def infer_const.future_apply : Expr :=
+  (:: both (:: (quote both)
+    (:: both (:: (quote (quote Except'.bind))
+      (:: both (:: (quote both) (:: both (:: infer_const.future_infer
+        infer_const.cnst_out_ty))))))))
+
+#eval try_step_n' 1000 (:: apply (:: infer_const.cnst_out_ty (:: infer_nil (:: const nil))))
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_const.future_infer (:: infer_nil (:: const nil)))) (:: infer_nil nil)))
+
 /-
 (:: apply (:: (:: apply (:: infer_const (:: infer (:: const data)))) (:: infer other_data)))
 -/
 def infer_const : Expr :=
-  let cnst_out_ty := (:: both (:: (quote const)
-    (:: both (:: (quote apply) (:: both (::
-      (quote infer_const.assert_op_ret_ty)
-      id))))))
-  let future_infer := infer_const.future_apply
-  sorry
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply))
+    infer_const.future_apply))))
 
---#eval try_step_n' 1000 (:: apply (:: apply (:: infer_const (:: infer_nil (:: const nil)))) (:: infer_nil (
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_const (:: infer_nil (:: const nil)))) (:: infer_nil nil)))
 
 namespace infer_test
 

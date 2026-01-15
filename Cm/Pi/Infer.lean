@@ -154,12 +154,17 @@ def infer_const.assert_op_ret_ty : Expr :=
 
 def infer_const.cnst_out_ty : Expr :=
   (:: both (:: (quote const)
-    (:: both (:: (quote apply) (:: both (::
-      (quote infer_const.assert_op_ret_ty)
-      id))))))
+    (:: both (:: (quote const)
+      (:: both (:: (quote apply) (:: both (::
+        (quote infer_const.assert_op_ret_ty)
+        id))))))))
 
 def infer_const.future_infer : Expr :=
   (quote infer.assert_well_typed_unsafe)
+
+def infer_const.bind_args : Expr :=
+  (:: both (:: (quote both) (:: both (:: infer_const.future_infer
+        infer_const.cnst_out_ty))))
 
 def infer_const.future_apply : Expr :=
   (:: both (:: (quote both)
@@ -169,6 +174,7 @@ def infer_const.future_apply : Expr :=
 
 #eval try_step_n' 1000 (:: apply (:: infer_const.cnst_out_ty (:: infer_nil (:: const nil))))
 #eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_const.future_infer (:: infer_nil (:: const nil)))) (:: infer_nil nil)))
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_const.bind_args (:: infer_nil (:: const nil)))) (:: infer_nil nil)))
 
 /-
 (:: apply (:: (:: apply (:: infer_const (:: infer (:: const data)))) (:: infer other_data)))

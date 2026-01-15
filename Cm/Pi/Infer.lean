@@ -26,6 +26,12 @@ def TData : Expr := .symbol "Data"
 def TFail : Expr := .symbol "sorry"
 
 /-
+Expects the expected value as the first argument.
+-/
+/-def expected_but_found' : Except :=
+  (λ' 2 (var.read 1 ((quote <| symbol "expected:")-/
+
+/-
 More dynamic version of expected_but_found.
 Curried. Expects the expected value as the first argument.
 
@@ -35,9 +41,18 @@ Just makes an error message.
 def expected_but_found' : Expr :=
   let expected := Expr.id
 
+  (λ' 1 (λ' 2 (::
+    (λ' 1 (:: (quote const) (:: both (:: (quote <| symbol "expected:") expected))))
+    (quote <| (:: both (:: (quote <| symbol "but found: ") id))))))
+
+def expected_but_found : Expr :=
+  let expected := Expr.id
+
   (:: both (:: (quote both) (:: both (::
     (:: both (:: (quote const) (:: both (:: (quote <| symbol "expected:") expected))))
     (quote <| (:: both (:: (quote <| symbol "but found: ") id)))))))
+
+#eval expected_but_found == expected_but_found'
 
 /-
 Checks whether a later curried argument
@@ -53,7 +68,7 @@ def assert_eq : Expr :=
 
   (:: both
     (:: (:: both (:: (quote eq) (:: both (:: eq_ok
-    (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found') my_v)))))))))))) my_v))
+    (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v)))))))))))) my_v))
 
 /-
 assert_eq but it returns just the data in the ok case.
@@ -63,9 +78,9 @@ def assert_eq_unwrap : Expr :=
 
   (:: both
     (:: (:: both (:: (quote eq) (:: both (:: (:: both (:: (quote const) my_v))
-    (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found') my_v)))))))))))) my_v))
+    (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v)))))))))))) my_v))
 
-/-def expected_but_found' : Expr :=
+/-def expected_but_found : Expr :=
   let expected := id
   (:: both -/
 
@@ -85,7 +100,7 @@ def infer_nil : Expr :=
   :: both (:: (quote apply)
     (:: π (::
     (quote <|
-      :: (:: eq (:: (quote <| (:: apply (:: Except'.ok TData))) (:: apply (:: expected_but_found' nil))))
+      :: (:: eq (:: (quote <| (:: apply (:: Except'.ok TData))) (:: apply (:: expected_but_found nil))))
       .nil)
     id)))
 
@@ -160,7 +175,7 @@ def infer_const.assert_op_ret_ty : Expr :=
         ($? <| (quote infer_const.assert_op_seq) ·')
         (quote infer_const.assert_well_typed)))
 
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (quote infer.assert_well_typed_unsafe) (:: infer_nil (:: const nil)))) (:: infer_nil nil)))
+example : try_step_n' 1000 (:: apply (:: (:: apply (:: (quote infer.assert_well_typed_unsafe) (:: infer_nil (:: const nil)))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
 
 def infer_const.cnst_out_ty : Expr :=
   (:: both (:: (quote const)
@@ -323,21 +338,6 @@ def infer_eq : Expr :=
     e>=> infer_eq.eq_types
     e>=> (infer_eq.inject_future_infer ∘' infer_eq.inject_future_assert_eq))
 
-/-
-quote π is pretty common, unfortunately, so we will need to make a curried type.
-π has an x map, an xs map, and produces an xs map.
-
-the x and xs maps do not need to be the same type.
-
-- check that the operation is π
-- check that the x map is well-typed
-- check that the xs map is well-typed
-
-A potential idea for type checking:
-- uncurried full π type
-- curry to produce fewer argument versions
--/
-
 namespace infer_test
 
 set_option maxRecDepth 5000
@@ -350,7 +350,7 @@ example : (try_step_n' 500 (:: apply (:: (:: apply (:: infer_const (:: infer_nil
 
 example : try_step_n' 1000 (:: apply (:: (:: apply (:: (quote infer.assert_well_typed_unsafe) (:: infer_nil (:: const nil)))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
 
-example : try_step_n' 20 (:: apply (:: (:: apply (:: expected_but_found' const)) nil)) = .ok (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil)) := rfl
+example : try_step_n' 20 (:: apply (:: (:: apply (:: expected_but_found const)) nil)) = .ok (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil)) := rfl
 
 example : try_step_n' 18 (:: apply (:: (:: apply (:: assert_eq .const)) nil)) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil))) := rfl
 

@@ -317,8 +317,10 @@ res is untouched, so we just make a quoted π expression and prepend it.
 -/
 def list.zipWith.foldl_fn_mk_push_advance' : Expr :=
   (:: both (:: (quote both) (:: both (::
-    list.zipWith.foldl_fn_mk_apply
-    (quote list.zipWith.foldl.res)))))
+    (quote (list.zipWith.foldl_rem_tail))
+      (:: both (:: (quote both) (:: both (::
+        list.zipWith.foldl_fn_mk_apply
+        (quote list.zipWith.foldl.res)))))))))
 
 /-def list.zipWith.foldl_fn_mk_push_advance : Expr :=
   (:: both (::

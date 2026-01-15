@@ -258,6 +258,10 @@ we will get a new infer function from the yes case.
 
 Future_infer works on whatever assertion argument it is passed.
 -/
+
+/-
+This is for the last eq argument.
+-/
 def infer_eq.future_infer₀ : Expr :=
   (:: both (:: (quote both) (:: both (::
     (quote (quote apply))
@@ -267,10 +271,21 @@ def infer_eq.future_infer₀ : Expr :=
       ))))))))
 
 /-
-
+This is for the first eq data argument.
 -/
 def infer_eq.future_infer₁ : Expr :=
-  sorry
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply)) (:: both (:: (quote both)
+    (:: both (:: 
+      (quote (quote Except'.bind))
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply)) (:: both (::
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply))
+    (:: both (:: (quote both) (:: both (::
+      const -- this wraps the eq assertions
+      (quote (Except'.unwrap ∘' infer.assert_well_typed_unsafe))))))))))
+      (:: both (:: (quote const) const))))))))))))))))  -- this outputs the original eq fn argument assertion from bind
 
 /-
 Checks that the next argument has the expected type.

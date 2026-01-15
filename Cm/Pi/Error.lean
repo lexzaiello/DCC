@@ -93,16 +93,32 @@ def Except'.match_with : Expr :=
     (:: both (:: (quote both) (:: both (:: (quote (quote apply))
       Except'.mk_eq))))))))))))
 
-#eval try_step_n run 100
+#eval try_step_n run 40
   (:: apply (:: (:: apply (:: Except'.match_with (:: id ((quote (symbol "my error is: ")) ·')))) (:: apply (:: Except'.err (symbol "hi")))))
 
-#eval try_step_n run 100
+#eval try_step_n run 40
   (:: apply (:: (:: apply (:: Except'.match_with (:: ((quote (symbol "my ok is: ")) ·') id))) (:: apply (:: Except'.ok (symbol "hi")))))
 
+def Except'.pure := Except'.ok
+
 /-
-(:: apply (:: apply (:: Except'.bind (:: apply (:: Except'.ok "val")))) (Except.ok' ·'))
-= (:: apply (:: Except.ok' "val"))
+This is essentially Except'.match_with reversed.
+This version is not curried.
+It expects the except as the first argument,
+and what to do with the ok value as the second
 -/
-/-def Except'.bind : Expr :=
-  
--/
+def Except'.bind.my_match :=
+  :: π (:: (quote Except'.match_with)
+    (:: both (::
+      id
+      (quote Except'.err))))
+
+def Except'.bind.my_except := :: π (:: id nil)
+
+def Except'.bind :=
+  (:: both (:: (quote apply)
+    (:: both (::
+      (:: both (:: (quote apply) Except'.bind.my_match)) Except'.bind.my_except))))
+
+#eval try_step_n run 50
+  (:: apply (:: Except'.bind (:: (:: apply (:: Except'.err (symbol "hi"))) id)))

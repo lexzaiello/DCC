@@ -206,23 +206,34 @@ map each element :: x xs to: :: π (:: both (:: (quote f) (:: (quote x) id)))
 f must be quoted twice.
 -/
 
+def list.zipWith.my_f : Expr := :: π (:: id nil)
 def list.zipWith.my_l : Expr := :: π (:: nil (:: π (:: id nil)))
 def list.zipWith.my_m : Expr := :: π (:: nil (:: π (:: nil id)))
 def list.zipWith.double_quote_my_f : Expr := :: π (:: (:: both (:: (quote const) const)) nil)
-def list.zipWith.mk_π_mapper : Expr := ((mk_both' 1) ∘ (mk_both' 0)) (:: (qn' 2 π) (:: (qn' 2 both) (::
+
+/-
+With f in scope, then l x head, then m x head
+-/
+def list.zipWith.mk_π_mapper : Expr := both_from_list [(qn' 2 π), [(:: (qn' 2 both) (::
     list.zipWith.double_quote_my_f
-    (:: const (qn' 2 id)))))
+    (quote (:: const (quote id))))) (quote (quote nil))))
+
+def list.zipWith.do_map (fn_getter list_getter : Expr) := $? <| mk_both_tail <| (:: (quote list.map) (:: fn_getter list_getter))
+
+def list.zipWith.mk_all_π : Expr := $? <| mk_both_tail <| (:: (quote list.map) (:: list.zipWith.my_f list.zipWith.my_l))
 
 def list.zipWith : Expr :=
   /-
    With all args in scope.
   -/
 
-  -- π gets eaten up by f binder, l binder, and then consumed by m binder
-  let mk_π_mapper := ((mk_both' 1) ∘ (mk_both' 0)) (:: (qn' 2 π) (:: (qn' 2 both) (::
-    double_quote_f
-    (:: const (qn' 2 id)))))
   sorry
+
+/-#eval do_step (:: apply (:: list.zipWith.double_quote_my_f (:: (symbol "my_f") (:: (symbol "my_l") (symbol "my_m")))))
+#eval do_step (:: apply (:: list.zipWith.mk_π_mapper (:: (symbol "my_f") (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))
+#eval try_step_n 100 (:: apply (:: list.zipWith.my_l (:: id (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))
+#eval try_step_n 100 (:: apply (:: (list.zipWith.do_map list.zipWith.my_f list.zipWith.my_l) (:: id (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))-/
+
 
 def list.reverse.state'' : Expr :=
   :: π (:: nil (:: π (:: nil id)))

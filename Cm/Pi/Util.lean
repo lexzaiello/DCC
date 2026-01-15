@@ -38,6 +38,23 @@ infixr:65 "∘'" => (fun (f : Expr) (g : Expr) => (:: both (:: (quote apply)
 notation "$!" => Expr.cons apply
 notation "$?" => (fun e => (:: both (:: (quote apply) e))) -- for applying later
 
+def both_from_list (n_repeat : ℕ) : List Expr → Expr
+  | .cons x xs => :: both (:: x (both_from_list n_repeat xs))
+  | .nil => nil
+where the_both (n_quote : ℕ) := (List.replicate n_quote const).foldr Expr.cons both
+      with_boths (e : Expr) := (List.range n_repeat).map the_both
+        |> List.foldr Expr.cons e
+
+example : both_from_list 1 [(symbol "a"), (symbol "b"), (symbol "c")]
+  = (:: both (:: (symbol "a") (:: both (:: (symbol "b") (:: both (:: (symbol "c") nil)))))) := rfl
+
+
+
+def mk_both_tail : Expr → Expr
+  | :: const e => :: const e
+  | :: x xs => :: both (:: x (mk_both_tail xs))
+  | e => e
+
 /-
 Creates a :: both (:: both ...) tree,
 ending with the last expression.

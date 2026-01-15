@@ -328,7 +328,7 @@ def list.zipWith.mk_foldl_args : Expr :=
 
   -- with f, then (:: acc x) in scope
   -- applies f to foldl x and acc
-  let apply_x_acc := list.zipWith.foldl_fn_mk_apply
+  let apply_x_acc := list.zipWith.foldl_fn_mk_push_advance
 
   -- with all args in scope
   (:: π (::
@@ -339,7 +339,7 @@ def list.zipWith : Expr :=
     (quote list.foldl)
     list.zipWith.mk_foldl_args))))
 
-#eval try_step_n' 200 (:: apply (:: (:: apply (:: list.zipWith (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "b") nil))))) (:: (symbol "c") (:: (symbol "d") nil))))
+example : try_step_n' 200 (:: apply (:: (:: apply (:: list.zipWith (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "b") nil))))) (:: (symbol "c") (:: (symbol "d") nil)))) = (.ok (:: (:: (symbol "d") (symbol "a")) (:: (symbol "c") (:: (symbol "b") nil)))) := rfl
 
 def list.reverse.state'' : Expr :=
   :: π (:: nil (:: π (:: nil id)))

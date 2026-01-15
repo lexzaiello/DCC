@@ -155,7 +155,7 @@ def infer_const.assert_op_ret_ty : Expr :=
 
 namespace infer_test
 
-#eval do_step (:: apply (:: (:: apply (:: expected_but_found' const)) nil))
+example : try_step_n' 20 (:: apply (:: (:: apply (:: expected_but_found' const)) nil)) = .ok (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil)) := rfl
 
 #eval try_step_n 100 (:: apply (:: (:: apply (:: assert_eq .const)) nil))
 #eval try_step_n 100 (:: apply (:: (:: apply (:: assert_eq .const)) .const))

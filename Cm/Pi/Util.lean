@@ -113,6 +113,8 @@ postfix:60 "·'" => (fun f => (:: both (:: f id)))
 
 prefix:60 "·'" => (fun f => (:: both (:: id f)))
 
+infixr:60 "b'" => (fun f g => (:: both (:: f g)))
+
 #eval do_step (:: apply (::
   ((·' (quote (symbol "another")) ) ∘'
   ((quote (symbol "prefix")) ·')) (symbol "hi")))

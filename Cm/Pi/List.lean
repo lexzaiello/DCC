@@ -98,7 +98,7 @@ For tests: the "state" that gets passed to the nil and xs handlers.
 def list.rec_with.test_match_args : Expr := (:: (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "nil_case") (symbol "succ_case")))) (:: (symbol "x") (symbol "xs")))
 
 /-
-Continus recursion on the tail of the list.
+Continues recursion on the tail of the list.
 -/
 def list.rec_with.advance_tail : Expr := (:: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id))))))
 
@@ -161,15 +161,39 @@ def list.get_n' : Expr :=
 #eval try_step_n 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (:: (symbol "succ") (symbol "zero"))) (:: (symbol "test") (:: (symbol "next") (:: (symbol "next next") nil))))))
 
 /-
-(:: apply (:: (:: apply (:: list.foldl (:: both (symbol "init")))) l)) = l
+(:: apply (:: (:: apply (:: list.foldl (:: both nil))) l)) = l
 -/
 
+/-
+nil just returns the init value.
+succ applies f with the head of the list
+and the accumulator
+-/
 def list.foldl.mk_nil_handler := :: π (:: nil const)
-def list.foldl.mk_succ_handler := :: π (:: nil const)
+
+/-
+with (:: match_args (:: x xs) in scope
+-/
+def list.foldl.rec_with.get_head := :: π (:: nil (:: π (:: id nil)))
+
+def list.foldl.my_f : Expr := :: π (:: id nil)
+
+/-
+  with all args in scope
+  then maps over (:: match_args (:: x xs))
+-/
+def list.foldl.mk_succ_handler :=
+  (:: both (::
+    (quote both) (:: both (::
+    ((quote const) b' list.foldl.my_f)
+    (quote (:: both (::
+      list.foldl.rec_with.get_head
+      list.rec_with.advance_tail)))))))
 
 example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl.mk_nil_handler (:: (symbol "my_f") (symbol "my_init")))) list.rec_with.test_match_args)) = (.ok (symbol "my_init")) := rfl
 
-#eval try_step_n 100 (:: apply (:: list.rec_with 
+#eval try_step_n 100 (:: apply (:: (:: apply (:: list.foldl.mk_succ_handler (:: (symbol "my_f") (symbol "my_init"))))
+  list.rec_with.test_match_args))
 
 def list.foldl : Expr :=
   sorry

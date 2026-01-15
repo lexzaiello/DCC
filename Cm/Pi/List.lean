@@ -146,7 +146,7 @@ def list.foldl.my_l : Expr := :: π (:: nil id)
 def list.foldl.mk_nil_handler : Expr := (quote nil)
 
 -- with :: match_args (:: x xs) in scope
---def list.foldl.get_head : Expr := quote (:: π (:: nil (:: π (:: nil (:: (:: π (:: nil (:: π (:: 
+--def list.foldl.get_head : Expr := quote (:: π (:: nil (:: π (:: nil (:: π (:: nil (:: π (:: nil (:: π (:: id nil))))))))))
 def list.foldl.do_app : Expr := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
 def list.foldl.mk_xs_handler : Expr := (:: both (:: (quote both) (:: (const ·') (quote do_app))))
 def list.foldl.mk_xs_handler' : Expr := (quote id)

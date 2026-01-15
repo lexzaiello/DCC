@@ -54,6 +54,14 @@ example : both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
 
 #eval both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
 
+def mk_π_skip (n : ℕ) (at_end : Expr) : Expr :=
+  match n with
+  | .zero => :: π (:: at_end nil)
+  | .succ n =>
+    :: π (:: nil (mk_π_skip n at_end))
+
+example : mk_π_skip 2 id = (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) := rfl
+
 def mk_both_tail : Expr → Expr
   | :: const e => :: const e
   | :: x xs => :: both (:: x (mk_both_tail xs))

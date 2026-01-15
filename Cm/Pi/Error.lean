@@ -38,7 +38,7 @@ of an error or ok Except value.
 def Except'.match_with.mk_mapper : Expr :=
   (:: both (:: (quote π) ((quote id) ·')))
 
-#eval do_step run (:: apply (:: (:: apply (:: Except'.match_with.mk_mapper id)) (:: apply (:: Except'.err (symbol "hi")))))
+#eval do_step (:: apply (:: (:: apply (:: Except'.match_with.mk_mapper id)) (:: apply (:: Except'.err (symbol "hi")))))
 
 def Except'.match_with.map_eq_ok : Expr :=
   :: π (:: Except'.match_with.mk_mapper nil)
@@ -56,7 +56,7 @@ def Except'.match_with.mk_eq_cases : Expr :=
         (quote (quote const))
         map_eq_no))))))))
 
-#eval do_step run (:: apply (:: (:: apply (:: Except'.match_with.mk_eq_cases (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
+#eval do_step (:: apply (:: (:: apply (:: Except'.match_with.mk_eq_cases (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
 
 def Except'.mk_eq : Expr :=
   (:: both (:: (quote both) (:: both (::
@@ -66,7 +66,7 @@ def Except'.mk_eq : Expr :=
         match_with.mk_eq_cases)))) (quote (quote s_ok))))))
     (quote (:: π (:: id nil)))))))
 
-#eval do_step run (:: apply (:: (:: apply (:: Except'.mk_eq (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
+#eval do_step (:: apply (:: (:: apply (:: Except'.mk_eq (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
 
 /-
 Maps the ok and error values of an except, creating a new except.
@@ -75,10 +75,10 @@ def Except'.map_with : Expr :=
   (:: both (:: (quote both) (:: both (:: (quote (quote apply))
     Except'.mk_eq))))
 
-#eval try_step_n run 100
+#eval try_step_n 100
   (:: apply (:: (:: apply (:: Except'.map_with (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
 
-#eval try_step_n run 100
+#eval try_step_n 100
   (:: apply (:: (:: apply (:: Except'.map_with (:: id ((quote (symbol "my error is: ")) ·')))) (:: apply (:: Except'.err (symbol "hi")))))
 
 /-
@@ -93,10 +93,10 @@ def Except'.match_with : Expr :=
     (:: both (:: (quote both) (:: both (:: (quote (quote apply))
       Except'.mk_eq))))))))))))
 
-#eval try_step_n run 40
+#eval try_step_n 40
   (:: apply (:: (:: apply (:: Except'.match_with (:: id ((quote (symbol "my error is: ")) ·')))) (:: apply (:: Except'.err (symbol "hi")))))
 
-#eval try_step_n run 40
+#eval try_step_n 40
   (:: apply (:: (:: apply (:: Except'.match_with (:: ((quote (symbol "my ok is: ")) ·') id))) (:: apply (:: Except'.ok (symbol "hi")))))
 
 def Except'.pure := Except'.ok
@@ -123,8 +123,8 @@ def Except'.bind :=
 infixl:60 "e>>=" => (fun e f =>
   (:: apply (:: Except'.bind (:: e f))))
 
-#eval try_step_n run 50
+#eval try_step_n 50
   (:: apply (:: Except'.bind (:: (:: apply (:: Except'.err (symbol "hi"))) id)))
 
-#eval try_step_n run 50 ((:: apply (:: Except'.ok (symbol "hi"))) e>>= id)
-#eval try_step_n run 50 ((:: apply (:: Except'.err (:: (symbol "other") (symbol "hi")))) e>>= id)
+#eval try_step_n 50 ((:: apply (:: Except'.ok (symbol "hi"))) e>>= id)
+#eval try_step_n 50 ((:: apply (:: Except'.err (:: (symbol "other") (symbol "hi")))) e>>= id)

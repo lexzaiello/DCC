@@ -155,5 +155,8 @@ def my_eval_test₂ : Except Error Expr := do
 
   do_step (:: apply (:: my_proj my_data))
 
+example : step_apply (:: (:: const (symbol "a")) nil) = .ok (symbol "a") := by
+  rfl
+
 #eval my_eval_test
 #eval my_eval_test₂

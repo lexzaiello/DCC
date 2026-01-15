@@ -188,12 +188,12 @@ def list.foldl.mapper_to_π : Expr :=
   (:: both (:: (quote π) (:: both
     (:: id (quote id))))))
 
-def list.foldl.mk_xs_handler : Expr := 
-    (:: both (:: (quote both) (:: both (::
-    mapper_to_π (quote do_app)))))
+def list.foldl.mk_xs_handler : Expr :=
+      (:: both (:: (quote both) (:: both (::
+      mapper_to_π (quote do_app)))))
 
 example : try_step_n' 20 (:: apply (:: list.foldl.mapper_to_π (symbol "my_f"))) = .ok (:: const (:: π (:: (symbol "my_f") id))) := rfl
-#eval try_step_n' 20 (:: apply (:: (:: apply (:: list.foldl.mk_xs_handler id)) (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))))
+#eval try_step_n' 20 (:: apply (:: (:: apply (:: list.foldl.mk_xs_handler (symbol "my_f"))) (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))))
 
 /-
 do_rec should have f in scope.

@@ -248,7 +248,7 @@ def infer_eq.eq_types : Expr :=
           infer_eq.no_type))))))))
 
 #eval try_step_n' 1000 (:: apply (:: infer_eq.yes_type (:: infer_nil (:: eq (:: nil nil)))))
-#eval try_step_n' 1000 (:: apply (:: infer_eq.eq_types (:: infer_nil (:: eq (:: nil nil)))))
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_eq.eq_types (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
 
 def infer_eq.bind_args : Expr :=
   (:: both

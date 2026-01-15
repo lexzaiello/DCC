@@ -19,8 +19,8 @@ I think these are just inverses of each other.
 -/
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))
 -- returning a variable. this corresponds to (:: both (:: (quote const) id))
-notation "var.store" => (fun (n : ℕ) => List.foldr (fun _e acc  => (:: both (:: (:: const const) acc)))
-  Expr.id (List.replicate n (:: const const)))
+notation "var.store" => (fun (n : ℕ) => List.foldr Expr.cons
+  const (List.replicate n const))
 
 def mk_binder (n : ℕ) (e : Expr) :=
   match n with
@@ -53,7 +53,7 @@ example : try_step_n' 10 (:: apply (:: (:: apply
 
 example : try_step_n' 10 (:: apply (:: (:: apply
   (:: (:: both (:: (quote both)
-    (:: both (:: (var.store 1) (var.store 1)))))
+    (:: both (:: (var.store 0) (var.store 0)))))
   (quote (symbol "var 0")))) (quote (symbol "var 1")))) =
     (.ok (:: (:: const (symbol "var 0")) (:: const (symbol "var 0")))) := rfl
 

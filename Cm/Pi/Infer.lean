@@ -41,9 +41,9 @@ Just makes an error message.
 def expected_but_found' : Expr :=
   (λ' 1 (λ' 2 (::
     (λ' 1 (::
-      (quote const)
-      (λ' 1 (:: (quote <| symbol "expected:") (var.read 0)))))
-        (quote <| (λ' 1 (:: (quote <| symbol "but found: ") (var.read 0)))))))
+      (var.store 1)
+      (λ' 1 (:: (:: (var.store 0) <| symbol "expected:") (var.read 0)))))
+        (:: (var.store 0) <| (λ' 1 (:: (:: (var.store 0) <| symbol "but found: ") (var.read 0)))))))
 
 def expected_but_found : Expr :=
   let expected := Expr.id
@@ -52,7 +52,7 @@ def expected_but_found : Expr :=
     (:: both (:: (quote const) (:: both (:: (quote <| symbol "expected:") expected))))
     (quote <| (:: both (:: (quote <| symbol "but found: ") id)))))))
 
-#eval expected_but_found == expected_but_found'
+example : expected_but_found = expected_but_found' := rfl
 
 /-
 Checks whether a later curried argument
@@ -69,6 +69,17 @@ def assert_eq : Expr :=
   (:: both
     (:: (:: both (:: (quote eq) (:: both (:: eq_ok
     (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v)))))))))))) my_v))
+
+def assert_eq' : Expr :=
+  let my_v := Expr.id
+
+  let eq_ok := (λ' 1 (:: (quote const) (λ' 1 (:: (quote Except'.s_ok) my_v))))
+
+  (:: both
+    (:: (:: both (:: (quote eq) (:: both (:: eq_ok
+    (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v)))))))))))) my_v))
+
+#eval assert_eq == assert_eq'
 
 /-
 assert_eq but it returns just the data in the ok case.

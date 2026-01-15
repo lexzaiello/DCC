@@ -267,12 +267,34 @@ end test_list
 Curried by one list.
 Second data list is curried once.
 
+accumulator is (:: remaining results)
+foldl map is (:: both (:: (quote f) (:: 
+zipWith fn l = List.foldl (:: 
+
 (:: apply (:: (:: apply (:: list.zipWith (:: fn l))) l₂))
 -/
 def list.zipWith : Expr :=
   /-
    With all args in scope.
   -/
+
+  -- with (:: acc x) in scope
+  -- pops the head of the remaining results
+  -- returning remaining'
+  let s'_pop_rem_acc := (:: π (:: nil id))
+
+  -- with f, then (:: acc x) in scope
+  -- pushes the head of remaining
+  -- onto (:: f (:: results))
+  let s'_pop_push_res := :: both (::
+    (quote both) (:: both (::
+        const -- temporarily wipe remaining, and put f in place
+        (quote (:: π (::
+          (:: π (:: id nil)) -- get just the head of remaining
+          id))))))
+
+  -- with f in scope
+  let mk_foldl_map := :: both (:: 
 
   sorry
 

@@ -258,7 +258,7 @@ def infer_eq.future_infer : Expr :=
     (quote (quote apply))
     (:: both (:: (quote both) (:: both (::
       const -- this wraps the eq assertions
-      (quote infer.assert_well_typed_unsafe) -- this infers the future argument
+      (quote (Except'.unwrap ∘' infer.assert_well_typed_unsafe)) -- this infers the future argument
       ))))))))
 
 /-
@@ -266,13 +266,13 @@ Checks that the next argument has the expected type.
 -/
 def infer_eq.mk_future_assert_eq : Expr :=
   (infer_eq.assert_op_eq_seq e>=> infer_eq.yes_type)
-    e>=> (id ∘' assert_eq)
+    e>=> (infer_eq.future_infer ∘' assert_eq)
 
 #eval try_step_n' 1000 (:: apply (:: infer_eq.yes_type (:: infer_nil (:: eq (:: nil nil)))))
 #eval try_step_n' 1000 ((:: apply (:: infer_eq.assert_op_eq_seq (:: infer_nil (:: eq (:: nil nil)))))
   e>>= infer_eq.yes_type)
 #eval try_step_n' 1000 ((:: apply (:: (infer_eq.assert_op_eq_seq e>=> infer_eq.yes_type) (:: infer_nil (:: eq (:: nil nil))))))
-#eval try_step_n' 1000 ((:: apply (:: infer_eq.mk_future_assert_eq (:: infer_nil (:: eq (:: nil nil))))))
+#eval try_step_n' 1000 (:: apply (:: ((:: apply (:: infer_eq.mk_future_assert_eq (:: infer_nil (:: eq (:: nil nil)))))) (:: infer_nil nil)))
 
 /-def infer_eq.bind_args₁ : Expr :=
   (:: both

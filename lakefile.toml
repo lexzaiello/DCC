@@ -1,6 +1,7 @@
 name = "Cm"
 version = "0.1.0"
 defaultTargets = ["Cm"]
+testDriver = "tests"
 
 [[require]]
 name = "lspec"
@@ -18,3 +19,7 @@ root = "Main"
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
 
+[[lean_exe]]
+name = "tests"
+root = "Tests"
+supportInterpreter = true

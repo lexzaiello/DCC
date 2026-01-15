@@ -180,6 +180,15 @@ def infer_const : Expr :=
     (quote (quote apply))
     infer_const.future_apply))))
 
+/-
+id is a curried infer rule.
+it will just run infer on whatever comes next.
+-/
+def infer_id : Expr :=
+  (:: both (:: (quote Except'.bind) (:: both
+    (:: ((:: apply (:: assert_eq .const)) ∘' Expr.id)
+    (quote (quote infer.assert_well_typed_unsafe))))))
+
 namespace infer_test
 
 set_option maxRecDepth 5000

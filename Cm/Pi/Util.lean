@@ -50,6 +50,20 @@ def mk_both : Expr → Expr
   | e => e
 
 /-
+Creates a :: both (:: both ...) tree,
+ending with the last expression.
+
+Does not both quoted exprs.
+
+quotes both n times.
+-/
+def mk_both' (n : ℕ) : Expr → Expr
+  | :: const e => :: const e
+  | :: x xs => :: the_both (:: (mk_both x) (mk_both xs))
+  | e => e
+where the_both := (List.replicate n const).foldr Expr.cons both
+
+/-
 Inserts a quoted both after every both
 in a tree.
 -/

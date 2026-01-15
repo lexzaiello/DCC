@@ -141,6 +141,20 @@ def list.get_n' : Expr :=
 #eval try_step_n 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (symbol "zero")) (:: (symbol "test") (:: (symbol "next") nil)))))
 #eval try_step_n 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (:: (symbol "succ") (symbol "zero"))) (:: (symbol "test") (:: (symbol "next") (:: (symbol "next next") nil))))))
 
+def list.foldl.my_f : Expr := .id
+def list.foldl.mk_zero_handler : Expr := :: both (:: (quote π) (:: both (:: (const ·') (quote nil))))
+def list.foldl.do_app : Expr := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
+def list.foldl.mk_succ_handler : Expr := :: both (:: (quote both) (:: both
+  (:: (quote (quote π)) (:: both (:: (quote both) (:: (const ·') do_app))))))
+
+
+/-
+(:: apply (:: (:: apply (:: list.foldl id)) l)) = l
+-/
+def list.foldl : Expr :=
+  let my_f := Expr.id
+  let mk_zero_handler := :: both (:: (quote π) (:: both (:: id (quote nil))))
+
 /-
 (:: apply (:: list.map (:: f l)))
 -/
@@ -204,6 +218,12 @@ nil => nil
 map each element :: x xs to: :: π (:: both (:: (quote f) (:: (quote x) id)))
 
 f must be quoted twice.
+
+Potential issue:
+map will nest π in ways we don't like
+
+we could first map to get map_fn
+:: (:: π map_fn)
 -/
 
 def list.zipWith.my_f : Expr := :: π (:: id nil)
@@ -220,14 +240,21 @@ def list.zipWith.mk_π_mapper : Expr := both_from_list 3 [(qn' 2 π), (both_from
 def list.zipWith.do_map (map_impl fn_getter list_getter : Expr) := $? <| both_from_list 1
   [(quote map_impl), fn_getter, list_getter]
 
-def list.zipWith.do_map' (map_impl on_f : Expr) := :: both (:: (quote apply) (::
+def list.zipWith.do_map' (map_impl on_f : Expr) := :: both (:: (quote apply) (:: both (::
   (quote map_impl)
-  (:: π (:: on_f (:: π (:: id nil))))))
+  (:: π (:: on_f id)))))
 
 def list.zipWith.mk_all_π : Expr := list.zipWith.do_map list.map list.zipWith.mk_π_mapper list.zipWith.my_l
 
 def list.zipWith.mk_all_π' : Expr := list.zipWith.do_map' list.map list.zipWith.mk_π_mapper
+def list.zipWith.mk_all_π_debug : Expr := list.zipWith.do_map' list.map .id
 
+/-
+Curried by one list.
+Second data list is curried once.
+
+(:: apply (:: (:: apply (:: list.zipWith (:: fn l))) l₂))
+-/
 def list.zipWith : Expr :=
   /-
    With all args in scope.
@@ -235,10 +262,10 @@ def list.zipWith : Expr :=
 
   sorry
 
-#eval try
-/-#eval try_step_n 1000 (:: apply (::
-  (list.zipWith.do_map (symbol "list.map") list.zipWith.my_f list.zipWith.my_l)
-  (:: id (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))-/
+-- (:: (symbol "c") (:: (symbol "d") nil))
+#eval try_step_n 500 (:: apply (::
+  list.zipWith.mk_all_π_debug
+  (:: id (:: (symbol "a") (:: (symbol "b") nil)))))
 /-#eval do_step (:: apply (:: list.zipWith.double_quote_my_f (:: (symbol "my_f") (:: (symbol "my_l") (symbol "my_m")))))
 #eval do_step (:: apply (:: list.zipWith.mk_π_mapper (:: (symbol "my_f") (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))
 #eval try_step_n 100 (:: apply (:: list.zipWith.my_l (:: id (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))

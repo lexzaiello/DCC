@@ -35,13 +35,50 @@ def raise_err (msg : String) : Expr :=
 Accepts an "actual" value at runtime as an input,
 and outputs an Except "expected {expected}, but found {acutal}"
 -/
-def expected_but_found (expected : String) : Expr :=
+def expected_but_found (expected : Expr) : Expr :=
   (:: both (:: (quote apply)
     (:: both (:: (quote Except'.err)
     (:: both (:: (quote <| symbol s!"expected '{expected}', but found: ")
       id))))))
 
-#eval do_step run (:: apply (:: (expected_but_found "stuff") (symbol "other stuff")))
+#eval do_step run (:: apply (:: (expected_but_found (symbol "stuff")) (symbol "other stuff")))
+
+/-
+More dynamic version of expected_but_found.
+Curried. Expects the expected value as the first argument.
+
+Just makes an error message.
+
+-/
+
+def expected_but_found' : Expr :=
+  let expected := Expr.id
+
+  (:: both (:: (quote both) (:: both (::
+    (:: both (:: (quote const) (:: both (:: (quote <| symbol "expected:") expected))))
+    (quote <| (:: both (:: (quote <| symbol "but found: ") id)))))))
+
+#eval do_step run (:: apply (:: (:: apply (:: expected_but_found' const)) nil))
+
+/-
+Checks whether a later curried argument
+is equal to the first argument.
+
+Outputs an expected but found error messsage otherwise.
+Returns an ok with the first argument if ok.
+-/
+def assert_eq : Expr :=
+  let my_v := Expr.id
+
+  (:: both
+    (:: (:: both (:: (quote eq) (:: both (:: (:: both (:: (quote const) (:: both (:: (quote Except'.s_ok) my_v))))
+    (:: both (:: (quote apply) (:: (quote expected_but_found') my_v))))))) my_v))
+
+#eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) .const))
+
+/-def expected_but_found' : Expr :=
+  let expected := id
+  (:: both -/
 
 def Arr : Expr := .symbol "→"
 
@@ -80,7 +117,13 @@ def infer_const.my_data :=
             (quote const) (:: both (::
             infer.self)-/
 
-def infer_const.check_op_no := err "not a const operation"
+def infer_const.check_op_no := (expected_but_found .const)
+
+def infer_const.assert_op_const :=
+  (:: (:: eq (:: (quote (:: apply (:: Except'.ok .const)))
+    (:: apply (:: expected_but_found' .const)))) (.const))
+
+#eval do_step run (:: apply (:: infer_const.assert_op_const const))
 
 /-def infer_const : Expr :=
   -- if the op is "const", then fetch our infer component and run that
@@ -89,7 +132,12 @@ def infer_const.check_op_no := err "not a const operation"
       (:: (:: both (:: (:: both (:: (quote eq) (:: both (:: infer_const.check_op_yes (quote infer_const.check_op_no))))) (quote .const))) infer_const.my_op)))-/
 
 def infer_nil : Expr :=
-  :: both (:: (quote apply) (:: π (:: (quote <| :: (:: eq (:: (quote <| (:: apply (:: Except'.ok TData))) (raise_err "expected a nil value"))) .nil) id)))
+  :: both (:: (quote apply)
+    (:: π (::
+    (quote <|
+      :: (:: eq (:: (quote <| (:: apply (:: Except'.ok TData))) (:: apply (:: expected_but_found' nil))))
+      .nil)
+    id)))
 
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") nil)))
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever"))))

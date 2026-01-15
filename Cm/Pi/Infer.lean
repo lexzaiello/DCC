@@ -335,18 +335,7 @@ Note: eq_types won't produce an ok'd value.
 It unwraps the types.
 -/
 #eval try_step_n' 2000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil)))
-#eval try_step_n' 1000 (:: apply (:: (infer_eq.assert_op_eq_seq e>=> infer_eq.eq_types) (:: infer_id (:: eq (:: id id)))))
-#eval try_step_n' 1000 (:: apply (:: (infer_eq.assert_op_eq_seq e>=> infer_eq.eq_types) (:: infer_id (:: eq (:: id id)))))
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_eq.mk_future_assert_type (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
-/-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_eq.do_future_infer ∘' (infer_eq.assert_op_eq_seq e>=> infer_eq.eq_types)) (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_eq.do_future_infer ∘' (infer_eq.assert_op_eq_seq e>=> infer_eq.eq_types)) (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_eq.yes_type e>=> infer_eq.do_future_infer) (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
-#eval try_step_n' 2000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq.mk_future_assert_eq₀ (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil)))
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_eq.yes_type (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
-#eval try_step_n' 1000 ((:: apply (:: infer_eq.assert_op_eq_seq (:: infer_nil (:: eq (:: nil nil)))))
-  e>>= infer_eq.yes_type)
-#eval try_step_n' 1000 ((:: apply (:: (infer_eq.assert_op_eq_seq e>=> infer_eq.yes_type) (:: infer_nil (:: eq (:: nil nil))))))
-#eval try_step_n' 1000 (:: apply (:: ((:: apply (:: infer_eq.mk_future_assert_eq₀ (:: infer_nil (:: eq (:: nil nil)))))) (:: infer_nil nil)))-/
+#eval try_step_n' 2000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil)))
 
 /-def infer_eq.bind_args₁ : Expr :=
   (:: both
@@ -360,8 +349,6 @@ It unwraps the types.
 namespace infer_test
 
 set_option maxRecDepth 5000
-
-example : try_step_n' 1000 (:: apply (:: infer_eq.eq_types (:: infer_nil (:: eq (:: nil nil))))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
 
 example : try_step_n' 1000 (:: apply (:: (:: apply (:: infer_id (:: infer_nil id))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
 

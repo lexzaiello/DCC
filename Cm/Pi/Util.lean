@@ -52,7 +52,14 @@ and pushing up from lower binders.
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))
 -- returning a variable. this corresponds to (:: both (:: (quote const) id))
 notation "var.store" => (fun (n : ℕ) => List.foldr (fun _e acc  => (:: both (:: (quote const) acc))) Expr.id (List.replicate n (quote Expr.const)))
---notation "binder" => (fun (n : ℕ) (fn : Expr := Expr.id) => List.replicate n
+
+def mk_binder (n : ℕ) (e : Expr) :=
+  match n with
+  | .zero => e
+  | .succ n' => (:: the_both (mk_binder n' e))
+where the_both := (List.foldr Expr.cons Expr.both (List.replicate n Expr.const))
+
+notation "λ'" => mk_binder
 
 example : try_step_n' 10 (:: apply (:: (:: apply
   (:: (:: both

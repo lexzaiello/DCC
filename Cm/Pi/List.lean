@@ -265,48 +265,6 @@ def test_list_map_const (fn l : Expr) : Except Error Expr := do
 end test_list
 
 /-
-(:: apply (:: list.zipWith (:: both (:: l m)))
-= (:: apply (:: list.zip (:: l m)))
-
-We can do this by mapping each element to an incomplete π expression.
-nil => nil
-:: x xs => (:: π (:: both (:: (quote f) (:: both (:: (quote xs) id)))))
-
-map each element :: x xs to: :: π (:: both (:: (quote f) (:: (quote x) id)))
-
-f must be quoted twice.
-
-Potential issue:
-map will nest π in ways we don't like
-
-we could first map to get map_fn
-:: (:: π map_fn)
--/
-
-def list.zipWith.my_f : Expr := :: π (:: id nil)
-def list.zipWith.my_l : Expr := :: π (:: nil (:: π (:: id nil)))
-def list.zipWith.my_m : Expr := :: π (:: nil (:: π (:: nil id)))
-def list.zipWith.double_quote_my_f : Expr := :: π (:: (:: both (:: (quote const) const)) nil)
-
-/-
-With f in scope, then l x head, then m x head
--/
-def list.zipWith.mk_π_mapper : Expr := both_from_list 3 [(qn' 2 π), (both_from_list 3 [
-    (:: both (:: (quote const) const)), (quote (:: const (quote id)))]), (quote (quote nil))]
-
-def list.zipWith.do_map (map_impl fn_getter list_getter : Expr) := $? <| both_from_list 1
-  [(quote map_impl), fn_getter, list_getter]
-
-def list.zipWith.do_map' (map_impl on_f : Expr) := :: both (:: (quote apply) (:: both (::
-  (quote map_impl)
-  (:: π (:: on_f id)))))
-
-def list.zipWith.mk_all_π : Expr := list.zipWith.do_map list.map list.zipWith.mk_π_mapper list.zipWith.my_l
-
-def list.zipWith.mk_all_π' : Expr := list.zipWith.do_map' list.map list.zipWith.mk_π_mapper
-def list.zipWith.mk_all_π_debug : Expr := list.zipWith.do_map' list.map .id
-
-/-
 Curried by one list.
 Second data list is curried once.
 
@@ -318,16 +276,6 @@ def list.zipWith : Expr :=
   -/
 
   sorry
-
--- (:: (symbol "c") (:: (symbol "d") nil))
-#eval try_step_n 500 (:: apply (::
-  list.zipWith.mk_all_π_debug
-  (:: id (:: (symbol "a") (:: (symbol "b") nil)))))
-/-#eval do_step (:: apply (:: list.zipWith.double_quote_my_f (:: (symbol "my_f") (:: (symbol "my_l") (symbol "my_m")))))
-#eval do_step (:: apply (:: list.zipWith.mk_π_mapper (:: (symbol "my_f") (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))
-#eval try_step_n 100 (:: apply (:: list.zipWith.my_l (:: id (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))
-#eval try_step_n 100 (:: apply (:: (list.zipWith.do_map list.zipWith.my_f list.zipWith.my_l) (:: id (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))-/
-
 
 def list.reverse.state'' : Expr :=
   :: π (:: nil (:: π (:: nil id)))
@@ -496,89 +444,3 @@ def rec_with_descent : Except Error Expr := do
 example : try_step_n' 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil))) = .ok (symbol "test") := by rfl
 
 end test_list
-
-namespace dead
-
-/-
-(:: apply (:: (:: apply (:: list.map' id))) l) = l
-this is a curried version of list.map.
--/
-
-def list.foldl.my_f : Expr := :: π (:: id nil)
-def list.foldl.my_l : Expr := :: π (:: nil id)
-def list.foldl.mk_nil_handler : Expr := (quote nil)
-
--- with :: match_args (:: x xs) in scope. rec_with, rec_with, zero_handler, succ_handler, x, xs
-def list.foldl.get_head : Expr := (mk_π_skip 4 (:: π (:: id nil)))
-
-def test_match_args : Expr := (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))
-
-example : try_step_n' 10 (:: apply
-  (:: list.foldl.get_head test_match_args)) = .ok (symbol "x") := rfl
-
-def list.foldl.match_args.get_meta_args : Expr :=
-  (:: π (:: id (:: π (:: id (:: π (:: id (:: π (:: id nil))))))))
-
-example : try_step_n' 100 (:: apply (:: list.foldl.match_args.get_meta_args test_match_args))
-  = (.ok (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (symbol "succ_handler"))))) := rfl
-
-/-
-Run apply on the inner list.rec list.rec zero_case succ case
-and around the xs
--/
-def list.foldl.do_app : Expr := :: both (:: (quote apply)
-  (:: both (::
-    (:: both (:: (quote apply)
-      (:: π (:: id (:: π (:: id (:: π (:: id (:: π (:: id nil))))))))))
-    (mk_π_skip 5 id))))
-
-example : try_step_n' 100 (:: apply (:: list.foldl.do_app test_match_args))
-  = (.ok (:: apply (::
-    (:: apply (::
-      (symbol "rec_with")
-      (:: (symbol "rec_with")
-      (:: (symbol "zero_handler")
-      (symbol "succ_handler")))))
-      (symbol "xs")))) := rfl
-
-/-
-with f in scope.
-map f on the head element, and leave the rest the same,
-since that is the recursive part.
--/
-def list.foldl.mapper_to_π : Expr :=
-  :: both (:: (quote const)
-  (:: both (:: (quote π) (:: both
-    (:: id (quote id))))))
-
-def list.foldl.mk_xs_handler : Expr :=
-  (:: both (:: (quote both) (:: both (::
-    (quote (quote apply))
-  (:: both (:: (quote both) (:: both (::
-      mapper_to_π (quote do_app)))))))))
-
-example : try_step_n' 20 (:: apply (:: list.foldl.mapper_to_π (symbol "my_f"))) = .ok (:: const (:: π (:: (symbol "my_f") id))) := rfl
-#eval try_step_n' 20 (:: apply (:: (:: apply (:: list.foldl.mk_xs_handler (symbol "my_f"))) (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))))
-
-/-
-do_rec should have f in scope.
--/
-def list.foldl.mk_do_rec : Expr :=
-  (:: both (:: (quote apply) (:: both (::
-    (quote list.rec_with)
-    (:: both (::
-        (quote list.rec_with)
-          (:: both (:: (quote list.foldl.mk_nil_handler) list.foldl.mk_xs_handler))))))))
-
-/-
-(:: apply (:: (:: apply (:: list.foldl id)) l)) = l
-
-list.foldl is curried once. the second argument is the list.
--/
-def list.foldl : Expr :=
-  -- this should be quoted. it does not depend on anything
-  list.foldl.mk_do_rec
-
-#eval try_step_n 100 (:: apply (:: (:: apply (:: list.foldl id)) (:: (symbol "a") (:: (symbol "b") nil))))
-
-end dead

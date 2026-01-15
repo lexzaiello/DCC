@@ -214,13 +214,19 @@ def list.zipWith.double_quote_my_f : Expr := :: π (:: (:: both (:: (quote const
 /-
 With f in scope, then l x head, then m x head
 -/
-def list.zipWith.mk_π_mapper : Expr := both_from_list [(qn' 2 π), [(:: (qn' 2 both) (::
-    list.zipWith.double_quote_my_f
-    (quote (:: const (quote id))))) (quote (quote nil))))
+def list.zipWith.mk_π_mapper : Expr := both_from_list 3 [(qn' 2 π), (both_from_list 3 [
+    (:: both (:: (quote const) const)), (quote (:: const (quote id)))]), (quote (quote nil))]
 
-def list.zipWith.do_map (fn_getter list_getter : Expr) := $? <| mk_both_tail <| (:: (quote list.map) (:: fn_getter list_getter))
+def list.zipWith.do_map (map_impl fn_getter list_getter : Expr) := $? <| both_from_list 1
+  [(quote map_impl), fn_getter, list_getter]
 
-def list.zipWith.mk_all_π : Expr := $? <| mk_both_tail <| (:: (quote list.map) (:: list.zipWith.my_f list.zipWith.my_l))
+def list.zipWith.do_map' (map_impl on_f : Expr) := :: both (:: (quote apply) (::
+  (quote map_impl)
+  (:: π (:: on_f (:: π (:: id nil))))))
+
+def list.zipWith.mk_all_π : Expr := list.zipWith.do_map list.map list.zipWith.mk_π_mapper list.zipWith.my_l
+
+def list.zipWith.mk_all_π' : Expr := list.zipWith.do_map' list.map list.zipWith.mk_π_mapper
 
 def list.zipWith : Expr :=
   /-
@@ -229,6 +235,10 @@ def list.zipWith : Expr :=
 
   sorry
 
+#eval try
+/-#eval try_step_n 1000 (:: apply (::
+  (list.zipWith.do_map (symbol "list.map") list.zipWith.my_f list.zipWith.my_l)
+  (:: id (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))-/
 /-#eval do_step (:: apply (:: list.zipWith.double_quote_my_f (:: (symbol "my_f") (:: (symbol "my_l") (symbol "my_m")))))
 #eval do_step (:: apply (:: list.zipWith.mk_π_mapper (:: (symbol "my_f") (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))
 #eval try_step_n 100 (:: apply (:: list.zipWith.my_l (:: id (:: (:: (symbol "a") (:: (symbol "b") nil)) (symbol "my_m")))))

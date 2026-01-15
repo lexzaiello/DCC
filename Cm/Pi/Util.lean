@@ -39,21 +39,15 @@ notation "$!" => Expr.cons apply
 notation "$?" => (fun e => (:: both (:: (quote apply) e))) -- for applying later
 
 /-
-Inserts (quote both) after every both in a tree
--/
-def both.nest : Expr → Expr
-  | nil => nil
-  | :: both e =>
-    :: both (:: (quote both) (nest e))
-  | x => x
-
-/-
 Creates a :: both (:: both ...) tree,
 ending with the last expression.
+
+Does not both quoted exprs.
 -/
 def mk_both : Expr → Expr
   | nil => nil
-  | :: x xs => :: both (:: x (mk_both xs))
+  | :: const e => :: const e
+  | :: x xs => :: both (:: (mk_both x) (mk_both xs))
   | e => e
 
 prefix:60 "q'" => quote

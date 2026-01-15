@@ -306,6 +306,9 @@ example : try_step_n' 14 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_ap
 def list.zipWith.foldl_fn_mk_push_advance : Expr :=
   (:: both (::
     (quote both) (:: both (::
+    (quote (quote apply))
+  (:: both (::
+    (quote both) (:: both (::
       (:: both (::
         (quote both)
         (:: both (::
@@ -314,7 +317,7 @@ def list.zipWith.foldl_fn_mk_push_advance : Expr :=
           (:: both (::
             (quote (quote (:: π (:: nil id)))) -- tail of the remaining
             (:: both (:: (quote both) (:: both (:: (quote (quote const)) list.zipWith.foldl_fn_mk_apply))))))))))))
-    (quote id)))))
+    (quote id)))))))))
 
 #eval try_step_n' 60 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x"))))
 

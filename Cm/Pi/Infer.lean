@@ -150,8 +150,20 @@ def infer_const.assert_op_ret_ty : Expr :=
         ($? <| (quote infer_const.assert_op_seq) ·')
         (quote infer_const.assert_well_typed)))
 
-/-def infer_const : Expr :=
-  (:: both (:: (quote apply) (:: both-/
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (quote infer.assert_well_typed_unsafe) (:: infer_nil (:: const nil)))) (:: infer_nil nil)))
+
+/-
+(:: apply (:: (:: apply (:: infer_const (:: infer (:: const data)))) (:: infer other_data)))
+-/
+def infer_const : Expr :=
+  let cnst_out_ty := (:: both (:: (quote const)
+    (:: both (:: (quote apply) (:: both (::
+      (quote infer_const.assert_op_ret_ty)
+      id))))))
+  let future_infer := infer_const.future_apply
+  sorry
+
+--#eval try_step_n' 1000 (:: apply (:: apply (:: infer_const (:: infer_nil (:: const nil)))) (:: infer_nil (
 
 namespace infer_test
 

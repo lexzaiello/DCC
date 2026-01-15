@@ -56,10 +56,18 @@ notation "var.store" => (fun (n : ℕ) => List.foldr (fun _e acc  => (:: both (:
 def mk_binder (n : ℕ) (e : Expr) :=
   match n with
   | .zero => e
-  | .succ n' => (:: the_both (mk_binder n' e))
-where the_both := (List.foldr Expr.cons Expr.both (List.replicate n Expr.const))
+  | .succ n' =>
+    let the_both := (List.foldr Expr.cons Expr.both (List.replicate n' Expr.const))
+    (:: the_both (mk_binder n' e))
 
 notation "λ'" => mk_binder
+
+example : try_step_n' 10 (:: apply (:: (:: apply
+  (:: (λ' 1 (
+    (λ' 2 (:: (var.read 1) (var.read 1)))))
+      (quote (symbol "var 0"))))
+      (quote (symbol "var 1")))) =
+    (.ok (:: (:: const (symbol "var 1")) (:: const (symbol "var 1")))) := rfl
 
 example : try_step_n' 10 (:: apply (:: (:: apply
   (:: (:: both
@@ -91,6 +99,7 @@ example : both_from_list 1 [(symbol "a"), (symbol "b"), (symbol "c")]
 example : both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
   = (:: both (:: (quote both) (:: (symbol "a") (:: both (:: (quote both)
     (:: (symbol "b") (:: both (:: (quote both) (:: (symbol "c") nil))))))))) := rfl
+
 
 #eval both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
 

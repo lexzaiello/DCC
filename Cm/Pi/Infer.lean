@@ -155,24 +155,24 @@ def infer_const.assert_op_ret_ty : Expr :=
 
 namespace infer_test
 
-#eval do_step run (:: apply (:: (:: apply (:: expected_but_found' const)) nil))
+#eval do_step (:: apply (:: (:: apply (:: expected_but_found' const)) nil))
 
-#eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) nil))
-#eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) .const))
+#eval try_step_n 100 (:: apply (:: (:: apply (:: assert_eq .const)) nil))
+#eval try_step_n 100 (:: apply (:: (:: apply (:: assert_eq .const)) .const))
 
-#eval try_step_n run 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever")))))
-#eval try_step_n run 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
+#eval try_step_n 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever")))))
+#eval try_step_n 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
 
-#eval try_step_n run 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil))))
+#eval try_step_n 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil))))
 
-#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever")))))
-#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
-#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
+#eval try_step_n 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever")))))
+#eval try_step_n 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
+#eval try_step_n 100 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
 
-#eval try_step_n run 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: const nil))))
-#eval try_step_n run 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: (symbol "not const") nil))))
+#eval try_step_n 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: const nil))))
+#eval try_step_n 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: (symbol "not const") nil))))
 
-#eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") nil)))
-#eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever"))))
+#eval do_step (:: apply (:: infer_nil (:: (symbol "infer") nil)))
+#eval do_step (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever"))))
 
 end infer_test

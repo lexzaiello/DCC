@@ -47,7 +47,7 @@ postfix:60 "·'" => (fun f => (:: both (:: f id)))
 
 prefix:60 "·'" => (fun f => (:: both (:: id f)))
 
-#eval do_step run (:: apply (::
+#eval do_step (:: apply (::
   ((·' (quote (symbol "another")) ) ∘'
   ((quote (symbol "prefix")) ·')) (symbol "hi")))
 
@@ -58,7 +58,7 @@ prefix:60 "·'" => (fun f => (:: both (:: id f)))
 -/
 infixl:60 "|>'" => (fun x => (fun y => (:: apply (:: y (:: apply x)))))
 
-#eval do_step run ((::
+#eval do_step ((::
   ((·' (quote (symbol "another")) ) ∘'
   ((quote (symbol "prefix")) ·')) (symbol "hi")) |>' Expr.id)
 
@@ -69,7 +69,7 @@ my_op
 -/
 infixr:60 "<|'" => (fun x y => y |>' x)
 
-#eval do_step run (Expr.id <|' (::
+#eval do_step (Expr.id <|' (::
   ((·' (quote (symbol "another")) ) ∘'
   ((quote (symbol "prefix")) ·')) (symbol "hi")))
 
@@ -109,8 +109,8 @@ def example_then_append : Except Error Expr := do
   let my_data := symbol "hi"
   let my_other := symbol "other"
 
-  do_step run (:: apply (:: then_append my_data))
-    >>= (fun c => do_step run (:: apply (:: c my_other)))
+  do_step (:: apply (:: then_append my_data))
+    >>= (fun c => do_step (:: apply (:: c my_other)))
 
 #eval example_then_append
 
@@ -123,11 +123,11 @@ def example_append_chain : Except Error Expr := do
   let my_data := symbol "hi"
   let my_other := (symbol "other")
 
-  do_step run (:: apply (:: then_append my_data))
-    >>= (fun c => do_step run (:: apply (:: c my_other)))
+  do_step (:: apply (:: then_append my_data))
+    >>= (fun c => do_step (:: apply (:: c my_other)))
     >>= (fun c => do
-      let my_d ← do_step run (:: apply (:: then_append (symbol "other data")))
-      do_step run (:: apply (:: my_d c)))
+      let my_d ← do_step (:: apply (:: then_append (symbol "other data")))
+      do_step (:: apply (:: my_d c)))
 
 #eval example_append_chain
 
@@ -144,11 +144,11 @@ def example_cons_chain : Except Error Expr := do
   let my_data := symbol "hi"
   let my_other := symbol "other"
 
-  do_step run (:: apply (:: then_cons my_data))
-    >>= (fun c => do_step run (:: apply (:: c my_other)))
+  do_step (:: apply (:: then_cons my_data))
+    >>= (fun c => do_step (:: apply (:: c my_other)))
     >>= (fun c => do
-      let my_d ← do_step run (:: apply (:: then_cons (symbol "other data")))
-      do_step run (:: apply (:: my_d c)))
+      let my_d ← do_step (:: apply (:: then_cons (symbol "other data")))
+      do_step (:: apply (:: my_d c)))
 
 def cons_chain_is_reverse_append_chain : Except Error Bool := do
   let a_l ← unwrap_with (.stuck nil) <| Expr.as_list (← example_cons_chain)
@@ -169,7 +169,7 @@ def example_cons_now : Except Error Expr := do
   let my_l := :: (symbol "head") (:: (symbol "tail") nil)
 
   let c := (:: then_cons my_data)
-  do_step run (:: apply (:: (:: apply c) my_l))
+  do_step (:: apply (:: (:: apply c) my_l))
 
 #eval example_cons_now
 
@@ -180,7 +180,7 @@ def example_cons_multiple : Except Error Expr := do
   let c  := (:: apply (:: then_cons my_data))
   let o  := (:: apply (:: then_cons (symbol "other data")))
   let l := (:: apply (:: c my_l))
-  do_step run (:: apply (:: o l))
+  do_step (:: apply (:: o l))
 
 #eval example_cons_multiple
 
@@ -188,8 +188,8 @@ def example_then_cons : Except Error Expr := do
   let my_data := symbol "hi"
   let my_l := :: (symbol "head") (:: (symbol "tail") nil)
 
-  do_step run (:: apply (:: then_cons my_data))
-    >>= (fun c => do_step run (:: apply (:: c my_l)))
+  do_step (:: apply (:: then_cons my_data))
+    >>= (fun c => do_step (:: apply (:: c my_l)))
 
 #eval example_then_cons
 
@@ -210,7 +210,7 @@ def example_flip_head_next : Except Error Expr := do
   let my_l := (:: (symbol "x") (:: (symbol "y") (symbol "ys")))
   let flip := (:: apply (:: flip_head_next my_l))
 
-  do_step run flip
+  do_step flip
 
 #eval example_flip_head_next
 
@@ -230,9 +230,9 @@ def example_set_tail_args_pointfree : Except Error Expr :=
   let replace_with := (:: (symbol "x") (:: (symbol "xs") nil))
   let replace_in := (:: (symbol "replace") nil) -- args tail
 
-  do_step run (:: apply (:: set_tail_args' replace_with))
+  do_step (:: apply (:: set_tail_args' replace_with))
     >>= (fun rep =>
-      do_step run (:: apply (:: rep replace_in)))
+      do_step (:: apply (:: rep replace_in)))
 
 #eval example_set_tail_args_pointfree
 
@@ -273,7 +273,7 @@ def set_tail_args : Expr :=
 def example_set_tail_args : Except Error Expr :=
   let replace_with := (:: (symbol "x") (:: (symbol "xs") nil))
   let replace_in := (:: (symbol "replace") nil) -- args tail
-  do_step run (:: apply (:: set_tail_args (:: replace_with replace_in)))
+  do_step (:: apply (:: set_tail_args (:: replace_with replace_in)))
 
 #eval example_set_tail_args
 
@@ -306,7 +306,7 @@ def example_map_head_arg : Except Error Expr :=
   -/
   let my_f := (:: const (symbol "replace"))
 
-  do_step run (:: apply (:: map_head_arg (:: my_f my_args)))
+  do_step (:: apply (:: map_head_arg (:: my_f my_args)))
 
 #eval example_map_head_arg
 
@@ -332,8 +332,8 @@ def map_head_example : Except Error Expr :=
   -- replace the head of the list with "replaced"
   let my_f := (:: const (symbol "replaced"))
 
-  do_step run (:: apply (:: map_head my_f))
-    >>= (fun map => do_step run (:: apply (:: map my_list)))
+  do_step (:: apply (:: map_head my_f))
+    >>= (fun map => do_step (:: apply (:: map my_list)))
 
 #eval map_head_example
 

@@ -19,7 +19,7 @@ make a new both that allows us to insert n f x
 
 Let's keep this for now. We'll clean up later.
 -/
-#eval do_step run (:: apply (:: (:: both (:: (:: const apply) (:: π (:: const id)))) (:: (symbol "const") (symbol "xs"))))
+#eval do_step (:: apply (:: (:: both (:: (:: const apply) (:: π (:: const id)))) (:: (symbol "const") (symbol "xs"))))
 
 /-
 succ n f x = f (n f x)
@@ -83,11 +83,11 @@ def succ : Expr :=
 -- x = (symbol "hi")
 -- so this will create a new expression with f on the left
 -- :: (:: both (:: (:: const apply) (:: π (:: const id)))) (:: π (:: (:: const id) id))
-#eval do_step run (:: apply (:: succ (symbol "n")))
-#eval do_step run (:: apply (:: zero (:: id (symbol "x"))))
-#eval do_step run (:: apply (:: (:: apply (:: succ (:: apply (:: succ zero)))) (:: id (symbol "x"))))
-  >>= (fun c => do_step run (:: apply c))
-  >>= (fun c => do_step run (:: apply c))
-  >>= (fun c => do_step run (:: apply c))
-  >>= (fun c => do_step run (:: apply c))
-  >>= (fun c => do_step run (:: apply c))
+#eval do_step (:: apply (:: succ (symbol "n")))
+#eval do_step (:: apply (:: zero (:: id (symbol "x"))))
+#eval do_step (:: apply (:: (:: apply (:: succ (:: apply (:: succ zero)))) (:: id (symbol "x"))))
+  >>= (fun c => do_step (:: apply c))
+  >>= (fun c => do_step (:: apply c))
+  >>= (fun c => do_step (:: apply c))
+  >>= (fun c => do_step (:: apply c))
+  >>= (fun c => do_step (:: apply c))

@@ -8,12 +8,6 @@ Utility functions for the list calculus.
 
 open Expr
 
-/-
-Forces an expression to be evaluated immediately.
--/
-def apply_now (e : Expr) : Expr :=
-  :: both (:: (:: const apply) e)
-
 def quote (e : Expr) : Expr :=
   (:: const e)
 
@@ -23,7 +17,8 @@ and pushing up from lower binders.
 -/
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))
 -- returning a variable. this corresponds to (:: both (:: (quote const) id))
-notation "var.store" => (fun (n : ℕ) => List.foldr (fun _e acc  => (:: both (:: (quote const) acc))) Expr.id (List.replicate n (quote Expr.const)))
+notation "var.store" => (fun (n : ℕ) => List.foldr (fun _e acc  => (:: both (:: (:: const const) acc)))
+  Expr.id (List.replicate n (:: const const)))
 
 def mk_binder (n : ℕ) (e : Expr) :=
   match n with

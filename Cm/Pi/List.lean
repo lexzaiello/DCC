@@ -133,12 +133,12 @@ def list.get_n' : Expr :=
 
   mk_getter
 
-#eval try_step_n run 100 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil)))
-#eval try_step_n run 100 (:: apply (:: (:: apply (:: list.get_n' (:: (symbol "succ") (symbol "zero")))) (:: (symbol "test") (:: (symbol "b") nil))))
+#eval try_step_n 100 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil)))
+#eval try_step_n 100 (:: apply (:: (:: apply (:: list.get_n' (:: (symbol "succ") (symbol "zero")))) (:: (symbol "test") (:: (symbol "b") nil))))
 
-#eval try_step_n run 100 (:: apply (:: list.get_n (:: (symbol "zero") (:: (symbol "test") nil))))
-#eval try_step_n run 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (symbol "zero")) (:: (symbol "test") (:: (symbol "next") nil)))))
-#eval try_step_n run 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (:: (symbol "succ") (symbol "zero"))) (:: (symbol "test") (:: (symbol "next") (:: (symbol "next next") nil))))))
+#eval try_step_n 100 (:: apply (:: list.get_n (:: (symbol "zero") (:: (symbol "test") nil))))
+#eval try_step_n 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (symbol "zero")) (:: (symbol "test") (:: (symbol "next") nil)))))
+#eval try_step_n 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (:: (symbol "succ") (symbol "zero"))) (:: (symbol "test") (:: (symbol "next") (:: (symbol "next next") nil))))))
 
 /-
 (:: apply (:: list.map (:: f l)))
@@ -184,7 +184,7 @@ def list.map : Expr :=
 namespace test_list
 
 def test_list_map_const (fn l : Expr) : Except Error Expr := do
-  try_step_n run 100 (:: apply (:: list.map (:: fn l)))
+  try_step_n 100 (:: apply (:: list.map (:: fn l)))
 
 #eval test_list_map_const (:: both (:: (quote (symbol "hi")) id)) (:: (symbol "a") (:: (symbol "b") nil))
 #eval test_list_map_const (:: both (:: (quote (symbol "hi")) id)) (:: (symbol "a") (:: (symbol "b") nil))
@@ -250,7 +250,7 @@ def list.reverse : Expr :=
 namespace test_list
 
 def test_list_reverse (l : Expr) : Except Error Expr :=
-  try_step_n run 1000 (:: apply (:: list.reverse l))
+  try_step_n 1000 (:: apply (:: list.reverse l))
 
 #eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
   >>= (pure <| · == (:: (symbol "c") (:: (symbol "b") (:: (symbol "a") nil))))
@@ -269,7 +269,7 @@ def list.length : Expr :=
 namespace test_list
 
 def test_list_length (l : Expr) : Except Error Expr :=
-  try_step_n run 100 (:: apply (:: list.length l))
+  try_step_n 100 (:: apply (:: list.length l))
 
 #eval test_list_length (:: (symbol "a") nil)
 
@@ -335,12 +335,12 @@ def list.append : Expr :=
 namespace test_list
 
 def test_list_prepend (a b : Expr) : Except Error Expr := do
-  try_step_n run 100 (:: apply (:: list.prepend (:: a b)))
+  try_step_n 100 (:: apply (:: list.prepend (:: a b)))
 
 #eval test_list_prepend (:: (symbol "a") (:: (symbol "b") nil)) (:: (symbol "a") (:: (symbol "b") nil))
 
 def test_list_append (a b : Expr) : Except Error Expr := do
-  try_step_n run 1000 (:: apply (:: list.append (:: a b)))
+  try_step_n 1000 (:: apply (:: list.append (:: a b)))
 
 #eval test_list_append (:: (symbol "hi") (:: (symbol "two") nil)) (:: (symbol "a") (:: (symbol "b") nil))
 
@@ -351,7 +351,7 @@ then display.
 def rec_with_descent : Except Error Expr := do
   let my_succ_case := :: π (:: nil id)
   let my_zero_case := Expr.id
-  let out ← try_step_n run 50 (:: apply (:: (:: apply (:: list.rec_with (:: list.rec_with (:: my_zero_case my_succ_case)))) (:: (symbol "discard") nil)))
+  let out ← try_step_n 50 (:: apply (:: (:: apply (:: list.rec_with (:: list.rec_with (:: my_zero_case my_succ_case)))) (:: (symbol "discard") nil)))
   pure out
 
 #eval rec_with_descent

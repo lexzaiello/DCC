@@ -100,7 +100,7 @@ def nat.plus : Expr :=
 namespace test_nat
 
 def nat_plus (m n : Expr) : Except Error Expr := do
-  try_step_n run 100 (:: apply (:: nat.plus (:: m n)))
+  try_step_n 100 (:: apply (:: nat.plus (:: m n)))
 
 #eval nat_plus (:: succ (:: succ zero)) (:: succ (:: succ zero))
   >>= (pure <| · == :: (symbol "succ") (:: (symbol "succ") (:: (symbol "succ") (:: (symbol "succ") (symbol "zero")))))
@@ -108,7 +108,7 @@ def nat_plus (m n : Expr) : Except Error Expr := do
 def test_nat_plus_nat (m n : ℕ) (max_steps : ℕ := 100) : Except Error (Option ℕ) := do
   let m' := Nat'.of_nat m
   let n' := Nat'.of_nat n
-  try_step_n run max_steps (:: apply (:: nat.plus (:: m' n')))
+  try_step_n max_steps (:: apply (:: nat.plus (:: m' n')))
     >>= (pure ∘ Nat'.to_nat)
 
 #eval test_nat_plus_nat 1 100 (max_steps := 100)
@@ -121,7 +121,7 @@ Just to print out the cases, prepend identifiers.
 def rec_with_return_is_same : Except Error Bool := do
   let my_succ_case := :: π (:: (:: π (:: id nil)) nil)
   let my_zero_case := Expr.id
-  let out ← try_step_n run 100 (:: apply (:: (:: apply (:: nat.rec_with (:: nat.rec_with (:: my_zero_case my_succ_case)))) (:: succ zero)))
+  let out ← try_step_n 100 (:: apply (:: (:: apply (:: nat.rec_with (:: nat.rec_with (:: my_zero_case my_succ_case)))) (:: succ zero)))
   pure <| out == nat.rec_with
 
 #eval rec_with_return_is_same

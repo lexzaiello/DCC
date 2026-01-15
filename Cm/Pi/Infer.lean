@@ -325,30 +325,11 @@ def infer_eq : Expr :=
     e>=> infer_eq.eq_types
     e>=> (infer_eq.inject_future_infer ∘' infer_eq.inject_future_assert_eq))
 
-/-
-TODO: later, we might want to allow yes and no to have different types.
-Not yet, though.
--/
-
-/-
-Note: eq_types won't produce an ok'd value.
-It unwraps the types.
--/
-#eval try_step_n' 2000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil)))
-#eval try_step_n' 2000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil)))
-
-/-def infer_eq.bind_args₁ : Expr :=
-  (:: both
-    (:: ($? <| (quote infer_eq.assert_op_eq) ·')
-      (quote (quote infer_eq.eq_types))))-/
-
-
-/-def infer_eq : Expr :=
-  (:: both (:: (quote apply) (:: both (:: (quote Except'.bind) infer_eq.bind_args))))-/
-
 namespace infer_test
 
 set_option maxRecDepth 5000
+
+example : try_step_n' 2000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
 
 example : try_step_n' 1000 (:: apply (:: (:: apply (:: infer_id (:: infer_nil id))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
 

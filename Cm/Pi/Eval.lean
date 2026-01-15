@@ -148,6 +148,14 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     pure <| :: x' xs)
   | e => (.error <| .no_rule e)
 
+def try_step_n' (n : ℕ) (e : Expr) : Except Error Expr :=
+  match n with
+  | .zero => pure e
+  | .succ n =>
+    match run' e with
+    | .ok e' => try_step_n' n e' <|> (pure e')
+    | .error e => .error e
+
 def try_step_n (n : ℕ) (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
   if n = 0 then
     pure e
@@ -183,6 +191,12 @@ def my_eval_test₂ : Except Error Expr := do
   do_step (:: apply (:: my_proj my_data))
 
 example : step_apply (:: (:: const (symbol "a")) nil) = .ok (symbol "a") := by
+  rfl
+
+example : run (:: apply (:: (:: const (symbol "a")) nil)) = .ok (symbol "a") := by
+  rfl
+
+example : try_step_n' 10 (:: apply (:: (:: const (symbol "a")) nil)) = .ok (symbol "a") := by
   rfl
 
 #eval my_eval_test

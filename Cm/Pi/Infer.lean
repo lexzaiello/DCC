@@ -71,15 +71,15 @@ def assert_eq : Expr :=
     (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v)))))))))))) my_v))
 
 def assert_eq' : Expr :=
-  let my_v := Expr.id
+  let my_v := var.read 0
 
-  let eq_ok := (λ' 1 (:: (quote const) (λ' 1 (:: (quote Except'.s_ok) my_v))))
+  let eq_ok := (λ' 1 (:: (var.store 1) (λ' 1 (:: (:: (var.store 0) Except'.s_ok) my_v))))
 
-  (:: both
-    (:: (:: both (:: (quote eq) (:: both (:: eq_ok
-    (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v)))))))))))) my_v))
+  (λ' 1
+    (:: (λ' 1 (:: (:: (var.store 0) eq) (λ' 1 (:: eq_ok
+    (λ' 1 (λ' 2 (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v))))))))))) my_v))
 
-#eval assert_eq == assert_eq'
+example : assert_eq = assert_eq' := rfl
 
 /-
 assert_eq but it returns just the data in the ok case.

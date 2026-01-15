@@ -92,6 +92,15 @@ def infer.self : Expr :=
 def infer.x (with_op : Expr := id) : Expr :=
   :: π (:: nil with_op)
 
+
+def infer_nil : Expr :=
+  :: both (:: (quote apply)
+    (:: π (::
+    (quote <|
+      :: (:: eq (:: (quote <| (:: apply (:: Except'.ok TData))) (:: apply (:: expected_but_found' nil))))
+      .nil)
+    id)))
+
 /-
 (:: apply (:: infer (:: infer (:: const x))))
 -/
@@ -101,44 +110,35 @@ def infer_const.my_op :=
 def infer_const.my_data :=
   infer.x (:: π (:: nil id))
 
-/-def infer_const.check_op_yes :=
-  :: both (::
-    (quote const)
-    (:: both (::
-      (quote both)
-      (:: both (::
-        (:: both (::
-          (quote const)
-          (:: both (::
-            (quote apply) (:: both
-            (:: infer.self (:: both
-            (:: infer.self infer_const.my_data))))))))
-        (:: both (::
-          (quote both) (:: both (::
-            (quote const) (:: both (::
-            infer.self)-/
-
-def infer_const.check_op_no := (expected_but_found .const)
-
 /-
 With all args in scope.
+
+Checks that the operator is "const".
 -/
 def infer_const.assert_op_const :=
   (:: apply (:: assert_eq .const)) ∘' infer_const.my_op
 
-#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever")))))
+#eval try_step_n run 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever")))))
+
+/-
+With all args in scope.
+
+Checks that the argument to const is well-typed.
+-/
+def infer_const.assert_well_typed :=
+  (:: both (::
+    (quote apply)
+    (:: both (::
+        infer.self
+        (:: both (::
+          infer.self
+          infer_const.my_data))))))
+
+#eval try_step_n run 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil))))
 
 def infer_const : Expr :=
   -- if the op is "const", then fetch our infer component and run that
   sorry
-
-def infer_nil : Expr :=
-  :: both (:: (quote apply)
-    (:: π (::
-    (quote <|
-      :: (:: eq (:: (quote <| (:: apply (:: Except'.ok TData))) (:: apply (:: expected_but_found' nil))))
-      .nil)
-    id)))
 
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") nil)))
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever"))))

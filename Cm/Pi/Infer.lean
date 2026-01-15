@@ -192,11 +192,11 @@ def infer_id.assert_op_id : Expr :=
 
 def infer_id.bind_args : Expr :=
   (:: both
-    (:: ($? <| infer_id.assert_op_id ·')
+    (:: ($? <| (quote infer_id.assert_op_id) ·')
       (quote (quote infer.assert_well_typed_unsafe))))
 
 def infer_id : Expr :=
-  (quote Except'.bind) ∘' (:: both infer_id.bind_args)
+  (:: both (:: (quote apply) (:: both (:: (quote Except'.bind) infer_id.bind_args))))
 
 #eval try_step_n' 1000 (:: apply (:: infer_id.bind_args (:: infer_nil id)))
 #eval try_step_n' 1000 (:: apply (:: infer_id.assert_op_id (:: infer_nil id)))

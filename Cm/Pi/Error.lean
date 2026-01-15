@@ -68,11 +68,33 @@ def Except'.mk_eq : Expr :=
 
 #eval do_step run (:: apply (:: (:: apply (:: Except'.mk_eq (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
 
-def Except'.match_with : Expr :=
+/-
+Maps the ok and error values of an except, creating a new except.
+-/
+def Except'.map_with : Expr :=
   (:: both (:: (quote both) (:: both (:: (quote (quote apply))
     Except'.mk_eq))))
 
-#eval try_step_n run 100 (:: apply (:: (:: apply (:: Except'.match_with (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
+#eval try_step_n run 100
+  (:: apply (:: (:: apply (:: Except'.map_with (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
+
+#eval try_step_n run 100
+  (:: apply (:: (:: apply (:: Except'.map_with (:: id ((quote (symbol "my error is: ")) ·')))) (:: apply (:: Except'.err (symbol "hi")))))
+
+/-
+Fetches the inner value of an Except'.
+-/
+def Except'.unwrap : Expr :=
+  :: π (:: nil id)
+
+def Except'.match_with : Expr :=
+  (:: both (:: (quote both) (:: both (:: (quote (quote apply))
+    (:: both (:: (quote both) (:: both (:: (quote (quote Except'.unwrap))
+    (:: both (:: (quote both) (:: both (:: (quote (quote apply))
+      Except'.mk_eq))))))))))))
+
+#eval try_step_n run 100
+  (:: apply (:: (:: apply (:: Except'.match_with (:: id ((quote (symbol "my error is: ")) ·')))) (:: apply (:: Except'.err (symbol "hi")))))
 
 /-
 (:: apply (:: apply (:: Except'.bind (:: apply (:: Except'.ok "val")))) (Except.ok' ·'))

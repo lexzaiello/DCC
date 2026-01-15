@@ -357,4 +357,7 @@ def rec_with_descent : Except Error Expr := do
 
 #eval rec_with_descent
 
+set_option maxRecDepth 1000
+example : try_step_n' 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil))) = .ok (symbol "test") := by rfl
+
 end test_list

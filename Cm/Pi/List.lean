@@ -418,10 +418,7 @@ def list.zipWith : Expr :=
         const
         (quote id)))))))))))))))))∘' list.zipWith_helper
 
-#eval try_step_n' 500 (:: apply (:: (:: apply (:: list.zipWith (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "c") nil))))) (:: (symbol "b") (:: (symbol "d") nil))))
---example : try_step_n' 500 (:: apply (:: (:: apply (:: list.zipWith_helper (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "b") nil))))) (:: (symbol "c") (:: (symbol "d") nil)))) = (.ok (:: nil (:: (:: (symbol "c") (symbol "b")) (:: (:: (symbol "d") (symbol "a")) nil)))) := rfl
-
-
+example : try_step_n' 500 (:: apply (:: (:: apply (:: list.zipWith (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "c") nil))))) (:: (symbol "b") (:: (symbol "d") nil)))) = (.ok (:: (:: (symbol "a") (symbol "b")) (:: (:: (symbol "c") (symbol "d")) nil))) := rfl
 
 namespace test_list
 

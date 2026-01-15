@@ -120,5 +120,11 @@ def Except'.bind :=
     (:: both (::
       (:: both (:: (quote apply) Except'.bind.my_match)) Except'.bind.my_except))))
 
+infixl:60 "e>>=" => (fun e f =>
+  (:: apply (:: Except'.bind (:: e f))))
+
 #eval try_step_n run 50
   (:: apply (:: Except'.bind (:: (:: apply (:: Except'.err (symbol "hi"))) id)))
+
+#eval try_step_n run 50 ((:: apply (:: Except'.ok (symbol "hi"))) e>>= id)
+#eval try_step_n run 50 ((:: apply (:: Except'.err (symbol "hi"))) e>>= id)

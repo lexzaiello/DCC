@@ -59,7 +59,7 @@ quotes both n times.
 -/
 def mk_both' (n : ℕ) : Expr → Expr
   | :: const e => :: const e
-  | :: x xs => :: the_both (:: (mk_both x) (mk_both xs))
+  | :: x xs => :: the_both (:: (mk_both' n x) (mk_both' n xs))
   | e => e
 where the_both := (List.replicate n const).foldr Expr.cons both
 

@@ -330,10 +330,6 @@ def infer_eq.inject_future_infer' : Expr :=
               Expr.id))
           (q' q' infer.assert_well_typed_unsafe)))))))))
 
-example : (:: (q' both) (::
-              (q' q' const)
-              Expr.id)) = mk_both' 1 (:: (q' q' const) Expr.id) := rfl
-
 def infer_eq.inject_future_infer'' : Expr :=
   mk_both' 0 (:: (q' both) (::
     (q' q' both)
@@ -342,15 +338,18 @@ def infer_eq.inject_future_infer'' : Expr :=
         (:: (q' both) (::
           (q' q' both)
           (:: (q' both) (::
-            (:: (q' both) (::
+            (mk_both' 1 (::
               (q' q' const)
               Expr.id))
           (q' q' infer.assert_well_typed_unsafe)))))))))
+
+
 
 example : (quote (quote infer.assert_well_typed_unsafe)) = (q' q' infer.assert_well_typed_unsafe) := rfl
 
 example : infer_eq.inject_future_infer = infer_eq.inject_future_infer' := rfl
 example : infer_eq.inject_future_infer = infer_eq.inject_future_infer'' := rfl
+
 
 /-
 Checks that the eq maps have the same type,

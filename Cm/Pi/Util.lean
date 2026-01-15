@@ -41,12 +41,22 @@ notation "$?" => (fun e => (:: both (:: (quote apply) e))) -- for applying later
 /-
 Inserts (quote both) after every both in a tree
 -/
-def both.nest (e : Expr) :=
-  match e with
+def both.nest : Expr → Expr
   | nil => nil
   | :: both e =>
     :: both (:: (quote both) (nest e))
   | x => x
+
+/-
+Creates a :: both (:: both ...) tree,
+ending with the last expression.
+-/
+def mk_both : Expr → Expr
+  | nil => nil
+  | :: x xs => :: both (:: x (mk_both xs))
+  | e => e
+
+prefix:60 "q'" => quote
 
 /-
 (f ·') = (:: both (:: f id))

@@ -1,6 +1,7 @@
 import Mathlib.Data.Nat.Notation
 import Cm.Pi.Ast
 import Cm.Pi.Eval
+import Cm.Pi.Error
 import Cm.Pi.Util
 import Cm.Pi.Nat
 
@@ -14,13 +15,33 @@ Infer is a fixpoint function.
 It takes itself as an argument.
 
 (:: apply (:: infer (:: infer x)))
+
+Infer always returns an Except, where the ok value
+is the type, and the error value is some error
+message.
 -/
 
 def TData : Expr := .symbol "Data"
 
 def TFail : Expr := .symbol "sorry"
 
-def err : String → Expr := quote ∘ symbol
+/-
+Makes an except with an error messages.
+-/
+def raise_err (msg : String) : Expr :=
+  quote <| (:: apply (:: Except'.err (symbol msg)))
+
+/-
+Accepts an "actual" value at runtime as an input,
+and outputs an Except "expected {expected}, but found {acutal}"
+-/
+def expected_but_found (expected : String) : Expr :=
+  (:: both (:: (quote apply)
+    (:: both (:: (quote Except'.err)
+    (:: both (:: (quote <| symbol s!"expected '{expected}', but found: ")
+      id))))))
+
+#eval do_step run (:: apply (:: (expected_but_found "stuff") (symbol "other stuff")))
 
 def Arr : Expr := .symbol "→"
 
@@ -68,7 +89,8 @@ def infer_const.check_op_no := err "not a const operation"
       (:: (:: both (:: (:: both (:: (quote eq) (:: both (:: infer_const.check_op_yes (quote infer_const.check_op_no))))) (quote .const))) infer_const.my_op)))-/
 
 def infer_nil : Expr :=
-  :: both (:: (quote apply) (:: π (:: (quote <| :: (:: eq (:: (quote TData) (quote TFail))) .nil) id)))
+  :: both (:: (quote apply) (:: π (:: (quote <| :: (:: eq (:: (quote <| (:: apply (:: Except'.ok TData))) (raise_err "expected a nil value"))) .nil) id)))
 
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") nil)))
+#eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever"))))
 

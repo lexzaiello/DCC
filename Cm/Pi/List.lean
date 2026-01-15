@@ -152,13 +152,13 @@ def list.get_n' : Expr :=
 
   mk_getter
 
-#eval try_step_n 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil)))
-#eval try_step_n 100 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil)))
-#eval try_step_n 100 (:: apply (:: (:: apply (:: list.get_n' (:: (symbol "succ") (symbol "zero")))) (:: (symbol "test") (:: (symbol "b") nil))))
+example : try_step_n' 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil)))
+  = (.ok (symbol "test")) := rfl
+example : try_step_n' 100 (:: apply (:: (:: apply (:: list.get_n' (:: (symbol "succ") (symbol "zero")))) (:: (symbol "test") (:: (symbol "b") nil)))) = (.ok (symbol "b")) := rfl
 
-#eval try_step_n 100 (:: apply (:: list.get_n (:: (symbol "zero") (:: (symbol "test") nil))))
-#eval try_step_n 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (symbol "zero")) (:: (symbol "test") (:: (symbol "next") nil)))))
-#eval try_step_n 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (:: (symbol "succ") (symbol "zero"))) (:: (symbol "test") (:: (symbol "next") (:: (symbol "next next") nil))))))
+example : try_step_n' 100 (:: apply (:: list.get_n (:: (symbol "zero") (:: (symbol "test") nil)))) = (.ok (symbol "test")) := rfl
+example : try_step_n' 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (symbol "zero")) (:: (symbol "test") (:: (symbol "next") nil))))) = (.ok (symbol "next")) := rfl
+example : try_step_n' 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (:: (symbol "succ") (symbol "zero"))) (:: (symbol "test") (:: (symbol "next") (:: (symbol "next next") nil)))))) = (.ok (symbol "next next")) := rfl
 
 /-
 (:: apply (:: (:: apply (:: list.foldl (:: both nil))) l)) = l
@@ -207,7 +207,7 @@ def list.foldl : Expr :=
       (:: (quote list.rec_with)
       (:: both (:: list.foldl.mk_nil_handler list.foldl.mk_succ_handler))))))))
 
-set_option maxRecDepth 2000
+set_option maxRecDepth 5000
 
 example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: both nil))) nil)) = (.ok .nil) := rfl
 example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: (:: π (:: id id)) nil))) (:: (symbol "a") (:: (symbol "b") nil)))) = (.ok <| :: (:: nil (symbol "b")) (symbol "a")) := rfl
@@ -256,11 +256,10 @@ def list.map : Expr :=
 namespace test_list
 
 def test_list_map_const (fn l : Expr) : Except Error Expr := do
-  try_step_n 100 (:: apply (:: list.map (:: fn l)))
+  try_step_n' 100 (:: apply (:: list.map (:: fn l)))
 
-#eval test_list_map_const (:: both (:: (quote (symbol "hi")) id)) (:: (symbol "a") (:: (symbol "b") nil))
-#eval test_list_map_const (:: both (:: (quote (symbol "hi")) id)) (:: (symbol "a") (:: (symbol "b") nil))
-  >>= (pure <| · == (:: (:: (symbol "hi") (symbol "a")) (:: (:: (symbol "hi") (symbol "b")) nil)))
+example : test_list_map_const (:: both (:: (quote (symbol "hi")) id)) (:: (symbol "a") (:: (symbol "b") nil))
+  = (.ok (:: (:: (symbol "hi") (symbol "a")) (:: (:: (symbol "hi") (symbol "b")) nil))) := rfl
 
 end test_list
 
@@ -335,10 +334,10 @@ def list.reverse : Expr :=
 namespace test_list
 
 def test_list_reverse (l : Expr) : Except Error Expr :=
-  try_step_n 1000 (:: apply (:: list.reverse l))
+  try_step_n' 1000 (:: apply (:: list.reverse l))
 
-#eval test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
-  >>= (pure <| · == (:: (symbol "c") (:: (symbol "b") (:: (symbol "a") nil))))
+example : test_list_reverse (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
+  = (.ok (:: (symbol "c") (:: (symbol "b") (:: (symbol "a") nil)))) := rfl
 
 end test_list
 
@@ -354,9 +353,9 @@ def list.length : Expr :=
 namespace test_list
 
 def test_list_length (l : Expr) : Except Error Expr :=
-  try_step_n 100 (:: apply (:: list.length l))
+  try_step_n' 100 (:: apply (:: list.length l))
 
-#eval test_list_length (:: (symbol "a") nil)
+example : test_list_length (:: (symbol "a") nil) = (.ok (:: (symbol "succ") (symbol "zero"))) := rfl
 
 end test_list
 
@@ -420,14 +419,16 @@ def list.append : Expr :=
 namespace test_list
 
 def test_list_prepend (a b : Expr) : Except Error Expr := do
-  try_step_n 100 (:: apply (:: list.prepend (:: a b)))
+  try_step_n' 100 (:: apply (:: list.prepend (:: a b)))
 
-#eval test_list_prepend (:: (symbol "a") (:: (symbol "b") nil)) (:: (symbol "a") (:: (symbol "b") nil))
+example : test_list_prepend (:: (symbol "a") (:: (symbol "b") nil)) (:: (symbol "a") (:: (symbol "b") nil))
+   = (.ok (:: (symbol "a") (:: (symbol "b") (:: (symbol "a") (:: (symbol "b") nil))))) := rfl
 
 def test_list_append (a b : Expr) : Except Error Expr := do
-  try_step_n 1000 (:: apply (:: list.append (:: a b)))
+  try_step_n' 1000 (:: apply (:: list.append (:: a b)))
 
-#eval test_list_append (:: (symbol "hi") (:: (symbol "two") nil)) (:: (symbol "a") (:: (symbol "b") nil))
+example : test_list_append (:: (symbol "hi") (:: (symbol "two") nil)) (:: (symbol "a") (:: (symbol "b") nil))
+  = (.ok (:: (symbol "hi") (:: (symbol "two") (:: (symbol "a") (:: (symbol "b") nil))))) := rfl
 
 /-
 Continue running the recursor on a list until we get to nil,

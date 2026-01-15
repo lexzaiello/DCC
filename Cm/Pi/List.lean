@@ -437,10 +437,10 @@ then display.
 def rec_with_descent : Except Error Expr := do
   let my_succ_case := :: π (:: nil id)
   let my_zero_case := Expr.id
-  let out ← try_step_n 50 (:: apply (:: (:: apply (:: list.rec_with (:: list.rec_with (:: my_zero_case my_succ_case)))) (:: (symbol "discard") nil)))
+  let out ← try_step_n' 50 (:: apply (:: (:: apply (:: list.rec_with (:: list.rec_with (:: my_zero_case my_succ_case)))) (:: (symbol "discard") nil)))
   pure out
 
-#eval rec_with_descent
+example : rec_with_descent = (.ok (:: (symbol "discard") nil)) := rfl
 
 example : try_step_n' 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil))) = .ok (symbol "test") := by rfl
 

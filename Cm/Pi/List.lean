@@ -183,12 +183,12 @@ def list.foldl.my_f : Expr := :: π (:: id nil)
   then maps over (:: match_args (:: x xs))
 -/
 def list.foldl.mk_succ_handler :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply))
   (:: both (::
     (quote both) (:: both (::
     ((quote const) b' list.foldl.my_f)
-    (quote (:: both (::
-      list.foldl.rec_with.get_head
-      list.rec_with.advance_tail)))))))
+    (quote (list.foldl.rec_with.get_head b' list.rec_with.advance_tail))))))))))
 
 example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl.mk_nil_handler (:: (symbol "my_f") (symbol "my_init")))) list.rec_with.test_match_args)) = (.ok (symbol "my_init")) := rfl
 

@@ -14,11 +14,14 @@ Either (:: (symbol "error") ε) or
 Completely untyped.
 -/
 
+def Except'.s_ok := symbol "ok"
+def Except'.s_err := symbol "error"
+
 def Except'.ok : Expr :=
-  ((quote (symbol "ok")) ·')
+  ((quote s_ok) ·')
 
 def Except'.err : Expr :=
-  ((quote (symbol "error")) ·')
+  ((quote s_err) ·')
 
 /-
 matches on the ok and error cases.
@@ -55,15 +58,26 @@ def Except'.match_with.mk_eq_cases : Expr :=
 
 #eval do_step run (:: apply (:: (:: apply (:: Except'.match_with.mk_eq_cases (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
 
-/-def Except'.match_with : Expr :=
-  :: both (:: (quote both)
-    (:: both (::
-      (quote (quote eq))
-      -/
+def Except'.mk_eq : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (:: both (:: (quote both) (:: both (::
+      (:: both (:: (quote both) (:: both (::
+        (quote (quote eq))
+        match_with.mk_eq_cases)))) (quote (quote s_ok))))))
+    (quote (:: π (:: id nil)))))))
+
+#eval do_step run (:: apply (:: (:: apply (:: Except'.mk_eq (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
+
+def Except'.match_with : Expr :=
+  (:: both (:: (quote both) (:: both (:: (quote (quote apply))
+    Except'.mk_eq))))
+
+#eval try_step_n run 100 (:: apply (:: (:: apply (:: Except'.match_with (:: id id))) (:: apply (:: Except'.err (symbol "hi")))))
 
 /-
 (:: apply (:: apply (:: Except'.bind (:: apply (:: Except'.ok "val")))) (Except.ok' ·'))
 = (:: apply (:: Except.ok' "val"))
 -/
-def Except'.bind : Expr :=
+/-def Except'.bind : Expr :=
   
+-/

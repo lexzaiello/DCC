@@ -72,9 +72,9 @@ def assert_eq : Expr :=
 
   (:: both
     (:: (:: both (:: (quote eq) (:: both (:: (:: both (:: (quote const) (:: both (:: (quote Except'.s_ok) my_v))))
-    (:: both (:: (quote apply) (:: (quote expected_but_found') my_v))))))) my_v))
+    (:: both (:: (quote apply) (:: both (:: (quote expected_but_found') my_v)))))))) my_v))
 
-#eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) .const))
+#eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) nil))
 
 /-def expected_but_found' : Expr :=
   let expected := id

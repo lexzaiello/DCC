@@ -96,6 +96,9 @@ def Except'.match_with : Expr :=
 #eval try_step_n run 100
   (:: apply (:: (:: apply (:: Except'.match_with (:: id ((quote (symbol "my error is: ")) ·')))) (:: apply (:: Except'.err (symbol "hi")))))
 
+#eval try_step_n run 100
+  (:: apply (:: (:: apply (:: Except'.match_with (:: ((quote (symbol "my ok is: ")) ·') id))) (:: apply (:: Except'.ok (symbol "hi")))))
+
 /-
 (:: apply (:: apply (:: Except'.bind (:: apply (:: Except'.ok "val")))) (Except.ok' ·'))
 = (:: apply (:: Except.ok' "val"))

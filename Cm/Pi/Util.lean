@@ -18,34 +18,6 @@ def quote (e : Expr) : Expr :=
   (:: const e)
 
 /-
-Defers application of another argument.
--/
-def defer_app : Expr :=
-  (:: both (:: (quote both) (:: both (::
-    (quote (quote apply)) (:: both (::
-      (quote both) (:: both (::
-        const
-        (quote id)))))))))
-
-/-
-Composition of functions:
-f ∘ g data = f(g(data))
-
-(:: both (:: (quote apply) (:: (quote f)
-  (:: both
-    (:: (quote apply)
-      (quote g)
-      id)))))
--/
-
-infixr:65 "∘'" => (fun (f : Expr) (g : Expr) => (:: both (:: (quote apply)
-  (:: both (:: (quote f)
-  (:: both
-    (:: (quote apply) (:: both (::
-      (quote g)
-      Expr.id)))))))))
-
-/-
 There is a distinction between loading dowm from higher binders
 and pushing up from lower binders.
 -/
@@ -81,6 +53,24 @@ example : try_step_n' 10 (:: apply (:: (:: apply
     (:: both (:: (var.store 1) (var.store 1)))))
   (quote (symbol "var 0")))) (quote (symbol "var 1")))) =
     (.ok (:: (:: const (symbol "var 0")) (:: const (symbol "var 0")))) := rfl
+
+/-
+Composition of functions:
+f ∘ g data = f(g(data))
+
+(:: both (:: (quote apply) (:: (quote f)
+  (:: both
+    (:: (quote apply)
+      (quote g)
+      id)))))
+-/
+
+infixr:65 "∘'" => (fun (f : Expr) (g : Expr) => (:: both (:: (quote apply)
+  (:: both (:: (quote f)
+  (:: both
+    (:: (quote apply) (:: both (::
+      (quote g)
+      Expr.id)))))))))
 
 notation "$!" => Expr.cons apply
 notation "$?" => (fun e => (:: both (:: (quote apply) e))) -- for applying later

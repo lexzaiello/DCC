@@ -247,9 +247,18 @@ def infer_eq.eq_types : Expr :=
               infer_eq.yes_type))))
           infer_eq.no_type))))))))
 
+/-
+Checks that the next argument has the expected type.
+-/
+def infer_eq.mk_future_assert_eq : Expr :=
+  (infer_eq.assert_op_eq_seq e>=> infer_eq.yes_type)
+    e>=> assert_eq
+
 #eval try_step_n' 1000 (:: apply (:: infer_eq.yes_type (:: infer_nil (:: eq (:: nil nil)))))
 #eval try_step_n' 1000 ((:: apply (:: infer_eq.assert_op_eq_seq (:: infer_nil (:: eq (:: nil nil)))))
   e>>= infer_eq.yes_type)
+#eval try_step_n' 1000 ((:: apply (:: (infer_eq.assert_op_eq_seq e>=> infer_eq.yes_type) (:: infer_nil (:: eq (:: nil nil))))))
+--#eval try_step_n' 1000 ((:: apply (:: infer_eq.mk_future_assert_eq (:: infer_nil (:: eq (:: nil nil))))))
 
 /-def infer_eq.bind_args₁ : Expr :=
   (:: both

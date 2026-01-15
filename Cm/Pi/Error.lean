@@ -130,6 +130,17 @@ def Except'.bind :=
 infixl:60 "e>>=" => (fun e f =>
   (:: apply (:: Except'.bind (:: e f))))
 
+/-
+(:: apply (:: action args))
+  e>>= f
+-/
+infixl:60 "e>=>" => (fun e f =>
+  (:: both (:: (quote apply)
+    (:: both (:: (quote Except'.bind) (:: both (::
+      (:: both (:: (quote apply) (:: both
+        (:: (quote e) id))))
+      (quote f))))))))
+
 #eval try_step_n 50
   (:: apply (:: Except'.bind (:: (:: apply (:: Except'.err (symbol "hi"))) id)))
 

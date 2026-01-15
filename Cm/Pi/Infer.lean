@@ -248,11 +248,14 @@ def infer_eq.eq_types : Expr :=
           infer_eq.no_type))))))))
 
 #eval try_step_n' 1000 (:: apply (:: infer_eq.yes_type (:: infer_nil (:: eq (:: nil nil)))))
+#eval try_step_n' 1000 ((:: apply (:: infer_eq.assert_op_eq_seq (:: infer_nil (:: eq (:: nil nil)))))
+  e>>= infer_eq.yes_type)
 
-def infer_eq.eq_types_seq : Expr :=
-  infer.assert_seq infer_eq.eq_types
+/-def infer_eq.bind_args₁ : Expr :=
+  (:: both
+    (:: ($? <| (quote infer_eq.assert_op_eq) ·')
+      (quote (quote infer_eq.eq_types))))-/
 
-#eval try_step_n' 1000 (:: apply (:: infer_eq.eq_types (:: infer_nil (:: eq (:: nil nil)))))
 
 /-def infer_eq : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote Except'.bind) infer_eq.bind_args))))-/

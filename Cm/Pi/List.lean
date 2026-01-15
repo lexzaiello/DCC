@@ -193,6 +193,37 @@ def test_list_map_const (fn l : Expr) : Except Error Expr := do
 
 end test_list
 
+/-
+(:: apply (:: list.zipWith (:: both (:: l m)))
+= (:: apply (:: list.zip (:: l m)))
+
+We can do this by mapping each element to an incomplete π expression.
+nil => nil
+:: x xs => (:: π (:: both (:: (quote f) (:: both (:: (quote xs) id)))))
+
+map each element :: x xs to: :: π (:: both (:: (quote f) (:: (quote x) id)))
+
+f must be quoted twice.
+-/
+
+def list.zipWith.my_l : Expr := :: π (:: nil (:: π (:: id nil)))
+def list.zipWith.my_m : Expr := :: π (:: nil (:: π (:: nil id)))
+def list.zipWith.double_quote_my_f : Expr := :: π (:: (:: both (:: (quote const) const)) nil)
+def list.zipWith.mk_π_mapper : Expr := ((mk_both' 1) ∘ (mk_both' 0)) (:: (qn' 2 π) (:: (qn' 2 both) (::
+    list.zipWith.double_quote_my_f
+    (:: const (qn' 2 id)))))
+
+def list.zipWith : Expr :=
+  /-
+   With all args in scope.
+  -/
+
+  -- π gets eaten up by f binder, l binder, and then consumed by m binder
+  let mk_π_mapper := ((mk_both' 1) ∘ (mk_both' 0)) (:: (qn' 2 π) (:: (qn' 2 both) (::
+    double_quote_f
+    (:: const (qn' 2 id)))))
+  sorry
+
 def list.reverse.state'' : Expr :=
   :: π (:: nil (:: π (:: nil id)))
 

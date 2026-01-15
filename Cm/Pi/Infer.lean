@@ -332,6 +332,10 @@ the x and xs maps do not need to be the same type.
 - check that the operation is π
 - check that the x map is well-typed
 - check that the xs map is well-typed
+
+A potential idea for type checking:
+- uncurried full π type
+- curry to produce fewer argument versions
 -/
 
 namespace infer_test

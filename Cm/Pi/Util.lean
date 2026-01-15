@@ -73,7 +73,7 @@ def nest_both : Expr → Expr
   | e => e
 
 prefix:60 "q'" => quote
-notation "qn'" => (fun (n : ℕ) (e : Expr) => List.foldr (List.replicate n Expr.const) Expr.cons e)
+notation "qn'" => (fun (n : ℕ) (e : Expr) => List.foldr Expr.cons e (List.replicate n Expr.const))
 
 /-
 (f ·') = (:: both (:: f id))

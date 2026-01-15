@@ -305,11 +305,11 @@ def infer_eq.inject_future_assert_eq : Expr :=
       (:: both (:: (quote both) (:: both (:: (quote (quote assert_eq_unwrap)) id))))))))
 
 def infer_eq.inject_future_infer : Expr :=
-  (mk_both' 0 ∘ mk_both' 1) (:: (q' q' both)
-    (:: (q' q' q' apply)
-        (:: (q' q' both) (::
-            (:: (q' q' const) Expr.id)
-            (q' q' infer.assert_well_typed_unsafe)))))
+  (mk_both' 0 ∘ mk_both' 1) (:: (qn' 2 both)
+    (:: (qn' 3 apply)
+        (:: (qn' 2 both) (::
+            (:: (qn' 2 const) Expr.id)
+            (qn' 2 infer.assert_well_typed_unsafe)))))
 
 example : (quote (quote infer.assert_well_typed_unsafe)) = (q' q' infer.assert_well_typed_unsafe) := rfl
 

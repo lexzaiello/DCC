@@ -404,12 +404,19 @@ def list.zipWith_helper : Expr :=
     (quote list.foldl)
     list.zipWith.mk_foldl_args))))
 
+def list.zipWith.stripNil : Expr :=
+  (quote (:: π (:: nil id)))
+
 def list.zipWith : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply)) (:: both (::
+      (quote both) (:: both
+      (:: (quote list.zipWith.stripNil)
   (:: both (:: (quote both) (:: both (::
     (quote (quote apply)) (:: both (::
       (quote both) (:: both (::
         const
-        (quote id)))))))))∘' list.zipWith_helper
+        (quote id)))))))))))))))))∘' list.zipWith_helper
 
 #eval try_step_n' 500 (:: apply (:: (:: apply (:: list.zipWith (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "c") nil))))) (:: (symbol "b") (:: (symbol "d") nil))))
 --example : try_step_n' 500 (:: apply (:: (:: apply (:: list.zipWith_helper (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "b") nil))))) (:: (symbol "c") (:: (symbol "d") nil)))) = (.ok (:: nil (:: (:: (symbol "c") (symbol "b")) (:: (:: (symbol "d") (symbol "a")) nil)))) := rfl

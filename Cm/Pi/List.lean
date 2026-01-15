@@ -208,6 +208,10 @@ def list.foldl : Expr :=
       (:: (quote list.rec_with)
       (:: both (:: list.foldl.mk_nil_handler list.foldl.mk_succ_handler))))))))
 
+example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: both nil))) nil)) = (.ok .nil) := rfl
+
+#eval try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: (:: π (:: (:: both (:: (quote (symbol "acc: ")) id)) (:: both (:: (quote (symbol "x: ")) id)))) nil))) (:: (symbol "a") (:: (symbol "b") nil))))
+
 /-
 (:: apply (:: list.map (:: f l)))
 -/

@@ -252,8 +252,13 @@ Accepts the yes type eq assert as an argument.
 Must create a new function that
 runs infer on the next argument and plugs
 it into the assert
+
+Note that since eq has functions as the cases,
+we will get a new infer function from the yes case.
+
+Future_infer works on whatever assertion argument it is passed.
 -/
-def infer_eq.future_infer : Expr :=
+def infer_eq.future_infer₀ : Expr :=
   (:: both (:: (quote both) (:: both (::
     (quote (quote apply))
     (:: both (:: (quote both) (:: both (::
@@ -262,17 +267,33 @@ def infer_eq.future_infer : Expr :=
       ))))))))
 
 /-
+
+-/
+def infer_eq.future_infer₁ : Expr :=
+  sorry
+
+/-
 Checks that the next argument has the expected type.
 -/
-def infer_eq.mk_future_assert_eq : Expr :=
+def infer_eq.mk_future_assert_eq₀ : Expr :=
   (infer_eq.assert_op_eq_seq e>=> infer_eq.yes_type)
-    e>=> (infer_eq.future_infer ∘' assert_eq)
+    e>=> (infer_eq.future_infer₀ ∘' assert_eq)
 
-#eval try_step_n' 1000 (:: apply (:: infer_eq.yes_type (:: infer_nil (:: eq (:: nil nil)))))
+/-
+TODO: later, we might want to allow yes and no to have different types.
+Not yet, though.
+-/
+
+/-
+We can infer the comparison argument fine.
+Then we need to comapre against the value type.
+-/
+
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_eq.yes_type (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
 #eval try_step_n' 1000 ((:: apply (:: infer_eq.assert_op_eq_seq (:: infer_nil (:: eq (:: nil nil)))))
   e>>= infer_eq.yes_type)
 #eval try_step_n' 1000 ((:: apply (:: (infer_eq.assert_op_eq_seq e>=> infer_eq.yes_type) (:: infer_nil (:: eq (:: nil nil))))))
-#eval try_step_n' 1000 (:: apply (:: ((:: apply (:: infer_eq.mk_future_assert_eq (:: infer_nil (:: eq (:: nil nil)))))) (:: infer_nil nil)))
+#eval try_step_n' 1000 (:: apply (:: ((:: apply (:: infer_eq.mk_future_assert_eq₀ (:: infer_nil (:: eq (:: nil nil)))))) (:: infer_nil nil)))
 
 /-def infer_eq.bind_args₁ : Expr :=
   (:: both

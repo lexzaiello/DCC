@@ -184,10 +184,24 @@ def infer_const : Expr :=
 id is a curried infer rule.
 it will just run infer on whatever comes next.
 -/
+def infer_id.my_op : Expr :=
+  (:: π (:: nil id))
+
+def infer_id.assert_op_id : Expr :=
+  ((:: apply (:: assert_eq .id)) ∘' (:: π (:: nil id)))
+
+def infer_id.bind_args : Expr :=
+  (:: both
+    (:: ($? <| infer_id.assert_op_id ·')
+      (quote (quote infer.assert_well_typed_unsafe))))
+
 def infer_id : Expr :=
-  (:: both (:: (quote Except'.bind) (:: both
-    (:: ((:: apply (:: assert_eq .const)) ∘' Expr.id)
-    (quote (quote infer.assert_well_typed_unsafe))))))
+  (quote Except'.bind) ∘' (:: both infer_id.bind_args)
+
+#eval try_step_n' 1000 (:: apply (:: infer_id.bind_args (:: infer_nil id)))
+#eval try_step_n' 1000 (:: apply (:: infer_id.assert_op_id (:: infer_nil id)))
+#eval try_step_n' 1000 (:: apply (:: infer_nil (:: infer_nil nil)))
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_id (:: infer_nil id))) (:: infer_nil nil)))
 
 namespace infer_test
 

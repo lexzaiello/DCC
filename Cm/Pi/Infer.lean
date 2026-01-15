@@ -296,10 +296,12 @@ def infer_eq.inject_future_assert_eq : Expr :=
 
 def infer_eq.inject_future_infer : Expr :=
   (:: both (:: (quote both) (:: both (::
-    (quote (quote (symbol "prefix")))
-      (:: both (:: (quote both) (:: both (::
-        Expr.id
-        (quote (quote (symbol "later infer")))))))))))
+    (quote (quote both))
+    (:: both (:: (quote both) (:: both (::
+      (quote (quote (symbol "prefix")))
+        (:: both (:: (quote both) (:: both (::
+          Expr.id
+          (quote (quote (symbol "later infer")))))))))))))))
 
 /-
 Checks that the next argument has the expected type.

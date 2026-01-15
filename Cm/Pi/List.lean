@@ -299,7 +299,7 @@ def list.zipWith.foldl_fn_mk_apply : Expr :=
         const -- inject f
         (quote (:: both (:: foldl_x foldl_rem_head)))))))))))
 
-#eval try_step_n' 100 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x"))))
+example : try_step_n' 14 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
 
 def list.zipWith.mk_foldl_args : Expr :=
   /-

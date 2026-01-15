@@ -39,7 +39,7 @@ notation "$!" => Expr.cons apply
 notation "$?" => (fun e => (:: both (:: (quote apply) e))) -- for applying later
 
 def both_from_list (n_repeat : ℕ) : List Expr → Expr
-  | .cons x xs => :: both (:: x (both_from_list n_repeat xs))
+  | .cons x xs => with_boths (:: x (both_from_list n_repeat xs))
   | .nil => nil
 where the_both (n_quote : ℕ) := (List.replicate n_quote const).foldr Expr.cons both
       with_boths (e : Expr) := (List.range n_repeat).map the_both
@@ -48,7 +48,11 @@ where the_both (n_quote : ℕ) := (List.replicate n_quote const).foldr Expr.cons
 example : both_from_list 1 [(symbol "a"), (symbol "b"), (symbol "c")]
   = (:: both (:: (symbol "a") (:: both (:: (symbol "b") (:: both (:: (symbol "c") nil)))))) := rfl
 
+example : both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
+  = (:: both (:: (quote both) (:: (symbol "a") (:: both (:: (quote both)
+    (:: (symbol "b") (:: both (:: (quote both) (:: (symbol "c") nil))))))))) := rfl
 
+#eval both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
 
 def mk_both_tail : Expr → Expr
   | :: const e => :: const e

@@ -55,6 +55,16 @@ def assert_eq : Expr :=
     (:: (:: both (:: (quote eq) (:: both (:: eq_ok
     (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found') my_v)))))))))))) my_v))
 
+/-
+assert_eq but it returns just the data in the ok case.
+-/
+def assert_eq_unwrap : Expr :=
+  let my_v := Expr.id
+
+  (:: both
+    (:: (:: both (:: (quote eq) (:: both (:: (:: both (:: (quote const) my_v))
+    (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found') my_v)))))))))))) my_v))
+
 /-def expected_but_found' : Expr :=
   let expected := id
   (:: both -/
@@ -292,7 +302,7 @@ def infer_eq.mk_future_assert_type : Expr :=
 
 def infer_eq.inject_future_assert_eq : Expr :=
   (:: both (:: (quote both) (:: both (:: (quote (quote apply))
-      (:: both (:: (quote both) (:: both (:: (quote (quote assert_eq)) id))))))))
+      (:: both (:: (quote both) (:: both (:: (quote (quote assert_eq_unwrap)) id))))))))
 
 def infer_eq.inject_future_infer : Expr :=
   (:: both (:: (quote both) (:: both (::
@@ -302,9 +312,9 @@ def infer_eq.inject_future_infer : Expr :=
         (:: both (:: (quote both) (:: both (::
           (quote (quote both))
           (:: both (:: (quote both) (:: both (::
-          (:: both (:: (quote both) (:: both (::
-            (quote (quote const))
-            Expr.id))))
+            (:: both (:: (quote both) (:: both (::
+              (quote (quote const))
+              Expr.id))))
           (quote (quote infer.assert_well_typed_unsafe))))))))))))))))))
 
 /-
@@ -324,8 +334,7 @@ Not yet, though.
 Note: eq_types won't produce an ok'd value.
 It unwraps the types.
 -/
-
-#eval try_step_n' 2000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil (symbol "bruh"))))
+#eval try_step_n' 2000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil)))
 #eval try_step_n' 1000 (:: apply (:: (infer_eq.assert_op_eq_seq e>=> infer_eq.eq_types) (:: infer_id (:: eq (:: id id)))))
 #eval try_step_n' 1000 (:: apply (:: (infer_eq.assert_op_eq_seq e>=> infer_eq.eq_types) (:: infer_id (:: eq (:: id id)))))
 #eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_eq.mk_future_assert_type (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))

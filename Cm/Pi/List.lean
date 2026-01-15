@@ -293,8 +293,11 @@ example : try_step_n' 4 (:: apply (:: list.zipWith.foldl_fn_args (:: (:: (symbol
 def list.zipWith.foldl_fn_mk_apply : Expr :=
   (:: both (::
     (quote both) (:: both (::
+    (quote (quote apply))
+  (:: both (::
+    (quote both) (:: both (::
         const -- inject f
-        (quote (:: both (:: foldl_x foldl_rem_head)))))))
+        (quote (:: both (:: foldl_x foldl_rem_head)))))))))))
 
 #eval try_step_n' 100 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x"))))
 

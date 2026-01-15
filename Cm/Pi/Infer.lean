@@ -215,10 +215,10 @@ def infer_eq.assert_op_eq_seq : Expr :=
   infer.assert_seq infer_eq.assert_op_eq
 
 def infer_eq.yes_case : Expr :=
-  (:: π (:: nil (:: π (:: nil (:: π (:: id nil))))))
+  (:: π (:: nil (:: π (:: id nil))))
 
 def infer_eq.no_case : Expr :=
-  (:: π (:: nil (:: π (:: nil (:: π (:: nil id))))))
+  (:: π (:: nil (:: π (:: nil id))))
 
 def infer_eq.yes_type : Expr :=
   (:: both (:: (quote apply)
@@ -238,12 +238,17 @@ then returns them.
 -/
 def infer_eq.eq_types : Expr :=
   (:: both (:: (quote apply)
-    (:: both (::
+    (:: both (:: (quote Except'.unwrap)
       (:: both (:: (quote apply)
         (:: both (::
-          (quote assert_eq)
-          infer_eq.yes_type))))
-      infer_eq.no_type))))
+          (:: both (:: (quote apply)
+            (:: both (::
+              (quote assert_eq)
+              infer_eq.yes_type))))
+          infer_eq.no_type))))))))
+
+#eval try_step_n' 1000 (:: apply (:: infer_eq.yes_type (:: infer_nil (:: nil nil))))
+#eval try_step_n' 1000 (:: apply (:: infer_eq.eq_types (:: infer_nil (:: nil nil))))
 
 def infer_eq.bind_args : Expr :=
   (:: both

@@ -39,6 +39,16 @@ notation "$!" => Expr.cons apply
 notation "$?" => (fun e => (:: both (:: (quote apply) e))) -- for applying later
 
 /-
+Inserts (quote both) after every both in a tree
+-/
+def both.nest (e : Expr) :=
+  match e with
+  | nil => nil
+  | :: both e =>
+    :: both (:: (quote both) (nest e))
+  | x => x
+
+/-
 (f ·') = (:: both (:: f id))
 
 These operators do not force evaluation.

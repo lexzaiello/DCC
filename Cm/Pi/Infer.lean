@@ -318,12 +318,25 @@ def infer_eq.inject_future_infer : Expr :=
           (quote (quote infer.assert_well_typed_unsafe))))))))))))))))))
 
 /-
-Checks that the next argument has the expected type.
+Checks that the eq maps have the same type,
+and that the result of applying the test argument into
+that type is the same as the type of the actual argument.
 -/
 def infer_eq : Expr :=
   (infer_eq.assert_op_eq_seq
     e>=> infer_eq.eq_types
     e>=> (infer_eq.inject_future_infer ∘' infer_eq.inject_future_assert_eq))
+
+/-
+quote π is pretty common, unfortunately, so we will need to make a curried type.
+π has an x map, an xs map, and produces an xs map.
+
+the x and xs maps do not need to be the same type.
+
+- check that the operation is π
+- check that the x map is well-typed
+- check that the xs map is well-typed
+-/
 
 namespace infer_test
 

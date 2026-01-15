@@ -2,6 +2,7 @@ import Mathlib.Data.Nat.Notation
 import Cm.Pi.Ast
 import Cm.Pi.Eval
 import Cm.Pi.Util
+import Cm.Pi.List
 
 open Expr
 

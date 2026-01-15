@@ -145,11 +145,31 @@ def list.foldl.my_f : Expr := :: π (:: id nil)
 def list.foldl.my_l : Expr := :: π (:: nil id)
 def list.foldl.mk_nil_handler : Expr := (quote nil)
 
--- with :: match_args (:: x xs) in scope
---def list.foldl.get_head : Expr := quote (:: π (:: nil (:: π (:: nil (:: π (:: nil (:: π (:: nil (:: π (:: id nil))))))))))
+-- with :: match_args (:: x xs) in scope. rec_with, rec_with, zero_handler, succ_handler, x, xs
+def list.foldl.get_head : Expr := (mk_π_skip 4 id)
+
+def test_match_args : Expr := (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))
+
+example : try_step_n' 10 (:: apply
+  (:: list.foldl.get_head test_match_args)) = .ok (symbol "x") := rfl
+
 def list.foldl.do_app : Expr := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
-def list.foldl.mk_xs_handler : Expr := (:: both (:: (quote both) (:: (const ·') (quote do_app))))
-def list.foldl.mk_xs_handler' : Expr := (quote id)
+
+/-
+with f in scope.
+map f on the head element, and leave the rest the same,
+since that is the recursive part.
+-/
+def list.foldl.mapper_to_π : Expr :=
+  :: both (:: (quote const)
+  (:: both (:: (quote π) (:: both
+    (:: id (quote id))))))
+
+def list.foldl.mk_xs_handler : Expr := (:: both (:: (quote both) (:: both (::
+  mapper_to_π (quote do_app)))))
+
+example : try_step_n' 20 (:: apply (:: list.foldl.mapper_to_π (symbol "my_f"))) = .ok (:: const (:: π (:: (symbol "my_f") id))) := rfl
+#eval try_step_n' 20 (:: apply (:: (:: apply (:: list.foldl.mk_xs_handler id)) (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))))
 
 /-
 do_rec should have f in scope.
@@ -170,8 +190,7 @@ def list.foldl : Expr :=
   -- this should be quoted. it does not depend on anything
   list.foldl.mk_do_rec
 
-#eval try_step_n 200 (:: apply (:: (:: apply (:: list.foldl.mk_xs_handler' id)) (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "nil_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))))
-#eval try_step_n 200 (:: apply (:: list.foldl.mk_xs_handler id))
+#eval try_step_n 100 (:: apply (:: (:: apply (:: list.foldl id)) (:: (symbol "a") (:: (symbol "b") nil))))
 
 /-
 (:: apply (:: list.map (:: f l)))

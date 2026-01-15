@@ -172,10 +172,6 @@ def infer_const.future_apply : Expr :=
       (:: both (:: (quote both) (:: both (:: infer_const.future_infer
         infer_const.cnst_out_ty))))))))
 
-#eval try_step_n' 1000 (:: apply (:: infer_const.cnst_out_ty (:: infer_nil (:: const nil))))
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_const.future_infer (:: infer_nil (:: const nil)))) (:: infer_nil nil)))
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_const.bind_args (:: infer_nil (:: const nil)))) (:: infer_nil nil)))
-
 /-
 (:: apply (:: (:: apply (:: infer_const (:: infer (:: const data)))) (:: infer other_data)))
 -/
@@ -184,13 +180,15 @@ def infer_const : Expr :=
     (quote (quote apply))
     infer_const.future_apply))))
 
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_const (:: infer_nil (:: const nil)))) (:: infer_nil nil)))
-
 namespace infer_test
 
-example : try_step_n' 20 (:: apply (:: (:: apply (:: expected_but_found' const)) nil)) = .ok (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil)) := rfl
+set_option maxRecDepth 5000
 
-set_option maxRecDepth 1000
+example : (try_step_n' 500 (:: apply (:: (:: apply (:: infer_const (:: infer_nil (:: const nil)))) (:: infer_nil nil)))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
+
+example : try_step_n' 1000 (:: apply (:: (:: apply (:: (quote infer.assert_well_typed_unsafe) (:: infer_nil (:: const nil)))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
+
+example : try_step_n' 20 (:: apply (:: (:: apply (:: expected_but_found' const)) nil)) = .ok (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil)) := rfl
 
 example : try_step_n' 18 (:: apply (:: (:: apply (:: assert_eq .const)) nil)) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil))) := rfl
 
@@ -201,8 +199,6 @@ example : try_step_n' 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "
 example : try_step_n' 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever"))))) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") (symbol "bad")))) := rfl
 
 example : try_step_n' 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil)))) = .ok (:: (symbol "ok") (symbol "Data")) := rfl
-
-set_option maxRecDepth 2000
 
 example : try_step_n' 70 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever"))))) = .ok (:: (symbol "ok") (:: (symbol "infer") (:: const (symbol "whatever")))) := rfl
 

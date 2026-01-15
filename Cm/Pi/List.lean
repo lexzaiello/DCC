@@ -153,7 +153,17 @@ def test_match_args : Expr := (:: (symbol "rec_with") (:: (symbol "rec_with") (:
 example : try_step_n' 10 (:: apply
   (:: list.foldl.get_head test_match_args)) = .ok (symbol "x") := rfl
 
-def list.foldl.do_app : Expr := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
+/-
+Run apply on the inner list.rec list.rec zero_case succ case
+and around the xs
+-/
+def list.foldl.do_app : Expr := :: both (:: (quote apply)
+  (::
+    (:: both (:: (quote apply)
+      (:: π (:: id (:: π (:: id (:: π (:: id (:: π (:: id nil))))))))))
+    (mk_π_skip 5 id)))
+
+#eval try_step_n' 100 (:: apply (:: list.foldl.do_app test_match_args))
 
 /-
 with f in scope.
@@ -165,8 +175,9 @@ def list.foldl.mapper_to_π : Expr :=
   (:: both (:: (quote π) (:: both
     (:: id (quote id))))))
 
-def list.foldl.mk_xs_handler : Expr := (:: both (:: (quote both) (:: both (::
-  mapper_to_π (quote do_app)))))
+def list.foldl.mk_xs_handler : Expr := 
+    (:: both (:: (quote both) (:: both (::
+    mapper_to_π (quote do_app)))))
 
 example : try_step_n' 20 (:: apply (:: list.foldl.mapper_to_π (symbol "my_f"))) = .ok (:: const (:: π (:: (symbol "my_f") id))) := rfl
 #eval try_step_n' 20 (:: apply (:: (:: apply (:: list.foldl.mk_xs_handler id)) (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))))

@@ -136,12 +136,28 @@ def infer_const.assert_well_typed :=
 
 #eval try_step_n run 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil))))
 
+def infer_const.assert_op_seq.wrap_ok : Expr :=
+  (:: both (:: (quote apply) (:: both (:: (quote Except'.ok) id))))
+
+/-
+Asserts that the operator is const,
+but gives the original arguments in the except.ok value
+-/
+def infer_const.assert_op_seq : Expr :=
+  (:: both
+    (:: (quote apply) (:: both (:: (quote Except'.bind) (:: both (::
+      (:: both (:: (quote apply) (:: both (:: (quote infer_const.assert_op_const) id))))
+      (:: both (:: (quote const) infer_const.assert_op_seq.wrap_ok))))))))
+
+#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever")))))
+
 /-
 infer const produces a curried function
 that checks if the argument to (:: const v) is well-typed,
 then returns the type of v.
 -/
 def infer_const : Expr :=
+  
   -- if the op is "const", then fetch our infer component and run that
   sorry
 

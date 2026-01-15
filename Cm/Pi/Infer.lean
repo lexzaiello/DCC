@@ -77,7 +77,8 @@ def assert_eq' : Expr :=
 
   (λ' 1
     (:: (λ' 1 (:: (:: (var.store 0) eq) (λ' 1 (:: eq_ok
-    (λ' 1 (λ' 2 (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v))))))))))) my_v))
+    (λ' 1 (λ' 2 (:: (:: (var.store 0) (:: (var.store 0) Except'.s_err))
+    (λ' 1 (:: (:: (var.store 0) apply) (λ' 1 (:: (:: (var.store 0) expected_but_found) my_v))))))))))) my_v))
 
 example : assert_eq = assert_eq' := rfl
 

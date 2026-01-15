@@ -56,11 +56,11 @@ example : both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
 
 def mk_π_skip (n : ℕ) (at_end : Expr) : Expr :=
   match n with
-  | .zero => :: π (:: at_end nil)
+  | .zero => at_end
   | .succ n =>
     :: π (:: nil (mk_π_skip n at_end))
 
-example : mk_π_skip 2 id = (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) := rfl
+example : mk_π_skip 2 (:: π (:: id nil)) = (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) := rfl
 
 def mk_both_tail : Expr → Expr
   | :: const e => :: const e

@@ -170,6 +170,9 @@ def infer_const.assert_op_ret_ty : Expr :=
 
 #eval try_step_n run 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: const nil))))
 
+/-def infer_const : Expr :=
+  (:: both (:: (quote apply) (:: both-/
+
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") nil)))
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever"))))
 

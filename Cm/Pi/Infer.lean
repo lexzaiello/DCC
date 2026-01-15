@@ -270,6 +270,14 @@ def infer_eq.future_infer₀ : Expr :=
       (quote (Except'.unwrap ∘' infer.assert_well_typed_unsafe)) -- this infers the future argument
       ))))))))
 
+def infer_eq.do_future_infer : Expr :=
+  (:: both (:: (quote both)
+    (:: both (::
+      (quote (quote apply))
+      (:: both (:: (quote both) (:: both (::
+        (:: both (:: (quote const) id)) -- this wraps the eq assertions
+        (quote id)))))))))
+
 /-
 This is for the first eq data argument.
 -/
@@ -280,19 +288,14 @@ def infer_eq.future_infer₁ : Expr :=
       (quote (quote Except'.bind))
   (:: both (:: (quote both) (:: both (::
     (quote (quote apply)) (:: both (::
-  (:: both (:: (quote both) (:: both (::
-    (quote (quote apply))
-    (:: both (:: (quote both) (:: both (::
-      const -- this wraps the eq assertions
-      (quote (Except'.unwrap ∘' infer.assert_well_typed_unsafe))))))))))
+      infer_eq.do_future_infer
       (:: both (:: (quote const) const))))))))))))))))  -- this outputs the original eq fn argument assertion from bind
 
 /-
 Checks that the next argument has the expected type.
 -/
 def infer_eq.mk_future_assert_eq₀ : Expr :=
-  (infer_eq.assert_op_eq_seq e>=> infer_eq.yes_type)
-    e>=> (infer_eq.future_infer₀ ∘' assert_eq)
+  (infer_eq.future_infer₁ ∘' (infer_eq.assert_op_eq_seq e>=> infer_eq.eq_types))
 
 /-
 TODO: later, we might want to allow yes and no to have different types.
@@ -300,10 +303,13 @@ Not yet, though.
 -/
 
 /-
-We can infer the comparison argument fine.
-Then we need to comapre against the value type.
+Note: eq_types won't produce an ok'd value.
+It unwraps the types.
 -/
 
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_eq.do_future_infer ∘' infer_eq.eq_types) (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_eq.yes_type e>=> infer_eq.do_future_infer) (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq.mk_future_assert_eq₀ (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil)))
 #eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_eq.yes_type (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
 #eval try_step_n' 1000 ((:: apply (:: infer_eq.assert_op_eq_seq (:: infer_nil (:: eq (:: nil nil)))))
   e>>= infer_eq.yes_type)

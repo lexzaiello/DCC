@@ -290,16 +290,33 @@ example : try_step_n' 3 (:: apply (:: list.zipWith.foldl_rem_head (:: (:: (symbo
 example : try_step_n' 5 (:: apply (:: list.zipWith.foldl_x (:: (symbol "acc") (symbol "x")))) = (.ok (symbol "x")) := rfl
 example : try_step_n' 4 (:: apply (:: list.zipWith.foldl_fn_args (:: (:: (symbol "y") (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
 
-def list.zipWith.foldl_fn_mk_apply : Expr :=
-  (:: both (::
-    (quote both) (:: both (::
-    (quote (quote apply))
+def list.zipWith.foldl_fn_lazy_apply : Expr :=
   (:: both (::
     (quote both) (:: both (::
         const -- inject f
-        (quote (:: both (:: foldl_x foldl_rem_head)))))))))))
+        (quote (:: both (:: foldl_x foldl_rem_head)))))))
+
+def list.zipWith.foldl_fn_mk_apply : Expr :=
+  (:: both (::
+    (quote both) (:: both (::
+    (quote (quote apply)) foldl_fn_lazy_apply))))
 
 example : try_step_n' 14 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
+
+def list.zipWith.foldl_fn_mk_push_advance : Expr :=
+  (:: both (::
+    (quote both) (:: both (::
+      (:: both (::
+        (quote both)
+        (:: both (::
+          (quote (quote π)) (:: both (::
+          (quote both)
+          (:: both (::
+            (quote (quote (:: π (:: nil id)))) -- tail of the remaining
+            (:: both (:: (quote both) (:: both (:: (quote (quote const)) list.zipWith.foldl_fn_mk_apply))))))))))))
+    (quote id)))))
+
+#eval try_step_n' 60 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x"))))
 
 def list.zipWith.mk_foldl_args : Expr :=
   /-
@@ -308,10 +325,7 @@ def list.zipWith.mk_foldl_args : Expr :=
 
   -- with f, then (:: acc x) in scope
   -- applies f to foldl x and acc
-  let apply_x_acc := (:: both (::
-    (quote both) (:: both (::
-        const -- inject f
-        (quote (:: both (:: foldl_x foldl_rem_head)))))))
+  let apply_x_acc := list.zipWith.foldl_fn_mk_apply
 
   -- with all args in scope
   (:: π (::

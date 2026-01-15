@@ -75,6 +75,7 @@ def assert_eq : Expr :=
     (:: both (:: (quote apply) (:: both (:: (quote expected_but_found') my_v)))))))) my_v))
 
 #eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) nil))
+#eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) .const))
 
 /-def expected_but_found' : Expr :=
   let expected := id
@@ -119,17 +120,17 @@ def infer_const.my_data :=
 
 def infer_const.check_op_no := (expected_but_found .const)
 
+/-
+With all args in scope.
+-/
 def infer_const.assert_op_const :=
-  (:: (:: eq (:: (quote (:: apply (:: Except'.ok .const)))
-    (:: apply (:: expected_but_found' .const)))) (.const))
+  (:: apply (:: assert_eq .const)) ∘' infer_const.my_op
 
-#eval do_step run (:: apply (:: infer_const.assert_op_const const))
+#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever")))))
 
-/-def infer_const : Expr :=
+def infer_const : Expr :=
   -- if the op is "const", then fetch our infer component and run that
-  .cons both (:: (quote apply)
-    (:: both
-      (:: (:: both (:: (:: both (:: (quote eq) (:: both (:: infer_const.check_op_yes (quote infer_const.check_op_no))))) (quote .const))) infer_const.my_op)))-/
+  sorry
 
 def infer_nil : Expr :=
   :: both (:: (quote apply)

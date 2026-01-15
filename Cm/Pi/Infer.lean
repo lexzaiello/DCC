@@ -238,14 +238,12 @@ then returns them.
 -/
 def infer_eq.eq_types : Expr :=
   (:: both (:: (quote apply)
-    (:: both (:: (quote Except'.unwrap)
-      (:: both (:: (quote apply)
         (:: both (::
           (:: both (:: (quote apply)
             (:: both (::
               (quote assert_eq)
               infer_eq.yes_type))))
-          infer_eq.no_type))))))))
+          infer_eq.no_type))))
 
 /-
 Accepts the yes type eq assert as an argument.
@@ -296,8 +294,9 @@ def infer_eq.mk_future_assert_type : Expr :=
 Checks that the next argument has the expected type.
 -/
 def infer_eq.mk_future_assert_eq₀ : Expr :=
-  (infer_eq.assert_op_eq_seq e>=>
-    infer_eq.eq_types)
+  (infer_eq.assert_op_eq_seq
+    e>=> infer_eq.eq_types
+    e>=> (:: both (:: (quote both) (:: both (:: (quote (quote (symbol "hi"))) id)))))
 
 /-
 TODO: later, we might want to allow yes and no to have different types.

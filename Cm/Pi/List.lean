@@ -273,30 +273,43 @@ zipWith fn l = List.foldl (::
 
 (:: apply (:: (:: apply (:: list.zipWith (:: fn l))) l₂))
 -/
-def list.zipWith : Expr :=
+
+/-
+foldl gets passed acc x
+-/
+def list.zipWith.foldl_rem_head : Expr :=
+  (:: π (:: (:: π (:: id nil)) nil))
+
+def list.zipWith.foldl_x : Expr :=
+  (:: π (:: nil id))
+
+#eval try_step_n' 5 (:: apply (:: list.zipWith.foldl_rem_head (:: (:: (symbol "y") (symbol "acc")) (symbol "x"))))
+example : try_step_n' 5 (:: apply (:: list.zipWith.foldl_x (:: (symbol "acc") (symbol "x")))) = (.ok (symbol "x")) := rfl
+
+def list.zipWith.mk_foldl_args : Expr :=
   /-
    With all args in scope.
   -/
 
-  -- with (:: acc x) in scope
-  -- pops the head of the remaining results
-  -- returning remaining'
-  let s'_pop_rem_acc := (:: π (:: nil id))
-
   -- with f, then (:: acc x) in scope
-  -- pushes the head of remaining
-  -- onto (:: f (:: results))
-  let s'_pop_push_res := :: both (::
+  -- applies f to foldl x and acc
+  let rem_head := list.zipWith.foldl_rem_head
+  let foldl_x := list.zipWith.foldl_x
+  let apply_x_acc := (:: both (::
     (quote both) (:: both (::
-        const -- temporarily wipe remaining, and put f in place
-        (quote (:: π (::
-          (:: π (:: id nil)) -- get just the head of remaining
-          id))))))
+        const -- inject f
+        (quote (:: both (:: foldl_x rem_head)))))))
 
-  -- with f in scope
-  let mk_foldl_map := :: both (:: 
+  -- with all args in scope
+  (:: π (::
+    apply_x_acc id))
 
-  sorry
+def list.zipWith : Expr :=
+  (:: both (:: (quote apply) (:: both (::
+    (quote list.foldl)
+    list.zipWith.mk_foldl_args))))
+
+#eval try_step_n' 200 (:: apply (:: (:: apply (:: list.zipWith (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "b") nil))))) (:: (symbol "c") (:: (symbol "d") nil))))
 
 def list.reverse.state'' : Expr :=
   :: π (:: nil (:: π (:: nil id)))

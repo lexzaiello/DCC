@@ -157,22 +157,30 @@ namespace infer_test
 
 example : try_step_n' 20 (:: apply (:: (:: apply (:: expected_but_found' const)) nil)) = .ok (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil)) := rfl
 
-#eval try_step_n 100 (:: apply (:: (:: apply (:: assert_eq .const)) nil))
-#eval try_step_n 100 (:: apply (:: (:: apply (:: assert_eq .const)) .const))
+set_option maxRecDepth 1000
 
-#eval try_step_n 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever")))))
-#eval try_step_n 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
+example : try_step_n' 18 (:: apply (:: (:: apply (:: assert_eq .const)) nil)) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil))) := rfl
 
-#eval try_step_n 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil))))
+example : try_step_n' 20 (:: apply (:: (:: apply (:: assert_eq .const)) .const)) = .ok (:: (symbol "ok") const) := rfl
 
-#eval try_step_n 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever")))))
-#eval try_step_n 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
-#eval try_step_n 100 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
+example : try_step_n' 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever"))))) = .ok (:: (symbol "ok") const) := rfl
 
-#eval try_step_n 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: const nil))))
-#eval try_step_n 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: (symbol "not const") nil))))
+example : try_step_n' 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever"))))) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") (symbol "bad")))) := rfl
 
-#eval do_step (:: apply (:: infer_nil (:: (symbol "infer") nil)))
-#eval do_step (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever"))))
+example : try_step_n' 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil)))) = .ok (:: (symbol "ok") (symbol "Data")) := rfl
+
+set_option maxRecDepth 2000
+
+example : try_step_n' 70 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever"))))) = .ok (:: (symbol "ok") (:: (symbol "infer") (:: const (symbol "whatever")))) := rfl
+
+example : try_step_n' 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever"))))) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") (symbol "bad")))) := rfl
+
+example : try_step_n' 100 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever"))))) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") (symbol "bad")))) := rfl
+
+example : try_step_n' 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: const nil)))) = .ok (:: (symbol "ok") (symbol "Data")) := rfl
+example : try_step_n' 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: (symbol "not const") nil)))) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") (symbol "not const")))) := rfl
+
+example : try_step_n' 20 (:: apply (:: infer_nil (:: (symbol "infer") nil))) = .ok (:: (symbol "ok") (symbol "Data")) := rfl
+example : try_step_n' 50 (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever")))) = .ok (:: (:: (symbol "expected:") nil) (:: (symbol "but found: ") (symbol "whatever"))) := rfl
 
 end infer_test

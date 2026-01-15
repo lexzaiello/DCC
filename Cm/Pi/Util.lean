@@ -54,6 +54,7 @@ Creates a :: both (:: both ...) tree,
 ending with the last expression.
 
 Does not both quoted exprs.
+Does not quote lists with quoted heads.
 
 quotes both n times.
 -/
@@ -72,6 +73,7 @@ def nest_both : Expr → Expr
   | e => e
 
 prefix:60 "q'" => quote
+notation "qn'" => (fun (n : ℕ) (e : Expr) => List.foldr (List.replicate n Expr.const) Expr.cons e)
 
 /-
 (f ·') = (:: both (:: f id))

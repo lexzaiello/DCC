@@ -18,6 +18,16 @@ def quote (e : Expr) : Expr :=
   (:: const e)
 
 /-
+Defers application of another argument.
+-/
+def defer_app : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply)) (:: both (::
+      (quote both) (:: both (::
+        const
+        (quote id)))))))))
+
+/-
 Composition of functions:
 f ∘ g data = f(g(data))
 
@@ -34,6 +44,17 @@ infixr:65 "∘'" => (fun (f : Expr) (g : Expr) => (:: both (:: (quote apply)
     (:: (quote apply) (:: both (::
       (quote g)
       Expr.id)))))))))
+
+/-
+There is a distinction between loading dowm from higher binders
+and pushing up from lower binders.
+-/
+notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))
+-- returning a variable. this corresponds to (:: both (:: (quote const) id))
+notation "var.store" => (fun (n : ℕ) => List.foldr (:: both ·) (:: both (:: (quote const) id)) (List.replicate n (quote Expr.const)))
+--notation "binder" => (fun (n : ℕ) (fn : Expr := Expr.id) => List.replicate n
+
+example : try_step_n' 10 (:: apply (:: (:: apply (:: (:: both (:: (quote both) (:: both (:: (var.read 1) (var.read 1))))) (quote (symbol "var 0")))) (quote (symbol "var 1")))) = (.ok (:: (:: const (symbol "var 1")) (:: const (symbol "var 1")))) := rfl
 
 notation "$!" => Expr.cons apply
 notation "$?" => (fun e => (:: both (:: (quote apply) e))) -- for applying later

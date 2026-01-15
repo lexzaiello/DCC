@@ -147,3 +147,13 @@ infixl:60 "e>=>" => (fun e f =>
 
 #eval try_step_n 50 ((:: apply (:: Except'.ok (symbol "hi"))) e>>= id)
 #eval try_step_n 50 ((:: apply (:: Except'.err (:: (symbol "other") (symbol "hi")))) e>>= id)
+
+/-
+Combines many except values in a list.
+Returns a list containing all the unwrapped
+ok values, or the first error value.
+-/
+def Except'.allM : Expr :=
+  let my_l := Expr.id
+  
+  sorry

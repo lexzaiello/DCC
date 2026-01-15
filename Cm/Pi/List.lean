@@ -84,6 +84,25 @@ def list.rec_with : Expr :=
   .cons both (:: inner_eq (quote nil))
 
 /-
+nil and succ case handlers get passed (:: (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "nil_case") (symbol "succ_case")))) (:: (symbol "x") (symbol "xs")))
+nil case for example can access the nil value with :: π (:: nil id)
+-/
+set_option maxRecDepth 1000
+
+example : try_step_n' 30 (:: apply (:: (:: apply (:: list.rec_with (:: list.rec_with (:: (:: π (:: nil id)) (:: π (:: nil id)))))) nil)) = (.ok nil) := rfl
+example : try_step_n' 30 (:: apply (:: (:: apply (:: list.rec_with (:: list.rec_with (:: (:: π (:: nil id)) (:: π (:: nil id)))))) (:: (symbol "x") (symbol "xs")))) = (.ok (:: (symbol "x") (symbol "xs"))) := rfl
+
+/-
+For tests: the "state" that gets passed to the nil and xs handlers.
+-/
+def list.rec_with.test_match_args : Expr := (:: (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "nil_case") (symbol "succ_case")))) (:: (symbol "x") (symbol "xs")))
+
+/-
+Continus recursion on the tail of the list.
+-/
+def list.rec_with.advance_tail : Expr := (:: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) (:: π (:: nil id))))))
+
+/-
 :: apply (:: list.get_n (:: (:: succ n) l))
 we do this by using the recursor for nat.
 once we get to zero, we return the head of the list.
@@ -141,80 +160,19 @@ def list.get_n' : Expr :=
 #eval try_step_n 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (symbol "zero")) (:: (symbol "test") (:: (symbol "next") nil)))))
 #eval try_step_n 100 (:: apply (:: list.get_n (:: (:: (symbol "succ") (:: (symbol "succ") (symbol "zero"))) (:: (symbol "test") (:: (symbol "next") (:: (symbol "next next") nil))))))
 
-def list.foldl.my_f : Expr := :: π (:: id nil)
-def list.foldl.my_l : Expr := :: π (:: nil id)
-def list.foldl.mk_nil_handler : Expr := (quote nil)
-
--- with :: match_args (:: x xs) in scope. rec_with, rec_with, zero_handler, succ_handler, x, xs
-def list.foldl.get_head : Expr := (mk_π_skip 4 (:: π (:: id nil)))
-
-def test_match_args : Expr := (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))
-
-example : try_step_n' 10 (:: apply
-  (:: list.foldl.get_head test_match_args)) = .ok (symbol "x") := rfl
-
-def list.foldl.match_args.get_meta_args : Expr :=
-  (:: π (:: id (:: π (:: id (:: π (:: id (:: π (:: id nil))))))))
-
-example : try_step_n' 100 (:: apply (:: list.foldl.match_args.get_meta_args test_match_args))
-  = (.ok (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (symbol "succ_handler"))))) := rfl
-
 /-
-Run apply on the inner list.rec list.rec zero_case succ case
-and around the xs
+(:: apply (:: (:: apply (:: list.foldl (:: both (symbol "init")))) l)) = l
 -/
-def list.foldl.do_app : Expr := :: both (:: (quote apply)
-  (:: both (::
-    (:: both (:: (quote apply)
-      (:: π (:: id (:: π (:: id (:: π (:: id (:: π (:: id nil))))))))))
-    (mk_π_skip 5 id))))
 
-example : try_step_n' 100 (:: apply (:: list.foldl.do_app test_match_args))
-  = (.ok (:: apply (::
-    (:: apply (::
-      (symbol "rec_with")
-      (:: (symbol "rec_with")
-      (:: (symbol "zero_handler")
-      (symbol "succ_handler")))))
-      (symbol "xs")))) := rfl
+def list.foldl.mk_nil_handler := :: π (:: nil const)
+def list.foldl.mk_succ_handler := :: π (:: nil const)
 
-/-
-with f in scope.
-map f on the head element, and leave the rest the same,
-since that is the recursive part.
--/
-def list.foldl.mapper_to_π : Expr :=
-  :: both (:: (quote const)
-  (:: both (:: (quote π) (:: both
-    (:: id (quote id))))))
+example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl.mk_nil_handler (:: (symbol "my_f") (symbol "my_init")))) list.rec_with.test_match_args)) = (.ok (symbol "my_init")) := rfl
 
-def list.foldl.mk_xs_handler : Expr :=
-      (:: both (:: (quote both) (:: both (::
-      mapper_to_π (quote do_app)))))
+#eval try_step_n 100 (:: apply (:: list.rec_with 
 
-example : try_step_n' 20 (:: apply (:: list.foldl.mapper_to_π (symbol "my_f"))) = .ok (:: const (:: π (:: (symbol "my_f") id))) := rfl
-#eval try_step_n' 20 (:: apply (:: (:: apply (:: list.foldl.mk_xs_handler (symbol "my_f"))) (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))))
-
-/-
-do_rec should have f in scope.
--/
-def list.foldl.mk_do_rec : Expr :=
-  (:: both (:: (quote apply) (:: both (::
-    (quote list.rec_with)
-    (:: both (::
-        (quote list.rec_with)
-          (:: both (:: (quote list.foldl.mk_nil_handler) list.foldl.mk_xs_handler))))))))
-
-/-
-(:: apply (:: (:: apply (:: list.foldl id)) l)) = l
-
-list.foldl is curried once. the second argument is the list.
--/
 def list.foldl : Expr :=
-  -- this should be quoted. it does not depend on anything
-  list.foldl.mk_do_rec
-
-#eval try_step_n 100 (:: apply (:: (:: apply (:: list.foldl id)) (:: (symbol "a") (:: (symbol "b") nil))))
+  sorry
 
 /-
 (:: apply (:: list.map (:: f l)))
@@ -501,3 +459,89 @@ set_option maxRecDepth 1000
 example : try_step_n' 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil))) = .ok (symbol "test") := by rfl
 
 end test_list
+
+namespace dead
+
+/-
+(:: apply (:: (:: apply (:: list.map' id))) l) = l
+this is a curried version of list.map.
+-/
+
+def list.foldl.my_f : Expr := :: π (:: id nil)
+def list.foldl.my_l : Expr := :: π (:: nil id)
+def list.foldl.mk_nil_handler : Expr := (quote nil)
+
+-- with :: match_args (:: x xs) in scope. rec_with, rec_with, zero_handler, succ_handler, x, xs
+def list.foldl.get_head : Expr := (mk_π_skip 4 (:: π (:: id nil)))
+
+def test_match_args : Expr := (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))
+
+example : try_step_n' 10 (:: apply
+  (:: list.foldl.get_head test_match_args)) = .ok (symbol "x") := rfl
+
+def list.foldl.match_args.get_meta_args : Expr :=
+  (:: π (:: id (:: π (:: id (:: π (:: id (:: π (:: id nil))))))))
+
+example : try_step_n' 100 (:: apply (:: list.foldl.match_args.get_meta_args test_match_args))
+  = (.ok (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (symbol "succ_handler"))))) := rfl
+
+/-
+Run apply on the inner list.rec list.rec zero_case succ case
+and around the xs
+-/
+def list.foldl.do_app : Expr := :: both (:: (quote apply)
+  (:: both (::
+    (:: both (:: (quote apply)
+      (:: π (:: id (:: π (:: id (:: π (:: id (:: π (:: id nil))))))))))
+    (mk_π_skip 5 id))))
+
+example : try_step_n' 100 (:: apply (:: list.foldl.do_app test_match_args))
+  = (.ok (:: apply (::
+    (:: apply (::
+      (symbol "rec_with")
+      (:: (symbol "rec_with")
+      (:: (symbol "zero_handler")
+      (symbol "succ_handler")))))
+      (symbol "xs")))) := rfl
+
+/-
+with f in scope.
+map f on the head element, and leave the rest the same,
+since that is the recursive part.
+-/
+def list.foldl.mapper_to_π : Expr :=
+  :: both (:: (quote const)
+  (:: both (:: (quote π) (:: both
+    (:: id (quote id))))))
+
+def list.foldl.mk_xs_handler : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply))
+  (:: both (:: (quote both) (:: both (::
+      mapper_to_π (quote do_app)))))))))
+
+example : try_step_n' 20 (:: apply (:: list.foldl.mapper_to_π (symbol "my_f"))) = .ok (:: const (:: π (:: (symbol "my_f") id))) := rfl
+#eval try_step_n' 20 (:: apply (:: (:: apply (:: list.foldl.mk_xs_handler (symbol "my_f"))) (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "zero_handler") (:: (symbol "succ_handler") (:: (symbol "x") (symbol "xs"))))))))
+
+/-
+do_rec should have f in scope.
+-/
+def list.foldl.mk_do_rec : Expr :=
+  (:: both (:: (quote apply) (:: both (::
+    (quote list.rec_with)
+    (:: both (::
+        (quote list.rec_with)
+          (:: both (:: (quote list.foldl.mk_nil_handler) list.foldl.mk_xs_handler))))))))
+
+/-
+(:: apply (:: (:: apply (:: list.foldl id)) l)) = l
+
+list.foldl is curried once. the second argument is the list.
+-/
+def list.foldl : Expr :=
+  -- this should be quoted. it does not depend on anything
+  list.foldl.mk_do_rec
+
+#eval try_step_n 100 (:: apply (:: (:: apply (:: list.foldl id)) (:: (symbol "a") (:: (symbol "b") nil))))
+
+end dead

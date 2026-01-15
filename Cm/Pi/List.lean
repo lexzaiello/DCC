@@ -188,18 +188,17 @@ def list.foldl.mk_succ_handler :=
   (:: both (::
     (q' both) (:: both (::
     ((q' const) b' list.foldl.my_f)
-    (q' (list.foldl.rec_with.get_head b' list.rec_with.advance_tail))))))))))
+    (q' (list.rec_with.advance_tail b' list.foldl.rec_with.get_head))))))))))
 
 example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl.mk_nil_handler (:: (symbol "my_f") (symbol "my_init")))) list.rec_with.test_match_args)) = (.ok (symbol "my_init")) := rfl
 
 example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl.mk_succ_handler (:: (symbol "my_f") (symbol "my_init"))))
   list.rec_with.test_match_args)) = (.ok (:: apply
   (:: (symbol "my_f")
-     (:: (symbol "x")
-        (:: apply
+     (:: (:: apply
            (:: (:: apply
                  (:: (symbol "rec_with") (:: (symbol "rec_with") (:: (symbol "nil_case") (symbol "succ_case")))))
-              (symbol "xs"))))))) := rfl
+              (symbol "xs"))) (symbol "x"))))) := rfl
 
 def list.foldl : Expr :=
   (:: both
@@ -211,8 +210,7 @@ def list.foldl : Expr :=
 set_option maxRecDepth 2000
 
 example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: both nil))) nil)) = (.ok .nil) := rfl
-example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: (:: π (:: (:: both (:: (quote (symbol "acc: ")) id)) (:: both (:: (quote (symbol "x: ")) id)))) nil))) (:: (symbol "a") (:: (symbol "b") nil)))) = (.ok (:: (:: (symbol "acc: ") (symbol "a"))
-  (:: (symbol "x: ") (:: (:: (symbol "acc: ") (symbol "b")) (:: (symbol "x: ") nil))))) := rfl
+example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: (:: π (:: id id)) nil))) (:: (symbol "a") (:: (symbol "b") nil)))) = (.ok <| :: (:: nil (symbol "b")) (symbol "a")) := rfl
 
 /-
 (:: apply (:: list.map (:: f l)))

@@ -263,94 +263,6 @@ example : test_list_map_const (:: both (:: (quote (symbol "hi")) id)) (:: (symbo
 
 end test_list
 
-/-
-Curried by one list.
-Second data list is curried once.
-
-accumulator is (:: remaining results)
-foldl map is (:: both (:: (quote f) (:: 
-zipWith fn l = List.foldl (:: 
-
-(:: apply (:: (:: apply (:: list.zipWith (:: fn l))) l₂))
--/
-
-/-
-foldl gets passed acc x
-acc stores (rem, results)
--/
-def list.zipWith.foldl_rem_head : Expr :=
-  (:: π (:: (:: π (:: (:: π (:: id nil)) nil)) nil))
-
-def list.zipWith.foldl_rem_tail : Expr :=
-  (:: π (:: (:: π (:: (:: π (:: nil id)) nil)) nil))
-
-def list.zipWith.foldl.res : Expr :=
-  (:: π (:: (:: π (:: nil id)) nil))
-
-def list.zipWith.foldl_x : Expr :=
-  (:: π (:: nil id))
-
-def list.zipWith.foldl_fn_args : Expr :=
-  (:: both (:: foldl_x foldl_rem_head))
-
-example : try_step_n' 10 (:: apply (:: list.zipWith.foldl_rem_head (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (symbol "y")) := rfl
-example : try_step_n' 5 (:: apply (:: list.zipWith.foldl_x (:: (symbol "acc") (symbol "x")))) = (.ok (symbol "x")) := rfl
-example : try_step_n' 10 (:: apply (:: list.zipWith.foldl_fn_args (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
-
-def list.zipWith.foldl_fn_lazy_apply : Expr :=
-  (:: both (::
-    (quote both) (:: both (::
-        const -- inject f
-        (quote (:: both (:: foldl_x foldl_rem_head)))))))
-
-def list.zipWith.foldl_fn_mk_apply : Expr :=
-  (:: both (::
-    (quote both) (:: both (::
-    (quote (quote apply)) foldl_fn_lazy_apply))))
-
-example : try_step_n' 14 (:: apply (:: (:: apply
-  (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id))))
-  (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
-
-/-
-res is untouched, so we just make a quoted π expression and prepend it.
--/
-def list.zipWith.foldl_fn_mk_push_advance : Expr :=
-  (:: both (:: (quote both) (:: both (::
-    (quote (list.zipWith.foldl_rem_tail))
-      (:: both (:: (quote both) (:: both (::
-        list.zipWith.foldl_fn_mk_apply
-        (quote list.zipWith.foldl.res)))))))))
-
-example : try_step_n' 100
-  (:: apply
-    (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance (:: π (:: id id)))) (::
-      (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: nil (:: (:: (symbol "x") (symbol "y")) (symbol "acc")))) := rfl
-
-/-
-TODO: foldl doesn't handle nil as well as I would like.
--/
-
-def list.zipWith.mk_foldl_args : Expr :=
-  /-
-   With all args in scope.
-  -/
-
-  -- with f, then (:: acc x) in scope
-  -- applies f to foldl x and acc
-  let apply_x_acc := list.zipWith.foldl_fn_mk_push_advance
-
-  -- with all args in scope
-  (:: π (::
-    apply_x_acc (:: both (:: id (quote nil)))))
-
-def list.zipWith : Expr :=
-  (:: both (:: (quote apply) (:: both (::
-    (quote list.foldl)
-    list.zipWith.mk_foldl_args))))
-
-#eval try_step_n' 200 (:: apply (:: (:: apply (:: list.zipWith (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "b") nil))))) (:: (symbol "c") (:: (symbol "d") nil))))
-
 def list.reverse.state'' : Expr :=
   :: π (:: nil (:: π (:: nil id)))
 
@@ -405,6 +317,104 @@ def list.reverse.mk_rec : Expr :=
 -/
 def list.reverse : Expr :=
   (:: both (:: (quote apply) (:: both (:: list.reverse.mk_rec list.reverse.state₀))))
+
+/-
+Curried by one list.
+Second data list is curried once.
+
+accumulator is (:: remaining results)
+foldl map is (:: both (:: (quote f) (:: 
+zipWith fn l = List.foldl (:: 
+
+(:: apply (:: (:: apply (:: list.zipWith (:: fn l))) l₂))
+-/
+
+/-
+foldl gets passed acc x
+acc stores (rem, results)
+-/
+def list.zipWith.foldl_rem_head : Expr :=
+  (:: π (:: (:: π (:: (:: π (:: id nil)) nil)) nil))
+
+def list.zipWith.foldl_rem_tail : Expr :=
+  (:: π (:: (:: π (:: (:: π (:: nil id)) nil)) nil))
+
+def list.zipWith.foldl.res : Expr :=
+  (:: π (:: (:: π (:: nil id)) nil))
+
+def list.zipWith.foldl_x : Expr :=
+  (:: π (:: nil id))
+
+def list.zipWith.foldl_fn_args : Expr :=
+  (:: both (:: foldl_x foldl_rem_head))
+
+example : try_step_n' 10 (:: apply (:: list.zipWith.foldl_rem_head (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (symbol "y")) := rfl
+example : try_step_n' 5 (:: apply (:: list.zipWith.foldl_x (:: (symbol "acc") (symbol "x")))) = (.ok (symbol "x")) := rfl
+example : try_step_n' 10 (:: apply (:: list.zipWith.foldl_fn_args (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
+
+def list.zipWith.foldl_fn_lazy_apply : Expr :=
+  (:: both (::
+    (quote both) (:: both (::
+        const -- inject f
+        (quote list.zipWith.foldl_fn_args)))))
+
+def list.zipWith.foldl_fn_mk_apply : Expr :=
+  (:: both (::
+    (quote both) (:: both (::
+    (quote (quote apply)) foldl_fn_lazy_apply))))
+
+example : try_step_n' 14 (:: apply (:: (:: apply
+  (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id))))
+  (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
+
+/-
+res is untouched, so we just make a quoted π expression and prepend it.
+-/
+def list.zipWith.foldl_fn_mk_push_advance : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (list.zipWith.foldl_rem_tail))
+      (:: both (:: (quote both) (:: both (::
+        list.zipWith.foldl_fn_mk_apply
+        (quote list.zipWith.foldl.res)))))))))
+
+example : try_step_n' 100
+  (:: apply
+    (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance (:: π (:: id id)))) (::
+      (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: nil (:: (:: (symbol "x") (symbol "y")) (symbol "acc")))) := rfl
+
+/-
+TODO: foldl doesn't handle nil as well as I would like.
+-/
+
+def list.zipWith.mk_foldl_args : Expr :=
+  /-
+   With all args in scope.
+  -/
+
+  -- with f, then (:: acc x) in scope
+  -- applies f to foldl x and acc
+  let apply_x_acc := list.zipWith.foldl_fn_mk_push_advance
+
+  -- with all args in scope
+  (:: π (::
+    apply_x_acc (:: both (:: (list.reverse ∘' Expr.id) (quote nil)))))
+
+def list.zipWith_helper : Expr :=
+  (:: both (:: (quote apply) (:: both (::
+    (quote list.foldl)
+    list.zipWith.mk_foldl_args))))
+
+def list.zipWith : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply)) (:: both (::
+      (quote both) (:: both (::
+        const
+        (quote id)))))))))∘' list.zipWith_helper
+
+#eval try_step_n' 500 (:: apply (:: (:: apply (:: list.zipWith (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "b") nil))))) (:: (symbol "c") (:: (symbol "d") nil))))
+--example : try_step_n' 500 (:: apply (:: (:: apply (:: list.zipWith_helper (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "b") nil))))) (:: (symbol "c") (:: (symbol "d") nil)))) = (.ok (:: nil (:: (:: (symbol "c") (symbol "b")) (:: (:: (symbol "d") (symbol "a")) nil)))) := rfl
+
+
 
 namespace test_list
 

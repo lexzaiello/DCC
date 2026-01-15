@@ -160,16 +160,15 @@ that checks if the argument to (:: const v) is well-typed,
 then returns the type of v.
 -/
 def infer_const.assert_op_ret_ty : Expr :=
-  (:: both (::
-    (quote apply)
-    (:: both (::
-      (quote infer_const.assert_well_typed)
+  (:: both (:: (quote apply) (:: both (::
+      (quote Except'.bind)
       (:: both (::
-        (quote apply) (:: both (::
+        (:: both (:: (quote apply) (:: both (::
           (quote infer_const.assert_op_seq)
-          id))))))))
+          id))))
+        (quote infer_const.assert_well_typed)))))))
 
---#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_ret_ty (:: (symbol "infer") (:: const (symbol "whatever")))))
+#eval try_step_n run 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: const nil))))
 
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") nil)))
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever"))))

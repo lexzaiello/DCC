@@ -198,14 +198,66 @@ def infer_id.bind_args : Expr :=
 def infer_id : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote Except'.bind) infer_id.bind_args))))
 
-#eval try_step_n' 1000 (:: apply (:: infer_id.bind_args (:: infer_nil id)))
-#eval try_step_n' 1000 (:: apply (:: infer_id.assert_op_id (:: infer_nil id)))
-#eval try_step_n' 1000 (:: apply (:: infer_nil (:: infer_nil nil)))
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_id (:: infer_nil id))) (:: infer_nil nil)))
+/-
+eq is not well-typed unless the parameters are supplied.
+I think this is fine ish, but maybe too restrictive.
+
+We default to the yes case, so infer_eq is just the type of the yes case.
+We assert that the type of the no_case is the same.
+
+(:: apply (:: infer_eq (:: global_infer (:: eq (:: yes_case no_case)))))
+-/
+
+def infer_eq.assert_op_eq : Expr :=
+  ((:: apply (:: assert_eq .eq)) ∘' (:: π (:: nil (:: π (:: id nil)))))
+
+def infer_eq.assert_op_eq_seq : Expr :=
+  infer.assert_seq infer_eq.assert_op_eq
+
+def infer_eq.yes_case : Expr :=
+  (:: π (:: nil (:: π (:: nil (:: π (:: id nil))))))
+
+def infer_eq.no_case : Expr :=
+  (:: π (:: nil (:: π (:: nil (:: π (:: nil id))))))
+
+def infer_eq.yes_type : Expr :=
+  (:: both (:: (quote apply)
+    (:: both (:: infer.self
+      (:: both (:: infer.self
+      infer_eq.yes_case))))))
+
+def infer_eq.no_type : Expr :=
+  (:: both (:: (quote apply)
+    (:: both (:: infer.self
+      (:: both (:: infer.self
+      infer_eq.no_case))))))
+
+/-
+Checks that the yes and no case types are equal,
+then returns them.
+-/
+def infer_eq.eq_types : Expr :=
+  (:: both (:: (quote apply)
+    (:: both (::
+      (:: both (:: (quote apply)
+        (:: both (::
+          (quote assert_eq)
+          infer_eq.yes_type))))
+      infer_eq.no_type))))
+
+def infer_eq.bind_args : Expr :=
+  (:: both
+    (:: ($? <| (quote infer_eq.assert_op_eq) ·')
+      (quote (quote infer_eq.eq_types))))
+
+def infer_eq : Expr :=
+  (:: both (:: (quote apply) (:: both (:: (quote Except'.bind) infer_eq.bind_args))))
 
 namespace infer_test
 
 set_option maxRecDepth 5000
+
+example : try_step_n' 1000 (:: apply (:: (:: apply (:: infer_id (:: infer_nil id))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
 
 example : (try_step_n' 500 (:: apply (:: (:: apply (:: infer_const (:: infer_nil (:: const nil)))) (:: infer_nil nil)))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
 

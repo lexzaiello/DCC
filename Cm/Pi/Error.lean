@@ -24,6 +24,13 @@ def Except'.err : Expr :=
   ((quote s_err) ·')
 
 /-
+(:: apply (:: Except'.flag (:: apply (:: Except'.ok (symbol "hi")))))
+= (symbol "ok")
+-/
+def Except'.flag : Expr :=
+  (:: π (:: id nil))
+
+/-
 matches on the ok and error cases.
 expects functions on the inner values of
 ok and err, respectively

@@ -127,4 +127,4 @@ infixl:60 "e>>=" => (fun e f =>
   (:: apply (:: Except'.bind (:: (:: apply (:: Except'.err (symbol "hi"))) id)))
 
 #eval try_step_n run 50 ((:: apply (:: Except'.ok (symbol "hi"))) e>>= id)
-#eval try_step_n run 50 ((:: apply (:: Except'.err (symbol "hi"))) e>>= id)
+#eval try_step_n run 50 ((:: apply (:: Except'.err (:: (symbol "other") (symbol "hi")))) e>>= id)

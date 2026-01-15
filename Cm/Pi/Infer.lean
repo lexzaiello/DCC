@@ -119,6 +119,7 @@ def infer_const.assert_op_const :=
   (:: apply (:: assert_eq .const)) ∘' infer_const.my_op
 
 #eval try_step_n run 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever")))))
+#eval try_step_n run 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
 
 /-
 With all args in scope.
@@ -150,6 +151,8 @@ def infer_const.assert_op_seq : Expr :=
       (:: both (:: (quote const) infer_const.assert_op_seq.wrap_ok))))))))
 
 #eval try_step_n run 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever")))))
+#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
+#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
 
 /-
 infer const produces a curried function

@@ -19,7 +19,10 @@ def assert_nat_plus (m n : ℕ) (expected : ℕ) (max_steps : ℕ := 100) : Bool
     |> ((·.getD false) <$> ·)
     |> (·.toOption.getD false)
 
+
+
 def main := lspecIO $ .ofList [
     ("Nat", [test "Nat.plus 1 100 is 101" (assert_nat_plus 1 100 101 100)
       , test "Nat.plus 20 19 is 39" (assert_nat_plus 20 19 39 5000)]),
+    ("List", [test "List.get_n'" ((try_step_n run 100 (:: apply (:: (:: apply (:: list.get_n' (:: (symbol "succ") (symbol "zero")))) (:: (symbol "test") (:: (symbol "b") nil))))) == Except.ok (symbol "b"))])
   ]

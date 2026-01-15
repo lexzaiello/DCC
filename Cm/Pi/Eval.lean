@@ -1,5 +1,4 @@
 import Mathlib.Data.Nat.Notation
-import Cm.EvalUtil
 import Cm.Pi.Ast
 
 /-
@@ -122,6 +121,15 @@ def run (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
     pure <| :: x' xs)
   | e => (.error <| .no_rule e)
 
+def try_step_n (n : ℕ) (e : Expr) (with_logs : Bool := false) : Except Error Expr := do
+  if n = 0 then
+    pure e
+  else
+    let e' ← run e
+    (try_step_n (n - 1) e' with_logs) <|> (pure e')
+
+def do_step (e : Expr) (with_logs : Bool := false):= try_step_n 20 e with_logs
+
 /-
 A basic test of the eval function:
 - projecting on a list
@@ -132,7 +140,7 @@ def my_eval_test : Except Error Expr := do
 
   let my_data : Expr := :: (symbol "a") (:: (symbol "b") nil)
 
-  do_step run (:: apply (:: my_proj my_data))
+  do_step (:: apply (:: my_proj my_data))
 
 /-
 Test showing that we can replace the nil value in a list
@@ -145,7 +153,7 @@ def my_eval_test₂ : Except Error Expr := do
 
   let my_data : Expr := :: (symbol "a") (:: (symbol "b") nil)
 
-  do_step run (:: apply (:: my_proj my_data))
+  do_step (:: apply (:: my_proj my_data))
 
 #eval my_eval_test
 #eval my_eval_test₂

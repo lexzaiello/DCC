@@ -1,5 +1,4 @@
 import Mathlib.Data.Nat.Notation
-import Cm.EvalUtil
 
 /-
 This file used to live in Eval6.lean. I have split it up for organization.

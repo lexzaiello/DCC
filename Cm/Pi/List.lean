@@ -288,8 +288,15 @@ def list.zipWith.foldl_fn_args : Expr :=
 
 example : try_step_n' 3 (:: apply (:: list.zipWith.foldl_rem_head (:: (:: (symbol "y") (symbol "acc")) (symbol "x")))) = (.ok (symbol "y")) := rfl
 example : try_step_n' 5 (:: apply (:: list.zipWith.foldl_x (:: (symbol "acc") (symbol "x")))) = (.ok (symbol "x")) := rfl
-
 example : try_step_n' 4 (:: apply (:: list.zipWith.foldl_fn_args (:: (:: (symbol "y") (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
+
+def list.zipWith.foldl_fn_mk_apply : Expr :=
+  (:: both (::
+    (quote both) (:: both (::
+        const -- inject f
+        (quote (:: both (:: foldl_x foldl_rem_head)))))))
+
+#eval try_step_n' 100 (:: apply (:: (:: apply (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id)))) (:: (:: (symbol "y") (symbol "acc")) (symbol "x"))))
 
 def list.zipWith.mk_foldl_args : Expr :=
   /-

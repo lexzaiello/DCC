@@ -26,29 +26,10 @@ def TData : Expr := .symbol "Data"
 def TFail : Expr := .symbol "sorry"
 
 /-
-Makes an except with an error messages.
--/
-def raise_err (msg : String) : Expr :=
-  quote <| (:: apply (:: Except'.err (symbol msg)))
-
-/-
-Accepts an "actual" value at runtime as an input,
-and outputs an Except "expected {expected}, but found {acutal}"
--/
-def expected_but_found (expected : Expr) : Expr :=
-  (:: both (:: (quote apply)
-    (:: both (:: (quote Except'.err)
-    (:: both (:: (quote <| symbol s!"expected '{expected}', but found: ")
-      id))))))
-
-#eval do_step run (:: apply (:: (expected_but_found (symbol "stuff")) (symbol "other stuff")))
-
-/-
 More dynamic version of expected_but_found.
 Curried. Expects the expected value as the first argument.
 
 Just makes an error message.
-
 -/
 
 def expected_but_found' : Expr :=
@@ -102,6 +83,20 @@ def infer_nil : Expr :=
       :: (:: eq (:: (quote <| (:: apply (:: Except'.ok TData))) (:: apply (:: expected_but_found' nil))))
       .nil)
     id)))
+
+/-
+Note: this is not safe generally.
+Asserts that the argument is well-typed.
+Do not run this unless chaining.
+-/
+def infer.assert_well_typed_unsafe :=
+  (:: both (::
+    (quote apply)
+    (:: both (::
+        infer.self
+        (:: both (::
+          infer.self
+          infer.x))))))
 
 /-
 (:: apply (:: infer (:: infer (:: const x))))
@@ -164,10 +159,17 @@ infer const produces a curried function
 that checks if the argument to (:: const v) is well-typed,
 then returns the type of v.
 -/
-def infer_const : Expr :=
-  
-  -- if the op is "const", then fetch our infer component and run that
-  sorry
+def infer_const.assert_op_ret_ty : Expr :=
+  (:: both (::
+    (quote apply)
+    (:: both (::
+      (quote infer_const.assert_well_typed)
+      (:: both (::
+        (quote apply) (:: both (::
+          (quote infer_const.assert_op_seq)
+          id))))))))
+
+--#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_ret_ty (:: (symbol "infer") (:: const (symbol "whatever")))))
 
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") nil)))
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever"))))

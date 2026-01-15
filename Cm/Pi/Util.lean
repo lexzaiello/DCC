@@ -45,9 +45,16 @@ ending with the last expression.
 Does not both quoted exprs.
 -/
 def mk_both : Expr → Expr
-  | nil => nil
   | :: const e => :: const e
   | :: x xs => :: both (:: (mk_both x) (mk_both xs))
+  | e => e
+
+/-
+Inserts a quoted both after every both
+in a tree.
+-/
+def nest_both : Expr → Expr
+  | :: both xs => :: both (:: (quote both) (nest_both xs))
   | e => e
 
 prefix:60 "q'" => quote

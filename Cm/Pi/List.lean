@@ -346,11 +346,11 @@ def list.zipWith.foldl_x : Expr :=
   (:: π (:: nil id))
 
 def list.zipWith.foldl_fn_args : Expr :=
-  (:: both (:: foldl_x foldl_rem_head))
+  (:: both (:: foldl_rem_head foldl_x))
 
 example : try_step_n' 10 (:: apply (:: list.zipWith.foldl_rem_head (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (symbol "y")) := rfl
 example : try_step_n' 5 (:: apply (:: list.zipWith.foldl_x (:: (symbol "acc") (symbol "x")))) = (.ok (symbol "x")) := rfl
-example : try_step_n' 10 (:: apply (:: list.zipWith.foldl_fn_args (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
+example : try_step_n' 10 (:: apply (:: list.zipWith.foldl_fn_args (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "y") (symbol "x"))) := rfl
 
 def list.zipWith.foldl_fn_lazy_apply : Expr :=
   (:: both (::
@@ -365,7 +365,7 @@ def list.zipWith.foldl_fn_mk_apply : Expr :=
 
 example : try_step_n' 14 (:: apply (:: (:: apply
   (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id))))
-  (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "x") (symbol "y"))) := rfl
+  (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "y") (symbol "x"))) := rfl
 
 /-
 res is untouched, so we just make a quoted π expression and prepend it.
@@ -380,7 +380,7 @@ def list.zipWith.foldl_fn_mk_push_advance : Expr :=
 example : try_step_n' 100
   (:: apply
     (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance (:: π (:: id id)))) (::
-      (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: nil (:: (:: (symbol "x") (symbol "y")) (symbol "acc")))) := rfl
+      (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: nil (:: (:: (symbol "y") (symbol "x")) (symbol "acc")))) := rfl
 
 /-
 TODO: foldl doesn't handle nil as well as I would like.
@@ -411,7 +411,7 @@ def list.zipWith : Expr :=
         const
         (quote id)))))))))∘' list.zipWith_helper
 
-#eval try_step_n' 500 (:: apply (:: (:: apply (:: list.zipWith (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "b") nil))))) (:: (symbol "c") (:: (symbol "d") nil))))
+#eval try_step_n' 500 (:: apply (:: (:: apply (:: list.zipWith (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "c") nil))))) (:: (symbol "b") (:: (symbol "d") nil))))
 --example : try_step_n' 500 (:: apply (:: (:: apply (:: list.zipWith_helper (:: (:: π (:: id id)) (:: (symbol "a") (:: (symbol "b") nil))))) (:: (symbol "c") (:: (symbol "d") nil)))) = (.ok (:: nil (:: (:: (symbol "c") (symbol "b")) (:: (:: (symbol "d") (symbol "a")) nil)))) := rfl
 
 

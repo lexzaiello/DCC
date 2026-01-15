@@ -22,13 +22,14 @@ inductive Expr where
   | nil    : Expr
   | symbol : String
     → Expr
-deriving Repr, BEq
+deriving Repr, BEq, DecidableEq
 
 inductive Error where
   | stuck      : Expr → Error
   | no_rule    : Expr → Error
   | cant_curry : Expr → Error
   | var_in_output : Error -- for lambda translation
+deriving BEq, DecidableEq
 
 open Expr
 

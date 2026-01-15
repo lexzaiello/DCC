@@ -290,14 +290,24 @@ with third argument type as the input.
 def infer_eq.mk_future_assert_type : Expr :=
   $? (assert_eq ·')
 
+def infer_eq.inject_future_assert_eq : Expr :=
+  (:: both (:: (quote both) (:: both (:: (quote (quote apply))
+      (:: both (:: (quote both) (:: both (:: (quote (quote assert_eq)) id))))))))
+
+def infer_eq.inject_future_infer : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote (symbol "prefix")))
+      (:: both (:: (quote both) (:: both (::
+        Expr.id
+        (quote (quote (symbol "later infer")))))))))))
+
 /-
 Checks that the next argument has the expected type.
 -/
 def infer_eq.mk_future_assert_eq₀ : Expr :=
   (infer_eq.assert_op_eq_seq
     e>=> infer_eq.eq_types
-    e>=> (:: both (:: (quote both) (:: both (:: (quote (quote apply))
-      (:: both (:: (quote both) (:: both (:: (quote (quote assert_eq)) id)))))))))
+    e>=> (infer_eq.inject_future_infer ∘' inject_future_assert_eq))
 
 /-
 TODO: later, we might want to allow yes and no to have different types.

@@ -298,10 +298,14 @@ def infer_eq.inject_future_infer : Expr :=
   (:: both (:: (quote both) (:: both (::
     (quote (quote both))
     (:: both (:: (quote both) (:: both (::
-      (quote (quote (symbol "prefix")))
+      (quote (quote (quote apply)))
         (:: both (:: (quote both) (:: both (::
-          Expr.id
-          (quote (quote (symbol "later infer")))))))))))))))
+        (quote (quote both))
+        (:: both (:: (quote both) (:: both (::
+        (:: both (:: (quote both) (:: both (::
+            (quote (quote const))
+            Expr.id))))
+          (quote (quote infer.assert_well_typed_unsafe))))))))))))))))))
 
 /-
 Checks that the next argument has the expected type.
@@ -321,7 +325,7 @@ Note: eq_types won't produce an ok'd value.
 It unwraps the types.
 -/
 
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_eq.mk_future_assert_eq₀) (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))
+#eval try_step_n' 2000 (:: apply (:: (:: apply (:: (:: apply (:: (infer_eq.mk_future_assert_eq₀) (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil)))
 #eval try_step_n' 1000 (:: apply (:: (infer_eq.assert_op_eq_seq e>=> infer_eq.eq_types) (:: infer_id (:: eq (:: id id)))))
 #eval try_step_n' 1000 (:: apply (:: (infer_eq.assert_op_eq_seq e>=> infer_eq.eq_types) (:: infer_id (:: eq (:: id id)))))
 #eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_eq.mk_future_assert_type (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil)))

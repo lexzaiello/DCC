@@ -39,11 +39,11 @@ Just makes an error message.
 -/
 
 def expected_but_found' : Expr :=
-  let expected := Expr.id
-
   (λ' 1 (λ' 2 (::
-    (λ' 1 (:: (quote const) (:: both (:: (quote <| symbol "expected:") expected))))
-    (quote <| (:: both (:: (quote <| symbol "but found: ") id))))))
+    (λ' 1 (::
+      (quote const)
+      (λ' 1 (:: (quote <| symbol "expected:") (var.read 0)))))
+        (quote <| (λ' 1 (:: (quote <| symbol "but found: ") (var.read 0)))))))
 
 def expected_but_found : Expr :=
   let expected := Expr.id

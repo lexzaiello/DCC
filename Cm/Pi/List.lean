@@ -315,30 +315,21 @@ example : try_step_n' 14 (:: apply (:: (:: apply
 /-
 res is untouched, so we just make a quoted π expression and prepend it.
 -/
-def list.zipWith.foldl_fn_mk_push_advance' : Expr :=
+def list.zipWith.foldl_fn_mk_push_advance : Expr :=
   (:: both (:: (quote both) (:: both (::
     (quote (list.zipWith.foldl_rem_tail))
       (:: both (:: (quote both) (:: both (::
         list.zipWith.foldl_fn_mk_apply
         (quote list.zipWith.foldl.res)))))))))
 
-/-def list.zipWith.foldl_fn_mk_push_advance : Expr :=
-  (:: both (::
-    (quote both) (:: both (::
-    (quote (quote apply))
-  (:: both (::
-    (quote both) (:: both (::
-        (quote both)
-        (:: both (::
-          (quote (quote π)) (:: both (::
-          (quote both)
-          (:: both (::
-            (quote (quote (:: π (:: nil id)))) -- tail of the remaining
-            (:: both (:: (quote both) (:: both (:: list.zipWith.foldl_fn_mk_apply (quote id)))))))))))))))))))-/
-
-#eval try_step_n' 100
+example : try_step_n' 100
   (:: apply
-    (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance' (:: π (:: id id)))) (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x"))))
+    (:: (:: apply (:: list.zipWith.foldl_fn_mk_push_advance (:: π (:: id id)))) (::
+      (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: nil (:: (:: (symbol "x") (symbol "y")) (symbol "acc")))) := rfl
+
+/-
+TODO: foldl doesn't handle nil as well as I would like.
+-/
 
 def list.zipWith.mk_foldl_args : Expr :=
   /-
@@ -351,7 +342,7 @@ def list.zipWith.mk_foldl_args : Expr :=
 
   -- with all args in scope
   (:: π (::
-    apply_x_acc id))
+    apply_x_acc (:: both (:: id (quote nil)))))
 
 def list.zipWith : Expr :=
   (:: both (:: (quote apply) (:: both (::

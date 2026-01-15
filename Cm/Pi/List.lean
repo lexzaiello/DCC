@@ -208,9 +208,11 @@ def list.foldl : Expr :=
       (:: (quote list.rec_with)
       (:: both (:: list.foldl.mk_nil_handler list.foldl.mk_succ_handler))))))))
 
-example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: both nil))) nil)) = (.ok .nil) := rfl
+set_option maxRecDepth 2000
 
-#eval try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: (:: π (:: (:: both (:: (quote (symbol "acc: ")) id)) (:: both (:: (quote (symbol "x: ")) id)))) nil))) (:: (symbol "a") (:: (symbol "b") nil))))
+example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: both nil))) nil)) = (.ok .nil) := rfl
+example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: (:: π (:: (:: both (:: (quote (symbol "acc: ")) id)) (:: both (:: (quote (symbol "x: ")) id)))) nil))) (:: (symbol "a") (:: (symbol "b") nil)))) = (.ok (:: (:: (symbol "acc: ") (symbol "a"))
+  (:: (symbol "x: ") (:: (:: (symbol "acc: ") (symbol "b")) (:: (symbol "x: ") nil))))) := rfl
 
 /-
 (:: apply (:: list.map (:: f l)))
@@ -493,7 +495,6 @@ def rec_with_descent : Except Error Expr := do
 
 #eval rec_with_descent
 
-set_option maxRecDepth 1000
 example : try_step_n' 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil))) = .ok (symbol "test") := by rfl
 
 end test_list

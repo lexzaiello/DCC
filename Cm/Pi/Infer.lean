@@ -39,8 +39,6 @@ def expected_but_found' : Expr :=
     (:: both (:: (quote const) (:: both (:: (quote <| symbol "expected:") expected))))
     (quote <| (:: both (:: (quote <| symbol "but found: ") id)))))))
 
-#eval do_step run (:: apply (:: (:: apply (:: expected_but_found' const)) nil))
-
 /-
 Checks whether a later curried argument
 is equal to the first argument.
@@ -56,9 +54,6 @@ def assert_eq : Expr :=
   (:: both
     (:: (:: both (:: (quote eq) (:: both (:: eq_ok
     (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found') my_v)))))))))))) my_v))
-
-#eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) nil))
-#eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) .const))
 
 /-def expected_but_found' : Expr :=
   let expected := id
@@ -115,9 +110,6 @@ Checks that the operator is "const".
 def infer_const.assert_op_const :=
   (:: apply (:: assert_eq .const)) ∘' infer_const.my_op
 
-#eval try_step_n run 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever")))))
-#eval try_step_n run 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
-
 /-
 With all args in scope.
 
@@ -131,8 +123,6 @@ def infer_const.assert_well_typed :=
         (:: both (::
           infer.self
           infer_const.my_data))))))
-
-#eval try_step_n run 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil))))
 
 def infer_const.assert_op_seq.wrap_ok : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote Except'.ok) id))))
@@ -150,10 +140,6 @@ but gives the original arguments in the except.ok value
 def infer_const.assert_op_seq : Expr :=
   infer.assert_seq infer_const.assert_op_const
 
-#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever")))))
-#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
-#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
-
 /-
 infer const produces a curried function
 that checks if the argument to (:: const v) is well-typed,
@@ -164,12 +150,29 @@ def infer_const.assert_op_ret_ty : Expr :=
         ($? <| (quote infer_const.assert_op_seq) ·')
         (quote infer_const.assert_well_typed)))
 
-#eval try_step_n run 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: const nil))))
-#eval try_step_n run 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: (symbol "not const") nil))))
-
 /-def infer_const : Expr :=
   (:: both (:: (quote apply) (:: both-/
+
+namespace infer_test
+
+#eval do_step run (:: apply (:: (:: apply (:: expected_but_found' const)) nil))
+
+#eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) nil))
+#eval try_step_n run 100 (:: apply (:: (:: apply (:: assert_eq .const)) .const))
+
+#eval try_step_n run 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever")))))
+#eval try_step_n run 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
+
+#eval try_step_n run 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil))))
+
+#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever")))))
+#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
+#eval try_step_n run 100 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever")))))
+
+#eval try_step_n run 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: const nil))))
+#eval try_step_n run 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: (symbol "not const") nil))))
 
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") nil)))
 #eval do_step run (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever"))))
 
+end infer_test

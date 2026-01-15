@@ -2,6 +2,11 @@ name = "Cm"
 version = "0.1.0"
 defaultTargets = ["Cm"]
 
+[[require]]
+name = "lspec"
+git = "https://github.com/yatima-inc/lspec.git"
+rev = "main"
+
 [[lean_lib]]
 name = "Cm"
 

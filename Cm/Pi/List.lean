@@ -2,6 +2,7 @@ import Cm.Pi.Ast
 import Cm.Pi.Eval
 import Cm.Pi.Util
 import Cm.Pi.Nat
+import Cm.Pi.Curry
 
 open Expr
 
@@ -534,16 +535,14 @@ example : rec_with_descent = (.ok (:: (symbol "discard") nil)) := rfl
 example : try_step_n' 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil))) = .ok (symbol "test") := by rfl
 
 def point_free_plus : Expr :=
-  (!curry (:: both (:: (quote apply) (:: both (:: (quote nat.plus) id)))))
-
-#eval try_step_n' 200 (:: apply (:: (:: apply (:: point_free_plus (:: succ (:: succ zero)))) (:: succ zero)))
+  (:: apply (:: curry (:: both (:: (quote apply) (:: both (:: (quote nat.plus) id))))))
 
 def anon_map_plus_5 (max_steps : ℕ := 300) : Except Error Expr := do
   let curr := (:: apply (::
-    (!curry (:: both (:: (quote apply) (:: both (:: (quote list.map) id)))))
+    (:: apply (:: curry (:: both (:: (quote apply) (:: both (:: (quote list.map) id))))))
       -- (+ 5)
-    (:: apply (:: (!curry (:: both (:: (quote apply)
-      (:: both (:: (quote nat.plus) id))))) (Nat'.of_nat 5)))))
+    (:: apply (:: (:: apply (:: curry (:: both (:: (quote apply)
+      (:: both (:: (quote nat.plus) id)))))) (Nat'.of_nat 5)))))
   try_step_n' max_steps (:: apply (:: curr (:: (Nat'.of_nat 1) (:: (Nat'.of_nat 2) (:: (Nat'.of_nat 3) nil)))))
 
 example : (Expr.as_list >=> (List.mapM Nat'.to_nat)) <$> (anon_map_plus_5 298) = (.ok (some [6, 7, 8])) := rfl

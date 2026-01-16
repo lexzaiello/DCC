@@ -61,15 +61,6 @@ example : try_step_n' 10 (:: apply (:: (:: apply
 
 example : try_step_n' 1 (:: apply (:: (λ' 0 (var.read 0)) (quote (symbol "var 0")))) = (.ok (:: const (symbol "var 0"))) := rfl
 
-/-
-(:: apply (:: (:: apply (:: (:: apply (:: fun.comp f)) g)) x))
-= (:: apply (:: f (:: apply (:: g x))))
--/
-def func.comp : Expr := (λ' 1 (λ' 2 (λ' 3 (:: ($n 3) (λ' 3 (:: (var.store 3) (λ' 2 (:: ($n 2) (λ' 2 (:: (var.read 1) (var.read 0)))))))))))
---def func.comp : Expr := (λ' 1 (:: (λ' 1 (λ' 1 (var.read 3))) (var.store 0)))
-
-#eval try_step_n 500 (:: apply (:: (:: apply (:: (:: apply (:: func.comp id)) id)) (symbol "hi")))
-
 --infixr:65 "∘''" => 
 
 /-

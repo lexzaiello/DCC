@@ -87,6 +87,23 @@ def curry : Expr := (:: both (:: (quote both)
         (:: both (:: (quote (quote both)) (:: both (:: (quote both)
           (:: both (:: (:: both (:: (quote const) const)) curry.push_future_arg))))))))))))))))
 
+/-
+(:: apply (:: (:: apply (:: (:: apply (:: func.comp f)) g)) x)) = (:: apply (:: f (:: apply (:: g x))))
+curry curry
+f : β → δ
+g : α → β
+α → δ
+-/
+def func.comp : Expr :=
+  (:: apply (:: curry (:: apply
+    (:: curry (:: both (:: (quote apply) (:: both (::
+      (:: π (:: (:: π (:: id nil)) nil))
+      (:: both (:: (quote apply) (:: π (:: (:: π (:: nil id)) id))))))))))))
+
+-- :: apply (:: (:: id id) (symbol "hi"))
+
+#eval try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: func.comp id)) id)) (symbol "hi")))
+
 example : try_step_n' 50 (:: apply (:: (:: apply (:: (:: apply (:: curry.push_future_arg (args.app (:: (quote (symbol "arg: ")) (:: (args.read 0 id) nil))))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
   = (.ok (:: (symbol "hi") (:: (symbol "other arg") (:: (symbol "other other arg") nil)))) := rfl
 
@@ -104,4 +121,6 @@ example : try_step_n' 100 (:: apply (::
 example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: curry (args.read 0 id))) (symbol "arg 0"))) (symbol "rest args")))
    = (.ok (symbol "arg 0")) := rfl
 
-example : try_step_n' 51 (:: apply (:: (:: apply (:: (:: apply (:: (:: apply (:: curry (:: apply (:: curry (args.read 1 id))))) (symbol "arg 0"))) (symbol "rest args"))) (:: (symbol ("other arg")) nil))) = (.ok (symbol "other arg")) := rfl
+example : try_step_n' 51 (:: apply (:: (:: apply (::
+  (:: apply (:: (:: apply (:: curry (:: apply (:: curry (args.read 1 id))))) (symbol "arg 0")))
+    (symbol "rest args"))) (:: (symbol ("other arg")) nil))) = (.ok (symbol "other arg")) := rfl

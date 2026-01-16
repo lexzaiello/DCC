@@ -43,32 +43,41 @@ TODO:
 
 def mk_π_skip (n : ℕ) (at_end : Expr) : Expr :=
   match n with
-  | .zero => at_end
-  | .succ n =>
-    :: π (:: nil (mk_π_skip n at_end))
+  | .zero => :: π (:: at_end nil)
+  | n => (List.replicate n nil).foldr (fun e acc => (:: π (:: e acc))) (:: π (:: at_end nil))
 
-example : mk_π_skip 2 (:: π (:: id nil)) = (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) := rfl
+example : mk_π_skip 2 id = (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) := rfl
 
 def args.read : ℕ → Expr := (mk_π_skip · id)
 
-example : try_step_n' 5 (:: apply (:: (args.read 2) (:: (symbol "a") (:: (symbol "b") (symbol "c"))))) = (.ok (symbol "c")) := rfl
+example : try_step_n' 5 (:: apply (:: (args.read 0) (:: (symbol "a") nil))) = (.ok (symbol "a")) := rfl
+example : try_step_n' 5 (:: apply (:: (args.read 2) (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil))))) = (.ok (symbol "c")) := rfl
+example : try_step_n' 5 (:: apply (:: (args.read 0) (:: (symbol "a") (:: (symbol "b") (symbol "c"))))) = (.ok (symbol "a")) := rfl
 
 def args.push : Expr := (:: both (::
   (quote both) (:: both (::
     const
     (quote id)))))
 
-example : try_step_n' 5 (:: apply (:: (:: apply (:: args.push (symbol "arg"))) (symbol "args"))) = (.ok (:: (symbol "arg") (symbol "args"))) := rfl
+example : try_step_n' 5
+  (:: apply
+    (:: (:: apply (:: args.push (symbol "arg"))) (:: (symbol "args") nil))) =
+    (.ok (:: (symbol "arg") (:: (symbol "args") nil))) := rfl
 
 def args.app (e : Expr) :=
   match e with
+  | :: x nil => (:: both (:: (:: both (:: (quote apply) (:: both (:: (quote x) id)))) (quote nil)))
   | :: x xs => (:: both (::
     (:: both (:: (quote apply) (:: both (:: (quote x) id))))
     (args.app xs)))
-  | nil => (quote nil)
-  | e => (:: both (:: (quote apply) (:: both (:: (quote e) id))))
+  | e => (quote e)
 
 prefix:60 "$args" => args.app
+
+def args.app.test_args : Expr := (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
+def args.app.test_ops : Expr := (:: (args.read 0) (:: (args.read 1) (:: (args.read 2) nil)))
+
+example : try_step_n' 10 (:: apply (:: ($args args.app.test_ops) args.app.test_args)) = (.ok args.app.test_args) := rfl
 
 -- This is essentially the I rule in the compilation from lambda calculus to SK combiantors
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))

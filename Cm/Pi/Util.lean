@@ -95,12 +95,15 @@ def lam : Expr := (:: both (:: (quote both)
         (:: both (:: (quote (quote both)) (:: both (:: (quote both)
           (:: both (:: (:: both (:: (quote const) const)) lam.push_future_arg))))))))))))))))
 
-example : try_step_n' 50 (:: apply (:: (:: apply (:: (:: apply (:: lam.push_future_arg ($args (:: (quote (symbol "arg: ")) (:: (args.read 0) nil))))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
+prefix:60 "!λ" => (fun e => (:: apply (:: lam e)))
+prefix:60 "$f" => (fun e => (:: apply e))
+
+example : try_step_n' 50 ($f (:: ($f (:: ($f (:: lam.push_future_arg ($args (:: (quote (symbol "arg: ")) (:: (args.read 0) nil))))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
   = (.ok (:: (symbol "hi") (:: (symbol "other arg") (:: (symbol "other other arg") nil)))) := rfl
 
 set_option maxRecDepth 1000
 
-example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: lam ($args (:: (quote (symbol "ctx: ")) (:: id nil))))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil)))) = (.ok (:: (symbol "ctx: ") (:: (:: (symbol "hi") (:: (symbol "other arg") (:: (symbol "other other arg") nil))) nil))) := rfl
+example : try_step_n' 100 ($f (:: ($f (:: (!λ ($args (:: (quote (symbol "ctx: ")) (:: id nil)))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil)))) = (.ok (:: (symbol "ctx: ") (:: (:: (symbol "hi") (:: (symbol "other arg") (:: (symbol "other other arg") nil))) nil))) := rfl
 
 -- This is essentially the I rule in the compilation from lambda calculus to SK combiantors
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))
@@ -181,7 +184,6 @@ infixr:65 "∘'" => (fun (f : Expr) (g : Expr) => (:: both (:: (quote apply)
       (quote g)
       Expr.id)))))))))
 
-notation "$!" => Expr.cons apply
 notation "$?" => (fun e => (:: both (:: (quote apply) e))) -- for applying later
 
 def both_from_list (n_repeat : ℕ) : List Expr → Expr

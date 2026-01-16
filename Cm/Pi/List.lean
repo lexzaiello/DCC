@@ -546,7 +546,7 @@ def anon_map_plus_5 : Except Error Expr := do
       (:: both (:: (quote nat.plus) id))))) (Nat'.of_nat 5)))))
   try_step_n' 1000 (:: apply (:: curr (:: (Nat'.of_nat 1) (:: (Nat'.of_nat 2) (:: (Nat'.of_nat 3) nil)))))
 
-#eval anon_map_plus_5
+#eval (Expr.as_list >=> (List.mapM Nat'.to_nat)) <$> anon_map_plus_5
 
 
 end test_list

@@ -100,9 +100,8 @@ def func.comp : Expr :=
       (:: π (:: (:: π (:: id nil)) nil))
       (:: both (:: (quote apply) (:: π (:: (:: π (:: nil id)) id))))))))))))
 
--- :: apply (:: (:: id id) (symbol "hi"))
-
-#eval try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: func.comp id)) id)) (symbol "hi")))
+set_option maxRecDepth 1000
+example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: func.comp id)) id)) (symbol "hi"))) = (.ok (symbol "hi")) := rfl
 
 example : try_step_n' 50 (:: apply (:: (:: apply (:: (:: apply (:: curry.push_future_arg (args.app (:: (quote (symbol "arg: ")) (:: (args.read 0 id) nil))))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
   = (.ok (:: (symbol "hi") (:: (symbol "other arg") (:: (symbol "other other arg") nil)))) := rfl

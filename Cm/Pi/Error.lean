@@ -3,6 +3,7 @@ import Cm.Pi.Ast
 import Cm.Pi.Eval
 import Cm.Pi.Util
 import Cm.Pi.List
+import Cm.Pi.Curry
 
 open Expr
 
@@ -127,6 +128,26 @@ def Except'.bind :=
   (:: both (:: (quote apply)
     (:: both (::
       (:: both (:: (quote apply) Except'.bind.my_match)) Except'.bind.my_except))))
+
+/-
+Left-to-right composition of kleisli arrows.
+Curried thrice. Expects the two except-monadic actions,
+then the value.
+-/
+def Except'.kleisliRight.action₁ : Expr :=
+  (:: both (:: (quote apply) (:: both
+        (:: (args.read 0 (:: π (:: id nil))) (args.read 1 id)))))
+
+def Except'.kleisliRight : Expr :=
+  (:: apply (:: curry (:: apply (:: curry
+    (:: both (:: (quote apply) (:: both (:: (quote Except'.bind)
+      (:: both (:: Except'.kleisliRight.action₁ (args.read 0 (:: π (:: nil id)))))))))))))
+
+/-
+(Except.ok >=> Except.ok) "hi" = ok "hi"
+-/
+#eval try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: Except'.kleisliRight Except'.ok))
+  Except'.ok)) (symbol "hi")))
 
 infixl:60 "e>>=" => (fun e f =>
   (:: apply (:: Except'.bind (:: e f))))

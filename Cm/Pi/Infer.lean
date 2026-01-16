@@ -331,15 +331,11 @@ def infer_eq : Expr :=
 /-
 This is essentially the same as the infer_eq type, but it only takes one argument.
 -/
-/-def infer_both_store : Expr :=
-  (λ' 1 (:: (:: (var.store 0) ((infer.assert_op_seq .both)
-    e>=> infer_eq.eq_types)) (var.read 0)))
-
 def infer_both : Expr :=
   (λ' 1 (:: (λ' 1 (var.read 1)) (:: (var.store 0) ((infer.assert_op_seq .both)
-    e>=> infer_eq.eq_types))))-/
+    e>=> infer_eq.eq_types))))
 
---#eval try_step_n' 2000 (:: apply (:: infer_both_store (:: infer_id (:: both (:: id id)))))
+#eval try_step_n' 2000 (:: apply (:: infer_both_store (:: infer_id (:: both (:: id id)))))
 
 namespace infer_test
 

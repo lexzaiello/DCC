@@ -147,7 +147,7 @@ def Except'.kleisliRight : Expr :=
 (Except.ok >=> Except.ok) "hi" = ok "hi"
 -/
 #eval try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: Except'.kleisliRight Except'.ok))
-  Except'.ok)) (symbol "hi")))
+  Except'.ok)) (:: (symbol "hi") nil)))
 
 infixl:60 "e>>=" => (fun e f =>
   (:: apply (:: Except'.bind (:: e f))))

@@ -538,15 +538,15 @@ def point_free_plus : Expr :=
 
 #eval try_step_n' 200 (:: apply (:: (:: apply (:: point_free_plus (:: succ (:: succ zero)))) (:: succ zero)))
 
-def anon_map_plus_5 : Except Error Expr := do
+def anon_map_plus_5 (max_steps : ℕ := 300) : Except Error Expr := do
   let curr := (:: apply (::
     (!curry (:: both (:: (quote apply) (:: both (:: (quote list.map) id)))))
       -- (+ 5)
     (:: apply (:: (!curry (:: both (:: (quote apply)
       (:: both (:: (quote nat.plus) id))))) (Nat'.of_nat 5)))))
-  try_step_n' 1000 (:: apply (:: curr (:: (Nat'.of_nat 1) (:: (Nat'.of_nat 2) (:: (Nat'.of_nat 3) nil)))))
+  try_step_n' max_steps (:: apply (:: curr (:: (Nat'.of_nat 1) (:: (Nat'.of_nat 2) (:: (Nat'.of_nat 3) nil)))))
 
-#eval (Expr.as_list >=> (List.mapM Nat'.to_nat)) <$> anon_map_plus_5
+#eval (Expr.as_list >=> (List.mapM Nat'.to_nat)) <$> (anon_map_plus_5 298)
 
 
 end test_list

@@ -64,6 +64,9 @@ example : try_step_n' 5
     (:: (:: apply (:: args.push (symbol "arg"))) (:: (symbol "args") nil))) =
     (.ok (:: (symbol "arg") (:: (symbol "args") nil))) := rfl
 
+example : try_step_n' 5 (:: apply (:: (:: apply (:: args.push (symbol "arg"))) nil)) =
+  (.ok (:: (symbol "arg") nil)) := rfl
+
 def args.app (e : Expr) :=
   match e with
   | :: x nil => (:: both (:: (:: both (:: (quote apply) (:: both (:: (quote x) id)))) (quote nil)))
@@ -78,6 +81,9 @@ def args.app.test_args : Expr := (:: (symbol "a") (:: (symbol "b") (:: (symbol "
 def args.app.test_ops : Expr := (:: (args.read 0) (:: (args.read 1) (:: (args.read 2) nil)))
 
 example : try_step_n' 10 (:: apply (:: ($args args.app.test_ops) args.app.test_args)) = (.ok args.app.test_args) := rfl
+
+def lam : Expr := (:: both (:: (quote both)
+  (:: both (:: const (quote args.push)))))
 
 -- This is essentially the I rule in the compilation from lambda calculus to SK combiantors
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))

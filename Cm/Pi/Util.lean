@@ -17,7 +17,7 @@ In the list calculus, arguments are usually positional, not curried.
 This gets around that by growing the context in a sequence, cons'ing each argument as it is applied.
 
 The three main operators are:
-args.read, args.push, $n, and λ'.
+args.read, args.push, $args, and lam.
 var.read `n` creates a (:: π (:: nil (:: π ... id))) expression with `n` nil entries.
 This skips the first `n` elements in a context and gets the last one.
 
@@ -29,12 +29,29 @@ args.push = (:: both (:: (quote both) (:: both
   const
   (quote id))))
 
-λ'' body creates a (:: both (:: (quote body) args.store)) expression.
+$args spreads the context / arguments list among many operations,
+and applies the args to each function.
 
+(:: apply (:: (:: apply (:: $args (:: f (:: g h)))) args)) =
+(:: (:: apply (:: f args)) (:: (:: apply (:: g args)) (:: apply h args)))
+
+(:: apply (:: lam body)) creates a (:: both (:: (quote body) args.store)) expression.
 
 TODO:
-- these utility methods may not actually work as intended.
+- these old utility methods may not actually work as intended.
 -/
+
+def mk_π_skip (n : ℕ) (at_end : Expr) : Expr :=
+  match n with
+  | .zero => at_end
+  | .succ n =>
+    :: π (:: nil (mk_π_skip n at_end))
+
+example : mk_π_skip 2 (:: π (:: id nil)) = (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) := rfl
+
+notation "args.read" => (mk_π_skip · id)
+
+example : try_step_n' 5 (:: apply (:: (args.read 2) (:: (symbol "a") (:: (symbol "b") (symbol "c"))))) = (.ok (symbol "c")) := rfl
 
 -- This is essentially the I rule in the compilation from lambda calculus to SK combiantors
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))
@@ -134,14 +151,6 @@ example : both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
 
 
 #eval both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
-
-def mk_π_skip (n : ℕ) (at_end : Expr) : Expr :=
-  match n with
-  | .zero => at_end
-  | .succ n =>
-    :: π (:: nil (mk_π_skip n at_end))
-
-example : mk_π_skip 2 (:: π (:: id nil)) = (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) := rfl
 
 def mk_both_tail : Expr → Expr
   | :: const e => :: const e

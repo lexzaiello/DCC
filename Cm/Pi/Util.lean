@@ -21,7 +21,7 @@ args.read, args.push, $args, and lam.
 var.read `n` creates a (:: π (:: nil (:: π ... id))) expression with `n` nil entries.
 This skips the first `n` elements in a context and gets the last one.
 
-args.store pushes an argument to the arguments list of a function.
+args.push pushes an argument to the arguments list of a function.
 args.store expects that the context / arguments list is in scope.
 
 (:: apply (:: (:: apply (:: args.push x)) args)) = (:: x args)
@@ -36,6 +36,11 @@ and applies the args to each function.
 (:: (:: apply (:: f args)) (:: (:: apply (:: g args)) (:: apply h args)))
 
 (:: apply (:: lam body)) creates a (:: both (:: (quote body) args.store)) expression.
+This is essentially one level of currying.
+Applying other arugments will just push this argument to the front of them.
+
+(:: apply (:: (:: apply (:: (:: apply (:: lam body)) (symbol "arg"))) other_args))
+= (:: apply (:: body (:: (symbol "arg") other_args)))
 
 TODO:
 - these old utility methods may not actually work as intended.
@@ -82,8 +87,14 @@ def args.app.test_ops : Expr := (:: (args.read 0) (:: (args.read 1) (:: (args.re
 
 example : try_step_n' 10 (:: apply (:: ($args args.app.test_ops) args.app.test_args)) = (.ok args.app.test_args) := rfl
 
+def lam.push_future_arg := (quote (:: both (:: (quote apply) (:: both (:: (quote args.push) id)))))
+
 def lam : Expr := (:: both (:: (quote both)
-  (:: both (:: const (quote args.push)))))
+    (:: both (:: const lam.push_future_arg))))
+
+#eval try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: lam.push_future_arg ($args (:: (quote (symbol "arg: ")) (:: (args.read 0) nil)))))
+  (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
+#eval try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: lam ($args (:: (quote (symbol "arg: ")) (:: (args.read 0) nil))))) (:: (symbol "hi") nil))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
 
 -- This is essentially the I rule in the compilation from lambda calculus to SK combiantors
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))

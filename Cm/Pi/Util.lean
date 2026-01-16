@@ -103,7 +103,19 @@ example : try_step_n' 50 ($f (:: ($f (:: ($f (:: lam.push_future_arg ($args (:: 
 
 set_option maxRecDepth 1000
 
-example : try_step_n' 100 ($f (:: ($f (:: (!λ ($args (:: (quote (symbol "ctx: ")) (:: id nil)))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil)))) = (.ok (:: (symbol "ctx: ") (:: (:: (symbol "hi") (:: (symbol "other arg") (:: (symbol "other other arg") nil))) nil))) := rfl
+example : try_step_n' 100 ($f (::
+  ($f (:: (!λ
+    ($args (:: (quote (symbol "ctx: ")) (:: id nil))))
+    (symbol "hi")))
+    (:: (symbol "other arg") (:: (symbol "other other arg") nil)))) =
+  (.ok (:: (symbol "ctx: ") (:: (:: (symbol "hi")
+    (:: (symbol "other arg") (:: (symbol "other other arg") nil)))
+    nil))) := rfl
+
+example : try_step_n' 100 ($f (:: ($f (:: (!λ (args.read 0)) (symbol "arg 0"))) (symbol "rest args")))
+   = (.ok (symbol "arg 0")) := rfl
+
+example : try_step_n' 51 ($f (:: ($f (:: ($f (:: (!λ (!λ (args.read 1))) (symbol "arg 0"))) (symbol "rest args"))) (:: (symbol ("other arg")) nil))) = (.ok (symbol "other arg")) := rfl
 
 -- This is essentially the I rule in the compilation from lambda calculus to SK combiantors
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))

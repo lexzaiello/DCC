@@ -546,7 +546,6 @@ def anon_map_plus_5 (max_steps : ℕ := 300) : Except Error Expr := do
       (:: both (:: (quote nat.plus) id))))) (Nat'.of_nat 5)))))
   try_step_n' max_steps (:: apply (:: curr (:: (Nat'.of_nat 1) (:: (Nat'.of_nat 2) (:: (Nat'.of_nat 3) nil)))))
 
-#eval (Expr.as_list >=> (List.mapM Nat'.to_nat)) <$> (anon_map_plus_5 298)
-
+example : (Expr.as_list >=> (List.mapM Nat'.to_nat)) <$> (anon_map_plus_5 298) = (.ok (some [6, 7, 8])) := rfl
 
 end test_list

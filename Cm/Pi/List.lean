@@ -534,21 +534,19 @@ example : rec_with_descent = (.ok (:: (symbol "discard") nil)) := rfl
 example : try_step_n' 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil))) = .ok (symbol "test") := by rfl
 
 def point_free_plus : Expr :=
-  (!curry (args.app (:: (quote apply) (:: (quote nat.plus) const))))
+  (!curry (:: both (:: (quote apply) (:: both (:: (quote nat.plus) id)))))
 
---#eval try_step_n' 200 (:: apply (:: point_free_plus (:: succ zero)))
+#eval try_step_n' 200 (:: apply (:: (:: apply (:: point_free_plus (:: succ (:: succ zero)))) (:: succ zero)))
 
-/-def anon_map_plus_5 : Except Error Expr := do
+def anon_map_plus_5 : Except Error Expr := do
   let curr := (:: apply (::
-    (!curry (args.app (:: (quote apply) (:: (quote list.map) (:: (args.read 0 id) (args.read 1 id))))))
+    (!curry (:: both (:: (quote apply) (:: both (:: (quote list.map) id)))))
       -- (+ 5)
-      (!curry (args.app (::
-        (quote apply)
-        (:: (quote nat.plus)
-        (:: (args.read 0 id) (quote (Nat'.of_nat 5)))))))))
+    (:: apply (:: (!curry (:: both (:: (quote apply)
+      (:: both (:: (quote nat.plus) id))))) (Nat'.of_nat 5)))))
   try_step_n' 1000 (:: apply (:: curr (:: (Nat'.of_nat 1) (:: (Nat'.of_nat 2) (:: (Nat'.of_nat 3) nil)))))
 
---#eval anon_map_plus_5
--/
+#eval anon_map_plus_5
+
 
 end test_list

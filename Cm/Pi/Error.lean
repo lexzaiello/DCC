@@ -136,7 +136,7 @@ then the value.
 -/
 def Except'.kleisliRight.action₁ : Expr :=
   (:: both (:: (quote apply) (:: both
-        (:: (args.read 0 (:: π (:: id nil))) (args.read 1 id)))))
+        (:: (args.read 0 (:: π (:: id nil))) (:: π (:: nil id))))))
 
 def Except'.kleisliRight : Expr :=
   (:: apply (:: curry (:: apply (:: curry
@@ -147,7 +147,7 @@ def Except'.kleisliRight : Expr :=
 (Except.ok >=> Except.ok) "hi" = ok "hi"
 -/
 #eval try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: Except'.kleisliRight Except'.ok))
-  Except'.ok)) (:: (symbol "hi") nil)))
+  Except'.ok)) (symbol "hi")))
 
 infixl:60 "e>>=" => (fun e f =>
   (:: apply (:: Except'.bind (:: e f))))

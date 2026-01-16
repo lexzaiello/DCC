@@ -53,11 +53,11 @@ def mk_π_skip (n : ℕ) (at_end : Expr) : Expr :=
 
 example : mk_π_skip 2 id = (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) := rfl
 
-def args.read : ℕ → Expr := (mk_π_skip · id)
+def args.read (n : ℕ) (e : Expr) : Expr := mk_π_skip n e
 
-example : try_step_n' 5 (:: apply (:: (args.read 0) (:: (symbol "a") nil))) = (.ok (symbol "a")) := rfl
-example : try_step_n' 5 (:: apply (:: (args.read 2) (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil))))) = (.ok (symbol "c")) := rfl
-example : try_step_n' 5 (:: apply (:: (args.read 0) (:: (symbol "a") (:: (symbol "b") (symbol "c"))))) = (.ok (symbol "a")) := rfl
+example : try_step_n' 5 (:: apply (:: (args.read 0 id) (:: (symbol "a") nil))) = (.ok (symbol "a")) := rfl
+example : try_step_n' 5 (:: apply (:: (args.read 2 id) (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil))))) = (.ok (symbol "c")) := rfl
+example : try_step_n' 5 (:: apply (:: (args.read 0 id) (:: (symbol "a") (:: (symbol "b") (symbol "c"))))) = (.ok (symbol "a")) := rfl
 
 def args.push : Expr := (:: both (::
   (quote both) (:: both (::
@@ -83,28 +83,28 @@ def args.app (e : Expr) :=
 prefix:60 "$args" => args.app
 
 def args.app.test_args : Expr := (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
-def args.app.test_ops : Expr := (:: (args.read 0) (:: (args.read 1) (:: (args.read 2) nil)))
+def args.app.test_ops : Expr := (:: (args.read 0 id) (:: (args.read 1 id) (:: (args.read 2 id) nil)))
 
 example : try_step_n' 10 (:: apply (:: ($args args.app.test_ops) args.app.test_args)) = (.ok args.app.test_args) := rfl
 
-def lam.push_future_arg := (quote (:: both (:: (quote apply) (:: both (:: (quote args.push) id)))))
+def curry.push_future_arg := (quote (:: both (:: (quote apply) (:: both (:: (quote args.push) id)))))
 
-def lam : Expr := (:: both (:: (quote both)
+def curry : Expr := (:: both (:: (quote both)
     (:: both (:: (quote (quote both)) (:: both (:: (quote both)
       (:: both (:: (quote (quote (quote apply))) (:: both (:: (quote both)
         (:: both (:: (quote (quote both)) (:: both (:: (quote both)
-          (:: both (:: (:: both (:: (quote const) const)) lam.push_future_arg))))))))))))))))
+          (:: both (:: (:: both (:: (quote const) const)) curry.push_future_arg))))))))))))))))
 
-prefix:60 "!λ" => (fun e => (:: apply (:: lam e)))
+prefix:60 "!curry" => (fun e => (:: apply (:: curry e)))
 prefix:60 "$f" => (fun e => (:: apply e))
 
-example : try_step_n' 50 ($f (:: ($f (:: ($f (:: lam.push_future_arg ($args (:: (quote (symbol "arg: ")) (:: (args.read 0) nil))))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
+example : try_step_n' 50 ($f (:: ($f (:: ($f (:: curry.push_future_arg ($args (:: (quote (symbol "arg: ")) (:: (args.read 0 id) nil))))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
   = (.ok (:: (symbol "hi") (:: (symbol "other arg") (:: (symbol "other other arg") nil)))) := rfl
 
 set_option maxRecDepth 1000
 
 example : try_step_n' 100 ($f (::
-  ($f (:: (!λ
+  ($f (:: (!curry
     ($args (:: (quote (symbol "ctx: ")) (:: id nil))))
     (symbol "hi")))
     (:: (symbol "other arg") (:: (symbol "other other arg") nil)))) =
@@ -112,10 +112,10 @@ example : try_step_n' 100 ($f (::
     (:: (symbol "other arg") (:: (symbol "other other arg") nil)))
     nil))) := rfl
 
-example : try_step_n' 100 ($f (:: ($f (:: (!λ (args.read 0)) (symbol "arg 0"))) (symbol "rest args")))
+example : try_step_n' 100 ($f (:: ($f (:: (!curry (args.read 0 id)) (symbol "arg 0"))) (symbol "rest args")))
    = (.ok (symbol "arg 0")) := rfl
 
-example : try_step_n' 51 ($f (:: ($f (:: ($f (:: (!λ (!λ (args.read 1))) (symbol "arg 0"))) (symbol "rest args"))) (:: (symbol ("other arg")) nil))) = (.ok (symbol "other arg")) := rfl
+example : try_step_n' 51 ($f (:: ($f (:: ($f (:: (!curry (!curry (args.read 1 id))) (symbol "arg 0"))) (symbol "rest args"))) (:: (symbol ("other arg")) nil))) = (.ok (symbol "other arg")) := rfl
 
 -- This is essentially the I rule in the compilation from lambda calculus to SK combiantors
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))

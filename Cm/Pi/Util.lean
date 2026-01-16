@@ -90,10 +90,16 @@ example : try_step_n' 10 (:: apply (:: ($args args.app.test_ops) args.app.test_a
 def lam.push_future_arg := (quote (:: both (:: (quote apply) (:: both (:: (quote args.push) id)))))
 
 def lam : Expr := (:: both (:: (quote both)
-    (:: both (:: const lam.push_future_arg))))
+    (:: both (:: (quote (quote both)) (:: both (:: (quote both)
+      (:: both (:: (quote (quote (quote apply))) (:: both (:: (quote both)
+        (:: both (:: (quote (quote both)) (:: both (:: (quote both)
+          (:: both (:: (:: both (:: (quote const) const)) lam.push_future_arg))))))))))))))))
 
-#eval try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: lam.push_future_arg ($args (:: (quote (symbol "arg: ")) (:: (args.read 0) nil)))))
-  (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
+example : try_step_n' 50 (:: apply (:: (:: apply (:: (:: apply (:: lam.push_future_arg ($args (:: (quote (symbol "arg: ")) (:: (args.read 0) nil))))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
+  = (.ok (:: (symbol "hi") (:: (symbol "other arg") (:: (symbol "other other arg") nil)))) := rfl
+
+#eval try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: lam (symbol "f_args"))) (:: (symbol "hi") nil))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
+
 #eval try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: lam ($args (:: (quote (symbol "arg: ")) (:: (args.read 0) nil))))) (:: (symbol "hi") nil))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
 
 -- This is essentially the I rule in the compilation from lambda calculus to SK combiantors

@@ -38,21 +38,12 @@ Curried. Expects the expected value as the first argument.
 Just makes an error message.
 -/
 
-def expected_but_found' : Expr :=
+def expected_but_found : Expr :=
   (λ' 1 (λ' 2 (::
     (λ' 1 (::
       (var.store 1)
       (λ' 1 (:: (:: (var.store 0) <| symbol "expected:") (var.read 0)))))
         (:: (var.store 0) <| (λ' 1 (:: (:: (var.store 0) <| symbol "but found: ") (var.read 0)))))))
-
-def expected_but_found : Expr :=
-  let expected := Expr.id
-
-  (:: both (:: (quote both) (:: both (::
-    (:: both (:: (quote const) (:: both (:: (quote <| symbol "expected:") expected))))
-    (quote <| (:: both (:: (quote <| symbol "but found: ") id)))))))
-
-example : expected_but_found = expected_but_found' := rfl
 
 /-
 Checks whether a later curried argument
@@ -61,16 +52,8 @@ is equal to the first argument.
 Outputs an expected but found error messsage otherwise.
 Returns an ok with the first argument if ok.
 -/
+
 def assert_eq : Expr :=
-  let my_v := Expr.id
-
-  let eq_ok := (:: both (:: (quote const) (:: both (:: (quote Except'.s_ok) my_v))))
-
-  (:: both
-    (:: (:: both (:: (quote eq) (:: both (:: eq_ok
-    (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v)))))))))))) my_v))
-
-def assert_eq' : Expr :=
   let my_v := var.read 0
 
   let eq_ok := (λ' 1 (:: (var.store 1) (λ' 1 (:: (:: (var.store 0) Except'.s_ok) my_v))))
@@ -81,19 +64,10 @@ def assert_eq' : Expr :=
         (λ' 1 (:: (:: (var.store 0) apply) (λ' 1 (:: (:: (var.store 0) expected_but_found) my_v)))))))))))
       my_v))
 
-example : assert_eq = assert_eq' := rfl
-
 /-
 assert_eq but it returns just the data in the ok case.
 -/
 def assert_eq_unwrap : Expr :=
-  let my_v := Expr.id
-
-  (:: both
-    (:: (:: both (:: (quote eq) (:: both (:: (:: both (:: (quote const) my_v))
-    (:: both (:: (quote both) (:: both (:: (quote (quote Except'.s_err)) (:: both (:: (quote apply) (:: both (:: (quote expected_but_found) my_v)))))))))))) my_v))
-
-def assert_eq_unwrap' : Expr :=
   let my_v := var.read 0
 
   (λ' 1
@@ -101,19 +75,12 @@ def assert_eq_unwrap' : Expr :=
       (λ' 1
         (λ' 2 (::
           (:: (var.store 0) (:: (var.store 0) Except'.s_err))
-          (λ' 1 (:: (:: (var.store 0) apply) (λ' 1 (:: (:: (var.store 0) expected_but_found) my_v)))))))))))
-    my_v))
-
-example : assert_eq_unwrap = assert_eq_unwrap' := rfl
-
-/-def expected_but_found : Expr :=
-  let expected := id
-  (:: both -/
-
-def Arr : Expr := .symbol "→"
-
-def mk_arrow : Expr :=
-  .cons both (:: (quote Arr) (:: π (:: id id)))
+          (λ' 1 (::
+            (:: (var.store 0) apply)
+            (λ' 1 (::
+              (:: (var.store 0) expected_but_found)
+              my_v)))))))))))
+      my_v))
 
 def infer.self : Expr :=
   :: π (:: id nil)
@@ -123,12 +90,12 @@ def infer.x (with_op : Expr := id) : Expr :=
 
 
 def infer_nil : Expr :=
-  :: both (:: (quote apply)
+  (λ' 1 (:: (quote apply)
     (:: π (::
     (quote <|
       :: (:: eq (:: (quote <| (:: apply (:: Except'.ok TData))) (:: apply (:: expected_but_found nil))))
       .nil)
-    id)))
+    id))))
 
 /-
 Note: this is not safe generally.
@@ -259,11 +226,11 @@ We assert that the type of the no_case is the same.
 (:: apply (:: infer_eq (:: global_infer (:: eq (:: yes_case no_case)))))
 -/
 
-def infer_eq.assert_op_eq : Expr :=
-  ((:: apply (:: assert_eq .eq)) ∘' (:: π (:: nil (:: π (:: id nil)))))
+def infer.assert_op_seq (op : Expr) :=
+  infer.assert_seq <| ((:: apply (:: assert_eq op)) ∘' (:: π (:: nil (:: π (:: id nil)))))
 
 def infer_eq.assert_op_eq_seq : Expr :=
-  infer.assert_seq infer_eq.assert_op_eq
+  infer.assert_op_seq .eq
 
 def infer_eq.yes_case : Expr :=
   (:: π (:: nil (:: π (:: nil (:: π (:: id nil))))))
@@ -338,9 +305,6 @@ def infer_eq.future_infer₁ : Expr :=
 with third argument type as the input.
 -/
 
-def infer_eq.mk_future_assert_type : Expr :=
-  $? (assert_eq ·')
-
 def infer_eq.inject_future_assert_eq : Expr :=
   (:: both (:: (quote both) (:: both (:: (quote (quote apply))
       (:: both (:: (quote both) (:: both (:: (quote (quote assert_eq_unwrap)) id))))))))
@@ -363,6 +327,19 @@ def infer_eq : Expr :=
   (infer_eq.assert_op_eq_seq
     e>=> infer_eq.eq_types
     e>=> (infer_eq.inject_future_infer ∘' infer_eq.inject_future_assert_eq))
+
+/-
+This is essentially the same as the infer_eq type, but it only takes one argument.
+-/
+/-def infer_both_store : Expr :=
+  (λ' 1 (:: (:: (var.store 0) ((infer.assert_op_seq .both)
+    e>=> infer_eq.eq_types)) (var.read 0)))
+
+def infer_both : Expr :=
+  (λ' 1 (:: (λ' 1 (var.read 1)) (:: (var.store 0) ((infer.assert_op_seq .both)
+    e>=> infer_eq.eq_types))))-/
+
+--#eval try_step_n' 2000 (:: apply (:: infer_both_store (:: infer_id (:: both (:: id id)))))
 
 namespace infer_test
 

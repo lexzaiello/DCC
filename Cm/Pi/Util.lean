@@ -12,15 +12,35 @@ def quote (e : Expr) : Expr :=
   (:: const e)
 
 /-
-There is a distinction between loading dowm from higher binders
-and pushing up from lower binders.
+Utility methods for currying that simulate lambda calculus binders with de bruijn indices.
+In the list calculus, arguments are usually positional, not curried.
+This gets around that by growing the context in a sequence, cons'ing each argument as it is applied.
 
-I think these are just inverses of each other.
+The three main operators are:
+args.read, args.push, $n, and λ'.
+var.read `n` creates a (:: π (:: nil (:: π ... id))) expression with `n` nil entries.
+This skips the first `n` elements in a context and gets the last one.
+
+args.store pushes an argument to the arguments list of a function.
+args.store expects that the context / arguments list is in scope.
+
+(:: apply (:: (:: apply (:: args.push x)) args)) = (:: x args)
+args.push = (:: both (:: (quote both) (:: both
+  const
+  (quote id))))
+
+λ'' body creates a (:: both (:: (quote body) args.store)) expression.
+
+
+TODO:
+- these utility methods may not actually work as intended.
 -/
+
+-- This is essentially the I rule in the compilation from lambda calculus to SK combiantors
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))
--- returning a variable. this corresponds to (:: both (:: (quote const) id))
-notation "var.store" => (fun (n : ℕ) => List.foldr Expr.cons
-  const (List.replicate n const))
+
+-- This is the K rule
+notation "var.store" => (fun (n : ℕ) => List.foldr Expr.cons const (List.replicate n const))
 
 def mk_binder (n : ℕ) (e : Expr) :=
   match n with
@@ -29,7 +49,15 @@ def mk_binder (n : ℕ) (e : Expr) :=
     let the_both := (List.foldr Expr.cons Expr.both (List.replicate n' Expr.const))
     (:: the_both (mk_binder n' e))
 
+notation "$n" => (fun (n : ℕ) => List.foldr Expr.cons apply (List.replicate n const))
+
+example : $n 0 = apply := rfl
+example : $n 1 = (:: const apply) := rfl
+
 notation "λ'" => mk_binder
+
+example : try_step_n' 100 (:: apply (:: (:: apply (:: (λ' 1 (:: (var.store 1) id)) (symbol "hello, world"))) (symbol "discard")))
+  = (.ok (symbol "hello, world")) := rfl
 
 #eval try_step_n' 100 (:: apply (:: (:: apply
   (:: (λ' 1 (
@@ -52,10 +80,9 @@ example : try_step_n' 10 (:: apply (:: (:: apply
     (.ok (:: (:: const (symbol "var 1")) (:: const (symbol "var 1")))) := rfl
 
 example : try_step_n' 10 (:: apply (:: (:: apply
-  (:: (:: both (:: (quote both)
-    (:: both (:: (var.store 0) (var.store 0)))))
-  (quote (symbol "var 0")))) (quote (symbol "var 1")))) =
-    (.ok (:: (:: const (symbol "var 0")) (:: const (symbol "var 0")))) := rfl
+  (:: (λ' 1 (λ' 2 (:: (var.store 0) (var.store 0))))
+    (quote (symbol "var 0")))) (quote (symbol "var 1")))) =
+      (.ok (:: (:: const (symbol "var 0")) (:: const (symbol "var 0")))) := rfl
 
 example : try_step_n' 1 (:: apply (:: (λ' 0 (var.read 0)) (quote (symbol "var 0")))) = (.ok (:: const (symbol "var 0"))) := rfl
 
@@ -63,9 +90,10 @@ example : try_step_n' 1 (:: apply (:: (λ' 0 (var.read 0)) (quote (symbol "var 0
 (:: apply (:: (:: apply (:: (:: apply (:: fun.comp f)) g)) x))
 = (:: apply (:: f (:: apply (:: g x))))
 -/
-def func.comp : Expr := (λ' 1 (λ' 2 (λ' 3 (:: (var.read 2) (:: (var.read 1) (var.read 0))))))
+def func.comp : Expr := (λ' 1 (λ' 2 (λ' 3 (:: ($n 3) (λ' 3 (:: (var.store 3) (λ' 2 (:: ($n 2) (λ' 2 (:: (var.read 1) (var.read 0)))))))))))
+--def func.comp : Expr := (λ' 1 (:: (λ' 1 (λ' 1 (var.read 3))) (var.store 0)))
 
-#eval try_step_n 200 (:: apply (:: (:: apply (:: (:: apply (:: func.comp (quote id))) (quote id))) (quote (symbol "hi"))))
+#eval try_step_n 500 (:: apply (:: (:: apply (:: (:: apply (:: func.comp id)) id)) (symbol "hi")))
 
 --infixr:65 "∘''" => 
 

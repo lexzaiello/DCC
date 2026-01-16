@@ -49,9 +49,24 @@ def mk_π_skip (n : ℕ) (at_end : Expr) : Expr :=
 
 example : mk_π_skip 2 (:: π (:: id nil)) = (:: π (:: nil (:: π (:: nil (:: π (:: id nil)))))) := rfl
 
-notation "args.read" => (mk_π_skip · id)
+def args.read : ℕ → Expr := (mk_π_skip · id)
 
 example : try_step_n' 5 (:: apply (:: (args.read 2) (:: (symbol "a") (:: (symbol "b") (symbol "c"))))) = (.ok (symbol "c")) := rfl
+
+def args.push : Expr := (:: both (::
+  (quote both) (:: both (::
+    const
+    (quote id)))))
+
+def args.app (e : Expr) :=
+  match e with
+  | :: x xs => (:: both (::
+    (:: both (:: (quote apply) (:: both (:: (quote x) id))))
+    (args.app xs)))
+  | nil => (quote nil)
+  | e => (:: both (:: (quote apply) (:: both (:: (quote e) id))))
+
+prefix:60 "$args" => args.app
 
 -- This is essentially the I rule in the compilation from lambda calculus to SK combiantors
 notation "var.read" => (fun (n : ℕ) => List.foldr Expr.cons Expr.id (List.replicate n Expr.const))

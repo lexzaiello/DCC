@@ -58,6 +58,8 @@ def args.push : Expr := (:: both (::
     const
     (quote id)))))
 
+example : try_step_n' 5 (:: apply (:: (:: apply (:: args.push (symbol "arg"))) (symbol "args"))) = (.ok (:: (symbol "arg") (symbol "args"))) := rfl
+
 def args.app (e : Expr) :=
   match e with
   | :: x xs => (:: both (::

@@ -328,15 +328,6 @@ def infer_eq : Expr :=
     e>=> infer_eq.eq_types
     e>=> (infer_eq.inject_future_infer ∘' infer_eq.inject_future_assert_eq))
 
-/-
-This is essentially the same as the infer_eq type, but it only takes one argument.
--/
-def infer_both : Expr :=
-  (λ' 1 (:: (λ' 1 (var.read 1)) (:: (var.store 0) ((infer.assert_op_seq .both)
-    e>=> infer_eq.eq_types))))
-
-#eval try_step_n' 2000 (:: apply (:: infer_both_store (:: infer_id (:: both (:: id id)))))
-
 namespace infer_test
 
 set_option maxRecDepth 5000

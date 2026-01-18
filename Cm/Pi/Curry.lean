@@ -1,11 +1,9 @@
 import Mathlib.Data.Nat.Notation
 import Cm.Pi.Ast
 import Cm.Pi.Eval
+import Cm.Pi.Util
 
 open Expr
-
-def quote (e : Expr) : Expr :=
-  (:: const e)
 
 /-
 Utility methods for currying that simulate lambda calculus binders with de bruijn indices.
@@ -59,8 +57,6 @@ def args.push : Expr := (:: both (::
   (quote both) (:: both (::
     const
     (quote id)))))
-
-#eval try_step_n' 10 (:: apply (:: (:: apply (:: args.push (symbol "arg"))) (:: (symbol "args") nil)))
 
 example : try_step_n' 5
   (:: apply

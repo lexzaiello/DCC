@@ -188,11 +188,13 @@ def Except'.orM : Expr :=
   (:: both (:: (quote apply) (:: both (::
     (:: both (:: (quote apply)
       (:: both (:: (quote Except'.match_with) (:: both (::
-        (quote id)
+        (quote Except'.ok)
         (:: π (:: (quote const) id))))))))
      (:: π (:: id nil))))))
 
-#eval try_step_n' 1000 (:: apply (:: Except'.orM (:: (:: apply (:: Except'.err (symbol "a"))) (:: apply (:: Except'.ok (symbol "b"))))))
+example : try_step_n' 1000 (:: apply (:: Except'.orM (:: (:: apply (:: Except'.err (symbol "a"))) (:: apply (:: Except'.ok (symbol "b")))))) = (.ok (:: Except'.s_ok (symbol "b"))) := rfl
+
+example : try_step_n' 1000 (:: apply (:: Except'.orM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.ok (symbol "b")))))) = (.ok (:: Except'.s_ok (symbol "a"))) := rfl
 
 example : try_step_n' 100 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.ok (symbol "b")))))) = .ok (:: (symbol "ok") (:: (symbol "a") (symbol "b"))) := rfl
 

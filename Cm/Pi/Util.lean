@@ -97,6 +97,8 @@ example : both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
   = (:: both (:: (quote both) (:: (symbol "a") (:: both (:: (quote both)
     (:: (symbol "b") (:: both (:: (quote both) (:: (symbol "c") nil))))))))) := rfl
 
+def flip_e (e : Expr) : Expr :=
+  (:: both (:: e (:: both (:: (:: π (:: nil id)) (:: π (:: id nil))))))
 
 #eval both_from_list 2 [(symbol "a"), (symbol "b"), (symbol "c")]
 

@@ -100,6 +100,8 @@ def func.comp : Expr :=
       (:: π (:: (:: π (:: id nil)) nil))
       (:: both (:: (quote apply) (:: π (:: (:: π (:: nil id)) id))))))))))))
 
+notation "∘'" => func.comp
+
 set_option maxRecDepth 1000
 example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: func.comp id)) id)) (symbol "hi"))) = (.ok (symbol "hi")) := rfl
 

@@ -192,7 +192,8 @@ example : try_step_n' 100 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.
 
 def Except'.allM : Expr :=
   (:: apply (:: list.foldl (::
-    (:: both (:: (quote apply) (:: both (:: (quote Except'.bothM) (:: both (:: (:: π (:: nil id)) (:: π (:: id nil))))))))
+    (:: both (:: (quote apply)
+    (flip_e (quote Except'.bothM))))
     (:: apply (:: Except'.ok nil)))))
 
 set_option maxRecDepth 5000

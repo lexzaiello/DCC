@@ -358,23 +358,17 @@ def infer_both.fn_with_global_infer (fn : Expr) : Expr :=
 
 example : try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_both.fn_with_global_infer infer_both.f) (:: (symbol "global infer") (:: both (:: (symbol "f") id))))) (symbol "my data"))) = (.ok (:: apply (:: (symbol "global infer") (:: (symbol "global infer") (:: (symbol "f") (symbol "my data")))))) := rfl
 
-/-
-This is with all infer.both args in scope.
-
-(:: apply (:: infer_both (:: global_infer (:: both (:: f g)))))
-= (:: both (:: (:: (:: global_infer (:: global_infer .))) (:: (:: global_infer (:: global_infer .)))))
--/
-/-def infer_both.list_types : Expr :=
-  :: both (:: infer.self
-
-/-
-both makes a list of infer functions that are mappable over a list.
--/
 def infer_both : Expr :=
   infer.assert_op_seq .both
-    e>=> infer_both.list_types
-
-#eval try_step_n' 5000 (:: apply (:: (:: apply (:: infer_both (:: infer_nil (:: both (:: id id))))) (:: nil nil)))-/
+    e>=> (:: apply (:: curry
+      (:: both (:: (quote apply) (:: both (::
+        (quote Except'.bothM) (:: both (::
+        (:: both (:: (quote apply) (:: both (::
+          (:: apply (:: func.comp (:: (args.read 0 id) (infer_both.fn_with_global_infer infer_both.f))))
+          (args.read 1 id))))) -- infer (:: f l)
+        (:: both (:: (quote apply) (:: both (::
+          (:: apply (:: func.comp (:: (args.read 0 id) (infer_both.fn_with_global_infer infer_both.g))))
+          (args.read 1 id))))))))))))) -- infer (:: g l)
 
 namespace infer_test
 

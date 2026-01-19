@@ -370,9 +370,10 @@ def infer_both : Expr :=
             (args.read 0 (infer_both.fn_with_global_infer infer_both.g))
             (args.read 1 id))))))))))))) -- infer (:: g l)
 
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_both (::
+set_option maxRecDepth 5000
+example : try_step_n' 1000 (:: apply (:: (:: apply (:: infer_both (::
   (quote (:: apply (:: Except'.ok (symbol "ok")))) (:: both (:: id id)))))
-  (symbol "my data")))
+  (symbol "my data"))) = (.ok (:: (symbol "ok") (:: (symbol "ok") (symbol "ok")))) := rfl
 
 namespace infer_test
 

@@ -386,9 +386,20 @@ def infer_apply : Expr :=
         (args.read 0 infer.self)
         (args.read 1 id)))))))))
 
+def infer_π.body : Expr :=
+  (:: apply (:: curry
+      (:: both (:: (quote apply) (:: both (::
+        (quote Except'.bothM) (:: both (::
+          (:: both (:: (quote apply) (:: both (::
+            (args.read 0 <| infer_both.fn_with_global_infer infer_both.f)
+            (args.read 1 (:: π (:: id nil))))))) -- infer (:: f (:: x _xs))
+          (:: both (:: (quote apply) (:: both (::
+            (args.read 0 <| infer_both.fn_with_global_infer infer_both.g)
+            (args.read 1 (:: π (:: nil id))))))))))))))) -- infer (:: g (:: _ xs))
+
 def infer_π : Expr :=
   infer.assert_op_seq .π
-    e>=> infer_both.body
+    e>=> infer_π.body
 
 namespace infer_test
 

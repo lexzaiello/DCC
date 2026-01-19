@@ -97,6 +97,26 @@ def nat.plus : Expr :=
 
   (:: both (:: (quote apply) (:: both (:: do_rec m))))
 
+def nat.fib : Expr :=
+  let do_app (fn : Expr) := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) fn)))
+  let cmp := (:: both (:: (:: both (:: (quote eq) (quote (::
+    (quote (:: succ zero))
+    (:: both (:: (quote apply) (:: both (::
+      (quote nat.plus) (:: both (::
+        (do_app id)
+        (do_app (:: π (:: nil id))))))))))))) (:: π (:: id (quote zero)))))
+  let do_succ := :: both (:: (quote apply) (:: both (:: cmp id)))
+
+  let zero_case := (quote zero)
+
+  -- generates recursor
+  (:: apply (:: nat.rec_with (:: nat.rec_with (:: zero_case do_succ))))
+
+set_option maxRecDepth 5000
+example : Nat'.to_nat <$> try_step_n' 1000 (:: apply (:: nat.fib (Nat'.of_nat 5))) = (.ok (.some 5)) := rfl
+example : try_step_n' 50 (:: apply (:: nat.fib (Nat'.of_nat 1))) = (.ok (:: succ zero)) := rfl
+example : try_step_n' 50 (:: apply (:: nat.fib (Nat'.of_nat 0))) = (.ok zero) := rfl
+
 namespace test_nat
 
 def nat_plus (m n : Expr) : Except Error Expr := do

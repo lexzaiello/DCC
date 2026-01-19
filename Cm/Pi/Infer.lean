@@ -358,9 +358,8 @@ def infer_both.fn_with_global_infer (fn : Expr) : Expr :=
 
 example : try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_both.fn_with_global_infer infer_both.f) (:: (symbol "global infer") (:: both (:: (symbol "f") id))))) (symbol "my data"))) = (.ok (:: apply (:: (symbol "global infer") (:: (symbol "global infer") (:: (symbol "f") (symbol "my data")))))) := rfl
 
-def infer_both : Expr :=
-  infer.assert_op_seq .both
-    e>=> (:: apply (:: curry
+def infer_both.body : Expr :=
+  (:: apply (:: curry
       (:: both (:: (quote apply) (:: both (::
         (quote Except'.bothM) (:: both (::
           (:: both (:: (quote apply) (:: both (::
@@ -369,6 +368,10 @@ def infer_both : Expr :=
           (:: both (:: (quote apply) (:: both (::
             (args.read 0 <| infer_both.fn_with_global_infer infer_both.g)
             (args.read 1 id))))))))))))) -- infer (:: g l)
+
+def infer_both : Expr :=
+  infer.assert_op_seq .both
+    e>=> infer_both.body
 
 set_option maxRecDepth 5000
 example : try_step_n' 1000 (:: apply (:: (:: apply (:: infer_both (::
@@ -382,6 +385,10 @@ def infer_apply : Expr :=
       (args.read 0 infer.self) (:: both (::
         (args.read 0 infer.self)
         (args.read 1 id)))))))))
+
+def infer_π : Expr :=
+  infer.assert_op_seq .π
+    e>=> infer_both.body
 
 namespace infer_test
 

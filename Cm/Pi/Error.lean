@@ -191,6 +191,8 @@ example : try_step_n' 100 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.
 example : try_step_n' 100 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.err (symbol "b")))))) = (.ok <| :: (symbol "error") (symbol "b")) := rfl
 
 def Except'.allM : Expr :=
-  (:: apply (:: list.foldl (:: Except'.bothM (:: apply (:: Except'.ok nil)))))
+  (:: apply (:: list.foldl (::
+    (:: both (:: (quote apply) (:: both (:: (quote Except'.bothM) (:: both (:: (:: π (:: nil id)) (:: π (:: id nil))))))))
+    (:: apply (:: Except'.ok nil)))))
 
 #eval try_step_n 1000 (:: apply (:: Except'.allM (:: (:: apply (:: Except'.ok (symbol "hi"))) (:: (:: apply (:: Except'.ok (symbol "hi₂"))) nil))))

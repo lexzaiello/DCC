@@ -195,4 +195,5 @@ def Except'.allM : Expr :=
     (:: both (:: (quote apply) (:: both (:: (quote Except'.bothM) (:: both (:: (:: π (:: nil id)) (:: π (:: id nil))))))))
     (:: apply (:: Except'.ok nil)))))
 
-#eval try_step_n 1000 (:: apply (:: Except'.allM (:: (:: apply (:: Except'.ok (symbol "hi"))) (:: (:: apply (:: Except'.ok (symbol "hi₂"))) nil))))
+set_option maxRecDepth 5000
+example : try_step_n' 300 (:: apply (:: Except'.allM (:: (:: apply (:: Except'.ok (symbol "hi"))) (:: (:: apply (:: Except'.ok (symbol "hi₂"))) nil)))) = (.ok <| :: (symbol "ok") (:: (symbol "hi") (:: (symbol "hi₂") nil))) := rfl

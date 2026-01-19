@@ -4,6 +4,7 @@ import Cm.Pi.Eval
 import Cm.Pi.Error
 import Cm.Pi.Util
 import Cm.Pi.Nat
+import Cm.Pi.List
 
 open Expr
 
@@ -327,6 +328,53 @@ def infer_eq : Expr :=
   (infer_eq.assert_op_eq_seq
     e>=> infer_eq.eq_types
     e>=> (infer_eq.inject_future_infer ∘' infer_eq.inject_future_assert_eq))
+
+def infer_both.f : Expr :=
+  :: π (:: nil (:: π (:: nil (:: π (:: id nil)))))
+
+def infer_both.g : Expr :=
+  :: π (:: nil (:: π (:: nil (:: π (:: nil id)))))
+
+example : try_step_n' 1000 (:: apply (:: infer_both.g (:: infer_nil (:: both (:: id id))))) = (.ok .id) := rfl
+example : try_step_n' 1000 (:: apply (:: infer_both.f (:: infer_nil (:: both (:: const id))))) = (.ok .const) := rfl
+
+/-
+With all args in scope.
+
+Inserts future arg in (:: apply (:: (eval infer_both.g) (:: infer_global arg)))
+position.
+-/
+def infer_both.fn_with_global_infer (fn : Expr) : Expr :=
+  :: both (:: (quote both)
+    (:: both (:: (quote (quote apply))
+    (:: both (:: (quote both)
+      (:: both (::
+        (:: both (:: (quote const) (infer.self)))
+        (:: both (:: (quote both) (:: both (::
+          (:: both (:: (quote const) (infer.self)))
+            (:: both (:: (quote both) (:: both (::
+              (:: both (:: (quote const) fn))
+              (quote id))))))))))))))))
+
+example : try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_both.fn_with_global_infer infer_both.f) (:: (symbol "global infer") (:: both (:: (symbol "f") id))))) (symbol "my data"))) = (.ok (:: apply (:: (symbol "global infer") (:: (symbol "global infer") (:: (symbol "f") (symbol "my data")))))) := rfl
+
+/-
+This is with all infer.both args in scope.
+
+(:: apply (:: infer_both (:: global_infer (:: both (:: f g)))))
+= (:: both (:: (:: (:: global_infer (:: global_infer .))) (:: (:: global_infer (:: global_infer .)))))
+-/
+/-def infer_both.list_types : Expr :=
+  :: both (:: infer.self
+
+/-
+both makes a list of infer functions that are mappable over a list.
+-/
+def infer_both : Expr :=
+  infer.assert_op_seq .both
+    e>=> infer_both.list_types
+
+#eval try_step_n' 5000 (:: apply (:: (:: apply (:: infer_both (:: infer_nil (:: both (:: id id))))) (:: nil nil)))-/
 
 namespace infer_test
 

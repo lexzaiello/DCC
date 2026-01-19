@@ -364,16 +364,24 @@ def infer_both : Expr :=
       (:: both (:: (quote apply) (:: both (::
         (quote Except'.bothM) (:: both (::
           (:: both (:: (quote apply) (:: both (::
-            (args.read 0 (infer_both.fn_with_global_infer infer_both.f))
+            (args.read 0 <| infer_both.fn_with_global_infer infer_both.f)
             (args.read 1 id))))) -- infer (:: f l)
           (:: both (:: (quote apply) (:: both (::
-            (args.read 0 (infer_both.fn_with_global_infer infer_both.g))
+            (args.read 0 <| infer_both.fn_with_global_infer infer_both.g)
             (args.read 1 id))))))))))))) -- infer (:: g l)
 
 set_option maxRecDepth 5000
 example : try_step_n' 1000 (:: apply (:: (:: apply (:: infer_both (::
   (quote (:: apply (:: Except'.ok (symbol "ok")))) (:: both (:: id id)))))
   (symbol "my data"))) = (.ok (:: (symbol "ok") (:: (symbol "ok") (symbol "ok")))) := rfl
+
+def infer_apply : Expr :=
+  infer.assert_op_seq .both
+  e>=> (:: apply (:: curry (:: both (::
+    (quote apply) (:: both (::
+      (args.read 0 infer.self) (:: both (::
+        (args.read 0 infer.self)
+        (args.read 1 id)))))))))
 
 namespace infer_test
 

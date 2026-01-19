@@ -170,3 +170,14 @@ infixl:60 "e>=>" => (fun e f =>
 #eval try_step_n 50 ((:: apply (:: Except'.ok (symbol "hi"))) e>>= id)
 #eval try_step_n 50 ((:: apply (:: Except'.err (:: (symbol "other") (symbol "hi")))) e>>= id)
 
+def Except'.bothM : Expr :=
+  (:: both (:: (quote apply)
+    (:: both (:: (quote Except'.bind)
+      (:: π (:: id (:: both (:: (quote const) (:: both (:: (quote apply) (:: both (:: (quote Except'.unwrap) id))))))))))))
+
+example : try_step_n' 5000 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.ok (symbol "b")))))) = .ok (symbol "b") := rfl
+
+def Except'.allM : Expr :=
+  (:: apply (:: list.foldl (:: (symbol "bind") (:: apply (:: Except'.ok nil)))))
+
+#eval try_step_n 1000 (:: apply (:: Except'.allM (:: (:: apply (:: Except'.ok (symbol "hi"))) nil)))

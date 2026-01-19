@@ -208,5 +208,13 @@ def Except'.allM : Expr :=
     (flip_e (quote Except'.bothM))))
     (:: apply (:: Except'.ok nil)))))
 
+def Except'.firstM : Expr :=
+  (:: apply (:: list.foldl (::
+    (:: both (:: (quote apply)
+    (flip_e (quote Except'.orM))))
+    (:: apply (:: Except'.err nil)))))
+
+#eval try_step_n' 1000 (:: apply (:: Except'.firstM (:: (:: apply (:: Except'.err (symbol "a"))) (:: (:: apply (:: Except'.ok (symbol "a"))) nil))))
+
 set_option maxRecDepth 5000
 example : try_step_n' 300 (:: apply (:: Except'.allM (:: (:: apply (:: Except'.ok (symbol "hi"))) (:: (:: apply (:: Except'.ok (symbol "hi₂"))) nil)))) = (.ok <| :: (symbol "ok") (:: (symbol "hi") (:: (symbol "hi₂") nil))) := rfl

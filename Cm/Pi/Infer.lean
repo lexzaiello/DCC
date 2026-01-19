@@ -401,6 +401,9 @@ def infer_π : Expr :=
   infer.assert_op_seq .π
     e>=> infer_π.body
 
+/-def infer : Expr :=
+  -/
+
 namespace infer_test
 
 set_option maxRecDepth 5000

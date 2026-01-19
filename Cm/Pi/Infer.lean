@@ -363,12 +363,16 @@ def infer_both : Expr :=
     e>=> (:: apply (:: curry
       (:: both (:: (quote apply) (:: both (::
         (quote Except'.bothM) (:: both (::
-        (:: both (:: (quote apply) (:: both (::
-          (:: apply (:: func.comp (:: (args.read 0 id) (infer_both.fn_with_global_infer infer_both.f))))
-          (args.read 1 id))))) -- infer (:: f l)
-        (:: both (:: (quote apply) (:: both (::
-          (:: apply (:: func.comp (:: (args.read 0 id) (infer_both.fn_with_global_infer infer_both.g))))
-          (args.read 1 id))))))))))))) -- infer (:: g l)
+          (:: both (:: (quote apply) (:: both (::
+            (args.read 0 (infer_both.fn_with_global_infer infer_both.f))
+            (args.read 1 id))))) -- infer (:: f l)
+          (:: both (:: (quote apply) (:: both (::
+            (args.read 0 (infer_both.fn_with_global_infer infer_both.g))
+            (args.read 1 id))))))))))))) -- infer (:: g l)
+
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: infer_both (::
+  (quote (:: apply (:: Except'.ok (symbol "ok")))) (:: both (:: id id)))))
+  (symbol "my data")))
 
 namespace infer_test
 

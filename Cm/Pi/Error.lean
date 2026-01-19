@@ -173,9 +173,11 @@ infixl:60 "e>=>" => (fun e f =>
 def Except'.bothM : Expr :=
   (:: both (:: (quote apply)
     (:: both (:: (quote Except'.bind)
-      (:: π (:: id (:: both (:: (quote const) (:: both (:: (quote apply) (:: both (:: (quote Except'.unwrap) id))))))))))))
+      (:: π (:: id (:: both (:: (quote both) (:: both (:: (:: both
+        (:: (quote const)
+        (:: both (:: (quote apply) (:: both (:: (quote Except'.unwrap) id)))))) (quote id)))))))))))
 
-example : try_step_n' 5000 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.ok (symbol "b")))))) = .ok (symbol "b") := rfl
+#eval try_step_n' 5000 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.ok (symbol "b"))))))
 
 def Except'.allM : Expr :=
   (:: apply (:: list.foldl (:: (symbol "bind") (:: apply (:: Except'.ok nil)))))

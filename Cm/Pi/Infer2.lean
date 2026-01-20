@@ -151,3 +151,5 @@ set_option maxRecDepth 5000
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 
 example : try_step_n' 1000 (:: apply (:: (:: apply (:: (:: apply (:: infer (:: infer both))) (:: id id))) nil)) = (.ok (:: Except'.s_ok (:: TData TData))) := rfl
+
+example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: both (:: id id)) nil)))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl

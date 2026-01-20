@@ -100,7 +100,10 @@ def infer_both.infer_g : Expr :=
 (:: apply (:: infer_both (:: infer_global (:: (:: f g) x))))
 -/
 def infer_both : Expr :=
-  (:: apply (:: curry (:: apply (:: curry (:: both (:: infer_both.infer_f infer_both.infer_g))))))
+  (:: apply (:: curry (:: apply (:: curry (:: both (:: (quote apply)
+    (:: both (::
+      (quote Except'.bothM)
+      (:: both (:: infer_both.infer_f infer_both.infer_g))))))))))
 
 set_option maxRecDepth 1000
 example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: (:: apply (:: curry (:: apply (:: curry infer_both.infer_f)))) (symbol "infer_global"))) (:: (symbol "f") (symbol "g")))) (symbol "x"))) = (.ok (:: apply (:: (symbol "infer_global") (:: (symbol "infer_global") (:: (symbol "f") (symbol "x")))))) := rfl
@@ -147,4 +150,4 @@ def infer : Expr :=
 set_option maxRecDepth 5000
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 
-#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (:: apply (:: infer (:: infer both))) (:: id id))) nil))
+example : try_step_n' 1000 (:: apply (:: (:: apply (:: (:: apply (:: infer (:: infer both))) (:: id id))) nil)) = (.ok (:: Except'.s_ok (:: TData TData))) := rfl

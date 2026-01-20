@@ -81,19 +81,35 @@ example : try_step_n' 100 (:: apply (:: infer_id (:: infer_nil nil))) = (.ok (::
 Also fully applied.
 (:: apply (:: infer (:: infer (:: (:: both (:: f g)) x)))) = (:: apply (:: Except'.bothM (:: (:: apply (:: infer (:: infer (:: f x)))) (:: apply (:: infer (:: infer (:: g x)))))))
 -/
+def infer_both.f : Expr :=
+  :: π (:: nil (:: π (:: id nil)))
+
+def infer_both.g : Expr :=
+  :: π (:: nil (:: π (:: nil (:: π (:: id nil)))))
+
+def infer_both.x : Expr :=
+  :: π (:: nil (:: π (:: nil (:: π (:: nil id)))))
+
 def infer_both.infer_f : Expr :=
   :: both (:: (quote apply) (:: both (::
-    infer.self (:: π (:: id (:: π (:: id (:: π (:: nil id)))))))))
+    infer.self (:: both (::
+    infer.self (:: both (::
+    infer_both.f
+    infer_both.x)))))))
 
 def infer_both.infer_g : Expr :=
   :: both (:: (quote apply) (:: both (::
-    infer.self (:: π (:: id (:: π (:: nil (:: π (:: id id)))))))))
+    infer.self (:: both (::
+    infer.self (:: both (::
+    infer_both.g
+    infer_both.x)))))))
 
 def infer_both : Expr :=
-  (:: both (:: (quote apply) (:: both (::
-    (quote Except'.bothM) (:: both (::
+  (:: both (::
       infer_both.infer_f
-      infer_both.infer_g))))))
+      infer_both.infer_g))
+
+#eval try_step_n' 500 (:: apply (:: infer_both (:: (symbol "global infer") (:: (symbol "f") (:: (symbol "g") (symbol "x"))))))
 
 def assert_op (op_getter : Expr) : Expr :=
   (:: π (:: id (:: π (:: op_getter id))))
@@ -118,14 +134,22 @@ def infer_fn' (fn : Expr) : Expr :=
       (:: π (:: nil (:: π (:: id nil))))))))))
       (:: π (:: nil (:: π (:: nil id))))))))
 
+def t_curr (e : Expr) : Expr :=
+  (:: both (:: (quote apply) (:: both (:: (quote (:: apply (:: curry e))) infer.self))))
+
 def infer : Expr :=
   match_infer
     (assert_whole (quote nil))
     infer_nil
     (match_infer
       (assert_whole (quote id))
-      (:: both (:: (quote apply) (:: both (:: (quote (:: apply (:: curry infer_id))) infer.self))))
-      (infer_fn' infer.self))
+      (t_curr infer_id)
+      (match_infer
+        (assert_whole (quote both))
+        (t_curr infer_both)
+        (infer_fn' infer.self)))
 
 set_option maxRecDepth 5000
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
+
+--#eval try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: both (:: id id)) nil)))) 

@@ -92,7 +92,7 @@ def run' (e : Expr) : Except Error Expr := do
     let step_whole : Except Error Expr := do
       step_apply (:: f x)
 
-    eval_both <|> eval_f_first <|> eval_arg_first <|> step_whole
+    eval_f_first <|> eval_both <|> eval_arg_first <|> step_whole
   | :: x xs => (do
     let x' ← run' x
     let xs' ← run' xs

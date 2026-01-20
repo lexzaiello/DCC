@@ -77,7 +77,8 @@ def args.app (e : Expr) :=
 def args.app.test_args : Expr := (:: (symbol "a") (:: (symbol "b") (:: (symbol "c") nil)))
 def args.app.test_ops : Expr := (:: (args.read 0 id) (:: (args.read 1 id) (:: (args.read 2 id) nil)))
 
-example : try_step_n' 10 (:: apply (:: (args.app args.app.test_ops) args.app.test_args)) = (.ok args.app.test_args) := rfl
+set_option maxRecDepth 1000
+example : try_step_n' 20 (:: apply (:: (args.app args.app.test_ops) args.app.test_args)) = (.ok args.app.test_args) := rfl
 
 def curry.push_future_arg := (quote (:: both (:: (quote apply) (:: both (:: (quote args.push) id)))))
 
@@ -102,7 +103,6 @@ def func.comp : Expr :=
 
 notation "∘'" => func.comp
 
-set_option maxRecDepth 1000
 example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: func.comp id)) id)) (symbol "hi"))) = (.ok (symbol "hi")) := rfl
 
 example : try_step_n' 50 (:: apply (:: (:: apply (:: (:: apply (:: curry.push_future_arg (args.app (:: (quote (symbol "arg: ")) (:: (args.read 0 id) nil))))) (symbol "hi"))) (:: (symbol "other arg") (:: (symbol "other other arg") nil))))
@@ -122,6 +122,6 @@ example : try_step_n' 100 (:: apply (::
 example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: curry (args.read 0 id))) (symbol "arg 0"))) (symbol "rest args")))
    = (.ok (symbol "arg 0")) := rfl
 
-example : try_step_n' 51 (:: apply (:: (:: apply (::
+example : try_step_n' 100 (:: apply (:: (:: apply (::
   (:: apply (:: (:: apply (:: curry (:: apply (:: curry (args.read 1 id))))) (symbol "arg 0")))
     (symbol "rest args"))) (:: (symbol ("other arg")) nil))) = (.ok (symbol "other arg")) := rfl

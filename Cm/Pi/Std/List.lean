@@ -153,7 +153,9 @@ def list.get_n' : Expr :=
 
   mk_getter
 
-example : try_step_n' 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil)))
+set_option maxRecDepth 5000
+
+example : try_step_n' 50 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil)))
   = (.ok (symbol "test")) := rfl
 example : try_step_n' 100 (:: apply (:: (:: apply (:: list.get_n' (:: (symbol "succ") (symbol "zero")))) (:: (symbol "test") (:: (symbol "b") nil)))) = (.ok (symbol "b")) := rfl
 
@@ -208,10 +210,8 @@ def list.foldl : Expr :=
       (:: (quote list.rec_with)
       (:: both (:: list.foldl.mk_nil_handler list.foldl.mk_succ_handler))))))))
 
-set_option maxRecDepth 5000
-
 example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: both nil))) nil)) = (.ok .nil) := rfl
-example : try_step_n' 100 (:: apply (:: (:: apply (:: list.foldl (:: (:: π (:: id id)) nil))) (:: (symbol "a") (:: (symbol "b") nil)))) = (.ok <| :: (:: nil (symbol "b")) (symbol "a")) := rfl
+example : try_step_n' 200 (:: apply (:: (:: apply (:: list.foldl (:: (:: π (:: id id)) nil))) (:: (symbol "a") (:: (symbol "b") nil)))) = (.ok <| :: (:: nil (symbol "b")) (symbol "a")) := rfl
 
 /-
 (:: apply (:: list.map (:: f l)))
@@ -364,7 +364,7 @@ def list.zipWith.foldl_fn_mk_apply : Expr :=
     (quote both) (:: both (::
     (quote (quote apply)) foldl_fn_lazy_apply))))
 
-example : try_step_n' 14 (:: apply (:: (:: apply
+example : try_step_n' 50 (:: apply (:: (:: apply
   (:: list.zipWith.foldl_fn_mk_apply (:: π (:: id id))))
   (:: (:: (:: (symbol "y") nil) (symbol "acc")) (symbol "x")))) = (.ok (:: (symbol "y") (symbol "x"))) := rfl
 
@@ -527,12 +527,12 @@ then display.
 def rec_with_descent : Except Error Expr := do
   let my_succ_case := :: π (:: nil id)
   let my_zero_case := Expr.id
-  let out ← try_step_n' 50 (:: apply (:: (:: apply (:: list.rec_with (:: list.rec_with (:: my_zero_case my_succ_case)))) (:: (symbol "discard") nil)))
+  let out ← try_step_n' 100 (:: apply (:: (:: apply (:: list.rec_with (:: list.rec_with (:: my_zero_case my_succ_case)))) (:: (symbol "discard") nil)))
   pure out
 
 example : rec_with_descent = (.ok (:: (symbol "discard") nil)) := rfl
 
-example : try_step_n' 27 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil))) = .ok (symbol "test") := by rfl
+example : try_step_n' 50 (:: apply (:: (:: apply (:: list.get_n' (symbol "zero"))) (:: (symbol "test") nil))) = .ok (symbol "test") := by rfl
 
 def point_free_plus : Expr :=
   (:: apply (:: curry (:: both (:: (quote apply) (:: both (:: (quote nat.plus) id))))))
@@ -545,6 +545,6 @@ def anon_map_plus_5 (max_steps : ℕ := 300) : Except Error Expr := do
       (:: both (:: (quote nat.plus) id)))))) (Nat'.of_nat 5)))))
   try_step_n' max_steps (:: apply (:: curr (:: (Nat'.of_nat 1) (:: (Nat'.of_nat 2) (:: (Nat'.of_nat 3) nil)))))
 
-example : (Expr.as_list >=> (List.mapM Nat'.to_nat)) <$> (anon_map_plus_5 298) = (.ok (some [6, 7, 8])) := rfl
+example : (Expr.as_list >=> (List.mapM Nat'.to_nat)) <$> (anon_map_plus_5 500) = (.ok (some [6, 7, 8])) := rfl
 
 end test_list

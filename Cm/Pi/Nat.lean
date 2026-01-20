@@ -112,7 +112,7 @@ def nat.fib : Expr :=
   -- generates recursor
   (:: apply (:: nat.rec_with (:: nat.rec_with (:: zero_case do_succ))))
 
-set_option maxRecDepth 5000
+set_option maxRecDepth 10000
 example : Nat'.to_nat <$> try_step_n' 1000 (:: apply (:: nat.fib (Nat'.of_nat 5))) = (.ok (.some 5)) := rfl
 example : try_step_n' 50 (:: apply (:: nat.fib (Nat'.of_nat 1))) = (.ok (:: succ zero)) := rfl
 example : try_step_n' 50 (:: apply (:: nat.fib (Nat'.of_nat 0))) = (.ok zero) := rfl

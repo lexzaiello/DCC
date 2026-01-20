@@ -147,7 +147,7 @@ def Except'.kleisliRight : Expr :=
 (Except.ok >=> Except.ok) "hi" = ok "hi"
 -/
 set_option maxRecDepth 2000
-example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: Except'.kleisliRight Except'.ok))
+example : try_step_n' 500 (:: apply (:: (:: apply (:: (:: apply (:: Except'.kleisliRight Except'.ok))
   Except'.ok)) (symbol "hi"))) = (.ok (:: Except'.s_ok (symbol "hi"))) := rfl
 
 infixl:60 "e>>=" => (fun e f =>
@@ -196,11 +196,11 @@ example : try_step_n' 1000 (:: apply (:: Except'.orM (:: (:: apply (:: Except'.e
 
 example : try_step_n' 1000 (:: apply (:: Except'.orM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.ok (symbol "b")))))) = (.ok (:: Except'.s_ok (symbol "a"))) := rfl
 
-example : try_step_n' 100 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.ok (symbol "b")))))) = .ok (:: (symbol "ok") (:: (symbol "a") (symbol "b"))) := rfl
+example : try_step_n' 500 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.ok (symbol "b")))))) = .ok (:: (symbol "ok") (:: (symbol "a") (symbol "b"))) := rfl
 
-example : try_step_n' 100 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.err (symbol "a"))) (:: apply (:: Except'.ok (symbol "b")))))) = (.ok <| :: (symbol "error") (symbol "a")) := rfl
+example : try_step_n' 500 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.err (symbol "a"))) (:: apply (:: Except'.ok (symbol "b")))))) = (.ok <| :: (symbol "error") (symbol "a")) := rfl
 
-example : try_step_n' 100 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.err (symbol "b")))))) = (.ok <| :: (symbol "error") (symbol "b")) := rfl
+example : try_step_n' 500 (:: apply (:: Except'.bothM (:: (:: apply (:: Except'.ok (symbol "a"))) (:: apply (:: Except'.err (symbol "b")))))) = (.ok <| :: (symbol "error") (symbol "b")) := rfl
 
 def Except'.allM : Expr :=
   (:: apply (:: list.foldl (::
@@ -218,4 +218,4 @@ set_option maxRecDepth 5000
 
 example : try_step_n' 1000 (:: apply (:: Except'.firstM (:: (:: apply (:: Except'.err (symbol "a"))) (:: (:: apply (:: Except'.ok (symbol "a"))) nil)))) = (.ok (:: (symbol "ok") (symbol "a"))) := rfl
 
-example : try_step_n' 300 (:: apply (:: Except'.allM (:: (:: apply (:: Except'.ok (symbol "hi"))) (:: (:: apply (:: Except'.ok (symbol "hi₂"))) nil)))) = (.ok <| :: (symbol "ok") (:: (symbol "hi") (:: (symbol "hi₂") nil))) := rfl
+example : try_step_n' 500 (:: apply (:: Except'.allM (:: (:: apply (:: Except'.ok (symbol "hi"))) (:: (:: apply (:: Except'.ok (symbol "hi₂"))) nil)))) = (.ok <| :: (symbol "ok") (:: (symbol "hi") (:: (symbol "hi₂") nil))) := rfl

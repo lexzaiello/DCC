@@ -443,6 +443,8 @@ example : try_step_n' 100 (:: apply (:: infer (:: infer nil))) = .ok (:: Except'
 
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: apply (:: id nil))))) = .ok (:: Except'.s_ok TData) := rfl
 
+#eval try_step_n' 500 (:: apply (:: infer (:: infer (:: apply (:: (:: both (:: id id)) nil)))))
+
 namespace infer_test
 
 set_option maxRecDepth 5000
@@ -457,7 +459,7 @@ example : try_step_n' 1000 (:: apply (:: (:: apply (:: (quote infer.assert_well_
 
 example : try_step_n' 20 (:: apply (:: (:: apply (:: expected_but_found const)) nil)) = .ok (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil)) := rfl
 
-example : try_step_n' 18 (:: apply (:: (:: apply (:: assert_eq .const)) nil)) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil))) := rfl
+example : try_step_n' 50 (:: apply (:: (:: apply (:: assert_eq .const)) nil)) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil))) := rfl
 
 example : try_step_n' 20 (:: apply (:: (:: apply (:: assert_eq .const)) .const)) = .ok (:: (symbol "ok") const) := rfl
 
@@ -467,7 +469,7 @@ example : try_step_n' 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "
 
 example : try_step_n' 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil)))) = .ok (:: (symbol "ok") (symbol "Data")) := rfl
 
-example : try_step_n' 70 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever"))))) = .ok (:: (symbol "ok") (:: (symbol "infer") (:: const (symbol "whatever")))) := rfl
+example : try_step_n' 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever"))))) = .ok (:: (symbol "ok") (:: (symbol "infer") (:: const (symbol "whatever")))) := rfl
 
 example : try_step_n' 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever"))))) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") (symbol "bad")))) := rfl
 

@@ -356,18 +356,26 @@ def infer_both.fn_with_global_infer (fn : Expr) : Expr :=
               (:: both (:: (quote const) fn))
               (quote id))))))))))))))))
 
-example : try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_both.fn_with_global_infer infer_both.f) (:: (symbol "global infer") (:: both (:: (symbol "f") id))))) (symbol "my data"))) = (.ok (:: apply (:: (symbol "global infer") (:: (symbol "global infer") (:: (symbol "f") (symbol "my data")))))) := rfl
+example : try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_both.fn_with_global_infer infer_both.f)
+  (:: (symbol "global infer") (:: both (:: (symbol "f") id))))) (symbol "my data"))) =
+  (.ok (:: apply (:: (symbol "global infer") (:: (symbol "global infer") (:: (symbol "f") (symbol "my data")))))) := rfl
 
 def infer_both.body : Expr :=
   (:: apply (:: curry
       (:: both (:: (quote apply) (:: both (::
         (quote Except'.bothM) (:: both (::
           (:: both (:: (quote apply) (:: both (::
-            (args.read 0 <| infer_both.fn_with_global_infer infer_both.f)
-            (args.read 1 id))))) -- infer (:: f l)
+            (args.read 0 infer.self) (:: both (::
+            (args.read 0 infer.self)
+            (:: both (::
+              (args.read 0 <| infer_both.f)
+              (args.read 1 id))))))))) -- infer (:: f l)
           (:: both (:: (quote apply) (:: both (::
-            (args.read 0 <| infer_both.fn_with_global_infer infer_both.g)
-            (args.read 1 id))))))))))))) -- infer (:: g l)
+            (args.read 0 infer.self) (:: both (::
+            (args.read 0 infer.self)
+            (:: both (::
+            (args.read 0 infer_both.g)
+            (args.read 1 id))))))))))))))))) -- infer (:: g l)
 
 def infer_both : Expr :=
   infer.assert_op_seq .both
@@ -405,7 +413,7 @@ def infer_π : Expr :=
 (:: apply (:: (match_infer infer_π infer_nil) (:: infer_nil nil)))
 = (:: apply (:: Except'.ok TData))
 -/
-def match_infer (match_fn then_do or_else : Expr) : Expr :=
+def match_infer (match_fn then_do : Expr) (or_else : Expr := (quote (:: apply (:: Except'.err TFail)))) : Expr :=
   (:: both (:: (quote apply)
     (:: both (::
       (:: both (:: (:: both (:: (quote eq) (:: both (::
@@ -418,13 +426,16 @@ def match_infer (match_fn then_do or_else : Expr) : Expr :=
 (:: apply (:: infer (:: infer nil)))
 (:: apply (:: infer (:: infer (:: apply 
 -/
-def infer : Expr :=
+/-def infer : Expr :=
   match_infer
     (:: π (:: id (quote nil)))
     infer_nil
     (match_infer
+      (:: π (:: id (quote id)))
+      infer_id
+    (match_infer
       (:: π (:: id (:: π (:: (quote apply) id))))
-      infer_apply
+      infer_id
       (match_infer
         (:: π (:: id (:: π (:: (quote π) id))))
         infer_π
@@ -434,16 +445,67 @@ def infer : Expr :=
           (match_infer
             (:: π (:: id (:: π (:: (quote const) id))))
             infer_const
+            (quote (:: apply (:: Except'.err TFail))))))))-/
+
+/-
+Infer's the left side of a future application with the specified infer
+function.
+-/
+def infer_fn (fn : Expr) : Expr :=
+  (:: both (:: (quote apply) (:: both (::
+    (:: both (:: (quote apply) (:: both (::
+      fn (:: both (::
+      infer.self
+      (:: π (:: nil (:: π (:: id nil))))))))))
+    (:: both (::
+      infer.self
+      (:: π (:: nil (:: π (:: nil id))))))))))
+
+def infer_fn' (fn : Expr) : Expr :=
+  (:: both (:: (quote apply) (:: both (::
+    (:: both (:: (quote apply) (:: both (::
+      fn (:: both (::
+      infer.self
+      (:: π (:: nil (:: π (:: id nil))))))))))
+      (:: π (:: nil (:: π (:: nil id))))))))
+
+def assert_op (op_getter : Expr) : Expr :=
+  (:: π (:: id (:: π (:: op_getter id))))
+
+def assert_whole (whole : Expr) : Expr :=
+  (:: π (:: id whole))
+
+def infer : Expr :=
+  match_infer
+    (assert_whole (quote nil))
+    infer_nil
+    (match_infer
+      (assert_whole (quote id))
+      infer_id
+      (match_infer
+        (assert_op (quote id))
+        (infer_fn (quote infer_id))
+        (match_infer
+          (assert_op (quote both))
+          infer_both
+          (match_infer
+            (assert_op (assert_op (quote both)))
+            (infer_fn (quote infer_both))
             (match_infer
-              (:: π (:: id (quote id)))
-              infer_id
-              (quote (:: apply (:: Except'.err TFail))))))))
+              (:: π (:: id (:: π (:: (:: π (:: (quote const) id)) id))))
+              (infer_fn (quote infer_const)))))))
 
 example : try_step_n' 100 (:: apply (:: infer (:: infer nil))) = .ok (:: Except'.s_ok TData) := rfl
 
+example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
+
+#eval try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: const nil) nil))))
+
+/-example : try_step_n' 100 (:: apply (:: infer (:: infer nil))) = .ok (:: Except'.s_ok TData) := rfl
+
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: apply (:: id nil))))) = .ok (:: Except'.s_ok TData) := rfl
 
-#eval try_step_n' 500 (:: apply (:: infer (:: infer (:: apply (:: (:: both (:: id id)) nil)))))
+#eval try_step_n' 500 (:: apply (:: infer (:: infer (:: apply (:: id nil)))))-/
 
 namespace infer_test
 

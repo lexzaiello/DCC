@@ -437,9 +437,11 @@ def infer : Expr :=
             (match_infer
               (:: π (:: id (quote id)))
               infer_id
-              (quote (:: apply (:: Except'.ok TData))))))))
+              (quote (:: apply (:: Except'.err TFail))))))))
 
-example : try_step_n' 20 (:: apply (:: infer (:: infer nil))) = .ok (:: Except'.s_ok TData) := rfl
+example : try_step_n' 100 (:: apply (:: infer (:: infer nil))) = .ok (:: Except'.s_ok TData) := rfl
+
+example : try_step_n' 500 (:: apply (:: infer (:: infer (:: apply (:: id nil))))) = .ok (:: Except'.s_ok TData) := rfl
 
 namespace infer_test
 

@@ -439,7 +439,7 @@ def infer : Expr :=
               infer_id
               (quote (:: apply (:: Except'.ok TData))))))))
 
-#eval try_step_n' 5000 (:: apply (:: infer (:: infer_nil nil)))
+example : try_step_n' 20 (:: apply (:: infer (:: infer nil))) = .ok (:: Except'.s_ok TData) := rfl
 
 namespace infer_test
 

@@ -495,7 +495,8 @@ def infer : Expr :=
               (:: π (:: id (:: π (:: (:: π (:: (quote const) id)) id))))
               (infer_fn (quote infer_const)))))))
 
-example : try_step_n' 100 (:: apply (:: infer (:: infer nil))) = .ok (:: Except'.s_ok TData) := rfl
+example : try_step_n' 100 (:: apply (:: infer (:: infer nil))) = .ok (:: Except'.s_ok TData) := rflcxvm.,/'oidx
+/xr,m,',bclnmyu[ko]tidcnkk
 
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 

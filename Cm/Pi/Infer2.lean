@@ -79,37 +79,31 @@ example : try_step_n' 100 (:: apply (:: infer_id (:: infer_nil nil))) = (.ok (::
 
 /-
 Also fully applied.
-(:: apply (:: infer (:: infer (:: (:: both (:: f g)) x)))) = (:: apply (:: Except'.bothM (:: (:: apply (:: infer (:: infer (:: f x)))) (:: apply (:: infer (:: infer (:: g x)))))))
+(:: apply (:: infer_both (:: infer_global (:: (:: f g) x))))
 -/
-def infer_both.f : Expr :=
-  :: π (:: nil (:: π (:: id nil)))
-
-def infer_both.g : Expr :=
-  :: π (:: nil (:: π (:: nil (:: π (:: id nil)))))
-
 def infer_both.x : Expr :=
-  :: π (:: nil (:: π (:: nil (:: π (:: nil id)))))
+  :: π (:: nil (:: π (:: nil id)))
 
 def infer_both.infer_f : Expr :=
-  :: both (:: (quote apply) (:: both (::
-    infer.self (:: both (::
-    infer.self (:: both (::
-    infer_both.f
-    infer_both.x)))))))
+  (:: both (:: (quote apply) (:: both (::
+    (args.read 0 (:: π (:: id nil))) (:: both (::
+    (args.read 0 (:: π (:: id nil))) (:: both (::
+    (args.read 0 (:: π (:: nil (:: π (:: id nil))))) (:: π (:: nil id))))))))))
 
 def infer_both.infer_g : Expr :=
-  :: both (:: (quote apply) (:: both (::
-    infer.self (:: both (::
-    infer.self (:: both (::
-    infer_both.g
-    infer_both.x)))))))
+  (:: both (:: (quote apply) (:: both (::
+    (args.read 0 (:: π (:: id nil))) (:: both (::
+    (args.read 0 (:: π (:: id nil))) (:: both (::
+    (args.read 0 (:: π (:: nil (:: π (:: nil id))))) (:: π (:: nil id))))))))))
 
+/-
+(:: apply (:: infer_both (:: infer_global (:: (:: f g) x))))
+-/
 def infer_both : Expr :=
-  (:: both (::
-      infer_both.infer_f
-      infer_both.infer_g))
+  (:: apply (:: curry (:: apply (:: curry (:: both (:: infer_both.infer_f infer_both.infer_g))))))
 
-#eval try_step_n' 500 (:: apply (:: infer_both (:: (symbol "global infer") (:: (symbol "f") (:: (symbol "g") (symbol "x"))))))
+set_option maxRecDepth 1000
+example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: (:: apply (:: curry (:: apply (:: curry infer_both.infer_f)))) (symbol "infer_global"))) (:: (symbol "f") (symbol "g")))) (symbol "x"))) = (.ok (:: apply (:: (symbol "infer_global") (:: (symbol "infer_global") (:: (symbol "f") (symbol "x")))))) := rfl
 
 def assert_op (op_getter : Expr) : Expr :=
   (:: π (:: id (:: π (:: op_getter id))))
@@ -134,8 +128,9 @@ def infer_fn' (fn : Expr) : Expr :=
       (:: π (:: nil (:: π (:: id nil))))))))))
       (:: π (:: nil (:: π (:: nil id))))))))
 
-def t_curr (e : Expr) : Expr :=
-  (:: both (:: (quote apply) (:: both (:: (quote (:: apply (:: curry e))) infer.self))))
+def t_curr (n : ℕ) (e : Expr) : Expr :=
+  (:: both (:: (quote apply) (:: both (:: (quote (:: apply ((List.replicate n curry).foldr
+    (fun e acc => :: e acc) e))) infer.self))))
 
 def infer : Expr :=
   match_infer
@@ -143,13 +138,13 @@ def infer : Expr :=
     infer_nil
     (match_infer
       (assert_whole (quote id))
-      (t_curr infer_id)
+      (t_curr 1 infer_id)
       (match_infer
         (assert_whole (quote both))
-        (t_curr infer_both)
+        (:: both (:: (quote apply) (:: both (:: (quote infer_both) infer.self))))
         (infer_fn' infer.self)))
 
 set_option maxRecDepth 5000
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 
---#eval try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: both (:: id id)) nil)))) 
+#eval try_step_n' 1000 (:: apply (:: (:: apply (:: (:: apply (:: infer (:: infer both))) (:: id id))) nil))

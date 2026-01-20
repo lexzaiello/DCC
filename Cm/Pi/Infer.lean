@@ -1,10 +1,10 @@
 import Mathlib.Data.Nat.Notation
 import Cm.Pi.Ast
 import Cm.Pi.Eval
-import Cm.Pi.Error
-import Cm.Pi.Util
-import Cm.Pi.Nat
-import Cm.Pi.List
+import Cm.Pi.Std.Except
+import Cm.Pi.Std.Util
+import Cm.Pi.Std.Nat
+import Cm.Pi.Std.List
 
 open Expr
 
@@ -401,8 +401,45 @@ def infer_π : Expr :=
   infer.assert_op_seq .π
     e>=> infer_π.body
 
-/-def infer : Expr :=
-  -/
+/-
+(:: apply (:: (match_infer infer_π infer_nil) (:: infer_nil nil)))
+= (:: apply (:: Except'.ok TData))
+-/
+def match_infer (match_fn then_do or_else : Expr) : Expr :=
+  (:: both (:: (quote apply)
+    (:: both (::
+      (:: both (:: (:: both (:: (quote eq) (:: both (::
+        (quote then_do)
+        (quote or_else)))))
+        match_fn))
+     id))))
+
+/-
+(:: apply (:: infer (:: infer nil)))
+(:: apply (:: infer (:: infer (:: apply 
+-/
+def infer : Expr :=
+  match_infer
+    (:: π (:: id (quote nil)))
+    infer_nil
+    (match_infer
+      (:: π (:: id (:: π (:: (quote apply) id))))
+      infer_apply
+      (match_infer
+        (:: π (:: id (:: π (:: (quote π) id))))
+        infer_π
+        (match_infer
+          (:: π (:: id (:: π (:: (quote both) id))))
+          infer_both
+          (match_infer
+            (:: π (:: id (:: π (:: (quote const) id))))
+            infer_const
+            (match_infer
+              (:: π (:: id (quote id)))
+              infer_id
+              (quote (:: apply (:: Except'.ok TData))))))))
+
+#eval try_step_n' 5000 (:: apply (:: infer (:: infer_nil nil)))
 
 namespace infer_test
 

@@ -105,16 +105,19 @@ def infer_both : Expr :=
       (quote Except'.bothM)
       (:: both (:: infer_both.infer_f infer_both.infer_g))))))))))
 
+def infer_curr.global_infer : Expr :=
+  (args.read 0 (:: π (:: id nil)))
+
 def infer_π.infer_f : Expr :=
   (:: both (:: (quote apply) (:: both (::
-    (args.read 0 (:: π (:: id nil))) (:: both (::
-    (args.read 0 (:: π (:: id nil))) (:: both (::
+    (infer_curr.global_infer) (:: both (::
+    (infer_curr.global_infer) (:: both (::
     (args.read 0 (:: π (:: nil (:: π (:: id nil))))) (:: π (:: nil (:: π (:: id nil))))))))))))
 
 def infer_π.infer_g : Expr :=
   (:: both (:: (quote apply) (:: both (::
-    (args.read 0 (:: π (:: id nil))) (:: both (::
-    (args.read 0 (:: π (:: id nil))) (:: both (::
+    (infer_curr.global_infer) (:: both (::
+    (infer_curr.global_infer) (:: both (::
     (args.read 0 (:: π (:: nil (:: π (:: nil id))))) (:: π (:: nil (:: π (:: nil id))))))))))))
 
 def infer_π : Expr :=
@@ -130,8 +133,40 @@ def infer_π : Expr :=
 def infer_const : Expr :=
   (:: apply (:: curry (:: apply (:: curry
     (:: both (:: (quote apply) (:: both (::
-      (args.read 0 (:: π (:: id nil))) (:: both (::
-      (args.read 0 (:: π (:: id nil))) (:: π (:: nil id))))))))))))
+      infer_curr.global_infer (:: both (::
+      infer_curr.global_infer (:: π (:: nil id))))))))))))
+
+/-
+(:: apply (:: infer (:: infer (:: (:: (:: (:: eq (:: yes_case no_case)) test) val)))))
+= (:: (:: (:: eq (:: (:: apply (:: infer (:: infer yes_case test)) (:: infer (:: infer no_case val))))) test) val)
+
+currying twice gets nil applied.
+-/
+def infer_eq.yes_case : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply)) (:: both (:: (quote both) (:: both (::
+    (:: both (:: (quote const) infer_curr.global_infer)) (:: both (::
+    (quote both)
+    (:: both (:: (:: both (:: (quote const) infer_curr.global_infer)) (:: both (:: (quote both)
+      (:: both (:: (:: both (:: (quote const) (args.read 0 (:: π (:: nil (:: π (:: id nil))))))) (quote id)))))))))))))))))
+
+def infer_eq.no_case : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply)) (:: both (:: (quote both) (:: both (::
+    (:: both (:: (quote const) infer_curr.global_infer)) (:: both (::
+    (quote both)
+    (:: both (:: (:: both (:: (quote const) infer_curr.global_infer)) (:: both (:: (quote both)
+      (:: both (:: (:: both (:: (quote const) (args.read 0 (:: π (:: nil (:: π (:: nil id))))))) (quote id)))))))))))))))))
+
+def infer_eq.test_val : Expr :=
+  (:: π (:: nil (:: π (:: nil id))))
+
+def infer_eq : Expr :=
+  (:: apply (:: curry
+    (:: apply (:: curry
+      (:: both (::
+        (:: both (:: (quote eq)
+          (:: both (:: infer_eq.yes_case infer_eq.no_case)))) infer_eq.test_val))))))
 
 set_option maxRecDepth 1000
 example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: (:: apply (:: curry (:: apply (:: curry infer_both.infer_f)))) (symbol "infer_global"))) (:: (symbol "f") (symbol "g")))) (symbol "x"))) = (.ok (:: apply (:: (symbol "infer_global") (:: (symbol "infer_global") (:: (symbol "f") (symbol "x")))))) := rfl
@@ -179,15 +214,20 @@ def infer : Expr :=
           (match_infer
             (assert_whole (quote const))
             (:: both (:: (quote apply) (:: both (:: (quote infer_const) infer.self))))
-            (infer_fn' infer.self)))))
+            (match_infer
+              (assert_whole (quote eq))
+              (:: both (:: (quote apply) (:: both (:: (quote infer_eq) infer.self))))
+              (infer_fn' infer.self))))))
+
+#eval try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: (:: eq (:: id id)) nil) nil))))
 
 set_option maxRecDepth 5000
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 
-example : try_step_n' 1000 (:: apply (:: (:: apply (:: (:: apply (:: infer (:: infer both))) (:: id id))) nil)) = (.ok (:: Except'.s_ok (:: TData TData))) := rfl
+example : try_step_n' 500 (:: apply (:: (:: apply (:: (:: apply (:: infer (:: infer both))) (:: id id))) nil)) = (.ok (:: Except'.s_ok (:: TData TData))) := rfl
 
-example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: both (:: id id)) nil)))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
+example : try_step_n' 500 (:: apply (:: infer (:: infer (:: (:: both (:: id id)) nil)))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
 
-example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: π (:: id id)) (:: nil nil))))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
+example : try_step_n' 500 (:: apply (:: infer (:: infer (:: (:: π (:: id id)) (:: nil nil))))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
 
-example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: const nil) nil)))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
+example : try_step_n' 500 (:: apply (:: infer (:: infer (:: (:: const nil) nil)))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl

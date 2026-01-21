@@ -123,6 +123,16 @@ def infer_π : Expr :=
       (quote Except'.bothM)
       (:: both (:: infer_π.infer_f infer_π.infer_g))))))))))
 
+/-
+(:: apply (:: infer (:: infer (:: (:: const x) y))))
+= (:: apply (:: infer (:: infer x)))
+-/
+def infer_const : Expr :=
+  (:: apply (:: curry (:: apply (:: curry
+    (:: both (:: (quote apply) (:: both (::
+      (args.read 0 (:: π (:: id nil))) (:: both (::
+      (args.read 0 (:: π (:: id nil))) (:: π (:: nil id))))))))))))
+
 set_option maxRecDepth 1000
 example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: (:: apply (:: curry (:: apply (:: curry infer_both.infer_f)))) (symbol "infer_global"))) (:: (symbol "f") (symbol "g")))) (symbol "x"))) = (.ok (:: apply (:: (symbol "infer_global") (:: (symbol "infer_global") (:: (symbol "f") (symbol "x")))))) := rfl
 
@@ -166,7 +176,10 @@ def infer : Expr :=
         (match_infer
           (assert_whole (quote π))
           (:: both (:: (quote apply) (:: both (:: (quote infer_π) infer.self))))
-          (infer_fn' infer.self))))
+          (match_infer
+            (assert_whole (quote const))
+            (:: both (:: (quote apply) (:: both (:: (quote infer_const) infer.self))))
+            (infer_fn' infer.self)))))
 
 set_option maxRecDepth 5000
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
@@ -176,3 +189,5 @@ example : try_step_n' 1000 (:: apply (:: (:: apply (:: (:: apply (:: infer (:: i
 example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: both (:: id id)) nil)))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
 
 example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: π (:: id id)) (:: nil nil))))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
+
+example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: const nil) nil)))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl

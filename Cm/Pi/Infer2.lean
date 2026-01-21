@@ -166,7 +166,7 @@ def infer_eq : Expr :=
     (:: apply (:: curry
       (:: both (::
         (:: both (:: (quote eq)
-          (:: both (:: infer_eq.yes_case infer_eq.no_case)))) infer_eq.test_val))))))
+          (:: both (:: infer_eq.yes_case infer_eq.no_case)))) (:: π (:: nil id))))))))
 
 set_option maxRecDepth 1000
 example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: (:: apply (:: curry (:: apply (:: curry infer_both.infer_f)))) (symbol "infer_global"))) (:: (symbol "f") (symbol "g")))) (symbol "x"))) = (.ok (:: apply (:: (symbol "infer_global") (:: (symbol "infer_global") (:: (symbol "f") (symbol "x")))))) := rfl
@@ -219,10 +219,12 @@ def infer : Expr :=
               (:: both (:: (quote apply) (:: both (:: (quote infer_eq) infer.self))))
               (infer_fn' infer.self))))))
 
-#eval try_step_n' 2000 (:: apply (:: infer (:: infer (:: (quote nil) nil))))
---#eval try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: (:: eq (:: (quote (symbol "bruh")) (quote (symbol "bruh")))) nil) nil))))
+set_option maxRecDepth 10000
 
-set_option maxRecDepth 5000
+example : try_step_n' 2000 (:: apply (:: infer (:: infer (:: (quote nil) nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
+
+example : try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: (:: eq (:: (quote nil) (quote (symbol "hi")))) nil) nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
+
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 
 example : try_step_n' 500 (:: apply (:: (:: apply (:: (:: apply (:: infer (:: infer both))) (:: id id))) nil)) = (.ok (:: Except'.s_ok (:: TData TData))) := rfl

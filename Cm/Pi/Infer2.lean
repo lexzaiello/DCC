@@ -46,6 +46,8 @@ def infer.self : Expr :=
 
 /-
 Runs infer again. Unsafe.
+
+get_e has all args in scope.
 -/
 def infer_self_unsafe (get_e : Expr := (:: π (:: nil id))) : Expr :=
   (:: both (:: (quote apply) (:: both (::
@@ -66,11 +68,11 @@ is detected.
 -/
 def infer_list : Expr :=
   (infer.match_with
-    (match_fn := (infer_self_unsafe (:: π (:: id (:: π (:: id nil))))))
-    (match_other := (infer_self_unsafe (:: π (:: id (:: π (:: nil id))))))
+    (match_fn := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: id nil)))))))
+    (match_other := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: nil id)))))))
     -- if the types of the head and the tail are equal, then the type is List α
     -- although, they might both be Except values, so map those
-    (then_do := (:: Except'.map_with (:: mk_tlist id)))
+    (then_do := (quote (:: both (:: (quote apply) (:: both (:: (quote (:: apply (:: Except'.map_with (:: mk_tlist id)))) id))))))
     (or_else := assert_eq))
 
 /-
@@ -96,4 +98,6 @@ def infer : Expr :=
 def infer' : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote infer) (:: both (:: (quote infer) id))))))
 
-#eval try_step_n' 100 (:: apply (:: infer (:: infer nil)))
+set_option maxRecDepth 5000
+example : try_step_n' 500 (:: apply (:: infer' (:: nil nil))) = (.ok (:: Except'.s_ok (:: IList TData))) := rfl
+example : try_step_n' 100 (:: apply (:: infer' nil)) = (.ok (:: Except'.s_ok TData)) := rfl

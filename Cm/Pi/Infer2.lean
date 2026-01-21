@@ -62,26 +62,34 @@ def infer_nil (or_else : Expr := or_fail) : Expr :=
 def mk_tlist : Expr :=
   :: both (:: (quote IList) id)
 
+def throw_generic_expected (msg : String) : Expr :=
+  (quote (:: both (:: (quote apply) (:: both (::
+      (quote Except'.err)
+      (:: both (:: (quote apply) (:: both (::
+        (quote (:: apply (:: expected_but_found (symbol msg)))) id)))))))))
+
+/-
+then_do should usually be quoted.
+-/
+def guard_list (then_do : Expr) : Expr :=
+  (infer.match_with
+    (match_fn := (:: π (:: id (:: π (:: id id)))))
+    (then_do := then_do)
+    (or_else := (throw_generic_expected "a list"))
+    (match_other := id))
 /-
 List inference is the top-level infer rule if no application
 is detected.
 -/
 def infer_list : Expr :=
-  (infer.match_with
-    (match_fn := (:: π (:: id (:: π (:: id id)))))
-    (then_do :=
-      (quote (infer.match_with
-        (match_fn := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: id nil)))))))
-        (match_other := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: nil id)))))))
-        -- if the types of the head and the tail are equal, then the type is List α
-        -- although, they might both be Except values, so map those
-        (then_do := (quote (:: both (:: (quote apply) (:: both (:: (quote (:: apply (:: Except'.map_with (:: mk_tlist id)))) id))))))
-        (or_else := assert_eq))))
-    (or_else := (quote (:: both (:: (quote apply) (:: both (::
-      (quote Except'.err)
-      (:: both (:: (quote apply) (:: both (::
-        (quote (:: apply (:: expected_but_found (symbol "a list")))) id))))))))))
-    (match_other := id))
+  guard_list <|
+    (quote (infer.match_with
+      (match_fn := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: id nil)))))))
+      (match_other := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: nil id)))))))
+      -- if the types of the head and the tail are equal, then the type is List α
+      -- although, they might both be Except values, so map those
+      (then_do := (quote (:: both (:: (quote apply) (:: both (:: (quote (:: apply (:: Except'.map_with (:: mk_tlist id)))) id))))))
+      (or_else := assert_eq)))
 
 /-
 A version of infer both that forms the type of f and g
@@ -90,15 +98,25 @@ by inference on x.
 both :: ∀  (α : Type), (f : α → β) (g : α → β), List β
 -/
 
-def infer_fn : Expr :=
-  sorry
+/-
+Infer apps by inferring the left side of the app, fn
+and applying the argument to it.
 
-/-def infer_apply : Expr :=
+Similar guard to infer_list.
+-/
+def infer_fn : Expr :=
+  guard_list <|
+    (quote (:: both
+      (:: (quote apply) (::
+        (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: id nil))))))
+        (:: π (:: nil (:: π (:: nil id))))))))
+
+def infer_apply : Expr :=
   (infer.match_with
     (match_fn := (:: π (:: id (:: π (:: (quote apply) id)))))
     (match_other := id)
     (then_do := (quote infer_fn))
-    (or_else := -/
+    (or_else := (throw_generic_expected "a function application")))
 
 /-
 (:: apply (:: (:: apply (:: (:: apply (:: infer_both infer_global)) (:: f g))) x))

@@ -5,6 +5,7 @@ import Cm.Pi.Ast
 open Expr
 
 def TData : Expr := .symbol "Data"
+def TType : Expr := .symbol "Type"
 
 def TFail : Expr := .symbol "sorry"
 
@@ -228,7 +229,10 @@ def infer : Expr :=
               (match_infer
                 (assert_whole (quote apply))
                 (:: both (:: (quote apply) (:: both (:: (quote infer_apply) infer.self))))
-                (infer_fn' infer.self)))))))
+                (match_infer
+                  (assert_whole (quote TData))
+                  (quote (:: apply (:: Except'.ok TType)))
+                  (infer_fn' infer.self))))))))
 
 def infer' : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote infer) (:: both (:: (quote infer) id))))))
@@ -247,8 +251,8 @@ example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:
 
 example : try_step_n' 500 (:: apply (:: (:: apply (:: (:: apply (:: infer (:: infer both))) (:: id id))) nil)) = (.ok (:: Except'.s_ok (:: TData TData))) := rfl
 
-example : try_step_n' 500 (:: apply (:: infer (:: infer (:: (:: both (:: id id)) nil)))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
+example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: both (:: id id)) nil)))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
 
-example : try_step_n' 500 (:: apply (:: infer (:: infer (:: (:: π (:: id id)) (:: nil nil))))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
+example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: π (:: id id)) (:: nil nil))))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
 
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: (:: const nil) nil)))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl

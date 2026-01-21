@@ -260,9 +260,11 @@ def infer' : Expr :=
 
 --#eval try_step_n' 1000 (:: apply (:: infer' (:: Except'.unwrap (:: Except'.s_ok nil))))
 
-#eval try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: π (:: nil id)) (:: nil nil)))))
-
 set_option maxRecDepth 10000
+
+example : try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: π (:: nil id)) (:: nil nil))))) = (.ok (:: Except'.s_ok TData)) := rfl
+
+example : try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: π (:: id nil)) (:: nil nil))))) = (.ok (:: Except'.s_ok TData)) := rfl
 
 example : try_step_n' 1000 ((:: apply (:: infer' nil)) e>>= infer') = (.ok (:: (symbol "ok") (symbol "Type"))) := rfl
 

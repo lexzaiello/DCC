@@ -282,6 +282,8 @@ def infer' : Expr :=
 
 set_option maxRecDepth 10000
 
+example : try_step_n' 5000 (:: apply (:: infer' (:: apply (:: nat.plus (:: (Nat'.of_nat 10) (Nat'.of_nat 10)))))) = (.ok (:: Except'.s_ok TNat)) := rfl
+
 example : try_step_n' 2000 (:: apply (:: infer (:: infer Nat'.zero))) = (.ok (:: Except'.s_ok TNat)) := rfl
 
 example : try_step_n' 2000 (:: apply (:: infer (:: infer (:: Nat'.succ (:: Nat'.succ Nat'.zero))))) = (.ok (:: Except'.s_ok TNat)) := rfl

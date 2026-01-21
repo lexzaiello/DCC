@@ -258,9 +258,9 @@ def infer : Expr :=
 def infer' : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote infer) (:: both (:: (quote infer) id))))))
 
---#eval try_step_n' 1000 (:: apply (:: infer' (:: Except'.unwrap (:: Except'.s_ok nil))))
-
 set_option maxRecDepth 10000
+
+example : try_step_n' 1000 (:: apply (:: infer' (:: Except'.unwrap (:: Except'.s_ok nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 
 example : try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: π (:: nil id)) (:: nil nil))))) = (.ok (:: Except'.s_ok TData)) := rfl
 

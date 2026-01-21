@@ -68,12 +68,17 @@ is detected.
 -/
 def infer_list : Expr :=
   (infer.match_with
-    (match_fn := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: id nil)))))))
-    (match_other := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: nil id)))))))
-    -- if the types of the head and the tail are equal, then the type is List α
-    -- although, they might both be Except values, so map those
-    (then_do := (quote (:: both (:: (quote apply) (:: both (:: (quote (:: apply (:: Except'.map_with (:: mk_tlist id)))) id))))))
-    (or_else := assert_eq))
+    (match_fn := (:: π (:: id (:: π (:: id id)))))
+    (then_do :=
+      (quote (infer.match_with
+        (match_fn := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: id nil)))))))
+        (match_other := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: nil id)))))))
+        -- if the types of the head and the tail are equal, then the type is List α
+        -- although, they might both be Except values, so map those
+        (then_do := (quote (:: both (:: (quote apply) (:: both (:: (quote (:: apply (:: Except'.map_with (:: mk_tlist id)))) id))))))
+        (or_else := assert_eq))))
+    (or_else := (quote (:: apply (:: expected_but_found (symbol "a list")))))
+    (match_other := id))
 
 /-
 A version of infer both that forms the type of f and g
@@ -81,6 +86,16 @@ by inference on x.
 
 both :: ∀  (α : Type), (f : α → β) (g : α → β), List β
 -/
+
+def infer_fn : Expr :=
+  sorry
+
+/-def infer_apply : Expr :=
+  (infer.match_with
+    (match_fn := (:: π (:: id (:: π (:: (quote apply) id)))))
+    (match_other := id)
+    (then_do := (quote infer_fn))
+    (or_else := -/
 
 /-
 (:: apply (:: (:: apply (:: (:: apply (:: infer_both infer_global)) (:: f g))) x))

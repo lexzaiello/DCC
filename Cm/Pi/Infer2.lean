@@ -230,9 +230,14 @@ def infer : Expr :=
                 (:: both (:: (quote apply) (:: both (:: (quote infer_apply) infer.self))))
                 (infer_fn' infer.self)))))))
 
+def infer' : Expr :=
+  (:: both (:: (quote apply) (:: both (:: (quote infer) (:: both (:: (quote infer) id))))))
+
 set_option maxRecDepth 10000
 
 example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: apply (:: id nil))))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
+
+example : try_step_n' 1000 (:: apply (:: infer' (:: id nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
 
 example : try_step_n' 2000 (:: apply (:: infer (:: infer (:: (quote nil) nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 

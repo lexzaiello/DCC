@@ -8,6 +8,8 @@ open Expr
 Natural numbers, featuring pattern matching.
 -/
 
+def TNat : Expr := symbol "Nat"
+
 def zero : Expr := symbol "zero"
 
 abbrev Nat'.zero := symbol "zero"

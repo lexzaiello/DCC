@@ -1,6 +1,7 @@
 import Cm.Pi.Std.Except
 import Cm.Pi.Eval
 import Cm.Pi.Ast
+import Cm.Pi.Std.Nat
 
 open Expr
 
@@ -228,6 +229,21 @@ def t_curr (n : ℕ) (e : Expr) : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote (:: apply ((List.replicate n curry).foldr
     (fun e acc => :: e acc) e))) infer.self))))
 
+/-
+For use with infer.
+-/
+def nat.type : Expr :=
+  let do_rec := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
+  let succ_case := :: both (:: (quote apply) (:: both (:: (:: both (:: (:: both (::
+    (quote eq) (:: both (::
+      (quote (quote (:: apply (:: Except'.ok TNat))))
+      (:: both (:: (quote const) do_rec))))))
+      (quote Nat'.zero)))
+      (:: π (:: nil id)))))
+  (:: both (:: (quote apply) (:: both (::
+    (quote (:: apply (:: nat.rec_with (:: nat.rec_with (:: (quote (:: apply (:: Except'.ok TNat))) succ_case)))))
+    (:: π (:: nil id))))))
+
 def infer : Expr :=
   match_infer
     (assert_whole (quote nil))
@@ -253,14 +269,28 @@ def infer : Expr :=
                 (match_infer
                   (assert_whole (quote TData))
                   (quote (:: apply (:: Except'.ok TType)))
-                  (infer_fn' infer.self))))))))
+                  (match_infer
+                    (assert_whole (quote Nat'.zero))
+                    nat.type
+                    (match_infer
+                      (:: π (:: id (:: π (:: (quote Nat'.succ) id))))
+                      nat.type
+                      (infer_fn' infer.self))))))))))
 
 def infer' : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote infer) (:: both (:: (quote infer) id))))))
 
 set_option maxRecDepth 10000
 
-example : try_step_n' 1000 (:: apply (:: infer' (:: Except'.unwrap (:: apply (:: infer' nil))))) = (.ok (:: Except'.s_ok TType)) := rfl
+example : try_step_n' 2000 (:: apply (:: infer (:: infer Nat'.zero))) = (.ok (:: Except'.s_ok TNat)) := rfl
+
+example : try_step_n' 2000 (:: apply (:: infer (:: infer (:: Nat'.succ (:: Nat'.succ Nat'.zero))))) = (.ok (:: Except'.s_ok TNat)) := rfl
+
+example : try_step_n' 1000 (:: apply (:: nat.type (:: infer (:: Nat'.succ (:: Nat'.succ Nat'.zero))))) = (.ok (:: (symbol "ok") TNat)) := rfl
+
+example : try_step_n' 100 (:: apply (:: nat.type (:: infer Nat'.zero))) = (.ok (:: Except'.s_ok TNat)) := rfl
+
+example : try_step_n' 1000 (:: apply (:: infer' (:: Except'.unwrap (:: apply (:: infer' nil))))) = (.ok (:: Except'.s_ok (symbol "Type"))) := rfl
 
 example : try_step_n' 1000 (:: apply (:: infer' (:: Except'.unwrap (:: Except'.s_ok nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 

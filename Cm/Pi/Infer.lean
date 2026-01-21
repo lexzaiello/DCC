@@ -1,43 +1,13 @@
-import Mathlib.Data.Nat.Notation
-import Cm.Pi.Ast
-import Cm.Pi.Eval
 import Cm.Pi.Std.Except
-import Cm.Pi.Std.Util
-import Cm.Pi.Std.Nat
-import Cm.Pi.Std.List
+import Cm.Pi.Eval
+import Cm.Pi.Ast
 
 open Expr
 
-/-
-Type inference for the list calculus.
-Nil is of type "Data", and so are symbols.
-
-Infer is a fixpoint function.
-It takes itself as an argument.
-
-(:: apply (:: infer (:: infer x)))
-
-Infer always returns an Except, where the ok value
-is the type, and the error value is some error
-message.
--/
-
 def TData : Expr := .symbol "Data"
+def TType : Expr := .symbol "Type"
 
 def TFail : Expr := .symbol "sorry"
-
-/-
-Expects the expected value as the first argument.
--/
-/-def expected_but_found' : Except :=
-  (λ' 2 (var.read 1 ((quote <| symbol "expected:")-/
-
-/-
-More dynamic version of expected_but_found.
-Curried. Expects the expected value as the first argument.
-
-Just makes an error message.
--/
 
 def expected_but_found : Expr :=
   (λ' 1 (λ' 2 (::
@@ -45,14 +15,6 @@ def expected_but_found : Expr :=
       (var.store 1)
       (λ' 1 (:: (:: (var.store 0) <| symbol "expected:") (var.read 0)))))
         (:: (var.store 0) <| (λ' 1 (:: (:: (var.store 0) <| symbol "but found: ") (var.read 0)))))))
-
-/-
-Checks whether a later curried argument
-is equal to the first argument.
-
-Outputs an expected but found error messsage otherwise.
-Returns an ok with the first argument if ok.
--/
 
 def assert_eq : Expr :=
   let my_v := var.read 0
@@ -98,321 +60,153 @@ def infer_nil : Expr :=
       .nil)
     id))))
 
-/-
-Note: this is not safe generally.
-Asserts that the argument is well-typed.
-Do not run this unless chaining.
--/
-def infer.assert_well_typed_unsafe :=
-  (:: both (::
-    (quote apply)
-    (:: both (::
-        infer.self
-        (:: both (::
-          infer.self
-          infer.x))))))
+example : try_step_n' 100 (:: apply (:: infer_nil (:: infer_nil nil))) = (.ok (:: Except'.s_ok TData)) := rfl
 
 /-
-(:: apply (:: infer (:: infer (:: const x))))
+Infer fully applied id.
+Curry this for partial app.
+
+Currying = dependent type.
+
+(:: apply (:: infer (:: infer (:: id x)))) = (:: apply (:: infer (:: infer x)))
 -/
-def infer_const.my_op :=
-  infer.x (:: π (:: id nil))
-
-def infer_const.my_data :=
-  infer.x (:: π (:: nil id))
-
-/-
-With all args in scope.
-
-Checks that the operator is "const".
--/
-def infer_const.assert_op_const :=
-  (:: apply (:: assert_eq .const)) ∘' infer_const.my_op
-
-/-
-With all args in scope.
-
-Checks that the argument to const is well-typed.
--/
-def infer_const.assert_well_typed :=
-  (:: both (::
-    (quote apply)
-    (:: both (::
-        infer.self
-        (:: both (::
-          infer.self
-          infer_const.my_data))))))
-
-def infer_const.assert_op_seq.wrap_ok : Expr :=
-  (:: both (:: (quote apply) (:: both (:: (quote Except'.ok) id))))
-
-def infer.assert_seq (e : Expr) : Expr :=
-  (:: both
-    (:: (quote apply) (:: both (:: (quote Except'.bind) (:: both (::
-      (:: both (:: (quote apply) (:: both (:: (quote e) id))))
-      (:: both (:: (quote const) infer_const.assert_op_seq.wrap_ok))))))))
-
-/-
-Asserts that the operator is const,
-but gives the original arguments in the except.ok value
--/
-def infer_const.assert_op_seq : Expr :=
-  infer.assert_seq infer_const.assert_op_const
-
-/-
-infer const produces a curried function
-that checks if the argument to (:: const v) is well-typed,
-then returns the type of v.
--/
-def infer_const.assert_op_ret_ty : Expr :=
-  Except'.bind ∘' (:: both (::
-        ($? <| (quote infer_const.assert_op_seq) ·')
-        (quote infer_const.assert_well_typed)))
-
-example : try_step_n' 1000 (:: apply (:: (:: apply (:: (quote infer.assert_well_typed_unsafe) (:: infer_nil (:: const nil)))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
-
-def infer_const.cnst_out_ty : Expr :=
-  (:: both (:: (quote const)
-    (:: both (:: (quote const)
-      (:: both (:: (quote apply) (:: both (::
-        (quote infer_const.assert_op_ret_ty)
-        id))))))))
-
-def infer_const.future_infer : Expr :=
-  (quote infer.assert_well_typed_unsafe)
-
-def infer_const.bind_args : Expr :=
-  (:: both (:: (quote both) (:: both (:: infer_const.future_infer
-        infer_const.cnst_out_ty))))
-
-def infer_const.future_apply : Expr :=
-  (:: both (:: (quote both)
-    (:: both (:: (quote (quote Except'.bind))
-      (:: both (:: (quote both) (:: both (:: infer_const.future_infer
-        infer_const.cnst_out_ty))))))))
-
-/-
-(:: apply (:: (:: apply (:: infer_const (:: infer (:: const data)))) (:: infer other_data)))
--/
-def infer_const : Expr :=
-  (:: both (:: (quote both) (:: both (::
-    (quote (quote apply))
-    infer_const.future_apply))))
-
-/-
-id is a curried infer rule.
-it will just run infer on whatever comes next.
--/
-def infer_id.my_op : Expr :=
-  (:: π (:: nil id))
-
-def infer_id.assert_op_id : Expr :=
-  ((:: apply (:: assert_eq .id)) ∘' (:: π (:: nil id)))
-
-def infer_id.bind_args : Expr :=
-  (:: both
-    (:: ($? <| (quote infer_id.assert_op_id) ·')
-      (quote (quote infer.assert_well_typed_unsafe))))
-
 def infer_id : Expr :=
-  (:: both (:: (quote apply) (:: both (:: (quote Except'.bind) infer_id.bind_args))))
-
-/-
-eq is not well-typed unless the parameters are supplied.
-I think this is fine ish, but maybe too restrictive.
-
-We default to the yes case, so infer_eq is just the type of the yes case.
-We assert that the type of the no_case is the same.
-
-(:: apply (:: infer_eq (:: global_infer (:: eq (:: yes_case no_case)))))
--/
-
-def infer.assert_op_seq (op : Expr) :=
-  infer.assert_seq <| ((:: apply (:: assert_eq op)) ∘' (:: π (:: nil (:: π (:: id nil)))))
-
-def infer_eq.assert_op_eq_seq : Expr :=
-  infer.assert_op_seq .eq
-
-def infer_eq.yes_case : Expr :=
-  (:: π (:: nil (:: π (:: nil (:: π (:: id nil))))))
-
-def infer_eq.no_case : Expr :=
-  (:: π (:: nil (:: π (:: nil (:: π (:: nil id))))))
-
-def infer_eq.yes_type : Expr :=
-  (:: both (:: (quote apply)
-    (:: both (:: infer.self
-      (:: both (:: infer.self
-      infer_eq.yes_case))))))
-
-def infer_eq.no_type : Expr :=
-  (:: both (:: (quote apply)
-    (:: both (:: infer.self
-      (:: both (:: infer.self
-      infer_eq.no_case))))))
-
-/-
-Checks that the yes and no case types are equal,
-then returns them.
--/
-def infer_eq.eq_types : Expr :=
-  (:: both (:: (quote apply)
-        (:: both (::
-          (:: both (:: (quote apply)
-            (:: both (::
-              (quote assert_eq)
-              infer_eq.yes_type))))
-          infer_eq.no_type))))
-
-/-
-Accepts the yes type eq assert as an argument.
-Must create a new function that
-runs infer on the next argument and plugs
-it into the assert
-
-Note that since eq has functions as the cases,
-we will get a new infer function from the yes case.
-
-Future_infer works on whatever assertion argument it is passed.
--/
-
-/-
-This is for the last eq argument.
--/
-def infer_eq.future_infer₀ : Expr :=
-  (:: both (:: (quote both) (:: both (::
-    (quote (quote apply))
-    (:: both (:: (quote both) (:: both (::
-      const -- this wraps the eq assertions
-      (quote (Except'.unwrap ∘' infer.assert_well_typed_unsafe)) -- this infers the future argument
-      ))))))))
-
-def infer_eq.do_future_infer : Expr :=
-  (:: both (:: (quote both)
+  :: both (:: (quote apply)
     (:: both (::
-      (quote (quote apply))
-      (:: both (:: (quote both) (:: both (::
-        (:: both (:: (quote const) id)) -- this wraps the eq assertions
-        (quote id)))))))))
+      (:: π (:: id nil))
+      (:: π (:: id id)))))
+
+example : try_step_n' 100 (:: apply (:: infer_id (:: infer_nil nil))) = (.ok (:: Except'.s_ok TData)) := rfl
 
 /-
-This is for the first eq data argument.
+Also fully applied.
+(:: apply (:: infer_both (:: infer_global (:: (:: f g) x))))
 -/
-def infer_eq.future_infer₁ : Expr :=
-  (:: both (:: (quote (quote apply))
-    (:: both (:: (quote assert_eq) (:: both (:: (quote apply) (:: (quote infer_eq.do_future_infer) id)))))))
+def infer_both.x : Expr :=
+  :: π (:: nil (:: π (:: nil id)))
+
+def infer_both.infer_f : Expr :=
+  (:: both (:: (quote apply) (:: both (::
+    (args.read 0 (:: π (:: id nil))) (:: both (::
+    (args.read 0 (:: π (:: id nil))) (:: both (::
+    (args.read 0 (:: π (:: nil (:: π (:: id nil))))) (:: π (:: nil id))))))))))
+
+def infer_both.infer_g : Expr :=
+  (:: both (:: (quote apply) (:: both (::
+    (args.read 0 (:: π (:: id nil))) (:: both (::
+    (args.read 0 (:: π (:: id nil))) (:: both (::
+    (args.read 0 (:: π (:: nil (:: π (:: nil id))))) (:: π (:: nil id))))))))))
 
 /-
-with third argument type as the input.
+(:: apply (:: infer_both (:: infer_global (:: (:: f g) x))))
 -/
-
-def infer_eq.inject_future_assert_eq : Expr :=
-  (:: both (:: (quote both) (:: both (:: (quote (quote apply))
-      (:: both (:: (quote both) (:: both (:: (quote (quote assert_eq_unwrap)) id))))))))
-
-def infer_eq.inject_future_infer : Expr :=
-  (mk_both' 0 ∘ mk_both' 1) (:: (qn' 2 both)
-    (:: (qn' 3 apply)
-        (:: (qn' 2 both) (::
-            (:: (qn' 2 const) Expr.id)
-            (qn' 2 infer.assert_well_typed_unsafe)))))
-
-example : (quote (quote infer.assert_well_typed_unsafe)) = (q' q' infer.assert_well_typed_unsafe) := rfl
-
-/-
-Checks that the eq maps have the same type,
-and that the result of applying the test argument into
-that type is the same as the type of the actual argument.
--/
-def infer_eq : Expr :=
-  (infer_eq.assert_op_eq_seq
-    e>=> infer_eq.eq_types
-    e>=> (infer_eq.inject_future_infer ∘' infer_eq.inject_future_assert_eq))
-
-def infer_both.f : Expr :=
-  :: π (:: nil (:: π (:: nil (:: π (:: id nil)))))
-
-def infer_both.g : Expr :=
-  :: π (:: nil (:: π (:: nil (:: π (:: nil id)))))
-
-example : try_step_n' 1000 (:: apply (:: infer_both.g (:: infer_nil (:: both (:: id id))))) = (.ok .id) := rfl
-example : try_step_n' 1000 (:: apply (:: infer_both.f (:: infer_nil (:: both (:: const id))))) = (.ok .const) := rfl
-
-/-
-With all args in scope.
-
-Inserts future arg in (:: apply (:: (eval infer_both.g) (:: infer_global arg)))
-position.
--/
-def infer_both.fn_with_global_infer (fn : Expr) : Expr :=
-  :: both (:: (quote both)
-    (:: both (:: (quote (quote apply))
-    (:: both (:: (quote both)
-      (:: both (::
-        (:: both (:: (quote const) (infer.self)))
-        (:: both (:: (quote both) (:: both (::
-          (:: both (:: (quote const) (infer.self)))
-            (:: both (:: (quote both) (:: both (::
-              (:: both (:: (quote const) fn))
-              (quote id))))))))))))))))
-
-example : try_step_n' 1000 (:: apply (:: (:: apply (:: (infer_both.fn_with_global_infer infer_both.f)
-  (:: (symbol "global infer") (:: both (:: (symbol "f") id))))) (symbol "my data"))) =
-  (.ok (:: apply (:: (symbol "global infer") (:: (symbol "global infer") (:: (symbol "f") (symbol "my data")))))) := rfl
-
-def infer_both.body : Expr :=
-  (:: apply (:: curry
-      (:: both (:: (quote apply) (:: both (::
-        (quote Except'.bothM) (:: both (::
-          (:: both (:: (quote apply) (:: both (::
-            (args.read 0 infer.self) (:: both (::
-            (args.read 0 infer.self)
-            (:: both (::
-              (args.read 0 <| infer_both.f)
-              (args.read 1 id))))))))) -- infer (:: f l)
-          (:: both (:: (quote apply) (:: both (::
-            (args.read 0 infer.self) (:: both (::
-            (args.read 0 infer.self)
-            (:: both (::
-            (args.read 0 infer_both.g)
-            (args.read 1 id))))))))))))))))) -- infer (:: g l)
-
 def infer_both : Expr :=
-  infer.assert_op_seq .both
-    e>=> infer_both.body
+  (:: apply (:: curry (:: apply (:: curry (:: both (:: (quote apply)
+    (:: both (::
+      (quote Except'.bothM)
+      (:: both (:: infer_both.infer_f infer_both.infer_g))))))))))
 
-set_option maxRecDepth 5000
-example : try_step_n' 1000 (:: apply (:: (:: apply (:: infer_both (::
-  (quote (:: apply (:: Except'.ok (symbol "ok")))) (:: both (:: id id)))))
-  (symbol "my data"))) = (.ok (:: (symbol "ok") (:: (symbol "ok") (symbol "ok")))) := rfl
+def infer_curr.global_infer : Expr :=
+  (args.read 0 (:: π (:: id nil)))
 
-def infer_apply : Expr :=
-  infer.assert_op_seq .both
-  e>=> (:: apply (:: curry (:: both (::
-    (quote apply) (:: both (::
-      (args.read 0 infer.self) (:: both (::
-        (args.read 0 infer.self)
-        (args.read 1 id)))))))))
+def infer_π.infer_f : Expr :=
+  (:: both (:: (quote apply) (:: both (::
+    (infer_curr.global_infer) (:: both (::
+    (infer_curr.global_infer) (:: both (::
+    (args.read 0 (:: π (:: nil (:: π (:: id nil))))) (:: π (:: nil (:: π (:: id nil))))))))))))
 
-def infer_π.body : Expr :=
-  (:: apply (:: curry
-      (:: both (:: (quote apply) (:: both (::
-        (quote Except'.bothM) (:: both (::
-          (:: both (:: (quote apply) (:: both (::
-            (args.read 0 <| infer_both.fn_with_global_infer infer_both.f)
-            (args.read 1 (:: π (:: id nil))))))) -- infer (:: f (:: x _xs))
-          (:: both (:: (quote apply) (:: both (::
-            (args.read 0 <| infer_both.fn_with_global_infer infer_both.g)
-            (args.read 1 (:: π (:: nil id))))))))))))))) -- infer (:: g (:: _ xs))
+def infer_π.infer_g : Expr :=
+  (:: both (:: (quote apply) (:: both (::
+    (infer_curr.global_infer) (:: both (::
+    (infer_curr.global_infer) (:: both (::
+    (args.read 0 (:: π (:: nil (:: π (:: nil id))))) (:: π (:: nil (:: π (:: nil id))))))))))))
+
+/-
+:: π (:: nil f)
+-/
+def infer_π_contract_f : Expr :=
+  infer_π.infer_g
+
+def infer_π_contract_g : Expr :=
+  infer_π.infer_f
+
+def infer_π_both : Expr :=
+  (:: both (:: (quote apply)
+    (:: both (::
+      (quote Except'.bothM)
+      (:: both (:: infer_π.infer_f infer_π.infer_g))))))
+
+def infer_π_else : Expr :=
+  (:: both (:: (quote apply)
+    (:: both (::
+      (:: both (::
+        (quote (:: eq (:: infer_π_contract_f infer_π_both)))
+        (:: π (:: (:: π (:: id (:: π (:: (quote nil) id)))) id)))) id))))
 
 def infer_π : Expr :=
-  infer.assert_op_seq .π
-    e>=> infer_π.body
+  (:: apply (:: curry (:: apply (:: curry (:: both (:: (quote apply) (:: both (:: (:: both (::
+      (quote (:: eq (:: infer_π_contract_g infer_π_else)))
+      (:: π (:: (:: π (:: id (:: π (:: (quote nil) id)))) id)))) id))))))))
 
 /-
-(:: apply (:: (match_infer infer_π infer_nil) (:: infer_nil nil)))
-= (:: apply (:: Except'.ok TData))
+(:: apply (:: infer (:: infer (:: (:: const x) y))))
+= (:: apply (:: infer (:: infer x)))
 -/
+def infer_const : Expr :=
+  (:: apply (:: curry (:: apply (:: curry
+    (:: both (:: (quote apply) (:: both (::
+      infer_curr.global_infer (:: both (::
+      infer_curr.global_infer (args.read 0 (:: π (:: nil id)))))))))))))
+
+/-
+(:: apply (:: infer (:: infer (:: (:: (:: (:: eq (:: yes_case no_case)) test) val)))))
+= (:: (:: (:: eq (:: (:: apply (:: infer (:: infer yes_case test)) (:: infer (:: infer no_case val))))) test) val)
+
+currying twice gets nil applied.
+-/
+def infer_eq.yes_case : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply)) (:: both (:: (quote both) (:: both (::
+    (:: both (:: (quote const) infer_curr.global_infer)) (:: both (::
+    (quote both)
+    (:: both (:: (:: both (:: (quote const) infer_curr.global_infer)) (:: both (:: (quote both)
+      (:: both (:: (:: both (:: (quote const) (args.read 0 (:: π (:: nil (:: π (:: id nil))))))) (quote id)))))))))))))))))
+
+def infer_eq.no_case : Expr :=
+  (:: both (:: (quote both) (:: both (::
+    (quote (quote apply)) (:: both (:: (quote both) (:: both (::
+    (:: both (:: (quote const) infer_curr.global_infer)) (:: both (::
+    (quote both)
+    (:: both (:: (:: both (:: (quote const) infer_curr.global_infer)) (:: both (:: (quote both)
+      (:: both (:: (:: both (:: (quote const) (args.read 0 (:: π (:: nil (:: π (:: nil id))))))) (quote id)))))))))))))))))
+
+def infer_eq.test_val : Expr :=
+  (:: π (:: nil (:: π (:: nil id))))
+
+def infer_eq : Expr :=
+  (:: apply (:: curry
+    (:: apply (:: curry
+      (:: both (::
+        (:: both (:: (quote eq)
+          (:: both (:: infer_eq.yes_case infer_eq.no_case)))) (:: π (:: nil id))))))))
+
+def infer_apply : Expr :=
+  (:: apply (:: curry
+    (:: both (:: (quote apply) (:: both (::
+      infer_curr.global_infer
+      (:: both (::
+        infer_curr.global_infer
+        (args.read 1 id)))))))))
+
+set_option maxRecDepth 1000
+example : try_step_n' 100 (:: apply (:: (:: apply (:: (:: apply (:: (:: apply (:: curry (:: apply (:: curry infer_both.infer_f)))) (symbol "infer_global"))) (:: (symbol "f") (symbol "g")))) (symbol "x"))) = (.ok (:: apply (:: (symbol "infer_global") (:: (symbol "infer_global") (:: (symbol "f") (symbol "x")))))) := rfl
+
+def assert_op (op_getter : Expr) : Expr :=
+  (:: π (:: id (:: π (:: op_getter id))))
+
+def assert_whole (whole : Expr) : Expr :=
+  (:: π (:: id whole))
+
 def match_infer (match_fn then_do : Expr) (or_else : Expr := (quote (:: apply (:: Except'.err TFail)))) : Expr :=
   (:: both (:: (quote apply)
     (:: both (::
@@ -422,45 +216,6 @@ def match_infer (match_fn then_do : Expr) (or_else : Expr := (quote (:: apply (:
         match_fn))
      id))))
 
-/-
-(:: apply (:: infer (:: infer nil)))
-(:: apply (:: infer (:: infer (:: apply 
--/
-/-def infer : Expr :=
-  match_infer
-    (:: π (:: id (quote nil)))
-    infer_nil
-    (match_infer
-      (:: π (:: id (quote id)))
-      infer_id
-    (match_infer
-      (:: π (:: id (:: π (:: (quote apply) id))))
-      infer_id
-      (match_infer
-        (:: π (:: id (:: π (:: (quote π) id))))
-        infer_π
-        (match_infer
-          (:: π (:: id (:: π (:: (quote both) id))))
-          infer_both
-          (match_infer
-            (:: π (:: id (:: π (:: (quote const) id))))
-            infer_const
-            (quote (:: apply (:: Except'.err TFail))))))))-/
-
-/-
-Infer's the left side of a future application with the specified infer
-function.
--/
-def infer_fn (fn : Expr) : Expr :=
-  (:: both (:: (quote apply) (:: both (::
-    (:: both (:: (quote apply) (:: both (::
-      fn (:: both (::
-      infer.self
-      (:: π (:: nil (:: π (:: id nil))))))))))
-    (:: both (::
-      infer.self
-      (:: π (:: nil (:: π (:: nil id))))))))))
-
 def infer_fn' (fn : Expr) : Expr :=
   (:: both (:: (quote apply) (:: both (::
     (:: both (:: (quote apply) (:: both (::
@@ -469,11 +224,9 @@ def infer_fn' (fn : Expr) : Expr :=
       (:: π (:: nil (:: π (:: id nil))))))))))
       (:: π (:: nil (:: π (:: nil id))))))))
 
-def assert_op (op_getter : Expr) : Expr :=
-  (:: π (:: id (:: π (:: op_getter id))))
-
-def assert_whole (whole : Expr) : Expr :=
-  (:: π (:: id whole))
+def t_curr (n : ℕ) (e : Expr) : Expr :=
+  (:: both (:: (quote apply) (:: both (:: (quote (:: apply ((List.replicate n curry).foldr
+    (fun e acc => :: e acc) e))) infer.self))))
 
 def infer : Expr :=
   match_infer
@@ -481,67 +234,52 @@ def infer : Expr :=
     infer_nil
     (match_infer
       (assert_whole (quote id))
-      infer_id
+      (t_curr 1 infer_id)
       (match_infer
-        (assert_op (quote id))
-        (infer_fn (quote infer_id))
+        (assert_whole (quote both))
+        (:: both (:: (quote apply) (:: both (:: (quote infer_both) infer.self))))
         (match_infer
-          (assert_op (quote both))
-          infer_both
+          (assert_whole (quote π))
+          (:: both (:: (quote apply) (:: both (:: (quote infer_π) infer.self))))
           (match_infer
-            (assert_op (assert_op (quote both)))
-            (infer_fn (quote infer_both))
+            (assert_whole (quote const))
+            (:: both (:: (quote apply) (:: both (:: (quote infer_const) infer.self))))
             (match_infer
-              (:: π (:: id (:: π (:: (:: π (:: (quote const) id)) id))))
-              (infer_fn (quote infer_const)))))))
+              (assert_whole (quote eq))
+              (:: both (:: (quote apply) (:: both (:: (quote infer_eq) infer.self))))
+              (match_infer
+                (assert_whole (quote apply))
+                (:: both (:: (quote apply) (:: both (:: (quote infer_apply) infer.self))))
+                (match_infer
+                  (assert_whole (quote TData))
+                  (quote (:: apply (:: Except'.ok TType)))
+                  (infer_fn' infer.self))))))))
 
-example : try_step_n' 100 (:: apply (:: infer (:: infer nil))) = .ok (:: Except'.s_ok TData) := rflcxvm.,/'oidx
-/xr,m,',bclnmyu[ko]tidcnkk
+def infer' : Expr :=
+  (:: both (:: (quote apply) (:: both (:: (quote infer) (:: both (:: (quote infer) id))))))
+
+--#eval try_step_n' 1000 (:: apply (:: infer' (:: Except'.unwrap (:: Except'.s_ok nil))))
+
+#eval try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: π (:: id id)) (:: nil nil)))))
+
+set_option maxRecDepth 10000
+
+example : try_step_n' 1000 ((:: apply (:: infer' nil)) e>>= infer') = (.ok (:: (symbol "ok") (symbol "Type"))) := rfl
+
+example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: apply (:: id nil))))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
+
+example : try_step_n' 1000 (:: apply (:: infer' (:: id nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
+
+example : try_step_n' 2000 (:: apply (:: infer (:: infer (:: (quote nil) nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
+
+example : try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: (:: eq (:: (quote nil) (quote (symbol "hi")))) nil) nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl
 
-#eval try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: const nil) nil))))
+example : try_step_n' 500 (:: apply (:: (:: apply (:: (:: apply (:: infer (:: infer both))) (:: id id))) nil)) = (.ok (:: Except'.s_ok (:: TData TData))) := rfl
 
-/-example : try_step_n' 100 (:: apply (:: infer (:: infer nil))) = .ok (:: Except'.s_ok TData) := rfl
+example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: both (:: id id)) nil)))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
 
-example : try_step_n' 500 (:: apply (:: infer (:: infer (:: apply (:: id nil))))) = .ok (:: Except'.s_ok TData) := rfl
+example : try_step_n' 1000 (:: apply (:: infer (:: infer (:: (:: π (:: id id)) (:: nil nil))))) = (.ok (:: (symbol "ok") (:: (symbol "Data") (symbol "Data")))) := rfl
 
-#eval try_step_n' 500 (:: apply (:: infer (:: infer (:: apply (:: id nil)))))-/
-
-namespace infer_test
-
-set_option maxRecDepth 5000
-
-example : try_step_n' 2000 (:: apply (:: (:: apply (:: (:: apply (:: infer_eq (:: infer_id (:: eq (:: id id))))) (:: infer_nil nil))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
-
-example : try_step_n' 1000 (:: apply (:: (:: apply (:: infer_id (:: infer_nil id))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
-
-example : (try_step_n' 500 (:: apply (:: (:: apply (:: infer_const (:: infer_nil (:: const nil)))) (:: infer_nil nil)))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
-
-example : try_step_n' 1000 (:: apply (:: (:: apply (:: (quote infer.assert_well_typed_unsafe) (:: infer_nil (:: const nil)))) (:: infer_nil nil))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl
-
-example : try_step_n' 20 (:: apply (:: (:: apply (:: expected_but_found const)) nil)) = .ok (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil)) := rfl
-
-example : try_step_n' 50 (:: apply (:: (:: apply (:: assert_eq .const)) nil)) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") nil))) := rfl
-
-example : try_step_n' 20 (:: apply (:: (:: apply (:: assert_eq .const)) .const)) = .ok (:: (symbol "ok") const) := rfl
-
-example : try_step_n' 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: const (symbol "whatever"))))) = .ok (:: (symbol "ok") const) := rfl
-
-example : try_step_n' 50 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever"))))) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") (symbol "bad")))) := rfl
-
-example : try_step_n' 50 (:: apply (:: infer_const.assert_well_typed (:: infer_nil (:: const nil)))) = .ok (:: (symbol "ok") (symbol "Data")) := rfl
-
-example : try_step_n' 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: const (symbol "whatever"))))) = .ok (:: (symbol "ok") (:: (symbol "infer") (:: const (symbol "whatever")))) := rfl
-
-example : try_step_n' 100 (:: apply (:: infer_const.assert_op_seq (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever"))))) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") (symbol "bad")))) := rfl
-
-example : try_step_n' 100 (:: apply (:: infer_const.assert_op_const (:: (symbol "infer") (:: (symbol "bad") (symbol "whatever"))))) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") (symbol "bad")))) := rfl
-
-example : try_step_n' 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: const nil)))) = .ok (:: (symbol "ok") (symbol "Data")) := rfl
-example : try_step_n' 200 (:: apply (:: infer_const.assert_op_ret_ty (:: infer_nil (:: (symbol "not const") nil)))) = .ok (:: (symbol "error") (:: (:: (symbol "expected:") const) (:: (symbol "but found: ") (symbol "not const")))) := rfl
-
-example : try_step_n' 20 (:: apply (:: infer_nil (:: (symbol "infer") nil))) = .ok (:: (symbol "ok") (symbol "Data")) := rfl
-example : try_step_n' 50 (:: apply (:: infer_nil (:: (symbol "infer") (symbol "whatever")))) = .ok (:: (:: (symbol "expected:") nil) (:: (symbol "but found: ") (symbol "whatever"))) := rfl
-
-end infer_test
+example : try_step_n' 500 (:: apply (:: infer (:: infer (:: (:: const nil) nil)))) = (.ok (:: (symbol "ok") (symbol "Data"))) := rfl

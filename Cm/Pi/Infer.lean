@@ -280,6 +280,8 @@ def infer : Expr :=
 def infer' : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote infer) (:: both (:: (quote infer) id))))))
 
+#eval try_step_n' 2000 (:: apply (:: infer' (:: apply (:: nat.plus (:: nil nil)))))
+
 set_option maxRecDepth 20000
 
 example : try_step_n' 5000 (:: apply (:: infer' (:: apply (:: nat.fib (Nat'.of_nat 5))))) = (.ok (:: Except'.s_ok TNat)) := rfl

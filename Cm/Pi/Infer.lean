@@ -140,12 +140,12 @@ def infer_π_else : Expr :=
   (:: both (:: (quote apply)
     (:: both (::
       (:: both (::
-        (quote (:: eq (:: infer_π_contract_f infer_π_both)))
-        (:: π (:: (:: π (:: id (:: π (:: (quote nil) id)))) id)))) id))))
+        (quote (:: eq (:: infer_π_contract_g infer_π_both)))
+        (:: π (:: (:: π (:: id (:: π (:: id (quote nil))))) id)))) id))))
 
 def infer_π : Expr :=
   (:: apply (:: curry (:: apply (:: curry (:: both (:: (quote apply) (:: both (:: (:: both (::
-      (quote (:: eq (:: infer_π_contract_g infer_π_else)))
+      (quote (:: eq (:: infer_π_contract_f infer_π_else)))
       (:: π (:: (:: π (:: id (:: π (:: (quote nil) id)))) id)))) id))))))))
 
 /-
@@ -260,7 +260,7 @@ def infer' : Expr :=
 
 --#eval try_step_n' 1000 (:: apply (:: infer' (:: Except'.unwrap (:: Except'.s_ok nil))))
 
-#eval try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: π (:: id id)) (:: nil nil)))))
+#eval try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: π (:: nil id)) (:: nil nil)))))
 
 set_option maxRecDepth 10000
 

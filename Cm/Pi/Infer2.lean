@@ -77,7 +77,10 @@ def infer_list : Expr :=
         -- although, they might both be Except values, so map those
         (then_do := (quote (:: both (:: (quote apply) (:: both (:: (quote (:: apply (:: Except'.map_with (:: mk_tlist id)))) id))))))
         (or_else := assert_eq))))
-    (or_else := (quote (:: apply (:: expected_but_found (symbol "a list")))))
+    (or_else := (quote (:: both (:: (quote apply) (:: both (::
+      (quote Except'.err)
+      (:: both (:: (quote apply) (:: both (::
+        (quote (:: apply (:: expected_but_found (symbol "a list")))) id))))))))))
     (match_other := id))
 
 /-
@@ -114,5 +117,6 @@ def infer' : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote infer) (:: both (:: (quote infer) id))))))
 
 set_option maxRecDepth 5000
+example : try_step_n' 500 (:: apply (:: (:: π (:: id (:: π (:: id nil)))) (:: apply (:: infer' (symbol "hi"))))) = (.ok (:: (symbol "error") (:: (symbol "expected:") (symbol "a list")))) := rfl
 example : try_step_n' 500 (:: apply (:: infer' (:: nil nil))) = (.ok (:: Except'.s_ok (:: IList TData))) := rfl
 example : try_step_n' 100 (:: apply (:: infer' nil)) = (.ok (:: Except'.s_ok TData)) := rfl

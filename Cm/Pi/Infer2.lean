@@ -134,7 +134,7 @@ def infer_const : Expr :=
   (:: apply (:: curry (:: apply (:: curry
     (:: both (:: (quote apply) (:: both (::
       infer_curr.global_infer (:: both (::
-      infer_curr.global_infer (:: π (:: nil id))))))))))))
+      infer_curr.global_infer (args.read 0 (:: π (:: nil id)))))))))))))
 
 /-
 (:: apply (:: infer (:: infer (:: (:: (:: (:: eq (:: yes_case no_case)) test) val)))))
@@ -219,7 +219,8 @@ def infer : Expr :=
               (:: both (:: (quote apply) (:: both (:: (quote infer_eq) infer.self))))
               (infer_fn' infer.self))))))
 
-#eval try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: (:: eq (:: (quote (symbol "bruh")) (quote (symbol "bruh")))) nil) nil))))
+#eval try_step_n' 2000 (:: apply (:: infer (:: infer (:: (quote nil) nil))))
+--#eval try_step_n' 2000 (:: apply (:: infer (:: infer (:: (:: (:: eq (:: (quote (symbol "bruh")) (quote (symbol "bruh")))) nil) nil))))
 
 set_option maxRecDepth 5000
 example : try_step_n' 500 (:: apply (:: infer (:: infer (:: id nil)))) = (.ok (:: Except'.s_ok TData)) := rfl

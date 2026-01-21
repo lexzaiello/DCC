@@ -120,8 +120,28 @@ def infer_apply : Expr :=
 
 /-
 (:: apply (:: (:: apply (:: (:: apply (:: infer_both infer_global)) (:: f g))) x))
+0-ary. this creates a function that
+
+can this avoid omega?
+I think so.
+
+TODO: we might need to check that we have both f and g in scope.
 -/
+def infer_both.f : Expr :=
+  (:: both (:: (quote apply) (:: both (::
+    args.read 0 id 
+    args.read 1 (:: π (:: id nil))
+
+def infer_both.g : Expr :=
+  args.read 1 (:: π (:: nil id))
+
+def infer_both.arg : Expr :=
+  args.read 2 id
+
 def infer_both : Expr :=
+  (:: apply (:: curry (:: apply (:: curry (::
+    (infer.match_with
+      (
   sorry
 
 def infer.match_whole (whole : Expr) : Expr :=

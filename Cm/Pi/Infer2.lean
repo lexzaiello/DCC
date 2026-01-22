@@ -77,6 +77,7 @@ def guard_list (then_do : Expr) : Expr :=
     (then_do := then_do)
     (or_else := (throw_generic_expected "a list"))
     (match_other := id))
+
 /-
 List inference is the top-level infer rule if no application
 is detected.

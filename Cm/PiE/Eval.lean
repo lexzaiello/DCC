@@ -9,49 +9,39 @@ apply just turns a list into an app.
 /-
 For testing purposes.
 This mirrors is_step_once exactly.
+
+TODO: applying arg onto a ::[x, f] feels like it should shortcut to
+::[::[arg, x], f]
+
+we will need to redo all our eval rules with this new ordering.
+
+::[x, α, id m]
+
+feels like snd should just be (f$ f x)?
+
+nil m α x = α
 -/
 def do_step_apply : Expr → Except Error Expr
   | ($ (fst _m _n), _α, _β, ::[a, _b]) => pure a
-  | ($ (snd _m _n), _α, _β, ::[a, ::[x, xs]]) => pure ::[::[a, x], xs]
   | ($ (snd _m _n), _α, _β, ::[x, f]) => pure (f$ f x)
   /-
     nil can downgrade a dependent type to a nondependent type.
     this is how nondependent pairs are derived from sigmas.
   -/
-  | ::[.nil _m _n, α, _β, _x] => pure α
-  | ::[.id _o, _α, x] => pure x
-  | ::[const _o _p, _α, _β, c, _x] => pure <| c
-  | ::[both o p q, α, β, γ, ::[f, g], x] => -- TODO: not sure whether to nest ::[f, g] here, or leave flat
-    pure <| ::[f$ (apply o p) ::[α, β, f, x], f$ (apply o q) ::[α, γ, g, x]]
-  | ::[π o p q r, α, β, γ, δ, ::[fx, fxs], ::[x, xs]] =>
-    pure <| ::[f$ (apply o q) ::[α, γ, fx, x], f$ (apply p r) ::[β, δ, fxs, xs]]
-  | ::[eq o p, α, β, ::[fn_yes, fn_no], a, b] =>
+  | ::[_x, α, .nil _m] => pure α
+  | ::[x, _α, .id _o] => pure x
+  | ::[_x, c, _β, _α, const _o _p] => pure <| c
+  | ::[x, g, f, γ, β, α, both o p q] => -- TODO: not sure whether to nest ::[f, g] here, or leave flat
+    pure <| ::[($ (snd o p), α, β, ::[x, f]), ($ (snd o q), α, γ, ::[x, g])]
+  | ::[b, a, fn_no, fn_yes, β, α, eq o p] =>
     if a == b then
-      pure <| f$ (apply o p) ::[α, β, fn_yes, a]
+      pure <| ($ (snd o p), α, β, ::[a, fn_yes])
     else
-      pure <| f$ (apply o p) ::[α, β, fn_no, b]
+      pure <| ($ (snd o p), α, β, ::[b, fn_no])
   | e => .error <| .no_rule e
 
 def run (e : Expr) : Except Error Expr := do
-  match e with
-  | f$ a@(apply _m _n) ::[fα, fβ, f, x] => do
-    let eval_both : Except Error Expr := do
-      let f' ← run f
-      let x' ← run x
-      pure <| f$ a ::[fα, fβ, f', x']
-    let eval_arg_first : Except Error Expr := do
-      let x' ← run x
-      pure <| f$ a ::[fα, fβ, f, x']
-    let eval_f_first : Except Error Expr := do
-      let f' ← run f
-      pure <| f$ a ::[fα, fβ, f', x]
-    let step_whole : Except Error Expr := do
-      do_step_apply <| ::[f, x]
-    let push_arg : Except Error Expr := do
-      ((Expr.push f x).map Except.ok).getD (.error <| .stuck e)
-        >>= (fun f' => pure <| f$ a ::[fα, fβ, f'])
-
-    eval_f_first <|> eval_both <|> eval_arg_first <|> step_whole <|> push_arg
+  do_step_apply e <|> (match e with
   | :: x xs => (do
     let x' ← run x
     let xs' ← run xs
@@ -60,7 +50,7 @@ def run (e : Expr) : Except Error Expr := do
     pure <| :: x xs') <|> (do
     let x' ← run x
     pure <| :: x' xs)
-  | e => .error <| .stuck e
+  | e => .error <| .stuck e)
 
 def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
   match n with
@@ -70,53 +60,5 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
     | .ok e' => try_step_n n e' <|> (pure e')
     | .error e => .error e
 
-namespace test_curry
 
-example : try_step_n 200 (f$ (apply 0 0) ::[Ty 0, Ty 0, .id 0, Ty 1, Ty 0]) = try_step_n 200 (f$ (apply 0 0) ::[Ty 0, Ty 0, ::[.id 0, Ty 1], Ty 0]) := rfl
-
-end test_curry
-
-/-
-mk_dup_tup α x = ::[x, ::[x, nil Unit α]]
-this is just ::[x, x] in a trenchcoat, since this is a sigma
-makes a nil-delimited tupe with two entries of α
-
-this doesn't change the fact that x still doesn't depend on x.
-we need to basically wrap x in a "no-op"
-
-::[x, ::[x, nil Unit α]]
-
-::[x, nil Unit α] : ((x : α) × Unit)
-so it feels like
-
-nil Unit α x has no evaluation rule?
-nil is in the type?
-
-but what is in the term?
-this is the type, yes ((x : α) × (nil Unit α))
-
-∀ (x : α), β = (nil β α)
-nil β α x = β
-
-α → β = 
-
-we need a way to wrap the term x while preserving its value.
-nil seems like the obvious candidate.
-
--/
-def mk_dup_tup (m : Level) (α x : Expr) : Expr :=
-  ::[x, x, ::[(nil 0 m)
-
-def dup_tup₀ (m : Level) : Expr :=
-  
-
-namespace hole
-
-/-
-id α x : ::[(Ty m), α, α]
--/
-def id.type_with_holes (m : Level) : Expr :=
-  
-
-end hole
 

@@ -127,7 +127,7 @@ inductive Expr where
   -- for forming cons types
   | unit   : Expr
   | prod   : Level → Level → Expr
-  | nil    : Level → Level → Expr -- nil {α : Type} {β : Type} : ∀ (x : α), β
+  | nil    : Level → Expr -- nil {α : Type} : α → Ty m
   -- the core combinators: π, const, apply, id, eq, both
   -- these have explicit universe level arguments
   | apply  : Level → Level → Expr
@@ -177,7 +177,7 @@ that isn't nil delimited.
 def Expr.push (l with_val : Expr) : Option Expr :=
   match l with
   | :: x xs => Expr.cons x <$> Expr.push xs with_val
-  | nil _m _n => .none
+  | nil _m => .none
   | x => :: x with_val
 
 /-
@@ -207,7 +207,7 @@ partial def Expr.fmt (e : Expr) : Format :=
   | const' m n => "const'.{" ++ [m, n].toString ++ "}"
   | both m n o => "both.{" ++ [m, n, o].toString ++ "}"
   | both' m n o => "both'.{" ++ [m, n, o].toString ++ "}"
-  | nil m n => "nil.{" ++ [m, n].toString ++ "}"
+  | nil m => "nil.{" ++ [m].toString ++ "}"
   | prod m n => "×'.{" ++ [m, n].toString ++ "}"
   | unit => "Unit"
   | Ty n => s!"Ty {n}"

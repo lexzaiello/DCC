@@ -111,22 +111,23 @@ eq : ∀ (α : Type) (β : α → Type) (f : ∀ (x : α), β x) (g : ∀ (x : �
 
 inductive Expr where
   -- for forming "lists"
-  | cons  : Expr → Expr → Expr
-  | app   : Expr → Expr → Expr
+  | cons   : Expr → Expr → Expr
+  | app    : Expr → Expr → Expr
   -- type universe hierarchy
-  | ty    : ℕ → Expr
+  | ty     : ℕ → Expr
   -- for forming cons types
-  | unit  : Expr
-  | prod  : Expr
-  | nil   : Expr -- nil : Unit
+  | unit   : Expr
+  | prod   : Expr
+  | nil    : Expr -- nil : Unit
   -- the core combinators: π, const, apply, id, eq, both
   -- these have explicit universe level arguments
-  | π     : ℕ → ℕ → ℕ → ℕ → Expr
-  | id    : ℕ → Expr
-  | apply : ℕ → ℕ → Expr
-  | eq    : ℕ → ℕ → Expr
-  | const : ℕ → ℕ → Expr
-  | both  : ℕ → ℕ → ℕ → Expr
+  | π      : ℕ → ℕ → ℕ → ℕ → Expr
+  | id     : ℕ → Expr
+  | apply  : ℕ → ℕ → Expr
+  | eq     : ℕ → ℕ → Expr
+  | const  : ℕ → ℕ → Expr
+  | const' : ℕ → ℕ → Expr
+  | both   : ℕ → ℕ → ℕ → Expr
 deriving BEq, DecidableEq
 
 open Expr
@@ -167,6 +168,7 @@ def Expr.fmt (e : Expr) : Format :=
     ":: " ++ (.group <| .nest 2 <| x.fmt ++ Format.line ++ xs.fmt)
   | id m => "id.{" ++ [m].toString ++ "}"
   | const m n => "const.{" ++ [m, n].toString ++ "}"
+  | const' m n => "const'.{" ++ [m, n].toString ++ "}"
   | both m n o => "both.{" ++ [m, n, o].toString ++ "}"
   | nil => "nil"
   | prod => "×'"

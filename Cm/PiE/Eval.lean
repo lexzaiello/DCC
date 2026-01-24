@@ -8,7 +8,8 @@ This mirrors is_step_once exactly.
 -/
 def do_step : Expr → Except Error Expr
   | (f$ (f$ (f$ (apply _m _n) _fα) _fβ) ::[::[.id _o, _α], x]) => pure x
-  | (f$ (f$ (f$ (apply _m _n) _fα) _fβ) ::[::[::[(const _o _p), _α, _β], c], _x]) => pure c
+  | (f$ (f$ (f$ (apply _m _n) _fα) _fβ) ::[::[::[(const _o _p), _α, _β], c], _x])
+  | (f$ (f$ (f$ (apply _m _n) _fα) _fβ) ::[::[::[(const' _o _p), _α, _β], c], _x]) => pure c
   | (f$ (f$ (f$ (apply _m _n) _fα) _fβ) ::[::[::[(both o p q), α, β, γ], ::[f, g]], x]) =>
     pure <| ::[f$ (f$ (f$ (apply o p) α) β)  ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
   | (f$ (f$ (f$ (apply _m _n) _fα) _fβ) ::[::[::[π o p q r, α, β, γ, δ], ::[fx, fxs]], ::[x, xs]]) =>

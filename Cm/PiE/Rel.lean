@@ -13,7 +13,7 @@ both : ∀ (α : Type) (β : α → Type) (γ : α → Type)
   (l : α), (β l × γ l)
 both (:: (:: f g) l) = (:: (:: apply (:: f l)) (:: apply (:: g l)))
 
-const α β (x : α) (y : β x) : α
+const (α : Type m) (β : α → Type n) (x : α) (y : β x) : α
 id α : α → α
 
 nil : Unit
@@ -43,6 +43,7 @@ TODO: need to fill in type arguments to applies created inside step relation.
 inductive is_step_once : Expr → Expr → Prop
   | app_id       : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[.id o, _α], x]) x
   | app_const    : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(const o p), _α, _β], c], _x]) c
+  | app_const'   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(const' o p), _α, _β], c], _x]) c
   | app_both     : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(both o p q), α, β, γ], ::[f, g]], x])
     ::[f$ (f$ (f$ (apply o p) α) β)  ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
   | app_π_both   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[π o p q r, α, β, γ, δ], ::[fx, fxs]], ::[x, xs]])
@@ -78,8 +79,11 @@ For example, with id:
 id α : [Type, rest stuff]
 id α x : [(:: const α), (:: const α)]
 
+id with types filled in
+id m : :: both (:: (:: (const' m.succ.succ m.succ.succ) (Ty m.succ) (Ty m.succ) (Ty m)) (:: both (:: const const)))
+
 id m : :: both (:: (:: const (Ty m)) (:: both (:: const const)))
-const m n : :: both (:: (:: const (Ty m)) (:: 
+const m n : :: both (:: (:: const (Ty m)) (::
 
 β : α → Type
 β = :: both (:: const α :: const Ty n)

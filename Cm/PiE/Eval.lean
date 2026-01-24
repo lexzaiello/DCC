@@ -69,6 +69,8 @@ def quote?₁ (α e : Expr) (m : Option Level := .none) : Expr := ::[::[const' (
 
 def const?₀ : Expr := ::[const' 0 0, ?, ?]
 def const?₁ (α : Expr) (m : Option Level := .none) : Expr := ::[const' (m.getD 0) 0, α, ?]
+def quote?_n (n : ℕ) : Expr → Expr :=
+  (List.replicate n const?₀).foldr (fun e acc => ::[e, acc])
 
 def both? (f g : Expr) (α : Option Expr := .none) (m : Option Level := .none) : Expr :=
   ::[::[both' (m.getD 0) 0 0, (α.getD .hole), ?, ?], ::[f, g]]
@@ -78,15 +80,22 @@ def both?₀ (α : Option Expr := .none) (m : Option Level := .none) : Expr :=
   , (α.getD .hole)
   , ? , ?]
 
+def id? (α : Option Expr := .none) (m : Option Level := .none) := ::[id (m.getD 0), α.getD .hole]
+
+/-
+curried n * quote
+:: both (:: (quote const) id)
+-/
+def quote?_n₀ (n : ℕ) (α : Option Expr := .none) (m : Option Level := .none) : Expr :=
+  (List.replicate n (quote const?₀)).foldr (fun e acc => both? e acc) (@id? α m)
+
 -- for n λ binders. this expands into n * (n * const(both))
 -- this "binds" n binders deep by injecting n future both's
 def both?_n (n : ℕ) (f g : Expr) (α : Option Expr := .none) (m : Option Level := .none) : Expr :=
-  match n with
-  | .zero => both? f g (α := α) (m := m)
-  | .succ n' =>
-    both?
-      (f := (List.replicate n const?₀).foldr (fun e acc => ::[e, acc]) both?₀)
-      (g := both?_n n' f g)
+  -- [0, 1, 2] => [both, (quote both), (quote (quote both))]
+  -- this should actually be (both? (quote both) (both? (quote (quote both)) _)
+  ((List.range n.succ).map (fun n => quote?_n n both?₀)).foldr
+    (fun e acc => both? e acc) (both? (f := f) (g := g) (α := α) (m := m))
 
 notation "$?"  => (fun (f x : Expr) => @$ 0 0 Expr.hole Expr.hole f x)
 
@@ -117,32 +126,38 @@ def apply.type_with_holes.mk_β (m n : Level) : Expr :=
         (m := m.succ))
    (m := m.succ)
 
+/-
+f : ∀ (x : α), β x
+this is originally with α and β in scope to make the type.
+first α, then β.
+:: both
+α assertion must be quoted twice to escape β arg
+and x binder within.
+
+f should be both'd such that it can accept the β binder
+x is also a binder, so it should e under a both as well.
+-/
+def apply.type_with_holes.mk_mk_f (m n : Level) : Expr :=
+  both?_n 2
+    (f := quote?_n₀ 2)
+    (g := quote const?₀)
+    (α := Ty m)
+
+example : try_step_n 500 ($? ($? ($? ($? (quote?_n₀ 3) (Ty 0)) (Ty 0)) (Ty 0)) (Ty 0)) = (.ok (Ty 0)) := rfl
+#eval try_step_n 500 ($? ($? ($? (apply.type_with_holes.mk_mk_f 1 3) (Ty 0)) (@id? (Ty 1) (.some 2))) (Ty 3))
+
 def apply.type_with_holes (m n : Level) : Expr :=
   -- with α in scope, β : α → Type
   let mk_β : Expr := type_with_holes.mk_β m n
 
   -- with α in scope, then β in scope
   -- with α in scope, make :: both (:: (quote α) (quote (apply))
-  let mk_mk_f := both?₁
-    (α := Ty m)
-    (f := quote both?₀)
-    (g := both?₁
-      (α := Ty m)
-      (f := const?₀)
-      (g := (quote?₁
-        (α := (Ty m))
-        (e := quote apply?₀)
-        (m := m.succ)))
-      (m := m.succ))
+  let mk_mk_f := type_with_holes.mk_mk_f m n
 
   -- x : α. this will have α, then β, then f in scope, so we need to quote twice
   -- :: both (:: (quote const) (:: both (:: (quote const) id)))
   -- (:: both (:: (quote const) (:: both (:: (quote const) id)))) α = ::[const, ::[const, α]]
-  let mk_mk_x := both?
-    (f := quote const?₀)
-    (g := both?
-      (f := quote const?₀)
-      (g := Expr.id m))
+  let mk_mk_x := quote?_n₀ 2
 
   /-
     out type = β x. this is apply ?0 ?0 t_β α β x
@@ -168,34 +183,16 @@ def apply.type_with_holes (m n : Level) : Expr :=
       (α := (Ty m.succ))
       (e := (Ty m))
       (m := m.succ.succ))) -- first arg, (α : Ty m)
-    (g := (both?₁
+    (g := (both?_n 1 -- we will be under β here
       (α := Ty m)
-      (f := (quote both?₀))  -- after α, make a both to sequence β
-      (g := (both?₁
+      (f := mk_β) -- make β : α → Ty n from α
+      (g := (both?_n 2 -- we will be under f here
         (α := Ty m)
-        (f := mk_β) -- make β : α → Ty n from α
-        (g := (both?₁ -- need another both here for β
+        (f := mk_mk_f)
+        (g := (both?_n 3 -- we will e under x here
           (α := Ty m)
-          (f := (quote both?₀))
-          (g := (both?₁
-            (α := Ty m)
-            (f := (quote (quote both?₀)))
-            (g := (both?₁
-              (α := Ty m)
-              (f := mk_mk_f)
-              (g := (both?₁
-                (α := Ty m)
-                (f := (quote both?₀))
-                (g := (both?₁
-                  (α := Ty m)
-                  (f := mk_mk_x)
-                  (g := mk_mk_t_out)
-                  (m := m.succ)))
-                (m := m.succ)))
-              (m := m.succ)))
-            (m := m.succ)))
-          (m := m.succ)))
-        (m := m.succ)))))
+          (f := mk_mk_x)
+          (g := mk_mk_t_out)))))))
 
 /-
 β = (K' (Ty 2) (Ty 1) (Ty 1)) (Ty 1) = (Ty 1)
@@ -214,8 +211,26 @@ function types.
 How do we compare this against something similar but slightly different?
 This looks like [(quote Ty 0), (quote Ty 2)]. This is fine. α =
 
-I hypothesize that this could be because we need to nest apply inside
-β. The first const looks totally wrong. I don't know what's up wtiht hat.
+This looks potentially quite suspicious:
+::[(@$ 0 0 _ _ ::[::[::[const'.{[0, 0]}, _, _], both'.{[0, 0, 0]}, _, _, _],
+     ::[both'.{[0, 0, 0]}, _, _, _],
+     ::[::[both'.{[0, 0, 0]}, _, _, _],
+       ::[::[const'.{[0, 0]}, _, _], Ty 1],
+       ::[const'.{[0, 0]}, _, _],
+       f$ (f$ (apply.{[0, 0]}) (_))
+       (_)],
+     ::[::[const'.{[0, 0]}, _, _], ::[const'.{[0, 0]}, _, _], both'.{[0, 0, 0]}, _, _, _],
+     ::[::[const'.{[0, 0]}, _, _], both'.{[0, 0, 0]}, _, _, _],
+     ::[both'.{[0, 0, 0]}, _, _, _],
+     ::[::[const'.{[0, 0]}, _, _], ::[const'.{[0, 0]}, _, _], (@$ 0 0 _ _ id.{[2]} Ty 1)],
+     ::[both'.{[0, 0, 0]}, _, _, _],
+     ::[::[const'.{[0, 0]}, _, _], const'.{[0, 0]}, _, _],
+     (@$ 0 0 _ _ f$ (apply.{[0, 0]}) (_) Ty 1)] ::[::[const'.{[3, 2]}, Ty 2, Ty 1], Ty 1]),
+  id.{[2]},
+  Ty 1]
+
+this is upon applying f to (t_apply α β)
+f should essentailly be totally discarded, ngl.
 -/
 
 def test_reduce_apply_type : Except Error Expr := do
@@ -231,9 +246,9 @@ def test_reduce_apply_type : Except Error Expr := do
   dbg_trace Expr.head! a₁ == (Ty 2)
   let a₂ ← try_step_n 500 ($? a₁.tail! β)
   dbg_trace Expr.head! a₂ == ::[Ty 1, Ty 2]
-  dbg_trace a₂.tail!
   let a₃ := try_step_n 500 ($? a₂.tail! f)
   dbg_trace a₃
+  dbg_trace (← try_step_n 200 ($? f x)) == (Ty 0)
   -- got this for β: ::[::[::[const'.{[3, 0]}, Ty 2, _], Ty 1], ::[const'.{[0, 0]}, _, _], Ty 2]
   -- (quote (Ty 1)) → (quote Ty 2), so this is ∀ (x : (Ty 1)), (Ty 2).
   -- this seems right. probably β x = Ty 1, Ty 1 : Ty 2. fine.

@@ -52,3 +52,10 @@ this reeks of function application. I'll think about this later.
 fst : ∀ (α : Type) (β : Type), (× α β) → α
 snd : ∀ (α : Type) (β : Type), (l : (× α β)), β l.fst
 -/
+
+/-
+Can we derive nondependent pairs from Sigmas?
+
+α : Type m, β : Type n
+::[x : α, nil.{[n]} β]
+-/

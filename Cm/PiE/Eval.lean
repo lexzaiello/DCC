@@ -61,19 +61,57 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
     | .ok e' => try_step_n n e' <|> (pure e')
     | .error e => .error e
 
+/-
+nil.{[m]} : ∀ (α : Type m), α → Ty m
+nil (Ty m) α = Ty m
+out receives ::[α, Ty m, nil.{{m.succ]}]
+same pattern
+::[nil.{[m]}, ::[::[(fst m ? ? ?), nil.{{m]}], Prod.snd]]
+
+We also need to feed Prod.snd into here.
+
+we can basically nil / lift the term mapping from (x : α) → (β x)
+to get the corresponding type.
+
+app? ::[Ty m, ::[nil.{[m]}, ::[::[(fst m ? ? ?), nil.{{m]}], Prod.snd]]
+
+to check t_in: ::[x, t_f].snd.fst.snd
+this normalizes t_in, but this could just be like a simple pair,
+not a dependent pair.
+-/
+def nil.type (m : Level) : Expr :=
+  let t_α := ::[Ty m, nil.{[m.succ]}]
+  ::[t_α, ::[ (Ty m)
+  sorry
+
+/-
+id.{[m]} : (::[::[(Ty m), nil.{[m.succ]}], ::[::[(Prod.fst ? ?, nil.{[m]}], Prod.snd]])
+-/
+def id.type (m : Level) : Expr :=
+  let t_α := ::[(Ty m), (nil m.succ)]
+  -- prod.fst ::[α, ...], β = ?
+  -- α × (β : α → Type)
+  -- t_x receives ::[\alpha, ::[Ty m, nil.{{m.succ]}]]
+  -- nil.{[m]} : ∀ (α : Type m), α → Ty m
+  -- β : (const' ? ? ($ ×', (Ty m.succ), t_nil
+  let α_ret := ::[::[::[(Ty m) (Prod.fst m.succ 0) ? ?, nil m], Prod.snd]]
+  sorry
+
 namespace hole
 
 def TSorry : Expr := .unit
 
-/-
-id.{[m]} : (::[::[(Ty m), nil.{[m.succ]}], ::[nil.{[m]} ∘ Prod.fst, Prod.snd]])
--/
---def id.type_with_hole (m : Level) : Expr :=
-  
+
 
 def app? (f : Level → Level → Expr) (e : Expr) := ($ (f 0 0), TSorry, TSorry, e)
 
-example : try_step_n 200 (app? snd ::[(symbol "x"), ::[symbol "f", symbol "g"]])  = (.ok (f$ ((symbol "g")) ((f$ ((symbol "f")) ((symbol "x")))))) := rfl
+/-
+g ∘ f. ezpz.
+
+g ∘ f
+-/
+example : try_step_n 200 (app? snd ::[(symbol "x"), ::[symbol "f", symbol "g"]])  =
+  (.ok (f$ ((symbol "g")) ((f$ ((symbol "f")) ((symbol "x")))))) := rfl
 
 example : try_step_n 100 (app? snd ::[(Ty 1), ::[(Ty 2), .id 3]]) = (.ok <| Ty 1) := rfl
 

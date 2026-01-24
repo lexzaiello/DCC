@@ -14,9 +14,8 @@ def do_step_apply : Expr → Except Error Expr
   /-
     nil can downgrade a dependent type to a nondependent type.
     this is how nondependent pairs are derived from sigmas.
-    ((x : (α : Ty m)) × (β : Ty n)) = ((x : α) × (.nil m n α β))
   -/
-  | ::[.nil _m _n, _α, β, _x] => pure β
+  | ::[.nil _m _n, α, _β, _x] => pure α
   | ::[.id _o, _α, x] => pure x
   | ::[const _o _p, _α, _β, c, _x] => pure <| c
   | ::[both o p q, α, β, γ, ::[f, g], x] => -- TODO: not sure whether to nest ::[f, g] here, or leave flat
@@ -74,8 +73,47 @@ example : try_step_n 200 (f$ (apply 0 0) ::[Ty 0, Ty 0, .id 0, Ty 1, Ty 0]) = tr
 
 end test_curry
 
+/-
+mk_dup_tup α x = ::[x, ::[x, nil Unit α]]
+this is just ::[x, x] in a trenchcoat, since this is a sigma
+makes a nil-delimited tupe with two entries of α
+
+this doesn't change the fact that x still doesn't depend on x.
+we need to basically wrap x in a "no-op"
+
+::[x, ::[x, nil Unit α]]
+
+::[x, nil Unit α] : ((x : α) × Unit)
+so it feels like
+
+nil Unit α x has no evaluation rule?
+nil is in the type?
+
+but what is in the term?
+this is the type, yes ((x : α) × (nil Unit α))
+
+∀ (x : α), β = (nil β α)
+nil β α x = β
+
+α → β = 
+
+we need a way to wrap the term x while preserving its value.
+nil seems like the obvious candidate.
+
+-/
+def mk_dup_tup (m : Level) (α x : Expr) : Expr :=
+  ::[x, x, ::[(nil 0 m)
+
+def dup_tup₀ (m : Level) : Expr :=
+  
+
 namespace hole
 
+/-
+id α x : ::[(Ty m), α, α]
+-/
+def id.type_with_holes (m : Level) : Expr :=
+  
 
 end hole
 

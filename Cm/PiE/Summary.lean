@@ -41,4 +41,8 @@ downgrading :: (x : α) (xs : ∀ (x : α), β x) to :: (x : α) (xs : β)
 
 Currying with apply:
 f$ apply ::[::[f, a], x] = f$ apply ::[f, a, x]
+
+wait even hotter take:
+if sigmas are ((x : α) × (y : β x)),
+this reeks of function application. I'll think about this later.
 -/

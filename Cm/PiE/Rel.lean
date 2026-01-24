@@ -1,3 +1,4 @@
+
 import Cm.PiE.Ast
 
 open Expr
@@ -46,8 +47,9 @@ inductive is_step_once : Expr → Expr → Prop
   | app_const'   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(const' o p), _α, _β], c], _x]) c
   | app_both     : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(both o p q), α, β, γ], ::[f, g]], x])
     ::[f$ (f$ (f$ (apply o p) α) β) ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
-  | app_both'    : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(both' o p q), α, β, γ], ::[f, g]], x])
-    ::[f$ (f$ (f$ (apply o p) α) β) ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
+  | app_both'    : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[both' o p q, α, β, γ], ::[f, g]], x])
+    ::[f$ (f$ (f$ (apply o p) α) ::[const' p.succ o, (Ty p), α, β]) ::[f, x]
+     , f$ (f$ (f$ (apply o q) α) ::[const' q.succ o, (Ty q), α, γ]) ::[g, x]]
   | app_π_both   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[π o p q r, α, β, γ, δ], ::[fx, fxs]], ::[x, xs]])
     ::[f$ (f$ (f$ (apply o q) α) γ) ::[fx, x], f$ (f$ (f$ (apply p r) β) δ) ::[fxs, xs]]
   | app_eq_yes   : a == b → is_step_once
@@ -135,6 +137,70 @@ TODO: fill these in later.
 -/
 def USorry : Level := 0
 def TSorry : Expr:= .nil
+
+/-
+Creates a list element that ignores the next term argument of the type
+of the current term argument,
+and returns the argument that was in scope when assert was called.
+
+assert m α = ::[::[const' m.succ m, Ty m, α], α]
+
+assert m = :: both (:: (const' m.succ m),
+I feel like both' should work differently than both.
+It seems like a common pattern where I write const's inside a both when really I just want to append to a list.
+
+like literally just append.
+this is not both'. this should be accomplishable with π somehow.
+
+id α's type is:
+- double α
+- prepend (Ty m)
+- prepend const
+
+double = ::[(both' m.succ), Ty m]
+double α = ::[α, α]
+
+need to prepend const, though.
+this is where normal both comes into play, I think.
+
+id α = :: both'
+
+both' does what we think it does here. just creates a pair with l twice.
+
+perhaps both' is more like push?
+maybe we can derive push? not sure.
+
+can we do assert now?
+
+assert m α = ::[::[const' m.succ m, Ty m, α], α]
+similar pattern here. double α, prepend ::[const' m.succ m, Ty m]
+
+double := ::[::[(both' m m m), α, α, α], ::[id m, α], ::[id m, α]]
+
+assert m := :: both (:: (quote (const' m.succ m)) (:: both (:: (quote Ty m) (:: both (:: id id)))))
+-/
+
+/-
+f$ apply ::[mk_dup_pair m, α] = ::[α, α]
+this only works with argument of type Type m
+-/
+def t_dup_pair (m : Level) : Expr :=
+  ::[::[both' m.succ m.succ m.succ, Ty m, Ty m, Ty m]
+   , ::[id m.succ, Ty m]
+   , ::[id m.succ, Ty m]]
+
+/-
+assert m α = ::[::[const' m.succ m, Ty m, α], α]
+assert m = ::[prepend ::[const' m.succ m, Ty m]
+-/
+def assert (m : Level) : Expr :=
+  let to_prepend := ::[const' m.succ.succ m, Ty m]
+  let double := t_dup_pair m
+
+  -- :: both' (:: (quote ::[const' m.succ.succ m, Ty m.succ]) (:: both' (:: id id)))
+  -- β = [quote Ty m, quote [
+  ::[(both' m
+  sorry
 
 namespace prod
 

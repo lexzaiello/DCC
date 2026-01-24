@@ -137,6 +137,8 @@ inductive Expr where
   -- Dependent and nondependent :: both, respectively
   | both   : Level → Level → Level → Expr
   | both'  : Level → Level → Level → Expr
+  -- For bootstrapping types by running infer first. TODO: remove this once combinator types are determined
+  | hole   : Expr
 deriving BEq, DecidableEq
 
 open Expr
@@ -149,6 +151,7 @@ macro_rules
   | `(::[ $x:term ]) => `($x)
   | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
 
+notation "?" => Expr.hole
 notation "::" => Expr.cons
 notation "f$" => Expr.app
 notation "×'" => Expr.prod
@@ -161,20 +164,26 @@ deriving BEq, DecidableEq
 
 open Expr
 
-def Expr.fmt (e : Expr) : Format :=
+/-
+Foldls cons'd pairs / lists
+-/
+def Expr.foldl! {α : Type} (f : α → Expr → α) (init : α) : Expr → α
+  | :: x xs => xs.foldl! f (f init x)
+  | x => f init x
+
+partial def Expr.fmt (e : Expr) : Format :=
   match e with
-  | f$ f x => "f$ " ++ f.fmt ++ .line ++ x.fmt
+  | hole => "_"
+  | f$ f x => "f$ " ++ (.paren f.fmt) ++ .line ++ (.paren x.fmt)
   | eq m n => "eq.{" ++ [m, n].toString ++ "}"
   | apply m n => "apply.{" ++ [m, n].toString ++ "}"
   | π m n o p => "π.{" ++ [m, n, o, p].toString ++ "}"
-  | cons (.cons a b) (.cons c d) =>
-    ":: " ++ (.group <| .nest 2 <| (.paren (Expr.cons a b).fmt) ++ Format.line ++ (.paren (Expr.cons c d).fmt))
-  | cons (.cons a b) xs =>
-    ":: " ++ (.group <| .nest 2 <| (.paren (Expr.cons a b).fmt) ++ Format.line ++ xs.fmt)
-  | cons x (.cons a b) =>
-    ":: " ++ (.group <| .nest 2 <| x.fmt ++ Format.line ++ (.paren (Expr.cons a b).fmt))
-  | cons x xs =>
-    ":: " ++ (.group <| .nest 2 <| x.fmt ++ Format.line ++ xs.fmt)
+  | (.cons x xs) =>
+    "::[" ++
+      (.group
+        <| .nest 2
+        <| Format.joinSep (xs.foldl! (fun (acc : List Std.Format) e => acc ++ [(Expr.fmt e)]) [x.fmt]) ((format ", ") ++ Format.line))
+    ++ "]"
   | id m => "id.{" ++ [m].toString ++ "}"
   | const m n => "const.{" ++ [m, n].toString ++ "}"
   | const' m n => "const'.{" ++ [m, n].toString ++ "}"
@@ -203,3 +212,11 @@ instance Expr.instToString : ToString Expr where
 
 def unwrap_with {α : Type} (e : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error e)
+
+def Expr.head! : Expr → Expr
+  | :: a _b => a
+  | e => e
+
+def Expr.tail! : Expr → Expr
+  | :: _a b => b
+  | e => e

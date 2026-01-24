@@ -91,11 +91,18 @@ def apply.type_with_holes.mk_β (m n : Level) : Expr :=
   -- :: both (:: const (quote (quote Ty n)))
   -- this const is wrong. α : Ty m, f := (const t_α ? α)
   -- f looks fine ish.
+  -- missing a both. after α is applied, we should get
+  -- a future both that will pass along the (x : α)
   both?₁
     (α := (Ty m))
-    (f := (const?₁ (α := (Ty m)) (m := m.succ)))
-    (g := (quote <| quote <| Ty n))
-    (m := m.succ)
+    (f := (quote both?₀))
+    (g :=
+      both?₁
+        (α := (Ty m))
+        (f := (const?₁ (α := (Ty m)) (m := m.succ)))
+        (g := (quote <| quote <| Ty n))
+        (m := m.succ))
+   (m := m.succ)
 
 def apply.type_with_holes (m n : Level) : Expr :=
   -- with α in scope, β : α → Type
@@ -194,7 +201,10 @@ def test_reduce_apply_type : Except Error Expr := do
   -- then β, then f, then x
   let a₁ ← try_step_n 500 ($? (apply.type_with_holes 2 2) α)
   dbg_trace Expr.head! a₁ == (Ty 2)
-  dbg_trace (Expr.head! ∘ Expr.tail!) a₁
+  dbg_trace ::[Ty 1, Ty 2] == (← try_step_n 500 ($? ((Expr.head! ∘ Expr.tail!) a₁) x)) -- β : (Ty 1 = α) → Ty 2
+  dbg_trace a₁.tail!
+  let a₂ ← try_step_n 500 ($? a₁.tail! β)
+  dbg_trace Expr.head! a₂
   -- got this for β: ::[::[::[const'.{[3, 0]}, Ty 2, _], Ty 1], ::[const'.{[0, 0]}, _, _], Ty 2]
   -- (quote (Ty 1)) → (quote Ty 2), so this is ∀ (x : (Ty 1)), (Ty 2).
   -- this seems right. probably β x = Ty 1, Ty 1 : Ty 2. fine.

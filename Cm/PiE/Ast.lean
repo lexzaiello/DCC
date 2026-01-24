@@ -159,6 +159,8 @@ notation "Ty" => Expr.ty
 
 abbrev mk_quote (m n : Level) (α β x : Expr) : Expr := ::[::[const' m n, α, β], x]
 
+abbrev mk_apply (m n : Level) (α β e : Expr) : Expr := f$ (f$ (f$ (apply m n) α) β) e
+
 inductive Error where
   | stuck      : Expr → Error
   | no_rule    : Expr → Error

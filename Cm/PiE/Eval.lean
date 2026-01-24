@@ -12,15 +12,19 @@ This mirrors is_step_once exactly.
 -/
 def do_step_apply : Expr → Except Error Expr
   -- this apply rule allows treating a list as if it were a function application
-  | ::[::[apply _m _n, _α, _β], ::[f, x]] => pure <| f$ f x
   | ::[::[.id _o, _α], x] => pure x
   | e@::[::[(const _o _p), _α, _β], _c]
   | e@::[::[(const' _o _p), _α, _β], _c] => pure e
   | ::[::[::[(const _o _p), _α, _β], c], _x]
   | ::[::[::[(const' _o _p), _α, _β], c], _x] => pure c
-  | ::[::[::[(both _o _p _q), _α, _β, _γ], ::[f, g]], x]
-  | ::[::[::[(both' _o _p _q), _α, _β, _γ], ::[f, g]], x] =>
-    pure <| ::[f$ f x, f$ g x]
+  | ::[::[::[(both o p q), α, β, γ], ::[f, g]], x] =>
+    pure <| ::[mk_apply o p α β ::[f, x], mk_apply o q α γ ::[g, x]]
+  | ::[::[::[(both' o p q), α, β, γ], ::[f, g]], x] =>
+    -- both' is nondependent, so β' = (mk_quote p.succ o (Ty p) α β)
+    let fβ := mk_quote p.succ o (Ty p) α β
+    let gβ := mk_quote q.succ o (Ty q) α γ
+
+    pure <| ::[mk_apply o p.succ α fβ ::[f, x], mk_apply o q.succ α gβ ::[g, x]]
   | ::[::[::[π _o _p _q _r, _α, _β, _γ, _δ], ::[fx, fxs]], ::[x, xs]] =>
     pure <| ::[f$ fx x, f$ fxs xs]
   | ::[::[::[::[eq _o _p, _α, _β], fn_yes, fn_no], a], b] =>
@@ -32,17 +36,17 @@ def do_step_apply : Expr → Except Error Expr
 
 def run (e : Expr) : Except Error Expr := do
   match e with
-  | f$ f x => do
+  | f$ a@(f$ (f$ (apply _m _n) _fα) _fβ) ::[f, x] => do
     let eval_both : Except Error Expr := do
       let f' ← run f
       let x' ← run x
-      pure <| f$ f' x'
+      pure <| f$ a ::[f', x']
     let eval_arg_first : Except Error Expr := do
       let x' ← run x
-      pure <| f$ f x'
+      pure <| f$ a ::[f, x']
     let eval_f_first : Except Error Expr := do
       let f' ← run f
-      pure <| f$ f' x
+      pure <| f$ a ::[f', x]
     let step_whole : Except Error Expr := do
       do_step_apply <| ::[f, x]
 
@@ -83,6 +87,9 @@ def both?₀ (α : Option Expr := .none) (m : Option Level := .none) : Expr :=
   , (α.getD .hole)
   , ? , ?]
 
+def apply?₀ (α β : Option Expr := .none) (m n : Option Level := .none) : Expr :=
+  f$ (f$ (apply (m.getD 0) (n.getD 0)) (α.getD ?)) (β.getD ?)
+
 def id? (α : Option Expr := .none) (m : Option Level := .none) := ::[id (m.getD 0), α.getD .hole]
 
 /-
@@ -98,7 +105,7 @@ def both?_n (n : ℕ) (f g : Expr) (α : Option Expr := .none) (m : Option Level
   ((List.range n).tail.map (fun n => quote?_n n both?₀)).foldr
     (fun e acc => both? e acc) (both? (f := f) (g := g) (α := α) (m := m))
 
-example : try_step_n 200 (f$ (f$ (f$ (quote?_n 3 (Ty 0)) (Ty 0)) (Ty 0)) (Ty 0)) = (.ok (Ty 0)) := rfl
+example : try_step_n 200 (f$ apply?₀ ::[(f$ apply?₀ ::[(f$ apply?₀ ::[quote?_n 3 (Ty 0), (Ty 0)]), Ty 0]), Ty 0])  = (.ok (Ty 0)) := rfl
 
 /-
   α → β
@@ -121,8 +128,8 @@ def id.type_with_holes (m : Level) : Expr :=
         (m := m.succ)))
       (m := m.succ)))
 
-example : Expr.tail! <$> try_step_n 500 (f$ (id.type_with_holes 0) (Ty 0))
-  >>= (fun (e : Expr) => try_step_n 500 (f$ e (Ty 100))) = (.ok (::[Ty 0, Ty 0])) := rfl
+example : Expr.tail! <$> try_step_n 500 (f$ apply?₀ ::[id.type_with_holes 0, Ty 0])
+  >>= (fun (e : Expr) => try_step_n 500 (f$ apply?₀ ::[e, Ty 100])) = (.ok (::[Ty 0, Ty 0])) := rfl
 
 /-
 Type inference for filling in holes in expr types.

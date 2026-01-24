@@ -3,6 +3,24 @@ import Cm.PiE.Ast
 open Expr
 
 /-
+Potential massive simplification:
+what is the point of apply?
+apply really should be handled by our rules, I think.
+I think we can simplify this significantly.
+
+Am I stupid? what is the point of apply?
+
+β x with apply = :: both (:: whatever apply)
+we can just do this with id.
+
+But then we get back to the question:
+how do we emualte the "combining" step in S x y z?
+
+(x z) (y z)?
+this is kind of just handled by the list. we'll see.
+-/
+
+/-
 For testing purposes.
 This mirrors is_step_once exactly.
 -/
@@ -12,31 +30,31 @@ def do_step_apply : Expr → Except Error Expr
   | e@::[::[(const' _o _p), _α, _β], _c] => pure e
   | ::[::[::[(const _o _p), _α, _β], c], _x]
   | ::[::[::[(const' _o _p), _α, _β], c], _x] => pure c
-  | ::[::[::[(both o p q), α, β, γ], ::[f, g]], x]
-  | ::[::[::[(both' o p q), α, β, γ], ::[f, g]], x] =>
-    pure <| ::[@$ o p α β f x, @$ o q α γ g x]
-  | ::[::[::[π o p q r, α, β, γ, δ], ::[fx, fxs]], ::[x, xs]] =>
-    pure <| ::[@$ o q α γ fx x, @$ p r β δ fxs xs]
-  | ::[::[::[::[eq o p, α, β], fn_yes, fn_no], a], b] =>
+  | ::[::[::[(both _o _p _q), _α, _β, _γ], ::[f, g]], x]
+  | ::[::[::[(both' _o _p _q), _α, _β, _γ], ::[f, g]], x] =>
+    pure <| ::[f$ f x, f$ g x]
+  | ::[::[::[π _o _p _q _r, _α, _β, _γ, _δ], ::[fx, fxs]], ::[x, xs]] =>
+    pure <| ::[f$ fx x, f$ fxs xs]
+  | ::[::[::[::[eq _o _p, _α, _β], fn_yes, fn_no], a], b] =>
     if a == b then
-      pure <| @$ o p α β fn_yes a
+      pure <| f$ fn_yes a
     else
-      pure <| @$ o p α β fn_no b
+      pure <| f$ fn_no b
   | e => .error <| .no_rule e
 
 def run (e : Expr) : Except Error Expr := do
   match e with
-  | @$ m n fα fβ f x => do
+  | f$ f x => do
     let eval_both : Except Error Expr := do
       let f' ← run f
       let x' ← run x
-      pure <| @$ m n fα fβ f' x'
+      pure <| f$ f' x'
     let eval_arg_first : Except Error Expr := do
       let x' ← run x
-      pure <| @$ m n fα fβ f x'
+      pure <| f$ f x'
     let eval_f_first : Except Error Expr := do
       let f' ← run f
-      pure <| @$ m n fα fβ f' x
+      pure <| f$ f' x
     let step_whole : Except Error Expr := do
       do_step_apply <| ::[f, x]
 
@@ -49,7 +67,7 @@ def run (e : Expr) : Except Error Expr := do
     pure <| :: x xs') <|> (do
     let x' ← run x
     pure <| :: x' xs)
-  | e => .error <| .no_rule e
+  | e => .error <| .stuck e
 
 def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
   match n with
@@ -60,9 +78,6 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
     | .error e => .error e
 
 namespace hole
-
-def apply?₀ : Expr := ((apply 0 0).app ?).app ?
-def apply?₁ (α : Expr) (m : Option Level := .none) : Expr := ((apply (m.getD 0) 0).app α).app ?
 
 def quote (e : Expr) : Expr := ::[::[const' 0 0, ?, ?], e]
 def quote?₁ (α e : Expr) (m : Option Level := .none) : Expr := ::[::[const' (m.getD 0) 0, α, ?], e]
@@ -95,9 +110,7 @@ def both?_n (n : ℕ) (f g : Expr) (α : Option Expr := .none) (m : Option Level
   ((List.range n).tail.map (fun n => quote?_n n both?₀)).foldr
     (fun e acc => both? e acc) (both? (f := f) (g := g) (α := α) (m := m))
 
-notation "$?"  => (fun (f x : Expr) => @$ 0 0 Expr.hole Expr.hole f x)
-
-example : try_step_n 200 ($? ($? ($? (quote?_n 3 (Ty 0)) (Ty 0)) (Ty 0)) (Ty 0)) = (.ok (Ty 0)) := rfl
+example : try_step_n 200 (f$ (f$ (f$ (quote?_n 3 (Ty 0)) (Ty 0)) (Ty 0)) (Ty 0)) = (.ok (Ty 0)) := rfl
 
 /-
   α → β
@@ -137,21 +150,20 @@ and x binder within.
 f should be both'd such that it can accept the β binder
 x is also a binder, so it should e under a both as well.
 
-forgot totally about the apply for β.
-we can just wrap the entirety of t_f in a const I think?
+we can totally remove the apply part here.
+β x
 
-t_f = 
+β = quote id
 -/
 def apply.type_with_holes.mk_mk_f (m n : Level) : Expr :=
-  both?_n 2
+  both?_n 3
     (f := quote?_n₀ 2)
-    (g := quote const?₀)
+    (g := quote id?)
     (α := Ty m)
 
-example : try_step_n 500 ($? ($? ($? ($? (quote?_n₀ 3) (Ty 0)) (Ty 0)) (Ty 0)) (Ty 0)) = (.ok (Ty 0)) := rfl
-#eval try_step_n 500 ($? (apply.type_with_holes.mk_mk_f 1 3) (Ty 0))
-  >>= (fun e => try_step_n 500 ($? e (@id? (Ty 1) (.some 2))))
-  -->>= (fun e => try_step_n 500 ($? e (Ty 10)))
+example : try_step_n 500 (f$ (f$ (f$ (f$ (quote?_n₀ 3) (Ty 0)) (Ty 0)) (Ty 0)) (Ty 0)) = (.ok (Ty 0)) := rfl
+#eval try_step_n 1000 (f$ (apply.type_with_holes.mk_mk_f 1 3) (Ty 0))
+  >>= (fun e => try_step_n 1000 (f$ e (@id? (Ty 1) (.some 2))))
 
 def apply.type_with_holes (m n : Level) : Expr :=
   -- with α in scope, β : α → Type

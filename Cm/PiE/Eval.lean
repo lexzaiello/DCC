@@ -49,7 +49,7 @@ def run (e : Expr) : Except Error Expr := do
     pure <| :: x xs') <|> (do
     let x' ← run x
     pure <| :: x' xs)
-  | e => (.error <| .no_rule e)
+  | e => .error <| .no_rule e
 
 def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
   match n with
@@ -86,11 +86,20 @@ def imp? (α β : Expr) : Expr := ::[quote α, quote β]
 apply : ∀ (α : Type) (β : α → Type) (f : ∀ (x : α), β x) (x : α), β x
 
 -/
-def apply.type_with_holes (m n : Level) : Expr :=
+def apply.type_with_holes.mk_β (m n : Level) : Expr :=
   -- with α in scope, β : α → Type
-  let mk_β : Expr := both?
+  -- :: both (:: const (quote (quote Ty n)))
+  -- this const is wrong. α : Ty m, f := (const t_α ? α)
+  -- f looks fine ish.
+  both?₁
+    (α := (Ty m))
     (f := (const?₁ (α := (Ty m)) (m := m.succ)))
     (g := (quote <| quote <| Ty n))
+    (m := m.succ)
+
+def apply.type_with_holes (m n : Level) : Expr :=
+  -- with α in scope, β : α → Type
+  let mk_β : Expr := type_with_holes.mk_β m n
 
   -- with α in scope, then β in scope
   -- with α in scope, make :: both (:: (quote α) (quote (apply))
@@ -162,16 +171,37 @@ f = (::[id 2, Ty 1])
 x = Ty 0
 
 t_f = ∀ (x : Ty 0), β x
+
+This is bringing up the question again of extensionality for
+function types.
+
+::[::[::[const'.{[3, 0]}, Ty 2, _], Ty 0], ::[const'.{[0, 0]}, _, _], Ty 2]
+How do we compare this against something similar but slightly different?
+This looks like [(quote Ty 0), (quote Ty 2)]. This is fine. α =
+
+I hypothesize that this could be because we need to nest apply inside
+β. The first const looks totally wrong. I don't know what's up wtiht hat.
 -/
 
-def test_reduce_apply_type : Except Error Expr :=
+def test_reduce_apply_type : Except Error Expr := do
   let m := 1
   let t_α := Ty m.succ
   let α := Ty m
   let β := mk_quote m.succ.succ m.succ t_α α α -- discard (x : α), return α
+  let f := ::[id m.succ, α]
+  let x := Ty 0
   -- first argument to apply type is α, then β,
-  -- then 
-  try_step_n 200 (@$ m.succ m.succ α β (apply.type_with_holes 2 2) (Ty 0))
+  -- then β, then f, then x
+  let a₁ ← try_step_n 500 ($? (apply.type_with_holes 2 2) α)
+  dbg_trace Expr.head! a₁ == (Ty 2)
+  dbg_trace (Expr.head! ∘ Expr.tail!) a₁
+  -- got this for β: ::[::[::[const'.{[3, 0]}, Ty 2, _], Ty 1], ::[const'.{[0, 0]}, _, _], Ty 2]
+  -- (quote (Ty 1)) → (quote Ty 2), so this is ∀ (x : (Ty 1)), (Ty 2).
+  -- this seems right. probably β x = Ty 1, Ty 1 : Ty 2. fine.
+  .tail! <$> try_step_n 500 ($? (apply.type_with_holes 2 2) α)
+    >>= (fun e => .tail! <$> try_step_n 500 ($? e β))
+    >>= (fun e => .tail! <$> try_step_n 500 ($? e f))
+    >>= (fun e => .tail! <$> try_step_n 500 ($? e x))
 
 #eval test_reduce_apply_type
 

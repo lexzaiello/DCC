@@ -17,6 +17,9 @@ const' : ∀ (α : Type m) (β : Type n), α → β → α
 both'  : ∀ (α : Type m) (β : Type n) (γ : Type o) (f : α → β) (g : α → γ), α → (β × γ)
 
 :: : {α : Type} {β : α → Type} (x : α) (xs : β x), ((x : α) × β x)
+
+fst : ∀ (α : Type) (β : Type), (× α β) → α
+snd : ∀ (α : Type) (β : Type), (l : (× α β)), β l.fst
 -/
 
 /-
@@ -45,4 +48,7 @@ f$ apply ::[::[f, a], x] = f$ apply ::[f, a, x]
 wait even hotter take:
 if sigmas are ((x : α) × (y : β x)),
 this reeks of function application. I'll think about this later.
+
+fst : ∀ (α : Type) (β : Type), (× α β) → α
+snd : ∀ (α : Type) (β : Type), (l : (× α β)), β l.fst
 -/

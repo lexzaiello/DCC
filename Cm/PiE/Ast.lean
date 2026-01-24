@@ -116,6 +116,9 @@ both'  : ∀ (α : Type m) (β : Type n) (γ : Type o) (f : α → β) (g : α �
 abbrev Level := ℕ
 
 inductive Expr where
+  -- for projecting on cons
+  | fst    : Level → Level → Expr
+  | snd    : Level → Level → Expr
   -- for forming "lists"
   | cons   : Expr → Expr → Expr
   | app    : Expr → Expr → Expr
@@ -145,11 +148,14 @@ open Expr
 
 syntax ident ".{" term,* "}" : term
 syntax "::[" term,+ "]" : term
+syntax "($" term,+ ")" : term
 syntax (name := atDollar) "@$" term:max term:max term:max term:max term:max term:max : term
 
 macro_rules
   | `(::[ $x:term ]) => `($x)
   | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
+  | `(($ $x:term) ) => `($x)
+  | `(($ $x:term, $xs:term,*)) => `(Expr.app $x ($ $xs,*))
 
 notation "?" => Expr.hole
 notation "::" => Expr.cons
@@ -183,6 +189,8 @@ def Expr.foldl! {α : Type} (f : α → Expr → α) (init : α) : Expr → α
 
 partial def Expr.fmt (e : Expr) : Format :=
   match e with
+  | fst m n => "fst.{" ++ [m, n].toString ++ "}"
+  | snd m n => "snd.{" ++ [m, n].toString ++ "}"
   | apply m n => "apply.{" ++ [m, n].toString ++ "}"
   | hole => "_"
   | f$ f x => .paren <| "f$ " ++ (.paren f.fmt) ++ .line ++ (.paren x.fmt)

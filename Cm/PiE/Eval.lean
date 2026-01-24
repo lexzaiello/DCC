@@ -11,6 +11,9 @@ For testing purposes.
 This mirrors is_step_once exactly.
 -/
 def do_step_apply : Expr → Except Error Expr
+  | ($ (fst _m _n), _α, _β, ::[a, _b]) => pure a
+  | ($ (snd _m _n), _α, _β, ::[a, ::[x, xs]]) => pure ::[::[a, x], xs]
+  | ($ (snd _m _n), _α, _β, ::[x, f]) => pure (f$ f x)
   /-
     nil can downgrade a dependent type to a nondependent type.
     this is how nondependent pairs are derived from sigmas.

@@ -5,6 +5,27 @@ import Cm.Pi.Std.Except
 
 open Expr
 
+/-
+Notes:
+- with current valid_judgment setup, we have no way of expressing that both
+is well-typed in a point-free way.
+- we could use the infer fixpoint method, but this is time consuming
+and we will need to finish the entire infer function for this to work
+
+infer function is challenging to write, but ultimately, the meta theoretical
+proofs should coincide with the actual usage of the system
+
+- how can you be sure that the eval / infer function coincides with the model?
+proofs will be gargantuan with infer function approach, but quite nice,
+since we can transport them quite easily to the actual implementation vs just the model
+
+- the other question is inductive types:
+  - I want to support inductive types more natively, rather than just extending the infer
+function, as this feels quite dangerous.
+  - we were able to encode some basic "inductive" types
+  
+-/
+
 def TData : Expr := .symbol "Data"
 def TType : Expr := .symbol "Type"
 def IList : Expr := .symbol "List"
@@ -53,10 +74,20 @@ def infer_self_unsafe (get_e : Expr := (:: π (:: nil id))) : Expr :=
   (:: both (:: (quote apply) (:: both (::
     infer.self (:: both (:: infer.self get_e))))))
 
+/-
+nil : IList α.
+Its type is dependent and varies on the type of the rest of the list.
+
+(:: apply (:: (:: apply (:: infer_nil (:: infer_global))) x))
+= (:: IList (:: apply (:: infer_global (:: infer_global x))))
+-/
 def infer_nil (or_else : Expr := or_fail) : Expr :=
   (infer.match_with
     (match_fn := (:: π (:: id (quote nil))))
-    (then_do := (quote (quote (:: apply (:: Except'.ok TData)))))
+    (then_do := (quote (:: both (:: (quote both) (:: both (::
+      (quote IList)
+      (:: both (:: (quote both) (:: both (:: (quote (quote apply))
+      (:: both (:: (quote const) (:: both (:: infer.self infer.self))))))))))))))
     (quote or_else))
 
 def mk_tlist : Expr :=
@@ -85,10 +116,10 @@ is detected.
 def infer_list : Expr :=
   guard_list <|
     (quote (infer.match_with
-      (match_fn := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: id nil)))))))
+      (match_fn := (:: both (:: (quote IList) (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: id nil)))))))))
       (match_other := (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: nil id)))))))
-      -- if the types of the head and the tail are equal, then the type is List α
-      -- although, they might both be Except values, so map those
+      -- the type of the tail must be List α
+      -- and the head must be α
       (then_do := (quote (:: both (:: (quote apply) (:: both (:: (quote (:: apply (:: Except'.map_with (:: mk_tlist id)))) id))))))
       (or_else := assert_eq)))
 
@@ -112,6 +143,10 @@ def infer_fn : Expr :=
         (infer_self_unsafe (get_e := (:: π (:: nil (:: π (:: id nil))))))
         (:: π (:: nil (:: π (:: nil id))))))))
 
+/-
+Apply can induce a function application.
+Otherwise, data are type-checked as lists.
+-/
 def infer_apply : Expr :=
   (infer.match_with
     (match_fn := (:: π (:: id (:: π (:: (quote apply) id)))))
@@ -121,12 +156,7 @@ def infer_apply : Expr :=
 
 /-
 (:: apply (:: (:: apply (:: (:: apply (:: infer_both infer_global)) (:: f g))) x))
-0-ary. this creates a function that
-
-can this avoid omega?
-I think so.
-
-TODO: we might need to check that we have both f and g in scope.
+This creates a curried function that asserts that
 -/
 def infer_both.f : Expr :=
   (:: both (:: (quote apply) (:: both (::
@@ -145,12 +175,29 @@ def infer_both : Expr :=
       (
   sorry
 
+/-
+For use with infer.
+-/
+def nat.type : Expr :=
+  let do_rec := :: both (:: (quote apply) (:: π (:: (:: both (:: (quote apply) id)) id)))
+  let succ_case := :: both (:: (quote apply) (:: both (:: (:: both (:: (:: both (::
+    (quote eq) (:: both (::
+      (quote (quote (:: apply (:: Except'.ok TNat))))
+      (:: both (:: (quote const) do_rec))))))
+      (quote Nat'.zero)))
+      (:: π (:: nil id)))))
+  (:: both (:: (quote apply) (:: both (::
+    (quote (:: apply (:: nat.rec_with (:: nat.rec_with (:: (quote (:: apply (:: Except'.ok TNat))) succ_case)))))
+    (:: π (:: nil id))))))
+
 def infer.match_whole (whole : Expr) : Expr :=
   (:: π (:: id whole))
 
 def infer : Expr :=
   infer_nil
   infer_list
+
+#eval try_step_n' 100 (:: apply (:: infer_nil (:: infer nil)))
 
 def infer' : Expr :=
   (:: both (:: (quote apply) (:: both (:: (quote infer) (:: both (:: (quote infer) id))))))
@@ -159,3 +206,8 @@ set_option maxRecDepth 5000
 example : try_step_n' 500 (:: apply (:: (:: π (:: id (:: π (:: id nil)))) (:: apply (:: infer' (symbol "hi"))))) = (.ok (:: (symbol "error") (:: (symbol "expected:") (symbol "a list")))) := rfl
 example : try_step_n' 500 (:: apply (:: infer' (:: nil nil))) = (.ok (:: Except'.s_ok (:: IList TData))) := rfl
 example : try_step_n' 100 (:: apply (:: infer' nil)) = (.ok (:: Except'.s_ok TData)) := rfl
+
+/-
+At the very least, we need some mechanism to pattern match on Symbol.
+If something isn't a list
+-/

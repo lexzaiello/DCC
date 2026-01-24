@@ -55,6 +55,11 @@ inductive valid_judgment : Expr → Expr → Prop
     → valid_judgment (:: apply (:: no_case b)) t'
     → valid_judgment (:: apply (:: (:: (:: eq (:: yes_case no_case)) a) b)) t'
 
+def is_value : Expr → Prop
+  | :: f x => f ≠ apply ∧ (is_value x)
+  | .symbol _s | both | .id | const
+  | π | eq | nil | apply => true
+
 example : valid_judgment (:: (:: apply (:: (:: const (symbol "hello, ")) (symbol "discard"))) (:: (symbol "world") nil)) (:: IList TData) := by
   apply valid_judgment.list
   apply valid_judgment.const

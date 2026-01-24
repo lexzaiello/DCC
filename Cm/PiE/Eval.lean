@@ -18,15 +18,15 @@ def do_step_apply : Expr → Except Error Expr
   | ::[::[::[(const _o _p), _α, _β], c], _x]
   | ::[::[::[(const' _o _p), _α, _β], c], _x] => pure c
   | ::[::[::[(both o p q), α, β, γ], ::[f, g]], x] =>
-    pure <| ::[mk_apply o p α β ::[f, x], mk_apply o q α γ ::[g, x]]
+    pure <| ::[f$ (apply o p) ::[::[α, β], ::[f, x]], f$ (apply o q) ::[::[α, γ], ::[g, x]]]
   | ::[::[::[(both' o p q), α, β, γ], ::[f, g]], x] =>
     -- both' is nondependent, so β' = (mk_quote p.succ o (Ty p) α β)
     let fβ := mk_quote p.succ o (Ty p) α β
     let gβ := mk_quote q.succ o (Ty q) α γ
 
-    pure <| ::[mk_apply o p.succ α fβ ::[f, x], mk_apply o q.succ α gβ ::[g, x]]
-  | ::[::[::[π _o _p _q _r, _α, _β, _γ, _δ], ::[fx, fxs]], ::[x, xs]] =>
-    pure <| ::[f$ fx x, f$ fxs xs]
+    pure <| ::[f$ (apply o p.succ) ::[::[α, fβ], ::[f, x]], f$ (apply o q.succ) ::[::[α, gβ], ::[g, x]]]
+  | ::[::[::[π o p q r, α, β, γ, δ], ::[fx, fxs]], ::[x, xs]] =>
+    pure <| ::[f$ (apply o q) ::[::[α, γ], ::[fx, x]], f$ (apply p r) ::[::[β, δ], ::[fxs, xs]]]
   | ::[::[::[::[eq _o _p, _α, _β], fn_yes, fn_no], a], b] =>
     if a == b then
       pure <| f$ fn_yes a
@@ -36,17 +36,17 @@ def do_step_apply : Expr → Except Error Expr
 
 def run (e : Expr) : Except Error Expr := do
   match e with
-  | f$ a@(f$ (f$ (apply _m _n) _fα) _fβ) ::[f, x] => do
+  | f$ a@(apply _m _n) ::[::[fα, fβ], ::[f, x]] => do
     let eval_both : Except Error Expr := do
       let f' ← run f
       let x' ← run x
-      pure <| f$ a ::[f', x']
+      pure <| f$ a ::[::[fα, fβ], ::[f', x']]
     let eval_arg_first : Except Error Expr := do
       let x' ← run x
-      pure <| f$ a ::[f, x']
+      pure <| f$ a ::[::[fα, fβ], ::[f, x']]
     let eval_f_first : Except Error Expr := do
       let f' ← run f
-      pure <| f$ a ::[f', x]
+      pure <| f$ a ::[::[fα, fβ], ::[f', x]]
     let step_whole : Except Error Expr := do
       do_step_apply <| ::[f, x]
 

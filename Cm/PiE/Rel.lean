@@ -41,7 +41,6 @@ TODO: need to fill in type arguments to applies created inside step relation.
 -/
 
 inductive is_step_once : Expr → Expr → Prop
-
   | app_id       : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[.id o, _α], x]) x
   | app_const    : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(const o p), _α, _β], c], _x]) c
   | app_both     : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(both o p q), α, β, γ], ::[f, g]], x])
@@ -79,7 +78,7 @@ For example, with id:
 id α : [Type, rest stuff]
 id α x : [(:: const α), (:: const α)]
 
-id.{ : ::[(:: const (Ty 
+id.{[m]} : ::[(:: const (Ty 
 -/
 
 inductive valid_judgment : Expr → Expr → Prop

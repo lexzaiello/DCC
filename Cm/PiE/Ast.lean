@@ -131,9 +131,14 @@ deriving BEq, DecidableEq
 
 open Expr
 
+syntax term ".{" term "}" : term
+
 syntax "::[" term,+ "]" : term
 
 macro_rules
+  | `(c.{[]}) => `(c)
+  | `(c.{[u]}) => `(c u)
+  | `(c.{List.cons x xs}) => `((c x).{xs})
   | `(::[ $x:term ]) => `($x)
   | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
 

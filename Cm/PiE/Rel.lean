@@ -46,6 +46,8 @@ inductive is_step_once : Expr → Expr → Prop
   | app_const'   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(const' o p), _α, _β], c], _x]) c
   | app_both     : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(both o p q), α, β, γ], ::[f, g]], x])
     ::[f$ (f$ (f$ (apply o p) α) β) ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
+  | app_both'    : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(both' o p q), α, β, γ], ::[f, g]], x])
+    ::[f$ (f$ (f$ (apply o p) α) β) ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
   | app_π_both   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[π o p q r, α, β, γ, δ], ::[fx, fxs]], ::[x, xs]])
     ::[f$ (f$ (f$ (apply o q) α) γ) ::[fx, x], f$ (f$ (f$ (apply p r) β) δ) ::[fxs, xs]]
   | app_eq_yes   : a == b → is_step_once
@@ -69,6 +71,11 @@ apply : ∀ (α : Type) (β : α → Type) : ∀ (l : ((∀ (x : α), β x) × �
   (f : ∀ (x : α), γ x) (g : ∀ (x : β), δ x)
   (l : α × β), ((γ l.fst) × (δ l.snd))
 eq : ∀ (α : Type) (β : α → Type) (f : ∀ (x : α), β x) (g : ∀ (x : α), β x) (x : α) (y : α), β x
+
+const' : ∀ (α : Type m) (β : Type n), α → β → α
+both'  : ∀ (α : Type m) (β : Type n) (γ : Type o) (f : α → β) (g : α → γ), α → (β × γ)
+
+Note that const' and both' are necessary for bootstrapping purposes.
 
 we start our derivation of the point-free types with the function application rule.
 f$ apply ::[f, x] gets type-checked by applying x to the type of f,
@@ -117,7 +124,10 @@ id = :: both (:: (quote (Ty m)) (:: both (:: (quote const) (:: both (:: id id)))
 See here, β gets filled in with α. perfect.
 the nesting might be wrong though we'll see.
 
+id type using the new bootstrapped const' and both':
 
+id = :: both (:: (quote (Ty m)) (:: both (:: (quote const) (:: both (:: id id)))))
+id α = ::[Ty m, ::[::[const' m.succ m, (Ty m) × (Ty m), α], ::[α, α]]]
 -/
 
 /-
@@ -165,7 +175,16 @@ def type' (m : Level) : Expr :=
   -- const ((Ty m) × (Ty m)) α : ((Ty m) × (Ty m)) → α → ((Ty m) × (Ty m))
   -- α needs to be copied into here, too.
   -- :: both (:: (quote (quote ((Ty m) × (Ty m)))) (:: both (:: (id (Ty m)) (:: (quote (quote ((Ty m) × (Ty m))))))))
+  -- β argument to the both is an expression taht surrounds α by ((Ty m) × (Ty m))
   let t_t_inner_α_α := Ty m.succ
+  -- once the const wrapper / prefix is fully typed with ::[(const m.succ, m), ((Ty m) × (Ty m)), α]
+  -- it has type ((Ty m) × (Ty m)) → α → ((Ty m) × (Ty m)). this is the β in the middle both.
+  -- this is β, and it forms this arrow type.
+  -- we should be producing ::[(quote ((Ty m) × (Ty m))), (quote α), ((Ty m) × (Ty m))]
+  -- this is tricky again, since the inner α quotation requires copying α.
+  -- annoying. the argument at that point would be (x : α), so we would need
+  -- ::[::[const' m.succ m, Ty m, α], α]
+  -- this is a common pattern, seemingly, so it may be good to abstract
   let t_typed_const_wrapper := ::[(
 
   /- inner_ish α = (const' ((Ty m) × (Ty m)) α) (:: α α)

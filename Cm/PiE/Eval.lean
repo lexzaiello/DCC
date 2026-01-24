@@ -70,10 +70,23 @@ def quote?₁ (α e : Expr) (m : Option Level := .none) : Expr := ::[::[const' (
 def const?₀ : Expr := ::[const' 0 0, ?, ?]
 def const?₁ (α : Expr) (m : Option Level := .none) : Expr := ::[const' (m.getD 0) 0, α, ?]
 
-def both? (f g : Expr) : Expr := ::[::[both' 0 0 0, ?, ?, ?], ::[f, g]]
+def both? (f g : Expr) (α : Option Expr := .none) (m : Option Level := .none) : Expr :=
+  ::[::[both' (m.getD 0) 0 0, (α.getD .hole), ?, ?], ::[f, g]]
 def both?₁ (α f g : Expr) (m : Option Level := .none) : Expr := ::[::[both' (m.getD 0) 0 0, α, ?, ?], ::[f, g]]
+def both?₀ (α : Option Expr := .none) (m : Option Level := .none) : Expr :=
+  ::[both' (m.getD 0) 0 0
+  , (α.getD .hole)
+  , ? , ?]
 
-def both?₀ : Expr := ::[both' 0 0 0, ?, ?, ?]
+-- for n λ binders. this expands into n * (n * const(both))
+-- this "binds" n binders deep by injecting n future both's
+def both?_n (n : ℕ) (f g : Expr) (α : Option Expr := .none) (m : Option Level := .none) : Expr :=
+  match n with
+  | .zero => both? f g (α := α) (m := m)
+  | .succ n' =>
+    both?
+      (f := (List.replicate n const?₀).foldr (fun e acc => ::[e, acc]) both?₀)
+      (g := both?_n n' f g)
 
 notation "$?"  => (fun (f x : Expr) => @$ 0 0 Expr.hole Expr.hole f x)
 
@@ -157,18 +170,30 @@ def apply.type_with_holes (m n : Level) : Expr :=
       (m := m.succ.succ))) -- first arg, (α : Ty m)
     (g := (both?₁
       (α := Ty m)
-      (f := (quote both?₀))
+      (f := (quote both?₀))  -- after α, make a both to sequence β
       (g := (both?₁
         (α := Ty m)
-        (f := mk_β)
-        (g := (both?₁
+        (f := mk_β) -- make β : α → Ty n from α
+        (g := (both?₁ -- need another both here for β
           (α := Ty m)
-          (f := mk_mk_f)
-          (g := both?₁
+          (f := (quote both?₀))
+          (g := (both?₁
             (α := Ty m)
-            (f := mk_mk_x)
-            (g := mk_mk_t_out)
-            (m := m.succ))
+            (f := (quote (quote both?₀)))
+            (g := (both?₁
+              (α := Ty m)
+              (f := mk_mk_f)
+              (g := (both?₁
+                (α := Ty m)
+                (f := (quote both?₀))
+                (g := (both?₁
+                  (α := Ty m)
+                  (f := mk_mk_x)
+                  (g := mk_mk_t_out)
+                  (m := m.succ)))
+                (m := m.succ)))
+              (m := m.succ)))
+            (m := m.succ)))
           (m := m.succ)))
         (m := m.succ)))))
 
@@ -206,6 +231,9 @@ def test_reduce_apply_type : Except Error Expr := do
   dbg_trace Expr.head! a₁ == (Ty 2)
   let a₂ ← try_step_n 500 ($? a₁.tail! β)
   dbg_trace Expr.head! a₂ == ::[Ty 1, Ty 2]
+  dbg_trace a₂.tail!
+  let a₃ := try_step_n 500 ($? a₂.tail! f)
+  dbg_trace a₃
   -- got this for β: ::[::[::[const'.{[3, 0]}, Ty 2, _], Ty 1], ::[const'.{[0, 0]}, _, _], Ty 2]
   -- (quote (Ty 1)) → (quote Ty 2), so this is ∀ (x : (Ty 1)), (Ty 2).
   -- this seems right. probably β x = Ty 1, Ty 1 : Ty 2. fine.

@@ -183,7 +183,8 @@ def Expr.foldl! {α : Type} (f : α → Expr → α) (init : α) : Expr → α
 partial def Expr.fmt (e : Expr) : Format :=
   match e with
   | hole => "_"
-  | @$ m n α β f x => "@$ " ++ (Format.joinSep [format m, format n, Expr.fmt α, Expr.fmt β, f.fmt, x.fmt] " ")
+  | @$ m n α β f x => .paren <|
+    "@$ " ++ (Format.joinSep [format m, format n, Expr.fmt α, Expr.fmt β, f.fmt, x.fmt] " ")
   | f$ f x => "f$ " ++ (.paren f.fmt) ++ .line ++ (.paren x.fmt)
   | eq m n => "eq.{" ++ [m, n].toString ++ "}"
   | apply m n => "apply.{" ++ [m, n].toString ++ "}"

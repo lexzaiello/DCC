@@ -65,7 +65,15 @@ namespace hole
 
 def TSorry : Expr := .unit
 
+/-
+id.{[m]} : (::[::[(Ty m), nil.{[m.succ]}], ::[nil.{[m]} ∘ Prod.fst, Prod.snd]])
+-/
+--def id.type_with_hole (m : Level) : Expr :=
+  
+
 def app? (f : Level → Level → Expr) (e : Expr) := ($ (f 0 0), TSorry, TSorry, e)
+
+example : try_step_n 200 (app? snd ::[(symbol "x"), ::[symbol "f", symbol "g"]])  = (.ok (f$ ((symbol "g")) ((f$ ((symbol "f")) ((symbol "x")))))) := rfl
 
 example : try_step_n 100 (app? snd ::[(Ty 1), ::[(Ty 2), .id 3]]) = (.ok <| Ty 1) := rfl
 

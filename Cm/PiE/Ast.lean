@@ -116,6 +116,8 @@ both'  : ∀ (α : Type m) (β : Type n) (γ : Type o) (f : α → β) (g : α �
 abbrev Level := ℕ
 
 inductive Expr where
+  -- for debugging
+  | symbol : String → Expr
   -- for projecting on cons
   | fst    : Level → Level → Expr
   | snd    : Level → Level → Expr
@@ -189,6 +191,7 @@ def Expr.foldl! {α : Type} (f : α → Expr → α) (init : α) : Expr → α
 
 partial def Expr.fmt (e : Expr) : Format :=
   match e with
+  | symbol s => .paren s!"symbol \"{s}\""
   | fst m n => "fst.{" ++ [m, n].toString ++ "}"
   | snd m n => "snd.{" ++ [m, n].toString ++ "}"
   | apply m n => "apply.{" ++ [m, n].toString ++ "}"

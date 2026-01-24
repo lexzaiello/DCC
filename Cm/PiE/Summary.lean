@@ -34,5 +34,11 @@ const : ∀ (α : Type) (β : α → Type) (x : α) (y : β x), α
 
 both' is just both with β = (nil (α : Type m) (Type n)),
 and y :
-nil.{[m, n]} (α : Type m) (x : α) = Type n
+nil.{[m, n]} (α : Type m) (β : Type n) (x : α) = β
+
+downgrading :: (x : α) (xs : ∀ (x : α), β x) to :: (x : α) (xs : β)
+:: (x : α) (:: (xs : β) (
+
+Currying with apply:
+f$ apply ::[::[f, a], x] = f$ apply ::[f, a, x]
 -/

@@ -164,10 +164,14 @@ deriving BEq, DecidableEq
 
 open Expr
 
-def Expr.push (l with_val : Expr) : Expr :=
+/-
+This pushes a value to the end of a list
+that isn't nil delimited.
+-/
+def Expr.push (l with_val : Expr) : Option Expr :=
   match l with
-  | :: x xs => :: x (Expr.push xs with_val)
-  | nil m n => :: with_val (nil m n)
+  | :: x xs => Expr.cons x <$> Expr.push xs with_val
+  | nil _m _n => .none
   | x => :: x with_val
 
 /-

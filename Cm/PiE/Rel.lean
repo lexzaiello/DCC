@@ -36,19 +36,24 @@ I want to follow the old style, ideally, but I'm not sure how that will play wit
 Need to also decide where to nil delimit these, if applicable.
 
 Note that all of these types are universe polymoprhic.
+
+TODO: need to fill in type arguments to applies created inside step relation.
 -/
 
 inductive is_step_once : Expr → Expr → Prop
-  | app_id       : is_step_once (f$ apply ::[::[id, _α], x]) x
-  | app_const    : is_step_once (f$ apply ::[::[::[const, _α, _β], c], _x]) c
-  | app_both     : is_step_once (f$ apply ::[::[::[both, _α, _β, _γ], ::[f, g]], x])
-    ::[f$ apply ::[f, x], f$ apply ::[g, x]]
-  | app_π_both   : is_step_once (f$ apply ::[::[::[π, _α, _β, _γ, _δ], ::[fx, fxs]], ::[x, xs]])
-    ::[f$ apply ::[fx, x], f$ apply ::[fxs, xs]]
-  | app_eq_yes   : a == b → is_step_once (f$ apply ::[::[::[::[eq, _α, _β], fn_yes, fn_no], a], b])
-    (f$ apply ::[fn_yes, a])
-  | app_eq_no    : a ≠ b  → is_step_once (f$ apply ::[::[::[::[eq, _α, _β], fn_yes, fn_no], a], b])
-    (f$ apply ::[fn_no, b])
+
+  | app_id       : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[.id o, _α], x]) x
+  | app_const    : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(const o p), _α, _β], c], _x]) c
+  | app_both     : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(both o p q), α, β, γ], ::[f, g]], x])
+    ::[f$ (f$ (f$ (apply o p) α) β)  ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
+  | app_π_both   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[π o p q r, _α, _β, _γ, _δ], ::[fx, fxs]], ::[x, xs]])
+    ::[f$ (f$ (f$ (apply o q) α) γ) ::[fx, x], f$ (f$ (f$ (apply p r) β) δ) ::[fxs, xs]]
+  | app_eq_yes   : a == b → is_step_once
+    (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[::[eq o p, α, β], fn_yes, fn_no], a], b])
+    (f$ (f$ (f$ (apply o p) α) β) ::[fn_yes, a])
+  | app_eq_no    : a ≠ b  → is_step_once
+    (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[::[eq o p, α, β], fn_yes, fn_no], a], b])
+    (f$ (f$ (f$ (apply o p) α) β) ::[fn_no, b])
 
 /-
 Summary of our types:

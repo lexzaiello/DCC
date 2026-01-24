@@ -75,6 +75,13 @@ def both?₁ (α f g : Expr) (m : Option Level := .none) : Expr := ::[::[both' (
 
 def both?₀ : Expr := ::[both' 0 0 0, ?, ?, ?]
 
+notation "$?"  => (fun (f x : Expr) => @$ 0 0 Expr.hole Expr.hole f x)
+
+/-
+  α → β
+-/
+def imp? (α β : Expr) : Expr := ::[quote α, quote β]
+
 /-
 apply : ∀ (α : Type) (β : α → Type) (f : ∀ (x : α), β x) (x : α), β x
 
@@ -145,6 +152,28 @@ def apply.type_with_holes (m n : Level) : Expr :=
           (m := m.succ))
         (m := m.succ)))
       (m := m.succ)))
+
+/-
+β = (K' (Ty 2) (Ty 1) (Ty 1)) (Ty 1) = (Ty 1)
+β = ((K' (Ty 2) (Ty 1) (Ty 1)) (Ty 1) : (Ty 2))
+
+β just gives us back Ty 1.
+f = (::[id 2, Ty 1])
+x = Ty 0
+
+t_f = ∀ (x : Ty 0), β x
+-/
+
+def test_reduce_apply_type : Except Error Expr :=
+  let m := 1
+  let t_α := Ty m.succ
+  let α := Ty m
+  let β := mk_quote m.succ.succ m.succ t_α α α -- discard (x : α), return α
+  -- first argument to apply type is α, then β,
+  -- then 
+  try_step_n 200 (@$ m.succ m.succ α β (apply.type_with_holes 2 2) (Ty 0))
+
+#eval test_reduce_apply_type
 
 /-
 id : ∀ (α : Type), α → α

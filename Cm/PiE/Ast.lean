@@ -164,6 +164,8 @@ notation "f$" => Expr.app
 notation "×'" => Expr.prod
 notation "Ty" => Expr.ty
 
+abbrev mk_quote (m n : Level) (α β x : Expr) : Expr := ::[::[const' m n, α, β], x]
+
 inductive Error where
   | stuck      : Expr → Error
   | no_rule    : Expr → Error

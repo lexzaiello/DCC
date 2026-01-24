@@ -112,6 +112,38 @@ example : try_step_n 200 (f$ apply?₀ ::[(f$ apply?₀ ::[(f$ apply?₀ ::[quot
 -/
 def imp? (α β : Expr) : Expr := ::[quote α, quote β]
 
+def apply.type_with_holes.mk_β (m n : Level) : Expr :=
+  -- with α in scope, β : α → Type
+  -- :: both (:: const (quote (quote Ty n)))
+  -- this const is wrong. α : Ty m, f := (const t_α ? α)
+  -- f looks fine ish.
+  -- missing a both. after α is applied, we should get
+  -- a future both that will pass along the (x : α)
+  both?₁
+    (α := (Ty m))
+    (f := (quote both?₀))
+    (g :=
+      both?₁
+        (α := (Ty m))
+        (f := (const?₁ (α := (Ty m)) (m := m.succ)))
+        (g := (quote <| quote <| Ty n))
+        (m := m.succ))
+   (m := m.succ)
+
+-- (Ty 0) → (Ty 2)
+#eval try_step_n 200 (f$ apply?₀ ::[apply.type_with_holes.mk_β 1 2
+
+/-
+apply : ∀ (α : Type) (β : α → Type) : ∀ (l : ((∀ (x : α), β x) × α)), l.fst l.snd
+
+apply : (:: both (:: (quote (Type m)) (:: both (:: (
+-/
+def apply.type_with_holes (m : Level) : Expr :=
+  both?₁
+    (α := (Ty m))
+    (f := (quote?₁ (α := Ty 
+  sorry
+
 /-
 id : ∀ (α : Type), α → α
 -/

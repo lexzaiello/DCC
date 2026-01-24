@@ -181,6 +181,9 @@ id m : ::[
 
 (id m) : t_id = ::[::[(Ty m), nil.{[m.succ]}], Prod.fst]
 
+::[α, ::[(Ty m), nil.{[m.succ]}]].snd
+= 
+
 ::[α, t_id].snd.fst = ::[α, ::[(Ty m), nil.{[m.succ]}]] = Ty m. this checks (α : Ty m)
 
 ::[α, ::[::[(Ty m), nil.{[m.succ]}], Prod.fst]].snd.snd
@@ -212,6 +215,8 @@ nil.{[m]} ∘ Prod.fst
 
 ::[::[(Ty m), nil.{[m.succ]}], ::[nil.{[m]} ∘ Prod.fst, id.{[m.succ]} (Ty m)]]
 
+::[::[(Ty m), nil.{[m.succ]}], ::[nil.{[m]} ∘ Prod.fst, Prod.snd]]
+
 ::[α, t_id].snd.fst.snd
 = ::[α, ::[(Ty m), nil.{[m.succ]}]].snd
 = nil.{[m.succ]} (Ty m) α = Ty m
@@ -225,4 +230,26 @@ nil.{[m]} ∘ Prod.fst
 = α, due to nil "downgrading" rule
 
 ::[x, ::[::[::[α, ::[(Ty m), nil.{[m.succ]}]], nil.{[m]} ∘ Prod.fst], Prod.snd]].snd.snd
+-/
+
+
+/-
+Problem 1 with dependently-typed combinators:
+K : ∀ (α : Type) (β : α → Type) (x : α) (y : β x), α
+
+K's β argument makes a type that depends on (x : α).
+You need to add a "nondependent" special case of K, and usually S as well
+to make this work.
+
+K' : ∀ (α : Type) (β : Type) (x : α) (y : β), α
+
+Using this nondependent special case, you can "break the chain"
+of type dependency in the β argument to K.
+
+Nicer solution that conforms with my language's
+
+nil.{[m]} : ∀ (α : Type m), α → Type m
+
+:: (x : α) (xs : β x)
+β = nil.{{0]}
 -/

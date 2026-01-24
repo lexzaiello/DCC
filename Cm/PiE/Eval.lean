@@ -54,3 +54,7 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
     match run e with
     | .ok e' => try_step_n n e' <|> (pure e')
     | .error e => .error e
+
+example : try_step_n 100 (f$ (f$ (f$ (apply 0 0) nil) nil) ::[::[id 2, Ty 1], Ty 0]) = (.ok <| Ty 0) := rfl
+
+example : try_step_n 100 (f$ (f$ (f$ (apply 0 0) nil) nil) ::[::[::[const 2 2, Ty 1, Ty 1], Ty 0], Ty 0]) = (.ok <| Ty 0) := rfl

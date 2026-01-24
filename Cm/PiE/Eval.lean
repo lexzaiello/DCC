@@ -11,18 +11,11 @@ For testing purposes.
 This mirrors is_step_once exactly.
 -/
 def do_step_apply : Expr → Except Error Expr
-  -- this apply rule allows treating a list as if it were a function application
+  | ::[.nil _m n, _α, _x] => pure <| Ty n -- this can downgrade a dependent type to a nondependent type
   | ::[.id _o, _α, x] => pure x
-  | ::[const _o _p, _α, _β, c, _x]
-  | ::[const' _o _p, _α, _β, c, _x] => pure c
+  | ::[const _o _p, _α, _β, c, _x] => pure <| c
   | ::[both o p q, α, β, γ, ::[f, g], x] => -- TODO: not sure whether to nest ::[f, g] here, or leave flat
     pure <| ::[f$ (apply o p) ::[α, β, f, x], f$ (apply o q) ::[α, γ, g, x]]
-  | ::[both' o p q, α, β, γ, ::[f, g], x] =>
-    -- both' is nondependent, so β' = (mk_quote p.succ o (Ty p) α β)
-    let fβ := mk_quote p.succ o (Ty p) α β
-    let gβ := mk_quote q.succ o (Ty q) α γ
-
-    pure <| ::[f$ (apply o p.succ) ::[α, fβ, f, x], f$ (apply o q.succ) ::[α, gβ, g, x]]
   | ::[π o p q r, α, β, γ, δ, ::[fx, fxs], ::[x, xs]] =>
     pure <| ::[f$ (apply o q) ::[α, γ, fx, x], f$ (apply p r) ::[β, δ, fxs, xs]]
   | ::[eq o p, α, β, ::[fn_yes, fn_no], a, b] =>

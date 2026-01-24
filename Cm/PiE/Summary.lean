@@ -5,7 +5,7 @@ both : ∀ (α : Type) (β : α → Type) (γ : α → Type)
   (f : (∀ (x : α), β x)) (g : (∀ (x : α), γ x))
   (l : α), (β l × γ l)
 const α β (x : α) (y : β x) : α
-nil {α : Type} : ∀ (x : α), Unit
+nil.{[m, n]} {α : Type m} : ∀ (x : α), Type n
 Unit : Type
 apply : ∀ (α : Type) (β : α → Type) : ∀ (l : ((∀ (x : α), β x) × α)), l.fst l.snd
 π : ∀ (α : Type) (β : Type) (γ : α → Type) (δ : β → Type)
@@ -26,4 +26,13 @@ It feels like we should be able to remove the const' and both' special case / no
 versions of both and const, now that nil {α : Type} : α → Unit
 
 :: (x : α) (nil α) - this "completes" the chain of dependency in the sigma.
+
+can we remove const' altogether?
+const' : (α : Type) → (β → Type) (x : α) → (y : β) → α
+
+const : ∀ (α : Type) (β : α → Type) (x : α) (y : β x), α
+
+both' is just both with β = (nil (α : Type m) (Type n)),
+and y :
+nil.{[m, n]} (α : Type m) (x : α) = Type n
 -/

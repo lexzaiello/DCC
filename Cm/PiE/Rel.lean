@@ -111,11 +111,13 @@ Then, it receives x : α, so α needs to be copied in again, which is unfortunat
 we could probably remove one of the quotes then.
 
 id = :: both (:: (quote (Ty m)) (:: both (:: (quote const) (:: both (:: id id)))))
+:: both (:: (quote (Ty m)) (:: both (:: (quote const) (:: both (:: id id)))))
+
+(quote const) = :: ::[(const' m.succ m), type_of_the_inner_thing]
+See here, β gets filled in with α. perfect.
+the nesting might be wrong though we'll see.
 
 
-(quote const) = :: ::[(const m.succ ?), 
-
-:: (const
 -/
 
 /-
@@ -138,10 +140,19 @@ def type' (m : Level) : Expr :=
                           , Ty m]
   -- :: both (:: id id) α = :: α α
   let inner_α_α := ::[
-    ::[both m.succ m.succ m.succ, Ty m, inner_both_α_α_t, inner_both_α_α_t]
+    ::[both m.succ m.succ m.succ
+      , Ty m
+      , inner_both_α_α_t
+      , inner_both_α_α_t]
     , ::[id m.succ, Ty m]
     , ::[id m.succ, Ty m]]
-  
+  -- wraps the :: α α list in a const so (x : α) gets rejected
+  -- α gets inserted as the β type argument to const
+  -- and α is set to the :: α α list type ((Ty m) × (Ty m))
+  let t_inner_α_α := ::[prod m m, Ty m, Ty m]
+  let const_wrapper_α_α := ::[(const' m.succ m), t_inner_α_α]
+
+
   ::[::[both m.succ m.succ m.succ, Ty m, TSorry, TSorry]
 
 /-

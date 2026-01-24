@@ -14,29 +14,29 @@ def do_step_apply : Expr → Except Error Expr
   | ::[::[::[(const' _o _p), _α, _β], c], _x] => pure c
   | ::[::[::[(both o p q), α, β, γ], ::[f, g]], x]
   | ::[::[::[(both' o p q), α, β, γ], ::[f, g]], x] =>
-    pure <| ::[@$ o p α β ::[f, x], @$ o q α γ ::[g, x]]
+    pure <| ::[@$ o p α β f x, @$ o q α γ g x]
   | ::[::[::[π o p q r, α, β, γ, δ], ::[fx, fxs]], ::[x, xs]] =>
-    pure <| ::[@$ o q α γ ::[fx, x], @$ p r β δ ::[fxs, xs]]
+    pure <| ::[@$ o q α γ fx x, @$ p r β δ fxs xs]
   | ::[::[::[::[eq o p, α, β], fn_yes, fn_no], a], b] =>
     if a == b then
-      pure <| @$ o p α β ::[fn_yes, a]
+      pure <| @$ o p α β fn_yes a
     else
-      pure <| @$ o p α β ::[fn_no, b]
+      pure <| @$ o p α β fn_no b
   | e => .error <| .no_rule e
 
 def run (e : Expr) : Except Error Expr := do
   match e with
-  | @$ m n fα fβ ::[f, x] => do
+  | @$ m n fα fβ f x => do
     let eval_both : Except Error Expr := do
       let f' ← run f
       let x' ← run x
-      pure <| f$ (f$ (f$ (apply m n) fα) fβ) ::[f', x']
+      pure <| @$ m n fα fβ f' x'
     let eval_arg_first : Except Error Expr := do
       let x' ← run x
-      pure <| f$ (f$ (f$ (apply m n) fα) fβ) ::[f, x']
+      pure <| @$ m n fα fβ f x'
     let eval_f_first : Except Error Expr := do
       let f' ← run f
-      pure <| f$ (f$ (f$ (apply m n) fα) fβ) ::[f', x]
+      pure <| @$ m n fα fβ f' x
     let step_whole : Except Error Expr := do
       do_step_apply <| ::[f, x]
 
@@ -61,6 +61,9 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
 
 namespace hole
 
+def apply?₀ : Expr := ((apply 0 0).app ?).app ?
+def apply?₁ (α : Expr) (m : Option Level := .none) : Expr := ((apply (m.getD 0) 0).app α).app ?
+
 def quote (e : Expr) : Expr := ::[::[const' 0 0, ?, ?], e]
 def quote?₁ (α e : Expr) (m : Option Level := .none) : Expr := ::[::[const' (m.getD 0) 0, α, ?], e]
 
@@ -72,8 +75,80 @@ def both?₁ (α f g : Expr) (m : Option Level := .none) : Expr := ::[::[both' (
 
 def both?₀ : Expr := ::[both' 0 0 0, ?, ?, ?]
 
-notation "f?" => (fun f x => (f$ (f$ (f$ (apply 0 0) ?) ?) ::[f, x]))
+/-
+apply : ∀ (α : Type) (β : α → Type) (f : ∀ (x : α), β x) (x : α), β x
 
+-/
+def apply.type_with_holes (m n : Level) : Expr :=
+  -- with α in scope, β : α → Type
+  let mk_β : Expr := both?
+    (f := (const?₁ (α := (Ty m)) (m := m.succ)))
+    (g := (quote <| quote <| Ty n))
+
+  -- with α in scope, then β in scope
+  -- with α in scope, make :: both (:: (quote α) (quote (apply))
+  let mk_mk_f := both?₁
+    (α := Ty m)
+    (f := quote both?₀)
+    (g := both?₁
+      (α := Ty m)
+      (f := const?₀)
+      (g := (quote?₁
+        (α := (Ty m))
+        (e := quote apply?₀)
+        (m := m.succ)))
+      (m := m.succ))
+
+  -- x : α. this will have α, then β, then f in scope, so we need to quote twice
+  -- :: both (:: (quote const) (:: both (:: (quote const) id)))
+  -- (:: both (:: (quote const) (:: both (:: (quote const) id)))) α = ::[const, ::[const, α]]
+  let mk_mk_x := both?
+    (f := quote const?₀)
+    (g := both?
+      (f := quote const?₀)
+      (g := Expr.id m))
+
+  /-
+    out type = β x. this is apply ?0 ?0 t_β α β x
+    so, this only disregards f.
+    apply α β, then quote once
+    :: both (:: (quote both) (:: both (:: (quote (quote const)) (apply ?0 ?0 t_β))))
+    (:: both (:: (quote both) (:: both (:: (quote (quote const)) (apply ?0 ?0 t_β))))) α
+      = :: both (:: (quote const) (apply ?0 ?0 t_β α)
+    (:: both (:: (quote const) (apply ?0 ?0 t_β α)) β
+      = const (apply ?0 ?0 t_β α β)
+    (const (apply ?0 ?0 t_β α β)) f
+      = apply ?0 ?0 t_β α β
+    apply ?0 ?0 t_β α β x = β x
+  -/
+  let mk_mk_t_out := both?
+    (f := (quote both?₀))
+    (g := both?
+      (f := quote <| quote <| const?₀)
+      (g := .app (apply 0 0) ?))
+
+  both?
+    (f := (quote?₁
+      (α := (Ty m.succ))
+      (e := (Ty m))
+      (m := m.succ.succ))) -- first arg, (α : Ty m)
+    (g := (both?₁
+      (α := Ty m)
+      (f := mk_β)
+      (g := (both?₁
+        (α := Ty m)
+        (f := mk_mk_f)
+        (g := both?₁
+          (α := Ty m)
+          (f := mk_mk_x)
+          (g := mk_mk_t_out)
+          (m := m.succ))
+        (m := m.succ)))
+      (m := m.succ)))
+
+/-
+id : ∀ (α : Type), α → α
+-/
 def id.type_with_holes (m : Level) : Expr :=
   both?
     (f := (quote?₁ (Ty m.succ) (Ty m) (m := m.succ.succ)))
@@ -87,8 +162,8 @@ def id.type_with_holes (m : Level) : Expr :=
         (m := m.succ)))
       (m := m.succ)))
 
-#eval Expr.tail! <$> try_step_n 500 (f? (id.type_with_holes 0) (Ty 0))
-  >>= (fun e => try_step_n 500 (f? e (Ty 100)))
+example : Expr.tail! <$> try_step_n 500 (@$ 0 0 ? ? (id.type_with_holes 0) (Ty 0))
+  >>= (fun (e : Expr) => try_step_n 500 ((mk$ 0 0 ? ?) e (Ty 100))) = (.ok (::[Ty 0, Ty 0])) := rfl
 
 /-
 Type inference for filling in holes in expr types.

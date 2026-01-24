@@ -145,15 +145,18 @@ open Expr
 
 syntax ident ".{" term,* "}" : term
 syntax "::[" term,+ "]" : term
-syntax (name := atDollar) "@$" term:max term:max term:max term:max term:max : term
+syntax (name := atDollar) "@$" term:max term:max term:max term:max term:max term:max : term
+
+@[inline]
+abbrev mk_app (m n : Level) (α β f x : Expr) : Expr := (.app (.app (.app (.app (apply m n) α) β) f) x)
+
+notation "mk$" => mk_app
 
 macro_rules
   | `(::[ $x:term ]) => `($x)
   | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
-  | `(@$ $m:term $n:term $α:term $β:term $e:term) => `(Expr.app (Expr.app (Expr.app (Expr.apply $m $n) $α) $β) $e)
-
-@[inline]
-abbrev mk_app (m n : Level) (α β e : Expr) : Expr := (.app (.app (.app (apply m n) α) β) e)
+  | `(@$ $m:term $n:term $α:term $β:term $f:term $x:term) =>
+    `(Expr.app (Expr.app (Expr.app (Expr.app (Expr.apply $m $n) $α) $β) $f) $x)
 
 notation "?" => Expr.hole
 notation "::" => Expr.cons
@@ -178,7 +181,7 @@ def Expr.foldl! {α : Type} (f : α → Expr → α) (init : α) : Expr → α
 partial def Expr.fmt (e : Expr) : Format :=
   match e with
   | hole => "_"
-  | @$ m n α β e => "@$ " ++ (Format.joinSep [format m, format n, Expr.fmt α, Expr.fmt β, e.fmt] " ")
+  | @$ m n α β f x => "@$ " ++ (Format.joinSep [format m, format n, Expr.fmt α, Expr.fmt β, f.fmt, x.fmt] " ")
   | f$ f x => "f$ " ++ (.paren f.fmt) ++ .line ++ (.paren x.fmt)
   | eq m n => "eq.{" ++ [m, n].toString ++ "}"
   | apply m n => "apply.{" ++ [m, n].toString ++ "}"

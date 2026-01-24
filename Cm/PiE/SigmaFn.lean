@@ -89,5 +89,79 @@ nil.{[m.succ]} (Ty m)
 nil.{[m]} α x = α
 ::[α, ::[id m.succ, Ty m]]
 
+::[α, ::[nil.{[m.succ]} (Ty m), ::[nil.{[m]}, ::[id m.succ, Ty m]]]]
 
+::[nil.{[m.succ]} (Ty m) α = Ty m, ::[nil.{[m]}, ::[id m.succ, Ty m]]]
+
+::[x, (::[nil.{[m.succ]} (Ty m) α = Ty m, ::[nil.{[m]}, ::[id m.succ, Ty m]]]).snd]
+
+::[x, ::[nil.{[m]}, ::[id m.succ, Ty m]]
+
+if the head becomes
+
+::[α, ::[
+
+nil.{[3]} (Ty 2) : (Ty 2) → (Ty 3)
+feels like we should have to duplicate α somehow.
+
+but xs : β x.
+to check α, we want to downgrade to Ty m.
+but then β x can bring us back out somehow.
+
+so we need some way to simultaneously downgrade α to Ty m and pass it on.
+
+we need to remember α.
+we can potentially make it more dependent just for this use case
+
+t.fst x gives the input type
+snd gets acces to the Ty m part and the α part.
+
+::[(α : Ty m), (? : Ty m)]
+
+so the entire type is dependent on (α : Ty m)
+it feels like we need some duplication mechanism.
+I think we're capping and nil actually works like we think it does.
+
+nil downgrades a term to its type, pretty much.
+
+if all of ? is dependnet on α..
+we can make the head extra dependent, so
+?.fst : ∀ (x : α)
+
+how exactly does nested "normalization" of lists look like?
+
+::[x, ::[y, z]]
+
+z depends on y, which depends on x, is how I would read this.
+
+((x : α) × (yz : tyz x))
+how is this not circular, then?
+
+nested normalization of lists requires some finagling.
+
+::[y, z] needs to depend on x, but it is a sigma (⨯' α β)
+I mean the obvious answer is:
+
+::[x, ::[y, z]].snd -> ::[::[x, y], z]
+
+::[y, x] is not normalized yet, though.
+it's just a pair.
+
+so
+
+id α x
+(::[α, t_id].snd.fst.fst gives us the normalized value, which we can use to check α
+::[α, ::[
+
+(id m) : ::[nil.{[m.succ]} (Ty m), ::[nil.{[m]}, ::[id m.succ, Ty m]]]
+
+(::[α, ::[nil.{[m.succ]} (Ty m), ::[nil.{[m]}, ::[id m.succ, Ty m]]]]).snd
+= ::[::[α, nil.{[m.succ]} (Ty m)], ::[nil.{[m]}, ::[id m.succ, Ty m]]]
+
+(::[::[α, nil.{[m.succ]} (Ty m)], ::[nil.{[m]}, ::[id m.succ, Ty m]]]).fst.snd
+= Ty m, due to nil eval rule
+
+? = ::[nil.{[m.succ]} (Ty m)
+
+::[α, ::[
 -/

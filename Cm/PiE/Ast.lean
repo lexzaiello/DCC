@@ -144,12 +144,16 @@ deriving BEq, DecidableEq
 open Expr
 
 syntax ident ".{" term,* "}" : term
-
 syntax "::[" term,+ "]" : term
+syntax (name := atDollar) "@$" term:max term:max term:max term:max term:max : term
 
 macro_rules
   | `(::[ $x:term ]) => `($x)
   | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
+  | `(@$ $m:term $n:term $α:term $β:term $e:term) => `(Expr.app (Expr.app (Expr.app (Expr.apply $m $n) $α) $β) $e)
+
+@[inline]
+abbrev mk_app (m n : Level) (α β e : Expr) : Expr := (.app (.app (.app (apply m n) α) β) e)
 
 notation "?" => Expr.hole
 notation "::" => Expr.cons
@@ -174,6 +178,7 @@ def Expr.foldl! {α : Type} (f : α → Expr → α) (init : α) : Expr → α
 partial def Expr.fmt (e : Expr) : Format :=
   match e with
   | hole => "_"
+  | @$ m n α β e => "@$ " ++ (Format.joinSep [format m, format n, Expr.fmt α, Expr.fmt β, e.fmt] " ")
   | f$ f x => "f$ " ++ (.paren f.fmt) ++ .line ++ (.paren x.fmt)
   | eq m n => "eq.{" ++ [m, n].toString ++ "}"
   | apply m n => "apply.{" ++ [m, n].toString ++ "}"
@@ -182,7 +187,7 @@ partial def Expr.fmt (e : Expr) : Format :=
     "::[" ++
       (.group
         <| .nest 2
-        <| Format.joinSep (xs.foldl! (fun (acc : List Std.Format) e => acc ++ [(Expr.fmt e)]) [x.fmt]) ((format ", ") ++ Format.line))
+        <| Format.joinSep (xs.foldl! (fun (acc : List Std.Format) e => acc ++ [(Expr.fmt e)]) [x.fmt]) ((format ",") ++ Format.line))
     ++ "]"
   | id m => "id.{" ++ [m].toString ++ "}"
   | const m n => "const.{" ++ [m, n].toString ++ "}"

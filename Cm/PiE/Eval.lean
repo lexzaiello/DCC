@@ -8,23 +8,25 @@ This mirrors is_step_once exactly.
 -/
 def do_step_apply : Expr → Except Error Expr
   | ::[::[.id _o, _α], x] => pure x
+  | e@::[::[(const _o _p), _α, _β], _c]
+  | e@::[::[(const' _o _p), _α, _β], _c] => pure e
   | ::[::[::[(const _o _p), _α, _β], c], _x]
   | ::[::[::[(const' _o _p), _α, _β], c], _x] => pure c
   | ::[::[::[(both o p q), α, β, γ], ::[f, g]], x]
   | ::[::[::[(both' o p q), α, β, γ], ::[f, g]], x] =>
-    pure <| ::[f$ (f$ (f$ (apply o p) α) β) ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
+    pure <| ::[@$ o p α β ::[f, x], @$ o q α γ ::[g, x]]
   | ::[::[::[π o p q r, α, β, γ, δ], ::[fx, fxs]], ::[x, xs]] =>
-    pure <| ::[f$ (f$ (f$ (apply o q) α) γ) ::[fx, x], f$ (f$ (f$ (apply p r) β) δ) ::[fxs, xs]]
+    pure <| ::[@$ o q α γ ::[fx, x], @$ p r β δ ::[fxs, xs]]
   | ::[::[::[::[eq o p, α, β], fn_yes, fn_no], a], b] =>
     if a == b then
-      pure <| (f$ (f$ (f$ (apply o p) α) β) ::[fn_yes, a])
+      pure <| @$ o p α β ::[fn_yes, a]
     else
-      pure <| (f$ (f$ (f$ (apply o p) α) β) ::[fn_no, b])
+      pure <| @$ o p α β ::[fn_no, b]
   | e => .error <| .no_rule e
 
 def run (e : Expr) : Except Error Expr := do
   match e with
-  | f$ (f$ (f$ (apply m n) fα) fβ) ::[f, x] => do
+  | @$ m n fα fβ ::[f, x] => do
     let eval_both : Except Error Expr := do
       let f' ← run f
       let x' ← run x
@@ -86,6 +88,7 @@ def id.type_with_holes (m : Level) : Expr :=
       (m := m.succ)))
 
 #eval Expr.tail! <$> try_step_n 500 (f? (id.type_with_holes 0) (Ty 0))
+  >>= (fun e => try_step_n 500 (f? e (Ty 100)))
 
 /-
 Type inference for filling in holes in expr types.

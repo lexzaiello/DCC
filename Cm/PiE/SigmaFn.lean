@@ -207,4 +207,22 @@ nil.{[m]} ∘ Prod.fst
 ::[x, ::[::[α, nil.{[m]}], (id.{[m.succ]} (Ty m))].snd.snd
 = ::[::[x, α, nil.{[m]}] (id.{[m.succ]} (Ty m))]
 = α
+
+::[::[(Ty m), nil.{[m.succ]}], ::[nil.{[m]} ∘ Prod.fst, id.{[m.succ]} (Ty m)]]
+
+::[::[(Ty m), nil.{[m.succ]}], ::[nil.{[m]} ∘ Prod.fst, id.{[m.succ]} (Ty m)]]
+
+::[α, t_id].snd.fst.snd
+= ::[α, ::[(Ty m), nil.{[m.succ]}]].snd
+= nil.{[m.succ]} (Ty m) α = Ty m
+
+::[α, t_id].snd.snd
+= ::[::[::[α, ::[(Ty m), nil.{[m.succ]}]], nil.{[m]} ∘ Prod.fst], Prod.snd]
+
+::[x, ::[::[::[α, ::[(Ty m), nil.{[m.succ]}]], nil.{[m]} ∘ Prod.fst], id.{[m.succ]} (Ty m)]].snd.fst.snd
+= ::[::[x, ::[α, ::[(Ty m), nil.{[m.succ]}]], nil.{[m]} ∘ Prod.fst]].snd
+= ::[x, ::[α, nil.{[m]}]].snd
+= α, due to nil "downgrading" rule
+
+::[x, ::[::[::[α, ::[(Ty m), nil.{[m.succ]}]], nil.{[m]} ∘ Prod.fst], Prod.snd]].snd.snd
 -/

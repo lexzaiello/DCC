@@ -159,9 +159,52 @@ id α x
 = ::[::[α, nil.{[m.succ]} (Ty m)], ::[nil.{[m]}, ::[id m.succ, Ty m]]]
 
 (::[::[α, nil.{[m.succ]} (Ty m)], ::[nil.{[m]}, ::[id m.succ, Ty m]]]).fst.snd
-= Ty m, due to nil eval rule
+= Ty m, due to nil eval rule. this checks that α : Ty m, as it should in first arugment position to id.
+
+(::[::[α, nil.{[m.succ]} (Ty m)], ::[nil.{[m]}, ::[id m.succ, Ty m]]]).snd
+should give us the return type, which should be something we can apply x to like this:
+
+::[x, t_out_α_call].fst.snd = α
+::[x, t_out_α_call].snd = α
+
+::[x, ::[::[α, nil.{[m]}], Prod.snd]].snd
+
+we can make nil not work with lists or work differently to make this work don't worry about that.
+
+::[x, ::[α, nil.{[m]}]].snd = α
+
+id m : ::[
 
 ? = ::[nil.{[m.succ]} (Ty m)
 
 ::[α, ::[
+
+(id m) : t_id = ::[::[(Ty m), nil.{[m.succ]}], Prod.fst]
+
+::[α, t_id].snd.fst = ::[α, ::[(Ty m), nil.{[m.succ]}]] = Ty m. this checks (α : Ty m)
+
+::[α, ::[::[(Ty m), nil.{[m.succ]}], Prod.fst]].snd.snd
+= ::[::[α, (Ty m), nil.{[m.succ]}], Prod.fst].snd = α
+
+so now we need to make this work with the x argument.
+
+we literally just prepend α to nil.{[m]}
+
+nil.{[m]} ∘ Prod.fst
+
+::[x, ::[α, nil.{[m]}]].snd = α
+
+(id m) : t_id = ::[::[(Ty m), nil.{[m.succ]}], ((id.{[m.succ]} Ty m) ∘ (nil.{[m]} ∘ Prod.fst))]
+
+::[α, t_id].snd.fst.snd = ::[α, Ty m, nil.{[m.succ]}].snd = Ty m
+::[α, t_id].snd.snd = ((id.{[m.succ]} Ty m) ∘ ((nil.{[m]} ∘ Prod.fst))) ::[α, Ty m, nil.{[m.succ]}]
+  = ::[α, nil.{[m]}]
+
+::[x, ::[::[α, nil.{[m]}], (id.{[m.succ]} (Ty m))].snd.fst.snd
+= ::[x, α, nil.{[m]}].snd
+= α
+
+::[x, ::[::[α, nil.{[m]}], (id.{[m.succ]} (Ty m))].snd.snd
+= ::[::[x, α, nil.{[m]}] (id.{[m.succ]} (Ty m))]
+= α
 -/

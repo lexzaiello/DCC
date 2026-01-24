@@ -107,6 +107,10 @@ apply : ∀ (α : Type) (β : α → Type) : ∀ (l : ((∀ (x : α), β x) × �
   (f : ∀ (x : α), γ x) (g : ∀ (x : β), δ x)
   (l : α × β), ((γ l.fst) × (δ l.snd))
 eq : ∀ (α : Type) (β : α → Type) (f : ∀ (x : α), β x) (g : ∀ (x : α), β x) (x : α) (y : α), β x
+
+Nondependent versions of const and both used to bootstrap parts of the system.
+const' : ∀ (α : Type m) (β : Type n), α → β → α
+both'  : ∀ (α : Type m) (β : Type n) (γ : Type o) (f : α → β) (g : α → γ), α → (β × γ)
 -/
 
 abbrev Level := ℕ
@@ -127,9 +131,12 @@ inductive Expr where
   | id     : Level → Expr
   | apply  : Level → Level → Expr
   | eq     : Level → Level → Expr
+  -- dependent and nondependent const.
   | const  : Level → Level → Expr
   | const' : Level → Level → Expr
+  -- Dependent and nondependent :: both, respectively
   | both   : Level → Level → Level → Expr
+  | both'  : Level → Level → Level → Expr
 deriving BEq, DecidableEq
 
 open Expr
@@ -171,6 +178,7 @@ def Expr.fmt (e : Expr) : Format :=
   | id m => "id.{" ++ [m].toString ++ "}"
   | const m n => "const.{" ++ [m, n].toString ++ "}"
   | const' m n => "const'.{" ++ [m, n].toString ++ "}"
+  | both' m n o => "both.{" ++ [m, n, o].toString ++ "}"
   | both m n o => "both.{" ++ [m, n, o].toString ++ "}"
   | nil => "nil"
   | prod m n => "×'.{" ++ [m, n].toString ++ "}"

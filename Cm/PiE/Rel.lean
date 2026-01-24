@@ -126,6 +126,16 @@ TODO: fill these in later.
 def USorry : Level := 0
 def TSorry : Expr:= .nil
 
+namespace prod
+
+/-
+((α : (Type m)) × (β : (Type n))) : (Type (max (m n))).succ
+-/
+def type_expanded (m n : Level) : Expr :=
+  Ty (max m n).succ
+
+end prod
+
 namespace id
 
 /-
@@ -152,6 +162,18 @@ def type' (m : Level) : Expr :=
   let t_inner_α_α := ::[prod m m, Ty m, Ty m]
   let const_wrapper_α_α := ::[(const' m.succ m), t_inner_α_α]
 
+  -- const ((Ty m) × (Ty m)) α : ((Ty m) × (Ty m)) → α → ((Ty m) × (Ty m))
+  -- α needs to be copied into here, too.
+  -- :: both (:: (quote (quote ((Ty m) × (Ty m)))) (:: both (:: (id (Ty m)) (:: (quote (quote ((Ty m) × (Ty m))))))))
+  let t_t_inner_α_α := Ty m.succ
+  let t_typed_const_wrapper := ::[(
+
+  /- inner_ish α = (const' ((Ty m) × (Ty m)) α) (:: α α)
+    = :: both (:: (const' t_inner_α_α) inner_α_α)
+    α = (Ty m)
+    β : α → Type, β α = t_typed_const_wrapper, β has α in scope anyway, so we just need to wrapped the (Ty × stuff around
+  -/
+  let inner_ish_both
 
   ::[::[both m.succ m.succ m.succ, Ty m, TSorry, TSorry]
 

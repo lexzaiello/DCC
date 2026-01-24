@@ -38,6 +38,7 @@ def do_step_apply : Expr → Except Error Expr
       pure <| ($ (snd o p), α, β, ::[a, fn_yes])
     else
       pure <| ($ (snd o p), α, β, ::[b, fn_no])
+  | f$ ::[x, f] arg => pure ::[arg, x, f]
   | e => .error <| .no_rule e
 
 def run (e : Expr) : Except Error Expr := do
@@ -60,5 +61,12 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
     | .ok e' => try_step_n n e' <|> (pure e')
     | .error e => .error e
 
+namespace hole
 
+def TSorry : Expr := .unit
 
+def app? (f : Level → Level → Expr) (e : Expr) := ($ (f 0 0), TSorry, TSorry, e)
+
+#eval try_step_n 100 (app? snd ::[(Ty 1), ::[(Ty 2), .id 3]])
+
+end hole

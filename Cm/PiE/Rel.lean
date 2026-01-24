@@ -45,7 +45,7 @@ inductive is_step_once : Expr → Expr → Prop
   | app_const    : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(const o p), _α, _β], c], _x]) c
   | app_both     : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(both o p q), α, β, γ], ::[f, g]], x])
     ::[f$ (f$ (f$ (apply o p) α) β)  ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
-  | app_π_both   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[π o p q r, _α, _β, _γ, _δ], ::[fx, fxs]], ::[x, xs]])
+  | app_π_both   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[π o p q r, α, β, γ, δ], ::[fx, fxs]], ::[x, xs]])
     ::[f$ (f$ (f$ (apply o q) α) γ) ::[fx, x], f$ (f$ (f$ (apply p r) β) δ) ::[fxs, xs]]
   | app_eq_yes   : a == b → is_step_once
     (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[::[eq o p, α, β], fn_yes, fn_no], a], b])
@@ -78,7 +78,20 @@ For example, with id:
 id α : [Type, rest stuff]
 id α x : [(:: const α), (:: const α)]
 
-id.{[m]} : ::[(:: const (Ty 
+id m : :: both (:: (:: const (Ty m)) (:: both (:: const const)))
+const m n : :: both (:: (:: const (Ty m)) (:: 
+
+β : α → Type
+β = :: both (:: const α :: const Ty n)
+point-free, with α in scope:
+β = :: both (:: (quote both) (:: both (:: const (:: const (Ty n)))))
+
+const m n : :: both (::
+  (:: const (Ty m))
+  (:: both (::
+    (:: both (:: (quote both) (:: both (:: const (:: const (Ty n))))))
+    (:: both (::
+      (:: both (:: (:: const const) const)) -- x : α will later accept β and have to discard it
 -/
 
 inductive valid_judgment : Expr → Expr → Prop

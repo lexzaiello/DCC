@@ -92,15 +92,12 @@ def quote?_n₀ (n : ℕ) (α : Option Expr := .none) (m : Option Level := .none
 -- for n λ binders. this expands into n * (n * const(both))
 -- this "binds" n binders deep by injecting n future both's
 def both?_n (n : ℕ) (f g : Expr) (α : Option Expr := .none) (m : Option Level := .none) : Expr :=
-  -- [0, 1, 2] => [both, (quote both), (quote (quote both))]
-  -- this should actually be (both? (quote both) (both? (quote (quote both)) _)
   ((List.range n).tail.map (fun n => quote?_n n both?₀)).foldr
     (fun e acc => both? e acc) (both? (f := f) (g := g) (α := α) (m := m))
 
 notation "$?"  => (fun (f x : Expr) => @$ 0 0 Expr.hole Expr.hole f x)
 
 example : try_step_n 200 ($? ($? ($? (quote?_n 3 (Ty 0)) (Ty 0)) (Ty 0)) (Ty 0)) = (.ok (Ty 0)) := rfl
-#eval both?_n 
 
 /-
   α → β
@@ -139,6 +136,11 @@ and x binder within.
 
 f should be both'd such that it can accept the β binder
 x is also a binder, so it should e under a both as well.
+
+forgot totally about the apply for β.
+we can just wrap the entirety of t_f in a const I think?
+
+t_f = 
 -/
 def apply.type_with_holes.mk_mk_f (m n : Level) : Expr :=
   both?_n 2
@@ -147,7 +149,6 @@ def apply.type_with_holes.mk_mk_f (m n : Level) : Expr :=
     (α := Ty m)
 
 example : try_step_n 500 ($? ($? ($? ($? (quote?_n₀ 3) (Ty 0)) (Ty 0)) (Ty 0)) (Ty 0)) = (.ok (Ty 0)) := rfl
-#eval (apply.type_with_holes.mk_mk_f 1 3)
 #eval try_step_n 500 ($? (apply.type_with_holes.mk_mk_f 1 3) (Ty 0))
   >>= (fun e => try_step_n 500 ($? e (@id? (Ty 1) (.some 2))))
   -->>= (fun e => try_step_n 500 ($? e (Ty 10)))

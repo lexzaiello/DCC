@@ -28,17 +28,17 @@ def do_step_apply : Expr → Except Error Expr
     nil can downgrade a dependent type to a nondependent type.
     this is how nondependent pairs are derived from sigmas.
   -/
-  | ::[_x, α, .nil _m] => pure α
-  | ::[x, _α, .id _o] => pure x
-  | ::[_x, c, _β, _α, const _o _p] => pure <| c
-  | ::[x, g, f, γ, β, α, both o p q] => -- TODO: not sure whether to nest ::[f, g] here, or leave flat
+  | ($ (.nil _m), α, _x) => pure α
+  | ($ (.id _o), _α, x) => pure x
+  | ($ (.const _o _p), _α, _β, c, _x) => pure <| c
+  | ($ (.both o p q), α, β, γ, f, g, x) => -- TODO: not sure whether to nest ::[f, g] here, or leave flat
     pure <| ::[($ (snd o p), α, β, ::[x, f]), ($ (snd o q), α, γ, ::[x, g])]
-  | ::[b, a, fn_no, fn_yes, β, α, eq o p] =>
+  | ($ (.eq o p), α, β, fn_yes, fn_no, a, b) =>
     if a == b then
       pure <| ($ (snd o p), α, β, ::[a, fn_yes])
     else
       pure <| ($ (snd o p), α, β, ::[b, fn_no])
-  | f$ ::[x, f] arg => pure ::[arg, x, f]
+  | f$ ::[x, f] arg => pure ($ f, x, arg)
   | e => .error <| .no_rule e
 
 def run (e : Expr) : Except Error Expr := do
@@ -67,6 +67,8 @@ def TSorry : Expr := .unit
 
 def app? (f : Level → Level → Expr) (e : Expr) := ($ (f 0 0), TSorry, TSorry, e)
 
-#eval try_step_n 100 (app? snd ::[(Ty 1), ::[(Ty 2), .id 3]])
+example : try_step_n 100 (app? snd ::[(Ty 1), ::[(Ty 2), .id 3]]) = (.ok <| Ty 1) := rfl
+
+example : try_step_n 100 (app? snd ::[(Ty 0), ::[(Ty 1), .nil 2]]) = (.ok (Ty 1)) := rfl
 
 end hole

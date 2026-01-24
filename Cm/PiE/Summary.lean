@@ -5,7 +5,7 @@ both : ∀ (α : Type) (β : α → Type) (γ : α → Type)
   (f : (∀ (x : α), β x)) (g : (∀ (x : α), γ x))
   (l : α), (β l × γ l)
 const α β (x : α) (y : β x) : α
-nil : Unit
+nil {α : Type} : ∀ (x : α), Unit
 Unit : Type
 apply : ∀ (α : Type) (β : α → Type) : ∀ (l : ((∀ (x : α), β x) × α)), l.fst l.snd
 π : ∀ (α : Type) (β : Type) (γ : α → Type) (δ : β → Type)
@@ -20,29 +20,10 @@ both'  : ∀ (α : Type m) (β : Type n) (γ : Type o) (f : α → β) (g : α �
 -/
 
 /-
-More notes on pairs.
-It seems like it might be nice to upgrade our pairs to dependent pairs / sigmas.
+Notes on pairs now that we have sigma pairs:
 
-we could express apply more succinctly, then.
+It feels like we should be able to remove the const' and both' special case / nondependent
+versions of both and const, now that nil {α : Type} : α → Unit
 
-f$ (f$ apply ::[α, β]) ::[f, x]
-f$ (f$ (f$ apply α) β) ::[f, x]
-
-:: {α : Type} {β : α → Type} [(x : α), (xs : β x)] : ((x : α) × (β x))
-
-f$ apply ::[::[α, β], ::[f, x]]
-
-the ::[α, β] looks a lot like a sigma type.
-
-((α : Ty m) × (α → Ty n))
-
-this seems like potentially a worthwhile upgrade, but it could make type inference harder?
-easier?
-
-we'll see. This doesn't really require any changes, except in eval.
-we just need to change the eval rule for apply.
-
-I like this approach way more, ngl.
-
-
+:: (x : α) (nil α) - this "completes" the chain of dependency in the sigma.
 -/

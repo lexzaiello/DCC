@@ -45,7 +45,7 @@ inductive is_step_once : Expr → Expr → Prop
   | app_const    : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(const o p), _α, _β], c], _x]) c
   | app_const'   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(const' o p), _α, _β], c], _x]) c
   | app_both     : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[(both o p q), α, β, γ], ::[f, g]], x])
-    ::[f$ (f$ (f$ (apply o p) α) β)  ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
+    ::[f$ (f$ (f$ (apply o p) α) β) ::[f, x], f$ (f$ (f$ (apply o q) α) γ) ::[g, x]]
   | app_π_both   : is_step_once (f$ (f$ (f$ (apply m n) _fα) _fβ) ::[::[::[π o p q r, α, β, γ, δ], ::[fx, fxs]], ::[x, xs]])
     ::[f$ (f$ (f$ (apply o q) α) γ) ::[fx, x], f$ (f$ (f$ (apply p r) β) δ) ::[fxs, xs]]
   | app_eq_yes   : a == b → is_step_once
@@ -79,24 +79,98 @@ For example, with id:
 id α : [Type, rest stuff]
 id α x : [(:: const α), (:: const α)]
 
-id with types filled in
-id m : :: both (:: (:: (const' m.succ.succ m.succ.succ) (Ty m.succ) (Ty m.succ) (Ty m)) (:: both (:: const const)))
+id : (:: both (:: (:: const (Ty m)) (:: both (:: (quote both) (:: both (:: const const))))))
+id α = :: (Ty m) (:: (const α) (const α))
 
-id m : :: both (:: (:: const (Ty m)) (:: both (:: const const)))
-const m n : :: both (:: (:: const (Ty m)) (::
+can also redo id instead like this:
+id α   : quote (:: α α)
+id α x : :: α α
 
-β : α → Type
-β = :: both (:: const α :: const Ty n)
-point-free, with α in scope:
-β = :: both (:: (quote both) (:: both (:: const (:: const (Ty n)))))
+head is the right type.
 
-const m n : :: both (::
-  (:: const (Ty m))
-  (:: both (::
-    (:: both (:: (quote both) (:: both (:: const (:: const (Ty n))))))
-    (:: both (::
-      (:: both (:: (:: const const) const)) -- x : α will later accept β and have to discard it
+Also, thing to remember. We assume our arguments are like ::[::[id o, α], x]
+id = :: both (:: (quote (Ty m)) (:: both (:: (quote const) (:: both (:: id id)))))
+after applying α, output type is
+:: (const' (×' m.succ m.succ (Ty m) (Ty m)) α) (:: α α)
+
+outermost both, α = (Ty m), β, γ = (::[const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m]), n, o = m.succ
+or actually β, γ = :: [id m.succ, Ty m]
+l = α, (β l × γ l) = α × α. does this reflect the const part? this is also wrong. it's not a list of α,
+it's a list of Ty m containing α.
+((const' (Ty m.succ) (Ty m) (Ty m)) α = (Ty m)
+(Ty m) × (Ty m),
+
+but what about the quote oth?
+
+this is the type of the (:: both (:: const const)), (:: α α), (Ty m) × (Ty m)
+
+(quote const) = :: const const
+this receives α : Ty m, but the output type should be sorry for now since we haven't settled the type of const
+although, the inner const being returned should have its type arguments filled in.
+Then, it receives x : α, so α needs to be copied in again, which is unfortunate.
+we could probably remove one of the quotes then.
+
+id = :: both (:: (quote (Ty m)) (:: both (:: (quote const) (:: both (:: id id)))))
+
+
+(quote const) = :: ::[(const m.succ ?), 
+
+:: (const
 -/
+
+/-
+TODO: fill these in later.
+-/
+def USorry : Level := 0
+def TSorry : Expr:= .nil
+
+namespace id
+
+/-
+id : ∀ (α : Type), α → α
+-/
+def type' (m : Level) : Expr :=
+  -- this is the resulting :: α α. Of type (Ty m) × (Ty m)
+  -- we have to wrap this in a const as well though.
+  let inner_both_α_α_t := ::[const' m.succ.succ m.succ
+                          , Ty m.succ
+                          , Ty m
+                          , Ty m]
+  -- :: both (:: id id) α = :: α α
+  let inner_α_α := ::[
+    ::[both m.succ m.succ m.succ, Ty m, inner_both_α_α_t, inner_both_α_α_t]
+    , ::[id m.succ, Ty m]
+    , ::[id m.succ, Ty m]]
+  
+  ::[::[both m.succ m.succ m.succ, Ty m, TSorry, TSorry]
+
+/-
+id : ∀ (α : Type), α → α
+-/
+def type (m : Level) : Expr :=
+  ::[::[(both m.succ USorry USorry), (Ty m), TSorry, TSorry]
+  , ::[::[(const' m.succ.succ m.succ.succ), (Ty m.succ), (Ty m.succ)], (Ty m)]
+  , ::[(both USorry USorry USorry), TSorry, TSorry, TSorry]
+  , ::[::[(const' USorry USorry), TSorry, TSorry], ::[(both USorry USorry USorry), TSorry, TSorry, TSorry]]
+  , ::[(both USorry USorry USorry), TSorry, TSorry, TSorry]
+  , ::[(const' USorry USorry), TSorry, TSorry]
+  , ::[(const' USorry USorry), TSorry, TSorry]]
+
+end id
+
+/-
+both : ∀ (α : Type) (β : α → Type) (γ : α → Type)
+  (f : (∀ (x : α), β x)) (g : (∀ (x : α), γ x))
+  (l : α), (β l × γ l)
+both : (:: both (:: (quote Ty m)
+  (:: both (:: (
+-/
+namespace both
+
+def type (m n o : Level) : Expr :=
+  
+
+end both
 
 inductive valid_judgment : Expr → Expr → Prop
   | cons : valid_judgment x α
@@ -104,4 +178,5 @@ inductive valid_judgment : Expr → Expr → Prop
     → valid_judgment ::[x, xs] (::[prod, α, β])
   | unit : valid_judgment unit (Ty 0)
   | nil  : valid_judgment nil unit
-  | id   : valid_judgment 
+  | id   : valid_judgment (Expr.id m) <| id.type m
+  

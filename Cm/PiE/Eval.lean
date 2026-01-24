@@ -157,17 +157,20 @@ def apply.type_with_holes (m n : Level) : Expr :=
       (m := m.succ.succ))) -- first arg, (α : Ty m)
     (g := (both?₁
       (α := Ty m)
-      (f := mk_β)
+      (f := (quote both?₀))
       (g := (both?₁
         (α := Ty m)
-        (f := mk_mk_f)
-        (g := both?₁
+        (f := mk_β)
+        (g := (both?₁
           (α := Ty m)
-          (f := mk_mk_x)
-          (g := mk_mk_t_out)
-          (m := m.succ))
-        (m := m.succ)))
-      (m := m.succ)))
+          (f := mk_mk_f)
+          (g := both?₁
+            (α := Ty m)
+            (f := mk_mk_x)
+            (g := mk_mk_t_out)
+            (m := m.succ))
+          (m := m.succ)))
+        (m := m.succ)))))
 
 /-
 β = (K' (Ty 2) (Ty 1) (Ty 1)) (Ty 1) = (Ty 1)
@@ -201,10 +204,8 @@ def test_reduce_apply_type : Except Error Expr := do
   -- then β, then f, then x
   let a₁ ← try_step_n 500 ($? (apply.type_with_holes 2 2) α)
   dbg_trace Expr.head! a₁ == (Ty 2)
-  dbg_trace ::[Ty 1, Ty 2] == (← try_step_n 500 ($? ((Expr.head! ∘ Expr.tail!) a₁) x)) -- β : (Ty 1 = α) → Ty 2
-  dbg_trace a₁.tail!
   let a₂ ← try_step_n 500 ($? a₁.tail! β)
-  dbg_trace Expr.head! a₂
+  dbg_trace Expr.head! a₂ == ::[Ty 1, Ty 2]
   -- got this for β: ::[::[::[const'.{[3, 0]}, Ty 2, _], Ty 1], ::[const'.{[0, 0]}, _, _], Ty 2]
   -- (quote (Ty 1)) → (quote Ty 2), so this is ∀ (x : (Ty 1)), (Ty 2).
   -- this seems right. probably β x = Ty 1, Ty 1 : Ty 2. fine.

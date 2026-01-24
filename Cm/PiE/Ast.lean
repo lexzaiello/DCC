@@ -93,6 +93,20 @@ Is there a way to emulate the S functionality while keeping apply the way it is?
 we'll see.
 
 the combinators are completely inert without apply.
+
+Summary of our types:
+id : ∀ (x : α), α → α
+both : ∀ (α : Type) (β : α → Type) (γ : α → Type)
+  (f : (∀ (x : α), β x)) (g : (∀ (x : α), γ x))
+  (l : α), (β l × γ l)
+const (α : Type) (β : α → Type) (x : α) (y : β x) : α
+nil : Unit
+Unit : Type
+apply : ∀ (α : Type) (β : α → Type) : ∀ (l : ((∀ (x : α), β x) × α)), l.fst l.snd
+π : ∀ (α : Type) (β : Type) (γ : α → Type) (δ : β → Type)
+  (f : ∀ (x : α), γ x) (g : ∀ (x : β), δ x)
+  (l : α × β), ((γ l.fst) × (δ l.snd))
+eq : ∀ (α : Type) (β : α → Type) (f : ∀ (x : α), β x) (g : ∀ (x : α), β x) (x : α) (y : α), β x
 -/
 
 inductive Expr where
@@ -106,12 +120,13 @@ inductive Expr where
   | prod  : Expr
   | nil   : Expr -- nil : Unit
   -- the core combinators: π, const, apply, id, eq, both
-  | π     : Expr
-  | id    : Expr
-  | apply : Expr
-  | eq    : Expr
-  | const : Expr
-  | both  : Expr
+  -- these have explicit universe level arguments
+  | π     : ℕ → ℕ → ℕ → ℕ → Expr
+  | id    : ℕ → Expr
+  | apply : ℕ → ℕ → Expr
+  | eq    : ℕ → ℕ → Expr
+  | const : ℕ → ℕ → Expr
+  | both  : ℕ → ℕ → ℕ → Expr
 deriving BEq, DecidableEq
 
 open Expr
@@ -137,9 +152,9 @@ open Expr
 def Expr.fmt (e : Expr) : Format :=
   match e with
   | f$ f x => "f$ " ++ f.fmt ++ .line ++ x.fmt
-  | eq => "eq"
-  | apply => "apply"
-  | π => "π"
+  | eq m n => "eq.{" ++ [m, n].toString ++ "}"
+  | apply m n => "apply.{" ++ [m, n].toString ++ "}"
+  | π m n o p => "π.{" ++ [m, n, o, p].toString ++ "}"
   | cons (.cons a b) (.cons c d) =>
     ":: " ++ (.group <| .nest 2 <| (.paren (Expr.cons a b).fmt) ++ Format.line ++ (.paren (Expr.cons c d).fmt))
   | cons (.cons a b) xs =>
@@ -148,9 +163,9 @@ def Expr.fmt (e : Expr) : Format :=
     ":: " ++ (.group <| .nest 2 <| x.fmt ++ Format.line ++ (.paren (Expr.cons a b).fmt))
   | cons x xs =>
     ":: " ++ (.group <| .nest 2 <| x.fmt ++ Format.line ++ xs.fmt)
-  | id => "id"
-  | const => "const"
-  | both => "both"
+  | id m => "id.{" ++ [m].toString ++ "}"
+  | const m n => "const.{" ++ [m, n].toString ++ "}"
+  | both m n o => "both.{" ++ [m, n, o].toString ++ "}"
   | nil => "nil"
   | prod => "×'"
   | unit => "Unit"

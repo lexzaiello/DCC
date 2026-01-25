@@ -15,6 +15,43 @@ this looks fine.
 some tests to run:
 
 nested app.
+
+| f$ ::[x, f] arg
+
+this rule feels derivable.
+
+::[(x : α), (xs : β x)].snd "substitutes" x in, by some vague, unknown mechanism.
+the most logical conclusion is that
+
+::[x, ::[y, ys]].snd = ::[x,
+
+Question: can we replace f$ ::[x, f] arg with ::[arg, x, f]?
+
+if xs is also a sigma, then how exactly is it dependent on x?
+
+::[(x : α), ::[(y : Ty m), ::[(z : Ty n), nil]]] nil delimiter closes the loop?
+
+BUT, this is also a (×' α β) type.
+another question. why in god's name does ⨯' exist?
+
+question: can we derive the type of a product without funky (⨯' α β)?
+could this potentially make our cons's even more flexible?
+
+for fst, though, we need some way to capture the head, and if we don't
+do it by construction with (×' α β), then what?
+
+fst already get α and β
+
+the main question is:
+
+(a : ?) × β x, here for example,
+what if we want a to depent on something above it as well?
+how does that work?
+
+the head element of a sigma should be able to "leak" its dependency,
+kind of like a function argument.
+
+::[(y : Ty m), ::[(z : Ty n), nil]]
 -/
 
 def do_step_apply : Expr → Except Error Expr

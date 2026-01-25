@@ -123,12 +123,12 @@ inductive Expr where
   | snd    : Level → Level → Expr
   -- for forming "lists"
   | cons   : Expr → Expr → Expr
+  | prod   : Level → Level → Expr -- ($ ⨯' m.succ m.succ, Ty m, nil.{[m]} Ty m)
   | app    : Expr → Expr → Expr
   -- type universe hierarchy
   | ty     : Level → Expr
   -- for forming cons types
   | unit   : Expr
-  | prod   : Level → Level → Expr
   | nil    : Level → Expr -- nil {α : Type} : α → Ty m
   -- the core combinators: π, const, apply, id, eq, both
   -- these have explicit universe level arguments
@@ -149,20 +149,23 @@ deriving BEq, DecidableEq
 open Expr
 
 syntax ident ".{" term,* "}" : term
-syntax "::[" term,+ "]" : term
-syntax "($" term,+ ")" : term
+syntax "::[" term,+ "]"      : term
+syntax "($" term,+ ")"       : term
 syntax (name := atDollar) "@$" term:max term:max term:max term:max term:max term:max : term
 
 macro_rules
   | `(::[ $x:term ]) => `($x)
   | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
   | `(($ $x:term) ) => `($x)
-  | `(($ $x:term, $xs:term,*)) => `(Expr.app $x ($ $xs,*))
+  | `(($ $f:term, $x:term )) => `(Expr.app $f $x)
+  | `(($ $f, $x:term, $args:term,* )) =>
+    `(($ (Expr.app $f $x), $args,*))
+
+#eval ($ (symbol "f"), (symbol "g"), (symbol "x"), (symbol "y"))
 
 notation "?" => Expr.hole
 notation "::" => Expr.cons
 notation "f$" => Expr.app
-notation "×'" => Expr.prod
 notation "Ty" => Expr.ty
 
 inductive Error where
@@ -191,6 +194,7 @@ def Expr.foldl! {α : Type} (f : α → Expr → α) (init : α) : Expr → α
 
 partial def Expr.fmt (e : Expr) : Format :=
   match e with
+  | prod m n => "⨯'.{" ++ [m, n].toString ++ "}"
   | symbol s => .paren s!"symbol \"{s}\""
   | fst m n => "fst.{" ++ [m, n].toString ++ "}"
   | snd m n => "snd.{" ++ [m, n].toString ++ "}"
@@ -211,7 +215,6 @@ partial def Expr.fmt (e : Expr) : Format :=
   | both m n o => "both.{" ++ [m, n, o].toString ++ "}"
   | both' m n o => "both'.{" ++ [m, n, o].toString ++ "}"
   | nil m => "nil.{" ++ [m].toString ++ "}"
-  | prod m n => "×'.{" ++ [m, n].toString ++ "}"
   | unit => "Unit"
   | Ty n => s!"Ty {n}"
 

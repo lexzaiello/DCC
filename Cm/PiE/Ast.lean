@@ -161,11 +161,8 @@ macro_rules
   | `(($ $f, $x:term, $args:term,* )) =>
     `(($ (Expr.app $f $x), $args,*))
 
-#eval ($ (symbol "f"), (symbol "g"), (symbol "x"), (symbol "y"))
-
 notation "?" => Expr.hole
 notation "::" => Expr.cons
-notation "f$" => Expr.app
 notation "Ty" => Expr.ty
 
 inductive Error where
@@ -200,7 +197,7 @@ partial def Expr.fmt (e : Expr) : Format :=
   | snd m n => "snd.{" ++ [m, n].toString ++ "}"
   | apply m n => "apply.{" ++ [m, n].toString ++ "}"
   | hole => "_"
-  | f$ f x => .paren <| "f$ " ++ (.paren f.fmt) ++ .line ++ (.paren x.fmt)
+  | .app f x => "f$ " ++ f.fmt.paren ++ .line ++ x.fmt.paren
   | eq m n => "eq.{" ++ [m, n].toString ++ "}"
   | π m n o p => "π.{" ++ [m, n, o, p].toString ++ "}"
   | (.cons x xs) =>

@@ -45,6 +45,7 @@ fst already get α and β
 the main question is:
 
 (a : ?) × β x, here for example,
+
 what if we want a to depent on something above it as well?
 how does that work?
 
@@ -56,7 +57,7 @@ kind of like a function argument.
 
 def do_step_apply : Expr → Except Error Expr
   | ($ (fst _m _n), _α, _β, ::[a, _b]) => pure a
-  | ($ (snd _m _n), _α, _β, ::[x, f]) => pure (f$ f x)
+  | ($ (snd _m _n), _α, _β, ::[x, f]) => pure ($ f, x)
   /-
     nil can downgrade a dependent type to a nondependent type.
     this is how nondependent pairs are derived from sigmas.
@@ -71,7 +72,7 @@ def do_step_apply : Expr → Except Error Expr
       pure <| ($ (snd o p), α, β, ::[a, fn_yes])
     else
       pure <| ($ (snd o p), α, β, ::[b, fn_no])
-  | f$ ::[x, f] arg => pure ($ f, x, arg)
+  | ($ ::[x, f], arg) => pure ($ f, x, arg)
   | e => .error <| .no_rule e
 
 /-
@@ -168,9 +169,6 @@ We can apply apps as normal, but for ::[x, f] calls, we need to Prod.snd first.
 -/
 example : try_step_n 100 ($ (const 0 0), ?, ?, (symbol "a"), (symbol "discard")) = (.ok (symbol "a")) := rfl
 
-example : (try_step_n 100 <|
-  app? snd ::[(symbol "discard"), (symbol "a"), ?, ?, (const 0 0)]) = (.ok (symbol "a")) := rfl
-
 example : try_step_n 100 ::[
   (symbol "discard")
   , (symbol "a")
@@ -179,11 +177,9 @@ example : try_step_n 100 ::[
   , (const 0 0)] = (.error <| .stuck (symbol "discard")) := rfl
 
 /-
-(id id) x = x
 
-::[x, ::[?, id 0], ::[?, id 0]]
 -/
-example : try_step_n 100 (app? snd ::[(symbol "x"), ::[?, id 0], ::[?, id 0]]) = (.ok (symbol "x")) := rfl
+#eval try_step_n 200 (app? snd ::[(symbol "x"), ::[symbol "f", symbol "g"]])
 
 /-
 g ∘ f. ezpz.

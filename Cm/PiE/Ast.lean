@@ -194,20 +194,22 @@ def Expr.foldl! {α : Type} (f : α → Expr → α) (init : α) : Expr → α
 
 partial def Expr.fmt (e : Expr) : Format :=
   match e with
-  | prod m n => "⨯'.{" ++ [m, n].toString ++ "}"
-  | symbol s => .paren s!"symbol \"{s}\""
-  | fst m n => "fst.{" ++ [m, n].toString ++ "}"
-  | snd m n => "snd.{" ++ [m, n].toString ++ "}"
-  | hole => "_"
-  | .app f x => "f$ " ++ f.fmt.paren ++ .line ++ x.fmt.paren
-  | eq m n => "eq.{" ++ [m, n].toString ++ "}"
-  | π m n o p => "π.{" ++ [m, n, o, p].toString ++ "}"
-  | (.cons x xs) =>
+  | ::[x, xs] =>
     "::[" ++
       (.group
         <| .nest 2
-        <| Format.joinSep (xs.foldl! (fun (acc : List Std.Format) e => acc ++ [(Expr.fmt e)]) [x.fmt]) ((format ",") ++ Format.line))
+        <| Format.joinSep
+          (xs.foldl! (fun (acc : List Std.Format) e => acc ++ [(Expr.fmt e)]) [x.fmt])
+          ((format ",") ++ Format.line))
     ++ "]"
+  | .prod m n => "⨯'.{" ++ [m, n].toString ++ "}"
+  | .symbol s => .paren s!"symbol \"{s}\""
+  | .fst m n => "fst.{" ++ [m, n].toString ++ "}"
+  | .snd m n => "snd.{" ++ [m, n].toString ++ "}"
+  | .hole => "_"
+  | .app f x => "f$ " ++ f.fmt.paren ++ .line ++ x.fmt.paren
+  | .eq m n => "eq.{" ++ [m, n].toString ++ "}"
+  | .cons => "cons"
   | id m => "id.{" ++ [m].toString ++ "}"
   | const m n => "const.{" ++ [m, n].toString ++ "}"
   | const' m n => "const'.{" ++ [m, n].toString ++ "}"
@@ -216,6 +218,8 @@ partial def Expr.fmt (e : Expr) : Format :=
   | nil m => "nil.{" ++ [m].toString ++ "}"
   | unit => "Unit"
   | Ty n => s!"Ty {n}"
+
+#eval ::[symbol "a", symbol "b", symbol "c"].fmt
 
 def Error.fmt : Error → Format
   | .stuck e   => "got stuck evaluating: " ++ .line ++ e.fmt
@@ -237,9 +241,9 @@ def unwrap_with {α : Type} (e : Error) (o : Option α) : Except Error α :=
   (o.map Except.ok).getD (.error e)
 
 def Expr.head! : Expr → Expr
-  | :: a _b => a
+  | ::[a, _b] => a
   | e => e
 
 def Expr.tail! : Expr → Expr
-  | :: _a b => b
+  | ::[_a, b] => b
   | e => e

@@ -122,7 +122,11 @@ inductive Expr where
   | fst    : Level → Level → Expr
   | snd    : Level → Level → Expr
   -- for forming "lists"
-  | cons   : Expr → Expr → Expr
+  /-
+    Cons doesn't need explicit type arguments, since it
+    corresponds to uncurried apply, which doesn't take type arguments either.
+  -/
+  | cons   : Expr
   | prod   : Level → Level → Expr -- ($ ⨯' m.succ m.succ, Ty m, nil.{[m]} Ty m)
   | app    : Expr → Expr → Expr
   -- type universe hierarchy
@@ -130,10 +134,8 @@ inductive Expr where
   -- for forming cons types
   | unit   : Expr
   | nil    : Level → Expr -- nil {α : Type} : α → Ty m
-  -- the core combinators: π, const, apply, id, eq, both
+  -- the core combinators: const, id, eq, both
   -- these have explicit universe level arguments
-  | apply  : Level → Level → Expr
-  | π      : Level → Level → Level → Level → Expr
   | id     : Level → Expr
   | eq     : Level → Level → Expr
   -- dependent and nondependent const.
@@ -155,14 +157,15 @@ syntax (name := atDollar) "@$" term:max term:max term:max term:max term:max term
 
 macro_rules
   | `(::[ $x:term ]) => `($x)
-  | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
+  | `(::[ $x:term, $xs:term,* ]) => `(Expr.app (Expr.app Expr.cons $x) ::[$xs,*])
   | `(($ $x:term) ) => `($x)
   | `(($ $f:term, $x:term )) => `(Expr.app $f $x)
   | `(($ $f, $x:term, $args:term,* )) =>
     `(($ (Expr.app $f $x), $args,*))
 
+#eval ::[symbol "a", symbol "b", symbol "c"]
+
 notation "?" => Expr.hole
-notation "::" => Expr.cons
 notation "Ty" => Expr.ty
 
 inductive Error where
@@ -178,15 +181,15 @@ that isn't nil delimited.
 -/
 def Expr.push (l with_val : Expr) : Option Expr :=
   match l with
-  | :: x xs => Expr.cons x <$> Expr.push xs with_val
+  | ::[x, xs] => (::[x, ·]) <$>Expr.push xs with_val
   | nil _m => .none
-  | x => :: x with_val
+  | x => ::[x, with_val]
 
 /-
 Foldls cons'd pairs / lists
 -/
 def Expr.foldl! {α : Type} (f : α → Expr → α) (init : α) : Expr → α
-  | :: x xs => xs.foldl! f (f init x)
+  | ::[x, xs] => xs.foldl! f (f init x)
   | x => f init x
 
 partial def Expr.fmt (e : Expr) : Format :=
@@ -195,7 +198,6 @@ partial def Expr.fmt (e : Expr) : Format :=
   | symbol s => .paren s!"symbol \"{s}\""
   | fst m n => "fst.{" ++ [m, n].toString ++ "}"
   | snd m n => "snd.{" ++ [m, n].toString ++ "}"
-  | apply m n => "apply.{" ++ [m, n].toString ++ "}"
   | hole => "_"
   | .app f x => "f$ " ++ f.fmt.paren ++ .line ++ x.fmt.paren
   | eq m n => "eq.{" ++ [m, n].toString ++ "}"

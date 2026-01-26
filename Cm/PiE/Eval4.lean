@@ -237,4 +237,43 @@ Sigma application ending in a terminal application with nil
 -/
 example : try_step_n 100 ($ (snd 0 0), (Ty 1), (Ty 1), ::[Ty 0, Ty 1, ::[id 2, ($ (nil 0), (Ty 0))]]) = (.ok (Ty 0)) := rfl
 
+/-
+We assume that application types produce sigma outputs
+where .snd.fst = 
+To type-check an application ($ (f : t), (x : α)):
 
+
+-/
+
+/-
+Current .snd is not particularly powerful,
+but we may be able to mimick substitution in types with it.
+
+::[x, f].snd = (.app f.snd x)
+
+::[x, t_f].snd.fst represents the expected type of x
+
+.snd should produce a sigma with the head value being the expected type.
+further types will need the entire context.
+if we had partial application for cons, that would help a lot, since
+then we could just append α to ::[Ty m, α]
+
+a partially applied cons would be stupid powerful,
+though we can probably simulate it with π,
+but we have merk'd π since we have snd and fst
+
+::[α, ::[t_id].snd = (.app t_id.snd α)
+= 
+-/
+
+namespace hole
+
+/-
+id.{[m]} : ∀ (α : Type m), α → α
+
+::[x, f].snd = (.app f.snd x)
+id.{[m]} : ::[
+-/
+def id.type : 
+
+end hole

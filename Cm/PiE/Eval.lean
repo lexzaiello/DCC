@@ -381,6 +381,9 @@ def func_type_out? (m n : Option Level := .none) (α β : Option Expr := .none) 
 
 #eval try_step_n 100 <| ($ ::[symbol "in", symbol "out"], func_type_out?)
 
+def test_check (t_f t_arg arg : Expr) : Except Error Bool := do
+  pure <| t_arg == (← try_step_n 100 ($ ($ t_f, func_type_head?), arg))
+
 def id? : Expr := ($ Expr.id 0, Ty 0)
 
 #eval try_step_n 100 ($ snd? (snd? id?), ::[(Ty 1), id.type 2])

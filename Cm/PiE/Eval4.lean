@@ -20,12 +20,7 @@ def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := 
 
   match e with
   | ($ (fst _m _n), _α, _β, _γ, fn, ::[a, _b]) => pure ($ fn, a)
-  | ($ (snd _m _n), _α, _β, _γ, fn, ::[::[x, xs], ::[f, nil]]) =>
-    pure <| ($ ($ fn, ::[xs, ::[f, nil]]), x)
-  | ($ (snd _m _n), _α, _β, _γ, fn, ::[x, ::[f, nil]]) =>
-    pure <| ($ fn, f, x)
-  | ($ (snd _m _n), _α, _β, _γ, fn, ::[x, ::[a, f]]) =>
-    pure <| ($ fn, ::[::[x, a], f])
+  | ($ (snd _m _n), _α, _β, _γ, fn, ::[x, f]) => pure ($ fn, f, x)
   | ($ (.id _o), _α, x) => pure x
   | ($ (.const _o _p), _α, _β, c, _x)
   | ($ (.const' _o _p), _α, _β, c, _x) => pure <| c
@@ -271,6 +266,8 @@ snd (snd cons) ::[y, ::[x, f]]
 snd (snd id) ::[y, ::[x, f]]
   = (snd id) ::[x, f] y
   = (id f x) y
+
+
 
 wait that is so cool.
 

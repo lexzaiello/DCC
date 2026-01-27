@@ -271,6 +271,8 @@ t_id.{[m]} = ::[
 def id.type (m : Level) : Expr :=
   ::[($ nil m.succ, (Ty m)), nil m, nil m]
 
+
+
 /-
 Test reduction:
 
@@ -280,14 +282,21 @@ snd (fst id) ::[Ty 1, id.type 2]
 = Ty 2
 
 nice.
+
+
 -/
 
-notation "snd!" => (fun e => ($ (snd 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), e))
-notation "fst!" => (fun e => ($ (fst 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), e))
+-- need γ placeholder
+notation "snd?" => (fun fn => ($ (snd 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), fn))
+notation "fst?" => (fun fn => ($ (fst 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), fn))
+
+def id? : Expr := ($ Expr.id 0, Ty 0)
+
+#eval try_step_n 100 ($ snd? (fst? id?), ::[(Ty 1), id.type 2])
 
 example : try_step_n 100 (snd! ∘ fst! ∘ snd! <| ::[(Ty 1), id.type 2]) = (.ok (Ty 2)) := rfl
 
-#eval try_step_n 100 (snd! <| ::[(Ty 0), (snd! ∘ snd! <| ::[(Ty 1), id.type 2])])
+#eval try_step_n 100 (snd? <| ::[(Ty 0), (snd? ∘ snd? <| ::[(Ty 1), id.type 2])])
 
 namespace hole
 

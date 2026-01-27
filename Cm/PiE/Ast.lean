@@ -215,7 +215,7 @@ partial def Expr.fmt (e : Expr) : Format :=
   | const' m n => "const'.{" ++ [m, n].toString ++ "}"
   | both m n o => "both.{" ++ [m, n, o].toString ++ "}"
   | both' m n o => "both'.{" ++ [m, n, o].toString ++ "}"
-  | .nil _m => "nil"
+  | .nil m => "nil.{" ++ [m].toString ++ "}"
   | unit => "Unit"
   | Ty n => s!"Ty {n}"
 

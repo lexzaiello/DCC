@@ -271,6 +271,17 @@ t_id.{[m]} = ::[
 def id.type (m : Level) : Expr :=
   ::[($ nil m.succ, (Ty m)), nil m, nil m]
 
+/-
+Test reduction:
+
+snd (fst id) ::[Ty 1, id.type 2]
+= (fst id) ::[($ nil m.succ, (Ty m)), nil m, nil m] (Ty 1)
+= id ($ nil 3, (Ty 2)) (Ty 1)
+= Ty 2
+
+nice.
+-/
+
 notation "snd!" => (fun e => ($ (snd 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), e))
 notation "fst!" => (fun e => ($ (fst 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), e))
 

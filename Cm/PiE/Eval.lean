@@ -8,7 +8,6 @@ def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := 
 
   match e with
   | ($ ::[x, f], fn) => pure ($ fn, f, x)
-  | ($ (nil _m), α, _x) => pure α
   | ($ (.id _o), _α, x) => pure x
   | ($ (.const _o _p), _α, _β, c, _x)
   | ($ (.const' _o _p), _α, _β, c, _x) => pure <| c
@@ -52,215 +51,115 @@ example : try_step_n 100 ($ ::[(symbol "self"), ($ id 0, (symbol "sorry"))], ($ 
    = (.ok (symbol "self")) := rfl
 
 /-
-id.{[m]} : ∀ (α : Type m), α → α
+::[(x : α), (f : β)] {γ : α → β → Type}: (f : γ) → γ f x
+-/
 
-which style of type-checking is the kernel going to use?
+/-
+Using this, new id type:
 
-I feel like we ought to include the entire context, and select what we need.
+assuming (id.{[m]} : t_id.{[m]}) and (α : Ty m) (x : α)
 
-snd (fst id) normalizes the first component.
+snd (fst id) = ($ ::[α, ::[($ nil m.succ, (Ty m)), stuf]], (const ? ? (id ?)))
+= (const ? ? (id ?)) ::[($ nil m.succ, (Ty m)), stuf] α
+=
 
-what if we want to normalize the first component as well?
+interesting.
+disadvantage to new eval rule is our selector goes after,
+but we put it before.
+composition becomes slightly more difficult.
 
-is this really necessary? unclear.
+can we put fn after? does that work?
+wait.
 
-We should keep the entire context in each step, though.
+can we make the fn selector itself a list?
 
-after applying one argument, we should get a snd that
-includes the argument α
+snd (fst id) = ($ ::[α, ::[($ nil m.succ, (Ty m)), stuf]], (const ? ? (id ?)))
+= (const ? ? (id ?)) ::[($ nil m.succ, (Ty m)), stuf] α
 
-id.{[m]} : ∀ (α : Type m), α → α
+interesting.
 
-this is kind of like rendering a type, I think.
+snd (fst id) = ($ ::[($ nil m.succ, (Ty m)), stuf], (const ? ? ?))
+= (const ? ? ?) stuf ($ nil m.succ, (Ty m))
+= ? ($ nil m.succ, (Ty m))
 
-to type-check id:
+($ nil m.succ, (Ty m)) = fn in list app
 
-- need to return type m, but still keep the α.
+[?x, ?f] can be a list now.
 
-can do this by appending α to Type m, probably.
+($ ($ nil m.succ, (Ty m)), ?f, ?x)
 
-t_id = ($ cons, Ty m)
+we can make ($ nil m.succ, (Ty m)) literally just id?
+or get the head of the list?
 
-snd id t_id ::[α, t_id]
-= id t_id α
-= t_id α
-= ::[Ty m, α]
+thinking we pass in a nil delimited list.
+I think we ought to remove nil eval rule.
+nil is just list delimiter.
 
-for the id type, we accept a Ty m
+snd (fst id) = ($ ::[($ nil m.succ, (Ty m)), stuf], (const ? ? ?))
+
+? = ::[α, nil]
+
+($ nil m.succ, (Ty m)) =
+
+observations:
+- supply arguments δ as a nil delimited list so we can use list operations on it
+- first element in id type list just selects the head.
+- first element in id type is supposed to output (Ty m)
+- second element in id type
+
+procedure for type-checking:
+- since output values in the context don't depend on the context itself,
+we can just offload substitution to the kernel.
+
+id.{[m]} : t_id.{[m]}
+
+to check:
+($ t_id.{[m]}, (const ? ? (id ?)))
+= ($ (const ? ? (id ?)), t_id.tail, t_id.head)
+= ($ id ?, t_id.head)
+
+now have:
+t_id.head
+
+t_id.head = ($ const' m.succ.succ m.succ, (Ty m.succ), Ty m, Ty m)
+
+t_id.tail = stuff
+
+($ t_id.head, α) = Ty m
+
+- to get tail:
+($ t_id.{[m]}, (const ? ?))
+= ($ ($ const ? ?), t_id.tail, t_id.head)
+= t_id.tail
 
 
-
-fst = Ty m, snd = α.
-
-so we need to do some manipulation.
-
-need to select snd, then put it in a future cons.
-need to wrap it.
-
-snd
-
-fst =
-
-t id needs to do the work to wrap α in a const.
-
-is function composition still ::?
-
-(f ∘ g) x = ($ f, ($ g, x)
-
-(f ∘ g) x = ::[x, ::[g, f]] =
-
-snd id ::[x, ::[g, f]] = ::[g, f] x
-
-swap order of
-
-::[g, f] x = ($ f, g) x
-
-need parens around g and x
+t_id.{[m]} = ::[($ const' m.succ.succ m.succ, (Ty m.succ), Ty m, Ty m), 
 
 
+::[::[α, nil], ::[(const ? ? (id ?)), stuff]]
 
-snd (snd id) ::[f, ::[g, x]]
-= (snd id) ::[g, x] f
+($ ::[::[α, nil], ::[(const ? ? (id ?)), stuff]], (const ? ? (id ?)))
+= (const ? ? (id ?)), ::[(const ? ? (id ?)), stuff], ::[α, nil]
 = 
 
-t_id = 
+? = ::[
 
-id.{[m]}
-
-
-
-type-check an application:
-
-snd (snd id) ::[α, ::[id, id]] = ::[id, id] α
-
-snd (snd id) ::[α, ::[::[
-
-snd (fst id) ::[α, ::[id, id]]
-  = (fst id) ::[id, id] α
-  = id α
-
-snd (fst id) is the normalization step now. no extra snd.
-
-snd (fst id) is the normalization step, but this means we can only normalize
-if we know the number of items in the list.
-
-t_α = ($ (const' m.succ.succ m.succ), Ty m.succ, Ty m id)
-
-snd (snd (const' ? ? )) ::[α, ::[($ (const' m.succ.succ m.succ), Ty m.succ, Ty m id), t_rest]]
-  = (snd (const' ? ?)) ::[($ (const' m.succ.succ m.succ), Ty m.succ, Ty m id), t_rest] α
-  = t_rest α
-
-this is after applying α.
-
-so, we lose the previous assertion, and receive it in t_rest for substitution
-
-we want to make ::[(const (Ty m) α α), (const (Ty m) α α)]
-
-t_rest α = ::[(const (Ty m) α α), (const (Ty m) α α)]
-
-t_rest α x = snd (fst id) ::[x, ::[(const (Ty m) α α), (const (Ty m) α α)]]
-= (fst id) ::[(const (Ty m) α α), (const (Ty m) α α)] x
-= id (const (Ty m) α α) x
-= α
-
-snd (snd (const' ? ?)) ::[x, ::[(const (Ty m) α α), (const (Ty m) α α)]]
-  = (snd (const' ? ?)) ::[(const (Ty m) α α), (const (Ty m) α α)] x
-  = (const (Ty m) α α)
-
-but how do we make the const (Ty m) α α part?
-
-we need to duplicate for this, potentially.
-but we can get around this if we keep the context around.
-
-instead of snd (snd (const' ? ?)),
-if we do
+($ ::[x, f] (const ? ? (id ?))) = ($ (const ? ? (id ?)), f, x)
+= ($ (id ?), x) = x
 
 
+($ ::[x, f] (const ? ? (id ?))) = ($ (const ? ? (id ?)), f, x)
+= ($ (id ?), x) = x
 
-t_rest = ::[
+simulating fst
+($ ::[x, f] (const ? ? (id ?))) = ($ (const ? ? (id ?)), f, x)
+= ($ (id ?), x) = x
 
-t_rest = 
+t_id.{[m]} = ::[($ nil m.succ, (Ty m)), stuf]
 
-for t_rest, we want to be 
+::[α, ::[($ nil m.succ, (Ty m)), stuf]] 
 
-  feels like we should be able to swap out id here or something.
-  or just make t_rest discard the first thing.
-
-this version of snd keeps our assertions context, which is whack.
-we now have no way to yeet out the fst part.
-snd also accepts the first part.
-
-or we can just have t_rest be okay with this.
-
-t_rest =
-
-id : ∀ (α : Type m), α → α
-
-it's pretty useful to be able to reference (α : Type m)
-the term being bound and its type.
-
-::[term, ty]
-
-ctx = ::[::[term₁, ty₁], ::[term₂, ty₂], ::[term₃, ty₃]]
-
-oh interesting.
-
-maybe we want to store the argument terms and types in separate lists.
-
-::[::[term₁, term₂, term₃], ::[ty₁, ty₂, ty₃]]
-
-this is slightly harder to work with for the type-checker, I think.
-
-we're basically filling in the next available slot.
-
-arguments / assertions register idea was kinda nice high key.
-
-::[::[ass₁, ass₂, ass₃], ::[arg₁, arg₂, arg₃]]
-
-so, to type-check ($ (f : t), (x : α)) ::[α, t.fst].snd
-
-thing I'm confused about as well:
-very unclear what the advantage is of using list notation here.
-well, it's actually very necessary for the assertions list.
-that actually is data.
-
-and the assertions do depend on each other.
-
-so we assume we have the entire context with positional arguments.
-
-I think maybe the play is we receive the arguments in the order that they were appended to the context.
-
-so, t_x receives ::[x, α]
-
-t_id = ::[($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), snd fst, snd fst]
-
-snd fst part is not typed. should fill in types.
-
-what is γ in snd? type of substitution in f.
-
-snd fst receives ::[x, α]
-
-oh shit wait we should use nil here.
-
-::[($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), nil, nil]
-
-nil will just give us α
-
-type-checking application rules:
-
-
-($ snd, α, t_id
-
-($ (snd ::[α, t_id]) = 
-
-id : ::[
-
-t_id α = ::[
-
-t_id.{[m]} : 
-
-
-t_id.{[m]} = ::[
+t_id.{[m]}
 -/
 
 def id.type (m : Level) : Expr :=

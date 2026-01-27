@@ -2,18 +2,6 @@ import Cm.PiE.Ast
 
 open Expr
 
-/-
-Notes:
-feels like our evaluation rule for snd is potentially perfect.
-.snd.fst works as intended.
-once we reach the end of the list, we apply all.
-
-and we have a way to check input arguments, since we can
-manually do .snd.fst.snd.
-
-WAIT. snd should not recurse snd.
--/
-
 def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := do
   if with_logs then
     dbg_trace e
@@ -271,8 +259,6 @@ t_id.{[m]} = ::[
 def id.type (m : Level) : Expr :=
   ::[($ nil m.succ, (Ty m)), nil m, nil m]
 
-
-
 /-
 Test reduction:
 
@@ -283,7 +269,192 @@ snd (fst id) ::[Ty 1, id.type 2]
 
 nice.
 
+::[($ nil m.succ, (Ty m)), nil m, nil m]
+($ snd? (snd? cons), ::[(Ty 1), id.type 2])
 
+= (snd? cons) ::[($ nil m.succ, (Ty m)), nil m, nil m] (Ty 1)
+= ::[::[nil m, nil m], ($ nil m.succ, (Ty m))]
+
+snd? (fst? id?) ::[(Ty 1), ::[($ nil m.succ, (Ty m)), nil m, nil m]]
+= (fst? id?) ::[($ nil m.succ, (Ty m)), nil m, nil m] (Ty m)
+= ($ nil m.succ, (Ty m))
+
+snd? (snd? id?) ::[(Ty 1), ::[($ nil m.succ, (Ty m)), nil m, nil m]]
+= (snd? id?) ::[($ nil m.succ, (Ty m)), nil m, nil m] (Ty 1)
+= id? ::[nil m, nil m] ($ nil m.succ, (Ty m)) (Ty 1)
+
+this is kinda whack.
+
+we should restructure the list itself.
+
+ok this is whack.
+we want an arguments register.
+
+id? ::[nil m, nil m] ($ nil m.succ, (Ty m)) (Ty 1)
+
+this stuff on the right.
+we want to accumulate it as arguyments.
+acc as arguments is just yeeting the ($ nil m.succ, (Ty m))
+
+I don't want to restructure the list.
+just delete the ($ nil m.succ, (Ty m)), since we can't use const
+
+we need to restructure the list itself.
+second argument is going to receive α as well,
+but also the previous head?
+
+we change the output getter formula.
+
+snd? (snd? id?) ::[(Ty 1), ::[($ nil m.succ, (Ty m)), nil m, nil m]]
+
+cons ::[nil m, nil m] ($ nil m.succ, (Ty m)) (Ty 1)
+
+(const' 0 0 ?  id? ::[nil m, nil m] ($ nil m.succ, (Ty m)) (Ty 1)
+
+= 
+::[nil m, nil m]
+
+interesting. so we forward the entire context,
+but it's' not actually applied. strange.
+
+feels like fst and snd should be able to foldl in both directions.
+hmmmm.
+
+($ snd? (snd? id?), ::[(Ty 1), ::[($ nil m.succ, (Ty m)), nil m, nil m]])
+
+= snd? id? ::[($ nil m.succ, (Ty m)), nil m, nil m] (Ty 1)
+= id ::[nil m, nil m] ($ nil m.succ, (Ty m)) (Ty 1)
+= ::[nil m, nil m]
+
+ok wait cooking again?
+
+instead of nil in here what if we use fst and snd?
+
+it would be really awesome if we could just emulate our arguments register in full.
+
+just like keep stacking things on it
+so that we can receive all of them.
+
+arguments register kind of is like application,
+but potentially harder to work with.
+
+oh wait cool idea.
+
+($ snd? (snd? id?), ::[(Ty 1), ::[($ nil m.succ, (Ty m)), nil m, nil m]])
+we get (Ty 1) as an argument.
+
+we need to set up the type-checking rules so as to remove old
+dead registers.
+
+at the very least, the old registers should be included in a list as data.
+
+($ snd? (snd? id?), ::[(Ty 1), id.type 2])
+= (snd? id?) ::[($ nil m.succ, (Ty m)), nil m, nil m] (Ty 1)
+= ::[nil m, nil m] ($ nil m.succ, (Ty m)) (Ty 1)
+=
+
+(snd? id?) ::[($ nil m.succ, (Ty m)), nil m, nil m] (Ty 1)
+can chagne id here to const something.
+
+snd? (const ? ?) ::[($ nil m.succ, (Ty m)), nil m, nil m] (Ty 1)
+  = (const ? ?) ::[nil m, nil m] ($ nil m.succ, (Ty m)) (Ty 1)
+
+
+feels like there are places where we would want access to our context,
+but it might make it harder to traverse, since our snd / fst calls
+will need to be well-typed.
+
+oh interesting idea:
+
+- we would like to avoid explicit types inside our type expressions
+the challenge comes from using snd as a function.
+
+what if instead we could plug our "selector" into the sigma type.
+
+This way, we don't have to make the selector well-typed,
+the sigma type itself does.
+
+lists are applications,
+so the types of the elements are inferred.
+
+can we store the inferred type somewhere?
+or do some kind of trick to shortcut generating the type?
+
+::[(x : α), (f : (β : α → Type))] : (
+
+another note:
+the sigma pair should not constrain its members to be strictly
+pure, depend
+
+we should have some mechanism for just lining up some "selector"
+with the elements in the pair.
+
+how do we switch between fst and snd?
+
+::[
+
+it feels like we should be able to dynamically upgrade a pair type
+into a sigma type by offloading the constraints for application
+to the user somehow.
+
+Ok, interesting.
+
+feels like the selector is determining which things it depends on
+in the context.
+
+kinda just like normal ∀ (x : α) (y : β)
+
+::[(x : α), (y : β)] - this is a context
+
+how do things in the context depend on each other?
+
+I quite liked our assertions vs arguments idea.
+
+it was working quite well.
+
+sigma types = red herring?
+
+fst corresponds to the actual type of the first argument.
+snd corresponds to substitution.
+
+substitution needs to work nicer.
+
+our current design is fine,
+but it would be nice if we could
+abstract out snd and fst
+so as to not require explicit type arguments.
+
+| ($ (fst _m _n), _α, _β, _γ, fn, ::[a, _b]) => pure ($ fn, a)
+| ($ (snd _m _n), _α, _β, _γ, fn, ::[x, f]) => pure ($ fn, f, x)
+
+α and β here seem kind of duplicates.
+
+($ ::[x, f] fn) = ($ fn, f, x)
+
+this handles the snd case,
+but it doesn't handle the fst case.
+
+fst wants just x
+fst feels like syntax sugar, potentially,
+for const ? ?
+
+| ($ (fst _m _n), _α, _β, _γ, fn, ::[a, _b]) => pure ($ fn, a)
+| ($ (snd _m _n), _α, _β, _γ, fn, ::[x, f]) => pure ($ fn, f, x)
+
+($ ::[x, f] fn) = ($ fn, f, x)
+
+-- simulating `fst` to get just x.
+($ ::[x, f] (const ? ? (id ?))) = ($ (const ? ? (id ?)), f, x)
+= ($ (id ?), x) = x
+
+-- simulating `snd` like before.
+-- we want ($ fn, f, x)
+-- this is due to the new eval rule
+($ ::[x, f] fn) = ($ fn, f, x)
+
+γ : 
+
+::[(x : α), (f : β)] : (∀ (γ : ∀ (x : α) (f : β)
 -/
 
 -- need γ placeholder
@@ -291,6 +462,13 @@ notation "snd?" => (fun fn => ($ (snd 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), fn))
 notation "fst?" => (fun fn => ($ (fst 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), fn))
 
 def id? : Expr := ($ Expr.id 0, Ty 0)
+
+#eval try_step_n 100 ($ snd? (snd? id?), ::[(Ty 1), id.type 2])
+
+#eval try_step_n 100 ($ snd? (fst? id?), ::[(Ty 1), id.type 2])
+
+-- (x : α). need to get the substituted context.
+#eval try_step_n 100 ($ snd? (snd? cons), ::[(Ty 1), id.type 2])
 
 #eval try_step_n 100 ($ snd? (fst? id?), ::[(Ty 1), id.type 2])
 

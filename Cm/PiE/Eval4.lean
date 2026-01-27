@@ -211,7 +211,36 @@ oh interesting.
 
 maybe we want to store the argument terms and types in separate lists.
 
+::[::[term₁, term₂, term₃], ::[ty₁, ty₂, ty₃]]
 
+this is slightly harder to work with for the type-checker, I think.
+
+we're basically filling in the next available slot.
+
+arguments / assertions register idea was kinda nice high key.
+
+::[::[ass₁, ass₂, ass₃], ::[arg₁, arg₂, arg₃]]
+
+so, to type-check ($ (f : t), (x : α)) ::[α, t.fst].snd
+
+thing I'm confused about as well:
+very unclear what the advantage is of using list notation here.
+well, it's actually very necessary for the assertions list.
+that actually is data.
+
+and the assertions do depend on each other.
+
+so we assume we have the entire context with positional arguments.
+
+I think maybe the play is we receive the arguments in the order that they were appended to the context.
+
+so, t_x receives ::[x, α]
+
+t_id = ::[($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), snd fst, snd fst]
+
+
+
+id : ::[
 
 t_id α = ::[
 

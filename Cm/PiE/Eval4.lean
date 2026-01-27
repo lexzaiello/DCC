@@ -19,23 +19,23 @@ def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := 
     dbg_trace e
 
   match e with
-  | ($ (fst _m _n), _α, _β, ::[a, _b]) => pure a
-  | ($ (snd m n), α, β, ::[::[x, xs], ::[f, nil]]) =>
-    pure <| ($ ($ (snd m n), α, β, ::[xs, ::[f, nil]]), x)
-  | ($ (snd _m _n), _α, _β, ::[x, ::[f, nil]]) =>
-    pure <| ($ f, x)
-  | ($ (snd _m _n), _α, _β, ::[x, ::[a, f]]) =>
-    pure <| ::[::[x, a], f]
+  | ($ (fst _m _n), _α, _β, _γ, fn, ::[a, _b]) => pure ($ fn, a)
+  | ($ (snd _m _n), _α, _β, _γ, fn, ::[::[x, xs], ::[f, nil]]) =>
+    pure <| ($ ($ fn, ::[xs, ::[f, nil]]), x)
+  | ($ (snd _m _n), _α, _β, _γ, fn, ::[x, ::[f, nil]]) =>
+    pure <| ($ fn, f, x)
+  | ($ (snd _m _n), _α, _β, _γ, fn, ::[x, ::[a, f]]) =>
+    pure <| ($ fn, ::[::[x, a], f])
   | ($ (.id _o), _α, x) => pure x
   | ($ (.const _o _p), _α, _β, c, _x)
   | ($ (.const' _o _p), _α, _β, c, _x) => pure <| c
-  | ($ (.both o p q), α, β, γ, f, g, x) => -- TODO: not sure whether to nest ::[f, g] here, or leave flat
-    pure <| ::[($ (snd o p), α, β, ::[x, f]), ($ (snd o q), α, γ, ::[x, g])]
-  | ($ (.eq o p), α, β, fn_yes, fn_no, a, b) =>
+  | ($ (.both _o _p _q), _α, _β, _γ, f, g, x) =>
+    pure <| ::[($ f, x), ($ g, x)]
+  | ($ (.eq _o _p), _α, _β, fn_yes, fn_no, a, b) =>
     if a == b then
-      pure <| ($ (snd o p), α, β, ::[a, fn_yes])
+      pure <| ($ fn_yes, a)
     else
-      pure <| ($ (snd o p), α, β, ::[b, fn_no])
+      pure <| ($ fn_no, b)
   | e => .error <| .no_rule e
 
 def run (e : Expr) : Except Error Expr := do
@@ -59,9 +59,6 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
     | .error e => .error e
 
 example : try_step_n 100 ($ (id 2), (Ty 1), (Ty 0)) = (.ok (Ty 0)) := rfl
-
-example : try_step_n 100 ($ (snd 0 0), (Ty 0), (Ty 0), ::[Ty 0, ::[Ty 1, id 2, nil]])
-  >>= (fun c => try_step_n 100 ($ (snd 0 0), (Ty 0), (Ty 0), c)) = (.ok (Ty 0)) := rfl
 
 /-
 We assume that application types produce sigma outputs
@@ -105,17 +102,220 @@ perhaps we can make snd more powerful?
 
 snd gets like a fold argument.
 
+do we even need α β arguments if f has a type?
+f should include the type, hmmmmm.
+
+does this mean we can downgrade to nondependent pairs?
+since there is no actual application going on.
+
+snd id ::[x, ::[f, nil]]
+
+this should produce ($ f, x)
+
+current rule looks good.
+
+fst f ::[a, b] = (f a)
+
+this FEELS like it should simplify the types ngl.
+we might not need the types of fst and snd to be very dependent.
+
+fst : ∀ (α : Type) (β : Type)
+
+snd' 
+
 snd' (snd' fst) ::[x, α, stuff] = α
 
+snd fold argument works after substitution.
 
+what is the advantage of this?
+
+snd' fn ::[x, ::[::[a, b], f]] = ::[($ fn, ::[x, a, b]), f]
+
+snd' fn ::[x, ::[::[a, b], f]] = ::[($ fn, ::[x, a, b]), f]
+
+snd' id ::[x, (::[::[a, b], f] : β)] = ::[::[x, a, b], f]
+
+f : ∀ (l : (α × β.fst)
+
+this is potentially even nicer,
+since we don't have to explicitly type ::[x, α, stuff] as strictly.
+
+snd' f ::[a, ::[b, c]] = f ::[::[a, b], c]
+
+this simplifies the type a lot.
+
+this is kind of nice.
+it would be nice if we could find a way to merge dependent and nondependent pairs.
+
+it would be really nice if we could move the type dependency to snd.
+snd says how to interpret these two things.
+
+we basically want to "substitute".
+I think the current rules are fine for this.
+
+our selector is what to do once we've reached a nil list?
+
+
+
+snd : ∀ (α : Type) (β : Type) (γ : ∀ (x : α), β x → Type) (f : ∀ (x : α) (y : β x), γ x y) (l : (α × β)),
+  γ l.fst l.snd
+
+bring π back? this is a combination of both.
+
+am I stupid?
+
+feels like we could simplify both now.
+
+snd fn ::[x, ::[::[a, b], f]] = fn ::[::[x, a, b], f]
+
+this seems kind of whack. seems like a potential infinite loop.
+
+can we recover substitution?
+
+sub ::[x, ::[::[a, b], f]] = 
+
+snd' : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α) (y : β x), Type) (f : l) (l : (× α β)), γ l.fst (β l.fst)
+
+id : ∀ (α : Type), α → α
+
+::[α, t_id].snd (fst ∘ snd)
+
+question:
+can we defer substitution with this?
+
+snd fn ::[a, ::[::[b, c], f]] = ($ fn, a, ::[::[b, c], f])
+
+snd cons ::[a, ::[::[b, c], f]] = ($ cons, a, ::[::[b, c], f])
+
+this feels like a nice identity.
+
+uncurry, we receive y ::[x, f]
+
+snd y ::[x, f] = ($ y x f)
+
+C combinator?
+
+snd y ::[x, f] = ($ y x f)
+
+can we use fst inside?
+
+($ fst, f, ::[a, b]) = ($ f, a)
+
+oh wait interesting.
+this is where we can make it work like before.
+
+snd should do some kind of substitution.
+
+does fn tell us how to substitute?
+
+snd should absolutely destroy a.
+
+snd f ::[a, b] =
+
+how, ideally, do I want to use this for id?
+
+id : ∀ (α : Type), α → α
+
+I feel like ideally, snd should just do application as substitution.
+
+snd (id α) ::[x, f] = (f x)
+
+equations:
+
+snd f ::[a, b] = f b a
+
+this is like the C combinator.
+
+and, we can recover the original list, I think.
+this doesn't matter.
+
+snd f ::[a, b] = f b a
+
+id : ∀ (α : Type), α → α
+
+::[α, t_id].snd
+
+what do we plug into snd to do substitution?
+if we plug in id, then we get
+simple application.
+for substitution, we probably want
+
+fst f ::[a, b] = f a b
+
+whoah that is whack.
+
+interesting.
+
+to do substitution with snd:
+
+we get the function first, b.
+
+this contains our nested context.
+
+fst fn ::[x, f] = fn x f
+
+the nested sigma is kind of an interesting case.
+how do we know when to stop?
+
+snd fn ::[x, f] = fn f x
+
+snd cons ::[x, ::[y, f]] = cons ::[y, f] x = ::[::[y, f], x]
+
+nested snd looks very promising
+wait this is literally it.
+
+snd (snd cons) ::[y, ::[x, f]]
+  = (snd cons) ::[x, f] y
+  = cons f x y
+
+snd (snd id) ::[y, ::[x, f]]
+  = (snd id) ::[x, f] y
+  = (id f x) y
+
+wait that is so cool.
+
+f ::[ctx, out] x
+
+we can nest snd and fst nicely.
+
+f = cons
+
+::[($ cons 
+
+snd (fst y) ::[x, f] = ($ ($ fst, y, 
+
+snd ::[y, ::[x, f]]
+
+how do we recurse here reliably?
+
+fn receives a and acts on the second element.
+INTERESTING.
+
+
+
+snd fn ::[
+
+in this version, we don't actually apply inside the sigma.
+
+
+f takes in a, 
+
+question:
+since we're deferring applications to f, can we actually avoid
+dependent sigmas in snd altogether?
+
+snd : ∀ (α : Type) (β : Type) (f : ∀ (l : (α × β)
+
+::[(b : α), (c] : (⨯ 
+snd' f ::[a, ::[b, c]] = 
 -/
 
 def id.type (m : Level) : Expr :=
   ::[::[($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), nil]
    , ::[($ id m, (Ty 0)), ::[($ id m.succ, (Ty m)), nil], nil]]
 
-notation "snd!" => (fun e => ($ (snd 0 0), Ty 0, Ty 0, e))
-notation "fst!" => (fun e => ($ (fst 0 0), Ty 0, Ty 0, e))
+notation "snd!" => (fun e => ($ (snd 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), e))
+notation "fst!" => (fun e => ($ (fst 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), e))
 
 example : try_step_n 100 (snd! ∘ fst! ∘ snd! <| ::[(Ty 1), id.type 2]) = (.ok (Ty 2)) := rfl
 

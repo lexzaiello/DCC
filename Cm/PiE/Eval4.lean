@@ -3,202 +3,32 @@ import Cm.PiE.Ast
 open Expr
 
 /-
-sigma is the opposite of app.
+Notes:
+feels like our evaluation rule for snd is potentially perfect.
+.snd.fst works as intended.
+once we reach the end of the list, we apply all.
 
-app is curried application.
+and we have a way to check input arguments, since we can
+manually do .snd.fst.snd.
 
-Feels like our evaluation rules should probably work with sigma arguments, then.
-
-(.app (f : t_f) (x : α)) : ::[x, t_f].snd.fst.snd
-
-if sigma is the opposite of application, then what is the opposite of:
-
-(.app (.app f x) y)?
-
-::[y, x, f]
-
-need some way to convert this^ into (.app (.app f x) y)
-
-::[y, x, f].? = (.app ::[x, f].? f)
-
-maybe want to show this as a sigma type instead?
-feels like this operation should produce another sigma type
-
-wait this is interesting.
-
-::[y, x, f].snd.fst =
-
-::[y, x, f].? = (.app (.app f x) y)
-
-::[a, b].snd = (.app b a),
-but we need to nest. so there is either two separate rules,
-or just one smart recursive one.
-but we need to permit terminal applications as well.
-
-::[a, b].snd = (.app b a)
-::[a, ::[b, c]].snd = (.app
-
-snd should produce another sigma pair that we can follow,
-or something that isn't a sigma pair
-
-::[a, ::[b, c]].snd
-
-interesting.
-maybe we need an evaluation rule for sigma pairs?
-
-or maybe we can use nil as the terminal value?
-
-interesting.
-
-::[a, ::[b, c]].snd
-
-::[a, ::[b, nil?]].snd =
-.app (::[b, nil?].snd) a
-
-
-::[b, nil?].snd = .app b nil = b
-
-perfecto
-we can have an eval rule for nil that makes this work well.
-this is kind of a special case.
-
-terminal app here feels weird.
-::[x, ::[α, (id 0)]] : ((x : α) × ((y : β) × (f : ∀ (x : α) (y : β), t x y)))
-
-id 0 in terminal position will not have the same evaluation rule.
-maybe we add a special case for .snd for nested sigma, but this doesn't correspond exactly to the type.
-
-nesting feels fine, but we can use our wonky nil delimiter idea potentially.
-
-nil α x = α
-nil : ∀ (α : Ty) (x : α), α
-
-::[x, ::[α, (id 0)]] : ((x : α) × ((y : β) × (f : ∀ (x : α) (y : β), t x y)))
-
-::[x, ::[α, ((id 0) : ]].snd : 
-
-l.snd : ∀ (l : ((x : α) × ((y : β) × xs
+WAIT. snd should not recurse snd.
 -/
 
-/-
-(.app f x) as usual. this is a curried application.
-::[x, f].snd = .app (f x) where f is not a nested sigma pair
-::[y, ::[x, f]].snd = .app ::[x, f].snd y = (.app (.app f x) y) where f is not a sigma
+def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := do
+  if with_logs then
+    dbg_trace e
 
-we could leave snd as just application,
-and add just put a .snd nested inside,
-maybe,
-but I want to be able to recurse
-
-(y : β) × (x : (t : β → Type))
-
-does this work with nested sigma types?
-
-interesting. this does feel like the nil delimiter should work.
-but a nested sigma pair probably wouldn't.
-
-((x : α) × (y : (β : α → Type)) : Type)
-(y : β) × (x : (t : β → Type))
-
-partially applied sigma pair? this could be it
-partially applied application?
-
-sigma type application is first class, so we should handle that first.
-we want to recover unapplied argument: TODO
-
-::[y, ::[x, .app f]]
-
-::[x, f].snd = .app f.snd x
-
-where f is a terminal value
-::[nil, f].snd this is a nondependent pair.
-if we can derive them, then we're golden,
-since .snd will produce a constant f, then.
-
-::[f, nil].snd = .app (nil.snd f)
-nil feels like it should be a sigma pair type
-that just outputs the constant argument.
-
-perfect.
-
-equations:
-
-::[x, f].snd = .app f.snd x
-
-nil.snd = nil?
-this implies that nil is a sigma type pair,
-but applying it to something feels like a different type.
-
-nil.snd has no evaluation rule.
-nil.snd = id but with the type filled in.
-
-(nil α).snd = 
-
-nil.snd = nil
-::[x, ::[f, nil]].snd
-  = .app ::[f, nil].snd x
-  = (.app nil.snd f)
-  = f
-(
-
-Reductions:
-
-::[x, f].snd = .app f.snd x
-(nil.{[m]} α).snd = .app (id m) α
-
-we assume currying by default.
-
-snd takes explicit type arguments.
-need some way to denote the result of applying the inner value
-
-snd α ? ((x : α) × (β : α → Type))
-
-perhaps β is the entire type of f?
-if f is also a sigma pair...
-
-need some type to denote .snd beta reduction
-without an infinite chain
-
-clearly, sigma application should apply to the types.
-no easy way to recover the universe arguments
-from β
-
-
-
-to type check ::[x, f].snd:
-
-Sigma.snd.{[m, n]} : ∀ (α : Type) (β : α → Type m) (l : ((x : α) × (y : β)))
-
-but then we don't know how to fill in the nested snd's types.
-
-sigma.snd was difficult to write, since it took explicit type arguments.
-
-β refers to the reduced type of f,
-snd should beta reduce internally,
-so it probably doesn't matter what the types are.
-dummy values.
-
-the second universe for nested snd is obviously n.
-
-but what about the first?
-and what about the nested α argument?
-
-nested snd's β should just be a constant β.
-
-
-new nil eval rule doesn't vibe with "closing the loop" in a dependent type,
-but we will figure it out.
--/
-
-def do_step_apply : Expr → Except Error Expr
+  match e with
   | ($ (fst _m _n), _α, _β, ::[a, _b]) => pure a
-  | ($ (snd m n), α, β, ::[x, f]) =>
-    let ret_inner_t := ($ (const m.succ n), (Ty m), β, α)
-    let reduce_f := ($ (snd m n), α, ret_inner_t, f)
-    pure ($ reduce_f, x)
-  | ($ (snd _m _n), _α, _β, ($ (nil o), α)) => pure ($ (id o), α)
+  | ($ (snd m n), α, β, ::[::[x, xs], ::[f, nil]]) =>
+    pure <| ($ ($ (snd m n), α, β, ::[xs, ::[f, nil]]), x)
+  | ($ (snd _m _n), _α, _β, ::[x, ::[f, nil]]) =>
+    pure <| ($ f, x)
+  | ($ (snd _m _n), _α, _β, ::[x, ::[a, f]]) =>
+    pure <| ::[::[x, a], f]
   | ($ (.id _o), _α, x) => pure x
-  | ($ (.const _o _p), _α, _β, c, _x) => pure <| c
+  | ($ (.const _o _p), _α, _β, c, _x)
+  | ($ (.const' _o _p), _α, _β, c, _x) => pure <| c
   | ($ (.both o p q), α, β, γ, f, g, x) => -- TODO: not sure whether to nest ::[f, g] here, or leave flat
     pure <| ::[($ (snd o p), α, β, ::[x, f]), ($ (snd o q), α, γ, ::[x, g])]
   | ($ (.eq o p), α, β, fn_yes, fn_no, a, b) =>
@@ -228,18 +58,14 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
     | .ok e' => try_step_n n e' <|> (pure e')
     | .error e => .error e
 
-example : try_step_n 100 ($ (snd 0 0), Ty 0, Ty 0, ::[id 2, ($ (nil 0), (Ty 0))]) = (.ok (id 2)) := rfl
-
 example : try_step_n 100 ($ (id 2), (Ty 1), (Ty 0)) = (.ok (Ty 0)) := rfl
 
-/-
-Sigma application ending in a terminal application with nil
--/
-example : try_step_n 100 ($ (snd 0 0), (Ty 1), (Ty 1), ::[Ty 0, Ty 1, ::[id 2, ($ (nil 0), (Ty 0))]]) = (.ok (Ty 0)) := rfl
+example : try_step_n 100 ($ (snd 0 0), (Ty 0), (Ty 0), ::[Ty 0, ::[Ty 1, id 2, nil]])
+  >>= (fun c => try_step_n 100 ($ (snd 0 0), (Ty 0), (Ty 0), c)) = (.ok (Ty 0)) := rfl
 
 /-
 We assume that application types produce sigma outputs
-where .snd.fst = 
+where .snd.fst =
 To type-check an application ($ (f : t), (x : α)):
 
 
@@ -260,20 +86,59 @@ then we could just append α to ::[Ty m, α]
 
 a partially applied cons would be stupid powerful,
 though we can probably simulate it with π,
-but we have merk'd π since we have snd and fst
 
-::[α, ::[t_id].snd = (.app t_id.snd α)
-= 
+t_id = ::[($ cons, Ty m), ::[nil m, id m.succ]]
+
+t_id = ::[($ cons, Ty m), ::[::[Ty m, id m.succ]
+
+x part receives ::[α, ($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), nil],
+then ::[x, α, ($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), nil]
+
+Idea:
+type of lists is kinda determined by fst and snd,
+I would like to be able to treat this context as just a list and select the second element.
+
+snd ∘ snd
+
+another idea:
+perhaps we can make snd more powerful?
+
+snd gets like a fold argument.
+
+snd' (snd' fst) ::[x, α, stuff] = α
+
+
 -/
+
+def id.type (m : Level) : Expr :=
+  ::[::[($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), nil]
+   , ::[($ id m, (Ty 0)), ::[($ id m.succ, (Ty m)), nil], nil]]
+
+notation "snd!" => (fun e => ($ (snd 0 0), Ty 0, Ty 0, e))
+notation "fst!" => (fun e => ($ (fst 0 0), Ty 0, Ty 0, e))
+
+example : try_step_n 100 (snd! ∘ fst! ∘ snd! <| ::[(Ty 1), id.type 2]) = (.ok (Ty 2)) := rfl
+
+#eval try_step_n 100 (snd! <| ::[(Ty 0), (snd! ∘ snd! <| ::[(Ty 1), id.type 2])])
 
 namespace hole
 
 /-
 id.{[m]} : ∀ (α : Type m), α → α
 
+todo: need a nil here
+t_id = ::[:: (Ty m), ::[($ cons, ::[id (Ty m), id (Ty m)]), nil]]
+
+::[α, t_id].snd = (.app t_id.snd α) = ::[α, id (Ty m), id (Ty m)]
+
+::[α, id (Ty m), id (Ty m)].snd = (.app ::[id (Ty m), id (Ty m)].snd α)
+= (.app (id (Ty m)) (id (Ty m))).app α
+= (id (Ty m)).app α
+
+::[::[:: (Ty m), stuff]
+
 ::[x, f].snd = (.app f.snd x)
 id.{[m]} : ::[
 -/
-def id.type : 
 
 end hole

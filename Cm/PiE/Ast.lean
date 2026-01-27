@@ -133,7 +133,7 @@ inductive Expr where
   | ty     : Level → Expr
   -- for forming cons types
   | unit   : Expr
-  | nil    : Level → Expr -- nil {α : Type} : α → Ty m
+  | nil    : Expr -- nil {α : Type} : α → Ty m
   -- the core combinators: const, id, eq, both
   -- these have explicit universe level arguments
   | id     : Level → Expr
@@ -182,7 +182,7 @@ that isn't nil delimited.
 def Expr.push (l with_val : Expr) : Option Expr :=
   match l with
   | ::[x, xs] => (::[x, ·]) <$>Expr.push xs with_val
-  | nil _m => .none
+  | .nil => .none
   | x => ::[x, with_val]
 
 /-
@@ -207,7 +207,7 @@ partial def Expr.fmt (e : Expr) : Format :=
   | .fst m n => "fst.{" ++ [m, n].toString ++ "}"
   | .snd m n => "snd.{" ++ [m, n].toString ++ "}"
   | .hole => "_"
-  | .app f x => "f$ " ++ f.fmt.paren ++ .line ++ x.fmt.paren
+  | .app f x => "f$ " ++ (.group <| .nest 2 <| f.fmt.paren ++ .line ++ x.fmt.paren)
   | .eq m n => "eq.{" ++ [m, n].toString ++ "}"
   | .cons => "cons"
   | id m => "id.{" ++ [m].toString ++ "}"
@@ -215,7 +215,7 @@ partial def Expr.fmt (e : Expr) : Format :=
   | const' m n => "const'.{" ++ [m, n].toString ++ "}"
   | both m n o => "both.{" ++ [m, n, o].toString ++ "}"
   | both' m n o => "both'.{" ++ [m, n, o].toString ++ "}"
-  | nil m => "nil.{" ++ [m].toString ++ "}"
+  | .nil => "nil"
   | unit => "Unit"
   | Ty n => s!"Ty {n}"
 

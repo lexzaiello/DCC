@@ -365,6 +365,20 @@ for const ? ?
 
 -- need γ placeholder
 
+/-
+Expression to get the head of an assertions list.
+-/
+def func_type_head? (m n o : Option Level := .none) (α β γ : Option Expr := .none) : Expr :=
+  ($ const' (m.getD 0) (n.getD 0), (α.getD ?), (β.getD ?), ($ (id (o.getD 0)), (γ.getD ?)))
+
+#eval try_step_n 100 <| ($ ::[symbol "in", symbol "out"], func_type_head?)
+
+/-
+Expression to get the tail of an assertions list.
+-/
+def func_type_out? (t_f : Expr) (m n : Option Level := .none) (α β : Option Expr) : Expr :=
+  ($ t_f, ($ const' (m.getD 0) (n.getD 0), (α.getD ?), (β.getD ?)))
+
 def id? : Expr := ($ Expr.id 0, Ty 0)
 
 #eval try_step_n 100 ($ snd? (snd? id?), ::[(Ty 1), id.type 2])

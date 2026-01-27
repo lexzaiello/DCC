@@ -56,255 +56,61 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
 example : try_step_n 100 ($ (id 2), (Ty 1), (Ty 0)) = (.ok (Ty 0)) := rfl
 
 /-
-We assume that application types produce sigma outputs
-where .snd.fst =
-To type-check an application ($ (f : t), (x : α)):
+id.{[m]} : ∀ (α : Type m), α → α
 
+type-check an application:
 
--/
+snd (snd id) ::[α, ::[id, id]] = ::[id, id] α
 
-/-
-Current .snd is not particularly powerful,
-but we may be able to mimick substitution in types with it.
+snd (snd id) ::[α, ::[::[
 
-::[x, f].snd = (.app f.snd x)
+snd (fst id) ::[α, ::[id, id]]
+  = (fst id) ::[id, id] α
+  = id α
 
-::[x, t_f].snd.fst represents the expected type of x
+snd (fst id) is the normalization step now. no extra snd.
 
-.snd should produce a sigma with the head value being the expected type.
-further types will need the entire context.
-if we had partial application for cons, that would help a lot, since
-then we could just append α to ::[Ty m, α]
+snd (fst id) is the normalization step, but this means we can only normalize
+if we know the number of items in the list.
 
-a partially applied cons would be stupid powerful,
-though we can probably simulate it with π,
+t_α = ($ (const' m.succ.succ m.succ), Ty m.succ, Ty m id)
 
-t_id = ::[($ cons, Ty m), ::[nil m, id m.succ]]
+snd (snd (const' ? ? )) ::[α, ::[($ (const' m.succ.succ m.succ), Ty m.succ, Ty m id), t_rest]]
+  = (snd (const' ? ?)) ::[($ (const' m.succ.succ m.succ), Ty m.succ, Ty m id), t_rest] α
+  = t_rest α
 
-t_id = ::[($ cons, Ty m), ::[::[Ty m, id m.succ]
+this is after applying α.
 
-x part receives ::[α, ($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), nil],
-then ::[x, α, ($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), nil]
+so, we lose the previous assertion, and receive it in t_rest for substitution
 
-Idea:
-type of lists is kinda determined by fst and snd,
-I would like to be able to treat this context as just a list and select the second element.
+we want to make ::[(const (Ty m) α α), (const (Ty m) α α)]
 
-snd ∘ snd
+t_rest α = ::[(const (Ty m) α α), (const (Ty m) α α)]
 
-another idea:
-perhaps we can make snd more powerful?
+t_rest α x = snd (fst id) ::[x, ::[(const (Ty m) α α), (const (Ty m) α α)]]
+= (fst id) ::[(const (Ty m) α α), (const (Ty m) α α)] x
+= id (const (Ty m) α α) x
+= α
 
-snd gets like a fold argument.
 
-do we even need α β arguments if f has a type?
-f should include the type, hmmmmm.
 
-does this mean we can downgrade to nondependent pairs?
-since there is no actual application going on.
+t_rest = 
 
-snd id ::[x, ::[f, nil]]
+for t_rest, we want to be 
 
-this should produce ($ f, x)
+  feels like we should be able to swap out id here or something.
+  or just make t_rest discard the first thing.
 
-current rule looks good.
+this version of snd keeps our assertions context, which is whack.
+we now have no way to yeet out the fst part.
+snd also accepts the first part.
 
-fst f ::[a, b] = (f a)
+or we can just have t_rest be okay with this.
 
-this FEELS like it should simplify the types ngl.
-we might not need the types of fst and snd to be very dependent.
+t_rest = 
 
-fst : ∀ (α : Type) (β : Type)
 
-snd' 
-
-snd' (snd' fst) ::[x, α, stuff] = α
-
-snd fold argument works after substitution.
-
-what is the advantage of this?
-
-snd' fn ::[x, ::[::[a, b], f]] = ::[($ fn, ::[x, a, b]), f]
-
-snd' fn ::[x, ::[::[a, b], f]] = ::[($ fn, ::[x, a, b]), f]
-
-snd' id ::[x, (::[::[a, b], f] : β)] = ::[::[x, a, b], f]
-
-f : ∀ (l : (α × β.fst)
-
-this is potentially even nicer,
-since we don't have to explicitly type ::[x, α, stuff] as strictly.
-
-snd' f ::[a, ::[b, c]] = f ::[::[a, b], c]
-
-this simplifies the type a lot.
-
-this is kind of nice.
-it would be nice if we could find a way to merge dependent and nondependent pairs.
-
-it would be really nice if we could move the type dependency to snd.
-snd says how to interpret these two things.
-
-we basically want to "substitute".
-I think the current rules are fine for this.
-
-our selector is what to do once we've reached a nil list?
-
-
-
-snd : ∀ (α : Type) (β : Type) (γ : ∀ (x : α), β x → Type) (f : ∀ (x : α) (y : β x), γ x y) (l : (α × β)),
-  γ l.fst l.snd
-
-bring π back? this is a combination of both.
-
-am I stupid?
-
-feels like we could simplify both now.
-
-snd fn ::[x, ::[::[a, b], f]] = fn ::[::[x, a, b], f]
-
-this seems kind of whack. seems like a potential infinite loop.
-
-can we recover substitution?
-
-sub ::[x, ::[::[a, b], f]] = 
-
-snd' : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α) (y : β x), Type) (f : l) (l : (× α β)), γ l.fst (β l.fst)
-
-id : ∀ (α : Type), α → α
-
-::[α, t_id].snd (fst ∘ snd)
-
-question:
-can we defer substitution with this?
-
-snd fn ::[a, ::[::[b, c], f]] = ($ fn, a, ::[::[b, c], f])
-
-snd cons ::[a, ::[::[b, c], f]] = ($ cons, a, ::[::[b, c], f])
-
-this feels like a nice identity.
-
-uncurry, we receive y ::[x, f]
-
-snd y ::[x, f] = ($ y x f)
-
-C combinator?
-
-snd y ::[x, f] = ($ y x f)
-
-can we use fst inside?
-
-($ fst, f, ::[a, b]) = ($ f, a)
-
-oh wait interesting.
-this is where we can make it work like before.
-
-snd should do some kind of substitution.
-
-does fn tell us how to substitute?
-
-snd should absolutely destroy a.
-
-snd f ::[a, b] =
-
-how, ideally, do I want to use this for id?
-
-id : ∀ (α : Type), α → α
-
-I feel like ideally, snd should just do application as substitution.
-
-snd (id α) ::[x, f] = (f x)
-
-equations:
-
-snd f ::[a, b] = f b a
-
-this is like the C combinator.
-
-and, we can recover the original list, I think.
-this doesn't matter.
-
-snd f ::[a, b] = f b a
-
-id : ∀ (α : Type), α → α
-
-::[α, t_id].snd
-
-what do we plug into snd to do substitution?
-if we plug in id, then we get
-simple application.
-for substitution, we probably want
-
-fst f ::[a, b] = f a b
-
-whoah that is whack.
-
-interesting.
-
-to do substitution with snd:
-
-we get the function first, b.
-
-this contains our nested context.
-
-fst fn ::[x, f] = fn x f
-
-the nested sigma is kind of an interesting case.
-how do we know when to stop?
-
-snd fn ::[x, f] = fn f x
-
-snd cons ::[x, ::[y, f]] = cons ::[y, f] x = ::[::[y, f], x]
-
-nested snd looks very promising
-wait this is literally it.
-
-snd (snd cons) ::[y, ::[x, f]]
-  = (snd cons) ::[x, f] y
-  = cons f x y
-
-snd (snd id) ::[y, ::[x, f]]
-  = (snd id) ::[x, f] y
-  = (id f x) y
-
-
-
-wait that is so cool.
-
-f ::[ctx, out] x
-
-we can nest snd and fst nicely.
-
-f = cons
-
-::[($ cons 
-
-snd (fst y) ::[x, f] = ($ ($ fst, y, 
-
-snd ::[y, ::[x, f]]
-
-how do we recurse here reliably?
-
-fn receives a and acts on the second element.
-INTERESTING.
-
-
-
-snd fn ::[
-
-in this version, we don't actually apply inside the sigma.
-
-
-f takes in a, 
-
-question:
-since we're deferring applications to f, can we actually avoid
-dependent sigmas in snd altogether?
-
-snd : ∀ (α : Type) (β : Type) (f : ∀ (l : (α × β)
-
-::[(b : α), (c] : (⨯ 
-snd' f ::[a, ::[b, c]] = 
+t_id.{[m]} = ::[
 -/
 
 def id.type (m : Level) : Expr :=

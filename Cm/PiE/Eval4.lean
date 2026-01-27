@@ -58,6 +58,81 @@ example : try_step_n 100 ($ (id 2), (Ty 1), (Ty 0)) = (.ok (Ty 0)) := rfl
 /-
 id.{[m]} : ∀ (α : Type m), α → α
 
+which style of type-checking is the kernel going to use?
+
+I feel like we ought to include the entire context, and select what we need.
+
+snd (fst id) normalizes the first component.
+
+what if we want to normalize the first component as well?
+
+is this really necessary? unclear.
+
+We should keep the entire context in each step, though.
+
+after applying one argument, we should get a snd that
+includes the argument α
+
+id.{[m]} : ∀ (α : Type m), α → α
+
+this is kind of like rendering a type, I think.
+
+to type-check id:
+
+- need to return type m, but still keep the α.
+
+can do this by appending α to Type m, probably.
+
+t_id = ($ cons, Ty m)
+
+snd id t_id ::[α, t_id]
+= id t_id α
+= t_id α
+= ::[Ty m, α]
+
+for the id type, we accept a Ty m
+
+
+
+fst = Ty m, snd = α.
+
+so we need to do some manipulation.
+
+need to select snd, then put it in a future cons.
+need to wrap it.
+
+snd
+
+fst =
+
+t id needs to do the work to wrap α in a const.
+
+is function composition still ::?
+
+(f ∘ g) x = ($ f, ($ g, x)
+
+(f ∘ g) x = ::[x, ::[g, f]] =
+
+snd id ::[x, ::[g, f]] = ::[g, f] x
+
+swap order of
+
+::[g, f] x = ($ f, g) x
+
+need parens around g and x
+
+
+
+snd (snd id) ::[f, ::[g, x]]
+= (snd id) ::[g, x] f
+= 
+
+t_id = 
+
+id.{[m]}
+
+
+
 type-check an application:
 
 snd (snd id) ::[α, ::[id, id]] = ::[id, id] α
@@ -92,7 +167,21 @@ t_rest α x = snd (fst id) ::[x, ::[(const (Ty m) α α), (const (Ty m) α α)]]
 = id (const (Ty m) α α) x
 = α
 
+snd (snd (const' ? ?)) ::[x, ::[(const (Ty m) α α), (const (Ty m) α α)]]
+  = (snd (const' ? ?)) ::[(const (Ty m) α α), (const (Ty m) α α)] x
+  = (const (Ty m) α α)
 
+but how do we make the const (Ty m) α α part?
+
+we need to duplicate for this, potentially.
+but we can get around this if we keep the context around.
+
+instead of snd (snd (const' ? ?)),
+if we do
+
+
+
+t_rest = ::[
 
 t_rest = 
 
@@ -107,7 +196,26 @@ snd also accepts the first part.
 
 or we can just have t_rest be okay with this.
 
-t_rest = 
+t_rest =
+
+id : ∀ (α : Type m), α → α
+
+it's pretty useful to be able to reference (α : Type m)
+the term being bound and its type.
+
+::[term, ty]
+
+ctx = ::[::[term₁, ty₁], ::[term₂, ty₂], ::[term₃, ty₃]]
+
+oh interesting.
+
+maybe we want to store the argument terms and types in separate lists.
+
+
+
+t_id α = ::[
+
+t_id.{[m]} : 
 
 
 t_id.{[m]} = ::[

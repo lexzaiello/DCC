@@ -8,6 +8,7 @@ def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := 
 
   match e with
   | ($ ::[x, f], fn) => pure ($ fn, f, x)
+  | ($ (nil _o), α, _x) => pure α
   | ($ (.id _o), _α, x) => pure x
   | ($ (.const _o _p), _α, _β, c, _x)
   | ($ (.const' _o _p), _α, _β, c, _x) => pure <| c
@@ -361,6 +362,27 @@ for const ? ?
 γ : 
 
 ::[(x : α), (f : β)] : (∀ (γ : ∀ (x : α) (f : β)
+
+first assert just outputs Type m
+second assert accepts α
+and creates ::[($ const? m.succ, Type m
+we may need to copy α
+to create a const that deletes Ty mid.{[m]} : ::[($ const? m.succ.succ m.succ, Type m.succ, Type m, Type m),
+
+or we will need to copy α into two nil's.
+we will need both for this.
+
+(:: both (:: (cons (nil m)) (cons (nil m))))
+
+($ (both 0 0 0), ?, ?, ?,
+
+both f g x = ::[(f x), (g x)]
+both : ∀ (α : Type) (β : α → Type) (γ : α → Type) (f : β) (g : γ) (x : α), (× (β x) (γ x))
+
+($ both 0 0 0, (cons (nil m)),  (cons (nil m)))
+
+id.{[m]} : ::[($ const? m.succ.succ m.succ, Type m.succ, Type m, Type m),
+  
 -/
 
 -- need γ placeholder
@@ -381,8 +403,14 @@ def func_type_out? (m n : Option Level := .none) (α β : Option Expr := .none) 
 
 #eval try_step_n 100 <| ($ ::[symbol "in", symbol "out"], func_type_out?)
 
-def test_check (t_f t_arg arg : Expr) : Except Error Bool := do
-  pure <| t_arg == (← try_step_n 100 ($ ($ t_f, func_type_head?), arg))
+def test_check (t_f t_arg arg : Expr) : Except Error Expr := do
+  let out ← try_step_n 100 ($ ($ t_f, func_type_head?), arg)
+  let ret ← try_step_n 100 ($ ($ t_f, func_type_out?), arg)
+
+  if t_arg == out then
+    .error <| .mismatch_arg out t_arg
+  else
+    pure ret
 
 def id? : Expr := ($ Expr.id 0, Ty 0)
 

@@ -131,7 +131,7 @@ inductive Expr where
   | ty     : Level → Expr
   -- for forming cons types
   | unit   : Expr
-  | nil    : Expr -- nil {α : Type} : α → Ty m
+  | nil    : Level → Expr -- nil {α : Type} : α → Ty m
   -- the core combinators: const, id, eq, both
   -- these have explicit universe level arguments
   | id     : Level → Expr
@@ -167,8 +167,11 @@ notation "?" => Expr.hole
 notation "Ty" => Expr.ty
 
 inductive Error where
-  | stuck      : Expr → Error
-  | no_rule    : Expr → Error
+  | stuck        : Expr → Error
+  | no_rule      : Expr → Error
+  | mismatch_arg : Expr
+    → Expr
+    → Error
 deriving BEq, DecidableEq
 
 open Expr
@@ -180,7 +183,7 @@ that isn't nil delimited.
 def Expr.push (l with_val : Expr) : Option Expr :=
   match l with
   | ::[x, xs] => (::[x, ·]) <$>Expr.push xs with_val
-  | .nil => .none
+  | .nil _m => .none
   | x => ::[x, with_val]
 
 /-
@@ -211,13 +214,14 @@ partial def Expr.fmt (e : Expr) : Format :=
   | const' m n => "const'.{" ++ [m, n].toString ++ "}"
   | both m n o => "both.{" ++ [m, n, o].toString ++ "}"
   | both' m n o => "both'.{" ++ [m, n, o].toString ++ "}"
-  | .nil => "nil"
+  | .nil m => "nil.{" ++ [m].toString ++ "}"
   | unit => "Unit"
   | Ty n => s!"Ty {n}"
 
 #eval ::[symbol "a", symbol "b", symbol "c"].fmt
 
 def Error.fmt : Error → Format
+  | .mismatch_arg expected actual => s!"expected {Expr.fmt expected} but found {Expr.fmt actual}"
   | .stuck e   => "got stuck evaluating: " ++ .line ++ e.fmt
   | .no_rule e => "no rule to evaluate: " ++ .line ++ e.fmt
 

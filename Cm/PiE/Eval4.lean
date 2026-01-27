@@ -21,6 +21,7 @@ def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := 
   match e with
   | ($ (fst _m _n), _α, _β, _γ, fn, ::[a, _b]) => pure ($ fn, a)
   | ($ (snd _m _n), _α, _β, _γ, fn, ::[x, f]) => pure ($ fn, f, x)
+  | ($ (nil _m), α, _x) => pure α
   | ($ (.id _o), _α, x) => pure x
   | ($ (.const _o _p), _α, _β, c, _x)
   | ($ (.const' _o _p), _α, _β, c, _x) => pure <| c
@@ -238,7 +239,24 @@ so, t_x receives ::[x, α]
 
 t_id = ::[($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), snd fst, snd fst]
 
+snd fst part is not typed. should fill in types.
 
+what is γ in snd? type of substitution in f.
+
+snd fst receives ::[x, α]
+
+oh shit wait we should use nil here.
+
+::[($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), nil, nil]
+
+nil will just give us α
+
+type-checking application rules:
+
+
+($ snd, α, t_id
+
+($ (snd ::[α, t_id]) = 
 
 id : ::[
 
@@ -251,8 +269,7 @@ t_id.{[m]} = ::[
 -/
 
 def id.type (m : Level) : Expr :=
-  ::[::[($ const' m.succ.succ m.succ, Ty m.succ, Ty m, Ty m), nil]
-   , ::[($ id m, (Ty 0)), ::[($ id m.succ, (Ty m)), nil], nil]]
+  ::[($ nil m.succ, (Ty m)), nil m, nil m]
 
 notation "snd!" => (fun e => ($ (snd 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), e))
 notation "fst!" => (fun e => ($ (fst 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), e))

@@ -379,9 +379,48 @@ we will need both for this.
 both f g x = ::[(f x), (g x)]
 both : ∀ (α : Type) (β : α → Type) (γ : α → Type) (f : β) (g : γ) (x : α), (× (β x) (γ x))
 
-($ both 0 0 0, (cons (nil m)),  (cons (nil m)))
+α : Ty m
+β α = α → Ty m = ::[$ nil m.succ, 
+γ α = α → Ty m
 
-id.{[m]} : ::[($ const? m.succ.succ m.succ, Type m.succ, Type m, Type m),
+($ both m m.succ m.succ, (Ty m), ((cons (nil m)),  (cons (nil m)))
+
+this is going to be mad annoying to get to be well-typed.
+
+we can get α into the head argument position pretty easily,
+but we can't get it into the return type position as easily.
+
+it would be pretty useful if the context retained ALL our arguments.
+
+we can do this by making a future context with α,
+and adding x to it.
+
+we can do this very sneakily by making ::[α, α]
+
+would be ideal if when type-checking,
+we feed the argument in at the top-level
+
+check in ::[t_in, t_out]
+
+Note: our "selector" makes this possible.
+
+($ const' (m.getD 0) (n.getD 0), (α.getD ?), (β.getD ?), ($ (id (o.getD 0)), (γ.getD ?)))
+
+we can almost certainly swap id here with a selector.
+the selector could be a ::[]
+selector is ctx sigma.
+
+assuming all of our in and out asserts receive the entire context:
+
+id.{[m]} : ::[
+
+($ ::[x, f] (const ? ? (id ?))) = ($ (const ? ? (id ?)), f, x)
+= ($ (id ?), x) = x
+
+note that simulating fst takes this id argument.
+this is our selector.
+
+id.{[m]} : ::[($ nil m.succ m, Type m),
   
 -/
 
@@ -392,6 +431,20 @@ Expression to get the head of an assertions list.
 -/
 def func_type_head? (m n o : Option Level := .none) (α β γ : Option Expr := .none) : Expr :=
   ($ const' (m.getD 0) (n.getD 0), (α.getD ?), (β.getD ?), ($ (id (o.getD 0)), (γ.getD ?)))
+
+/-
+Generic over the selector.
+($ selector, head_assert)
+
+($ my_asserts ($ select_fn_type_head?, my_selector))
+= ($ my_selector, head_assert)
+-/
+def select_fn_type_head? (m n : Option Level := .none) (α β : Option Expr := .none) : Expr :=
+  ($ const' (m.getD 0) (n.getD 0), (α.getD ?), (β.getD ?))
+
+def select_fn_tail? (m n : Option Level := .none) (α β : Option Expr := .none) : Expr :=
+  ($ 
+
 
 #eval try_step_n 100 <| ($ ::[symbol "in", symbol "out"], func_type_head?)
 

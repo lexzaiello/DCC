@@ -119,8 +119,6 @@ inductive Expr where
   -- for debugging
   | symbol : String → Expr
   -- for projecting on cons
-  | fst    : Level → Level → Expr
-  | snd    : Level → Level → Expr
   -- for forming "lists"
   /-
     Cons doesn't need explicit type arguments, since it
@@ -204,8 +202,6 @@ partial def Expr.fmt (e : Expr) : Format :=
     ++ "]"
   | .prod m n => "⨯'.{" ++ [m, n].toString ++ "}"
   | .symbol s => .paren s!"symbol \"{s}\""
-  | .fst m n => "fst.{" ++ [m, n].toString ++ "}"
-  | .snd m n => "snd.{" ++ [m, n].toString ++ "}"
   | .hole => "_"
   | .app f x => "f$ " ++ (.group <| .nest 2 <| f.fmt.paren ++ .line ++ x.fmt.paren)
   | .eq m n => "eq.{" ++ [m, n].toString ++ "}"

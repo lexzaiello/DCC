@@ -7,8 +7,7 @@ def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := 
     dbg_trace e
 
   match e with
-  | ($ (fst _m _n), _α, _β, _γ, fn, ::[a, _b]) => pure ($ fn, a)
-  | ($ (snd _m _n), _α, _β, _γ, fn, ::[x, f]) => pure ($ fn, f, x)
+  | ($ ::[x, f], fn) => pure ($ fn, f, x)
   | ($ (nil _m), α, _x) => pure α
   | ($ (.id _o), _α, x) => pure x
   | ($ (.const _o _p), _α, _β, c, _x)
@@ -43,6 +42,13 @@ def try_step_n (n : ℕ) (e : Expr) : Except Error Expr :=
     | .error e => .error e
 
 example : try_step_n 100 ($ (id 2), (Ty 1), (Ty 0)) = (.ok (Ty 0)) := rfl
+
+/-
+currying:
+snd id = ($ ::[x, f] (id ?)) = ($ f, x)
+-/
+
+#eval try_step_n 100 ($ ::[(symbol "self"), ($ id 0, (symbol "sorry"))], ($ (id 0), (symbol "sorry")))
 
 /-
 id.{[m]} : ∀ (α : Type m), α → α
@@ -458,8 +464,6 @@ for const ? ?
 -/
 
 -- need γ placeholder
-notation "snd?" => (fun fn => ($ (snd 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), fn))
-notation "fst?" => (fun fn => ($ (fst 0 0), Ty 0, Ty 0, ($ id 0, Ty 0), fn))
 
 def id? : Expr := ($ Expr.id 0, Ty 0)
 

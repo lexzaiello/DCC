@@ -48,7 +48,8 @@ currying:
 snd id = ($ ::[x, f] (id ?)) = ($ f, x)
 -/
 
-#eval try_step_n 100 ($ ::[(symbol "self"), ($ id 0, (symbol "sorry"))], ($ (id 0), (symbol "sorry")))
+example : try_step_n 100 ($ ::[(symbol "self"), ($ id 0, (symbol "sorry"))], ($ (id 0), (symbol "sorry")))
+   = (.ok (symbol "self")) := rfl
 
 /-
 id.{[m]} : ∀ (α : Type m), α → α

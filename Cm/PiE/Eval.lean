@@ -376,8 +376,10 @@ def func_type_head? (m n o : Option Level := .none) (α β γ : Option Expr := .
 /-
 Expression to get the tail of an assertions list.
 -/
-def func_type_out? (t_f : Expr) (m n : Option Level := .none) (α β : Option Expr) : Expr :=
-  ($ t_f, ($ const' (m.getD 0) (n.getD 0), (α.getD ?), (β.getD ?)))
+def func_type_out? (m n : Option Level := .none) (α β : Option Expr := .none) : Expr :=
+  ($ const' (m.getD 0) (n.getD 0), (α.getD ?), (β.getD ?))
+
+#eval try_step_n 100 <| ($ ::[symbol "in", symbol "out"], func_type_out?)
 
 def id? : Expr := ($ Expr.id 0, Ty 0)
 

@@ -13,8 +13,6 @@
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-\documentclass[12pt]{article}
-
 \usepackage{fvextra}
 \fvset{breaklines=true}
 \usepackage{tabularx}
@@ -25,8 +23,6 @@
 \usepackage[T1]{fontenc}
 \usepackage{float}
 \usepackage{scrextend}
-\usepackage{fancyhdr}
-\pagestyle{fancy}
 \newcommand{\inter}{\cap}
 \newcommand{\iunion}{\bigcup}
 \newcommand{\iintersect}{\bigcap}
@@ -46,11 +42,6 @@
 \newcommand{\Conclude}[1]{\textbf{Therefore, #1}}
 \newcommand{\eby}[1]{\textit{by #1}}
 \newcommand{\By}[1]{By \textit{#1}}
-\newenvironment{case}[1]{\textbf{#1 case:}\\\begin{addmargin}[1cm]{0pt}}{\\\end{addmargin}}
-\newenvironment{ecase}[1]{\textit{#1}\\\begin{addmargin}[1cm]{0pt}}{\\\end{addmargin}}
-\newenvironment{inductive}{\begin{case}{Inductive}}{\end{case}}
-\newenvironment{base}{\begin{case}{Base}}{\end{case}}
-\newcommand{\mpiff}[1]{\textbf{(\(\Rightarrow\))} #1}
 \newcommand{\mpriff}[1]{\textbf{(\(\Leftarrow\))} #1}
 \newcommand{\Byinduction}[1]{We proceed by induction on #1}
 \newcommand{\integers}[1]{\(\{#1\} \subseteq \mathbb{Z}\)}

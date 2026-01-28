@@ -39,7 +39,8 @@
           { name = "paper"; path = "papers/paper"; }
           { name = "adapting_equations"; path = "papers/adapting_equations"; }
           { name = "lit_review"; path = "papers/lit_review"; }
-          { name = "infer_rule"; path = "papers/infer_rule"; } ];
+          { name = "infer_rule"; path = "papers/infer_rule"; }
+          { name = "infer_rule_slides"; path = "papers/infer_rule_slides"; } ];
       in rec {
         devShells.default = pkgs.mkShell {
           buildInputs = [ pkgs.coreutils tex ];

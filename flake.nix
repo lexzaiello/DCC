@@ -69,6 +69,7 @@
             '';
             buildPhase = ''
               runHook preBuild
+              mkdir build
               xelatex -interaction=nonstopmode -output-directory=build ${pkg-name}
             '';
             installPhase = ''

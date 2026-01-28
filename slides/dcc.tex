@@ -33,9 +33,9 @@
 
 \begin{frame}{Overview}
   \begin{itemize}
-    \item The \textit{DCC} achieves dependent typing without variables by interpreting sigma types (i.e., \mintinline{lean4}|s := (fst : \alpha) \times (snd : \beta x)| in Lean) as a future function application.
-    \item We make use of a correspondence between \(snd\) projection and variable substitution to emulate variables under \(\Pi\) binders
-    \item This correspondence also acts as a bridge between curried functions and \(n\)-argument functions, like combinators.
+    \item The \textit{DCC} achieves dependent typing without variables by interpreting sigma types (i.e., \mintinline{lean4}|(fst : \alpha) \times (snd : \beta x)| in Lean) as a future function application.
+    \item We make use of a correspondence between \(Sigma.snd\) projection and variable substitution to emulate \(\Pi\) binders
+    \item This correspondence also acts as a bridge between curried functions and \(n\)-argument functions, like combinators by allowing arguments to be treated as data to be applied later.
   \end{itemize}
 \end{frame}
 
@@ -73,6 +73,10 @@ Continued...
   -- Branch on def-eq. For practical applications.
   | eq     : Level → Expr
   \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Evaluation Rules}
+  
 \end{frame}
 
 %\begin{frame}{Evaluation Rules}

@@ -34,7 +34,7 @@ inductive Expr where
   | both'  : Level → Level → Level → Expr
   -- For bootstrapping types by running infer first. TODO: remove this once combinator types are determined
   | hole   : Expr
-deriving BEq, DecidableEq
+deriving BEq, DecidableEq, Repr
 
 open Expr
 

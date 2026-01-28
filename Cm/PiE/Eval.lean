@@ -35,6 +35,27 @@ I think we can also do sigma fst.
 sigma snd is just id, since that's application.
 -/
 
+#eval repr ::[($ symbol "f", symbol "x"), ($ symbol "g", symbol "x")]
+
+/-
+Expr.app
+  (.app .cons (.app f x))
+  (.app g x)
+-/
+
+inductive is_step : Expr → Expr → Prop
+  | sapp   : is_step ($ ::[x, f], fn) ($ fn, f, x)
+  | nil    : is_step ($ (nil _o), α, _x) α
+  | id     : is_step ($ (.id _o), _α, x) x
+  | const  : is_step ($ (.const _o _p), _α, _β, c, _x) c
+  | const' : is_step ($ (.const' _o _p), _α, _β, c, _x) c
+  | both   : is_step ($ (.both _o _p _q), _α, _β, _γ, f, g, x) ::[($ f, x), ($ g, x)]
+  | eq_yes : a == b → is_step ($ (.eq _o _p), _α, _β, fn_yes, fn_no, a, b)
+    (.app fn_yes a)
+  | eq_no  : a ≠ b → is_step ($ (.eq _o _p), _α, _β, fn_yes, fn_no, a, b)
+    (.app fn_no b)
+
+
 def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := do
   if with_logs then
     dbg_trace e

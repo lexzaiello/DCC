@@ -86,9 +86,9 @@
         \item \leane{fn := .app (Expr.id 0) α} induces function application:
       \end{itemize}
   \end{itemize}
-  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+  \leane{
     eval (.app ::[x, f] (.app (Expr.id 0) α)) = (.app f x)
-  \end{minted}
+  }
 \end{frame}
 
 \section{AST}
@@ -154,19 +154,19 @@ inductive is_step : Expr → Expr → Prop
 \begin{frame}[fragile]{Inference Rule: Application}
   \begin{figure}
     \begin{columns}[c]
-      \begin{column}{0.5\textwidth}
+      \begin{column}{0.45\textwidth}
         \centering App in CoC:
         \[
-          \\frac{\text{$\Gamma \vdash M : (\forall x : A.B)$} }{}
+          \frac{\text{$\Gamma \vdash M : (\forall x : A.B)$} \quad\quad \text{$\Gamma \vdash N : A$}}{\Gamma \vdash M N : B[x := N]}
         \]
-      \end{column}
-    \end{columns}
+    \end{column}
     \begin{column}{0.5\textwidth}
       \centering App in CoC:
       \[
-        f(x) \mapsto \sum_{i=0}^{\infty} \frac{x^i}{i!}
+        \text{sorry}
       \]
     \end{column}
+  \end{columns}
   \end{figure}
 \end{frame}
 

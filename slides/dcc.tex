@@ -2,6 +2,8 @@
 \usepackage{fontspec}
 \usepackage{minted}
 
+\newenvironment{bitemize}[1]{\begin{itemize}\setlength{\itemsep}{1em}#1\end{itemize}}
+
 \setmainfont{DejaVu Serif} 
 \setsansfont{DejaVu Sans}
 \setmonofont{JuliaMono}[
@@ -51,7 +53,7 @@ inductive Expr where
    -- Nil "downgrades" a term to a type
    -- nil (α : Ty m) : α → Ty m
    -- useful for typing arguments like ∀ (α : Type), ...
-  | nil    : Expr
+  | nil    : Level → Expr
   -- The I combinator in SK
   | id     : Level → Expr
   -- Dependent K combinator
@@ -60,23 +62,41 @@ inductive Expr where
   | const' : Level → Level → Expr
 \end{minted}
 
-Continued...
+Cont \ldots
 \end{frame}
 
 \begin{frame}[fragile]{AST (cont \ldots)}
   \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
   inductive Expr where
+  ...
   -- forms a new sigma pair from (both f g x) ::[(f x), (g x)]
   -- but does not force application of (f x) (g x)
   -- combined with snd projection results in S
   | both   : Level → Level → Level → Expr
   -- Branch on def-eq. For practical applications.
-  | eq     : Level → Expr
+  | eq     : Level → Level → Level → Expr
   \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]{Evaluation Rules}
-  
+  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+inductive is_step : Expr → Expr → Prop
+  | sapp   : is_step ($ ::[x, f], fn) ($ fn, f, x)
+  | nil    : is_step ($ (nil _o), α, _x) α
+  | id     : is_step ($ (.id _o), _α, x) x
+  | const  : is_step ($ (.const _o _p), _α, _β, c, _x) c
+  | const' : is_step ($ (.const' _o _p), _α, _β, c, _x) c
+  | both   : is_step ($ (.both _o _p _q), _α, _β, _γ, f, g, x)
+    ::[($ f, x), ($ g, x)]
+  | eq_yes : a == b → is_step
+    ($ (.eq _o _p), _α, _β, fn_yes, fn_no, a, b)
+    (.app fn_yes a)
+  | eq_no  : a ≠ b → is_step
+    ($ (.eq _o _p), _α, _β, fn_yes, fn_no, a, b)
+    (.app fn_no b)
+  | left   : is_step f f' → is_step ($ f, x) ($ f', x)
+  | right  : is_step x x' → is_step ($ f, x) ($ f, x')
+  \end{minted}
 \end{frame}
 
 %\begin{frame}{Evaluation Rules}

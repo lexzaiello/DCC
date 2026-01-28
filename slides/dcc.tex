@@ -1,5 +1,16 @@
 \documentclass{beamer}
+\usepackage{fontspec}
 \usepackage{minted}
+
+\setmainfont{DejaVu Serif} 
+\setsansfont{DejaVu Sans}
+\setmonofont{JuliaMono}[
+    Extension = .ttf,
+    UprightFont = *-Regular,
+    BoldFont = *-Bold,
+    ItalicFont = *-RegularItalic,
+    BoldItalicFont = *-BoldItalic
+]
 
 \usemintedstyle{tango}
 
@@ -27,8 +38,8 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{AST}
-  \begin{minted}[fontsize=\small, linenos]{lean4}
+\begin{frame}[fragile]{AST}
+  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
 abbrev Level := ℕ
 
 inductive Expr where

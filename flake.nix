@@ -12,6 +12,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
+        tex' = pkgs.texlive.combined.scheme-full;
         tex = pkgs.texliveFull.withPackages (ps:
           with ps; [
             biblatex
@@ -24,6 +25,8 @@
             hyphenat
             url
             bbm
+            beamer
+            unicode-math
             fontspec
             xcharter
             fvextra
@@ -59,18 +62,12 @@
               cp build/${builtins.baseNameOf pkg-name}.pdf $out/
             '';
           });
-        buildnobiber = (pkg-name:
+        buildslide = (pkg-name:
           pkgs.stdenvNoCC.mkDerivation rec {
             name = pkg-name;
             src = self;
-            buildInputs = [ pkgs.coreutils tex ];
-            FONTCONFIG_FILE = pkgs.makeFontsConf { fontDirectories = [ ]; };
-            preBuild = ''
-              export HOME=$(mktemp -d)
-              export XDG_CACHE_HOME="$HOME/.cache"
-            '';
+            buildInputs = [ pkgs.python313Packages.pygments pkgs.julia-mono pkgs.coreutils tex' ];
             buildPhase = ''
-              runHook preBuild
               mkdir build
               xelatex -interaction=nonstopmode -output-directory=build ${pkg-name}
             '';
@@ -108,7 +105,7 @@
           tex = tex;
         } // builtins.listToAttrs (builtins.map (slide: {
           name = slide.name;
-          value = buildnobiber slide.path;
+          value = buildslide slide.path;
         }) slides);
         defaultPackage = pkgs.linkFarm "all-documents" ((builtins.map (paper: {
           name = paper.name;

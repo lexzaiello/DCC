@@ -32,7 +32,7 @@
 
 \begin{frame}{Overview}
   \begin{itemize}
-    \item The \textit{DCC} achieves dependent typing without variables by interpreting sigma types (i.e., \(s := (fst : \alpha) \times (snd : \beta x)\) in Lean) as a future function application.
+    \item The \textit{DCC} achieves dependent typing without variables by interpreting sigma types (i.e., \mintinline{lean4}|s := (fst : \alpha) \times (snd : \beta x)| in Lean) as a future function application.
     \item We make use of a correspondence between \(snd\) projection and variable substitution to emulate variables under \(\Pi\) binders
     \item This correspondence also acts as a bridge between curried functions and \(n\)-argument functions, like combinators.
   \end{itemize}

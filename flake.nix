@@ -67,9 +67,17 @@
             name = pkg-name;
             src = self;
             buildInputs = [ pkgs.python313Packages.pygments pkgs.julia-mono pkgs.coreutils tex' ];
+            nativeBuildInputs = [ pkgs.python313Packages.pygments pkgs.julia-mono pkgs.coreutils tex' ];
+            preBuild = ''
+              export HOME=$(mktemp -d)
+              export XDG_CACHE_HOME="$HOME/.cache"
+            '';
             buildPhase = ''
+              runHook preBuild
               mkdir build
-              xelatex -interaction=nonstopmode -output-directory=build ${pkg-name}
+              export PATH="${pkgs.python313Packages.pygments}/bin:$PATH"
+              xelatex -shell-escape -interaction=nonstopmode -output-directory=build ${pkg-name}
+              xelatex -shell-escape -interaction=nonstopmode -output-directory=build ${pkg-name}
             '';
             installPhase = ''
               mkdir -p $out

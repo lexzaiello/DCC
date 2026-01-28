@@ -53,9 +53,9 @@
 
 \begin{frame}{Overview}
   \begin{itemize}
-    \item The \textit{DCC} achieves dependent typing without variables by interpreting sigma types (i.e., \leane{(fst : \alpha) \times (snd : \beta x)} in Lean) as a future function application.
-    \item We make use of a correspondence between \(Sigma.snd\) projection and variable substitution to emulate \(\Pi\) binders
-    \item This correspondence also acts as a bridge between curried functions and \(n\)-argument functions, like combinators by allowing arguments to be treated as data to be applied later.
+    \item \textit{DCC} achieves dependent typing without variables by interpreting sigma types (i.e., \leane{(fst : α) × (snd : β x)} in Lean) as a future function application.
+    \item We make use of a correspondence between \(Sigma.snd\) projection and variable substitution to emulate \(\Pi\) binders.
+    \item This correspondence also acts as a bridge between curried functions and \(n\)-argument combinators by allowing arguments to be treated as data to be applied later.
   \end{itemize}
 \end{frame}
 
@@ -78,13 +78,17 @@
 
 \begin{frame}{Sigma Types}
   \begin{itemize}
-    \item Written as \lean{::[a, b]}. Expands to \lean{.app (.app .cons a) b}
-    \item Notation: \lean{::[a, b, c, ...] = ::[a, ::[b, ::[c, ...]]]}
-    \item Reduction rule: \lean{| (.app ::[x, f], fn) => pure (.app fn, f, x)}
+    \item Written as \leane{::[a, b]}. Expands to: \leane{.app (.app .cons a) b}
+    \item Notation: \leane{::[a, b, c, ...] = ::[a, ::[b, ::[c, ...]]]}
+    \item No \texttt{fst} or \texttt{snd} combinators. \leane{::[a, b]} accepts a ``projector'' (\leane{fn}):
       \begin{itemize}
-        \item \(fn\) above projects over the sigma. \(fn = id\) induces
+        \item \leane{(.app ::[x, f], fn) => pure (.app fn, f, x)}
+        \item \leane{fn := .app (Expr.id 0) α} induces function application:
       \end{itemize}
-  \end{itemize}  
+  \end{itemize}
+  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+    eval (.app ::[x, f] (.app (Expr.id 0) α)) = (.app f x)
+  \end{minted}
 \end{frame}
 
 \section{AST}
@@ -145,6 +149,25 @@ inductive is_step : Expr → Expr → Prop
   | left   : is_step f f' → is_step ($ f, x) ($ f', x)
   | right  : is_step x x' → is_step ($ f, x) ($ f, x')
   \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Inference Rule: Application}
+  \begin{figure}
+    \begin{columns}[c]
+      \begin{column}{0.5\textwidth}
+        \centering App in CoC:
+        \[
+          \\frac{\text{$\Gamma \vdash M : (\forall x : A.B)$} }{}
+        \]
+      \end{column}
+    \end{columns}
+    \begin{column}{0.5\textwidth}
+      \centering App in CoC:
+      \[
+        f(x) \mapsto \sum_{i=0}^{\infty} \frac{x^i}{i!}
+      \]
+    \end{column}
+  \end{figure}
 \end{frame}
 
 %\section{Inference Rules}

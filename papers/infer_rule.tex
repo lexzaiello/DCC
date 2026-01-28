@@ -13,8 +13,7 @@
   sorting=ynt
 ]{biblatex}
 \addbibresource{./refs.bib}
-\usepackage{tikz}
-\usepackage{tikz-inet}
+
 
 \author{Alexandra Aiello}
 \date{December 19, 2025}
@@ -22,12 +21,20 @@
 
 \begin{document}
 
+Id combinator type:
+
 \begin{equation}
+\frac{}{
+  \text{id}(m) : \Pi (\alpha : \type{m}) (x : \alpha), \alpha
+}
+\end{equation}
 
-  \frac{}{
-    id(m) : \pie{(\alpha : \type{m}), (x : \alpha)}, \alpha
-  }
+Id combinator type:
 
+\begin{equation}
+\frac{}{
+  \text{const'}(m,  n) : \Pi (\alpha : \type{m}) (x : \alpha), \alpha
+}
 \end{equation}
 
 \end{document}

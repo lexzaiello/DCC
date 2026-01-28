@@ -552,3 +552,64 @@ id.{[m]} : ::[
 -/
 
 end hole
+
+/-
+Sigma term substitution:
+
+inside out or something?
+
+id α = fun (x : α) => x
+Sigma.mk α (fun (x : α) => x)
+
+
+In Lean, sigma projection does implicit substitution.
+
+the fun depends on the term α
+
+(λ (x : A) => (N : B)) M = N[x := A]
+(Sigma.mk M N[x := A]).snd = N[x := A]
+
+(Σ (x : A), B x
+
+(Σ (x : A), N x).snd = 
+
+wait this seems vaguely interesting.
+
+
+id α = fun (x : α) => x
+Sigma.mk α (fun (x : α) => x)
+Here, as well.
+
+(fun (x : α) => x) is the substituted value.
+
+In DCC,
+
+::[α, id] (id _ _)
+= (id _ _) id α
+= id α = fun (x : α) => x
+
+
+Sigma.mk α (
+Sigma.mk 
+
+
+
+
+id : ∀ (α : Type), α → α
+s := (α : Type) × (fun (x : α) => x)
+::[α, ::[Type, id]]
+
+
+
+::[Type, id]
+
+::[Type, id]
+
+it would be REALLY NICE
+if we could substitute in here.
+
+::[α, ::[Type, id]] id
+= id ::[Type, id] α
+= ::[Type, id] α
+= id Type α
+-/

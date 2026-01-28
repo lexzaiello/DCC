@@ -15,6 +15,8 @@ feels like this should actually be
 = ($ ($ ::[x, f], id) y)
 =
 
+× α β. this is something where projection produces
+
 
 -/
 

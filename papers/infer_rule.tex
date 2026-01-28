@@ -21,39 +21,43 @@
 
 \begin{document}
 
-Id combinator type:
+These are the types of the core DCC combinators.
+I am using standard \(\Pi\) and \(\times\) notation here for legibility, and since I have not yet completed all the types. Later in this overview, I outline the challenges I encountered, and the progress I have made towards finishing them.
 
 \begin{equation}
 \frac{}{
   \text{id}(m) : \Pi (\alpha : \type{m}) (x : \alpha), \alpha
-}
+}\\
 \end{equation}
-
-Nil combinator type:
 
 \begin{equation}
-
+\frac{}{
+  \text{nil}(m) : \Pi (\alpha : \type{m}) (x : \alpha), \type{m}
+}\\
 \end{equation}
-
-Const' combinator type:
 
 \begin{equation}
 \frac{}{
   \text{const'}(m,  n) : \Pi (\alpha : \type{m}) (\beta : \type{n}) (x : \alpha) (y : \beta), \alpha
-}
+}\\
 \end{equation}
-
-Const combinator type:
-
-This one will require some work, since it has an actual dependent type.
-
-And it has an arrow inside an argument.
-
-\(\beta : \alpha \rightarrow \type{n}\) corresponds to \(\texttt{::[}\text{nil}(m)\texttt{, } \alpha \texttt{]}\)
 
 \begin{equation}
 \frac{}{
-  \text{const'}(m,  n) : \Pi (\alpha : \type{m}) (\beta : \type{n}) (x : \alpha) (y : \beta), \alpha
+  \text{const}(m,  n) : \Pi (\alpha : \type{m}) (\beta : \alpha \rightarrow \type{n}) (x : \alpha) (y : \beta\ x), \alpha
+}
+\end{equation}
+
+The rule for \texttt{both} is quite long, so I have written it in fully applied style, as it would not fit on the page otherwise.
+
+\begin{equation}
+  \frac{\Gamma, \vdash \alpha : \type{m},
+    \beta : \alpha \rightarrow \type{n},
+    \gamma : \alpha \rightarrow \type{o},
+    (f : \pie{(x : \alpha)}, \beta\ x),
+    (g : \pie{(x : \alpha)}, x : \alpha),
+    (x : \alpha)}{
+    \text{both}(m, n, o)\ \alpha\ \beta\ \gamma\ f\ g\ x : ((\beta\ x) \times (\gamma\ x))
 }
 \end{equation}
 

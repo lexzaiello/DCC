@@ -27,3 +27,8 @@ inductive Expr where
   | both   : Level → Level → Level → Expr
   -- Branch on def-eq. For practical applications.
   | eq     : Level → Expr
+
+
+/-
+both.{[m, n, o]} : ∀ (α : Type m) (β : α → Type n) (γ : α → Type o) (f : ∀ (x : α), β x) (g : ∀ (x : α), γ x), 
+-/

@@ -22,15 +22,20 @@
 
 \begin{document}
 
-This is the type of a pair \sigl{x, f}. Pairs are created with cons (\texttt{::}).
-Cons can be partially applied. Also, pairs can be nested.
-I use the notation \sigl{\(x_{1}, \cdots x_{n}\)} to denote
+This is the type of a sigma \sigl{x, f}. Pairs are created with cons (\texttt{::}).
+I use the notation \sigl{\(x_{1}, \cdots x_{n}\)} to denote \sigl{\(x_{1}\), \sigl{\(x_{2}, \cdots\)}}.
+Sigmas can be nested, and cons can be partially applied.
+However, this means that type-checking cons is a special case, and doesn't follow directly from the general application rule.
+I think this is reasonable, since it is so primitive.
+
+Sigmas internalize the notion of projection by accepting a ``projector'' (\(\pi\)) function, which corresponds to function application where \(\pi = \text{id}\).
+As such, there are no dedicated \texttt{fst} or \texttt{snd} combinators.
 
 \begin{equation}
   \frac{
-    
+    \Gamma \vdash, (\alpha : \ty{m}), (\beta : \ty{n}), (x : \alpha), (y : \beta)
   }{
-    
+    \sigl{\(\alpha, \beta\)} : 
   }
 \end{equation}
 
@@ -67,17 +72,12 @@ I am using standard \(\Pi\) and \(\times\) notation here for legibility, and sin
 
 \newpage
 
-The rule for \texttt{both} is quite long, so I have written it in fully applied style, as it would not fit on the page otherwise.
+Note that this rule for both uses the point-free notation mentioned above. The judgment \(f : \beta\) is to denote \(\forall (x : \alpha), \beta(x)\). This is because our equivalent of \(\Pi\) types can be applied, unlike in the CoC.
 
 \begin{equation}
-  \frac{\Gamma, \vdash (\alpha : \type{m}),
-    (\beta : \alpha \rightarrow \type{n}),
-    (\gamma : \alpha \rightarrow \type{o}),
-    (f : \Pi (x : \alpha), \beta(x)),
-    (g : \Pi (x : \alpha), \gamma(x)),
-    (x : \alpha)}{
-    \text{both}(m, n, o, \alpha, \beta, \gamma, f, g, x) : (\beta(x) \times \gamma(x))
-}
+  \frac{}{
+    \text{both}(m, n, o) : \Pi (\alpha : \type{m}) (\beta : \alpha \rightarrow \type{n}) (\gamma : \alpha \rightarrow \type{o}) (f : \beta) (g : \gamma) (x : \alpha), (\beta(x) \times \gamma(x))
+  }
 \end{equation}
 
 \begin{equation}

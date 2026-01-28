@@ -27,7 +27,12 @@ But, this answers our sigma type question, pretty much.
 
 ::[(x : α), (f : β)] : {γ : α → β → Type} (∀ (f : β) (x : α), γ f x)
 
+I think we can also do sigma fst.
 
+::[x, f] (const' ...)
+= (const' ...) f x = x. this is right
+
+sigma snd is just id, since that's application.
 -/
 
 def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := do

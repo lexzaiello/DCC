@@ -5,6 +5,7 @@
 \setmainfont{DejaVu Serif} 
 \setsansfont{DejaVu Sans}
 \setmonofont{JuliaMono}[
+    Scale=0.9,
     Extension = .ttf,
     UprightFont = *-Regular,
     BoldFont = *-Bold,
@@ -49,13 +50,22 @@ inductive Expr where
   | app    : Expr → Expr → Expr
    -- Nil "downgrades" a term to a type
    -- nil (α : Ty m) : α → Ty m
+   -- useful for typing arguments like ∀ (α : Type), ...
   | nil    : Expr
-  -- Id is the I combinator in SK
+  -- The I combinator in SK
   | id     : Level → Expr
   -- Dependent K combinator
   | const  : Level → Level → Expr
-   -- Nondependent K. Closes the loop of type dependency.
+  -- Nondependent K. Closes the loop of type dependency.
   | const' : Level → Level → Expr
+\end{minted}
+
+Continued...
+\end{frame}
+
+\begin{frame}[fragile]{AST (cont \ldots)}
+  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+  inductive Expr where
   -- forms a new sigma pair from (both f g x) ::[(f x), (g x)]
   -- but does not force application of (f x) (g x)
   -- combined with snd projection results in S

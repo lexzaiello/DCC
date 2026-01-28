@@ -1,0 +1,54 @@
+\documentclass{beamer}
+\usepackage{fontspec}
+\usepackage{minted}
+\usepackage[
+  backend=biber,
+  style=alphabetic,
+  sorting=ynt
+]{biblatex}
+\addbibresource{./refs.bib}
+
+\newenvironment{bitemize}[1]{\begin{itemize}\setlength{\itemsep}{1em}#1\end{itemize}}
+
+\AtBeginSection[]{
+  \begin{frame}
+    \vfill
+    \centering
+    \begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+      \usebeamerfont{title}\insertsectionhead\par%
+    \end{beamercolorbox}
+    \vfill
+  \end{frame}
+}
+
+\setmainfont{DejaVu Serif} 
+\setsansfont{DejaVu Sans}
+\setmonofont{JuliaMono}[
+    Scale=0.9,
+    Extension = .ttf,
+    UprightFont = *-Regular,
+    BoldFont = *-Bold,
+    ItalicFont = *-RegularItalic,
+    BoldItalicFont = *-BoldItalic
+]
+
+\usemintedstyle{tango}
+
+\newcommand{\leane}[1]{\mintinline{lean4}|#1|}
+\newcommand{\pie}[1]{\Pi_{#1}}
+\newcommand{\type}[1]{\text{Type } #1}
+\newcommand{\turnstile}{\vdash}
+\newcommand{\sigl}[1]{\(\texttt{::[}#1\texttt{]}\)}
+\newcommand{\sigle}[1]{\texttt{::[}#1\texttt{]}}
+
+\usetheme{Madrid}
+
+\title{The Dependent Combinator Calculus}
+\author{Alexandra Aiello}
+\date{\today}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\end{document}

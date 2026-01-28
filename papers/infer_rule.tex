@@ -45,37 +45,37 @@ There are no explicit \texttt{fst} and \texttt{snd} combinators:
 
 Sigma types allow expressions to be stored and manipulated as list-like data.
 
-\subsection{Sigma Terms vs. Sigma Types}
-
-Sigmas are used to emulate contexts as in dependent type theory with variables.
-Projection on sigmas emulates substitution.
-
-The type \(\type{m} \rightarrow \type{n}\) corresponds to the sigma:
-
+%\subsection{Sigma Terms vs. Sigma Types}
+%
+%Sigmas are used to emulate contexts as in dependent type theory with variables.
+%Projection on sigmas emulates substitution.
+%
+%The type \(\type{m} \rightarrow \type{n}\) corresponds to the sigma:
+%
+%%\begin{equation}
+%  
+%%\end{equation}
+%
+%In the application \(id(\sigle{a, b}, (x : \sigle{a, b}))\), the sigma is a type. Specifically, it is the type of \(x\).
+%However, in the application \(\sigle{x, f}(\text{id})\), a beta-reduction occurs, so it is a term.
+%
+%So, I consider \sigl{a, b} to refer to a type.
+%
 %\begin{equation}
-  
+%  \frac{\Gamm \vdash, (a : \type{n}), (b : \type{m})}{
+%    \Gamma \vdash, \esigl{a, b} : \type{\texttt{max}(n, m) + 1}
+%   }
 %\end{equation}
-
-In the application \(id(\sigle{a, b}, (x : \sigle{a, b}))\), the sigma is a type. Specifically, it is the type of \(x\).
-However, in the application \(\sigle{x, f}(\text{id})\), a beta-reduction occurs, so it is a term.
-
-So, I consider \sigl{a, b} to refer to a type.
-
-\begin{equation}
-  \frac{\Gamm \vdash, (a : \type{n}), (b : \type{m})}{
-    \Gamma \vdash, \esigl{a, b} : \type{\texttt{max}(n, m) + 1}
-   }
-\end{equation}
-
-However, the projection \(\sigle{a, b}(\pi)\) is judged as:
-
-\begin{equation}
-  \frac{
-    \Gamma \vdash, (\alpha : \type{m}), (\beta : \type{n}), (a : \alpha), (b : \beta)
-  }{
-    \sigle{\alpha, \beta} : 
-  }
-\end{equation}
+%
+%However, the projection \(\sigle{a, b}(\pi)\) is judged as:
+%
+%\begin{equation}
+%  \frac{
+%    \Gamma \vdash, (\alpha : \type{m}), (\beta : \type{n}), (a : \alpha), (b : \beta)
+%  }{
+%    \sigle{\alpha, \beta} : 
+%  }
+%\end{equation}
 
 \section{Type Type}
 

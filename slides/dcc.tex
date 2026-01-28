@@ -154,16 +154,17 @@ inductive is_step : Expr → Expr → Prop
 \begin{frame}[fragile]{Inference Rule: Application}
   \begin{figure}
     \begin{columns}[c]
-      \begin{column}{0.45\textwidth}
+      \begin{column}{0.5\textwidth}
         \centering App in CoC:
         \[
           \frac{\text{$\Gamma \vdash M : (\forall x : A.B)$} \quad\quad \text{$\Gamma \vdash N : A$}}{\Gamma \vdash M N : B[x := N]}
         \]
     \end{column}
     \begin{column}{0.5\textwidth}
-      \centering App in CoC:
+      \centering App in DCC:
       \[
-        \text{sorry}
+        \frac{\text{$\Gamma \vdash M : \sigle{A, B}$} \quad\quad \text{$\Gamma \vdash N : A$}}{
+          \Gamma \vdash M N : (::[N, A]\ B)}
       \]
     \end{column}
   \end{columns}

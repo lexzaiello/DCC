@@ -1,4 +1,5 @@
-\input{./papers/template.tex}
+\input{./papers/template2.tex}
+\usepackage[margin=0.75in]{geometry}
 \usepackage{fitch}
 \usepackage{bbm}
 \usepackage{stmaryrd}
@@ -45,19 +46,21 @@ I am using standard \(\Pi\) and \(\times\) notation here for legibility, and sin
 \begin{equation}
 \frac{}{
   \text{const}(m,  n) : \Pi (\alpha : \type{m}) (\beta : \alpha \rightarrow \type{n}) (x : \alpha) (y : \beta\ x), \alpha
-}
+}\\\\
 \end{equation}
+
+\newpage
 
 The rule for \texttt{both} is quite long, so I have written it in fully applied style, as it would not fit on the page otherwise.
 
 \begin{equation}
-  \frac{\Gamma, \vdash \alpha : \type{m},
-    \beta : \alpha \rightarrow \type{n},
-    \gamma : \alpha \rightarrow \type{o},
-    (f : \pie{(x : \alpha)}, \beta\ x),
-    (g : \pie{(x : \alpha)}, x : \alpha),
+  \frac{\Gamma, \vdash (\alpha : \type{m}),
+    (\beta : \alpha \rightarrow \type{n}),
+    (\gamma : \alpha \rightarrow \type{o}),
+    (f : \pie{(x : \alpha)}, \beta(x)),
+    (g : \pie{(x : \alpha)}, \gamma(x)),
     (x : \alpha)}{
-    \text{both}(m, n, o)\ \alpha\ \beta\ \gamma\ f\ g\ x : ((\beta\ x) \times (\gamma\ x))
+    \text{both}(m, n, o, \alpha, \beta, \gamma, f, g, x) : ((\beta\ x) \times (\gamma\ x))
 }
 \end{equation}
 

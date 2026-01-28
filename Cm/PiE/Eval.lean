@@ -59,6 +59,12 @@ inductive is_step : Expr → Expr → Prop
   | right  : is_step x x'
     → is_step ($ f, x) ($ f, x')
 
+inductive 
+
+example : is_step (Expr.app ::[x, f] (.app (Expr.id 0) α)) (.app (symbol "f") (symbol "x")) := by
+  apply is_step.sapp
+
+#eval repr (::[symbol "a", symbol "b"])
 
 def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := do
   if with_logs then

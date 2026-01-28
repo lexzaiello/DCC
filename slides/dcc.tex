@@ -34,6 +34,7 @@
 
 \usemintedstyle{tango}
 
+\newcommand{\leane}[1]{\mintinline{lean4}|#1|}
 \newcommand{\pie}[1]{\Pi_{#1}}
 \newcommand{\type}[1]{\text{Type } #1}
 \newcommand{\turnstile}{\vdash}
@@ -52,7 +53,7 @@
 
 \begin{frame}{Overview}
   \begin{itemize}
-    \item The \textit{DCC} achieves dependent typing without variables by interpreting sigma types (i.e., \mintinline{lean4}|(fst : \alpha) \times (snd : \beta x)| in Lean) as a future function application.
+    \item The \textit{DCC} achieves dependent typing without variables by interpreting sigma types (i.e., \leane{(fst : \alpha) \times (snd : \beta x)} in Lean) as a future function application.
     \item We make use of a correspondence between \(Sigma.snd\) projection and variable substitution to emulate \(\Pi\) binders
     \item This correspondence also acts as a bridge between curried functions and \(n\)-argument functions, like combinators by allowing arguments to be treated as data to be applied later.
   \end{itemize}
@@ -61,9 +62,29 @@
 \begin{frame}{Sigma-Curry Correspondence}
   \begin{itemize}
     \item Combinator evaluation are usually written with all arguments (e.g., \(K(x, y) = x\))
-    \item Writing combinators in point-free / ``curried'' notation results in extremely complex types
-    \item Past approaches, including ours and Altenkirch's 
+    \item Writing combinators in point-free / ``curried'' notation feels unnatural and results in complex types
+    \item Past approaches, Altenkirch's \cite{altenkirch} used helper combinators form types.
+      \begin{itemize}
+        \item Downside: the kernel can't tell if two types with the same shape are equal
+        \item Downside: AST becomes very large---meta combinators also need types
+      \end{itemize}
+    \item Sigma types store expressions as data, and emulate \(\Pi\)-like substitution in a universal way.
+      \begin{itemize}
+        \item No meta combiantor hierarchy
+        \item No AST explosion
+      \end{itemize}
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Sigma Types}
+  \begin{itemize}
+    \item Written as \mintinline{lean4}|::[a, b]|. Expands to \mintinline{lean4}|.app (.app .cons a) b|
+    \item Notation: \mintinline{lean4}|::[a, b, c, ...] = ::[a, ::[b, ::[c, ...]]]|
+    \item Reduction rule: \mintinline{lean4}|| (.app ::[x, f], fn) => pure (.app fn, f, x)|
+      \begin{itemize}
+        \item \(fn\) above projects over the sigma. \(fn = id\) induces
+      \end{itemize}
+  \end{itemize}  
 \end{frame}
 
 \section{AST}

@@ -1,6 +1,12 @@
 \documentclass{beamer}
 \usepackage{fontspec}
 \usepackage{minted}
+\usepackage[
+  backend=biber,
+  style=alphabetic,
+  sorting=ynt
+]{biblatex}
+\addbibresource{./refs.bib}
 
 \newenvironment{bitemize}[1]{\begin{itemize}\setlength{\itemsep}{1em}#1\end{itemize}}
 
@@ -146,6 +152,10 @@ inductive is_step : Expr → Expr → Prop
 %  \end{itemize}
 %  
 %\end{frame}
+
+\begin{frame}[allowframebreaks]{References}
+    \printbibliography
+\end{frame}
 
 \end{document}
 

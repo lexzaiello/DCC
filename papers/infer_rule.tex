@@ -29,11 +29,31 @@ Id combinator type:
 }
 \end{equation}
 
-Id combinator type:
+Nil combinator type:
+
+\begin{equation}
+
+\end{equation}
+
+Const' combinator type:
 
 \begin{equation}
 \frac{}{
-  \text{const'}(m,  n) : \Pi (\alpha : \type{m}) (x : \alpha), \alpha
+  \text{const'}(m,  n) : \Pi (\alpha : \type{m}) (\beta : \type{n}) (x : \alpha) (y : \beta), \alpha
+}
+\end{equation}
+
+Const combinator type:
+
+This one will require some work, since it has an actual dependent type.
+
+And it has an arrow inside an argument.
+
+\(\beta : \alpha \rightarrow \type{n}\) corresponds to \(\texttt{::[}\text{nil}(m)\texttt{, } \alpha \texttt{]}\)
+
+\begin{equation}
+\frac{}{
+  \text{const'}(m,  n) : \Pi (\alpha : \type{m}) (\beta : \type{n}) (x : \alpha) (y : \beta), \alpha
 }
 \end{equation}
 

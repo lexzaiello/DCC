@@ -12,7 +12,8 @@ inductive Expr where
    -- Cons can be partially applied, so it is a combinator
   | cons   : Expr
   | app    : Expr → Expr → Expr
-   -- Nil delimits the end of a list
+   -- Nil "downgrades" a term to a type
+   -- nil (α : Ty m) : α → Ty m
   | nil    : Expr
   -- Id is the I combinator in SK
   | id     : Level → Expr

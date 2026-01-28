@@ -17,6 +17,16 @@ feels like this should actually be
 
 × α β. this is something where projection produces
 
+old snd
+snd fn ::[x, f] = ($ fn, f, x)
+
+So our current evaluation rule should be fine.
+It's just whether we can recurse or not.
+
+But, this answers our sigma type question, pretty much.
+
+::[(x : α), (f : β)] : {γ : α → β → Type} (∀ (f : β) (x : α), γ f x)
+
 
 -/
 

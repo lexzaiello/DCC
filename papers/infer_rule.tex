@@ -22,8 +22,22 @@
 
 \begin{document}
 
+This is the type of a pair \(\texttt{::[}a, b\texttt{]}\):
+
+\begin{equation}
+  \frac{
+    
+  }{
+    
+  }
+\end{equation}
+
 These are the types of the core DCC combinators.
-I am using standard \(\Pi\) and \(\times\) notation here for legibility, and since I have not yet completed all the types. Later in this overview, I outline the challenges I encountered, and the progress I have made towards finishing them.
+
+Note that I am denoting types like \(\forall (x : \alpha), \beta(x)\) in point-free notation as \(\beta\), since
+there are no \(\Pi\) binders in the DCC. This is explained more in the application inference rule.
+
+I am using standard \(\Pi\) and \(\times\) notation here for legibility, and since I have not yet completed all the DCC tyeps in the latest, most sound version. Later in this overview, I outline the challenges I encountered, and the progress I have made towards finishing them.
 
 \begin{equation}
 \frac{}{
@@ -57,11 +71,31 @@ The rule for \texttt{both} is quite long, so I have written it in fully applied 
   \frac{\Gamma, \vdash (\alpha : \type{m}),
     (\beta : \alpha \rightarrow \type{n}),
     (\gamma : \alpha \rightarrow \type{o}),
-    (f : \pie{(x : \alpha)}, \beta(x)),
-    (g : \pie{(x : \alpha)}, \gamma(x)),
+    (f : \Pi (x : \alpha), \beta(x)),
+    (g : \Pi (x : \alpha), \gamma(x)),
     (x : \alpha)}{
-    \text{both}(m, n, o, \alpha, \beta, \gamma, f, g, x) : ((\beta\ x) \times (\gamma\ x))
+    \text{both}(m, n, o, \alpha, \beta, \gamma, f, g, x) : (\beta(x) \times \gamma(x))
 }
 \end{equation}
+
+\begin{equation}
+  \frac{}{
+    \type{n} : \type{n + 1}
+  }
+\end{equation}
+
+\begin{equation}
+  \frac{}{
+    
+  }
+\end{equation}
+
+What's left?
+
+\begin{itemize}
+  \item{cons}
+  \item{app}
+  \item{eq, but if I don't get to it, that's fine}
+\end{itemize}
 
 \end{document}

@@ -31,6 +31,7 @@
             ulem
             fancyhdr
             fitch
+            minted
           ]);
         buildtex = (pkg-name:
           pkgs.stdenvNoCC.mkDerivation rec {

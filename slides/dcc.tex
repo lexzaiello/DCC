@@ -61,9 +61,9 @@
 
 \begin{frame}{Sigma-Curry Correspondence}
   \begin{itemize}
-    \item Combinator evaluation are usually written with all arguments (e.g., \(K(x, y) = x\))
+    \item Combinator evaluation rules are usually written with all arguments (e.g., \(K(x, y) = x\))
     \item Writing combinators in point-free / ``curried'' notation feels unnatural and results in complex types
-    \item Past approaches, Altenkirch's \cite{altenkirch} used helper combinators form types.
+    \item Past approaches, including Altenkirch's \cite{altenkirch} used helper combinators to form types.
       \begin{itemize}
         \item Downside: the kernel can't tell if two types with the same shape are equal
         \item Downside: AST becomes very large---meta combinators also need types
@@ -78,9 +78,9 @@
 
 \begin{frame}{Sigma Types}
   \begin{itemize}
-    \item Written as \mintinline{lean4}|::[a, b]|. Expands to \mintinline{lean4}|.app (.app .cons a) b|
-    \item Notation: \mintinline{lean4}|::[a, b, c, ...] = ::[a, ::[b, ::[c, ...]]]|
-    \item Reduction rule: \mintinline{lean4}|| (.app ::[x, f], fn) => pure (.app fn, f, x)|
+    \item Written as \lean{::[a, b]}. Expands to \lean{.app (.app .cons a) b}
+    \item Notation: \lean{::[a, b, c, ...] = ::[a, ::[b, ::[c, ...]]]}
+    \item Reduction rule: \lean{| (.app ::[x, f], fn) => pure (.app fn, f, x)}
       \begin{itemize}
         \item \(fn\) above projects over the sigma. \(fn = id\) induces
       \end{itemize}

@@ -25,4 +25,4 @@ inductive Expr where
   -- combined with snd projection results in S
   | both   : Level → Level → Level → Expr
   -- Branch on def-eq. For practical applications.
-  | eq     : Level → Expr -- for practical applications. branching on def-eq
+  | eq     : Level → Expr

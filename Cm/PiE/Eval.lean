@@ -54,6 +54,10 @@ inductive is_step : Expr → Expr → Prop
     (.app fn_yes a)
   | eq_no  : a ≠ b → is_step ($ (.eq _o _p), _α, _β, fn_yes, fn_no, a, b)
     (.app fn_no b)
+  | left   : is_step f f'
+    → is_step ($ f, x) ($ f', x)
+  | right  : is_step x x'
+    → is_step ($ f, x) ($ f, x')
 
 
 def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := do

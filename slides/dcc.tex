@@ -4,6 +4,17 @@
 
 \newenvironment{bitemize}[1]{\begin{itemize}\setlength{\itemsep}{1em}#1\end{itemize}}
 
+\AtBeginSection[]{
+  \begin{frame}
+    \vfill
+    \centering
+    \begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+      \usebeamerfont{title}\insertsectionhead\par%
+    \end{beamercolorbox}
+    \vfill
+  \end{frame}
+}
+
 \setmainfont{DejaVu Serif} 
 \setsansfont{DejaVu Sans}
 \setmonofont{JuliaMono}[
@@ -41,6 +52,16 @@
   \end{itemize}
 \end{frame}
 
+\begin{frame}{Sigma-Curry Correspondence}
+  \begin{itemize}
+    \item Combinator evaluation are usually written with all arguments (e.g., \(K(x, y) = x\))
+    \item Writing combinators in point-free / ``curried'' notation results in extremely complex types
+    \item Past approaches, including ours and Altenkirch's 
+  \end{itemize}
+\end{frame}
+
+\section{AST}
+
 \begin{frame}[fragile]{AST}
   \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
 abbrev Level := ℕ
@@ -69,9 +90,9 @@ Cont \ldots
   \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
   inductive Expr where
   ...
-  -- forms a new sigma pair from (both f g x) ::[(f x), (g x)]
-  -- but does not force application of (f x) (g x)
-  -- combined with snd projection results in S
+  /- form a new sigma pair from (both f g x) ::[(f x), (g x)]
+     but does not force application of (f x) (g x)
+     combined with snd projection results in S -/
   | both   : Level → Level → Level → Expr
   -- Branch on def-eq. For practical applications.
   | eq     : Level → Level → Level → Expr
@@ -98,6 +119,19 @@ inductive is_step : Expr → Expr → Prop
   | right  : is_step x x' → is_step ($ f, x) ($ f, x')
   \end{minted}
 \end{frame}
+
+%\section{Inference Rules}
+%
+%\begin{frame}{Notation}
+%  
+%
+%\end{frame}
+%
+%\begin{frame}{Inference Rule: Application}
+%  \begin{equation}
+%    
+%  \end{equation}
+%\end{frame}
 
 %\begin{frame}{Evaluation Rules}
 %  \begin{itemize}

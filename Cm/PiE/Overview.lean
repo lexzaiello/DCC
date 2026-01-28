@@ -28,7 +28,23 @@ inductive Expr where
   -- Branch on def-eq. For practical applications.
   | eq     : Level → Expr
 
-
 /-
-both.{[m, n, o]} : ∀ (α : Type m) (β : α → Type n) (γ : α → Type o) (f : ∀ (x : α), β x) (g : ∀ (x : α), γ x), 
+to type-check function application:
+
+two approaches:
+- carry the found type -> this should not change the eval rule for sigma projection
+  - allows later apps to use functions on them
+
+we don't carry around the entire context.
+assertions should assume they get passed just the next argument
+without its type
+
+f : ::[t_in, t_out]
+x : α
+
+Γ = ::[α, nil]
+
+t_in Γ = α_type
+
+Δ = ::[
 -/

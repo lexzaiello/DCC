@@ -23,7 +23,7 @@
 \begin{document}
 
 This is the type of a sigma \sigl{x, f}. Pairs are created with cons (\texttt{::}).
-I use the notation \sigl{\(x_{1}, \cdots x_{n}\)} to denote \sigl{\(x_{1}\), \sigl{\(x_{2}, \cdots\)}}.
+I use the notation \sigl{x_{1}, \cdots x_{n}} to denote \sigl{x_{1}, \text{\sigl{x_{2}, \cdots}}}.
 Sigmas can be nested, and cons can be partially applied.
 However, this means that type-checking cons is a special case, and doesn't follow directly from the general application rule.
 I think this is reasonable, since it is so primitive.
@@ -33,9 +33,9 @@ As such, there are no dedicated \texttt{fst} or \texttt{snd} combinators.
 
 \begin{equation}
   \frac{
-    \Gamma \vdash, (\alpha : \ty{m}), (\beta : \ty{n}), (x : \alpha), (y : \beta)
+    \Gamma \vdash, (\alpha : \type{m}), (\beta : \type{n}), (x : \alpha), (y : \beta)
   }{
-    \sigl{\(\alpha, \beta\)} : 
+    \sigl{\alpha, \beta} : 
   }
 \end{equation}
 

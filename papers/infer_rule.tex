@@ -31,15 +31,10 @@ This is the type of a sigma \sigl{x, f}.
   \item{Cons can be partially applied. This requires a special case for infer.}
   \item{No explicit \texttt{fst} and \texttt{snd} combinators:}
     \begin{itemize}
-      \item{\sigl{x, f} accepts a ``projector'' (\(\pi\)). \(\esigl{x, f} \(\pi\) \mapsto 
+    \item{\sigl{x, f} accepts a ``projector'' (\(\pi\)).}
+    \item{\(\sigle{x, f}(\pi) \mapsto \texttt{.app (.app \(\pi\) f) x}\)}
     \end{itemize}
-I use the  to denote 
-Sigmas can be nested, and cons can be partially applied.
-However, this means that type-checking cons is a special case, and doesn't follow directly from the general application rule.
-I think this is reasonable, since it is so primitive.
-
-Sigmas internalize the notion of projection by accepting a ``projector'' (\(\pi\)) function, which corresponds to function application where \(\pi = \text{id}\).
-As such, there are no dedicated \texttt{fst} or \texttt{snd} combinators.
+\end{itemize}
 
 \begin{equation}
   \frac{

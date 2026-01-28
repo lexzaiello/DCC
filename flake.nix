@@ -32,6 +32,7 @@
             fancyhdr
             fitch
             minted
+            dejavu
           ]);
         buildtex = (pkg-name:
           pkgs.stdenvNoCC.mkDerivation rec {

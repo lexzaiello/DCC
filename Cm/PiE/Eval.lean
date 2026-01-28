@@ -2,6 +2,22 @@ import Cm.PiE.Ast
 
 open Expr
 
+/-
+snd rule feels kinda wrong ngl.
+
+::[x, f] fn = ($ fn, f, x)
+
+feels like this should actually be
+
+($ ($ f, fn), x)
+
+::[y, ::[x, f]] id
+= ($ ($ ::[x, f], id) y)
+=
+
+
+-/
+
 def do_step_apply (e : Expr) (with_logs : Bool := False) : Except Error Expr := do
   if with_logs then
     dbg_trace e
@@ -52,115 +68,7 @@ example : try_step_n 100 ($ ::[(symbol "self"), ($ id 0, (symbol "sorry"))], ($ 
    = (.ok (symbol "self")) := rfl
 
 /-
-::[(x : α), (f : β)] {γ : α → β → Type}: (f : γ) → γ f x
--/
-
-/-
-Using this, new id type:
-
-assuming (id.{[m]} : t_id.{[m]}) and (α : Ty m) (x : α)
-
-snd (fst id) = ($ ::[α, ::[($ nil m.succ, (Ty m)), stuf]], (const ? ? (id ?)))
-= (const ? ? (id ?)) ::[($ nil m.succ, (Ty m)), stuf] α
-=
-
-interesting.
-disadvantage to new eval rule is our selector goes after,
-but we put it before.
-composition becomes slightly more difficult.
-
-can we put fn after? does that work?
-wait.
-
-can we make the fn selector itself a list?
-
-snd (fst id) = ($ ::[α, ::[($ nil m.succ, (Ty m)), stuf]], (const ? ? (id ?)))
-= (const ? ? (id ?)) ::[($ nil m.succ, (Ty m)), stuf] α
-
-interesting.
-
-snd (fst id) = ($ ::[($ nil m.succ, (Ty m)), stuf], (const ? ? ?))
-= (const ? ? ?) stuf ($ nil m.succ, (Ty m))
-= ? ($ nil m.succ, (Ty m))
-
-($ nil m.succ, (Ty m)) = fn in list app
-
-[?x, ?f] can be a list now.
-
-($ ($ nil m.succ, (Ty m)), ?f, ?x)
-
-we can make ($ nil m.succ, (Ty m)) literally just id?
-or get the head of the list?
-
-thinking we pass in a nil delimited list.
-I think we ought to remove nil eval rule.
-nil is just list delimiter.
-
-snd (fst id) = ($ ::[($ nil m.succ, (Ty m)), stuf], (const ? ? ?))
-
-? = ::[α, nil]
-
-($ nil m.succ, (Ty m)) =
-
-observations:
-- supply arguments δ as a nil delimited list so we can use list operations on it
-- first element in id type list just selects the head.
-- first element in id type is supposed to output (Ty m)
-- second element in id type
-
-procedure for type-checking:
-- since output values in the context don't depend on the context itself,
-we can just offload substitution to the kernel.
-
-id.{[m]} : t_id.{[m]}
-
-to check:
-($ t_id.{[m]}, (const ? ? (id ?)))
-= ($ (const ? ? (id ?)), t_id.tail, t_id.head)
-= ($ id ?, t_id.head)
-
-now have:
-t_id.head
-
-t_id.head = ($ const' m.succ.succ m.succ, (Ty m.succ), Ty m, Ty m)
-
-t_id.tail = stuff
-
-($ t_id.head, α) = Ty m
-
-- to get tail:
-($ t_id.{[m]}, (const ? ?))
-= ($ ($ const ? ?), t_id.tail, t_id.head)
-= t_id.tail
-
-
-t_id.{[m]} = ::[($ const' m.succ.succ m.succ, (Ty m.succ), Ty m, Ty m), 
-
-
-::[::[α, nil], ::[(const ? ? (id ?)), stuff]]
-
-($ ::[::[α, nil], ::[(const ? ? (id ?)), stuff]], (const ? ? (id ?)))
-= (const ? ? (id ?)), ::[(const ? ? (id ?)), stuff], ::[α, nil]
-= 
-
-? = ::[
-
-($ ::[x, f] (const ? ? (id ?))) = ($ (const ? ? (id ?)), f, x)
-= ($ (id ?), x) = x
-
-
-($ ::[x, f] (const ? ? (id ?))) = ($ (const ? ? (id ?)), f, x)
-= ($ (id ?), x) = x
-
-simulating fst
-($ ::[x, f] (const ? ? (id ?))) = ($ (const ? ? (id ?)), f, x)
-= ($ (id ?), x) = x
-
-t_id.{[m]} = ::[($ nil m.succ, (Ty m)), stuf]
-
-::[α, ::[($ nil m.succ, (Ty m)), stuf]] 
-
-t_id.{[m]}
+Tricky thing with writing assertions is that our combinators are 
 -/
 
 def id.type (m : Level) : Expr :=
@@ -442,8 +350,106 @@ Generic over the selector.
 def select_fn_type_head? (m n : Option Level := .none) (α β : Option Expr := .none) : Expr :=
   ($ const' (m.getD 0) (n.getD 0), (α.getD ?), (β.getD ?))
 
-def select_fn_tail? (m n : Option Level := .none) (α β : Option Expr := .none) : Expr :=
-  ($ 
+/-
+Notes:
+- for id type, grow the context with α intact.
+
+- making the assert for x is quite simple.
+we need some way to make sure that snd = fst.
+
+-- this is fst
+-- for id, we plug in ::[α, nil]
+
+If we make each step of the assertion
+take the entire context,
+we can very idiomatically traverse it.
+this is definitely ideal.
+
+then, α assert becomes (fst id)
+
+we can almost certainly defer this to the meta layer.
+no reason to over complicate.
+
+we need to be able to represent the grown context with the out_t
+such that we can plug in the next argument.
+
+($ ::[x, f] (const ? ? (id ?))) = ($ (const ? ? (id ?)), f, x)
+= ($ (id ?), x) = x
+
+id = ::[α, nil]
+
+($ ::[t_in, t_out] (const ? ? (::[α, nil])))
+= ($ (const ? ? (::[α, nil])), t_out, t_in)
+= ($ ::[α, nil], t_in)
+t_in = fst
+= α
+
+for t_out, we don't handle the traversal at runtime.
+just pattern match it out.
+
+need some way to append to the context,
+then run.
+
+assuming we got here
+($ ::[t_in', t_out] (const ? ? (::[α, nil])))
+
+and assuming next arg is in scope
+
+Two conflicting designs:
+- whole context design. this one is kind of hard to do curried
+- curried design. this one we could do by eliding next.
+
+curried design feels the simplest, where we pass the
+context through the entire list.
+
+"substitution" operation.
+just apply the argument to every assertion in the list
+at each step.
+
+::[ass₁, ::[ass₂, ass₃]]
+
+feels like we should be able to index the context
+and pop off a list.
+but then, we need to know the argument types
+ahead of time
+which is mad complicated.
+
+we should shortcut this with some cleverly designed logic.
+FEELS like the π combiantor would have been very useful here.
+
+fetches the 2nd argument
+::[skip, ::[skip, id]]
+
+This feels like we're sequencing these operations.
+
+($ (id ∘ skip ∘ skip), arg)
+= (id ∘ skip)
+
+issue with this, again is we need the type of context elements.
+
+BOOM ANOTHER IDEA.
+
+what if we STORE the types next to the arguments as we go?
+
+then, skip has the type and argument already filled in.
+
+for example, if the next step is just ::[id, stuff],
+
+then when we apply,
+($ ::[t_arg, arg_val], (id m n))
+= ($ id m n, t_arg, arg_val)
+
+but what about at the first assertion?
+we don't know the type of the argument.
+
+how does the inductive step work?
+
+t_in app produces our expected_type
+
+α'
+
+
+-/
 
 
 #eval try_step_n 100 <| ($ ::[symbol "in", symbol "out"], func_type_head?)

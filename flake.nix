@@ -66,8 +66,18 @@
           pkgs.stdenvNoCC.mkDerivation rec {
             name = pkg-name;
             src = self;
-            buildInputs = [ pkgs.python313Packages.pygments pkgs.julia-mono pkgs.coreutils tex' ];
-            nativeBuildInputs = [ pkgs.python313Packages.pygments pkgs.julia-mono pkgs.coreutils tex' ];
+            buildInputs = [
+              pkgs.python313Packages.pygments
+              pkgs.julia-mono
+              pkgs.coreutils
+              tex'
+            ];
+            nativeBuildInputs = [
+              pkgs.python313Packages.pygments
+              pkgs.julia-mono
+              pkgs.coreutils
+              tex'
+            ];
             preBuild = ''
               export HOME=$(mktemp -d)
               export XDG_CACHE_HOME="$HOME/.cache"
@@ -103,10 +113,15 @@
           }
           #{ name = "infer_rule"; path = "papers/infer_rule"; }
         ];
-        slides = [{
-          name = "dcc";
-          path = "slides/dcc";
-        }
+        slides = [
+          {
+            name = "dcc";
+            path = "slides/dcc";
+          }
+          {
+            name = "dcc_overview";
+            path = "slides/dcc_overview";
+          }
         ];
       in rec {
         devShells.default =

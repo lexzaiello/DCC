@@ -101,52 +101,52 @@ Sigma.fst.{u, v} {α : Type u} {β : α → Type v}
 \end{figure}
 \end{frame}
 
-\begin{frame}[fragile]{AST: \textit{DCC}}
-\begin{minted}[mathescape, fontsize=\small, frame=lines]{lean4}
-  inductive Expr where
-  | app    : Expr → Expr → Expr
-  | ty     : ℕ → Expr
-  -- Sigmas ::[a, b]
-  | cons   : Expr → Expr → Expr
-  /-
-    nil α x = α. Closes the loop of dependency in sigma.
-    ::[α, nil α] x = α
-  -/
-  | nil    : Level → Expr
-  /-
-    Dependent and nondependent versions of K.
-  -/
-  | const  : Level → Level → Expr
-  | const' : Level → Level → Expr
-\end{minted}
-Cont \ldots
-\end{frame}
-
-\begin{frame}[fragile]{AST (cont \ldots): \textit{DCC}}
-\begin{minted}[mathescape, fontsize=\small, frame=lines]{lean4}
-/-
-    Dependent and extra nondependent versions of S.
-    both' does not accept β and γ arguments.
-    both' is used inside sigma types to form expressions.
-    both'.{[m, n, o]} α (f : α → Type n)
-      (g : α → Type o)
-      (x : α) : (Type (max n o)).succ
-    both is the usual S combinator.
-  -/
-  | both   : Level → Level → Level → Expr
-  | both'  : Level → Level → Level → Expr
-  | id     : Level → Expr
-\end{minted}
-\end{frame}
-
-\begin{frame}[fragile]{Inference Rule: Application}
-  \begin{aligned}
-    \frac{\Gamma \vdash,
-    \alpha : \type{u},\
-    \beta : \sigle{\alpha, (\texttt{const'.{[v.succ.succ, u]}}\ \type{v.succ}\ \alpha\ \type{v})},\
-    f : ::[\alpha, \beta],
-    x : \alpha}{\Gamma \vdash (f\ x) : \beta\ x}
-  \end{aligned}
-\end{frame}
+%\begin{frame}[fragile]{AST: \textit{DCC}}
+%\begin{minted}[mathescape, fontsize=\small, frame=lines]{lean4}
+%  inductive Expr where
+%  | app    : Expr → Expr → Expr
+%  | ty     : ℕ → Expr
+%  -- Sigmas ::[a, b]
+%  | cons   : Expr → Expr → Expr
+%  /-
+%    nil α x = α. Closes the loop of dependency in sigma.
+%    ::[α, nil α] x = α
+%  -/
+%  | nil    : Level → Expr
+%  /-
+%    Dependent and nondependent versions of K.
+%  -/
+%  | const  : Level → Level → Expr
+%  | const' : Level → Level → Expr
+%\end{minted}
+%Cont \ldots
+%\end{frame}
+%
+%\begin{frame}[fragile]{AST (cont \ldots): \textit{DCC}}
+%\begin{minted}[mathescape, fontsize=\small, frame=lines]{lean4}
+%/-
+%    Dependent and extra nondependent versions of S.
+%    both' does not accept β and γ arguments.
+%    both' is used inside sigma types to form expressions.
+%    both'.{[m, n, o]} α (f : α → Type n)
+%      (g : α → Type o)
+%      (x : α) : (Type (max n o)).succ
+%    both is the usual S combinator.
+%  -/
+%  | both   : Level → Level → Level → Expr
+%  | both'  : Level → Level → Level → Expr
+%  | id     : Level → Expr
+%\end{minted}
+%\end{frame}
+%
+%\begin{frame}[fragile]{Inference Rule: Application}
+%  \begin{aligned}
+%    \frac{\Gamma \vdash,
+%    \alpha : \type{u},\
+%    \beta : \sigle{\alpha, (\texttt{const'.{[v.succ.succ, u]}}\ \type{v.succ}\ \alpha\ \type{v})},\
+%    f : ::[\alpha, \beta],
+%    x : \alpha}{\Gamma \vdash (f\ x) : \beta\ x}
+%  \end{aligned}
+%\end{frame}
 
 \end{document}

@@ -103,14 +103,6 @@ Sigma.fst.{u, v} {α : Type u} {β : α → Type v}
 \begin{frame}[fragile]{Hypothesis: Sigma-Completeness}
   \begin{itemize}
     \item I hypothesize that \leane{Sigma.fst}, \leane{Sigma.snd}, \leane{Sigma.uncurry}, and \leane{Pair.fst} constitute a turing-complete dependently-typed combinator calculus.
-    \item This Mathlib theorem gives us an idea of how we might simulate substitution:
-      \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
-theorem forall {p : (Σ a, β a) → Prop} : (∀ x, p x) ↔ ∀ a b, p ⟨a, b⟩ := ...\end{minted}
-  \end{itemize}
-\end{frame}
-
-\begin{frame}[fragile]{Hypothesis: Main Equivalences}
-  \begin{itemize}
     \item \leane{K α β (x : α) (y : β x) = Sigma.fst α β ::[x, y]}
     \item \leane{K' α β (x : α) (y : β) = Pair.fst α β ::[x, y]}
     \item \leane{(fn arg) ≈ Sigma.uncurry α β γ id ::[arg, fn] = id fn arg = fn arg}

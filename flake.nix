@@ -122,6 +122,10 @@
             name = "dcc_overview";
             path = "slides/dcc_overview";
           }
+          {
+            name = "comparison";
+            path = "slides/comparison";
+          }
         ];
       in rec {
         devShells.default =

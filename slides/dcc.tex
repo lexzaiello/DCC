@@ -8,6 +8,7 @@
 ]{biblatex}
 \addbibresource{./refs.bib}
 
+\newcommand{\type}[1]{\text{Type } #1}
 \newenvironment{bitemize}[1]{\begin{itemize}\setlength{\itemsep}{1em}#1\end{itemize}}
 
 \AtBeginSection[]{
@@ -91,9 +92,14 @@ def piCurry {α} {β : α → Type*} (γ : ∀ a, β a → Type*) :
 \begin{frame}{Central Thesis: Combinator-Sigma Correspondence}
   A function on a sigma term corresponds to a dependent combinator equation. A sigma type corresponds to the uncurried type of a dependent combinator. E.g., the dependent \(K\) combinator:
   \begin{equation}
-    K((\alpha : Type), (\beta : \alpha \rightarrow Type), (x : \alpha), (y : \beta x)) = y
+    K((\alpha : \type{m}), (\beta : \alpha \rightarrow \type{n}), (x : \alpha), (y : \beta x)) = x
   \end{equation}
-  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+\begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+-- #check Sigma.mk
+Sigma.mk.{u, v} {α : Type u} {β : α → Type v} (fst : α) (snd : β fst) : Sigma β
+
+-- #check Sigma.fst. This is = x
+Sigma.fst.{u, v} {α : Type u} {β : α → Type v} (self : Sigma β) : α
   \end{minted}
 \end{frame}
 
@@ -101,106 +107,6 @@ def piCurry {α} {β : α → Type*} (γ : ∀ a, β a → Type*) :
   \begin{itemize}
     A sigma term \leane{Sigma.mk (x : α) (y : ∀ (x : α), β x)} corresponds to a dependent combinator equation \leane{C(x, y) = M}. A sigma type \leane{
   \end{itemize}    
-\end{frame}
-
-\begin{frame}{Recap: Assertions / Arguments Register Design}
-  \begin{itemize}
-    \item Check an application by applying a list of the arguments \leane{:: x (:: y (:: z nil))} (using old notation) to the type of the function \leane{f : t_f}
-    \item \leane{t_f} is a series of instructions {\leane{next}, \leane{read}, \leane{apply}, \ldots} to manipulate the arguments and output the \textbf{expected types} in the same order as the arguments.
-    \item Was able to express dependent types, but the list combinators {\leane{next}, \leane{read}, \leane{apply}, \ldots} were almost dynamically typed.
-    \item Couldn't handle currying.
-    \item Design was not elegant at all. Special cases all over the place.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Summary: Latest Version}
-  \begin{itemize}
-    \item The latest version combines the combinators I showed you last time we met, and the asserts / args design in a well-typed context.
-    \item Key insight: sigma types in Lean \leane{(fst : α) × (snd : β fst)} coincide perfectly with application in a list-based calculus, and give the previous iterations a well-typed interpretation.
-      \begin{itemize}
-        \item We still have normal application \leane{(f x)}, but now, expressions can be grouped like data and applied at a later time.
-      \end{itemize}
-  \end{itemize}
-\end{frame}
-
-\section{AST}
-
-\begin{frame}[fragile]{AST}
-  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
-abbrev Level := ℕ
-
-inductive Expr where
-  | ty     : Level → Expr
-   -- Cons can be partially applied, so it is a combinator
-  | cons   : Expr
-  | app    : Expr → Expr → Expr
-   -- Nil "downgrades" a term to a type
-   -- nil (α : Ty m) : α → Ty m
-   -- useful for typing arguments like ∀ (α : Type), ...
-  | nil    : Level → Expr
-  -- The I combinator in SK
-  | id     : Level → Expr
-  -- Dependent K combinator
-  | const  : Level → Level → Expr
-  -- Nondependent K. Closes the loop of type dependency.
-  | const' : Level → Level → Expr
-\end{minted}
-
-Cont \ldots
-\end{frame}
-
-\begin{frame}[fragile]{AST (cont \ldots)}
-  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
-  inductive Expr where
-  ...
-  /- form a new sigma pair from (both f g x) ::[(f x), (g x)]
-     but does not force application of (f x) (g x)
-     combined with snd projection results in S -/
-  | both   : Level → Level → Level → Expr
-  -- Branch on def-eq. For practical applications.
-  | eq     : Level → Level → Level → Expr
-  \end{minted}
-\end{frame}
-
-\begin{frame}[fragile]{Evaluation Rules}
-  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
-inductive is_step : Expr → Expr → Prop
-  | sapp   : is_step ($ ::[x, f], fn) ($ fn, f, x)
-  | nil    : is_step ($ (nil _o), α, _x) α
-  | id     : is_step ($ (.id _o), _α, x) x
-  | const  : is_step ($ (.const _o _p), _α, _β, c, _x) c
-  | const' : is_step ($ (.const' _o _p), _α, _β, c, _x) c
-  | both   : is_step ($ (.both _o _p _q), _α, _β, _γ, f, g, x)
-    ::[($ f, x), ($ g, x)]
-  | eq_yes : a == b → is_step
-    ($ (.eq _o _p), _α, _β, fn_yes, fn_no, a, b)
-    (.app fn_yes a)
-  | eq_no  : a ≠ b → is_step
-    ($ (.eq _o _p), _α, _β, fn_yes, fn_no, a, b)
-    (.app fn_no b)
-  | left   : is_step f f' → is_step ($ f, x) ($ f', x)
-  | right  : is_step x x' → is_step ($ f, x) ($ f, x')
-  \end{minted}
-\end{frame}
-
-\begin{frame}[fragile]{Inference Rule: Application}
-  \begin{figure}
-    \begin{columns}[c]
-      \begin{column}{0.5\textwidth}
-        \centering App in CoC:
-        \[
-          \frac{\text{$\Gamma \vdash M : (\forall x : A.B)$} \quad\quad \text{$\Gamma \vdash N : A$}}{\Gamma \vdash M N : B[x := N]}
-        \]
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \centering App in DCC:
-      \[
-        \frac{\text{$\Gamma \vdash M : \sigle{A, B}$} \quad\quad \text{$\Gamma \vdash N : A$}}{
-          \Gamma \vdash M N : \sigle{N, A} B}
-      \]
-    \end{column}
-  \end{columns}
-  \end{figure}
 \end{frame}
 
 \end{document}

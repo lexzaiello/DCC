@@ -1,5 +1,8 @@
 import Mathlib.Data.Nat.Notation
 
+#check Sigma.mk
+#check Sigma.snd
+
 open Std (Format)
 open Std (ToFormat)
 open Std.ToFormat (format)

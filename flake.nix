@@ -106,7 +106,8 @@
         slides = [{
           name = "dcc";
           path = "slides/dcc";
-        }];
+        }
+        ];
       in rec {
         devShells.default =
           pkgs.mkShell { buildInputs = [ pkgs.coreutils tex ]; };

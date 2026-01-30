@@ -51,22 +51,30 @@
 
 \frame{\titlepage}
 
-\begin{frame}{Overview}
+\begin{frame}{Updates Summary}
   \begin{itemize}
-    \item \textit{DCC} achieves dependent typing without variables by interpreting sigma types (i.e., \leane{(fst : α) × (snd : β fst)}) as variable substitutions.
+    \item Previous versions were either unable to express dependent types in an elegant way, or relied on hacky methods resembling dynamic typing.
+    \item The latest version leverages the ideas of the assertions / arguments register design, but with explicit type arguments for all the primitive combinators, and with far fewer, and much simpler eval rules.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Sigma Types in DCC Correspond to \leane{∀} in CoC}
+\begin{frame}{Recap: Assertions / Arguments Register Design}
   \begin{itemize}
-    \item Sigma types are written as \leane{::[a, b] = .app (.app .cons a) b}.
-    \item \leane{
-    \item There are no \texttt{fst} or \texttt{snd} combinators. \leane{::[a, b]} accepts a ``projector'' (\leane{fn}):
+    \item Check an application by applying a list of the arguments \leane{:: x (:: y (:: z nil))} (using old notation) to the type of the function \leane{f : t_f}
+    \item \leane{t_f} is a series of instructions {\leane{next}, \leane{read}, \leane{apply}, \ldots} to manipulate the arguments and output the \textbf{expected types} in the same order as the arguments.
+    \item Was able to express dependent types, but the list combinators {\leane{next}, \leane{read}, \leane{apply}, \ldots} were almost dynamically typed.
+    \item Couldn't handle currying.
+    \item Design was not elegant at all. Special cases all over the place.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Summary: Latest Version}
+  \begin{itemize}
+    \item The latest version combines the combinators I showed you last time we met, and the asserts / args design in a well-typed context.
+    \item Key insight: sigma types in Lean \leane{(fst : α) × (snd : β fst)} coincide perfectly with application in a list-based calculus, and give the previous iterations a well-typed interpretation.
       \begin{itemize}
-        \item Projection rule: \leane{(.app ::[x, f], fn) => pure (.app fn, f, x)}
-        \item \leane{fn := .app (Expr.id 0) α} induces application of \leane{(f x)}
+        \item We still have normal application \leane{(f x)}, but now, expressions can be grouped like data and applied at a later time.
       \end{itemize}
-    \item \(\Pi\) types are represented by sigma expressions.
   \end{itemize}
 \end{frame}
 
@@ -150,36 +158,4 @@ inductive is_step : Expr → Expr → Prop
   \end{figure}
 \end{frame}
 
-%\section{Inference Rules}
-%
-%\begin{frame}{Notation}
-%  
-%
-%\end{frame}
-%
-%\begin{frame}{Inference Rule: Application}
-%  \begin{equation}
-%    
-%  \end{equation}
-%\end{frame}
-
-%\begin{frame}{Evaluation Rules}
-%  \begin{itemize}
-%    \item 
-%  \end{itemize}
-%\end{frame}
-
-%\begin{frame}{Inference Rule: Function Application}
-%
-%  \begin{itemize}
-%    
-%  \end{itemize}
-%  
-%\end{frame}
-
-\begin{frame}[allowframebreaks]{References}
-    \printbibliography
-\end{frame}
-
 \end{document}
-

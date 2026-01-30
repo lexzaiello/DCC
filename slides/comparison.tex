@@ -1,7 +1,7 @@
 \documentclass{beamer}
 \usepackage{fontspec}
 \usepackage{minted}
-\usepackage{venndiagram}
+\usepackage[table]{xcolor}
 \usepackage[
   backend=biber,
   style=alphabetic,
@@ -53,8 +53,8 @@
 
 \begin{frame}{Distinct Iterations of the Calculus}
   \begin{figure}
-  \resizebox{\textwidth}{!}{%
-  \begin{tabular}{ |l|p{2.5cm}|c|p{2cm}|p{2cm}| }
+  \resizebox{0.825\textwidth}{!}{%
+  \begin{tabular}{ |l|p{2.5cm}|p{1cm}|p{2cm}|p{0.2\textwidth}| }
     \hline
     Name & Main Feature & Meta Combinators?* & Uncurried Types? & Types are Well-Typed? \\
     \hline
@@ -62,11 +62,11 @@
     \hline
     \(SK\Pi\) & \(\Pi\) Combinator & Yes & No & No \\
     \hline
-    \(SK\Gamma\) & \((\Gamma, \Delta)\) registers & No & Yes & Barely. Couldn't handle random edge cases. \\
+    \(SK\Gamma\) & \((\Gamma, \Delta)\) registers & No & \cellcolor{yellow!20}Yes & Barely. Couldn't handle random edge cases. \\
     \hline
-    List Calculus & Extremely minimal kernel & No & Barely well-typed & Barely well-typed \\
+    List Calculus & \cellcolor{yellow!20}Extremely minimal kernel & No & Barely well-typed & Barely well-typed \\
     \hline
-    Sigma interpretation & Sigma type is data encoding \(\Pi\) & No & No & Probably \\
+    Sigma interpretation & \cellcolor{yellow!20}Sigma type is data encoding \(\Pi\) & No & No & \cellcolor{yellow!20}Probably \\
     \hline
   \end{tabular}
 }
@@ -77,9 +77,16 @@
 \begin{frame}{The Ideal Dependent Combinator Calculus}
   \begin{itemize}
     \item Use \((\Gamma, \Delta)\) registers.
-    \item Use \(\pi\) list pattern matching combinator to shrink the kernel. \(\pi(fx, fxs, \sigle{x, xs}) = \sigle{fx(x), fxs(xs)}\).
+    \item Use \(\pi\) list pattern matching combinator to shrink the kernel.
+      \begin{itemize}
+        \(\pi(fx, fxs, \sigle{x, xs}) = \sigle{fx(x), fxs(xs)}\).
+      \end{itemize}
     \item Sigma interpretation: \(\Gamma[n]\) is a nested sigma pair. Same eval rules as in \((\Gamma, \Delta)\), but a new well-typed meaning.
-    \item Potentially internalize substitution into \sigl{x, xs} sigma pairs. \sigle{x, xs} receives a ``projector'' resembling \(f\) in a list fold: \leane{(.app ::[x, f], fn) => pure (.app fn, f, x)}. Lets us omit some judgment rules.
+    \item Internalize projection into \sigl{x, xs} sigma pairs.
+      \begin{itemize}
+        \item \leane{(.app ::[x, f], fn) => pure (.app fn, f, x)}
+        \item Fewer inference rules, since \sigle{::[x, f]} is already a special case.
+      \end{itemize}
   \end{itemize}
 \end{frame}
 

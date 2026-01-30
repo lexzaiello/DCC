@@ -1,0 +1,184 @@
+\documentclass{beamer}
+\usepackage{fontspec}
+\usepackage{minted}
+\usepackage[
+  backend=biber,
+  style=alphabetic,
+  sorting=ynt
+]{biblatex}
+\addbibresource{./refs.bib}
+
+\newenvironment{bitemize}[1]{\begin{itemize}\setlength{\itemsep}{1em}#1\end{itemize}}
+
+\AtBeginSection[]{
+  \begin{frame}
+    \vfill
+    \centering
+    \begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+      \usebeamerfont{title}\insertsectionhead\par%
+    \end{beamercolorbox}
+    \vfill
+  \end{frame}
+}
+
+\setmainfont{DejaVu Serif} 
+\setsansfont{DejaVu Sans}
+\setmonofont{JuliaMono}[
+    Scale=0.9,
+    Extension = .ttf,
+    UprightFont = *-Regular,
+    BoldFont = *-Bold,
+    ItalicFont = *-RegularItalic,
+    BoldItalicFont = *-BoldItalic
+]
+
+\usemintedstyle{tango}
+
+\newcommand{\leane}[1]{\mintinline{lean4}|#1|}
+\newcommand{\pie}[1]{\Pi_{#1}}
+\newcommand{\type}[1]{\text{Type } #1}
+\newcommand{\turnstile}{\vdash}
+\newcommand{\sigl}[1]{\(\texttt{::[}#1\texttt{]}\)}
+\newcommand{\sigle}[1]{\texttt{::[}#1\texttt{]}}
+
+\usetheme{Madrid}
+
+\title{The Dependent Combinator Calculus}
+\author{Alexandra Aiello}
+\date{\today}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}{Overview}
+  \begin{itemize}
+    \item \textit{DCC} achieves dependent typing without variables by interpreting sigma types (i.e., \leane{(fst : α) × (snd : β fst)}) as variable substitutions.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Sigma Types in DCC Correspond to \leane{∀} in CoC}
+  \begin{itemize}
+    \item Sigma types are written as \leane{::[a, b] = .app (.app .cons a) b}.
+    \item \leane{
+    \item There are no \texttt{fst} or \texttt{snd} combinators. \leane{::[a, b]} accepts a ``projector'' (\leane{fn}):
+      \begin{itemize}
+        \item Projection rule: \leane{(.app ::[x, f], fn) => pure (.app fn, f, x)}
+        \item \leane{fn := .app (Expr.id 0) α} induces application of \leane{(f x)}
+      \end{itemize}
+    \item \(\Pi\) types are represented by sigma expressions.
+  \end{itemize}
+\end{frame}
+
+\section{AST}
+
+\begin{frame}[fragile]{AST}
+  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+abbrev Level := ℕ
+
+inductive Expr where
+  | ty     : Level → Expr
+   -- Cons can be partially applied, so it is a combinator
+  | cons   : Expr
+  | app    : Expr → Expr → Expr
+   -- Nil "downgrades" a term to a type
+   -- nil (α : Ty m) : α → Ty m
+   -- useful for typing arguments like ∀ (α : Type), ...
+  | nil    : Level → Expr
+  -- The I combinator in SK
+  | id     : Level → Expr
+  -- Dependent K combinator
+  | const  : Level → Level → Expr
+  -- Nondependent K. Closes the loop of type dependency.
+  | const' : Level → Level → Expr
+\end{minted}
+
+Cont \ldots
+\end{frame}
+
+\begin{frame}[fragile]{AST (cont \ldots)}
+  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+  inductive Expr where
+  ...
+  /- form a new sigma pair from (both f g x) ::[(f x), (g x)]
+     but does not force application of (f x) (g x)
+     combined with snd projection results in S -/
+  | both   : Level → Level → Level → Expr
+  -- Branch on def-eq. For practical applications.
+  | eq     : Level → Level → Level → Expr
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Evaluation Rules}
+  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+inductive is_step : Expr → Expr → Prop
+  | sapp   : is_step ($ ::[x, f], fn) ($ fn, f, x)
+  | nil    : is_step ($ (nil _o), α, _x) α
+  | id     : is_step ($ (.id _o), _α, x) x
+  | const  : is_step ($ (.const _o _p), _α, _β, c, _x) c
+  | const' : is_step ($ (.const' _o _p), _α, _β, c, _x) c
+  | both   : is_step ($ (.both _o _p _q), _α, _β, _γ, f, g, x)
+    ::[($ f, x), ($ g, x)]
+  | eq_yes : a == b → is_step
+    ($ (.eq _o _p), _α, _β, fn_yes, fn_no, a, b)
+    (.app fn_yes a)
+  | eq_no  : a ≠ b → is_step
+    ($ (.eq _o _p), _α, _β, fn_yes, fn_no, a, b)
+    (.app fn_no b)
+  | left   : is_step f f' → is_step ($ f, x) ($ f', x)
+  | right  : is_step x x' → is_step ($ f, x) ($ f, x')
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Inference Rule: Application}
+  \begin{figure}
+    \begin{columns}[c]
+      \begin{column}{0.5\textwidth}
+        \centering App in CoC:
+        \[
+          \frac{\text{$\Gamma \vdash M : (\forall x : A.B)$} \quad\quad \text{$\Gamma \vdash N : A$}}{\Gamma \vdash M N : B[x := N]}
+        \]
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering App in DCC:
+      \[
+        \frac{\text{$\Gamma \vdash M : \sigle{A, B}$} \quad\quad \text{$\Gamma \vdash N : A$}}{
+          \Gamma \vdash M N : \sigle{N, A} B}
+      \]
+    \end{column}
+  \end{columns}
+  \end{figure}
+\end{frame}
+
+%\section{Inference Rules}
+%
+%\begin{frame}{Notation}
+%  
+%
+%\end{frame}
+%
+%\begin{frame}{Inference Rule: Application}
+%  \begin{equation}
+%    
+%  \end{equation}
+%\end{frame}
+
+%\begin{frame}{Evaluation Rules}
+%  \begin{itemize}
+%    \item 
+%  \end{itemize}
+%\end{frame}
+
+%\begin{frame}{Inference Rule: Function Application}
+%
+%  \begin{itemize}
+%    
+%  \end{itemize}
+%  
+%\end{frame}
+
+\begin{frame}[allowframebreaks]{References}
+    \printbibliography
+\end{frame}
+
+\end{document}

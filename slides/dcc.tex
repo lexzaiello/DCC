@@ -33,6 +33,7 @@
 \usemintedstyle{tango}
 
 \newcommand{\leane}[1]{\mintinline{lean4}|#1|}
+\newcommand{\dcce}[1]{\mintinline{lean4}[style=manni]|#1|}
 \newcommand{\pie}[1]{\Pi_{#1}}
 \newcommand{\type}[1]{\text{Type } #1}
 \newcommand{\turnstile}{\vdash}
@@ -84,29 +85,44 @@ def piCurry {α} {β : α → Type*} (γ : ∀ a, β a → Type*) :
 
 \begin{frame}[fragile]{Central Thesis: Combinator-Sigma Correspondence}
   \begin{figure}
-  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
--- Pseudocode. The usual dependent K combinator eval rule.
-K((α : Type u), (β : α → Type v), (x : α), (y : β x)) := x
+  \begin{minted}[mathescape, fontsize=\small, frame=lines]{lean4}
+-- The usual dependent K combinator in Lean.
+K (α : Type u) (β : α → Type v) (x : α) (y : β x) : α := x
 
--- check Sigma.mk
+-- Output of check Sigma.mk
 Sigma.mk.{u, v} {α : Type u} {β : α → Type v} (fst : α)
   (snd : β fst) : Sigma β
 
--- check Sigma.fst. This is K .. = x
+-- Output of check Sigma.fst. This is K .. = x
 Sigma.fst.{u, v} {α : Type u} {β : α → Type v}
   (self : Sigma β) : α
 \end{minted}
-  \caption{A function on a sigma term (e.g., projection) corresponds to a dependent combinator equation. A sigma type corresponds to the uncurried type of a dependent combinator. E.g., the dependent \(K\) combinator.}
+  \caption{The dependent \(K\) combinator has the same type as \leane{Sigma.fst ∘ Sigma.mk}. Hypothesis: A function on a sigma term (e.g., projection) corresponds to a dependent combinator equation.}
 \end{figure}
 \end{frame}
 
-\begin{frame}[fragile]{Hypothesis: Sigma-Completeness}
-  \begin{itemize}
-    \item I hypothesize that \leane{Sigma.fst}, \leane{Sigma.snd}, \leane{Sigma.uncurry}, and \leane{Pair.fst} constitute a turing-complete dependently-typed combinator calculus.
-    \item \leane{K α β (x : α) (y : β x) = Sigma.fst α β ::[x, y]}
-    \item \leane{K' α β (x : α) (y : β) = Pair.fst α β ::[x, y]}
-    \item \leane{(fn arg) ≈ Sigma.uncurry α β γ id ::[arg, fn]}
-  \end{itemize}
+\begin{frame}[fragile]{Evaluation Rule: Sigma}
+  \begin{figure}
+    \begin{equation}
+      \sigle{::[\alpha, \beta]} x \mapsto \beta(x)
+    \end{equation}
+    \caption{We still represent applications with \texttt{.app}. \sigl{::[\alpha, \beta]} is a dependent type, not a term.}
+  \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]{Evaluation Rule: Const and Const'}
+  \begin{figure}
+    \begin{equation}
+      const(\alpha, \beta, x, y)
+    \end{equation}
+    \caption{The nondependent version of \(K\)}
+  \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]{Inference Rule: Application}
+  \begin{aligned}
+    \frac{\Gamma \vdash, \alpha : \type{u}, \beta : \sigle{\alpha, nil \type{u}: \sigle{\alpha, \beta}, x : \alpha}{\beta x}
+  \end{aligned}
 \end{frame}
 
 \end{document}

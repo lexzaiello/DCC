@@ -102,9 +102,18 @@ Sigma.fst.{u, v} {α : Type u} {β : α → Type v}
 
 \begin{frame}[fragile]{Hypothesis: Sigma-Completeness}
   \begin{itemize}
-    \item I hypothesize that \leane{{Sigma.fst, Sigma.snd, Sigma.uncurry, Pair.fst}} constitute a turing-complete dependently-typed combiantor calculus.
-    \item We can simulate substitution in Lean's \leane{Sigma.snd} by applying \leane{Sigma.fst} as an argument to our \leane{Sigma.snd}.
-    \item By defining reduction for the combinators in terms of a single sigma argument, ``uncurried'' combinators become well-behaved curried functions.
+    \item I hypothesize that \leane{Sigma.fst}, \leane{Sigma.snd}, \leane{Sigma.uncurry}, and \leane{Pair.fst} constitute a turing-complete dependently-typed combinator calculus.
+    \item This Mathlib theorem gives us an idea of how we might simulate substitution:
+      \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+theorem forall {p : (Σ a, β a) → Prop} : (∀ x, p x) ↔ ∀ a b, p ⟨a, b⟩ := ...\end{minted}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Hypothesis: Main Equivalences}
+  \begin{itemize}
+    \item \leane{K α β (x : α) (y : β x) = Sigma.fst α β ::[x, y]}
+    \item \leane{K' α β (x : \alpha) (y : \beta) = Pair.fst α β ::[x, y]}
+    \item \lean{(fn arg) ≈ Sigma.snd id α β ::[arg, fn] = fn arg}
   \end{itemize}
 \end{frame}
 

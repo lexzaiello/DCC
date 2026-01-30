@@ -28,9 +28,6 @@ inductive Expr where
   -/
   | both   : Level → Level → Level → Expr
   | both'  : Level → Level → Level → Expr
-  /-
-    Identity combinator.
-  -/
   | id     : Level → Expr
 deriving BEq, DecidableEq
 

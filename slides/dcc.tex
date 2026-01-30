@@ -51,11 +51,56 @@
 
 \frame{\titlepage}
 
-\begin{frame}{Updates Summary}
+\begin{frame}{Problem Statement: The \(\Pi\)-Combinator Mismatch}
   \begin{itemize}
-    \item Previous versions were either unable to express dependent types in an elegant way, or relied on hacky methods resembling dynamic typing.
-    \item The latest version leverages the ideas of the assertions / arguments register design, but with explicit type arguments for all the primitive combinators, and with far fewer, and much simpler eval rules.
-  \end{itemize}
+    \item Lambdas are curried \(\lambda x.\lambda y.M\), and so are their types \(\forall (x : \alpha), \forall (y : \beta), \ldots\).
+    \item Combinators are uncurried (\(K(x, y) = x\). Fixed number of known arguments.
+    \item Past approaches treated combinator types as uncurried.
+      \begin{itemize}
+        \item Altenkirch and I used \(\Pi\) combinators, or meta combinators. Many disadvantages.
+      \end{itemize}
+    \item By uncurrying combiantor types, dependent types become simple, and elegant.
+  \end{itemize}    
+\end{frame}
+
+\begin{frame}[fragile]{Central Thesis: Combinator-Sigma Correspondence}
+  \begin{figure}
+\begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+/-- Interpret a function on `Σ x : α, β x` as a dependent function with two arguments.
+This also exists as an `Equiv` as `Equiv.piCurry γ`. -/
+def Sigma.curry {γ : ∀ a, β a → Type*} (f : ∀ x : Sigma β, γ x.1 x.2) (x : α) (y : β x) : γ x y :=
+  f ⟨x, y⟩
+
+/-- Interpret a dependent function with two arguments as a function on `Σ x : α, β x`.
+This also exists as an `Equiv` as `(Equiv.piCurry γ).symm`. -/
+def Sigma.uncurry {γ : ∀ a, β a → Type*} (f : ∀ (x) (y : β x), γ x y) (x : Sigma β) : γ x.1 x.2 :=
+  f x.1 x.2
+
+-- in Mathlib Equiv module
+def piCurry {α} {β : α → Type*} (γ : ∀ a, β a → Type*) :
+    (∀ x : Σ i, β i, γ x.1 x.2) ≃ ∀ a b, γ a b where
+  toFun := Sigma.curry
+  invFun := Sigma.uncurry
+  left_inv := Sigma.uncurry_curry
+  right_inv := Sigma.curry_uncurry
+\end{minted}
+    \caption{Equivalence between dependent functions and sigmas in Mathlib (curry-uncurry). Sigmas carry the variable and substitution as data, whereas \(\forall\) substitution is not data.}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Central Thesis: Combinator-Sigma Correspondence}
+  A function on a sigma term corresponds to a dependent combinator equation. A sigma type corresponds to the uncurried type of a dependent combinator. E.g., the dependent \(K\) combinator:
+  \begin{equation}
+    K((\alpha : Type), (\beta : \alpha \rightarrow Type), (x : \alpha), (y : \beta x)) = y
+  \end{equation}
+  \begin{minted}[mathescape, fontsize=\small, linenos]{lean4}
+  \end{minted}
+\end{frame}
+
+\begin{frame}{Central Thesis: Combinator-Sigma Correspondence}
+  \begin{itemize}
+    A sigma term \leane{Sigma.mk (x : α) (y : ∀ (x : α), β x)} corresponds to a dependent combinator equation \leane{C(x, y) = M}. A sigma type \leane{
+  \end{itemize}    
 \end{frame}
 
 \begin{frame}{Recap: Assertions / Arguments Register Design}

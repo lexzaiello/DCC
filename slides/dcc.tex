@@ -112,8 +112,8 @@ theorem forall {p : (Σ a, β a) → Prop} : (∀ x, p x) ↔ ∀ a b, p ⟨a, b
 \begin{frame}[fragile]{Hypothesis: Main Equivalences}
   \begin{itemize}
     \item \leane{K α β (x : α) (y : β x) = Sigma.fst α β ::[x, y]}
-    \item \leane{K' α β (x : \alpha) (y : \beta) = Pair.fst α β ::[x, y]}
-    \item \lean{(fn arg) ≈ Sigma.snd id α β ::[arg, fn] = fn arg}
+    \item \leane{K' α β (x : α) (y : β) = Pair.fst α β ::[x, y]}
+    \item \leane{(fn arg) ≈ Sigma.uncurry α β γ id ::[arg, fn] = id fn arg = fn arg}
   \end{itemize}
 \end{frame}
 

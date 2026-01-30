@@ -105,7 +105,7 @@ Sigma.fst.{u, v} {α : Type u} {β : α → Type v}
     \item I hypothesize that \leane{Sigma.fst}, \leane{Sigma.snd}, \leane{Sigma.uncurry}, and \leane{Pair.fst} constitute a turing-complete dependently-typed combinator calculus.
     \item \leane{K α β (x : α) (y : β x) = Sigma.fst α β ::[x, y]}
     \item \leane{K' α β (x : α) (y : β) = Pair.fst α β ::[x, y]}
-    \item \leane{(fn arg) ≈ Sigma.uncurry α β γ id ::[arg, fn] = id fn arg = fn arg}
+    \item \leane{(fn arg) ≈ Sigma.uncurry α β γ id ::[arg, fn]}
   \end{itemize}
 \end{frame}
 

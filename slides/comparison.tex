@@ -43,7 +43,7 @@
 
 \usetheme{Madrid}
 
-\title{Comparison of Dependent Combinators}
+\title{Updates: The Dependent Combinator Calculus}
 \author{Alexandra Aiello}
 \date{\today}
 
@@ -62,7 +62,7 @@
     \hline
     \(SK\Pi\) & \(\Pi\) Combinator & Yes & No & No \\
     \hline
-    \(SK\Gamma\) & \((\Gamma, \Delta)\) registers & No & \cellcolor{yellow!20}Yes & Barely. Couldn't handle random edge cases. \\
+    \(SK\Gamma\) & \cellcolor{yellow!20}\((\Gamma, \Delta)\) registers & No & \cellcolor{yellow!20}Yes & Barely. Couldn't handle random edge cases. \\
     \hline
     List Calculus & \cellcolor{yellow!20}Extremely minimal kernel & No & Barely well-typed & Barely well-typed \\
     \hline
@@ -79,15 +79,21 @@
     \item Use \((\Gamma, \Delta)\) registers.
     \item Use \(\pi\) list pattern matching combinator to shrink the kernel.
       \begin{itemize}
-        \(\pi(fx, fxs, \sigle{x, xs}) = \sigle{fx(x), fxs(xs)}\).
+        \item \(\pi(fx, fxs, \sigle{x, xs}) = \sigle{fx(x), fxs(xs)}\).
       \end{itemize}
     \item Sigma interpretation: \(\Gamma[n]\) is a nested sigma pair. Same eval rules as in \((\Gamma, \Delta)\), but a new well-typed meaning.
-    \item Internalize projection into \sigl{x, xs} sigma pairs.
+    \item Potentially internalize projection into \sigl{x, xs} sigma pairs.
       \begin{itemize}
         \item \leane{(.app ::[x, f], fn) => pure (.app fn, f, x)}
-        \item Fewer inference rules, since \sigle{::[x, f]} is already a special case.
+        \item Fewer inference rules, since \sigl{x, f} is already a special case.
+      \end{itemize}
+    \item \texttt{nil} combinator: downgrades a term to a type.
+      \begin{itemize}
+        \item Useful for arguments like \(\alpha : \type{n}\)
       \end{itemize}
   \end{itemize}
 \end{frame}
+
+
 
 \end{document}

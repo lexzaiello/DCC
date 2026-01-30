@@ -104,6 +104,7 @@ Sigma.fst.{u, v} {α : Type u} {β : α → Type v}
   \begin{itemize}
     \item I hypothesize that \leane{{Sigma.fst, Sigma.snd, Sigma.uncurry, Pair.fst}} constitute a turing-complete dependently-typed combiantor calculus.
     \item We can simulate substitution in Lean's \leane{Sigma.snd} by applying \leane{Sigma.fst} as an argument to our \leane{Sigma.snd}.
+    \item By defining reduction for the combinators in terms of a single sigma argument, ``uncurried'' combinators become well-behaved curried functions.
   \end{itemize}
 \end{frame}
 

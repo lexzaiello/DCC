@@ -50,13 +50,13 @@
 
 \frame{\titlepage}
 
-\section{Distinct Iterations of the Calculus}
-
-\begin{tabular}{c | c | c | c}
+\begin{frame}{Distinct Iterations of the Calculus}
+\begin{tabular}{ c | c | c | c }
   Name & Type-Encoding Mechanism & Drawbacks & Best Feature \\
-  \(SKM\) & Reflection: \(M(c)\) represented combinator's type. Would expand once all arguments were filled in & Could not check if  types had the same ``shape'' & n/a \\
-  \(SK\Pi\) & \(\Pi\): represented a \(\Pi\) binder. \(\Pi(\alpha, bdy, x)\). & Used \textbf{meta combinators}, which themselves had types. Hierarchy explodes quickly. Could not detect similarly shaped types. & Meta combinators implicitly encode \textbf{uncurrying} if done correctly, since they can have multiple arguments. \\
-  \(SK\Pi\)
+  \(SKM\) & Reflection: \(M(c) = \) combinator's type. & Can't detect similarly shaped types & n/a \\
+  \(SK\Pi\) & \(\Pi = \) represented a \(\Pi\) binder. \(\Pi(\alpha, bdy, x)\). & Used \textbf{meta combinators}, which themselves had types. Hierarchy explodes quickly. Could not detect similarly shaped types. & Meta combinators implicitly encode \textbf{uncurrying} if done correctly, since they can have multiple arguments. \\
+  \(SK\Gamma\) & Encode the \textbf{context} as a list of term arguments \(\Gamma\). Combinator's type outputs the ``expected'' type when each argument is applied with \(\Gamma\) in scope - foundational architecture shift. & What is the type of operations on the context \(\Gamma\)? Need to be well-typed as well. Couldn't handle random edge cases. All Lean code, no proofs. & \((\Delta, \Gamma)\) assertions / arguments register design is killer for combinators. Universal representation of dependent types. No meta combinators, and can detect similarly shaped types.
 \end{tabular}
+\end{frame}
 
 \end{document}

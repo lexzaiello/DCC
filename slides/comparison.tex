@@ -81,7 +81,7 @@
       \begin{itemize}
         \item \(\pi(fx, fxs, \sigle{x, xs}) = \sigle{fx(x), fxs(xs)}\).
       \end{itemize}
-    \item Sigma interpretation: \(\Gamma[n]\) is a nested sigma pair. Same eval rules as in \((\Gamma, \Delta)\), but a new well-typed meaning.
+    \item Pair interpretation: \(\Gamma[n]\) is a nested pair. Same eval rules as in \((\Gamma, \Delta)\), but a new well-typed meaning.
     \item Potentially internalize projection into \sigl{x, xs} sigma pairs.
       \begin{itemize}
         \item \leane{(.app ::[x, f], fn) => pure (.app fn, f, x)}
@@ -91,9 +91,20 @@
       \begin{itemize}
         \item Useful for arguments like \(\alpha : \type{n}\)
       \end{itemize}
+    \item 
   \end{itemize}
 \end{frame}
 
-
+\begin{frame}{Ideal Inference Rule: Application}
+  \begin{equation}
+    \frac{
+      f : \sigle{\sigle{t_{in}, t_{out}}, \Delta},
+      \alpha : \type{m},
+      x : \alpha,
+      (t_{in}\ \sigle{x, \delta}) \mapsto \alpha,
+      \sigle{x, \Delta} : \type{n}
+    }{(f\ x) : \sigle{t_{out}, \sigle{x, \Delta}}}
+  \end{equation}
+\end{frame}
 
 \end{document}

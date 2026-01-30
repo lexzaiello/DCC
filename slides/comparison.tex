@@ -1,6 +1,7 @@
 \documentclass{beamer}
 \usepackage{fontspec}
 \usepackage{minted}
+\usepackage{venndiagram}
 \usepackage[
   backend=biber,
   style=alphabetic,
@@ -51,12 +52,35 @@
 \frame{\titlepage}
 
 \begin{frame}{Distinct Iterations of the Calculus}
-\begin{tabular}{ c | c | c | c }
-  Name & Type-Encoding Mechanism & Drawbacks & Best Feature \\
-  \(SKM\) & Reflection: \(M(c) = \) combinator's type. & Can't detect similarly shaped types & n/a \\
-  \(SK\Pi\) & \(\Pi = \) represented a \(\Pi\) binder. \(\Pi(\alpha, bdy, x)\). & Used \textbf{meta combinators}, which themselves had types. Hierarchy explodes quickly. Could not detect similarly shaped types. & Meta combinators implicitly encode \textbf{uncurrying} if done correctly, since they can have multiple arguments. \\
-  \(SK\Gamma\) & Encode the \textbf{context} as a list of term arguments \(\Gamma\). Combinator's type outputs the ``expected'' type when each argument is applied with \(\Gamma\) in scope - foundational architecture shift. & What is the type of operations on the context \(\Gamma\)? Need to be well-typed as well. Couldn't handle random edge cases. All Lean code, no proofs. & \((\Delta, \Gamma)\) assertions / arguments register design is killer for combinators. Universal representation of dependent types. No meta combinators, and can detect similarly shaped types.
-\end{tabular}
+  \begin{figure}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{ |l|p{2.5cm}|c|p{2cm}|p{2cm}| }
+    \hline
+    Name & Main Feature & Meta Combinators?* & Uncurried Types? & Types are Well-Typed? \\
+    \hline
+    \(SKM\) & Reflection & Yes & No & No \\
+    \hline
+    \(SK\Pi\) & \(\Pi\) Combinator & Yes & No & No \\
+    \hline
+    \(SK\Gamma\) & \((\Gamma, \Delta)\) registers & No & Yes & Barely. Couldn't handle random edge cases. \\
+    \hline
+    List Calculus & Extremely minimal kernel & No & Barely well-typed & Barely well-typed \\
+    \hline
+    Sigma interpretation & Sigma type is data encoding \(\Pi\) & No & No & Probably \\
+    \hline
+  \end{tabular}
+}
+\caption{*Meta combinators result in a huge tree. Each meta combinator has a type.}
+\end{figure}
+\end{frame}
+
+\begin{frame}{The Ideal Dependent Combinator Calculus}
+  \begin{itemize}
+    \item Use \((\Gamma, \Delta)\) registers.
+    \item Use \(\pi\) list pattern matching combinator to shrink the kernel. \(\pi(fx, fxs, \sigle{x, xs}) = \sigle{fx(x), fxs(xs)}\).
+    \item Sigma interpretation: \(\Gamma[n]\) is a nested sigma pair. Same eval rules as in \((\Gamma, \Delta)\), but a new well-typed meaning.
+    \item Potentially internalize substitution into \sigl{x, xs} sigma pairs. \sigle{x, xs} receives a ``projector'' resembling \(f\) in a list fold: \leane{(.app ::[x, f], fn) => pure (.app fn, f, x)}. Lets us omit some judgment rules.
+  \end{itemize}
 \end{frame}
 
 \end{document}

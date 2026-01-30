@@ -114,14 +114,14 @@
           #{ name = "infer_rule"; path = "papers/infer_rule"; }
         ];
         slides = [
-          {
-            name = "dcc";
-            path = "slides/dcc";
-          }
-          {
-            name = "dcc_overview";
-            path = "slides/dcc_overview";
-          }
+          #{
+          #  name = "dcc";
+          #  path = "slides/dcc";
+          #}
+          #{
+          #  name = "dcc_overview";
+          #  path = "slides/dcc_overview";
+          #}
           {
             name = "comparison";
             path = "slides/comparison";

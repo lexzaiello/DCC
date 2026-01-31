@@ -169,7 +169,7 @@ inductive IsStepStar { rel : Expr → Expr → Prop } : Expr → Expr → Prop
 
 \subsection{\leanw{fst} and \leanw{snd} can be condensed into one rule}
 
-\begin{frame}[fragile]{Projection Derivation \leanw{IsStep}}
+\begin{frame}[fragile]{Single-Step Reduction for Projection Derivations}
   \begin{leancode}
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep (.app ::[x, f], fn) (.app (.app fn f) x)
@@ -229,6 +229,27 @@ theorem snd_der (head tail fn : Expr) : IsStep
 \end{frame}
 
 \subsection{Sigma projection is equivalent to application}
+
+\begin{frame}[fragile]{Single-Step Reduction for Sigma Equivalence Proofs}
+  \begin{leancode}
+inductive IsStep : Expr → Expr → Prop
+  | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
+  | nil    : IsStep ($ nil, α, x) α
+  | id     : IsStep ($ Expr.id, _α, x) x
+  | const' : IsStep ($ const', _α, _β, x, y) x
+  | const  : IsStep ($ const, _α, _β, x, y) x
+  /- f and g order is flipped here compared to S.
+     both f g x = ::[(f x), (g x)]
+     both f g x id = id (g x) (f x) -/
+  | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
+    ::[($f, x), ($ g, x)]
+  | left   : IsStep f f'
+    → IsStep ($ f, x) ($ f', x)
+  | right  : IsStep x x'
+    → IsStep ($ f, x) ($ f, x')
+  \end{leancode}
+\end{frame}
+
 
 \begin{frame}[fragile]{All Function Applications have corresponding Sigma Projections}
   \begin{leancode}

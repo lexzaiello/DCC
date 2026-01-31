@@ -218,4 +218,33 @@ theorem snd_der (head tail fn : Expr) : IsStep
   \end{leancode}
 \end{frame}
 
+\subsection{Sigma projection is equivalent to application}
+
+\begin{frame}[fragile]{All Apps have corresponding Proj.}
+  \begin{leancode}
+theorem app_imp_proj (t_f f x : Expr) : (@IsStepStar IsStep) ($ f, x) e' →
+  (@IsStepStar IsStep) ($ ::[x, f], ($ id, t_f)) e' := by
+  intro h_step
+  cases h_step
+  apply IsStepStar.trans; apply IsStep.sapp
+  apply IsStepStar.trans; apply IsStep.left
+  apply IsStep.id; apply IsStepStar.refl
+  apply IsStepStar.trans; apply IsStep.sapp
+  apply IsStepStar.trans; apply IsStep.left
+  apply IsStep.id; apply IsStepStar.trans
+  repeat assumption
+  \end{leancode}
+\end{frame}
+
+\begin{frame}[fragile]{Apps are \(=_{\beta}\) Sigma Projection}
+  \begin{leancode}
+theorem apps_are_proj (t_f f x : Expr) : (@IsBetaEq IsStep) ($ f, x) ($ ::[x, f], ($ id, t_f)) := by
+  apply IsBetaEq.symm; apply IsBetaEq.trans
+  apply IsBetaEq.rel; apply IsStep.sapp
+  apply IsBetaEq.trans; apply IsBetaEq.rel
+  apply IsStep.left; apply IsStep.id
+  apply IsBetaEq.refl
+  \end{leancode}
+\end{frame}
+
 \end{document}

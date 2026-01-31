@@ -187,14 +187,10 @@ theorem app_imp_proj (t_f f x : Expr) : (@IsStepStar IsStep) ($ f, x) e' → (@I
   repeat assumption
 
 theorem apps_are_proj (t_f f x : Expr) : (@IsBetaEq IsStep) ($ f, x) ($ ::[x, f], ($ id, t_f)) := by
-  apply IsBetaEq.symm
-  apply IsBetaEq.trans
-  apply IsBetaEq.rel
-  apply IsStep.sapp
-  apply IsBetaEq.trans
-  apply IsBetaEq.rel
-  apply IsStep.left
-  apply IsStep.id
+  apply IsBetaEq.symm; apply IsBetaEq.trans
+  apply IsBetaEq.rel; apply IsStep.sapp
+  apply IsBetaEq.trans; apply IsBetaEq.rel
+  apply IsStep.left; apply IsStep.id
   apply IsBetaEq.refl
 
 end der_app_proj

@@ -317,6 +317,7 @@ theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep)
 
 \begin{frame}{Is there a \sigl{x, xs} that lives in \type{u}?}
   \begin{itemize}
+    \item \texttt{nil} appears to be redundant, except for delimiting lists. But, what is the type of nil, then?
     \item Sigmas are very powerful. However, we have been using them as terms. We want to capture the same functionality for the kernel to use to check types.
     \item Can we assume \(\sigle{(x : \alpha), (xs : \beta)} : \times\ \beta\ \alpha\)?
       \begin{itemize}

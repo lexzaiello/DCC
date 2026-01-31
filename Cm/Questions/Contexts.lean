@@ -23,6 +23,24 @@ As we said before, we probably don't need the types as well as the arguments in 
 Σ[::[t_in, t_out], Δ] arg =
   Σ t_out, ::[(::[arg, Δ] t_in), Δ]
 
+::[arg, Δ] t_in
+id t_in = id
+
+id ::[Ty, nil] α
+
+so we could change the first assert.
+
+::[Ty, nil] α
+
+id ::[Ty, nil] α
+
+::[Ty, nil] α
+= α nil Ty
+
+we really just need a nil delimeter.
+
+But we always need Δ to be a list.
+
 Using this new definition, we can start writing types for things.
 
 What about id?
@@ -46,6 +64,15 @@ id : Σ[::[id, t_out], Ty] α
   = Σ[t_out, ::[α, Ty]]
 
 id : Σ[::[id, ::[nil, id]], Ty]
+
+what if we apply fst to Ty?
+That won't do anything.
+
+We could change the sigma evaluation rule.
+Make it nil delimeted.
+
+we could do something like Δ = ::[arg₁, nil]
+Δ' = ::[::[arg₂, arg₁], nil]
 -/
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
@@ -67,7 +94,7 @@ inductive IsStep : Expr → Expr → Prop
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | const' : IsStep ($ const', _α, _β, x, y) x
-  | sigma  : IsStep ($ Σ[::[t_in, t_out], Δ], arg) (Σ[t_out, ::[($ ::[arg, Δ], t_in), Δ]])
+  | sigma  : IsStep ($ Σ[::[t_in, t_out], ::[Δ, nil]], arg) (Σ[t_out, ::[::[($ ::[arg, Δ], t_in), Δ], nil]])
   | left   : IsStep f f'
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
@@ -78,4 +105,17 @@ inductive valid_judgment : Expr → Expr → Prop
      this module is just for answering reseach questions -/
   | ty    : valid_judgment Ty Ty
   | sigma : valid_judgment Σ[Γ, Δ] Ty
+  | id    : valid_judgment id Σ[::[id, ::[nil, id]], ::[Ty, nil]]
+  | app   : valid_judgment f Σ[Γ, ::[α, Δs]]
+    → valid_judgment x α
+    → IsStep ($ Σ[Γ, ::[α, Δs]], x) t'
+    → valid_judgment ($ f, x) t'
+
+example : valid_judgment α Ty → valid_judgment ($ id, α) Σ[::[nil, id], ::[::[($ ::[α, Ty], id), Ty], nil]] := by
+  intro h_t
+  apply valid_judgment.app
+  apply valid_judgment.id
+  exact h_t
+  apply IsStep.sigma
+
 

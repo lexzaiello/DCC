@@ -114,6 +114,7 @@
     \item Combinator types are much easier to form with all arguments in scope (``uncurried'')
     \item I demonstrate \hyperlink{equivsigmaapp}{\beamergotobutton{here}} that \texttt{Sigma.snd} projection is equivalent to function application
     \item Treating the future application as \textit{data} makes forming types much simpler
+    \item We can capture projection of \texttt{fst}, \texttt{snd}, application, and many more with a single reduction rule
   \end{itemize}
 \end{frame}
 
@@ -137,7 +138,7 @@
         \item \sout{Can we derive \leane{snd}?} \textbf{Yes!}
         \item \sout{Can we fully emulate the old \(\pi\) combinator with a projector agrument?} \textbf{Yes!}
       \end{itemize}
-    \item Can we derive application from \(\pi\) projection?
+    \item \sout{Can we derive application from \(\pi\) projection?} \textbf{Yes!}
     \item Can we derive \(S\) from both + \(\pi(id)\)?
     \item Choose between \leane{fst} + \leane{snd} or \(\pi\) list projection combinator.
       \begin{itemize}

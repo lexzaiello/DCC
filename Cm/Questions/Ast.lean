@@ -35,7 +35,7 @@ inductive Expr where
   | nil    : Expr
   | ty     : Expr
 
-inductive IsStepStar { rel : Expr → Expr → Prop } : Expr → Expr → Prop
+inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
   | refl  : IsStepStar e e
   | trans : rel e₁ e₂
     → IsStepStar e₂ e₃
@@ -50,7 +50,6 @@ inductive IsBetaEq {s : Expr → Expr → Prop} : Expr → Expr → Prop where
 syntax ident ".{" term,* "}" : term
 syntax "::[" term,+ "]"      : term
 syntax "($" term,+ ")"       : term
-syntax (name := atDollar) "@$" term:max term:max term:max term:max term:max term:max : term
 
 macro_rules
   | `(::[ $x:term ]) => `($x)
@@ -194,3 +193,61 @@ theorem apps_are_proj (t_f f x : Expr) : (@IsBetaEq IsStep) ($ f, x) ($ ::[x, f]
   apply IsBetaEq.refl
 
 end der_app_proj
+
+namespace der_s_proj
+
+/-
+  With an explicit S combinator.
+-/
+inductive Expr' where
+  | app    : Expr' → Expr' → Expr'
+  | cons   : Expr' → Expr' → Expr'
+  | π      : Expr'
+  | fst    : Expr'
+  | snd    : Expr'
+  | both   : Expr'
+  | const  : Expr'
+  | const' : Expr'
+  | id     : Expr'
+  | nil    : Expr'
+  | ty     : Expr'
+  | s      : Expr'
+
+open Expr'
+
+syntax ident ".{" term,* "}" : term
+syntax "::['" term,+ "]"      : term
+syntax "($'" term,+ ")"       : term
+
+macro_rules
+  | `(::[' $x:term ]) => `($x)
+  | `(::[' $x:term, $xs:term,* ]) => `(Expr'.cons $x ::['$xs,*])
+  | `(($' $x:term) ) => `($x)
+  | `(($' $f:term, $x:term )) => `(Expr'.app $f $x)
+  | `(($' $f, $x:term, $args:term,* )) =>
+    `(($' (Expr'.app $f $x), $args,*))
+
+notation "Ty" => Expr'.ty
+
+inductive IsStep : Expr' → Expr' → Prop
+  | sapp   : IsStep ($' ::['x, f], fn) ($' fn, f, x)
+  | nil    : IsStep ($' nil, α, x) α
+  | id     : IsStep ($' Expr'.id, _α, x) x
+  | const' : IsStep ($' const', _α, _β, x, y) x
+  | const  : IsStep ($' const, _α, _β, x, y) x
+  /- f and g order is flipped here compared to S.
+     both f g x = ::[(f x), (g x)]
+     both f g x id = id (g x) (f x) -/
+  | both   : IsStep ($' both, _α, _β, _γ, f, g, x)
+    ::['($' f, x), ($' g, x)]
+  /- The usual S combinator -/
+  | s      : IsStep ($' s, _α, _β, _γ, f, g, x)
+    ($' ($' f, x), ($' g, x))
+  | left   : IsStep f f'
+    → IsStep ($' f, x) ($' f', x)
+  | right  : IsStep x x'
+    → IsStep ($' f, x) ($' f, x')
+
+
+
+end der_s_proj

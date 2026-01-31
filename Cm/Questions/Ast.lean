@@ -167,7 +167,7 @@ inductive IsStep : Expr → Expr → Prop
   | right  : IsStep x x'
     → IsStep ($ f, x) ($ f, x')
 
-theorem application_is_projection (t_f f x : Expr) : IsStep ($ f, x) e' ↔ IsStepStar ($ ::[x, f], (id t_f)) e' := by
+theorem application_is_projection (t_f f x : Expr) : IsStep ($ f, x) e' ↔ (@IsStepStar IsStep) ($ ::[x, f], (id t_f)) e' := by
   sorry
 
 end der_app_proj

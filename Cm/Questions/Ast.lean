@@ -37,6 +37,6 @@ macro_rules
   | `(($ $f, $x:term, $args:term,* )) =>
     `(($ (Expr.app $f $x), $args,*))
 
-notation "Σ'" => Expr.sigma
+notation "Σ" => Expr.sigma
 notation "Ty" => Expr.ty
 

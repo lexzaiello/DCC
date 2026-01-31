@@ -311,9 +311,8 @@ theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep)
     \item \(x : F x\): very dependent types, such as this one featured in Altenkirch et al. \cite{altenkirch} give an idea.
     \item Since our sigma terms encode application as data, we can easily traverse the ``context''.
     \item \leane{Σ t : Type}
-    \item To infer output type: \leane{(((f : Σ T) (x : α)) : ((T ::[x, f]) snd))}
-    \item To infer input type: \leane{(((f : Σ T) (x : α)) : ((T ::[x, f]) fst))}
-    \item Can we do better by: \leane{(((f : Σ T) (x : α)) : ((T ::[x, Σ T]) snd))}?
+    \item To infer output/intput type: \leane{(((f : Σ T) (x : α)) : ((T ::[x, f]) π))}
+    \item Can we do better with \leane{(((f : Σ T) (x : α)) : ((T ::[x, Σ T]) snd))}?
       \item Since \leane{Σ T} is a \leane{Type}, the user cannot force evaluation. Only the kernel can.
   \end{itemize}
 \end{frame}

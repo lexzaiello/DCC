@@ -49,6 +49,16 @@ def mk_arrow (α β : Expr) : Expr :=
 def snd' (α β : Expr) (γ : Expr := α) (fn_post : Expr := ($ id, α)) :=
   comp fn_post ($ const', (mk_arrow α γ), β, fn_post)
 
+/-
+id : (Σ Tid)
+Tid ::[α, id] = ::[nil Ty α, Tid₂]
+Tid₂ ::[x, α, id] = ::[nil α x, nil α x]
+
+
+-/
+abbrev id.type : Expr :=
+  sorry
+
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
   | refl  : IsStepStar e e
   | trans : rel e₁ e₂
@@ -100,6 +110,8 @@ inductive ValidJudgment : Expr → Expr → Prop
     - functions have type Σ T
     - (((f : Σ T) (x : α)) : ((T ::[x, f]) snd))
     - Body of f's type Σ T receives ::[x, f]. Data encoding of the app
+    - Body of f's type produces ::[t_in, t_out]
+    - Type of (f x) is ::[t_in, t_out] snd
   -/
   | app       : ValidJudgment f ($ Σ', Γ)
     → ValidJudgment x ($ ($ Γ, ::[x, f]), (fst Ty Ty))

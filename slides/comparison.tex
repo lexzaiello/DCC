@@ -91,19 +91,22 @@
       \begin{itemize}
         \item Useful for arguments like \(\alpha : \type{n}\)
       \end{itemize}
-    \item 
+    \item Core calculus is the typical \(SK\) combinators:
+      \begin{itemize}
+        \item Dependent \(S\)
+        \item Dependent \(K\)
+        \item Nondependent \(K\)
+      \end{itemize}
   \end{itemize}
 \end{frame}
 
 \begin{frame}{Ideal Inference Rule: Application}
   \begin{equation}
     \frac{
-      f : \sigle{\sigle{t_{in}, t_{out}}, \Delta},
-      \alpha : \type{m},
+      \Gamma \vdash f : \sigle{\sigle{t_{in}, t_{out}}, \Delta},
       x : \alpha,
-      (t_{in}\ \sigle{x, \delta}) \mapsto \alpha,
-      \sigle{x, \Delta} : \type{n}
-    }{(f\ x) : \sigle{t_{out}, \sigle{x, \Delta}}}
+      (t_{in}\ \sigle{x, \delta}) \mapsto \alpha
+    }{\Gamma \vdash (f\ x) : \sigle{t_{out}, \sigle{x, \Delta}}}
   \end{equation}
 \end{frame}
 

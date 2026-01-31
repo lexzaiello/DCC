@@ -1,5 +1,6 @@
 \documentclass{beamer}
 \usepackage{fontspec}
+\usepackage{ulem}
 \usepackage{minted}
 \usepackage[table]{xcolor}
 \usepackage[
@@ -32,11 +33,9 @@
 ]
 
 \usemintedstyle{tango}
-
-\newminted{lean4}{
-    mathescape,
-    fontsize=\small,
-    linenos
+\newminted[leancode]{lean4}{
+    mathescape=false,
+    fontsize=\small
 }
 \newcommand{\leane}[1]{\mintinline{lean4}|#1|}
 \newcommand{\dcce}[1]{\mintinline{lean4}[style=manni]|#1|}
@@ -116,7 +115,8 @@
   \begin{itemize}
     \item Should we internalize \(\pi\) projection in \sigl{a, b}, or should we have \sigl{fst, snd} combinators?
       \begin{itemize}
-        \item Can we derive \leane{fst}?
+        \item \sout{Can we derive \leane{fst}?} \textbf{Yes!}
+        \item Can we derive \leane{snd}?
         \item Can we fully emulate the old \(\pi\) combinator with a projector agrument?
       \end{itemize}
     \item Can we derive application from \(\pi\) projection?
@@ -129,32 +129,24 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Deriving the Explicit \leane{fst} Combinator}
+\begin{frame}[fragile]{Deriving the Explicit \leane{fst} Combinator}
   \begin{leancode}
 /-
-  Assuming that we don't substitute in the head position of contexts ::[a, b], only the tail.
-
-  fst α β ::[head, tail] = head
-  ::[head, tail] ($ const', ::[β, nil β], α, (id β)) = (id β) head = head
-
-  Internalized fst projection and explicit fst combinator are equally expressive.
+  fst α β ::[head, tail] = head ::[head, tail] ($ const',
+    ::[β, nil β], α, (id β)) = (id β) head = head
 -/
-theorem fst_der (head tail fn : Expr) : IsStep ($ fst, fn, _α, _β, ::[head, tail]) ($ fn, head) ↔
-  IsStepStar ($ ::[head, tail], ($ const', ::[β, ($ nil, β)], α, fn)) ($ fn, head) := by
+theorem fst_der (head tail fn : Expr) : IsStep
+  (f fst, fn, _α, _β, ::[head, tail]) ($ fn, head) ↔
+  IsStepStar ($ ::[head, tail],
+    ($ const', ::[β, ($ nil, β)], α, fn)) ($ fn, head) := by
   constructor
-  intro h_step
-  cases h_step
-  apply IsStepStar.trans
-  apply IsStep.sapp
-  apply IsStepStar.trans
-  apply IsStep.left
-  apply IsStep.const'
-  apply IsStepStar.refl
-  intro h_step
-  cases h_step
+  intro h_step; cases h_step
+  apply IsStepStar.trans; apply IsStep.sapp
+  apply IsStepStar.trans; apply IsStep.left
+  apply IsStep.const'; apply IsStepStar.refl
+  intro h_step; cases h_step
   case mpr.trans e₂ h_step h_trans =>
-    cases h_trans
-    apply IsStep.fst
+    cases h_trans; apply IsStep.fst
     apply IsStep.fst
   \end{leancode}
 \end{frame}

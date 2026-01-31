@@ -132,8 +132,8 @@
 \begin{frame}[fragile]{Deriving the Explicit \leane{fst} Combinator}
   \begin{leancode}
 /-
-  fst α β ::[head, tail] = head ::[head, tail] ($ const',
-    ::[β, nil β], α, (id β)) = (id β) head = head
+  fst α β fn ::[head, tail] = fn head =
+    ::[head, tail] fn =* fn head
 -/
 theorem fst_der (head tail fn : Expr) : IsStep
   (f fst, fn, _α, _β, ::[head, tail]) ($ fn, head) ↔

@@ -21,6 +21,20 @@
   \end{frame}
 }
 
+\AtBeginSubsection[]
+{
+  \begin{frame}
+    \vfill
+    \centering
+    \begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+        \usebeamerfont{caption}\insertsectionhead\par%
+        \vspace{0.5em}
+        {\usebeamerfont{subtitle} \insertsubsectionhead}
+    \end{beamercolorbox}
+    \vfill
+  \end{frame}
+}
+
 \setmainfont{DejaVu Serif} 
 \setsansfont{DejaVu Sans}
 \setmonofont{JuliaMono}[
@@ -216,7 +230,7 @@ theorem snd_der (head tail fn : Expr) : IsStep
 
 \subsection{Sigma projection is equivalent to application}
 
-\begin{frame}[fragile]{All Apps have corresponding Sigma Projections}
+\begin{frame}[fragile]{All Function Applications have corresponding Sigma Projections}
   \begin{leancode}
 /-
   (f x) = e' implies (::[x, f] (id t_f)) = e'

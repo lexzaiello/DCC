@@ -59,6 +59,9 @@
 \newcommand{\turnstile}{\vdash}
 \newcommand{\sigl}[1]{\(\texttt{::[}#1\texttt{]}\)}
 \newcommand{\sigle}[1]{\texttt{::[}#1\texttt{]}}
+\newcommand{\falll}[1]{\(\texttt{\(\forall\)[}#1\texttt{]}\)}
+\newcommand{\fallle}[1]{\texttt{\(\forall\)[}#1\texttt{]}}
+\newcommand{\timesl}[1]{\(\times\ #1\)}
 
 \usetheme{Madrid}
 
@@ -144,7 +147,8 @@
       \begin{itemize}
         \item \sout{Intuition says \leane{fst} and \leane{snd}, since they would have simpler types.} \textbf{Can derive \leane{snd} and \leane{fst}.}
       \end{itemize}
-    \end{itemize}
+    \item Can we derive \texttt{nil} from \texttt{::[x, xs] f}?
+  \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]{Research Questions AST}
@@ -309,11 +313,31 @@ theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep)
   \end{figure}
 \end{frame}
 
-%\section{Research Questions: \((\Gamma, \Delta)\) Contexts}
-%
+\section{Research Questions: \((\Gamma, \Delta)\) Contexts}
+
+\begin{frame}{Is there a \sigl{x, xs} that lives in \type{u}?}
+  \begin{itemize}
+    \item Sigmas are very powerful. However, we have been using them as terms. We want to capture the same functionality for the kernel to use to check types.
+    \item Can we assume \(\sigle{(x : \alpha), (xs : \beta)} : \times\ \beta\ \alpha\)?
+      \begin{itemize}
+        \item Intuition says \textbf{no}, and that this should be expressed as a function type with a variant of \sigl{x, xs} that is downgraded to eliminate into \type{n}.
+      \end{itemize}
+    \item Is there a reason we can't express function types with a \sigl{x, xs} such that \((\sigle{x, xs}\ \pi) : \type{n}\)?
+      \begin{itemize}
+        \item If no, can we produce an inference rule that makes this type-check?
+      \end{itemize}
+  \end{itemize}
+\end{frame}
+
 %\begin{frame}{Hypotheses: Type Contexts}
 %  \begin{itemize}
-%  
+%    \item If \(\sigle{(x : \alpha), (xs : \beta)}\ (f : \forall (x : \beta) (xs : \alpha), \gamma(xs, x)) : \gamma(xs, x)\), then can we represent \(\{\gamma : \alpha \rightarrow \) by just \(\gammma\)?
+%    \item Can we represent the type of \texttt{both} and \texttt{id} application with this rule?
+%    \item Can we encode simple types like \(\type{m} : \type{m.succ}\) as just \(\type{m.succ}\) without context information?
+%      \begin{itemize}
+%        \item Intuition says yes, since these base objects are special cases.
+%      \end{itemize}
+%    \item Is the nondependent \(K\) combinator necessary if we introduce \texttt{nil : ∀ (α : Type u), α → Type u}?
 %  \end{itemize}
 %\end{frame}
 

@@ -98,20 +98,22 @@
     \item Use \((\Gamma, \Delta)\) registers.
     \item Condense \(\pi\), \leane{next}, \leane{read} into one rule (equivalence proven \hyperlink{equivfst}{\beamergotobutton{here}}):
       \begin{itemize}
-        \item \leane{IsStep.sapp : IsStep (.app ::[x, f] fn) (.app (.app fn f) x)}.
         \item Very small kernel!
       \end{itemize}
     \item Pair interpretation: \(\Gamma[n]\) is a nested pair. Same eval rules as in \((\Gamma, \Delta)\), but a new well-typed meaning.
-    \item Potentially internalize projection into \sigl{x, xs} sigma pairs (see .
-      \begin{itemize}
-        \item \leane{(.app ::[x, f], fn) => pure (.app fn, f, x)}
-        \item Fewer inference rules, since \sigl{x, f} is already a special case.
-      \end{itemize}
     \item \texttt{nil} combinator: downgrades a term to a type.
       \begin{itemize}
         \item Useful for arguments like \(\alpha : \type{n}\)
       \end{itemize}
     \item Core calculus is the typical \(SK\) combinators
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Central Thesis: The Sigma-Curry Correspondence}
+  \begin{itemize}
+    \item Combinator types are much easier to form with all arguments in scope (``uncurried'')
+    \item I demonstrate \hyperlink{equivfst}{\beamergotobutton{here}} that \texttt{Sigma.snd} projection is equivalent to function application
+    \item Treating the future application as \textit{data} makes forming types much simpler
   \end{itemize}
 \end{frame}
 

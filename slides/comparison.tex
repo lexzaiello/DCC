@@ -37,8 +37,8 @@
     mathescape=false,
     fontsize=\small
   }
-\newmintinline[leanw]{lean}{formatcom=\color{white}}
 \newcommand{\leane}[1]{\mintinline{lean4}|#1|}
+\newcommand{\leanw}[1]{\textcolor{white}{\leane{#1}}}
 \newcommand{\dcce}[1]{\mintinline{lean4}[style=manni]|#1|}
 \newcommand{\pie}[1]{\Pi_{#1}}
 \newcommand{\type}[1]{\text{Type } #1}
@@ -162,16 +162,16 @@ inductive IsStepStar { rel : Expr → Expr → Prop } : Expr → Expr → Prop
 \begin{frame}[fragile]{Projection Derivation \leanw{IsStep}}
   \begin{leancode}
 inductive IsStep : Expr → Expr → Prop
-  | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
-  | fst    : IsStep ($ fst, _α, _β, fn, ::[x, f]) ($ fn, x)
-  | snd    : IsStep ($ snd, _α, _β, fn, ::[x, f]) ($ fn, f, x)
-  | nil    : IsStep ($ nil, α, x) α
-  | id     : IsStep ($ Expr.id, _α, x) x
-  | const' : IsStep ($ const', _α, _β, x, y) x
+  | sapp   : IsStep (.app ::[x, f], fn) (.app (.app fn f) x)
+  | fst    : IsStep (\$ fst, _α, _β, fn, ::[x, f]) (\$ fn, x)
+  | snd    : IsStep (\$ snd, _α, _β, fn, ::[x, f]) (\$ fn, f, x)
+  | nil    : IsStep (\$ nil, α, x) α
+  | id     : IsStep (\$ Expr.id, _α, x) x
+  | const' : IsStep (\$ const', _α, _β, x, y) x
   | left   : IsStep f f'
-    → IsStep ($ f, x) ($ f', x)
+    → IsStep (\$ f, x) (\$ f', x)
   | right  : IsStep x x'
-    → IsStep ($ f, x) ($ f, x')
+    → IsStep (\$ f, x) (\$ f, x')
   \end{leancode}
 \end{frame}
 
@@ -182,9 +182,9 @@ inductive IsStep : Expr → Expr → Prop
     ::[head, tail] fn =* fn head
 -/
 theorem fst_der (head tail fn : Expr) : IsStep
-  ($ fst, _α, _β, fn, ::[head, tail]) ($ fn, head) ↔
-  (@IsStepStar IsStep) ($ ::[head, tail],
-    ($ const', ::[β, ($ nil, β)], α, fn)) ($ fn, head) := by
+  (\$ fst, _α, _β, fn, ::[head, tail]) (\$ fn, head) ↔
+  (@IsStepStar IsStep) (\$ ::[head, tail],
+    (\$ const', ::[β, (\$ nil, β)], α, fn)) (\$ fn, head) := by
   constructor
   intro h_step; cases h_step
   apply IsStepStar.trans; apply IsStep.sapp
@@ -204,8 +204,8 @@ theorem fst_der (head tail fn : Expr) : IsStep
   = fn tail head
 -/
 theorem snd_der (head tail fn : Expr) : IsStep
-  ($ snd, _α, _β, fn, ::[head, tail]) ($ fn, tail, head) ↔
-  (@IsStepStar IsStep) ($ ::[head, tail], fn) ($ fn, tail, head) := by
+  (\$ snd, _α, _β, fn, ::[head, tail]) (\$ fn, tail, head) ↔
+  (@IsStepStar IsStep) (\$ ::[head, tail], fn) (\$ fn, tail, head) := by
   constructor
   intro h_step; cases h_step
   apply IsStepStar.trans; apply IsStep.sapp
@@ -222,8 +222,8 @@ theorem snd_der (head tail fn : Expr) : IsStep
 
 \begin{frame}[fragile]{All Apps have corresponding Proj.}
   \begin{leancode}
-theorem app_imp_proj (t_f f x : Expr) : (@IsStepStar IsStep) ($ f, x) e' →
-  (@IsStepStar IsStep) ($ ::[x, f], ($ id, t_f)) e' := by
+theorem app_imp_proj (t_f f x : Expr) : (@IsStepStar IsStep) (\$ f, x) e' →
+  (@IsStepStar IsStep) (\$ ::[x, f], (\$ id, t_f)) e' := by
   intro h_step
   cases h_step
   apply IsStepStar.trans; apply IsStep.sapp
@@ -238,7 +238,7 @@ theorem app_imp_proj (t_f f x : Expr) : (@IsStepStar IsStep) ($ f, x) e' →
 
 \begin{frame}[fragile]{Apps are \(=_{\beta}\) Sigma Projection}
   \begin{leancode}
-theorem apps_are_proj (t_f f x : Expr) : (@IsBetaEq IsStep) ($ f, x) ($ ::[x, f], ($ id, t_f)) := by
+theorem apps_are_proj (t_f f x : Expr) : (@IsBetaEq IsStep) (\$ f, x) (\$ ::[x, f], (\$ id, t_f)) := by
   apply IsBetaEq.symm; apply IsBetaEq.trans
   apply IsBetaEq.rel; apply IsStep.sapp
   apply IsBetaEq.trans; apply IsBetaEq.rel

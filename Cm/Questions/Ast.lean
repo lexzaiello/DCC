@@ -12,7 +12,7 @@ Our AST can be quite minimal.
 inductive Expr where
   | app    : Expr → Expr → Expr
   | cons   : Expr → Expr → Expr
-  | sigma  : Expr → Expr → Expr
+  | sigma  : Expr
   | π      : Expr
   | fst    : Expr
   | snd    : Expr
@@ -28,10 +28,8 @@ inductive Expr where
 syntax ident ".{" term,* "}"  : term
 syntax "::[" term,+ "]"       : term
 syntax "($" term,+ ")"        : term
-syntax "Σ[" term "," term "]" :term
 
 macro_rules
-  | `(Σ[ $Γ:term, $Δ:term]) => `(Expr.sigma $Γ $Δ)
   | `(::[ $x:term ]) => `($x)
   | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
   | `(($ $x:term) ) => `($x)
@@ -39,5 +37,6 @@ macro_rules
   | `(($ $f, $x:term, $args:term,* )) =>
     `(($ (Expr.app $f $x), $args,*))
 
+notation "Σ'" => Expr.sigma
 notation "Ty" => Expr.ty
 

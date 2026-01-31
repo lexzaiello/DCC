@@ -36,7 +36,8 @@
 \newminted[leancode]{lean4}{
     mathescape=false,
     fontsize=\small
-}
+  }
+\newmintinline[leanw]{lean}{formatcom=\color{white}}
 \newcommand{\leane}[1]{\mintinline{lean4}|#1|}
 \newcommand{\dcce}[1]{\mintinline{lean4}[style=manni]|#1|}
 \newcommand{\pie}[1]{\Pi_{#1}}
@@ -116,7 +117,7 @@
     \item Should we internalize \(\pi\) projection in \sigl{a, b}, or should we have \sigl{fst, snd} combinators?
       \begin{itemize}
         \item \sout{Can we derive \leane{fst}?} \textbf{Yes!}
-        \item Can we derive \leane{snd}?
+        \item \sout{Can we derive \leane{snd}?} \textbf{Yes!}
         \item Can we fully emulate the old \(\pi\) combinator with a projector agrument?
       \end{itemize}
     \item Can we derive application from \(\pi\) projection?
@@ -129,7 +130,7 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Deriving the Explicit \leane{fst} Combinator}
+\begin{frame}[fragile]{Deriving the Explicit \leanw{fst} Combinator}
   \begin{leancode}
 /-
   fst α β fn ::[head, tail] = fn head =
@@ -148,6 +149,25 @@ theorem fst_der (head tail fn : Expr) : IsStep
   case mpr.trans e₂ h_step h_trans =>
     cases h_trans; apply IsStep.fst
     apply IsStep.fst
+  \end{leancode}
+\end{frame}
+
+\begin{frame}[fragile]{Deriving the Explicit \leanw{snd} Combinator}
+  \begin{leancode}
+/-
+  snd α β fn ::[head, tail] = ::[head, tail] fn
+  = fn tail head
+-/
+theorem snd_der (head tail fn : Expr) : IsStep ($ snd, _α, _β, fn, ::[head, tail]) ($ fn, tail, head) ↔ IsStepStar ($ ::[head, tail], fn) ($ fn, tail, head) := by
+  constructor
+  intro h_step; cases h_step
+  apply IsStepStar.trans; apply IsStep.sapp
+  apply IsStepStar.refl
+  case mp.right a =>
+    cases a
+  intro h_step
+  cases h_step
+  apply IsStep.snd
   \end{leancode}
 \end{frame}
 

@@ -126,7 +126,8 @@ theorem fst_der (head tail fn : Expr) : IsStep ($ fst, _α, _β, fn, ::[head, ta
     apply IsStep.fst
 
 /-
-snd fn ::[head, tail]
+snd α β fn ::[head, tail] = ::[head, tail] fn
+  = fn tail head
 -/
 theorem snd_der (head tail fn : Expr) : IsStep ($ snd, _α, _β, fn, ::[head, tail]) ($ fn, tail, head) ↔ IsStepStar ($ ::[head, tail], fn) ($ fn, tail, head) := by
   constructor

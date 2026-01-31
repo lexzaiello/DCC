@@ -82,12 +82,13 @@
 \begin{frame}{The Ideal Dependent Combinator Calculus}
   \begin{itemize}
     \item Use \((\Gamma, \Delta)\) registers.
-    \item Use \(\pi\) list pattern matching combinator to shrink the kernel.
+    \item Condense \(\pi\), \leane{next}, \leane{read} into one rule (equivalence proven \hyperlink{equivfst}{\beamergotobutton{here}}):
       \begin{itemize}
-        \item \(\pi(fx, fxs, \sigle{x, xs}) = \sigle{fx(x), fxs(xs)}\).
+        \item \leane{IsStep.sapp : IsStep (.app ::[x, f] fn) (.app (.app fn f) x)}.
+        \item Very small kernel!
       \end{itemize}
     \item Pair interpretation: \(\Gamma[n]\) is a nested pair. Same eval rules as in \((\Gamma, \Delta)\), but a new well-typed meaning.
-    \item Potentially internalize projection into \sigl{x, xs} sigma pairs.
+    \item Potentially internalize projection into \sigl{x, xs} sigma pairs (see .
       \begin{itemize}
         \item \leane{(.app ::[x, f], fn) => pure (.app fn, f, x)}
         \item Fewer inference rules, since \sigl{x, f} is already a special case.
@@ -130,7 +131,9 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Deriving the Explicit \leanw{fst} Combinator}
+\subsection{\leanw{fst} and \leanw{snd} can be condensed into one rule}
+
+\begin{frame}[label=equivfst, fragile]{Deriving the Explicit \leanw{fst} Combinator}
   \begin{leancode}
 /-
   fst α β fn ::[head, tail] = fn head =

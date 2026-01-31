@@ -147,6 +147,16 @@ inductive Expr where
 \end{figure}
 \end{frame}
 
+\begin{frame}{Research Questions Multi-Step Relation}
+\begin{leancode}
+inductive IsStepStar { rel : Expr → Expr → Prop } : Expr → Expr → Prop
+  | refl  : IsStepStar e e
+  | trans : rel e₁ e₂
+    → IsStepStar e₂ e₃
+    → IsStepStar e₁ e₃
+\end{leancode}
+\end{frame}
+
 \subsection{\leanw{fst} and \leanw{snd} can be condensed into one rule}
 
 \begin{frame}{Projection Derivation \leanw{IsStep}}

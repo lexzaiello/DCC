@@ -35,6 +35,12 @@ inductive Expr where
   | nil    : Expr
   | ty     : Expr
 
+inductive IsStepStar { rel : Expr → Expr → Prop } : Expr → Expr → Prop
+  | refl  : IsStepStar e e
+  | trans : rel e₁ e₂
+    → IsStepStar e₂ e₃
+    → IsStepStar e₁ e₃
+
 syntax ident ".{" term,* "}" : term
 syntax "::[" term,+ "]"      : term
 syntax "($" term,+ ")"       : term
@@ -92,12 +98,6 @@ inductive IsStep : Expr → Expr → Prop
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
     → IsStep ($ f, x) ($ f, x')
-
-inductive IsStepStar : Expr → Expr → Prop
-  | refl  : IsStepStar e e
-  | trans : IsStep e₁ e₂
-    → IsStepStar e₂ e₃
-    → IsStepStar e₁ e₃
 
 /-
 Assuming that we don't substitute in the head position of contexts ::[a, b], only the tail.
@@ -157,10 +157,11 @@ inductive IsStep : Expr → Expr → Prop
   | id     : IsStep ($ Expr.id, _α, x) x
   | const' : IsStep ($ const', _α, _β, x, y) x
   | const  : IsStep ($ const, _α, _β, x, y) x
-  -- f and g order is flipped here compared to S.
-  -- both f g x = ::[(f x), (g x)]
-  -- both f g x id = ::[(f x), (g x)]
-  | both   : IsStep ($ both, _α, _β, _γ, f, g, x) ::[
+  /- f and g order is flipped here compared to S.
+     both f g x = ::[(f x), (g x)]
+     both f g x id = id (g x) (f x) -/
+  | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
+    ::[($f, x), ($ g, x)]
   | left   : IsStep f f'
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'

@@ -4,12 +4,39 @@ import Cm.Questions.Ast
 open Expr
 
 /-
+::[a, b] flip = ::[b, a]
+
+::[a, b] cons = cons b a = ::[b, a]
+-/
+
+/-
 Research question to answer:
 Can we do better with \leane{(((f : Σ T) (x : α)) : ((T ::[x, Σ T]) snd))}?
 
 Our new inference:
 (((f : Σ T) (x : α)) : ((T ::[x, Σ T]) snd))
 (x : ((T ::[x, Σ T]) fst))
+
+Question: is this sufficient to recover term arguments? Σ T should be a Type
+We'll see.
+
+Using this new inference rule, id type:
+
+-- with ::[α, Σ Tid] in scope.
+id : Σ (both ? ? ? ($ const' Ty, Ty)
+
+::[α, Σ Tid] ($ const' Ty, Ty)
+  = ($ const' Ty, Ty) (Σ Tid) α
+  
+
+($ const' Ty, Ty, α, Σ Tid)
+
+assuming we have fst with π projector argument
+id : comp ($ const' Ty, Ty
+
+($ const' Ty, Ty) ::[α, Σ id]
+
+(id α) : ::[Ty, Tid₂]
 
 We still expect an output type of the form ::[t_in, t_out]
 
@@ -55,6 +82,9 @@ def snd (α β : Expr) : Expr :=
 /-
 ::[f, g] list
 = list g f
+
+::[a, b] g f
+= g b a f
 -/
 def comp (f g : Expr) : Expr :=
   ::[f, g]
@@ -71,22 +101,6 @@ def mk_arrow (α β : Expr) : Expr :=
   , ($ const', Ty, α, ::[α, β]))
 
 /-
-Point-free version of mk_arrow.
-
-(::[β, α] mk_arrow) x = ::[α, β]
-
-(::[β, α] mk_arrow) = (const' Ty α ::[β, α])
-
-::[β, α] : Ty
-
-(::[β, α] (const' Ty ) x
-= nil 
--/
-def mk_arrow' : Expr :=
-  (nil 
-  sorry
-
-/-
 ::[a, b] (snd' α β fn_post)
 = b fn_post
 
@@ -95,54 +109,9 @@ def mk_arrow' : Expr :=
 def snd' (α β : Expr) (γ : Expr := α) (fn_post : Expr := ($ id, α)) :=
   comp fn_post ($ const', (mk_arrow α γ), β, fn_post)
 
-/-
-id : (Σ Tid)
 
-Tid receives ::[α, id]
-we can insert a Ty ::[α, Ty, id]
-
-we want to make ::[Ty, Σ Tid₂]
-
-we can actually map the components to make this work.
-::[Tid₂, Ty] id = Tid₂
-Tid₂ already has sigma prepended.
-
-::[α, id] (π, (nil, Ty), ::[Tid₂, Ty])
-
-t_app_α α := ::[nil α, nil α] -- type of id α. this is the same as Id₂, but with α applied?
-t_both α := 
-
-
-Tid = (mk_both ? ? ? (
--/
-
-/-
-id : (Σ Tid)
-::[α, id] Tid = ::[nil Ty α, Tid₂]
-
-for Tid₂, something similar
-Tid₂ ::[x, α, id] = ::[nil α x, nil α x]
-Tid₂ = 
-
-t_app_α α := ::[nil α, nil α]
-t_app_α 
-
-Tid = Σ (fst ? ? (mk_both (α := Ty) (β := Ty) (γ := Ty) (f := ($ nil, Ty)) (g := ($ const', Ty, Ty, Tid₂))))
-Tid₂ = Σ (
--/
 abbrev id.type : Expr :=
-  -- Tid₂ ::[x, α, id]
-  -- this uses dependent const version of snd
-  -- snd' β(::[α, id]) =
-  -- ::[α, id]
-  let Tid₂ : Expr := ($ Σ, (snd' sorry sorry Ty (mk_both sorry sorry  sorry nil nil)))
-  ($Σ,
-    (fst
-      Tid₂
-      ($ nil, Ty)
-      (mk_both (α := Ty) (β := Ty) (γ := Ty)
-        (f := ($ nil, Ty))
-        (g := ($ nil, Tid₂)))))
+  sorry
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
   | refl  : IsStepStar e e
@@ -161,8 +130,10 @@ inductive IsStep : Expr → Expr → Prop
   | sigma  : IsStep ($ Σ, Γ, x) ($ Γ, x)
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
+  /- Our most primitive, atomic datum is a list,
+     so both is setup to do list-native application -/
   | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
-    ::[($ f, x), ($ g, x)]
+    ::[($ x, f), ($ x, g)]
   | const' : IsStep ($ const', _α, _β, x, y) x
   | left   : IsStep f f'
     → IsStep ($ f, x) ($ f', x)

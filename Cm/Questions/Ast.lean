@@ -11,7 +11,7 @@ Our AST can be quite minimal.
 
 inductive Expr where
   | app    : Expr → Expr → Expr
-  | cons   : Expr → Expr → Expr
+  | cons   : Expr
   | sigma  : Expr
   | π      : Expr
   | fst    : Expr
@@ -31,7 +31,7 @@ syntax "($" term,+ ")"        : term
 
 macro_rules
   | `(::[ $x:term ]) => `($x)
-  | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
+  | `(::[ $x:term, $xs:term,* ]) => `(Expr.app (Expr.app Expr.cons $x) ::[$xs,*])
   | `(($ $x:term) ) => `($x)
   | `(($ $f:term, $x:term )) => `(Expr.app $f $x)
   | `(($ $f, $x:term, $args:term,* )) =>

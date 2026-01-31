@@ -12,30 +12,40 @@ So we need some notation to represent ∀ {γ : β → α → Type} (π : ∀ (x
 Call this Σ β xs α x.
 
 Σ β xs α x (π : γ) = γ xs x
+Σ β xs α x = ∀ {γ : β → α → Type} (π : ∀ (xs : β) (x : α), γ xs x), γ xs x
 
-Σ is just notation for the type of ::[x, xs]
+We want Σ to behave exactly as ::, but for types, so that we can use it for contexts.
+And, we want to use fst read.
+We want to grow the context.
 
-Notably, Σ seems to coincide with our idea of ::[Δ, Γ]
+As we said before, we probably don't need the types as well as the arguments in the Δ register.
 
-So it feels like the rule for application is:
+Σ[::[t_in, t_out], Δ] arg =
+  Σ t_out, ::[(::[arg, Δ] t_in), Δ]
 
-((f : t) (x : α))
+Using this new definition, we can start writing types for things.
 
-Σ denotes a very dependent type?
+What about id?
+We can just set Δ₀ = nil.
+That's fine.
 
-Σ x T denotes (x : T x)
+t_in assumes we have ::[
 
-::[(x : α), (xs : β)]
+Note: we can sequence things nicely ::[x, f] id = f x
 
-(x : nil α) this is a normal type assertion?
+α argument assumes we have ::[α, Ty] in scope.
+and, obviously, ::[α, Ty] t_in = t_in Ty α
+t_in = nil
 
-wait holy moly.
+So we might want to flip the order.
 
-Σ Ty : nil Ty
+So when we type-check, we just want to look at the head of the Δ register?
 
-α → α
+id : Σ[::[id, t_out], Ty] α
+  = Σ[t_out, ::[(::[α, Ty] id), Ty]]
+  = Σ[t_out, ::[α, Ty]]
 
-Function application rule?
+id : Σ[::[id, ::[nil, id]], Ty]
 -/
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
@@ -57,7 +67,7 @@ inductive IsStep : Expr → Expr → Prop
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | const' : IsStep ($ const', _α, _β, x, y) x
-  | sigma  : IsStep ($ Σ', β, xs, α, x, γ) ($ γ, xs, x)
+  | sigma  : IsStep ($ Σ[::[t_in, t_out], Δ], arg) (Σ[t_out, ::[($ ::[arg, Δ], t_in), Δ]])
   | left   : IsStep f f'
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
@@ -67,5 +77,5 @@ inductive valid_judgment : Expr → Expr → Prop
   /- TODO: Remove this in the actual calculus
      this module is just for answering reseach questions -/
   | ty    : valid_judgment Ty Ty
-  | sigma : valid_judgment x α → valid_judgment xs β
-    → valid_judgment ::[x, xs] ($ Σ', β, xs, α, x)
+  | sigma : valid_judgment Σ[Γ, Δ] Ty
+

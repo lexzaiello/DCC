@@ -12,6 +12,7 @@ Our AST can be quite minimal.
 inductive Expr where
   | app    : Expr → Expr → Expr
   | cons   : Expr → Expr → Expr
+  | sigma  : Expr → Expr → Expr
   | π      : Expr
   | fst    : Expr
   | snd    : Expr
@@ -23,13 +24,14 @@ inductive Expr where
   | nil    : Expr
   | ty     : Expr
   -- Notation for type of a sigma pair
-  | sigma  : Expr
 
-syntax ident ".{" term,* "}" : term
-syntax "::[" term,+ "]"      : term
-syntax "($" term,+ ")"       : term
+syntax ident ".{" term,* "}"  : term
+syntax "::[" term,+ "]"       : term
+syntax "($" term,+ ")"        : term
+syntax "Σ[" term "," term "]" :term
 
 macro_rules
+  | `(Σ[ $Γ:term, $Δ:term]) => `(Expr.sigma $Γ $Δ)
   | `(::[ $x:term ]) => `($x)
   | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
   | `(($ $x:term) ) => `($x)
@@ -38,4 +40,4 @@ macro_rules
     `(($ (Expr.app $f $x), $args,*))
 
 notation "Ty" => Expr.ty
-notation "Σ'" => Expr.sigma
+

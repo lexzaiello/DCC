@@ -141,3 +141,32 @@ theorem snd_der (head tail fn : Expr) : IsStep ($ snd, _α, _β, fn, ::[head, ta
   apply IsStep.snd
 
 end der_fst_intr_proj
+
+namespace der_app_proj
+
+/-
+  Same IsStep as above, but without fst and snd,
+  since we have proven they are in bijection.
+
+  Also added the both combinator, since it is analagous
+  to S.
+-/
+inductive IsStep : Expr → Expr → Prop
+  | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
+  | nil    : IsStep ($ nil, α, x) α
+  | id     : IsStep ($ Expr.id, _α, x) x
+  | const' : IsStep ($ const', _α, _β, x, y) x
+  | const  : IsStep ($ const, _α, _β, x, y) x
+  -- f and g order is flipped here compared to S.
+  -- both f g x = ::[(f x), (g x)]
+  -- both f g x id = ::[(f x), (g x)]
+  | both   : IsStep ($ both, _α, _β, _γ, f, g, x) ::[
+  | left   : IsStep f f'
+    → IsStep ($ f, x) ($ f', x)
+  | right  : IsStep x x'
+    → IsStep ($ f, x) ($ f, x')
+
+theorem application_is_projection (t_f f x : Expr) : IsStep ($ f, x) e' ↔ IsStepStar ($ ::[x, f], (id t_f)) e' := by
+  sorry
+
+end der_app_proj

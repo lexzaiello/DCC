@@ -115,7 +115,7 @@
 
 \begin{frame}{TODOs}
   \begin{itemize}
-    \item Should we internalize \(\pi\) projection in \sigl{a, b}, or should we have \sigl{fst, snd} combinators?
+    \item \soute{Should we internalize \(\pi\) projection in \sigl{a, b}, or should we have \sigl{fst, snd} combinators?} \textbf{Yes!}
       \begin{itemize}
         \item \sout{Can we derive \leane{fst}?} \textbf{Yes!}
         \item \sout{Can we derive \leane{snd}?} \textbf{Yes!}
@@ -132,6 +132,19 @@
 \end{frame}
 
 \subsection{\leanw{fst} and \leanw{snd} can be condensed into one rule}
+
+\begin{frame}{Derivation AST}
+  \begin{leancode}
+inductive Expr where
+  | app    : Expr → Expr → Expr
+  | cons   : Expr → Expr → Expr
+  | π      : Expr
+  | fst    : Expr | snd    : Expr
+  | both   : Expr
+  | const  : Expr | const' : Expr
+  | id     : Expr | nil    : Expr | ty     : Expr
+  \end{leancode}
+\end{frame}
 
 \begin{frame}[label=equivfst, fragile]{Deriving the Explicit \leanw{fst} Combinator}
   \begin{leancode}

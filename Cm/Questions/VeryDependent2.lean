@@ -33,6 +33,9 @@ respectively
 the projector π is of type β → γ
 γ is set to be β by default,
 since our argument is id
+
+Technically, Σ is a combinator. So, we can put it in full list notation.
+Although, this might not be ideal. ::[x, Σ T] is ideal.
 -/
 def fst (α β : Expr) (γ : Expr := β) (fn : Expr := ($ id, β)) : Expr :=
   ($ const', ::[β, ($ const', Ty, β, γ)], α, fn)
@@ -199,8 +202,8 @@ inductive ValidJudgment : Expr → Expr → Prop
     - Type of (f x) is ::[t_in, t_out] snd
   -/
   | app       : ValidJudgment f ($ Σ, T)
-    → ValidJudgment x ($ ($ ::[x, f], T), (fst Ty Ty))
-    → ValidJudgment ($ f, x) ($ ($ ::[x, f], T), (snd Ty Ty))
+    → ValidJudgment x ($ ($ T, ::[x, ($ Σ, T)]), (fst Ty Ty))
+    → ValidJudgment ($ f, x) ($ ($ T, ::[x, ($ Σ, T)]), (snd Ty Ty))
   | def_eq    : ValidJudgment e α
     → DefEq α β
     → ValidJudgment e β

@@ -108,7 +108,7 @@ fst α β ::[head, tail] = head
 Internalized fst projection and explicit fst combinator are equally expressive.
 -/
 theorem fst_der (head tail fn : Expr) : IsStep ($ fst, _α, _β, fn, ::[head, tail]) ($ fn, head) ↔
-  IsStepStar ($ ::[head, tail], ($ const', ::[β, ($ nil, β)], α, fn)) ($ fn, head) := by
+  (@IsStepStar IsStep) ($ ::[head, tail], ($ const', ::[β, ($ nil, β)], α, fn)) ($ fn, head) := by
   constructor
   intro h_step
   cases h_step
@@ -129,7 +129,7 @@ theorem fst_der (head tail fn : Expr) : IsStep ($ fst, _α, _β, fn, ::[head, ta
 snd α β fn ::[head, tail] = ::[head, tail] fn
   = fn tail head
 -/
-theorem snd_der (head tail fn : Expr) : IsStep ($ snd, _α, _β, fn, ::[head, tail]) ($ fn, tail, head) ↔ IsStepStar ($ ::[head, tail], fn) ($ fn, tail, head) := by
+theorem snd_der (head tail fn : Expr) : IsStep ($ snd, _α, _β, fn, ::[head, tail]) ($ fn, tail, head) ↔ (@IsStepStar IsStep) ($ ::[head, tail], fn) ($ fn, tail, head) := by
   constructor
   intro h_step; cases h_step
   apply IsStepStar.trans; apply IsStep.sapp

@@ -136,7 +136,7 @@
     ::[head, tail] fn =* fn head
 -/
 theorem fst_der (head tail fn : Expr) : IsStep
-  (f fst, fn, _α, _β, ::[head, tail]) ($ fn, head) ↔
+  ($ fst, _α, _β, fn, ::[head, tail]) ($ fn, head) ↔
   IsStepStar ($ ::[head, tail],
     ($ const', ::[β, ($ nil, β)], α, fn)) ($ fn, head) := by
   constructor

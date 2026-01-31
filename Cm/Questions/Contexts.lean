@@ -18,6 +18,44 @@ This version just fetches the second element.
 def snd (α β : Expr) : Expr :=
   ($ const', β, α)
 
+/-
+Want to do composition.
+
+::[g, f] ::[a, b] or x ::[g, f]
+= (const fn 
+
+const b a = b
+
+(fn ∘ const) b a = fn b
+
+::[fn, const] ::[b, a] =
+::[b, a] (const fn)
+= (const fn) a b
+= fn b
+-/
+def comp (f g : Expr) : Expr :=
+  ::[f, g]
+
+/-
+Arrows:
+Σ (mk_arrow α β) (T x) = ::[α, β]
+-/
+def mk_arrow (α β : Expr) : Expr :=
+  ($ Σ'
+  , ($ both
+      , Ty
+      , ($ nil, Ty)
+      , ($ nil, Ty)
+      , ($ const', Ty, Ty, α)
+      , ($ const', Ty, Ty
+        , ($ Σ'
+           , ($ both, Ty, ($ nil, Ty), ($ nil, Ty)
+             , ($ const', Ty, Ty, β)
+             , ($ const', Ty, Ty, β))))))
+
+def snd' (α β : Expr) (fn_post : Expr := ($ id, α)) :=
+  comp fn_post ($ const', sorry, β, fn_post)
+
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
   | refl  : IsStepStar e e
   | trans : rel e₁ e₂
@@ -32,6 +70,7 @@ inductive IsBetaEq {s : Expr → Expr → Prop} : Expr → Expr → Prop where
 
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
+  | sigma  : IsStep ($ Σ', Γ, x) ($ Γ, x)
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
@@ -63,9 +102,15 @@ inductive ValidJudgment : Expr → Expr → Prop
   | ty        : ValidJudgment Ty Ty
   | sigma     : ValidJudgment ($ Σ', Γ) Ty
   --| id        : ValidJudgment id Σ[::[nil, id, id], Ty]
+  /-
+    To check an app:
+    - functions have type Σ T
+    - (((f : Σ T) (x : α)) : ((T ::[x, f]) snd))
+    - Body of f's type Σ T receives ::[x, f]. Data encoding of the app
+  -/
   | app       : ValidJudgment f ($ Σ', Γ)
-    → ValidJudgment x ($ (fst Ty Ty), ($ Γ, ::[x, f]))
-    → ValidJudgment ($ f, x) ($ snd Ty Ty, ($ Γ, ::[x, f]))
+    → ValidJudgment x ($ ($ Γ, ::[x, f]), (fst Ty Ty))
+    → ValidJudgment ($ f, x) ($ ($ Γ, ::[x, f]), (snd Ty Ty))
   | def_eq    : ValidJudgment e α
     → DefEq α β
     → ValidJudgment e β
@@ -82,7 +127,15 @@ check x: (fst (T ::[x, f]))
 -/
 
 /-
-id : Σ ($ both, (nil Ty), (nil Ty), (fst Ty Ty ($ nil, Ty))
+::[x, α, id]
+
+both ? ? ? (
+
+out_α_ty = ($ Σ, (both (
+
+assert_α_ty = (fst Ty Ty ($ nil, Ty))
+with_α_scope f = Σ ($ both, ($ nil, Ty), ($ nil Ty), assert_α_ty, 
+id : Σ ($ both, (nil Ty), (nil Ty), assert_α_ty, (const' ? Ty (
 -/
 
 theorem id_α_well_typed : ValidJudgment α Ty → ValidJudgment ($ id, α) Σ[::[id, id], ::[::[α, Ty], Ty]] := by

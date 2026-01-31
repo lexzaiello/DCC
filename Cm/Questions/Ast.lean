@@ -248,6 +248,47 @@ inductive IsStep : Expr' → Expr' → Prop
   | right  : IsStep x x'
     → IsStep ($' f, x) ($' f, x')
 
+inductive IsStepStar {rel : Expr' → Expr' → Prop} : Expr' → Expr' → Prop
+  | refl  : IsStepStar e e
+  | trans : rel e₁ e₂
+    → IsStepStar e₂ e₃
+    → IsStepStar e₁ e₃
 
+inductive IsBetaEq {s : Expr' → Expr' → Prop} : Expr' → Expr' → Prop where
+  | rel   : s e₁ e₂ → IsBetaEq e₁ e₂
+  | refl  : IsBetaEq e e
+  | symm  : IsBetaEq e₁ e₂ → IsBetaEq e₂ e₁
+  | trans : IsBetaEq e₁ e₂ → IsBetaEq e₂ e₃ → IsBetaEq e₁ e₃
+
+/-
+S _ _ _ x y z    = (x z)(y z)
+both _ _ _ y x z = ::[(y z), (x z)]
+(both _ _ _ y x z) (id _) = (::[(y z), (x z)] id) = (x z) (y z)
+
+y z : β z
+
+This is due to the previous theorem about apps being equivalent to
+projection.
+
+Note that the order of g and f are flipped between S and both,
+since both is native to sigmas.
+-/
+theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep) ($' s, α, β, γ, f, g, x) ($' ($' both, α, β, γ, g, f, x), ($' id, ($' β, z))) := by
+  apply IsBetaEq.trans
+  apply IsBetaEq.rel
+  apply IsStep.s
+  apply IsBetaEq.symm
+  apply IsBetaEq.trans
+  apply IsBetaEq.rel
+  apply IsStep.left
+  apply IsStep.both
+  apply IsBetaEq.trans
+  apply IsBetaEq.rel
+  apply IsStep.sapp
+  apply IsBetaEq.trans
+  apply IsBetaEq.rel
+  apply IsStep.left
+  apply IsStep.id
+  apply IsBetaEq.refl
 
 end der_s_proj

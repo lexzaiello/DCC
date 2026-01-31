@@ -43,7 +43,7 @@
 
 \usetheme{Madrid}
 
-\title{Updates: The Dependent Combinator Calculus}
+\title{Updates: Dependent Combinator Calculus}
 \author{Alexandra Aiello}
 \date{\today}
 
@@ -54,7 +54,7 @@
 \begin{frame}{Distinct Iterations of the Calculus}
   \begin{figure}
   \resizebox{0.825\textwidth}{!}{%
-  \begin{tabular}{ |l|p{2.5cm}|p{1cm}|p{2cm}|p{0.2\textwidth}| }
+  \begin{tabular}{ |p{0.1\textwidth}|p{0.23\textwidth}|p{0.23\textwidth}|p{0.23\textwidth}|p{0.2\textwidth}| }
     \hline
     Name & Main Feature & Meta Combinators?* & Uncurried Types? & Types are Well-Typed? \\
     \hline
@@ -91,12 +91,7 @@
       \begin{itemize}
         \item Useful for arguments like \(\alpha : \type{n}\)
       \end{itemize}
-    \item Core calculus is the typical \(SK\) combinators:
-      \begin{itemize}
-        \item Dependent \(S\)
-        \item Dependent \(K\)
-        \item Nondependent \(K\)
-      \end{itemize}
+    \item Core calculus is the typical \(SK\) combinators
   \end{itemize}
 \end{frame}
 
@@ -108,6 +103,23 @@
       (t_{in}\ \sigle{x, \delta}) \mapsto \alpha
     }{\Gamma \vdash (f\ x) : \sigle{t_{out}, \sigle{x, \Delta}}}
   \end{equation}
+\end{frame}
+
+\begin{frame}{TODOs}
+  \begin{itemize}
+    \item Should we internalize \(\pi\) projection in \sigl{a, b}, or should we have \sigl{fst, snd} combinators?
+      \begin{itemize}
+        \item Can we derive \leane{fst}?
+        \item Can we fully emulate the old \(\pi\) combinator with a projector agrument?
+      \end{itemize}
+    \item Can we derive application from \(\pi\) projection?
+    \item Can we derive \(S\) from both + \(\pi(id)\)?
+    \item Choose between \leane{fst} + \leane{snd} or \(\pi\) list projection combinator.
+      \begin{itemize}
+        \item Intuition says \leane{fst} and \leane{snd}, since they would have simpler types.
+      \end{itemize}
+      \item Should assertions get access to \sigl{x} or \sigl{x, \alpha}? Should work through some examples to compare.
+    \end{itemize}
 \end{frame}
 
 \end{document}

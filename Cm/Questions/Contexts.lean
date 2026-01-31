@@ -73,6 +73,11 @@ Make it nil delimeted.
 
 we could do something like Δ = ::[arg₁, nil]
 Δ' = ::[::[arg₂, arg₁], nil]
+
+Ok, what about const's type?
+
+our sigma rule feels too restrictive.
+We need a nil case, as well for the asserts.
 -/
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
@@ -89,33 +94,45 @@ inductive IsBetaEq {s : Expr → Expr → Prop} : Expr → Expr → Prop where
 
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
-  | fst    : IsStep ($ fst, _α, _β, fn, ::[x, f]) ($ fn, x)
-  | snd    : IsStep ($ snd, _α, _β, fn, ::[x, f]) ($ fn, f, x)
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | const' : IsStep ($ const', _α, _β, x, y) x
-  | sigma  : IsStep ($ Σ[::[t_in, t_out], ::[Δ, nil]], arg) (Σ[t_out, ::[::[($ ::[arg, Δ], t_in), Δ], nil]])
   | left   : IsStep f f'
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
     → IsStep ($ f, x) ($ f, x')
+
+inductive IsStepN : ℕ → Expr → Expr → Prop
+  | one  : IsStep e e' → IsStepN 1 e e'
+  | succ : IsStep e e'' → IsStepN n e'' e'''
+    → IsStepN n.succ e e'''
 
 inductive valid_judgment : Expr → Expr → Prop
   /- TODO: Remove this in the actual calculus
      this module is just for answering reseach questions -/
   | ty    : valid_judgment Ty Ty
   | sigma : valid_judgment Σ[Γ, Δ] Ty
-  | id    : valid_judgment id Σ[::[id, ::[nil, id]], ::[Ty, nil]]
-  | app   : valid_judgment f Σ[Γ, ::[α, Δs]]
+  | id    : valid_judgment id Σ[::[id, nil, id, nil], ::[Ty, nil]]
+  | app'  : valid_judgment f Σ[::[t_out, nil], ::[α, Δs]]
     → valid_judgment x α
-    → IsStep ($ Σ[Γ, ::[α, Δs]], x) t'
-    → valid_judgment ($ f, x) t'
+    → valid_judgment ($ f, x) t_out
+  | app   : valid_judgment f Σ[::[t_in, ::[x, xs]], ::[α, Δs]]
+    → valid_judgment x α
+    → IsStep ($ ::[arg, Δ], t_in) t'
+    → valid_judgment ($ f, x) Σ[::[x, xs], ::[::[t', Δ], nil]]
 
-example : valid_judgment α Ty → valid_judgment ($ id, α) Σ[::[nil, id], ::[::[($ ::[α, Ty], id), Ty], nil]] := by
+theorem id_α_well_typed : valid_judgment α Ty → valid_judgment ($ id, α) Σ[::[nil, id, nil],
+  ::[::[($ ::[α, Ty], id), Ty], nil]] := by
   intro h_t
   apply valid_judgment.app
   apply valid_judgment.id
   exact h_t
   apply IsStep.sigma
 
+example : valid_judgment α Ty → valid_judgment x α → valid_judgment ($ id, α, x) α := by
+  intro h_t h_t_x
+  apply valid_judgment.app
+  exact (@id_α_well_typed α h_t)
+  
+  sorry
 

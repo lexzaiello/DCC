@@ -51,10 +51,36 @@ def snd' (α β : Expr) (γ : Expr := α) (fn_post : Expr := ($ id, α)) :=
 
 /-
 id : (Σ Tid)
-Tid ::[α, id] = ::[nil Ty α, Tid₂]
+
+Tid receives ::[α, id]
+we can insert a Ty ::[α, Ty, id]
+
+we want to make ::[Ty, Σ Tid₂]
+
+we can actually map the components to make this work.
+::[Tid₂, Ty] id = Tid₂
+Tid₂ already has sigma prepended.
+
+::[α, id] (π, (nil, Ty), ::[Tid₂, Ty])
+
+t_app_α α := ::[nil α, nil α] -- type of id α. this is the same as Id₂, but with α applied?
+t_both α := 
+Tid = Σ (fst Tid₂ ($ nil, Ty) (mk_both (α := Ty) (β := Ty) (γ := Ty) (f := ($ nil, Ty)) (g := ($ nil, Tid₂))))
+
+Tid = (mk_both ? ? ? (
+-/
+
+/-
+id : (Σ Tid)
+::[α, id] Tid = ::[nil Ty α, Tid₂]
+
 Tid₂ ::[x, α, id] = ::[nil α x, nil α x]
 
+t_app_α α := ::[nil α, nil α]
+t_app_α 
 
+Tid = Σ (fst ? ? (mk_both (α := Ty) (β := Ty) (γ := Ty) (f := ($ nil, Ty)) (g := ($ const', Ty, Ty, Tid₂))))
+Tid₂ = Σ (
 -/
 abbrev id.type : Expr :=
   sorry
@@ -109,13 +135,14 @@ inductive ValidJudgment : Expr → Expr → Prop
     To check an app:
     - functions have type Σ T
     - (((f : Σ T) (x : α)) : ((T ::[x, f]) snd))
-    - Body of f's type Σ T receives ::[x, f]. Data encoding of the app
+    - Body of f's type Σ T receives ::[x, f] via list application:
+      ($ ::[x, f] T)
     - Body of f's type produces ::[t_in, t_out]
     - Type of (f x) is ::[t_in, t_out] snd
   -/
   | app       : ValidJudgment f ($ Σ', Γ)
-    → ValidJudgment x ($ ($ Γ, ::[x, f]), (fst Ty Ty))
-    → ValidJudgment ($ f, x) ($ ($ Γ, ::[x, f]), (snd Ty Ty))
+    → ValidJudgment x ($ ($ ::[x, f], Γ), (fst Ty Ty))
+    → ValidJudgment ($ f, x) ($ ($ ::[x, f], Γ), (snd Ty Ty))
   | def_eq    : ValidJudgment e α
     → DefEq α β
     → ValidJudgment e β

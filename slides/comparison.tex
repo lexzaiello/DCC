@@ -98,7 +98,7 @@
     \item Use \((\Gamma, \Delta)\) registers.
     \item Condense \(\pi\), \leane{next}, \leane{read} into one rule (equivalence proven \hyperlink{equivfst}{\beamergotobutton{here}}):
       \begin{itemize}
-        \item Very small kernel!
+        \item Very small kernel
       \end{itemize}
     \item Pair interpretation: \(\Gamma[n]\) is a nested pair. Same eval rules as in \((\Gamma, \Delta)\), but a new well-typed meaning.
     \item \texttt{nil} combinator: downgrades a term to a type.
@@ -128,9 +128,9 @@
   \end{equation}
 \end{frame}
 
-\section{Research Questions}
+\section{Research Questions: Sigma-Curry Correspondence}
 
-\begin{frame}{TODOs}
+\begin{frame}{Hypotheses: Sigma-Curry Correspondence}
   \begin{itemize}
     \item \sout{Should we internalize \(\pi\) projection in \sigl{a, b}, or should we have \sigl{fst, snd} combinators?} \textbf{Yes, internalize projection!}
       \begin{itemize}
@@ -144,7 +144,6 @@
       \begin{itemize}
         \item \sout{Intuition says \leane{fst} and \leane{snd}, since they would have simpler types.} \textbf{Can derive \leane{snd} and \leane{fst}.}
       \end{itemize}
-    \item \textbf{TODO:} Should assertions get access to \sigl{x} or \sigl{x, \alpha}? Should work through some examples to compare.
     \end{itemize}
 \end{frame}
 
@@ -309,5 +308,13 @@ theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep)
     \caption{This proof uses an extended AST with the \(S\) combinator for the purposes of this equivalence. Note that the order of \(f\) and \(g\) are flipped between \(S\) and \texttt{both}, since \texttt{both} is sigma-native.}
   \end{figure}
 \end{frame}
+
+%\section{Research Questions: \((\Gamma, \Delta)\) Contexts}
+%
+%\begin{frame}{Hypotheses: Type Contexts}
+%  \begin{itemize}
+%  
+%  \end{itemize}
+%\end{frame}
 
 \end{document}

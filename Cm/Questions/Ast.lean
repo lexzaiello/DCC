@@ -111,7 +111,6 @@ theorem fst_der (head tail fn : Expr) : IsStep ($ fst, _α, _β, fn, ::[head, ta
   (@IsStepStar IsStep) ($ ::[head, tail], ($ const', ::[β, ($ nil, β)], α, fn)) ($ fn, head) := by
   constructor
   intro h_step
-  cases h_step
   apply IsStepStar.trans
   apply IsStep.sapp
   apply IsStepStar.trans
@@ -167,7 +166,16 @@ inductive IsStep : Expr → Expr → Prop
   | right  : IsStep x x'
     → IsStep ($ f, x) ($ f, x')
 
-theorem application_is_projection (t_f f x : Expr) : IsStep ($ f, x) e' ↔ (@IsStepStar IsStep) ($ ::[x, f], (id t_f)) e' := by
+theorem application_is_projection (t_f f x : Expr) : IsStep ($ f, x) e' ↔ (@IsStepStar IsStep) ($ ::[x, f], ($ id, t_f)) e' := by
+  constructor
+  intro h_step
+  apply IsStepStar.trans
+  apply IsStep.sapp
+  apply IsStepStar.trans
+  apply IsStep.left
+  apply IsStep.id
+  apply IsStepStar.trans
+  exact h_step
   sorry
 
 end der_app_proj

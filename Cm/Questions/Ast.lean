@@ -273,22 +273,16 @@ projection.
 Note that the order of g and f are flipped between S and both,
 since both is native to sigmas.
 -/
-theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep) ($' s, α, β, γ, f, g, x) ($' ($' both, α, β, γ, g, f, x), ($' id, ($' β, z))) := by
-  apply IsBetaEq.trans
-  apply IsBetaEq.rel
-  apply IsStep.s
-  apply IsBetaEq.symm
-  apply IsBetaEq.trans
-  apply IsBetaEq.rel
-  apply IsStep.left
-  apply IsStep.both
-  apply IsBetaEq.trans
-  apply IsBetaEq.rel
-  apply IsStep.sapp
-  apply IsBetaEq.trans
-  apply IsBetaEq.rel
-  apply IsStep.left
-  apply IsStep.id
-  apply IsBetaEq.refl
+theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep)
+  ($' s, α, β, γ, f, g, x)
+  ($' ($' both, α, β, γ, g, f, x), ($' id, ($' β, z))) := by
+  apply IsBetaEq.trans; apply IsBetaEq.rel
+  apply IsStep.s; apply IsBetaEq.symm
+  apply IsBetaEq.trans; apply IsBetaEq.rel
+  apply IsStep.left; apply IsStep.both
+  apply IsBetaEq.trans; apply IsBetaEq.rel
+  apply IsStep.sapp; apply IsBetaEq.trans
+  apply IsBetaEq.rel; apply IsStep.left
+  apply IsStep.id; apply IsBetaEq.refl
 
 end der_s_proj

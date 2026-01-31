@@ -139,7 +139,7 @@
         \item \sout{Can we fully emulate the old \(\pi\) combinator with a projector agrument?} \textbf{Yes!}
       \end{itemize}
     \item \sout{Can we derive application from \(\pi\) projection?} \textbf{Yes!}
-    \item Can we derive \(S\) from both + \(\pi(id)\)?
+    \item \sout{Can we derive \(S\) from both + \(\pi(id)\)?} \textbf{Yes!}
     \item Choose between \leane{fst} + \leane{snd} or \(\pi\) list projection combinator.
       \begin{itemize}
         \item Intuition says \leane{fst} and \leane{snd}, since they would have simpler types.
@@ -287,6 +287,27 @@ theorem apps_are_proj (t_f f x : Expr) : (@IsBetaEq IsStep)
   apply IsStep.left; apply IsStep.id
   apply IsBetaEq.refl
   \end{leancode}
+\end{frame}
+
+\subsection{Deriving the \(S\) combinator from \texttt{both} + projection}
+
+\begin{frame}[fragile, label=equivsapp]{\(S\) combinator = \texttt{id ∘ both}}
+  \begin{figure}
+    \begin{leancode}
+theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep)
+  ($' s, α, β, γ, f, g, x)
+  ($' ($' both, α, β, γ, g, f, x), ($' id, ($' β, z))) := by
+  apply IsBetaEq.trans; apply IsBetaEq.rel
+  apply IsStep.s; apply IsBetaEq.symm
+  apply IsBetaEq.trans; apply IsBetaEq.rel
+  apply IsStep.left; apply IsStep.both
+  apply IsBetaEq.trans; apply IsBetaEq.rel
+  apply IsStep.sapp; apply IsBetaEq.trans
+  apply IsBetaEq.rel; apply IsStep.left
+  apply IsStep.id; apply IsBetaEq.refl
+    \end{leancode}
+    \caption{This proof uses an extended AST with the \(S\) combinator for the purposes of this equivalence. Note that the order of \(f\) and \(g\) are flipped between \(S\) and \texttt{both}, since \texttt{both} is sigma-native.}
+  \end{figure}
 \end{frame}
 
 \end{document}

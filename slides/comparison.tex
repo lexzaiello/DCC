@@ -33,6 +33,11 @@
 
 \usemintedstyle{tango}
 
+\newminted{lean4}{
+    mathescape,
+    fontsize=\small,
+    linenos
+}
 \newcommand{\leane}[1]{\mintinline{lean4}|#1|}
 \newcommand{\dcce}[1]{\mintinline{lean4}[style=manni]|#1|}
 \newcommand{\pie}[1]{\Pi_{#1}}
@@ -105,6 +110,8 @@
   \end{equation}
 \end{frame}
 
+\section{Research Questions}
+
 \begin{frame}{TODOs}
   \begin{itemize}
     \item Should we internalize \(\pi\) projection in \sigl{a, b}, or should we have \sigl{fst, snd} combinators?
@@ -120,6 +127,36 @@
       \end{itemize}
       \item Should assertions get access to \sigl{x} or \sigl{x, \alpha}? Should work through some examples to compare.
     \end{itemize}
+\end{frame}
+
+\begin{frame}{Deriving the Explicit \leane{fst} Combinator}
+  \begin{leancode}
+/-
+  Assuming that we don't substitute in the head position of contexts ::[a, b], only the tail.
+
+  fst α β ::[head, tail] = head
+  ::[head, tail] ($ const', ::[β, nil β], α, (id β)) = (id β) head = head
+
+  Internalized fst projection and explicit fst combinator are equally expressive.
+-/
+theorem fst_der (head tail fn : Expr) : IsStep ($ fst, fn, _α, _β, ::[head, tail]) ($ fn, head) ↔
+  IsStepStar ($ ::[head, tail], ($ const', ::[β, ($ nil, β)], α, fn)) ($ fn, head) := by
+  constructor
+  intro h_step
+  cases h_step
+  apply IsStepStar.trans
+  apply IsStep.sapp
+  apply IsStepStar.trans
+  apply IsStep.left
+  apply IsStep.const'
+  apply IsStepStar.refl
+  intro h_step
+  cases h_step
+  case mpr.trans e₂ h_step h_trans =>
+    cases h_trans
+    apply IsStep.fst
+    apply IsStep.fst
+  \end{leancode}
 \end{frame}
 
 \end{document}

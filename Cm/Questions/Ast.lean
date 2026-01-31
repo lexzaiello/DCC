@@ -41,6 +41,12 @@ inductive IsStepStar { rel : Expr → Expr → Prop } : Expr → Expr → Prop
     → IsStepStar e₂ e₃
     → IsStepStar e₁ e₃
 
+inductive IsBetaEq {s : Expr → Expr → Prop} : Expr → Expr → Prop where
+  | rel   : s e₁ e₂ → IsBetaEq e₁ e₂
+  | refl  : IsBetaEq e e
+  | symm  : IsBetaEq e₁ e₂ → IsBetaEq e₂ e₁
+  | trans : IsBetaEq e₁ e₂ → IsBetaEq e₂ e₃ → IsBetaEq e₁ e₃
+
 syntax ident ".{" term,* "}" : term
 syntax "::[" term,+ "]"      : term
 syntax "($" term,+ ")"       : term
@@ -166,16 +172,29 @@ inductive IsStep : Expr → Expr → Prop
   | right  : IsStep x x'
     → IsStep ($ f, x) ($ f, x')
 
-theorem application_is_projection (t_f f x : Expr) : IsStep ($ f, x) e' ↔ (@IsStepStar IsStep) ($ ::[x, f], ($ id, t_f)) e' := by
-  constructor
+/-
+All applications have equivalent projections.
+-/
+theorem app_imp_proj (t_f f x : Expr) : (@IsStepStar IsStep) ($ f, x) e' → (@IsStepStar IsStep) ($ ::[x, f], ($ id, t_f)) e' := by
   intro h_step
-  apply IsStepStar.trans
+  cases h_step
+  apply IsStepStar.trans; apply IsStep.sapp
+  apply IsStepStar.trans; apply IsStep.left
+  apply IsStep.id; apply IsStepStar.refl
+  apply IsStepStar.trans; apply IsStep.sapp
+  apply IsStepStar.trans; apply IsStep.left
+  apply IsStep.id; apply IsStepStar.trans
+  repeat assumption
+
+theorem apps_are_proj (t_f f x : Expr) : (@IsBetaEq IsStep) ($ f, x) ($ ::[x, f], ($ id, t_f)) := by
+  apply IsBetaEq.symm
+  apply IsBetaEq.trans
+  apply IsBetaEq.rel
   apply IsStep.sapp
-  apply IsStepStar.trans
+  apply IsBetaEq.trans
+  apply IsBetaEq.rel
   apply IsStep.left
   apply IsStep.id
-  apply IsStepStar.trans
-  exact h_step
-  sorry
+  apply IsBetaEq.refl
 
 end der_app_proj

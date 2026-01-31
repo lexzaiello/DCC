@@ -38,7 +38,7 @@
     fontsize=\small
   }
 \newcommand{\leane}[1]{\mintinline{lean4}|#1|}
-\newcommand{\leanw}[1]{\textcolor{white}{\mintinline{lean4}{#1}}}
+\newcommand{\leanw}[1]{\texttt{#1}}
 \newcommand{\dcce}[1]{\mintinline{lean4}[style=manni]|#1|}
 \newcommand{\pie}[1]{\Pi_{#1}}
 \newcommand{\type}[1]{\text{Type } #1}
@@ -216,10 +216,11 @@ theorem snd_der (head tail fn : Expr) : IsStep
 
 \subsection{Sigma projection is equivalent to application}
 
-\begin{frame}[fragile]{All Apps have corresponding Proj.}
+\begin{frame}[fragile]{All Apps have corresponding Sigma Projections}
   \begin{leancode}
-theorem app_imp_proj (t_f f x : Expr) : (@IsStepStar IsStep) (\$ f, x) e' →
-  (@IsStepStar IsStep) (\$ ::[x, f], (\$ id, t_f)) e' := by
+theorem app_imp_proj (t_f f x : Expr) : (@IsStepStar IsStep)
+  (\$ f, x) e' → (@IsStepStar IsStep)
+  (\$ ::[x, f], (\$ id, t_f)) e' := by
   intro h_step
   cases h_step
   apply IsStepStar.trans; apply IsStep.sapp
@@ -234,7 +235,8 @@ theorem app_imp_proj (t_f f x : Expr) : (@IsStepStar IsStep) (\$ f, x) e' →
 
 \begin{frame}[fragile]{Apps are \(=_{\beta}\) Sigma Projection}
   \begin{leancode}
-theorem apps_are_proj (t_f f x : Expr) : (@IsBetaEq IsStep) (\$ f, x) (\$ ::[x, f], (\$ id, t_f)) := by
+theorem apps_are_proj (t_f f x : Expr) : (@IsBetaEq IsStep)
+  (\$ f, x) (\$ ::[x, f], (\$ id, t_f)) := by
   apply IsBetaEq.symm; apply IsBetaEq.trans
   apply IsBetaEq.rel; apply IsStep.sapp
   apply IsBetaEq.trans; apply IsBetaEq.rel

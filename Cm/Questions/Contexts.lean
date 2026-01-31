@@ -19,42 +19,35 @@ def snd (α β : Expr) : Expr :=
   ($ const', β, α)
 
 /-
-Want to do composition.
-
-::[g, f] ::[a, b] or x ::[g, f]
-= (const fn 
-
-const b a = b
-
-(fn ∘ const) b a = fn b
-
-::[fn, const] ::[b, a] =
-::[b, a] (const fn)
-= (const fn) a b
-= fn b
+::[f, g] list
+= list g f
 -/
 def comp (f g : Expr) : Expr :=
   ::[f, g]
 
+def mk_both (α β γ f g : Expr) : Expr :=
+  ($ both, α , β, γ, f, g)
+
 /-
 Arrows:
-Σ (mk_arrow α β) (T x) = ::[α, β]
+Σ (mk_arrow α β) (x : α) = ::[α, β]
 -/
 def mk_arrow (α β : Expr) : Expr :=
   ($ Σ'
-  , ($ both
-      , Ty
-      , ($ nil, Ty)
-      , ($ nil, Ty)
-      , ($ const', Ty, Ty, α)
-      , ($ const', Ty, Ty
-        , ($ Σ'
-           , ($ both, Ty, ($ nil, Ty), ($ nil, Ty)
-             , ($ const', Ty, Ty, β)
-             , ($ const', Ty, Ty, β))))))
+  , (mk_both (α := α)
+      (β := ($ const', α, Ty, Ty))
+      (γ := ($ const', α, Ty, Ty))
+      (f := ($ nil, α))
+      (g := ($ const, Ty, α, β))))
 
-def snd' (α β : Expr) (fn_post : Expr := ($ id, α)) :=
-  comp fn_post ($ const', sorry, β, fn_post)
+/-
+::[a, b] (snd' α β fn_post)
+= b fn_post
+
+(a : β) (b : α)
+-/
+def snd' (α β : Expr) (γ : Expr := α) (fn_post : Expr := ($ id, α)) :=
+  comp fn_post ($ const', (mk_arrow α , β, fn_post)
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
   | refl  : IsStepStar e e

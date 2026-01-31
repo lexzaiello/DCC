@@ -131,18 +131,37 @@
     \end{itemize}
 \end{frame}
 
-\subsection{\leanw{fst} and \leanw{snd} can be condensed into one rule}
-
-\begin{frame}{Derivation AST}
+\begin{frame}{Research Questions AST}
+  \begin{figure}
   \begin{leancode}
 inductive Expr where
-  | app    : Expr → Expr → Expr
-  | cons   : Expr → Expr → Expr
-  | π      : Expr
-  | fst    : Expr | snd    : Expr
-  | both   : Expr
-  | const  : Expr | const' : Expr
-  | id     : Expr | nil    : Expr | ty     : Expr
+  | app : Expr → Expr → Expr
+  | cons : Expr → Expr → Expr
+  | π : Expr
+  | fst : Expr | snd : Expr
+  | both : Expr
+  | const : Expr | const' : Expr
+  | id : Expr | nil : Expr | ty : Expr
+\end{leancode}
+\caption{I have omitted universe levels for our research question proofs.}
+\end{figure}
+\end{frame}
+
+\subsection{\leanw{fst} and \leanw{snd} can be condensed into one rule}
+
+\begin{frame}{Projection Derivation \leanw{IsStep}}
+  \begin{leancode}
+inductive IsStep : Expr → Expr → Prop
+  | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
+  | fst    : IsStep ($ fst, _α, _β, fn, ::[x, f]) ($ fn, x)
+  | snd    : IsStep ($ snd, _α, _β, fn, ::[x, f]) ($ fn, f, x)
+  | nil    : IsStep ($ nil, α, x) α
+  | id     : IsStep ($ Expr.id, _α, x) x
+  | const' : IsStep ($ const', _α, _β, x, y) x
+  | left   : IsStep f f'
+    → IsStep ($ f, x) ($ f', x)
+  | right  : IsStep x x'
+    → IsStep ($ f, x) ($ f, x')
   \end{leancode}
 \end{frame}
 

@@ -112,7 +112,7 @@
 \begin{frame}{Central Thesis: The Sigma-Curry Correspondence}
   \begin{itemize}
     \item Combinator types are much easier to form with all arguments in scope (``uncurried'')
-    \item I demonstrate \hyperlink{equivfst}{\beamergotobutton{here}} that \texttt{Sigma.snd} projection is equivalent to function application
+    \item I demonstrate \hyperlink{equivsigmaapp}{\beamergotobutton{here}} that \texttt{Sigma.snd} projection is equivalent to function application
     \item Treating the future application as \textit{data} makes forming types much simpler
   \end{itemize}
 \end{frame}
@@ -273,7 +273,7 @@ theorem app_imp_proj (t_f f x : Expr) : (@IsStepStar IsStep)
   \end{leancode}
 \end{frame}
 
-\begin{frame}[fragile]{All Function Applications are \(=_{\beta}\) Sigma Projection}
+\begin{frame}[fragile, label=equivsigmaapp]{All Function Applications are \(=_{\beta}\) Sigma Projection}
   \begin{leancode}
 /-
   (f x) β= (::[x, f] (id t_f))

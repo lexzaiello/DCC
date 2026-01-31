@@ -47,7 +47,7 @@ def mk_arrow (α β : Expr) : Expr :=
 (a : β) (b : α)
 -/
 def snd' (α β : Expr) (γ : Expr := α) (fn_post : Expr := ($ id, α)) :=
-  comp fn_post ($ const', (mk_arrow α , β, fn_post)
+  comp fn_post ($ const', (mk_arrow α γ), β, fn_post)
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
   | refl  : IsStepStar e e

@@ -131,9 +131,9 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Research Questions AST}
+\begin{frame}[fragile]{Research Questions AST}
   \begin{figure}
-  \begin{leancode}
+    \begin{leancode}
 inductive Expr where
   | app : Expr → Expr → Expr
   | cons : Expr → Expr → Expr
@@ -142,12 +142,12 @@ inductive Expr where
   | both : Expr
   | const : Expr | const' : Expr
   | id : Expr | nil : Expr | ty : Expr
-\end{leancode}
-\caption{I have omitted universe levels for our research question proofs.}
-\end{figure}
+    \end{leancode}
+    \caption{I have omitted universe levels for our research question proofs.}
+  \end{figure}
 \end{frame}
 
-\begin{frame}{Research Questions Multi-Step Relation}
+\begin{frame}[fragile]{Research Questions Multi-Step Relation}
 \begin{leancode}
 inductive IsStepStar { rel : Expr → Expr → Prop } : Expr → Expr → Prop
   | refl  : IsStepStar e e
@@ -159,7 +159,7 @@ inductive IsStepStar { rel : Expr → Expr → Prop } : Expr → Expr → Prop
 
 \subsection{\leanw{fst} and \leanw{snd} can be condensed into one rule}
 
-\begin{frame}{Projection Derivation \leanw{IsStep}}
+\begin{frame}[fragile]{Projection Derivation \leanw{IsStep}}
   \begin{leancode}
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
@@ -175,7 +175,7 @@ inductive IsStep : Expr → Expr → Prop
   \end{leancode}
 \end{frame}
 
-\begin{frame}[label=equivfst, fragile]{Deriving the Explicit \leanw{fst} Combinator}
+\begin{frame}[fragile][label=equivfst, fragile]{Deriving the Explicit \leanw{fst} Combinator}
   \begin{leancode}
 /-
   fst α β fn ::[head, tail] = fn head =

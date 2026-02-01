@@ -342,10 +342,10 @@ theorem project_well_typed : ValidJudgment xs β → ValidJudgment x α
   → ValidJudgment α Ty
   → ValidJudgment β Ty
   → ValidJudgment δ Ty
-  → ValidJudgment π ($ Pi, ($ nil, β), ($ Pi, ($ const', (mk_arrow α Ty), Ty, ($ nil, α)), γ))
+  → ValidJudgment π ($ Pi, ($ nil, β), ($ Pi, ($ const', (mk_arrow α Ty), β, ($ nil, α)), γ))
   → DefEq ($ γ, xs, x) δ
   → ValidJudgment ($ ::[x, xs], π) δ := by
   intro h_t_xs h_t_x h_t_γ h_t_α h_t_β h_t_π h_eq_γ
   judge def_eq, sapp, cons
   repeat assumption
-  
+

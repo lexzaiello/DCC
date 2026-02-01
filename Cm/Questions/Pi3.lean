@@ -331,3 +331,60 @@ inductive ValidJudgment : Expr → Expr → Prop
   | defeq    : ValidJudgment e α
     → DefEq α β
     → ValidJudgment e β
+
+syntax "defeq" ident,*        : tactic
+syntax "step" ident,*         : tactic
+syntax "judge" ident,*         : tactic
+
+macro_rules
+  | `(tactic| defeq $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `DefEq name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| step $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `IsStep name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| judge $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+
+theorem rw_snd_postfix : DefEq ($ ::[a, b], (snd_postfix α β)) b := by
+  defeq trans, step
+  step sapp
+  defeq step
+  step const
+
+theorem rw_fst_postfix : DefEq ($ ::[a, b], (fst_postfix α β)) a := by
+  defeq trans, step
+  step sapp
+  defeq trans, left, step
+  step const
+  defeq step
+  step id
+
+theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by
+  intro h_t_α h_t_x
+  judge defeq
+  judge app
+  judge defeq
+  judge app
+  judge id
+  judge defeq
+  assumption
+  defeq symm, trans, step
+  step nil
+  defeq refl
+  defeq trans, right, step
+  step id
+  defeq pi
+  judge defeq
+  assumption
+  defeq symm, trans

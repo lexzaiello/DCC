@@ -171,7 +171,7 @@ inductive DefEq : Expr → Expr → Prop
   | pleft   : DefEq i i'  → DefEq (Pi i o f) (Pi i' o f)
   | pf      : DefEq f f'  → DefEq (Pi i o f) (Pi i o f')
   | pi      : DefEq ($ (Pi i o map_arg), x)
-    (Pi ($ i, ($ map_arg, x)) ($ o, ($ map_arg, x)) ($map_arg, x))
+    (Pi i o ($ map_arg, x))
   | subst   : DefEq ($ (Pi α₁ β₁ map_arg₁), x) ($ (Pi α₂ β₂ map_arg₂), x)
     → DefEq (Pi α₁ β₁ map_arg₁) (Pi α₂ β₂ map_arg₂)
 
@@ -377,15 +377,16 @@ theorem nil_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJud
   assumption
   defeq symm, trans, step
   step nil
-  defeq refl, trans, pi, refl
+  defeq refl, pi
   judge defeq
   assumption
-  defeq symm, trans, left, step
+  defeq symm, trans, step
   step id
   defeq trans, step
   step nil
-  defeq step
+  defeq trans, step
   step id
+  defeq refl
   
 
 theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by

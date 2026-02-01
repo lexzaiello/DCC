@@ -98,7 +98,23 @@ const : ∀ (α : Type) (β : α → Type), α → β → α
 /-
 const' : ∀ (α : Type) (β : Type), α → β → α
 
-const' : Pi (nil Ty) (Pi (const' nil.type Ty nil)
+(flip (const' Ty)) α β = (const' Ty β α)
+
+would be nice if we could make nil even more powerful.
+
+nil α β x = α
+α → β → α
+
+α gets in scope β, x
+
+nil Ty Ty x = x
+β is the type of the argument.
+
+const' : Pi
+  (nil Ty)
+  (Pi
+    (const' (mk_arrow Ty Ty) Ty (nil Ty))
+    (Pi (const' Ty 
 -/
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop

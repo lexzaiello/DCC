@@ -20,6 +20,25 @@ import Mathlib.Data.Nat.Notation
 
   1. Does this new distinction between ValidJudgment and Pi
     break anything? Probably breaks strong normalization. Maybe.
+
+  2. Prod currently seems quite inflexible.
+    Is (Prod α (β : α → Type)) better?
+
+  3. By adding cons' combinator version of cons, we can actually get around
+    having a separate IsStep for Pi.
+
+    (Pi t_in t_out) ∘ cons'. Nope.
+    But, we should use cons' instead of cons.
+
+    (Pi t_in t_out) a b = (Pi t_in t_out) ::[b, a]
+
+    (Pi t_in t_out) ::[a, b] c = (Pi t_in t_out) (cons' ::[a, b] c) = ::[::[a, b], c]
+
+    cons' should actually be push, I think.
+
+  4. For later: should we special case push and just get rid of cons? Unclear.
+
+  5. Prod α β ::[(x : (α : β → Type)), (xs : β)]?
 -/
 
 inductive Expr where
@@ -29,9 +48,17 @@ inductive Expr where
      They are the mirror image of application "as data". -/
   | cons   : Expr → Expr → Expr
   /-
+    Combinator version of cons.
+
+    5. Is this totally unnecessary?
+  -/
+  | push  : Expr
+  /-
     ::[x, xs] lists are a special case. They are the mirror
     image of application as data. They internalize a projector
     argument π.
+
+    Prod (α : β → Type) (β : Type)
   -/
   | Prod   : Expr → Expr → Expr
   /-
@@ -63,6 +90,7 @@ inductive Expr where
   | id     : Expr
   -- This is a necessary for bridging ::[a, b] π to π ::[a, b]
   | flip   : Expr
+  | comp   : Expr
   -- downgrades a term to a type
   | nil    : Expr
   | ty     : Expr
@@ -86,6 +114,7 @@ open Expr
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
   -- To allow forming Pi expressions using list syntax.
+  -- cons
   | pi     : IsStep ($ Pi Tin Tout, a, b) ($ Pi t_in t_out, ::[b, a])
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
@@ -101,6 +130,18 @@ inductive IsStep : Expr → Expr → Prop
       (y : ∀ (x : α), β x), γ x
   -/
   | flip   : IsStep ($ flip, _α, _β, x, z) ($ z, x)
+  /-
+    Another less powerful version of the B combinator.
+
+    comp (α β : Type)
+      (γ : β → Type)
+      (f : ∀ (x : β), γ x)
+      (g : α → β)
+      (x : α), γ (g x)
+
+    comp f g x = f (g x)
+  -/
+  | comp   : IsStep ($ comp, α, β, γ, f, g, x) ($ f, ($ g, x))
   | left   : IsStep f f'
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
@@ -143,6 +184,9 @@ def fst_postfix (α β : Expr := Ty) : Expr :=
 def fst_postfix.type (α β : Expr := Ty) : Expr :=
   (mk_arrow α (mk_arrow β β))
 
+def pair.mk_type (α β : Expr) : Expr :=
+  (Prod ($ const', Ty, Ty, α) β)
+
 /-
 List projection, but in head position.
 
@@ -151,6 +195,8 @@ fst ::[a, b] = a
 This is essentially our flip combinator.
 
 flip fst ::[a, b]
+
+We assume here that (β : α → Type)
 -/
 def fst (α β : Expr := Ty) : Expr :=
   ($ flip, (fst_postfix.type α β), (Prod α β), (fst_postfix α β))
@@ -165,6 +211,9 @@ def snd_postfix (α β : Expr := Ty) : Expr :=
 
 def snd_postfix.type (α β : Expr := Ty) : Expr := (mk_arrow β (mk_arrow α β))
 
+/-
+We also assume here (β : α → Type)
+-/
 def snd (α β : Expr := Ty) : Expr :=
   ($ flip, (snd_postfix.type α β), (Prod α β), (snd_postfix α β))
 
@@ -176,18 +225,47 @@ def snd (α β : Expr := Ty) : Expr :=
 
   Assume for α → β → α that we have ::[β, α] in scope.
 
-  
+  (Pi (fst Ty (Prod Ty Ty)) (Pi (comp (Prod Ty Ty) (nil Ty) _ (fst Ty (Prod Ty Ty))
 
   (Pi (nil Ty) (Pi (const' (mk_arrow Ty Ty) Ty (nil Ty)) (Pi (
 -/
+
+def const.type.mk_out_arr : Expr :=
+  /-
+    ::[(x : α : β → Type), xs : (β : Type)]
+  -/
+
+  let t_β_α := Prod ($ nil, Ty) Ty
+
+  -- with ::[β, α] in scope
+  let t_y := (fst ($ nil, Ty) Ty)
+  let t_x_β_α := Prod t_y t_β_α
+  /- with ::[y, β, α] in scope
+   we want just α
+   we know that snd will give us
+   t_β_α
+   ::[β, α]
+   we do snd again
+  -/
+  let t_all := Prod ($ comp, t_x_β_α, t_β_α, ($ const', Ty, t_β_α, Ty), (snd ($ nil, Ty) Ty), (snd t_y t_β_α))
+
+  -- with ::[y, x, β, α] in scope
+  let α := snd 
+
+  (Pi α (Pi β α))
+
+def const.type : Expr :=
+  
 
 inductive ValidJudgment : Expr → Expr → Prop
   /- TODO: Remove this in the actual calculus
      use type universes
      this module is just for answering reseach questions -/
   | ty        : ValidJudgment Ty Ty
-  | cons      : ValidJudgment x α
-    → ValidJudgment xs β
+  | cons      : ValidJudgment x β
+    → ValidJudgment xs α
+    → ValidJudgment α Ty
+    → ValidJudgment β (mk_arrow α Ty)
     → ValidJudgment ::[x, xs] (Prod α β)
   | id        : ValidJudgment id id.type
   | nil       : ValidJudgment nil nil.type
@@ -213,10 +291,12 @@ inductive ValidJudgment : Expr → Expr → Prop
 
    If γ is a Pi expression, we won't automatically get the output.
    γ is not a Pi expression, it is a function. So this is fine!
+
+   Prod α β ::[(x : (β : α → Type)), (xs : α)]
   -/
   | sapp      : ValidJudgment ::[a, b] (Prod α β)
-    → ValidJudgment a α
-    → ValidJudgment b β
+    → ValidJudgment a β
+    → ValidJudgment b α
     → ValidJudgment γ (mk_arrow β (mk_arrow α Ty))
     → ValidJudgment π (Pi ($ nil, β) (Pi ($ const', (mk_arrow α Ty), β, ($ nil, α)) γ))
     → ValidJudgment ($ ::[a, b], π) ($ γ, b, a)
@@ -336,45 +416,7 @@ theorem nil_well_typed : ValidJudgment α Ty
   step nil
   defeq refl
 
-theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
-  → ValidJudgment γ (mk_arrow Ty (mk_arrow xs Ty))
-  → ValidJudgment π (Pi ($ nil, Ty) (Pi ($ const', (mk_arrow xs Ty), Ty, ($ nil, xs)) γ))
-  → DefEq ($ γ, xs, x) xs
-  → ValidJudgment ($ ::[x, xs], id) xs := by
-  intro h_t_xs h_t_x h_t_γ h_t_π h_eq_γ
-  judge defeq, sapp, cons
-  repeat assumption
-  judge defeq, id
-  defeq symm, subst
-  defeq trans, pi
-  defeq trans, pleft, step
-  step nil
-  defeq trans, pright, pi
-  defeq trans, pright, pleft, step
-  step const'
-  defeq symm, trans, pi
-  defeq trans, pright, pi
-  defeq trans, pleft, step
-  step nil
-  defeq pright, subst, symm, trans, pi
-  defeq trans, pright
-  exact h_eq_γ
-  defeq trans, pleft, step
-  step nil
-  defeq symm, trans, pi
-  defeq trans, pright, step
-  step nil
-  defeq trans, pright
-  exact h_eq_γ.symm
-  defeq trans, pleft
-  defeq step
-  step nil
-  defeq trans, pright
-  exact h_eq_γ
-  defeq refl
-  exact h_eq_γ
-
-theorem project_well_typed : ValidJudgment xs β → ValidJudgment x α
+/-theorem project_well_typed : ValidJudgment xs β → ValidJudgment x α
   → ValidJudgment γ (mk_arrow β (mk_arrow α Ty))
   → ValidJudgment α Ty
   → ValidJudgment β Ty
@@ -384,4 +426,4 @@ theorem project_well_typed : ValidJudgment xs β → ValidJudgment x α
   → ValidJudgment ($ ::[x, xs], π) δ := by
   intro h_t_xs h_t_x h_t_γ h_t_α h_t_β h_t_π h_eq_γ
   judge defeq, sapp, cons
-  repeat assumption
+  repeat assumption-/

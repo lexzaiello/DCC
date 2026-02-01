@@ -29,7 +29,7 @@ inductive Expr where
     Our representation of curried function types.
     Π t_in t_out
   -/
-  | Pi     : Expr
+  | Pi     : Expr → Expr → Expr
   | both   : Expr
   | const  : Expr
   | const' : Expr
@@ -59,25 +59,21 @@ Arrows:
 This assumes only (x : α) is in scope.
 -/
 def mk_arrow (α β : Expr) : Expr :=
-  ($ Pi, ($ nil, α), ($ const', Ty, α, β))
+  (Pi ($ nil, α) ($ const', Ty, α, β))
 
 def pop_t_out : Expr → Expr
-  | ($ Pi, _t_in, t_out) => t_out
+  | (Pi _t_in t_out) => t_out
   | e => e
 
 /-
 Pi : (α → Type) → (α → Type) → Type
 -/
 def Pi.type : Expr :=
-  ($ Pi
-   , ($ Pi, ($ id, Ty), ($ nil, Ty))
-   , ($ Pi
-     , ($ Pi, ($ id, Ty), ($ nil, Ty))
-     , ($ nil, ($ nil, Ty))))
+  Ty
 
 def id.type : Expr :=
   -- (α : Ty) ((x : α) → (_x α))
-  ($ Pi, ($ nil, Ty), ($ Pi, nil, nil))
+  (Pi ($ nil, Ty) (Pi nil nil))
 
 /-
 nil : ∀ (α : Type), α → Type
@@ -86,7 +82,7 @@ nil : ∀ (α : Type), α → Type
 (nil Ty) x = Ty
 -/
 def nil.type : Expr :=
-  ($ Pi, ($ nil, Ty), ($ Pi, nil, ($ nil, ($ nil, Ty))))
+  (Pi ($ nil, Ty) (Pi nil ($ nil, ($ nil, Ty))))
 
 /-
 const' : ∀ (α : Type) (β : Type), α → β → α
@@ -113,7 +109,7 @@ inductive IsBetaEq {s : Expr → Expr → Prop} : Expr → Expr → Prop where
 
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
-  | pi     : IsStep ($ Pi, Tin, Tout, Δ) ($ Pi, ($ Tin, Δ), ($ Tout, Δ))
+  | pi     : IsStep ($ (Pi Tin Tout), Δ) (Pi ($ Tin, Δ) ($ Tout, Δ))
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
@@ -134,8 +130,10 @@ inductive DefEq : Expr → Expr → Prop
   | right   : DefEq x x'  → DefEq ($ f, x) ($ f, x')
   | lright  : DefEq f f'  → DefEq ::[x, f] ::[x, f']
   | lleft   : DefEq x x'  → DefEq ::[x, f] ::[x', f]
-  | subst   : DefEq ($ Pi, α₁, β₁, x) ($ Pi, α₂, β₂, x)
-    → DefEq ($ Pi, α₁, β₁) ($ Pi, α₂, β₂)
+  | pright  : DefEq o o'  → DefEq (Pi i o) (Pi i o')
+  | pleft   : DefEq i i'  → DefEq (Pi i o) (Pi i' o)
+  | subst   : DefEq ($ (Pi α₁ β₁), x) ($ (Pi α₂ β₂), x)
+    → DefEq (Pi α₁ β₁) (Pi α₂ β₂)
 
 inductive IsStepN : ℕ → Expr → Expr → Prop
   | one  : IsStep e e' → IsStepN 1 e e'
@@ -158,7 +156,9 @@ inductive ValidJudgment : Expr → Expr → Prop
   | id        : ValidJudgment id id.type
   | nil       : ValidJudgment nil nil.type
   | Prod      : ValidJudgment (Prod α β) Ty
-  | Pi        : ValidJudgment Pi Pi.type
+  | Pi        : ValidJudgment t_in (mk_arrow α Ty)
+    → ValidJudgment t_out (mk_arrow α Ty)
+    → ValidJudgment (Pi t_in t_out) Pi.type
   --| id        : ValidJudgment id Π[::[nil, id, id], Ty]
   /-
     To check an app:
@@ -168,7 +168,7 @@ inductive ValidJudgment : Expr → Expr → Prop
     - (((f : Π Tin Tout) (x : α)) : (Tout x))
     - To check that x matches the domain, (Tin x)
   -/
-  | app       : ValidJudgment f ($ Pi, Tin, Tout)
+  | app       : ValidJudgment f (Pi Tin Tout)
     → ValidJudgment x ($ Tin, x)
     → ValidJudgment ($ f, x) ($ Tout, x)
   /-
@@ -182,7 +182,7 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment a α
     → ValidJudgment b β
     → ValidJudgment γ (mk_arrow β (mk_arrow α Ty))
-    → ValidJudgment π ($ Pi, ($ nil, β), ($ Pi, ($ const', (mk_arrow α Ty), β, ($ nil, α)), γ))
+    → ValidJudgment π (Pi ($ nil, β) (Pi ($ const', (mk_arrow α Ty), β, ($ nil, α)) γ))
     → ValidJudgment ($ ::[a, b], π) ($ γ, b, a)
   | def_eq    : ValidJudgment e α
     → DefEq α β
@@ -243,23 +243,23 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
-abbrev nil_ty_out {α : Expr} : Expr := ($ Pi, Ty, ($ Pi, ($ nil, α), ($ nil, Ty)))
+abbrev nil_ty_out {α : Expr} : Expr := (Pi Ty (Pi ($ nil, α) ($ nil, Ty)))
 
 theorem rw_nil_ty : DefEq ($ nil.type, α) (@nil_ty_out α) := by
   unfold nil.type
   defeq trans, step
   step pi
-  defeq trans, left, right, step
+  defeq trans, pleft, step
   step nil
-  defeq right, trans, step
+  defeq pright, trans, step
   step pi
-  defeq trans, right, step
+  defeq trans, pright, step
   step nil
-  defeq right, refl
+  defeq pright, refl
 
-abbrev nil_ty₁_out {α : Expr} := ($ Pi, α, Ty)
+abbrev nil_ty₁_out {α : Expr} := (Pi α Ty)
 
-theorem rw_nil_ty_out : DefEq (pop_t_out (@nil_ty_out α)) ($ Pi, ($ nil, α), ($ nil, Ty)) := by
+theorem rw_nil_ty_out : DefEq (pop_t_out (@nil_ty_out α)) (Pi ($ nil, α) ($ nil, Ty)) := by
   simp [pop_t_out]
   defeq refl
 
@@ -267,19 +267,20 @@ theorem rw_nil_ty₁ {α x : Expr} : DefEq ($ (pop_t_out (@nil_ty_out α)), x) (
   simp [pop_t_out]
   defeq trans, step
   step pi
-  defeq trans, right, step
+  defeq trans, pright, step
   step nil
-  defeq trans, left, right, step
+  defeq trans, pleft, step
   step nil
   defeq refl
 
 -- Pi : (α → Type) → (α → Type) → Type
-theorem Pi_well_typed_self : ValidJudgment t_in ($ Pi, ($ id, Ty), ($ nil, Ty))
-  → ValidJudgment t_out ($ Pi, ($ id, Ty), ($ nil, Ty))
-  → ValidJudgment ($ Pi, t_in, t_out) Ty := by
-  intro h_t_t_in h_t_t_out
-  judge def_eq, app, def_eq, app
-  
+theorem Pi_well_typed_self : ValidJudgment α Ty
+  → ValidJudgment t_in (mk_arrow α Ty)
+  → ValidJudgment t_out (mk_arrow α Ty)
+  → ValidJudgment (Pi t_in t_out) Ty := by
+  intro h_t_α h_t_in h_t_out
+  judge Pi
+  repeat assumption
 
 theorem nil_well_typed : ValidJudgment α Ty
   → ValidJudgment x α
@@ -296,7 +297,7 @@ theorem nil_well_typed : ValidJudgment α Ty
   simp [pop_t_out]
   defeq trans, step
   step pi
-  defeq right
+  defeq pright
   defeq trans, step
   step nil
   defeq refl
@@ -311,7 +312,7 @@ theorem nil_well_typed : ValidJudgment α Ty
 
 theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   → ValidJudgment γ (mk_arrow Ty (mk_arrow xs Ty))
-  → ValidJudgment π ($ Pi, ($ nil, Ty), ($ Pi, ($ const', (mk_arrow xs Ty), Ty, ($ nil, xs)), γ))
+  → ValidJudgment π (Pi ($ nil, Ty) (Pi ($ const', (mk_arrow xs Ty), Ty, ($ nil, xs)) γ))
   → DefEq ($ γ, xs, x) xs
   → ValidJudgment ($ ::[x, xs], id) xs := by
   intro h_t_xs h_t_x h_t_γ h_t_π h_eq_γ
@@ -321,30 +322,35 @@ theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   defeq symm, subst
   defeq trans, step
   step pi
-  defeq trans, left, right, step
+  defeq trans, pleft, step
   step nil
-  defeq trans, right, step
+  defeq trans, pright, step
   step pi
-  defeq trans, right, left, right, step
+  defeq trans, pright, pleft, step
   step const'
   defeq symm, trans, step
   step pi
-  defeq trans, right, step
+  defeq trans, pright, step
   step pi
-  defeq trans, left, right, step
+  defeq trans, pleft, step
   step nil
-  defeq right, subst, symm, trans, step
+  defeq pright, subst, symm, trans, step
   step pi
-  defeq trans, right
+  defeq trans, pright
   exact h_eq_γ
-  defeq trans, left, right, step
+  defeq trans, pleft, step
   step nil
   defeq symm, trans, step
   step pi
-  defeq trans, left, right, step
+  defeq trans, pright, step
   step nil
-  defeq trans, right, step
+  defeq trans, pright
+  exact h_eq_γ.symm
+  defeq trans, pleft
+  defeq step
   step nil
+  defeq trans, pright
+  exact h_eq_γ
   defeq refl
   exact h_eq_γ
 
@@ -353,7 +359,7 @@ theorem project_well_typed : ValidJudgment xs β → ValidJudgment x α
   → ValidJudgment α Ty
   → ValidJudgment β Ty
   → ValidJudgment δ Ty
-  → ValidJudgment π ($ Pi, ($ nil, β), ($ Pi, ($ const', (mk_arrow α Ty), β, ($ nil, α)), γ))
+  → ValidJudgment π (Pi ($ nil, β) (Pi ($ const', (mk_arrow α Ty), β, ($ nil, α)) γ))
   → DefEq ($ γ, xs, x) δ
   → ValidJudgment ($ ::[x, xs], π) δ := by
   intro h_t_xs h_t_x h_t_γ h_t_α h_t_β h_t_π h_eq_γ

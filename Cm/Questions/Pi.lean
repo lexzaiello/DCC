@@ -61,6 +61,10 @@ This assumes only (x : α) is in scope.
 def mk_arrow (α β : Expr) : Expr :=
   ($ Pi, ($ nil, α), ($ const', Ty, α, β))
 
+def pop_t_out : Expr → Expr
+  | ($ Pi, _t_in, t_out) => t_out
+  | e => e
+
 def Pi.type : Expr :=
   ($ Pi
    , ($ nil, ($ Pi, ($ id, Ty), ($ nil, Ty)))
@@ -112,6 +116,7 @@ inductive IsStep : Expr → Expr → Prop
   | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
     ::[($ f, x), ($ g, x)]
   | const' : IsStep ($ const', _α, _β, x, y) x
+  | const  : IsStep ($ const, _α, _β, x, y) x
   | left   : IsStep f f'
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
@@ -126,8 +131,6 @@ inductive DefEq : Expr → Expr → Prop
   | right   : DefEq x x'  → DefEq ($ f, x) ($ f, x')
   | lright  : DefEq f f'  → DefEq ::[x, f] ::[x, f']
   | lleft   : DefEq x x'  → DefEq ::[x, f] ::[x', f]
-  | pleft   : DefEq α α'  → DefEq ($ Pi, α, β) ($ Pi, α', β)
-  | pright  : DefEq β β'  → DefEq ($ Pi, α, β) ($ Pi, α, β')
   | subst   : DefEq ($ Pi, α₁, β₁, x) ($ Pi, α₂, β₂, x)
     → DefEq ($ Pi, α₁, β₁) ($ Pi, α₂, β₂)
 
@@ -237,48 +240,64 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
-theorem rw_nil_ty : DefEq ($ nil.type, α) ($ Pi, Ty, ($ Pi, ($ nil, α), ($ nil, Ty))) := by
+abbrev nil_ty_out {α : Expr} : Expr := ($ Pi, Ty, ($ Pi, ($ nil, α), ($ nil, Ty)))
+
+theorem rw_nil_ty : DefEq ($ nil.type, α) (@nil_ty_out α) := by
   unfold nil.type
   defeq trans, step
   step pi
-  defeq trans, pleft, step
+  defeq trans, left, right, step
   step nil
-  defeq pright, trans, step
+  defeq right, trans, step
   step pi
-  defeq trans, pright, step
+  defeq trans, right, step
   step nil
-  defeq pright
+  defeq right, refl
+
+abbrev nil_ty₁_out {α : Expr} := ($ Pi, α, Ty)
+
+theorem rw_nil_ty_out : DefEq (pop_t_out (@nil_ty_out α)) ($ Pi, ($ nil, α), ($ nil, Ty)) := by
+  simp [pop_t_out]
   defeq refl
 
-theorem rw_nil_ty₁ : DefEq ($ ($ Pi, ($ nil, α), ($ nil, Ty)), x) ($ Pi, α, Ty) := by
+theorem rw_nil_ty₁ {α x : Expr} : DefEq ($ (pop_t_out (@nil_ty_out α)), x) (@nil_ty₁_out α) := by
+  simp [pop_t_out]
   defeq trans, step
   step pi
-  defeq trans, pleft, step
+  defeq trans, right, step
   step nil
-  defeq right
-  defeq step
+  defeq trans, left, right, step
   step nil
+  defeq refl
 
 theorem nil_α_well_typed : ValidJudgment α Ty
   → ValidJudgment x α
   → ValidJudgment ($ nil, α, x) Ty := by
   intro h_t_α h_t_x
-  judge def_eq, app, app, def_eq, nil
-  unfold nil.type
-  defeq subst
+  judge def_eq, app, def_eq, app, nil
+  judge def_eq
+  exact h_t_α
+  defeq symm, trans, step
+  step nil
+  defeq refl, trans
+  show DefEq (pop_t_out (@nil_ty_out α)) _
+  apply rw_nil_ty_out
+  simp [pop_t_out]
   defeq trans, step
   step pi
-  defeq trans, pright, step
-  step pi
-  defeq trans, pright, pright, step
+  defeq right
+  defeq trans, step
   step nil
+  defeq refl
+  judge def_eq
+  exact h_t_x
   defeq symm, trans, step
-  step pi
-  defeq symm, trans, pleft, step
   step nil
-  defeq symm, trans
-  
-  sorry
+  defeq refl
+  defeq trans, step
+  step nil
+  defeq refl
+
 /-, refl
   exact (nil.app Ty)
   judge def_eq

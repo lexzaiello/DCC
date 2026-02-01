@@ -98,6 +98,17 @@ abbrev id.type : Expr :=
   -- (α : Ty) ((x : α) → (_x α))
   Pi ($ nil, Ty) (Pi nil nil)
 
+/-
+const' : ∀ (α : Type) (β : Type), α → β → α
+
+-- with α, then β in scope
+-- wrap (nil α) in a const
+-- const ? ? (nil α)
+let x_α := ::[nil, const Ty (Pi (nil Ty) nil)
+
+const : Pi (nil Ty) (Pi (const' (mk_arrow Ty Ty) Ty (nil Ty)) (Pi (nil
+-/
+
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
   | refl  : IsStepStar e e
   | trans : rel e₁ e₂
@@ -242,7 +253,6 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
-
 theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   → ValidJudgment γ (mk_arrow Ty (mk_arrow xs Ty))
   → ValidJudgment π (Pi ($ nil, Ty) (Pi ($ const', (mk_arrow xs Ty), Ty, ($ nil, xs)) γ))
@@ -281,4 +291,5 @@ theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   step nil
   defeq refl
   exact h_eq_γ
+
 

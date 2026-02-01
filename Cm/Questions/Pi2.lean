@@ -55,7 +55,15 @@ import Mathlib.Data.Nat.Notation
 
     We can make α implicit? And infer it upon the first app.
 
-    Pi : Pi (nil Ty) (Pi (Pi nil (nil Ty)) (Pi (Pi nil (nil Ty))
+    Pi : Pi
+      (nil Ty)
+      (Pi
+        (nil ∘ (Pi nil (nil Ty)))
+        (const' (Pi
+          (nil ∘ (Pi nil (nil Ty)))
+          (
+
+    Assuming we have in scope ::[
 -/
 
 inductive Expr where

@@ -200,19 +200,26 @@ List projection, but in tail position.
 def snd_postfix (α β : Expr := Ty) : Expr :=
   ($ const, β, α)
 
+/-
+::[a, b] id = b a
+
+::[b, id] a =
+id a b
+-/
+
 def const'.type : Expr :=
   (Pi -- α in scope
     ($ nil, Ty)
-    (Pi -- α β in scope
-      ::[($ nil, Ty), snd_postfix]
-      (Pi -- ::[α, β] x in scope. We want only α assert for this argument
-        ::[($ id, Ty), fst_postfix]
-        (Pi -- only ::[α, β] in scope. We want only β assert for this argument
-          ::[($ id, Ty), snd_postfix]
-          ::[($ id, Ty), fst_postfix]
-          nil)
-        nil)
-      Expr.cons) -- ($ cons, a, b) = .app (.app .cons a) b
+    (Pi -- ::[α, β] in scope
+      ($ const', Ty, (Prod Ty ($ nil, Ty)), Ty) -- ty is input
+      (Pi -- with still ::[α, β] in scope
+        ::[snd_postfix, Expr.cons]
+        (Pi
+          ::[fst_postfix, Expr.cons]
+          ::[snd_postfix, Expr.cons]
+          ($ const, (Prod Ty ($ nil, Ty)), ::[fst_postfix, Expr.cons]))
+        ($ const, (Prod Ty ($ nil, Ty)), ::[snd_postfix, Expr.cons]))
+      Expr.cons)
     ($ id, Ty))
 
 def id.type : Expr :=
@@ -223,7 +230,7 @@ def id.type : Expr :=
       ($ id, Ty)
       nil)
     ($ id, Ty))
-    
+
 
 def Pi.type : Expr := Ty
 
@@ -258,8 +265,9 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment α Ty
     → ValidJudgment β (mk_arrow α Ty)
     → ValidJudgment ::[x, xs] (Prod α β)
-  | id        : ValidJudgment id id.type
+  | id        : ValidJudgment Expr.id id.type
   | nil       : ValidJudgment nil nil.type
+  | const'    : ValidJudgment const' const'.type
   | Prod      : ValidJudgment (Prod α β) Ty
   | Pi        : ValidJudgment (Pi Tin Tout Marg) Pi.type
   /-
@@ -334,12 +342,14 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
+@[simp]
 theorem rw_snd_postfix {a b α β : Expr} : DefEq ($ ::[a, b], (snd_postfix α β)) b := by
   defeq trans, step
   step sapp
   defeq step
   step const
 
+@[simp]
 theorem rw_fst_postfix {a b α β : Expr} : DefEq ($ ::[a, b], (fst_postfix α β)) a := by
   defeq trans, step
   step sapp
@@ -348,6 +358,7 @@ theorem rw_fst_postfix {a b α β : Expr} : DefEq ($ ::[a, b], (fst_postfix α �
   defeq step
   step id
 
+@[simp]
 theorem rw_comp : DefEq ($ ::[g, f], ::[a, b]) ($ ::[a, b], f, g) := by
   defeq step
   step sapp
@@ -392,6 +403,61 @@ theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudg
   step id
   defeq trans, step
   step nil
+  defeq step
+  step id
+
+theorem const'_well_typed : ValidJudgment α Ty
+  → ValidJudgment β Ty
+  → ValidJudgment x α
+  → ValidJudgment y β
+  → ValidJudgment ($ const', α, β, x, y) α := by
+  intro h_t_α h_t_β h_t_x h_t_y
+  judge defeq, app, defeq, app, defeq, app, defeq, app, const', defeq
+  assumption
+  defeq symm, trans, step
+  step nil
+  defeq refl, pi
+  judge defeq
+  assumption
+  defeq symm, trans, step
+  step const'
+  defeq refl
+  defeq pi
+  judge defeq
+  assumption
+  defeq symm, trans, step
+  step sapp
+  defeq trans, left, left, step
+  step const
+  defeq trans, left, step
+  step sapp
+  defeq trans
+  apply rw_snd_postfix
+  defeq step
+  step id
+  defeq pi
+  judge defeq
+  assumption
+  defeq symm, trans, step
+  step sapp
+  defeq trans, left, left, step
+  step const
+  defeq trans, left, left, step
+  step const
+  defeq trans, left, step
+  step sapp
+  defeq trans
+  apply rw_fst_postfix
+  defeq refl, trans, step
+  step sapp
+  defeq trans, left, left, step
+  step const
+  defeq trans, left, left, step
+  step const
+  defeq trans, left, step
+  step sapp
+  defeq trans
+  apply rw_snd_postfix
   defeq step
   step id
 

@@ -237,7 +237,7 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
-example : DefEq ($ nil.type, α) ($ Pi, Ty, ($ Pi, ($ nil, α), ($ nil, Ty))) := by
+theorem rw_nil_ty : DefEq ($ nil.type, α) ($ Pi, Ty, ($ Pi, ($ nil, α), ($ nil, Ty))) := by
   unfold nil.type
   defeq trans, step
   step pi
@@ -249,6 +249,15 @@ example : DefEq ($ nil.type, α) ($ Pi, Ty, ($ Pi, ($ nil, α), ($ nil, Ty))) :=
   step nil
   defeq pright
   defeq refl
+
+theorem rw_nil_ty₁ : DefEq ($ ($ Pi, ($ nil, α), ($ nil, Ty)), x) ($ Pi, α, Ty) := by
+  defeq trans, step
+  step pi
+  defeq trans, pleft, step
+  step nil
+  defeq right
+  defeq step
+  step nil
 
 theorem nil_α_well_typed : ValidJudgment α Ty
   → ValidJudgment x α

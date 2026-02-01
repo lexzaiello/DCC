@@ -39,6 +39,23 @@ import Mathlib.Data.Nat.Notation
   4. For later: should we special case push and just get rid of cons? Unclear.
 
   5. Prod α β ::[(x : (α : β → Type)), (xs : β)]?
+
+  6. Is it possible to make Pi point-free with our new sigma types?
+
+    Not really. So we can't use it in places where we expect a Pi.
+    We couldn't make a point-free arrow.
+
+    We can't really wrap it in any good way.
+
+    Pi : (α → Type) → (α → Type) → Type
+
+    We also can't substitute nicely point-free.
+
+    If we made up a syntactic object for Pi, what would it be?
+
+    We can make α implicit? And infer it upon the first app.
+
+    Pi : Pi (nil Ty) (Pi (Pi nil (nil Ty)) (Pi (Pi nil (nil Ty))
 -/
 
 inductive Expr where
@@ -218,17 +235,38 @@ def snd (α β : Expr := Ty) : Expr :=
   ($ flip, (snd_postfix.type α β), (Prod α β), (snd_postfix α β))
 
 /-
+/-
   Const type now.
   We can use our new substitution here.
 
   But how do we trigger it?
+  - This will only get triggered, since it will have multiple
+  arguments hit it without spitting out a value.
 
-  Assume for α → β → α that we have ::[β, α] in scope.
-
-  (Pi (fst Ty (Prod Ty Ty)) (Pi (comp (Prod Ty Ty) (nil Ty) _ (fst Ty (Prod Ty Ty))
-
-  (Pi (nil Ty) (Pi (const' (mk_arrow Ty Ty) Ty (nil Ty)) (Pi (
+  This is my other question:
+  - Do we only get α and β? Would be a lot easier, then.
 -/
+
+def const.type.mk_out_arr' : Expr :=
+  /-
+    ::[β, α]
+  -/
+
+  let t_p_α := Ty
+  let t_p_β := ($ nil, Ty)
+
+  let t_all := (Prod t_p_β t_p_α)
+
+  let α := (snd t_p_β t_p_α)
+  let β := (snd t_p_β t_p_α)
+
+  /-
+    We need to prefix the first α by only one nil.
+    We need to prefix β by two nil, since it might also receive x.
+  -/
+
+  -- (nil ∘ snd) ::[β, α]
+  let t_α := ($ comp, t_all, Ty, (Ty
 
 def const.type.mk_out_arr : Expr :=
   /-
@@ -274,7 +312,8 @@ def const.type.mk_out_arr : Expr :=
   (Pi α (Pi β α))
 
 def const.type : Expr :=
-  
+  Pi (nil Ty) (Pi (nil Ty)
+-/
 
 inductive ValidJudgment : Expr → Expr → Prop
   /- TODO: Remove this in the actual calculus

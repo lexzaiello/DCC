@@ -142,7 +142,7 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment ::[x, xs] (Prod α β)
   | prod      : ValidJudgment (Prod α β) Ty
   | id        : ValidJudgment id id.type
-  | Pi        : ValidJudgment ($ Pi, dom, cod) Ty
+  | Pi        : ValidJudgment Pi Pi.type
   --| id        : ValidJudgment id Π[::[nil, id, id], Ty]
   /-
     To check an app:

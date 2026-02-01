@@ -239,7 +239,8 @@ def const.type.mk_out_arr : Expr :=
 
   -- with ::[β, α] in scope
   let t_y := (fst ($ nil, Ty) Ty)
-  let t_x_β_α := Prod t_y t_β_α
+  let t_x := (snd ($ nil, Ty) Ty)
+  let t_x_β_α := Prod t_x t_β_α
   /- with ::[y, β, α] in scope
    we want just α
    we know that snd will give us
@@ -247,10 +248,21 @@ def const.type.mk_out_arr : Expr :=
    ::[β, α]
    we do snd again
   -/
-  let t_all := Prod ($ comp, t_x_β_α, t_β_α, ($ const', Ty, t_β_α, Ty), (snd ($ nil, Ty) Ty), (snd t_y t_β_α))
+  -- with ::[x, β, α] in scope
+  let whole_t_y := ($ comp, t_x_β_α, t_β_α, ($ const', Ty, t_β_α, Ty), (snd ($ nil, Ty) Ty), (snd t_y t_β_α))
+  let t_all := Prod whole_t_y t_x_β_α
 
   -- with ::[y, x, β, α] in scope
-  let α := snd 
+  -- then ::[x, β, α]
+  -- (snd ∘ snd ∘ snd) ::[y, x, β, α] = α
+  -- snd ∘ snd ::[x, β, α] = α
+  -- working inside to out
+  let α := ($ comp,
+    t_all,
+    t_x_β_α,
+    ($ nil, nil),
+    ($ comp, t_x_β_α, t_β_α, (fst ($ nil, Ty) Ty), t_x, t_x),
+    (snd whole_t_y t_x_β_α))
 
   (Pi α (Pi β α))
 

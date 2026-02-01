@@ -74,6 +74,9 @@ def id.type : Expr :=
 
 /-
 nil : ∀ (α : Type), α → Type
+
+($ nil, ($ nil, Ty)) α = (nil Ty)
+(nil Ty) x = Ty
 -/
 def nil.type : Expr :=
   ($ Pi, ($ nil, Ty), ($ Pi, nil, ($ nil, ($ nil, Ty))))
@@ -125,7 +128,7 @@ inductive DefEq : Expr → Expr → Prop
   | lleft   : DefEq x x'  → DefEq ::[x, f] ::[x', f]
   | pleft   : DefEq α α'  → DefEq ($ Pi, α, β) ($ Pi, α', β)
   | pright  : DefEq β β'  → DefEq ($ Pi, α, β) ($ Pi, α, β')
-  | subst   : DefEq ($ ($ Pi, α₁, β₁), x) ($ ($ Pi, α₂, β₂), x)
+  | subst   : DefEq ($ Pi, α₁, β₁, x) ($ Pi, α₂, β₂, x)
     → DefEq ($ Pi, α₁, β₁) ($ Pi, α₂, β₂)
 
 inductive IsStepN : ℕ → Expr → Expr → Prop
@@ -147,6 +150,7 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment xs β
     → ValidJudgment ::[x, xs] (Prod α β)
   | id        : ValidJudgment id id.type
+  | nil       : ValidJudgment nil nil.type
   | Prod      : ValidJudgment (Prod α β) Ty
   | Pi        : ValidJudgment Pi Pi.type
   --| id        : ValidJudgment id Π[::[nil, id, id], Ty]
@@ -232,6 +236,52 @@ macro_rules
       `(tactic| apply $nm))))
 
     `(tactic| $[$nms];*)
+
+example : DefEq ($ nil.type, α) ($ Pi, Ty, ($ Pi, ($ nil, α), ($ nil, Ty))) := by
+  unfold nil.type
+  defeq trans, step
+  step pi
+  defeq trans, pleft, step
+  step nil
+  defeq pright, trans, step
+  step pi
+  defeq trans, pright, step
+  step nil
+  defeq pright
+  defeq refl
+
+theorem nil_α_well_typed : ValidJudgment α Ty
+  → ValidJudgment x α
+  → ValidJudgment ($ nil, α, x) Ty := by
+  intro h_t_α h_t_x
+  judge def_eq, app, app, def_eq, nil
+  unfold nil.type
+  defeq subst
+  defeq trans, step
+  step pi
+  defeq trans, pright, step
+  step pi
+  defeq trans, pright, pright, step
+  step nil
+  defeq symm, trans, step
+  step pi
+  defeq symm, trans, pleft, step
+  step nil
+  defeq symm, trans
+  
+  sorry
+/-, refl
+  exact (nil.app Ty)
+  judge def_eq
+  assumption
+  defeq symm, trans, step
+  step nil
+  defeq refl
+  judge def_eq
+  assumption
+  defeq symm, trans, step
+  step nil-/
+  
 
 theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   → ValidJudgment γ (mk_arrow Ty (mk_arrow xs Ty))

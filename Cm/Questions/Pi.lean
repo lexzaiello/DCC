@@ -239,7 +239,7 @@ macro_rules
     let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
       let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
       `(tactic| apply $nm))))
-  
+
     `(tactic| $[$nms];*)
 
 

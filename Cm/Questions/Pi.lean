@@ -323,29 +323,29 @@ theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   defeq symm, subst
   defeq trans, step
   step pi
-  defeq trans, pleft, step
+  defeq trans, left, right, step
   step nil
-  defeq trans, pright, step
+  defeq trans, right, step
   step pi
-  defeq trans, pright, pleft, step
+  defeq trans, right, left, right, step
   step const'
   defeq symm, trans, step
   step pi
-  defeq trans, pright, step
+  defeq trans, right, step
   step pi
-  defeq trans, pleft, step
+  defeq trans, left, right, step
   step nil
-  defeq pright, subst, symm, trans, step
+  defeq right, subst, symm, trans, step
   step pi
-  defeq trans, pright
+  defeq trans, right
   exact h_eq_γ
-  defeq trans, pleft, step
+  defeq trans, left, right, step
   step nil
   defeq symm, trans, step
   step pi
-  defeq trans, pleft, step
+  defeq trans, left, right, step
   step nil
-  defeq trans, pright, step
+  defeq trans, right, step
   step nil
   defeq refl
   exact h_eq_γ

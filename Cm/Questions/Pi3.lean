@@ -170,7 +170,7 @@ inductive DefEq : Expr → Expr → Prop
   | pright  : DefEq o o'  → DefEq (Pi i o f) (Pi i o' f)
   | pleft   : DefEq i i'  → DefEq (Pi i o f) (Pi i' o f)
   | pf      : DefEq f f'  → DefEq (Pi i o f) (Pi i o f')
-  | pi      : DefEq ($ (Pi i o map_arg), x) (Pi ($ i, ($ map_arg, x)) ($ o, ($ map_arg, x)) ($ map_arg, x))
+  | pi      : DefEq ($ (Pi i o map_arg), x) (Pi ($ i, ($ map_arg, x)) ($ o, ($ map_arg, x)) nil)
   | subst   : DefEq ($ (Pi α₁ β₁ map_arg), x) ($ (Pi α₂ β₂ map_arg), x)
     → DefEq (Pi α₁ β₁ map_arg) (Pi α₂ β₂ map_arg)
 
@@ -308,7 +308,25 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment a α
     → ValidJudgment b β
     → ValidJudgment γ (mk_arrow β (mk_arrow α Ty))
-    → ValidJudgment π (Pi ($ nil, β) (Pi ($ const', (mk_arrow α Ty), β, ($ nil, α)) γ))
+    → ValidJudgment π (Pi -- x in scope
+      ($ nil, β)
+      (Pi -- ::[x, y] in scope. we need to flip x, y, then prepend to γ. ::[y, x, y] cons = cons ::[x, y] γ
+        ($ const', Ty, (Prod α β), α)
+        ($ both
+        , (Prod α β)
+        , ($ const'
+          , Ty
+          , (Prod α β)
+          , (mk_arrow β (mk_arrow α Ty)))
+        , ($ nil, (Prod α β))
+        , ($ const'
+          , (mk_arrow β (mk_arrow α Ty))
+          , (Prod α β)
+          , γ)
+        , ($ id, (Prod α β)))
+        Expr.cons)
+      ($ id, β))
+    --→ ValidJudgment π (Pi ($ nil, β) (Pi ($ const', (mk_arrow α Ty), β, ($ nil, α)) γ))
     → ValidJudgment ($ ::[a, b], π) ($ γ, b, a)
   | defeq    : ValidJudgment e α
     → DefEq α β

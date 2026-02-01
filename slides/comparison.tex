@@ -308,15 +308,15 @@ theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep)
 \begin{frame}{Very Dependent Types}
   \begin{itemize}
     \item \sigl{x, xs} represents a term. It is computationally relevant. What is the equivalent for types?
-    \item \(x : F\ x\): very dependent types, such as this one featured in Altenkirch et al. \cite{altenkirch} might be useful.
-    \item Since our sigma terms encode application as data, we can easily traverse the ``context''.
-    \item \leane{Σ t_in t_out : Type}
-    \item To infer domain / codomain: \leane{(((f : Σ Tα Tβ) (x : α)) : ((T ::[x, f]) π))}
+    \item \sout{\(x : F\ x\): very dependent types, such as this one featured in Altenkirch et al. \cite{altenkirch} might be useful.} Not helpful---use \(\Pi\) with clever inference and reduction rules.
+    \item \sout{Since our sigma terms encode application as data, we can easily traverse the ``context''.} List context is also unnecessary, seemingly. See \hyperlink{pisim}{\beamergotobutton{here}}.
+    \item \sout{\leane{Σ t_in t_out : Type}}
+    \item \sout{To infer domain / codomain: \leane{(((f : Σ Tα Tβ) (x : α)) : ((T ::[x, f]) π))}}
       \begin{itemize}
-        \item Problem: to project either component, we must know \(\alpha\) and \(\beta\).
+        \item \sout{Problem: to project either component, we must know \(\alpha\) and \(\beta\).}
       \end{itemize}
-    \item Can we do better with \leane{(((f : Σ T) (x : α)) : ((T ::[x, Σ T]) snd))}?
-      \item Since \leane{Σ T} is a \leane{Type}, the user cannot force evaluation. Only the kernel can.
+    \item \sout{Can we do better with \leane{(((f : Σ T) (x : α)) : ((T ::[x, Σ T]) snd))}?}
+      \item \sout{Since \leane{Σ T} is a \leane{Type}, the user cannot force evaluation. Only the kernel can.}
   \end{itemize}
 \end{frame}
 

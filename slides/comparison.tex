@@ -308,29 +308,20 @@ theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep)
 \begin{frame}{Very Dependent Types}
   \begin{itemize}
     \item \sigl{x, xs} represents a term. It is computationally relevant. What is the equivalent for types?
-    \item \(x : F x\): very dependent types, such as this one featured in Altenkirch et al. \cite{altenkirch} give an idea.
+    \item \(x : F\ x\): very dependent types, such as this one featured in Altenkirch et al. \cite{altenkirch} might be useful.
     \item Since our sigma terms encode application as data, we can easily traverse the ``context''.
-    \item \leane{Σ t : Type}
-    \item To infer output/intput type: \leane{(((f : Σ T) (x : α)) : ((T ::[x, f]) π))}
+    \item \leane{Σ t_in t_out : Type}
+    \item To infer domain / codomain: \leane{(((f : Σ Tα Tβ) (x : α)) : ((T ::[x, f]) π))}
+      \begin{itemize}
+        \item Problem: to project either component, we must know \(\alpha\) and \(\beta\).
+      \end{itemize}
     \item Can we do better with \leane{(((f : Σ T) (x : α)) : ((T ::[x, Σ T]) snd))}?
       \item Since \leane{Σ T} is a \leane{Type}, the user cannot force evaluation. Only the kernel can.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Is there a \sigl{x, xs} that lives in \type{u}?}
-  \begin{itemize}
-    \item Very dependent types, \(x : F x\), like the ones seen in Altenkirch's paper \cite{altenkirch} might be useful to clean up our application rule.
-    \item \texttt{nil} appears to be redundant, except for delimiting lists. But, what is the type of nil, then?
-    \item Sigmas are very powerful. However, we have been using them as terms. We want to capture the same functionality for the kernel to use to check types.
-    \item Can we assume \(\sigle{(x : \alpha), (xs : \beta)} : \times\ \beta\ \alpha\)?
-      \begin{itemize}
-        \item Intuition says \textbf{no}, and that this should be expressed as a function type with a variant of \sigl{x, xs} that is downgraded to eliminate into \type{n}.
-      \end{itemize}
-    \item Is there a reason we can't express function types with a \sigl{x, xs} such that \((\sigle{x, xs}\ \pi) : \type{n}\)?
-      \begin{itemize}
-        \item If no, can we produce an inference rule that makes this type-check?
-      \end{itemize}
-  \end{itemize}
+\begin{frame}{Inference Rule: Application}
+  
 \end{frame}
 
 %\begin{frame}{Hypotheses: Type Contexts}

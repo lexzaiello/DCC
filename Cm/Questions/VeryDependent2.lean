@@ -4,48 +4,7 @@ import Cm.Questions.Ast
 open Expr
 
 /-
-::[a, b] flip = ::[b, a]
-
-::[a, b] cons = cons b a = ::[b, a]
--/
-
-/-
-Research question to answer:
-Can we do better with \leane{(((f : Σ T) (x : α)) : ((T ::[x, Σ T]) snd))}?
-
-Our new inference:
-(((f : Σ T) (x : α)) : ((T ::[x, Σ T]) snd))
-(x : ((T ::[x, Σ T]) fst))
-
-Question: is this sufficient to recover term arguments? Σ T should be a Type
-We'll see.
-
-Using this new inference rule, id type:
-
--- with ::[α, Σ Tid] in scope.
-id : Σ (both ? ? ? ($ const' Ty, Ty)
-
-::[α, Σ Tid] ($ const' Ty, Ty)
-  = ($ const' Ty, Ty) (Σ Tid) α
-  
-
-($ const' Ty, Ty, α, Σ Tid)
-
-assuming we have fst with π projector argument
-id : comp ($ const' Ty, Ty
-
-($ const' Ty, Ty) ::[α, Σ id]
-
-(id α) : ::[Ty, Tid₂]
-
-We still expect an output type of the form ::[t_in, t_out]
-
-Note that Σ T receives ::[x, Σ t], so x should have a known type,
-since it is our argument. but Σ T is of type Type.
-Also, ::[x, Σ t] (id Type) : Type
-
-Answer to research question:
-This is almost certainly optimal.
+For our very dependent types, it's 
 -/
 
 /-
@@ -66,6 +25,26 @@ Although, this might not be ideal. ::[x, Σ T] is ideal.
 -/
 def fst (α β : Expr) (γ : Expr := β) (fn : Expr := ($ id, β)) : Expr :=
   ($ const', ::[β, ($ const', Ty, β, γ)], α, fn)
+
+
+/-
+::[a, b] flip = ::[b, a]
+
+::[a, b] cons = cons b a = ::[b, a]
+-/
+def flip_list : Expr :=
+  Expr.cons
+
+/-
+Type of ::[x, Σ (mk_arrow α β)]
+
+::[a, b] pairs accept a π projector argument.
+Otherwise, what is their type?
+
+Worry about this later.
+-/
+def context.type : Expr :=
+  sorry
 
 /-
 The version of snd in SigmaCorr is kind of unfaithful.
@@ -93,25 +72,37 @@ def mk_both (α β γ f g : Expr) : Expr :=
   ($ both, α , β, γ, f, g)
 
 /-
-Arrows:
-Σ (mk_arrow α β) (x : α) = ::[α, β]
+New id type using our new inference rules.
+
+ValidJudgment ($ f, x) ($ ($ T, ::[x, ($ Σ, T)]), (snd Ty Ty))
+
+Tid ::[α, fix] = ::[Ty, Tid₂]
+
+Issue here, again, is that we need to know the type of ::[Ty, Tid₂].
+We may need more notation for this.
+
+::[(Ty : Ty), (Tid₂ : Ty)] receives a projector. (π : Ty → Ty → 
+
+Tid = (fst Ty Ty sorry, ($ const, sorry, Ty, ::[Ty, Tid₂]))
+
+::[x, ::[α, ($ Σ, Tid)]]
+tid₂ ::[x, α, ($ Σ, Tid)]
+
+(id α) : ($ Σ, (Tid₂ α))
+
+we lean on the evaluation rule for Σ here. (Σ bdy x) = (Σ (bdy x))
+Tid = (fst Ty Ty sorry, ($ both, ?, ?, ?, ($ nil, Ty), ($ both, ?, ?, ?, Tid₂
+
+α gets destroyed. We need to apply it to Tid₂.
+
+ValidJudgmment f (Σ T)
+ValidJudgment x ((T ::[x, (Σ T)]) (fst Ty Ty))
+
+id : Σ (
 -/
-def mk_arrow (α β : Expr) : Expr :=
-  ($ Σ
-  , ($ const', Ty, α, ::[α, β]))
-
-/-
-::[a, b] (snd' α β fn_post)
-= b fn_post
-
-(a : β) (b : α)
--/
-def snd' (α β : Expr) (γ : Expr := α) (fn_post : Expr := ($ id, α)) :=
-  comp fn_post ($ const', (mk_arrow α γ), β, fn_post)
-
-
 abbrev id.type : Expr :=
-  sorry
+  let tid₂ := sorry
+  (fst Ty Ty sorry, ($ const, sorry, Ty, ::[Ty, Σ id₂]))
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop
   | refl  : IsStepStar e e

@@ -12,7 +12,11 @@ import Mathlib.Data.Nat.Notation
 
   (Pi t_in t_out) a b = (Pi t_in t_out) ::[b, a]
 
-  - Def eq allows us to step this, but step itself doesn't do this.
+  I like this approach ^ the best. We can avoid comp for now.
+
+  But, we will need to make use DefEq picks up how to do this.
+
+  We should leave the main Pi ValidJudgment the same, though.
 -/
 
 inductive Expr where
@@ -58,10 +62,26 @@ inductive Expr where
   | nil    : Expr
   | ty     : Expr
 
+syntax ident ".{" term,* "}"  : term
+syntax "::[" term,+ "]"       : term
+syntax "($" term,+ ")"        : term
+
+macro_rules
+  | `(::[ $x:term ]) => `($x)
+  | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
+  | `(($ $x:term) ) => `($x)
+  | `(($ $f:term, $x:term )) => `(Expr.app $f $x)
+  | `(($ $f, $x:term, $args:term,* )) =>
+    `(($ (Expr.app $f $x), $args,*))
+
+notation "Ty" => Expr.ty
+
+open Expr
+
 inductive IsStep : Expr → Expr → Prop
-  | comp   : IsStep ($ comp, α, β, γ, δ, f, g, x) ($ ($g, x), f)
   | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
-  | pi     : IsStep ($ (Pi Tin Tout), Δ) (Pi ($ Tin, Δ) ($ Tout, Δ))
+  -- To allow forming Pi expressions using list syntax.
+  | pi     : IsStep ($ Pi Tin Tout, a, b) ($ Pi t_in t_out, ::[b, a])
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
@@ -84,8 +104,21 @@ inductive DefEq : Expr → Expr → Prop
   | lleft   : DefEq x x'  → DefEq ::[x, f] ::[x', f]
   | pright  : DefEq o o'  → DefEq (Pi i o) (Pi i o')
   | pleft   : DefEq i i'  → DefEq (Pi i o) (Pi i' o)
+  | pi      : DefEq ($ Pi i o, x) ($ Pi ($ i, x) ($ o, x))
   | subst   : DefEq ($ (Pi α₁ β₁), x) ($ (Pi α₂ β₂), x)
     → DefEq (Pi α₁ β₁) (Pi α₂ β₂)
+
+def mk_arrow (α β : Expr) : Expr :=
+  (Pi ($ nil, α) ($ const', Ty, α, β))
+
+def id.type : Expr :=
+  (Pi ($ nil, Ty) (Pi nil nil))
+
+def nil.type : Expr :=
+  (Pi ($ nil, Ty) (Pi nil ($ nil, ($ nil, Ty))))
+
+def Pi.type : Expr :=
+  Ty
 
 inductive ValidJudgment : Expr → Expr → Prop
   /- TODO: Remove this in the actual calculus
@@ -126,35 +159,9 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment γ (mk_arrow β (mk_arrow α Ty))
     → ValidJudgment π (Pi ($ nil, β) (Pi ($ const', (mk_arrow α Ty), β, ($ nil, α)) γ))
     → ValidJudgment ($ ::[a, b], π) ($ γ, b, a)
-  | def_eq    : ValidJudgment e α
+  | defeq    : ValidJudgment e α
     → DefEq α β
     → ValidJudgment e β
-
-theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by
-  intro h_t_α h_t_x
-  apply ValidJudgment.def_eq
-  apply ValidJudgment.app
-  apply ValidJudgment.def_eq
-  apply ValidJudgment.app
-  apply ValidJudgment.id
-  apply ValidJudgment.def_eq
-  assumption
-  apply DefEq.symm
-  apply DefEq.step
-  apply IsStep.nil
-  apply DefEq.trans
-  apply DefEq.step
-  apply IsStep.pi
-  apply DefEq.refl
-  apply ValidJudgment.def_eq
-  assumption
-  apply DefEq.symm
-  apply DefEq.step
-  apply IsStep.nil
-  apply DefEq.trans
-  apply DefEq.step
-  apply IsStep.nil
-  apply DefEq.refl
 
 /-
 If x : xs, then
@@ -184,6 +191,22 @@ macro_rules
       `(tactic| apply $nm))))
 
     `(tactic| $[$nms];*)
+
+theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by
+  intro h_t_α h_t_x
+  judge defeq, app, defeq, app, id, defeq
+  assumption
+  defeq symm, trans, step
+  step nil
+  defeq refl, trans, pi, refl
+  judge defeq
+  assumption
+  defeq symm, trans, step
+  step nil
+  defeq refl
+  defeq trans, step
+  step nil
+  defeq refl
 
 abbrev nil_ty_out {α : Expr} : Expr := (Pi Ty (Pi ($ nil, α) ($ nil, Ty)))
 
@@ -228,8 +251,8 @@ theorem nil_well_typed : ValidJudgment α Ty
   → ValidJudgment x α
   → ValidJudgment ($ nil, α, x) Ty := by
   intro h_t_α h_t_x
-  judge def_eq, app, def_eq, app, nil
-  judge def_eq
+  judge defeq, app, defeq, app, nil
+  judge defeq
   exact h_t_α
   defeq symm, trans, step
   step nil
@@ -243,7 +266,7 @@ theorem nil_well_typed : ValidJudgment α Ty
   defeq trans, step
   step nil
   defeq refl
-  judge def_eq
+  judge defeq
   exact h_t_x
   defeq symm, trans, step
   step nil
@@ -258,9 +281,9 @@ theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   → DefEq ($ γ, xs, x) xs
   → ValidJudgment ($ ::[x, xs], id) xs := by
   intro h_t_xs h_t_x h_t_γ h_t_π h_eq_γ
-  judge def_eq, sapp, cons
+  judge defeq, sapp, cons
   repeat assumption
-  judge def_eq, id
+  judge defeq, id
   defeq symm, subst
   defeq trans, step
   step pi
@@ -305,6 +328,6 @@ theorem project_well_typed : ValidJudgment xs β → ValidJudgment x α
   → DefEq ($ γ, xs, x) δ
   → ValidJudgment ($ ::[x, xs], π) δ := by
   intro h_t_xs h_t_x h_t_γ h_t_α h_t_β h_t_π h_eq_γ
-  judge def_eq, sapp, cons
+  judge defeq, sapp, cons
   repeat assumption
 

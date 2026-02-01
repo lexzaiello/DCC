@@ -163,7 +163,7 @@ inductive IsBetaEq {s : Expr → Expr → Prop} : Expr → Expr → Prop where
 
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
-  | Pi  : IsStep ($ Pi Tin Tout, Δ) ($ Pi ($ Tin, Δ) ($ Tout, Δ))
+  | pi     : IsStep ($ Pi Tin Tout, Δ) ($ Pi ($ Tin, Δ) ($ Tout, Δ))
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
@@ -189,6 +189,11 @@ inductive IsStepN : ℕ → Expr → Expr → Prop
   | succ : IsStep e e'' → IsStepN n e'' e'''
     → IsStepN n.succ e e'''
 
+/-
+::[a, b] : Prod a b
+::[a, b] : {γ : β → α → Type} (π : ∀ (x : β) (y : α), γ x y)
+-/
+
 inductive ValidJudgment : Expr → Expr → Prop
   /- TODO: Remove this in the actual calculus
      use type universes
@@ -197,7 +202,8 @@ inductive ValidJudgment : Expr → Expr → Prop
   | cons      : ValidJudgment x α
     → ValidJudgment xs β
     → ValidJudgment ::[x, xs] (Prod α β)
-  | Pi     : ValidJudgment (Pi dom cod) Ty
+  | id        : ValidJudgment id id.type
+  | Pi        : ValidJudgment (Pi dom cod) Ty
   --| id        : ValidJudgment id Π[::[nil, id, id], Ty]
   /-
     To check an app:
@@ -210,6 +216,40 @@ inductive ValidJudgment : Expr → Expr → Prop
   | app       : ValidJudgment f (Pi Tin Tout)
     → ValidJudgment x ($ Tin, x)
     → ValidJudgment ($ f, x) ($ Tout, x)
+  /-
+   Apps with ::[x, xs] fn are a special case, since they
+   do some type inference
+  -/
+  | sapp      : ValidJudgment ::[a, b] (Prod α β)
+    → ValidJudgment π γ
+    → ValidJudgment γ (Pi ($ nil, β) ($ const', Ty, β, (Pi ($ nil, α) ($ const', Ty, α, Ty))))
+    → ValidJudgment ($ ::[a, b], π) ($ γ, b, a)
   | def_eq    : ValidJudgment e α
     → DefEq α β
     → ValidJudgment e β
+
+theorem id_α_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by
+  intro h_t_α h_t_x
+  apply ValidJudgment.def_eq
+  apply ValidJudgment.app
+  apply ValidJudgment.def_eq
+  apply ValidJudgment.app
+  apply ValidJudgment.id
+  apply ValidJudgment.def_eq
+  assumption
+  apply DefEq.symm
+  apply DefEq.step
+  apply IsStep.nil
+  apply DefEq.trans
+  apply DefEq.step
+  apply IsStep.pi
+  apply DefEq.refl
+  apply ValidJudgment.def_eq
+  assumption
+  apply DefEq.symm
+  apply DefEq.step
+  apply IsStep.nil
+  apply DefEq.trans
+  apply DefEq.step
+  apply IsStep.nil
+  apply DefEq.refl

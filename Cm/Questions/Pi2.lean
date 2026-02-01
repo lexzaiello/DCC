@@ -61,6 +61,8 @@ inductive Expr where
   | const  : Expr
   | const' : Expr
   | id     : Expr
+  -- This is a necessary for bridging ::[a, b] π to π ::[a, b]
+  | flip   : Expr
   -- downgrades a term to a type
   | nil    : Expr
   | ty     : Expr
@@ -91,6 +93,14 @@ inductive IsStep : Expr → Expr → Prop
     ::[($ f, x), ($ g, x)]
   | const' : IsStep ($ const', _α, _β, x, y) x
   | const  : IsStep ($ const, _α, _β, x, y) x
+  /-
+    This is a less powerful, less dependent version of flip.
+
+    flip (α : Type) (β : α → Type)
+      (x : α)
+      (y : ∀ (x : α), β x), γ x
+  -/
+  | flip   : IsStep ($ flip, _α, _β, x, z) ($ z, x)
   | left   : IsStep f f'
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
@@ -122,6 +132,54 @@ def nil.type : Expr :=
 
 def Pi.type : Expr :=
   Ty
+
+/-
+::[a, b] fst = a
+-/
+def fst_postfix (α β : Expr := Ty) : Expr :=
+  let f := ($ id, β)
+  ($ const', (mk_arrow β β), α, f)
+
+def fst_postfix.type (α β : Expr := Ty) : Expr :=
+  (mk_arrow α (mk_arrow β β))
+
+/-
+List projection, but in head position.
+
+fst ::[a, b] = a
+
+This is essentially our flip combinator.
+
+flip fst ::[a, b]
+-/
+def fst (α β : Expr := Ty) : Expr :=
+  ($ flip, (fst_postfix.type α β), (Prod α β), (fst_postfix α β))
+
+/-
+List projection, but in tail position.
+
+::[a, b] snd = b
+-/
+def snd_postfix (α β : Expr := Ty) : Expr :=
+  ($ const', β, α)
+
+def snd_postfix.type (α β : Expr := Ty) : Expr := (mk_arrow β (mk_arrow α β))
+
+def snd (α β : Expr := Ty) : Expr :=
+  ($ flip, (snd_postfix.type α β), (Prod α β), (snd_postfix α β))
+
+/-
+  Const type now.
+  We can use our new substitution here.
+
+  But how do we trigger it?
+
+  Assume for α → β → α that we have ::[β, α] in scope.
+
+  
+
+  (Pi (nil Ty) (Pi (const' (mk_arrow Ty Ty) Ty (nil Ty)) (Pi (
+-/
 
 inductive ValidJudgment : Expr → Expr → Prop
   /- TODO: Remove this in the actual calculus
@@ -327,4 +385,3 @@ theorem project_well_typed : ValidJudgment xs β → ValidJudgment x α
   intro h_t_xs h_t_x h_t_γ h_t_α h_t_β h_t_π h_eq_γ
   judge defeq, sapp, cons
   repeat assumption
-

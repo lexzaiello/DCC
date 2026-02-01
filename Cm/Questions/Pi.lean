@@ -85,9 +85,20 @@ def nil.type : Expr :=
   (Pi ($ nil, Ty) (Pi nil ($ nil, ($ nil, Ty))))
 
 /-
+Can we do composition with ::[a, b]?
+
+::[nil, (id Ty)] α =
+
+const' Ty Ty (nil α) β = α
+
+const : ∀ (α : Type) (β : α → Type), α → β → α
+(Pi (nil Ty) (Pi (Pi (id Ty)
+-/
+
+/-
 const' : ∀ (α : Type) (β : Type), α → β → α
 
-const : (Pi (nil Ty) (Pi (const' (mk_arrow Ty Ty) Ty (nil Ty)) (
+const' : Pi (nil Ty) (Pi (const' nil.type Ty nil)
 -/
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop

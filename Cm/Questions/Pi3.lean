@@ -387,7 +387,9 @@ theorem nil_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJud
   defeq trans, step
   step id
   defeq refl
-  
+  defeq trans, step
+  step nil
+  defeq refl
 
 theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by
   intro h_t_α h_t_x

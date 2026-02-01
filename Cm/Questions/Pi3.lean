@@ -170,9 +170,10 @@ inductive DefEq : Expr → Expr → Prop
   | pright  : DefEq o o'  → DefEq (Pi i o f) (Pi i o' f)
   | pleft   : DefEq i i'  → DefEq (Pi i o f) (Pi i' o f)
   | pf      : DefEq f f'  → DefEq (Pi i o f) (Pi i o f')
-  | pi      : DefEq ($ (Pi i o map_arg), x) (Pi ($ i, ($ map_arg, x)) ($ o, ($ map_arg, x)) nil)
-  | subst   : DefEq ($ (Pi α₁ β₁ map_arg), x) ($ (Pi α₂ β₂ map_arg), x)
-    → DefEq (Pi α₁ β₁ map_arg) (Pi α₂ β₂ map_arg)
+  | pi      : DefEq ($ (Pi i o map_arg), x)
+    (Pi ($ i, ($ map_arg, x)) ($ o, ($ map_arg, x)) ($map_arg, x))
+  | subst   : DefEq ($ (Pi α₁ β₁ map_arg₁), x) ($ (Pi α₂ β₂ map_arg₂), x)
+    → DefEq (Pi α₁ β₁ map_arg₁) (Pi α₂ β₂ map_arg₂)
 
 /-
 α → β
@@ -257,8 +258,8 @@ def nil.type : Expr :=
     (Pi -- still just α in scope
       ($ id, Ty)
       ($ nil, Ty)
-      ($ nil, Ty))
-    ($ nil, Ty))
+      nil)
+    ($ id, Ty))
 
 /-
 To check an application:
@@ -356,13 +357,13 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
-theorem rw_snd_postfix : DefEq ($ ::[a, b], (snd_postfix α β)) b := by
+theorem rw_snd_postfix {a b α β : Expr} : DefEq ($ ::[a, b], (snd_postfix α β)) b := by
   defeq trans, step
   step sapp
   defeq step
   step const
 
-theorem rw_fst_postfix : DefEq ($ ::[a, b], (fst_postfix α β)) a := by
+theorem rw_fst_postfix {a b α β : Expr} : DefEq ($ ::[a, b], (fst_postfix α β)) a := by
   defeq trans, step
   step sapp
   defeq trans, left, step
@@ -370,14 +371,26 @@ theorem rw_fst_postfix : DefEq ($ ::[a, b], (fst_postfix α β)) a := by
   defeq step
   step id
 
+theorem nil_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ nil, α, x) Ty := by
+  intro h_t_α h_t_x
+  judge defeq, app, defeq, app, nil, defeq
+  assumption
+  defeq symm, trans, step
+  step nil
+  defeq refl, trans, pi, refl
+  judge defeq
+  assumption
+  defeq symm, trans, left, step
+  step id
+  defeq trans, step
+  step nil
+  defeq step
+  step id
+  
+
 theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by
   intro h_t_α h_t_x
-  judge defeq
-  judge app
-  judge defeq
-  judge app
-  judge id
-  judge defeq
+  judge defeq, app, defeq, app, id, defeq
   assumption
   defeq symm, trans, step
   step nil
@@ -387,4 +400,10 @@ theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudg
   defeq pi
   judge defeq
   assumption
-  defeq symm, trans
+  defeq symm, trans, left, step
+  step sapp
+  defeq trans, left, step
+  step sapp
+  defeq trans, left, left, step
+  step nil
+  defeq 

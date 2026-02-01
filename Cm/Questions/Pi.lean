@@ -24,6 +24,38 @@ import Mathlib.Data.Nat.Notation
     curried apps. (B f g x) = f (g x)
     we assume (g x) produces some kind of list expression
     (g x) f is what we want, really.
+
+    - We will probably also need "flip" / C combinator.
+
+  4. Is it possible to change the Π substitution rule such that we can form
+    Pi types at runtime easier?
+
+    What we could do instead of applying always, and this would make the type
+    for Pi more consistent, is mirror how valid_judgment does it.
+
+    (Pi t_in t_out) a = (Pi (t_in a) (t_out a))
+    (Pi t_in t_out) a b = (Pi t_in t_out) ::[b, a]
+
+    This is very interesting.
+
+    But, we want these two branches to be exclusive.
+    How do we force substitution?
+
+    We could mimick this without a new eval rule with:
+
+    (Pi t_in t_out) ∘ (cons a)
+    (Pi t_in t_out) ∘ (cons a) b = (Pi t_in t_out)
+
+    But then we need a new cons operator.
+
+    Another potential idea:
+    No substitution happens in Step.
+
+    Can we offload advancing the machine to ValidJudgment?
+
+    (Pi t_in t_out) a b = (Pi t_in t_out) ::[b, a]
+
+    We will answer these questions in Pi2.lean
 -/
 
 inductive Expr where
@@ -58,7 +90,10 @@ inductive Expr where
     = ((both _ _ _ y x) z) id
     = ::[(y z), (x z)] id
     = (x z) (y z)
+
+    comp (α β γ : Ty) (δ : γ → β → Ty) (f : δ) (g : α → Prod β γ) (x : α)
   -/
+  | flip   : Expr
   | comp   : Expr
   | both   : Expr
   | const  : Expr
@@ -106,6 +141,47 @@ def id.type : Expr :=
   (Pi ($ nil, Ty) (Pi nil nil))
 
 /-
+/-
+comp (α β γ : Ty) (δ : γ → β → Ty) (f : ∀ (xs : γ) (x : β), δ) (g : α → Prod β γ) (x : α)
+
+comp _ _ _ _ f g x = ($ ($ g, x), f)
+
+α has just α in scope
+β has α and β in scope
+-/
+def comp.type : Expr :=
+  let α := ($ nil, Ty)
+  let β := ($ const' (mk_arrow Ty Ty) Ty α)
+  let γ := ($ const' (mk_arrow Ty (mk_arrow Ty Ty)) Ty β)
+
+  /-
+    δ rejects α, then makes γ → β → Ty,
+    which is kind of tricky, since it
+    flips the arguemnts.
+    Can we substitute into Pi with a list?
+    We are allowed to use comp in our own type
+
+    Once we have flip, we can do (const _ _ (flip _ _ _ (Pi (
+
+    Can we derive this comp from other comp?
+
+    Normal comp: (B f g x) = f (g x)
+
+    Another note: this is essentially flipped order of the list comp.
+
+    We might need a flip, corresponding to C.
+
+    C x y z = x z y
+    C 
+    flip 
+
+    Pi ? ? ::[
+  -/
+
+  (Pi α (Pi β (Pi γ (Pi 
+  sorry-/
+
+/-
 nil : ∀ (α : Type), α → Type
 
 ($ nil, ($ nil, Ty)) α = (nil Ty)
@@ -147,6 +223,7 @@ It would ALSO be really nice if we could build up an n-length context ::[arg₁,
 (t_in ∘ (:: arg₁)) arg₂ = t_in ::[arg₁, arg₂]
 
 Feels like composition would be really nice.
+This may allow us to do substitution in lists.
 
 (const' ? ? (nil α))
 -/
@@ -164,6 +241,7 @@ inductive IsBetaEq {s : Expr → Expr → Prop} : Expr → Expr → Prop where
   | trans : IsBetaEq e₁ e₂ → IsBetaEq e₂ e₃ → IsBetaEq e₁ e₃
 
 inductive IsStep : Expr → Expr → Prop
+  | comp   : IsStep ($ comp, α, β, γ, δ, f, g, x) ($ ($g, x), f)
   | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
   | pi     : IsStep ($ (Pi Tin Tout), Δ) (Pi ($ Tin, Δ) ($ Tout, Δ))
   | nil    : IsStep ($ nil, α, x) α

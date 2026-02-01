@@ -185,7 +185,7 @@ inductive ValidJudgment : Expr → Expr → Prop
     → DefEq α β
     → ValidJudgment e β
 
-theorem id_α_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by
+theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by
   intro h_t_α h_t_x
   apply ValidJudgment.def_eq
   apply ValidJudgment.app
@@ -270,7 +270,7 @@ theorem rw_nil_ty₁ {α x : Expr} : DefEq ($ (pop_t_out (@nil_ty_out α)), x) (
   step nil
   defeq refl
 
-theorem nil_α_well_typed : ValidJudgment α Ty
+theorem nil_well_typed : ValidJudgment α Ty
   → ValidJudgment x α
   → ValidJudgment ($ nil, α, x) Ty := by
   intro h_t_α h_t_x
@@ -297,19 +297,6 @@ theorem nil_α_well_typed : ValidJudgment α Ty
   defeq trans, step
   step nil
   defeq refl
-
-/-, refl
-  exact (nil.app Ty)
-  judge def_eq
-  assumption
-  defeq symm, trans, step
-  step nil
-  defeq refl
-  judge def_eq
-  assumption
-  defeq symm, trans, step
-  step nil-/
-  
 
 theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   → ValidJudgment γ (mk_arrow Ty (mk_arrow xs Ty))
@@ -350,4 +337,15 @@ theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   defeq refl
   exact h_eq_γ
 
-
+theorem project_well_typed : ValidJudgment xs β → ValidJudgment x α
+  → ValidJudgment γ (mk_arrow β (mk_arrow α Ty))
+  → ValidJudgment α Ty
+  → ValidJudgment β Ty
+  → ValidJudgment δ Ty
+  → ValidJudgment π ($ Pi, ($ nil, β), ($ Pi, ($ const', (mk_arrow α Ty), Ty, ($ nil, α)), γ))
+  → DefEq ($ γ, xs, x) δ
+  → ValidJudgment ($ ::[x, xs], π) δ := by
+  intro h_t_xs h_t_x h_t_γ h_t_α h_t_β h_t_π h_eq_γ
+  judge def_eq, sapp, cons
+  repeat assumption
+  

@@ -1,49 +1,16 @@
 import Mathlib.Data.Nat.Notation
 
 /-
-  1. Can we redesign our Π syntax to use more positional arguments?
-  Π t_in (Π t_in₂ (Π t_in₃ t_out))
-  Each t_in gets the context applied.
+  1. Can we do Π as a combinator, instead of an eta-expaned
+  Pi : Expr → Expr → Expr?
 
-  Note:
-  - we can start off each combinator's type
-  with a singleton
+  What would its type be?
 
-  Another note:
-  - Tout should not have to manage maintaining its own context.
+  Pi : (α → Type) → (α → Type) → Type
 
-  2. Ideally, we don't carry around a context. We form it from scratch from (f x)
-  We could encode the context in Π.
-
-  What's challenging about carrying around ::[x, f]?
-  We don't know how to type f if we want to project on the list.
-
-  We will run into this issue at some point.
-  Another potential approach is to carry each argument's type with it.
-
-  3. Can we carry around x's type? Not easily.
-
-  4. Can we include a Δ mapping register?
-
-    Perhaps Δ is not required, and Δ does substitution?
-    (Π t_in t_out) Δ = Π (t_in Δ) (t_out Δ)
-
-    So we can actually just apply one argument at a time?
-
-    This could be nice.
-
-    This should not be a reduction rule, though,
-    because it implies that sigma is a function.
-
-    (Π t_in t_out) : Type
-
-    id : Π (
-
-  ::[
-
-  (Π t_in t_out) Δ = (t_out Δ)
-
-  3. Can we omit f as an argument, or at least supply its type instead, wrapped in Π?
+  Pi : ($ Pi
+       , nil (Pi (id Ty) (nil Ty))
+       , Pi ($ nil, ($ Pi, id Ty, nil Ty)) ($ const', Ty, nil (Pi (id Ty) (nil Ty)), Ty))
 -/
 
 inductive Expr where
@@ -62,7 +29,7 @@ inductive Expr where
     Our representation of curried function types.
     Π t_in t_out
   -/
-  | Pi     : Expr → Expr → Expr
+  | Pi     : Expr
   | both   : Expr
   | const  : Expr
   | const' : Expr
@@ -92,11 +59,18 @@ Arrows:
 This assumes only (x : α) is in scope.
 -/
 def mk_arrow (α β : Expr) : Expr :=
-  Pi ($ nil, α) ($ const', Ty, α, β)
+  ($ Pi, ($ nil, α), ($ const', Ty, α, β))
+
+abbrev Pi.type : Expr :=
+  ($ Pi
+   , ($ nil, ($ Pi, ($ id, Ty), ($ nil, Ty)))
+   , ($ Pi
+     , ($ nil, ($ Pi, ($ id, Ty), ($ nil, Ty)))
+     , ($ const', Ty, ($ nil, ($ Pi, ($ id, Ty), ($ nil, Ty))), Ty)))
 
 abbrev id.type : Expr :=
   -- (α : Ty) ((x : α) → (_x α))
-  Pi ($ nil, Ty) (Pi nil nil)
+  ($ Pi, ($ nil, Ty), ($ Pi, nil, nil))
 
 /-
 const' : ∀ (α : Type) (β : Type), α → β → α
@@ -123,7 +97,7 @@ inductive IsBetaEq {s : Expr → Expr → Prop} : Expr → Expr → Prop where
 
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
-  | pi     : IsStep ($ Pi Tin Tout, Δ) ($ Pi ($ Tin, Δ) ($ Tout, Δ))
+  | pi     : IsStep ($ Pi, Tin, Tout, Δ) ($ Pi, ($ Tin, Δ), ($ Tout, Δ))
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
@@ -143,10 +117,10 @@ inductive DefEq : Expr → Expr → Prop
   | right   : DefEq x x'  → DefEq ($ f, x) ($ f, x')
   | lright  : DefEq f f'  → DefEq ::[x, f] ::[x, f']
   | lleft   : DefEq x x'  → DefEq ::[x, f] ::[x', f]
-  | pleft   : DefEq α α'  → DefEq (Pi α β) (Pi α' β)
-  | pright  : DefEq β β'  → DefEq (Pi α β) (Pi α β')
-  | subst   : DefEq ($ (Pi α₁ β₁), x) ($ (Pi α₂ β₂), x)
-    → DefEq (Pi α₁ β₁) (Pi α₂ β₂)
+  | pleft   : DefEq α α'  → DefEq ($ Pi, α, β) ($ Pi, α', β)
+  | pright  : DefEq β β'  → DefEq ($ Pi, α, β) ($ Pi, α, β')
+  | subst   : DefEq ($ ($ Pi, α₁, β₁), x) ($ ($ Pi, α₂, β₂), x)
+    → DefEq ($ Pi, α₁, β₁) ($ Pi, α₂, β₂)
 
 inductive IsStepN : ℕ → Expr → Expr → Prop
   | one  : IsStep e e' → IsStepN 1 e e'
@@ -168,7 +142,7 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment ::[x, xs] (Prod α β)
   | prod      : ValidJudgment (Prod α β) Ty
   | id        : ValidJudgment id id.type
-  | Pi        : ValidJudgment (Pi dom cod) Ty
+  | Pi        : ValidJudgment ($ Pi, dom, cod) Ty
   --| id        : ValidJudgment id Π[::[nil, id, id], Ty]
   /-
     To check an app:
@@ -178,7 +152,7 @@ inductive ValidJudgment : Expr → Expr → Prop
     - (((f : Π Tin Tout) (x : α)) : (Tout x))
     - To check that x matches the domain, (Tin x)
   -/
-  | app       : ValidJudgment f (Pi Tin Tout)
+  | app       : ValidJudgment f ($ Pi, Tin, Tout)
     → ValidJudgment x ($ Tin, x)
     → ValidJudgment ($ f, x) ($ Tout, x)
   /-
@@ -192,7 +166,7 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment a α
     → ValidJudgment b β
     → ValidJudgment γ (mk_arrow β (mk_arrow α Ty))
-    → ValidJudgment π (Pi ($ nil, β) (Pi ($ const', (mk_arrow α Ty), β, ($ nil, α)) γ))
+    → ValidJudgment π ($ Pi, ($ nil, β), ($ Pi, ($ const', (mk_arrow α Ty), β, ($ nil, α)), γ))
     → ValidJudgment ($ ::[a, b], π) ($ γ, b, a)
   | def_eq    : ValidJudgment e α
     → DefEq α β
@@ -255,7 +229,7 @@ macro_rules
 
 theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   → ValidJudgment γ (mk_arrow Ty (mk_arrow xs Ty))
-  → ValidJudgment π (Pi ($ nil, Ty) (Pi ($ const', (mk_arrow xs Ty), Ty, ($ nil, xs)) γ))
+  → ValidJudgment π ($ Pi, ($ nil, Ty), ($ Pi, ($ const', (mk_arrow xs Ty), Ty, ($ nil, xs)), γ))
   → DefEq ($ γ, xs, x) xs
   → ValidJudgment ($ ::[x, xs], id) xs := by
   intro h_t_xs h_t_x h_t_γ h_t_π h_eq_γ

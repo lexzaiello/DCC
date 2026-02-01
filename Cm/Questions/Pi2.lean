@@ -17,6 +17,9 @@ import Mathlib.Data.Nat.Notation
   But, we will need to make use DefEq picks up how to do this.
 
   We should leave the main Pi ValidJudgment the same, though.
+
+  1. Does this new distinction between ValidJudgment and Pi
+    break anything? Probably breaks strong normalization. Maybe.
 -/
 
 inductive Expr where
@@ -212,17 +215,19 @@ abbrev nil_ty_out {α : Expr} : Expr := (Pi Ty (Pi ($ nil, α) ($ nil, Ty)))
 
 theorem rw_nil_ty : DefEq ($ nil.type, α) (@nil_ty_out α) := by
   unfold nil.type
-  defeq trans, step
-  step pi
+  defeq trans, pi
   defeq trans, pleft, step
   step nil
-  defeq pright, trans, step
-  step pi
-  defeq trans, pright, step
+  defeq trans, pright, pi
+  unfold nil_ty_out
+  defeq pright, pright, step
   step nil
-  defeq pright, refl
 
 abbrev nil_ty₁_out {α : Expr} := (Pi α Ty)
+
+def pop_t_out : Expr → Expr
+  | (Pi _t_in t_out) => t_out
+  | e => e
 
 theorem rw_nil_ty_out : DefEq (pop_t_out (@nil_ty_out α)) (Pi ($ nil, α) ($ nil, Ty)) := by
   simp [pop_t_out]
@@ -230,8 +235,7 @@ theorem rw_nil_ty_out : DefEq (pop_t_out (@nil_ty_out α)) (Pi ($ nil, α) ($ ni
 
 theorem rw_nil_ty₁ {α x : Expr} : DefEq ($ (pop_t_out (@nil_ty_out α)), x) (@nil_ty₁_out α) := by
   simp [pop_t_out]
-  defeq trans, step
-  step pi
+  defeq trans, pi
   defeq trans, pright, step
   step nil
   defeq trans, pleft, step
@@ -260,8 +264,7 @@ theorem nil_well_typed : ValidJudgment α Ty
   show DefEq (pop_t_out (@nil_ty_out α)) _
   apply rw_nil_ty_out
   simp [pop_t_out]
-  defeq trans, step
-  step pi
+  defeq trans, pi
   defeq pright
   defeq trans, step
   step nil
@@ -285,28 +288,22 @@ theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   repeat assumption
   judge defeq, id
   defeq symm, subst
-  defeq trans, step
-  step pi
+  defeq trans, pi
   defeq trans, pleft, step
   step nil
-  defeq trans, pright, step
-  step pi
+  defeq trans, pright, pi
   defeq trans, pright, pleft, step
   step const'
-  defeq symm, trans, step
-  step pi
-  defeq trans, pright, step
-  step pi
+  defeq symm, trans, pi
+  defeq trans, pright, pi
   defeq trans, pleft, step
   step nil
-  defeq pright, subst, symm, trans, step
-  step pi
+  defeq pright, subst, symm, trans, pi
   defeq trans, pright
   exact h_eq_γ
   defeq trans, pleft, step
   step nil
-  defeq symm, trans, step
-  step pi
+  defeq symm, trans, pi
   defeq trans, pright, step
   step nil
   defeq trans, pright

@@ -1,0 +1,310 @@
+import Mathlib.Data.Nat.Notation
+
+/-
+  Minor alterations to Pi.lean to answer research question #4:
+  - Is it possible to change the Π substitution rule such that we can form
+    Pi types at runtime easier?
+
+  We would like to form Pi expressions at runtime with the "advancement"
+  feature we have in the kernel.
+
+  It's worth considering:
+
+  (Pi t_in t_out) a b = (Pi t_in t_out) ::[b, a]
+
+  - Def eq allows us to step this, but step itself doesn't do this.
+-/
+
+inductive Expr where
+  | app    : Expr → Expr → Expr
+  /- List-like objects
+     They come with built-in projection.
+     They are the mirror image of application "as data". -/
+  | cons   : Expr → Expr → Expr
+  /-
+    ::[x, xs] lists are a special case. They are the mirror
+    image of application as data. They internalize a projector
+    argument π.
+  -/
+  | Prod   : Expr → Expr → Expr
+  /-
+    Our representation of curried function types.
+    Π t_in t_out
+  -/
+  | Pi     : Expr → Expr → Expr
+  /-
+    The core SK combinators. Both is kind of a "downgraded" version
+    of S meant to work with ::[a, b] lists.
+    (both _ _ _ y x z) (id _) = (x z) (y z)
+    (both (id _) (const _ _ (both _ _ _ y x))) z
+    = ::[z, (both _ _ _ y x)]
+
+    (comp (id _) (both (id _) (const _ _ (both _ _ _ y x)))) z
+    = ((both (id _) (const _ _ (both _ _ _ y x))) z) (id _)
+    = ::[z, (both _ _ _ y x)] (id _)
+    = (both _ _ _ y x) z
+    (comp (id _) (comp (id _) (both (id _) (const _ _ (both _ _ _ y x))))) z
+    = ((both _ _ _ y x) z) id
+    = ::[(y z), (x z)] id
+    = (x z) (y z)
+
+    comp (α β γ : Ty) (δ : γ → β → Ty) (f : δ) (g : α → Prod β γ) (x : α)
+  -/
+  | both   : Expr
+  | const  : Expr
+  | const' : Expr
+  | id     : Expr
+  -- downgrades a term to a type
+  | nil    : Expr
+  | ty     : Expr
+
+inductive IsStep : Expr → Expr → Prop
+  | comp   : IsStep ($ comp, α, β, γ, δ, f, g, x) ($ ($g, x), f)
+  | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
+  | pi     : IsStep ($ (Pi Tin Tout), Δ) (Pi ($ Tin, Δ) ($ Tout, Δ))
+  | nil    : IsStep ($ nil, α, x) α
+  | id     : IsStep ($ Expr.id, _α, x) x
+  | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
+    ::[($ f, x), ($ g, x)]
+  | const' : IsStep ($ const', _α, _β, x, y) x
+  | const  : IsStep ($ const, _α, _β, x, y) x
+  | left   : IsStep f f'
+    → IsStep ($ f, x) ($ f', x)
+  | right  : IsStep x x'
+    → IsStep ($ f, x) ($ f, x')
+
+inductive DefEq : Expr → Expr → Prop
+  | refl    : DefEq a a
+  | step    : IsStep e e' → DefEq e e'
+  | symm    : DefEq e₁ e₂ → DefEq e₂ e₁
+  | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
+  | left    : DefEq f f'  → DefEq ($ f, x) ($ f', x)
+  | right   : DefEq x x'  → DefEq ($ f, x) ($ f, x')
+  | lright  : DefEq f f'  → DefEq ::[x, f] ::[x, f']
+  | lleft   : DefEq x x'  → DefEq ::[x, f] ::[x', f]
+  | pright  : DefEq o o'  → DefEq (Pi i o) (Pi i o')
+  | pleft   : DefEq i i'  → DefEq (Pi i o) (Pi i' o)
+  | subst   : DefEq ($ (Pi α₁ β₁), x) ($ (Pi α₂ β₂), x)
+    → DefEq (Pi α₁ β₁) (Pi α₂ β₂)
+
+inductive ValidJudgment : Expr → Expr → Prop
+  /- TODO: Remove this in the actual calculus
+     use type universes
+     this module is just for answering reseach questions -/
+  | ty        : ValidJudgment Ty Ty
+  | cons      : ValidJudgment x α
+    → ValidJudgment xs β
+    → ValidJudgment ::[x, xs] (Prod α β)
+  | id        : ValidJudgment id id.type
+  | nil       : ValidJudgment nil nil.type
+  | Prod      : ValidJudgment (Prod α β) Ty
+  | Pi        : ValidJudgment t_in (mk_arrow α Ty)
+    → ValidJudgment t_out (mk_arrow α Ty)
+    → ValidJudgment (Pi t_in t_out) Pi.type
+  --| id        : ValidJudgment id Π[::[nil, id, id], Ty]
+  /-
+    To check an app:
+    - functions have type Π Tin Tout
+    - (Π Tin Tout) Δ = (Π (Tin Δ) (Tout Δ)). This mimicks substitution.
+    - (Π (Tin arg) (Tout arg))
+    - (((f : Π Tin Tout) (x : α)) : (Tout x))
+    - To check that x matches the domain, (Tin x)
+  -/
+  | app       : ValidJudgment f (Pi Tin Tout)
+    → ValidJudgment x ($ Tin, x)
+    → ValidJudgment ($ f, x) ($ Tout, x)
+  /-
+   Apps with ::[x, xs] fn are a special case, since they
+   do some type inference
+
+   If γ is a Pi expression, we won't automatically get the output.
+   γ is not a Pi expression, it is a function. So this is fine!
+  -/
+  | sapp      : ValidJudgment ::[a, b] (Prod α β)
+    → ValidJudgment a α
+    → ValidJudgment b β
+    → ValidJudgment γ (mk_arrow β (mk_arrow α Ty))
+    → ValidJudgment π (Pi ($ nil, β) (Pi ($ const', (mk_arrow α Ty), β, ($ nil, α)) γ))
+    → ValidJudgment ($ ::[a, b], π) ($ γ, b, a)
+  | def_eq    : ValidJudgment e α
+    → DefEq α β
+    → ValidJudgment e β
+
+theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by
+  intro h_t_α h_t_x
+  apply ValidJudgment.def_eq
+  apply ValidJudgment.app
+  apply ValidJudgment.def_eq
+  apply ValidJudgment.app
+  apply ValidJudgment.id
+  apply ValidJudgment.def_eq
+  assumption
+  apply DefEq.symm
+  apply DefEq.step
+  apply IsStep.nil
+  apply DefEq.trans
+  apply DefEq.step
+  apply IsStep.pi
+  apply DefEq.refl
+  apply ValidJudgment.def_eq
+  assumption
+  apply DefEq.symm
+  apply DefEq.step
+  apply IsStep.nil
+  apply DefEq.trans
+  apply DefEq.step
+  apply IsStep.nil
+  apply DefEq.refl
+
+/-
+If x : xs, then
+::[x, xs] id should always have type xs.
+-/
+
+syntax "defeq" ident,*        : tactic
+syntax "step" ident,*         : tactic
+syntax "judge" ident,*         : tactic
+
+macro_rules
+  | `(tactic| defeq $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `DefEq name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| step $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `IsStep name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| judge $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+
+abbrev nil_ty_out {α : Expr} : Expr := (Pi Ty (Pi ($ nil, α) ($ nil, Ty)))
+
+theorem rw_nil_ty : DefEq ($ nil.type, α) (@nil_ty_out α) := by
+  unfold nil.type
+  defeq trans, step
+  step pi
+  defeq trans, pleft, step
+  step nil
+  defeq pright, trans, step
+  step pi
+  defeq trans, pright, step
+  step nil
+  defeq pright, refl
+
+abbrev nil_ty₁_out {α : Expr} := (Pi α Ty)
+
+theorem rw_nil_ty_out : DefEq (pop_t_out (@nil_ty_out α)) (Pi ($ nil, α) ($ nil, Ty)) := by
+  simp [pop_t_out]
+  defeq refl
+
+theorem rw_nil_ty₁ {α x : Expr} : DefEq ($ (pop_t_out (@nil_ty_out α)), x) (@nil_ty₁_out α) := by
+  simp [pop_t_out]
+  defeq trans, step
+  step pi
+  defeq trans, pright, step
+  step nil
+  defeq trans, pleft, step
+  step nil
+  defeq refl
+
+-- Pi : (α → Type) → (α → Type) → Type
+theorem Pi_well_typed_self : ValidJudgment α Ty
+  → ValidJudgment t_in (mk_arrow α Ty)
+  → ValidJudgment t_out (mk_arrow α Ty)
+  → ValidJudgment (Pi t_in t_out) Ty := by
+  intro h_t_α h_t_in h_t_out
+  judge Pi
+  repeat assumption
+
+theorem nil_well_typed : ValidJudgment α Ty
+  → ValidJudgment x α
+  → ValidJudgment ($ nil, α, x) Ty := by
+  intro h_t_α h_t_x
+  judge def_eq, app, def_eq, app, nil
+  judge def_eq
+  exact h_t_α
+  defeq symm, trans, step
+  step nil
+  defeq refl, trans
+  show DefEq (pop_t_out (@nil_ty_out α)) _
+  apply rw_nil_ty_out
+  simp [pop_t_out]
+  defeq trans, step
+  step pi
+  defeq pright
+  defeq trans, step
+  step nil
+  defeq refl
+  judge def_eq
+  exact h_t_x
+  defeq symm, trans, step
+  step nil
+  defeq refl
+  defeq trans, step
+  step nil
+  defeq refl
+
+theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
+  → ValidJudgment γ (mk_arrow Ty (mk_arrow xs Ty))
+  → ValidJudgment π (Pi ($ nil, Ty) (Pi ($ const', (mk_arrow xs Ty), Ty, ($ nil, xs)) γ))
+  → DefEq ($ γ, xs, x) xs
+  → ValidJudgment ($ ::[x, xs], id) xs := by
+  intro h_t_xs h_t_x h_t_γ h_t_π h_eq_γ
+  judge def_eq, sapp, cons
+  repeat assumption
+  judge def_eq, id
+  defeq symm, subst
+  defeq trans, step
+  step pi
+  defeq trans, pleft, step
+  step nil
+  defeq trans, pright, step
+  step pi
+  defeq trans, pright, pleft, step
+  step const'
+  defeq symm, trans, step
+  step pi
+  defeq trans, pright, step
+  step pi
+  defeq trans, pleft, step
+  step nil
+  defeq pright, subst, symm, trans, step
+  step pi
+  defeq trans, pright
+  exact h_eq_γ
+  defeq trans, pleft, step
+  step nil
+  defeq symm, trans, step
+  step pi
+  defeq trans, pright, step
+  step nil
+  defeq trans, pright
+  exact h_eq_γ.symm
+  defeq trans, pleft
+  defeq step
+  step nil
+  defeq trans, pright
+  exact h_eq_γ
+  defeq refl
+  exact h_eq_γ
+
+theorem project_well_typed : ValidJudgment xs β → ValidJudgment x α
+  → ValidJudgment γ (mk_arrow β (mk_arrow α Ty))
+  → ValidJudgment α Ty
+  → ValidJudgment β Ty
+  → ValidJudgment δ Ty
+  → ValidJudgment π (Pi ($ nil, β) (Pi ($ const', (mk_arrow α Ty), β, ($ nil, α)) γ))
+  → DefEq ($ γ, xs, x) δ
+  → ValidJudgment ($ ::[x, xs], π) δ := by
+  intro h_t_xs h_t_x h_t_γ h_t_α h_t_β h_t_π h_eq_γ
+  judge def_eq, sapp, cons
+  repeat assumption
+

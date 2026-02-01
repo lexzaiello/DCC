@@ -260,8 +260,15 @@ def const.type.mk_out_arr : Expr :=
   let α := ($ comp,
     t_all,
     t_x_β_α,
-    ($ nil, nil),
-    ($ comp, t_x_β_α, t_β_α, (fst ($ nil, Ty) Ty), t_x, t_x),
+    ($ nil, Ty),
+    ($ comp, t_x_β_α, t_β_α, ($ const', Ty, t_β_α, Ty), (snd ($ nil, Ty) Ty), (snd t_x t_β_α)),
+    (snd whole_t_y t_x_β_α))
+
+  let β := ($ comp,
+    t_all,
+    t_x_β_α,
+    ($ nil, Ty),
+    ($ comp, t_x_β_α, t_β_α, ($ const', Ty, t_β_α, Ty), (fst ($ nil, Ty) Ty), (snd t_x t_β_α)),
     (snd whole_t_y t_x_β_α))
 
   (Pi α (Pi β α))

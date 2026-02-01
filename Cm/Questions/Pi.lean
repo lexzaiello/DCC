@@ -61,16 +61,22 @@ This assumes only (x : α) is in scope.
 def mk_arrow (α β : Expr) : Expr :=
   ($ Pi, ($ nil, α), ($ const', Ty, α, β))
 
-abbrev Pi.type : Expr :=
+def Pi.type : Expr :=
   ($ Pi
    , ($ nil, ($ Pi, ($ id, Ty), ($ nil, Ty)))
    , ($ Pi
      , ($ nil, ($ Pi, ($ id, Ty), ($ nil, Ty)))
      , ($ const', Ty, ($ nil, ($ Pi, ($ id, Ty), ($ nil, Ty))), Ty)))
 
-abbrev id.type : Expr :=
+def id.type : Expr :=
   -- (α : Ty) ((x : α) → (_x α))
   ($ Pi, ($ nil, Ty), ($ Pi, nil, nil))
+
+/-
+nil : ∀ (α : Type), α → Type
+-/
+def nil.type : Expr :=
+  ($ Pi, ($ nil, Ty), ($ Pi, nil, ($ nil, ($ nil, Ty))))
 
 /-
 const' : ∀ (α : Type) (β : Type), α → β → α
@@ -140,8 +146,8 @@ inductive ValidJudgment : Expr → Expr → Prop
   | cons      : ValidJudgment x α
     → ValidJudgment xs β
     → ValidJudgment ::[x, xs] (Prod α β)
-  | prod      : ValidJudgment (Prod α β) Ty
   | id        : ValidJudgment id id.type
+  | Prod      : ValidJudgment (Prod α β) Ty
   | Pi        : ValidJudgment Pi Pi.type
   --| id        : ValidJudgment id Π[::[nil, id, id], Ty]
   /-

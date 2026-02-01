@@ -320,11 +320,9 @@ theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep)
   \end{itemize}
 \end{frame}
 
-\begin{frame}{AST}
+\begin{frame}[fragile]{AST}
   \begin{leancode}
-\begin{frame}{Inference Rule: Application}
-  
-\end{frame}inductive Expr where
+inductive Expr where
   | app    : Expr → Expr → Expr
   /- List-like objects
      They come with built-in projection.

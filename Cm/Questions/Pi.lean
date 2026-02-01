@@ -87,12 +87,7 @@ def nil.type : Expr :=
 /-
 const' : ∀ (α : Type) (β : Type), α → β → α
 
--- with α, then β in scope
--- wrap (nil α) in a const
--- const ? ? (nil α)
-let x_α := ::[nil, const Ty (Pi (nil Ty) nil)
-
-const : Pi (nil Ty) (Pi (const' (mk_arrow Ty Ty) Ty (nil Ty)) (Pi (nil
+const : (Pi (nil Ty) (Pi (const' (mk_arrow Ty Ty) Ty (nil Ty)) (
 -/
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop

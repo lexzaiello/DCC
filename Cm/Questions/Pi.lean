@@ -220,6 +220,7 @@ If x : xs, then
 
 syntax "defeq" ident,*        : tactic
 syntax "step" ident,*         : tactic
+syntax "judge" ident,*         : tactic
 
 macro_rules
   | `(tactic| defeq $fn:ident,*) => do
@@ -234,31 +235,50 @@ macro_rules
       `(tactic| apply $nm))))
 
     `(tactic| $[$nms];*)
+  | `(tactic| judge $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
+      `(tactic| apply $nm))))
+  
+    `(tactic| $[$nms];*)
+
 
 theorem project_self : ValidJudgment xs Ty → ValidJudgment x xs
   → ValidJudgment γ (mk_arrow Ty (mk_arrow xs Ty))
   → ValidJudgment π (Pi ($ nil, Ty) (Pi ($ const', (mk_arrow xs Ty), Ty, ($ nil, xs)) γ))
+  → DefEq ($ γ, xs, x) xs
   → ValidJudgment ($ ::[x, xs], id) xs := by
-  intro h_t_xs h_t_x h_t_γ h_t_π
-  apply ValidJudgment.def_eq
-  apply ValidJudgment.sapp
-  apply ValidJudgment.cons
+  intro h_t_xs h_t_x h_t_γ h_t_π h_eq_γ
+  judge def_eq, sapp, cons
   repeat assumption
-  apply ValidJudgment.def_eq
-  apply ValidJudgment.id
+  judge def_eq, id
   defeq symm, subst
   defeq trans, step
   step pi
   defeq trans, pleft, step
-  apply IsStep.nil
+  step nil
   defeq trans, pright, step
-  apply IsStep.pi
+  step pi
   defeq trans, pright, pleft, step
-  apply IsStep.const'
-  apply DefEq.symm
-  apply DefEq.trans
-  apply DefEq.step
-  apply IsStep.pi
+  step const'
+  defeq symm, trans, step
+  step pi
   defeq trans, pright, step
-  apply IsStep.pi
-  
+  step pi
+  defeq trans, pleft, step
+  step nil
+  defeq pright, subst, symm, trans, step
+  step pi
+  defeq trans, pright
+  exact h_eq_γ
+  defeq trans, pleft, step
+  step nil
+  defeq symm, trans, step
+  step pi
+  defeq trans, pleft, step
+  step nil
+  defeq trans, pright, step
+  step nil
+  defeq refl
+  exact h_eq_γ
+

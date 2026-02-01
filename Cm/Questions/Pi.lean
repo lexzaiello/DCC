@@ -11,6 +11,19 @@ import Mathlib.Data.Nat.Notation
   Pi : ($ Pi
        , nil (Pi (id Ty) (nil Ty))
        , Pi ($ nil, ($ Pi, id Ty, nil Ty)) ($ const', Ty, nil (Pi (id Ty) (nil Ty)), Ty))
+
+  2. Can we extend Pi substitution to lists? Some kind of cons combinator.
+    cons a b = ::[b, a]
+
+    Or more like (cons a b) x = ::[($ a, x), ($ b, x)] this is exactly what both
+    does.
+
+    Both lets us do list substitution.
+
+  3. We still need some form of composition to fully bridge between lists and
+    curried apps. (B f g x) = f (g x)
+    we assume (g x) produces some kind of list expression
+    (g x) f is what we want, really.
 -/
 
 inductive Expr where
@@ -30,6 +43,23 @@ inductive Expr where
     Π t_in t_out
   -/
   | Pi     : Expr → Expr → Expr
+  /-
+    The core SK combinators. Both is kind of a "downgraded" version
+    of S meant to work with ::[a, b] lists.
+    (both _ _ _ y x z) (id _) = (x z) (y z)
+    (both (id _) (const _ _ (both _ _ _ y x))) z
+    = ::[z, (both _ _ _ y x)]
+
+    (comp (id _) (both (id _) (const _ _ (both _ _ _ y x)))) z
+    = ((both (id _) (const _ _ (both _ _ _ y x))) z) (id _)
+    = ::[z, (both _ _ _ y x)] (id _)
+    = (both _ _ _ y x) z
+    (comp (id _) (comp (id _) (both (id _) (const _ _ (both _ _ _ y x))))) z
+    = ((both _ _ _ y x) z) id
+    = ::[(y z), (x z)] id
+    = (x z) (y z)
+  -/
+  | comp   : Expr
   | both   : Expr
   | const  : Expr
   | const' : Expr
@@ -100,21 +130,25 @@ const' : ∀ (α : Type) (β : Type), α → β → α
 
 (flip (const' Ty)) α β = (const' Ty β α)
 
-would be nice if we could make nil even more powerful.
+(const' ? ? (nil α)) β
+= nil α
 
-nil α β x = α
-α → β → α
+Composition operator would be REALLY nice.
+Or, we could change both
 
-α gets in scope β, x
+We don't have to change both
 
-nil Ty Ty x = x
-β is the type of the argument.
+((id _) ∘' (both _ _ _ y x)) z = (x z) (y z)
 
-const' : Pi
-  (nil Ty)
-  (Pi
-    (const' (mk_arrow Ty Ty) Ty (nil Ty))
-    (Pi (const' Ty 
+Assume ∘' is list-native.
+
+It would ALSO be really nice if we could build up an n-length context ::[arg₁, arg₂]
+
+(t_in ∘ (:: arg₁)) arg₂ = t_in ::[arg₁, arg₂]
+
+Feels like composition would be really nice.
+
+(const' ? ? (nil α))
 -/
 
 inductive IsStepStar {rel : Expr → Expr → Prop} : Expr → Expr → Prop

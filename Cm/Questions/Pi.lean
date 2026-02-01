@@ -65,12 +65,15 @@ def pop_t_out : Expr → Expr
   | ($ Pi, _t_in, t_out) => t_out
   | e => e
 
+/-
+Pi : (α → Type) → (α → Type) → Type
+-/
 def Pi.type : Expr :=
   ($ Pi
-   , ($ nil, ($ Pi, ($ id, Ty), ($ nil, Ty)))
+   , ($ Pi, ($ id, Ty), ($ nil, Ty))
    , ($ Pi
-     , ($ nil, ($ Pi, ($ id, Ty), ($ nil, Ty)))
-     , ($ const', Ty, ($ nil, ($ Pi, ($ id, Ty), ($ nil, Ty))), Ty)))
+     , ($ Pi, ($ id, Ty), ($ nil, Ty))
+     , ($ nil, ($ nil, Ty))))
 
 def id.type : Expr :=
   -- (α : Ty) ((x : α) → (_x α))
@@ -269,6 +272,14 @@ theorem rw_nil_ty₁ {α x : Expr} : DefEq ($ (pop_t_out (@nil_ty_out α)), x) (
   defeq trans, left, right, step
   step nil
   defeq refl
+
+-- Pi : (α → Type) → (α → Type) → Type
+theorem Pi_well_typed_self : ValidJudgment t_in ($ Pi, ($ id, Ty), ($ nil, Ty))
+  → ValidJudgment t_out ($ Pi, ($ id, Ty), ($ nil, Ty))
+  → ValidJudgment ($ Pi, t_in, t_out) Ty := by
+  intro h_t_t_in h_t_t_out
+  judge def_eq, app, def_eq, app
+  
 
 theorem nil_well_typed : ValidJudgment α Ty
   → ValidJudgment x α

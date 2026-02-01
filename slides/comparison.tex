@@ -320,8 +320,35 @@ theorem s_both_app_beq (α β γ f g x : Expr') : (@IsBetaEq IsStep)
   \end{itemize}
 \end{frame}
 
+\begin{frame}{AST}
+  \begin{leancode}
 \begin{frame}{Inference Rule: Application}
   
+\end{frame}inductive Expr where
+  | app    : Expr → Expr → Expr
+  /- List-like objects
+     They come with built-in projection.
+     They are the mirror image of application "as data". -/
+  | cons   : Expr → Expr → Expr
+  /-
+    ::[x, xs] lists are a special case. They are the mirror
+    image of application as data. They internalize a projector
+    argument π.
+  -/
+  | Prod   : Expr → Expr → Expr
+  /-
+    Our representation of curried function types.
+    Π t_in t_out
+  -/
+  | Pi     : Expr → Expr → Expr
+  | both   : Expr
+  | const  : Expr
+  | const' : Expr
+  | id     : Expr
+  -- downgrades a term to a type
+  | nil    : Expr
+  | ty     : Expr
+  \end{leancode}
 \end{frame}
 
 %\begin{frame}{Hypotheses: Type Contexts}

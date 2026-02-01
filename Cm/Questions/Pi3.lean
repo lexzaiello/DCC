@@ -170,8 +170,7 @@ inductive DefEq : Expr → Expr → Prop
   | pright  : DefEq o o'  → DefEq (Pi i o f) (Pi i o' f)
   | pleft   : DefEq i i'  → DefEq (Pi i o f) (Pi i' o f)
   | pf      : DefEq f f'  → DefEq (Pi i o f) (Pi i o f')
-  | pi      : DefEq ($ (Pi i o map_arg), x)
-    (Pi i o ($ map_arg, x))
+  | pi      : DefEq ($ (Pi i o map_arg), x) (Pi i o ($ map_arg, x))
   | subst   : DefEq ($ (Pi α₁ β₁ map_arg₁), x) ($ (Pi α₂ β₂ map_arg₂), x)
     → DefEq (Pi α₁ β₁ map_arg₁) (Pi α₂ β₂ map_arg₂)
 
@@ -201,51 +200,30 @@ List projection, but in tail position.
 def snd_postfix (α β : Expr := Ty) : Expr :=
   ($ const, β, α)
 
-/-
-  id :
-  
-
-  id : (Pi
-    (nil Ty)
-    (Pi
-      ::[($ nil, Ty), snd_postfix]
-      (Pi
-        ::[fst_postfix
-        , (fst_postfix (Prod Ty (nil Ty)) ::[(id Ty), (fst_postfix Ty (nil Ty))])]
-        (Pi
-          _
-          _
-          _)
-        (fst_postfix (Prod Ty (nil Ty)) ::[(id Ty), (fst_postfix Ty (nil Ty))]))) Expr.cons)
-      Expr.cons)
-    (Expr.id Ty)
-  α receives α
-  β receives ::[α, β], so we can do ::[nil Ty, snd_postfix]
-  ::[id, snd_postfix] ::[β, α]
-  = ::[β, α] fst_postfix id
-  = β id
-
-  x receives ::[α, β], then x
-
-  ::[::[α, β], x]
-
-  ::[fst_postfix, fst_postfix] ::[::[α, β], x]
-  = α
--/
-def id.type : Expr :=
+def const'.type : Expr :=
   (Pi -- α in scope
     ($ nil, Ty)
-    (Pi -- ::[α, β] in scope
+    (Pi -- α β in scope
       ::[($ nil, Ty), snd_postfix]
-      (Pi -- ::[α, β] in scope. We want only α assert for this argument
+      (Pi -- ::[α, β] x in scope. We want only α assert for this argument
         ::[($ id, Ty), fst_postfix]
         (Pi -- only ::[α, β] in scope. We want only β assert for this argument
           ::[($ id, Ty), snd_postfix]
           ::[($ id, Ty), fst_postfix]
           nil)
         nil)
-    Expr.cons)
-  ($ Expr.id, Ty))
+      Expr.cons) -- ($ cons, a, b) = .app (.app .cons a) b
+    ($ id, Ty))
+
+def id.type : Expr :=
+  (Pi -- α in scope
+    ($ nil, Ty)
+    (Pi -- still just α in scope
+      ($ id, Ty)
+      ($ id, Ty)
+      nil)
+    ($ id, Ty))
+    
 
 def Pi.type : Expr := Ty
 
@@ -284,7 +262,6 @@ inductive ValidJudgment : Expr → Expr → Prop
   | nil       : ValidJudgment nil nil.type
   | Prod      : ValidJudgment (Prod α β) Ty
   | Pi        : ValidJudgment (Pi Tin Tout Marg) Pi.type
-  --| id        : ValidJudgment id Π[::[nil, id, id], Ty]
   /-
     To check an app:
     - functions have type Π Tin Tout
@@ -371,6 +348,10 @@ theorem rw_fst_postfix {a b α β : Expr} : DefEq ($ ::[a, b], (fst_postfix α �
   defeq step
   step id
 
+theorem rw_comp : DefEq ($ ::[g, f], ::[a, b]) ($ ::[a, b], f, g) := by
+  defeq step
+  step sapp
+
 theorem nil_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ nil, α, x) Ty := by
   intro h_t_α h_t_x
   judge defeq, app, defeq, app, nil, defeq
@@ -397,16 +378,20 @@ theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudg
   assumption
   defeq symm, trans, step
   step nil
-  defeq refl
-  defeq trans, right, step
-  step id
-  defeq pi
+  defeq refl, pi
   judge defeq
   assumption
-  defeq symm, trans, left, step
-  step sapp
-  defeq trans, left, step
-  step sapp
-  defeq trans, left, left, step
+  defeq symm, trans, step
+  step id
+  defeq trans, step
   step nil
-  defeq 
+  defeq trans, step
+  step id
+  defeq refl
+  defeq trans, step
+  step id
+  defeq trans, step
+  step nil
+  defeq step
+  step id
+

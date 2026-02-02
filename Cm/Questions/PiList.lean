@@ -123,11 +123,12 @@ open Expr
 
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[a, b], x) ::[($ a, ($ b, x)), ($ b, x)]
-  | fst    : IsStep ($ fst, ::[a, b], arg) ($ a, ($ b, arg))
-  | snd    : IsStep ($ snd, ::[a, b], arg) ($ b, arg)
+  | fst    : IsStep ($ fst, α, β, γ, ::[a, b], arg) ($ a, ($ b, arg))
+  | snd    : IsStep ($ snd, α, β, γ, ::[a, b], arg) ($ b, arg)
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
-  | both   : IsStep ($ both, _α, _β, _γ, ::[f, g], x) ::[($f, x), ($ g, x)]
+  -- both α β γ (f : γ) (g : β) (arg : α) = ::[($ const', ($ γ, arg), ($ β, arg), ($ f, arg)), g] arg
+  | both   : IsStep ($ both, _α, β, γ, f, g, x) ::[($ const', ($ γ, arg), ($ β, arg), ($ f, arg)), ($ g, arg)]
   | const' : IsStep ($ const', _α, _β, x, y) x
   | const  : IsStep ($ const, _α, _β, x, y) x
   | left   : IsStep f f'
@@ -151,4 +152,50 @@ inductive DefEq : Expr → Expr → Prop
   | subst   : DefEq ($ ($ Pi, bdy), x) ($ ($Pi, bdy₂), x)
     → DefEq ($ Pi, bdy) ($ Pi, bdy₂)
 
+/-
+Cons is typed, by default, as Pair ::[α, β]
+Pi expects any list, but it expects specifically t_in and t_out registers, at least.
 
+Another thought on both:
+both α β γ (f : γ) (g : β) (arg : α) = ::[($ const', ($ γ, arg), ($ β, arg), ($ f, arg)), g] arg
+γ : α → Type
+β : α → Type
+γ arg
+β arg
+
+Does this both rule work as expected?
+Maybe not?
+
+Can we stil derive Pi?
+
+It feels like by default we should assume that there is dependency from
+map_arg -> t_in -> t_out.
+
+And if we don't want it, we use both.
+
+This way, Pi is not complex at all.
+
+Pi : ∀ {map_arg : α → β} {t_in : β → γ} {t_out : γ → δ}, Prod ::[t_out, ::[t_in, map_arg]] → Type
+
+
+
+since prod members are preserved, we can assume
+
+- fst ::[a, b] arg = a (b arg)
+- snd ::[a, b] arg = b arg
+
+t_out:   Pi l, fst l
+t_in:    Pi l, fst (snd l)
+map_arg: NOT NECESSARY NOW. we get dependency by default.
+
+So, Pi : Prod ::[t_out, t_in] → Type
+
+Prod : ∀ {α : Type} {β : α → Type} {γ : Type → Type}, Prod ::[γ, β] → Type
+
+So, how do we make this arrow?
+
+Prod ::[t_out, t_in] → Type = Prod ::[($ nil, Type), Prod ::[t_out, t_in]]
+-/
+
+inductive ValidJudgment : Expr → Expr → Prop
+  | Pi : ValidJudgment Pi ($ Prod, ::[($ nil, Type), ($ Prod, ::[t_out, t_in])])

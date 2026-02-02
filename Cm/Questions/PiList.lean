@@ -14,7 +14,7 @@ import Mathlib.Data.Nat.Notation
 
 #2: Is it possible to upgrade our lists to do proper substitution?
 
-  ::[a, b] x = ::[(a x), (b x)]
+  ::[a, b] x = ::[(a x), (b x)]. NO, see #3.
 
   This could be nice, since it propogates the value easier than we could with both.
   Remember: list application is a special case anyway.
@@ -28,6 +28,8 @@ import Mathlib.Data.Nat.Notation
   So, substitution ought to proceed like such:
 
   ::[a, b] x = ::[(a (b x)), (b x)]. This way, the type dependency is preserved.
+
+  What about nesting? Seems fine.
 
   The head element was updated, and the tail was updated.
 
@@ -45,9 +47,46 @@ or at least behave as before?
   substitution in t_in t_out
 
   Pi t_in t_out map_arg = ::[both ::[nil t_in, t_out], map_arg]
+
+#7: Now that we have substitution, is point-free cons necessary? Probably not, but why?
 -/
 
 inductive Expr where
-  | app : Expr → Expr → Expr
-  | ty  : Expr
-  
+  | app    : Expr → Expr → Expr
+  | cons   : Expr → Expr → Expr
+  | Prod   : Expr → Expr → Expr
+  | Pi     : Expr
+  | ty     : Expr
+  | const  : Expr
+  | const' : Expr
+  | both   : Expr
+  | id     : Expr
+  | nil    : Expr
+
+syntax ident ".{" term,* "}"  : term
+syntax "::[" term,+ "]"       : term
+syntax "($" term,+ ")"        : term
+
+macro_rules
+  | `(::[ $x:term ]) => `($x)
+  | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
+  | `(($ $x:term) ) => `($x)
+  | `(($ $f:term, $x:term )) => `(Expr.app $f $x)
+  | `(($ $f, $x:term, $args:term,* )) =>
+    `(($ (Expr.app $f $x), $args,*))
+
+notation "Ty" => Expr.ty
+
+open Expr
+
+inductive IsStep : Expr → Expr → Prop
+  | sapp : IsStep ($ ::[a, b], x) ::[($ a, ($ b, x)), ($ b, x)]
+  | nil    : IsStep ($ nil, α, x) α
+  | id     : IsStep ($ Expr.id, _α, x) x
+  | both   : IsStep ($ both, _α, _β, _γ, ::[f, g], x) ::[($f, x), ($ g, x)]
+  | const' : IsStep ($ const', _α, _β, x, y) x
+  | const  : IsStep ($ const, _α, _β, x, y) x
+  | left   : IsStep f f'
+    → IsStep ($ f, x) ($ f', x)
+  | right  : IsStep x x'
+    → IsStep ($ f, x) ($ f, x')

@@ -23,7 +23,7 @@ import Mathlib.Data.Nat.Notation
 
   ::[a, b] - a ought to depend on b, not the other way around. Cons is most efficient in this position.
 
-  ::[(a : (β : α → Type)), (b : α)] : (β ∘ α)?
+  ::[(a : (β : α → Type)), (b : α)] : ::[β, α]?
 
   So, substitution ought to proceed like such:
 
@@ -68,26 +68,34 @@ or at least behave as before?
   Kind of. At some point, we will need something like S for terms. What's bridging this gap for us?
   We can embed applications with composition quite easily.
 
+  We could also make fst be cleverer by substituting into a list.
+
 Core design changes:
 - ::[a, b] x = ::[a (b x), b x] - list substitution works more as expected now.
 And, it acts like composition out of the box.
+  - Pair and Pi are just syntax markers. That's all. Pi l arg = Pi (l arg). Pair l arg = Pair (l arg). For the kernel to interpret.
   - Can still do composition
-- Pi upgrades any list into a Type.
 - Explicit fst and snd combinators are important. And, we can express their types more easily, now.
-- Prod is no longer an explicit construction. Rather, we generate a Pi expression on the fly.
+  - fst ::[a, b] arg = a (b arg)
+  - snd ::[a, b] arg = b arg
+  - Bridge from lists to app terms.
+- Prod and Pi coincide exactly with substitution now.
 - fst and snd are in head position, not tail position.
-  This bridges the gap between app terms and list terms.
-  Do stuff inside the list, then grab fst or snd.
-- Neither fst or snd assume substitution. They just grab the relevant objects.
 
 Remaining questions:
-- Can we make Pi point-free?
+- Can we make Pi point-free? Answer: no, it's a useful syntactic marker. Same with Prod.
+- We might benefit from a "take" combinator.
+- How will we type sigma pairs? ::[(x : (α : β → Type)), (xs : β)] : Pair ::[α, β]
+- Will we still need separate app rules for Pi vs Pair? Probably. I think it makes sense. These are very discrete things.
+
+Does both still preserve the type dependency? Seems like not really. Not sure about this one. Will find the answer though.
 -/
 
 inductive Expr where
   | app    : Expr → Expr → Expr
   | cons   : Expr → Expr → Expr
   | Pi     : Expr
+  | Prod   : Expr
   | ty     : Expr
   | const  : Expr
   | const' : Expr
@@ -115,8 +123,8 @@ open Expr
 
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[a, b], x) ::[($ a, ($ b, x)), ($ b, x)]
-  | fst    : IsStep ($ fst, ::[a, b]) a
-  | snd    : IsStep ($ snd, ::[a, b]) b
+  | fst    : IsStep ($ fst, ::[a, b], arg) ($ a, ($ b, arg))
+  | snd    : IsStep ($ snd, ::[a, b], arg) ($ b, arg)
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | both   : IsStep ($ both, _α, _β, _γ, ::[f, g], x) ::[($f, x), ($ g, x)]
@@ -126,4 +134,21 @@ inductive IsStep : Expr → Expr → Prop
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
     → IsStep ($ f, x) ($ f, x')
+
+syntax ident ".{" term,* "}"  : term
+syntax "::[" term,+ "]"       : term
+syntax "($" term,+ ")"        : term
+
+inductive DefEq : Expr → Expr → Prop
+  | refl    : DefEq a a
+  | step    : IsStep e e' → DefEq e e'
+  | symm    : DefEq e₁ e₂ → DefEq e₂ e₁
+  | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
+  | left    : DefEq f f'  → DefEq ($ f, x) ($ f', x)
+  | right   : DefEq x x'  → DefEq ($ f, x) ($ f, x')
+  | lright  : DefEq f f'  → DefEq ::[x, f] ::[x, f']
+  | lleft   : DefEq x x'  → DefEq ::[x, f] ::[x', f]
+  | subst   : DefEq ($ ($ Pi, bdy), x) ($ ($Pi, bdy₂), x)
+    → DefEq ($ Pi, bdy) ($ Pi, bdy₂)
+
 

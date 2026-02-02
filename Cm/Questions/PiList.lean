@@ -56,12 +56,37 @@ or at least behave as before?
   ::[(a : (β : α → Type)), (b : α)] : Pi ::[β, ($ id, α)]
 
 #7: Now that we have substitution, is point-free cons necessary? Probably not, but why?
+
+#8: Should fst and snd be in head or tail position?
+  - Our pairs might not necessarily be functions. We should prefer head position.
+  It's also easier to use, and bridges the gap.
+
+#9: What about grabbing fst after an operation. Can we do that easily?
+
+  ::[fst, my_op] x = ::[(fst (my_op x)), my_op x]
+
+  Kind of. At some point, we will need something like S for terms. What's bridging this gap for us?
+  We can embed applications with composition quite easily.
+
+Core design changes:
+- ::[a, b] x = ::[a (b x), b x] - list substitution works more as expected now.
+And, it acts like composition out of the box.
+  - Can still do composition
+- Pi upgrades any list into a Type.
+- Explicit fst and snd combinators are important. And, we can express their types more easily, now.
+- Prod is no longer an explicit construction. Rather, we generate a Pi expression on the fly.
+- fst and snd are in head position, not tail position.
+  This bridges the gap between app terms and list terms.
+  Do stuff inside the list, then grab fst or snd.
+- Neither fst or snd assume substitution. They just grab the relevant objects.
+
+Remaining questions:
+- Can we make Pi point-free?
 -/
 
 inductive Expr where
   | app    : Expr → Expr → Expr
   | cons   : Expr → Expr → Expr
-  | Prod   : Expr → Expr → Expr
   | Pi     : Expr
   | ty     : Expr
   | const  : Expr
@@ -69,6 +94,8 @@ inductive Expr where
   | both   : Expr
   | id     : Expr
   | nil    : Expr
+  | fst    : Expr
+  | snd    : Expr
 
 syntax ident ".{" term,* "}"  : term
 syntax "::[" term,+ "]"       : term
@@ -87,7 +114,9 @@ notation "Ty" => Expr.ty
 open Expr
 
 inductive IsStep : Expr → Expr → Prop
-  | sapp : IsStep ($ ::[a, b], x) ::[($ a, ($ b, x)), ($ b, x)]
+  | sapp   : IsStep ($ ::[a, b], x) ::[($ a, ($ b, x)), ($ b, x)]
+  | fst    : IsStep ($ fst, ::[a, b]) a
+  | snd    : IsStep ($ snd, ::[a, b]) b
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | both   : IsStep ($ both, _α, _β, _γ, ::[f, g], x) ::[($f, x), ($ g, x)]
@@ -97,3 +126,4 @@ inductive IsStep : Expr → Expr → Prop
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
     → IsStep ($ f, x) ($ f, x')
+

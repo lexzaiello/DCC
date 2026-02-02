@@ -114,8 +114,7 @@ macro_rules
   | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
   | `(($ $x:term) ) => `($x)
   | `(($ $f:term, $x:term )) => `(Expr.app $f $x)
-  | `(($ $f, $x:term, $args:term,* )) =>
-    `(($ (Expr.app $f $x), $args,*))
+  | `(($ $f, $x:term, $args:term,* )) => `(($ (Expr.app $f $x), $args,*))
 
 notation "Ty" => Expr.ty
 
@@ -131,6 +130,8 @@ inductive IsStep : Expr → Expr → Prop
   | both   : IsStep ($ both, _α, β, γ, f, g, x) ::[($ const', ($ γ, arg), ($ β, arg), ($ f, arg)), ($ g, arg)]
   | const' : IsStep ($ const', _α, _β, x, y) x
   | const  : IsStep ($ const, _α, _β, x, y) x
+  | pi     : IsStep ($ ($ Pi, l), x) ($ Pi, ($ l, x))
+  | prod   : IsStep ($ ($ Prod, l), x) ($ Prod, ($ l, x))
   | left   : IsStep f f'
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
@@ -177,8 +178,6 @@ This way, Pi is not complex at all.
 
 Pi : ∀ {map_arg : α → β} {t_in : β → γ} {t_out : γ → δ}, Prod ::[t_out, ::[t_in, map_arg]] → Type
 
-
-
 since prod members are preserved, we can assume
 
 - fst ::[a, b] arg = a (b arg)
@@ -195,7 +194,20 @@ Prod : ∀ {α : Type} {β : α → Type} {γ : Type → Type}, Prod ::[γ, β] 
 So, how do we make this arrow?
 
 Prod ::[t_out, t_in] → Type = Prod ::[($ nil, Type), Prod ::[t_out, t_in]]
+
+what about fst type?
+
+fst α β γ : (p : Prod ::[γ, β]) → (x : α) → (γ (snd α β γ p arg))
+snd α β γ : (p : Prod ::[γ, β]) → (x : α) → (β arg)
+
+fst ::[a, b] arg = a (b arg)
+
+fst α (β : α → Type γ  ::[a, b] arg = 
 -/
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | Pi : ValidJudgment Pi ($ Prod, ::[($ nil, Type), ($ Prod, ::[t_out, t_in])])
+  | Pi   : ValidJudgment Pi   ($ Pi, ::[($ nil, Ty), Prod])
+  | Prod : ValidJudgment Prod ($ Pi, ::[($ nil, Ty), Prod])
+  | app  : ValidJudgment fn ($ Pi, ::[t_out, t_in])
+    → ValidJudgment arg ($ t_in, arg)
+    → ValidJudgment fn ($ ($ fst, ::[t_out, t_in], arg)

@@ -118,6 +118,12 @@ inductive DefEq : Expr → Expr → Prop
 def id.type : Expr :=
   ⟪ ⟪ ::[fst, fst], ::[fst, fst], ::[snd, fst] ⟫, ⟪ Ty, Ty ⟫ ⟫
 
+/-
+nil : ∀ (α : Type), α → Ty
+-/
+def nil.type : Expr :=
+  ⟪ ⟪ ::[fst, fst], ::[fst, fst], ::[snd, snd, snd] ⟫, ⟪ Ty, Ty ⟫ ⟫
+
 inductive ValidJudgment : Expr → Expr → Prop
   | ty  : ValidJudgment Ty Ty
   | app : ValidJudgment f ⟪ ⟪ α, β ⟫, Γ ⟫

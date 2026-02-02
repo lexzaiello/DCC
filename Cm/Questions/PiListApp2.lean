@@ -5,6 +5,9 @@ TODO:
 - comp rule
 DONE - Prod type, this should be very easy. Prod is not a combinator, it's just a syntax object.
 DONE - ⟪ a, b ⟫ products
+
+It feels like we might want Pi again, just as a marker.
+See this is the other confusing thing.
 -/
 
 inductive Expr where
@@ -12,6 +15,7 @@ inductive Expr where
   | cons   : Expr → Expr → Expr
   | pair   : Expr → Expr → Expr
   | Prod   : Expr → Expr → Expr
+  | Pi     : Expr → Expr
   | fst    : Expr
   | snd    : Expr
   | ty     : Expr
@@ -57,20 +61,24 @@ inductive DefEq : Expr → Expr → Prop
   | right   : DefEq x x'  → DefEq ($ f, x) ($ f, x')
   | lleft   : DefEq a a'  → DefEq ⟪ a, b ⟫ ⟪ a', b ⟫
   | lright  : DefEq b b'  → DefEq ⟪ a, b ⟫ ⟪ a, b' ⟫
-  | nil_ctx : DefEq ⟪ ⟪ α, nil ⟫, Γ ⟫ ($ α, Γ)
+  | nil_ctx : DefEq (Pi ⟪ ⟪ α, nil ⟫, Γ ⟫) ($ α, Γ)
 
 /-
 α → β
 -/
 def mk_arrow (α β : Expr) : Expr :=
-  ⟪ ⟪ ::[fst, fst], ::[fst, snd, snd], nil ⟫, ⟪ ⟪ α, Ty ⟫, ⟪ β, Ty ⟫ ⟫ ⟫
+  (Pi ⟪ ⟪ ::[fst, fst], ::[fst, snd, snd], nil ⟫, ⟪ ⟪ α, Ty ⟫, ⟪ β, Ty ⟫ ⟫ ⟫)
 
 def id.type : Expr :=
-  ⟪ ⟪ fst, ::[fst, fst], ::[snd, fst], nil ⟫, ⟪ Ty, Ty ⟫ ⟫
+  (Pi ⟪ ⟪ fst, ::[fst, fst], ::[snd, fst], nil ⟫, ⟪ Ty, Ty ⟫ ⟫)
 
-def nil.type : Expr := Ty
+def nil.type : Expr := (Prod Ty Ty)
 
 inductive ValidJudgment : Expr → Expr → Prop
+  | Pi    : ValidJudgment (Prod t_x t_t) Ty
+    → ValidJudgment (Prod t_γ_x t_xs) Ty
+    → ValidJudgment Ctx (Prod (Prod t_γ_x t_xs) (Prod t_x t_t))
+    → ValidJudgment (Pi Ctx) Ty
   | Prod  : ValidJudgment α Ty
     → ValidJudgment β Ty
     → ValidJudgment (Prod α β) Ty
@@ -82,9 +90,9 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment f (mk_arrow β γ)
     → ValidJudgment ::[f, g] (mk_arrow α γ)
   | nil   : ValidJudgment nil nil.type
-  | app   : ValidJudgment f ⟪ ⟪ α, β ⟫, Γ ⟫
+  | app   : ValidJudgment f (Pi ⟪ ⟪ α, β ⟫, Γ ⟫)
     → ValidJudgment x ($ α, Γ)
-    → ValidJudgment ($ f, x) ⟪ β, ⟪ ⟪ x, ($ α, Γ) ⟫, Γ ⟫ ⟫
+    → ValidJudgment ($ f, x) (Pi ⟪ β, ⟪ ⟪ x, ($ α, Γ) ⟫, Γ ⟫ ⟫)
   | id    : ValidJudgment id id.type
   | defeq : ValidJudgment x t₁
     → DefEq t₁ t₂
@@ -121,6 +129,7 @@ theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudg
   defeq symm, trans, step
   step fst
   defeq refl
+  
   defeq refl
   judge defeq
   assumption

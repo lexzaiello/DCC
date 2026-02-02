@@ -29,7 +29,6 @@ inductive Expr where
   | both   : Expr
   | id     : Expr
   | nil    : Expr
-  | fst    : Expr
   | snd    : Expr
 
 syntax ident ".{" term,* "}"  : term
@@ -49,7 +48,6 @@ open Expr
 
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[a, b], x) ($a, ($ b, x))
-  | fst    : IsStep ($ fst, α, β, ::[a, b]) ($ a, b)
   | snd    : IsStep ($ snd, α, β, ::[a, b]) b
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
@@ -73,9 +71,7 @@ inductive DefEq : Expr → Expr → Prop
   | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
   | left    : DefEq f f'  → DefEq ($ f, x) ($ f', x)
   | right   : DefEq x x'  → DefEq ($ f, x) ($ f, x')
-  | lright  : DefEq f f'  → DefEq ::[x, f] ::[x, f']
-  | lleft   : DefEq x x'  → DefEq ::[x, f] ::[x', f]
-  | subst   : DefEq ($ fst, ($ bdy, x)) ($ fst, ($ bdy₂, x))
+  | subst   : DefEq ($ bdy, x) ($ bdy₂, x)
     → DefEq ($ snd, ($ bdy, x)) ($ snd, ($ bdy₂, x))
     → DefEq ($ Pi, bdy) ($ Pi, bdy₂)
 
@@ -84,7 +80,25 @@ So now we associate to the left for composition.
 ::[::[::[h, f], g]
 -/
 def id.type : Expr :=
-  ($ Pi, ::[($ nil, Ty), ::[Pi, ($ both, Ty, ($ nil, Ty), ($ nil, Ty), nil, nil)]])
+  ($ Pi, ::[($ nil, Ty)
+    , ::[Pi, ($ both, Ty, ($ nil, Ty), ($ nil, Ty), nil, nil)]])
+
+/-
+nil.type
+
+γ takes in α, make (α → Ty)
+this is another both
+output type we want: ($ const', Ty, α, Ty)
+output type is just Ty, so it doesn't need the context.
+
+OH WAIT AYO.
+
+($ const', Ty, α, Ty)
+(flip ($ const', Ty), Ty)
+-/
+def nil.type : Expr :=
+  ($ Pi, ::[($ nil, Ty)
+    , ::[Pi, ($ both, Ty, ($ nil, Ty), ($ nil, Ty), nil, nil)]])
 
 inductive ValidJudgment : Expr → Expr → Prop
   | cons  : ValidJudgment xs β
@@ -147,5 +161,4 @@ example : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α
   step nil
   defeq step
   step nil
-
 

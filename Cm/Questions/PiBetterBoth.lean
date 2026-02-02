@@ -23,6 +23,8 @@ TODO: will need to fix instances of both later.
 
 both ::[($ nil, α), β] x
 = ::[α, β x]
+
+#2: can we make Pi a combinator that accepts pairs? would be cool
 -/
 
 inductive Expr where
@@ -190,127 +192,6 @@ def id.type : Expr :=
       nil)
     ($ id, Ty))
 
-/-
-α : Type
-β x : Type
-β we assume to be a function of (x : α)
-
-β gets the context ::[α, x]
-
-β : 
-
-β : Prod (Prod Ty ($ id, Ty)) ($ const', Ty, (Prod Ty ($ id, Ty)), Ty)
-
-alternatively:
-
-x : α
-y : β x
-out: α
-
-so we need to track α, β, and x
-
-β has in scope at first just α
--/
-def const.type.β.type : Expr :=
-  Pi nil ($ const', Ty, (Prod Ty ($ id, Ty)), Ty) Expr.cons
-
-def const.type.α.type : Expr := Ty
-
--- ::[α, β], gets α
-def const.type.x.type_from_αβ : Expr :=
-  ::[snd_postfix const.type.α.type const.type.β.type, ($Expr.cons, Ty)]
-
--- ::[α, β]
-def const.type.αβ.type : Expr :=
-  Prod const.type.α.type const.type.β.type
-
--- ::[::[α, β], x]
--- fake value: ::[::[::[α, β], x], Ty]
-def const.type.αβx.type : Expr :=
-  Prod const.type.αβ.type const.type.x.type_from_αβ
-
-def const.type.x.type_from_αβx : Expr :=
-  ::[::[::[const.type.x.type_from_αβ
-        , fst_postfix const.type.αβ.type const.type.x.type_from_αβ]
-        , snd_postfix' const.type.αβx.type Ty]
-  , ($ Expr.cons, Ty)]
-
-/-
-With ::[::[α, β], x] in scope.
--/
-def const.type.β.type_from_αβx : Expr :=
-  sorry
-
-/-
-  with ::[::[α, β], x] in scope
-
-  Remember, β : Pi ...
-
-  ($ both
-   , const.type.αβx.type
-   , ($ const', Ty, const.type.αβx.type, const.type.β.type)
-   , const.type.x.type_from_αβx
-   , ::[snd_postfix, fst_postfix]
-   , ::[::[snd_postfix const.type.αβ.type const.type.x.type_from_αβ, snd_postfix Ty const.type.αβx.type], (Expr.cons Ty)]
-   , ::[fst_postfix _ _, Expr.cons])
-
-  y : β x.
--/
-def const.type.y.type : Expr :=
-  ($ both
-   , const.type.αβx.type
-   , const.type.x.type_from_αβx
-   , ($ const', Ty, const.type.αβx.type, const.type.β.type) -- with ::[::[α, β], x] in scope
-   , ::[snd_postfix, fst_postfix]
-   , ::[::[snd_postfix const.type.αβ.type const.type.x.type_from_αβ
-         , snd_postfix Ty const.type.αβx.type]
-         , ($ Expr.cons, Ty)])
-
-/-
-y : (β ::[α, x])
-entire context: ::[::[α, β], x]
-
-smart way to do this:
-both _ _ _  ::[::[snd_postfix, snd_postfix], Expr.cons] ??
-               ^ this grabs β
-??
-
-::[x, cons] ::[(flip cons), α]
-= ::[(flip cons), α] cons x
-= cons α ((flip cons)) x
-= ::[α, ((flip cons))] x
-= ((flip cons)) x α
-= ::[α, x]
-
-flip ::[a, b] = ::[b, a]
-
-flip = ::[id _, Expr.cons]
-
-::[Expr.cons, Expr.cons] ::[a, b] = ::[a, b] Expr.cons id _
-= Expr.cons b a (id _)
-= ::[b, a] (id _)
-= (id _) a b
-
-
--/
-def const.type.αβxy.type : Expr :=
-  Prod const.type.αβx.type const.type.y.type
-
-def const.type : Expr :=
-  (Pi
-    ($ nil, const.type.α.type)
-    (Pi
-      const.type.β.type -- this receives ::[α, β]. beta.
-      (Pi -- ::[::[α, β], x] in scope
-        const.type.x.type_from_αβx -- (x : α)
-        (Pi -- ::[::[α, β], x] in scope, but NOT y. y gets discarded.
-          const.type.y.type
-          const.type.x.type_from_αβx
-          ($ const, const.type.αβx.type, const.type.y.type))
-      Expr.cons) -- ::[::[α, β], x]
-      Expr.cons) -- make ::[α, β]
-    ($ id, Ty))
-
 def Pi.type : Expr := Ty
 
 /-
@@ -324,6 +205,33 @@ def nil.type : Expr :=
       ($ nil, Ty)
       nil)
     ($ id, Ty))
+
+/-
+with α in scope:
+α
+
+with β in scope:
+both α sorry β
+
+hardest parts of this type:
+
+- β x. we can handle this with both.
+
+both ::[($ nil, α), β] x
+= ::[α, β x]
+so we easily have the type of x and the type of y.
+
+to type-check β:
+
+-/
+def const.type : Expr :=
+  (Pi -- ($ nil, α)
+    ($ nil, Ty)
+    (Pi -- ::[($ nil, α), β]
+      sorry
+      sorry
+      Expr.cons)
+    nil)
 
 /-
 To check an application:

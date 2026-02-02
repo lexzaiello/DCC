@@ -212,5 +212,5 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment t_in ($ Pi, ::[β, α])
     → ValidJudgment t_out ($ Pi, ::[($ const, Ty, ($ id, Ty), Ty), β])
     → ValidJudgment arg ($ snd, α, t_out, t_in, ($ t, arg))
-    → ValidJudgment fn ($ fst, α, t_out, t_in, ($ t, arg))
-
+    → ValidJudgment ($ fn, arg) ($ fst, α, t_out, t_in, ($ t, arg))
+  

@@ -48,10 +48,9 @@ notation "Ty" => Expr.ty
 open Expr
 
 inductive IsStep : Expr → Expr → Prop
-  | sapp   : IsStep ($ ::[a, b], x)  ::[a, ($ b, x)]
+  | sapp   : IsStep ($ ::[a, b], x) ($a, ($ b, x))
   | fst    : IsStep ($ fst, α, β, ::[a, b]) ($ a, b)
-  | snd    : IsStep ($ snd, α, β, ::[a, ::[b, c]]) ($b, c)
-  | snd'   : IsStep ($ snd, α, β, ::[a, x]) x
+  | snd    : IsStep ($ snd, α, β, ::[a, b]) b
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | both   : IsStep ($ both, _α, _β, _γ, f, g, arg)
@@ -80,8 +79,12 @@ inductive DefEq : Expr → Expr → Prop
     → DefEq ($ snd, ($ bdy, x)) ($ snd, ($ bdy₂, x))
     → DefEq ($ Pi, bdy) ($ Pi, bdy₂)
 
+/-
+So now we associate to the left for composition.
+::[::[::[h, f], g]
+-/
 def id.type : Expr :=
-  ($ Pi, ::[($ nil, Ty), ::[Pi, ::[($ id, Ty), nil]]])
+  ($ Pi, ::[($ nil, Ty), ::[Pi, ($ both, Ty, ($ nil, Ty), ($ nil, Ty), nil, nil)]])
 
 inductive ValidJudgment : Expr → Expr → Prop
   | cons  : ValidJudgment xs β
@@ -89,9 +92,9 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment ::[x, xs] ($ Pi, ::[α, β])
   | Pi    : ValidJudgment Pi   ($ Pi, ::[($ nil, Ty), Prod])
   | Prod  : ValidJudgment Prod ($ Pi, ::[($ nil, Ty), Prod])
-  | app   : ValidJudgment fn ($ Pi, t)
-    → ValidJudgment arg ($ fst, Ty, Ty, ($ t, arg))
-    → ValidJudgment ($ fn, arg) ($ snd, Ty, Ty, ($ t, arg))
+  | app   : ValidJudgment fn ($ Pi, ::[t_in, t_out])
+    → ValidJudgment arg ($ ::[t_in, t_out], arg)
+    → ValidJudgment ($ fn, arg) ($ t_out, arg)
   | id    : ValidJudgment id id.type
   | ty    : ValidJudgment Ty Ty
   | defeq : ValidJudgment e t₁
@@ -126,40 +129,23 @@ example : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α
   intro h_t_α h_t_x
   judge defeq, app, defeq, app, id, defeq
   assumption
-  defeq symm, trans, right, step
-  step sapp
-  defeq trans, step
-  step fst
-  defeq trans, step
-  step nil
-  defeq refl
-  defeq trans, right, step
-  step sapp
-  defeq trans, right, lright
+  defeq symm, trans
   defeq step
   step sapp
+  defeq step
+  step nil
   defeq trans, step
-  step snd
+  step sapp
+  defeq trans, right, step
+  step both
   defeq refl
   judge defeq
   assumption
-  defeq symm, trans, right, left, step
+  defeq symm, trans, step
   step sapp
-  defeq trans, right, step
-  step sapp
-  defeq trans, step
-  step fst
-  defeq trans, step
-  step id
   defeq step
   step nil
-  defeq trans
-  defeq right, left, step
-  step sapp
-  defeq trans, right, step
-  step sapp
-  defeq trans, step
-  step snd'
   defeq step
   step nil
+
 

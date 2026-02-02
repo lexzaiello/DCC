@@ -202,12 +202,15 @@ snd α β γ : (p : Prod ::[γ, β]) → (x : α) → (β arg)
 
 fst ::[a, b] arg = a (b arg)
 
-fst α (β : α → Type γ  ::[a, b] arg = 
+Feels like fst and snd might need to be special cased, but not sure.
 -/
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | Pi   : ValidJudgment Pi   ($ Pi, ::[($ nil, Ty), Prod])
-  | Prod : ValidJudgment Prod ($ Pi, ::[($ nil, Ty), Prod])
-  | app  : ValidJudgment fn ($ Pi, ::[t_out, t_in])
-    → ValidJudgment arg ($ t_in, arg)
-    → ValidJudgment fn ($ ($ fst, ::[t_out, t_in], arg)
+  | Pi   : ValidJudgment Pi   ($ Pi, ::[($ const, Ty, ($ id, Ty), Ty), Prod])
+  | Prod : ValidJudgment Prod ($ Pi, ::[($ const, Ty, ($ id, Ty), Ty), Prod])
+  | app  : ValidJudgment fn ($ Pi, t)
+    → ValidJudgment t_in ($ Pi, ::[β, α])
+    → ValidJudgment t_out ($ Pi, ::[($ const, Ty, ($ id, Ty), Ty), β])
+    → ValidJudgment arg ($ snd, α, t_out, t_in, ($ t, arg))
+    → ValidJudgment fn ($ fst, α, t_out, t_in, ($ t, arg))
+

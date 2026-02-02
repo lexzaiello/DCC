@@ -3,9 +3,8 @@ import Mathlib.Data.Nat.Notation
 /-
 TODO:
 - comp rule
-- Prod type, this should be very easy. Prod is not a combinator, it's just a syntax object.
-
-α → β = ⟪ ⟪ ::[fst, fst], ::[fst, snd, snd] ⟫, ⟪ ⟪ α, Type ⟫, ⟪ β, Type ⟫ ⟫ ⟫
+DONE - Prod type, this should be very easy. Prod is not a combinator, it's just a syntax object.
+DONE - ⟪ a, b ⟫ products
 -/
 
 inductive Expr where
@@ -66,26 +65,22 @@ inductive DefEq : Expr → Expr → Prop
 def mk_arrow (α β : Expr) : Expr :=
   ⟪ ⟪ ::[fst, fst], ::[fst, snd, snd], nil ⟫, ⟪ ⟪ α, Ty ⟫, ⟪ β, Ty ⟫ ⟫ ⟫
 
-/-
-Creates an α → β arrow from the arguments α and β.
--/
-
 def id.type : Expr :=
   ⟪ ⟪ fst, ::[fst, fst], ::[snd, fst], nil ⟫, ⟪ Ty, Ty ⟫ ⟫
 
-/-
-
--/
 def nil.type : Expr := Ty
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | prod  : ValidJudgment α (mk_arrow β Ty)
+  | Prod  : ValidJudgment α Ty
     → ValidJudgment β Ty
     → ValidJudgment (Prod α β) Ty
+  | pair  : ValidJudgment α Ty
+    → ValidJudgment x α
+    → ValidJudgment ⟪ x, α ⟫ (Prod α Ty)
   | ty    : ValidJudgment Ty Ty
-  /-| comp : ValidJudgment g ⟪ ⟪ α, β, nil ⟫, Γ ⟫
-    → ValidJudgment f ⟪ ⟪ ($ β, Γ), Δ ⟫, ⟪ ⟪ g', ($ α ⟫, Γ ⟫ ⟫
-    → ValidJudgment ::[f, g] ⟪ ⟪ α, ($ β, Γ), nil ⟫, Γ ⟫-/
+  | comp : ValidJudgment g (mk_arrow α β)
+    → ValidJudgment f (mk_arrow β γ)
+    → ValidJudgment ::[f, g] (mk_arrow α γ)
   | nil   : ValidJudgment nil nil.type
   | app   : ValidJudgment f ⟪ ⟪ α, β ⟫, Γ ⟫
     → ValidJudgment x ($ α, Γ)

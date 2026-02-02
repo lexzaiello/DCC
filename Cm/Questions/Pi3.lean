@@ -1,65 +1,58 @@
 import Mathlib.Data.Nat.Notation
 
 /-
-  More alternations to Pi2 and Pi.lean to answer research question #6:
-  Can we make Pi binders list-context native?
+  #1: can we derive S from both?
 
-  Old way:
-    (Pi t_in t_out) a = (Pi (t_in a) (t_in a))
+  both _ _ _ f g x = ::[(g x), (f x)]
+  ::[(g x), (f x)] (id _) = (id _) (f x) (g x)
+  (f x) (g x)
 
-  Lists are SOOOO nice.
+  (both _ _ _ f g x) (id _)
+  = (id _) (f x) (g x)
 
-  As far as I understand, we can just merge ValidJudgment and the eval rule.
-  However, we need to isolate advancing the entire context to just DefEq.
+  ::[x, f, g] (both _ _ _)
+  ? = (both _ _ _) ::[f, g] x
+  = ::[f, g] (both _ _ _) x
+  = (both _ _ _) g f x
+  = ::[(f, x), (g, x)]
 
-  #7: Can we assume that our t_in and t_out will be operations on lists?
-    If so, can we Δ t_in? No, not really.
+  ::[x, f, g, γ, β, α] ::[both, 
+  = both ::[f, g, γ, β, α]
 
-  #8: Pi types - if we require that all Pi types look like ($ (Pi t_in t_out), Δ),
-  will we ever encounter a Pi type without a Δ? Yes. Keep as is.
-  We will need to special case Pi application, probably in multiple ways.
+    both ::[f, g, γ, β, α]
 
-  #9: List of list instructions: can we compose list projection nicely?
-    ::[snd, fst] ::[::[c, d], a] = ::[::[c, d], a] fst snd
-    = ::[c, d] snd
-    = d
+  ::[x, f, g, γ, β, α, both] id
+  = id ::[f, g, γ, β, α, both] x
+  = ::[f, g, γ, β, α, both] x
 
-  That is really quite nice.
-  Hypotheses:
-  - can we plug the output type of fst into snd somehow to make things smoother?
-  - since we are already applying ($ t_in, Δ), we can compose very easily.
-    - We can leave comp to do normal term composition
+  #2: Can we make both easier to use by
+  using list arguments and returning to app terms?
 
-  - if we use dependent versions of the combinators, can we get around
-    having to pass in explicit type arguments every time? - no.
+  both ::[α, β, γ, f, g, x]
+  = (f x) (g x)
 
-  - another take: we should be able to omit things from the context
-    (Pi t_in t_out map_ctx) - map_ctx
-
-    For example, in id, the x and y arguments are totally irrelevant.
-
-  - yet another take: there shouldn't be a step rule for Pi.
-    Pi is computationally irrelevant.
-
-    App rule using this method:
-
-    - to do this, we will probably need point-free cons. No reason we can't do that.
-
-    ((f : (Pi t_in t_out map_ctx)) (x : α))
-    - domain: (t_in (map_ctx α))
-    - codomain: (t_out (map_ctx x))
-
-    - can we express ad-hoc α → β with this approach?
-
-    - this approach could be really nice, since we can capture both the ::[] approach
-      and the curried approach.
-
-  #10: can we capture the ::[] and curried approaches with the map_ctx approach?
-
-  #11: this approach seems to make cons align nicer with our Prod α β - ::[a, b]
-
-  ::[g, f] l = l f g
+  Why not?:
+    - Forming the type will be easier, since product types are
+    really easy to use
+    - We will need to change a tiny bit of code
+      TODO: sapp judgment rule uses both. Will need modification.
 -/
+
+/-
+
+::[a, ::[b, ::[c, d]]] π = π ::[b, ::[c, d]] a
+::[a, ::[b, ::[c, d]]] id = id ::[b, ::[c, d]] a
+
+::[g, f] ::[x, fn] = ::[x, fn] f g
+= f fn x g
+
+β : α → Type
+(::[x : α, xs : β]) : (Prod α β)
+-/
+
+
+
+
 
 inductive Expr where
   | app    : Expr → Expr → Expr
@@ -201,6 +194,18 @@ def snd_postfix (α β : Expr := Ty) : Expr :=
   ($ const, β, α)
 
 /-
+Selects two elements from the context, then creates a (α → β) arrow.
+-/
+def mk_arrow_pointfree (π_t_in : Expr := ::[snd_postfix, Expr.cons])
+  (π_t_out : Expr := ::[fst_postfix, Expr.cons])
+: Expr :=
+  (Pi -- with ::[α, β] in scope, then ::[::[α, β], x]
+    π_t_in -- with ::[α, x] in scope. we want just α
+    π_t_out
+    -- with ::[α, x] in scope. we want to output Type as the output type
+    Expr.cons)
+
+/-
 ::[a, b] id = b a
 
 ::[b, id] a =
@@ -219,6 +224,64 @@ def const'.type : Expr :=
           ::[snd_postfix, Expr.cons]
           ($ const, (Prod Ty ($ nil, Ty)), ::[fst_postfix, Expr.cons]))
         ($ const, (Prod Ty ($ nil, Ty)), ::[snd_postfix, Expr.cons]))
+      Expr.cons)
+    ($ id, Ty))
+
+/-
+Dependent K.
+
+K : ∀ (α : Type) (β : α → Type) (x : α) (y : β x), α
+-/
+
+def const.type.just_α : Expr :=
+  ::[::[fst_postfix, snd_postfix] -- ::[α, β] doesn't get flipped
+    , Expr.cons] -- flip to ::[x, ::[α, β]]. then snd, fst to get α
+
+-- with ::[::[α, β], x] in scope. ::[x, ::[α, β]]
+def const.type.β_arrow : Expr :=
+  mk_arrow_pointfree just_α
+    ($ const, (Prod Ty ($ nil, Ty)), ::[snd_postfix, Expr.cons])
+
+/-
+  with ::[x, ::[α, β]] in scope.
+  we need β x
+  once we've typed (β : α → Type),
+  we can reduce β x in the context map
+  given we have α in scope,
+  but then we destroy α
+  what we can do is use both to create a relevant context
+  with ::[::[α, β], x] in scope
+  we can copy α → Type to the context, maybe
+  with α → Type in the context
+  it will be easier to do the app.
+
+  ::[x, ::[β, α → Type]] ::[id, id] = ::[id, id] ::[β, α → Type] x
+  = ::[β, α → Type] id id x
+  = ($ id, α → Type, β) id x
+
+  (both _ _ _ 
+-/
+def const.type.y_type : Expr :=
+  sorry
+
+def const.type : Expr :=
+  let β_arrow := const.type.β_arrow
+
+  -- for α, β in scope, we need to make a pi binder, but without substituting
+  -- pi application (Pi t_in t_out map_ctx) x causes x to be pushed to map_ctx
+  -- so, if ::[α, β] is in scope, we can apply t_in_arrow ::[α, β].
+  -- we should use cons as our map_ctx
+  (Pi -- α in scope
+    ($ nil, Ty) -- first argument is of type Ty
+    (Pi -- ::[α, β] in scope.
+      β_arrow -- β : α → Type 
+      (Pi
+        const.type.just_α
+        (Pi
+          const.type.y_type
+          _
+          _)
+        Expr.cons) -- with ::[::[α, β], x] in scope
       Expr.cons)
     ($ id, Ty))
 
@@ -342,14 +405,14 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
-@[simp]
-theorem rw_snd_postfix {a b α β : Expr} : DefEq ($ ::[a, b], (snd_postfix α β)) b := by
+theorem rw_snd_postfix {a b α β : Expr} : DefEq
+  ($ ::[a, b], (snd_postfix α β))
+  b := by
   defeq trans, step
   step sapp
   defeq step
   step const
 
-@[simp]
 theorem rw_fst_postfix {a b α β : Expr} : DefEq ($ ::[a, b], (fst_postfix α β)) a := by
   defeq trans, step
   step sapp
@@ -358,12 +421,13 @@ theorem rw_fst_postfix {a b α β : Expr} : DefEq ($ ::[a, b], (fst_postfix α �
   defeq step
   step id
 
-@[simp]
 theorem rw_comp : DefEq ($ ::[g, f], ::[a, b]) ($ ::[a, b], f, g) := by
   defeq step
   step sapp
 
-theorem nil_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ nil, α, x) Ty := by
+theorem nil_well_typed : ValidJudgment α Ty
+  → ValidJudgment x α
+  → ValidJudgment ($ nil, α, x) Ty := by
   intro h_t_α h_t_x
   judge defeq, app, defeq, app, nil, defeq
   assumption
@@ -383,7 +447,9 @@ theorem nil_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJud
   step nil
   defeq refl
 
-theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α, x) α := by
+theorem id_well_typed : ValidJudgment α Ty
+  → ValidJudgment x α
+  → ValidJudgment ($ id, α, x) α := by
   intro h_t_α h_t_x
   judge defeq, app, defeq, app, id, defeq
   assumption

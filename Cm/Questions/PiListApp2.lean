@@ -1,29 +1,20 @@
 import Mathlib.Data.Nat.Notation
 
-/-
-TODO:
-- comp rule
-DONE - Prod type, this should be very easy. Prod is not a combinator, it's just a syntax object.
-DONE - ⟪ a, b ⟫ products
-
-It feels like we might want Pi again, just as a marker.
-See this is the other confusing thing.
--/
-
 inductive Expr where
   | app    : Expr → Expr → Expr
   | cons   : Expr → Expr → Expr
+  | Pi     : Expr → Expr
   | pair   : Expr → Expr → Expr
   | Prod   : Expr → Expr → Expr
-  | Pi     : Expr → Expr
   | fst    : Expr
   | snd    : Expr
   | ty     : Expr
-  | const  : Expr
-  | const' : Expr
-  | both   : Expr
-  | id     : Expr
+  -- For delimiting lists
   | nil    : Expr
+  /-
+    The actual SK combinators.
+  -/
+  | id     : Expr
 
 syntax "::[" term,+ "]"       : term
 syntax "($" term,+ ")"        : term
@@ -129,7 +120,6 @@ theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudg
   defeq symm, trans, step
   step fst
   defeq refl
-  
   defeq refl
   judge defeq
   assumption

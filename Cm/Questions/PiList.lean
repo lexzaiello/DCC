@@ -48,6 +48,13 @@ or at least behave as before?
 
   Pi t_in t_out map_arg = ::[both ::[nil t_in, t_out], map_arg]
 
+  Pi ::[(both ::[t_in, t_out]), map_arg]
+
+  So Pi is basically just a marker that this is a Type?
+  Is Prod also subsumed by this? I think so, actually.
+
+  ::[(a : (β : α → Type)), (b : α)] : Pi ::[β, ($ id, α)]
+
 #7: Now that we have substitution, is point-free cons necessary? Probably not, but why?
 -/
 

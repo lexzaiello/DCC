@@ -20,7 +20,7 @@ we can compose fst and snd.
 
 inductive Expr where
   | app    : Expr → Expr → Expr
-  | cons   : Expr
+  | cons   : Expr → Expr → Expr
   | Pi     : Expr
   | Prod   : Expr
   | ty     : Expr
@@ -38,7 +38,7 @@ syntax "($" term,+ ")"        : term
 
 macro_rules
   | `(::[ $x:term ]) => `($x)
-  | `(::[ $x:term, $xs:term,* ]) => `(Expr.app (Expr.app Expr.cons $x) ::[$xs,*])
+  | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
   | `(($ $x:term) ) => `($x)
   | `(($ $f:term, $x:term )) => `(Expr.app $f $x)
   | `(($ $f, $x:term, $args:term,* )) => `(($ (Expr.app $f $x), $args,*))
@@ -50,7 +50,8 @@ open Expr
 inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[a, b], x)  ::[a, ($ b, x)]
   | fst    : IsStep ($ fst, α, β, ::[a, b]) ($ a, b)
-  | snd    : IsStep ($ snd, α, β, ::[a, b]) b
+  | snd    : IsStep ($ snd, α, β, ::[a, ::[b, c]]) ($b, c)
+  | snd'   : IsStep ($ snd, α, β, ::[a, x]) x
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
   | both   : IsStep ($ both, _α, _β, _γ, f, g, arg)
@@ -125,14 +126,40 @@ example : ValidJudgment α Ty → ValidJudgment x α → ValidJudgment ($ id, α
   intro h_t_α h_t_x
   judge defeq, app, defeq, app, id, defeq
   assumption
-  defeq symm, trans, right, trans, step
-  step sapp
-  defeq right, step
+  defeq symm, trans, right, step
   step sapp
   defeq trans, step
   step fst
   defeq trans, step
   step nil
   defeq refl
-  
-  sorry
+  defeq trans, right, step
+  step sapp
+  defeq trans, right, lright
+  defeq step
+  step sapp
+  defeq trans, step
+  step snd
+  defeq refl
+  judge defeq
+  assumption
+  defeq symm, trans, right, left, step
+  step sapp
+  defeq trans, right, step
+  step sapp
+  defeq trans, step
+  step fst
+  defeq trans, step
+  step id
+  defeq step
+  step nil
+  defeq trans
+  defeq right, left, step
+  step sapp
+  defeq trans, right, step
+  step sapp
+  defeq trans, step
+  step snd'
+  defeq step
+  step nil
+

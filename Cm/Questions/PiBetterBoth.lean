@@ -48,6 +48,35 @@ import Mathlib.Data.Nat.Notation
 
   #3: Will we need some kind of coercion between pi and prod?
     Feels like there should be some equivalence or coercion.
+
+  #4: Why is β x so hard? The elements are stored in an order that makes it hard to retrieve.
+  We also don't have function composition, which makes things hard.
+
+  Can we derive prefix composition?
+  B f g x = f (g x)
+
+  We could use both.
+  ::[a, b] f = f b a
+
+  Our lists give us no way really to associate like that.
+  We can swap, but we can't associate.
+  Would help to have a proper flip operation.
+
+  I feel like this comes from the fact that we can't
+
+  What is the challenge with β x?
+
+  We have ::[::[α, β], x] in scope.
+
+  This would be really easy if we could reassociate..
+
+  ass ::[::[α, β], x] = ::[α, ::[β, x]]
+
+  The main challenge with using lists:
+  once we reach a terminal value ::[a, b] fst = a,
+  we cannot map it easily after that, since it's no longer a list.
+
+  Composition would be really nice for this.
 -/
 
 inductive Expr where
@@ -90,10 +119,10 @@ inductive Expr where
   | both   : Expr
   | const  : Expr
   | const' : Expr
+  | comp   : Expr
   | id     : Expr
   -- This is a necessary for bridging ::[a, b] π to π ::[a, b]
   | flip   : Expr
-  | comp   : Expr
   -- downgrades a term to a type
   | nil    : Expr
   | ty     : Expr
@@ -131,13 +160,6 @@ inductive IsStep : Expr → Expr → Prop
     -/
   | const' : IsStep ($ const', _α, _β, x, y) x
   | const  : IsStep ($ const, _α, _β, x, y) x
-  /-
-    This is a less powerful, less dependent version of flip.
-
-    flip (α : Type) (β : α → Type)
-      (p : Prod α β), Prod β α
-  -/
-  | flip   : IsStep ($ flip, _α, _β, ::[a, b]) ::[b, a]
   /-
     Another less powerful version of the B combinator.
 
@@ -217,6 +239,22 @@ def snd_postfix' (α β : Expr := Ty) : Expr :=
   ($ const', β, α)
 
 /-
+Mapping the first component of a list.
+
+f ::[a, b] = ::[f a, b]
+
+::[f, Expr.cons] ::[a, b] =
+::[a, b] cons 
+= cons b a f
+= ::[b, a] f
+= f a b
+
+-/
+def map_fst (f : Expr) : Expr :=
+  
+  sorry
+
+/-
 Selects two elements from the context, then creates a (α → β) arrow.
 -/
 def mk_arrow_pointfree (π_t_in : Expr := ::[snd_postfix, Expr.cons])
@@ -278,25 +316,25 @@ out: α
 
 so we need to track α, β, and x
 
-β has in scope ::[α, β]
-::[α, β] : 
+β has in scope at first just α
 -/
 def const.type.β.type : Expr :=
   Pi nil ($ const', Ty, (Prod Ty ($ id, Ty)), Ty) Expr.cons
 
 def const.type.α.type : Expr := Ty
 
--- ::[α, β]
-def const.type.αβ.type : Expr :=
-  Prod const.type.α.type ($ const', Ty, Ty, const.type.β.type)
-
--- ::[::[α, β], x]
-def const.type.αβx.type : Expr :=
-  Prod const.type.αβ.type ::[(snd_postfix ($ const', Ty, const.type.β.type, Ty) const.type.β.type), Expr.cons]
-
 -- ::[α, β], gets α
 def const.type.x.type_from_αβ : Expr :=
-  ::[snd_postfix' const.type.β.type const.type.α.type, Expr.cons]
+  ::[snd_postfix const.type.α.type const.type.β.type, ($Expr.cons, Ty)]
+
+-- ::[α, β]
+def const.type.αβ.type : Expr :=
+  Prod const.type.α.type const.type.β.type
+
+-- ::[::[α, β], x]
+-- fake value: ::[::[::[α, β], x], Ty]
+def const.type.αβx.type : Expr :=
+  Prod const.type.αβ.type const.type.x.type_from_αβ
 
 def const.type.x.type_from_αβx : Expr :=
   ::[::[::[const.type.x.type_from_αβ
@@ -323,8 +361,8 @@ def const.type.x.type_from_αβx : Expr :=
 def const.type.y.type : Expr :=
   ($ both
    , const.type.αβx.type
-   , ($ const', Ty, const.type.αβx.type, const.type.β.type)
    , const.type.x.type_from_αβx
+   , ($ const', Ty, const.type.αβx.type, const.type.β.type)
    , ::[snd_postfix, fst_postfix]
    , ::[::[snd_postfix const.type.αβ.type const.type.x.type_from_αβ
          , snd_postfix Ty const.type.αβx.type]
@@ -364,7 +402,7 @@ def const.type : Expr :=
   (Pi
     ($ nil, const.type.α.type)
     (Pi
-      ($ const', const.type.αβ.type, Ty, const.type.β.type)
+      const.type.β.type -- this receives ::[α, β]. beta.
       (Pi -- ::[::[α, β], x] in scope
         const.type.x.type_from_αβx -- (x : α)
         (Pi -- ::[::[α, β], x] in scope, but NOT y. y gets discarded.
@@ -411,6 +449,7 @@ inductive ValidJudgment : Expr → Expr → Prop
   | id        : ValidJudgment Expr.id id.type
   | nil       : ValidJudgment nil nil.type
   | const'    : ValidJudgment const' const'.type
+  | const     : ValidJudgment const const.type
   | Prod      : ValidJudgment (Prod α β) Ty
   | Pi        : ValidJudgment (Pi Tin Tout Marg) Pi.type
   /-
@@ -504,6 +543,13 @@ theorem rw_fst_postfix {a b α β : Expr} : DefEq ($ ::[a, b], (fst_postfix α �
 theorem rw_comp : DefEq ($ ::[g, f], ::[a, b]) ($ ::[a, b], f, g) := by
   defeq step
   step sapp
+
+theorem rw_const_defeq_const' {α β γ δ x y y₂ : Expr} : DefEq ($ const, α, β, x, y) ($ const', γ, δ, x, y₂) := by
+  defeq trans, step
+  step const
+  defeq symm, trans, step
+  step const'
+  defeq refl
 
 theorem nil_well_typed : ValidJudgment α Ty
   → ValidJudgment x α
@@ -607,3 +653,68 @@ theorem const'_well_typed : ValidJudgment α Ty
   defeq step
   step id
 
+theorem const_well_typed : ValidJudgment α Ty
+  → ValidJudgment β (Pi ($ nil, α) ($ const', Ty, α, Ty) ($ id, α))
+  → ValidJudgment x α
+  → ValidJudgment y ($ β, x)
+  → ValidJudgment ($ const, α, β, x, y) α := by
+  intro h_t_α h_t_β h_t_x h_t_y
+  judge defeq, app, defeq, app, defeq, app, defeq, app, const, defeq
+  assumption
+  defeq symm, trans, step
+  step nil
+  defeq refl
+  defeq pi
+  judge defeq
+  assumption
+  defeq symm, trans
+  defeq trans, step
+  
+  sorry
+
+/-
+const : ∀ (α : Type) (β : α → Type) (x : α) (y : β x), α
+α = Prod Ty ($ nil, Ty)
+β = ($ const', Ty, Prod Ty ($ nil, Ty), Ty)
+x = ::[Ty, Ty]
+β x = Ty
+y : Ty
+y = Ty
+
+Trivial example.
+-/
+
+example : ValidJudgment ($ const,
+  Prod Ty ($ nil, Ty),
+  ($ const', Ty, Prod Ty ($ nil, Ty), Ty),
+  ::[Ty, Ty],
+  Ty) (Prod Ty ($ nil, Ty)) := by
+  judge defeq, app, defeq, app, defeq, app, defeq, app, const, defeq, Prod
+  defeq symm, trans, right, step
+  step id
+  defeq trans, step
+  step nil
+  defeq refl, pi
+  judge defeq, app, defeq, app, defeq, app, const', defeq, ty
+  defeq symm, trans, step
+  step nil
+  defeq refl, pi
+  judge defeq, Prod
+  defeq symm, trans, step
+  step const'
+  defeq refl
+  defeq pi
+  judge defeq, ty
+  defeq symm, trans, step
+  step sapp
+  defeq trans, left, left, step
+  step const
+  defeq trans, left, step
+  step sapp
+  defeq trans
+  apply rw_snd_postfix
+  defeq step
+  step id
+  unfold const.type.β.type
+  unfold const.type.αβ.type
+  

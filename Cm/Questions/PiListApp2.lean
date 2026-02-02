@@ -1,77 +1,20 @@
 import Mathlib.Data.Nat.Notation
 
 /-
-Type assertions should be able to see their own expressions, but as pairs.
+TODO:
+- comp rule
+- Prod type, this should be very easy. Prod is not a combinator, it's just a syntax object.
 
-⟨snd, ⟨id, α, x⟩⟩
-
-head of the head is the assertion for e.
-
-⟨⟨t, xs⟩, e⟩
-
-- Append to e as we go along, inside out. ⟨_, id⟩ -> ⟨_, ⟨x, α, id⟩⟩
-- Shrink T as we go along.
-
-⟨⟨fst, ⟨::[fst, snd], ::[fst, ::[snd, snd]]⟩⟩, Ty⟩, α looks good, so
-⟨⟨::[fst, snd], ::[fst, ::[snd, snd]]⟩, ⟨α, Ty⟩⟩, ::[fst, snd] ⟨α, Ty⟩ = Ty
-
-This looks pretty chill ngl.
-
-Core language:
-
-- Cons, for composition, special-cased, since we have both Expr's, so we can infer.
-- fst : (Prod ....)
-
-⟨a, b⟩ is not dependent, but Prod is
-
-Prod is flipped? first element depends on the second.
-
-We could type fst as just Syntax, but then we run into issues once we get to more complicate arguments.
-
-Another idea:
-
-We always place terms next to their types.
-
-⟨x, α⟩
-
-fst : ⟨⟨fst, _⟩, Prod ($ id, Ty) Ty⟩
-
-fst : ⟨⟨fst, ::[fst, snd]⟩, Prod Ty ($ id, Ty)⟩
-
-fst x : ⟨⟨fst, 
-
-snd is just taking a (Prod a b) and producing b
-
-head element always look like this, though:
-Prod ($ id, Ty) Ty
-
-snd : ⟨⟨
-
-app rule:
-
-elements in the list always look like ⟨x, α⟩
-
-α is current arg assert, β is next arg assert
-(((f : ⟨⟨α, β⟩, Γ⟩)
-  (x : ($ α, Γ))) : ⟨β, ⟨⟨x, ($ α, Γ)⟩, Γ⟩⟩
-
-We will have issues again with nil delimeters, maybe.
-maybe not?
-
-Core elements so far:
-- composition (cons)
-- pairs ⟨a, b⟩
-- apps ($a, b)
-
+α → β = ⟪ ⟪ ::[fst, fst], ::[fst, snd, snd] ⟫, ⟪ ⟪ α, Type ⟫, ⟪ β, Type ⟫ ⟫ ⟫
 -/
 
 inductive Expr where
   | app    : Expr → Expr → Expr
   | cons   : Expr → Expr → Expr
   | pair   : Expr → Expr → Expr
+  | Prod   : Expr → Expr → Expr
   | fst    : Expr
   | snd    : Expr
-  | Prod   : Expr
   | ty     : Expr
   | const  : Expr
   | const' : Expr
@@ -117,15 +60,31 @@ inductive DefEq : Expr → Expr → Prop
   | lright  : DefEq b b'  → DefEq ⟪ a, b ⟫ ⟪ a, b' ⟫
   | nil_ctx : DefEq ⟪ ⟪ α, nil ⟫, Γ ⟫ ($ α, Γ)
 
+/-
+α → β
+-/
+def mk_arrow (α β : Expr) : Expr :=
+  ⟪ ⟪ ::[fst, fst], ::[fst, snd, snd], nil ⟫, ⟪ ⟪ α, Ty ⟫, ⟪ β, Ty ⟫ ⟫ ⟫
+
+/-
+Creates an α → β arrow from the arguments α and β.
+-/
+
 def id.type : Expr :=
   ⟪ ⟪ fst, ::[fst, fst], ::[snd, fst], nil ⟫, ⟪ Ty, Ty ⟫ ⟫
 
+/-
+
+-/
 def nil.type : Expr := Ty
 
 inductive ValidJudgment : Expr → Expr → Prop
+  | prod  : ValidJudgment α (mk_arrow β Ty)
+    → ValidJudgment β Ty
+    → ValidJudgment (Prod α β) Ty
   | ty    : ValidJudgment Ty Ty
-  /-| comp : ValidJudgment g ⟪ ⟪ ($ α, Γ), ($ β, Γ), nil ⟫, Γ ⟫
-    → ValidJudgment f ⟪ ⟪ ($ β, Γ), Δ ⟫, Γ' ⟫
+  /-| comp : ValidJudgment g ⟪ ⟪ α, β, nil ⟫, Γ ⟫
+    → ValidJudgment f ⟪ ⟪ ($ β, Γ), Δ ⟫, ⟪ ⟪ g', ($ α ⟫, Γ ⟫ ⟫
     → ValidJudgment ::[f, g] ⟪ ⟪ α, ($ β, Γ), nil ⟫, Γ ⟫-/
   | nil   : ValidJudgment nil nil.type
   | app   : ValidJudgment f ⟪ ⟪ α, β ⟫, Γ ⟫

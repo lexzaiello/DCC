@@ -1,82 +1,28 @@
 import Mathlib.Data.Nat.Notation
 
 /-
-  #1: can we derive S from both?
+#1: how valuable are our lists if we don't have substitution?
 
-  both _ _ _ f g x = ::[(g x), (f x)]
-  ::[(g x), (f x)] (id _) = (id _) (f x) (g x)
-  (f x) (g x)
+- Our lists are very minimal. Remember the reduction rule for Π.
 
-  (both _ _ _ f g x) (id _)
-  = (id _) (f x) (g x)
+(Π t_in t_out) x = Π (t_in x) (t_out x)
 
-  ::[x, f, g] (both _ _ _)
-  ? = (both _ _ _) ::[f, g] x
-  = ::[f, g] (both _ _ _) x
-  = (both _ _ _) g f x
-  = ::[(f, x), (g, x)]
+We could do something similar for lists.
+This would significantly change the meaning, though.
 
-  ::[x, f, g, γ, β, α] ::[both, 
-  = both ::[f, g, γ, β, α]
+We can recover this functionality with both.
 
-    both ::[f, g, γ, β, α]
+Another question:
+- how useful is term both?
 
-  ::[x, f, g, γ, β, α, both] id
-  = id ::[f, g, γ, β, α, both] x
-  = ::[f, g, γ, β, α, both] x
+if both acts as substitution, that could be quite nice.
 
-  #2: Can we make both easier to use by
-  using list arguments and returning to app terms?
+Both worked very well before.
 
-  both ::[α, β, γ, f, g, x]
-  = (f x) (g x)
+TODO: will need to fix instances of both later.
 
-  Why not?:
-    - Forming the type will be easier, since product types are
-    really easy to use
-    - We will need to change a tiny bit of code
-      TODO: sapp judgment rule uses both. Will need modification.
-
-  Answering questions here.
-
-  #2: TODO: can we change prod ::[(x : α), (y : (β : α → Type))] to apply
-  β α? No we don't need to.
-
-  we might need to change the type of y, though. it's currently an arrow type.
-  we will either need some way to upgrade a Prod to an arrow,
-  or something. MASSIVE TODO
-
-  #3: Will we need some kind of coercion between pi and prod?
-    Feels like there should be some equivalence or coercion.
-
-  #4: Why is β x so hard? The elements are stored in an order that makes it hard to retrieve.
-  We also don't have function composition, which makes things hard.
-
-  Can we derive prefix composition?
-  B f g x = f (g x)
-
-  We could use both.
-  ::[a, b] f = f b a
-
-  Our lists give us no way really to associate like that.
-  We can swap, but we can't associate.
-  Would help to have a proper flip operation.
-
-  I feel like this comes from the fact that we can't
-
-  What is the challenge with β x?
-
-  We have ::[::[α, β], x] in scope.
-
-  This would be really easy if we could reassociate..
-
-  ass ::[::[α, β], x] = ::[α, ::[β, x]]
-
-  The main challenge with using lists:
-  once we reach a terminal value ::[a, b] fst = a,
-  we cannot map it easily after that, since it's no longer a list.
-
-  Composition would be really nice for this.
+both ::[($ nil, α), β] x
+= ::[α, β x]
 -/
 
 inductive Expr where
@@ -99,30 +45,17 @@ inductive Expr where
   -/
   | Pi     : Expr → Expr → Expr → Expr
   /-
-    The core SK combinators. Both is kind of a "downgraded" version
-    of S meant to work with ::[a, b] lists.
-    (both _ _ _ y x z) (id _) = (x z) (y z)
-    (both (id _) (const _ _ (both _ _ _ y x))) z
-    = ::[z, (both _ _ _ y x)]
-
-    (comp (id _) (both (id _) (const _ _ (both _ _ _ y x)))) z
-    = ((both (id _) (const _ _ (both _ _ _ y x))) z) (id _)
-    = ::[z, (both _ _ _ y x)] (id _)
-    = (both _ _ _ y x) z
-    (comp (id _) (comp (id _) (both (id _) (const _ _ (both _ _ _ y x))))) z
-    = ((both _ _ _ y x) z) id
-    = ::[(y z), (x z)] id
-    = (x z) (y z)
-
-    comp (α β γ : Ty) (δ : γ → β → Ty) (f : δ) (g : α → Prod β γ) (x : α)
+    both creates a new list by applying a value inside a list.
+    both α β γ ::[f, g] x
+    = ::[(f x), (g x)]
+    both ::[($ nil, α), β] x
+= ::[α, β x]
   -/
   | both   : Expr
   | const  : Expr
   | const' : Expr
-  | comp   : Expr
   | id     : Expr
   -- This is a necessary for bridging ::[a, b] π to π ::[a, b]
-  | flip   : Expr
   -- downgrades a term to a type
   | nil    : Expr
   | ty     : Expr
@@ -147,31 +80,9 @@ inductive IsStep : Expr → Expr → Prop
   | sapp   : IsStep ($ ::[x, f], fn) ($ fn, f, x)
   | nil    : IsStep ($ nil, α, x) α
   | id     : IsStep ($ Expr.id, _α, x) x
-  | both   : IsStep ($ both, _α, _β, _γ, f, g, x)
-    ($ ($ f, x), ($ g, x)) -- this bridges lists to app terms
-    -- can make a new list with Expr.cons
-    /-
-      And, makes both's type easier!
-      β gets ::[α, x]
-      γ receives ::[::[::[α, x], β], ($ β, ::[α, x])]
-      
-      γ : (x : α) → 
-      both : ∀ (p : (Prod ×αβ (
-    -/
+  | both   : IsStep ($ both, _α, _β, _γ, ::[f, g], x) ::[($f, x), ($ g, x)]
   | const' : IsStep ($ const', _α, _β, x, y) x
   | const  : IsStep ($ const, _α, _β, x, y) x
-  /-
-    Another less powerful version of the B combinator.
-
-    comp (α β : Type)
-      (γ : β → Type)
-      (f : ∀ (x : β), γ x)
-      (g : α → β)
-      (x : α), γ (g x)
-
-    comp f g x = f (g x)
-  -/
-  | comp   : IsStep ($ comp, α, β, γ, f, g, x) ($ f, ($ g, x))
   | left   : IsStep f f'
     → IsStep ($ f, x) ($ f', x)
   | right  : IsStep x x'
@@ -227,6 +138,16 @@ def snd_postfix (α β : Expr := Ty) : Expr :=
   ($ const, β, α)
 
 /-
+Performs sigma substitution.
+
+β depends on (a : α)
+::[a, (b : β)] subst
+= b a
+-/
+def subst_postfix (β : Expr := Ty) : Expr :=
+  ($ id, β)
+
+/-
 List projection, but in tail position.
 Nondependent variant.
 
@@ -237,34 +158,6 @@ Nondependent variant.
 -/
 def snd_postfix' (α β : Expr := Ty) : Expr :=
   ($ const', β, α)
-
-/-
-Mapping the first component of a list.
-
-f ::[a, b] = ::[f a, b]
-
-::[f, Expr.cons] ::[a, b] =
-::[a, b] cons 
-= cons b a f
-= ::[b, a] f
-= f a b
-
--/
-def map_fst (f : Expr) : Expr :=
-  
-  sorry
-
-/-
-Selects two elements from the context, then creates a (α → β) arrow.
--/
-def mk_arrow_pointfree (π_t_in : Expr := ::[snd_postfix, Expr.cons])
-  (π_t_out : Expr := ::[fst_postfix, Expr.cons])
-: Expr :=
-  (Pi -- with ::[α, β] in scope, then ::[::[α, β], x]
-    π_t_in -- with ::[α, x] in scope. we want just α
-    π_t_out
-    -- with ::[α, x] in scope. we want to output Type as the output type
-    Expr.cons)
 
 /-
 ::[a, b] id = b a
@@ -342,6 +235,11 @@ def const.type.x.type_from_αβx : Expr :=
         , snd_postfix' const.type.αβx.type Ty]
   , ($ Expr.cons, Ty)]
 
+/-
+With ::[::[α, β], x] in scope.
+-/
+def const.type.β.type_from_αβx : Expr :=
+  sorry
 
 /-
   with ::[::[α, β], x] in scope
@@ -362,7 +260,7 @@ def const.type.y.type : Expr :=
   ($ both
    , const.type.αβx.type
    , const.type.x.type_from_αβx
-   , ($ const', Ty, const.type.αβx.type, const.type.β.type)
+   , ($ const', Ty, const.type.αβx.type, const.type.β.type) -- with ::[::[α, β], x] in scope
    , ::[snd_postfix, fst_postfix]
    , ::[::[snd_postfix const.type.αβ.type const.type.x.type_from_αβ
          , snd_postfix Ty const.type.αβx.type]

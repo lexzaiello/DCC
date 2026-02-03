@@ -58,6 +58,7 @@ All ingredients:
 - Π
 - Pair
 - $Σ
+- projection, fst, and snd, with explicit type arguments.
 
 What is the type of a Pair?
 pairs shouldn't by default be dependent, I don't think.
@@ -118,13 +119,15 @@ abbrev Level := ℕ
 
 inductive Expr where
   | ty    : Level → Expr
-  | pi    : Level → Expr → Expr -- Pi.{[m]} _ : Sort m
+  | Pi    : Level → Expr → Expr -- Pi.{[m]} _ : Sort m
   | comp  : Expr  → Expr → Expr -- for composing functions. ::[f, g] x = ($ f, ($ g, x))
   | sigma : Level → Expr -- Σ T x : Prop - this is asserting that (x : T)
   | prop  : Expr -- as usual
-  | pair  : Level → Level → Expr -- universe levels of type args
+  | pair  : Expr   → Expr → Expr
   | app   : Expr  → Expr  → Expr
   | sapp  : Expr -- assumed sapp : Prop → Prop → Prop
+  | fst   : Level → Level → Expr -- takes in α β, which are the elements in the pair.
+  | snd   : Level → Level → Expr -- takes in α β, which are the elements in the pair.
 
 open Expr
 
@@ -152,7 +155,21 @@ and sapp.
 -/
 inductive IsStep : Expr → Expr → Prop
   | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
+  | fst    : IsStep ⸨(fst m n) _α _β ⟪a, b⟫⸩ a
   | left   : IsStep f f'
     → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x'
     → IsStep ⸨f x⸩ ⸨f x'⸩
+
+abbrev 
+
+/-
+elements in the context at start:
+::[β, α]
+-/
+def mk_arrow (α β : Expr) (m n : Level := 0) : Expr :=
+  (Pi (max m n).succ ⟪⟪⸨(fst m.succ n.succ) (Ty m) (Ty n)⸩
+       , ⸨(snd m.succ n.succ) (Ty m) (Ty n)⸩⟫, ⟪α, β⟫⟫)
+
+inductive ValidJudgment : Expr → Expr → Prop
+  | sapp : 

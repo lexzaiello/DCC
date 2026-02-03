@@ -3,8 +3,6 @@ import Mathlib.Data.Nat.Notation
 /-
 We have seen in multiple places that it's advantageous to have some notion of a type assertion.
 
-(Σ t x) : Prop - this is the assertion that (x : t). It can ONLY be introduced by the kernel.
-
 Σ t x is kind of the inverse of Pi.
 
 (Σ t x) : Prop, only produced by the kernel.
@@ -47,7 +45,7 @@ Sigma pairs should be inert.
 So, sigma application is just a syntactic thing.
 
 sapp : Prop → Prop → Prop
-
+e
 All ingredients:
 - Prop
 - Ty n
@@ -119,7 +117,7 @@ abbrev Level := ℕ
 
 inductive Expr where
   | ty    : Level → Expr
-  | Pi    : Level → Expr → Expr -- Pi.{[m]} _ : Sort m
+  | Pi    : Expr → Expr -- Pi.{[m]} _ : Sort m
   | comp  : Expr  → Expr → Expr -- for composing functions. ::[f, g] x = ($ f, ($ g, x))
   | sigma : Level → Expr -- Σ T x : Prop - this is asserting that (x : T)
   | prop  : Expr -- as usual
@@ -167,7 +165,7 @@ elements in the context at start:
 ::[β, α]
 -/
 def mk_arrow (α β : Expr) (m n : Level := 0) : Expr :=
-  (Pi (max m n).succ ⟪⟪⸨(fst m.succ n.succ) (Ty m) (Ty n)⸩
+  (Pi ⟪⟪⸨(fst m.succ n.succ) (Ty m) (Ty n)⸩
        , ⸨(snd m.succ n.succ) (Ty m) (Ty n)⸩⟫, ⟪α, β⟫⟫)
 
 /-
@@ -175,20 +173,25 @@ Pi : mk_arrow (Pair _ _) Ty
 -/
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | Pi    : ValidJudgment bdy (Pair α β)
-    → ValidJudgment ((Pi m) bdy) (Ty m)
+  | Pi    : ValidJudgment bdy (Prod α β)
+    → ValidJudgment (Pi bdy) (Ty m)
   | prop  : ValidJudgment Prp (Ty 0)
   | ty    : ValidJudgment (Ty m) (Ty m.succ)
   | pair  : ValidJudgment x α
     → ValidJudgment xs β
-    → ValidJudgment ⟪x, xs⟫ ⸨Prod α β⸩
+    → ValidJudgment ⟪x, xs⟫ (Prod α β)
   | Prod  : ValidJudgment α (Ty m)
     → ValidJudgment β (Ty n)
-    → ValidJudgment ⸨Prod α β⸩ (Ty (max m n).succ)
+    → ValidJudgment (Prod α β) (Ty (max m n).succ)
   | sigma : ValidJudgment t (Ty m)
     → ValidJudgment x t
-    → ValidJudgment ⸨sigma m t x⸩ Prp
+    → ValidJudgment ⸨(sigma m) t x⸩ Prp
   | comp  : ValidJudgment g (mk_arrow α β)
     → ValidJudgment f (mk_arrow β γ)
-    → ValidJudgment (f ∘' g) (mk_arrow α γ)
-  | sapp : 
+    → ValidJudgment (f ∘ g) (mk_arrow α γ)
+  | app   : ValidJudgment f (Pi ⟪⟪assert, rst⟫, Γ⟫)
+    → ValidJudgment ⸨assert Γ⸩ (Ty m)
+    → ValidJudgment arg ⸨assert Γ⸩
+    → ValidJudgment ⸨f arg⸩ ⟪⟪rst⟫, ⟪⸨(sigma m) ⸨assert Γ⸩ arg⸩, Γ⟫⟫
+  /-| sapp  : ValidJudgment
+  -/

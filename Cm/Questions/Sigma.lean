@@ -123,8 +123,9 @@ inductive Expr where
   | comp  : Expr  → Expr → Expr -- for composing functions. ::[f, g] x = ($ f, ($ g, x))
   | sigma : Level → Expr -- Σ T x : Prop - this is asserting that (x : T)
   | prop  : Expr -- as usual
-  | pair  : Expr   → Expr → Expr
-  | app   : Expr  → Expr  → Expr
+  | pair  : Expr  → Expr → Expr
+  | Prod  : Expr  → Expr → Expr
+  | app   : Expr  → Expr → Expr
   | sapp  : Expr -- assumed sapp : Prop → Prop → Prop
   | fst   : Level → Level → Expr -- takes in α β, which are the elements in the pair.
   | snd   : Level → Level → Expr -- takes in α β, which are the elements in the pair.
@@ -161,8 +162,6 @@ inductive IsStep : Expr → Expr → Prop
   | right  : IsStep x x'
     → IsStep ⸨f x⸩ ⸨f x'⸩
 
-abbrev 
-
 /-
 elements in the context at start:
 ::[β, α]
@@ -171,5 +170,25 @@ def mk_arrow (α β : Expr) (m n : Level := 0) : Expr :=
   (Pi (max m n).succ ⟪⟪⸨(fst m.succ n.succ) (Ty m) (Ty n)⸩
        , ⸨(snd m.succ n.succ) (Ty m) (Ty n)⸩⟫, ⟪α, β⟫⟫)
 
+/-
+Pi : mk_arrow (Pair _ _) Ty
+-/
+
 inductive ValidJudgment : Expr → Expr → Prop
+  | Pi    : ValidJudgment bdy (Pair α β)
+    → ValidJudgment ((Pi m) bdy) (Ty m)
+  | prop  : ValidJudgment Prp (Ty 0)
+  | ty    : ValidJudgment (Ty m) (Ty m.succ)
+  | pair  : ValidJudgment x α
+    → ValidJudgment xs β
+    → ValidJudgment ⟪x, xs⟫ ⸨Prod α β⸩
+  | Prod  : ValidJudgment α (Ty m)
+    → ValidJudgment β (Ty n)
+    → ValidJudgment ⸨Prod α β⸩ (Ty (max m n).succ)
+  | sigma : ValidJudgment t (Ty m)
+    → ValidJudgment x t
+    → ValidJudgment ⸨sigma m t x⸩ Prp
+  | comp  : ValidJudgment g (mk_arrow α β)
+    → ValidJudgment f (mk_arrow β γ)
+    → ValidJudgment (f ∘' g) (mk_arrow α γ)
   | sapp : 

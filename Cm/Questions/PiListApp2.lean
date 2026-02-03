@@ -1,5 +1,14 @@
 import Mathlib.Data.Nat.Notation
 
+/-
+Special cases I don't like:
+
+- cons function composition feels like a special case for sure
+
+(Σ t, x) : Prop
+
+-/
+
 inductive Expr where
   | app    : Expr → Expr → Expr
   | cons   : Expr → Expr → Expr
@@ -63,6 +72,12 @@ def mk_arrow (α β : Expr) : Expr :=
 def id.type : Expr :=
   (Pi ⟪ ⟪ fst, ::[fst, fst], ::[snd, fst], nil ⟫, ⟪ Ty, Ty ⟫ ⟫)
 
+/-
+
+-/
+def fst.type : Expr :=
+  (Pi ⟪ 
+
 def nil.type : Expr := (Prod Ty Ty)
 
 inductive ValidJudgment : Expr → Expr → Prop
@@ -70,9 +85,13 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment (Prod t_γ_x t_xs) Ty
     → ValidJudgment Ctx (Prod (Prod t_γ_x t_xs) (Prod t_x t_t))
     → ValidJudgment (Pi Ctx) Ty
+  /-
+    The kernel stores arguments in this order: ⟪ (x : α), (α : Ty) ⟫
+    We represent the type of this with (Prod ($ id, Ty) α)
+    Note, α is a function of (α : Ty)
+  -/
   | Prod  : ValidJudgment α Ty
-    → ValidJudgment β Ty
-    → ValidJudgment (Prod α β) Ty
+    → ValidJudgment (Prod α Ty) Ty
   | pair  : ValidJudgment α Ty
     → ValidJudgment x α
     → ValidJudgment ⟪ x, α ⟫ (Prod α Ty)
@@ -142,3 +161,10 @@ theorem id_well_typed : ValidJudgment α Ty → ValidJudgment x α → ValidJudg
   defeq step
   step fst
 
+/-
+fst ⟪ (x : α), (y : β) ⟫ : α
+-/
+theorem fst_well_typed : ValidJudgment x α → ValidJudgment xs β → ValidJudgment ⟪ x, xs ⟫ (Prod α β) → ValidJudgment ($ fst, ⟪ x, y ⟫) α := by
+  intro h_t_x h_t_xs h_t_pair
+  judge defeq, app
+  

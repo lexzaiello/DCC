@@ -1,132 +1,70 @@
 import Mathlib.Data.Nat.Notation
 
 /-
-We have seen in multiple places that it's advantageous to have some notion of a type assertion.
+- Need some kind of mechanism to apply judgments.
 
-Σ t x is kind of the inverse of Pi.
+We could use Σ for this.
 
-(Σ t x) : Prop, only produced by the kernel.
+(Σ t_app) : Prop → Prop → Prop
 
-Σ t x terms are what get thrown inside the arguments context.
+We need some mechanism to traverse the context that is well-typed.
+This suggests that Σ is different from :.
 
-We want to minimize the number of special cases.
+This feels like reaching the end of a list. Maybe instead of snd and fst,
+we want pattern mathcing.
 
-Core ingredients:
-- comp, but with explicit type arguments
+fst + (snd exists_case nil_case)
 
-- Pi should denote a single argument application, not a random number.
+So, our context now becomes:
 
-Σ t x only get applied after the kernel checks the argument.
+(⊢ t_app judge_f judge_x) : Prop
+We represent function types now as:
 
-Σ t x doesn't make sense without both arguments. However, we ought not special case it.
+Pi t_in t_out
 
-It might make sense to use cons, in general, for pairs, and have different combinators that interpret
-them in different ways.
+And, t_in : Prop → Prop
 
-This is a common pattern.
+So we can only build the asserted type from the known ok types.
 
-Pi l : Type
+We should be able to make certain known ok types dynamically.
 
-Σ ::[T, x] : Prop. Then, our context is just a bunch of nested pairs of Prop.
+For example, id:
 
-Since Σ is only created by the kernel, we don't need to feed it explicit types.
-And, we can just type it as Prop, which is really nice.
+(∶ (u.succ) (Ty u)) : (Ty u) → Prop
 
-One thing to note: I would prefer if Pi was really well-typed.
+Unclear how we continue passing the context in.
 
-Also note: the user can(?) make Σ expressions themselves, granted they are
-one of the built-in ones.
-These coincide, pretty much, with the judgment rules. Can have an entire case for this.
+The obvious way is to do substitution.
 
-Do we need sigma application?
-At the very least, we need some mechanism to project out of a sigma pair.
-Sigma pairs should be inert.
+I don't like having "state."
 
-So, sigma application is just a syntactic thing.
+The idea is that the assertion for (f x y) sees (Σ t_app
 
-sapp : Prop → Prop → Prop
-e
-All ingredients:
-- Prop
-- Ty n
-- Expr.app
-- cons, for composition
-- pair, for just normal pairs
-- Σ
-- Π
-- Pair
-- $Σ
-- projection, fst, and snd, with explicit type arguments.
+- The input register should produce as an input a type in universe u matching the
+level of Pi.
 
-What is the type of a Pair?
-pairs shouldn't by default be dependent, I don't think.
-
-At some point, we will need a way to apply Sigma's.
-
-The only reason we can't internalize substitution with ::[] is because...
-
-id : Π ::[comp _ _ ::[], ::[Σ ::[Ty, Ty]]]
-
-- Will need some mechanism to grab the values inside these objects, UNLESS we design
-around them first-class. Kernel should be the only one touching them.
-- We want the list context to be maintaing per-Pi binder.
-  I like the old Pi design, in this respect.
-
-Once we get to a nil context, we just return the output value.
-
-delimeter is quite problematic.
-
-What we could do is nest Pi at each level, but this is quite ugly looking.
-I like the current way.
-
-(Pi ::[::[α, rst], Δ]) (Σ t x) = Pi ::[rst, ::[(Σ t x), Δ]]
--/
-
-/-
-Pairs are formed with ⟪a, b⟫.
-Operations are sequenced with cons ::[a, b]
-
-Pairs and cons, we almost certainly need to special case to do type inference.
--/
-
-/-
-Pi takes in ::[assertions, context]
-the assertions is a list where the head element dictates
-what the type of the next argument should be from the current
-context.
-
-Pi is not a combinator. It requires the list argument.
-
-Sigma is point-free. It is universe polymorphic.
-It accepts
-
-Pi eliminates into some sort level.
-
-With universe levels, we should almost certainly:
-
-- Index Pair by the sorts of the type arguments
-- Index Pi by the sort it eliminates into.
-- Cons can stay as is.
-- Sigma is point-free, so we ought to indicate the universe level of the Type argument.
-...
-Level 1 = Type 0
-Level 0 = Prop
+id.{[m]} : (Pi (const' (Type m.succ) Prop (Type m)) _)
 -/
 
 abbrev Level := ℕ
 
 inductive Expr where
-  | ty    : Level → Expr
-  | Pi    : Expr → Expr -- Pi.{[m]} _ : Sort m
-  | comp  : Expr  → Expr → Expr -- for composing functions. ::[f, g] x = ($ f, ($ g, x))
-  | sigma : Level → Expr -- Σ T x : Prop - this is asserting that (x : T)
-  | prop  : Expr -- as usual
-  | pair  : Expr  → Expr → Expr
-  | Prod  : Expr  → Expr → Expr
   | app   : Expr  → Expr → Expr
-  | sapp  : Expr -- assumed sapp : Prop → Prop → Prop
-  | fst   : Level → Level → Expr -- takes in α β, which are the elements in the pair.
-  | snd   : Level → Level → Expr -- takes in α β, which are the elements in the pair.
+  | ty    : Level → Expr
+  | Pi    : Level → Expr -- Pi.{[m]} _ : _ → Sort m
+  | judge : Level → Expr -- (: T x) : Prop - this is asserting that (x : T)
+  | sigma : Expr -- (Σ t_app (: T_f f) (: T_x x)) - this is asserting ((f x) : t_app)
+  | prop  : Expr -- as usual
+  | fst   : Expr
+  | snd   : Expr
+  | comp  : Expr -- for composing context traversal functions.
+  /-
+    ^ To traverse contexts. snd (Σ t_app (: t_f f) (: t_x x)) = (: t_x x)
+  -/
+  /-
+    The standard combinators.
+  -/
+  | const' : Level → Level → Expr -- α → β → α
 
 open Expr
 
@@ -135,38 +73,42 @@ def sort_to_expr : Level → Expr
   | .succ n => ty n
 
 syntax "⟪" term,+ "⟫"      : term
-syntax "⸨" term+ "⸩"        : term
+syntax "⸨" term+ "⸩"       : term
 
 notation "Ty" => Expr.ty
 notation "Prp" => Expr.prop
-
-infixr:90 " ∘ " => Expr.comp
+notation "∶" => Expr.judge
+notation "⊢" => Expr.sigma
 
 macro_rules
   | `(⸨$f:term $x:term⸩) => `(Expr.app $f $x)
   | `(⸨ $f $x:term $args:term*⸩) => `(⸨ (Expr.app $f $x) $args*⸩)
-  | `(⟪ $x:term ⟫) => `($x)
-  | `(⟪ $x:term, $xs:term,* ⟫) => `(Expr.pair $x ⟪ $xs,* ⟫)
+
+infixr:90 " ∘ " => (fun f g => ⸨Expr.comp f g⸩)
 
 /-
 None of the terms we introduced above have step rules except for composition, app
 and sapp.
 -/
 inductive IsStep : Expr → Expr → Prop
+  | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
   | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
-  | fst    : IsStep ⸨(fst m n) _α _β ⟪a, b⟫⸩ a
+  | fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
+  | snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
   | left   : IsStep f f'
     → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x'
     → IsStep ⸨f x⸩ ⸨f x'⸩
 
 /-
-elements in the context at start:
-::[β, α]
+(α : Type u) → (β: Type v) corresponds to:
+
+(Pi (const' (Type u) Prop α) (const' (Type v) Prop β))
 -/
 def mk_arrow (α β : Expr) (m n : Level := 0) : Expr :=
-  (Pi ⟪⟪⸨(fst m.succ n.succ) (Ty m) (Ty n)⸩
-       , ⸨(snd m.succ n.succ) (Ty m) (Ty n)⸩⟫, ⟪α, β⟫⟫)
+  let t_in := ⸨(const' u.succ 1) (Type u) Prop α⸩
+  let t_out
+  ⸨(Pi m) t_in 
 
 /-
 Pi : mk_arrow (Pair _ _) Ty
@@ -192,6 +134,10 @@ inductive ValidJudgment : Expr → Expr → Prop
   | app   : ValidJudgment f (Pi ⟪⟪assert, rst⟫, Γ⟫)
     → ValidJudgment ⸨assert Γ⸩ (Ty m)
     → ValidJudgment arg ⸨assert Γ⸩
-    → ValidJudgment ⸨f arg⸩ ⟪⟪rst⟫, ⟪⸨(sigma m) ⸨assert Γ⸩ arg⸩, Γ⟫⟫
-  /-| sapp  : ValidJudgment
-  -/
+    → ValidJudgment ⸨f arg⸩ ⟪rst, ⟪⸨(sigma m) ⸨assert Γ⸩ arg⸩, Γ⟫⟫
+  | sapp  : ValidJudgment ⸨(sigma m) t_f f⸩ Prop
+    → ValidJudgment ⸨(sigma n) t_x x⸩ Prop
+    → ValidJudgment ⸨f x⸩ t'
+    -- (sapp a b) reduces to 
+    → ValidJudgment (sapp ⸨(sigma m) t_f f⸩ ⸨(sigma n) t_x x⸩) Prop
+

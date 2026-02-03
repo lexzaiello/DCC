@@ -53,7 +53,7 @@ inductive Expr where
   | ty    : Level → Expr
   | Pi    : Level → Expr -- Pi.{[m]} _ : _ → Sort m
   | judge : Level → Expr -- (: T x) : Prop - this is asserting that (x : T)
-  | sigma : Expr -- (Σ t_app (: T_f f) (: T_x x)) - this is asserting ((f x) : t_app)
+  | sigma : Level → Expr -- (Σ t_app (: T_f f) (: T_x x)) - this is asserting ((f x) : t_app)
   | prop  : Expr -- as usual
   | fst   : Expr
   | snd   : Expr
@@ -93,8 +93,8 @@ and sapp.
 inductive IsStep : Expr → Expr → Prop
   | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
   | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
-  | fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
-  | snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
+  | fst    : IsStep ⸨fst ⸨(⊢ m) t_app judge_f judge_x⸩⸩ judge_f
+  | snd    : IsStep ⸨snd ⸨(⊢ n) t_app judge_f judge_x⸩⸩ judge_x
   | left   : IsStep f f'
     → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x'
@@ -106,38 +106,23 @@ inductive IsStep : Expr → Expr → Prop
 (Pi (const' (Type u) Prop α) (const' (Type v) Prop β))
 -/
 def mk_arrow (α β : Expr) (m n : Level := 0) : Expr :=
-  let t_in := ⸨(const' u.succ 1) (Type u) Prop α⸩
-  let t_out
-  ⸨(Pi m) t_in 
+  let t_in := ⸨(const' m.succ 1) (Ty m) Prp α⸩
+  let t_out := ⸨(const' n.succ 1) (Ty n) Prp β⸩
+
+  ⸨(Pi m) t_in t_out⸩
 
 /-
 Pi : mk_arrow (Pair _ _) Ty
 -/
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | Pi    : ValidJudgment bdy (Prod α β)
-    → ValidJudgment (Pi bdy) (Ty m)
-  | prop  : ValidJudgment Prp (Ty 0)
-  | ty    : ValidJudgment (Ty m) (Ty m.succ)
-  | pair  : ValidJudgment x α
-    → ValidJudgment xs β
-    → ValidJudgment ⟪x, xs⟫ (Prod α β)
-  | Prod  : ValidJudgment α (Ty m)
-    → ValidJudgment β (Ty n)
-    → ValidJudgment (Prod α β) (Ty (max m n).succ)
-  | sigma : ValidJudgment t (Ty m)
+  | judge : ValidJudgment t (Ty m)
     → ValidJudgment x t
-    → ValidJudgment ⸨(sigma m) t x⸩ Prp
-  | comp  : ValidJudgment g (mk_arrow α β)
-    → ValidJudgment f (mk_arrow β γ)
-    → ValidJudgment (f ∘ g) (mk_arrow α γ)
-  | app   : ValidJudgment f (Pi ⟪⟪assert, rst⟫, Γ⟫)
-    → ValidJudgment ⸨assert Γ⸩ (Ty m)
-    → ValidJudgment arg ⸨assert Γ⸩
-    → ValidJudgment ⸨f arg⸩ ⟪rst, ⟪⸨(sigma m) ⸨assert Γ⸩ arg⸩, Γ⟫⟫
-  | sapp  : ValidJudgment ⸨(sigma m) t_f f⸩ Prop
-    → ValidJudgment ⸨(sigma n) t_x x⸩ Prop
-    → ValidJudgment ⸨f x⸩ t'
-    -- (sapp a b) reduces to 
-    → ValidJudgment (sapp ⸨(sigma m) t_f f⸩ ⸨(sigma n) t_x x⸩) Prop
+    → ValidJudgment ⸨(∶ m) t x⸩ Prp
+  | sigma : ValidJudgment t_app (Ty o)
+    → ValidJudgment ⸨(∶ m) t_f f⸩ Prp
+    → ValidJudgment ⸨(∶ n) t_x x⸩ Prp
+    → ValidJudgment ⸨f x⸩ t_app
+    → ValidJudgment ⸨(⊢ o) t_app ⸨(∶ m) t_f f⸩ ⸨(∶ n) t_x x⸩⸩ Prp
+  
 

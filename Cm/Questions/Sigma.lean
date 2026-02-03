@@ -55,6 +55,33 @@ TODO: we will probably need some mechanism to split a stream / context.
 Duplicate it that only lives in Prop.
 
 We could derive this as shorthand from both.
+
+What about output types?
+It feels like they should receive the context as well?
+There is no circumstance in which they won't.
+However, (Pi.{{m, n]} (t_in : Prop → Type m) (t_out : Prop → Type n)) : Type n
+
+Another potential interpretation of ⊢.
+
+The thing I'm wondering is if Pi is even necessary.
+
+fst on a judgment just returns the type.
+However, snd is not legal.
+
+snd and fst should ONLY return Prop.
+
+So how do we type (x : α)?
+
+I feel like we ought to return Prop from our t_in
+where the object being judged is the type.
+
+(∶ type_of_type type)
+
+I feel like high-key, with nested Pi,
+we could do it instead with a partially applied Judge.
+Idk.
+
+Or, we could it by asserting that the output Pi expression has some type.
 -/
 
 abbrev Level := ℕ
@@ -62,7 +89,7 @@ abbrev Level := ℕ
 inductive Expr where
   | app   : Expr  → Expr → Expr
   | ty    : Level → Expr
-  | Pi    : Level → Expr -- Pi.{[m]} _ : _ → Sort m
+  | Pi    : Expr -- Pi : (Prop → Prop) → (Prop → Prop) → (Type 0)
   | judge : Level → Expr -- (: T x) : Prop - this is asserting that (x : T)
   | sigma : Level → Expr -- (Σ t_app (: T_f f) (: T_x x)) - this is asserting ((f x) : t_app)
   | prop  : Expr -- as usual
@@ -111,27 +138,55 @@ inductive IsStep : Expr → Expr → Prop
   | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
   | fst    : IsStep ⸨fst ⸨(⊢ m) t_app judge_f judge_x⸩⸩ judge_f
   | snd    : IsStep ⸨snd ⸨(⊢ n) t_app judge_f judge_x⸩⸩ judge_x
+  -- snd can only return new Props, so we can't project on a judge.
+  -- we need a default value, then.
+  | snd_no : IsStep ⸨snd ⸨(∶ n) _a _b⸩⸩ ⸨(∶ n) _a _b⸩
   | left   : IsStep f f'
     → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x'
     → IsStep ⸨f x⸩ ⸨f x'⸩
 
 /-
+Assertions reject the context and just output
+a type of type (Type m).
+-/
+def mk_assert (α : Expr) (m : Level) : Expr :=
+  ⸨(const' 0 0) Prp Prp ⸨(∶ m.succ) (Ty m) α⸩⸩
+
+/-
 (α : Type u) → (β: Type v) corresponds to:
 
 (Pi (const' (Type u) Prop α) (const' (Type v) Prop β))
+(Pi.{{m, n]} (t_in : Prop → Type m) (t_out : Prop → Type n)) : Type n, due to this rule.
 -/
 def mk_arrow (α β : Expr) (m n : Level) : Expr :=
-  let t_in := ⸨(const' m.succ 0) (Ty m) Prp α⸩
-  let t_out := ⸨(const' n.succ 0) (Ty n) Prp β⸩
+  let t_in := mk_assert α m
+  let t_out := mk_assert β n
 
-  ⸨(Pi m) t_in t_out⸩
+  ⸨Pi t_in t_out⸩
 
 /-
 const' : (α : Type m) → (β : Type n) → α → β → α
+
+At (x : α) argument, we have (const' α β) in the judgment list. This is:
+⊢ _ (⊢ _ (∶ t_const const') (∶ t_α α))
+
+So, we output (∶ t_α α)
 -/
 def const'.type (m n : Level) : Expr :=
-  sorry
+  let α := mk_assert (Ty m) m.succ
+  let β := mk_assert (Ty n) n.succ
+  -- with ⊢ _ (⊢ _ (∶ t_const const) (∶ (Ty m) α)) (∶ (Ty n) β)
+  -- in scope. We select (∶ (Ty m) α)
+  -- with (snd ∘ fst)
+  let x := (snd ∘ fst)
+  -- with ⊢ _ (⊢ _ (⊢ _ (∶ t_const const) (∶ (Ty m) α)) (∶ (Ty n) β)) (∶ α x) in scope
+  let y := (fst ∘ fst)
+
+  -- with ⊢ _ (⊢ _ (⊢ _ (⊢ _ (∶ t_const const) (∶ (Ty m) α)) (∶ (Ty n) β)) (∶ α x)) (∶ β y) in scope
+  let out := (fst ∘ fst)
+
+  ⸨Pi α ⸨Pi β ⸨Pi x ⸨Pi y out⸩⸩⸩⸩
 
 /-
 Pi : mk_arrow (Pair _ _) Ty
@@ -155,4 +210,4 @@ inductive ValidJudgment : Expr → Expr → Prop
     (mk_arrow
       (mk_arrow Prp Prp 0 0) -- Prop → Prop
       (mk_arrow Prp Prp 0 0) 1 1) 1 1)
-  
+  | pi    : ValidJudgment (Pi m n) (mk_arrow 

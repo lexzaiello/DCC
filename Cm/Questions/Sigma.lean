@@ -44,6 +44,17 @@ The idea is that the assertion for (f x y) sees (Σ t_app
 level of Pi.
 
 id.{[m]} : (Pi (const' (Type m.succ) Prop (Type m)) _)
+
+fst and snd always produce as final outputs types, since they are mainly used
+in the t_in position.
+
+Terms get inserted via judgments by the Kernel.
+fst and snd do not have universe level arguments, since these can be inferred.
+
+TODO: we will probably need some mechanism to split a stream / context.
+Duplicate it that only lives in Prop.
+
+We could derive this as shorthand from both.
 -/
 
 abbrev Level := ℕ
@@ -56,6 +67,11 @@ inductive Expr where
   | sigma : Level → Expr -- (Σ t_app (: T_f f) (: T_x x)) - this is asserting ((f x) : t_app)
   | prop  : Expr -- as usual
   | fst   : Expr
+  /-
+    snd has a x_case for when the snd value exists,
+    and a nil case for when it does not exist. The nil_case receives niothing.
+    ⸨snd x_case nil_case⸩
+  -/
   | snd   : Expr
   | comp  : Expr -- for composing context traversal functions.
   /-
@@ -105,11 +121,17 @@ inductive IsStep : Expr → Expr → Prop
 
 (Pi (const' (Type u) Prop α) (const' (Type v) Prop β))
 -/
-def mk_arrow (α β : Expr) (m n : Level := 0) : Expr :=
-  let t_in := ⸨(const' m.succ 1) (Ty m) Prp α⸩
-  let t_out := ⸨(const' n.succ 1) (Ty n) Prp β⸩
+def mk_arrow (α β : Expr) (m n : Level) : Expr :=
+  let t_in := ⸨(const' m.succ 0) (Ty m) Prp α⸩
+  let t_out := ⸨(const' n.succ 0) (Ty n) Prp β⸩
 
   ⸨(Pi m) t_in t_out⸩
+
+/-
+const' : (α : Type m) → (β : Type n) → α → β → α
+-/
+def const'.type (m n : Level) : Expr :=
+  sorry
 
 /-
 Pi : mk_arrow (Pair _ _) Ty
@@ -124,5 +146,13 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment ⸨(∶ n) t_x x⸩ Prp
     → ValidJudgment ⸨f x⸩ t_app
     → ValidJudgment ⸨(⊢ o) t_app ⸨(∶ m) t_f f⸩ ⸨(∶ n) t_x x⸩⸩ Prp
+  | fst   : ValidJudgment fst (mk_arrow Prp Prp 0 0)
+  | snd   : ValidJudgment snd (mk_arrow Prp Prp 0 0)
+  | prp   : ValidJudgment Prp (Ty 0)
+  | ty    : ValidJudgment (Ty m) (Ty m.succ)
+  | comp  : ValidJudgment comp (mk_arrow -- comp : (Prop → Prop) → (Prop → Prop) → Prop → Prop
+    (mk_arrow Prp Prp 0 0) -- Prop → Prop
+    (mk_arrow
+      (mk_arrow Prp Prp 0 0) -- Prop → Prop
+      (mk_arrow Prp Prp 0 0) 1 1) 1 1)
   
-

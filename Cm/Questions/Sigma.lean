@@ -331,12 +331,16 @@ def both.type (m n o : Level) : Expr :=
   -/
   let x.mk_γ_xy := ((⸨comp ⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩⸩ ∘
     (⸨flip_comp snd⸩ ∘ ⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩)) ∘ Expr.snd)
-  let γ' := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
+  let x := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
     (Pi ∘ (snd ∘ fst ∘ fst))
     (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
       ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
           (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (Expr.snd ∘ fst)))
           x.mk_γ_xy⸩)⸩
+
+  let y := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
+    (Pi ∘ (snd ∘ fst ∘ fst ∘ fst)) -- (x : α)
+      (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (Expr.snd ∘ fst ∘ fst))⸩
 
   sorry
 

@@ -342,6 +342,38 @@ def both.type (m n o : Level) : Expr :=
     (Pi ∘ (snd ∘ fst ∘ fst ∘ fst)) -- (x : α)
       (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (Expr.snd ∘ fst ∘ fst))⸩
 
+  /-
+    t_out : γ z (y z)
+
+    the (y z) term is pretty easy to recover.
+
+    we receive (∶ Tz z) as an argument outright.
+
+    we receive the context first, though.
+
+    ⊢ _ (⊢ (⊢ (⊢ _ judge_β) _ judge_γ)_ judge_x) judge_y
+
+    γ = snd ∘ fst ∘ fst
+
+    y = fst
+
+    so we just need to make
+
+    both (⊢ Ty o γ) y, then our argument z will take care of the rest.
+
+    both (both ∘ (⊢ Ty o) ∘ snd ∘ fst ∘ fst) ((⊢ Ty o γ) ∘ fst)
+
+    snd ∘ snd ∘ fst
+
+    γ = snd ∘ fst ∘ 
+    y =
+  -/
+
+  ⸨Pi α (ret_pi
+    ⸨Pi β (ret_pi
+      ⸨Pi x (ret_pi
+        ⸨Pi y 
+
   sorry
 
 /-

@@ -2,7 +2,9 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Tactic
 
 /-
+Same as Sigma.lean, but:
 
+⊢ : Prop
 -/
 
 abbrev Level := ℕ

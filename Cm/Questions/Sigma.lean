@@ -154,16 +154,18 @@ def const.type (m n : Level) : Expr :=
   let β.const_out := (mk_assert_out (Ty n) n.succ)
   let β := (⸨flip_pi β.const_out⸩ ∘ β.const)
 
-  /-
-    β x : Type n
-    y : β x
-  -/
+  let return_pi := ⸨Pi
+      ⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ -- apply β x
+      (⸨(const' 0 0) Prp Prp⸩ ∘ (fst ∘ snd))⸩
+      -- ^ fetch x judgement, elevate to a type with fst_j rule, reject y
+  let y_out := (⸨⊢ ⸨(∶ 1) (Ty 0) return_pi⸩⸩ ∘ snd)
+
+  let x_out := ⸨Pi (Expr.snd ∘ Expr.fst) y_out⸩
 
   ⸨Pi α
     (ret_pi
       ⸨Pi β
-      (ret_pi ⸨Pi (Expr.snd ∘ Expr.fst) (ret_pi sorry)⸩)⸩)⸩
-
+        (ret_pi x_out)⸩)⸩
 /-
 (∶ m) : ∀ (α : Type m), α → Prop
 -/

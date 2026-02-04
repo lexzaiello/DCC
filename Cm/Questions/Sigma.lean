@@ -156,33 +156,16 @@ def const.type (m n : Level) : Expr :=
   let β.const_out := (mk_assert_out (Ty n) n.succ)
   let β := (⸨(∶ 2) (Ty 1)⸩ ∘ (⸨flip_pi β.const_out⸩ ∘ β.const))
 
-  let return_pi := ⸨Pi
-      ⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ -- apply β x
-      (⸨(const' 0 0) Prp Prp⸩ ∘ (fst ∘ snd))⸩
-      -- ^ fetch x judgement, elevate to a type with fst_j rule, reject y
-  let y_out := (⸨⊢ ⸨(∶ 1) (Ty 0) return_pi⸩⸩ ∘ snd)
-
-  /-
-    Simpler y_out
-    with ⊢ _ (⊢ _ (⊢ _ judge_β) judge_x) judge_y
-
-    in scope
-    we need ⊢ (Ty n) judge_β judge_x
-    we can do
-
-    (both (⊢ Ty ∘ fst) snd) ∘ fst
-
-    with (⊢ _ (⊢ _ judge_β) judge_x) in scope. this applies β x.
-    ⸨both 0 0 0
+  let βx := ⸨(both 0 0 0)
       Prp
-      ⸨const' 0 1 (Ty 0) Prp Prp⸩
-      ⸨const' 0 1 (mk_arrow Prp Prp 0 0) Prp ⸨const' 0 1 (Ty 0) Prp⸩⸩
+      ⸨(const' 0 1) (Ty 0) Prp Prp⸩
+      ⸨(const' 0 1) (mk_arrow Prp Prp 0 0) Prp ⸨(const' 0 1) (Ty 0) Prp⸩⸩
       (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (snd ∘ fst))
       snd⸩
-  -/
 
-  let y_out' := ⸨Pi
-    
+  let y_out := ⸨Pi
+    βx
+    (fst ∘ fst ∘ fst ∘ fst)⸩
 
   let x_out := ⸨Pi (Expr.snd ∘ Expr.fst) y_out⸩
 

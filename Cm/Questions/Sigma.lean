@@ -3,20 +3,6 @@ import Mathlib.Tactic
 
 abbrev Level := ℕ
 
-/-
-To clean up:
-
-Nothing was wrong with const.
-
-We just need to form the id expression again.
-
-⊢ is wrong. It should be:
-
-⊢ : Prop → Prop → Prop.
-
-The innfer Prop is the output type.
--/
-
 inductive Expr where
   | app   : Expr  → Expr → Expr
   | ty    : Level → Expr
@@ -36,9 +22,17 @@ inductive Expr where
     ^ To traverse contexts. snd (Σ t_app (: t_f f) (: t_x x)) = (: t_x x)
   -/
   /-
-    The standard combinators.
+    The standard SK, BCKW combinators.
   -/
   | const' : Level → Level → Expr -- α → β → α
+  | const  : Level → Level → Expr -- dependent K
+  /-
+    Dependent C / flip.
+    C x y z = x z y
+    C : ∀ (x : α) (β : Type) (γ : α → β → Type) (f : ∀ (x : α)
+      (y : β), γ x y) (y : β) (z : α), γ z y
+  -/
+  | flip   : Level → Level → Level → Expr-- dependent C / flip combinator
   /-
     both : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
       (f : ∀ (x : α) (y : β x), γ x y)
@@ -70,6 +64,7 @@ and sapp.
 inductive IsStep : Expr → Expr → Prop
   | id     : IsStep ⸨(Expr.id m) _α x⸩ x
   | both   : IsStep ⸨(both m n o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
+  | flip   : IsStep ⸨(Expr.flip m n o) _α _β _γ x y z⸩ ⸨x z y⸩
   | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
   | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
   | fst_j  : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩
@@ -110,6 +105,15 @@ def snd.type : Expr := (mk_arrow Prp Prp 0 0)
 def fst.type : Expr := (mk_arrow Prp Prp 0 0)
 
 /-
+Turns Pi t_in t_out into Pi t_out t_in
+
+-/
+def flip_pi : Expr :=
+  ⸨(flip 1 1 0) (mk_arrow Prp Prp 0 0) (mk_arrow Prp Prp 0 0)
+    ⸨(const' 1 0) (mk_arrow Prp (Ty 0) 0 1) Prp ⸨(const' 1 0) (Ty 0) Prp Prp⸩⸩
+    Pi⸩
+
+/-
 const' : (α : Type m) → (β : Type n) → α → β → α
 
 At (x : α) argument, we have (const' α β) in the judgment list. This is:
@@ -141,6 +145,24 @@ def const'.type (m n : Level) : Expr :=
   let out := ⸨cpy (⊢ ∘ (snd ∘ fst ∘ fst)) ⸨(id 0) Prp⸩⸩
 
   ⸨Pi α (ret_pi ⸨Pi β (ret_pi ⸨Pi x (ret_pi ⸨Pi y out⸩)⸩)⸩)⸩
+
+def const.type (m n : Level) : Expr :=
+  let α := mk_assert_in (Ty m) m.succ
+  -- with ⊢ judge_app_α judge_app_f judge_α in scope
+  /-
+    let t_in := mk_assert_in α m
+
+    ⸨Pi t_in (mk_assert_out β n)⸩
+  -/
+  let β.α := snd
+  let β.const := (⸨(const' 0 0) Prp Prp⸩ ∘ β.α)
+  let β.const_out := ((const' 0 n.succ.succ) (Ty n.succ) Prp (Ty n))
+  let β.const_out.ty := 
+  let β.pi := ⸨both _ _ _ (Pi ∘ β.const) (
+  let β.pi := ⸨Pi snd ((const' 0 n.succ.succ) (Ty n.succ) Prp (Ty n))⸩
+  let β.pi.ctx := ⸨⊢ β.pi (∶ 
+  
+  let β := β.pi
 
 /-
 (∶ m) : ∀ (α : Type m), α → Prop

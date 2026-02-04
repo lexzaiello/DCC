@@ -163,9 +163,20 @@ def const.type (m n : Level) : Expr :=
       (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (snd ∘ fst))
       snd⸩
 
+  /-
+    to prepend a judgment and ourselves.
+  -/
+  let cpy := ⸨(both 0 0 0)
+    Prp
+    ⸨(const' 1 0) (Ty 0) Prp Prp⸩
+    ⸨(const' 1 0) (mk_arrow Prp (Ty 0) 0 1) Prp
+      ⸨(const' 1 0) (Ty 0) Prp
+        (mk_arrow Prp (mk_arrow Prp Prp 0 0) 0 1)⸩⸩⸩
+  let out := ⸨cpy (⊢ ∘ (snd ∘ fst ∘ fst)) ⸨(id 0) Prp⸩⸩
+
   let y_out := ⸨Pi
     βx
-    (⸨(const' 0 0) Prp Prp⸩ ∘ (snd ∘ fst ∘ fst))⸩ -- with ⊢ _ (⊢ _ (⊢ _ judge_α)judge x judge_y
+    out⸩ -- with ⊢ _ (⊢ _ (⊢ _ judge_α)judge x judge_y
 
   ⸨Pi α
     (ret_pi
@@ -515,20 +526,23 @@ theorem const_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   defeq step
   step snd
   defeq trans, left, step
+  step both
+  defeq trans, left, left, step
   step comp
-  defeq trans, left, right, step
+  defeq vdash, trans, step
   step comp
-  defeq trans, left, right, right, step
+  defeq trans, right, step
   step comp
-  defeq trans, left, right, right, right, step
+  defeq trans, right, right, step
   step fst
-  defeq trans, left, right
   defeq trans, right, step
   step fst
   defeq trans, step
   step snd
   defeq refl
   defeq trans, step
-  step const'
-  
-  sorry
+  step id
+  defeq vdash, refl, vdash, refl
+  defeq vdash, refl
+  repeat defeq refl
+

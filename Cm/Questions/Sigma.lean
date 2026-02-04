@@ -99,8 +99,13 @@ id α x, how does the type of x get to see the vdash stufF?
 
 wait interesting.
 
-ValidJudgment!!!!! So it's not just we're outputting the type.
-We're outputting a Judgment.
+fst we assume to produce a Prop, but
+in apps, we need some way to type-check x.
+
+We don't want to use IsStep.
+
+We should almost certainly type everything with (: type_of_type type)
+I think.
 -/
 
 abbrev Level := ℕ
@@ -155,8 +160,8 @@ and sapp.
 inductive IsStep : Expr → Expr → Prop
   | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
   | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
-  | fst    : IsStep ⸨fst ⸨(⊢ m) t_app judge_f judge_x⸩⸩ judge_f
-  | snd    : IsStep ⸨snd ⸨(⊢ n) t_app judge_f judge_x⸩⸩ judge_x
+  | fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
+  | snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
   -- snd can only return new Props, so we can't project on a judge.
   -- we need a default value, then.
   | snd_no : IsStep ⸨snd ⸨(∶ n) _a _b⸩⸩ ⸨(∶ n) _a _b⸩
@@ -243,14 +248,23 @@ def pi.type : Expr :=
   (mk_arrow (mk_arrow Prp Prp 0 0)
     (mk_arrow (mk_arrow Prp Prp 0 0) (Ty 0) 1 1) 1 1)
 
+/-
+(ValidJudgment t x : Prop) = ((∶ t x) : Prop)
+
+ValidJudgment ⸨Pi t_in t_out⸩ f -> (∶ ⸨Pi t_in t_out⸩ f)
+
+It feels like 
+
+So, for app rule, (f x)
+-/
 inductive ValidJudgment : Expr → Expr → Prop
-  | judge : ValidJudgment (∶ m) (judge.type m)
-  | vdash : ValidJudgment ⊢ vdash.type
-  | fst   : ValidJudgment fst (mk_arrow Prp Prp 0 0) -- fst : Prop → Prop
-  | snd   : ValidJudgment snd (mk_arrow Prp Prp 0 0) -- snd : Prop → Prop
-  | prp   : ValidJudgment Prp (Ty 0) -- Prop : Ty 0
-  | ty    : ValidJudgment (Ty m) (Ty m.succ) -- Ty m : Ty m.succ
-  | comp  : ValidJudgment comp comp.type
+  | judge : ValidJudgment (judge.type m) (∶ m)
+  | vdash : ValidJudgment vdash.type ⊢
+  | fst   : ValidJudgment (mk_arrow Prp Prp 0 0) fst -- fst : Prop → Prop
+  | snd   : ValidJudgment (mk_arrow Prp Prp 0 0) snd -- snd : Prop → Prop
+  | prp   : ValidJudgment (Ty 0) Prp -- Prop : Ty 0
+  | ty    : ValidJudgment (Ty m.succ) (Ty m) -- Ty m : Ty m.succ
+  | comp  : ValidJudgment comp.type comp
   /-
     Pi accepts a map on the context producing the input type,
     and a map on the context producing the output type.
@@ -260,5 +274,6 @@ inductive ValidJudgment : Expr → Expr → Prop
 
     Pi : (Prop → Prop) → (Prop → Prop) → (Ty 0)
   -/
-  | pi    : ValidJudgment Pi pi.type
-
+  | pi    : ValidJudgment pi.type Pi
+  | app   : ValidJudgment ⸨Pi t_in t_out⸩ f
+    → ValidJudgment x 

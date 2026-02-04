@@ -6,34 +6,26 @@ abbrev Level := ℕ
 inductive Expr where
   | app   : Expr  → Expr → Expr
   | ty    : Level → Expr
-  | Pi    : Expr -- Pi : (Prop → Prop) → (Prop → Prop → Prop) → (Type 0). This is because t_out needs to know the judged input type.
+  | Pi    : Expr -- Pi : (Prop → Prop) → (Prop → Prop → Prop) → (Type 0)
   | judge : Level → Expr -- (: T x) : Prop - this is asserting that (x : T)
-  | vdash : Expr -- ⊢ (t_app : Prop) (judge_f : Prop) (judge_x : Prop)
-  | prop  : Expr -- as usual
-  | fst   : Expr
+  | vdash : Expr -- ⊢ (judge_t_app : Prop) (judge_f : Prop) (judge_x : Prop)
+  | prop  : Expr -- only inhabited by ⊢ and ∶
+  | fst   : Expr -- Prop → Prop
+  | snd   : Expr -- Prop → Prop
+  | comp  : Expr -- (Prop → Prop) → (Prop → Prop) → Prop → Prop
   /-
-    snd has a x_case for when the snd value exists,
-    and a nil case for when it does not exist. The nil_case receives niothing.
-    ⸨snd x_case nil_case⸩
-  -/
-  | snd   : Expr
-  | comp  : Expr -- for composing context traversal functions.
-  /-
-    ^ To traverse contexts. snd (Σ t_app (: t_f f) (: t_x x)) = (: t_x x)
-  -/
-  /-
-    The standard SK, BCKW combinators.
+    The standard SK combinators.
   -/
   | const' : Level → Level → Expr -- α → β → α
   | const  : Level → Level → Expr -- dependent K
   /-
-    Dependent C / flip.
+    Dependent C / flip from BCKW. comes in handy in some places.
     C x y z = x z y
     C : ∀ (x : α) (β : Type) (γ : α → β → Type) (f : ∀ (x : α)
       (y : β), γ x y) (y : β) (z : α), γ z y
   -/
   | flip   : Level → Level → Level → Expr-- dependent C / flip combinator
-  /-
+  /- The dependent S combinator.
     both : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
       (f : ∀ (x : α) (y : β x), γ x y)
       (g : ∀ (x : α), β x)
@@ -435,6 +427,7 @@ inductive ValidJudgment : Expr → Prop
     Base combinator types:
   -/
   | const'  : ValidJudgment ⸨(∶ 1) (const'.type m n) (const' m n)⸩
+  | both    : ValidJudgment ⸨(∶ 1) (both.type m n o) (both m n o)⸩ 
 
 /-
 Helper macros for proofs about judgments.
@@ -582,6 +575,25 @@ theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
     step id
     defeq vdash, refl, vdash, refl, vdash
     repeat (defeq refl)
+
+abbrev id_derived (α : Expr) (m : Level) : Expr :=
+  ⸨⸨(both m 1 1) α ⸨(const' 1 m) (Ty 0) α (mk_arrow α α m m)⸩ ⸨(const' 1 m) (Ty m) α α⸩⸩ ⸨(const m 1) α (mk_arrow α α m m)⸩ ⸨(const m m) α α⸩⸩
+
+/-
+id = (S K K
+-/
+theorem id_derived_both (α : Expr) : ValidJudgment ⸨(∶ n.succ) (Ty n) α⸩
+  → ValidJudgment ⸨(∶ m) (mk_arrow α α m m) (id_derived α n)⸩ := by
+  intro h_t_α
+  
+
+/-
+Dependent S is well-typed.
+-/
+/-theorem both_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
+  → ValidJudgment ⸨(∶ 1) (mk_arrow α (Ty n) m n.succ) β⸩
+  → ValidJudgment ⸨(∶ 1) ⸨Pi (mk_assert_in α m) (ret_pi ⸨Pi (β ∘ fst) (mk_assert_out (Ty o) o.succ)⸩)⸩⸩
+  → ValidJudgment ⸨(∶ 1) ⸨Pi (mk_assert_in α m) (ret_pi ⸨Pi (β ∘ fst) ()-/
 
 /-
 Dependent K is well-typed.

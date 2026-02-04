@@ -112,8 +112,11 @@ def flip_pi : Expr :=
     ⸨(const' 1 0) (mk_arrow Prp (Ty 0) 0 1) Prp ⸨(const' 1 0) (Ty 0) Prp Prp⸩⸩
     Pi⸩
 
-def dup_vdash : Expr :=
-  ⸨both 
+def both_prp : Expr :=
+  ⸨(both 0 0 0)
+      Prp
+      ⸨(const' 0 1) (Ty 0) Prp Prp⸩
+      ⸨(const' 0 1) (mk_arrow Prp Prp 0 0) Prp ⸨(const' 0 1) (Ty 0) Prp⸩⸩⸩
 
 /-
 const' : (α : Type m) → (β : Type n) → α → β → α
@@ -182,6 +185,50 @@ def const.type (m n : Level) : Expr :=
     (ret_pi
       ⸨Pi β
         (ret_pi ⸨Pi (Expr.snd ∘ Expr.fst) (ret_pi y_out)⸩)⸩)⸩
+
+/-
+S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
+  (x : ∀ (x : α) (y : β x), γ x y)
+  (y : ∀ (x : α), β x)
+  (z : α), γ x (y z)
+-/
+def both.type (m n o : Level) : Expr :=
+  /-
+    Same as in const. α : Type, β : α → Type
+  -/
+  let α := mk_assert_in (Ty m) m.succ
+
+  -- takes α, makes a new (α → Type n)
+  let β.α := Expr.snd
+  let β.const := (⸨(const' 0 0) Prp Prp⸩ ∘ β.α)
+  let β.const_out := (mk_assert_out (Ty n) n.succ)
+  let β := (⸨(∶ 2) (Ty 1)⸩ ∘ (⸨flip_pi β.const_out⸩ ∘ β.const))
+
+  /-
+    γ is a similar pattern to β
+    we have in scope ⊢ _ (⊢ judge_f judge_α) judge_β
+
+    We need to make (Pi (mk_assert α) (Pi
+  -/
+  let γ.my_x := Expr.snd -- this refers to x inside γ.
+  let γ.α := Expr.snd ∘ Expr.fst
+  let γ.β := Expr.snd
+  let γ.const_out := (mk_assert_out (Ty o) o.succ)
+
+  let mk_γ_x_α := (Pi ∘ (⸨(const' 0 0) Prp Prp⸩ ∘ γ.α))
+  let mk_γ_y_βx := (⸨flip_pi γ.const_out⸩ ∘
+    (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ γ.β))
+
+  let γ := ⸨both_prp mk_γ_x_α mk_γ_y_βx⸩
+
+
+
+  /-
+  (both   ctx
+  -/
+
+  sorry
+
 /-
 (∶ m) : ∀ (α : Type m), α → Prop
 -/

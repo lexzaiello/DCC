@@ -197,7 +197,7 @@ def comp.type : Expr :=
       (mk_arrow Prp Prp 0 0) 1 1) 1 1)
 
 /-
-Pi : ((Prop → Prop) → (Prop → (Prop → Prop))) : (Type 0)
+Pi : ((Prop → Prop) → (Prop → Prop)) : (Type 0)
 -/
 def pi.type : Expr :=
   let t_in := (mk_arrow Prp Prp 0 0)
@@ -279,9 +279,6 @@ inductive ValidJudgment : Expr → Prop
   -/
   | app  : ValidJudgment ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩
     → ValidJudgment ⸨(∶ n) t_x x⸩
-    -- t_in will produce another judgment. ⸨: type_of_x_type x_type⸩
-    -- t_x : (Type n)
-    → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
     → DefEq ⸨t_in ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩⸩ ⸨(∶ n.succ) (Ty n) t_x⸩
     -- t_out decides what to to do with the context and make a new judgment
     → ValidJudgment ⸨t_out
@@ -295,9 +292,6 @@ inductive ValidJudgment : Expr → Prop
   -/
   | parapp : ValidJudgment ⸨⊢ ⸨(∶ 1) (Ty 0) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩
     → ValidJudgment ⸨(∶ n) t_x x⸩
-    → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
-    -- Feed our context into t_in. This should produce the same judgment
-    -- as (t_x : t_t_x)
     → DefEq ⸨t_in ⸨⊢ ⸨(∶ 1) (Ty 0) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩⸩ ⸨(∶ n.succ) (Ty n) t_x⸩
     → ValidJudgment ⸨t_out
       ⸨⊢ ⸨(∶ 1) (Ty 0) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩
@@ -365,11 +359,9 @@ theorem id_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   judge defeq, parapp, app, id
   exact m
   exact h_t_α
-  judge ty
   defeq step
   step const'
   exact h_t_x
-  exact h_t_α
   defeq step
   step snd
   defeq trans, left, step
@@ -399,7 +391,6 @@ theorem judge_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   step const'
   defeq refl, refl
   assumption
-  assumption
   defeq trans, step
   step snd
   defeq refl
@@ -417,17 +408,14 @@ theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
     exact m
     exact n
     exact h_t_α
-    judge ty
     defeq step
     step const'
     defeq refl
     exact h_t_β
-    judge ty
     defeq step
     step const'
     defeq refl
     exact h_t_x
-    assumption
     defeq trans, step
     step comp
     defeq trans, right, step
@@ -436,7 +424,6 @@ theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
     step snd
     defeq refl
     exact h_t_y
-    exact h_t_β
     simp
     defeq trans, step
     step comp
@@ -488,5 +475,6 @@ theorem const_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   unfold mk_arrow
   simp
   judge defeq, parapp, defeq, app, pi
+  
   
   sorry

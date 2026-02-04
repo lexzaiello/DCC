@@ -154,7 +154,15 @@ def const.type (m n : Level) : Expr :=
   let β.const_out := (mk_assert_out (Ty n) n.succ)
   let β := (⸨flip_pi β.const_out⸩ ∘ β.const)
 
-  ⸨Pi α (ret_pi ⸨Pi β sorry⸩)⸩
+  /-
+    β x : Type n
+    y : β x
+  -/
+
+  ⸨Pi α
+    (ret_pi
+      ⸨Pi β
+      (ret_pi ⸨Pi (Expr.snd ∘ Expr.fst) (ret_pi sorry)⸩)⸩)⸩
 
 /-
 (∶ m) : ∀ (α : Type m), α → Prop

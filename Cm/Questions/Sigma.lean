@@ -261,8 +261,6 @@ Prop : (Ty 0) in Lean,
 
 ValidJudgment (∶ (Ty 0) Prp) in our language.
 
-
-
 ⊢ (f : t)
 -/
 
@@ -326,3 +324,10 @@ inductive ValidJudgment : Expr → Prop
   | defeq   : ValidJudgment j₁
     → DefEq j₁ j₂
     → ValidJudgment j₂
+
+theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
+  → ValidJudgment ⸨(∶ m) α x⸩
+  → ValidJudgment ⸨(∶ n.succ) (Ty n) β⸩
+  → ValidJudgment ⸨(∶ n) β y⸩
+  → ValidJudgment ⸨(∶ m) α ⸨(const' m n) α β x y⸩⸩ := by
+    

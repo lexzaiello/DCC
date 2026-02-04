@@ -16,6 +16,8 @@ So, out_t in a Pi takes judge_f and judge_x.
 Pi : (Prop → Prop) → (Prop → Prop → Prop) → (Type 1)
 
 Pi t_in (⊢ inner_pi)
+
+We need something similar to both. we can do this very easily.
 -/
 
 abbrev Level := ℕ
@@ -42,6 +44,14 @@ inductive Expr where
     The standard combinators.
   -/
   | const' : Level → Level → Expr -- α → β → α
+  /-
+    both : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
+      (f : ∀ (x : α) (y : β x), γ x y)
+      (g : ∀ (x : α), β x)
+      (x : α), γ x (g x)
+  -/
+  | both   : Level → Level → Level → Expr
+  | id     : Level → Expr
 
 open Expr
 
@@ -63,6 +73,8 @@ None of the terms we introduced above have step rules except for composition, ap
 and sapp.
 -/
 inductive IsStep : Expr → Expr → Prop
+  | id     : IsStep ⸨(Expr.id m) _α x⸩ x
+  | both   : IsStep ⸨(both m n o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
   | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
   | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
   | fst_j  : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩
@@ -99,6 +111,9 @@ def mk_arrow (α β : Expr) (m n : Level) : Expr :=
 def ret_pi (the_pi : Expr) : Expr :=
   ⸨(⊢ 1) the_pi⸩
 
+def snd.type : Expr := (mk_arrow Prp Prp 0 0)
+def fst.type : Expr := (mk_arrow Prp Prp 0 0)
+
 /-
 const' : (α : Type m) → (β : Type n) → α → β → α
 
@@ -115,11 +130,28 @@ def const'.type (m n : Level) : Expr :=
   -- in scope. We select (∶ (Ty m) α)
   -- with (snd ∘ fst)
   let x := (snd ∘ fst)
-  -- with ⊢ _ (⊢ _ (⊢ _ (∶ t_const const) (∶ (Ty m) α)) (∶ (Ty n) β)) (∶ α x) in scope
-  let y := (fst ∘ fst)
+  -- with ⊢ _ (⊢ t_app_αβ (⊢ t_app_α judge_const' judge_α) judge_β) judge_x
+  let y := (snd ∘ fst)
 
-  -- with (⊢ (const' α β x)) and (: t_y y) in scope.
-  let out := ⸨(const' 0 0) Prp Prp⸩
+  /-
+    we can just grab the assertion for x.
+    (∶ α x). compose grabbing that with const.
+    both (⊢ ∘ snd) id
+    (both (⊢ ∘ snd) id) (⊢ stuff)
+    = (⊢ (judge x α)) : Prop → Prop → Prop
+    
+    this would do it.
+
+    For the type arguments:
+    both Prop (const' (Type 0) Prop Prop) (const' (mk_arrow Prop (Type 0)) Prop (const' (Type 0) Prop (mk_arrow Prop (mk_arrow Prop Prop 0 0) 0 1)))
+  -/
+  let cpy := ⸨(both 0 0 0)
+    Prp
+    ⸨(const' 1 0) (Ty 0) Prp Prp⸩
+    ⸨(const' 1 0) (mk_arrow Prp (Ty 0) 0 1) Prp
+      ⸨(const' 1 0) (Ty 0) Prp
+        (mk_arrow Prp (mk_arrow Prp Prp 0 0) 0 1)⸩⸩⸩
+  let out := ⸨cpy ((⊢ m) ∘ snd) ⸨(id 0) Prp⸩⸩
 
   ⸨Pi α (ret_pi ⸨Pi β (ret_pi ⸨Pi x (ret_pi ⸨Pi y out⸩)⸩)⸩)⸩
 
@@ -192,8 +224,8 @@ inductive DefEq : Expr → Expr → Prop
 inductive ValidJudgment : Expr → Prop
   | judge : ValidJudgment ⸨(∶ 1) (judge.type m) (∶ m)⸩
   | vdash : ValidJudgment ⸨(∶ 1) (vdash.type m) (⊢ m)⸩
-  | fst   : ValidJudgment ⸨(∶ 1) (mk_arrow Prp Prp 0 0) fst⸩ -- fst : Prop → Prop
-  | snd   : ValidJudgment ⸨(∶ 1) (mk_arrow Prp Prp 0 0) snd⸩ -- snd : Prop → Prop
+  | fst   : ValidJudgment ⸨(∶ 1) fst.type fst⸩ -- fst : Prop → Prop
+  | snd   : ValidJudgment ⸨(∶ 1) snd.type snd⸩ -- snd : Prop → Prop
   | prp   : ValidJudgment ⸨(∶ 1) (Ty 0) Prp⸩ -- Prop : Ty 0
   | ty    : ValidJudgment ⸨(∶ (m.succ.succ)) (Ty m.succ) (Ty m)⸩ -- Ty m : Ty m.succ
   | comp  : ValidJudgment ⸨(∶ 1) comp.type comp⸩
@@ -342,16 +374,45 @@ pi : (Prop → Prop) → (Prop → Prop → Prop) → (Type 1)
 -/
 
 theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
-  → ValidJudgment ⸨(∶ m) α x⸩
   → ValidJudgment ⸨(∶ n.succ) (Ty n) β⸩
+  → ValidJudgment ⸨(∶ m) α x⸩
   → ValidJudgment ⸨(∶ n) β y⸩
   → ValidJudgment ⸨(∶ m) α ⸨(const' m n) α β x y⸩⸩ := by
     intro h_t_α h_t_β h_t_x h_t_y
-    judge defeq, parapp, defeq, parapp, defeq, parapp, app, const'
+    judge defeq, parapp, defeq, parapp, defeq, parapp, defeq, app, const'
     exact m
     exact n
     exact h_t_α
     judge ty
     defeq step
     step const'
-    
+    defeq refl
+    exact h_t_β
+    judge ty
+    defeq step
+    step const'
+    defeq refl
+    exact h_t_x
+    assumption
+    defeq trans, step
+    step comp
+    defeq trans, right, step
+    step fst
+    defeq step
+    step snd
+    defeq refl
+    exact h_t_y
+    assumption
+    defeq trans, step
+    step comp
+    defeq trans, right, step
+    step fst
+    defeq step
+    step snd
+    defeq trans, left, step
+    step comp
+    defeq trans, left, right, step
+    step snd
+    defeq trans, step
+    step const'
+    sorry

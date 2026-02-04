@@ -110,7 +110,7 @@ inductive Expr where
   | ty    : Level → Expr
   | Pi    : Expr -- Pi : (Prop → Prop) → (Prop → Prop) → (Type 0)
   | judge : Level → Expr -- (: T x) : Prop - this is asserting that (x : T)
-  | vdash : Level → Expr -- ⊢ t_app (∶ T_f f) (∶ T_x x) : Prop
+  | vdash : Expr -- ⊢ (∶ T_f f) (∶ T_x x) : Prop
   | prop  : Expr -- as usual
   | fst   : Expr
   /-
@@ -220,6 +220,14 @@ def judge.type (m : Level) : Expr :=
   let x := snd
 
   ⸨Pi α (ret_pi ⸨Pi x (mk_assert Prp 0)⸩)⸩
+
+/-
+⊢ : Prop → Prop → Prop.
+
+Used to denote function application as a kind of tree.
+-/
+def vdash.type : Expr :=
+  ⸨Pi (mk_assert Prp 0) (ret_pi ⸨Pi (mk_assert Prp 0) (mk_assert Prp 0)⸩)⸩
 
 /-
 Pi : mk_arrow (Pair _ _) Ty

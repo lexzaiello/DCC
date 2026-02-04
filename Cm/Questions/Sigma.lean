@@ -2,111 +2,17 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Tactic
 
 /-
-- Need some kind of mechanism to apply judgments.
+⊢ : Prop → Prop → Prop → Prop
+Pi : (Prop → Prop) → (Prop → Prop) → Type 0
 
-We could use Σ for this.
+Universe levels are probably wrong in a few places.
 
-(Σ t_app) : Prop → Prop → Prop
+Wrong again:
+I think ⊢ should be:
+⊢ : Type → Prop → Prop → Prop.
 
-We need some mechanism to traverse the context that is well-typed.
-This suggests that Σ is different from :.
-
-This feels like reaching the end of a list. Maybe instead of snd and fst,
-we want pattern mathcing.
-
-fst + (snd exists_case nil_case)
-
-So, our context now becomes:
-
-(⊢ t_app judge_f judge_x) : Prop
-We represent function types now as:
-
-Pi t_in t_out
-
-And, t_in : Prop → Prop
-
-So we can only build the asserted type from the known ok types.
-
-We should be able to make certain known ok types dynamically.
-
-For example, id:
-
-(∶ (u.succ) (Ty u)) : (Ty u) → Prop
-
-Unclear how we continue passing the context in.
-
-The obvious way is to do substitution.
-
-I don't like having "state."
-
-The idea is that the assertion for (f x y) sees (Σ t_app
-
-- The input register should produce as an input a type in universe u matching the
-level of Pi.
-
-id.{[m]} : (Pi (const' (Type m.succ) Prop (Type m)) _)
-
-fst and snd always produce as final outputs types, since they are mainly used
-in the t_in position.
-
-Terms get inserted via judgments by the Kernel.
-fst and snd do not have universe level arguments, since these can be inferred.
-
-TODO: we will probably need some mechanism to split a stream / context.
-Duplicate it that only lives in Prop.
-
-We could derive this as shorthand from both.
-
-What about output types?
-It feels like they should receive the context as well?
-There is no circumstance in which they won't.
-However, (Pi.{{m, n]} (t_in : Prop → Type m) (t_out : Prop → Type n)) : Type n
-
-Another potential interpretation of ⊢.
-
-The thing I'm wondering is if Pi is even necessary.
-
-fst on a judgment just returns the type.
-However, snd is not legal.
-
-snd and fst should ONLY return Prop.
-
-So how do we type (x : α)?
-
-I feel like we ought to return Prop from our t_in
-where the object being judged is the type.
-
-(∶ type_of_type type)
-
-I feel like high-key, with nested Pi,
-we could do it instead with a partially applied Judge.
-Idk.
-
-Or, we could it by asserting that the output Pi expression has some type.
-
-Is the Prop → Prop in the return type even necessary?
-
-Confusing.
-
-We don't have to maintain state, fortunately.
-
-Or will we? we might have to maintain state.
-However, we should be able to form it pretty easily.
-
-I think. I hope.
-
-However.
-id α x, how does the type of x get to see the vdash stufF?
-
-wait interesting.
-
-fst we assume to produce a Prop, but
-in apps, we need some way to type-check x.
-
-We don't want to use IsStep.
-
-We should almost certainly type everything with (: type_of_type type)
-I think.
+The inner type is the judged type of the application.
+We have to take a universe as an argument, but that's fine.
 -/
 
 abbrev Level := ℕ
@@ -135,10 +41,6 @@ inductive Expr where
   | const' : Level → Level → Expr -- α → β → α
 
 open Expr
-
-def sort_to_expr : Level → Expr
-  | 0 => prop
-  | .succ n => ty n
 
 syntax "⸨" term+ "⸩"       : term
 
@@ -180,9 +82,6 @@ def mk_assert (α : Expr) (m : Level) : Expr :=
 
 /-
 (α : Type u) → (β: Type v) corresponds to:
-
-(Pi (const' (Type u) Prop α) (const' (Type v) Prop β))
-(Pi.{{m, n]} (t_in : Prop → Type m) (t_out : Prop → Type n)) : Type n, due to this rule.
 -/
 def mk_arrow (α β : Expr) (m n : Level) : Expr :=
   let t_in := mk_assert α m
@@ -204,6 +103,7 @@ So, we output (∶ t_α α)
 def const'.type (m n : Level) : Expr :=
   let α := mk_assert (Ty m) m.succ
   let β := mk_assert (Ty n) n.succ
+
   -- with ⊢ _ (⊢ _ (∶ t_const const) (∶ (Ty m) α)) (∶ (Ty n) β)
   -- in scope. We select (∶ (Ty m) α)
   -- with (snd ∘ fst)
@@ -301,15 +201,15 @@ inductive ValidJudgment : Expr → Prop
     In the normal application case, f has a normal judgment.
     A Pi expression.
   -/
-  | app  : ValidJudgment ⸨(∶ m) ⸨Pi t_in t_out⸩ f⸩
+  | app  : ValidJudgment ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩
     → ValidJudgment ⸨(∶ n) t_x x⸩
     -- t_in will produce another judgment. ⸨: type_of_x_type x_type⸩
     -- t_x : (Type n)
     → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
-    → DefEq ⸨(∶ n.succ) (Ty n) t_x⸩ ⸨t_in ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩
+    → DefEq ⸨t_in ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩⸩ ⸨(∶ n.succ) (Ty n) t_x⸩
     -- ⊢ judge_app judge_f judge_x
     -- t_out will produce a Prop as well, a judgment.
-    → ValidJudgment ⸨⊢ ⸨t_out ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩ ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩ ⸨(∶ n) t_x x⸩⸩
+    → ValidJudgment ⸨⊢ ⸨t_out ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩ ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩ ⸨(∶ n) t_x x⸩⸩
   /-
     Partial application produces a conjoined context. ⊢ judge_f judge_x.
     This is our "context:" ⸨⊢ judge_f judge_inner_f judge_inner_x⸩
@@ -392,7 +292,27 @@ Step simp lemmas, defeq simp lemmas.
 
 @[simp] theorem step_right : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩ := IsStep.right
 
-theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
+@[simp] theorem ty_well_typed : ValidJudgment ⸨(∶ m.succ.succ) (Ty m.succ) (Ty m)⸩ := ValidJudgment.ty
+
+/-
+judge / : : ∀ (α : Type), α → Prop
+-/
+theorem judge_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
+  → ValidJudgment ⸨(∶ m) α x⸩
+  → ValidJudgment ⸨(∶ 0) Prp ⸨(∶ m) α x⸩⸩ := by
+  intro h_t_α
+  intro h_t_x
+  judge defeq, parapp, defeq, app, judge
+  exact m
+  exact h_t_α
+  simp
+  defeq trans, step
+  step const'
+  defeq refl
+  defeq trans, left, right, left
+  
+
+/-theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   → ValidJudgment ⸨(∶ m) α x⸩
   → ValidJudgment ⸨(∶ n.succ) (Ty n) β⸩
   → ValidJudgment ⸨(∶ n) β y⸩
@@ -405,5 +325,7 @@ theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
     judge ty
     defeq symm, trans, step
     step const'
-    defeq refl
-    
+    defeq refl, left, left, right, trans, step
+    step const'
+    simp
+-/

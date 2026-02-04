@@ -143,12 +143,50 @@ def both_nondep (α β γ : Expr) (m n o : Level) : Expr :=
     ⸨(const' m 1) (mk_arrow β (Ty o) n o.succ) α ⸨(const' n o.succ) (Ty o) β γ⸩⸩⸩
 
 /-
+Inserts a (judge : Prop) as the spine
+⊢ spine judge_f judge_x
+
+n binders deep.
+
+⸨(insert_vdash_spine 1 spine') ⸨⊢ spine judge_f judge_x⸩⸩
+-*> ⸨⊢ spine' judge_f judge_x⸩
+-/
+/-def insert_vdash_spine (n_binders : ℕ) : Expr :=
+  -- both ((⊢ spine') ∘ (fst ∘ n_binders*snd) snd
+  -- but we need to create a future both, since we need to inject the spine.
+  -- spine : Prp
+  -- both (both (const both) ((flip_comp fst)
+  List.replicate n_binders (
+  sorry-/
+
+/-
+⸨(insert_vdash_spine 1 spine') ⸨⊢ spine judge_f judge_x⸩⸩
+-*> ⸨⊢ spine' judge_f judge_x⸩
+-/
+/-def insert_vdash_spine (n_binders_deep : ℕ) : Expr :=
+  match n_binders_deep with
+  | .zero =>
+    (⸨flip_comp fst⸩ ∘ ⊢)
+  | .succ n =>
+    let inner := insert_vdash_spine n spine'
+    -- both (both (const both) id) (const snd)
+    -- inner : Prop → Prop → Prop
+    let t_my_spine := Prp
+    -- (insert_vdash_spine 1 spine') takes in a Prp, returns a Prp
+    let t_res := (mk_arrow Prp Prp 0 0)
+    let t_snd := t_res
+    
+
+    ⸨(both_nondep t_my_spine t_snd t_res)
+      ⸨(both_nondep t_my_spine 
+      ⸨(const' (mk_arrow Prp Prp 0 0) Prp) (both_nondep Prp Prp Prp 0 0 0)⸩
+      ⸨(both_nondep t_my_spine-/
+
+/-
 const' : (α : Type m) → (β : Type n) → α → β → α
 
 At (x : α) argument, we have (const' α β) in the judgment list. This is:
 ⊢ _ (⊢ _ (∶ t_const const') (∶ t_α α))
-
-
 -/
 def const'.type (m n : Level) : Expr :=
   let α := mk_assert_in (Ty m) m.succ
@@ -268,24 +306,37 @@ def both.type (m n o : Level) : Expr :=
           (mk_assert_out (Ty o) o.succ)
           (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩ ∘ Expr.snd))⸩)
   -/
-  let γ := ⸨(both 0 1 0)
-      Prp
-      ⸨(const' 0 1) (Ty 0) Prp (mk_arrow Prp Prp 0 0)⸩
-      ⸨(const' 0 1) (mk_arrow Prp (Ty 1) 0 2) Prp ⸨(const' 0 2) (Ty 1) Prp (Ty 0)⸩⸩
-      (Pi ∘ (snd ∘ fst))
+  let γ' := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
+    (Pi ∘ (snd ∘ fst))
       (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
         ⸨flip_pi
           (mk_assert_out (Ty o) o.succ)
           (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ Expr.snd))⸩)⸩
 
   /-
-    x is very similar to γ, but we have to inject γ, and change the indices for our values.
-    α is now (snd ∘ fst ∘ fst)
-    β is now (snd ∘ fst)
-    and γ is snd
+    In the past, we were able to make β x-like expressions with just composition.
 
-    We will need two both expressions for this.
+    We probably can here, too
+
+    ((comp ⊢ (Ty o)) ∘ ((flip_comp snd) ∘ (⊢ (Ty o))) ∘ Expr.snd
+    = ⊢ (Ty o) ∘ (⊢ (Ty o) judge_γ)
+    = ⊢ (Ty o) ∘ (⊢ (Ty o) judge_γ)
+
+    ((comp ⊢ (Ty o)) ∘ ((flip_comp snd) ∘ (⊢ (Ty o)))) ∘ Expr.snd
+    = ((comp ⊢ (Ty o)) ∘ ((flip_comp snd) ∘ (⊢ (Ty o)))) judge_γ
+    = (comp ⊢ (Ty o)) ((flip_comp snd) ((⊢ (Ty o)) judge_γ))
+    (comp ⊢ (Ty o)) ((flip_comp snd) ((⊢ (Ty o)) judge_γ)) (⊢ _ judge_x)
+    = (⊢ (Ty o)) ((((⊢ (Ty o)) judge_γ) ∘ snd) (⊢ _ judge_x))
+    = (⊢ (Ty o)) (((⊢ (Ty o)) judge_γ) judge_x)
   -/
+  let x.mk_γ_xy := ((⸨comp ⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩⸩ ∘
+    (⸨flip_comp snd⸩ ∘ ⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩)) ∘ Expr.snd)
+  let γ' := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
+    (Pi ∘ (snd ∘ fst ∘ fst))
+    (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
+      ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
+          (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (Expr.snd ∘ fst)))
+          x.mk_γ_xy⸩)⸩
 
   sorry
 

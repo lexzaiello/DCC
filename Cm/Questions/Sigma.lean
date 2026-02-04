@@ -115,7 +115,7 @@ inductive Expr where
   | ty    : Level → Expr
   | Pi    : Expr -- Pi : (Prop → Prop) → (Prop → Prop) → (Type 0)
   | judge : Level → Expr -- (: T x) : Prop - this is asserting that (x : T)
-  | vdash : Expr -- ⊢ (∶ T_f f) (∶ T_x x) : Prop
+  | vdash : Expr -- ⊢ (∶ T_f f) (∶ T_x x) Tapp : Prop
   | prop  : Expr -- as usual
   | fst   : Expr
   /-
@@ -139,7 +139,6 @@ def sort_to_expr : Level → Expr
   | 0 => prop
   | .succ n => ty n
 
-syntax "⟪" term,+ "⟫"      : term
 syntax "⸨" term+ "⸩"       : term
 
 notation "Ty" => Expr.ty
@@ -160,6 +159,7 @@ and sapp.
 inductive IsStep : Expr → Expr → Prop
   | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
   | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
+  | fst_j  : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩
   | fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
   | snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
   -- snd can only return new Props, so we can't project on a judge.
@@ -227,7 +227,7 @@ def judge.type (m : Level) : Expr :=
   ⸨Pi α (ret_pi ⸨Pi x (mk_assert Prp 0)⸩)⸩
 
 /-
-⊢ : Prop → Prop → Prop.
+⊢ : (judge_f : Prop) → (judge_x : Prop) → ( → Prop.
 
 Used to denote function application as a kind of tree.
 -/
@@ -253,18 +253,26 @@ def pi.type : Expr :=
 
 ValidJudgment ⸨Pi t_in t_out⸩ f -> (∶ ⸨Pi t_in t_out⸩ f)
 
-It feels like 
+How do we recover ⊢ from partial apps?
 
-So, for app rule, (f x)
+- ValidJudgment always gives the type of the type, not just the type
+
+Prop : (Ty 0) in Lean,
+
+ValidJudgment (∶ (Ty 0) Prp) in our language.
+
+
+
+⊢ (f : t)
 -/
-inductive ValidJudgment : Expr → Expr → Prop
-  | judge : ValidJudgment (judge.type m) (∶ m)
-  | vdash : ValidJudgment vdash.type ⊢
-  | fst   : ValidJudgment (mk_arrow Prp Prp 0 0) fst -- fst : Prop → Prop
-  | snd   : ValidJudgment (mk_arrow Prp Prp 0 0) snd -- snd : Prop → Prop
-  | prp   : ValidJudgment (Ty 0) Prp -- Prop : Ty 0
-  | ty    : ValidJudgment (Ty m.succ) (Ty m) -- Ty m : Ty m.succ
-  | comp  : ValidJudgment comp.type comp
+inductive ValidJudgment : Expr → Prop
+  | judge : ValidJudgment ⸨(∶ 1) (judge.type m) (∶ m)⸩
+  | vdash : ValidJudgment ⸨(∶ 1) vdash.type ⊢⸩
+  | fst   : ValidJudgment ⸨(∶ 1) (mk_arrow Prp Prp 0 0) fst⸩ -- fst : Prop → Prop
+  | snd   : ValidJudgment ⸨(∶ 1) (mk_arrow Prp Prp 0 0) snd⸩ -- snd : Prop → Prop
+  | prp   : ValidJudgment ⸨(∶ 1) (Ty 0) Prp⸩ -- Prop : Ty 0
+  | ty    : ValidJudgment ⸨(∶ (m.succ.succ)) (Ty m.succ) (Ty m)⸩ -- Ty m : Ty m.succ
+  | comp  : ValidJudgment ⸨(∶ 1) comp.type comp⸩
   /-
     Pi accepts a map on the context producing the input type,
     and a map on the context producing the output type.
@@ -274,6 +282,15 @@ inductive ValidJudgment : Expr → Expr → Prop
 
     Pi : (Prop → Prop) → (Prop → Prop) → (Ty 0)
   -/
-  | pi    : ValidJudgment pi.type Pi
-  | app   : ValidJudgment ⸨Pi t_in t_out⸩ f
-    → ValidJudgment x 
+  | pi    : ValidJudgment ⸨(∶ 1) pi.type Pi⸩
+  /-
+    In the normal application case, f has a normal judgment.
+    A Pi expression.
+  -/
+  | app  : ValidJudgment ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩
+    → ValidJudgment ⸨(∶ n) t_x x⸩
+    → DefEq t_x ⸨t_in ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩
+    → ValidJudgment ⸨⊢ ⸨f x⸩
+  /-
+    Partial application requires conjoined contexts. ⊢ judge_f judge_x.
+  -/

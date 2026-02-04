@@ -211,6 +211,17 @@ def const'.type (m n : Level) : Expr :=
   ⸨Pi α (ret_pi ⸨Pi β (ret_pi ⸨Pi x (ret_pi ⸨Pi y out⸩)⸩)⸩)⸩
 
 /-
+(∶ m) : ∀ (α : Type m), α → Prop
+-/
+def judge.type (m : Level) : Expr :=
+  let α := mk_assert (Ty m) m.succ
+
+  -- with (⊢ _ (:t_judge (judge m)) (: (Ty m) α)) in scope
+  let x := snd
+
+  ⸨Pi α (ret_pi ⸨Pi x (mk_assert Prp 0)⸩)⸩
+
+/-
 Pi : mk_arrow (Pair _ _) Ty
 -/
 
@@ -245,3 +256,4 @@ inductive ValidJudgment : Expr → Expr → Prop
   -/
   | pi    : ValidJudgment Pi (mk_arrow (mk_arrow Prp Prp 0 0)
     (mk_arrow (mk_arrow Prp Prp 0 0) (Ty 0) 1 1) 1 1)
+

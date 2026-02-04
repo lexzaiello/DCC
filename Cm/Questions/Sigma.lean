@@ -7,12 +7,15 @@ Pi : (Prop → Prop) → (Prop → Prop) → Type 0
 
 Universe levels are probably wrong in a few places.
 
-Wrong again:
-I think ⊢ should be:
-⊢ : Type → Prop → Prop → Prop.
+We should allow t_out to decide if it wants to make another ⊢.
 
-The inner type is the judged type of the application.
-We have to take a universe as an argument, but that's fine.
+⊢ : Type → Prop → Prop → Prop
+
+So, out_t in a Pi takes judge_f and judge_x.
+
+Pi : (Prop → Prop) → (Prop → Prop → Prop) → (Type 1)
+
+Pi t_in (⊢ inner_pi)
 -/
 
 abbrev Level := ℕ
@@ -20,9 +23,9 @@ abbrev Level := ℕ
 inductive Expr where
   | app   : Expr  → Expr → Expr
   | ty    : Level → Expr
-  | Pi    : Expr -- Pi : (Prop → Prop) → (Prop → Prop) → (Type 0)
+  | Pi    : Expr -- Pi : (Prop → Prop) → (Prop → Prop → Prop) → (Type 0). This is because t_out needs to know the judged input type.
   | judge : Level → Expr -- (: T x) : Prop - this is asserting that (x : T)
-  | vdash : Expr -- ⊢ (∶ T_f f) (∶ T_x x) Tapp : Prop
+  | vdash : Level → Expr -- ⊢ (t_app : Type) (judge_f : Prop) (judge_x : Prop)
   | prop  : Expr -- as usual
   | fst   : Expr
   /-
@@ -63,8 +66,8 @@ inductive IsStep : Expr → Expr → Prop
   | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
   | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
   | fst_j  : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩
-  | fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
-  | snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
+  | fst    : IsStep ⸨fst ⸨(⊢ m) t_app judge_f judge_x⸩⸩ judge_f
+  | snd    : IsStep ⸨snd ⸨(⊢ m) t_app judge_f judge_x⸩⸩ judge_x
   -- snd can only return new Props, so we can't project on a judge.
   -- we need a default value, then.
   | snd_no : IsStep ⸨snd ⸨(∶ n) _a _b⸩⸩ ⸨(∶ n) _a _b⸩
@@ -77,20 +80,24 @@ inductive IsStep : Expr → Expr → Prop
 Assertions reject the context and just output
 a type of type (Type m).
 -/
-def mk_assert (α : Expr) (m : Level) : Expr :=
+def mk_assert_in (α : Expr) (m : Level) : Expr :=
   ⸨(const' 0 0) Prp Prp ⸨(∶ m.succ) (Ty m) α⸩⸩
+
+def mk_assert_out (α : Expr) (m : Level) : Expr :=
+  ⸨(⊢ m) α⸩
 
 /-
 (α : Type u) → (β: Type v) corresponds to:
+
+Pi (const' Prp Prp α) (⊢ β)
 -/
 def mk_arrow (α β : Expr) (m n : Level) : Expr :=
-  let t_in := mk_assert α m
-  let t_out := mk_assert β n
+  let t_in := mk_assert_in α m
 
-  ⸨Pi t_in t_out⸩
+  ⸨Pi t_in ⸨(⊢ n) β⸩⸩
 
 def ret_pi (the_pi : Expr) : Expr :=
-  (mk_assert ⸨(∶ 1) (Ty 0) the_pi⸩ 1)
+  ⸨(⊢ 1) the_pi⸩
 
 /-
 const' : (α : Type m) → (β : Type n) → α → β → α
@@ -101,8 +108,8 @@ At (x : α) argument, we have (const' α β) in the judgment list. This is:
 So, we output (∶ t_α α)
 -/
 def const'.type (m n : Level) : Expr :=
-  let α := mk_assert (Ty m) m.succ
-  let β := mk_assert (Ty n) n.succ
+  let α := mk_assert_in (Ty m) m.succ
+  let β := mk_assert_in (Ty n) n.succ
 
   -- with ⊢ _ (⊢ _ (∶ t_const const) (∶ (Ty m) α)) (∶ (Ty n) β)
   -- in scope. We select (∶ (Ty m) α)
@@ -111,8 +118,8 @@ def const'.type (m n : Level) : Expr :=
   -- with ⊢ _ (⊢ _ (⊢ _ (∶ t_const const) (∶ (Ty m) α)) (∶ (Ty n) β)) (∶ α x) in scope
   let y := (fst ∘ fst)
 
-  -- with ⊢ _ (⊢ _ (⊢ _ (⊢ _ (∶ t_const const) (∶ (Ty m) α)) (∶ (Ty n) β)) (∶ α x)) (∶ β y) in scope
-  let out := (fst ∘ fst)
+  -- with (⊢ (const' α β x)) and (: t_y y) in scope.
+  let out := ⸨(const' 0 0) Prp Prp⸩
 
   ⸨Pi α (ret_pi ⸨Pi β (ret_pi ⸨Pi x (ret_pi ⸨Pi y out⸩)⸩)⸩)⸩
 
@@ -120,20 +127,20 @@ def const'.type (m n : Level) : Expr :=
 (∶ m) : ∀ (α : Type m), α → Prop
 -/
 def judge.type (m : Level) : Expr :=
-  let α := mk_assert (Ty m) m.succ
+  let α := mk_assert_in (Ty m) m.succ
 
   -- with (⊢ _ (:t_judge (judge m)) (: (Ty m) α)) in scope
   let x := snd
 
-  ⸨Pi α (ret_pi ⸨Pi x (mk_assert Prp 0)⸩)⸩
+  ⸨Pi α (ret_pi ⸨Pi x (mk_assert_out Prp 0)⸩)⸩
 
 /-
-⊢ : (judge_app : Prop) → (judge_f : Prop) → (judge_x : Prop) → Prop
+⊢ m : (Type m) → (judge_f : Prop) → (judge_x : Prop) → Prop
 
 Used to denote function application as a kind of tree.
 -/
-def vdash.type : Expr :=
-  ⸨Pi (mk_assert Prp 0) (ret_pi ⸨Pi (mk_assert Prp 0) (ret_pi ⸨Pi (mk_assert Prp 0) (mk_assert Prp 0)⸩)⸩)⸩
+def vdash.type (m : Level) : Expr :=
+  ⸨Pi (mk_assert_in (Ty m) m.succ) (ret_pi ⸨Pi (mk_assert_in Prp 0) (ret_pi ⸨Pi (mk_assert_in Prp 0) (mk_assert_out Prp 0)⸩)⸩)⸩
 
 /-
 comp : (Prop → Prop) → (Prop → Prop) → Prop → Prop
@@ -146,11 +153,13 @@ def comp.type : Expr :=
       (mk_arrow Prp Prp 0 0) 1 1) 1 1)
 
 /-
-Pi : ((Prop → Prop) → (Prop → Prop)) : (Type 0)
+Pi : ((Prop → Prop) → (Prop → (Prop → Prop))) : (Type 0)
 -/
 def pi.type : Expr :=
-  (mk_arrow (mk_arrow Prp Prp 0 0)
-    (mk_arrow (mk_arrow Prp Prp 0 0) (Ty 0) 1 1) 1 1)
+  let t_in := (mk_arrow Prp Prp 0 0)
+  let t_out := (mk_arrow Prp (mk_arrow Prp Prp 0 0) 0 1)
+  (mk_arrow t_in
+    (mk_arrow t_out (Ty 0) 1 1) 1 1)
 
 /-
 (ValidJudgment t x : Prop) = ((∶ t x) : Prop)
@@ -175,13 +184,14 @@ inductive DefEq : Expr → Expr → Prop
   | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
   | left    : DefEq f f'  → DefEq ⸨f x⸩ ⸨f' x⸩
   | right   : DefEq x x'  → DefEq ⸨f x⸩ ⸨f x'⸩
-  | vdash   : DefEq ⸨(∶ m) t_x x⸩ ⸨⊢ ⸨(∶ m) t_x x⸩ _a _b⸩
+  | vdash   : DefEq ⸨(⊢ m) t_fx ⸨(∶ n) t_f f⸩ ⸨(∶ o) t_x x⸩⸩ ⸨(∶ m) t_fx ⸨f x⸩⸩
+  --| vdash   : DefEq ⸨(∶ m) t_x x⸩ ⸨(⊢ n) ⸨(∶ m) t_x x⸩ _a _b⸩
   /-| subst   : DefEq ($ (Pi α₁ β₁ map_arg₁), x) ($ (Pi α₂ β₂ map_arg₂), x)
     → DefEq (Pi α₁ β₁ map_arg₁) (Pi α₂ β₂ map_arg₂)-/
 
 inductive ValidJudgment : Expr → Prop
   | judge : ValidJudgment ⸨(∶ 1) (judge.type m) (∶ m)⸩
-  | vdash : ValidJudgment ⸨(∶ 1) vdash.type ⊢⸩
+  | vdash : ValidJudgment ⸨(∶ 1) (vdash.type m) (⊢ m)⸩
   | fst   : ValidJudgment ⸨(∶ 1) (mk_arrow Prp Prp 0 0) fst⸩ -- fst : Prop → Prop
   | snd   : ValidJudgment ⸨(∶ 1) (mk_arrow Prp Prp 0 0) snd⸩ -- snd : Prop → Prop
   | prp   : ValidJudgment ⸨(∶ 1) (Ty 0) Prp⸩ -- Prop : Ty 0
@@ -207,24 +217,21 @@ inductive ValidJudgment : Expr → Prop
     -- t_x : (Type n)
     → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
     → DefEq ⸨t_in ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩⸩ ⸨(∶ n.succ) (Ty n) t_x⸩
-    -- ⊢ judge_app judge_f judge_x
-    -- t_out will produce a Prop as well, a judgment.
-    → ValidJudgment ⸨⊢ ⸨t_out ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩ ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩ ⸨(∶ n) t_x x⸩⸩
+    -- t_out decides what to to do with the context and make a new judgment
+    → ValidJudgment ⸨t_out ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩ ⸨(∶ n) t_x x⸩⸩
   /-
     Partial application produces a conjoined context. ⊢ judge_f judge_x.
     This is our "context:" ⸨⊢ judge_f judge_inner_f judge_inner_x⸩
     This is the result of the partially applied app (a nested Pi):
       ⸨(∶ m) ⸨Pi t_in t_out⸩⸩
   -/
-  | parapp : ValidJudgment ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩
+  | parapp : ValidJudgment ⸨(⊢ 1) ⸨Pi t_in t_out⸩ judge_inner_f judge_inner_x⸩
     → ValidJudgment ⸨(∶ n) t_x x⸩
     → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
     -- Feed our context into t_in. This should produce the same judgment
     -- as (t_x : t_t_x)
-    → DefEq ⸨(∶ n.succ) (Ty n) t_x⸩ ⸨t_in ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩⸩
-    → ValidJudgment ⸨⊢ ⸨t_out ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩⸩ -- judgment for the app
-      ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩ -- judgment for f
-      ⸨(∶ n) t_x x⸩⸩ -- judgment for x
+    → DefEq ⸨(∶ n.succ) (Ty n) t_x⸩ ⸨t_in ⸨(⊢ 1) ⸨Pi t_in t_out⸩ judge_inner_f judge_inner_x⸩⸩
+    → ValidJudgment ⸨t_out ⸨(⊢ 1) ⸨Pi t_in t_out⸩ judge_inner_f judge_inner_x⸩ ⸨(∶ n) t_x x⸩⸩
   | defeq   : ValidJudgment j₁
     → DefEq j₁ j₂
     → ValidJudgment j₂
@@ -284,9 +291,9 @@ Step simp lemmas, defeq simp lemmas.
 
 @[simp] theorem step_fst_j : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩ := IsStep.fst_j
 
-@[simp] theorem step_fst : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f := IsStep.fst
+@[simp] theorem step_fst : IsStep ⸨fst ⸨(⊢ m) t_app judge_f judge_x⸩⸩ judge_f := IsStep.fst
 
-@[simp] theorem step_snd : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x := IsStep.snd
+@[simp] theorem step_snd : IsStep ⸨snd ⸨(⊢ m) t_app judge_f judge_x⸩⸩ judge_x := IsStep.snd
 
 @[simp] theorem step_left : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩ := IsStep.left
 
@@ -300,17 +307,22 @@ judge / : : ∀ (α : Type), α → Prop
 theorem judge_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   → ValidJudgment ⸨(∶ m) α x⸩
   → ValidJudgment ⸨(∶ 0) Prp ⸨(∶ m) α x⸩⸩ := by
-  intro h_t_α
-  intro h_t_x
+  intro h_t_α h_t_x
   judge defeq, parapp, defeq, app, judge
   exact m
   exact h_t_α
   simp
   defeq trans, step
   step const'
+  defeq refl, refl
+  assumption
+  assumption
+  defeq symm, trans, step
+  step snd
   defeq refl
-  defeq trans, left, right, left
-  
+  unfold mk_assert_out
+  defeq trans, left, right, vdash, vdash
+
 
 /-theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   → ValidJudgment ⸨(∶ m) α x⸩

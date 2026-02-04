@@ -112,6 +112,10 @@ def flip_pi : Expr :=
     ⸨(const' 1 0) (mk_arrow Prp (Ty 0) 0 1) Prp ⸨(const' 1 0) (Ty 0) Prp Prp⸩⸩
     Pi⸩
 
+
+def flip_comp : Expr :=
+  
+
 def both_prp : Expr :=
   ⸨(both 0 0 0)
       Prp
@@ -205,12 +209,34 @@ def both.type (m n o : Level) : Expr :=
   let β := (⸨(∶ 2) (Ty 1)⸩ ∘ (⸨flip_pi β.const_out⸩ ∘ β.const))
 
   /-
-    γ is a similar pattern to β
-    we have in scope ⊢ _ (⊢ judge_f judge_α) judge_β
+    by γ, we have in scope
+    (⊢ (⊢ _ judge_f judge_α) judge_β)
+    We need α and β,
+    so we can select these with (snd ∘ fst)
+    and snd, respectively
 
-    We need to make (Pi (mk_assert α) (Pi
+    then, since β is mentioned inside γ as a term,
+    we feed it in with
+    both (Pi ∘ get_α) mk_βx_binder
+
+    Notably, mk_βx_binder should produce a ⊢ expression to permit
+
+    both (Pi ∘ get_α) (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘ mk_βx_binder)
+
+    mk_βx_binder has
+      (⊢ (⊢ _ judge_f judge_α) judge_β)
+    in scope, so we need to select β,
+    but inside the γ (β : _) binder, we get
+    ⊢ _ _ judge_x
+
+    so, we need to (⊢ (Ty o) gotten_x) ∘ snd
+      = both (const' _ _ (flip_comp snd) (⊢ (Ty o) ∘ get_β))
+
+    Putting it all together:
+
+    both (Pi ∘ get_α) (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘ both (const' _ _ (flip_comp snd) (⊢ (Ty o) ∘ get_β)))
   -/
-  let γ.my_x := Expr.snd -- this refers to x inside γ.
+  let γ.my_x := Expr.snd
   let γ.α := Expr.snd ∘ Expr.fst
   let γ.β := Expr.snd
   let γ.const_out := (mk_assert_out (Ty o) o.succ)
@@ -221,7 +247,19 @@ def both.type (m n o : Level) : Expr :=
 
   let γ := ⸨both_prp mk_γ_x_α mk_γ_y_βx⸩
 
+  /-
+    x is pretty much the same as γ, but with an application as the output.
+  -/
+  let x.my_x := Expr.snd -- this refers to x inside γ.
+  let x.α := Expr.snd ∘ Expr.fst
+  let x.β := Expr.snd
+  let x.const_out := (mk_assert_out (Ty o) o.succ)
 
+  let mk_x_x_α := (Pi ∘ (⸨(const' 0 0) Prp Prp⸩ ∘ γ.α))
+  let mk_x_y_βx := (⸨flip_pi γ.const_out⸩ ∘
+    (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ γ.β))
+
+  let γ := ⸨both_prp mk_γ_x_α mk_γ_y_βx⸩
 
   /-
   (both   ctx

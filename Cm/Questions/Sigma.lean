@@ -362,9 +362,34 @@ macro_rules
 
 /-
 Some simp lemmas for proofs.
+
+Step simp lemmas, defeq simp lemmas.
+
+| const' : IsStep ⸨(const' m n) _α _β x y⸩ x
+| comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
+| fst_j  : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩
+| fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
+| snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
+| snd_no : IsStep ⸨snd ⸨(∶ n) _a _b⸩⸩ ⸨(∶ n) _a _b⸩
+| left   : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩
+| right  : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩
 -/
 
-theorem step_const : 
+@[simp] theorem defeq_refl (e : Expr) : DefEq e e := DefEq.refl
+
+@[simp] theorem step_const' : IsStep ⸨(const' m n) _α _β x y⸩ x := IsStep.const'
+
+@[simp] theorem step_comp : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩ := IsStep.comp
+
+@[simp] theorem step_fst_j : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩ := IsStep.fst_j
+
+@[simp] theorem step_fst : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f := IsStep.fst
+
+@[simp] theorem step_snd : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x := IsStep.snd
+
+@[simp] theorem step_left : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩ := IsStep.left
+
+@[simp] theorem step_right : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩ := IsStep.right
 
 theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   → ValidJudgment ⸨(∶ m) α x⸩

@@ -227,12 +227,12 @@ def judge.type (m : Level) : Expr :=
   ⸨Pi α (ret_pi ⸨Pi x (mk_assert Prp 0)⸩)⸩
 
 /-
-⊢ : (judge_f : Prop) → (judge_x : Prop) → ( → Prop.
+⊢ : (judge_app : Prop) → (judge_f : Prop) → (judge_x : Prop) → Prop
 
 Used to denote function application as a kind of tree.
 -/
 def vdash.type : Expr :=
-  ⸨Pi (mk_assert Prp 0) (ret_pi ⸨Pi (mk_assert Prp 0) (mk_assert Prp 0)⸩)⸩
+  ⸨Pi (mk_assert Prp 0) (ret_pi ⸨Pi (mk_assert Prp 0) (ret_pi ⸨Pi (mk_assert Prp 0) (mk_assert Prp 0)⸩)⸩)⸩
 
 /-
 comp : (Prop → Prop) → (Prop → Prop) → Prop → Prop
@@ -265,6 +265,18 @@ ValidJudgment (∶ (Ty 0) Prp) in our language.
 
 ⊢ (f : t)
 -/
+
+inductive DefEq : Expr → Expr → Prop
+  | refl    : DefEq a a
+  | step    : IsStep e e' → DefEq e e'
+  | symm    : DefEq e₁ e₂ → DefEq e₂ e₁
+  | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
+  | left    : DefEq f f'  → DefEq ⸨f x⸩ ⸨f' x⸩
+  | right   : DefEq x x'  → DefEq ⸨f x⸩ ⸨f x'⸩
+  | vdash   : DefEq ⸨(∶ m) t_x x⸩ ⸨⊢ ⸨(∶ m) t_x x⸩ _a _b⸩
+  /-| subst   : DefEq ($ (Pi α₁ β₁ map_arg₁), x) ($ (Pi α₂ β₂ map_arg₂), x)
+    → DefEq (Pi α₁ β₁ map_arg₁) (Pi α₂ β₂ map_arg₂)-/
+
 inductive ValidJudgment : Expr → Prop
   | judge : ValidJudgment ⸨(∶ 1) (judge.type m) (∶ m)⸩
   | vdash : ValidJudgment ⸨(∶ 1) vdash.type ⊢⸩
@@ -289,8 +301,28 @@ inductive ValidJudgment : Expr → Prop
   -/
   | app  : ValidJudgment ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩
     → ValidJudgment ⸨(∶ n) t_x x⸩
-    → DefEq t_x ⸨t_in ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩
-    → ValidJudgment ⸨⊢ ⸨f x⸩
+    -- t_in will produce another judgment. ⸨: type_of_x_type x_type⸩
+    -- t_x : (Type n)
+    → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
+    → DefEq ⸨(∶ n.succ) (Ty n) t_x⸩ ⸨fst ⸨t_in ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩⸩
+    -- ⊢ judge_app judge_f judge_x
+    -- t_out will produce a Prop as well, a judgment.
+    → ValidJudgment ⸨⊢ ⸨t_out ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩ ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩ ⸨(∶ n) t_x x⸩⸩
   /-
-    Partial application requires conjoined contexts. ⊢ judge_f judge_x.
+    Partial application produces a conjoined context. ⊢ judge_f judge_x.
+    This is our "context:" ⸨⊢ judge_f judge_inner_f judge_inner_x⸩
+    This is the result of the partially applied app (a nested Pi):
+      ⸨(∶ m) ⸨Pi t_in t_out⸩⸩
   -/
+  | par_app : ValidJudgment ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩
+    → ValidJudgment ⸨(∶ n) t_x x⸩
+    → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
+    -- Feed our context into t_in. This should produce the same judgment
+    -- as (t_x : t_t_x)
+    → DefEq ⸨(∶ n.succ) (Ty n) t_x⸩ ⸨fst ⸨t_in ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩⸩⸩
+    → ValidJudgment ⸨⊢ ⸨t_out ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩⸩ -- judgment for the app
+      ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩ -- judgment for f
+      ⸨(∶ n) t_x x⸩⸩ -- judgment for x
+  | defeq   : ValidJudgment j₁
+    → DefEq j₁ j₂
+    → ValidJudgment j₂

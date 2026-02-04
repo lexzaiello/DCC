@@ -106,12 +106,14 @@ def fst.type : Expr := (mk_arrow Prp Prp 0 0)
 
 /-
 Turns Pi t_in t_out into Pi t_out t_in
-
 -/
 def flip_pi : Expr :=
   ⸨(flip 1 1 0) (mk_arrow Prp Prp 0 0) (mk_arrow Prp Prp 0 0)
     ⸨(const' 1 0) (mk_arrow Prp (Ty 0) 0 1) Prp ⸨(const' 1 0) (Ty 0) Prp Prp⸩⸩
     Pi⸩
+
+def dup_vdash : Expr :=
+  ⸨both 
 
 /-
 const' : (α : Type m) → (β : Type n) → α → β → α
@@ -159,6 +161,28 @@ def const.type (m n : Level) : Expr :=
       (⸨(const' 0 0) Prp Prp⸩ ∘ (fst ∘ snd))⸩
       -- ^ fetch x judgement, elevate to a type with fst_j rule, reject y
   let y_out := (⸨⊢ ⸨(∶ 1) (Ty 0) return_pi⸩⸩ ∘ snd)
+
+  /-
+    Simpler y_out
+    with ⊢ _ (⊢ _ (⊢ _ judge_β) judge_x) judge_y
+
+    in scope
+    we need ⊢ (Ty n) judge_β judge_x
+    we can do
+
+    (both (⊢ Ty ∘ fst) snd) ∘ fst
+
+    with (⊢ _ (⊢ _ judge_β) judge_x) in scope. this applies β x.
+    ⸨both 0 0 0
+      Prp
+      ⸨const' 0 1 (Ty 0) Prp Prp⸩
+      ⸨const' 0 1 (mk_arrow Prp Prp 0 0) Prp ⸨const' 0 1 (Ty 0) Prp⸩⸩
+      (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (snd ∘ fst))
+      snd⸩
+  -/
+
+  let y_out' := ⸨Pi
+    
 
   let x_out := ⸨Pi (Expr.snd ∘ Expr.fst) y_out⸩
 
@@ -486,5 +510,17 @@ theorem const_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   defeq trans, right, right, step
   step snd
   defeq refl
+  defeq refl
+  exact h_t_x
+  defeq trans, step
+  step comp
+  defeq trans, right, step
+  step fst
+  defeq step
+  step snd
+  defeq left, step
+  step comp
+  exact h_t_y
+  defeq trans, right, vdash, trans, right
   
   sorry

@@ -480,5 +480,11 @@ theorem const_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   defeq right, trans, step
   step flip
   defeq left
+  defeq trans, right, step
+  step comp
+  unfold mk_assert_in
+  defeq trans, right, right, step
+  step snd
+  defeq refl
   
   sorry

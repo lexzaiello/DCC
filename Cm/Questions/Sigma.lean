@@ -82,6 +82,25 @@ we could do it instead with a partially applied Judge.
 Idk.
 
 Or, we could it by asserting that the output Pi expression has some type.
+
+Is the Prop → Prop in the return type even necessary?
+
+Confusing.
+
+We don't have to maintain state, fortunately.
+
+Or will we? we might have to maintain state.
+However, we should be able to form it pretty easily.
+
+I think. I hope.
+
+However.
+id α x, how does the type of x get to see the vdash stufF?
+
+wait interesting.
+
+ValidJudgment!!!!! So it's not just we're outputting the type.
+We're outputting a Judgment.
 -/
 
 abbrev Level := ℕ
@@ -91,7 +110,7 @@ inductive Expr where
   | ty    : Level → Expr
   | Pi    : Expr -- Pi : (Prop → Prop) → (Prop → Prop) → (Type 0)
   | judge : Level → Expr -- (: T x) : Prop - this is asserting that (x : T)
-  | sigma : Level → Expr -- (Σ t_app (: T_f f) (: T_x x)) - this is asserting ((f x) : t_app)
+  | vdash : Level → Expr -- ⊢ t_app (∶ T_f f) (∶ T_x x) : Prop
   | prop  : Expr -- as usual
   | fst   : Expr
   /-
@@ -121,7 +140,7 @@ syntax "⸨" term+ "⸩"       : term
 notation "Ty" => Expr.ty
 notation "Prp" => Expr.prop
 notation "∶" => Expr.judge
-notation "⊢" => Expr.sigma
+notation "⊢" => Expr.vdash
 
 macro_rules
   | `(⸨$f:term $x:term⸩) => `(Expr.app $f $x)
@@ -165,6 +184,9 @@ def mk_arrow (α β : Expr) (m n : Level) : Expr :=
 
   ⸨Pi t_in t_out⸩
 
+def ret_pi (the_pi : Expr) : Expr :=
+  ⸨(∶ 1) (Ty 0) the_pi⸩
+
 /-
 const' : (α : Type m) → (β : Type n) → α → β → α
 
@@ -186,7 +208,7 @@ def const'.type (m n : Level) : Expr :=
   -- with ⊢ _ (⊢ _ (⊢ _ (⊢ _ (∶ t_const const) (∶ (Ty m) α)) (∶ (Ty n) β)) (∶ α x)) (∶ β y) in scope
   let out := (fst ∘ fst)
 
-  ⸨Pi α ⸨Pi β ⸨Pi x ⸨Pi y out⸩⸩⸩⸩
+  ⸨Pi α (ret_pi ⸨Pi β (ret_pi ⸨Pi x (ret_pi ⸨Pi y out⸩)⸩)⸩)⸩
 
 /-
 Pi : mk_arrow (Pair _ _) Ty
@@ -196,18 +218,30 @@ inductive ValidJudgment : Expr → Expr → Prop
   | judge : ValidJudgment t (Ty m)
     → ValidJudgment x t
     → ValidJudgment ⸨(∶ m) t x⸩ Prp
-  | sigma : ValidJudgment t_app (Ty o)
-    → ValidJudgment ⸨(∶ m) t_f f⸩ Prp
-    → ValidJudgment ⸨(∶ n) t_x x⸩ Prp
+  | vdash : ValidJudgment t_f (Ty m)
+    → ValidJudgment t_x (Ty n)
+    → ValidJudgment f t_f
+    → ValidJudgment x t_x
     → ValidJudgment ⸨f x⸩ t_app
+    → ValidJudgment t_app (Ty o)
     → ValidJudgment ⸨(⊢ o) t_app ⸨(∶ m) t_f f⸩ ⸨(∶ n) t_x x⸩⸩ Prp
-  | fst   : ValidJudgment fst (mk_arrow Prp Prp 0 0)
-  | snd   : ValidJudgment snd (mk_arrow Prp Prp 0 0)
-  | prp   : ValidJudgment Prp (Ty 0)
-  | ty    : ValidJudgment (Ty m) (Ty m.succ)
+  | fst   : ValidJudgment fst (mk_arrow Prp Prp 0 0) -- fst : Prop → Prop
+  | snd   : ValidJudgment snd (mk_arrow Prp Prp 0 0) -- snd : Prop → Prop
+  | prp   : ValidJudgment Prp (Ty 0) -- Prop : Ty 0
+  | ty    : ValidJudgment (Ty m) (Ty m.succ) -- Ty m : Ty m.succ
   | comp  : ValidJudgment comp (mk_arrow -- comp : (Prop → Prop) → (Prop → Prop) → Prop → Prop
     (mk_arrow Prp Prp 0 0) -- Prop → Prop
     (mk_arrow
       (mk_arrow Prp Prp 0 0) -- Prop → Prop
       (mk_arrow Prp Prp 0 0) 1 1) 1 1)
-  | pi    : ValidJudgment (Pi m n) (mk_arrow 
+  /-
+    Pi accepts a map on the context producing the input type,
+    and a map on the context producing the output type.
+
+    Note that the resulting (∶ t x) judgements for t_in and t_out
+    represent the TYPE of the asserted type.
+
+    Pi : (Prop → Prop) → (Prop → Prop) → (Ty 0)
+  -/
+  | pi    : ValidJudgment Pi (mk_arrow (mk_arrow Prp Prp 0 0)
+    (mk_arrow (mk_arrow Prp Prp 0 0) (Ty 0) 1 1) 1 1)

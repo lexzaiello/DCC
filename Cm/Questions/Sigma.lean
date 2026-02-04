@@ -148,21 +148,13 @@ def const'.type (m n : Level) : Expr :=
 
 def const.type (m n : Level) : Expr :=
   let α := mk_assert_in (Ty m) m.succ
-  -- with ⊢ judge_app_α judge_app_f judge_α in scope
-  /-
-    let t_in := mk_assert_in α m
-
-    ⸨Pi t_in (mk_assert_out β n)⸩
-  -/
-  let β.α := snd
+  -- takes α, makes a new (α → Type n)
+  let β.α := Expr.snd
   let β.const := (⸨(const' 0 0) Prp Prp⸩ ∘ β.α)
-  let β.const_out := ((const' 0 n.succ.succ) (Ty n.succ) Prp (Ty n))
-  let β.const_out.ty := 
-  let β.pi := ⸨both _ _ _ (Pi ∘ β.const) (
-  let β.pi := ⸨Pi snd ((const' 0 n.succ.succ) (Ty n.succ) Prp (Ty n))⸩
-  let β.pi.ctx := ⸨⊢ β.pi (∶ 
-  
-  let β := β.pi
+  let β.const_out := (mk_assert_out (Ty n) n.succ)
+  let β := (⸨flip_pi β.const_out⸩ ∘ β.const)
+
+  ⸨Pi α (ret_pi ⸨Pi β sorry⸩)⸩
 
 /-
 (∶ m) : ∀ (α : Type m), α → Prop

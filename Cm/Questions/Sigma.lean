@@ -113,8 +113,19 @@ def flip_pi : Expr :=
     Pi⸩
 
 
+/-
+Flips the Prop composition operator.
+
+comp : (Prop → Prop) → (Prop → Prop) → Prop → Prop
+
+-/
 def flip_comp : Expr :=
-  
+  let f := (mk_arrow Prp Prp 0 0)
+  ⸨(flip 1 1 0)
+    f
+    f
+    ⸨(const' 0 1) Prp (mk_arrow Prp (Ty 0) 0 1) ⸨(const' 0 1) Prp (Ty 0) Prp⸩⸩
+    comp⸩
 
 def both_prp : Expr :=
   ⸨(both 0 0 0)
@@ -235,6 +246,13 @@ def both.type (m n o : Level) : Expr :=
     Putting it all together:
 
     both (Pi ∘ get_α) (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘ both (const' _ _ (flip_comp snd) (⊢ (Ty o) ∘ get_β)))
+
+    Or, we can just derive flip_vdash. Then, it's easier.
+
+    both (Pi ∘ get_α) (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
+      (flip_pi
+        (mk_assert_out (Ty o) o.succ)
+        ((flip_comp snd) ∘ (⊢ (Ty o) ∘ Expr.snd))))
   -/
   let γ.my_x := Expr.snd
   let γ.α := Expr.snd ∘ Expr.fst

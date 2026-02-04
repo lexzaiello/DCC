@@ -190,7 +190,7 @@ def mk_arrow (α β : Expr) (m n : Level) : Expr :=
   ⸨Pi t_in t_out⸩
 
 def ret_pi (the_pi : Expr) : Expr :=
-  ⸨(∶ 1) (Ty 0) the_pi⸩
+  (mk_assert ⸨(∶ 1) (Ty 0) the_pi⸩ 1)
 
 /-
 const' : (α : Type m) → (β : Type n) → α → β → α
@@ -244,6 +244,9 @@ def comp.type : Expr :=
       (mk_arrow Prp Prp 0 0) -- Prop → Prop
       (mk_arrow Prp Prp 0 0) 1 1) 1 1)
 
+/-
+Pi : ((Prop → Prop) → (Prop → Prop)) : (Type 0)
+-/
 def pi.type : Expr :=
   (mk_arrow (mk_arrow Prp Prp 0 0)
     (mk_arrow (mk_arrow Prp Prp 0 0) (Ty 0) 1 1) 1 1)
@@ -297,12 +300,12 @@ inductive ValidJudgment : Expr → Prop
     In the normal application case, f has a normal judgment.
     A Pi expression.
   -/
-  | app  : ValidJudgment ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩
+  | app  : ValidJudgment ⸨(∶ m) ⸨Pi t_in t_out⸩ f⸩
     → ValidJudgment ⸨(∶ n) t_x x⸩
     -- t_in will produce another judgment. ⸨: type_of_x_type x_type⸩
     -- t_x : (Type n)
     → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
-    → DefEq ⸨(∶ n.succ) (Ty n) t_x⸩ ⸨fst ⸨t_in ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩⸩
+    → DefEq ⸨(∶ n.succ) (Ty n) t_x⸩ ⸨t_in ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩
     -- ⊢ judge_app judge_f judge_x
     -- t_out will produce a Prop as well, a judgment.
     → ValidJudgment ⸨⊢ ⸨t_out ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩⸩ ⸨(∶ m) f ⸨Pi t_in t_out⸩⸩ ⸨(∶ n) t_x x⸩⸩
@@ -312,22 +315,69 @@ inductive ValidJudgment : Expr → Prop
     This is the result of the partially applied app (a nested Pi):
       ⸨(∶ m) ⸨Pi t_in t_out⸩⸩
   -/
-  | par_app : ValidJudgment ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩
+  | parapp : ValidJudgment ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩
     → ValidJudgment ⸨(∶ n) t_x x⸩
     → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
     -- Feed our context into t_in. This should produce the same judgment
     -- as (t_x : t_t_x)
-    → DefEq ⸨(∶ n.succ) (Ty n) t_x⸩ ⸨fst ⸨t_in ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩⸩⸩
+    → DefEq ⸨(∶ n.succ) (Ty n) t_x⸩ ⸨t_in ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩⸩
     → ValidJudgment ⸨⊢ ⸨t_out ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩⸩ -- judgment for the app
       ⸨⊢ ⸨(∶ m) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩ -- judgment for f
       ⸨(∶ n) t_x x⸩⸩ -- judgment for x
   | defeq   : ValidJudgment j₁
     → DefEq j₁ j₂
     → ValidJudgment j₂
+  /-
+    Base combinator types:
+  -/
+  | const'  : ValidJudgment ⸨(∶ 1) (const'.type m n) (const' m n)⸩
+
+/-
+Helper macros for proofs about judgments.
+-/
+
+syntax "defeq" ident,*        : tactic
+syntax "step" ident,*         : tactic
+syntax "judge" ident,*         : tactic
+
+macro_rules
+  | `(tactic| defeq $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `DefEq name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| step $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `IsStep name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| judge $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+
+/-
+Some simp lemmas for proofs.
+-/
+
+theorem step_const : 
 
 theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   → ValidJudgment ⸨(∶ m) α x⸩
   → ValidJudgment ⸨(∶ n.succ) (Ty n) β⸩
   → ValidJudgment ⸨(∶ n) β y⸩
   → ValidJudgment ⸨(∶ m) α ⸨(const' m n) α β x y⸩⸩ := by
+    intro h_t_α h_t_β h_t_x h_t_y
+    judge defeq, parapp, defeq, parapp, defeq, parapp, defeq, parapp, defeq, app, const'
+    exact m
+    exact n
+    exact h_t_α
+    judge ty
+    defeq symm, trans, step
+    step const'
+    defeq refl
     

@@ -111,7 +111,7 @@ def const'.type (m n : Level) : Expr :=
   let α := mk_assert_in (Ty m) m.succ
   let β := mk_assert_in (Ty n) n.succ
 
-  -- with ⊢ _ (⊢ _ (∶ t_const const) (∶ (Ty m) α)) (∶ (Ty n) β)
+  -- with ⊢ t_app_αβ (⊢ t_app_α judge_const' judge_α) judge_β
   -- in scope. We select (∶ (Ty m) α)
   -- with (snd ∘ fst)
   let x := (snd ∘ fst)
@@ -218,7 +218,9 @@ inductive ValidJudgment : Expr → Prop
     → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
     → DefEq ⸨t_in ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩⸩ ⸨(∶ n.succ) (Ty n) t_x⸩
     -- t_out decides what to to do with the context and make a new judgment
-    → ValidJudgment ⸨t_out ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩ ⸨(∶ n) t_x x⸩⸩
+    → ValidJudgment ⸨t_out
+                    ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩
+                    ⸨(∶ n) t_x x⸩⸩
   /-
     Partial application produces a conjoined context. ⊢ judge_f judge_x.
     This is our "context:" ⸨⊢ judge_f judge_inner_f judge_inner_x⸩
@@ -230,8 +232,10 @@ inductive ValidJudgment : Expr → Prop
     → ValidJudgment ⸨(∶ n.succ) (Ty n) t_x⸩
     -- Feed our context into t_in. This should produce the same judgment
     -- as (t_x : t_t_x)
-    → DefEq ⸨(∶ n.succ) (Ty n) t_x⸩ ⸨t_in ⸨(⊢ 1) ⸨Pi t_in t_out⸩ judge_inner_f judge_inner_x⸩⸩
-    → ValidJudgment ⸨t_out ⸨(⊢ 1) ⸨Pi t_in t_out⸩ judge_inner_f judge_inner_x⸩ ⸨(∶ n) t_x x⸩⸩
+    → DefEq ⸨t_in ⸨(⊢ 1) ⸨Pi t_in t_out⸩ judge_inner_f judge_inner_x⸩⸩ ⸨(∶ n.succ) (Ty n) t_x⸩
+    → ValidJudgment ⸨t_out
+      ⸨(⊢ 1) ⸨Pi t_in t_out⸩ judge_inner_f judge_inner_x⸩
+      ⸨(∶ n) t_x x⸩⸩
   | defeq   : ValidJudgment j₁
     → DefEq j₁ j₂
     → ValidJudgment j₂
@@ -317,27 +321,37 @@ theorem judge_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   defeq refl, refl
   assumption
   assumption
-  defeq symm, trans, step
+  defeq trans, step
   step snd
   defeq refl
   unfold mk_assert_out
   defeq trans, left, right, vdash, vdash
 
+/-
+pi : (Prop → Prop) → (Prop → Prop → Prop) → (Type 1)
+-/
+/-theorem pi_well_typed : ValidJudgment ⸨(∶ 1) (mk_arrow Prp Prp 0 0) t_in⸩
+  → ValidJudgment ⸨(∶ 1) (mk_arrow Prp (mk_arrow Prp Prp 0 0) 0 1) t_out⸩
+  → ValidJudgment ⸨(∶ 2) (Ty 1) ⸨Pi t_in t_out⸩⸩ := by
+  intro h_t_in h_t_out
+  judge defeq, parapp, defeq, app, pi
+  exact h_t_in
+  simp [mk_arrow]
+  unfold mk_assert_in
+  judge defeq, parapp, app, pi, ty
+-/
 
-/-theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
+theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   → ValidJudgment ⸨(∶ m) α x⸩
   → ValidJudgment ⸨(∶ n.succ) (Ty n) β⸩
   → ValidJudgment ⸨(∶ n) β y⸩
   → ValidJudgment ⸨(∶ m) α ⸨(const' m n) α β x y⸩⸩ := by
     intro h_t_α h_t_β h_t_x h_t_y
-    judge defeq, parapp, defeq, parapp, defeq, parapp, defeq, parapp, defeq, app, const'
+    judge defeq, parapp, defeq, parapp, defeq, parapp, app, const'
     exact m
     exact n
     exact h_t_α
     judge ty
-    defeq symm, trans, step
+    defeq step
     step const'
-    defeq refl, left, left, right, trans, step
-    step const'
-    simp
--/
+    

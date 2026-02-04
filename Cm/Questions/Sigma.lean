@@ -230,29 +230,27 @@ def vdash.type : Expr :=
   ⸨Pi (mk_assert Prp 0) (ret_pi ⸨Pi (mk_assert Prp 0) (mk_assert Prp 0)⸩)⸩
 
 /-
-Pi : mk_arrow (Pair _ _) Ty
+comp : (Prop → Prop) → (Prop → Prop) → Prop → Prop
 -/
-
-inductive ValidJudgment : Expr → Expr → Prop
-  | judge : ValidJudgment t (Ty m)
-    → ValidJudgment x t
-    → ValidJudgment ⸨(∶ m) t x⸩ Prp
-  | vdash : ValidJudgment t_f (Ty m)
-    → ValidJudgment t_x (Ty n)
-    → ValidJudgment f t_f
-    → ValidJudgment x t_x
-    → ValidJudgment ⸨f x⸩ t_app
-    → ValidJudgment t_app (Ty o)
-    → ValidJudgment ⸨(⊢ o) t_app ⸨(∶ m) t_f f⸩ ⸨(∶ n) t_x x⸩⸩ Prp
-  | fst   : ValidJudgment fst (mk_arrow Prp Prp 0 0) -- fst : Prop → Prop
-  | snd   : ValidJudgment snd (mk_arrow Prp Prp 0 0) -- snd : Prop → Prop
-  | prp   : ValidJudgment Prp (Ty 0) -- Prop : Ty 0
-  | ty    : ValidJudgment (Ty m) (Ty m.succ) -- Ty m : Ty m.succ
-  | comp  : ValidJudgment comp (mk_arrow -- comp : (Prop → Prop) → (Prop → Prop) → Prop → Prop
+def comp.type : Expr :=
+  (mk_arrow
     (mk_arrow Prp Prp 0 0) -- Prop → Prop
     (mk_arrow
       (mk_arrow Prp Prp 0 0) -- Prop → Prop
       (mk_arrow Prp Prp 0 0) 1 1) 1 1)
+
+def pi.type : Expr :=
+  (mk_arrow (mk_arrow Prp Prp 0 0)
+    (mk_arrow (mk_arrow Prp Prp 0 0) (Ty 0) 1 1) 1 1)
+
+inductive ValidJudgment : Expr → Expr → Prop
+  | judge : ValidJudgment (∶ m) (judge.type m)
+  | vdash : ValidJudgment ⊢ vdash.type
+  | fst   : ValidJudgment fst (mk_arrow Prp Prp 0 0) -- fst : Prop → Prop
+  | snd   : ValidJudgment snd (mk_arrow Prp Prp 0 0) -- snd : Prop → Prop
+  | prp   : ValidJudgment Prp (Ty 0) -- Prop : Ty 0
+  | ty    : ValidJudgment (Ty m) (Ty m.succ) -- Ty m : Ty m.succ
+  | comp  : ValidJudgment comp comp.type
   /-
     Pi accepts a map on the context producing the input type,
     and a map on the context producing the output type.
@@ -262,6 +260,5 @@ inductive ValidJudgment : Expr → Expr → Prop
 
     Pi : (Prop → Prop) → (Prop → Prop) → (Ty 0)
   -/
-  | pi    : ValidJudgment Pi (mk_arrow (mk_arrow Prp Prp 0 0)
-    (mk_arrow (mk_arrow Prp Prp 0 0) (Ty 0) 1 1) 1 1)
+  | pi    : ValidJudgment Pi pi.type
 

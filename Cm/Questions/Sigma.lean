@@ -279,7 +279,6 @@ def both.type (m n o : Level) : Expr :=
             0 1 1)
             ((both_nondep Prp Prp Prp 0 0 0) ∘ (⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩ ∘ snd ∘ fst ∘ fst))
             (⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩ ∘ fst)⸩⸩)⸩)⸩)⸩)⸩
-
 /-
 (∶ m) : ∀ (α : Type m), α → Prop
 -/

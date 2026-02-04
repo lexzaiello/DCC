@@ -49,7 +49,7 @@
 \usemintedstyle{tango}
 \newminted[leancode]{lean4}{
     mathescape=true,
-    fontsize=\small
+    fontsize=\tiny
   }
 \newcommand{\leane}[1]{\mintinline{lean4}|#1|}
 \newcommand{\leanw}[1]{\texttt{#1}}
@@ -137,6 +137,13 @@ inductive ValidJudgment : Expr → Prop
     → ValidJudgment ⸨t_out
       ⸨⊢ ⸨(∶ 1) (Ty 0) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩
       ⸨(∶ n) t_x x⸩⸩
+  -- ... on next slide
+\end{leancode}
+\end{frame}
+
+\begin{frame}[fragile]{Inference Rules (cont...)}
+\begin{leancode}
+  -- ... ValidJudgment
   /-
     Unclear how suspicious this is. See DefEq on the next slide.
     This could be easily refactored by matching the (∶ T e) e
@@ -146,7 +153,7 @@ inductive ValidJudgment : Expr → Prop
     → DefEq j₁ j₂
     → ValidJudgment j₂
   /-
-    Base combinator types. All point-free. I omitted them all they are all on seperate slides.
+    Base combinator types. All point-free. Too many to fit on one slide.
   -/
   | const : ValidJudgment ⸨(∶ 1) (const.type m n) (const m n)⸩
   | both    : ValidJudgment ⸨(∶ 1) (both.type m n o) (both m n o)⸩ 
@@ -175,7 +182,7 @@ def const.type (m n : Level) : Expr :=
   let α := mk_assert_in (Ty m) m.succ
   -- takes α, makes a new (α → Type n)
   let β.α := Expr.snd
-  let β.const := (⸨(const' 0 0) Prp Prp⸩ ∘ β.α)
+  let β.const := (⸨(const' 0 0) Prp Prp⸩ ∘ Expr.snd)
   let β.const_out := (mk_assert_out (Ty n) n.succ)
   let β := (⸨(∶ 2) (Ty 1)⸩ ∘ (⸨flip_pi β.const_out⸩ ∘ β.const))
 
@@ -195,10 +202,10 @@ def const.type (m n : Level) : Expr :=
         (mk_arrow Prp (mk_arrow Prp Prp 0 0) 0 1)⸩⸩⸩
   let out := ⸨cpy (⊢ ∘ (snd ∘ fst ∘ fst)) ⸨(id 0) Prp⸩⸩
 
-  ⸨Pi α
-    (ret_pi
+  ⸨Pi ⸨(const' 0 0) Prp Prp ⸨(∶ m.succ.succ) (Ty m.succ) (Ty m)⸩⸩
+    ⸨⊢ ⸨(∶ 1) (Ty 0)
       ⸨Pi β
-        (ret_pi ⸨Pi (Expr.snd ∘ Expr.fst) (ret_pi ⸨Pi βx out⸩)⸩)⸩)⸩
+        ⸨⊢ ⸨(∶ 1) (Ty 0) ⸨Pi (Expr.snd ∘ Expr.fst) ⸨⊢ ⸨(∶ 1) (Ty 0) ⸨Pi βx out⸩⸩⸩⸩⸩⸩⸩⸩⸩⸩
 \end{leancode}
 \end{frame}
 
@@ -226,6 +233,54 @@ theorem const_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   step comp
   defeq right, trans, step
   ... -- too many steps to list on screen
+\end{leancode}
+\end{frame}
+
+\begin{frame}[fragile]{The \(S\) Type}
+\begin{leancode}
+def both.type (m n o : Level) : Expr :=
+  /-
+    Same as in const. α : Type, β : α → Type
+  -/
+  let α := mk_assert_in (Ty m) m.succ
+
+  -- takes α, makes a new (α → Type n)
+  let β.α := Expr.snd
+  let β.const := (⸨(const' 0 0) Prp Prp⸩ ∘ β.α)
+  let β.const_out := (mk_assert_out (Ty n) n.succ)
+  let β := (⸨(∶ 2) (Ty 1)⸩ ∘ (⸨flip_pi β.const_out⸩ ∘ β.const))
+
+  let γ := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
+    (Pi ∘ (snd ∘ fst))
+      (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
+        ⸨flip_pi
+          (mk_assert_out (Ty o) o.succ)
+          (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ Expr.snd))⸩)⸩
+
+  let x.mk_γ_xy := ((⸨comp ⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩⸩ ∘
+    (⸨flip_comp snd⸩ ∘ ⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩)) ∘ Expr.snd)
+  let x := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
+    (Pi ∘ (snd ∘ fst ∘ fst))
+    (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
+      ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
+          (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (Expr.snd ∘ fst)))
+          x.mk_γ_xy⸩)⸩
+
+  let y := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
+    (Pi ∘ (snd ∘ fst ∘ fst ∘ fst)) -- (x : α)
+      (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (Expr.snd ∘ fst ∘ fst))⸩
+
+  ⸨Pi α (ret_pi
+    ⸨Pi β (ret_pi
+      ⸨Pi γ (ret_pi
+        ⸨Pi x (ret_pi
+          ⸨Pi y ⸨(both_nondep
+            Prp
+            (mk_arrow Prp Prp 0 0)
+            (mk_arrow Prp Prp 0 0)
+            0 1 1)
+            ((both_nondep Prp Prp Prp 0 0 0) ∘ (⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩ ∘ snd ∘ fst ∘ fst))
+            (⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩ ∘ fst)⸩⸩)⸩)⸩)⸩)⸩
 \end{leancode}
 \end{frame}
 

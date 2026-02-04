@@ -134,6 +134,15 @@ def both_prp : Expr :=
       ⸨(const' 0 1) (mk_arrow Prp Prp 0 0) Prp ⸨(const' 0 1) (Ty 0) Prp⸩⸩⸩
 
 /-
+Nondependent version of both, derived from both.
+-/
+def both_nondep (α β γ : Expr) (m n o : Level) : Expr :=
+  ⸨(both m n 0)
+    α
+    ⸨(const' n.succ m) (Ty n) α β⸩
+    ⸨(const' m 1) (mk_arrow β (Ty o) n o.succ) α ⸨(const' n o.succ) (Ty o) β γ⸩⸩⸩
+
+/-
 const' : (α : Type m) → (β : Type n) → α → β → α
 
 At (x : α) argument, we have (const' α β) in the judgment list. This is:
@@ -259,33 +268,23 @@ def both.type (m n o : Level) : Expr :=
           (mk_assert_out (Ty o) o.succ)
           (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩ ∘ Expr.snd))⸩)
   -/
-  let γ.my_x := Expr.snd
-  let γ.α := Expr.snd ∘ Expr.fst
-  let γ.β := Expr.snd
-  let γ.const_out := (mk_assert_out (Ty o) o.succ)
-
-  let mk_γ_x_α := (Pi ∘ (⸨(const' 0 0) Prp Prp⸩ ∘ γ.α))
-  let mk_γ_y_βx := (⸨flip_pi γ.const_out⸩ ∘
-    (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ γ.β))
-
-  let γ := ⸨both_prp mk_γ_x_α mk_γ_y_βx⸩
-
-  /-
-    x is pretty much the same as γ, but with an application as the output.
-  -/
-  let x.my_x := Expr.snd -- this refers to x inside γ.
-  let x.α := Expr.snd ∘ Expr.fst
-  let x.β := Expr.snd
-  let x.const_out := (mk_assert_out (Ty o) o.succ)
-
-  let mk_x_x_α := (Pi ∘ (⸨(const' 0 0) Prp Prp⸩ ∘ γ.α))
-  let mk_x_y_βx := (⸨flip_pi γ.const_out⸩ ∘
-    (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ γ.β))
-
-  let γ := ⸨both_prp mk_γ_x_α mk_γ_y_βx⸩
+  let γ := ⸨(both 0 1 0)
+      Prp
+      ⸨(const' 0 1) (Ty 0) Prp (mk_arrow Prp Prp 0 0)⸩
+      ⸨(const' 0 1) (mk_arrow Prp (Ty 1) 0 2) Prp ⸨(const' 0 2) (Ty 1) Prp (Ty 0)⸩⸩
+      (Pi ∘ (snd ∘ fst))
+      (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
+        ⸨flip_pi
+          (mk_assert_out (Ty o) o.succ)
+          (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ Expr.snd))⸩)⸩
 
   /-
-  (both   ctx
+    x is very similar to γ, but we have to inject γ, and change the indices for our values.
+    α is now (snd ∘ fst ∘ fst)
+    β is now (snd ∘ fst)
+    and γ is snd
+
+    We will need two both expressions for this.
   -/
 
   sorry

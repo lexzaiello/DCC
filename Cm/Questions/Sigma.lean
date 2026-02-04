@@ -151,7 +151,7 @@ def const'.type (m n : Level) : Expr :=
     ⸨(const' 1 0) (mk_arrow Prp (Ty 0) 0 1) Prp
       ⸨(const' 1 0) (Ty 0) Prp
         (mk_arrow Prp (mk_arrow Prp Prp 0 0) 0 1)⸩⸩⸩
-  let out := ⸨cpy ((⊢ m) ∘ snd) ⸨(id 0) Prp⸩⸩
+  let out := ⸨cpy ((⊢ m) ∘ (fst ∘ snd)) ⸨(id 0) Prp⸩⸩
 
   ⸨Pi α (ret_pi ⸨Pi β (ret_pi ⸨Pi x (ret_pi ⸨Pi y out⸩)⸩)⸩)⸩
 
@@ -325,6 +325,8 @@ Step simp lemmas, defeq simp lemmas.
 
 @[simp] theorem step_comp : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩ := IsStep.comp
 
+@[simp] theorem step_both : IsStep ⸨(both m n o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩ := IsStep.both
+
 @[simp] theorem step_fst_j : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩ := IsStep.fst_j
 
 @[simp] theorem step_fst : IsStep ⸨fst ⸨(⊢ m) t_app judge_f judge_x⸩⸩ judge_f := IsStep.fst
@@ -410,9 +412,17 @@ theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
     defeq step
     step snd
     defeq trans, left, step
-    step comp
+    step both
+    simp
     defeq trans, left, right, step
+    step id
+    defeq trans, left, left, step
+    step comp
+    defeq trans, left, left, right, step
+    step comp
+    defeq trans, left, left, right, right, step
     step snd
-    defeq trans, step
-    step const'
+    defeq trans, left, left, right, step
+    step fst_j
+    
     sorry

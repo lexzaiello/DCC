@@ -266,69 +266,13 @@ def both.type (m n o : Level) : Expr :=
   let β.const_out := (mk_assert_out (Ty n) n.succ)
   let β := (⸨(∶ 2) (Ty 1)⸩ ∘ (⸨flip_pi β.const_out⸩ ∘ β.const))
 
-  /-
-    by γ, we have in scope
-    (⊢ (⊢ _ judge_f judge_α) judge_β)
-    We need α and β,
-    so we can select these with (snd ∘ fst)
-    and snd, respectively
-
-    then, since β is mentioned inside γ as a term,
-    we feed it in with
-    both (Pi ∘ get_α) mk_βx_binder
-
-    Notably, mk_βx_binder should produce a ⊢ expression to permit
-
-    both (Pi ∘ get_α) (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘ mk_βx_binder)
-
-    mk_βx_binder has
-      (⊢ (⊢ _ judge_f judge_α) judge_β)
-    in scope, so we need to select β,
-    but inside the γ (β : _) binder, we get
-    ⊢ _ _ judge_x
-
-    so, we need to (⊢ (Ty o) gotten_x) ∘ snd
-      = both (const' _ _ (flip_comp snd) (⊢ (Ty o) ∘ get_β))
-
-    Putting it all together:
-
-    both (Pi ∘ get_α) (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘ both (const' _ _ (flip_comp snd) (⊢ (Ty o) ∘ get_β)))
-
-    Or, we can just derive flip_vdash. Then, it's easier.
-
-    both
-      Prp
-      ⸨const' 0 1 (Ty 0) Prp (mk_arrow Prp Prp 0 0)⸩
-      ⸨const' 0 1 (mk_arrow Prp (Ty 1)) Prp ⸨const' 0 2 (Ty 1) Prp (Ty 0) ⸩⸩
-      (Pi ∘ get_α)
-      (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
-        ⸨flip_pi
-          (mk_assert_out (Ty o) o.succ)
-          (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩ ∘ Expr.snd))⸩)
-  -/
-  let γ' := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
+  let γ := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
     (Pi ∘ (snd ∘ fst))
       (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
         ⸨flip_pi
           (mk_assert_out (Ty o) o.succ)
           (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ Expr.snd))⸩)⸩
 
-  /-
-    In the past, we were able to make β x-like expressions with just composition.
-
-    We probably can here, too
-
-    ((comp ⊢ (Ty o)) ∘ ((flip_comp snd) ∘ (⊢ (Ty o))) ∘ Expr.snd
-    = ⊢ (Ty o) ∘ (⊢ (Ty o) judge_γ)
-    = ⊢ (Ty o) ∘ (⊢ (Ty o) judge_γ)
-
-    ((comp ⊢ (Ty o)) ∘ ((flip_comp snd) ∘ (⊢ (Ty o)))) ∘ Expr.snd
-    = ((comp ⊢ (Ty o)) ∘ ((flip_comp snd) ∘ (⊢ (Ty o)))) judge_γ
-    = (comp ⊢ (Ty o)) ((flip_comp snd) ((⊢ (Ty o)) judge_γ))
-    (comp ⊢ (Ty o)) ((flip_comp snd) ((⊢ (Ty o)) judge_γ)) (⊢ _ judge_x)
-    = (⊢ (Ty o)) ((((⊢ (Ty o)) judge_γ) ∘ snd) (⊢ _ judge_x))
-    = (⊢ (Ty o)) (((⊢ (Ty o)) judge_γ) judge_x)
-  -/
   let x.mk_γ_xy := ((⸨comp ⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩⸩ ∘
     (⸨flip_comp snd⸩ ∘ ⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩)) ∘ Expr.snd)
   let x := ⸨(both_nondep Prp (mk_arrow Prp Prp 0 0) (Ty 0) 0 1 1)
@@ -342,39 +286,17 @@ def both.type (m n o : Level) : Expr :=
     (Pi ∘ (snd ∘ fst ∘ fst ∘ fst)) -- (x : α)
       (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (Expr.snd ∘ fst ∘ fst))⸩
 
-  /-
-    t_out : γ z (y z)
-
-    the (y z) term is pretty easy to recover.
-
-    we receive (∶ Tz z) as an argument outright.
-
-    we receive the context first, though.
-
-    ⊢ _ (⊢ (⊢ (⊢ _ judge_β) _ judge_γ)_ judge_x) judge_y
-
-    γ = snd ∘ fst ∘ fst
-
-    y = fst
-
-    so we just need to make
-
-    both (⊢ Ty o γ) y, then our argument z will take care of the rest.
-
-    both (both ∘ (⊢ Ty o) ∘ snd ∘ fst ∘ fst) ((⊢ Ty o γ) ∘ fst)
-
-    snd ∘ snd ∘ fst
-
-    γ = snd ∘ fst ∘ 
-    y =
-  -/
-
   ⸨Pi α (ret_pi
     ⸨Pi β (ret_pi
-      ⸨Pi x (ret_pi
-        ⸨Pi y 
-
-  sorry
+      ⸨Pi γ (ret_pi
+        ⸨Pi x (ret_pi
+          ⸨Pi y ⸨(both_nondep
+            Prp
+            (mk_arrow Prp Prp 0 0)
+            (mk_arrow Prp Prp 0 0)
+            0 1 1)
+            ((both_nondep Prp Prp Prp 0 0 0) ∘ (⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩ ∘ snd ∘ fst ∘ fst))
+            (⸨⊢ ⸨(∶ o.succ.succ) (Ty o.succ) (Ty o)⸩⸩ ∘ fst)⸩⸩)⸩)⸩)⸩)⸩
 
 /-
 (∶ m) : ∀ (α : Type m), α → Prop

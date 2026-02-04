@@ -75,26 +75,158 @@
 
 \section{Current Iteration}
 
-\begin{frame}{AST}
+\begin{frame}[fragile]{AST}
 \begin{leancode}
 abbrev Level := ℕ
 
 inductive Expr where
   | app   : Expr  → Expr → Expr
   | ty    : Level → Expr
-  | Pi    : Expr -- Pi : (Prop → Prop) → (Prop → Prop → Prop) → (Type 0)
-  | judge : Level → Expr -- (: T x) : Prop - this is asserting that (x : T)
-  | vdash : Expr -- ⊢ (judge_t_app : Prop) (judge_f : Prop) (judge_x : Prop)
+  | judge : Level → Expr
+     -- (α : Type m) → α → Prop
+  | Pi    : Expr
+     -- (Prop → Prop) → (Prop → Prop → Prop) → (Type 0)
+  | vdash : Expr -- combine judgements into a judgment of an app
   | prop  : Expr -- only inhabited by ⊢ and ∶
-  | fst   : Expr -- Prop → Prop
-  | snd   : Expr -- Prop → Prop
-  | comp  : Expr -- (Prop → Prop) → (Prop → Prop) → Prop → Prop
-  | const' : Level → Level → Expr -- α → β → α
-  | const  : Level → Level → Expr -- dependent K
-  | flip   : Level → Level → Level → Expr-- dependent C / flip combinator
+  -- fst, snd, comp - traversal combinators for Prop
+  | fst   : Expr
+  | snd   : Expr
+  | comp  : Expr
+  /-
+    SK + I + C combinator from BCKW
+  -/
+  | const' : Level → Level → Expr
+  | const  : Level → Level → Expr
+  | flip   : Level → Level → Level → Expr
   | both   : Level → Level → Level → Expr
   | id     : Level → Expr
   \end{leancode}
+\end{frame}
+
+\begin{frame}[fragile]{Step Relation}
+  \begin{leancode}
+  inductive IsStep : Expr → Expr → Prop
+  | id     : IsStep ⸨(Expr.id m) _α x⸩ x
+  | both   : IsStep ⸨(both m n o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
+  | flip   : IsStep ⸨(Expr.flip m n o) _α _β _γ x y z⸩ ⸨x z y⸩
+  | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
+  | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
+  | fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
+  | snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
+  | left   : IsStep f f'
+    → IsStep ⸨f x⸩ ⸨f' x⸩
+  | right  : IsStep x x'
+    → IsStep ⸨f x⸩ ⸨f x'⸩
+\end{leancode}
+\end{frame}
+
+\begin{frame}[fragile]{Inference Rules}
+\begin{leancode}
+inductive ValidJudgment : Expr → Prop
+  | app  : ValidJudgment ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩
+    → ValidJudgment ⸨(∶ n) t_x x⸩
+    → DefEq ⸨t_in ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩⸩ ⸨(∶ n.succ) (Ty n) t_x⸩
+    -- t_out decides what to to do with the context and make a new judgment
+    → ValidJudgment ⸨t_out
+                    ⸨(∶ 1) ⸨Pi t_in t_out⸩ f⸩
+                    ⸨(∶ n) t_x x⸩⸩
+
+  | parapp : ValidJudgment ⸨⊢ ⸨(∶ 1) (Ty 0) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩
+    → ValidJudgment ⸨(∶ n) t_x x⸩
+    → DefEq ⸨t_in ⸨⊢ ⸨(∶ 1) (Ty 0) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩⸩ ⸨(∶ n.succ) (Ty n) t_x⸩
+    → ValidJudgment ⸨t_out
+      ⸨⊢ ⸨(∶ 1) (Ty 0) ⸨Pi t_in t_out⸩⸩ judge_inner_f judge_inner_x⸩
+      ⸨(∶ n) t_x x⸩⸩
+  /-
+    Unclear how suspicious this is. See DefEq on the next slide.
+    This could be easily refactored by matching the (∶ T e) e
+    and only defeq-ing the type.
+  -/
+  | defeq   : ValidJudgment j₁
+    → DefEq j₁ j₂
+    → ValidJudgment j₂
+  /-
+    Base combinator types. All point-free. I omitted them all they are all on seperate slides.
+  -/
+  | const : ValidJudgment ⸨(∶ 1) (const.type m n) (const m n)⸩
+  | both    : ValidJudgment ⸨(∶ 1) (both.type m n o) (both m n o)⸩ 
+  ... -- more base combinator types
+\end{leancode}
+\end{frame}
+
+\begin{frame}[fragile]{DefEq}
+\begin{leancode}
+  inductive DefEq : Expr → Expr → Prop
+  | refl    : DefEq a a
+  | step    : IsStep e e' → DefEq e e'
+  | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
+  | left    : DefEq f f'  → DefEq ⸨f x⸩ ⸨f' x⸩
+  | right   : DefEq x x'  → DefEq ⸨f x⸩ ⸨f x'⸩
+  | vdash   : DefEq judge_app ⸨(∶ m.succ) (Ty m) t_fx⸩
+    → DefEq judge_f ⸨(∶ n) t_f f⸩
+    → DefEq judge_x ⸨(∶ o) t_x x⸩
+    → DefEq ⸨⊢ judge_app judge_f judge_x⸩ ⸨(∶ m) t_fx ⸨f x⸩⸩
+\end{leancode}
+\end{frame}
+
+\begin{frame}[fragile]{Combinator Types: Dependent \(K\)}
+\begin{leancode}
+def const.type (m n : Level) : Expr :=
+  let α := mk_assert_in (Ty m) m.succ
+  -- takes α, makes a new (α → Type n)
+  let β.α := Expr.snd
+  let β.const := (⸨(const' 0 0) Prp Prp⸩ ∘ β.α)
+  let β.const_out := (mk_assert_out (Ty n) n.succ)
+  let β := (⸨(∶ 2) (Ty 1)⸩ ∘ (⸨flip_pi β.const_out⸩ ∘ β.const))
+
+  let βx := ⸨(both 0 0 0)
+      Prp
+      ⸨(const' 0 1) (Ty 0) Prp Prp⸩
+      ⸨(const' 0 1) (mk_arrow Prp Prp 0 0) Prp ⸨(const' 0 1) (Ty 0) Prp⸩⸩
+      (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (snd ∘ fst))
+      snd⸩
+
+  -- Inserts our type in (∶ T (const α β x y)) this position.
+  let cpy := ⸨(both 0 0 0)
+    Prp
+    ⸨(const' 1 0) (Ty 0) Prp Prp⸩
+    ⸨(const' 1 0) (mk_arrow Prp (Ty 0) 0 1) Prp
+      ⸨(const' 1 0) (Ty 0) Prp
+        (mk_arrow Prp (mk_arrow Prp Prp 0 0) 0 1)⸩⸩⸩
+  let out := ⸨cpy (⊢ ∘ (snd ∘ fst ∘ fst)) ⸨(id 0) Prp⸩⸩
+
+  ⸨Pi α
+    (ret_pi
+      ⸨Pi β
+        (ret_pi ⸨Pi (Expr.snd ∘ Expr.fst) (ret_pi ⸨Pi βx out⸩)⸩)⸩)⸩
+\end{leancode}
+\end{frame}
+
+\begin{frame}[fragile]{The Proof}
+\begin{leancode}
+theorem const_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
+  → ValidJudgment ⸨(∶ 1) (mk_arrow α (Ty n) m n.succ) β⸩
+  → ValidJudgment ⸨(∶ m) α x⸩
+  → ValidJudgment ⸨(∶ n) ⸨β x⸩ y⸩
+  → ValidJudgment ⸨(∶ m) α ⸨(const m n) α β x y⸩⸩ := by
+  intro h_t_α h_t_β h_t_x h_t_y
+  judge defeq, parapp, defeq, parapp, defeq, parapp, defeq, app, const
+  exact m
+  exact n
+  exact h_t_α
+  defeq step
+  step const'
+  defeq refl
+  exact h_t_β
+  unfold mk_arrow
+  simp
+  defeq trans, step
+  step comp
+  defeq trans, right, step
+  step comp
+  defeq right, trans, step
+  ... -- too many steps to list on screen
+\end{leancode}
 \end{frame}
 
 \section{Summary of Past Iterations}

@@ -59,12 +59,8 @@ inductive IsStep : Expr → Expr → Prop
   | flip   : IsStep ⸨(Expr.flip m n o) _α _β _γ x y z⸩ ⸨x z y⸩
   | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
   | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
-  | fst_j  : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩
   | fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
   | snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
-  -- snd can only return new Props, so we can't project on a judge.
-  -- we need a default value, then.
-  | snd_no : IsStep ⸨snd ⸨(∶ n) _a _b⸩⸩ ⸨(∶ n) _a _b⸩
   | left   : IsStep f f'
     → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x'
@@ -220,9 +216,7 @@ def const.type (m n : Level) : Expr :=
       (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ ∘ (snd ∘ fst))
       snd⸩
 
-  /-
-    to prepend a judgment and ourselves.
-  -/
+  -- Inserts our type in (∶ T (const α β x y)) this position.
   let cpy := ⸨(both 0 0 0)
     Prp
     ⸨(const' 1 0) (Ty 0) Prp Prp⸩
@@ -231,14 +225,10 @@ def const.type (m n : Level) : Expr :=
         (mk_arrow Prp (mk_arrow Prp Prp 0 0) 0 1)⸩⸩⸩
   let out := ⸨cpy (⊢ ∘ (snd ∘ fst ∘ fst)) ⸨(id 0) Prp⸩⸩
 
-  let y_out := ⸨Pi
-    βx
-    out⸩ -- with ⊢ _ (⊢ _ (⊢ _ judge_α)judge x judge_y
-
   ⸨Pi α
     (ret_pi
       ⸨Pi β
-        (ret_pi ⸨Pi (Expr.snd ∘ Expr.fst) (ret_pi y_out)⸩)⸩)⸩
+        (ret_pi ⸨Pi (Expr.snd ∘ Expr.fst) (ret_pi ⸨Pi βx out⸩)⸩)⸩)⸩
 
 /-
 S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
@@ -365,7 +355,6 @@ ValidJudgment (∶ (Ty 0) Prp) in our language.
 inductive DefEq : Expr → Expr → Prop
   | refl    : DefEq a a
   | step    : IsStep e e' → DefEq e e'
-  | symm    : DefEq e₁ e₂ → DefEq e₂ e₁
   | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
   | left    : DefEq f f'  → DefEq ⸨f x⸩ ⸨f' x⸩
   | right   : DefEq x x'  → DefEq ⸨f x⸩ ⸨f x'⸩
@@ -464,8 +453,6 @@ macro_rules
 @[simp] theorem step_comp : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩ := IsStep.comp
 
 @[simp] theorem step_both : IsStep ⸨(both m n o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩ := IsStep.both
-
-@[simp] theorem step_fst_j : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩ := IsStep.fst_j
 
 @[simp] theorem step_fst : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f := IsStep.fst
 

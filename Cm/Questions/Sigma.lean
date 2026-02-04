@@ -254,6 +254,7 @@ inductive DefEq : Expr → Expr → Prop
     → DefEq (Pi α₁ β₁ map_arg₁) (Pi α₂ β₂ map_arg₂)-/
 
 inductive ValidJudgment : Expr → Prop
+  | const : ValidJudgment ⸨(∶ 1) (const.type m n) (const m n)⸩
   | id    : ValidJudgment ⸨(∶ 1) (id.type m) (id m)⸩
   | judge : ValidJudgment ⸨(∶ 1) (judge.type m) (∶ m)⸩
   | vdash : ValidJudgment ⸨(∶ 1) (vdash.type m) ⊢⸩
@@ -463,3 +464,29 @@ theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
     defeq vdash, refl, vdash, refl, vdash
     repeat (defeq refl)
 
+/-
+Dependent K is well-typed.
+
+α : Type
+β : α → Type
+-/
+theorem const_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
+  → ValidJudgment ⸨(∶ 1) (mk_arrow α (Ty n) m n.succ) β⸩
+  → ValidJudgment ⸨(∶ m) α x⸩
+  → ValidJudgment ⸨(∶ n) ⸨β x⸩ y⸩
+  → ValidJudgment ⸨(∶ m) α ⸨(const m n) α β x y⸩⸩ := by
+  intro h_t_α h_t_β h_t_x h_t_y
+  judge defeq, parapp, defeq, parapp, defeq, parapp, defeq, app, const
+  exact m
+  exact n
+  exact h_t_α
+  judge ty
+  defeq step
+  step const'
+  defeq refl
+  exact h_t_β
+  unfold mk_arrow
+  simp
+  judge defeq, parapp, defeq, app, pi
+  
+  sorry

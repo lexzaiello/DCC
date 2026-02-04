@@ -249,10 +249,15 @@ def both.type (m n o : Level) : Expr :=
 
     Or, we can just derive flip_vdash. Then, it's easier.
 
-    both (Pi ∘ get_α) (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
-      (flip_pi
-        (mk_assert_out (Ty o) o.succ)
-        ((flip_comp snd) ∘ (⊢ (Ty o) ∘ Expr.snd))))
+    both
+      Prp
+      ⸨const' 0 1 (Ty 0) Prp (mk_arrow Prp Prp 0 0)⸩
+      ⸨const' 0 1 (mk_arrow Prp (Ty 1)) Prp ⸨const' 0 2 (Ty 1) Prp (Ty 0) ⸩⸩
+      (Pi ∘ get_α)
+      (⸨⊢ ⸨(∶ 1) (Ty 0)⸩⸩ ∘
+        ⸨flip_pi
+          (mk_assert_out (Ty o) o.succ)
+          (⸨flip_comp snd⸩ ∘ (⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩ ∘ Expr.snd))⸩)
   -/
   let γ.my_x := Expr.snd
   let γ.α := Expr.snd ∘ Expr.fst

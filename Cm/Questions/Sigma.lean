@@ -165,14 +165,12 @@ def const.type (m n : Level) : Expr :=
 
   let y_out := ⸨Pi
     βx
-    (fst ∘ fst ∘ fst ∘ fst)⸩
-
-  let x_out := ⸨Pi (Expr.snd ∘ Expr.fst) y_out⸩
+    (⸨(const' 0 0) Prp Prp⸩ ∘ (snd ∘ fst ∘ fst))⸩ -- with ⊢ _ (⊢ _ (⊢ _ judge_α)judge x judge_y
 
   ⸨Pi α
     (ret_pi
       ⸨Pi β
-        (ret_pi x_out)⸩)⸩
+        (ret_pi ⸨Pi (Expr.snd ∘ Expr.fst) (ret_pi y_out)⸩)⸩)⸩
 /-
 (∶ m) : ∀ (α : Type m), α → Prop
 -/
@@ -501,9 +499,36 @@ theorem const_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   step fst
   defeq step
   step snd
-  defeq left, step
-  step comp
+  defeq left, refl
   exact h_t_y
-  defeq trans, right, vdash, trans, right
+  defeq trans, step
+  step both
+  defeq trans, left, step
+  step comp
+  defeq vdash, refl
+  defeq trans, step
+  step comp
+  defeq trans, right, step
+  step fst
+  defeq step
+  step snd
+  defeq step
+  step snd
+  defeq trans, left, step
+  step comp
+  defeq trans, left, right, step
+  step comp
+  defeq trans, left, right, right, step
+  step comp
+  defeq trans, left, right, right, right, step
+  step fst
+  defeq trans, left, right
+  defeq trans, right, step
+  step fst
+  defeq trans, step
+  step snd
+  defeq refl
+  defeq trans, step
+  step const'
   
   sorry

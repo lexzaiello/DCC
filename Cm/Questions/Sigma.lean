@@ -182,6 +182,23 @@ def pi.type : Expr :=
     (mk_arrow t_out (Ty 0) 1 1) 1 1)
 
 /-
+id : ∀ (α : Type), α → α
+-/
+def id.type (m : Level) : Expr :=
+  let α := mk_assert_in (Ty m) m.succ
+  let x := snd
+
+  let cpy := ⸨(both 0 0 0)
+    Prp
+    ⸨(const' 1 0) (Ty 0) Prp Prp⸩
+    ⸨(const' 1 0) (mk_arrow Prp (Ty 0) 0 1) Prp
+      ⸨(const' 1 0) (Ty 0) Prp
+        (mk_arrow Prp (mk_arrow Prp Prp 0 0) 0 1)⸩⸩⸩
+  let out := ⸨cpy (⊢ ∘ snd) ⸨(id 0) Prp⸩⸩
+
+  ⸨Pi α (ret_pi ⸨Pi x out⸩)⸩
+
+/-
 (ValidJudgment t x : Prop) = ((∶ t x) : Prop)
 
 ValidJudgment ⸨Pi t_in t_out⸩ f -> (∶ ⸨Pi t_in t_out⸩ f)
@@ -204,14 +221,16 @@ inductive DefEq : Expr → Expr → Prop
   | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
   | left    : DefEq f f'  → DefEq ⸨f x⸩ ⸨f' x⸩
   | right   : DefEq x x'  → DefEq ⸨f x⸩ ⸨f x'⸩
-  | vdash   : DefEq judge_f ⸨(∶ n) t_f f⸩
+  | vdash   : DefEq judge_app ⸨(∶ m.succ) (Ty m) t_fx⸩
+    → DefEq judge_f ⸨(∶ n) t_f f⸩
     → DefEq judge_x ⸨(∶ o) t_x x⸩
-    → DefEq ⸨⊢ ⸨(∶ m.succ) (Ty m) t_fx⸩ judge_f judge_x⸩ ⸨(∶ m) t_fx ⸨f x⸩⸩
+    → DefEq ⸨⊢ judge_app judge_f judge_x⸩ ⸨(∶ m) t_fx ⸨f x⸩⸩
   --| vdash   : DefEq ⸨(∶ m) t_x x⸩ ⸨(⊢ n) ⸨(∶ m) t_x x⸩ _a _b⸩
   /-| subst   : DefEq ($ (Pi α₁ β₁ map_arg₁), x) ($ (Pi α₂ β₂ map_arg₂), x)
     → DefEq (Pi α₁ β₁ map_arg₁) (Pi α₂ β₂ map_arg₂)-/
 
 inductive ValidJudgment : Expr → Prop
+  | id    : ValidJudgment ⸨(∶ 1) (id.type m) (id m)⸩
   | judge : ValidJudgment ⸨(∶ 1) (judge.type m) (∶ m)⸩
   | vdash : ValidJudgment ⸨(∶ 1) (vdash.type m) ⊢⸩
   | fst   : ValidJudgment ⸨(∶ 1) fst.type fst⸩ -- fst : Prop → Prop
@@ -294,21 +313,6 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
-/-
-Some simp lemmas for proofs.
-
-Step simp lemmas, defeq simp lemmas.
-
-| const' : IsStep ⸨(const' m n) _α _β x y⸩ x
-| comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
-| fst_j  : IsStep ⸨fst ⸨(∶ m) t x⸩⸩ ⸨(∶ m.succ) (Ty m) t⸩
-| fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
-| snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
-| snd_no : IsStep ⸨snd ⸨(∶ n) _a _b⸩⸩ ⸨(∶ n) _a _b⸩
-| left   : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩
-| right  : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩
--/
-
 @[simp] theorem defeq_refl (e : Expr) : DefEq e e := DefEq.refl
 
 @[simp] theorem step_const' : IsStep ⸨(const' m n) _α _β x y⸩ x := IsStep.const'
@@ -328,6 +332,32 @@ Step simp lemmas, defeq simp lemmas.
 @[simp] theorem step_right : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩ := IsStep.right
 
 @[simp] theorem ty_well_typed : ValidJudgment ⸨(∶ m.succ.succ) (Ty m.succ) (Ty m)⸩ := ValidJudgment.ty
+
+theorem id_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
+  → ValidJudgment ⸨(∶ m) α x⸩
+  → ValidJudgment ⸨(∶ m) α ⸨(id m) α x⸩⸩ := by
+  intro h_t_α h_t_x
+  judge defeq, parapp, app, id
+  exact m
+  exact h_t_α
+  judge ty
+  defeq step
+  step const'
+  exact h_t_x
+  exact h_t_α
+  defeq step
+  step snd
+  defeq trans, left, step
+  step both
+  defeq trans, left, left, step
+  step comp
+  defeq vdash, trans, step
+  step snd
+  defeq refl
+  defeq trans, step
+  step id
+  defeq vdash
+  repeat (defeq refl)
 
 /-
 judge / : : ∀ (α : Type), α → Prop
@@ -349,21 +379,8 @@ theorem judge_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   step snd
   defeq refl
   unfold mk_assert_out
-  defeq vdash, vdash, refl, refl, refl
-
-/-
-pi : (Prop → Prop) → (Prop → Prop → Prop) → (Type 1)
--/
-/-theorem pi_well_typed : ValidJudgment ⸨(∶ 1) (mk_arrow Prp Prp 0 0) t_in⸩
-  → ValidJudgment ⸨(∶ 1) (mk_arrow Prp (mk_arrow Prp Prp 0 0) 0 1) t_out⸩
-  → ValidJudgment ⸨(∶ 2) (Ty 1) ⸨Pi t_in t_out⸩⸩ := by
-  intro h_t_in h_t_out
-  judge defeq, parapp, defeq, app, pi
-  exact h_t_in
-  simp [mk_arrow]
-  unfold mk_assert_in
-  judge defeq, parapp, app, pi, ty
--/
+  defeq vdash, refl, vdash
+  repeat (defeq refl)
 
 theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   → ValidJudgment ⸨(∶ n.succ) (Ty n) β⸩
@@ -417,7 +434,8 @@ theorem const'_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
     step fst
     defeq trans, left, left, right, step
     step snd
-    defeq vdash, trans, step
+    defeq vdash, refl, trans, step
     step id
-    defeq vdash, vdash, vdash, refl, refl, refl, refl, refl
+    defeq vdash, refl, vdash, refl, vdash
+    repeat (defeq refl)
 

@@ -152,7 +152,7 @@ def const.type (m n : Level) : Expr :=
   let β.α := Expr.snd
   let β.const := (⸨(const' 0 0) Prp Prp⸩ ∘ β.α)
   let β.const_out := (mk_assert_out (Ty n) n.succ)
-  let β := (⸨flip_pi β.const_out⸩ ∘ β.const)
+  let β := (⸨(∶ 2) (Ty 1)⸩ ∘ (⸨flip_pi β.const_out⸩ ∘ β.const))
 
   let return_pi := ⸨Pi
       ⸨⊢ ⸨(∶ n.succ.succ) (Ty n.succ) (Ty n)⸩⸩ -- apply β x
@@ -467,14 +467,18 @@ theorem const_well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩
   exact m
   exact n
   exact h_t_α
-  judge ty
   defeq step
   step const'
   defeq refl
   exact h_t_β
   unfold mk_arrow
   simp
-  judge defeq, parapp, defeq, app, pi
-  
+  defeq trans, step
+  step comp
+  defeq trans, right, step
+  step comp
+  defeq right, trans, step
+  step flip
+  defeq left
   
   sorry

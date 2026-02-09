@@ -76,14 +76,21 @@ def comp (α β γ : Expr) (m n o : Level) (f g : Expr) : Expr :=
   let γ' := ⸨(const' 1 m) t_γ α γ⸩
   let t_f := ⸨Pi β ⸨(const' 1 0) t_γ Prp γ⸩⸩
 
-  ⸨(both m n o)
-    α
-    β'
-    γ'
-    ⸨(const' 1 0) t_f α f⸩
-    g⸩
+  ⸨(both m n o) α β' γ' ⸨(const' 1 0) t_f α f⸩ g⸩
 
-infixr:90 " ∘ " => (fun f g => ⸨Expr.comp f g⸩)
+/-
+Dependent C / flip.
+  C x y z = x z y
+  C : ∀ (x : α) (β : Type) (γ : α → β → Type) (f : ∀ (x : α)
+        (y : β), γ x y) (y : β) (z : α), γ z y
+
+  Sx(Ky)z = Cxyz
+-/
+def flip' (α β γ : Expr) (m n o : Level) (f y : Expr) :=
+  let β' := ⸨(const' n.succ m) (Ty n) α β⸩
+  let y' := ⸨(const' n m) β α y⸩
+  ⸨(both m n o) α β' γ f y'⸩
+
 
 /-
 None of the terms we introduced above have step rules except for composition, app
@@ -92,9 +99,8 @@ and sapp.
 inductive IsStep : Expr → Expr → Prop
   | id     : IsStep ⸨(Expr.id m) _α x⸩ x
   | both   : IsStep ⸨(both m n o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
-  | flip   : IsStep ⸨(Expr.flip m n o) _α _β _γ x y z⸩ ⸨x z y⸩
+  | const  : IsStep ⸨(const m n ) _α _β x y⸩ x
   | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
-  | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
   | fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
   | snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
   | left   : IsStep f f'

@@ -1,12 +1,6 @@
 import Mathlib.Data.Nat.Notation
 import Mathlib.Tactic
 
-/-
-Refactor notes:
-
-⊢ feels less ergonomic than I want it to be, and potentially dangerous.
--/
-
 abbrev Level := ℕ
 
 inductive Expr where
@@ -18,11 +12,19 @@ inductive Expr where
   | prop  : Expr -- only inhabited by ⊢ and ∶
   | fst   : Expr -- Prop → Prop
   | snd   : Expr -- Prop → Prop
+  | comp  : Expr -- (Prop → Prop) → (Prop → Prop) → Prop → Prop
   /-
     The standard SK combinators.
   -/
   | const' : Level → Level → Expr -- α → β → α
   | const  : Level → Level → Expr -- dependent K
+  /-
+    Dependent C / flip from BCKW. comes in handy in some places.
+    C x y z = x z y
+    C : ∀ (x : α) (β : Type) (γ : α → β → Type) (f : ∀ (x : α)
+      (y : β), γ x y) (y : β) (z : α), γ z y
+  -/
+  | flip   : Level → Level → Level → Expr-- dependent C / flip combinator
   /- The dependent S combinator.
     both : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type)
       (f : ∀ (x : α) (y : β x), γ x y)
@@ -45,6 +47,25 @@ macro_rules
   | `(⸨$f:term $x:term⸩) => `(Expr.app $f $x)
   | `(⸨ $f $x:term $args:term*⸩) => `(⸨ (Expr.app $f $x) $args*⸩)
 
+infixr:90 " ∘ " => (fun f g => ⸨Expr.comp f g⸩)
+
+/-
+None of the terms we introduced above have step rules except for composition, app
+and sapp.
+-/
+inductive IsStep : Expr → Expr → Prop
+  | id     : IsStep ⸨(Expr.id m) _α x⸩ x
+  | both   : IsStep ⸨(both m n o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
+  | flip   : IsStep ⸨(Expr.flip m n o) _α _β _γ x y z⸩ ⸨x z y⸩
+  | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
+  | comp   : IsStep ⸨(f ∘ g) x⸩ ⸨f ⸨g x⸩⸩
+  | fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
+  | snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
+  | left   : IsStep f f'
+    → IsStep ⸨f x⸩ ⸨f' x⸩
+  | right  : IsStep x x'
+    → IsStep ⸨f x⸩ ⸨f x'⸩
+
 /-
 Assertions reject the context and just output
 a type of type (Type m).
@@ -64,49 +85,6 @@ def mk_arrow (α β : Expr) (m n : Level) : Expr :=
   let t_in := mk_assert_in α m
 
   ⸨Pi t_in (mk_assert_out β n)⸩
-
-/-
-Dependently-typed B combinator.
-B : ∀ (α β : Type) (γ : β → Type) (f : ∀ (x : β), γ x) (g : α → β) (x : α), γ x
-B f g = S α β (K γ) (K f) g
--/
-def comp (α β γ : Expr) (m n o : Level) (f g : Expr) : Expr :=
-  let t_γ := mk_arrow β (Ty o) n o.succ
-  let β' := ⸨(const' n.succ m) (Ty n) α β⸩
-  let γ' := ⸨(const' 1 m) t_γ α γ⸩
-  let t_f := ⸨Pi β ⸨(const' 1 0) t_γ Prp γ⸩⸩
-
-  ⸨(both m n o) α β' γ' ⸨(const' 1 0) t_f α f⸩ g⸩
-
-/-
-Dependent C / flip.
-  C x y z = x z y
-  C : ∀ (x : α) (β : Type) (γ : α → β → Type) (f : ∀ (x : α)
-        (y : β), γ x y) (y : β) (z : α), γ z y
-
-  Sx(Ky)z = Cxyz
--/
-def flip' (α β γ : Expr) (m n o : Level) (f y : Expr) :=
-  let β' := ⸨(const' n.succ m) (Ty n) α β⸩
-  let y' := ⸨(const' n m) β α y⸩
-  ⸨(both m n o) α β' γ f y'⸩
-
-
-/-
-None of the terms we introduced above have step rules except for composition, app
-and sapp.
--/
-inductive IsStep : Expr → Expr → Prop
-  | id     : IsStep ⸨(Expr.id m) _α x⸩ x
-  | both   : IsStep ⸨(both m n o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
-  | const  : IsStep ⸨(const m n ) _α _β x y⸩ x
-  | const' : IsStep ⸨(const' m n) _α _β x y⸩ x
-  | fst    : IsStep ⸨fst ⸨⊢ t_app judge_f judge_x⸩⸩ judge_f
-  | snd    : IsStep ⸨snd ⸨⊢ t_app judge_f judge_x⸩⸩ judge_x
-  | left   : IsStep f f'
-    → IsStep ⸨f x⸩ ⸨f' x⸩
-  | right  : IsStep x x'
-    → IsStep ⸨f x⸩ ⸨f x'⸩
 
 def ret_pi (the_pi : Expr) : Expr :=
   ⸨⊢ ⸨(∶ 1) (Ty 0) the_pi⸩⸩
@@ -151,6 +129,46 @@ def both_nondep (α β γ : Expr) (m n o : Level) : Expr :=
     α
     ⸨(const' n.succ m) (Ty n) α β⸩
     ⸨(const' m 1) (mk_arrow β (Ty o) n o.succ) α ⸨(const' n o.succ) (Ty o) β γ⸩⸩⸩
+
+/-
+Inserts a (judge : Prop) as the spine
+⊢ spine judge_f judge_x
+
+n binders deep.
+
+⸨(insert_vdash_spine 1 spine') ⸨⊢ spine judge_f judge_x⸩⸩
+-*> ⸨⊢ spine' judge_f judge_x⸩
+-/
+/-def insert_vdash_spine (n_binders : ℕ) : Expr :=
+  -- both ((⊢ spine') ∘ (fst ∘ n_binders*snd) snd
+  -- but we need to create a future both, since we need to inject the spine.
+  -- spine : Prp
+  -- both (both (const both) ((flip_comp fst)
+  List.replicate n_binders (
+  sorry-/
+
+/-
+⸨(insert_vdash_spine 1 spine') ⸨⊢ spine judge_f judge_x⸩⸩
+-*> ⸨⊢ spine' judge_f judge_x⸩
+-/
+/-def insert_vdash_spine (n_binders_deep : ℕ) : Expr :=
+  match n_binders_deep with
+  | .zero =>
+    (⸨flip_comp fst⸩ ∘ ⊢)
+  | .succ n =>
+    let inner := insert_vdash_spine n spine'
+    -- both (both (const both) id) (const snd)
+    -- inner : Prop → Prop → Prop
+    let t_my_spine := Prp
+    -- (insert_vdash_spine 1 spine') takes in a Prp, returns a Prp
+    let t_res := (mk_arrow Prp Prp 0 0)
+    let t_snd := t_res
+    
+
+    ⸨(both_nondep t_my_spine t_snd t_res)
+      ⸨(both_nondep t_my_spine 
+      ⸨(const' (mk_arrow Prp Prp 0 0) Prp) (both_nondep Prp Prp Prp 0 0 0)⸩
+      ⸨(both_nondep t_my_spine-/
 
 /-
 const' : (α : Type m) → (β : Type n) → α → β → α
@@ -354,7 +372,7 @@ inductive ValidJudgment : Expr → Prop
   | vdash : ValidJudgment ⸨(∶ 1) (vdash.type m) ⊢⸩
   | fst   : ValidJudgment ⸨(∶ 1) fst.type fst⸩ -- fst : Prop → Prop
   | snd   : ValidJudgment ⸨(∶ 1) snd.type snd⸩ -- snd : Prop → Prop
-  | prp   : ValidJudgment ⸨(∶ 1) (Ty 0) Prp⸩ -- Prop : Ty 0
+v  | prp   : ValidJudgment ⸨(∶ 1) (Ty 0) Prp⸩ -- Prop : Ty 0
   | ty    : ValidJudgment ⸨(∶ (m.succ.succ)) (Ty m.succ) (Ty m)⸩ -- Ty m : Ty m.succ
   | comp  : ValidJudgment ⸨(∶ 1) comp.type comp⸩
   /-

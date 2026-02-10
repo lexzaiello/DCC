@@ -4,14 +4,19 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    lean4-nix.url = "github:lenianiva/lean4-nix";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, lean4-nix }:
     with flake-utils.lib;
     eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ (lean4-nix.readToolchainFile ./lean-toolchain) ];
+        };
         lib = pkgs.lib;
+        lake2nix = pkgs.callPackage lean4-nix.lake {};
         tex' = pkgs.texlive.combined.scheme-full;
         tex = pkgs.texliveFull.withPackages (ps:
           with ps; [
@@ -138,7 +143,12 @@
         } // builtins.listToAttrs (builtins.map (slide: {
           name = slide.name;
           value = buildslide slide.path;
-        }) slides);
+        }) slides) // {
+          docs = (lake2nix.mkPackage {
+            name = "docs";
+            src = pkgs.lib.cleanSource ./.;
+          });
+        };
         defaultPackage = pkgs.linkFarm "all-documents" ((builtins.map (paper: {
           name = paper.name;
           path = packages.${paper.name};

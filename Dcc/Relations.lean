@@ -146,7 +146,7 @@ inductive IsStep : Expr → Expr → Prop
   | k      : IsStep ⸨K x y⸩ x
   | s      : IsStep ⸨S x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
   | fst    : IsStep ⸨fst ⸨∶ T x⸩⸩ T
-  | snd    : IsStep ⸨snd ⸨∶ T x⸩⸩ ⸨∶ x⸩
+  | snd    : IsStep ⸨snd ⸨∶ T x⸩⸩ x
   | left   : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩
 
@@ -170,36 +170,16 @@ Nondependent interpretation of K.
 
 K : (∶ Prop) → (∶ Prop) → (∶ α (K x y))
 ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩⸩
-
-⊢ may not be necessary. we will see until S.
-
-Note: we don't need to (∶ terms inline every time.
-ValidJudgment can figure this out for us. These are kind of built-in axioms.
-
-we want to make
-
-(∶ α (K (∶ α x)))
-
-we can simplify actually.
-
-(∶ (cod x) (f x))
-
-make
-
-S (K (∶ α)) (S (K ((K (∶ α x))) I))
-
-S (K (∶ α)) (S (K ((K (∶ α x))) I))
-
-S (K (∶ α)) (S (K ((K (∶ α x))) I)) (∶ β y)
-= (∶ α) (((K (∶ α x))) (∶ β y))
-
-S (K (∶ α)) (S (K ((K (∶ α x))) I))
-
-⸨S ⸨S ⸨K S⸩ (K ∘ snd)⸩ (S ∘ ⸨S (K ∘ K) ⸨K I⸩)⸩
 -/
 def K'.type : Expr :=
-  ⸨Π' ⸨∶ Prp⸩
-    (⸨Π' ⸨∶ Prp⸩⸩ ∘ (K ∘ fst))⸩
+  ⸨Π' ⸨∶ Prp⸩ (⸨Π' ⸨∶ Prp⸩⸩ ∘ (K ∘ fst))⸩
+
+/-
+(S (∶ ∘ ((snd judge_x) ∘ fst)) snd)
+K : (judge_x = (∶ Prop)) → (S (∶ ∘ ((snd judge_x) ∘ fst)) snd) → (fst judge_x)
+-/
+def K.type : Expr :=
+  ⸨Π' ⸨∶ Prp⸩ ⸨S (Π' ∘ (S ∘ (⸨B ∶⸩ ∘ (⸨C B fst⸩ ∘ snd)))) (K ∘ fst)⸩⸩
 
 /-
 (: T x) : Prop

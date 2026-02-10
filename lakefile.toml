@@ -1,25 +1,10 @@
-name = "Cm"
+name = "Dcc"
 version = "0.1.0"
-defaultTargets = ["Cm"]
-testDriver = "tests"
-
-[[require]]
-name = "lspec"
-git = "https://github.com/yatima-inc/lspec.git"
-rev = "main"
+defaultTargets = ["Dcc"]
 
 [[lean_lib]]
-name = "Cm"
-
-[[lean_exe]]
-name = "cm"
-root = "Main"
+name = "Dcc"
 
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
-
-[[lean_exe]]
-name = "tests"
-root = "Tests"
-supportInterpreter = true

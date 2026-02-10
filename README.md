@@ -1,2 +1,2 @@
-# DAM - The Dependent Abstract Machine
+# DCC - The Dependent Combinator Calculus
 

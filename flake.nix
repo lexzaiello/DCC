@@ -1,5 +1,5 @@
 {
-  description = "ZK-DTT";
+  description = "DCC";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
@@ -16,7 +16,7 @@
           overlays = [ (lean4-nix.readToolchainFile ./lean-toolchain) ];
         };
         lib = pkgs.lib;
-        lake2nix = pkgs.callPackage lean4-nix.lake {};
+        lake2nix = pkgs.callPackage lean4-nix.lake { };
         tex' = pkgs.texlive.combined.scheme-full;
         tex = pkgs.texliveFull.withPackages (ps:
           with ps; [

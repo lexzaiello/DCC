@@ -202,9 +202,9 @@ inductive ValidJudgment : Expr → Expr → Prop
   | judge : ValidJudgment ⸨∶ judge.type ∶⸩ ∶
   | k'    : ValidJudgment ⸨∶ K'.type K⸩ K
   | k     : ValidJudgment ⸨∶ K.type K⸩ K
-  | defeq : ValidJudgment ⸨∶ t₁ x⸩ x
+  | defeq : ValidJudgment t₁ x
     → DefEq t₁ t₂
-    → ValidJudgment ⸨∶ t₂ x⸩ x
+    → ValidJudgment t₂ x
 
 /-
 Helper macros for proofs about judgments.
@@ -355,24 +355,10 @@ theorem K.preservation : ValidJudgment ⸨∶ Ty α⸩ α
   → ValidJudgment ⸨∶ ⸨β x⸩ y⸩ y
   → ValidJudgment ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ ⸨β x⸩ y⸩⸩⸩ ⸨K ⸨∶ α x⸩ ⸨∶ ⸨β x⸩ y⸩⸩ := by
   intro h_t_α h_t_β h_t_x h_t_y
-  judge defeq, app, defeq, app, k, defeq, app, defeq, app, judge
+  judge defeq, app, defeq, defeq, app, k, defeq, app, defeq, app, judge
   assumption
   simp
   defeq symm, left
-  simp
-  defeq refl
-  assumption
-  defeq trans, left
-  simp
-  defeq refl
-  simp
-  defeq refl
-  simp
-  defeq symm, trans, left
-  simp
-  defeq symm, trans, right
-  simp
-  defeq symm, trans
   
   sorry
 
@@ -385,39 +371,55 @@ theorem K'.preservation : ValidJudgment ⸨∶ Ty α⸩ α
   judge defeq, app, defeq, app, k', defeq, app, defeq, app, judge
   assumption
   simp
+  defeq trans, left, right
+  simp
   defeq symm, trans, left
   simp
   defeq refl
   defeq refl
+  defeq refl
   assumption
-  defeq trans, left
+  defeq trans, left, right, left
   simp
   defeq refl
+  defeq trans, left, right
   simp
   defeq refl
-  simp
   defeq refl
+  simp
+  defeq trans, left, right
+  simp
+  defeq symm, trans, right
+  simp
+  defeq refl, refl, refl
   judge defeq, app, defeq, app, judge
   assumption
   simp
+  defeq trans, left, right
+  simp
   defeq symm, trans, left
   simp
   defeq refl
+  defeq trans, right
+  simp
+  defeq refl
+  defeq refl
   defeq refl
   assumption
-  defeq trans, left
+  defeq trans, left, right
   simp
   defeq refl
+  defeq refl
+  defeq trans, right
   simp
   defeq refl
-  defeq trans, left
+  defeq trans, left, right
   simp
-  defeq refl
-  defeq trans, left, left
-  defeq refl
-  simp
-  defeq symm, trans
-  defeq step
+  defeq symm, step
   step fst
+  defeq symm, trans, right
+  simp
   defeq refl
+  defeq refl
+
 

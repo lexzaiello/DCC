@@ -1,119 +1,5 @@
 /-
-Questions:
 
-- can we avoid universe polymorphism for the base combinators?
-  - offload to (∶ T x : Prop)?
-  - offloading would be very very nice
-- What is a proof of (∶ T x)?
-  - x?
-  - x is a proof of T
-- (∶ T x) : Judgment
-  - Judgment : Prop
-
-K : ∀ (α : Judgment) (β : Judgment), α → β → α
-
-This seems to imply that (K : (∶ Tk K)).
-
-snd (∶ Tα α) = (∶ α),
-
-so we can apply x, and receive a typing judgment.
-
-(∶ α x), then we can compare against the judgment for x.
-
-This also implies that (x : (∶ α x)).
-
-Type universe hierarchy is just for type of type.
-
-(∶ T x) : Prop. This is fine.
-
-(∶ T x) ↔ (Id_{T}, x = x)
-
-snd (∶ Tα α) = (∶ α),
-
-apply x, get (∶ α x).
-
-Then compare this against the judgment for x.
-
-To make this, we still use ⊢. β x
-
-⊢ π₁ π₂ hyp₁ hyp₂ = (∶ ((π₁ hyp₁ hyp₂) (π₂ hyp₁ hyp₂)))
-
-Eval rules:
-1. snd (∶ T x) = (∶ x)
-2. fst (∶ T x) = (∶ TT T)
-3. fst ((f : Pi t_in t_out) (x : α)) = (t_in x)
-4. snd ((f : Pi t_in t_out) (x : α)) = (t_out (t_in x))
-5. ⊢ π₁ π₂ hyp₁ hyp₂ = (∶ ((π₁ hyp₁ hyp₂) (π₂ hyp₁ hyp₂))
-6. S x y z = (x z) (y z)
-   ^ the typing judgments themselves induce evaluation. if they are not well-typed, no reduction.
-7. K x y = x
-
-Can we remove type arguments from K and K' altogether? Almost certainly.
-1. K x y = x,
-
-Can we internalize the typing judgment?
-
-K : Prop → (Prop → Prop) → Prop
-
-⊢ y β x = (∶ (β x) y)
-
-Oh god that is beautiful.
-
-(∶ T) ∘ K, we should be able to infer the judgment from this.
-
-Inference rules:
-
-1. (∶ T x) : Prop
-2. ((f : Pi t_in t_out) x)
-
-: (∶ TT t) x
-^ cannot keep recursing forever, though.
-need base case.
-
-Prop and Type.
-
-K : Pi id
-
-In S, the judgment expression internalizes the condition for strong normalization.
-
-This implies that x = ⊢.
-
-⊢ should do application.
-
-⊢ (∶
-
-What is a proof of (∶ Tk K)?
-
-There is no proof.
-
-Feels like K' shouldn't exist.
-
-K' is just an "interpretation" under (∶.).
-
-Yes, this does mean there are mutliple ValidJudgment.
-
-This means we don't have UIP.
-
-Is ⊢ even necessary?
-
-(∶ could do it with just a fancy reduction rule,
-although ⊢ is nice.
-
-S x y z = (x z) (y z), these are all Props, or maybe they are functions on Prop. ⊢.
-
-Start with K first.
-
-Check if ValidJudgment ⸨∶ α x⸩ x.
-
-K doesn't have type arguments.
-
-Its types just specify "capabilities."
-
-K' : Pi (∶ Prp) (K (∶ ? (Pi (∶ Prp)
-
-fst and snd may not be necessary YET.
-
-Pi t_in t_out : Type
 -/
 
 inductive Expr where
@@ -143,7 +29,8 @@ macro_rules
   | `(⸨ $f $x:term $args:term*⸩) => `(⸨ (Expr.app $f $x) $args*⸩)
 
 inductive IsStep : Expr → Expr → Prop
-  | k      : IsStep ⸨K x y⸩ x
+  | k      : IsStep ⸨K α β x y⸩ x
+  | k'     : IsStep ⸨K x y⸩ x
   | s      : IsStep ⸨S x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
   | fst    : IsStep ⸨fst ⸨∶ T x⸩⸩ T
   | snd    : IsStep ⸨snd ⸨∶ T x⸩⸩ x
@@ -168,18 +55,25 @@ infixr:90 " ∘ " => (fun f g => ⸨B f g⸩)
 /-
 Nondependent interpretation of K.
 
+This is fine, since in dependent K:
+K : ∀ (α : Type) (β : α → Type) (x : α) (y : β x), α,
+
+The type of y is not determined by anything. Its type is not under a ∀ binder.
+It should be inferrable given it is an argument of type Prop.
+
 K : (∶ Prop) → (∶ Prop) → (∶ α (K x y))
 ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩⸩
 -/
-def K'.type : Expr :=
+def K.type : Expr :=
   ⸨Π' ⸨∶ Prp⸩ (⸨Π' ⸨∶ Prp⸩⸩ ∘ (K ∘ fst))⸩
 
 /-
-(S (∶ ∘ ((snd judge_x) ∘ fst)) snd)
-K : (judge_x = (∶ Prop)) → (S (∶ ∘ ((snd judge_x) ∘ fst)) snd) → (fst judge_x)
+x : ∀ (x : α) (y : β x), γ x y
+x ≅ Pi α (S nu
+S : (x = (∶ Prop)) → (∶ 
 -/
-def K.type : Expr :=
-  ⸨Π' ⸨∶ Prp⸩ ⸨S (Π' ∘ (⸨C S snd⸩ ∘ (⸨B ∶⸩ ∘ (⸨C B fst⸩ ∘ snd)))) (K ∘ fst)⸩⸩
+def S.type : Expr :=
+  sorry
 
 /-
 (: T x) : Prop
@@ -200,8 +94,7 @@ inductive ValidJudgment : Expr → Expr → Prop
   | ty    : ValidJudgment ⸨∶ Ty Ty⸩ Ty
   | prp   : ValidJudgment ⸨∶ Ty Prp⸩ Prp
   | judge : ValidJudgment ⸨∶ judge.type ∶⸩ ∶
-  | k'    : ValidJudgment ⸨∶ K'.type K⸩ K
-  | k     : ValidJudgment ⸨∶ K.type K⸩ K
+  | k'    : ValidJudgment ⸨∶ K.type K⸩ K
   | defeq : ValidJudgment t₁ x
     → DefEq t₁ t₂
     → ValidJudgment t₂ x
@@ -252,10 +145,10 @@ macro_rules
   defeq trans, symm
   exact h
   defeq step
-  step k
+  step k'
   intro h
   defeq trans, step
-  step k
+  step k'
   defeq symm
   exact h
 
@@ -269,7 +162,7 @@ macro_rules
   step left, left
   step s
   defeq trans, step
-  step left, left, left, k
+  step left, left, left, k'
   simp
   defeq symm, left
   simp
@@ -280,11 +173,11 @@ macro_rules
   defeq symm, trans, step
   step left, left, s
   defeq trans, left, left, left, step
-  step k
+  step k'
   defeq trans, step
   step s
   defeq left, step
-  step k
+  step k'
 
 @[simp] theorem C.step : DefEq ⸨C x y z⸩ c' ↔ DefEq c' ⸨x z y⸩ := by
   constructor
@@ -352,19 +245,6 @@ theorem defeq.symm : DefEq x y ↔ DefEq y x := ⟨DefEq.symm, DefEq.symm⟩
 theorem K.preservation : ValidJudgment ⸨∶ Ty α⸩ α
   → ValidJudgment ⸨∶ Ty β⸩ β
   → ValidJudgment ⸨∶ α x⸩ x
-  → ValidJudgment ⸨∶ ⸨β x⸩ y⸩ y
-  → ValidJudgment ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ ⸨β x⸩ y⸩⸩⸩ ⸨K ⸨∶ α x⸩ ⸨∶ ⸨β x⸩ y⸩⸩ := by
-  intro h_t_α h_t_β h_t_x h_t_y
-  judge defeq, app, defeq, defeq, app, k, defeq, app, defeq, app, judge
-  assumption
-  simp
-  defeq symm, left
-  
-  sorry
-
-theorem K'.preservation : ValidJudgment ⸨∶ Ty α⸩ α
-  → ValidJudgment ⸨∶ Ty β⸩ β
-  → ValidJudgment ⸨∶ α x⸩ x
   → ValidJudgment ⸨∶ β y⸩ y
   → ValidJudgment ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩⸩ ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩ := by
   intro h_t_α h_t_β h_t_x h_t_y
@@ -421,5 +301,3 @@ theorem K'.preservation : ValidJudgment ⸨∶ Ty α⸩ α
   simp
   defeq refl
   defeq refl
-
-

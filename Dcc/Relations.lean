@@ -145,7 +145,7 @@ macro_rules
 inductive IsStep : Expr → Expr → Prop
   | k      : IsStep ⸨K x y⸩ x
   | s      : IsStep ⸨S x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
-  | fst    : IsStep ⸨fst ⸨∶ T x⸩⸩ t
+  | fst    : IsStep ⸨fst ⸨∶ T x⸩⸩ T
   | snd    : IsStep ⸨snd ⸨∶ T x⸩⸩ ⸨∶ x⸩
   | left   : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩
@@ -199,7 +199,7 @@ S (K (∶ α)) (S (K ((K (∶ α x))) I))
 -/
 def K'.type : Expr :=
   ⸨Π' ⸨∶ Prp⸩
-    (⸨Π' ⸨∶ Prp⸩⸩ ∘ ⸨S ⸨S ⸨K S⸩ (K ∘ snd)⸩ (K ∘ fst)⸩)⸩
+    (⸨Π' ⸨∶ Prp⸩⸩ ∘ (K ∘ fst))⸩
 
 /-
 (: T x) : Prop
@@ -211,10 +211,10 @@ t_out α = ((∶ Prp) ∘ (Pi α))
 : Pi (∶ Ty) (S (Pi ∘ (∶)) (S (K (B (∶ Prp))) Pi))
 -/
 def judge.type : Expr :=
-  ⸨Pi ⸨∶ Ty⸩ ⸨S (Pi ∘ (∶)) K⸩⸩
+  ⸨Π' ⸨∶ Ty⸩ ⸨S (Π' ∘ (∶)) ⸨K ⸨K Prp⸩⸩⸩⸩
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | app   : ValidJudgment ⸨∶ ⸨Pi dom cod⸩ f⸩ f
+  | app   : ValidJudgment ⸨∶ ⸨Π' dom cod⸩ f⸩ f
     → ValidJudgment ⸨dom x⸩ x
     → ValidJudgment ⸨∶ ⸨cod x⸩ ⸨f x⸩⸩ ⸨f x⸩
   | ty    : ValidJudgment ⸨∶ Ty Ty⸩ Ty
@@ -305,6 +305,10 @@ macro_rules
   defeq left, step
   step k
 
+theorem defeq.refl : DefEq x x := DefEq.refl
+
+theorem defeq.symm : DefEq x y ↔ DefEq y x := ⟨DefEq.symm, DefEq.symm⟩
+
 theorem K'.preservation : ValidJudgment ⸨∶ Ty α⸩ α
   → ValidJudgment ⸨∶ Ty β⸩ β
   → ValidJudgment ⸨∶ α x⸩ x
@@ -314,6 +318,39 @@ theorem K'.preservation : ValidJudgment ⸨∶ Ty α⸩ α
   judge defeq, app, defeq, app, k', defeq, app, defeq, app, judge
   assumption
   simp
-  defeq symm
-  
-  sorry
+  defeq symm, trans, left
+  simp
+  defeq refl
+  defeq refl
+  assumption
+  defeq trans, left
+  simp
+  defeq refl
+  simp
+  defeq refl
+  simp
+  defeq refl
+  judge defeq, app, defeq, app, judge
+  assumption
+  simp
+  defeq symm, trans, left
+  simp
+  defeq refl
+  defeq refl
+  assumption
+  defeq trans, left
+  simp
+  defeq refl
+  simp
+  defeq refl
+  defeq trans, left
+  simp
+  defeq refl
+  defeq trans, left, left
+  defeq refl
+  simp
+  defeq symm, trans
+  defeq step
+  step fst
+  defeq refl
+

@@ -286,6 +286,65 @@ macro_rules
   defeq left, step
   step k
 
+@[simp] theorem C.step : DefEq ⸨C x y z⸩ c' ↔ DefEq c' ⸨x z y⸩ := by
+  constructor
+  intro h
+  defeq trans, symm
+  exact h
+  defeq trans, left, left
+  simp
+  defeq symm, trans, left
+  simp
+  defeq symm, trans, left
+  simp
+  defeq refl
+  simp
+  defeq symm, trans, left
+  simp
+  defeq refl
+  defeq refl
+  defeq refl
+  defeq trans, left
+  simp
+  defeq symm, trans, left
+  simp
+  defeq refl, refl
+  simp
+  defeq right, symm, trans, left, left
+  simp
+  defeq refl
+  simp
+  defeq refl
+  intro h
+  defeq symm, trans
+  exact h
+  defeq symm, trans, left, left
+  simp
+  defeq symm, trans, left
+  simp
+  defeq symm, trans, left
+  simp
+  defeq refl
+  simp
+  defeq symm, trans, left
+  simp
+  defeq refl
+  defeq refl
+  defeq refl
+  defeq trans, left
+  simp
+  defeq symm, trans, left
+  simp
+  defeq refl
+  defeq trans, right, left
+  simp
+  defeq refl, refl
+  simp
+  defeq symm, trans, right
+  simp
+  defeq refl
+  defeq refl
+
 theorem defeq.refl : DefEq x x := DefEq.refl
 
 theorem defeq.symm : DefEq x y ↔ DefEq y x := ⟨DefEq.symm, DefEq.symm⟩
@@ -295,6 +354,25 @@ theorem K.preservation : ValidJudgment ⸨∶ Ty α⸩ α
   → ValidJudgment ⸨∶ α x⸩ x
   → ValidJudgment ⸨∶ ⸨β x⸩ y⸩ y
   → ValidJudgment ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ ⸨β x⸩ y⸩⸩⸩ ⸨K ⸨∶ α x⸩ ⸨∶ ⸨β x⸩ y⸩⸩ := by
+  intro h_t_α h_t_β h_t_x h_t_y
+  judge defeq, app, defeq, app, k, defeq, app, defeq, app, judge
+  assumption
+  simp
+  defeq symm, left
+  simp
+  defeq refl
+  assumption
+  defeq trans, left
+  simp
+  defeq refl
+  simp
+  defeq refl
+  simp
+  defeq symm, trans, left
+  simp
+  defeq symm, trans, right
+  simp
+  defeq symm, trans
   
   sorry
 

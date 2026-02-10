@@ -179,7 +179,7 @@ def K'.type : Expr :=
 K : (judge_x = (∶ Prop)) → (S (∶ ∘ ((snd judge_x) ∘ fst)) snd) → (fst judge_x)
 -/
 def K.type : Expr :=
-  ⸨Π' ⸨∶ Prp⸩ ⸨S (Π' ∘ (S ∘ (⸨B ∶⸩ ∘ (⸨C B fst⸩ ∘ snd)))) (K ∘ fst)⸩⸩
+  ⸨Π' ⸨∶ Prp⸩ ⸨S (Π' ∘ (⸨C S snd⸩ ∘ (⸨B ∶⸩ ∘ (⸨C B fst⸩ ∘ snd)))) (K ∘ fst)⸩⸩
 
 /-
 (: T x) : Prop
@@ -201,6 +201,7 @@ inductive ValidJudgment : Expr → Expr → Prop
   | prp   : ValidJudgment ⸨∶ Ty Prp⸩ Prp
   | judge : ValidJudgment ⸨∶ judge.type ∶⸩ ∶
   | k'    : ValidJudgment ⸨∶ K'.type K⸩ K
+  | k     : ValidJudgment ⸨∶ K.type K⸩ K
   | defeq : ValidJudgment ⸨∶ t₁ x⸩ x
     → DefEq t₁ t₂
     → ValidJudgment ⸨∶ t₂ x⸩ x
@@ -288,6 +289,14 @@ macro_rules
 theorem defeq.refl : DefEq x x := DefEq.refl
 
 theorem defeq.symm : DefEq x y ↔ DefEq y x := ⟨DefEq.symm, DefEq.symm⟩
+
+theorem K.preservation : ValidJudgment ⸨∶ Ty α⸩ α
+  → ValidJudgment ⸨∶ Ty β⸩ β
+  → ValidJudgment ⸨∶ α x⸩ x
+  → ValidJudgment ⸨∶ ⸨β x⸩ y⸩ y
+  → ValidJudgment ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ ⸨β x⸩ y⸩⸩⸩ ⸨K ⸨∶ α x⸩ ⸨∶ ⸨β x⸩ y⸩⸩ := by
+  
+  sorry
 
 theorem K'.preservation : ValidJudgment ⸨∶ Ty α⸩ α
   → ValidJudgment ⸨∶ Ty β⸩ β

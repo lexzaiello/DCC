@@ -149,6 +149,13 @@ inductive IsStep : Expr → Expr → Prop
   | left   : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩
 
+inductive DefEq : Expr → Expr → Prop
+  | refl    : DefEq a a
+  | step    : IsStep e e' → DefEq e e'
+  | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
+  | left    : DefEq f f'  → DefEq ⸨f x⸩ ⸨f' x⸩
+  | right   : DefEq x x'  → DefEq ⸨f x⸩ ⸨f x'⸩
+
 abbrev B := ⸨S ⸨K S⸩ K⸩
 abbrev C := ⸨S ⸨S ⸨K ⸨S ⸨K S⸩ K⸩⸩ S⸩ ⸨K K⸩⸩
 abbrev I := ⸨S K K⸩
@@ -187,10 +194,23 @@ def K'.type : Expr :=
   ⸨Π' ⸨∶ Prp⸩
     (⸨Π' ⸨∶ Prp⸩⸩ ∘ ⸨S ⸨S ⸨K S⸩ (K ∘ snd)⸩ (S ∘ ⸨S (K ∘ K) ⸨K I⸩⸩)⸩)⸩
 
+/-
+(: T x) : Prop
+
+∶ : Pi (∶ Ty) (S (Pi ∘ (∶)) t_out)
+
+t_out α = ((∶ Prp) ∘ (Pi α))
+
+: Pi (∶ Ty) (S (Pi ∘ (∶)) (S (K (B (∶ Prp))) Pi))
+-/
+def judge.type : Expr :=
+  ⸨Pi ⸨∶ Ty⸩ ⸨S (Pi ∘ (∶)) ⸨S ⸨K ⸨B ⸨∶ Prp⸩⸩⸩ Pi⸩⸩⸩
+
 inductive ValidJudgment : Expr → Expr → Prop
-  | app : ValidJudgment ⸨∶ ⸨Pi dom cod⸩ f⸩ f
+  | app   : ValidJudgment ⸨∶ ⸨Pi dom cod⸩ f⸩ f
     → ValidJudgment ⸨dom x⸩ x
     → ValidJudgment ⸨cod x⸩ ⸨f x⸩
-  | ty  : ValidJudgment ⸨∶ Ty Ty⸩ Ty
-  | prp : ValidJudgment ⸨∶ Ty Prp⸩ Prp
-  | k'  : ValidJudgment ⸨∶ K'.type K⸩ K
+  | ty    : ValidJudgment ⸨∶ Ty Ty⸩ Ty
+  | prp   : ValidJudgment ⸨∶ Ty Prp⸩ Prp
+  | judge : ValidJudgment ⸨∶ judge.type ∶⸩ ∶
+  | k'    : ValidJudgment ⸨∶ K'.type K⸩ K

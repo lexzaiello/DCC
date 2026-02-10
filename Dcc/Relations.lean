@@ -152,6 +152,8 @@ inductive IsStep : Expr → Expr → Prop
 
 inductive DefEq : Expr → Expr → Prop
   | refl    : DefEq a a
+  | symm    : DefEq e e'
+    → DefEq e' e
   | step    : IsStep e e' → DefEq e e'
   | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
   | left    : DefEq f f'  → DefEq ⸨f x⸩ ⸨f' x⸩
@@ -251,9 +253,67 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
-theorem K'.preservation : ValidJudgment ⸨∶ α x⸩ x
+@[simp] theorem S.step : DefEq ⸨S x y z⸩ s' ↔ DefEq s' ⸨⸨x z⸩ ⸨y z⸩⸩ := by
+  constructor
+  intro h
+  defeq symm, trans, symm, step
+  step s
+  exact h
+  intro h
+  defeq trans, step
+  step s
+  defeq symm
+  assumption
+
+@[simp] theorem K.step : DefEq ⸨K x y⸩ k' ↔ DefEq k' x := by
+  constructor
+  intro h
+  defeq trans, symm
+  exact h
+  defeq step
+  step k
+  intro h
+  defeq trans, step
+  step k
+  defeq symm
+  exact h
+
+@[simp] theorem B.step : DefEq ⸨B f g x⸩ b' ↔ DefEq b' ⸨f ⸨g x⸩⸩ := by
+  constructor
+  intro h
+  defeq trans, symm
+  exact h
+  defeq trans, step
+  unfold B
+  step left, left
+  step s
+  defeq trans, step
+  step left, left, left, k
+  simp
+  defeq symm, left
+  simp
+  defeq refl
+  intro h
+  defeq symm, trans
+  exact h
+  defeq symm, trans, step
+  step left, left, s
+  defeq trans, left, left, left, step
+  step k
+  defeq trans, step
+  step s
+  defeq left, step
+  step k
+
+theorem K'.preservation : ValidJudgment ⸨∶ Ty α⸩ α
+  → ValidJudgment ⸨∶ Ty β⸩ β
+  → ValidJudgment ⸨∶ α x⸩ x
   → ValidJudgment ⸨∶ β y⸩ y
   → ValidJudgment ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩⸩ ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩ := by
-  intro h_t_x h_t_y
-  judge defeq, app
+  intro h_t_α h_t_β h_t_x h_t_y
+  judge defeq, app, defeq, app, k', defeq, app, defeq, app, judge
+  assumption
+  simp
+  defeq symm
+  
   sorry

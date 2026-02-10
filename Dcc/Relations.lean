@@ -145,6 +145,7 @@ macro_rules
 inductive IsStep : Expr → Expr → Prop
   | k      : IsStep ⸨K x y⸩ x
   | s      : IsStep ⸨S x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
+  | fst    : IsStep ⸨fst ⸨∶ T x⸩⸩ t
   | snd    : IsStep ⸨snd ⸨∶ T x⸩⸩ ⸨∶ x⸩
   | left   : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩
@@ -177,6 +178,10 @@ we want to make
 
 (∶ α (K (∶ α x)))
 
+we can simplify actually.
+
+(∶ (cod x) (f x))
+
 make
 
 S (K (∶ α)) (S (K ((K (∶ α x))) I))
@@ -192,7 +197,7 @@ S (K (∶ α)) (S (K ((K (∶ α x))) I))
 -/
 def K'.type : Expr :=
   ⸨Π' ⸨∶ Prp⸩
-    (⸨Π' ⸨∶ Prp⸩⸩ ∘ ⸨S ⸨S ⸨K S⸩ (K ∘ snd)⸩ (S ∘ ⸨S (K ∘ K) ⸨K I⸩⸩)⸩)⸩
+    (⸨Π' ⸨∶ Prp⸩⸩ ∘ ⸨S ⸨S ⸨K S⸩ (K ∘ snd)⸩ (K ∘ fst)⸩)⸩
 
 /-
 (: T x) : Prop
@@ -204,13 +209,51 @@ t_out α = ((∶ Prp) ∘ (Pi α))
 : Pi (∶ Ty) (S (Pi ∘ (∶)) (S (K (B (∶ Prp))) Pi))
 -/
 def judge.type : Expr :=
-  ⸨Pi ⸨∶ Ty⸩ ⸨S (Pi ∘ (∶)) ⸨S ⸨K ⸨B ⸨∶ Prp⸩⸩⸩ Pi⸩⸩⸩
+  ⸨Pi ⸨∶ Ty⸩ ⸨S (Pi ∘ (∶)) K⸩⸩
 
 inductive ValidJudgment : Expr → Expr → Prop
   | app   : ValidJudgment ⸨∶ ⸨Pi dom cod⸩ f⸩ f
     → ValidJudgment ⸨dom x⸩ x
-    → ValidJudgment ⸨cod x⸩ ⸨f x⸩
+    → ValidJudgment ⸨∶ ⸨cod x⸩ ⸨f x⸩⸩ ⸨f x⸩
   | ty    : ValidJudgment ⸨∶ Ty Ty⸩ Ty
   | prp   : ValidJudgment ⸨∶ Ty Prp⸩ Prp
   | judge : ValidJudgment ⸨∶ judge.type ∶⸩ ∶
   | k'    : ValidJudgment ⸨∶ K'.type K⸩ K
+  | defeq : ValidJudgment ⸨∶ t₁ x⸩ x
+    → DefEq t₁ t₂
+    → ValidJudgment ⸨∶ t₂ x⸩ x
+
+/-
+Helper macros for proofs about judgments.
+-/
+
+syntax "defeq" ident,*        : tactic
+syntax "step" ident,*         : tactic
+syntax "judge" ident,*         : tactic
+
+macro_rules
+  | `(tactic| defeq $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `DefEq name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| step $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `IsStep name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| judge $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+
+theorem K'.preservation : ValidJudgment ⸨∶ α x⸩ x
+  → ValidJudgment ⸨∶ β y⸩ y
+  → ValidJudgment ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩⸩ ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩ := by
+  intro h_t_x h_t_y
+  judge defeq, app
+  sorry

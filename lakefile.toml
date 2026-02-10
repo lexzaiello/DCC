@@ -16,7 +16,7 @@ rev = "v4.26.0"
 [[require]]
 name = "verso"
 git = "https://github.com/leanprover/verso"
-rev = "v4.26.0"
+rev = "v4.26.0-rc2"
 
 [[lean_exe]]
 name = "docs"

@@ -147,10 +147,15 @@
           docs = (lake2nix.mkPackage {
             name = "docs";
             src = ./.;
-            depOverride = {
+            depOverride.subservo = {
               buildDeps = [pkgs.nodejs_20];
               nativeBuildDeps = [pkgs.nodejs_20];
             };
+            depOverride.widgetJsAll2K = {
+              buildDeps = [pkgs.nodejs_20];
+              nativeBuildDeps = [pkgs.nodejs_20];
+            };
+            staticLibDeps = [pkgs.nodejs_20];
           });
         };
         defaultPackage = pkgs.linkFarm "all-documents" ((builtins.map (paper: {

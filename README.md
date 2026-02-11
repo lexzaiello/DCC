@@ -4,4 +4,10 @@ The DCC is an extensional, dependently-typed combinator calculus. It is based on
 
 ## Docs
 
-To view the documentation, 
+To view the documentation, use:
+
+```shell
+nix run .#serve
+```
+
+If the docs are not up-to-date, please run `lake build`.

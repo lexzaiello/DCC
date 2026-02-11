@@ -101,18 +101,18 @@
             '';
           });
         papers = [
-          {
-            name = "paper";
-            path = "papers/paper";
-          }
-          {
-            name = "adapting_equations";
-            path = "papers/adapting_equations";
-          }
-          {
-            name = "lit_review";
-            path = "papers/lit_review";
-          }
+          #{
+          #  name = "paper";
+          #  path = "papers/paper";
+          #}
+          #{
+          #  name = "adapting_equations";
+          #  path = "papers/adapting_equations";
+          #}
+          #{
+          #  name = "lit_review";
+          #  path = "papers/lit_review";
+          #}
           #{ name = "infer_rule"; path = "papers/infer_rule"; }
         ];
         slides = [
@@ -124,14 +124,14 @@
           #  name = "dcc_overview";
           #  path = "slides/dcc_overview";
           #}
-          {
-            name = "comparison";
-            path = "slides/comparison";
-          }
+          #{
+          #  name = "comparison";
+          #  path = "slides/comparison";
+          #}
         ];
       in rec {
         devShells.default =
-          pkgs.mkShell { buildInputs = [ pkgs.coreutils tex elan ]; };
+          pkgs.mkShell { buildInputs = [ pkgs.coreutils tex ]; };
         packages = builtins.listToAttrs (builtins.map (paper: {
           name = paper.name;
           value = buildtex paper.path;

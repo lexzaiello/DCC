@@ -148,6 +148,11 @@
             name = "docs";
             src = ./.;
           });
+          serve = pkgs.writeShellApplication {
+          name = "serve";
+          runtimeInputs = [ pkgs.python3 ];
+          text = ''python3 -m http.server 8000 -d ./_out/html-multi'';
+          };
         };
         defaultPackage = pkgs.linkFarm "all-documents" ((builtins.map (paper: {
           name = paper.name;
@@ -156,5 +161,9 @@
           name = slide.name;
           path = packages.${slide.name};
         }) slides));
+        apps.serve = {
+          type = "app";
+          program = "${self.packages.${system}.serve}/bin/serve";
+        };
       });
 }

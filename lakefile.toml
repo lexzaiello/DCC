@@ -18,6 +18,12 @@ name = "verso"
 git = "https://github.com/leanprover/verso"
 rev = "v4.26.0-rc2"
 
+[[require]]
+name = "subverso"
+git = "https://github.com/leanprover/subverso"
+rev = "2aa08940ec078fdf3d4c168bf60091d07ccccbfb"
+
 [[lean_exe]]
 name = "docs"
 root = "Main"
+srcDir = "."

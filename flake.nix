@@ -9,7 +9,7 @@
 
   outputs = { self, nixpkgs, flake-utils, lean4-nix }:
     with flake-utils.lib;
-    eachDefaultSystem (system:
+    eachSystem [system.x86_64-linux] (system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -146,7 +146,7 @@
         }) slides) // {
           docs = (lake2nix.mkPackage {
             name = "docs";
-            src = pkgs.lib.cleanSource ./.;
+            src = ./.;
           });
         };
         defaultPackage = pkgs.linkFarm "all-documents" ((builtins.map (paper: {

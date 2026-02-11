@@ -9,8 +9,9 @@ name = "Dcc"
 name = "Docs"
 
 [[require]]
-name = "subverso"
-git = "https://github.com/lexzaiello/subverso"
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.26.0"
 
 [[require]]
 name = "verso"

@@ -20,8 +20,7 @@ rev = "v4.26.0-rc2"
 
 [[require]]
 name = "subverso"
-git = "https://github.com/leanprover/subverso"
-rev = "2aa08940ec078fdf3d4c168bf60091d07ccccbfb"
+git = "https://github.com/lexzaiello/subverso"
 
 [[lean_exe]]
 name = "docs"

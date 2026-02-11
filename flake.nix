@@ -4,19 +4,16 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    lean4-nix.url = "github:lenianiva/lean4-nix";
   };
 
-  outputs = { self, nixpkgs, flake-utils, lean4-nix }:
+  outputs = { self, nixpkgs, flake-utils }:
     with flake-utils.lib;
     eachSystem [system.x86_64-linux] (system:
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [ (lean4-nix.readToolchain { toolchain = "leanprover/lean4:v4.26.0"; binary = true; }) ];
         };
         lib = pkgs.lib;
-        lake2nix = pkgs.callPackage lean4-nix.lake { };
         tex' = pkgs.texlive.combined.scheme-full;
         tex = pkgs.texliveFull.withPackages (ps:
           with ps; [
@@ -134,7 +131,7 @@
         ];
       in rec {
         devShells.default =
-          pkgs.mkShell { buildInputs = [ pkgs.coreutils tex ]; };
+          pkgs.mkShell { buildInputs = [ pkgs.coreutils tex elan ]; };
         packages = builtins.listToAttrs (builtins.map (paper: {
           name = paper.name;
           value = buildtex paper.path;
@@ -144,10 +141,6 @@
           name = slide.name;
           value = buildslide slide.path;
         }) slides) // {
-          docs = (lake2nix.mkPackage {
-            name = "docs";
-            src = ./.;
-          });
           serve = pkgs.writeShellApplication {
           name = "serve";
           runtimeInputs = [ pkgs.python3 ];

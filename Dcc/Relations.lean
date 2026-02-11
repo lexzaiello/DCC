@@ -64,7 +64,7 @@ It should be inferrable given it is an argument of type Prop.
 K : (∶ Prop) → (∶ Prop) → (∶ α (K x y))
 ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩⸩
 -/
-def K.type : Expr :=
+def K'.type : Expr :=
   ⸨Π' ⸨∶ Prp⸩ (⸨Π' ⸨∶ Prp⸩⸩ ∘ (K ∘ fst))⸩
 
 /-
@@ -94,7 +94,7 @@ inductive ValidJudgment : Expr → Expr → Prop
   | ty    : ValidJudgment ⸨∶ Ty Ty⸩ Ty
   | prp   : ValidJudgment ⸨∶ Ty Prp⸩ Prp
   | judge : ValidJudgment ⸨∶ judge.type ∶⸩ ∶
-  | k'    : ValidJudgment ⸨∶ K.type K⸩ K
+  | k'    : ValidJudgment ⸨∶ K'.type K⸩ K
   | defeq : ValidJudgment t₁ x
     → DefEq t₁ t₂
     → ValidJudgment t₂ x

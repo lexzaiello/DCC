@@ -6,6 +6,8 @@ Author: David Thrane Christiansen
 
 import VersoManual
 
+import Dcc
+
 -- This gets access to most of the manual genre
 open Verso.Genre Manual
 
@@ -19,21 +21,24 @@ open Verso.Code.External
 
 set_option pp.rawOnError true
 
--- This is the source of code examples to be shown in the document. It should be relative to the
--- current Lake workspace. One good way to set up the files is in a Git repository that contains one
--- Lake package for example code and another for the docs, as sibling directories.
-set_option verso.exampleProject "./."
-
 -- This is the module that will be consulted for example code. It can be overridden using the
 -- `(module := ...)` argument to most elements that show code.
-set_option verso.exampleModule "Dcc"
+set_option verso.exampleProject "./"
+set_option verso.exampleModule "Dcc.Relations"
 
 #doc (Manual) "DCC: The Dependently-typed Combinator Calculus" =>
 %%%
 authors := ["Alexandra Aiello"]
-shortTitle := "DCC"
+shortTitle := "The Dependently-typed Combinator Calculus"
 %%%
 
 {index}[DCC]
 Reference and explainer of the Dependently-typed Combinator Calculus (DCC).
 
+# Index
+%%%
+number := false
+tag := "index"
+%%%
+
+{theIndex}

@@ -13,7 +13,7 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [ (lean4-nix.readToolchainFile ./lean-toolchain) ];
+          overlays = [ (lean4-nix.readToolchain { toolchain = "leanprover/lean4:v4.26.0"; binary = true; }) ];
         };
         lib = pkgs.lib;
         lake2nix = pkgs.callPackage lean4-nix.lake { };

@@ -1,123 +1,3 @@
-/-
-Application is, in some sense, interpretation of our combinators.
-
-K does not supply new proof information, so application is not required.
-β x.
-
-TODO:
-- correct ValidJudgment proofs using new inference rules
-- fix simp lemmas so as to be cleaner
-- S type
- -  S induces application, so we will need to decide how that works
-- What is a proof of ∶ T x?
-  - The ValidJudgment constructor
-  - We should be able to refer to these by names, though
-  - This suggests we should be able to improve the judgment rule for app
-
-(∶ interpretation term), term is the proof.
-
-⊢ reduced interpretation₁ interpretation₂
-
-⊢ goal fn x
-
-- our current calculus reduction rules are quite unrestricted.
-we want the typing judgments to be essentially elided after one layer
-so that we can use normal SK.
-
-Note:
-⊢ goal f x should somehow carry its components down
-
-⊢ goal f x can be replaced with just
-
-(∶ (Pi
-
-⊢ gets encoded in the rule for S itself.
-
-S should encode its requirements in its reduction rule.
-
-K should stya the same. It doesn't care.
-
-⊢ (∶ Ttf Tf) (∶ Ttx Tx) (f : Tf) (x : Tx)
-
-Ideas:
-- only encode typing judgments at the highest level of application
-- reduction rules carry these down
-- this happens inside the rule for S
-- also happens in the judgment rule for app
-- we should assume in app rule that Pi has already been substituted.
-- it would be cool to be able to explicit supply proofs of ∶ T x
-  - although these should be inferrable by the type-checker
-
-ValidJudgment f ⸨Pi cod dom⸩
-ValidJudgment x cod
-ValidJudgment ⸨f x⸩ ⸨∶ ⸨dom x⸩ ⸨f x⸩⸩ ⸨f x⸩
-
-S (∶ Pi Tx cod) (∶ (Pi Tx cod)) (∶ Tx x)
-
-Then, S.type becomes
-
-Prop → Prop → Prop → Prop
-
-⊢ becomes unnecessary. we can also encode the dependency in K's reduction rule, I think,
-although this is also unnecessary.
-
-We also ought to improve substitution for Pi
-
-so that we don't need to invoke S in the type for K.
-
-K : Prop → Prop → Prop.
-
-fst / snd have no use now.
-
-fst / snd are just Prop → Prop → Prop, respectively.
-
-snd : (Prop → Prop) → Prop → Prop
-fst : Prop → Prop
-
-Then, Pi becomes substitution as we always thought.
-
-Composition is pretty natural on snd / fst now.
-
-Composition is not necessary, since π is an argument to snd.
-
-K : Pi (: Ty Prop) (Pi (snd fst) K)
-
-This suggests that fst and snd should work on types.
-
-- we should have some clever reduction rule for judgments.
-- we substitute just x in. term, not its type.
-
-this removes need for fst / snd.
-
-Pi substitution rule should not substitute dom.
-
-we should make this on-demand with S.
-
-position of judgments feels like it changes form in to out,
-but this is fine, since it mirrors the substitution rule.
-
-S isn't guaranteed to produce a not-stuck expression
-even if we type-check it.
-
-we need to make sure that f and g line up better.
-
-S as out type still makes sense, but g and x
-should be term arguments, not prop.
-
-This suggests, again, that the sustitution rule should be upgraded.
-
-fst and snd should be operations on judgments
-
-if we can get fst on Pi, that would be nice, too.
-
-It would be really nice for Pi to take Prop arguments.
-we can do that.
-
-fst (∶ α x) = (∶ Ty α)
-
-fst should also work on Pi, probably.
--/
-
 inductive Expr where
   | Pi    : Expr
   | S     : Expr
@@ -145,11 +25,7 @@ macro_rules
 
 inductive IsStep : Expr → Expr → Prop
   | k      : IsStep ⸨K x y⸩ x
-  | s      : IsStep ⸨S ⸨∶ ⸨Pi α cod⸩ f⸩ ⸨∶ ⸨Pi α cod⸩ g⸩ ⸨∶ α x⸩⸩
-    ⸨∶
-      ⸨cod ⸨∶ α x⸩ ⸨g ⸨∶ α x⸩⸩⸩
-      ⸨f ⸨∶ α x⸩ ⸨g ⸨∶ α x⸩⸩⸩
-    ⸩
+  | s      : IsStep ⸨S ⸨∶ ⸨Pi α β⸩ f⸩ g x⸩ ⸨f x ⸨g x⸩⸩
   | i      : IsStep ⸨I x⸩ x
   | fst    : IsStep ⸨fst π ⸨∶ α x⸩⸩ ⸨π ⸨∶ Ty α⸩⸩
   | snd    : IsStep ⸨snd π ⸨∶ α x⸩⸩ ⸨π x⸩
@@ -172,40 +48,35 @@ K type:
   K : Prop → Prop → Prop
   K x y = x
 -/
-def K'.type : Expr :=
-  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨K ⸨∶ Ty Prp⸩⸩ K⸩⸩
+def K.type : Expr :=
+  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨K ⸨∶ Ty Prp⸩⸩ ⸨K ⸨K ⸨∶ Ty Prp⸩⸩⸩⸩⸩
+
+/-
+I type:
+  I : Prop → Prop
+-/
+def I.type : Expr :=
+  ⸨Π' ⸨∶ Ty Prp⸩ ⸨K ⸨∶ Ty Prp⸩⸩⸩
 
 /-
 S type:
-  S : (x : Prop) → (fst x : Prp) → Prop → Prop
+  S : (f : Prp) → (g : (fst x : Prp)) → (x : ((K ∘ fst ∘ fst) f : Prp)) → (((S ∘ snd) x) x (g x) : Prp)
   fst x is a Pi type, Pi dom cod. fst fst x is α in (x : α)
   S (∶ (Pi α cod) f) (∶ (Pi α cod) g) (∶ α x) = (∶
     (cod (∶ α x) (g (∶ α x)))
     (f (∶ α x) (g (∶ α x))))
 -/
 def S.type : Expr :=
-  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨fst I⸩ ⸨Π' ⸨fst ⸨fst K⸩⸩ S⸩⸩⸩
-
-/-
-(: T x) : Prop
-
-∶ : Pi (∶ Ty) (S (Pi ∘ (∶)) t_out)
-
-t_out α = ((∶ Prp) ∘ (Pi α))
-
-: Pi (∶ Ty) (S (Pi ∘ (∶)) (S (K (B (∶ Prp))) Pi))
--/
-def judge.type : Expr :=
-  ⸨Π' ⸨∶ Ty⸩ ⸨S (Π' ∘ (∶)) ⸨K ⸨K Prp⸩⸩⸩⸩
+  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨fst I⸩ ⸨Π' ⸨fst ⸨fst K⸩⸩ ⸨snd S⸩⸩⸩⸩
 
 inductive ValidJudgment : Expr → Expr → Prop
   | app   : ValidJudgment ⸨∶ ⸨Π' dom cod⸩ f⸩ f
-    → ValidJudgment ⸨∶ dom x⸩ x
+    → ValidJudgment dom x
     → ValidJudgment ⸨∶ ⸨cod x⸩ ⸨f x⸩⸩ ⸨f x⸩
   | ty    : ValidJudgment ⸨∶ Ty Ty⸩ Ty
   | prp   : ValidJudgment ⸨∶ Ty Prp⸩ Prp
-  | judge : ValidJudgment ⸨∶ judge.type ∶⸩ ∶
-  | k'    : ValidJudgment ⸨∶ K'.type K⸩ K
+  | k     : ValidJudgment ⸨∶ K.type K⸩ K
+  | s     : ValidJudgment ⸨∶ S.type S⸩ S
   | defeq : ValidJudgment t₁ x
     → DefEq t₁ t₂
     → ValidJudgment t₂ x

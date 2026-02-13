@@ -1,3 +1,12 @@
+/-
+We might want to just keep current K and add other K.
+Type becomes annoying, though.
+
+K : Pi (∶ Ty Prp) (Pi (Pi I)
+
+Other potential is that we can make fst downgrade.
+-/
+
 inductive Expr where
   | Pi    : Expr
   | S     : Expr
@@ -25,13 +34,13 @@ macro_rules
 
 inductive IsStep : Expr → Expr → Prop
   | k      : IsStep ⸨K x y⸩ x
-  | s      : IsStep ⸨S ⸨∶ ⸨Pi α β⸩ f⸩ g x⸩ ⸨f x ⸨g x⸩⸩
+  | s      : IsStep ⸨S ⸨∶ ⸨Π' α β⸩ f⸩ g x⸩ ⸨f x ⸨g x⸩⸩
   | i      : IsStep ⸨I x⸩ x
-  | fst    : IsStep ⸨fst π ⸨∶ α x⸩⸩ ⸨π ⸨∶ Ty α⸩⸩
+  | fst    : IsStep ⸨fst π ⸨∶ α x⸩⸩ ⸨π α⸩
   | snd    : IsStep ⸨snd π ⸨∶ α x⸩⸩ ⸨π x⸩
   | fstπ   : IsStep ⸨fst π ⸨Π' dom cod⸩⸩ ⸨π dom⸩
   | sndπ   : IsStep ⸨snd π ⸨Π' dom cod⸩⸩ ⸨π cod⸩
-  | pi     : IsStep ⸨⸨Pi dom cod⸩ x⸩ ⸨Pi ⸨dom x⸩ ⸨cod x⸩⸩
+  | pi     : IsStep ⸨⸨Π' dom cod⸩ x⸩ ⸨Π' ⸨dom x⸩ ⸨cod x⸩⸩
   | left   : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩
 
@@ -49,7 +58,7 @@ K type:
   K x y = x
 -/
 def K.type : Expr :=
-  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨K ⸨∶ Ty Prp⸩⸩ ⸨K ⸨K ⸨∶ Ty Prp⸩⸩⸩⸩⸩
+  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨K ⸨∶ Ty Prp⸩⸩ ⸨fst K⸩⸩⸩
 
 /-
 I type:
@@ -70,16 +79,14 @@ def S.type : Expr :=
   ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨fst I⸩ ⸨Π' ⸨fst ⸨fst K⸩⸩ ⸨snd S⸩⸩⸩⸩
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | app   : ValidJudgment ⸨∶ ⸨Π' dom cod⸩ f⸩ f
-    → ValidJudgment dom x
+  | app   : ValidJudgment ⸨∶ ⸨Π' ⸨∶ Tα α⸩ cod⸩ f⸩ f
+    → ValidJudgment ⸨∶ α x⸩ x
     → ValidJudgment ⸨∶ ⸨cod x⸩ ⸨f x⸩⸩ ⸨f x⸩
   | ty    : ValidJudgment ⸨∶ Ty Ty⸩ Ty
   | prp   : ValidJudgment ⸨∶ Ty Prp⸩ Prp
   | k     : ValidJudgment ⸨∶ K.type K⸩ K
   | s     : ValidJudgment ⸨∶ S.type S⸩ S
-  | defeq : ValidJudgment t₁ x
-    → DefEq t₁ t₂
-    → ValidJudgment t₂ x
+  | defeq : ValidJudgment t₁ x → DefEq t₁ t₂ → ValidJudgment t₂ x
 
 /-
 Helper macros for proofs about judgments.
@@ -113,12 +120,14 @@ macro_rules
 
 @[simp] theorem defeq.trans : DefEq a b → DefEq b c → DefEq a c := DefEq.trans
 
-@[simp] theorem S.step :  DefEq ⸨S x y z⸩ s' = DefEq s' ⸨⸨x z⸩ ⸨y z⸩⸩ := by
+@[simp] theorem S.step :  DefEq ⸨S ⸨∶ ⸨Pi α β⸩ f⸩ g x⸩ s' = DefEq s' ⸨f x ⸨g x⸩⸩ := by
   ext
   constructor
   intro h
   defeq symm, trans, symm, step
   step s
+  exact α
+  exact β
   exact h
   intro h
   defeq trans, step
@@ -140,142 +149,22 @@ macro_rules
   defeq symm
   exact h
 
-@[simp] theorem B.step : DefEq ⸨B f g x⸩ b' = DefEq b' ⸨f ⸨g x⸩⸩ := by
-  ext
-  constructor
-  intro h
-  defeq trans, symm
-  exact h
-  defeq trans, step
-  unfold B
-  step left, left
-  step s
-  defeq trans, step
-  step left, left, left, k
-  simp
-  defeq symm, left
-  simp
-  intro h
-  defeq symm, trans
-  exact h
-  defeq symm, trans, step
-  step left, left, s
-  defeq trans, left, left, left, step
-  step k
-  defeq trans, step
-  step s
-  defeq left, step
-  step k
-
-@[simp] theorem C.step : DefEq ⸨C x y z⸩ c' ↔ DefEq c' ⸨x z y⸩ := by
-  constructor
-  intro h
-  defeq trans, symm
-  exact h
-  defeq trans, left, left
-  simp
-  defeq symm, trans, left
-  simp
-  defeq symm, trans, left
-  simp
-  defeq refl
-  simp
-  defeq symm, trans, left
-  simp
-  defeq refl, refl, refl
-  defeq trans, left
-  simp
-  defeq symm, trans, left
-  simp
-  defeq refl, refl
-  simp
-  defeq right, symm, trans, left, left
-  simp
-  defeq refl
-  simp
-  intro h
-  defeq symm, trans
-  exact h
-  defeq symm, trans, left, left
-  simp
-  defeq symm, trans, left
-  simp
-  defeq symm, trans, left
-  simp
-  defeq refl
-  simp
-  defeq symm, trans, left
-  simp
-  defeq refl, refl, refl
-  defeq trans, left
-  simp
-  defeq symm, trans, left
-  simp
-  defeq refl
-  defeq trans, right, left
-  simp
-  defeq refl, refl
-  simp
-  defeq symm, trans, right
-  simp
-  defeq refl, refl
-
-theorem K.preservation : ValidJudgment ⸨∶ Ty α⸩ α
-  → ValidJudgment ⸨∶ Ty β⸩ β
+theorem K.preservation : ValidJudgment ⸨∶ Prp ⸨∶ α x⸩⸩ ⸨∶ α x⸩
+  → ValidJudgment ⸨∶ Prp ⸨∶ β y⸩⸩ ⸨∶ β y⸩
   → ValidJudgment ⸨∶ α x⸩ x
   → ValidJudgment ⸨∶ β y⸩ y
   → ValidJudgment ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩⸩ ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩ := by
   intro h_t_α h_t_β h_t_x h_t_y
-  judge defeq, app, defeq, app, k', defeq, app, defeq, app, judge
+  judge defeq, app, defeq, app, k
   assumption
-  simp
-  defeq trans, left, right
-  simp
-  defeq symm, trans, left
-  simp
-  defeq refl
-  defeq refl
-  defeq refl
-  assumption
-  defeq trans, left, right, left
-  simp
-  defeq refl
-  defeq trans, left, right
-  simp
-  defeq refl
-  defeq refl
-  simp
-  defeq trans, left, right
-  simp
-  defeq symm, trans, right
-  simp
-  defeq refl, refl, refl
-  judge defeq, app, defeq, app, judge
-  assumption
-  simp
-  defeq trans, left, right
-  simp
-  defeq symm, trans, left
-  simp
-  defeq refl
-  defeq trans, right
-  simp
-  defeq refl
-  defeq refl
-  defeq refl
-  assumption
-  defeq trans, left, right
-  simp
-  defeq refl
-  defeq refl
-  defeq trans, right
-  simp
-  defeq refl
-  defeq trans, left, right
-  simp
-  defeq symm, step
+  defeq left, right, trans, step
+  step pi
+  defeq trans, right, step
   step fst
-  defeq symm, trans, right
-  simp
+  defeq trans, left, right, step
+  step k
   defeq refl
-  defeq refl
+  assumption
+  defeq left, right, step
+  step k
+

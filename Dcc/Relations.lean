@@ -4,13 +4,20 @@ Type becomes annoying, though.
 
 K : Pi (∶ Ty Prp) (Pi (Pi I)
 
-Other potential is that we can make fst downgrade.
+- snd should upgrade.
+Then we don't need K'.
+
+- fst should actually upgrade. we seem to need it in quite a few places.
+but also we need it to access pi members.
+
+TODO: will need type universes. She mad.
 -/
 
 inductive Expr where
   | Pi    : Expr
   | S     : Expr
   | K     : Expr
+  | K'    : Expr
   | I     : Expr
   | judge : Expr
   | type  : Expr
@@ -34,7 +41,7 @@ macro_rules
 
 inductive IsStep : Expr → Expr → Prop
   | k      : IsStep ⸨K x y⸩ x
-  | s      : IsStep ⸨S ⸨∶ ⸨Π' α β⸩ f⸩ g x⸩ ⸨f x ⸨g x⸩⸩
+  | s      : IsStep ⸨S ⸨∶ Tf f⸩ g x⸩ ⸨f x ⸨g x⸩⸩
   | i      : IsStep ⸨I x⸩ x
   | fst    : IsStep ⸨fst π ⸨∶ α x⸩⸩ ⸨π α⸩
   | snd    : IsStep ⸨snd π ⸨∶ α x⸩⸩ ⸨π x⸩
@@ -68,15 +75,26 @@ def I.type : Expr :=
   ⸨Π' ⸨∶ Ty Prp⸩ ⸨K ⸨∶ Ty Prp⸩⸩⸩
 
 /-
+Π : Prop → Ty → Ty
+-/
+def Pi.type : Expr :=
+  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨K ⸨∶ Ty Ty⸩⸩ ⸨fst K⸩⸩⸩
+
+/-
 S type:
   S : (f : Prp) → (g : (fst x : Prp)) → (x : ((K ∘ fst ∘ fst) f : Prp)) → (((S ∘ snd) x) x (g x) : Prp)
   fst x is a Pi type, Pi dom cod. fst fst x is α in (x : α)
+  (S (∶ (Π' Prp (K ( Ty Ty)) ((fst Π') (snd (fst I))) t_f
   S (∶ (Pi α cod) f) (∶ (Pi α cod) g) (∶ α x) = (∶
     (cod (∶ α x) (g (∶ α x)))
     (f (∶ α x) (g (∶ α x))))
 -/
 def S.type : Expr :=
-  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨fst I⸩ ⸨Π' ⸨fst ⸨fst K⸩⸩ ⸨snd S⸩⸩⸩⸩
+  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π'
+    ⸨fst ⸨S ⸨∶ Ty ⸨K ⸨∶ Ty⸩⸩⸩ ⸨S ⸨∶ Ty ⸨fst Π'⸩⸩ ⸨snd ⸨fst I⸩⸩⸩⸩⸩ -- Form Π α β
+    ⸨Π'
+      ⸨fst ⸨fst K⸩⸩ -- select α from Π α (Π β γ), prepend K.
+      ⸨snd ⸨snd S⸩⸩⸩⸩⸩ -- select γ from Π α (Π β γ), prepend S
 
 inductive ValidJudgment : Expr → Expr → Prop
   | app   : ValidJudgment ⸨∶ ⸨Π' ⸨∶ Tα α⸩ cod⸩ f⸩ f
@@ -120,14 +138,13 @@ macro_rules
 
 @[simp] theorem defeq.trans : DefEq a b → DefEq b c → DefEq a c := DefEq.trans
 
-@[simp] theorem S.step :  DefEq ⸨S ⸨∶ ⸨Pi α β⸩ f⸩ g x⸩ s' = DefEq s' ⸨f x ⸨g x⸩⸩ := by
+@[simp] theorem S.step :  DefEq ⸨S ⸨∶ Tf f⸩ g x⸩ s' = DefEq s' ⸨f x ⸨g x⸩⸩ := by
   ext
   constructor
   intro h
   defeq symm, trans, symm, step
   step s
-  exact α
-  exact β
+  exact Tf
   exact h
   intro h
   defeq trans, step
@@ -151,10 +168,8 @@ macro_rules
 
 theorem K.preservation : ValidJudgment ⸨∶ Prp ⸨∶ α x⸩⸩ ⸨∶ α x⸩
   → ValidJudgment ⸨∶ Prp ⸨∶ β y⸩⸩ ⸨∶ β y⸩
-  → ValidJudgment ⸨∶ α x⸩ x
-  → ValidJudgment ⸨∶ β y⸩ y
   → ValidJudgment ⸨∶ α ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩⸩ ⸨K ⸨∶ α x⸩ ⸨∶ β y⸩⸩ := by
-  intro h_t_α h_t_β h_t_x h_t_y
+  intro h_t_α h_t_β
   judge defeq, app, defeq, app, k
   assumption
   defeq left, right, trans, step
@@ -168,3 +183,24 @@ theorem K.preservation : ValidJudgment ⸨∶ Prp ⸨∶ α x⸩⸩ ⸨∶ α x�
   defeq left, right, step
   step k
 
+/-
+As usual:
+S : ∀ (f : ∀ (x : α) (y : β x), γ x y) (g : ∀ (x : α), β x) (z : α), γ z (y z)
+-/
+theorem S.preservation : ValidJudgment ⸨∶ Prp ⸨∶ ⸨Π' ⸨∶ Ty α⸩ ⸨Π' β γ⸩⸩ f⸩⸩ ⸨∶ ⸨Π' ⸨∶ Ty α⸩ ⸨Π' β γ⸩⸩ f⸩
+  → ValidJudgment ⸨∶ ⸨Π' ⸨∶ Ty α⸩ cod⸩ g⸩ g
+  → ValidJudgment ⸨∶ α x⸩ x
+  → ValidJudgment ⸨∶ ⸨γ x ⸨y x⸩⸩ ⸨S ⸨∶ ⸨Π' ⸨∶ Ty α⸩ ⸨Π' β γ⸩⸩ f⸩ g x⸩⸩ ⸨S ⸨∶ ⸨Π' ⸨∶ Ty α⸩ ⸨Π' β γ⸩⸩ f⸩ g x⸩ := by
+  intro h_t_f h_t_g h_t_x
+  judge defeq, app, defeq, app, defeq, app, s
+  assumption
+  defeq trans, left, right, step
+  step pi
+  defeq trans, left, right, right, step
+  step pi
+  defeq trans, left, right, left, right, step
+  step fst
+  defeq left, right, left, right, step
+  step fstπ
+  
+  sorry

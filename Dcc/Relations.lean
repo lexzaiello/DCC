@@ -11,6 +11,8 @@ Then we don't need K'.
 but also we need it to access pi members.
 
 TODO: will need type universes. She mad.
+
+Pi codomain needs to also be a Prp.
 -/
 
 inductive Expr where
@@ -75,10 +77,10 @@ def I.type : Expr :=
   ⸨Π' ⸨∶ Ty Prp⸩ ⸨K ⸨∶ Ty Prp⸩⸩⸩
 
 /-
-Π : Prop → Ty → Ty
+Π : Prop → Prop → Prop
 -/
 def Pi.type : Expr :=
-  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨K ⸨∶ Ty Ty⸩⸩ ⸨fst K⸩⸩⸩
+  ⸨Π' ⸨∶ Ty Prp⸩ ⸨Π' ⸨K ⸨∶ Ty Prp⸩⸩ ⸨fst K⸩⸩⸩
 
 /-
 S type:
@@ -94,7 +96,7 @@ def S.type : Expr :=
     ⸨fst ⸨S ⸨∶ Ty ⸨K ⸨∶ Ty⸩⸩⸩ ⸨S ⸨∶ Ty ⸨fst Π'⸩⸩ ⸨snd ⸨fst I⸩⸩⸩⸩⸩ -- Form Π α β
     ⸨Π'
       ⸨fst ⸨fst K⸩⸩ -- select α from Π α (Π β γ), prepend K.
-      ⸨snd ⸨snd S⸩⸩⸩⸩⸩ -- select γ from Π α (Π β γ), prepend S
+      ⸨fst ⸨snd ⸨snd S⸩⸩⸩⸩⸩⸩ -- select γ from Π α (Π β γ), prepend S
 
 inductive ValidJudgment : Expr → Expr → Prop
   | app   : ValidJudgment ⸨∶ ⸨Π' ⸨∶ Tα α⸩ cod⸩ f⸩ f
@@ -188,9 +190,9 @@ As usual:
 S : ∀ (f : ∀ (x : α) (y : β x), γ x y) (g : ∀ (x : α), β x) (z : α), γ z (y z)
 -/
 theorem S.preservation : ValidJudgment ⸨∶ Prp ⸨∶ ⸨Π' ⸨∶ Ty α⸩ ⸨Π' β γ⸩⸩ f⸩⸩ ⸨∶ ⸨Π' ⸨∶ Ty α⸩ ⸨Π' β γ⸩⸩ f⸩
-  → ValidJudgment ⸨∶ ⸨Π' ⸨∶ Ty α⸩ cod⸩ g⸩ g
+  → ValidJudgment ⸨∶ ⸨Π' ⸨∶ Ty α⸩ β⸩ g⸩ g
   → ValidJudgment ⸨∶ α x⸩ x
-  → ValidJudgment ⸨∶ ⸨γ x ⸨y x⸩⸩ ⸨S ⸨∶ ⸨Π' ⸨∶ Ty α⸩ ⸨Π' β γ⸩⸩ f⸩ g x⸩⸩ ⸨S ⸨∶ ⸨Π' ⸨∶ Ty α⸩ ⸨Π' β γ⸩⸩ f⸩ g x⸩ := by
+  → ValidJudgment ⸨∶ ⸨γ x ⸨g x⸩⸩ ⸨S ⸨∶ ⸨Π' ⸨∶ Ty α⸩ ⸨Π' β γ⸩⸩ f⸩ g x⸩⸩ ⸨S ⸨∶ ⸨Π' ⸨∶ Ty α⸩ ⸨Π' β γ⸩⸩ f⸩ g x⸩ := by
   intro h_t_f h_t_g h_t_x
   judge defeq, app, defeq, app, defeq, app, s
   assumption
@@ -200,7 +202,39 @@ theorem S.preservation : ValidJudgment ⸨∶ Prp ⸨∶ ⸨Π' ⸨∶ Ty α⸩ 
   step pi
   defeq trans, left, right, left, right, step
   step fst
-  defeq left, right, left, right, step
+  defeq trans, left, right, left, right
+  simp
+  defeq symm, left
+  simp
+  defeq refl, refl
+  judge defeq
+  assumption
+  defeq symm, trans, left, right
+  simp
+  defeq symm, left, step
   step fstπ
+  defeq trans, left, right, right, step
+  step sndπ
+  defeq trans, left, right, right, step
+  step fstπ
+  defeq left, right, right, step
+  step i
+  defeq trans, left, right, step
+  step pi
+  defeq trans, left, right, right, left, step
+  step fst
+  defeq trans, left, right, left, right, left, step
+  step fst
+  defeq trans, left, right, left, right, left, step
+  step fstπ
+  defeq trans, left, right, left, right
+  simp
+  defeq refl, refl
+  assumption
+  defeq trans, left, right, left, left, step
+  step sndπ
+  defeq trans, left, right, left, left, step
+  step sndπ
+  defeq trans, left, right
   
   sorry

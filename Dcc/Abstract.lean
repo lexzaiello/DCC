@@ -65,5 +65,23 @@ theorem Xi_imp_cons_elim {α : Type} {P : α → Prop} {Q₁ : α → Prop}
     , fun x => ⟨Ξ _ (X x), X _⟩⟩
 
 /-
-A proof that Curry's paradox is not possible with our inference rule:
+A proof that elim_right and elim_left implies Ξ.
+
+Note that the Ξ hypothesis is not required. It is subsumed by the types of
+P, Q, f, and g.
+
+This vaguely suggests that our rules are more powerful.
 -/
+theorem cons_elim_imp_Xi {α : Type} {P : α → Prop} {Q : ∀ {x : α}, P x → Prop}
+  (f : ∀ (x : α), P x) (g : ∀ {x : α}, Q (f x)) : ∃ (Q₁ : α → Prop) (_Ξ : ∀ (x : α), P x → Q₁ x),
+  ∀ (x : α), Q₁ x := ⟨fun x => Q (f x), fun _X _hp => g, fun _X => g⟩
+
+theorem Xi_iff_cons {α : Type} {P : α → Prop} (X : ∀ (x : α), P x) :
+  (∃ (Q₁ : α → Prop), ∀ (x : α), P x → Q₁ x) ↔
+  (∃ (Q : ∀ {x : α}, P x → Prop) (_g : ∀ {x : α}, Q (X x)), ∀ (x : α), Q (X x) ∧ P x) := by
+  constructor
+  intro ⟨Q₁, Ξ⟩
+  exact ⟨fun {X} hp => Q₁ X, fun {x} => Ξ _ (X x), fun x => ⟨Ξ _ (X x), X x⟩⟩
+  intro ⟨Q, g, helim⟩
+  exact ⟨fun x => Q (X x), fun x hp => g⟩
+

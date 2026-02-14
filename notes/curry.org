@@ -1,0 +1,38 @@
+#+TITLE: Notes - Illative Combinatory Logic
+#+AUTHOR: Lexi Aiello
+#+DATE: 2/14/26
+
+* Overview: Illative Combinatory Logic
+
+The central elimination rule:
+
+#+BEGIN_SRC lean
+\Delta ⊢ \Xi XY       \Delta ⊢ XU
+---------------------
+        \Delta ⊢ YU
+#+END_SRC
+
+Attempt to translate into Lean:
+
+#+BEGIN_SRC lean
+def Xi.elim {\alpha : Type *} (X : U \rightarrow Prop) (Y : U \rightarrow Prop) (h1 : \forall U, (X U \rightarrow Y U)) (U : \alpha) (hu : X U) : Y U := sorry
+#+END_SRC
+
+How does this differ from the \Pi combinator?
+
+#+BEGIN_SRC lean
+def Pi.elim {\alpha : Type} (P : \alpha \rightarrow Prop) (h : \forall (x : \alpha), P x) (x : \alpha), P x := sorry
+#+END_SRC
+
+How does this differ from ⊢ in the latest version?
+
+How does this differ from (: T x) judgments?
+
+How does this differ from :: sigma composition?
+
+#+BEGIN_SRC lean
+-- (:: f g) x = (:: f(x), g(f(x)))
+def Cons.elim {\alpha : Type *} (h1 : \forall (x : \alpha), P x) (x : \alpha)
+#+END_SRC
+
+^^ This feels like it's merging \Pi and \Xi which is interesting.

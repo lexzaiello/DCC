@@ -13,6 +13,14 @@ but also we need it to access pi members.
 TODO: will need type universes. She mad.
 
 Pi codomain needs to also be a Prp.
+
+S type is so close. we could probably fix it pretty easily with S.
+
+S γ g x, but we need γ to also be a judgment.
+
+We could do this. I see no reason we couldn't just change our hypotheses.
+
+cod should probably be a judgmen too. this is the easiest way to fix it.
 -/
 
 inductive Expr where

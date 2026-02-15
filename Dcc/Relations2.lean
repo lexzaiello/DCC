@@ -1,73 +1,20 @@
 import Mathlib.Data.Nat.Notation
 
 /-
-Summary of improvements:
+See abstract.lean for more.
+-/
 
-- use sigmas instead of Pi
-
-(:: f g) x = (:: f(x), g(f(x)))
-snd (:: f(x), g(f(x))) = g(f(x))
-fst (:: f(x), g(f(x))) = f(x)
-
-f(x) is domain, g(f(x)) is codomain.
-
-f(x) are a list of hypotheses kind of.
-
-we can use judgments to make (:: f g) : Prop.
-
-f is a judgment. then derive g type from the type contained in (∶ Tf f).
-
-This is nice because :: doesn't need to be special-cased.
-
-It's also nice because we only ever need to type the head element.
-
-Is there a way to unify : T x with ::? Probably not.
-We don't need :: to be Prop. We can use judgments to supply it nicely.
-
-f in :: f g is a list of hypotheses. g is the conclusion.
-
-(I ((∶ n.succ) (Ty n) α) x) : α
-
-I : (∷ (I Prp)
-
-unclear whether fst / snd should also be for (∶ T x).
-
-Also unclear whether (∶ T x) is necessary. but it feels like it.
-
-Reduction rules for (∷ f g) will become slightly messy if we use
-judgment arguments.
-
-We will have to though if we don't want to special-case cons.
-
-I think we can also derive g from f.
-
-(∷ (∶ Tf f) g) x = (∷ (∶ (Tf x) f) (g (f x)))
-
-Do we even need S/K/I? Can we derive these from sigma / fst / snd?
-
-fst projection is like K.
-
-snd projection or something is like S.
-
-wait. snd is S.
-
-What about I?
-
-I is intrinsic.
-
-We can derive K. Absolutely.
-
-I think we can actually assume that f is curried.
-
-We can simplify the rule, I think.
-
-The operational semantics shouldn't care about the type.
+/-
+What about (∶ T x) judgments?
 
 def Cons.elim_right {α : Type} {P : α → Prop} {Q : ∀ {x : α}, P x → Prop}
   (f : ∀ (x : α), P x) (g : ∀ {x : α}, Q (f x)) (x : α) : Q (f x) := by
   apply g
+                            ^
+We don't actually take f(x) as an argument in the term. Just x.
+f x gets passed into the type, not the term.
 
-^ P x in f is (∶ Ty) in app infer rule.
+I m : ⸨∷ ⸨(∶ 0) ⸨(∶ m.succ) (Ty m)⸩ ⸨(I m.succ) (Ty m)⸩⸩ ⸨(∶ 0) (∶ m) (I m)⸩
 -/
 
 abbrev Level := ℕ
@@ -98,11 +45,12 @@ macro_rules
 
 inductive IsStep : Expr → Expr → Prop
   | i      : IsStep ⸨(I m) α x⸩ x
-  | subst  : IsStep ⸨⸨∷ f g⸩ x⸩ ⸨∷ ⸨f x⸩ ⸨g ⸨f x⸩⸩⸩
+  | subst  : IsStep ⸨⸨∷ ⸨(∶ m) P f⸩ ⸨(∶ n) Q g⸩⸩ x⸩
+    ⸨∷ ⸨(∶ m) ⸨P x⸩ ⸨f x⸩⸩ ⸨(∶ n) ⸨Q ⸨f x⸩⸩ ⸨g x⸩⸩⸩
   | fst    : IsStep ⸨fst ⸨∷ f g⸩⸩ f
   | snd    : IsStep ⸨snd ⸨∷ f g⸩⸩ g
   | fstj   : IsStep ⸨fst ⸨(∶ m) f g⸩⸩ f
-  | sndj   : IsStep ⸨snd ⸨(∶ m.succ) f g⸩⸩ ⸨(∶ m) g⸩
+  | sndj   : IsStep ⸨snd ⸨(∶ m) f g⸩⸩ g
   | left   : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩
 
@@ -120,15 +68,71 @@ I type:
 I.{[m]} : ∀ (α : Ty m), α → α
 -/
 def I.type (m : Level) : Expr :=
-  ⸨∷ ⸨(∶ m) (Ty m)⸩ ⸨∷ snd fst⸩⸩
+  ⸨∷ ⸨(∶ 0) ⸨(∶ m.succ) (Ty m)⸩ ⸨(I m.succ) (Ty m)⸩⸩
+    ⸨(∶ 0) ⸨∷ ⸨(∶ 0) (∶ m) (I m)⸩ ⸨(∶ 0) (∶ m) (I m)⸩⸩ (I m)⸩⸩
 
 inductive ValidJudgment : Expr → Expr → Prop
   | ty    : ValidJudgment ⸨(∶ m.succ.succ) (Ty m.succ) (Ty m)⸩ (Ty m)
   | prp   : ValidJudgment ⸨(∶ 1) (Ty 0) Prp⸩ Prp
-  | app   : ValidJudgment ⸨(∶ m) ⸨∷ α β⸩ f⸩ f
-    → ValidJudgment ⸨α x⸩ x
-    → ValidJudgment ⸨(∶ m) ⸨snd ⸨⸨∷ α β⸩ x⸩⸩ ⸨f x⸩⸩ ⸨f x⸩
-  | defeq : ValidJudgment ⸨(∶ m) α x⸩ x
+  | app   : ValidJudgment ⸨(∶ m) t f⸩ f
+    → ValidJudgment ⸨fst ⸨fst ⸨t x⸩⸩⸩ x -- (∷ dom cod), dom produces a judgment (∶ α x),
+      -- cod / snd produces a judgment (∶ (β (fst (t x))) (f x))
+    → ValidJudgment ⸨snd ⸨t x⸩⸩ ⸨f x⸩
+  | defeq : ValidJudgment α x
     → DefEq α β
-    → ValidJudgment ⸨(∶ m) β x⸩ x
+    → ValidJudgment β x
   | i     : ValidJudgment ⸨(∶ m) (I.type m) (I m)⸩ (I m)
+
+syntax "defeq" ident,*        : tactic
+syntax "step" ident,*         : tactic
+syntax "judge" ident,*         : tactic
+
+macro_rules
+  | `(tactic| defeq $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `DefEq name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| step $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `IsStep name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| judge $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+
+theorem I.well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩ α
+  → ValidJudgment ⸨(∶ m) α x⸩ x
+  → ValidJudgment ⸨(∶ m) α ⸨(I m) α x⸩⸩ ⸨(I m) α x⸩ := by
+  intro h_t_α h_t_x
+  judge defeq, app, defeq, app, i, defeq
+  assumption
+  defeq symm, trans, right, right, step
+  step subst
+  defeq trans, right, step
+  step fst
+  defeq step
+  step fstj
+  defeq trans, right, step
+  step subst
+  defeq step
+  step snd
+  judge defeq
+  assumption
+  defeq symm, trans, right, right, left, step
+  step subst
+  defeq trans, right, right, step
+  step subst
+  defeq trans, right, step
+  step fst
+  defeq trans, step
+  step fstj
+  defeq left, right, step
+  step i
+  

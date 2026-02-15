@@ -47,12 +47,10 @@ Here are the elimination rules written out:
 (:: f g) x = (:: f(x), g(f(x)))
 -/
 def Cons.elim_right {α : Type} {P : α → Prop} {Q : ∀ {x : α}, P x → Prop}
-  (f : ∀ (x : α), P x) (g : ∀ {x : α}, Q (f x)) (x : α) : Q (f x) := by
-  apply g
+  (f : ∀ (x : α), P x) (g : ∀ {x : α}, Q (f x)) (x : α) : Q (f x) := g
 
 def Cons.elim_left {α : Type} {P : α → Prop} {Q : ∀ {x : α}, P x → Prop}
-  (f : ∀ (x : α), P x) (_g : ∀ {x : α}, Q (f x)) (x : α) : P x := by
-  apply f
+  (f : ∀ (x : α), P x) (_g : ∀ {x : α}, Q (f x)) (x : α) : P x := f x
 
 /-
 A proof that Ξ implies elim_right and elim_left.

@@ -4,13 +4,15 @@ Representations of our core inference rules in Lean, with some proofs about them
 
 /-
 Cons / sigma / composition:
-(:: f g) x = (:: f(x), g(f(x)))
+(:: f g) x = (:: f(x), g(x)(f(x)))
 
 This is a core data structure in the paper.
 fst / snd correspond to left and right sigma elimination.
 
-fst ((:: f g) x) = fst (:: f(x), g(f(x))) = f(x)
-snd ((:: f g) x) = snd (:: f(x), g(f(x))) = g(f(x))
+fst ((:: f g) x) = fst (:: f(x), g(x)(f(x))) = f(x)
+snd ((:: f g) x) = snd (:: f(x), g(x)(f(x))) = g(x)(f(x))
+
+Note that snd also corresponds to the S combinator and cut elimination.
 
 Curry has a concept of Ξ / restricted generality
 in illative combinatory logic with the inference rule:

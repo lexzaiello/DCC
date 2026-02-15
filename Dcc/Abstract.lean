@@ -20,8 +20,6 @@ in illative combinatory logic with the inference rule:
 Δ ⊢ ΞXY      Δ ⊢ XU
 -------------------
        Δ ⊢ YU
-
-Note that this specific rule is designed to prevent Curry's paradox.
 -/
 def Ξ.elim {α : Type} {P : α → Prop} {Q : α → Prop}
   (Ξ : ∀ (x : α), P x → Q x)

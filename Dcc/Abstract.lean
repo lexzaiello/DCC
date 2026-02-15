@@ -9,8 +9,8 @@ Cons / sigma / composition:
 This is a core data structure in the paper.
 fst / snd correspond to left and right sigma elimination.
 
-fst (:: f g) x = fst (:: f(x), g(f(x))) = f(x)
-snd (:: f g) x = snd (:: f(x), g(f(x))) = g(x)
+fst ((:: f g) x) = fst (:: f(x), g(f(x))) = f(x)
+snd ((:: f g) x) = snd (:: f(x), g(f(x))) = g(f(x))
 
 Curry has a concept of Ξ / restricted generality
 in illative combinatory logic with the inference rule:

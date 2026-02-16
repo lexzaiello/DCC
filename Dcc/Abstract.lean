@@ -128,4 +128,4 @@ structure Cons.{m, n} (P : Sort m) (Q : P → Sort n) where
 
 def Cons.curry.{m, n, o} {α : Sort m} {P : α → Sort n} {Q : ∀ (x : α), P x → Sort o}
   (c : Cons (∀ (x : α), P x) (fun f => ∀ (x : α), Q x (f x)))
-  (x : α) : Cons (P x) (Q x) := sorry
+  (x : α) : Cons (P x) (Q x) := ⟨c.f x, c.g x⟩

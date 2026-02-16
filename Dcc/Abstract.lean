@@ -83,30 +83,6 @@ theorem Xi_iff_cons {α : Type} {P : α → Prop} (X : ∀ (x : α), P x) :
   intro ⟨Q, g, helim⟩
   exact ⟨fun x => Q (X x), fun x hp => g⟩
 
-namespace tst
-/-
-Cons corresponds to composition / S.
-
-(:: f g) x = (:: (f x) g(f(x)))
--/
-structure Cons.{m, n, o} (α : Sort m) where
-  P   : α → Sort n
-  Q   : ∀ (x : α), P x → Sort o
-
-  f   : ∀ (x : α), P x
-  g   : ∀ (x : α) (y : P x), Q x y
-
-/-
-Discard any further substitutions after substituting x.
--/
-def Cons.subst.{m, n, o} {α : Sort m} (c : Cons.{m, n, o} α) (x : α) : Cons ((t : Type) × t) where
-  P := fun _   => c.P x
-  f := fun _   => c.f x
-  Q := fun _ _ => c.Q x (c.f x)
-  g := fun _ _ => c.g x (c.f x)
-
-end tst
-
 /-
 (:: f g) is not necessarily a "substitutable" sigma.
 
@@ -129,3 +105,6 @@ structure Cons.{m, n} (P : Sort m) (Q : P → Sort n) where
 def Cons.curry.{m, n, o} {α : Sort m} {P : α → Sort n} {Q : ∀ (x : α), P x → Sort o}
   (c : Cons (∀ (x : α), P x) (fun f => ∀ (x : α), Q x (f x)))
   (x : α) : Cons (P x) (Q x) := ⟨c.f x, c.g x⟩
+
+def Cons.fst : Cons P Q → P := Cons.f
+def Cons.snd : ∀ (c : Cons P Q), Q c.f := Cons.g

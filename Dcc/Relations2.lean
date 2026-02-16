@@ -15,6 +15,13 @@ We don't actually take f(x) as an argument in the term. Just x.
 f x gets passed into the type, not the term.
 
 I m : ⸨∷ ⸨(∶ 0) ⸨(∶ m.succ) (Ty m)⸩ ⸨(I m.succ) (Ty m)⸩⸩ ⸨(∶ 0) (∶ m) (I m)⸩
+
+P(x) doesn't necessarily need to be a Prop,
+it may be elucidating to think about the type of cons first.
+
+Cut elimination doesn't need to be restricted to Prop.
+
+
 -/
 
 abbrev Level := ℕ
@@ -66,10 +73,12 @@ inductive DefEq : Expr → Expr → Prop
 I type:
 
 I.{[m]} : ∀ (α : Ty m), α → α
+
+This suggests α is a proof of (∶ m.succ) (Ty m) α
 -/
 def I.type (m : Level) : Expr :=
   ⸨∷ ⸨(∶ 0) ⸨(∶ m.succ) (Ty m)⸩ ⸨(I m.succ) (Ty m)⸩⸩
-    ⸨(∶ 0) ⸨∷ ⸨(∶ 0) (∶ m) (I m)⸩ ⸨(∶ 0) (∶ m) (I m)⸩⸩ (I m)⸩⸩
+    ⸨(∶ 0) ⸨∷ ⸨(∶ 0) (∶ m) (I m)⸩ ⸨(∶ m) (I (m.succ)) (I m)⸩⸩ (I m)⸩⸩
 
 inductive ValidJudgment : Expr → Expr → Prop
   | ty    : ValidJudgment ⸨(∶ m.succ.succ) (Ty m.succ) (Ty m)⸩ (Ty m)
@@ -85,7 +94,7 @@ inductive ValidJudgment : Expr → Expr → Prop
 
 syntax "defeq" ident,*        : tactic
 syntax "step" ident,*         : tactic
-syntax "judge" ident,*         : tactic
+syntax "judge" ident,*        : tactic
 
 macro_rules
   | `(tactic| defeq $fn:ident,*) => do
@@ -134,5 +143,21 @@ theorem I.well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩ α
   defeq trans, step
   step fstj
   defeq left, right, step
+  step i
+  defeq trans, right, left, step
+  step subst
+  defeq trans, right, step
+  step subst
+  defeq trans, step
+  step snd
+  defeq trans, left, right, left, right, right, step
+  step i
+  defeq trans, left, right, step
+  step i
+  defeq trans, left, right, step
+  step i
+  defeq trans, right, step
+  step i
+  defeq symm, trans, right, step
   step i
   

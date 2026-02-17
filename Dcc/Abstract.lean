@@ -40,6 +40,7 @@ cannot be substituted into it.
 -/
 
 --                                      ↓                ↓ - (:: f(x) g(x))
+@[ext]
 structure Ξ.{m, n, o} {α : Sort m} (P : α → Sort n) (Q : α → Sort o) where
   X    : ∀ (x : α), P x -- X U
   himp : ∀ (x : α), P x → Q x
@@ -49,6 +50,7 @@ structure Ξ.{m, n, o} {α : Sort m} (P : α → Sort n) (Q : α → Sort o) whe
 def Ξ.elim'.{m, n, o} {α : Sort m} {P : α → Sort n} {Q : α → Sort o}
   (c : Ξ.{m, n, o} P Q) (x : α) : Q x := c.himp x (c.X x)
 
+@[ext]
 structure Cons.{m, n} (P : Sort m) (Q : P → Sort n) where
   f : P
   g : Q f
@@ -59,6 +61,53 @@ def Cons.curry.{m, n, o} {α : Sort m} {P : α → Sort n} {Q : ∀ (x : α), P 
 
 def Cons.fst : Cons P Q → P := Cons.f
 def Cons.snd : ∀ (c : Cons P Q), Q c.f := Cons.g
+
+def Ξ.of_cons.{m, n} {α : Sort m} {P : α → Sort n} {Q : ∀ (x : α), P x → Sort o}
+  (C : Cons (∀ (x : α), P x) (fun f => ∀ (x : α), Q x (f x))) : (Ξ P (fun x => Q x (C.f x))) :=
+  ⟨C.f, fun x _ => C.g x⟩
+
+def Cons.of_Ξ.{m, n} {α : Sort m} {P : α → Sort n} {Q : α → Sort o}
+  (Ξ : Ξ P Q) : Cons (∀ (x : α), P x) (fun _f => ∀ (x : α), Q x) :=
+    ⟨Ξ.X, fun x => Ξ.himp x (Ξ.X x)⟩
+
+/-
+We want a proof that Ξ is not constructive, while cons is.
+
+This might not be particularly useful if we don't model Ξ exactly as curry does.
+-/
+
+def Ξ_iff_Cons.toFun.{m, n, o} (α : Sort m) (P : α → Sort n) (Q : α → Sort o) (Ξ : Ξ P Q) :
+  Cons (∀ (x : α), P x) (fun _f => ∀ (x : α), Q x) :=
+  ⟨fun x => Ξ.X x, fun x => Ξ.himp x (Ξ.X x)⟩
+
+def Ξ_iff_Cons.invFun.{m, n, o} (α : Sort m) (P : α → Sort n) (Q : α → Sort o)
+  (C : Cons (∀ (x : α), P x) (fun _f => ∀ (x : α), Q x)) : Ξ P Q :=
+  ⟨fun x => C.f x, fun x _y => C.g x⟩
+
+def Ξ.iff_Cons.right_inv (α : Sort m) (P : α → Sort n) (Q : α → Sort o) :
+  Function.RightInverse (Ξ_iff_Cons.invFun α P Q) (Ξ_iff_Cons.toFun α P Q) :=
+  by intro; first | rfl
+
+/-
+When α is a Type, we cannot produce a witness of g, since himp
+is nonconstructive.
+
+For example, Q may be "Nonempty α". In this case, conversion back and forth
+is lossy, since our witness (x : α) is not carried back and forth.
+
+P, for example, might be Inhabited α. Inhabited α implies Nonempty α,
+but not the other way around.
+-/
+def Ξ.iff_Cons.no_left_inv.{m} : ¬ (∀ (α : Type (m + 1)) (P : α → Sort (max 1 (m + 1))) (Q : α → Prop),
+  Function.LeftInverse (Ξ_iff_Cons.invFun α P Q) (Ξ_iff_Cons.toFun α P Q)) := by
+  simp
+  refine ⟨Type m, Inhabited, Nonempty, ?_⟩
+  simp [Function.LeftInverse]
+  refine ⟨⟨fun x => Sort n, fun x y => Sort o⟩, ?_⟩
+  intro h
+  cases h
+  
+  sorry
 
 def Ξ_iff_Cons.{m, n, o} (α : Sort m) (P : α → Sort n) (Q : α → Sort o) :
   (Ξ P Q) ≃ (Cons (∀ (x : α), P x) (fun f => ∀ (x : α), Q x)) where

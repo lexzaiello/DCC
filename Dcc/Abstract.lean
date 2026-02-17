@@ -84,7 +84,7 @@ def Ξ_iff_Cons.invFun.{m, n, o} (α : Sort m) (P : α → Sort n) (Q : α → S
   (C : Cons (∀ (x : α), P x) (fun _f => ∀ (x : α), Q x)) : Ξ P Q :=
   ⟨fun x => C.f x, fun x _y => C.g x⟩
 
-def Ξ.iff_Cons.right_inv (α : Sort m) (P : α → Sort n) (Q : α → Sort o) :
+def Ξ_iff_Cons.right_inv (α : Sort m) (P : α → Sort n) (Q : α → Sort o) :
   Function.RightInverse (Ξ_iff_Cons.invFun α P Q) (Ξ_iff_Cons.toFun α P Q) :=
   by intro; first | rfl
 
@@ -98,15 +98,27 @@ is lossy, since our witness (x : α) is not carried back and forth.
 P, for example, might be Inhabited α. Inhabited α implies Nonempty α,
 but not the other way around.
 -/
-def Ξ.iff_Cons.no_left_inv.{m} : ¬ (∀ (α : Type (m + 1)) (P : α → Sort (max 1 (m + 1))) (Q : α → Prop),
+def Ξ.iff_Cons.no_left_inv.{m} : ¬ (∀ (α : Type (m + 1)) (P : α → Sort (max 1 (m + 2))) (Q : α → Prop),
   Function.LeftInverse (Ξ_iff_Cons.invFun α P Q) (Ξ_iff_Cons.toFun α P Q)) := by
   simp
-  refine ⟨Type m, Inhabited, Nonempty, ?_⟩
+
+  let P := fun (_ : Type m) => Inhabited (Type m)
+  let Q := fun (_ : Type m) => Nonempty (Type m)
+
+  let Xi : Ξ P Q := ⟨fun _ => Inhabited.mk (Sort m), fun x y => Nonempty.intro default⟩
+
+  refine ⟨Type m, P, Q, ?_⟩
   simp [Function.LeftInverse]
-  refine ⟨⟨fun x => Sort n, fun x y => Sort o⟩, ?_⟩
-  intro h
-  cases h
+  refine ⟨Xi, ?_⟩
+
+  intro h_xi_eq
+  let h_c_eq := Ξ_iff_Cons.right_inv (Type m) P Q (Ξ_iff_Cons.toFun _ _ _ Xi)
+
+  unfold Ξ_iff_Cons.toFun at *
+  unfold Ξ_iff_Cons.invFun at *
+
   
+
   sorry
 
 def Ξ_iff_Cons.{m, n, o} (α : Sort m) (P : α → Sort n) (Q : α → Sort o) :

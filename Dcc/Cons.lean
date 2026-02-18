@@ -137,6 +137,7 @@ open Expr
 
 declare_syntax_cat expr
 
+syntax "__"                                   : expr
 syntax ident                                  : expr
 syntax ident "[" term,* "]"              : expr
 syntax "(" expr+ ")"                          : expr
@@ -160,12 +161,12 @@ syntax "fst(" expr ")" : expr
 syntax "⟪" expr "⟫" : term
 
 macro_rules
-  | `(⟪($e:expr)⟫) => `(⟪$e:expr⟫)
   | `(⟪$comb:ident[$univ:term,*]⟫) => `($comb $univ*)
   | `(⟪$id:ident⟫) => `($id)
   | `(⟪#$e:term⟫) => `($e)
   | `(⟪($f:expr $x:expr)⟫) => `(Expr.app ⟪$f⟫ ⟪$x⟫)
-  | `(⟪($f $x:expr $args:expr*)⟫) => `(((Expr.app ⟪$f⟫ ⟪$x⟫) ⟪($args*)⟫))
+  | `(⟪($f $x:expr $args:expr*)⟫) => `(Expr.app (Expr.app ⟪$f⟫ ⟪$x⟫) ⟪($args*)⟫)
+  | `(⟪($e:expr)⟫) => `(⟪$e:expr⟫)
   | `(⟪::[ $x:expr ]⟫) => `(⟪$x⟫)
   | `(⟪::[ $x:expr, $xs:expr,* ]⟫) => `(Expr.uncons ⟪$x⟫ ⟪::[$xs,*]⟫)
   | `(⟪::( $x:expr )⟫) => `(⟪$x⟫)
@@ -182,7 +183,7 @@ macro_rules
   | `(⟪snd(::($_a, $_b, $_c){$_x, $xs})⟫) => `(⟪$xs⟫)
   | `(⟪Ty $m⟫) => `(Expr.type $m)
   | `(⟪Srt $m⟫) => `(Expr.srt $m)
-  | `(⟪Prp⟫) => `(Expr.prp)
+  | `(⟪Prp⟫) => `(Expr.prop)
 
 def mk_arrow (f α β : Expr) : Expr :=
   ⟪::[(∶ α), ::[snd, f, (∶ β)]]⟫
@@ -190,6 +191,12 @@ def mk_arrow (f α β : Expr) : Expr :=
 syntax expr "->" expr : expr
 
 macro_rules
+  | `(⟪$α:expr -> Ty $m ∶ __⟫) =>
+    `(⟪$α:expr -> Ty $m ∶ Ty (Nat.succ $m)⟫)
+  | `(⟪$α:expr -> Srt $m ∶ __⟫) =>
+    `(⟪$α:expr -> Srt $m ∶ Ty $m⟫)
+  | `(⟪$α:expr -> Prp ∶ __⟫) =>
+    `(⟪$α:expr -> Prp ∶ Ty 0⟫)
   | `(⟪$f:expr ∶ ($α:expr -> $β:expr ∶ Ty $m)⟫) =>
     `(⟪($f ∶ ((# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫)) ∶ Ty $m))⟫)
   | `(⟪$f:expr ∶ $α:expr -> $β:expr⟫) => `(⟪$f ∶ (# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫))⟫)
@@ -225,14 +232,14 @@ we should assume α is a judgment (∶ α)
 
 def mk_debruijn (t_f : Expr) (m : Level) (idx : ℕ) : Expr :=
   let α := match t_f with
-  | ::(_a, _b, _c){∶ α, _β} => α
-  | ::[(∶ α), _] => α
+  | ⟪::(_a, _b, _c){∶ α, _β}⟫ => α
+  | ⟪::[(∶ α), _rst]⟫ => α
   | α => α
 
   let n := match α with
-  | ⸨(∶ _a) _b⸩ => 0
-  | Ty n => n
-  | Prp => 0
+  | ⟪((∶ _a) _b)⟫ => 0
+  | ⟪Ty n⟫ => n
+  | ⟪Prp⟫ => 0
   | _ => m -- TODO: fix
 
   /-
@@ -244,11 +251,11 @@ def mk_debruijn (t_f : Expr) (m : Level) (idx : ℕ) : Expr :=
   -/
 
   match idx with
-  | 0 => ⸨mkcons mkcons ⸨(K' m n) t_f Prp⸩ ⸨(I m) t_f⸩⸩
+  | 0 => ⟪(mkcons mkcons (K'[m, n] t_f Prp) (I[m] t_f))⟫
   -- at 0, reject the next argument, output f, then reject forever.
-  | 1 => ⸨mkcons (mk_debruijn t_f m 0) ⸨(I m) t_f⸩ ⸨(I m) t_f⸩⸩
+  | 1 => ⟪(mkcons (# (mk_debruijn t_f m 0)) (I[m] t_f) (I[m] t_f))⟫
   -- at 1, accept the argument, then proceed to reject.
-  | .succ (.succ idx) => ⸨mkcons (mk_debruijn t_f m (.succ idx)) ⸨(K' m n) t_f α⸩ ⸨(I m) t_f⸩⸩
+  | .succ (.succ idx) => ⟪(mkcons (# (mk_debruijn t_f m (.succ idx))) (K'[m, n] t_f α) (I[m] t_f))⟫
 
 syntax "::{" expr,+ "}" : expr
 

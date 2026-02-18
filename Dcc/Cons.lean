@@ -160,9 +160,9 @@ syntax "fst(" expr ")" : expr
 syntax "⟪" expr "⟫" : term
 
 macro_rules
+  | `(⟪($e:expr)⟫) => `(⟪$e:expr⟫)
   | `(⟪$comb:ident[$univ:term,*]⟫) => `($comb $univ*)
   | `(⟪$id:ident⟫) => `($id)
-  | `(⟪($e:expr)⟫) => `(⟪$e⟫)
   | `(⟪#$e:term⟫) => `($e)
   | `(⟪($f:expr $x:expr)⟫) => `(Expr.app ⟪$f⟫ ⟪$x⟫)
   | `(⟪($f $x:expr $args:expr*)⟫) => `(((Expr.app ⟪$f⟫ ⟪$x⟫) ⟪($args*)⟫))
@@ -180,6 +180,9 @@ macro_rules
   | `(⟪snd(::[$_x, $xs])⟫) => `(⟪$xs⟫)
   | `(⟪fst(::($_a, $_b, $_c){$x, $_xs})⟫) => `(⟪$x⟫)
   | `(⟪snd(::($_a, $_b, $_c){$_x, $xs})⟫) => `(⟪$xs⟫)
+  | `(⟪Ty $m⟫) => `(Expr.type $m)
+  | `(⟪Srt $m⟫) => `(Expr.srt $m)
+  | `(⟪Prp⟫) => `(Expr.prp)
 
 def mk_arrow (f α β : Expr) : Expr :=
   ⟪::[(∶ α), ::[snd, f, (∶ β)]]⟫
@@ -187,11 +190,12 @@ def mk_arrow (f α β : Expr) : Expr :=
 syntax expr "->" expr : expr
 
 macro_rules
-  | `(⟪($f:expr ∶ $α:expr -> $β:expr)⟫) => `(⟪$f ∶ (# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫))⟫)
-  | `(⟪($f:expr ∶ ($α:expr -> $β:expr ∶ Ty $m))⟫) =>
+  | `(⟪$f:expr ∶ ($α:expr -> $β:expr ∶ Ty $m)⟫) =>
     `(⟪($f ∶ ((# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫)) ∶ Ty $m))⟫)
+  | `(⟪$f:expr ∶ $α:expr -> $β:expr⟫) => `(⟪$f ∶ (# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫))⟫)
+  | `(⟪$x ∶ $t⟫) => `(⟪(∶ $t $x)⟫)
 
-#eval ⟪((I 0 (Ty 0))
+#eval ⟪(I[0] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1)⟫
 
 /-
 Note: this assumes f composes with g.

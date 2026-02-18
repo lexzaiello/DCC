@@ -193,9 +193,9 @@ macro_rules
   | `(⟪::[ $x:expr, $xs:expr,* ]⟫) => `(Expr.uncons ⟪$x⟫ ⟪::[$xs,*]⟫)
   | `(⟪::($πcons:expr, $πf:expr, $πg:expr)⟫) => `(⟪(Expr.mkcons $πcons $πf $πg)⟫)
   | `(⟪::($πcons:expr, $πf:expr, $πg:expr){$elems:expr,*}⟫) => do
-    match elems.getElems.toList with
+    match elems.getElems.toList.reverse with
     | .cons x xs =>
-      xs.foldlM (fun e acc => do `(expr| (::($πcons, $πf, $πg) $e ($acc:expr)))) x
+      xs.foldrM (fun e acc => do `(expr| (::($πcons, $πf, $πg) $e ($acc:expr)))) x
         >>= (fun e => `(⟪$e⟫))
     | .nil => `(sorry)
   | `(⟪∶ $α:expr⟫) => `(judge ⟪$α⟫)
@@ -281,27 +281,30 @@ def mk_debruijn (α β γ : Expr) (m o : Level) (idx : ℕ) : Expr :=
   -/
 
   match idx with
-  | 0 => ⟪::(mkcons, (K'[m, n] α Prp), (I[m] t_g))⟫ -- should be substituted here
+  | 0 => ⟪::(mkcons, (K'[m, n] α Prp), (I[o] t_g))⟫ -- should be substituted here
   -- at 0, reject the next argument, output f, then reject forever.
-  | 1 => ⟪::((# (mk_debruijn α β γ m o 0)), (I[m] t_f), (I[m] t_f))⟫
+  | 1 => ⟪::((# (mk_debruijn α β γ m o 0)), (I[m] t_f), (I[o] t_g))⟫
   -- at 1, accept the argument, then proceed to reject.
   | .succ (.succ idx) => ⟪::((# (mk_debruijn α β γ m o (.succ idx)))
     , (K'[m, n] t_f α)
-    , (I[m] t_f))⟫
+    , (I[o] t_g))⟫
 
 syntax "::{" substitution,+ "}" : expr
 
-#eval ⟪::(K'[1, 2], K'[3, 4], K'[5, 6]){K'[7, 8], K'[9, 10], K'[11, 12]}⟫
+#eval ⟪::(K'[1, 2], K'[3, 4], K'[5, 6]){K'[7, 8], K'[9, 10], K'[11, 12], K'[13, 14]}⟫
 
 macro_rules
   | `(⟪::{$f:expr⟦__ ∶ ($α:expr ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $_n₁)
     , $g:expr⟦$_j:judgment := *⟧ ∶ ($γ:expr ∶ Ty $n₂)}⟫) =>
     `(⟪((#mk_debruijn ⟪$α⟫ ⟪$β⟫ ⟪$γ⟫ $m $n₂ $idx) $f $g)⟫)
-  | `(⟪::{$elems,*}⟫) => do
-    match elems.getElems.toList with
+  | `(⟪::{$elems,*}⟫) =>
+    match elems.getElems.reverse.toList with
     | .cons x xs =>
-      xs.foldlM (fun e acc => do `(expr| (::{$e, $acc}))) x
-        >>= (fun e => `(⟪$e⟫))
+      (xs.foldrM (fun e acc =>
+        match e with
+        | `(substitution| $f:expr⟦__ ∶ ($α ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $n)) =>
+          `(expr| ((# (mk_debruijn ⟪$α⟫ ⟪$β⟫ ⟪Prp⟫ $m 0 $idx)) $f $acc))
+        | _ => `(expr| Prp)) `(expr| s($x))) >>= (fun e => `(⟪$e⟫))
     | .nil => `(sorry)
 
 def Expr.toFormat : Expr → Std.Format

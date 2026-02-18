@@ -169,6 +169,11 @@ macro_rules
 def mk_arrow (f α β : Expr) : Expr :=
   ::[(∶ α), ::[snd, f, (∶ β)]]
 
+syntax term "->" term : term
+
+macro_rules
+  | `(($f ∶ $α -> $β)) => `(mk_arrow $f $α $β)
+
 /-
 Note: this assumes f composes with g.
 It also assumes that the tail has already been debruijn-ified.
@@ -263,8 +268,8 @@ inductive DefEq : Expr → Expr → Prop
   | prp     : DefEq (Srt 0) Prp
 
 example : DefEq ⸨::{
-  (⸨(I 1) (Ty 0)⸩ ∶ ((mk_arrow ⸨(I 1) (Ty 0) Prp⸩ (Ty 0) (Ty 0)) ∶ (Ty 1)))⟦_ := #1 ∶ (Ty 0 ∶ Ty 1)⟧
-  , ⸨(I 1) (Ty 0)⸩} Prp⸩ =
+  (⸨(I 1) (Ty 0)⸩ ∶ ((mk_arrow ⸨(I 1) (Ty 0) Prp⸩ (Ty 0) (Ty 0)) ∶ (Ty 1)))⟦_ := #1⟧
+  , ⸨(I 1) (Ty 0)⸩} Prp⸩
   ::(mkcons
     , ⸨(K' 1 1) (mk_arrow ⸨(I 1) (Ty 0) Prp⸩ (Ty 0) (Ty 0)) (Ty 0)⸩
     , ⸨(I m) t_f⸩){Prp, Prp} := by

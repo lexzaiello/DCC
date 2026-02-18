@@ -184,11 +184,11 @@ macro_rules
   | `(⟪$id:ident⟫) => `($id)
   | `(⟪#$e:term⟫) => `($e)
   | `(⟪($e:expr)⟫) => `(⟪$e:expr⟫)
-  | `(⟪($f:expr $x:expr*)⟫) => do
-    let mut curr ← `(⟪$f⟫)
-    for arg in x do
-      curr ← `(Expr.app $curr ⟪$arg⟫)
-    return curr
+  | `(⟪ ($f:expr $args:expr*) ⟫) => do
+    let mut res ← `(⟪$f⟫)
+    for arg in args do
+      res ← `(Expr.app $res ⟪$arg⟫)
+    return res
   | `(⟪::[ $x:expr ]⟫) => `(⟪$x⟫)
   | `(⟪::[ $x:expr, $xs:expr,* ]⟫) => `(Expr.uncons ⟪$x⟫ ⟪::[$xs,*]⟫)
   | `(⟪::($πcons:expr, $πf:expr, $πg:expr)⟫) => `(⟪(Expr.mkcons $πcons $πf $πg)⟫)

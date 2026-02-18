@@ -144,7 +144,6 @@ syntax "(" expr+ ")"                          : expr
 syntax "::(" expr,+ ")"                       : expr
 syntax "::[" expr,+ "]"                       : expr
 syntax "::(" expr "," expr "," expr ")" "{" expr,+ "}" : expr
-syntax expr "∶" expr                          : expr
 syntax "∶" expr                               : expr
 syntax "#" term                               : expr
 -- ^ for making judgments: (x : (α : Ty m))
@@ -154,16 +153,27 @@ syntax "Ty" term  : expr
 syntax "Srt" term : expr
 syntax "Prp"      : expr
 syntax "__"       : expr
+
+declare_syntax_cat judgment
+syntax expr "∶" expr    : judgment
+syntax "(" judgment ")" : judgment
+
 syntax "snd(" expr ")" : expr
 syntax "fst(" expr ")" : expr
 
+syntax "snd(" judgment ")" : expr
+syntax "fst(" judgment ")" : expr
+
 declare_syntax_cat substitution
 
-syntax expr "⟦" "__" "∶" expr ":=" "*" "⟧"  "∶" expr : substitution
-syntax expr "⟦" "__" "∶" expr ":=" expr "⟧" "∶" expr : substitution
+syntax "(" expr ")⟦" judgment ":=" "*" "⟧"  "∶" expr : substitution
+syntax "(" expr ")⟦" judgment ":=" expr "⟧" "∶" expr : substitution
+
+syntax substitution : expr
 
 syntax "⟪" expr "⟫" : term
 syntax "s{{" substitution "}}" : term
+syntax "j{{" judgment "}}" : term
 
 macro_rules
   | `(⟪$comb:ident[$univ:term,*]⟫) => `($comb $univ*)
@@ -180,9 +190,10 @@ macro_rules
   | `(⟪::($πcons, $πf, $πg){$x:expr, $xs:expr,*}⟫) =>
     `(⟪(Expr.mkcons $πcons $πf $πg $x ::($πcons, $πf, $πg){$xs,*})⟫)
   | `(⟪∶ $α:expr⟫) => `(judge ⟪$α⟫)
-  | `(⟪$x:expr ∶ $α:expr⟫) => `(⟪(∶ $α $x)⟫)
-  | `(⟪fst($x ∶ $_t)⟫) => `(⟪$x⟫)
-  | `(⟪snd($_x ∶ $t)⟫) => `(⟪$t⟫)
+  | `(j{{($j)}}) => `(j{{$j}})
+  | `(j{{$x:expr ∶ $α:expr}}) => `(⟪(∶ $α $x)⟫)
+  | `(⟪fst($x:expr ∶ $t:expr)⟫) => `(⟪$x⟫)
+  | `(⟪snd($x:expr ∶ $t:expr)⟫) => `(⟪$t⟫)
   | `(⟪fst(::[$x, $_xs])⟫) => `(⟪$x⟫)
   | `(⟪snd(::[$_x, $xs])⟫) => `(⟪$xs⟫)
   | `(⟪fst(::($_a, $_b, $_c){$x, $_xs})⟫) => `(⟪$x⟫)
@@ -197,18 +208,18 @@ def mk_arrow (f α β : Expr) : Expr :=
 syntax expr "->" expr : expr
 
 macro_rules
-  | `(⟪$f:expr ∶ $α:expr -> $β:expr⟫) => `(⟪$f ∶ (# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫))⟫)
-  | `(⟪$α:expr -> Ty $m ∶ __⟫) =>
-    `(⟪$α:expr -> Ty $m ∶ Ty (Nat.succ $m)⟫)
-  | `(⟪$α:expr -> Srt $m ∶ __⟫) =>
-    `(⟪$α:expr -> Srt $m ∶ Ty $m⟫)
-  | `(⟪$α:expr -> Prp ∶ __⟫) =>
-    `(⟪$α:expr -> Prp ∶ Ty 0⟫)
-  | `(⟪$f:expr ∶ ($α:expr -> $β:expr ∶ Ty $m)⟫) =>
-    `(⟪($f ∶ ((# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫)) ∶ Ty $m))⟫)
-  | `(⟪$x ∶ $t⟫) => `(⟪(∶ $t $x)⟫)
+  | `(j{{$f:expr ∶ $α:expr -> $β:expr}}) =>
+    `(j{{$f:expr ∶ (# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫))}})
+  | `(j{{$α:expr -> Ty $m ∶ __}}) =>
+    `(j{{$α:expr -> Ty $m ∶ Ty (Nat.succ $m)}})
+  | `(j{{$α:expr -> Srt $m ∶ __}}) =>
+    `(j{{$α:expr -> Srt $m ∶ Ty $m}})
+  | `(j{{$α:expr -> Prp ∶ __}}) =>
+    `(j{{$α:expr -> Prp ∶ Ty 0}})
+  | `(j{{$f:expr ∶ ($α:expr -> $β:expr ∶ Ty $m)}}) =>
+    `(j{{$f:expr ∶ ((# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫)) ∶ Ty $m)}})
 
-#eval ⟪(I[0] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1)⟫
+#eval j{{(I[0] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1)}}
 
 /-
 Note: this assumes f composes with g.
@@ -313,8 +324,8 @@ inductive DefEq : Expr → Expr → Prop
 #eval ⟪((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))⟫
 
 #eval ⟪::{
-  (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧ ∶ Ty 0
-  , (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := *⟧ ∶ Ty 0}⟫
+  (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
+  , (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := *⟧ ∶ ((Ty 0) ∶ Ty 1)}⟫
 
 example : DefEq ⟪(::{
   ((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))⟦__ := #1⟧

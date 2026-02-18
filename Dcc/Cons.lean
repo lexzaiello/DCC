@@ -94,6 +94,16 @@ This will give us our types in validjudgment.
 First question: can we derive ::(f, g) x = ::(f(x), g(x))?
 
 ::(πc, πf, πg){f, g}
+
+Can we derive debruijn indices with ::(πc, πf, πg){f, g}?
+
+For this one, we compose. Assume 0 indicates that the head and
+tail positions get substituted.
+
+mk_debruijn 0 f g = ::(mkcons, I α, I β){f, g}
+
+debruijn index 1 or anything greater than zero is just nesting K's.
+mk_debruijn n.succ f g = ::(mk_debruijn n, K' t_f α f, I β){f, g}
 -/
 
 abbrev Level := ℕ
@@ -103,7 +113,7 @@ inductive Expr where
   | K      : Level → Level → Expr -- Dependent K
   | K'     : Level → Level → Expr -- Nondependent K
   | S      : Level → Level → Level → Expr -- Dependent S
-  | mkcons : Expr -- (cons πcons πf πg) f g x = (πcons πf πg x) (πf f x) (πg g x)
+  | mkcons : Expr -- (mkcons πcons πf πg) f g x = πcons πf πg ⸨πf f x⸩ ⸨πg g x⸩
   | cons   : Expr  → Expr  → Expr -- not a combinator. just a freestanding expr.
   | uncons : Expr  → Expr  → Expr -- not a combinator. just a freestanding expr.
   -- uncons is the opposite of cons. it does not substitute into its components,
@@ -147,6 +157,15 @@ macro_rules
   | `(($x ∶ $α)) => `(⸨(judge $α) $x⸩)
   | `(∶ $α) => `(judge $α)
 
+/-
+Note: this assumes f composes with g.
+It also assumes that the tail has already been debruijn-ified.
+-/
+def mk_debruijn (t_f t_g α β : Expr) (m n o p : Level) (idx : ℕ) : Expr :=
+  match idx with
+  | 0 => ⸨mkcons mkcons ⸨(I m) t_f⸩ ⸨(I n) t_g⸩⸩
+  | .succ idx => ⸨mkcons (mk_debruijn t_f t_g α β m n o p idx) ⸨(K' m o) t_f α⸩ ⸨(I n) t_f⸩⸩
+
 notation "__" => ⸨(I 0) Prp⸩
 
 def mk_arrow (f α β : Expr) : Expr :=
@@ -155,7 +174,7 @@ def mk_arrow (f α β : Expr) : Expr :=
 inductive IsStep : Expr → Expr → Prop
   | subst  : IsStep ⸨::(f, g) x⸩ ::(⸨f x⸩, ⸨g ⸨f x⸩⸩)
   | chain  : IsStep ⸨::[f, g] x⸩ ::(f, ⸨g x⸩)
-  | mkcons : IsStep ⸨::(πc, πf, πg){f, g} x⸩ ::(πc, πf, πg){⸨πf f x⸩, ⸨πg g x⸩}
+  | mkcons : IsStep ⸨::(πc, πf, πg){f, g} x⸩ ⸨πc πf πg ⸨πf f x⸩ ⸨πg g x⸩⸩
   | plug   : IsStep ⸨(plug x) y⸩ x
   | i      : IsStep ⸨(I m) α x⸩ x
   | k      : IsStep ⸨(K m n) α β x y⸩ x
@@ -190,6 +209,7 @@ snd (∶ (Ty m) α) = α
 S m n o : ::((∶ (Ty m)), ::(::(
 -/
 def S.type (m n o : Level) : Expr :=
+  
   sorry
 
 

@@ -1,33 +1,111 @@
 import Mathlib.Data.Nat.Notation
 
 /-
-See abstract.lean for more.
--/
+Porting over abstract.lean work:
 
-/-
-What about (∶ T x) judgments?
+(∷ f g)
 
-def Cons.elim_right {α : Type} {P : α → Prop} {Q : ∀ {x : α}, P x → Prop}
-  (f : ∀ (x : α), P x) (g : ∀ {x : α}, Q (f x)) (x : α) : Q (f x) := by
-  apply g
-                            ^
-We don't actually take f(x) as an argument in the term. Just x.
-f x gets passed into the type, not the term.
+Design questions:
+- should we put g first, letting us omit the judgment for f?
+- Can we make a macro for cons that derives the types from the head-most ∷?
 
-I m : ⸨∷ ⸨(∶ 0) ⸨(∶ m.succ) (Ty m)⸩ ⸨(I m.succ) (Ty m)⸩⸩ ⸨(∶ 0) (∶ m) (I m)⸩
+f : P
+Q : P → Sort n
+g : Q f
 
-P(x) doesn't necessarily need to be a Prop,
-it may be elucidating to think about the type of cons first.
+∷ is untyped. it just takes two judgments. We only know to substitute
 
-Cut elimination doesn't need to be restricted to Prop.
+Q' = P f
 
+(∷ (∶ P f) (∶ Q' g))
 
+How does substitution work mechanically? We can choose:
+
+- duplicate x, pass composition in:
+  (∷ f(x), g(x, f(x)))
+- only duplicate x:
+  (∷ f(x), g(x))
+
+For actually making types:
+- it's useful to have an "output" value and a "stored" value. a context, and an output
+  - or, we can substitute all the way down, which is that the duplication option does.
+  This is also what we did our proof of.
+- perhaps sigma is less complicated than I thought. we just duplicate x in. This is substitution.
+
+- assume f : α → β, g : α → γ
+
+- We could type (∷ f g) as selecting a selector which acts on both the elements.
+
+(∷f x) : (α → β → γ) → γ
+Interesting, this looks like the S type.
+
+What is the challenge we are trying to solve?
+
+- Cons is a structure in our shallow encoding. It has its own type. it is not derived, for example,
+and it isn't prop.
+- If we don't use function composition, we won't be able to derive its type easily.
+
+- Function composition is the most promising approach.
+
+(∷f(x), g(f(x)))
+
+(∷ (∶ _ f) (∶ _ g))
+
+How will we represent simple arrows?
+
+(∷ (∶ JudgeArg Arg) (∶ JudgeApp App))
+
+- substitute x all the way down
+- compose types
+
+(∷ (∶ P f) (∶ Q g)) x =
+  (∷ (∶ (P x) f(x)) (∶ Q(x, f(x)) g(x)))
+
+- I combinator is totally unnecessary.
+- we want S and K. In their usual formulations. No special judgment shit.
+- First thing to do is Cons type.
+- Also check Judge type.
+
+- What will be the hardest parts of this? Can we do the S type?
+- we will have to have the tail list also typed. This is annoying and confusing.
+We can potentially avoid this by making ValidJudgment work only with types, not judgments.
+
+- for checking apps as well:
+  - we should assume that the head component is already sustituted. so don't substitute head.
+  Just check if f = α
+
+S m n o : (∷ (∶ (Ty m.succ) (Ty m)) (∶ _ cod))
+
+- cod will receive x, at least in the type, and ((∶ (Ty m.succ) (Ty m)) x)
+
+Two potential interpretations:
+- fst is the type of the type
+- snd is the asserted type
+
+The purist interpretation:
+- P is the assertion that this is well-typed.
+I like this one more, because it forms kind of a tree of applications.
+
+S type:
+
+S m n o :
+^ cod receives x. that's good.
+
+I mean another thought is whether we want to pass x and f(x) in as just separate argument or as a list.
+
+A list would be ideal, since then we can traverse it with fst and snd.
+
+Also, we can ignore elements with fst, which is nice.
+
+This will change the type of cons slightly, but that's fine.
 -/
 
 abbrev Level := ℕ
 
 inductive Expr where
-  | I     : Level → Expr
+  | K     : Level → Level → Expr -- Dependent K
+  | K'    : Level → Level → Expr -- Nondependent K
+  | S     : Level → Level → Level → Expr -- Dependent S
   | judge : Level → Expr
   | type  : Level → Expr
   | prop  : Expr
@@ -38,7 +116,10 @@ inductive Expr where
 
 open Expr
 
-syntax "⸨" term+ "⸩"       : term
+syntax "⸨" term+ "⸩"                  : term
+syntax "::[" term,+ "]"               : term
+syntax term "∶" "(" term "∶" term ")" : term
+-- ^ for making judgments: (x : (α : Ty m))
 
 notation "Π'" => Expr.Pi
 notation "Ty" => Expr.type
@@ -49,11 +130,16 @@ notation "∷" => Expr.cons
 macro_rules
   | `(⸨$f:term $x:term⸩) => `(Expr.app $f $x)
   | `(⸨ $f $x:term $args:term*⸩) => `(⸨ (Expr.app $f $x) $args*⸩)
+  | `(::[ $x:term ]) => `($x)
+  | `(::[ $x:term, $xs:term,* ]) => `(Expr.app (Expr.app Expr.cons $x) ::[$xs,*])
+  | `(x ∶ (α ∶ Ty m)) => `(⸨(∶ m) α x⸩)
 
 inductive IsStep : Expr → Expr → Prop
-  | i      : IsStep ⸨(I m) α x⸩ x
   | subst  : IsStep ⸨⸨∷ ⸨(∶ m) P f⸩ ⸨(∶ n) Q g⸩⸩ x⸩
-    ⸨∷ ⸨(∶ m) ⸨P x⸩ ⸨f x⸩⸩ ⸨(∶ n) ⸨Q ⸨f x⸩⸩ ⸨g x⸩⸩⸩
+    ⸨∷ ⸨(∶ m) ⸨P x⸩ ⸨f x⸩⸩ ⸨(∶ n) ⸨Q x ⸨f x⸩⸩ ⸨g x⸩⸩⸩
+  | k      : IsStep ⸨(K m n) α β x y⸩ x
+  | k'     : IsStep ⸨(K' m n) α β x y⸩ x
+  | s      : IsStep ⸨(S m n o) α β γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
   | fst    : IsStep ⸨fst ⸨∷ f g⸩⸩ f
   | snd    : IsStep ⸨snd ⸨∷ f g⸩⸩ g
   | fstj   : IsStep ⸨fst ⸨(∶ m) f g⸩⸩ f
@@ -70,27 +156,35 @@ inductive DefEq : Expr → Expr → Prop
   | right   : DefEq x x'  → DefEq ⸨f x⸩ ⸨f x'⸩
 
 /-
-I type:
-
-I.{[m]} : ∀ (α : Ty m), α → α
-
-This suggests α is a proof of (∶ m.succ) (Ty m) α
+S m n o : ∀ (α : Type m) (β : α → Type n) (γ : ∀ (x : α), β x → Type o)
+  (f : ∀ (x : α) (y : β x), γ x y)
+  (g : ∀ (x : α), β x)
+  (z : α), γ x (g x)
 -/
-def I.type (m : Level) : Expr :=
-  ⸨∷ ⸨(∶ 0) ⸨(∶ m.succ) (Ty m)⸩ ⸨(I m.succ) (Ty m)⸩⸩
-    ⸨(∶ 0) ⸨∷ ⸨(∶ 0) (∶ m) (I m)⸩ ⸨(∶ m) (I (m.succ)) (I m)⸩⸩ (I m)⸩⸩
+def S.type (m n o : Level) : Expr :=
+  -- assert (α : Ty m)
+  let α := ⸨(∶ 0) ⸨(∶ m.succ) (Ty m)⸩ (S m n o)⸩
+
+  -- with α and (∶ Ty m α) in scope
+  let β := ⸨(∶ sorry
+
+  -- type of (S m n o α). ∀ (β : α → Type) ...
+  let tSα := (∷ β sorry)
+
+  ⸨∷ α ⸨(∶ o) tSα (S m n o)⸩⸩
+
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | ty    : ValidJudgment ⸨(∶ m.succ.succ) (Ty m.succ) (Ty m)⸩ (Ty m)
-  | prp   : ValidJudgment ⸨(∶ 1) (Ty 0) Prp⸩ Prp
-  | app   : ValidJudgment ⸨(∶ m) t f⸩ f
-    → ValidJudgment ⸨fst ⸨fst ⸨t x⸩⸩⸩ x -- (∷ dom cod), dom produces a judgment (∶ α x),
-      -- cod / snd produces a judgment (∶ (β (fst (t x))) (f x))
-    → ValidJudgment ⸨snd ⸨t x⸩⸩ ⸨f x⸩
+  | ty    : ValidJudgment (Ty m.succ) (Ty m)
+  | prp   : ValidJudgment (Ty 0) Prp
+  | app   : ValidJudgment t f
+    → ValidJudgment ⸨fst ⸨fst ⸨t x⸩⸩⸩ x
+     -- ^ (∷ (∶ P f) (∶ Q g)), P is a predicate. the predicate that x is typed at...
+      -- Q is similar predicate for the codomain
+    → ValidJudgment ⸨fst ⸨snd ⸨t x⸩⸩⸩ ⸨f x⸩
   | defeq : ValidJudgment α x
     → DefEq α β
     → ValidJudgment β x
-  | i     : ValidJudgment ⸨(∶ m) (I.type m) (I m)⸩ (I m)
 
 syntax "defeq" ident,*        : tactic
 syntax "step" ident,*         : tactic
@@ -115,49 +209,3 @@ macro_rules
       `(tactic| apply $nm))))
 
     `(tactic| $[$nms];*)
-
-theorem I.well_typed : ValidJudgment ⸨(∶ m.succ) (Ty m) α⸩ α
-  → ValidJudgment ⸨(∶ m) α x⸩ x
-  → ValidJudgment ⸨(∶ m) α ⸨(I m) α x⸩⸩ ⸨(I m) α x⸩ := by
-  intro h_t_α h_t_x
-  judge defeq, app, defeq, app, i, defeq
-  assumption
-  defeq symm, trans, right, right, step
-  step subst
-  defeq trans, right, step
-  step fst
-  defeq step
-  step fstj
-  defeq trans, right, step
-  step subst
-  defeq step
-  step snd
-  judge defeq
-  assumption
-  defeq symm, trans, right, right, left, step
-  step subst
-  defeq trans, right, right, step
-  step subst
-  defeq trans, right, step
-  step fst
-  defeq trans, step
-  step fstj
-  defeq left, right, step
-  step i
-  defeq trans, right, left, step
-  step subst
-  defeq trans, right, step
-  step subst
-  defeq trans, step
-  step snd
-  defeq trans, left, right, left, right, right, step
-  step i
-  defeq trans, left, right, step
-  step i
-  defeq trans, left, right, step
-  step i
-  defeq trans, right, step
-  step i
-  defeq symm, trans, right, step
-  step i
-  

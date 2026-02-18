@@ -161,22 +161,24 @@ syntax "(" judgment ")" : judgment
 syntax "snd(" expr ")" : expr
 syntax "fst(" expr ")" : expr
 
-syntax "snd(" judgment ")" : expr
-syntax "fst(" judgment ")" : expr
-
 declare_syntax_cat substitution
 
 syntax expr "⟦" judgment ":=" "*" "⟧"  : substitution
 syntax expr "⟦" judgment ":=" expr "⟧" : substitution
 syntax "(" substitution ")"    : substitution
-syntax substitution "∶" expr   : substitution
+syntax substitution "∶" judgment   : substitution
+
+syntax "j(" judgment ")" : expr
+syntax "s(" substitution ")" : expr
 
 syntax "⟪" expr "⟫" : term
 syntax "s{{" substitution "}}" : term
 syntax "j{{" judgment "}}" : term
 
 macro_rules
-  | `(s{{($s)}}) => `(s{{$s}})
+  | `(⟪j($j:judgment)⟫) => `(j{{$j}})
+  | `(⟪s($s:substitution)⟫) => `(s{{$s}})
+  | `(s{{($s:substitution)}}) => `(s{{$s}})
   | `(⟪$comb:ident[$univ:term,*]⟫) => `($comb $univ*)
   | `(⟪$id:ident⟫) => `($id)
   | `(⟪#$e:term⟫) => `($e)
@@ -193,8 +195,12 @@ macro_rules
   | `(⟪∶ $α:expr⟫) => `(judge ⟪$α⟫)
   | `(j{{($j)}}) => `(j{{$j}})
   | `(j{{$x:expr ∶ $α:expr}}) => `(⟪(∶ $α $x)⟫)
-  | `(⟪fst($x:expr ∶ $_t:expr)⟫) => `(⟪$x⟫)
-  | `(⟪snd($_x:expr ∶ $t:expr)⟫) => `(⟪$t⟫)
+  | `(⟪snd(j($e:judgment))⟫) => `(match j{{$e}} with
+    | j{{α ∶ β}} => β
+    | e => e)
+  | `(⟪fst(j($e:judgment))⟫) => `(match j{{$e}} with
+    | j{{α ∶ β}} => α
+    | e => e)
   | `(⟪fst(::[$x, $_xs])⟫) => `(⟪$x⟫)
   | `(⟪snd(::[$_x, $xs])⟫) => `(⟪$xs⟫)
   | `(⟪fst(::($_a, $_b, $_c){$x, $_xs})⟫) => `(⟪$x⟫)
@@ -282,18 +288,16 @@ macro_rules
   | `(⟪::{$elems,*}⟫) =>
     match elems.getElems.toList with
     | .nil => `(sorry)
-    | .cons x xs =>
-      match x with
-      | `(s{{($f:expr)⟦__ ∶ ($α:expr ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $n)}}) => do
+    | .cons x xs => do
+      match ← `(s{{$x}}) with
+      | `(s{{$f:expr⟦__ ∶ ($α:expr ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $n)}}) => do
         dbg_trace "hi1"
         let my_cons ← `(mk_debruijn ⟪$α⟫ ⟪$β⟫ $m $n $(Lean.quote idx))
         `(⟪((# $my_cons) $f (::{$(⟨⟨xs.map (·.raw)⟩⟩),*}))⟫)
-      | `(s{{$e}}) => do
-        dbg_trace s!"hi: {e}"
+      | `(s{{$e:substitution ∶ ($β:expr ∶ Ty $n)}}) => do
+        dbg_trace s!"hi: {e} t = {β} {n}"
         `(sorry)
-      | e =>
-        dbg_trace s!"hi3: {e}"
-        `(sorry)
+      | e => `(sorry)
 
 inductive IsStep : Expr → Expr → Prop
   | subst  : IsStep ⟪(::(f, g) x)⟫ ⟪::((f x), (g (f x)))⟫
@@ -328,14 +332,18 @@ inductive DefEq : Expr → Expr → Prop
 #eval j{{(I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1)}}
 
 #eval ⟪::{
-  ((I[1] (Ty 0)))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
-  , ((I[1] (Ty 0)))⟦__ ∶ ((Ty 0) ∶ Ty 1) := *⟧ ∶ ((Ty 0) ∶ Ty 1)}⟫
+  ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)
+  , ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)}⟫
+
+#eval ⟪(::{
+  ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)
+  , ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)} Prp)⟫
 
 example : DefEq ⟪(::{
   (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
   , (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)} Prp)⟫
   ⟪::(mkcons
-    , (K'[1, 1] snd((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1)) (Ty 0))
+    , (K'[1, 1] snd(j((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))) (Ty 0))
     , (I[m] t_f)){Prp, Prp}⟫ := by
   rfl
 

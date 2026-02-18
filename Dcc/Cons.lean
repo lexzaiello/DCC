@@ -1,4 +1,5 @@
 import Mathlib.Data.Nat.Notation
+import Init.Meta.Defs
 
 /-
 This version of the SK project uses cons substitution / composition.
@@ -104,6 +105,9 @@ mk_debruijn 0 f g = ::(mkcons, I α, I β){f, g}
 
 debruijn index 1 or anything greater than zero is just nesting K's.
 mk_debruijn n.succ f g = ::(mk_debruijn n, K' t_f α f, I β){f, g}
+
+We still haven't exactly figured out what the type of lists will be.
+We will figure it out, I think.
 -/
 
 abbrev Level := ℕ
@@ -118,6 +122,7 @@ inductive Expr where
   | uncons : Expr  → Expr  → Expr -- not a combinator. just a freestanding expr.
   -- uncons is the opposite of cons. it does not substitute into its components,
   -- but rather passes the value on to the next cons.
+  -- TODO: will probably remove these in favor of mkcons
   | plug   : Expr → Expr -- (plug x) y = x
   | hole   : Expr -- __ x = x
   | judge  : Expr  → Expr -- judge t is a freestanding expr
@@ -136,6 +141,7 @@ syntax "::[" term,+ "]"                       : term
 syntax "::(" term "," term "," term ")" "{" term,+ "}" : term
 syntax "(" term "∶" term ")"                  : term
 syntax "∶" term                               : term
+syntax "#" term                               : term
 -- ^ for making judgments: (x : (α : Ty m))
 
 notation "Π'" => Expr.Pi
@@ -145,6 +151,7 @@ notation "Prp" => Expr.prop
 notation "__" => Expr.hole
 
 macro_rules
+  | `(#$n) => `(($n : Nat))
   | `(⸨$f:term $x:term⸩) => `(Expr.app $f $x)
   | `(⸨ $f $x:term $args:term*⸩) => `(⸨ (Expr.app $f $x) $args*⸩)
   | `(::[ $x:term ]) => `($x)
@@ -157,19 +164,39 @@ macro_rules
   | `(($x ∶ $α)) => `(⸨(judge $α) $x⸩)
   | `(∶ $α) => `(judge $α)
 
+def mk_arrow (f α β : Expr) : Expr :=
+  ::[(∶ α), ::[snd, f, (∶ β)]]
+
 /-
 Note: this assumes f composes with g.
 It also assumes that the tail has already been debruijn-ified.
+
+This also assumes that the head will compose with the tail.
+That is, that the tail will then receive the head.
+This is an implicit context.
+
+So, given α and β for f, 
 -/
-def mk_debruijn (t_f t_g α β : Expr) (m n o p : Level) (idx : ℕ) : Expr :=
+def mk_debruijn (t_f t_g α : Expr) (m n o : Level) (idx : ℕ) : Expr :=
   match idx with
   | 0 => ⸨mkcons mkcons ⸨(I m) t_f⸩ ⸨(I n) t_g⸩⸩
-  | .succ idx => ⸨mkcons (mk_debruijn t_f t_g α β m n o p idx) ⸨(K' m o) t_f α⸩ ⸨(I n) t_f⸩⸩
+  | .succ idx => ⸨mkcons (mk_debruijn t_f t_g α m n o idx) ⸨(K' m o) t_f α⸩ ⸨(I n) t_f⸩⸩
+
+syntax "::{" (term "∶" term),+ "}" : term
+
+macro_rules
+  | `(::{$e ∶ $_α}) => `($e)
+  | `(::{#$idx ∶ ($α ∶ Ty $m), $g ∶ ($tg ∶ Ty $n), $[$ks:term ∶ $vs:term],* }) =>
+    `(⸨(mk_debruijn (mk_arrow ⸨(I $m) $α⸩ $α $α) $tg $α $m $n $m $(Lean.quote idx))
+      ⸨(I $m) $α⸩
+      ($tail ∶ ($tg ∶ Ty $n))⸩)
+  | `(::{#$idx ∶ ($α ∶ Ty $m), $[$ks:term ∶ $vs:term],* }) =>
+    `(⸨(mk_debruijn (mk_arrow ⸨(I $m) $α⸩ $α $α) $tg $α $m $n $m $(Lean.quote idx))
+      ⸨(I $m) $α⸩
+      ($tail ∶ ($tg ∶ Ty $n))⸩)
+    sorry
 
 notation "__" => ⸨(I 0) Prp⸩
-
-def mk_arrow (f α β : Expr) : Expr :=
-  ::[(∶ α), ::[snd, f, (∶ β)]]
 
 inductive IsStep : Expr → Expr → Prop
   | subst  : IsStep ⸨::(f, g) x⸩ ::(⸨f x⸩, ⸨g ⸨f x⸩⸩)
@@ -198,6 +225,9 @@ inductive DefEq : Expr → Expr → Prop
   | judge   : DefEq α β   → DefEq (x ∶ α) (x ∶ β)
   | srt     : DefEq (Srt m) (Ty (m.succ))
   | prp     : DefEq (Srt 0) Prp
+
+example : DefEq ::((#0 ∶ (Prp ∶ Ty 0)), (⸨(I 1) (Ty 0)⸩ ∶ ((mk_arrow (Ty 0) (Ty 0)) ∶ (Ty 1)))) = sorry := by
+  rfl
 
 /-
 S m n o : ∀ (α : Type m) (β : α → Type n) (γ : ∀ (x : α), β x → Type o)

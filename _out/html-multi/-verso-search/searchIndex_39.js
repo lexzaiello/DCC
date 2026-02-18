@@ -1,0 +1,1 @@
+window.docContents[39].resolve({"/#DCC___-The-Dependently-typed-Combinator-Calculus":{"contents":"\nReference and explainer of the Dependently-typed Combinator Calculus (DCC).\n\n","context":"","header":"DCC: The Dependently-typed Combinator Calculus","id":"/#DCC___-The-Dependently-typed-Combinator-Calculus"}});

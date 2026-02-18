@@ -1,5 +1,5 @@
 {
-  description = "ZK-DTT";
+  description = "DCC";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
@@ -8,9 +8,11 @@
 
   outputs = { self, nixpkgs, flake-utils }:
     with flake-utils.lib;
-    eachDefaultSystem (system:
+    eachSystem [system.x86_64-linux] (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs {
+          inherit system;
+        };
         lib = pkgs.lib;
         tex' = pkgs.texlive.combined.scheme-full;
         tex = pkgs.texliveFull.withPackages (ps:
@@ -99,18 +101,18 @@
             '';
           });
         papers = [
-          {
-            name = "paper";
-            path = "papers/paper";
-          }
-          {
-            name = "adapting_equations";
-            path = "papers/adapting_equations";
-          }
-          {
-            name = "lit_review";
-            path = "papers/lit_review";
-          }
+          #{
+          #  name = "paper";
+          #  path = "papers/paper";
+          #}
+          #{
+          #  name = "adapting_equations";
+          #  path = "papers/adapting_equations";
+          #}
+          #{
+          #  name = "lit_review";
+          #  path = "papers/lit_review";
+          #}
           #{ name = "infer_rule"; path = "papers/infer_rule"; }
         ];
         slides = [
@@ -122,10 +124,10 @@
           #  name = "dcc_overview";
           #  path = "slides/dcc_overview";
           #}
-          {
-            name = "comparison";
-            path = "slides/comparison";
-          }
+          #{
+          #  name = "comparison";
+          #  path = "slides/comparison";
+          #}
         ];
       in rec {
         devShells.default =
@@ -138,7 +140,13 @@
         } // builtins.listToAttrs (builtins.map (slide: {
           name = slide.name;
           value = buildslide slide.path;
-        }) slides);
+        }) slides) // {
+          serve = pkgs.writeShellApplication {
+          name = "serve";
+          runtimeInputs = [ pkgs.python3 ];
+          text = ''python3 -m http.server 8000 -d ./_out/html-multi'';
+          };
+        };
         defaultPackage = pkgs.linkFarm "all-documents" ((builtins.map (paper: {
           name = paper.name;
           path = packages.${paper.name};
@@ -146,5 +154,9 @@
           name = slide.name;
           path = packages.${slide.name};
         }) slides));
+        apps.serve = {
+          type = "app";
+          program = "${self.packages.${system}.serve}/bin/serve";
+        };
       });
 }

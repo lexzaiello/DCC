@@ -297,15 +297,9 @@ macro_rules
   | `(⟪::{$f:expr⟦__ ∶ ($α:expr ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $_n₁)
     , $g:expr⟦$_j:judgment := *⟧ ∶ ($γ:expr ∶ Ty $n₂)}⟫) =>
     `(⟪((#mk_debruijn ⟪$α⟫ ⟪$β⟫ ⟪$γ⟫ $m $n₂ $idx) $f $g)⟫)
-  | `(⟪::{$elems,*}⟫) =>
-    match elems.getElems.reverse.toList with
-    | .cons x xs =>
-      (xs.foldrM (fun e acc =>
-        match e with
-        | `(substitution| $f:expr⟦__ ∶ ($α ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $n)) =>
-          `(expr| ((# (mk_debruijn ⟪$α⟫ ⟪$β⟫ ⟪Prp⟫ $m 0 $idx)) $f $acc))
-        | _ => `(expr| Prp)) `(expr| s($x))) >>= (fun e => `(⟪$e⟫))
-    | .nil => `(sorry)
+  | `(⟪::{$f:expr⟦__ ∶ ($α:expr ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $_n₁)
+    , $g:expr⟦$_j:judgment := #$idx₂⟧ ∶ ($γ:expr ∶ Ty $n₂), $rst,*}⟫) =>
+    `(⟪((#mk_debruijn ⟪$α⟫ ⟪$β⟫ ⟪$γ⟫ $m $n₂ $idx) $f ::{$g:expr⟦$_j:judgment := #$idx₂⟧ ∶ ($γ:expr ∶ Ty $n₂), $rst,*})⟫)
 
 def Expr.toFormat : Expr → Std.Format
   | ⟪K[m, n]⟫ => "K[" ++ (joinSep [m, n] ", ") ++"]"
@@ -366,16 +360,8 @@ inductive DefEq : Expr → Expr → Prop
 #eval j{{(I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1)}}
 
 #eval ⟪::{
-  ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)
-  , ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)}⟫
-
-#eval ⟪::{
-  ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)
-  , ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)}⟫
-
-#eval ⟪(::{
-  ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)
-  , ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)} Prp)⟫
+  (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
+  , (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := *⟧ ∶ ((Ty 0) ∶ Ty 1)}⟫
 
 /-
 S m n o : ∀ (α : Type m) (β : α → Type n) (γ : ∀ (x : α), β x → Type o)

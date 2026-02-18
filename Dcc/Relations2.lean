@@ -98,6 +98,8 @@ A list would be ideal, since then we can traverse it with fst and snd.
 Also, we can ignore elements with fst, which is nice.
 
 This will change the type of cons slightly, but that's fine.
+
+Q ::[x, f x]. this aligns perfectly with sigma, ngl.
 -/
 
 abbrev Level := ℕ
@@ -106,44 +108,147 @@ inductive Expr where
   | K     : Level → Level → Expr -- Dependent K
   | K'    : Level → Level → Expr -- Nondependent K
   | S     : Level → Level → Level → Expr -- Dependent S
+  | cons  : Expr  → Expr  → Expr -- not a combinator. just a freestanding expr.
   | judge : Level → Expr
   | type  : Level → Expr
   | prop  : Expr
-  | cons  : Expr
+  | sort  : Level → Expr
   | fst   : Expr
   | snd   : Expr
   | app   : Expr → Expr → Expr
 
 open Expr
 
-syntax "⸨" term+ "⸩"                  : term
-syntax "::[" term,+ "]"               : term
-syntax term "∶" "(" term "∶" term ")" : term
+syntax "⸨" term+ "⸩"                          : term
+syntax "::[" term,+ "]"                       : term
+syntax "(" term "∶" "(" term "∶" term ")" ")" : term
 -- ^ for making judgments: (x : (α : Ty m))
 
 notation "Π'" => Expr.Pi
 notation "Ty" => Expr.type
+notation "Srt" => Expr.sort
 notation "Prp" => Expr.prop
-notation "∶" => Expr.judge
-notation "∷" => Expr.cons
 
 macro_rules
   | `(⸨$f:term $x:term⸩) => `(Expr.app $f $x)
   | `(⸨ $f $x:term $args:term*⸩) => `(⸨ (Expr.app $f $x) $args*⸩)
   | `(::[ $x:term ]) => `($x)
-  | `(::[ $x:term, $xs:term,* ]) => `(Expr.app (Expr.app Expr.cons $x) ::[$xs,*])
-  | `(x ∶ (α ∶ Ty m)) => `(⸨(∶ m) α x⸩)
+  | `(::[ $x:term, $xs:term,* ]) => `(Expr.cons $x ::[$xs,*])
+  | `(($x ∶ ($α ∶ Ty $m))) => `(⸨(judge $m) $α $x⸩)
+
+/-
+In cons substitution / currying,
+(∷ (judge P f) (judge Q g))
+((∷ (judge P f) (judge Q g)) x) = ...
+
+x : (α : Sort m)
+P : α → Type
+
+def Cons.curry.{m, n, o} {α : Sort m} {P : α → Sort n} {Q : ∀ (x : α), P x → Sort o}
+  (c : Cons (∀ (x : α), P x) (fun f => ∀ (x : α), Q x (f x)))
+  (x : α) : Cons (P x) (Q x) := ⟨c.f x, c.g x⟩ -- (:: f(x) g(x))
+
+In cons substitution / currying:
+P = ∀ (x : α), P(x) = ∷[(∶ 
+∷[(∶
+
+Another idea, potentially sus:
+
+α → β = ::[(∶ α), β]
+
+Another thing:
+since cons is so primitive, we may want to special case it.
+It's just incredibly frustrating having to put judgments for everything.
+
+Or, we can add explicit type arguments to cons.
+
+:: Tα Tβ [(∶ α), β]
+
+This is not very different. it reads mildly cleaner.
+Special case is preferred, to be honest.
+
+We can make cons not a combinator. That's pretty clean, tbh.
+
+Then, we don't have to give explicit types to the elements.
+We can just hide it all in the judgment rule.
+
+So, now, f : α → β:
+
+::[(∶ α), (∶ 
+
+A function application is a sequence of judgments.
+
+So, the function application rule:
+- substitute x in:
+- check if fst is its type. this is the same as always.
+
+Another idea:
+- head element of the list is not just asserting the type of the argument, it's asserting
+the type of the entire app so far.
+
+Then, we always have the entire context floating around.
+Then, again, it becomes composition, not duplication.
+
+::[f, g] x = ::[f(x), g(f(x))]
+
+f : α → β:
+::[(: m) α, ::[snd ::[fst, (∶ m)
+
+- we should make fst and snd also do substitution. fst l x. snd l x
+
+Given that ::[] is untyped, we can almost certainly abuse this composition.
+
+- Head position is not just a judgment of the argument,
+but a judgment of the entire function.
+
+Another thing I want to be able to do is both.
+both in head position just duplicates the x.
+
+::[both, g] x = ::[::[x, x], g]
+
+However, there are different kinds of substitution and projection.
+
+fst and snd should not assume that we want to substitute.
+
+f : α → β = ::[(∶ m) α, ::[
+
+How do we know when we want to normalize and when we don't?
+When ::[] is composition and when it's not?
+
+fst / snd are nice, but it would be even nicer if we could replace them.
+
+Remember ::[a, b] x substitutes.
+
+We can assume almost always that the second-most component is the final β-normal value.
+
+so, fst and snd are not necessary for lists.
+
+::[a, b] ::[f, g] = ::[::[f, g] a, b(::[f, g] a)]
+                  = ::[::[f a, g a], b ::[f a, g a]]
+
+we can re-derive the S combinator?
+
+::[::[f a, g a], ::[b, c] ::[f a, g a]]
+=
+
+::[] is the list of steps in a reduction. literally. it literally is.
+It's the inverse of application.
+
+α → β, if ::[] is describing steps of a computation:
+
+Judgments may actually be secondary to everything we're doing.
+What advantage does the judgment have?
+-/
 
 inductive IsStep : Expr → Expr → Prop
-  | subst  : IsStep ⸨⸨∷ ⸨(∶ m) P f⸩ ⸨(∶ n) Q g⸩⸩ x⸩
-    ⸨∷ ⸨(∶ m) ⸨P x⸩ ⸨f x⸩⸩ ⸨(∶ n) ⸨Q x ⸨f x⸩⸩ ⸨g x⸩⸩⸩
+  | subst  : IsStep ⸨::[f, g] x⸩ ::[⸨f x⸩, ⸨g ⸨f x⸩⸩]
   | k      : IsStep ⸨(K m n) α β x y⸩ x
   | k'     : IsStep ⸨(K' m n) α β x y⸩ x
   | s      : IsStep ⸨(S m n o) α β γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
-  | fst    : IsStep ⸨fst ⸨∷ f g⸩⸩ f
-  | snd    : IsStep ⸨snd ⸨∷ f g⸩⸩ g
-  | fstj   : IsStep ⸨fst ⸨(∶ m) f g⸩⸩ f
-  | sndj   : IsStep ⸨snd ⸨(∶ m) f g⸩⸩ g
+  | fst    : IsStep ⸨fst ::[f, g]⸩ f
+  | snd    : IsStep ⸨snd ::[f, g]⸩ g
+  | fstj   : IsStep ⸨fst (f ∶ (α ∶ Ty m))⸩ f
+  | sndj   : IsStep ⸨snd (f ∶ (α ∶ Ty m))⸩ α
   | left   : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩
 

@@ -192,9 +192,12 @@ macro_rules
   | `(⟪::[ $x:expr ]⟫) => `(⟪$x⟫)
   | `(⟪::[ $x:expr, $xs:expr,* ]⟫) => `(Expr.uncons ⟪$x⟫ ⟪::[$xs,*]⟫)
   | `(⟪::($πcons:expr, $πf:expr, $πg:expr)⟫) => `(⟪(Expr.mkcons $πcons $πf $πg)⟫)
-  | `(⟪::($πcons:expr, $πf:expr, $πg:expr){$x:expr, $xs:expr,*}⟫) => do
-    xs.getElems.toList.foldrM (fun e acc => do `(expr| (::($πcons, $πf, $πg) $e $acc:expr))) x
-      >>= (fun e => `(⟪$e⟫))
+  | `(⟪::($πcons:expr, $πf:expr, $πg:expr){$elems:expr,*}⟫) => do
+    match elems.getElems.toList with
+    | .cons x xs =>
+      xs.foldlM (fun e acc => do `(expr| (::($πcons, $πf, $πg) $e ($acc:expr)))) x
+        >>= (fun e => `(⟪$e⟫))
+    | .nil => `(sorry)
   | `(⟪∶ $α:expr⟫) => `(judge ⟪$α⟫)
   | `(j{{($j)}}) => `(j{{$j}})
   | `(j{{$x:expr ∶ $α:expr}}) => `(⟪(∶ $α $x)⟫)
@@ -288,35 +291,18 @@ def mk_debruijn (α β γ : Expr) (m o : Level) (idx : ℕ) : Expr :=
 
 syntax "::{" substitution,+ "}" : expr
 
+#eval ⟪::(K'[1, 2], K'[3, 4], K'[5, 6]){K'[7, 8], K'[9, 10], K'[11, 12]}⟫
+
 macro_rules
-  | `(⟪::{$f:expr⟦__ ∶ ($α:expr ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $n₁)
-    , $g:expr⟦$j:judgment := *⟧ ∶ ($γ:expr ∶ Ty $n₂)}⟫) =>
+  | `(⟪::{$f:expr⟦__ ∶ ($α:expr ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $_n₁)
+    , $g:expr⟦$_j:judgment := *⟧ ∶ ($γ:expr ∶ Ty $n₂)}⟫) =>
     `(⟪((#mk_debruijn ⟪$α⟫ ⟪$β⟫ ⟪$γ⟫ $m $n₂ $idx) $f $g)⟫)
-  | `(⟪::{$elems,*}⟫) =>
+  | `(⟪::{$elems,*}⟫) => do
     match elems.getElems.toList with
+    | .cons x xs =>
+      xs.foldlM (fun e acc => do `(expr| (::{$e, $acc}))) x
+        >>= (fun e => `(⟪$e⟫))
     | .nil => `(sorry)
-    | .cons x xs => do
-      match ← `(s{{$x}}) with
-      | `(s{{$e:substitution ∶ ($β:expr ∶ Ty $n)}}) => do
-        match ← `(s{{$e:substitution}}) with
-        | `(s{{($f:expr⟦$j:judgment := #$idx⟧)}})
-        | `(s{{$f:expr⟦$j:judgment := #$idx⟧}}) =>
-          match ← `(j{{$j}}) with
-          | `(j{{(__ ∶ ($α:expr ∶ Ty $m))}})
-          | `(j{{__ ∶ ($α:expr ∶ Ty $m)}}) => do
-            match xs with
-            | .nil => `(⟪$f⟫)
-            | .cons g .nil =>
-              let my_cons ← `(mk_debruijn ⟪$α⟫ ⟪$β⟫ $m $(Lean.quote idx))
-              let app_f ← `(($my_cons).app ⟪$f⟫)
-              `(($app_f).app s{{$g}})
-            | xs =>
-              let my_cons ← `(mk_debruijn ⟪$α⟫ ⟪$β⟫ $m $(Lean.quote idx))
-              let app_f ← `(($my_cons).app ⟪$f⟫)
-              `(($app_f).app ⟪::{$(⟨⟨xs.map (·.raw)⟩⟩),*}⟫)
-          | e => `(sorry)
-        | e => `(sorry)
-      | e => `(sorry)
 
 def Expr.toFormat : Expr → Std.Format
   | ⟪K[m, n]⟫ => "K[" ++ (joinSep [m, n] ", ") ++"]"

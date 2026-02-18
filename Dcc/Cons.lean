@@ -135,16 +135,23 @@ inductive Expr where
 
 open Expr
 
+declare_syntax_cat expr
+
+syntax term : expr
+
 syntax "⸨" term+ "⸩"                          : term
 syntax "::(" term,+ ")"                       : term
 syntax "::[" term,+ "]"                       : term
-syntax "::(" term "," term "," term ")" "{" term,+ "}" : term
-syntax "(" term "∶" term ")"                  : term
-syntax "∶" term                               : term
-syntax "#" term                               : term
+syntax "::(" expr "," expr "," expr ")" "{" expr,+ "}" : expr
+syntax "(" expr "∶" expr ")"                 : expr
+syntax "(" expr ")"                           : expr
+syntax "∶" expr                               : expr
+syntax "#" term                               : expr
 -- ^ for making judgments: (x : (α : Ty m))
-syntax term "⟦" "_" ":=" term "⟧"     : term
+syntax expr "⟦" "_" ":=" expr "⟧"     : expr
 -- ^ for mimicking variables
+
+syntax "⟪" expr "⟫" : term
 
 notation "Π'" => Expr.Pi
 notation "Ty" => Expr.type
@@ -153,6 +160,8 @@ notation "Prp" => Expr.prop
 notation "__" => Expr.hole
 
 macro_rules
+  | `(($e)) => `($e)
+  | `(⟪$e:term⟫) => `($e)
   | `(#$n) => `(($n : Nat))
   | `(⸨$f:term $x:term⸩) => `(Expr.app $f $x)
   | `(⸨ $f $x:term $args:term*⸩) => `(⸨ (Expr.app $f $x) $args*⸩)
@@ -163,16 +172,17 @@ macro_rules
   | `(::($_πcons, $_πf, $_πg){$x:term}) => `($x)
   | `(::($πcons, $πf, $πg){$x:term, $xs:term,*}) =>
     `(⸨Expr.mkcons $πcons $πf $πg $x ::($πcons, $πf, $πg){$xs,*}⸩)
-  | `(($x ∶ $α)) => `(⸨(judge $α) $x⸩)
   | `(∶ $α) => `(judge $α)
 
 def mk_arrow (f α β : Expr) : Expr :=
   ::[(∶ α), ::[snd, f, (∶ β)]]
 
-syntax term "->" term : term
+syntax expr "->" expr : expr
 
 macro_rules
-  | `(($f ∶ $α -> $β)) => `(mk_arrow $f $α $β)
+  | `(⟪($f:expr ∶ $α:expr -> $β:expr)⟫) => `(mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫)
+  | `(⟪($f:expr ∶ ($α:expr -> $β:expr ∶ Ty $m))⟫) =>
+    `(⟪($f ∶ ((mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫) ∶ Ty $m))⟫)
 
 /-
 Note: this assumes f composes with g.
@@ -227,15 +237,15 @@ def mk_debruijn (t_f : Expr) (m : Level) (idx : ℕ) : Expr :=
   -- at 1, accept the argument, then proceed to reject.
   | .succ (.succ idx) => ⸨mkcons (mk_debruijn t_f m (.succ idx)) ⸨(K' m n) t_f α⸩ ⸨(I m) t_f⸩⸩
 
-syntax "::{" term,+ "}" : term
+syntax "::{" expr,+ "}" : expr
 
 macro_rules
-  | `(::{($f:term ∶ ($t_f ∶ Ty $n))⟦_ := #$idx⟧, $tail,* }) => do
-    let my_cons ← `(mk_debruijn $t_f $n $(Lean.quote idx))
-    let inner ← `(::{$tail,*})
-    `(⸨$my_cons $f $inner⸩)
+  | `(⟪::{($f:expr ∶ ($t_f:expr ∶ Ty $n))⟦_ := #$idx⟧, $tail,* }⟫) => do
+    let my_cons ← `(mk_debruijn ⟪$t_f⟫ $n $(Lean.quote idx))
+    let inner ← `(⟪::{$tail,*}⟫)
+    `(⸨$my_cons ⟪$f⟫ $inner⸩)
   -- the tail element
-  | `(::{$init:term}) => `($init)
+  | `(⟪::{quot $init:term}⟫) => `($init)
 
 notation "__" => ⸨(I 0) Prp⸩
 
@@ -250,8 +260,8 @@ inductive IsStep : Expr → Expr → Prop
   | s      : IsStep ⸨(S m n o) α β γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
   | fst    : IsStep ⸨fst ::(f, g)⸩ f
   | snd    : IsStep ⸨snd ::(f, g)⸩ g
-  | fstj   : IsStep ⸨fst (f ∶ (α ∶ Ty m))⸩ f
-  | sndj   : IsStep ⸨snd (f ∶ (α ∶ Ty m))⸩ α
+  | fstj   : IsStep ⸨fst ⸨(∶ α) β⸩⸩ α
+  | sndj   : IsStep ⸨fst ⸨(∶ α) β⸩⸩ β
   | left   : IsStep f f' → IsStep ⸨f x⸩ ⸨f' x⸩
   | right  : IsStep x x' → IsStep ⸨f x⸩ ⸨f x'⸩
 
@@ -263,12 +273,15 @@ inductive DefEq : Expr → Expr → Prop
   | left    : DefEq f f'  → DefEq ⸨f x⸩ ⸨f' x⸩
   | right   : DefEq x x'  → DefEq ⸨f x⸩ ⸨f x'⸩
   | cons    : DefEq x x'  → DefEq xs xs' → DefEq ::[x, xs] ::[x', xs']
-  | judge   : DefEq α β   → DefEq (x ∶ α) (x ∶ β)
+  | judge   : DefEq α β   → DefEq ⸨(∶ α) x⸩ ⸨(∶ β) x⸩
   | srt     : DefEq (Srt m) (Ty (m.succ))
   | prp     : DefEq (Srt 0) Prp
 
+
+#eval ⟪(⸨(I 1) (Ty 0)⸩ ∶ ((Ty 0 -> Ty 0) ∶ Ty 1))⟫
+
 example : DefEq ⸨::{
-  (⸨(I 1) (Ty 0)⸩ ∶ ((mk_arrow ⸨(I 1) (Ty 0) Prp⸩ (Ty 0) (Ty 0)) ∶ (Ty 1)))⟦_ := #1⟧
+  (⸨(I 1) (Ty 0)⸩ ∶ (Ty 0 -> Ty 0 ∶ (Ty 1)))⟦_ := #1⟧
   , ⸨(I 1) (Ty 0)⸩} Prp⸩
   ::(mkcons
     , ⸨(K' 1 1) (mk_arrow ⸨(I 1) (Ty 0) Prp⸩ (Ty 0) (Ty 0)) (Ty 0)⸩

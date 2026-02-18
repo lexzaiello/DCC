@@ -1,6 +1,8 @@
 import Mathlib.Data.Nat.Notation
 import Init.Meta.Defs
 
+open Std Format
+
 /-
 This version of the SK project uses cons substitution / composition.
 
@@ -141,9 +143,9 @@ syntax "__"                                   : expr
 syntax ident                                  : expr
 syntax ident "[" term,* "]"              : expr
 syntax "(" expr+ ")"                          : expr
-syntax "::(" expr,+ ")"                       : expr
 syntax "::[" expr,+ "]"                       : expr
-syntax "::(" expr "," expr "," expr ")" "{" expr,+ "}" : expr
+syntax "::(" expr,* ")"                       : expr
+syntax "::(" expr,* ")" "{" expr,+ "}" : expr
 syntax "∶" expr                               : expr
 syntax "#" term                               : expr
 -- ^ for making judgments: (x : (α : Ty m))
@@ -186,10 +188,10 @@ macro_rules
   | `(⟪($e:expr)⟫) => `(⟪$e:expr⟫)
   | `(⟪::[ $x:expr ]⟫) => `(⟪$x⟫)
   | `(⟪::[ $x:expr, $xs:expr,* ]⟫) => `(Expr.uncons ⟪$x⟫ ⟪::[$xs,*]⟫)
-  | `(⟪::( $x:expr )⟫) => `(⟪$x⟫)
-  | `(⟪::($x:expr, $xs:expr,* )⟫) => `(Expr.cons ⟪$x⟫ ⟪::($xs,*)⟫)
-  | `(⟪::($_πcons, $_πf, $_πg){$x:expr}⟫) => `(⟪$x⟫)
-  | `(⟪::($πcons, $πf, $πg){$x:expr, $xs:expr,*}⟫) =>
+  | `(⟪::($πcons:expr, $πf:expr, $πg:expr)⟫) => `(⟪(Expr.mkcons $πcons $πf $πg)⟫)
+  | `(⟪::($πcons:expr, $πf:expr, $πg:expr){$x:expr, $xs:expr}⟫) =>
+    `(⟪(Expr.mkcons $πcons $πf $πg $x $xs)⟫)
+  | `(⟪::($πcons:expr, $πf:expr, $πg:expr){$x:expr, $xs:expr,*}⟫) =>
     `(⟪(Expr.mkcons $πcons $πf $πg $x ::($πcons, $πf, $πg){$xs,*})⟫)
   | `(⟪∶ $α:expr⟫) => `(judge ⟪$α⟫)
   | `(j{{($j)}}) => `(j{{$j}})
@@ -273,17 +275,17 @@ def mk_debruijn (α β : Expr) (m : Level) (idx : ℕ) : Expr :=
   -/
 
   match idx with
-  | 0 => ⟪(mkcons mkcons (K'[m, n] t_f Prp) (I[m] t_f))⟫
+  | 0 => ⟪::(mkcons, (K'[m, n] t_f Prp), (I[m] t_f))⟫
   -- at 0, reject the next argument, output f, then reject forever.
-  | 1 => ⟪(mkcons (# (mk_debruijn α β m 0)) (I[m] t_f) (I[m] t_f))⟫
+  | 1 => ⟪::((# (mk_debruijn α β m 0)), (I[m] t_f), (I[m] t_f))⟫
   -- at 1, accept the argument, then proceed to reject.
-  | .succ (.succ idx) => ⟪(mkcons (# (mk_debruijn α β m (.succ idx)))
-    (K'[m, n] t_f α) (I[m] t_f))⟫
+  | .succ (.succ idx) => ⟪::((# (mk_debruijn α β m (.succ idx)))
+    ,(K'[m, n] t_f α)
+    ,(I[m] t_f))⟫
 
 syntax "::{" substitution,+ "}" : expr
 
 macro_rules
-  | `(s{{($g:expr)⟦__ ∶ $α := *⟧ ∶ $β}}) => `(⟪$g⟫) -- accept all arguments
   | `(⟪::{$elems,*}⟫) =>
     match elems.getElems.toList with
     | .nil => `(sorry)
@@ -300,24 +302,48 @@ macro_rules
             | .nil => `(⟪$f⟫)
             | xs =>
               let my_cons ← `(mk_debruijn ⟪$α⟫ ⟪$β⟫ $m $(Lean.quote idx))
-              let app_f ← `(Expr.app $my_cons ⟪$f⟫)
-              `(Expr.app $app_f ⟪::{$(⟨⟨xs.map (·.raw)⟩⟩),*}⟫)
-          | e =>
-            dbg_trace s!"hi: {e} t = {β} {n}"
-            `(sorry)
+              let app_f ← `(($my_cons).app ⟪$f⟫)
+              `(($app_f).app ⟪::{$(⟨⟨xs.map (·.raw)⟩⟩),*}⟫)
+          | e => `(sorry)
         | e => `(sorry)
       | e => `(sorry)
 
+def Expr.toFormat : Expr → Std.Format
+  | ⟪K[m, n]⟫ => "K[" ++ (joinSep [m, n] ", ") ++"]"
+  | ⟪K'[m, n]⟫ => "K'[" ++ (joinSep [m, n] ", ") ++ "]"
+  | ⟪S[m, n, o]⟫ => "S[" ++ (joinSep [m, n, o] ", ") ++ "]"
+  | ⟪I[m]⟫ => s!"I[{m}]"
+  | ⟪::(πc, πf, πg){f, g}⟫ =>
+    "::(" ++
+      (.group <| .nest 2 <| joinSep [πc.toFormat, πf.toFormat, πg.toFormat] ", ")
+      ++ ")"
+      ++ "{" ++ (.group <| .nest 2 <| joinSep [f.toFormat, g.toFormat] ", ") ++ "}"
+  | ⟪Ty m⟫ => s!"Ty {m}"
+  | ⟪Srt m⟫ => s!"Srt {m}"
+  | ⟪Prp⟫ => s!"Prp"
+  | ⟪snd[]⟫ => "snd"
+  | ⟪fst[]⟫ => "fst"
+  | ⟪j(x ∶ t)⟫ => .paren <| .group <| .nest 2 <| x.toFormat ++ " ∶ " ++ t.toFormat
+  | ⟪(∶ T)⟫ => s!"∶ {T.toFormat}"
+  | ⟪::[x, xs]⟫ => s!"::[{x.toFormat}, {xs.toFormat}]"
+  | ⟪mkcons⟫ => "mkcons"
+  | ⟪(a b)⟫ => .paren <| .group <| .nest 2 <| a.toFormat ++ .line ++ b.toFormat
+  | _ => ""
+
+instance : ToFormat Expr := ⟨Expr.toFormat⟩
+instance : ToString Expr := ⟨fun e => s!"{e.toFormat}"⟩
+
 inductive IsStep : Expr → Expr → Prop
-  | subst  : IsStep ⟪(::(f, g) x)⟫ ⟪::((f x), (g (f x)))⟫
-  | chain  : IsStep ⟪(::[f, g] x)⟫ ⟪::(f, (g x))⟫
+  | chain  : IsStep ⟪(::[f, g] x)⟫ ⟪::[f, (g x)]⟫
   | mkcons : IsStep ⟪(::(πc, πf, πg){f, g} x)⟫ ⟪(πc πf πg (πf f x) (πg g x))⟫
   | i      : IsStep ⟪(I[m] α x)⟫ x
   | k      : IsStep ⟪(K[m, n] α β x y)⟫ x
   | k'     : IsStep ⟪(K'[m, n] α β x y)⟫ x
   | s      : IsStep ⟪(S[m, n, o] α β γ x y z)⟫ ⟪((x z) (y z))⟫
-  | fst    : IsStep ⟪(fst ::(f, g))⟫ f
-  | snd    : IsStep ⟪(snd ::(f, g))⟫ g
+  | fst    : IsStep ⟪(fst ::[f, g])⟫ f
+  | snd    : IsStep ⟪(snd ::[f, g])⟫ g
+  | fst'   : IsStep ⟪(fst ::(_a, _b, _c){f, g})⟫ f
+  | snd'   : IsStep ⟪(snd ::(_a, _b, _c){f, g})⟫ g
   | fstj   : IsStep ⟪(fst ((∶ α) β))⟫ α
   | sndj   : IsStep ⟪(fst ((∶ α) β))⟫ β
   | left   : IsStep f f' → IsStep ⟪(f x)⟫ ⟪(f' x)⟫
@@ -351,14 +377,6 @@ inductive DefEq : Expr → Expr → Prop
 #eval ⟪(::{
   ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)
   , ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)} Prp)⟫
-
-example : DefEq ⟪(::{
-  (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
-  , (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)} Prp)⟫
-  ⟪::(mkcons
-    , (K'[1, 1] snd(j((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))) (Ty 0))
-    , (I[m] t_f)){Prp, Prp}⟫ := by
-  rfl
 
 /-
 S m n o : ∀ (α : Type m) (β : α → Type n) (γ : ∀ (x : α), β x → Type o)
@@ -409,3 +427,21 @@ macro_rules
       `(tactic| apply $nm))))
 
     `(tactic| $[$nms];*)
+
+#eval ⟪::{(I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
+  , (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)}⟫
+
+#eval ⟪::(mkcons
+    , (K'[1, 1] snd(j((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))) (Ty 0))
+    , (I[0] Prp)){Prp, Prp, Ty 0}⟫
+
+example : DefEq ⟪(::{
+  (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
+  , (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)} Prp)⟫
+  ⟪::(mkcons
+    , (K'[1, 1] snd(j((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))) (Ty 0))
+    , (I[m] t_f)){Prp, Prp}⟫ := by
+  simp [mk_debruijn]
+  defeq trans, step
+  step mkcons
+  rfl

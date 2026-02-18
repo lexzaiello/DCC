@@ -143,6 +143,8 @@ syntax "(" term "∶" term ")"                  : term
 syntax "∶" term                               : term
 syntax "#" term                               : term
 -- ^ for making judgments: (x : (α : Ty m))
+syntax term "⟦" "_" ":=" term "⟧"     : term
+-- ^ for mimicking variables
 
 notation "Π'" => Expr.Pi
 notation "Ty" => Expr.type
@@ -175,26 +177,60 @@ This also assumes that the head will compose with the tail.
 That is, that the tail will then receive the head.
 This is an implicit context.
 
-So, given α and β for f,
+Note that this will always induce substitution into the tail element.
+This can only handle "variables" in the head position.
 
-f : ∀ (x : α), β x
+Every head position must select a variable. It is then piped into the
+head function.
 
-why do we need t_g? Kinda annoying.
-TODO: fix.
+the debruijn index 0 indicates that we reject all arguments.
+the debruijn index 1 indicates that we accept the arugment.
+
+Note: we should be able to infer α from t_f
+
+Problem is, now we can't easily match against t_f.
+
+we can't match α, since
+
+we should assume α is a judgment (∶ α)
 -/
-def mk_debruijn (t_f α : Expr) (m o : Level) (idx : ℕ) : Expr :=
-  match idx with
-  | 0 => ⸨mkcons mkcons ⸨(I m) t_f⸩ ⸨(I m) t_f⸩⸩
-  | .succ idx => ⸨mkcons (mk_debruijn t_f α m o idx) ⸨(K' m o) t_f α⸩ ⸨(I m) t_f⸩⸩
 
-syntax "::{" (term "∶" term),+ "}" : term
+def mk_debruijn (t_f : Expr) (m : Level) (idx : ℕ) : Expr :=
+  let α := match t_f with
+  | ::(_a, _b, _c){∶ α, _β} => α
+  | ::[(∶ α), _] => α
+  | α => α
+
+  let n := match α with
+  | ⸨(∶ _a) _b⸩ => 0
+  | Ty n => n
+  | Prp => 0
+  | _ => m -- TODO: fix
+
+  /-
+    The 0th de bruijn index, we should have an expression
+    of the codomain type β.
+    Since further arguments won't have determined types,
+    since we should not substitute further arguments,
+    we will defer to Prop.
+  -/
+
+  match idx with
+  | 0 => ⸨mkcons mkcons ⸨(K' m n) t_f Prp⸩ ⸨(I m) t_f⸩⸩
+  -- at 0, reject the next argument, output f, then reject forever.
+  | 1 => ⸨mkcons (mk_debruijn t_f m 0) ⸨(I m) t_f⸩ ⸨(I m) t_f⸩⸩
+  -- at 1, accept the argument, then proceed to reject.
+  | .succ (.succ idx) => ⸨mkcons (mk_debruijn t_f m (.succ idx)) ⸨(K' m n) t_f α⸩ ⸨(I m) t_f⸩⸩
+
+syntax "::{" term,+ "}" : term
 
 macro_rules
-  | `(::{$e ∶ $_α}) => `($e)
-  | `(::{#$idx ∶ ($α ∶ Ty $m), $g ∶ ($tg ∶ Ty $n), $[$ks:term ∶ $vs:term],* }) => do
-    let my_cons ← `(mk_debruijn (mk_arrow ⸨(I $m) $α⸩ $α $α) $α $m $m $(Lean.quote idx))
-    let inner ← `(::{$[$ks:term ∶ $vs:term],*})
-    `(⸨$my_cons ⸨(I $m) $α⸩ $inner⸩)
+  | `(::{($f:term ∶ ($t_f ∶ Ty $n))⟦_ := #$idx⟧, $tail,* }) => do
+    let my_cons ← `(mk_debruijn $t_f $n $(Lean.quote idx))
+    let inner ← `(::{$tail,*})
+    `(⸨$my_cons $f $inner⸩)
+  -- the tail element
+  | `(::{$init:term}) => `($init)
 
 notation "__" => ⸨(I 0) Prp⸩
 
@@ -226,7 +262,12 @@ inductive DefEq : Expr → Expr → Prop
   | srt     : DefEq (Srt m) (Ty (m.succ))
   | prp     : DefEq (Srt 0) Prp
 
-example : DefEq ::{#0 ∶ (Prp ∶ Ty 0), #0 ∶ (Prp ∶ Ty 0)} = sorry := by
+example : DefEq ⸨::{
+  (⸨(I 1) (Ty 0)⸩ ∶ ((mk_arrow ⸨(I 1) (Ty 0) Prp⸩ (Ty 0) (Ty 0)) ∶ (Ty 1)))⟦_ := #1 ∶ (Ty 0 ∶ Ty 1)⟧
+  , ⸨(I 1) (Ty 0)⸩} Prp⸩ =
+  ::(mkcons
+    , ⸨(K' 1 1) (mk_arrow ⸨(I 1) (Ty 0) Prp⸩ (Ty 0) (Ty 0)) (Ty 0)⸩
+    , ⸨(I m) t_f⸩){Prp, Prp} := by
   rfl
 
 /-

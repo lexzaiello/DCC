@@ -137,52 +137,61 @@ open Expr
 
 declare_syntax_cat expr
 
-syntax term : expr
-
-syntax "⸨" term+ "⸩"                          : term
-syntax "::(" term,+ ")"                       : term
-syntax "::[" term,+ "]"                       : term
+syntax ident                                  : expr
+syntax ident "[" term,* "]"              : expr
+syntax "(" expr+ ")"                          : expr
+syntax "::(" expr,+ ")"                       : expr
+syntax "::[" expr,+ "]"                       : expr
 syntax "::(" expr "," expr "," expr ")" "{" expr,+ "}" : expr
-syntax "(" expr "∶" expr ")"                 : expr
-syntax "(" expr ")"                           : expr
+syntax expr "∶" expr                          : expr
 syntax "∶" expr                               : expr
 syntax "#" term                               : expr
 -- ^ for making judgments: (x : (α : Ty m))
 syntax expr "⟦" "_" ":=" expr "⟧"     : expr
 -- ^ for mimicking variables
+syntax "Π'"       : expr
+syntax "Ty" term  : expr
+syntax "Srt" term : expr
+syntax "Prp"      : expr
+syntax "__"       : expr
+syntax "snd(" expr ")" : expr
+syntax "fst(" expr ")" : expr
 
 syntax "⟪" expr "⟫" : term
 
-notation "Π'" => Expr.Pi
-notation "Ty" => Expr.type
-notation "Srt" => Expr.sort
-notation "Prp" => Expr.prop
-notation "__" => Expr.hole
-
 macro_rules
-  | `(($e)) => `($e)
-  | `(⟪$e:term⟫) => `($e)
-  | `(#$n) => `(($n : Nat))
-  | `(⸨$f:term $x:term⸩) => `(Expr.app $f $x)
-  | `(⸨ $f $x:term $args:term*⸩) => `(⸨ (Expr.app $f $x) $args*⸩)
-  | `(::[ $x:term ]) => `($x)
-  | `(::[ $x:term, $xs:term,* ]) => `(Expr.uncons $x ::[$xs,*])
-  | `(::( $x:term )) => `($x)
-  | `(::( $x:term, $xs:term,* )) => `(Expr.cons $x ::($xs,*))
-  | `(::($_πcons, $_πf, $_πg){$x:term}) => `($x)
-  | `(::($πcons, $πf, $πg){$x:term, $xs:term,*}) =>
-    `(⸨Expr.mkcons $πcons $πf $πg $x ::($πcons, $πf, $πg){$xs,*}⸩)
-  | `(∶ $α) => `(judge $α)
+  | `(⟪$comb:ident[$univ:term,*]⟫) => `($comb $univ*)
+  | `(⟪$id:ident⟫) => `($id)
+  | `(⟪($e:expr)⟫) => `(⟪$e⟫)
+  | `(⟪#$e:term⟫) => `($e)
+  | `(⟪($f:expr $x:expr)⟫) => `(Expr.app ⟪$f⟫ ⟪$x⟫)
+  | `(⟪($f $x:expr $args:expr*)⟫) => `(((Expr.app ⟪$f⟫ ⟪$x⟫) ⟪($args*)⟫))
+  | `(⟪::[ $x:expr ]⟫) => `(⟪$x⟫)
+  | `(⟪::[ $x:expr, $xs:expr,* ]⟫) => `(Expr.uncons ⟪$x⟫ ⟪::[$xs,*]⟫)
+  | `(⟪::( $x:expr )⟫) => `(⟪$x⟫)
+  | `(⟪::($x:expr, $xs:expr,* )⟫) => `(Expr.cons ⟪$x⟫ ⟪::($xs,*)⟫)
+  | `(⟪::($_πcons, $_πf, $_πg){$x:expr}⟫) => `(⟪$x⟫)
+  | `(⟪::($πcons, $πf, $πg){$x:expr, $xs:expr,*}⟫) =>
+    `(⟪(Expr.mkcons $πcons $πf $πg $x ::($πcons, $πf, $πg){$xs,*})⟫)
+  | `(⟪∶ $α:expr⟫) => `(judge ⟪$α⟫)
+  | `(⟪fst($x ∶ $_t)⟫) => `(⟪$x⟫)
+  | `(⟪snd($_x ∶ $t)⟫) => `(⟪$t⟫)
+  | `(⟪fst(::[$x, $_xs])⟫) => `(⟪$x⟫)
+  | `(⟪snd(::[$_x, $xs])⟫) => `(⟪$xs⟫)
+  | `(⟪fst(::($_a, $_b, $_c){$x, $_xs})⟫) => `(⟪$x⟫)
+  | `(⟪snd(::($_a, $_b, $_c){$_x, $xs})⟫) => `(⟪$xs⟫)
 
 def mk_arrow (f α β : Expr) : Expr :=
-  ::[(∶ α), ::[snd, f, (∶ β)]]
+  ⟪::[(∶ α), ::[snd, f, (∶ β)]]⟫
 
 syntax expr "->" expr : expr
 
 macro_rules
-  | `(⟪($f:expr ∶ $α:expr -> $β:expr)⟫) => `(mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫)
+  | `(⟪($f:expr ∶ $α:expr -> $β:expr)⟫) => `(⟪$f ∶ (# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫))⟫)
   | `(⟪($f:expr ∶ ($α:expr -> $β:expr ∶ Ty $m))⟫) =>
-    `(⟪($f ∶ ((mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫) ∶ Ty $m))⟫)
+    `(⟪($f ∶ ((# (mk_arrow ⟪$f⟫ ⟪$α⟫ ⟪$β⟫)) ∶ Ty $m))⟫)
+
+#eval ⟪((I 0 (Ty 0))
 
 /-
 Note: this assumes f composes with g.

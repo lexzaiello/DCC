@@ -159,8 +159,8 @@ syntax "fst(" expr ")" : expr
 
 declare_syntax_cat substitution
 
-syntax expr "⟦" "_" "∶" expr ":=" expr "⟧" "∶" expr : substitution
-syntax expr "⟦" "_" "∶" expr ":=" "*" "⟧"  "∶" expr : substitution
+syntax expr "⟦" "__" "∶" expr ":=" "*" "⟧"  "∶" expr : substitution
+syntax expr "⟦" "__" "∶" expr ":=" expr "⟧" "∶" expr : substitution
 
 syntax "⟪" expr "⟫" : term
 syntax "s{{" substitution "}}" : term
@@ -266,15 +266,15 @@ def mk_debruijn (α β : Expr) (m n : Level) (idx : ℕ) : Expr :=
 syntax "::{" substitution,+ "}" : expr
 
 macro_rules
-  | `(s{{$g:expr⟦_ ∶ $α := *⟧ ∶ $β}}) => `(⟪$g⟫) -- accept all arguments
+  | `(s{{$g:expr⟦__ ∶ $α := *⟧ ∶ $β}}) => `(⟪$g⟫) -- accept all arguments
   | `(⟪::{$elems,*}⟫) =>
     match elems.getElems.toList with
     | .nil => `(sorry)
     | .cons x xs =>
       match x with
-      | `(s{{$f:expr⟦_ ∶ $α := #$idx⟧ ∶ $β:expr}}) => do
+      | `(s{{$f:expr⟦__ ∶ ($α:expr ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $n)}}) => do
         dbg_trace "hi1"
-        let my_cons ← `(mk_debruijn ⟪$t_f⟫ $n $(Lean.quote idx))
+        let my_cons ← `(mk_debruijn ⟪$α⟫ ⟪$β⟫ $m $n $(Lean.quote idx))
         `(⟪((# $my_cons) $f (::{$(⟨⟨xs.map (·.raw)⟩⟩),*}))⟫)
       | e =>
         dbg_trace s!"{e}"
@@ -313,12 +313,12 @@ inductive DefEq : Expr → Expr → Prop
 #eval ⟪((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))⟫
 
 #eval ⟪::{
-  ((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))⟦_ := #1⟧
-  , (I[1] (Ty 0))⟦_ := *⟧}⟫
+  (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧ ∶ Ty 0
+  , (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := *⟧ ∶ Ty 0}⟫
 
 example : DefEq ⟪(::{
-  ((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))⟦_ := #1⟧
-  , (I[1] (Ty 0))⟦_ := *⟧} Prp)⟫
+  ((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))⟦__ := #1⟧
+  , (I[1] (Ty 0))⟦__ := *⟧} Prp)⟫
   ⟪::(mkcons
     , (K'[1, 1] snd((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1)) (Ty 0))
     , (I[m] t_f)){Prp, Prp}⟫ := by

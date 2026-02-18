@@ -413,14 +413,16 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
-example : DefEq ⟪(::{
+example : ((π₁ : Expr) × (π₂ : Expr) × (DefEq ⟪(::{
   (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
   , (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := *⟧ ∶ ((Ty 0) ∶ Ty 1)} Prp)⟫
   ⟪::(mkcons
-    , (K'[1, 1] snd(j((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))) (Ty 0))
-    , (I[m] t_f)){Prp, Prp}⟫ := by
+    , π₁
+    , π₂){Prp, Prp}⟫)) := by
   simp [mk_debruijn]
   defeq trans, step
+  step mkcons
+  defeq trans, left, step
   step mkcons
   
   rfl

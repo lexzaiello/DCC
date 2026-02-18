@@ -27,6 +27,38 @@ also, we can avoid nested applications.
 - the very last snd is the normalized value, so very last snd's type is the entire type.
 - for cons, we only need a "terminal" type. everything else bubbles up from that. we can calculate this
 in our reduction rule by "bubbling up".
+
+Note: mkcons has a "terminal value" which we derive.
+Note: mkcons does not need explicit type arguments, since its πf and πg are fixed.
+they are dynamic anyway.
+
+However, in order to plug mkcons in as a fixpoint,
+we need the type arguments.
+
+If we add α and β type arguments, the type is pretty easy.
+
+x : α
+β = new fst
+γ = new snd
+
+However, new fst and new snd are different from the cons map.
+
+This type is δ
+
+δ = new cons.
+
+πf : ∀ (x : α)
+mkcons α β : (
+
+This might be fine.
+
+Worry about this later. At the very least, we will need α β γ and δ.
+
+πf f : ∀ (x : α), β x
+
+πf : ∀ (f : ∀ (x : α), β x) (x : α), β x
+
+etc.
 -/
 
 import Mathlib.Data.Nat.Notation
@@ -41,7 +73,7 @@ inductive Expr where
   | K      : Level → Level → Expr -- Dependent K
   | K'     : Level → Level → Expr -- Nondependent K
   | S      : Level → Level → Level → Expr -- Dependent S
-  | mkcons : Expr  → Expr  → Expr  → Expr -- (mkcons πcons πf πg) f g x = πcons πf πg ⸨πf f x⸩ ⸨πg g x⸩
+  | mkcons : Expr -- (mkcons α β γ δ πcons (πf : ∀ (x : α), β x) (πg : ∀ (x : α)) f g x = πcons πf πg ⸨πf f x⸩ ⸨πg g x⸩
   | judge  : Expr  → Expr -- judge t is a freestanding expr
   /-
     Sorts:
@@ -64,10 +96,19 @@ declare_syntax_cat u_level
 declare_syntax_cat atom
 declare_syntax_cat sort
 declare_syntax_cat sort_cat
+declare_syntax_cat lit
+declare_syntax_cat stmt
+declare_syntax_cat app
+declare_syntax_cat judgment
+declare_syntax_cat declare
+declare_syntax_cat assign
+declare_syntax_cat substitution
+
+syntax "#(" term ")" : lit
 
 syntax num           : u_level
 syntax ident         : u_level
-syntax "#(" term ")" : u_level
+syntax lit           : u_level
 
 syntax "Type" : sort_cat
 syntax "Prop" : sort_cat
@@ -75,11 +116,31 @@ syntax "Sort" : sort_cat
 
 syntax sort_cat u_level : sort
 
-syntax "(" expr ")"         : atom
-syntax "__"                 : atom
-syntax ident "[" term,* "]" : atom
-syntax "::(" atom,* ")"     : atom
-syntax "{" atom,+ "}"       : atom
-syntax "∶" atom             : atom
-syntax "#(" term ")"        : atom
-syntax "Ty" term            : atom
+syntax "*"                     : atom
+syntax "(" expr ")"            : atom
+syntax "__"                    : atom
+syntax ident "[" u_level,* "]" : atom
+syntax "::(" atom,* ")"        : atom
+syntax "{" atom,+ "}"          : atom
+syntax ":" atom                : atom
+syntax lit                     : atom
+
+syntax:50 (name := judge_all) atom ":" expr : judgment
+
+-- assignments are always well-typed judgment
+-- with an assigned value.
+-- these are not core to the language,
+-- but rather derived from operational semantics of cons.
+syntax judgment ":=" atom  : declare
+syntax atom ":=" atom      : declare
+
+syntax "⟦" declare "⟧" : assign
+
+syntax atom assign : substitution
+
+syntax app atom : app
+syntax atom     : app
+
+syntax app          : expr
+syntax judgment     : expr
+

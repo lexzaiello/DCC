@@ -413,24 +413,14 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
-#eval ⟪::{(I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
-  , (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)}⟫
-
-#eval ⟪::(mkcons
-    , (K'[1, 1] snd(j((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))) (Ty 0))
-    , (I[0] Prp)){Prp, Prp, Ty 0}⟫
-
-#eval ⟪::{
-  (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
-  , (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)}⟫
-
 example : DefEq ⟪(::{
-  (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
-  , (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)} Prp)⟫
+  (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
+  , (I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := *⟧ ∶ ((Ty 0) ∶ Ty 1)} Prp)⟫
   ⟪::(mkcons
     , (K'[1, 1] snd(j((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))) (Ty 0))
     , (I[m] t_f)){Prp, Prp}⟫ := by
   simp [mk_debruijn]
   defeq trans, step
   step mkcons
+  
   rfl

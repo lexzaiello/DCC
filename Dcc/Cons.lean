@@ -234,19 +234,18 @@ Problem is, now we can't easily match against t_f.
 we can't match α, since
 
 we should assume α is a judgment (∶ α)
+
+This also assumes that β is the fully substituted
+type of the substituted variable.
 -/
-
-def mk_debruijn (t_f : Expr) (m : Level) (idx : ℕ) : Expr :=
-  let α := match t_f with
-  | ⟪::(_a, _b, _c){∶ α, _β}⟫ => α
-  | ⟪::[(∶ α), _rst]⟫ => α
-  | α => α
-
+def mk_debruijn (α β : Expr) (m n : Level) (idx : ℕ) : Expr :=
   let n := match α with
   | ⟪((∶ _a) _b)⟫ => 0
   | ⟪Ty n⟫ => n
   | ⟪Prp⟫ => 0
   | _ => m -- TODO: fix
+
+  let t_f := ⟪mkcons ∶ (α -> β ∶ Ty n)⟫
 
   /-
     The 0th de bruijn index, we should have an expression
@@ -259,9 +258,10 @@ def mk_debruijn (t_f : Expr) (m : Level) (idx : ℕ) : Expr :=
   match idx with
   | 0 => ⟪(mkcons mkcons (K'[m, n] t_f Prp) (I[m] t_f))⟫
   -- at 0, reject the next argument, output f, then reject forever.
-  | 1 => ⟪(mkcons (# (mk_debruijn t_f m 0)) (I[m] t_f) (I[m] t_f))⟫
+  | 1 => ⟪(mkcons (# (mk_debruijn α β m n 0)) (I[m] t_f) (I[m] t_f))⟫
   -- at 1, accept the argument, then proceed to reject.
-  | .succ (.succ idx) => ⟪(mkcons (# (mk_debruijn t_f m (.succ idx))) (K'[m, n] t_f α) (I[m] t_f))⟫
+  | .succ (.succ idx) => ⟪(mkcons (# (mk_debruijn α β m n (.succ idx)))
+    (K'[m, n] t_f α) (I[m] t_f))⟫
 
 syntax "::{" substitution,+ "}" : expr
 

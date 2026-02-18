@@ -152,7 +152,6 @@ syntax "Π'"       : expr
 syntax "Ty" term  : expr
 syntax "Srt" term : expr
 syntax "Prp"      : expr
-syntax "__"       : expr
 
 declare_syntax_cat judgment
 syntax expr "∶" expr    : judgment
@@ -256,7 +255,7 @@ we should assume α is a judgment (∶ α)
 This also assumes that β is the fully substituted
 type of the substituted variable.
 -/
-def mk_debruijn (α β : Expr) (m n : Level) (idx : ℕ) : Expr :=
+def mk_debruijn (α β : Expr) (m : Level) (idx : ℕ) : Expr :=
   let n := match α with
   | ⟪((∶ _a) _b)⟫ => 0
   | ⟪Ty n⟫ => n
@@ -276,9 +275,9 @@ def mk_debruijn (α β : Expr) (m n : Level) (idx : ℕ) : Expr :=
   match idx with
   | 0 => ⟪(mkcons mkcons (K'[m, n] t_f Prp) (I[m] t_f))⟫
   -- at 0, reject the next argument, output f, then reject forever.
-  | 1 => ⟪(mkcons (# (mk_debruijn α β m n 0)) (I[m] t_f) (I[m] t_f))⟫
+  | 1 => ⟪(mkcons (# (mk_debruijn α β m 0)) (I[m] t_f) (I[m] t_f))⟫
   -- at 1, accept the argument, then proceed to reject.
-  | .succ (.succ idx) => ⟪(mkcons (# (mk_debruijn α β m n (.succ idx)))
+  | .succ (.succ idx) => ⟪(mkcons (# (mk_debruijn α β m (.succ idx)))
     (K'[m, n] t_f α) (I[m] t_f))⟫
 
 syntax "::{" substitution,+ "}" : expr
@@ -290,13 +289,23 @@ macro_rules
     | .nil => `(sorry)
     | .cons x xs => do
       match ← `(s{{$x}}) with
-      | `(s{{$f:expr⟦__ ∶ ($α:expr ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $n)}}) => do
-        dbg_trace "hi1"
-        let my_cons ← `(mk_debruijn ⟪$α⟫ ⟪$β⟫ $m $n $(Lean.quote idx))
-        `(⟪((# $my_cons) $f (::{$(⟨⟨xs.map (·.raw)⟩⟩),*}))⟫)
       | `(s{{$e:substitution ∶ ($β:expr ∶ Ty $n)}}) => do
-        dbg_trace s!"hi: {e} t = {β} {n}"
-        `(sorry)
+        match ← `(s{{$e:substitution}}) with
+        | `(s{{($f:expr⟦$j:judgment := #$idx⟧)}})
+        | `(s{{$f:expr⟦$j:judgment := #$idx⟧}}) =>
+          match ← `(j{{$j}}) with
+          | `(j{{(__ ∶ ($α:expr ∶ Ty $m))}})
+          | `(j{{__ ∶ ($α:expr ∶ Ty $m)}}) => do
+            match xs with
+            | .nil => `(⟪$f⟫)
+            | xs =>
+              let my_cons ← `(mk_debruijn ⟪$α⟫ ⟪$β⟫ $m $(Lean.quote idx))
+              let app_f ← `(Expr.app $my_cons ⟪$f⟫)
+              `(Expr.app $app_f ⟪::{$(⟨⟨xs.map (·.raw)⟩⟩),*}⟫)
+          | e =>
+            dbg_trace s!"hi: {e} t = {β} {n}"
+            `(sorry)
+        | e => `(sorry)
       | e => `(sorry)
 
 inductive IsStep : Expr → Expr → Prop
@@ -330,6 +339,10 @@ inductive DefEq : Expr → Expr → Prop
 #eval j{{(I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1)}}
 
 #eval j{{(I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1)}}
+
+#eval ⟪::{
+  ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)
+  , ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)}⟫
 
 #eval ⟪::{
   ((I[1] (Ty 0))⟦__ ∶ ((Ty 0) ∶ Ty 1) := #1⟧) ∶ ((Ty 0) ∶ Ty 1)

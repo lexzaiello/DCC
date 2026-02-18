@@ -141,7 +141,7 @@ declare_syntax_cat expr
 
 syntax "__"                                   : expr
 syntax ident                                  : expr
-syntax ident "[" term,* "]"              : expr
+syntax ident "[" term,* "]"                   : expr
 syntax "(" expr+ ")"                          : expr
 syntax "::[" expr,+ "]"                       : expr
 syntax "::(" expr,* ")"                       : expr
@@ -183,16 +183,18 @@ macro_rules
   | `(⟪$comb:ident[$univ:term,*]⟫) => `($comb $univ*)
   | `(⟪$id:ident⟫) => `($id)
   | `(⟪#$e:term⟫) => `($e)
-  | `(⟪($f:expr $x:expr)⟫) => `(Expr.app ⟪$f⟫ ⟪$x⟫)
-  | `(⟪($f $x:expr $args:expr*)⟫) => `(Expr.app (Expr.app ⟪$f⟫ ⟪$x⟫) ⟪($args*)⟫)
   | `(⟪($e:expr)⟫) => `(⟪$e:expr⟫)
+  | `(⟪($f:expr $x:expr*)⟫) => do
+    let mut curr ← `(⟪$f⟫)
+    for arg in x do
+      curr ← `(Expr.app $curr ⟪$arg⟫)
+    return curr
   | `(⟪::[ $x:expr ]⟫) => `(⟪$x⟫)
   | `(⟪::[ $x:expr, $xs:expr,* ]⟫) => `(Expr.uncons ⟪$x⟫ ⟪::[$xs,*]⟫)
   | `(⟪::($πcons:expr, $πf:expr, $πg:expr)⟫) => `(⟪(Expr.mkcons $πcons $πf $πg)⟫)
-  | `(⟪::($πcons:expr, $πf:expr, $πg:expr){$x:expr, $xs:expr}⟫) =>
-    `(⟪(Expr.mkcons $πcons $πf $πg $x $xs)⟫)
-  | `(⟪::($πcons:expr, $πf:expr, $πg:expr){$x:expr, $xs:expr,*}⟫) =>
-    `(⟪(Expr.mkcons $πcons $πf $πg $x ::($πcons, $πf, $πg){$xs,*})⟫)
+  | `(⟪::($πcons:expr, $πf:expr, $πg:expr){$x:expr, $xs:expr,*}⟫) => do
+    xs.getElems.toList.foldrM (fun e acc => do `(expr| (::($πcons, $πf, $πg) $e $acc:expr))) x
+      >>= (fun e => `(⟪$e⟫))
   | `(⟪∶ $α:expr⟫) => `(judge ⟪$α⟫)
   | `(j{{($j)}}) => `(j{{$j}})
   | `(j{{$x:expr ∶ $α:expr}}) => `(⟪(∶ $α $x)⟫)
@@ -257,7 +259,7 @@ we should assume α is a judgment (∶ α)
 This also assumes that β is the fully substituted
 type of the substituted variable.
 -/
-def mk_debruijn (α β : Expr) (m : Level) (idx : ℕ) : Expr :=
+def mk_debruijn (α β γ : Expr) (m o : Level) (idx : ℕ) : Expr :=
   let n := match α with
   | ⟪((∶ _a) _b)⟫ => 0
   | ⟪Ty n⟫ => n
@@ -265,6 +267,7 @@ def mk_debruijn (α β : Expr) (m : Level) (idx : ℕ) : Expr :=
   | _ => m -- TODO: fix
 
   let t_f := j{{mkcons ∶ (α -> β ∶ Ty n)}}
+  let t_g := j{{mkcons ∶ (α -> γ ∶ Ty o)}}
 
   /-
     The 0th de bruijn index, we should have an expression
@@ -275,17 +278,20 @@ def mk_debruijn (α β : Expr) (m : Level) (idx : ℕ) : Expr :=
   -/
 
   match idx with
-  | 0 => ⟪::(mkcons, (K'[m, n] t_f Prp), (I[m] t_f))⟫
+  | 0 => ⟪::(mkcons, (K'[m, n] α Prp), (I[m] t_g))⟫ -- should be substituted here
   -- at 0, reject the next argument, output f, then reject forever.
-  | 1 => ⟪::((# (mk_debruijn α β m 0)), (I[m] t_f), (I[m] t_f))⟫
+  | 1 => ⟪::((# (mk_debruijn α β γ m o 0)), (I[m] t_f), (I[m] t_f))⟫
   -- at 1, accept the argument, then proceed to reject.
-  | .succ (.succ idx) => ⟪::((# (mk_debruijn α β m (.succ idx)))
-    ,(K'[m, n] t_f α)
-    ,(I[m] t_f))⟫
+  | .succ (.succ idx) => ⟪::((# (mk_debruijn α β γ m o (.succ idx)))
+    , (K'[m, n] t_f α)
+    , (I[m] t_f))⟫
 
 syntax "::{" substitution,+ "}" : expr
 
 macro_rules
+  | `(⟪::{$f:expr⟦__ ∶ ($α:expr ∶ Ty $m) := #$idx⟧ ∶ ($β:expr ∶ Ty $n₁)
+    , $g:expr⟦$j:judgment := *⟧ ∶ ($γ:expr ∶ Ty $n₂)}⟫) =>
+    `(⟪((#mk_debruijn ⟪$α⟫ ⟪$β⟫ ⟪$γ⟫ $m $n₂ $idx) $f $g)⟫)
   | `(⟪::{$elems,*}⟫) =>
     match elems.getElems.toList with
     | .nil => `(sorry)
@@ -300,6 +306,10 @@ macro_rules
           | `(j{{__ ∶ ($α:expr ∶ Ty $m)}}) => do
             match xs with
             | .nil => `(⟪$f⟫)
+            | .cons g .nil =>
+              let my_cons ← `(mk_debruijn ⟪$α⟫ ⟪$β⟫ $m $(Lean.quote idx))
+              let app_f ← `(($my_cons).app ⟪$f⟫)
+              `(($app_f).app s{{$g}})
             | xs =>
               let my_cons ← `(mk_debruijn ⟪$α⟫ ⟪$β⟫ $m $(Lean.quote idx))
               let app_f ← `(($my_cons).app ⟪$f⟫)
@@ -434,6 +444,10 @@ macro_rules
 #eval ⟪::(mkcons
     , (K'[1, 1] snd(j((I[1] (Ty 0)) ∶ ((Ty 0) -> (Ty 0) ∶ Ty 1))) (Ty 0))
     , (I[0] Prp)){Prp, Prp, Ty 0}⟫
+
+#eval ⟪::{
+  (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)
+  , (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)}⟫
 
 example : DefEq ⟪(::{
   (I[1] (Ty 0))⟦(__ ∶ ((Ty 0) ∶ Ty 1)) := #1⟧ ∶ ((Ty 0) ∶ Ty 1)

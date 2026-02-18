@@ -175,26 +175,26 @@ This also assumes that the head will compose with the tail.
 That is, that the tail will then receive the head.
 This is an implicit context.
 
-So, given α and β for f, 
+So, given α and β for f,
+
+f : ∀ (x : α), β x
+
+why do we need t_g? Kinda annoying.
+TODO: fix.
 -/
-def mk_debruijn (t_f t_g α : Expr) (m n o : Level) (idx : ℕ) : Expr :=
+def mk_debruijn (t_f α : Expr) (m o : Level) (idx : ℕ) : Expr :=
   match idx with
-  | 0 => ⸨mkcons mkcons ⸨(I m) t_f⸩ ⸨(I n) t_g⸩⸩
-  | .succ idx => ⸨mkcons (mk_debruijn t_f t_g α m n o idx) ⸨(K' m o) t_f α⸩ ⸨(I n) t_f⸩⸩
+  | 0 => ⸨mkcons mkcons ⸨(I m) t_f⸩ ⸨(I m) t_f⸩⸩
+  | .succ idx => ⸨mkcons (mk_debruijn t_f α m o idx) ⸨(K' m o) t_f α⸩ ⸨(I m) t_f⸩⸩
 
 syntax "::{" (term "∶" term),+ "}" : term
 
 macro_rules
   | `(::{$e ∶ $_α}) => `($e)
-  | `(::{#$idx ∶ ($α ∶ Ty $m), $g ∶ ($tg ∶ Ty $n), $[$ks:term ∶ $vs:term],* }) =>
-    `(⸨(mk_debruijn (mk_arrow ⸨(I $m) $α⸩ $α $α) $tg $α $m $n $m $(Lean.quote idx))
-      ⸨(I $m) $α⸩
-      ($tail ∶ ($tg ∶ Ty $n))⸩)
-  | `(::{#$idx ∶ ($α ∶ Ty $m), $[$ks:term ∶ $vs:term],* }) =>
-    `(⸨(mk_debruijn (mk_arrow ⸨(I $m) $α⸩ $α $α) $tg $α $m $n $m $(Lean.quote idx))
-      ⸨(I $m) $α⸩
-      ($tail ∶ ($tg ∶ Ty $n))⸩)
-    sorry
+  | `(::{#$idx ∶ ($α ∶ Ty $m), $g ∶ ($tg ∶ Ty $n), $[$ks:term ∶ $vs:term],* }) => do
+    let my_cons ← `(mk_debruijn (mk_arrow ⸨(I $m) $α⸩ $α $α) $α $m $m $(Lean.quote idx))
+    let inner ← `(::{$[$ks:term ∶ $vs:term],*})
+    `(⸨$my_cons ⸨(I $m) $α⸩ $inner⸩)
 
 notation "__" => ⸨(I 0) Prp⸩
 
@@ -226,7 +226,7 @@ inductive DefEq : Expr → Expr → Prop
   | srt     : DefEq (Srt m) (Ty (m.succ))
   | prp     : DefEq (Srt 0) Prp
 
-example : DefEq ::((#0 ∶ (Prp ∶ Ty 0)), (⸨(I 1) (Ty 0)⸩ ∶ ((mk_arrow (Ty 0) (Ty 0)) ∶ (Ty 1)))) = sorry := by
+example : DefEq ::{#0 ∶ (Prp ∶ Ty 0), #0 ∶ (Prp ∶ Ty 0)} = sorry := by
   rfl
 
 /-

@@ -68,6 +68,9 @@ It is somewhat untyped.
 Issue: with mkcons, we want to be able to calculuate f and g types on the fly.
 
 Judgments might be very useful for this, instead of explicit type arguments.
+
+We can actually probably have only πcons as a judgment.
+This should give us everything we need.
 -/
 
 import Mathlib.Data.Nat.Notation
@@ -82,8 +85,8 @@ inductive Expr where
   | K      : Level → Level → Expr -- Dependent K
   | K'     : Level → Level → Expr -- Nondependent K
   | S      : Level → Level → Level → Expr -- Dependent S
-  | mkcons : Level → Level → Level → Level → Expr
-  -- ^ (mkcons α β γ δ πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
+  | mkcons : Expr
+  -- ^ (mkcons πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
   | judge  : Expr  → Expr -- judge t is a freestanding expr
   /-
     Sorts:
@@ -146,6 +149,7 @@ syntax "*"                     : atom
 syntax "(" expr ")"            : atom
 syntax "__"                    : atom
 syntax ":" atom                : atom
+syntax "judge" judgment        : atom
 
 syntax:50 (name := judge_all) atom ":" expr : judgment
 
@@ -181,6 +185,7 @@ syntax "::⟪" cons "⟫"    : term
 syntax "j⟪" judgment "⟫" : term
 
 macro_rules
+  -- TODO: fix to use new mkcons with judgments.
   /-| `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) => do
     let inner ← `(app| (mkcons $m:atom $n:atom $o:atom $p:atom) $α:atom $β:atom $γ:atom $δ:atom)
     let args ← rst.getElems.toList.foldlM (fun acc e => `(app| $acc:app $e:atom)) inner
@@ -192,7 +197,7 @@ macro_rules
   -- and which debruijn indices they correspond to.
   | `(::⟪::=[$elems,*]⟫) => `(::⟪::={}[$elems,*]⟫)
   -- Note: this only works for letter variables
-  | `(::⟪::={$vars:ident,*}[($f:atom ⟦__ : ($α:atom : Ty $m) := $var:ident⟧) : $β:app $v:atom, ($f:atom ⟦__ : ($α:atom : Ty $m) := $var:ident⟧) : $β:app $v:atom]⟫) =>
+  | `(::⟪::={$vars:ident,*}[($f:atom ⟦__ : ($α:atom : Type $m:atom) := $var:ident⟧) : ($β:atom : Type $n:atom), $g:atom : ($tg:atom : Type $o:atom)]⟫) =>
     -- If this variable is contained in vars, then look up the corresponding debruijn index
     -- otherwise, insert the variable
 
@@ -200,8 +205,21 @@ macro_rules
     -- for the head
     -- 1 corresponds to accepting the input
     -- all others decrement from n to 1
-    let mk_debruijn : ℕ → Lean.MacroM Lean.Syntax
-      | .zero => `(⟪::($α:atom, $β:atom, 
+    let rec mk_debruijn (n' : ℕ) : Lean.MacroM (Lean.TSyntax `atom) := do
+      let ret_g ← `(atom| (I[$o:atom] $tg:atom))
+      let judge_α ← `(atom| ($α:atom : Type $m:atom))
+      let judge_β ← `(atom| ($β:atom : Type $n:atom))
+
+      match n' with
+      | .zero => `(atom| (::(mkcons, (K'[$n:atom, $n:atom] $β:atom $β:atom), (I[$o:atom] $tg:atom))))
+      | .succ n' =>
+        let inner ← mk_debruijn n'
+        let map_f ← if n' == .succ .zero then
+          `(atom| (I[$n:atom] ($judge_α:atom → $judge_β:atom)))
+        else
+          `(atom| (K[$n:atom, $m:atom] ($judge_α:atom → $judge_β:atom)))
+
+        `(atom| (::($inner:atom, $map_f:atom, $ret_g:atom)))
 
     match vars.getElems.toList.findIdx? (· == var) with
     | .some debruijnidx =>
@@ -210,6 +228,7 @@ macro_rules
     | .none =>
       -- Not contained in vars, so this is de bruijn index 0
       sorry
+  | `(at⟪judge $x:atom : $t:atom⟫) => `(⟪(judge $t) $x⟫)
   | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)
   | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
   | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)

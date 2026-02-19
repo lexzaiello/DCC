@@ -59,6 +59,11 @@ Worry about this later. At the very least, we will need α β γ and δ.
 πf : ∀ (f : ∀ (x : α), β x) (x : α), β x
 
 etc.
+
+Since α is a type, and β produces a type, we will need level arguments, too.
+
+Note: cons can really accept any argument.
+It is somewhat untyped.
 -/
 
 import Mathlib.Data.Nat.Notation
@@ -73,7 +78,8 @@ inductive Expr where
   | K      : Level → Level → Expr -- Dependent K
   | K'     : Level → Level → Expr -- Nondependent K
   | S      : Level → Level → Level → Expr -- Dependent S
-  | mkcons : Expr -- (mkcons α β γ δ πcons (πf : ∀ (x : α), β x) (πg : ∀ (x : α)) f g x = πcons πf πg ⸨πf f x⸩ ⸨πg g x⸩
+  | mkcons : Level → Level → Level → Level → Expr
+  -- ^ (mkcons α β γ δ πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
   | judge  : Expr  → Expr -- judge t is a freestanding expr
   /-
     Sorts:
@@ -92,8 +98,8 @@ inductive Expr where
 open Expr
 
 declare_syntax_cat expr
-declare_syntax_cat u_level
 declare_syntax_cat atom
+declare_syntax_cat comb
 declare_syntax_cat sort
 declare_syntax_cat sort_cat
 declare_syntax_cat lit
@@ -103,29 +109,35 @@ declare_syntax_cat judgment
 declare_syntax_cat declare
 declare_syntax_cat assign
 declare_syntax_cat substitution
+declare_syntax_cat arrow
+declare_syntax_cat fall
+declare_syntax_cat cons
 
 syntax "#(" term ")" : lit
 
-syntax num           : u_level
-syntax ident         : u_level
-syntax lit           : u_level
+syntax num           : atom
+syntax ident         : atom
+syntax lit           : atom
 
 syntax "Type" : sort_cat
-syntax "Prop" : sort_cat
 syntax "Sort" : sort_cat
 
-syntax sort_cat u_level : sort
+syntax "::(" atom,* ")"                : cons
+syntax "::(" atom,* ")" "{" atom,+ "}" : cons
+syntax "::=[" atom,* "]"               : cons
 
+syntax ident "[" atom,* "]"        : comb
+syntax "(" term ")" "[" atom,* "]" : comb
+
+syntax comb                    : atom
+syntax sort_cat atom           : atom
+syntax "Prop"                  : atom
 syntax "*"                     : atom
 syntax "(" expr ")"            : atom
 syntax "__"                    : atom
-syntax ident "[" u_level,* "]" : atom
-syntax "::(" atom,* ")"        : atom
-syntax "{" atom,+ "}"          : atom
 syntax ":" atom                : atom
-syntax lit                     : atom
 
-syntax:50 (name := judge_all) atom ":" expr : judgment
+syntax:50 (name := judge_all) atom ":" atom : judgment
 
 -- assignments are always well-typed judgment
 -- with an assigned value.
@@ -136,6 +148,9 @@ syntax atom ":=" atom      : declare
 
 syntax "⟦" declare "⟧" : assign
 
+syntax judgment "→" judgment   : arrow
+syntax "∀" judgment,+ "," atom : fall
+
 syntax atom assign : substitution
 
 syntax app atom : app
@@ -144,3 +159,20 @@ syntax atom     : app
 syntax app          : expr
 syntax judgment     : expr
 
+syntax "⟪" expr "⟫"      : term
+syntax "a⟪" app "⟫"      : term
+syntax "at⟪" atom "⟫"    : term
+syntax "c⟪" comb "⟫"     : term
+syntax "j⟪" judgment "⟫" : term
+
+macro_rules
+  | `(at⟪$n:num⟫) => `($n)
+  | `(at⟪$ide:ident⟫) => `($ide)
+  | `(at⟪#($t:term)⟫) => `($t)
+  | `(at⟪Type $n:atom⟫) => `(Expr.type at⟪$n⟫)
+  | `(at⟪Sort $n:atom⟫) => `(Expr.sort at⟪$n⟫)
+  | `(at⟪Prop⟫) => `(Expr.prop)
+  | `(c⟪$comb:ident[]⟫) => `(at⟪$comb:ident⟫)
+  | `(c⟪($comb:term)[]⟫) => `($comb)
+  | `(c⟪$comb:ident[$u:atom, $xs:atom,*]⟫) =>`(c⟪($comb at⟪$u⟫)[$xs,*]⟫)
+  | `(c⟪($comb:term)[$u:atom, $xs:atom,*]⟫) =>`(c⟪($comb at⟪$u⟫)[$xs,*]⟫)

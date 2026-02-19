@@ -211,6 +211,7 @@ def parse_asvar : Lean.Macro
 def parse_aoperator : Lean.Macro
   | `(at⟪ head <| judge <| ($x:atom : $_t:atom)⟫) => pure x
   | `(at⟪ tail <| judge <| ($_x:atom : $t:atom)⟫) => pure t
+  | `(at⟪judge <| ($x:atom : $t:atom)⟫) => `(at⟪((: $t:atom) $x:atom)⟫)
   | s@`(at⟪ typeof <| $_e:atom⟫) => parse_typeof s
   | s@`(at⟪ sortof <| $_e:atom⟫) => parse_sortof s
   | s@`(at⟪ asvar  <| $_e:atom⟫) => parse_asvar s
@@ -237,11 +238,10 @@ def parse_fall : Lean.Macro
   | `(at⟪∀($vars:judgment,*), [$hyps:atom,*, ($conclude:atom : $why:atom)]⟫) => do
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder
-    let TJudge := Lean.MacroM (Lean.TSyntax `judgment)
     let TJudge' := Prod (Lean.MacroM (Lean.TSyntax `atom)) (Lean.MacroM (Lean.TSyntax `atom))
     let find_entry (var : Lean.TSyntax `term) : Lean.TSyntax `judgment × ℕ → Lean.MacroM Bool :=
-          fun (⟨judgmt, idx⟩ : Lean.TSyntax `judgment × ℕ) => match judgmt with
-          | `(judgment| $v:atom : $α:atom) => do
+          fun (⟨judgmt, _idx⟩ : Lean.TSyntax `judgment × ℕ) => match judgmt with
+          | `(judgment| $v:atom : $_α:atom) => do
             pure <| (← `(at⟪$v⟫)) == var
           | _ => pure false
     let Ctx := Lean.MacroM (Lean.TSyntax `binderlist)
@@ -251,14 +251,12 @@ def parse_fall : Lean.Macro
       let t_rest ← rest.snd
       match ← vars with
       | `(binderlist| ($thevars,*)) =>
-        let t_f ← `(⟪typeof <| $fhead:atom⟫)
-        let t_t_f ← `(⟪typeof <| typeof <| $fhead:atom⟫)
-        match fhead, t_f, t_t_f with
-        | `(⟪($f:app $var:atom) : $β:atom⟫), t_f, `(⟪ Type $m:atom ⟫) =>
+        match fhead with
+        | `(⟪($_f:app $var:atom) : $β:atom⟫) =>
           match ← thevars.getElems.toList.zipIdx.findM? (find_entry (← `(⟪asvar <| $var:atom⟫))) with
           | .some (.mk a debruijnIdx) =>
             match var, a with
-            | _, `(judgment| $x:atom : $α:atom) =>
+            | _, `(judgment| $_x:atom : $α:atom) =>
               pure <| ⟨vars, mk_debruijn α β t_rest debruijnIdx.succ⟩
             | `(judgment| $x:atom : $α:atom), _ =>
               pure <| ⟨vars, mk_debruijn α β t_rest debruijnIdx.succ⟩
@@ -270,10 +268,10 @@ def parse_fall : Lean.Macro
               -- we should add it to the context and also
               -- substitute the bound variable
               let inner := ← mk_debruijn α β t_rest 1
-              let vars' := `(binderlist| ($thevars:judgment,*, $var:atom : $α:atom))
+              let vars' := `(binderlist| ($thevars:judgment,*, $x:atom : $α:atom))
               pure <| ⟨vars', pure inner⟩
             | _ => Macro.throwError "variable's type is undefined"
-        | _, _, _ => Macro.throwError "this is not a valid list"
+        | _ => Macro.throwError "this is not a valid list"
       | _ => Macro.throwError "not a valid context"
     let acc : Ctx × TJudge' :=
       Prod.mk (`(binderlist| ($vars:judgment,*))) (⟨pure conclude, pure why⟩ : TJudge')
@@ -285,21 +283,20 @@ def parse_fall : Lean.Macro
         (`(atom| ($mycons:cons {$e:atom, $fst:atom})))
         (`(atom| tail <| $(← acc_e.snd)))) : TJudge'))
       (init := acc)
-      >>= (fun (⟨vars, acc_e⟩ : Ctx × TJudge') =>do
+      >>= (fun (⟨_vars, acc_e⟩ : Ctx × TJudge') =>do
         let fst ← acc_e.fst
         `(at⟪$fst:atom⟫))
   | _ => Macro.throwUnsupported
 
 @[macro matom] def parse_atom : Lean.Macro
-  | `(at⟪judge <| $x:atom : $t:atom⟫) => `(⟪(: $t:atom) $x:atom⟫)
-  | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)
   | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
+  | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)
   | `(at⟪$n:num⟫) => `($n)
   | `(at⟪$ide:ident⟫) => `($ide)
   | `(at⟪#($t:term)⟫) => `($t)
   | `(at⟪: $T:atom⟫) => `(Expr.judge at⟪$T⟫)
-  | s@`(at⟪∀$vars:binderlist, $hyps:list⟫) => parse_fall s
-  | s@`(at⟪$op:operator <| $a:atom⟫) => parse_aoperator s
+  | s@`(at⟪∀$_vars:binderlist, $_hyps:list⟫) => parse_fall s
+  | s@`(at⟪$_op:operator <| $_a:atom⟫) => parse_aoperator s
   | _ => Macro.throwUnsupported
 
 @[macro mapp] def parse_app : Lean.Macro
@@ -308,9 +305,8 @@ def parse_fall : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro mexpr] def parse_expr : Lean.Macro
-  | `(⟪ $op:operator "<|" $e:expr⟫) => moperator
-  | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
+  | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
   | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)
   | _ => Macro.throwUnsupported
 

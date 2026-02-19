@@ -77,11 +77,11 @@ declare_syntax_cat list
 declare_syntax_cat fall
 declare_syntax_cat binderlist
 
-syntax "to_ty"  : operator
+syntax "sortof" : operator
 syntax "typeof" : operator
-syntax "head" : operator
-syntax "tail" : operator
-syntax "judge" : operator
+syntax "head"   : operator
+syntax "tail"   : operator
+syntax "judge"  : operator
 
 syntax "#(" term ")" : lit
 
@@ -162,7 +162,11 @@ syntax "j⟪" judgment "⟫"    : term
 -- for the head
 -- 1 corresponds to accepting the input
 -- all others decrement from n to 1
-def mk_debruijn (n m o α β tg : Lean.TSyntax `atom) (n' : ℕ) : Lean.MacroM (Lean.TSyntax `cons) := do
+-- this assumes that α is well-tyepd as a Type
+def mk_debruijn (α β tg : Lean.TSyntax `atom) (n' : ℕ) : Lean.MacroM (Lean.TSyntax `cons) := do
+  let m := `(atom| typeof <| $α:atom)
+  let n := `(atom| typeof <| $β:atom)
+  let o := `(atom| typeof <| $tg:atom)
   let ret_g    ← `(atom| (I[$o:atom] $tg:atom))
   let judge_α  ← `(atom| ($α:atom : Type $m:atom))
   let judge_β  ← `(atom| ($β:atom : Type $n:atom))
@@ -182,6 +186,9 @@ macro_rules
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$op:operator <| $e:expr⟫) => do
     match op, ← `(⟪$e⟫) with
+    | `(operator| sortof), `(⟪Prop⟫) => `(0)
+    | `(operator| sortof), `(⟪Sort $m⟫) => `(at⟪$m⟫)
+    | `(operator| sortof), `(⟪Type $m⟫) => `(at⟪$m⟫ + 1)
     | `(operator| typeof), `(⟪Sort $m⟫) => `(⟪Type $m⟫)
     | `(operator| typeof), `(⟪Type $m⟫) => `(⟪Type #(1 + at⟪$m⟫)⟫)
     | `(operator| typeof), `(⟪Prop⟫) => `(⟪Type 0⟫)
@@ -209,25 +216,28 @@ macro_rules
   | `(::⟪$a:cons {$f:atom,$g:atom}⟫) => `(a⟪($a:cons) $f:atom $g:atom⟫)
   -- This is the base case of debruijn-index substitution in lists
   | `(⟪∀($vars:judgment,*), [$hyps,*, $conclude:judgment]⟫) => do
-    let h : List (Lean.MacroM (Lean.TSyntax `expr)) := hyps.getElems.toList.mapM (fun f => do
+    -- Finds the entry of an indexed variable judgment
+    -- corresponding to a hypothesis binder
+    let find_entry (var : Lean.TSyntax `atom) : _ → Lean.MacroM Bool :=
+          fun (⟨judgmt, idx⟩ : (Lean.TSyntax `judgment) × ℕ) => match judgmt with
+          | `(judgment| $v:atom : $α:atom) => do
+            pure <| (← `(at⟪$v⟫)) == (← `(at⟪$var⟫))
+          | _ => pure false
+    
+    let swap_head (f : Lean.TSyntax `expr) : (Lean.MacroM (Lean.TSyntax `expr)) := do
       let t_f ← `(⟪typeof <| $f⟫)
       let t_t_f ← `(⟪typeof <| typeof <| $f⟫)
       match f, t_f, t_t_f with
       | `(⟪$f:app $var:atom⟫), t_f, `(⟪ Type $m:atom ⟫) =>
-        let find_entry : _ → Lean.MacroM (Option ((Lean.TSyntax `atom) × (Lean.TSyntax `atom) × ℕ)) :=
-          fun (⟨judgmt, idx⟩ : (Lean.TSyntax `atom) × ℕ) => match judgmt with
-          | `(judgment| $v:atom : $α:atom) => do
-            if (← `(at⟪$v⟫)) == (← `(at⟪$var⟫)) then
-              pure <| pure ⟨v, α, idx⟩
-            else
-              pure .none
-          | _ => pure .none
-        match vars.getElems.toList.zipIdx.firstM find_entry with
+        match ← vars.getElems.toList.zipIdx.findM? (find_entry var) with
         | .some debruijnIdx =>
+          let inner ← mk_debruijn 
           sorry
         | .none =>
+          -- this is the first time seeing this variable.
+          we should add it to the context.
           sorry
-      | _, _, _ => `(⟪__⟫))
+      | _, _, _ => `(⟪__⟫)
     sorry
   -- base case. this is technically the head element.
   -- here, we produce a judged list

@@ -24,6 +24,8 @@ The very last element in our list receives ALL our arguments. No indices.
 This element has type α → β → γ → δ...
 
 each layer up we go, we snd its type.
+
+We are still using mostly untyped mkcons. no type argument parameters.
 -/
 
 import Mathlib.Data.Nat.Notation
@@ -311,7 +313,8 @@ def parse_fall : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro mcons] def parse_cons : Lean.Macro
-  | _ => sorry
+  | `(::⟪::($πcons:atom, $πf:atom, $πg:atom)⟫) => `(⟪mkcons $πcons $πf $πg⟫)
+  | _ => Macro.throwUnsupported
 
 /-
 macro_rules

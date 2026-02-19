@@ -324,3 +324,4 @@ def parse_fall : Lean.Macro
 
 #eval ⟪mkcons I[0]⟫
 #eval ::⟪::(mkcons, I[0], I[0]){Prop, Prop, Type 0}⟫
+#eval ⟪I[1] (Type 0) Prop⟫

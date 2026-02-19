@@ -30,6 +30,7 @@ import Mathlib.Data.Nat.Notation
 import Init.Meta.Defs
 
 open Std Format
+open Lean (Macro)
 
 abbrev Level := ℕ
 
@@ -185,8 +186,8 @@ macro_rules
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$op:operator <| $e:expr⟫) => do
     match op, ← `(⟪$e⟫) with
-    | `(operator| asvar), `(⟪$x:atom : $t:atom⟫) => x
-    | `(operator| asvar), `(⟪$x⟫) => x
+    | `(operator| asvar), `(⟪$x:atom : $t:atom⟫) => pure x
+    | `(operator| asvar), `(⟪$x⟫) => pure x
     | `(operator| sortof), `(⟪Prop⟫) => `(0)
     | `(operator| sortof), `(⟪Sort $m⟫) => `(at⟪$m⟫)
     | `(operator| sortof), `(⟪Type $m⟫) => `(at⟪$m⟫ + 1)
@@ -219,34 +220,40 @@ macro_rules
   | `(⟪∀($vars:judgment,*), [$hyps,*, $conclude:judgment]⟫) => do
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder
-    let find_entry (var : Lean.TSyntax `atom) : _ → Lean.MacroM Bool :=
+    let find_entry (var : Lean.TSyntax `term) : _ → Lean.MacroM Bool :=
           fun (⟨judgmt, idx⟩ : (Lean.TSyntax `judgment) × ℕ) => match judgmt with
           | `(judgment| $v:atom : $α:atom) => do
-            pure <| (← `(at⟪$v⟫)) == (← `(at⟪$var⟫))
+            pure <| (← `(at⟪$v⟫)) == var
           | _ => pure false
-    let Ctx := Lean.Syntax.TSepArray `judgment ","
+    let Ctx := Lean.MacroM (Lean.TSyntax `binderlist)
     -- generates ::(a, b, c) head without f and g inserted.
     let gen_debruijn (fhead : Lean.TSyntax `expr) (t_rest : Lean.TSyntax `atom) (vars : Ctx) : (Lean.MacroM (Ctx × (Lean.TSyntax `cons))) := do
-      let t_f ← `(⟪typeof <| $fhead⟫)
-      let t_t_f ← `(⟪typeof <| typeof <| $fhead⟫)
-      match fhead, t_f, t_t_f with
-      | `(⟪($f:app ($var:atom : $α:atom)) : $β:atom⟫), t_f, `(⟪ Type $m:atom ⟫)
-      | `(⟪($f:app $var:atom) : $β:atom⟫), t_f, `(⟪ Type $m:atom ⟫) =>
-        match ← vars.getElems.toList.zipIdx.findM? (find_entry var) with
-        | .some (.mk a debruijnIdx) =>
-          match a with
-          | `(judgment| $x:atom : $α:atom) =>
-            pure <| ⟨vars, ← mk_debruijn α β t_rest debruijnIdx.succ⟩
-          | _ =>
-            pure <| ⟨vars, ← mk_debruijn α β t_rest debruijnIdx.succ⟩
-        | .none =>
-          -- this is the first time seeing this variable.
-          -- we should add it to the context and also
-          -- substitute the bound variable
-          let inner := ← mk_debruijn α β t_rest 1
-          let vars' := `(binderlist| ($vars:judgment,*, $var:atom : $α:atom))
-          pure <| ⟨vars', inner⟩
-      | _, _, _ => `(⟪__⟫)
+      match vars with
+      | `(binderlist| ($vars,*)) =>
+        let t_f ← `(⟪typeof <| $fhead⟫)
+        let t_t_f ← `(⟪typeof <| typeof <| $fhead⟫)
+        match fhead, t_f, t_t_f with
+        | `(⟪($f:app $var:atom) : $β:atom⟫), t_f, `(⟪ Type $m:atom ⟫) =>
+          match ← vars.getElems.toList.zipIdx.findM? (find_entry (← `(⟪asvar <| $var:atom⟫))) with
+          | .some (.mk a debruijnIdx) =>
+            match var, a with
+            | _, `(judgment| $x:atom : $α:atom) =>
+              pure <| ⟨vars, ← mk_debruijn α β t_rest debruijnIdx.succ⟩
+            | `(judgment| $x:atom : $α:atom), _ =>
+              pure <| ⟨vars, ← mk_debruijn α β t_rest debruijnIdx.succ⟩
+            | _, _ => Macro.throwError "variable's type is undefined"
+          | .none =>
+            match var with
+            | `(judgment| $x:atom : $α:atom) =>
+              -- this is the first time seeing this variable.
+              -- we should add it to the context and also
+              -- substitute the bound variable
+              let inner := ← mk_debruijn α β t_rest 1
+              let vars' := `(binderlist| ($vars:judgment,*, $var:atom : $α:atom))
+              pure <| ⟨← vars', inner⟩
+            | _ => Macro.throwError "variable's type is undefined"
+        | _, _, _ => Macro.throwError "this is not a valid list"
+      | _ => Macro.throwError "not a valid context"
     sorry
   -- base case. this is technically the head element.
   -- here, we produce a judged list

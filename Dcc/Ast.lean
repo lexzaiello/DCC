@@ -1,72 +1,24 @@
 /-
-This mkcons is a combinator, without fixed projectors.
+New alert check.
 
-Our notation for debruijn indices is quite nice.
-The only annoyance:
+mkcons we should ASSUME to produce objects which are judgments.
 
-- codomain types are kind of opaque.
-- type of the entire list isn't clear.
-- we should only substitute arguments, we should not compose.
+Every element in the list is EVENTUALLY going to be a Prop.
 
-- we can infer cons types, potentially.
-However, it may be prudent to add type arguments.
+Another thing: we want to use mkcons to represent function types.
 
-⟪(::(πc, πf, πg){f, g} x)⟫ ⟪(πc πf πg (πf f x) (πg g x))⟫
+We could literally just say that mkcons is a type.
 
-- we should also simplify the macro for creating infer cons types.
-- another question: is it even necessary to make it a point-free combinator
-if we enable mapping? Mapping will be sufficient, I think.
-- if we make it not a combinator, then we can infer types very nicely.
+Specifically, in ::[], we assume:
 
-also, we can avoid nested applications.
+f : α → Prop
 
-- fst and snd probably should have type arguments.
+::[] should be specifically for function types.
 
-- we will also need a data structure to represent sigma.
-  - Keep in mind, we want to be able to treat sigma as a type when possible.
-- the very last snd is the normalized value, so very last snd's type is the entire type.
-- for cons, we only need a "terminal" type. everything else bubbles up from that. we can calculate this
-in our reduction rule by "bubbling up".
+Its type should be the very last snd's final substituted value.
 
-Note: mkcons has a "terminal value" which we derive.
-Note: mkcons does not need explicit type arguments, since its πf and πg are fixed.
-they are dynamic anyway.
-
-However, in order to plug mkcons in as a fixpoint,
-we need the type arguments.
-
-If we add α and β type arguments, the type is pretty easy.
-
-x : α
-β = new fst
-γ = new snd
-
-However, new fst and new snd are different from the cons map.
-
-This type is δ
-
-δ = new cons.
-
-πf : ∀ (x : α)
-mkcons α β : (
-
-This might be fine.
-
-Worry about this later. At the very least, we will need α β γ and δ.
-
-πf f : ∀ (x : α), β x
-
-πf : ∀ (f : ∀ (x : α), β x) (x : α), β x
-
-etc.
-
-Since α is a type, and β produces a type, we will need level arguments, too.
-
-does πcons : tπc contain all the information we need?
-
-almost certainly yes.
-
-wait a second. we can fix the first argument of mkcons.
+Each layer we push onto the very last element, we remove
+a binder from its type, eventually producing Type.
 -/
 
 import Mathlib.Data.Nat.Notation
@@ -100,6 +52,7 @@ inductive Expr where
 
 open Expr
 
+declare_syntax_cat operator
 declare_syntax_cat expr
 declare_syntax_cat atom
 declare_syntax_cat comb
@@ -115,6 +68,9 @@ declare_syntax_cat substitution
 declare_syntax_cat arrow
 declare_syntax_cat fall
 declare_syntax_cat cons
+
+syntax "head" : operator
+syntax "tail" : operator
 
 syntax "#(" term ")" : lit
 
@@ -155,7 +111,7 @@ syntax:50 (name := judge_all) atom ":" expr : judgment
 syntax judgment ":=" atom  : declare
 syntax atom ":=" atom      : declare
 
-syntax "⟦" declare "⟧" : assign
+syntax "⟦" judgment "⟧" : assign
 
 syntax atom "→" atom           : arrow
 syntax "∀" judgment,+ "," atom : fall
@@ -171,6 +127,7 @@ syntax judgment     : expr
 syntax arrow        : expr
 syntax substitution : expr
 syntax cons         : expr
+syntax operator "<|" expr : expr
 
 syntax "⟪" expr "⟫"      : term
 syntax "a⟪" app "⟫"      : term
@@ -180,6 +137,13 @@ syntax "::⟪" cons "⟫"    : term
 syntax "j⟪" judgment "⟫" : term
 
 macro_rules
+  | `(⟪$op:operator <| $e:expr⟫) => do
+    match op, ← `(⟪$e⟫) with
+    | `(operator| head), `(⟪judge($x:atom : $t:atom)⟫) => pure x
+    | `(operator| tail), `(⟪judge($x:atom : $t:atom)⟫) => pure t
+    | `(operator| head), `(::⟪$a:cons {$a:atom, $xs:atom,*}⟫) => pure a
+    | `(operator| tail), `(::⟪$a:cons {$a:atom, $xs:atom,*}⟫) => `(::⟪$a:cons {$xs:atom,*}⟫)
+    | _, _ => `(sorry)
   -- TODO: fix to use new recursive mkcons
   /-| `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) => do
     let inner ← `(app| (mkcons $m:atom $n:atom $o:atom $p:atom) $α:atom $β:atom $γ:atom $δ:atom)
@@ -190,9 +154,11 @@ macro_rules
   -- We are substituting a variable.
   -- note that we always carry a set of variables seen so far
   -- and which debruijn indices they correspond to.
+  -- note: ::=[stuff] coerces a typed cons list
   | `(::⟪::=[$elems,*]⟫) => `(::⟪::={}[$elems,*]⟫)
+  -- base case for debruijn indices
   -- Note: this only works for letter variables
-  | `(::⟪::={$vars:ident,*}[($f:atom ⟦__ : ($α:atom : Type $m:atom) := $var:ident⟧) : ($β:atom : Type $n:atom)
+  | `(::⟪::={$vars:ident,*}[($f:atom ⟦$var:ident : ($α:atom : Type $m:atom)⟧) : ($β:atom : Type $n:atom)
     , $g:atom : ($tg:atom : Type $o:atom)]⟫) => do
     let ret_g    ← `(atom| (I[$o:atom] $tg:atom))
     let judge_α  ← `(atom| ($α:atom : Type $m:atom))

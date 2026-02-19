@@ -136,8 +136,9 @@ syntax "*"                     : atom
 syntax "(" expr ")"            : atom
 syntax "__"                    : atom
 syntax ":" atom                : atom
+syntax cons                    : atom
 
-syntax:50 (name := judge_all) atom ":" atom : judgment
+syntax:50 (name := judge_all) atom ":" expr : judgment
 
 -- assignments are always well-typed judgment
 -- with an assigned value.
@@ -148,7 +149,7 @@ syntax atom ":=" atom      : declare
 
 syntax "⟦" declare "⟧" : assign
 
-syntax judgment "→" judgment   : arrow
+syntax atom "→" atom           : arrow
 syntax "∀" judgment,+ "," atom : fall
 
 syntax atom assign : substitution
@@ -158,20 +159,29 @@ syntax atom     : app
 
 syntax app          : expr
 syntax judgment     : expr
+syntax arrow        : expr
 
 syntax "⟪" expr "⟫"      : term
 syntax "a⟪" app "⟫"      : term
 syntax "at⟪" atom "⟫"    : term
 syntax "c⟪" comb "⟫"     : term
+syntax "::⟪" cons "⟫"    : term
 syntax "j⟪" judgment "⟫" : term
 
 macro_rules
+  | `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst,*)⟫) => sorry
+  | `(::⟪::($cfgs:atom,*){$f:atom,$g:atom,$xs:atom,*}⟫) => `(a⟪::($cfgs:atom,*) $f ::($cfgs:atom,*){$g, $xs,*}⟫)
+  | `(::⟪::($cfgs:atom,*){$f:atom,$g:atom}⟫) => `(a⟪::($cfgs:atom,*) $f $g⟫)
+  | `(at⟪$c:cons⟫) => `(::⟪$c:cons⟫)
+  | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
+  | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)
   | `(at⟪$n:num⟫) => `($n)
   | `(at⟪$ide:ident⟫) => `($ide)
   | `(at⟪#($t:term)⟫) => `($t)
   | `(at⟪Type $n:atom⟫) => `(Expr.type at⟪$n⟫)
   | `(at⟪Sort $n:atom⟫) => `(Expr.sort at⟪$n⟫)
   | `(at⟪Prop⟫) => `(Expr.prop)
+  | `(at⟪: $T:atom⟫) => `(Expr.judge at⟪$T⟫)
   | `(c⟪$comb:ident[]⟫) => `(at⟪$comb:ident⟫)
   | `(c⟪($comb:term)[]⟫) => `($comb)
   | `(c⟪$comb:ident[$u:atom, $xs:atom,*]⟫) =>`(c⟪($comb at⟪$u⟫)[$xs,*]⟫)

@@ -124,7 +124,11 @@ syntax "Sort" : sort_cat
 
 syntax "::(" atom,* ")"                : cons
 syntax "::(" atom,* ")" "{" atom,+ "}" : cons
-syntax "::=[" atom,* "]"               : cons
+syntax "::=[" substitution,* "]"       : cons
+-- ^ assumed debruijn, unless a human variable
+-- is encountered
+-- For keeping track of human variables
+syntax "::={" term "}[" substitution,* "]" : cons
 
 syntax ident "[" atom,* "]"        : comb
 syntax "(" term ")" "[" atom,* "]" : comb
@@ -153,6 +157,7 @@ syntax atom "→" atom           : arrow
 syntax "∀" judgment,+ "," atom : fall
 
 syntax atom assign : substitution
+syntax judgment    : substitution
 
 syntax app atom : app
 syntax atom     : app
@@ -160,6 +165,7 @@ syntax atom     : app
 syntax app          : expr
 syntax judgment     : expr
 syntax arrow        : expr
+syntax substitution : expr
 
 syntax "⟪" expr "⟫"      : term
 syntax "a⟪" app "⟫"      : term
@@ -175,6 +181,14 @@ macro_rules
     `(a⟪$args⟫)
   | `(::⟪::($cfgs:atom,*){$f:atom,$g:atom,$xs:atom,*}⟫) => `(a⟪::($cfgs:atom,*) $f ::($cfgs:atom,*){$g, $xs,*}⟫)
   | `(::⟪::($cfgs:atom,*){$f:atom,$g:atom}⟫) => `(a⟪::($cfgs:atom,*) $f $g⟫)
+  -- We are substituting a variable.
+  -- note that we always carry a set of variables seen so far
+  -- and which debruijn indices they correspond to.
+  | `(::⟪::=[$elems,*]⟫) => `(::⟪::={List.nil}[$elems,*]⟫)
+  | `(::⟪::={$vars:term}[($f:atom ⟦$var:atom : $t:expr := $v:atom⟧) : $β:app $v:atom, $xs,*]⟫) =>
+    -- If this variable
+    let my_cons := 
+    sorry
   | `(at⟪$c:cons⟫) => `(::⟪$c:cons⟫)
   | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
   | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)

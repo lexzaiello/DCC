@@ -77,6 +77,7 @@ declare_syntax_cat list
 declare_syntax_cat fall
 declare_syntax_cat binderlist
 
+syntax "asvar"  : operator -- strip judgment information, if it is present
 syntax "sortof" : operator
 syntax "typeof" : operator
 syntax "head"   : operator
@@ -95,10 +96,8 @@ syntax "Sort" : sort_cat
 syntax sort_cat atom : sort
 syntax "Prop"        : sort
 
-syntax binderlist atom         : binderlist
-syntax atom                    : binderlist
-
-syntax "∀(" judgment,* ")" "," list    : fall
+syntax "(" judgment,* ")"              : binderlist
+syntax "∀" binderlist "," list         : fall
 
 syntax "::(" atom,* ")"                : cons
 syntax "{" atom,+ "}"                  : cons
@@ -164,9 +163,9 @@ syntax "j⟪" judgment "⟫"    : term
 -- all others decrement from n to 1
 -- this assumes that α is well-tyepd as a Type
 def mk_debruijn (α β tg : Lean.TSyntax `atom) (n' : ℕ) : Lean.MacroM (Lean.TSyntax `cons) := do
-  let m := `(atom| typeof <| $α:atom)
-  let n := `(atom| typeof <| $β:atom)
-  let o := `(atom| typeof <| $tg:atom)
+  let m ← `(atom| sortof <| typeof <| $α:atom)
+  let n ← `(atom| sortof <| typeof <| $β:atom)
+  let o ← `(atom| sortof <| typeof <| $tg:atom)
   let ret_g    ← `(atom| (I[$o:atom] $tg:atom))
   let judge_α  ← `(atom| ($α:atom : Type $m:atom))
   let judge_β  ← `(atom| ($β:atom : Type $n:atom))
@@ -174,7 +173,7 @@ def mk_debruijn (α β tg : Lean.TSyntax `atom) (n' : ℕ) : Lean.MacroM (Lean.T
   match n' with
   | .zero => `(cons| ::(mkcons, (K'[$n:atom, $n:atom] $β:atom $β:atom), (I[$o:atom] $tg:atom)))
   | .succ n' =>
-    let inner ← mk_debruijn n m o α β tg n'
+    let inner ← mk_debruijn α β tg n'
     let map_f ← if n' == .succ .zero then
       `(atom| (I[$n:atom] $norm_t_f:atom))
     else
@@ -186,6 +185,8 @@ macro_rules
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$op:operator <| $e:expr⟫) => do
     match op, ← `(⟪$e⟫) with
+    | `(operator| asvar), `(⟪$x:atom : $t:atom⟫) => x
+    | `(operator| asvar), `(⟪$x⟫) => x
     | `(operator| sortof), `(⟪Prop⟫) => `(0)
     | `(operator| sortof), `(⟪Sort $m⟫) => `(at⟪$m⟫)
     | `(operator| sortof), `(⟪Type $m⟫) => `(at⟪$m⟫ + 1)
@@ -223,20 +224,28 @@ macro_rules
           | `(judgment| $v:atom : $α:atom) => do
             pure <| (← `(at⟪$v⟫)) == (← `(at⟪$var⟫))
           | _ => pure false
-    
-    let swap_head (f : Lean.TSyntax `expr) : (Lean.MacroM (Lean.TSyntax `expr)) := do
-      let t_f ← `(⟪typeof <| $f⟫)
-      let t_t_f ← `(⟪typeof <| typeof <| $f⟫)
-      match f, t_f, t_t_f with
-      | `(⟪$f:app $var:atom⟫), t_f, `(⟪ Type $m:atom ⟫) =>
+    let Ctx := Lean.Syntax.TSepArray `judgment ","
+    -- generates ::(a, b, c) head without f and g inserted.
+    let gen_debruijn (fhead : Lean.TSyntax `expr) (t_rest : Lean.TSyntax `atom) (vars : Ctx) : (Lean.MacroM (Ctx × (Lean.TSyntax `cons))) := do
+      let t_f ← `(⟪typeof <| $fhead⟫)
+      let t_t_f ← `(⟪typeof <| typeof <| $fhead⟫)
+      match fhead, t_f, t_t_f with
+      | `(⟪($f:app ($var:atom : $α:atom)) : $β:atom⟫), t_f, `(⟪ Type $m:atom ⟫)
+      | `(⟪($f:app $var:atom) : $β:atom⟫), t_f, `(⟪ Type $m:atom ⟫) =>
         match ← vars.getElems.toList.zipIdx.findM? (find_entry var) with
-        | .some debruijnIdx =>
-          let inner ← mk_debruijn 
-          sorry
+        | .some (.mk a debruijnIdx) =>
+          match a with
+          | `(judgment| $x:atom : $α:atom) =>
+            pure <| ⟨vars, ← mk_debruijn α β t_rest debruijnIdx.succ⟩
+          | _ =>
+            pure <| ⟨vars, ← mk_debruijn α β t_rest debruijnIdx.succ⟩
         | .none =>
           -- this is the first time seeing this variable.
-          we should add it to the context.
-          sorry
+          -- we should add it to the context and also
+          -- substitute the bound variable
+          let inner := ← mk_debruijn α β t_rest 1
+          let vars' := `(binderlist| ($vars:judgment,*, $var:atom : $α:atom))
+          pure <| ⟨vars', inner⟩
       | _, _, _ => `(⟪__⟫)
     sorry
   -- base case. this is technically the head element.

@@ -94,6 +94,7 @@ inductive Expr where
   | fst    : Expr
   | snd    : Expr
   | app    : Expr → Expr → Expr
+deriving BEq
 
 open Expr
 
@@ -128,7 +129,7 @@ syntax "::=[" substitution,* "]"       : cons
 -- ^ assumed debruijn, unless a human variable
 -- is encountered
 -- For keeping track of human variables
-syntax "::={" term "}[" substitution,* "]" : cons
+syntax "::={" declare,* "}[" substitution,* "]" : cons
 
 syntax ident "[" atom,* "]"        : comb
 syntax "(" term ")" "[" atom,* "]" : comb
@@ -184,11 +185,20 @@ macro_rules
   -- We are substituting a variable.
   -- note that we always carry a set of variables seen so far
   -- and which debruijn indices they correspond to.
-  | `(::⟪::=[$elems,*]⟫) => `(::⟪::={List.nil}[$elems,*]⟫)
-  | `(::⟪::={$vars:term}[($f:atom ⟦$var:atom : $t:expr := $v:atom⟧) : $β:app $v:atom, $xs,*]⟫) =>
-    -- If this variable
-    let my_cons := 
-    sorry
+  | `(::⟪::=[$elems,*]⟫) => `(::⟪::={}[$elems,*]⟫)
+  | `(::⟪::={$vars:declare,*}[($f:atom ⟦__ : $t:expr := $var:atom⟧) : $β:app $v:atom, $xs,*]⟫) =>
+    -- If this variable is contained in vars, then look up the corresponding debruijn index
+    -- otherwise, insert the variable
+
+    let find_idx := fun v => match v with
+      | `(declare| $var:atom := #($n:term)) => Option.some n
+      | _ => .none
+
+    match vars.getElems.toList.find? find_ixd with
+    | .some debruijnidx =>
+      sorry
+    | .none =>
+      sorry
   | `(at⟪$c:cons⟫) => `(::⟪$c:cons⟫)
   | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
   | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)

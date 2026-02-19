@@ -299,3 +299,5 @@ def parse_fall : Lean.Macro
 #eval ⟪I[1] (Type 0) Prop⟫
 
 #eval ⟪Prop → Prop⟫
+
+#eval ⟪∀(x : Type 2, y : Prop), [I[3] (Type 2) x, I[3]]⟫

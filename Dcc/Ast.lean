@@ -87,6 +87,7 @@ syntax "∀" binderlist "," list        : fall
 
 syntax atom "{" atom,* "}"     : atom
 syntax "::(" atom,* ")"        : atom
+syntax "⟨" atom,+ "⟩"          : atom
 syntax sort                    : atom
 syntax  "(" expr ")"           : atom
 syntax ":" atom                : atom
@@ -160,6 +161,9 @@ def parse_aoperator : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro matom] def parse_atom : Lean.Macro
+  | `(at⟪⟨($a:atom : ($α:atom : Type $m:atom)), ($b:atom : ($β:atom : Type $n:atom))⟩⟫) =>
+    `(a⟪mkcons (I.[at⟪$m:atom⟫] (($α:atom : Type $m) → $α:atom)) (I.[at⟪$m:atom⟫] $α:atom)
+      (I.[at⟪$n:atom⟫] $β:atom) $a:atom $b:atom⟫)
   | `(at⟪$a:atom {$f:atom, $g:atom, $elems:atom,*}⟫) =>
     `(a⟪$a:atom $f:atom $g:atom ($a:atom {$elems:atom,*})⟫)
   | `(at⟪$a:atom {$f:atom, $g:atom}⟫) => `(a⟪$a:atom $f:atom $g:atom⟫)
@@ -288,3 +292,4 @@ def parse_fall : Lean.Macro
       , [(: sortof <| $α:atom) $α:atom $myId:ident, $β:atom]⟫)
   | _ => Macro.throwUnsupported
 
+def Expr

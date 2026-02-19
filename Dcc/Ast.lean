@@ -99,14 +99,14 @@ syntax "Sort" : sort_cat
 syntax sort_cat atom : sort
 syntax "Prop"        : sort
 
-syntax "(" judgment,* ")"              : binderlist
-syntax "∀" binderlist "," list         : fall
+syntax "[" atom,+ "]"                  : list
+
+syntax "(" judgment,+ ")"              : binderlist
+syntax "∀" binderlist "," list        : fall
 
 syntax "::(" atom,* ")"                : cons
 syntax "{" atom,+ "}"                  : cons
 syntax cons cons                       : cons
-
-syntax "[" expr,+ "]"                  : list
 
 -- ^ assumed debruijn, unless a human variable
 -- is encountered
@@ -141,23 +141,24 @@ syntax judgment            : substitution
 syntax app atom : app
 syntax atom     : app
 
-syntax fall         : expr
+syntax fall         : atom
 syntax app          : expr
 syntax judgment     : expr
 syntax arrow        : expr
 syntax substitution : expr
 syntax cons         : expr
 syntax:65 operator "<|" expr:65 : atom
+syntax:65 operator "<|" atom:65 : atom
 
-syntax (name := mfall) "⟪" fall "⟫" : term
+syntax (name := mfall) "at⟪" fall "⟫" : term
 syntax (name := moperator) "⟪" operator "<|" expr "⟫" : term
+syntax (name := amoperator) "at⟪" operator "<|" atom "⟫" : term
 syntax (name := mexpr) "⟪" expr "⟫"         : term
 syntax (name := mapp) "a⟪" app "⟫"         : term
 syntax (name := matom) "at⟪" atom "⟫" : term
 syntax (name := msort) "srt⟪" sort "⟫"      : term
 syntax (name := mcomb) "c⟪" comb "⟫"        : term
-syntax "::⟪" cons "⟫"       : term
-syntax "j⟪" judgment "⟫"    : term
+syntax (name := mcons) "::⟪" cons "⟫"       : term
 
 -- If this variable is contained in vars, then look up the corresponding debruijn index
 -- otherwise, insert the variable
@@ -191,10 +192,11 @@ def parse_typeof : Lean.Macro
   | `(⟪ typeof <| Type $m ⟫) => `(⟪Type #(1 + at⟪$m⟫)⟫)
   | `(⟪ typeof <| Prop ⟫)    => `(⟪Type 0⟫)
   | `(⟪ typeof <| $_x:atom : $t:atom ⟫) => `(⟪$t:atom⟫)
-  | `(⟪ typeof <| judge <| ($_x:atom : $_t:atom) ⟫) => `(⟪Prop⟫)
+  | `(⟪ typeof <| judge <| $_x:atom : $_t:atom ⟫) => `(⟪Prop⟫)
   | `(⟪ typeof <| : $T:atom⟫) => `(⟪$T:atom → Prop⟫)
-  | `(⟪ typeof <| ∀($_vars), [$_dom:expr, $cod:expr] ⟫) => `(⟪typeof <| $cod:expr⟫)
-  | `(⟪ typeof <| ∀($vars), [$_dom:judgment, $cod:expr,*] ⟫) => `(⟪tail <| typeof <| ∀($vars), [$cod:expr,*]⟫)
+  | `(at⟪ typeof <| ∀$_vars:binderlist, [$_dom:atom, $cod:atom] ⟫) => `(at⟪typeof <| $cod:atom⟫)
+  | `(at⟪ typeof <| ∀$vars:binderlist, [$_dom:atom, $cod:atom,*] ⟫) =>
+    `(at⟪tail <| typeof <| ∀$vars:binderlist, [$cod:atom,*]⟫)
   | `(⟪ typeof <| $_α:atom → $β:atom⟫) => `(⟪typeof <| $β:atom⟫)
   | `(⟪ typeof <| ($e:expr)⟫) => `(⟪typeof <| $e:expr⟫)
   | _ => Macro.throwUnsupported
@@ -214,12 +216,22 @@ def parse_asvar : Lean.Macro
   | s@`(⟪ typeof <| $_e:expr⟫) => parse_typeof s
   | s@`(⟪ sortof <| $_e:expr⟫) => parse_sortof s
   | s@`(⟪ asvar  <| $_e:expr⟫) => parse_asvar s
-  | `(⟪ head <| judge <| $x:atom $_t:atom⟫) => pure x
-  | `(⟪ tail <| judge <| $_x:atom $t:atom⟫) => pure t
+  | `(⟪ head <| judge <| $x:atom : $_t:atom⟫) => pure x
+  | `(⟪ tail <| judge <| $_x:atom : $t:atom⟫) => pure t
   | `(⟪ head <| $x:atom : $_t:atom⟫) => pure x
   | `(⟪ tail <| $_x:atom : $t:atom⟫) => pure t
   | `(⟪ head <| ($_a:cons {$a:atom, $_xs:atom,*})⟫) => pure a
   | `(⟪ tail <| ($a:cons {$_a:atom, $xs:atom,*})⟫) => `(::⟪$a:cons {$xs:atom,*}⟫)
+  | _ => Macro.throwUnsupported
+
+@[macro amoperator] def parse_aoperator : Lean.Macro
+  | s@`(a⟪ typeof <| $_e:atom⟫) => parse_typeof s
+  | s@`(a⟪ sortof <| $_e:atom⟫) => parse_sortof s
+  | s@`(a⟪ asvar  <| $_e:atom⟫) => parse_asvar s
+  | `(a⟪ head <| $x:atom : $_t:atom⟫) => pure x
+  | `(a⟪ tail <| $_x:atom : $t:atom⟫) => pure t
+  | `(a⟪ head <| ($_a:cons {$a:atom, $_xs:atom,*})⟫) => pure a
+  | `(a⟪ tail <| ($a:cons {$_a:atom, $xs:atom,*})⟫) => `(::⟪$a:cons {$xs:atom,*}⟫)
   | _ => Macro.throwUnsupported
 
 @[macro matom] def parse_atom : Lean.Macro
@@ -246,30 +258,34 @@ def parse_asvar : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro mfall] def parse_fall : Lean.Macro
-  | `(⟪∀($vars:judgment,*), [$hyps,*, $conclude:judgment]⟫) => do
+  | `(at⟪∀($vars:judgment,*), [$hyps:atom,*, ($conclude:atom : $why:atom)]⟫) => do
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder
-    let find_entry (var : Lean.TSyntax `term) : _ → Lean.MacroM Bool :=
-          fun (⟨judgmt, idx⟩ : (Lean.TSyntax `judgment) × ℕ) => match judgmt with
+    let TJudge := Lean.MacroM (Lean.TSyntax `judgment)
+    let TJudge' := Prod (Lean.MacroM (Lean.TSyntax `atom)) (Lean.MacroM (Lean.TSyntax `atom))
+    let find_entry (var : Lean.TSyntax `term) : Lean.TSyntax `judgment × ℕ → Lean.MacroM Bool :=
+          fun (⟨judgmt, idx⟩ : Lean.TSyntax `judgment × ℕ) => match judgmt with
           | `(judgment| $v:atom : $α:atom) => do
             pure <| (← `(at⟪$v⟫)) == var
           | _ => pure false
-    let Ctx := Lean.TSyntax `binderlist
+    let Ctx := Lean.MacroM (Lean.TSyntax `binderlist)
     -- generates ::(a, b, c) head without f and g inserted.
-    let gen_debruijn (fhead : Lean.TSyntax `expr) (t_rest : Lean.TSyntax `atom) (vars : Ctx) : (Lean.MacroM (Ctx × (Lean.TSyntax `cons))) := do
-      match vars with
+    let gen_debruijn (fhead : Lean.TSyntax `atom) (rest : TJudge') (vars : Ctx) : (Lean.MacroM
+      (Ctx × (MacroM (Lean.TSyntax `cons)))) := do
+      let t_rest ← rest.snd
+      match ← vars with
       | `(binderlist| ($thevars,*)) =>
-        let t_f ← `(⟪typeof <| $fhead⟫)
-        let t_t_f ← `(⟪typeof <| typeof <| $fhead⟫)
+        let t_f ← `(⟪typeof <| $fhead:atom⟫)
+        let t_t_f ← `(⟪typeof <| typeof <| $fhead:atom⟫)
         match fhead, t_f, t_t_f with
         | `(⟪($f:app $var:atom) : $β:atom⟫), t_f, `(⟪ Type $m:atom ⟫) =>
           match ← thevars.getElems.toList.zipIdx.findM? (find_entry (← `(⟪asvar <| $var:atom⟫))) with
           | .some (.mk a debruijnIdx) =>
             match var, a with
             | _, `(judgment| $x:atom : $α:atom) =>
-              pure <| ⟨vars, ← mk_debruijn α β t_rest debruijnIdx.succ⟩
+              pure <| ⟨vars, mk_debruijn α β t_rest debruijnIdx.succ⟩
             | `(judgment| $x:atom : $α:atom), _ =>
-              pure <| ⟨vars, ← mk_debruijn α β t_rest debruijnIdx.succ⟩
+              pure <| ⟨vars, mk_debruijn α β t_rest debruijnIdx.succ⟩
             | _, _ => Macro.throwError "variable's type is undefined"
           | .none =>
             match var with
@@ -279,11 +295,23 @@ def parse_asvar : Lean.Macro
               -- substitute the bound variable
               let inner := ← mk_debruijn α β t_rest 1
               let vars' := `(binderlist| ($thevars:judgment,*, $var:atom : $α:atom))
-              pure <| ⟨← vars', inner⟩
+              pure <| ⟨vars', pure inner⟩
             | _ => Macro.throwError "variable's type is undefined"
         | _, _, _ => Macro.throwError "this is not a valid list"
       | _ => Macro.throwError "not a valid context"
-    sorry
+    let acc : Ctx × TJudge' :=
+      Prod.mk (`(binderlist| ($vars:judgment,*))) (⟨pure conclude, pure why⟩ : TJudge')
+    hyps.getElems.toList.foldrM (fun e (⟨vars, acc_e⟩ : Ctx × TJudge') => do
+      let ⟨vars', fc⟩ ← gen_debruijn e acc_e vars
+      let fst ← acc_e.fst
+      let mycons ← fc
+      Prod.mk vars' ((Prod.mk
+        (`(atom| ($mycons:cons {$e:atom, $fst:atom})))
+        (`(atom| tail <| $(← acc_e.snd)))) : TJudge'))
+      (init := acc)
+      >>= (fun (⟨vars, acc_e⟩ : Ctx × TJudge') =>do
+        let fst ← acc_e.fst
+        `(at⟪$fst:atom⟫))
   | _ => Macro.throwUnsupported
 
 @[macro mapp] def parse_app : Lean.Macro
@@ -294,6 +322,10 @@ def parse_asvar : Lean.Macro
 @[macro mexpr] def parse_expr : Lean.Macro
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)
+  | _ => Macro.throwUnsupported
+
+@[macro mcons] def parse_cons : Lean.Macro
+  | _ => sorry
 
 /-
 macro_rules

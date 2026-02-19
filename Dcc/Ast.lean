@@ -76,7 +76,7 @@ declare_syntax_cat list
 declare_syntax_cat fall
 declare_syntax_cat binderlist
 
-syntax "succ" : operator
+syntax "typeof" : operator
 syntax "head" : operator
 syntax "tail" : operator
 syntax "judge" : operator
@@ -143,7 +143,7 @@ syntax judgment     : expr
 syntax arrow        : expr
 syntax substitution : expr
 syntax cons         : expr
-syntax operator "<|" expr : expr
+syntax operator "<|" atom : atom
 
 syntax "⟪" expr "⟫"         : term
 syntax "a⟪" app "⟫"         : term
@@ -178,11 +178,18 @@ def mk_debruijn (n m o α β tg : Lean.TSyntax `atom) (n' : ℕ) : Lean.MacroM (
 
 macro_rules
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
-  | `(⟪$op:operator <| $e:expr⟫) => do
+  | `(⟪$op:operator <| $e:atom⟫) => do
     match op, ← `(⟪$e⟫) with
-    | `(operator| succ), `(⟪Sort $m⟫) => `(⟪Sort #(1 + ⟪$m⟫)⟫)
-    | `(operator| succ), `(⟪Type $m⟫) => `(⟪Type #(1 + ⟪$m⟫)⟫)
-    | `(operator| succ), `(⟪Prop⟫) => `(⟪Type 0⟫)
+    | `(operator| typeof), `(⟪Sort $m⟫) => `(⟪Sort #(1 + at⟪$m⟫)⟫)
+    | `(operator| typeof), `(⟪Type $m⟫) => `(⟪Type #(1 + at⟪$m⟫)⟫)
+    | `(operator| typeof), `(⟪Prop⟫) => `(⟪Type 0⟫)
+    | `(operator| typeof), `(⟪$x:atom : $t:atom⟫) => `(⟪$t:atom⟫)
+    | `(operator| typeof), `(⟪judge <| ($x:atom : $t:atom)⟫) => `(⟪Prop⟫)
+    | `(operator| typeof), `(⟪∀($vars), [$dom:judgment, $cod:judgment]⟫) => `(⟪typeof <| ($cod:judgment)⟫)
+    | `(operator| typeof), `(⟪∀($vars), [$dom:judgment, $cod:judgment,*]⟫) => do
+      let t_inner ← `(⟪tail <| typeof <| (∀($vars), [$cod:judgment,*])⟫)
+      sorry
+    | `(operator| typeof), `(⟪$α:atom → $β:atom⟫) => `(⟪typeof <| $β:atom⟫)
     | `(operator| judge), `(⟪$x:atom : $t:atom⟫) => `(⟪: $t:atom $x:atom⟫)
     | `(operator| head), `(⟪judge <| $x:atom : $t:atom⟫) => pure x
     | `(operator| tail), `(⟪judge <| $x:atom : $t:atom⟫) => pure t

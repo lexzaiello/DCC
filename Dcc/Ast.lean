@@ -149,12 +149,13 @@ syntax substitution : expr
 syntax cons         : expr
 syntax:65 operator "<|" expr:65 : atom
 
+syntax (name := mfall) "⟪" fall "⟫" : term
 syntax (name := moperator) "⟪" operator "<|" expr "⟫" : term
-syntax "⟪" expr "⟫"         : term
-syntax "a⟪" app "⟫"         : term
+syntax (name := mexpr) "⟪" expr "⟫"         : term
+syntax (name := mapp) "a⟪" app "⟫"         : term
 syntax (name := matom) "at⟪" atom "⟫" : term
 syntax (name := msort) "srt⟪" sort "⟫"      : term
-syntax "c⟪" comb "⟫"        : term
+syntax (name := mcomb) "c⟪" comb "⟫"        : term
 syntax "::⟪" cons "⟫"       : term
 syntax "j⟪" judgment "⟫"    : term
 
@@ -185,7 +186,7 @@ def mk_debruijn (α β tg : Lean.TSyntax `atom) (n' : ℕ) : Lean.MacroM (Lean.T
 
     `(cons| ::(($inner:cons), $map_f:atom, $ret_g:atom))
 
-def parse_typeof : Syntax → MacroM Syntax
+def parse_typeof : Lean.Macro
   | `(⟪ typeof <| Sort $m ⟫) => `(⟪Type $m⟫)
   | `(⟪ typeof <| Type $m ⟫) => `(⟪Type #(1 + at⟪$m⟫)⟫)
   | `(⟪ typeof <| Prop ⟫)    => `(⟪Type 0⟫)
@@ -198,30 +199,30 @@ def parse_typeof : Syntax → MacroM Syntax
   | `(⟪ typeof <| ($e:expr)⟫) => `(⟪typeof <| $e:expr⟫)
   | _ => Macro.throwUnsupported
 
-def parse_sortof : Syntax → MacroM Syntax
+def parse_sortof : Lean.Macro
   | `(⟪ sortof <| Prop ⟫) => `(0)
   | `(⟪ sortof <| Sort $m ⟫) => `(at⟪$m⟫)
   | `(⟪ sortof <| Type $m ⟫) => `(at⟪$m⟫ + 1)
   | _ => Macro.throwUnsupported
 
-def parse_asvar : Syntax → MacroM Syntax
-  | `(⟪ asvar <| $x:atom $t:atom ⟫) => pure x
+def parse_asvar : Lean.Macro
+  | `(⟪ asvar <| $x:atom $_t:atom ⟫) => pure x
   | `(⟪ asvar <| $x⟫) => pure x
   | _ => Macro.throwUnsupported
 
-@[macro moperator] def parse_operator : Syntax → MacroM Syntax
-  | s@`(⟪ typeof <| $e:expr⟫) => parse_typeof s
-  | s@`(⟪ sortof <| $e:expr⟫) => parse_sortof s
-  | s@`(⟪ asvar  <| $e:expr⟫) => parse_asvar s
-  | `(⟪ head <| judge <| $x:atom $t:atom⟫) => pure x
-  | `(⟪ tail <| judge <| $x:atom $t:atom⟫) => pure t
-  | `(⟪ head <| $x:atom : $t:atom⟫) => pure x
-  | `(⟪ tail <| $x:atom : $t:atom⟫) => pure t
-  | `(⟪ head <| ::⟪$a:cons {$a:atom, $xs:atom,*}⟫⟫) => pure a
-  | `(⟪ tail <| ::⟪$a:cons {$a:atom, $xs:atom,*}⟫⟫) => `(::⟪$a:cons {$xs:atom,*}⟫)
+@[macro moperator] def parse_operator : Lean.Macro
+  | s@`(⟪ typeof <| $_e:expr⟫) => parse_typeof s
+  | s@`(⟪ sortof <| $_e:expr⟫) => parse_sortof s
+  | s@`(⟪ asvar  <| $_e:expr⟫) => parse_asvar s
+  | `(⟪ head <| judge <| $x:atom $_t:atom⟫) => pure x
+  | `(⟪ tail <| judge <| $_x:atom $t:atom⟫) => pure t
+  | `(⟪ head <| $x:atom : $_t:atom⟫) => pure x
+  | `(⟪ tail <| $_x:atom : $t:atom⟫) => pure t
+  | `(⟪ head <| ($_a:cons {$a:atom, $xs:atom,*})⟫) => pure a
+  | `(⟪ tail <| ($a:cons {$_a:atom, $xs:atom,*})⟫) => `(::⟪$a:cons {$xs:atom,*}⟫)
   | _ => Macro.throwUnsupported
 
-@[macro matom] def parse_atom : Syntax → MacroM Syntax
+@[macro matom] def parse_atom : Lean.Macro
   | `(at⟪judge <| $x:atom : $t:atom⟫) => `(⟪(: $t:atom) $x:atom⟫)
   | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
   | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)
@@ -231,15 +232,20 @@ def parse_asvar : Syntax → MacroM Syntax
   | `(at⟪: $T:atom⟫) => `(Expr.judge at⟪$T⟫)
   | _ => Macro.throwUnsupported
 
-macro_rules
-  | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
-  /-| `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) => do
-    let inner ← `(app| (mkcons $m:atom $n:atom $o:atom $p:atom) $α:atom $β:atom $γ:atom $δ:atom)
-    let args ← rst.getElems.toList.foldlM (fun acc e => `(app| $acc:app $e:atom)) inner
-    `(a⟪$args⟫)-/
-  | `(::⟪$a:cons {$f:atom,$g:atom,$xs:atom,*}⟫) => `(a⟪($a:cons) $f:atom ($a:cons {$g:atom, $xs:atom,*})⟫)
-  | `(::⟪$a:cons {$f:atom,$g:atom}⟫) => `(a⟪($a:cons) $f:atom $g:atom⟫)
-  -- This is the base case of debruijn-index substitution in lists
+@[macro msort] def parse_sort : Lean.Macro
+  | `(srt⟪Type $n:atom⟫) => `(Expr.type at⟪$n⟫)
+  | `(srt⟪Sort $n:atom⟫) => `(Expr.sort at⟪$n⟫)
+  | `(srt⟪Prop⟫) => `(Expr.prop)
+  | _ => Macro.throwUnsupported
+
+@[macro mcomb] def parse_comb : Lean.Macro
+  | `(c⟪$comb:ident[]⟫) => `(at⟪$comb:ident⟫)
+  | `(c⟪($comb:term)[]⟫) => `($comb)
+  | `(c⟪$comb:ident[$u:atom, $xs:atom,*]⟫) =>`(c⟪($comb at⟪$u⟫)[$xs,*]⟫)
+  | `(c⟪($comb:term)[$u:atom, $xs:atom,*]⟫) =>`(c⟪($comb at⟪$u⟫)[$xs,*]⟫)
+  | _ => Macro.throwUnsupported
+
+@[macro mfall] def parse_fall : Lean.Macro
   | `(⟪∀($vars:judgment,*), [$hyps,*, $conclude:judgment]⟫) => do
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder
@@ -278,6 +284,25 @@ macro_rules
         | _, _, _ => Macro.throwError "this is not a valid list"
       | _ => Macro.throwError "not a valid context"
     sorry
+  | _ => Macro.throwUnsupported
+
+@[macro mapp] def parse_app : Lean.Macro
+  | `(::⟪$a:cons {$f:atom,$g:atom,$xs:atom,*}⟫) => `(a⟪($a:cons) $f:atom ($a:cons {$g:atom, $xs:atom,*})⟫)
+  | `(::⟪$a:cons {$f:atom,$g:atom}⟫) => `(a⟪($a:cons) $f:atom $g:atom⟫)
+  | _ => Macro.throwUnsupported
+
+@[macro mexpr] def parse_expr : Lean.Macro
+  | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
+  | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)
+
+/-
+macro_rules
+  | `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) => do
+    let inner ← `(app| (mkcons $m:atom $n:atom $o:atom $p:atom) $α:atom $β:atom $γ:atom $δ:atom)
+    let args ← rst.getElems.toList.foldlM (fun acc e => `(app| $acc:app $e:atom)) inner
+    `(a⟪$args⟫)-/
+  -- This is the base case of debruijn-index substitution in lists
+  
   -- base case. this is technically the head element.
   -- here, we produce a judged list
   -- the type is exactly the type of concl
@@ -296,11 +321,3 @@ macro_rules
       let inner ← mk_debruijn n m o α β tg 0
       
       sorry-/
-  | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)
-  | `(srt⟪Type $n:atom⟫) => `(Expr.type at⟪$n⟫)
-  | `(srt⟪Sort $n:atom⟫) => `(Expr.sort at⟪$n⟫)
-  | `(srt⟪Prop⟫) => `(Expr.prop)
-  | `(c⟪$comb:ident[]⟫) => `(at⟪$comb:ident⟫)
-  | `(c⟪($comb:term)[]⟫) => `($comb)
-  | `(c⟪$comb:ident[$u:atom, $xs:atom,*]⟫) =>`(c⟪($comb at⟪$u⟫)[$xs,*]⟫)
-  | `(c⟪($comb:term)[$u:atom, $xs:atom,*]⟫) =>`(c⟪($comb at⟪$u⟫)[$xs,*]⟫)

@@ -218,7 +218,7 @@ def parse_asvar : Lean.Macro
   | `(⟪ tail <| judge <| $_x:atom $t:atom⟫) => pure t
   | `(⟪ head <| $x:atom : $_t:atom⟫) => pure x
   | `(⟪ tail <| $_x:atom : $t:atom⟫) => pure t
-  | `(⟪ head <| ($_a:cons {$a:atom, $xs:atom,*})⟫) => pure a
+  | `(⟪ head <| ($_a:cons {$a:atom, $_xs:atom,*})⟫) => pure a
   | `(⟪ tail <| ($a:cons {$_a:atom, $xs:atom,*})⟫) => `(::⟪$a:cons {$xs:atom,*}⟫)
   | _ => Macro.throwUnsupported
 
@@ -254,16 +254,16 @@ def parse_asvar : Lean.Macro
           | `(judgment| $v:atom : $α:atom) => do
             pure <| (← `(at⟪$v⟫)) == var
           | _ => pure false
-    let Ctx := Lean.MacroM (Lean.TSyntax `binderlist)
+    let Ctx := Lean.TSyntax `binderlist
     -- generates ::(a, b, c) head without f and g inserted.
     let gen_debruijn (fhead : Lean.TSyntax `expr) (t_rest : Lean.TSyntax `atom) (vars : Ctx) : (Lean.MacroM (Ctx × (Lean.TSyntax `cons))) := do
       match vars with
-      | `(binderlist| ($vars,*)) =>
+      | `(binderlist| ($thevars,*)) =>
         let t_f ← `(⟪typeof <| $fhead⟫)
         let t_t_f ← `(⟪typeof <| typeof <| $fhead⟫)
         match fhead, t_f, t_t_f with
         | `(⟪($f:app $var:atom) : $β:atom⟫), t_f, `(⟪ Type $m:atom ⟫) =>
-          match ← vars.getElems.toList.zipIdx.findM? (find_entry (← `(⟪asvar <| $var:atom⟫))) with
+          match ← thevars.getElems.toList.zipIdx.findM? (find_entry (← `(⟪asvar <| $var:atom⟫))) with
           | .some (.mk a debruijnIdx) =>
             match var, a with
             | _, `(judgment| $x:atom : $α:atom) =>
@@ -278,7 +278,7 @@ def parse_asvar : Lean.Macro
               -- we should add it to the context and also
               -- substitute the bound variable
               let inner := ← mk_debruijn α β t_rest 1
-              let vars' := `(binderlist| ($vars:judgment,*, $var:atom : $α:atom))
+              let vars' := `(binderlist| ($thevars:judgment,*, $var:atom : $α:atom))
               pure <| ⟨← vars', inner⟩
             | _ => Macro.throwError "variable's type is undefined"
         | _, _, _ => Macro.throwError "this is not a valid list"

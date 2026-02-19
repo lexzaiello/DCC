@@ -102,7 +102,7 @@ syntax "::(" atom,* ")"                : cons
 syntax "{" atom,+ "}"                  : cons
 syntax cons cons                       : cons
 
-syntax "[" judgment,+ "]"                  : list
+syntax "[" expr,+ "]"                  : list
 
 -- ^ assumed debruijn, unless a human variable
 -- is encountered
@@ -143,7 +143,7 @@ syntax judgment     : expr
 syntax arrow        : expr
 syntax substitution : expr
 syntax cons         : expr
-syntax operator "<|" atom : atom
+syntax:65 operator "<|" expr:65 : atom
 
 syntax "⟪" expr "⟫"         : term
 syntax "a⟪" app "⟫"         : term
@@ -178,18 +178,19 @@ def mk_debruijn (n m o α β tg : Lean.TSyntax `atom) (n' : ℕ) : Lean.MacroM (
 
 macro_rules
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
-  | `(⟪$op:operator <| $e:atom⟫) => do
+  | `(⟪$op:operator <| $e:expr⟫) => do
     match op, ← `(⟪$e⟫) with
     | `(operator| typeof), `(⟪Sort $m⟫) => `(⟪Sort #(1 + at⟪$m⟫)⟫)
     | `(operator| typeof), `(⟪Type $m⟫) => `(⟪Type #(1 + at⟪$m⟫)⟫)
     | `(operator| typeof), `(⟪Prop⟫) => `(⟪Type 0⟫)
     | `(operator| typeof), `(⟪$x:atom : $t:atom⟫) => `(⟪$t:atom⟫)
     | `(operator| typeof), `(⟪judge <| ($x:atom : $t:atom)⟫) => `(⟪Prop⟫)
-    | `(operator| typeof), `(⟪∀($vars), [$dom:judgment, $cod:judgment]⟫) => `(⟪typeof <| ($cod:judgment)⟫)
-    | `(operator| typeof), `(⟪∀($vars), [$dom:judgment, $cod:judgment,*]⟫) => do
-      let t_inner ← `(⟪tail <| typeof <| (∀($vars), [$cod:judgment,*])⟫)
-      sorry
+    | `(operator| typeof), `(⟪: $T:atom⟫) => `(⟪$T:atom → Prop⟫)
+    | `(operator| typeof), `(⟪∀($vars), [$dom:expr, $cod:expr]⟫) => `(⟪typeof <| $cod:expr⟫)
+    | `(operator| typeof), `(⟪∀($vars), [$dom:judgment, $cod:expr,*]⟫) =>
+      `(⟪tail <| typeof <| ∀($vars), [$cod:expr,*]⟫)
     | `(operator| typeof), `(⟪$α:atom → $β:atom⟫) => `(⟪typeof <| $β:atom⟫)
+    | `(operator| typeof), `(⟪($e:expr)⟫) => `(⟪typeof <| $e⟫)
     | `(operator| judge), `(⟪$x:atom : $t:atom⟫) => `(⟪: $t:atom $x:atom⟫)
     | `(operator| head), `(⟪judge <| $x:atom : $t:atom⟫) => pure x
     | `(operator| tail), `(⟪judge <| $x:atom : $t:atom⟫) => pure t
@@ -203,16 +204,13 @@ macro_rules
   | `(::⟪$a:cons {$f:atom,$g:atom,$xs:atom,*}⟫) => `(a⟪($a:cons) $f:atom ($a:cons {$g:atom, $xs:atom,*})⟫)
   | `(::⟪$a:cons {$f:atom,$g:atom}⟫) => `(a⟪($a:cons) $f:atom $g:atom⟫)
   -- This is the base case of debruijn-index substitution in lists
-  | `(list| [$a:atom : $α:sort, $xs,*]) => `(list| [$a:atom : ($α:sort : succ <| $α:sort), $xs,*])
-  | `(list| [$a:atom : Type $m, $xs,*]) =>
-    `(list| [$a:atom : (Type $m : Type #(1 + at⟪$m⟫)), $xs,*])
-  | `(⟪∀($vars:judgment,*), [($f:atom $x:atom) : ($β:atom : Type $m), $conclude:atom : ($γ:atom : Type $o)]⟫) => do
+  | `(⟪∀($vars:judgment,*), [$hyps,*, $conclude:judgment]⟫) => do
     let inner ← mk_debruijn n m o α β tg debruijnIdx
     sorry
   -- base case. this is technically the head element.
   -- here, we produce a judged list
   -- the type is exactly the type of concl
-  | `(⟪∀{$vars} $last:substitution, $concl:atom : $α:atom⟫) =>
+  /-| `(⟪∀{$vars} $last:substitution, $concl:atom : $α:atom⟫) =>
     
   | `(⟪∀{$vars} $prev:binderlist $last:substitution, $concl:atom⟫) => 
   -- base case for debruijn indices. this produces a judged cons list.
@@ -226,8 +224,8 @@ macro_rules
       -- Not contained in vars, so this is de bruijn index 0
       let inner ← mk_debruijn n m o α β tg 0
       
-      sorry
-  | `(at⟪judge($x:atom : $t:atom)⟫) => `(⟪(judge $t:atom) $x:atom⟫)
+      sorry-/
+  | `(at⟪judge <| $x:atom : $t:atom⟫) => `(⟪(: $t:atom) $x:atom⟫)
   | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)
   | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
   | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)

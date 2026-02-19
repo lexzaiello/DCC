@@ -1,49 +1,5 @@
 /-
-New alert check.
 
-mkcons we should ASSUME to produce objects which are judgments.
-
-Every element in the list is EVENTUALLY going to be a Prop.
-
-Another thing: we want to use mkcons to represent function types.
-
-We could literally just say that mkcons is a type.
-
-Specifically, in ::[], we assume:
-
-f : α → Prop
-
-::[] should be specifically for function types.
-
-Its type should be the very last snd's final substituted value.
-
-Each layer we push onto the very last element, we remove
-a binder from its type, eventually producing Type.
-
-The very last element in our list receives ALL our arguments. No indices.
-This element has type α → β → γ → δ...
-
-each layer up we go, we snd its type.
-
-We are still using mostly untyped mkcons. no type argument parameters.
-
-Another question I have:
-should we not be able to infer ALL the types from jsut the variables in context?
-
-Pretty sure we decided that cons lists will NOT produce props in their last codomain.
-This will be a raw type, and it won't mention the application.
-
-fst and snd could potentially be invisible to the user.
-we can just use ∀.
-
-Note: we aren't able to do cool substitution powers in the tail
-
-This is something to think about more tomorrow, but it probably doesn't make sense to substitute
-values in without knowing their types.
-
-With judgments, we don't have to type anything.
-
-Consider the ∀ list a special case where
 -/
 
 import Mathlib.Data.Nat.Notation
@@ -79,7 +35,6 @@ deriving BEq
 
 open Expr
 
-declare_syntax_cat name
 declare_syntax_cat operator
 declare_syntax_cat expr
 declare_syntax_cat atom
@@ -97,13 +52,6 @@ declare_syntax_cat list
 declare_syntax_cat fall
 declare_syntax_cat binderlist
 declare_syntax_cat binder
-
-syntax "mkcons" : name
-syntax "K"      : name
-syntax "K'"     : name
-syntax "S"      : name
-syntax "I"      : name
-syntax "judge"  : name
 
 syntax "asvar"  : operator -- strip judgment information, if it is present
 syntax "sortof" : operator
@@ -135,12 +83,11 @@ syntax "∀" binderlist "," list        : fall
 -- is encountered
 -- For keeping track of human variables
 
-syntax name                    : comb
-syntax name "[" atom,* "]"     : comb
+syntax ident "[" term,* "]"    : comb
+syntax ident                   : comb
 
 syntax "{" atom,* "}"          : atom
 syntax "::(" atom,* ")"        : atom
-syntax name                    : atom
 syntax comb                    : atom
 syntax sort                    : atom
 syntax:1000 "(" expr ")"       : atom
@@ -164,15 +111,15 @@ syntax judgment     : expr
 syntax arrow        : expr
 syntax:65 operator "<|" atom:65 : atom
 
-syntax "c⟪" comb "⟫"                        : term
+syntax (name := mcomb) "c⟪" comb "⟫"        : term
 syntax (name := msort) "srt⟪" sort "⟫"      : term
 syntax (name := matom) "at⟪" atom "⟫"       : term
 syntax (name := mapp) "a⟪" app "⟫"          : term
 syntax (name := mexpr) "⟪" expr "⟫"         : term
 
 @[macro msort] def parse_sort : Lean.Macro
-  | `(srt⟪Type $n:atom⟫) => `(Expr.type at⟪$n⟫)
-  | `(srt⟪Sort $n:atom⟫) => `(Expr.sort at⟪$n⟫)
+  | `(srt⟪Type $n:atom⟫) => `(Expr.type at⟪$n:atom⟫)
+  | `(srt⟪Sort $n:atom⟫) => `(Expr.sort at⟪$n:atom⟫)
   | `(srt⟪Prop⟫) => `(Expr.prop)
   | _ => Macro.throwUnsupported
 
@@ -212,16 +159,17 @@ def parse_aoperator : Lean.Macro
   | `(at⟪ tail <| ($a:atom {$_a:atom, $xs:atom,*})⟫) => `(a⟪$a:atom {$xs:atom,*}⟫)
   | _ => Macro.throwUnsupported
 
+@[macro mcomb] def parse_comb : Lean.Macro
+  | `($c:ident [$args:term,*]) => `($c:term $args*)
+  | `($c:ident) => `($c:term)
+  | _ => Macro.throwUnsupported
+
 @[macro matom] def parse_atom : Lean.Macro
   | `(at⟪($e:app)⟫) => `(a⟪$e:app⟫)
   | `(at⟪($e:expr)⟫) => `(⟪$e:expr⟫)
   | `(at⟪mkcons⟫) => `(Expr.mkcons)
   | `(at⟪::($πcons:atom, $πf:atom, $πg:atom)⟫) => `(a⟪mkcons $πcons $πf $πg⟫)
-  | `(at⟪I[$m:atom]⟫) => `(Expr.I at⟪$m⟫)
-  | `(at⟪S[$m:atom, $n:atom, $o:atom]⟫) => `(Expr.S at⟪$m⟫ at⟪$n⟫ at⟪$o⟫)
-  | `(at⟪K'[$m:atom, $n:atom]⟫) => `(Expr.K' at⟪$m⟫ at⟪$n⟫)
-  | `(at⟪K[$m:atom, $n:atom]⟫) => `(Expr.K at⟪$m⟫ at⟪$n⟫)
-  | `(at⟪judge[$α:atom]⟫) => `(Expr.judge at⟪$α:atom⟫)
+  | `(at⟪judge <| $α:atom⟫) => `(Expr.judge at⟪$α:atom⟫)
   | `(at⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(at⟪$c:comb⟫) => `(c⟪$c:comb⟫)
   | `(at⟪$n:num⟫) => `($n)
@@ -244,20 +192,41 @@ def parse_aoperator : Lean.Macro
 -- 1 corresponds to accepting the input
 -- all others decrement from n to 1
 -- this assumes that α is well-tyepd as a Type
-def mk_debruijn (n' : ℕ) : Lean.MacroM (Lean.TSyntax `app) := do
-  match n' with
-  -- by this point, we could have substituted a variable in,
-  -- and thus, we have produced some kind of judgment (slot : T)
-  | .zero =>
-    `(app| ::(mkcons, (K'[0, 0] Prop Prop), (I[0] Prop)))
-  | .succ n' =>
-    let inner ← mk_debruijn n'
-    let map_f ← if n' == .succ .zero then
-      `(atom| (I[0] Prop))
+-- default behavior of the second component is that it will accept the next argument.
+def mk_debruijn (n₁ : ℕ) (n₂ : Option ℕ := .none) : Lean.MacroM (Lean.TSyntax `atom) := do
+  /-
+    If we are at indxe 1, we will accept the argument. Otherwise, we will reject it.
+  -/
+  let mk_fetch (n : ℕ) : Lean.MacroM (Lean.TSyntax `app) :=
+    if n == .succ .zero then
+      `(app| I[0] Prop) -- only once we've hit debruijn index one we accept the argument
     else
-      `(atom| (K'[0, 0] Prop))
+      `(app| K'[0, 0] Prop Prop)
 
-    `(app| ::(($inner:app), $map_f:atom, (I[0] Prop)))
+  let advance (inner : Lean.TSyntax `atom) : Lean.MacroM (Lean.TSyntax `atom) := do
+    let map_f ← mk_fetch n₁
+    let map_g ← (mk_fetch <$> n₂).getD `(app| I[0] Prop)
+    -- if we don't care where substitutions get sent,
+    -- e.g., if we are not the very tail of the list,
+    -- we can usually leave n₂ alone.
+
+    `(atom| ::($inner:atom, ($map_f:app), ($map_g:app)))
+
+  match n₁ with
+    | .succ n₁ =>
+      match n₂ with
+      | .some (.succ n₂) =>
+        mk_debruijn n₁ n₂ >>= advance
+      | .some .zero =>
+        mk_debruijn n₁ (.some .zero) >>= advance
+      | .none =>
+        mk_debruijn n₁ .none >>= advance
+    | .zero =>
+      match n₂ with
+      | .some (.succ n₂) => do
+        mk_debruijn .zero n₂ >>= advance
+      | .some .zero => do `(atom| ::(mkcons, (K'[0, 0] Prop Prop), (K'[0, 0] Prop Prop)))
+      | .none => `(atom| ::(mkcons, (K'[0, 0] Prop Prop), (I[0] Prop)))
 
 def parse_fall : Lean.Macro
   | `(⟪∀($vars:binder,*), [$hyps:expr,*, $conclude:atom]⟫) => do
@@ -290,6 +259,7 @@ def parse_fall : Lean.Macro
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
   | `(⟪$a:app⟫) => `(a⟪$a:app⟫)
+  | `(⟪$c:comb⟫) => `(c⟪$c:comb⟫)
   | `(⟪$α:atom → $β:atom⟫) => do
     let myId ← Lean.withFreshMacroScope (pure <| Lean.mkIdent `my_x)
     `(⟪∀($myId:ident : $α:atom), [: $α:atom $myId:ident, $β:atom]⟫)
@@ -298,6 +268,6 @@ def parse_fall : Lean.Macro
 #eval ⟪mkcons I[0]⟫
 #eval ⟪I[1] (Type 0) Prop⟫
 
-#eval ⟪Prop → Prop⟫
+--#eval ⟪Prop → Prop⟫
 
-#eval ⟪∀(x : Type 2, y : Prop), [I[3] (Type 2) x, I[3]]⟫
+--#eval ⟪∀(x : Type 2, y : Prop), [I[3] (Type 2) x, I[3]]⟫

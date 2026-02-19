@@ -249,23 +249,71 @@ def allOuterIdents (base_vars : List (Lean.TSyntax `ident)) (e : Lean.TSyntax `a
     | `(app| $f:atom $x:ident) => if x' == x then [x] else []
     | _ => []
 
-def parse_fall : Lean.Macro
+def parse_fall (f : Syntax) : MacroM Syntax :=
+  -- Finds the entry of an indexed variable judgment
+  -- corresponding to a hypothesis binder
+  let find_entry (vars : Syntax.TSepArray `binder ",")
+    (var : Lean.TSyntax `ident) : Option (Lean.TSyntax `binder × ℕ) :=
+      vars.getElems.zipIdx.find? (fun ⟨a, idx⟩ =>
+        match a with
+          | `(binder| $var':ident : $t:atom) => if var' == var then
+            True
+          else False
+          | _ => False)
+  let best_var_for (vars : Syntax.TSepArray `binder ",") (elem : Lean.TSyntax `atom) : Option (Lean.TSyntax `binder × ℕ):=
+      match elem with
+      | `(atom| $var:ident)
+      | `(atom| ($f:app $var:ident)) => find_entry vars var
+      | _ => .none
+  let best_body (vars : Syntax.TSepArray `binder ",") (elem  : Lean.TSyntax `atom) : OptionT MacroM (Lean.TSyntax `app) := do
+    match elem with
+      | elem@`(atom| $var:ident) =>
+        let vs ← (OptionT.mk <| pure (best_var_for vars elem))
+        match vs.fst with
+        | `(binder | $var:ident : ($t:atom : Type $m))=>
+          pure <| `(⟪I.[a⟪$m:atom⟫] $t:atom⟫)
+        | `(binder | $var:ident : $t:atom) =>
+          let srt ← `(at⟪sortof <| typeof <| $t:atom⟫)
+          pure <| `(⟪I.[$srt] $t:atom⟫)
+        | _ => pure `(⟪I.[0] Prop⟫)
+      | `(atom| ($f:app $var:ident)) => pure f
+      | `(atom| $f:atom) => pure `(app| $f:atom)
+
   -- when there is only one head hypothesis, the conclusion
   -- may want a say in subbstitution
+  match f with
+  | `(⟪∀($vars:binder,*), [$hyp:atom, $conclude:atom]⟫) => do
+    let best_idx := Prod.snd ∘ best_var_for
+    best_idx hyp
+      >>= (mk_debruijn · (best_idx conclude))
+      >>= (fun e => do
+        let hypb ← best_body vars hyp
+        let hypc ← best_body vars conclude
+        `(a⟪$e:atom $(best_body vars hyp) $(best_body vars conclude)⟫))
   | `(⟪∀($vars:binder,*), [$hyps:atom,*, $conclude:atom]⟫) => do
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder
-    let find_entry (var : Lean.TSyntax `ident) : Lean.TSyntax `binder × ℕ → Bool :=
-          fun (⟨bind, _idx⟩ : Lean.TSyntax `binder × ℕ) => match bind with
-          | `(binder| $v:ident : $_α:atom) => v == var
-          | _ => false
+    let find_entry (var : Lean.TSyntax `ident) : Option (Lean.TSyntax `binder × ℕ) :=
+      vars.getElems.zipIdx.firstM (fun ⟨a, idx⟩ =>
+        match a with
+          | `(binder| $var':ident : $t:atom) => if var' == var then
+            pure ⟨a, idx⟩
+          else .none
+          | _ => .none)
+
+    let best_var_for (elem : Lean.TSyntax `atom) : (Option (Lean.TSyntax `binder × ℕ)):=
+      match elem with
+      | `(atom| $var:ident)
+      | `(atom| ($f:app $var:ident)) => find_entry var
+      | _ => .none
+
     -- generates ::(a, b, c) head without f and g inserted.
     let gen_debruijn (fhead : Lean.TSyntax `atom) : MacroM (Lean.TSyntax `app) := do
       -- if a variable isn't in substitution position
       -- we can be fairly sure they will never need an argument.
       match fhead with
       | `(atom| $var:ident) =>
-        match vars.getElems.toList.zipIdx.find? (find_entry var) with
+        match find_entry var with
         | .some (.mk binder debruijnIdx) =>
           match binder with
           | `(binder| $_v:ident : ($α:atom : Type $m)) =>
@@ -278,7 +326,7 @@ def parse_fall : Lean.Macro
           | _ => Macro.throwError "variable missing in context"
         | .none => Macro.throwError "variable missing in context"
       | `(atom| ($f:app $var:ident)) =>
-        match vars.getElems.toList.zipIdx.find? (find_entry var) with
+        match find_entry var with
         | .some (.mk _a debruijnIdx) =>
           let inner ← mk_debruijn debruijnIdx.succ .none
           `(app| $inner:atom ($f:app))

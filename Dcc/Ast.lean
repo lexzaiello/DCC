@@ -286,16 +286,24 @@ def parse_fall (f : Syntax) : MacroM Syntax := do
   -- when there is only one head hypothesis, the conclusion
   -- may want a say in subbstitution
   match f with
-  | `(⟪∀($vars:binder,*), [$hyp:atom, $conclude:atom]⟫) => do
-    let v ← best_var_for vars hyp
-    let debrj ← (mk_debruijn · (best_idx conclude))
-    
-    >>= (pure ∘ Prod.snd)
-    >>= (mk_debruijn · (best_idx conclude))
-    >>= (fun e => do
-      let hypb ← best_body vars hyp
-      let hypc ← best_body vars conclude
-      `(a⟪$e:atom $(best_body vars hyp) $(best_body vars conclude)⟫))
+  | `(⟪∀($vars:binder,*), [$hyps:atom,*, $hyp:atom, $conclude:atom]⟫) => do
+    let ⟨_v, idx⟩ ← unwrap <| best_var_for vars hyp
+    let debrj ← (mk_debruijn idx (Prod.snd <$> (best_var_for vars conclude)))
+
+    let innermost ← `(atom| ($debrj:atom $(← best_body vars hyp)
+      $(← best_body vars conclude)))
+
+    let generate_head (hyp : Lean.TSyntax `atom) : MacroM (Lean.TSyntax `atom) := do
+      let ⟨_v, idx⟩ ← unwrap <| best_var_for vars hyp
+      let debrj ← (mk_debruijn idx .none)
+
+      `(atom| ($debrj:atom $(← best_body vars hyp)))
+
+    hyps.getElems.toList.foldrM (init := innermost) (fun
+      (e : Lean.TSyntax `atom) (acc : Lean.TSyntax `atom) => do
+      let h ← generate_head e
+      `(atom| ($h:atom $acc:atom)))
+      >>= (fun e => `(a⟪$e:atom⟫))
   | `(⟪∀($vars:binder,*), [$hyps:atom,*, $conclude:atom]⟫) => do
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder

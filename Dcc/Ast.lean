@@ -38,7 +38,6 @@ open Expr
 declare_syntax_cat operator
 declare_syntax_cat expr
 declare_syntax_cat atom
-declare_syntax_cat comb
 declare_syntax_cat sort
 declare_syntax_cat sort_cat
 declare_syntax_cat lit
@@ -72,7 +71,8 @@ syntax "Sort" : sort_cat
 syntax sort_cat atom : sort
 syntax "Prop"        : sort
 
-syntax "[" expr,+ "]"                  : list
+syntax ident ".[" term,+ "]"          : atom
+syntax "[" expr,+ "]"                 : list
 
 syntax ident ":" atom                 : binder
 syntax "(" binder,* ")"               : binderlist
@@ -83,12 +83,8 @@ syntax "∀" binderlist "," list        : fall
 -- is encountered
 -- For keeping track of human variables
 
-syntax ident "[" term,* "]"    : comb
-syntax ident                   : comb
-
 syntax "{" atom,* "}"          : atom
 syntax "::(" atom,* ")"        : atom
-syntax comb                    : atom
 syntax sort                    : atom
 syntax:1000 "(" expr ")"       : atom
 syntax ":" atom                : atom
@@ -111,7 +107,6 @@ syntax judgment     : expr
 syntax arrow        : expr
 syntax:65 operator "<|" atom:65 : atom
 
-syntax (name := mcomb) "c⟪" comb "⟫"        : term
 syntax (name := msort) "srt⟪" sort "⟫"      : term
 syntax (name := matom) "at⟪" atom "⟫"       : term
 syntax (name := mapp) "a⟪" app "⟫"          : term
@@ -159,26 +154,25 @@ def parse_aoperator : Lean.Macro
   | `(at⟪ tail <| ($a:atom {$_a:atom, $xs:atom,*})⟫) => `(a⟪$a:atom {$xs:atom,*}⟫)
   | _ => Macro.throwUnsupported
 
-@[macro mcomb] def parse_comb : Lean.Macro
-  | `($c:ident [$args:term,*]) => `($c:term $args*)
-  | `($c:ident) => `($c:term)
-  | _ => Macro.throwUnsupported
-
 @[macro matom] def parse_atom : Lean.Macro
   | `(at⟪($e:app)⟫) => `(a⟪$e:app⟫)
   | `(at⟪($e:expr)⟫) => `(⟪$e:expr⟫)
   | `(at⟪mkcons⟫) => `(Expr.mkcons)
-  | `(at⟪::($πcons:atom, $πf:atom, $πg:atom)⟫) => `(a⟪mkcons $πcons $πf $πg⟫)
+  | `(at⟪::($πcons:atom, $πf:atom, $πg:atom)⟫) => `(a⟪mkcons $πcons:atom $πf:atom $πg:atom⟫)
   | `(at⟪judge <| $α:atom⟫) => `(Expr.judge at⟪$α:atom⟫)
   | `(at⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
-  | `(at⟪$c:comb⟫) => `(c⟪$c:comb⟫)
   | `(at⟪$n:num⟫) => `($n)
   | `(at⟪#($t:term)⟫) => `($t)
   | `(at⟪: $T:atom⟫) => `(Expr.judge at⟪$T⟫)
+  | `(at⟪I.[$uvs:term,*]⟫) => `(Expr.I $uvs*)
+  | `(at⟪S.[$uvs:term,*]⟫) => `(Expr.S $uvs*)
+  | `(at⟪K.[$uvs:term,*]⟫) => `(Expr.K $uvs*)
+  | `(at⟪K'.[$uvs:term,*]⟫) => `(Expr.K' $uvs*)
   | s@`(at⟪$_op:operator <| $_a:atom⟫) => parse_aoperator s
   | _ => Macro.throwUnsupported
 
 @[macro mapp] def parse_app : Lean.Macro
+  | `(at⟪mkcons⟫) => `(Expr.mkcons)
   | `(a⟪$a:atom⟫) => `(at⟪$a:atom⟫)
   | `(a⟪$a:atom $b:atom⟫) => `(Expr.app at⟪$a:atom⟫ at⟪$b:atom⟫)
   | `(a⟪$a:app $b:atom⟫) => `(Expr.app a⟪$a:app⟫ at⟪$b:atom⟫)
@@ -199,13 +193,13 @@ def mk_debruijn (n₁ : ℕ) (n₂ : Option ℕ := .none) : Lean.MacroM (Lean.TS
   -/
   let mk_fetch (n : ℕ) : Lean.MacroM (Lean.TSyntax `app) :=
     if n == .succ .zero then
-      `(app| I[0] Prop) -- only once we've hit debruijn index one we accept the argument
+      `(app| I.[0] Prop) -- only once we've hit debruijn index one we accept the argument
     else
-      `(app| K'[0, 0] Prop Prop)
+      `(app| K'.[0, 0] Prop Prop)
 
   let advance (inner : Lean.TSyntax `atom) : Lean.MacroM (Lean.TSyntax `atom) := do
     let map_f ← mk_fetch n₁
-    let map_g ← (mk_fetch <$> n₂).getD `(app| I[0] Prop)
+    let map_g ← (mk_fetch <$> n₂).getD `(app| I.[0] Prop)
     -- if we don't care where substitutions get sent,
     -- e.g., if we are not the very tail of the list,
     -- we can usually leave n₂ alone.
@@ -225,8 +219,8 @@ def mk_debruijn (n₁ : ℕ) (n₂ : Option ℕ := .none) : Lean.MacroM (Lean.TS
       match n₂ with
       | .some (.succ n₂) => do
         mk_debruijn .zero n₂ >>= advance
-      | .some .zero => do `(atom| ::(mkcons, (K'[0, 0] Prop Prop), (K'[0, 0] Prop Prop)))
-      | .none => `(atom| ::(mkcons, (K'[0, 0] Prop Prop), (I[0] Prop)))
+      | .some .zero => do `(atom| ::(mkcons, (K'.[0, 0] Prop Prop), (K'.[0, 0] Prop Prop)))
+      | .none => `(atom| ::(mkcons, (K'.[0, 0] Prop Prop), (I.[0] Prop)))
 
 /-
 Use this to figure out which variables an element in the list is using.
@@ -241,16 +235,10 @@ def allOuterIdents (base_vars : List (Lean.TSyntax `ident)) (e : Lean.TSyntax `a
     | `(app| $f:atom $x:ident) => if x' == x then [x] else []
     | _ => []
 
-#eval (fun c => allOuterIdents [(Lean.mkIdent `x), (Lean.mkIdent `y)] c) <$> `(app| I[0] x y)
-
 def parse_fall : Lean.Macro
   -- when there is only one head hypothesis, the conclusion
   -- may want a say in subbstitution
   | `(⟪∀($vars:binder,*), [$hyps:expr,*, $conclude:atom]⟫) => do
-    let base_vars : List (Lean.TSyntax `ident) := hps.getElems.toList.filterMap (fun elem => match elem with
-      | `(binder| $v:ident : $_α:atom) => pure v
-      | _ => .none)
-
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder
     let find_entry (var : Lean.TSyntax `ident) : Lean.TSyntax `binder × ℕ → Bool :=
@@ -272,8 +260,6 @@ def parse_fall : Lean.Macro
       | f =>
         let inner ← mk_debruijn 0 .none
         `(app| $inner:atom ($f:expr))
-    let init ← match conlude with
-      | `(a⟪$f:app $var:ident⟫
     hyps.getElems.toList.foldrM (fun e fst => do
       `(a⟪$(← gen_debruijn e) $(⟨fst⟩):atom⟫))
       (init := conclude)
@@ -284,14 +270,13 @@ def parse_fall : Lean.Macro
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
   | `(⟪$a:app⟫) => `(a⟪$a:app⟫)
-  | `(⟪$c:comb⟫) => `(c⟪$c:comb⟫)
   | `(⟪$α:atom → $β:atom⟫) => do
     let myId ← Lean.withFreshMacroScope (pure <| Lean.mkIdent `my_x)
     `(⟪∀($myId:ident : $α:atom), [: $α:atom $myId:ident, $β:atom]⟫)
   | _ => Macro.throwUnsupported
 
-#eval ⟪mkcons I[0]⟫
-#eval ⟪I[1] (Type 0) Prop⟫
+#eval ⟪mkcons I.[0]⟫
+#eval ⟪I.[1] (Type 0) Prop⟫
 
 --#eval ⟪Prop → Prop⟫
 

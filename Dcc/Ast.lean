@@ -258,29 +258,29 @@ def parse_fall (f : Syntax) : MacroM Syntax := do
   -- corresponding to a hypothesis binder
   let find_entry (vars : Syntax.TSepArray `binder ",")
     (var : Lean.TSyntax `ident) : Option (Lean.TSyntax `binder × ℕ) :=
-      vars.getElems.zipIdx.find? (fun ⟨a, idx⟩ =>
+      vars.getElems.zipIdx.find? (fun ⟨a, _idx⟩ =>
         match a with
-          | `(binder| $var':ident : $t:atom) => if var' == var then
+          | `(binder| $var':ident : $_t:atom) => if var' == var then
             True
           else False
           | _ => False)
   let best_var_for (vars : Syntax.TSepArray `binder ",") (elem : Lean.TSyntax `atom) : Option (Lean.TSyntax `binder × ℕ):=
       match elem with
       | `(atom| $var:ident)
-      | `(atom| ($f:app $var:ident)) => find_entry vars var
+      | `(atom| ($_f:app $var:ident)) => find_entry vars var
       | _ => .none
   let best_body (vars : Syntax.TSepArray `binder ",") (elem  : Lean.TSyntax `atom) : MacroM (Lean.TSyntax `atom) := do
     match elem with
-      | elem@`(atom| $var:ident) =>
+      | elem@`(atom| $_var:ident) =>
         let vs ← unwrap (best_var_for vars elem)
         match vs.fst with
-        | `(binder | $var:ident : ($t:atom : Type $m))=>
+        | `(binder | $_var:ident : ($t:atom : Type $m))=>
           `(atom| (I.[a⟪$m:atom⟫] $t:atom))
-        | `(binder | $var:ident : $t:atom) =>
+        | `(binder | $_var:ident : $t:atom) =>
           let srt ← `(at⟪sortof <| typeof <| $t:atom⟫)
           `(atom| (I.[$srt] $t:atom))
         | _ => `(atom| (I.[0] Prop))
-      | `(atom| ($f:app $var:ident)) => `(atom| ($f:app))
+      | `(atom| ($f:app $_var:ident)) => `(atom| ($f:app))
       | `(atom| $f:atom) => pure f
 
   -- when there is only one head hypothesis, the conclusion
@@ -304,54 +304,6 @@ def parse_fall (f : Syntax) : MacroM Syntax := do
       let h ← generate_head e
       `(atom| ($h:atom $acc:atom)))
       >>= (fun e => `(a⟪$e:atom⟫))
-  | `(⟪∀($vars:binder,*), [$hyps:atom,*, $conclude:atom]⟫) => do
-    -- Finds the entry of an indexed variable judgment
-    -- corresponding to a hypothesis binder
-    let find_entry (var : Lean.TSyntax `ident) : Option (Lean.TSyntax `binder × ℕ) :=
-      vars.getElems.zipIdx.firstM (fun ⟨a, idx⟩ =>
-        match a with
-          | `(binder| $var':ident : $t:atom) => if var' == var then
-            pure ⟨a, idx⟩
-          else .none
-          | _ => .none)
-
-    let best_var_for (elem : Lean.TSyntax `atom) : (Option (Lean.TSyntax `binder × ℕ)):=
-      match elem with
-      | `(atom| $var:ident)
-      | `(atom| ($f:app $var:ident)) => find_entry var
-      | _ => .none
-
-    -- generates ::(a, b, c) head without f and g inserted.
-    let gen_debruijn (fhead : Lean.TSyntax `atom) : MacroM (Lean.TSyntax `app) := do
-      -- if a variable isn't in substitution position
-      -- we can be fairly sure they will never need an argument.
-      match fhead with
-      | `(atom| $var:ident) =>
-        match find_entry var with
-        | .some (.mk binder debruijnIdx) =>
-          match binder with
-          | `(binder| $_v:ident : ($α:atom : Type $m)) =>
-            let inner ← mk_debruijn debruijnIdx .none
-            `(app| $inner:atom (I.[a⟪$m:atom⟫] $α:atom))
-          | `(binder| $_v:ident : $α:atom) =>
-            let inner ← mk_debruijn debruijnIdx .none
-            let srt   ← `(at⟪sortof <| $α:atom⟫)
-            `(app| $inner:atom (I.[$srt] $α:atom))
-          | _ => Macro.throwError "variable missing in context"
-        | .none => Macro.throwError "variable missing in context"
-      | `(atom| ($f:app $var:ident)) =>
-        match find_entry var with
-        | .some (.mk _a debruijnIdx) =>
-          let inner ← mk_debruijn debruijnIdx.succ .none
-          `(app| $inner:atom ($f:app))
-        | .none => Macro.throwError "variable missing in context"
-      -- this slot does not take the variable as substitution.
-      | f =>
-        let inner ← mk_debruijn 0 .none
-        `(app| $inner:atom $f:atom)
-    hyps.getElems.toList.foldrM (fun e fst => do
-      `(a⟪$(← gen_debruijn e) $(⟨fst⟩):atom⟫))
-      (init := conclude)
   | _ => Macro.throwUnsupported
 
 @[macro mexpr] def parse_expr : Lean.Macro

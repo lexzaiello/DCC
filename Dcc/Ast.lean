@@ -74,7 +74,7 @@ syntax sort_cat atom : sort
 syntax "Prop"        : sort
 
 syntax ident ".[" term,+ "]"          : atom
-syntax "[" expr,+ "]"                 : list
+syntax "[" atom,+ "]"                 : list
 
 syntax ident ":" atom                 : binder
 syntax "(" binder,* ")"               : binderlist
@@ -128,10 +128,10 @@ def parse_typeof : Lean.Macro
   | `(at⟪ typeof <| ($_x:atom : $t:atom) ⟫) => `(⟪$t:atom⟫)
   | `(⟪ typeof <| judge <| ($_x:atom : $_t:atom) ⟫) => `(⟪Prop⟫)
   | `(⟪ typeof <| (: m) $T:atom⟫) => `(⟪$T:atom → Prop⟫)
-  | `(at⟪ typeof <| (∀$_vars:binderlist, [$_dom:expr, $cod:expr]) ⟫) =>
-    `(at⟪typeof <| ($cod:expr)⟫)
-  | `(at⟪ typeof <| (∀$vars:binderlist, [$_dom:expr, $cod:expr,*]) ⟫) =>
-    `(at⟪tail <| typeof <| (∀$vars:binderlist, [$cod:expr,*])⟫)
+  | `(at⟪ typeof <| (∀$_vars:binderlist, [$_dom:atom, $cod:atom]) ⟫) =>
+    `(at⟪typeof <| $cod:atom⟫)
+  | `(at⟪ typeof <| (∀$vars:binderlist, [$_dom:atom, $cod:atom,*]) ⟫) =>
+    `(at⟪tail <| typeof <| (∀$vars:binderlist, [$cod:atom,*])⟫)
   | _ => Macro.throwUnsupported
 
 def parse_asvar : Lean.Macro
@@ -161,8 +161,10 @@ def parse_aoperator : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro matom] def parse_atom : Lean.Macro
-  | `(at⟪⟨($a:atom : ($α:atom : Type $m:atom)), ($b:atom : ($β:atom : Type $n:atom))⟩⟫) =>
-    `(a⟪mkcons (I.[at⟪$m:atom⟫] (($α:atom : Type $m) → $α:atom)) (I.[at⟪$m:atom⟫] $α:atom)
+  | `(at⟪⟨($a:atom : ($α:atom : Type $m:atom))
+    , ($b:atom : ($β:atom : Type $n:atom))⟩⟫) =>
+    `(a⟪mkcons (I.[at⟪$m:atom⟫] (($α:atom : Type $m) → $α:atom))
+      (I.[at⟪$m:atom⟫] $α:atom)
       (I.[at⟪$n:atom⟫] $β:atom) $a:atom $b:atom⟫)
   | `(at⟪$a:atom {$f:atom, $g:atom, $elems:atom,*}⟫) =>
     `(a⟪$a:atom $f:atom $g:atom ($a:atom {$elems:atom,*})⟫)
@@ -250,7 +252,7 @@ def allOuterIdents (base_vars : List (Lean.TSyntax `ident)) (e : Lean.TSyntax `a
 def parse_fall : Lean.Macro
   -- when there is only one head hypothesis, the conclusion
   -- may want a say in subbstitution
-  | `(⟪∀($vars:binder,*), [$hyps:expr,*, $conclude:atom]⟫) => do
+  | `(⟪∀($vars:binder,*), [$hyps:atom,*, $conclude:atom]⟫) => do
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder
     let find_entry (var : Lean.TSyntax `ident) : Lean.TSyntax `binder × ℕ → Bool :=
@@ -258,11 +260,24 @@ def parse_fall : Lean.Macro
           | `(binder| $v:ident : $_α:atom) => v == var
           | _ => false
     -- generates ::(a, b, c) head without f and g inserted.
-    let gen_debruijn (fhead : Lean.TSyntax `expr) : MacroM (Lean.TSyntax `app) := do
+    let gen_debruijn (fhead : Lean.TSyntax `atom) : MacroM (Lean.TSyntax `app) := do
       -- if a variable isn't in substitution position
       -- we can be fairly sure they will never need an argument.
       match fhead with
-      | `(expr| $f:app $var:ident) =>
+      | `(atom| $var:ident) =>
+        match vars.getElems.toList.zipIdx.find? (find_entry var) with
+        | .some (.mk binder debruijnIdx) =>
+          match binder with
+          | `(binder| $_v:ident : ($α:atom : Type $m)) =>
+            let inner ← mk_debruijn debruijnIdx .none
+            `(app| $inner:atom (I.[a⟪$m:atom⟫] $α:atom))
+          | `(binder| $_v:ident : $α:atom) =>
+            let inner ← mk_debruijn debruijnIdx .none
+            let srt   ← `(at⟪sortof <| $α:atom⟫)
+            `(app| $inner:atom (I.[$srt] $α:atom))
+          | _ => Macro.throwError "variable missing in context"
+        | .none => Macro.throwError "variable missing in context"
+      | `(atom| ($f:app $var:ident)) =>
         match vars.getElems.toList.zipIdx.find? (find_entry var) with
         | .some (.mk _a debruijnIdx) =>
           let inner ← mk_debruijn debruijnIdx.succ .none
@@ -271,25 +286,23 @@ def parse_fall : Lean.Macro
       -- this slot does not take the variable as substitution.
       | f =>
         let inner ← mk_debruijn 0 .none
-        `(app| $inner:atom ($f:expr))
+        `(app| $inner:atom $f:atom)
     hyps.getElems.toList.foldrM (fun e fst => do
       `(a⟪$(← gen_debruijn e) $(⟨fst⟩):atom⟫))
       (init := conclude)
   | _ => Macro.throwUnsupported
 
 @[macro mexpr] def parse_expr : Lean.Macro
-  | `(⟪$a:app $b:atom⟫) => `(Expr.app a⟪$a:app⟫ at⟪$b:atom⟫)
   | s@`(⟪∀$_vars:binderlist, $_hyps:list⟫) => parse_fall s
+  | `(⟪$a:app $b:atom⟫) => `(Expr.app a⟪$a:app⟫ at⟪$b:atom⟫)
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
   | `(⟪($α:atom : Type $m) → $β:atom⟫) => do
     let myId ← Lean.withFreshMacroScope (pure <| Lean.mkIdent `my_x)
-    `(⟪∀($myId:ident : $α:atom), [(: $m) $α:atom $myId:ident, $β:atom]⟫)
+    `(⟪∀($myId:ident : $α:atom), [((: $m) $α:atom $myId:ident), $β:atom]⟫)
   | `(⟪$α:atom → $β:atom⟫) => do
     let myId ← Lean.withFreshMacroScope (pure <| Lean.mkIdent `my_x)
 
-    `(⟪∀($myId:ident : $α:atom)
-      , [(: sortof <| $α:atom) $α:atom $myId:ident, $β:atom]⟫)
+    `(⟪∀($myId:ident : $α:atom), [((: sortof <| $α:atom) $α:atom $myId:ident), $β:atom]⟫)
   | _ => Macro.throwUnsupported
 
-def Expr

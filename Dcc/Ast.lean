@@ -55,13 +55,6 @@ inductive Expr where
   | snd    : Expr
   | app    : Expr → Expr → Expr
 
-def Expr.get_sort : Expr → Option ℕ
-  | .prop
-  | .sort 0 => pure 0
-  | .sort n => pure n
-  | .type n => pure n.succ
-  | _ => .none
-
 open Expr
 
 declare_syntax_cat operator
@@ -83,6 +76,7 @@ declare_syntax_cat list
 declare_syntax_cat fall
 declare_syntax_cat binderlist
 
+syntax "succ" : operator
 syntax "head" : operator
 syntax "tail" : operator
 syntax "judge" : operator
@@ -95,6 +89,9 @@ syntax lit           : atom
 
 syntax "Type" : sort_cat
 syntax "Sort" : sort_cat
+
+syntax sort_cat atom : sort
+syntax "Prop"        : sort
 
 syntax binderlist atom         : binderlist
 syntax atom                    : binderlist
@@ -115,8 +112,7 @@ syntax ident "[" atom,* "]"        : comb
 syntax "(" term ")" "[" atom,* "]" : comb
 
 syntax comb                    : atom
-syntax sort_cat atom           : atom
-syntax "Prop"                  : atom
+syntax sort                    : atom
 syntax "*"                     : atom
 syntax "(" expr ")"            : atom
 syntax "__"                    : atom
@@ -152,6 +148,7 @@ syntax operator "<|" expr : expr
 syntax "⟪" expr "⟫"         : term
 syntax "a⟪" app "⟫"         : term
 syntax "at⟪" atom "⟫"       : term
+syntax "srt⟪" sort "⟫"      : term
 syntax "c⟪" comb "⟫"        : term
 syntax "::⟪" cons "⟫"       : term
 syntax "j⟪" judgment "⟫"    : term
@@ -180,8 +177,12 @@ def mk_debruijn (n m o α β tg : Lean.TSyntax `atom) (n' : ℕ) : Lean.MacroM (
     `(cons| ::(($inner:cons), $map_f:atom, $ret_g:atom))
 
 macro_rules
+  | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$op:operator <| $e:expr⟫) => do
     match op, ← `(⟪$e⟫) with
+    | `(operator| succ), `(⟪Sort $m⟫) => `(⟪Sort #(1 + ⟪$m⟫)⟫)
+    | `(operator| succ), `(⟪Type $m⟫) => `(⟪Type #(1 + ⟪$m⟫)⟫)
+    | `(operator| succ), `(⟪Prop⟫) => `(⟪Type 0⟫)
     | `(operator| judge), `(⟪$x:atom : $t:atom⟫) => `(⟪: $t:atom $x:atom⟫)
     | `(operator| head), `(⟪judge <| $x:atom : $t:atom⟫) => pure x
     | `(operator| tail), `(⟪judge <| $x:atom : $t:atom⟫) => pure t
@@ -195,13 +196,7 @@ macro_rules
   | `(::⟪$a:cons {$f:atom,$g:atom,$xs:atom,*}⟫) => `(a⟪($a:cons) $f:atom ($a:cons {$g:atom, $xs:atom,*})⟫)
   | `(::⟪$a:cons {$f:atom,$g:atom}⟫) => `(a⟪($a:cons) $f:atom $g:atom⟫)
   -- This is the base case of debruijn-index substitution in lists
-  | `(list| [$a:atom : $α:atom, $xs,*]) => do
-    match (← `(Expr.get_sort at⟪$α⟫)) with
-    | `(.some 0) => `(list| [$a:atom : ($α:atom : Sort 1), $xs,*])
-    | `(.some $n) =>
-      let n' := Lean.quote n
-      `(list| [$a:atom : ($α:atom : Sort #($n' + 1)), $xs,*])
-    | _ => `(list| [$a:atom : $α:atom, $xs,*])
+  | `(list| [$a:atom : $α:sort, $xs,*]) => `(list| [$a:atom : ($α:sort : succ <| $α:sort), $xs,*])
   | `(list| [$a:atom : Type $m, $xs,*]) =>
     `(list| [$a:atom : (Type $m : Type #(1 + at⟪$m⟫)), $xs,*])
   | `(⟪∀($vars:judgment,*), [($f:atom $x:atom) : ($β:atom : Type $m), $conclude:atom : ($γ:atom : Type $o)]⟫) => do
@@ -232,9 +227,9 @@ macro_rules
   | `(at⟪$n:num⟫) => `($n)
   | `(at⟪$ide:ident⟫) => `($ide)
   | `(at⟪#($t:term)⟫) => `($t)
-  | `(at⟪Type $n:atom⟫) => `(Expr.type at⟪$n⟫)
-  | `(at⟪Sort $n:atom⟫) => `(Expr.sort at⟪$n⟫)
-  | `(at⟪Prop⟫) => `(Expr.prop)
+  | `(srt⟪Type $n:atom⟫) => `(Expr.type at⟪$n⟫)
+  | `(srt⟪Sort $n:atom⟫) => `(Expr.sort at⟪$n⟫)
+  | `(srt⟪Prop⟫) => `(Expr.prop)
   | `(at⟪: $T:atom⟫) => `(Expr.judge at⟪$T⟫)
   | `(c⟪$comb:ident[]⟫) => `(at⟪$comb:ident⟫)
   | `(c⟪($comb:term)[]⟫) => `($comb)

@@ -207,6 +207,7 @@ def parse_aoperator : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro matom] def parse_atom : Lean.Macro
+  | `(at⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(at⟪$c:comb⟫) => `(c⟪$c:comb⟫)
   | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
   | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)
@@ -322,4 +323,4 @@ def parse_fall : Lean.Macro
   | _ => Macro.throwUnsupported
 
 #eval ⟪mkcons I[0]⟫
-#eval ::⟪::(mkcons, I[0], I[0]){Prop, Prop}⟫
+#eval ::⟪::(mkcons, I[0], I[0]){Prop, Prop, Type 0}⟫

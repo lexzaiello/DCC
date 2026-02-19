@@ -29,6 +29,12 @@ We are still using mostly untyped mkcons. no type argument parameters.
 
 Another question I have:
 should we not be able to infer ALL the types from jsut the variables in context?
+
+Pretty sure we decided that cons lists will NOT produce props in their last codomain.
+This will be a raw type, and it won't mention the application.
+
+fst and snd could potentially be invisible to the user.
+we can just use ∀.
 -/
 
 import Mathlib.Data.Nat.Notation
@@ -59,13 +65,12 @@ inductive Expr where
     Sigma projection:
     TODO: we will need explicit type arguments here of some kind.
   -/
-  | fst    : Expr
-  | snd    : Expr
   | app    : Expr → Expr → Expr
 deriving BEq
 
 open Expr
 
+declare_syntax_cat name
 declare_syntax_cat operator
 declare_syntax_cat expr
 declare_syntax_cat atom
@@ -78,12 +83,18 @@ declare_syntax_cat app
 declare_syntax_cat judgment
 declare_syntax_cat declare
 declare_syntax_cat assign
-declare_syntax_cat substitution
 declare_syntax_cat arrow
 declare_syntax_cat cons
 declare_syntax_cat list
 declare_syntax_cat fall
 declare_syntax_cat binderlist
+
+syntax "mkcons" : name
+syntax "K"      : name
+syntax "K'"     : name
+syntax "S"      : name
+syntax "I"      : name
+syntax "judge"  : name
 
 syntax "asvar"  : operator -- strip judgment information, if it is present
 syntax "sortof" : operator
@@ -110,6 +121,7 @@ syntax "(" judgment,+ ")"              : binderlist
 syntax "∀" binderlist "," list        : fall
 
 syntax "::(" atom,* ")"                : cons
+syntax "∘(" atom,* ")"                 : cons
 syntax "{" atom,+ "}"                  : cons
 syntax cons cons                       : cons
 
@@ -117,8 +129,10 @@ syntax cons cons                       : cons
 -- is encountered
 -- For keeping track of human variables
 
-syntax ident "[" atom,* "]"     : comb
+syntax name                    : comb
+syntax name "[" atom,* "]"     : comb
 
+syntax name                    : atom
 syntax comb                    : atom
 syntax sort                    : atom
 syntax "*"                     : atom
@@ -132,15 +146,8 @@ syntax:50 atom ":" atom : judgment
 -- with an assigned value.
 -- these are not core to the language,
 -- but rather derived from operational semantics of cons.
-syntax judgment ":=" atom  : declare
-syntax atom ":=" atom      : declare
-
-syntax "⟦" judgment "⟧" : assign
 
 syntax atom "→" atom           : arrow
-
-syntax "(" atom assign ")" : substitution
-syntax judgment            : substitution
 
 syntax app atom : app
 syntax atom     : app
@@ -149,22 +156,15 @@ syntax fall         : expr
 syntax app          : expr
 syntax judgment     : expr
 syntax arrow        : expr
-syntax substitution : expr
 syntax cons         : expr
 syntax:65 operator "<|" atom:65 : atom
 
-syntax (name := mcomb) "c⟪" comb "⟫"        : term
+syntax "c⟪" comb "⟫"        : term
 syntax (name := msort) "srt⟪" sort "⟫"      : term
 syntax (name := matom) "at⟪" atom "⟫"       : term
 syntax (name := mapp) "a⟪" app "⟫"          : term
 syntax (name := mcons) "::⟪" cons "⟫"       : term
 syntax (name := mexpr) "⟪" expr "⟫"         : term
-
-@[macro mcomb] def parse_comb : Lean.Macro
-  | `(c⟪$comb:ident [$args:atom,*]⟫) => do
-    let termArgs ← args.getElems.mapM (fun a => `(⟪$a:atom⟫))
-    `($comb $termArgs*)
-  | _ => Macro.throwUnsupported
 
 @[macro msort] def parse_sort : Lean.Macro
   | `(srt⟪Type $n:atom⟫) => `(Expr.type at⟪$n⟫)
@@ -185,12 +185,6 @@ def parse_typeof : Lean.Macro
     `(at⟪tail <| typeof <| (∀$vars:binderlist, [$cod:expr,*])⟫)
   | _ => Macro.throwUnsupported
 
-def parse_sortof : Lean.Macro
-  | `(⟪ sortof <| Prop ⟫) => `(0)
-  | `(⟪ sortof <| Sort $m ⟫) => `(at⟪$m⟫)
-  | `(⟪ sortof <| Type $m ⟫) => `(at⟪$m⟫ + 1)
-  | _ => Macro.throwUnsupported
-
 def parse_asvar : Lean.Macro
   | `(⟪ asvar <| $x:atom $_t:atom ⟫) => pure x
   | `(⟪ asvar <| $x⟫) => pure x
@@ -201,7 +195,12 @@ def parse_aoperator : Lean.Macro
   | `(at⟪ tail <| judge <| ($_x:atom : $t:atom)⟫) => pure t
   | `(at⟪judge <| ($x:atom : $t:atom)⟫) => `(at⟪((: $t:atom) $x:atom)⟫)
   | s@`(at⟪ typeof <| $_e:atom⟫) => parse_typeof s
-  | s@`(at⟪ sortof <| $_e:atom⟫) => parse_sortof s
+  | `(at⟪ sortof <| $e:atom ⟫) =>
+    `(match at⟪$e:atom⟫ with
+      | Expr.prop => 0
+      | Expr.sort m => m
+      | Expr.type m => m + 1
+      | _ => 0)
   | s@`(at⟪ asvar  <| $_e:atom⟫) => parse_asvar s
   | `(at⟪ head <| ($x:atom : $_t:atom)⟫) => pure x
   | `(at⟪ tail <| ($_x:atom : $t:atom)⟫) => pure t
@@ -210,6 +209,12 @@ def parse_aoperator : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro matom] def parse_atom : Lean.Macro
+  | `(at⟪mkcons⟫) => `(Expr.mkcons)
+  | `(at⟪I[$m:atom]⟫) => `(Expr.I at⟪$m⟫)
+  | `(at⟪S[$m:atom, $n:atom, $o:atom]⟫) => `(Expr.S at⟪$m⟫ at⟪$n⟫ at⟪$o⟫)
+  | `(at⟪K'[$m:atom, $n:atom]⟫) => `(Expr.K' at⟪$m⟫ at⟪$n⟫)
+  | `(at⟪K[$m:atom, $n:atom]⟫) => `(Expr.K at⟪$m⟫ at⟪$n⟫)
+  | `(at⟪judge[$α:atom]⟫) => `(Expr.judge at⟪$α:atom⟫)
   | `(at⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(at⟪$c:comb⟫) => `(c⟪$c:comb⟫)
   | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
@@ -245,21 +250,21 @@ def parse_aoperator : Lean.Macro
 -- all others decrement from n to 1
 -- this assumes that α is well-tyepd as a Type
 def mk_debruijn (α β tg : Lean.TSyntax `atom) (n' : ℕ) : Lean.MacroM (Lean.TSyntax `cons) := do
-  let m ← `(atom| sortof <| typeof <| $α:atom)
-  let n ← `(atom| sortof <| typeof <| $β:atom)
-  let o ← `(atom| sortof <| typeof <| $tg:atom)
-  let ret_g    ← `(atom| (I[$o:atom] $tg:atom))
-  let judge_α  ← `(atom| ($α:atom : Type $m:atom))
-  let judge_β  ← `(atom| ($β:atom : Type $n:atom))
+  let m ← `(at⟪sortof <| typeof <| $α:atom⟫)
+  let n ← `(at⟪sortof <| typeof <| $β:atom⟫)
+  let o ← `(at⟪sortof <| typeof <| $tg:atom⟫)
+  let ret_g    ← `(atom| (I[#($o:term)] $tg:atom))
+  let judge_α  ← `(atom| ($α:atom : Type #($m:term)))
+  let judge_β  ← `(atom| ($β:atom : Type #($n:term)))
   let norm_t_f ← `(atom| ($judge_α:atom → $judge_β:atom))
   match n' with
-  | .zero => `(cons| ::(mkcons, (K'[$n:atom, $n:atom] $β:atom $β:atom), (I[$o:atom] $tg:atom)))
+  | .zero => `(cons| ::(mkcons, (K'[#($n:term), #($n:term)] $β:atom $β:atom), (I[#($o:term)] $tg:atom)))
   | .succ n' =>
     let inner ← mk_debruijn α β tg n'
     let map_f ← if n' == .succ .zero then
-      `(atom| (I[$n:atom] $norm_t_f:atom))
+      `(atom| (I[#($n:term)] $norm_t_f:atom))
     else
-      `(atom| (K'[$n:atom, $m:atom] $norm_t_f:atom))
+      `(atom| (K'[#($n:term), #($m:term)] $norm_t_f:atom))
 
     `(cons| ::(($inner:cons), $map_f:atom, $ret_g:atom))
 
@@ -279,9 +284,11 @@ def parse_fall : Lean.Macro
       (Ctx × (MacroM (Lean.TSyntax `cons)))) := do
       let t_rest ← rest.snd
       match ← vars with
-      | `(binderlist| ($thevars,*)) =>
+      | `(binderlist| ($thevars:judgment,*)) =>
+        -- if a variable isn't in substitution position
+        -- we can be fairly sure they will never need an argument.
         match fhead with
-        | `(⟪($_f:app $var:ident) : $β:atom⟫) =>
+        | `(expr| ($_f:app $var:ident) : $β:atom) =>
           match ← thevars.getElems.toList.zipIdx.findM? (find_entry var) with
           | .some (.mk a debruijnIdx) =>
             match a with
@@ -289,7 +296,10 @@ def parse_fall : Lean.Macro
               pure <| ⟨vars, mk_debruijn α β t_rest debruijnIdx.succ⟩
             | _ => Macro.throwError "variable missing in context"
           | .none => Macro.throwError "variable missing in context"
-        | _ => Macro.throwError "this is not a valid list"
+        -- this slot does not take the variable as substitution.
+        | `(expr| $_f:atom : $β:atom) =>
+          pure <| ⟨vars, mk_debruijn β β t_rest 0⟩
+        | _ => Macro.throwError "not a valid context"
       | _ => Macro.throwError "not a valid context"
     let acc : Ctx × TJudge' :=
       Prod.mk (`(binderlist| ($vars:judgment,*))) (⟨pure conclude, pure why⟩ : TJudge')
@@ -312,10 +322,15 @@ def parse_fall : Lean.Macro
   | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
   | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)
   | `(⟪$a:app⟫) => `(a⟪$a:app⟫)
+  | `(⟪$α:atom → ($β:atom : Type $n)⟫) =>
+    `(⟪∀(x : $α:atom), [(: $α:atom x) : Prop, $β:atom : Type $n]⟫)
+  | `(⟪$α:atom → $β:atom⟫) =>
+    `(⟪∀(x : $α:atom), [(: $α:atom x) : Prop, $β:atom : (sortof <| typeof <| $β)]⟫)
   | _ => Macro.throwUnsupported
 
 #eval ⟪mkcons I[0]⟫
 #eval ::⟪::(mkcons, I[0], I[0]){Prop, Prop, Type 0}⟫
 #eval ⟪I[1] (Type 0) Prop⟫
+#eval at⟪sortof<|typeof<|Type 0⟫
 
-#eval ⟪∀(x : Prop, y : Type 1), [(I[1] (Type 0))]⟫
+#eval ⟪∀(x : Prop, y : Type 1), [(I[1] (Type 0) x) : Type 0, (I[1] (Type 0) x) : Type 0]⟫

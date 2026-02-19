@@ -8,6 +8,10 @@ open Lean (Syntax)
 
 abbrev Level := ℕ
 
+/-
+I'm fairly certain you can derive fst and snd from the new generalized cons.
+-/
+
 inductive Expr where
   | I       : Level → Expr
   | K       : Level → Level → Expr -- Dependent K
@@ -22,6 +26,8 @@ inductive Expr where
   | type   : Level → Expr
   | prop   : Expr
   | sort   : Level → Expr
+  | fst    : Level → Expr
+  | snd    : Level → Expr
   /-
     Sigma projection:
     TODO: we will need explicit type arguments here of some kind.
@@ -163,6 +169,8 @@ def parse_aoperator : Lean.Macro
   | `(at⟪$n:num⟫) => `($n)
   | `(at⟪#($t:term)⟫) => `($t)
   | `(at⟪: $T:atom⟫) => `(Expr.judge at⟪$T⟫)
+  | `(at⟪fst.[$u:term]⟫) => `(Expr.fst $u)
+  | `(at⟪snd.[$u:term]⟫) => `(Expr.snd $u)
   | `(at⟪I.[$uvs:term,*]⟫) => `(Expr.I $uvs*)
   | `(at⟪S.[$uvs:term,*]⟫) => `(Expr.S $uvs*)
   | `(at⟪K.[$uvs:term,*]⟫) => `(Expr.K $uvs*)

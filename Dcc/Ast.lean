@@ -54,6 +54,7 @@ inductive Expr where
   | fst    : Expr
   | snd    : Expr
   | app    : Expr → Expr → Expr
+deriving BEq
 
 open Expr
 
@@ -76,6 +77,7 @@ declare_syntax_cat list
 declare_syntax_cat fall
 declare_syntax_cat binderlist
 
+syntax "to_ty"  : operator
 syntax "typeof" : operator
 syntax "head" : operator
 syntax "tail" : operator
@@ -180,7 +182,7 @@ macro_rules
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$op:operator <| $e:expr⟫) => do
     match op, ← `(⟪$e⟫) with
-    | `(operator| typeof), `(⟪Sort $m⟫) => `(⟪Sort #(1 + at⟪$m⟫)⟫)
+    | `(operator| typeof), `(⟪Sort $m⟫) => `(⟪Type $m⟫)
     | `(operator| typeof), `(⟪Type $m⟫) => `(⟪Type #(1 + at⟪$m⟫)⟫)
     | `(operator| typeof), `(⟪Prop⟫) => `(⟪Type 0⟫)
     | `(operator| typeof), `(⟪$x:atom : $t:atom⟫) => `(⟪$t:atom⟫)
@@ -194,6 +196,8 @@ macro_rules
     | `(operator| judge), `(⟪$x:atom : $t:atom⟫) => `(⟪: $t:atom $x:atom⟫)
     | `(operator| head), `(⟪judge <| $x:atom : $t:atom⟫) => pure x
     | `(operator| tail), `(⟪judge <| $x:atom : $t:atom⟫) => pure t
+    | `(operator| head), `(⟪$x:atom : $t:atom⟫) => pure x
+    | `(operator| tail), `(⟪$x:atom : $t:atom⟫) => pure t
     | `(operator| head), `(::⟪$a:cons {$a:atom, $xs:atom,*}⟫) => pure a
     | `(operator| tail), `(::⟪$a:cons {$a:atom, $xs:atom,*}⟫) => `(::⟪$a:cons {$xs:atom,*}⟫)
     | _, _ => `(sorry)
@@ -205,7 +209,23 @@ macro_rules
   | `(::⟪$a:cons {$f:atom,$g:atom}⟫) => `(a⟪($a:cons) $f:atom $g:atom⟫)
   -- This is the base case of debruijn-index substitution in lists
   | `(⟪∀($vars:judgment,*), [$hyps,*, $conclude:judgment]⟫) => do
-    let inner ← mk_debruijn n m o α β tg debruijnIdx
+    let h : List (Lean.MacroM (Lean.TSyntax `expr)) := hyps.getElems.toList.mapM (fun f => do
+      let t_f ← `(⟪typeof <| $f⟫)
+      let t_t_f ← `(⟪typeof <| typeof <| $f⟫)
+      match f, t_f, t_t_f with
+      | `(⟪$f:app $var:atom⟫), t_f, `(⟪ Type $m:atom ⟫) =>
+        let find_entry := fun judgmt => match judgmt with
+          | `(judgment| $v:atom : $α:atom) => do
+            if (← `(at⟪$v⟫)) == (← `(at⟪$var⟫)) then
+              sorry
+            else
+              sorry
+        match vars.getElems.toList.firstM (fun judmt => · == var) with
+        | .some debruijnIdx =>
+          sorry
+        | .none =>
+          sorry
+      | _, _, _ => `(⟪__⟫))
     sorry
   -- base case. this is technically the head element.
   -- here, we produce a judged list

@@ -228,7 +228,21 @@ def mk_debruijn (n₁ : ℕ) (n₂ : Option ℕ := .none) : Lean.MacroM (Lean.TS
       | .some .zero => do `(atom| ::(mkcons, (K'[0, 0] Prop Prop), (K'[0, 0] Prop Prop)))
       | .none => `(atom| ::(mkcons, (K'[0, 0] Prop Prop), (I[0] Prop)))
 
+def allOuterIdents (base_vars : List (Lean.TSyntax `ident)) (e : Lean.TSyntax `app) : List (Lean.TSyntax `ident) :=
+  match base_vars with
+  | .nil => .nil
+  | (.cons _x xs) =>
+    match e with
+    | `(app| $f:app $x:ident) =>
+      (x :: allOuterIdents xs f)
+    | `(app| $f:atom $x:ident) => [x]
+    | _ => []
+
+#eval (fun c => allOuterIdents [(Lean.mkIdent `x), (Lean.mkIdent `y)] c) <$> `(app| I[0] x y)
+
 def parse_fall : Lean.Macro
+  -- when there is only one head hypothesis, the conclusion
+  -- may want a say in subbstitution
   | `(⟪∀($vars:binder,*), [$hyps:expr,*, $conclude:atom]⟫) => do
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder
@@ -244,11 +258,15 @@ def parse_fall : Lean.Macro
       | `(expr| $f:app $var:ident) =>
         match vars.getElems.toList.zipIdx.find? (find_entry var) with
         | .some (.mk _a debruijnIdx) =>
-          let inner ← mk_debruijn debruijnIdx.succ
-          `(app| $inner:app ($f:app))
+          let inner ← mk_debruijn debruijnIdx.succ .none
+          `(app| $inner:atom ($f:app))
         | .none => Macro.throwError "variable missing in context"
       -- this slot does not take the variable as substitution.
-      | f => `(app| $(← mk_debruijn 0) ($f:expr))
+      | f =>
+        let inner ← mk_debruijn 0 .none
+        `(app| $inner:atom ($f:expr))
+    let init ← match conlude with
+      | `(a⟪$f:app $var:ident⟫
     hyps.getElems.toList.foldrM (fun e fst => do
       `(a⟪$(← gen_debruijn e) $(⟨fst⟩):atom⟫))
       (init := conclude)

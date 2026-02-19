@@ -196,10 +196,12 @@ macro_rules
   | `(::⟪$a:cons {$f:atom,$g:atom}⟫) => `(a⟪($a:cons) $f:atom $g:atom⟫)
   -- This is the base case of debruijn-index substitution in lists
   | `(list| [$a:atom : $α:atom, $xs,*]) => do
-    match Expr.get_sort (← `(at⟪$α⟫)) with
-    | .some 0 => `(list| [$a:atom : ($α:atom : Sort 1), $xs,*])
-    | .some n => `(list| [$a:atom : ($α:atom : Sort (n + 1)), $xs,*])
-    | .none => `(list| [$a:atom : $α:atom, $xs,*])
+    match (← `(Expr.get_sort at⟪$α⟫)) with
+    | `(.some 0) => `(list| [$a:atom : ($α:atom : Sort 1), $xs,*])
+    | `(.some $n) =>
+      let n' := Lean.quote n
+      `(list| [$a:atom : ($α:atom : Sort #($n' + 1)), $xs,*])
+    | _ => `(list| [$a:atom : $α:atom, $xs,*])
   | `(list| [$a:atom : Type $m, $xs,*]) =>
     `(list| [$a:atom : (Type $m : Type #(1 + at⟪$m⟫)), $xs,*])
   | `(⟪∀($vars:judgment,*), [($f:atom $x:atom) : ($β:atom : Type $m), $conclude:atom : ($γ:atom : Type $o)]⟫) => do

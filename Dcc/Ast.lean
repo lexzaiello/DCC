@@ -124,12 +124,13 @@ syntax "Type" : sort_cat
 syntax "Sort" : sort_cat
 
 syntax "::(" atom,* ")"                : cons
-syntax "::(" atom,* ")" "{" atom,+ "}" : cons
+syntax "{" atom,+ "}"                  : cons
 syntax "::=[" substitution,* "]"       : cons
 -- ^ assumed debruijn, unless a human variable
 -- is encountered
 -- For keeping track of human variables
 syntax "::={" declare,* "}[" substitution,* "]" : cons
+syntax cons cons                                : cons
 
 syntax ident "[" atom,* "]"        : comb
 syntax "(" term ")" "[" atom,* "]" : comb
@@ -141,7 +142,6 @@ syntax "*"                     : atom
 syntax "(" expr ")"            : atom
 syntax "__"                    : atom
 syntax ":" atom                : atom
-syntax cons                    : atom
 
 syntax:50 (name := judge_all) atom ":" expr : judgment
 
@@ -167,6 +167,7 @@ syntax app          : expr
 syntax judgment     : expr
 syntax arrow        : expr
 syntax substitution : expr
+syntax cons         : expr
 
 syntax "⟪" expr "⟫"      : term
 syntax "a⟪" app "⟫"      : term
@@ -176,12 +177,12 @@ syntax "::⟪" cons "⟫"    : term
 syntax "j⟪" judgment "⟫" : term
 
 macro_rules
-  | `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) => do
-    let inner ← `(app| (mkcons $m $n $o $p) $α $β $γ $δ)
+  /-| `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) => do
+    let inner ← `(app| (mkcons $m:atom $n:atom $o:atom $p:atom) $α:atom $β:atom $γ:atom $δ:atom)
     let args ← rst.getElems.toList.foldlM (fun acc e => `(app| $acc:app $e:atom)) inner
-    `(a⟪$args⟫)
-  | `(::⟪::($cfgs:atom,*){$f:atom,$g:atom,$xs:atom,*}⟫) => `(a⟪::($cfgs:atom,*) $f ::($cfgs:atom,*){$g, $xs,*}⟫)
-  | `(::⟪::($cfgs:atom,*){$f:atom,$g:atom}⟫) => `(a⟪::($cfgs:atom,*) $f $g⟫)
+    `(a⟪$args⟫)-/
+  | `(::⟪$a:cons {$f:atom,$g:atom,$xs:atom,*}⟫) => `(a⟪($a:cons) $f:atom ($a:cons {$g:atom, $xs:atom,*})⟫)
+  | `(::⟪$a:cons {$f:atom,$g:atom}⟫) => `(a⟪($a:cons) $f:atom $g:atom⟫)
   -- We are substituting a variable.
   -- note that we always carry a set of variables seen so far
   -- and which debruijn indices they correspond to.
@@ -194,12 +195,12 @@ macro_rules
       | `(declare| $var:atom := #($n:term)) => Option.some n
       | _ => .none
 
-    match vars.getElems.toList.find? find_ixd with
+    match vars.getElems.toList.find? find_idx with
     | .some debruijnidx =>
       sorry
     | .none =>
       sorry
-  | `(at⟪$c:cons⟫) => `(::⟪$c:cons⟫)
+  | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)
   | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
   | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)
   | `(at⟪$n:num⟫) => `($n)

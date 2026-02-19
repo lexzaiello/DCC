@@ -228,14 +228,17 @@ def mk_debruijn (n₁ : ℕ) (n₂ : Option ℕ := .none) : Lean.MacroM (Lean.TS
       | .some .zero => do `(atom| ::(mkcons, (K'[0, 0] Prop Prop), (K'[0, 0] Prop Prop)))
       | .none => `(atom| ::(mkcons, (K'[0, 0] Prop Prop), (I[0] Prop)))
 
+/-
+Use this to figure out which variables an element in the list is using.
+-/
 def allOuterIdents (base_vars : List (Lean.TSyntax `ident)) (e : Lean.TSyntax `app) : List (Lean.TSyntax `ident) :=
   match base_vars with
   | .nil => .nil
-  | (.cons _x xs) =>
+  | (.cons x' xs) =>
     match e with
     | `(app| $f:app $x:ident) =>
-      (x :: allOuterIdents xs f)
-    | `(app| $f:atom $x:ident) => [x]
+      if x' == x then (x :: allOuterIdents xs f) else []
+    | `(app| $f:atom $x:ident) => if x' == x then [x] else []
     | _ => []
 
 #eval (fun c => allOuterIdents [(Lean.mkIdent `x), (Lean.mkIdent `y)] c) <$> `(app| I[0] x y)
@@ -244,6 +247,10 @@ def parse_fall : Lean.Macro
   -- when there is only one head hypothesis, the conclusion
   -- may want a say in subbstitution
   | `(⟪∀($vars:binder,*), [$hyps:expr,*, $conclude:atom]⟫) => do
+    let base_vars : List (Lean.TSyntax `ident) := hps.getElems.toList.filterMap (fun elem => match elem with
+      | `(binder| $v:ident : $_α:atom) => pure v
+      | _ => .none)
+
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder
     let find_entry (var : Lean.TSyntax `ident) : Lean.TSyntax `binder × ℕ → Bool :=

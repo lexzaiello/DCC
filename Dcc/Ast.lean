@@ -79,10 +79,10 @@ syntax "∀" binderlist "," list        : fall
 -- is encountered
 -- For keeping track of human variables
 
-syntax "{" atom,* "}"          : atom
+syntax atom "{" atom,* "}"     : atom
 syntax "::(" atom,* ")"        : atom
 syntax sort                    : atom
-syntax:1000 "(" expr ")"       : atom
+syntax  "(" expr ")"           : atom
 syntax ":" atom                : atom
 
 syntax:50 atom ":" atom : judgment
@@ -151,6 +151,9 @@ def parse_aoperator : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro matom] def parse_atom : Lean.Macro
+  | `(at⟪$a:atom {$f:atom, $g:atom, $elems:atom,*}⟫) =>
+    `(a⟪$a:atom $f:atom $g:atom ($a:atom {$elems:atom,*})⟫)
+  | `(at⟪$a:atom {$f:atom, $g:atom}⟫) => `(a⟪$a:atom $f:atom $g:atom⟫)
   | `(at⟪($e:app)⟫) => `(a⟪$e:app⟫)
   | `(at⟪($e:expr)⟫) => `(⟪$e:expr⟫)
   | `(at⟪mkcons⟫) => `(Expr.mkcons)
@@ -169,9 +172,7 @@ def parse_aoperator : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro mapp] def parse_app : Lean.Macro
-  | `(a⟪$a:atom {$f:atom, $g:atom}⟫) => `(a⟪$a:atom $f:atom $g:atom⟫)
-  | `(a⟪$a:atom {$f:atom, $g:atom, $elems:atom,*}⟫) =>
-    `(a⟪$a:atom $f:atom $g:atom ($a:atom {$elems:atom,*})⟫)
+  | `(a⟪$a:app $b:atom⟫) => `(Expr.app a⟪$a:app⟫ at⟪$b:atom⟫)
   | `(a⟪$a:atom⟫) => `(at⟪$a:atom⟫)
   | _ => Macro.throwUnsupported
 
@@ -267,7 +268,6 @@ def parse_fall : Lean.Macro
   | s@`(⟪∀$_vars:binderlist, $_hyps:list⟫) => parse_fall s
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
-  | `(⟪$a:app⟫) => `(a⟪$a:app⟫)
   | `(⟪$α:atom → $β:atom⟫) => do
     let myId ← Lean.withFreshMacroScope (pure <| Lean.mkIdent `my_x)
     `(⟪∀($myId:ident : $α:atom), [: $α:atom $myId:ident, $β:atom]⟫)

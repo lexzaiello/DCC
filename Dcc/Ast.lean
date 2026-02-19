@@ -213,6 +213,7 @@ def parse_aoperator : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro matom] def parse_atom : Lean.Macro
+  | `(at⟪($e:app)⟫) => `(a⟪$e:app⟫)
   | `(at⟪($e:expr)⟫) => `(⟪$e:expr⟫)
   | `(at⟪mkcons⟫) => `(Expr.mkcons)
   | `(at⟪::($πcons:atom, $πf:atom, $πg:atom)⟫) => `(a⟪mkcons $πcons $πf $πg⟫)
@@ -264,8 +265,7 @@ def parse_fall : Lean.Macro
     -- corresponding to a hypothesis binder
     let find_entry (var : Lean.TSyntax `ident) : Lean.TSyntax `binder × ℕ → Bool :=
           fun (⟨bind, _idx⟩ : Lean.TSyntax `binder × ℕ) => match bind with
-          | `(binder| $v:ident : $_α:atom) =>
-            v.getId.lastComponentAsString == var.getId.lastComponentAsString
+          | `(binder| $v:ident : $_α:atom) => v == var
           | _ => false
     -- generates ::(a, b, c) head without f and g inserted.
     let gen_debruijn (fhead : Lean.TSyntax `expr) : MacroM (Lean.TSyntax `app) := do
@@ -281,7 +281,7 @@ def parse_fall : Lean.Macro
       -- this slot does not take the variable as substitution.
       | f => `(app| $(← mk_debruijn 0) ($f:expr))
     hyps.getElems.toList.foldrM (fun e fst => do
-      `(a⟪$(← gen_debruijn e) {($e:expr), $(⟨fst⟩):atom}⟫))
+      `(a⟪$(← gen_debruijn e) $(⟨fst⟩):atom⟫))
       (init := conclude)
   | _ => Macro.throwUnsupported
 
@@ -290,8 +290,9 @@ def parse_fall : Lean.Macro
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
   | `(⟪$a:app⟫) => `(a⟪$a:app⟫)
-  | `(⟪$α:atom → $β:atom⟫) =>
-    `(⟪∀(x : $α:atom), [: $α:atom x, $β:atom]⟫)
+  | `(⟪$α:atom → $β:atom⟫) => do
+    let myId ← Lean.withFreshMacroScope (pure <| Lean.mkIdent `my_x)
+    `(⟪∀($myId:ident : $α:atom), [: $α:atom $myId:ident, $β:atom]⟫)
   | _ => Macro.throwUnsupported
 
 #eval ⟪mkcons I[0]⟫

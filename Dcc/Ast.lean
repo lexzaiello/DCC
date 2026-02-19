@@ -192,7 +192,8 @@ macro_rules
   -- and which debruijn indices they correspond to.
   | `(::⟪::=[$elems,*]⟫) => `(::⟪::={}[$elems,*]⟫)
   -- Note: this only works for letter variables
-  | `(::⟪::={$vars:ident,*}[($f:atom ⟦__ : ($α:atom : Type $m:atom) := $var:ident⟧) : ($β:atom : Type $n:atom), $g:atom : ($tg:atom : Type $o:atom)]⟫) => do
+  | `(::⟪::={$vars:ident,*}[($f:atom ⟦__ : ($α:atom : Type $m:atom) := $var:ident⟧) : ($β:atom : Type $n:atom)
+    , $g:atom : ($tg:atom : Type $o:atom)]⟫) => do
     let ret_g    ← `(atom| (I[$o:atom] $tg:atom))
     let judge_α  ← `(atom| ($α:atom : Type $m:atom))
     let judge_β  ← `(atom| ($β:atom : Type $n:atom))
@@ -223,6 +224,8 @@ macro_rules
       `(::⟪$inner:cons {$f:atom,$g:atom}⟫)
     | .none =>
       -- Not contained in vars, so this is de bruijn index 0
+      let inner ← mk_debruijn 0
+      
       sorry
   | `(at⟪judge($x:atom : $t:atom)⟫) => `(⟪(judge $t:atom) $x:atom⟫)
   | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)

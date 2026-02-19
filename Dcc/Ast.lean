@@ -19,6 +19,11 @@ Its type should be the very last snd's final substituted value.
 
 Each layer we push onto the very last element, we remove
 a binder from its type, eventually producing Type.
+
+The very last element in our list receives ALL our arguments. No indices.
+This element has type α → β → γ → δ...
+
+each layer up we go, we snd its type.
 -/
 
 import Mathlib.Data.Nat.Notation
@@ -50,6 +55,13 @@ inductive Expr where
   | snd    : Expr
   | app    : Expr → Expr → Expr
 
+def Expr.get_sort : Expr → Option ℕ
+  | .prop
+  | .sort 0 => pure 0
+  | .sort n => pure n
+  | .type n => pure n.succ
+  | _ => .none
+
 open Expr
 
 declare_syntax_cat operator
@@ -66,11 +78,14 @@ declare_syntax_cat declare
 declare_syntax_cat assign
 declare_syntax_cat substitution
 declare_syntax_cat arrow
-declare_syntax_cat fall
 declare_syntax_cat cons
+declare_syntax_cat list
+declare_syntax_cat fall
+declare_syntax_cat binderlist
 
 syntax "head" : operator
 syntax "tail" : operator
+syntax "judge" : operator
 
 syntax "#(" term ")" : lit
 
@@ -81,14 +96,20 @@ syntax lit           : atom
 syntax "Type" : sort_cat
 syntax "Sort" : sort_cat
 
+syntax binderlist atom         : binderlist
+syntax atom                    : binderlist
+
+syntax "∀(" judgment,* ")" "," list    : fall
+
 syntax "::(" atom,* ")"                : cons
 syntax "{" atom,+ "}"                  : cons
-syntax "::=[" substitution,* "]"       : cons
+syntax cons cons                       : cons
+
+syntax "[" judgment,+ "]"                  : list
+
 -- ^ assumed debruijn, unless a human variable
 -- is encountered
 -- For keeping track of human variables
-syntax "::={" ident,* "}[" substitution,* "]" : cons
-syntax cons cons                                : cons
 
 syntax ident "[" atom,* "]"        : comb
 syntax "(" term ")" "[" atom,* "]" : comb
@@ -100,7 +121,6 @@ syntax "*"                     : atom
 syntax "(" expr ")"            : atom
 syntax "__"                    : atom
 syntax ":" atom                : atom
-syntax "judge(" judgment ")"   : atom
 
 syntax:50 (name := judge_all) atom ":" expr : judgment
 
@@ -114,14 +134,14 @@ syntax atom ":=" atom      : declare
 syntax "⟦" judgment "⟧" : assign
 
 syntax atom "→" atom           : arrow
-syntax "∀" judgment,+ "," atom : fall
 
-syntax atom assign : substitution
-syntax judgment    : substitution
+syntax "(" atom assign ")" : substitution
+syntax judgment            : substitution
 
 syntax app atom : app
 syntax atom     : app
 
+syntax fall         : expr
 syntax app          : expr
 syntax judgment     : expr
 syntax arrow        : expr
@@ -129,68 +149,78 @@ syntax substitution : expr
 syntax cons         : expr
 syntax operator "<|" expr : expr
 
-syntax "⟪" expr "⟫"      : term
-syntax "a⟪" app "⟫"      : term
-syntax "at⟪" atom "⟫"    : term
-syntax "c⟪" comb "⟫"     : term
-syntax "::⟪" cons "⟫"    : term
-syntax "j⟪" judgment "⟫" : term
+syntax "⟪" expr "⟫"         : term
+syntax "a⟪" app "⟫"         : term
+syntax "at⟪" atom "⟫"       : term
+syntax "c⟪" comb "⟫"        : term
+syntax "::⟪" cons "⟫"       : term
+syntax "j⟪" judgment "⟫"    : term
+
+-- If this variable is contained in vars, then look up the corresponding debruijn index
+-- otherwise, insert the variable
+
+-- debruijn index 0 corresponds to rejecting all future inputs
+-- for the head
+-- 1 corresponds to accepting the input
+-- all others decrement from n to 1
+def mk_debruijn (n m o α β tg : Lean.TSyntax `atom) (n' : ℕ) : Lean.MacroM (Lean.TSyntax `cons) := do
+  let ret_g    ← `(atom| (I[$o:atom] $tg:atom))
+  let judge_α  ← `(atom| ($α:atom : Type $m:atom))
+  let judge_β  ← `(atom| ($β:atom : Type $n:atom))
+  let norm_t_f ← `(atom| ($judge_α:atom → $judge_β:atom))
+  match n' with
+  | .zero => `(cons| ::(mkcons, (K'[$n:atom, $n:atom] $β:atom $β:atom), (I[$o:atom] $tg:atom)))
+  | .succ n' =>
+    let inner ← mk_debruijn n m o α β tg n'
+    let map_f ← if n' == .succ .zero then
+      `(atom| (I[$n:atom] $norm_t_f:atom))
+    else
+      `(atom| (K'[$n:atom, $m:atom] $norm_t_f:atom))
+
+    `(cons| ::(($inner:cons), $map_f:atom, $ret_g:atom))
 
 macro_rules
   | `(⟪$op:operator <| $e:expr⟫) => do
     match op, ← `(⟪$e⟫) with
-    | `(operator| head), `(⟪judge($x:atom : $t:atom)⟫) => pure x
-    | `(operator| tail), `(⟪judge($x:atom : $t:atom)⟫) => pure t
+    | `(operator| judge), `(⟪$x:atom : $t:atom⟫) => `(⟪: $t:atom $x:atom⟫)
+    | `(operator| head), `(⟪judge <| $x:atom : $t:atom⟫) => pure x
+    | `(operator| tail), `(⟪judge <| $x:atom : $t:atom⟫) => pure t
     | `(operator| head), `(::⟪$a:cons {$a:atom, $xs:atom,*}⟫) => pure a
     | `(operator| tail), `(::⟪$a:cons {$a:atom, $xs:atom,*}⟫) => `(::⟪$a:cons {$xs:atom,*}⟫)
     | _, _ => `(sorry)
-  -- TODO: fix to use new recursive mkcons
   /-| `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) => do
     let inner ← `(app| (mkcons $m:atom $n:atom $o:atom $p:atom) $α:atom $β:atom $γ:atom $δ:atom)
     let args ← rst.getElems.toList.foldlM (fun acc e => `(app| $acc:app $e:atom)) inner
     `(a⟪$args⟫)-/
   | `(::⟪$a:cons {$f:atom,$g:atom,$xs:atom,*}⟫) => `(a⟪($a:cons) $f:atom ($a:cons {$g:atom, $xs:atom,*})⟫)
   | `(::⟪$a:cons {$f:atom,$g:atom}⟫) => `(a⟪($a:cons) $f:atom $g:atom⟫)
-  -- We are substituting a variable.
-  -- note that we always carry a set of variables seen so far
-  -- and which debruijn indices they correspond to.
-  -- note: ::=[stuff] coerces a typed cons list
-  | `(::⟪::=[$elems,*]⟫) => `(::⟪::={}[$elems,*]⟫)
-  -- base case for debruijn indices
-  -- Note: this only works for letter variables
+  -- This is the base case of debruijn-index substitution in lists
+  | `(list| [$a:atom : $α:atom, $xs,*]) => do
+    match Expr.get_sort (← `(at⟪$α⟫)) with
+    | .some 0 => `(list| [$a:atom : ($α:atom : Sort 1), $xs,*])
+    | .some n => `(list| [$a:atom : ($α:atom : Sort (n + 1)), $xs,*])
+    | .none => `(list| [$a:atom : $α:atom, $xs,*])
+  | `(list| [$a:atom : Type $m, $xs,*]) =>
+    `(list| [$a:atom : (Type $m : Type #(1 + at⟪$m⟫)), $xs,*])
+  | `(⟪∀($vars:judgment,*), [($f:atom $x:atom) : ($β:atom : Type $m), $conclude:atom : ($γ:atom : Type $o)]⟫) => do
+    let inner ← mk_debruijn n m o α β tg debruijnIdx
+    sorry
+  -- base case. this is technically the head element.
+  -- here, we produce a judged list
+  -- the type is exactly the type of concl
+  | `(⟪∀{$vars} $last:substitution, $concl:atom : $α:atom⟫) =>
+    
+  | `(⟪∀{$vars} $prev:binderlist $last:substitution, $concl:atom⟫) => 
+  -- base case for debruijn indices. this produces a judged cons list.
   | `(::⟪::={$vars:ident,*}[($f:atom ⟦$var:ident : ($α:atom : Type $m:atom)⟧) : ($β:atom : Type $n:atom)
     , $g:atom : ($tg:atom : Type $o:atom)]⟫) => do
-    let ret_g    ← `(atom| (I[$o:atom] $tg:atom))
-    let judge_α  ← `(atom| ($α:atom : Type $m:atom))
-    let judge_β  ← `(atom| ($β:atom : Type $n:atom))
-    let norm_t_f ← `(atom| ($judge_α:atom → $judge_β:atom))
-
-    -- If this variable is contained in vars, then look up the corresponding debruijn index
-    -- otherwise, insert the variable
-
-    -- debruijn index 0 corresponds to rejecting all future inputs
-    -- for the head
-    -- 1 corresponds to accepting the input
-    -- all others decrement from n to 1
-    let rec mk_debruijn (n' : ℕ) : Lean.MacroM (Lean.TSyntax `cons) := do
-      match n' with
-      | .zero => `(cons| ::(mkcons, (K'[$n:atom, $n:atom] $β:atom $β:atom), (I[$o:atom] $tg:atom)))
-      | .succ n' =>
-        let inner ← mk_debruijn n'
-        let map_f ← if n' == .succ .zero then
-          `(atom| (I[$n:atom] $norm_t_f:atom))
-        else
-          `(atom| (K'[$n:atom, $m:atom] $norm_t_f:atom))
-
-        `(cons| ::(($inner:cons), $map_f:atom, $ret_g:atom))
-
     match vars.getElems.toList.findIdx? (· == var) with
     | .some debruijnIdx =>
-      let inner ← mk_debruijn debruijnIdx
-      `(::⟪$inner:cons {$f:atom,$g:atom}⟫)
+      let inner ← mk_debruijn n m o α β tg debruijnIdx
+      `(⟪judge(($inner:cons {$f:atom,$g:atom}) : )⟫)
     | .none =>
       -- Not contained in vars, so this is de bruijn index 0
-      let inner ← mk_debruijn 0
+      let inner ← mk_debruijn n m o α β tg 0
       
       sorry
   | `(at⟪judge($x:atom : $t:atom)⟫) => `(⟪(judge $t:atom) $x:atom⟫)

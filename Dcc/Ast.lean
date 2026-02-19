@@ -214,13 +214,15 @@ macro_rules
       let t_t_f ← `(⟪typeof <| typeof <| $f⟫)
       match f, t_f, t_t_f with
       | `(⟪$f:app $var:atom⟫), t_f, `(⟪ Type $m:atom ⟫) =>
-        let find_entry := fun judgmt => match judgmt with
+        let find_entry : _ → Lean.MacroM (Option ((Lean.TSyntax `atom) × (Lean.TSyntax `atom) × ℕ)) :=
+          fun (⟨judgmt, idx⟩ : (Lean.TSyntax `atom) × ℕ) => match judgmt with
           | `(judgment| $v:atom : $α:atom) => do
             if (← `(at⟪$v⟫)) == (← `(at⟪$var⟫)) then
-              sorry
+              pure <| pure ⟨v, α, idx⟩
             else
-              sorry
-        match vars.getElems.toList.firstM (fun judmt => · == var) with
+              pure .none
+          | _ => pure .none
+        match vars.getElems.toList.zipIdx.firstM find_entry with
         | .some debruijnIdx =>
           sorry
         | .none =>

@@ -188,8 +188,8 @@ def parse_aoperator : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro mapp] def parse_app : Lean.Macro
-  | `(a⟪$a:app $b:atom⟫) => `(Expr.app a⟪$a:app⟫ at⟪$b:atom⟫)
   | `(a⟪$a:atom⟫) => `(at⟪$a:atom⟫)
+  | `(a⟪$a:app $b:atom⟫) => `(Expr.app a⟪$a:app⟫ at⟪$b:atom⟫)
   | _ => Macro.throwUnsupported
 
 -- If this variable is contained in vars, then look up the corresponding debruijn index
@@ -249,7 +249,11 @@ def allOuterIdents (base_vars : List (Lean.TSyntax `ident)) (e : Lean.TSyntax `a
     | `(app| $f:atom $x:ident) => if x' == x then [x] else []
     | _ => []
 
-def parse_fall (f : Syntax) : MacroM Syntax :=
+def parse_fall (f : Syntax) : MacroM Syntax := do
+  let unwrap {α : Type} : Option α → MacroM α
+    | .some x => return x
+    | .none => Macro.throwUnsupported
+
   -- Finds the entry of an indexed variable judgment
   -- corresponding to a hypothesis binder
   let find_entry (vars : Syntax.TSepArray `binder ",")
@@ -265,31 +269,33 @@ def parse_fall (f : Syntax) : MacroM Syntax :=
       | `(atom| $var:ident)
       | `(atom| ($f:app $var:ident)) => find_entry vars var
       | _ => .none
-  let best_body (vars : Syntax.TSepArray `binder ",") (elem  : Lean.TSyntax `atom) : OptionT MacroM (Lean.TSyntax `app) := do
+  let best_body (vars : Syntax.TSepArray `binder ",") (elem  : Lean.TSyntax `atom) : MacroM (Lean.TSyntax `atom) := do
     match elem with
       | elem@`(atom| $var:ident) =>
-        let vs ← (OptionT.mk <| pure (best_var_for vars elem))
+        let vs ← unwrap (best_var_for vars elem)
         match vs.fst with
         | `(binder | $var:ident : ($t:atom : Type $m))=>
-          pure <| `(⟪I.[a⟪$m:atom⟫] $t:atom⟫)
+          `(atom| (I.[a⟪$m:atom⟫] $t:atom))
         | `(binder | $var:ident : $t:atom) =>
           let srt ← `(at⟪sortof <| typeof <| $t:atom⟫)
-          pure <| `(⟪I.[$srt] $t:atom⟫)
-        | _ => pure `(⟪I.[0] Prop⟫)
-      | `(atom| ($f:app $var:ident)) => pure f
-      | `(atom| $f:atom) => pure `(app| $f:atom)
+          `(atom| (I.[$srt] $t:atom))
+        | _ => `(atom| (I.[0] Prop))
+      | `(atom| ($f:app $var:ident)) => `(atom| ($f:app))
+      | `(atom| $f:atom) => pure f
 
   -- when there is only one head hypothesis, the conclusion
   -- may want a say in subbstitution
   match f with
   | `(⟪∀($vars:binder,*), [$hyp:atom, $conclude:atom]⟫) => do
-    let best_idx := Prod.snd ∘ best_var_for
-    best_idx hyp
-      >>= (mk_debruijn · (best_idx conclude))
-      >>= (fun e => do
-        let hypb ← best_body vars hyp
-        let hypc ← best_body vars conclude
-        `(a⟪$e:atom $(best_body vars hyp) $(best_body vars conclude)⟫))
+    let v ← best_var_for vars hyp
+    let debrj ← (mk_debruijn · (best_idx conclude))
+    
+    >>= (pure ∘ Prod.snd)
+    >>= (mk_debruijn · (best_idx conclude))
+    >>= (fun e => do
+      let hypb ← best_body vars hyp
+      let hypc ← best_body vars conclude
+      `(a⟪$e:atom $(best_body vars hyp) $(best_body vars conclude)⟫))
   | `(⟪∀($vars:binder,*), [$hyps:atom,*, $conclude:atom]⟫) => do
     -- Finds the entry of an indexed variable judgment
     -- corresponding to a hypothesis binder

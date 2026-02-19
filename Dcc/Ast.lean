@@ -152,8 +152,8 @@ syntax:65 operator "<|" expr:65 : atom
 syntax (name := moperator) "⟪" operator "<|" expr "⟫" : term
 syntax "⟪" expr "⟫"         : term
 syntax "a⟪" app "⟫"         : term
-syntax "at⟪" atom "⟫"       : term
-syntax "srt⟪" sort "⟫"      : term
+syntax (name := matom) "at⟪" atom "⟫" : term
+syntax (name := msort) "srt⟪" sort "⟫"      : term
 syntax "c⟪" comb "⟫"        : term
 syntax "::⟪" cons "⟫"       : term
 syntax "j⟪" judgment "⟫"    : term
@@ -221,6 +221,16 @@ def parse_asvar : Syntax → MacroM Syntax
   | `(⟪ tail <| ::⟪$a:cons {$a:atom, $xs:atom,*}⟫⟫) => `(::⟪$a:cons {$xs:atom,*}⟫)
   | _ => Macro.throwUnsupported
 
+@[macro matom] def parse_atom : Syntax → MacroM Syntax
+  | `(at⟪judge <| $x:atom : $t:atom⟫) => `(⟪(: $t:atom) $x:atom⟫)
+  | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
+  | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)
+  | `(at⟪$n:num⟫) => `($n)
+  | `(at⟪$ide:ident⟫) => `($ide)
+  | `(at⟪#($t:term)⟫) => `($t)
+  | `(at⟪: $T:atom⟫) => `(Expr.judge at⟪$T⟫)
+  | _ => Macro.throwUnsupported
+
 macro_rules
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   /-| `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) => do
@@ -286,17 +296,10 @@ macro_rules
       let inner ← mk_debruijn n m o α β tg 0
       
       sorry-/
-  | `(at⟪judge <| $x:atom : $t:atom⟫) => `(⟪(: $t:atom) $x:atom⟫)
   | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)
-  | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)
-  | `(at⟪($a:expr)⟫) => `(⟪$a:expr⟫)
-  | `(at⟪$n:num⟫) => `($n)
-  | `(at⟪$ide:ident⟫) => `($ide)
-  | `(at⟪#($t:term)⟫) => `($t)
   | `(srt⟪Type $n:atom⟫) => `(Expr.type at⟪$n⟫)
   | `(srt⟪Sort $n:atom⟫) => `(Expr.sort at⟪$n⟫)
   | `(srt⟪Prop⟫) => `(Expr.prop)
-  | `(at⟪: $T:atom⟫) => `(Expr.judge at⟪$T⟫)
   | `(c⟪$comb:ident[]⟫) => `(at⟪$comb:ident⟫)
   | `(c⟪($comb:term)[]⟫) => `($comb)
   | `(c⟪$comb:ident[$u:atom, $xs:atom,*]⟫) =>`(c⟪($comb at⟪$u⟫)[$xs,*]⟫)

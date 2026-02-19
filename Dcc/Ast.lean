@@ -315,30 +315,3 @@ def parse_fall : Lean.Macro
 @[macro mcons] def parse_cons : Lean.Macro
   | `(::⟪::($πcons:atom, $πf:atom, $πg:atom)⟫) => `(⟪mkcons $πcons $πf $πg⟫)
   | _ => Macro.throwUnsupported
-
-/-
-macro_rules
-  | `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) => do
-    let inner ← `(app| (mkcons $m:atom $n:atom $o:atom $p:atom) $α:atom $β:atom $γ:atom $δ:atom)
-    let args ← rst.getElems.toList.foldlM (fun acc e => `(app| $acc:app $e:atom)) inner
-    `(a⟪$args⟫)-/
-  -- This is the base case of debruijn-index substitution in lists
-  
-  -- base case. this is technically the head element.
-  -- here, we produce a judged list
-  -- the type is exactly the type of concl
-  /-| `(⟪∀{$vars} $last:substitution, $concl:atom : $α:atom⟫) =>
-    
-  | `(⟪∀{$vars} $prev:binderlist $last:substitution, $concl:atom⟫) => 
-  -- base case for debruijn indices. this produces a judged cons list.
-  | `(::⟪::={$vars:ident,*}[($f:atom ⟦$var:ident : ($α:atom : Type $m:atom)⟧) : ($β:atom : Type $n:atom)
-    , $g:atom : ($tg:atom : Type $o:atom)]⟫) => do
-    match vars.getElems.toList.findIdx? (· == var) with
-    | .some debruijnIdx =>
-      let inner ← mk_debruijn n m o α β tg debruijnIdx
-      `(⟪judge(($inner:cons {$f:atom,$g:atom}) : )⟫)
-    | .none =>
-      -- Not contained in vars, so this is de bruijn index 0
-      let inner ← mk_debruijn n m o α β tg 0
-      
-      sorry-/

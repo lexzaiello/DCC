@@ -64,6 +64,10 @@ Since α is a type, and β produces a type, we will need level arguments, too.
 
 Note: cons can really accept any argument.
 It is somewhat untyped.
+
+Issue: with mkcons, we want to be able to calculuate f and g types on the fly.
+
+Judgments might be very useful for this, instead of explicit type arguments.
 -/
 
 import Mathlib.Data.Nat.Notation
@@ -129,7 +133,7 @@ syntax "::=[" substitution,* "]"       : cons
 -- ^ assumed debruijn, unless a human variable
 -- is encountered
 -- For keeping track of human variables
-syntax "::={" declare,* "}[" substitution,* "]" : cons
+syntax "::={" ident,* "}[" substitution,* "]" : cons
 syntax cons cons                                : cons
 
 syntax ident "[" atom,* "]"        : comb
@@ -187,18 +191,24 @@ macro_rules
   -- note that we always carry a set of variables seen so far
   -- and which debruijn indices they correspond to.
   | `(::⟪::=[$elems,*]⟫) => `(::⟪::={}[$elems,*]⟫)
-  | `(::⟪::={$vars:declare,*}[($f:atom ⟦__ : $t:expr := $var:atom⟧) : $β:app $v:atom, $xs,*]⟫) =>
+  -- Note: this only works for letter variables
+  | `(::⟪::={$vars:ident,*}[($f:atom ⟦__ : ($α:atom : Ty $m) := $var:ident⟧) : $β:app $v:atom, ($f:atom ⟦__ : ($α:atom : Ty $m) := $var:ident⟧) : $β:app $v:atom]⟫) =>
     -- If this variable is contained in vars, then look up the corresponding debruijn index
     -- otherwise, insert the variable
 
-    let find_idx := fun v => match v with
-      | `(declare| $var:atom := #($n:term)) => Option.some n
-      | _ => .none
+    -- debruijn index 0 corresponds to rejecting all future inputs
+    -- for the head
+    -- 1 corresponds to accepting the input
+    -- all others decrement from n to 1
+    let mk_debruijn : ℕ → Lean.MacroM Lean.Syntax
+      | .zero => `(⟪::($α:atom, $β:atom, 
 
-    match vars.getElems.toList.find? find_idx with
+    match vars.getElems.toList.findIdx? (· == var) with
     | .some debruijnidx =>
+      
       sorry
     | .none =>
+      -- Not contained in vars, so this is de bruijn index 0
       sorry
   | `(⟪$c:cons⟫) => `(::⟪$c:cons⟫)
   | `(at⟪($a:atom)⟫) => `(at⟪$a:atom⟫)

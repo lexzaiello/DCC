@@ -1,7 +1,3 @@
-/-
-
--/
-
 import Mathlib.Data.Nat.Notation
 import Init.Meta.Defs
 
@@ -169,13 +165,14 @@ def parse_aoperator : Lean.Macro
   | `(at⟪K.[$uvs:term,*]⟫) => `(Expr.K $uvs*)
   | `(at⟪K'.[$uvs:term,*]⟫) => `(Expr.K' $uvs*)
   | s@`(at⟪$_op:operator <| $_a:atom⟫) => parse_aoperator s
+  | `(at⟪$id:ident⟫) => `($id)
   | _ => Macro.throwUnsupported
 
 @[macro mapp] def parse_app : Lean.Macro
-  | `(at⟪mkcons⟫) => `(Expr.mkcons)
+  | `(a⟪$a:atom {$f:atom, $g:atom}⟫) => `(a⟪$a:atom $f:atom $g:atom⟫)
+  | `(a⟪$a:atom {$f:atom, $g:atom, $elems:atom,*}⟫) =>
+    `(a⟪$a:atom $f:atom $g:atom ($a:atom {$elems:atom,*})⟫)
   | `(a⟪$a:atom⟫) => `(at⟪$a:atom⟫)
-  | `(a⟪$a:atom $b:atom⟫) => `(Expr.app at⟪$a:atom⟫ at⟪$b:atom⟫)
-  | `(a⟪$a:app $b:atom⟫) => `(Expr.app a⟪$a:app⟫ at⟪$b:atom⟫)
   | _ => Macro.throwUnsupported
 
 -- If this variable is contained in vars, then look up the corresponding debruijn index
@@ -266,6 +263,7 @@ def parse_fall : Lean.Macro
   | _ => Macro.throwUnsupported
 
 @[macro mexpr] def parse_expr : Lean.Macro
+  | `(⟪$a:app $b:atom⟫) => `(Expr.app a⟪$a:app⟫ at⟪$b:atom⟫)
   | s@`(⟪∀$_vars:binderlist, $_hyps:list⟫) => parse_fall s
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
@@ -275,9 +273,3 @@ def parse_fall : Lean.Macro
     `(⟪∀($myId:ident : $α:atom), [: $α:atom $myId:ident, $β:atom]⟫)
   | _ => Macro.throwUnsupported
 
-#eval ⟪mkcons I.[0]⟫
-#eval ⟪I.[1] (Type 0) Prop⟫
-
---#eval ⟪Prop → Prop⟫
-
---#eval ⟪∀(x : Type 2, y : Prop), [I[3] (Type 2) x, I[3]]⟫

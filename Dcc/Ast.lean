@@ -169,9 +169,10 @@ syntax "::⟪" cons "⟫"    : term
 syntax "j⟪" judgment "⟫" : term
 
 macro_rules
-  | `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) =>
-    let inner := `(app| (mkcons $m $n $o $p) $α $β $γ $δ)
-    rst.getElems.toList.foldl (fun acc e => `(a⟪$acc:app $e:atom⟫)) inner
+  | `(::⟪::(($α:atom : Type $m), ($β:atom : ($α:atom : Type $m) → (Type $n : Type #($n + 1))), ($γ:atom : ($α:atom : Type $m) → (Type $o : Type #($o + 1))), ($δ:atom : Type $p), $rst:atom,*)⟫) => do
+    let inner ← `(app| (mkcons $m $n $o $p) $α $β $γ $δ)
+    let args ← rst.getElems.toList.foldlM (fun acc e => `(app| $acc:app $e:atom)) inner
+    `(a⟪$args⟫)
   | `(::⟪::($cfgs:atom,*){$f:atom,$g:atom,$xs:atom,*}⟫) => `(a⟪::($cfgs:atom,*) $f ::($cfgs:atom,*){$g, $xs,*}⟫)
   | `(::⟪::($cfgs:atom,*){$f:atom,$g:atom}⟫) => `(a⟪::($cfgs:atom,*) $f $g⟫)
   | `(at⟪$c:cons⟫) => `(::⟪$c:cons⟫)

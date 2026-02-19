@@ -19,7 +19,7 @@ inductive Expr where
   | S       : Level → Level → Level → Expr -- Dependent S
   | mkcons  : Expr
   -- ^ (mkcons πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
-  | judge  : Expr  → Expr -- judge t is a freestanding expr
+  | judge  : Level  → Expr -- judge t is a freestanding expr
   /-
     Sorts:
   -/
@@ -126,7 +126,7 @@ def parse_typeof : Lean.Macro
   | `(at⟪ typeof <| Prop ⟫)    => `(⟪Type 0⟫)
   | `(at⟪ typeof <| ($_x:atom : $t:atom) ⟫) => `(⟪$t:atom⟫)
   | `(⟪ typeof <| judge <| ($_x:atom : $_t:atom) ⟫) => `(⟪Prop⟫)
-  | `(⟪ typeof <| : $T:atom⟫) => `(⟪$T:atom → Prop⟫)
+  | `(⟪ typeof <| (: m) $T:atom⟫) => `(⟪$T:atom → Prop⟫)
   | `(at⟪ typeof <| (∀$_vars:binderlist, [$_dom:expr, $cod:expr]) ⟫) =>
     `(at⟪typeof <| ($cod:expr)⟫)
   | `(at⟪ typeof <| (∀$vars:binderlist, [$_dom:expr, $cod:expr,*]) ⟫) =>
@@ -141,7 +141,10 @@ def parse_asvar : Lean.Macro
 def parse_aoperator : Lean.Macro
   | `(at⟪ head <| judge <| ($x:atom : $_t:atom)⟫) => pure x
   | `(at⟪ tail <| judge <| ($_x:atom : $t:atom)⟫) => pure t
-  | `(at⟪judge <| ($x:atom : $t:atom)⟫) => `(at⟪((: $t:atom) $x:atom)⟫)
+  | `(at⟪judge <| ($x:atom : ($t:atom : Type $m))⟫) =>
+    `(at⟪(((: $m) $t:atom) $x:atom)⟫)
+  | `(at⟪judge <| ($x:atom : $t:atom)⟫) =>
+    `(at⟪(((: sortof <| $t:atom) $t:atom) $x:atom)⟫)
   | s@`(at⟪ typeof <| $_e:atom⟫) => parse_typeof s
   | `(at⟪ sortof <| $e:atom ⟫) =>
     `(match at⟪$e:atom⟫ with
@@ -164,11 +167,10 @@ def parse_aoperator : Lean.Macro
   | `(at⟪($e:expr)⟫) => `(⟪$e:expr⟫)
   | `(at⟪mkcons⟫) => `(Expr.mkcons)
   | `(at⟪::($πcons:atom, $πf:atom, $πg:atom)⟫) => `(a⟪mkcons $πcons:atom $πf:atom $πg:atom⟫)
-  | `(at⟪judge <| $α:atom⟫) => `(Expr.judge at⟪$α:atom⟫)
   | `(at⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(at⟪$n:num⟫) => `($n)
   | `(at⟪#($t:term)⟫) => `($t)
-  | `(at⟪: $T:atom⟫) => `(Expr.judge at⟪$T⟫)
+  | `(at⟪: $m:atom⟫) => `(Expr.judge a⟪$m:atom⟫)
   | `(at⟪fst.[$u:term]⟫) => `(Expr.fst $u)
   | `(at⟪snd.[$u:term]⟫) => `(Expr.snd $u)
   | `(at⟪I.[$uvs:term,*]⟫) => `(Expr.I $uvs*)
@@ -276,8 +278,13 @@ def parse_fall : Lean.Macro
   | s@`(⟪∀$_vars:binderlist, $_hyps:list⟫) => parse_fall s
   | `(⟪$s:sort⟫) => `(srt⟪$s:sort⟫)
   | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
+  | `(⟪($α:atom : Type $m) → $β:atom⟫) => do
+    let myId ← Lean.withFreshMacroScope (pure <| Lean.mkIdent `my_x)
+    `(⟪∀($myId:ident : $α:atom), [(: $m) $α:atom $myId:ident, $β:atom]⟫)
   | `(⟪$α:atom → $β:atom⟫) => do
     let myId ← Lean.withFreshMacroScope (pure <| Lean.mkIdent `my_x)
-    `(⟪∀($myId:ident : $α:atom), [: $α:atom $myId:ident, $β:atom]⟫)
+
+    `(⟪∀($myId:ident : $α:atom)
+      , [(: sortof <| $α:atom) $α:atom $myId:ident, $β:atom]⟫)
   | _ => Macro.throwUnsupported
 

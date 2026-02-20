@@ -1,3 +1,4 @@
+
 import Qq
 import Mathlib.Data.Nat.Notation
 import Lean.Elab.Term
@@ -158,6 +159,33 @@ E is some dependent function living in sort q
 - F : Type n
 - G : type o
 
+we still haven't figured out how we're doing the terminal value
+in a cons list. Will it be a prop or a type?
+mkcons is flexible now, so we can do a type.
+
+Other problem:
+- we assumed πcons already knows the type arguments.
+this is mad annoying. mkcons should probably figure them out
+itself.
+
+A and B is also sus.
+
+πcons gets these type arguments, potentially:
+
+(α : Type $m) (F : α → Type $n) (G : α → Type $o) (A : Type $p) (B : Type $q)
+        (γ : ((∀ (x : α), F x) → α → A) → ((∀ (x : α), G x) → α → B) → A → B → Type $r)
+
+πcons receives the same πf πg, and fst and snd
+
+so at the very least, πcons receives the explicit type arguments
+
+if πf f x produces another arrow type, that arrow type's
+α is the next α to pass in.
+Question: can we cheat with implicit variables somehow?
+I don't want all this extra shit.
+
+we can derive α from type of f.
+Can we assume πcons already knows the types? maybe. probably a safe assumption.
 -/
 
 inductive Expr where
@@ -165,6 +193,8 @@ inductive Expr where
   | K       : Level → Level → Expr -- Dependent K
   | K'      : Level → Level → Expr -- Nondependent K
   | S       : Level → Level → Level → Expr -- Dependent S
+  | prod    : Level → Level → Expr -- Type of nondep pairs
+  | cons    : Level → Level → Expr -- Normal pair
   | mkcons  : Level → Level → Level → Level → Level → Level → Expr
   -- ^ (mkcons πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
   | judge   : Level  → Expr -- judge t is a freestanding expr
@@ -188,17 +218,21 @@ syntax "Type" term                      : comb
 syntax "Prop"                           : comb
 syntax:max "(" comb ")"                 : comb
 syntax:max "::(" comb,+ ")"             : comb
+syntax "_"                              : comb
 
 syntax:1022 comb:1022     comb:1023     : comb
 syntax:50   comb:51 " : " comb:50       : comb
 syntax:40   comb:41 " → " comb:40       : comb
 syntax:30   "∀" "(" comb,+ ")" "," comb : comb
 
-syntax "⟪" comb "⟫"     : term
+syntax  "⟪" comb "⟫"     : term
+syntax "*⟪" comb "⟫"     : term
 
 def Expr.toExpr (e : Expr) : Lean.Expr :=
   match e with
-    | .sort n => mkApp (mkConst ``Expr.sort) (Lean.toExpr n)
+    | .prod m n => (mkConst ``Prod [m, n])
+    | .cons m n => (mkConst ``Prod.mk [m, n])
+    | .sort n => .app (mkConst ``Expr.sort) (Lean.toExpr n)
     | .I n => q(fun (α : Type $n) (x : α) => x)
     | .K m n => q(fun (α : Type $m) (β : α → Type $n) (x : α) (_y : β x) => x)
     | .K' m n => q(fun (α : Type $m) (β : Type $n) (x : α) (_y : β) => x)
@@ -231,10 +265,11 @@ def Expr.toExpr (e : Expr) : Lean.Expr :=
       -- if we used A as a placeholder, how scuffed would it be? not toob ad.
       -- if we already know fst and snd, we can shortcut the type dependency.
       -- fst was produced by substitution.
-      -- another interesting idea:
+      -- refinement: instead of F and G being the literal types,
+      -- F and G are the codomain? hmmmm
       q(fun (α : Type $m) (F : Type $n) (G : Type $o) (A : Type $p) (B : Type $q)
-        (γ : (F → α → A) → (G → α → B) → A → B → Type $r)
-        (πcons : ∀ (πf : F → α → A) (πg : G → α → B) (fst : A) (snd : B), γ πf πg fst snd)
+        (γ : Type $r)
+        (πcons : (F → α → A) → (G → α → B) → A → B → γ)
         (πf : F → α → A) (πg : G → α → B)
         (f : F) (g : G)
         (x : α) => (πcons πf πg (πf f x) (πg g x)))

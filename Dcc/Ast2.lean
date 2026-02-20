@@ -3,8 +3,12 @@ import Mathlib.Data.Nat.Notation
 import Lean.Elab.Term
 import Mathlib.Tactic.ToExpr
 import Mathlib
+import Lean
 
 open Qq
+open Lean (Macro)
+open Lean (MacroM)
+open Lean (Syntax)
 open Lean (Level)
 open Lean (mkApp)
 open Lean (mkAppN)
@@ -12,6 +16,7 @@ open Lean (mkLambda)
 open Lean (mkConst)
 open Lean.ToExpr (toExpr)
 open Lean.Quote (quote)
+open Lean (Syntax)
 
 /-
 The tricky thing is mkcons. I like that we can be so flexible with it.
@@ -162,7 +167,7 @@ inductive Expr where
   | S       : Level → Level → Level → Expr -- Dependent S
   | mkcons  : Level → Level → Level → Level → Level → Level → Expr
   -- ^ (mkcons πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
-  | judge  : Level  → Expr -- judge t is a freestanding expr
+  | judge   : Level  → Expr -- judge t is a freestanding expr
   /-
     Sorts:
   -/
@@ -173,20 +178,21 @@ inductive Expr where
 deriving BEq
 
 declare_syntax_cat comb
-syntax:max ident (".{" level,+ "}")?    : comb
+syntax level                            : comb
+syntax:max ident (".{" term,+ "}")?     : comb
 syntax:max num                          : comb
-syntax "Sort" level                     : comb
-syntax "Type" level                     : comb
+syntax "Sort" term                      : comb
+syntax "Type" term                      : comb
 syntax "Prop"                           : comb
 syntax:max "(" comb ")"                 : comb
-syntax:max "::(" (term ",")? comb,+ ")" : comb
+syntax:max "::(" comb,+ ")"             : comb
 
 syntax:1022 comb:1022     comb:1023     : comb
 syntax:50   comb:51 " : " comb:50       : comb
 syntax:40   comb:41 " → " comb:40       : comb
 syntax:30   "∀" "(" comb,+ ")" "," comb : comb
 
-syntax (name := comb) "⟪" comb "⟫"     : term
+syntax "⟪" comb "⟫"     : term
 
 def Expr.toExpr (e : Expr) : Lean.Expr :=
   match e with
@@ -235,19 +241,14 @@ instance : Lean.ToExpr Expr where
   toExpr := Expr.toExpr
   toTypeExpr := .const ``Expr []
 
-@[macro comb] def parse_comb : Lean.Macro
-  | `(comb| Type $n) => `(Expr.sort 0)
-  | `(comb| Prop) => `(Expr.sort 0)
-  | `(comb| $id:ident.{$l:level,*}) => do
-    let base ← match id with
-      | `(ident| I) => `(Expr.I)
-      | `(ident| S) => `(Expr.S)
-      | `(ident| K) => `(Expr.K)
-      | `(ident| K') => `(Expr.K')
-      | `(ident| mkcons) => `(Expr.mkcons)
-      | `(ident| judge) => `(Expr.judge)
-      | `(ident| fst) => `(Expr.fst)
-      | `(ident| snd) => `(Expr.snd)
-      | _ => Lean.Macro.throwUnsupported
-    `($base $l*)
-
+macro_rules
+  | `(⟪Prop⟫) => `(Expr.sort 0)
+  | `(⟪Type $n⟫) => `(Expr.sort ($n:term + 1))
+  | `(⟪Sort $n⟫) => `(Expr.sort $n:term)
+  | `(⟪::($cfg:comb, $a:comb, $b:comb)⟫) =>`(⟪$cfg $a $b⟫)
+  | `(⟪::($cfg:comb, $a:comb, $b:comb,*)⟫) => `(⟪$cfg $a ::($cfg, $b,*)⟫)
+  | `(⟪$n:num⟫) => `($n:term)
+  | `(⟪$id:ident.{$l:term,*}⟫) => `($id $l:term*)
+  | `(⟪$id:ident⟫) => `($id)
+  | `(⟪($c:comb)⟫) => `(⟪$c:comb⟫)
+  | `(⟪$f:comb $x:comb⟫) => `(Expr.app ⟪$f:comb⟫ ⟪$x:comb⟫)

@@ -68,6 +68,23 @@ however, we will get them substituted in eventually, so not an issue.
 
 - also note: we don't have to introspect into app. we can make
 something better. something based on lists.
+
+list codomains should not mention ourselves.
+ideally, we should output a term representing the final type, but which is
+well-typed via judgment.
+
+The x component is the codomain.
+
+Or, we could just literally put anything in the term component
+and encode the codomain via the type. doesn't really matter. just interpretation.
+
+However, to do that, we would need to produce a well-typed function.
+
+If we implicitly accepted ourselves in our type, this would solve the issue,
+but it isn't very elegant.
+
+The most pragmatic approach is to output a judgment whose term
+corresponds to the codomain type.
 -/
 
 open Std Format
@@ -240,7 +257,7 @@ def fall.pop (f : Syntax) : MacroM Syntax := do
     `(fall| ∀($tail:judgment,*))
   | _ => Macro.throwUnsupported
 
-def fall.infer (e : Lean.TSyntax `atom) (f : Syntax) : MacroM (Option (Lean.Term)) :=
+def fall.infer (e : Lean.TSyntax `atom) : MacroM (Option (Lean.Term)) :=
   match e with
   | `(sort| Type $m:ident) => `(⟪Type #(1 + $m)⟫)
   | `(sort| Sort $m:ident) => `(⟪Sort #(1 + $m)⟫)
@@ -252,6 +269,20 @@ def fall.infer (e : Lean.TSyntax `atom) (f : Syntax) : MacroM (Option (Lean.Term
   -- to produce judgment propositions.
   -- as a result, an entire forall is a proposition.
   | `(expr| ∀($_jd:judgment,*), $_a) => `(⟪Prop⟫)
+  | _ => Macro.throwUnsupported
+
+def fall.sort_of (e : Lean.TSyntax `atom) : MacroM (Option Lean.Term) := do
+  match e with
+  | `(sort| Type $m:ident) => `($m - 1)
+  | `(sort| Sort $m:ident) => `($m)
+  | `(sort| Prop) => `(Option.some 0)
+  | `(sort| Type $m:num) => `(Option.some ($m - 1))
+  | `(sort| Sort $m:num) => `($m)
+  | `(arrow| $_α:atom → ($_β:atom : Type $m)) => `(⟪$m:atom⟫)
+  -- forall substitutions are guaranteed
+  -- to produce judgment propositions.
+  -- as a result, an entire forall is a proposition.
+  | `(expr| ∀($_jd:judgment,*), $_a) => `(0)
   | _ => Macro.throwUnsupported
 
 def fall.unwrap {α : Type} : Option α → MacroM α
@@ -300,14 +331,13 @@ If the user only specifies a "variable," then we us the I combinator.
 -/
 def fall.fn_of (a : Lean.TSyntax `atom) (f : Syntax) : MacroM (Lean.TSyntax `atom) := do
   match a with
-  | `(atom| ($fn:atom $_var:ident)) =>
-    pure <| fn
+  | `(atom| ($fn:atom $_var:ident)) => pure <| fn
   | `(atom| $var:ident) =>
     let α ← unwrap <| ← fall.type_of var f
-    match ← unwrap <| ← fall.infer α f with
+    match ← unwrap <| ← fall.infer α with
     | `(⟪Type $m⟫) => `(atom| (#(I ⟪$m:atom⟫) $α))
     | _ => Macro.throwUnsupported
-  | _ => Macro.throwUnsupported
+  | e => pure e
 
 /-
 (∀(x : α, y : β), ::(f x, g y)) x y
@@ -317,44 +347,54 @@ def parse_fall (f : Syntax) : MacroM Syntax := do
   match f with
   | `(⟪∀($judgs:judgment,*), ::($_cfg:atom, $h₁:atom, $h₂:atom)⟫) => do
     -- calculate debruijn indices for either, if they have them.
-    -- zero is a reasonable default if not, since they would just reject the arguments
-    
-  | `(⟪∀($judgs:judgment,*), ::($cfg:atom, $hyps:atom,*, $hyp:atom, $conclude:atom)⟫) => do
-    dbg_trace "hi"
-    let ⟨_v, idx⟩ ← unwrap <| best_var_for vars hyp
-    let debrj ← (mk_debruijn idx (Prod.snd <$> (best_var_for vars conclude)))
+    -- zero is a reasonable default if not, since they would just reject the argument
+    let ctx ← `(fall| ∀($judgs:judgment,*))
 
-    let innermost ← `(atom| ($debrj:atom $(← best_body vars hyp)
-      $(← best_body vars conclude)))
+    let fn₁ ← fall.fn_of h₁ ctx
+    let fn₂ ← fall.fn_of h₂ ctx
 
-    let generate_head (hyp : Lean.TSyntax `atom) : MacroM (Lean.TSyntax `atom) := do
-      let ⟨_v, idx⟩ ← unwrap <| best_var_for vars hyp
-      let debrj ← (mk_debruijn idx .none)
+    let idx₁ ← fall.idx_of' h₁ ctx
+    let idx₂ ← fall.idx_of' h₂ ctx
 
-      `(atom| ($debrj:atom $(← best_body vars hyp)))
+    let mycons ← mk_debruijn idx₁ (.some idx₂)
+    `(⟪$mycons:app $fn₁:atom $fn₂:atom⟫)
+  | `(⟪∀($judgs:judgment,*), ::($_cfg:atom, $h₁:atom, $hrst:atom,*)⟫) => do
+    let ctx ← `(fall| ∀($judgs:judgment,*))
+    let rst' ← `(⟪$ctx:fall, ::($_cfg:atom, $hrst:atom,*)⟫)
 
-    hyps.getElems.toList.foldrM (init := innermost) (fun
-      (e : Lean.TSyntax `atom) (acc : Lean.TSyntax `atom) => do
-      let h ← generate_head e
-      `(atom| ($h:atom $acc:atom)))
-      >>= (fun e => `(a⟪$e:atom⟫))
+    let fn₁ ← fall.fn_of h₁ ctx
+    let idx₁ ← fall.idx_of' h₁ ctx
+
+    let mycons ← mk_debruijn idx₁ .none
+    `(⟪$mycons:app $fn₁:atom #($rst')⟫)
   | _ => Macro.throwUnsupported
 
 def parse_atom : Lean.Macro
   | `(⟪mkcons⟫) => `(Expr.mkcons)
   | `(⟪$n:num⟫) => `($n)
   | `(⟪#($t:term)⟫) => `($t)
-  | `(atom| judge $m:term)
-  | `(⟪: $m:atom⟫) => `(Expr.judge ⟪$m:atom⟫)
+  | `(atom| : $m:term) => `(Expr.judge $m:term)
   | _ => Macro.throwUnsupported
 
 def parse_cons : Lean.Macro
   -- carry the configuration settings
   -- down the cons. these
   -- are required by mkcons.
-  | `(⟪::((mkcons $πcons $πf $πg)$cfg:atom, $args:atom,*)⟫) => `(⟪$cfg:atom $args:atom*⟫)
+  | `(⟪::((::($πcons:atom, $πf:atom, $πg:atom)), $x:atom, $y:atom)⟫) =>
+    `(⟪Expr.mkcons $πcons:atom $πf:atom $πg:atom $x:atom $y:atom⟫)
+  | `(⟪::((::($πcons:atom, $πf:atom, $πg:atom)), $x:atom, $args:atom,*)⟫) =>
+    `(⟪Expr.mkcons $πcons:atom $πf:atom $πg:atom $x:atom (::((::($πcons:atom, $πf:atom, $πg:atom)), $args:atom,*))⟫)
+  | _ => Macro.throwUnsupported
 
-def parse_arrow : Lean.Macro := sorry
+def parse_arrow : Lean.Macro
+  | `(arrow| ($α:atom : Type $m) → ($β:atom : Type $n)) =>
+    `(expr| ∀(x : $α), ::(((: ⟪$m:atom⟫) $α x), ((: (⟪$n:atom⟫ + 1)) (Type $n) $β)))
+  | `(arrow| $α:atom → $β:atom) => do
+    match ← fall.sort_of α, ← fall.sort_of β with
+    | .some m, .some n =>
+      `(expr| ∀(x : $α), ::(((: $m) $α x), ((: ($n + 1)) (Type #($n)) $β)))
+    | _, _ => Macro.throwUnsupported
+  | _ => Macro.throwUnsupported
 
 def parse_judgment : Lean.Macro := sorry
 

@@ -158,8 +158,7 @@ syntax "::(" atom "," atom,* ")"          : cons
 --          ^ this argument stores the config
 -- of the sigma. specifically projection
 
-syntax arrow "→" arrow         : arrow
-syntax atom                    : arrow
+syntax atom "→" atom              : arrow
 
 syntax sort                       : atom
 syntax  "(" expr ")"              : atom
@@ -180,6 +179,7 @@ syntax fall         : expr
 syntax arrow        : expr
 
 syntax (name := expr) "⟪" expr "⟫"  : term
+syntax (name := mapp) "a⟪" app "⟫"          : term
 
 def parse_sort : Lean.Macro
   | `(⟪Type $n:term⟫) => `(Expr.type $n:term)
@@ -221,7 +221,7 @@ def mk_debruijn (n₁ : ℕ) (n₂ : Option ℕ := .none) : Lean.MacroM (Lean.TS
     -- e.g., if we are not the very tail of the list,
     -- we can usually leave n₂ alone.
 
-    `(app| mkcons ($inner:app) ($map_f:app) ($map_g:app))
+    `(app| #(Expr.mkcons) ($inner:app) ($map_f:app) ($map_g:app))
 
   match n₁ with
     | .succ n₁ =>
@@ -236,8 +236,8 @@ def mk_debruijn (n₁ : ℕ) (n₂ : Option ℕ := .none) : Lean.MacroM (Lean.TS
       match n₂ with
       | .some (.succ n₂) => do
         mk_debruijn .zero n₂ >>= advance
-      | .some .zero => do `(app| mkcons (#(K' 0 0) Prop Prop) (#(K' 0 0) Prop Prop))
-      | .none => `(app| mkcons (#(K' 0 0) Prop Prop) (#(I 0) Prop))
+      | .some .zero => do `(app| #(Expr.mkcons) (#(K' 0 0) Prop Prop) (#(K' 0 0) Prop Prop))
+      | .none => `(app| #(Expr.mkcons) (#(K' 0 0) Prop Prop) (#(I 0) Prop))
 
 /-
 Use this to figure out which variables an element in the list is using.
@@ -367,12 +367,12 @@ def parse_fall (f : Syntax) : MacroM Syntax := do
     `(⟪$mycons:app $fn₁:atom #($rst')⟫)
   | _ => Macro.throwUnsupported
 
-def parse_atom : Lean.Macro
-  | `(⟪$id:ident⟫) => `($id:ident)
-  | `(⟪mkcons⟫) => `(Expr.mkcons)
+def parse_atom (s : Syntax) : MacroM Syntax :=
+  match s with
   | `(⟪$n:num⟫) => `($n)
   | `(⟪#($t:term)⟫) => `($t)
-  | `(atom| : $m:term) => `(Expr.judge $m:term)
+  | `(⟪$id:ident⟫) =>`($id:ident)
+  | `(⟪: $m:term⟫) => `(Expr.judge $m:term)
   | _ => Macro.throwUnsupported
 
 def parse_cons : Lean.Macro
@@ -380,9 +380,9 @@ def parse_cons : Lean.Macro
   -- down the cons. these
   -- are required by mkcons.
   | `(⟪::((::($πcons:atom, $πf:atom, $πg:atom)), $x:atom, $y:atom)⟫) =>
-    `(⟪Expr.mkcons $πcons:atom $πf:atom $πg:atom $x:atom $y:atom⟫)
+    `(⟪#(Expr.mkcons) $πcons:atom $πf:atom $πg:atom $x:atom $y:atom⟫)
   | `(⟪::((::($πcons:atom, $πf:atom, $πg:atom)), $x:atom, $args:atom,*)⟫) =>
-    `(⟪Expr.mkcons $πcons:atom $πf:atom $πg:atom $x:atom (::((::($πcons:atom, $πf:atom, $πg:atom)), $args:atom,*))⟫)
+    `(⟪#(Expr.mkcons) $πcons:atom $πf:atom $πg:atom $x:atom (::((::($πcons:atom, $πf:atom, $πg:atom)), $args:atom,*))⟫)
   | _ => Macro.throwUnsupported
 
 /-
@@ -399,13 +399,19 @@ def parse_arrow : Lean.Macro
     `(expr| ($α:atom : Type #($m)) → ($β:atom : Type #($n)))
   | _ => Macro.throwUnsupported
 
+@[macro app] def parse_app : Lean.Macro
+  | `(
+
 @[macro expr] def parse_expr : Lean.Macro
-  | s@`(⟪$_s:cons⟫) => parse_cons s
   | s@`(⟪$_s:sort⟫) => parse_sort s
   | s@`(⟪$_s:atom⟫) => parse_atom s
   | s@`(⟪$_s:arrow⟫) => parse_arrow s
+  | s@`(⟪$_s:cons⟫) => parse_cons s
   | s@`(⟪$_s:fall⟫) => parse_fall s
-  | `(⟪$a:app $b:atom⟫) => `(Expr.app ⟪$a:app⟫ ⟪$b:atom⟫)
+  | `(⟪$x:atom $y:atom⟫) => `(Expr.app ⟪$x:atom⟫ ⟪$y:atom⟫)
+  | `(⟪$x:atom $xs:atom,*⟫) => `(Expr.app ⟪$x:atom⟫ ⟪$y:atom⟫)
+  | `(⟪$x:atom $xs:atom,*⟫) => do
+    xs.getElems.toList.foldlM (fun acc e => `(Expr.app $acc $e)) (← `(⟪$x:atom⟫))
   | _ => Macro.throwUnsupported
   /-| `(⟪∀$_vars:judgment,*, ::($concl:atom,*)⟫)
   | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
@@ -423,6 +429,6 @@ def parse_arrow : Lean.Macro
     `(⟪∀($myId:ident : $α:atom) [((: sortof <| $α:atom) $α:atom $myId:ident), $β:atom]⟫)
   | _ => Macro.throwUnsupported-/
 
-#eval ⟪mkcons mkcons mkcons⟫
+#eval ⟪#(Expr.mkcons)⟫
 
 #eval ⟪∀(x : α), ::(((I 1) x), (#(I 1) x))⟫

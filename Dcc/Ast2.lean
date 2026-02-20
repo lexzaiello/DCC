@@ -188,17 +188,20 @@ syntax:30   "∀" "(" comb,+ ")" "," comb : comb
 
 syntax (name := comb) "⟪" comb "⟫"     : term
 
-instance : Lean.ToExpr Expr where
-  toExpr e :=
-    match e with
-    | .sort n => mkApp (mkConst ``Expr.sort) (toExpr n)
+def Expr.toExpr (e : Expr) : Lean.Expr :=
+  match e with
+    | .sort n => mkApp (mkConst ``Expr.sort) (Lean.toExpr n)
     | .I n => q(fun (α : Type $n) (x : α) => x)
-    | .K m n => q(fun (α : Type $m) (β : α → Type $n) (x : α) (y : β x) => x)
-    | .K' m n => q(fun (α : Type $m) (β : Type $n) (x : α) (y : β) => x)
+    | .K m n => q(fun (α : Type $m) (β : α → Type $n) (x : α) (_y : β x) => x)
+    | .K' m n => q(fun (α : Type $m) (β : Type $n) (x : α) (_y : β) => x)
     | .S m n o => q(fun (α : Type $m) (β : α → Type $n) (γ : ∀ (x : α), β x → Type $o) (f : ∀ (x : α) (y : β x), γ x y) (g : ∀ (x : α), β x) (x : α) => (f x (g x)))
     | .judge m => q(fun (α : Type $m) (x : α) => (@Inhabited.mk α x))
     | .fst m n => q(fun (α : Type $m) (β : α → Type $n) (S : Σ a : α, β a) => S.fst)
     | .snd m n => q(fun (α : Type $m) (β : α → Type $n) (S : Σ a : α, β a) => S.snd)
+    | .app f x =>
+      let f' := f.toExpr
+      let x' := x.toExpr
+      Lean.mkApp f' x'
     | .mkcons m n o p q r =>
       -- (mkcons πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
       -- α : Type m
@@ -221,19 +224,55 @@ instance : Lean.ToExpr Expr where
       -- if we already know fst and snd, we can shortcut the type dependency.
       -- fst was produced by substitution.
       -- another interesting idea:
-      q(fun
-        (α : Type $m)
-        (F : Type $n)
-        (G : Type $o)
-        (A : Type $p)
-        (B : Type $q)
+      q(fun (α : Type $m) (F : Type $n) (G : Type $o) (A : Type $p) (B : Type $q)
         (γ : (F → α → A) → (G → α → B) → A → B → Type $r)
         (πcons : ∀ (πf : F → α → A) (πg : G → α → B) (fst : A) (snd : B), γ πf πg fst snd)
-        (πf : F → α → A)
-        (πg : G → α → B)
-        (f : F)
-        (g : G)
-        (x : α) : γ πf πg (πf f x) (πg g x) => (πcons πf πg (πf f x) (πg g x)))
+        (πf : F → α → A) (πg : G → α → B)
+        (f : F) (g : G)
+        (x : α) => (πcons πf πg (πf f x) (πg g x)))
+
+instance : Lean.ToExpr Expr where
+  toExpr e :=
+    match e with
+    | .sort n => mkApp (mkConst ``Expr.sort) (toExpr n)
+    | .I n => q(fun (α : Type $n) (x : α) => x)
+    | .K m n => q(fun (α : Type $m) (β : α → Type $n) (x : α) (y : β x) => x)
+    | .K' m n => q(fun (α : Type $m) (β : Type $n) (x : α) (y : β) => x)
+    | .S m n o => q(fun (α : Type $m) (β : α → Type $n) (γ : ∀ (x : α), β x → Type $o) (f : ∀ (x : α) (y : β x), γ x y) (g : ∀ (x : α), β x) (x : α) => (f x (g x)))
+    | .judge m => q(fun (α : Type $m) (x : α) => (@Inhabited.mk α x))
+    | .fst m n => q(fun (α : Type $m) (β : α → Type $n) (S : Σ a : α, β a) => S.fst)
+    | .snd m n => q(fun (α : Type $m) (β : α → Type $n) (S : Σ a : α, β a) => S.snd)
+    | .app f x =>
+      let f'
+      sorry
+    | .mkcons m n o p q r =>
+      -- (mkcons πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
+      -- α : Type m
+      -- f : (F : Type n)
+      -- g : (G : Type o)
+      -- πf : ∀ (f : F) (x : α), D f x
+      -- πg : ∀ (g : G) (x : α), E g x
+      -- πcons : ∀ (πf : ∀ (f : F) (x : α), D f x)
+      -- (πg : ∀ (g : G) (x : α), E g x)
+      -- D f x β= D'
+      -- πcons : ∀ (πf : ∀ (f : F) (x : α), )
+      -- (πg : ∀ (f : F) (x : α), )
+      -- (fst : D')
+      -- (snd : E'), End
+      -- mkcons takes a πcons, which dicates how to build the next cons.
+      -- mkcons also takes πf, which makes the f / fst compoent of the sigma, and
+      -- the next substitute value (x : α)
+      -- πcons : ∀ (πf : Dummy₁) (πg : Dummy₂) (fst : D) (snd : e), γ πf πg fst snd
+      -- if we used A as a placeholder, how scuffed would it be? not toob ad.
+      -- if we already know fst and snd, we can shortcut the type dependency.
+      -- fst was produced by substitution.
+      -- another interesting idea:
+      q(fun (α : Type $m) (F : Type $n) (G : Type $o) (A : Type $p) (B : Type $q)
+        (γ : (F → α → A) → (G → α → B) → A → B → Type $r)
+        (πcons : ∀ (πf : F → α → A) (πg : G → α → B) (fst : A) (snd : B), γ πf πg fst snd)
+        (πf : F → α → A) (πg : G → α → B)
+        (f : F) (g : G)
+        (x : α) => (πcons πf πg (πf f x) (πg g x)))
 
 @[macro comb] def parse_comb : Lean.Macro
   | `(comb| Prop) => `(Expr.sort 0)

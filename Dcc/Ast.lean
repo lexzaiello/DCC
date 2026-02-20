@@ -211,8 +211,8 @@ deriving BEq
 open Expr
 
 declare_syntax_cat comb
-syntax level                            : comb
-syntax:max ident (".{" term,+ "}")?     : comb
+syntax ident                            : comb
+syntax:max comb  ".{" term,+ "}"        : comb
 syntax:max num                          : comb
 syntax "Sort" term                      : comb
 syntax "Type" term                      : comb
@@ -220,6 +220,7 @@ syntax "Prop"                           : comb
 syntax:max "(" comb ")"                 : comb
 syntax:max "::(" comb,+ ")"             : comb
 syntax "_"                              : comb
+syntax "#(" term ")"                    : comb
 
 syntax:1022 comb:1022     comb:1023     : comb
 syntax:50   comb:51 " : " comb:50       : comb
@@ -280,15 +281,28 @@ instance : Lean.ToExpr Expr where
   toTypeExpr := .const ``Expr []
 
 macro_rules
-  | `(⟪Prop⟫) => `(Expr.sort 0)
-  | `(⟪Type $n⟫) => `(Expr.sort ($n:term + 1))
-  | `(⟪Sort $n⟫) => `(Expr.sort $n:term)
+  | `(⟪Prop⟫) => `(Expr.sort .zero)
+  | `(⟪Type $n⟫) => `(Expr.sort ($n + 1))
+  | `(⟪Sort $n⟫) => `(Expr.sort $n)
   | `(⟪::($cfg:comb, $a:comb, $b:comb)⟫) =>`(⟪$cfg $a $b⟫)
   | `(⟪::($cfg:comb, $a:comb, $b:comb,*)⟫) => `(⟪$cfg $a ::($cfg, $b,*)⟫)
   | `(⟪$n:num⟫) => `($n:term)
-  | `(⟪$id:ident.{$l:term,*}⟫) => `($id $l:term*)
-  | `(⟪$id:ident⟫) => `($id)
+  | `(⟪$id:ident⟫) =>
+    match id with
+    | `(ident| I) => `(Expr.I)
+    | `(ident| K) => `(Expr.K)
+    | `(ident| K') => `(Expr.K')
+    | `(ident| S) => `(Expr.S)
+    | `(ident| cons) => `(Expr.cons)
+    | `(ident| mkcons) => `(Expr.mkcons)
+    | `(ident| judge) => `(Expr.judge)
+    | `(ident| fst) => `(Expr.fst)
+    | `(ident| snd) => `(Expr.snd)
+    | id => `($id)
+  | `(⟪$c:comb.{$m:term}⟫) => `(⟪$c⟫ $m)
+  | `(⟪$c:comb.{$m:term, $l:term,*}⟫) => `(⟪$c.{$m}.{$l,*}⟫)
   | `(⟪($c:comb)⟫) => `(⟪$c:comb⟫)
   | `(⟪$f:comb $x:comb⟫) => `(Expr.app ⟪$f:comb⟫ ⟪$x:comb⟫)
 
+#eval ⟪I.{1}⟫
 #eval ⟪I.{1} Prop⟫

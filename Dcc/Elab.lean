@@ -54,19 +54,22 @@ This could be used for tree substitution.
 
 open Expr
 
-elab "⟪" α:comb "→" β:comb "⟫" : term => do
-  let α' ← (elabTerm · none) =<< `(⟪$α⟫)
-  let β' ← (elabTerm · none) =<< `(⟪$β⟫)
-  let t_α ← inferType α'
-  let t_β ← inferType β'
+elab_rules : term
+  | `(⟪$α:comb → $β:comb⟫) => do
+    let α' ← (elabTerm · none) =<< `(⟪$α⟫)
+    let β' ← (elabTerm · none) =<< `(⟪$β⟫)
+    let t_α ← inferType α'
+    let t_β ← inferType β'
 
-  let qα : Q(Expr) := α'
-  let qβ : Q(Expr) := β'
+    let qα : Q(Expr) := α'
+    let qβ : Q(Expr) := β'
 
-  match t_α, t_β with
-  | .sort m, .sort n =>
-    return q(Expr.app (Expr.app (Expr.cons $m $n) $qα) $qβ)
-  | _, _ => throwError m!"Expected a type, but found {α}"
+    match t_α, t_β with
+    | .sort m, .sort n =>
+      return q(Expr.app (Expr.app (Expr.cons $m $n) $qα) $qβ)
+    | _, _ => throwError m!"Expected a type, but found {α}"
+
+#eval ⟪Prop → Prop⟫
 
 /-
 /-

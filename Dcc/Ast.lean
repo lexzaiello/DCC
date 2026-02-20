@@ -186,6 +186,8 @@ I don't want all this extra shit.
 
 we can derive α from type of f.
 Can we assume πcons already knows the types? maybe. probably a safe assumption.
+
+cons a b feels like it should always be a type.
 -/
 
 inductive Expr where
@@ -193,8 +195,7 @@ inductive Expr where
   | K       : Level → Level → Expr -- Dependent K
   | K'      : Level → Level → Expr -- Nondependent K
   | S       : Level → Level → Level → Expr -- Dependent S
-  | prod    : Level → Level → Expr -- Type of nondep pairs
-  | cons    : Level → Level → Expr -- Normal pair
+  | cons    : Level → Level → Expr -- Normal pair. this is a Type.
   | mkcons  : Level → Level → Level → Level → Level → Level → Expr
   -- ^ (mkcons πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
   | judge   : Level  → Expr -- judge t is a freestanding expr
@@ -230,8 +231,8 @@ syntax "*⟪" comb "⟫"     : term
 
 def Expr.toExpr (e : Expr) : Lean.Expr :=
   match e with
-    | .prod m n => (mkConst ``Prod [m, n])
-    | .cons m n => (mkConst ``Prod.mk [m, n])
+    | .cons m n =>
+      q(fun (α : Type $m) (β : Type $n) => α → β)
     | .sort n => .app (mkConst ``Expr.sort) (Lean.toExpr n)
     | .I n => q(fun (α : Type $n) (x : α) => x)
     | .K m n => q(fun (α : Type $m) (β : α → Type $n) (x : α) (_y : β x) => x)

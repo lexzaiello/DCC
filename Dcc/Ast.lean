@@ -155,18 +155,14 @@ syntax "Prop"        : sort
 
 syntax atom ":" atom : judgment
 
-syntax "∀" "(" judgment,* ")"          : fall
-syntax "::(" atom "," atom,* ")"       : cons
+syntax "∀" "(" judgment,* ")"             : fall
+syntax fall "," "::(" atom,* ")"          : fall
+syntax "::(" atom "," atom,* ")"          : cons
 --          ^ this argument stores the config
 -- of the sigma. specifically projection
 
 syntax arrow "→" arrow         : arrow
 syntax atom                    : arrow
-
--- judgment, fall, and manual lists provide some
--- information which we can act upon in various
--- circumstances encoded by macros
-syntax fall "," expr                 : expr
 
 syntax sort                       : atom
 syntax  "(" expr ")"              : atom
@@ -192,6 +188,19 @@ def parse_sort : Lean.Macro
   | `(⟪Type $n:atom⟫) => `(Expr.type ⟪$n:atom⟫)
   | `(⟪Sort $n:atom⟫) => `(Expr.sort ⟪$n:atom⟫)
   | `(⟪Prop⟫) => `(Expr.prop)
+  | _ => Macro.throwUnsupported
+
+def compute_sort (s : Syntax) : Lean.MacroM (Lean.TSyntax `term) :=
+  match s with
+  | `(expr| Prop) => `(0)
+  | `(expr| Type $m) => `(1 + ⟪$m:atom⟫)
+  | `(expr| Sort $m) => `(⟪$m:atom⟫)
+  | `(atom| Prop) => `(0)
+  | `(atom| Type $m) => `(1 + ⟪$m:atom⟫)
+  | `(atom| Sort $m) => `(⟪$m:atom⟫)
+  | `(sort| Prop) => `(0)
+  | `(sort| Type $m) => `(1 + ⟪$m:atom⟫)
+  | `(sort| Sort $m) => `(⟪$m:atom⟫)
   | _ => Macro.throwUnsupported
 
 -- If this variable is contained in vars, then look up the corresponding debruijn index
@@ -253,8 +262,7 @@ def allOuterIdents (base_vars : List (Lean.TSyntax `ident)) (e : Lean.TSyntax `a
 
 def fall.pop (f : Syntax) : MacroM Syntax := do
   match f with
-  | `(fall| ∀($_j₁:judgment, $tail:judgment,*)) =>
-    `(fall| ∀($tail:judgment,*))
+  | `(fall| ∀($_j₁:judgment, $tail:judgment,*)) =>`(fall| ∀($tail:judgment,*))
   | _ => Macro.throwUnsupported
 
 def fall.infer (e : Lean.TSyntax `atom) : MacroM (Option (Lean.Term)) :=
@@ -262,13 +270,13 @@ def fall.infer (e : Lean.TSyntax `atom) : MacroM (Option (Lean.Term)) :=
   | `(sort| Type $m:ident) => `(⟪Type #(1 + $m)⟫)
   | `(sort| Sort $m:ident) => `(⟪Sort #(1 + $m)⟫)
   | `(sort| Prop) => `(⟪Type 0⟫)
-  | `(sort| Type $m:num) => `(⟪Type #(m + 1)⟫)
-  | `(sort| Sort $m:num) => `(⟪Sort #(m + 1)⟫)
+  | `(sort| Type $m:num) => `(⟪Type #($m + 1)⟫)
+  | `(sort| Sort $m:num) => `(⟪Sort #($m + 1)⟫)
   | `(arrow| $_α:atom → ($_β:atom : Type $m)) => `(⟪Type $m⟫)
   -- forall substitutions are guaranteed
   -- to produce judgment propositions.
   -- as a result, an entire forall is a proposition.
-  | `(expr| ∀($_jd:judgment,*), $_a) => `(⟪Prop⟫)
+  | `(fall| ∀($_jd:judgment,*), ::($_a:atom,*)) => `(⟪Prop⟫)
   | _ => Macro.throwUnsupported
 
 def fall.sort_of (e : Lean.TSyntax `atom) : MacroM (Option Lean.Term) := do
@@ -282,7 +290,7 @@ def fall.sort_of (e : Lean.TSyntax `atom) : MacroM (Option Lean.Term) := do
   -- forall substitutions are guaranteed
   -- to produce judgment propositions.
   -- as a result, an entire forall is a proposition.
-  | `(expr| ∀($_jd:judgment,*), $_a) => `(0)
+  | `(expr| ∀($_jd:judgment,*), ::($_a:atom,*)) => `(0)
   | _ => Macro.throwUnsupported
 
 def fall.unwrap {α : Type} : Option α → MacroM α
@@ -345,7 +353,7 @@ def fall.fn_of (a : Lean.TSyntax `atom) (f : Syntax) : MacroM (Lean.TSyntax `ato
 -/
 def parse_fall (f : Syntax) : MacroM Syntax := do
   match f with
-  | `(⟪∀($judgs:judgment,*), ::($_cfg:atom, $h₁:atom, $h₂:atom)⟫) => do
+  | `(⟪∀($judgs:judgment,*), ::($h₁:atom, $h₂:atom)⟫) => do
     -- calculate debruijn indices for either, if they have them.
     -- zero is a reasonable default if not, since they would just reject the argument
     let ctx ← `(fall| ∀($judgs:judgment,*))
@@ -386,17 +394,19 @@ def parse_cons : Lean.Macro
     `(⟪Expr.mkcons $πcons:atom $πf:atom $πg:atom $x:atom (::((::($πcons:atom, $πf:atom, $πg:atom)), $args:atom,*))⟫)
   | _ => Macro.throwUnsupported
 
+/-
+β isn't necessarily a terminal form.
+β could be chain in an intermediate step.
+-/
+
 def parse_arrow : Lean.Macro
   | `(arrow| ($α:atom : Type $m) → ($β:atom : Type $n)) =>
     `(expr| ∀(x : $α), ::(((: ⟪$m:atom⟫) $α x), ((: (⟪$n:atom⟫ + 1)) (Type $n) $β)))
   | `(arrow| $α:atom → $β:atom) => do
-    match ← fall.sort_of α, ← fall.sort_of β with
-    | .some m, .some n =>
-      `(expr| ∀(x : $α), ::(((: $m) $α x), ((: ($n + 1)) (Type #($n)) $β)))
-    | _, _ => Macro.throwUnsupported
+    let m ← compute_sort α
+    let n ← compute_sort β
+    `(expr| ($α:atom : Type #($m)) → ($β:atom : Type #($n)))
   | _ => Macro.throwUnsupported
-
-def parse_judgment : Lean.Macro := sorry
 
 @[macro expr] def parse_expr : Lean.Macro
   | `(⟪$a:atom $b:atom⟫) => `(Expr.app ⟪$a:atom⟫ ⟪$b:atom⟫)
@@ -406,7 +416,6 @@ def parse_judgment : Lean.Macro := sorry
   | s@`(⟪$_s:sort⟫) => parse_sort s
   | s@`(⟪$_s:atom⟫) => parse_atom s
   | s@`(⟪$_s:arrow⟫) => parse_arrow s
-  | s@`(⟪$_s:judgment⟫) => parse_judgment s
   | _ => Macro.throwUnsupported
   /-| `(⟪∀$_vars:judgment,*, ::($concl:atom,*)⟫)
   | `(⟪$a:atom⟫) => `(at⟪$a:atom⟫)
@@ -424,4 +433,4 @@ def parse_judgment : Lean.Macro := sorry
     `(⟪∀($myId:ident : $α:atom) [((: sortof <| $α:atom) $α:atom $myId:ident), $β:atom]⟫)
   | _ => Macro.throwUnsupported-/
 
-#eval ⟪∀(x : Type 2, y : Type 3) [x, y]⟫
+#eval ⟪∀(x : α), ::((#(I 1) x), (#(I 1) x))⟫

@@ -9,6 +9,7 @@ open Lean.Meta
 open Lean (Syntax)
 open Lean (logInfo)
 open Lean.Meta (inferType)
+open Lean.Expr (forallE)
 
 /-
 Utility for auto-generating mkcons list configurations
@@ -51,6 +52,10 @@ However, since πcons injected multiple identities, the end result is
 the substituted components being applied together.
 
 This could be used for tree substitution.
+
+We usually have at least πcons, πf, and πg for πcons.
+We should be able to infer the universes and type arguments
+for mkcons from these.
 -/
 
 open Expr
@@ -67,6 +72,37 @@ elab_rules : term
     let n ← Lean.Level.quote <$> getLevel t_β
 
     elabTerm (← `(⟪cons.{$m, $n} $α $β⟫)) none
+  | `(⟪mkcons.{$m, $n, $o, $p, $q, $r} _ _ _ _ _ _ $πcons⟫) => do
+    let πcons' ← elabTerm (← `(Expr.toExpr ⟪$πcons⟫)) none
+    let t_c ← inferType πcons'
+    let u_c ← getLevel t_c
+
+    let lvs := Array.mapM (m := TermElabM) (as := [m.raw, n.raw, o.raw, p.raw, q.raw, r.raw].toArray)
+      (f := (fun l => Lean.toExpr <$> (elabLevel l)))
+
+    match_expr t_c with
+    | forallE _ tπf bdy₁ =>
+      match_expr bdy₁ with
+      | forallE _ tπg bdy₂ =>
+        match_expr bdy₂ with
+        | forallE _ A bdy₃ =>
+          match_expr bdy₃ with
+          | forallE _ B γ =>
+            match_expr tπf with
+            | forallE _ F _codπf =>
+              match_expr tπg with
+              | forallE _ G codπg =>
+                match_expr codπg with
+                | forallE _ α _rst =>
+                  let c := Lean.mkAppN q(Expr.mkcons) (← lvs)
+                  return Lean.mkAppN c [α, F, G, A, B, γ, πcons'].toArray
+                | _ => throwError "error"
+              | _ => throwError "error"
+            | _ => throwError "error"
+          | _ => throwError "error"
+        | _ => throwError "error"
+      | _ => throwError "error"
+    | _ => throwError m!"Expected a type, but found {t_c}"
 
 #eval ⟪Prop → Prop⟫
 #eval repr ⟪Prop → Prop⟫

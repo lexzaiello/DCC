@@ -315,7 +315,7 @@ def Expr.toExpr (e : Expr) : Lean.Expr :=
   match e with
     | .cons m n =>
       q(fun (α : Type $m) (β : Type $n) => α → β)
-    | .sort n => .app (mkConst ``Expr.sort) (Lean.toExpr n)
+    | .sort n => q(Sort $n)
     | .I n => q(fun (α : Type $n) (x : α) => x)
     | .K m n => q(fun (α : Type $m) (β : α → Type $n) (x : α) (_y : β x) => x)
     | .K' m n => q(fun (α : Type $m) (β : Type $n) (x : α) (_y : β) => x)

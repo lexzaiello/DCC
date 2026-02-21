@@ -57,20 +57,19 @@ open Expr
 
 elab_rules : term
   | `(⟪$α:comb → $β:comb⟫) => do
-    let α' ← elabTerm (← `(⟪$α⟫)) none
-    let β' ← elabTerm (← `(⟪$β⟫)) none
+    let α' ← elabTerm (← `(Expr.toExpr ⟪$α⟫)) none
+    let β' ← elabTerm (← `(Expr.toExpr ⟪$β⟫)) none
 
-    let reified : Expr ← toExpr ⟪$α⟫
+    let t_α ← inferType α'
+    let t_β ← inferType β'
 
-    let m ← getLevel α'
-    let n ← getLevel β'
+    let m ← Lean.Level.quote <$> getLevel t_α
+    let n ← Lean.Level.quote <$> getLevel t_β
 
-    let mTerm ← `(Sort $(Lean.Quote.quote m):level)
-    let nTerm ← `(Sort $(Lean.Quote.quote n):level)
-
-    elabTerm (← `(⟪cons.{$mTerm, $nTerm} $α $β⟫)) none
+    elabTerm (← `(⟪cons.{$m, $n} $α $β⟫)) none
 
 #eval ⟪Prop → Prop⟫
+#eval repr ⟪Prop → Prop⟫
 
 /-
 /-

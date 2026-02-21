@@ -61,8 +61,8 @@ for mkcons from these.
 open Expr
 
 def simple_cons (α β : Lean.TSyntax `comb) : TermElabM Lean.Expr := do
-  let α' ← elabTerm (← `(Expr.toExpr ⟪$α⟫)) none
-  let β' ← elabTerm (← `(Expr.toExpr ⟪$β⟫)) none
+  let α' ← elabTerm (← `(Expr.toExpr *⟪$α⟫)) none
+  let β' ← elabTerm (← `(Expr.toExpr *⟪$β⟫)) none
 
   let t_α ← inferType α'
   let t_β ← inferType β'
@@ -70,13 +70,19 @@ def simple_cons (α β : Lean.TSyntax `comb) : TermElabM Lean.Expr := do
   let m ← Lean.Level.quote <$> getLevel t_α
   let n ← Lean.Level.quote <$> getLevel t_β
 
-  elabTerm (← `(⟪cons.{$m, $n} $α $β⟫)) none
+  elabTerm (← `(*⟪cons.{$m, $n} $α $β⟫)) none
 
 elab_rules : term
-  | `(⟪cons.{$_m, $_n} $α:comb $β:comb⟫) => simple_cons α β
-  | `(⟪$α:comb → $β:comb⟫) => simple_cons α β
-  | `(⟪mkcons.{$m, $n, $o, $p, $q, $r} _ _ _ _ _ _ $πcons⟫) => do
-    let πcons' ← elabTerm (← `(Expr.toExpr ⟪$πcons⟫)) none
+  | `(*⟪($e:comb)⟫) => do elabTerm (← `(*⟪$e:comb⟫)) none
+  | `(*⟪#($t)⟫) => elabTerm t none
+  | `(*⟪$α:comb → $β:comb⟫) => simple_cons α β
+  | `(*⟪mkcons.{$m, $n, $o, $p, $q, $r} _ _ _ _ _ _ $πcons⟫) => do
+    let πcons' ← (do match πcons with
+      | `(comb| #($πcons)) =>
+        let πcons ← elabTerm πcons none
+        logInfo s!"hi: {πcons}"
+        elabTerm (← `(Expr.toExpr $πcons)) none
+      | `(comb| $πcons) => elabTerm (← `(Expr.toExpr *⟪$πcons⟫)) none)
     let t_c ← inferType πcons'
 
     let lvs := Array.mapM (m := TermElabM) (as := [m.raw, n.raw, o.raw, p.raw, q.raw, r.raw].toArray)
@@ -105,9 +111,14 @@ elab_rules : term
         | _ => throwError "error"
       | _ => throwError "error"
     | _ => throwError m!"Expected a type, but found {t_c}"
+  | `(*⟪$f:comb $x:comb⟫) => do
+    let f ← elabTerm (← `(*⟪$f:comb⟫)) none
+    let x ← elabTerm (← `(*⟪$x:comb⟫)) none
+    return Lean.mkAppN q(Expr.app) [f, x].toArray
+  | `(*⟪$f:comb⟫) => do elabTerm (← `(⟪$f:comb⟫)) none
 
-#eval ⟪Prop → Prop⟫
-#eval repr ⟪Prop → Prop⟫
+#eval *⟪Prop → Prop⟫
+#eval repr *⟪Prop → Prop⟫
 
 /-
 drops the first πf and πg arguments to mkcons
@@ -117,14 +128,31 @@ mkcons (skipπ my_f) πf πg (πf f x) (πg g x)
 skipπ = K (K my_f)
 -/
 def skipπ (f t_f tπf tπg : Expr) : Expr :=
-  let inner_k : Expr := ⟪K'.{_, _} #(t_f) #(tπg) #(f)⟫
-  let t_inner_k := ⟪#(tπf) → (#(tπg) → #(t_f))⟫
-  ⟪K'.{_, _} #(t_inner_k) #(tπf) #(inner_k)⟫
+  let inner_k : Expr := *⟪K'.{_, _} #(t_f) #(tπg) #(f)⟫
+  let t_inner_k := *⟪#(tπf) → (#(tπg) → #(t_f))⟫
+  *⟪K'.{_, _} #(t_inner_k) #(tπf) #(inner_k)⟫
 
+/-
+Example using mkcons to create a simple cons.
+mkcons (skipπ cons.{1, 1}) I I (Type 0) (Type 0)
+x = Prop
+
+mkcons (skipπ cons.{1, 1}) I I (Type 0) (Type 0) Prop
+= cons.{1, 1} (I (Type 0) Prop) (I (Type 0) Prop)
+-/
 def test_app_mk_cons : Expr :=
-  -- f = I
-  -- g = I
-  -- πcons
+  let f := ⟪Prop⟫
+  let g := ⟪Prop⟫
+  let πf := ⟪K'.{1, 1} (Type 0) (Type 0)⟫
+  let πg := ⟪K'.{1, 1} (Type 0) (Type 0)⟫
+
+  let tπf := *⟪Type 0 → Type 0⟫
+  let tπg := *⟪Type 0 → Type 0⟫
+
+  let t_f := *⟪Type 1 → (Type 1 → Type 2)⟫
+
+  let πcons := skipπ ⟪cons.{1, 1}⟫ t_f tπf tπg
+  let c := *⟪mkcons.{$m, $n, $o, $p, $q, $r} _ _ _ _ _ _ #(πcons) #(πf) #(πg)⟫
   sorry
 
 /-

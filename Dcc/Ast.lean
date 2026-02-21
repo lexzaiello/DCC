@@ -233,83 +233,81 @@ syntax:30   "∀" "(" comb,+ ")" "," comb : comb
 syntax  "⟪" comb "⟫"     : term
 syntax "*⟪" comb "⟫"     : term
 
-/-def TExpr.toExpr (stx : Syntax) : TermElabM Lean.Expr := do
-  match stx with
-  | `(comb| cons.{$m, $n}) =>
-    let m ← elabLevel m
-    let n ← elabLevel n
+/-def Expr.decode (e : Lean.Expr) : TermElabM Expr := do
+  match e with
+  | .app (.const ``Expr.sort []) n =>
+    Expr.sort n
+  | _ => sorry-/
 
-    return q(fun (α : Type $m) (β : Type $n) => α → β)
-  | `(comb| Sort $m) =>
-    let m ← elabLevel m
-    return .app (mkConst ``Expr.sort) (Lean.toExpr m)
-  | `(comb| I.{$m}) =>
-    let m ← elabLevel m
-    return q(fun (α : Type $m) (x : α) => x)
-  | `(comb| K.{$m, $n}) =>
-    let m ← elabLevel m
-    let n ← elabLevel n
-    return q(fun (α : Type $m) (β : α → Type $n) (x : α) (_y : β x) => x)
-  | `(comb| K'.{$m, $n}) =>
-    let m ← elabLevel m
-    let n ← elabLevel n
-    return q(fun (α : Type $m) (β : Type $n) (x : α) (_y : β) => x)
-  | `(comb| S.{$m, $n, $o}) =>
-    let m ← elabLevel m
-    let n ← elabLevel n
-    let o ← elabLevel o
-    return q(fun (α : Type $m) (β : α → Type $n) (γ : ∀ (x : α), β x → Type $o) (f : ∀ (x : α) (y : β x), γ x y) (g : ∀ (x : α), β x) (x : α) => (f x (g x)))
-  | `(comb| judge.{$m}) =>
-    let m ← elabLevel m
-    return q(fun (α : Type $m) (x : α) => (@Inhabited.mk α x))
-  | `(comb| fst.{$m, $n}) =>
-    let m ← elabLevel m
-    let n ← elabLevel n
-    return q(fun (α : Type $m) (β : α → Type $n) (S : Σ a : α, β a) => S.fst)
-  | `(comb| snd.{$m, $n}) =>
-    let m ← elabLevel m
-    let n ← elabLevel n
-    return q(fun (α : Type $m) (β : α → Type $n) (S : Σ a : α, β a) => S.snd)
-  | `(comb| $f $x) =>
-    let f' ← TExpr.toExpr f
-    let x' ← TExpr.toExpr x
-    return f'.app x'
-  | `(comb| mkcons.{$m, $n, $o, $p, $q, $r}) =>
-    let m ← elabLevel m
-    let n ← elabLevel n
-    let o ← elabLevel o
-    let p ← elabLevel p
-    let q ← elabLevel q
-    let r ← elabLevel r
-    -- (mkcons πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
-    -- α : Type m
-    -- f : (F : Type n)
-    -- g : (G : Type o)
-    -- πf : ∀ (f : F) (x : α), D f x
-    -- πg : ∀ (g : G) (x : α), E g x
-    -- πcons : ∀ (πf : ∀ (f : F) (x : α), D f x)
-    -- (πg : ∀ (g : G) (x : α), E g x)
-    -- D f x β= D'
-    -- πcons : ∀ (πf : ∀ (f : F) (x : α), )
-    -- (πg : ∀ (f : F) (x : α), )
-    -- (fst : D')
-    -- (snd : E'), End
-    -- mkcons takes a πcons, which dicates how to build the next cons.
-    -- mkcons also takes πf, which makes the f / fst compoent of the sigma, and
-    -- the next substitute value (x : α)
-    -- πcons : ∀ (πf : Dummy₁) (πg : Dummy₂) (fst : D) (snd : e), γ πf πg fst snd
-    -- if we used A as a placeholder, how scuffed would it be? not toob ad.
-    -- if we already know fst and snd, we can shortcut the type dependency.
-    -- fst was produced by substitution.
-    -- refinement: instead of F and G being the literal types,
-    -- F and G are the codomain? hmmmm
-    return q(fun (α : Type $m) (F : Type $n) (G : Type $o) (A : Type $p) (B : Type $q)
-      (γ : Type $r)
-      (πcons : (F → α → A) → (G → α → B) → A → B → γ)
-      (πf : F → α → A) (πg : G → α → B)
-      (f : F) (g : G)
-      (x : α) => (πcons πf πg (πf f x) (πg g x)))
-  | e => throwError m!"Not supported: {e}"-/
+def unwrap_sorts {n_sorts : ℕ} (raw : Vector Q(Level) n_sorts) : TermElabM (Vector Lean.Level n_sorts) :=
+  raw.mapM (fun l => match l with
+    | .sort m => pure m
+    | e => throwError s!"expected a sort but found: {e}")
+
+def LExpr.toExpr (e : Q(Expr)) : TermElabM Lean.Expr := do
+  match e with
+    | ~q(Expr.cons $m $n) =>
+      let ⟨⟨[m, n]⟩, _⟩ ← unwrap_sorts [m, n].toArray.toVector
+      return q(fun (α : Type $m) (β : Type $n) => α → β)
+    | ~q(Expr.sort $n) =>
+      let ⟨⟨[n]⟩, _⟩ ← unwrap_sorts [n].toArray.toVector
+      return q(Sort $n)
+    | ~q(Expr.I $n) =>
+      let ⟨⟨[n]⟩, _⟩ ← unwrap_sorts [n].toArray.toVector
+      return q(fun (α : Type $n) (x : α) => x)
+    | ~q(Expr.K $m $n) =>
+      let ⟨⟨[m, n]⟩, _⟩ ← unwrap_sorts [m, n].toArray.toVector
+      return q(fun (α : Type $m) (β : α → Type $n) (x : α) (_y : β x) => x)
+    | ~q(Expr.K' $m $n) =>
+      let ⟨⟨[m, n]⟩, _⟩ ← unwrap_sorts [m, n].toArray.toVector
+      return q(fun (α : Type $m) (β : Type $n) (x : α) (_y : β) => x)
+    | ~q(Expr.S $m $n $o) =>
+      let ⟨⟨[m, n, o]⟩, _⟩ ← unwrap_sorts [m, n, o].toArray.toVector
+      return q(fun (α : Type $m) (β : α → Type $n) (γ : ∀ (x : α), β x → Type $o) (f : ∀ (x : α) (y : β x), γ x y) (g : ∀ (x : α), β x) (x : α) => (f x (g x)))
+    | ~q(Expr.judge $m) =>
+      let ⟨⟨[m]⟩, _⟩ ← unwrap_sorts [m].toArray.toVector
+      return q(fun (α : Type $m) (x : α) => (@Inhabited.mk α x))
+    | ~q(Expr.fst $m $n) =>
+      let ⟨⟨[m, n]⟩, _⟩ ← unwrap_sorts [m, n].toArray.toVector
+      return q(fun (α : Type $m) (β : α → Type $n) (S : Σ a : α, β a) => S.fst)
+    | ~q(Expr.snd $m $n) =>
+      let ⟨⟨[m, n]⟩, _⟩ ← unwrap_sorts [m, n].toArray.toVector
+      return q(fun (α : Type $m) (β : α → Type $n) (S : Σ a : α, β a) => S.snd)
+    | .app (.app (.const ``Expr.app []) f) x =>
+      let f' ← LExpr.toExpr f
+      let x' ← LExpr.toExpr x
+      return Lean.mkApp f' x'
+    | ~q(Expr.mkcons $m $n $o $p $q $r) =>
+      let ⟨⟨[m, n, o, p, q, r]⟩, _⟩ ← unwrap_sorts [m, n, o, p, q, r].toArray.toVector
+      -- (mkcons πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
+      -- α : Type m
+      -- f : (F : Type n)
+      -- g : (G : Type o)
+      -- πf : ∀ (f : F) (x : α), D f x
+      -- πg : ∀ (g : G) (x : α), E g x
+      -- πcons : ∀ (πf : ∀ (f : F) (x : α), D f x)
+      -- (πg : ∀ (g : G) (x : α), E g x)
+      -- D f x β= D'
+      -- πcons : ∀ (πf : ∀ (f : F) (x : α), )
+      -- (πg : ∀ (f : F) (x : α), )
+      -- (fst : D')
+      -- (snd : E'), End
+      -- mkcons takes a πcons, which dicates how to build the next cons.
+      -- mkcons also takes πf, which makes the f / fst compoent of the sigma, and
+      -- the next substitute value (x : α)
+      -- πcons : ∀ (πf : Dummy₁) (πg : Dummy₂) (fst : D) (snd : e), γ πf πg fst snd
+      -- if we used A as a placeholder, how scuffed would it be? not toob ad.
+      -- if we already know fst and snd, we can shortcut the type dependency.
+      -- fst was produced by substitution.
+      -- refinement: instead of F and G being the literal types,
+      -- F and G are the codomain? hmmmm
+      return q(fun (α : Type $m) (F : Type $n) (G : Type $o) (A : Type $p) (B : Type $q)
+        (γ : Type $r)
+        (πcons : (F → α → A) → (G → α → B) → A → B → γ)
+        (πf : F → α → A) (πg : G → α → B)
+        (f : F) (g : G)
+        (x : α) => (πcons πf πg (πf f x) (πg g x)))
+    | _ => throwError "error"
 
 def Expr.toExpr (e : Expr) : Lean.Expr :=
   match e with
@@ -379,7 +377,6 @@ macro_rules
     | `(ident| snd) => `(Expr.snd)
     | id => `($id)
   | `(⟪($c:comb)⟫) => `(⟪$c:comb⟫)
-  | `(⟪#($t:term)⟫) => pure t
   | `(⟪$f:comb $x:comb⟫) => `(Expr.app ⟪$f:comb⟫ ⟪$x:comb⟫)
 
 elab_rules : term

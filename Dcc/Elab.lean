@@ -60,22 +60,24 @@ for mkcons from these.
 
 open Expr
 
+def simple_cons (α β : Lean.TSyntax `comb) : TermElabM Lean.Expr := do
+  let α' ← elabTerm (← `(Expr.toExpr ⟪$α⟫)) none
+  let β' ← elabTerm (← `(Expr.toExpr ⟪$β⟫)) none
+
+  let t_α ← inferType α'
+  let t_β ← inferType β'
+
+  let m ← Lean.Level.quote <$> getLevel t_α
+  let n ← Lean.Level.quote <$> getLevel t_β
+
+  elabTerm (← `(⟪cons.{$m, $n} $α $β⟫)) none
+
 elab_rules : term
-  | `(⟪$α:comb → $β:comb⟫) => do
-    let α' ← elabTerm (← `(Expr.toExpr ⟪$α⟫)) none
-    let β' ← elabTerm (← `(Expr.toExpr ⟪$β⟫)) none
-
-    let t_α ← inferType α'
-    let t_β ← inferType β'
-
-    let m ← Lean.Level.quote <$> getLevel t_α
-    let n ← Lean.Level.quote <$> getLevel t_β
-
-    elabTerm (← `(⟪cons.{$m, $n} $α $β⟫)) none
+  | `(⟪cons.{$_m, $_n} $α:comb $β:comb⟫) => simple_cons α β
+  | `(⟪$α:comb → $β:comb⟫) => simple_cons α β
   | `(⟪mkcons.{$m, $n, $o, $p, $q, $r} _ _ _ _ _ _ $πcons⟫) => do
     let πcons' ← elabTerm (← `(Expr.toExpr ⟪$πcons⟫)) none
     let t_c ← inferType πcons'
-    let u_c ← getLevel t_c
 
     let lvs := Array.mapM (m := TermElabM) (as := [m.raw, n.raw, o.raw, p.raw, q.raw, r.raw].toArray)
       (f := (fun l => Lean.toExpr <$> (elabLevel l)))
@@ -106,6 +108,24 @@ elab_rules : term
 
 #eval ⟪Prop → Prop⟫
 #eval repr ⟪Prop → Prop⟫
+
+/-
+drops the first πf and πg arguments to mkcons
+mkcons (skipπ my_f) πf πg (πf f x) (πg g x)
+= my_f (πf f x) (πg g x)
+
+skipπ = K (K my_f)
+-/
+def skipπ (f t_f tπf tπg : Expr) : Expr :=
+  let inner_k : Expr := ⟪K'.{_, _} #(t_f) #(tπg) #(f)⟫
+  let t_inner_k := ⟪#(tπf) → (#(tπg) → #(t_f))⟫
+  ⟪K'.{_, _} #(t_inner_k) #(tπf) #(inner_k)⟫
+
+def test_app_mk_cons : Expr :=
+  -- f = I
+  -- g = I
+  -- πcons
+  sorry
 
 /-
 /-

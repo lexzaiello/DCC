@@ -379,6 +379,7 @@ macro_rules
     | `(ident| snd) => `(Expr.snd)
     | id => `($id)
   | `(⟪($c:comb)⟫) => `(⟪$c:comb⟫)
+  | `(⟪#($t:term)⟫) => pure t
   | `(⟪$f:comb $x:comb⟫) => `(Expr.app ⟪$f:comb⟫ ⟪$x:comb⟫)
 
 elab_rules : term

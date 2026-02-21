@@ -1,6 +1,6 @@
-
 import Qq
 import Mathlib.Data.Nat.Notation
+import Lean.Elab.Term.TermElabM
 import Lean.Elab.Term
 import Mathlib.Tactic.ToExpr
 import Mathlib
@@ -17,7 +17,10 @@ open Lean (mkLambda)
 open Lean (mkConst)
 open Lean.ToExpr (toExpr)
 open Lean.Quote (quote)
-open Lean (Syntax)
+open Lean.Elab
+open Lean.Elab.Term
+open Lean.Elab.Level
+
 
 /-
 The tricky thing is mkcons. I like that we can be so flexible with it.
@@ -206,16 +209,16 @@ inductive Expr where
   | fst    : Level → Level → Expr
   | snd    : Level → Level → Expr
   | app    : Expr  → Expr  → Expr
-deriving BEq
+deriving BEq, Repr
 
 open Expr
 
 declare_syntax_cat comb
 syntax ident                            : comb
-syntax:max comb  ".{" term,+ "}"        : comb
+syntax:max comb  ".{" level,+ "}"       : comb
 syntax:max num                          : comb
-syntax "Sort" term                      : comb
-syntax "Type" term                      : comb
+syntax "Sort" level                     : comb
+syntax "Type" level                     : comb
 syntax "Prop"                           : comb
 syntax:max "(" comb ")"                 : comb
 syntax:max "::(" comb,+ ")"             : comb
@@ -229,6 +232,84 @@ syntax:30   "∀" "(" comb,+ ")" "," comb : comb
 
 syntax  "⟪" comb "⟫"     : term
 syntax "*⟪" comb "⟫"     : term
+
+/-def TExpr.toExpr (stx : Syntax) : TermElabM Lean.Expr := do
+  match stx with
+  | `(comb| cons.{$m, $n}) =>
+    let m ← elabLevel m
+    let n ← elabLevel n
+
+    return q(fun (α : Type $m) (β : Type $n) => α → β)
+  | `(comb| Sort $m) =>
+    let m ← elabLevel m
+    return .app (mkConst ``Expr.sort) (Lean.toExpr m)
+  | `(comb| I.{$m}) =>
+    let m ← elabLevel m
+    return q(fun (α : Type $m) (x : α) => x)
+  | `(comb| K.{$m, $n}) =>
+    let m ← elabLevel m
+    let n ← elabLevel n
+    return q(fun (α : Type $m) (β : α → Type $n) (x : α) (_y : β x) => x)
+  | `(comb| K'.{$m, $n}) =>
+    let m ← elabLevel m
+    let n ← elabLevel n
+    return q(fun (α : Type $m) (β : Type $n) (x : α) (_y : β) => x)
+  | `(comb| S.{$m, $n, $o}) =>
+    let m ← elabLevel m
+    let n ← elabLevel n
+    let o ← elabLevel o
+    return q(fun (α : Type $m) (β : α → Type $n) (γ : ∀ (x : α), β x → Type $o) (f : ∀ (x : α) (y : β x), γ x y) (g : ∀ (x : α), β x) (x : α) => (f x (g x)))
+  | `(comb| judge.{$m}) =>
+    let m ← elabLevel m
+    return q(fun (α : Type $m) (x : α) => (@Inhabited.mk α x))
+  | `(comb| fst.{$m, $n}) =>
+    let m ← elabLevel m
+    let n ← elabLevel n
+    return q(fun (α : Type $m) (β : α → Type $n) (S : Σ a : α, β a) => S.fst)
+  | `(comb| snd.{$m, $n}) =>
+    let m ← elabLevel m
+    let n ← elabLevel n
+    return q(fun (α : Type $m) (β : α → Type $n) (S : Σ a : α, β a) => S.snd)
+  | `(comb| $f $x) =>
+    let f' ← TExpr.toExpr f
+    let x' ← TExpr.toExpr x
+    return f'.app x'
+  | `(comb| mkcons.{$m, $n, $o, $p, $q, $r}) =>
+    let m ← elabLevel m
+    let n ← elabLevel n
+    let o ← elabLevel o
+    let p ← elabLevel p
+    let q ← elabLevel q
+    let r ← elabLevel r
+    -- (mkcons πcons πf πg f g x) = (πcons πf πg (πf f x) (πg g x))
+    -- α : Type m
+    -- f : (F : Type n)
+    -- g : (G : Type o)
+    -- πf : ∀ (f : F) (x : α), D f x
+    -- πg : ∀ (g : G) (x : α), E g x
+    -- πcons : ∀ (πf : ∀ (f : F) (x : α), D f x)
+    -- (πg : ∀ (g : G) (x : α), E g x)
+    -- D f x β= D'
+    -- πcons : ∀ (πf : ∀ (f : F) (x : α), )
+    -- (πg : ∀ (f : F) (x : α), )
+    -- (fst : D')
+    -- (snd : E'), End
+    -- mkcons takes a πcons, which dicates how to build the next cons.
+    -- mkcons also takes πf, which makes the f / fst compoent of the sigma, and
+    -- the next substitute value (x : α)
+    -- πcons : ∀ (πf : Dummy₁) (πg : Dummy₂) (fst : D) (snd : e), γ πf πg fst snd
+    -- if we used A as a placeholder, how scuffed would it be? not toob ad.
+    -- if we already know fst and snd, we can shortcut the type dependency.
+    -- fst was produced by substitution.
+    -- refinement: instead of F and G being the literal types,
+    -- F and G are the codomain? hmmmm
+    return q(fun (α : Type $m) (F : Type $n) (G : Type $o) (A : Type $p) (B : Type $q)
+      (γ : Type $r)
+      (πcons : (F → α → A) → (G → α → B) → A → B → γ)
+      (πf : F → α → A) (πg : G → α → B)
+      (f : F) (g : G)
+      (x : α) => (πcons πf πg (πf f x) (πg g x)))
+  | e => throwError m!"Not supported: {e}"-/
 
 def Expr.toExpr (e : Expr) : Lean.Expr :=
   match e with
@@ -281,9 +362,7 @@ instance : Lean.ToExpr Expr where
   toTypeExpr := .const ``Expr []
 
 macro_rules
-  | `(⟪Prop⟫) => `(Expr.sort .zero)
-  | `(⟪Type $n⟫) => `(Expr.sort ($n + 1))
-  | `(⟪Sort $n⟫) => `(Expr.sort $n)
+  | `(⟪Prop⟫) => `(Expr.sort Level.zero)
   | `(⟪::($cfg:comb, $a:comb, $b:comb)⟫) =>`(⟪$cfg $a $b⟫)
   | `(⟪::($cfg:comb, $a:comb, $b:comb,*)⟫) => `(⟪$cfg $a ::($cfg, $b,*)⟫)
   | `(⟪$n:num⟫) => `($n:term)
@@ -299,10 +378,20 @@ macro_rules
     | `(ident| fst) => `(Expr.fst)
     | `(ident| snd) => `(Expr.snd)
     | id => `($id)
-  | `(⟪$c:comb.{$m:term}⟫) => `(⟪$c⟫ $m)
-  | `(⟪$c:comb.{$m:term, $l:term,*}⟫) => `(⟪$c.{$m}.{$l,*}⟫)
   | `(⟪($c:comb)⟫) => `(⟪$c:comb⟫)
   | `(⟪$f:comb $x:comb⟫) => `(Expr.app ⟪$f:comb⟫ ⟪$x:comb⟫)
+
+elab_rules : term
+  | `(⟪$c:ident.{$lvs:level,*}⟫) => do
+    let lvs ← lvs.getElems.mapM (fun h => Lean.toExpr <$> elabLevel h)
+    let c ← elabTerm c .none
+    return Lean.mkAppN c lvs
+  | `(⟪Type $n⟫) => do
+    let n ← elabLevel n
+    return (Lean.Expr.const ``Expr.sort []).app (toExpr n.succ)
+  | `(⟪Sort $n⟫) => do
+    let n ← elabLevel n
+    return (Lean.Expr.const ``Expr.sort []).app (toExpr n)
 
 #eval ⟪I.{1}⟫
 #eval ⟪I.{1} Prop⟫

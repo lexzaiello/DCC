@@ -7,6 +7,7 @@ open Lean.Elab.Term
 open Lean.Elab.Level
 open Lean.Meta
 open Lean (Syntax)
+open Lean (logInfo)
 open Lean.Meta (inferType)
 
 /-
@@ -56,18 +57,18 @@ open Expr
 
 elab_rules : term
   | `(⟪$α:comb → $β:comb⟫) => do
-    let α' ← (elabTerm · none) =<< `(⟪$α⟫)
-    let β' ← (elabTerm · none) =<< `(⟪$β⟫)
-    let t_α ← inferType α'
-    let t_β ← inferType β'
+    let α' ← elabTerm (← `(⟪$α⟫)) none
+    let β' ← elabTerm (← `(⟪$β⟫)) none
 
-    let qα : Q(Expr) := α'
-    let qβ : Q(Expr) := β'
+    let reified : Expr ← toExpr ⟪$α⟫
 
-    match t_α, t_β with
-    | .sort m, .sort n =>
-      return q(Expr.app (Expr.app (Expr.cons $m $n) $qα) $qβ)
-    | _, _ => throwError m!"Expected a type, but found {α}"
+    let m ← getLevel α'
+    let n ← getLevel β'
+
+    let mTerm ← `(Sort $(Lean.Quote.quote m):level)
+    let nTerm ← `(Sort $(Lean.Quote.quote n):level)
+
+    elabTerm (← `(⟪cons.{$mTerm, $nTerm} $α $β⟫)) none
 
 #eval ⟪Prop → Prop⟫
 

@@ -115,7 +115,17 @@ def S.type (m n o : Level) : Expr :=
 def i0.type : Expr := ⟪I⟫
 def i1.type : Expr := ⟪I⟫
 
+def choose.type (l : Level) : Expr :=
+  ⟪Π.{[l.succ, l]} (Set l) (K'.{[l.succ, l.succ]} (Set l) (Set l)
+    (Π.{[
+
+/-
+choose.{[l]}
+-/
+
 inductive IsStep : Expr → Expr → Prop
+  | choose  : IsStep ⟪choose.{[l]} A B i0⟫ A
+  | choose  : IsStep ⟪choose.{[l]} A B i1⟫ B
   | K       : IsStep ⟪K.{[m, n]} α β x y⟫ x
   | K'      : IsStep ⟪K'.{[m, n]} α β x y⟫ x
   | S       : IsStep ⟪S.{[m, n, o]} α β γ x y z⟫ ⟪(x z) (y z)⟫

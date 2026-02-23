@@ -74,7 +74,7 @@ syntax  "⟪" comb "⟫"     : term
 macro_rules
   | `(⟪Set $n⟫) => `(Expr.TAtom (TAtom.Set $n))
   | `(⟪M $c:comb⟫) => `(Expr.M ⟪$c⟫)
-  | `(⟪PathP.{$m}⟫) => `(Expr.TAtom (TAtom.PathP $m))
+  | `(⟪PathP.{[$m]}⟫) => `(Expr.TAtom (TAtom.PathP $m))
   | `(⟪=.{[$m]}⟫) => `(Expr.TAtom (TAtom.PathEq $m))
   | `(⟪≃.{[$m]}⟫) => `(Expr.TAtom (TAtom.Equiv $m))
   | `(⟪Π.{[$m, $n]}⟫) => `(Expr.TAtom (TAtom.Pi $m $n))
@@ -115,9 +115,7 @@ def S.type (m n o : Level) : Expr :=
 def i0.type : Expr := ⟪I⟫
 def i1.type : Expr := ⟪I⟫
 
-def choose.type (l : Level) : Expr :=
-  ⟪Π.{[l.succ, l]} (Set l) (K'.{[l.succ, l.succ]} (Set l) (Set l)
-    (Π.{[
+def choose.type (l : Level) : Expr := ⟪PathP.{[l]}⟫
 
 /-
 choose.{[l]}

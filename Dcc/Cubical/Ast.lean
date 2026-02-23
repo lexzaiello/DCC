@@ -1,5 +1,21 @@
 import Mathlib.Data.Nat.Notation
 
+/-
+What if we want to extend dom / cod at runtime?
+Will this become prohibitive?
+No, because we're just using our type inference
+to figure out what the next dom / cod will be.
+
+dom / cod needs to not type-check for
+things that aren't functions, though.
+We could just add a symbol for this.
+Unit or something.
+
+We could, alternatively, use Pi.
+Then, we don't need dom / cod.
+We're just equating Pi.
+-/
+
 abbrev Level := ℕ
 
 inductive Interval where
@@ -7,30 +23,22 @@ inductive Interval where
   | i₁ : Interval
 deriving BEq, Repr
 
-inductive MComb where
-  | MK : Level → Level → MComb
-  | MS : Level → Level → Level → MComb
-deriving BEq, Repr
-
-inductive MOp where
-  | dom : Level → MOp
-  | cod : Level → MOp
-deriving BEq, Repr
-
 inductive TAtom where
-  | MComb : MComb → TAtom
+  | Unit  : TAtom
   | I     : TAtom
   | PathP : Level → TAtom
   | Eq    : Level → TAtom
   | Equiv : Level → TAtom
   | Set   : Level → TAtom
+  | Pi    : Level → Level → TAtom
 deriving BEq, Repr
 
 inductive Expr where
+  | M       : Expr → Expr
   | K       : Level → Level → Expr -- Dependent K
+  | K'      : Level → Level → Expr -- Nondependent K
   | S       : Level → Level → Level → Expr -- Dependent S
   | TAtom   : TAtom → Expr
-  | MOp     : MOp → Expr -- Manipulate meta meta combinators
   | transp  : Expr
   | intvl   : Interval → Expr -- Interval components
   | hcomp   : Expr → Expr
@@ -38,15 +46,16 @@ inductive Expr where
 deriving BEq, Repr
 
 declare_syntax_cat comb
-syntax ident                            : comb
+syntax:max ident                        : comb
 syntax:max comb  ".{" term,+ "}"        : comb
-syntax:max num                          : comb
+syntax "M" comb                         : comb
+syntax "Π" ".{" term,+ "}"              : comb
 syntax "="                              : comb
 syntax "≃"                              : comb
 syntax "Set" term                       : comb
 syntax:max "(" comb ")"                 : comb
 syntax "_"                              : comb
-syntax "#(" term ")"                    : comb
+syntax "#" term                         : comb
 
 syntax:1022 comb:1022     comb:1023     : comb
 
@@ -54,24 +63,38 @@ syntax  "⟪" comb "⟫"     : term
 
 macro_rules
   | `(⟪Set $n⟫) => `(Expr.TAtom (TAtom.Set $n))
-  | `(⟪$n:num⟫) => `($n:term)
+  | `(⟪M $c:comb⟫) => `(Expr.M ⟪$c⟫)
   | `(⟪$id:ident⟫) =>
     match id with
     | `(ident| I) => `(Expr.TAtom TAtom.I)
     | `(ident| K) => `(Expr.K)
+    | `(ident| K') => `(Expr.K')
     | `(ident| S) => `(Expr.S)
     | `(ident| PathP) => `(Expr.TAtom TAtom.PathP)
-    | `(ident| dom) => `(Expr.MOp MOp.dom)
-    | `(ident| cod) => `(Expr.MOp MOp.cod)
     | `(ident| i₀) => `(Expr.intvl Interval.i₀)
     | `(ident| i₁) => `(Expr.intvl Interval.i₁)
     | `(ident| hcomp) => `(Expr.hcomp)
     | `(ident| transp) => `(Expr.transp)
-    | `(ident| MK) => `(Expr.TAtom (TAtom.MComb MComb.MK))
-    | `(ident| MS) => `(Expr.TAtom (TAtom.MComb MComb.MS))
-    | id => `($id)
+    | `(ident| $id) =>`($id:term)
   | `(⟪=⟫) => `(Expr.TAtom TAtom.Eq)
   | `(⟪≃⟫) => `(Expr.TAtom TAtom.Equiv)
   | `(⟪($c:comb)⟫) => `(⟪$c:comb⟫)
+  | `(⟪Π.{$m, $n}⟫) => `(Expr.TAtom (TAtom.Pi $m $n))
+  | `(⟪$c.{$l:term}⟫) => `(⟪$c⟫ $l)
+  | `(⟪$c.{$l:term, $lvs:term,*}⟫) => `(⟪$c.{$l}.{$lvs,*}⟫)
+  | `(⟪#$t:term⟫) => `($t)
   | `(⟪$f:comb $x:comb⟫) => `(Expr.app ⟪$f:comb⟫ ⟪$x:comb⟫)
-  | `(⟪#($t:term)⟫) => `($t)
+
+inductive IsStep : Expr → Expr → Prop
+  | K     : IsStep ⟪K.{m, n} α β x y⟫ x
+  | K'    : IsStep ⟪K'.{m, n} α β x y⟫ x
+  | S     : IsStep ⟪S.{m, n, o} α β γ x y z⟫ ⟪(x z) (y z)⟫
+  | left  : IsStep f f' → IsStep ⟪f x⟫ ⟪f' x⟫
+  | right : IsStep x x' → IsStep ⟪f x⟫ ⟪f x'⟫
+  | pi    : IsStep ⟪Π.{m, n} α β x⟫ ⟪β x⟫
+  | k₁    : IsStep ⟪(M K.{m, n}) α⟫ ⟪Π.{n.succ, m} (Π.{m, n.succ}
+    α (K'.{n.succ.succ, m} (Set n.succ) α (Set n)))
+    (M (K.{m, n} α))⟫
+  | k₂    : IsStep ⟪(M (K.{m, n} α)) β⟫ ⟪Π.{m, m} α (M (K.{m, n} α β))⟫
+  | k₃    : IsStep ⟪(M (K.{m, n} α β)) x⟫ ⟪Π.{m, m} (β x) (M (K.{m, n} α β x))⟫
+  | k₄    : IsStep ⟪(M (K.{m, n} α β x)) y⟫ α

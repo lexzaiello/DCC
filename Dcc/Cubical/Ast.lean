@@ -101,6 +101,16 @@ def α_to_set (α : Expr) (m n : Level) : Expr :=
 def βx_to_set (β x : Expr) (n o : Level) : Expr :=
   ⟪(Π.{[n, o.succ.succ]} (β x) (K'.{[o.succ.succ, n]} (Set o.succ) (β x) (Set o)))⟫
 
+def K.type (m n : Level) : Expr :=
+  ⟪Π.{[m.succ, m]} (Set m) (M K.{[m, n]})⟫
+
+def K'.type (m n : Level) : Expr :=
+  ⟪Π.{[m.succ, m]} (Set m) (M K'.{[m, n]})⟫
+
+def S.type (m n o : Level) : Expr :=
+  ⟪Π.{[m.succ, o]} (Set m) (M S.{[m, n, o]})⟫
+
+
 inductive IsStep : Expr → Expr → Prop
   | K     : IsStep ⟪K.{[m, n]} α β x y⟫ x
   | K'    : IsStep ⟪K'.{[m, n]} α β x y⟫ x
@@ -131,4 +141,4 @@ inductive IsStep : Expr → Expr → Prop
   | s₅    : IsStep ⟪(M (S.{[m, n, o]} α β γ x)) y⟫ ⟪Π.{[m, o]} α
     (M (S.{[m, n, o]} α β γ x y))⟫
   | s₆    : IsStep ⟪(M (S.{[m, n, o]} α β γ x y)) z⟫ ⟪γ z (y z)⟫
-  
+

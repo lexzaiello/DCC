@@ -45,6 +45,8 @@ deriving BEq, Repr
 
 inductive Expr where
   | I       : Expr
+  -- I → α
+  | Dim     : Expr → Expr
   | M       : Expr → Expr
   | comb    : Comb → Expr
   | TAtom   : TAtom → Expr
@@ -53,12 +55,17 @@ inductive Expr where
   | app     : Expr → Expr → Expr
 deriving BEq, Repr
 
+declare_syntax_cat op
 declare_syntax_cat comb
+
+syntax:max "I" "→" comb : comb
+
 syntax:max ident                        : comb
 syntax:max ident  ".{" term "}"         : comb
 syntax:max "="  ".{" term "}"           : comb
 syntax:max "≃"  ".{" term "}"           : comb
 syntax "Π" ".{" term "}"                : comb
+syntax "I"                              : comb
 syntax "M" comb                         : comb
 syntax "="                              : comb
 syntax "≃"                              : comb
@@ -66,6 +73,7 @@ syntax "Set" term                       : comb
 syntax:max "(" comb ")"                 : comb
 syntax "_"                              : comb
 syntax "#" term                         : comb
+syntax op                               : comb
 
 syntax:1022 comb:1022     comb:1023     : comb
 
@@ -85,11 +93,12 @@ macro_rules
     `((Expr.comb (Comb.mk $name_s:term $lvs:term)))
   | `(⟪$id:ident⟫) =>
     match id with
-    | `(ident| I) => `(Expr.I)
     | `(ident| i0) => `(Expr.intvl Interval.i0)
     | `(ident| i1) => `(Expr.intvl Interval.i1)
     | `(ident| hcomp) => `(Expr.hcomp)
     | `(ident| $id) =>`($id:term)
+  | `(⟪I⟫) => `(Expr.I)
+  | `(⟪I → $e:comb⟫) => `(Expr.Dim ⟪$e⟫)
   | `(⟪#$t:term⟫) => `($t)
   | `(⟪$f:comb $x:comb⟫) => `(Expr.app ⟪$f:comb⟫ ⟪$x:comb⟫)
 
@@ -115,15 +124,20 @@ def S.type (m n o : Level) : Expr :=
 def i0.type : Expr := ⟪I⟫
 def i1.type : Expr := ⟪I⟫
 
-def choose.type (l : Level) : Expr := ⟪PathP.{[l]}⟫
+/-
+
+-/
+def path.type (A α β : Expr) (l : Level) : Expr := ⟪PathP.{[l]} A α β⟫
 
 /-
-choose.{[l]}
+choose.{[l]} is analagous to λi → t path abstraction.
+choose A α β i0 = (α : A i0)
+choose A α β i1 = (β : A i1)
 -/
 
 inductive IsStep : Expr → Expr → Prop
-  | choose  : IsStep ⟪choose.{[l]} A B i0⟫ A
-  | choose  : IsStep ⟪choose.{[l]} A B i1⟫ B
+  | choose0 : IsStep ⟪choose.{[l]} A α β i0⟫ α
+  | choose1 : IsStep ⟪choose.{[l]} A α β i1⟫ β
   | K       : IsStep ⟪K.{[m, n]} α β x y⟫ x
   | K'      : IsStep ⟪K'.{[m, n]} α β x y⟫ x
   | S       : IsStep ⟪S.{[m, n, o]} α β γ x y z⟫ ⟪(x z) (y z)⟫
@@ -153,5 +167,5 @@ inductive IsStep : Expr → Expr → Prop
   | s₅      : IsStep ⟪(M (S.{[m, n, o]} α β γ x)) y⟫ ⟪Π.{[m, o]} α
     (M (S.{[m, n, o]} α β γ x y))⟫
   | s₆      : IsStep ⟪(M (S.{[m, n, o]} α β γ x y)) z⟫ ⟪γ z (y z)⟫
-  | transp₁ : IsStep ⟪transp.{[m]} A i i1 a⟫ a
-  | transpu : IsStep ⟪transp.{[m]} (K'.{[u.succ.succ, A i i0 (Set m)⟫ ⟪
+  | transp₁ : IsStep ⟪transp.{[m]} A i1 a⟫ a
+  | transpu : IsStep ⟪transp.{[m.succ]} _U i0 (Set m)⟫ ⟪Set m⟫

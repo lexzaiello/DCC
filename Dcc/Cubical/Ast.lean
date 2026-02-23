@@ -1,5 +1,9 @@
 import Mathlib.Data.Nat.Notation
 
+/-
+TODO: dependent pairs.
+-/
+
 open Lean.Quote (quote)
 
 /-
@@ -22,8 +26,8 @@ abbrev Level := ℕ
 abbrev Ident := String
 
 inductive Interval where
-  | i₀ : Interval
-  | i₁ : Interval
+  | i0 : Interval
+  | i1 : Interval
 deriving BEq, Repr
 
 inductive Comb where
@@ -32,7 +36,6 @@ deriving BEq, Repr
 
 inductive TAtom where
   | Unit  : TAtom
-  | I     : TAtom
   | PathP : Level → TAtom
   | Eq    : Level → TAtom
   | Equiv : Level → TAtom
@@ -41,10 +44,10 @@ inductive TAtom where
 deriving BEq, Repr
 
 inductive Expr where
+  | I       : Expr
   | M       : Expr → Expr
   | comb    : Comb → Expr
   | TAtom   : TAtom → Expr
-  | transp  : Expr
   | intvl   : Interval → Expr -- Interval components
   | hcomp   : Expr → Expr
   | app     : Expr → Expr → Expr
@@ -82,11 +85,10 @@ macro_rules
     `((Expr.comb (Comb.mk $name_s:term $lvs:term)))
   | `(⟪$id:ident⟫) =>
     match id with
-    | `(ident| I) => `(Expr.TAtom TAtom.I)
-    | `(ident| i₀) => `(Expr.intvl Interval.i₀)
-    | `(ident| i₁) => `(Expr.intvl Interval.i₁)
+    | `(ident| I) => `(Expr.I)
+    | `(ident| i0) => `(Expr.intvl Interval.i0)
+    | `(ident| i1) => `(Expr.intvl Interval.i1)
     | `(ident| hcomp) => `(Expr.hcomp)
-    | `(ident| transp) => `(Expr.transp)
     | `(ident| $id) =>`($id:term)
   | `(⟪#$t:term⟫) => `($t)
   | `(⟪$f:comb $x:comb⟫) => `(Expr.app ⟪$f:comb⟫ ⟪$x:comb⟫)
@@ -110,35 +112,38 @@ def K'.type (m n : Level) : Expr :=
 def S.type (m n o : Level) : Expr :=
   ⟪Π.{[m.succ, o]} (Set m) (M S.{[m, n, o]})⟫
 
+def i0.type : Expr := ⟪I⟫
+def i1.type : Expr := ⟪I⟫
 
 inductive IsStep : Expr → Expr → Prop
-  | K     : IsStep ⟪K.{[m, n]} α β x y⟫ x
-  | K'    : IsStep ⟪K'.{[m, n]} α β x y⟫ x
-  | S     : IsStep ⟪S.{[m, n, o]} α β γ x y z⟫ ⟪(x z) (y z)⟫
-  | left  : IsStep f f' → IsStep ⟪f x⟫ ⟪f' x⟫
-  | right : IsStep x x' → IsStep ⟪f x⟫ ⟪f x'⟫
-  | pi    : IsStep ⟪Π.{[m, n]} α β x⟫ ⟪β x⟫
-  | γ₂    : IsStep ⟪(M (γ.{[m, n, o]} α β)) x⟫ (βx_to_set β x n o)
-  | k'₁   : IsStep ⟪(M K'.{[m, n]}) α⟫ ⟪Π.{[n.succ, m]} (Set n) (M (K'.{[m, n]} α))⟫
-  | k'₂   : IsStep ⟪(M (K'.{[m, n]} α)) β⟫ ⟪Π.{[m, m]} α (M (K'.{[m, n]} α β))⟫
-  | k'₃   : IsStep ⟪(M (K'.{[m, n]} α β)) x⟫ ⟪Π.{[m, m]} β (K'.{[m.succ, n]} (Set m) β α)⟫
-  | k₁    : IsStep ⟪(M K.{[m, n]}) α⟫ ⟪Π.{[n.succ.succ, m]}
+  | K       : IsStep ⟪K.{[m, n]} α β x y⟫ x
+  | K'      : IsStep ⟪K'.{[m, n]} α β x y⟫ x
+  | S       : IsStep ⟪S.{[m, n, o]} α β γ x y z⟫ ⟪(x z) (y z)⟫
+  | left    : IsStep f f' → IsStep ⟪f x⟫ ⟪f' x⟫
+  | right   : IsStep x x' → IsStep ⟪f x⟫ ⟪f x'⟫
+  | pi      : IsStep ⟪Π.{[m, n]} α β x⟫ ⟪β x⟫
+  | γ₂      : IsStep ⟪(M (γ.{[m, n, o]} α β)) x⟫ (βx_to_set β x n o)
+  | k'₁     : IsStep ⟪(M K'.{[m, n]}) α⟫ ⟪Π.{[n.succ, m]} (Set n) (M (K'.{[m, n]} α))⟫
+  | k'₂     : IsStep ⟪(M (K'.{[m, n]} α)) β⟫ ⟪Π.{[m, m]} α (M (K'.{[m, n]} α β))⟫
+  | k'₃     : IsStep ⟪(M (K'.{[m, n]} α β)) x⟫ ⟪Π.{[m, m]} β (K'.{[m.succ, n]} (Set m) β α)⟫
+  | k₁      : IsStep ⟪(M K.{[m, n]}) α⟫ ⟪Π.{[n.succ.succ, m]}
     (#α_to_set α m n)
     (M (K.{[m, n]} α))⟫
-  | k₂    : IsStep ⟪(M (K.{[m, n]} α)) β⟫ ⟪Π.{[m, m]} α (M (K.{[m, n]} α β))⟫
-  | k₃    : IsStep ⟪(M (K.{[m, n]} α β)) x⟫ ⟪Π.{[m, m]} (β x) (M (K.{[m, n]} α β x))⟫
-  | k₄    : IsStep ⟪(M (K.{[m, n]} α β x)) y⟫ α
-  | F₁    : IsStep ⟪(M (F.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (β x) (γ x)⟫
-  | s₁    : IsStep ⟪(M S.{[m, n, o]}) α⟫ ⟪Π.{[n.succ.succ, o]} (#α_to_set α m n)
+  | k₂      : IsStep ⟪(M (K.{[m, n]} α)) β⟫ ⟪Π.{[m, m]} α (M (K.{[m, n]} α β))⟫
+  | k₃      : IsStep ⟪(M (K.{[m, n]} α β)) x⟫ ⟪Π.{[m, m]} (β x) (M (K.{[m, n]} α β x))⟫
+  | k₄      : IsStep ⟪(M (K.{[m, n]} α β x)) y⟫ α
+  | F₁      : IsStep ⟪(M (F.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (β x) (γ x)⟫
+  | s₁      : IsStep ⟪(M S.{[m, n, o]}) α⟫ ⟪Π.{[n.succ.succ, o]} (#α_to_set α m n)
     (M (S.{[m, n]} α))⟫
-  | s₂    : IsStep ⟪(M (S.{[m, n, o]} α)) β⟫ ⟪Π.{[o.succ.succ, o]}
+  | s₂      : IsStep ⟪(M (S.{[m, n, o]} α)) β⟫ ⟪Π.{[o.succ.succ, o]}
     (Π.{[m, o.succ.succ]} α (M (γ.{[m, n, o]} α β)))
     (M (S.{[m, n, o]} α β))⟫
-  | s₃    : IsStep ⟪(M (S.{[m, n, o]} α β)) γ⟫ ⟪Π.{[o, o]} (Π.{[m, o]} α (M (F.{[m, n, o]} α β γ)))
+  | s₃      : IsStep ⟪(M (S.{[m, n, o]} α β)) γ⟫ ⟪Π.{[o, o]} (Π.{[m, o]} α (M (F.{[m, n, o]} α β γ)))
     (M (S.{[m, n, o]} α β γ))⟫
-  | s₄    : IsStep ⟪(M (S.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (Π.{[m, n]} α β)
+  | s₄      : IsStep ⟪(M (S.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (Π.{[m, n]} α β)
     (M (S.{[m, n, o]} α β γ x))⟫
-  | s₅    : IsStep ⟪(M (S.{[m, n, o]} α β γ x)) y⟫ ⟪Π.{[m, o]} α
+  | s₅      : IsStep ⟪(M (S.{[m, n, o]} α β γ x)) y⟫ ⟪Π.{[m, o]} α
     (M (S.{[m, n, o]} α β γ x y))⟫
-  | s₆    : IsStep ⟪(M (S.{[m, n, o]} α β γ x y)) z⟫ ⟪γ z (y z)⟫
-
+  | s₆      : IsStep ⟪(M (S.{[m, n, o]} α β γ x y)) z⟫ ⟪γ z (y z)⟫
+  | transp₁ : IsStep ⟪transp.{[m]} A i i1 a⟫ a
+  | transpu : IsStep ⟪transp.{[m]} (K'.{[u.succ.succ, A i i0 (Set m)⟫ ⟪

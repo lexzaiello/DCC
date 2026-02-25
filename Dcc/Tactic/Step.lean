@@ -3,10 +3,9 @@ import Dcc.Types
 import Dcc.Tactic.Register
 
 @[simp_dcc] theorem Pi.step {α β x : Expr} {m n : Level} : IsStep ⟪Π.{[m, n]} α β x⟫ ⟪β x⟫ := IsStep.pi
-@[simp_dcc] theorem K.step {α β x y : Expr} {m n : Level} : IsStep ⟪K.{[m, n]} α β x y⟫ x := IsStep.K
-@[simp_dcc] theorem K'.step {α β x y : Expr} {m n : Level} : IsStep ⟪K'.{[m, n]} α β x y⟫ x := IsStep.K'
-@[simp_dcc] theorem S.step {α β γ f g x : Expr} {m n o : Level} : IsStep
-  ⟪S.{[m, n, o]} α β γ f g x⟫ ⟪f x (g x)⟫ := IsStep.S
+@[simp_dcc] theorem K.defeq {α β x y : Expr} {m n : Level} : IsStep ⟪K.{[m, n]} α β x y⟫ x := IsStep.K
+@[simp_dcc] theorem K'.defeq {α β x y : Expr} {m n : Level} : IsStep ⟪K'.{[m, n]} α β x y⟫ x := IsStep.K'
+@[simp_dcc] theorem S.defeq {α β γ x y z : Expr} {m n : Level} : IsStep ⟪S.{[m, n, o]} α β γ x y z⟫ ⟪x z (y z)⟫ := IsStep.S
 @[simp_dcc] theorem MK'₁.defeq {α : Expr} {m n : Level}  : DefEq
   ⟪Π.{[n.succ, m]} (Sort n) (M (K'.{[m, n]} α))⟫ ⟪(M K'.{[m, n]}) α⟫ :=
   DefEq.symm <|DefEq.step <| IsStep.M IsStepM.k'₁
@@ -80,3 +79,5 @@ import Dcc.Tactic.Register
   defeq refl
   assumption
   defeq refl
+@[simp_dcc] theorem Step.defeq : IsStep e e' → DefEq e e' := DefEq.step
+@[simp_dcc] theorem StepM.defeq : IsStepM e e' → DefEq e e' := DefEq.step ∘ IsStep.M

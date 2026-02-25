@@ -1,11 +1,14 @@
 import Dcc.Ast
 
+def mk_arrow (α β : Expr) (m n : Level) : Expr :=
+  ⟪(Π.{[m, n]}
+    α (K'.{[n.succ, m]} (Sort n) α β))⟫
+
 def α_to_set (α : Expr) (m n : Level) : Expr :=
-  ⟪(Π.{[m, n.succ.succ]}
-    α (K'.{[n.succ.succ, m]} (Sort n.succ) α (Sort n)))⟫
+  mk_arrow α ⟪Sort n⟫ m n.succ
 
 def βx_to_set (β x : Expr) (n o : Level) : Expr :=
-  ⟪(Π.{[n, o.succ.succ]} (β x) (K'.{[o.succ.succ, n]} (Sort o.succ) (β x) (Sort o)))⟫
+  mk_arrow ⟪β x⟫ ⟪Sort o⟫ n o.succ
 
 def K.type (m n : Level) : Expr :=
   ⟪Π.{[m.succ, m]} (Sort m) (M K.{[m, n]})⟫
@@ -22,9 +25,7 @@ def K'_type.type (m : Level) : Expr       := ⟪Sort m⟫
 
 def Sort.type (m : Level) : Expr := ⟪Sort m.succ⟫
 
-def Pi.type (m n : Level) : Expr := ⟪Π.{[m.succ, n.succ]}
-  (Sort m)
-  (K'.{[n.succ.succ, m.succ]} (Sort n.succ) (Sort m) (Sort n))⟫
+def Pi.type (m n : Level) : Expr := mk_arrow ⟪Sort m⟫ ⟪Sort n⟫ m.succ n.succ
 
 def MK'.type (m _n    : Level) : Expr := ⟪Sort m⟫
 def MK.type  (m _n    : Level) : Expr := ⟪Sort m⟫
@@ -97,3 +98,5 @@ inductive ValidJudgment : Expr → Expr → Prop
     → DefEq t t'
     → ValidJudgment t' x
 
+theorem S.well_typed : ValidJudgment ⟪Sort m⟫ α
+  → ValidJudgment ⟪Π.{[m, n]} α (K'.{[

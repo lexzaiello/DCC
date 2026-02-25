@@ -53,7 +53,7 @@ inductive IsStepM : Expr → Expr → Prop
   | γ₂      : IsStepM ⟪(M (γ.{[m, n, o]} α β)) x⟫ (βx_to_set β x n o)
   | F₁      : IsStepM ⟪(M (F.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (β x) (γ x)⟫
   | s₁      : IsStepM ⟪(M S.{[m, n, o]}) α⟫ ⟪Π.{[n.succ.succ, o]} (#α_to_set α m n)
-    (M (S.{[m, n]} α))⟫
+    (M (S.{[m, n, o]} α))⟫
   | s₂      : IsStepM ⟪(M (S.{[m, n, o]} α)) β⟫ ⟪Π.{[o.succ.succ, o]}
     (Π.{[m, o.succ.succ]} α (M (γ.{[m, n, o]} α β)))
     (M (S.{[m, n, o]} α β))⟫
@@ -96,11 +96,61 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment ⟪cod x⟫ ⟪f x⟫
   | defeq : ValidJudgment t x → DefEq t t' → ValidJudgment t' x
 
+syntax "defeq" ident,*         : tactic
+syntax "step" ident,*          : tactic
+syntax "stepM" ident,*         : tactic
+syntax "judge" ident,*         : tactic
+
+macro_rules
+  | `(tactic| defeq $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `DefEq name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| step $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `IsStep name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| stepM $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := (Lean.mkIdent (Lean.Name.mkStr `IsStepM name.getId.toString))
+      `(tactic| (apply IsStep.M; apply $nm)))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| judge $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
+      `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+
 theorem S.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   (h_t_β : ValidJudgment (mk_arrow α ⟪Sort n⟫ m n.succ) β)
   (h_t_γ : ValidJudgment ⟪(Π.{[m, o.succ.succ]} α (M (γ.{[m, n, o]} α β)))⟫ γ)
   (h_t_f : ValidJudgment ⟪(Π.{[m, o]} α (M (F.{[m, n, o]} α β γ)))⟫ f)
   (h_t_g : ValidJudgment ⟪(Π.{[m, n]} α β)⟫ g)
   (h_t_x : ValidJudgment α x)
-  : ValidJudgment ⟪S.{[m, n, o]} α β γ f g x⟫ ⟪γ x (g x)⟫ := by
-  sorry
+  : ValidJudgment ⟪γ x (g x)⟫ ⟪S.{[m, n, o]} α β γ f g x⟫ := by
+  judge defeq, app, defeq, app, defeq, app, defeq, app, defeq, app, defeq, app, S
+  assumption
+  defeq step
+  stepM s₁
+  assumption
+  defeq step
+  stepM s₂
+  assumption
+  defeq step
+  stepM s₃
+  assumption
+  defeq step
+  stepM s₄
+  assumption
+  defeq step
+  stepM s₅
+  assumption
+  defeq step
+  stepM s₆
+

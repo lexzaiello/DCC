@@ -8,7 +8,7 @@ theorem K'.well_typed' (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   (h_t_x : ValidJudgment α x)
   (h_t_y : ValidJudgment β y) : ValidJudgment α ⟪K'.{[m, n]} α β x y⟫ := by
   judge app, app, app, app
-  
+  simp [simp_dcc]
   sorry
 
 theorem K'.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)

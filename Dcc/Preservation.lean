@@ -1,6 +1,5 @@
 import Dcc.Ast
 import Dcc.Types
-import Dcc.Tactic.Register
 import Dcc.Tactic.Step
 
 theorem K'.well_typed' (h_t_α : ValidJudgment ⟪Sort m⟫ α)

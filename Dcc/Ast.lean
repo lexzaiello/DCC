@@ -1,4 +1,10 @@
 import Mathlib.Data.Nat.Notation
+import Mathlib.Tactic
+import Lean
+
+open Lean.Meta (registerSimpAttr)
+open Lean.Meta (SimpExtension)
+
 
 open Lean.Quote (quote)
 
@@ -70,4 +76,3 @@ macro_rules
 
 #eval ⟪K'.{[1, 2]}⟫
 #eval ⟪K'.{[1, 2]}⟫
-

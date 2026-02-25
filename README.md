@@ -26,3 +26,5 @@ nix run .#serve
 ```
 
 If the docs are not up-to-date, please run `lake build`.
+
+By *Lexi Aiello*.

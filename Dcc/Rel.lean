@@ -94,9 +94,13 @@ inductive ValidJudgment : Expr → Expr → Prop
   | app   : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
     → ValidJudgment α x
     → ValidJudgment ⟪cod x⟫ ⟪f x⟫
-  | defeq : ValidJudgment t x
-    → DefEq t t'
-    → ValidJudgment t' x
+  | defeq : ValidJudgment t x → DefEq t t' → ValidJudgment t' x
 
-theorem S.well_typed : ValidJudgment ⟪Sort m⟫ α
-  → ValidJudgment ⟪Π.{[m, n]} α (K'.{[
+theorem S.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
+  (h_t_β : ValidJudgment (mk_arrow α ⟪Sort n⟫ m n.succ) β)
+  (h_t_γ : ValidJudgment ⟪(Π.{[m, o.succ.succ]} α (M (γ.{[m, n, o]} α β)))⟫ γ)
+  (h_t_f : ValidJudgment ⟪(Π.{[m, o]} α (M (F.{[m, n, o]} α β γ)))⟫ f)
+  (h_t_g : ValidJudgment ⟪(Π.{[m, n]} α β)⟫ g)
+  (h_t_x : ValidJudgment α x)
+  : ValidJudgment ⟪S.{[m, n, o]} α β γ f g x⟫ ⟪γ x (g x)⟫ := by
+  sorry

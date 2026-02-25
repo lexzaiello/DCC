@@ -132,9 +132,23 @@ theorem K.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   (h_t_β : ValidJudgment (mk_arrow α ⟪Sort n⟫ m n.succ) β)
   (h_t_x : ValidJudgment α x)
   (h_t_y : ValidJudgment ⟪β x⟫ y) : ValidJudgment α ⟪K.{[m, n]} α β x y⟫ := by
-  judge app, app, app, app
-  
-  sorry
+  judge app, app, app, app, K
+  defeq refl
+  assumption
+  defeq step
+  stepM k₁
+  defeq refl
+  assumption
+  defeq step
+  stepM k₂
+  defeq refl
+  assumption
+  defeq step
+  stepM k₃
+  defeq refl
+  assumption
+  defeq step
+  stepM k₄
 
 @[simp]
 theorem S.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)

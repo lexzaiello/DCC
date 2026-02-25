@@ -173,6 +173,9 @@ theorem K.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   defeq step
   stepM k₄
 
+@[simp] theorem K.preservation  : ValidJudgment α x → ValidJudgment α x := id
+@[simp] theorem K'.preservation : ValidJudgment α x → ValidJudgment α x := id
+
 @[simp]
 theorem S.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   (h_t_β : ValidJudgment (mk_arrow α ⟪Sort n⟫ m n.succ) β)

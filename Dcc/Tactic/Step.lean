@@ -2,6 +2,7 @@ import Dcc.Ast
 import Dcc.Types
 import Dcc.Tactic.Register
 
+@[simp_dcc] theorem Pi.step : IsStep ⟪Π.{[m, n]} α β x⟫ ⟪β x⟫ := IsStep.pi
 @[simp_dcc] theorem K.step : IsStep ⟪K.{[m, n]} α β x y⟫ x := IsStep.K
 @[simp_dcc] theorem K'.step : IsStep ⟪K'.{[m, n]} α β x y⟫ x := IsStep.K'
 @[simp_dcc] theorem S.step : IsStep ⟪S.{[m, n, o]} α β γ f g x⟫ ⟪f x (g x)⟫ := IsStep.S
@@ -45,3 +46,24 @@ import Dcc.Tactic.Register
   ⟪(M (S.{[m, n, o]} α β γ x)) y⟫ := DefEq.symm <|DefEq.step <| IsStep.M IsStepM.s₅
 @[simp_dcc] theorem S₆.stepM : IsStepM ⟪(M (S.{[m, n, o]} α β γ x y)) z⟫ ⟪γ z (y z)⟫ := IsStepM.s₆
 
+@[simp_dcc] theorem M.step : IsStepM m₁ m₂ → IsStep m₁ m₂ := IsStep.M
+@[simp_dcc] theorem IsStep.defeq : IsStep x x' → DefEq x x' := DefEq.step
+@[simp_dcc] theorem IsStepM.defeq : IsStepM x x' → DefEq x x' := DefEq.step ∘ IsStep.M
+
+@[simp] theorem Sort.judge : ValidJudgment (Sort.type m) ⟪Sort m⟫ := ValidJudgment.Sort
+@[simp] theorem S.judge : ValidJudgment (S.type m n o) ⟪S.{[m, n, o]}⟫ := ValidJudgment.S
+@[simp] theorem K.judge : ValidJudgment (K.type m n) ⟪K.{[m, n]}⟫ := ValidJudgment.K
+@[simp] theorem K'.judge : ValidJudgment (K'.type m n) ⟪K'.{[m, n]}⟫ := ValidJudgment.K'
+@[simp] theorem Pi.judge : ValidJudgment (Pi.type m n) ⟪Π.{[m, n]}⟫ := ValidJudgment.Pi
+@[simp] theorem MK.judge : ValidJudgment (MK.type m n) ⟪M K.{[m, n]}⟫ := ValidJudgment.MK
+@[simp] theorem MK'.judge : ValidJudgment (MK'.type m n) ⟪M K'.{[m, n]}⟫ := ValidJudgment.MK'
+@[simp] theorem MS.judge : ValidJudgment (MS.type m n o) ⟪M S.{[m, n, o]}⟫ := ValidJudgment.MS
+@[simp] theorem App.judge : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
+    → ValidJudgment α x
+    → DefEq ⟪cod x⟫ t'
+    → ValidJudgment t' ⟪f x⟫ := by
+  intro h_t_f h_t_x
+  apply ValidJudgment.app
+  assumption
+  defeq refl
+  assumption

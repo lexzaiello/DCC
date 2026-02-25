@@ -85,7 +85,7 @@ inductive DefEq : Expr → Expr → Prop
 inductive ValidJudgment : Expr → Expr → Prop
   | Sort  : ValidJudgment (Sort.type m)   ⟪Sort m⟫
   | S     : ValidJudgment (S.type m n o)  ⟪S.{[m, n, o]}⟫
-  | K     : ValidJudgment (K.type m n)    ⟪S.{[m, n]}⟫
+  | K     : ValidJudgment (K.type m n)    ⟪K.{[m, n]}⟫
   | K'    : ValidJudgment (K'.type m n)   ⟪K'.{[m, n]}⟫
   | Pi    : ValidJudgment (Pi.type m n)   ⟪Π.{[m, n]}⟫
   | MK    : ValidJudgment (MK.type m n)   ⟪M K.{[m, n]}⟫
@@ -128,6 +128,14 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
+theorem K.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
+  (h_t_β : ValidJudgment (mk_arrow α ⟪Sort n⟫ m n.succ) β)
+  (h_t_x : ValidJudgment α x)
+  (h_t_y : ValidJudgment ⟪β x⟫ y) : ValidJudgment α ⟪K.{[m, n]} α β x y⟫ := by
+  judge app, app, app, app
+  
+  sorry
+
 @[simp]
 theorem S.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   (h_t_β : ValidJudgment (mk_arrow α ⟪Sort n⟫ m n.succ) β)
@@ -162,6 +170,7 @@ theorem S.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   defeq step
   stepM s₆
 
+@[simp]
 theorem S.preservation (h_t_f : ValidJudgment ⟪(Π.{[m, o]} α (M (F.{[m, n, o]} α β γ)))⟫ f)
   (h_t_g : ValidJudgment ⟪(Π.{[m, n]} α β)⟫ g)
   (h_t_x : ValidJudgment α x) :

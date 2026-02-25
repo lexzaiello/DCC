@@ -1,6 +1,10 @@
 import Dcc.Ast
 import Dcc.Types
+import Mathlib.Tactic
+import Lean
 
-public meta section
+open Lean.Meta (registerSimpAttr)
+open Lean.Meta (SimpExtension)
 
-register_simp_attr simp_dcc
+initialize simp_dcc : SimpExtension ←
+  registerSimpAttr `simp_dcc ""

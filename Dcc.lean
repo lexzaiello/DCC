@@ -1,1 +1,2 @@
-import Dcc.Relations
+import Dcc.Ast
+import Dcc.Types

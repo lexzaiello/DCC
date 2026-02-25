@@ -128,6 +128,29 @@ macro_rules
 
     `(tactic| $[$nms];*)
 
+theorem K'.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
+  (h_t_β : ValidJudgment ⟪Sort n⟫ β)
+  (h_t_x : ValidJudgment α x)
+  (h_t_y : ValidJudgment β y) : ValidJudgment α ⟪K'.{[m, n]} α β x y⟫ := by
+  judge app, app, app, app, K'
+  defeq refl
+  assumption
+  defeq step
+  stepM k'₁
+  defeq refl
+  assumption
+  defeq step
+  stepM k'₂
+  defeq refl
+  assumption
+  defeq step
+  stepM k'₃
+  defeq refl
+  assumption
+  defeq step
+  step K'
+
+@[simp]
 theorem K.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   (h_t_β : ValidJudgment (mk_arrow α ⟪Sort n⟫ m n.succ) β)
   (h_t_x : ValidJudgment α x)

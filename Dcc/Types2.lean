@@ -115,8 +115,21 @@ theorem K.preservation (h_t : ValidJudgment α ⟪K.{[m, n]} α β x y⟫) :
   cases h_t_f with
   | app h_t_f _ h_cod =>
   cases h_t_f
-  case app.app.app.app.K h_cod_y _ _ _ _ _ _ _ _ _ _ _ _ _  =>
-    cases h_cod_y
+  case app.app.app.app.K h_cod_y _ _ _ _ _ _ _ _ _ _ _ h_dom₁ h_cod₁ =>
+    cases h_dom₁
+    cases h_cod₁
+    case refl h =>
+      cases h
+      case refl h =>
+        cases h
+        case refl h =>
+          cases h_cod_y
+          cases h
+          case refl.k₄ h =>
+            cases h
+            case k₃ h _ =>
+              cases h
+              assumption
 
 theorem S.preservation (h_t : ValidJudgment ⟪γ z (y z)⟫ ⟪S.{[m, n, o]} α β γ x y z⟫) :
   ValidJudgment ⟪γ z (y z)⟫ ⟪x z (y z)⟫ := by
@@ -133,8 +146,36 @@ theorem S.preservation (h_t : ValidJudgment ⟪γ z (y z)⟫ ⟪S.{[m, n, o]} α
   cases h_t_f with
   | app h_t_f _ h_cod =>
   cases h_t_f
-  case app.app.app.app.app _ _ _ _  h_cod_t' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ __ _ _ _ _ _ _  =>
-    cases h_cod_t'
+  case app.app.app.app.S h_cod_y _ _ _ _ _ _ _ _ _ _ _ h_dom₁ h_cod₁ =>
+    cases h_cod₁
+    case refl h =>
+      cases h
+      case refl h =>
+        cases h
+        case refl h =>
+          cases h_cod_y
+          cases h
+          case refl.s₄ h =>
+            cases h
+            case refl h =>
+            cases h
+            case refl h =>
+            cases h
+            case s₆ h _ =>
+              cases h
+              apply ValidJudgment.app
+              apply ValidJudgment.app
+              assumption
+              exact IsDom.sf₄
+              assumption
+              rfl
+              exact IsDom.sf₅
+              apply ValidJudgment.app
+              assumption
+              exact IsDom.sg₁
+              assumption
+              rfl
+              rfl
 
 example : ValidJudgment ⟪Sort 1⟫ ⟪K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)⟫ := by
   apply ValidJudgment.app

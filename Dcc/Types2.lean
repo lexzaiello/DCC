@@ -55,6 +55,7 @@ def IsCod : Expr → Expr → Prop
   | ⟪M (Sγ.{[_m, _n, o]} _α _β _x)⟫, α' => ⟪Sort o⟫ = α'
   | ⟪M (Sf.{[_m, _n, _o]} _α _β γ x y)⟫, α' => ⟪γ x y⟫ = α'
   | ⟪M (Sg.{[_m, _n]} _α β x)⟫, α' => ⟪β x⟫ = α'
+  | ⟪M e⟫, α' => e = α'
   | _, _ => false
 
 inductive IsStep : Expr → Expr → Prop
@@ -76,4 +77,15 @@ inductive ValidJudgment : Expr → Expr → Prop
     → IsCod ⟪Tf x⟫ β
     → ValidJudgment β ⟪f x⟫
 
-
+theorem K'.preservation (h_t : ValidJudgment α ⟪K'.{[m, n]} α β x y⟫) : ValidJudgment α x := by
+  cases h_t with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f
+  case app.app.app.app.K' h_cod_y _ _ _ _ _ _ _ _ _ _ _ _ _  =>
+    cases h_cod_y

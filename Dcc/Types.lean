@@ -18,7 +18,7 @@ syntax "MS.type.{" term "}" : comb
 
 macro_rules
   | `(⟪mk_arrow.{[$m, $n]}($α, $β)⟫) =>
-    `(⟪(Π.{[$m, $n]} $α (K'.{[($n).succ, $m]} (Sort $n) $α $β))⟫)
+    `(⟪Π.{[$m, $n]} $α (K'.{[($n).succ, $m]} (Sort $n) $α $β)⟫)
   | `(⟪α_to_set.{[$m, $n]}($α)⟫) =>
     `(⟪mk_arrow.{[$m, ($n).succ]}($α, Sort $n)⟫)
   | `(⟪βx_to_set.{[$n, $o]}($β, $x)⟫) =>

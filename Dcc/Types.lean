@@ -114,8 +114,10 @@ inductive ValidJudgment : Expr → Expr → Prop
 declare_syntax_cat cmd
 declare_syntax_cat target
 
-syntax ident "[" ident,+ "]"     : cmd
-syntax ident "[" cmd,+ "]"       : cmd
+syntax ident : target
+syntax cmd   : target
+
+syntax ident "[" target,+ "]"     : cmd
 syntax "←" cmd : cmd
 
 syntax cmd     : tactic
@@ -150,10 +152,11 @@ macro_rules
       let f := Lean.mkIdent fn
       `(tactic| apply $fg; c $f:ident [$name:ident])
     | _ => Lean.Macro.throwUnsupported
-  | `(tactic| $c:ident [$a:ident, $xs:ident,*]) =>
-    `(tactic| $c:ident [$a:ident]; $c:ident [$xs:ident,*])
+  | `(tactic| c $c:ident [$a:target, $xs:target,*]) =>
+    `(tactic| c $c:ident [$a:target]; c $c:ident [$xs:target,*])
   | `(tactic| $c:cmd) => `(tactic| c $c)
 
 example : DefEq ⟪K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)⟫ ⟪Sort 0⟫ := by
   defeq.step [step [K']]
+
 

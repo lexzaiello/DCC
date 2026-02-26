@@ -5,12 +5,16 @@ import Dcc.Types
   (h_t_β : ValidJudgment ⟪Sort n⟫ β)
   (h_t_x : ValidJudgment α x)
   (h_t_y : ValidJudgment β y) : ValidJudgment α ⟪K'.{[m, n]} α β x y⟫ := by
-  judge.defeq [app, app, app, app]
+  judge.defeq [judge [app], judge [app], judge [app], judge [app]]
   judge [K']
   assumption
-  ← defeq [step[stepM [k'₁]]]
+  ← defeq.step [step.M [stepM [k'₁]]]
   assumption
-  sorry
+  ← defeq.step [step.M [stepM [k'₂]]]
+  assumption
+  ← defeq.step [step.M [stepM [k'₃]]]
+  assumption
+  ← defeq.step [step [K']]
 
 @[simp] theorem K.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   (h_t_β : ValidJudgment ⟪mk_arrow.{[m, n.succ]}(α, Sort n)⟫ β)

@@ -1,6 +1,5 @@
 import Dcc.Ast
 import Dcc.Types
-import Dcc.Tactic.Simp
 
 @[simp] theorem K'.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   (h_t_β : ValidJudgment ⟪Sort n⟫ β)
@@ -9,13 +8,18 @@ import Dcc.Tactic.Simp
   judgeEq app, app, app, app
   judge K'
   assumption
-  stepM? k'₁
+  defeq symm, step
+  stepM k'₁
+  step? refl
   assumption
-  stepM? k'₂
+  stepM k'₂
+  step? refl
   assumption
-  stepM? k'₃
+  stepM k'₃
+  step? refl
   assumption
-  step? K'
+  step K'
+  step? refl
 
 @[simp] theorem K.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   (h_t_β : ValidJudgment ⟪mk_arrow.{[m, n.succ]}(α, Sort n)⟫ β)
@@ -24,13 +28,17 @@ import Dcc.Tactic.Simp
   judgeEq app, app, app, app
   judge K
   assumption
-  stepM? k₁
+  stepM k₁
+  step? refl
   assumption
-  stepM? k₂
+  stepM k₂
+  step? refl
   assumption
-  stepM? k₃
+  stepM k₃
+  step? refl
   assumption
-  stepM? k₄
+  stepM k₄
+  step? refl
 
 @[simp] theorem K.preservation  : ValidJudgment α x → ValidJudgment α x := id
 @[simp] theorem K'.preservation : ValidJudgment α x → ValidJudgment α x := id
@@ -45,50 +53,52 @@ import Dcc.Tactic.Simp
   judgeEq app, app, app, app, app, app
   judge S
   assumption
-  stepM? s₁
+  stepM s₁
+  step? refl
   assumption
-  stepM? s₂
+  stepM s₂
+  step? refl
   assumption
-  stepM? s₃
+  stepM s₃
+  step? refl
   assumption
-  stepM? s₄
+  stepM s₄
+  step? refl
   assumption
-  stepM? s₅
+  stepM s₅
+  step? refl
   assumption
-  stepM? s₆
+  stepM s₆
+  step? refl
 
 @[simp] theorem S.preservation (h_t_f : ValidJudgment ⟪(Π.{[m, o]} α (M (Sf.{[m, n, o]} α β γ)))⟫ f)
   (h_t_g : ValidJudgment ⟪(Π.{[m, n]} α β)⟫ g)
   (h_t_x : ValidJudgment α x) :
   ValidJudgment ((γ.app x).app (g.app x)) ⟪f x (g x)⟫ := by
-  judgeEq app, app
+  judge app, app
   repeat assumption
-  stepM? sf
+  stepM sf
   judge app
   repeat assumption
-  step? refl
+  step? refl, refl, refl
 
 theorem preservation (h_t : ValidJudgment t e) (h_step : IsStep e e') : ValidJudgment t e' := by
   induction h_t generalizing e'
   repeat contradiction
-  case app m n α cod f α' x t' h_t_f h_deq_α h_t_x h_dq_t' ih₁ ih₂ =>
+  case defeq ih =>
+    judge defeq
+    exact ih h_step
+    assumption
+  case app m n α cod f x t' h_t_f h_t_x h_step_t ih₁ ih₂ =>
     cases h_step with
-    | left =>
+    | left h_step_f' =>
       judge app
-      exact ih₁ (by assumption)
-      exact h_deq_α
-      exact h_t_x
-      exact h_dq_t'
-    | right h_step =>
+      exact ih₁ h_step_f'
+      repeat assumption
+    | right h_step_x' =>
+      have h₁ := ih₂ h_step_x'
       judge app
-      exact h_t_f
-      exact h_deq_α
-      exact ih₂ (by assumption)
-      defeq symm, trans
-      exact h_dq_t'.symm
-      defeq right
-      exact DefEq.step h_step
-    | K =>
-      sorry
-    | S =>
+      assumption
+      exact h₁
+      
       sorry

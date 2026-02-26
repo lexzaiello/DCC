@@ -67,5 +67,6 @@ import Dcc.Types
   apply ValidJudgment.app
   assumption
   assumption
+  step? refl
 @[simp] theorem Step.defeq : IsStep e e' → DefEq e e' := DefEq.step
 @[simp] theorem StepM.defeq : IsStepM e e' → DefEq e e' := DefEq.step ∘ IsStep.M

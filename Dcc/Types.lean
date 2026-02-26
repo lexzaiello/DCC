@@ -107,57 +107,41 @@ inductive ValidJudgment : Expr → Expr → Prop
   | app   : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
     → ValidJudgment α x
     → ValidJudgment ⟪cod x⟫ ⟪f x⟫
-  | defeq : ValidJudgment t x
-    → IsStepStar t t'
-    → ValidJudgment t' x
+  | defeq : ValidJudgment t' x
+    → DefEq t t'
+    → ValidJudgment t x
 
-syntax "defeq" ident,*         : tactic
-syntax "step" ident,*          : tactic
-syntax "step?" ident,*         : tactic
-syntax "stepM?" ident,*     : tactic
-syntax "stepM" ident,*         : tactic
-syntax "judge" ident,*         : tactic
-syntax "judgeEq" ident,*        : tactic
+declare_syntax_cat cmd
+declare_syntax_cat target
+
+syntax:max ident             : target
+syntax "←" target            : target
+syntax cmd                   : target
+
+syntax ident "[" target,+ "]" : cmd
+syntax ident "∘" ident "[" target,+ "]" : cmd
+
+syntax cmd     : tactic
 
 macro_rules
-  | `(tactic| defeq $fn:ident,*) => do
-    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
-      let nm := Lean.mkIdent (Lean.Name.mkStr `DefEq name.getId.toString)
-      `(tactic| apply $nm))))
+  | `(tactic| judge ∘ defeq [$c:target]) =>
+    `(tactic| apply ValidJudgment.defeq; defeq [$c:target])
+  | `(tactic| $c:ident [$name:ident]) => do
+    let pre ← (match c with
+    | `(ident| defeq) => pure `DefEq
+    | `(ident| step) => pure `IsStep
+    | `(ident| stepM) => pure `IsStepM
+    | `(ident| step?) => pure `IsStepStar
+    | `(ident| judge) => pure `ValidJudgment
+    | _ => Lean.Macro.throwUnsupported)
+    let nm := Lean.mkIdent (Lean.Name.mkStr pre name.getId.toString)
+    `(tactic| apply $nm)
+  | `(tactic| $c:ident [← $name:target]) =>
+    `(tactic| apply DefEq.symm; $c:ident [$name:target])
+  | `(tactic| $g:ident [$f:ident [$t:target]]) =>
+    `(tactic| $g:ident [$f:ident]; $f:ident [$t:target])
+  | `(tactic| $c:ident [$a:target, $xs:target,*]) =>
+    `(tactic| $c:ident [$a:target]; $c:ident [$xs:target,*])
 
-    `(tactic| $[$nms];*)
-  | `(tactic| step $fn:ident,*) => do
-    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
-      let nm := Lean.mkIdent (Lean.Name.mkStr `IsStep name.getId.toString)
-      `(tactic| apply $nm))))
-
-    `(tactic| $[$nms];*)
-  | `(tactic| stepM? $cmd) => do
-    let inner ← `(tactic| stepM $cmd)
-    `(tactic| (apply IsStepStar.step; $inner))
-  | `(tactic| step? refl) => `(tactic| apply IsStepStar.refl)
-  | `(tactic| step? trans) => `(tactic| apply IsStepStar.trans)
-  | `(tactic| step? $fn:ident,*) => do
-    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
-      let nm := Lean.mkIdent (Lean.Name.mkStr `IsStep name.getId.toString)
-      `(tactic| (apply IsStepStar.step; apply $nm)))))
-
-    `(tactic| $[$nms];*)
-  | `(tactic| stepM $fn:ident,*) => do
-    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
-      let nm := (Lean.mkIdent (Lean.Name.mkStr `IsStepM name.getId.toString))
-      `(tactic| (apply IsStep.M; apply $nm)))))
-
-    `(tactic| $[$nms];*)
-  | `(tactic| judge $fn:ident,*) => do
-    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
-      let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
-      `(tactic| apply $nm))))
-
-    `(tactic| $[$nms];*)
-  | `(tactic| judgeEq $fn:ident,*) => do
-    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
-      let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
-      `(tactic| (apply ValidJudgment.defeq; apply $nm)))))
-
-    `(tactic| $[$nms];*)
+example : DefEq ⟪K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)⟫ ⟪Sort 0⟫ := by
+  defeq [step [K']]

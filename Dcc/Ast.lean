@@ -31,7 +31,7 @@ inductive Ty where
 deriving BEq, Repr
 
 inductive Expr where
-  | M       : Expr → Expr
+  | m       : Expr → Expr
   | comb    : Comb → Expr
   | ty      : Ty    → Expr
   | app     : Expr → Expr → Expr
@@ -58,7 +58,7 @@ syntax  "⟪" comb "⟫"     : term
 
 macro_rules
   | `(⟪Sort $n⟫) => `(Expr.ty (Ty.Sort $n))
-  | `(⟪M $c:comb⟫) => `(Expr.M ⟪$c⟫)
+  | `(⟪M $c:comb⟫) => `(Expr.m ⟪$c⟫)
   | `(⟪Π.{[$m, $n]}⟫) => `(Expr.ty (Ty.Pi $m $n))
   | `(⟪($c:comb)⟫) => `(⟪$c:comb⟫)
   | `(⟪K.{[$m:term, $n:term]}⟫) => `(Expr.comb (Comb.K $m $n))

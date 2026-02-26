@@ -7,6 +7,8 @@ syntax "K.type.{" term "}" : comb
 syntax "K.type.{" term "}" : comb
 syntax "K'.type.{" term "}" : comb
 syntax "S.type.{" term "}" : comb
+syntax "Sf.type.{" term "}" : comb
+syntax "Sγ.type.{" term "}(" comb,* ")" : comb
 syntax "S.type.type.{" term "}" : comb
 syntax "K.type.type.{" term "}" : comb
 syntax "K'.type.type.{" term "}" : comb
@@ -34,6 +36,7 @@ macro_rules
   | `(⟪MK'.type.{[$m, $_n]}⟫) => `(⟪Sort $m⟫)
   | `(⟪MK.type.{[$m, $_n]}⟫) => `(⟪Sort $m⟫)
   | `(⟪MS.type.{[$_m, $_n, $o]}⟫) => `(⟪Sort $o⟫)
+  | `(⟪Sγ.type.{[$m, $n, $o]}($α, $β)⟫) => `(⟪Π.{[$m, ($o).succ.succ]} $α (M Sγ.{[$m, $n, $o]} $α $β)⟫)
 
 inductive IsStepM : Expr → Expr → Prop
   /-
@@ -54,12 +57,12 @@ inductive IsStepM : Expr → Expr → Prop
   /-
     S combinator type:
   -/
-  | γ₂      : IsStepM ⟪(M (Sγ.{[m, n, o]} α β)) x⟫ ⟪βx_to_set.{[n, o]}(β, x)⟫
+  | γ₂      : IsStepM ⟪(M Sγ.{[m, n, o]} α β) x⟫ ⟪βx_to_set.{[n, o]}(β, x)⟫
   | F₁      : IsStepM ⟪(M (Sf.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (β x) (γ x)⟫
   | s₁      : IsStepM ⟪(M S.{[m, n, o]}) α⟫ ⟪Π.{[n.succ.succ, o]} (α_to_set.{[m, n]}(α))
     (M (S.{[m, n, o]} α))⟫
   | s₂      : IsStepM ⟪(M (S.{[m, n, o]} α)) β⟫ ⟪Π.{[o.succ.succ, o]}
-    (Π.{[m, o.succ.succ]} α (M (Sγ.{[m, n, o]} α β)))
+    Sγ.type.{[m, n, o]}(α, β)
     (M (S.{[m, n, o]} α β))⟫
   | s₃      : IsStepM ⟪(M (S.{[m, n, o]} α β)) γ⟫ ⟪Π.{[o, o]} (Π.{[m, o]} α (M (Sf.{[m, n, o]} α β γ)))
     (M (S.{[m, n, o]} α β γ))⟫

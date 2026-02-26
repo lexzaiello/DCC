@@ -1,5 +1,10 @@
 import Dcc.Ast
 
+/-
+Was messing around with these definitions of the types as macros because lean
+wasn't seeing through them for simp
+-/
+
 syntax "mk_arrow.{" term "}("  comb ","  comb ")" : comb
 syntax "α_to_set.{" term "}("  comb ")"      : comb
 syntax "βx_to_set.{" term "}("  comb "," comb ")" : comb
@@ -32,13 +37,17 @@ macro_rules
   | `(⟪K.type.type.{[$m, $_n]}⟫) => `(⟪Sort $m⟫)
   | `(⟪K'.type.type.{[$m, $_n]}⟫) => `(⟪Sort $m⟫)
   | `(⟪Sort.type.{[$m]}⟫) => `(⟪Sort ($m).succ⟫)
-  | `(⟪Π.type.{[$m, $n]}⟫) => `(⟪mk_arrow.{[($m).succ, ($n).succ]}(Sort $m, Sort $n)⟫)
+  | `(⟪Π.type.{[$m, $n]}⟫) => `(⟪Π.{[($m).succ, $n]} (Sort $m) (M Π.{[$m, $n]})⟫)
   | `(⟪MK'.type.{[$m, $_n]}⟫) => `(⟪Sort $m⟫)
   | `(⟪MK.type.{[$m, $_n]}⟫) => `(⟪Sort $m⟫)
   | `(⟪MS.type.{[$_m, $_n, $o]}⟫) => `(⟪Sort $o⟫)
   | `(⟪Sγ.type.{[$m, $n, $o]}($α, $β)⟫) => `(⟪Π.{[$m, ($o).succ.succ]} $α (M Sγ.{[$m, $n, $o]} $α $β)⟫)
 
 inductive IsStepM : Expr → Expr → Prop
+  /-
+  Π combinator type:
+  -/
+  | Pi₁     : IsStepM ⟪(M Π.{[m, n]}) α⟫ ⟪mk_arrow.{[n.succ, n.succ]}(mk_arrow.{[m, n.succ]}(α, Sort n), Sort n)⟫
   /-
     Nondependent K combinator type:
   -/
@@ -107,9 +116,9 @@ inductive ValidJudgment : Expr → Expr → Prop
   | app   : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
     → ValidJudgment α x
     → ValidJudgment ⟪cod x⟫ ⟪f x⟫
-  | defeq : ValidJudgment t' x
-    → DefEq t t'
-    → ValidJudgment t x
+  | m     : ValidJudgment t x
+    → IsStep t t'
+    → ValidJudgment t' x
 
 declare_syntax_cat cmd
 declare_syntax_cat target
@@ -134,6 +143,15 @@ def pre : Lean.Name → Lean.MacroM Lean.Name := fun predname => do
 
 macro_rules
   | `(tactic| c ← $c:cmd) => `(tactic| apply DefEq.symm; c $c)
+  | `(tactic| c step.M [$tgt:target]) =>
+    let l := Lean.mkIdent `stepM
+    `(tactic| apply IsStep.M; c $l:ident [$tgt:target])
+  | `(tactic| c step?.M [$tgt:target]) =>
+    let l := Lean.mkIdent `stepM
+    `(tactic| apply IsStepStar.step; apply IsStep.M; c $l:ident [$tgt:target])
+  | `(tactic| c defeq.step.M [$tgt:target]) =>
+    let l := Lean.mkIdent `stepM
+    `(tactic| apply DefEq.step; apply IsStep.M; c $l:ident [$tgt:target])
   | `(tactic| c $c:ident [$tgt:cmd]) => do
     match c.getId with
     | .str pred prop =>
@@ -158,5 +176,3 @@ macro_rules
 
 example : DefEq ⟪K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)⟫ ⟪Sort 0⟫ := by
   defeq.step [step [K']]
-
-

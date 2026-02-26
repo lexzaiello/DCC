@@ -115,34 +115,45 @@ declare_syntax_cat cmd
 declare_syntax_cat target
 
 syntax ident "[" ident,+ "]"     : cmd
-syntax "←" ident "[" ident,+ "]" : cmd
+syntax ident "[" cmd,+ "]"       : cmd
+syntax "←" cmd : cmd
 
 syntax cmd     : tactic
+syntax "c" cmd : tactic
+
+def pre : Lean.Name → Lean.MacroM Lean.Name := fun predname => do
+  match predname with
+  | (.str .anonymous "defeq") => pure `DefEq
+  | (.str .anonymous "step") => pure `IsStep
+  | (.str .anonymous "stepM") => pure `IsStepM
+  | (.str .anonymous "step?") => pure `IsStepStar
+  | (.str .anonymous "judge") => pure `ValidJudgment
+  | _ => Lean.Macro.throwUnsupported
 
 macro_rules
-  | `(tactic| ← $c:ident [$tgs:ident,*]) =>
-    `(tactic| apply DefEq.symm; $c:ident [$tgs,*])
-  | `(tactic| $c:ident [$name:ident]) => do
-    let pre : Lean.Name → Lean.MacroM Lean.Name := fun predname => do
-      match predname with
-      | (.str .anonymous "defeq") => pure `DefEq
-      | (.str .anonymous "step") => pure `IsStep
-      | (.str .anonymous "stepM") => pure `IsStepM
-      | (.str .anonymous "step?") => pure `IsStepStar
-      | (.str .anonymous "judge") => pure `ValidJudgment
-      | _ => Lean.Macro.throwUnsupported
-
+  | `(tactic| c ← $c:cmd) => `(tactic| apply DefEq.symm; c $c)
+  | `(tactic| c $c:ident [$tgt:cmd]) => do
+    match c.getId with
+    | .str pred prop =>
+      let fn ← pre pred
+      let fg := Lean.mkIdent (.str fn prop)
+      `(tactic| apply $fg; c $tgt)
+    | _ => Lean.Macro.throwUnsupported
+  | `(tactic| c $c:ident [$name:ident]) => do
     match c.getId with
     | c@(.str .anonymous _a) =>
       let nm := Lean.mkIdent (.str (← pre c) name.getId.toString)
       `(tactic| apply $nm)
     | .str c prop =>
-      let f := Lean.mkIdent (.str (← pre c) prop)
-      let g := Lean.mkIdent (.str .anonymous prop)
-      `(tactic| apply $f; $g:ident [$name:ident])
+      let fn ← pre c
+      let fg := Lean.mkIdent (.str fn prop)
+      let f := Lean.mkIdent fn
+      `(tactic| apply $fg; c $f:ident [$name:ident])
     | _ => Lean.Macro.throwUnsupported
   | `(tactic| $c:ident [$a:ident, $xs:ident,*]) =>
     `(tactic| $c:ident [$a:ident]; $c:ident [$xs:ident,*])
+  | `(tactic| $c:cmd) => `(tactic| c $c)
 
 example : DefEq ⟪K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)⟫ ⟪Sort 0⟫ := by
-  defeq.step [K']
+  defeq.step [step [K']]
+

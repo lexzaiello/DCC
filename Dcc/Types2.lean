@@ -185,8 +185,16 @@ example : ValidJudgment ⟪Sort 1⟫ ⟪K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (
   apply ValidJudgment.K'
   exact IsDom.k'₁
   exact ValidJudgment.Sort
-  unfold IsCod
-  simp
+  rfl
+  exact IsDom.k'₂
+  exact ValidJudgment.Sort
+  rfl
+  exact IsDom.k'₃
+  exact ValidJudgment.Sort
+  rfl
+  exact IsDom.k'₄
+  exact ValidJudgment.Sort
+  rfl
 
 theorem preservation (h_t : ValidJudgment t e) (h_step : IsStep e e') : ValidJudgment t e' := by
   induction h_t

@@ -19,10 +19,15 @@ inductive Comb where
   | K  : Level → Level → Comb
   | K' : Level → Level → Comb
   | S  : Level → Level → Level → Comb
+  -- β argument for K type:
+  | Kβ : Level → Level → Comb
    -- γ argument for S type:
   | Sγ : Level → Level → Level → Comb
   -- f argument for S type:
   | Sf : Level → Level →  Level → Comb
+  -- g argument for S type:
+  -- depends on α and β
+  | Sg : Level → Level → Comb
 deriving BEq, Repr
 
 inductive Ty where
@@ -40,8 +45,10 @@ deriving BEq, Repr
 declare_syntax_cat comb
 
 syntax:max ident                   : comb
+syntax "Kβ.{" term "}"             : comb
 syntax "Sγ.{" term "}"             : comb
 syntax "Sf.{" term "}"             : comb
+syntax "Sg.{" term "}"             : comb
 syntax "K.{" term "}"              : comb
 syntax "K'.{" term "}"             : comb
 syntax "S.{" term "}"              : comb
@@ -64,8 +71,10 @@ macro_rules
   | `(⟪K.{[$m:term, $n:term]}⟫) => `(Expr.comb (Comb.K $m $n))
   | `(⟪K'.{[$m:term, $n:term]}⟫) => `(Expr.comb (Comb.K' $m $n))
   | `(⟪S.{[$m, $n, $o]}⟫) => `(Expr.comb (Comb.S $m $n $o))
+  | `(⟪Kβ.{[$m, $n]}⟫) => `(Expr.comb (Comb.Kβ $m $n))
   | `(⟪Sγ.{[$m, $n, $o]}⟫) => `(Expr.comb (Comb.Sγ $m $n $o))
   | `(⟪Sf.{[$m, $n, $o]}⟫) => `(Expr.comb (Comb.Sf $m $n $o))
+  | `(⟪Sg.{[$m, $n]}⟫) => `(Expr.comb (Comb.Sg $m $n))
   | `(⟪$id:ident⟫) =>
     match id with
     | `(ident| $id) =>`($id:term)

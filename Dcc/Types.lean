@@ -46,7 +46,7 @@ inductive IsStepM : Expr → Expr → Prop
     Dependent K combinator type:
   -/
   | k₁      : IsStepM ⟪(M K.{[m, n]}) α⟫ ⟪Π.{[n.succ.succ, m]}
-    (#@α_to_set α m n)
+    α_to_set.{[m, n]}(α)
     (M (K.{[m, n]} α))⟫
   | k₂      : IsStepM ⟪(M (K.{[m, n]} α)) β⟫ ⟪Π.{[m, m]} α (M (K.{[m, n]} α β))⟫
   | k₃      : IsStepM ⟪(M (K.{[m, n]} α β)) x⟫ ⟪Π.{[m, m]} (β x) (M (K.{[m, n]} α β x))⟫
@@ -54,9 +54,9 @@ inductive IsStepM : Expr → Expr → Prop
   /-
     S combinator type:
   -/
-  | γ₂      : IsStepM ⟪(M (Sγ.{[m, n, o]} α β)) x⟫ (@βx_to_set β x n o)
+  | γ₂      : IsStepM ⟪(M (Sγ.{[m, n, o]} α β)) x⟫ ⟪βx_to_set.{[n, o]}(β, x)⟫
   | F₁      : IsStepM ⟪(M (Sf.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (β x) (γ x)⟫
-  | s₁      : IsStepM ⟪(M S.{[m, n, o]}) α⟫ ⟪Π.{[n.succ.succ, o]} (#@α_to_set α m n)
+  | s₁      : IsStepM ⟪(M S.{[m, n, o]}) α⟫ ⟪Π.{[n.succ.succ, o]} (α_to_set.{[m, n]}(α))
     (M (S.{[m, n, o]} α))⟫
   | s₂      : IsStepM ⟪(M (S.{[m, n, o]} α)) β⟫ ⟪Π.{[o.succ.succ, o]}
     (Π.{[m, o.succ.succ]} α (M (Sγ.{[m, n, o]} α β)))
@@ -87,14 +87,14 @@ inductive DefEq : Expr → Expr → Prop
   | right   : DefEq x x'  → DefEq ⟪f x⟫ ⟪f x'⟫
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | Sort  : ValidJudgment (@Sort.type m)   ⟪Sort m⟫
-  | S     : ValidJudgment (@S.type m n o)  ⟪S.{[m, n, o]}⟫
-  | K     : ValidJudgment (@K.type m n)    ⟪K.{[m, n]}⟫
-  | K'    : ValidJudgment (@K'.type m n)   ⟪K'.{[m, n]}⟫
-  | Pi    : ValidJudgment (@Pi.type m n)   ⟪Π.{[m, n]}⟫
-  | MK    : ValidJudgment (@MK.type m n)   ⟪M K.{[m, n]}⟫
-  | MK'   : ValidJudgment (@MK'.type m n)  ⟪M K'.{[m, n]}⟫
-  | MS    : ValidJudgment (@MS.type m n o) ⟪M S.{[m, n, o]}⟫
+  | Sort  : ValidJudgment ⟪Sort.type.{[m]}⟫   ⟪Sort m⟫
+  | S     : ValidJudgment ⟪S.type.{[m, n, o]}⟫  ⟪S.{[m, n, o]}⟫
+  | K     : ValidJudgment ⟪K.type.{[m, n]}⟫    ⟪K.{[m, n]}⟫
+  | K'    : ValidJudgment ⟪K'.type.{[m, n]}⟫   ⟪K'.{[m, n]}⟫
+  | Pi    : ValidJudgment ⟪Π.type.{[m, n]}⟫   ⟪Π.{[m, n]}⟫
+  | MK    : ValidJudgment ⟪MK.type.{[m, n]}⟫   ⟪M K.{[m, n]}⟫
+  | MK'   : ValidJudgment ⟪MK'.type.{[m, n]}⟫  ⟪M K'.{[m, n]}⟫
+  | MS    : ValidJudgment ⟪MS.type.{[m, n, o]}⟫ ⟪M S.{[m, n, o]}⟫
   | app   : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
     → DefEq α α'
     → ValidJudgment α' x

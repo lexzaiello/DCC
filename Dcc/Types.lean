@@ -81,6 +81,12 @@ inductive IsStep : Expr → Expr → Prop
   | S       : IsStep ⟪S.{[m, n, o]} α β γ x y z⟫ ⟪(x z) (y z)⟫
   | pi      : IsStep ⟪Π.{[m, n]} α β x⟫ ⟪β x⟫
 
+inductive IsStepStar : Expr → Expr → Prop
+  | refl  : IsStepStar e e
+  | step  : IsStep e e'
+    → IsStepStar e e'
+  | trans : IsStepStar e₁ e₂ → IsStepStar e₂ e₃ → IsStepStar e₁ e₃
+
 inductive DefEq : Expr → Expr → Prop
   | refl    : DefEq a a
   | symm    : DefEq e e'  → DefEq e' e
@@ -90,13 +96,13 @@ inductive DefEq : Expr → Expr → Prop
   | right   : DefEq x x'  → DefEq ⟪f x⟫ ⟪f x'⟫
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | Sort  : ValidJudgment ⟪Sort.type.{[m]}⟫   ⟪Sort m⟫
-  | S     : ValidJudgment ⟪S.type.{[m, n, o]}⟫  ⟪S.{[m, n, o]}⟫
-  | K     : ValidJudgment ⟪K.type.{[m, n]}⟫    ⟪K.{[m, n]}⟫
-  | K'    : ValidJudgment ⟪K'.type.{[m, n]}⟫   ⟪K'.{[m, n]}⟫
-  | Pi    : ValidJudgment ⟪Π.type.{[m, n]}⟫   ⟪Π.{[m, n]}⟫
-  | MK    : ValidJudgment ⟪MK.type.{[m, n]}⟫   ⟪M K.{[m, n]}⟫
-  | MK'   : ValidJudgment ⟪MK'.type.{[m, n]}⟫  ⟪M K'.{[m, n]}⟫
+  | Sort  : ValidJudgment ⟪Sort.type.{[m]}⟫ ⟪Sort m⟫
+  | S     : ValidJudgment ⟪S.type.{[m, n, o]}⟫ ⟪S.{[m, n, o]}⟫
+  | K     : ValidJudgment ⟪K.type.{[m, n]}⟫ ⟪K.{[m, n]}⟫
+  | K'    : ValidJudgment ⟪K'.type.{[m, n]}⟫ ⟪K'.{[m, n]}⟫
+  | Pi    : ValidJudgment ⟪Π.type.{[m, n]}⟫ ⟪Π.{[m, n]}⟫
+  | MK    : ValidJudgment ⟪MK.type.{[m, n]}⟫ ⟪M K.{[m, n]}⟫
+  | MK'   : ValidJudgment ⟪MK'.type.{[m, n]}⟫ ⟪M K'.{[m, n]}⟫
   | MS    : ValidJudgment ⟪MS.type.{[m, n, o]}⟫ ⟪M S.{[m, n, o]}⟫
   | app   : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
     → DefEq α α'

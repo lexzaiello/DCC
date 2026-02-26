@@ -2,6 +2,8 @@ import Dcc.Ast
 import Dcc.Types
 import Dcc.Tactic.Simp
 
+
+
 @[simp] theorem K'.well_typed (h_t_α : ValidJudgment ⟪Sort m⟫ α)
   (h_t_β : ValidJudgment ⟪Sort n⟫ β)
   (h_t_x : ValidJudgment α x)
@@ -104,13 +106,14 @@ theorem preservation (h_t : ValidJudgment t e) (h_step : IsStep e e') : ValidJud
   induction h_t generalizing e'
   repeat contradiction
   case app m n α cod f α' x t' h_t_f h_deq_α h_t_x h_dq_t' ih₁ ih₂ =>
-    cases h_step
-    judge app
-    exact ih₁ (by assumption)
-    exact h_deq_α
-    exact h_t_x
-    exact h_dq_t'
-    case right h_step =>
+    cases h_step with
+    | left =>
+      judge app
+      exact ih₁ (by assumption)
+      exact h_deq_α
+      exact h_t_x
+      exact h_dq_t'
+    | right h_step =>
       judge app
       exact h_t_f
       exact h_deq_α
@@ -119,4 +122,7 @@ theorem preservation (h_t : ValidJudgment t e) (h_step : IsStep e e') : ValidJud
       exact h_dq_t'.symm
       defeq right
       exact DefEq.step h_step
-    sorry
+    | K =>
+      sorry
+    | S =>
+      sorry

@@ -100,11 +100,23 @@ import Dcc.Tactic.Simp
   defeq refl
   defeq refl
 
-theorem preservation (h_t : ValidJudgment e t) (h_step : IsStep e e') : ValidJudgment e' t := by
-  induction h_t
-  repeat contradiction -- Things that are not types
-  case Pi m n =>
+theorem preservation (h_t : ValidJudgment t e) (h_step : IsStep e e') : ValidJudgment t e' := by
+  induction h_t generalizing e'
+  repeat contradiction
+  case app m n α cod f α' x t' h_t_f h_deq_α h_t_x h_dq_t' ih₁ ih₂ =>
     cases h_step
-    repeat contradiction
-  
-  sorry
+    judge app
+    exact ih₁ (by assumption)
+    exact h_deq_α
+    exact h_t_x
+    exact h_dq_t'
+    case right h_step =>
+      judge app
+      exact h_t_f
+      exact h_deq_α
+      exact ih₂ (by assumption)
+      defeq symm, trans
+      exact h_dq_t'.symm
+      defeq right
+      exact DefEq.step h_step
+    sorry

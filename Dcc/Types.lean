@@ -11,10 +11,10 @@ syntax "S.type.type.{" term "}" : comb
 syntax "K.type.type.{" term "}" : comb
 syntax "K'.type.type.{" term "}" : comb
 syntax "Sort.type.{" term "}" : comb
-syntax "Pi.{" term "}" : comb
-syntax "MK'.{" term "}" : comb
-syntax "MK.{" term "}" : comb
-syntax "MS.{" term "}" : comb
+syntax "Π.type.{" term "}" : comb
+syntax "MK'.type.{" term "}" : comb
+syntax "MK.type.{" term "}" : comb
+syntax "MS.type.{" term "}" : comb
 
 macro_rules
   | `(⟪mk_arrow.{[$m, $n]}($α, $β)⟫) =>
@@ -23,28 +23,17 @@ macro_rules
     `(⟪mk_arrow.{[$m, ($n).succ]}($α, Sort $n)⟫)
   | `(⟪βx_to_set.{[$n, $o]}($β, $x)⟫) =>
     `(⟪mk_arrow.{[$n, ($o).succ]}(($β $x), Sort $o)⟫)
-  | `(⟪
-
-@[macro_inline] abbrev K.type {m n : Level} : Expr :=
-  ⟪Π.{[m.succ, m]} (Sort m) (M K.{[m, n]})⟫
-
-@[macro_inline] abbrev K'.type {m n : Level} : Expr :=
-  ⟪Π.{[m.succ, m]} (Sort m) (M K'.{[m, n]})⟫
-
-@[macro_inline] abbrev S.type {m n o : Level} : Expr :=
-  ⟪Π.{[m.succ, o]} (Sort m) (M S.{[m, n, o]})⟫
-
-@[macro_inline] abbrev S_type.type  {_m _n o : Level} : Expr := ⟪Sort o⟫
-@[macro_inline] abbrev K_type.type  {m : Level} : Expr       := ⟪Sort m⟫
-@[macro_inline] abbrev K'_type.type {m : Level} : Expr       := ⟪Sort m⟫
-
-@[macro_inline] abbrev Sort.type {m : Level} : Expr := ⟪Sort m.succ⟫
-
-@[macro_inline] abbrev Pi.type {m n : Level} : Expr := @mk_arrow ⟪Sort m⟫ ⟪Sort n⟫ m.succ n.succ
-
-@[macro_inline] abbrev MK'.type {m _n    : Level} : Expr := ⟪Sort m⟫
-@[macro_inline] abbrev MK.type  {m _n    : Level} : Expr := ⟪Sort m⟫
-@[macro_inline] abbrev MS.type  {_m _n o : Level} : Expr := ⟪Sort o⟫
+  | `(⟪K.type.{[$m, $n]}⟫) => `(⟪Π.{[($m).succ, $m]} (Sort $m) (M K.{[$m, $n]})⟫)
+  | `(⟪K'.type.{[$m, $n]}⟫) => `(⟪Π.{[($m).succ, $m]} (Sort $m) (M K'.{[$m, $n]})⟫)
+  | `(⟪S.type.{[$m, $n, $o]}⟫) => `(⟪Π.{[($m).succ, $o]} (Sort $m) (M S.{[$m, $n, $o]})⟫)
+  | `(⟪S.type.type.{[$_m, $_n, $o]}⟫) => `(⟪Sort $o⟫)
+  | `(⟪K.type.type.{[$m, $_n]}⟫) => `(⟪Sort $m⟫)
+  | `(⟪K'.type.type.{[$m, $_n]}⟫) => `(⟪Sort $m⟫)
+  | `(⟪Sort.type.{[$m]}⟫) => `(⟪Sort ($m).succ⟫)
+  | `(⟪Π.type.{[$m, $n]}⟫) => `(⟪mk_arrow.{[($m).succ, ($n).succ]}(Sort $m, Sort $n)⟫)
+  | `(⟪MK'.type.{[$m, $_n]}⟫) => `(⟪Sort $m⟫)
+  | `(⟪MK.type.{[$m, $_n]}⟫) => `(⟪Sort $m⟫)
+  | `(⟪MS.type.{[$_m, $_n, $o]}⟫) => `(⟪Sort $o⟫)
 
 inductive IsStepM : Expr → Expr → Prop
   /-

@@ -57,8 +57,8 @@ inductive IsStepM : Expr → Expr → Prop
   /-
     S combinator type:
   -/
-  | γ₂      : IsStepM ⟪(M Sγ.{[m, n, o]} α β) x⟫ ⟪βx_to_set.{[n, o]}(β, x)⟫
-  | F₁      : IsStepM ⟪(M (Sf.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (β x) (γ x)⟫
+  | sγ      : IsStepM ⟪(M Sγ.{[m, n, o]} α β) x⟫ ⟪βx_to_set.{[n, o]}(β, x)⟫
+  | sf      : IsStepM ⟪(M (Sf.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (β x) (γ x)⟫
   | s₁      : IsStepM ⟪(M S.{[m, n, o]}) α⟫ ⟪Π.{[n.succ.succ, o]} (α_to_set.{[m, n]}(α))
     (M (S.{[m, n, o]} α))⟫
   | s₂      : IsStepM ⟪(M (S.{[m, n, o]} α)) β⟫ ⟪Π.{[o.succ.succ, o]}
@@ -105,15 +105,19 @@ inductive ValidJudgment : Expr → Expr → Prop
   | MK'   : ValidJudgment ⟪MK'.type.{[m, n]}⟫ ⟪M K'.{[m, n]}⟫
   | MS    : ValidJudgment ⟪MS.type.{[m, n, o]}⟫ ⟪M S.{[m, n, o]}⟫
   | app   : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
-    → DefEq α α'
-    → ValidJudgment α' x
-    → DefEq ⟪cod x⟫ t'
-    → ValidJudgment t' ⟪f x⟫
+    → ValidJudgment α x
+    → ValidJudgment ⟪cod x⟫ ⟪f x⟫
+  | defeq : ValidJudgment t x
+    → IsStepStar t t'
+    → ValidJudgment t' x
 
 syntax "defeq" ident,*         : tactic
 syntax "step" ident,*          : tactic
+syntax "step?" ident,*         : tactic
+syntax "stepM?" ident,*     : tactic
 syntax "stepM" ident,*         : tactic
 syntax "judge" ident,*         : tactic
+syntax "judgeEq" ident,*        : tactic
 
 macro_rules
   | `(tactic| defeq $fn:ident,*) => do
@@ -128,6 +132,17 @@ macro_rules
       `(tactic| apply $nm))))
 
     `(tactic| $[$nms];*)
+  | `(tactic| stepM? $cmd) => do
+    let inner ← `(tactic| stepM $cmd)
+    `(tactic| (apply IsStepStar.step; $inner))
+  | `(tactic| step? refl) => `(tactic| apply IsStepStar.refl)
+  | `(tactic| step? trans) => `(tactic| apply IsStepStar.trans)
+  | `(tactic| step? $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `IsStep name.getId.toString)
+      `(tactic| (apply IsStepStar.step; apply $nm)))))
+
+    `(tactic| $[$nms];*)
   | `(tactic| stepM $fn:ident,*) => do
     let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
       let nm := (Lean.mkIdent (Lean.Name.mkStr `IsStepM name.getId.toString))
@@ -138,5 +153,11 @@ macro_rules
     let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
       let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
       `(tactic| apply $nm))))
+
+    `(tactic| $[$nms];*)
+  | `(tactic| judgeEq $fn:ident,*) => do
+    let nms : Array (Lean.TSyntax `tactic) ← (Array.mk <$> (fn.getElems.toList.mapM (fun name =>
+      let nm := Lean.mkIdent (Lean.Name.mkStr `ValidJudgment name.getId.toString)
+      `(tactic| (apply ValidJudgment.defeq; apply $nm)))))
 
     `(tactic| $[$nms];*)

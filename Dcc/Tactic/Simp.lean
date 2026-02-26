@@ -24,8 +24,8 @@ import Dcc.Types
   DefEq.symm <|DefEq.step <| IsStep.M IsStepM.k₃
 @[simp] theorem MK₄.stepM {α β x : Expr} {m n : Level} : IsStepM ⟪(M (K.{[m, n]} α β x)) y⟫ α := IsStepM.k₄
 @[simp] theorem Sγ₂.defeq {α β x : Expr} {m n o : Level} : DefEq ⟪βx_to_set.{[n, o]}(β, x)⟫ ⟪(M (Sγ.{[m, n, o]} α β)) x⟫ :=
-  DefEq.symm <|DefEq.step <| IsStep.M IsStepM.γ₂
-@[simp] theorem Sf₁.stepM {α β γ x : Expr} {m n o : Level} : IsStepM ⟪(M (Sf.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (β x) (γ x)⟫ := IsStepM.F₁
+  DefEq.symm <|DefEq.step <| IsStep.M IsStepM.sγ
+@[simp] theorem Sf₁.stepM {α β γ x : Expr} {m n o : Level} : IsStepM ⟪(M (Sf.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (β x) (γ x)⟫ := IsStepM.sf
 @[simp] theorem S₁.defeq {α : Expr} {m n o : Level} : DefEq
   ⟪Π.{[n.succ.succ, o]} (α_to_set.{[m, n]}(α)) (M (S.{[m, n, o]} α))⟫
   ⟪(M S.{[m, n, o]}) α⟫ := DefEq.symm <|DefEq.step <| IsStep.M IsStepM.s₁
@@ -60,23 +60,12 @@ import Dcc.Types
 @[simp] theorem MK.judge {m n : Level} : ValidJudgment ⟪MK.type.{[m, n]}⟫ ⟪M K.{[m, n]}⟫ := ValidJudgment.MK
 @[simp] theorem MK'.judge {m n : Level} : ValidJudgment ⟪MK'.type.{[m, n]}⟫ ⟪M K'.{[m, n]}⟫ := ValidJudgment.MK'
 @[simp] theorem MS.judge {m n o : Level} : ValidJudgment ⟪MS.type.{[m, n, o]}⟫ ⟪M S.{[m, n, o]}⟫ := ValidJudgment.MS
-@[simp] theorem App.judge {m n : Level} {α cod f x t' : Expr} : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
-    → ValidJudgment α x
-    → DefEq ⟪cod x⟫ t'
-    → ValidJudgment t' ⟪f x⟫ := by
-  intro h_t_f h_t_x
-  apply ValidJudgment.app
-  assumption
-  defeq refl
-  assumption
-@[simp] theorem App.judge' {m n : Level} {α cod f x : Expr} : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
+@[simp] theorem App.judge {m n : Level} {α cod f x : Expr} : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
     → ValidJudgment α x
     → ValidJudgment ⟪cod x⟫ ⟪f x⟫ := by
   intro h_t_f h_t_x
   apply ValidJudgment.app
   assumption
-  defeq refl
   assumption
-  defeq refl
 @[simp] theorem Step.defeq : IsStep e e' → DefEq e e' := DefEq.step
 @[simp] theorem StepM.defeq : IsStepM e e' → DefEq e e' := DefEq.step ∘ IsStep.M

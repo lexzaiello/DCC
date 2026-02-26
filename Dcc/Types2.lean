@@ -197,10 +197,16 @@ example : ValidJudgment ⟪Sort 1⟫ ⟪K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (
   rfl
 
 theorem preservation (h_t : ValidJudgment t e) (h_step : IsStep e e') : ValidJudgment t e' := by
-  induction h_t
+  induction h_t generalizing e'
   contradiction
   contradiction
   contradiction
   contradiction
-  
-  sorry
+  case app Tf f α x β h_t_f h_dom_f h_t_x h_cod_f ih₁ ih₂ =>
+    cases h_step with
+    | left =>
+      exact ValidJudgment.app (ih₁ (by assumption)) h_dom_f h_t_x h_cod_f
+    | right =>
+      
+      sorry
+    | _ => sorry

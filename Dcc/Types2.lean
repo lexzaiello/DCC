@@ -89,3 +89,34 @@ theorem K'.preservation (h_t : ValidJudgment α ⟪K'.{[m, n]} α β x y⟫) : V
   cases h_t_f
   case app.app.app.app.K' h_cod_y _ _ _ _ _ _ _ _ _ _ _ _ _  =>
     cases h_cod_y
+
+theorem K.preservation (h_t : ValidJudgment α ⟪K.{[m, n]} α β x y⟫) : ValidJudgment α x := by
+  cases h_t with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f
+  case app.app.app.app.K h_cod_y _ _ _ _ _ _ _ _ _ _ _ _ _  =>
+    cases h_cod_y
+
+theorem S.preservation (h_t : ValidJudgment ⟪γ z (y z)⟫ ⟪S.{[m, n, o]} α β γ x y z⟫) : ValidJudgment ⟪γ z (y z)⟫ ⟪x z (y z)⟫ := by
+  cases h_t with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f with
+  | app h_t_f _ h_cod =>
+  cases h_t_f
+  case app.app.app.app.app _ _ _ _  h_cod_t' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ __ _ _ _ _ _ _  =>
+    cases h_cod_t'
+

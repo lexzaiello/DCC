@@ -1,35 +1,50 @@
 import Dcc.Ast
 
-def mk_arrow (α β : Expr) (m n : Level) : Expr :=
-  ⟪(Π.{[m, n]}
-    α (K'.{[n.succ, m]} (Sort n) α β))⟫
+syntax "mk_arrow.{" term "}("  comb ","  comb ")" : comb
+syntax "α_to_set.{" term "}("  comb ")"      : comb
+syntax "βx_to_set.{" term "}("  comb "," comb ")" : comb
+syntax "K.type.{" term "}" : comb
+syntax "K.type.{" term "}" : comb
+syntax "K'.type.{" term "}" : comb
+syntax "S.type.{" term "}" : comb
+syntax "S.type.type.{" term "}" : comb
+syntax "K.type.type.{" term "}" : comb
+syntax "K'.type.type.{" term "}" : comb
+syntax "Sort.type.{" term "}" : comb
+syntax "Pi.{" term "}" : comb
+syntax "MK'.{" term "}" : comb
+syntax "MK.{" term "}" : comb
+syntax "MS.{" term "}" : comb
 
-def α_to_set (α : Expr) (m n : Level) : Expr :=
-  mk_arrow α ⟪Sort n⟫ m n.succ
+macro_rules
+  | `(⟪mk_arrow.{[$m, $n]}($α, $β)⟫) =>
+    `(⟪(Π.{[$m, $n]} $α (K'.{[($n).succ, $m]} (Sort $n) $α $β))⟫)
+  | `(⟪α_to_set.{[$m, $n]}($α)⟫) =>
+    `(⟪mk_arrow.{[$m, ($n).succ]}($α, Sort $n)⟫)
+  | `(⟪βx_to_set.{[$n, $o]}($β, $x)⟫) =>
+    `(⟪mk_arrow.{[$n, ($o).succ]}(($β $x), Sort $o)⟫)
+  | `(⟪
 
-def βx_to_set (β x : Expr) (n o : Level) : Expr :=
-  mk_arrow ⟪β x⟫ ⟪Sort o⟫ n o.succ
-
-def K.type (m n : Level) : Expr :=
+@[macro_inline] abbrev K.type {m n : Level} : Expr :=
   ⟪Π.{[m.succ, m]} (Sort m) (M K.{[m, n]})⟫
 
-def K'.type (m n : Level) : Expr :=
+@[macro_inline] abbrev K'.type {m n : Level} : Expr :=
   ⟪Π.{[m.succ, m]} (Sort m) (M K'.{[m, n]})⟫
 
-def S.type (m n o : Level) : Expr :=
+@[macro_inline] abbrev S.type {m n o : Level} : Expr :=
   ⟪Π.{[m.succ, o]} (Sort m) (M S.{[m, n, o]})⟫
 
-def S_type.type  (_m _n o : Level) : Expr := ⟪Sort o⟫
-def K_type.type  (m : Level) : Expr       := ⟪Sort m⟫
-def K'_type.type (m : Level) : Expr       := ⟪Sort m⟫
+@[macro_inline] abbrev S_type.type  {_m _n o : Level} : Expr := ⟪Sort o⟫
+@[macro_inline] abbrev K_type.type  {m : Level} : Expr       := ⟪Sort m⟫
+@[macro_inline] abbrev K'_type.type {m : Level} : Expr       := ⟪Sort m⟫
 
-def Sort.type (m : Level) : Expr := ⟪Sort m.succ⟫
+@[macro_inline] abbrev Sort.type {m : Level} : Expr := ⟪Sort m.succ⟫
 
-def Pi.type (m n : Level) : Expr := mk_arrow ⟪Sort m⟫ ⟪Sort n⟫ m.succ n.succ
+@[macro_inline] abbrev Pi.type {m n : Level} : Expr := @mk_arrow ⟪Sort m⟫ ⟪Sort n⟫ m.succ n.succ
 
-def MK'.type (m _n    : Level) : Expr := ⟪Sort m⟫
-def MK.type  (m _n    : Level) : Expr := ⟪Sort m⟫
-def MS.type  (_m _n o : Level) : Expr := ⟪Sort o⟫
+@[macro_inline] abbrev MK'.type {m _n    : Level} : Expr := ⟪Sort m⟫
+@[macro_inline] abbrev MK.type  {m _n    : Level} : Expr := ⟪Sort m⟫
+@[macro_inline] abbrev MS.type  {_m _n o : Level} : Expr := ⟪Sort o⟫
 
 inductive IsStepM : Expr → Expr → Prop
   /-
@@ -42,7 +57,7 @@ inductive IsStepM : Expr → Expr → Prop
     Dependent K combinator type:
   -/
   | k₁      : IsStepM ⟪(M K.{[m, n]}) α⟫ ⟪Π.{[n.succ.succ, m]}
-    (#α_to_set α m n)
+    (#@α_to_set α m n)
     (M (K.{[m, n]} α))⟫
   | k₂      : IsStepM ⟪(M (K.{[m, n]} α)) β⟫ ⟪Π.{[m, m]} α (M (K.{[m, n]} α β))⟫
   | k₃      : IsStepM ⟪(M (K.{[m, n]} α β)) x⟫ ⟪Π.{[m, m]} (β x) (M (K.{[m, n]} α β x))⟫
@@ -50,9 +65,9 @@ inductive IsStepM : Expr → Expr → Prop
   /-
     S combinator type:
   -/
-  | γ₂      : IsStepM ⟪(M (Sγ.{[m, n, o]} α β)) x⟫ (βx_to_set β x n o)
+  | γ₂      : IsStepM ⟪(M (Sγ.{[m, n, o]} α β)) x⟫ (@βx_to_set β x n o)
   | F₁      : IsStepM ⟪(M (Sf.{[m, n, o]} α β γ)) x⟫ ⟪Π.{[n, o]} (β x) (γ x)⟫
-  | s₁      : IsStepM ⟪(M S.{[m, n, o]}) α⟫ ⟪Π.{[n.succ.succ, o]} (#α_to_set α m n)
+  | s₁      : IsStepM ⟪(M S.{[m, n, o]}) α⟫ ⟪Π.{[n.succ.succ, o]} (#@α_to_set α m n)
     (M (S.{[m, n, o]} α))⟫
   | s₂      : IsStepM ⟪(M (S.{[m, n, o]} α)) β⟫ ⟪Π.{[o.succ.succ, o]}
     (Π.{[m, o.succ.succ]} α (M (Sγ.{[m, n, o]} α β)))
@@ -83,14 +98,14 @@ inductive DefEq : Expr → Expr → Prop
   | right   : DefEq x x'  → DefEq ⟪f x⟫ ⟪f x'⟫
 
 inductive ValidJudgment : Expr → Expr → Prop
-  | Sort  : ValidJudgment (Sort.type m)   ⟪Sort m⟫
-  | S     : ValidJudgment (S.type m n o)  ⟪S.{[m, n, o]}⟫
-  | K     : ValidJudgment (K.type m n)    ⟪K.{[m, n]}⟫
-  | K'    : ValidJudgment (K'.type m n)   ⟪K'.{[m, n]}⟫
-  | Pi    : ValidJudgment (Pi.type m n)   ⟪Π.{[m, n]}⟫
-  | MK    : ValidJudgment (MK.type m n)   ⟪M K.{[m, n]}⟫
-  | MK'   : ValidJudgment (MK'.type m n)  ⟪M K'.{[m, n]}⟫
-  | MS    : ValidJudgment (MS.type m n o) ⟪M S.{[m, n, o]}⟫
+  | Sort  : ValidJudgment (@Sort.type m)   ⟪Sort m⟫
+  | S     : ValidJudgment (@S.type m n o)  ⟪S.{[m, n, o]}⟫
+  | K     : ValidJudgment (@K.type m n)    ⟪K.{[m, n]}⟫
+  | K'    : ValidJudgment (@K'.type m n)   ⟪K'.{[m, n]}⟫
+  | Pi    : ValidJudgment (@Pi.type m n)   ⟪Π.{[m, n]}⟫
+  | MK    : ValidJudgment (@MK.type m n)   ⟪M K.{[m, n]}⟫
+  | MK'   : ValidJudgment (@MK'.type m n)  ⟪M K'.{[m, n]}⟫
+  | MS    : ValidJudgment (@MS.type m n o) ⟪M S.{[m, n, o]}⟫
   | app   : ValidJudgment ⟪Π.{[m, n]} α cod⟫ f
     → DefEq α α'
     → ValidJudgment α' x

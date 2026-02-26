@@ -37,22 +37,20 @@ inductive Expr where
   | app     : Expr → Expr → Expr
 deriving BEq, Repr
 
-declare_syntax_cat op
 declare_syntax_cat comb
 
-syntax:max ident                        : comb
-syntax "Sγ.{" term "}"              : comb
-syntax "Sf.{" term "}"              : comb
+syntax:max ident                   : comb
+syntax "Sγ.{" term "}"             : comb
+syntax "Sf.{" term "}"             : comb
 syntax "K.{" term "}"              : comb
 syntax "K'.{" term "}"             : comb
 syntax "S.{" term "}"              : comb
-syntax "Π.{" term "}"                : comb
-syntax "M" comb                         : comb
-syntax "Sort" term                      : comb
-syntax:max "(" comb ")"                 : comb
-syntax "_"                              : comb
-syntax "#" term                         : comb
-syntax op                               : comb
+syntax "Π.{" term "}"              : comb
+syntax "M" comb                    : comb
+syntax "Sort" term                 : comb
+syntax:max "(" comb ")"            : comb
+syntax "_"                         : comb
+syntax "#" term                    : comb
 
 syntax:1022 comb:1022     comb:1023     : comb
 

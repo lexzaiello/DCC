@@ -7,6 +7,13 @@ inductive Pos where
   | tail : Pos → Pos
 deriving BEq, Repr
 
+def Pos.toNat : Pos → ℕ
+  | .head => 0
+  | .tail xs => xs.toNat.succ
+
+instance : ToString Pos where
+  toString p := toString p.toNat
+
 inductive Atom where
   | Sort   : Level → Atom
   | Syntax : Atom
@@ -17,6 +24,17 @@ inductive Atom where
   | app'   : Atom
   | Pi     : Atom
 deriving BEq, Repr
+
+instance : ToString Atom where
+  toString e := match e with
+    | .Sort m => s!"Sort {m}"
+    | .Syntax => "Syntax"
+    | .K' m n => s!"K'." ++ "{" ++ [m, n].toString ++ "}"
+    | .K m n => s!"K." ++ "{" ++ [m, n].toString ++ "}"
+    | .S m n o => s!"S." ++ "{" ++ [m, n, o].toString ++ "}"
+    | .pos p => toString p
+    | .app' => "$"
+    | .Pi => "Π"
 
 inductive Expr where
   | atom   : Atom → Expr
@@ -52,7 +70,7 @@ macro_rules
   | `(SK(tail $c)) => `(Expr.atom Atom(tail $c))
   | `(SK(pos $c)) => `(Expr.atom Atom(pos $c))
   | `(SK(Π ($α:comb), $β:comb)) => `(SK($ ($ (quot (# Expr.atom Atom.Pi)) $α) $β))
-  | `(SK(Π)) => `(Expr.atom Atom.Pi)
+  | `(SK(Π)) => `(SK(quot (#Expr.atom Atom.Pi)))
   | `(SK($f:comb $x:comb)) => `(Expr.app SK($f:comb) SK($x:comb))
   | `(Atom(tail $c)) => `(Atom.pos (Pos.tail Pos($c)))
   | `(Atom(pos $c)) => `(Atom.pos Pos($c))
@@ -80,7 +98,6 @@ macro_rules
   | `(SK($c:comb)) => `(Expr.atom Atom($c))
 
 def Expr.quote : Expr → Expr
-  | SK(Π (α), β) => SK(quot (Π (α), β))
   | .atom a => .quot (.atom a)
   | SK(f x) => SK($ (# quote f) (# quote x))
   | .quot e => .quot e

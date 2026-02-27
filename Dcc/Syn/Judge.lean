@@ -4,7 +4,7 @@ import Dcc.Syn.Step
 syntax comb "→" comb : comb
 
 macro_rules
-  | `(SK($α:comb → $β:comb)) => `(SK(Π (quot $α), quot $β))
+  | `(SK($α:comb → $β:comb)) => `(SK(Π (#Expr.quote SK($α)), (#Expr.quote SK($β))))
 
 def Sort.type (m : Level) : Expr := SK(Sort m.succ)
 def Syntax.sort : Level          := 1
@@ -83,6 +83,12 @@ inductive SynArrow : Expr → Prop
   | pure : SynArrow SK(Syntax)
   | succ : SynArrow β → SynArrow SK(Syntax → β)
 
+inductive SynStep : Expr → Expr → Prop
+  | quot : SynStep SK((quot e) x) SK(quot e)
+  | head : SynStep SK(0 f ($ qf qx)) SK(f qx)
+  | tail : SynStep SK((tail xs) f ($ qf qx)) SK((pos xs) f qf)
+  | app' : SynStep SK(($ f x) c) SK($ (f c) (x c))
+
 inductive Judge : Expr → Expr → Prop
   | sort : Judge SK(Sort m.succ) SK(Sort m)
   | app : Judge SK(Π (α), β) f
@@ -94,10 +100,11 @@ inductive Judge : Expr → Expr → Prop
   | quot : Judge SK(Syntax) SK(quot e)
   | syn  : Judge Syntax.type SK(Syntax)
   | pos  : Judge Pos.type (Expr.atom (Atom.pos p))
-  | app' : Judge Tf f
-    → Judge Tf x
-    → SynArrow Tf
-    → Judge Tf SK($ f x)
+  | app' : Judge Tf f → Judge Tf x → SynArrow Tf → Judge Tf SK($ f x)
+  | lsyn : Judge t e  → SynStep t t' → Judge t' e
+  | rsyn : Judge t e  → SynStep t' t → Judge t' e
 
 example : Judge SK(Syntax → Syntax → Syntax) Syntax.K' := by
+  apply Judge.app
+  apply Judge.app
   

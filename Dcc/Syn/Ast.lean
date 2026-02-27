@@ -15,13 +15,13 @@ inductive Atom where
   | S      : Level → Level → Level → Atom
   | pos    : Pos   → Atom
   | app'   : Atom
-  | quot   : Atom  → Atom
 deriving BEq, Repr
 
 inductive Expr where
   | atom   : Atom → Expr
   | Pi     : Expr → Expr → Expr
   | app    : Expr → Expr → Expr
+  | quot   : Expr → Expr
 deriving BEq, Repr
 
 declare_syntax_cat comb
@@ -47,12 +47,11 @@ syntax "Pos(" comb ")"  : term
 syntax "Atom(" comb ")" : term
 
 macro_rules
-  | `(SK(quot $c)) => `(Expr.atom Atom(quot $c))
+  | `(SK(quot $c)) => `(Expr.quot SK($c))
   | `(SK(tail $c)) => `(Expr.atom Atom(tail $c))
   | `(SK(pos $c)) => `(Expr.atom Atom(pos $c))
-  | `(SK(Π ($α:comb), $β:comb)) => `(Expr.Pi (SK($α) SK($β)))
+  | `(SK(Π ($α:comb), $β:comb)) => `(Expr.Pi SK($α) SK($β))
   | `(SK($f:comb $x:comb)) => `(Expr.app SK($f:comb) SK($x:comb))
-  | `(Atom(quot $c)) => `(Atom.quot Atom($c))
   | `(Atom(tail $c)) => `(Atom.pos (Pos.tail Pos($c)))
   | `(Atom(pos $c)) => `(Atom.pos Pos($c))
   | `(Pos($n:num)) =>
@@ -73,10 +72,13 @@ macro_rules
   | `(Atom(K'.{[$m:term, $n:term]})) => `(Atom.K' $m $n)
   | `(Atom(S.{[$m:term, $n:term, $o:term]})) => `(Atom.S $m $n $o)
   | `(Atom($)) => `(Atom.app')
-  | `(SK($id:ident)) =>
-    match id with
-    | `(ident| $id) =>`($id:term)
+  | `(SK($id:ident)) => `($id:term)
   | `(Atom(#$t:term)) => `($t)
   | `(SK(#$t:term)) => `($t)
   | `(SK($c:comb)) => `(Expr.atom Atom($c))
 
+def Expr.quote : Expr → Expr
+  | SK(Π (α), β) => SK(quot (Π (α), β))
+  | .atom a => .quot (.atom a)
+  | SK(f x) => SK($ (# quote f) (# quote x))
+  | .quot e => .quot e

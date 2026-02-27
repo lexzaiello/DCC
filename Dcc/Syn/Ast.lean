@@ -47,6 +47,9 @@ syntax "Pos(" comb ")"  : term
 syntax "Atom(" comb ")" : term
 
 macro_rules
+  | `(SK(quot $c)) => `(Expr.atom Atom(quot $c))
+  | `(SK(tail $c)) => `(Expr.atom Atom(tail $c))
+  | `(SK(pos $c)) => `(Expr.atom Atom(pos $c))
   | `(SK(Π ($α:comb), $β:comb)) => `(Expr.Pi (SK($α) SK($β)))
   | `(SK($f:comb $x:comb)) => `(Expr.app SK($f:comb) SK($x:comb))
   | `(Atom(quot $c)) => `(Atom.quot Atom($c))
@@ -60,6 +63,7 @@ macro_rules
       let n' := Lean.Syntax.mkNatLit n
       `(Pos.tail (Pos($n':num)))
   | `(Pos($n:ident)) => `($n:term)
+  | `(Atom($n:ident)) => `($n:term)
   | `(Atom($n:num)) => `(Atom.pos Pos($n:num))
   | `(Atom(Sort $n)) => `(Atom.Sort $n)
   | `(Atom(Syntax)) => `(Atom.Syntax)

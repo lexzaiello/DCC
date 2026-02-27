@@ -47,7 +47,7 @@ def Expr.toString (e : Expr) : String :=
   | .app (.app (.atom .app') f) g => s!"($ {f.toString} {g.toString})"
   | .atom a => ToString.toString a
   | .app f x => s!"({f.toString} {x.toString})"
-  | .quot e => s!"quot {e.toString}"
+  | .quot e => s!"(quot {e.toString})"
 
 instance : ToString Expr where
   toString := Expr.toString
@@ -76,12 +76,12 @@ syntax "Pos(" comb ")"  : term
 syntax "Atom(" comb ")" : term
 
 macro_rules
+  | `(SK(quot $)) => `(SK(quot (#Expr.atom Atom.app')))
   | `(SK(quot $c)) => `(Expr.quot SK($c))
   | `(SK(tail $c)) => `(Expr.atom Atom(tail $c))
   | `(SK(pos $c)) => `(Expr.atom Atom(pos $c))
   | `(SK(Π ($α:comb), $β:comb)) => `(SK($ ($ (quot (# Expr.atom Atom.Pi)) $α) $β))
   | `(SK($ $f:comb $g:comb)) => `((Expr.app (Expr.atom Atom.app') SK($f)).app SK($g))
-  | `(SK($)) => `(SK(quot (#Expr.atom Atom.app')))
   | `(SK(Π)) => `(SK(quot (#Expr.atom Atom.Pi)))
   | `(SK($f:comb $x:comb)) => `(Expr.app SK($f:comb) SK($x:comb))
   | `(Atom(tail $c)) => `(Atom.pos (Pos.tail Pos($c)))
@@ -109,7 +109,8 @@ macro_rules
   | `(SK($c:comb)) => `(Expr.atom Atom($c))
 
 def Expr.quote : Expr → Expr
-  | .atom a => .quot (.atom a)
-  | SK(f x) => SK($ (# quote f) (# quote x))
   | .quot e => .quot e
+  | SK(f x) => SK($ (#f.quote) (# x.quote))
+  | e => .quot e
+
 

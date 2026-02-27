@@ -4,6 +4,7 @@ import Dcc.Syn.Step
 syntax comb "→" comb : comb
 
 macro_rules
+  | `(SK($α:comb → ($β:comb → $γ:comb))) => `(SK(Π (#Expr.quote SK($α)), ($β:comb → $γ:comb)))
   | `(SK($α:comb → $β:comb)) => `(SK(Π (#Expr.quote SK($α)), (#Expr.quote SK($β))))
 
 def Sort.type (m : Level) : Expr := SK(Sort m.succ)
@@ -51,29 +52,29 @@ Note: index zero refers to self Π binder.
 -/
 
 def K'.type (m n : Level) : Expr :=
-  SK(Π (quot (Sort m)), Π (quot (Sort n)), Π (2 Syntax.id), Π (2 Syntax.id), (3 Syntax.id))
+  SK(Π (quot (Sort m)), Π (quot (Sort n)), Π (1 Syntax.id), Π (1 Syntax.id), (3 Syntax.id))
 
 def K.type (m n : Level) : Expr :=
-  SK(Π (quot (Sort m)), Π (quot (Sort n)), Π (2 Syntax.id), Π ($ (2 Syntax.id) (3 Syntax.id)), (3 Syntax.id))
+  SK(Π (quot (Sort m)), Π (quot (Sort n)), Π (1 Syntax.id), Π ($ (1 Syntax.id) (0 Syntax.id)), (3 Syntax.id))
 
 def S.type (m n o : Level) : Expr :=
   SK(Π (quot (Sort m)),
-     Π ($ ($ (rtrn Π) (1 Syntax.id)) (quot (Sort n))),
+     Π ($ ($ (rtrn Π) (0 Syntax.id)) (quot (Sort n))),
      -- γ type: create a new Π binder from α and β
      -- for β, bind the INNNER Π, not the S Π
      -- by creating a new Π expression:
      -- Π ($ (quot β) (1 Syntax.id)), (quot (Sort o))
-     Π ($ ($ (rtrn Π) (2 Syntax.id)) ($
-       ($ (rtrn Π) ($ ($ (rtrn $) (1 Syntax.id)) (rtrn (1 Syntax.id))))
+     Π ($ ($ (rtrn Π) (1 Syntax.id)) ($
+       ($ (rtrn Π) ($ ($ (rtrn (quot $)) (0 Syntax.id)) (rtrn (0 Syntax.id))))
        (rtrn (quot (Sort o))))),
      -- Similarly for x / f, except instead of (quot (Sort o)), do:
      -- $ ($ (quot γ) (2 Syntax.id)) (1 Syntax.id)
-     Π ($ ($ (rtrn Π) (3 Syntax.id)) ($
-       ($ (rtrn Π) ($ ($ (rtrn $) (2 Syntax.id)) (rtrn (1 Syntax.id))))
-       ($ ($ (rtrn $) ($ ($ (rtrn $) (2 Syntax.id)) (rtrn (1 Syntax.id)))) (rtrn (0 Syntax.id))))),
-     Π ($ (rtrn $) ($ (rtrn Π) (4 Syntax.id))
-       ($ ($ (rtrn $) (3 Syntax.id)) (rtrn (1 Syntax.id)))),
-     Π (5 Syntax.id),
+     Π ($ ($ (rtrn Π) (2 Syntax.id)) ($
+       ($ (rtrn Π) ($ ($ (rtrn (quot $)) (1 Syntax.id)) (rtrn (0 Syntax.id))))
+       ($ ($ (rtrn (quot $)) ($ ($ (rtrn (quot $)) (1 Syntax.id)) (rtrn (1 Syntax.id)))) (rtrn (0 Syntax.id))))),
+     Π ($ (rtrn (quot $)) ($ (rtrn Π) (3 Syntax.id))
+       ($ ($ (rtrn (quot $)) (2 Syntax.id)) (rtrn (0 Syntax.id)))),
+     Π (4 Syntax.id),
        ($ ($ (3 Syntax.id) (0 Syntax.id)) (1 Syntax.id) (0 Syntax.id)))
 
 def Pos.type : Expr :=
@@ -104,7 +105,11 @@ inductive Judge : Expr → Expr → Prop
   | lsyn : Judge t e  → SynStep t t' → Judge t' e
   | rsyn : Judge t e  → SynStep t' t → Judge t' e
 
+#eval toString SK(Syntax → Syntax → Syntax)
+
 example : Judge SK(Syntax → Syntax → Syntax) Syntax.K' := by
   apply Judge.app
   apply Judge.app
+  apply Judge.rsyn
+  apply Judge.K'
   

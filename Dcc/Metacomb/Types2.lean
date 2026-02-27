@@ -25,7 +25,7 @@ inductive IsDom : Expr → Expr → Prop
     S type:
   -/
   | s₁  : IsDom ⟪M (S.{[m, n, o]})⟫ ⟪Sort m⟫
-  | s₂  : IsDom ⟪M (S.{[m, n, o]})⟫ ⟪M (Kβ.{[m, n.succ]} α (Sort n))⟫
+  | s₂  : IsDom ⟪M (S.{[m, n, o]} α)⟫ ⟪M (Kβ.{[m, n.succ]} α (Sort n))⟫
   | s₃  : IsDom ⟪M (S.{[m, n, o]} α β)⟫ ⟪M (Sγ.{[m, n, o]} α β)⟫
   | s₄  : IsDom ⟪M (S.{[m, n, o]} α β γ)⟫ ⟪M (Sf.{[m, n, o]} α β γ)⟫
   | s₅  : IsDom ⟪M (S.{[m, n, o]} α β γ x)⟫ ⟪M (Sg.{[m, n]} α β)⟫
@@ -44,6 +44,23 @@ inductive IsDom : Expr → Expr → Prop
   | sg₁ : IsDom ⟪M (Sg.{[m, n]} α β)⟫ α
   | sg₂ : IsDom ⟪M (Sg.{[m, n]} α β x)⟫ ⟪β x⟫
 
+inductive IsStep : Expr → Expr → Prop
+  | left    : IsStep f f'  → IsStep ⟪f x⟫ ⟪f' x⟫
+  | right   : IsStep x x'  → IsStep ⟪f x⟫ ⟪f x'⟫
+  | K       : IsStep ⟪K.{[m, n]} α β x y⟫ x
+  | K'      : IsStep ⟪K'.{[m, n]} α β x y⟫ x
+  | S       : IsStep ⟪S.{[m, n, o]} α β γ x y z⟫ ⟪(x z) (y z)⟫
+  | pi      : IsStep ⟪Π.{[m, n]} α β x⟫ ⟪β x⟫
+
+inductive DefEq : Expr → Expr → Prop
+  | refl    : DefEq a a
+  | symm    : DefEq e e'  → DefEq e' e
+  | step    : IsStep e e' → DefEq e e'
+  | trans   : DefEq e₁ e₂ → DefEq e₂ e₃ → DefEq e₁ e₃
+  | left    : DefEq f f'  → DefEq ⟪f x⟫ ⟪f' x⟫
+  | right   : DefEq x x'  → DefEq ⟪f x⟫ ⟪f x'⟫
+
+
 /-
 For substitution later.
 -/
@@ -58,22 +75,15 @@ def IsCod : Expr → Expr → Prop
   | ⟪(M e) x⟫, α' => ⟪(M (e x))⟫ = α'
   | _, _ => false
 
-inductive IsStep : Expr → Expr → Prop
-  | left    : IsStep f f'  → IsStep ⟪f x⟫ ⟪f' x⟫
-  | right   : IsStep x x'  → IsStep ⟪f x⟫ ⟪f x'⟫
-  | K       : IsStep ⟪K.{[m, n]} α β x y⟫ x
-  | K'      : IsStep ⟪K'.{[m, n]} α β x y⟫ x
-  | S       : IsStep ⟪S.{[m, n, o]} α β γ x y z⟫ ⟪(x z) (y z)⟫
-  | pi      : IsStep ⟪Π.{[m, n]} α β x⟫ ⟪β x⟫
-
 inductive ValidJudgment : Expr → Expr → Prop
-  | Sort : ValidJudgment ⟪Sort m.succ⟫ ⟪Sort m⟫
-  | S    : ValidJudgment ⟪M S.{[m, n, o]}⟫ ⟪S.{[m, n, o]}⟫
-  | K    : ValidJudgment ⟪M K.{[m, n]}⟫ ⟪K.{[m, n]}⟫
-  | K'   : ValidJudgment ⟪M K'.{[m, n]}⟫ ⟪K'.{[m, n]}⟫
-  | app  : ValidJudgment Tf f
+  | Sort  : ValidJudgment ⟪Sort m.succ⟫ ⟪Sort m⟫
+  | S     : ValidJudgment ⟪M S.{[m, n, o]}⟫ ⟪S.{[m, n, o]}⟫
+  | K     : ValidJudgment ⟪M K.{[m, n]}⟫ ⟪K.{[m, n]}⟫
+  | K'    : ValidJudgment ⟪M K'.{[m, n]}⟫ ⟪K'.{[m, n]}⟫
+  | app   : ValidJudgment Tf f
     → IsDom Tf α
-    → ValidJudgment α x
+    → DefEq α α'
+    → ValidJudgment α' x
     → IsCod ⟪Tf x⟫ β
     → ValidJudgment β ⟪f x⟫
 
@@ -98,11 +108,15 @@ theorem K'.preservation (h_t : ValidJudgment α ⟪K'.{[m, n]} α β x y⟫) :
         case refl h =>
           cases h_cod_y
           cases h
-          case refl.k'₄ h =>
+          case Sort.refl h =>
             cases h
-            case k'₃ h _ =>
-              cases h
-              assumption
+            case k'₄ _ _ _ =>
+              
+              sorry
+          sorry
+          sorry
+          sorry
+          sorry
 
 theorem K.preservation (h_t : ValidJudgment α ⟪K.{[m, n]} α β x y⟫) :
   ValidJudgment α x := by
@@ -203,10 +217,15 @@ theorem preservation (h_t : ValidJudgment t e) (h_step : IsStep e e') : ValidJud
   contradiction
   contradiction
   case app Tf f α x β h_t_f h_dom_f h_t_x h_cod_f ih₁ ih₂ =>
-    cases h_step with
-    | left =>
+    cases h_step
+    case left =>
       exact ValidJudgment.app (ih₁ (by assumption)) h_dom_f h_t_x h_cod_f
-    | right =>
+    case right x' h_step =>
+      cases h_t_f
+      contradiction
+      have h := ih₂ (by assumption)
+      cases h_dom_f
+      cases h_cod_f
       
       sorry
-    | _ => sorry
+

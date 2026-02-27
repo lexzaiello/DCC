@@ -5,7 +5,6 @@ import Lean
 open Lean.Meta (registerSimpAttr)
 open Lean.Meta (SimpExtension)
 
-
 open Lean.Quote (quote)
 
 abbrev Level := ℕ

@@ -83,18 +83,21 @@ inductive SynArrow : Expr → Prop
   | pure : SynArrow SK(Syntax)
   | succ : SynArrow β → SynArrow SK(Syntax → β)
 
-inductive ValidJudgment : Expr → Expr → Prop
-  | sort : ValidJudgment SK(Sort m.succ) SK(Sort m)
-  | app : ValidJudgment SK(Π (α), β) f
-    → ValidJudgment SK(α (# f.quote)) x
-    → ValidJudgment β SK(f x)
-  | K'   : ValidJudgment (K'.type m n) SK(K'.{[m, n]})
-  | K    : ValidJudgment (K.type m n) SK(K.{[m, n]})
-  | S    : ValidJudgment (S.type m n o) SK(S.{[m, n, o]})
-  | quot : ValidJudgment SK(Syntax) SK(quot e)
-  | syn  : ValidJudgment Syntax.type SK(Syntax)
-  | pos  : ValidJudgment Pos.type (Expr.atom (Atom.pos p))
-  | app' : ValidJudgment Tf f
-    → ValidJudgment Tf x
+inductive Judge : Expr → Expr → Prop
+  | sort : Judge SK(Sort m.succ) SK(Sort m)
+  | app : Judge SK(Π (α), β) f
+    → Judge SK(α (# f.quote)) x
+    → Judge β SK(f x)
+  | K'   : Judge (K'.type m n) SK(K'.{[m, n]})
+  | K    : Judge (K.type m n) SK(K.{[m, n]})
+  | S    : Judge (S.type m n o) SK(S.{[m, n, o]})
+  | quot : Judge SK(Syntax) SK(quot e)
+  | syn  : Judge Syntax.type SK(Syntax)
+  | pos  : Judge Pos.type (Expr.atom (Atom.pos p))
+  | app' : Judge Tf f
+    → Judge Tf x
     → SynArrow Tf
-    → ValidJudgment Tf SK($ f x)
+    → Judge Tf SK($ f x)
+
+example : Judge SK(Syntax → Syntax → Syntax) Syntax.K' := by
+  

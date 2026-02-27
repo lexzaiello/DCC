@@ -66,4 +66,11 @@ def S.type (m n o : Level) : Expr :=
      Π ($ ($ (rtrn Π) (2 Syntax.id)) ($
        ($ (rtrn Π) ($ ($ (rtrn $) (1 Syntax.id)) (rtrn (1 Syntax.id))))
        (rtrn (quot (Sort o))))),
-     
+     -- Similarly for x / f, except instead of (quot (Sort o)), do:
+     -- $ ($ (quot γ) (2 Syntax.id)) (1 Syntax.id)
+     Π ($ ($ (rtrn Π) (3 Syntax.id)) ($
+       ($ (rtrn Π) ($ ($ (rtrn $) (2 Syntax.id)) (rtrn (1 Syntax.id))))
+       ($ ($ (rtrn $) ($ ($ (rtrn $) (2 Syntax.id)) (rtrn (1 Syntax.id)))) (rtrn (0 Syntax.id))))),
+     Π ($ ($ (rtrn Π) (2 Syntax.id)) ($
+       ($ ($ (rtrn $) (1 Syntax.id)) (rtrn (1 Syntax.id))),
+     Π ($ 

@@ -75,3 +75,15 @@ def S.type (m n o : Level) : Expr :=
        ($ ($ (rtrn $) (3 Syntax.id)) (rtrn (1 Syntax.id)))),
      Π (5 Syntax.id),
        ($ ($ (3 Syntax.id) (0 Syntax.id)) (1 Syntax.id) (0 Syntax.id)))
+
+/-
+quote e : Syntax
+-/
+def quote.type : Expr :=
+  SK(Syntax)
+
+inductive ValidJudgment : Expr → Expr → Prop
+  | app : ValidJudgment SK(Π (α), β) f
+    → ValidJudgment SK(α (# f.quote)) x
+    → ValidJudgment β SK(f x)
+  | sort : ValidJudgment SK(Sort m.succ) SK(Sort m)

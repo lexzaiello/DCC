@@ -82,3 +82,4 @@ def Expr.quote : Expr → Expr
   | .atom a => .quot (.atom a)
   | SK(f x) => SK($ (# quote f) (# quote x))
   | .quot e => .quot e
+

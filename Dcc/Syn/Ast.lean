@@ -84,6 +84,7 @@ macro_rules
   | `(SK(quot $c)) => `(Expr.quot SK($c))
   | `(SK(tail $c)) => `(Expr.atom Atom(tail $c))
   | `(SK(pos $c)) => `(Expr.atom Atom(pos $c))
+  | `(SK(Π ($α:comb), Π ($β:comb), $γ:comb)) => `(SK(Π $α (quot (Π ($β:comb), $γ:comb))))
   | `(SK(Π ($α:comb), $β:comb)) => `(SK(Π $α $β))
   | `(SK($ $f:comb $g:comb)) => `(Expr.app (Expr.app (Expr.atom Atom.app') SK($f)) SK($g))
   | `(SK($f:comb $x:comb)) => `(Expr.app SK($f:comb) SK($x:comb))
@@ -114,7 +115,7 @@ macro_rules
 
 @[simp] def Expr.quote : Expr → Expr
   | .quot e => .quot e
-  | SK(f x) => SK($ (#f.quote) (# x.quote))
+  | SK(f x) => SK($ (# f.quote) (#x.quote))
   | e => .quot e
 
 syntax comb:66 " → " comb : comb

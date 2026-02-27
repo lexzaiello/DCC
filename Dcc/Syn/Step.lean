@@ -3,19 +3,17 @@ import Dcc.Syn.Ast
 open Expr
 
 /-
-There is no extra context being invalidated.
-we have the entire expression.
+Probably do want to keep the indices relative /
+kinda like debruijn index, but for definitional equality,
+we need to be able to create a "fake" context.
 
-Checking defeq of Pi requires the application,
-but what about partial apps?
-
-Order needs to be reversed, somehow.
-then, 0 refers to the very first argument
-instead of some weird index.
-
-K x y
- ^0 ^1
-y x K
+defeq case is basically extensionality but for Pi expressions.
+since later Pi binders aren't affected by internal binders,
+we can do this recursively.
+we could technically just append a garbage value
+each level deeper we go into TyDefEq.
+but we want something that realistically couldn't be a type.
+0 isn't a type.
 -/
 
 inductive SynStep : Expr → Expr → Prop
@@ -31,8 +29,6 @@ inductive SynStep : Expr → Expr → Prop
   | app' : SynStep SK(f c) f'
     → SynStep SK(x c) x'
     → SynStep SK(($ f x) c) SK($ f' x')
-  | pi   : SynStep SK(α x) α' → SynStep SK(β x) β'
-    → SynStep SK((Π (α), β) x) SK(Π (α'), β')
 
 /-
 TODO: tomorrow. Need to chain the context inside Pi.

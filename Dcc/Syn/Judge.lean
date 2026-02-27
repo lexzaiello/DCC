@@ -75,20 +75,22 @@ inductive Unquote : Expr → Expr → Prop
 inductive StepUnquote : Expr → Expr → Prop
   | mk : SynStep e e' → Unquote e' e'' → StepUnquote e e''
 
-inductive TyDefEq : Expr → Expr → Prop
-  | pi   : TyDefEq α α'
-    → TyDefEq β β'
-    → TyDefEq SK(Π (α), β) SK(Π (α'), β')
-  | step : SynStep e e'
-    → TyDefEq e e'
-  | refl : TyDefEq e e
+inductive TyDefEq : Expr → Expr → Expr → Prop
+  | quot : TyDefEq e α β
+    → TyDefEq e SK(quot α) SK(quot β)
+  | pi   : TyDefEq f α α'
+    → TyDefEq SK($ f x) β β'
+    → TyDefEq f SK(Π (α), β) SK(Π (α'), β')
+  | step : SynStep SK(t e) t'
+    → TyDefEq e t t'
+  | refl : TyDefEq a e e
 
 inductive Judge : Expr → Expr → Prop
   | sort : Judge SK(Sort m.succ) SK(Sort m)
   | app  : Judge SK(Π (α), β) f
     → StepUnquote SK(α (# f.quote)) t_x
     → Judge t_x x
-    → SynStep SK(β (# SK(f x).quote)) t
+    → StepUnquote SK(β (# SK(f x).quote)) t
     → Judge t SK(f x)
   | K'   : Judge (K'.type m n) SK(K'.{[m, n]})
   | K    : Judge (K.type m n) SK(K.{[m, n]})
@@ -98,7 +100,7 @@ inductive Judge : Expr → Expr → Prop
   | pos  : Judge Pos.type (Expr.atom (Atom.pos p))
   | app' : Judge Tf f → Judge Tf x → SynArrow Tf → Judge Tf SK($ f x)
   | deq  : Judge t f
-    → TyDefEq t t'
+    → TyDefEq f.quote t t'
     → Judge t' f
 
 @[simp] theorem unquote_quot : Unquote SK(quot e) e := Unquote.quot
@@ -116,12 +118,8 @@ example : Judge SK(Syntax → Syntax → Syntax) Syntax.K' := by
   apply SynStep.quot
   apply Unquote.quot
   apply Judge.syn
-  apply SynStep.pi
+  apply StepUnquote.mk
   apply SynStep.quot
-  apply SynStep.pi
-  apply SynStep.tail
-  apply SynStep.head
-  
   apply Unquote.quot
   apply StepUnquote.mk
   apply SynStep.quot
@@ -131,5 +129,21 @@ example : Judge SK(Syntax → Syntax → Syntax) Syntax.K' := by
   apply SynStep.quot
   apply Unquote.quot
   apply TyDefEq.pi
-  
-  sorry
+  apply TyDefEq.step
+  apply SynStep.tail
+  apply SynStep.head
+  apply SynStep.id
+  apply TyDefEq.quot
+  apply TyDefEq.pi
+  apply TyDefEq.step
+  apply SynStep.tail
+  apply SynStep.head
+  apply SynStep.id
+  apply TyDefEq.step
+  apply SynStep.tail
+  apply SynStep.tail
+  apply SynStep.tail
+  apply SynStep.head
+  apply SynStep.id
+  exact SK(pos 0)
+  exact SK(pos 0)

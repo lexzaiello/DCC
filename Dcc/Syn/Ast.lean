@@ -42,6 +42,16 @@ inductive Expr where
   | quot   : Expr → Expr
 deriving BEq, Repr
 
+def Expr.toString (e : Expr) : String :=
+  match e with
+  | .app (.app (.atom .app') f) g => s!"($ {f.toString} {g.toString})"
+  | .atom a => ToString.toString a
+  | .app f x => s!"({f.toString} {x.toString})"
+  | .quot e => s!"quot {e.toString}"
+
+instance : ToString Expr where
+  toString := Expr.toString
+
 declare_syntax_cat comb
 
 syntax:max ident                     : comb

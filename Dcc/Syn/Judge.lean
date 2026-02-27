@@ -109,7 +109,7 @@ inductive Judge : Expr → Expr → Prop
 @[simp] theorem step_unquote₁ : SynStep e SK(quot e') → StepUnquote e e' :=
   (StepUnquote.mk · Unquote.quot)
 
-example : Judge SK(Syntax → Syntax → Syntax) Syntax.K' := by
+example : Judge SK(Syntax → Syntax → Syntax) SK(K'.{[Syntax.sort, Syntax.sort]} Syntax Syntax) := by
   apply Judge.deq
   apply Judge.app
   apply Judge.app

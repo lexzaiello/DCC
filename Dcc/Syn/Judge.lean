@@ -7,7 +7,7 @@ macro_rules
   | `(SK($α:comb → $β:comb)) => `(SK(Π (quot $α), quot $β))
 
 def Sort.type (m : Level) : Expr := SK(Sort m.succ)
-def Syntax.sort : Level := 1
+def Syntax.sort : Level          := 1
 def Syntax.type : Expr           := SK(Sort Syntax.sort)
 
 /-
@@ -31,8 +31,11 @@ def Syntax.id : Expr := SK(S.{[Syntax.sort, Syntax.sort.succ, Syntax.sort.succ]}
   (K'.{[Syntax.sort, Syntax.sort]} Syntax Syntax))
 
 /-
-Note: dom should not see the current arg.
+Note: index zero refers to self Π binder.
 -/
 
 def K'.type (m n : Level) : Expr :=
-  SK(Π (quot (Sort m)), Π (quot (Sort n)), Π (1 Syntax.id), Π (1 Syntax.id), (3 Syntax.id))
+  SK(Π (quot (Sort m)), Π (quot (Sort n)), Π (2 Syntax.id), Π (2 Syntax.id), (3 Syntax.id))
+
+def K.type (m n : Level) : Expr :=
+  SK(Π (quot (Sort m)), Π (quot (Sort n)), Π (2 Syntax.id), Π ($ (2 Syntax.id) (3 Syntax.id)), (3 Syntax.id))

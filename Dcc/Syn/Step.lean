@@ -12,8 +12,8 @@ inductive IsStep : Expr → Expr → Prop
   /-
     Quotation manipulation:
   -/
-  | head  : IsStep SK(0 f ($ qf qx)) SK(f qf)
-  | tail  : IsStep SK((tail xs) f ($ qf qx)) SK((pos xs) f qx)
+  | head  : IsStep SK(0 f ($ qf qx)) SK(f qx)
+  | tail  : IsStep SK((tail xs) f ($ qf qx)) SK((pos xs) f qf)
   | app'  : IsStep SK(($ f x) c) SK($ (f c) (x c))
   | quot  : IsStep SK((quot e) x) SK(quot e)
   /-

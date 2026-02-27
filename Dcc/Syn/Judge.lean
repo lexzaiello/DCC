@@ -39,3 +39,6 @@ def K'.type (m n : Level) : Expr :=
 
 def K.type (m n : Level) : Expr :=
   SK(Π (quot (Sort m)), Π (quot (Sort n)), Π (2 Syntax.id), Π ($ (2 Syntax.id) (3 Syntax.id)), (3 Syntax.id))
+
+def S.type (m n o : Level) : Expr :=
+  SK(Π (quot (Sort m)), Π (

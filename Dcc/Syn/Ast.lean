@@ -15,11 +15,11 @@ inductive Atom where
   | S      : Level → Level → Level → Atom
   | pos    : Pos   → Atom
   | app'   : Atom
+  | Pi     : Atom
 deriving BEq, Repr
 
 inductive Expr where
   | atom   : Atom → Expr
-  | Pi     : Expr → Expr → Expr
   | app    : Expr → Expr → Expr
   | quot   : Expr → Expr
 deriving BEq, Repr
@@ -50,7 +50,7 @@ macro_rules
   | `(SK(quot $c)) => `(Expr.quot SK($c))
   | `(SK(tail $c)) => `(Expr.atom Atom(tail $c))
   | `(SK(pos $c)) => `(Expr.atom Atom(pos $c))
-  | `(SK(Π ($α:comb), $β:comb)) => `(Expr.Pi SK($α) SK($β))
+  | `(SK(Π ($α:comb), $β:comb)) => `(SK($ ($ (quot (# Expr.atom Atom.Pi)) $α) $β))
   | `(SK($f:comb $x:comb)) => `(Expr.app SK($f:comb) SK($x:comb))
   | `(Atom(tail $c)) => `(Atom.pos (Pos.tail Pos($c)))
   | `(Atom(pos $c)) => `(Atom.pos Pos($c))

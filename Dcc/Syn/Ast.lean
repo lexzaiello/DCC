@@ -115,7 +115,7 @@ macro_rules
 
 @[simp] def Expr.quote : Expr → Expr
   | .quot e => .quot e
-  | SK(f x) => SK($ (# f.quote) (#x.quote))
+  | SK(f x) => SK($ (#f.quote) (quot x))
   | e => .quot e
 
 syntax comb:66 " → " comb : comb

@@ -37,25 +37,25 @@ def K'.type (m n : Level) : Expr :=
   SK(Π (quot (Sort m)), Π (quot (Sort n)), Π (1 id), Π (1 id), (3 id))
 
 def K.type (m n : Level) : Expr :=
-  SK(Π (quot (Sort m)), Π (quot (Sort n)), Π (1 id), Π ($ (1 id) (0 id)), (3 id))
+  SK(Π (quot (Sort m)), Π ($ ($ (quot Π) (0 id)) (quot (Sort n))), Π (1 id), Π ($ (1 id) (0 id)), (3 id))
 
 def S.type (m n o : Level) : Expr :=
   SK(Π (quot (Sort m)),
-     Π ($ ($ (rtrn (quot Π)) (0 id)) (quot (Sort n))),
+     Π ($ ($ (quot Π) (0 id)) (quot (Sort n))),
      -- γ type: create a new Π binder from α and β
      -- for β, bind the INNNER Π, not the S Π
      -- by creating a new Π expression:
      -- Π ($ (quot β) (1 id)), (quot (Sort o))
-     Π ($ ($ (rtrn (quot Π)) (1 id)) ($
-       ($ (rtrn (quot Π)) ($ ($ (rtrn (quot $)) (0 id)) (rtrn (0 id))))
-       (rtrn (quot (Sort o))))),
+     Π ($ ($ (quot Π) (1 id)) ($
+       ($ (quot Π) ($ ($ (quot $) (0 id)) (rtrn (0 id))))
+       (quot (Sort o)))),
      -- Similarly for x / f, except instead of (quot (Sort o)), do:
      -- $ ($ (quot γ) (2 id)) (1 id)
-     Π ($ ($ (rtrn (quot Π)) (2 id)) ($
-       ($ (rtrn (quot Π)) ($ ($ (rtrn (quot $)) (1 id)) (rtrn (0 id))))
-       ($ ($ (rtrn (quot $)) ($ ($ (rtrn (quot $)) (1 id)) (rtrn (1 id)))) (rtrn (0 id))))),
-     Π ($ (rtrn (quot $)) ($ (rtrn (quot Π)) (3 id))
-       ($ ($ (rtrn (quot $)) (2 id)) (rtrn (0 id)))),
+     Π ($ ($ (quot Π) (2 id)) ($
+       ($ (quot Π) ($ ($ (quot $) (1 id)) (0 id)))
+       ($ ($ (quot $) ($ ($ (quot $) (1 id)) (1 id))) (0 id)))),
+     Π ($ (quot $) ($ (quot Π) (3 id))
+       ($ ($ (quot $) (2 id)) (0 id))),
      Π (4 id),
        ($ ($ (3 id) (0 id)) (1 id) (0 id)))
 
@@ -109,7 +109,7 @@ inductive Judge : Expr → Expr → Prop
 @[simp] theorem step_unquote₁ : SynStep e SK(quot e') → StepUnquote e e' :=
   (StepUnquote.mk · Unquote.quot)
 
-example : Judge SK(Syntax → Syntax → Syntax) SK(K'.{[Syntax.sort, Syntax.sort]} Syntax Syntax) := by
+theorem K'.partial_app (α β : Expr) (m n : Level) (h_t_α : Judge SK(Sort m) α) (h_t_β : Judge SK(Sort n) β) : Judge SK(α → β → α) SK(K'.{[m, n]} α β) := by
   apply Judge.deq
   apply Judge.app
   apply Judge.app
@@ -117,14 +117,14 @@ example : Judge SK(Syntax → Syntax → Syntax) SK(K'.{[Syntax.sort, Syntax.sor
   apply StepUnquote.mk
   apply SynStep.quot
   apply Unquote.quot
-  apply Judge.syn
+  assumption
   apply StepUnquote.mk
   apply SynStep.quot
   apply Unquote.quot
   apply StepUnquote.mk
   apply SynStep.quot
   apply Unquote.quot
-  apply Judge.syn
+  assumption
   apply StepUnquote.mk
   apply SynStep.quot
   apply Unquote.quot
@@ -147,3 +147,37 @@ example : Judge SK(Syntax → Syntax → Syntax) SK(K'.{[Syntax.sort, Syntax.sor
   apply SynStep.id
   exact SK(pos 0)
   exact SK(pos 0)
+
+/-
+(K Syntax (K' Syntax.type Syntax Syntax) (quot (Sort 0)) (quot (Sort 0))) : Syntax
+-/
+example : Judge SK(quot (Sort 0)) SK(K.{[Syntax.sort, Syntax.sort]}
+  Syntax (K'.{[Syntax.sort.succ, Syntax.sort]} Syntax.type Syntax Syntax)
+  (quot (Sort 0))
+  (quot (Sort 0))) := by
+  apply Judge.deq
+  apply Judge.app
+  apply Judge.app
+  apply Judge.app
+  apply Judge.app
+  apply Judge.K
+  apply StepUnquote.mk
+  apply SynStep.quot
+  apply Unquote.quot
+  apply Judge.syn
+  apply StepUnquote.mk
+  apply SynStep.quot
+  apply Unquote.quot
+  apply StepUnquote.mk
+  apply SynStep.app'
+  apply SynStep.app'
+  apply SynStep.quot
+  apply SynStep.head
+  apply SynStep.id
+  apply SynStep.quot
+  apply Unquote.app
+  apply Unquote.app
+  repeat apply Unquote.quot
+  apply Judge.app
+  
+  sorry

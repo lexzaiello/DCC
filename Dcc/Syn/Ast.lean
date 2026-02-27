@@ -20,6 +20,7 @@ inductive Atom where
   | K'     : Level → Level → Atom
   | K      : Level → Level → Atom
   | S      : Level → Level → Level → Atom
+  | id     : Atom
   | pos    : Pos   → Atom
   | app'   : Atom
   | Pi     : Atom
@@ -32,6 +33,7 @@ instance : ToString Atom where
     | .K' m n => s!"K'." ++ "{" ++ [m, n].toString ++ "}"
     | .K m n => s!"K." ++ "{" ++ [m, n].toString ++ "}"
     | .S m n o => s!"S." ++ "{" ++ [m, n, o].toString ++ "}"
+    | .id => "id"
     | .pos p => toString p
     | .app' => "$"
     | .Pi => "Π"
@@ -66,6 +68,7 @@ syntax:max "Π" "(" comb ")" "," comb : comb
 syntax "Π"                           : comb
 syntax "K.{" term "}"                : comb
 syntax "K'.{" term "}"               : comb
+syntax "id"                          : comb
 syntax "S.{" term "}"                : comb
 syntax "$"                           : comb
 syntax "Syntax"                      : comb
@@ -81,7 +84,6 @@ macro_rules
   | `(SK(quot $c)) => `(Expr.quot SK($c))
   | `(SK(tail $c)) => `(Expr.atom Atom(tail $c))
   | `(SK(pos $c)) => `(Expr.atom Atom(pos $c))
-  | `(SK(Π ($α:comb), Π ($β:comb), $γ:comb)) => `(SK(Π ($α), (quot (Π ($β:comb), $γ:comb))))
   | `(SK(Π ($α:comb), $β:comb)) => `(SK(Π $α $β))
   | `(SK($ $f:comb $g:comb)) => `(Expr.app (Expr.app (Expr.atom Atom.app') SK($f)) SK($g))
   | `(SK($f:comb $x:comb)) => `(Expr.app SK($f:comb) SK($x:comb))
@@ -101,20 +103,32 @@ macro_rules
   | `(Atom(Syntax)) => `(Atom.Syntax)
   | `(Atom(($c:comb))) => `(Atom($c:comb))
   | `(SK(($c:comb))) => `(SK($c:comb))
+  | `(Atom(id)) => `(Atom.id)
   | `(Atom(K.{[$m:term, $n:term]})) => `(Atom.K $m $n)
   | `(Atom(K'.{[$m:term, $n:term]})) => `(Atom.K' $m $n)
   | `(Atom(S.{[$m:term, $n:term, $o:term]})) => `(Atom.S $m $n $o)
-  | `(SK($id:ident)) => `($id:term)
+  | `(SK($ide:ident)) => `($ide:term)
   | `(Atom(#$t:term)) => `($t)
   | `(SK(#$t:term)) => `($t)
   | `(SK($c:comb)) => `(Expr.atom Atom($c))
 
-def Expr.quote : Expr → Expr
+@[simp] def Expr.quote : Expr → Expr
   | .quot e => .quot e
   | SK(f x) => SK($ (#f.quote) (# x.quote))
   | e => .quot e
 
-def Expr.unquote : Expr → Expr
-  | SK($ f x) => SK((#f.unquote) (#x.unquote))
-  | .quot e => e
-  | e => e
+syntax comb:66 " → " comb : comb
+
+macro_rules
+  | `(SK($a:comb → $b:comb)) => `(SK(Π (quot $a), (quot $b)))
+
+def Sort.type (m : Level) : Expr := SK(Sort m.succ)
+def Syntax.sort : Level          := 1
+def Syntax.type : Expr           := SK(Sort Syntax.sort)
+
+/-
+Reject one syntax, output a constant syntax
+-/
+def Syntax.K'      : Expr := SK(K'.{[Syntax.sort, Syntax.sort]} Syntax Syntax)
+def Syntax.K'.type : Expr := SK(Syntax → Syntax → Syntax)
+abbrev rtrn : Expr := Syntax.K'

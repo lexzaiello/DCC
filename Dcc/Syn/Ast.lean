@@ -77,12 +77,13 @@ syntax "Atom(" comb ")" : term
 
 macro_rules
   | `(SK(quot $)) => `(SK(quot (#Expr.atom Atom.app')))
+  | `(Atom(Π)) => `(Atom.Pi) -- Π has no evaluation rule. Syntax.
   | `(SK(quot $c)) => `(Expr.quot SK($c))
   | `(SK(tail $c)) => `(Expr.atom Atom(tail $c))
   | `(SK(pos $c)) => `(Expr.atom Atom(pos $c))
-  | `(SK(Π ($α:comb), $β:comb)) => `(SK($ ($ (quot (# Expr.atom Atom.Pi)) $α) $β))
-  | `(SK($ $f:comb $g:comb)) => `((Expr.app (Expr.atom Atom.app') SK($f)).app SK($g))
-  | `(SK(Π)) => `(SK(quot (#Expr.atom Atom.Pi)))
+  | `(SK(Π ($α:comb), Π ($β:comb), $γ:comb)) => `(SK(Π ($α), (quot (Π ($β:comb), $γ:comb))))
+  | `(SK(Π ($α:comb), $β:comb)) => `(SK(Π $α $β))
+  | `(SK($ $f:comb $g:comb)) => `(Expr.app (Expr.app (Expr.atom Atom.app') SK($f)) SK($g))
   | `(SK($f:comb $x:comb)) => `(Expr.app SK($f:comb) SK($x:comb))
   | `(Atom(tail $c)) => `(Atom.pos (Pos.tail Pos($c)))
   | `(Atom(pos $c)) => `(Atom.pos Pos($c))
@@ -113,4 +114,7 @@ def Expr.quote : Expr → Expr
   | SK(f x) => SK($ (#f.quote) (# x.quote))
   | e => .quot e
 
-
+def Expr.unquote : Expr → Expr
+  | SK($ f x) => SK((#f.unquote) (#x.unquote))
+  | .quot e => e
+  | e => e

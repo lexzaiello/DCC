@@ -2,6 +2,18 @@ import Dcc.Syn.Ast
 
 open Expr
 
+inductive SynStep : Expr → Expr → Prop
+  /-
+    Quotation manipulation:
+  -/
+  | quot : SynStep SK((quot e) x) SK(quot e)
+  | head : SynStep SK(0 f ($ qf qx)) SK(f qx)
+  | tail : SynStep SK((pos xs) f qf) e'
+    → SynStep SK((tail xs) f ($ qf qx)) e'
+  | app' : SynStep SK(f c) f'
+    → SynStep SK(x c) x'
+    → SynStep SK(($ f x) c) SK($ f' x')
+
 inductive Step : Expr → Expr → Prop
   /-
     Normal SK:
@@ -9,13 +21,7 @@ inductive Step : Expr → Expr → Prop
   | K'    : Step SK(K'.{[m, n]} α β x y) x
   | K     : Step SK(K.{[m, n]} α β x y) x
   | S     : Step SK(S.{[m, n, o]} α β γ x y z) SK(x z (y z))
-  /-
-    Quotation manipulation:
-  -/
-  | head  : Step SK(0 f ($ qf qx)) SK(f qx)
-  | tail  : Step SK((tail xs) f ($ qf qx)) SK((pos xs) f qf)
-  | app'  : Step SK(($ f x) c) SK($ (f c) (x c))
-  | quot  : Step SK((quot e) x) SK(quot e)
+  | syn   : SynStep e e' → Step e e'
   /-
     Congruence:
   -/

@@ -84,10 +84,13 @@ inductive SynArrow : Expr → Prop
   | succ : SynArrow β → SynArrow SK(Syntax → β)
 
 inductive ValidJudgment : Expr → Expr → Prop
+  | sort : ValidJudgment SK(Sort m.succ) SK(Sort m)
   | app : ValidJudgment SK(Π (α), β) f
     → ValidJudgment SK(α (# f.quote)) x
     → ValidJudgment β SK(f x)
-  | sort : ValidJudgment SK(Sort m.succ) SK(Sort m)
+  | K'   : ValidJudgment (K'.type m n) SK(K'.{[m, n]})
+  | K    : ValidJudgment (K.type m n) SK(K.{[m, n]})
+  | S    : ValidJudgment (S.type m n o) SK(S.{[m, n, o]})
   | quot : ValidJudgment SK(Syntax) SK(quot e)
   | syn  : ValidJudgment Syntax.type SK(Syntax)
   | pos  : ValidJudgment Pos.type (Expr.atom (Atom.pos p))
@@ -95,4 +98,3 @@ inductive ValidJudgment : Expr → Expr → Prop
     → ValidJudgment Tf x
     → SynArrow Tf
     → ValidJudgment Tf SK($ f x)
-  

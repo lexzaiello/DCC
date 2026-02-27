@@ -76,14 +76,23 @@ def S.type (m n o : Level) : Expr :=
      Π (5 Syntax.id),
        ($ ($ (3 Syntax.id) (0 Syntax.id)) (1 Syntax.id) (0 Syntax.id)))
 
-/-
-quote e : Syntax
--/
-def quote.type : Expr :=
-  SK(Syntax)
+def Pos.type : Expr :=
+  SK((Syntax → Syntax) → Syntax → Syntax)
+
+inductive SynArrow : Expr → Prop
+  | pure : SynArrow SK(Syntax)
+  | succ : SynArrow β → SynArrow SK(Syntax → β)
 
 inductive ValidJudgment : Expr → Expr → Prop
   | app : ValidJudgment SK(Π (α), β) f
     → ValidJudgment SK(α (# f.quote)) x
     → ValidJudgment β SK(f x)
   | sort : ValidJudgment SK(Sort m.succ) SK(Sort m)
+  | quot : ValidJudgment SK(Syntax) SK(quot e)
+  | syn  : ValidJudgment Syntax.type SK(Syntax)
+  | pos  : ValidJudgment Pos.type (Expr.atom (Atom.pos p))
+  | app' : ValidJudgment Tf f
+    → ValidJudgment Tf x
+    → SynArrow Tf
+    → ValidJudgment Tf SK($ f x)
+  

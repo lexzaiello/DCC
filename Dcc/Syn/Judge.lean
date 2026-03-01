@@ -127,6 +127,12 @@ inductive Judge : Expr → Expr → Prop
   apply SynStep.head
   apply SynStep.id
 
+syntax "n_pos" num : tactic
+
+macro_rules
+  | `(tactic| n_pos $n:num) =>
+    `(tactic| (iterate $n (apply SynStep.tail)); apply SynStep.head; apply SynStep.id)
+
 theorem K'.partial_app (α β : Expr) (m n : Level) (h_t_α : Judge SK(Sort m) α) (h_t_β : Judge SK(Sort n) β) : Judge SK(α → β → α) SK(K'.{[m, n]} α β) := by
   apply Judge.deq
   apply Judge.app
@@ -148,9 +154,7 @@ theorem K'.partial_app (α β : Expr) (m n : Level) (h_t_α : Judge SK(Sort m) �
   apply TyDefEq.quoted
   apply TyDefEq.pi
   apply TyDefEq.step
-  apply SynStep.tail
-  apply SynStep.head
-  apply SynStep.id
+  n_pos 1
   apply TyDefEq.refl
   apply TyDefEq.unquoted
   apply TyDefEq.step
@@ -158,17 +162,11 @@ theorem K'.partial_app (α β : Expr) (m n : Level) (h_t_α : Judge SK(Sort m) �
   apply TyDefEq.quoted
   apply TyDefEq.pi
   apply TyDefEq.step
-  apply SynStep.tail
-  apply SynStep.head
-  apply SynStep.id
+  n_pos 1
   apply TyDefEq.refl
   apply TyDefEq.unquoted
   apply TyDefEq.step
-  apply SynStep.tail
-  apply SynStep.tail
-  apply SynStep.tail
-  apply SynStep.head
-  apply SynStep.id
+  n_pos 3
   apply TyDefEq.quoted
   apply TyDefEq.refl
 

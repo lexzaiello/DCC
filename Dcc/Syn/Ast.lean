@@ -21,7 +21,7 @@ inductive Atom where
   | K      : Level → Level → Atom
   | S      : Level → Level → Level → Atom
   | id     : Atom
-  | pos    : Pos   → Atom
+  | pos    : Pos → Atom
   | app'   : Atom
   | Pi     : Atom
 deriving BEq, Repr
@@ -110,13 +110,9 @@ macro_rules
   | `(Atom(S.{[$m:term, $n:term, $o:term]})) => `(Atom.S $m $n $o)
   | `(SK($ide:ident)) => `($ide:term)
   | `(Atom(#$t:term)) => `($t)
+  | `(Pos(#$t:term)) => `($t)
   | `(SK(#$t:term)) => `($t)
   | `(SK($c:comb)) => `(Expr.atom Atom($c))
-
-@[simp] def Expr.quote : Expr → Expr
-  | .quot e => .quot e
-  | SK(f x) => SK($ (#f.quote) (quot x))
-  | e => .quot e
 
 syntax comb:66 " → " comb : comb
 

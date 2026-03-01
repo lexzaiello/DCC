@@ -1,5 +1,7 @@
 import Dcc.Syn.Ast
 import Dcc.Syn.Step
+import Mathlib.Data.Nat.Basic
+import Mathlib.Logic.Function.Iterate
 
 /-
 SKK
@@ -66,109 +68,109 @@ inductive SynArrow : Expr → Prop
   | pure : SynArrow SK(Syntax)
   | succ : SynArrow β → SynArrow SK(Syntax → β)
 
-inductive Unquote : Expr → Expr → Prop
-  | refl : Unquote e e
-  | quot : Unquote e e'
-    → Unquote SK(quot e) e'
-  | app  : Unquote f f'
-    → Unquote x x'
-    → Unquote SK($ f x) SK(f' x')
-
 inductive TyDefEq : Expr → Expr → Expr → Prop
-  | unquote : Unquote t t'
-    → TyDefEq e t' t''
-    → TyDefEq e t t''
-  | quote   : Unquote t t'
-    → TyDefEq e t t''
-    → TyDefEq e t' t''
-  | congq   : TyDefEq e t t'
-    → TyDefEq e SK(quot t) SK(quot t')
-  | pi      : TyDefEq f SK(α (#f.quote)) α'
-    → TyDefEq SK(f x) SK(β (# SK(f x).quote)) β'
+  | pi       : TyDefEq f SK(α (quot f)) α'
+    → TyDefEq SK(f (pos 0)) SK(β (quot (f (pos 0)))) β'
     → TyDefEq f SK(Π (α), β) SK(Π (α'), β')
-  | step    : SynStep t t'
+  | step     : SynStep t t'
     → TyDefEq e t' t''
     → TyDefEq e t t''
-  | refl    : TyDefEq a t t
+  | refl     : TyDefEq a t t
+  | quoted   : TyDefEq e t t'
+    → TyDefEq e SK(quot t) t'
+  | unquoted : TyDefEq e t t'
+    → TyDefEq e t SK(quot t')
 
 inductive Judge : Expr → Expr → Prop
-  | sort : Judge SK(Sort m.succ) SK(Sort m)
-  | app  : Judge SK(Π (α), β) f
-    → Judge SK(α (# f.quote)) x
-    → Judge SK(β (# SK(f x).quote)) SK(f x)
-  | K'   : Judge (K'.type m n) SK(K'.{[m, n]})
-  | K    : Judge (K.type m n) SK(K.{[m, n]})
-  | S    : Judge (S.type m n o) SK(S.{[m, n, o]})
-  | quot : Judge SK(Syntax) SK(quot e)
-  | syn  : Judge Syntax.type SK(Syntax)
-  | pos  : Judge Pos.type (Expr.atom (Atom.pos p))
-  | app' : Judge Tf f → Judge Tf x → SynArrow Tf → Judge Tf SK($ f x)
-  | deq  : Judge t f  → TyDefEq f t t' → Judge t' f
-  | deq' : Judge t' f → TyDefEq f t t' → Judge t f
+  | sort    : Judge SK(Sort m.succ) SK(Sort m)
+  | app     : Judge SK(Π (α), β) f → Judge SK(α (quot f)) x → Judge SK(β (quot (f x))) SK(f x)
+  | K'      : Judge (K'.type m n) SK(K'.{[m, n]})
+  | K       : Judge (K.type m n) SK(K.{[m, n]})
+  | S       : Judge (S.type m n o) SK(S.{[m, n, o]})
+  | quot    : Judge SK(Syntax) SK(quot e)
+  | syn     : Judge Syntax.type SK(Syntax)
+  | pos     : Judge Pos.type (Expr.atom (Atom.pos p))
+  | app'    : Judge Tf f → Judge Tf x → SynArrow Tf → Judge Tf SK($ f x)
+  | deq     : Judge t f  → TyDefEq f t t' → Judge t' f
+  | deq'    : Judge t' f → TyDefEq f t t' → Judge t f
+
+@[simp] theorem simp_quoted (h_t : Judge t e) : Judge SK(quot t) e := Judge.deq h_t (TyDefEq.unquoted TyDefEq.refl)
+@[simp] theorem simp_quoted_app (h_t : Judge SK(quot t) e) : Judge SK((quot t) x) e := by
+  apply Judge.deq'
+  exact h_t
+  apply TyDefEq.step
+  apply SynStep.quot
+  apply TyDefEq.refl
+@[simp] theorem simp_quoted_app' : Judge t e → Judge SK((quot t) x) e := simp_quoted_app ∘ simp_quoted
+@[simp] theorem simp_defeq_quot : TyDefEq e SK((quot a) b) SK(quot a) := by
+  apply TyDefEq.step
+  apply SynStep.quot
+  apply TyDefEq.refl
+
+@[simp] theorem K'.partial_app.extracted_1_1
+  {spine : Expr}
+  {t_α α : Expr} :
+  TyDefEq α (t_α.quot.app spine) t_α := by
+  apply TyDefEq.step
+  apply SynStep.quot
+  apply TyDefEq.quoted
+  apply TyDefEq.refl
+@[simp] theorem K'.partial_app.extracted_1_2
+  {spine : Expr}
+  {t_α α : Expr} :
+  TyDefEq α (t_α.quot.app spine) t_α.quot := by
+  apply TyDefEq.unquoted
+  simp
+
+@[simp] theorem simp_step_id_head :
+  SynStep SK((0 id) (quot (a b))) SK(quot b) := by
+  apply SynStep.head
+  apply SynStep.id
 
 theorem K'.partial_app (α β : Expr) (m n : Level) (h_t_α : Judge SK(Sort m) α) (h_t_β : Judge SK(Sort n) β) : Judge SK(α → β → α) SK(K'.{[m, n]} α β) := by
   apply Judge.deq
   apply Judge.app
   apply Judge.deq
   apply Judge.app
-  apply Judge.deq
   apply Judge.K'
-  apply TyDefEq.refl
   apply Judge.deq'
   exact h_t_α
+  simp
   apply TyDefEq.step
   apply SynStep.quot
-  apply TyDefEq.unquote
-  apply Unquote.quot
-  apply Unquote.refl
-  apply TyDefEq.refl
-  apply TyDefEq.step
-  apply SynStep.quot
-  apply TyDefEq.unquote
-  apply Unquote.quot
-  apply Unquote.refl
+  apply TyDefEq.quoted
   apply TyDefEq.refl
   apply Judge.deq'
-  assumption
+  exact h_t_β
+  simp
   apply TyDefEq.step
   apply SynStep.quot
-  apply TyDefEq.unquote
-  apply Unquote.quot
-  apply Unquote.refl
-  apply TyDefEq.refl
-  apply TyDefEq.step
-  apply SynStep.quot
-  apply TyDefEq.unquote
-  apply Unquote.quot
-  apply Unquote.refl
+  apply TyDefEq.quoted
   apply TyDefEq.pi
   apply TyDefEq.step
   apply SynStep.tail
   apply SynStep.head
   apply SynStep.id
   apply TyDefEq.refl
+  apply TyDefEq.unquoted
   apply TyDefEq.step
   apply SynStep.quot
-  apply TyDefEq.unquote
-  apply Unquote.quot
-  apply Unquote.refl
-  apply TyDefEq.quote
-  apply Unquote.quot
-  apply Unquote.refl
-  apply TyDefEq.congq
+  apply TyDefEq.quoted
   apply TyDefEq.pi
   apply TyDefEq.step
   apply SynStep.tail
   apply SynStep.head
   apply SynStep.id
   apply TyDefEq.refl
+  apply TyDefEq.unquoted
   apply TyDefEq.step
-  repeat apply SynStep.tail
+  apply SynStep.tail
+  apply SynStep.tail
+  apply SynStep.tail
   apply SynStep.head
   apply SynStep.id
+  apply TyDefEq.quoted
   apply TyDefEq.refl
-  exact SK(pos 0)
-  exact SK(pos 0)
 
 /-
 (K Syntax (K' Syntax.type Syntax Syntax) (quot (Sort 0)) (quot (Sort 0))) : Syntax
@@ -179,10 +181,49 @@ example : Judge SK(Syntax) SK(K.{[Syntax.sort, Syntax.sort]} Syntax
   (quot (Sort 0))) := by
   apply Judge.deq
   apply Judge.app
+  apply Judge.deq
   apply Judge.app
+  apply Judge.deq
   apply Judge.app
+  apply Judge.deq
   apply Judge.app
   apply Judge.K
+  apply Judge.deq'
+  apply Judge.syn
+  apply TyDefEq.step
+  apply SynStep.quot
+  apply TyDefEq.unquote
+  apply Unquote.quot
+  apply Unquote.refl
+  apply TyDefEq.refl
+  apply TyDefEq.step
+  apply SynStep.quot
+  apply TyDefEq.unquote
+  apply Unquote.quot
+  apply Unquote.refl
+  apply TyDefEq.refl
+  apply Judge.deq'
+  apply Judge.app
+  apply K'.partial_app
+  apply Judge.sort
+  apply Judge.syn
+  apply Judge.deq'
+  apply Judge.syn
+  apply TyDefEq.step
+  apply SynStep.quot
+  apply TyDefEq.unquote
+  apply Unquote.quot
+  apply Unquote.refl
+  apply TyDefEq.refl
+  apply TyDefEq.step
+  apply SynStep.app'
+  apply SynStep.app'
+  apply SynStep.quot
+  apply SynStep.head
+  apply SynStep.id
+  apply SynStep.quot
+  
+  
   apply StepUnquote.mk
   apply SynStep.quot
   apply Unquote.quot

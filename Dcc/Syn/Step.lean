@@ -3,42 +3,29 @@ import Dcc.Syn.Ast
 open Expr
 
 /-
-Probably do want to keep the indices relative /
-kinda like debruijn index, but for definitional equality,
-we need to be able to create a "fake" context.
+Indices need to work from the inside out
+for def eq to be straight-forward.
 
-defeq case is basically extensionality but for Pi expressions.
-since later Pi binders aren't affected by internal binders,
-we can do this recursively.
-we could technically just append a garbage value
-each level deeper we go into TyDefEq.
-but we want something that realistically couldn't be a type.
-0 isn't a type.
+we can't go in order of the application,
+the actual expression needs to be last argument first.
+
+some kind of offset? nah.
+just some kind of dummy value.
 -/
+
 
 inductive SynStep : Expr → Expr → Prop
   /-
     Quotation manipulation:
   -/
   | quot : SynStep SK((quot e) x) SK(quot e)
-  | head : SynStep SK(f qx) e'
-    → SynStep SK(0 f ($ qf qx)) e'
+  | head : SynStep SK(f (quot qx)) e'
+    → SynStep SK(0 f (quot (qf qx))) e'
   | id   : SynStep SK(id x) x
-  | tail : SynStep SK((pos xs) f qf) e'
-    → SynStep SK((tail xs) f ($ qf qx)) e'
-  | app' : SynStep SK(f c) f'
-    → SynStep SK(x c) x'
+  | tail : SynStep SK((pos xs) f (quot qf)) e'
+    → SynStep SK((tail xs) f (quot (qf qx))) e'
+  | app' : SynStep SK(f c) f' → SynStep SK(x c) x'
     → SynStep SK(($ f x) c) SK($ f' x')
-
-/-
-TODO: tomorrow. Need to chain the context inside Pi.
-
-pass (f x ...) into next pi via
-
-($ (quote Pi...) ($ (f x ...) id))
-
-also, we may not be quoting in some places in ValidJudgment.app
--/
 
 inductive Step : Expr → Expr → Prop
   /-

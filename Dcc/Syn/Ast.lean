@@ -1,5 +1,12 @@
 import Mathlib.Data.Nat.Notation
 
+/-
+debruijn combinators are quite nice.
+
+0 f stx = f stx
+(succ n) f stx = n f stx
+-/
+
 abbrev Level := ℕ
 
 inductive Pos where

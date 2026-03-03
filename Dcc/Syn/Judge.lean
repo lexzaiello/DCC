@@ -69,6 +69,9 @@ inductive SynArrow : Expr → Prop
   | succ : SynArrow β → SynArrow SK(Syntax → β)
 
 inductive TyDefEq : Expr → Expr → Expr → Prop
+  | app'     : TyDefEq e f f'
+    → TyDefEq e x x'
+    → TyDefEq e SK($ f x) SK(f' x')
   | pi       : TyDefEq f SK(α (quot f)) α'
     → TyDefEq SK(f (pos 0)) SK(β (quot (f (pos 0)))) β'
     → TyDefEq f SK(Π (α), β) SK(Π (α'), β')
@@ -78,8 +81,8 @@ inductive TyDefEq : Expr → Expr → Expr → Prop
   | refl     : TyDefEq a t t
   | quoted   : TyDefEq e t t'
     → TyDefEq e SK(quot t) t'
-  | unquoted : TyDefEq e t t'
-    → TyDefEq e t SK(quot t')
+  | symm     : TyDefEq e t t'
+    → TyDefEq e t' t
 
 inductive Judge : Expr → Expr → Prop
   | sort    : Judge SK(Sort m.succ) SK(Sort m)
@@ -92,12 +95,12 @@ inductive Judge : Expr → Expr → Prop
   | pos     : Judge Pos.type (Expr.atom (Atom.pos p))
   | app'    : Judge Tf f → Judge Tf x → SynArrow Tf → Judge Tf SK($ f x)
   | deq     : Judge t f  → TyDefEq f t t' → Judge t' f
-  | deq'    : Judge t' f → TyDefEq f t t' → Judge t f
 
 @[simp] theorem simp_quoted (h_t : Judge t e) : Judge SK(quot t) e := Judge.deq h_t (TyDefEq.unquoted TyDefEq.refl)
 @[simp] theorem simp_quoted_app (h_t : Judge SK(quot t) e) : Judge SK((quot t) x) e := by
-  apply Judge.deq'
+  apply Judge.deq
   exact h_t
+  apply TyDefEq.symm
   apply TyDefEq.step
   apply SynStep.quot
   apply TyDefEq.refl
@@ -119,8 +122,13 @@ inductive Judge : Expr → Expr → Prop
   {spine : Expr}
   {t_α α : Expr} :
   TyDefEq α (t_α.quot.app spine) t_α.quot := by
-  apply TyDefEq.unquoted
-  simp
+  apply TyDefEq.symm
+  apply TyDefEq.quoted
+  apply TyDefEq.symm
+  apply TyDefEq.step
+  apply SynStep.quot
+  apply TyDefEq.quoted
+  apply TyDefEq.refl
 
 @[simp] theorem simp_step_id_head :
   SynStep SK((0 id) (quot (a b))) SK(quot b) := by
@@ -128,26 +136,27 @@ inductive Judge : Expr → Expr → Prop
   apply SynStep.id
 
 syntax "n_pos" num : tactic
+syntax "n_sub" num : tactic
+syntax "app_n" num term : tactic
+syntax "quot_app" : tactic
 
 macro_rules
   | `(tactic| n_pos $n:num) =>
     `(tactic| (iterate $n (apply SynStep.tail)); apply SynStep.head; apply SynStep.id)
+  | `(tactic| app_n $n:num $judge_spine:term) =>
+    `(tactic| ((iterate $n (apply Judge.deq; apply Judge.app)); apply $judge_spine; apply Judge.deq))
+  | `(tactic| quot_app) =>
+    `(tactic| apply TyDefEq.step; apply SynStep.quot; apply TyDefEq.quoted; apply TyDefEq.refl)
 
 theorem K'.partial_app (α β : Expr) (m n : Level) (h_t_α : Judge SK(Sort m) α) (h_t_β : Judge SK(Sort n) β) : Judge SK(α → β → α) SK(K'.{[m, n]} α β) := by
-  apply Judge.deq
-  apply Judge.app
-  apply Judge.deq
-  apply Judge.app
-  apply Judge.K'
-  apply Judge.deq'
+  app_n 2 Judge.K'
   exact h_t_α
+  apply TyDefEq.symm
   simp
-  apply TyDefEq.step
-  apply SynStep.quot
-  apply TyDefEq.quoted
-  apply TyDefEq.refl
-  apply Judge.deq'
+  quot_app
+  apply Judge.deq
   exact h_t_β
+  apply TyDefEq.symm
   simp
   apply TyDefEq.step
   apply SynStep.quot
@@ -156,7 +165,9 @@ theorem K'.partial_app (α β : Expr) (m n : Level) (h_t_α : Judge SK(Sort m) �
   apply TyDefEq.step
   n_pos 1
   apply TyDefEq.refl
-  apply TyDefEq.unquoted
+  apply TyDefEq.symm
+  apply TyDefEq.quoted
+  apply TyDefEq.symm
   apply TyDefEq.step
   apply SynStep.quot
   apply TyDefEq.quoted
@@ -164,7 +175,9 @@ theorem K'.partial_app (α β : Expr) (m n : Level) (h_t_α : Judge SK(Sort m) �
   apply TyDefEq.step
   n_pos 1
   apply TyDefEq.refl
-  apply TyDefEq.unquoted
+  apply TyDefEq.symm
+  apply TyDefEq.quoted
+  apply TyDefEq.symm
   apply TyDefEq.step
   n_pos 3
   apply TyDefEq.quoted
@@ -177,81 +190,59 @@ example : Judge SK(Syntax) SK(K.{[Syntax.sort, Syntax.sort]} Syntax
   (K'.{[Syntax.sort.succ, Syntax.sort]} Syntax.type Syntax Syntax)
   (quot (Sort 0))
   (quot (Sort 0))) := by
+  app_n 4 Judge.K
+  exact Judge.syn
+  apply TyDefEq.symm
+  quot_app
+  quot_app
   apply Judge.deq
-  apply Judge.app
-  apply Judge.deq
-  apply Judge.app
-  apply Judge.deq
-  apply Judge.app
-  apply Judge.deq
-  apply Judge.app
-  apply Judge.K
-  apply Judge.deq'
-  apply Judge.syn
-  apply TyDefEq.step
-  apply SynStep.quot
-  apply TyDefEq.unquote
-  apply Unquote.quot
-  apply Unquote.refl
-  apply TyDefEq.refl
-  apply TyDefEq.step
-  apply SynStep.quot
-  apply TyDefEq.unquote
-  apply Unquote.quot
-  apply Unquote.refl
-  apply TyDefEq.refl
-  apply Judge.deq'
   apply Judge.app
   apply K'.partial_app
-  apply Judge.sort
-  apply Judge.syn
-  apply Judge.deq'
-  apply Judge.syn
+  exact Judge.sort
+  exact Judge.syn
+  apply Judge.deq
+  exact Judge.syn
+  apply TyDefEq.symm
+  quot_app
+  apply TyDefEq.symm
+  apply TyDefEq.step
+  apply SynStep.app'
+  apply SynStep.app'
+  apply SynStep.quot
+  n_pos 0
+  apply SynStep.quot
+  apply TyDefEq.symm
   apply TyDefEq.step
   apply SynStep.quot
-  apply TyDefEq.unquote
-  apply Unquote.quot
-  apply Unquote.refl
+  apply TyDefEq.quoted
+  apply TyDefEq.symm
+  apply TyDefEq.app'
+  apply TyDefEq.app'
+  apply TyDefEq.quoted
+  apply TyDefEq.refl
+  apply TyDefEq.refl
   apply TyDefEq.refl
   apply TyDefEq.step
-  apply SynStep.app'
-  apply SynStep.app'
   apply SynStep.quot
+  apply TyDefEq.quoted
+  apply TyDefEq.refl
+  apply Judge.deq
+  apply Judge.quot
+  apply TyDefEq.symm
+  apply TyDefEq.step
+  apply SynStep.tail
   apply SynStep.head
   apply SynStep.id
+  apply TyDefEq.quoted
+  apply TyDefEq.refl
+  apply TyDefEq.step
   apply SynStep.quot
+  apply TyDefEq.quoted
+  apply TyDefEq.refl
+  apply Judge.deq
+  apply Judge.quot
+  apply TyDefEq.symm
+  apply TyDefEq.step
   
-  
-  apply StepUnquote.mk
-  apply SynStep.quot
-  apply Unquote.quot
-  apply Unquote.refl
-  apply Judge.syn
-  apply StepUnquote.mk
-  apply SynStep.quot
-  apply Unquote.quot
-  apply Unquote.refl
-  apply StepUnquote.mk
-  apply SynStep.app'
-  apply SynStep.app'
-  apply SynStep.quot
-  apply SynStep.head
-  apply SynStep.id
-  apply SynStep.quot
-  apply Unquote.app
-  apply Unquote.app
-  repeat (apply Unquote.quot; apply Unquote.refl)
-  apply Judge.app
-  apply K'.partial_app
-  apply Judge.sort
-  apply Judge.syn
-  apply StepUnquote.mk
-  apply SynStep.quot
-  apply Unquote.quot
-  apply Unquote.refl
-  apply Judge.syn
-  apply StepUnquote.mk
-  apply SynStep.quot
-  apply Unquote.quot
-  
+
   sorry

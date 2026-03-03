@@ -11,9 +11,4 @@ idx references the context. what is an idx?
 
 we just want to avoid a ton of constructors.
 would be cool if we could condense all the M c rules into one rule.
-
-the other larp is to model the context as inert syntactic objects
-that we're just rearranging. then, we can get away with all kinds of shenanigans.
-
-
 -/

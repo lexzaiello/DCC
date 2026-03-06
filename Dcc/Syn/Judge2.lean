@@ -8,14 +8,16 @@ inductive red : Expr → Expr → Prop
   | K     : red ⸨(K m n) α β x y⸩ x
   | K'    : red ⸨(K' m n) α β x y⸩ x
   | S     : red ⸨(S m n o) α β γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
-  | Pi    : red (Π' α, ⸨β x⸩) (Π' ⸨α x⸩, ⸨β x⸩)
+  | Pi    : red (Π' α, ⸨β x⸩) (Π' ⸨α x⸩, β')
   /-
     Quotation manipulation
   -/
-  | head  : red ⸨head fn (quot ⸨f x⸩)⸩ ⸨fn (quot f)⸩
+  | head  : red ⸨fn (quot f)⸩ f'
+    → red ⸨head fn (quot ⸨f x⸩)⸩ f'
   -- Not sure about this one: want to be able to partially apply nested tail
-  | tail  : red ⸨tail fn (quot ⸨f x⸩)⸩ ⸨fn (quot x)⸩
-  | app'  : red ⸨$ f x (quot e)⸩ ⸨$ ⸨f (quot e)⸩ ⸨x (quot e)⸩⸩
+  | tail  : red ⸨fn (quot x)⸩ x'
+    → red ⸨tail fn (quot ⸨f x⸩)⸩ x'
+  | app'  : red ⸨$ (f, x) (quot e)⸩ ⸨$ (⸨f (quot e)⸩, ⸨x (quot e)⸩)⸩
   | left  : red f f' → red ⸨f x⸩ ⸨f' x⸩
   | right : red x x' → red ⸨f x⸩ ⸨f x'⸩
 
@@ -34,14 +36,26 @@ def I.type (m : Level) : Expr :=
 
 def K.type (m n : Level) : Expr :=
    (Π' (quot (Srt m))
-  , Π' (⸨tail Syntax.id⸩ ~> (quot (Srt n)))
+  , Π' (Π' ⸨tail Syntax.id⸩, (quot (Srt n)))
   , Π' ⸨head ⸨tail Syntax.id⸩⸩
-  , Π' ⸨$ ⸨⸨head ⸨tail Syntax.id⸩⸩ ⸨tail Syntax.id⸩⸩⸩
+  , Π' ⸨$ (⸨head ⸨tail Syntax.id⸩⸩, ⸨tail Syntax.id⸩)⸩
   , ⸨head ⸨head ⸨tail Syntax.id⸩⸩⸩)
+
+def S.type (m n o : Level) : Expr :=
+  (Π' (quot (Srt m))
+  , Π' (Π' ⸨tail Syntax.id⸩, (quot (Srt n)))
+  , Π' (Π' ⸨tail ⸨head Syntax.id⸩⸩
+      , Π' ($ (⸨tail Syntax.id⸩, ⸨Syntax.const ⸨tail Syntax.id⸩⸩))
+      , (quot (Srt o)))
+  , Π' (Π' ⸨tail ⸨tail ⸨head Syntax.id⸩⸩⸩
+      , Π' ($ (⸨tail ⸨head Syntax.id⸩⸩, ⸨Syntax.const ⸨tail Syntax.id⸩⸩))
+      , ($ (⸨head Syntax.id⸩, ⸨Syntax.const ⸨tail ⸨head Syntax.id⸩⸩⸩, ⸨Syntax.const ⸨head Syntax.id⸩⸩)))
+  , Π' (Π' (⸨tail ⸨tail ⸨tail ⸨head Syntax.id⸩⸩⸩⸩), ($ (⸨tail ⸨tail ⸨head Syntax.id⸩⸩⸩, ⸨Syntax.const ⸨head Syntax.id⸩⸩)))
+  , Π' (⸨tail ⸨tail ⸨tail ⸨tail ⸨head Syntax.id⸩⸩⸩⸩⸩), ($ (⸨tail ⸨tail ⸨head Syntax.id⸩⸩⸩, ⸨head Syntax.id⸩, ($ (⸨tail ⸨head Syntax.id⸩⸩, ⸨head Syntax.id⸩)))))
 
 inductive judge : Expr → Expr → Prop
   | sort : judge (Srt m.succ) (Srt m)
-  | app  : judge ⸨Π' (quot α) cod⸩ f
+  | app  : judge (Π' (quot α), cod) f
     → judge α x
     → judge ⸨cod x⸩ ⸨f x⸩
   | conv : judge t₁ x

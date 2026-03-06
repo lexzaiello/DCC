@@ -21,13 +21,17 @@ inductive Expr where
 
 open Expr
 
-notation "$" => Expr.app'
-
+syntax "$" "(" term,* ")" : term
+syntax "($)"              : term
 syntax "Π'" term "," term : term
+syntax "(Π')" : term
 syntax "⸨" term* "⸩" : term
 macro_rules
-  | `(Π' $α, Π' $β, $cod) => `(Π' $α, (quot (Π' $β, $cod)))
-  | `(Π' $α, $β) => `(⸨Expr.Pi $α $β⸩)
+  | `($ ($f:term, $x:term)) => `(⸨($) $f $x⸩)
+  | `($ ($f:term, $x:term, $xs:term,*)) => `($ (($ ($f, $x)), $xs,*))
+  | `(($)) => `(Expr.app')
+  | `((Π')) => `(Expr.Pi)
+  | `(Π' $α, $β) => `(⸨(Π') $α $β⸩)
   | `(⸨$f:term $x:term $xs:term*⸩) => `(⸨(Expr.app $f $x) $xs*⸩)
   | `(⸨$e:term⸩) => `($e)
 
@@ -35,3 +39,5 @@ example :  ⸨(Srt 0) (Srt 1) (Srt 2)⸩ = Expr.app (Expr.app (Expr.Srt 0) (Expr
 
 -- Syntax id
 abbrev Syntax.id : Expr := ⸨(I 1) Syntax⸩
+
+abbrev Syntax.const : Expr := ⸨(K' 1 1) Syntax Syntax⸩

@@ -36,6 +36,7 @@ open Expr
 
 syntax term "~>" term : term
 macro_rules
+  | `($α ~> ($β ~> $γ)) => `(Π' (quot $α), $β ~> $γ)
   | `($α ~> $β) => `(Π' (quot $α), (quot $β))
 
 def I.type (m : Level) : Expr :=
@@ -152,10 +153,11 @@ def mk_I (α : Expr) (m : Level) : Expr :=
   ⸨(S m 2 m) α β γ x y⸩
 
 #eval infer ⸨(K' 3 1) (Srt 2) (Srt 0) (Srt 1)⸩
+#eval infer (Π' (quot (Srt 2)), (quot (Srt 1)))
 #eval infer (mk_I (Srt 0) 1)
 #eval infer (Π' (quot (Srt 2)), (quot (Srt 1)))
 #eval infer ⸨⸨⸨(K' 2 1) (Π' (quot (Srt 2)), (quot (Srt 1)))⸩ (Srt 0)⸩ ⸨⸨⸨(K' 2 3) (Srt 1)⸩ (Srt 2)⸩ (Srt 0)⸩⸩
-#eval infer ⸨⸨⸨(K' 2 3) (Srt 1)⸩ (Srt 2)⸩ (Srt 0)⸩
+#eval infer (Srt 1 ~> Srt 2)
 
 end Expr
 

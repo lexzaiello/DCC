@@ -12,12 +12,13 @@ inductive Expr where
   -- quotation identity. id (quot e) = (quot e)
   | I      : Level → Expr
   -- head fn (quot (f x)) = fn (quot f)
-  | head   : Expr
+  | head   : Expr → Expr
   -- tail fn (quot (f x)) = fn (quot x)
-  | tail   : Expr
+  | tail   : Expr → Expr
   | app'   : Expr -- quotation application. ($ f x) (quot e) = ($ (f e) (x e))
   | quot   : Expr → Expr
   | app    : Expr → Expr → Expr
+deriving BEq, Repr
 
 open Expr
 
@@ -26,14 +27,15 @@ syntax "($)"              : term
 syntax "Π'" term "," term : term
 syntax "(Π')" : term
 syntax "⸨" term* "⸩" : term
+
 macro_rules
   | `($ ($f:term, $x:term)) => `(⸨($) $f $x⸩)
   | `($ ($f:term, $x:term, $xs:term,*)) => `($ (($ ($f, $x)), $xs,*))
   | `(($)) => `(Expr.app')
   | `((Π')) => `(Expr.Pi)
   | `(Π' $α, $β) => `(⸨(Π') $α $β⸩)
-  | `(⸨$f:term $x:term $xs:term*⸩) => `(⸨(Expr.app $f $x) $xs*⸩)
-  | `(⸨$e:term⸩) => `($e)
+  | `(⸨$f:term $x:term⸩) => `(Expr.app $f:term $x:term)
+  | `(⸨$f:term $x:term $xs:term*⸩) => `(⸨⸨$f:term $x:term⸩ $xs:term*⸩)
 
 example :  ⸨(Srt 0) (Srt 1) (Srt 2)⸩ = Expr.app (Expr.app (Expr.Srt 0) (Expr.Srt 1)) (Expr.Srt 2) := rfl
 

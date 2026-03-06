@@ -133,7 +133,7 @@ def infer (e : Expr) : Except Format Expr :=
       match (eval ⸨· (quot e)⸩) =<< infer f, infer x with
       | .ok (Π' α, β), .ok α₂ => do
         let _ ← eq' α α₂ x
-        return eval' ⸨β (quot e)⸩
+        eval ⸨β (quot e)⸩
       | _t, .error err => .error s!"argument not well-typed: {err}"
       | t, _ => do .error s!"{(← t)} not a function type"
   match do_infer e with

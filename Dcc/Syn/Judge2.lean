@@ -4,6 +4,48 @@ import Mathlib.Logic.Relation
 open Std (Format)
 open Std.ToFormat (format)
 
+mutual
+
+inductive CombVal where
+  | K  : Level → Level → CombVal
+  | S  : Level → Level → Level → CombVal
+  | K' : Level → Level → CombVal
+  | I  : Level → CombVal
+
+inductive TmVal where
+  | comb : CombVal → TmVal
+  | app  : TmVal → TmVal → TmVal
+
+inductive PiVal where
+  | mk : TyVal → TyVal → PiVal
+
+inductive Srt : Level → Type where
+  | mk : TyVal → Srt n
+
+inductive TyVal where
+  | Srt : Srt n → TyVal
+  | Pi  : PiVal → TyVal
+
+end
+
+syntax term "M->" term : term
+
+def TmVal.sort : TmVal → Level := sorry
+
+def TmVal.toType : TmVal → TyVal
+  | .comb (.K m n) => ∀ (α : Srt m) (β : α → Srt n) (x : α) (y : β x), α
+  | .comb (.K' m n) => ∀ (α : Srt m) (β : Srt n), α → β → α
+  | .comb (.S m n o) => ∀ (α : Type m) (β : α → Type n) (γ : ∀ (x : α), β x → Type o)
+    (x : ∀ (x : α) (y : β x), γ x y)
+    (y : ∀ (x : α), β x)
+    (z : α), γ z (y z)
+  
+
+def CombVal.reflect (c : CombVal) : c.t_map :=
+  match c with
+  | K' | K => (fun a b => a)
+  | S => (fun x y z => 
+
 namespace Expr
 
 inductive red : Expr → Expr → Prop
@@ -80,70 +122,56 @@ def eval (e : Expr) : Except Format Expr :=
   | ⸨(K _m _n) _α _β x _y⸩
   | ⸨(K' _m _n) _α _β x _y⸩ => (eval x) <|> (pure x)
   | ⸨(S _m _n _o) _α _β _γ x y z⸩ => pure ⸨(⸨x z⸩.eval.toOption.getD ⸨x z⸩) (⸨y z⸩.eval.toOption.getD ⸨y z⸩)⸩
-  | ⸨(Π' α, β) x⸩ => do pure <| (Π' (← ⸨α x⸩.eval), β)
+  | ⸨(Π' α, β) x⸩ => do
+    pure <| (Π' (← ⸨α x⸩.eval), β)
   | ⸨(head fn) (quot ⸨f _x⸩)⸩ => eval ⸨fn (quot f)⸩
   | ⸨(tail fn) (quot ⸨_f x⸩)⸩ => eval ⸨fn (quot x)⸩
-  | ⸨$ (f, x) e⸩ => pure ($ ((eval ⸨f e⸩).toOption.getD f, (eval ⸨x e⸩).toOption.getD x))
+  | ⸨$ (f, x) e⸩ => do
+    pure <| quot ⸨(← eval ⸨f e⸩) (← eval ⸨x e⸩)⸩
   | ⸨f x⸩ => (do pure <| ⸨(← f.eval) (← x.eval)⸩) <|> ((·.app x) <$> eval f) <|> (f.app <$> eval x)
   | e => .error <| "stuck: " ++ (format e)
 
-def eval' (e : Expr) : Expr :=
-  match e with
-  | (quot e') => eval' e'
-  | ($ (f, x)) => (eval ⸨(eval' f) (eval' x)⸩).toOption.getD ⸨(eval' f) (eval' x)⸩
-  | e => (eval e).toOption.getD e
+abbrev eval? := fun e => (eval e).toOption.getD e
 
 def unquote : Expr → Expr
-  | e₀@⸨$ (_f, _x) _e⸩ => e₀
-  | ($ (f, x)) => ⸨(unquote f) (unquote x)⸩
   | (quot e) => unquote e
   | e => e
 
-abbrev eval? := fun e => (eval e).toOption.getD e
-
 def defeq (t₁ t₂ : Expr) : Except Format Unit := do
-  if (unquote <| eval? <| unquote t₁) == (unquote <| eval? <| unquote t₂) then
+  let t₁' := eval? t₁
+  let t₁₂ := eval? t₁
+
+/-
+  if t₁' == t₂' then
     pure ()
   else
-    .error <| (format t₁) ++ (Format.text " ≠ ") ++ (format t₂)
+    .error <| (format t₁') ++ (Format.text " ≠ ") ++ (format t₂')
+-/
 
-def pi_eq (t₁ t₂ in_e : Expr) : Except Format Unit := do
-  let rec pi_eq' (t₁ t₂ in_e : Expr) : Except Format Unit := do
+def defeq' (t₁ t₂ : Expr) : Except Format Unit := do
+  let t₁' ← eval t₁
+  let t₂' ← eval t₂
+
+  defeq t₁' t₂'
+
+def pi_eq (t₁ t₂ in_e₁ in_e₂ : Expr) : Except Format Unit := do
+  let rec pi_eq' (t₁ t₂ in_e₁ in_e₂ : Expr) : Except Format Unit := do
     match t₁, t₂ with
     | (Π' α₁, cod₁), (Π' α₂, cod₂) =>
-      let _ ← defeq ⸨α₁ (quot in_e)⸩ ⸨α₂ (quot in_e)⸩
-      pi_eq' cod₁ cod₂ ⸨in_e in_e⸩
-    | t₁, t₂ => defeq ⸨t₁ (quot in_e)⸩ ⸨t₂ (quot in_e)⸩
+      let _ ← pi_eq' α₁ α₂ in_e₁ in_e₂
+      pi_eq' cod₁ cod₂ ⸨in_e₁ in_e₁⸩ ⸨in_e₂ in_e₂⸩
+    | t₁, t₂ =>
+      defeq ⸨t₁ (quot in_e₁)⸩ ⸨t₂ (quot in_e₂)⸩
   match t₁, t₂ with
   | (Π' _α₁, _cod₁), (Π' _α₂, _cod₂) =>
-    pi_eq' t₁ t₂ in_e
-  | t₁, t₂ => defeq t₁ t₂
-
-def eq' (t₁ t₂ in_e : Expr) : Except Format Unit := do
-  match eval' t₁, eval' t₂ with
-  | (Π' α₁, cod₁), (Π' α₂, cod₂) =>
-    let t₁' := Π' (eval' α₁), eval' ⸨cod₁ (quot ⸨in_e (Srt 0)⸩)⸩
-    let t₂' := Π' (eval' α₂), eval' ⸨cod₂ (quot ⸨in_e (Srt 0)⸩)⸩
-    if t₁' == t₂' then
-      .ok ()
-    else
-      Except.error <| (.text "argument type mismatch. expected")
-        ++ (.nest 2 <| Format.line
-        ++ (format t₁'))
-        ++ (.text ", but found")
-        ++ (.nest 2 <| Format.line
-        ++ (format t₂'))
-  | quot t₁, t₂
-  | t₁, quot t₂
+    pi_eq' t₁ t₂ in_e₁ in_e₂
   | t₁, t₂ =>
-    if eval' t₁ == eval' t₂ then
-      pure ()
-    else
-      .error <| "argument type mismatch. expected" ++ (.nest 2 <| .line ++ (format (eval' t₁)) ++ .line ++ (.paren (format t₁))) ++ ", but found" ++ (.nest 2 <| .line ++ (format (eval' t₂)) ++ .line ++ (.paren (format t₂)))
+    defeq t₁ t₂
 
 def infer (e : Expr) : Except Format Expr :=
   let rec do_infer (e : Expr) : Except Format Expr :=
     match e with
+    | unquot e => infer e
     | (I m) => pure <| I.type m
     | (K m n) => pure <| K.type m n
     | (K' m n) => pure <| K'.type m n
@@ -158,22 +186,16 @@ def infer (e : Expr) : Except Format Expr :=
     | ⸨f x⸩ =>
       match infer f, infer x with
       | .ok (Π' α, β), .ok α₂ => do
-        let _ ← pi_eq α α₂ x
+        let _ ← pi_eq α α₂ e x
         eval ⸨β (quot e)⸩
       | _t, .error err => .error s!"argument not well-typed: {err}"
       | t, _ => do .error s!"{(← t)} not a function type"
   match do_infer e with
-  | .error err => .error <| "type error in '" ++ (format e) ++ "':" ++ (.nest 2 <| .line ++ err)
+  | .error err => .error <| "type error in '" ++ (format e) ++ "':" ++ .line ++ err
   | .ok e => .ok e
 
 #eval infer ⸨(K' 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩
 #eval infer ⸨(K 3 2) (Srt 2) ⸨(I 3) (Srt 2)⸩ (Srt 1) (Srt 0)⸩
-#eval eval' ⸨(Expr.head (Expr.tail (Expr.app (Expr.I 1) (Expr.Syntax)))) (Srt 1)⸩
-
-#eval format <| eval' ⸨(Π' ⸨⸨⸨⸨(K' 3 1) (Srt 2)⸩ (Srt 0)⸩ (Srt 1)⸩ ⸨⸨⸨(K' 1 1) Syntax⸩ Syntax⸩ (tail ⸨(I 1) Syntax⸩)⸩⸩, (Srt 1))
-    (quot
-     ⸨⸨⸨⸨(K' 1 1) (Π' (quot (Srt 1)), (quot (Srt 1)))⸩ (Srt 0)⸩ ⸨⸨⸨(K' 2 2) (Srt 1)⸩ (Srt 1)⸩ (Srt 0)⸩⸩
-      (Srt 0)⸩)⸩
 
 def mk_I (α : Expr) (m : Level) : Expr :=
   let α := α
@@ -185,15 +207,9 @@ def mk_I (α : Expr) (m : Level) : Expr :=
 
   ⸨(S m 2 m) α β γ x y⸩
 
-#eval infer ⸨(K' 3 1) (Srt 2) (Srt 0) (Srt 1)⸩
 #eval infer (Π' (quot (Srt 2)), (quot (Srt 1)))
 #eval infer (mk_I (Srt 0) 1)
-#eval eval' (Expr.app
-  (Expr.head (Expr.head (Expr.head (Expr.tail (Expr.app (Expr.I 1) (Expr.Syntax))))))
-  (Expr.quot
-    (Expr.app (Expr.app (Expr.app (Expr.app (Expr.K' 3 1) (Expr.Srt 2)) (Expr.Srt 0)) (Expr.Srt 1)) (Expr.Srt 0))))
 #eval infer (Π' (quot (Srt 2)), (quot (Srt 1)))
-#eval infer ⸨⸨⸨(K' 2 1) (Π' (quot (Srt 2)), (quot (Srt 1)))⸩ (Srt 0)⸩ ⸨⸨⸨(K' 2 3) (Srt 1)⸩ (Srt 2)⸩ (Srt 0)⸩⸩
 #eval infer (Srt 1 ~> Srt 2)
 
 end Expr

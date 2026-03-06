@@ -93,6 +93,32 @@ def eval' (e : Expr) : Expr :=
   | ($ (f, x)) => (eval ⸨(eval' f) (eval' x)⸩).toOption.getD ⸨(eval' f) (eval' x)⸩
   | e => (eval e).toOption.getD e
 
+def unquote : Expr → Expr
+  | e₀@⸨$ (_f, _x) _e⸩ => e₀
+  | ($ (f, x)) => ⸨(unquote f) (unquote x)⸩
+  | (quot e) => unquote e
+  | e => e
+
+abbrev eval? := fun e => (eval e).toOption.getD e
+
+def defeq (t₁ t₂ : Expr) : Except Format Unit := do
+  if (unquote <| eval? <| unquote t₁) == (unquote <| eval? <| unquote t₂) then
+    pure ()
+  else
+    .error <| (format t₁) ++ (Format.text " ≠ ") ++ (format t₂)
+
+def pi_eq (t₁ t₂ in_e : Expr) : Except Format Unit := do
+  let rec pi_eq' (t₁ t₂ in_e : Expr) : Except Format Unit := do
+    match t₁, t₂ with
+    | (Π' α₁, cod₁), (Π' α₂, cod₂) =>
+      let _ ← defeq ⸨α₁ (quot in_e)⸩ ⸨α₂ (quot in_e)⸩
+      pi_eq' cod₁ cod₂ ⸨in_e in_e⸩
+    | t₁, t₂ => defeq ⸨t₁ (quot in_e)⸩ ⸨t₂ (quot in_e)⸩
+  match t₁, t₂ with
+  | (Π' _α₁, _cod₁), (Π' _α₂, _cod₂) =>
+    pi_eq' t₁ t₂ in_e
+  | t₁, t₂ => defeq t₁ t₂
+
 def eq' (t₁ t₂ in_e : Expr) : Except Format Unit := do
   match eval' t₁, eval' t₂ with
   | (Π' α₁, cod₁), (Π' α₂, cod₂) =>
@@ -130,14 +156,14 @@ def infer (e : Expr) : Except Format Expr :=
     | (head fn) => infer fn
     | Srt m => pure <| Srt m.succ
     | ⸨f x⸩ =>
-      match (eval ⸨· (quot e)⸩) =<< infer f, infer x with
+      match infer f, infer x with
       | .ok (Π' α, β), .ok α₂ => do
-        let _ ← eq' α α₂ x
+        let _ ← pi_eq α α₂ x
         eval ⸨β (quot e)⸩
       | _t, .error err => .error s!"argument not well-typed: {err}"
       | t, _ => do .error s!"{(← t)} not a function type"
   match do_infer e with
-  | .error err => .error <| "type error in" ++ (.nest 2 <| .line ++ (format e)) ++ .line ++ err
+  | .error err => .error <| "type error in '" ++ (format e) ++ "':" ++ (.nest 2 <| .line ++ err)
   | .ok e => .ok e
 
 #eval infer ⸨(K' 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩

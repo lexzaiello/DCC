@@ -95,18 +95,22 @@ def eval' (e : Expr) : Expr :=
   | e => (eval e).getD e
 
 def eq' (t₁ t₂ in_e : Expr) : Except Format Unit :=
-  match t₁, t₂ with
-  | t₁@(Π' α₁, cod₁), t₂@(Π' α₂, cod₂) =>
-    dbg_trace repr ⸨cod₂ (quot ⸨in_e (Srt 0)⸩)⸩
-    if eval' α₁ == eval' α₂ ∧ (eval' ⸨cod₁ (quot ⸨in_e (Srt 0)⸩)⸩ == eval' ⸨cod₂ (quot ⸨in_e (Srt 0)⸩)⸩) then
+  match eval' t₁, eval' t₂ with
+  | (Π' α₁, cod₁), (Π' α₂, cod₂)
+  | quot (Π' α₁, cod₁), (Π' α₂, cod₂)
+  | (Π' α₁, cod₁), quot (Π' α₂, cod₂)
+  | quot (Π' α₁, cod₁), quot (Π' α₂, cod₂) =>
+    let t₁' := Π' (eval' α₁), eval' ⸨cod₁ (quot ⸨in_e (Srt 0)⸩)⸩
+    let t₂' := Π' (eval' α₂), eval' ⸨cod₂ (quot ⸨in_e (Srt 0)⸩)⸩
+    if t₁' == t₂' then
       .ok ()
     else
       Except.error <| (.text "argument type mismatch. expected")
         ++ (.nest 2 <| Format.line
-        ++ (format t₁))
+        ++ (format t₁'))
         ++ (.text ", but found")
         ++ (.nest 2 <| Format.line
-        ++ (format t₂))
+        ++ (format t₂'))
   | t₁, t₂ =>
     if eval' t₁ == eval' t₂ then
       pure ()
@@ -148,13 +152,17 @@ def mk_I (α : Expr) (m : Level) : Expr :=
   let x := ⸨(K' m 2) α (Srt 1)⸩
 
   let β := ⸨(K' 3 m) (Srt 2) α (Srt 1)⸩
-  let γ := ⸨(K' m.succ 1) (Srt 2 ~> Srt m) α ⸨(K' m.succ 3) (Srt m) (Srt 2) α⸩⸩
+  let γ := ⸨(K' 1 1) (Srt 1 ~> Srt m) α ⸨(K' m.succ 2) (Srt m) (Srt 1) α⸩⸩
 
   ⸨(S m 2 m) α β γ x y⸩
 
 #eval infer ⸨(K' 3 1) (Srt 2) (Srt 0) (Srt 1)⸩
 #eval infer (Π' (quot (Srt 2)), (quot (Srt 1)))
 #eval infer (mk_I (Srt 0) 1)
+#eval eval' (Expr.app
+  (Expr.head (Expr.head (Expr.head (Expr.tail (Expr.app (Expr.I 1) (Expr.Syntax))))))
+  (Expr.quot
+    (Expr.app (Expr.app (Expr.app (Expr.app (Expr.K' 3 1) (Expr.Srt 2)) (Expr.Srt 0)) (Expr.Srt 1)) (Expr.Srt 0))))
 #eval infer (Π' (quot (Srt 2)), (quot (Srt 1)))
 #eval infer ⸨⸨⸨(K' 2 1) (Π' (quot (Srt 2)), (quot (Srt 1)))⸩ (Srt 0)⸩ ⸨⸨⸨(K' 2 3) (Srt 1)⸩ (Srt 2)⸩ (Srt 0)⸩⸩
 #eval infer (Srt 1 ~> Srt 2)

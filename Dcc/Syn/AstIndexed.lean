@@ -11,7 +11,7 @@ inductive Expr where
   | K      : Level → Level → Expr
   | S      : Level → Level → Level → Expr
   | I      : Level → Expr
-  | hole   :  Expr -- I (Syntax _) (quot (f x))
+  | hole   : Expr -- I (Syntax _) (quot (f x))
   -- head fn (quot (f x)) = fn (quot f)
   | head   : Expr → Expr
   -- tail fn (quot (f x)) = fn (quot x)
@@ -34,7 +34,7 @@ syntax "Ty" term : term
 syntax "?_" : term
 
 macro_rules
-  | `(Ty $n) => `(Expr.sort ($n + 1))
+  | `(Ty $n) => `(Expr.Srt ($n + 1))
   | `(?_) => `(Expr.hole)
   | `($n:num $fn:term) =>
     match n.getNat with

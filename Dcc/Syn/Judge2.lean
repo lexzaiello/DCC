@@ -52,7 +52,7 @@ def K'.type (m n : Level) : Expr :=
   (Π' (quot (Srt m))
  , Π' (quot (Srt n))
  , Π' (head (tail Syntax.id))
- , Π' (head (head (tail Syntax.id)))
+ , Π' (head (tail Syntax.id))
  , (head (head (head (tail Syntax.id)))))
 
 def S.type (m n o : Level) : Expr :=
@@ -96,6 +96,7 @@ def eval' (e : Expr) : Expr :=
 def eq' (t₁ t₂ in_e : Expr) : Except Format Unit :=
   match t₁, t₂ with
   | t₁@(Π' α₁, cod₁), t₂@(Π' α₂, cod₂) =>
+    dbg_trace repr ⸨cod₂ (quot ⸨in_e (Srt 0)⸩)⸩
     if eval' α₁ == eval' α₂ ∧ (eval' ⸨cod₁ (quot ⸨in_e (Srt 0)⸩)⸩ == eval' ⸨cod₂ (quot ⸨in_e (Srt 0)⸩)⸩) then
       .ok ()
     else
@@ -119,7 +120,7 @@ def infer (e : Expr) : Except Format Expr :=
     | (K' m n) => pure <| K'.type m n
     | (S m n o) => pure <| S.type m n o
     | Syntax => pure <| Srt 0
-    | (quot _e) => pure <| Syntax
+    | (quot _e) => pure <| (Syntax ~> Syntax)
     | ($ (_a, _b)) => pure <| (Syntax ~> Syntax)
     | (Π') => pure <| Pi.type
     | (tail fn)
@@ -130,6 +131,7 @@ def infer (e : Expr) : Except Format Expr :=
       | .ok (Π' α, β), .ok α₂ => do
         let _ ← eq' α α₂ x
         return eval' ⸨β (quot e)⸩
+      | _t, .error err => .error s!"argument not well-typed: {err}"
       | t, _ => do .error s!"{(← t)} not a function type"
   match do_infer e with
   | .error err => .error <| "type error in" ++ (.nest 2 <| .line ++ (format e)) ++ .line ++ err
@@ -138,6 +140,22 @@ def infer (e : Expr) : Except Format Expr :=
 #eval infer ⸨(K' 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩
 #eval infer ⸨(K 3 2) (Srt 2) ⸨(I 3) (Srt 2)⸩ (Srt 1) (Srt 0)⸩
 #eval eval' ⸨(Expr.head (Expr.tail (Expr.app (Expr.I 1) (Expr.Syntax)))) (Srt 1)⸩
+
+def mk_I (α : Expr) (m : Level) : Expr :=
+  let α := α
+  let y := ⸨(K' 2 m) (Srt 1) α (Srt 0)⸩
+  let x := ⸨(K' m 2) α (Srt 1)⸩
+
+  let β := ⸨(K' 3 m) (Srt 2) α (Srt 1)⸩
+  let γ := ⸨(K' m.succ 1) (Srt 2 ~> Srt m) α ⸨(K' m.succ 3) (Srt m) (Srt 2) α⸩⸩
+
+  ⸨(S m 2 m) α β γ x y⸩
+
+#eval infer ⸨(K' 3 1) (Srt 2) (Srt 0) (Srt 1)⸩
+#eval infer (mk_I (Srt 0) 1)
+#eval infer (Π' (quot (Srt 2)), (quot (Srt 1)))
+#eval infer ⸨⸨⸨(K' 2 1) (Π' (quot (Srt 2)), (quot (Srt 1)))⸩ (Srt 0)⸩ ⸨⸨⸨(K' 2 3) (Srt 1)⸩ (Srt 2)⸩ (Srt 0)⸩⸩
+#eval infer ⸨⸨⸨(K' 2 3) (Srt 1)⸩ (Srt 2)⸩ (Srt 0)⸩
 
 end Expr
 

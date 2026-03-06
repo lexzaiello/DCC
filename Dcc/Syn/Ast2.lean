@@ -43,18 +43,19 @@ abbrev Syntax.id : Expr := ⸨(I 1) Syntax⸩
 abbrev Syntax.const : Expr := ⸨(K' 1 1) Syntax Syntax⸩
 
 def Expr.toFormat : Expr → Format
-  | Srt m => s!"Sort {m}"
+  | Srt m => s!"(Srt {m})"
   | quot e => .paren <| "quot" ++ .line ++ e.toFormat
   | K' m n => s!"(K' {m} {n})"
   | K m n => s!"(K' {m} {n})"
   | S m n o => s!"(S {m} {n} {o})"
   | app' a b => "$ " ++ (.paren <| .nest 2 <| a.toFormat ++ .line ++ b.toFormat)
+  | Π' α, β => .paren <| "Π' " ++ α.toFormat ++ "," ++ .line ++ β.toFormat
   | Pi => "Π'"
   | I m => s!"(I {m})"
   | Syntax => "Syntax"
   | head fn => .paren <| "head" ++ .line ++ fn.toFormat
   | tail fn => .paren <| "tail" ++ .line ++ fn.toFormat
-  | .app f x => .paren <| f.toFormat ++ .line ++ x.toFormat
+  | .app f x => .bracket "⸨" (f.toFormat ++ .line ++ x.toFormat) "⸩"
 
 instance : ToFormat Expr := ⟨Expr.toFormat⟩
 instance : ToString Expr := ⟨toString ∘ toFormat⟩

@@ -22,6 +22,7 @@ inductive Expr where
 open Expr
 
 notation "$" => Expr.app'
+notation "Π'" => Expr.Pi
 
 syntax "⸨" term* "⸩" : term
 macro_rules

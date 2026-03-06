@@ -49,7 +49,7 @@ def K'.type (m n : Level) : Expr :=
   (Π' (quot (Srt m))
  , Π' (quot (Srt n))
  , Π' (head (tail Syntax.id))
- , Π' (head (tail Syntax.id))
+ , Π' (head (head (tail Syntax.id)))
  , (head (head (head (tail Syntax.id)))))
 
 def S.type (m n o : Level) : Expr :=
@@ -72,10 +72,11 @@ namespace Expr
 
 def eval (e : Expr) : Option Expr :=
   match e with
+  | ⸨(I _m) _α x⸩ => (eval x).getD x
   | ⸨(K _m _n) _α _β x _y⸩
   | ⸨(K' _m _n) _α _β x _y⸩ => eval x
   | ⸨(S _m _n _o) _α _β _γ x y z⸩ => pure ⸨(⸨x z⸩.eval.getD ⸨x z⸩) (⸨y z⸩.eval.getD ⸨y z⸩)⸩
-  | ⸨(Π' α, β) x⸩ => pure (Π' ((eval ⸨α x⸩).getD ⸨α x⸩), ((eval ⸨β x⸩).getD ⸨β x⸩))
+  | ⸨(Π' α, β) x⸩ => pure (Π' ((eval ⸨α x⸩).getD α), ((eval ⸨β x⸩).getD β))
   | ⸨(head fn) (quot ⸨f _x⸩)⸩ => eval ⸨fn (quot f)⸩
   | ⸨(tail fn) (quot ⸨_f x⸩)⸩ => eval ⸨fn (quot x)⸩
   | ⸨$ (f, x) e⸩ => pure ($ ((eval ⸨f e⸩).getD ⸨f e⸩, (eval ⸨x e⸩).getD ⸨x e⸩))
@@ -85,32 +86,34 @@ def eval (e : Expr) : Option Expr :=
 def eval' (e : Expr) : Expr :=
   match e with
   | (quot e) => (eval' e)
-  | ($ (f, x)) => ⸨f.eval' x.eval'⸩
+  | ($ (f, x)) => (eval ⸨f.eval' x.eval'⸩).getD ⸨f.eval' x.eval'⸩
   | e => e.eval.getD e
 
 def infer (e : Expr) : Except String Expr :=
   match e with
-  | (I m) => return I.type m
-  | (K m n) => return K.type m n
-  | (K' m n) => return K'.type m n
-  | (S m n o) => return S.type m n o
-  | Syntax => return Srt 0
-  | (quot _e) => return Syntax
-  | ($) => return (Syntax ~> Syntax) ~> ((Syntax ~> Syntax) ~> (Syntax ~> Syntax))
-  | (Π') => return Pi.type
+  | (I m) => pure <| I.type m
+  | (K m n) => pure <| K.type m n
+  | (K' m n) => pure <| K'.type m n
+  | (S m n o) => pure <| S.type m n o
+  | Syntax => pure <| Srt 0
+  | (quot _e) => pure <| Syntax
+  | ($) => pure <| (Syntax ~> Syntax) ~> ((Syntax ~> Syntax) ~> (Syntax ~> Syntax))
+  | (Π') => pure <| Pi.type
   | (tail fn)
   | (head fn) => infer fn
-  | Srt m => return Srt m.succ
-  | ⸨f x⸩ => do match ← infer f, ← infer x with
-    | (Π' α, β), α₂ =>
-      let α'  := α.eval'
-      let α₂' := α₂.eval'
-
-      if α' == α₂' then
-        return ⸨β x⸩
+  | Srt m => pure <| Srt m.succ
+  | ⸨f x⸩ => match (eval' ⸨· (quot ⸨f x⸩)⸩) <$> infer f, eval' <$> infer x with
+    | .ok (Π' α, β), .ok α₂ =>
+      let α' := eval' α
+      if α' == α₂ then
+        return β
       else
-        .error s!"argument type mismatch. expected {repr α'}, but found {repr α₂'}"
+        .error s!"argument type mismatch. expected {repr α'}, but found {repr α₂}"
     | t, _ => .error s!"{repr t} is not a function type"
+
+#eval infer ⸨(K' 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩
+#eval infer ⸨(K 3 2) (Srt 2) ⸨(I 3) (Srt 2)⸩ (Srt 1) (Srt 0)⸩
+#eval eval' ⸨(Expr.head (Expr.tail (Expr.app (Expr.I 1) (Expr.Syntax)))) (Srt 1)⸩
 
 end Expr
 

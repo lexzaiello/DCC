@@ -18,7 +18,7 @@ inductive Expr where
   | app'   : Expr -- quotation application. ($ f x) (quot e) = ($ (f e) (x e))
   | quot   : Expr → Expr
   | app    : Expr → Expr → Expr
-deriving BEq, Repr
+deriving BEq, Repr, DecidableEq
 
 open Expr
 

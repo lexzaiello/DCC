@@ -28,8 +28,10 @@ syntax "$" "(" term,* ")" : term
 syntax "Π'" term "," term : term
 syntax "(Π')" : term
 syntax "⸨" term* "⸩" : term
+syntax "Ty" term : term
 
 macro_rules
+  | `(Ty $n) => `(Expr.sort ($n + 1))
   | `($n:num $fn:term) =>
     match n.getNat with
     | 0 => `(Expr.head $fn)

@@ -22,12 +22,20 @@ deriving BEq, Repr, DecidableEq
 
 open Expr
 
+syntax num term : term
+
 syntax "$" "(" term,* ")" : term
 syntax "Π'" term "," term : term
 syntax "(Π')" : term
 syntax "⸨" term* "⸩" : term
 
 macro_rules
+  | `($n:num $fn:term) =>
+    match n.getNat with
+    | 0 => `(Expr.head $fn)
+    | .succ n =>
+      let n' := Lean.Syntax.mkNatLit n
+      `(Expr.tail ($n':num $fn))
   | `($ ($f:term, $x:term)) => `((Expr.app' $f $x))
   | `($ ($f:term, $x:term, $xs:term,*)) => `($ ($ ($f, $x), $xs,*))
   | `((Π')) => `(Expr.Pi)

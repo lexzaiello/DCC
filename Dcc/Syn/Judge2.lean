@@ -15,11 +15,11 @@ inductive red : Expr → Expr → Prop
     /-
     Quotation manipulation
   -/
-  | head  : red ⸨fn f⸩ f'
-    → red ⸨(head fn) ⸨f x⸩⸩ f'
+  | head  : red ⸨fn (quot f)⸩ f'
+    → red ⸨(head fn) (quot ⸨f x⸩)⸩ f'
   -- Not sure about this one: want to be able to partially apply nested tail
-  | tail  : red ⸨fn x⸩ x'
-    → red ⸨(tail fn) ⸨f x⸩⸩ x'
+  | tail  : red ⸨fn (quot x)⸩ x'
+    → red ⸨(tail fn) (quot ⸨f x⸩)⸩ x'
   | app'  : red ⸨$ (f, x) e⸩ ($ (⸨f e⸩, ⸨x e⸩))
   | left  : red f f' → red ⸨f x⸩ ⸨f' x⸩
   | right : red x x' → red ⸨f x⸩ ⸨f x'⸩

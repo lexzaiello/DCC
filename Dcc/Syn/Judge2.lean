@@ -130,7 +130,7 @@ def infer (e : Expr) : Except Format Expr :=
     | (head fn) => infer fn
     | Srt m => pure <| Srt m.succ
     | ⸨f x⸩ =>
-      match (eval' ⸨· (quot e)⸩) <$> infer f, eval' <$> infer x with
+      match (eval ⸨· (quot e)⸩) =<< infer f, infer x with
       | .ok (Π' α, β), .ok α₂ => do
         let _ ← eq' α α₂ x
         return eval' ⸨β (quot e)⸩

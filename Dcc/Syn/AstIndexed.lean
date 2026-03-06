@@ -51,9 +51,9 @@ macro_rules
 example :  ⸨(Srt 0) (Srt 1) (Srt 2)⸩ = Expr.app (Expr.app (Expr.Srt 0) (Expr.Srt 1)) (Expr.Srt 2) := rfl
 
 -- Syntax id
-abbrev Syntax.id (α : Expr := ?_) : Expr := ⸨(I 1) (Syntax α)⸩
+abbrev Syntax.id : Expr := ⸨(I 1) (Syntax ?_)⸩
 
-abbrev Syntax.const (α : Expr := ?_) (β : Expr := ?_) : Expr := ⸨(K' 1 1) (Syntax α) (Syntax β)⸩
+abbrev Syntax.const : Expr := ⸨(K' 1 1) (Syntax ?_) (Syntax ?_)⸩
 
 def Expr.toFormat : Expr → Format
   | Srt m => s!"(Srt {m})"

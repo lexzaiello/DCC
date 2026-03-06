@@ -10,12 +10,13 @@ inductive Expr where
   | S      : Level → Level → Level → Expr
   | Pi     : Expr
   -- quotation identity. id (quot e) = (quot e)
-  | id     : Expr
+  | I      : Level → Expr
   -- head fn (quot (f x)) = fn (quot f)
   | head   : Expr
   -- tail fn (quot (f x)) = fn (quot x)
   | tail   : Expr
   | app'   : Expr -- quotation application. ($ f x) (quot e) = ($ (f e) (x e))
+  | quot   : Expr
   | app    : Expr → Expr → Expr
 
 open Expr
@@ -28,3 +29,6 @@ macro_rules
   | `(⸨$e:term⸩) => `($e)
 
 example :  ⸨(Srt 0) (Srt 1) (Srt 2)⸩ = Expr.app (Expr.app (Expr.Srt 0) (Expr.Srt 1)) (Expr.Srt 2) := rfl
+
+-- Syntax id
+abbrev Syntax.id : Expr := ⸨(I 1) Syntax⸩

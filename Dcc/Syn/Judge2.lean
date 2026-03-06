@@ -59,9 +59,8 @@ def K'.type (m n : Level) : Expr :=
 def S.type (m n o : Level) : Expr :=
   (Π' (quot (Srt m))
   , Π' (Π' (tail Syntax.id), (quot (Srt n)))
-  , Π' (Π' (head (tail Syntax.id))
-      , Π' ($ ((tail Syntax.id), ⸨Syntax.const (tail Syntax.id)⸩))
-      , (quot (Srt o)))
+  , Π' ($ ((quot (Π')), (head (tail Syntax.id))
+      , ($ ((quot (Π')), ($ ((tail Syntax.id), ⸨Syntax.const (tail Syntax.id)⸩)), (quot (Srt o))))))
   , Π' (Π' (head (head (tail Syntax.id)))
       , Π' ($ ((head (tail Syntax.id)), ⸨Syntax.const (tail Syntax.id)⸩))
       , ($ ((tail Syntax.id), ⸨Syntax.const (head (tail Syntax.id))⸩, ⸨Syntax.const (head Syntax.id)⸩)))
@@ -74,32 +73,29 @@ def Pi.type : Expr := ((Syntax ~> Syntax) ~> ((Syntax ~> Syntax) ~> (Srt 1)))
 
 namespace Expr
 
-def eval (e : Expr) : Option Expr :=
+def eval (e : Expr) : Except Format Expr :=
   match e with
-  | ⸨(quot e) _x⸩ => (quot e)
-  | ⸨(I _m) _α x⸩ => (eval x).getD x
+  | ⸨(quot e) _x⸩ => pure (quot e)
+  | ⸨(I _m) _α x⸩ => (eval x) <|> (pure x)
   | ⸨(K _m _n) _α _β x _y⸩
-  | ⸨(K' _m _n) _α _β x _y⸩ => eval x
-  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => pure ⸨(⸨x z⸩.eval.getD ⸨x z⸩) (⸨y z⸩.eval.getD ⸨y z⸩)⸩
+  | ⸨(K' _m _n) _α _β x _y⸩ => (eval x) <|> (pure x)
+  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => pure ⸨(⸨x z⸩.eval.toOption.getD ⸨x z⸩) (⸨y z⸩.eval.toOption.getD ⸨y z⸩)⸩
   | ⸨(Π' α, β) x⸩ => do pure <| (Π' (← ⸨α x⸩.eval), β)
   | ⸨(head fn) (quot ⸨f _x⸩)⸩ => eval ⸨fn (quot f)⸩
   | ⸨(tail fn) (quot ⸨_f x⸩)⸩ => eval ⸨fn (quot x)⸩
-  | ⸨$ (f, x) e⸩ => pure ($ ((eval ⸨f e⸩).getD f, (eval ⸨x e⸩).getD x))
+  | ⸨$ (f, x) e⸩ => pure ($ ((eval ⸨f e⸩).toOption.getD f, (eval ⸨x e⸩).toOption.getD x))
   | ⸨f x⸩ => (do pure <| ⸨(← f.eval) (← x.eval)⸩) <|> ((·.app x) <$> eval f) <|> (f.app <$> eval x)
-  | _ => .none
+  | e => .error <| "stuck: " ++ (format e)
 
 def eval' (e : Expr) : Expr :=
   match e with
   | (quot e') => eval' e'
-  | ($ (f, x)) => (eval ⸨(eval' f) (eval' x)⸩).getD ⸨(eval' f) (eval' x)⸩
-  | e => (eval e).getD e
+  | ($ (f, x)) => (eval ⸨(eval' f) (eval' x)⸩).toOption.getD ⸨(eval' f) (eval' x)⸩
+  | e => (eval e).toOption.getD e
 
-def eq' (t₁ t₂ in_e : Expr) : Except Format Unit :=
+def eq' (t₁ t₂ in_e : Expr) : Except Format Unit := do
   match eval' t₁, eval' t₂ with
-  | (Π' α₁, cod₁), (Π' α₂, cod₂)
-  | quot (Π' α₁, cod₁), (Π' α₂, cod₂)
-  | (Π' α₁, cod₁), quot (Π' α₂, cod₂)
-  | quot (Π' α₁, cod₁), quot (Π' α₂, cod₂) =>
+  | (Π' α₁, cod₁), (Π' α₂, cod₂) =>
     let t₁' := Π' (eval' α₁), eval' ⸨cod₁ (quot ⸨in_e (Srt 0)⸩)⸩
     let t₂' := Π' (eval' α₂), eval' ⸨cod₂ (quot ⸨in_e (Srt 0)⸩)⸩
     if t₁' == t₂' then
@@ -111,6 +107,8 @@ def eq' (t₁ t₂ in_e : Expr) : Except Format Unit :=
         ++ (.text ", but found")
         ++ (.nest 2 <| Format.line
         ++ (format t₂'))
+  | quot t₁, t₂
+  | t₁, quot t₂
   | t₁, t₂ =>
     if eval' t₁ == eval' t₂ then
       pure ()
@@ -145,6 +143,11 @@ def infer (e : Expr) : Except Format Expr :=
 #eval infer ⸨(K' 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩
 #eval infer ⸨(K 3 2) (Srt 2) ⸨(I 3) (Srt 2)⸩ (Srt 1) (Srt 0)⸩
 #eval eval' ⸨(Expr.head (Expr.tail (Expr.app (Expr.I 1) (Expr.Syntax)))) (Srt 1)⸩
+
+#eval format <| eval' ⸨(Π' ⸨⸨⸨⸨(K' 3 1) (Srt 2)⸩ (Srt 0)⸩ (Srt 1)⸩ ⸨⸨⸨(K' 1 1) Syntax⸩ Syntax⸩ (tail ⸨(I 1) Syntax⸩)⸩⸩, (Srt 1))
+    (quot
+     ⸨⸨⸨⸨(K' 1 1) (Π' (quot (Srt 1)), (quot (Srt 1)))⸩ (Srt 0)⸩ ⸨⸨⸨(K' 2 2) (Srt 1)⸩ (Srt 1)⸩ (Srt 0)⸩⸩
+      (Srt 0)⸩)⸩
 
 def mk_I (α : Expr) (m : Level) : Expr :=
   let α := α

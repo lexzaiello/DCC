@@ -16,16 +16,18 @@ inductive Expr where
   -- tail fn (quot (f x)) = fn (quot x)
   | tail   : Expr
   | app'   : Expr -- quotation application. ($ f x) (quot e) = ($ (f e) (x e))
-  | quot   : Expr
+  | quot   : Expr → Expr
   | app    : Expr → Expr → Expr
 
 open Expr
 
 notation "$" => Expr.app'
-notation "Π'" => Expr.Pi
 
+syntax "Π'" term "," term : term
 syntax "⸨" term* "⸩" : term
 macro_rules
+  | `(Π' $α, Π' $β, $cod) => `(Π' $α, (quot (Π' $β, $cod)))
+  | `(Π' $α, $β) => `(⸨Expr.Pi $α $β⸩)
   | `(⸨$f:term $x:term $xs:term*⸩) => `(⸨(Expr.app $f $x) $xs*⸩)
   | `(⸨$e:term⸩) => `($e)
 

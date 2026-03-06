@@ -4,56 +4,6 @@ import Mathlib.Logic.Relation
 open Std (Format)
 open Std.ToFormat (format)
 
-mutual
-
-inductive CombVal : List Lean.Level → Type where
-  | K  : CombVal [m, n]
-  | S  : CombVal [m, n, o]
-  | K' : CombVal [m, n]
-  | I  : CombVal [m]
-
-inductive TmVal : List Lean.Level → Type where
-  | comb : CombVal lvs → TmVal lvs
-  | app  : TmVal n → TmVal m → TmVal o
-
-inductive PiVal : List Lean.Level → Type where
-  | mk : TyVal _lvs₁ → TyVal _lvs' → PiVal [m]
-
-inductive Srt : List Lean.Level → Type where
-  | mk : Srt [n]
-
-inductive TyVal : List Lean.Level → Type where
-  | Srt : Srt [n] → TyVal [n.succ]
-  | Pi  : PiVal [_n] → TyVal [1]
-
-end
-
-abbrev Typ := ((l : Lean.Level) × Srt [l])
-
-def TyVal.srt : TyVal m → Type m
-  | _ => Sort m
-
-def TyVal.ty_val : TyVal m → Type m := sorry
-
-def Srt.ty_val : Srt n → Type n
-  | _ => (Sort n)
-
-def TmVal.toType (v : TmVal m) : ((l : Lean.Level) × Srt l) :=
-  match m, v with
-  | [u, v], comb K =>
-    ⟨u, ∀ (α : TyVal [u]) (β : α → Type v) (x : α) (y : β x), α⟩
-  | [m, n], comb K'  => ⟨u, ∀ (α : TyVal m) (β : TyVal m), α.ty_val → β.ty_val → α.ty_val⟩
-  | [u, v, t] comb S => ⟨o, ∀ (α : Type u) (β : α → Type v) (γ : ∀ (x : α), β x → Type t)
-    (x : ∀ (x : α) (y : β x), γ x y)
-    (y : ∀ (x : α), β x)
-    (z : α), γ z (y z)⟩
-  | _ => sorry
-
-def CombVal.reflect (c : CombVal) : c.t_map :=
-  match c with
-  | K' | K => (fun a b => a)
-  | S => (fun x y z => 
-
 namespace Expr
 
 inductive red : Expr → Expr → Prop

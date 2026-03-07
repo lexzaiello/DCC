@@ -38,10 +38,10 @@ macro_rules
   | `(?_) => `(Expr.hole)
   | `($n:num $fn:term) =>
     match n.getNat with
-    | 0 => `(Expr.head $fn)
+    | 0 => `(Expr.tail $fn)
     | .succ n =>
       let n' := Lean.Syntax.mkNatLit n
-      `(Expr.tail ($n':num $fn))
+      `(Expr.head ($n':num $fn))
   | `($ ($f:term, $x:term)) => `((Expr.app' $f $x))
   | `($ ($f:term, $x:term, $xs:term,*)) => `($ ($ ($f, $x), $xs,*))
   | `(Π' $α, $β) => `(Expr.Pi $α $β)
@@ -51,9 +51,9 @@ macro_rules
 example :  ⸨(Srt 0) (Srt 1) (Srt 2)⸩ = Expr.app (Expr.app (Expr.Srt 0) (Expr.Srt 1)) (Expr.Srt 2) := rfl
 
 -- Syntax id
-abbrev Syntax.id : Expr := ⸨(I 1) (Syntax ?_)⸩
+abbrev Syntax.id (α : Expr) (m : Level) : Expr := ⸨(I m) (Syntax α)⸩
 
-abbrev Syntax.const : Expr := ⸨(K' 1 1) (Syntax ?_) (Syntax ?_)⸩
+abbrev Syntax.const (α β : Expr) (m n : Level) : Expr := ⸨(K' m n) (Syntax α) (Syntax β)⸩
 
 def Expr.toFormat : Expr → Format
   | Srt m => s!"(Srt {m})"

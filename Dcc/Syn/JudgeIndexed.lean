@@ -6,6 +6,29 @@ open Std.ToFormat (format)
 /-
 Another change:
 dom in apps receive the entire quoted app
+
+I really like the idea of carrying the context around.
+
+with : Syntax
+^ we can probably derive this somehow.
+
+Need to make $ point-free, though.
+
+the other alternative is concatenating contexts.
+
+with (quot (f x))
+
+what about for anonymous ($ f, x)?
+
+e.g., (β x)
+
+Feels like with should be nesting binders...
+
+with (Π α, β) (quot (f x)) (quot y) = (Π α, β) (quot ((f) y))
+
+with can let us simulate contexts without the explict book-keeping.
+
+(unquot _) (quot β) (quot x)
 -/
 
 namespace Expr

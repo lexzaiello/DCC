@@ -53,7 +53,7 @@ inductive red : Expr → Expr → Prop
   | tail   : red ⸨(tail fn) (quot ⸨f x⸩)⸩ ⸨fn (quot x)⸩
   | app'   : red ⸨$ (f, x) e⸩ ⸨⸨f e⸩ ⸨x e⸩⸩ -- this is fine, since ($ can infer what kind of Syntax α
   | into   : red ⸨(into fn) (quot f) (quot x)⸩ ⸨fn (quot ⸨f x⸩)⸩
-  | unquot : red ⸨(unquot _m) α (quot e)⸩ e
+  | unquot : red ⸨(unquot α) (quot e)⸩ e
   | left   : red f f' → red ⸨f x⸩ ⸨f' x⸩
   | right  : red x x' → red ⸨f x⸩ ⸨f x'⸩
 
@@ -63,15 +63,14 @@ abbrev SynConst := Syntax.const
 abbrev Syntax.id' := Syntax.id ?_ 1
 abbrev Syntax.const' := Syntax.const ?_ ?_ 1 1
 
-def mk_arrow (α β : Expr) (m n : Level) : Expr :=
-  Π' ⸨(Syntax.const (Srt m) α m.succ m) α⸩, ⸨(Syntax.const (Srt n) α n.succ m) β⸩
+abbrev unquot? := (unquot ?_)
 
-def mk_const_n (e α : Expr) (m : Level) (t_args : List (Level × Expr)) : Expr :=
-  Prod.snd <| t_args.foldr (fun (n, t_arg) (t_acc, acc) =>
-    ((mk_arrow t_acc t_arg m n), ⸨(K' m n) t_acc t_arg acc⸩)) (α, e)
+def mk_arrow (α β : Expr) : Expr :=
+  ⸨(into (Π' (head (head unquot?)), (head (tail unquot?)))) (quot ⸨α β⸩)⸩
 
-def unquote_const (α β : Expr) (m n : Level) : Expr :=
-  $ (⸨(K' m 1) (Syntax α) (mk_arrow α (mk_arrow β α n m) m m) ⸨(K' m n) α β⸩⸩, ⸨(unquot m) α⸩)
+syntax term "~>" term : term
+macro_rules
+  | `($α ~> $β) => `(mk_arrow $α $β)
 
 /-
 Types for quotation combinators
@@ -80,23 +79,12 @@ abbrev Syntax.type (_t : Expr) (m : Level) := (Srt m)
 
 abbrev quot.type (α _e : Expr) := (Syntax α)
 
-abbrev unquot.type' (m : Level) : Expr :=
-  sorry
-
-abbrev unquot.type (m : Level) := Π' (0 ⸨(Syntax.const (Srt m.succ) (Syntax (Srt m)) m.succ.succ m.succ) (Srt m)⸩)
-  , Π' ?_, (1 ⸨(unquot m) (Srt m)⸩)
-
 abbrev Pi.type : Expr → Expr := id
 
-abbrev app'.type (_f x : Expr) (α γ : Expr) (m : Level) :=
+abbrev app'.type (_f x : Expr) (α γ : Expr) :=
   Π' α
-   , $ (γ, 0 ⸨(unquot m) α⸩, $ (x, 0 ⸨(unquot m) α⸩))
+   , $ (γ, 0 (unquot α), $ (x, 0 (unquot α)))
 
-abbrev head.type (_fn β γ : Expr) : Expr := Π' ($ (⸨(Syntax.const ?_ ?_ 1 1) β⸩, head (Syntax.id ?_ 1)))
-                                             , ($ (⸨(Syntax.const ?_ ?_ 1 1) γ⸩, head (Syntax.id ?_ 1)))
-
-abbrev tail.type (_fn β γ : Expr) : Expr := Π' ($ (⸨(Syntax.const ?_ ?_ 1 1) β⸩, tail (Syntax.id ?_ 1)))
-                                             , ($ (⸨(Syntax.const ?_ ?_ 1 1) γ⸩, tail (Syntax.id ?_ 1)))
 abbrev hole.type : Expr → Expr := id
 
 abbrev Srt.type (m : Level) : Expr := (Ty m)
@@ -111,44 +99,44 @@ Types for the core combinators:
 -/
 
 abbrev α_sort (m : Level) : Expr :=
-  ⸨(K' m.succ.succ m.succ) (Srt m.succ) (Syntax (Srt m)) (Srt m)⸩
+  ⸨(K' m.succ.succ m.succ) (Srt m.succ) (Syntax ?_) (Srt m)⸩
 
 abbrev α_to_sort (m n : Level) : Expr :=
-  into (Π' (head (head ⸨(unquot m.succ) (Srt m)⸩))
+  into (Π' (head (head (unquot (Srt m))))
        , ⸨(K' n.succ.succ 1) (Srt n.succ) ?_ (Srt n)⸩)
 
 abbrev I.type (m : Level) : Expr :=
     Π' (α_sort m)
-  , into (Π' (head ⸨(unquot 1) ?_⸩)
-  , (head ⸨(unquot 1) ?_⸩))
+  , into (Π' (head unquot?)
+  , (head unquot?))
 
 abbrev K'.type (m n : Level) : Expr :=
     Π' (α_sort m)
   , into (Π' ⸨(K' n.succ.succ 1) (Srt n.succ) (Syntax ?_) (Srt n)⸩
-  , into (Π' (head (head ⸨(unquot 1) ?_⸩))
-  , into (Π' (head (head (tail ⸨(unquot 1) ?_⸩))), (head (head (head ⸨(unquot 1) ?_⸩))))))
+  , into (Π' (head (head unquot?))
+  , into (Π' (head (head (tail unquot?))), (head (head (head unquot?))))))
 
 abbrev K.type (m n : Level) : Expr :=
     Π' (α_sort m)
   , into (Π' (α_to_sort m n)
-  , into (Π' (head (head ⸨(unquot 1) ?_⸩))
-  , into (Π' ($ ((head (head (tail ⸨(unquot 1) ?_⸩))), (head (tail ⸨(unquot 1) ?_⸩))))
-  , (head (head (head ⸨(unquot 1) ?_⸩))))))
+  , into (Π' (head (head unquot?))
+  , into (Π' ($ ((head (head (tail unquot?))), (head (tail unquot?))))
+  , (head (head (head unquot?))))))
 
 abbrev γ (o : Level) : Expr :=
-    into (Π' (head (head (head ⸨(unquot 1) ?_⸩)))
-  , into (Π' $ (head (head (head (tail ⸨(unquot 1) ?_⸩))), head (tail ⸨(unquot 1) ?_⸩))
+    into (Π' (head (head (head unquot?)))
+  , into (Π' $ (head (head (head (tail unquot?))), head (tail unquot?))
   , ⸨(K' o.succ.succ 1) (Srt o.succ) (Syntax ?_) (Srt o)⸩))
 
 abbrev x : Expr :=
-    into (Π' (head (head (head (head ⸨(unquot 1) ?_⸩))))
-  , into (Π' $ (head (head (head (head (tail ⸨(unquot 1) ?_⸩)))), head (tail ⸨(unquot 1) ?_⸩))
-  , $ (head (head (tail ⸨(unquot 1) ?_⸩)), head (head (tail ⸨(unquot 1) ?_⸩))
-          , ($ ((head (tail ⸨(unquot 1) ?_⸩)), tail ⸨(unquot 1) ?_⸩)))))
+    into (Π' (head (head (head (head unquot?))))
+  , into (Π' $ (head (head (head (head (tail unquot?)))), head (tail unquot?))
+  , $ (head (head (tail unquot?)), head (head (tail unquot?))
+          , ($ ((head (tail unquot?)), tail unquot?)))))
 
 abbrev y : Expr :=
-    into (Π' (head (head (head (head (head ⸨(unquot 1) ?_⸩)))))
-  , $ (head (head (head (head (head (tail ⸨(unquot 1) ?_⸩))))), head (tail ⸨(unquot 1) ?_⸩)))
+    into (Π' (head (head (head (head (head unquot?)))))
+  , $ (head (head (head (head (head (tail unquot?))))), head (tail unquot?)))
 
 abbrev S.type (m n o : Level) : Expr :=
     Π' (α_sort m)
@@ -156,9 +144,9 @@ abbrev S.type (m n o : Level) : Expr :=
   , into (Π' (γ o)
   , into (Π' x
   , into (Π' y
-  , into (Π' (head (head (head (head (tail ⸨(unquot 1) ?_⸩)))))
-  , $ (head (head (tail ⸨(unquot 1) ?_⸩)), (tail ⸨(unquot 1) ?_⸩)
-          , ($ ((head (tail ⸨(unquot 1) ?_⸩)), tail ⸨(unquot 1) ?_⸩))))))))
+  , into (Π' (head (head (head (head (tail unquot?)))))
+  , $ (head (head (tail unquot?)), (tail unquot?)
+          , ($ ((head (tail unquot?)), tail unquot?))))))))
 
 /-
 Def infer / eval for prototyping:
@@ -173,7 +161,8 @@ def eval (e : Expr) : Except Format Expr :=
      (do return ⸨(← ⸨x z⸩.eval) ⸨y z⸩⸩) <|>
      (do return ⸨⸨x z⸩ (← ⸨y z⸩.eval)⸩) <|>
      (do return ⸨⸨x z⸩ ⸨y z⸩⸩)
-  | ⸨(into fn) (quot f) (quot x)⸩ => (eval ⸨fn (quot ⸨f x⸩)⸩) <|> pure ⸨fn (quot ⸨f x⸩)⸩
+  | ⸨(into fn) (quot f) (quot x)⸩ =>
+    (eval ⸨fn (quot ⸨f x⸩)⸩) <|> pure ⸨fn (quot ⸨f x⸩)⸩
   | ⸨(Π' α, β) x⸩ => return Π' ⸨α x⸩, ⸨β x⸩
   | ⸨(head fn) (quot ⸨f _x⸩)⸩ => eval ⸨fn (quot f)⸩ <|> pure ⸨fn (quot f)⸩
   | ⸨(tail fn) (quot ⸨_f x⸩)⸩ => eval ⸨fn (quot x)⸩ <|> pure ⸨fn (quot x)⸩
@@ -181,7 +170,7 @@ def eval (e : Expr) : Except Format Expr :=
      (do return ⸨(← ⸨f e⸩.eval) ⸨x e⸩⸩) <|>
      (do return ⸨⸨f e⸩ (← ⸨x e⸩.eval)⸩) <|>
      (do return ⸨⸨f e⸩ ⸨x e⸩⸩) -- this is fine, since ($ can infer what kind of Syntax α
-  | ⸨⸨(unquot _m) _α⸩ (quot e)⸩ => eval e <|> (pure e)
+  | ⸨(unquot _α) (quot e)⸩ => eval e <|> (pure e)
   | ⸨f x⸩ => (do return ⸨(← f.eval) (← x.eval)⸩) <|> ((·.app x) <$> (f.eval)) <|> (f.app <$> (x.eval))
   | e => .error <| "stuck: " ++ (format e)
 
@@ -190,17 +179,18 @@ def norm (e : Expr) (gas : ℕ := 100) : Expr :=
     | .zero => e
     | .succ n => norm ((eval e).toOption.getD e) n
 
-partial def infer (e : Expr) : Except Format Expr := do
+def infer (e : Expr) : Except Format Expr := do
   let not_type (t : Expr) := Except.error <| "not a type: " ++ (format t)
   let not_fn (t : Expr) := Except.error <| "not a function type: " ++ (format t)
   let mismatch (expected actual : Expr) := .error <| (format expected) ++ " ≠ " ++ (format actual)
 
   let rec defeq (t₁ : Expr) (t₂ : Expr) (gas : ℕ := 100) : Except Format Expr :=
-    match gas, t₁, t₂ with
-    | _, t₁@⸨(into _f) _a⸩, t₂
-    | _, t₁, t₂@⸨(into _f) _a⸩ =>
-      defeq (norm ⸨t₁ (quot ?_)⸩) (norm ⸨t₂ (quot ?_)⸩)
+    match gas, norm t₁, norm t₂ with
+    | .succ n, t₁@⸨(into _f) _a⸩, t₂
+    | .succ n, t₁, t₂@⸨(into _f) _a⸩ =>
+      defeq (norm ⸨t₁ (quot ?_)⸩) (norm ⸨t₂ (quot ?_)⸩) n
     | .zero , _, _ => .error "out of gas"
+    | _, ?_, e => pure e
     | .succ n, (Π' α₁, β₁), (Π' α₂, β₂) => do
       let _ ← defeq α₁ α₂ n
 
@@ -216,11 +206,23 @@ partial def infer (e : Expr) : Except Format Expr := do
         mismatch t₁ t₂
 
   match e with
+  | Π' _α, β@(Π' _β, _γ) => infer β
+  | Π' _α, β => (norm ⸨· ?_⸩) <$> infer β
   | S m n o => return S.type m n o
   | K' m n => return K'.type m n
   | K m n => return K.type m n
   | I m    => return I.type m
   | Srt m  => return Srt.type m
+  | head fn => infer fn
+  | tail fn => infer fn
+  | unquot α => pure (Syntax α ~> α)
+  | ?_ => return Srt 1
+  | into f => match ← infer f with
+    | Π' _α, β => return ⸨(into
+             (Π' (head (head unquot?))
+      , into (Π' (head (head (head unquot?)))
+           , ($  (head (head (tail unquot?)), (head (tail unquot?)), (tail unquot?)))))) (quot ⸨(Syntax ?_) β⸩)⸩
+    | t => not_fn t
   | quot e => (quot.type · e) <$> infer e
   | Syntax t => do match ← norm <$> infer t with
     | (Srt m) => return Syntax.type t m
@@ -231,6 +233,20 @@ partial def infer (e : Expr) : Except Format Expr := do
       return norm β
     | t, _ => not_fn t
   | t => .error <| "not well-typed: " ++ (format t)
+
+def mk_I (α : Expr) (m : Level) : Expr :=
+  let α := α
+  let y := ⸨(K' 2 m) (Srt 1) α (Srt 0)⸩
+  let x := ⸨(K' m 2) α (Srt 1)⸩
+
+  let β := ⸨(K' 3 m) (Srt 2) α (Srt 1)⸩
+  let γ := ⸨(K' 1 1) ⸨((Srt 2) ~> (Srt m.succ)) (Srt 1) (Srt m)⸩ α ⸨(K' m.succ 2) (Srt m) (Srt 1) α⸩⸩
+
+  ⸨(S m 2 m) α β γ x y⸩
+
+#eval infer (⸨(unquot (Srt 1)) (quot (Srt 0))⸩)
+
+#eval infer <| mk_I (Srt 1) 2
 
 #eval infer (quot (Srt 1))
 #eval infer ⸨(I 2) (Srt 1) (Srt 0)⸩

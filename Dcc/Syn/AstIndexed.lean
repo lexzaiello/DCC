@@ -18,7 +18,7 @@ inductive Expr where
   | tail   : Expr  → Expr
   -- into fn (quot f) (quot x) = fn (quot (f x))
   | into   : Expr → Expr
-  | unquot : Level → Expr -- (unquot α ((quot e) : Syntax α)) = e
+  | unquot : Expr → Expr -- (unquot α ((quot e) : Syntax α)) = e
   | quot   : Expr  → Expr -- (quot (e : α)) : Syntax α
   | app'   : Expr  → Expr → Expr -- quotation application. ($ f x) (quot e) = ((f e) (x e))
   | app    : Expr  → Expr → Expr
@@ -68,7 +68,7 @@ def Expr.toFormat : Expr → Format
   | Π' α, β => .paren <| "Π' " ++ α.toFormat ++ "," ++ .line ++ β.toFormat
   | I m => s!"(I {m})"
   | Syntax α => .paren <| "Syntax " ++ α.toFormat
-  | unquot n => .paren <| "unquot " ++ s!"{n}"
+  | unquot α => .paren <| "unquot " ++ α.toFormat
   | hole => "?_"
   | head fn => .paren <| "head" ++ (.nest 2 <| .line ++ fn.toFormat)
   | tail fn => .paren <| "tail" ++ (.nest 2 <| .line ++ fn.toFormat)

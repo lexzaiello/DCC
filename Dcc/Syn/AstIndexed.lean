@@ -14,8 +14,10 @@ inductive Expr where
   | hole   : Expr -- I (Syntax _) (quot (f x))
   -- head fn (quot (f x)) = fn (quot f)
   | head   : Expr → Expr
-  -- tail fn (quot (f x)) = fn (quot x)
+    -- tail fn (quot (f x)) = fn (quot x)
   | tail   : Expr  → Expr
+  -- into fn (quot f) (quot x) = fn (quot (f x))
+  | into   : Expr → Expr
   | unquot : Level → Expr -- (unquot α ((quot e) : Syntax α)) = e
   | quot   : Expr  → Expr -- (quot (e : α)) : Syntax α
   | app'   : Expr  → Expr → Expr -- quotation application. ($ f x) (quot e) = ((f e) (x e))
@@ -56,6 +58,7 @@ abbrev Syntax.id (α : Expr) (m : Level) : Expr := ⸨(I m) (Syntax α)⸩
 abbrev Syntax.const (α β : Expr) (m n : Level) : Expr := ⸨(K' m n) (Syntax α) (Syntax β)⸩
 
 def Expr.toFormat : Expr → Format
+  | into e => .paren <| "into " ++ e.toFormat
   | Srt m => s!"(Srt {m})"
   | quot e => .paren <| "quot" ++ (.nest 2 <| .line ++ e.toFormat)
   | K' m n => s!"(K' {m} {n})"

@@ -42,6 +42,7 @@ inductive red : Expr → Expr → Prop
   | head   : red ⸨(head fn) (quot ⸨f x⸩)⸩ ⸨fn (quot f)⸩
   | tail   : red ⸨(tail fn) (quot ⸨f x⸩)⸩ ⸨fn (quot x)⸩
   | app'   : red ⸨$ (f, x) e⸩ ⸨⸨f e⸩ ⸨x e⸩⸩ -- this is fine, since ($ can infer what kind of Syntax α
+  | into   : red ⸨(into fn) (quot f) (quot x)⸩ ⸨fn (quot ⸨f x⸩)⸩
   | unquot : red ⸨(unquot _m) α (quot e)⸩ e
   | left   : red f f' → red ⸨f x⸩ ⸨f' x⸩
   | right  : red x x' → red ⸨f x⸩ ⸨f x'⸩
@@ -143,6 +144,7 @@ def eval (e : Expr) : Except Format Expr :=
   | ⸨(Π' α, β) x⸩ => return Π' ⸨α x⸩, ⸨β x⸩
   | ⸨(head fn) (quot ⸨f _x⸩)⸩ => eval ⸨fn (quot f)⸩ <|> pure ⸨fn (quot f)⸩
   | ⸨(tail fn) (quot ⸨_f x⸩)⸩ => eval ⸨fn (quot x)⸩ <|> pure ⸨fn (quot x)⸩
+  | ⸨(into fn) (quot f) (quot x)⸩ => eval ⸨fn (quot ⸨f x⸩)⸩ <|> pure ⸨fn (quot ⸨f x⸩)⸩
   | ⸨$ (f, x) e⸩ => (do return ⸨(← ⸨f e⸩.eval) (← ⸨x e⸩.eval)⸩) <|>
      (do return ⸨(← ⸨f e⸩.eval) ⸨x e⸩⸩) <|>
      (do return ⸨⸨f e⸩ (← ⸨x e⸩.eval)⸩) <|>

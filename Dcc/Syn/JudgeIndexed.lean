@@ -41,37 +41,37 @@ macro_rules
 /-
 Types for quotation combinators
 -/
-def Syntax.type (_t : Expr) (m : Level) := (Srt m)
+abbrev Syntax.type (_t : Expr) (m : Level) := (Srt m)
 
-def quot.type (α _e : Expr) := (Syntax α)
+abbrev quot.type (α _e : Expr) := (Syntax α)
 
-def unquot.type (α : Expr) := (Syntax α) ~> α
+abbrev unquot.type (α : Expr) := (Syntax α) ~> α
 
-def Pi.type : Expr → Expr := id
+abbrev Pi.type : Expr → Expr := id
 
-def app'.type (_f x : Expr) (α γ : Expr) := (Π' α, ($ (γ, tail (unquot α), $ (x, tail (unquot α)))))
+abbrev app'.type (_f x : Expr) (α γ : Expr) := (Π' α, ($ (γ, tail (unquot α), $ (x, tail (unquot α)))))
 
 -- head (quot (f x)) = head (quot f)
 -- fn : ∀ (x : Syntax β), γ x
 -- (x : α)
 -- (f x : β x)
-def head.type (_fn β γ : Expr) : Expr := Π' ($ (⸨Syntax.const β⸩, head Syntax.id))
+abbrev head.type (_fn β γ : Expr) : Expr := Π' ($ (⸨Syntax.const β⸩, head Syntax.id))
                                              , ($ (⸨Syntax.const γ⸩, head Syntax.id))
 
-def tail.type (_fn β γ : Expr) : Expr := Π' ($ (⸨Syntax.const β⸩, tail Syntax.id))
+abbrev tail.type (_fn β γ : Expr) : Expr := Π' ($ (⸨Syntax.const β⸩, tail Syntax.id))
                                              , ($ (⸨Syntax.const γ⸩, tail Syntax.id))
 
-def hole.type : Expr → Expr := id
+abbrev hole.type : Expr → Expr := id
 
-def Srt.type (m : Level) : Expr := (Ty m)
+abbrev Srt.type (m : Level) : Expr := (Ty m)
 
 /-
 Types for the core combinators:
 -/
-def I.type (m : Level) : Expr :=
+abbrev I.type (m : Level) : Expr :=
     Π' ⸨Syntax.const (Srt m)⸩
-  , Π' (head (tail Syntax.id))
-  , (head (tail Syntax.id))
+  , Π' (head (tail (unquot ?_)))
+  , (head (tail (unquot ?_)))
 
 /-
 Def infer / eval for prototyping:
@@ -79,31 +79,40 @@ Def infer / eval for prototyping:
 
 def eval (e : Expr) : Except Format Expr :=
   match e with
-  | ⸨(I _m) _α x⸩ => (eval x) <|> (pure x)
+  | ⸨(I _m) _α x⸩ => eval x <|> pure e
   | ⸨(K _m _n) _α _β x _y⸩ => eval x <|> (pure x)
   | ⸨(K' _m _n) _α _β x _y⸩ => eval x <|> (pure x)
   | ⸨(S _m _n _o) _α _β _γ x y z⸩ => (do return ⸨(← ⸨x z⸩.eval) (← ⸨y z⸩.eval)⸩) <|>
-    (do return ⸨(← ⸨x z⸩.eval) ⸨y z⸩⸩) <|>
-    (do return ⸨⸨x z⸩ (← ⸨y z⸩.eval)⸩) <|>
-    (do return ⸨⸨x z⸩ ⸨y z⸩⸩)
+     (do return ⸨(← ⸨x z⸩.eval) ⸨y z⸩⸩) <|>
+     (do return ⸨⸨x z⸩ (← ⸨y z⸩.eval)⸩) <|>
+     (do return ⸨⸨x z⸩ ⸨y z⸩⸩)
   | ⸨(Π' α, β) x⸩ => return Π' ⸨α x⸩, ⸨β x⸩
   | ⸨(head fn) (quot ⸨f _x⸩)⸩ => eval ⸨fn (quot f)⸩
   | ⸨(tail fn) (quot ⸨_f x⸩)⸩ => eval ⸨fn (quot x)⸩
-  | ⸨$ (f, x) e⸩ => return ⸨⸨f e⸩ ⸨x e⸩⸩ -- this is fine, since ($ can infer what kind of Syntax α
-  | ⸨(unquot _α) (quot e)⸩ => return e
-  | ⸨f x⸩ => (do return ⸨(← f.eval) (← x.eval)⸩) <|> ((·.app x) <$> f.eval) <|> (f.app <$> x.eval)
+  | ⸨$ (f, x) e⸩ => (do return ⸨(← ⸨f e⸩.eval) (← ⸨x e⸩.eval)⸩) <|>
+     (do return ⸨(← ⸨f e⸩.eval) ⸨x e⸩⸩) <|>
+     (do return ⸨⸨f e⸩ (← ⸨x e⸩.eval)⸩) <|>
+     (do return ⸨⸨f e⸩ ⸨x e⸩⸩) -- this is fine, since ($ can infer what kind of Syntax α
+  | ⸨(unquot _α) (quot e)⸩ => eval e <|> (pure e)
+  | ⸨f x⸩ => (do return ⸨(← f.eval) (← x.eval)⸩) <|> ((·.app x) <$> (f.eval)) <|> (f.app <$> (x.eval))
   | e => .error <| "stuck: " ++ (format e)
 
-def infer (e : Expr) : Except Format Expr :=
-  let norm (e : Expr) : Expr := (eval e).toOption.getD e
+def infer (e : Expr) (gas : ℕ := 100) : Except Format Expr :=
+  let rec norm (e : Expr) (gas : ℕ := gas) : Expr :=
+    match gas with
+    | .zero => e
+    | .succ n => norm ((eval e).toOption.getD e) n
 
   let not_fn (t : Expr) := .error <| "not a function type: " ++ (format t)
 
   let mismatch (expected actual : Expr) := .error <| (format expected) ++ " ≠ " ++ (format actual)
 
-  let defeq : Expr → Expr → Bool
-    | (Syntax ?_), (Syntax _α) => true
-    | t₁, t₂ => t₁ == t₂
+  let rec defeq : Expr → Expr → Except Format Expr
+    | (Syntax ?_), t@(Syntax _α) => pure t
+    | t₁, t₂ => if t₁ == t₂ ∨ (norm ⸨(unquot ?_) t₁⸩ gas) == (norm ⸨(unquot ?_) t₂⸩ gas) then
+      pure t₁
+    else
+      mismatch  t₁ t₂
 
   match e with
   | I m => return I.type m
@@ -127,18 +136,14 @@ def infer (e : Expr) : Except Format Expr :=
     | Π' β, γ => return head.type fn β γ
     | t => not_fn t
   | app f x => do match ← norm <$> infer f, ← norm <$> infer x with
+    | Π' (Syntax ?_), (β@(Π' _γ, _δ)), (Syntax α₂@α)
     | Π' α, (β@(Π' _γ, _δ)), α₂ =>
-      let α' := norm ⸨α (quot ⸨f x⸩)⸩
-      if defeq α' α₂ then
-        return β
-      else
-        mismatch α' α₂
+      let _ ← defeq ⸨α (quot ⸨f x⸩)⸩ α₂
+      return β
+    | Π' (Syntax ?_), β, (Syntax α₂@α)
     | Π' α, β, α₂ =>
-      let α' := norm ⸨α (quot ⸨f x⸩)⸩
-      if defeq α' α₂ then
-        return norm ⸨β ⸨f x⸩⸩
-      else
-        mismatch α' α₂
+      let _ ← defeq ⸨α (quot ⸨f x⸩)⸩ α₂
+      return norm ⸨β (quot ⸨f x⸩)⸩
     | t, _ => not_fn t
   | e => .error <| "not well-typed: " ++ (format e)
 

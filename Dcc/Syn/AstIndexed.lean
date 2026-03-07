@@ -15,11 +15,11 @@ inductive Expr where
   -- head fn (quot (f x)) = fn (quot f)
   | head   : Expr → Expr
   -- tail fn (quot (f x)) = fn (quot x)
-  | tail   : Expr → Expr
-  | unquot : Expr → Expr -- (unquot α ((quot e) : Syntax α)) = e
-  | quot   : Expr → Expr -- (quot (e : α)) : Syntax α
-  | app'   : Expr → Expr → Expr -- quotation application. ($ f x) (quot e) = ((f e) (x e))
-  | app    : Expr → Expr → Expr
+  | tail   : Expr  → Expr
+  | unquot : Level → Expr -- (unquot α ((quot e) : Syntax α)) = e
+  | quot   : Expr  → Expr -- (quot (e : α)) : Syntax α
+  | app'   : Expr  → Expr → Expr -- quotation application. ($ f x) (quot e) = ((f e) (x e))
+  | app    : Expr  → Expr → Expr
 deriving BEq, Repr, DecidableEq
 
 open Expr
@@ -65,7 +65,7 @@ def Expr.toFormat : Expr → Format
   | Π' α, β => .paren <| "Π' " ++ α.toFormat ++ "," ++ .line ++ β.toFormat
   | I m => s!"(I {m})"
   | Syntax α => .paren <| "Syntax " ++ α.toFormat
-  | unquot e => .paren <| "unquot " ++ e.toFormat
+  | unquot n => .paren <| "unquot " ++ s!"{n}"
   | hole => "?_"
   | head fn => .paren <| "head" ++ (.nest 2 <| .line ++ fn.toFormat)
   | tail fn => .paren <| "tail" ++ (.nest 2 <| .line ++ fn.toFormat)

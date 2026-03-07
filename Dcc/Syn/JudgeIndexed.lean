@@ -109,7 +109,7 @@ def infer (e : Expr) (gas : ℕ := 100) : Except Format Expr :=
 
   let rec defeq : Expr → Expr → Except Format Expr
     | (Syntax ?_), t@(Syntax _α) => pure t
-    | t₁, t₂ => if t₁ == t₂ ∨ (norm ⸨(unquot ?_) t₁⸩ gas) == (norm ⸨(unquot ?_) t₂⸩ gas) then
+    | t₁, t₂ => if t₁ == t₂ ∨ (norm t₁ gas) == (norm t₂ gas) then
       pure t₁
     else
       mismatch  t₁ t₂

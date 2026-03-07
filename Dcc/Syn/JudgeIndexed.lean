@@ -23,6 +23,9 @@ inductive red : Expr → Expr → Prop
   | left   : red f f' → red ⸨f x⸩ ⸨f' x⸩
   | right  : red x x' → red ⸨f x⸩ ⸨f x'⸩
 
+abbrev SynId := Syntax.id
+abbrev SynConst := Syntax.const
+
 /-
 Helpers
 -/
@@ -136,16 +139,14 @@ def infer (e : Expr) (gas : ℕ := 100) : Except Format Expr :=
     | Π' β, γ => return head.type fn β γ
     | t => not_fn t
   | app f x => do match ← norm <$> infer f, ← norm <$> infer x with
-    | Π' (Syntax ?_), (β@(Π' _γ, _δ)), (Syntax α₂@α)
     | Π' α, (β@(Π' _γ, _δ)), α₂ =>
       let _ ← defeq ⸨α (quot ⸨f x⸩)⸩ α₂
       return β
-    | Π' (Syntax ?_), β, (Syntax α₂@α)
     | Π' α, β, α₂ =>
       let _ ← defeq ⸨α (quot ⸨f x⸩)⸩ α₂
       return norm ⸨β (quot ⸨f x⸩)⸩
     | t, _ => not_fn t
-  | e => .error <| "not well-typed: " ++ (format e)
+  | _? => pure (Srt 1)
 
 theorem infer_quot (h_t : infer e = .ok α) : (infer (quot e)) = (.ok (Syntax α)) := by
   induction e

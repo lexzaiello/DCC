@@ -36,7 +36,7 @@ def mk_const_n (e α : Expr) (m : Level) (t_args : List (Level × Expr)) : Expr 
   Prod.snd <| t_args.foldr (fun (n, t_arg) (t_acc, acc) =>
     ((mk_arrow t_acc t_arg m n), ⸨(K' m n) t_acc t_arg acc⸩)) (α, e)
 
-def const_unquote (α β : Expr) (m n : Level) : Expr :=
+def unquote_const (α β : Expr) (m n : Level) : Expr :=
   $ (⸨(K' m 1) (Syntax α) (mk_arrow α (mk_arrow β α n m) m m) ⸨(K' m n) α β⸩⸩, ⸨(unquot m) α⸩)
 
 /-
@@ -85,10 +85,10 @@ abbrev K'.type (m n : Level) : Expr :=
 
 abbrev K.type (m n : Level) : Expr :=
     Π' ⸨(K' m.succ.succ m.succ) (Srt m.succ) (Syntax (Srt m)) (Srt m)⸩
-  , Π' (Π' (1 (const_unquote (Srt m) ?_ m.succ 1))
+  , Π' (Π' (1 (unquote_const (Srt m) ?_ m.succ 1))
            , ⸨(Syntax.const ?_ ?_ 1 1) ⸨(Syntax.const (Srt n.succ) ?_ n.succ.succ 1) (Srt n)⸩⸩)
-  , Π' (2 (Syntax.id (Srt m) m.succ))
-  , Π' ($ (2 Syntax.id (Srt n) n.succ, 3 (unquot m)))
+  , Π' (2 ⸨(unquot m.succ) (Srt m)⸩)
+  , Π' ($ (2 ⸨(unquot n.succ) ?_⸩, 1 ⸨(unquot m) ?_⸩))
   , (3 ⸨(unquot m.succ) (Srt m)⸩)
 
 /-
@@ -97,7 +97,7 @@ Def infer / eval for prototyping:
 
 def eval (e : Expr) : Except Format Expr :=
   match e with
-  | ⸨(I _m) _α x⸩ => eval x <|> pure e
+  | ⸨(I _m) _α x⸩ => eval x <|> pure x
   | ⸨(K _m _n) _α _β x _y⸩ => eval x <|> (pure x)
   | ⸨(K' _m _n) _α _β x _y⸩ => eval x <|> (pure x)
   | ⸨(S _m _n _o) _α _β _γ x y z⸩ => (do return ⸨(← ⸨x z⸩.eval) (← ⸨y z⸩.eval)⸩) <|>

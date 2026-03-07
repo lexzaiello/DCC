@@ -29,6 +29,16 @@ with (Π α, β) (quot (f x)) (quot y) = (Π α, β) (quot ((f) y))
 with can let us simulate contexts without the explict book-keeping.
 
 (unquot _) (quot β) (quot x)
+
+TODO:
+- account for offset from removing f arg
+- need to change app inference rule:
+  - need to only plug in (quot x), and need to do it before anything else
+- point-free Syntax, different inferene rule for with app
+- quote.type'
+
+new pattern:
+- $, assume point-free variants of the combinators
 -/
 
 namespace Expr
@@ -70,6 +80,9 @@ abbrev Syntax.type (_t : Expr) (m : Level) := (Srt m)
 
 abbrev quot.type (α _e : Expr) := (Syntax α)
 
+abbrev unquot.type' (m : Level) : Expr :=
+  sorry
+
 abbrev unquot.type (m : Level) := Π' (0 ⸨(Syntax.const (Srt m.succ) (Syntax (Srt m)) m.succ.succ m.succ) (Srt m)⸩)
   , Π' ?_, (1 ⸨(unquot m) (Srt m)⸩)
 
@@ -100,24 +113,24 @@ Types for the core combinators:
 abbrev α_sort (m : Level) : Expr :=
   ⸨(K' m.succ.succ m.succ) (Srt m.succ) (Syntax (Srt m)) (Srt m)⸩
 
-abbrev β_to_sort (m n : Level) : Expr :=
-  (Π' (1 (unquote_const (Srt m) ?_ m.succ 1))
-       , ⸨(Syntax.const ?_ ?_ 1 1) ⸨(Syntax.const (Srt n.succ) ?_ n.succ.succ 1) (Srt n)⸩⸩)
+abbrev α_to_sort (m n : Level) : Expr :=
+  into (Π' (head (head ⸨(unquot m.succ) (Srt m)⸩))
+       , ⸨(K' n.succ.succ 1) (Srt n.succ) ?_ (Srt n)⸩)
 
 abbrev I.type (m : Level) : Expr :=
     Π' (α_sort m)
-  , Π' (1 ⸨(unquot 1) ?_⸩)
-  , (1 ⸨(unquot 1) ?_⸩)
+  , into (Π' (head ⸨(unquot 1) ?_⸩)
+  , (head ⸨(unquot 1) ?_⸩))
 
 abbrev K'.type (m n : Level) : Expr :=
     Π' (α_sort m)
-  , Π' ⸨(K' n.succ.succ 1) (Srt n.succ) (Syntax ?_) (Srt n)⸩
-  , Π' (2 ⸨(unquot 1) ?_⸩)
-  , Π' (2 ⸨(unquot 1) ?_⸩), (3 ⸨(unquot 1) ?_⸩)
+  , into (Π' ⸨(K' n.succ.succ 1) (Srt n.succ) (Syntax ?_) (Srt n)⸩
+  , into (Π' (head (head ⸨(unquot 1) ?_⸩))
+  , into (Π' (head (head (tail ⸨(unquot 1) ?_⸩))), (head (head (head ⸨(unquot 1) ?_⸩))))))
 
 abbrev K.type (m n : Level) : Expr :=
     Π' (α_sort m)
-  , Π' (β_to_sort m n)
+  , Π' (α_to_sort m n)
   , Π' (2 ⸨(unquot m.succ) (Srt m)⸩)
   , Π' ($ (2 ⸨(unquot n.succ) ?_⸩, 1 ⸨(unquot m) ?_⸩))
   , (3 ⸨(unquot m.succ) (Srt m)⸩)
@@ -141,10 +154,10 @@ def eval (e : Expr) : Except Format Expr :=
      (do return ⸨(← ⸨x z⸩.eval) ⸨y z⸩⸩) <|>
      (do return ⸨⸨x z⸩ (← ⸨y z⸩.eval)⸩) <|>
      (do return ⸨⸨x z⸩ ⸨y z⸩⸩)
+  | ⸨(into fn) (quot f) (quot x)⸩ => (eval ⸨fn (quot ⸨f x⸩)⸩) <|> pure ⸨fn (quot ⸨f x⸩)⸩
   | ⸨(Π' α, β) x⸩ => return Π' ⸨α x⸩, ⸨β x⸩
   | ⸨(head fn) (quot ⸨f _x⸩)⸩ => eval ⸨fn (quot f)⸩ <|> pure ⸨fn (quot f)⸩
   | ⸨(tail fn) (quot ⸨_f x⸩)⸩ => eval ⸨fn (quot x)⸩ <|> pure ⸨fn (quot x)⸩
-  | ⸨(into fn) (quot f) (quot x)⸩ => eval ⸨fn (quot ⸨f x⸩)⸩ <|> pure ⸨fn (quot ⸨f x⸩)⸩
   | ⸨$ (f, x) e⸩ => (do return ⸨(← ⸨f e⸩.eval) (← ⸨x e⸩.eval)⸩) <|>
      (do return ⸨(← ⸨f e⸩.eval) ⸨x e⸩⸩) <|>
      (do return ⸨⸨f e⸩ (← ⸨x e⸩.eval)⸩) <|>
@@ -158,22 +171,22 @@ def norm (e : Expr) (gas : ℕ := 100) : Expr :=
     | .zero => e
     | .succ n => norm ((eval e).toOption.getD e) n
 
-partial def infer (e : Expr) (gas : ℕ := 100) : Except Format Expr := do
+partial def infer (e : Expr) : Except Format Expr := do
   let not_type (t : Expr) := Except.error <| "not a type: " ++ (format t)
   let not_fn (t : Expr) := Except.error <| "not a function type: " ++ (format t)
   let mismatch (expected actual : Expr) := .error <| (format expected) ++ " ≠ " ++ (format actual)
 
-  let rec defeq (in_e₁ in_e₂ : Expr) (t₁ : Expr) (t₂ : Expr) (gas : ℕ := 100) : Except Format Expr :=
+  let rec defeq (t₁ : Expr) (t₂ : Expr) (gas : ℕ := 100) : Except Format Expr :=
     match gas, t₁, t₂ with
     | .zero , _, _ => .error "out of gas"
     | .succ n, (Π' α₁, β₁), (Π' α₂, β₂) => do
-      let _ ← defeq ⸨in_e₁ ?_⸩ ⸨in_e₂ ?_⸩ α₁ α₂ n
+      let _ ← defeq α₁ α₂ n
 
-      defeq ⸨in_e₁ ?_⸩ ⸨in_e₂ ?_⸩ β₁ β₂ n
+      defeq β₁ β₂ n
     | _, (Syntax ?_), t@(Syntax _α) => pure t
     | _, t₁, t₂ =>
-      let t₁' := norm ⸨t₁ (quot in_e₁)⸩ gas
-      let t₂' := norm ⸨t₂ (quot in_e₂)⸩ gas
+      let t₁' := norm t₁ gas
+      let t₂' := norm t₂ gas
 
       if t₁ == t₂ ∨ t₁' == t₂' then
         pure t₁
@@ -181,40 +194,19 @@ partial def infer (e : Expr) (gas : ℕ := 100) : Except Format Expr := do
         mismatch t₁ t₂
 
   match e with
-  | I m    => return I.type m
   | K' m n => return K'.type m n
-  | K m n  => return K.type m n
+  | I m    => return I.type m
   | Srt m  => return Srt.type m
   | quot e => (quot.type · e) <$> infer e
-  | unquot m => return unquot.type m
-  | Π' _α, Π' β, γ => Pi.type <$> infer (Π' β, γ)
-  | Π' _α, β => do match ← norm <$> infer β with
-    | (Π' _α', γ) => pure ⸨γ ?_⸩
-    | t => not_fn t
   | Syntax t => do match ← norm <$> infer t with
     | (Srt m) => return Syntax.type t m
     | t => not_type t
-  | app' f x => do match ← norm <$> infer f with
-    | (Π' α, Π' _β, γ) =>
-      match ← norm <$> infer α with
-      | (Srt m) => return app'.type f x α γ m
-      | t => not_type t
-    | t => not_fn t
-  | tail fn => do match ← norm <$> infer fn with
-    | Π' β, γ => return tail.type fn β γ
-    | t => not_fn t
-  | head fn => do match ← norm <$> infer fn with
-    | Π' β, γ => return head.type fn β γ
-    | t => not_fn t
-  | app f x => do match ← norm <$> infer f, ← norm <$> infer x with
-    | Π' α, (β@(Π' _γ, _δ)), α₂ =>
-      let _ ← defeq ⸨f x⸩ x (norm ⸨α (quot ⸨f x⸩)⸩ gas) α₂
-      return β
+  | app f x => do match ← (norm ⸨· (quot x)⸩) <$> infer f, ← norm <$> infer x with
     | Π' α, β, α₂ =>
-      let _ ← defeq ⸨f x⸩ x (norm ⸨α (quot ⸨f x⸩)⸩ gas) α₂
-      return norm ⸨β (quot ⸨f x⸩)⸩ gas
+      let _ ← defeq α α₂
+      return norm β
     | t, _ => not_fn t
-  | _? => pure (Srt 1)
+  | t => .error <| "not well-typed: " ++ (format t)
 
 #eval infer (quot (Srt 1))
 #eval infer ⸨(I 2) (Srt 1) (Srt 0)⸩

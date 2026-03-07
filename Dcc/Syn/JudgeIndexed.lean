@@ -130,10 +130,10 @@ abbrev K'.type (m n : Level) : Expr :=
 
 abbrev K.type (m n : Level) : Expr :=
     Π' (α_sort m)
-  , Π' (α_to_sort m n)
-  , Π' (2 ⸨(unquot m.succ) (Srt m)⸩)
-  , Π' ($ (2 ⸨(unquot n.succ) ?_⸩, 1 ⸨(unquot m) ?_⸩))
-  , (3 ⸨(unquot m.succ) (Srt m)⸩)
+  , into (Π' (α_to_sort m n)
+  , into (Π' (head (head ⸨(unquot 1) ?_⸩))
+  , into (Π' ($ ((head (head (tail ⸨(unquot 1) ?_⸩))), (head (tail ⸨(unquot 1) ?_⸩))))
+  , (head (head (head ⸨(unquot 1) ?_⸩))))))
 
 /-abbrev S.type (m n o : Level) : Expr :=
     Π' (α_sort m)
@@ -178,6 +178,9 @@ partial def infer (e : Expr) : Except Format Expr := do
 
   let rec defeq (t₁ : Expr) (t₂ : Expr) (gas : ℕ := 100) : Except Format Expr :=
     match gas, t₁, t₂ with
+    | _, t₁@⸨(into _f) _a⸩, t₂
+    | _, t₁, t₂@⸨(into _f) _a⸩ =>
+      defeq (norm ⸨t₁ (quot ?_)⸩) (norm ⸨t₂ (quot ?_)⸩)
     | .zero , _, _ => .error "out of gas"
     | .succ n, (Π' α₁, β₁), (Π' α₂, β₂) => do
       let _ ← defeq α₁ α₂ n
@@ -195,6 +198,7 @@ partial def infer (e : Expr) : Except Format Expr := do
 
   match e with
   | K' m n => return K'.type m n
+  | K m n => return K.type m n
   | I m    => return I.type m
   | Srt m  => return Srt.type m
   | quot e => (quot.type · e) <$> infer e

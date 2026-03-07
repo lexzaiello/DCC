@@ -62,7 +62,7 @@ def Expr.toFormat : Expr → Format
   | Srt m => s!"(Srt {m})"
   | quot e => .paren <| "quot" ++ (.nest 2 <| .line ++ e.toFormat)
   | K' m n => s!"(K' {m} {n})"
-  | K m n => s!"(K' {m} {n})"
+  | K m n => s!"(K {m} {n})"
   | S m n o => s!"(S {m} {n} {o})"
   | app' a b => "$ " ++ (.paren <| .nest 2 <| a.toFormat ++ .line ++ b.toFormat)
   | Π' α, β => .paren <| "Π' " ++ α.toFormat ++ "," ++ .line ++ β.toFormat

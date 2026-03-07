@@ -72,24 +72,37 @@ abbrev Srt.type (m : Level) : Expr := (Ty m)
 /-
 Types for the core combinators:
 -/
+
+abbrev α_sort (m : Level) : Expr :=
+  ⸨(K' m.succ.succ m.succ) (Srt m.succ) (Syntax (Srt m)) (Srt m)⸩
+
+abbrev β_to_sort (m n : Level) : Expr :=
+  (Π' (1 (unquote_const (Srt m) ?_ m.succ 1))
+       , ⸨(Syntax.const ?_ ?_ 1 1) ⸨(Syntax.const (Srt n.succ) ?_ n.succ.succ 1) (Srt n)⸩⸩)
+
 abbrev I.type (m : Level) : Expr :=
-    Π' ⸨(K' m.succ.succ m.succ) (Srt m.succ) (Syntax (Srt m)) (Srt m)⸩
+    Π' (α_sort m)
   , Π' (1 ⸨(unquot 1) ?_⸩)
   , (1 ⸨(unquot 1) ?_⸩)
 
 abbrev K'.type (m n : Level) : Expr :=
-    Π' ⸨(K' m.succ.succ m.succ) (Srt m.succ) (Syntax (Srt m)) (Srt m)⸩
+    Π' (α_sort m)
   , Π' ⸨(K' n.succ.succ 1) (Srt n.succ) (Syntax ?_) (Srt n)⸩
   , Π' (2 ⸨(unquot 1) ?_⸩)
   , Π' (2 ⸨(unquot 1) ?_⸩), (3 ⸨(unquot 1) ?_⸩)
 
 abbrev K.type (m n : Level) : Expr :=
-    Π' ⸨(K' m.succ.succ m.succ) (Srt m.succ) (Syntax (Srt m)) (Srt m)⸩
-  , Π' (Π' (1 (unquote_const (Srt m) ?_ m.succ 1))
-           , ⸨(Syntax.const ?_ ?_ 1 1) ⸨(Syntax.const (Srt n.succ) ?_ n.succ.succ 1) (Srt n)⸩⸩)
+    Π' (α_sort m)
+  , Π' (β_to_sort m n)
   , Π' (2 ⸨(unquot m.succ) (Srt m)⸩)
   , Π' ($ (2 ⸨(unquot n.succ) ?_⸩, 1 ⸨(unquot m) ?_⸩))
   , (3 ⸨(unquot m.succ) (Srt m)⸩)
+
+/-abbrev S.type (m n o : Level) : Expr :=
+    Π' (α_sort m)
+  , Π' (β_to_sort m n)
+  , Π' (Π' (2 (unquote_const (Srt m) ?_ m.succ 1))
+      , Π' sorry), sorry-/
 
 /-
 Def infer / eval for prototyping:

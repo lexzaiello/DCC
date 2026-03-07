@@ -135,11 +135,30 @@ abbrev K.type (m n : Level) : Expr :=
   , into (Π' ($ ((head (head (tail ⸨(unquot 1) ?_⸩))), (head (tail ⸨(unquot 1) ?_⸩))))
   , (head (head (head ⸨(unquot 1) ?_⸩))))))
 
-/-abbrev S.type (m n o : Level) : Expr :=
+abbrev γ (o : Level) : Expr :=
+    into (Π' (head (head (head ⸨(unquot 1) ?_⸩)))
+  , into (Π' $ (head (head (head (tail ⸨(unquot 1) ?_⸩))), head (tail ⸨(unquot 1) ?_⸩))
+  , ⸨(K' o.succ.succ 1) (Srt o.succ) (Syntax ?_) (Srt o)⸩))
+
+abbrev x : Expr :=
+    into (Π' (head (head (head (head ⸨(unquot 1) ?_⸩))))
+  , into (Π' $ (head (head (head (head (tail ⸨(unquot 1) ?_⸩)))), head (tail ⸨(unquot 1) ?_⸩))
+  , $ (head (head (tail ⸨(unquot 1) ?_⸩)), head (head (tail ⸨(unquot 1) ?_⸩))
+          , ($ ((head (tail ⸨(unquot 1) ?_⸩)), tail ⸨(unquot 1) ?_⸩)))))
+
+abbrev y : Expr :=
+    into (Π' (head (head (head (head (head ⸨(unquot 1) ?_⸩)))))
+  , $ (head (head (head (head (head (tail ⸨(unquot 1) ?_⸩))))), head (tail ⸨(unquot 1) ?_⸩)))
+
+abbrev S.type (m n o : Level) : Expr :=
     Π' (α_sort m)
-  , Π' (β_to_sort m n)
-  , Π' (Π' (2 (unquote_const (Srt m) ?_ m.succ 1))
-      , Π' sorry), sorry-/
+  , into (Π' (α_to_sort m n)
+  , into (Π' (γ o)
+  , into (Π' x
+  , into (Π' y
+  , into (Π' (head (head (head (head (tail ⸨(unquot 1) ?_⸩)))))
+  , $ (head (head (tail ⸨(unquot 1) ?_⸩)), (tail ⸨(unquot 1) ?_⸩)
+          , ($ ((head (tail ⸨(unquot 1) ?_⸩)), tail ⸨(unquot 1) ?_⸩))))))))
 
 /-
 Def infer / eval for prototyping:
@@ -197,6 +216,7 @@ partial def infer (e : Expr) : Except Format Expr := do
         mismatch t₁ t₂
 
   match e with
+  | S m n o => return S.type m n o
   | K' m n => return K'.type m n
   | K m n => return K.type m n
   | I m    => return I.type m

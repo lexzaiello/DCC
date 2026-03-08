@@ -228,4 +228,39 @@ example : judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   apply EqvGen.rel
   apply red.assert
 
+theorem judge_I {h_t_α : judge (Srt m) α} {h_t_x : judge α x} : judge α ⸨(I m) α x⸩ := by
+  apply judge.conv
+  apply judge.app
+  apply judge.conv
+  apply judge.app
+  apply judge.I
+  exact h_t_α
+  apply EqvGen.rel
+  apply red.Pi
+  apply judge.conv
+  assumption
+  apply Setoid.symm
+  apply EqvGen.rel
+  apply red.read
+  apply EqvGen.rel
+  apply red.assert
+
+example : judge (Srt 2) ⸨(K 3 2) (Srt 2) ⸨(I 3) (Srt 2)⸩ (Srt 1) (Srt 0)⸩ := by
+  apply judge.conv
+  apply judge.app
+  apply judge.conv
+  apply judge.app
+  apply judge.conv
+  apply judge.app
+  apply judge.conv
+  apply judge.app
+  apply judge.K
+  exact judge.Srt
+  apply EqvGen.rel
+  apply red.Pi
+  apply judge.conv
+  apply judge.app
+  apply judge.
+  sorry
+
 end Expr

@@ -115,7 +115,7 @@ def S.type (m n o : Level) : Expr :=
       , (Π' o) (1 assert)
       , (2 read))
    , (Π' o) ((Π' n) (assert_n 3 (0 read))
-       , (assert_n 2 (1 read)))
+       , (1 (assert ∘' assert))) -- (assert_n 2 (1 read))
    , (Π' o) (assert_n 4 (0 read))
    , (assert_n 3 ${read})
 

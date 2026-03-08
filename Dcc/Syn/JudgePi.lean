@@ -192,6 +192,8 @@ inductive red : Expr → Expr → Prop
   | app'   : red ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
   | left   : red f f' → red ⸨f x⸩ ⸨f' x⸩
   | right  : red x x' → red ⸨f x⸩ ⸨f x'⸩
+  | leftp  : red α α' → red ((Π' m) α, β) ((Π' m) α', β)
+  | rightp : red β β' → red ((Π' m) α, β) ((Π' m) α, β')
 
 def eq : Expr → Expr → Prop := Relation.EqvGen red
 
@@ -227,6 +229,18 @@ example : judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   apply red.read
   apply EqvGen.rel
   apply red.assert
+
+theorem judge_I_par {h_t_α : judge (Srt m) α} : judge ((Π' m) α, ⸨assert α⸩) ⸨(I m) α⸩ := by
+  apply judge.conv
+  apply judge.app
+  apply judge.I
+  assumption
+  apply EqvGen.trans
+  apply EqvGen.rel
+  apply red.Pi
+  apply EqvGen.rel
+  apply red.leftp
+  apply red.read
 
 theorem judge_I {h_t_α : judge (Srt m) α} {h_t_x : judge α x} : judge α ⸨(I m) α x⸩ := by
   apply judge.conv

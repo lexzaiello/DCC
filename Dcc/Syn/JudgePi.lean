@@ -131,20 +131,6 @@ def step_plus (e : Expr) : Option Expr :=
   | (Π' m) α, β => do return (Π' m) (← step_plus α), (← step_plus β)
   | _ => .none
 
-def step_star (e : Expr) :=
-  match e with
-  | ⸨(I _m) _α x⸩ => step_star x
-  | ⸨(K _m _n) _α _β x _y⸩ => step_star x
-  | ⸨(K' _m _n) _α _β x _y⸩ => step_star x
-  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => ⸨⸨(step_star x) (step_star z)⸩ ⸨(step_star y) (step_star z)⸩⸩
-  | ⸨((Π' m) α, β) x⸩ => (Π' m) (step_star ⸨α x⸩), (step_star ⸨β x⸩)
-  | ⸨next f _x⸩ => step_star f
-  | ⸨read e⸩ => step_star e
-  | ⸨assert e _x⸩ => step_star e
-  | ⸨${π} f g x⸩ => ⸨π ⸨(step_star f) (step_star x)⸩ ⸨(step_star g) (step_star x)⸩⸩
-  | (Π' m) α, β => (Π' m) (step_star α), (step_star β)
-  | e => e
-
 def norm (e : Expr) :=
   match e with
   | ⸨(I _m) _α x⸩ => norm x

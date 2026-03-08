@@ -236,7 +236,7 @@ inductive Judge : Expr → Expr → Prop
     → Judge ⸨β x⸩ ⸨f x⸩
   | conv : Judge A x → (∃ C, Deq A C ∧ Deq B C) → Judge B x
 
-theorem diamond : Red a b → Red a c → ∃ d, Deq b d ∧ Deq c d := by
+theorem confluence : Red a b → Red a c → ∃ d, Deq b d ∧ Deq c d := by
   intro hb hc
   induction hb generalizing c
   repeat (cases hc; exact ⟨_, Deq.refl, Deq.refl⟩; contradiction)
@@ -250,7 +250,12 @@ theorem diamond : Red a b → Red a c → ∃ d, Deq b d ∧ Deq c d := by
       have h_eq₂ : ⸨f'' x⸩.Deq ⸨d x⸩ := Deq.app d₂ Deq.refl
       exact ⟨⸨d x⸩, h_eq₁, h_eq₂⟩
 
-theorem step_left_or_whole : Red ⸨f x⸩ e' → (∃ f', Red f f') ∨ Whnf f := by
+theorem Whnf.no_step : Whnf e → ¬ ∃ e', Red e e' := by
+  intro h
+  cases h
+  repeat (intro ⟨e', hstep⟩; contradiction)
+
+theorem step_left_or_whole : Red ⸨f x⸩ e' → (∃ f', Red f f' ∧ e' = ⸨f' x⸩) ∨ Whnf f := by
   intro h_step
   cases h_step
   exact Or.inr Whnf.I₁
@@ -263,13 +268,33 @@ theorem step_left_or_whole : Red ⸨f x⸩ e' → (∃ f', Red f f') ∨ Whnf f 
   exact Or.inr Whnf.assert₁
   exact Or.inr Whnf.app'₃
   case left f' h_red =>
-    exact Or.inl ⟨f', h_red⟩
+    refine Or.inl ⟨f', h_red, rfl⟩
 
 theorem diamond' : Deq a b → Deq a c → ∃ d, Deq b d ∧ Deq c d := by
   intro hb hc
   induction hb generalizing c with
   | Red h_r_b =>
-    
+    rename_i a' b'
+    induction hc generalizing b'
+    · apply confluence
+      repeat assumption
+    · rename_i e
+      exact ⟨b', Deq.refl, Deq.Red (by assumption)⟩
+    case Red.app f f' x x' h_dq_f' h_dq_x' ih₁ ih₂ =>
+      match step_left_or_whole h_r_b with
+      | .inl ⟨f'', h, heq⟩ =>
+        rw [heq]
+        have ⟨d, f''_d, f'_d⟩ := ih₁ h
+        refine ⟨⸨d x'⸩, ?_, ?_⟩
+        apply Deq.app
+        assumption
+        assumption
+        apply Deq.app
+        assumption
+        apply Deq.refl
+      | .inr h =>
+        
+        sorry
   |  _ => sorry
 
 theorem subst : Judge ((Π' m) α, β) f → Judge α x → Judge ⸨β x⸩ ⸨f x⸩ := by

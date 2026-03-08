@@ -265,6 +265,17 @@ theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedSta
   cases hb
   repeat (cases hc; exact ⟨_, RedStar.refl, RedStar.refl⟩)
 
+theorem red_unique : RedStar a c → RedStar b c → ∃ d, (RedStar d b ∧ RedStar d c) := by
+  intro h₁ h₂
+  induction h₁
+  induction h₂
+  exact ⟨b, .refl, .refl⟩
+  rename_i ih₁ ih₂ ih₃
+  have ⟨d, heq₁, heq₂⟩ := ih₃
+  exact ⟨d, heq₁, .trans heq₂ (.tail .refl (by assumption))⟩
+  rename_i ih
+  exact ⟨b, .refl, h₂⟩
+
 theorem confluence : RedStar a b → RedStar a c → ∃ d, RedStar b d ∧ RedStar c d := by
   intro hb hc
   induction hb
@@ -274,15 +285,33 @@ theorem confluence : RedStar a b → RedStar a c → ∃ d, RedStar b d ∧ RedS
     induction hc
     exact ⟨e, .refl, .tail hr' hr⟩
     case tail b'' c'' hr'' hr''' ih₂ =>
-      have ⟨d, eq₁, eq₂⟩ := ih
-      have ⟨d₂, eq₃, eq₄⟩ := ih₂ ⟨d, eq₁, .trans (.tail .refl hr''') eq₂⟩
-      refine ⟨d, ?_, eq₂⟩
+      have h : b''.RedStar c'' := by
+        apply ReflTransGen.tail .refl
+        assumption
+      let ⟨d, eq₁, eq₃⟩ := ih
+      have ⟨d₂, eq₁, eq₄⟩ := ih₂ (⟨d, eq₁, .trans h eq₃⟩)
       induction eq₃
-      induction eq₁
+      rename_i eq₀
+      induction eq₄
+      exact ⟨c'', .trans eq₀ h, .refl⟩
+      
+      exact ⟨d₂, eq₁, by sorry⟩
+      /-let h₀₀ := ih
+      let h₁₀ := ih₂ ⟨d, eq₁, .trans (.tail .refl hr''') eq₂⟩
+      let ⟨d₂, eq₃, eq₄⟩ := ih₂ ⟨d, eq₁, .trans (.tail .refl hr''') eq₂⟩ (.trans (.tail .refl hr''') eq₂)
+      refine ⟨d, ?_, eq₂⟩
+      apply ReflTransGen.trans eq₃
+      induction eq₃
       induction eq₄
       induction eq₂
-      exact RedStar.tail .refl hr'''
-      exact .trans (.tail .refl hr''') (.trans (by assumption) (.tail .refl (by assumption)))
+      exact (.tail .refl hr''')
+      exact ReflTransGen.trans (.tail .refl hr''') (.trans (by assumption) (.tail .refl (by assumption)))
+      rename_i hr' _-/
+      
+      sorry
+      sorry
+      --let ⟨d, eq₁, eq₂⟩ := ih
+      --have h := ih₂ ⟨d, eq₁, .trans (.tail .refl hr''') eq₂⟩
       
       --induction hr -- induction eq₁
       

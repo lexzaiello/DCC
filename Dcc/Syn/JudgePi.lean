@@ -102,6 +102,20 @@ def K.type (m n : Level) : Expr :=
   , Π' ⸨${${read}} (1 assert) (2 read)⸩
   , (assert_n 3 read)
 
+def S.type (m n o : Level) : Expr :=
+    Π' (Srt m)
+  , Π' (Π' (0 read), (1 ⸨assert (Srt n)⸩))
+  , Π' (Π' (0 assert)
+      , Π' ⸨${${read}} (1 assert) (2 read)⸩
+      , (2 ⸨assert (Srt o)⸩))
+  , Π' (Π' (0 assert)
+      , Π' ⸨${${read}} (1 assert) (2 read)⸩
+      , (2 read))
+   , Π' (Π' (assert_n 3 (0 read))
+       , (assert_n 2 (1 read)))
+   , Π' (assert_n 4 (0 read))
+   , (assert_n 3 ${read})
+
 def norm (e : Expr) (gas : ℕ := 100) :=
   match gas with
   | .zero => e

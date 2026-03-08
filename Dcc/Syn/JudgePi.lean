@@ -6,7 +6,7 @@ abbrev Level := ℕ
 
 inductive Expr where
   | Srt    : Level → Expr
-  | Pi     : Expr  → Expr  → Expr -- Pi (α : Syntax (Sort m)) (β : Sort n) : (Sort n)
+  | Pi     : Level → Expr → Expr → Expr -- Pi (α : Syntax (Sort m)) (β : Sort n) : (Sort n)
   | K'     : Level → Level → Expr
   | K      : Level → Level → Expr
   | S      : Level → Level → Level → Expr
@@ -25,7 +25,7 @@ syntax num term : term
 
 syntax "$" : term
 syntax "${" term "}" : term
-syntax "Π'" term "," term : term
+syntax "(Π'" term ")" term "," term : term
 syntax "(Π')" : term
 syntax "⸨" term* "⸩" : term
 syntax "Ty" term : term
@@ -42,7 +42,7 @@ macro_rules
       `(⸨Expr.next ($n':num $fn)⸩)
   | `(${ $t:term }) => `(⸨$ $t⸩)
   | `($) => `(Expr.app')
-  | `(Π' $α, $β) => `(Expr.Pi $α $β)
+  | `((Π' $m) $α, $β) => `(Expr.Pi $m $α $β)
   | `(⸨$f:term $x:term⸩) => `(Expr.app $f:term $x:term)
   | `(⸨$f:term $x:term $xs:term*⸩) => `(⸨⸨$f:term $x:term⸩ $xs:term*⸩)
 
@@ -54,7 +54,7 @@ def Expr.toFormat : Expr → Format
   | K' m n => s!"(K' {m} {n})"
   | K m n => s!"(K {m} {n})"
   | S m n o => s!"(S {m} {n} {o})"
-  | Π' α, β => .paren <| "Π' " ++ α.toFormat ++ "," ++ .line ++ β.toFormat
+  | (Π' m) α, β => .paren <| "Π' " ++ (.paren (format m)) ++ " " ++ α.toFormat ++ "," ++ .line ++ β.toFormat
   | I m => s!"(I {m})"
   | .app f x => .bracket "⸨" (f.toFormat ++ (.nest 2 <| .line ++ x.toFormat)) "⸩"
   | .app' => "$"
@@ -76,7 +76,7 @@ def eval (e : Expr) : Except Format Expr :=
      (do return ⸨(← ⸨x z⸩.eval) ⸨y z⸩⸩) <|>
      (do return ⸨⸨x z⸩ (← ⸨y z⸩.eval)⸩) <|>
      (do return ⸨⸨x z⸩ ⸨y z⸩⸩)
-  | ⸨(Π' α, β) x⸩ => return Π' ((⸨α x⸩.eval).toOption.getD ⸨α x⸩), ((⸨β x⸩.eval).toOption.getD ⸨β x⸩)
+  | ⸨((Π' m) α, β) x⸩ => return (Π' m) ((⸨α x⸩.eval).toOption.getD ⸨α x⸩), ((⸨β x⸩.eval).toOption.getD ⸨β x⸩)
   | ⸨next f _x⸩ => pure f
   | ⸨read e⸩ => pure e
   | ⸨assert e _x⸩ => pure e
@@ -93,27 +93,30 @@ abbrev assert_n (n : ℕ) (fn : Expr) : Expr :=
   (List.replicate n assert).foldr (fun e acc => (e ∘' acc)) fn
 
 def I.type (m : Level) : Expr :=
-  Π' (Srt m), Π' (0 read), (0 assert)
+  (Π' m) (Srt m), (Π' m) (0 read), (0 assert)
+
+def K'.type (m n : Level) : Expr :=
+  (Π' m) (Srt m), (Π' m) ⸨assert (Srt n)⸩, (Π' m) (0 assert), (Π' m) (1 assert), (assert_n 3 (0 read))
 
 def K.type (m n : Level) : Expr :=
-    Π' (Srt m)
-  , Π' (Π' (0 read), (1 ⸨assert (Srt n)⸩))
-  , Π' (0 assert)
-  , Π' ⸨${${read}} (1 assert) (2 read)⸩
+    (Π' m) (Srt m)
+  , (Π' m) ((Π' n.succ) (0 read), (1 ⸨assert (Srt n)⸩))
+  , (Π' m) (0 assert)
+  , (Π' m) ⸨${${read}} (1 assert) (2 read)⸩
   , (assert_n 3 read)
 
 def S.type (m n o : Level) : Expr :=
-    Π' (Srt m)
-  , Π' (Π' (0 read), (1 ⸨assert (Srt n)⸩))
-  , Π' (Π' (0 assert)
-      , Π' ⸨${${read}} (1 assert) (2 read)⸩
-      , (2 ⸨assert (Srt o)⸩))
-  , Π' (Π' (0 assert)
-      , Π' ⸨${${read}} (1 assert) (2 read)⸩
+    (Π' o) (Srt m)
+  , (Π' o) ((Π' n.succ) (0 read), (1 ⸨assert (Srt n)⸩))
+  , (Π' o) ((Π' o.succ) (0 assert)
+      , (Π' o.succ) (1 read)
+      , (3 ⸨assert (Srt o)⸩))
+  , (Π' o) ((Π' o) (0 assert)
+      , (Π' o) ⸨${${read}} (1 assert) (2 read)⸩
       , (2 read))
-   , Π' (Π' (assert_n 3 (0 read))
+   , (Π' o) ((Π' n) (assert_n 3 (0 read))
        , (assert_n 2 (1 read)))
-   , Π' (assert_n 4 (0 read))
+   , (Π' o) (assert_n 4 (0 read))
    , (assert_n 3 ${read})
 
 def norm (e : Expr) (gas : ℕ := 100) :=
@@ -121,29 +124,34 @@ def norm (e : Expr) (gas : ℕ := 100) :=
   | .zero => e
   | .succ n =>
     match e with
-    | Π' α, β =>
-      Π' (norm α n), (norm β n)
+    | (Π' m) α, β =>
+      (Π' m) (norm α n), (norm β n)
     | e =>
       norm ((eval e).toOption.getD e) n
 
 def defeq (α β : Expr) (gas : ℕ := 100) : Except Format Unit :=
-  match α, β with
-  | (Π' α₁, β₁), (Π' α₂, β₂) => do
-    let _ ← defeq α₁ α₂
-    defeq β₁ β₂
-  | e₁, e₂ =>
+  match gas, α, β with
+  | .succ n, ((Π' _m₁) α₁, β₁), ((Π' _m₂) α₂, β₂) => do
+    let _ ← (defeq α₁ α₂ n).mapError (fun e => "while checking Π domain: " ++ e)
+    (defeq (norm ⸨β₁ ?_⸩) (norm ⸨β₂ ?_⸩) n).mapError (fun e => "while checking Π codomain: " ++ e)
+  | .succ n, ⸨assert e₁⸩, ⸨assert e₂⸩ => defeq e₁ e₂ n
+  | _, e₁, e₂ =>
     if norm e₁ gas == norm e₂ gas then
       pure ()
     else
       .error <| (format α) ++ " ≠ " ++ (format β)
 
 def infer : Expr → Except Format Expr
-  | (I m) => return I.type m
+  | I m => return I.type m
   | K m n => return K.type m n
+  | K' m n => return K'.type m n
+  | S m n o => return S.type m n o
   | Srt m => return Srt m.succ
+  | (Π' m) _α, _β => return Srt m
   | ⸨f x⸩ => do match ← norm <$> infer f, ← norm <$> infer x with
-    | (Π' α₁, β), α₂ => do
-      let _ ← defeq α₁ α₂
+    | ((Π' _m) α₁, β), α₂ => do
+      let _ ← (defeq α₁ α₂).mapError
+        (fun e => "argument mismatch in app " ++ (format ⸨f x⸩) ++ ":" ++ .line ++ e)
       pure <| norm ⸨β x⸩
     | t₁, _t₂ =>
       .error <| "not a function type: " ++ (.nest 2 <| .line ++ (format t₁))
@@ -151,5 +159,22 @@ def infer : Expr → Except Format Expr
 
 #eval infer ⸨(I 2) (Srt 1) (Srt 0)⸩
 #eval infer ⸨(K 3 2) (Srt 2) ⸨(I 3) (Srt 2)⸩ (Srt 1) (Srt 0)⸩
+
+syntax "(" "~>" term ")" term "," term : term
+
+macro_rules
+  | `((~> $m:term) $α:term, $β:term) => `((Π' $m) $α, ⸨assert $β⸩)
+
+def mk_I (α : Expr) (m : Level) : Expr :=
+  let α := α
+  let y := ⸨(K' 2 m) (Srt 1) α (Srt 0)⸩
+  let x := ⸨(K' m 2) α (Srt 1)⸩
+
+  let β := ⸨(K' 3 m) (Srt 2) α (Srt 1)⸩
+  let γ := ⸨(K' m.succ m) ((~> m.succ) (Srt 1), (Srt m)) α ⸨(K' m.succ 2) (Srt m) (Srt 1) α⸩⸩
+
+  ⸨(S m 2 m) α β γ x y⸩
+
+#eval infer <| mk_I (Srt 1) 2
 
 end Expr

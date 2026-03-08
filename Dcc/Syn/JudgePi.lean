@@ -71,19 +71,16 @@ namespace Expr
 
 def eval (e : Expr) : Except Format Expr :=
   match e with
-  | ⸨(I _m) _α x⸩ => eval x <|> pure x
-  | ⸨(K _m _n) _α _β x _y⸩ => eval x <|> (pure x)
-  | ⸨(K' _m _n) _α _β x _y⸩ => eval x <|> (pure x)
-  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => (do return ⸨(← ⸨x z⸩.eval) (← ⸨y z⸩.eval)⸩) <|>
-     (do return ⸨(← ⸨x z⸩.eval) ⸨y z⸩⸩) <|>
-     (do return ⸨⸨x z⸩ (← ⸨y z⸩.eval)⸩) <|>
-     (do return ⸨⸨x z⸩ ⸨y z⸩⸩)
-  | ⸨((Π' m) α, β) x⸩ => return (Π' m) ((⸨α x⸩.eval).toOption.getD ⸨α x⸩), ((⸨β x⸩.eval).toOption.getD ⸨β x⸩)
+  | ⸨(I _m) _α x⸩ => pure x
+  | ⸨(K _m _n) _α _β x _y⸩ => pure x
+  | ⸨(K' _m _n) _α _β x _y⸩ => pure x
+  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => return ⸨⸨x z⸩ ⸨y z⸩⸩
+  | ⸨((Π' m) α, β) x⸩ => return (Π' m) ⸨α x⸩, ⸨β x⸩
   | ⸨next f _x⸩ => pure f
   | ⸨read e⸩ => pure e
   | ⸨assert e _x⸩ => pure e
   | ⸨${π} f g x⸩ => pure ⸨π ⸨f x⸩ ⸨g x⸩⸩
-  | ⸨f x⸩ => (do return ⸨(← f.eval) (← x.eval)⸩) <|> ((·.app x) <$> (f.eval)) <|> (f.app <$> (x.eval))
+  | ⸨f x⸩ => do return ⸨(← f.eval) x⸩
   | e => .error <| "stuck: " ++ (format e)
 
 abbrev comp (f g : Expr) : Expr :=
@@ -191,15 +188,22 @@ inductive red : Expr → Expr → Prop
   | assert : red ⸨assert e _x⸩ e
   | app'   : red ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
   | left   : red f f' → red ⸨f x⸩ ⸨f' x⸩
-  | right  : red x x' → red ⸨f x⸩ ⸨f x'⸩
-  | leftp  : red α α' → red ((Π' m) α, β) ((Π' m) α', β)
-  | rightp : red β β' → red ((Π' m) α, β) ((Π' m) α, β')
 
-def eq : Expr → Expr → Prop := Relation.EqvGen red
+inductive deq : Expr → Expr → Prop
+  | red    : red a b  → deq a b
+  | right  : deq x x' → deq ⸨f x⸩ ⸨f x'⸩
+  | leftp  : deq α α' → deq ((Π' m) α, β) ((Π' m) α', β)
+  | rightp : deq β β' → deq ((Π' m) α, β) ((Π' m) α, β')
+
+def red.rel : Expr → Expr → Prop := Relation.EqvGen red
+def red.iseqv := Relation.EqvGen.is_equivalence red
+
+def deq.rel : Expr → Expr → Prop := Relation.EqvGen deq
+def deq.iseqv := Relation.EqvGen.is_equivalence deq
 
 instance instSetoid : Setoid Expr where
-  r := eq
-  iseqv := Relation.EqvGen.is_equivalence red
+  r := deq.rel
+  iseqv := deq.iseqv
 
 inductive judge : Expr → Expr → Prop
   | I   : judge (I.type m) (I m)
@@ -221,13 +225,16 @@ example : judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   apply judge.I
   exact judge.Srt
   apply EqvGen.rel
+  apply deq.red
   apply red.Pi
   apply judge.conv
   apply judge.Srt
   apply Setoid.symm
   apply EqvGen.rel
+  apply deq.red
   apply red.read
   apply EqvGen.rel
+  apply deq.red
   apply red.assert
 
 theorem judge_I_par {h_t_α : judge (Srt m) α} : judge ((Π' m) α, ⸨assert α⸩) ⸨(I m) α⸩ := by
@@ -237,9 +244,11 @@ theorem judge_I_par {h_t_α : judge (Srt m) α} : judge ((Π' m) α, ⸨assert �
   assumption
   apply EqvGen.trans
   apply EqvGen.rel
+  apply deq.red
   apply red.Pi
   apply EqvGen.rel
-  apply red.leftp
+  apply deq.leftp
+  apply deq.red
   apply red.read
 
 theorem judge_I {h_t_α : judge (Srt m) α} {h_t_x : judge α x} : judge α ⸨(I m) α x⸩ := by
@@ -250,31 +259,16 @@ theorem judge_I {h_t_α : judge (Srt m) α} {h_t_x : judge α x} : judge α ⸨(
   apply judge.I
   exact h_t_α
   apply EqvGen.rel
+  apply deq.red
   apply red.Pi
   apply judge.conv
   assumption
   apply Setoid.symm
   apply EqvGen.rel
+  apply deq.red
   apply red.read
   apply EqvGen.rel
+  apply deq.red
   apply red.assert
-
-example : judge (Srt 2) ⸨(K 3 2) (Srt 2) ⸨(I 3) (Srt 2)⸩ (Srt 1) (Srt 0)⸩ := by
-  apply judge.conv
-  apply judge.app
-  apply judge.conv
-  apply judge.app
-  apply judge.conv
-  apply judge.app
-  apply judge.conv
-  apply judge.app
-  apply judge.K
-  exact judge.Srt
-  apply EqvGen.rel
-  apply red.Pi
-  apply judge.conv
-  apply judge.app
-  apply judge.
-  sorry
 
 end Expr

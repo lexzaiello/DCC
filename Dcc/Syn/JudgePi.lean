@@ -80,7 +80,6 @@ def eval (e : Expr) : Except Format Expr :=
   | ⸨read e⸩ => pure e
   | ⸨assert e _x⸩ => pure e
   | ⸨${π} f g x⸩ => pure ⸨π ⸨f x⸩ ⸨g x⸩⸩
-  | ⸨f x⸩ => do return ⸨(← f.eval) x⸩
   | e => .error <| "stuck: " ++ (format e)
 
 abbrev comp (f g : Expr) : Expr :=
@@ -118,15 +117,20 @@ def S.type (m n o : Level) : Expr :=
    , (Π' o) (assert_n 4 (0 read))
    , (2 (${read} ∘' assert))
 
-def norm (e : Expr) (gas : ℕ := 100) :=
-  match gas with
-  | .zero => e
-  | .succ n =>
-    match e with
-    | (Π' m) α, β =>
-      (Π' m) (norm α n), (norm β n)
-    | e =>
-      norm ((eval e).toOption.getD e) n
+def norm (e : Expr) :=
+  match e with
+  | ⸨(I _m) _α x⸩ => norm x
+  | ⸨(K _m _n) _α _β x _y⸩ => norm x
+  | ⸨(K' _m _n) _α _β x _y⸩ => norm x
+  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => ⸨(norm ⸨x z⸩) (norm ⸨y z⸩)⸩
+  | ⸨((Π' m) α, β) x⸩ => (Π' m) (norm ⸨α x⸩), (norm ⸨β x⸩)
+  | ⸨next f _x⸩ => norm f
+  | ⸨read e⸩ => norm e
+  | ⸨assert e _x⸩ => norm e
+  | ⸨${π} f g x⸩ => ⸨π (norm ⸨f x⸩) (norm ⸨g x⸩)⸩
+  | (Π' m) α, β => (Π' m) (norm α), (norm β)
+  | ⸨f x⸩ => ⸨(norm f) (norm x)⸩
+  | e => e
 
 def defeq (α β : Expr) (gas : ℕ := 100) : Except Format Unit :=
   match gas, α, β with
@@ -135,7 +139,9 @@ def defeq (α β : Expr) (gas : ℕ := 100) : Except Format Unit :=
     (defeq (norm ⸨β₁ _?⸩) (norm ⸨β₂ _?⸩) n).mapError (fun e => "while checking Π codomain: " ++ e)
   | .succ n, ⸨assert e₁⸩, ⸨assert e₂⸩ => defeq e₁ e₂ n
   | _, e₁, e₂ =>
-    if norm e₁ gas == norm e₂ gas then
+    let e₁' := norm e₁
+    let e₂' := norm e₂
+    if e₁' == e₂' then
       pure ()
     else
       .error <| (format α) ++ " ≠ " ++ (format β)
@@ -247,11 +253,16 @@ inductive Red : Expr → Expr → Prop
   | assert : Red ⸨assert e _x⸩ e
   | app'   : Red ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
 
-inductive Deq : Expr → Expr → Prop
-  | Red    : Red a b → Deq a b
-  | refl   : Deq a a
-  | app    : Deq f f' → Deq x x' → Deq ⸨f x⸩ ⸨f' x'⸩
-  | pi     : Deq α α' → Deq β β' → Deq ((Π' m) α, β) ((Π' m) α', β')
+inductive StepStar : Expr → Expr → Prop
+  | Red    : Red a b → StepStar a b
+  | refl   : StepStar a a
+  | app    : StepStar f f' → StepStar x x' → StepStar ⸨f x⸩ ⸨f' x'⸩
+  | pi     : StepStar α α' → StepStar β β' → StepStar ((Π' m) α, β) ((Π' m) α', β')
+
+inductive StepPlus : Expr → Expr → Prop
+  | Red    : Red a b → StepPlus a b
+  | app    : StepPlus f f' → StepPlus x x' → StepPlus ⸨f x⸩ ⸨f' x'⸩
+  | pi     : StepPlus α α' → StepPlus β β' → StepPlus ((Π' m) α, β) ((Π' m) α', β')
 
 inductive Judge : Expr → Expr → Prop
   | I   : Judge (I.type m) (I m)
@@ -263,12 +274,12 @@ inductive Judge : Expr → Expr → Prop
   | app : Judge ((Π' _m) α, β) f
     → Judge α x
     → Judge ⸨β x⸩ ⸨f x⸩
-  | conv : Judge A x → (∃ C, Deq A C ∧ Deq B C) → Judge B x
+  | conv : Judge A x → (∃ C, StepStar A C ∧ StepStar B C) → Judge B x
 
-theorem confluence : Red a b → Red a c → ∃ d, Deq b d ∧ Deq c d := by
+theorem confluence : Red a b → Red a c → ∃ d, StepStar b d ∧ StepStar c d := by
   intro hb hc
   cases hb
-  repeat (cases hc; exact ⟨_, Deq.refl, Deq.refl⟩)
+  repeat (cases hc; exact ⟨_, StepStar.refl, StepStar.refl⟩)
 
 theorem Whnf.no_step : Whnf e → ¬ ∃ e', Red e e' := by
   intro h
@@ -322,43 +333,101 @@ theorem step_whole : Red ⸨f x⸩ e' → Whnf f ∨ Whnf ⸨f x⸩ := by
   exact Or.inl Whnf.assert₁
   exact Or.inl Whnf.app'₃
 
-theorem Deq.trans : Deq a b → Deq b c → Deq a b := by
-  intro h₁ h₂
-  induction h₁ generalizing c
-  induction h₂ generalizing a
-  repeat (apply Deq.Red; assumption)
-  exact Deq.refl
-  case app f f' x x' h_f h_x ih₁ ih₂ =>
-    apply Deq.app
-    repeat assumption
-  apply Deq.pi
-  repeat assumption
+theorem Step.sound (e₁ e₂) : Red e₁ e₂ → eval e₁ = .ok e₂ := by
+  intro h_r
+  induction h_r
+  repeat rfl
 
-theorem diamond' : Deq a b → Deq a c → ∃ d, Deq b d ∧ Deq c d := by
+theorem Step.complete (e₁ e₂) : eval e₁ = .ok e₂ → Red e₁ e₂ := by
+  intro h_e
+  unfold eval at h_e
+  induction e₁
+  repeat simp at h_e
+  case app f x ih =>
+    rename_i a
+    split at h_e
+    rename_i heq
+    cases heq
+    cases h_e
+    exact Red.I
+    rename_i heq
+    cases heq
+    cases h_e
+    exact Red.K
+    rename_i heq
+    cases heq
+    cases h_e
+    exact Red.K'
+    rename_i heq
+    cases heq
+    cases h_e
+    exact Red.S
+    rename_i heq
+    cases heq
+    cases h_e
+    exact Red.Pi
+    rename_i heq
+    cases heq
+    cases h_e
+    exact Red.next
+    rename_i heq
+    cases heq
+    cases h_e
+    exact Red.read
+    rename_i heq
+    cases heq
+    cases h_e
+    exact Red.assert
+    rename_i heq
+    cases heq
+    cases h_e
+    exact Red.app'
+    simp_all
+
+theorem diamond' : StepPlus a b → StepPlus a c → ∃ d, StepStar b d ∧ StepStar c d := by
   intro hb hc
   induction hb generalizing c with
   | Red h_r_b =>
-    induction hc generalizing b
+    rename_i a₁ b₁
+    induction hc generalizing b₁
     apply confluence
     repeat assumption
-    rename_i α₁ b₂ α₃
-    exact ⟨b₂, Deq.refl, Deq.Red h_r_b⟩
-    case Red.app a₂ b₂ f f' x x' h_dq_f h_dq_x ih₁ ih₂ =>
+    case Red.app f f' x x' hp₁ hp₂ ih₁ ih₂ =>
+      cases hp₁
+      rename_i ha
+      have h := ih₁ ha
+      
       sorry
-    sorry
   |  _ => sorry
 
 theorem inv : Judge ((Π' m) α, β) f → Judge α x → Judge ⸨β x⸩ ⸨f x⸩ := by
   apply Judge.app
 
-theorem inv' : Deq ((Π' m) α, β) ((Π' m) α', β') → Deq α α' ∧ Deq β β' := by
-  intro hDeq
-  cases hDeq
-  contradiction
-  exact ⟨Deq.refl, Deq.refl⟩
-  exact ⟨by assumption, by assumption⟩
+theorem Judge_I_par {h_t_α : Judge (Srt m) α} : Judge ((Π' m) α, ⸨assert α⸩) ⸨(I m) α⸩ := by
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.app
+  apply Judge.I
+  assumption
+  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, StepStar.Red Red.Pi, StepStar.refl⟩
+  refine ⟨(Π' m) α, ⸨assert α⸩, ?_, StepStar.refl⟩
+  apply StepStar.pi
+  apply StepStar.Red
+  exact Red.read
+  exact StepStar.refl
 
---theorem inv' : Judge ((Π' m) α, β) f → Judge α x → Judge 
+theorem Judge_I {h_t_α : Judge (Srt m) α} {h_t_x : Judge α x} : Judge α ⸨(I m) α x⸩ := by
+  apply Judge.conv
+  apply Judge.app
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.app
+  apply Judge.I
+  exact h_t_α
+  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, StepStar.Red Red.Pi, StepStar.refl⟩
+  exact ⟨(Π' m) α, ⸨assert α⸩, StepStar.pi (StepStar.Red Red.read) StepStar.refl, StepStar.refl⟩
+  assumption
+  exact ⟨α, StepStar.Red Red.assert, StepStar.refl⟩
 
 theorem preservation (h_t : Judge α x) (h_step : Red x x') : Judge α x' := by
   induction h_t generalizing x'
@@ -369,7 +438,31 @@ theorem preservation (h_t : Judge α x) (h_step : Red x x') : Judge α x' := by
     rename_i h
     cases h
     rename_i h _ _
-    have h' := inv h (by assumption)
+    cases h
+    rename_i h_c
+    have ⟨C, heq₁, heq₂⟩ := h_c
+    cases heq₁
+    rename_i h
+    cases h
+    cases heq₂
+    contradiction
+    apply Judge.conv
+    assumption
+    exact ⟨_, StepStar.Red Red.read, StepStar.Red Red.assert⟩
+    apply Judge.conv
+    assumption
+    rename_i h₁ h₂
+    rename_i _α _
+    refine ⟨_α, by sorry, StepStar.trans (StepStar.app h₂ StepStar.refl) (StepStar.Red Red.assert)⟩
+    
+    /-cases h_t_f
+    rename_i α₀ x₀ _m₁ _α A h_c h
+    cases h
+    rename_i _m₂ α₂ β₂ h_j₂ h_j₃
+    have h' := inv h_j₂ (by assumption)
+    have h_judge₂ : Judge (Pi _m α β) ((I _m₁).app _α) := Judge.conv h' h_c
+    have h'' := inv h_judge₂ (by assumption)
+    cases h_j₂-/
     
     sorry
 
@@ -382,38 +475,12 @@ example : Judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   exact Judge.Srt
   use (Π' 2) ⸨read (Srt 1)⸩, ⸨assert (Srt 1)⸩
   constructor
-  apply Deq.Red
+  apply StepStar.Red
   apply Red.Pi
-  exact Deq.refl
+  exact StepStar.refl
   apply Judge.conv
   exact Judge.Srt
-  exact ⟨Srt 1, Deq.refl, Deq.Red Red.read⟩
-  exact ⟨Srt 1, Deq.Red Red.assert, Deq.refl⟩
-
-theorem Judge_I_par {h_t_α : Judge (Srt m) α} : Judge ((Π' m) α, ⸨assert α⸩) ⸨(I m) α⸩ := by
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.I
-  assumption
-  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, Deq.Red Red.Pi, Deq.refl⟩
-  refine ⟨(Π' m) α, ⸨assert α⸩, ?_, Deq.refl⟩
-  apply Deq.pi
-  apply Deq.Red
-  exact Red.read
-  exact Deq.refl
-
-theorem Judge_I {h_t_α : Judge (Srt m) α} {h_t_x : Judge α x} : Judge α ⸨(I m) α x⸩ := by
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.I
-  exact h_t_α
-  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, Deq.Red Red.Pi, Deq.refl⟩
-  exact ⟨(Π' m) α, ⸨assert α⸩, Deq.pi (Deq.Red Red.read) Deq.refl, Deq.refl⟩
-  assumption
-  exact ⟨α, Deq.Red Red.assert, Deq.refl⟩
+  exact ⟨Srt 1, StepStar.refl, StepStar.Red Red.read⟩
+  exact ⟨Srt 1, StepStar.Red Red.assert, StepStar.refl⟩
 
 end Expr

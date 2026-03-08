@@ -248,6 +248,31 @@ abbrev RedStar := Relation.ReflTransGen Red
 abbrev RedStar.tail {a b c : Expr} := Relation.ReflTransGen.tail (r := Red) (a := a) (b := b) (c := c)
 abbrev RedStar.refl {a : Expr} := Relation.ReflTransGen.refl (r := Red) (a := a)
 
+inductive ParRed : Expr → Expr → Prop where
+  | refl_K'     : ParRed (K' m n) (K' m n)
+  | refl_K      : ParRed (K m n) (K m n)
+  | refl_S      : ParRed (S m n o) (S m n o)
+  | refl_I      : ParRed (I m) (I m)
+  | refl_hole   : ParRed (_?) (_?)
+  | refl_Srt    : ParRed (Srt m) (Srt m)
+  | refl_next   : ParRed next next
+  | refl_read   : ParRed read read
+  | refl_assert : ParRed assert assert
+  | refl_app'   : ParRed $ $
+  | I           : ParRed x x' → ParRed ⸨(I _m) _α x⸩ x
+  | K           : ParRed x x' → ParRed ⸨(K _m _n) _α _β x _y⸩ x
+  | K'          : ParRed x x' → ParRed ⸨(K' _m _n) _α _β x _y⸩ x
+  | S           : ParRed x x' → ParRed y y' → ParRed z z'
+    → ParRed ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨⸨x' z'⸩ ⸨y' z'⸩⸩
+  | Pi          : ParRed ⸨α x⸩ α' → ParRed ⸨β x⸩ β' → ParRed ⸨((Π' m) α, β) x⸩ ((Π' m) α', β')
+  | Pival       : ParRed α α' → ParRed β β' → ParRed ((Π' m) α, β) ((Π' m) α', β')
+  | next        : ParRed f f' → ParRed ⸨next f _x⸩ f'
+  | read        : ParRed e e' → ParRed ⸨read e⸩ e'
+  | assert      : ParRed e e' → ParRed ⸨assert e _x⸩ e'
+  | app'        : ParRed π π' → ParRed f f' → ParRed g g' → ParRed x x'
+    → ParRed ⸨${π} f g x⸩ ⸨π' ⸨f' x'⸩ ⸨g' x'⸩⸩
+  | app         : ParRed f f' → ParRed x x' → ParRed ⸨f x⸩ ⸨f' x'⸩
+
 inductive Judge : Expr → Expr → Prop
   | I   : Judge (I.type m) (I m)
   | K   : Judge (K.type m n) (K m n)
@@ -265,56 +290,37 @@ theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedSta
   cases hb
   repeat (cases hc; exact ⟨_, RedStar.refl, RedStar.refl⟩)
 
-theorem red_unique : RedStar a c → RedStar b c → ∃ d, (RedStar d b ∧ RedStar d c) := by
+theorem ParApp.refl : ParRed e e := by
+  induction e
+  exact ParRed.refl_Srt
+  apply ParRed.Pival
+  repeat assumption
+  apply ParRed.refl_K'
+  apply ParRed.refl_K
+  apply ParRed.refl_S
+  apply ParRed.refl_I
+  apply ParRed.refl_hole
+  apply ParRed.refl_next
+  apply ParRed.refl_read
+  apply ParRed.refl_assert
+  apply ParRed.refl_app'
+  apply ParRed.app
+  repeat assumption
+
+theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro h₁ h₂
   induction h₁
   induction h₂
-  exact ⟨b, .refl, .refl⟩
-  rename_i ih₁ ih₂ ih₃
-  have ⟨d, heq₁, heq₂⟩ := ih₃
-  exact ⟨d, heq₁, .trans heq₂ (.tail .refl (by assumption))⟩
-  rename_i ih
-  exact ⟨b, .refl, h₂⟩
-
-theorem confluence : RedStar a b → RedStar a c → ∃ d, RedStar b d ∧ RedStar c d := by
-  intro hb hc
-  induction hb
-  exact ⟨c, hc, .refl⟩
-  case tail b e hr' hr ih =>
-    rename_i b₀
-    induction hc
-    exact ⟨e, .refl, .tail hr' hr⟩
-    case tail b'' c'' hr'' hr''' ih₂ =>
-      have h : b''.RedStar c'' := by
-        apply ReflTransGen.tail .refl
-        assumption
-      let ⟨d, eq₁, eq₃⟩ := ih
-      have ⟨d₂, eq₁, eq₄⟩ := ih₂ (⟨d, eq₁, .trans h eq₃⟩)
-      induction eq₃
-      rename_i eq₀
-      induction eq₄
-      exact ⟨c'', .trans eq₀ h, .refl⟩
-      
-      exact ⟨d₂, eq₁, by sorry⟩
-      /-let h₀₀ := ih
-      let h₁₀ := ih₂ ⟨d, eq₁, .trans (.tail .refl hr''') eq₂⟩
-      let ⟨d₂, eq₃, eq₄⟩ := ih₂ ⟨d, eq₁, .trans (.tail .refl hr''') eq₂⟩ (.trans (.tail .refl hr''') eq₂)
-      refine ⟨d, ?_, eq₂⟩
-      apply ReflTransGen.trans eq₃
-      induction eq₃
-      induction eq₄
-      induction eq₂
-      exact (.tail .refl hr''')
-      exact ReflTransGen.trans (.tail .refl hr''') (.trans (by assumption) (.tail .refl (by assumption)))
-      rename_i hr' _-/
-      
-      sorry
-      sorry
-      --let ⟨d, eq₁, eq₂⟩ := ih
-      --have h := ih₂ ⟨d, eq₁, .trans (.tail .refl hr''') eq₂⟩
-      
-      --induction hr -- induction eq₁
-      
+  exact ⟨a, .refl, .refl⟩
+  rename_i b₁ c₁ hr₁ hr₂ h
+  have ⟨d, heq₁, heq₂⟩ := h
+  have h_c₁ : ReflTransGen Red a c₁ := .trans hr₁ (.tail .refl hr₂)
+  exact ⟨c₁, h_c₁, .refl⟩
+  rename_i b₁ c₂ hr₁ hr₂ h
+  have ⟨d, h₁, h₂⟩ := h
+  exact ⟨c₂, .refl, by
+    
+    sorry⟩
 
 
 theorem Whnf.no_step : Whnf e → ¬ ∃ e', Red e e' := by

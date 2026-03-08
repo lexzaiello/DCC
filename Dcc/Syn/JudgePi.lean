@@ -117,17 +117,45 @@ def S.type (m n o : Level) : Expr :=
    , (Π' o) (assert_n 4 (0 read))
    , (2 (${read} ∘' assert))
 
+def step_plus (e : Expr) : Option Expr :=
+  match e with
+  | ⸨(I _m) _α x⸩ => step_plus x
+  | ⸨(K _m _n) _α _β x _y⸩ => step_plus x
+  | ⸨(K' _m _n) _α _β x _y⸩ => step_plus x
+  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => do return ⸨⸨(← step_plus x) (← step_plus z)⸩ ⸨(← step_plus y) (← step_plus z)⸩⸩
+  | ⸨((Π' m) α, β) x⸩ => do return (Π' m) (← step_plus ⸨α x⸩), (← step_plus ⸨β x⸩)
+  | ⸨next f _x⸩ => step_plus f
+  | ⸨read e⸩ => step_plus e
+  | ⸨assert e _x⸩ => step_plus e
+  | ⸨${π} f g x⸩ => do return ⸨π ⸨(← step_plus f) (← step_plus x)⸩ ⸨(← step_plus g) (← step_plus x)⸩⸩
+  | (Π' m) α, β => do return (Π' m) (← step_plus α), (← step_plus β)
+  | _ => .none
+
+def step_star (e : Expr) :=
+  match e with
+  | ⸨(I _m) _α x⸩ => step_star x
+  | ⸨(K _m _n) _α _β x _y⸩ => step_star x
+  | ⸨(K' _m _n) _α _β x _y⸩ => step_star x
+  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => ⸨⸨(step_star x) (step_star z)⸩ ⸨(step_star y) (step_star z)⸩⸩
+  | ⸨((Π' m) α, β) x⸩ => (Π' m) (step_star ⸨α x⸩), (step_star ⸨β x⸩)
+  | ⸨next f _x⸩ => step_star f
+  | ⸨read e⸩ => step_star e
+  | ⸨assert e _x⸩ => step_star e
+  | ⸨${π} f g x⸩ => ⸨π ⸨(step_star f) (step_star x)⸩ ⸨(step_star g) (step_star x)⸩⸩
+  | (Π' m) α, β => (Π' m) (step_star α), (step_star β)
+  | e => e
+
 def norm (e : Expr) :=
   match e with
   | ⸨(I _m) _α x⸩ => norm x
   | ⸨(K _m _n) _α _β x _y⸩ => norm x
   | ⸨(K' _m _n) _α _β x _y⸩ => norm x
-  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => ⸨(norm ⸨x z⸩) (norm ⸨y z⸩)⸩
+  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => ⸨⸨(norm x) (norm z)⸩ ⸨(norm y) (norm z)⸩⸩
   | ⸨((Π' m) α, β) x⸩ => (Π' m) (norm ⸨α x⸩), (norm ⸨β x⸩)
   | ⸨next f _x⸩ => norm f
   | ⸨read e⸩ => norm e
   | ⸨assert e _x⸩ => norm e
-  | ⸨${π} f g x⸩ => ⸨π (norm ⸨f x⸩) (norm ⸨g x⸩)⸩
+  | ⸨${π} f g x⸩ => ⸨π ⸨(norm f) (norm x)⸩ ⸨(norm g) (norm x)⸩⸩
   | (Π' m) α, β => (Π' m) (norm α), (norm β)
   | ⸨f x⸩ => ⸨(norm f) (norm x)⸩
   | e => e
@@ -212,36 +240,6 @@ inductive Whnf : Expr → Prop where
   | app'₂   : Whnf ⸨$ a b⸩
   | app'₃   : Whnf ⸨$ a b c⸩
 
-inductive Nf : Expr → Prop where
-  | I₀      : Nf (I m)
-  | I₁      : Nf α → Nf ⸨(I m) α⸩
-  | K₀      : Nf (K m n)
-  | K₁      : Nf α → Nf ⸨(K m n) α⸩
-  | K₂      : Nf α → Nf β → Nf ⸨(K m n) α β⸩
-  | K₃      : Nf α → Nf β → Nf x → Nf ⸨(K m n) α β x⸩
-  | K'₀     : Nf (K' m n)
-  | K'₁     : Nf α → Nf ⸨(K' m n) α⸩
-  | K'₂     : Nf β → Nf ⸨(K' m n) α β⸩
-  | K'₃     : Nf α → Nf β → Nf x → Nf ⸨(K' m n) α β x⸩
-  | S₀      : Nf (S m n o)
-  | S₁      : Nf α → Nf ⸨(S m n o) α⸩
-  | S₂      : Nf α → Nf β → Nf ⸨(S m n o) α β⸩
-  | S₃      : Nf α → Nf β → Nf γ → Nf ⸨(S m n o) α β γ⸩
-  | S₄      : Nf α → Nf β → Nf γ → Nf x → Nf ⸨(S m n o) α β γ x⸩
-  | S₅      : Nf α → Nf β → Nf γ → Nf x → Nf y → Nf ⸨(S m n o) α β γ x y⸩
-  | Pi      : Nf α → Nf β → Nf ((Π' m) α, β)
-  | Srt     : Nf (Srt m)
-  | next₀   : Nf next
-  | next₁   : Nf f → Nf ⸨next f⸩
-  | read    : Nf read
-  | assert₀ : Nf assert
-  | assert₁ : Nf e → Nf ⸨assert e⸩
-  | app'₀   : Nf $
-  | app'₁   : Nf a → Nf ⸨$ a⸩
-  | app'₂   : Nf a → Nf b → Nf ⸨$ a b⸩
-  | app'₃   : Nf ⸨$ a b c⸩
-
-
 inductive Red : Expr → Expr → Prop
   | I      : Red ⸨(I _m) _α x⸩ x
   | K      : Red ⸨(K _m _n) _α _β x _y⸩ x
@@ -254,15 +252,24 @@ inductive Red : Expr → Expr → Prop
   | app'   : Red ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
 
 inductive StepStar : Expr → Expr → Prop
-  | Red    : Red a b → StepStar a b
-  | refl   : StepStar a a
-  | app    : StepStar f f' → StepStar x x' → StepStar ⸨f x⸩ ⸨f' x'⸩
+  | red    : Red a b → StepStar a b
   | pi     : StepStar α α' → StepStar β β' → StepStar ((Π' m) α, β) ((Π' m) α', β')
+  | app    : StepStar f f' → StepStar x x' → StepStar ⸨f x⸩ ⸨f' x⸩
+  | refl   : StepStar e e
 
 inductive StepPlus : Expr → Expr → Prop
-  | Red    : Red a b → StepPlus a b
-  | app    : StepPlus f f' → StepPlus x x' → StepPlus ⸨f x⸩ ⸨f' x'⸩
-  | pi     : StepPlus α α' → StepPlus β β' → StepPlus ((Π' m) α, β) ((Π' m) α', β')
+  | I      : StepPlus x x' → StepPlus ⸨(I _m) _α x⸩ x'
+  | K      : StepPlus x x' → StepPlus ⸨(K _m _n) _α _β x _y⸩ x'
+  | K'     : StepPlus x x' → StepPlus ⸨(K' _m _n) _α _β x _y⸩ x'
+  | S      : StepPlus x x' → StepPlus y y' → StepPlus z z' → StepPlus ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨⸨x' z'⸩ ⸨y' z'⸩⸩
+  | Pi     : StepPlus ⸨α x⸩ α' → StepPlus ⸨β x⸩ β' → StepPlus ⸨((Π' m) α, β) x⸩ ((Π' m) α', β')
+  | Pi'    : StepPlus α α' → StepPlus β β' → StepPlus ((Π' m) α, β) ((Π' m) α', β')
+  | next   : StepPlus f f' → StepPlus ⸨next f _x⸩ f'
+  | read   : StepPlus e e' → StepPlus ⸨read e⸩ e'
+  | assert : StepPlus e e' → StepPlus ⸨assert e _x⸩ e'
+  | app'   : StepPlus f f' → StepPlus x x' → StepPlus g g'
+    → StepPlus ⸨${π} f g x⸩ ⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩
+  | app    : StepPlus f f' → StepPlus x x' → StepPlus ⸨f x⸩ ⸨f' x⸩
 
 inductive Judge : Expr → Expr → Prop
   | I   : Judge (I.type m) (I m)
@@ -386,19 +393,9 @@ theorem Step.complete (e₁ e₂) : eval e₁ = .ok e₂ → Red e₁ e₂ := by
 
 theorem diamond' : StepPlus a b → StepPlus a c → ∃ d, StepStar b d ∧ StepStar c d := by
   intro hb hc
-  induction hb generalizing c with
-  | Red h_r_b =>
-    rename_i a₁ b₁
-    induction hc generalizing b₁
-    apply confluence
-    repeat assumption
-    case Red.app f f' x x' hp₁ hp₂ ih₁ ih₂ =>
-      cases hp₁
-      rename_i ha
-      have h := ih₁ ha
-      
-      sorry
-  |  _ => sorry
+  induction hb generalizing c
+  cases hc
+  repeat sorry
 
 theorem inv : Judge ((Π' m) α, β) f → Judge α x → Judge ⸨β x⸩ ⸨f x⸩ := by
   apply Judge.app
@@ -409,10 +406,10 @@ theorem Judge_I_par {h_t_α : Judge (Srt m) α} : Judge ((Π' m) α, ⸨assert �
   apply Judge.app
   apply Judge.I
   assumption
-  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, StepStar.Red Red.Pi, StepStar.refl⟩
+  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, StepStar.red Red.Pi, StepStar.refl⟩
   refine ⟨(Π' m) α, ⸨assert α⸩, ?_, StepStar.refl⟩
   apply StepStar.pi
-  apply StepStar.Red
+  apply StepStar.red
   exact Red.read
   exact StepStar.refl
 
@@ -424,47 +421,13 @@ theorem Judge_I {h_t_α : Judge (Srt m) α} {h_t_x : Judge α x} : Judge α ⸨(
   apply Judge.app
   apply Judge.I
   exact h_t_α
-  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, StepStar.Red Red.Pi, StepStar.refl⟩
-  exact ⟨(Π' m) α, ⸨assert α⸩, StepStar.pi (StepStar.Red Red.read) StepStar.refl, StepStar.refl⟩
+  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, StepStar.red Red.Pi, StepStar.refl⟩
+  exact ⟨(Π' m) α, ⸨assert α⸩, StepStar.pi (StepStar.red Red.read) StepStar.refl, StepStar.refl⟩
   assumption
-  exact ⟨α, StepStar.Red Red.assert, StepStar.refl⟩
+  exact ⟨α, StepStar.red Red.assert, StepStar.refl⟩
 
 theorem preservation (h_t : Judge α x) (h_step : Red x x') : Judge α x' := by
-  induction h_t generalizing x'
-  repeat contradiction
-  case app _m α β f x h_t_f h_t_x ih₁ ih₂ =>
-    cases h_step
-    cases h_t_f
-    rename_i h
-    cases h
-    rename_i h _ _
-    cases h
-    rename_i h_c
-    have ⟨C, heq₁, heq₂⟩ := h_c
-    cases heq₁
-    rename_i h
-    cases h
-    cases heq₂
-    contradiction
-    apply Judge.conv
-    assumption
-    exact ⟨_, StepStar.Red Red.read, StepStar.Red Red.assert⟩
-    apply Judge.conv
-    assumption
-    rename_i h₁ h₂
-    rename_i _α _
-    refine ⟨_α, by sorry, StepStar.trans (StepStar.app h₂ StepStar.refl) (StepStar.Red Red.assert)⟩
-    
-    /-cases h_t_f
-    rename_i α₀ x₀ _m₁ _α A h_c h
-    cases h
-    rename_i _m₂ α₂ β₂ h_j₂ h_j₃
-    have h' := inv h_j₂ (by assumption)
-    have h_judge₂ : Judge (Pi _m α β) ((I _m₁).app _α) := Judge.conv h' h_c
-    have h'' := inv h_judge₂ (by assumption)
-    cases h_j₂-/
-    
-    sorry
+  sorry
 
 example : Judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   apply Judge.conv
@@ -475,12 +438,12 @@ example : Judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   exact Judge.Srt
   use (Π' 2) ⸨read (Srt 1)⸩, ⸨assert (Srt 1)⸩
   constructor
-  apply StepStar.Red
+  apply StepStar.red
   apply Red.Pi
   exact StepStar.refl
   apply Judge.conv
   exact Judge.Srt
-  exact ⟨Srt 1, StepStar.refl, StepStar.Red Red.read⟩
-  exact ⟨Srt 1, StepStar.Red Red.assert, StepStar.refl⟩
+  exact ⟨Srt 1, StepStar.refl, StepStar.red Red.read⟩
+  exact ⟨Srt 1, StepStar.red Red.assert, StepStar.refl⟩
 
 end Expr

@@ -206,6 +206,36 @@ inductive Whnf : Expr → Prop where
   | app'₂   : Whnf ⸨$ a b⸩
   | app'₃   : Whnf ⸨$ a b c⸩
 
+inductive Nf : Expr → Prop where
+  | I₀      : Nf (I m)
+  | I₁      : Nf α → Nf ⸨(I m) α⸩
+  | K₀      : Nf (K m n)
+  | K₁      : Nf α → Nf ⸨(K m n) α⸩
+  | K₂      : Nf α → Nf β → Nf ⸨(K m n) α β⸩
+  | K₃      : Nf α → Nf β → Nf x → Nf ⸨(K m n) α β x⸩
+  | K'₀     : Nf (K' m n)
+  | K'₁     : Nf α → Nf ⸨(K' m n) α⸩
+  | K'₂     : Nf β → Nf ⸨(K' m n) α β⸩
+  | K'₃     : Nf α → Nf β → Nf x → Nf ⸨(K' m n) α β x⸩
+  | S₀      : Nf (S m n o)
+  | S₁      : Nf α → Nf ⸨(S m n o) α⸩
+  | S₂      : Nf α → Nf β → Nf ⸨(S m n o) α β⸩
+  | S₃      : Nf α → Nf β → Nf γ → Nf ⸨(S m n o) α β γ⸩
+  | S₄      : Nf α → Nf β → Nf γ → Nf x → Nf ⸨(S m n o) α β γ x⸩
+  | S₅      : Nf α → Nf β → Nf γ → Nf x → Nf y → Nf ⸨(S m n o) α β γ x y⸩
+  | Pi      : Nf α → Nf β → Nf ((Π' m) α, β)
+  | Srt     : Nf (Srt m)
+  | next₀   : Nf next
+  | next₁   : Nf f → Nf ⸨next f⸩
+  | read    : Nf read
+  | assert₀ : Nf assert
+  | assert₁ : Nf e → Nf ⸨assert e⸩
+  | app'₀   : Nf $
+  | app'₁   : Nf a → Nf ⸨$ a⸩
+  | app'₂   : Nf a → Nf b → Nf ⸨$ a b⸩
+  | app'₃   : Nf ⸨$ a b c⸩
+
+
 inductive Red : Expr → Expr → Prop
   | I      : Red ⸨(I _m) _α x⸩ x
   | K      : Red ⸨(K _m _n) _α _β x _y⸩ x
@@ -216,7 +246,6 @@ inductive Red : Expr → Expr → Prop
   | read   : Red ⸨read e⸩ e
   | assert : Red ⸨assert e _x⸩ e
   | app'   : Red ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
-  | left   : Red f f' → Red ⸨f x⸩ ⸨f' x⸩
 
 inductive Deq : Expr → Expr → Prop
   | Red    : Red a b → Deq a b
@@ -238,17 +267,8 @@ inductive Judge : Expr → Expr → Prop
 
 theorem confluence : Red a b → Red a c → ∃ d, Deq b d ∧ Deq c d := by
   intro hb hc
-  induction hb generalizing c
-  repeat (cases hc; exact ⟨_, Deq.refl, Deq.refl⟩; contradiction)
-  case left f f' x h_r_f' ih =>
-    cases hc
-    repeat contradiction
-    case left f'' h_r_f'' =>
-      have ⟨d, d₁, _⟩ := ih h_r_f'
-      have ⟨d, d₁, d₂⟩ := ih h_r_f''
-      have h_eq₁ : ⸨f' x⸩.Deq ⸨d x⸩ := Deq.app d₁ Deq.refl
-      have h_eq₂ : ⸨f'' x⸩.Deq ⸨d x⸩ := Deq.app d₂ Deq.refl
-      exact ⟨⸨d x⸩, h_eq₁, h_eq₂⟩
+  cases hb
+  repeat (cases hc; exact ⟨_, Deq.refl, Deq.refl⟩)
 
 theorem Whnf.no_step : Whnf e → ¬ ∃ e', Red e e' := by
   intro h
@@ -288,64 +308,68 @@ theorem step_left_or_whole : Red ⸨f x⸩ e' → (∃ f', Red f f' ∧ e' = ⸨
   exact Or.inr Whnf.read
   exact Or.inr Whnf.assert₁
   exact Or.inr Whnf.app'₃
-  case left f' h_red =>
-    refine Or.inl ⟨f', h_red, rfl⟩
+
+theorem step_whole : Red ⸨f x⸩ e' → Whnf f ∨ Whnf ⸨f x⸩ := by
+  intro h_r
+  cases h_r
+  exact Or.inl Whnf.I₁
+  exact Or.inl Whnf.K₃
+  exact Or.inl Whnf.K'₃
+  exact Or.inl Whnf.S₅
+  exact Or.inl Whnf.Pi
+  exact Or.inl Whnf.next₁
+  exact Or.inl Whnf.read
+  exact Or.inl Whnf.assert₁
+  exact Or.inl Whnf.app'₃
+
+theorem Deq.trans : Deq a b → Deq b c → Deq a b := by
+  intro h₁ h₂
+  induction h₁ generalizing c
+  induction h₂ generalizing a
+  repeat (apply Deq.Red; assumption)
+  exact Deq.refl
+  case app f f' x x' h_f h_x ih₁ ih₂ =>
+    apply Deq.app
+    repeat assumption
+  apply Deq.pi
+  repeat assumption
 
 theorem diamond' : Deq a b → Deq a c → ∃ d, Deq b d ∧ Deq c d := by
   intro hb hc
   induction hb generalizing c with
   | Red h_r_b =>
-    rename_i a' b'
-    induction hc generalizing b'
-    · apply confluence
-      repeat assumption
-    · rename_i e
-      exact ⟨b', Deq.refl, Deq.Red (by assumption)⟩
-    case Red.app f f' x x' h_dq_f' h_dq_x' ih₁ ih₂ =>
-      match step_left_or_whole h_r_b with
-      | .inl ⟨f'', h, heq⟩ =>
-        rw [heq]
-        have ⟨d, f''_d, f'_d⟩ := ih₁ h
-        refine ⟨⸨d x'⸩, ?_, ?_⟩
-        apply Deq.app
-        assumption
-        assumption
-        apply Deq.app
-        assumption
-        apply Deq.refl
-      | .inr h =>
-        have h_no_step := h.no_step
-        induction h_dq_f'
-        simp_all
-        cases h_r_b
-        simp_all
-        exact ⟨x', by assumption, Deq.Red Red.I⟩
-        exact ⟨b', Deq.refl, Deq.Red Red.K⟩
-        exact ⟨b', Deq.refl, Deq.Red Red.K'⟩
-        rename_i m n o α β γ x y
-        rename_i z
-        exact ⟨⸨⸨x x'⸩ ⸨y x'⸩⸩, Deq.app (Deq.app Deq.refl (by assumption)) (Deq.app Deq.refl (by assumption))
-              , Deq.Red Red.S⟩
-        rename_i m α β
-        exact ⟨(Π' m) ⸨α x'⸩, ⸨β x'⸩, Deq.pi (Deq.app Deq.refl h_dq_x') (Deq.app Deq.refl h_dq_x'), Deq.Red Red.Pi⟩
-        
-        sorry
+    induction hc generalizing b
+    apply confluence
+    repeat assumption
+    rename_i α₁ b₂ α₃
+    exact ⟨b₂, Deq.refl, Deq.Red h_r_b⟩
+    case Red.app a₂ b₂ f f' x x' h_dq_f h_dq_x ih₁ ih₂ =>
+      sorry
+    sorry
   |  _ => sorry
 
-theorem subst : Judge ((Π' m) α, β) f → Judge α x → Judge ⸨β x⸩ ⸨f x⸩ := by
+theorem inv : Judge ((Π' m) α, β) f → Judge α x → Judge ⸨β x⸩ ⸨f x⸩ := by
   apply Judge.app
 
-theorem inv : Deq ((Π' m) α, β) ((Π' m) α', β') → Deq α α' ∧ Deq β β' := by
+theorem inv' : Deq ((Π' m) α, β) ((Π' m) α', β') → Deq α α' ∧ Deq β β' := by
   intro hDeq
   cases hDeq
   contradiction
   exact ⟨Deq.refl, Deq.refl⟩
   exact ⟨by assumption, by assumption⟩
 
+--theorem inv' : Judge ((Π' m) α, β) f → Judge α x → Judge 
+
 theorem preservation (h_t : Judge α x) (h_step : Red x x') : Judge α x' := by
   induction h_t generalizing x'
   repeat contradiction
   case app _m α β f x h_t_f h_t_x ih₁ ih₂ =>
+    cases h_step
+    cases h_t_f
+    rename_i h
+    cases h
+    rename_i h _ _
+    have h' := inv h (by assumption)
     
     sorry
 

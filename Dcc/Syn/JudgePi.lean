@@ -385,7 +385,37 @@ theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed 
     rename_i s_α s_β
     have ⟨d, ha, hb⟩ := ih (ParRed.Pival (.app s_α α₂) (.app s_β α₂))
     refine ⟨d, ha, ParRed.Pi hb⟩
-    
+  · rename_i α α' β β' m p_α p_β ih₁ ih₂
+    cases h₂
+    rename_i α'₂ β'₂ p_α' p_β'
+    have ⟨d₁, h_α₁, h_α₂⟩ := ih₁ p_α
+    have ⟨d₂, h_β₁, h_β₂⟩ := ih₂ p_β
+    have ⟨d₃, h_α₃, h_α₄⟩ := ih₁ p_α'
+    have ⟨d₄, h_β₃, h_β₄⟩ := ih₂ p_β'
+    have ha : ParRed (Pi m α'₂ β'₂) (Pi m d₃ d₄) := ParRed.Pival (by assumption) (by assumption)
+    have hb : ParRed (Pi m α' β') (Pi m d₃ d₄) := ParRed.Pival h_α₃ h_β₃
+    exact ⟨_, hb, ha⟩
+  · rename_i f f' _x h_f ih
+    cases h₂
+    · rename_i a
+      exact ih a
+    · rename_i f'' x' h_f' h_x'
+      cases h_f'
+      rename_i f'' x'' h_f'' h_x''
+      cases h_f''
+      have h := ih h_f
+      have ⟨d, hd_f', hd_x''⟩ := ih h_x''
+      have h := ParRed.next (f := x'') (_x := x') hd_x''
+      exact ⟨d, hd_f', h⟩
+  · rename_i e e' h_e' ih
+    cases h₂
+    · rename_i a
+      exact ih a
+    · rename_i f' x' h_f' h_x'
+      cases h_f'
+      have ⟨d, ha, hb⟩ := ih h_x'
+      exact ⟨d, ha, ParRed.read hb⟩
+  
   sorry
 
 

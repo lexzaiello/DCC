@@ -255,6 +255,27 @@ theorem Whnf.no_step : Whnf e → ¬ ∃ e', Red e e' := by
   cases h
   repeat (intro ⟨e', hstep⟩; contradiction)
 
+theorem Whnf.left : Whnf ⸨f x⸩ → Whnf f := by
+  intro h
+  cases h
+  exact Whnf.I₀
+  exact Whnf.K₀
+  exact Whnf.K₁
+  exact Whnf.K₂
+  exact Whnf.K'₀
+  exact Whnf.K'₁
+  exact Whnf.K'₂
+  exact Whnf.S₀
+  exact Whnf.S₁
+  exact Whnf.S₂
+  exact Whnf.S₃
+  exact Whnf.S₄
+  exact Whnf.next₀
+  exact Whnf.assert₀
+  exact Whnf.app'₀
+  exact Whnf.app'₁
+  exact Whnf.app'₂
+
 theorem step_left_or_whole : Red ⸨f x⸩ e' → (∃ f', Red f f' ∧ e' = ⸨f' x⸩) ∨ Whnf f := by
   intro h_step
   cases h_step
@@ -293,6 +314,20 @@ theorem diamond' : Deq a b → Deq a c → ∃ d, Deq b d ∧ Deq c d := by
         assumption
         apply Deq.refl
       | .inr h =>
+        have h_no_step := h.no_step
+        induction h_dq_f'
+        simp_all
+        cases h_r_b
+        simp_all
+        exact ⟨x', by assumption, Deq.Red Red.I⟩
+        exact ⟨b', Deq.refl, Deq.Red Red.K⟩
+        exact ⟨b', Deq.refl, Deq.Red Red.K'⟩
+        rename_i m n o α β γ x y
+        rename_i z
+        exact ⟨⸨⸨x x'⸩ ⸨y x'⸩⸩, Deq.app (Deq.app Deq.refl (by assumption)) (Deq.app Deq.refl (by assumption))
+              , Deq.Red Red.S⟩
+        rename_i m α β
+        exact ⟨(Π' m) ⸨α x'⸩, ⸨β x'⸩, Deq.pi (Deq.app Deq.refl h_dq_x') (Deq.app Deq.refl h_dq_x'), Deq.Red Red.Pi⟩
         
         sorry
   |  _ => sorry

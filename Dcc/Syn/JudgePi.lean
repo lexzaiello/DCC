@@ -313,30 +313,68 @@ theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed 
   intro h₁ h₂
   induction h₁ generalizing c
   repeat exact ⟨_, h₂, ParRed.refl⟩
-  cases h₂
-  rename_i h_x ih h_c
-  exact ih h_c
-  rename_i h_x ih _ _ h₂ h_x'
-  cases h₂
-  rename_i h₂ _
-  cases h₂
-  have ⟨d, ha, hb⟩ := ih h_x'
-  refine ⟨d, ha, ParRed.I hb⟩
-  cases h₂
-  rename_i h_x ih
-  exact  h_x ih
-  rename_i h_x ih f' x' h_k h_x'
-  cases h_k
-  rename_i h_k _
-  cases h_k
-  rename_i h_k _
-  cases h_k
-  rename_i h_k _
-  cases h_k
-  have ⟨d, ha, hb⟩ := ih h_x
-  rename_i h_x₂ _ _ _ _
-  have ⟨d₂, ha₂, hb₂⟩ := ih h_x₂
-  exact ⟨d₂, ha₂, ParRed.K hb₂⟩
+  · cases h₂
+    rename_i h_x ih h_c
+    exact ih h_c
+    rename_i h_x ih _ _ h₂ h_x'
+    cases h₂
+    rename_i h₂ _
+    cases h₂
+    have ⟨d, ha, hb⟩ := ih h_x'
+    refine ⟨d, ha, ParRed.I hb⟩
+  · cases h₂
+    rename_i h_x ih
+    exact  h_x ih
+    rename_i h_x ih f' x' h_k h_x'
+    cases h_k
+    rename_i h_k _
+    cases h_k
+    rename_i h_k _
+    cases h_k
+    rename_i h_k _
+    cases h_k
+    have ⟨d, ha, hb⟩ := ih h_x
+    rename_i h_x₂ _ _ _ _
+    have ⟨d₂, ha₂, hb₂⟩ := ih h_x₂
+    exact ⟨d₂, ha₂, ParRed.K hb₂⟩
+  · cases h₂
+    rename_i h_x ih
+    exact  h_x ih
+    rename_i h_x ih f' x' h_k h_x'
+    cases h_k
+    rename_i h_k _
+    cases h_k
+    rename_i h_k _
+    cases h_k
+    rename_i h_k _
+    cases h_k
+    have ⟨d, ha, hb⟩ := ih h_x
+    rename_i h_x₂ _ _ _ _
+    have ⟨d₂, ha₂, hb₂⟩ := ih h_x₂
+    exact ⟨d₂, ha₂, ParRed.K' hb₂⟩
+  · cases h₂
+    rename_i h_x ih
+    exact  h_x ih
+    rename_i hs _
+    cases hs
+    rename_i hs _
+    cases hs
+    rename_i hs _
+    cases hs
+    rename_i hs _
+    cases hs
+    rename_i hs _
+    cases hs
+    rename_i hs _
+    cases hs
+    rename_i x z y _ _ _ _ _ _ _ h ih _ _ _ _ _ _ _ _ _ _ _ _
+    have ⟨d, ha, hb⟩ := ih h
+    rename_i s' _ _ _ _ _ _ x'₅ a'₄ _ h₂ _ h₃ _ h₄ _ _ _ _
+    have h_xz := ParRed.app h₃ a'₄
+    have h_yz := ParRed.app h₂ a'₄
+    have h_s  := ParRed.app h_xz h_yz
+    have ⟨d, ha, hb⟩ := ih h_s
+    exact ⟨d, ha, ParRed.S hb⟩
   
   sorry
 

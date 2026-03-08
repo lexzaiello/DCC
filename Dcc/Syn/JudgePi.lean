@@ -117,7 +117,7 @@ def S.type (m n o : Level) : Expr :=
    , (Π' o) ((Π' n) (assert_n 3 (0 read))
        , (1 (assert ∘' assert))) -- (assert_n 2 (1 read))
    , (Π' o) (assert_n 4 (0 read))
-   , (assert_n 3 ${read})
+   , (2 (${read} ∘' assert))
 
 def norm (e : Expr) (gas : ℕ := 100) :=
   match gas with
@@ -176,5 +176,7 @@ def mk_I (α : Expr) (m : Level) : Expr :=
   ⸨(S m 2 m) α β γ x y⸩
 
 #eval infer <| mk_I (Srt 1) 2
+
+#eval infer <| ⸨(mk_I (Srt 1) 2) (Srt 0)⸩
 
 end Expr

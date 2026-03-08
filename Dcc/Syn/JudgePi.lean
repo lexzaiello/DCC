@@ -1,4 +1,5 @@
 import Mathlib.Data.Nat.Notation
+import Mathlib.Logic.Relation
 open Std (ToFormat Format)
 open Std.ToFormat (format)
 
@@ -190,5 +191,23 @@ inductive red : Expr → Expr → Prop
   | app'   : red ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
   | left   : red f f' → red ⸨f x⸩ ⸨f' x⸩
   | right  : red x x' → red ⸨f x⸩ ⸨f x'⸩
+
+def eq : Expr → Expr → Prop := Relation.EqvGen red
+
+instance instSetoid : Setoid Expr where
+  r := eq
+  iseqv := Relation.EqvGen.is_equivalence red
+
+inductive judge : Expr → Expr → Prop
+  | I   : judge (I m) (I.type m)
+  | K   : judge (K m n) (K.type m n)
+  | K'  : judge (K' m n) (K'.type m n)
+  | S   : judge (S m n o) (S.type m n o)
+  | Srt : judge (Srt m) (Srt m.succ)
+  | Pi  : judge ((Π' m) _α, _β) (Srt m)
+  | app : judge ((Π' _m) α, β) f
+    → judge α x
+    → judge ⸨β x⸩ ⸨f x⸩
+  | conv : judge t₁ x → t₁ ≈ t₂ → judge t₂ x
 
 end Expr

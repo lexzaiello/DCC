@@ -259,19 +259,21 @@ inductive ParRed : Expr → Expr → Prop where
   | refl_read   : ParRed read read
   | refl_assert : ParRed assert assert
   | refl_app'   : ParRed $ $
-  | I           : ParRed x x' → ParRed ⸨(I _m) _α x⸩ x
-  | K           : ParRed x x' → ParRed ⸨(K _m _n) _α _β x _y⸩ x
-  | K'          : ParRed x x' → ParRed ⸨(K' _m _n) _α _β x _y⸩ x
-  | S           : ParRed x x' → ParRed y y' → ParRed z z'
-    → ParRed ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨⸨x' z'⸩ ⸨y' z'⸩⸩
-  | Pi          : ParRed ⸨α x⸩ α' → ParRed ⸨β x⸩ β' → ParRed ⸨((Π' m) α, β) x⸩ ((Π' m) α', β')
+  | I           : ParRed x x' → ParRed ⸨(I _m) _α x⸩ x'
+  | K           : ParRed x x' → ParRed ⸨(K _m _n) _α _β x _y⸩ x'
+  | K'          : ParRed x x' → ParRed ⸨(K' _m _n) _α _β x _y⸩ x'
+  | S           : ParRed ⸨⸨x z⸩ ⸨y z⸩⸩ s'
+    → ParRed ⸨(S _m _n _o) _α _β _γ x y z⸩ s'
+  | Pi          : ParRed ((Π' m) ⸨α x⸩, ⸨β x⸩) P' → ParRed ⸨((Π' m) α, β) x⸩ P'
   | Pival       : ParRed α α' → ParRed β β' → ParRed ((Π' m) α, β) ((Π' m) α', β')
   | next        : ParRed f f' → ParRed ⸨next f _x⸩ f'
   | read        : ParRed e e' → ParRed ⸨read e⸩ e'
   | assert      : ParRed e e' → ParRed ⸨assert e _x⸩ e'
-  | app'        : ParRed π π' → ParRed f f' → ParRed g g' → ParRed x x'
-    → ParRed ⸨${π} f g x⸩ ⸨π' ⸨f' x'⸩ ⸨g' x'⸩⸩
-  | app         : ParRed f f' → ParRed x x' → ParRed ⸨f x⸩ ⸨f' x'⸩
+  | app'        : ParRed ⸨π ⸨f x⸩ ⸨g x⸩⸩ P'
+    → ParRed ⸨${π} f g x⸩ P'
+  | app         : ParRed f f'
+    → ParRed x x'
+    → ParRed ⸨f x⸩ ⸨f' x'⸩
 
 inductive Judge : Expr → Expr → Prop
   | I   : Judge (I.type m) (I m)
@@ -290,7 +292,7 @@ theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedSta
   cases hb
   repeat (cases hc; exact ⟨_, RedStar.refl, RedStar.refl⟩)
 
-theorem ParApp.refl : ParRed e e := by
+theorem ParRed.refl : ParRed e e := by
   induction e
   exact ParRed.refl_Srt
   apply ParRed.Pival
@@ -309,18 +311,20 @@ theorem ParApp.refl : ParRed e e := by
 
 theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro h₁ h₂
-  induction h₁
-  induction h₂
-  exact ⟨a, .refl, .refl⟩
-  rename_i b₁ c₁ hr₁ hr₂ h
-  have ⟨d, heq₁, heq₂⟩ := h
-  have h_c₁ : ReflTransGen Red a c₁ := .trans hr₁ (.tail .refl hr₂)
-  exact ⟨c₁, h_c₁, .refl⟩
-  rename_i b₁ c₂ hr₁ hr₂ h
-  have ⟨d, h₁, h₂⟩ := h
-  exact ⟨c₂, .refl, by
-    
-    sorry⟩
+  induction h₁ generalizing c
+  repeat exact ⟨_, by assumption, ParRed.refl⟩
+  rename_i h_p_x ih
+  cases h₂
+  rename_i h_p_x'
+  exact ih h_p_x'
+  rename_i f' x' h_p_f' p_x'
+  cases h_p_f'
+  rename_i h _
+  cases h
+  have ⟨d, ha, hb⟩ := ih p_x'
+  exact ⟨d, ha, ParRed.I hb⟩
+  
+  sorry
 
 
 theorem Whnf.no_step : Whnf e → ¬ ∃ e', Red e e' := by

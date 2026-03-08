@@ -152,7 +152,14 @@ def defeq (α β : Expr) (gas : ℕ := 100) : Except Format Unit :=
     let _ ← (defeq α₁ α₂ n).mapError (fun e => "while checking Π domain: " ++ e)
     (defeq (norm ⸨β₁ _?⸩) (norm ⸨β₂ _?⸩) n).mapError (fun e => "while checking Π codomain: " ++ e)
   | .succ n, ⸨assert e₁⸩, ⸨assert e₂⸩ => defeq e₁ e₂ n
-  | _, e₁, e₂ =>
+  | .succ n, e₁, e₂ =>
+    let e₁' := norm e₁
+    let e₂' := norm e₂
+    if e₁' == e₂' then
+      pure ()
+    else
+      defeq e₁' e₂' n
+  | .zero, e₁, e₂ =>
     let e₁' := norm e₁
     let e₂' := norm e₂
     if e₁' == e₂' then
@@ -237,25 +244,9 @@ inductive Red : Expr → Expr → Prop
   | assert : Red ⸨assert e _x⸩ e
   | app'   : Red ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
 
-inductive StepStar : Expr → Expr → Prop
-  | red    : Red a b → StepStar a b
-  | pi     : StepStar α α' → StepStar β β' → StepStar ((Π' m) α, β) ((Π' m) α', β')
-  | app    : StepStar f f' → StepStar x x' → StepStar ⸨f x⸩ ⸨f' x⸩
-  | refl   : StepStar e e
-
-inductive StepPlus : Expr → Expr → Prop
-  | I      : StepPlus x x' → StepPlus ⸨(I _m) _α x⸩ x'
-  | K      : StepPlus x x' → StepPlus ⸨(K _m _n) _α _β x _y⸩ x'
-  | K'     : StepPlus x x' → StepPlus ⸨(K' _m _n) _α _β x _y⸩ x'
-  | S      : StepPlus x x' → StepPlus y y' → StepPlus z z' → StepPlus ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨⸨x' z'⸩ ⸨y' z'⸩⸩
-  | Pi     : StepPlus ⸨α x⸩ α' → StepPlus ⸨β x⸩ β' → StepPlus ⸨((Π' m) α, β) x⸩ ((Π' m) α', β')
-  | Pi'    : StepPlus α α' → StepPlus β β' → StepPlus ((Π' m) α, β) ((Π' m) α', β')
-  | next   : StepPlus f f' → StepPlus ⸨next f _x⸩ f'
-  | read   : StepPlus e e' → StepPlus ⸨read e⸩ e'
-  | assert : StepPlus e e' → StepPlus ⸨assert e _x⸩ e'
-  | app'   : StepPlus f f' → StepPlus x x' → StepPlus g g'
-    → StepPlus ⸨${π} f g x⸩ ⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩
-  | app    : StepPlus f f' → StepPlus x x' → StepPlus ⸨f x⸩ ⸨f' x⸩
+abbrev RedStar := Relation.ReflTransGen Red
+abbrev RedStar.tail {a b c : Expr} := Relation.ReflTransGen.tail (r := Red) (a := a) (b := b) (c := c)
+abbrev RedStar.refl {a : Expr} := Relation.ReflTransGen.refl (r := Red) (a := a)
 
 inductive Judge : Expr → Expr → Prop
   | I   : Judge (I.type m) (I m)
@@ -267,12 +258,35 @@ inductive Judge : Expr → Expr → Prop
   | app : Judge ((Π' _m) α, β) f
     → Judge α x
     → Judge ⸨β x⸩ ⸨f x⸩
-  | conv : Judge A x → (∃ C, StepStar A C ∧ StepStar B C) → Judge B x
+  | conv : Judge A x → (∃ C, RedStar A C ∧ RedStar B C) → Judge B x
 
-theorem confluence : Red a b → Red a c → ∃ d, StepStar b d ∧ StepStar c d := by
+theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedStar c d := by
   intro hb hc
   cases hb
-  repeat (cases hc; exact ⟨_, StepStar.refl, StepStar.refl⟩)
+  repeat (cases hc; exact ⟨_, RedStar.refl, RedStar.refl⟩)
+
+theorem confluence : RedStar a b → RedStar a c → ∃ d, RedStar b d ∧ RedStar c d := by
+  intro hb hc
+  induction hb
+  exact ⟨c, hc, .refl⟩
+  case tail b e hr' hr ih =>
+    rename_i b₀
+    induction hc
+    exact ⟨e, .refl, .tail hr' hr⟩
+    case tail b'' c'' hr'' hr''' ih₂ =>
+      have ⟨d, eq₁, eq₂⟩ := ih
+      have ⟨d₂, eq₃, eq₄⟩ := ih₂ ⟨d, eq₁, .trans (.tail .refl hr''') eq₂⟩
+      refine ⟨d, ?_, eq₂⟩
+      induction eq₃
+      induction eq₁
+      induction eq₄
+      induction eq₂
+      exact RedStar.tail .refl hr'''
+      exact .trans (.tail .refl hr''') (.trans (by assumption) (.tail .refl (by assumption)))
+      
+      --induction hr -- induction eq₁
+      
+
 
 theorem Whnf.no_step : Whnf e → ¬ ∃ e', Red e e' := by
   intro h
@@ -377,12 +391,6 @@ theorem Step.complete (e₁ e₂) : eval e₁ = .ok e₂ → Red e₁ e₂ := by
     exact Red.app'
     simp_all
 
-theorem diamond' : StepPlus a b → StepPlus a c → ∃ d, StepStar b d ∧ StepStar c d := by
-  intro hb hc
-  induction hb generalizing c
-  cases hc
-  repeat sorry
-
 theorem inv : Judge ((Π' m) α, β) f → Judge α x → Judge ⸨β x⸩ ⸨f x⸩ := by
   apply Judge.app
 
@@ -392,9 +400,12 @@ theorem Judge_I_par {h_t_α : Judge (Srt m) α} : Judge ((Π' m) α, ⸨assert �
   apply Judge.app
   apply Judge.I
   assumption
-  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, StepStar.red Red.Pi, StepStar.refl⟩
-  refine ⟨(Π' m) α, ⸨assert α⸩, ?_, StepStar.refl⟩
-  apply StepStar.pi
+  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, .tail .refl Red.Pi, .refl⟩
+  refine ⟨(Π' m) α, ⸨assert α⸩, ?_, .refl⟩
+  apply RedStar.tail
+  apply RedStar.tail
+  apply RedStar.refl
+  apply Red.Pi
   apply StepStar.red
   exact Red.read
   exact StepStar.refl

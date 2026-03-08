@@ -186,11 +186,11 @@ partial def infer (e : Expr) : Except Format Expr := do
 
   let rec defeq (t₁ : Expr) (t₂ : Expr) (gas : ℕ := 100) : Except Format Expr :=
     match gas, norm t₁, norm t₂ with
+    | _, ?_, t₁ | _, t₁, ?_ => pure t₁
     | .succ n, t₁@⸨(into _f) _a⸩, t₂
     | .succ n, t₁, t₂@⸨(into _f) _a⸩ =>
       defeq (norm ⸨t₁ (quot ?_)⸩) (norm ⸨t₂ (quot ?_)⸩) n
     | .zero , _, _ => .error "out of gas"
-    | _, ?_, e => pure e
     | .succ n, (Π' α₁, β₁), (Π' α₂, β₂) => do
       let _ ← defeq α₁ α₂ n
 
@@ -206,7 +206,7 @@ partial def infer (e : Expr) : Except Format Expr := do
         mismatch t₁ t₂
 
   match e with
-  | Π' _α, β => infer ⸨β ?_⸩
+  | Π' _α, β => infer ⸨β (quot ?_)⸩
   | S m n o => return S.type m n o
   | K' m n => return K'.type m n
   | K m n => return K.type m n
@@ -215,14 +215,12 @@ partial def infer (e : Expr) : Except Format Expr := do
   | head fn => infer fn
   | tail fn => infer fn
   | unquot α => pure (Syntax α ~> α)
-  | ?_ => return Srt 1
-  | into f => match ← infer f with
-    | Π' _α, β => return ⸨(into
-             (Π' (head (head unquot?))
-      , into (Π' (head (head (head unquot?)))
-           , ($  (head (head (tail unquot?)), (head (tail unquot?)), (tail unquot?)))))) (quot ⸨(Syntax ?_) β⸩)⸩
-    | t => not_fn t f (into f)
-  | quot e => (quot.type · e) <$> infer e
+  | ?_ => return ?_
+  | into f => do match ← (norm ⸨· (quot ⸨?_ ?_⸩)⸩) <$> infer f with
+    | t' => return (Syntax ?_ ~> (Syntax ?_ ~> t'))
+  | ⸨(into f) (quot a)⸩ => do match ← (norm ⸨· (quot ⸨a ?_⸩)⸩) <$> infer f with
+    | t' => return (Syntax ?_ ~> t')
+  | quot e => (quot.type · e) <$> infer e <|> (pure (quot.type ?_ e))
   | Syntax t => do match ← norm <$> infer t with
     | (Srt m) => return Syntax.type t m
     | t => not_type t
@@ -239,10 +237,12 @@ def mk_I (α : Expr) (m : Level) : Expr :=
   let x := ⸨(K' m 2) α (Srt 1)⸩
 
   let β := ⸨(K' 3 m) (Srt 2) α (Srt 1)⸩
-  let γ := ⸨(K' 1 1) ((Srt 2) ~> (Srt m.succ)) α ⸨(K' m.succ 2) (Srt m) (Srt 1) α⸩⸩
+  dbg_trace format ((Srt 2) ~> (Srt m.succ))
+  let γ := ⸨(K' m.succ.succ m) ((Srt 2) ~> (Srt m.succ)) α ⸨(K' m.succ 2) (Srt m) (Srt 1) α⸩⸩
 
   ⸨(S m 2 m) α β γ x y⸩
 
+#eval infer ⸨(into (Π' (head (head (unquot ?_))), (head (tail (unquot ?_))))) (quot ⸨(Srt 2) (Srt 3)⸩)⸩
 #eval infer (⸨(unquot (Srt 1)) (quot (Srt 0))⸩)
 #eval infer <| mk_I (Srt 1) 2
 
@@ -252,6 +252,8 @@ def mk_I (α : Expr) (m : Level) : Expr :=
 #eval infer ⸨(K' 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩
 #eval infer ⸨(K 3 2) (Srt 2) ⸨(I 3) (Srt 2)⸩ (Srt 1) (Srt 0)⸩
 
-#eval infer (Π' ⸨(SynConst (Srt 1) (Srt 1) 2 2) (Srt 0)⸩, ⸨(I 2) (Srt 1)⸩)
+#eval infer (head (tail (unquot ?_)))
+
+#eval format <$> infer (Srt 0 ~> Srt 0)
 
 end Expr

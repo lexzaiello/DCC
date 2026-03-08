@@ -177,34 +177,34 @@ def mk_I (α : Expr) (m : Level) : Expr :=
 #eval infer <| mk_I (Srt 1) 2
 #eval infer <| ⸨(mk_I (Srt 1) 2) (Srt 0)⸩
 
-inductive IsValue : Expr → Prop where
-  | I₀      : IsValue (I m)
-  | I₁      : IsValue ⸨(I m) α⸩
-  | K₀      : IsValue (K m n)
-  | K₁      : IsValue ⸨(K m n) α⸩
-  | K₂      : IsValue ⸨(K m n) α β⸩
-  | K₃      : IsValue ⸨(K m n) α β x⸩
-  | K'₀     : IsValue (K m n)
-  | K'₁     : IsValue ⸨(K m n) α⸩
-  | K'₂     : IsValue ⸨(K m n) α β⸩
-  | K'₃     : IsValue ⸨(K m n) α β x⸩
-  | S₀      : IsValue (S m n o)
-  | S₁      : IsValue ⸨(S m n o) α⸩
-  | S₂      : IsValue ⸨(S m n o) α β⸩
-  | S₃      : IsValue ⸨(S m n o) α β γ⸩
-  | S₄      : IsValue ⸨(S m n o) α β γ x⸩
-  | S₅      : IsValue ⸨(S m n o) α β γ x y⸩
-  | Pi      : IsValue ((Π' m) α, β)
-  | Srt     : IsValue (Srt m)
-  | next₀   : IsValue next
-  | next₁   : IsValue ⸨next f⸩
-  | read    : IsValue read
-  | assert₀ : IsValue assert
-  | assert₁ : IsValue ⸨assert e⸩
-  | app'₀   : IsValue $
-  | app'₁   : IsValue ⸨$ a⸩
-  | app'₂   : IsValue ⸨$ a b⸩
-  | app'₃   : IsValue ⸨$ a b c⸩
+inductive Whnf : Expr → Prop where
+  | I₀      : Whnf (I m)
+  | I₁      : Whnf ⸨(I m) α⸩
+  | K₀      : Whnf (K m n)
+  | K₁      : Whnf ⸨(K m n) α⸩
+  | K₂      : Whnf ⸨(K m n) α β⸩
+  | K₃      : Whnf ⸨(K m n) α β x⸩
+  | K'₀     : Whnf (K m n)
+  | K'₁     : Whnf ⸨(K m n) α⸩
+  | K'₂     : Whnf ⸨(K m n) α β⸩
+  | K'₃     : Whnf ⸨(K m n) α β x⸩
+  | S₀      : Whnf (S m n o)
+  | S₁      : Whnf ⸨(S m n o) α⸩
+  | S₂      : Whnf ⸨(S m n o) α β⸩
+  | S₃      : Whnf ⸨(S m n o) α β γ⸩
+  | S₄      : Whnf ⸨(S m n o) α β γ x⸩
+  | S₅      : Whnf ⸨(S m n o) α β γ x y⸩
+  | Pi      : Whnf ((Π' m) α, β)
+  | Srt     : Whnf (Srt m)
+  | next₀   : Whnf next
+  | next₁   : Whnf ⸨next f⸩
+  | read    : Whnf read
+  | assert₀ : Whnf assert
+  | assert₁ : Whnf ⸨assert e⸩
+  | app'₀   : Whnf $
+  | app'₁   : Whnf ⸨$ a⸩
+  | app'₂   : Whnf ⸨$ a b⸩
+  | app'₃   : Whnf ⸨$ a b c⸩
 
 inductive Red : Expr → Expr → Prop
   | I      : Red ⸨(I _m) _α x⸩ x

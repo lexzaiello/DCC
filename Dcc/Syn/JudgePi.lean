@@ -2,6 +2,7 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
 open Std (ToFormat Format)
 open Std.ToFormat (format)
+open Relation
 
 abbrev Level := ℕ
 
@@ -199,15 +200,32 @@ instance instSetoid : Setoid Expr where
   iseqv := Relation.EqvGen.is_equivalence red
 
 inductive judge : Expr → Expr → Prop
-  | I   : judge (I m) (I.type m)
-  | K   : judge (K m n) (K.type m n)
-  | K'  : judge (K' m n) (K'.type m n)
-  | S   : judge (S m n o) (S.type m n o)
-  | Srt : judge (Srt m) (Srt m.succ)
-  | Pi  : judge ((Π' m) _α, _β) (Srt m)
+  | I   : judge (I.type m) (I m)
+  | K   : judge (K.type m n) (K m n)
+  | K'  : judge (K'.type m n) (K' m n)
+  | S   : judge (S.type m n o) (S m n o)
+  | Srt : judge (Srt m.succ) (Srt m)
+  | Pi  : judge (Srt m) ((Π' m) _α, _β)
   | app : judge ((Π' _m) α, β) f
     → judge α x
     → judge ⸨β x⸩ ⸨f x⸩
   | conv : judge t₁ x → t₁ ≈ t₂ → judge t₂ x
+
+example : judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
+  apply judge.conv
+  apply judge.app
+  apply judge.conv
+  apply judge.app
+  apply judge.I
+  exact judge.Srt
+  apply EqvGen.rel
+  apply red.Pi
+  apply judge.conv
+  apply judge.Srt
+  apply Setoid.symm
+  apply EqvGen.rel
+  apply red.read
+  apply EqvGen.rel
+  apply red.assert
 
 end Expr

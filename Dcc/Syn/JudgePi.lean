@@ -207,21 +207,35 @@ inductive judge : Expr → Expr → Prop
     → judge ⸨β x⸩ ⸨f x⸩
   | conv : judge A x → (∃ C, deq A C ∧ deq B C) → judge B x
 
-theorem invert_app (h_t_app : judge τ ⸨e₁ e₂⸩) : ∃ m α β, judge ((Π' m) α, β) e₁ ∧ judge α e₂ := by
-  cases h_t_app
-  case app m α β h_t_f h_t_x =>
-    exact ⟨m, α, β, h_t_f, h_t_x⟩
-  case conv t₁ h_deq h =>
-    induction h_deq
-    
-    sorry
+theorem diamond : red a b → red a c → ∃ d, deq b d ∧ deq c d := by
+  intro hb hc
+  induction hb generalizing c
+  repeat (cases hc; exact ⟨_, deq.refl, deq.refl⟩; contradiction)
+  case left f f' x h_r_f' ih =>
+    cases hc
+    repeat contradiction
+    case left f'' h_r_f'' =>
+      have ⟨d, d₁, _⟩ := ih h_r_f'
+      have ⟨d, d₁, d₂⟩ := ih h_r_f''
+      have h_eq₁ : ⸨f' x⸩.deq ⸨d x⸩ := deq.app d₁ deq.refl
+      have h_eq₂ : ⸨f'' x⸩.deq ⸨d x⸩ := deq.app d₂ deq.refl
+      exact ⟨⸨d x⸩, h_eq₁, h_eq₂⟩
 
 theorem preservation (h_t : judge α x) (h_step : red x x') : judge α x' := by
   induction h_t generalizing x'
   repeat contradiction
   case app _m α β f x h_t_f h_t_x ih₁ ih₂ =>
-    
-    sorry
+    cases h_step
+    cases h_t_f
+    case I.conv h_C h_t_I =>
+      have ⟨C, Adeq, Pideq⟩ := h_C
+      cases Pideq
+      contradiction
+      cases Adeq
+      case refl.red a =>
+        cases a
+        
+        sorry
 
 example : judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   apply judge.conv

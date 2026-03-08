@@ -312,17 +312,31 @@ theorem ParRed.refl : ParRed e e := by
 theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro h₁ h₂
   induction h₁ generalizing c
-  repeat exact ⟨_, by assumption, ParRed.refl⟩
-  rename_i h_p_x ih
+  repeat exact ⟨_, h₂, ParRed.refl⟩
   cases h₂
-  rename_i h_p_x'
-  exact ih h_p_x'
-  rename_i f' x' h_p_f' p_x'
-  cases h_p_f'
-  rename_i h _
-  cases h
-  have ⟨d, ha, hb⟩ := ih p_x'
-  exact ⟨d, ha, ParRed.I hb⟩
+  rename_i h_x ih h_c
+  exact ih h_c
+  rename_i h_x ih _ _ h₂ h_x'
+  cases h₂
+  rename_i h₂ _
+  cases h₂
+  have ⟨d, ha, hb⟩ := ih h_x'
+  refine ⟨d, ha, ParRed.I hb⟩
+  cases h₂
+  rename_i h_x ih
+  exact  h_x ih
+  rename_i h_x ih f' x' h_k h_x'
+  cases h_k
+  rename_i h_k _
+  cases h_k
+  rename_i h_k _
+  cases h_k
+  rename_i h_k _
+  cases h_k
+  have ⟨d, ha, hb⟩ := ih h_x
+  rename_i h_x₂ _ _ _ _
+  have ⟨d₂, ha₂, hb₂⟩ := ih h_x₂
+  exact ⟨d₂, ha₂, ParRed.K hb₂⟩
   
   sorry
 

@@ -31,11 +31,11 @@ syntax "(Π'" term ")" term "," term : term
 syntax "(Π')" : term
 syntax "⸨" term* "⸩" : term
 syntax "Ty" term : term
-syntax "?_" : term
+syntax "_?" : term
 
 macro_rules
   | `(Ty $n) => `(Expr.Srt ($n + 1))
-  | `(?_) => `(Expr.hole)
+  | `(_?) => `(Expr.hole)
   | `($n:num $fn:term) =>
     match n.getNat with
     | 0 => `($fn)
@@ -51,7 +51,7 @@ macro_rules
 example :  ⸨(Srt 0) (Srt 1) (Srt 2)⸩ = Expr.app (Expr.app (Expr.Srt 0) (Expr.Srt 1)) (Expr.Srt 2) := rfl
 
 def Expr.toFormat : Expr → Format
-  | .hole => "?_"
+  | .hole => "_?"
   | Srt m => s!"(Srt {m})"
   | K' m n => s!"(K' {m} {n})"
   | K m n => s!"(K {m} {n})"
@@ -132,7 +132,7 @@ def defeq (α β : Expr) (gas : ℕ := 100) : Except Format Unit :=
   match gas, α, β with
   | .succ n, ((Π' _m₁) α₁, β₁), ((Π' _m₂) α₂, β₂) => do
     let _ ← (defeq α₁ α₂ n).mapError (fun e => "while checking Π domain: " ++ e)
-    (defeq (norm ⸨β₁ ?_⸩) (norm ⸨β₂ ?_⸩) n).mapError (fun e => "while checking Π codomain: " ++ e)
+    (defeq (norm ⸨β₁ _?⸩) (norm ⸨β₂ _?⸩) n).mapError (fun e => "while checking Π codomain: " ++ e)
   | .succ n, ⸨assert e₁⸩, ⸨assert e₂⸩ => defeq e₁ e₂ n
   | _, e₁, e₂ =>
     if norm e₁ gas == norm e₂ gas then
@@ -190,20 +190,10 @@ inductive red : Expr → Expr → Prop
   | left   : red f f' → red ⸨f x⸩ ⸨f' x⸩
 
 inductive deq : Expr → Expr → Prop
-  | red    : red a b  → deq a b
-  | right  : deq x x' → deq ⸨f x⸩ ⸨f x'⸩
-  | leftp  : deq α α' → deq ((Π' m) α, β) ((Π' m) α', β)
-  | rightp : deq β β' → deq ((Π' m) α, β) ((Π' m) α, β')
-
-def red.rel : Expr → Expr → Prop := Relation.EqvGen red
-def red.iseqv := Relation.EqvGen.is_equivalence red
-
-def deq.rel : Expr → Expr → Prop := Relation.EqvGen deq
-def deq.iseqv := Relation.EqvGen.is_equivalence deq
-
-instance instSetoid : Setoid Expr where
-  r := deq.rel
-  iseqv := deq.iseqv
+  | red    : red a b → deq a b
+  | refl   : deq a a
+  | app    : deq f f' → deq x x' → deq ⸨f x⸩ ⸨f' x'⸩
+  | pi     : deq α α' → deq β β' → deq ((Π' m) α, β) ((Π' m) α', β')
 
 inductive judge : Expr → Expr → Prop
   | I   : judge (I.type m) (I m)
@@ -215,7 +205,23 @@ inductive judge : Expr → Expr → Prop
   | app : judge ((Π' _m) α, β) f
     → judge α x
     → judge ⸨β x⸩ ⸨f x⸩
-  | conv : judge t₁ x → t₁ ≈ t₂ → judge t₂ x
+  | conv : judge A x → (∃ C, deq A C ∧ deq B C) → judge B x
+
+theorem invert_app (h_t_app : judge τ ⸨e₁ e₂⸩) : ∃ m α β, judge ((Π' m) α, β) e₁ ∧ judge α e₂ := by
+  cases h_t_app
+  case app m α β h_t_f h_t_x =>
+    exact ⟨m, α, β, h_t_f, h_t_x⟩
+  case conv t₁ h_deq h =>
+    induction h_deq
+    
+    sorry
+
+theorem preservation (h_t : judge α x) (h_step : red x x') : judge α x' := by
+  induction h_t generalizing x'
+  repeat contradiction
+  case app _m α β f x h_t_f h_t_x ih₁ ih₂ =>
+    
+    sorry
 
 example : judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   apply judge.conv
@@ -224,51 +230,40 @@ example : judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   apply judge.app
   apply judge.I
   exact judge.Srt
-  apply EqvGen.rel
+  use (Π' 2) ⸨read (Srt 1)⸩, ⸨assert (Srt 1)⸩
+  constructor
   apply deq.red
   apply red.Pi
+  exact deq.refl
   apply judge.conv
-  apply judge.Srt
-  apply Setoid.symm
-  apply EqvGen.rel
-  apply deq.red
-  apply red.read
-  apply EqvGen.rel
-  apply deq.red
-  apply red.assert
+  exact judge.Srt
+  exact ⟨Srt 1, deq.refl, deq.red red.read⟩
+  exact ⟨Srt 1, deq.red red.assert, deq.refl⟩
 
 theorem judge_I_par {h_t_α : judge (Srt m) α} : judge ((Π' m) α, ⸨assert α⸩) ⸨(I m) α⸩ := by
+  apply judge.conv
   apply judge.conv
   apply judge.app
   apply judge.I
   assumption
-  apply EqvGen.trans
-  apply EqvGen.rel
+  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, deq.red red.Pi, deq.refl⟩
+  refine ⟨(Π' m) α, ⸨assert α⸩, ?_, deq.refl⟩
+  apply deq.pi
   apply deq.red
-  apply red.Pi
-  apply EqvGen.rel
-  apply deq.leftp
-  apply deq.red
-  apply red.read
+  exact red.read
+  exact deq.refl
 
 theorem judge_I {h_t_α : judge (Srt m) α} {h_t_x : judge α x} : judge α ⸨(I m) α x⸩ := by
   apply judge.conv
   apply judge.app
   apply judge.conv
+  apply judge.conv
   apply judge.app
   apply judge.I
   exact h_t_α
-  apply EqvGen.rel
-  apply deq.red
-  apply red.Pi
-  apply judge.conv
+  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, deq.red red.Pi, deq.refl⟩
+  exact ⟨(Π' m) α, ⸨assert α⸩, deq.pi (deq.red red.read) deq.refl, deq.refl⟩
   assumption
-  apply Setoid.symm
-  apply EqvGen.rel
-  apply deq.red
-  apply red.read
-  apply EqvGen.rel
-  apply deq.red
-  apply red.assert
+  exact ⟨α, deq.red red.assert, deq.refl⟩
 
 end Expr

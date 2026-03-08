@@ -177,107 +177,145 @@ def mk_I (α : Expr) (m : Level) : Expr :=
 #eval infer <| mk_I (Srt 1) 2
 #eval infer <| ⸨(mk_I (Srt 1) 2) (Srt 0)⸩
 
-inductive red : Expr → Expr → Prop
-  | I      : red ⸨(I _m) _α x⸩ x
-  | K      : red ⸨(K _m _n) _α _β x _y⸩ x
-  | K'     : red ⸨(K' _m _n) _α _β x _y⸩ x
-  | S      : red ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
-  | Pi     : red ⸨((Π' m) α, β) x⸩ ((Π' m) ⸨α x⸩, ⸨β x⸩)
-  | next   : red ⸨next f _x⸩ f
-  | read   : red ⸨read e⸩ e
-  | assert : red ⸨assert e _x⸩ e
-  | app'   : red ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
-  | left   : red f f' → red ⸨f x⸩ ⸨f' x⸩
+inductive IsValue : Expr → Prop where
+  | I₀      : IsValue (I m)
+  | I₁      : IsValue ⸨(I m) α⸩
+  | K₀      : IsValue (K m n)
+  | K₁      : IsValue ⸨(K m n) α⸩
+  | K₂      : IsValue ⸨(K m n) α β⸩
+  | K₃      : IsValue ⸨(K m n) α β x⸩
+  | K'₀     : IsValue (K m n)
+  | K'₁     : IsValue ⸨(K m n) α⸩
+  | K'₂     : IsValue ⸨(K m n) α β⸩
+  | K'₃     : IsValue ⸨(K m n) α β x⸩
+  | S₀      : IsValue (S m n o)
+  | S₁      : IsValue ⸨(S m n o) α⸩
+  | S₂      : IsValue ⸨(S m n o) α β⸩
+  | S₃      : IsValue ⸨(S m n o) α β γ⸩
+  | S₄      : IsValue ⸨(S m n o) α β γ x⸩
+  | S₅      : IsValue ⸨(S m n o) α β γ x y⸩
+  | Pi      : IsValue ((Π' m) α, β)
+  | Srt     : IsValue (Srt m)
+  | next₀   : IsValue next
+  | next₁   : IsValue ⸨next f⸩
+  | read    : IsValue read
+  | assert₀ : IsValue assert
+  | assert₁ : IsValue ⸨assert e⸩
+  | app'₀   : IsValue $
+  | app'₁   : IsValue ⸨$ a⸩
+  | app'₂   : IsValue ⸨$ a b⸩
+  | app'₃   : IsValue ⸨$ a b c⸩
 
-inductive deq : Expr → Expr → Prop
-  | red    : red a b → deq a b
-  | refl   : deq a a
-  | app    : deq f f' → deq x x' → deq ⸨f x⸩ ⸨f' x'⸩
-  | pi     : deq α α' → deq β β' → deq ((Π' m) α, β) ((Π' m) α', β')
+inductive Red : Expr → Expr → Prop
+  | I      : Red ⸨(I _m) _α x⸩ x
+  | K      : Red ⸨(K _m _n) _α _β x _y⸩ x
+  | K'     : Red ⸨(K' _m _n) _α _β x _y⸩ x
+  | S      : Red ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
+  | Pi     : Red ⸨((Π' m) α, β) x⸩ ((Π' m) ⸨α x⸩, ⸨β x⸩)
+  | next   : Red ⸨next f _x⸩ f
+  | read   : Red ⸨read e⸩ e
+  | assert : Red ⸨assert e _x⸩ e
+  | app'   : Red ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
+  | left   : Red f f' → Red ⸨f x⸩ ⸨f' x⸩
 
-inductive judge : Expr → Expr → Prop
-  | I   : judge (I.type m) (I m)
-  | K   : judge (K.type m n) (K m n)
-  | K'  : judge (K'.type m n) (K' m n)
-  | S   : judge (S.type m n o) (S m n o)
-  | Srt : judge (Srt m.succ) (Srt m)
-  | Pi  : judge (Srt m) ((Π' m) _α, _β)
-  | app : judge ((Π' _m) α, β) f
-    → judge α x
-    → judge ⸨β x⸩ ⸨f x⸩
-  | conv : judge A x → (∃ C, deq A C ∧ deq B C) → judge B x
+inductive Deq : Expr → Expr → Prop
+  | Red    : Red a b → Deq a b
+  | refl   : Deq a a
+  | app    : Deq f f' → Deq x x' → Deq ⸨f x⸩ ⸨f' x'⸩
+  | pi     : Deq α α' → Deq β β' → Deq ((Π' m) α, β) ((Π' m) α', β')
 
-theorem diamond : red a b → red a c → ∃ d, deq b d ∧ deq c d := by
+inductive Judge : Expr → Expr → Prop
+  | I   : Judge (I.type m) (I m)
+  | K   : Judge (K.type m n) (K m n)
+  | K'  : Judge (K'.type m n) (K' m n)
+  | S   : Judge (S.type m n o) (S m n o)
+  | Srt : Judge (Srt m.succ) (Srt m)
+  | Pi  : Judge (Srt m) ((Π' m) _α, _β)
+  | app : Judge ((Π' _m) α, β) f
+    → Judge α x
+    → Judge ⸨β x⸩ ⸨f x⸩
+  | conv : Judge A x → (∃ C, Deq A C ∧ Deq B C) → Judge B x
+
+theorem diamond : Red a b → Red a c → ∃ d, Deq b d ∧ Deq c d := by
   intro hb hc
   induction hb generalizing c
-  repeat (cases hc; exact ⟨_, deq.refl, deq.refl⟩; contradiction)
+  repeat (cases hc; exact ⟨_, Deq.refl, Deq.refl⟩; contradiction)
   case left f f' x h_r_f' ih =>
     cases hc
     repeat contradiction
     case left f'' h_r_f'' =>
       have ⟨d, d₁, _⟩ := ih h_r_f'
       have ⟨d, d₁, d₂⟩ := ih h_r_f''
-      have h_eq₁ : ⸨f' x⸩.deq ⸨d x⸩ := deq.app d₁ deq.refl
-      have h_eq₂ : ⸨f'' x⸩.deq ⸨d x⸩ := deq.app d₂ deq.refl
+      have h_eq₁ : ⸨f' x⸩.Deq ⸨d x⸩ := Deq.app d₁ Deq.refl
+      have h_eq₂ : ⸨f'' x⸩.Deq ⸨d x⸩ := Deq.app d₂ Deq.refl
       exact ⟨⸨d x⸩, h_eq₁, h_eq₂⟩
 
-theorem preservation (h_t : judge α x) (h_step : red x x') : judge α x' := by
+theorem diamond' : Deq a b → Deq a c → ∃ d, Deq b d ∧ Deq c d := by
+  intro hb hc
+  induction hb generalizing c with
+  | Red h_r_b =>
+    cases h_r_b
+    
+  |  _ => sorry
+
+theorem subst : Judge ((Π' m) α, β) f → Judge α x → Judge ⸨β x⸩ ⸨f x⸩ := by
+  apply Judge.app
+
+theorem inv : Deq ((Π' m) α, β) ((Π' m) α', β') → Deq α α' ∧ Deq β β' := by
+  intro hDeq
+  cases hDeq
+  contradiction
+  exact ⟨Deq.refl, Deq.refl⟩
+  exact ⟨by assumption, by assumption⟩
+
+theorem preservation (h_t : Judge α x) (h_step : Red x x') : Judge α x' := by
   induction h_t generalizing x'
   repeat contradiction
   case app _m α β f x h_t_f h_t_x ih₁ ih₂ =>
-    cases h_step
-    cases h_t_f
-    case I.conv h_C h_t_I =>
-      have ⟨C, Adeq, Pideq⟩ := h_C
-      cases Pideq
-      contradiction
-      cases Adeq
-      case refl.red a =>
-        cases a
-        
-        sorry
+    
+    sorry
 
-example : judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
-  apply judge.conv
-  apply judge.app
-  apply judge.conv
-  apply judge.app
-  apply judge.I
-  exact judge.Srt
+example : Judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
+  apply Judge.conv
+  apply Judge.app
+  apply Judge.conv
+  apply Judge.app
+  apply Judge.I
+  exact Judge.Srt
   use (Π' 2) ⸨read (Srt 1)⸩, ⸨assert (Srt 1)⸩
   constructor
-  apply deq.red
-  apply red.Pi
-  exact deq.refl
-  apply judge.conv
-  exact judge.Srt
-  exact ⟨Srt 1, deq.refl, deq.red red.read⟩
-  exact ⟨Srt 1, deq.red red.assert, deq.refl⟩
+  apply Deq.Red
+  apply Red.Pi
+  exact Deq.refl
+  apply Judge.conv
+  exact Judge.Srt
+  exact ⟨Srt 1, Deq.refl, Deq.Red Red.read⟩
+  exact ⟨Srt 1, Deq.Red Red.assert, Deq.refl⟩
 
-theorem judge_I_par {h_t_α : judge (Srt m) α} : judge ((Π' m) α, ⸨assert α⸩) ⸨(I m) α⸩ := by
-  apply judge.conv
-  apply judge.conv
-  apply judge.app
-  apply judge.I
+theorem Judge_I_par {h_t_α : Judge (Srt m) α} : Judge ((Π' m) α, ⸨assert α⸩) ⸨(I m) α⸩ := by
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.app
+  apply Judge.I
   assumption
-  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, deq.red red.Pi, deq.refl⟩
-  refine ⟨(Π' m) α, ⸨assert α⸩, ?_, deq.refl⟩
-  apply deq.pi
-  apply deq.red
-  exact red.read
-  exact deq.refl
+  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, Deq.Red Red.Pi, Deq.refl⟩
+  refine ⟨(Π' m) α, ⸨assert α⸩, ?_, Deq.refl⟩
+  apply Deq.pi
+  apply Deq.Red
+  exact Red.read
+  exact Deq.refl
 
-theorem judge_I {h_t_α : judge (Srt m) α} {h_t_x : judge α x} : judge α ⸨(I m) α x⸩ := by
-  apply judge.conv
-  apply judge.app
-  apply judge.conv
-  apply judge.conv
-  apply judge.app
-  apply judge.I
+theorem Judge_I {h_t_α : Judge (Srt m) α} {h_t_x : Judge α x} : Judge α ⸨(I m) α x⸩ := by
+  apply Judge.conv
+  apply Judge.app
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.app
+  apply Judge.I
   exact h_t_α
-  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, deq.red red.Pi, deq.refl⟩
-  exact ⟨(Π' m) α, ⸨assert α⸩, deq.pi (deq.red red.read) deq.refl, deq.refl⟩
+  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, Deq.Red Red.Pi, Deq.refl⟩
+  exact ⟨(Π' m) α, ⸨assert α⸩, Deq.pi (Deq.Red Red.read) Deq.refl, Deq.refl⟩
   assumption
-  exact ⟨α, deq.red red.assert, deq.refl⟩
+  exact ⟨α, Deq.Red Red.assert, Deq.refl⟩
 
 end Expr

@@ -184,10 +184,10 @@ inductive Whnf : Expr → Prop where
   | K₁      : Whnf ⸨(K m n) α⸩
   | K₂      : Whnf ⸨(K m n) α β⸩
   | K₃      : Whnf ⸨(K m n) α β x⸩
-  | K'₀     : Whnf (K m n)
-  | K'₁     : Whnf ⸨(K m n) α⸩
-  | K'₂     : Whnf ⸨(K m n) α β⸩
-  | K'₃     : Whnf ⸨(K m n) α β x⸩
+  | K'₀     : Whnf (K' m n)
+  | K'₁     : Whnf ⸨(K' m n) α⸩
+  | K'₂     : Whnf ⸨(K' m n) α β⸩
+  | K'₃     : Whnf ⸨(K' m n) α β x⸩
   | S₀      : Whnf (S m n o)
   | S₁      : Whnf ⸨(S m n o) α⸩
   | S₂      : Whnf ⸨(S m n o) α β⸩
@@ -250,11 +250,25 @@ theorem diamond : Red a b → Red a c → ∃ d, Deq b d ∧ Deq c d := by
       have h_eq₂ : ⸨f'' x⸩.Deq ⸨d x⸩ := Deq.app d₂ Deq.refl
       exact ⟨⸨d x⸩, h_eq₁, h_eq₂⟩
 
+theorem step_left_or_whole : Red ⸨f x⸩ e' → (∃ f', Red f f') ∨ Whnf f := by
+  intro h_step
+  cases h_step
+  exact Or.inr Whnf.I₁
+  exact Or.inr Whnf.K₃
+  exact Or.inr Whnf.K'₃
+  exact Or.inr Whnf.S₅
+  exact Or.inr Whnf.Pi
+  exact Or.inr Whnf.next₁
+  exact Or.inr Whnf.read
+  exact Or.inr Whnf.assert₁
+  exact Or.inr Whnf.app'₃
+  case left f' h_red =>
+    exact Or.inl ⟨f', h_red⟩
+
 theorem diamond' : Deq a b → Deq a c → ∃ d, Deq b d ∧ Deq c d := by
   intro hb hc
   induction hb generalizing c with
   | Red h_r_b =>
-    cases h_r_b
     
   |  _ => sorry
 

@@ -149,6 +149,7 @@ inductive Atom : Expr → Prop where
   | Srt     : Atom (Srt m)
 
 inductive Whnf : Expr → Prop where
+  | hole    : Whnf _?
   | atom    : Atom c → Whnf c
   | I₁      : Whnf ⸨(I m) α⸩
   | K₁      : Whnf ⸨(K m n) α⸩

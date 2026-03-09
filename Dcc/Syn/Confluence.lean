@@ -37,11 +37,18 @@ theorem single_step_unique : Red e e₁ → Red e e₂ → e₁ = e₂ := by
   induction h₁
   repeat (cases h₂; rfl)
 
-theorem must_step_not_whnf : ¬ Whnf e → ∃ e', Red e e' := by
+theorem red_imp : Red a b → ParRed a b := by
   intro h
-  induction e
-  
-  sorry
+  induction h
+  exact .I .refl
+  exact .K .refl
+  exact .K' .refl
+  exact .S .refl
+  exact .Pi .refl
+  exact .next .refl
+  exact .read .refl
+  exact .assert .refl
+  exact .app' .refl
 
 theorem confluence' : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro h₁ h₂
@@ -49,6 +56,7 @@ theorem confluence' : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed
     have h := confluence_atom ha h₁ h₂
     exact ⟨c, by rw [h]; exact ParRed.refl, ParRed.refl⟩
   else if hb : Whnf a then
+    
     sorry
   else
     

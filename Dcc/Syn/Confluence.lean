@@ -10,6 +10,71 @@ Useful for checking definitional equality.
 I have proven it to coincide with my definition of ParRed.
 -/
 
+inductive Reduction.app : Expr → Expr → Prop → Prop
+  | mk : (∃ f x, e = ⸨f x⸩) → Reduction.app e ⸨f' x'⸩ (∃ f x, e = ⸨f x⸩)
+
+inductive Reduction.pi : Expr → Expr → Prop → Prop
+  | mk : (∃ m α β, e = (Π' m) α, β) → Reduction.pi e ((Π' m) α', β') (∃ m α β, e = (Π' m) α, β)
+
+inductive Reduction.red : Expr → Expr → Prop → Prop
+  | mk : Red e e' → Reduction.red e e' (Red e e')
+
+inductive Reduction.refl : Expr → Expr → Prop → Prop
+  | mk : Atom e → e' = e → Reduction.refl e e' (Atom e ∧ e' = e)
+
+inductive Reduction : Expr → Expr → Prop → Prop
+  | app'  : (Reduction.app e ⸨f' x'⸩ p) → Reduction e ⸨f' x'⸩ p
+  | pi'   : (Reduction.pi e ((Π' m) α', β') p) → Reduction e ((Π' m) α', β') p
+  | red'  : (Reduction.red e e' p) → Reduction e e' p
+  | refl' : (Reduction.refl e e' p) → Reduction e e' p
+
+structure Reduces (e e' : Expr) where
+  e'    : Expr
+  hpar  : ParRed e e'
+  hkind : Reduction e e' δ
+
+def gen (e : Expr) : ((e' : Expr) × (Reduces e e')) :=
+  match e with
+  | .K' m n
+  | .K m n
+  | .S m n o
+  | .I m
+  | Srt m
+  | .next
+  | .read
+  | .assert
+  | .app'
+  | _? => ⟨e, { e' := e, hpar := .refl, hkind := .refl' ⟨by cases e; sorry, by sorry⟩ }⟩
+  | ⸨(.I _m) _α x⸩ => ⟨x, ⟨.inr (.inl (.I))⟩⟩
+  | ⸨(.K _m _n) _α _β x _y⸩ => ⟨x, ⟨.inr (.inl .K)⟩⟩
+  | ⸨(.K' _m _n) _α _β x _y⸩ => ⟨x, ⟨.inr (.inl .K')⟩⟩
+  | ⸨(.S _m _n _o) _α _β _γ x y z⸩ => ⟨⸨⸨x z⸩ ⸨y z⸩⸩, ⟨.inr (.inl .S)⟩⟩
+  | ⸨((Π' _m) α, β) x⸩ => ⟨⟨_, ⟨.inr (.inl .Pi)⟩⟩, by sorry⟩
+  | ((Π' m) α, β) =>
+    let ⟨α', h₁⟩ := α.gen
+    let αp := h₁.down.right
+    let ⟨β', h₂⟩ := β.gen
+    let βp := h₂.down.right
+    ⟨_, ⟨.inl (.inr sorry)⟩, .Pi h₁ h₂⟩
+  | ⸨.next f _x⸩ =>
+    let ⟨inner, pinner⟩ := gen f
+    ⟨inner, ⟨.next pinner.down⟩⟩
+  | ⸨.read e⸩ =>
+    let ⟨inner, pinner⟩ := gen e
+    ⟨inner, ⟨.read pinner.down⟩⟩
+  | ⸨.assert f _x⸩ =>
+    let ⟨inner, pinner⟩ := gen f
+    ⟨inner, ⟨.assert pinner.down⟩⟩
+  | ⸨${_π} f g x⸩ =>
+    let ⟨_innerx, pinner₁⟩ := gen f
+    let ⟨_innery, pinner₂⟩ := gen g
+    let ⟨_innerx, pinner₃⟩ := gen x
+    ⟨_, ⟨.app' pinner₁.down pinner₂.down pinner₃.down⟩⟩
+  | ⸨f x⸩ =>
+    let ⟨innerx, pinner₁⟩ := gen f
+    let ⟨innery, pinner₂⟩ := gen x
+    ⟨⸨innerx innery⸩, ⟨.app pinner₁.down pinner₂.down⟩⟩
+
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with
   | (I _m) => .inl <| .comb .I₀
@@ -46,41 +111,31 @@ def Atom.complete (h : Atom e) : (Atom.gen e = .inl h) := by
   induction h
   repeat rfl
 
-def gen (e : Expr) : ((e' : Expr) × (PLift (ParRed e e'))) :=
+def gen (e : Expr) : ((e' : Expr) × (PLift <| (((∃ f x f' x', ParRed e ⸨f' x'⸩ ∧ e = ⸨f x⸩)
+  ∨ (∃ m α β α' β', ParRed e ((Π' m) α', β')  ∧ e = (Π' m) α, β))
+  ∨ (Red e e') ∨ (e' = e)) ∧ (ParRed e e'))) :=
   match e with
-  | .K' m n => ⟨.K' m n, ⟨ParRed.refl_K'⟩⟩
-  | .K m n => ⟨.K m n, ⟨ParRed.refl_K⟩⟩
-  | .S m n o => ⟨.S m n o, ⟨ParRed.refl_S⟩⟩
-  | .I m => ⟨.I m, ⟨ParRed.refl_I⟩⟩
-  | _? => ⟨_?, ⟨.refl_hole⟩⟩
-  | Srt m => ⟨Srt m, ⟨.refl_Srt⟩⟩
-  | .next => ⟨.next, ⟨.refl_next⟩⟩
-  | .read => ⟨.read, ⟨.refl_read⟩⟩
-  | .assert => ⟨.assert, ⟨.refl_assert⟩⟩
-  | .app' => ⟨.app', ⟨.refl_app'⟩⟩
-  | ⸨(.I _m) _α x⸩ =>
-    let ⟨inner, pinner⟩ := gen x
-    ⟨inner, ⟨.I pinner.down⟩⟩
-  | ⸨(.K _m _n) _α _β x _y⸩ =>
-    let ⟨inner, pinner⟩ := gen x
-    ⟨inner, ⟨.K pinner.down⟩⟩
-  | ⸨(.K' _m _n) _α _β x _y⸩ =>
-    let ⟨inner, pinner⟩ := gen x
-    ⟨inner, ⟨.K' pinner.down⟩⟩
-  | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
-    let ⟨_inner_x, pinner₁⟩ := gen x
-    let ⟨_inner_y, pinner₂⟩ := gen y
-    let ⟨_inner_z, pinner₃⟩ := gen z
-    ⟨_, ⟨.S pinner₁.down pinner₂.down pinner₃.down⟩⟩
-  | ⸨((Π' _m) α, β) x⸩ =>
-    let ⟨_inner_x, pinner₁⟩ := gen α
-    let ⟨_inner_y, pinner₂⟩ := gen β
-    let ⟨_inner_z, pinner₃⟩ := gen x
-    ⟨_, ⟨.Pi pinner₁.down pinner₂.down pinner₃.down⟩⟩
+  | .K' m n => sorry
+  | .K m n
+  | .S m n o
+  | .I m
+  | Srt m
+  | .next
+  | .read
+  | .assert
+  | .app'
+  | _? => ⟨⟨_, ⟨.inr (.inr rfl)⟩⟩, by sorry⟩
+  | ⸨(.I _m) _α x⸩ => ⟨x, ⟨.inr (.inl (.I))⟩⟩
+  | ⸨(.K _m _n) _α _β x _y⸩ => ⟨x, ⟨.inr (.inl .K)⟩⟩
+  | ⸨(.K' _m _n) _α _β x _y⸩ => ⟨x, ⟨.inr (.inl .K')⟩⟩
+  | ⸨(.S _m _n _o) _α _β _γ x y z⸩ => ⟨⸨⸨x z⸩ ⸨y z⸩⸩, ⟨.inr (.inl .S)⟩⟩
+  | ⸨((Π' _m) α, β) x⸩ => ⟨⟨_, ⟨.inr (.inl .Pi)⟩⟩, by sorry⟩
   | ((Π' m) α, β) =>
-    let ⟨inner_x, pinner₁⟩ := gen α
-    let ⟨inner_y, pinner₂⟩ := gen β
-    ⟨((Π' m) inner_x, inner_y), ⟨.Pival pinner₁.down pinner₂.down⟩⟩
+    let ⟨α', h₁⟩ := α.gen
+    let αp := h₁.down.right
+    let ⟨β', h₂⟩ := β.gen
+    let βp := h₂.down.right
+    ⟨_, ⟨.inl (.inr sorry)⟩, .Pi h₁ h₂⟩
   | ⸨.next f _x⸩ =>
     let ⟨inner, pinner⟩ := gen f
     ⟨inner, ⟨.next pinner.down⟩⟩
@@ -172,24 +227,29 @@ theorem ParRed.step_whole_or_parts_refl : ParRed e e₂
       exact Or.inr (Or.inl ⟨⟨f', pf⟩, ⟨x', px⟩⟩)
   | .inr (.inr ⟨m, α, β, heq⟩) => by simp_all
 
-theorem Red.diamond (h_r : Red a b) (h_r₂ : ParRed a c) : ∃ d, ParRed b d ∧ ParRed c d := by
-  
-  
-  sorry
-
-theorem gen.com : ParRed f f' → ParRed x x' → ParRed (f'.app x') (gen (f.app x)).fst := by
-  intro h_f h_x
-  unfold gen
-  
-  sorry
-
-@[simp] theorem gen.get_trivial (_h : (gen a).fst = b) : ∃ b, ParRed a b ∧ ParRed a b := by
-  exact ⟨(gen a).fst, (gen a).snd.down, (gen a).snd.down⟩
-
-theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedStar c d := by
+theorem Red.confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedStar c d := by
   intro hb hc
   cases hb
   repeat (cases hc; exact ⟨_, RedStar.refl, RedStar.refl⟩)
+
+theorem gen.max (p : ParRed e e') : ParRed e' (gen e).fst := by
+  match p.step_whole_or_parts_refl with
+  | .inl h =>
+    
+    sorry
+  | .inr h => sorry
+  /-match heq : Atom.gen e with
+  | .inl h =>
+    apply gen.sound
+    rw [no_step_atom p h]
+  | .inr (.inl ⟨f, x, heq⟩) =>
+    
+    
+    sorry
+  | .inr (.inr h) => sorry-/
+
+@[simp] theorem gen.get_trivial (_h : (gen a).fst = b) : ∃ b, ParRed a b ∧ ParRed a b := by
+  exact ⟨(gen a).fst, (gen a).snd.down, (gen a).snd.down⟩
 
 theorem confluence_atom (h_atom : Atom a) (h_b : ParRed a b) (h_c : ParRed a c) : b = c := by
   induction h_b

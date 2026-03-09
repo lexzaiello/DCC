@@ -149,6 +149,15 @@ inductive Atom : Expr → Prop where
   | Srt     : Atom (Srt m)
   | hole    : Atom _?
 
+@[simp] theorem Atom.K : Atom (K m n) := .comb .K₀
+@[simp] theorem Atom.K' : Atom (K' m n) := .comb .K'₀
+@[simp] theorem Atom.S : Atom (S m n o) := .comb .S₀
+@[simp] theorem Atom.next : Atom next := .comb .next₀
+@[simp] theorem Atom.read : Atom read := .comb .read
+@[simp] theorem Atom.assert : Atom assert := .comb .assert₀
+@[simp] theorem Atom.Sort' : Atom (Expr.Srt m) := Atom.Srt
+@[simp] theorem Atom.hole' : Atom _? := Atom.hole
+
 inductive Nf : Expr → Prop where
   | atom    : Atom c → Nf c
   | I₁      : Nf α → Nf ⸨(I m) α⸩
@@ -344,9 +353,7 @@ theorem inv : Judge ((Π' m) α, β) f → Judge α x → Judge ⸨β x⸩ ⸨f 
 
 end Judge
 
-namespace ParRed
-
-theorem refl : ParRed e e := by
+theorem ParRed.refl : ParRed e e := by
   induction e
   exact ParRed.refl_Srt
   apply ParRed.Pival
@@ -363,4 +370,3 @@ theorem refl : ParRed e e := by
   apply ParRed.app
   repeat assumption
 
-end ParRed

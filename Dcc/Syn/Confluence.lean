@@ -4,56 +4,105 @@ open Expr
 
 namespace ParRed
 
-def run (e : Expr) : ((e' : Expr) × (ULift <| PLift (ParRed e e'))) :=
+def gen (e : Expr) : ((e' : Expr) × (PLift (ParRed e e'))) :=
   match e with
-  | .K' m n => ⟨.K' m n, ⟨⟨ParRed.refl_K'⟩⟩⟩
-  | .K m n => ⟨.K m n, ⟨⟨ParRed.refl_K⟩⟩⟩
-  | .S m n o => ⟨.S m n o, ⟨⟨ParRed.refl_S⟩⟩⟩
-  | .I m => ⟨.I m, ⟨⟨ParRed.refl_I⟩⟩⟩
-  | _? => ⟨_?, ⟨⟨.refl_hole⟩⟩⟩
-  | Srt m => ⟨Srt m, ⟨⟨.refl_Srt⟩⟩⟩
-  | .next => ⟨.next, ⟨⟨.refl_next⟩⟩⟩
-  | .read => ⟨.read, ⟨⟨.refl_read⟩⟩⟩
-  | .assert => ⟨.assert, ⟨⟨.refl_assert⟩⟩⟩
-  | .app' => ⟨.app', ⟨⟨.refl_app'⟩⟩⟩
+  | .K' m n => ⟨.K' m n, ⟨ParRed.refl_K'⟩⟩
+  | .K m n => ⟨.K m n, ⟨ParRed.refl_K⟩⟩
+  | .S m n o => ⟨.S m n o, ⟨ParRed.refl_S⟩⟩
+  | .I m => ⟨.I m, ⟨ParRed.refl_I⟩⟩
+  | _? => ⟨_?, ⟨.refl_hole⟩⟩
+  | Srt m => ⟨Srt m, ⟨.refl_Srt⟩⟩
+  | .next => ⟨.next, ⟨.refl_next⟩⟩
+  | .read => ⟨.read, ⟨.refl_read⟩⟩
+  | .assert => ⟨.assert, ⟨.refl_assert⟩⟩
+  | .app' => ⟨.app', ⟨.refl_app'⟩⟩
   | ⸨(.I m) α x⸩ =>
-    let ⟨inner, pinner⟩ := run x
-    ⟨inner, ⟨⟨.I pinner.down.down⟩⟩⟩
+    let ⟨inner, pinner⟩ := gen x
+    ⟨inner, ⟨.I pinner.down⟩⟩
   | ⸨(.K m n) α β x y⸩ =>
-    let ⟨inner, pinner⟩ := run x
-    ⟨inner, ⟨⟨.K pinner.down.down⟩⟩⟩
+    let ⟨inner, pinner⟩ := gen x
+    ⟨inner, ⟨.K pinner.down⟩⟩
   | ⸨(.K' m n) α β x y⸩ =>
-    let ⟨inner, pinner⟩ := run x
-    ⟨inner, ⟨⟨.K' pinner.down.down⟩⟩⟩
+    let ⟨inner, pinner⟩ := gen x
+    ⟨inner, ⟨.K' pinner.down⟩⟩
   | ⸨(.S m n o) α β γ x y z⸩ =>
-    let ⟨inner_x, pinner₁⟩ := run ⸨x z⸩
-    let ⟨inner_y, pinner₂⟩ := run ⸨y z⸩
-    ⟨⸨inner_x inner_y⸩, ⟨⟨.S (.app pinner₁.down.down pinner₂.down.down)⟩⟩⟩
+    let ⟨inner_x, pinner₁⟩ := gen ⸨x z⸩
+    let ⟨inner_y, pinner₂⟩ := gen ⸨y z⸩
+    ⟨⸨inner_x inner_y⸩, ⟨.S pinner₁.down pinner₂.down⟩⟩
   | ⸨((Π' m) α, β) x⸩ =>
-    let ⟨inner_x, pinner₁⟩ := run ⸨α x⸩
-    let ⟨inner_y, pinner₂⟩ := run ⸨β x⸩
-    ⟨((Π' m) inner_x, inner_y), ⟨⟨.Pi (.Pival pinner₁.down.down pinner₂.down.down)⟩⟩⟩
+    let ⟨inner_x, pinner₁⟩ := gen ⸨α x⸩
+    let ⟨inner_y, pinner₂⟩ := gen ⸨β x⸩
+    ⟨((Π' m) inner_x, inner_y), ⟨.Pi pinner₁.down pinner₂.down⟩⟩
   | ((Π' m) α, β) =>
-    let ⟨inner_x, pinner₁⟩ := run α
-    let ⟨inner_y, pinner₂⟩ := run β
-    ⟨((Π' m) inner_x, inner_y), ⟨⟨.Pival pinner₁.down.down pinner₂.down.down⟩⟩⟩
+    let ⟨inner_x, pinner₁⟩ := gen α
+    let ⟨inner_y, pinner₂⟩ := gen β
+    ⟨((Π' m) inner_x, inner_y), ⟨.Pival pinner₁.down pinner₂.down⟩⟩
   | ⸨.next f _x⸩ =>
-    let ⟨inner, pinner⟩ := run f
-    ⟨inner, ⟨⟨.next pinner.down.down⟩⟩⟩
+    let ⟨inner, pinner⟩ := gen f
+    ⟨inner, ⟨.next pinner.down⟩⟩
   | ⸨.read e⸩ =>
-    let ⟨inner, pinner⟩ := run e
-    ⟨inner, ⟨⟨.read pinner.down.down⟩⟩⟩
+    let ⟨inner, pinner⟩ := gen e
+    ⟨inner, ⟨.read pinner.down⟩⟩
   | ⸨.assert f _x⸩ =>
-    let ⟨inner, pinner⟩ := run f
-    ⟨inner, ⟨⟨.assert pinner.down.down⟩⟩⟩
+    let ⟨inner, pinner⟩ := gen f
+    ⟨inner, ⟨.assert pinner.down⟩⟩
   | ⸨${π} f g x⸩ =>
-    let ⟨innerx, pinner₁⟩ := run ⸨f x⸩
-    let ⟨innery, pinner₂⟩ := run ⸨g x⸩
-    ⟨⸨π innerx innery⸩, ⟨⟨.app' (.app (.app .refl pinner₁.down.down) pinner₂.down.down)⟩⟩⟩
+    let ⟨innerx, pinner₁⟩ := gen ⸨f x⸩
+    let ⟨innery, pinner₂⟩ := gen ⸨g x⸩
+    ⟨⸨π innerx innery⸩, ⟨.app' pinner₁.down pinner₂.down⟩⟩
   | ⸨f x⸩ =>
-    let ⟨innerx, pinner₁⟩ := run f
-    let ⟨innery, pinner₂⟩ := run x
-    ⟨⸨innerx innery⸩, ⟨⟨.app pinner₁.down.down pinner₂.down.down⟩⟩⟩
+    let ⟨innerx, pinner₁⟩ := gen f
+    let ⟨innery, pinner₂⟩ := gen x
+    ⟨⸨innerx innery⸩, ⟨.app pinner₁.down pinner₂.down⟩⟩
+
+theorem gen.sound : (gen e).fst = e' → ParRed e e' := by
+  intro h
+  let h' := gen e
+  let x := h'.fst
+  let p := h'.snd
+  rw [h] at p
+  exact p.down
+
+theorem gen.max : ParRed e e' → ParRed e' (gen e).fst := by
+  intro h
+  let e := (gen e')
+  induction h
+  repeat exact e.snd.down
+  repeat (rename_i h; unfold gen; simp; exact h)
+  unfold gen
+  simp
+  simp_all
+  rename_i h ih
+  apply ParRed.app
+  exact h
+  exact ih
+  rename_i h_α h_β ih₁ ih₂
+  unfold gen
+  simp
+  apply ParRed.Pival
+  exact ih₁
+  exact ih₂
+  unfold gen
+  simp
+  apply ParRed.Pival
+  repeat assumption
+  repeat (unfold gen; assumption)
+  rename_i ih
+  unfold gen
+  simp
+  apply ParRed.app
+  apply ParRed.app
+  exact .refl
+  repeat assumption
+  simp_all
+  
+  sorry
+
+def gen.complete (p : ParRed e e') : ((e'' : Expr) × (p : PLift (ParRed e e'')) × ((e_join : Expr) × PLift (ParRed e' e''))) := by
+  let h' := gen e
+  refine ⟨h'.fst, h'.snd, ?_⟩
+  
+  sorry
 
 theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
   intro h_r h_whnf
@@ -107,9 +156,9 @@ theorem inv (h : ParRed ⸨f x⸩ e') : ∃ f' x', (ParRed f f' ∧ ParRed x x' 
   rename_i hx
   exact ⟨_, x, .refl, .refl, .K' hx⟩
   rename_i hx
-  exact ⟨_, x, .refl, .refl, .S hx⟩
+  exact ⟨_, x, .refl, .refl, .S (by assumption) (by assumption)⟩
   rename_i hx
-  exact ⟨_, x, .refl, .refl, .Pi hx⟩
+  exact ⟨_, x, .refl, .refl, .Pi (by assumption) (by assumption)⟩
   rename_i hx
   exact ⟨_, x, .refl, .refl, .next hx⟩
   rename_i hx
@@ -117,7 +166,7 @@ theorem inv (h : ParRed ⸨f x⸩ e') : ∃ f' x', (ParRed f f' ∧ ParRed x x' 
   rename_i hx
   exact ⟨_, x, .refl, .refl, .assert hx⟩
   rename_i hx
-  exact ⟨_, x, .refl, .refl, .app' hx⟩
+  exact ⟨_, x, .refl, .refl, .app' (by assumption) (by assumption)⟩
   · rename_i f' x' h_f' h_x'
     exact ⟨f', x', h_f', h_x', .refl⟩
 
@@ -126,12 +175,12 @@ theorem par_app (h : ParRed ⸨f x⸩ e₁) : (∃ e₂, Red ⸨f x⸩ e₂ ∧ 
   exact Or.inl ⟨_, Red.I, by assumption⟩
   exact Or.inl ⟨_, Red.K, by assumption⟩
   exact Or.inl ⟨_, Red.K', by assumption⟩
-  exact Or.inl ⟨_, Red.S, by assumption⟩
-  exact Or.inl ⟨_, Red.Pi, by assumption⟩
+  exact Or.inl ⟨_, Red.S, .app (by assumption) (by assumption)⟩
+  exact Or.inl ⟨_, Red.Pi, .Pival (by assumption) (by assumption)⟩
   exact Or.inl ⟨_, Red.next, by assumption⟩
   exact Or.inl ⟨_, Red.read, by assumption⟩
   exact Or.inl ⟨_, Red.assert, by assumption⟩
-  exact Or.inl ⟨_, Red.app', by assumption⟩
+  exact Or.inl ⟨_, Red.app', .app (.app .refl (by assumption)) (by assumption)⟩
   · rename_i f' x' h_f h_x
     right
     exact ⟨f', x', h_f, h_x, rfl⟩
@@ -154,90 +203,23 @@ theorem multi_step_unique : ParRed e e₁ → ParRed e e₂ → (∃ e', ParRed 
     match h₁.par_app with
     | .inl ⟨e₄, hr, heq⟩ =>
       have hb := h₂.par_app
+      
+      sorry
     | .inr ⟨f', x', h_p_f', h_p_x', h_eq₁⟩ =>
       match h₂.par_app with
       | .inr ⟨f'₁, x'₁, h_p_f'₁, h_p_x'₁, h_eq₂⟩ =>
         cases h_eq₁
         cases h_eq₂
+        
         sorry
       | _ => sorry
 
 end ParRed
 
-theorem red_imp : Red a b → ParRed a b := by
-  intro h
-  induction h
-  exact .I .refl
-  exact .K .refl
-  exact .K' .refl
-  exact .S .refl
-  exact .Pi .refl
-  exact .next .refl
-  exact .read .refl
-  exact .assert .refl
-  exact .app' .refl
-
-/-
-Theorem that ParRed is either Red or something else. Some situation where Red encapsulates,
-where we can downgrade.
-Check constructors.
--/
-
-theorem par_red.case (h : ParRed a b) : (∃ e', Red a e' ∧ ParRed e' b) ∨ b = a ∨ ((∃ f' x', b = ⸨f' x'⸩) ∨ (∃ m α' β', b = (Π' m) α', β')) := by
-  induction h
-  repeat (right; left; rfl)
-  left; exact ⟨_, Red.I, by assumption⟩
-  left; exact ⟨_, Red.K, by assumption⟩
-  left; exact ⟨_, Red.K', by assumption⟩
-  left; exact ⟨_, Red.S, by assumption⟩
-  left; exact ⟨_, Red.Pi, by assumption⟩
-  right
-  right
-  right
-  rename_i α α' β β' m h_α' h_β' ih₁ ih₂
-  refine ⟨m, α', β', ?_⟩
-  rfl
-  left; exact ⟨_, Red.next, by assumption⟩
-  left; exact ⟨_, Red.read, by assumption⟩
-  left; exact ⟨_, Red.assert, by assumption⟩
-  left; exact ⟨_, Red.app', by assumption⟩
-  case app f f' x x' h_f h_x ih₁ ih₂ =>
-    match h₁ : ih₁ with
-    | .inl ⟨a, hr, hrf⟩ =>
-      match h₂ : ih₂ with
-      | .inl ⟨b, hr₂, bhrf⟩ =>
-        have hf'x' := ParRed.app h_f h_x
-        left
-        
-        sorry
-      | .inr h =>
-        sorry
-    | .inr h => sorry
-
-theorem confluence_whnf (h : Whnf a) (h₁ : ParRed a b) (h₂ : ParRed a c) : ∃ d, ParRed b d ∧ ParRed c d := by
-  induction h₂
-  cases h
-  repeat exact ⟨b, .refl, h₁⟩
-  repeat contradiction
-  cases h₁
-  rename_i h_α h_β ih₁ ih₂
-  cases h
-  contradiction
-  
-
 theorem confluence' : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro h₁ h₂
-  if ha : Atom a then
-    have h := confluence_atom ha h₁ h₂
-    exact ⟨c, by rw [h]; exact ParRed.refl, ParRed.refl⟩
-  else if hb : Whnf a then
-    induction hb
-    contradiction
-    have h := Atom.comb (Comb.I₀)
-    sorry
-  else
-    
-    sorry
+  
+  sorry
 
 theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro h₁ h₂

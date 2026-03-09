@@ -199,15 +199,15 @@ inductive ParRed : Expr → Expr → Prop where
   | I           : ParRed x x' → ParRed ⸨(I _m) _α x⸩ x'
   | K           : ParRed x x' → ParRed ⸨(K _m _n) _α _β x _y⸩ x'
   | K'          : ParRed x x' → ParRed ⸨(K' _m _n) _α _β x _y⸩ x'
-  | S           : ParRed ⸨⸨x z⸩ ⸨y z⸩⸩ s'
-    → ParRed ⸨(S _m _n _o) _α _β _γ x y z⸩ s'
-  | Pi          : ParRed ((Π' m) ⸨α x⸩, ⸨β x⸩) P' → ParRed ⸨((Π' m) α, β) x⸩ P'
+  | S           : ParRed ⸨x z⸩ xz' → ParRed ⸨y z⸩ yz'
+    → ParRed ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨xz' yz'⸩
+  | Pi          : ParRed ⸨α x⸩ α' → ParRed ⸨β x⸩ β' → ParRed ⸨((Π' m) α, β) x⸩ ((Π' m) α', β')
   | Pival       : ParRed α α' → ParRed β β' → ParRed ((Π' m) α, β) ((Π' m) α', β')
   | next        : ParRed f f' → ParRed ⸨next f _x⸩ f'
   | read        : ParRed e e' → ParRed ⸨read e⸩ e'
   | assert      : ParRed e e' → ParRed ⸨assert e _x⸩ e'
-  | app'        : ParRed ⸨π ⸨f x⸩ ⸨g x⸩⸩ P'
-    → ParRed ⸨${π} f g x⸩ P'
+  | app'        : ParRed ⸨f x⸩ fx' → ParRed ⸨g x⸩ gx'
+    → ParRed ⸨${π} f g x⸩ ⸨π fx' gx'⸩
   | app         : ParRed f f'
     → ParRed x x'
     → ParRed ⸨f x⸩ ⸨f' x'⸩
@@ -302,20 +302,3 @@ theorem refl : ParRed e e := by
   repeat assumption
 
 end ParRed
-
-example : Judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.I
-  exact Judge.Srt
-  use (Π' 2) ⸨read (Srt 1)⸩, ⸨assert (Srt 1)⸩
-  constructor
-  apply ParRed.Pi
-  exact ParRed.refl
-  apply ParRed.refl
-  apply Judge.conv
-  exact Judge.Srt
-  exact ⟨Srt 1, ParRed.refl, ParRed.read ParRed.refl⟩
-  exact ⟨Srt 1, .assert ParRed.refl, ParRed.refl⟩

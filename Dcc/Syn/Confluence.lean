@@ -2,8 +2,12 @@ import Dcc.Syn.JudgePi
 
 theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
   intro h_r h_whnf
-  induction h_whnf
-  repeat (cases h_r; rfl)
+  cases h_whnf
+  · rename_i a
+    cases a
+    repeat (cases h_r; rfl)
+  · cases h_r
+    rfl
 
 theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedStar c d := by
   intro hb hc
@@ -12,8 +16,34 @@ theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedSta
 
 theorem confluence_atom (h_atom : Atom a) (h_b : ParRed a b) (h_c : ParRed a c) : b = c := by
   induction h_b
-  repeat (cases h_atom; cases h_c; rfl)
+  repeat (cases h_atom; rename_i h_comb; cases h_comb; cases h_c; rfl)
+  cases h_atom
+  rename_i h_comb
+  cases h_comb
+  repeat (cases h_atom; rename_i h; cases h)
+
+/-
+Exprs in whnf where ⸨f x⸩ ||-> ⸨f' x'⸩ must step ParRed f f' and ParRed x x'
+-/
+theorem whnf_step : Whnf ⸨f x⸩ → ParRed ⸨f x⸩ ⸨f' x'⸩ → ParRed f f' ∧ ParRed x x' := by
+  intro h_wh h_app
+  cases h_app
   repeat contradiction
+  rename_i h_f h_x
+  exact ⟨h_f, h_x⟩
+
+theorem root_step : ¬ Whnf ⸨f x⸩ → 
+
+theorem confluence' : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
+  intro h₁ h₂
+  if ha : Atom a then
+    have h := confluence_atom ha h₁ h₂
+    exact ⟨c, by rw [h]; exact ParRed.refl, ParRed.refl⟩
+  else if hb : Whnf a then
+    sorry
+  else
+    
+    sorry
 
 theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro h₁ h₂
@@ -29,6 +59,8 @@ theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed 
       rename_i x' _m _α h_c
       have ⟨d₁, haf, hbf⟩ := ih₁ e₁
       have ⟨dc, hac, hbc⟩ := ih₂ h_c
+      refine ⟨d₁.app dc, .app haf hac, ?_⟩
+      cases e₁
       have h := ParRed.app haf hac
       cases e₁
       rename_i h_i _

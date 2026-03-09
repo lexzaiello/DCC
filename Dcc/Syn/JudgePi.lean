@@ -134,16 +134,19 @@ def mk_I (α : Expr) (m : Level) : Expr :=
 
   ⸨(S m 2 m) α β γ x y⸩
 
+inductive Comb : Expr → Prop where
+  | I₀      : Comb (I m)
+  | K₀      : Comb (K m n)
+  | K'₀     : Comb (K' m n)
+  | S₀      : Comb (S m n o)
+  | next₀   : Comb next
+  | app'₀   : Comb $
+  | read    : Comb read
+  | assert₀ : Comb assert
+
 inductive Atom : Expr → Prop where
-  | I₀      : Atom (I m)
-  | K₀      : Atom (K m n)
-  | K'₀     : Atom (K' m n)
-  | S₀      : Atom (S m n o)
-  | next₀   : Atom next
-  | app'₀   : Atom $
-  | read    : Atom read
+  | comb    : Comb e → Atom e
   | Srt     : Atom (Srt m)
-  | assert₀ : Atom assert
 
 inductive Whnf : Expr → Prop where
   | atom    : Atom c → Whnf c

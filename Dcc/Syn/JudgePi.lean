@@ -82,6 +82,8 @@ def eval (e : Expr) : Except Format Expr :=
   | ⸨${π} f g x⸩ => pure ⸨π ⸨f x⸩ ⸨g x⸩⸩
   | e => .error <| "stuck: " ++ (format e)
 
+end Expr
+
 abbrev comp (f g : Expr) : Expr :=
   ⸨${read} ⸨assert f⸩ g⸩
 
@@ -117,75 +119,6 @@ def S.type (m n o : Level) : Expr :=
    , (Π' o) (assert_n 4 (0 read))
    , (2 (${read} ∘' assert))
 
-def step_plus (e : Expr) : Option Expr :=
-  match e with
-  | ⸨(I _m) _α x⸩ => step_plus x
-  | ⸨(K _m _n) _α _β x _y⸩ => step_plus x
-  | ⸨(K' _m _n) _α _β x _y⸩ => step_plus x
-  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => do return ⸨⸨(← step_plus x) (← step_plus z)⸩ ⸨(← step_plus y) (← step_plus z)⸩⸩
-  | ⸨((Π' m) α, β) x⸩ => do return (Π' m) (← step_plus ⸨α x⸩), (← step_plus ⸨β x⸩)
-  | ⸨next f _x⸩ => step_plus f
-  | ⸨read e⸩ => step_plus e
-  | ⸨assert e _x⸩ => step_plus e
-  | ⸨${π} f g x⸩ => do return ⸨π ⸨(← step_plus f) (← step_plus x)⸩ ⸨(← step_plus g) (← step_plus x)⸩⸩
-  | (Π' m) α, β => do return (Π' m) (← step_plus α), (← step_plus β)
-  | _ => .none
-
-def norm (e : Expr) :=
-  match e with
-  | ⸨(I _m) _α x⸩ => norm x
-  | ⸨(K _m _n) _α _β x _y⸩ => norm x
-  | ⸨(K' _m _n) _α _β x _y⸩ => norm x
-  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => ⸨⸨(norm x) (norm z)⸩ ⸨(norm y) (norm z)⸩⸩
-  | ⸨((Π' m) α, β) x⸩ => (Π' m) (norm ⸨α x⸩), (norm ⸨β x⸩)
-  | ⸨next f _x⸩ => norm f
-  | ⸨read e⸩ => norm e
-  | ⸨assert e _x⸩ => norm e
-  | ⸨${π} f g x⸩ => ⸨π ⸨(norm f) (norm x)⸩ ⸨(norm g) (norm x)⸩⸩
-  | (Π' m) α, β => (Π' m) (norm α), (norm β)
-  | ⸨f x⸩ => ⸨(norm f) (norm x)⸩
-  | e => e
-
-def defeq (α β : Expr) (gas : ℕ := 100) : Except Format Unit :=
-  match gas, α, β with
-  | .succ n, ((Π' _m₁) α₁, β₁), ((Π' _m₂) α₂, β₂) => do
-    let _ ← (defeq α₁ α₂ n).mapError (fun e => "while checking Π domain: " ++ e)
-    (defeq (norm ⸨β₁ _?⸩) (norm ⸨β₂ _?⸩) n).mapError (fun e => "while checking Π codomain: " ++ e)
-  | .succ n, ⸨assert e₁⸩, ⸨assert e₂⸩ => defeq e₁ e₂ n
-  | .succ n, e₁, e₂ =>
-    let e₁' := norm e₁
-    let e₂' := norm e₂
-    if e₁' == e₂' then
-      pure ()
-    else
-      defeq e₁' e₂' n
-  | .zero, e₁, e₂ =>
-    let e₁' := norm e₁
-    let e₂' := norm e₂
-    if e₁' == e₂' then
-      pure ()
-    else
-      .error <| (format α) ++ " ≠ " ++ (format β)
-
-def infer : Expr → Except Format Expr
-  | I m => return I.type m
-  | K m n => return K.type m n
-  | K' m n => return K'.type m n
-  | S m n o => return S.type m n o
-  | Srt m => return Srt m.succ
-  | (Π' m) _α, _β => return Srt m
-  | ⸨f x⸩ => do match ← norm <$> infer f, ← norm <$> infer x with
-    | ((Π' _m) α₁, β), α₂ => do
-      let _ ← (defeq α₁ α₂).mapError
-        (fun e => "argument mismatch in app " ++ (format ⸨f x⸩) ++ ":" ++ .line ++ e)
-      pure <| norm ⸨β x⸩
-    | t₁, _t₂ =>
-      .error <| "not a function type: " ++ (.nest 2 <| .line ++ (format t₁))
-  | e => .error <| "not well-typed: " ++ (.nest 2 <| .line ++ (format e))
-
-#eval infer ⸨(I 2) (Srt 1) (Srt 0)⸩
-#eval infer ⸨(K 3 2) (Srt 2) ⸨(I 3) (Srt 2)⸩ (Srt 1) (Srt 0)⸩
-
 syntax "(" "~>" term ")" term "," term : term
 
 macro_rules
@@ -200,9 +133,6 @@ def mk_I (α : Expr) (m : Level) : Expr :=
   let γ := ⸨(K' m.succ m) ((~> m.succ) (Srt 1), (Srt m)) α ⸨(K' m.succ 2) (Srt m) (Srt 1) α⸩⸩
 
   ⸨(S m 2 m) α β γ x y⸩
-
-#eval infer <| mk_I (Srt 1) 2
-#eval infer <| ⸨(mk_I (Srt 1) 2) (Srt 0)⸩
 
 inductive Whnf : Expr → Prop where
   | I₀      : Whnf (I m)
@@ -285,191 +215,7 @@ inductive Judge : Expr → Expr → Prop
   | app : Judge ((Π' _m) α, β) f
     → Judge α x
     → Judge ⸨β x⸩ ⸨f x⸩
-  | conv : Judge A x → (∃ C, RedStar A C ∧ RedStar B C) → Judge B x
-
-theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedStar c d := by
-  intro hb hc
-  cases hb
-  repeat (cases hc; exact ⟨_, RedStar.refl, RedStar.refl⟩)
-
-theorem ParRed.refl : ParRed e e := by
-  induction e
-  exact ParRed.refl_Srt
-  apply ParRed.Pival
-  repeat assumption
-  apply ParRed.refl_K'
-  apply ParRed.refl_K
-  apply ParRed.refl_S
-  apply ParRed.refl_I
-  apply ParRed.refl_hole
-  apply ParRed.refl_next
-  apply ParRed.refl_read
-  apply ParRed.refl_assert
-  apply ParRed.refl_app'
-  apply ParRed.app
-  repeat assumption
-
-theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
-  intro h₁ h₂
-  induction h₁ generalizing c
-  repeat exact ⟨_, h₂, ParRed.refl⟩
-  · cases h₂
-    · rename_i h_x ih h_c
-      exact ih h_c
-    · rename_i h_x ih _ _ h₂ h_x'
-      cases h₂
-      rename_i h₂ _
-      cases h₂
-      have ⟨d, ha, hb⟩ := ih h_x'
-      refine ⟨d, ha, ParRed.I hb⟩
-  · cases h₂
-    · rename_i h_x ih
-      exact  h_x ih
-    · rename_i h_x ih f' x' h_k h_x'
-      cases h_k
-      rename_i h_k _
-      cases h_k
-      rename_i h_k _
-      cases h_k
-      rename_i h_k _
-      cases h_k
-      have ⟨d, ha, hb⟩ := ih h_x
-      rename_i h_x₂ _ _ _ _
-      have ⟨d₂, ha₂, hb₂⟩ := ih h_x₂
-      exact ⟨d₂, ha₂, ParRed.K hb₂⟩
-  · cases h₂
-    · rename_i h_x ih
-      exact  h_x ih
-    · rename_i h_x ih f' x' h_k h_x'
-      cases h_k
-      rename_i h_k _
-      cases h_k
-      rename_i h_k _
-      cases h_k
-      rename_i h_k _
-      cases h_k
-      have ⟨d, ha, hb⟩ := ih h_x
-      rename_i h_x₂ _ _ _ _
-      have ⟨d₂, ha₂, hb₂⟩ := ih h_x₂
-      exact ⟨d₂, ha₂, ParRed.K' hb₂⟩
-  · cases h₂
-    · rename_i h_x ih
-      exact  h_x ih
-    · rename_i hs _
-      cases hs
-      rename_i hs _
-      cases hs
-      rename_i hs _
-      cases hs
-      rename_i hs _
-      cases hs
-      rename_i hs _
-      cases hs
-      rename_i hs _
-      cases hs
-      rename_i x z y _ _ _ _ _ _ _ h ih _ _ _ _ _ _ _ _ _ _ _ _
-      have ⟨d, ha, hb⟩ := ih h
-      rename_i s' _ _ _ _ _ _ x'₅ a'₄ _ h₂ _ h₃ _ h₄ _ _ _ _
-      have h_xz := ParRed.app h₃ a'₄
-      have h_yz := ParRed.app h₂ a'₄
-      have h_s  := ParRed.app h_xz h_yz
-      have ⟨d, ha, hb⟩ := ih h_s
-      exact ⟨d, ha, ParRed.S hb⟩
-  · rename_i m α x β P' h_P' ih
-    cases h₂
-    rename_i h_c
-    exact ih h_c
-    rename_i f' x' α₁ α₂
-    have h := ih h_P'
-    cases α₁
-    rename_i s_α s_β
-    have ⟨d, ha, hb⟩ := ih (ParRed.Pival (.app s_α α₂) (.app s_β α₂))
-    refine ⟨d, ha, ParRed.Pi hb⟩
-  · rename_i α α' β β' m p_α p_β ih₁ ih₂
-    cases h₂
-    rename_i α'₂ β'₂ p_α' p_β'
-    have ⟨d₁, h_α₁, h_α₂⟩ := ih₁ p_α
-    have ⟨d₂, h_β₁, h_β₂⟩ := ih₂ p_β
-    have ⟨d₃, h_α₃, h_α₄⟩ := ih₁ p_α'
-    have ⟨d₄, h_β₃, h_β₄⟩ := ih₂ p_β'
-    have ha : ParRed (Pi m α'₂ β'₂) (Pi m d₃ d₄) := ParRed.Pival (by assumption) (by assumption)
-    have hb : ParRed (Pi m α' β') (Pi m d₃ d₄) := ParRed.Pival h_α₃ h_β₃
-    exact ⟨_, hb, ha⟩
-  · rename_i f f' _x h_f ih
-    cases h₂
-    · rename_i a
-      exact ih a
-    · rename_i f'' x' h_f' h_x'
-      cases h_f'
-      rename_i f'' x'' h_f'' h_x''
-      cases h_f''
-      have h := ih h_f
-      have ⟨d, hd_f', hd_x''⟩ := ih h_x''
-      have h := ParRed.next (f := x'') (_x := x') hd_x''
-      exact ⟨d, hd_f', h⟩
-  · rename_i e e' h_e' ih
-    cases h₂
-    · rename_i a
-      exact ih a
-    · rename_i f' x' h_f' h_x'
-      cases h_f'
-      have ⟨d, ha, hb⟩ := ih h_x'
-      exact ⟨d, ha, ParRed.read hb⟩
-  
-  sorry
-
-
-theorem Whnf.no_step : Whnf e → ¬ ∃ e', Red e e' := by
-  intro h
-  cases h
-  repeat (intro ⟨e', hstep⟩; contradiction)
-
-theorem Whnf.left : Whnf ⸨f x⸩ → Whnf f := by
-  intro h
-  cases h
-  exact Whnf.I₀
-  exact Whnf.K₀
-  exact Whnf.K₁
-  exact Whnf.K₂
-  exact Whnf.K'₀
-  exact Whnf.K'₁
-  exact Whnf.K'₂
-  exact Whnf.S₀
-  exact Whnf.S₁
-  exact Whnf.S₂
-  exact Whnf.S₃
-  exact Whnf.S₄
-  exact Whnf.next₀
-  exact Whnf.assert₀
-  exact Whnf.app'₀
-  exact Whnf.app'₁
-  exact Whnf.app'₂
-
-theorem step_left_or_whole : Red ⸨f x⸩ e' → (∃ f', Red f f' ∧ e' = ⸨f' x⸩) ∨ Whnf f := by
-  intro h_step
-  cases h_step
-  exact Or.inr Whnf.I₁
-  exact Or.inr Whnf.K₃
-  exact Or.inr Whnf.K'₃
-  exact Or.inr Whnf.S₅
-  exact Or.inr Whnf.Pi
-  exact Or.inr Whnf.next₁
-  exact Or.inr Whnf.read
-  exact Or.inr Whnf.assert₁
-  exact Or.inr Whnf.app'₃
-
-theorem step_whole : Red ⸨f x⸩ e' → Whnf f ∨ Whnf ⸨f x⸩ := by
-  intro h_r
-  cases h_r
-  exact Or.inl Whnf.I₁
-  exact Or.inl Whnf.K₃
-  exact Or.inl Whnf.K'₃
-  exact Or.inl Whnf.S₅
-  exact Or.inl Whnf.Pi
-  exact Or.inl Whnf.next₁
-  exact Or.inl Whnf.read
-  exact Or.inl Whnf.assert₁
-  exact Or.inl Whnf.app'₃
+  | conv : Judge A x → (∃ C, ParRed A C ∧ ParRed B C) → Judge B x
 
 theorem Step.sound (e₁ e₂) : Red e₁ e₂ → eval e₁ = .ok e₂ := by
   intro h_r
@@ -522,40 +268,33 @@ theorem Step.complete (e₁ e₂) : eval e₁ = .ok e₂ → Red e₁ e₂ := by
     exact Red.app'
     simp_all
 
+namespace Judge
+
 theorem inv : Judge ((Π' m) α, β) f → Judge α x → Judge ⸨β x⸩ ⸨f x⸩ := by
   apply Judge.app
 
-theorem Judge_I_par {h_t_α : Judge (Srt m) α} : Judge ((Π' m) α, ⸨assert α⸩) ⸨(I m) α⸩ := by
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.I
-  assumption
-  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, .tail .refl Red.Pi, .refl⟩
-  refine ⟨(Π' m) α, ⸨assert α⸩, ?_, .refl⟩
-  apply RedStar.tail
-  apply RedStar.tail
-  apply RedStar.refl
-  apply Red.Pi
-  apply StepStar.red
-  exact Red.read
-  exact StepStar.refl
+end Judge
 
-theorem Judge_I {h_t_α : Judge (Srt m) α} {h_t_x : Judge α x} : Judge α ⸨(I m) α x⸩ := by
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.I
-  exact h_t_α
-  exact ⟨(Π' m) ⸨read α⸩, ⸨assert α⸩, StepStar.red Red.Pi, StepStar.refl⟩
-  exact ⟨(Π' m) α, ⸨assert α⸩, StepStar.pi (StepStar.red Red.read) StepStar.refl, StepStar.refl⟩
-  assumption
-  exact ⟨α, StepStar.red Red.assert, StepStar.refl⟩
+namespace ParRed
 
-theorem preservation (h_t : Judge α x) (h_step : Red x x') : Judge α x' := by
-  sorry
+theorem refl : ParRed e e := by
+  induction e
+  exact ParRed.refl_Srt
+  apply ParRed.Pival
+  repeat assumption
+  apply ParRed.refl_K'
+  apply ParRed.refl_K
+  apply ParRed.refl_S
+  apply ParRed.refl_I
+  apply ParRed.refl_hole
+  apply ParRed.refl_next
+  apply ParRed.refl_read
+  apply ParRed.refl_assert
+  apply ParRed.refl_app'
+  apply ParRed.app
+  repeat assumption
+
+end ParRed
 
 example : Judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   apply Judge.conv
@@ -566,12 +305,10 @@ example : Judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   exact Judge.Srt
   use (Π' 2) ⸨read (Srt 1)⸩, ⸨assert (Srt 1)⸩
   constructor
-  apply StepStar.red
-  apply Red.Pi
-  exact StepStar.refl
+  apply ParRed.Pi
+  exact ParRed.refl
+  apply ParRed.refl
   apply Judge.conv
   exact Judge.Srt
-  exact ⟨Srt 1, StepStar.refl, StepStar.red Red.read⟩
-  exact ⟨Srt 1, StepStar.red Red.assert, StepStar.refl⟩
-
-end Expr
+  exact ⟨Srt 1, ParRed.refl, ParRed.read ParRed.refl⟩
+  exact ⟨Srt 1, .assert ParRed.refl, ParRed.refl⟩

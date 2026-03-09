@@ -10,6 +10,11 @@ theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedSta
   cases hb
   repeat (cases hc; exact ⟨_, RedStar.refl, RedStar.refl⟩)
 
+theorem confluence_atom (h_atom : Atom a) (h_b : ParRed a b) (h_c : ParRed a c) : b = c := by
+  induction h_b
+  repeat (cases h_atom; cases h_c; rfl)
+  repeat contradiction
+
 theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro h₁ h₂
   induction h₁ generalizing c with
@@ -22,7 +27,6 @@ theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed 
       exact ⟨d.app d₂, ParRed.app ha ha₂, ParRed.app hb hb₂⟩
     | I =>
       rename_i x' _m _α h_c
-      have h_step := ParRed.I h_c (_m := _m) (_α := _α)
       have ⟨d₁, haf, hbf⟩ := ih₁ e₁
       have ⟨dc, hac, hbc⟩ := ih₂ h_c
       have h := ParRed.app haf hac
@@ -33,6 +37,46 @@ theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed 
       refine ⟨dc, ?_, hbc⟩
       rw [← heq]
       exact ParRed.I hac
+    | K =>
+      rename_i _m _n _α _β h_c
+      cases e₁
+      rename_i h_i _
+      cases h_i
+      rename_i h_i _
+      cases h_i
+      rename_i h_i _
+      have heq := no_step_atom h_i Atom.K₀
+      have ⟨d₁, h_x₃, h_x₃'⟩ := ih₂ e₂
+      rename_i h_x₀ _ h_β f' x' h_α
+      have ⟨d₁, haf, hbf⟩ := ih₁ (((ParRed.app ParRed.refl h_α).app h_β).app h_x₀)
+      rename_i x'₁ _ _
+      rw [← heq]
+      cases heq
+      cases hbf
+      cases haf
+      cases h_i
+      rename_i h_k _
+      cases h_k
+      rename_i h_k₁ _ _
+      cases h_k₁
+      rename_i h_k
+      cases h_k
+      rename_i h_k _
+      cases h_k
+      
+      rw [heq] at hbf
+      have ⟨dc, hac, hbc⟩ := ih₂ e₂
+      have h := ParRed.app haf hac
+      rw [← heq] at h
+      rename_i xa _ _ _ _ _ _
+      refine ⟨d₁.app dc, ?_, ?_⟩
+      rw [← heq]
+      exact h
+      
+      apply ParRed.K
+      exact ParRed.refl
+      exact ParRed.I hac
+      --have h_step := ParRed.K h_x (x := x₃) (x' := c) (_m := _m) (_n := _n) (_y := 
   | _ => sorry
 
 /-theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by

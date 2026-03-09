@@ -138,10 +138,11 @@ theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
   cases h_r
   rfl
 
-theorem not_atom_has_parts : ¬ (Atom e) → ∃ f x, ⸨f x⸩ = e := by
-  intro ha
-  induction e
-  
+theorem not_atom_has_parts (h : ¬ (Atom e)) : (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
+  match heq : Atom.gen e with
+  | .inl h => by contradiction
+  | .inr (.inl h) => .inl h
+  | .inr (.inr h) => .inr h
 
 theorem ParRed.step_whole_or_parts_refl : ParRed e e₂
   → (∃ e₁, Red e e₁ ∧ ParRed e₁ e₂) ∨ (∃ f x f' x', ⸨f x⸩ = e ∧ ParRed f f' ∧ ParRed x x') ∨ e = e₂ := by

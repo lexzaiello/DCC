@@ -8,10 +8,14 @@ It is kind of halfway between normalization and single-step reduction.
 Useful for checking definitional equality.
 
 I have proven it to coincide with my definition of ParRed.
+
+Need some way to derive gen from ParRed.
+
+number of steps.
 -/
 
 inductive Reduction.app : Expr → Expr → Prop
-  | mk : ParRed f f' → ParRed x x' → Reduction.app ⸨f x⸩ ⸨f' x'⸩
+  | mk : (¬ ∃ e', Red ⸨f x⸩ e') → ParRed f f' → ParRed x x' → Reduction.app ⸨f x⸩ ⸨f' x'⸩
 
 inductive Reduction.pi : Expr → Expr → Prop
   | mk : ParRed α α' → ParRed β β' → Reduction.pi ((Π' m) α, β) ((Π' m) α', β')
@@ -51,34 +55,43 @@ def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
     constructor
     exact ParRed.refl
     exact Reduction.refl' ⟨by simp⟩
-  | ⸨⸨(.I _m) _α⸩ x⸩ =>
-    ⟨x, ⟨⟨.I .refl, .red' ⟨.refl, .I⟩⟩⟩⟩
-  | ⸨(.K _m _n) _α _β x _y⸩ =>
-    ⟨x, ⟨.K .refl, .red' ⟨.refl, .K⟩⟩⟩
-  | ⸨(.K' _m _n) _α _β x _y⸩ =>
-    ⟨x, ⟨.K' .refl, .red' ⟨.refl, .K'⟩⟩⟩
-  | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
-    ⟨⸨⸨x z⸩ ⸨y z⸩⸩, ⟨.S .refl .refl .refl, .red' ⟨.app (.app .refl .refl) (.app .refl .refl), .S⟩⟩⟩
-  | ⸨((Π' m) α, β) x⸩ =>
-    ⟨((Π' m) ⸨α x⸩, ⸨β x⸩), ⟨.Pi .refl .refl .refl, .red' ⟨.Pival (.app .refl .refl) (.app .refl .refl), .Pi⟩⟩⟩
-  | ((Π' m) α, β) =>
-    let ⟨α', ⟨⟨heq₁, _⟩⟩⟩ := gen α
-    let ⟨β', ⟨⟨heq₂, _⟩⟩⟩ := gen β
-    ⟨(Π' m) α', β', ⟨.Pival heq₁ heq₂, .pi' ⟨heq₁, heq₂⟩⟩⟩
-  | ⸨.next f _x⸩ =>
-    ⟨f, ⟨.next .refl, .red' ⟨.refl, .next⟩⟩⟩
-  | ⸨.read e⸩ =>
-    ⟨e, ⟨.read .refl, .red' ⟨.refl, .read⟩⟩⟩
-  | ⸨.assert f _x⸩ =>
-    ⟨f, ⟨.assert .refl, .red' ⟨.refl, .assert⟩⟩⟩
-  | ⸨${π} f g x⸩ =>
-    ⟨⸨π ⸨f x⸩ ⸨g x⸩⸩,
-      ⟨.app' .refl .refl .refl, .red' ⟨.app (.app .refl (.app .refl .refl)) (.app .refl .refl), .app'⟩⟩⟩
-  | ⸨f x⸩ =>
-    let ⟨f', ⟨⟨heq₁, c⟩⟩⟩ := gen f
-    let ⟨x', ⟨⟨heq₂, c⟩⟩⟩ := gen x
+  | e =>
+    match heq₂ : e.eval with
+    | .ok e_step =>
+      have h_step := Step.complete _ _ heq₂
+      let red : Reduction.red e e_step := ⟨.refl, h_step⟩
+      
+      ⟨e_step, ⟨{ hpar := by sorry }⟩⟩
+    | .error h =>
+      sorry
+    | ⸨⸨(.I _m) _α⸩ x⸩ =>
+      ⟨x, ⟨⟨.I .refl, .red' ⟨.refl, .I⟩⟩⟩⟩
+    | ⸨(.K _m _n) _α _β x _y⸩ =>
+      ⟨x, ⟨.K .refl, .red' ⟨.refl, .K⟩⟩⟩
+    | ⸨(.K' _m _n) _α _β x _y⸩ =>
+      ⟨x, ⟨.K' .refl, .red' ⟨.refl, .K'⟩⟩⟩
+    | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
+      ⟨⸨⸨x z⸩ ⸨y z⸩⸩, ⟨.S .refl .refl .refl, .red' ⟨.app (.app .refl .refl) (.app .refl .refl), .S⟩⟩⟩
+    | ⸨((Π' m) α, β) x⸩ =>
+      ⟨((Π' m) ⸨α x⸩, ⸨β x⸩), ⟨.Pi .refl .refl .refl, .red' ⟨.Pival (.app .refl .refl) (.app .refl .refl), .Pi⟩⟩⟩
+    | ((Π' m) α, β) =>
+      let ⟨α', ⟨⟨heq₁, _⟩⟩⟩ := gen α
+      let ⟨β', ⟨⟨heq₂, _⟩⟩⟩ := gen β
+      ⟨(Π' m) α', β', ⟨.Pival heq₁ heq₂, .pi' ⟨heq₁, heq₂⟩⟩⟩
+    | ⸨.next f _x⸩ =>
+      ⟨f, ⟨.next .refl, .red' ⟨.refl, .next⟩⟩⟩
+    | ⸨.read e⸩ =>
+      ⟨e, ⟨.read .refl, .red' ⟨.refl, .read⟩⟩⟩
+    | ⸨.assert f _x⸩ =>
+      ⟨f, ⟨.assert .refl, .red' ⟨.refl, .assert⟩⟩⟩
+    | ⸨${π} f g x⸩ =>
+      ⟨⸨π ⸨f x⸩ ⸨g x⸩⸩,
+        ⟨.app' .refl .refl .refl, .red' ⟨.app (.app .refl (.app .refl .refl)) (.app .refl .refl), .app'⟩⟩⟩
+    | ⸨f x⸩ =>
+      let ⟨f', ⟨⟨heq₁, c⟩⟩⟩ := gen f
+      let ⟨x', ⟨⟨heq₂, c⟩⟩⟩ := gen x
 
-    ⟨⸨f' x'⸩, ⟨.app heq₁ heq₂, .app' ⟨heq₁, heq₂⟩⟩⟩
+      ⟨⸨f' x'⸩, ⟨.app heq₁ heq₂, .app' ⟨fun h => by sorry, heq₁, heq₂⟩⟩⟩
 
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with
@@ -267,10 +280,20 @@ theorem whnf_step : Whnf ⸨f x⸩ → ParRed ⸨f x⸩ ⸨f' x'⸩ → ParRed f
   rename_i h_f h_x
   exact ⟨h_f, h_x⟩
 
-theorem single_step_unique : Red e e₁ → Red e e₂ → e₁ = e₂ := by
+theorem Red.single_step_unique : Red e e₁ → Red e e₂ → e₁ = e₂ := by
   intro h₁ h₂
   induction h₁
   repeat (cases h₂; rfl)
+
+theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
+  intro ha hb
+  have ⟨e', ⟨hpar, red⟩⟩ := gen a
+  induction red
+  rename_i h
+  cases h
+  rename_i h_f h_x
+  
+  sorry
 
 theorem multi_step_unique : ParRed e e₁ → ParRed e e₂ → (∃ e', ParRed e₁ e' ∧ ParRed e₂ e') := by
   intro h₁ h₂

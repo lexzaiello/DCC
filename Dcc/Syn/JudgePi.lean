@@ -372,3 +372,15 @@ theorem ParRed.refl : ParRed e e := by
   apply ParRed.app
   repeat assumption
 
+theorem ParRed.of_red : Red e₁ e₂ → ParRed e₁ e₂ := by
+  intro h
+  induction h
+  exact ParRed.I .refl
+  exact ParRed.K .refl
+  exact ParRed.K' .refl
+  exact ParRed.S .refl .refl .refl
+  exact ParRed.Pi .refl .refl .refl
+  exact ParRed.next .refl
+  exact ParRed.read .refl
+  exact ParRed.assert .refl
+  exact ParRed.app' .refl .refl .refl

@@ -4,6 +4,57 @@ open Expr
 
 namespace ParRed
 
+def run (e : Expr) : ((e' : Expr) × (ULift <| PLift (ParRed e e'))) :=
+  match e with
+  | .K' m n => ⟨.K' m n, ⟨⟨ParRed.refl_K'⟩⟩⟩
+  | .K m n => ⟨.K m n, ⟨⟨ParRed.refl_K⟩⟩⟩
+  | .S m n o => ⟨.S m n o, ⟨⟨ParRed.refl_S⟩⟩⟩
+  | .I m => ⟨.I m, ⟨⟨ParRed.refl_I⟩⟩⟩
+  | _? => ⟨_?, ⟨⟨.refl_hole⟩⟩⟩
+  | Srt m => ⟨Srt m, ⟨⟨.refl_Srt⟩⟩⟩
+  | .next => ⟨.next, ⟨⟨.refl_next⟩⟩⟩
+  | .read => ⟨.read, ⟨⟨.refl_read⟩⟩⟩
+  | .assert => ⟨.assert, ⟨⟨.refl_assert⟩⟩⟩
+  | .app' => ⟨.app', ⟨⟨.refl_app'⟩⟩⟩
+  | ⸨(.I m) α x⸩ =>
+    let ⟨inner, pinner⟩ := run x
+    ⟨inner, ⟨⟨.I pinner.down.down⟩⟩⟩
+  | ⸨(.K m n) α β x y⸩ =>
+    let ⟨inner, pinner⟩ := run x
+    ⟨inner, ⟨⟨.K pinner.down.down⟩⟩⟩
+  | ⸨(.K' m n) α β x y⸩ =>
+    let ⟨inner, pinner⟩ := run x
+    ⟨inner, ⟨⟨.K' pinner.down.down⟩⟩⟩
+  | ⸨(.S m n o) α β γ x y z⸩ =>
+    let ⟨inner_x, pinner₁⟩ := run ⸨x z⸩
+    let ⟨inner_y, pinner₂⟩ := run ⸨y z⸩
+    ⟨⸨inner_x inner_y⸩, ⟨⟨.S (.app pinner₁.down.down pinner₂.down.down)⟩⟩⟩
+  | ⸨((Π' m) α, β) x⸩ =>
+    let ⟨inner_x, pinner₁⟩ := run ⸨α x⸩
+    let ⟨inner_y, pinner₂⟩ := run ⸨β x⸩
+    ⟨((Π' m) inner_x, inner_y), ⟨⟨.Pi (.Pival pinner₁.down.down pinner₂.down.down)⟩⟩⟩
+  | ((Π' m) α, β) =>
+    let ⟨inner_x, pinner₁⟩ := run α
+    let ⟨inner_y, pinner₂⟩ := run β
+    ⟨((Π' m) inner_x, inner_y), ⟨⟨.Pival pinner₁.down.down pinner₂.down.down⟩⟩⟩
+  | ⸨.next f _x⸩ =>
+    let ⟨inner, pinner⟩ := run f
+    ⟨inner, ⟨⟨.next pinner.down.down⟩⟩⟩
+  | ⸨.read e⸩ =>
+    let ⟨inner, pinner⟩ := run e
+    ⟨inner, ⟨⟨.read pinner.down.down⟩⟩⟩
+  | ⸨.assert f _x⸩ =>
+    let ⟨inner, pinner⟩ := run f
+    ⟨inner, ⟨⟨.assert pinner.down.down⟩⟩⟩
+  | ⸨${π} f g x⸩ =>
+    let ⟨innerx, pinner₁⟩ := run ⸨f x⸩
+    let ⟨innery, pinner₂⟩ := run ⸨g x⸩
+    ⟨⸨π innerx innery⸩, ⟨⟨.app' (.app (.app .refl pinner₁.down.down) pinner₂.down.down)⟩⟩⟩
+  | ⸨f x⸩ =>
+    let ⟨innerx, pinner₁⟩ := run f
+    let ⟨innery, pinner₂⟩ := run x
+    ⟨⸨innerx innery⸩, ⟨⟨.app pinner₁.down.down pinner₂.down.down⟩⟩⟩
+
 theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
   intro h_r h_whnf
   cases h_whnf
@@ -100,10 +151,16 @@ theorem multi_step_unique : ParRed e e₁ → ParRed e e₂ → (∃ e', ParRed 
     exact ⟨((Π' m)e, e'), .Pival ha ha', .Pival hb hb'⟩
   repeat (cases h₁; cases h₂; exact ⟨_, ParRed.refl, ParRed.refl⟩)
   · rename_i a b ih₁ ih₂
-    have ha := h₁.inv
-    have hb := h₂.inv
-    
-    sorry
+    match h₁.par_app with
+    | .inl ⟨e₄, hr, heq⟩ =>
+      have hb := h₂.par_app
+    | .inr ⟨f', x', h_p_f', h_p_x', h_eq₁⟩ =>
+      match h₂.par_app with
+      | .inr ⟨f'₁, x'₁, h_p_f'₁, h_p_x'₁, h_eq₂⟩ =>
+        cases h_eq₁
+        cases h_eq₂
+        sorry
+      | _ => sorry
 
 end ParRed
 

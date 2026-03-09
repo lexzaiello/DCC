@@ -160,13 +160,17 @@ theorem ParRed.step_whole_or_parts_refl : ParRed e e₂
   → (∃ e₁, Red e e₁ ∧ ParRed e₁ e₂)
     ∨ ((∃ f x f' x', ⸨f x⸩ = e ∧ ParRed f f' ∧ ParRed x x')
     ∨ (∃ m α β, e = (Π' m) α, β)) ∨ e = e₂ := fun h_r =>
-  match Atom.gen e with
+  match heq : Atom.gen e with
   | .inl h=> .inr <| .inr <| no_step_atom h_r h
-  | .inr (.inl ⟨f, x, heq⟩) => by
-    
-    sorry
-  | .inr (.inr ⟨m, α, β, heq⟩) =>
-    sorry
+  | .inr (.inl h₁@⟨f, x, heq⟩) => by
+    have h_not_at := Atom.sound' (h_not_atom := .inl h₁) (by simp)
+    simp_all
+    have h := ParRed.step_whole_or_parts h_r
+    match h with
+    | .inl h => exact Or.inl h
+    | .inr ⟨f', x', pf, px⟩ =>
+      exact Or.inr (Or.inl ⟨⟨f', pf⟩, ⟨x', px⟩⟩)
+  | .inr (.inr ⟨m, α, β, heq⟩) => by simp_all
 
 theorem Red.diamond (h_r : Red a b) (h_r₂ : ParRed a c) : ∃ d, ParRed b d ∧ ParRed c d := by
   
@@ -210,46 +214,6 @@ theorem single_step_unique : Red e e₁ → Red e e₂ → e₁ = e₂ := by
   induction h₁
   repeat (cases h₂; rfl)
 
-namespace ParRed
-
-theorem inv (h : ParRed ⸨f x⸩ e') : ∃ f' x', (ParRed f f' ∧ ParRed x x' ∧ ParRed ⸨f' x'⸩ e') := by
-  cases h
-  rename_i hx
-  exact ⟨_, e', .refl, hx, .I .refl⟩
-  rename_i hx
-  exact ⟨_, x, .refl, .refl, .K hx⟩
-  rename_i hx
-  exact ⟨_, x, .refl, .refl, .K' hx⟩
-  rename_i hx
-  exact ⟨_, x, .refl, .refl, .S (by assumption) (by assumption)⟩
-  rename_i hx
-  exact ⟨_, x, .refl, .refl, .Pi (by assumption) (by assumption)⟩
-  rename_i hx
-  exact ⟨_, x, .refl, .refl, .next hx⟩
-  rename_i hx
-  exact ⟨_, x, .refl, .refl, .read hx⟩
-  rename_i hx
-  exact ⟨_, x, .refl, .refl, .assert hx⟩
-  rename_i hx
-  exact ⟨_, x, .refl, .refl, .app' (by assumption) (by assumption)⟩
-  · rename_i f' x' h_f' h_x'
-    exact ⟨f', x', h_f', h_x', .refl⟩
-
-theorem par_app (h : ParRed ⸨f x⸩ e₁) : (∃ e₂, Red ⸨f x⸩ e₂ ∧ ParRed e₂ e₁) ∨ (∃ f' x', ParRed f f' ∧ ParRed x x' ∧ e₁ = ⸨f' x'⸩) := by
-  cases h
-  exact Or.inl ⟨_, Red.I, by assumption⟩
-  exact Or.inl ⟨_, Red.K, by assumption⟩
-  exact Or.inl ⟨_, Red.K', by assumption⟩
-  exact Or.inl ⟨_, Red.S, .app (by assumption) (by assumption)⟩
-  exact Or.inl ⟨_, Red.Pi, .Pival (by assumption) (by assumption)⟩
-  exact Or.inl ⟨_, Red.next, by assumption⟩
-  exact Or.inl ⟨_, Red.read, by assumption⟩
-  exact Or.inl ⟨_, Red.assert, by assumption⟩
-  exact Or.inl ⟨_, Red.app', .app (.app .refl (by assumption)) (by assumption)⟩
-  · rename_i f' x' h_f h_x
-    right
-    exact ⟨f', x', h_f, h_x, rfl⟩
-
 theorem multi_step_unique : ParRed e e₁ → ParRed e e₂ → (∃ e', ParRed e₁ e' ∧ ParRed e₂ e') := by
   intro h₁ h₂
   induction e generalizing e₁ e₂
@@ -278,8 +242,6 @@ theorem multi_step_unique : ParRed e e₁ → ParRed e e₂ → (∃ e', ParRed 
         
         sorry
       | _ => sorry
-
-end ParRed
 
 theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   sorry

@@ -2,6 +2,8 @@ import Dcc.Syn.JudgePi
 
 open Expr
 
+namespace ParRed
+
 theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
   intro h_r h_whnf
   cases h_whnf
@@ -10,6 +12,10 @@ theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
     repeat (cases h_r; rfl)
   · cases h_r
     rfl
+  cases h_r
+  rfl
+
+end ParRed
 
 theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedStar c d := by
   intro hb hc
@@ -39,6 +45,8 @@ theorem single_step_unique : Red e e₁ → Red e e₂ → e₁ = e₂ := by
   induction h₁
   repeat (cases h₂; rfl)
 
+namespace ParRed
+
 theorem inv (h : ParRed ⸨f x⸩ e') : ∃ f' x', (ParRed f f' ∧ ParRed x x' ∧ ParRed ⸨f' x'⸩ e') := by
   cases h
   rename_i hx
@@ -62,6 +70,21 @@ theorem inv (h : ParRed ⸨f x⸩ e') : ∃ f' x', (ParRed f f' ∧ ParRed x x' 
   · rename_i f' x' h_f' h_x'
     exact ⟨f', x', h_f', h_x', .refl⟩
 
+theorem par_app (h : ParRed ⸨f x⸩ e₁) : (∃ e₂, Red ⸨f x⸩ e₂ ∧ ParRed e₂ e₁) ∨ (∃ f' x', ParRed f f' ∧ ParRed x x' ∧ e₁ = ⸨f' x'⸩) := by
+  cases h
+  exact Or.inl ⟨_, Red.I, by assumption⟩
+  exact Or.inl ⟨_, Red.K, by assumption⟩
+  exact Or.inl ⟨_, Red.K', by assumption⟩
+  exact Or.inl ⟨_, Red.S, by assumption⟩
+  exact Or.inl ⟨_, Red.Pi, by assumption⟩
+  exact Or.inl ⟨_, Red.next, by assumption⟩
+  exact Or.inl ⟨_, Red.read, by assumption⟩
+  exact Or.inl ⟨_, Red.assert, by assumption⟩
+  exact Or.inl ⟨_, Red.app', by assumption⟩
+  · rename_i f' x' h_f h_x
+    right
+    exact ⟨f', x', h_f, h_x, rfl⟩
+
 theorem multi_step_unique : ParRed e e₁ → ParRed e e₂ → (∃ e', ParRed e₁ e' ∧ ParRed e₂ e') := by
   intro h₁ h₂
   induction e generalizing e₁ e₂
@@ -74,11 +97,15 @@ theorem multi_step_unique : ParRed e e₁ → ParRed e e₂ → (∃ e', ParRed 
     rename_i _ _ ha₁ ha₂ _ _ ha₃ ha₄
     have ⟨e, ha, hb⟩ := ih₁ ha₁ ha₃
     have ⟨e', ha', hb'⟩ := ih₂ ha₂ ha₄
-    exact ⟨Pi m e e', .Pival ha ha', .Pival hb hb'⟩
+    exact ⟨((Π' m)e, e'), .Pival ha ha', .Pival hb hb'⟩
   repeat (cases h₁; cases h₂; exact ⟨_, ParRed.refl, ParRed.refl⟩)
   · rename_i a b ih₁ ih₂
+    have ha := h₁.inv
+    have hb := h₂.inv
     
     sorry
+
+end ParRed
 
 theorem red_imp : Red a b → ParRed a b := by
   intro h

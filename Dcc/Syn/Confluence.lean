@@ -30,11 +30,23 @@ def Atom.sound (_h : Atom.gen e = .inl h_atom) : Atom e :=
   | .inl h => h
   | _ => by simp_all
 
+def Atom.sound' (_heq : Atom.gen e = .inr h_not_atom) : (¬ Atom e) := by
+  simp_all
+  match h_not_atom with
+  | .inl ⟨f, x, heq⟩ | .inr ⟨m, α, β, heq⟩ =>
+    intro hat
+    match hat with
+    | .comb h =>
+      cases h
+      repeat contradiction
+    | .Srt =>
+      contradiction
+
 def Atom.complete (h : Atom e) : (Atom.gen e = .inl h) := by
   induction h
   repeat rfl
 
-def      gen (e : Expr) : ((e' : Expr) × (PLift (ParRed e e'))) :=
+def gen (e : Expr) : ((e' : Expr) × (PLift (ParRed e e'))) :=
   match e with
   | .K' m n => ⟨.K' m n, ⟨ParRed.refl_K'⟩⟩
   | .K m n => ⟨.K m n, ⟨ParRed.refl_K⟩⟩
@@ -145,12 +157,15 @@ theorem not_atom_has_parts (h : ¬ (Atom e)) : (∃ f x, e = ⸨f x⸩) ∨ (∃
   | .inr (.inr h) => .inr h
 
 theorem ParRed.step_whole_or_parts_refl : ParRed e e₂
-  → (∃ e₁, Red e e₁ ∧ ParRed e₁ e₂) ∨ (∃ f x f' x', ⸨f x⸩ = e ∧ ParRed f f' ∧ ParRed x x') ∨ e = e₂ := by
-  intro h_r
-  if hatom : Atom e then
-    exact .inr <| .inr <| no_step_atom h_r hatom
-  else
+  → (∃ e₁, Red e e₁ ∧ ParRed e₁ e₂)
+    ∨ ((∃ f x f' x', ⸨f x⸩ = e ∧ ParRed f f' ∧ ParRed x x')
+    ∨ (∃ m α β, e = (Π' m) α, β)) ∨ e = e₂ := fun h_r =>
+  match Atom.gen e with
+  | .inl h=> .inr <| .inr <| no_step_atom h_r h
+  | .inr (.inl ⟨f, x, heq⟩) => by
     
+    sorry
+  | .inr (.inr ⟨m, α, β, heq⟩) =>
     sorry
 
 theorem Red.diamond (h_r : Red a b) (h_r₂ : ParRed a c) : ∃ d, ParRed b d ∧ ParRed c d := by

@@ -10,85 +10,183 @@ Useful for checking definitional equality.
 I have proven it to coincide with my definition of ParRed.
 -/
 
-inductive Reduction.app : Expr → Expr → Prop → Prop
-  | mk : (∃ f x, e = ⸨f x⸩) → Reduction.app e ⸨f' x'⸩ (∃ f x, e = ⸨f x⸩)
+inductive Reduction.app : Expr → Expr → Prop
+  | mk : ParRed f f' → ParRed x x' → Reduction.app ⸨f x⸩ ⸨f' x'⸩
 
-inductive Reduction.pi : Expr → Expr → Prop → Prop
-  | mk : (∃ m α β, e = (Π' m) α, β) → Reduction.pi e ((Π' m) α', β') (∃ m α β, e = (Π' m) α, β)
+inductive Reduction.pi : Expr → Expr → Prop
+  | mk : ParRed α α' → ParRed β β' → Reduction.pi ((Π' m) α, β) ((Π' m) α', β')
 
-inductive Reduction.red : Expr → Expr → Prop → Prop
-  | mk : Red e e' → Reduction.red e e' (Red e e')
+inductive Reduction.red : Expr → Expr → Prop
+  | mk : ParRed e' e'' → Red e e' → Reduction.red e e''
 
-inductive Reduction.refl : Expr → Expr → Prop → Prop
-  | mk : Atom e → e' = e → Reduction.refl e e' (Atom e ∧ e' = e)
+inductive Reduction.refl : Expr → Expr → Prop
+  | mk : Atom e  → Reduction.refl e e
 
-inductive Reduction : Expr → Expr → Prop → Prop
-  | app'  : (Reduction.app e ⸨f' x'⸩ p) → Reduction e ⸨f' x'⸩ p
-  | pi'   : (Reduction.pi e ((Π' m) α', β') p) → Reduction e ((Π' m) α', β') p
-  | red'  : (Reduction.red e e' p) → Reduction e e' p
-  | refl' : (Reduction.refl e e' p) → Reduction e e' p
+inductive Reduction : Expr → Expr → Prop
+  | app'  : (Reduction.app e ⸨f' x'⸩) → Reduction e ⸨f' x'⸩
+  | pi'   : (Reduction.pi e ((Π' m) α', β')) → Reduction e ((Π' m) α', β')
+  | red'  : (Reduction.red e e') → Reduction e e'
+  | refl' : (Reduction.refl e e') → Reduction e e'
 
 structure Reduces (e e' : Expr) where
-  e'    : Expr
   hpar  : ParRed e e'
-  hkind : Reduction e e' δ
+  hkind : Reduction e e'
 
-def gen (e : Expr) : ((e' : Expr) × (Reduces e e')) :=
-  match e with
-  | .K' m n
-  | .K m n
-  | .S m n o
-  | .I m
-  | Srt m
-  | .next
-  | .read
-  | .assert
-  | .app'
-  | _? => ⟨e, { e' := e, hpar := .refl, hkind := .refl' ⟨by cases e; sorry, by sorry⟩ }⟩
-  | ⸨(.I _m) _α x⸩ => ⟨x, ⟨.inr (.inl (.I))⟩⟩
-  | ⸨(.K _m _n) _α _β x _y⸩ => ⟨x, ⟨.inr (.inl .K)⟩⟩
-  | ⸨(.K' _m _n) _α _β x _y⸩ => ⟨x, ⟨.inr (.inl .K')⟩⟩
-  | ⸨(.S _m _n _o) _α _β _γ x y z⸩ => ⟨⸨⸨x z⸩ ⸨y z⸩⸩, ⟨.inr (.inl .S)⟩⟩
-  | ⸨((Π' _m) α, β) x⸩ => ⟨⟨_, ⟨.inr (.inl .Pi)⟩⟩, by sorry⟩
+syntax "obvious" term : tactic
+macro_rules
+  | `(tactic| obvious $e:term $heq:term) => `(tactic|
+    refine ⟨$e, ?_⟩
+    rw [$heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' (.mk (by simp)))
+
+def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
+  match heq : e with
+  | .K' m n => by
+    refine ⟨e, ?_⟩
+    rw [heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' ⟨by simp⟩
+  | .K m n => by
+    refine ⟨e, ?_⟩
+    rw [heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' ⟨by simp⟩
+  | .S m n o => by
+    refine ⟨e, ?_⟩
+    rw [heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' ⟨by simp⟩
+  | .I m => by
+    refine ⟨e, ?_⟩
+    rw [heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' ⟨by simp⟩
+  | Srt m => by
+    refine ⟨e, ?_⟩
+    rw [heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' ⟨by simp⟩
+  | .next => by
+    refine ⟨e, ?_⟩
+    rw [heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' ⟨by simp⟩
+  | .read => by
+    refine ⟨e, ?_⟩
+    rw [heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' ⟨by simp⟩
+  | .assert => by
+    refine ⟨e, ?_⟩
+    rw [heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' ⟨by simp⟩
+  | .app' => by
+    refine ⟨e, ?_⟩
+    rw [heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' ⟨by simp⟩
+  | _? => by
+    refine ⟨e, ?_⟩
+    rw [heq]
+    constructor
+    constructor
+    exact ParRed.refl
+    exact Reduction.refl' ⟨by simp⟩
+  | ⸨⸨(.I _m) _α⸩ x⸩ =>
+    let ⟨x', ⟨⟨heq, _⟩⟩⟩ := gen x
+    ⟨x', ⟨⟨.I heq, .red' ⟨heq, .I⟩⟩⟩⟩
+  | ⸨(.K _m _n) _α _β x _y⸩ =>
+    let ⟨x', ⟨⟨heq, _⟩⟩⟩ := gen x
+    ⟨x', ⟨.K heq, .red' ⟨heq, .K⟩⟩⟩
+  | ⸨(.K' _m _n) _α _β x _y⸩ =>
+    let ⟨x', ⟨⟨heq, _⟩⟩⟩ := gen x
+    ⟨x', ⟨.K' heq, .red' ⟨heq, .K'⟩⟩⟩
+  | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
+    let ⟨x', ⟨⟨heq₁, _⟩⟩⟩ := gen x
+    let ⟨y', ⟨⟨heq₂, _⟩⟩⟩ := gen y
+    let ⟨z', ⟨⟨heq₃, _⟩⟩⟩ := gen z
+    ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, ⟨.S heq₁ heq₂ heq₃, .red' ⟨.app (.app heq₁ heq₃) (.app heq₂ heq₃), .S⟩⟩⟩
+  | ⸨((Π' m) α, β) x⸩ =>
+    let ⟨α', ⟨⟨heq₁, _⟩⟩⟩ := gen α
+    let ⟨β', ⟨⟨heq₂, _⟩⟩⟩ := gen β
+    let ⟨x', ⟨⟨heq₃, _⟩⟩⟩ := gen x
+    ⟨(Π' m) ⸨α' x'⸩, ⸨β' x'⸩, ⟨.Pi heq₁ heq₂ heq₃, .red' ⟨.Pival (.app heq₁ heq₃) (.app heq₂ heq₃), .Pi⟩⟩⟩
   | ((Π' m) α, β) =>
-    let ⟨α', h₁⟩ := α.gen
-    let αp := h₁.down.right
-    let ⟨β', h₂⟩ := β.gen
-    let βp := h₂.down.right
-    ⟨_, ⟨.inl (.inr sorry)⟩, .Pi h₁ h₂⟩
+    let ⟨α', ⟨⟨heq₁, _⟩⟩⟩ := gen α
+    let ⟨β', ⟨⟨heq₂, _⟩⟩⟩ := gen β
+    ⟨(Π' m) α', β', ⟨.Pival heq₁ heq₂, .pi' ⟨heq₁, heq₂⟩⟩⟩
   | ⸨.next f _x⸩ =>
-    let ⟨inner, pinner⟩ := gen f
-    ⟨inner, ⟨.next pinner.down⟩⟩
+    let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
+    ⟨f', ⟨.next heq₁, .red' ⟨heq₁, .next⟩⟩⟩
   | ⸨.read e⸩ =>
-    let ⟨inner, pinner⟩ := gen e
-    ⟨inner, ⟨.read pinner.down⟩⟩
+    let ⟨e', ⟨⟨heq₁, _⟩⟩⟩ := gen e
+    ⟨e', ⟨.read heq₁, .red' ⟨heq₁, .read⟩⟩⟩
   | ⸨.assert f _x⸩ =>
-    let ⟨inner, pinner⟩ := gen f
-    ⟨inner, ⟨.assert pinner.down⟩⟩
-  | ⸨${_π} f g x⸩ =>
-    let ⟨_innerx, pinner₁⟩ := gen f
-    let ⟨_innery, pinner₂⟩ := gen g
-    let ⟨_innerx, pinner₃⟩ := gen x
-    ⟨_, ⟨.app' pinner₁.down pinner₂.down pinner₃.down⟩⟩
+    let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
+    ⟨f', ⟨.assert heq₁, .red' ⟨heq₁, .assert⟩⟩⟩
+  | ⸨${π} f g x⸩ =>
+    let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
+    let ⟨g', ⟨⟨heq₂, _⟩⟩⟩ := gen g
+    let ⟨x', ⟨⟨heq₃, _⟩⟩⟩ := gen x
+    ⟨⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩,
+      ⟨.app' heq₁ heq₂ heq₃, .red' ⟨.app (.app .refl (.app heq₁ heq₃)) (.app heq₂ heq₃), .app'⟩⟩⟩
   | ⸨f x⸩ =>
-    let ⟨innerx, pinner₁⟩ := gen f
-    let ⟨innery, pinner₂⟩ := gen x
-    ⟨⸨innerx innery⸩, ⟨.app pinner₁.down pinner₂.down⟩⟩
+    let ⟨f', ⟨⟨heq₁, c⟩⟩⟩ := gen f
+    let ⟨x', ⟨⟨heq₂, c⟩⟩⟩ := gen x
+
+    ⟨⸨f' x'⸩, ⟨.app heq₁ heq₂, .app' ⟨heq₁, heq₂⟩⟩⟩
 
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with
-  | (I _m) => .inl <| .comb .I₀
-  | (K _m _n) => .inl <| .comb .K₀
-  | (K' _m _n) => .inl <| .comb .K'₀
-  | (S _m _n _o) => .inl <| .comb .S₀
-  | next => .inl <| .comb .next₀
-  | $ => .inl <| .comb .app'₀
+  | (.I _m) => .inl <| .comb .I₀
+  | (.K _m _n) => .inl <| .comb .K₀
+  | (.K' _m _n) => .inl <| .comb .K'₀
+  | (.S _m _n _o) => .inl <| .comb .S₀
+  | .next => .inl <| .comb .next₀
+  | .app' => .inl <| .comb .app'₀
   | .read => .inl <| .comb .read
   | .assert => .inl <| .comb .assert₀
   | .Srt _m => .inl .Srt
   | _? => .inl .hole
   | ⸨f x⸩ => .inr (.inl ⟨f, x, rfl⟩)
   | (Π' m) α, β => .inr (.inr ⟨m, α, β, rfl⟩)
+
+def gen.sound : (gen e).fst = e' → ParRed e e' := fun h => by
+  rw [← h]
+  exact (gen e).snd.down.hpar
+
+def gen.complete : ParRed e e' → (gen e).fst = e' := fun h => by
+  induction h
+  repeat (unfold gen; rfl)
+  case I x x' m α h_par ih =>
+    rw [← ih]
+    
+    split
+    case h_1 heq =>
+      
+      sorry
 
 def Atom.sound (_h : Atom.gen e = .inl h_atom) : Atom e :=
   match heq : Atom.gen e with
@@ -111,7 +209,7 @@ def Atom.complete (h : Atom e) : (Atom.gen e = .inl h) := by
   induction h
   repeat rfl
 
-def gen (e : Expr) : ((e' : Expr) × (PLift <| (((∃ f x f' x', ParRed e ⸨f' x'⸩ ∧ e = ⸨f x⸩)
+/-def gen (e : Expr) : ((e' : Expr) × (PLift <| (((∃ f x f' x', ParRed e ⸨f' x'⸩ ∧ e = ⸨f x⸩)
   ∨ (∃ m α β α' β', ParRed e ((Π' m) α', β')  ∧ e = (Π' m) α, β))
   ∨ (Red e e') ∨ (e' = e)) ∧ (ParRed e e'))) :=
   match e with
@@ -153,7 +251,7 @@ def gen (e : Expr) : ((e' : Expr) × (PLift <| (((∃ f x f' x', ParRed e ⸨f' 
   | ⸨f x⸩ =>
     let ⟨innerx, pinner₁⟩ := gen f
     let ⟨innery, pinner₂⟩ := gen x
-    ⟨⸨innerx innery⸩, ⟨.app pinner₁.down pinner₂.down⟩⟩
+    ⟨⸨innerx innery⸩, ⟨.app pinner₁.down pinner₂.down⟩⟩-/
 
 def diamond (h₁ : (gen a).fst = b) (h₂ : (gen a).fst = c) :
   ((d : Expr) × (PLift ((gen b).fst = d)) × (PLift ((gen c).fst = d))) := by

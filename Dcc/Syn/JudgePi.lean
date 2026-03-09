@@ -149,14 +149,16 @@ inductive Atom : Expr → Prop where
   | Srt     : Atom (Srt m)
   | hole    : Atom _?
 
-@[simp] theorem Atom.K : Atom (K m n) := .comb .K₀
-@[simp] theorem Atom.K' : Atom (K' m n) := .comb .K'₀
-@[simp] theorem Atom.S : Atom (S m n o) := .comb .S₀
+@[simp] theorem Atom.K {m n : Level} : Atom (K m n) := .comb .K₀
+@[simp] theorem Atom.K' {m n : Level} : Atom (K' m n) := .comb .K'₀
+@[simp] theorem Atom.S {m n o : Level} : Atom (S m n o) := .comb .S₀
+@[simp] theorem Atom.I {m : Level} : Atom (I m) := .comb .I₀
 @[simp] theorem Atom.next : Atom next := .comb .next₀
 @[simp] theorem Atom.read : Atom read := .comb .read
 @[simp] theorem Atom.assert : Atom assert := .comb .assert₀
-@[simp] theorem Atom.Sort' : Atom (Expr.Srt m) := Atom.Srt
+@[simp] theorem Atom.Sort' {m : Level} : Atom (Expr.Srt m) := Atom.Srt
 @[simp] theorem Atom.hole' : Atom _? := Atom.hole
+@[simp] theorem Atom.app' : Atom $ := .comb .app'₀
 
 inductive Nf : Expr → Prop where
   | atom    : Atom c → Nf c

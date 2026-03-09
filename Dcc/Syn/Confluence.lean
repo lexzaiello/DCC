@@ -32,7 +32,16 @@ theorem whnf_step : Whnf ⸨f x⸩ → ParRed ⸨f x⸩ ⸨f' x'⸩ → ParRed f
   rename_i h_f h_x
   exact ⟨h_f, h_x⟩
 
-theorem root_step : ¬ Whnf ⸨f x⸩ → 
+theorem single_step_unique : Red e e₁ → Red e e₂ → e₁ = e₂ := by
+  intro h₁ h₂
+  induction h₁
+  repeat (cases h₂; rfl)
+
+theorem must_step_not_whnf : ¬ Whnf e → ∃ e', Red e e' := by
+  intro h
+  induction e
+  
+  sorry
 
 theorem confluence' : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro h₁ h₂

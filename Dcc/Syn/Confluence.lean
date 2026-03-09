@@ -10,7 +10,31 @@ Useful for checking definitional equality.
 I have proven it to coincide with my definition of ParRed.
 -/
 
-def gen (e : Expr) : ((e' : Expr) × (PLift (ParRed e e'))) :=
+def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
+  match e with
+  | (I _m) => .inl <| .comb .I₀
+  | (K _m _n) => .inl <| .comb .K₀
+  | (K' _m _n) => .inl <| .comb .K'₀
+  | (S _m _n _o) => .inl <| .comb .S₀
+  | next => .inl <| .comb .next₀
+  | $ => .inl <| .comb .app'₀
+  | .read => .inl <| .comb .read
+  | .assert => .inl <| .comb .assert₀
+  | .Srt _m => .inl .Srt
+  | _? => .inl .hole
+  | ⸨f x⸩ => .inr (.inl ⟨f, x, rfl⟩)
+  | (Π' m) α, β => .inr (.inr ⟨m, α, β, rfl⟩)
+
+def Atom.sound (_h : Atom.gen e = .inl h_atom) : Atom e :=
+  match heq : Atom.gen e with
+  | .inl h => h
+  | _ => by simp_all
+
+def Atom.complete (h : Atom e) : (Atom.gen e = .inl h) := by
+  induction h
+  repeat rfl
+
+def      gen (e : Expr) : ((e' : Expr) × (PLift (ParRed e e'))) :=
   match e with
   | .K' m n => ⟨.K' m n, ⟨ParRed.refl_K'⟩⟩
   | .K m n => ⟨.K m n, ⟨ParRed.refl_K⟩⟩
@@ -22,23 +46,25 @@ def gen (e : Expr) : ((e' : Expr) × (PLift (ParRed e e'))) :=
   | .read => ⟨.read, ⟨.refl_read⟩⟩
   | .assert => ⟨.assert, ⟨.refl_assert⟩⟩
   | .app' => ⟨.app', ⟨.refl_app'⟩⟩
-  | ⸨(.I m) α x⸩ =>
+  | ⸨(.I _m) _α x⸩ =>
     let ⟨inner, pinner⟩ := gen x
     ⟨inner, ⟨.I pinner.down⟩⟩
-  | ⸨(.K m n) α β x y⸩ =>
+  | ⸨(.K _m _n) _α _β x _y⸩ =>
     let ⟨inner, pinner⟩ := gen x
     ⟨inner, ⟨.K pinner.down⟩⟩
-  | ⸨(.K' m n) α β x y⸩ =>
+  | ⸨(.K' _m _n) _α _β x _y⸩ =>
     let ⟨inner, pinner⟩ := gen x
     ⟨inner, ⟨.K' pinner.down⟩⟩
-  | ⸨(.S m n o) α β γ x y z⸩ =>
-    let ⟨inner_x, pinner₁⟩ := gen ⸨x z⸩
-    let ⟨inner_y, pinner₂⟩ := gen ⸨y z⸩
-    ⟨⸨inner_x inner_y⸩, ⟨.S pinner₁.down pinner₂.down⟩⟩
-  | ⸨((Π' m) α, β) x⸩ =>
-    let ⟨inner_x, pinner₁⟩ := gen ⸨α x⸩
-    let ⟨inner_y, pinner₂⟩ := gen ⸨β x⸩
-    ⟨((Π' m) inner_x, inner_y), ⟨.Pi pinner₁.down pinner₂.down⟩⟩
+  | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
+    let ⟨_inner_x, pinner₁⟩ := gen x
+    let ⟨_inner_y, pinner₂⟩ := gen y
+    let ⟨_inner_z, pinner₃⟩ := gen z
+    ⟨_, ⟨.S pinner₁.down pinner₂.down pinner₃.down⟩⟩
+  | ⸨((Π' _m) α, β) x⸩ =>
+    let ⟨_inner_x, pinner₁⟩ := gen α
+    let ⟨_inner_y, pinner₂⟩ := gen β
+    let ⟨_inner_z, pinner₃⟩ := gen x
+    ⟨_, ⟨.Pi pinner₁.down pinner₂.down pinner₃.down⟩⟩
   | ((Π' m) α, β) =>
     let ⟨inner_x, pinner₁⟩ := gen α
     let ⟨inner_y, pinner₂⟩ := gen β
@@ -52,10 +78,11 @@ def gen (e : Expr) : ((e' : Expr) × (PLift (ParRed e e'))) :=
   | ⸨.assert f _x⸩ =>
     let ⟨inner, pinner⟩ := gen f
     ⟨inner, ⟨.assert pinner.down⟩⟩
-  | ⸨${π} f g x⸩ =>
-    let ⟨innerx, pinner₁⟩ := gen ⸨f x⸩
-    let ⟨innery, pinner₂⟩ := gen ⸨g x⸩
-    ⟨⸨π innerx innery⸩, ⟨.app' pinner₁.down pinner₂.down⟩⟩
+  | ⸨${_π} f g x⸩ =>
+    let ⟨_innerx, pinner₁⟩ := gen f
+    let ⟨_innery, pinner₂⟩ := gen g
+    let ⟨_innerx, pinner₃⟩ := gen x
+    ⟨_, ⟨.app' pinner₁.down pinner₂.down pinner₃.down⟩⟩
   | ⸨f x⸩ =>
     let ⟨innerx, pinner₁⟩ := gen f
     let ⟨innery, pinner₂⟩ := gen x
@@ -70,7 +97,7 @@ def diamond (h₁ : (gen a).fst = b) (h₂ : (gen a).fst = c) :
   rw [← h₂, ← h₁]
   exact ⟨rfl⟩
 
-def Atom.transport (h₁ : ParRed a b) (h₂ : Atom a) : (gen a).fst = b := by
+def ParRed.transport_atom (h₁ : ParRed a b) (h₂ : Atom a) : (gen a).fst = b := by
   cases h₂ with
   | comb h => cases h <;> cases h₁ <;> unfold gen <;> rfl
   | _ => cases h₁; unfold gen; rfl
@@ -100,16 +127,6 @@ theorem ParRed.step_whole_or_parts : ParRed ⸨f x⸩ e₂ →
   | app' h_f h_g h_x => .inl ⟨_, Red.app', .app (.app .refl (.app h_f h_x)) (.app h_g h_x)⟩
   | @ParRed.app f f' x x' h_f h_x => Or.inr ⟨f', x', h_f, h_x⟩
 
-theorem Red.diamond (h_r : Red a b) (h_r₂ : ParRed a c) : ∃ d, ParRed b d ∧ ParRed c d := by
-  
-  sorry
-
-theorem gen.com : ParRed f f' → ParRed x x' → ParRed (f'.app x') (gen (f.app x)).fst := by
-  intro h_f h_x
-  unfold gen
-  
-  sorry
-
 theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
   intro h_r h_whnf
   cases h_whnf
@@ -120,6 +137,31 @@ theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
     rfl
   cases h_r
   rfl
+
+theorem not_atom_has_parts : ¬ (Atom e) → ∃ f x, ⸨f x⸩ = e := by
+  intro ha
+  induction e
+  
+
+theorem ParRed.step_whole_or_parts_refl : ParRed e e₂
+  → (∃ e₁, Red e e₁ ∧ ParRed e₁ e₂) ∨ (∃ f x f' x', ⸨f x⸩ = e ∧ ParRed f f' ∧ ParRed x x') ∨ e = e₂ := by
+  intro h_r
+  if hatom : Atom e then
+    exact .inr <| .inr <| no_step_atom h_r hatom
+  else
+    
+    sorry
+
+theorem Red.diamond (h_r : Red a b) (h_r₂ : ParRed a c) : ∃ d, ParRed b d ∧ ParRed c d := by
+  
+  
+  sorry
+
+theorem gen.com : ParRed f f' → ParRed x x' → ParRed (f'.app x') (gen (f.app x)).fst := by
+  intro h_f h_x
+  unfold gen
+  
+  sorry
 
 @[simp] theorem gen.get_trivial (_h : (gen a).fst = b) : ∃ b, ParRed a b ∧ ParRed a b := by
   exact ⟨(gen a).fst, (gen a).snd.down, (gen a).snd.down⟩

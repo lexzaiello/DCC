@@ -1,5 +1,7 @@
 import Dcc.Syn.JudgePi
 
+open Expr
+
 theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
   intro h_r h_whnf
   cases h_whnf
@@ -37,6 +39,47 @@ theorem single_step_unique : Red e e₁ → Red e e₂ → e₁ = e₂ := by
   induction h₁
   repeat (cases h₂; rfl)
 
+theorem inv (h : ParRed ⸨f x⸩ e') : ∃ f' x', (ParRed f f' ∧ ParRed x x' ∧ ParRed ⸨f' x'⸩ e') := by
+  cases h
+  rename_i hx
+  exact ⟨_, e', .refl, hx, .I .refl⟩
+  rename_i hx
+  exact ⟨_, x, .refl, .refl, .K hx⟩
+  rename_i hx
+  exact ⟨_, x, .refl, .refl, .K' hx⟩
+  rename_i hx
+  exact ⟨_, x, .refl, .refl, .S hx⟩
+  rename_i hx
+  exact ⟨_, x, .refl, .refl, .Pi hx⟩
+  rename_i hx
+  exact ⟨_, x, .refl, .refl, .next hx⟩
+  rename_i hx
+  exact ⟨_, x, .refl, .refl, .read hx⟩
+  rename_i hx
+  exact ⟨_, x, .refl, .refl, .assert hx⟩
+  rename_i hx
+  exact ⟨_, x, .refl, .refl, .app' hx⟩
+  · rename_i f' x' h_f' h_x'
+    exact ⟨f', x', h_f', h_x', .refl⟩
+
+theorem multi_step_unique : ParRed e e₁ → ParRed e e₂ → (∃ e', ParRed e₁ e' ∧ ParRed e₂ e') := by
+  intro h₁ h₂
+  induction e generalizing e₁ e₂
+  · cases h₁
+    cases h₂
+    exact ⟨_, ParRed.refl, ParRed.refl⟩
+  · rename_i m a₁ a₂ ih₁ ih₂
+    cases h₁
+    cases h₂
+    rename_i _ _ ha₁ ha₂ _ _ ha₃ ha₄
+    have ⟨e, ha, hb⟩ := ih₁ ha₁ ha₃
+    have ⟨e', ha', hb'⟩ := ih₂ ha₂ ha₄
+    exact ⟨Pi m e e', .Pival ha ha', .Pival hb hb'⟩
+  repeat (cases h₁; cases h₂; exact ⟨_, ParRed.refl, ParRed.refl⟩)
+  · rename_i a b ih₁ ih₂
+    
+    sorry
+
 theorem red_imp : Red a b → ParRed a b := by
   intro h
   induction h
@@ -50,13 +93,63 @@ theorem red_imp : Red a b → ParRed a b := by
   exact .assert .refl
   exact .app' .refl
 
+/-
+Theorem that ParRed is either Red or something else. Some situation where Red encapsulates,
+where we can downgrade.
+Check constructors.
+-/
+
+theorem par_red.case (h : ParRed a b) : (∃ e', Red a e' ∧ ParRed e' b) ∨ b = a ∨ ((∃ f' x', b = ⸨f' x'⸩) ∨ (∃ m α' β', b = (Π' m) α', β')) := by
+  induction h
+  repeat (right; left; rfl)
+  left; exact ⟨_, Red.I, by assumption⟩
+  left; exact ⟨_, Red.K, by assumption⟩
+  left; exact ⟨_, Red.K', by assumption⟩
+  left; exact ⟨_, Red.S, by assumption⟩
+  left; exact ⟨_, Red.Pi, by assumption⟩
+  right
+  right
+  right
+  rename_i α α' β β' m h_α' h_β' ih₁ ih₂
+  refine ⟨m, α', β', ?_⟩
+  rfl
+  left; exact ⟨_, Red.next, by assumption⟩
+  left; exact ⟨_, Red.read, by assumption⟩
+  left; exact ⟨_, Red.assert, by assumption⟩
+  left; exact ⟨_, Red.app', by assumption⟩
+  case app f f' x x' h_f h_x ih₁ ih₂ =>
+    match h₁ : ih₁ with
+    | .inl ⟨a, hr, hrf⟩ =>
+      match h₂ : ih₂ with
+      | .inl ⟨b, hr₂, bhrf⟩ =>
+        have hf'x' := ParRed.app h_f h_x
+        left
+        
+        sorry
+      | .inr h =>
+        sorry
+    | .inr h => sorry
+
+theorem confluence_whnf (h : Whnf a) (h₁ : ParRed a b) (h₂ : ParRed a c) : ∃ d, ParRed b d ∧ ParRed c d := by
+  induction h₂
+  cases h
+  repeat exact ⟨b, .refl, h₁⟩
+  repeat contradiction
+  cases h₁
+  rename_i h_α h_β ih₁ ih₂
+  cases h
+  contradiction
+  
+
 theorem confluence' : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro h₁ h₂
   if ha : Atom a then
     have h := confluence_atom ha h₁ h₂
     exact ⟨c, by rw [h]; exact ParRed.refl, ParRed.refl⟩
   else if hb : Whnf a then
-    
+    induction hb
+    contradiction
+    have h := Atom.comb (Comb.I₀)
     sorry
   else
     

@@ -147,9 +147,9 @@ inductive Comb : Expr → Prop where
 inductive Atom : Expr → Prop where
   | comb    : Comb e → Atom e
   | Srt     : Atom (Srt m)
+  | hole    : Atom _?
 
 inductive Whnf : Expr → Prop where
-  | hole    : Whnf _?
   | atom    : Atom c → Whnf c
   | I₁      : Whnf ⸨(I m) α⸩
   | K₁      : Whnf ⸨(K m n) α⸩

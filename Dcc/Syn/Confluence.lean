@@ -87,28 +87,22 @@ theorem gen.sound : (gen e).fst = e' → ParRed e e' := by
   rw [h] at p
   exact p.down
 
-theorem ParRed.step_whole_or_parts (h_r : ParRed ⸨f x⸩ e₂) :
-  (∃ e₁, Red ⸨f x⸩ e₁ ∧ ParRed e₁ e₂) ∨ (∃ f' x', ParRed f f' ∧ ParRed x x') := by
-  cases h_r
-  · exact Or.inl ⟨x, Red.I, by assumption⟩
-  · rename_i x' _m _n _α _β h_x
-    exact Or.inl ⟨x', Red.K, by assumption⟩
-  · rename_i x' _m _n _α _β h_x
-    exact Or.inl ⟨x', Red.K', by assumption⟩
-  · rename_i z x' y y' z' m n o α β γ h_x h_y h_z
-    exact Or.inl ⟨⸨⸨z x⸩ ⸨y x⸩⸩, Red.S, .app (.app h_x h_z) (.app h_y h_z)⟩
-  · rename_i α α' β β' x' m h_α h_β h_x
-    exact Or.inl ⟨_, Red.Pi, .Pival (.app h_α h_x) (.app h_β h_x)⟩
-  · rename_i h_f
-    exact Or.inl ⟨_, Red.next, h_f⟩
-  · rename_i h_x
-    exact Or.inl ⟨_, Red.read, h_x⟩
-  · rename_i h_x
-    exact Or.inl ⟨_, Red.assert, h_x⟩
-  · rename_i f f' g g' x' π h_f h_g h_x
-    exact Or.inl ⟨_, Red.app', .app (.app .refl (.app h_f h_x)) (.app h_g h_x)⟩
-  · rename_i f' x' h_f h_x
-    exact Or.inr ⟨f', x', h_f, h_x⟩
+theorem ParRed.step_whole_or_parts : ParRed ⸨f x⸩ e₂ →
+  (∃ e₁, Red ⸨f x⸩ e₁ ∧ ParRed e₁ e₂) ∨ (∃ f' x', ParRed f f' ∧ ParRed x x')
+  | I h_x=> .inl ⟨_, Red.I, h_x⟩
+  | K h_x => .inl ⟨_, Red.K, h_x⟩
+  | K' h_x => .inl ⟨_, Red.K', h_x⟩
+  | S h_x h_y h_z => .inl ⟨_, Red.S, .app (.app h_x h_z) (.app h_y h_z)⟩
+  | Pi h_α h_β h_x => .inl ⟨_, Red.Pi, .Pival (.app h_α h_x) (.app h_β h_x)⟩
+  | next h_f => .inl ⟨_, Red.next, h_f⟩
+  | read h_x => .inl ⟨_, Red.read, h_x⟩
+  | assert h_x => .inl ⟨_, Red.assert, h_x⟩
+  | app' h_f h_g h_x => .inl ⟨_, Red.app', .app (.app .refl (.app h_f h_x)) (.app h_g h_x)⟩
+  | @ParRed.app f f' x x' h_f h_x => Or.inr ⟨f', x', h_f, h_x⟩
+
+theorem Red.diamond (h_r : Red a b) (h_r₂ : ParRed a c) : ∃ d, ParRed b d ∧ ParRed c d := by
+  
+  sorry
 
 theorem gen.com : ParRed f f' → ParRed x x' → ParRed (f'.app x') (gen (f.app x)).fst := by
   intro h_f h_x

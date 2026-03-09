@@ -2,6 +2,14 @@ import Dcc.Syn.JudgePi
 
 open Expr
 
+/-
+This is a parallel "single-step" reducer for my SK-like calculus.
+It is kind of halfway between normalization and single-step reduction.
+Useful for checking definitional equality.
+
+I have proven it to coincide with my definition of ParRed.
+-/
+
 def gen (e : Expr) : ((e' : Expr) × (PLift (ParRed e e'))) :=
   match e with
   | .K' m n => ⟨.K' m n, ⟨ParRed.refl_K'⟩⟩
@@ -62,10 +70,14 @@ def diamond (h₁ : (gen a).fst = b) (h₂ : (gen a).fst = c) :
   rw [← h₂, ← h₁]
   exact ⟨rfl⟩
 
-def atom.transport (h₁ : ParRed a b) (h₂ : Atom a) : (gen a).fst = b := by
+def Atom.transport (h₁ : ParRed a b) (h₂ : Atom a) : (gen a).fst = b := by
   cases h₂ with
   | comb h => cases h <;> cases h₁ <;> unfold gen <;> rfl
   | _ => cases h₁; unfold gen; rfl
+
+-- need to make cases for ParRed.
+theorem gen.mono : ParRed a b → ParRed b (gen a).fst := by
+  sorry
 
 theorem gen.sound : (gen e).fst = e' → ParRed e e' := by
   intro h
@@ -74,6 +86,35 @@ theorem gen.sound : (gen e).fst = e' → ParRed e e' := by
   let p := h'.snd
   rw [h] at p
   exact p.down
+
+theorem ParRed.step_whole_or_parts (h_r : ParRed ⸨f x⸩ e₂) :
+  (∃ e₁, Red ⸨f x⸩ e₁ ∧ ParRed e₁ e₂) ∨ (∃ f' x', ParRed f f' ∧ ParRed x x') := by
+  cases h_r
+  · exact Or.inl ⟨x, Red.I, by assumption⟩
+  · rename_i x' _m _n _α _β h_x
+    exact Or.inl ⟨x', Red.K, by assumption⟩
+  · rename_i x' _m _n _α _β h_x
+    exact Or.inl ⟨x', Red.K', by assumption⟩
+  · rename_i z x' y y' z' m n o α β γ h_x h_y h_z
+    exact Or.inl ⟨⸨⸨z x⸩ ⸨y x⸩⸩, Red.S, .app (.app h_x h_z) (.app h_y h_z)⟩
+  · rename_i α α' β β' x' m h_α h_β h_x
+    exact Or.inl ⟨_, Red.Pi, .Pival (.app h_α h_x) (.app h_β h_x)⟩
+  · rename_i h_f
+    exact Or.inl ⟨_, Red.next, h_f⟩
+  · rename_i h_x
+    exact Or.inl ⟨_, Red.read, h_x⟩
+  · rename_i h_x
+    exact Or.inl ⟨_, Red.assert, h_x⟩
+  · rename_i f f' g g' x' π h_f h_g h_x
+    exact Or.inl ⟨_, Red.app', .app (.app .refl (.app h_f h_x)) (.app h_g h_x)⟩
+  · rename_i f' x' h_f h_x
+    exact Or.inr ⟨f', x', h_f, h_x⟩
+
+theorem gen.com : ParRed f f' → ParRed x x' → ParRed (f'.app x') (gen (f.app x)).fst := by
+  intro h_f h_x
+  unfold gen
+  
+  sorry
 
 theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
   intro h_r h_whnf

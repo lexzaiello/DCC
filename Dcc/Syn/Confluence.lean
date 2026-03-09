@@ -1,5 +1,10 @@
 import Dcc.Syn.JudgePi
 
+theorem no_step_atom : ParRed e e₂ → Atom e → e = e₂ := by
+  intro h_r h_whnf
+  induction h_whnf
+  repeat (cases h_r; rfl)
+
 theorem local_confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedStar c d := by
   intro hb hc
   cases hb
@@ -15,7 +20,19 @@ theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed 
       have ⟨d, ha, hb⟩ := ih₁ h_f
       have ⟨d₂, ha₂, hb₂⟩ := ih₂ h_x
       exact ⟨d.app d₂, ParRed.app ha ha₂, ParRed.app hb hb₂⟩
-    | _ => sorry
+    | I =>
+      rename_i x' _m _α h_c
+      have h_step := ParRed.I h_c (_m := _m) (_α := _α)
+      have ⟨d₁, haf, hbf⟩ := ih₁ e₁
+      have ⟨dc, hac, hbc⟩ := ih₂ h_c
+      have h := ParRed.app haf hac
+      cases e₁
+      rename_i h_i _
+      have heq := no_step_atom h_i Atom.I₀
+      rw [← heq] at h
+      refine ⟨dc, ?_, hbc⟩
+      rw [← heq]
+      exact ParRed.I hac
   | _ => sorry
 
 /-theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by

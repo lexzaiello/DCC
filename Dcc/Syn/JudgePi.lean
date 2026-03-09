@@ -134,31 +134,34 @@ def mk_I (α : Expr) (m : Level) : Expr :=
 
   ⸨(S m 2 m) α β γ x y⸩
 
+inductive Atom : Expr → Prop where
+  | I₀      : Atom (I m)
+  | K₀      : Atom (K m n)
+  | K'₀     : Atom (K' m n)
+  | S₀      : Atom (S m n o)
+  | next₀   : Atom next
+  | app'₀   : Atom $
+  | read    : Atom read
+  | Srt     : Atom (Srt m)
+  | assert₀ : Atom assert
+
 inductive Whnf : Expr → Prop where
-  | I₀      : Whnf (I m)
+  | atom    : Atom c → Whnf c
   | I₁      : Whnf ⸨(I m) α⸩
-  | K₀      : Whnf (K m n)
   | K₁      : Whnf ⸨(K m n) α⸩
   | K₂      : Whnf ⸨(K m n) α β⸩
   | K₃      : Whnf ⸨(K m n) α β x⸩
-  | K'₀     : Whnf (K' m n)
   | K'₁     : Whnf ⸨(K' m n) α⸩
   | K'₂     : Whnf ⸨(K' m n) α β⸩
   | K'₃     : Whnf ⸨(K' m n) α β x⸩
-  | S₀      : Whnf (S m n o)
   | S₁      : Whnf ⸨(S m n o) α⸩
   | S₂      : Whnf ⸨(S m n o) α β⸩
   | S₃      : Whnf ⸨(S m n o) α β γ⸩
   | S₄      : Whnf ⸨(S m n o) α β γ x⸩
   | S₅      : Whnf ⸨(S m n o) α β γ x y⸩
   | Pi      : Whnf ((Π' m) α, β)
-  | Srt     : Whnf (Srt m)
-  | next₀   : Whnf next
   | next₁   : Whnf ⸨next f⸩
-  | read    : Whnf read
-  | assert₀ : Whnf assert
   | assert₁ : Whnf ⸨assert e⸩
-  | app'₀   : Whnf $
   | app'₁   : Whnf ⸨$ a⸩
   | app'₂   : Whnf ⸨$ a b⸩
   | app'₃   : Whnf ⸨$ a b c⸩

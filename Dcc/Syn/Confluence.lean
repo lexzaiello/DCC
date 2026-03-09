@@ -44,70 +44,7 @@ macro_rules
 
 def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
   match heq : e with
-  | .K' m n => by
-    refine ⟨e, ?_⟩
-    rw [heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' ⟨by simp⟩
-  | .K m n => by
-    refine ⟨e, ?_⟩
-    rw [heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' ⟨by simp⟩
-  | .S m n o => by
-    refine ⟨e, ?_⟩
-    rw [heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' ⟨by simp⟩
-  | .I m => by
-    refine ⟨e, ?_⟩
-    rw [heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' ⟨by simp⟩
-  | Srt m => by
-    refine ⟨e, ?_⟩
-    rw [heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' ⟨by simp⟩
-  | .next => by
-    refine ⟨e, ?_⟩
-    rw [heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' ⟨by simp⟩
-  | .read => by
-    refine ⟨e, ?_⟩
-    rw [heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' ⟨by simp⟩
-  | .assert => by
-    refine ⟨e, ?_⟩
-    rw [heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' ⟨by simp⟩
-  | .app' => by
-    refine ⟨e, ?_⟩
-    rw [heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' ⟨by simp⟩
-  | _? => by
+  | .K' m n | .K m n | .S m n o | .I m | Srt m | .next | .read | .assert | .app' | _? => by
     refine ⟨e, ?_⟩
     rw [heq]
     constructor
@@ -115,43 +52,28 @@ def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
     exact ParRed.refl
     exact Reduction.refl' ⟨by simp⟩
   | ⸨⸨(.I _m) _α⸩ x⸩ =>
-    let ⟨x', ⟨⟨heq, _⟩⟩⟩ := gen x
-    ⟨x', ⟨⟨.I heq, .red' ⟨heq, .I⟩⟩⟩⟩
+    ⟨x, ⟨⟨.I .refl, .red' ⟨.refl, .I⟩⟩⟩⟩
   | ⸨(.K _m _n) _α _β x _y⸩ =>
-    let ⟨x', ⟨⟨heq, _⟩⟩⟩ := gen x
-    ⟨x', ⟨.K heq, .red' ⟨heq, .K⟩⟩⟩
+    ⟨x, ⟨.K .refl, .red' ⟨.refl, .K⟩⟩⟩
   | ⸨(.K' _m _n) _α _β x _y⸩ =>
-    let ⟨x', ⟨⟨heq, _⟩⟩⟩ := gen x
-    ⟨x', ⟨.K' heq, .red' ⟨heq, .K'⟩⟩⟩
+    ⟨x, ⟨.K' .refl, .red' ⟨.refl, .K'⟩⟩⟩
   | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
-    let ⟨x', ⟨⟨heq₁, _⟩⟩⟩ := gen x
-    let ⟨y', ⟨⟨heq₂, _⟩⟩⟩ := gen y
-    let ⟨z', ⟨⟨heq₃, _⟩⟩⟩ := gen z
-    ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, ⟨.S heq₁ heq₂ heq₃, .red' ⟨.app (.app heq₁ heq₃) (.app heq₂ heq₃), .S⟩⟩⟩
+    ⟨⸨⸨x z⸩ ⸨y z⸩⸩, ⟨.S .refl .refl .refl, .red' ⟨.app (.app .refl .refl) (.app .refl .refl), .S⟩⟩⟩
   | ⸨((Π' m) α, β) x⸩ =>
-    let ⟨α', ⟨⟨heq₁, _⟩⟩⟩ := gen α
-    let ⟨β', ⟨⟨heq₂, _⟩⟩⟩ := gen β
-    let ⟨x', ⟨⟨heq₃, _⟩⟩⟩ := gen x
-    ⟨(Π' m) ⸨α' x'⸩, ⸨β' x'⸩, ⟨.Pi heq₁ heq₂ heq₃, .red' ⟨.Pival (.app heq₁ heq₃) (.app heq₂ heq₃), .Pi⟩⟩⟩
+    ⟨((Π' m) ⸨α x⸩, ⸨β x⸩), ⟨.Pi .refl .refl .refl, .red' ⟨.Pival (.app .refl .refl) (.app .refl .refl), .Pi⟩⟩⟩
   | ((Π' m) α, β) =>
     let ⟨α', ⟨⟨heq₁, _⟩⟩⟩ := gen α
     let ⟨β', ⟨⟨heq₂, _⟩⟩⟩ := gen β
     ⟨(Π' m) α', β', ⟨.Pival heq₁ heq₂, .pi' ⟨heq₁, heq₂⟩⟩⟩
   | ⸨.next f _x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
-    ⟨f', ⟨.next heq₁, .red' ⟨heq₁, .next⟩⟩⟩
+    ⟨f, ⟨.next .refl, .red' ⟨.refl, .next⟩⟩⟩
   | ⸨.read e⸩ =>
-    let ⟨e', ⟨⟨heq₁, _⟩⟩⟩ := gen e
-    ⟨e', ⟨.read heq₁, .red' ⟨heq₁, .read⟩⟩⟩
+    ⟨e, ⟨.read .refl, .red' ⟨.refl, .read⟩⟩⟩
   | ⸨.assert f _x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
-    ⟨f', ⟨.assert heq₁, .red' ⟨heq₁, .assert⟩⟩⟩
+    ⟨f, ⟨.assert .refl, .red' ⟨.refl, .assert⟩⟩⟩
   | ⸨${π} f g x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
-    let ⟨g', ⟨⟨heq₂, _⟩⟩⟩ := gen g
-    let ⟨x', ⟨⟨heq₃, _⟩⟩⟩ := gen x
-    ⟨⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩,
-      ⟨.app' heq₁ heq₂ heq₃, .red' ⟨.app (.app .refl (.app heq₁ heq₃)) (.app heq₂ heq₃), .app'⟩⟩⟩
+    ⟨⸨π ⸨f x⸩ ⸨g x⸩⸩,
+      ⟨.app' .refl .refl .refl, .red' ⟨.app (.app .refl (.app .refl .refl)) (.app .refl .refl), .app'⟩⟩⟩
   | ⸨f x⸩ =>
     let ⟨f', ⟨⟨heq₁, c⟩⟩⟩ := gen f
     let ⟨x', ⟨⟨heq₂, c⟩⟩⟩ := gen x
@@ -172,21 +94,6 @@ def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, 
   | _? => .inl .hole
   | ⸨f x⸩ => .inr (.inl ⟨f, x, rfl⟩)
   | (Π' m) α, β => .inr (.inr ⟨m, α, β, rfl⟩)
-
-def gen.sound : (gen e).fst = e' → ParRed e e' := fun h => by
-  rw [← h]
-  exact (gen e).snd.down.hpar
-
-def gen.complete : ParRed e e' → (gen e).fst = e' := fun h => by
-  induction h
-  repeat (unfold gen; rfl)
-  case I x x' m α h_par ih =>
-    rw [← ih]
-    
-    split
-    case h_1 heq =>
-      
-      sorry
 
 def Atom.sound (_h : Atom.gen e = .inl h_atom) : Atom e :=
   match heq : Atom.gen e with
@@ -267,17 +174,13 @@ def ParRed.transport_atom (h₁ : ParRed a b) (h₂ : Atom a) : (gen a).fst = b 
   | comb h => cases h <;> cases h₁ <;> unfold gen <;> rfl
   | _ => cases h₁; unfold gen; rfl
 
--- need to make cases for ParRed.
-theorem gen.mono : ParRed a b → ParRed b (gen a).fst := by
-  sorry
+theorem Red.gen_complete (h : Red e e') : (gen e).fst = e' := by
+  induction h
+  repeat (unfold gen; rfl)
 
-theorem gen.sound : (gen e).fst = e' → ParRed e e' := by
-  intro h
-  let h' := gen e
-  let x := h'.fst
-  let p := h'.snd
-  rw [h] at p
-  exact p.down
+def gen.sound : (gen e).fst = e' → ParRed e e' := fun h => by
+  rw [← h]
+  exact (gen e).snd.down.hpar
 
 theorem ParRed.step_whole_or_parts : ParRed ⸨f x⸩ e₂ →
   (∃ e₁, Red ⸨f x⸩ e₁ ∧ ParRed e₁ e₂) ∨ (∃ f' x', ParRed f f' ∧ ParRed x x')
@@ -345,9 +248,6 @@ theorem gen.max (p : ParRed e e') : ParRed e' (gen e).fst := by
     
     sorry
   | .inr (.inr h) => sorry-/
-
-@[simp] theorem gen.get_trivial (_h : (gen a).fst = b) : ∃ b, ParRed a b ∧ ParRed a b := by
-  exact ⟨(gen a).fst, (gen a).snd.down, (gen a).snd.down⟩
 
 theorem confluence_atom (h_atom : Atom a) (h_b : ParRed a b) (h_c : ParRed a c) : b = c := by
   induction h_b

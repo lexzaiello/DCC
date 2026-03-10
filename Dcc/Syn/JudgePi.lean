@@ -98,12 +98,21 @@ def I.type (m : Level) : Expr :=
 def K'.type (m n : Level) : Expr :=
   (Π' m) (Srt m), (Π' m) ⸨assert (Srt n)⸩, (Π' m) (0 assert), (Π' m) (1 assert), (assert_n 3 (0 read))
 
+def K.β (_m n : Level) : Expr :=
+  (Π' n.succ) (0 read), (1 ⸨assert (Srt n)⸩)
+
+def K.x : Expr := (0 assert)
+
+def K.y : Expr := ⸨${${read}} (1 assert) (2 read)⸩
+
+def K.cod : Expr := (assert_n 3 read)
+
 def K.type (m n : Level) : Expr :=
     (Π' m) (Srt m)
-  , (Π' m) ((Π' n.succ) (0 read), (1 ⸨assert (Srt n)⸩))
-  , (Π' m) (0 assert)
-  , (Π' m) ⸨${${read}} (1 assert) (2 read)⸩
-  , (assert_n 3 read)
+  , (Π' m) (K.β m n)
+  , (Π' m) K.x
+  , (Π' m) K.y
+  , K.cod
 
 def S.type (m n o : Level) : Expr :=
     (Π' o) (Srt m)

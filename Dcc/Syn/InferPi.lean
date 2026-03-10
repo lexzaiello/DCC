@@ -36,6 +36,6 @@ namespace _examples
 
 open Expr
 
-#eval infer ⸨(I 2) (Srt 1) (Srt 0)⸩
+#eval Sigma.fst <$> infer ⸨(I 2) (Srt 1) (Srt 0)⸩
 
 end _examples

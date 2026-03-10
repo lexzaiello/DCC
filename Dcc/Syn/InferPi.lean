@@ -16,7 +16,8 @@ inductive InferAs : Expr → Expr → Type where
   | Pi  : InferAs (Srt m) ((Π' m) _α, _β)
     | app  : InferAs ((Π' m) α, β) f
     → InferAs α x
-    → InferAs ⸨β x⸩ ⸨f x⸩
+    → (gen ⸨β x⸩).fst = t'
+    → InferAs t' ⸨f x⸩
   | conv : InferAs A x → (∃ C, (gen A).fst = C ∧ (gen B).fst = C) → InferAs B x
 
 inductive NoType : Expr → Type where
@@ -51,7 +52,12 @@ theorem Judgment.sound : InferAs t e → Judge t e := by
   · exact Judge.S
   · exact Judge.Srt
   · exact Judge.Pi
-  case app m α β f x h_t_f h_α h_t_f' h_t_x' => exact Judge.app h_t_f' .refl h_t_x' .refl
+  case app m α β f x t' h_t_f h_t_x h_eq h_t_f' h_t_x' =>
+    apply Judge.app
+    assumption
+    exact .refl
+    assumption
+    exact gen.sound h_eq
   case conv α x β h_t_α heq ih =>
     let ⟨C, heq₁, heq₂⟩ := heq
     apply Judge.conv
@@ -72,23 +78,10 @@ open Expr in def infer (e : Expr) (expected : Option Expr := .none) : ((t : Expr
     | ⟨a, _⟩, ⟨_b, .error e⟩ => ⟨⸨a x⸩, .error <| .appr e⟩
     | tf@⟨(Π' _m) α₁, β, .ok heq₁⟩, tx@⟨α₂, .ok heq₂⟩ =>
       if hrw : (gen α₁).fst = (gen α₂).fst then
-        have h_inf_f' : InferAs (gen α₁).fst f := by
-          sorry
-        have h_inf_x' : InferAs (gen α₂).fst x := by
-          sorry
-        --let h_t₀ := InferAs.app (α := α₁) (β := β) (x := x) heq₁ (.conv h_inf_x' (by rw [← hrw]; exact gen.eq.step))
-        let ⟨t', red⟩ := (gen ⸨β x⸩)
-        let h_inf₀ : InferAs (β.app x) ⸨f x⸩ := by
-          apply InferAs.app
-          assumption
-          apply InferAs.conv
-          assumption
-          rw [← hrw]
-          apply gen.eq.step
-          rw [hrw]
-          sorry
-        ⟨(gen ⸨β x⸩).fst, .ok <| .conv (by sorry) .step⟩
+        let h : InferAs (gen ⸨β x⸩).fst ⸨f x⸩ := InferAs.app heq₁ (.conv heq₂ (⟨(gen α₂).fst, rfl, hrw⟩)) rfl
+        ⟨(gen ⸨β x⸩).fst, .ok h⟩
       else
+        ⟨⸨β x⸩, .error (by sorry)⟩
         sorry
     | ⟨t, _⟩, _ => .error <| "not a function type: " ++ (format t)
   | e => .error <| "not well-typed: " ++ (format e)

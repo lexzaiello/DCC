@@ -8,6 +8,16 @@ syntax "subst" : tactic
 theorem gen_imp_well_typed : Judge α x → (gen α).fst = β → Judge β x := fun h_t h_g =>
   Judge.conv h_t ⟨β, gen.sound h_g, .refl⟩
 
+theorem gen_pi {m : Level} {α β x : Expr} : ∃ α' β', (gen ⸨((Π' m) α, β) x⸩).fst = ((Π' m) α', β') := by
+  cases h₁ : (gen ⸨((Π' m) α, β) x⸩).fst with
+  | _ =>
+    unfold gen at h₁
+    repeat split at h₁
+    simp_all
+
+@[simp] theorem judge_self : ∃ C, ParRed a C ∧ ParRed a C :=
+  ⟨a, .refl, .refl⟩
+
 macro_rules
   | `(tactic| subst) => `(tactic| exact ⟨_, .app (.app (.Pi .refl .refl .refl) .refl) .refl, .refl⟩)
   | `(tactic| convpi) => `(tactic| exact ⟨_, ParRed.Pi .refl .refl .refl, .refl⟩)
@@ -54,41 +64,9 @@ theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (S
   have ⟨e₁, e₂, e₃, e₄, e₅, e₆, e₇, e₈, e₉⟩ := assert_n' (x := α) (y := β) (n := 2) (fn := .read)
   apply Judge.app
   apply Judge.app
-  apply Judge.conv
-  apply Judge.conv
   apply Judge.app
   apply Judge.app
   apply Judge.K
   assumption
-  exact ⟨_, .refl, .refl⟩
-  exact ParRed.Pi .refl .refl .refl
-  apply Judge.conv
-  apply Judge.conv
-  assumption
-  refine ⟨_, .refl, ?_⟩
-  apply ParRed.Pival
-  apply ParRed.read .refl
-  apply ParRed.next
-  exact α
-  exact ParRed.refl
-  refine ⟨_, .refl, .Pi .refl .refl .refl⟩
-  exact ⟨_, .refl, .refl⟩
-  apply ParRed.app
-  exact ParRed.Pi .refl .refl .refl
-  exact ParRed.refl
-  refine ⟨_, .Pi .refl (.Pi .refl .refl .refl) .refl, .refl⟩
-  refine ⟨_, .Pival (.assert .refl) (.Pi .refl .refl .refl), .refl⟩
-  assumption
-  exact ⟨_, .refl, .refl⟩
-  refine .Pi (β' := e₁) (.app (.app' .refl .refl .refl) .refl) e₅ .refl
-  apply Judge.conv
-  apply Judge.conv
-  assumption
-  refine ⟨_, .refl, ?_⟩
-  apply ParRed.read
-  apply ParRed.refl
+  exact judge_self
   
-  assumption
-  sorry
-  --exact e₅
-  sorry

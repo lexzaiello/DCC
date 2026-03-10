@@ -38,8 +38,11 @@ def gen.n_norm (n : ℕ) (e : Expr) : ((e' : Expr) × (PLift <| gen.eq e e')) :=
   match n with
   | .zero => ⟨(gen e).fst, ⟨gen.eq.step (a := e) (b := (gen e).fst) rfl⟩⟩
   | .succ n =>
-    let ⟨inner, ⟨h⟩⟩ := gen.n_norm n e
-    ⟨(gen inner).fst, ⟨gen.eq.trans h (.step (b := (gen inner).fst) rfl)⟩⟩
+    if (gen e).fst == e then
+      ⟨(gen e).fst, ⟨gen.eq.step (a := e) (b := (gen e).fst) rfl⟩⟩
+    else
+      let ⟨inner, ⟨h⟩⟩ := gen.n_norm n e
+      ⟨(gen inner).fst, ⟨gen.eq.trans h (.step (b := (gen inner).fst) rfl)⟩⟩
 
 def gen.judge_conv.judge : gen.judge_conv α x → Judge α x := by
   intro h
@@ -69,6 +72,7 @@ open Qq in elab "gen_judge" steps:num* : tactic => do
         let x₂ ← Lean.Meta.reduceAll x₂
         if ¬ x == x₂ then continue
         let n_steps := (steps.toList.head?.getD (Lean.Syntax.mkNatLit 1)).getNat
+
         let rec do_gen (h_judge : Lean.Expr) (e : Q(Expr)) (n : ℕ) : (Lean.Elab.Tactic.TacticM Lean.Expr) := do
           let h : Q(Expr) := ← Lean.Meta.reduceAll q(Sigma.fst (gen $e))
           let u ← Lean.Meta.getLevel (← Lean.Meta.inferType h)
@@ -85,6 +89,7 @@ example : Judge (I.type 0) (I 0) := by
   let h : Judge (I.type 0) (I 0) := Judge.I
   gen_judge 0
 
+#eval (gen ⸨(I.type 1) (Srt 0)⸩).fst
 
 @[simp] theorem judge_self : ∃ C, ParRed a C ∧ ParRed a C :=
   ⟨a, .refl, .refl⟩
@@ -133,14 +138,4 @@ theorem assert_n' {n : ℕ} {fn : Expr} : ∃ e₁ e₂ e₃ e₄, ParRed ⸨(as
 theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (Srt n)) β)
   (h_x : Judge α x) (h_y : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by
   have ⟨e₁, e₂, e₃, e₄, e₅, e₆, e₇, e₈, e₉⟩ := assert_n' (x := α) (y := β) (n := 2) (fn := .read)
-  apply Judge.app
-  apply Judge.app
-  apply Judge.app
-  apply Judge.app
-  apply Judge.K
-  assumption
-  exact judge_self
-  exact gen.sound heq₁
-  assumption
-  refine ⟨_, ?_, .refl⟩
-  
+  sorry

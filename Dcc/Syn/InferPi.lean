@@ -1,59 +1,41 @@
-import Dcc.Syn.AstPi
+import Dcc.Syn.JudgePi
+import Dcc.Syn.Confluence
+import Dcc.Syn.Preservation
 
-def norm (e : Expr) :=
+open Std (ToFormat Format)
+open Std.ToFormat (format)
+
+open Expr in def infer (e : Expr) : Except Format ((t : Expr) × (PLift <| Judge t e)) :=
   match e with
-  | ⸨(I _m) _α x⸩ => norm x
-  | ⸨(K _m _n) _α _β x _y⸩ => norm x
-  | ⸨(K' _m _n) _α _β x _y⸩ => norm x
-  | ⸨(S _m _n _o) _α _β _γ x y z⸩ => ⸨⸨(norm x) (norm z)⸩ ⸨(norm y) (norm z)⸩⸩
-  | ⸨((Π' m) α, β) x⸩ => (Π' m) (norm ⸨α x⸩), (norm ⸨β x⸩)
-  | ⸨next f _x⸩ => norm f
-  | ⸨read e⸩ => norm e
-  | ⸨assert e _x⸩ => norm e
-  | ⸨${π} f g x⸩ => ⸨π ⸨(norm f) (norm x)⸩ ⸨(norm g) (norm x)⸩⸩
-  | (Π' m) α, β => (Π' m) (norm α), (norm β)
-  | ⸨f x⸩ => ⸨(norm f) (norm x)⸩
-  | e => e
+  | Srt m => pure ⟨Srt m.succ, ⟨.Srt⟩⟩
+  | Pi m _α _β => pure ⟨Srt m, ⟨.Pi⟩⟩
+  | K' m n => pure ⟨K'.type m n, ⟨.K'⟩⟩
+  | K m n => pure ⟨K.type m n, ⟨.K⟩⟩
+  | S m n o => pure ⟨S.type m n o, ⟨.S⟩⟩
+  | I m => pure ⟨I.type m, ⟨.I⟩⟩
+  | .app f x => do
+    match ← infer f, ← infer x with
+    | ⟨(Π' _m) α₁, β, heq₁⟩, ⟨α₂, heq₂⟩ =>
+      if hrw : (gen α₁).fst = (gen α₂).fst then
+        have β' := gen ⸨β x⸩
+        have h_t : Judge (gen ⸨β x⸩).fst ⸨f x⸩ := by
+          apply Judge.conv
+          apply Judge.app
+          exact heq₁.down
+          exact heq₂.down
+          exact ⟨(gen α₁).fst, gen.sound rfl, by apply gen.sound; exact hrw.symm⟩
+          exact .refl
+          exact ⟨(gen ⸨β x⸩).fst, gen.sound rfl, .refl⟩
+        pure ⟨(gen ⸨β x⸩).fst, ⟨h_t⟩⟩
+      else
+        .error <| (format (gen α₁).fst) ++ " ≠ " ++ (format (gen α₂).fst)
+    | ⟨t, _⟩, _ => .error <| "not a function type: " ++ (format t)
+  | e => .error <| "not well-typed: " ++ (format e)
 
-def defeq (α β : Expr) (gas : ℕ := 100) : Except Format Unit :=
-  match gas, α, β with
-  | .succ n, ((Π' _m₁) α₁, β₁), ((Π' _m₂) α₂, β₂) => do
-    let _ ← (defeq α₁ α₂ n).mapError (fun e => "while checking Π domain: " ++ e)
-    (defeq (norm ⸨β₁ _?⸩) (norm ⸨β₂ _?⸩) n).mapError (fun e => "while checking Π codomain: " ++ e)
-  | .succ n, ⸨assert e₁⸩, ⸨assert e₂⸩ => defeq e₁ e₂ n
-  | .succ n, e₁, e₂ =>
-    let e₁' := norm e₁
-    let e₂' := norm e₂
-    if e₁' == e₂' then
-      pure ()
-    else
-      defeq e₁' e₂' n
-  | .zero, e₁, e₂ =>
-    let e₁' := norm e₁
-    let e₂' := norm e₂
-    if e₁' == e₂' then
-      pure ()
-    else
-      .error <| (format α) ++ " ≠ " ++ (format β)
+namespace _examples
 
-def infer : Expr → Except Format Expr
-  | I m => return I.type m
-  | K m n => return K.type m n
-  | K' m n => return K'.type m n
-  | S m n o => return S.type m n o
-  | Srt m => return Srt m.succ
-  | (Π' m) _α, _β => return Srt m
-  | ⸨f x⸩ => do match ← norm <$> infer f, ← norm <$> infer x with
-    | ((Π' _m) α₁, β), α₂ => do
-      let _ ← (defeq α₁ α₂).mapError
-        (fun e => "argument mismatch in app " ++ (format ⸨f x⸩) ++ ":" ++ .line ++ e)
-      pure <| norm ⸨β x⸩
-    | t₁, _t₂ =>
-      .error <| "not a function type: " ++ (.nest 2 <| .line ++ (format t₁))
-  | e => .error <| "not well-typed: " ++ (.nest 2 <| .line ++ (format e))
+open Expr
 
 #eval infer ⸨(I 2) (Srt 1) (Srt 0)⸩
-#eval infer ⸨(K 3 2) (Srt 2) ⸨(I 3) (Srt 2)⸩ (Srt 1) (Srt 0)⸩
 
-#eval infer <| mk_I (Srt 1) 2
-#eval infer <| ⸨(mk_I (Srt 1) 2) (Srt 0)⸩
+end _examples

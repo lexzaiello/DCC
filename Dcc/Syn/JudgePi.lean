@@ -302,8 +302,8 @@ inductive Judge : Expr → Expr → Prop
   | Srt : Judge (Srt m.succ) (Srt m)
   | Pi  : Judge (Srt m) ((Π' m) _α, _β)
   | app : Judge ((Π' _m) α₁, β) f
+    → ParRed α₁ α₁'
     → Judge α₂ x
-    → (∃ C, ParRed α₁ C ∧ ParRed α₂ C)
     → ParRed ⸨β x⸩ β'
     → Judge β' ⸨f x⸩
   | conv : Judge A x → (∃ C, ParRed A C ∧ ParRed B C) → Judge B x
@@ -392,3 +392,43 @@ theorem ParRed.of_red : Red e₁ e₂ → ParRed e₁ e₂ := by
   exact ParRed.read .refl
   exact ParRed.assert .refl
   exact ParRed.app' .refl .refl .refl
+
+def dec_n (m : Lean.Expr) : Lean.Elab.TermElabM ℕ := do
+  match ← Lean.Meta.getNatValue? m with
+  | .some n => pure n
+  | _ => throwError "not a valid sort"
+
+def Expr.decode (e : Lean.Expr) : Lean.Elab.TermElabM Expr :=
+  match e with
+  | .app (.const `Expr.Srt []) m  => .Srt <$> dec_n m
+  | .app (.app (.app (.const `Expr.Pi []) m) α) β => do
+    return .Pi (← dec_n m) (← decode α) (← decode β)
+  | (.app (.app (.const `Expr.K' []) m) n) => do
+    return .K' (← dec_n m) (← dec_n n)
+  | (.app (.app (.const `Expr.K []) m) n) => do
+    return .K (← dec_n m) (← dec_n n)
+  | (.app (.app (.app (.const `Expr.S []) m) n) o) => do
+    return .S (← dec_n m) (← dec_n n) (← dec_n o)
+  | (.app (.const `Expr.I []) m) => do
+    return .I (← dec_n m)
+  | .const `Expr.hole [] => return .hole
+  | .const `Expr.next [] => return .next
+  | .const `Expr.read [] => return .read
+  | .const `Expr.assert [] => return .assert
+  | .const `Expr.app' [] => return .app'
+  | (.app (.app (.const `Expr.app []) f) x) => return .app (← decode f) (← decode x)
+  | _ => throwError "not supported"
+
+open Qq in def Expr.toLeanExpr : Expr → Q(Expr)
+  | .Srt m => q(Expr.Srt $m)
+  | .app' => q(Expr.app')
+  | .hole => q(Expr.hole)
+  | .read => q(Expr.read)
+  | .assert => q(Expr.assert)
+  | .next => q(Expr.next)
+  | .I m => q(Expr.I $m)
+  | .K' m n => q(Expr.K' $m $n)
+  | .K m n => q(Expr.K $m $n)
+  | .S m n o => q(Expr.S $m $n $o)
+  | .Pi m α β => (((Lean.Expr.const `Expr.Pi []).app (Lean.mkNatLit m)).app (α.toLeanExpr)).app (β.toLeanExpr)
+  | .app f x => ((Lean.Expr.const `Expr.app []).app (f.toLeanExpr)).app (x.toLeanExpr)

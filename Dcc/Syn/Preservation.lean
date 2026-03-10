@@ -2,6 +2,7 @@ import Dcc.Syn.JudgePi
 import Dcc.Syn.Gen
 import Dcc.Syn.Confluence
 import Dcc.Syn.Gen
+import Dcc.Syn.InferPi
 import Lean
 import Qq
 open Expr
@@ -82,15 +83,14 @@ theorem I_well_typed (h_α : Judge (Srt m) α) (h_x : Judge α x) : Judge α ⸨
   apply Judge.conv
   apply Judge.app
   apply Judge.I
+  exact .refl
   assumption
-  refine ⟨Srt m, .refl, .refl⟩
-  apply ParRed.Pi .refl .refl
-  exact ParRed.refl
+  apply ParRed.Pi .refl .refl .refl
   refine ⟨_, .Pival (.read .refl) .refl, .refl⟩
+  exact .refl
   assumption
-  refine ⟨_, .refl, .refl⟩
-  exact ParRed.assert .refl
-  exact ⟨_, .refl, .refl⟩
+  apply ParRed.assert .refl
+  exact judge_self
 
 @[simp] theorem arrows_well_typed {n : Level} {α β : Expr} : Judge (Srt n) ((~> n) α, β) := by
   apply Judge.conv
@@ -109,5 +109,69 @@ theorem assert_n' {n : ℕ} {fn : Expr} : ∃ e₁ e₂ e₃ e₄, ParRed ⸨(as
 
 theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (Srt n)) β)
   (h_x : Judge α x) (h_y : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by
-  have ⟨e₁, e₂, e₃, e₄, e₅, e₆, e₇, e₈, e₉⟩ := assert_n' (x := α) (y := β) (n := 2) (fn := .read)
-  sorry
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.app
+  apply Judge.conv
+  apply Judge.conv
+  apply Judge.app
+  apply Judge.app
+  apply Judge.conv
+  apply Judge.app
+  exact Judge.K
+  exact .refl
+  assumption
+  apply ParRed.Pi .refl .refl .refl
+  exact ⟨_, .Pival (ParRed.Pi .refl .refl .refl) (.Pi .refl .refl .refl), .refl⟩
+  apply ParRed.Pival
+  apply ParRed.read .refl
+  apply ParRed.next .refl
+  assumption
+  apply ParRed.Pi .refl
+  apply ParRed.Pi .refl .refl .refl
+  apply ParRed.refl
+  apply ParRed.assert .refl
+  assumption
+  apply ParRed.app
+  apply ParRed.app
+  apply ParRed.Pival
+  unfold y_arg
+  apply ParRed.app' .refl .refl .refl
+  apply ParRed.refl
+  apply ParRed.refl
+  apply ParRed.refl
+  refine ⟨_, .app (.Pi .refl .refl .refl) .refl, .refl⟩
+  refine ⟨_, .Pi .refl .refl .refl, .refl⟩
+  apply ParRed.app
+  apply ParRed.app'
+  apply ParRed.next .refl
+  apply ParRed.next .refl
+  apply ParRed.refl
+  apply ParRed.refl
+  assumption
+  unfold cod
+  apply ParRed.app
+  apply ParRed.app
+  unfold assert_n
+  simp
+  unfold comp
+  apply ParRed.app
+  apply ParRed.app' .refl
+  apply ParRed.app .refl .refl
+  apply ParRed.refl
+  apply ParRed.refl
+  apply ParRed.refl
+  apply ParRed.refl
+  refine ⟨_, (.app (.app (.app (.app (.read .refl) (.app' .refl .refl .refl)) .refl) .refl) .refl), .refl⟩
+  refine ⟨_, (.app (.app (.app (.app (.assert .refl) (.app (.read .refl) (.app' .refl .refl .refl))) .refl) .refl) .refl), .refl⟩
+  refine ⟨_, (.app (.app (.assert .refl) .refl) .refl), .refl⟩
+  refine ⟨_, .app (.app (.app (.assert .refl) (.app (.read .refl) (.read .refl))) .refl) .refl, .refl⟩
+  refine ⟨_, .app (.assert .refl) .refl, .refl⟩
+  refine ⟨_, .app (.app (.assert .refl) .refl) .refl, .refl⟩
+  exact ⟨α, .assert .refl, .refl⟩
+

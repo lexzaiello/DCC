@@ -15,6 +15,20 @@ theorem gen_pi {m : Level} {α β x : Expr} : ∃ α' β', (gen ⸨((Π' m) α, 
     repeat split at h₁
     simp_all
 
+inductive gen.judge_conv : ℕ → Expr → Expr → Prop
+  | zero : Judge α x → judge_conv 0 α x
+  | succ : gen.judge_conv n α₂ x → (gen α₁).fst = α₂ → gen.judge_conv n.succ α₁ x
+
+def gen.judge_conv.judge : gen.judge_conv n α x → Judge α x := by
+  intro h
+  induction h with
+  | zero h => exact h
+  | succ ih h_gen h_t =>
+    apply Judge.conv
+    assumption
+    case succ.a n α₂ h α₁ =>
+      exact ⟨α₂, .refl, gen.sound h_gen⟩
+
 @[simp] theorem judge_self : ∃ C, ParRed a C ∧ ParRed a C :=
   ⟨a, .refl, .refl⟩
 
@@ -62,6 +76,16 @@ theorem assert_n' {n : ℕ} {fn : Expr} : ∃ e₁ e₂ e₃ e₄, ParRed ⸨(as
 theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (Srt n)) β)
   (h_x : Judge α x) (h_y : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by
   have ⟨e₁, e₂, e₃, e₄, e₅, e₆, e₇, e₈, e₉⟩ := assert_n' (x := α) (y := β) (n := 2) (fn := .read)
+  have ⟨α'₁, β'₁, heq₁⟩ :=
+    gen_pi (x := α)
+      (m := m)
+      (α := (Pi (Nat.succ n) Expr.read (next.app (assert.app (Srt n)))))
+      (β := (Pi m assert
+        (Pi m
+          (((app'.app
+          (app'.app Expr.read)).app
+          (next.app assert)).app
+          (next.app (next.app Expr.read))) (assert_n 3 Expr.read))))
   apply Judge.app
   apply Judge.app
   apply Judge.app
@@ -69,4 +93,7 @@ theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (S
   apply Judge.K
   assumption
   exact judge_self
+  exact gen.sound heq₁
+  assumption
+  refine ⟨_, ?_, .refl⟩
   

@@ -201,7 +201,7 @@ open Expr in def gen.n_norm (n : ℕ) (e : Expr) : ((e' : Expr) × (PLift <| gen
     apply gen.eq.refl
     apply ParRed.refl
 
-theorem gen.symm : gen.eq α β → gen.eq β α := by
+theorem gen.eq.symm : gen.eq α β → gen.eq β α := by
   intro h
   induction h
   apply gen.eq.refl
@@ -213,17 +213,40 @@ theorem gen.symm : gen.eq α β → gen.eq β α := by
   apply gen.eq.trans
   repeat assumption
 
+theorem gen.eq.choose : gen.eq a c → (∃ b, gen.eq a b ∧ ParRed b c) ∨ (a = c) := by
+  intro h
+  induction h
+  rename_i a₁ _
+  exact Or.inr rfl
+  rename_i a'
+  refine Or.inl (⟨a', ?_, by apply gen.sound; rfl⟩)
+  apply gen.eq.refl
+  apply ParRed.refl
+  case trans a₂ c₂ b₂ heq₁ heq₂ ih₁ ih₂ =>
+    have heq_whack := heq₁.trans heq₂
+    match ih₁, ih₂ with
+    | .inl h₁, .inl h₂ =>
+      simp_all
+      refine Or.inl ⟨_, ?_, .refl⟩
+      exact heq_whack
+    | .inr h₁, .inr h₂ =>
+      simp_all
+    | .inl h₁, .inr h₂ =>
+      simp_all
+    | .inr h₁, .inl h₂ =>
+      simp_all
+      let ⟨e, heq₁, hpr₁⟩ := h₂
+      exact Or.inl ⟨_, heq_whack, .refl⟩
+
 def Judge.step_gen : Judge α x → gen.eq α β → Judge β x := by
   intro h_t h_eq
+  have h_eq₂ := h_eq.symm
   induction h_eq with
   | step => exact gen_imp_well_typed (by assumption) rfl
   | trans g₁ g₂ ih₁ ih₂=>
     have h := ih₁ h_t
+    have h' := h (by apply gen.eq.trans; exact g₁.symm; apply gen.eq.refl; exact ParRed.refl)
     
-    apply Judge.conv
-    apply Judge.conv
-    assumption
-    refine ⟨_, (gen _).snd.down.hpar, .refl⟩
-    refine ⟨_, (gen _).snd.down.hpar, by sorry⟩
+    sorry
   | refl => exact h_t
 

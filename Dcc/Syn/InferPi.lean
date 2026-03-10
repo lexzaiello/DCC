@@ -17,7 +17,7 @@ inductive InferAs : Expr → Expr → Type where
     | app  : InferAs ((Π' m) α, β) f
     → InferAs α x
     → InferAs ⸨β x⸩ ⸨f x⸩
-  | conv : InferAs α x → gen.eq α β → InferAs β x -- can derive Judge β x with gen
+  | conv : InferAs α x → ParRed α β → InferAs β x
 
 inductive NoType : Expr → Type where
   | app'      : NoType app'
@@ -30,10 +30,10 @@ inductive Err : Expr → Type where
   | no_type  : NoType e → Err e
   | mismatch : InferAs ((Π' m) α, β) f
     → InferAs α₂ x
-    → (¬ gen.eq α α₂)
+    → (¬ ParRed α α₂)
     → Err ⸨f x⸩
   | not_fn   : InferAs t_f f
-    → (¬ ∃ m α β, gen.eq t_f ((Π' m) α, β))
+    → (¬ ∃ m α β, ParRed t_f ((Π' m) α, β))
     → Err ⸨f x⸩
 
 inductive Inference : Expr → Expr → Type where
@@ -50,7 +50,8 @@ theorem Judgment.sound : InferAs t e → Judge t e := by
   · exact Judge.Srt
   · exact Judge.Pi
   case app m α β f x h_t_f h_α h_t_f' h_t_x' => exact Judge.app h_t_f' .refl h_t_x' .refl
-  case conv α x β h_t_α heq ih => exact ih.step_gen heq
+  case conv α x β h_t_α heq ih =>
+    exact Judge.conv ih ⟨β, heq, .refl⟩
 
 open Expr in def infer (e : Expr) : Except Format ((t : Expr) × (PLift <| Judge t e)) :=
   match e with

@@ -167,23 +167,35 @@ theorem gen_pi {m : Level} {α β x : Expr} : ∃ α' β', (gen ⸨((Π' m) α, 
     simp_all
 
 inductive gen.eq : Expr → Expr → Prop
-  | step  : (gen a).fst = b → gen.eq a b
+  | refl  : ParRed a a → gen.eq a a
+  | step  : gen.eq a (gen a).fst
   | trans : gen.eq a b → gen.eq b c → gen.eq a c
 
-@[simp] theorem gen.eq.of_gen : (gen a).fst = b → gen.eq a b := gen.eq.step
+@[simp] theorem gen.eq.of_gen : (gen a).fst = b → gen.eq a b := fun h => by
+  rw [← h]
+  exact gen.eq.step
 
-def gen.n_norm (n : ℕ) (e : Expr) : ((e' : Expr) × (PLift <| gen.eq e e')) :=
+open Expr in def gen.n_norm (n : ℕ) (e : Expr) : ((e' : Expr) × (PLift <| gen.eq e e')) :=
   match n with
-  | .zero => ⟨(gen e).fst, ⟨gen.eq.step (a := e) (b := (gen e).fst) rfl⟩⟩
+  | .zero =>
+    match e with
+    | (K' m n) => ⟨(K' m n), ⟨.refl .refl_K'⟩⟩
+    | (K m n) => ⟨(K m n), ⟨.refl .refl_K⟩⟩
+    | (S m n o) => ⟨(S m n o), ⟨.refl .refl_S⟩⟩
+    | (I m) => ⟨(I m), ⟨.refl .refl_I⟩⟩
+    | (_?) => ⟨_?, ⟨.refl .refl_hole⟩⟩
+    | (Srt m) => ⟨Srt m, ⟨.refl .refl_Srt⟩⟩
+    | next => ⟨next, ⟨.refl .refl_next⟩⟩
+    | .read => ⟨read, ⟨.refl .refl_read⟩⟩
+    | assert => ⟨assert, ⟨.refl .refl_assert⟩⟩
+    | x => ⟨(gen x).fst, ⟨.step⟩⟩
   | .succ n =>
-    if (gen e).fst == e then
-      ⟨(gen e).fst, ⟨gen.eq.step (a := e) (b := (gen e).fst) rfl⟩⟩
-    else
-      let ⟨inner, ⟨h⟩⟩ := gen.n_norm n e
-      ⟨(gen inner).fst, ⟨gen.eq.trans h (.step (b := (gen inner).fst) rfl)⟩⟩
+    let ⟨e', eq⟩ := gen.n_norm n e
+    ⟨(gen e').fst, ⟨gen.eq.trans eq.down .step⟩⟩
 
 def Judge.step_gen : Judge α x → gen.eq α β → Judge β x := by
   intro h_t h_eq
   induction h_eq with
-  | step => exact gen_imp_well_typed (by assumption) (by assumption)
+  | step => exact gen_imp_well_typed (by assumption) rfl
   | trans h₁ h₂ ih₁ ih₂ => exact ih₂ (ih₁ (by assumption))
+  | refl => exact h_t

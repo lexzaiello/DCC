@@ -5,7 +5,9 @@ import Qq
 open Std (ToFormat Format)
 open Std.ToFormat (format)
 
-open Expr in inductive InferAs : Expr → Expr → Type where
+open Expr
+
+inductive InferAs : Expr → Expr → Type where
   | I   : InferAs (I.type m) (I m)
   | K   : InferAs (K.type m n) (K m n)
   | K'  : InferAs (K'.type m n) (K' m n)
@@ -15,8 +17,28 @@ open Expr in inductive InferAs : Expr → Expr → Type where
     | app  : InferAs ((Π' m) α, β) f
     → InferAs α x
     → InferAs ⸨β x⸩ ⸨f x⸩
-  | conv : InferAs α x → gen.eq α β
-    → InferAs β x -- can derive Judge β x with gen
+  | conv : InferAs α x → gen.eq α β → InferAs β x -- can derive Judge β x with gen
+
+inductive NoType : Expr → Type where
+  | app'      : NoType app'
+  | assert    : NoType assert
+  | read      : NoType read
+  | next      : NoType next
+  | hole      : NoType hole
+
+inductive Err : Expr → Type where
+  | no_type  : NoType e → Err e
+  | mismatch : InferAs ((Π' m) α, β) f
+    → InferAs α₂ x
+    → (¬ gen.eq α α₂)
+    → Err ⸨f x⸩
+  | not_fn   : InferAs t_f f
+    → (¬ ∃ m α β, gen.eq t_f ((Π' m) α, β))
+    → Err ⸨f x⸩
+
+inductive Inference : Expr → Expr → Type where
+  | ok    : InferAs t e → Inference t e
+  | error : Err e       → Inference t e
 
 theorem Judgment.sound : InferAs t e → Judge t e := by
   intro h_t

@@ -229,21 +229,6 @@ theorem gen.eq.choose : gen.eq a c → (∃ b, gen.eq a b ∧ ParRed b c) := by
     refine ⟨_, ?_, ParRed.refl⟩
     exact heq_whack
 
-theorem gen.diamond : gen.eq a b → gen.eq a c → (∃ d, gen.eq b d ∧ gen.eq c d) := by
+theorem gen.eq.diamond : gen.eq a b → gen.eq a c → (∃ d, gen.eq b d ∧ gen.eq c d) := by
   intro ha hb
   exact ⟨a, ha.symm, hb.symm⟩
-
-def Judge.step_gen : Judge α x → gen.eq α β → Judge β x := by
-  intro h_t h_eq
-  have h_eq₂ := h_eq.symm
-  induction h_eq with
-  | step => exact gen_imp_well_typed (by assumption) rfl
-  | trans g₁ g₂ ih₁ ih₂=>
-    have h := ih₁ h_t
-    have h' := h (by apply gen.eq.trans; exact g₁.symm; apply gen.eq.refl; exact ParRed.refl)
-    apply Judge.conv
-    exact h_t
-    
-    sorry
-  | refl => exact h_t
-

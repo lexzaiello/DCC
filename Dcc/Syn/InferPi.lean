@@ -17,7 +17,7 @@ inductive InferAs : Expr → Expr → Type where
     | app  : InferAs ((Π' m) α, β) f
     → InferAs α x
     → InferAs ⸨β x⸩ ⸨f x⸩
-  | conv : InferAs β x → (gen.eq α β) → InferAs α x
+  | conv : InferAs A x → (∃ C, (gen A).fst = C ∧ (gen B).fst = C) → InferAs B x
 
 inductive NoType : Expr → Type where
   | app'      : NoType app'
@@ -53,7 +53,10 @@ theorem Judgment.sound : InferAs t e → Judge t e := by
   · exact Judge.Pi
   case app m α β f x h_t_f h_α h_t_f' h_t_x' => exact Judge.app h_t_f' .refl h_t_x' .refl
   case conv α x β h_t_α heq ih =>
-    exact ih.step_gen (by sorry)
+    let ⟨C, heq₁, heq₂⟩ := heq
+    apply Judge.conv
+    assumption
+    exact ⟨C, gen.sound heq₁, gen.sound heq₂⟩
 
 open Expr in def infer (e : Expr) (expected : Option Expr := .none) : ((t : Expr) × Inference t e) :=
   match e with

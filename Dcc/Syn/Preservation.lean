@@ -51,62 +51,6 @@ def gen.judge_conv.judge : gen.judge_conv α x → Judge α x := by
     case succ α₂ h α₁ =>
       exact ⟨α₂, .refl, gen.sound h_gen⟩
 
-open Qq in def find_judge (tgt : Q(Expr)) : Lean.Elab.Tactic.TacticM Lean.Expr := do
-  let hyps ← Lean.getLocalHyps
-  hyps.toList.firstM (fun e => do
-    let t ← Lean.Meta.inferType e
-    match t with
-    | (Lean.Expr.app (.app (.const `Judge []) _a) x) =>
-      if x == tgt then
-        pure e
-      else
-        throwError "no matching hypothesis"
-    | _ => throwError "no matching hypothesis")
-
-def dec_n (m : Lean.Expr) : Lean.Elab.Tactic.TacticM ℕ := do
-    match ← Lean.Meta.getNatValue? m with
-    | .some n => pure n
-    | _ => throwError "not a valid sort"
-
-def decode (e : Lean.Expr) : Lean.Elab.Tactic.TacticM Expr :=
-  match e with
-  | .app (.const `Expr.Srt []) m  => .Srt <$> dec_n m
-  | .app (.app (.app (.const `Expr.Pi []) m) α) β => do
-    return .Pi (← dec_n m) (← decode α) (← decode β)
-  | (.app (.app (.const `Expr.K' []) m) n) => do
-    return .K' (← dec_n m) (← dec_n n)
-  | (.app (.app (.const `Expr.K []) m) n) => do
-    return .K (← dec_n m) (← dec_n n)
-  | (.app (.app (.app (.const `Expr.S []) m) n) o) => do
-    return .S (← dec_n m) (← dec_n n) (← dec_n o)
-  | (.app (.const `Expr.I []) m) => do
-    return .I (← dec_n m)
-  | .const `Expr.hole [] => return .hole
-  | .const `Expr.next [] => return .next
-  | .const `Expr.read [] => return .read
-  | .const `Expr.assert [] => return .assert
-  | .const `Expr.app' [] => return .app'
-  | (.app (.app (.const `Expr.app []) f) x) => return .app (← decode f) (← decode x)
-  | _ => throwError "not supported"
-
-open Qq in def Expr.toLeanExpr : Expr → Q(Expr)
-  | .Srt m => q(Expr.Srt $m)
-  | .app' => q(Expr.app')
-  | .hole => q(Expr.hole)
-  | .read => q(Expr.read)
-  | .assert => q(Expr.assert)
-  | .next => q(Expr.next)
-  | .I m => q(Expr.I $m)
-  | .K' m n => q(Expr.K' $m $n)
-  | .K m n => q(Expr.K $m $n)
-  | .S m n o => q(Expr.S $m $n $o)
-  | .Pi m α β => (((Lean.Expr.const `Expr.Pi []).app (Lean.mkNatLit m)).app (α.toLeanExpr)).app (β.toLeanExpr)
-  | .app f x => ((Lean.Expr.const `Expr.app []).app (f.toLeanExpr)).app (x.toLeanExpr)
-
-instance Expr.instToExpr : Lean.ToExpr Expr where
-  toExpr := Expr.toLeanExpr
-  toTypeExpr := Lean.Expr.const `Expr []
-
 open Qq in elab "gen_judge" steps:num* : tactic => do
   let goal ← Lean.Elab.Tactic.getMainGoal
   let goalDecl ← goal.getDecl
@@ -133,7 +77,6 @@ open Qq in elab "gen_judge" steps:num* : tactic => do
           | .zero => return mjudge
           | .succ n => do_gen mjudge h n
         let proof ← do_gen (← Lean.Meta.reduceAll hyp) α n_steps
-        dbg_trace proof
         goal.assign proof
       | _ => continue
   | _ => throwError "not supported"

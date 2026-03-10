@@ -15,7 +15,7 @@ number of steps.
 -/
 
 inductive Reduction.app : Expr → Expr → Prop
-  | mk : ParRed f f' → ParRed x x' → Reduction.app ⸨f x⸩ ⸨f' x'⸩
+  | mk : (¬ ∃ e', Red ⸨f x⸩ e') → ParRed f f' → ParRed x x' → Reduction.app ⸨f x⸩ ⸨f' x'⸩
 
 inductive Reduction.pi : Expr → Expr → Prop
   | mk : ParRed α α' → ParRed β β' → Reduction.pi ((Π' m) α, β) ((Π' m) α', β')
@@ -94,10 +94,13 @@ def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
     ⟨⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩,
       ⟨.app' heq₁ heq₂ heq₃, .red' ⟨.app (.app .refl (.app heq₁ heq₃)) (.app heq₂ heq₃), .app'⟩⟩⟩
   | ⸨f x⸩ =>
+    have h : ¬ ∃ e', Red ⸨f x⸩ e' := fun h => by
+      
+      sorry
     let ⟨f', ⟨⟨heq₁, c⟩⟩⟩ := gen f
     let ⟨x', ⟨⟨heq₂, c⟩⟩⟩ := gen x
 
-    ⟨⸨f' x'⸩, ⟨.app heq₁ heq₂, .app' ⟨heq₁, heq₂⟩⟩⟩
+    ⟨⸨f' x'⸩, ⟨.app heq₁ heq₂, .app' ⟨h, heq₁, heq₂⟩⟩⟩
 
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with

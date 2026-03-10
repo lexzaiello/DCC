@@ -46,49 +46,49 @@ macro_rules
     exact ParRed.refl
     exact Reduction.refl' (.mk (by simp)))
 
-def gen' (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
+def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
   match e with
   | ⸨⸨(.I _m) _α⸩ x⸩ =>
-    let ⟨x', ⟨hpar, _reda⟩⟩ := gen' x
+    let ⟨x', ⟨hpar, _reda⟩⟩ := gen x
     ⟨x', ⟨⟨.I hpar, .red' ⟨hpar, .I⟩⟩⟩⟩
   | ⸨(.K _m _n) _α _β x _y⸩ =>
-    let ⟨x', ⟨hpar, _redf⟩⟩ := gen' x
+    let ⟨x', ⟨hpar, _redf⟩⟩ := gen x
     ⟨x', ⟨.K hpar, .red' ⟨hpar, .K⟩⟩⟩
   | ⸨(.K' _m _n) _α _β x _y⸩ =>
-    let ⟨x', ⟨hpar, _redc⟩⟩ := gen' x
+    let ⟨x', ⟨hpar, _redc⟩⟩ := gen x
     ⟨x', ⟨.K' hpar, .red' ⟨hpar, .K'⟩⟩⟩
   | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
-    let ⟨x', ⟨hpar₁, _redg⟩⟩ := gen' x
-    let ⟨y', ⟨hpar₂, _redf⟩⟩ := gen' y
-    let ⟨z', ⟨hpar₃, _rede⟩⟩ := gen' z
+    let ⟨x', ⟨hpar₁, _redg⟩⟩ := gen x
+    let ⟨y', ⟨hpar₂, _redf⟩⟩ := gen y
+    let ⟨z', ⟨hpar₃, _rede⟩⟩ := gen z
     ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, ⟨.S hpar₁ hpar₂ hpar₃, .red' ⟨.app (.app hpar₁ hpar₃) (.app hpar₂ hpar₃), .S⟩⟩⟩
   | ⸨((Π' m) α, β) x⸩ =>
-    let ⟨α', ⟨hpar₁, _reda⟩⟩ := gen' α
-    let ⟨β', ⟨hpar₂, _redb⟩⟩ := gen' β
-    let ⟨x', ⟨hpar₃, _redc⟩⟩ := gen' x
+    let ⟨α', ⟨hpar₁, _reda⟩⟩ := gen α
+    let ⟨β', ⟨hpar₂, _redb⟩⟩ := gen β
+    let ⟨x', ⟨hpar₃, _redc⟩⟩ := gen x
     ⟨((Π' m) ⸨α' x'⸩, ⸨β' x'⸩), ⟨.Pi hpar₁ hpar₂ hpar₃, .red' ⟨.Pival (.app hpar₁ hpar₃) (.app hpar₂ hpar₃), .Pi⟩⟩⟩
   | ((Π' m) α, β) =>
-    let ⟨α', ⟨⟨heq₁, _g⟩⟩⟩ := gen' α
-    let ⟨β', ⟨⟨heq₂, _h⟩⟩⟩ := gen' β
+    let ⟨α', ⟨⟨heq₁, _g⟩⟩⟩ := gen α
+    let ⟨β', ⟨⟨heq₂, _h⟩⟩⟩ := gen β
     ⟨(Π' m) α', β', ⟨.Pival heq₁ heq₂, .pi' ⟨heq₁, heq₂⟩⟩⟩
   | ⸨.next f _x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _f⟩⟩⟩ := gen' f
+    let ⟨f', ⟨⟨heq₁, _f⟩⟩⟩ := gen f
     ⟨f', ⟨.next heq₁, .red' ⟨heq₁, .next⟩⟩⟩
   | ⸨.read e⸩ =>
-    let ⟨e', ⟨⟨heq₁, _e⟩⟩⟩ := gen' e
+    let ⟨e', ⟨⟨heq₁, _e⟩⟩⟩ := gen e
     ⟨e', ⟨.read heq₁, .red' ⟨heq₁, .read⟩⟩⟩
   | ⸨.assert f _x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _d⟩⟩⟩ := gen' f
+    let ⟨f', ⟨⟨heq₁, _d⟩⟩⟩ := gen f
     ⟨f', ⟨.assert heq₁, .red' ⟨heq₁, .assert⟩⟩⟩
   | ⸨${π} f g x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _a⟩⟩⟩ := gen' f
-    let ⟨g', ⟨⟨heq₂, _b⟩⟩⟩ := gen' g
-    let ⟨x', ⟨⟨heq₃, _c⟩⟩⟩ := gen' x
+    let ⟨f', ⟨⟨heq₁, _a⟩⟩⟩ := gen f
+    let ⟨g', ⟨⟨heq₂, _b⟩⟩⟩ := gen g
+    let ⟨x', ⟨⟨heq₃, _c⟩⟩⟩ := gen x
     ⟨⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩,
       ⟨.app' heq₁ heq₂ heq₃, .red' ⟨.app (.app .refl (.app heq₁ heq₃)) (.app heq₂ heq₃), .app'⟩⟩⟩
   | ⸨f x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _c⟩⟩⟩ := gen' f
-    let ⟨x', ⟨⟨heq₂, _c⟩⟩⟩ := gen' x
+    let ⟨f', ⟨⟨heq₁, _c⟩⟩⟩ := gen f
+    let ⟨x', ⟨⟨heq₂, _c⟩⟩⟩ := gen x
 
     ⟨⸨f' x'⸩, ⟨.app heq₁ heq₂, .app' ⟨heq₁, heq₂⟩⟩⟩
   | K' m n => ⟨K' m n, ⟨.refl, .refl' ⟨Atom.comb .K'₀⟩⟩⟩
@@ -101,61 +101,6 @@ def gen' (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
   | .assert => ⟨.assert, ⟨.refl, .refl' ⟨Atom.comb .assert₀⟩⟩⟩
   | .app' => ⟨.app', ⟨.refl, .refl' ⟨Atom.comb .app'₀⟩⟩⟩
   | .hole => ⟨.hole, ⟨.refl, .refl' ⟨Atom.hole⟩⟩⟩
-
-#eval (gen' (K 0 0)).fst
-
-def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) := by
-  match heq : e with
-  | .K' m n | .K m n | .S m n o | .I m | Srt m | .next | .read | .assert | .app' | _? =>
-    refine ⟨e, ?_⟩
-    rw [heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' ⟨by simp⟩
-  | ⸨⸨(.I _m) _α⸩ x⸩ =>
-    let ⟨x', ⟨hpar, red⟩⟩ := gen x
-    exact ⟨x', ⟨⟨.I hpar, .red' ⟨hpar, .I⟩⟩⟩⟩
-  | ⸨(.K _m _n) _α _β x _y⸩ =>
-    let ⟨x', ⟨hpar, red⟩⟩ := gen x
-    exact ⟨x', ⟨.K hpar, .red' ⟨hpar, .K⟩⟩⟩
-  | ⸨(.K' _m _n) _α _β x _y⸩ =>
-    let ⟨x', ⟨hpar, red⟩⟩ := gen x
-    exact ⟨x', ⟨.K' hpar, .red' ⟨hpar, .K'⟩⟩⟩
-  | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
-    let ⟨x', ⟨hpar₁, red⟩⟩ := gen x
-    let ⟨y', ⟨hpar₂, red⟩⟩ := gen y
-    let ⟨z', ⟨hpar₃, red⟩⟩ := gen z
-    exact ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, ⟨.S hpar₁ hpar₂ hpar₃, .red' ⟨.app (.app hpar₁ hpar₃) (.app hpar₂ hpar₃), .S⟩⟩⟩
-  | ⸨((Π' m) α, β) x⸩ =>
-    let ⟨α', ⟨hpar₁, red⟩⟩ := gen α
-    let ⟨β', ⟨hpar₂, red⟩⟩ := gen β
-    let ⟨x', ⟨hpar₃, red⟩⟩ := gen x
-    exact ⟨((Π' m) ⸨α' x'⸩, ⸨β' x'⸩), ⟨.Pi hpar₁ hpar₂ hpar₃, .red' ⟨.Pival (.app hpar₁ hpar₃) (.app hpar₂ hpar₃), .Pi⟩⟩⟩
-  | ((Π' m) α, β) =>
-    let ⟨α', ⟨⟨heq₁, _⟩⟩⟩ := gen α
-    let ⟨β', ⟨⟨heq₂, _⟩⟩⟩ := gen β
-    exact ⟨(Π' m) α', β', ⟨.Pival heq₁ heq₂, .pi' ⟨heq₁, heq₂⟩⟩⟩
-  | ⸨.next f _x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
-    exact ⟨f', ⟨.next heq₁, .red' ⟨heq₁, .next⟩⟩⟩
-  | ⸨.read e⸩ =>
-    let ⟨e', ⟨⟨heq₁, _⟩⟩⟩ := gen e
-    exact ⟨e', ⟨.read heq₁, .red' ⟨heq₁, .read⟩⟩⟩
-  | ⸨.assert f _x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
-    exact ⟨f', ⟨.assert heq₁, .red' ⟨heq₁, .assert⟩⟩⟩
-  | ⸨${π} f g x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
-    let ⟨g', ⟨⟨heq₂, _⟩⟩⟩ := gen g
-    let ⟨x', ⟨⟨heq₃, _⟩⟩⟩ := gen x
-    exact ⟨⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩,
-      ⟨.app' heq₁ heq₂ heq₃, .red' ⟨.app (.app .refl (.app heq₁ heq₃)) (.app heq₂ heq₃), .app'⟩⟩⟩
-  | ⸨f x⸩ =>
-    let ⟨f', ⟨⟨heq₁, c⟩⟩⟩ := gen f
-    let ⟨x', ⟨⟨heq₂, c⟩⟩⟩ := gen x
-
-    exact ⟨⸨f' x'⸩, ⟨.app heq₁ heq₂, .app' ⟨heq₁, heq₂⟩⟩⟩
 
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with

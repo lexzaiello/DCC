@@ -63,12 +63,12 @@ def find_judge (tgt : Lean.Expr) : Lean.Elab.Tactic.TacticM (Option Lean.FVarId)
         return some localDecl.fvarId
   return none
 
-def decode (e : Lean.Expr) : Lean.Elab.Tactic.TacticM Expr :=
-  let dec_n (m : Lean.Expr) : Lean.Elab.Tactic.TacticM ℕ := do
+def dec_n (m : Lean.Expr) : Lean.Elab.Tactic.TacticM ℕ := do
     match ← Lean.Meta.getNatValue? m with
     | .some n => pure n
     | _ => throwError "not a valid sort"
 
+def decode (e : Lean.Expr) : Lean.Elab.Tactic.TacticM Expr :=
   match e with
   | .app (.const `Expr.Srt []) m  => .Srt <$> dec_n m
   | .app (.app (.app (.const `Expr.Pi []) m) α) β => do
@@ -89,7 +89,25 @@ def decode (e : Lean.Expr) : Lean.Elab.Tactic.TacticM Expr :=
   | (.app (.app (.const `Expr.app []) f) x) => return .app (← decode f) (← decode x)
   | _ => throwError "not supported"
 
-elab "gen_judge" num* : tactic => do
+def Expr.toLeanExpr : Expr → Q(Expr)
+  | .Srt m => q(Expr.Srt $m)
+  | .app' => q(Expr.app')
+  | .hole => q(Expr.hole)
+  | .read => q(Expr.read)
+  | .assert => q(Expr.assert)
+  | .next => q(Expr.next)
+  | .I m => q(Expr.I $m)
+  | .K' m n => q(Expr.K' $m $n)
+  | .K m n => q(Expr.K $m $n)
+  | .S m n o => q(Expr.S $m $n $o)
+  | .Pi m α β => (((Lean.Expr.const `Expr.Pi []).app (Lean.mkNatLit m)).app (α.toLeanExpr)).app (β.toLeanExpr)
+  | .app f x => ((Lean.Expr.const `Expr.app []).app (f.toLeanExpr)).app (x.toLeanExpr)
+
+instance Expr.instToExpr : Lean.ToExpr Expr where
+  toExpr := Expr.toLeanExpr
+  toTypeExpr := Lean.Expr.const `Expr []
+
+elab "gen_judge" steps:num* : tactic => do
   let goal ← Lean.Elab.Tactic.getMainGoal
   goal.withContext do
     let target : Q(Prop) ← goal.getType
@@ -97,6 +115,8 @@ elab "gen_judge" num* : tactic => do
     | ~q(Judge $α $x) =>
       match ← find_judge x with
       | .some e =>
+        let reflected ← decode x
+        let n_steps := (steps.toList.head?.getD (Lean.Syntax.mkNatLit 100)).getNat
         
         sorry
       | .none => throwError "no matching hypothesis"

@@ -15,7 +15,7 @@ number of steps.
 -/
 
 inductive Reduction.app : Expr → Expr → Prop
-  | mk : (¬ ∃ e', Red ⸨f x⸩ e') → ParRed f f' → ParRed x x' → Reduction.app ⸨f x⸩ ⸨f' x'⸩
+  | mk : ParRed f f' → ParRed x x' → Reduction.app ⸨f x⸩ ⸨f' x'⸩
 
 inductive Reduction.pi : Expr → Expr → Prop
   | mk : ParRed α α' → ParRed β β' → Reduction.pi ((Π' m) α, β) ((Π' m) α', β')
@@ -46,9 +46,9 @@ macro_rules
     exact ParRed.refl
     exact Reduction.refl' (.mk (by simp)))
 
-def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
+def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) := by
   match heq : e with
-  | .K' m n | .K m n | .S m n o | .I m | Srt m | .next | .read | .assert | .app' | _? => by
+  | .K' m n | .K m n | .S m n o | .I m | Srt m | .next | .read | .assert | .app' | _? =>
     refine ⟨e, ?_⟩
     rw [heq]
     constructor
@@ -57,50 +57,47 @@ def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
     exact Reduction.refl' ⟨by simp⟩
   | ⸨⸨(.I _m) _α⸩ x⸩ =>
     let ⟨x', ⟨hpar, red⟩⟩ := gen x
-    ⟨x', ⟨⟨.I hpar, .red' ⟨hpar, .I⟩⟩⟩⟩
+    exact ⟨x', ⟨⟨.I hpar, .red' ⟨hpar, .I⟩⟩⟩⟩
   | ⸨(.K _m _n) _α _β x _y⸩ =>
     let ⟨x', ⟨hpar, red⟩⟩ := gen x
-    ⟨x', ⟨.K hpar, .red' ⟨hpar, .K⟩⟩⟩
+    exact ⟨x', ⟨.K hpar, .red' ⟨hpar, .K⟩⟩⟩
   | ⸨(.K' _m _n) _α _β x _y⸩ =>
     let ⟨x', ⟨hpar, red⟩⟩ := gen x
-    ⟨x', ⟨.K' hpar, .red' ⟨hpar, .K'⟩⟩⟩
+    exact ⟨x', ⟨.K' hpar, .red' ⟨hpar, .K'⟩⟩⟩
   | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
     let ⟨x', ⟨hpar₁, red⟩⟩ := gen x
     let ⟨y', ⟨hpar₂, red⟩⟩ := gen y
     let ⟨z', ⟨hpar₃, red⟩⟩ := gen z
-    ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, ⟨.S hpar₁ hpar₂ hpar₃, .red' ⟨.app (.app hpar₁ hpar₃) (.app hpar₂ hpar₃), .S⟩⟩⟩
+    exact ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, ⟨.S hpar₁ hpar₂ hpar₃, .red' ⟨.app (.app hpar₁ hpar₃) (.app hpar₂ hpar₃), .S⟩⟩⟩
   | ⸨((Π' m) α, β) x⸩ =>
     let ⟨α', ⟨hpar₁, red⟩⟩ := gen α
     let ⟨β', ⟨hpar₂, red⟩⟩ := gen β
     let ⟨x', ⟨hpar₃, red⟩⟩ := gen x
-    ⟨((Π' m) ⸨α' x'⸩, ⸨β' x'⸩), ⟨.Pi hpar₁ hpar₂ hpar₃, .red' ⟨.Pival (.app hpar₁ hpar₃) (.app hpar₂ hpar₃), .Pi⟩⟩⟩
+    exact ⟨((Π' m) ⸨α' x'⸩, ⸨β' x'⸩), ⟨.Pi hpar₁ hpar₂ hpar₃, .red' ⟨.Pival (.app hpar₁ hpar₃) (.app hpar₂ hpar₃), .Pi⟩⟩⟩
   | ((Π' m) α, β) =>
     let ⟨α', ⟨⟨heq₁, _⟩⟩⟩ := gen α
     let ⟨β', ⟨⟨heq₂, _⟩⟩⟩ := gen β
-    ⟨(Π' m) α', β', ⟨.Pival heq₁ heq₂, .pi' ⟨heq₁, heq₂⟩⟩⟩
+    exact ⟨(Π' m) α', β', ⟨.Pival heq₁ heq₂, .pi' ⟨heq₁, heq₂⟩⟩⟩
   | ⸨.next f _x⸩ =>
     let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
-    ⟨f', ⟨.next heq₁, .red' ⟨heq₁, .next⟩⟩⟩
+    exact ⟨f', ⟨.next heq₁, .red' ⟨heq₁, .next⟩⟩⟩
   | ⸨.read e⸩ =>
     let ⟨e', ⟨⟨heq₁, _⟩⟩⟩ := gen e
-    ⟨e', ⟨.read heq₁, .red' ⟨heq₁, .read⟩⟩⟩
+    exact ⟨e', ⟨.read heq₁, .red' ⟨heq₁, .read⟩⟩⟩
   | ⸨.assert f _x⸩ =>
     let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
-    ⟨f', ⟨.assert heq₁, .red' ⟨heq₁, .assert⟩⟩⟩
+    exact ⟨f', ⟨.assert heq₁, .red' ⟨heq₁, .assert⟩⟩⟩
   | ⸨${π} f g x⸩ =>
     let ⟨f', ⟨⟨heq₁, _⟩⟩⟩ := gen f
     let ⟨g', ⟨⟨heq₂, _⟩⟩⟩ := gen g
     let ⟨x', ⟨⟨heq₃, _⟩⟩⟩ := gen x
-    ⟨⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩,
+    exact ⟨⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩,
       ⟨.app' heq₁ heq₂ heq₃, .red' ⟨.app (.app .refl (.app heq₁ heq₃)) (.app heq₂ heq₃), .app'⟩⟩⟩
   | ⸨f x⸩ =>
-    have h : ¬ ∃ e', Red ⸨f x⸩ e' := fun h => by
-      
-      sorry
     let ⟨f', ⟨⟨heq₁, c⟩⟩⟩ := gen f
     let ⟨x', ⟨⟨heq₂, c⟩⟩⟩ := gen x
 
-    ⟨⸨f' x'⸩, ⟨.app heq₁ heq₂, .app' ⟨h, heq₁, heq₂⟩⟩⟩
+    exact ⟨⸨f' x'⸩, ⟨.app heq₁ heq₂, .app' ⟨heq₁, heq₂⟩⟩⟩
 
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with
@@ -251,101 +248,6 @@ theorem Red.confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedStar 
   cases hb
   repeat (cases hc; exact ⟨_, RedStar.refl, RedStar.refl⟩)
 
-theorem gen_is_maximal (h : ParRed e e') : ParRed e' (gen e).fst := by
-  induction h
-  repeat (apply gen.sound; rfl)
-  case I x x' m α h_x h_x' =>
-    unfold gen
-    split
-    cases (gen x).snd
-    simp_all
-  case K x x' m n α β y h_x h_x' =>
-    unfold gen
-    split
-    cases (gen x).snd
-    simp_all
-  case K' x x' m n α β y h_x h_x' =>
-    unfold gen
-    split
-    cases (gen x).snd
-    simp_all
-  case S x x' y y' z z' m n o α β γ h_x h_y h_z ih₁ ih₂ ih₃ =>
-    unfold gen
-    split
-    cases h₁ : gen x
-    cases h₂ : gen y
-    cases h₃ : gen z
-    split
-    split
-    simp
-    apply ParRed.app
-    repeat (apply ParRed.app; repeat simp_all)
-  case Pi α α' β β' x x' m h_a h_b h_x ih₁ ih₂ ih₃ =>
-    unfold gen
-    split
-    cases h₁ : gen α
-    cases h₂ : gen β
-    cases h₃ : gen x
-    split
-    split
-    simp
-    apply ParRed.Pival
-    simp_all
-    repeat (apply ParRed.app; repeat simp_all)
-  case Pival α α' β β' m h_a h_b ih₁ ih₂ =>
-    unfold gen
-    split
-    cases h₁ : gen α
-    cases h₂ : gen β
-    split
-    simp
-    apply ParRed.Pival
-    repeat simp_all
-  · unfold gen
-    split
-    simp_all
-  · unfold gen
-    split
-    simp_all
-  · unfold gen
-    split
-    simp_all
-  case app' f f' g g' x x' π h_f h_g h_x ih₁ ih₂ ih₃ =>
-    unfold gen
-    split
-    cases h₁ : gen f
-    cases h₂ : gen g
-    cases h₃ : gen x
-    split
-    split
-    simp
-    apply ParRed.app
-    apply ParRed.app
-    exact ParRed.refl
-    apply ParRed.app
-    repeat simp_all
-    apply ParRed.app
-    repeat simp_all
-  case app f f' x x' h_f h_x ih₁ ih₂ =>
-    
-    sorry
-
-theorem gen.max (p : ParRed e e') : ParRed e' (gen e).fst := by
-  match p.step_whole_or_parts_refl with
-  | .inl h =>
-    
-    sorry
-  | .inr h => sorry
-  /-match heq : Atom.gen e with
-  | .inl h =>
-    apply gen.sound
-    rw [no_step_atom p h]
-  | .inr (.inl ⟨f, x, heq⟩) =>
-    
-    
-    sorry
-  | .inr (.inr h) => sorry-/
-
 theorem confluence_atom (h_atom : Atom a) (h_b : ParRed a b) (h_c : ParRed a c) : b = c := by
   induction h_b
   repeat (cases h_atom; rename_i h_comb; cases h_comb; cases h_c; rfl)
@@ -368,46 +270,4 @@ theorem Red.single_step_unique : Red e e₁ → Red e e₂ → e₁ = e₂ := by
   intro h₁ h₂
   induction h₁
   repeat (cases h₂; rfl)
-
-theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
-  intro ha hb
-  have ⟨e', ⟨hpar, red⟩⟩ := gen a
-  induction red
-  rename_i h
-  cases h
-  rename_i h_f h_x
-  
-  sorry
-
-theorem multi_step_unique : ParRed e e₁ → ParRed e e₂ → (∃ e', ParRed e₁ e' ∧ ParRed e₂ e') := by
-  intro h₁ h₂
-  induction e generalizing e₁ e₂
-  · cases h₁
-    cases h₂
-    exact ⟨_, ParRed.refl, ParRed.refl⟩
-  · rename_i m a₁ a₂ ih₁ ih₂
-    cases h₁
-    cases h₂
-    rename_i _ _ ha₁ ha₂ _ _ ha₃ ha₄
-    have ⟨e, ha, hb⟩ := ih₁ ha₁ ha₃
-    have ⟨e', ha', hb'⟩ := ih₂ ha₂ ha₄
-    exact ⟨((Π' m)e, e'), .Pival ha ha', .Pival hb hb'⟩
-  repeat (cases h₁; cases h₂; exact ⟨_, ParRed.refl, ParRed.refl⟩)
-  · rename_i a b ih₁ ih₂
-    match h₁.par_app with
-    | .inl ⟨e₄, hr, heq⟩ =>
-      have hb := h₂.par_app
-      
-      sorry
-    | .inr ⟨f', x', h_p_f', h_p_x', h_eq₁⟩ =>
-      match h₂.par_app with
-      | .inr ⟨f'₁, x'₁, h_p_f'₁, h_p_x'₁, h_eq₂⟩ =>
-        cases h_eq₁
-        cases h_eq₂
-        
-        sorry
-      | _ => sorry
-
-theorem confluence : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
-  sorry
 

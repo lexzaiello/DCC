@@ -1,5 +1,8 @@
 import Dcc.Syn.JudgePi
 import Dcc.Syn.Confluence
+import Lean
+import Qq
+open Qq
 
 syntax "gen_reduce" : tactic
 syntax "convpi" : tactic
@@ -29,6 +32,8 @@ inductive gen.judge_conv : Expr → Expr → Prop
   | zero : Judge α x → judge_conv α x
   | succ : gen.judge_conv α₂ x → (gen α₁).fst = α₂ → gen.judge_conv α₁ x
 
+@[simp] theorem gen.eq.of_gen : (gen a).fst = b → gen.eq a b := gen.eq.step
+
 def gen.n_norm (n : ℕ) (e : Expr) : ((e' : Expr) × (PLift <| gen.eq e e')) :=
   match n with
   | .zero => ⟨(gen e).fst, ⟨gen.eq.step (a := e) (b := (gen e).fst) rfl⟩⟩
@@ -45,6 +50,57 @@ def gen.judge_conv.judge : gen.judge_conv α x → Judge α x := by
     assumption
     case succ α₂ h α₁ =>
       exact ⟨α₂, .refl, gen.sound h_gen⟩
+
+def find_judge (tgt : Lean.Expr) : Lean.Elab.Tactic.TacticM (Option Lean.FVarId) := do
+  let lctx ← Lean.MonadLCtx.getLCtx
+  for localDecl in lctx do
+    if localDecl.isImplementationDetail then continue
+    let type := localDecl.type
+    if type.isAppOfArity ``Judge 2 then
+      let args := type.getAppArgs
+      let xInCtx := args[1]!
+      if ← Lean.Meta.isDefEq xInCtx tgt then
+        return some localDecl.fvarId
+  return none
+
+def decode (e : Lean.Expr) : Lean.Elab.Tactic.TacticM Expr :=
+  let dec_n (m : Lean.Expr) : Lean.Elab.Tactic.TacticM ℕ := do
+    match ← Lean.Meta.getNatValue? m with
+    | .some n => pure n
+    | _ => throwError "not a valid sort"
+
+  match e with
+  | .app (.const `Expr.Srt []) m  => .Srt <$> dec_n m
+  | .app (.app (.app (.const `Expr.Pi []) m) α) β => do
+    return .Pi (← dec_n m) (← decode α) (← decode β)
+  | (.app (.app (.const `Expr.K' []) m) n) => do
+    return .K' (← dec_n m) (← dec_n n)
+  | (.app (.app (.const `Expr.K []) m) n) => do
+    return .K (← dec_n m) (← dec_n n)
+  | (.app (.app (.app (.const `Expr.S []) m) n) o) => do
+    return .S (← dec_n m) (← dec_n n) (← dec_n o)
+  | (.app (.const `Expr.I []) m) => do
+    return .I (← dec_n m)
+  | .const `Expr.hole [] => return .hole
+  | .const `Expr.next [] => return .next
+  | .const `Expr.read [] => return .read
+  | .const `Expr.assert [] => return .assert
+  | .const `Expr.app' [] => return .app'
+  | (.app (.app (.const `Expr.app []) f) x) => return .app (← decode f) (← decode x)
+  | _ => throwError "not supported"
+
+elab "gen_judge" num* : tactic => do
+  let goal ← Lean.Elab.Tactic.getMainGoal
+  goal.withContext do
+    let target : Q(Prop) ← goal.getType
+    match target with
+    | ~q(Judge $α $x) =>
+      match ← find_judge x with
+      | .some e =>
+        
+        sorry
+      | .none => throwError "no matching hypothesis"
+    | _ => throwError "not supported"
 
 @[simp] theorem judge_self : ∃ C, ParRed a C ∧ ParRed a C :=
   ⟨a, .refl, .refl⟩
@@ -89,23 +145,6 @@ theorem assert_n' {n : ℕ} {fn : Expr} : ∃ e₁ e₂ e₃ e₄, ParRed ⸨(as
     refine ⟨_, .app (.app (.read .refl) .refl) .refl, ?_⟩
     refine ⟨_, (.app (.app (.assert .refl) .refl) (.refl)), ?_⟩
     exact ⟨_, .assert .refl, .refl⟩
-
-#eval Std.ToFormat.format <| (gen.n_norm 6 ⸨(K.type 2 3) .hole⸩).fst
-
-theorem gen_pi_eq : gen.eq ((Pi m α β).app x) (Pi m (α.app x) (β.app x)) := by
-  apply gen.eq.step
-  unfold gen
-  repeat split
-  simp_all
-  
-  sorry
-
-theorem K.type.eval₁ {m n : Level} {α : Expr} : gen.eq ⸨(K.type m n) α⸩ ((Π' m) ⸨(Srt m) α⸩,
- ((Π' m) ((Π' n.succ) α, ⸨assert (Srt n)⸩),
-  ((Π' m) ⸨assert α⸩,
-   ((Π' m) ⸨⸨⸨$ read⸩ assert⸩ ⸨next read⸩⸩, ⸨assert ⸨assert ⸨⸨read ⸨⸨assert assert⸩ α⸩⸩ ⸨read α⸩⸩⸩⸩)))) := by
- unfold K.type
- 
 
 theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (Srt n)) β)
   (h_x : Judge α x) (h_y : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by

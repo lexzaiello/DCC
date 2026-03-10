@@ -31,7 +31,7 @@ inductive Err : Expr → Type where
   | no_type  : NoType e → Err e
   | mismatch : InferAs ((Π' m) α, β) f
     → InferAs α₂ x
-    → (¬ gen.eq α α₂)
+    → (¬ (∃ C, (gen α).fst = C ∧ (gen α₂).fst = C))
     → Err ⸨f x⸩
   | not_fn   : InferAs t_f f
     → (¬ ∃ m α β, gen.eq t_f ((Π' m) α, β))
@@ -81,8 +81,7 @@ open Expr in def infer (e : Expr) (expected : Option Expr := .none) : ((t : Expr
         let h : InferAs (gen ⸨β x⸩).fst ⸨f x⸩ := InferAs.app heq₁ (.conv heq₂ (⟨(gen α₂).fst, rfl, hrw⟩)) rfl
         ⟨(gen ⸨β x⸩).fst, .ok h⟩
       else
-        ⟨⸨β x⸩, .error (by sorry)⟩
-        sorry
+        ⟨⸨β x⸩, .error (.mismatch heq₁ heq₂ (by intro ⟨C, h₁, h₂⟩; exact hrw (h₁.trans h₂.symm)))⟩
     | ⟨t, _⟩, _ => .error <| "not a function type: " ++ (format t)
   | e => .error <| "not well-typed: " ++ (format e)
 

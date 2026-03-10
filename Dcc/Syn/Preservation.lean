@@ -113,11 +113,20 @@ elab "gen_judge" steps:num* : tactic => do
     let target : Q(Prop) ← goal.getType
     match target with
     | ~q(Judge $α $x) =>
+      let tgt_dec ← decode α
       match ← find_judge x with
       | .some e =>
         let reflected ← decode x
         let n_steps := (steps.toList.head?.getD (Lean.Syntax.mkNatLit 100)).getNat
-        
+        let rec do_gen (h_judge : Lean.Expr) (e : Q(Expr)) (n : ℕ) : (Lean.Elab.Tactic.TacticM Lean.Expr) := do
+          let h : Q(((e' : Expr) × (PLift (Reduces $e e')))) := ← Lean.Meta.reduceAll q(gen $e)
+          let mjudge : Lean.Expr := ((Lean.Expr.const `Judge.conv []).app h_judge).app
+              (.app
+                ((Lean.Expr.const `Prod.mk []).app ((Lean.Expr.const `Sigma.fst []).app h))
+                (.app (.const `gen.sound []) (.const `rfl [])))
+          match n with
+          | .zero => return mjudge
+          | .succ n => do_gen mjudge q(Sigma.fst $h) n
         sorry
       | .none => throwError "no matching hypothesis"
     | _ => throwError "not supported"

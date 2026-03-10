@@ -19,7 +19,7 @@ inductive Expr where
   | assert : Expr
   | app'   : Expr
   | app    : Expr  → Expr → Expr
-deriving BEq, Repr, DecidableEq
+deriving BEq, Repr, DecidableEq, Lean.ToExpr
 
 open Expr
 

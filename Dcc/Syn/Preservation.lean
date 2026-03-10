@@ -29,6 +29,13 @@ inductive gen.judge_conv : Expr → Expr → Prop
   | zero : Judge α x → judge_conv α x
   | succ : gen.judge_conv α₂ x → (gen α₁).fst = α₂ → gen.judge_conv α₁ x
 
+def gen.n_norm (n : ℕ) (e : Expr) : ((e' : Expr) × (PLift <| gen.eq e e')) :=
+  match n with
+  | .zero => ⟨(gen e).fst, ⟨gen.eq.step (a := e) (b := (gen e).fst) rfl⟩⟩
+  | .succ n =>
+    let ⟨inner, ⟨h⟩⟩ := gen.n_norm n e
+    ⟨(gen inner).fst, ⟨gen.eq.trans h (.step (b := (gen inner).fst) rfl)⟩⟩
+
 def gen.judge_conv.judge : gen.judge_conv α x → Judge α x := by
   intro h
   induction h with
@@ -83,7 +90,22 @@ theorem assert_n' {n : ℕ} {fn : Expr} : ∃ e₁ e₂ e₃ e₄, ParRed ⸨(as
     refine ⟨_, (.app (.app (.assert .refl) .refl) (.refl)), ?_⟩
     exact ⟨_, .assert .refl, .refl⟩
 
-theorem K.β.eval : ⸨(K.type m n) α⸩
+#eval Std.ToFormat.format <| (gen.n_norm 6 ⸨(K.type 2 3) .hole⸩).fst
+
+theorem gen_pi_eq : gen.eq ((Pi m α β).app x) (Pi m (α.app x) (β.app x)) := by
+  apply gen.eq.step
+  unfold gen
+  repeat split
+  simp_all
+  
+  sorry
+
+theorem K.type.eval₁ {m n : Level} {α : Expr} : gen.eq ⸨(K.type m n) α⸩ ((Π' m) ⸨(Srt m) α⸩,
+ ((Π' m) ((Π' n.succ) α, ⸨assert (Srt n)⸩),
+  ((Π' m) ⸨assert α⸩,
+   ((Π' m) ⸨⸨⸨$ read⸩ assert⸩ ⸨next read⸩⸩, ⸨assert ⸨assert ⸨⸨read ⸨⸨assert assert⸩ α⸩⸩ ⸨read α⸩⸩⸩⸩)))) := by
+ unfold K.type
+ 
 
 theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (Srt n)) β)
   (h_x : Judge α x) (h_y : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by

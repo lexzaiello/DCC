@@ -153,6 +153,10 @@ inductive Comb : Expr → Prop where
   | read    : Comb read
   | assert₀ : Comb assert
 
+inductive TypedAtom : Expr → Prop where
+  | comb    : Comb e → TypedAtom e
+  | Srt     : TypedAtom (Srt m)
+
 inductive Atom : Expr → Prop where
   | comb    : Comb e → Atom e
   | Srt     : Atom (Srt m)

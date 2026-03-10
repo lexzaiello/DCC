@@ -11,12 +11,6 @@ syntax "gen_reduce" : tactic
 syntax "convpi" : tactic
 syntax "subst" : tactic
 
-def judge.step_gen : Judge α x → gen.eq α β → Judge β x := by
-  intro h_t h_eq
-  induction h_eq with
-  | step => exact gen_imp_well_typed (by assumption) (by assumption)
-  | trans h₁ h₂ ih₁ ih₂ => exact ih₂ (ih₁ (by assumption))
-
 inductive gen.judge_conv : Expr → Expr → Prop
   | zero : Judge α x → judge_conv α x
   | succ : gen.judge_conv α₂ x → (gen α₁).fst = α₂ → gen.judge_conv α₁ x
@@ -175,3 +169,5 @@ theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (S
   refine ⟨_, .app (.app (.assert .refl) .refl) .refl, .refl⟩
   exact ⟨α, .assert .refl, .refl⟩
 
+theorem I_well_typed' (h_α : Judge (Srt m) α) (h_x : Judge α x) : Judge α ⸨(I m) α x⸩ := by
+  sorry

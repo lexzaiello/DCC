@@ -5,6 +5,31 @@ import Qq
 open Std (ToFormat Format)
 open Std.ToFormat (format)
 
+open Expr in inductive InferAs : Expr → Expr → Type where
+  | I   : InferAs (I.type m) (I m)
+  | K   : InferAs (K.type m n) (K m n)
+  | K'  : InferAs (K'.type m n) (K' m n)
+  | S   : InferAs (S.type m n o) (S m n o)
+  | Srt : InferAs (Srt m.succ) (Srt m)
+  | Pi  : InferAs (Srt m) ((Π' m) _α, _β)
+    | app  : InferAs ((Π' m) α, β) f
+    → InferAs α x
+    → InferAs ⸨β x⸩ ⸨f x⸩
+  | conv : InferAs α x → gen.eq α β
+    → InferAs β x -- can derive Judge β x with gen
+
+theorem Judgment.sound : InferAs t e → Judge t e := by
+  intro h_t
+  induction h_t
+  · exact Judge.I
+  · exact Judge.K
+  · exact Judge.K'
+  · exact Judge.S
+  · exact Judge.Srt
+  · exact Judge.Pi
+  case app m α β f x h_t_f h_α h_t_f' h_t_x' => exact Judge.app h_t_f' .refl h_t_x' .refl
+  case conv α x β h_t_α heq ih => exact ih.step_gen heq
+
 open Expr in def infer (e : Expr) : Except Format ((t : Expr) × (PLift <| Judge t e)) :=
   match e with
   | Srt m => pure ⟨Srt m.succ, ⟨.Srt⟩⟩

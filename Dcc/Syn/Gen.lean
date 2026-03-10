@@ -181,3 +181,9 @@ def gen.n_norm (n : ℕ) (e : Expr) : ((e' : Expr) × (PLift <| gen.eq e e')) :=
     else
       let ⟨inner, ⟨h⟩⟩ := gen.n_norm n e
       ⟨(gen inner).fst, ⟨gen.eq.trans h (.step (b := (gen inner).fst) rfl)⟩⟩
+
+def Judge.step_gen : Judge α x → gen.eq α β → Judge β x := by
+  intro h_t h_eq
+  induction h_eq with
+  | step => exact gen_imp_well_typed (by assumption) (by assumption)
+  | trans h₁ h₂ ih₁ ih₂ => exact ih₂ (ih₁ (by assumption))

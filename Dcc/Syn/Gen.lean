@@ -213,30 +213,21 @@ theorem gen.eq.symm : gen.eq α β → gen.eq β α := by
   apply gen.eq.trans
   repeat assumption
 
-theorem gen.eq.choose : gen.eq a c → (∃ b, gen.eq a b ∧ ParRed b c) ∨ (a = c) := by
+theorem gen.eq.choose : gen.eq a c → (∃ b, gen.eq a b ∧ ParRed b c) := by
   intro h
   induction h
   rename_i a₁ _
-  exact Or.inr rfl
+  exact ⟨_, (by apply gen.eq.refl; apply ParRed.refl), ParRed.refl⟩
   rename_i a'
-  refine Or.inl (⟨a', ?_, by apply gen.sound; rfl⟩)
+  refine ⟨a', ?_, by apply gen.sound; rfl⟩
   apply gen.eq.refl
   apply ParRed.refl
   case trans a₂ c₂ b₂ heq₁ heq₂ ih₁ ih₂ =>
     have heq_whack := heq₁.trans heq₂
-    match ih₁, ih₂ with
-    | .inl h₁, .inl h₂ =>
-      simp_all
-      refine Or.inl ⟨_, ?_, .refl⟩
-      exact heq_whack
-    | .inr h₁, .inr h₂ =>
-      simp_all
-    | .inl h₁, .inr h₂ =>
-      simp_all
-    | .inr h₁, .inl h₂ =>
-      simp_all
-      let ⟨e, heq₁, hpr₁⟩ := h₂
-      exact Or.inl ⟨_, heq_whack, .refl⟩
+    let ⟨e, heq₁, hpr₁⟩ := ih₁
+    let ⟨e₂, heq₂, hpr₂⟩ := ih₂
+    refine ⟨_, ?_, ParRed.refl⟩
+    exact heq_whack
 
 def Judge.step_gen : Judge α x → gen.eq α β → Judge β x := by
   intro h_t h_eq
@@ -246,6 +237,8 @@ def Judge.step_gen : Judge α x → gen.eq α β → Judge β x := by
   | trans g₁ g₂ ih₁ ih₂=>
     have h := ih₁ h_t
     have h' := h (by apply gen.eq.trans; exact g₁.symm; apply gen.eq.refl; exact ParRed.refl)
+    apply Judge.conv
+    exact h'
     
     sorry
   | refl => exact h_t

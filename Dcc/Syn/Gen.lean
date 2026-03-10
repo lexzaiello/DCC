@@ -169,7 +169,7 @@ theorem gen_pi {m : Level} {α β x : Expr} : ∃ α' β', (gen ⸨((Π' m) α, 
 inductive gen.eq : Expr → Expr → Prop
   | refl  : ParRed a a → gen.eq a a
   | step  : gen.eq a (gen a).fst
-  | trans : gen.eq a b → gen.eq b c → gen.eq a c
+  | trans : gen.eq a c → gen.eq b c → gen.eq a b
 
 @[simp] theorem gen.eq.of_gen : (gen a).fst = b → gen.eq a b := fun h => by
   rw [← h]
@@ -189,13 +189,41 @@ open Expr in def gen.n_norm (n : ℕ) (e : Expr) : ((e' : Expr) × (PLift <| gen
     | .read => ⟨read, ⟨.refl .refl_read⟩⟩
     | assert => ⟨assert, ⟨.refl .refl_assert⟩⟩
     | x => ⟨(gen x).fst, ⟨.step⟩⟩
-  | .succ n =>
-    let ⟨e', eq⟩ := gen.n_norm n e
-    ⟨(gen e').fst, ⟨gen.eq.trans eq.down .step⟩⟩
+  | .succ n => by
+    refine ⟨(gen ((gen e).fst)).fst, ⟨?_⟩⟩
+    apply gen.eq.trans
+    apply gen.eq.step
+    apply gen.eq.trans
+    apply gen.eq.trans
+    apply gen.eq.refl
+    apply ParRed.refl
+    apply gen.eq.step
+    apply gen.eq.refl
+    apply ParRed.refl
+
+theorem gen.symm : gen.eq α β → gen.eq β α := by
+  intro h
+  induction h
+  apply gen.eq.refl
+  apply ParRed.refl
+  apply gen.eq.trans
+  apply gen.eq.refl
+  apply ParRed.refl
+  apply gen.eq.step
+  apply gen.eq.trans
+  repeat assumption
 
 def Judge.step_gen : Judge α x → gen.eq α β → Judge β x := by
   intro h_t h_eq
   induction h_eq with
   | step => exact gen_imp_well_typed (by assumption) rfl
-  | trans h₁ h₂ ih₁ ih₂ => exact ih₂ (ih₁ (by assumption))
+  | trans g₁ g₂ ih₁ ih₂=>
+    have h := ih₁ h_t
+    
+    apply Judge.conv
+    apply Judge.conv
+    assumption
+    refine ⟨_, (gen _).snd.down.hpar, .refl⟩
+    refine ⟨_, (gen _).snd.down.hpar, by sorry⟩
   | refl => exact h_t
+

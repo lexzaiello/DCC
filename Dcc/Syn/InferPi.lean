@@ -17,7 +17,7 @@ inductive InferAs : Expr → Expr → Type where
     | app  : InferAs ((Π' m) α, β) f
     → InferAs α x
     → InferAs ⸨β x⸩ ⸨f x⸩
-  | conv : InferAs α x → ParRed α β → InferAs β x
+  | conv : InferAs β x → (gen.eq α β) → InferAs α x
 
 inductive NoType : Expr → Type where
   | app'      : NoType app'
@@ -30,11 +30,13 @@ inductive Err : Expr → Type where
   | no_type  : NoType e → Err e
   | mismatch : InferAs ((Π' m) α, β) f
     → InferAs α₂ x
-    → (¬ ParRed α α₂)
+    → (¬ gen.eq α α₂)
     → Err ⸨f x⸩
   | not_fn   : InferAs t_f f
-    → (¬ ∃ m α β, ParRed t_f ((Π' m) α, β))
+    → (¬ ∃ m α β, gen.eq t_f ((Π' m) α, β))
     → Err ⸨f x⸩
+  | appl     : Err f → Err ⸨f x⸩
+  | appr     : Err x → Err ⸨f x⸩
 
 inductive Inference : Expr → Expr → Type where
   | ok    : InferAs t e → Inference t e
@@ -51,34 +53,40 @@ theorem Judgment.sound : InferAs t e → Judge t e := by
   · exact Judge.Pi
   case app m α β f x h_t_f h_α h_t_f' h_t_x' => exact Judge.app h_t_f' .refl h_t_x' .refl
   case conv α x β h_t_α heq ih =>
-    exact Judge.conv ih ⟨β, heq, .refl⟩
+    exact ih.step_gen (by sorry)
 
-open Expr in def infer (e : Expr) : Except Format ((t : Expr) × (PLift <| Judge t e)) :=
+open Expr in def infer (e : Expr) (expected : Option Expr := .none) : ((t : Expr) × Inference t e) :=
   match e with
-  | Srt m => pure ⟨Srt m.succ, ⟨.Srt⟩⟩
-  | Pi m _α _β => pure ⟨Srt m, ⟨.Pi⟩⟩
-  | K' m n => pure ⟨K'.type m n, ⟨.K'⟩⟩
-  | K m n => pure ⟨K.type m n, ⟨.K⟩⟩
-  | S m n o => pure ⟨S.type m n o, ⟨.S⟩⟩
-  | I m => pure ⟨I.type m, ⟨.I⟩⟩
-  | .app f x => do
-    match ← infer f, ← infer x with
-    | ⟨(Π' _m) α₁, β, heq₁⟩, ⟨α₂, heq₂⟩ =>
+  | Srt m => ⟨Srt m.succ, .ok .Srt⟩
+  | Pi m _α _β => ⟨Srt m, .ok .Pi⟩
+  | K' m n => ⟨K'.type m n, .ok .K'⟩
+  | K m n => ⟨K.type m n, .ok .K⟩
+  | S m n o => ⟨S.type m n o, .ok .S⟩
+  | I m => ⟨I.type m, .ok .I⟩
+  | .app f x =>
+    match infer f, infer x with
+    | ⟨a, .error e⟩, ⟨_b, _⟩ => ⟨⸨a x⸩, .error <| .appl e⟩
+    | ⟨a, _⟩, ⟨_b, .error e⟩ => ⟨⸨a x⸩, .error <| .appr e⟩
+    | tf@⟨(Π' _m) α₁, β, .ok heq₁⟩, tx@⟨α₂, .ok heq₂⟩ =>
       if hrw : (gen α₁).fst = (gen α₂).fst then
-        have β' := gen ⸨β x⸩
-        have h_t : Judge (gen ⸨β x⸩).fst ⸨f x⸩ := by
-          apply Judge.conv
-          apply Judge.app
-          exact heq₁.down
-          exact .refl
-          apply Judge.conv
-          exact heq₂.down
-          exact ⟨(gen α₂).fst, gen.sound rfl, by apply gen.sound; exact hrw⟩
-          exact .refl
-          exact ⟨(gen ⸨β x⸩).fst, gen.sound rfl, .refl⟩
-        pure ⟨(gen ⸨β x⸩).fst, ⟨h_t⟩⟩
+        have h_inf_f' : InferAs (gen α₁).fst f := by
+          sorry
+        have h_inf_x' : InferAs (gen α₂).fst x := by
+          sorry
+        --let h_t₀ := InferAs.app (α := α₁) (β := β) (x := x) heq₁ (.conv h_inf_x' (by rw [← hrw]; exact gen.eq.step))
+        let ⟨t', red⟩ := (gen ⸨β x⸩)
+        let h_inf₀ : InferAs (β.app x) ⸨f x⸩ := by
+          apply InferAs.app
+          assumption
+          apply InferAs.conv
+          assumption
+          rw [← hrw]
+          apply gen.eq.step
+          rw [hrw]
+          sorry
+        ⟨(gen ⸨β x⸩).fst, .ok <| .conv (by sorry) .step⟩
       else
-        .error <| (format (gen α₁).fst) ++ " ≠ " ++ (format (gen α₂).fst)
+        sorry
     | ⟨t, _⟩, _ => .error <| "not a function type: " ++ (format t)
   | e => .error <| "not well-typed: " ++ (format e)
 

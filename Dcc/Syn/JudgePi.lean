@@ -292,9 +292,11 @@ inductive Judge : Expr → Expr → Prop
   | S   : Judge (S.type m n o) (S m n o)
   | Srt : Judge (Srt m.succ) (Srt m)
   | Pi  : Judge (Srt m) ((Π' m) _α, _β)
-  | app : Judge ((Π' _m) α, β) f
-    → Judge α x
-    → Judge ⸨β x⸩ ⸨f x⸩
+  | app : Judge ((Π' _m) α₁, β) f
+    → Judge α₂ x
+    → (∃ C, ParRed α₁ C ∧ ParRed α₂ C)
+    → ParRed ⸨β x⸩ β'
+    → Judge β' ⸨f x⸩
   | conv : Judge A x → (∃ C, ParRed A C ∧ ParRed B C) → Judge B x
 
 theorem Step.sound (e₁ e₂) : Red e₁ e₂ → eval e₁ = .ok e₂ := by
@@ -349,9 +351,6 @@ theorem Step.complete (e₁ e₂) : eval e₁ = .ok e₂ → Red e₁ e₂ := by
     simp_all
 
 namespace Judge
-
-theorem inv : Judge ((Π' m) α, β) f → Judge α x → Judge ⸨β x⸩ ⸨f x⸩ := by
-  apply Judge.app
 
 end Judge
 

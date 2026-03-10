@@ -248,6 +248,40 @@ theorem Red.confluence : Red a b → Red a c → ∃ d, RedStar b d ∧ RedStar 
   cases hb
   repeat (cases hc; exact ⟨_, RedStar.refl, RedStar.refl⟩)
 
+theorem gen_is_maximal (h : ParRed e e') : ParRed e' (gen e).fst := by
+  induction h
+  repeat (apply gen.sound; rfl)
+  case I x x' m α h_x h_x' =>
+    unfold gen
+    split
+    cases (gen x).snd
+    simp_all
+  case K x x' m n α β y h_x h_x' =>
+    unfold gen
+    split
+    cases (gen x).snd
+    simp_all
+  case K' x x' m n α β y h_x h_x' =>
+    unfold gen
+    split
+    cases (gen x).snd
+    simp_all
+  case S x x' y y' z z' m n o α β γ h_x h_y h_z ih₁ ih₂ ih₃ =>
+    unfold gen
+    split
+    cases h₁ : gen x
+    cases h₂ : gen y
+    cases h₃ : gen z
+    split
+    split
+    simp
+    apply ParRed.app
+    apply ParRed.app
+    repeat simp_all
+    apply ParRed.app
+    repeat simp_all
+    
+
 theorem gen.max (p : ParRed e e') : ParRed e' (gen e).fst := by
   match p.step_whole_or_parts_refl with
   | .inl h =>

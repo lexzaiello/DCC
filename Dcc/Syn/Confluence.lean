@@ -276,11 +276,56 @@ theorem gen_is_maximal (h : ParRed e e') : ParRed e' (gen e).fst := by
     split
     simp
     apply ParRed.app
+    repeat (apply ParRed.app; repeat simp_all)
+  case Pi α α' β β' x x' m h_a h_b h_x ih₁ ih₂ ih₃ =>
+    unfold gen
+    split
+    cases h₁ : gen α
+    cases h₂ : gen β
+    cases h₃ : gen x
+    split
+    split
+    simp
+    apply ParRed.Pival
+    simp_all
+    repeat (apply ParRed.app; repeat simp_all)
+  case Pival α α' β β' m h_a h_b ih₁ ih₂ =>
+    unfold gen
+    split
+    cases h₁ : gen α
+    cases h₂ : gen β
+    split
+    simp
+    apply ParRed.Pival
+    repeat simp_all
+  · unfold gen
+    split
+    simp_all
+  · unfold gen
+    split
+    simp_all
+  · unfold gen
+    split
+    simp_all
+  case app' f f' g g' x x' π h_f h_g h_x ih₁ ih₂ ih₃ =>
+    unfold gen
+    split
+    cases h₁ : gen f
+    cases h₂ : gen g
+    cases h₃ : gen x
+    split
+    split
+    simp
+    apply ParRed.app
+    apply ParRed.app
+    exact ParRed.refl
     apply ParRed.app
     repeat simp_all
     apply ParRed.app
     repeat simp_all
+  case app f f' x x' h_f h_x ih₁ ih₂ =>
     
+    sorry
 
 theorem gen.max (p : ParRed e e') : ParRed e' (gen e).fst := by
   match p.step_whole_or_parts_refl with

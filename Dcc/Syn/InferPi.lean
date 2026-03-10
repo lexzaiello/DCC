@@ -1,6 +1,5 @@
 import Dcc.Syn.JudgePi
-import Dcc.Syn.Confluence
-import Dcc.Syn.Preservation
+import Dcc.Syn.Gen
 
 open Std (ToFormat Format)
 open Std.ToFormat (format)
@@ -31,6 +30,8 @@ open Expr in def infer (e : Expr) : Except Format ((t : Expr) × (PLift <| Judge
         .error <| (format (gen α₁).fst) ++ " ≠ " ++ (format (gen α₂).fst)
     | ⟨t, _⟩, _ => .error <| "not a function type: " ++ (format t)
   | e => .error <| "not well-typed: " ++ (format e)
+
+theorem infer.sound : infer e = .ok res → Judge res.fst e := fun _ => res.snd.down
 
 namespace _examples
 

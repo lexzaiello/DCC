@@ -1,5 +1,7 @@
 import Dcc.Syn.JudgePi
+import Dcc.Syn.Gen
 import Dcc.Syn.Confluence
+import Dcc.Syn.Gen
 import Lean
 import Qq
 open Expr
@@ -7,20 +9,6 @@ open Expr
 syntax "gen_reduce" : tactic
 syntax "convpi" : tactic
 syntax "subst" : tactic
-
-theorem gen_imp_well_typed : Judge α x → (gen α).fst = β → Judge β x := fun h_t h_g =>
-  Judge.conv h_t ⟨β, gen.sound h_g, .refl⟩
-
-theorem gen_pi {m : Level} {α β x : Expr} : ∃ α' β', (gen ⸨((Π' m) α, β) x⸩).fst = ((Π' m) α', β') := by
-  cases h₁ : (gen ⸨((Π' m) α, β) x⸩).fst with
-  | _ =>
-    unfold gen at h₁
-    repeat split at h₁
-    simp_all
-
-inductive gen.eq : Expr → Expr → Prop
-  | step  : (gen a).fst = b → gen.eq a b
-  | trans : gen.eq a b → gen.eq b c → gen.eq a c
 
 def judge.step_gen : Judge α x → gen.eq α β → Judge β x := by
   intro h_t h_eq
@@ -31,18 +19,6 @@ def judge.step_gen : Judge α x → gen.eq α β → Judge β x := by
 inductive gen.judge_conv : Expr → Expr → Prop
   | zero : Judge α x → judge_conv α x
   | succ : gen.judge_conv α₂ x → (gen α₁).fst = α₂ → gen.judge_conv α₁ x
-
-@[simp] theorem gen.eq.of_gen : (gen a).fst = b → gen.eq a b := gen.eq.step
-
-def gen.n_norm (n : ℕ) (e : Expr) : ((e' : Expr) × (PLift <| gen.eq e e')) :=
-  match n with
-  | .zero => ⟨(gen e).fst, ⟨gen.eq.step (a := e) (b := (gen e).fst) rfl⟩⟩
-  | .succ n =>
-    if (gen e).fst == e then
-      ⟨(gen e).fst, ⟨gen.eq.step (a := e) (b := (gen e).fst) rfl⟩⟩
-    else
-      let ⟨inner, ⟨h⟩⟩ := gen.n_norm n e
-      ⟨(gen inner).fst, ⟨gen.eq.trans h (.step (b := (gen inner).fst) rfl)⟩⟩
 
 def gen.judge_conv.judge : gen.judge_conv α x → Judge α x := by
   intro h
@@ -97,10 +73,6 @@ example : Judge (I.type 0) (I 0) := by
 macro_rules
   | `(tactic| subst) => `(tactic| exact ⟨_, .app (.app (.Pi .refl .refl .refl) .refl) .refl, .refl⟩)
   | `(tactic| convpi) => `(tactic| exact ⟨_, ParRed.Pi .refl .refl .refl, .refl⟩)
-  | `(tactic| gen_reduce) => `(tactic| exact ⟨(gen _).fst, (gen _).snd.down.hpar, by
-    unfold gen
-    split
-    exact ParRed.refl⟩ )
 
 open Expr
 

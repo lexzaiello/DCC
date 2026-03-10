@@ -2,7 +2,7 @@ import Dcc.Syn.JudgePi
 import Dcc.Syn.Confluence
 import Lean
 import Qq
-open Qq
+open Expr
 
 syntax "gen_reduce" : tactic
 syntax "convpi" : tactic
@@ -51,17 +51,17 @@ def gen.judge_conv.judge : gen.judge_conv α x → Judge α x := by
     case succ α₂ h α₁ =>
       exact ⟨α₂, .refl, gen.sound h_gen⟩
 
-def find_judge (tgt : Lean.Expr) : Lean.Elab.Tactic.TacticM (Option Lean.FVarId) := do
-  let lctx ← Lean.MonadLCtx.getLCtx
-  for localDecl in lctx do
-    if localDecl.isImplementationDetail then continue
-    let type := localDecl.type
-    if type.isAppOfArity ``Judge 2 then
-      let args := type.getAppArgs
-      let xInCtx := args[1]!
-      if ← Lean.Meta.isDefEq xInCtx tgt then
-        return some localDecl.fvarId
-  return none
+open Qq in def find_judge (tgt : Q(Expr)) : Lean.Elab.Tactic.TacticM Lean.Expr := do
+  let hyps ← Lean.getLocalHyps
+  hyps.toList.firstM (fun e => do
+    let t ← Lean.Meta.inferType e
+    match t with
+    | (Lean.Expr.app (.app (.const `Judge []) _a) x) =>
+      if x == tgt then
+        pure e
+      else
+        throwError "no matching hypothesis"
+    | _ => throwError "no matching hypothesis")
 
 def dec_n (m : Lean.Expr) : Lean.Elab.Tactic.TacticM ℕ := do
     match ← Lean.Meta.getNatValue? m with
@@ -89,7 +89,7 @@ def decode (e : Lean.Expr) : Lean.Elab.Tactic.TacticM Expr :=
   | (.app (.app (.const `Expr.app []) f) x) => return .app (← decode f) (← decode x)
   | _ => throwError "not supported"
 
-def Expr.toLeanExpr : Expr → Q(Expr)
+open Qq in def Expr.toLeanExpr : Expr → Q(Expr)
   | .Srt m => q(Expr.Srt $m)
   | .app' => q(Expr.app')
   | .hole => q(Expr.hole)
@@ -107,31 +107,41 @@ instance Expr.instToExpr : Lean.ToExpr Expr where
   toExpr := Expr.toLeanExpr
   toTypeExpr := Lean.Expr.const `Expr []
 
-elab "gen_judge" steps:num* : tactic => do
+open Qq in elab "gen_judge" steps:num* : tactic => do
   let goal ← Lean.Elab.Tactic.getMainGoal
-  goal.withContext do
-    let target : Q(Prop) ← goal.getType
-    let proof ← match target with
-    | ~q(Judge $α $x) =>
-      match ← find_judge x with
-      | .some e =>
-        let n_steps := (steps.toList.head?.getD (Lean.Syntax.mkNatLit 100)).getNat
+  let goalDecl ← goal.getDecl
+  let lctx := goalDecl.lctx
+  let t_goal ← Lean.Meta.reduceAll (← goal.getType)
+  match t_goal with
+  | (Lean.Expr.app (Lean.Expr.app (Lean.Expr.const `Judge []) α) x) =>
+    let α ← Lean.Meta.reduceAll α -- α
+    let x ← Lean.Meta.reduceAll x -- x
+    for decl in lctx do
+      if decl.isImplementationDetail then continue
+      let t ← Lean.Meta.reduceAll decl.type
+      let hyp ← Lean.Meta.reduceAll decl.value -- judge B x
+      match t with
+      | (Lean.Expr.app (Lean.Expr.app (Lean.Expr.const `Judge []) _α₂) x₂) =>
+        let x₂ ← Lean.Meta.reduceAll x₂
+        if ¬ x == x₂ then continue
+        let n_steps := (steps.toList.head?.getD (Lean.Syntax.mkNatLit 1)).getNat
         let rec do_gen (h_judge : Lean.Expr) (e : Q(Expr)) (n : ℕ) : (Lean.Elab.Tactic.TacticM Lean.Expr) := do
-          let h : Q(((e' : Expr) × (PLift (Reduces $e e')))) := ← Lean.Meta.reduceAll q(gen $e)
-          let mjudge : Lean.Expr := ((Lean.Expr.const `Judge.conv []).app h_judge).app
-              (.app
-                ((Lean.Expr.const `Prod.mk []).app ((Lean.Expr.const `Sigma.fst []).app h))
-                (.app (.const `gen.sound []) (.const `rfl [])))
+          let h : Q(Expr) := ← Lean.Meta.reduceAll q(Sigma.fst (gen $e))
+          let u ← Lean.Meta.getLevel (← Lean.Meta.inferType h)
+          let mjudge : Lean.Expr := ((((((Lean.Expr.const `gen_imp_well_typed []).app e).app x).app h).app h_judge).app (.app (.app (.const `rfl [u]) (.const `Expr [])) h))
           match n with
           | .zero => return mjudge
-          | .succ n => do_gen mjudge q(Sigma.fst $h) n
-        let hyp := Lean.mkFVar e
-        let proof ← do_gen hyp x n_steps
-        let m ← Lean.mkFreshMVarId
-        m.assign proof
-        Lean.Elab.Tactic.replaceMainGoal [m]
-      | .none => throwError "no matching hypothesis"
-    | _ => throwError "not supported"
+          | .succ n => do_gen mjudge h n
+        let proof ← do_gen (← Lean.Meta.reduceAll hyp) α n_steps
+        dbg_trace proof
+        goal.assign proof
+      | _ => continue
+  | _ => throwError "not supported"
+
+example : Judge (I.type 0) (I 0) := by
+  let h : Judge (I.type 0) (I 0) := Judge.I
+  gen_judge 0
+
 
 @[simp] theorem judge_self : ∃ C, ParRed a C ∧ ParRed a C :=
   ⟨a, .refl, .refl⟩

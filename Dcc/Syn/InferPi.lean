@@ -17,12 +17,10 @@ inductive InferAs : Expr → Expr → Type where
   | S   : InferAs (S.type m n o) (S m n o)
   | Srt : InferAs (Srt m.succ) (Srt m)
   | Pi  : InferAs (Srt m) ((Π' m) _α, _β)
-  | app  : InferAs ((Π' m) α₁, β) f
-    → ParRed α₁ α₂
-    → InferAs α₂ x
-    → ParRed ⸨β x⸩ t'
-    → InferAs t' ⸨f x⸩
-  | conv : InferAs A x → (∃ C, ParRed A C ∧ ParRed B C) → InferAs B x
+  | app  : InferAs ((Π' m) α, β) f
+    → InferAs α x
+    → InferAs ⸨β x⸩ ⸨f x⸩
+  | conv : InferAs A x → (∃ C, Reduces A C ∧ Reduces B C) → InferAs B x
 
 inductive NoType : Expr → Type where
   | app'      : NoType app'
@@ -56,17 +54,16 @@ theorem InferAs.sound : InferAs t e → Judge t e := by
   · exact Judge.S
   · exact Judge.Srt
   · exact Judge.Pi
-  case app m α β f x t' h_t_f h_t_x h_eq h_t_f' h_t_x' =>
-    apply Judge.app
+  · apply Judge.app
     assumption
     exact .refl
     assumption
-    exact h_eq
+    exact .refl
   case conv α x β h_t_α heq ih =>
     let ⟨C, heq₁, heq₂⟩ := heq
     apply Judge.conv
     assumption
-    exact ⟨C, heq₁, heq₂⟩
+    exact ⟨C, heq₁.hpar, heq₂.hpar⟩
 
 open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
   match e with
@@ -81,18 +78,18 @@ open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
     | .inl e, _ => .inl <| .appl e
     | _, .inl e => .inl <| .appr e
     | .inr tf@⟨(Π' _m) α₁, β, heq₁⟩, .inr tx@⟨α₂, heq₂⟩ =>
-      if hrw : (gen α₁).fst = (gen α₂).fst then
-        have h := gen.sound hrw
-        let h : InferAs (gen ⸨β x⸩).fst ⸨f x⸩ := by
-          apply InferAs.app
-          exact heq₁
-          exact .refl
-          apply InferAs.conv
-          assumption
-          exact ⟨(gen α₂).fst, gen.sound rfl, h⟩
-          apply gen.sound
-          rfl
-        .inr ⟨(gen ⸨β x⸩).fst, h⟩
+      if hrw : (gen α₁).fst = (gen α₂).fst then by
+        apply Sum.inr
+        refine ⟨⸨β x⸩, ?_⟩
+        apply InferAs.app
+        assumption
+        apply InferAs.conv
+        assumption
+        refine ⟨_, (gen α₂).snd.down, ?_, ?_⟩
+        rw [← hrw]
+        exact (gen α₁).snd.down.hpar
+        rw [← hrw]
+        exact (gen α₁).snd.down.hkind
       else
         .inl (.mismatch heq₁ heq₂ (by intro ⟨C, h₁, h₂⟩; exact hrw (h₁.trans h₂.symm)))
     | .inr t, _ => .inl <| .not_fn t.fst
@@ -114,9 +111,20 @@ this infer function is used to solve lean goals.
 
 syntax "decide_infer" : tactic
 
-def do_decide_infer (x : Expr) : Lean.Elab.Tactic.TacticM Lean.Expr := do
+def InferAs.render (e : InferAs t x) : Lean.Expr :=
+  match e with
+  | I => by
+    
+    sorry
+
+open Qq Lean Meta Elab Tactic in
+def do_decide_infer (x : _root_.Expr) : Lean.Elab.Tactic.TacticM Unit := do
   match infer x with
-  | .inl _ => "error"
+  | .inl _ => throwError "error"
+  | .inr ⟨_t, h_infer⟩ =>
+    let proof := h_infer.render
+    let goal ← getMainGoal
+    goal.assign proof
 
 open Qq Lean Meta Elab Tactic in elab "decide_infer" : tactic => do
   let goal ← getMainGoal
@@ -125,6 +133,5 @@ open Qq Lean Meta Elab Tactic in elab "decide_infer" : tactic => do
   | Lean.Expr.app (.app (.const ``Judge []) _α) x =>
     let tgt_term ← whnf (← Lean.Meta.reduceAll x)
     let e ← _root_.Expr.decode tgt_term
-    let proof ← do_decide_infer e
-    goal.assign proof
+    do_decide_infer e
   | _ => throwError "unsupported"

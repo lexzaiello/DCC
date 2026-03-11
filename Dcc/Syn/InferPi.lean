@@ -43,8 +43,6 @@ inductive Inference : Expr → Expr → Type where
   | ok    : InferAs t e → Inference t e
   | error : Err e       → Inference t e
 
-
-
 theorem InferAs.sound : InferAs t e → Judge t e := by
   intro h_t
   induction h_t
@@ -111,11 +109,21 @@ this infer function is used to solve lean goals.
 
 syntax "decide_infer" : tactic
 
-def InferAs.render (e : InferAs t x) : Lean.Expr :=
-  match e with
-  | I => by
-    
-    sorry
+/-
+Produces a Lean.Expr representing a Judge proof.
+-/
+open Qq in def InferAs.render (h : InferAs t x) : Lean.Expr :=
+  let e : Q(Judge $t $x) :=
+  match h with
+  | @I m => q(@Judge.I $m)
+  | @K m n => q(@Judge.K $m $n)
+  | @K' m n => q(@Judge.K' $m $n)
+  | @S m n o => q(@Judge.S $m $n $o)
+  | @Srt m => q(@Judge.Srt $m)
+  | @Pi m α β => q(@Judge.Pi $m $α $β)
+  | .conv a b => sorry
+  | _ => sorry
+  e
 
 open Qq Lean Meta Elab Tactic in
 def do_decide_infer (x : _root_.Expr) : Lean.Elab.Tactic.TacticM Unit := do

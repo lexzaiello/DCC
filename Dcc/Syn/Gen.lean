@@ -172,6 +172,9 @@ open Lean Meta Elab Tactic in elab "red_decide" : tactic => do
     goal.assign (← whnf (← Lean.Meta.reduceAll expr))
   | _ => throwError "unsupported"
 
+example : ParRed ⸨(K 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩ (Srt 0) := by
+  red_decide
+
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with
   | (.I _m) => .inl <| .comb .I₀

@@ -4,8 +4,9 @@ import Dcc.Syn.Confluence
 import Dcc.Syn.Gen
 import Dcc.Syn.InferPi
 import Lean
-import Qq
+
 open Expr
+open Lean (Level)
 
 syntax "gen_reduce" : tactic
 syntax "convpi" : tactic

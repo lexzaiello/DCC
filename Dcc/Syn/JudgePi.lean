@@ -306,7 +306,7 @@ inductive Judge : Expr → Expr → Prop
   | Srt : Judge (Srt m.succ) (Srt m)
   | Pi  : Judge (Srt m) ((Π' m) _α, _β)
   | app : Judge ((Π' _m) α₁, β) f
-    → ParRed α₁ α₁'
+    → ParRed α₁ α₂
     → Judge α₂ x
     → ParRed ⸨β x⸩ β'
     → Judge β' ⸨f x⸩

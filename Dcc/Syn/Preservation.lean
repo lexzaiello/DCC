@@ -170,4 +170,6 @@ theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (S
   exact ⟨α, .assert .refl, .refl⟩
 
 theorem I_well_typed' (h_α : Judge (Srt m) α) (h_x : Judge α x) : Judge α ⸨(I m) α x⸩ := by
+  let h := infer (((I m).app α).app x)
+  
   sorry

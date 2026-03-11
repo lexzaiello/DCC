@@ -232,3 +232,4 @@ theorem gen.eq.choose : gen.eq a c → (∃ b, gen.eq a b ∧ ParRed b c) := by
 theorem gen.eq.diamond : gen.eq a b → gen.eq a c → (∃ d, gen.eq b d ∧ gen.eq c d) := by
   intro ha hb
   exact ⟨a, ha.symm, hb.symm⟩
+

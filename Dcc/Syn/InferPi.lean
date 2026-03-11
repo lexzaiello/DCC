@@ -1,6 +1,9 @@
 import Dcc.Syn.JudgePi
 import Dcc.Syn.Gen
 import Qq
+import Lean
+import Lean.Meta
+import Lean.Elab
 
 open Std (ToFormat Format)
 open Std.ToFormat (format)
@@ -14,11 +17,12 @@ inductive InferAs : Expr → Expr → Type where
   | S   : InferAs (S.type m n o) (S m n o)
   | Srt : InferAs (Srt m.succ) (Srt m)
   | Pi  : InferAs (Srt m) ((Π' m) _α, _β)
-    | app  : InferAs ((Π' m) α, β) f
-    → InferAs α x
-    → (gen ⸨β x⸩).fst = t'
+  | app  : InferAs ((Π' m) α₁, β) f
+    → ParRed α₁ α₂
+    → InferAs α₂ x
+    → ParRed ⸨β x⸩ t'
     → InferAs t' ⸨f x⸩
-  | conv : InferAs A x → (∃ C, (gen A).fst = C ∧ (gen B).fst = C) → InferAs B x
+  | conv : InferAs A x → (∃ C, ParRed A C ∧ ParRed B C) → InferAs B x
 
 inductive NoType : Expr → Type where
   | app'      : NoType app'
@@ -41,6 +45,8 @@ inductive Inference : Expr → Expr → Type where
   | ok    : InferAs t e → Inference t e
   | error : Err e       → Inference t e
 
+
+
 theorem InferAs.sound : InferAs t e → Judge t e := by
   intro h_t
   induction h_t
@@ -55,12 +61,12 @@ theorem InferAs.sound : InferAs t e → Judge t e := by
     assumption
     exact .refl
     assumption
-    exact gen.sound h_eq
+    exact h_eq
   case conv α x β h_t_α heq ih =>
     let ⟨C, heq₁, heq₂⟩ := heq
     apply Judge.conv
     assumption
-    exact ⟨C, gen.sound heq₁, gen.sound heq₂⟩
+    exact ⟨C, heq₁, heq₂⟩
 
 open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
   match e with
@@ -76,7 +82,16 @@ open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
     | _, .inl e => .inl <| .appr e
     | .inr tf@⟨(Π' _m) α₁, β, heq₁⟩, .inr tx@⟨α₂, heq₂⟩ =>
       if hrw : (gen α₁).fst = (gen α₂).fst then
-        let h : InferAs (gen ⸨β x⸩).fst ⸨f x⸩ := InferAs.app heq₁ (.conv heq₂ (⟨(gen α₂).fst, rfl, hrw⟩)) rfl
+        have h := gen.sound hrw
+        let h : InferAs (gen ⸨β x⸩).fst ⸨f x⸩ := by
+          apply InferAs.app
+          exact heq₁
+          exact .refl
+          apply InferAs.conv
+          assumption
+          exact ⟨(gen α₂).fst, gen.sound rfl, h⟩
+          apply gen.sound
+          rfl
         .inr ⟨(gen ⸨β x⸩).fst, h⟩
       else
         .inl (.mismatch heq₁ heq₂ (by intro ⟨C, h₁, h₂⟩; exact hrw (h₁.trans h₂.symm)))
@@ -89,29 +104,27 @@ open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
 
 theorem infer.sound : infer e = .inr ⟨t, h_infer⟩ → Judge t e := fun _ => h_infer.sound
 
-syntax "decide_infer" term : term
-syntax "decide_infer'" term : term
-
-open Qq in elab "decide_infer" e:term : term => do
-  let e : Q(Expr) := ← Lean.Meta.whnf (← Lean.Meta.reduceAll (← Lean.Elab.Term.elabTerm e .none))
-  let ref ← Expr.decode e
-  match infer ref with
-  | .ok t =>
-    Lean.Meta.reduceAll (Lean.toExpr t.fst)
-  | .error e => throwError (format e)
-
-open Qq Lean Meta Simp in elab "decide_infer'" e:term : term => do
-  let e : Q(_root_.Expr) := (← Lean.Elab.Term.elabTerm e .none)
-  Lean.Meta.whnf (← Lean.Meta.reduceAll q(infer $e))
-
 open Expr in example : ∃ t, infer ⸨(I 2) (Srt 1) (Srt 0)⸩ = t := by
-  let h₂ := decide_infer' ⸨(I 2) (Srt 1) (Srt 0)⸩
-  simp
+  let h₂ := infer ⸨(I 2) (Srt 1) (Srt 0)⸩
+  sorry
 
-namespace _examples
+/-
+this infer function is used to solve lean goals.
+-/
 
-open Expr
+syntax "decide_infer" : tactic
 
-#eval Sigma.fst <$> infer ⸨(I 2) (Srt 1) (Srt 0)⸩
+def do_decide_infer (x : Expr) : Lean.Elab.Tactic.TacticM Lean.Expr := do
+  match infer x with
+  | .inl _ => "error"
 
-end _examples
+open Qq Lean Meta Elab Tactic in elab "decide_infer" : tactic => do
+  let goal ← getMainGoal
+  let goalType := ← whnf (← Lean.Meta.reduceAll (← goal.getType))
+  match goalType with
+  | Lean.Expr.app (.app (.const ``Judge []) _α) x =>
+    let tgt_term ← whnf (← Lean.Meta.reduceAll x)
+    let e ← _root_.Expr.decode tgt_term
+    let proof ← do_decide_infer e
+    goal.assign proof
+  | _ => throwError "unsupported"

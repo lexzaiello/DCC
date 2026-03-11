@@ -158,9 +158,9 @@ open Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.Expr :=
     let h_x : Q(ParRed $x $x') := gen_par_red_proof h_x
     q(@ParRed.app $f $f' $x $x' $h_f $h_x)
 
-syntax "red_decide" : tactic
+syntax "decide_red" : tactic
 
-open Lean Meta Elab Tactic in elab "red_decide" : tactic => do
+open Lean Meta Elab Tactic in elab "decide_red" : tactic => do
   let goal ← getMainGoal
   let goalType := ← whnf (← Lean.Meta.reduceAll (← goal.getType))
   match goalType with
@@ -173,7 +173,7 @@ open Lean Meta Elab Tactic in elab "red_decide" : tactic => do
   | _ => throwError "unsupported"
 
 example : ParRed ⸨(K 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩ (Srt 0) := by
-  red_decide
+  decide_red
 
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with

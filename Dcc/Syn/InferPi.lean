@@ -10,18 +10,25 @@ open Std.ToFormat (format)
 
 open Expr
 
+/-
+We extend our AST with lean expr's to enable
+solving via hypotheses in context.
+However, the resulting proofs are still of type Judge : Expr → Expr → Prop
+-/
+
 inductive InferAs : Expr → Expr → Type where
   | I   : InferAs (I.type m) (I m)
   | K   : InferAs (K.type m n) (K m n)
   | K'  : InferAs (K'.type m n) (K' m n)
   | S   : InferAs (S.type m n o) (S m n o)
-  | Srt : InferAs (Srt m.succ) (Srt m)
+  | Srt : InferAs (Srt m.succ)  (Srt m)
   | Pi  : InferAs (Srt m) ((Π' m) _α, _β)
-  | app  : InferAs ((Π' m) α, β) f
+  | app : InferAs ((Π' m) α, β) f
     → ParRed' α α'
     → InferAs α₂ x -- unrelated, but we assume they're the same for the tactic
     → ParRed' ⸨β x⸩ β'
     → InferAs β' ⸨f x⸩
+    -- Axioms supplied from local context for the tactic
   | conv : InferAs A x → ((C : Expr) × (ParRed' A C) × (ParRed' B C)) → InferAs B x
 deriving Repr
 
@@ -34,7 +41,7 @@ inductive NoType : Expr → Type where
 deriving Repr
 
 inductive Err : Expr → Type where
-  | no_type  : NoType e → Err e
+  | no_type  : NoType e → Err e 
   | mismatch : InferAs ((Π' m) α, β) f
     → InferAs α₂ x
     → Err ⸨f x⸩
@@ -43,7 +50,9 @@ inductive Err : Expr → Type where
   | appr     : Err x → Err ⸨f x⸩
 deriving Repr
 
-open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
+-- Note: axioms are a generalization of hypotheses in the lean info view
+-- consumed by our decide tactic
+def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
   match e with
   | Srt m => .inr ⟨Srt m.succ, .Srt⟩
   | Pi m _α _β => .inr ⟨Srt m, .Pi⟩

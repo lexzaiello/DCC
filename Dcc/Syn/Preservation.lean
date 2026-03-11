@@ -12,12 +12,6 @@ syntax "gen_reduce" : tactic
 syntax "convpi" : tactic
 syntax "subst" : tactic
 
-inductive gen.judge_conv : Expr → Expr → Prop
-  | zero : Judge α x → judge_conv α x
-  | succ : gen.judge_conv α₂ x → (gen α₁).fst = α₂ → gen.judge_conv α₁ x
-
-#eval (gen ⸨(I.type 1) (Srt 0)⸩).fst
-
 @[simp] theorem judge_self : ∃ C, ParRed a C ∧ ParRed a C :=
   ⟨a, .refl, .refl⟩
 
@@ -62,4 +56,5 @@ theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (S
   sorry
 
 theorem I_well_typed' (h_α : Judge (Srt m) α) (h_x : Judge α x) : Judge α ⸨(I m) α x⸩ := by
+  
   sorry

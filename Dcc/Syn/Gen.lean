@@ -5,158 +5,289 @@ import Lean.Elab
 
 open Lean (Level)
 
-open Expr
+inductive MExpr where
+  | Srt    : Level → MExpr
+  | Pi     : Level → MExpr → MExpr → MExpr -- Pi (α : Syntax (Sort m)) (β : Sort n) : (Sort n)
+  | K'     : Level → Level → MExpr
+  | K      : Level → Level → MExpr
+  | S      : Level → Level → Level → MExpr
+  | I      : Level → MExpr
+  | hole   : MExpr
+  | next   : MExpr
+  | read   : MExpr
+  | assert : MExpr
+  | app'   : MExpr
+  | app    : MExpr  → MExpr → MExpr
+   -- ONLY for tactics: Theorems are written in Expr, fvar for hypothesis automation
+  | fvar   : Lean.FVarId → MExpr
+deriving BEq, Repr, Lean.ToExpr
 
-inductive ParRed' : Expr → Expr → Type where
+def Expr.toMeta : Expr → MExpr
+  | .K m n => .K m n
+  | .K' m n => .K' m n
+  | .Pi m α β => .Pi m α.toMeta β.toMeta
+  | .Srt m => .Srt m
+  | .I m => .I m
+  | .hole => .hole
+  | .next => .next
+  | .read => .read
+  | .app' => .app'
+  | .S m n o => .S m n o
+  | .assert => .assert
+  | .app f x => .app f.toMeta x.toMeta
+
+open Lean Meta in unsafe def evalLevelUnsafe (e : Lean.Expr) : MetaM Level :=
+  evalExpr Level (.const ``Lean.Level []) e
+
+open Lean Meta in  @[implemented_by evalLevelUnsafe]
+def evalLevelSafe (e : Lean.Expr) : MetaM Level :=
+  throwError s!"not a valid sort: {repr e}"
+
+open Qq Lean Elab Meta Tactic in def MExpr.decode (e : Lean.Expr) : Lean.Elab.TermElabM MExpr := do
+  match e with
+  | (.app (.app (.const `Expr.app []) f) x) => return .app (← decode f) (← decode x)
+  | .app (.app (.app (.const ``Expr.Pi []) m) α) β => do
+    let α' ← decode α
+    let β' ← decode β
+    let m ← evalLevelSafe m
+    return .Pi m α' β'
+  | .app (.const ``Expr.Srt []) m  => return .Srt (←  evalLevelSafe m)
+  | (.app (.app (.const `Expr.K' []) m) n) => do
+    return .K' (← evalLevelSafe m) (← evalLevelSafe n)
+  | (.app (.app (.const `Expr.K []) m) n) => do
+    return .K (← evalLevelSafe m) (← evalLevelSafe n)
+  | (.app (.app (.app (.const `Expr.S []) m) n) o) => do
+    return .S (← evalLevelSafe m) (← evalLevelSafe n) (← evalLevelSafe o)
+  | (.app (.const `Expr.I []) m) => do
+    return .I (← evalLevelSafe m)
+  | .const `Expr.hole [] => return .hole
+  | .const `Expr.next [] => return .next
+  | .const `Expr.read [] => return .read
+  | .const `Expr.assert [] => return .assert
+  | .const `Expr.app' [] => return .app'
+  | e => match (← getLCtx).findFVar? e with
+    | .some decl => return .fvar decl.fvarId
+    | .none => throwError s!"not supported: {repr e}"
+
+open MExpr
+
+inductive ParRed' : MExpr → MExpr → Type where
   | refl_K'     : ParRed' (K' m n) (K' m n)
   | refl_K      : ParRed' (K m n) (K m n)
   | refl_S      : ParRed' (S m n o) (S m n o)
   | refl_I      : ParRed' (I m) (I m)
-  | refl_hole   : ParRed' (_?) (_?)
+  | refl_hole   : ParRed' .hole .hole
   | refl_Srt    : ParRed' (Srt m) (Srt m)
   | refl_next   : ParRed' next next
   | refl_read   : ParRed' read read
   | refl_assert : ParRed' assert assert
-  | refl_app'   : ParRed' $ $
-  | I           : ParRed' x x' → ParRed' ⸨(I _m) _α x⸩ x'
-  | K           : ParRed' x x' → ParRed' ⸨(K _m _n) _α _β x _y⸩ x'
-  | K'          : ParRed' x x' → ParRed' ⸨(K' _m _n) _α _β x _y⸩ x'
+  | refl_app'   : ParRed' .app' .app'
+  | I           : ParRed' x x' → ParRed' (((I _m).app _α).app x) x'
+  | K           : ParRed' x x' → ParRed' (((((K _m _n).app _α).app _β).app x).app _y) x'
+  | K'          : ParRed' x x' → ParRed' (((((K' _m _n).app _α).app _β).app x).app _y) x'
   | S           : ParRed' x x' → ParRed' y y' → ParRed' z z'
-    → ParRed' ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨⸨x' z'⸩ ⸨y' z'⸩⸩
+    → ParRed' (((((((S _m _n _o).app _α).app _β).app _γ).app x).app y).app z) ((x'.app z').app (y'.app z'))
   | Pi          : ParRed' α α' → ParRed' β β' → ParRed' x x'
-    → ParRed' ⸨((Π' m) α, β) x⸩ ((Π' m) ⸨α' x'⸩, ⸨β' x'⸩)
-  | Pival       : ParRed' α α' → ParRed' β β' → ParRed' ((Π' m) α, β) ((Π' m) α', β')
-  | next        : ParRed' f f' → ParRed' ⸨next f _x⸩ f'
-  | read        : ParRed' e e' → ParRed' ⸨read e⸩ e'
-  | assert      : ParRed' e e' → ParRed' ⸨assert e _x⸩ e'
+    → ParRed' ((MExpr.Pi m α β).app x) (.Pi m (α'.app x') (β'.app x'))
+  | Pival       : ParRed' α α' → ParRed' β β' → ParRed' (MExpr.Pi m α β) (MExpr.Pi m α' β')
+  | next        : ParRed' f f' → ParRed' ((next.app f).app _x) f'
+  | read        : ParRed' e e' → ParRed' (read.app e) e'
+  | assert      : ParRed' e e' → ParRed' ((assert.app e).app _x) e'
   | app'        : ParRed' f f' → ParRed' g g' → ParRed' x x'
-    → ParRed' ⸨${π} f g x⸩ ⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩
+    → ParRed' ((((MExpr.app'.app π).app f).app g).app x) ((MExpr.app π (f'.app x')).app (g'.app x'))
   | app         : ParRed' f f'
     → ParRed' x x'
-    → ParRed' ⸨f x⸩ ⸨f' x'⸩
+    → ParRed' (f.app x) (f'.app x')
 deriving Repr
 
-inductive Red' : Expr → Expr → Type
-  | I      : Red' ⸨(I _m) _α x⸩ x
-  | K      : Red' ⸨(K _m _n) _α _β x _y⸩ x
-  | K'     : Red' ⸨(K' _m _n) _α _β x _y⸩ x
-  | S      : Red' ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
-  | Pi     : Red' ⸨((Π' m) α, β) x⸩ ((Π' m) ⸨α x⸩, ⸨β x⸩)
-  | next   : Red' ⸨next f _x⸩ f
-  | read   : Red' ⸨read e⸩ e
-  | assert : Red' ⸨assert e _x⸩ e
-  | app'   : Red' ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
+syntax "*⸨" term* "⸩" : term
 
-def gen (e : Expr) : (e' : Expr) × (ParRed' e e') :=
+macro_rules
+  | `(*⸨$f:term $x:term⸩) => `(MExpr.app $f:term $x:term)
+  | `(*⸨$f:term $x:term $xs:term*⸩) => `(*⸨*⸨$f:term $x:term⸩ $xs:term*⸩)
+
+def gen (e : MExpr) : (e' : MExpr) × (ParRed' e e') :=
   match e with
-  | ⸨⸨(.I _m) _α⸩ x⸩ =>
+  | MExpr.app (.app (.I _m) _α) x =>
     let ⟨x', h⟩ := gen x
     ⟨x', .I h⟩
-  | ⸨(.K _m _n) _α _β x _y⸩ =>
+  | *⸨(.K _m _n) _α _β x _y⸩ =>
     let ⟨x', h⟩ := gen x
     ⟨x', .K h⟩
-  | ⸨(.K' _m _n) _α _β x _y⸩ =>
+  | *⸨(.K' _m _n) _α _β x _y⸩ =>
     let ⟨x', h⟩ := gen x
     ⟨x', .K' h⟩
-  | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
+  | *⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
     let ⟨x', h₁⟩ := gen x
     let ⟨y', h₂⟩ := gen y
     let ⟨z', h₃⟩ := gen z
-    ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, .S h₁ h₂ h₃⟩
-  | ⸨((Π' m) α, β) x⸩ =>
+    ⟨((x'.app z').app (y'.app z')), .S h₁ h₂ h₃⟩
+  | *⸨(.Pi m α β) x⸩ =>
     let ⟨α', h₁⟩ := gen α
     let ⟨β', h₂⟩ := gen β
     let ⟨x', h₃⟩ := gen x
-    ⟨((Π' m) ⸨α' x'⸩, ⸨β' x'⸩), .Pi h₁ h₂ h₃⟩
-  | ((Π' m) α, β) =>
+    ⟨MExpr.Pi m (α'.app x') (β'.app x'), .Pi h₁ h₂ h₃⟩
+  | (.Pi m α β) =>
     let ⟨α', h₁⟩ := gen α
     let ⟨β', h₂⟩ := gen β
-    ⟨(Π' m) α', β', .Pival h₁ h₂⟩
-  | ⸨.next f _x⸩ =>
+    ⟨MExpr.Pi m α' β', .Pival h₁ h₂⟩
+  | *⸨.next f _x⸩ =>
     let ⟨f', h₁⟩ := gen f
     ⟨f', .next h₁⟩
-  | ⸨.read e⸩ =>
+  | *⸨.read e⸩ =>
     let ⟨e', h₁⟩ := gen e
     ⟨e', .read h₁⟩
-  | ⸨.assert f _x⸩ =>
+  | *⸨.assert f _x⸩ =>
     let ⟨f', h₁⟩ := gen f
     ⟨f', .assert h₁⟩
-  | ⸨${π} f g x⸩ =>
+  | *⸨.app' π f g x⸩ =>
     let ⟨f', h₁⟩ := gen f
     let ⟨g', h₂⟩ := gen g
     let ⟨x', h₃⟩ := gen x
-    ⟨⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩, .app' h₁ h₂ h₃⟩
-  | ⸨f x⸩ =>
+    ⟨(MExpr.app π (f'.app x')).app (g'.app x'), .app' h₁ h₂ h₃⟩
+  | *⸨f x⸩ =>
     let ⟨f', h₁⟩ := gen f
     let ⟨x', h₂⟩ := gen x
 
-    ⟨⸨f' x'⸩, .app h₁ h₂⟩
-  | K' m n => ⟨K' m n, .refl_K'⟩
-  | K m n => ⟨K m n, .refl_K⟩
-  | S m n o => ⟨S m n o, .refl_S⟩
-  | I m => ⟨I m, .refl_I⟩
-  | Srt m => ⟨Srt m, .refl_Srt⟩
+    ⟨f'.app x', .app h₁ h₂⟩
+  | .K' m n => ⟨K' m n, .refl_K'⟩
+  | .K m n => ⟨K m n, .refl_K⟩
+  | .S m n o => ⟨S m n o, .refl_S⟩
+  | .I m => ⟨I m, .refl_I⟩
+  | .Srt m => ⟨Srt m, .refl_Srt⟩
   | .next => ⟨.next, .refl_next⟩
   | .read => ⟨.read, .refl_read⟩
   | .assert => ⟨.assert, .refl_assert⟩
   | .app' => ⟨.app', .refl_app'⟩
   | .hole => ⟨.hole, .refl_hole⟩
 
-open Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.Expr :=
+open Lean Elab Tactic Qq in def MExpr.unify (hyps : FVarId → TacticM Lean.Expr)
+  (e : MExpr) : TacticM Q(_root_.Expr) := do
+  match e with
+  | .fvar v => hyps v
+  | .K m n => pure q(Expr.K $m $n)
+  | .Srt m => pure q(Expr.Srt $m)
+  | .Pi m α β =>
+    let α' : Q(_root_.Expr) := ← α.unify hyps
+    let β' : Q(_root_.Expr) := ← β.unify hyps
+    pure q(Expr.Pi $m $α' $β')
+  | .K' m n => pure q(Expr.K' $m $n)
+  | .S m n o => pure q(Expr.S $m $n $o)
+  | .I m  => pure q(Expr.I $m)
+  | .hole => pure q(Expr.hole)
+  | .next => pure q(Expr.next)
+  | .read => pure q(Expr.read)
+  | .assert => pure q(Expr.assert)
+  | .app' => pure q(Expr.app')
+  | .app f x => do pure <| .app (← f.unify hyps) (← x.unify hyps)
+
+open Lean Elab Tactic Qq in def gen_par_red_proof (hyps : FVarId → TacticM Lean.Expr)
+  (p : ParRed' e e') : Lean.Elab.Tactic.TacticM Lean.Expr :=
   match p with
-  | @ParRed'.refl_K' m n      => q(@ParRed.refl_K' $m $n)
-  | @ParRed'.refl_K m n       => q(@ParRed.refl_K $m $n)
-  | @ParRed'.refl_S m n o     => q(@ParRed.refl_S $m $n $o)
-  | @ParRed'.refl_I m         => q(@ParRed.refl_I $m)
-  | @ParRed'.refl_hole        => q(@ParRed.refl_hole)
-  | @ParRed'.refl_Srt m       => q(@ParRed.refl_Srt $m)
-  | @ParRed'.refl_next        => q(@ParRed.refl_next)
-  | @ParRed'.refl_read        => q(@ParRed.refl_read)
-  | @ParRed'.refl_assert      => q(@ParRed.refl_assert)
-  | @ParRed'.refl_app'        => q(@ParRed.refl_app')
-  | @ParRed'.I x x' m α h     =>
-    let inner : Q(ParRed $x $x') := gen_par_red_proof h
-    q(@ParRed.I $x $x' $m $α $inner)
-  | @ParRed'.K x x' m n α β y h =>
-    let inner : Q(ParRed $x $x') := gen_par_red_proof h
-    q(@ParRed.K $x $x' $m $n $α $β $y $inner)
-  | @ParRed'.K' x x' m n α β y h =>
-    let inner : Q(ParRed $x $x') := gen_par_red_proof h
-    q(@ParRed.K' $x $x' $m $n $α $β $y $inner)
-  | @ParRed'.S x x' y y' z z' m n o α β γ hx hy hz =>
-    let hx' : Q(ParRed $x $x') := gen_par_red_proof hx
-    let hy' : Q(ParRed $y $y') := gen_par_red_proof hy
-    let hz' : Q(ParRed $z $z') := gen_par_red_proof hz
+  | @ParRed'.refl_K' m n      => return q(@ParRed.refl_K' $m $n)
+  | @ParRed'.refl_K m n       => return q(@ParRed.refl_K $m $n)
+  | @ParRed'.refl_S m n o     => return q(@ParRed.refl_S $m $n $o)
+  | @ParRed'.refl_I m         => return q(@ParRed.refl_I $m)
+  | @ParRed'.refl_hole        => return q(@ParRed.refl_hole)
+  | @ParRed'.refl_Srt m       => return q(@ParRed.refl_Srt $m)
+  | @ParRed'.refl_next        => return q(@ParRed.refl_next)
+  | @ParRed'.refl_read        => return q(@ParRed.refl_read)
+  | @ParRed'.refl_assert      => return q(@ParRed.refl_assert)
+  | @ParRed'.refl_app'        => return q(@ParRed.refl_app')
+  | @ParRed'.I x x' m α h     => do
+    let x : Q(_root_.Expr) ← x.unify hyps
+    let x' : Q(_root_.Expr) ← x'.unify hyps
+    let α : Q(_root_.Expr)  ← α.unify hyps
+    let inner : Q(ParRed $x $x') ← gen_par_red_proof hyps h
+    return q(@ParRed.I $x $x' $m $α $inner)
+  | @ParRed'.K x x' m n α β y h => do
+    let x : Q(_root_.Expr) ← x.unify hyps
+    let x' : Q(_root_.Expr) ← x'.unify hyps
+    let α : Q(_root_.Expr) ← α.unify hyps
+    let β : Q(_root_.Expr) ← β.unify hyps
+    let y : Q(_root_.Expr) ← y.unify hyps
+    let inner : Q(ParRed $x $x') ← gen_par_red_proof hyps h
+    return q(@ParRed.K $x $x' $m $n $α $β $y $inner)
+  | @ParRed'.K' x x' m n α β y h => do
+    let x : Q(_root_.Expr) ← x.unify hyps
+    let x' : Q(_root_.Expr) ← x'.unify hyps
+    let α : Q(_root_.Expr) ← α.unify hyps
+    let β : Q(_root_.Expr) ← β.unify hyps
+    let y : Q(_root_.Expr) ← y.unify hyps
+    let inner : Q(ParRed $x $x') ← gen_par_red_proof hyps h
+    return q(@ParRed.K' $x $x' $m $n $α $β $y $inner)
+  | @ParRed'.S x x' y y' z z' m n o α β γ hx hy hz => do
+    let x : Q(_root_.Expr) ← x.unify hyps
+    let x' : Q(_root_.Expr) ← x'.unify hyps
+    let y : Q(_root_.Expr) ← y.unify hyps
+    let y' : Q(_root_.Expr) ← y'.unify hyps
+    let z : Q(_root_.Expr) ← z.unify hyps
+    let z' : Q(_root_.Expr) ← z'.unify hyps
+    let α : Q(_root_.Expr) ← α.unify hyps
+    let β : Q(_root_.Expr) ← β.unify hyps
+    let γ : Q(_root_.Expr) ← γ.unify hyps
+    let hx' : Q(ParRed $x $x') ← gen_par_red_proof hyps hx
+    let hy' : Q(ParRed $y $y') ← gen_par_red_proof hyps hy
+    let hz' : Q(ParRed $z $z') ← gen_par_red_proof hyps hz
 
-    q(@ParRed.S $x $x' $y $y' $z $z' $m $n $o $α $β $γ $hx' $hy' $hz')
-  | @ParRed'.Pi α α' β β' x x' m h_α h_β h_x =>
-    let hx' : Q(ParRed $α $α') := gen_par_red_proof h_α
-    let hy' : Q(ParRed $β $β') := gen_par_red_proof h_β
-    let hz' : Q(ParRed $x $x') := gen_par_red_proof h_x
+    return q(@ParRed.S $x $x' $y $y' $z $z' $m $n $o $α $β $γ $hx' $hy' $hz')
+  | @ParRed'.Pi α α' β β' x x' m h_α h_β h_x => do
+    let α : Q(_root_.Expr) ← α.unify hyps
+    let α' : Q(_root_.Expr) ← α'.unify hyps
+    let β' : Q(_root_.Expr) ← β'.unify hyps
+    let β : Q(_root_.Expr) ← β.unify hyps
+    let x : Q(_root_.Expr) ← x.unify hyps
+    let x' : Q(_root_.Expr) ← x'.unify hyps
+    let hx' : Q(ParRed $α $α') ←  gen_par_red_proof hyps h_α
+    let hy' : Q(ParRed $β $β') ←  gen_par_red_proof hyps h_β
+    let hz' : Q(ParRed $x $x') ←  gen_par_red_proof hyps h_x
 
-    q(@ParRed.Pi $α $α' $β $β' $x $x' $m $hx' $hy' $hz')
-  | @ParRed'.Pival α α' β β' m h_α h_β =>
-    let hx' : Q(ParRed $α $α') := gen_par_red_proof h_α
-    let hy' : Q(ParRed $β $β') := gen_par_red_proof h_β
-    q(@ParRed.Pival $α $α' $β $β' $m $hx' $hy')
-  | @ParRed'.next f f' x hf   =>
-    let hf : Q(ParRed $f $f') := gen_par_red_proof hf
-    q(@ParRed.next $f $f' $x $hf)
-  | @ParRed'.read e e' he     =>
-    let he : Q(ParRed $e $e') := gen_par_red_proof he
-    q(@ParRed.read $e $e' $he)
-  | @ParRed'.assert e e' x he =>
-    let he : Q(ParRed $e $e') := gen_par_red_proof he
-    q(@ParRed.assert $e $e' $x $he)
-  | @ParRed'.app' f f' g g' x x' π h_f h_g h_x =>
-    let h_f : Q(ParRed $f $f') := gen_par_red_proof h_f
-    let h_g : Q(ParRed $g $g') := gen_par_red_proof h_g
-    let h_x : Q(ParRed $x $x') := gen_par_red_proof h_x
-    q(@ParRed.app' $f $f' $g $g' $x $x' $π $h_f $h_g $h_x)
-  | @ParRed'.app f f' x x' h_f h_x =>
-    let h_f : Q(ParRed $f $f') := gen_par_red_proof h_f
-    let h_x : Q(ParRed $x $x') := gen_par_red_proof h_x
-    q(@ParRed.app $f $f' $x $x' $h_f $h_x)
+    return q(@ParRed.Pi $α $α' $β $β' $x $x' $m $hx' $hy' $hz')
+  | @ParRed'.Pival α α' β β' m h_α h_β => do
+    let α : Q(_root_.Expr) ← α.unify hyps
+    let α' : Q(_root_.Expr) ← α'.unify hyps
+    let β' : Q(_root_.Expr) ← β'.unify hyps
+    let β : Q(_root_.Expr) ← β.unify hyps
+    let hx' : Q(ParRed $α $α') ← gen_par_red_proof hyps h_α
+    let hy' : Q(ParRed $β $β') ← gen_par_red_proof hyps h_β
+    return q(@ParRed.Pival $α $α' $β $β' $m $hx' $hy')
+  | @ParRed'.next f f' x hf   => do
+    let f : Q(_root_.Expr) ← f.unify hyps
+    let f' : Q(_root_.Expr) ← f'.unify hyps
+    let x : Q(_root_.Expr) ← x.unify hyps
+    let hf : Q(ParRed $f $f') ← gen_par_red_proof hyps hf
+    return q(@ParRed.next $f $f' $x $hf)
+  | @ParRed'.read e e' he     => do
+    let e : Q(_root_.Expr) ← e.unify hyps
+    let e' : Q(_root_.Expr) ← e'.unify hyps
+    let he : Q(ParRed $e $e') ← gen_par_red_proof hyps he
+    return q(@ParRed.read $e $e' $he)
+  | @ParRed'.assert e e' x he => do
+    let e : Q(_root_.Expr) ← e.unify hyps
+    let e' : Q(_root_.Expr) ← e'.unify hyps
+    let x : Q(_root_.Expr) ← x.unify hyps
+    let he : Q(ParRed $e $e') ← gen_par_red_proof hyps he
+    return q(@ParRed.assert $e $e' $x $he)
+  | @ParRed'.app' f f' g g' x x' π h_f h_g h_x => do
+    let f : Q(_root_.Expr) ← f.unify hyps
+    let f' : Q(_root_.Expr) ← f'.unify hyps
+    let g : Q(_root_.Expr) ← g.unify hyps
+    let g' : Q(_root_.Expr) ← g'.unify hyps
+    let x : Q(_root_.Expr) ← x.unify hyps
+    let x' : Q(_root_.Expr) ← x'.unify hyps
+    let π : Q(_root_.Expr) ← π.unify hyps
+    let h_f : Q(ParRed $f $f') ← gen_par_red_proof hyps h_f
+    let h_g : Q(ParRed $g $g') ← gen_par_red_proof hyps h_g
+    let h_x : Q(ParRed $x $x') ← gen_par_red_proof hyps h_x
+    return q(@ParRed.app' $f $f' $g $g' $x $x' $π $h_f $h_g $h_x)
+  | @ParRed'.app f f' x x' h_f h_x => do
+    let f : Q(_root_.Expr) ← f.unify hyps
+    let f' : Q(_root_.Expr) ← f'.unify hyps
+    let x : Q(_root_.Expr) ← x.unify hyps
+    let x' : Q(_root_.Expr) ← x'.unify hyps
+    let h_f : Q(ParRed $f $f') ← gen_par_red_proof hyps h_f
+    let h_x : Q(ParRed $x $x') ← gen_par_red_proof hyps h_x
+    return q(@ParRed.app $f $f' $x $x' $h_f $h_x)
 
 syntax "decide_red" : tactic
 
@@ -166,16 +297,16 @@ open Lean Meta Elab Tactic in elab "decide_red" : tactic => do
   match goalType with
   | Lean.Expr.app (.app (.const ``ParRed []) x) _x' =>
     let tgt_term ← whnf (← Lean.Meta.reduceAll x)
-    let e ← _root_.Expr.decode tgt_term
+    let e ← MExpr.decode tgt_term
     let ⟨_, proof⟩ := gen e
     let expr := gen_par_red_proof proof
     goal.assign (← whnf (← Lean.Meta.reduceAll expr))
   | _ => throwError "unsupported"
 
-example : ParRed ⸨(K 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩ (Srt 0) := by
+example : ParRed *⸨(K 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩ (Srt 0) := by
   decide_red
 
-def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
+def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = *⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with
   | (.I _m) => .inl <| .comb .I₀
   | (.K _m _n) => .inl <| .comb .K₀
@@ -187,7 +318,7 @@ def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, 
   | .assert => .inl <| .comb .assert₀
   | .Srt _m => .inl .Srt
   | _? => .inl .hole
-  | ⸨f x⸩ => .inr (.inl ⟨f, x, rfl⟩)
+  | *⸨f x⸩ => .inr (.inl ⟨f, x, rfl⟩)
   | (Π' m) α, β => .inr (.inr ⟨m, α, β, rfl⟩)
 
 def Atom.sound (_h : Atom.gen e = .inl h_atom) : Atom e :=
@@ -225,8 +356,8 @@ def ParRed.transport_atom (h₁ : ParRed a b) (h₂ : Atom a) : (gen a).fst = b 
   | comb h => cases h <;> cases h₁ <;> unfold gen <;> rfl
   | _ => cases h₁; unfold gen; rfl
 
-theorem gen_pi {m : Level} {α β x : Expr} : ∃ α' β', (gen ⸨((Π' m) α, β) x⸩).fst = ((Π' m) α', β') := by
-  cases h₁ : (gen ⸨((Π' m) α, β) x⸩).fst with
+theorem gen_pi {m : Level} {α β x : Expr} : ∃ α' β', (gen *⸨((Π' m) α, β) x⸩).fst = ((Π' m) α', β') := by
+  cases h₁ : (gen *⸨((Π' m) α, β) x⸩).fst with
   | _ =>
     unfold gen at h₁
     repeat split at h₁

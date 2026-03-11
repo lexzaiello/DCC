@@ -18,9 +18,12 @@ inductive InferAs : Expr → Expr → Type where
   | Srt : InferAs (Srt m.succ) (Srt m)
   | Pi  : InferAs (Srt m) ((Π' m) _α, _β)
   | app  : InferAs ((Π' m) α, β) f
-    → InferAs α x
-    → InferAs ⸨β x⸩ ⸨f x⸩
+    → ParRed' α α'
+    → InferAs α₂ x -- unrelated, but we assume they're the same for the tactic
+    → ParRed' ⸨β x⸩ β'
+    → InferAs β' ⸨f x⸩
   | conv : InferAs A x → ((C : Expr) × (ParRed' A C) × (ParRed' B C)) → InferAs B x
+deriving Repr
 
 inductive NoType : Expr → Type where
   | app'      : NoType app'
@@ -28,20 +31,17 @@ inductive NoType : Expr → Type where
   | read      : NoType read
   | next      : NoType next
   | hole      : NoType hole
+deriving Repr
 
 inductive Err : Expr → Type where
   | no_type  : NoType e → Err e
   | mismatch : InferAs ((Π' m) α, β) f
     → InferAs α₂ x
-    → (¬ (∃ C, (gen α).fst = C ∧ (gen α₂).fst = C))
     → Err ⸨f x⸩
   | not_fn   : Expr  → Err ⸨f x⸩
   | appl     : Err f → Err ⸨f x⸩
   | appr     : Err x → Err ⸨f x⸩
-
-inductive Inference : Expr → Expr → Type where
-  | ok    : InferAs t e → Inference t e
-  | error : Err e       → Inference t e
+deriving Repr
 
 open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
   match e with
@@ -58,16 +58,14 @@ open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
     | .inr tf@⟨(Π' _m) α₁, β, heq₁⟩, .inr tx@⟨α₂, heq₂⟩ =>
       if hrw : (gen α₁).fst = (gen α₂).fst then by
         apply Sum.inr
-        refine ⟨⸨β x⸩, ?_⟩
+        refine ⟨(gen ⸨β x⸩).fst, ?_⟩
         apply InferAs.app
         assumption
-        apply InferAs.conv
-        assumption
-        refine ⟨_, (gen α₂).snd, ?_⟩
-        rw [← hrw]
         exact (gen α₁).snd
+        assumption
+        exact (gen ⸨β x⸩).snd
       else
-        .inl (.mismatch heq₁ heq₂ (by intro ⟨C, h₁, h₂⟩; exact hrw (h₁.trans h₂.symm)))
+        .inl (.mismatch heq₁ heq₂)
     | .inr t, _ => .inl <| .not_fn t.fst
   | _? => .inl <| .no_type .hole
   | app' => .inl <| .no_type .app'
@@ -102,16 +100,18 @@ open Qq in def InferAs.render (h : InferAs t x) : Lean.Expr :=
       let hA' : Q(ParRed $A $C) := gen_par_red_proof hA'
       let hB' : Q(ParRed $B $C) := gen_par_red_proof hB'
       q(@Judge.conv $A $x $B $hA ⟨$C, $hA', $hB'⟩)
-    | @app m α β f x h_f h_x =>
-      let h_f' : Q(Judge (Expr.Pi $m $α $β) $f) := h_f.render
-      let h_x' : Q(Judge $α $x) := h_x.render
-      q(@Judge.app $m $α $β $f $α $x (Expr.app $β $x) $h_f' (@ParRed.refl $α) $h_x' (@ParRed.refl (Expr.app $β $x)))
+    | @app m α β f α' α₂ x β' h_t_f h_redα h_t_x h_red_cod =>
+      let h_f' : Q(Judge (Expr.Pi $m $α $β) $f) := h_t_f.render
+      let h_x' : Q(Judge $α' $x) := h_t_x.render
+      let red_proof_dom : Q(ParRed $α $α') := gen_par_red_proof h_redα
+      let red_proof_cod : Q(ParRed (Expr.app $β $x) $β') := gen_par_red_proof h_red_cod
+      q(@Judge.app $m $α $β $f $α' $x $β' $h_f' $red_proof_dom $h_x' $red_proof_cod)
   e
 
 open Qq Lean Meta Elab Tactic in
 def do_decide_infer (x : _root_.Expr) : Lean.Elab.Tactic.TacticM Unit := do
   match infer x with
-  | .inl _ => throwError "error"
+  | .inl e => throwError s!"error: {repr e}"
   | .inr ⟨_t, h_infer⟩ =>
     let proof := h_infer.render
     let goal ← getMainGoal
@@ -126,3 +126,6 @@ open Qq Lean Meta Elab Tactic in elab "decide_infer" : tactic => do
     let e ← _root_.Expr.decode tgt_term
     do_decide_infer e
   | _ => throwError "unsupported"
+
+example : Judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
+  decide_infer

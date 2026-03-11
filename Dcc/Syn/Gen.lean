@@ -32,6 +32,7 @@ inductive ParRed' : Expr → Expr → Type where
   | app         : ParRed' f f'
     → ParRed' x x'
     → ParRed' ⸨f x⸩ ⸨f' x'⸩
+deriving Repr
 
 inductive Red' : Expr → Expr → Type
   | I      : Red' ⸨(I _m) _α x⸩ x

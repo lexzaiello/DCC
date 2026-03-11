@@ -166,7 +166,7 @@ open Lean Meta Elab Tactic in elab "red_decide" : tactic => do
     let e ← _root_.Expr.decode tgt_term
     let ⟨_, proof⟩ := gen e
     let expr := gen_par_red_proof proof
-    goal.assign expr
+    goal.assign (← whnf (← Lean.Meta.reduceAll expr))
   | _ => throwError "unsupported"
 
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=

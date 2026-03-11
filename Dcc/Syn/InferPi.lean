@@ -20,7 +20,7 @@ inductive InferAs : Expr → Expr → Type where
   | app  : InferAs ((Π' m) α, β) f
     → InferAs α x
     → InferAs ⸨β x⸩ ⸨f x⸩
-  | conv : InferAs A x → (∃ C, Reduces A C ∧ Reduces B C) → InferAs B x
+  | conv : InferAs A x → ((C : Expr) × (ParRed' A C) × (ParRed' B C)) → InferAs B x
 
 inductive NoType : Expr → Type where
   | app'      : NoType app'
@@ -43,26 +43,6 @@ inductive Inference : Expr → Expr → Type where
   | ok    : InferAs t e → Inference t e
   | error : Err e       → Inference t e
 
-theorem InferAs.sound : InferAs t e → Judge t e := by
-  intro h_t
-  induction h_t
-  · exact Judge.I
-  · exact Judge.K
-  · exact Judge.K'
-  · exact Judge.S
-  · exact Judge.Srt
-  · exact Judge.Pi
-  · apply Judge.app
-    assumption
-    exact .refl
-    assumption
-    exact .refl
-  case conv α x β h_t_α heq ih =>
-    let ⟨C, heq₁, heq₂⟩ := heq
-    apply Judge.conv
-    assumption
-    exact ⟨C, heq₁.hpar, heq₂.hpar⟩
-
 open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
   match e with
   | Srt m => .inr ⟨Srt m.succ, .Srt⟩
@@ -83,11 +63,9 @@ open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
         assumption
         apply InferAs.conv
         assumption
-        refine ⟨_, (gen α₂).snd.down, ?_, ?_⟩
+        refine ⟨_, (gen α₂).snd, ?_⟩
         rw [← hrw]
-        exact (gen α₁).snd.down.hpar
-        rw [← hrw]
-        exact (gen α₁).snd.down.hkind
+        exact (gen α₁).snd
       else
         .inl (.mismatch heq₁ heq₂ (by intro ⟨C, h₁, h₂⟩; exact hrw (h₁.trans h₂.symm)))
     | .inr t, _ => .inl <| .not_fn t.fst
@@ -96,8 +74,6 @@ open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
   | .read => .inl <| .no_type .read
   | .assert => .inl <|.no_type .assert
   | .next => .inl <| .no_type .next
-
-theorem infer.sound : infer e = .inr ⟨t, h_infer⟩ → Judge t e := fun _ => h_infer.sound
 
 open Expr in example : ∃ t, infer ⸨(I 2) (Srt 1) (Srt 0)⸩ = t := by
   let h₂ := infer ⸨(I 2) (Srt 1) (Srt 0)⸩
@@ -114,15 +90,22 @@ Produces a Lean.Expr representing a Judge proof.
 -/
 open Qq in def InferAs.render (h : InferAs t x) : Lean.Expr :=
   let e : Q(Judge $t $x) :=
-  match h with
-  | @I m => q(@Judge.I $m)
-  | @K m n => q(@Judge.K $m $n)
-  | @K' m n => q(@Judge.K' $m $n)
-  | @S m n o => q(@Judge.S $m $n $o)
-  | @Srt m => q(@Judge.Srt $m)
-  | @Pi m α β => q(@Judge.Pi $m $α $β)
-  | .conv a b => sorry
-  | _ => sorry
+    match h with
+    | @I m => q(@Judge.I $m)
+    | @K m n => q(@Judge.K $m $n)
+    | @K' m n => q(@Judge.K' $m $n)
+    | @S m n o => q(@Judge.S $m $n $o)
+    | @Srt m => q(@Judge.Srt $m)
+    | @Pi m α β => q(@Judge.Pi $m $α $β)
+    | @conv A x B hA ⟨C, hA', hB'⟩ =>
+      let hA : Q(Judge $A $x) := hA.render
+      let hA' : Q(ParRed $A $C) := gen_par_red_proof hA'
+      let hB' : Q(ParRed $B $C) := gen_par_red_proof hB'
+      q(@Judge.conv $A $x $B $hA ⟨$C, $hA', $hB'⟩)
+    | @app m α β f x h_f h_x =>
+      let h_f' : Q(Judge (Expr.Pi $m $α $β) $f) := h_f.render
+      let h_x' : Q(Judge $α $x) := h_x.render
+      q(@Judge.app $m $α $β $f $α $x (Expr.app $β $x) $h_f' (@ParRed.refl $α) $h_x' (@ParRed.refl (Expr.app $β $x)))
   e
 
 open Qq Lean Meta Elab Tactic in

@@ -1,106 +1,157 @@
 import Dcc.Syn.JudgePi
+import Qq
 
 open Expr
 
-/-
-This is a parallel "single-step" reducer for my SK-like calculus.
-It is kind of halfway between normalization and single-step reduction.
-Useful for checking definitional equality.
+inductive ParRed' : Expr → Expr → Type where
+  | refl_K'     : ParRed' (K' m n) (K' m n)
+  | refl_K      : ParRed' (K m n) (K m n)
+  | refl_S      : ParRed' (S m n o) (S m n o)
+  | refl_I      : ParRed' (I m) (I m)
+  | refl_hole   : ParRed' (_?) (_?)
+  | refl_Srt    : ParRed' (Srt m) (Srt m)
+  | refl_next   : ParRed' next next
+  | refl_read   : ParRed' read read
+  | refl_assert : ParRed' assert assert
+  | refl_app'   : ParRed' $ $
+  | I           : ParRed' x x' → ParRed' ⸨(I _m) _α x⸩ x'
+  | K           : ParRed' x x' → ParRed' ⸨(K _m _n) _α _β x _y⸩ x'
+  | K'          : ParRed' x x' → ParRed' ⸨(K' _m _n) _α _β x _y⸩ x'
+  | S           : ParRed' x x' → ParRed' y y' → ParRed' z z'
+    → ParRed' ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨⸨x' z'⸩ ⸨y' z'⸩⸩
+  | Pi          : ParRed' α α' → ParRed' β β' → ParRed' x x'
+    → ParRed' ⸨((Π' m) α, β) x⸩ ((Π' m) ⸨α' x'⸩, ⸨β' x'⸩)
+  | Pival       : ParRed' α α' → ParRed' β β' → ParRed' ((Π' m) α, β) ((Π' m) α', β')
+  | next        : ParRed' f f' → ParRed' ⸨next f _x⸩ f'
+  | read        : ParRed' e e' → ParRed' ⸨read e⸩ e'
+  | assert      : ParRed' e e' → ParRed' ⸨assert e _x⸩ e'
+  | app'        : ParRed' f f' → ParRed' g g' → ParRed' x x'
+    → ParRed' ⸨${π} f g x⸩ ⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩
+  | app         : ParRed' f f'
+    → ParRed' x x'
+    → ParRed' ⸨f x⸩ ⸨f' x'⸩
 
-I have proven it to coincide with my definition of ParRed.
+inductive Red' : Expr → Expr → Type
+  | I      : Red' ⸨(I _m) _α x⸩ x
+  | K      : Red' ⸨(K _m _n) _α _β x _y⸩ x
+  | K'     : Red' ⸨(K' _m _n) _α _β x _y⸩ x
+  | S      : Red' ⸨(S _m _n _o) _α _β _γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
+  | Pi     : Red' ⸨((Π' m) α, β) x⸩ ((Π' m) ⸨α x⸩, ⸨β x⸩)
+  | next   : Red' ⸨next f _x⸩ f
+  | read   : Red' ⸨read e⸩ e
+  | assert : Red' ⸨assert e _x⸩ e
+  | app'   : Red' ⸨${π} f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
 
-Need some way to derive gen from ParRed.
-
-number of steps.
--/
-
-inductive Reduction.app : Expr → Expr → Prop
-  | mk : ParRed f f' → ParRed x x' → Reduction.app ⸨f x⸩ ⸨f' x'⸩
-
-inductive Reduction.pi : Expr → Expr → Prop
-  | mk : ParRed α α' → ParRed β β' → Reduction.pi ((Π' m) α, β) ((Π' m) α', β')
-
-inductive Reduction.red : Expr → Expr → Prop
-  | mk : ParRed e' e'' → Red e e' → Reduction.red e e''
-
-inductive Reduction.refl : Expr → Expr → Prop
-  | mk : Atom e  → Reduction.refl e e
-
-inductive Reduction : Expr → Expr → Prop
-  | app'  : (Reduction.app e ⸨f' x'⸩) → Reduction e ⸨f' x'⸩
-  | pi'   : (Reduction.pi e ((Π' m) α', β')) → Reduction e ((Π' m) α', β')
-  | red'  : (Reduction.red e e') → Reduction e e'
-  | refl' : (Reduction.refl e e') → Reduction e e'
-
-structure Reduces (e e' : Expr) where
-  hpar  : ParRed e e'
-  hkind : Reduction e e'
-
-syntax "obvious" term : tactic
-macro_rules
-  | `(tactic| obvious $e:term $heq:term) => `(tactic|
-    refine ⟨$e, ?_⟩
-    rw [$heq]
-    constructor
-    constructor
-    exact ParRed.refl
-    exact Reduction.refl' (.mk (by simp)))
-
-def gen (e : Expr) : ((e' : Expr) × (PLift (Reduces e e'))) :=
+def gen (e : Expr) : (e' : Expr) × (ParRed' e e') :=
   match e with
   | ⸨⸨(.I _m) _α⸩ x⸩ =>
-    let ⟨x', ⟨hpar, _reda⟩⟩ := gen x
-    ⟨x', ⟨⟨.I hpar, .red' ⟨hpar, .I⟩⟩⟩⟩
+    let ⟨x', h⟩ := gen x
+    ⟨x', .I h⟩
   | ⸨(.K _m _n) _α _β x _y⸩ =>
-    let ⟨x', ⟨hpar, _redf⟩⟩ := gen x
-    ⟨x', ⟨.K hpar, .red' ⟨hpar, .K⟩⟩⟩
+    let ⟨x', h⟩ := gen x
+    ⟨x', .K h⟩
   | ⸨(.K' _m _n) _α _β x _y⸩ =>
-    let ⟨x', ⟨hpar, _redc⟩⟩ := gen x
-    ⟨x', ⟨.K' hpar, .red' ⟨hpar, .K'⟩⟩⟩
+    let ⟨x', h⟩ := gen x
+    ⟨x', .K' h⟩
   | ⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
-    let ⟨x', ⟨hpar₁, _redg⟩⟩ := gen x
-    let ⟨y', ⟨hpar₂, _redf⟩⟩ := gen y
-    let ⟨z', ⟨hpar₃, _rede⟩⟩ := gen z
-    ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, ⟨.S hpar₁ hpar₂ hpar₃, .red' ⟨.app (.app hpar₁ hpar₃) (.app hpar₂ hpar₃), .S⟩⟩⟩
+    let ⟨x', h₁⟩ := gen x
+    let ⟨y', h₂⟩ := gen y
+    let ⟨z', h₃⟩ := gen z
+    ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, .S h₁ h₂ h₃⟩
   | ⸨((Π' m) α, β) x⸩ =>
-    let ⟨α', ⟨hpar₁, _reda⟩⟩ := gen α
-    let ⟨β', ⟨hpar₂, _redb⟩⟩ := gen β
-    let ⟨x', ⟨hpar₃, _redc⟩⟩ := gen x
-    ⟨((Π' m) ⸨α' x'⸩, ⸨β' x'⸩), ⟨.Pi hpar₁ hpar₂ hpar₃, .red' ⟨.Pival (.app hpar₁ hpar₃) (.app hpar₂ hpar₃), .Pi⟩⟩⟩
+    let ⟨α', h₁⟩ := gen α
+    let ⟨β', h₂⟩ := gen β
+    let ⟨x', h₃⟩ := gen x
+    ⟨((Π' m) ⸨α' x'⸩, ⸨β' x'⸩), .Pi h₁ h₂ h₃⟩
   | ((Π' m) α, β) =>
-    let ⟨α', ⟨⟨heq₁, _g⟩⟩⟩ := gen α
-    let ⟨β', ⟨⟨heq₂, _h⟩⟩⟩ := gen β
-    ⟨(Π' m) α', β', ⟨.Pival heq₁ heq₂, .pi' ⟨heq₁, heq₂⟩⟩⟩
+    let ⟨α', h₁⟩ := gen α
+    let ⟨β', h₂⟩ := gen β
+    ⟨(Π' m) α', β', .Pival h₁ h₂⟩
   | ⸨.next f _x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _f⟩⟩⟩ := gen f
-    ⟨f', ⟨.next heq₁, .red' ⟨heq₁, .next⟩⟩⟩
+    let ⟨f', h₁⟩ := gen f
+    ⟨f', .next h₁⟩
   | ⸨.read e⸩ =>
-    let ⟨e', ⟨⟨heq₁, _e⟩⟩⟩ := gen e
-    ⟨e', ⟨.read heq₁, .red' ⟨heq₁, .read⟩⟩⟩
+    let ⟨e', h₁⟩ := gen e
+    ⟨e', .read h₁⟩
   | ⸨.assert f _x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _d⟩⟩⟩ := gen f
-    ⟨f', ⟨.assert heq₁, .red' ⟨heq₁, .assert⟩⟩⟩
+    let ⟨f', h₁⟩ := gen f
+    ⟨f', .assert h₁⟩
   | ⸨${π} f g x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _a⟩⟩⟩ := gen f
-    let ⟨g', ⟨⟨heq₂, _b⟩⟩⟩ := gen g
-    let ⟨x', ⟨⟨heq₃, _c⟩⟩⟩ := gen x
-    ⟨⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩,
-      ⟨.app' heq₁ heq₂ heq₃, .red' ⟨.app (.app .refl (.app heq₁ heq₃)) (.app heq₂ heq₃), .app'⟩⟩⟩
+    let ⟨f', h₁⟩ := gen f
+    let ⟨g', h₂⟩ := gen g
+    let ⟨x', h₃⟩ := gen x
+    ⟨⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩, .app' h₁ h₂ h₃⟩
   | ⸨f x⸩ =>
-    let ⟨f', ⟨⟨heq₁, _c⟩⟩⟩ := gen f
-    let ⟨x', ⟨⟨heq₂, _c⟩⟩⟩ := gen x
+    let ⟨f', h₁⟩ := gen f
+    let ⟨x', h₂⟩ := gen x
 
-    ⟨⸨f' x'⸩, ⟨.app heq₁ heq₂, .app' ⟨heq₁, heq₂⟩⟩⟩
-  | K' m n => ⟨K' m n, ⟨.refl, .refl' ⟨Atom.comb .K'₀⟩⟩⟩
-  | K m n => ⟨K m n, ⟨.refl, .refl' ⟨Atom.comb .K₀⟩⟩⟩
-  | S m n o => ⟨S m n o, ⟨.refl, .refl' ⟨Atom.comb .S₀⟩⟩⟩
-  | I m => ⟨I m, ⟨.refl, .refl' ⟨Atom.comb .I₀⟩⟩⟩
-  | Srt m => ⟨Srt m, ⟨.refl, .refl' ⟨Atom.Srt⟩⟩⟩
-  | .next => ⟨.next, ⟨.refl, .refl' ⟨Atom.comb .next₀⟩⟩⟩
-  | .read => ⟨.read, ⟨.refl, .refl' ⟨Atom.comb .read⟩⟩⟩
-  | .assert => ⟨.assert, ⟨.refl, .refl' ⟨Atom.comb .assert₀⟩⟩⟩
-  | .app' => ⟨.app', ⟨.refl, .refl' ⟨Atom.comb .app'₀⟩⟩⟩
-  | .hole => ⟨.hole, ⟨.refl, .refl' ⟨Atom.hole⟩⟩⟩
+    ⟨⸨f' x'⸩, .app h₁ h₂⟩
+  | K' m n => ⟨K' m n, .refl_K'⟩
+  | K m n => ⟨K m n, .refl_K⟩
+  | S m n o => ⟨S m n o, .refl_S⟩
+  | I m => ⟨I m, .refl_I⟩
+  | Srt m => ⟨Srt m, .refl_Srt⟩
+  | .next => ⟨.next, .refl_next⟩
+  | .read => ⟨.read, .refl_read⟩
+  | .assert => ⟨.assert, .refl_assert⟩
+  | .app' => ⟨.app', .refl_app'⟩
+  | .hole => ⟨.hole, .refl_hole⟩
+
+open Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.Expr :=
+  match p with
+  | @ParRed'.refl_K' m n      => q(@ParRed.refl_K' $m $n)
+  | @ParRed'.refl_K m n       => q(@ParRed.refl_K $m $n)
+  | @ParRed'.refl_S m n o     => q(@ParRed.refl_S $m $n $o)
+  | @ParRed'.refl_I m         => q(@ParRed.refl_I $m)
+  | @ParRed'.refl_hole        => q(@ParRed.refl_hole)
+  | @ParRed'.refl_Srt m       => q(@ParRed.refl_Srt $m)
+  | @ParRed'.refl_next        => q(@ParRed.refl_next)
+  | @ParRed'.refl_read        => q(@ParRed.refl_read)
+  | @ParRed'.refl_assert      => q(@ParRed.refl_assert)
+  | @ParRed'.refl_app'        => q(@ParRed.refl_app')
+  | @ParRed'.I x x' m α h     =>
+    let inner : Q(ParRed $x $x') := gen_par_red_proof h
+    q(@ParRed.I $x $x' $m $α $inner)
+  | @ParRed'.K x x' m n α β y h =>
+    let inner : Q(ParRed $x $x') := gen_par_red_proof h
+    q(@ParRed.K $x $x' $m $n $α $β $y $inner)
+  | @ParRed'.K' x x' m n α β y h =>
+    let inner : Q(ParRed $x $x') := gen_par_red_proof h
+    q(@ParRed.K' $x $x' $m $n $α $β $y $inner)
+  | @ParRed'.S x x' y y' z z' m n o α β γ hx hy hz =>
+    let hx' : Q(ParRed $x $x') := gen_par_red_proof hx
+    let hy' : Q(ParRed $y $y') := gen_par_red_proof hy
+    let hz' : Q(ParRed $z $z') := gen_par_red_proof hz
+
+    q(@ParRed.S $x $x' $y $y' $z $z' $m $n $o $α $β $γ $hx' $hy' $hz')
+  | @ParRed'.Pi α α' β β' x x' m h_α h_β h_x =>
+    let hx' : Q(ParRed $α $α') := gen_par_red_proof h_α
+    let hy' : Q(ParRed $β $β') := gen_par_red_proof h_β
+    let hz' : Q(ParRed $x $x') := gen_par_red_proof h_x
+
+    q(@ParRed.Pi $α $α' $β $β' $x $x' $m $hx' $hy' $hz')
+  | @ParRed'.Pival α α' β β' m h_α h_β =>
+    let hx' : Q(ParRed $α $α') := gen_par_red_proof h_α
+    let hy' : Q(ParRed $β $β') := gen_par_red_proof h_β
+    q(@ParRed.Pival $α $α' $β $β' $m $hx' $hy')
+  | @ParRed'.next f f' x hf   =>
+    let hf : Q(ParRed $f $f') := gen_par_red_proof hf
+    q(@ParRed.next $f $f' $x $hf)
+  | @ParRed'.read e e' he     =>
+    let he : Q(ParRed $e $e') := gen_par_red_proof he
+    q(@ParRed.read $e $e' $he)
+  | @ParRed'.assert e e' x he =>
+    let he : Q(ParRed $e $e') := gen_par_red_proof he
+    q(@ParRed.assert $e $e' $x $he)
+  | @ParRed'.app' f f' g g' x x' π h_f h_g h_x =>
+    let h_f : Q(ParRed $f $f') := gen_par_red_proof h_f
+    let h_g : Q(ParRed $g $g') := gen_par_red_proof h_g
+    let h_x : Q(ParRed $x $x') := gen_par_red_proof h_x
+    q(@ParRed.app' $f $f' $g $g' $x $x' $π $h_f $h_g $h_x)
+  | @ParRed'.app f f' x x' h_f h_x =>
+    let h_f : Q(ParRed $f $f') := gen_par_red_proof h_f
+    let h_x : Q(ParRed $x $x') := gen_par_red_proof h_x
+    q(@ParRed.app $f $f' $x $x' $h_f $h_x)
 
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with
@@ -151,13 +202,6 @@ def ParRed.transport_atom (h₁ : ParRed a b) (h₂ : Atom a) : (gen a).fst = b 
   cases h₂ with
   | comb h => cases h <;> cases h₁ <;> unfold gen <;> rfl
   | _ => cases h₁; unfold gen; rfl
-
-def gen.sound : (gen e).fst = e' → ParRed e e' := fun h => by
-  rw [← h]
-  exact (gen e).snd.down.hpar
-
-theorem gen_imp_well_typed : Judge α x → (gen α).fst = β → Judge β x := fun h_t h_g =>
-  Judge.conv h_t ⟨β, gen.sound h_g, .refl⟩
 
 theorem gen_pi {m : Level} {α β x : Expr} : ∃ α' β', (gen ⸨((Π' m) α, β) x⸩).fst = ((Π' m) α', β') := by
   cases h₁ : (gen ⸨((Π' m) α, β) x⸩).fst with
@@ -213,23 +257,6 @@ theorem gen.eq.symm : gen.eq α β → gen.eq β α := by
   apply gen.eq.trans
   repeat assumption
 
-theorem gen.eq.choose : gen.eq a c → (∃ b, gen.eq a b ∧ ParRed b c) := by
-  intro h
-  induction h
-  rename_i a₁ _
-  exact ⟨_, (by apply gen.eq.refl; apply ParRed.refl), ParRed.refl⟩
-  rename_i a'
-  refine ⟨a', ?_, by apply gen.sound; rfl⟩
-  apply gen.eq.refl
-  apply ParRed.refl
-  case trans a₂ c₂ b₂ heq₁ heq₂ ih₁ ih₂ =>
-    have heq_whack := heq₁.trans heq₂
-    let ⟨e, heq₁, hpr₁⟩ := ih₁
-    let ⟨e₂, heq₂, hpr₂⟩ := ih₂
-    refine ⟨_, ?_, ParRed.refl⟩
-    exact heq_whack
-
 theorem gen.eq.diamond : gen.eq a b → gen.eq a c → (∃ d, gen.eq b d ∧ gen.eq c d) := by
   intro ha hb
   exact ⟨a, ha.symm, hb.symm⟩
-

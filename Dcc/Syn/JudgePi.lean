@@ -4,7 +4,7 @@ open Std (ToFormat Format)
 open Std.ToFormat (format)
 open Relation
 
-abbrev Level := ℕ
+open Lean (Level)
 
 inductive Expr where
   | Srt    : Level → Expr
@@ -19,7 +19,7 @@ inductive Expr where
   | assert : Expr
   | app'   : Expr
   | app    : Expr  → Expr → Expr
-deriving BEq, Repr, DecidableEq, Lean.ToExpr
+deriving BEq, Repr, Lean.ToExpr
 
 open Expr
 
@@ -397,31 +397,36 @@ theorem ParRed.of_red : Red e₁ e₂ → ParRed e₁ e₂ := by
   exact ParRed.assert .refl
   exact ParRed.app' .refl .refl .refl
 
-def dec_n (m : Lean.Expr) : Lean.Elab.TermElabM ℕ := do
-  match ← Lean.Meta.getNatValue? m with
-  | .some n => pure n
-  | _ => throwError "not a valid sort"
+open Lean Meta in unsafe def evalLevelUnsafe (e : Lean.Expr) : MetaM Level :=
+  evalExpr Level (.const ``Lean.Level []) e
 
-def Expr.decode (e : Lean.Expr) : Lean.Elab.TermElabM Expr :=
+open Lean Meta in  @[implemented_by evalLevelUnsafe]
+def evalLevelSafe (e : Lean.Expr) : MetaM Level :=
+  throwError s!"not a valid sort: {repr e}"
+
+open Qq Lean Elab Meta Tactic in def Expr.decode (e : Lean.Expr) : Lean.Elab.TermElabM _root_.Expr := do
   match e with
-  | .app (.const `Expr.Srt []) m  => .Srt <$> dec_n m
-  | .app (.app (.app (.const `Expr.Pi []) m) α) β => do
-    return .Pi (← dec_n m) (← decode α) (← decode β)
+  | (.app (.app (.const `Expr.app []) f) x) => return .app (← decode f) (← decode x)
+  | .app (.app (.app (.const ``Expr.Pi []) m) α) β => do
+    let α' ← decode α
+    let β' ← decode β
+    let m ← evalLevelSafe m
+    return .Pi m α' β'
+  | .app (.const ``Expr.Srt []) m  => return .Srt (←  evalLevelSafe m)
   | (.app (.app (.const `Expr.K' []) m) n) => do
-    return .K' (← dec_n m) (← dec_n n)
+    return .K' (← evalLevelSafe m) (← evalLevelSafe n)
   | (.app (.app (.const `Expr.K []) m) n) => do
-    return .K (← dec_n m) (← dec_n n)
+    return .K (← evalLevelSafe m) (← evalLevelSafe n)
   | (.app (.app (.app (.const `Expr.S []) m) n) o) => do
-    return .S (← dec_n m) (← dec_n n) (← dec_n o)
+    return .S (← evalLevelSafe m) (← evalLevelSafe n) (← evalLevelSafe o)
   | (.app (.const `Expr.I []) m) => do
-    return .I (← dec_n m)
+    return .I (← evalLevelSafe m)
   | .const `Expr.hole [] => return .hole
   | .const `Expr.next [] => return .next
   | .const `Expr.read [] => return .read
   | .const `Expr.assert [] => return .assert
   | .const `Expr.app' [] => return .app'
-  | (.app (.app (.const `Expr.app []) f) x) => return .app (← decode f) (← decode x)
-  | _ => throwError "not supported"
+  | e => throwError s!"not supported: {repr e}"
 
 open Qq in def Expr.toLeanExpr : Expr → Q(Expr)
   | .Srt m => q(Expr.Srt $m)
@@ -434,5 +439,5 @@ open Qq in def Expr.toLeanExpr : Expr → Q(Expr)
   | .K' m n => q(Expr.K' $m $n)
   | .K m n => q(Expr.K $m $n)
   | .S m n o => q(Expr.S $m $n $o)
-  | .Pi m α β => (((Lean.Expr.const `Expr.Pi []).app (Lean.mkNatLit m)).app (α.toLeanExpr)).app (β.toLeanExpr)
+  | .Pi m α β => (((Lean.Expr.const `Expr.Pi []).app (Lean.toExpr m)).app (α.toLeanExpr)).app (β.toLeanExpr)
   | .app f x => ((Lean.Expr.const `Expr.app []).app (f.toLeanExpr)).app (x.toLeanExpr)

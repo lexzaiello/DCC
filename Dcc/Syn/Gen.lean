@@ -3,6 +3,8 @@ import Qq
 import Lean
 import Lean.Elab
 
+open Lean (Level)
+
 open Expr
 
 inductive ParRed' : Expr → Expr → Type where

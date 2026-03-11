@@ -56,7 +56,7 @@ open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
     | .inl e, _ => .inl <| .appl e
     | _, .inl e => .inl <| .appr e
     | .inr tf@⟨(Π' _m) α₁, β, heq₁⟩, .inr tx@⟨α₂, heq₂⟩ =>
-      if hrw : (gen α₁).fst = (gen α₂).fst then by
+      if hrw : (gen α₁).fst == (gen α₂).fst then by
         apply Sum.inr
         refine ⟨(gen ⸨β x⸩).fst, ?_⟩
         apply InferAs.app
@@ -72,10 +72,6 @@ open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
   | .read => .inl <| .no_type .read
   | .assert => .inl <|.no_type .assert
   | .next => .inl <| .no_type .next
-
-open Expr in example : ∃ t, infer ⸨(I 2) (Srt 1) (Srt 0)⸩ = t := by
-  let h₂ := infer ⸨(I 2) (Srt 1) (Srt 0)⸩
-  sorry
 
 /-
 this infer function is used to solve lean goals.
@@ -100,7 +96,7 @@ open Qq in def InferAs.render (h : InferAs t x) : Lean.Expr :=
       let hA' : Q(ParRed $A $C) := gen_par_red_proof hA'
       let hB' : Q(ParRed $B $C) := gen_par_red_proof hB'
       q(@Judge.conv $A $x $B $hA ⟨$C, $hA', $hB'⟩)
-    | @app m α β f α' α₂ x β' h_t_f h_redα h_t_x h_red_cod =>
+    | @app m α β f α' _α₂ x β' h_t_f h_redα h_t_x h_red_cod =>
       let h_f' : Q(Judge (Expr.Pi $m $α $β) $f) := h_t_f.render
       let h_x' : Q(Judge $α' $x) := h_t_x.render
       let red_proof_dom : Q(ParRed $α $α') := gen_par_red_proof h_redα

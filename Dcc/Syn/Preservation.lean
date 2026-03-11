@@ -15,51 +15,6 @@ inductive gen.judge_conv : Expr → Expr → Prop
   | zero : Judge α x → judge_conv α x
   | succ : gen.judge_conv α₂ x → (gen α₁).fst = α₂ → gen.judge_conv α₁ x
 
-def gen.judge_conv.judge : gen.judge_conv α x → Judge α x := by
-  intro h
-  induction h with
-  | zero h => exact h
-  | succ ih h_gen h_t =>
-    apply Judge.conv
-    assumption
-    case succ α₂ h α₁ =>
-      exact ⟨α₂, .refl, gen.sound h_gen⟩
-
-open Qq in elab "gen_judge" steps:num* : tactic => do
-  let goal ← Lean.Elab.Tactic.getMainGoal
-  let goalDecl ← goal.getDecl
-  let lctx := goalDecl.lctx
-  let t_goal ← Lean.Meta.reduceAll (← goal.getType)
-  match t_goal with
-  | (Lean.Expr.app (Lean.Expr.app (Lean.Expr.const `Judge []) α) x) =>
-    let α ← Lean.Meta.reduceAll α -- α
-    let x ← Lean.Meta.reduceAll x -- x
-    for decl in lctx do
-      if decl.isImplementationDetail then continue
-      let t ← Lean.Meta.reduceAll decl.type
-      let hyp ← Lean.Meta.reduceAll decl.value -- judge B x
-      match t with
-      | (Lean.Expr.app (Lean.Expr.app (Lean.Expr.const `Judge []) _α₂) x₂) =>
-        let x₂ ← Lean.Meta.reduceAll x₂
-        if ¬ x == x₂ then continue
-        let n_steps := (steps.toList.head?.getD (Lean.Syntax.mkNatLit 1)).getNat
-
-        let rec do_gen (h_judge : Lean.Expr) (e : Q(Expr)) (n : ℕ) : (Lean.Elab.Tactic.TacticM Lean.Expr) := do
-          let h : Q(Expr) := ← Lean.Meta.reduceAll q(Sigma.fst (gen $e))
-          let u ← Lean.Meta.getLevel (← Lean.Meta.inferType h)
-          let mjudge : Lean.Expr := ((((((Lean.Expr.const `gen_imp_well_typed []).app e).app x).app h).app h_judge).app (.app (.app (.const `rfl [u]) (.const `Expr [])) h))
-          match n with
-          | .zero => return mjudge
-          | .succ n => do_gen mjudge h n
-        let proof ← do_gen (← Lean.Meta.reduceAll hyp) α n_steps
-        goal.assign proof
-      | _ => continue
-  | _ => throwError "not supported"
-
-example : Judge (I.type 0) (I 0) := by
-  let h : Judge (I.type 0) (I 0) := Judge.I
-  gen_judge 0
-
 #eval (gen ⸨(I.type 1) (Srt 0)⸩).fst
 
 @[simp] theorem judge_self : ∃ C, ParRed a C ∧ ParRed a C :=
@@ -103,73 +58,7 @@ theorem assert_n' {n : ℕ} {fn : Expr} : ∃ e₁ e₂ e₃ e₄, ParRed ⸨(as
 
 theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (Srt n)) β)
   (h_x : Judge α x) (h_y : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.conv
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.app
-  apply Judge.conv
-  apply Judge.app
-  exact Judge.K
-  exact .refl
-  assumption
-  apply ParRed.Pi .refl .refl .refl
-  exact ⟨_, .Pival (ParRed.Pi .refl .refl .refl) (.Pi .refl .refl .refl), .refl⟩
-  apply ParRed.Pival
-  apply ParRed.read .refl
-  apply ParRed.next .refl
-  assumption
-  apply ParRed.Pi .refl
-  apply ParRed.Pi .refl .refl .refl
-  apply ParRed.refl
-  apply ParRed.assert .refl
-  assumption
-  apply ParRed.app
-  apply ParRed.app
-  apply ParRed.Pival
-  unfold y_arg
-  apply ParRed.app' .refl .refl .refl
-  apply ParRed.refl
-  apply ParRed.refl
-  apply ParRed.refl
-  refine ⟨_, .app (.Pi .refl .refl .refl) .refl, .refl⟩
-  refine ⟨_, .Pi .refl .refl .refl, .refl⟩
-  apply ParRed.app
-  apply ParRed.app'
-  apply ParRed.next .refl
-  apply ParRed.next .refl
-  apply ParRed.refl
-  apply ParRed.refl
-  assumption
-  unfold cod
-  apply ParRed.app
-  apply ParRed.app
-  unfold assert_n
-  simp
-  unfold comp
-  apply ParRed.app
-  apply ParRed.app' .refl
-  apply ParRed.app .refl .refl
-  apply ParRed.refl
-  apply ParRed.refl
-  apply ParRed.refl
-  apply ParRed.refl
-  refine ⟨_, (.app (.app (.app (.app (.read .refl) (.app' .refl .refl .refl)) .refl) .refl) .refl), .refl⟩
-  refine ⟨_, (.app (.app (.app (.app (.assert .refl) (.app (.read .refl) (.app' .refl .refl .refl))) .refl) .refl) .refl), .refl⟩
-  refine ⟨_, (.app (.app (.assert .refl) .refl) .refl), .refl⟩
-  refine ⟨_, .app (.app (.app (.assert .refl) (.app (.read .refl) (.read .refl))) .refl) .refl, .refl⟩
-  refine ⟨_, .app (.assert .refl) .refl, .refl⟩
-  refine ⟨_, .app (.app (.assert .refl) .refl) .refl, .refl⟩
-  exact ⟨α, .assert .refl, .refl⟩
+  sorry
 
 theorem I_well_typed' (h_α : Judge (Srt m) α) (h_x : Judge α x) : Judge α ⸨(I m) α x⸩ := by
-  let h := infer (((I m).app α).app x)
-  
   sorry

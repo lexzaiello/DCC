@@ -1,5 +1,7 @@
 import Dcc.Syn.JudgePi
 import Qq
+import Lean
+import Lean.Elab
 
 open Expr
 
@@ -152,6 +154,20 @@ open Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.Expr :=
     let h_f : Q(ParRed $f $f') := gen_par_red_proof h_f
     let h_x : Q(ParRed $x $x') := gen_par_red_proof h_x
     q(@ParRed.app $f $f' $x $x' $h_f $h_x)
+
+syntax "red_decide" : tactic
+
+open Lean Meta Elab Tactic in elab "red_decide" : tactic => do
+  let goal ← getMainGoal
+  let goalType := ← whnf (← Lean.Meta.reduceAll (← goal.getType))
+  match goalType with
+  | Lean.Expr.app (.app (.const ``ParRed []) x) _x' =>
+    let tgt_term ← whnf (← Lean.Meta.reduceAll x)
+    let e ← _root_.Expr.decode tgt_term
+    let ⟨_, proof⟩ := gen e
+    let expr := gen_par_red_proof proof
+    goal.assign expr
+  | _ => throwError "unsupported"
 
 def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = ⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
   match e with

@@ -33,9 +33,7 @@ inductive Err : Expr → Type where
     → InferAs α₂ x
     → (¬ (∃ C, (gen α).fst = C ∧ (gen α₂).fst = C))
     → Err ⸨f x⸩
-  | not_fn   : InferAs t_f f
-    → (¬ ∃ m α β, gen.eq t_f ((Π' m) α, β))
-    → Err ⸨f x⸩
+  | not_fn   : Expr  → Err ⸨f x⸩
   | appl     : Err f → Err ⸨f x⸩
   | appr     : Err x → Err ⸨f x⸩
 
@@ -43,7 +41,7 @@ inductive Inference : Expr → Expr → Type where
   | ok    : InferAs t e → Inference t e
   | error : Err e       → Inference t e
 
-theorem Judgment.sound : InferAs t e → Judge t e := by
+theorem InferAs.sound : InferAs t e → Judge t e := by
   intro h_t
   induction h_t
   · exact Judge.I
@@ -64,28 +62,32 @@ theorem Judgment.sound : InferAs t e → Judge t e := by
     assumption
     exact ⟨C, gen.sound heq₁, gen.sound heq₂⟩
 
-open Expr in def infer (e : Expr) (expected : Option Expr := .none) : ((t : Expr) × Inference t e) :=
+open Expr in def infer (e : Expr) : (Err e) ⊕ ((t : Expr) × InferAs t e) :=
   match e with
-  | Srt m => ⟨Srt m.succ, .ok .Srt⟩
-  | Pi m _α _β => ⟨Srt m, .ok .Pi⟩
-  | K' m n => ⟨K'.type m n, .ok .K'⟩
-  | K m n => ⟨K.type m n, .ok .K⟩
-  | S m n o => ⟨S.type m n o, .ok .S⟩
-  | I m => ⟨I.type m, .ok .I⟩
+  | Srt m => .inr ⟨Srt m.succ, .Srt⟩
+  | Pi m _α _β => .inr ⟨Srt m, .Pi⟩
+  | K' m n => .inr ⟨K'.type m n, .K'⟩
+  | K m n => .inr ⟨K.type m n, .K⟩
+  | S m n o => .inr ⟨S.type m n o, .S⟩
+  | I m => .inr ⟨I.type m, .I⟩
   | .app f x =>
-    match infer f, infer x with
-    | ⟨a, .error e⟩, ⟨_b, _⟩ => ⟨⸨a x⸩, .error <| .appl e⟩
-    | ⟨a, _⟩, ⟨_b, .error e⟩ => ⟨⸨a x⸩, .error <| .appr e⟩
-    | tf@⟨(Π' _m) α₁, β, .ok heq₁⟩, tx@⟨α₂, .ok heq₂⟩ =>
+    match h_t₀ : infer f, infer x with
+    | .inl e, _ => .inl <| .appl e
+    | _, .inl e => .inl <| .appr e
+    | .inr tf@⟨(Π' _m) α₁, β, heq₁⟩, .inr tx@⟨α₂, heq₂⟩ =>
       if hrw : (gen α₁).fst = (gen α₂).fst then
         let h : InferAs (gen ⸨β x⸩).fst ⸨f x⸩ := InferAs.app heq₁ (.conv heq₂ (⟨(gen α₂).fst, rfl, hrw⟩)) rfl
-        ⟨(gen ⸨β x⸩).fst, .ok h⟩
+        .inr ⟨(gen ⸨β x⸩).fst, h⟩
       else
-        ⟨⸨β x⸩, .error (.mismatch heq₁ heq₂ (by intro ⟨C, h₁, h₂⟩; exact hrw (h₁.trans h₂.symm)))⟩
-    | ⟨t, _⟩, _ => .error <| "not a function type: " ++ (format t)
-  | e => .error <| "not well-typed: " ++ (format e)
+        .inl (.mismatch heq₁ heq₂ (by intro ⟨C, h₁, h₂⟩; exact hrw (h₁.trans h₂.symm)))
+    | .inr t, _ => .inl <| .not_fn t.fst
+  | _? => .inl <| .no_type .hole
+  | app' => .inl <| .no_type .app'
+  | .read => .inl <| .no_type .read
+  | .assert => .inl <|.no_type .assert
+  | .next => .inl <| .no_type .next
 
-theorem infer.sound : infer e = .ok res → Judge res.fst e := fun _ => res.snd.down
+theorem infer.sound : infer e = .inr ⟨t, h_infer⟩ → Judge t e := fun _ => h_infer.sound
 
 syntax "decide_infer" term : term
 syntax "decide_infer'" term : term

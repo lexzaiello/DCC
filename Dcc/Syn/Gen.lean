@@ -23,6 +23,7 @@ inductive MExpr where
   | app    : MExpr  → MExpr → MExpr
    -- ONLY for tactics: Theorems are written in Expr, fvar for hypothesis automation
   | fvar   : Lean.FVarId → MExpr
+  | lean_e : Lean.Expr → MExpr
 deriving BEq, Repr, Lean.ToExpr
 
 end gen
@@ -80,7 +81,7 @@ open MExpr
 
 inductive ParRed' : MExpr → MExpr → Type where
   | refl_fvar   : ParRed' (.fvar m) (.fvar m)
-  | proof       : Lean.Expr → ParRed' t x
+  | proof       : Lean.Expr → ParRed' e e'
   | refl_K'     : ParRed' (K' m n) (K' m n)
   | refl_K      : ParRed' (K m n) (K m n)
   | refl_S      : ParRed' (S m n o) (S m n o)
@@ -115,26 +116,32 @@ macro_rules
   | `(*⸨$f:term $x:term⸩) => `(MExpr.app $f:term $x:term)
   | `(*⸨$f:term $x:term $xs:term*⸩) => `(*⸨*⸨$f:term $x:term⸩ $xs:term*⸩)
 
-open Qq Lean Meta Elab Tactic in def lookup (x : FVarId) (pred : Lean.Expr) : TacticM (Option Lean.Expr) := do
-  let lctx ← getLCtx
-  Option.bindM (fun (e : Lean.Expr) =>
-    lctx.decls.toList.firstM (fun ldecl => ldecl.bindM (fun ldecl => do
-      if ldecl.isImplementationDetail then return Option.none
-      let type ← whnf (← reduceAll ldecl.type)
-      match type with
-      | .app (.app pred' _α) x' =>
-        if (← isDefEq x' e) ∧ (← isDefEq pred pred') then
-          return (.some ldecl.value)
-        else return .none
-      | _ => return .none
-    ))) ((lctx.find? x).map (fun e => e.value))
+open Qq Lean Meta Elab Tactic in def try_first_hyp (pred : Lean.Name) (on_e : FVarId) : TacticM (Option (Lean.Expr × Lean.Expr)) := do
+  let goal ← getMainGoal
+  goal.withContext do
+    let lctx ← getLCtx
+
+    let mut proof : Option (Lean.Expr × Lean.Expr) := Option.none
+
+    for hyp in lctx do
+      match hyp.type with
+      | Lean.Expr.app (Lean.Expr.app b (Lean.Expr.fvar e')) _t  =>
+        if b == (Lean.Expr.const pred []) ∧ e' == on_e then
+          proof := .some ⟨hyp.type, (Lean.Expr.fvar hyp.fvarId)⟩
+        else continue
+      | _ => continue
+    return proof
 
 -- TODO: Use Lean.TacticM to look up potential reduction for fvar
 open Lean Elab Tactic in def reduce (e : MExpr) : TacticM ((e' : MExpr) × (ParRed' e e')) :=
   match e with
+  | .lean_e e => throwError s!"not supported: {repr e}"
   | .fvar v => do
-    let p? : Option (ParRed' (.fvar v) (.fvar v)) := (← lookup v (.const ``ParRed [])).map (.proof)
-    return Sigma.mk (.fvar v) (p?.getD (.refl_fvar (m := v)))
+    let p? := (← try_first_hyp (``ParRed) v)
+    match p? with
+    | .some ⟨.app (.app (.const ``ParRed []) _ety) e', proof⟩ =>
+      return ⟨.lean_e e', .proof proof (e := .fvar v) (e' := .lean_e e')⟩
+    | _ => throwError "no matching hypothesis"
   | MExpr.app (.app (.I _m) _α) x => do
     let ⟨x', h⟩ ← reduce x
     return ⟨x', .I h⟩
@@ -190,10 +197,11 @@ open Lean Elab Tactic in def reduce (e : MExpr) : TacticM ((e' : MExpr) × (ParR
 
 open Lean Elab Tactic Qq in def MExpr.unify (e : MExpr) : TacticM Q(_root_.Expr) := do
   match e with
+  | .lean_e e => pure e
   | .fvar v =>
     let l ← getLCtx
     match l.find? v with
-    | .some v => return v.value
+    | .some v => return (.fvar v.fvarId)
     | .none => throwError s!"not supported"
   | .K m n => pure q(Expr.K $m $n)
   | .Srt m => pure q(Expr.Srt $m)
@@ -219,7 +227,7 @@ end gen
 open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.Elab.Tactic.TacticM Lean.Expr :=
   match p with
   | @ParRed'.proof _ _ p      => return p
-  | @ParRed'.refl_fvar m      => return (Lean.Expr.const ``rfl [])
+  | @ParRed'.refl_fvar m      => return ((Lean.Expr.const ``rfl [1]).app (.const ``_root_.Expr []))
   | @ParRed'.refl_K' m n      => return q(@ParRed.refl_K' $m $n)
   | @ParRed'.refl_K m n       => return q(@ParRed.refl_K $m $n)
   | @ParRed'.refl_S m n o     => return q(@ParRed.refl_S $m $n $o)
@@ -344,6 +352,9 @@ namespace examples
 open Expr
 
 example : ParRed ⸨(K 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩ (Srt 0) := by
+  decide_red
+
+example (h : ParRed e (Srt 0)) : ParRed ⸨(K 2 2) (Srt 1) (Srt 1) e (Srt 0)⸩ (Srt 0) := by
   decide_red
 
 end examples

@@ -386,7 +386,10 @@ open gen Lean Meta Elab Tactic in elab "decide_red" : tactic => do
     let e ← MExpr.decode tgt_term
     let ⟨_, proof⟩ ← reduce e
     let expr ← gen_par_red_proof proof
-    goal.assign (← whnf (← Lean.Meta.reduceAll expr))
+    if ← isTypeCorrect expr then
+      goal.assign (← whnf (← Lean.Meta.reduceAll expr))
+    else
+      throwError "couldn't solve"
   | _ => throwError "unsupported"
 
 namespace examples
@@ -406,10 +409,10 @@ syntax "exists_red" : tactic
 open Qq gen Lean Meta Elab Tactic in elab "exists_red" : tactic => do
   let goal ← getMainGoal
   goal.withContext do
-    match ← goal.getType with
-    | .app
-      (.app (.const ``Exists [_u]) (.const ``_root_.Expr []))
-      (.lam _e' (.const ``_root_.Expr []) (.app (.app (.const `ParRed []) xe) (.bvar 0)) _bd) =>
+    let tgt ← getMainTarget
+    let tgt : Option Q(Prop) ← Qq.checkTypeQ tgt q(Prop)
+    match tgt with
+    | .some ~q(∃ d, ParRed $xe d) =>
       match ← checkTypeQ xe q(_root_.Expr) with
       | .some x' =>
         let m ← MExpr.decode xe
@@ -420,10 +423,58 @@ open Qq gen Lean Meta Elab Tactic in elab "exists_red" : tactic => do
 
         let proof := q(Exists.intro $d $p)
 
-        goal.assign proof
+        if ← isTypeCorrect proof then
+          goal.assign proof
+        else
+          throwError "couldn't solve"
       | .none => throwError s!"not a valid Expr: {repr xe}"
     | e => throwError s!"not a ParRed existential: {repr e}"
 
 open Expr in example : ∃ e', ParRed ⸨(I 2) (Srt 1) (Srt 0)⸩ e' := by
   exists_red
 
+/-
+Closes conversion goals like "∃ e', ParRed A x ∧ ParRed B x" by:
+1. decide_red on A and B
+2. check if fst == and close with ∧ + ∃ if so
+-/
+
+syntax "decide_conv" : tactic
+
+open Qq gen Lean Meta Elab Tactic in elab "decide_conv" : tactic => do
+  let goal ← getMainGoal
+  goal.withContext do
+    let tgt ← getMainTarget
+    let tgt : Option Q(Prop) ← Qq.checkTypeQ tgt q(Prop)
+    match tgt with
+    | .some ~q(∃ x, ParRed $A x ∧ ParRed $B x) =>
+      match ← checkTypeQ A q(_root_.Expr), ← checkTypeQ B q(_root_.Expr) with
+      | .some A, .some B =>
+        let mA ← MExpr.decode A
+        let mB ← MExpr.decode B
+
+        let red₁ ← reduce mA
+        let red₂ ← reduce mB
+
+        let D₁ : Q(_root_.Expr) := ← red₁.fst.unify
+        let D₂ : Q(_root_.Expr) := ← red₂.fst.unify
+
+        match ← checkTypeQ D₁ q(_root_.Expr), ← checkTypeQ D₂ q(_root_.Expr) with
+        | .some D₁, .some D₂ =>
+          match ← isDefEqQ D₁ D₂ with
+          | .defEq _heq =>
+            let p₁ : Q(ParRed $A $D₁) := ← gen_par_red_proof red₁.snd
+            let p₂ : Q(ParRed $B $D₁) := ← gen_par_red_proof red₂.snd
+
+            match ← checkTypeQ p₁ q(ParRed $A $D₁), ← checkTypeQ p₂ q(ParRed $B $D₂) with
+            | .some p₁, .some p₂ =>
+              goal.assign q(@Exists.intro _root_.Expr (fun d => ParRed $A d ∧ ParRed $B d) $D₁ (And.intro $p₁ $p₂))
+            | _, _ => throwError s!"{D₁} ≠ {D₂}"
+          | _ => throwError s!"{D₁} ≠ {D₂}"
+        | _, _ => throwError "not an expr"
+      | .none, _ => throwError s!"not an Expr: {A}"
+      | _, .none => throwError s!"not an Expr: {B}"
+    | e => throwError s!"not a valid conversion goal: {repr e}"
+
+open Expr in example : ∃ D, ParRed ⸨(I 2) (Srt 1) (Srt 0)⸩ D ∧ ParRed ⸨(I 2) (Srt 1) (Srt 0)⸩ D := by
+  decide_conv

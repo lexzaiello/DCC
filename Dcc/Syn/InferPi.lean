@@ -252,7 +252,10 @@ def do_decide_infer (x : MExpr) : Lean.Elab.Tactic.TacticM Unit := do
   | .inr ⟨_t, h_infer⟩ =>
     let proof ← h_infer.render
     let goal ← getMainGoal
-    goal.assign proof
+    if ← isTypeCorrect proof then
+      goal.assign proof
+    else
+      throwError "couldn't solve"
 
 open Qq Lean Meta Elab Tactic in elab "decide_infer" : tactic => do
   let goal ← getMainGoal

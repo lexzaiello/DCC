@@ -80,6 +80,20 @@ theorem K'.diamond (ih : ∀ {c : Expr}, ParRed x c → ∃ d, ParRed x' d ∧ P
     have ⟨d, h₁, h₂⟩ := h
     exact ⟨d, h₁, .K' h₂⟩
 
+theorem ParRed.triangle : ParRed a b → ParRed a c → ∃ d, ParRed a d ∧ ParRed c d := by
+  intro ha hb
+  induction ha
+  repeat (cases hb; apply exists_red_self; exists_red)
+  cases hb
+  simp_all
+  exact ⟨_, by decide_red, .refl⟩
+  rename_i h _ _
+  cases h
+  rename_i h _ _
+  cases h
+  
+  sorry
+
 theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro ha hb
   induction ha generalizing c
@@ -202,8 +216,19 @@ theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ Par
   refine ⟨_, .app (.app hπ (.app heq₁ heq₅)) (.app heq₃ heq₅), ?_⟩
   apply ParRed.app'
   repeat assumption
-  
-  sorry
+  case app f f' x x' h_f h_x ih₁ ih₂ =>
+    cases hb
+    case app =>
+      have h₁ := ih₁ (by assumption)
+      have h₂ := ih₂ (by assumption)
+      have ⟨d₁, heq₁, heq₂⟩ := h₁
+      have ⟨d₂, heq₃, heq₄⟩ := h₂
+      exact ⟨⸨d₁ d₂⸩, .app heq₁ heq₃, .app heq₂ heq₄⟩
+    cases h_f
+    rename_i i _
+    cases i
+    have h := ih₂ (by assumption)
+    repeat sorry
 
 theorem ParRed.preservation (h_step : ParRed x x') (h_t : Judge α x) : Judge α x' := by
   induction h_t with

@@ -280,4 +280,11 @@ example (h₁ : Judge (Srt 1) α) (h₂ : Judge ((~> 3) α, (Srt 2)) β)
 example (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> n.succ) α, (Srt n)) β)
   (h₃ : Judge α x) (h₄ : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by
   decide_infer
-
+example (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> n.succ) α, (Srt n)) β)
+  (h₃ : Judge ((Π' o.succ) α
+      , (Π' o.succ) β
+      , ⸨next ⸨assert (Srt o)⸩⸩) γ)
+  (h₄ : Judge ((Π' o) α, (Π' o) β, γ) x)
+  (h₅ : Judge ((Π' n) α, β) y)
+  (h₆ : Judge α z) : Judge ⸨γ z ⸨y z⸩⸩ ⸨(S m n o) α β γ x y z⸩ := by
+  decide_infer

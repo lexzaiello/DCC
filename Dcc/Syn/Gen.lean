@@ -116,7 +116,7 @@ macro_rules
   | `(*⸨$f:term $x:term⸩) => `(MExpr.app $f:term $x:term)
   | `(*⸨$f:term $x:term $xs:term*⸩) => `(*⸨*⸨$f:term $x:term⸩ $xs:term*⸩)
 
-open Qq Lean Meta Elab Tactic in def try_first_hyp (pred : Lean.Name) (on_e : FVarId) : TacticM (Option (Lean.Expr × Lean.Expr)) := do
+open Qq Lean Meta Elab Tactic in def try_first_hyp (matcher : Lean.Expr → Bool) : TacticM (Option (Lean.Expr × Lean.Expr)) := do
   let goal ← getMainGoal
   goal.withContext do
     let lctx ← getLCtx
@@ -124,20 +124,23 @@ open Qq Lean Meta Elab Tactic in def try_first_hyp (pred : Lean.Name) (on_e : FV
     let mut proof : Option (Lean.Expr × Lean.Expr) := Option.none
 
     for hyp in lctx do
-      match hyp.type with
-      | Lean.Expr.app (Lean.Expr.app b (Lean.Expr.fvar e')) _t  =>
-        if b == (Lean.Expr.const pred []) ∧ e' == on_e then
-          proof := .some ⟨hyp.type, (Lean.Expr.fvar hyp.fvarId)⟩
-        else continue
-      | _ => continue
+      if matcher hyp.type then
+        proof := .some ⟨hyp.type, (Lean.Expr.fvar hyp.fvarId)⟩
+      else continue
     return proof
+
+open Lean Elab Tactic in def reduce.matcher (on_e : FVarId) (hyp_type : Lean.Expr) : Bool:=
+  match hyp_type with
+  | Lean.Expr.app (Lean.Expr.app b (Lean.Expr.fvar e')) _t  =>
+    b == (Lean.Expr.const ``ParRed []) ∧ e' == on_e
+  | _ => false
 
 -- TODO: Use Lean.TacticM to look up potential reduction for fvar
 open Lean Elab Tactic in def reduce (e : MExpr) : TacticM ((e' : MExpr) × (ParRed' e e')) :=
   match e with
   | .lean_e e => throwError s!"not supported: {repr e}"
   | .fvar v => do
-    let p? := (← try_first_hyp (``ParRed) v)
+    let p? := (← try_first_hyp (reduce.matcher v))
     match p? with
     | .some ⟨.app (.app (.const ``ParRed []) _ety) e', proof⟩ =>
       return ⟨.lean_e e', .proof proof (e := .fvar v) (e' := .lean_e e')⟩

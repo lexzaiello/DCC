@@ -53,9 +53,14 @@ deriving Repr
 
 -- Note: axioms are a generalization of hypotheses in the lean info view
 -- consumed by our decide tactic
-open gen in def infer (e : MExpr) : (Err e) ⊕ ((t : MExpr) × InferAs t e) :=
+open Lean Elab Tactic Elab gen in def infer (e : MExpr) : TacticM ((Err e) ⊕ ((t : MExpr) × InferAs t e)) :=
   match e with
-  | .fvar v => .inl <| .no_type (.fvar (m := v))
+  | .fvar v => do
+    let p? := (← try_first_hyp (``Judge) v)
+    match p? with
+    | .some ⟨.app (.app (.const ``Judge []) α) x, proof⟩ =>
+      return ⟨.lean_e e', .proof proof (e := .fvar v) (e' := .lean_e e')⟩
+    | _ => throwError "no matching hypothesis"
   | .Srt m => .inr ⟨.Srt m.succ, .Srt⟩
   | .Pi m α _β => .inr ⟨.Srt m, .Pi⟩
   | .K' m n => .inr ⟨(K'.type m n).toMeta, .K'⟩

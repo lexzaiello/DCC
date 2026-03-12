@@ -16,13 +16,85 @@ solving via hypotheses in context.
 However, the resulting proofs are still of type Judge : Expr → Expr → Prop
 -/
 
-open gen in inductive InferAs : MExpr → MExpr → Type where
+open Qq gen in abbrev Level.succ (l : Level) : Level :=
+  let l : Q(Lean.Level) := l
+  q(Lean.Level.succ $l)
+
+namespace gen
+
+open MExpr
+
+syntax "(Π''" term ")" term "," term : term
+syntax "(Π'')" : term
+syntax "#" num term : term
+syntax "$'{" term "}" : term
+syntax "$'" : term
+
+macro_rules
+  | `((Π'' $m) $α, $β) => `(MExpr.Pi $m $α $β)
+  | `(#$n:num $fn:term) =>
+    match n.getNat with
+    | 0 => `($fn)
+    | .succ n =>
+      let n' := Lean.Syntax.mkNatLit n
+      `(*⸨MExpr.next (# $n':num $fn)⸩)
+  | `($') => `(MExpr.app')
+  | `($'{ $t:term }) => `(*⸨$' $t⸩)
+
+
+abbrev comp (f g : MExpr) : MExpr :=
+  *⸨$'{read} *⸨assert f⸩ g⸩
+
+infix:30 "∘'" => comp
+
+abbrev assert_n (n : ℕ) (fn : MExpr) : MExpr :=
+  (List.replicate n MExpr.assert).foldr (fun e acc => (e ∘' acc)) fn
+
+def I.type (m : Level) : MExpr :=
+  (Π'' m) (Srt m), (Π'' m) (# 0 read), (0 assert)
+
+def K'.type (m n : Level) : MExpr :=
+  (Π'' m) (Srt m), (Π'' m) *⸨assert (Srt n)⸩, (Π'' m) (0 assert), (Π'' m) (# 1 assert), (assert_n 3 (0 read))
+
+def K.β_arg (_m n : Level) : MExpr :=
+  (Π'' (Level.succ n)) (0 read), (# 1 *⸨assert (Srt n)⸩)
+
+def K.x_arg : MExpr := (0 assert)
+
+def K.y_arg : MExpr := *⸨$'{$'{read}} (# 1 assert) (# 2 MExpr.read)⸩
+
+def K.cod : MExpr := (assert_n 3 read)
+
+def K.type (m n : Level) : MExpr :=
+    (Π'' m) (Srt m)
+  , (Π'' m) (K.β_arg m n)
+  , (Π'' m) K.x_arg
+  , (Π'' m) K.y_arg
+  , K.cod
+
+def S.type (m n o : Level) : MExpr :=
+    (Π'' o) (Srt m)
+  , (Π'' o) ((Π'' (Level.succ n)) (# 0 read), (# 1 *⸨assert (Srt n)⸩))
+  , (Π'' o) ((Π'' (Level.succ o)) (# 0 assert)
+      , (Π'' (Level.succ o)) (# 1 read)
+      , (# 3 *⸨assert (Srt o)⸩))
+  , (Π'' o) ((Π'' o) (assert_n 2 (0 read))
+      , (Π'' o) (# 1 assert)
+      , (# 2 read))
+   , (Π'' o) ((Π'' n) (assert_n 3 (0 read))
+       , (# 1 (assert ∘' assert)))
+   , (Π'' o) (assert_n 4 (0 read))
+   , (# 2 ($'{read} ∘' assert))
+
+end gen
+
+open Qq gen in inductive InferAs : MExpr → MExpr → Type where
   | proof : Lean.Expr → InferAs α x
-  | I     : InferAs (I.type m).toMeta (.I m)
-  | K     : InferAs (K.type m n).toMeta (.K m n)
-  | K'    : InferAs (K'.type m n).toMeta (.K' m n)
-  | S     : InferAs (S.type m n o).toMeta (.S m n o)
-  | Srt   : InferAs (.Srt m.succ) (.Srt m)
+  | I     : InferAs (gen.I.type m) (.I m)
+  | K     : InferAs (gen.K.type m n) (.K m n)
+  | K'    : InferAs (gen.K'.type m n) (.K' m n)
+  | S     : InferAs (gen.S.type m n o) (.S m n o)
+  | Srt   : InferAs (.Srt (Level.succ m)) (.Srt m)
   | Pi    : InferAs (.Srt m) (.Pi m _α _β)
   | app   : InferAs (.Pi m α β) f
     → ParRed' α α'
@@ -80,12 +152,12 @@ open Lean Elab Tactic Elab gen in def infer (e : MExpr) : TacticM ((Err e) ⊕ (
     | .some ⟨.app (.app (.const ``Judge []) α) _x, proof⟩ =>
       return .inr ⟨.lean_e α, .proof proof (α := .lean_e α) (x := (.fvar v))⟩
     | _ => throwError "no matching hypothesis"
-  | .Srt m => return .inr ⟨.Srt m.succ, .Srt⟩
+  | .Srt m => return .inr ⟨.Srt (Level.succ m), .Srt⟩
   | .Pi m _α _β => return .inr ⟨.Srt m, .Pi⟩
-  | .K' m n => return .inr ⟨(K'.type m n).toMeta, .K'⟩
-  | .K m n => return .inr ⟨(K.type m n).toMeta, .K⟩
-  | .S m n o => return .inr ⟨(S.type m n o).toMeta, .S⟩
-  | .I m => return .inr ⟨(I.type m).toMeta, .I⟩
+  | .K' m n => return .inr ⟨(gen.K'.type m n), .K'⟩
+  | .K m n => return .inr ⟨(gen.K.type m n), .K⟩
+  | .S m n o => return .inr ⟨(gen.S.type m n o), .S⟩
+  | .I m => return .inr ⟨(gen.I.type m), .I⟩
   | .app f x => do
     let t_f ← infer f
     let t_x ← infer x
@@ -126,14 +198,29 @@ Produces a Lean.Expr representing a Judge proof.
 open Qq Lean Elab Tactic in def InferAs.render (h : InferAs t x) : TacticM Lean.Expr := do
   match h with
   | @proof α x pf => return pf
-  | @I m => return q(@Judge.I $m)
-  | @K m n => return q(@Judge.K $m $n)
-  | @K' m n => return q(@Judge.K' $m $n)
-  | @S m n o => return q(@Judge.S $m $n $o)
-  | @Srt m => return q(@Judge.Srt $m)
+  | @I m =>
+    let m : Q(Lean.Level) := m
+    return q(@Judge.I $m)
+  | @K m n =>
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
+    return q(@Judge.K $m $n)
+  | @K' m n =>
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
+    return q(@Judge.K' $m $n)
+  | @S m n o =>
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
+    let o : Q(Lean.Level) := o
+    return q(@Judge.S $m $n $o)
+  | @Srt m =>
+    let m : Q(Lean.Level) := m
+    return q(@Judge.Srt $m)
   | @Pi m α β => do
     let α : Q(_root_.Expr) ← α.unify
     let β : Q(_root_.Expr) ← β.unify
+    let m : Q(Lean.Level) := m
     return q(@Judge.Pi $m $α $β)
   | @conv A x B hA ⟨C, hA', hB'⟩ => do
     let A ← A.unify
@@ -152,10 +239,10 @@ open Qq Lean Elab Tactic in def InferAs.render (h : InferAs t x) : TacticM Lean.
     let β' ← β'.unify
     let f ← f.unify
 
-    let h_f' : Q(Judge (Expr.Pi $m $α $β) $f) ← h_t_f.render
     let h_x' : Q(Judge $α' $x) ← h_t_x.render
     let red_proof_dom : Q(ParRed $α $α') ← gen_par_red_proof h_redα
     let red_proof_cod : Q(ParRed (Expr.app $β $x) $β') ← gen_par_red_proof h_red_cod
+    let h_f' : Q(Judge (Expr.Pi $m $α $β) $f) ← h_t_f.render
     return q(@Judge.app $m $α $β $f $α' $x $β' $h_f' $red_proof_dom $h_x' $red_proof_cod)
 
 open gen Qq Lean Meta Elab Tactic in
@@ -186,7 +273,11 @@ example (h₁ : Judge (Srt 1) α) (h₂ : Judge α x) : Judge α ⸨(I 1) α x�
 example (h₁ : Judge (Srt 1) α) (h₂ : Judge α x) : Judge α ⸨(K' 1 1) α α x x⸩ := by
   decide_infer
 
-example (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> m) α, (Srt n)) β)
+example (h₁ : Judge (Srt 1) α) (h₂ : Judge ((~> 3) α, (Srt 2)) β)
+  (h₃ : Judge α x) (h₄ : Judge ⸨β x⸩ y) : Judge α ⸨(K 1 2) α β x y⸩ := by
+  decide_infer
+
+example (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> n.succ) α, (Srt n)) β)
   (h₃ : Judge α x) (h₄ : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by
   decide_infer
 

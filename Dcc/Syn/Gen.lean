@@ -6,7 +6,9 @@ import Mathlib.Data.List.Defs
 
 namespace gen
 
-abbrev Level := Lean.Expr
+open Qq
+
+abbrev Level := Q(Lean.Level)
 
 inductive MExpr where
   | Srt    : Level → MExpr
@@ -24,7 +26,7 @@ inductive MExpr where
    -- ONLY for tactics: Theorems are written in Expr, fvar for hypothesis automation
   | fvar   : Lean.FVarId → MExpr
   | lean_e : Lean.Expr → MExpr
-deriving BEq, Repr, Lean.ToExpr
+deriving BEq, Repr
 
 end gen
 

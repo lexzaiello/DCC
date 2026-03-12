@@ -310,9 +310,7 @@ inductive Judge : Expr → Expr → Prop
   | S   : Judge (S.type m n o) (S m n o)
   | Srt : Judge (Srt m.succ) (Srt m)
   | Pi  : Judge (Srt m) ((Π' m) _α, _β)
-  | app : Judge ((Π' _m) α₁, β) f
-    → ParRed α₁ α₂
-    → Judge α₂ x
+  | app : Judge ((Π' _m) α₁, β) f → ParRed α₁ α₂ → Judge α₂ x
     → ParRed ⸨β x⸩ β'
     → Judge β' ⸨f x⸩
   | conv : Judge A x → (∃ C, ParRed A C ∧ ParRed B C) → Judge B x

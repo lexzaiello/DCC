@@ -114,13 +114,9 @@ open Qq Lean Meta Elab Tactic in def try_first_hyp (matcher : Lean.Expr → Bool
   let goal ← getMainGoal
   goal.withContext do
     let lctx ← getLCtx
-    let mut proof : Option (Lean.Expr × Lean.Expr) := Option.none
 
-    for hyp in lctx do
-      if matcher hyp.type then
-        proof := .some ⟨hyp.type, (Lean.Expr.fvar hyp.fvarId)⟩
-      else continue
-    return proof
+    let match_hyp := (lctx.decls.toList.reverse.filterMap id).find? (matcher ∘ (·.type))
+    return match_hyp.map (fun hyp => ⟨hyp.type, (Lean.Expr.fvar hyp.fvarId)⟩)
 
 open Lean Elab Tactic in def reduce.matcher (on_e : FVarId) (hyp_type : Lean.Expr) : Bool :=
   match hyp_type with
@@ -455,6 +451,8 @@ open Expr Qq gen Lean Meta Elab Tactic in def contains_spine (e : Lean.Expr) : M
       | ~q(read) => pure true
       | ~q(assert) => pure true
       | ~q(app') => pure true
+      | ~q(hole) => pure true
+      | ~q(Srt $m) => pure true
       | _ => pure false
   | _ => pure false
 
@@ -470,33 +468,38 @@ open Qq Lean Meta Elab Tactic in def do_cases_spine : TacticM (List MVarId) := d
       | _ => pure false))
 
 syntax "extract_conv" : tactic
+syntax "extract_conv?" : tactic
 
-open Qq Lean Meta Elab Tactic in def extract_conv : TacticM Unit := do
+open Qq Lean Meta Elab Tactic in def extract_conv (with_logs : Bool := false) : TacticM Unit := do
   let g ← getMainGoal
   g.withContext do
     let lctx ← getLCtx
     for decl in lctx do
       if decl.isImplementationDetail then continue
-      let hyp : Option Q(Prop) ← Qq.checkTypeQ decl.type q(Prop)
+      let hyp : Option Q(Prop) ← Qq.checkTypeQ (← whnf decl.type) q(Prop)
       match hyp with
-      | .some ((Lean.Expr.forallE _c (Lean.Expr.const `Expr []) (Lean.Expr.forallE n (Lean.Expr.app
+      | .some ((Lean.Expr.forallE _c (Lean.Expr.const `Expr []) (Lean.Expr.forallE _n (Lean.Expr.app
         (Lean.Expr.app (Lean.Expr.const `ParRed []) x)
-        (Lean.Expr.bvar 0)) _imp (Lean.BinderInfo.default)) (Lean.BinderInfo.implicit))) =>
-        let decl₂ : Option (Q(_root_.Expr) × LocalDecl) := ← lctx.findDeclM? (fun decl₂ => do
-          let solver : Option Q(Prop) ← Qq.checkTypeQ decl₂.type q(Prop)
+        (Lean.Expr.bvar 0)) _imp _b) _b₂)) =>
+        let decl₂ : Option (Q(_root_.Expr) × LocalDecl) := ← (lctx.decls.toList.reverse.filterMap id).findSomeM? (fun (decl₂ : LocalDecl) => do
+          let solver : Option Q(Prop) ← Qq.checkTypeQ (← whnf decl₂.type) q(Prop)
           match solver with
           | .some ~q(ParRed $x' $c₂) =>
             if ← isDefEq x x' then
               pure <| .some ⟨c₂, decl₂⟩
-            else pure .none
-          | _ => pure .none)
+            else
+              if with_logs then dbg_trace s!"no match: {toString x} {toString x'}; skipping"
+              pure .none
+          | e =>
+            if with_logs then dbg_trace s!"cannot solve ParRed proofs: {e}; skipping"
+            pure .none)
         match decl₂ with
         | .some ⟨e_solve, solver⟩ =>
           let nm' := Lean.Name.str decl.userName "'"
           let proof := (Lean.Expr.app (.fvar decl.fvarId) e_solve).app (.fvar solver.fvarId)
           let t ← inferType proof
-          let _new_t : Option Q(Prop) := ← Qq.checkTypeQ t q(Prop)
-          let ⟨fvar, g⟩ ← g.assertHypotheses ⟨[Hypothesis.mk nm' t proof .default .default]⟩
+          let _new_t : Option Q(Prop) := ← Qq.checkTypeQ (← whnf t) q(Prop)
+          let ⟨_fvar, g⟩ ← g.assertHypotheses ⟨[Hypothesis.mk nm' t proof .default .default]⟩
           setGoals [g]
           let idt := mkIdent nm'
           evalTactic (← `(tactic| rcases $idt:ident with ⟨D, p₁, p₂⟩))
@@ -505,6 +508,9 @@ open Qq Lean Meta Elab Tactic in def extract_conv : TacticM Unit := do
 
 elab "extract_conv" : tactic => do
   extract_conv
+
+elab "extract_conv?" : tactic => do
+  extract_conv true
 
 open Qq Lean Meta Elab Tactic in elab "cases_spine" : tactic => do
   let gs ← do_cases_spine
@@ -555,14 +561,3 @@ theorem I.diamond (ih : ∀ {c : Expr}, ParRed x c → ∃ d, ParRed x' d ∧ Pa
   · cases_spine
     extract_conv
     decide_conv
-
-/-
-(Lean.Expr.forallE
-  c
-  (Lean.Expr.const `Expr [])
-  (Lean.Expr.forallE
-    n
-    (Lean.Expr.app
-      (Lean.Expr.app (Lean.Expr.const `ParRed []) x)
-      (Lean.Expr.bvar 0)) imp (Lean.BinderInfo.default)) (Lean.BinderInfo.implicit))
--/

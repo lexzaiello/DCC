@@ -175,21 +175,33 @@ theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ Par
   have h := ih (by assumption)
   have ⟨d, ha, hb⟩ := h
   exact ⟨d, ha, .assert hb⟩
-  
-  simp_all
-  rename_i ih _
-  cases ih
-  rename_i ih _
-  cases ih
-  rename_i ih _
-  cases ih
-  rename_i ih _
-  cases ih
-  rename_i ih _ _ _ _ _ _ _ _
-  have h := ih (by assumption)
-  have ⟨d, h₁, h₂⟩ := h
-  exact ⟨d, h₁, .K' h₂⟩
   cases hb
+  rename_i ih₁ ih₂ ih₃ _ _ _ _ _ _
+  have ha := ih₁ (by assumption)
+  have hb := ih₂ (by assumption)
+  have hc := ih₃ (by assumption)
+  have ⟨d₁, heq₁, heq₂⟩ := ha
+  have ⟨d₂, heq₃, heq₄⟩ := hb
+  have ⟨d₃, heq₅, heq₆⟩ := hc
+  exact ⟨_, .app (.app .refl (.app heq₁ heq₅)) (.app heq₃ heq₅), .app (.app .refl (.app heq₂ heq₆)) (.app heq₄ heq₆)⟩
+  rename_i h _
+  cases h
+  rename_i h _
+  cases h
+  rename_i h _
+  cases h
+  rename_i h _
+  cases h
+  rename_i ih₁ ih₂ ih₃ _ hx _ hg _ hf _ hπ
+  have ha := ih₁ (by assumption)
+  have hb := ih₂ (by assumption)
+  have hc := ih₃ (by assumption)
+  have ⟨d, heq₁, heq₂⟩ := ha
+  have ⟨d₁, heq₃, heq₄⟩ := hb
+  have ⟨d₂, heq₅, heq₆⟩ := hc
+  refine ⟨_, .app (.app hπ (.app heq₁ heq₅)) (.app heq₃ heq₅), ?_⟩
+  apply ParRed.app'
+  repeat assumption
   
   sorry
 

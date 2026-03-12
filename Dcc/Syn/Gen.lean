@@ -73,14 +73,13 @@ open Qq Lean Elab Meta Tactic in def MExpr.decode (e : Lean.Expr) : Lean.Elab.Te
   | .const `Expr.read [] => return .read
   | .const `Expr.assert [] => return .assert
   | .const `Expr.app' [] => return .app'
-  | e => match (← getLCtx).findFVar? e with
-    | .some decl => return .fvar decl.fvarId
-    | .none => throwError s!"not supported: {repr e}"
+  | .fvar v => return .fvar v
+  | e => return .lean_e e
 
 open MExpr
 
 inductive ParRed' : MExpr → MExpr → Type where
-  | parred_refl : ParRed' e e
+  | parred_refl : ParRed' e e₂
   | refl_fvar   : ParRed' (.fvar m) (.fvar m)
   | proof       : Lean.Expr → ParRed' e e'
   | refl_K'     : ParRed' (K' m n) (K' m n)
@@ -121,7 +120,6 @@ open Qq Lean Meta Elab Tactic in def try_first_hyp (matcher : Lean.Expr → Bool
   let goal ← getMainGoal
   goal.withContext do
     let lctx ← getLCtx
-
     let mut proof : Option (Lean.Expr × Lean.Expr) := Option.none
 
     for hyp in lctx do
@@ -139,13 +137,13 @@ open Lean Elab Tactic in def reduce.matcher (on_e : FVarId) (hyp_type : Lean.Exp
 -- TODO: Use Lean.TacticM to look up potential reduction for fvar
 open Lean Elab Tactic in def reduce (e : MExpr) : TacticM ((e' : MExpr) × (ParRed' e e')) :=
   match e with
-  | .lean_e e => throwError s!"not supported: {repr e}"
+  | .lean_e e => return ⟨.lean_e e, ParRed'.parred_refl⟩
   | .fvar v => do
     let p? := (← try_first_hyp (reduce.matcher v))
     match p? with
     | .some ⟨.app (.app (.const ``ParRed []) _ety) e', proof⟩ =>
       return ⟨.lean_e e', .proof proof (e := .fvar v) (e' := .lean_e e')⟩
-    | _ => throwError "no matching hypothesis"
+    | _ => return ⟨(.fvar v), ParRed'.parred_refl (e := .fvar v)⟩
   | MExpr.app (.app (.I _m) _α) x => do
     let ⟨x', h⟩ ← reduce x
     return ⟨x', .I h⟩
@@ -230,7 +228,7 @@ end gen
 
 open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.Elab.Tactic.TacticM Lean.Expr :=
   match p with
-  | @ParRed'.parred_refl x    => do
+  | @ParRed'.parred_refl x x' => do
     let x : Q(_root_.Expr) ← x.unify
     return q(@ParRed.refl $x)
   | @ParRed'.proof _ _ p      => return p

@@ -404,9 +404,8 @@ end examples
 syntax "exists_red" : tactic
 
 open Qq gen Lean Meta Elab Tactic in elab "exists_red" : tactic => do
-  withMainContext do
-    let goal ← getMainGoal
-
+  let goal ← getMainGoal
+  goal.withContext do
     match ← goal.getType with
     | .app
       (.app (.const ``Exists [_u]) (.const ``_root_.Expr []))

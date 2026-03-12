@@ -1,62 +1,25 @@
-import Dcc.Syn.JudgePi
-import Dcc.Syn.Gen
-import Dcc.Syn.Confluence
 import Dcc.Syn.Gen
 import Dcc.Syn.InferPi
-import Lean
-
-open Expr
-open Lean (Level)
-
-syntax "gen_reduce" : tactic
-syntax "convpi" : tactic
-syntax "subst" : tactic
-
-@[simp] theorem judge_self : ∃ C, ParRed a C ∧ ParRed a C :=
-  ⟨a, .refl, .refl⟩
-
-macro_rules
-  | `(tactic| subst) => `(tactic| exact ⟨_, .app (.app (.Pi .refl .refl .refl) .refl) .refl, .refl⟩)
-  | `(tactic| convpi) => `(tactic| exact ⟨_, ParRed.Pi .refl .refl .refl, .refl⟩)
+import Dcc.Syn.JudgePi
 
 open Expr
 
-theorem I_well_typed (h_α : Judge (Srt m) α) (h_x : Judge α x) : Judge α ⸨(I m) α x⸩ := by
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.conv
-  apply Judge.app
-  apply Judge.I
-  exact .refl
-  assumption
-  apply ParRed.Pi .refl .refl .refl
-  refine ⟨_, .Pival (.read .refl) .refl, .refl⟩
-  exact .refl
-  assumption
-  apply ParRed.assert .refl
-  exact judge_self
+theorem S_well_typed (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> n.succ) α, (Srt n)) β)
+  (h₃ : Judge ((Π' o.succ) α
+      , (Π' o.succ) β
+      , ⸨next ⸨assert (Srt o)⸩⸩) γ)
+  (h₄ : Judge ((Π' o) α, (Π' o) β, γ) x)
+  (h₅ : Judge ((Π' n) α, β) y)
+  (h₆ : Judge α z) : Judge ⸨γ z ⸨y z⸩⸩ ⸨(S m n o) α β γ x y z⸩ := by
+  decide_infer
 
-@[simp] theorem arrows_well_typed {n : Level} {α β : Expr} : Judge (Srt n) ((~> n) α, β) := by
-  apply Judge.conv
-  apply Judge.Pi
-  exact ⟨_, .refl, .refl⟩
+theorem K_well_typed (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> n.succ) α, (Srt n)) β)
+  (h₃ : Judge α x) (h₄ : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by
+  decide_infer
 
-theorem assert_n' {n : ℕ} {fn : Expr} : ∃ e₁ e₂ e₃ e₄, ParRed ⸨(assert_n n.succ fn) x y⸩ e₁ ∧ ParRed e₁ e₂ ∧ ParRed e₂ e₃ ∧ ParRed e₃ e₄ ∧ ParRed e₄ ⸨(assert_n n fn) x⸩ := by
-  unfold assert_n
-  induction n with
-  | zero | succ n h =>
-    simp_all
-    refine ⟨_, .app (.app' .refl .refl .refl) .refl, ?_⟩
-    refine ⟨_, .app (.app (.read .refl) .refl) .refl, ?_⟩
-    refine ⟨_, (.app (.app (.assert .refl) .refl) (.refl)), ?_⟩
-    exact ⟨_, .assert .refl, .refl⟩
+theorem I_well_typed (h₁ : Judge (Srt m) α) (h₂ : Judge α x) : Judge α ⸨(I m) α x⸩ := by
+  decide_infer
 
-theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (Srt n)) β)
-  (h_x : Judge α x) (h_y : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by
-  sorry
-
-theorem I_well_typed' (h_α : Judge (Srt m) α) (h_x : Judge α x) : Judge α ⸨(I m) α x⸩ := by
-  sorry
-
-theorem preservation (h_t : Judge t e) (h_step : Red e e') : Judge t e' := by
-  sorry
+theorem K'_well_typed (h₁ : Judge (Srt m) α) (h₂ : Judge (Srt n) β)
+  (h₃ : Judge α x) (h₄ : Judge β y) : Judge α ⸨(K' m n) α β x y⸩ := by
+  decide_infer

@@ -17,13 +17,14 @@ However, the resulting proofs are still of type Judge : Expr → Expr → Prop
 -/
 
 open gen in inductive InferAs : MExpr → MExpr → Type where
-  | I   : InferAs (I.type m).toMeta (.I m)
-  | K   : InferAs (K.type m n).toMeta (.K m n)
-  | K'  : InferAs (K'.type m n).toMeta (.K' m n)
-  | S   : InferAs (S.type m n o).toMeta (.S m n o)
-  | Srt : InferAs (.Srt m.succ) (.Srt m)
-  | Pi  : InferAs (.Srt m) (.Pi m _α _β)
-  | app : InferAs (.Pi m α β) f
+  | proof : Lean.Expr → InferAs α x
+  | I     : InferAs (I.type m).toMeta (.I m)
+  | K     : InferAs (K.type m n).toMeta (.K m n)
+  | K'    : InferAs (K'.type m n).toMeta (.K' m n)
+  | S     : InferAs (S.type m n o).toMeta (.S m n o)
+  | Srt   : InferAs (.Srt m.succ) (.Srt m)
+  | Pi    : InferAs (.Srt m) (.Pi m _α _β)
+  | app   : InferAs (.Pi m α β) f
     → ParRed' α α'
     → InferAs α₂ x -- unrelated, but we assume they're the same for the tactic
     → ParRed' (β.app x) β'
@@ -51,43 +52,50 @@ inductive Err : gen.MExpr → Type where
   | appr     : Err x → Err *⸨f x⸩
 deriving Repr
 
+open Lean Elab Tactic in def infer.matcher (on_e : FVarId) (hyp_type : Lean.Expr) : Bool:=
+  match hyp_type with
+  | Lean.Expr.app (Lean.Expr.app b (Lean.Expr.fvar _t)) (.fvar e')  =>
+    b == (Lean.Expr.const ``Judge []) ∧ e' == on_e
+  | _ => false
+
 -- Note: axioms are a generalization of hypotheses in the lean info view
 -- consumed by our decide tactic
 open Lean Elab Tactic Elab gen in def infer (e : MExpr) : TacticM ((Err e) ⊕ ((t : MExpr) × InferAs t e)) :=
   match e with
+  | .lean_e _e => throwError "unsupported"
   | .fvar v => do
-    let p? := (← try_first_hyp (``Judge) v)
+    let p? := (← try_first_hyp (infer.matcher v))
     match p? with
-    | .some ⟨.app (.app (.const ``Judge []) α) x, proof⟩ =>
-      return ⟨.lean_e e', .proof proof (e := .fvar v) (e' := .lean_e e')⟩
+    | .some ⟨.app (.app (.const ``Judge []) α) _x, proof⟩ =>
+      return .inr ⟨.lean_e α, .proof proof (α := .lean_e α) (x := (.fvar v))⟩
     | _ => throwError "no matching hypothesis"
-  | .Srt m => .inr ⟨.Srt m.succ, .Srt⟩
-  | .Pi m α _β => .inr ⟨.Srt m, .Pi⟩
-  | .K' m n => .inr ⟨(K'.type m n).toMeta, .K'⟩
-  | .K m n => .inr ⟨(K.type m n).toMeta, .K⟩
-  | .S m n o => .inr ⟨(S.type m n o).toMeta, .S⟩
-  | .I m => .inr ⟨(I.type m).toMeta, .I⟩
-  | .app f x =>
-    match h_t₀ : infer f, infer x with
-    | .inl e, _ => .inl <| .appl e
-    | _, .inl e => .inl <| .appr e
-    | .inr tf@⟨MExpr.Pi m α₁ β, heq₁⟩, .inr tx@⟨α₂, heq₂⟩ =>
-      if hrw : (reduce α₁).fst == (reduce α₂).fst then by
-        apply Sum.inr
-        refine ⟨(reduce *⸨β x⸩).fst, ?_⟩
-        apply InferAs.app
-        assumption
-        exact (reduce α₁).snd
-        assumption
-        exact (reduce *⸨β x⸩).snd
+  | .Srt m => return .inr ⟨.Srt m.succ, .Srt⟩
+  | .Pi m _α _β => return .inr ⟨.Srt m, .Pi⟩
+  | .K' m n => return .inr ⟨(K'.type m n).toMeta, .K'⟩
+  | .K m n => return .inr ⟨(K.type m n).toMeta, .K⟩
+  | .S m n o => return .inr ⟨(S.type m n o).toMeta, .S⟩
+  | .I m => return .inr ⟨(I.type m).toMeta, .I⟩
+  | .app f x => do
+    let t_f ← infer f
+    let t_x ← infer x
+    match t_f, t_x with
+    | .inl e, _ => return .inl <| .appl e
+    | _, .inl e => return .inl <| .appr e
+    | .inr ⟨MExpr.Pi _m α₁ β, heq₁⟩, .inr ⟨α₂, heq₂⟩ => do
+      let α' ← (reduce α₁)
+      let α₂' ← (reduce α₂)
+      let β' ← reduce *⸨β x⸩
+      if α'.fst == α₂'.fst then
+        return Sum.inr ⟨β'.fst,
+          .app (f := f) heq₁ α'.snd (α₂ := α₂'.fst) (.conv heq₂ (⟨α₂'.fst, α₂'.snd, .parred_refl⟩)) β'.snd⟩
       else
-        .inl (.mismatch heq₁ heq₂)
-    | .inr t, _ => .inl <| .not_fn t.fst
-  | .hole => .inl <| .no_type .hole
-  | .app' => .inl <| .no_type .app'
-  | .read => .inl <| .no_type .read
-  | .assert => .inl <|.no_type .assert
-  | .next => .inl <| .no_type .next
+        return .inl (.mismatch heq₁ heq₂)
+    | .inr t, _ => return .inl <| .not_fn t.fst
+  | .hole => return .inl <| .no_type .hole
+  | .app' => return .inl <| .no_type .app'
+  | .read => return .inl <| .no_type .read
+  | .assert => return .inl <|.no_type .assert
+  | .next => return .inl <| .no_type .next
 
 /-
 this infer function is used to solve lean goals.
@@ -100,6 +108,7 @@ Produces a Lean.Expr representing a Judge proof.
 -/
 open Qq Lean Elab Tactic in def InferAs.render (h : InferAs t x) : TacticM Lean.Expr := do
   match h with
+  | @proof α x pf => return pf
   | @I m => return q(@Judge.I $m)
   | @K m n => return q(@Judge.K $m $n)
   | @K' m n => return q(@Judge.K' $m $n)
@@ -134,7 +143,7 @@ open Qq Lean Elab Tactic in def InferAs.render (h : InferAs t x) : TacticM Lean.
 
 open gen Qq Lean Meta Elab Tactic in
 def do_decide_infer (x : MExpr) : Lean.Elab.Tactic.TacticM Unit := do
-  match infer x with
+  match ← infer x with
   | .inl e => throwError s!"error: {repr e}"
   | .inr ⟨_t, h_infer⟩ =>
     let proof ← h_infer.render

@@ -80,6 +80,7 @@ open Qq Lean Elab Meta Tactic in def MExpr.decode (e : Lean.Expr) : Lean.Elab.Te
 open MExpr
 
 inductive ParRed' : MExpr → MExpr → Type where
+  | parred_refl : ParRed' e e
   | refl_fvar   : ParRed' (.fvar m) (.fvar m)
   | proof       : Lean.Expr → ParRed' e e'
   | refl_K'     : ParRed' (K' m n) (K' m n)
@@ -229,6 +230,9 @@ end gen
 
 open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.Elab.Tactic.TacticM Lean.Expr :=
   match p with
+  | @ParRed'.parred_refl x    => do
+    let x : Q(_root_.Expr) ← x.unify
+    return q(@ParRed.refl $x)
   | @ParRed'.proof _ _ p      => return p
   | @ParRed'.refl_fvar m      => return ((Lean.Expr.const ``rfl [1]).app (.const ``_root_.Expr []))
   | @ParRed'.refl_K' m n      => return q(@ParRed.refl_K' $m $n)

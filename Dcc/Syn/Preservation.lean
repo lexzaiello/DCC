@@ -29,6 +29,7 @@ theorem I.diamond (ih : ∀ {c : Expr}, ParRed x c → ∃ d, ParRed x' d ∧ Pa
   cases h
   · simp_all
   · rename_i h_i _
+    
     cases h_i
     rename_i h_i _
     cases h_i

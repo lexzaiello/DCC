@@ -439,7 +439,7 @@ Closes conversion goals like "∃ e', ParRed A x ∧ ParRed B x" by:
 2. check if fst == and close with ∧ + ∃ if so
 -/
 
-open Expr Qq gen Lean Meta Elab Tactic in def contains_spine (e : Lean.Expr) : TacticM Bool := do
+open Expr Qq gen Lean Meta Elab Tactic in def contains_spine (e : Lean.Expr) : MetaM Bool := do
   match ← checkTypeQ e q(_root_.Expr) with
   | .some e' =>
     match e with
@@ -458,34 +458,20 @@ open Expr Qq gen Lean Meta Elab Tactic in def contains_spine (e : Lean.Expr) : T
       | _ => pure false
   | _ => pure false
 
-syntax "cases_spine" num* : tactic
+syntax "cases_spine" : tactic
 
-open Qq Lean Meta Elab Tactic in elab "cases_spine" n:num* : tactic => do
-  let goal ← getMainGoal
-  let advance (nm : FVarId) (n_steps : ℕ) (e : Q(_root_.Expr)) := do
-    if (← contains_spine e) then
-      match (← goal.cases nm).toList with
-      | [g] =>
-        match n_steps with
-        | .zero => setGoals [g.mvarId]
-        | .succ n =>
-          let nlit := Syntax.mkNatLit n
-          let gs ← evalTacticAt (← `(tactic| cases_spine $nlit)) g.mvarId
-          setGoals gs
-      | _ => pure ()
+open Qq Lean Meta Elab Tactic in def do_cases_spine : TacticM (List MVarId) := do
+  Tactic.liftMetaMAtMain (fun goal => goal.casesRec (fun decl => do
+      match ← checkTypeQ (← whnf decl.type) q(Prop) with
+      | .some ~q(Judge $α $e) =>
+        contains_spine e
+      | .some ~q(ParRed $e $x') =>
+        contains_spine e
+      | _ => pure false))
 
-  let n_steps := (n.toList.head?.map (·.getNat)).getD 100
-  goal.withContext do
-    let lctx ← getLCtx
-    for decl in lctx do
-      if decl.isImplementationDetail then continue
-      let nm := decl.fvarId
-      match decl.value? with
-        | .some v => match ← checkTypeQ v q(Prop) with
-          | .some ~q(Judge $α $e) => advance nm n_steps e
-          | .some ~q(ParRed $e $x') => advance nm n_steps e
-          | _ => pure ()
-        | _ => pure ()
+open Qq Lean Meta Elab Tactic in elab "cases_spine" : tactic => do
+  let gs ← do_cases_spine
+  setGoals gs
 
 open Qq gen Lean Meta Elab Tactic in elab "decide_conv" : tactic => do
   let goal ← getMainGoal
@@ -524,3 +510,15 @@ open Qq gen Lean Meta Elab Tactic in elab "decide_conv" : tactic => do
 
 open Expr in example : ∃ D, ParRed ⸨(I 2) (Srt 1) (Srt 0)⸩ D ∧ ParRed ⸨(I 2) (Srt 1) (Srt 0)⸩ D := by
   decide_conv
+
+theorem I.diamond (ih : ∀ {c : Expr}, ParRed x c → ∃ d, ParRed x' d ∧ ParRed c d) : ParRed (((Expr.I _m).app _α).app x) c → ∃ d, ParRed x' d ∧ ParRed c d := by
+  intro h
+  cases h
+  · simp_all
+  · cases_spine
+    
+    rename_i h_i _
+    cases h_i
+    have h := ih (by assumption)
+    have ⟨d, hx', heq₁⟩ := h
+    exact ⟨d, by assumption, .I (by assumption)⟩

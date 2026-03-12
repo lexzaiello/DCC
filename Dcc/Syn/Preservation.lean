@@ -57,7 +57,37 @@ theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ Par
     simp_all
     extract_conv
     decide_conv
-  
+  · cases_spine
+    simp_all
+    extract_conv
+    decide_conv
+  · cases_spine
+    simp_all
+    extract_conv
+    decide_conv
+  · cases_spine
+    rename_i hpx₁ hpy₁ hpz₁ ih₁ ih₂ ih₃ _ _ _ hpx₂ hpy₂ hpz₂
+    have ha := ih₁ hpx₂
+    have hb := ih₂ hpy₂
+    have hc := ih₃ hpz₂
+    have ⟨d₁, heq₁, heq₂⟩ := ha
+    have ⟨d₂, heq₃, heq₄⟩ := hb
+    have ⟨d₃, heq₅, heq₆⟩ := hc
+    refine ⟨⸨⸨d₁ d₃⸩ ⸨d₂ d₃⸩⸩, ?_, ?_⟩
+    apply ParRed.app
+    repeat (apply ParRed.app; repeat assumption)
+    rename_i hpx₁ hpy₁ hpz₁ ih₁ ih₂ ih₃ _ _ _ _ _ _ _ _ _ _ _ _
+    rename_i hpz₂ x'₄ hpy₂ x'₃ hpx₂ x'₂ hpγ x'₁ hpβ x' hα
+    rename_i m n o _ _ _ _ 
+    have ha := ih₁ hpx₂
+    have hb := ih₂ hpy₂
+    have hc := ih₃ hpz₂
+    have ⟨d₁, heq₁, heq₂⟩ := ha
+    have ⟨d₂, heq₃, heq₄⟩ := hb
+    have ⟨d₃, heq₅, heq₆⟩ := hc
+    refine ⟨_, ?_, ParRed.S (_m := m) (_n := n) (_o := o) (_α := x') (_β := x'₁) (_γ := x'₂) heq₂ heq₄ heq₆⟩
+    apply ParRed.app
+    repeat (apply ParRed.app; repeat assumption)
   sorry
   sorry
 

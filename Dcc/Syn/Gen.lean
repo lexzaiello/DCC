@@ -495,7 +495,8 @@ open Qq Lean Meta Elab Tactic in def extract_conv (with_logs : Bool := false) : 
             pure .none)
         match decl₂ with
         | .some ⟨e_solve, solver⟩ =>
-          let nm' := Lean.Name.str decl.userName "'"
+          let post ← mkFreshId
+          let nm' := Lean.Name.str post decl.userName.toString
           let proof := (Lean.Expr.app (.fvar decl.fvarId) e_solve).app (.fvar solver.fvarId)
           let t ← inferType proof
           let _new_t : Option Q(Prop) := ← Qq.checkTypeQ (← whnf t) q(Prop)

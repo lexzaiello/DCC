@@ -109,7 +109,61 @@ theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ Par
     refine ⟨_, ?_, ParRed.Pi heq₂ heq₄ heq₆⟩
     apply ParRed.Pival
     repeat (apply ParRed.app; repeat assumption)
-    
+  · cases_spine
+    rename_i ih₁ ih₂ _ _ hpα hpβ
+    have ha := ih₁ hpα
+    have hb := ih₂ hpβ
+    have ⟨d₁, heq₁, heq₂⟩ := ha
+    have ⟨d₂, heq₃, heq₄⟩ := hb
+    exact ⟨_, .Pival heq₁ heq₃, .Pival heq₂ heq₄⟩
+  · cases_spine
+    simp_all
+    rename_i h_ff' ih _ h_xx' _ h_fx'
+    have ha := ih h_fx'
+    have ⟨d, heq₁, heq₂⟩ := ha
+    refine ⟨_, heq₁, ?_⟩
+    apply ParRed.next
+    assumption
+  · cases_spine
+    simp_all
+    extract_conv; decide_conv
+  · cases_spine
+    simp_all
+    rename_i h_ff' ih _ h_xx' _ h_fx'
+    have ha := ih h_fx'
+    have ⟨d, heq₁, heq₂⟩ := ha
+    refine ⟨_, heq₁, ?_⟩
+    apply ParRed.assert
+    assumption
+  · cases_spine
+    rename_i hf'₂ hg'₂ hx'₂ ih₁ ih₂ ih₃ _ _ _ hf' hg' hx'
+    have ha := ih₁ hf'
+    have hb := ih₂ hg'
+    have hc := ih₃ hx'
+    have ⟨d₁, heq₁, heq₂⟩ := ha
+    have ⟨d₂, heq₃, heq₄⟩ := hb
+    have ⟨d₃, heq₅, heq₆⟩ := hc
+    refine ⟨_, (.app (.app .refl (.app heq₁ heq₅)) (.app heq₃ heq₅)), ?_⟩
+    apply ParRed.app
+    apply ParRed.app
+    exact .refl
+    repeat (apply ParRed.app; assumption)
+    assumption
+    apply ParRed.app
+    assumption
+    assumption
+    rename_i ih₁ ih₂ ih₃ _ hx _ hg _ hf _ hπ
+    have ha := ih₁ hf
+    have hb := ih₂ hg
+    have hc := ih₃ hx
+    have ⟨d₁, heq₁, heq₂⟩ := ha
+    have ⟨d₂, heq₃, heq₄⟩ := hb
+    have ⟨d₃, heq₅, heq₆⟩ := hc
+    refine ⟨_, ?_, .app' heq₂ heq₄ heq₆⟩
+    apply ParRed.app
+    apply ParRed.app
+    assumption
+    repeat (apply ParRed.app; repeat assumption)
   sorry
   sorry
 

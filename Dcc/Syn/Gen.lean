@@ -462,6 +462,18 @@ syntax "cases_spine" num* : tactic
 
 open Qq Lean Meta Elab Tactic in elab "cases_spine" n:num* : tactic => do
   let goal ← getMainGoal
+  let advance (nm : FVarId) (n_steps : ℕ) (e : Q(_root_.Expr)) := do
+    if (← contains_spine e) then
+      match (← goal.cases nm).toList with
+      | [g] =>
+        match n_steps with
+        | .zero => setGoals [g.mvarId]
+        | .succ n =>
+          let nlit := Syntax.mkNatLit n
+          let gs ← evalTacticAt (← `(tactic| cases_spine $nlit)) g.mvarId
+          setGoals gs
+      | _ => pure ()
+
   let n_steps := (n.toList.head?.map (·.getNat)).getD 100
   goal.withContext do
     let lctx ← getLCtx
@@ -469,21 +481,11 @@ open Qq Lean Meta Elab Tactic in elab "cases_spine" n:num* : tactic => do
       if decl.isImplementationDetail then continue
       let nm := decl.fvarId
       match decl.value? with
-        | .some v => match ← checkTypeQ v q(_root_.Expr) with
-          | .some e =>
-            if ¬ (← contains_spine e) then continue
-            match (← goal.cases nm).toList with
-            | [g] =>
-              match n_steps with
-              | .zero => setGoals [g.mvarId]
-              | .succ n =>
-                let nlit := Syntax.mkNatLit n
-                let gs ← evalTacticAt (← `(tactic| cases_spine $nlit)) g.mvarId
-                setGoals gs
-            | [] => pure ()
-            | _ => continue
-          | _ => continue
-        | _ => continue
+        | .some v => match ← checkTypeQ v q(Prop) with
+          | .some ~q(Judge $α $e) => advance nm n_steps e
+          | .some ~q(ParRed $e $x') => advance nm n_steps e
+          | _ => pure ()
+        | _ => pure ()
 
 open Qq gen Lean Meta Elab Tactic in elab "decide_conv" : tactic => do
   let goal ← getMainGoal

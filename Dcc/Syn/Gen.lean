@@ -495,10 +495,11 @@ open Qq Lean Meta Elab Tactic in def mk_goals : TacticM Unit := do
           let nm' := Lean.Name.str decl.userName "'"
           let proof := (Lean.Expr.app (.fvar decl.fvarId) e_solve).app (.fvar solver.fvarId)
           let t ← inferType proof
-          dbg_trace toString t
-          dbg_trace toString proof
-          let ⟨_, g⟩ ← g.assertHypotheses ⟨[Hypothesis.mk nm' t proof .default .default]⟩
+          let _new_t : Option Q(Prop) := ← Qq.checkTypeQ t q(Prop)
+          let ⟨fvar, g⟩ ← g.assertHypotheses ⟨[Hypothesis.mk nm' t proof .default .default]⟩
           setGoals [g]
+          let idt := mkIdent nm'
+          evalTactic (← `(tactic| rcases $idt:ident with ⟨D, p₁, p₂⟩))
         | _ => continue
       | _ => continue
 

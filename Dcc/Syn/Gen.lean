@@ -122,7 +122,7 @@ open Qq Lean Meta Elab Tactic in def try_first_hyp (matcher : Lean.Expr → Bool
       else continue
     return proof
 
-open Lean Elab Tactic in def reduce.matcher (on_e : FVarId) (hyp_type : Lean.Expr) : Bool:=
+open Lean Elab Tactic in def reduce.matcher (on_e : FVarId) (hyp_type : Lean.Expr) : Bool :=
   match hyp_type with
   | Lean.Expr.app (Lean.Expr.app b (Lean.Expr.fvar e')) _t  =>
     b == (Lean.Expr.const ``ParRed []) ∧ e' == on_e
@@ -439,7 +439,24 @@ Closes conversion goals like "∃ e', ParRed A x ∧ ParRed B x" by:
 2. check if fst == and close with ∧ + ∃ if so
 -/
 
-syntax "decide_conv" : tactic
+open Expr Qq gen Lean Meta Elab Tactic in def contains_spine (e : Lean.Expr) : TacticM Bool := do
+  match ← checkTypeQ e q(_root_.Expr) with
+  | .some e' =>
+    match e with
+    | .app (.app (.const ``_root_.Expr.app []) f) _x => contains_spine f
+    | _ => match e' with
+      | ~q((K' $m $n)) => pure true
+      | ~q((K $m $n)) => pure true
+      | ~q((S $m $n $o)) => pure true
+      | ~q(I $m) => pure true
+      | ~q(S $m $n $o) => pure true
+      | ~q(Pi $m $α $β) => pure true
+      | ~q(next) => pure true
+      | ~q(read) => pure true
+      | ~q(assert) => pure true
+      | ~q(app') => pure true
+      | _ => pure false
+  | _ => pure false
 
 open Qq gen Lean Meta Elab Tactic in elab "decide_conv" : tactic => do
   let goal ← getMainGoal
@@ -470,7 +487,7 @@ open Qq gen Lean Meta Elab Tactic in elab "decide_conv" : tactic => do
             | .some p₁, .some p₂ =>
               goal.assign q(@Exists.intro _root_.Expr (fun d => ParRed $A d ∧ ParRed $B d) $D₁ (And.intro $p₁ $p₂))
             | _, _ => throwError s!"{D₁} ≠ {D₂}"
-          | _ => throwError s!"{D₁} ≠ {D₂}"
+          | _ => throwError s!"cannot solve. mismatch:\n{D₁} ≠ \n{D₂}"
         | _, _ => throwError "not an expr"
       | .none, _ => throwError s!"not an Expr: {A}"
       | _, .none => throwError s!"not an Expr: {B}"

@@ -24,20 +24,6 @@ theorem K'_well_typed (h₁ : Judge (Srt m) α) (h₂ : Judge (Srt n) β)
   (h₃ : Judge α x) (h₄ : Judge β y) : Judge α ⸨(K' m n) α β x y⸩ := by
   decide_infer
 
-theorem exists_red_self : (∃ e', ParRed e e') → ∃ e', ParRed e e' ∧ ParRed e e' := by
-  intro ⟨e', p⟩
-  exact ⟨e', by assumption, by assumption⟩
-
-syntax "cases_ih" num : tactic
-
-macro_rules
-  | `(tactic| cases_ih $n) =>
-    match n.getNat with
-    | .zero => `(tactic| rename_i h _; cases h)
-    | .succ n =>
-      let n_e := Lean.Syntax.mkNatLit n
-      `(tactic|  rename_i h _; cases_ih $n_e)
-
 theorem I.diamond (ih : ∀ {c : Expr}, ParRed x c → ∃ d, ParRed x' d ∧ ParRed c d) : ParRed (((Expr.I _m).app _α).app x) c → ∃ d, ParRed x' d ∧ ParRed c d := by
   intro h
   cases h

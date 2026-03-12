@@ -2,6 +2,7 @@ import Dcc.Syn.JudgePi
 import Qq
 import Lean
 import Lean.Elab
+import Mathlib.Data.List.Defs
 
 open Lean (Level)
 
@@ -112,6 +113,24 @@ syntax "*⸨" term* "⸩" : term
 macro_rules
   | `(*⸨$f:term $x:term⸩) => `(MExpr.app $f:term $x:term)
   | `(*⸨$f:term $x:term $xs:term*⸩) => `(*⸨*⸨$f:term $x:term⸩ $xs:term*⸩)
+
+open Qq Lean Meta Elab Tactic in def lookup (x : FVarId) (pred : Lean.Expr) : TacticM (Option Lean.Expr) := do
+  let lctx ← getLCtx
+  let e := (← (lctx.find? x).getDM (throwError "no matching hypothesis")).value
+  let hyp ← lctx.decls.toList.firstM (fun ldecl => do
+    ldecl.mapM (fun ldecl => do
+      if ldecl.isImplementationDetail then return Option.none
+      let type ← whnf (← reduceAll ldecl.type)
+      match type with
+      | .app (.app pred' _α) x' =>
+        if (← isDefEq x' e) ∧ (← isDefEq pred pred') then
+          return (.some ldecl.value)
+        else return .none
+      | _ => return .none)
+  )
+  match hyp with
+  | .some hyp => return hyp
+  | .none => throwError s!"no matching hypothesis for: {repr pred}"
 
 -- TODO: Use Lean.TacticM to look up potential reduction for fvar
 open Lean Elab Tactic in def reduce (e : MExpr) : (e' : MExpr) × (ParRed' e e') :=

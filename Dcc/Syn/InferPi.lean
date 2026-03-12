@@ -84,7 +84,7 @@ def S.type (m n o : Level) : MExpr :=
    , (Π'' o) ((Π'' n) (assert_n 3 (0 read))
        , (# 1 (assert ∘' assert)))
    , (Π'' o) (assert_n 4 (0 read))
-   , (# 2 ($'{read} ∘' assert))
+   , (# 2 (assert ∘' $'{read}))
 
 end gen
 

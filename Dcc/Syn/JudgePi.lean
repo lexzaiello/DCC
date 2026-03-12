@@ -126,7 +126,12 @@ def S.type (m n o : Level) : Expr :=
    , (Π' o) ((Π' n) (assert_n 3 (0 read))
        , (1 (assert ∘' assert)))
    , (Π' o) (assert_n 4 (0 read))
-   , (2 (${read} ∘' assert))
+   , (2 (assert ∘' ${read}))
+
+/-
+S γ y z = γ z (y z)
+2 
+-/
 
 syntax "(" "~>" term ")" term "," term : term
 

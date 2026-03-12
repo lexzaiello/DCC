@@ -469,6 +469,42 @@ open Qq Lean Meta Elab Tactic in def do_cases_spine : TacticM (List MVarId) := d
         contains_spine e
       | _ => pure false))
 
+syntax "mk_goals" : tactic
+
+open Qq Lean Meta Elab Tactic in def mk_goals : TacticM Unit := do
+  let g ← getMainGoal
+  g.withContext do
+    let lctx ← getLCtx
+    for decl in lctx do
+      if decl.isImplementationDetail then continue
+      let hyp : Option Q(Prop) ← Qq.checkTypeQ decl.type q(Prop)
+      match hyp with
+      | .some ((Lean.Expr.forallE _c (Lean.Expr.const `Expr []) (Lean.Expr.forallE n (Lean.Expr.app
+        (Lean.Expr.app (Lean.Expr.const `ParRed []) x)
+        (Lean.Expr.bvar 0)) _imp (Lean.BinderInfo.default)) (Lean.BinderInfo.implicit))) =>
+        let decl₂ : Option (Q(_root_.Expr) × LocalDecl) := ← lctx.findDeclM? (fun decl₂ => do
+          let solver : Option Q(Prop) ← Qq.checkTypeQ decl₂.type q(Prop)
+          match solver with
+          | .some ~q(ParRed $x' $c₂) =>
+            if ← isDefEq x x' then
+              pure <| .some ⟨c₂, decl₂⟩
+            else pure .none
+          | _ => pure .none)
+        match decl₂ with
+        | .some ⟨e_solve, solver⟩ =>
+          let nm' := Lean.Name.str decl.userName "'"
+          let proof := (Lean.Expr.app (.fvar decl.fvarId) e_solve).app (.fvar solver.fvarId)
+          let t ← inferType proof
+          dbg_trace toString t
+          dbg_trace toString proof
+          let ⟨_, g⟩ ← g.assertHypotheses ⟨[Hypothesis.mk nm' t proof .default .default]⟩
+          setGoals [g]
+        | _ => continue
+      | _ => continue
+
+elab "mk_goals" : tactic => do
+  mk_goals
+
 open Qq Lean Meta Elab Tactic in elab "cases_spine" : tactic => do
   let gs ← do_cases_spine
   setGoals gs
@@ -516,9 +552,20 @@ theorem I.diamond (ih : ∀ {c : Expr}, ParRed x c → ∃ d, ParRed x' d ∧ Pa
   cases h
   · simp_all
   · cases_spine
-    
+    mk_goals
     rename_i h_i _
     cases h_i
     have h := ih (by assumption)
     have ⟨d, hx', heq₁⟩ := h
     exact ⟨d, by assumption, .I (by assumption)⟩
+
+/-
+(Lean.Expr.forallE
+  c
+  (Lean.Expr.const `Expr [])
+  (Lean.Expr.forallE
+    n
+    (Lean.Expr.app
+      (Lean.Expr.app (Lean.Expr.const `ParRed []) x)
+      (Lean.Expr.bvar 0)) imp (Lean.BinderInfo.default)) (Lean.BinderInfo.implicit))
+-/

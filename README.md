@@ -4,14 +4,18 @@
 
 The DCC is a dependently-typed calculus based on [SK combinators](https://en.wikipedia.org/wiki/SKI_combinator_calculus). The DCC does not use variables or mutable state. In this repository, I set out to:
 
-- [x] Define syntax for a variable-free combinator calculus
-- [x] Define single-step and type relations for the calculus
-  - [x] Define types for every object in the syntax tree
-- [ ] Proofs
-  - [ ] Prove preservation of the typing judgment under single-step reduction
-  - [ ] Prove preservation of the typing judgment under star-step reduction
-  - [ ] Prove progress of well-typed terms (well-typed terms can step, or they are normal values)
-  - [ ] Prove weak normalization of the calculus using [reducibility candidates](https://www.cs.cmu.edu/~rwh/courses/chtt/pdfs/girard.pdf) or a combinator-specific decreasing measure
+## Dependent S Combinator Type-checks
+
+```lean
+example (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> n.succ) α, (Srt n)) β)
+  (h₃ : Judge ((Π' o.succ) α
+      , (Π' o.succ) β
+      , ⸨next ⸨assert (Srt o)⸩⸩) γ)
+  (h₄ : Judge ((Π' o) α, (Π' o) β, γ) x)
+  (h₅ : Judge ((Π' n) α, β) y)
+  (h₆ : Judge α z) : Judge ⸨γ z ⸨y z⸩⸩ ⸨(S m n o) α β γ x y z⸩ := by
+  decide_infer
+```
 
 ## Lean Toolchain
 

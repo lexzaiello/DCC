@@ -469,9 +469,9 @@ open Qq Lean Meta Elab Tactic in def do_cases_spine : TacticM (List MVarId) := d
         contains_spine e
       | _ => pure false))
 
-syntax "mk_goals" : tactic
+syntax "extract_conv" : tactic
 
-open Qq Lean Meta Elab Tactic in def mk_goals : TacticM Unit := do
+open Qq Lean Meta Elab Tactic in def extract_conv : TacticM Unit := do
   let g ← getMainGoal
   g.withContext do
     let lctx ← getLCtx
@@ -503,8 +503,8 @@ open Qq Lean Meta Elab Tactic in def mk_goals : TacticM Unit := do
         | _ => continue
       | _ => continue
 
-elab "mk_goals" : tactic => do
-  mk_goals
+elab "extract_conv" : tactic => do
+  extract_conv
 
 open Qq Lean Meta Elab Tactic in elab "cases_spine" : tactic => do
   let gs ← do_cases_spine
@@ -553,12 +553,8 @@ theorem I.diamond (ih : ∀ {c : Expr}, ParRed x c → ∃ d, ParRed x' d ∧ Pa
   cases h
   · simp_all
   · cases_spine
-    mk_goals
-    rename_i h_i _
-    cases h_i
-    have h := ih (by assumption)
-    have ⟨d, hx', heq₁⟩ := h
-    exact ⟨d, by assumption, .I (by assumption)⟩
+    extract_conv
+    decide_conv
 
 /-
 (Lean.Expr.forallE

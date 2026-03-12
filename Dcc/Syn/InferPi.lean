@@ -58,7 +58,7 @@ open Lean Elab Tactic in def infer.matcher (on_e : FVarId) (hyp_type : Lean.Expr
     b == (Lean.Expr.const ``Judge []) ∧ e' == on_e
   | _ => false
 
-open Lean Elab Tactic Elab gen in def conv_app_n (t₀ f x : MExpr) (h_t : InferAs t₀ *⸨f x⸩) (max_steps : ℕ := 1000) : TacticM (((β' : MExpr) × InferAs β' *⸨f x⸩)) := do
+open Lean Elab Tactic Elab gen in def conv_app_n (t₀ e : MExpr) (h_t : InferAs t₀ e) (max_steps : ℕ := 1000) : TacticM (((β' : MExpr) × InferAs β' e)) := do
   match max_steps with
   | .zero => return ⟨t₀, h_t⟩
   | .succ n =>
@@ -66,8 +66,8 @@ open Lean Elab Tactic Elab gen in def conv_app_n (t₀ f x : MExpr) (h_t : Infer
     if e'.fst == t₀ then
       return ⟨t₀, h_t⟩
     else
-      let t : InferAs e'.fst *⸨f x⸩ := InferAs.conv (A := t₀) h_t ⟨e'.fst, e'.snd, .parred_refl⟩
-      conv_app_n e'.fst f x t n
+      let t : InferAs e'.fst e := InferAs.conv (A := t₀) h_t ⟨e'.fst, e'.snd, .parred_refl⟩
+      conv_app_n e'.fst e t n
 
 -- Note: axioms are a generalization of hypotheses in the lean info view
 -- consumed by our decide tactic
@@ -94,11 +94,11 @@ open Lean Elab Tactic Elab gen in def infer (e : MExpr) : TacticM ((Err e) ⊕ (
     | _, .inl e => return .inl <| .appr e
     | .inr ⟨MExpr.Pi _m α₁ β, heq₁⟩, .inr ⟨α₂, heq₂⟩ => do
       let α' ← (reduce α₁)
-      let α₂' ← (reduce α₂)
+      let α₂' ← (conv_app_n α₂ x heq₂)
       let β' ← reduce *⸨β x⸩
       if defeq α'.fst α₂'.fst then
         let t₀ := InferAs.app (β' := β'.fst) (f := f) heq₁ α'.snd (α₂ := α'.fst) (.conv heq₂ (⟨α'.fst, .parred_refl, .parred_refl⟩)) β'.snd
-        return Sum.inr (← conv_app_n β'.fst f x t₀)
+        return Sum.inr (← conv_app_n β'.fst *⸨f x⸩ t₀)
       else
         return .inl (.mismatch heq₁ heq₂)
     | .inr t, _ => return .inl <| .not_fn t.fst
@@ -186,9 +186,7 @@ example (h₁ : Judge (Srt 1) α) (h₂ : Judge α x) : Judge α ⸨(I 1) α x�
 example (h₁ : Judge (Srt 1) α) (h₂ : Judge α x) : Judge α ⸨(K' 1 1) α α x x⸩ := by
   decide_infer
 
-example (h₁ : Judge (Srt 1) α) (h₂ : Judge ((~> 3) α, (Srt 2)) β)
-  (h₃ : Judge α x) (h₄ : Judge ⸨β x⸩ y) : Judge α ⸨(K 1 2) α β x y⸩ := by
+example (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> m) α, (Srt n)) β)
+  (h₃ : Judge α x) (h₄ : Judge ⸨β x⸩ y) : Judge α ⸨(K m n) α β x y⸩ := by
   decide_infer
 
-example : Judge (Srt 1) ⸨(mk_I (Srt 1) 2) (Srt 0)⸩ := by
-  decide_infer

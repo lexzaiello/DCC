@@ -4,9 +4,9 @@ import Lean
 import Lean.Elab
 import Mathlib.Data.List.Defs
 
-open Lean (Level)
-
 namespace gen
+
+abbrev Level := Lean.Expr
 
 inductive MExpr where
   | Srt    : Level → MExpr
@@ -29,27 +29,20 @@ deriving BEq, Repr, Lean.ToExpr
 end gen
 
 def Expr.toMeta : Expr → gen.MExpr
-  | .I m => .I m
-  | .K' m n => .K' m n
-  | .K m n => .K m n
-  | .S m n o => .S m n o
+  | .I m => .I (Lean.toExpr m)
+  | .K' m n => .K' (Lean.toExpr m) (Lean.toExpr n)
+  | .K m n => .K (Lean.toExpr m) (Lean.toExpr n)
+  | .S m n o => .S (Lean.toExpr m) (Lean.toExpr n) (Lean.toExpr o)
   | .app f x => .app f.toMeta x.toMeta
   | .app' => .app'
   | .assert => .assert
   | .read => .read
   | .next => .next
   | .hole => .hole
-  | Expr.Pi m a b => .Pi m (toMeta a) (toMeta b)
-  | .Srt m => .Srt m
+  | Expr.Pi m a b => .Pi (Lean.toExpr m) (toMeta a) (toMeta b)
+  | .Srt m => .Srt (Lean.toExpr m)
 
 namespace gen
-
-open Lean Meta in unsafe def evalLevelUnsafe (e : Lean.Expr) : MetaM Level :=
-  evalExpr Level (.const ``Lean.Level []) e
-
-open Lean Meta in  @[implemented_by evalLevelUnsafe]
-def evalLevelSafe (e : Lean.Expr) : MetaM Level :=
-  throwError s!"not a valid sort: {repr e}"
 
 open Qq Lean Elab Meta Tactic in def MExpr.decode (e : Lean.Expr) : Lean.Elab.TermElabM MExpr := do
   match e with
@@ -57,17 +50,16 @@ open Qq Lean Elab Meta Tactic in def MExpr.decode (e : Lean.Expr) : Lean.Elab.Te
   | .app (.app (.app (.const ``Expr.Pi []) m) α) β => do
     let α' ← decode α
     let β' ← decode β
-    let m ← evalLevelSafe m
     return .Pi m α' β'
-  | .app (.const ``Expr.Srt []) m  => return .Srt (←  evalLevelSafe m)
+  | .app (.const ``Expr.Srt []) m  => return .Srt m
   | (.app (.app (.const `Expr.K' []) m) n) => do
-    return .K' (← evalLevelSafe m) (← evalLevelSafe n)
+    return .K' m n
   | (.app (.app (.const `Expr.K []) m) n) => do
-    return .K (← evalLevelSafe m) (← evalLevelSafe n)
+    return .K m n
   | (.app (.app (.app (.const `Expr.S []) m) n) o) => do
-    return .S (← evalLevelSafe m) (← evalLevelSafe n) (← evalLevelSafe o)
+    return .S m n o
   | (.app (.const `Expr.I []) m) => do
-    return .I (← evalLevelSafe m)
+    return .I m
   | .const `Expr.hole [] => return .hole
   | .const `Expr.next [] => return .next
   | .const `Expr.read [] => return .read
@@ -204,17 +196,32 @@ open Lean Elab Tactic Qq in def MExpr.unify (e : MExpr) : TacticM Q(_root_.Expr)
   | .fvar v =>
     let l ← getLCtx
     match l.find? v with
-    | .some v => return (.fvar v.fvarId)
+    | .some v => return v.value?.getD (.fvar v.fvarId)
     | .none => throwError s!"not supported"
-  | .K m n => pure q(Expr.K $m $n)
-  | .Srt m => pure q(Expr.Srt $m)
+  | .K m n =>
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
+    pure q(Expr.K $m $n)
+  | .Srt m =>
+    let m : Q(Lean.Level) := m
+    pure q(Expr.Srt $m)
   | .Pi m α β =>
+    let m : Q(Lean.Level) := m
     let α' : Q(_root_.Expr) := ← α.unify
     let β' : Q(_root_.Expr) := ← β.unify
     pure q(Expr.Pi $m $α' $β')
-  | .K' m n => pure q(Expr.K' $m $n)
-  | .S m n o => pure q(Expr.S $m $n $o)
-  | .I m  => pure q(Expr.I $m)
+  | .K' m n =>
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
+    pure q(Expr.K' $m $n)
+  | .S m n o =>
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
+    let o : Q(Lean.Level) := o
+    pure q(Expr.S $m $n $o)
+  | .I m  =>
+    let m : Q(Lean.Level) := m
+    pure q(Expr.I $m)
   | .hole => pure q(Expr.hole)
   | .next => pure q(Expr.next)
   | .read => pure q(Expr.read)
@@ -234,23 +241,40 @@ open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.
     return q(@ParRed.refl $x)
   | @ParRed'.proof _ _ p      => return p
   | @ParRed'.refl_fvar m      => return ((Lean.Expr.const ``rfl [1]).app (.const ``_root_.Expr []))
-  | @ParRed'.refl_K' m n      => return q(@ParRed.refl_K' $m $n)
-  | @ParRed'.refl_K m n       => return q(@ParRed.refl_K $m $n)
-  | @ParRed'.refl_S m n o     => return q(@ParRed.refl_S $m $n $o)
-  | @ParRed'.refl_I m         => return q(@ParRed.refl_I $m)
+  | @ParRed'.refl_K' m n      =>
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
+    return q(@ParRed.refl_K' $m $n)
+  | @ParRed'.refl_K m n       =>
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
+    return q(@ParRed.refl_K $m $n)
+  | @ParRed'.refl_S m n o     =>
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
+    let o : Q(Lean.Level) := o
+    return q(@ParRed.refl_S $m $n $o)
+  | @ParRed'.refl_I m         =>
+    let m : Q(Lean.Level) := m
+    return q(@ParRed.refl_I $m)
   | @ParRed'.refl_hole        => return q(@ParRed.refl_hole)
-  | @ParRed'.refl_Srt m       => return q(@ParRed.refl_Srt $m)
+  | @ParRed'.refl_Srt m       =>
+    let m : Q(Lean.Level) := m
+    return q(@ParRed.refl_Srt $m)
   | @ParRed'.refl_next        => return q(@ParRed.refl_next)
   | @ParRed'.refl_read        => return q(@ParRed.refl_read)
   | @ParRed'.refl_assert      => return q(@ParRed.refl_assert)
   | @ParRed'.refl_app'        => return q(@ParRed.refl_app')
   | @ParRed'.I x x' m α h     => do
+    let m : Q(Lean.Level) := m
     let x : Q(_root_.Expr) ← x.unify
     let x' : Q(_root_.Expr) ← x'.unify
     let α : Q(_root_.Expr)  ← α.unify
     let inner : Q(ParRed $x $x') ← gen_par_red_proof h
     return q(@ParRed.I $x $x' $m $α $inner)
   | @ParRed'.K x x' m n α β y h => do
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
     let x : Q(_root_.Expr) ← x.unify
     let x' : Q(_root_.Expr) ← x'.unify
     let α : Q(_root_.Expr) ← α.unify
@@ -259,6 +283,8 @@ open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.
     let inner : Q(ParRed $x $x') ← gen_par_red_proof h
     return q(@ParRed.K $x $x' $m $n $α $β $y $inner)
   | @ParRed'.K' x x' m n α β y h => do
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
     let x : Q(_root_.Expr) ← x.unify
     let x' : Q(_root_.Expr) ← x'.unify
     let α : Q(_root_.Expr) ← α.unify
@@ -280,6 +306,10 @@ open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.
     let hy' : Q(ParRed $y $y') ← gen_par_red_proof hy
     let hz' : Q(ParRed $z $z') ← gen_par_red_proof hz
 
+    let m : Q(Lean.Level) := m
+    let n : Q(Lean.Level) := n
+    let o : Q(Lean.Level) := o
+
     return q(@ParRed.S $x $x' $y $y' $z $z' $m $n $o $α $β $γ $hx' $hy' $hz')
   | @ParRed'.Pi α α' β β' x x' m h_α h_β h_x => do
     let α : Q(_root_.Expr) ← α.unify
@@ -292,6 +322,8 @@ open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.
     let hy' : Q(ParRed $β $β') ←  gen_par_red_proof h_β
     let hz' : Q(ParRed $x $x') ←  gen_par_red_proof h_x
 
+    let m : Q(Lean.Level) := m
+
     return q(@ParRed.Pi $α $α' $β $β' $x $x' $m $hx' $hy' $hz')
   | @ParRed'.Pival α α' β β' m h_α h_β => do
     let α : Q(_root_.Expr) ← α.unify
@@ -300,6 +332,7 @@ open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.
     let β : Q(_root_.Expr) ← β.unify
     let hx' : Q(ParRed $α $α') ← gen_par_red_proof h_α
     let hy' : Q(ParRed $β $β') ← gen_par_red_proof h_β
+    let m : Q(Lean.Level) := m
     return q(@ParRed.Pival $α $α' $β $β' $m $hx' $hy')
   | @ParRed'.next f f' x hf   => do
     let f : Q(_root_.Expr) ← f.unify

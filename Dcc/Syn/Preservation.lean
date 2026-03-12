@@ -24,9 +24,17 @@ theorem K'_well_typed (h₁ : Judge (Srt m) α) (h₂ : Judge (Srt n) β)
   (h₃ : Judge α x) (h₄ : Judge β y) : Judge α ⸨(K' m n) α β x y⸩ := by
   decide_infer
 
-theorem Red.preservation (h_step : ParRed x x') (h_t : Judge α x) : Judge α x' := by
-  induction h_t
-  cases h_step
-  decide_infer
+theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed a d := by
+  intro ha hb
+  induction ha
+  cases hb
   
   sorry
+
+theorem ParRed.preservation (h_step : ParRed x x') (h_t : Judge α x) : Judge α x' := by
+  induction h_t with
+  | app =>
+    
+    sorry
+  | conv => sorry
+  | _ => cases h_step; decide_infer

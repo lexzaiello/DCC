@@ -400,3 +400,31 @@ example (h : ParRed e (Srt 0)) : ParRed ⸨(K 2 2) (Srt 1) (Srt 1) e (Srt 0)⸩ 
   decide_red
 
 end examples
+
+syntax "exists_red" : tactic
+
+open Qq gen Lean Meta Elab Tactic in elab "exists_red" : tactic => do
+  withMainContext do
+    let goal ← getMainGoal
+
+    match ← goal.getType with
+    | .app
+      (.app (.const ``Exists [_u]) (.const ``_root_.Expr []))
+      (.lam _e' (.const ``_root_.Expr []) (.app (.app (.const `ParRed []) xe) (.bvar 0)) _bd) =>
+      match ← checkTypeQ xe q(_root_.Expr) with
+      | .some x' =>
+        let m ← MExpr.decode xe
+        let r ← reduce m
+
+        let d : Q(_root_.Expr) ← r.fst.unify
+        let p : Q(ParRed $x' $d) ← gen_par_red_proof r.snd
+
+        let proof := q(Exists.intro $d $p)
+
+        goal.assign proof
+      | .none => throwError s!"not a valid Expr: {repr xe}"
+    | e => throwError s!"not a ParRed existential: {repr e}"
+
+open Expr in example : ∃ e', ParRed ⸨(I 2) (Srt 1) (Srt 0)⸩ e' := by
+  exists_red
+

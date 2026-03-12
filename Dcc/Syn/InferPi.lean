@@ -58,6 +58,17 @@ open Lean Elab Tactic in def infer.matcher (on_e : FVarId) (hyp_type : Lean.Expr
     b == (Lean.Expr.const ``Judge []) ∧ e' == on_e
   | _ => false
 
+open Lean Elab Tactic Elab gen in def conv_app_n (t₀ f x : MExpr) (h_t : InferAs t₀ *⸨f x⸩) (max_steps : ℕ := 1000) : TacticM (((β' : MExpr) × InferAs β' *⸨f x⸩)) := do
+  match max_steps with
+  | .zero => return ⟨t₀, h_t⟩
+  | .succ n =>
+    let e' ← reduce t₀
+    if e'.fst == t₀ then
+      return ⟨t₀, h_t⟩
+    else
+      let t : InferAs e'.fst *⸨f x⸩ := InferAs.conv (A := t₀) h_t ⟨e'.fst, e'.snd, .parred_refl⟩
+      conv_app_n e'.fst f x t n
+
 -- Note: axioms are a generalization of hypotheses in the lean info view
 -- consumed by our decide tactic
 open Lean Elab Tactic Elab gen in def infer (e : MExpr) : TacticM ((Err e) ⊕ ((t : MExpr) × InferAs t e)) :=

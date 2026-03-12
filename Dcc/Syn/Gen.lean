@@ -113,7 +113,8 @@ macro_rules
   | `(*⸨$f:term $x:term⸩) => `(MExpr.app $f:term $x:term)
   | `(*⸨$f:term $x:term $xs:term*⸩) => `(*⸨*⸨$f:term $x:term⸩ $xs:term*⸩)
 
-def reduce (e : MExpr) : (e' : MExpr) × (ParRed' e e') :=
+-- TODO: Use Lean.TacticM to look up potential reduction for fvar
+open Lean Elab Tactic in def reduce (e : MExpr) : (e' : MExpr) × (ParRed' e e') :=
   match e with
   | .fvar v => ⟨.fvar v, .refl_fvar⟩
   | MExpr.app (.app (.I _m) _α) x =>
@@ -190,7 +191,10 @@ open Lean Elab Tactic Qq in def MExpr.unify (e : MExpr) : TacticM Q(_root_.Expr)
   | .read => pure q(Expr.read)
   | .assert => pure q(Expr.assert)
   | .app' => pure q(Expr.app')
-  | .app f x => do pure <| .app (← f.unify) (← x.unify)
+  | .app f x => do
+    let f : Q(_root_.Expr) ← f.unify
+    let x : Q(_root_.Expr) ← x.unify
+    return q(Expr.app $f $x)
 
 end gen
 

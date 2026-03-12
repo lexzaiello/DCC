@@ -97,8 +97,8 @@ open Lean Elab Tactic Elab gen in def infer (e : MExpr) : TacticM ((Err e) ⊕ (
       let α₂' ← (reduce α₂)
       let β' ← reduce *⸨β x⸩
       if defeq α'.fst α₂'.fst then
-        return Sum.inr ⟨β'.fst,
-          .app (β' := β'.fst) (f := f) heq₁ α'.snd (α₂ := α'.fst) (.conv heq₂ (⟨α'.fst, .parred_refl, .parred_refl⟩)) β'.snd⟩
+        let t₀ := InferAs.app (β' := β'.fst) (f := f) heq₁ α'.snd (α₂ := α'.fst) (.conv heq₂ (⟨α'.fst, .parred_refl, .parred_refl⟩)) β'.snd
+        return Sum.inr (← conv_app_n β'.fst f x t₀)
       else
         return .inl (.mismatch heq₁ heq₂)
     | .inr t, _ => return .inl <| .not_fn t.fst
@@ -143,7 +143,7 @@ open Qq Lean Elab Tactic in def InferAs.render (h : InferAs t x) : TacticM Lean.
     let hA : Q(Judge $A $x) ← hA.render
     let hA' : Q(ParRed $A $C) ← gen_par_red_proof hA'
     let hB' : Q(ParRed $B $C) ← gen_par_red_proof hB'
-    return q(@Judge.conv $A $x $B $hA ⟨$C, $hA', $hB'⟩)
+    return q(@Judge.conv $A $x $B $hA ⟨$C, ⟨$hA', $hB'⟩⟩)
   | @app m α β f α' _α₂ x β' h_t_f h_redα h_t_x h_red_cod => do
     let α ← α.unify
     let α' ← α'.unify
@@ -186,6 +186,6 @@ example (h₁ : Judge (Srt 1) α) (h₂ : Judge α x) : Judge α ⸨(I 1) α x�
 example (h₁ : Judge (Srt 1) α) (h₂ : Judge α x) : Judge α ⸨(K' 1 1) α α x x⸩ := by
   decide_infer
 
-example (h₁ : Judge (Srt 1) α) (h₂ : Judge ((~> 1) α, (Srt 2)) β)
-  (h₃ : Judge α x) (h₄ : Judge ⸨β x⸩ y) : Judge α ⸨(K 2 2) α β x y⸩ := by
+example (h₁ : Judge (Srt 1) α) (h₂ : Judge ((~> 3) α, (Srt 2)) β)
+  (h₃ : Judge α x) (h₄ : Judge ⸨β x⸩ y) : Judge α ⸨(K 1 2) α β x y⸩ := by
   decide_infer

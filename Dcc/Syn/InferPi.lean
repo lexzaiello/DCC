@@ -87,7 +87,7 @@ open Lean Elab Tactic Elab gen in def infer (e : MExpr) : TacticM ((Err e) ⊕ (
       let β' ← reduce *⸨β x⸩
       if defeq α'.fst α₂'.fst then
         return Sum.inr ⟨β'.fst,
-          .app (f := f) heq₁ α'.snd (α₂ := α'.fst) (.conv heq₂ (⟨α'.fst, .parred_refl, .parred_refl⟩)) β'.snd⟩
+          .app (β' := β'.fst) (f := f) heq₁ α'.snd (α₂ := α'.fst) (.conv heq₂ (⟨α'.fst, .parred_refl, .parred_refl⟩)) β'.snd⟩
       else
         return .inl (.mismatch heq₁ heq₂)
     | .inr t, _ => return .inl <| .not_fn t.fst
@@ -170,4 +170,11 @@ example : Judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   decide_infer
 
 example (h₁ : Judge (Srt 1) α) (h₂ : Judge α x) : Judge α ⸨(I 1) α x⸩ := by
+  decide_infer
+
+example (h₁ : Judge (Srt 1) α) (h₂ : Judge α x) : Judge α ⸨(K' 1 1) α α x x⸩ := by
+  decide_infer
+
+example (h₁ : Judge (Srt 1) α) (h₂ : Judge ((~> 1) α, (Srt 2)) β)
+  (h₃ : Judge α x) (h₄ : Judge ⸨β x⸩ y) : Judge α ⸨(K 2 2) α β x y⸩ := by
   decide_infer

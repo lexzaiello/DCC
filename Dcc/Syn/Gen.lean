@@ -142,7 +142,8 @@ open Lean Elab Tactic in def reduce (e : MExpr) : TacticM ((e' : MExpr) × (ParR
     let p? := (← try_first_hyp (reduce.matcher v))
     match p? with
     | .some ⟨.app (.app (.const ``ParRed []) _ety) e', proof⟩ =>
-      return ⟨.lean_e e', .proof proof (e := .fvar v) (e' := .lean_e e')⟩
+      let e' ← MExpr.decode e'
+      return ⟨e', .proof proof (e := .fvar v) (e' := e')⟩
     | _ => return ⟨(.fvar v), ParRed'.parred_refl (e := .fvar v)⟩
   | MExpr.app (.app (.I _m) _α) x => do
     let ⟨x', h⟩ ← reduce x

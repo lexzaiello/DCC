@@ -88,6 +88,28 @@ theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ Par
     refine ⟨_, ?_, ParRed.S (_m := m) (_n := n) (_o := o) (_α := x') (_β := x'₁) (_γ := x'₂) heq₂ heq₄ heq₆⟩
     apply ParRed.app
     repeat (apply ParRed.app; repeat assumption)
+  · cases_spine
+    rename_i m _ _ _ ih₁ ih₂ ih₃ _ _ _ hpα hpβ hpx
+    have ha := ih₁ hpα
+    have hb := ih₂ hpβ
+    have hc := ih₃ hpx
+    have ⟨d₁, heq₁, heq₂⟩ := ha
+    have ⟨d₂, heq₃, heq₄⟩ := hb
+    have ⟨d₃, heq₅, heq₆⟩ := hc
+    refine ⟨_, ?_, ParRed.Pival (.app heq₂ heq₆) (.app heq₄ heq₆)⟩
+    apply ParRed.Pival
+    repeat (apply ParRed.app; repeat assumption)
+    rename_i m _ _ _ ih₁ ih₂ ih₃ _ hpx _ _ hpα hpβ
+    have ha := ih₁ hpα
+    have hb := ih₂ hpβ
+    have hc := ih₃ hpx
+    have ⟨d₁, heq₁, heq₂⟩ := ha
+    have ⟨d₂, heq₃, heq₄⟩ := hb
+    have ⟨d₃, heq₅, heq₆⟩ := hc
+    refine ⟨_, ?_, ParRed.Pi heq₂ heq₄ heq₆⟩
+    apply ParRed.Pival
+    repeat (apply ParRed.app; repeat assumption)
+    
   sorry
   sorry
 

@@ -189,3 +189,6 @@ example (h₁ : Judge (Srt 1) α) (h₂ : Judge α x) : Judge α ⸨(K' 1 1) α 
 example (h₁ : Judge (Srt 1) α) (h₂ : Judge ((~> 3) α, (Srt 2)) β)
   (h₃ : Judge α x) (h₄ : Judge ⸨β x⸩ y) : Judge α ⸨(K 1 2) α β x y⸩ := by
   decide_infer
+
+example : Judge (Srt 1) ⸨(mk_I (Srt 1) 2) (Srt 0)⸩ := by
+  decide_infer

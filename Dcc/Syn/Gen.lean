@@ -196,10 +196,11 @@ open Lean Elab Tactic Qq in def MExpr.unify (e : MExpr) : TacticM Q(_root_.Expr)
   match e with
   | .lean_e e => pure e
   | .fvar v =>
-    let l ← getLCtx
-    match l.find? v with
-    | .some v => return v.value?.getD (.fvar v.fvarId)
-    | .none => throwError s!"not supported"
+    withMainContext do
+      let l ← getLCtx
+      match l.find? v with
+      | .some v => return v.value?.getD (.fvar v.fvarId)
+      | .none => throwError s!"not supported"
   | .K m n =>
     let m : Q(Lean.Level) := m
     let n : Q(Lean.Level) := n

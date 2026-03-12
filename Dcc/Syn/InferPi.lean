@@ -256,13 +256,14 @@ def do_decide_infer (x : MExpr) : Lean.Elab.Tactic.TacticM Unit := do
 
 open Qq Lean Meta Elab Tactic in elab "decide_infer" : tactic => do
   let goal ← getMainGoal
-  let goalType := ← whnf (← Lean.Meta.reduceAll (← goal.getType))
-  match goalType with
-  | Lean.Expr.app (.app (.const ``Judge []) _α) x =>
-    let tgt_term ← whnf (← Lean.Meta.reduceAll x)
-    let e ← gen.MExpr.decode tgt_term
-    do_decide_infer e
-  | _ => throwError "unsupported"
+  goal.withContext do
+    let goalType := ← whnf (← Lean.Meta.reduceAll (← goal.getType))
+    match goalType with
+    | Lean.Expr.app (.app (.const ``Judge []) _α) x =>
+      let tgt_term ← whnf (← Lean.Meta.reduceAll x)
+      let e ← gen.MExpr.decode tgt_term
+      do_decide_infer e
+    | _ => throwError "unsupported"
 
 example : Judge (Srt 1) ⸨(I 2) (Srt 1) (Srt 0)⸩ := by
   decide_infer

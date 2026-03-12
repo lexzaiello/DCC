@@ -80,6 +80,7 @@ open MExpr
 
 inductive ParRed' : MExpr → MExpr → Type where
   | refl_fvar   : ParRed' (.fvar m) (.fvar m)
+  | proof       : Lean.Expr → ParRed' t x
   | refl_K'     : ParRed' (K' m n) (K' m n)
   | refl_K      : ParRed' (K m n) (K m n)
   | refl_S      : ParRed' (S m n o) (S m n o)
@@ -116,9 +117,8 @@ macro_rules
 
 open Qq Lean Meta Elab Tactic in def lookup (x : FVarId) (pred : Lean.Expr) : TacticM (Option Lean.Expr) := do
   let lctx ← getLCtx
-  let e := (← (lctx.find? x).getDM (throwError "no matching hypothesis")).value
-  let hyp ← lctx.decls.toList.firstM (fun ldecl => do
-    ldecl.mapM (fun ldecl => do
+  Option.bindM (fun (e : Lean.Expr) =>
+    lctx.decls.toList.firstM (fun ldecl => ldecl.bindM (fun ldecl => do
       if ldecl.isImplementationDetail then return Option.none
       let type ← whnf (← reduceAll ldecl.type)
       match type with
@@ -126,68 +126,67 @@ open Qq Lean Meta Elab Tactic in def lookup (x : FVarId) (pred : Lean.Expr) : Ta
         if (← isDefEq x' e) ∧ (← isDefEq pred pred') then
           return (.some ldecl.value)
         else return .none
-      | _ => return .none)
-  )
-  match hyp with
-  | .some hyp => return hyp
-  | .none => throwError s!"no matching hypothesis for: {repr pred}"
+      | _ => return .none
+    ))) ((lctx.find? x).map (fun e => e.value))
 
 -- TODO: Use Lean.TacticM to look up potential reduction for fvar
-open Lean Elab Tactic in def reduce (e : MExpr) : (e' : MExpr) × (ParRed' e e') :=
+open Lean Elab Tactic in def reduce (e : MExpr) : TacticM ((e' : MExpr) × (ParRed' e e')) :=
   match e with
-  | .fvar v => ⟨.fvar v, .refl_fvar⟩
-  | MExpr.app (.app (.I _m) _α) x =>
-    let ⟨x', h⟩ := reduce x
-    ⟨x', .I h⟩
-  | *⸨(.K _m _n) _α _β x _y⸩ =>
-    let ⟨x', h⟩ := reduce x
-    ⟨x', .K h⟩
-  | *⸨(.K' _m _n) _α _β x _y⸩ =>
-    let ⟨x', h⟩ := reduce x
-    ⟨x', .K' h⟩
-  | *⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
-    let ⟨x', h₁⟩ := reduce x
-    let ⟨y', h₂⟩ := reduce y
-    let ⟨z', h₃⟩ := reduce z
-    ⟨((x'.app z').app (y'.app z')), .S h₁ h₂ h₃⟩
-  | *⸨(.Pi m α β) x⸩ =>
-    let ⟨α', h₁⟩ := reduce α
-    let ⟨β', h₂⟩ := reduce β
-    let ⟨x', h₃⟩ := reduce x
-    ⟨MExpr.Pi m (α'.app x') (β'.app x'), .Pi h₁ h₂ h₃⟩
-  | (.Pi m α β) =>
-    let ⟨α', h₁⟩ := reduce α
-    let ⟨β', h₂⟩ := reduce β
-    ⟨MExpr.Pi m α' β', .Pival h₁ h₂⟩
-  | *⸨.next f _x⸩ =>
-    let ⟨f', h₁⟩ := reduce f
-    ⟨f', .next h₁⟩
-  | *⸨.read e⸩ =>
-    let ⟨e', h₁⟩ := reduce e
-    ⟨e', .read h₁⟩
-  | *⸨.assert f _x⸩ =>
-    let ⟨f', h₁⟩ := reduce f
-    ⟨f', .assert h₁⟩
-  | *⸨.app' π f g x⸩ =>
-    let ⟨f', h₁⟩ := reduce f
-    let ⟨g', h₂⟩ := reduce g
-    let ⟨x', h₃⟩ := reduce x
-    ⟨(MExpr.app π (f'.app x')).app (g'.app x'), .app' h₁ h₂ h₃⟩
-  | *⸨f x⸩ =>
-    let ⟨f', h₁⟩ := reduce f
-    let ⟨x', h₂⟩ := reduce x
+  | .fvar v => do
+    let p? : Option (ParRed' (.fvar v) (.fvar v)) := (← lookup v (.const ``ParRed [])).map (.proof)
+    return Sigma.mk (.fvar v) (p?.getD (.refl_fvar (m := v)))
+  | MExpr.app (.app (.I _m) _α) x => do
+    let ⟨x', h⟩ ← reduce x
+    return ⟨x', .I h⟩
+  | *⸨(.K _m _n) _α _β x _y⸩ => do
+    let ⟨x', h⟩ ← reduce x
+    return ⟨x', .K h⟩
+  | *⸨(.K' _m _n) _α _β x _y⸩ => do
+    let ⟨x', h⟩ ← reduce x
+    return ⟨x', .K' h⟩
+  | *⸨(.S _m _n _o) _α _β _γ x y z⸩ => do
+    let ⟨x', h₁⟩ ← reduce x
+    let ⟨y', h₂⟩ ← reduce y
+    let ⟨z', h₃⟩ ← reduce z
+    return ⟨((x'.app z').app (y'.app z')), .S h₁ h₂ h₃⟩
+  | *⸨(.Pi m α β) x⸩ => do
+    let ⟨α', h₁⟩ ← reduce α
+    let ⟨β', h₂⟩ ← reduce β
+    let ⟨x', h₃⟩ ← reduce x
+    return ⟨MExpr.Pi m (α'.app x') (β'.app x'), .Pi h₁ h₂ h₃⟩
+  | (.Pi m α β) => do
+    let ⟨α', h₁⟩ ← reduce α
+    let ⟨β', h₂⟩ ← reduce β
+    return ⟨MExpr.Pi m α' β', .Pival h₁ h₂⟩
+  | *⸨.next f _x⸩ => do
+    let ⟨f', h₁⟩ ← reduce f
+    return ⟨f', .next h₁⟩
+  | *⸨.read e⸩ => do
+    let ⟨e', h₁⟩ ← reduce e
+    return ⟨e', .read h₁⟩
+  | *⸨.assert f _x⸩ => do
+    let ⟨f', h₁⟩ ← reduce f
+    return ⟨f', .assert h₁⟩
+  | *⸨.app' π f g x⸩ => do
+    let ⟨f', h₁⟩ ← reduce f
+    let ⟨g', h₂⟩ ← reduce g
+    let ⟨x', h₃⟩ ← reduce x
+    return ⟨(MExpr.app π (f'.app x')).app (g'.app x'), .app' h₁ h₂ h₃⟩
+  | *⸨f x⸩ => do
+    let ⟨f', h₁⟩ ← reduce f
+    let ⟨x', h₂⟩ ← reduce x
 
-    ⟨f'.app x', .app h₁ h₂⟩
-  | .K' m n => ⟨K' m n, .refl_K'⟩
-  | .K m n => ⟨K m n, .refl_K⟩
-  | .S m n o => ⟨S m n o, .refl_S⟩
-  | .I m => ⟨I m, .refl_I⟩
-  | .Srt m => ⟨Srt m, .refl_Srt⟩
-  | .next => ⟨.next, .refl_next⟩
-  | .read => ⟨.read, .refl_read⟩
-  | .assert => ⟨.assert, .refl_assert⟩
-  | .app' => ⟨.app', .refl_app'⟩
-  | .hole => ⟨.hole, .refl_hole⟩
+    return ⟨f'.app x', .app h₁ h₂⟩
+  | .K' m n => return ⟨K' m n, .refl_K'⟩
+  | .K m n => return ⟨K m n, .refl_K⟩
+  | .S m n o => return ⟨S m n o, .refl_S⟩
+  | .I m => return ⟨I m, .refl_I⟩
+  | .Srt m => return ⟨Srt m, .refl_Srt⟩
+  | .next => return ⟨.next, .refl_next⟩
+  | .read => return ⟨.read, .refl_read⟩
+  | .assert => return ⟨.assert, .refl_assert⟩
+  | .app'   => return ⟨.app', .refl_app'⟩
+  | .hole   => return ⟨.hole, .refl_hole⟩
 
 open Lean Elab Tactic Qq in def MExpr.unify (e : MExpr) : TacticM Q(_root_.Expr) := do
   match e with
@@ -219,6 +218,7 @@ end gen
 
 open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.Elab.Tactic.TacticM Lean.Expr :=
   match p with
+  | @ParRed'.proof _ _ p      => return p
   | @ParRed'.refl_fvar m      => return (Lean.Expr.const ``rfl [])
   | @ParRed'.refl_K' m n      => return q(@ParRed.refl_K' $m $n)
   | @ParRed'.refl_K m n       => return q(@ParRed.refl_K $m $n)
@@ -334,7 +334,7 @@ open gen Lean Meta Elab Tactic in elab "decide_red" : tactic => do
   | Lean.Expr.app (.app (.const ``ParRed []) x) _x' =>
     let tgt_term ← whnf (← Lean.Meta.reduceAll x)
     let e ← MExpr.decode tgt_term
-    let ⟨_, proof⟩ := reduce e
+    let ⟨_, proof⟩ ← reduce e
     let expr ← gen_par_red_proof proof
     goal.assign (← whnf (← Lean.Meta.reduceAll expr))
   | _ => throwError "unsupported"

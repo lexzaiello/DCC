@@ -5,6 +5,8 @@ import Lean.Elab
 
 open Lean (Level)
 
+namespace gen
+
 inductive MExpr where
   | Srt    : Level → MExpr
   | Pi     : Level → MExpr → MExpr → MExpr -- Pi (α : Syntax (Sort m)) (β : Sort n) : (Sort n)
@@ -22,19 +24,23 @@ inductive MExpr where
   | fvar   : Lean.FVarId → MExpr
 deriving BEq, Repr, Lean.ToExpr
 
-def Expr.toMeta : Expr → MExpr
-  | .K m n => .K m n
-  | .K' m n => .K' m n
-  | .Pi m α β => .Pi m α.toMeta β.toMeta
-  | .Srt m => .Srt m
+end gen
+
+def Expr.toMeta : Expr → gen.MExpr
   | .I m => .I m
-  | .hole => .hole
-  | .next => .next
-  | .read => .read
-  | .app' => .app'
+  | .K' m n => .K' m n
+  | .K m n => .K m n
   | .S m n o => .S m n o
-  | .assert => .assert
   | .app f x => .app f.toMeta x.toMeta
+  | .app' => .app'
+  | .assert => .assert
+  | .read => .read
+  | .next => .next
+  | .hole => .hole
+  | Expr.Pi m a b => .Pi m (toMeta a) (toMeta b)
+  | .Srt m => .Srt m
+
+namespace gen
 
 open Lean Meta in unsafe def evalLevelUnsafe (e : Lean.Expr) : MetaM Level :=
   evalExpr Level (.const ``Lean.Level []) e
@@ -72,6 +78,7 @@ open Qq Lean Elab Meta Tactic in def MExpr.decode (e : Lean.Expr) : Lean.Elab.Te
 open MExpr
 
 inductive ParRed' : MExpr → MExpr → Type where
+  | refl_fvar   : ParRed' (.fvar m) (.fvar m)
   | refl_K'     : ParRed' (K' m n) (K' m n)
   | refl_K      : ParRed' (K m n) (K m n)
   | refl_S      : ParRed' (S m n o) (S m n o)
@@ -106,48 +113,49 @@ macro_rules
   | `(*⸨$f:term $x:term⸩) => `(MExpr.app $f:term $x:term)
   | `(*⸨$f:term $x:term $xs:term*⸩) => `(*⸨*⸨$f:term $x:term⸩ $xs:term*⸩)
 
-def gen (e : MExpr) : (e' : MExpr) × (ParRed' e e') :=
+def reduce (e : MExpr) : (e' : MExpr) × (ParRed' e e') :=
   match e with
+  | .fvar v => ⟨.fvar v, .refl_fvar⟩
   | MExpr.app (.app (.I _m) _α) x =>
-    let ⟨x', h⟩ := gen x
+    let ⟨x', h⟩ := reduce x
     ⟨x', .I h⟩
   | *⸨(.K _m _n) _α _β x _y⸩ =>
-    let ⟨x', h⟩ := gen x
+    let ⟨x', h⟩ := reduce x
     ⟨x', .K h⟩
   | *⸨(.K' _m _n) _α _β x _y⸩ =>
-    let ⟨x', h⟩ := gen x
+    let ⟨x', h⟩ := reduce x
     ⟨x', .K' h⟩
   | *⸨(.S _m _n _o) _α _β _γ x y z⸩ =>
-    let ⟨x', h₁⟩ := gen x
-    let ⟨y', h₂⟩ := gen y
-    let ⟨z', h₃⟩ := gen z
+    let ⟨x', h₁⟩ := reduce x
+    let ⟨y', h₂⟩ := reduce y
+    let ⟨z', h₃⟩ := reduce z
     ⟨((x'.app z').app (y'.app z')), .S h₁ h₂ h₃⟩
   | *⸨(.Pi m α β) x⸩ =>
-    let ⟨α', h₁⟩ := gen α
-    let ⟨β', h₂⟩ := gen β
-    let ⟨x', h₃⟩ := gen x
+    let ⟨α', h₁⟩ := reduce α
+    let ⟨β', h₂⟩ := reduce β
+    let ⟨x', h₃⟩ := reduce x
     ⟨MExpr.Pi m (α'.app x') (β'.app x'), .Pi h₁ h₂ h₃⟩
   | (.Pi m α β) =>
-    let ⟨α', h₁⟩ := gen α
-    let ⟨β', h₂⟩ := gen β
+    let ⟨α', h₁⟩ := reduce α
+    let ⟨β', h₂⟩ := reduce β
     ⟨MExpr.Pi m α' β', .Pival h₁ h₂⟩
   | *⸨.next f _x⸩ =>
-    let ⟨f', h₁⟩ := gen f
+    let ⟨f', h₁⟩ := reduce f
     ⟨f', .next h₁⟩
   | *⸨.read e⸩ =>
-    let ⟨e', h₁⟩ := gen e
+    let ⟨e', h₁⟩ := reduce e
     ⟨e', .read h₁⟩
   | *⸨.assert f _x⸩ =>
-    let ⟨f', h₁⟩ := gen f
+    let ⟨f', h₁⟩ := reduce f
     ⟨f', .assert h₁⟩
   | *⸨.app' π f g x⸩ =>
-    let ⟨f', h₁⟩ := gen f
-    let ⟨g', h₂⟩ := gen g
-    let ⟨x', h₃⟩ := gen x
+    let ⟨f', h₁⟩ := reduce f
+    let ⟨g', h₂⟩ := reduce g
+    let ⟨x', h₃⟩ := reduce x
     ⟨(MExpr.app π (f'.app x')).app (g'.app x'), .app' h₁ h₂ h₃⟩
   | *⸨f x⸩ =>
-    let ⟨f', h₁⟩ := gen f
-    let ⟨x', h₂⟩ := gen x
+    let ⟨f', h₁⟩ := reduce f
+    let ⟨x', h₂⟩ := reduce x
 
     ⟨f'.app x', .app h₁ h₂⟩
   | .K' m n => ⟨K' m n, .refl_K'⟩
@@ -161,15 +169,18 @@ def gen (e : MExpr) : (e' : MExpr) × (ParRed' e e') :=
   | .app' => ⟨.app', .refl_app'⟩
   | .hole => ⟨.hole, .refl_hole⟩
 
-open Lean Elab Tactic Qq in def MExpr.unify (hyps : FVarId → TacticM Lean.Expr)
-  (e : MExpr) : TacticM Q(_root_.Expr) := do
+open Lean Elab Tactic Qq in def MExpr.unify (e : MExpr) : TacticM Q(_root_.Expr) := do
   match e with
-  | .fvar v => hyps v
+  | .fvar v =>
+    let l ← getLCtx
+    match l.find? v with
+    | .some v => return v.value
+    | .none => throwError s!"not supported"
   | .K m n => pure q(Expr.K $m $n)
   | .Srt m => pure q(Expr.Srt $m)
   | .Pi m α β =>
-    let α' : Q(_root_.Expr) := ← α.unify hyps
-    let β' : Q(_root_.Expr) := ← β.unify hyps
+    let α' : Q(_root_.Expr) := ← α.unify
+    let β' : Q(_root_.Expr) := ← β.unify
     pure q(Expr.Pi $m $α' $β')
   | .K' m n => pure q(Expr.K' $m $n)
   | .S m n o => pure q(Expr.S $m $n $o)
@@ -179,11 +190,13 @@ open Lean Elab Tactic Qq in def MExpr.unify (hyps : FVarId → TacticM Lean.Expr
   | .read => pure q(Expr.read)
   | .assert => pure q(Expr.assert)
   | .app' => pure q(Expr.app')
-  | .app f x => do pure <| .app (← f.unify hyps) (← x.unify hyps)
+  | .app f x => do pure <| .app (← f.unify) (← x.unify)
 
-open Lean Elab Tactic Qq in def gen_par_red_proof (hyps : FVarId → TacticM Lean.Expr)
-  (p : ParRed' e e') : Lean.Elab.Tactic.TacticM Lean.Expr :=
+end gen
+
+open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.Elab.Tactic.TacticM Lean.Expr :=
   match p with
+  | @ParRed'.refl_fvar m      => return (Lean.Expr.const ``rfl [])
   | @ParRed'.refl_K' m n      => return q(@ParRed.refl_K' $m $n)
   | @ParRed'.refl_K m n       => return q(@ParRed.refl_K $m $n)
   | @ParRed'.refl_S m n o     => return q(@ParRed.refl_S $m $n $o)
@@ -195,221 +208,119 @@ open Lean Elab Tactic Qq in def gen_par_red_proof (hyps : FVarId → TacticM Lea
   | @ParRed'.refl_assert      => return q(@ParRed.refl_assert)
   | @ParRed'.refl_app'        => return q(@ParRed.refl_app')
   | @ParRed'.I x x' m α h     => do
-    let x : Q(_root_.Expr) ← x.unify hyps
-    let x' : Q(_root_.Expr) ← x'.unify hyps
-    let α : Q(_root_.Expr)  ← α.unify hyps
-    let inner : Q(ParRed $x $x') ← gen_par_red_proof hyps h
+    let x : Q(_root_.Expr) ← x.unify
+    let x' : Q(_root_.Expr) ← x'.unify
+    let α : Q(_root_.Expr)  ← α.unify
+    let inner : Q(ParRed $x $x') ← gen_par_red_proof h
     return q(@ParRed.I $x $x' $m $α $inner)
   | @ParRed'.K x x' m n α β y h => do
-    let x : Q(_root_.Expr) ← x.unify hyps
-    let x' : Q(_root_.Expr) ← x'.unify hyps
-    let α : Q(_root_.Expr) ← α.unify hyps
-    let β : Q(_root_.Expr) ← β.unify hyps
-    let y : Q(_root_.Expr) ← y.unify hyps
-    let inner : Q(ParRed $x $x') ← gen_par_red_proof hyps h
+    let x : Q(_root_.Expr) ← x.unify
+    let x' : Q(_root_.Expr) ← x'.unify
+    let α : Q(_root_.Expr) ← α.unify
+    let β : Q(_root_.Expr) ← β.unify
+    let y : Q(_root_.Expr) ← y.unify
+    let inner : Q(ParRed $x $x') ← gen_par_red_proof h
     return q(@ParRed.K $x $x' $m $n $α $β $y $inner)
   | @ParRed'.K' x x' m n α β y h => do
-    let x : Q(_root_.Expr) ← x.unify hyps
-    let x' : Q(_root_.Expr) ← x'.unify hyps
-    let α : Q(_root_.Expr) ← α.unify hyps
-    let β : Q(_root_.Expr) ← β.unify hyps
-    let y : Q(_root_.Expr) ← y.unify hyps
-    let inner : Q(ParRed $x $x') ← gen_par_red_proof hyps h
+    let x : Q(_root_.Expr) ← x.unify
+    let x' : Q(_root_.Expr) ← x'.unify
+    let α : Q(_root_.Expr) ← α.unify
+    let β : Q(_root_.Expr) ← β.unify
+    let y : Q(_root_.Expr) ← y.unify
+    let inner : Q(ParRed $x $x') ← gen_par_red_proof h
     return q(@ParRed.K' $x $x' $m $n $α $β $y $inner)
   | @ParRed'.S x x' y y' z z' m n o α β γ hx hy hz => do
-    let x : Q(_root_.Expr) ← x.unify hyps
-    let x' : Q(_root_.Expr) ← x'.unify hyps
-    let y : Q(_root_.Expr) ← y.unify hyps
-    let y' : Q(_root_.Expr) ← y'.unify hyps
-    let z : Q(_root_.Expr) ← z.unify hyps
-    let z' : Q(_root_.Expr) ← z'.unify hyps
-    let α : Q(_root_.Expr) ← α.unify hyps
-    let β : Q(_root_.Expr) ← β.unify hyps
-    let γ : Q(_root_.Expr) ← γ.unify hyps
-    let hx' : Q(ParRed $x $x') ← gen_par_red_proof hyps hx
-    let hy' : Q(ParRed $y $y') ← gen_par_red_proof hyps hy
-    let hz' : Q(ParRed $z $z') ← gen_par_red_proof hyps hz
+    let x : Q(_root_.Expr) ← x.unify
+    let x' : Q(_root_.Expr) ← x'.unify
+    let y : Q(_root_.Expr) ← y.unify
+    let y' : Q(_root_.Expr) ← y'.unify
+    let z : Q(_root_.Expr) ← z.unify
+    let z' : Q(_root_.Expr) ← z'.unify
+    let α : Q(_root_.Expr) ← α.unify
+    let β : Q(_root_.Expr) ← β.unify
+    let γ : Q(_root_.Expr) ← γ.unify
+    let hx' : Q(ParRed $x $x') ← gen_par_red_proof hx
+    let hy' : Q(ParRed $y $y') ← gen_par_red_proof hy
+    let hz' : Q(ParRed $z $z') ← gen_par_red_proof hz
 
     return q(@ParRed.S $x $x' $y $y' $z $z' $m $n $o $α $β $γ $hx' $hy' $hz')
   | @ParRed'.Pi α α' β β' x x' m h_α h_β h_x => do
-    let α : Q(_root_.Expr) ← α.unify hyps
-    let α' : Q(_root_.Expr) ← α'.unify hyps
-    let β' : Q(_root_.Expr) ← β'.unify hyps
-    let β : Q(_root_.Expr) ← β.unify hyps
-    let x : Q(_root_.Expr) ← x.unify hyps
-    let x' : Q(_root_.Expr) ← x'.unify hyps
-    let hx' : Q(ParRed $α $α') ←  gen_par_red_proof hyps h_α
-    let hy' : Q(ParRed $β $β') ←  gen_par_red_proof hyps h_β
-    let hz' : Q(ParRed $x $x') ←  gen_par_red_proof hyps h_x
+    let α : Q(_root_.Expr) ← α.unify
+    let α' : Q(_root_.Expr) ← α'.unify
+    let β' : Q(_root_.Expr) ← β'.unify
+    let β : Q(_root_.Expr) ← β.unify
+    let x : Q(_root_.Expr) ← x.unify
+    let x' : Q(_root_.Expr) ← x'.unify
+    let hx' : Q(ParRed $α $α') ←  gen_par_red_proof h_α
+    let hy' : Q(ParRed $β $β') ←  gen_par_red_proof h_β
+    let hz' : Q(ParRed $x $x') ←  gen_par_red_proof h_x
 
     return q(@ParRed.Pi $α $α' $β $β' $x $x' $m $hx' $hy' $hz')
   | @ParRed'.Pival α α' β β' m h_α h_β => do
-    let α : Q(_root_.Expr) ← α.unify hyps
-    let α' : Q(_root_.Expr) ← α'.unify hyps
-    let β' : Q(_root_.Expr) ← β'.unify hyps
-    let β : Q(_root_.Expr) ← β.unify hyps
-    let hx' : Q(ParRed $α $α') ← gen_par_red_proof hyps h_α
-    let hy' : Q(ParRed $β $β') ← gen_par_red_proof hyps h_β
+    let α : Q(_root_.Expr) ← α.unify
+    let α' : Q(_root_.Expr) ← α'.unify
+    let β' : Q(_root_.Expr) ← β'.unify
+    let β : Q(_root_.Expr) ← β.unify
+    let hx' : Q(ParRed $α $α') ← gen_par_red_proof h_α
+    let hy' : Q(ParRed $β $β') ← gen_par_red_proof h_β
     return q(@ParRed.Pival $α $α' $β $β' $m $hx' $hy')
   | @ParRed'.next f f' x hf   => do
-    let f : Q(_root_.Expr) ← f.unify hyps
-    let f' : Q(_root_.Expr) ← f'.unify hyps
-    let x : Q(_root_.Expr) ← x.unify hyps
-    let hf : Q(ParRed $f $f') ← gen_par_red_proof hyps hf
+    let f : Q(_root_.Expr) ← f.unify
+    let f' : Q(_root_.Expr) ← f'.unify
+    let x : Q(_root_.Expr) ← x.unify
+    let hf : Q(ParRed $f $f') ← gen_par_red_proof hf
     return q(@ParRed.next $f $f' $x $hf)
   | @ParRed'.read e e' he     => do
-    let e : Q(_root_.Expr) ← e.unify hyps
-    let e' : Q(_root_.Expr) ← e'.unify hyps
-    let he : Q(ParRed $e $e') ← gen_par_red_proof hyps he
+    let e : Q(_root_.Expr) ← e.unify
+    let e' : Q(_root_.Expr) ← e'.unify
+    let he : Q(ParRed $e $e') ← gen_par_red_proof he
     return q(@ParRed.read $e $e' $he)
   | @ParRed'.assert e e' x he => do
-    let e : Q(_root_.Expr) ← e.unify hyps
-    let e' : Q(_root_.Expr) ← e'.unify hyps
-    let x : Q(_root_.Expr) ← x.unify hyps
-    let he : Q(ParRed $e $e') ← gen_par_red_proof hyps he
+    let e : Q(_root_.Expr) ← e.unify
+    let e' : Q(_root_.Expr) ← e'.unify
+    let x : Q(_root_.Expr) ← x.unify
+    let he : Q(ParRed $e $e') ← gen_par_red_proof he
     return q(@ParRed.assert $e $e' $x $he)
   | @ParRed'.app' f f' g g' x x' π h_f h_g h_x => do
-    let f : Q(_root_.Expr) ← f.unify hyps
-    let f' : Q(_root_.Expr) ← f'.unify hyps
-    let g : Q(_root_.Expr) ← g.unify hyps
-    let g' : Q(_root_.Expr) ← g'.unify hyps
-    let x : Q(_root_.Expr) ← x.unify hyps
-    let x' : Q(_root_.Expr) ← x'.unify hyps
-    let π : Q(_root_.Expr) ← π.unify hyps
-    let h_f : Q(ParRed $f $f') ← gen_par_red_proof hyps h_f
-    let h_g : Q(ParRed $g $g') ← gen_par_red_proof hyps h_g
-    let h_x : Q(ParRed $x $x') ← gen_par_red_proof hyps h_x
+    let f : Q(_root_.Expr) ← f.unify
+    let f' : Q(_root_.Expr) ← f'.unify
+    let g : Q(_root_.Expr) ← g.unify
+    let g' : Q(_root_.Expr) ← g'.unify
+    let x : Q(_root_.Expr) ← x.unify
+    let x' : Q(_root_.Expr) ← x'.unify
+    let π : Q(_root_.Expr) ← π.unify
+    let h_f : Q(ParRed $f $f') ← gen_par_red_proof h_f
+    let h_g : Q(ParRed $g $g') ← gen_par_red_proof h_g
+    let h_x : Q(ParRed $x $x') ← gen_par_red_proof h_x
     return q(@ParRed.app' $f $f' $g $g' $x $x' $π $h_f $h_g $h_x)
   | @ParRed'.app f f' x x' h_f h_x => do
-    let f : Q(_root_.Expr) ← f.unify hyps
-    let f' : Q(_root_.Expr) ← f'.unify hyps
-    let x : Q(_root_.Expr) ← x.unify hyps
-    let x' : Q(_root_.Expr) ← x'.unify hyps
-    let h_f : Q(ParRed $f $f') ← gen_par_red_proof hyps h_f
-    let h_x : Q(ParRed $x $x') ← gen_par_red_proof hyps h_x
+    let f : Q(_root_.Expr) ← f.unify
+    let f' : Q(_root_.Expr) ← f'.unify
+    let x : Q(_root_.Expr) ← x.unify
+    let x' : Q(_root_.Expr) ← x'.unify
+    let h_f : Q(ParRed $f $f') ← gen_par_red_proof h_f
+    let h_x : Q(ParRed $x $x') ← gen_par_red_proof h_x
     return q(@ParRed.app $f $f' $x $x' $h_f $h_x)
 
 syntax "decide_red" : tactic
 
-open Lean Meta Elab Tactic in elab "decide_red" : tactic => do
+open gen Lean Meta Elab Tactic in elab "decide_red" : tactic => do
   let goal ← getMainGoal
   let goalType := ← whnf (← Lean.Meta.reduceAll (← goal.getType))
   match goalType with
   | Lean.Expr.app (.app (.const ``ParRed []) x) _x' =>
     let tgt_term ← whnf (← Lean.Meta.reduceAll x)
     let e ← MExpr.decode tgt_term
-    let ⟨_, proof⟩ := gen e
-    let expr := gen_par_red_proof proof
+    let ⟨_, proof⟩ := reduce e
+    let expr ← gen_par_red_proof proof
     goal.assign (← whnf (← Lean.Meta.reduceAll expr))
   | _ => throwError "unsupported"
 
-example : ParRed *⸨(K 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩ (Srt 0) := by
+namespace examples
+
+open Expr
+
+example : ParRed ⸨(K 2 2) (Srt 1) (Srt 1) (Srt 0) (Srt 0)⸩ (Srt 0) := by
   decide_red
 
-def Atom.gen (e : Expr) : Atom e ∨ (∃ f x, e = *⸨f x⸩) ∨ (∃ m α β, e = (Π' m) α, β) :=
-  match e with
-  | (.I _m) => .inl <| .comb .I₀
-  | (.K _m _n) => .inl <| .comb .K₀
-  | (.K' _m _n) => .inl <| .comb .K'₀
-  | (.S _m _n _o) => .inl <| .comb .S₀
-  | .next => .inl <| .comb .next₀
-  | .app' => .inl <| .comb .app'₀
-  | .read => .inl <| .comb .read
-  | .assert => .inl <| .comb .assert₀
-  | .Srt _m => .inl .Srt
-  | _? => .inl .hole
-  | *⸨f x⸩ => .inr (.inl ⟨f, x, rfl⟩)
-  | (Π' m) α, β => .inr (.inr ⟨m, α, β, rfl⟩)
-
-def Atom.sound (_h : Atom.gen e = .inl h_atom) : Atom e :=
-  match heq : Atom.gen e with
-  | .inl h => h
-  | _ => by simp_all
-
-def Atom.sound' (_heq : Atom.gen e = .inr h_not_atom) : (¬ Atom e) := by
-  simp_all
-  match h_not_atom with
-  | .inl ⟨f, x, heq⟩ | .inr ⟨m, α, β, heq⟩ =>
-    intro hat
-    match hat with
-    | .comb h =>
-      cases h
-      repeat contradiction
-    | .Srt =>
-      contradiction
-
-def Atom.complete (h : Atom e) : (Atom.gen e = .inl h) := by
-  induction h
-  repeat rfl
-
-def diamond (h₁ : (gen a).fst = b) (h₂ : (gen a).fst = c) :
-  ((d : Expr) × (PLift ((gen b).fst = d)) × (PLift ((gen c).fst = d))) := by
-  let d := gen b
-  refine ⟨d.fst, ?_, ?_⟩
-  exact ⟨rfl⟩
-  change PLift (_ = (gen b).fst)
-  rw [← h₂, ← h₁]
-  exact ⟨rfl⟩
-
-def ParRed.transport_atom (h₁ : ParRed a b) (h₂ : Atom a) : (gen a).fst = b := by
-  cases h₂ with
-  | comb h => cases h <;> cases h₁ <;> unfold gen <;> rfl
-  | _ => cases h₁; unfold gen; rfl
-
-theorem gen_pi {m : Level} {α β x : Expr} : ∃ α' β', (gen *⸨((Π' m) α, β) x⸩).fst = ((Π' m) α', β') := by
-  cases h₁ : (gen *⸨((Π' m) α, β) x⸩).fst with
-  | _ =>
-    unfold gen at h₁
-    repeat split at h₁
-    simp_all
-
-inductive gen.eq : Expr → Expr → Prop
-  | refl  : ParRed a a → gen.eq a a
-  | step  : gen.eq a (gen a).fst
-  | trans : gen.eq a c → gen.eq b c → gen.eq a b
-
-@[simp] theorem gen.eq.of_gen : (gen a).fst = b → gen.eq a b := fun h => by
-  rw [← h]
-  exact gen.eq.step
-
-open Expr in def gen.n_norm (n : ℕ) (e : Expr) : ((e' : Expr) × (PLift <| gen.eq e e')) :=
-  match n with
-  | .zero =>
-    match e with
-    | (K' m n) => ⟨(K' m n), ⟨.refl .refl_K'⟩⟩
-    | (K m n) => ⟨(K m n), ⟨.refl .refl_K⟩⟩
-    | (S m n o) => ⟨(S m n o), ⟨.refl .refl_S⟩⟩
-    | (I m) => ⟨(I m), ⟨.refl .refl_I⟩⟩
-    | (_?) => ⟨_?, ⟨.refl .refl_hole⟩⟩
-    | (Srt m) => ⟨Srt m, ⟨.refl .refl_Srt⟩⟩
-    | next => ⟨next, ⟨.refl .refl_next⟩⟩
-    | .read => ⟨read, ⟨.refl .refl_read⟩⟩
-    | assert => ⟨assert, ⟨.refl .refl_assert⟩⟩
-    | x => ⟨(gen x).fst, ⟨.step⟩⟩
-  | .succ n => by
-    refine ⟨(gen ((gen e).fst)).fst, ⟨?_⟩⟩
-    apply gen.eq.trans
-    apply gen.eq.step
-    apply gen.eq.trans
-    apply gen.eq.trans
-    apply gen.eq.refl
-    apply ParRed.refl
-    apply gen.eq.step
-    apply gen.eq.refl
-    apply ParRed.refl
-
-theorem gen.eq.symm : gen.eq α β → gen.eq β α := by
-  intro h
-  induction h
-  apply gen.eq.refl
-  apply ParRed.refl
-  apply gen.eq.trans
-  apply gen.eq.refl
-  apply ParRed.refl
-  apply gen.eq.step
-  apply gen.eq.trans
-  repeat assumption
-
-theorem gen.eq.diamond : gen.eq a b → gen.eq a c → (∃ d, gen.eq b d ∧ gen.eq c d) := by
-  intro ha hb
-  exact ⟨a, ha.symm, hb.symm⟩
+end examples

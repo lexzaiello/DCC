@@ -56,5 +56,7 @@ theorem K.well_typed (h_α : Judge (Srt m) α) (h_β : Judge ((~> n.succ) α, (S
   sorry
 
 theorem I_well_typed' (h_α : Judge (Srt m) α) (h_x : Judge α x) : Judge α ⸨(I m) α x⸩ := by
-  
+  sorry
+
+theorem preservation (h_t : Judge t e) (h_step : Red e e') : Judge t e' := by
   sorry

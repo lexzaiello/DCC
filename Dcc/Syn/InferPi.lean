@@ -16,18 +16,18 @@ solving via hypotheses in context.
 However, the resulting proofs are still of type Judge : Expr → Expr → Prop
 -/
 
-inductive InferAs : Expr → Expr → Type where
+open gen in inductive InferAs : MExpr → MExpr → Type where
   | I   : InferAs (I.type m) (I m)
   | K   : InferAs (K.type m n) (K m n)
   | K'  : InferAs (K'.type m n) (K' m n)
   | S   : InferAs (S.type m n o) (S m n o)
   | Srt : InferAs (Srt m.succ)  (Srt m)
   | Pi  : InferAs (Srt m) ((Π' m) _α, _β)
-  | app : InferAs ((Π' m) α, β) f
+  | app : InferAs (.Pi m α β) f
     → ParRed' α α'
     → InferAs α₂ x -- unrelated, but we assume they're the same for the tactic
-    → ParRed' ⸨β x⸩ β'
-    → InferAs β' ⸨f x⸩
+    → ParRed' (β.app x) β'
+    → InferAs β' (MExpr.app f x)
     -- Axioms supplied from local context for the tactic
   | conv : InferAs A x → ((C : Expr) × (ParRed' A C) × (ParRed' B C)) → InferAs B x
 deriving Repr

@@ -44,4 +44,19 @@ inductive Profile : Expr → Head → Spine → Prop
     → Arity ⸨e x⸩ n -- Trivial, but useful for induction
     → Profile ⸨e x⸩ f (args ++ [x])
 
+inductive ParRed : Expr → Expr → Prop
+  | k         : ParRed x x' → ParRed ⸨K.{[m, n]} α β x y⸩ x'
+  | k'        : ParRed x x' → ParRed ⸨K'.{[m, n]} α β x y⸩ x
+  | s         : ParRed x x' → ParRed y y' → ParRed z z'
+    → ParRed ⸨S.{[m, n, o]} α β γ x y z⸩ ⸨⸨x' z'⸩ ⸨y' z'⸩⸩
+  | next      : ParRed f f' → ParRed ⸨next f x⸩ f'
+  | read      : ParRed e e' → ParRed ⸨read e⸩ e'
+  | pi        : ParRed α α' → ParRed β β' → ParRed x x'
+    → ParRed (Π.{[m]} α, β) (Π.{[m]} ⸨α' x'⸩, ⸨β' x'⸩)
+  | app'      : ParRed π π' → ParRed f f'
+    → ParRed g g' → ParRed x x'
+    → ParRed ⸨$ π f g x⸩ ⸨π' ⸨f' x'⸩ ⸨g' x'⸩⸩
+  | refl_comb : ParRed (.comb c) (.comb c)
+  | pi_val    : ParRed α α' → ParRed β β' → ParRed (Π.{[m]} α, β) (Π.{[m]} α', β')
+
 end Expr

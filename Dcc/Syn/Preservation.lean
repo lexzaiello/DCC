@@ -40,8 +40,6 @@ theorem K'.diamond (ih : ∀ {c : Expr}, ParRed x c → ∃ d, ParRed x' d ∧ P
   · extract_conv; decide_conv
   · extract_conv; decide_conv
 
---theorem red_imp_gen : ParRed a b → (ParRed b ParRed' 
-
 theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ ParRed c d := by
   intro ha hb
   induction ha generalizing c
@@ -166,9 +164,6 @@ theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ Par
     apply ParRed.app
     assumption
     repeat (apply ParRed.app; repeat assumption)
-  rename_i f f' x x' h_f' h_x' ih₁ ih₂
-  have h := ih₁ .refl
-  
   sorry
 
 theorem ParRed.preservation (h_step : ParRed x x') (h_t : Judge α x) : Judge α x' := by

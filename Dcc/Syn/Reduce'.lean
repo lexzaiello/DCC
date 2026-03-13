@@ -55,3 +55,89 @@ open Expr in def reduce' (e : Expr) : ((e' : Expr) × (PLift <| ParRed e e')) :=
   | .app'   => ⟨.app', ⟨.refl_app'⟩⟩
   | .hole   => ⟨.hole, ⟨.refl_hole⟩⟩
 
+theorem reduce'.sound : reduce' A = ⟨B, hpr⟩ → ParRed A B := fun _ => hpr.down
+
+theorem ParRed.triangle : ParRed A B → ParRed B (reduce' A).fst := fun h => by
+  induction h
+  repeat (apply reduce'.sound; rfl)
+  repeat (unfold reduce'; simp; assumption)
+  · unfold reduce'; simp
+    apply ParRed.app
+    repeat (apply ParRed.app; repeat assumption)
+  · unfold reduce'; simp
+    apply ParRed.Pival
+    repeat (apply ParRed.app; repeat assumption)
+  · unfold reduce'; simp
+    apply ParRed.Pival
+    repeat assumption
+  · unfold reduce'; simp
+    assumption
+  · unfold reduce'; simp
+    assumption
+  · unfold reduce'; simp
+    assumption
+  · unfold reduce'; simp
+    apply ParRed.app
+    apply ParRed.app
+    exact ParRed.refl
+    repeat (apply ParRed.app; repeat assumption)
+  case app f f' x x' h_f' h_x' h_red_f h_red_x =>
+    unfold reduce' at h_red_f
+    split at h_red_f
+    repeat (simp_all; unfold reduce'; simp; apply ParRed.app; repeat assumption)
+    simp_all
+    unfold reduce'
+    simp
+    cases h_f'
+    apply ParRed.Pi
+    
+    /-cases h_f'
+    · unfold reduce'
+      simp
+      apply ParRed.app
+      apply reduce'.sound
+      rfl
+      assumption
+    · apply ParRed.app
+      apply reduce'.sound
+      rfl
+      assumption
+    · apply ParRed.app
+      apply reduce'.sound
+      rfl
+      assumption
+    · apply ParRed.app
+      apply reduce'.sound
+      rfl
+      assumption
+    · apply ParRed.app
+      apply reduce'.sound
+      rfl
+      assumption
+    · apply ParRed.app
+      apply reduce'.sound
+      rfl
+      assumption
+    · apply ParRed.app
+      apply reduce'.sound
+      rfl
+      assumption
+    · unfold reduce'
+      simp
+      apply ParRed.read
+      assumption
+    repeat (unfold reduce'; simp; apply ParRed.app; assumption; assumption)
+    unfold reduce'
+    simp
+    unfold reduce' at h_red_f
+    cases h_red_f
+    apply ParRed.Pi
+    repeat assumption
+    repeat (unfold reduce'; simp; apply ParRed.app; repeat assumption)
+    case app f f' x x' h_f h_x =>
+      unfold reduce' at h_red_f
+      simp at h_red_f
+      unfold reduce'
+      simp
+     
+      sorry-/

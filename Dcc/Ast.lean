@@ -24,6 +24,7 @@ namespace Expr
 
 syntax num term : term
 
+syntax term "∘'" term : term
 syntax "K" ".{" term "}" : term
 syntax "K'" ".{" term "}" : term
 syntax "S" ".{" term "}" : term
@@ -75,7 +76,8 @@ instance : ToString Expr := ⟨toString ∘ toFormat⟩
 abbrev comp (f g : Expr) : Expr :=
   ⸨$ read ⸨next f⸩ g⸩
 
-infix:30 "∘'" => comp
+macro_rules
+  | `($f:term ∘' $g:term) => `(comp $f $g)
 
 abbrev assert_n (n : ℕ) (fn : Expr) : Expr :=
   (List.replicate n next).foldr (fun e acc => (e ∘' acc)) fn

@@ -4,7 +4,7 @@ open Std (ToFormat Format)
 open Std.ToFormat (format)
 open Relation
 
-open Lean (Level)
+abbrev Level := ℕ
 
 inductive Expr where
   | Srt    : Level → Expr
@@ -19,7 +19,7 @@ inductive Expr where
   | assert : Expr
   | app'   : Expr
   | app    : Expr  → Expr → Expr
-deriving BEq, Repr, Lean.ToExpr
+deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 open Expr
 
@@ -299,9 +299,7 @@ inductive ParRed : Expr → Expr → Prop where
   | assert      : ParRed e e' → ParRed ⸨assert e _x⸩ e'
   | app'        : ParRed f f' → ParRed g g' → ParRed x x'
     → ParRed ⸨${π} f g x⸩ ⸨π ⸨f' x'⸩ ⸨g' x'⸩⸩
-  | app         : ParRed f f'
-    → ParRed x x'
-    → ParRed ⸨f x⸩ ⸨f' x'⸩
+  | app         : ParRed f f' → ParRed x x' → ParRed ⸨f x⸩ ⸨f' x'⸩
 
 inductive Judge : Expr → Expr → Prop
   | I   : Judge (I.type m) (I m)
@@ -315,12 +313,12 @@ inductive Judge : Expr → Expr → Prop
     → Judge β' ⸨f x⸩
   | conv : Judge A x → (∃ C, ParRed A C ∧ ParRed B C) → Judge B x
 
-theorem Step.sound (e₁ e₂) : Red e₁ e₂ → eval e₁ = .ok e₂ := by
+theorem Red.sound (e₁ e₂) : Red e₁ e₂ → eval e₁ = .ok e₂ := by
   intro h_r
   induction h_r
   repeat rfl
 
-theorem Step.complete (e₁ e₂) : eval e₁ = .ok e₂ → Red e₁ e₂ := by
+theorem eval.complete (e₁ e₂) : eval e₁ = .ok e₂ → Red e₁ e₂ := by
   intro h_e
   unfold eval at h_e
   induction e₁
@@ -365,6 +363,34 @@ theorem Step.complete (e₁ e₂) : eval e₁ = .ok e₂ → Red e₁ e₂ := by
     cases h_e
     exact Red.app'
     simp_all
+
+theorem red.complete' : ¬ (eval e).isOk → ¬ ∃ e₂, Red e e₂ := by
+  intro h ⟨e', hr⟩
+  have h := hr.sound
+  simp_all
+  contradiction
+
+def red.decidable : Decidable (Red e₁ e₂) :=
+  match heq : eval e₁ with
+  | .ok e' =>
+    let h := eval.complete e₁ e' heq
+    if heq₂ : e' = e₂ then by
+      apply Decidable.isTrue
+      rw [← heq₂]
+      exact h
+    else by
+      apply Decidable.isFalse
+      intro h_red
+      have h := h_red.sound
+      simp_all
+  | .error e =>
+    have h : ¬ (eval e₁).isOk := by
+      simp [heq]
+      rfl
+    Decidable.isFalse (by
+      intro hnot
+      have h := red.complete' h
+      simp_all)
 
 namespace Judge
 

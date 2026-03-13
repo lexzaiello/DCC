@@ -8,7 +8,7 @@ namespace gen
 
 open Qq
 
-abbrev Level := Q(Lean.Level)
+abbrev Level := Lean.Expr
 
 inductive MExpr where
   | Srt    : Level → MExpr
@@ -30,7 +30,7 @@ deriving BEq, Repr
 
 end gen
 
-def Expr.toMeta : Expr → gen.MExpr
+/-def Expr.toMeta : Expr → gen.MExpr
   | .I m => .I (Lean.toExpr m)
   | .K' m n => .K' (Lean.toExpr m) (Lean.toExpr n)
   | .K m n => .K (Lean.toExpr m) (Lean.toExpr n)
@@ -42,7 +42,7 @@ def Expr.toMeta : Expr → gen.MExpr
   | .next => .next
   | .hole => .hole
   | Expr.Pi m a b => .Pi (Lean.toExpr m) (toMeta a) (toMeta b)
-  | .Srt m => .Srt (Lean.toExpr m)
+  | .Srt m => .Srt (Lean.toExpr m)-/
 
 namespace gen
 
@@ -198,28 +198,28 @@ open Lean Elab Tactic Qq in def MExpr.unify (e : MExpr) : TacticM Q(_root_.Expr)
       | .some v => return v.value?.getD (.fvar v.fvarId)
       | .none => throwError s!"not supported"
   | .K m n =>
-    let m : Q(Lean.Level) := m
-    let n : Q(Lean.Level) := n
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
     pure q(Expr.K $m $n)
   | .Srt m =>
-    let m : Q(Lean.Level) := m
+    let m : Q(ℕ) := m
     pure q(Expr.Srt $m)
   | .Pi m α β =>
-    let m : Q(Lean.Level) := m
+    let m : Q(ℕ) := m
     let α' : Q(_root_.Expr) := ← α.unify
     let β' : Q(_root_.Expr) := ← β.unify
     pure q(Expr.Pi $m $α' $β')
   | .K' m n =>
-    let m : Q(Lean.Level) := m
-    let n : Q(Lean.Level) := n
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
     pure q(Expr.K' $m $n)
   | .S m n o =>
-    let m : Q(Lean.Level) := m
-    let n : Q(Lean.Level) := n
-    let o : Q(Lean.Level) := o
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
+    let o : Q(ℕ) := o
     pure q(Expr.S $m $n $o)
   | .I m  =>
-    let m : Q(Lean.Level) := m
+    let m : Q(ℕ) := m
     pure q(Expr.I $m)
   | .hole => pure q(Expr.hole)
   | .next => pure q(Expr.next)
@@ -241,39 +241,39 @@ open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.
   | @ParRed'.proof _ _ p      => return p
   | @ParRed'.refl_fvar m      => return ((Lean.Expr.const ``rfl [1]).app (.const ``_root_.Expr []))
   | @ParRed'.refl_K' m n      =>
-    let m : Q(Lean.Level) := m
-    let n : Q(Lean.Level) := n
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
     return q(@ParRed.refl_K' $m $n)
   | @ParRed'.refl_K m n       =>
-    let m : Q(Lean.Level) := m
-    let n : Q(Lean.Level) := n
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
     return q(@ParRed.refl_K $m $n)
   | @ParRed'.refl_S m n o     =>
-    let m : Q(Lean.Level) := m
-    let n : Q(Lean.Level) := n
-    let o : Q(Lean.Level) := o
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
+    let o : Q(ℕ) := o
     return q(@ParRed.refl_S $m $n $o)
   | @ParRed'.refl_I m         =>
-    let m : Q(Lean.Level) := m
+    let m : Q(ℕ) := m
     return q(@ParRed.refl_I $m)
   | @ParRed'.refl_hole        => return q(@ParRed.refl_hole)
   | @ParRed'.refl_Srt m       =>
-    let m : Q(Lean.Level) := m
+    let m : Q(ℕ) := m
     return q(@ParRed.refl_Srt $m)
   | @ParRed'.refl_next        => return q(@ParRed.refl_next)
   | @ParRed'.refl_read        => return q(@ParRed.refl_read)
   | @ParRed'.refl_assert      => return q(@ParRed.refl_assert)
   | @ParRed'.refl_app'        => return q(@ParRed.refl_app')
   | @ParRed'.I x x' m α h     => do
-    let m : Q(Lean.Level) := m
+    let m : Q(ℕ) := m
     let x : Q(_root_.Expr) ← x.unify
     let x' : Q(_root_.Expr) ← x'.unify
     let α : Q(_root_.Expr)  ← α.unify
     let inner : Q(ParRed $x $x') ← gen_par_red_proof h
     return q(@ParRed.I $x $x' $m $α $inner)
   | @ParRed'.K x x' m n α β y h => do
-    let m : Q(Lean.Level) := m
-    let n : Q(Lean.Level) := n
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
     let x : Q(_root_.Expr) ← x.unify
     let x' : Q(_root_.Expr) ← x'.unify
     let α : Q(_root_.Expr) ← α.unify
@@ -282,8 +282,8 @@ open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.
     let inner : Q(ParRed $x $x') ← gen_par_red_proof h
     return q(@ParRed.K $x $x' $m $n $α $β $y $inner)
   | @ParRed'.K' x x' m n α β y h => do
-    let m : Q(Lean.Level) := m
-    let n : Q(Lean.Level) := n
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
     let x : Q(_root_.Expr) ← x.unify
     let x' : Q(_root_.Expr) ← x'.unify
     let α : Q(_root_.Expr) ← α.unify
@@ -305,9 +305,9 @@ open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.
     let hy' : Q(ParRed $y $y') ← gen_par_red_proof hy
     let hz' : Q(ParRed $z $z') ← gen_par_red_proof hz
 
-    let m : Q(Lean.Level) := m
-    let n : Q(Lean.Level) := n
-    let o : Q(Lean.Level) := o
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
+    let o : Q(ℕ) := o
 
     return q(@ParRed.S $x $x' $y $y' $z $z' $m $n $o $α $β $γ $hx' $hy' $hz')
   | @ParRed'.Pi α α' β β' x x' m h_α h_β h_x => do
@@ -321,7 +321,7 @@ open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.
     let hy' : Q(ParRed $β $β') ←  gen_par_red_proof h_β
     let hz' : Q(ParRed $x $x') ←  gen_par_red_proof h_x
 
-    let m : Q(Lean.Level) := m
+    let m : Q(ℕ) := m
 
     return q(@ParRed.Pi $α $α' $β $β' $x $x' $m $hx' $hy' $hz')
   | @ParRed'.Pival α α' β β' m h_α h_β => do
@@ -331,7 +331,7 @@ open gen Lean Elab Tactic Qq in def gen_par_red_proof (p : ParRed' e e') : Lean.
     let β : Q(_root_.Expr) ← β.unify
     let hx' : Q(ParRed $α $α') ← gen_par_red_proof h_α
     let hy' : Q(ParRed $β $β') ← gen_par_red_proof h_β
-    let m : Q(Lean.Level) := m
+    let m : Q(ℕ) := m
     return q(@ParRed.Pival $α $α' $β $β' $m $hx' $hy')
   | @ParRed'.next f f' x hf   => do
     let f : Q(_root_.Expr) ← f.unify
@@ -552,6 +552,44 @@ open Qq gen Lean Meta Elab Tactic in elab "decide_conv" : tactic => do
       | _, .none => throwError s!"not an Expr: {B}"
     | e => throwError s!"not a valid conversion goal: {repr e}"
 
+open Qq gen Lean Meta Elab Tactic in def decode_red' (A B : Q(_root_.Expr)) : TacticM Q(ParRed $A $B ∨ ¬ ParRed $A $B) := do
+  let mA ← MExpr.decode A
+  let ⟨g₁, hp₁⟩ ← reduce mA
+
+  let AA ← g₁.unify
+
+  let ehp₁ : Q(ParRed $A $AA) := ← gen_par_red_proof hp₁
+
+  let proof : Q(ParRed $A $B ∨ ¬ ParRed $A $B) := q(by
+      let hpr₁ : ParRed $A $AA := $ehp₁
+      if heq : $AA = $B then
+        rw [← heq]
+        exact Or.inl hpr₁
+      else
+        induction hpr₁ generalizing $B with
+        | refl_K | refl_K' | refl_S | refl_I | refl_hole | refl_Srt | refl_next | refl_read | refl_assert | refl_app' =>
+          apply Or.inr
+          intro h
+          cases h
+          simp_all
+        | I =>
+          simp_all
+          rename_i ih
+          cases hpr₁
+          simp_all
+          have h := ih _ (by assumption)
+          cases h
+          apply Or.inl
+          exact ParRed.I (by assumption)
+          apply Or.inr
+          rename_i h
+          intro h_red
+          apply h
+          
+          sorry
+        | _ => sorry)
+  return proof
+
 open Expr in example : ∃ D, ParRed ⸨(I 2) (Srt 1) (Srt 0)⸩ D ∧ ParRed ⸨(I 2) (Srt 1) (Srt 0)⸩ D := by
   decide_conv
 
@@ -562,3 +600,7 @@ theorem I.diamond (ih : ∀ {c : Expr}, ParRed x c → ∃ d, ParRed x' d ∧ Pa
   · cases_spine
     extract_conv
     decide_conv
+
+instance ParRed.instDecidable : Decidable (ParRed a b) := by
+  
+  sorry

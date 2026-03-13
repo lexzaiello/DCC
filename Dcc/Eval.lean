@@ -58,5 +58,10 @@ inductive ParRed : Expr → Expr → Prop
     → ParRed ⸨$ π f g x⸩ ⸨π' ⸨f' x'⸩ ⸨g' x'⸩⸩
   | refl_comb : ParRed (.comb c) (.comb c)
   | pi_val    : ParRed α α' → ParRed β β' → ParRed (Π.{[m]} α, β) (Π.{[m]} α', β')
+  | app       : Profile ⸨f x⸩ head args
+    → Arity ⸨f x⸩ (Nat.succ n) -- this is always greater than zero. only stuck terms.
+    → ParRed f f'
+    → ParRed x x'
+    → ParRed ⸨f x⸩ ⸨f' x'⸩
 
 end Expr

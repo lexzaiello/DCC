@@ -1,6 +1,7 @@
 import Dcc.Syn.JudgePi
 import Qq
 import Lean
+import Dcc.Syn.Reduce'
 import Lean.Elab
 import Mathlib.Data.List.Defs
 
@@ -124,6 +125,50 @@ open Lean Elab Tactic in def reduce.matcher (on_e : FVarId) (hyp_type : Lean.Exp
     b == (Lean.Expr.const ``ParRed []) ∧ e' == on_e
   | _ => false
 
+
+open Lean Elab Tactic Qq in def MExpr.unify (e : MExpr) : TacticM Q(_root_.Expr) := do
+  match e with
+  | .lean_e e => pure e
+  | .fvar v =>
+    withMainContext do
+      let l ← getLCtx
+      match l.find? v with
+      | .some v => return v.value?.getD (.fvar v.fvarId)
+      | .none => throwError s!"not supported"
+  | .K m n =>
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
+    pure q(Expr.K $m $n)
+  | .Srt m =>
+    let m : Q(ℕ) := m
+    pure q(Expr.Srt $m)
+  | .Pi m α β =>
+    let m : Q(ℕ) := m
+    let α' : Q(_root_.Expr) := ← α.unify
+    let β' : Q(_root_.Expr) := ← β.unify
+    pure q(Expr.Pi $m $α' $β')
+  | .K' m n =>
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
+    pure q(Expr.K' $m $n)
+  | .S m n o =>
+    let m : Q(ℕ) := m
+    let n : Q(ℕ) := n
+    let o : Q(ℕ) := o
+    pure q(Expr.S $m $n $o)
+  | .I m  =>
+    let m : Q(ℕ) := m
+    pure q(Expr.I $m)
+  | .hole => pure q(Expr.hole)
+  | .next => pure q(Expr.next)
+  | .read => pure q(Expr.read)
+  | .assert => pure q(Expr.assert)
+  | .app' => pure q(Expr.app')
+  | .app f x => do
+    let f : Q(_root_.Expr) ← f.unify
+    let x : Q(_root_.Expr) ← x.unify
+    return q(Expr.app $f $x)
+
 -- TODO: Use Lean.TacticM to look up potential reduction for fvar
 open Lean Elab Tactic in def reduce (e : MExpr) : TacticM ((e' : MExpr) × (ParRed' e e')) :=
   match e with
@@ -187,49 +232,6 @@ open Lean Elab Tactic in def reduce (e : MExpr) : TacticM ((e' : MExpr) × (ParR
   | .assert => return ⟨.assert, .refl_assert⟩
   | .app'   => return ⟨.app', .refl_app'⟩
   | .hole   => return ⟨.hole, .refl_hole⟩
-
-open Lean Elab Tactic Qq in def MExpr.unify (e : MExpr) : TacticM Q(_root_.Expr) := do
-  match e with
-  | .lean_e e => pure e
-  | .fvar v =>
-    withMainContext do
-      let l ← getLCtx
-      match l.find? v with
-      | .some v => return v.value?.getD (.fvar v.fvarId)
-      | .none => throwError s!"not supported"
-  | .K m n =>
-    let m : Q(ℕ) := m
-    let n : Q(ℕ) := n
-    pure q(Expr.K $m $n)
-  | .Srt m =>
-    let m : Q(ℕ) := m
-    pure q(Expr.Srt $m)
-  | .Pi m α β =>
-    let m : Q(ℕ) := m
-    let α' : Q(_root_.Expr) := ← α.unify
-    let β' : Q(_root_.Expr) := ← β.unify
-    pure q(Expr.Pi $m $α' $β')
-  | .K' m n =>
-    let m : Q(ℕ) := m
-    let n : Q(ℕ) := n
-    pure q(Expr.K' $m $n)
-  | .S m n o =>
-    let m : Q(ℕ) := m
-    let n : Q(ℕ) := n
-    let o : Q(ℕ) := o
-    pure q(Expr.S $m $n $o)
-  | .I m  =>
-    let m : Q(ℕ) := m
-    pure q(Expr.I $m)
-  | .hole => pure q(Expr.hole)
-  | .next => pure q(Expr.next)
-  | .read => pure q(Expr.read)
-  | .assert => pure q(Expr.assert)
-  | .app' => pure q(Expr.app')
-  | .app f x => do
-    let f : Q(_root_.Expr) ← f.unify
-    let x : Q(_root_.Expr) ← x.unify
-    return q(Expr.app $f $x)
 
 end gen
 
@@ -566,28 +568,8 @@ open Qq gen Lean Meta Elab Tactic in def decode_red' (A B : Q(_root_.Expr)) : Ta
         rw [← heq]
         exact Or.inl hpr₁
       else
-        induction hpr₁ generalizing $B with
-        | refl_K | refl_K' | refl_S | refl_I | refl_hole | refl_Srt | refl_next | refl_read | refl_assert | refl_app' =>
-          apply Or.inr
-          intro h
-          cases h
-          simp_all
-        | I =>
-          simp_all
-          rename_i ih
-          cases hpr₁
-          simp_all
-          have h := ih _ (by assumption)
-          cases h
-          apply Or.inl
-          exact ParRed.I (by assumption)
-          apply Or.inr
-          rename_i h
-          intro h_red
-          apply h
-          
-          sorry
-        | _ => sorry)
+        
+        sorry)
   return proof
 
 open Expr in example : ∃ D, ParRed ⸨(I 2) (Srt 1) (Srt 0)⸩ D ∧ ParRed ⸨(I 2) (Srt 1) (Srt 0)⸩ D := by

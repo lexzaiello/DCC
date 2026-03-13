@@ -78,7 +78,7 @@ theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ Par
     repeat (apply ParRed.app; repeat assumption)
     rename_i hpx₁ hpy₁ hpz₁ ih₁ ih₂ ih₃ _ _ _ _ _ _ _ _ _ _ _ _
     rename_i hpz₂ x'₄ hpy₂ x'₃ hpx₂ x'₂ hpγ x'₁ hpβ x' hα
-    rename_i m n o _ _ _ _ 
+    rename_i m n o _ _ _ _
     have ha := ih₁ hpx₂
     have hb := ih₂ hpy₂
     have hc := ih₃ hpz₂
@@ -164,6 +164,7 @@ theorem ParRed.diamond : ParRed a b → ParRed a c → ∃ d, ParRed b d ∧ Par
     apply ParRed.app
     assumption
     repeat (apply ParRed.app; repeat assumption)
+  
   sorry
 
 theorem ParRed.preservation (h_step : ParRed x x') (h_t : Judge α x) : Judge α x' := by

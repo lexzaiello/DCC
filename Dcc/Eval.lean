@@ -112,47 +112,6 @@ theorem eval_complete : Red e e' → (eval e) = .ok e' := by
   cases h
   repeat rfl
 
-/-
-For parallel reduction:
-- only proceed with the general app case if there are fewer arguments
-to the innermost spine than its arity requires
--/
-inductive Arity : Expr → ℕ → Prop
-  | pi    : Arity (Π.{[m]} α, β) 1
-  | k     : Arity (K.{[m, n]}) 4
-  | k'    : Arity (K'.{[m, n]}) 4
-  | s     : Arity (S.{[m, n, o]}) 6
-  | next  : Arity next 2
-  | read  : Arity read 1
-  | app'  : Arity $ 4
-  | srt   : Arity (Srt n) 0
-  | app   : Arity f (Nat.succ n) → Arity ⸨f x⸩ n
-
-abbrev Head  := Expr
-abbrev Spine := List Expr
-
-inductive Profile : Expr → Head → Spine → Prop
-  | pi   : Profile (Π.{[m]} α, β) (Π.{[m]} α, β) []
-  | comb : Profile (.comb c) (.comb c) []
-  | srt  : Profile (Srt m) (Srt m) []
-  | app  : Profile e f args -- f represents the innermost combinator
-    → Profile ⸨e x⸩ f (args ++ [x])
-
-/-inductive Stuck : Expr → Bool → Prop
-  | zero : Profile e inner_comb args
-    → Arity inner_comb args.length
-    → Stuck e false
-  -- left can step
-  | succ : Stuck f False → Stuck ⸨f x⸩ True-/
-
-inductive Stuck : Expr → Prop
-  | srt     : Stuck (Srt m)
-  | pi      : Stuck α → Stuck β → Stuck (Π.{[m]} α, β)
-  | comb    : Stuck (.comb c)
-  | app     : Arity f 0 → Stuck ⸨f x⸩
-  | app_inv : (∃ n, ⸨f x⸩.Arity (Nat.succ n))
-    → Stuck ⸨f x⸩
-
 end Expr
 
 inductive ParRed : Expr → Expr → Prop

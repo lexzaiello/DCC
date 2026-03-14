@@ -44,8 +44,8 @@ inductive NormTy : Expr → Prop
   | srt   : NormTy (Srt m)
   | pi    : NormTy α → NormTy β
     →  NormTy (Π.{[m]} α, β)
-  | redex : (¬ ⸨f x⸩.Redex) → NormTy f
-    → NormTy x → NormTy ⸨f x⸩
+  | redex : (¬ ⸨f x⸩.Redex)
+    → NormTy f → NormTy x → NormTy ⸨f x⸩
 
 inductive IsNormTy : Expr → Type
   | srt   : IsNormTy (Srt m)
@@ -111,7 +111,7 @@ inductive Judge : Expr → Expr → Prop
     → Judge α x
     → ParRed ⸨β x⸩ β'
     → Judge β' ⸨f x⸩
-  | conv : ¬ NormTy A → Judge A x → (∃ C, ParRed A C ∧ ParRed B C) → Judge B x
+  | conv : Judge A x → (∃ C, ParRed A C ∧ ParRed B C) → Judge B x
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   match e with
@@ -124,57 +124,14 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
     let t_f₁ ← infer f
     let t_x₁ ← infer x
 
-    let reduce_if_needed {e : Expr}
-      (h : (t : Expr) × PLift (Judge t e)) : (t : Expr) × PLift (Judge t e) :=
-      if hnorm : NormTy h.fst then
-        h
-      else if hdiamond : ∃ C, ParRed h.fst C ∧ ParRed (reduce h.fst).fst C then
-        ⟨(reduce h.fst).fst, ⟨Judge.conv hnorm h.snd.down hdiamond⟩⟩
-      else h
-
-    let t_f₁ := reduce_if_needed t_f₁
-    let t_x₁ := reduce_if_needed t_x₁
-
     match t_f₁, t_x₁ with
     | ⟨Π.{[_m]} α₁, β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
-      if heq : α₁ = α₂ then
-        .some <|
-          ⟨(reduce ⸨β x⸩).fst
-          , ⟨.app h_t_f (by rw [heq]; exact h_t_x) (reduce ⸨β x⸩).snd.down⟩⟩
-      else
-        .none
+      if h_conv : ∃ C, ParRed α₂ C ∧ ParRed α₁ C then
+        .some ⟨(reduce ⸨β x⸩).fst
+              , ⟨.app h_t_f (.conv h_t_x h_conv) (reduce ⸨β x⸩).snd.down⟩⟩
+      else .none
     | _, _ => .none
   | _ => .none
 
 theorem infer_sound : (infer e) = .some ⟨t, PLift.up proof⟩ → Judge t e := fun _ => proof
 
-#eval Sigma.fst <$> infer ⸨(K'.{[2, 2]}) (Srt 1) (Srt 1)⸩
-
-example : Judge (Srt 1)  := by
-  apply infer_sound
-  simp [infer, K.type]
-  split
-  simp
-  split
-  split
-  simp
-  split
-  split
-  simp
-  split
-  simp
-  
-
-theorem S_well_typed (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> n.succ) α, (Srt n)) β)
-  (h₃ : Judge (Π.{[o.succ]} α
-      , Π.{[o.succ]} β
-      , ⸨next ⸨assert (Srt o)⸩⸩) γ)
-  (h₄ : Judge (Π.{[o]} α, Π.{[o]} β, γ) x)
-  (h₅ : Judge (Π.{[n]} α, β) y)
-  (h₆ : Judge α z) : Judge ⸨γ z ⸨y z⸩⸩ ⸨S.{[m, n, o]} α β γ x y z⸩ := by
-  repeat apply Judge.app
-  exact Judge.S
-  · assumption
-  · apply ParRed.reduce_sound
-    rfl
-  · sorry

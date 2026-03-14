@@ -121,8 +121,7 @@ inductive ParRed : Expr → Expr → Prop
     → ParRed ⸨S.{[m, n, o]} α β γ x y z⸩ ⸨⸨x' z'⸩ ⸨y' z'⸩⸩
   | next      : ParRed f f' → ParRed ⸨next f x⸩ f'
   | read      : ParRed e e' → ParRed ⸨read e⸩ e'
-  | pi        : ParRed α α' → ParRed β β'
-    → ParRed x x'
+  | pi        : ParRed α α' → ParRed β β' → ParRed x x'
     → ParRed ⸨(Π.{[m]} α, β) x⸩ (Π.{[m]} ⸨α' x'⸩, ⸨β' x'⸩)
   | app'      : ParRed π π' → ParRed f f'
     → ParRed g g' → ParRed x x'
@@ -150,9 +149,9 @@ def reduce (e : Expr) : ((e' : Expr) × (PLift <| ParRed e e')) :=
       let ⟨z', ⟨hz⟩⟩ := reduce z
       exact ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, ⟨.s hx hy hz⟩⟩
     · rename_i m α β x
+      let ⟨x', ⟨hx⟩⟩ := reduce x
       let ⟨α', ⟨hα⟩⟩ := reduce α
       let ⟨β', ⟨hβ⟩⟩ := reduce β
-      let ⟨x', ⟨hx⟩⟩ := reduce x
       exact ⟨(Π.{[m]} ⸨α' x'⸩, ⸨β' x'⸩), ⟨.pi hα hβ hx⟩⟩
     · rename_i f x
       let ⟨f', ⟨hf⟩⟩ := reduce f

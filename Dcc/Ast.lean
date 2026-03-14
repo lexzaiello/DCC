@@ -11,14 +11,14 @@ inductive Comb where
   | next   : Comb
   | read   : Comb
   | app'   : Comb
-deriving BEq, Repr, Lean.ToExpr
+deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 inductive Expr where
   | Pi     : Level → Expr → Expr → Expr
   | Srt    : Level → Expr
   | comb   : Comb  → Expr
   | app    : Expr  → Expr → Expr
-deriving BEq, Repr, Lean.ToExpr
+deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 namespace Expr
 

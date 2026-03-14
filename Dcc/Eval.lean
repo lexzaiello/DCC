@@ -1,10 +1,71 @@
 import Dcc.Ast
 import Mathlib.Data.Nat.Notation
 
+/-
+- select innermost redex
+  - can make inductive for this
+- build expression back up with folding
+-/
+
 open Std (ToFormat Format)
 open Std.ToFormat (format)
 
 namespace Expr
+
+inductive Redex : Expr → Prop where
+  | k    : Redex ⸨K.{[_m, _n]} _α _β _x _y⸩
+  | k'   : Redex ⸨K'.{[_m, _n]} _α _β _x _y⸩
+  | s    : Redex ⸨S.{[_m, _n, _o]} _α _β _γ _x _y _z⸩
+  | pi   : Redex ⸨(Π.{[_m]} _α, _β) _x⸩
+  | next : Redex ⸨next _f _x⸩
+  | read : Redex ⸨read _e⸩
+  | app' : Redex ⸨$ _π _f _g _x⸩
+
+inductive Redex' : Expr → Type where
+  | k    : Redex' ⸨K.{[_m, _n]} _α _β _x _y⸩
+  | k'   : Redex' ⸨K'.{[_m, _n]} _α _β _x _y⸩
+  | s    : Redex' ⸨S.{[_m, _n, _o]} _α _β _γ _x _y _z⸩
+  | pi   : Redex' ⸨(Π.{[_m]} _α, _β) _x⸩
+  | next : Redex' ⸨next _f _x⸩
+  | read : Redex' ⸨read _e⸩
+  | app' : Redex' ⸨$ _π _f _g _x⸩
+
+def is_redex (e : Expr) : Option (Redex' e) :=
+  match e with
+  | ⸨K.{[_m, _n]} _α _β _x _y⸩ => .some .k
+  | ⸨K'.{[_m, _n]} _α _β _x _y⸩ => .some .k'
+  | ⸨S.{[_m, _n, _o]} _α _β _γ _x _y _z⸩ => .some .s
+  | ⸨(Π.{[_m]} _α, _β) _x⸩ => .some .pi
+  | ⸨next _f _x⸩ => .some .next
+  | ⸨read _e⸩ => .some .read
+  | ⸨$ _π _f _g _x⸩ => .some .app'
+  | _ => .none
+
+theorem Redex'.sound : Redex' e → Redex e := fun h => by
+  cases h
+  · exact .k
+  · exact .k'
+  · exact .s
+  · exact .pi
+  · exact .next
+  · exact .read
+  · exact .app'
+
+theorem is_redex.sound : is_redex e = .some p → e.Redex := fun _ => p.sound
+
+instance Redex.instDecidable : Decidable (Redex e) := by
+  match heq : is_redex e with
+  | .some p => exact .isTrue p.sound
+  | .none =>
+    apply Decidable.isFalse
+    intro h
+    cases h
+    repeat cases heq
+
+theorem is_redex.sound' : is_redex e = Option.none → ¬ e.Redex := fun e => by
+  intro h
+  cases h
+  repeat cases e
 
 def eval (e : Expr) : Except Format Expr :=
   match e with
@@ -16,6 +77,40 @@ def eval (e : Expr) : Except Format Expr :=
   | ⸨read e⸩ => pure e
   | ⸨$ π f g x⸩ => pure ⸨π ⸨f x⸩ ⸨g x⸩⸩
   | e => .error <| "stuck: " ++ (format e)
+
+inductive Red : Expr → Expr → Prop
+  | k      : Red ⸨K.{[m, n]} α β x y⸩ x
+  | k'     : Red ⸨K'.{[m, n]} α β x y⸩ x
+  | s      : Red ⸨S.{[m, n, o]} α β γ x y z⸩ ⸨⸨x z⸩ ⸨y z⸩⸩
+  | pi     : Red ⸨(Π.{[m]} α, β) x⸩ (Π.{[m]} ⸨α x⸩, ⸨β x⸩)
+  | next   : Red ⸨next f _x⸩ f
+  | read   : Red ⸨read x⸩ x
+  | app'   : Red ⸨$ π f g x⸩ ⸨π ⸨f x⸩ ⸨g x⸩⸩
+
+theorem eval_sound : (eval e) = .ok e' → Red e e' := by
+  intro h
+  unfold eval at h
+  split at h
+  · cases h
+    apply Red.k
+  · cases h
+    apply Red.k'
+  · cases h
+    apply Red.s
+  · cases h
+    apply Red.pi
+  · cases h
+    apply Red.next
+  · cases h
+    apply Red.read
+  · cases h
+    apply Red.app'
+  · simp_all
+
+theorem eval_complete : Red e e' → (eval e) = .ok e' := by
+  intro h
+  cases h
+  repeat rfl
 
 /-
 For parallel reduction:
@@ -52,9 +147,8 @@ inductive Profile : Expr → Head → Spine → Prop
 
 inductive Stuck : Expr → Prop
   | srt     : Stuck (Srt m)
-  | pi      : Stuck α
-    → Stuck β
-    → Stuck (Π.{[m]} α, β)
+  | pi      : Stuck α → Stuck β → Stuck (Π.{[m]} α, β)
+  | comb    : Stuck (.comb c)
   | app     : Arity f 0 → Stuck ⸨f x⸩
   | app_inv : (∃ n, ⸨f x⸩.Arity (Nat.succ n))
     → Stuck ⸨f x⸩
@@ -74,162 +168,95 @@ inductive ParRed : Expr → Expr → Prop
   | app'      : ParRed π π' → ParRed f f'
     → ParRed g g' → ParRed x x'
     → ParRed ⸨$ π f g x⸩ ⸨π' ⸨f' x'⸩ ⸨g' x'⸩⸩
+  | app       : (¬ ⸨f x⸩.Redex) → ParRed f f'
+    → ParRed x x' → ParRed ⸨f x⸩ ⸨f' x'⸩
+  | refl_pi   : ParRed (Π.{[m]} α, β) (Π.{[m]} α, β)
   | refl_comb : ParRed (.comb c) (.comb c)
   | refl_srt  : ParRed (Srt m) (Srt m)
-  | pi_val    : ParRed α α' → ParRed β β' → ParRed (Π.{[m]} α, β) (Π.{[m]} α', β')
-  | app       : ⸨f x⸩.Stuck → ParRed f f' → ParRed x x' → ParRed ⸨f x⸩ ⸨f' x'⸩
+
+def reduce (e : Expr) : ((e' : Expr) × (PLift <| ParRed e e')) :=
+  match heq : e.is_redex with
+  | .some r => by
+    cases r
+    · rename_i m n α β x y
+      let ⟨e', ⟨hp⟩⟩ := reduce x
+      exact ⟨e', ⟨.k hp⟩⟩
+    · rename_i m n α β x y
+      let ⟨e', ⟨hp⟩⟩ := reduce x
+      exact ⟨e', ⟨.k' hp⟩⟩
+    · rename_i m n o α β γ x y z
+      let ⟨x', ⟨hx⟩⟩ := reduce x
+      let ⟨y', ⟨hy⟩⟩ := reduce y
+      let ⟨z', ⟨hz⟩⟩ := reduce z
+      exact ⟨⸨⸨x' z'⸩ ⸨y' z'⸩⸩, ⟨.s hx hy hz⟩⟩
+    · rename_i m α β x
+      let ⟨α', ⟨hα⟩⟩ := reduce α
+      let ⟨β', ⟨hβ⟩⟩ := reduce β
+      let ⟨x', ⟨hx⟩⟩ := reduce x
+      exact ⟨(Π.{[m]} ⸨α' x'⸩, ⸨β' x'⸩), ⟨.pi hα hβ hx⟩⟩
+    · rename_i f x
+      let ⟨f', ⟨hf⟩⟩ := reduce f
+      exact ⟨f', ⟨.next hf⟩⟩
+    · rename_i e
+      let ⟨e', ⟨he⟩⟩ := reduce e
+      exact ⟨e', ⟨.read he⟩⟩
+    · rename_i π f g x
+      let ⟨π', ⟨hπ⟩⟩ := reduce π
+      let ⟨f', ⟨hf⟩⟩ := reduce f
+      let ⟨g', ⟨hg⟩⟩ := reduce g
+      let ⟨x', ⟨hx⟩⟩ := reduce x
+      exact ⟨⸨π' ⸨f' x'⸩ ⸨g' x'⸩⸩, ⟨.app' hπ hf hg hx⟩⟩
+  | .none =>
+    let not_redex : ¬ e.Redex := Expr.is_redex.sound' heq
+    match heq : e with
+    | ⸨f x⸩ =>
+      let ⟨f', ⟨hf⟩⟩ := reduce f
+      let ⟨x', ⟨hx⟩⟩ := reduce x
+      ⟨⸨f' x'⸩, ⟨.app (by rw [← heq]; exact not_redex) hf hx⟩⟩
+    | Srt m => ⟨Srt m, ⟨.refl_srt⟩⟩
+    | Π.{[m]} α, β => ⟨Π.{[m]} α, β, ⟨.refl_pi⟩⟩
+    | .comb c => ⟨.comb c, ⟨.refl_comb⟩⟩
 
 namespace ParRed
 
-theorem mk_par_app_comb : ParRed x x' → ∃ e', ParRed ⸨(.comb c) x⸩ e' := by
-  intro h
-  cases c
-  · rename_i m n
-    refine ⟨⸨K'.{[m, n]} x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app_inv
-      refine ⟨2, ?_⟩
-      apply Expr.Arity.app
-      exact .k'
-    · exact .refl_comb
-    · assumption
-  · rename_i m n
-    refine ⟨⸨K.{[m, n]} x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app_inv
-      refine ⟨2, ?_⟩
-      apply Expr.Arity.app
-      exact .k
-    · exact .refl_comb
-    · assumption
-  · rename_i m n o
-    refine ⟨⸨S.{[m, n, o]} x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app_inv
-      refine ⟨4, ?_⟩
-      apply Expr.Arity.app
-      exact .s
-    · exact .refl_comb
-    · assumption
-  · refine ⟨⸨next x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app_inv
-      refine ⟨0, ?_⟩
-      apply Expr.Arity.app
-      exact .next
-    · exact .refl_comb
-    · assumption
-  · refine ⟨x', ?_⟩
-    apply ParRed.read
-    assumption
-  · refine ⟨⸨$ x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app_inv
-      refine ⟨2, ?_⟩
-      apply Expr.Arity.app
-      exact .app'
-    · exact ParRed.refl_comb
-    · assumption
+theorem reduce_sound : (reduce A).fst = B → ParRed A B := fun h => by
+  rw [← h]
+  exact (reduce A).snd.down
 
-theorem mk_par_app : ParRed f f' → ParRed x x' → ∃ e', ParRed ⸨f x⸩ e' := by
-  intro hf hx
-  induction hf
-  · rename_i kx kx' m n α β y h_k ih
-    have ⟨e', h_x_app⟩ := ih
-    refine ⟨⸨kx' x'⸩, .app ?_ (.k h_k) (by assumption)⟩
-    apply Expr.Stuck.app
-    apply Expr.Arity.app
-    apply Expr.Arity.app
-    apply Expr.Arity.app
-    apply Expr.Arity.app
-    exact .k
-  · rename_i kx kx' m n α β y h_k ih
-    have ⟨e', h_x_app⟩ := ih
-    refine ⟨⸨kx' x'⸩, .app ?_ (.k' h_k) (by assumption)⟩
-    apply Expr.Stuck.app
-    apply Expr.Arity.app
-    apply Expr.Arity.app
-    apply Expr.Arity.app
-    apply Expr.Arity.app
-    exact .k'
-  · rename_i sx sx' y y' z z' m n o α β γ hprx hpy hprz ih₁ ih₂ ih₃
-    refine ⟨⸨⸨⸨sx' z'⸩ ⸨y' z'⸩⸩ x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app
-      · apply Expr.Arity.app
-        apply Expr.Arity.app
-        apply Expr.Arity.app
-        apply Expr.Arity.app
-        apply Expr.Arity.app
-        apply Expr.Arity.app
-        exact .s
-    · exact ParRed.s (by assumption) (by assumption) (by assumption)
-    · assumption
-  · rename_i f nf nf' nx' hpf
-    refine ⟨⸨nf x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app
-      apply Expr.Arity.app
-      apply Expr.Arity.app
-      exact .next
-    · exact .next (by assumption)
-    · assumption
-  · rename_i e re hpr ih
-    refine ⟨⸨re x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app
-      · apply Expr.Arity.app
-        exact .read
-    · exact .read (by assumption)
-    · assumption
-  · rename_i α α' β β' pix pix' m hpi₁ hpi₂ hpi₃ ih₁ ih₂ ih₃
-    refine ⟨⸨(Π.{[m]} ⸨α' pix'⸩, ⸨β' pix'⸩) x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app
-      · apply Expr.Arity.app
-        exact Expr.Arity.pi
-    · apply ParRed.pi
-      repeat assumption
-    assumption
-  · rename_i π π' f f' g g' appx appx' happπ happf happg happx ih₁ ih₂ ih₃ ih₄
-    refine ⟨⸨π' ⸨f' appx'⸩ ⸨g' appx'⸩ x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app
-      · apply Expr.Arity.app
-        apply Expr.Arity.app
-        apply Expr.Arity.app
-        apply Expr.Arity.app
-        exact Expr.Arity.app'
-    · apply ParRed.app'
-      repeat assumption
-    · assumption
-  · rename_i comb
-    exact ParRed.mk_par_app_comb (c := comb) hx
-  · rename_i m
-    refine ⟨⸨(Srt m) x'⸩, ?_⟩
-    apply ParRed.app
-    · apply Expr.Stuck.app
-      exact Expr.Arity.srt
-    · exact .refl_srt
-    · assumption
-  
-  sorry
-
-theorem refl : ParRed A A := by
-  induction A
-  · apply ParRed.pi_val
-    repeat assumption
-  exact .refl_srt
-  exact .refl_comb
-  rename_i f x h_f h_x
-  
-  sorry
+theorem reduce_complete : ParRed A B → (reduce A).fst = B := fun h => by
+  induction h
+  repeat (rename_i h; rw [← h]; rfl)
+  · unfold reduce
+    unfold Expr.is_redex
+    simp
+    exact ⟨⟨by assumption, by assumption⟩, by assumption, by assumption⟩
+  repeat (rename_i h; rw [← h]; rfl)
+  case pi α α' β β' x x' m hα h𝔹 hx ih₁ ih₂ ih₃ =>
+    unfold reduce
+    unfold Expr.is_redex
+    simp
+    exact ⟨⟨by assumption, by assumption⟩, by assumption, by assumption⟩
+  case app' π π' f f' g g' x x' hπ hf hg hx ih₁ ih₂ ih₃ ih₄ =>
+    unfold reduce
+    unfold Expr.is_redex
+    simp
+    exact ⟨⟨by assumption, ⟨by assumption, by assumption⟩⟩, by assumption, by assumption⟩
+  case app f x f' x' h_not_redex hp₁ h₂ ih₁ ih₂ =>
+    unfold reduce
+    split
+    · rename_i heq
+      have h := Expr.is_redex.sound (by assumption)
+      contradiction
+    · simp
+      exact ⟨by assumption, by assumption⟩
+  repeat (unfold reduce; unfold Expr.is_redex; simp)
 
 theorem diamond : ParRed A B → ParRed A C → ∃ D, ParRed B D ∧ ParRed C D := by
   intro ha hb
   induction ha generalizing C
-  repeat (cases hb; simp_all; contradiction)
-  
+  case app f x f' x' hr hf hx ih₁ ih₂ =>
+    
+    sorry
   sorry
 
 end ParRed

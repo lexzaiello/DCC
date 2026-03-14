@@ -121,7 +121,7 @@ inductive MExpr where
   | read   : MExpr
   | app'   : MExpr
   | app    : MExpr  → MExpr → MExpr
-  | lean_e : Lean.Expr → MExpr
+  | lean_e : Q(_root_.Expr) → MExpr
 deriving BEq, Repr
 
 def MExpr.toFormat : MExpr → Format
@@ -138,6 +138,41 @@ def MExpr.toFormat : MExpr → Format
 
 instance : ToFormat MExpr := ⟨MExpr.toFormat⟩
 instance : ToString MExpr := ⟨toString ∘ MExpr.toFormat⟩
+
+def MExpr.decode (e : Lean.Expr) : MExpr :=
+  match e with
+  | (.app (.app (.const `Expr.app []) f) x) => .app (decode f) (decode x)
+  | .app (.app (.app (.const ``Expr.Pi []) m) α) β =>
+    let α' := decode α
+    let β' := decode β
+    .Pi m α' β'
+  | .app (.const ``Expr.Srt []) m  => .Srt m
+  | (.app (.app (.const `Expr.K' []) m) n) => .K' m n
+  | (.app (.app (.const `Expr.K []) m) n) => .K m n
+  | (.app (.app (.app (.const `Expr.S []) m) n) o) => .S m n o
+  | .const `Expr.next [] => .next
+  | .const `Expr.read [] => .read
+  | .const `Expr.app' [] => .app'
+  | e => .lean_e e
+
+def MExpr.unify (e : MExpr) : Q(_root_.Expr) :=
+  match e with
+  | .lean_e e => e
+  | .K m n => q(K.{[$m, $n]})
+  | .Srt m => q(Expr.Srt $m)
+  | .Pi m α β =>
+    let α' : Q(_root_.Expr) := α.unify
+    let β' : Q(_root_.Expr) := β.unify
+    q(Π.{[$m]} $α', $β')
+  | .K' m n => q(K'.{[$m, $n]})
+  | .S m n o => q(S.{[$m, $n, $o]})
+  | .next => q(next)
+  | .read => q(read)
+  | .app' => q($)
+  | .app f x =>
+    let f : Q(_root_.Expr) := f.unify
+    let x : Q(_root_.Expr) := x.unify
+    q(Expr.app $f $x)
 
 inductive MExpr.PRedex' : MExpr → Prop where
   | k    : PRedex' (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.K m n) α) β) x) y)
@@ -157,21 +192,26 @@ inductive MExpr.TmRedex' : MExpr → Type where
   | read : TmRedex' (MExpr.app .read e)
   | app' : TmRedex' ((((MExpr.app .app' π).app f).app g).app x)
 
-def MExpr.decode (e : Lean.Expr) : MExpr :=
+theorem MExpr.TmRedex'.sound : MExpr.TmRedex' e → e.PRedex' := fun h => by
+  cases h
+  · exact .k
+  · exact .k'
+  · exact .s
+  · exact .pi
+  · exact .next
+  · exact .read
+  · exact .app'
+
+def MExpr.is_redex (e : MExpr) : Option (TmRedex' e) :=
   match e with
-  | (.app (.app (.const `Expr.app []) f) x) => .app (decode f) (decode x)
-  | .app (.app (.app (.const ``Expr.Pi []) m) α) β =>
-    let α' := decode α
-    let β' := decode β
-    .Pi m α' β'
-  | .app (.const ``Expr.Srt []) m  => .Srt m
-  | (.app (.app (.const `Expr.K' []) m) n) => .K' m n
-  | (.app (.app (.const `Expr.K []) m) n) => .K m n
-  | (.app (.app (.app (.const `Expr.S []) m) n) o) => .S m n o
-  | .const `Expr.next [] => .next
-  | .const `Expr.read [] => .read
-  | .const `Expr.app' [] => .app'
-  | e => .lean_e e
+  | (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.K _m _n) _α) _β) _x) _y)  => .some TmRedex'.k
+  | (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.K' _m _n) _α) _β) _x) _y) => .some TmRedex'.k'
+  | (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.S _m _n _o) _α) _β) _γ) _x) _y) _z) => .some TmRedex'.s
+  | (MExpr.app (.Pi _m _α _β) _x) => .some TmRedex'.pi
+  | (MExpr.app (MExpr.app .next _f) _x) => .some TmRedex'.next
+  | (MExpr.app .read _e) => .some TmRedex'.read
+  | (MExpr.app (MExpr.app (MExpr.app (MExpr.app .app' _π) _f) _g) _x) => .some TmRedex'.app'
+  | _ => .none
 
 inductive ParRed' : MExpr → MExpr → Type
   | lean      {A B : Q(_root_.Expr)} : Q(ParRed $A $B)
@@ -188,7 +228,7 @@ inductive ParRed' : MExpr → MExpr → Type
     → ParRed' g g' → ParRed' x x'
     → ParRed' (((MExpr.app (MExpr.app MExpr.app' π) f).app g).app x)
       (MExpr.app (MExpr.app π' (MExpr.app f' x')) (.app g' x'))
-  | app       : (¬ (MExpr.app f x).PRedex') → ParRed' f f'
+  | app       : (MExpr.is_redex (MExpr.app f x)).isNone → ParRed' f f'
     → ParRed' x x' → ParRed' (.app f x) (.app f' x')
   | pi_val    : ParRed' α α' → ParRed' β β'
     → ParRed' (.Pi m α β) (.Pi m α' β')
@@ -199,27 +239,6 @@ inductive ParRed' : MExpr → MExpr → Type
   | refl_next : ParRed' MExpr.next MExpr.next
   | refl_read : ParRed' MExpr.read MExpr.read
   | refl_app' : ParRed' MExpr.app' MExpr.app'
-
-def MExpr.is_redex (e : MExpr) : Option (TmRedex' e) :=
-  match e with
-  | (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.K _m _n) _α) _β) _x) _y)  => .some TmRedex'.k
-  | (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.K' _m _n) _α) _β) _x) _y) => .some TmRedex'.k'
-  | (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.S _m _n _o) _α) _β) _γ) _x) _y) _z) => .some TmRedex'.s
-  | (MExpr.app (.Pi _m _α _β) _x) => .some TmRedex'.pi
-  | (MExpr.app (MExpr.app .next _f) _x) => .some TmRedex'.next
-  | (MExpr.app .read _e) => .some TmRedex'.read
-  | (MExpr.app (MExpr.app (MExpr.app (MExpr.app .app' _π) _f) _g) _x) => .some TmRedex'.app'
-  | _ => .none
-
-theorem MExpr.TmRedex'.sound : MExpr.TmRedex' e → e.PRedex' := fun h => by
-  cases h
-  · exact .k
-  · exact .k'
-  · exact .s
-  · exact .pi
-  · exact .next
-  · exact .read
-  · exact .app'
 
 theorem is_redex.sound : MExpr.is_redex e = .some p → e.PRedex' := fun _ => p.sound
 
@@ -243,6 +262,16 @@ theorem MExpr.is_redex.sound' : is_redex e = Option.none → ¬ e.PRedex' := fun
   intro h
   cases h
   repeat cases e
+
+def MExpr.TmRedex'.toLeanExpr (h : MExpr.TmRedex' A) : Q(_root_.Expr.Redex' $(A.unify)) := by
+  cases h
+  · exact q(.k)
+  · exact q(.k')
+  · exact q(.s)
+  · exact q(.pi)
+  · exact q(.next)
+  · exact q(.read)
+  · exact q(.app')
 
 def MExpr.n_args_spine (e : MExpr) : Option ℕ :=
   match e with
@@ -276,25 +305,6 @@ def MExpr.n_mentions (e : MExpr) : ℕ :=
   | .Srt _m    => 0
   | .app f x   => f.n_mentions + x.n_mentions
   | .Pi _m α β => α.n_mentions + β.n_mentions
-
-def MExpr.unify (e : MExpr) : Q(_root_.Expr) :=
-  match e with
-  | .lean_e e => e
-  | .K m n => q(K.{[$m, $n]})
-  | .Srt m => q(Expr.Srt $m)
-  | .Pi m α β =>
-    let α' : Q(_root_.Expr) := α.unify
-    let β' : Q(_root_.Expr) := β.unify
-    q(Π.{[$m]} $α', $β')
-  | .K' m n => q(K'.{[$m, $n]})
-  | .S m n o => q(S.{[$m, $n, $o]})
-  | .next => q(next)
-  | .read => q(read)
-  | .app' => q($)
-  | .app f x =>
-    let f : Q(_root_.Expr) := f.unify
-    let x : Q(_root_.Expr) := x.unify
-    q(Expr.app $f $x)
 
 instance MExpr.instToLeanExpr : Lean.ToExpr MExpr where
   toExpr := MExpr.unify
@@ -381,7 +391,7 @@ def MExpr.reduce (e : MExpr) : TacticM ((e' : MExpr) × ParRed' e e') :=
     | .app f x => do
       let ⟨f', hf⟩ ← reduce f
       let ⟨x', hx⟩ ← reduce x
-      pure ⟨.app f' x', .app (by rw [← heq]; exact not_redex) hf hx⟩
+      pure ⟨.app f' x', .app (by rw [← heq]; simp_all) hf hx⟩
     | .Srt m => pure ⟨.Srt m, .refl_srt⟩
     | .Pi m α β => do
       let ⟨α', hα⟩ ← reduce α
@@ -394,8 +404,30 @@ def MExpr.reduce (e : MExpr) : TacticM ((e' : MExpr) × ParRed' e e') :=
     | .read => pure ⟨.read, .refl_read⟩
     | .next => pure ⟨.next, .refl_next⟩
     | .lean_e e => do
-      let some ⟨B, qhpr⟩ := ← parred_solution e | throwError "no solution for: {format (MExpr.lean_e e)}"
+      let  ⟨B, qhpr⟩ := (← parred_solution e).getD ⟨.lean_e q((reduce $e).fst), q((reduce $e).snd.down)⟩
       pure ⟨.lean_e B.unify, .lean qhpr⟩
+
+def ParRed'.toLeanExpr (h : ParRed' A B) : MetaM Q(_root_.ParRed $(A.unify) $(B.unify)) :=
+  match h with
+  | .lean h => return h
+  | .k hx => do return q(ParRed.k $(← hx.toLeanExpr))
+  | .k' hx => do return q(ParRed.k' $(← hx.toLeanExpr))
+  | .s hx hy hz => do return q(ParRed.s $(← hx.toLeanExpr) $(← hy.toLeanExpr) $(← hz.toLeanExpr))
+  | .next hf => do return q(ParRed.next $(← hf.toLeanExpr))
+  | .read he => do return q(ParRed.read $(← he.toLeanExpr))
+  | .pi hα hβ hx => do return q(ParRed.pi $(← hα.toLeanExpr) $(← hβ.toLeanExpr) $(← hx.toLeanExpr))
+  | .app' hπ hf hg hx => do return q(ParRed.app' $(← hπ.toLeanExpr) $(← hf.toLeanExpr) $(← hg.toLeanExpr) $(← hx.toLeanExpr))
+  | .app (f := f) (x := x) _ hf hx => do
+    let p ← mkDecideProofQ q(¬ (Redex (_root_.Expr.app $(MExpr.unify f) $(MExpr.unify x))))
+    return q(ParRed.app $p $(← hf.toLeanExpr) $(← hx.toLeanExpr))
+  | .pi_val hα hβ => do return q(ParRed.pi_val $(← hα.toLeanExpr) $(← hβ.toLeanExpr))
+  | .refl_srt (m := m) => do return q(.refl_srt (m := $m))
+  | .refl_K' (m := m) (n := n)  => do return q(.refl_comb (c := (.K' $m $n)))
+  | .refl_K (m := m) (n := n) => do return q(.refl_comb (c := (.K $m $n)))
+  | .refl_S (m := m) (n := n) (o := o) => do return q(.refl_comb (c := (.S $m $n $o)))
+  | .refl_next => do return q(.refl_comb (c := .next))
+  | .refl_read => do return q(.refl_comb (c := .read))
+  | .refl_app' => do return q(.refl_comb (c := .app'))
 
 syntax "reduce_as" : tactic
 

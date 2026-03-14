@@ -204,9 +204,15 @@ theorem mk_par_app : ParRed f f' → ParRed x x' → ∃ e', ParRed ⸨f x⸩ e'
       repeat assumption
     · assumption
   · rename_i comb
-    refine ⟨⸨(.comb comb) x'⸩, ?_⟩
-    
-    sorry
+    exact ParRed.mk_par_app_comb (c := comb) hx
+  · rename_i m
+    refine ⟨⸨(Srt m) x'⸩, ?_⟩
+    apply ParRed.app
+    · apply Expr.Stuck.app
+      exact Expr.Arity.srt
+    · exact .refl_srt
+    · assumption
+  
   sorry
 
 theorem refl : ParRed A A := by

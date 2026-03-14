@@ -41,7 +41,26 @@ inductive Judge : Expr → Expr → Prop
   | S   : Judge (S.type m n o) S.{[m, n, o]}
   | Srt : Judge (Srt m.succ) (Srt m)
   | Pi  : Judge (Srt m) (Π.{[m]} _α, _β)
-  | app : Judge (Π.{[m]} α₁, β) f → ParRed α₁ α₂ → Judge α₂ x
+  | app : Judge (Π.{[m]} α, β) f
+    → Judge α x
     → ParRed ⸨β x⸩ β'
     → Judge β' ⸨f x⸩
   | conv : Judge A x → (∃ C, ParRed A C ∧ ParRed B C) → Judge B x
+
+def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
+  match e with
+  | K.{[m, n]} => .some ⟨K.type m n, ⟨Judge.K⟩⟩
+  | K'.{[m, n]} => .some ⟨K'.type m n, ⟨Judge.K'⟩⟩
+  | S.{[m, n, o]} => .some ⟨S.type m n o, ⟨Judge.S⟩⟩
+  | Srt m => .some ⟨Srt m.succ, ⟨Judge.Srt⟩⟩
+  | Π.{[m]} _α, _β => .some ⟨Srt m, ⟨Judge.Pi⟩⟩
+  | ⸨f x⸩ => do match ← infer f, ← infer x with
+    | ⟨Π.{[m]} α₁, β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
+      let ⟨β', ⟨hβ'⟩⟩ := reduce ⸨β x⸩
+      if h : α₁ = α₂ then
+        .some <| ⟨β', ⟨.app h_t_f (by rw [h]; exact h_t_x) hβ'⟩⟩
+      else if h : ∃ C, ParRed α₂ C ∧ ParRed α₁ C then
+        .some <| ⟨β', ⟨.app h_t_f (Judge.conv h_t_x h) hβ'⟩⟩
+      else .none
+    | _, _ => .none
+  | _ => .none

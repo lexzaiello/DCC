@@ -157,7 +157,25 @@ inductive MExpr.TmRedex' : MExpr → Type where
   | read : TmRedex' (MExpr.app .read e)
   | app' : TmRedex' ((((MExpr.app .app' π).app f).app g).app x)
 
+def MExpr.decode (e : Lean.Expr) : MExpr :=
+  match e with
+  | (.app (.app (.const `Expr.app []) f) x) => .app (decode f) (decode x)
+  | .app (.app (.app (.const ``Expr.Pi []) m) α) β =>
+    let α' := decode α
+    let β' := decode β
+    .Pi m α' β'
+  | .app (.const ``Expr.Srt []) m  => .Srt m
+  | (.app (.app (.const `Expr.K' []) m) n) => .K' m n
+  | (.app (.app (.const `Expr.K []) m) n) => .K m n
+  | (.app (.app (.app (.const `Expr.S []) m) n) o) => .S m n o
+  | .const `Expr.next [] => .next
+  | .const `Expr.read [] => .read
+  | .const `Expr.app' [] => .app'
+  | e => .lean_e e
+
 inductive ParRed' : MExpr → MExpr → Type
+  | lean      {A B : Q(_root_.Expr)} : Q(ParRed $A $B)
+    → ParRed' (.lean_e A) (.lean_e B)
   | k         : ParRed' x x' → ParRed' (((((MExpr.K m n).app α).app β).app x).app y) x'
   | k'        : ParRed' x x' → ParRed' (((((MExpr.K' m n).app α).app β).app x).app y) x'
   | s         : ParRed' x x' → ParRed' y y' → ParRed' z z'
@@ -259,22 +277,6 @@ def MExpr.n_mentions (e : MExpr) : ℕ :=
   | .app f x   => f.n_mentions + x.n_mentions
   | .Pi _m α β => α.n_mentions + β.n_mentions
 
-def MExpr.decode (e : Lean.Expr) : MExpr :=
-  match e with
-  | (.app (.app (.const `Expr.app []) f) x) => .app (decode f) (decode x)
-  | .app (.app (.app (.const ``Expr.Pi []) m) α) β =>
-    let α' := decode α
-    let β' := decode β
-    .Pi m α' β'
-  | .app (.const ``Expr.Srt []) m  => .Srt m
-  | (.app (.app (.const `Expr.K' []) m) n) => .K' m n
-  | (.app (.app (.const `Expr.K []) m) n) => .K m n
-  | (.app (.app (.app (.const `Expr.S []) m) n) o) => .S m n o
-  | .const `Expr.next [] => .next
-  | .const `Expr.read [] => .read
-  | .const `Expr.app' [] => .app'
-  | e => .lean_e e
-
 def MExpr.unify (e : MExpr) : Q(_root_.Expr) :=
   match e with
   | .lean_e e => e
@@ -320,28 +322,28 @@ def rank_solutions {P : Q(_root_.Expr → _root_.Expr → Prop)} {A : MExpr}
 
   ((List.mergeSort with_spines_hyps le).reverse).map Prod.snd
 
-open Qq in def parred_solution (A : MExpr) : TacticM (Option ((B : MExpr) × Q(ParRed $(A.unify) $(B.unify)))) := do
+open Qq in def parred_solution (A : Q(_root_.Expr)) : TacticM (Option ((B : MExpr) × Q(ParRed $A $(B.unify)))) := do
   let g ← getMainGoal
   g.withContext do
-    let potential_solutions : List ((B : MExpr) × Q(ParRed $(A.unify) $(B.unify))) := ← (← getLCtx).decls.toList.filterMapM (fun (decl : Option LocalDecl) =>
+    let potential_solutions : List ((B : MExpr) × Q(ParRed $A $(B.unify))) := ← (← getLCtx).decls.toList.filterMapM (fun (decl : Option LocalDecl) =>
       decl.bindM (fun (decl : LocalDecl)=> do
         let ty' ← checkTypeQ (← whnf decl.type) q(Prop)
         match ty' with
         | .some ~q(ParRed $A' $B) =>
-          if ← isDefEq (Lean.toExpr A) A' then
+          if ← isDefEq A A' then
             pure <| .some ⟨MExpr.decode B, .fvar decl.fvarId⟩
           else
             pure .none
         | .some ~q((_root_.reduce $A').fst = $B) =>
-          if ← isDefEq (Lean.toExpr A) A' then
-            pure <| .some (⟨MExpr.decode B, .fvar decl.fvarId⟩ : ((B : MExpr) × Q(ParRed $(A.unify) $(B.unify))))
+          if ← isDefEq A A' then
+            pure <| .some (⟨MExpr.decode B, .fvar decl.fvarId⟩ : ((B : MExpr) × Q(ParRed $A $(B.unify))))
           else
             pure .none
         | _ => pure Option.none))
-    let ranked := rank_solutions potential_solutions (A := A) (P := q(ParRed))
+    let ranked := rank_solutions potential_solutions (A := MExpr.decode A) (P := q(ParRed))
     pure ranked.head?
 
-def MExpr.reduce (e : MExpr) : MetaM ((e' : MExpr) × ParRed' e e') :=
+def MExpr.reduce (e : MExpr) : TacticM ((e' : MExpr) × ParRed' e e') :=
   match heq : e.is_redex with
   | .some r =>
     match r with
@@ -391,7 +393,9 @@ def MExpr.reduce (e : MExpr) : MetaM ((e' : MExpr) × ParRed' e e') :=
     | .app' => pure ⟨.app', .refl_app'⟩
     | .read => pure ⟨.read, .refl_read⟩
     | .next => pure ⟨.next, .refl_next⟩
-    | .lean_e e => let entry 
+    | .lean_e e => do
+      let some ⟨B, qhpr⟩ := ← parred_solution e | throwError "no solution for: {format (MExpr.lean_e e)}"
+      pure ⟨.lean_e B.unify, .lean qhpr⟩
 
 syntax "reduce_as" : tactic
 

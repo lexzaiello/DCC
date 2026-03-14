@@ -29,7 +29,7 @@ inductive Arity : Expr → ℕ → Prop
   | s     : Arity (S.{[m, n, o]}) 6
   | next  : Arity next 2
   | read  : Arity read 1
-  | next' : Arity $ 4
+  | app'  : Arity $ 4
   | srt   : Arity (Srt n) 0
   | app   : Arity f (Nat.succ n) → Arity ⸨f x⸩ n
 
@@ -51,12 +51,13 @@ inductive Profile : Expr → Head → Spine → Prop
   | succ : Stuck f False → Stuck ⸨f x⸩ True-/
 
 inductive Stuck : Expr → Prop
-  | zero : Stuck (.comb c)
-  | srt  : Stuck (Srt m)
-  | pi   : Stuck α
+  | srt     : Stuck (Srt m)
+  | pi      : Stuck α
     → Stuck β
     → Stuck (Π.{[m]} α, β)
-  | app  : Arity f 0 → Stuck ⸨f x⸩
+  | app     : Arity f 0 → Stuck ⸨f x⸩
+  | app_inv : (∃ n, ⸨f x⸩.Arity (Nat.succ n))
+    → Stuck ⸨f x⸩
 
 end Expr
 
@@ -79,6 +80,56 @@ inductive ParRed : Expr → Expr → Prop
   | app       : ⸨f x⸩.Stuck → ParRed f f' → ParRed x x' → ParRed ⸨f x⸩ ⸨f' x'⸩
 
 namespace ParRed
+
+theorem mk_par_app_comb : ParRed x x' → ∃ e', ParRed ⸨(.comb c) x⸩ e' := by
+  intro h
+  cases c
+  · rename_i m n
+    refine ⟨⸨K'.{[m, n]} x'⸩, ?_⟩
+    apply ParRed.app
+    · apply Expr.Stuck.app_inv
+      refine ⟨2, ?_⟩
+      apply Expr.Arity.app
+      exact .k'
+    · exact .refl_comb
+    · assumption
+  · rename_i m n
+    refine ⟨⸨K.{[m, n]} x'⸩, ?_⟩
+    apply ParRed.app
+    · apply Expr.Stuck.app_inv
+      refine ⟨2, ?_⟩
+      apply Expr.Arity.app
+      exact .k
+    · exact .refl_comb
+    · assumption
+  · rename_i m n o
+    refine ⟨⸨S.{[m, n, o]} x'⸩, ?_⟩
+    apply ParRed.app
+    · apply Expr.Stuck.app_inv
+      refine ⟨4, ?_⟩
+      apply Expr.Arity.app
+      exact .s
+    · exact .refl_comb
+    · assumption
+  · refine ⟨⸨next x'⸩, ?_⟩
+    apply ParRed.app
+    · apply Expr.Stuck.app_inv
+      refine ⟨0, ?_⟩
+      apply Expr.Arity.app
+      exact .next
+    · exact .refl_comb
+    · assumption
+  · refine ⟨x', ?_⟩
+    apply ParRed.read
+    assumption
+  · refine ⟨⸨$ x'⸩, ?_⟩
+    apply ParRed.app
+    · apply Expr.Stuck.app_inv
+      refine ⟨2, ?_⟩
+      apply Expr.Arity.app
+      exact .app'
+    · exact ParRed.refl_comb
+    · assumption
 
 theorem mk_par_app : ParRed f f' → ParRed x x' → ∃ e', ParRed ⸨f x⸩ e' := by
   intro hf hx
@@ -140,7 +191,22 @@ theorem mk_par_app : ParRed f f' → ParRed x x' → ∃ e', ParRed ⸨f x⸩ e'
     · apply ParRed.pi
       repeat assumption
     assumption
-  
+  · rename_i π π' f f' g g' appx appx' happπ happf happg happx ih₁ ih₂ ih₃ ih₄
+    refine ⟨⸨π' ⸨f' appx'⸩ ⸨g' appx'⸩ x'⸩, ?_⟩
+    apply ParRed.app
+    · apply Expr.Stuck.app
+      · apply Expr.Arity.app
+        apply Expr.Arity.app
+        apply Expr.Arity.app
+        apply Expr.Arity.app
+        exact Expr.Arity.app'
+    · apply ParRed.app'
+      repeat assumption
+    · assumption
+  · rename_i comb
+    refine ⟨⸨(.comb comb) x'⸩, ?_⟩
+    
+    sorry
   sorry
 
 theorem refl : ParRed A A := by

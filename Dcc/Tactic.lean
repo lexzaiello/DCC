@@ -59,23 +59,32 @@ def contains_spine (e : Q(_root_.Expr)) : MetaM Bool := do
   | .app (.app (.const ``_root_.Expr.app []) f) _x => contains_spine f
   | _ => pure false
 
-syntax "cases_spine" : tactic
-
-def do_cases_spine : TacticM Unit := do
+def cases_matcher (matcher : Lean.Expr → MetaM Bool) (recursive := false) : TacticM Unit := do
   Lean.Elab.Tactic.withMainContext do
     let (mvarId :: remainingGoals) := ← getGoals
       | throwError "No goals to solve"
 
-    let goals ← mvarId.casesMatching (fun (ty : Q(Prop)) => do
-      match ty with
-      | ~q(Judge $α $x) => contains_spine x
-      | ~q(ParRed $α $e') => contains_spine α
-      | _ => pure false) (recursive := false)
+    let goals ← mvarId.casesMatching matcher recursive
 
     setGoals (goals ++ remainingGoals)
 
+syntax "cases_spine" : tactic
+
 elab "cases_spine" : tactic => do
-  do_cases_spine
+  cases_matcher (fun (ty : Q(Prop)) => do
+      match ty with
+      | ~q(Judge $α $x) => contains_spine x
+      | ~q(ParRed $α $e') => contains_spine α
+      | _ => pure false)
+
+syntax "cases_conv" : tactic
+
+elab "cases_conv" : tactic => do
+  cases_matcher (fun (ty : Q(Prop)) => do
+      match ty with
+      | ~q(∃ D, ParRed $A D ∧ ParRed $B D) => pure <| (← contains_spine A) ∨ (← contains_spine B)
+      | ~q(ParRed $A $D ∧ ParRed $B $D) => pure <| (← contains_spine A) ∨ (← contains_spine B)
+      | _ => pure false) (recursive := true)
 
 syntax "reduce!" term   : term
 syntax "reduction" term : term
@@ -115,10 +124,7 @@ elab "reduce_as" : tactic => reduce_as
 
 theorem invert_k : Judge α ⸨K.{[m, n]} α β x y⸩ → Judge (Srt m) α ∧ Judge ((~> (Nat.succ n)) α, (Srt n)) β ∧ Judge α x ∧ Judge ⸨β x⸩ y := by
   intro h
-  cases_spine
-  cases_spine
-  cases_spine
-  cases_spine
-  cases_spine
+  repeat cases_spine
+  cases_conv
   
   sorry

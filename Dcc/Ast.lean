@@ -57,7 +57,7 @@ macro_rules
     | .succ n =>
       let n' := Lean.Syntax.mkNatLit n
       `(⸨next ($n':num $fn)⸩)
-  | `((~> $m:term) $α:term, $β:term) => `(Π.{[$m]} $α, ⸨assert $β⸩)
+  | `((~> $m:term) $α:term, $β:term) => `(Π.{[$m]} $α, ⸨next $β⸩)
 
 def toFormat : Expr → Format
   | Srt m => s!"(Srt {m})"

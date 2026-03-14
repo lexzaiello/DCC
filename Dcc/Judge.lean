@@ -65,3 +65,17 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   | _ => .none
 
 theorem infer_sound : (infer e) = .some ⟨t, PLift.up proof⟩ → Judge t e := fun _ => proof
+
+theorem S_well_typed (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> n.succ) α, (Srt n)) β)
+  (h₃ : Judge (Π.{[o.succ]} α
+      , Π.{[o.succ]} β
+      , ⸨next ⸨assert (Srt o)⸩⸩) γ)
+  (h₄ : Judge (Π.{[o]} α, Π.{[o]} β, γ) x)
+  (h₅ : Judge (Π.{[n]} α, β) y)
+  (h₆ : Judge α z) : Judge ⸨γ z ⸨y z⸩⸩ ⸨S.{[m, n, o]} α β γ x y z⸩ := by
+  repeat apply Judge.app
+  exact Judge.S
+  · assumption
+  · apply ParRed.reduce_sound
+    rfl
+  · sorry

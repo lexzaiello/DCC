@@ -129,7 +129,8 @@ inductive ParRed : Expr → Expr → Prop
     → ParRed ⸨$ π f g x⸩ ⸨π' ⸨f' x'⸩ ⸨g' x'⸩⸩
   | app       : (¬ ⸨f x⸩.Redex) → ParRed f f'
     → ParRed x x' → ParRed ⸨f x⸩ ⸨f' x'⸩
-  | refl_pi   : ParRed (Π.{[m]} α, β) (Π.{[m]} α, β)
+  | pi_val    : ParRed α α' → ParRed β β'
+    → ParRed (Π.{[m]} α, β) (Π.{[m]} α', β')
   | refl_comb : ParRed (.comb c) (.comb c)
   | refl_srt  : ParRed (Srt m) (Srt m)
 
@@ -173,7 +174,10 @@ def reduce (e : Expr) : ((e' : Expr) × (PLift <| ParRed e e')) :=
       let ⟨x', ⟨hx⟩⟩ := reduce x
       ⟨⸨f' x'⸩, ⟨.app (by rw [← heq]; exact not_redex) hf hx⟩⟩
     | Srt m => ⟨Srt m, ⟨.refl_srt⟩⟩
-    | Π.{[m]} α, β => ⟨Π.{[m]} α, β, ⟨.refl_pi⟩⟩
+    | Π.{[m]} α, β =>
+      let ⟨α', ⟨hα⟩⟩ := reduce α
+      let ⟨β', ⟨hβ⟩⟩ := reduce β
+      ⟨Π.{[m]} α', β', ⟨.pi_val hα hβ⟩⟩
     | .comb c => ⟨.comb c, ⟨.refl_comb⟩⟩
 
 namespace ParRed
@@ -208,6 +212,8 @@ theorem reduce_complete : ParRed A B → (reduce A).fst = B := fun h => by
       contradiction
     · simp
       exact ⟨by assumption, by assumption⟩
+  rename_i ih₁ ih₂
+  rw [← ih₁, ← ih₂]; rfl
   repeat (unfold reduce; unfold Expr.is_redex; simp)
 
 instance : Decidable (∃ (C : Expr), ParRed A C ∧ ParRed B C) :=

@@ -56,11 +56,12 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   | Π.{[m]} _α, _β => .some ⟨Srt m, ⟨Judge.Pi⟩⟩
   | ⸨f x⸩ => do match ← infer f, ← infer x with
     | ⟨Π.{[m]} α₁, β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
-      let ⟨β', ⟨hβ'⟩⟩ := reduce ⸨β x⸩
       if h : α₁ = α₂ then
-        .some <| ⟨β', ⟨.app h_t_f (by rw [h]; exact h_t_x) hβ'⟩⟩
+        .some <| ⟨(reduce ⸨β x⸩).fst, ⟨.app h_t_f (by rw [h]; exact h_t_x) (reduce ⸨β x⸩).snd.down⟩⟩
       else if h : ∃ C, ParRed α₂ C ∧ ParRed α₁ C then
-        .some <| ⟨β', ⟨.app h_t_f (Judge.conv h_t_x h) hβ'⟩⟩
+        .some <| ⟨(reduce ⸨β x⸩).fst, ⟨.app h_t_f (Judge.conv h_t_x h) (reduce ⸨β x⸩).snd.down⟩⟩
       else .none
     | _, _ => .none
   | _ => .none
+
+theorem infer_sound : (infer e) = .some ⟨t, PLift.up proof⟩ → Judge t e := fun _ => proof

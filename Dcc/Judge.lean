@@ -109,9 +109,8 @@ inductive Judge : Expr → Expr → Prop
   | Pi  : Judge (Srt m) (Π.{[m]} _α, _β)
   | app : Judge (Π.{[m]} α, β) f
     → Judge α x
-    → ParRed ⸨β x⸩ β'
-    → Judge β' ⸨f x⸩
-  | conv : Judge A x → (∃ C, ParRed A C ∧ ParRed B C) → Judge B x
+    → Judge ⸨β x⸩ ⸨f x⸩
+  | conv : Judge A x → (∃ C, ParRed (reduce A).fst C ∧ ParRed (reduce B).fst C) → Judge B x
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   match e with
@@ -126,9 +125,9 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
 
     match t_f₁, t_x₁ with
     | ⟨Π.{[_m]} α₁, β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
-      if h_conv : ∃ C, ParRed α₂ C ∧ ParRed α₁ C then
-        .some ⟨(reduce ⸨β x⸩).fst
-              , ⟨.app h_t_f (.conv h_t_x h_conv) (reduce ⸨β x⸩).snd.down⟩⟩
+      if h_conv : ∃ C, ParRed (reduce α₂).fst C ∧ ParRed (reduce α₁).fst C then
+        let h₀ := Judge.app h_t_f (.conv h_t_x h_conv)
+        .some ⟨⸨β x⸩, ⟨.conv h₀ ParRed.reduce_self'⟩⟩
       else .none
     | _, _ => .none
   | _ => .none

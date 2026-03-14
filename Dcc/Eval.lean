@@ -1,5 +1,6 @@
 import Dcc.Ast
 import Mathlib.Data.Nat.Notation
+import Mathlib.Tactic
 
 /-
 - select innermost redex
@@ -52,6 +53,14 @@ theorem Redex'.sound : Redex' e → Redex e := fun h => by
   · exact .app'
 
 theorem is_redex.sound : is_redex e = .some p → e.Redex := fun _ => p.sound
+
+theorem Redex.is_redex_complete : e.Redex → ∃ p, (is_redex e) = some p := by
+  intro h
+  induction h
+  repeat exact ⟨_, rfl⟩
+
+theorem Redex.is_redex_complete' : ¬ e.Redex → ¬ (∃ p, (is_redex e) = some p) := fun h ⟨p, _⟩ =>
+  absurd p.sound h
 
 instance Redex.instDecidable : Decidable (Redex e) := by
   match heq : is_redex e with
@@ -243,5 +252,13 @@ theorem diamond : ParRed A B → ParRed A C → ∃ D, ParRed B D ∧ ParRed C D
     simp_all
   refine ⟨(reduce B).fst, reduce_sound rfl, reduce_sound ?_⟩
   rw [h]
+
+theorem assoc : ParRed (reduce A).fst (reduce (reduce A).fst).fst := .reduce_sound rfl
+
+theorem reduce_self : ∃ B C, ParRed (reduce A).fst C ∧ ParRed (reduce B).fst C :=
+  ⟨_, _, ParRed.reduce_sound rfl, ParRed.reduce_sound rfl⟩
+
+theorem reduce_self' : ∃ C, ParRed (reduce A).fst C ∧ ParRed (reduce A).fst C :=
+  ⟨_, ParRed.reduce_sound rfl, ParRed.reduce_sound rfl⟩
 
 end ParRed

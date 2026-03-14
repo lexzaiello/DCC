@@ -231,7 +231,7 @@ theorem reduce_complete : ParRed A B → (reduce A).fst = B := fun h => by
     simp
     exact ⟨⟨by assumption, by assumption⟩, by assumption, by assumption⟩
   repeat (rename_i h; rw [← h]; rfl)
-  case pi α α' β β' x x' m hα h𝔹 hx ih₁ ih₂ ih₃ =>
+  case pi α α' β β' x x' m hα hβ hx ih₁ ih₂ ih₃ =>
     unfold reduce
     unfold Expr.is_redex
     simp
@@ -251,12 +251,33 @@ theorem reduce_complete : ParRed A B → (reduce A).fst = B := fun h => by
       exact ⟨by assumption, by assumption⟩
   repeat (unfold reduce; unfold Expr.is_redex; simp)
 
+instance : Decidable (∃ (C : Expr), ParRed A C ∧ ParRed B C) :=
+  if h : (reduce A).fst = (reduce B).fst then
+    Decidable.isTrue ⟨(reduce A).fst, reduce_sound rfl, reduce_sound h.symm⟩
+  else by
+    apply Decidable.isFalse
+    intro ⟨C, ha, hb⟩
+    have h₁ := reduce_complete ha
+    have h₂ := reduce_complete hb
+    simp_all
+
+instance : Decidable (ParRed A B) :=
+  if h : (reduce A).fst = B then by
+    rw [← h]
+    exact Decidable.isTrue (reduce A).snd.down
+  else by
+    apply Decidable.isFalse
+    intro hno
+    have h := reduce_complete hno
+    simp_all
+
 theorem diamond : ParRed A B → ParRed A C → ∃ D, ParRed B D ∧ ParRed C D := by
   intro ha hb
-  induction ha generalizing C
-  case app f x f' x' hr hf hx ih₁ ih₂ =>
-    
-    sorry
-  sorry
+  have h₁ := reduce_complete ha
+  have h₂ := reduce_complete hb
+  have h : B = C := by
+    simp_all
+  refine ⟨(reduce B).fst, reduce_sound rfl, reduce_sound ?_⟩
+  rw [h]
 
 end ParRed

@@ -35,57 +35,60 @@ def S.type (m n o : Level) : Expr :=
    , Π.{[o]} ((0 read).assert_n 4)
    , (2 (next ∘' ⸨$ read⸩))
 
-inductive Nbe : Expr → Expr → Prop
-  | redex     : Nbe f f' → Nbe x x'
-    → ParRed ⸨f' x'⸩ t'
-    → Nbe ⸨f x⸩ t'
-  | pi        : Nbe α α' → Nbe β β'
-    → ParRed (Π.{[m]} α', β') t'
-    → Nbe (Π.{[m]} α, β) t'
-  | refl_srt  : Nbe (Srt m) (Srt m)
-  | refl_comb : Nbe (.comb c) (.comb c)
+/-
+Nbe is unnecessary. What is necessary is type normalization. Specifically, we can have two types
+of types:
 
-def nbe (t : Expr) : ((t' : Expr) × PLift (Nbe t t')) :=
-  match t with
-  | Π.{[m]} α, β =>
-    let ⟨α', ⟨αp⟩⟩ := nbe α
-    let ⟨β', ⟨βp⟩⟩ := nbe β
-    ⟨(reduce (Π.{[m]} α', β')).fst, ⟨.pi αp βp (reduce _).snd.down⟩⟩
-  | Srt m => ⟨Srt m, ⟨.refl_srt⟩⟩
-  | .comb c => ⟨.comb c, ⟨.refl_comb⟩⟩
-  | ⸨f x⸩ =>
-    let ⟨f', ⟨hf⟩⟩ := nbe f
-    let ⟨x', ⟨hx⟩⟩ := nbe x
-    let ⟨fx', ⟨hfx'⟩⟩ := reduce ⸨f' x'⸩
-    ⟨fx', ⟨.redex hf hx hfx'⟩⟩
+- sorts
+- Pi binders
+  - applications under pi binders
+-/
 
-theorem Nbe.sound (h : (nbe t).fst = t') : Nbe t t' := by
-  induction t generalizing t'
-  · unfold nbe at h
+inductive Binder : Expr → Prop
+  | mk : Binder (Π.{[m]} α, β)
+
+instance Binder.instDecidable : Decidable (Binder e) := by
+  cases e
+  · exact .isTrue .mk
+  repeat (apply Decidable.isFalse; intro h; cases h)
+
+inductive RunPi (arg : Expr) : Expr → Expr → Prop
+  | zero : ¬ Binder e     → ParRed ⸨e arg⸩ e' → RunPi arg e e'
+  | succ : RunPi arg α α' → RunPi arg β β'    → RunPi arg (Π.{[m]} α, β) (Π.{[m]} α', β')
+
+def run_pi (e_arg e_pi : Expr) : ((e' : Expr) × PLift (RunPi e_arg e_pi e')) :=
+  if h : ¬ Binder e_pi then
+    let ⟨e', ⟨h⟩⟩ := (reduce ⸨e_pi e_arg⸩)
+    ⟨e', ⟨.zero (fun h => by simp_all) h⟩⟩
+  else by
     simp at h
-    cases h
-    rename_i ih₁ ih₂
-    apply Nbe.pi
-    · exact ih₁ rfl
-    · exact ih₂ rfl
-    apply ParRed.reduce_sound
-    rfl
-  · unfold nbe at h
-    simp at h
-    cases h
-    exact Nbe.refl_srt
-  · unfold nbe at h
-    simp at h
-    cases h
-    exact Nbe.refl_comb
-  · unfold nbe at h
-    rename_i ih₁ ih₂
-    simp at h
-    cases h
-    apply Nbe.redex
-    · exact ih₁ rfl
-    · exact ih₂ rfl
-    exact ParRed.reduce_sound rfl
+    match heq : e_pi with
+    | Π.{[m]} α, β =>
+      let ⟨α', ⟨hα⟩⟩ := run_pi e_arg α
+      let ⟨β', ⟨hβ⟩⟩ := run_pi e_arg β
+      exact ⟨(Π.{[m]} α', β'), ⟨.succ hα hβ⟩⟩
+
+theorem RunPi.sound : (run_pi e_arg e_pi).fst = e' → RunPi e_arg e_pi e' := fun _ => by
+  have h := (run_pi e_arg e_pi).snd.down
+  rename_i heq
+  rw [heq] at h
+  exact h
+
+theorem RunPi.complete : RunPi e_arg e_pi e' → (run_pi e_arg e_pi).fst = e' := by
+  intro h
+  induction h
+  · simp [run_pi]
+    simp_all
+    apply ParRed.reduce_complete
+    assumption
+  · rename_i α α' β β' m hrα hrβ ih₁ ih₂
+    simp [run_pi]
+    have h : Binder (Expr.Pi m α β) := .mk
+    split
+    · simp
+      exact ⟨by assumption, by assumption⟩
+    · contradiction
+
 
 theorem Nbe.complete (h : Nbe t t') : (nbe t).fst = t' := by
   induction h

@@ -93,6 +93,12 @@ theorem Nbe.complete_nbe (h : Nbe t t') : (nbe t).fst = t' := by
     simp [← ih₁, ← ih₂, nbe]
   repeat (unfold nbe; rfl)
 
+instance Nbe.instDecicdable : Decidable (Nbe t t') :=
+  if h : (nbe t).fst = t' then
+    .isTrue (Nbe.sound_nbe h)
+  else
+    .isFalse (fun h₂ => h (Nbe.complete_nbe h₂))
+
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
   | K'  : Judge (K'.type m n) K'.{[m, n]}

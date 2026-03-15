@@ -40,7 +40,8 @@ inductive Nbe : Expr → Expr → Prop
     → ParRed ⸨f' x'⸩ t'
     → Nbe ⸨f x⸩ t'
   | pi        : Nbe α α' → Nbe β β'
-    → Nbe (Π.{[m]} α, β) (Π.{[m]} α', β')
+    → ParRed (Π.{[m]} α', β') t'
+    → Nbe (Π.{[m]} α, β) t'
   | refl_srt  : Nbe (Srt m) (Srt m)
   | refl_comb : Nbe (.comb c) (.comb c)
 
@@ -49,7 +50,7 @@ def nbe (t : Expr) : ((t' : Expr) × PLift (Nbe t t')) :=
   | Π.{[m]} α, β =>
     let ⟨α', ⟨αp⟩⟩ := nbe α
     let ⟨β', ⟨βp⟩⟩ := nbe β
-    ⟨Π.{[m]} α', β', ⟨.pi αp βp⟩⟩
+    ⟨(reduce (Π.{[m]} α', β')).fst, ⟨.pi αp βp (reduce _).snd.down⟩⟩
   | Srt m => ⟨Srt m, ⟨.refl_srt⟩⟩
   | .comb c => ⟨.comb c, ⟨.refl_comb⟩⟩
   | ⸨f x⸩ =>
@@ -67,6 +68,8 @@ theorem Nbe.sound (h : (nbe t).fst = t') : Nbe t t' := by
     apply Nbe.pi
     · exact ih₁ rfl
     · exact ih₂ rfl
+    apply ParRed.reduce_sound
+    rfl
   · unfold nbe at h
     simp at h
     cases h
@@ -89,8 +92,11 @@ theorem Nbe.complete (h : Nbe t t') : (nbe t).fst = t' := by
   · rename_i hpar ih₁ ih₂
     simp [nbe, ← hpar.reduce_complete]
     rw [← ih₁, ← ih₂]
-  · rename_i α α' β β' m hnα hnβ ih₁ ih₂
-    simp [← ih₁, ← ih₂, nbe]
+  · rename_i α α' β β' m hnα hnβ hpr ih₁ ih₂
+    simp [nbe]
+    apply ParRed.reduce_complete
+    rw [ih₁, ih₂]
+    exact hpr
   repeat (unfold nbe; rfl)
 
 instance Nbe.instDecicdable : Decidable (Nbe t t') :=
@@ -138,7 +144,8 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
     | ⟨Π.{[_m]} α₁, _β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
       if h : ∃ D, Nbe α₁ D ∧ Nbe α₂ D then
         .some <| ⟨_, ⟨.app h_t_f h_t_x h (Nbe.sound rfl)⟩⟩
-      else .none
+      else
+        .none
     | _, _ => .none
   | _ => .none
 
@@ -154,3 +161,5 @@ def infer_complete (h : Judge t e) : (infer e).map (·.fst) = .some t := by
     have ⟨hp₂, heq₂⟩ := ih₂
     simp [infer, heq₁, heq₂]
     exact ⟨h_conv, nbf.complete⟩
+
+#eval (infer ⸨K.{[2, 2]} (Srt 1) ⸨K'.{[3, 2]} (Srt 2) (Srt 1) (Srt 1)⸩⸩).map (·.fst)

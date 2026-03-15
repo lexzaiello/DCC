@@ -464,9 +464,9 @@ elab "smart_reduce" "show" c:reduce_cmd : tactic => do
     match c with
     | `(reduce_cmd| reduce $t:term) =>
       let A := MExpr.decode (← elabTerm t (.some q(_root_.Expr)))
-      let ⟨r', pf⟩ ← A.reduce
-      let gen ← pf.toLeanExpr
-      logInfoAt t (.compose (.ofGoal g) (.ofFormat ("reduced: " ++ (repr r') ++ .line ++ "pretty: " ++ (format r') ++ .line ++ "proof: " ++ (repr gen))))
+      let ⟨r', _⟩ ← A.reduce
+      let r' := MExpr.decode (← whnf (← reduceAll <| r'.unify))
+      logInfo (.ofFormat ("reduced: " ++ (.nest 2 <| .line ++ (format r'))))
     | `(reduce_cmd| reduction) =>
       let tgt ← g.getType
       let tgt' ← checkTypeQ tgt q(Prop)
@@ -477,9 +477,9 @@ elab "smart_reduce" "show" c:reduce_cmd : tactic => do
       | g => throwError s!"not a recognized goal: {repr g}"))
       let A := MExpr.decode A_raw
 
-      let ⟨r', pf⟩ ← A.reduce
-      let gen ← pf.toLeanExpr
-      logInfo (.compose (.ofGoal g) (.ofFormat ("reduced: " ++ (repr r') ++ .line ++ "pretty: " ++ (format r') ++ .line ++ "proof: " ++ (repr gen))))
+      let ⟨r', _⟩ ← A.reduce
+      let r' := MExpr.decode (← whnf (← reduceAll <| r'.unify))
+      logInfo (.ofFormat ("reduced: " ++ (.nest 2 <| .line ++ (format r'))))
     | c => throwError s!"not a valid cmd: {repr c}"
 
 elab "smart_reduce" "close" c:reduce_cmd : tactic => do

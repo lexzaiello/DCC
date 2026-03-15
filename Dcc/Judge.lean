@@ -108,6 +108,14 @@ instance conv₁.instDecidable : Decidable (∃ D, Nbe A D ∧ Nbe B D) :=
       let heq₂ := h₂.complete_nbe
       simp_all)
 
+instance conv.instDecidable : Decidable (B.Redex ∧ (∃ D, Nbe A D ∧ Nbe B D)) :=
+  if h : B.Redex then
+    if h₂ : ∃ D, Nbe A D ∧ Nbe B D then
+      .isTrue ⟨h, h₂⟩
+    else
+      .isFalse (fun h => by simp_all)
+  else .isFalse (fun h => by simp_all)
+
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
   | K'  : Judge (K'.type m n) K'.{[m, n]}

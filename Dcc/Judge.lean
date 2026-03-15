@@ -125,7 +125,7 @@ inductive Judge : Expr → Expr → Prop
   | app : Judge (Π.{[m]} α, β) f
     → Judge α x
     → Judge ⸨β x⸩ ⸨f x⸩
-  | conv : Judge A x → B.Redex → (∃ D, Nbe A D ∧ Nbe B D) → Judge B x
+  | conv : Judge ⸨B y⸩ x → Nbe ⸨B y⸩ D → Judge D x
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   match e with
@@ -138,12 +138,13 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
     let t_f₁ ← infer f
     let t_x₁ ← infer x
 
-    match t_f₁, t_x₁ with
+    match heq : t_f₁, t_x₁ with
     | ⟨Π.{[_m]} α₁, β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
-      if h_conv : ∃ C, ParRed (reduce α₂).fst C ∧ ParRed (reduce α₁).fst C then
-        let h₀ := Judge.app h_t_f (.conv h_t_x h_conv)
-        .some ⟨⸨β x⸩, ⟨.conv h₀ ParRed.reduce_self'⟩⟩
-      else .none
+      let t₀ ← if h : α₁ = α₂ then
+        Option.some <| PLift.up <| Judge.app h_t_f (by rw [← h] at h_t_x; exact h_t_x)
+      else
+        .none
+      pure <| ⟨_, ⟨Judge.conv t₀.down (Nbe.sound_nbe rfl)⟩⟩
     | _, _ => .none
   | _ => .none
 

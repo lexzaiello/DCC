@@ -130,9 +130,9 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
     | _, _ => .none
   | _ => .none
 
-theorem infer_sound : (infer e) = .some ⟨t, PLift.up proof⟩ → Judge t e := fun _ => proof
+theorem Judge.sound : (infer e) = .some ⟨t, PLift.up proof⟩ → Judge t e := fun _ => proof
 
-def infer_complete (h : Judge t e) : (infer e).map (·.fst) = .some t := by
+def Judge.complete (h : Judge t e) : (infer e).map (·.fst) = .some t := by
   induction h
   repeat rfl
   case app m fα b f xα x β' h_t_f h_t_x h_conv nbf ih₁ ih₂ =>
@@ -142,5 +142,22 @@ def infer_complete (h : Judge t e) : (infer e).map (·.fst) = .some t := by
     have ⟨hp₂, heq₂⟩ := ih₂
     simp [infer, heq₁, heq₂]
     exact ⟨h_conv, nbf.complete⟩
+
+instance infer.instDecidable : Decidable (Judge α x) :=
+  match h : infer x with
+  | .some ⟨t, ⟨h_t_x⟩⟩ =>
+    if heq : t = α then
+      Decidable.isTrue <| heq ▸ h_t_x
+    else by
+      apply Decidable.isFalse
+      intro h
+      have h₁ := h.complete
+      have h₂ := h_t_x.complete
+      simp_all
+  | .none => by
+    apply Decidable.isFalse
+    intro h
+    have h₁ := h.complete
+    simp_all
 
 #eval (infer ⸨K.{[2, 2]} (Srt 1) ⸨K'.{[3, 2]} (Srt 2) (Srt 1) (Srt 1)⸩ (Srt 0) (Srt 0)⸩).map (·.fst)

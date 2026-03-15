@@ -458,6 +458,30 @@ macro_rules
     let c ← `($c:reduce_cmd)
     `(SmartReduce.cmd.c_close $c:term)
 
+elab "smart_reduce" "show" c:reduce_cmd : tactic => do
+  let g ← getMainGoal
+  g.withContext do
+    match c with
+    | `(reduce_cmd| reduce $t:term) =>
+      let A := MExpr.decode (← elabTerm t (.some q(_root_.Expr)))
+      let ⟨r', pf⟩ ← A.reduce
+      let gen ← pf.toLeanExpr
+      logInfoAt t (.compose (.ofGoal g) (.ofFormat ("reduced: " ++ (repr r') ++ .line ++ "pretty: " ++ (format r') ++ .line ++ "proof: " ++ (repr gen))))
+    | `(reduce_cmd| reduction) =>
+      let tgt ← g.getType
+      let tgt' ← checkTypeQ tgt q(Prop)
+
+      let A_raw := (← (do match tgt' with
+      | .some ~q((_root_.reduce $A).fst = $B) => pure A
+      | .some ~q(ParRed $A $B) => pure A
+      | g => throwError s!"not a recognized goal: {repr g}"))
+      let A := MExpr.decode A_raw
+
+      let ⟨r', pf⟩ ← A.reduce
+      let gen ← pf.toLeanExpr
+      logInfo (.compose (.ofGoal g) (.ofFormat ("reduced: " ++ (repr r') ++ .line ++ "pretty: " ++ (format r') ++ .line ++ "proof: " ++ (repr gen))))
+    | c => throwError s!"not a valid cmd: {repr c}"
+
 elab "smart_reduce" "close" c:reduce_cmd : tactic => do
   let g ← getMainGoal
   g.withContext do
@@ -504,34 +528,5 @@ elab "smart_reduce" "close" c:reduce_cmd : tactic => do
         g.assign hpr'
       | c => throwError s!"unexpected cmd: {repr c}"
     | e => throwError s!"not a valid reduction goal: {repr e}"
-
-/-syntax "reduce_as" : tactic
-
-def reduce_as : TacticM Unit := do
-  let g ← getMainGoal
-  g.withContext do
-    let tgt ← g.getType
-    let tgt' ← checkTypeQ tgt q(Prop)
-    match tgt' with
-    | .some ~q((_root_.reduce $A).fst = $B) =>
-      let e' : Q(_root_.Expr) ← whnf (← reduceAll q((_root_.reduce $A).fst))
-      let B' ← whnf (← reduceAll B)
-      if B.hasMVar ∨ (← isDefEq e' B) then
-        let proof ← whnf (← reduceAll q((_root_.reduce $A).snd.down))
-        g.assign proof
-      else
-        throwError (Format.text "could not solve: ") ++ (.nest 2 <|
-          (format (MExpr.decode e')) ++ Format.line ++ " ≠ " ++ format (MExpr.decode B'))
-    | .some ~q(ParRed $from_e $to_e) =>
-      let to_e' ← whnf (← reduceAll to_e)
-      let e' : Q(_root_.Expr) ← whnf (← reduceAll q((_root_.reduce $from_e).fst))
-      if ← isDefEq to_e e' then
-        let proof ← whnf (← reduceAll q((reduce $from_e).snd.down))
-        g.assign proof
-      else
-        throwError (Format.text "could not solve: ") ++ (.nest 2 <|
-          (format (MExpr.decode e')) ++ Format.line ++ " ≠ " ++ format (MExpr.decode to_e'))-/
-
-elab "reduce_as" : tactic => reduce_as
 
 end gen

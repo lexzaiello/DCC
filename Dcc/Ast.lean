@@ -64,7 +64,7 @@ def toFormat : Expr → Format
   | K'.{[m, n]} => "K'.{" ++ (format [m, n]) ++ "}"
   | K.{[m, n]} => "K.{" ++ (format [m, n]) ++ "}"
   | S.{[m, n, o]} => "S.{" ++ (format [m, n, o]) ++ "}"
-  | Π.{[lvs]} α, β => "Π.{" ++ (format lvs) ++ "}" ++ (.nest 2 <| α.toFormat ++ "," ++ β.toFormat)
+  | Π.{[lvs]} α, β => .paren <| "Π.{" ++ (format lvs) ++ "}" ++ (.nest 2 <| (.paren <| α.toFormat) ++ ", " ++ β.toFormat)
   | ⸨f x⸩ => .bracket "⸨" (f.toFormat ++ (.nest 2 <| .line ++ x.toFormat)) "⸩"
   | $ => "$"
   | next => "next"

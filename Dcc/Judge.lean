@@ -142,50 +142,20 @@ instance DefEq.instDecidable : Decidable (DefEq t₁ t₂) := by
       sorry
   sorry-/
 
-/-
-Converts term-level combinators in an expression into type "values"
-e.g., read / next / ${}.
-
-This is essentially stripping away the typing information.
--/
-
-inductive CanTransport : Expr → Expr → Prop
-  | K'_next   : CanTransport ⸨K'.{[m, n]} α β⸩ next
-  | K_next    : CanTransport ⸨K.{[m, n]} α β⸩ next
-  | S_app'    : CanTransport ⸨S.{[m, n, o]} α β γ⸩ ⸨$ read⸩
-
-inductive Transport : Expr → Expr → Prop
-  | do_trans  : CanTransport e e'           → Transport e e'
-  | no_trans  : (¬ ∃ e', CanTransport e e') → Transport e e
-  | pi        : Transport α α' → Transport β β'
-    → Transport (Π.{[m]} α, β) (Π.{[m]} α', β')
-  | app       : Transport f f' → Transport x x'
-    → Transport ⸨f x⸩ ⸨f' x'⸩
-
-def transport (t : Expr) : ((t' : Expr) × (PLift (Transport t t'))) :=
+def Expr.transport (t : Expr) : Expr :=
   match t with
-  | ⸨K'.{[m, n]} α β⸩ => ⟨_, ⟨.do_trans .K'_next⟩⟩
-  | ⸨K.{[m, n]} α β⸩ => ⟨_, ⟨.do_trans .K_next⟩⟩
-  | ⸨S.{[m, n, o]} α β γ⸩ => ⟨_, ⟨.do_trans .S_app'⟩⟩
+  | ⸨K'.{[_m, _n]} _α _β⸩
+  | ⸨K.{[_m, _n]} _α _β⸩ => next
+  | ⸨S.{[_m, _n, _o]} _α _β _γ⸩ => ⸨$ read⸩
   | Π.{[m]} α, β =>
-    let ⟨α', ⟨hα⟩⟩ := transport α
-    let ⟨β', ⟨hβ⟩⟩ := transport β
-    ⟨_, ⟨.pi hα hβ⟩⟩
+    let α':= transport α
+    let β' := transport β
+    Π.{[m]} α', β'
   | ⸨f x⸩ =>
-    let ⟨f', ⟨hf⟩⟩ := transport f
-    let ⟨x', ⟨hx⟩⟩ := transport x
-    ⟨_, ⟨.app hf hx⟩⟩
-  | next => ⟨next, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
-  | read => ⟨read, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
-  | $ => ⟨$, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
-  | Srt m => ⟨Srt m, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
-  | S.{[m, n, o]} => ⟨S.{[m, n, o]}, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
-  | K.{[m, n]} => ⟨K.{[m, n]}, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
-  | K'.{[m, n]} => ⟨K'.{[m, n]}, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
-
-theorem Transport.sound : (transport t).fst = t' → Transport t t' := fun heq => by
-  rw [← heq]
-  exact (transport t).snd.down
+    let f' := transport f
+    let x' := transport x
+    ⸨f' x'⸩
+  | e => e
 
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
@@ -194,8 +164,8 @@ inductive Judge : Expr → Expr → Prop
   | Srt : Judge (Srt m.succ) (Srt m)
   | Pi  : Judge (Srt m) (Π.{[m]} _α, _β)
   | app : Judge (Π.{[m]} α₁, β) f → Judge α₂ x
-    → (∃ D, ParRed α₁ D ∧ ParRed α₂ D)
-    → RunPi x β β'
+    → (∃ D, ParRed α₁.transport D ∧ ParRed α₂.transport D)
+    → RunPi x.transport β β'
     → Judge β' ⸨f x⸩
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
@@ -208,7 +178,7 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   | ⸨f x⸩ => do
     match ← infer f, ← infer x with
     | ⟨Π.{[_m]} α₁, _β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
-      if h : ∃ D, ParRed α₁ D ∧ ParRed α₂ D then
+      if h : ∃ D, ParRed α₁.transport D ∧ ParRed α₂.transport D then
         .some <| ⟨_, ⟨.app h_t_f h_t_x h (RunPi.sound rfl)⟩⟩
       else
         .none
@@ -247,24 +217,11 @@ instance infer.instDecidable : Decidable (Judge α x) :=
 
 #eval (infer ⸨K.{[2, 2]} (Srt 1) ⸨K'.{[3, 2]} (Srt 2) (Srt 1) (Srt 1)⸩ (Srt 0) (Srt 0)⸩).map (·.fst)
 
-def mk_I (α : Expr) (m : Level) : Expr :=
-  let α := α
-  -- y : α ~> Srt 1
-  -- y z = (Srt 0)
-  let y := ⸨(K'.{[2, m]}) (Srt 1) α (Srt 0)⸩
-  -- x : α ~> ((Srt 1) ~> α)
-  -- x z (y z) = K α (Srt 1) z (Srt 0)
-  let x := ⸨(K'.{[m, 2]}) α (Srt 1)⸩
+/-
+S (α := Srt 1) (β := λ (x : α), α) (γ := λ (x : α) (y : α) K'.{[m, m]})
+-/
 
-  -- (y z) : β x
-  -- β x = Srt 1
-  let β := ⸨(K'.{[3, m]}) (Srt 2) α (Srt 1)⸩
-  -- x z (y z) : γ z (y z)
-  -- γ z (y z) = α
-  -- γ : α → (β x) → (Srt m)
-  let γ := ⸨(K'.{[m.succ, m]}) ((~> m.succ) Srt 1, Srt m) α ⸨(K'.{[m.succ, 2]}) (Srt m) (Srt 1) α⸩⸩
-  dbg_trace Std.format <| (infer γ).map (·.fst)
+#eval (infer ⸨S.{[2, 2, 1]} (Srt 1)
+  ⸨K'.{[3, 2]} (Srt 2) (Srt 1) (Srt 1)⸩
+  ⸨K'.{[2, 2]} (Srt 1) (Srt 1)⸩⸩).map (·.fst)
 
-  ⸨(S.{[m, 2, m]}) α β γ x y⸩
-
-#eval (infer (mk_I (Srt 2) 3)).map (·.fst)

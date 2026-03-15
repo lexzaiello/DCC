@@ -188,8 +188,6 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
           (e_arg := x.transport)
           (e_pi := β.transport) rfl)⟩⟩
       else
-        --dbg_trace α₁.transport
-        --dbg_trace α₂.transport
         .none
     | _, _ => .none
   | _ => .none
@@ -275,17 +273,4 @@ def test_S : Option Expr := do
   )
   Sigma.fst <$> infer ⸨s α β γ x y z⸩
 
-#eval test_S
-
-def test_S : Option Expr := do
-  let s := ⸨S.{[3, 3, 2]} (Srt 2)
-    ⸨K'.{[4, 3]} (Srt 3) (Srt 2) (Srt 2)⸩ -- β x = Srt 2
-    ⸨K'.{[3, 3]} (Srt 2) (Srt 2)⸩⸩   -- γ z (y z) = Srt 1
-  dbg_trace (infer s).map (·.fst)
-  let inner := ⸨K'.{[3, 3]} (Srt 2) (Srt 2)⸩
-  let t_inner ← (infer inner).map (·.fst)
-  let x := ⸨K'.{[3, 3]} t_inner (Srt 2) inner⸩
-  dbg_trace t_inner
-  (infer x).map (·.fst)
-
-#eval Std.format <$> test_S
+#eval test_S.map (fun e => Sigma.fst <| reduce <| Sigma.fst <| reduce e)

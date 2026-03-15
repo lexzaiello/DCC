@@ -54,7 +54,10 @@ instance Binder.instDecidable : Decidable (Binder e) := by
 
 inductive RunPi (arg : Expr) : Expr → Expr → Prop
   | zero : ¬ Binder e     → ParRed ⸨e arg⸩ e' → RunPi arg e e'
-  | succ : RunPi arg α α' → RunPi arg β β'    → RunPi arg (Π.{[m]} α, β) (Π.{[m]} α', β')
+  | succ : RunPi arg α α' → RunPi arg β β'
+    → ParRed α' α''
+    → ParRed β' β''
+    → RunPi arg (Π.{[m]} α, β) (Π.{[m]} α'', β'')
 
 def run_pi (e_arg e_pi : Expr) : ((e' : Expr) × PLift (RunPi e_arg e_pi e')) :=
   if h : ¬ Binder e_pi then
@@ -66,7 +69,9 @@ def run_pi (e_arg e_pi : Expr) : ((e' : Expr) × PLift (RunPi e_arg e_pi e')) :=
     | Π.{[m]} α, β =>
       let ⟨α', ⟨hα⟩⟩ := run_pi e_arg α
       let ⟨β', ⟨hβ⟩⟩ := run_pi e_arg β
-      exact ⟨(Π.{[m]} α', β'), ⟨.succ hα hβ⟩⟩
+      let ⟨α'', ⟨hα'⟩⟩ := (reduce α')
+      let ⟨β'', ⟨hβ'⟩⟩ := (reduce β')
+      exact ⟨(Π.{[m]} α'', β''), ⟨.succ hα hβ hα' hβ'⟩⟩
 
 theorem RunPi.sound : (run_pi e_arg e_pi).fst = e' → RunPi e_arg e_pi e' := fun _ => by
   have h := (run_pi e_arg e_pi).snd.down
@@ -81,49 +86,21 @@ theorem RunPi.complete : RunPi e_arg e_pi e' → (run_pi e_arg e_pi).fst = e' :=
     simp_all
     apply ParRed.reduce_complete
     assumption
-  · rename_i α α' β β' m hrα hrβ ih₁ ih₂
+  · rename_i α α' β β' α'' β'' m hrα hrβ hrα' hrβ' ih₁ ih₂
     simp [run_pi]
     have h : Binder (Expr.Pi m α β) := .mk
     split
     · simp
-      exact ⟨by assumption, by assumption⟩
+      exact ⟨by rw [ih₁]; exact (ParRed.reduce_complete hrα'), by rw [ih₂]; exact (ParRed.reduce_complete hrβ')⟩
     · contradiction
 
-
-theorem Nbe.complete (h : Nbe t t') : (nbe t).fst = t' := by
-  induction h
-  · rename_i hpar ih₁ ih₂
-    simp [nbe, ← hpar.reduce_complete]
-    rw [← ih₁, ← ih₂]
-  · rename_i α α' β β' m hnα hnβ hpr ih₁ ih₂
-    simp [nbe]
-    apply ParRed.reduce_complete
-    rw [ih₁, ih₂]
-    exact hpr
-  repeat (unfold nbe; rfl)
-
-instance Nbe.instDecicdable : Decidable (Nbe t t') :=
-  if h : (nbe t).fst = t' then
-    .isTrue (Nbe.sound h)
+instance RunPi.instDecidabble : Decidable (RunPi e_arg e_pi e') :=
+  if h : (run_pi e_arg e_pi).fst = e' then
+    Decidable.isTrue (h.symm ▸ (run_pi e_arg e_pi).snd.down)
   else
-    .isFalse (fun h₂ => h (Nbe.complete h₂))
-
-instance conv₁.instDecidable : Decidable (∃ D, Nbe A D ∧ Nbe B D) :=
-  if h : (nbe A).fst = (nbe B).fst then
-    .isTrue ⟨(nbe A).fst, (nbe A).snd.down, by rw [h]; exact (nbe B).snd.down⟩
-  else
-    .isFalse (fun ⟨D, h₁, h₂⟩ => by
-      let heq₁ := h₁.complete
-      let heq₂ := h₂.complete
-      simp_all)
-
-instance conv.instDecidable : Decidable (B.Redex ∧ (∃ D, Nbe A D ∧ Nbe B D)) :=
-  if h : B.Redex then
-    if h₂ : ∃ D, Nbe A D ∧ Nbe B D then
-      .isTrue ⟨h, h₂⟩
-    else
-      .isFalse (fun h => by simp_all)
-  else .isFalse (fun h => by simp_all)
+    Decidable.isFalse (fun h₂ => by
+      have h := h h₂.complete
+      contradiction)
 
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
@@ -131,8 +108,9 @@ inductive Judge : Expr → Expr → Prop
   | S   : Judge (S.type m n o) S.{[m, n, o]}
   | Srt : Judge (Srt m.succ) (Srt m)
   | Pi  : Judge (Srt m) (Π.{[m]} _α, _β)
-  | app : Judge (Π.{[m]} fα, β) f → Judge xα x
-    → (∃ D, Nbe fα D ∧ Nbe xα D) → Nbe ⸨β x⸩ β'
+  | app : Judge (Π.{[m]} α₁, β) f → Judge α₂ x
+    → (∃ D, ParRed α₁ D ∧ ParRed α₂ D)
+    → RunPi x β β'
     → Judge β' ⸨f x⸩
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
@@ -145,8 +123,8 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   | ⸨f x⸩ => do
     match ← infer f, ← infer x with
     | ⟨Π.{[_m]} α₁, _β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
-      if h : ∃ D, Nbe α₁ D ∧ Nbe α₂ D then
-        .some <| ⟨_, ⟨.app h_t_f h_t_x h (Nbe.sound rfl)⟩⟩
+      if h : ∃ D, ParRed α₁ D ∧ ParRed α₂ D then
+        .some <| ⟨_, ⟨.app h_t_f h_t_x h (RunPi.sound rfl)⟩⟩
       else
         .none
     | _, _ => .none
@@ -165,4 +143,4 @@ def infer_complete (h : Judge t e) : (infer e).map (·.fst) = .some t := by
     simp [infer, heq₁, heq₂]
     exact ⟨h_conv, nbf.complete⟩
 
-#eval (infer ⸨K.{[2, 2]} (Srt 1) ⸨K'.{[3, 2]} (Srt 2) (Srt 1) (Srt 1)⸩⸩).map (·.fst)
+#eval (infer ⸨K.{[2, 2]} (Srt 1) ⸨K'.{[3, 2]} (Srt 2) (Srt 1) (Srt 1)⸩ (Srt 0) (Srt 0)⸩).map (·.fst)

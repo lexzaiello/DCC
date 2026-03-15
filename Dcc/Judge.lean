@@ -58,7 +58,7 @@ def nbe (t : Expr) : ((t' : Expr) × PLift (Nbe t t')) :=
     let ⟨fx', ⟨hfx'⟩⟩ := reduce ⸨f' x'⸩
     ⟨fx', ⟨.redex hf hx hfx'⟩⟩
 
-theorem Nbe.sound_nbe (h : (nbe t).fst = t') : Nbe t t' := by
+theorem Nbe.sound (h : (nbe t).fst = t') : Nbe t t' := by
   induction t generalizing t'
   · unfold nbe at h
     simp at h
@@ -84,7 +84,7 @@ theorem Nbe.sound_nbe (h : (nbe t).fst = t') : Nbe t t' := by
     · exact ih₂ rfl
     exact ParRed.reduce_sound rfl
 
-theorem Nbe.complete_nbe (h : Nbe t t') : (nbe t).fst = t' := by
+theorem Nbe.complete (h : Nbe t t') : (nbe t).fst = t' := by
   induction h
   · rename_i hpar ih₁ ih₂
     simp [nbe, ← hpar.reduce_complete]
@@ -95,17 +95,17 @@ theorem Nbe.complete_nbe (h : Nbe t t') : (nbe t).fst = t' := by
 
 instance Nbe.instDecicdable : Decidable (Nbe t t') :=
   if h : (nbe t).fst = t' then
-    .isTrue (Nbe.sound_nbe h)
+    .isTrue (Nbe.sound h)
   else
-    .isFalse (fun h₂ => h (Nbe.complete_nbe h₂))
+    .isFalse (fun h₂ => h (Nbe.complete h₂))
 
 instance conv₁.instDecidable : Decidable (∃ D, Nbe A D ∧ Nbe B D) :=
   if h : (nbe A).fst = (nbe B).fst then
     .isTrue ⟨(nbe A).fst, (nbe A).snd.down, by rw [h]; exact (nbe B).snd.down⟩
   else
     .isFalse (fun ⟨D, h₁, h₂⟩ => by
-      let heq₁ := h₁.complete_nbe
-      let heq₂ := h₂.complete_nbe
+      let heq₁ := h₁.complete
+      let heq₂ := h₂.complete
       simp_all)
 
 instance conv.instDecidable : Decidable (B.Redex ∧ (∃ D, Nbe A D ∧ Nbe B D)) :=
@@ -122,10 +122,9 @@ inductive Judge : Expr → Expr → Prop
   | S   : Judge (S.type m n o) S.{[m, n, o]}
   | Srt : Judge (Srt m.succ) (Srt m)
   | Pi  : Judge (Srt m) (Π.{[m]} _α, _β)
-  | app : Judge (Π.{[m]} α, β) f
-    → Judge α x
-    → Judge ⸨β x⸩ ⸨f x⸩
-  | conv : Judge ⸨B y⸩ x → Nbe ⸨B y⸩ D → Judge D x
+  | app : Judge (Π.{[m]} fα, β) f → Judge xα x
+    → (∃ D, Nbe fα D ∧ Nbe xα D) → Nbe ⸨β x⸩ β'
+    → Judge β' ⸨f x⸩
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   match e with
@@ -135,18 +134,23 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   | Srt m => .some ⟨Srt m.succ, ⟨Judge.Srt⟩⟩
   | Π.{[m]} _α, _β => .some ⟨Srt m, ⟨Judge.Pi⟩⟩
   | ⸨f x⸩ => do
-    let t_f₁ ← infer f
-    let t_x₁ ← infer x
-
-    match heq : t_f₁, t_x₁ with
-    | ⟨Π.{[_m]} α₁, β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
-      let t₀ ← if h : α₁ = α₂ then
-        Option.some <| PLift.up <| Judge.app h_t_f (by rw [← h] at h_t_x; exact h_t_x)
-      else
-        .none
-      pure <| ⟨_, ⟨Judge.conv t₀.down (Nbe.sound_nbe rfl)⟩⟩
+    match ← infer f, ← infer x with
+    | ⟨Π.{[_m]} α₁, _β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
+      if h : ∃ D, Nbe α₁ D ∧ Nbe α₂ D then
+        .some <| ⟨_, ⟨.app h_t_f h_t_x h (Nbe.sound rfl)⟩⟩
+      else .none
     | _, _ => .none
   | _ => .none
 
 theorem infer_sound : (infer e) = .some ⟨t, PLift.up proof⟩ → Judge t e := fun _ => proof
 
+def infer_complete (h : Judge t e) : (infer e).map (·.fst) = .some t := by
+  induction h
+  repeat rfl
+  case app m fα b f xα x β' h_t_f h_t_x h_conv nbf ih₁ ih₂ =>
+    simp at ih₁
+    simp at ih₂
+    have ⟨hp₁, heq₁⟩ := ih₁
+    have ⟨hp₂, heq₂⟩ := ih₂
+    simp [infer, heq₁, heq₂]
+    exact ⟨h_conv, nbf.complete⟩

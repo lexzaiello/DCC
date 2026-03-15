@@ -84,6 +84,15 @@ theorem Nbe.sound_nbe (h : (nbe t).fst = t') : Nbe t t' := by
     · exact ih₂ rfl
     exact ParRed.reduce_sound rfl
 
+theorem Nbe.complete_nbe (h : Nbe t t') : (nbe t).fst = t' := by
+  induction h
+  · rename_i hpar ih₁ ih₂
+    simp [nbe, ← hpar.reduce_complete]
+    rw [← ih₁, ← ih₂]
+  · rename_i α α' β β' m hnα hnβ ih₁ ih₂
+    simp [← ih₁, ← ih₂, nbe]
+  repeat (unfold nbe; rfl)
+
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
   | K'  : Judge (K'.type m n) K'.{[m, n]}

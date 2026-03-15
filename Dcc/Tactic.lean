@@ -429,7 +429,70 @@ def ParRed'.toLeanExpr (h : ParRed' A B) : MetaM Q(_root_.ParRed $(A.unify) $(B.
   | .refl_read => do return q(.refl_comb (c := .read))
   | .refl_app' => do return q(.refl_comb (c := .app'))
 
-syntax "reduce_as" : tactic
+declare_syntax_cat reduce_cmd
+syntax "reduction"        : reduce_cmd
+syntax "reduce" term      : reduce_cmd
+syntax "check?" term term : reduce_cmd
+syntax "check?"           : reduce_cmd
+syntax "show" reduce_cmd  : reduce_cmd
+syntax "close" reduce_cmd : reduce_cmd
+
+syntax reduce_cmd : term
+
+syntax "smart_reduce" reduce_cmd : tactic
+
+inductive SmartReduce.Cmd where
+  | reduction : Cmd
+  | reduce    : Q(_root_.Expr) → Cmd
+  | c_show    : Cmd → Cmd
+  | c_close   : Cmd → Cmd
+
+macro_rules
+  | `(reduction) => `(SmartReduce.cmd.reduction)
+  | `(reduce $t:term) => `(SmartReduce.cmd.reduce $t:term)
+  | `(show $c:reduce_cmd) => do
+    let c ← `($c:reduce_cmd)
+    `(SmartReduce.cmd.c_show $c:term)
+  | `(close $c:reduce_cmd) => do
+    let c ← `($c:reduce_cmd)
+    `(SmartReduce.cmd.c_close $c:term)
+
+elab "smart_reduce" "close" "reduction" : tactic => do
+  let g ← getMainGoal
+  g.withContext do
+    let tgt ← g.getType
+    let tgt' ← checkTypeQ tgt q(Prop)
+    match tgt' with
+    | .some ~q((_root_.reduce $A).fst = $B) =>
+      let A' := MExpr.decode A
+      let B' := MExpr.decode B
+
+      let ⟨E', hpr⟩ ← A'.reduce
+
+      if ¬ (← isDefEq E'.unify B) then
+        throwError Format.text "refusing. not def-eq: "
+          ++ Format.line
+          ++ (format E')
+          ++ Format.line ++ (format B')
+      else
+        let hpr' ← hpr.toLeanExpr
+        g.assign q(ParRed.reduce_complete $hpr')
+    | .some ~q(ParRed $A $B) =>
+      let A' := MExpr.decode A
+      let B' := MExpr.decode B
+
+      let ⟨E', hpr⟩ ← A'.reduce
+
+      if ¬ (← isDefEq E'.unify B) then
+        throwError Format.text "refusing. not def-eq: "
+          ++ Format.line
+          ++ (format E')
+          ++ Format.line ++ (format B')
+      else
+        g.assign (← hpr.toLeanExpr)
+    | e => throwError s!"not a valid reduction goal: {repr e}"
+
+/-syntax "reduce_as" : tactic
 
 def reduce_as : TacticM Unit := do
   let g ← getMainGoal
@@ -454,7 +517,7 @@ def reduce_as : TacticM Unit := do
         g.assign proof
       else
         throwError (Format.text "could not solve: ") ++ (.nest 2 <|
-          (format (MExpr.decode e')) ++ Format.line ++ " ≠ " ++ format (MExpr.decode to_e'))
+          (format (MExpr.decode e')) ++ Format.line ++ " ≠ " ++ format (MExpr.decode to_e'))-/
 
 elab "reduce_as" : tactic => reduce_as
 

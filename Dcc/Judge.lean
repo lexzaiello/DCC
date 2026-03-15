@@ -58,7 +58,31 @@ def nbe (t : Expr) : ((t' : Expr) × PLift (Nbe t t')) :=
     let ⟨fx', ⟨hfx'⟩⟩ := reduce ⸨f' x'⸩
     ⟨fx', ⟨.redex hf hx hfx'⟩⟩
 
-
+theorem Nbe.sound_nbe (h : (nbe t).fst = t') : Nbe t t' := by
+  induction t generalizing t'
+  · unfold nbe at h
+    simp at h
+    cases h
+    rename_i ih₁ ih₂
+    apply Nbe.pi
+    · exact ih₁ rfl
+    · exact ih₂ rfl
+  · unfold nbe at h
+    simp at h
+    cases h
+    exact Nbe.refl_srt
+  · unfold nbe at h
+    simp at h
+    cases h
+    exact Nbe.refl_comb
+  · unfold nbe at h
+    rename_i ih₁ ih₂
+    simp at h
+    cases h
+    apply Nbe.redex
+    · exact ih₁ rfl
+    · exact ih₂ rfl
+    exact ParRed.reduce_sound rfl
 
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}

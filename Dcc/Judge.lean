@@ -183,6 +183,94 @@ def transport (t : Expr) : ((t' : Expr) × (PLift (Transport t t'))) :=
   | K.{[m, n]} => ⟨K.{[m, n]}, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
   | K'.{[m, n]} => ⟨K'.{[m, n]}, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
 
+theorem Transport.sound : (transport t).fst = t' → Transport t t' := by
+  intro ha
+  unfold transport at ha
+  split at ha
+  · rw [← ha]
+    exact Transport.do_trans .K'_next
+  · rw [← ha]
+    exact Transport.do_trans .K_next
+  · rw [← ha]
+    exact Transport.do_trans .S_app'
+  · rw [← ha]
+    simp
+    rename_i t m α β
+    apply Transport.pi
+    simp at ha
+    exact (transport α).snd.down
+    exact (transport β).snd.down
+  · rename_i t f ih₁ ih₂ ih₃
+    simp at ha
+    rw [← ha]
+    apply Transport.app
+    exact (transport t).snd.down
+    exact (transport f).snd.down
+  · rw [← ha]
+    exact (transport next).snd.down
+  · rw [← ha]
+    exact (transport read).snd.down
+  · rw [← ha]
+    exact (transport $).snd.down
+  · rw [← ha]
+    rename_i m
+    exact (transport (Srt m)).snd.down
+  · rw [← ha]
+    rename_i m
+    exact (transport S.{[_, _, _]}).snd.down
+  · rw [← ha]
+    rename_i m
+    exact (transport K.{[_, _]}).snd.down
+  · rw [← ha]
+    rename_i m
+    exact (transport K'.{[_, _]}).snd.down
+
+theorem Transport.sound : (transport t).fst = t' → Transport t t' := by
+  intro h
+  induction t generalizing t'
+  · rw [← h]
+    simp [transport]
+    rename_i ih₁ ih₂
+    apply Transport.pi
+    · exact ih₁ rfl
+    · exact ih₂ rfl
+  · rw [← h]
+    simp [transport]
+    exact Transport.no_trans (fun ⟨_, h⟩ => by cases h)
+  · rw [← h]
+    unfold transport
+    rename_i c
+    cases c
+    repeat (cases h; simp; exact .no_trans (fun ⟨_, h⟩ => by cases h))
+  case app f x ih₁ ih₂ =>
+    unfold transport at h
+    cases f.app x
+    
+    have ha := ih₁ rfl
+    have hb := ih₂ rfl
+    match heq : f.app x with
+    | ⸨K'.{[m, n]} α β⸩ =>
+      simp [← h]
+      unfold transport
+      rw [heq]
+      simp
+      exact Transport.do_trans .K'_next
+    | ⸨K.{[m, n]} α β⸩ =>
+      simp [← h]
+      unfold transport
+      rw [heq]
+      simp
+      exact Transport.do_trans .K_next
+    | ⸨S.{[m, n, o]} α β γ⸩ =>
+      simp [← h]
+      unfold transport
+      rw [heq]
+      simp
+      exact Transport.do_trans .S_app'
+    | _ =>
+      
+      sorry
+
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
   | K'  : Judge (K'.type m n) K'.{[m, n]}

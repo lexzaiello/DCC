@@ -147,6 +147,11 @@ def Expr.transport (t : Expr) : Expr :=
   | ⸨K'.{[_m, _n]} _α _β⸩
   | ⸨K.{[_m, _n]} _α _β⸩ => next
   | ⸨S.{[_m, _n, _o]} _α _β _γ⸩ => ⸨$ read⸩
+  | Π.{[m]} α, ⸨next (Π.{[n]} β, γ)⸩ =>
+    let α':= transport α
+    let β' := transport β
+    let γ' := transport γ
+    Π.{[m]} α', (Π.{[n]} ⸨next β'⸩, ⸨next γ'⸩)
   | Π.{[m]} α, β =>
     let α':= transport α
     let β' := transport β
@@ -165,7 +170,7 @@ inductive Judge : Expr → Expr → Prop
   | Pi  : Judge (Srt m) (Π.{[m]} _α, _β)
   | app : Judge (Π.{[m]} α₁, β) f → Judge α₂ x
     → (∃ D, ParRed α₁.transport D ∧ ParRed α₂.transport D)
-    → RunPi x.transport β β'
+    → RunPi x.transport β.transport β'
     → Judge β' ⸨f x⸩
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
@@ -177,12 +182,14 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   | Π.{[m]} _α, _β => .some ⟨Srt m, ⟨Judge.Pi⟩⟩
   | ⸨f x⸩ => do
     match ← infer f, ← infer x with
-    | ⟨Π.{[_m]} α₁, _β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
+    | ⟨Π.{[_m]} α₁, β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
       if h : ∃ D, ParRed α₁.transport D ∧ ParRed α₂.transport D then
-        .some <| ⟨_, ⟨.app h_t_f h_t_x h (RunPi.sound rfl)⟩⟩
+        .some <| ⟨_, ⟨.app h_t_f h_t_x h (RunPi.sound
+          (e_arg := x.transport)
+          (e_pi := β.transport) rfl)⟩⟩
       else
-        dbg_trace α₁.transport
-        dbg_trace α₂.transport
+        --dbg_trace α₁.transport
+        --dbg_trace α₂.transport
         .none
     | _, _ => .none
   | _ => .none
@@ -198,7 +205,9 @@ def Judge.complete (h : Judge t e) : (infer e).map (·.fst) = .some t := by
     have ⟨hp₁, heq₁⟩ := ih₁
     have ⟨hp₂, heq₂⟩ := ih₂
     simp [infer, heq₁, heq₂]
-    exact ⟨h_conv, nbf.complete⟩
+    let h_app := Judge.app h_t_f hp₂ h_conv nbf
+    simp_all
+    exact nbf.complete
 
 instance infer.instDecidable : Decidable (Judge α x) :=
   match h : infer x with
@@ -264,9 +273,7 @@ def test_S : Option Expr := do
       | _ => .none
     | _, _, _ => .none
   )
-  dbg_trace Sigma.fst <$> infer γ
-  dbg_trace Sigma.fst <$> infer ⸨s α β⸩
-  Sigma.fst <$> infer ⸨s α β γ x y⸩
+  Sigma.fst <$> infer ⸨s α β γ x y z⸩
 
 #eval test_S
 

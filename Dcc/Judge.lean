@@ -181,6 +181,8 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
       if h : ∃ D, ParRed α₁.transport D ∧ ParRed α₂.transport D then
         .some <| ⟨_, ⟨.app h_t_f h_t_x h (RunPi.sound rfl)⟩⟩
       else
+        dbg_trace α₁.transport
+        dbg_trace α₂.transport
         .none
     | _, _ => .none
   | _ => .none
@@ -221,7 +223,62 @@ instance infer.instDecidable : Decidable (Judge α x) :=
 S (α := Srt 1) (β := λ (x : α), α) (γ := λ (x : α) (y : α) K'.{[m, m]})
 -/
 
-#eval (infer ⸨S.{[2, 2, 1]} (Srt 1)
-  ⸨K'.{[3, 2]} (Srt 2) (Srt 1) (Srt 1)⸩
-  ⸨K'.{[2, 2]} (Srt 1) (Srt 1)⸩⸩).map (·.fst)
+--#eval (infer ).map (·.fst)
 
+#eval (infer ⸨K'.{[3, 3]} (Srt 2) (Srt 2)⸩).map (·.fst)
+
+/-
+x : (x : Srt 2) ~> Srt 2 ~> x
+
+inner = K'.{[2, 3]} (Srt 1) (Srt 2)
+
+x = K.{[3, 3]} (Srt 2)
+-/
+
+def test_S : Option Expr := do
+  let s := S.{[3, 3, 3]}
+  let α := (Srt 2)
+  let z := (Srt 1)
+  let y := ⸨K'.{[3, 3]} (Srt 2) (Srt 2)⸩
+  let β ← match Sigma.fst <$> infer ⸨y (Srt 1)⸩ with
+  | .some β => do
+    match ← Sigma.fst <$> infer α with
+    | Srt out => .some ⸨K'.{[(out + 1), 3]} (Srt out) α β⸩
+    | _ => .none
+  | _ => none
+  let t_yz ← (Sigma.fst <$> infer ⸨y z⸩)
+  let t_t_yz ← Sigma.fst <$> infer t_yz
+  let x ← match (Sigma.fst <$> infer t_yz) with
+  | Srt m => .some ⸨K'.{[3, m]} α t_yz⸩
+  | _ => .none
+  let γ : Expr := ← (do
+    let t_xzyz ← Sigma.fst <$> infer ⸨x z ⸨y z⸩⸩
+    let t_t_xzyz ← Sigma.fst <$> infer t_xzyz
+    match t_xzyz, t_t_xzyz, t_t_yz with
+    | t_out, (Srt out), Srt yzm =>
+      let inner := ⸨K'.{[out.succ, yzm]} (Srt out) t_yz t_out⸩
+      let t_inner ← Sigma.fst <$> (infer inner)
+      match ← Sigma.fst <$> infer t_inner with
+      | Srt in_m =>
+        .some ⸨K'.{[in_m, 3]} t_inner α inner⸩
+      | _ => .none
+    | _, _, _ => .none
+  )
+  dbg_trace Sigma.fst <$> infer γ
+  dbg_trace Sigma.fst <$> infer ⸨s α β⸩
+  Sigma.fst <$> infer ⸨s α β γ x y⸩
+
+#eval test_S
+
+def test_S : Option Expr := do
+  let s := ⸨S.{[3, 3, 2]} (Srt 2)
+    ⸨K'.{[4, 3]} (Srt 3) (Srt 2) (Srt 2)⸩ -- β x = Srt 2
+    ⸨K'.{[3, 3]} (Srt 2) (Srt 2)⸩⸩   -- γ z (y z) = Srt 1
+  dbg_trace (infer s).map (·.fst)
+  let inner := ⸨K'.{[3, 3]} (Srt 2) (Srt 2)⸩
+  let t_inner ← (infer inner).map (·.fst)
+  let x := ⸨K'.{[3, 3]} t_inner (Srt 2) inner⸩
+  dbg_trace t_inner
+  (infer x).map (·.fst)
+
+#eval Std.format <$> test_S

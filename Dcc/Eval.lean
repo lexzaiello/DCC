@@ -260,5 +260,3 @@ theorem reduce_self : ∃ B C, ParRed (reduce A).fst C ∧ ParRed (reduce B).fst
 
 theorem reduce_self' : ∃ C, ParRed (reduce A).fst C ∧ ParRed (reduce A).fst C :=
   ⟨_, ParRed.reduce_sound rfl, ParRed.reduce_sound rfl⟩
-
-end ParRed

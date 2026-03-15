@@ -35,71 +35,30 @@ def S.type (m n o : Level) : Expr :=
    , Π.{[o]} ((0 read).assert_n 4)
    , (2 (next ∘' ⸨$ read⸩))
 
-/-
-  Weak-head normal form of a type.
-  If something other than these is encountered, we should
-  apply the conversion constructor.
--/
-inductive NormTy : Expr → Prop
-  | srt   : NormTy (Srt m)
-  | pi    : NormTy α → NormTy β
-    →  NormTy (Π.{[m]} α, β)
-  | redex : (¬ ⸨f x⸩.Redex)
-    → NormTy f → NormTy x → NormTy ⸨f x⸩
+inductive Nbe : Expr → Expr → Prop
+  | redex     : Nbe f f' → Nbe x x'
+    → ParRed ⸨f' x'⸩ t'
+    → Nbe ⸨f x⸩ t'
+  | pi        : Nbe α α' → Nbe β β'
+    → Nbe (Π.{[m]} α, β) (Π.{[m]} α', β')
+  | refl_srt  : Nbe (Srt m) (Srt m)
+  | refl_comb : Nbe (.comb c) (.comb c)
 
-inductive IsNormTy : Expr → Type
-  | srt   : IsNormTy (Srt m)
-  | pi    : IsNormTy α → IsNormTy β
-    →  IsNormTy (Π.{[m]} α, β)
-  | redex : (¬ ⸨f x⸩.Redex) → IsNormTy f
-    → IsNormTy x → IsNormTy ⸨f x⸩
-
-def Expr.is_norm_ty (e : Expr) : Option (IsNormTy e) :=
-  match e with
-  | Π.{[_m]} α, β => do pure <| .pi (← α.is_norm_ty) (← β.is_norm_ty)
+def nbe (t : Expr) : ((t' : Expr) × PLift (Nbe t t')) :=
+  match t with
+  | Π.{[m]} α, β =>
+    let ⟨α', ⟨αp⟩⟩ := nbe α
+    let ⟨β', ⟨βp⟩⟩ := nbe β
+    ⟨Π.{[m]} α', β', ⟨.pi αp βp⟩⟩
+  | Srt m => ⟨Srt m, ⟨.refl_srt⟩⟩
+  | .comb c => ⟨.comb c, ⟨.refl_comb⟩⟩
   | ⸨f x⸩ =>
-    if h : ¬⸨f x⸩.Redex then
-      do pure <| .redex h (← f.is_norm_ty) (← x.is_norm_ty)
-    else
-      .none
-  | Srt _m => pure .srt
-  | _ => .none
+    let ⟨f', ⟨hf⟩⟩ := nbe f
+    let ⟨x', ⟨hx⟩⟩ := nbe x
+    let ⟨fx', ⟨hfx'⟩⟩ := reduce ⸨f' x'⸩
+    ⟨fx', ⟨.redex hf hx hfx'⟩⟩
 
-theorem IsNormTy.sound : IsNormTy e → NormTy e := by
-  intro h
-  induction h
-  · exact .srt
-  · apply NormTy.pi
-    repeat assumption
-  · apply NormTy.redex
-    repeat assumption
 
-theorem is_norm_ty.sound : e.is_norm_ty = .some p → NormTy e := fun _ => p.sound
-
-theorem is_norm_ty.complete (p : NormTy e) : ∃ p, e.is_norm_ty = .some p := by
-  induction p
-  · rename_i m
-    exact ⟨.srt, rfl⟩
-  · rename_i α β m hα hβ ih₁ ih₂
-    have ⟨p₁, hp₁⟩ := ih₁
-    have ⟨p₂, hp₂⟩ := ih₂
-    refine ⟨.pi p₁ p₂, ?_⟩
-    simp [Expr.is_norm_ty, hp₁, hp₂]
-  · rename_i f x h_red hf hx ih₁ ih₂
-    have ⟨p₁, hp₁⟩ := ih₁
-    have ⟨p₂, hp₂⟩ := ih₂
-    refine ⟨.redex h_red p₁ p₂, ?_⟩
-    simp [Expr.is_norm_ty, hp₁, hp₂, h_red]
-
-theorem is_norm_ty.sound' : e.is_norm_ty = .none → ¬ NormTy e := by
-  intro heq hp
-  have ⟨_, h_some⟩ := is_norm_ty.complete hp
-  simp_all
-
-instance NormTy.instDecidable : Decidable (NormTy e) :=
-  match heq : e.is_norm_ty with
-  | .some _p => .isTrue (is_norm_ty.sound heq)
-  | .none => .isFalse (is_norm_ty.sound' heq)
 
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
@@ -110,7 +69,7 @@ inductive Judge : Expr → Expr → Prop
   | app : Judge (Π.{[m]} α, β) f
     → Judge α x
     → Judge ⸨β x⸩ ⸨f x⸩
-  | conv : Judge A x → (∃ C, ParRed (reduce A).fst C ∧ ParRed (reduce B).fst C) → Judge B x
+  | conv : Judge A x → B.Redex → (∃ D, Nbe A D ∧ Nbe B D) → Judge B x
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   match e with

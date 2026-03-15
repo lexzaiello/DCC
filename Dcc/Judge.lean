@@ -102,6 +102,87 @@ instance RunPi.instDecidabble : Decidable (RunPi e_arg e_pi e') :=
       have h := h h₂.complete
       contradiction)
 
+/-
+Todo: this is very hacky.
+Only useful under Pi binders.
+This turns typed user-land combinators into our Π combinators.
+inductive Transport : Expr → Expr → Prop
+  | K'_next  : Transport ⸨K'.{[m, n]} α β⸩ next
+  | K_next   : Transport ⸨K.{[m, n]} α β⸩ next
+  | app      : Transport f f'  → Transport ⸨f x⸩ ⸨f' x⸩
+  | pi       : Transport α₁ α₂ → Transport (Π.{[m]} α₁, β₁) (Π.{[m]} α₂, β₂)
+
+def transport (t : Expr) : Option ((t' : Expr) × (PLift (Transport t t'))) :=
+
+inductive DefEq : Expr → Expr → Prop
+  | red_conv : (∃ D, ParRed α₁ D ∧ ParRed α₂ D)
+    → DefEq α₁ α₂
+  | propext  : Binder p₁ → Binder p₂
+    → (ParRed ⸨p₁ (Srt 0)⸩ B)
+    → (ParRed ⸨p₂ (Srt 0)⸩ B)
+    → DefEq p₁ p₂
+
+instance DefEq.instDecidable : Decidable (DefEq t₁ t₂) := by
+  cases t₁
+  cases t₂
+  · rename_i m α₁ β₁ n α₂ β₂
+    if h : (reduce ⸨(Π.{[m]} α₁, β₁) (Srt 0)⸩).fst = (reduce ⸨(Π.{[n]} α₂, β₂) (Srt 0)⸩).fst then
+      apply Decidable.isTrue
+      apply DefEq.propext
+      · exact Binder.mk
+      · exact Binder.mk
+      · exact ParRed.reduce_sound rfl
+      · rw [h]
+        exact ParRed.reduce_sound rfl
+    else
+      apply Decidable.isFalse
+      intro h
+      cases h
+      
+      sorry
+  sorry-/
+
+/-
+Converts term-level combinators in an expression into type "values"
+e.g., read / next / ${}.
+
+This is essentially stripping away the typing information.
+-/
+
+inductive CanTransport : Expr → Expr → Prop
+  | K'_next   : CanTransport ⸨K'.{[m, n]} α β⸩ next
+  | K_next    : CanTransport ⸨K.{[m, n]} α β⸩ next
+  | S_app'    : CanTransport ⸨S.{[m, n, o]} α β γ⸩ ⸨$ read⸩
+
+inductive Transport : Expr → Expr → Prop
+  | do_trans  : CanTransport e e'           → Transport e e'
+  | no_trans  : (¬ ∃ e', CanTransport e e') → Transport e e
+  | pi        : Transport α α' → Transport β β'
+    → Transport (Π.{[m]} α, β) (Π.{[m]} α', β')
+  | app       : Transport f f' → Transport x x'
+    → Transport ⸨f x⸩ ⸨f' x'⸩
+
+def transport (t : Expr) : ((t' : Expr) × (PLift (Transport t t'))) :=
+  match t with
+  | ⸨K'.{[m, n]} α β⸩ => ⟨_, ⟨.do_trans .K'_next⟩⟩
+  | ⸨K.{[m, n]} α β⸩ => ⟨_, ⟨.do_trans .K_next⟩⟩
+  | ⸨S.{[m, n, o]} α β γ⸩ => ⟨_, ⟨.do_trans .S_app'⟩⟩
+  | Π.{[m]} α, β =>
+    let ⟨α', ⟨hα⟩⟩ := transport α
+    let ⟨β', ⟨hβ⟩⟩ := transport β
+    ⟨_, ⟨.pi hα hβ⟩⟩
+  | ⸨f x⸩ =>
+    let ⟨f', ⟨hf⟩⟩ := transport f
+    let ⟨x', ⟨hx⟩⟩ := transport x
+    ⟨_, ⟨.app hf hx⟩⟩
+  | next => ⟨next, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
+  | read => ⟨read, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
+  | $ => ⟨$, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
+  | Srt m => ⟨Srt m, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
+  | S.{[m, n, o]} => ⟨S.{[m, n, o]}, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
+  | K.{[m, n]} => ⟨K.{[m, n]}, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
+  | K'.{[m, n]} => ⟨K'.{[m, n]}, ⟨.no_trans (fun ⟨_, h⟩ => by cases h)⟩⟩
+
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
   | K'  : Judge (K'.type m n) K'.{[m, n]}
@@ -161,3 +242,25 @@ instance infer.instDecidable : Decidable (Judge α x) :=
     simp_all
 
 #eval (infer ⸨K.{[2, 2]} (Srt 1) ⸨K'.{[3, 2]} (Srt 2) (Srt 1) (Srt 1)⸩ (Srt 0) (Srt 0)⸩).map (·.fst)
+
+def mk_I (α : Expr) (m : Level) : Expr :=
+  let α := α
+  -- y : α ~> Srt 1
+  -- y z = (Srt 0)
+  let y := ⸨(K'.{[2, m]}) (Srt 1) α (Srt 0)⸩
+  -- x : α ~> ((Srt 1) ~> α)
+  -- x z (y z) = K α (Srt 1) z (Srt 0)
+  let x := ⸨(K'.{[m, 2]}) α (Srt 1)⸩
+
+  -- (y z) : β x
+  -- β x = Srt 1
+  let β := ⸨(K'.{[3, m]}) (Srt 2) α (Srt 1)⸩
+  -- x z (y z) : γ z (y z)
+  -- γ z (y z) = α
+  -- γ : α → (β x) → (Srt m)
+  let γ := ⸨(K'.{[m.succ, m]}) ((~> m.succ) Srt 1, Srt m) α ⸨(K'.{[m.succ, 2]}) (Srt m) (Srt 1) α⸩⸩
+  dbg_trace Std.format <| (infer γ).map (·.fst)
+
+  ⸨(S.{[m, 2, m]}) α β γ x y⸩
+
+#eval (infer (mk_I (Srt 2) 3)).map (·.fst)

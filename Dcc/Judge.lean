@@ -162,6 +162,8 @@ def Expr.transport (t : Expr) : Expr :=
     ⸨f' x'⸩
   | e => e
 
+abbrev DefEq (α₁ α₂ : Expr) := ∃ D, ParRed α₁.transport D ∧ ParRed α₂.transport D
+
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
   | K'  : Judge (K'.type m n) K'.{[m, n]}
@@ -169,7 +171,7 @@ inductive Judge : Expr → Expr → Prop
   | Srt : Judge (Srt m.succ) (Srt m)
   | Pi  : Judge (Srt m) (Π.{[m]} _α, _β)
   | app : Judge (Π.{[m]} α₁, β) f → Judge α₂ x
-    → (∃ D, ParRed α₁.transport D ∧ ParRed α₂.transport D)
+    → DefEq α₁ α₂
     → RunPi x.transport β.transport β'
     → Judge β' ⸨f x⸩
 

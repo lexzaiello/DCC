@@ -496,7 +496,7 @@ elab "smart_reduce" "close" c:reduce_cmd : tactic => do
       | `(reduce_cmd| reduction) =>
         let ⟨E', hpr⟩ ← A'.reduce
 
-        if ¬ (← isDefEq E'.unify B) then
+        if ¬ (← isDefEq (← Lean.Core.betaReduce (← simp E'.unify (← Simp.Context.mkDefault)).fst.expr) B) then
           throwError Format.text "refusing. not def-eq: "
             ++ Format.line
             ++ (format E')
@@ -516,7 +516,7 @@ elab "smart_reduce" "close" c:reduce_cmd : tactic => do
       | `(reduce_cmd| reduction) =>
         let ⟨E', hpr⟩ ← A'.reduce
 
-        if ¬ (← isDefEq E'.unify B) then
+        if ¬ (← isDefEq (← Lean.Core.betaReduce (← simp E'.unify (← Simp.Context.mkDefault)).fst.expr) B) then
           throwError Format.text "refusing. not def-eq: "
             ++ Format.line
             ++ (format E')

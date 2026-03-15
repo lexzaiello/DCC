@@ -436,6 +436,7 @@ syntax "check?" term term : reduce_cmd
 syntax "check?"           : reduce_cmd
 syntax "show" reduce_cmd  : reduce_cmd
 syntax "close" reduce_cmd : reduce_cmd
+syntax "decide"           : reduce_cmd
 
 syntax reduce_cmd : term
 
@@ -457,7 +458,7 @@ macro_rules
     let c ← `($c:reduce_cmd)
     `(SmartReduce.cmd.c_close $c:term)
 
-elab "smart_reduce" "close" "reduction" : tactic => do
+elab "smart_reduce" "close" c:reduce_cmd : tactic => do
   let g ← getMainGoal
   g.withContext do
     let tgt ← g.getType
@@ -467,29 +468,41 @@ elab "smart_reduce" "close" "reduction" : tactic => do
       let A' := MExpr.decode A
       let B' := MExpr.decode B
 
-      let ⟨E', hpr⟩ ← A'.reduce
+      match c with
+      | `(reduce_cmd| reduction) =>
+        let ⟨E', hpr⟩ ← A'.reduce
 
-      if ¬ (← isDefEq E'.unify B) then
-        throwError Format.text "refusing. not def-eq: "
-          ++ Format.line
-          ++ (format E')
-          ++ Format.line ++ (format B')
-      else
-        let hpr' ← hpr.toLeanExpr
+        if ¬ (← isDefEq E'.unify B) then
+          throwError Format.text "refusing. not def-eq: "
+            ++ Format.line
+            ++ (format E')
+            ++ Format.line ++ (format B')
+        else
+          let hpr' ← hpr.toLeanExpr
+          g.assign q(ParRed.reduce_complete $hpr')
+      | `(reduce_cmd| decide) =>
+        let hpr' ← mkDecideProofQ q(ParRed $A $B)
         g.assign q(ParRed.reduce_complete $hpr')
+      | c => throwError s!"unexpected cmd: {repr c}"
     | .some ~q(ParRed $A $B) =>
       let A' := MExpr.decode A
       let B' := MExpr.decode B
 
-      let ⟨E', hpr⟩ ← A'.reduce
+      match c with
+      | `(reduce_cmd| reduction) =>
+        let ⟨E', hpr⟩ ← A'.reduce
 
-      if ¬ (← isDefEq E'.unify B) then
-        throwError Format.text "refusing. not def-eq: "
-          ++ Format.line
-          ++ (format E')
-          ++ Format.line ++ (format B')
-      else
-        g.assign (← hpr.toLeanExpr)
+        if ¬ (← isDefEq E'.unify B) then
+          throwError Format.text "refusing. not def-eq: "
+            ++ Format.line
+            ++ (format E')
+            ++ Format.line ++ (format B')
+        else
+          g.assign (← hpr.toLeanExpr)
+      | `(reduce_cmd| decide) =>
+        let hpr' ← mkDecideProofQ q(ParRed $A $B)
+        g.assign hpr'
+      | c => throwError s!"unexpected cmd: {repr c}"
     | e => throwError s!"not a valid reduction goal: {repr e}"
 
 /-syntax "reduce_as" : tactic

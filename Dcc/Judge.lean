@@ -99,6 +99,15 @@ instance Nbe.instDecicdable : Decidable (Nbe t t') :=
   else
     .isFalse (fun h₂ => h (Nbe.complete_nbe h₂))
 
+instance conv₁.instDecidable : Decidable (∃ D, Nbe A D ∧ Nbe B D) :=
+  if h : (nbe A).fst = (nbe B).fst then
+    .isTrue ⟨(nbe A).fst, (nbe A).snd.down, by rw [h]; exact (nbe B).snd.down⟩
+  else
+    .isFalse (fun ⟨D, h₁, h₂⟩ => by
+      let heq₁ := h₁.complete_nbe
+      let heq₂ := h₂.complete_nbe
+      simp_all)
+
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
   | K'  : Judge (K'.type m n) K'.{[m, n]}

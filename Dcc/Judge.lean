@@ -142,6 +142,7 @@ instance DefEq.instDecidable : Decidable (DefEq t₁ t₂) := by
       sorry
   sorry-/
 
+/-
 def Expr.transport (t : Expr) : Expr :=
   match t with
   | ⸨K'.{[_m, _n]} _α _β⸩
@@ -161,8 +162,9 @@ def Expr.transport (t : Expr) : Expr :=
     let x' := transport x
     ⸨f' x'⸩
   | e => e
+-/
 
-abbrev DefEq (α₁ α₂ : Expr) := ∃ D, ParRed α₁.transport D ∧ ParRed α₂.transport D
+abbrev DefEq (α₁ α₂ : Expr) := ∃ D, ParRed α₁ D ∧ ParRed α₂ D
 
 inductive Judge : Expr → Expr → Prop
   | K   : Judge (K.type m n) K.{[m, n]}
@@ -172,7 +174,7 @@ inductive Judge : Expr → Expr → Prop
   | Pi  : Judge (Srt m) (Π.{[m]} _α, _β)
   | app : Judge (Π.{[m]} α₁, β) f → Judge α₂ x
     → DefEq α₁ α₂
-    → RunPi x.transport β.transport β'
+    → RunPi x β β'
     → Judge β' ⸨f x⸩
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
@@ -185,10 +187,10 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   | ⸨f x⸩ => do
     match ← infer f, ← infer x with
     | ⟨Π.{[_m]} α₁, β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
-      if h : ∃ D, ParRed α₁.transport D ∧ ParRed α₂.transport D then
+      if h : ∃ D, ParRed α₁ D ∧ ParRed α₂ D then
         .some <| ⟨_, ⟨.app h_t_f h_t_x h (RunPi.sound
-          (e_arg := x.transport)
-          (e_pi := β.transport) rfl)⟩⟩
+          (e_arg := x)
+          (e_pi := β) rfl)⟩⟩
       else
         .none
     | _, _ => .none
@@ -244,6 +246,8 @@ inner = K'.{[2, 3]} (Srt 1) (Srt 2)
 x = K.{[3, 3]} (Srt 2)
 -/
 
+/-
+Need transport for this to work.
 def test_S : Option Expr := do
   let s := S.{[3, 3, 3]}
   let α := (Srt 2)
@@ -276,3 +280,4 @@ def test_S : Option Expr := do
   Sigma.fst <$> infer ⸨s α β γ x y z⸩
 
 #eval test_S.map (fun e => Sigma.fst <| reduce <| Sigma.fst <| reduce e)
+-/

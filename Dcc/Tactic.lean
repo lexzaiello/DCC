@@ -139,21 +139,21 @@ def MExpr.toFormat : MExpr → Format
 instance : ToFormat MExpr := ⟨MExpr.toFormat⟩
 instance : ToString MExpr := ⟨toString ∘ MExpr.toFormat⟩
 
-def MExpr.decode (e : Lean.Expr) : MExpr :=
+def MExpr.decode (e : Q(_root_.Expr)) : TacticM MExpr := do
   match e with
-  | (.app (.app (.const `Expr.app []) f) x) => .app (decode f) (decode x)
+  | (.app (.app (.const ``Expr.app []) f) x) => pure <| .app (← decode f) (← decode x)
   | .app (.app (.app (.const ``Expr.Pi []) m) α) β =>
-    let α' := decode α
-    let β' := decode β
-    .Pi m α' β'
-  | .app (.const ``Expr.Srt []) m  => .Srt m
-  | (.app (.app (.const `Expr.K' []) m) n) => .K' m n
-  | (.app (.app (.const `Expr.K []) m) n) => .K m n
-  | (.app (.app (.app (.const `Expr.S []) m) n) o) => .S m n o
-  | .const `Expr.next [] => .next
-  | .const `Expr.read [] => .read
-  | .const `Expr.app' [] => .app'
-  | e => .lean_e e
+    let α' ← decode α
+    let β' ← decode β
+    pure <| .Pi m α' β'
+  | ~q(Srt $m) => pure <| .Srt m
+  | ~q(K'.{[$m, $n]}) => pure <| .K' m n
+  | ~q(K.{[$m, $n]}) => pure <| .K m n
+  | ~q(S.{[$m, $n, $o]}) => pure <| .S m n o
+  | ~q(next) => pure .next
+  | ~q(read) => pure .read
+  | ~q($) => pure .app'
+  | e => pure <| .lean_e e
 
 def MExpr.unify (e : MExpr) : Q(_root_.Expr) :=
   match e with
@@ -315,42 +315,46 @@ Ranks ParRed or Judge proofs by:
 1. The number of spines they contain
 2. The number of other hypotheses they mention
 -/
-def rank_solutions {P : Q(_root_.Expr → _root_.Expr → Prop)} {A : MExpr}
-  (solutions : List ((B : MExpr) × Q($P $(MExpr.unify A) $(MExpr.unify B)))) : List ((B : MExpr) × Q($P $(MExpr.unify A) $(MExpr.unify B))) :=
-  let with_spines_hyps := solutions.map (fun e@⟨B, _sol⟩ =>
-    let n_spines := B.n_args_spine
-    let n_mentions := B.n_mentions
-    ((n_spines, n_mentions), e))
+def rank_solutions {P : Q(_root_.Expr → _root_.Expr → Prop)} {A : Q(_root_.Expr)}
+  (solutions : List ((B : Q(_root_.Expr)) × Q($P $A $B))) : TacticM (List ((B : Q(_root_.Expr)) × Q($P $A $B))) := do
+  let with_spines_hyps : List ((Option ℕ × ℕ) × (B : Q(_root_.Expr)) × Q($P $A $B)) :=
+    ← solutions.mapM (m := TacticM) (fun e@⟨B, _sol⟩ => do
+      let B : MExpr := ← MExpr.decode B
 
-  let le : (Option ℕ × ℕ) × (B : MExpr) × Q($P $(A.unify) $(B.unify))
-        → (Option ℕ × ℕ) × (B : MExpr) × Q($P $(A.unify) $(B.unify)) → Bool :=
+      match B.n_args_spine with
+      | Option.some n_spines =>
+        pure <| ((.some n_spines, B.n_mentions), e)
+      | _ => pure ((.none, B.n_mentions), e))
+
+  let le : ((Option ℕ × ℕ)) × (B : Q(_root_.Expr)) × Q($P $A $B)
+        → ((Option ℕ × ℕ)) × (B : Q(_root_.Expr)) × Q($P $A $B) → Bool :=
         fun ⟨⟨nargs₁, nm₁⟩, _⟩ ⟨⟨nargs₂, nm₂⟩, _⟩ =>
           match nargs₁, nargs₂ with
           | .some n₁, .some n₂ => n₁ < n₂
           | _, .some _n₂ => false
           | _, _ => nm₁ < nm₂
 
-  ((List.mergeSort with_spines_hyps le).reverse).map Prod.snd
+  return ((List.mergeSort with_spines_hyps le).reverse).map Prod.snd
 
-open Qq in def parred_solution (A : Q(_root_.Expr)) : TacticM (Option ((B : MExpr) × Q(ParRed $A $(B.unify)))) := do
+open Qq in def parred_solution (A : Q(_root_.Expr)) : TacticM (Option ((B : Q(_root_.Expr)) × Q(ParRed $A $B))) := do
   let g ← getMainGoal
   g.withContext do
-    let potential_solutions : List ((B : MExpr) × Q(ParRed $A $(B.unify))) := ← (← getLCtx).decls.toList.filterMapM (fun (decl : Option LocalDecl) =>
+    let potential_solutions : List ((B : Q(_root_.Expr)) × Q(ParRed $A $B)) := ← (← getLCtx).decls.toList.filterMapM (fun (decl : Option LocalDecl) =>
       decl.bindM (fun (decl : LocalDecl)=> do
         let ty' ← checkTypeQ (← whnf decl.type) q(Prop)
         match ty' with
         | .some ~q(ParRed $A' $B) =>
           if ← isDefEq A A' then
-            pure <| .some ⟨MExpr.decode B, .fvar decl.fvarId⟩
+            pure <| .some ⟨B, .fvar decl.fvarId⟩
           else
             pure .none
         | .some ~q((_root_.reduce $A').fst = $B) =>
           if ← isDefEq A A' then
-            pure <| .some (⟨MExpr.decode B, .fvar decl.fvarId⟩ : ((B : MExpr) × Q(ParRed $A $(B.unify))))
+            pure <| .some (⟨B, .fvar decl.fvarId⟩ : ((B : Q(_root_.Expr)) × Q(ParRed $A $B)))
           else
             pure .none
         | _ => pure Option.none))
-    let ranked := rank_solutions potential_solutions (A := MExpr.decode A) (P := q(ParRed))
+    let ranked ← rank_solutions potential_solutions (A := A) (P := q(ParRed))
     pure ranked.head?
 
 def MExpr.reduce (e : MExpr) : TacticM ((e' : MExpr) × ParRed' e e') :=
@@ -404,8 +408,8 @@ def MExpr.reduce (e : MExpr) : TacticM ((e' : MExpr) × ParRed' e e') :=
     | .read => pure ⟨.read, .refl_read⟩
     | .next => pure ⟨.next, .refl_next⟩
     | .lean_e e => do
-      let  ⟨B, qhpr⟩ := (← parred_solution e).getD ⟨.lean_e q((reduce $e).fst), q((reduce $e).snd.down)⟩
-      pure ⟨.lean_e B.unify, .lean qhpr⟩
+      let  ⟨B, qhpr⟩ := (← parred_solution e).getD ⟨q((reduce $e).fst), q((reduce $e).snd.down)⟩
+      pure ⟨.lean_e B, .lean qhpr⟩
 
 def ParRed'.toLeanExpr (h : ParRed' A B) : MetaM Q(_root_.ParRed $(A.unify) $(B.unify)) :=
   match h with
@@ -463,9 +467,9 @@ elab "smart_reduce" "show" c:reduce_cmd : tactic => do
   g.withContext do
     match c with
     | `(reduce_cmd| reduce $t:term) =>
-      let A := MExpr.decode (← elabTerm t (.some q(_root_.Expr)))
+      let A ← MExpr.decode (← elabTerm t (.some q(_root_.Expr)))
       let ⟨r', _⟩ ← A.reduce
-      let r' := MExpr.decode (← whnf (← reduceAll <| r'.unify))
+      let r' ← MExpr.decode (← whnf (← reduceAll <| r'.unify))
       logInfo (.ofFormat ("reduced: " ++ (.nest 2 <| .line ++ (format r'))))
     | `(reduce_cmd| reduction) =>
       let tgt ← g.getType
@@ -475,10 +479,10 @@ elab "smart_reduce" "show" c:reduce_cmd : tactic => do
       | .some ~q((_root_.reduce $A).fst = $B) => pure A
       | .some ~q(ParRed $A $B) => pure A
       | g => throwError s!"not a recognized goal: {repr g}"))
-      let A := MExpr.decode A_raw
+      let A ← MExpr.decode A_raw
 
       let ⟨r', _⟩ ← A.reduce
-      let r' := MExpr.decode (← whnf (← reduceAll <| r'.unify))
+      let r' ← MExpr.decode (← whnf (← reduceAll <| r'.unify))
       logInfo (.ofFormat ("reduced: " ++ (.nest 2 <| .line ++ (format r'))))
     | c => throwError s!"not a valid cmd: {repr c}"
 
@@ -489,14 +493,16 @@ elab "smart_reduce" "close" c:reduce_cmd : tactic => do
     let tgt' ← checkTypeQ tgt q(Prop)
     match tgt' with
     | .some ~q((_root_.reduce $A).fst = $B) =>
-      let A' := MExpr.decode A
-      let B' := MExpr.decode B
+      let A' ← MExpr.decode A
+      let B' ← MExpr.decode B
 
       match c with
       | `(reduce_cmd| reduction) =>
         let ⟨E', hpr⟩ ← A'.reduce
 
-        if ¬ (← isDefEq (← Lean.Core.betaReduce (← simp E'.unify (← Simp.Context.mkDefault)).fst.expr) B) then
+        let E' ← Lean.Core.betaReduce (← simp E'.unify (← Simp.Context.mkDefault)).fst.expr
+
+        if ¬ (← isDefEq E' B) then
           throwError Format.text "refusing. not def-eq: "
             ++ Format.line
             ++ (format E')
@@ -509,14 +515,16 @@ elab "smart_reduce" "close" c:reduce_cmd : tactic => do
         g.assign q(ParRed.reduce_complete $hpr')
       | c => throwError s!"unexpected cmd: {repr c}"
     | .some ~q(ParRed $A $B) =>
-      let A' := MExpr.decode A
-      let B' := MExpr.decode B
+      let A' ← MExpr.decode A
+      let B' ← MExpr.decode B
 
       match c with
       | `(reduce_cmd| reduction) =>
         let ⟨E', hpr⟩ ← A'.reduce
 
-        if ¬ (← isDefEq (← Lean.Core.betaReduce (← simp E'.unify (← Simp.Context.mkDefault)).fst.expr) B) then
+        let E' ← Lean.Core.betaReduce (← simp E'.unify (← Simp.Context.mkDefault)).fst.expr
+
+        if ¬ (← isDefEq E' B) then
           throwError Format.text "refusing. not def-eq: "
             ++ Format.line
             ++ (format E')

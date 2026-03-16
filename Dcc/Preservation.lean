@@ -14,6 +14,33 @@ theorem DefEq.trans : DefEq a b → DefEq b c → DefEq a c := fun ⟨D₁, h₁
   exact ParRed.reduce_sound (by assumption)
   exact ParRed.reduce_sound (by assumption)
 
+theorem DefEq.congr_left : DefEq f f' → DefEq ⸨f x⸩ ⸨f' x⸩ := by
+  intro ⟨D, h₁, h₂⟩
+  induction h₁
+  simp_all
+  rename_i x' _ _ _ _ _ _ _
+  refine ⟨(x'.app x), ParRed.app ?_ ?_ ?_, ?_⟩
+  · apply Expr.is_redex.sound'
+    simp [Expr.is_redex]
+  apply ParRed.k
+  · assumption
+  
+
+theorem DefEq.congr : DefEq f f' → DefEq x x' → DefEq ⸨f x⸩ ⸨f' x'⸩ := by
+  intro ⟨D₁, h₁, h₂⟩ ⟨D₂, h₃, h₄⟩
+  reduce_equations
+  induction h₁
+  · simp_all
+    rename_i ih
+    have h := ih (ParRed.reduce_complete (by assumption))
+    apply DefEq.symm
+    apply DefEq.trans
+    exact h.symm
+    apply DefEq.symm
+    
+    sorry
+  sorry
+
 theorem RunPi.weak_stable : RunPi arg t t' → ParRed arg arg' → ∃ t'', RunPi arg' t t'' := fun _ _ =>
   ⟨_, RunPi.sound rfl⟩
 

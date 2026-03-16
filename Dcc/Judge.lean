@@ -164,15 +164,60 @@ def Expr.transport (t : Expr) : Expr :=
   | e => e
 -/
 
-abbrev DefEq (α₁ α₂ : Expr) := ∃ D, ParRed α₁ D ∧ ParRed α₂ D
+inductive DefEq : Expr → Expr → Prop
+  | step   : (∃ D, ParRed α₁ D ∧ ParRed α₂ D)
+    → DefEq α₁ α₂
+  | congr  : ¬ (∃ D, ParRed ⸨f x⸩ D ∧ ParRed ⸨g y⸩ D)
+    → DefEq f g
+    → DefEq x y
+    → DefEq ⸨f x⸩ ⸨g y⸩
+  | picong : ¬ (∃ D, ParRed (Π.{[m]} α, β) D ∧ ParRed (Π.{[m]} γ, δ) D)
+    → DefEq α γ
+    → DefEq β δ
+    → DefEq (Π.{[m]} α, β) (Π.{[m]} γ, δ)
+
+def is_def_eq (e₁ e₂ : Expr) : Option (PLift <| DefEq e₁ e₂) :=
+  if h : ∃ D, ParRed e₁ D ∧ ParRed e₂ D then
+    .some ⟨.step h⟩
+  else
+    match heq : e₁, e₂ with
+    | ⸨f x⸩, ⸨g y⸩ =>
+      match is_def_eq f g, is_def_eq x y with
+      | .some ⟨p₁⟩, .some ⟨p₂⟩ =>
+        .some ⟨.congr h p₁ p₂⟩
+      | _, _ => .none
+    | Π.{[m]} α, β, Π.{[n]} γ, δ =>
+      if hm : m = n then
+        match is_def_eq α γ, is_def_eq β δ with
+        | .some ⟨p₁⟩, .some ⟨p₂⟩ =>
+          have h := DefEq.picong (by rw [← hm] at h; exact h) p₁ p₂
+          .some ⟨by rw [← hm]; exact h⟩
+        | _, _ => .none
+      else .none
+    | _, _ => .none
+
+theorem DefEq.sound : (is_def_eq e₁ e₂ = .some ⟨p⟩) → DefEq e₁ e₂ := fun _ => p
+
+theorem DefEq.complete (h : DefEq e₁ e₂) : is_def_eq e₁ e₂ = .some ⟨p⟩ := by
+  induction h
+  · unfold is_def_eq
+    simp_all
+  repeat ({
+    unfold is_def_eq
+    split
+    · simp_all
+    simp
+    rename_i df dg ih₁ ih₂ _
+    simp [@ih₁ df, @ih₂ dg]
+  })
 
 inductive Judge : Expr → Expr → Prop
-  | K   : Judge (K.type m n) K.{[m, n]}
-  | K'  : Judge (K'.type m n) K'.{[m, n]}
-  | S   : Judge (S.type m n o) S.{[m, n, o]}
-  | Srt : Judge (Srt m.succ) (Srt m)
-  | Pi  : Judge (Srt m) (Π.{[m]} _α, _β)
-  | app : Judge (Π.{[m]} α₁, β) f → Judge α₂ x
+  | K     : Judge (K.type m n) K.{[m, n]}
+  | K'    : Judge (K'.type m n) K'.{[m, n]}
+  | S     : Judge (S.type m n o) S.{[m, n, o]}
+  | Srt   : Judge (Srt m.succ) (Srt m)
+  | Pi    : Judge (Srt m) (Π.{[m]} _α, _β)
+  | app   : Judge (Π.{[m]} α₁, β) f → Judge α₂ x
     → DefEq α₁ α₂
     → RunPi x β β'
     → Judge β' ⸨f x⸩

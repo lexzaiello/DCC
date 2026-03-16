@@ -127,6 +127,16 @@ theorem RunPi.complete (h : RunPi arg in_e e') : run_pi arg in_e = ⟨e', ⟨h�
     simp [run_pi, e'.complete]
     exact ⟨h, by congr; expose_names; exact heq_of_eqRec_eq (congrArg (RunPi arg e_1) h) rfl⟩
 
+instance RunPi.instDecidable : Decidable (RunPi arg in_e e') :=
+  let h := run_pi arg in_e
+  if heq : h.fst = e' then
+    .isTrue (heq ▸ h.snd.down)
+  else
+    .isFalse (fun h' =>
+      have ha := h'.complete
+      have hb := h.snd.down.complete
+      False.elim <| heq (by simp_all))
+
 def Expr.n_ty_comb : Expr → ℕ
   | C | B | K* | I => 1
   | Π' α, β => α.n_ty_comb + β.n_ty_comb

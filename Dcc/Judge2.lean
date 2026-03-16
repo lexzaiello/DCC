@@ -77,6 +77,12 @@ def Expr.IsNotBinder.complete (_h : Expr.IsNotBinder e) : e.is_not_binder.isSome
   cases _h
   repeat rfl
 
+instance Expr.IsNotBinder.instDecidable : Decidable (Expr.IsNotBinder e) :=
+  if h : e.is_not_binder.isSome then
+    .isTrue (e.is_not_binder.get h).down
+  else
+    .isFalse (fun h => by simp [h.complete] at *)
+
 inductive RunPi (arg : Expr) : Expr → Expr → Prop
   | pi       : RunPi arg α α'
     → RunPi arg β β'
@@ -96,36 +102,30 @@ we probably want a directed version.
 -/
 
 def run_pi (arg in_e : Expr) : (e' : Expr) × (PLift (RunPi arg in_e e')) :=
-  match in_e with
-  | Π' α, β =>
-    let ⟨α', ⟨h₁⟩⟩ := run_pi arg α
-    let ⟨β', ⟨h₂⟩⟩ := run_pi arg β
-    ⟨(Π' α', β'), ⟨.pi h₁ h₂⟩⟩
-  | e =>
-    ⟨⸨in_e arg⸩.red_ty_comb.fst, ⟨.app ⸨in_e arg⸩.red_ty_comb.snd.down⟩⟩
+  if h : in_e.is_not_binder.isSome then
+    let h_e := in_e.is_not_binder.get h
+    ⟨⸨in_e arg⸩.red_ty_comb.fst, ⟨.app h_e.down ⸨in_e arg⸩.red_ty_comb.snd.down⟩⟩
+  else
+    match in_e with
+    | Π' α, β =>
+      let ⟨α', ⟨h₁⟩⟩ := run_pi arg α
+      let ⟨β', ⟨h₂⟩⟩ := run_pi arg β
+      ⟨(Π' α', β'), ⟨.pi h₁ h₂⟩⟩
 
-theorem RunPi.sound {h : (run_pi arg in_e).isSome} : ((run_pi arg in_e).get h).fst = e' → RunPi arg in_e e' := fun heq => by
-  have h := ((run_pi arg in_e).get h).snd.down
-  rw [heq] at h
-  exact h
+theorem RunPi.sound : run_pi arg in_e = ⟨e', ⟨h⟩⟩ → RunPi arg in_e e' := fun heq => by
+  simp_all
 
-theorem RunPi.complete (h : RunPi arg in_e e') : run_pi arg in_e = .some ⟨e', ⟨h⟩⟩ := by
+theorem RunPi.complete (h : RunPi arg in_e e') : run_pi arg in_e = ⟨e', ⟨h⟩⟩ := by
   induction h
   · rename_i  α α' β β' ha hb ih₁ ih₂
-    unfold run_pi
-    unfold Expr.red_ty_comb
-    unfold Expr.ty_is_redex
-    unfold Expr.red_ty_comb
-    unfold Expr.ty_is_redex
-    simp [ih₁, ih₂]
+    dsimp [run_pi, Expr.is_not_binder]
+    simp_all
+    congr
+    repeat simp_all
   · rename_i e e' ih
     let h := ih.complete
-    simp at h
-    unfold run_pi
-    simp [h]
-    congr
-    repeat simp [h]
-    exact ih
+    simp [run_pi, e'.complete]
+    exact ⟨h, by congr; expose_names; exact heq_of_eqRec_eq (congrArg (RunPi arg e_1) h) rfl⟩
 
 def Expr.n_ty_comb : Expr → ℕ
   | C | B | K* | I => 1

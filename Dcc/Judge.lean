@@ -2,26 +2,26 @@ import Dcc.Ast
 import Dcc.Eval
 import Mathlib.Data.Nat.Notation
 
-def K'.type (m n : Level) : Expr :=
+@[simp] abbrev K'.type (m n : Level) : Expr :=
   Π.{[m]} Srt m, Π.{[m]} ⸨next (Srt n)⸩, Π.{[m]} (0 next), Π.{[m]} (1 next), ((0 read).assert_n 3)
 
-def K.β_arg (_m n : Level) : Expr :=
+@[simp] abbrev K.β_arg (_m n : Level) : Expr :=
   Π.{[n.succ]} (0 read), (1 ⸨next (Srt n)⸩)
 
-def K.x_arg : Expr := (0 next)
+@[simp] abbrev K.x_arg : Expr := (0 next)
 
-def K.y_arg : Expr := ⸨$ ⸨$ read⸩ (1 next) (2 read)⸩
+@[simp] abbrev K.y_arg : Expr := ⸨$ ⸨$ read⸩ (1 next) (2 read)⸩
 
-def K.cod : Expr := (read).assert_n 3
+@[simp] abbrev K.cod : Expr := (read).assert_n 3
 
-def K.type (m n : Level) : Expr :=
+@[simp] abbrev K.type (m n : Level) : Expr :=
     Π.{[m]} Srt m
   , Π.{[m]} (K.β_arg m n)
   , Π.{[m]} K.x_arg
   , Π.{[m]} K.y_arg
   , K.cod
 
-def S.type (m n o : Level) : Expr :=
+@[simp] abbrev S.type (m n o : Level) : Expr :=
     Π.{[o]} Srt m
   , Π.{[o]} (Π.{[n.succ]} (0 read), (1 ⸨next (Srt n)⸩))
   , Π.{[o]} (Π.{[o.succ]} (0 next)
@@ -172,6 +172,8 @@ theorem DefEq.complete (h : DefEq e₁ e₂) : is_def_eq e₁ e₂ = .some ⟨h�
     simp [@ih₁, @ih₂]
   })
 
+theorem DefEq.refl : DefEq A A := .step ⟨_, (_root_.reduce A).snd.down, (_root_.reduce A).snd.down⟩
+
 theorem DefEq.symm : DefEq A B → DefEq B A := by
   intro ha
   induction ha with
@@ -208,7 +210,8 @@ inductive Judge : Expr → Expr → Prop
   | S     : Judge (S.type m n o) S.{[m, n, o]}
   | Srt   : Judge (Srt m.succ) (Srt m)
   | Pi    : Judge (Srt m) (Π.{[m]} _α, _β)
-  | app   : Judge (Π.{[m]} α₁, β) f → Judge α₂ x
+  | app   : Judge (Π.{[m]} α₁, β) f
+    → Judge α₂ x
     → DefEq α₁ α₂
     → RunPi x β β'
     → Judge β' ⸨f x⸩
@@ -272,7 +275,7 @@ S (α := Srt 1) (β := λ (x : α), α) (γ := λ (x : α) (y : α) K'.{[m, m]})
 
 --#eval (infer ).map (·.fst)
 
-#eval (infer ⸨K'.{[3, 3]} (Srt 2) (Srt 2)⸩).map (·.fst)
+#eval (infer ⸨K'.{[3, 3]} (Srt 2) (Srt 2) (Srt 1) (Srt 1)⸩).map (·.fst)
 
 /-
 x : (x : Srt 2) ~> Srt 2 ~> x

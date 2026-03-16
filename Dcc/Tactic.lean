@@ -33,6 +33,8 @@ def cases_matcher (matcher : Lean.Expr → MetaM Bool) (recursive := false) (all
 
 syntax "cases_spine" "*"*  : tactic
 syntax "lcases_spine" "*"* : tactic
+syntax "contra_binder" : tactic
+syntax "binder_contra" : tactic
 
 elab "cases_spine" star:"*"* : tactic => do
   cases_matcher (fun (ty : Q(Prop)) => do
@@ -41,23 +43,42 @@ elab "cases_spine" star:"*"* : tactic => do
         if ¬ star.isEmpty then contains_spine (← whnf x) else contains_spine x
       | ~q(ParRed $α $e') => do
         if ¬ star.isEmpty then contains_spine (← whnf α) else contains_spine α
+      | ~q(DefEq $α $e') => do
+        if ¬ star.isEmpty then contains_spine (← whnf α) else contains_spine α
+      | ~q(RunPi $arg $in_e $t') => do
+        if ¬ star.isEmpty then
+          pure ((← contains_spine in_e) ∨ (← contains_spine t'))
+        else pure false
       | _ => pure false)
+
+elab "binder_contra" : tactic => do
+  cases_matcher (fun (ty : Q(Prop)) => do
+      match ty with
+      | ~q(Binder (_root_.Expr.app $f $x)) => pure true
+      | ~q(Binder (.comb $c)) => pure true
+      | _ => pure false) (recursive := true)
+
+
+elab "contra_binder" : tactic => do
+  let g ← getMainGoal
+  g.withContext do
+    for decl in (← getLCtx).decls do
+      if let some decl := decl then
+        let ty' ← checkTypeQ (← whnf decl.type) q(Prop)
+          match ty' with
+          | .some ~q(¬ Binder (Π.{[$m]} $α, $β)) =>
+            let id : Q(Binder (Π.{[$m]} $α, $β) → False) :=
+              Lean.Expr.fvar decl.fvarId
+            g.assignFalseProof (q($id Binder.mk))
+          | _ => pure ()
 
 syntax "cases_conv" "*"* : tactic
 
 elab "cases_conv" star:"*"* : tactic => do
   cases_matcher (fun (ty : Q(Prop)) => do
       match ty with
-      | ~q(∃ D, ParRed $A D ∧ ParRed $B D) =>
-        if ¬ star.isEmpty then
-          pure <| (← contains_spine (← whnf A)) ∨ (← contains_spine (← whnf B))
-        else
-          pure <| (← contains_spine A) ∨ (← contains_spine B)
-      | ~q(ParRed $A $D ∧ ParRed $B $D) =>
-        if ¬ star.isEmpty then
-          pure <| (← contains_spine (← whnf A)) ∨ (← contains_spine (← whnf B))
-        else
-          pure <| (← contains_spine A) ∨ (← contains_spine B)
+      | ~q(∃ D, ParRed $A D ∧ ParRed $B D) => pure true
+      | ~q(ParRed $A $D ∧ ParRed $B $D) => pure true
       | _ => pure false) (recursive := true)
 
 syntax "reduce!" term   : term
@@ -439,6 +460,7 @@ syntax "reduce" term      : reduce_cmd
 syntax "check?" term term : reduce_cmd
 syntax "check?"           : reduce_cmd
 syntax "show" reduce_cmd  : reduce_cmd
+syntax "change_reduce"    : reduce_cmd
 syntax "close" reduce_cmd : reduce_cmd
 syntax "decide"           : reduce_cmd
 
@@ -461,6 +483,26 @@ macro_rules
   | `(close $c:reduce_cmd) => do
     let c ← `($c:reduce_cmd)
     `(SmartReduce.cmd.c_close $c:term)
+
+elab "smart_reduce" "change_all" : tactic => do
+  let g ← getMainGoal
+  g.withContext do
+    for decl in (← getLCtx).decls do
+      if let some decl := decl then
+         let ty' ← checkTypeQ (← whnf decl.type) q(Prop)
+         match ty' with
+         | .some ~q((_root_.reduce $x).fst = $y) =>
+           if ← contains_spine x then
+             let A ← MExpr.decode x
+             let ⟨r', p⟩ ← A.reduce
+             let pe ← p.toLeanExpr
+             let re : Q(_root_.Expr) := ← whnf (← reduceAll r'.unify)
+             let nm := decl.userName
+             let hyp := Hypothesis.mk nm q((_root_.reduce $x).fst = $re) pe .default .default
+             let _ ← g.assertHypotheses ⟨[hyp]⟩
+           else
+             pure ()
+         | _ => pure ()
 
 elab "smart_reduce" "show" c:reduce_cmd : tactic => do
   let g ← getMainGoal

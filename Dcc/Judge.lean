@@ -103,46 +103,7 @@ instance RunPi.instDecidabble : Decidable (RunPi e_arg e_pi e') :=
       contradiction)
 
 /-
-Todo: this is very hacky.
-Only useful under Pi binders.
-This turns typed user-land combinators into our Π combinators.
-inductive Transport : Expr → Expr → Prop
-  | K'_next  : Transport ⸨K'.{[m, n]} α β⸩ next
-  | K_next   : Transport ⸨K.{[m, n]} α β⸩ next
-  | app      : Transport f f'  → Transport ⸨f x⸩ ⸨f' x⸩
-  | pi       : Transport α₁ α₂ → Transport (Π.{[m]} α₁, β₁) (Π.{[m]} α₂, β₂)
-
-def transport (t : Expr) : Option ((t' : Expr) × (PLift (Transport t t'))) :=
-
-inductive DefEq : Expr → Expr → Prop
-  | red_conv : (∃ D, ParRed α₁ D ∧ ParRed α₂ D)
-    → DefEq α₁ α₂
-  | propext  : Binder p₁ → Binder p₂
-    → (ParRed ⸨p₁ (Srt 0)⸩ B)
-    → (ParRed ⸨p₂ (Srt 0)⸩ B)
-    → DefEq p₁ p₂
-
-instance DefEq.instDecidable : Decidable (DefEq t₁ t₂) := by
-  cases t₁
-  cases t₂
-  · rename_i m α₁ β₁ n α₂ β₂
-    if h : (reduce ⸨(Π.{[m]} α₁, β₁) (Srt 0)⸩).fst = (reduce ⸨(Π.{[n]} α₂, β₂) (Srt 0)⸩).fst then
-      apply Decidable.isTrue
-      apply DefEq.propext
-      · exact Binder.mk
-      · exact Binder.mk
-      · exact ParRed.reduce_sound rfl
-      · rw [h]
-        exact ParRed.reduce_sound rfl
-    else
-      apply Decidable.isFalse
-      intro h
-      cases h
-      
-      sorry
-  sorry-/
-
-/-
+TODO: add these back optionally
 def Expr.transport (t : Expr) : Expr :=
   match t with
   | ⸨K'.{[_m, _n]} _α _β⸩
@@ -198,7 +159,7 @@ def is_def_eq (e₁ e₂ : Expr) : Option (PLift <| DefEq e₁ e₂) :=
 
 theorem DefEq.sound : (is_def_eq e₁ e₂ = .some ⟨p⟩) → DefEq e₁ e₂ := fun _ => p
 
-theorem DefEq.complete (h : DefEq e₁ e₂) : is_def_eq e₁ e₂ = .some ⟨p⟩ := by
+theorem DefEq.complete (h : DefEq e₁ e₂) : is_def_eq e₁ e₂ = .some ⟨h⟩ := by
   induction h
   · unfold is_def_eq
     simp_all
@@ -208,8 +169,42 @@ theorem DefEq.complete (h : DefEq e₁ e₂) : is_def_eq e₁ e₂ = .some ⟨p�
     · simp_all
     simp
     rename_i df dg ih₁ ih₂ _
-    simp [@ih₁ df, @ih₂ dg]
+    simp [@ih₁, @ih₂]
   })
+
+theorem DefEq.symm : DefEq A B → DefEq B A := by
+  intro ha
+  induction ha with
+  | step h =>
+    let ⟨D, h₁, h₂⟩ := h
+    exact .step ⟨D, h₂, h₁⟩
+  | congr ih =>
+    apply DefEq.congr
+    · simp_all
+      intro x h h₂
+      exact absurd h (ih _ (by assumption))
+    repeat assumption
+  | picong ih =>
+    apply DefEq.picong
+    · simp_all
+      intro x h h₂
+      exact absurd h (ih _ (by assumption))
+    repeat assumption
+
+theorem DefEq.diamond (h₁ : DefEq A B) (h₂ : DefEq A C) : ∃ D, DefEq B D ∧ DefEq C D := by
+  have ha := h₁.complete
+  have hb := h₂.complete
+  
+  refine ⟨_, .step ParRed.reduce_self' (by sorry) (by sorry), ?_⟩
+  sorry
+
+instance DefEq.instDecidable : Decidable (DefEq e₁ e₂) :=
+  if h : (is_def_eq e₁ e₂).isSome then
+    .isTrue ((is_def_eq e₁ e₂).get h).down
+  else
+    .isFalse (fun h => by
+      have h₂ := h.complete
+      simp_all)
 
 inductive Judge : Expr → Expr → Prop
   | K     : Judge (K.type m n) K.{[m, n]}
@@ -232,7 +227,7 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift <| Judge t e)) :=
   | ⸨f x⸩ => do
     match ← infer f, ← infer x with
     | ⟨Π.{[_m]} α₁, β, ⟨h_t_f⟩⟩, ⟨α₂, ⟨h_t_x⟩⟩ =>
-      if h : ∃ D, ParRed α₁ D ∧ ParRed α₂ D then
+      if h : DefEq α₁ α₂ then
         .some <| ⟨_, ⟨.app h_t_f h_t_x h (RunPi.sound
           (e_arg := x)
           (e_pi := β) rfl)⟩⟩

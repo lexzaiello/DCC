@@ -56,13 +56,11 @@ in scope:
   | _ => 0
 
 inductive RunPi (arg : Expr) : Expr → Expr → Prop
-  | pi      : RunPi arg α α'
+  | pi       : RunPi arg α α'
     → RunPi arg β β'
     → RunPi arg (Π' α, β) (Π' α', β')
-  | app     : ⸨f x arg⸩.RedTyComb e'
-    → RunPi arg ⸨f x⸩ e'
-  | refl_c  : RunPi arg (.tycomb c) ⸨(.tycomb c) arg⸩
-  | refl_tm : RunPi arg (.comb c) ⸨(.comb c) arg⸩
+  | app      : ⸨e arg⸩.RedTyComb e'
+    → RunPi arg e e'
 
 /-
 run_pi should strictly decrease the size of in_e with respect to
@@ -75,20 +73,17 @@ we probably want a directed version.
 -/
 
 def run_pi (arg in_e : Expr) : Option ((e' : Expr) × (PLift (RunPi arg in_e e'))) :=
-  dbg_trace repr in_e
-  match in_e with
-  | Π' α, β => do
-    let ⟨α', ⟨hα⟩⟩ ← run_pi arg α
-    let ⟨β', ⟨hβ⟩⟩ ← run_pi arg β
-    return ⟨(Π' α', β'), ⟨.pi hα hβ⟩⟩
-  | read => pure ⟨arg, ⟨.read⟩⟩
-  | ⸨next f⸩ => pure ⟨f, ⟨.next⟩⟩
-  | next => pure ⟨⸨next arg⸩, ⟨.next₀⟩⟩
-  | ⸨$ π f g⸩ => pure ⟨⸨π ⸨f arg⸩ ⸨g arg⸩⸩, ⟨.app'⟩⟩
-  | $ => pure ⟨⸨$ arg⸩, ⟨.app₀⟩⟩
-  | ⸨$ a⸩ => pure ⟨⸨$ a arg⸩, ⟨.app₁⟩⟩
-  | ⸨$ a b⸩ => pure ⟨⸨$ a b arg⸩, ⟨.app₂⟩⟩
-  | _ => .none
+  match heq : ⸨in_e arg⸩.red_ty_comb with
+  | .some ⟨e', ⟨h⟩⟩ => .some ⟨e', ⟨.app h⟩⟩
+  | .none =>
+    match in_e with
+    | (Srt _m) => .none
+    | Π' α, β => do
+      let ⟨α', ⟨h₁⟩⟩ ← run_pi arg α
+      let ⟨β', ⟨h₂⟩⟩ ← run_pi arg β
+      .some ⟨Π' α', β', ⟨.pi h₁ h₂⟩⟩
+    | ⸨_f _x⸩ => .none
+    | _ => .none
 
 theorem RunPi.sound {h : (run_pi arg in_e).isSome} : ((run_pi arg in_e).get h).fst = e' → RunPi arg in_e e' := fun heq => by
   have h := ((run_pi arg in_e).get h).snd.down
@@ -97,9 +92,22 @@ theorem RunPi.sound {h : (run_pi arg in_e).isSome} : ((run_pi arg in_e).get h).f
 
 theorem RunPi.complete (h : RunPi arg in_e e') : run_pi arg in_e = .some ⟨e', ⟨h⟩⟩ := by
   induction h
-  · simp [run_pi]
+  · unfold run_pi
+    split
+    · contradiction
     simp_all
-  repeat rfl
+  · rename_i h
+    have h := h.complete
+    unfold run_pi
+    simp_all
+    split
+    simp_all
+    congr
+    repeat exact h.left
+    have ⟨_, h₁⟩ := h
+    simp_all
+    split
+    repeat simp_all
 
 inductive Judge : Expr → Expr → Prop
   | read  : Judge (Srt m) α

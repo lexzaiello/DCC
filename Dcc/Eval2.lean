@@ -35,7 +35,6 @@ inductive Expr.RedTyComb : Expr → Expr → Prop
   | refl_c   : RedTyComb (.comb c) (.comb c)
   | refl_ty  : RedTyComb (.tycomb c) (.tycomb c)
   | refl_srt : RedTyComb (Srt m) (Srt m)
-  | pi       : RedTyComb α α' → RedTyComb β β' → RedTyComb (Π' α, β) (Π' α', β')
 
 def Expr.red_ty_comb (e : Expr) : Option ((e' : Expr) × (PLift (e.RedTyComb e'))) :=
   if _h : e.ty_is_redex.isSome then
@@ -67,10 +66,7 @@ def Expr.red_ty_comb (e : Expr) : Option ((e' : Expr) × (PLift (e.RedTyComb e')
     | .comb c => .some ⟨.comb c, ⟨.refl_c⟩⟩
     | .tycomb c => .some ⟨.tycomb c, ⟨.refl_ty⟩⟩
     | (Srt m) => .some ⟨Srt m, ⟨.refl_srt⟩⟩
-    | Π' α, β => do
-      let ⟨α', ⟨p₁⟩⟩ ← α.red_ty_comb
-      let ⟨β', ⟨p₂⟩⟩ ← β.red_ty_comb
-      .some ⟨Π' α', β', ⟨.pi p₁ p₂⟩⟩
+    | _ => .none
 
 theorem Expr.RedTyComb.sound (h : (Expr.red_ty_comb e).isSome) : Expr.RedTyComb e ((Expr.red_ty_comb e).get h).fst := ((e.red_ty_comb).get h).snd.down
 
@@ -99,11 +95,6 @@ theorem Expr.RedTyComb.complete (h : RedTyComb e e') : (Expr.red_ty_comb e) = .s
     unfold Expr.red_ty_comb
     simp_all
   repeat (unfold Expr.red_ty_comb; simp; intro h; contradiction)
-  case pi α α' β β' hα hβ ih₁ ih₂ =>
-    have h : ¬ (Π' α, β).ty_is_redex.isSome := fun h => by
-      simp [Expr.ty_is_redex] at h
-    unfold Expr.red_ty_comb
-    simp_all
 
 inductive Expr.RedexTm : Expr → Prop where
   | k    : RedexTm ⸨K.{[_m, _n]} _α _β _x _y⸩

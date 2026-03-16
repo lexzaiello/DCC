@@ -73,9 +73,11 @@ we probably want a directed version.
 -/
 
 def run_pi (arg in_e : Expr) : Option ((e' : Expr) × (PLift (RunPi arg in_e e'))) :=
-  match heq : ⸨in_e arg⸩.red_ty_comb with
-  | .some ⟨e', ⟨h⟩⟩ => .some ⟨e', ⟨.app h⟩⟩
-  | .none =>
+  let maybe_red := ⸨in_e arg⸩.red_ty_comb
+  if h : maybe_red.isSome then
+    let ⟨e', ⟨h⟩⟩ := maybe_red.get h
+    .some ⟨e', ⟨.app h⟩⟩
+  else
     match in_e with
     | (Srt _m) => .none
     | Π' α, β => do
@@ -92,32 +94,64 @@ theorem RunPi.sound {h : (run_pi arg in_e).isSome} : ((run_pi arg in_e).get h).f
 
 theorem RunPi.complete (h : RunPi arg in_e e') : run_pi arg in_e = .some ⟨e', ⟨h⟩⟩ := by
   induction h
-  · unfold run_pi
-    split
-    · contradiction
-    simp_all
-  · rename_i h
-    have h := h.complete
+  · rename_i  α α' β β' ha hb ih₁ ih₂
+    unfold run_pi
+    unfold Expr.red_ty_comb
+    unfold Expr.ty_is_redex
+    unfold Expr.red_ty_comb
+    unfold Expr.ty_is_redex
+    simp [ih₁, ih₂]
+  · rename_i e e' ih
+    let h := ih.complete
+    simp at h
+    unfold run_pi
+    simp [h]
+    congr
+    repeat simp [h]
+    exact ih
+
+def Expr.n_ty_comb : Expr → ℕ
+  | C | B | K* | I => 1
+  | Π' α, β => α.n_ty_comb + β.n_ty_comb
+  | ⸨f x⸩ => f.n_ty_comb + x.n_ty_comb
+  | _e => 0
+
+def Expr.is_pi : Expr → Bool
+  | Π' _α, _β => true
+  | _e => false
+
+theorem RunPi.basically_well_founded (h_n₀ : (Π' α, β).n_ty_comb > 0)
+  (h_step : (run_pi any_arg (Π' α, β)).isSome) :
+  ((run_pi any_arg (Π' α, β)).get h_step).fst.n_ty_comb < (Π' α, β).n_ty_comb := by
+  have hr := (run_pi any_arg (Π' α, β)).get h_step
+  unfold run_pi at h_step
+  rename_i h_step
+  
+  simp
+  
+  split at h_step
+  · contradiction
+  · rename_i h_step heq
+    simp at h_step
     unfold run_pi
     simp_all
-    split
-    simp_all
-    congr
-    repeat exact h.left
-    have ⟨_, h₁⟩ := h
-    simp_all
-    split
-    repeat simp_all
+    
+    sorry
+
+/-
+λ x => e₁ e₂
+
+INVERT pi.
+
+∀ (x : α) (y : β), α
+
+forming a path.
+
+typed holes are superior.
+we can run RunPi with them to calculate types.
+-/
 
 inductive Judge : Expr → Expr → Prop
-  | read  : Judge (Srt m) α
-    → Judge (Srt m) (Π' α, read)
-  | next  : Judge (Srt m) β
-    → Judge (Srt m) (Π' α, ⸨next β⸩)
-  | app'  : Judge (Π' β, Π' ⸨next γ⸩, ⸨next ⸨next (Srt m)⸩⸩) π
-    → Judge (Π' α, ⸨next β⸩) f
-    → Judge (Π' α, ⸨next γ⸩) g
-    → Judge (Srt m) (Π' α, ⸨$ π f g⸩)
   | app   : Judge (Π' α, β) f
     → Judge α x
     → RunPi x β β'

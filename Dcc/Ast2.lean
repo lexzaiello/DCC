@@ -25,6 +25,7 @@ inductive TyComb where
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 inductive Expr where
+  | tyhole : Expr   → Expr
   | tycomb : TyComb → Expr
   | Pi     : Expr   → Expr → Expr
   | Srt    : Level  → Expr
@@ -48,6 +49,7 @@ syntax "Π'" term "," term : term
 syntax "⸨" term* "⸩" : term
 syntax "Ty" term  : term
 syntax "Srt" term : term
+syntax "__" "∶" term : term
 syntax term "~>" term : term
 
 macro_rules
@@ -62,6 +64,7 @@ macro_rules
   | `(Srt $m) => `(Expr.Srt $m)
   | `(Ty $n) => `(Expr.Srt ($n + 1))
   | `(⸨$f:term $x:term⸩) => `(Expr.app $f:term $x:term)
+  | `(__ ∶ $t:term) => `(Expr.tyhole $t)
   | `(⸨$f:term $x:term $xs:term*⸩) => `(⸨⸨$f:term $x:term⸩ $xs:term*⸩)
   | `(#$n:num) =>
     match n.getNat with
@@ -84,6 +87,7 @@ def toFormat : Expr → Format
   | S.{[m, n, o]} => "S.{" ++ (format [m, n, o]) ++ "}"
   | Π' α, β => .paren <| "Π'" ++ (.nest 2 <| (.paren <| α.toFormat) ++ ", " ++ β.toFormat)
   | ⸨f x⸩ => .bracket "⸨" (f.toFormat ++ (.nest 2 <| .line ++ x.toFormat)) "⸩"
+  | __ ∶ t => "__ : " ++ t.toFormat
 
 instance : ToFormat Expr := ⟨Expr.toFormat⟩
 instance : ToString Expr := ⟨toString ∘ toFormat⟩

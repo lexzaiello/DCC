@@ -55,11 +55,34 @@ in scope:
   | I | B | C | K* => 1
   | _ => 0
 
+inductive Expr.IsNotBinder : Expr → Prop
+  | app      : IsNotBinder ⸨f x⸩
+  | comb_tm  : IsNotBinder (.comb c)
+  | comb_ty  : IsNotBinder (.tycomb c)
+  | srt      : IsNotBinder (Srt m)
+  | ty_hole  : IsNotBinder (.tyhole t)
+
+def Expr.is_not_binder (e : Expr) : Option (PLift e.IsNotBinder) :=
+  match e with
+  | Π' _α, _β => .none
+  | ⸨_f _x⸩ => .some ⟨.app⟩
+  | (.comb _c) => .some ⟨.comb_tm⟩
+  | (.tycomb _c) => .some ⟨.comb_ty⟩
+  | Srt _m => .some ⟨.srt⟩
+  | .tyhole _t => .some ⟨.ty_hole⟩
+
+def Expr.IsNotBinder.sound (_h : (Expr.is_not_binder e) = .some ⟨p⟩) : e.IsNotBinder := p
+
+def Expr.IsNotBinder.complete (_h : Expr.IsNotBinder e) : e.is_not_binder.isSome := by
+  cases _h
+  repeat rfl
+
 inductive RunPi (arg : Expr) : Expr → Expr → Prop
   | pi       : RunPi arg α α'
     → RunPi arg β β'
     → RunPi arg (Π' α, β) (Π' α', β')
-  | app      : ⸨e arg⸩.RedTyComb e'
+  | app      : e.IsNotBinder
+    → ⸨e arg⸩.RedTyComb e'
     → RunPi arg e e'
 
 /-
@@ -72,20 +95,14 @@ literally almost nowhere in types where this happens.
 we probably want a directed version.
 -/
 
-def run_pi (arg in_e : Expr) : Option ((e' : Expr) × (PLift (RunPi arg in_e e'))) :=
-  let maybe_red := ⸨in_e arg⸩.red_ty_comb
-  if h : maybe_red.isSome then
-    let ⟨e', ⟨h⟩⟩ := maybe_red.get h
-    .some ⟨e', ⟨.app h⟩⟩
-  else
-    match in_e with
-    | (Srt _m) => .none
-    | Π' α, β => do
-      let ⟨α', ⟨h₁⟩⟩ ← run_pi arg α
-      let ⟨β', ⟨h₂⟩⟩ ← run_pi arg β
-      .some ⟨Π' α', β', ⟨.pi h₁ h₂⟩⟩
-    | ⸨_f _x⸩ => .none
-    | _ => .none
+def run_pi (arg in_e : Expr) : (e' : Expr) × (PLift (RunPi arg in_e e')) :=
+  match in_e with
+  | Π' α, β =>
+    let ⟨α', ⟨h₁⟩⟩ := run_pi arg α
+    let ⟨β', ⟨h₂⟩⟩ := run_pi arg β
+    ⟨(Π' α', β'), ⟨.pi h₁ h₂⟩⟩
+  | e =>
+    ⟨⸨in_e arg⸩.red_ty_comb.fst, ⟨.app ⸨in_e arg⸩.red_ty_comb.snd.down⟩⟩
 
 theorem RunPi.sound {h : (run_pi arg in_e).isSome} : ((run_pi arg in_e).get h).fst = e' → RunPi arg in_e e' := fun heq => by
   have h := ((run_pi arg in_e).get h).snd.down
@@ -125,7 +142,6 @@ theorem RunPi.basically_well_founded (h_n₀ : (Π' α, β).n_ty_comb > 0)
   ((run_pi any_arg (Π' α, β)).get h_step).fst.n_ty_comb < (Π' α, β).n_ty_comb := by
   have hr := (run_pi any_arg (Π' α, β)).get h_step
   unfold run_pi at h_step
-  rename_i h_step
   
   simp
   

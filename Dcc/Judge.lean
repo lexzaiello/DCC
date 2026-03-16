@@ -192,11 +192,7 @@ theorem DefEq.symm : DefEq A B → DefEq B A := by
     repeat assumption
 
 theorem DefEq.diamond (h₁ : DefEq A B) (h₂ : DefEq A C) : ∃ D, DefEq B D ∧ DefEq C D := by
-  have ha := h₁.complete
-  have hb := h₂.complete
-  
-  refine ⟨_, .step ParRed.reduce_self' (by sorry) (by sorry), ?_⟩
-  sorry
+  exact ⟨A, h₁.symm, h₂.symm⟩
 
 instance DefEq.instDecidable : Decidable (DefEq e₁ e₂) :=
   if h : (is_def_eq e₁ e₂).isSome then

@@ -74,7 +74,7 @@ elab "contra_binder" : tactic => do
 
 syntax "cases_conv" "*"* : tactic
 
-elab "cases_conv" star:"*"* : tactic => do
+elab "cases_conv" "*"* : tactic => do
   cases_matcher (fun (ty : Q(Prop)) => do
       match ty with
       | ~q(∃ D, ParRed $A D ∧ ParRed $B D) => pure true
@@ -194,6 +194,8 @@ def MExpr.unify (e : MExpr) : Q(_root_.Expr) :=
     let f : Q(_root_.Expr) := f.unify
     let x : Q(_root_.Expr) := x.unify
     q(Expr.app $f $x)
+
+instance MExpr.toLeanExpr : Lean.ToExpr MExpr := ⟨MExpr.unify, q(MExpr)⟩
 
 inductive MExpr.PRedex' : MExpr → Prop where
   | k    : PRedex' (MExpr.app (MExpr.app (MExpr.app (MExpr.app (MExpr.K m n) α) β) x) y)
@@ -432,7 +434,7 @@ def MExpr.reduce (e : MExpr) : TacticM ((e' : MExpr) × ParRed' e e') :=
       let  ⟨B, qhpr⟩ := (← parred_solution e).getD ⟨q((reduce $e).fst), q((reduce $e).snd.down)⟩
       pure ⟨.lean_e B, .lean qhpr⟩
 
-def ParRed'.toLeanExpr (h : ParRed' A B) : MetaM Q(_root_.ParRed $(A.unify) $(B.unify)) :=
+def ParRed'.toLeanExpr (h : ParRed' A B)  : MetaM Q(_root_.ParRed $(A.unify) $(B.unify)) :=
   match h with
   | .lean h => return h
   | .k hx => do return q(ParRed.k $(← hx.toLeanExpr))
@@ -453,6 +455,30 @@ def ParRed'.toLeanExpr (h : ParRed' A B) : MetaM Q(_root_.ParRed $(A.unify) $(B.
   | .refl_next => do return q(.refl_comb (c := .next))
   | .refl_read => do return q(.refl_comb (c := .read))
   | .refl_app' => do return q(.refl_comb (c := .app'))
+
+def MExpr.run_pi (e_arg e_pi : Q(_root_.Expr)) : TacticM (Q(_root_.Expr) × Lean.Expr) := do
+  match e_pi with
+  | .app (.app (.app (.const ``Expr.Pi []) m) α) β =>
+    let some m ← checkTypeQ m q(_root_.Level) | throwError s!"missing level: {m}"
+    let ⟨α', hα⟩ ← run_pi e_arg α
+    let ⟨β', hβ⟩ ← run_pi e_arg β
+
+    let ⟨α'', hα'⟩ ← reduce (← MExpr.decode α')
+    let ⟨β'', hβ'⟩ ← reduce (← MExpr.decode β')
+
+    let proof := (.app (.app (.app (Lean.Expr.app
+        (.const ``RunPi.succ []) hα) hβ) (← hα'.toLeanExpr)) (← hβ'.toLeanExpr))
+    pure ⟨q(_root_.Expr.Pi $m $(α''.unify) $(β''.unify)), proof⟩
+  | _ =>
+    let d_pi ← decode e_pi
+    let d_arg ← decode e_arg
+
+    let e : MExpr := MExpr.app d_pi d_arg
+    let p : ((e' : MExpr) × ParRed' e e') ← reduce e
+    let p_fst := p.fst.unify
+    let lean_red_p ← p.snd.toLeanExpr (B := p.fst)
+    let pbind ← mkDecideProof q(¬ (Binder $e_pi))
+    pure ⟨p_fst, (.app (.app (.const ``RunPi.zero []) pbind) lean_red_p)⟩
 
 declare_syntax_cat reduce_cmd
 syntax "reduction"        : reduce_cmd
@@ -484,6 +510,12 @@ macro_rules
     let c ← `($c:reduce_cmd)
     `(SmartReduce.cmd.c_close $c:term)
 
+def assert (g : MVarId) (hyp : Hypothesis) : TacticM Unit := do
+  let ⟨_fvar, g⟩ ← g.assertHypotheses ⟨[hyp]⟩
+  let (_mvarId :: remainingGoals) := ← getGoals
+    | throwError "No goals to solve"
+  setGoals (g :: remainingGoals)
+
 elab "smart_reduce" "change_all" : tactic => do
   let g ← getMainGoal
   g.withContext do
@@ -499,9 +531,21 @@ elab "smart_reduce" "change_all" : tactic => do
              let re : Q(_root_.Expr) := ← whnf (← reduceAll r'.unify)
              let nm := decl.userName
              let hyp := Hypothesis.mk nm q((_root_.reduce $x).fst = $re) pe .default .default
-             let _ ← g.assertHypotheses ⟨[hyp]⟩
+             assert g hyp
            else
              pure ()
+         | .some ~q(RunPi $arg $in_t $_t') =>
+           if ← contains_spine in_t then
+             let ⟨t', proof⟩ ← MExpr.run_pi arg in_t
+             let nm := decl.userName
+             let hyp := Hypothesis.mk nm q(RunPi $arg $in_t $t') proof .default .default
+             assert g hyp
+         | .some ~q((_root_.run_pi $arg $in_t).fst = $t') =>
+           if ← contains_spine in_t then
+             let t' : Q(_root_.Expr) ← Lean.Meta.reduce q((_root_.run_pi $arg $in_t).fst)
+             let nm := decl.userName
+             let hyp := Hypothesis.mk nm q((_root_.run_pi $arg $in_t).fst = $t') q((_root_.run_pi $arg $in_t).snd.down) .default .default
+             assert g hyp
          | _ => pure ()
 
 elab "smart_reduce" "show" c:reduce_cmd : tactic => do

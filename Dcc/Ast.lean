@@ -14,7 +14,7 @@ inductive Comb where
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 inductive Expr where
-  | Pi     : Level → Expr → Expr → Expr
+  | Pi     : Expr → Expr → Expr
   | Srt    : Level → Expr
   | comb   : Comb  → Expr
   | app    : Expr  → Expr → Expr
@@ -28,7 +28,7 @@ syntax term "∘'" term : term
 syntax "K" ".{" term "}" : term
 syntax "K'" ".{" term "}" : term
 syntax "S" ".{" term "}" : term
-syntax "Π.{" term "}" term "," term : term
+syntax "Π'" term "," term : term
 syntax "next" : term
 syntax "read" : term
 syntax "$" : term
@@ -37,10 +37,10 @@ syntax "⸨" term* "⸩" : term
 syntax "Ty" term  : term
 syntax "Srt" term : term
 syntax "_?" : term
-syntax "(" "~>" term ")" term "," term : term
+syntax term "~>" term : term
 
 macro_rules
-  | `(Π.{[$m]} $α:term, $β:term) => `(Expr.Pi $m $α $β)
+  | `(Π' $α:term, $β:term) => `(Expr.Pi $α $β)
   | `(K.{[$m, $n]}) => `(Expr.comb (Comb.K $m $n))
   | `(K'.{[$m, $n]}) => `(Expr.comb (Comb.K' $m $n))
   | `(S.{[$m, $n, $o]}) => `(Expr.comb (Comb.S $m $n $o))
@@ -57,14 +57,14 @@ macro_rules
     | .succ n =>
       let n' := Lean.Syntax.mkNatLit n
       `(⸨next ($n':num $fn)⸩)
-  | `((~> $m:term) $α:term, $β:term) => `(Π.{[$m]} $α, ⸨next $β⸩)
+  | `($α:term ~> $β:term) => `(Π' $α, ⸨next $β⸩)
 
 def toFormat : Expr → Format
   | Srt m => s!"(Srt {m})"
   | K'.{[m, n]} => "K'.{" ++ (format [m, n]) ++ "}"
   | K.{[m, n]} => "K.{" ++ (format [m, n]) ++ "}"
   | S.{[m, n, o]} => "S.{" ++ (format [m, n, o]) ++ "}"
-  | Π.{[lvs]} α, β => .paren <| "Π.{" ++ (format lvs) ++ "}" ++ (.nest 2 <| (.paren <| α.toFormat) ++ ", " ++ β.toFormat)
+  | Π' α, β => .paren <| "Π'" ++ (.nest 2 <| (.paren <| α.toFormat) ++ ", " ++ β.toFormat)
   | ⸨f x⸩ => .bracket "⸨" (f.toFormat ++ (.nest 2 <| .line ++ x.toFormat)) "⸩"
   | $ => "$"
   | next => "next"

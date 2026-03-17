@@ -9,6 +9,43 @@ inductive Expr.RedexTy : Expr → Prop
   | next : RedexTy (SK (K* x y))
   | read : RedexTy (SK (I x))
 
+inductive Expr.NormTyComb : Expr → Prop
+  | comp₀ : (SK B).NormTyComb
+  | comp₁ : (SK (B f)).NormTyComb
+  | comp₂ : (SK (B f g)).NormTyComb
+  | flip₀ : (SK C).NormTyComb
+  | flip₁ : (SK (C x)).NormTyComb
+  | flip₂ : (SK (C x y)).NormTyComb
+  | next₀ : (SK K*).NormTyComb
+  | next₁ : (SK (K* f)).NormTyComb
+  | read  : (SK I).NormTyComb
+
+def Expr.ty_comb_is_norm (e : Expr) : Option (PLift e.NormTyComb) :=
+  match e with
+  | (SK B) => .some ⟨.comp₀⟩
+  | (SK (B _f)) => .some ⟨.comp₁⟩
+  | (SK (B _f _g)) => .some ⟨.comp₂⟩
+  | (SK C) => .some ⟨.flip₀⟩
+  | (SK (C _x)) => .some ⟨.flip₁⟩
+  | (SK (C _x _y)) => .some ⟨.flip₂⟩
+  | (SK K*) => .some ⟨.next₀⟩
+  | (SK (K* _f)) => .some ⟨.next₁⟩
+  | (SK I) => .some ⟨.read⟩
+  | _e => .none
+
+def Expr.NormTyComb.sound : Expr.ty_comb_is_norm e = .some ⟨h⟩ → e.NormTyComb := fun _ => h
+
+def Expr.NormTyComb.complete (h : Expr.NormTyComb e) : Expr.ty_comb_is_norm e = .some ⟨h⟩ := by
+  cases h
+  repeat rfl
+
+instance Expr.NormTyComb.instDecidable : Decidable (Expr.NormTyComb e) :=
+  if h : e.ty_comb_is_norm.isSome then
+    .isTrue (e.ty_comb_is_norm.get h).down
+  else
+    .isFalse (fun h => by
+      simp only [h.complete, Option.isSome_some, not_true_eq_false] at *)
+
 def Expr.ty_is_redex (e : Expr) : Option (PLift e.RedexTy) :=
   match e with
   | SK (B _f _g _x) => .some ⟨.comp⟩
@@ -34,26 +71,39 @@ inductive Expr.RedTyComb : Expr → Expr → Prop
   | comp      : RedTyComb (SK (B f g x)) (SK (f (g x)))
   | flip      : RedTyComb (SK (C x y z)) (SK (x z y))
   | read      : RedTyComb (SK (I x)) x
+  | norm      : NormTyComb e → RedTyComb e e
+  | refl_hole : RedTyComb (SK __ ∶ t) (SK __ ∶ t)
+  | refl_srt  : RedTyComb (SK Sort m) (SK Sort m)
+  | refl_c    : RedTyComb (.comb c) (.comb c) -- inert
+  | refl_pi   : RedTyComb (SK Π α, β) (SK Π α, β) -- also inert here. see RedPi
   | cong      : ¬ (SK (f x)).RedexTy → f.RedTyComb f' → (SK (f x)).RedTyComb (SK (f' x))
 
-def Expr.red_ty_comb? (e : Expr) : (Option <| (e' : Expr) × PLift (e.RedTyComb e')) :=
+def Expr.red_ty_comb (e : Expr) : (e' : Expr) × PLift (e.RedTyComb e') :=
   if heq₂ : e.RedexTy then
     match heq : e with
-    | SK (K* A _b) => .some ⟨A, ⟨.next⟩⟩
-    | SK (I A) => .some ⟨A, ⟨.read⟩⟩
-    | SK (C x y z) => .some ⟨SK (x z y), ⟨.flip⟩⟩
-    | SK (B f g x) => .some ⟨SK (f (g x)), ⟨.comp⟩⟩
+    | SK (K* A _b) => ⟨A, ⟨.next⟩⟩
+    | SK (I A) => ⟨A, ⟨.read⟩⟩
+    | SK (C x y z) => ⟨SK (x z y), ⟨.flip⟩⟩
+    | SK (B f g x) => ⟨SK (f (g x)), ⟨.comp⟩⟩
   else
-    match heq : e with
-    | SK (f x) =>
-      match f.red_ty_comb? with
-      | .some ⟨f', h⟩ =>
-        .some ⟨SK (f' x), ⟨.cong (fun h => by
+    if hnorm : e.NormTyComb then
+      ⟨e, ⟨.norm hnorm⟩⟩
+    else
+      match heq : e with
+      | SK (f x) =>
+        let ⟨f', h⟩ := f.red_ty_comb
+        ⟨SK (f' x), ⟨.cong (fun h => by
           have h' := h.complete
           simp_all only [not_true_eq_false]) (by exact h.down)⟩⟩
-      | _a => .none
-    | _a => .none
+      | SK Sort m => ⟨SK Sort m, ⟨.refl_srt⟩⟩
+      | .comb c => ⟨.comb c, ⟨.refl_c⟩⟩
+      | SK Π α, β => ⟨SK Π α, β, ⟨.refl_pi⟩⟩
+      | SK __ ∶ t => ⟨SK __ ∶ t, ⟨.refl_hole⟩⟩
 
+/-
+Will need to alter this to account for partial
+apps of the combinators. Should decrease size as well.
+-/
 @[simp] def Expr.ty_size_of : Expr → ℕ
   | SK K* => 2
   | SK B
@@ -64,12 +114,25 @@ def Expr.red_ty_comb? (e : Expr) : (Option <| (e' : Expr) × PLift (e.RedTyComb 
 
 theorem Expr.RedTyComb.sound (_h : (Expr.red_ty_comb? e).isSome) : Expr.RedTyComb e (e.red_ty_comb?.get h).fst := (e.red_ty_comb?.get h).snd.down
 
-theorem Expr.RedTyComb.complete (h : RedTyComb e e') : (Expr.red_ty_comb? e) = .some ⟨e', ⟨h⟩⟩ := by
+theorem Expr.RedTyComb.complete (h : RedTyComb e e') :
+  (Expr.red_ty_comb? e) = .some ⟨e', ⟨h⟩⟩ := by
   induction h
   repeat rfl
+  case norm e h_norm =>
+    cases h_norm
+    repeat rfl
   case cong f x f' h_nredex h_red ih =>
     dsimp only [red_ty_comb?]
-    simp only [h_nredex, ↓reduceDIte, ih]
+    simp_all only [↓reduceDIte, dite_eq_right_iff, Option.some.injEq, Sigma.mk.injEq, app.injEq, and_true]
+    intro h
+    cases h
+    cases h_red
+    cases ih
+    rename_i h
+    cases h
+    refine ⟨rfl, ?_⟩
+    
+    sorry
 
 inductive Expr.RedexTm : Expr → Prop where
   | k    : RedexTm (SK (K.{[_m, _n]} _α _β _x _y))
@@ -173,4 +236,3 @@ def arg (n : ℕ) : Expr :=
   | 0 => SK I
   | 1 => SK K*
   | .succ n => SK (B K* #(arg n))
-

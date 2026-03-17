@@ -20,6 +20,20 @@ def S.type (m n o : Level) : Expr := (SK
       (B (S.{[m, n, o.succ]} (__ ∶ Sort m) (__ ∶ Sort n) (__ ∶ Sort o)) #((arg 2).ret 1))) -- γ z (y z)
 -- ^ note that this is safe, since prior apps were type-checked, and def-eq here is deferred to term-level
 
+def Expr.pi_size_of : Expr → ℕ
+  | SK Π α, β => (α.pi_size_of + β.pi_size_of).succ
+  | e => e.ty_size_of
+
+theorem pi_size_of_decreasing : RedPiArg x (SK Π α, β) (SK Π α', β')
+  → β'.pi_size_of < (SK Π α, β).pi_size_of := by
+  intro h
+  cases h
+  · rename_i ih₁ ih₂
+    sorry
+  · rename_i h
+    
+    sorry
+
 inductive Judge : Expr → Expr → Prop
   | app   : Judge (SK Π α, β) f
     → Judge α x
@@ -57,3 +71,47 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
   | _ => .none
 
 #eval (infer (SK (K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)))).map (·.fst)
+
+def mk_I (α : Expr) (m : Level) : Expr :=
+  let α := α
+  let y := SK (K'.{[2, m]} (Sort 1) α (Sort 0))
+  let x := SK (K'.{[m, 2]} α (Sort 1))
+
+  let β := SK (K'.{[3, m]} (Sort 2) α (Sort 1))
+  let γ := SK (K'.{[m.succ, m]} ((Sort 1) → (Sort m)) α (K'.{[m.succ, 2]} (Sort m) (Sort 1) α))
+
+  SK (S.{[m, 2, m]} α)
+
+def test_S : Option Expr := do
+  let s := SK S.{[3, 3, 3]}
+  let α := SK (Sort 2)
+  let z := SK (Sort 1)
+  let y := SK (K'.{[3, 3]} (Sort 2) (Sort 2))
+  let β ← match Sigma.fst <$> infer (SK (y (Sort 1))) with
+  | .some β => do
+    match ← Sigma.fst <$> infer α with
+    | SK Sort out => .some (SK (K'.{[(out + 1), 3]} (Sort out) α β))
+    | _ => .none
+  | _ => none
+  let t_yz ← (Sigma.fst <$> infer (SK (y z)))
+  let t_t_yz ← Sigma.fst <$> infer t_yz
+  let x ← match (Sigma.fst <$> infer t_yz) with
+  | SK Sort m => .some (SK (K'.{[3, m]} α t_yz))
+  | _ => .none
+  let γ : Expr := ← (do
+    let t_xzyz ← Sigma.fst <$> infer (SK (x z (y z)))
+    let t_t_xzyz ← Sigma.fst <$> infer t_xzyz
+    match t_xzyz, t_t_xzyz, t_t_yz with
+    | t_out, (SK Sort out), (SK Sort yzm) =>
+      let inner := (SK (K'.{[out.succ, yzm]} (Sort out) t_yz t_out))
+      let t_inner ← Sigma.fst <$> (infer inner)
+      match ← Sigma.fst <$> infer t_inner with
+      | (SK Sort in_m) =>
+        .some (SK (K'.{[in_m, 3]} t_inner α inner))
+      | _ => .none
+    | _, _, _ => .none
+  )
+  Sigma.fst <$> infer (SK (s α β γ x y z))
+
+#eval test_S
+

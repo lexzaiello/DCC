@@ -39,6 +39,7 @@ declare_syntax_cat debruijn
 declare_syntax_cat expr
 
 syntax "{" expr,+ "}" : debruijn
+syntax "{" num,+ "}" : debruijn
 syntax "(" expr ")" : debruijn
 syntax "Π" debruijn "," debruijn : debruijn
 syntax "Π" expr "," debruijn : debruijn
@@ -58,13 +59,14 @@ syntax "S" : comb
 
 syntax expr "∘" expr : expr
 syntax comb levels : expr
+syntax "#(" term ")" : expr
 syntax "(" expr* ")" : expr
-syntax "Ty" term  : expr
+syntax "Type" term  : expr
 syntax "B" : expr
 syntax "C" : expr
 syntax "K*" : expr
 syntax "I" : expr
-syntax "Srt" term : expr
+syntax "Sort" term : expr
 syntax "__" "∶" expr : expr
 syntax expr "~>" expr : expr
 syntax ident : expr
@@ -74,6 +76,7 @@ syntax debruijn : expr
 syntax "SK" expr : term
 
 macro_rules
+  | `(SK #($t:term)) => `($t)
   | `(SK $f:expr ∘ $g:expr) => `(SK (B $f:expr $g:expr))
   | `(SK $idt:ident) => `($idt:term)
   | `(SK K.{[$m:term, $n:term]}) => `(Expr.comb (Comb.K $m:term $n:term))
@@ -83,8 +86,8 @@ macro_rules
   | `(SK C) => `(Expr.tycomb (TyComb.flip))
   | `(SK K*) => `(Expr.tycomb (TyComb.next))
   | `(SK I) => `(Expr.tycomb (TyComb.read))
-  | `(SK Srt $m:term) => `(Expr.Srt $m)
-  | `(SK Ty $n:term) => `(Expr.Srt ($n + 1))
+  | `(SK Sort $m:term) => `(Expr.Srt $m)
+  | `(SK Type $n:term) => `(Expr.Srt ($n + 1))
   | `(SK $d:debruijn) => `(d⟪$d:debruijn⟫)
   | `(SK ($e:expr)) => `(SK $e)
   | `(SK ($f:expr $x:expr)) => `(Expr.app (SK $f:expr) (SK $x:expr))
@@ -98,7 +101,7 @@ macro_rules
   | `(SK $α:expr ~> $β:expr) => `(d⟪Π ($α:expr), (K* $β:expr)⟫)
 
 def toFormat : Expr → Format
-  | SK Srt m => s!"(Srt {m})"
+  | SK Sort m => s!"(Sort {m})"
   | SK B => "B"
   | SK C => "C"
   | SK I => "I"

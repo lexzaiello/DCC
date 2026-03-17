@@ -85,7 +85,7 @@ inductive RedTm : Expr → Expr → Prop
     → RedTm x x' → RedTm (SK (f x)) (SK (f' x'))
   | refl_comb : RedTm (.comb c) (.comb c)
   | refl_ty   : RedTm (.tycomb c) (.tycomb c)
-  | refl_srt  : RedTm (SK Srt m) (SK Srt m)
+  | refl_srt  : RedTm (SK Sort m) (SK Sort m)
 
 /-
 {1} I (Srt 0) (Srt 1) = Srt 1
@@ -117,11 +117,11 @@ theorem all_ty_red_decreasing' : PLift (Expr.RedTyComb e e') → Expr.ty_size_of
   match h with
   | .up h => all_ty_red_decreasing h
 
-inductive CRedTrans : Expr → Expr → Type where
-  | single : PLift (e.RedTyComb e') → CRedTrans e e'
-  | trans  : (PLift (a.RedTyComb b)) → CRedTrans b c → CRedTrans a c
+inductive Expr.CRedTrans : Expr → Expr → Type where
+  | single : PLift (e.RedTyComb e') → Expr.CRedTrans e e'
+  | trans  : (PLift (a.RedTyComb b)) → Expr.CRedTrans b c → Expr.CRedTrans a c
 
-def Expr.reduce (e : Expr) (_h : e.ty_size_of > 0) : Option ((e' : Expr) × (CRedTrans e e')) :=
+def Expr.reduce (e : Expr) (_h : e.ty_size_of > 0) : Option ((e' : Expr) × (Expr.CRedTrans e e')) :=
   let _size := e.ty_size_of
   let r := e.red_ty_comb?
   match r with
@@ -136,18 +136,53 @@ def Expr.reduce (e : Expr) (_h : e.ty_size_of > 0) : Option ((e' : Expr) × (CRe
       .some ⟨e', .single h⟩
   | _ => .none
 
-def Expr.reduce_sound : Expr.reduce e h = .some ⟨e', hr⟩ → CRedTrans e e' := fun _ => hr
+def Expr.reduce_sound : Expr.reduce e h = .some ⟨e', hr⟩ → Expr.CRedTrans e e' := fun _ => hr
 
-macro_rules
-  | `(SK ({$projs:expr,*} $f:expr)) => do
-    let e ← projs.getElems.toList.foldlM (fun acc e =>
-      match e with
-      | `(expr| I) => `(expr| (B $acc I))
-      | `(expr| K*) => `(expr| (B $acc K*))
-      | `(expr| C) => `(expr| (B $acc C))
-      | `(expr| B) => `(expr| (B $acc B))
-      | _ => Lean.Macro.throwUnsupported) f
-    `(SK $e)
+inductive RunPi (arg : Expr) : Expr → Expr → Prop
+  | srt : RunPi arg (SK Sort m) (SK Sort m)
+  | pi  : RunPi arg α α' → RunPi arg β β'
+    → RunPi arg (SK Π α, β) (SK Π α', β')
+  | red : (SK (f arg)).CRedTrans e' → RunPi arg f e'
 
-#eval ((SK ({I, K*, I} I (Srt 2) (Srt 0) (Srt 1))).reduce (by simp)).map (·.fst)
+def Expr.run_pi (in_pi arg : Expr) : Option ((e' : Expr) × (PLift (RunPi arg in_pi e'))) :=
+  match in_pi with
+  | SK Sort m => .some ⟨SK Sort m, ⟨.srt⟩⟩
+  | SK Π α, β => do
+    let ⟨α', ⟨h₁⟩⟩ ← α.run_pi arg
+    let ⟨β', ⟨h₂⟩⟩ ← β.run_pi arg
+    .some ⟨(SK Π α', β'), ⟨.pi h₁ h₂⟩⟩
+  | SK e => do
+    if h : 0 < e.ty_size_of then
+      let ⟨e', h⟩ ← Expr.reduce (SK (e arg)) (by simp [Expr.ty_size_of]; exact .inl h)
+      .some ⟨e', ⟨.red h⟩⟩
+    else
+      .none
+/-
+arg is powerful. pretty much all we need.
 
+K : ∀ (α : Type) (β : α → Type)
+
+K : Π Srt m, Π (Π (arg 0), Srt n), Π (arg 0), Π (arg 1), (arg 0)
+
+we have literally all of our variables in a list.
+if we wanted to, we could generate "accessors" for each one.
+
+α = I
+β = K
+x = K* K*
+
+we don't need the assert shit.
+we're going to get a normal value then. it won't be applied again.
+we only apply if we see a type combinator head.
+-/
+
+def arg (n : ℕ) : Expr :=
+  match n with
+  | 0 => SK I
+  | 1 => SK K*
+  | .succ n => SK (B K* #(arg n))
+
+#eval (SK(#(arg 3) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
+#eval (SK((#(arg 2) #(arg 1)) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
+#eval (SK((#(arg 2) #(arg 1)) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
+#eval (SK((#(arg 2) #(arg 1)) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)

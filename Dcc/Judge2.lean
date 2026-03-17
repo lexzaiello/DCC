@@ -9,6 +9,9 @@ Notes:
 So, we may need to change the K rule slightly so that β x works.
 -/
 
+abbrev K'.type (m n : Level) : Expr :=
+  SK (Π Srt m, Π ({1} (Srt n)), Π {0 
+
 @[simp] abbrev K'.type (m n : Level) : Expr :=
   Π' Srt m, Π' ⸨# 0 ⸨K* (Srt n)⸩⸩, Π' ⸨# 0 K*⸩, Π' ⸨# 1 K*⸩, (⸨# 0 I⸩.assert_n 3)
 

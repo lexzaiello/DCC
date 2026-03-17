@@ -38,7 +38,7 @@ namespace Expr
 declare_syntax_cat debruijn
 declare_syntax_cat expr
 
-syntax "{" num+ "}" : debruijn
+syntax "{" expr,+ "}" : debruijn
 syntax "(" expr ")" : debruijn
 syntax "Π" debruijn "," debruijn : debruijn
 syntax "Π" expr "," debruijn : debruijn
@@ -91,22 +91,11 @@ macro_rules
   | `(SK __ ∶ $t:expr) => `(Expr.tyhole (SK $t))
   | `(SK ($f:expr $x:expr $xs:expr*)) => `(SK (($f:expr $x:expr) $xs:expr*))
   | `(d⟪($t:expr)⟫) => `(SK $t:expr)
-  | `(d⟪{$n:num}⟫) =>
-    match n.getNat with
-    | 0 => `(SK I)
-    | .succ n =>
-      let n' := Lean.Syntax.mkNatLit n
-      `(SK (B K* {$n':num}))
-  | `(d⟪{$n:num $nxs:num*}⟫) =>
-    let nxs' := nxs.map (Lean.Syntax.mkNatLit ∘ (· - 1) ∘ Lean.TSyntax.getNat)
-    `(SK ((B ({$nxs':num*})) ({$n:num})))
   | `(d⟪Π $α:debruijn, $β:debruijn⟫) => `(Expr.Pi d⟪$α⟫ d⟪$β⟫)
   | `(d⟪Π $α:expr, $β:debruijn⟫) => `(Expr.Pi (SK $α) d⟪$β⟫)
   | `(d⟪Π $α:expr, $β:expr⟫) => `(Expr.Pi (SK $α) (SK $β))
   | `(d⟪Π $α:debruijn, $β:expr⟫) => `(Expr.Pi (d⟪$α⟫) (SK $β))
   | `(SK $α:expr ~> $β:expr) => `(d⟪Π ($α:expr), (K* $β:expr)⟫)
-
-#eval SK ({0} I)
 
 def toFormat : Expr → Format
   | SK Srt m => s!"(Srt {m})"
@@ -128,3 +117,14 @@ abbrev assert_n (n : ℕ) (fn : Expr) : Expr :=
   (List.replicate n (SK K*)).foldr (fun e acc => (SK (B e acc))) fn
 
 end Expr
+
+/-
+Proper debruijn indices:
+
+0 = I
+1 = K I
+2 = K (K I)
+
+multiple arguments:
+
+-/

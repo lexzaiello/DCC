@@ -36,7 +36,7 @@ inductive Expr.RedTyComb : Expr → Expr → Prop
   | read      : RedTyComb (SK (I x)) x
   | cong      : ¬ (SK (f x)).RedexTy → f.RedTyComb f' → (SK (f x)).RedTyComb (SK (f' x))
 
-def Expr.red_ty_comb (e : Expr) : (Option <| (e' : Expr) × PLift (e.RedTyComb e')) :=
+def Expr.red_ty_comb? (e : Expr) : (Option <| (e' : Expr) × PLift (e.RedTyComb e')) :=
   if heq₂ : e.RedexTy then
     match heq : e with
     | SK (K* A _b) => .some ⟨A, ⟨.next⟩⟩
@@ -46,7 +46,7 @@ def Expr.red_ty_comb (e : Expr) : (Option <| (e' : Expr) × PLift (e.RedTyComb e
   else
     match heq : e with
     | SK (f x) =>
-      match f.red_ty_comb with
+      match f.red_ty_comb? with
       | .some ⟨f', h⟩ =>
         .some ⟨SK (f' x), ⟨.cong (fun h => by
           have h' := h.complete
@@ -54,13 +54,21 @@ def Expr.red_ty_comb (e : Expr) : (Option <| (e' : Expr) × PLift (e.RedTyComb e
       | _a => .none
     | _a => .none
 
-theorem Expr.RedTyComb.sound (_h : (Expr.red_ty_comb e).isSome) : Expr.RedTyComb e (e.red_ty_comb.get h).fst := (e.red_ty_comb.get h).snd.down
+@[simp] def Expr.ty_size_of : Expr → ℕ
+  | SK K* => 2
+  | SK B
+  | SK C => 3
+  | SK I => 1
+  | SK (f x) => f.ty_size_of + x.ty_size_of
+  | _ => 0
 
-theorem Expr.RedTyComb.complete (h : RedTyComb e e') : (Expr.red_ty_comb e) = .some ⟨e', ⟨h⟩⟩ := by
+theorem Expr.RedTyComb.sound (_h : (Expr.red_ty_comb? e).isSome) : Expr.RedTyComb e (e.red_ty_comb?.get h).fst := (e.red_ty_comb?.get h).snd.down
+
+theorem Expr.RedTyComb.complete (h : RedTyComb e e') : (Expr.red_ty_comb? e) = .some ⟨e', ⟨h⟩⟩ := by
   induction h
   repeat rfl
   case cong f x f' h_nredex h_red ih =>
-    dsimp only [red_ty_comb]
+    dsimp only [red_ty_comb?]
     simp only [h_nredex, ↓reduceDIte, ih]
 
 inductive Expr.RedexTm : Expr → Prop where
@@ -89,24 +97,13 @@ def Expr.reduce_ty_n (n : ℕ) (e : Expr) : Option ((e' : Expr) × (PLift (RedTr
   match n with
   | .zero => .none
   | .succ .zero => do
-    let ⟨e', h⟩ ← e.red_ty_comb
+    let ⟨e', h⟩ ← e.red_ty_comb?
     .some ⟨e', ⟨match h with | ⟨h⟩ => .single h⟩⟩
   | .succ n => do
     let ⟨inner, h₁⟩ ← e.reduce_ty_n n
-    let ⟨inner', h₂⟩ ← inner.red_ty_comb
+    let ⟨inner', h₂⟩ ← inner.red_ty_comb?
     .some ⟨inner', ⟨match h₁, h₂ with
       | ⟨h₁⟩, ⟨h₂⟩ => h₁.tail h₂⟩⟩
-
-#eval ((SK ({1} I (Srt 0) (Srt 10))).reduce_ty_n 4).map (·.fst)
-#eval (SK ({1} I (Srt 0) (Srt 10)))
-
-@[simp] def Expr.ty_size_of : Expr → ℕ
-  | SK K* => 2
-  | SK B
-  | SK C => 3
-  | SK I => 1
-  | SK (f x) => f.ty_size_of + x.ty_size_of
-  | _ => 0
 
 theorem all_ty_red_decreasing : Expr.RedTyComb e e' → Expr.ty_size_of e' < Expr.ty_size_of e := by
   intro hr
@@ -116,7 +113,7 @@ theorem all_ty_red_decreasing : Expr.RedTyComb e e' → Expr.ty_size_of e' < Exp
   case cong f x f' hr hredf ih =>
     simp only [Expr.ty_size_of, add_lt_add_iff_right, ih]
 
-theorem all_ty_red_decreasing' : PLift (Expr.RedTyComb e e') → Expr.ty_size_of e' < Expr.ty_size_of e := fun h => 
+theorem all_ty_red_decreasing' : PLift (Expr.RedTyComb e e') → Expr.ty_size_of e' < Expr.ty_size_of e := fun h =>
   match h with
   | .up h => all_ty_red_decreasing h
 
@@ -126,7 +123,7 @@ inductive CRedTrans : Expr → Expr → Type where
 
 def Expr.reduce (e : Expr) (_h : e.ty_size_of > 0) : Option ((e' : Expr) × (CRedTrans e e')) :=
   let _size := e.ty_size_of
-  let r := e.red_ty_comb
+  let r := e.red_ty_comb?
   match r with
   | .some ⟨e', h⟩ =>
     have _h_size : e'.ty_size_of < e.ty_size_of := all_ty_red_decreasing' h
@@ -138,3 +135,19 @@ def Expr.reduce (e : Expr) (_h : e.ty_size_of > 0) : Option ((e' : Expr) × (CRe
     else
       .some ⟨e', .single h⟩
   | _ => .none
+
+def Expr.reduce_sound : Expr.reduce e h = .some ⟨e', hr⟩ → CRedTrans e e' := fun _ => hr
+
+macro_rules
+  | `(SK ({$projs:expr,*} $f:expr)) => do
+    let e ← projs.getElems.toList.foldlM (fun acc e =>
+      match e with
+      | `(expr| I) => `(expr| (B $acc I))
+      | `(expr| K*) => `(expr| (B $acc K*))
+      | `(expr| C) => `(expr| (B $acc C))
+      | `(expr| B) => `(expr| (B $acc B))
+      | _ => Lean.Macro.throwUnsupported) f
+    `(SK $e)
+
+#eval ((SK ({I, K*, I} I (Srt 2) (Srt 0) (Srt 1))).reduce (by simp)).map (·.fst)
+

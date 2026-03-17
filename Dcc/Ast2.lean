@@ -59,7 +59,7 @@ syntax "K*" : expr
 syntax "I" : expr
 syntax "Sort" term : expr
 syntax "__" "∶" expr : expr
-syntax expr "→" expr : expr
+syntax expr "~>" expr : expr
 syntax ident : expr
 
 syntax "SK" expr : term
@@ -82,7 +82,7 @@ macro_rules
   | `(SK __ ∶ $t:expr) => `(Expr.tyhole (SK $t))
   | `(SK ($f:expr $x:expr $xs:expr*)) => `(SK (($f:expr $x:expr) $xs:expr*))
   | `(SK Π $α:expr, $β:expr) => `(Expr.Pi (SK $α) (SK $β))
-  | `(SK $α:expr → $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
+  | `(SK $α:expr ~> $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
 
 def toFormat : Expr → Format
   | SK Sort m => s!"Sort {m}"

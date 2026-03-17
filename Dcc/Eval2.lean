@@ -32,6 +32,21 @@ inductive Expr.RedTy : Expr → Expr → Prop
     -- ^ this is fine since all argument binders should have at least one I ready to fire
     → Expr.RedTy (SK ((Π α, β) x)) (SK (Π α', (β x)))
 
+theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n := by
+  induction h₁ generalizing m
+  repeat (cases h₂; rfl)
+  case pi α n β _ ih =>
+    cases h₂
+    rename_i hsizeα
+    exact ih hsizeα
+  repeat (cases h₂; rfl)
+  case app f n x m _ _ ih₁ ih₂ =>
+    cases h₂
+    rename_i hnf hnx
+    have ha := ih₁ hnf
+    have hb := ih₂ hnx
+    grind only
+
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n := by
   induction h_red generalizing n
   · cases h_size
@@ -73,6 +88,10 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
       have h := ih (.app (by assumption) (by assumption))
       have ⟨n', h₁, h₂⟩ := h
       exact ⟨_, .pi (by assumption), by grind only⟩
+
+def Expr.RedTyTrans := Relation.TransGen Expr.RedTy
+
+theorem Expr.RedTyTrans.decreasing (h_red : Expr.RedTyTrans a b) (hn₁ :  : 
 
 /-
 inductive Expr.RedexTy : Expr → Prop

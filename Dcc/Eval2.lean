@@ -76,16 +76,16 @@ inductive Expr.RedexTm : Expr → Prop where
   | k'   : RedexTm (SK (K'.{[_m, _n]} _α _β _x _y))
   | s    : RedexTm (SK (S.{[_m, _n, _o]} _α _β _γ _x _y _z))
 
-inductive RedTm : Expr → Expr → Prop
-  | k         : RedTm x x' → RedTm (SK (K.{[m, n]} α β x y)) x'
-  | k'        : RedTm x x' → RedTm (SK (K'.{[m, n]} α β x y)) x'
-  | s         : RedTm x x' → RedTm y y' → RedTm z z'
-    → RedTm (SK (S.{[m, n, o]} α β γ x y z)) (SK (((x' z') (y' z'))))
-  | app       : (¬ (SK (f x)).RedexTm) → RedTm f f'
-    → RedTm x x' → RedTm (SK (f x)) (SK (f' x'))
-  | refl_comb : RedTm (.comb c) (.comb c)
-  | refl_ty   : RedTm (.tycomb c) (.tycomb c)
-  | refl_srt  : RedTm (SK Sort m) (SK Sort m)
+inductive Expr.RedTm : Expr → Expr → Prop
+  | k         : Expr.RedTm x x' → Expr.RedTm (SK (K.{[m, n]} α β x y)) x'
+  | k'        : Expr.RedTm x x' → Expr.RedTm (SK (K'.{[m, n]} α β x y)) x'
+  | s         : Expr.RedTm x x' → Expr.RedTm y y' → Expr.RedTm z z'
+    → Expr.RedTm (SK (S.{[m, n, o]} α β γ x y z)) (SK (((x' z') (y' z'))))
+  | app       : (¬ (SK (f x)).RedexTm) → Expr.RedTm f f'
+    → Expr.RedTm x x' → Expr.RedTm (SK (f x)) (SK (f' x'))
+  | refl_comb : Expr.RedTm (.comb c) (.comb c)
+  | refl_ty   : Expr.RedTm (.tycomb c) (.tycomb c)
+  | refl_srt  : Expr.RedTm (SK Sort m) (SK Sort m)
 
 /-
 {1} I (Srt 0) (Srt 1) = Srt 1

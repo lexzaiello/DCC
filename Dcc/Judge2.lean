@@ -8,32 +8,33 @@ def K.type (m n : Level) : Expr := (SK
 --#eval Std.format <| ((K.type 1 1).reduce_pi (SK Sort 0)).fst
 
 def K'.type (m n : Level) : Expr :=
-  SK Π Sort m, Π Sort n, Π #((arg 0).ret 1), Π #((arg 1).ret 1), #((arg 0).ret 3)
+  (SK Π Sort m, Π Sort n, Π #((arg 0).ret 1), Π #((arg 1).ret 1), #((arg 0).ret 3))
 
-@[simp] abbrev S.type (m n o : Level) : Expr := SK
+def S.type (m n o : Level) : Expr := (SK
     Π Sort m, -- α
     Π (Π #(arg 0), Sort n), -- β
     Π (Π #((arg 0).ret 1), Π #(arg 1), Sort o), -- γ
     Π (Π #((arg 0).ret 2), Π #((arg 1).ret 1), #(arg 2)), -- x
     Π (Π #((arg 0).ret 3), #((arg 1).ret 2)), -- y
     Π #((arg 0).ret 4), -- z
-      (B (S.{[m, n, o.succ]} (__ ∶ Sort m) (__ ∶ Sort n) (__ ∶ Sort o)) #((arg 2).ret 1)) -- γ z (y z)
+      (B (S.{[m, n, o.succ]} (__ ∶ Sort m) (__ ∶ Sort n) (__ ∶ Sort o)) #((arg 2).ret 1))) -- γ z (y z)
 -- ^ note that this is safe, since prior apps were type-checked, and def-eq here is deferred to term-level
 
 inductive Judge : Expr → Expr → Prop
-  | app   : Judge (Π' α, β) f
+  | app   : Judge (SK Π α, β) f
     → Judge α x
-    → RunPi x β β'
-    → Judge β' ⸨f x⸩
-  | srt   : Judge (Srt m.succ) (Srt m)
-  | k     : Judge (K.type m n) K.{[m, n]}
-  | k'    : Judge (K'.type m n) K'.{[m, n]}
-  | s     : Judge (S.type m n o) S.{[m, n, o]}
-  | pi    : Judge t_β β
-    → RunPi α β t_β'
-    → Judge t_β' (Π' α, β)
-  | conv  : Judge A x → ParRed A B → Judge B x
+    → RedPi x β β'
+    → Judge β' (SK (f x))
+  | srt   : Judge (SK Sort m.succ) (SK Sort m)
+  | k     : Judge (K.type m n) (SK K.{[m, n]})
+  | k'    : Judge (K'.type m n) (SK K'.{[m, n]})
+  | s     : Judge (S.type m n o) (SK S.{[m, n, o]})
+  | pi    : RedPi (SK __ ∶ α) (SK Π α, β) β'
+    → Judge t_β β
+    → Judge t_β (SK Π α, β)
+  | conv  : Judge A x → Expr.RedTm A B → Judge B x
 
+/-
 def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
   match e_heq : e with
   | Π' α, read => do
@@ -79,7 +80,4 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
       pure ⟨β'.fst, ⟨.pi (β := β) (α := α) hjβ (β'.snd.down)⟩⟩
     | _ => .none
   | _ => .none
-
-#eval (K'.type 1 1).pi_size_of
-
-#eval (infer ⸨K'.{[1, 1]} (Srt 0) (Srt 0)⸩).map (·.fst)
+-/

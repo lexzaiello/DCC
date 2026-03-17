@@ -84,11 +84,16 @@ inductive RedTm : Expr → Expr → Prop
 
 def RedTrans := Relation.ReflTransGen Expr.RedTyComb
 
-def try_reduce_n (n : ℕ) (e : Expr) : Option ((e' : Expr) × (PLift (RedTrans e e'))) :=
+def Expr.reduce_ty_n (n : ℕ) (e : Expr) : Option ((e' : Expr) × (PLift (RedTrans e e'))) :=
   match n with
   | .zero => .none
+  | .succ .zero => do
+    let ⟨e', h⟩ ← e.red_ty_comb
+    .some ⟨e', ⟨match h with | ⟨h⟩ => .tail .refl h⟩⟩
   | .succ n => do
-    let ⟨inner, h₁⟩ ← try_reduce_n n e
+    let ⟨inner, h₁⟩ ← e.reduce_ty_n n
     let ⟨inner', h₂⟩ ← inner.red_ty_comb
     .some ⟨inner', ⟨match h₁, h₂ with
       | ⟨h₁⟩, ⟨h₂⟩ => h₁.trans (.tail .refl h₂)⟩⟩
+
+#eval ((SK ({1} I (Srt 0) (Srt 10))).reduce_ty_n 4).map (·.fst)

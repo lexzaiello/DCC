@@ -93,11 +93,13 @@ macro_rules
   | `(d⟪($t:expr)⟫) => `(SK $t:expr)
   | `(d⟪{$n:num}⟫) =>
     match n.getNat with
-    | 0 => `(SK (C B I))
+    | 0 => `(SK I)
     | .succ n =>
       let n' := Lean.Syntax.mkNatLit n
-      `(SK (B (B K* ({$n':num}))))
-  | `(d⟪{$n:num $nxs:num*}⟫) => `(SK ((B ({$nxs:num*})) ({$n:num})))
+      `(SK (B K* {$n':num}))
+  | `(d⟪{$n:num $nxs:num*}⟫) =>
+    let nxs' := nxs.map (Lean.Syntax.mkNatLit ∘ (· - 1) ∘ Lean.TSyntax.getNat)
+    `(SK ((B ({$nxs':num*})) ({$n:num})))
   | `(d⟪Π $α:debruijn, $β:debruijn⟫) => `(Expr.Pi d⟪$α⟫ d⟪$β⟫)
   | `(d⟪Π $α:expr, $β:debruijn⟫) => `(Expr.Pi (SK $α) d⟪$β⟫)
   | `(d⟪Π $α:expr, $β:expr⟫) => `(Expr.Pi (SK $α) (SK $β))

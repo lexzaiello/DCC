@@ -117,46 +117,57 @@ theorem all_ty_red_decreasing' : PLift (Expr.RedTyComb e e') → Expr.ty_size_of
   match h with
   | .up h => all_ty_red_decreasing h
 
-inductive Expr.CRedTrans : Expr → Expr → Type where
-  | single : PLift (e.RedTyComb e') → Expr.CRedTrans e e'
-  | trans  : (PLift (a.RedTyComb b)) → Expr.CRedTrans b c → Expr.CRedTrans a c
+inductive Expr.TyRedReflTrans : Expr → Expr → Type where
+  | single : PLift (e.RedTyComb e') → Expr.TyRedReflTrans e e'
+  | trans  : (PLift (a.RedTyComb b)) → Expr.TyRedReflTrans b c → Expr.TyRedReflTrans a c
+  | refl   : Expr.TyRedReflTrans e e
 
-def Expr.reduce (e : Expr) (_h : e.ty_size_of > 0) : Option ((e' : Expr) × (Expr.CRedTrans e e')) :=
+def Expr.reduce (e : Expr) : ((e' : Expr) × (Expr.TyRedReflTrans e e')) :=
   let _size := e.ty_size_of
   let r := e.red_ty_comb?
   match r with
   | .some ⟨e', h⟩ =>
-    have _h_size : e'.ty_size_of < e.ty_size_of := all_ty_red_decreasing' h
-    if hpos : e'.ty_size_of > 0 then
-      let r' := e'.reduce hpos
-      match r' with
-      | .some ⟨e'', r⟩ => .some ⟨e'', .trans h r⟩
-      | _ => .none
-    else
-      .some ⟨e', .single h⟩
-  | _ => .none
+    if _h : 0 < e.ty_size_of then
+      have _h_size : e'.ty_size_of < e.ty_size_of := all_ty_red_decreasing' h
+      let ⟨e'', r⟩ := e'.reduce
+      ⟨e'', .trans h r⟩
+    else ⟨e', .single h⟩
+  | _ => ⟨e, .refl⟩
 
-def Expr.reduce_sound : Expr.reduce e h = .some ⟨e', hr⟩ → Expr.CRedTrans e e' := fun _ => hr
+def Expr.reduce_sound : Expr.reduce e = ⟨e', hr⟩ → Expr.TyRedReflTrans e e' := fun _ => hr
 
-inductive RunPi (arg : Expr) : Expr → Expr → Prop
-  | srt : RunPi arg (SK Sort m) (SK Sort m)
-  | pi  : RunPi arg α α' → RunPi arg β β'
-    → RunPi arg (SK Π α, β) (SK Π α', β')
-  | red : (SK (f arg)).CRedTrans e' → RunPi arg f e'
+/-def Expr.reduce_complete (h : Expr.CRedTrans e e')
+  (h_pos : e.ty_size_of > 0) : Expr.reduce e h_pos = .some ⟨e', h⟩ := by
+  induction h
+  · unfold Expr.reduce
+    simp only [gt_iff_lt]
+    rename_i hr
+    have h := hr.down
+    cases h
+    dsimp [Expr.red_ty_comb?]
 
-def Expr.run_pi (in_pi arg : Expr) : Option ((e' : Expr) × (PLift (RunPi arg in_pi e'))) :=
+    sorry
+  sorry-/
+
+inductive RedPi (arg : Expr) : Expr → Expr → Prop
+  | srt : RedPi arg (SK Sort m) (SK Sort m)
+  | pi  : RedPi arg α α' → RedPi arg β β'
+    → RedPi arg (SK Π α, β) (SK Π α', β')
+  | red : (SK (f arg)).TyRedReflTrans e' → RedPi arg f e'
+
+def Expr.reduce_pi (in_pi arg : Expr) : (e' : Expr) × (PLift (RedPi arg in_pi e')) :=
   match in_pi with
-  | SK Sort m => .some ⟨SK Sort m, ⟨.srt⟩⟩
-  | SK Π α, β => do
-    let ⟨α', ⟨h₁⟩⟩ ← α.run_pi arg
-    let ⟨β', ⟨h₂⟩⟩ ← β.run_pi arg
-    .some ⟨(SK Π α', β'), ⟨.pi h₁ h₂⟩⟩
-  | SK e => do
-    if h : 0 < e.ty_size_of then
-      let ⟨e', h⟩ ← Expr.reduce (SK (e arg)) (by simp [Expr.ty_size_of]; exact .inl h)
-      .some ⟨e', ⟨.red h⟩⟩
-    else
-      .none
+  | SK Sort m => ⟨SK Sort m, ⟨.srt⟩⟩
+  | SK Π α, β =>
+    let ⟨α', ⟨h₁⟩⟩ := α.reduce_pi arg
+    let ⟨β', ⟨h₂⟩⟩ := β.reduce_pi arg
+    ⟨(SK Π α', β'), ⟨.pi h₁ h₂⟩⟩
+  | SK e =>
+    let ⟨e', h⟩ := Expr.reduce (SK (e arg))
+    ⟨e', ⟨.red h⟩⟩
+
+def Expr.RedPi.sound (_h : Expr.reduce_pi in_pi arg = ⟨e', ⟨hp⟩⟩) : RedPi arg in_pi e' := hp
+
 /-
 arg is powerful. pretty much all we need.
 
@@ -182,7 +193,12 @@ def arg (n : ℕ) : Expr :=
   | 1 => SK K*
   | .succ n => SK (B K* #(arg n))
 
-#eval (SK(#(arg 3) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
+def K.type (m n : Level) : Expr := (SK
+  Π Sort m, Π (Π #(arg 0), Sort n), Π #(arg 0), Π #(arg 1), #(arg 0))
+
+#eval Std.format <| ((K.type 1 1).reduce_pi (SK Sort 0)).fst
+
+/-#eval (SK(#(arg 3) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
 #eval (SK((#(arg 2) #(arg 1)) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
 #eval (SK((#(arg 2) #(arg 1)) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
-#eval (SK((#(arg 2) #(arg 1)) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
+#eval (SK((#(arg 2) #(arg 1)) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)-/

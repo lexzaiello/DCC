@@ -35,18 +35,9 @@ deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 namespace Expr
 
-declare_syntax_cat debruijn
 declare_syntax_cat expr
 
-syntax "{" expr,+ "}" : debruijn
-syntax "{" num,+ "}" : debruijn
-syntax "(" expr ")" : debruijn
-syntax "Π" debruijn "," debruijn : debruijn
-syntax "Π" expr "," debruijn : debruijn
-syntax "Π" expr "," expr : debruijn
-syntax "Π" debruijn "," expr : debruijn
-
-syntax "d⟪" debruijn "⟫" : term
+syntax "Π" expr "," expr : expr
 
 declare_syntax_cat levels
 declare_syntax_cat comb
@@ -71,8 +62,6 @@ syntax "__" "∶" expr : expr
 syntax expr "~>" expr : expr
 syntax ident : expr
 
-syntax debruijn : expr
-
 syntax "SK" expr : term
 
 macro_rules
@@ -88,20 +77,15 @@ macro_rules
   | `(SK I) => `(Expr.tycomb (TyComb.read))
   | `(SK Sort $m:term) => `(Expr.Srt $m)
   | `(SK Type $n:term) => `(Expr.Srt ($n + 1))
-  | `(SK $d:debruijn) => `(d⟪$d:debruijn⟫)
   | `(SK ($e:expr)) => `(SK $e)
   | `(SK ($f:expr $x:expr)) => `(Expr.app (SK $f:expr) (SK $x:expr))
   | `(SK __ ∶ $t:expr) => `(Expr.tyhole (SK $t))
   | `(SK ($f:expr $x:expr $xs:expr*)) => `(SK (($f:expr $x:expr) $xs:expr*))
-  | `(d⟪($t:expr)⟫) => `(SK $t:expr)
-  | `(d⟪Π $α:debruijn, $β:debruijn⟫) => `(Expr.Pi d⟪$α⟫ d⟪$β⟫)
-  | `(d⟪Π $α:expr, $β:debruijn⟫) => `(Expr.Pi (SK $α) d⟪$β⟫)
-  | `(d⟪Π $α:expr, $β:expr⟫) => `(Expr.Pi (SK $α) (SK $β))
-  | `(d⟪Π $α:debruijn, $β:expr⟫) => `(Expr.Pi (d⟪$α⟫) (SK $β))
-  | `(SK $α:expr ~> $β:expr) => `(d⟪Π ($α:expr), (K* $β:expr)⟫)
+  | `(SK Π $α:expr, $β:expr) => `(Expr.Pi (SK $α) (SK $β))
+  | `(SK $α:expr ~> $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
 
 def toFormat : Expr → Format
-  | SK Sort m => s!"(Sort {m})"
+  | SK Sort m => s!"Sort {m}"
   | SK B => "B"
   | SK C => "C"
   | SK I => "I"
@@ -109,7 +93,7 @@ def toFormat : Expr → Format
   | SK K'.{[m, n]} => "K'.{" ++ (format [m, n]) ++ "}"
   | SK K.{[m, n]} => "K.{" ++ (format [m, n]) ++ "}"
   | SK S.{[m, n, o]} => "S.{" ++ (format [m, n, o]) ++ "}"
-  | SK Π α, β => .paren <| "Π" ++ (.nest 2 <| (.paren <| α.toFormat) ++ ", " ++ β.toFormat)
+  | SK Π α, β => .paren <| "Π " ++ α.toFormat ++ ", " ++ β.toFormat
   | SK (f x) => .bracket "(" (f.toFormat ++ (.nest 2 <| .line ++ x.toFormat)) ")"
   | SK __ ∶ t => "__ : " ++ t.toFormat
 

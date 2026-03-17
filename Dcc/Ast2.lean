@@ -33,7 +33,7 @@ inductive Expr where
   | app    : Expr   → Expr → Expr
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
-namespace Expr
+namespace dsl
 
 declare_syntax_cat expr
 
@@ -58,7 +58,7 @@ syntax "C" : expr
 syntax "K*" : expr
 syntax "I" : expr
 syntax "Sort" term : expr
-syntax "__" "∶" expr : expr
+syntax expr "∶" expr : expr
 syntax expr "~>" expr : expr
 syntax ident : expr
 
@@ -84,6 +84,10 @@ macro_rules
   | `(SK Π $α:expr, $β:expr) => `(Expr.Pi (SK $α) (SK $β))
   | `(SK $α:expr ~> $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
 
+end dsl
+
+namespace Expr
+
 def toFormat : Expr → Format
   | SK Sort m => s!"Sort {m}"
   | SK B => "B"
@@ -104,14 +108,3 @@ abbrev ret (n : ℕ) (fn : Expr) : Expr :=
   (List.replicate n (SK K*)).foldr (fun e acc => (SK (B e acc))) fn
 
 end Expr
-
-/-
-Proper debruijn indices:
-
-0 = I
-1 = K I
-2 = K (K I)
-
-multiple arguments:
-
--/

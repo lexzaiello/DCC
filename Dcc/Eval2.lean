@@ -3,6 +3,78 @@ import Init.Data.Option.Lemmas
 import Mathlib.Logic.Relation
 import Mathlib.Tactic
 
+-- Decreasing measure
+-- function arity decreases with each argument
+inductive Expr.TySize : Expr → ℕ → Prop
+  | next : Expr.TySize (SK K*) 1
+  | comp : Expr.TySize (SK B) 1
+  | flip : Expr.TySize (SK C) 1
+  | read : Expr.TySize (SK I) 1
+  | pi   : Expr.TySize α n → Expr.TySize (SK Π α, β) n
+  | comb : Expr.TySize (.comb c) 0
+  | hole : Expr.TySize (SK __ ∶ t) 0
+  | srt  : Expr.TySize (SK Sort m) 0
+  | app  : Expr.TySize f n
+    → Expr.TySize x m
+    → Expr.TySize (SK (f x)) (n + m)
+
+-- single-ish step reduction
+-- no refl constructor, since this is meant to fire at the top level with Π.
+-- Π argument types should always reduce for the argument.
+inductive Expr.RedTy : Expr → Expr → Prop
+  | next      : RedTy (SK (K* A b)) A
+  | comp      : RedTy (SK (B f g x)) (SK (f (g x)))
+  | flip      : RedTy (SK (C x y z)) (SK (x z y))
+  | read      : RedTy (SK (I x)) x
+  | app       : Expr.RedTy f f'
+    → Expr.RedTy (SK (f x)) (SK (f' x))
+  | pi        : Expr.RedTy (SK (α x)) α'
+    -- ^ this is fine since all argument binders should have at least one I ready to fire
+    → Expr.RedTy (SK ((Π α, β) x)) (SK (Π α', (β x)))
+
+theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n := by
+  induction h_red generalizing n
+  · cases h_size
+    rename_i h _
+    cases h
+    rename_i h _
+    cases h
+    exact ⟨_, (by assumption), by grind only⟩
+  · cases h_size
+    rename_i h _
+    cases h
+    rename_i h _
+    cases h
+    rename_i h _
+    cases h
+    exact ⟨_, .app (by assumption) (.app (by assumption) (by assumption)), by grind only⟩
+  · cases h_size
+    rename_i h _
+    cases h
+    rename_i h _
+    cases h
+    rename_i h _
+    cases h
+    exact ⟨_, .app (.app (by assumption) (by assumption)) (by assumption), by grind only⟩
+  · cases h_size
+    rename_i h _
+    cases h
+    exact ⟨_, by assumption, by grind only⟩
+  case app f f' x hrf ih =>
+    cases h_size
+    have h := ih (by assumption)
+    have ⟨f', h₁, h₂⟩ := h
+    exact ⟨_, .app (by assumption) (by assumption), by grind only⟩
+  case pi α x α' β hr ih =>
+    cases h_size
+    · rename_i n m hsizeα hsizex
+      cases hsizeα
+      rename_i hsizeα
+      have h := ih (.app (by assumption) (by assumption))
+      have ⟨n', h₁, h₂⟩ := h
+      exact ⟨_, .pi (by assumption), by grind only⟩
+
+/-
 inductive Expr.RedexTy : Expr → Prop
   | comp : RedexTy (SK (B f g x))
   | flip : RedexTy (SK (C x y z))
@@ -117,22 +189,16 @@ theorem all_ty_red_decreasing' : PLift (Expr.RedTyComb e e') → Expr.ty_size_of
   match h with
   | .up h => all_ty_red_decreasing h
 
-inductive Expr.TyRedReflTrans : Expr → Expr → Type where
-  | single : PLift (e.RedTyComb e') → Expr.TyRedReflTrans e e'
-  | trans  : (PLift (a.RedTyComb b)) → Expr.TyRedReflTrans b c → Expr.TyRedReflTrans a c
-  | refl   : Expr.TyRedReflTrans e e
+def Expr.TyRedTrans := Relation.TransGen Expr.RedTyComb
 
-def Expr.reduce_ty (e : Expr) : ((e' : Expr) × (Expr.TyRedReflTrans e e')) :=
+def Expr.reduce_ty (e : Expr) : Option ((e' : Expr) × (PLift (Expr.TyRedTrans e e'))) := do
   let _size := e.ty_size_of
-  let r := e.red_ty_comb?
-  match r with
-  | .some ⟨e', h⟩ =>
-    if _h : 0 < e.ty_size_of then
-      have _h_size : e'.ty_size_of < e.ty_size_of := all_ty_red_decreasing' h
-      let ⟨e'', r⟩ := e'.reduce_ty
-      ⟨e'', .trans h r⟩
-    else ⟨e', .single h⟩
-  | _ => ⟨e, .refl⟩
+  let ⟨e', h⟩ ← e.red_ty_comb?
+  if _h : 0 < e.ty_size_of then
+    have _h_size : e'.ty_size_of < e.ty_size_of := all_ty_red_decreasing' h
+    let ⟨e'', r⟩ ← e'.reduce_ty
+    .some ⟨e'', ⟨.trans (.single h.down) r.down⟩⟩
+  else .some ⟨e', ⟨.single h.down⟩⟩
 
 def Expr.reduce_ty_sound : Expr.reduce_ty e = ⟨e', hr⟩ → Expr.TyRedReflTrans e e' := fun _ => hr
 
@@ -174,3 +240,4 @@ def arg (n : ℕ) : Expr :=
   | 1 => SK K*
   | .succ n => SK (B K* #(arg n))
 
+-/

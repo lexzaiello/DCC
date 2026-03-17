@@ -53,51 +53,7 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
       else
         .none
     | _ => .none
-  
-/-
-def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
-  match e_heq : e with
-  | Π' α, read => do
-    match ← infer α with
-    | ⟨Srt m, ⟨h⟩⟩ => pure ⟨Srt m, ⟨Judge.read h⟩⟩
-    | _ => .none
-  | Π' α, ⸨next β⸩ => do
-    match ← infer β with
-    | ⟨Srt m, ⟨h⟩⟩ => pure ⟨Srt m, ⟨Judge.next (α := α) h⟩⟩
-    | _ => .none
-  | Π' α, ⸨$ π f g⸩ => do
-    match heq : ← infer π, ← infer f, ← infer g with
-    | ⟨(Π' β, Π' ⸨next γ⸩, ⸨next ⸨next (Srt m)⸩⸩), ⟨h₁⟩⟩, ⟨(Π' α₁, ⸨next β₂⸩), ⟨h₂⟩⟩, ⟨(Π' α₂, ⸨next γ₂⸩), ⟨h₃⟩⟩ =>
-      if heq₂ : α = α₁ ∧ α = α₂ ∧ γ = γ₂ ∧ β = β₂ then
-        by
-          let ⟨hq₀, hq₁, hq₂, hq₃⟩ := heq₂
-          refine .some ⟨Srt m, ⟨.app' (m := m) (α := α) (β := β) (γ := γ) ?_ ?_ ?_⟩⟩
-          · exact h₁
-          · rw [← hq₀, ← hq₃] at h₂
-            exact h₂
-          · rw [← hq₁, ← hq₂] at h₃
-            exact h₃
-      else .none
-    | _, _, _ => .none
-  | ⸨f x⸩ => do match ← infer f, ← infer x with
-    | ⟨Π' α, β, ⟨hf⟩⟩, ⟨α₂, ⟨hx⟩⟩ =>
-      if heq : α = α₂ then
-        match hr : run_pi x β with
-        | .some h =>
-          .some ⟨h.fst, ⟨.app hf (by rw [heq]; exact hx) (by apply RunPi.sound; simp_all; rw [hr]; simp_all)⟩⟩
-        | _ => .none
-      else
-        .none
-    | _, _ => .none
-  | Srt m => return ⟨Srt m.succ, ⟨.srt⟩⟩
-  | K.{[m, n]} => pure ⟨K.type m n, ⟨.k⟩⟩
-  | K'.{[m, n]} => pure ⟨K'.type m n, ⟨.k'⟩⟩
-  | S.{[m, n, o]} => pure ⟨S.type m n o, ⟨.s⟩⟩
-  | Π' α, β => do
-    match ← infer β with
-    | ⟨Srt n, ⟨hjβ⟩⟩ =>
-      let β' ← run_pi α β
-      pure ⟨β'.fst, ⟨.pi (β := β) (α := α) hjβ (β'.snd.down)⟩⟩
-    | _ => .none
+  -- | SK Π α, β => TODO TODO
   | _ => .none
--/
+
+#eval (infer (SK (K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)))).map (·.fst)

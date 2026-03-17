@@ -10,7 +10,7 @@ So, we may need to change the K rule slightly so that β x works.
 -/
 
 @[simp] abbrev K'.type (m n : Level) : Expr :=
-  Π' Srt m, Π' ⸨K* (Srt n)⸩, Π' ⸨# 0 K*⸩, Π' ⸨# 1 K*⸩, (⸨# 0 I⸩.assert_n 3)
+  Π' Srt m, Π' ⸨# 0 ⸨K* (Srt n)⸩⸩, Π' ⸨# 0 K*⸩, Π' ⸨# 1 K*⸩, (⸨# 0 I⸩.assert_n 3)
 
 @[simp] abbrev K.β_arg (_m n : Level) : Expr :=
   Π' ⸨# 0 I⸩, ⸨# 1 ⸨K* (Srt n)⸩⸩
@@ -37,10 +37,10 @@ in scope:
 
 @[simp] abbrev S.type (m n o : Level) : Expr :=
     Π' Srt m
-  , Π' (Π' ⸨# 0 I⸩, ⸨# 1 ⸨K* (Srt n)⸩⸩)
-  , Π' (Π' ⸨# 0 K*⸩
+  , Π' ⸨# 0 (Π' ⸨# 0 I⸩, ⸨# 1 ⸨K* (Srt n)⸩⸩)⸩
+  , Π' ⸨# 0 (Π' ⸨# 0 K*⸩
       , Π' ⸨# 1 I⸩
-      , ⸨# 3 ⸨K* (Srt o)⸩⸩)
+      , ⸨# 3 ⸨K* (Srt o)⸩⸩)⸩
   , Π' (Π' (⸨# 0 I⸩.assert_n 2)
       , Π' ⸨# 1 K*⸩
       , ⸨# 2 I⸩)
@@ -50,9 +50,19 @@ in scope:
    , I -- SORRY: fix this later
 
 @[simp] def Expr.pi_size_of : Expr → ℕ
-  | (Π' α, β) => 1 + α.pi_size_of + β.pi_size_of
+  | (Π' α, β) => α.pi_size_of + β.pi_size_of
+  | K* => 2
+  | B
+  | C => 3
+  | I => 1
+  | ⸨I _x⸩ => 0
+  | ⸨B _f⸩ => 2
+  | ⸨B _f _g⸩ => 1
+  | ⸨B _f _g _x⸩ => 0
+  | ⸨C _x⸩ => 2
+  | ⸨C _x _y⸩ => 1
+  | ⸨C _x _y _z⸩ => 0
   | ⸨f x⸩ => f.pi_size_of + x.pi_size_of
-  | I | B | C | K* => 1
   | _ => 0
 
 inductive Expr.IsNotBinder : Expr → Prop
@@ -147,22 +157,11 @@ def Expr.is_pi : Expr → Bool
   | Π' _α, _β => true
   | _e => false
 
-theorem RunPi.basically_well_founded (h_n₀ : (Π' α, β).n_ty_comb > 0)
-  (h_step : (run_pi any_arg (Π' α, β)).isSome) :
-  ((run_pi any_arg (Π' α, β)).get h_step).fst.n_ty_comb < (Π' α, β).n_ty_comb := by
-  have hr := (run_pi any_arg (Π' α, β)).get h_step
-  unfold run_pi at h_step
+theorem RedTyComb.basically_well_founded : 0 < Expr.pi_size_of e → e.RedTyComb e' → e'.pi_size_of < e.pi_size_of := by
+  intro hnpos hred
+  induction hred
+  simp [Expr.pi_size_of] at *
   
-  simp
-  
-  split at h_step
-  · contradiction
-  · rename_i h_step heq
-    simp at h_step
-    unfold run_pi
-    simp_all
-    
-    sorry
 
 /-
 λ x => e₁ e₂

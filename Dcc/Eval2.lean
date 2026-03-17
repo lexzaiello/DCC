@@ -27,93 +27,24 @@ instance Expr.RedexTy.instDecidable : Decidable (Expr.RedexTy e) :=
     .isFalse (fun h => by simp [h.complete] at *)
 
 inductive Expr.RedTyComb : Expr → Expr → Prop
-  | next      : RedTyComb A A'  → RedTyComb ⸨K* A b⸩ A'
-  | comp      : RedTyComb f f'  → RedTyComb g g' → RedTyComb x x' → RedTyComb ⸨B f g x⸩ ⸨f' ⸨g' x'⸩⸩
-  | flip      : RedTyComb x x'  → RedTyComb y y' → RedTyComb z z' → RedTyComb ⸨C x y z⸩ ⸨x' z' y'⸩
-  | read      : RedTyComb x x'  → RedTyComb ⸨I x⸩ x'
-  | app       : ¬ ⸨f x⸩.RedexTy → RedTyComb f f' → RedTyComb x x' → RedTyComb ⸨f x⸩ ⸨f' x'⸩
-  | refl_c    : RedTyComb (.comb c) (.comb c)
-  | refl_ty   : RedTyComb (.tycomb c) (.tycomb c)
-  | refl_srt  : RedTyComb (Srt m) (Srt m)
-  | refl_hole : RedTyComb (.tyhole e) (.tyhole e)
-  | pi        : RedTyComb α α' → RedTyComb β β' → RedTyComb (Π' α, β) (Π' α', β')
+  | next      : RedTyComb ⸨K* A b⸩ A
+  | comp      : RedTyComb ⸨B f g x⸩ ⸨f ⸨g x⸩⸩
+  | flip      : RedTyComb ⸨C x y z⸩ ⸨x z y⸩
+  | read      : RedTyComb ⸨I x⸩ x
 
-def Expr.red_ty_comb (e : Expr) : (e' : Expr) × (PLift (e.RedTyComb e')) :=
-  if _h : e.ty_is_redex.isSome then
-    match e with
-    | ⸨K* A _b⸩ =>
-      let ⟨A', ⟨p⟩⟩ := A.red_ty_comb
-      ⟨A', ⟨.next p⟩⟩
-    | ⸨I A⸩ =>
-      let ⟨A', ⟨p⟩⟩ := A.red_ty_comb
-      ⟨A', ⟨.read p⟩⟩
-    | ⸨C x y z⸩ =>
-      let ⟨x', ⟨p₁⟩⟩ := x.red_ty_comb
-      let ⟨y', ⟨p₂⟩⟩ := y.red_ty_comb
-      let ⟨z', ⟨p₃⟩⟩ := z.red_ty_comb
-      ⟨⸨x' z' y'⸩, ⟨.flip p₁ p₂ p₃⟩⟩
-    | ⸨B f g x⸩ =>
-      let ⟨f', ⟨p₁⟩⟩ := f.red_ty_comb
-      let ⟨g', ⟨p₂⟩⟩ := g.red_ty_comb
-      let ⟨x', ⟨p₃⟩⟩ := x.red_ty_comb
-      ⟨⸨f' ⸨g' x'⸩⸩, ⟨.comp p₁ p₂ p₃⟩⟩
-  else match heq : e with
-    | ⸨f x⸩ =>
-      let ⟨f', ⟨p₁⟩⟩ := f.red_ty_comb
-      let ⟨x', ⟨p₂⟩⟩ := x.red_ty_comb
-      have h : ¬ ⸨f x⸩.ty_is_redex.isSome := fun h => by
-        simp_all
-      have h₂ : ¬ ⸨f x⸩.RedexTy := fun h => by
-        have h_complete := h.complete
-        simp_all
-      ⟨⸨f' x'⸩, ⟨.app h₂ p₁ p₂⟩⟩
-    | .comb c => ⟨.comb c, ⟨.refl_c⟩⟩
-    | .tycomb c => ⟨.tycomb c, ⟨.refl_ty⟩⟩
-    | (Srt m) => ⟨Srt m, ⟨.refl_srt⟩⟩
-    | Π' α, β =>
-      let ⟨α', ⟨hα⟩⟩ := α.red_ty_comb
-      let ⟨β', ⟨hβ⟩⟩ := β.red_ty_comb
-      ⟨Π' α', β', ⟨.pi hα hβ⟩⟩
-    | __ ∶ _t => ⟨__ ∶ _t, ⟨.refl_hole⟩⟩
+def Expr.red_ty_comb (e : Expr) : (Option <| (e' : Expr) × PLift (e.RedTyComb e')) :=
+  match e with
+  | ⸨K* A _b⸩ => .some ⟨A, ⟨.next⟩⟩
+  | ⸨I A⸩ => .some ⟨A, ⟨.read⟩⟩
+  | ⸨C x y z⸩ => .some ⟨⸨x z y⸩, ⟨.flip⟩⟩
+  | ⸨B f g x⸩ => .some ⟨⸨f ⸨g x⸩⸩, ⟨.comp⟩⟩
+  | _ => .none
 
-theorem Expr.RedTyComb.sound : Expr.RedTyComb e (Expr.red_ty_comb e).fst := (e.red_ty_comb).snd.down
+theorem Expr.RedTyComb.sound (_h : (Expr.red_ty_comb e).isSome) : Expr.RedTyComb e (e.red_ty_comb.get h).fst := (e.red_ty_comb.get h).snd.down
 
-theorem Expr.RedTyComb.complete (h : RedTyComb e e') : (Expr.red_ty_comb e).fst = e' := by
+theorem Expr.RedTyComb.complete (h : RedTyComb e e') : (Expr.red_ty_comb e) = .some ⟨e', ⟨h⟩⟩ := by
   induction h
-  · rename_i A A' b ha ih
-    unfold Expr.red_ty_comb
-    unfold Expr.ty_is_redex
-    simp [ih]
-  · rename_i f f' g g' x x' hf hg hx ih₁ ih₂ ih₃
-    unfold Expr.red_ty_comb
-    unfold Expr.ty_is_redex
-    simp [ih₁, ih₂, ih₃]
-  · rename_i ih₁ ih₂ ih₃
-    unfold Expr.red_ty_comb
-    unfold Expr.ty_is_redex
-    simp [ih₁, ih₂, ih₃]
-  · rename_i ih
-    unfold Expr.red_ty_comb
-    unfold Expr.ty_is_redex
-    simp [ih]
-  case app f x f' x' h_red hr₁ hr₂ ih₁ ih₂ =>
-    have h : ¬ ⸨f x⸩.ty_is_redex.isSome := fun h => by
-      have h := Expr.RedexTy.sound h
-      simp_all
-    unfold Expr.red_ty_comb
-    simp_all
-  · simp [Expr.red_ty_comb, Expr.ty_is_redex]
-  · simp [Expr.red_ty_comb, Expr.ty_is_redex]
-  · simp [Expr.red_ty_comb, Expr.ty_is_redex]
-  · simp [Expr.red_ty_comb, Expr.ty_is_redex]
-  case pi α α' β β' hα hβ ih₁ ih₂ =>
-    simp [← ih₁, ← ih₂]
-    have h : ¬ (α.Pi β).ty_is_redex.isSome := fun h => by
-      contradiction
-    rw [ih₁, ih₂]
-    unfold red_ty_comb
-    simp [h]
-    exact ⟨by assumption, by assumption⟩
+  repeat rfl
 
 inductive Expr.RedexTm : Expr → Prop where
   | k    : RedexTm ⸨K.{[_m, _n]} _α _β _x _y⸩

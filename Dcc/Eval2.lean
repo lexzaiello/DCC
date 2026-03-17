@@ -28,7 +28,7 @@ inductive Expr.RedTy : Expr → Expr → Prop
   | read      : RedTy (SK (I x)) x
   | app       : Expr.RedTy f f'
     → Expr.RedTy x x'
-    → Expr.RedTy (SK (f x)) (SK (f' x))
+    → Expr.RedTy (SK (f x)) (SK (f' x'))
   | pi        : Expr.RedTy (SK (α x)) α'
     -- ^ this is fine since all argument binders should have at least one I ready to fire
     → Expr.RedTy (SK ((Π α, β) x)) (SK (Π α', (β x)))
@@ -168,6 +168,12 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
     rw [← ih₁, ← ih₂]
     rfl
 
+theorem Expr.RedTy.decreasing' (h_red : Expr.RedTy e e') : e'.ty_size < e.ty_size := by
+  let h_size := e.ty_size
+  have ⟨m, h, hp⟩ := Expr.RedTy.decreasing h_red (Expr.TySize.sound (e := e) (n := h_size) rfl)
+  have h := h.complete
+  exact h.symm ▸ hp
+
 instance : WellFoundedRelation Expr := ⟨fun x y => x.ty_size < y.ty_size, (measure (fun e => Expr.ty_size e)).wf⟩
 
 def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
@@ -175,6 +181,8 @@ def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
 def Expr.IsNorm (e : Expr) : Prop := ∀ e', ¬ Expr.RedTy e e'
 
 theorem local_confluence : Expr.RedTy a b → Expr.RedTy a c → ∃ d, b.RedTyReflTrans d ∧ c.RedTyReflTrans d := by
+  intro ha hb
+  have h := Expr.RedTy.decreasing
   sorry
 
 theorem Expr.RedTy.is_norm_unique (h₁ : Expr.RedTy e e₁) (h₂ : Expr.RedTy e e₂) (h_norm₁ : e₁.IsNorm) (h_norm₂ : e₂.IsNorm) : e₁ = e₂ := by

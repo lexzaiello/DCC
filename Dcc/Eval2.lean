@@ -32,6 +32,25 @@ inductive Expr.RedTy : Expr → Expr → Prop
     -- ^ this is fine since all argument binders should have at least one I ready to fire
     → Expr.RedTy (SK ((Π α, β) x)) (SK (Π α', (β x)))
 
+theorem Expr.all_size : ∃ n, Expr.TySize e n := by
+  induction e
+  · exact ⟨0, .hole⟩
+  · rename_i c
+    cases c
+    · exact ⟨1, .next⟩
+    · exact ⟨1, .read⟩
+    · exact ⟨1, .comp⟩
+    · exact ⟨1, .flip⟩
+  case Pi α β ih₁ ih₂ =>
+    have ⟨n, h⟩ := ih₁
+    exact ⟨n, .pi h⟩
+  · exact ⟨0, .srt⟩
+  · exact ⟨0, .comb⟩
+  case app f x ih₁ ih₂ =>
+    have ⟨n, hn⟩ := ih₁
+    have ⟨m, hm⟩ := ih₂
+    exact ⟨n + m, .app hn hm⟩
+
 theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n := by
   induction h₁ generalizing m
   repeat (cases h₂; rfl)
@@ -105,7 +124,7 @@ def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
 
 def Expr.IsNorm (e : Expr) : Prop := ∀ e', ¬ Expr.RedTy e e'
 
-theorem Expr.RedTy.is_norm_unique (h₁ : Expr.RedTy e e₁) (h₂ : Expr.RedTy e e₂) (h_norm : e.IsNorm) : e₁ = e₂ := by
+theorem Expr.RedTy.is_norm_unique (h₁ : Expr.RedTy e e₁) (h₂ : Expr.RedTy e e₂) (h_norm₁ : e₁.IsNorm) (h_norm₂ : e₂.IsNorm) : e₁ = e₂ := by
   induction h₁ generalizing e₂
   · cases h₂
     · rfl
@@ -119,12 +138,9 @@ theorem Expr.RedTy.is_norm_unique (h₁ : Expr.RedTy e e₁) (h₂ : Expr.RedTy 
   · cases h₂
     · rfl
     repeat (rename_i h; cases h)
-  case app f f' x hrf ih =>
-    have h := h_norm e₂
-    contradiction
-  case pi α x α' β hrαx ih =>
-    have h := h_norm e₂
-    contradiction
+  · rename_i f f' x hrf ih
+    
+    sorry
 
 theorem Expr.RedTy.no_step_self : ¬ Expr.RedTy e e := by
   intro h
@@ -154,7 +170,7 @@ theorem Expr.RedTyTrans.is_norm_unique (h₁ : Expr.RedTyTrans e e₁) (h₂ : E
       exfalso
       exact h.no_step_self
 
-theorem Expr.RedTyTrans.weak_norm : ∃ e', (RedTyReflTrans e e' ∧ e'.IsNorm) := by
+theorem Expr.RedTyReflTrans.weak_norm : ∃ e', (RedTyReflTrans e e' ∧ e'.IsNorm) := by
   induction e
   · exact ⟨_, .refl, fun e h => by cases h⟩
   · exact ⟨_, .refl, fun e h => by cases h⟩
@@ -164,6 +180,8 @@ theorem Expr.RedTyTrans.weak_norm : ∃ e', (RedTyReflTrans e e' ∧ e'.IsNorm) 
   case app f x ih₁ ih₂ =>
     have ⟨f', hrf, h_norm_f⟩ := ih₁
     have ⟨x', hrx, h_norm_x⟩ := ih₂
+    induction hrf generalizing x x'
+    induction hrx generalizing f f'
     
     sorry
 

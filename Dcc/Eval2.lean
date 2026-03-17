@@ -1,5 +1,6 @@
 import Dcc.Ast2
 import Init.Data.Option.Lemmas
+import Mathlib.Logic.Relation
 
 inductive Expr.RedexTy : Expr → Prop
   | comp : RedexTy (SK (B f g x))
@@ -81,4 +82,13 @@ inductive RedTm : Expr → Expr → Prop
 {1} I (Srt 0) (Srt 1) = Srt 1
 -/
 
-#eval (SK ({1} I (Srt 0) (Srt 1)))
+def RedTrans := Relation.ReflTransGen Expr.RedTyComb
+
+def try_reduce_n (n : ℕ) (e : Expr) : Option ((e' : Expr) × (PLift (RedTrans e e'))) :=
+  match n with
+  | .zero => .none
+  | .succ n => do
+    let ⟨inner, h₁⟩ ← try_reduce_n n e
+    let ⟨inner', h₂⟩ ← inner.red_ty_comb
+    .some ⟨inner', ⟨match h₁, h₂ with
+      | ⟨h₁⟩, ⟨h₂⟩ => h₁.trans (.tail .refl h₂)⟩⟩

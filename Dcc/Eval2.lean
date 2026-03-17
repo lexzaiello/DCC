@@ -97,3 +97,4 @@ def Expr.reduce_ty_n (n : ℕ) (e : Expr) : Option ((e' : Expr) × (PLift (RedTr
       | ⟨h₁⟩, ⟨h₂⟩ => h₁.trans (.tail .refl h₂)⟩⟩
 
 #eval ((SK ({1} I (Srt 0) (Srt 10))).reduce_ty_n 4).map (·.fst)
+#eval (SK ({1} I (Srt 0) (Srt 10)))

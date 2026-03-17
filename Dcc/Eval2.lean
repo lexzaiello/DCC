@@ -91,7 +91,87 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
 
 def Expr.RedTyTrans := Relation.TransGen Expr.RedTy
 
-theorem Expr.RedTyTrans.decreasing (h_red : Expr.RedTyTrans a b) (hn₁ :  : 
+-- retry with hyp n₂ instead if hard
+theorem Expr.RedTyTrans.decreasing (h_red : Expr.RedTyTrans a b) (hn : a.TySize n) : ∃ m, b.TySize m ∧ m < n := by
+  induction h_red
+  · rename_i hr
+    exact hr.decreasing hn
+  · rename_i b c htrans hr ih
+    have ⟨m, hbm₁, hbm₂⟩ := ih
+    have ⟨mc, hcm₁, hcm₂⟩ := hr.decreasing hbm₁
+    exact ⟨mc, hcm₁, by grind only⟩
+
+def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
+
+def Expr.IsNorm (e : Expr) : Prop := ∀ e', ¬ Expr.RedTy e e'
+
+theorem Expr.RedTy.is_norm_unique (h₁ : Expr.RedTy e e₁) (h₂ : Expr.RedTy e e₂) (h_norm : e.IsNorm) : e₁ = e₂ := by
+  induction h₁ generalizing e₂
+  · cases h₂
+    · rfl
+    repeat (rename_i h; cases h)
+  · cases h₂
+    · rfl
+    repeat (rename_i h; cases h)
+  · cases h₂
+    · rfl
+    repeat (rename_i h; cases h)
+  · cases h₂
+    · rfl
+    repeat (rename_i h; cases h)
+  case app f f' x hrf ih =>
+    have h := h_norm e₂
+    contradiction
+  case pi α x α' β hrαx ih =>
+    have h := h_norm e₂
+    contradiction
+
+theorem Expr.RedTy.no_step_self : ¬ Expr.RedTy e e := by
+  intro h
+  induction e
+  repeat contradiction
+  case app f x ih₁ ih₂ =>
+    cases h
+    rename_i h
+    exfalso
+    exact ih₁ h
+
+theorem Expr.RedTyTrans.is_norm_unique (h₁ : Expr.RedTyTrans e e₁) (h₂ : Expr.RedTyTrans e e₂) (h_norm : e.IsNorm) : e₁ = e₂ := by
+  induction h₁ generalizing e₂
+  rename_i b _
+  · have h := h_norm b
+    contradiction
+  · rename_i b c hrb hredb ih
+    induction hrb generalizing e₁
+    · rename_i b _
+      have h := h_norm b
+      contradiction
+    · rename_i b' c' hrb' hredc' ih₂
+      have h₁ := ih hrb'
+      have h₂ := ih h₂
+      have h : c'.RedTy c' := by
+        simp_all only
+      exfalso
+      exact h.no_step_self
+
+theorem Expr.RedTyTrans.weak_norm : ∃ e', (RedTyReflTrans e e' ∧ e'.IsNorm) := by
+  induction e
+  · exact ⟨_, .refl, fun e h => by cases h⟩
+  · exact ⟨_, .refl, fun e h => by cases h⟩
+  · exact ⟨_, .refl, fun e h => by cases h⟩
+  · exact ⟨_, .refl, fun e h => by cases h⟩
+  · exact ⟨_, .refl, fun e h => by cases h⟩
+  case app f x ih₁ ih₂ =>
+    have ⟨f', hrf, h_norm_f⟩ := ih₁
+    have ⟨x', hrx, h_norm_x⟩ := ih₂
+    
+    sorry
+
+--theorem Expr.RedTyTrans.norm (h_size : 
+
+def Expr.reduce (h_size : Expr.TySize e n) : ((e' : Expr) × (PLift (e.RedTyTrans e'))) := by
+  
+  sorry
 
 /-
 inductive Expr.RedexTy : Expr → Prop

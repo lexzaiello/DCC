@@ -122,19 +122,19 @@ inductive Expr.TyRedReflTrans : Expr → Expr → Type where
   | trans  : (PLift (a.RedTyComb b)) → Expr.TyRedReflTrans b c → Expr.TyRedReflTrans a c
   | refl   : Expr.TyRedReflTrans e e
 
-def Expr.reduce (e : Expr) : ((e' : Expr) × (Expr.TyRedReflTrans e e')) :=
+def Expr.reduce_ty (e : Expr) : ((e' : Expr) × (Expr.TyRedReflTrans e e')) :=
   let _size := e.ty_size_of
   let r := e.red_ty_comb?
   match r with
   | .some ⟨e', h⟩ =>
     if _h : 0 < e.ty_size_of then
       have _h_size : e'.ty_size_of < e.ty_size_of := all_ty_red_decreasing' h
-      let ⟨e'', r⟩ := e'.reduce
+      let ⟨e'', r⟩ := e'.reduce_ty
       ⟨e'', .trans h r⟩
     else ⟨e', .single h⟩
   | _ => ⟨e, .refl⟩
 
-def Expr.reduce_sound : Expr.reduce e = ⟨e', hr⟩ → Expr.TyRedReflTrans e e' := fun _ => hr
+def Expr.reduce_ty_sound : Expr.reduce_ty e = ⟨e', hr⟩ → Expr.TyRedReflTrans e e' := fun _ => hr
 
 /-def Expr.reduce_complete (h : Expr.CRedTrans e e')
   (h_pos : e.ty_size_of > 0) : Expr.reduce e h_pos = .some ⟨e', h⟩ := by
@@ -149,24 +149,24 @@ def Expr.reduce_sound : Expr.reduce e = ⟨e', hr⟩ → Expr.TyRedReflTrans e e
     sorry
   sorry-/
 
-inductive RedPi (arg : Expr) : Expr → Expr → Prop
-  | srt : RedPi arg (SK Sort m) (SK Sort m)
-  | pi  : RedPi arg α α' → RedPi arg β β'
-    → RedPi arg (SK Π α, β) (SK Π α', β')
-  | red : (SK (f arg)).TyRedReflTrans e' → RedPi arg f e'
+inductive RedPiArg (arg : Expr) : Expr → Expr → Prop
+  | srt : RedPiArg arg (SK Sort m) (SK Sort m)
+  | pi  : RedPiArg arg α α' → RedPiArg arg β β'
+    → RedPiArg arg (SK Π α, β) (SK Π α', β')
+  | red : (SK (f arg)).TyRedReflTrans e' → RedPiArg arg f e'
 
-def Expr.reduce_pi (in_pi arg : Expr) : (e' : Expr) × (PLift (RedPi arg in_pi e')) :=
+def Expr.reduce_pi_arg (in_pi arg : Expr) : (e' : Expr) × (PLift (RedPiArg arg in_pi e')) :=
   match in_pi with
   | SK Sort m => ⟨SK Sort m, ⟨.srt⟩⟩
   | SK Π α, β =>
-    let ⟨α', ⟨h₁⟩⟩ := α.reduce_pi arg
-    let ⟨β', ⟨h₂⟩⟩ := β.reduce_pi arg
+    let ⟨α', ⟨h₁⟩⟩ := α.reduce_pi_arg arg
+    let ⟨β', ⟨h₂⟩⟩ := β.reduce_pi_arg arg
     ⟨(SK Π α', β'), ⟨.pi h₁ h₂⟩⟩
   | SK e =>
-    let ⟨e', h⟩ := Expr.reduce (SK (e arg))
+    let ⟨e', h⟩ := Expr.reduce_ty (SK (e arg))
     ⟨e', ⟨.red h⟩⟩
 
-def Expr.RedPi.sound (_h : Expr.reduce_pi in_pi arg = ⟨e', ⟨hp⟩⟩) : RedPi arg in_pi e' := hp
+def Expr.RedPiArg.sound (_h : Expr.reduce_pi_arg in_pi arg = ⟨e', ⟨hp⟩⟩) : RedPiArg arg in_pi e' := hp
 
 def arg (n : ℕ) : Expr :=
   match n with

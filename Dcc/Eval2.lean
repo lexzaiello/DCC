@@ -120,9 +120,58 @@ theorem Expr.RedTyTrans.decreasing (h_red : Expr.RedTyTrans a b) (hn : a.TySize 
     have ⟨mc, hcm₁, hcm₂⟩ := hr.decreasing hbm₁
     exact ⟨mc, hcm₁, by grind only⟩
 
+def Expr.ty_size : Expr → ℕ
+  | (SK K*) => 1
+  | (SK B) => 1
+  | (SK C) => 1
+  | (SK I) => 1
+  | (SK Π α, _β) => α.ty_size
+  | .comb _c => 0
+  | SK __ ∶ _t => 0
+  | SK Sort _m => 0
+  | SK (f x) =>
+    let n := f.ty_size
+    let m := x.ty_size
+    (n + m)
+
+theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
+  intro h
+  unfold Expr.ty_size at h
+  rw [← h]
+  split at h
+  · exact .next
+  · exact .comp
+  · exact .flip
+  · exact .read
+  · have h' := Expr.TySize.sound h
+    rw [← h] at h'
+    apply TySize.pi
+    exact h'
+  · exact .comb
+  · exact .hole
+  · exact .srt
+  simp at h
+  apply Expr.TySize.app
+  repeat (apply Expr.TySize.sound; rfl)
+
+theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
+  intro h
+  induction h
+  repeat rfl
+  case pi α n β hα ih =>
+    exact ih.symm ▸ rfl
+  repeat rfl
+  case app f n x m hf hx ih₁ ih₂ =>
+    rw [← ih₁, ← ih₂]
+    rfl
+
 def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
 
 def Expr.IsNorm (e : Expr) : Prop := ∀ e', ¬ Expr.RedTy e e'
+
+theorem Expr.RedTy.is_norm_unique (h₁ : Expr.RedTy e e₁) (h₂ : Expr.RedTy e e₂) (h_norm₁ : e₁.IsNorm) (h_norm₂ : e₂.IsNorm) : e₁ = e₂ := by
+  induction h : measure e using 
+  sorry
 
 theorem Expr.RedTy.is_norm_unique (h₁ : Expr.RedTy e e₁) (h₂ : Expr.RedTy e e₂) (h_norm₁ : e₁.IsNorm) (h_norm₂ : e₂.IsNorm) : e₁ = e₂ := by
   induction h₁ generalizing e₂

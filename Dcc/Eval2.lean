@@ -20,6 +20,11 @@ inductive Expr.NormTyComb : Expr → Prop
   | next₁ : (SK (K* f)).NormTyComb
   | read  : (SK I).NormTyComb
 
+theorem Expr.NormTyComb.not_redex : Expr.NormTyComb e → ¬ e.RedexTy := by
+  intro h
+  cases h
+  repeat (intro h; contradiction)
+
 def Expr.ty_comb_is_norm (e : Expr) : Option (PLift e.NormTyComb) :=
   match e with
   | (SK B) => .some ⟨.comp₀⟩
@@ -112,27 +117,39 @@ apps of the combinators. Should decrease size as well.
   | SK (f x) => f.ty_size_of + x.ty_size_of
   | _ => 0
 
-theorem Expr.RedTyComb.sound (_h : (Expr.red_ty_comb? e).isSome) : Expr.RedTyComb e (e.red_ty_comb?.get h).fst := (e.red_ty_comb?.get h).snd.down
+theorem Expr.RedTyComb.sound : Expr.RedTyComb e (e.red_ty_comb).fst := (e.red_ty_comb).snd.down
 
 theorem Expr.RedTyComb.complete (h : RedTyComb e e') :
-  (Expr.red_ty_comb? e) = .some ⟨e', ⟨h⟩⟩ := by
+  (Expr.red_ty_comb e).fst = e' := by
   induction h
   repeat rfl
   case norm e h_norm =>
-    cases h_norm
-    repeat rfl
+    have h := h_norm.not_redex
+    unfold Expr.red_ty_comb
+    simp only [h, ↓reduceDIte, h_norm]
   case cong f x f' h_nredex h_red ih =>
-    dsimp only [red_ty_comb?]
-    simp_all only [↓reduceDIte, dite_eq_right_iff, Option.some.injEq, Sigma.mk.injEq, app.injEq, and_true]
-    intro h
-    cases h
-    cases h_red
-    cases ih
-    rename_i h
-    cases h
-    refine ⟨rfl, ?_⟩
-    
-    sorry
+    unfold Expr.red_ty_comb
+    simp only [h_nredex, ↓reduceDIte]
+    rw [← ih]
+    split
+    · rename_i h_norm
+      cases h_norm
+      · cases h_red
+        simp_all only
+      · simp_all only
+        rw [← ih]
+        rfl
+      · cases h_red
+        simp_all only
+      · simp_all only [app.injEq, and_true]
+        rw [← ih]
+        rfl
+      · cases h_red
+        rename_i h_norm
+        cases h_norm
+        simp_all only
+    rfl
+  repeat rfl
 
 inductive Expr.RedexTm : Expr → Prop where
   | k    : RedexTm (SK (K.{[_m, _n]} _α _β _x _y))

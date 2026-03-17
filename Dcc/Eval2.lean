@@ -10,7 +10,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
   | comp : Expr.TySize (SK B) 1
   | flip : Expr.TySize (SK C) 1
   | read : Expr.TySize (SK I) 1
-  | pi   : Expr.TySize α n → Expr.TySize (SK Π α, β) n
+  | pi   : Expr.TySize (SK Π α, β) 0
   | comb : Expr.TySize (.comb c) 0
   | hole : Expr.TySize (SK __ ∶ t) 0
   | srt  : Expr.TySize (SK Sort m) 0
@@ -29,9 +29,6 @@ inductive Expr.RedTy : Expr → Expr → Prop
   | app       : Expr.RedTy f f'
     → Expr.RedTy x x'
     → Expr.RedTy (SK (f x)) (SK (f' x'))
-  | pi        : Expr.RedTy (SK (α x)) α'
-    -- ^ this is fine since all argument binders should have at least one I ready to fire
-    → Expr.RedTy (SK ((Π α, β) x)) (SK (Π α', (β x)))
 
 theorem Expr.all_size : ∃ n, Expr.TySize e n := by
   induction e
@@ -42,9 +39,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     · exact ⟨1, .read⟩
     · exact ⟨1, .comp⟩
     · exact ⟨1, .flip⟩
-  case Pi α β ih₁ ih₂ =>
-    have ⟨n, h⟩ := ih₁
-    exact ⟨n, .pi h⟩
+  · exact ⟨0, .pi⟩
   · exact ⟨0, .srt⟩
   · exact ⟨0, .comb⟩
   case app f x ih₁ ih₂ =>
@@ -55,17 +50,52 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
 theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n := by
   induction h₁ generalizing m
   repeat (cases h₂; rfl)
-  case pi α n β _ ih =>
-    cases h₂
-    rename_i hsizeα
-    exact ih hsizeα
-  repeat (cases h₂; rfl)
   case app f n x m _ _ ih₁ ih₂ =>
     cases h₂
     rename_i hnf hnx
     have ha := ih₁ hnf
     have hb := ih₂ hnx
     grind only
+
+
+def Expr.ty_size : Expr → ℕ
+  | (SK K*) => 1
+  | (SK B) => 1
+  | (SK C) => 1
+  | (SK I) => 1
+  | (SK Π _α, _β) => 0
+  | .comb _c => 0
+  | SK __ ∶ _t => 0
+  | SK Sort _m => 0
+  | SK (f x) =>
+    let n := f.ty_size
+    let m := x.ty_size
+    (n + m)
+
+theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
+  intro h
+  unfold Expr.ty_size at h
+  rw [← h]
+  split at h
+  · exact .next
+  · exact .comp
+  · exact .flip
+  · exact .read
+  · exact .pi
+  · exact .comb
+  · exact .hole
+  · exact .srt
+  simp at h
+  apply Expr.TySize.app
+  repeat (apply Expr.TySize.sound; rfl)
+
+theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
+  intro h
+  induction h
+  repeat rfl
+  case app f n x m hf hx ih₁ ih₂ =>
+    rw [← ih₁, ← ih₂]
+    rfl
 
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n := by
   induction h_red generalizing n
@@ -102,14 +132,6 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
     have ⟨f', h₁, h₂⟩ := ha
     have ⟨f'', h₃, h₄⟩ := hb
     exact ⟨_, .app (by assumption) (by assumption), by grind only⟩
-  case pi α x α' β hr ih =>
-    cases h_size
-    · rename_i n m hsizeα hsizex
-      cases hsizeα
-      rename_i hsizeα
-      have h := ih (.app (by assumption) (by assumption))
-      have ⟨n', h₁, h₂⟩ := h
-      exact ⟨_, .pi (by assumption), by grind only⟩
 
 def Expr.RedTyTrans := Relation.TransGen Expr.RedTy
 
@@ -123,51 +145,6 @@ theorem Expr.RedTyTrans.decreasing (h_red : Expr.RedTyTrans a b) (hn : a.TySize 
     have ⟨mc, hcm₁, hcm₂⟩ := hr.decreasing hbm₁
     exact ⟨mc, hcm₁, by grind only⟩
 
-def Expr.ty_size : Expr → ℕ
-  | (SK K*) => 1
-  | (SK B) => 1
-  | (SK C) => 1
-  | (SK I) => 1
-  | (SK Π α, _β) => α.ty_size
-  | .comb _c => 0
-  | SK __ ∶ _t => 0
-  | SK Sort _m => 0
-  | SK (f x) =>
-    let n := f.ty_size
-    let m := x.ty_size
-    (n + m)
-
-theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
-  intro h
-  unfold Expr.ty_size at h
-  rw [← h]
-  split at h
-  · exact .next
-  · exact .comp
-  · exact .flip
-  · exact .read
-  · have h' := Expr.TySize.sound h
-    rw [← h] at h'
-    apply TySize.pi
-    exact h'
-  · exact .comb
-  · exact .hole
-  · exact .srt
-  simp at h
-  apply Expr.TySize.app
-  repeat (apply Expr.TySize.sound; rfl)
-
-theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
-  intro h
-  induction h
-  repeat rfl
-  case pi α n β hα ih =>
-    exact ih.symm ▸ rfl
-  repeat rfl
-  case app f n x m hf hx ih₁ ih₂ =>
-    rw [← ih₁, ← ih₂]
-    rfl
-
 theorem Expr.RedTy.decreasing' (h_red : Expr.RedTy e e') : e'.ty_size < e.ty_size := by
   let h_size := e.ty_size
   have ⟨m, h, hp⟩ := Expr.RedTy.decreasing h_red (Expr.TySize.sound (e := e) (n := h_size) rfl)
@@ -175,6 +152,8 @@ theorem Expr.RedTy.decreasing' (h_red : Expr.RedTy e e') : e'.ty_size < e.ty_siz
   exact h.symm ▸ hp
 
 instance : WellFoundedRelation Expr := ⟨fun x y => x.ty_size < y.ty_size, (measure (fun e => Expr.ty_size e)).wf⟩
+
+instance Expr.instSizeOf : SizeOf Expr := ⟨Expr.ty_size⟩
 
 def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
 
@@ -186,9 +165,6 @@ def Expr.step? (e : Expr) : Option Expr :=
   | (SK (B f g x)) => .some (SK (f (g x)))
   | (SK (C x y z)) => .some (SK (x z y))
   | (SK (I x)) => .some x
-  | (SK ((Π α, β) x)) => match (SK (α x)).step? with
-    | .some α' => .some (SK (Π α', (β x)))
-    | .none => .none
   | (SK (f x)) => match f.step?, x.step? with
     | .some f', .some x' =>
       .some (SK (f' x'))
@@ -196,35 +172,55 @@ def Expr.step? (e : Expr) : Option Expr :=
   | _e => .none
 
 def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
+  induction e generalizing e'
   intro h
-  unfold step? at h
-  split at h
-  · simp only [Option.some.injEq] at h
-    rw [← h]
-    exact .next
-  · simp only [Option.some.injEq] at h
-    rw [← h]
-    exact .comp
-  · simp only [Option.some.injEq] at h
-    rw [← h]
-    exact .flip
-  · simp only [Option.some.injEq] at h
-    rw [← h]
-    exact .read
-  · split at h
-    · rename_i heq
-      simp_all only [Option.some.injEq]
-      rw [← h]
-      exact .pi (Expr.step?_sound heq)
-    contradiction
-  · split at h
-    · simp only [Option.some.injEq] at h
-      rename_i heq₁ heq₂
-      rw [← h]
-      exact .app (Expr.step?_sound heq₁) (Expr.step?_sound heq₂)
-    · contradiction
   · contradiction
+  · rename_i c
+    intro h
+    unfold Expr.step? at h
+    contradiction
+  · rename_i α β ih₁ ih₂
+    intro h
+    unfold Expr.step? at h
+    contradiction
+  · intro h
+    unfold Expr.step? at h
+    contradiction
+  · intro h
+    unfold Expr.step? at h
+    contradiction
+  · rename_i f x ih₁ ih₂
+    intro h
+    unfold Expr.step? at h
+    split at h
+    · rename_i heq
+      simp_all only [app.injEq, Option.some.injEq, and_self]
+      exact .next
+    · rename_i heq
+      simp_all only [app.injEq, Option.some.injEq]
+      rw [← h]
+      exact .comp
+    · rename_i heq
+      simp_all only [app.injEq, Option.some.injEq]
+      rw [← h]
+      exact .flip
+    · rename_i heq
+      simp_all only [app.injEq, Option.some.injEq]
+      rw [← h]
+      exact .read
+    · rename_i heq
+      split at h
+      · simp_all only [imp_false, app.injEq, Option.some.injEq, forall_eq']
+        rw [← h]
+        apply RedTy.app
+        repeat assumption
+      · contradiction
+    contradiction
 
-def Expr.reduce (h_size : Expr.TySize e n) : ((e' : Expr) × (PLift (e.RedTyTrans e'))) := by
-  
-  sorry
+def Expr.reduce (e : Expr) : Expr :=
+  match heq : step? e with
+  | .some e' =>
+    have _h_size : e'.ty_size < e.ty_size := (Expr.step?_sound heq).decreasing'
+    e'.reduce
+  | .none => e
+termination_by e

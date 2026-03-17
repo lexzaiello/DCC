@@ -100,7 +100,7 @@ def toFormat : Expr → Format
 instance : ToFormat Expr := ⟨Expr.toFormat⟩
 instance : ToString Expr := ⟨toString ∘ toFormat⟩
 
-abbrev assert_n (n : ℕ) (fn : Expr) : Expr :=
+abbrev ret (n : ℕ) (fn : Expr) : Expr :=
   (List.replicate n (SK K*)).foldr (fun e acc => (SK (B e acc))) fn
 
 end Expr

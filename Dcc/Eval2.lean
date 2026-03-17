@@ -168,37 +168,9 @@ def Expr.reduce_pi (in_pi arg : Expr) : (e' : Expr) × (PLift (RedPi arg in_pi e
 
 def Expr.RedPi.sound (_h : Expr.reduce_pi in_pi arg = ⟨e', ⟨hp⟩⟩) : RedPi arg in_pi e' := hp
 
-/-
-arg is powerful. pretty much all we need.
-
-K : ∀ (α : Type) (β : α → Type)
-
-K : Π Srt m, Π (Π (arg 0), Srt n), Π (arg 0), Π (arg 1), (arg 0)
-
-we have literally all of our variables in a list.
-if we wanted to, we could generate "accessors" for each one.
-
-α = I
-β = K
-x = K* K*
-
-we don't need the assert shit.
-we're going to get a normal value then. it won't be applied again.
-we only apply if we see a type combinator head.
--/
-
 def arg (n : ℕ) : Expr :=
   match n with
   | 0 => SK I
   | 1 => SK K*
   | .succ n => SK (B K* #(arg n))
 
-def K.type (m n : Level) : Expr := (SK
-  Π Sort m, Π (Π #(arg 0), Sort n), Π #(arg 0), Π #(arg 1), #(arg 0))
-
-#eval Std.format <| ((K.type 1 1).reduce_pi (SK Sort 0)).fst
-
-/-#eval (SK(#(arg 3) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
-#eval (SK((#(arg 2) #(arg 1)) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
-#eval (SK((#(arg 2) #(arg 1)) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)
-#eval (SK((#(arg 2) #(arg 1)) I (Sort 0) (Sort 1) (Sort 2) (Sort 3)).reduce (by simp)).map (·.fst)-/

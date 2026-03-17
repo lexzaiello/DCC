@@ -2,55 +2,23 @@ import Dcc.Ast2
 import Dcc.Eval2
 import Mathlib.Data.Nat.Notation
 
-/-
-Notes:
+def K.type (m n : Level) : Expr := (SK
+  Π Sort m, Π (Π #(arg 0), Sort n), Π #((arg 0).ret 1), Π #(arg 1), #((arg 0).ret 3))
 
-Π doesn't do general reduction. Just shuffle down.
-So, we may need to change the K rule slightly so that β x works.
--/
+--#eval Std.format <| ((K.type 1 1).reduce_pi (SK Sort 0)).fst
 
-abbrev K'.type (m n : Level) : Expr :=
-  SK (Π Srt m, Π ({1} (Srt n)), Π {0 
+def K'.type (m n : Level) : Expr :=
+  SK Π Sort m, Π Sort n, Π #((arg 0).ret 1), Π #((arg 1).ret 1), #((arg 0).ret 3)
 
-@[simp] abbrev K'.type (m n : Level) : Expr :=
-  Π' Srt m, Π' ⸨# 0 ⸨K* (Srt n)⸩⸩, Π' ⸨# 0 K*⸩, Π' ⸨# 1 K*⸩, (⸨# 0 I⸩.assert_n 3)
-
-@[simp] abbrev K.β_arg (_m n : Level) : Expr :=
-  Π' ⸨# 0 I⸩, ⸨# 1 ⸨K* (Srt n)⸩⸩
-
-@[simp] abbrev K.x_arg : Expr := ⸨# 0 K*⸩
-
-/-
-y arg: β x
-
-in scope:
-α
--/
-
-@[simp] abbrev K.y_arg : Expr := ⸨# 2 I⸩
-
-@[simp] abbrev K.cod : Expr := (I).assert_n 3
-
-@[simp] abbrev K.type (m n : Level) : Expr :=
-    Π' Srt m
-  , Π' (K.β_arg m n)
-  , Π' K.x_arg
-  , Π' K.y_arg
-  , K.cod
-
-@[simp] abbrev S.type (m n o : Level) : Expr :=
-    Π' Srt m
-  , Π' ⸨# 0 (Π' ⸨# 0 I⸩, ⸨# 1 ⸨K* (Srt n)⸩⸩)⸩
-  , Π' ⸨# 0 (Π' ⸨# 0 K*⸩
-      , Π' ⸨# 1 I⸩
-      , ⸨# 3 ⸨K* (Srt o)⸩⸩)⸩
-  , Π' (Π' (⸨# 0 I⸩.assert_n 2)
-      , Π' ⸨# 1 K*⸩
-      , ⸨# 2 I⸩)
-   , Π' (Π' (⸨# 0 I⸩.assert_n 3)
-       , ⸨# 1 ⸨B K* K*⸩⸩)
-   , Π' (⸨# 0 I⸩.assert_n 4)
-   , I -- SORRY: fix this later
+@[simp] abbrev S.type (m n o : Level) : Expr := SK
+    Π Sort m, -- α
+    Π (Π #(arg 0), Sort n), -- β
+    Π (Π #((arg 0).ret 1), Π #(arg 1), Sort o), -- γ
+    Π (Π #((arg 0).ret 2), Π #((arg 1).ret 1), #(arg 2)), -- x
+    Π (Π #((arg 0).ret 3), #((arg 1).ret 2)), -- y
+    Π #((arg 0).ret 4), -- z
+      (B (S.{[m, n, o.succ]} (__ ∶ Sort m) (__ ∶ Sort n) (__ ∶ Sort o)) #((arg 2).ret 1)) -- γ z (y z)
+-- ^ note that this is safe, since prior apps were type-checked, and def-eq here is deferred to term-level
 
 @[simp] def Expr.pi_size_of : Expr → ℕ
   | (Π' α, β) => α.pi_size_of + β.pi_size_of

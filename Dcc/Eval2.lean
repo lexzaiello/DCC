@@ -27,6 +27,7 @@ inductive Expr.RedTy : Expr → Expr → Prop
   | flip      : RedTy (SK (C x y z)) (SK (x z y))
   | read      : RedTy (SK (I x)) x
   | app       : Expr.RedTy f f'
+    → Expr.RedTy x x'
     → Expr.RedTy (SK (f x)) (SK (f' x))
   | pi        : Expr.RedTy (SK (α x)) α'
     -- ^ this is fine since all argument binders should have at least one I ready to fire
@@ -96,8 +97,10 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
     exact ⟨_, by assumption, by grind only⟩
   case app f f' x hrf ih =>
     cases h_size
-    have h := ih (by assumption)
-    have ⟨f', h₁, h₂⟩ := h
+    have ha := hrf (by assumption)
+    have hb := ih (by assumption)
+    have ⟨f', h₁, h₂⟩ := ha
+    have ⟨f'', h₃, h₄⟩ := hb
     exact ⟨_, .app (by assumption) (by assumption), by grind only⟩
   case pi α x α' β hr ih =>
     cases h_size
@@ -165,31 +168,18 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
     rw [← ih₁, ← ih₂]
     rfl
 
+instance : WellFoundedRelation Expr := ⟨fun x y => x.ty_size < y.ty_size, (measure (fun e => Expr.ty_size e)).wf⟩
+
 def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
 
 def Expr.IsNorm (e : Expr) : Prop := ∀ e', ¬ Expr.RedTy e e'
 
-theorem Expr.RedTy.is_norm_unique (h₁ : Expr.RedTy e e₁) (h₂ : Expr.RedTy e e₂) (h_norm₁ : e₁.IsNorm) (h_norm₂ : e₂.IsNorm) : e₁ = e₂ := by
-  induction h : measure e using 
+theorem local_confluence : Expr.RedTy a b → Expr.RedTy a c → ∃ d, b.RedTyReflTrans d ∧ c.RedTyReflTrans d := by
   sorry
 
 theorem Expr.RedTy.is_norm_unique (h₁ : Expr.RedTy e e₁) (h₂ : Expr.RedTy e e₂) (h_norm₁ : e₁.IsNorm) (h_norm₂ : e₂.IsNorm) : e₁ = e₂ := by
-  induction h₁ generalizing e₂
-  · cases h₂
-    · rfl
-    repeat (rename_i h; cases h)
-  · cases h₂
-    · rfl
-    repeat (rename_i h; cases h)
-  · cases h₂
-    · rfl
-    repeat (rename_i h; cases h)
-  · cases h₂
-    · rfl
-    repeat (rename_i h; cases h)
-  · rename_i f f' x hrf ih
-    
-    sorry
+  
+  sorry
 
 theorem Expr.RedTy.no_step_self : ¬ Expr.RedTy e e := by
   intro h

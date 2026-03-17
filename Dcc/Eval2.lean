@@ -1,4 +1,5 @@
 import Dcc.Ast2
+import Init.Data.Option.Lemmas
 
 inductive Expr.RedexTy : Expr → Prop
   | comp : RedexTy (SK (B f g x))
@@ -24,27 +25,41 @@ instance Expr.RedexTy.instDecidable : Decidable (Expr.RedexTy e) :=
   if h : e.ty_is_redex.isSome then
     .isTrue (e.ty_is_redex.get h).down
   else
-    .isFalse (fun h => by simp [h.complete] at *)
+    .isFalse (fun h => by simp only [h.complete, Option.isSome_some, not_true_eq_false] at *)
 
 inductive Expr.RedTyComb : Expr → Expr → Prop
   | next      : RedTyComb (SK (K* A b)) A
   | comp      : RedTyComb (SK (B f g x)) (SK (f (g x)))
   | flip      : RedTyComb (SK (C x y z)) (SK (x z y))
   | read      : RedTyComb (SK (I x)) x
+  | cong      : ¬ (SK (f x)).RedexTy → f.RedTyComb f' → (SK (f x)).RedTyComb (SK (f' x))
 
 def Expr.red_ty_comb (e : Expr) : (Option <| (e' : Expr) × PLift (e.RedTyComb e')) :=
-  match e with
-  | SK (K* A _b) => .some ⟨A, ⟨.next⟩⟩
-  | SK (I A) => .some ⟨A, ⟨.read⟩⟩
-  | SK (C x y z) => .some ⟨SK (x z y), ⟨.flip⟩⟩
-  | SK (B f g x) => .some ⟨SK (f (g x)), ⟨.comp⟩⟩
-  | _ => .none
+  if heq₂ : e.RedexTy then
+    match heq : e with
+    | SK (K* A _b) => .some ⟨A, ⟨.next⟩⟩
+    | SK (I A) => .some ⟨A, ⟨.read⟩⟩
+    | SK (C x y z) => .some ⟨SK (x z y), ⟨.flip⟩⟩
+    | SK (B f g x) => .some ⟨SK (f (g x)), ⟨.comp⟩⟩
+  else
+    match heq : e with
+    | SK (f x) =>
+      match f.red_ty_comb with
+      | .some ⟨f', h⟩ =>
+        .some ⟨SK (f' x), ⟨.cong (fun h => by
+          have h' := h.complete
+          simp_all only [not_true_eq_false]) (by exact h.down)⟩⟩
+      | _a => .none
+    | _a => .none
 
 theorem Expr.RedTyComb.sound (_h : (Expr.red_ty_comb e).isSome) : Expr.RedTyComb e (e.red_ty_comb.get h).fst := (e.red_ty_comb.get h).snd.down
 
 theorem Expr.RedTyComb.complete (h : RedTyComb e e') : (Expr.red_ty_comb e) = .some ⟨e', ⟨h⟩⟩ := by
   induction h
   repeat rfl
+  case cong f x f' h_nredex h_red ih =>
+    dsimp only [red_ty_comb]
+    simp only [h_nredex, ↓reduceDIte, ih]
 
 inductive Expr.RedexTm : Expr → Prop where
   | k    : RedexTm (SK (K.{[_m, _n]} _α _β _x _y))
@@ -61,3 +76,9 @@ inductive RedTm : Expr → Expr → Prop
   | refl_comb : RedTm (.comb c) (.comb c)
   | refl_ty   : RedTm (.tycomb c) (.tycomb c)
   | refl_srt  : RedTm (SK Srt m) (SK Srt m)
+
+/-
+{1} I (Srt 0) (Srt 1) = Srt 1
+-/
+
+#eval (SK ({1} I (Srt 0) (Srt 1)))

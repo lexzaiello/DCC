@@ -83,19 +83,19 @@ inductive RedTm : Expr → Expr → Prop
 {1} I (Srt 0) (Srt 1) = Srt 1
 -/
 
-def RedTrans := Relation.ReflTransGen Expr.RedTyComb
+def RedTrans := Relation.TransGen Expr.RedTyComb
 
 def Expr.reduce_ty_n (n : ℕ) (e : Expr) : Option ((e' : Expr) × (PLift (RedTrans e e'))) :=
   match n with
   | .zero => .none
   | .succ .zero => do
     let ⟨e', h⟩ ← e.red_ty_comb
-    .some ⟨e', ⟨match h with | ⟨h⟩ => .tail .refl h⟩⟩
+    .some ⟨e', ⟨match h with | ⟨h⟩ => .single h⟩⟩
   | .succ n => do
     let ⟨inner, h₁⟩ ← e.reduce_ty_n n
     let ⟨inner', h₂⟩ ← inner.red_ty_comb
     .some ⟨inner', ⟨match h₁, h₂ with
-      | ⟨h₁⟩, ⟨h₂⟩ => h₁.trans (.tail .refl h₂)⟩⟩
+      | ⟨h₁⟩, ⟨h₂⟩ => h₁.tail h₂⟩⟩
 
 #eval ((SK ({1} I (Srt 0) (Srt 10))).reduce_ty_n 4).map (·.fst)
 #eval (SK ({1} I (Srt 0) (Srt 10)))
@@ -112,7 +112,29 @@ theorem all_ty_red_decreasing : Expr.RedTyComb e e' → Expr.ty_size_of e' < Exp
   intro hr
   induction hr
   repeat (simp [Expr.ty_size_of]; grind only)
-  simp only [Expr.ty_size_of, lt_add_iff_pos_left, zero_lt_one]
+  · simp only [Expr.ty_size_of, lt_add_iff_pos_left, zero_lt_one]
   case cong f x f' hr hredf ih =>
     simp only [Expr.ty_size_of, add_lt_add_iff_right, ih]
 
+theorem all_ty_red_decreasing' : PLift (Expr.RedTyComb e e') → Expr.ty_size_of e' < Expr.ty_size_of e := fun h => 
+  match h with
+  | .up h => all_ty_red_decreasing h
+
+inductive CRedTrans : Expr → Expr → Type where
+  | single : PLift (e.RedTyComb e') → CRedTrans e e'
+  | trans  : (PLift (a.RedTyComb b)) → CRedTrans b c → CRedTrans a c
+
+def Expr.reduce (e : Expr) (_h : e.ty_size_of > 0) : Option ((e' : Expr) × (CRedTrans e e')) :=
+  let _size := e.ty_size_of
+  let r := e.red_ty_comb
+  match r with
+  | .some ⟨e', h⟩ =>
+    have _h_size : e'.ty_size_of < e.ty_size_of := all_ty_red_decreasing' h
+    if hpos : e'.ty_size_of > 0 then
+      let r' := e'.reduce hpos
+      match r' with
+      | .some ⟨e'', r⟩ => .some ⟨e'', .trans h r⟩
+      | _ => .none
+    else
+      .some ⟨e', .single h⟩
+  | _ => .none

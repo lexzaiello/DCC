@@ -1,6 +1,7 @@
 import Dcc.Ast2
 import Init.Data.Option.Lemmas
 import Mathlib.Logic.Relation
+import Mathlib.Tactic
 
 inductive Expr.RedexTy : Expr → Prop
   | comp : RedexTy (SK (B f g x))
@@ -98,3 +99,20 @@ def Expr.reduce_ty_n (n : ℕ) (e : Expr) : Option ((e' : Expr) × (PLift (RedTr
 
 #eval ((SK ({1} I (Srt 0) (Srt 10))).reduce_ty_n 4).map (·.fst)
 #eval (SK ({1} I (Srt 0) (Srt 10)))
+
+@[simp] def Expr.ty_size_of : Expr → ℕ
+  | SK K* => 2
+  | SK B
+  | SK C => 3
+  | SK I => 1
+  | SK (f x) => f.ty_size_of + x.ty_size_of
+  | _ => 0
+
+theorem all_ty_red_decreasing : Expr.RedTyComb e e' → Expr.ty_size_of e' < Expr.ty_size_of e := by
+  intro hr
+  induction hr
+  repeat (simp [Expr.ty_size_of]; grind only)
+  simp only [Expr.ty_size_of, lt_add_iff_pos_left, zero_lt_one]
+  case cong f x f' hr hredf ih =>
+    simp only [Expr.ty_size_of, add_lt_add_iff_right, ih]
+

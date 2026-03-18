@@ -255,33 +255,80 @@ theorem app_step_size_decrease : Expr.RedTy f f' → Expr.RedTy x x' → (SK (f'
     simp_all only [gt_iff_lt]
     grind
 
-theorem step_either : Expr.RedTy f f' ∨ Expr.RedTy x x' → (f.app x).step?.isSome := by
+theorem step?_decreasing : Expr.step? e = .some e' → e'.ty_size < e.ty_size := by
   intro h
-  unfold Expr.step?
-  split
-  repeat rfl
+  have h := Expr.step?_sound h
+  exact h.decreasing'
+
+def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := fun h => by
+  induction e generalizing e'
+  · cases h
+  · cases h
+  · cases h
+  · cases h
+  · cases h
+  case app f x ih₁ ih₂ =>
+    cases h
+    repeat rfl
+    unfold Expr.step?
+    have h := ih₁ (by assumption)
+    split
+    repeat (simp_all; cases h)
+    split
+    simp_all
+    rename_i h
+    exfalso
+    exact h (by assumption) (by simp_all)
+    have h := ih₁ (by assumption)
+    simp_all
+
+theorem progress : Expr.IsNorm e ∨ ∃ e', Expr.RedTy e e' := by
   
   sorry
 
-theorem progress : Expr.IsNorm e ∨ ∃ e', e.step? = .some e' := by
+/-theorem progress : Expr.IsNorm e ∨ ∃ e', e.step? = .some e' := by
   induction heq : e
   · exact .inl (fun e h => by cases h)
   · exact .inl (fun e h => by cases h)
   · exact .inl (fun e h => by cases h)
   · exact .inl (fun e h => by cases h)
   · exact .inl (fun e h => by cases h)
-  · rename_i f x ih₁ ih₂
-    match heq : (SK (f x)).step? with
+  simp_all
+  · unfold Expr.step?
+    split
+    simp_all
+    repeat exact .inr ⟨_, rfl⟩
+    split
+    exact .inr ⟨_, rfl⟩
+    · simp_all
+      intro e' h
+      cases heq
+      cases h
+      repeat simp_all
+      
+      sorry
+    sorry
+   rename_i f x ih₁ ih₂
+    match heq₂ : (SK (f x)).step? with
     | .some h =>
-      rw [← heq]
-      exact .inr ⟨h, heq⟩
+      rw [← heq₂]
+      exact .inr ⟨h, heq₂⟩
     | .none =>
-      exact .inl (fun e' h => by
-        cases h
-        repeat simp_all only
-        case app f' x' hrf hrx =>
-          have h := app_step_size_decrease hrf hrx
-          have h₂ := progress (e := (f'.app x'))
-          
-          sorry)
+      unfold Expr.step? at heq₂
+      split at heq₂
+      repeat contradiction
+      split at heq₂
+      have h := step?_decreasing (by assumption)
+      rename_i heq₁ _ _ _
+      simp at heq₁
+      have ⟨hrw₁, hrw⟩ := heq₁
+      rename_i heq
+      rw [← hrw₁] at heq
+      have h := Expr.step?_sound heq
+      exact .inl (fun _e h_not_red => by
+        rename_i f'' _
+        have h_yes_red : Expr.RedTy (f.app x) (f''.app x) := .congrFun (by assumption)
+        contradiction)
+      
+      simp_all-/
 termination_by e

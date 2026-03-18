@@ -164,7 +164,7 @@ instance Expr.instSizeOf : SizeOf Expr := ⟨Expr.ty_size⟩
 
 def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
 
-def Expr.IsNorm (e : Expr) : Prop := ∀ e', ¬ Expr.RedTy e e'
+def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
 
 def Expr.step? (e : Expr) : Option Expr :=
   match e with
@@ -286,21 +286,7 @@ theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by
   have heq₂ := hr₂.step?_complete
   simp_all
 
-/-theorem Expr.RedTyTrans.diamond (hrt₁ : Expr.RedTyTrans a b) (hrt₂ : Expr.RedTyTrans a c) : ∃ d, Expr.RedTyReflTrans b d ∧ Expr.RedTyReflTrans c d := by
-  have heval₁ := reduce a
-  
-  sorry
-
-theorem Expr.RedTyTrans.norm_unique (hrt₁ : Expr.RedTyTrans a b) (hrt₂ : Expr.RedTyTrans a c) (h_norm₁ : b.IsNorm) (hnorm₂ : c.IsNorm) : b = c :=
-  match hrt₁, hrt₂ with
-  | .single ha, .single hb =>
-    ha.unique hb
-  | .single ha, .tail (b := b₂) h₁ h₂ => by
-    
-    sorry
-termination_by b-/
-
-theorem norm_reduce_rfl : Expr.IsNorm e → e.reduce = e := by
+theorem Expr.IsNorm.reduce_rfl : Expr.IsNorm e → e.reduce = e := by
   intro h
   unfold Expr.reduce
   split
@@ -308,17 +294,64 @@ theorem norm_reduce_rfl : Expr.IsNorm e → e.reduce = e := by
     have h := Expr.step?_sound heq
     rename_i h_norm e''
     exfalso
-    exact h_norm e'' h
+    exact h_norm ⟨_, h⟩
   rfl
 
-theorem Expr.RedTyTrays.complete : Expr.RedTyTrans e e' → e'.IsNorm → Expr.reduce e = e' := by
+theorem Expr.RedTy.reduce_same : Expr.RedTy a b → reduce a = reduce b := by
+  intro ha
+  conv =>
+    left
+    unfold reduce
+    rfl
+  split
+  · rename_i e' heq
+    simp [ha.unique (Expr.step?_sound heq)]
+  · have h := ha.step?_complete
+    simp_all
+
+theorem Expr.RedTyTrans.reduce_same : Expr.RedTyTrans a b → Expr.RedTyTrans a c → reduce b = reduce c := by
+  intro h₁ h₂
+  induction h₁ generalizing c
+  · induction h₂ generalizing b
+    · rename_i b₁ hr₁ b₂ hr₂
+      have ha := hr₁.reduce_same
+      have hb := hr₂.reduce_same
+      simp_all
+    · rename_i b₁ hrr₁ b₂ c htrans hb₂ ih
+      rw [ih]
+      exact hb₂.reduce_same
+      exact b₂
+  · rename_i b₁ c₁ htrans hr₂ ih
+    have h := ih h₂
+    rw [← h]
+    have h := hr₂.reduce_same
+    simp_all
+
+theorem Expr.RedTyTrans.diamond : Expr.RedTyTrans a b → Expr.RedTyTrans a c → reduce b = reduce c := by
+  intro ha hb
+  induction ha generalizing c
+  · induction hb generalizing b
+    · rename_i b₁ hr₁ b₂ hr₂
+      have heq₁ := hr₁.reduce_same
+      have heq₂ := hr₂.reduce_same
+      simp_all only
+    · rename_i b₁ hr₁ b₂ c htrans hr₂ ih
+      rw [ih]
+      
+      sorry
+  · sorry
+
+theorem Expr.RedTyTrans.complete : Expr.RedTyTrans e e' → e'.IsNorm → Expr.reduce e = e' := by
   intro h h_norm
+  have h_rfl := h_norm.reduce_rfl
   unfold reduce
   split
   · simp_all
     rename_i e'' heq
     induction h generalizing e''
-    · 
+    · rename_i hred
+      rw [← h_rfl]
+      
       sorry
     · sorry
   · sorry

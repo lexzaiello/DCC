@@ -255,10 +255,8 @@ theorem app_step_size_decrease : Expr.RedTy f f' → Expr.RedTy x x' → (SK (f'
     simp_all only [gt_iff_lt]
     grind
 
-theorem step?_decreasing : Expr.step? e = .some e' → e'.ty_size < e.ty_size := by
-  intro h
-  have h := Expr.step?_sound h
-  exact h.decreasing'
+theorem step?_decreasing : Expr.step? e = .some e' → e'.ty_size < e.ty_size := fun h =>
+  (Expr.step?_sound h).decreasing'
 
 def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := fun h => by
   induction e generalizing e'
@@ -270,17 +268,60 @@ def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := f
   case app f x ih₁ ih₂ =>
     cases h
     repeat rfl
-    unfold Expr.step?
-    have h := ih₁ (by assumption)
-    split
-    repeat (simp_all; cases h)
-    split
-    simp_all
-    rename_i h
+    · unfold Expr.step?
+      have h := ih₁ (by assumption)
+      split
+      repeat (simp_all; cases h)
+      split
+      simp_all
+      rename_i h
+      exfalso
+      exact h (by assumption) (by simp_all)
+      have h := ih₁ (by assumption)
+      simp_all
+
+theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by
+  intro hr₁ hr₂
+  have heq₁ := hr₁.step?_complete
+  have heq₂ := hr₂.step?_complete
+  simp_all
+
+/-theorem Expr.RedTyTrans.diamond (hrt₁ : Expr.RedTyTrans a b) (hrt₂ : Expr.RedTyTrans a c) : ∃ d, Expr.RedTyReflTrans b d ∧ Expr.RedTyReflTrans c d := by
+  have heval₁ := reduce a
+  
+  sorry
+
+theorem Expr.RedTyTrans.norm_unique (hrt₁ : Expr.RedTyTrans a b) (hrt₂ : Expr.RedTyTrans a c) (h_norm₁ : b.IsNorm) (hnorm₂ : c.IsNorm) : b = c :=
+  match hrt₁, hrt₂ with
+  | .single ha, .single hb =>
+    ha.unique hb
+  | .single ha, .tail (b := b₂) h₁ h₂ => by
+    
+    sorry
+termination_by b-/
+
+theorem norm_reduce_rfl : Expr.IsNorm e → e.reduce = e := by
+  intro h
+  unfold Expr.reduce
+  split
+  · rename_i heq
+    have h := Expr.step?_sound heq
+    rename_i h_norm e''
     exfalso
-    exact h (by assumption) (by simp_all)
-    have h := ih₁ (by assumption)
-    simp_all
+    exact h_norm e'' h
+  rfl
+
+theorem Expr.RedTyTrays.complete : Expr.RedTyTrans e e' → e'.IsNorm → Expr.reduce e = e' := by
+  intro h h_norm
+  unfold reduce
+  split
+  · simp_all
+    rename_i e'' heq
+    induction h generalizing e''
+    · 
+      sorry
+    · sorry
+  · sorry
 
 theorem progress : Expr.IsNorm e ∨ ∃ e', Expr.RedTy e e' := by
   

@@ -335,6 +335,31 @@ theorem Expr.RedTyTrans.complete : Expr.RedTyTrans a b → Expr.reduce a = Expr.
     have h := h.reduce_same
     simp_all
 
+theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.reduce a = b := by
+  intro ha hnorm
+  induction ha
+  · rename_i _ hr
+    simp [hr.reduce_same]
+    unfold Expr.reduce
+    split
+    · exfalso
+      exact hnorm ⟨_, Expr.step?_sound (by assumption)⟩
+    · rfl
+  · rename_i b₂ c htrans hrb ih
+    have h := hrb.step?_complete
+    change Expr.RedTyTrans a b₂ at htrans
+    rw [htrans.complete]
+    unfold Expr.reduce
+    split
+    · simp_all
+      unfold Expr.reduce
+      split
+      · simp
+        exfalso
+        exact hnorm ⟨_, Expr.step?_sound (by assumption)⟩
+      · rfl
+    simp_all
+
 theorem progress : Expr.IsNorm e ∨ ∃ e', Expr.RedTy e e' := by
   
   sorry

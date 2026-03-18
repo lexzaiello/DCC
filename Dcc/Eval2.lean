@@ -235,4 +235,57 @@ theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := by
   · rename_i heq
     exact h.symm ▸ .refl
 
+theorem app_step_size_decrease : Expr.RedTy f f' → Expr.RedTy x x' → (SK (f' x')).ty_size < (SK (f x)).ty_size := by
+  intro ha hb
+  have h : f'.ty_size < f.ty_size := ha.decreasing'
+  have h : x'.ty_size < x.ty_size := hb.decreasing'
+  induction ha generalizing x'
+  · unfold Expr.ty_size; grind
+  · unfold Expr.ty_size; grind
+  · unfold Expr.ty_size; grind
+  · unfold Expr.ty_size; grind
+  case app f₂ f₃ x₂ x₃ hf hx ih₁ ih₂ h' =>
+    have h := hb.decreasing'
+    have ha := hf.decreasing'
+    have hc := hx.decreasing'
+    have haa := ih₁ (by assumption) (by assumption) (by assumption)
+    have hbb := ih₂ (by assumption) (by assumption) (by assumption)
+    unfold Expr.ty_size
+    simp
+    grind
 
+theorem Expr.step?_complete : Expr.RedTy a b → Expr.step? a = .some b := by
+  intro h
+  induction h
+  repeat (unfold Expr.step?; rfl)
+  case app f f' x x' hf hx ih₁ ih₂ =>
+    
+    sorry
+
+theorem reduce_same : Expr.RedTy a b → Expr.RedTy a c → Expr.reduce b = Expr.reduce c := by
+  intro ha hb
+  unfold Expr.reduce
+  split
+  · rename_i d heq
+    simp_all
+    have hc := Expr.step?_sound heq
+    have hsize₁ := ha.decreasing'
+    have hsize₂ := hb.decreasing'
+    have hsize₃ := hc.decreasing'
+    
+    exact reduce_same hc (by sorry)
+    sorry
+
+theorem reduce_complete : Expr.RedTyTrans e e' → Expr.reduce e = e' := by
+  intro h
+  unfold Expr.reduce
+  split
+  · rename_i e₂ heq
+    induction h
+    · rename_i e₃ h
+      have h_sound := Expr.step?_sound heq
+      have hsize₁ := h.decreasing'
+      have hsize₂ := h_sound.decreasing'
+      exact reduce_complete (by sorry)
+    sorry
+  sorry

@@ -224,3 +224,15 @@ def Expr.reduce (e : Expr) : Expr :=
     e'.reduce
   | .none => e
 termination_by e
+
+theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := by
+  intro h
+  unfold Expr.reduce at h
+  split at h
+  · rename_i e'' heq
+    have _h_size : e''.ty_size < e.ty_size := (Expr.step?_sound heq).decreasing'
+    exact .trans (.single (Expr.step?_sound heq)) (reduce_sound h)
+  · rename_i heq
+    exact h.symm ▸ .refl
+
+

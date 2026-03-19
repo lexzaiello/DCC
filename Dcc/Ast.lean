@@ -48,9 +48,12 @@ DSL:
   - Sort m = Expr.Srt m
 
   Core:
-  - S = .comb .S
-  - K' = .comb .K'
-  - K = .comb K
+  - S.{[m, n, o]} = .comb (.S m n o)
+    Where m, n, o refer to universe levels.
+  - K'.{[m, n]} = .comb (.K' m n )
+    Where m, n refer to universe levels.
+  - K.{[m, n]} = .comb (.K m n)
+    Where m, n refer to universe levels.
   - (f x_1 ... x_n) = (.app (SK f) (SK x_1)).app ...
 
   Utility macros (not corresponding to AST elements directly):

@@ -368,3 +368,5 @@ termination_by e
 def Expr.RedTyTrans.SN (e : Expr) : Acc (fun b a => Expr.RedTyTrans a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing'
   exact Expr.RedTyTrans.SN e')
+
+#eval Std.format <| (SK (arg 2 I (Sort 1) (Sort 2) (Sort 3))).reduce

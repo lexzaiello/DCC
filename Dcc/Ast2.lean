@@ -48,6 +48,9 @@ syntax "K" : comb
 syntax "K'" : comb
 syntax "S" : comb
 
+syntax "arg" num expr : expr
+syntax "ret" num : expr
+
 syntax expr "∘" expr : expr
 syntax comb levels : expr
 syntax "#(" term ")" : expr
@@ -83,6 +86,18 @@ macro_rules
   | `(SK ($f:expr $x:expr $xs:expr*)) => `(SK (($f:expr $x:expr) $xs:expr*))
   | `(SK Π $α:expr, $β:expr) => `(Expr.Pi (SK $α) (SK $β))
   | `(SK $α:expr ~> $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
+  | `(SK arg $n:num $fn:expr) =>
+    match n.getNat with
+    | .zero => `(SK $fn)
+    | .succ n =>
+      let n' := Lean.Syntax.mkNatLit n
+      `(SK arg $n' (K* $fn))
+  | `(SK ret $n:num) =>
+    match n.getNat with
+    | .zero => `(SK I)
+    | .succ n =>
+      let n' := Lean.Syntax.mkNatLit n
+      `(SK (B K* (ret $n')))
 
 end dsl
 
@@ -103,8 +118,5 @@ def toFormat : Expr → Format
 
 instance : ToFormat Expr := ⟨Expr.toFormat⟩
 instance : ToString Expr := ⟨toString ∘ toFormat⟩
-
-abbrev ret (n : ℕ) (fn : Expr) : Expr :=
-  (List.replicate n (SK K*)).foldr (fun e acc => (SK (B e acc))) fn
 
 end Expr

@@ -88,7 +88,7 @@ macro_rules
   | `(SK $α:expr ~> $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
   | `(SK arg $n:num $fn:expr) =>
     match n.getNat with
-    | .zero => `(SK $fn)
+    | .zero => `(SK (B $fn I))
     | .succ n =>
       let n' := Lean.Syntax.mkNatLit n
       `(SK arg $n' (K* $fn))

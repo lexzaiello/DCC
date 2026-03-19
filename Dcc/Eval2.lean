@@ -413,3 +413,31 @@ theorem Expr.PiSize.sound (h : Expr.pi_size e = n) : Expr.PiSize e n := by
     · rename_i e' f x
       apply PiSize.app; exact TySize.sound rfl
 
+/-
+α leaves must always reduce.
+-/
+inductive Expr.RedPi : Expr → Expr → Prop
+  | step_ty  : Expr.RedTy e e' → Expr.RedPi e e'
+  | step_dom : Expr.RedPi (SK (α x)) α'
+    → Expr.RedPi (SK (β x)) β'
+    → Expr.RedPi (SK ((Π α, β) x)) (SK Π α', β')
+  | zero_app : Expr.TySize f 0 -- this is to handle raw SK in Π. does not increase size.
+    → Expr.RedPi (SK (f x)) (SK (f x))
+
+def Expr.step_pi? (e : Expr) : Option Expr :=
+  match e with
+  | SK ((Π α, β) x) =>
+    -- full congruence is fine, since raw combs do nothing
+    -- and all arg macros expand to at least one I, which will reduce
+    match (SK (α x)).step_pi?, (SK (β x)).step_pi? with
+    | .some α', .some β' =>
+      .some (SK (Π α', β'))
+    | _, _ => .none
+  | SK (f x) =>
+    if _h : f.ty_size = 0 then
+      .some (SK (f x))
+    else
+      (SK (f x)).step?
+  | _ => .none
+
+

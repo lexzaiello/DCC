@@ -229,6 +229,49 @@ Here is a list of other proofs we have omitted for brevity:
 * More of these proofs, but for single-step reduction and the `step?` function.
   * [Deterministic single-step reduction](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L49): `theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := ...`
 
+# References:
+
+Much of this current iteration of the paper is original work, but I have absorbed a great deal of information. Here is my Bibtex file of various sources I consulted:
+
+* Altenkirch, T., Kaposi, A., Šinkarovs, A., & Végh, T. (2023). The Münchhausen Method in Type Theory. In 28th International Conference on Types for Proofs and Programs (TYPES 2022) (pp. 10:1–10:20). Schloss Dagstuhl – Leibniz-Zentrum fur Informatik.
+
+* Mazza, D. (2007). A denotational semantics for the symmetric interaction combinators. Mathematical Structures in Computer Science, 17(3), 527–562.
+
+* Eli Ben-Sasson, Iddo Bentov, Yinon Horesh, & Michael Riabzev. (2018). Scalable, transparent, and post-quantum secure computational integrity. .
+
+* Maribel Fernández, & Ian Mackie (2003). Operational equivalence for interaction nets. Theoretical Computer Science, 297(1), 157–181.
+
+* Lévy, J.J. (1976). An algebraic interpretation of the λβ K-calculus; and an application of a labelled λ-calculus. Theoretical computer science, 2(1), 97-114.
+
+* Yves Lafont (1997). Interaction Combinators. Information and Computation, 137(1), 69-101.
+
+* Micali, S. (2000). Computationally Sound Proofs. SIAM J. Comput., 30(4), 1253–1298.
+
+* Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, & Madars Virza. (2014). Scalable Zero Knowledge via Cycles of Elliptic Curves. .
+
+* Arora, S., & Safra, S. (1998). Probabilistic checking of proofs: a new characterization of NP. J. ACM, 45(1), 70–122.
+
+* Goldwasser, S., Micali, S., & Rackoff, C. (1985). The knowledge complexity of interactive proof-systems. In Proceedings of the Seventeenth Annual ACM Symposium on Theory of Computing (pp. 291–304). Association for Computing Machinery.
+
+* Lior Goldberg, Shahar Papini, & Michael Riabzev. (2021). Cairo – a Turing-complete STARK-friendly CPU architecture. .
+
+* Lafont, Y. (1989). Interaction nets. In Proceedings of the 17th ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages (pp. 95–108). Association for Computing Machinery.
+
+* Y. Lafont (1988). The linear abstract machine. Theoretical Computer Science, 59(1), 157-180.
+
+* Cousineau, M. (1985). The categorical abstract machine. In Functional Programming Languages and Computer Architecture (pp. 50–64). Springer Berlin Heidelberg.
+
+* Peyton Jones, S. (1987). The Implementation of Functional Programming Languages (Prentice-Hall International Series in Computer Science). Prentice-Hall, Inc..
+
+* Seely, R. (1984). Locally cartesian closed categories and type theory. Mathematical Proceedings of the Cambridge Philosophical Society, 95(1), 33–48.
+
+* P.-L. Curien (1986). Categorical combinators. Information and Control, 69(1), 188-254.
+
+* Andreas Abel, Klaus Aehlig, & Peter Dybjer (2007). Normalization by Evaluation for Martin-Löf Type Theory with One Universe. Electronic Notes in Theoretical Computer Science, 173, 17-39.
+
+* David Turner (1979). A new implementation technique for applicative languages. Software: Practice and Experience, 9.
+
+
 ## Lean Toolchain
 
 I am using Lean4 with the toolchain `leanprover/lean4:v4.26.0`. Lean support with Nix is not well-maintained, so you will have to install it manually.

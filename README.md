@@ -86,11 +86,11 @@ S : ∀ (α : Type) (β : α → Type) (γ : ∀ (x : α), β x → Type) (x : �
 Each argument uses each element in the context at most once. By argument, I refer to each nested `(_ : _)` under a `Π` binder. The only duplication under a `Π` binder has the codomain of `S`.
 This enables strong normalization of type formation in SK, since each argument type merely rearranges or discards elements in context, but never duplicates them. As such, **whenever an argument is applied to a function, the number of "type combinators" in its type strictly decreases**.
 
-## Main Theorems
+# Main Theorems
 
 Our main goal is to prove strong normalization of well-typed dependent SK programs. We intend to do so by using our *decreasing measure* for types as a proxy. If a program is well-typed, then its type will strictly decrease upon applying an argument.
 
-### BCKI Evaluation Rules
+## BCKI Evaluation Rules
 
 Here are the rewrite rules for our type combinators. Note that no duplication is possible, and we use call-by-name reduction to allow deterministic reduction:
 
@@ -104,7 +104,7 @@ inductive Expr.RedTy : Expr → Expr → Prop
     → Expr.RedTy (SK (f x)) (SK (f' x))
 ```
 
-### Decreasing Measure in Types:
+## Decreasing Measure in Types:
 
 This is our definition of the "size" of an argument type under a `Π` binder:
 
@@ -137,7 +137,7 @@ We have proven [soundness and completeness](https://github.com/lexzaiello/DCC/bl
 
 Note that due to our notion of congruence, the left-most head of an application must always fire for reduction to occur. As a result, the size of the application will strictly decrease.
 
-#### Existence of a decreasing size:
+## Existence of a decreasing size:
 
 ```lean
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n := by
@@ -195,7 +195,7 @@ theorem Expr.RedTy.decreasing' (h_red : Expr.RedTy e e') : e'.ty_size < e.ty_siz
   exact h.symm ▸ hp
 ```
 
-### Strong Normalization Proof (single step and transitive closure)
+## Strong Normalization Proof (single step and transitive closure)
 
 We use a fairly standard definition of `SN` with Lean's `Acc` accessibility predicate. We have proven it using our decreasing measure for [both the transitive closure and single-step reduction](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L361):
 
@@ -213,7 +213,7 @@ termination_by e.ty_size
 
 Our decreasing measure is extremely powerful, and allows us to recurse in proofs where Lean would have easily hung otherwise.
 
-### Other proofs:
+## Other proofs:
 
 Here is a list of other proofs we have omitted for brevity:
 
@@ -228,19 +228,6 @@ Here is a list of other proofs we have omitted for brevity:
   * `theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := ...`
 * More of these proofs, but for single-step reduction and the `step?` function.
   * [Deterministic single-step reduction](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L49): `theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := ...`
-
-## Dependent S Combinator Type-checks
-
-```lean
-example (h₁ : Judge (Srt m) α) (h₂ : Judge ((~> n.succ) α, (Srt n)) β)
-  (h₃ : Judge ((Π' o.succ) α
-      , (Π' o.succ) β
-      , ⸨next ⸨assert (Srt o)⸩⸩) γ)
-  (h₄ : Judge ((Π' o) α, (Π' o) β, γ) x)
-  (h₅ : Judge ((Π' n) α, β) y)
-  (h₆ : Judge α z) : Judge ⸨γ z ⸨y z⸩⸩ ⸨(S m n o) α β γ x y z⸩ := by
-  decide_infer
-```
 
 ## Lean Toolchain
 

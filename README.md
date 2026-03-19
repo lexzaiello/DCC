@@ -218,10 +218,16 @@ Our decreasing measure is extremely powerful, and allows us to recurse in proofs
 Here is a list of other proofs we have omitted for brevity:
 
 * [Completeness](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L336) of the full beta reducer `reduce : Expr → Expr` with respect to normal transitive forms:
-  * `theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.reduce a = b := by ...`
+  * `theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.reduce a = b := ...`
+    * This essentially proves uniqueness of normal forms due to soundness of the reducer.
 * [Completeness](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L328) of the full beta reducer with respect to definitional equality:
   * `theorem Expr.RedTyTrans.complete : Expr.RedTyTrans a b → Expr.reduce a = Expr.reduce b := ...`
-
+  * `theorem Expr.RedTyTrans.reduce_same : Expr.RedTyTrans a b → Expr.RedTyTrans a c → reduce b = reduce c := ...`
+    * **Note that this is essentially Church-Rosser, as we have also shown soundness of the reducer:**
+* [Soundness](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L231) of the full beta reducer:
+  * `theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := ...`
+* More of these proofs, but for single-step reduction and the `step?` function.
+  * [Deterministic single-step reduction](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L49): `theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := ...`
 
 ## Dependent S Combinator Type-checks
 

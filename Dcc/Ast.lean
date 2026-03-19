@@ -8,78 +8,115 @@ inductive Comb where
   | K'     : Level → Level → Comb
   | K      : Level → Level → Comb
   | S      : Level → Level → Level → Comb
-  | next   : Comb
-  | read   : Comb
-  | app'   : Comb
+deriving BEq, Repr, Lean.ToExpr, DecidableEq
+
+/-
+The type combinators are seperate from the term-level combinators.
+They have no types, except when inferred under a Π binder.
+Note that this is BCKI.
+Size is guaranteed to decrease.
+Can reduce all type transformations at once.
+-/
+inductive TyComb where
+  | next   : TyComb
+  | read   : TyComb
+  | comp   : TyComb
+  | flip   : TyComb
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 inductive Expr where
-  | Pi     : Expr → Expr → Expr
-  | Srt    : Level → Expr
-  | comb   : Comb  → Expr
-  | app    : Expr  → Expr → Expr
+  | tyhole : Expr   → Expr
+  | tycomb : TyComb → Expr
+  | Pi     : Expr   → Expr → Expr
+  | Srt    : Level  → Expr
+  | comb   : Comb   → Expr
+  | app    : Expr   → Expr → Expr
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
+
+namespace dsl
+
+declare_syntax_cat expr
+
+syntax "Π" expr "," expr : expr
+
+declare_syntax_cat levels
+declare_syntax_cat comb
+
+syntax ".{" term "}" : levels
+
+syntax "K" : comb
+syntax "K'" : comb
+syntax "S" : comb
+
+syntax "arg" num expr : expr
+syntax "ret" num : expr
+
+syntax expr "∘" expr : expr
+syntax comb levels : expr
+syntax "#(" term ")" : expr
+syntax "(" expr* ")" : expr
+syntax "Type" term  : expr
+syntax "B" : expr
+syntax "C" : expr
+syntax "K*" : expr
+syntax "I" : expr
+syntax "Sort" term : expr
+syntax expr "∶" expr : expr
+syntax expr "~>" expr : expr
+syntax ident : expr
+
+syntax "SK" expr : term
+
+macro_rules
+  | `(SK #($t:term)) => `($t)
+  | `(SK $f:expr ∘ $g:expr) => `(SK (B $f:expr $g:expr))
+  | `(SK $idt:ident) => `($idt:term)
+  | `(SK K.{[$m:term, $n:term]}) => `(Expr.comb (Comb.K $m:term $n:term))
+  | `(SK K'.{[$m:term, $n:term]}) => `(Expr.comb (Comb.K' $m:term $n:term))
+  | `(SK S.{[$m:term, $n:term, $o:term]}) => `(Expr.comb (Comb.S $m:term $n:term $o:term))
+  | `(SK B) => `(Expr.tycomb (TyComb.comp))
+  | `(SK C) => `(Expr.tycomb (TyComb.flip))
+  | `(SK K*) => `(Expr.tycomb (TyComb.next))
+  | `(SK I) => `(Expr.tycomb (TyComb.read))
+  | `(SK Sort $m:term) => `(Expr.Srt $m)
+  | `(SK Type $n:term) => `(Expr.Srt ($n + 1))
+  | `(SK ($e:expr)) => `(SK $e)
+  | `(SK ($f:expr $x:expr)) => `(Expr.app (SK $f:expr) (SK $x:expr))
+  | `(SK __ ∶ $t:expr) => `(Expr.tyhole (SK $t))
+  | `(SK ($f:expr $x:expr $xs:expr*)) => `(SK (($f:expr $x:expr) $xs:expr*))
+  | `(SK Π $α:expr, $β:expr) => `(Expr.Pi (SK $α) (SK $β))
+  | `(SK $α:expr ~> $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
+  | `(SK arg $n:num $fn:expr) =>
+    match n.getNat with
+    | .zero => `(SK (B $fn I))
+    | .succ n =>
+      let n' := Lean.Syntax.mkNatLit n
+      `(SK arg $n' (K* $fn))
+  | `(SK ret $n:num) =>
+    match n.getNat with
+    | .zero => `(SK I)
+    | .succ n =>
+      let n' := Lean.Syntax.mkNatLit n
+      `(SK (B K* (ret $n')))
+
+end dsl
 
 namespace Expr
 
-syntax num term : term
-
-syntax term "∘'" term : term
-syntax "K" ".{" term "}" : term
-syntax "K'" ".{" term "}" : term
-syntax "S" ".{" term "}" : term
-syntax "Π'" term "," term : term
-syntax "next" : term
-syntax "read" : term
-syntax "$" : term
-syntax "${" term "}" : term
-syntax "⸨" term* "⸩" : term
-syntax "Ty" term  : term
-syntax "Srt" term : term
-syntax "_?" : term
-syntax term "~>" term : term
-
-macro_rules
-  | `(Π' $α:term, $β:term) => `(Expr.Pi $α $β)
-  | `(K.{[$m, $n]}) => `(Expr.comb (Comb.K $m $n))
-  | `(K'.{[$m, $n]}) => `(Expr.comb (Comb.K' $m $n))
-  | `(S.{[$m, $n, $o]}) => `(Expr.comb (Comb.S $m $n $o))
-  | `(next) => `(Expr.comb Comb.next)
-  | `(read) => `(Expr.comb Comb.read)
-  | `($) => `(Expr.comb Comb.app')
-  | `(Srt $m) => `(Expr.Srt $m)
-  | `(Ty $n) => `(Expr.Srt ($n + 1))
-  | `(⸨$f:term $x:term⸩) => `(Expr.app $f:term $x:term)
-  | `(⸨$f:term $x:term $xs:term*⸩) => `(⸨⸨$f:term $x:term⸩ $xs:term*⸩)
-  | `($n:num $fn:term) =>
-    match n.getNat with
-    | 0 => `($fn:term)
-    | .succ n =>
-      let n' := Lean.Syntax.mkNatLit n
-      `(⸨next ($n':num $fn)⸩)
-  | `($α:term ~> $β:term) => `(Π' $α, ⸨next $β⸩)
-
 def toFormat : Expr → Format
-  | Srt m => s!"(Srt {m})"
-  | K'.{[m, n]} => "K'.{" ++ (format [m, n]) ++ "}"
-  | K.{[m, n]} => "K.{" ++ (format [m, n]) ++ "}"
-  | S.{[m, n, o]} => "S.{" ++ (format [m, n, o]) ++ "}"
-  | Π' α, β => .paren <| "Π'" ++ (.nest 2 <| (.paren <| α.toFormat) ++ ", " ++ β.toFormat)
-  | ⸨f x⸩ => .bracket "⸨" (f.toFormat ++ (.nest 2 <| .line ++ x.toFormat)) "⸩"
-  | $ => "$"
-  | next => "next"
-  | read => "read"
+  | SK Sort m => s!"Sort {m}"
+  | SK B => "B"
+  | SK C => "C"
+  | SK I => "I"
+  | SK K* => "K*"
+  | SK K'.{[m, n]} => "K'.{" ++ (format [m, n]) ++ "}"
+  | SK K.{[m, n]} => "K.{" ++ (format [m, n]) ++ "}"
+  | SK S.{[m, n, o]} => "S.{" ++ (format [m, n, o]) ++ "}"
+  | SK Π α, β => .paren <| "Π " ++ α.toFormat ++ ", " ++ β.toFormat
+  | SK (f x) => .bracket "(" (f.toFormat ++ (.nest 2 <| .line ++ x.toFormat)) ")"
+  | SK __ ∶ t => "__ : " ++ t.toFormat
 
 instance : ToFormat Expr := ⟨Expr.toFormat⟩
 instance : ToString Expr := ⟨toString ∘ toFormat⟩
-
-abbrev comp (f g : Expr) : Expr :=
-  ⸨$ read ⸨next f⸩ g⸩
-
-macro_rules
-  | `($f:term ∘' $g:term) => `(comp $f $g)
-
-abbrev assert_n (n : ℕ) (fn : Expr) : Expr :=
-  (List.replicate n next).foldr (fun e acc => (e ∘' acc)) fn
 
 end Expr

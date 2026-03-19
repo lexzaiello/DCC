@@ -271,6 +271,9 @@ Much of this current iteration of the paper is original work, but I have absorbe
 
 * David Turner (1979). A new implementation technique for applicative languages. Software: Practice and Experience, 9.
 
+# Future Work
+
+My next primary objective is to formalize a proof of strong normalization of well-typed term-level SK programs using my type-level decreasing measure as a proxy. This is my final objective. Then, I intend to type-set the paper.
 
 ## Lean Toolchain
 

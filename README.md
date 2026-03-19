@@ -61,15 +61,17 @@ K' : ∀ (α : Type) (β : Type) (x : α) (y : β), α
 
 `S`, `K`, and `K'` are our only computationally relevant objects. All other objects are for forming types, though they can appear as terms, but have no rewrite rules accessible to the user:
 
-| Object   | Purpose                                    | Rewrite Rule                    | Type                                                       | Computationally Relevant?                   |
-|----------|--------------------------------------------|---------------------------------|------------------------------------------------------------|---------------------------------------------|
-| `S`      | Duplication and composition in computation | `S x y z = (x z) (y z)`         | See above                                                  | Yes                                         |
-| `K`      | Weakening, dependent type                  | `K x y = x`                     | See above                                                  | Yes                                         |
-| `K'`     | Weakening, nondependent type               | `K' x y = x`                    | See above                                                  | Yes                                         |
-| `Sort m` | Prevent self-type paradox                  | n/a                             | `⊢ Sort m : Sort m.succ`, `Prop` is shorthand for `Sort 0` | No, cannot pattern match.                   |
-| `Π`      | Form dependent types.                      | `((Π α, β) x) = Π (α x), (β x)` | `Γ x : α, β x : Sort m ⊢ Π α, β : Sort m`                  | No. Only kernel has access to rewrite rule. |
-| `B`      | Type combinator                            |                                 |                                                            |                                             |
-|          |                                            |                                 |                                                            |                                             |
+| Object   | Purpose                                        | Rewrite Rule                    | Type                                                                                                     | Computationally Relevant?                   |
+|----------|------------------------------------------------|---------------------------------|----------------------------------------------------------------------------------------------------------|---------------------------------------------|
+| `S`      | Duplication and composition in computation     | `S x y z = (x z) (y z)`         | See above. Requires explicit type arguments `α`, `β`, `γ`.                                               | Yes                                         |
+| `K`      | Weakening, dependent type                      | `K x y = x`                     | See above. Requires explicit type arguments `α`, `β`.                                                    | Yes                                         |
+| `K'`     | Weakening, nondependent type                   | `K' x y = x`                    | See above. Requires explicit type arguments `α`, `β`.                                                    | Yes                                         |
+| `Sort m` | Prevent self-type paradox                      | n/a                             | `⊢ Sort m : Sort m.succ`, `Prop` is shorthand for `Sort 0`                                               | No, cannot pattern match.                   |
+| `Π`      | Form dependent types.                          | `((Π α, β) x) = Π (α x), (β x)` | `Γ x : α, β x : Sort m ⊢ Π α, β : Sort m`                                                                | No. Only kernel has access to rewrite rule. |
+| `B`      | Type combinator, composition.                  | `B f g x = f (g x)`             | No explicit type arguments. Inferred from `Π`.<br>`Γ g : Π α, K* β, f : Π β, γ ⊢ (Π α, B f g) : γ (g x)` | No. Only kernel has access to rewrite rule. |
+| `C`      | Type combinator, flip arguments to a function. | `C f x y = f y x`               | Inferred from `Π`. Omitted for brevity. No explicit type arguments.                                      | No. Only kernel has access to rewrite rule. |
+| `K*`     | Type combinator, discard argument.             | `K* x y = x`                    | Inferred from `Π`. Omitted for brevity. No explicit type arguments.                                      | No. Only kernel has access to rewrite rule. |
+| `I`      | Type combinator, identity.                     | `I x = x`                       | Inferred from `Π`. Omitted for brevity. No explicit type arguments.                                      | No. Only kernel has access to rewrite rule. |
 
 ## Dependent S Combinator Type-checks
 

@@ -57,6 +57,8 @@ DSL:
   - (f x_1 ... x_n) = (.app (SK f) (SK x_1)).app ...
 
   Utility macros (not corresponding to AST elements directly):
+  - Arrow macro:
+    - α → β = (Π α, K* β)
   - Arg macro:
     - (arg 0 f) = B f I
     - (arg (n + 1) f) = K* (arg n f)
@@ -98,7 +100,7 @@ syntax "K*" : expr
 syntax "I" : expr
 syntax "Sort" term : expr
 syntax expr "∶" expr : expr
-syntax expr "~>" expr : expr
+syntax expr "→" expr : expr
 syntax ident : expr
 
 syntax "SK" expr : term
@@ -121,7 +123,7 @@ macro_rules
   | `(SK __ ∶ $t:expr) => `(Expr.tyhole (SK $t))
   | `(SK ($f:expr $x:expr $xs:expr*)) => `(SK (($f:expr $x:expr) $xs:expr*))
   | `(SK Π $α:expr, $β:expr) => `(Expr.Pi (SK $α) (SK $β))
-  | `(SK $α:expr ~> $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
+  | `(SK $α:expr → $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
   | `(SK arg $n:num $fn:expr) =>
     match n.getNat with
     | .zero => `(SK (B $fn I))

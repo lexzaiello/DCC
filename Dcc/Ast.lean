@@ -2,8 +2,10 @@ import Mathlib.Data.Nat.Notation
 open Std (ToFormat Format)
 open Std.ToFormat (format)
 
+-- Infinite sort universe hierarchy
 abbrev Level := ℕ
 
+-- Core computational combinators. Standard. K' for downgrading a dependent type to a nondependent one.
 inductive Comb where
   | K'     : Level → Level → Comb
   | K      : Level → Level → Comb
@@ -25,13 +27,44 @@ inductive TyComb where
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 inductive Expr where
-  | tyhole : Expr   → Expr
+  | tyhole : Expr   → Expr -- __ : τ. May not be necessary due to inference rule for BCKI. Vestigial.
   | tycomb : TyComb → Expr
-  | Pi     : Expr   → Expr → Expr
+  | Pi     : Expr   → Expr → Expr -- Binders. No →. Form → with Π + K*.
   | Srt    : Level  → Expr
   | comb   : Comb   → Expr
   | app    : Expr   → Expr → Expr
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
+
+/-
+DSL:
+  Type combinators:
+  - K* = Expr.tycomb .next
+  - B = Expr.tycomb .comp
+  - I = Expr.tycomb .read
+  - C = Expr.tycomb .flip
+
+  Types:
+  - Π α, β = Expr.Pi (SK α) (SK β)
+  - Sort m = Expr.Srt m
+
+  Core:
+  - S = .comb .S
+  - K' = .comb .K'
+  - K = .comb K
+  - (f x_1 ... x_n) = (.app (SK f) (SK x_1)).app ...
+
+  Utility macros (not corresponding to AST elements directly):
+  - Arg macro:
+    - (arg 0 f) = B f I
+    - (arg (n + 1) f) = K* (arg n f)
+    This macro allows discarding `n` arguments under a Π binder, then applying a function to the selected argument to it.
+    Kind of simulates Debruijn Indices: (arg 1 I) a b = I b.
+  - Ret macro:
+    - (ret 0) = I
+    - (ret (n + 1)) = (B K* (ret n))
+    This macro is the inverse of arg. It discards `m` arguments after a "selected" argument:
+    (arg 1 (ret 1)) a b c = b
+-/
 
 namespace dsl
 

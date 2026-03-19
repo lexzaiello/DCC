@@ -56,7 +56,6 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
     have hb := ih₂ hnx
     grind only
 
-
 def Expr.ty_size : Expr → ℕ
   | (SK K*) => 1
   | (SK B) => 1
@@ -160,8 +159,6 @@ theorem Expr.RedTyTrans.decreasing' (h_red : Expr.RedTyTrans e e') : e'.ty_size 
 
 instance : WellFoundedRelation Expr := ⟨fun x y => x.ty_size < y.ty_size, (measure (fun e => Expr.ty_size e)).wf⟩
 
-instance Expr.instSizeOf : SizeOf Expr := ⟨Expr.ty_size⟩
-
 def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
 
 def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
@@ -240,6 +237,7 @@ theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := by
     exact .trans (.single (Expr.step?_sound heq)) (reduce_sound h)
   · rename_i heq
     exact h.symm ▸ .refl
+termination_by e.ty_size
 
 theorem app_step_size_decrease : Expr.RedTy f f' → Expr.RedTy x x' → (SK (f' x')).ty_size < (SK (f x)).ty_size := by
   intro ha hb
@@ -368,5 +366,50 @@ termination_by e
 def Expr.RedTyTrans.SN (e : Expr) : Acc (fun b a => Expr.RedTyTrans a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing'
   exact Expr.RedTyTrans.SN e')
+termination_by e.ty_size
 
 #eval Std.format <| (SK (arg 2 I (Sort 1) (Sort 2) (Sort 3))).reduce
+
+/-
+Count the size of a Π α, β expression
+by finding the size of its leaves (not nested Π. apps, for example,
+or just tycombs).
+-/
+inductive Expr.PiSize : Expr → ℕ → Prop
+  | tycomb : Expr.TySize (.tycomb c) n → Expr.PiSize (.tycomb c) n
+  | comb   : Expr.PiSize (.comb c) 0
+  | hole   : Expr.PiSize (SK __ ∶ t) 0
+  | srt    : Expr.PiSize (SK Sort m) 0
+  | app    : Expr.TySize (.app f x) n → Expr.PiSize (.app f x) n
+  | pi     : Expr.PiSize α m → Expr.PiSize β n →  Expr.PiSize (SK Π α, β) (m + n)
+
+def Expr.pi_size (e : Expr) : ℕ :=
+  match e with
+  | (SK Π α, β) =>
+    let m := α.pi_size
+    let n := β.pi_size
+    (m + n)
+  | e => e.ty_size
+
+theorem Expr.PiSize.sound (h : Expr.pi_size e = n) : Expr.PiSize e n := by
+  unfold Expr.pi_size at h
+  rw [← h]
+  split at h
+  · rename_i e α β
+    have size₁ := Expr.PiSize.sound (e := α) rfl
+    have size₂ := Expr.PiSize.sound (e := β) rfl
+    exact Expr.PiSize.pi size₁ size₂
+  · rename_i _ hsize
+    cases e
+    · exact .hole
+    · rename_i c
+      cases c
+      repeat (apply PiSize.tycomb; exact TySize.sound rfl)
+    · rename_i e₁ α β
+      exfalso
+      exact hsize α β rfl
+    · exact .srt
+    · exact .comb
+    · rename_i e' f x
+      apply PiSize.app; exact TySize.sound rfl
+

@@ -413,16 +413,44 @@ theorem Expr.PiSize.sound (h : Expr.pi_size e = n) : Expr.PiSize e n := by
     · rename_i e' f x
       apply PiSize.app; exact TySize.sound rfl
 
+theorem Expr.PiSize.complete (h : Expr.PiSize e n) : Expr.pi_size e = n := by
+  induction h
+  · rename_i h
+    cases h
+    repeat rfl
+  repeat rfl
+  case app f x n ih =>
+    unfold Expr.pi_size
+    exact Expr.TySize.complete ih
+  case pi α m β n hα hβ ih₁ ih₂ =>
+    unfold Expr.pi_size
+    simp_all
+
 /-
 α leaves must always reduce.
 -/
 inductive Expr.RedPi : Expr → Expr → Prop
   | step_ty  : Expr.RedTy e e' → Expr.RedPi e e'
-  | step_dom : Expr.RedPi (SK (α x)) α'
+  | step_pi  : Expr.RedPi (SK (α x)) α'
     → Expr.RedPi (SK (β x)) β'
     → Expr.RedPi (SK ((Π α, β) x)) (SK Π α', β')
+
+/-
+TODO:
   | zero_app : Expr.TySize f 0 -- this is to handle raw SK in Π. does not increase size.
     → Expr.RedPi (SK (f x)) (SK (f x))
+need inductive that allows this via β argument. "substitution", where we pop Π
+all other decreasing.
+Actually not necessary, since we wrap β (e.g., raw S) in arg.
+-/
+
+theorem Expr.RedPi.decreasing (h_red : Expr.RedPi e e') (h_size : e.PiSize n) : e'.pi_size < n := by
+  induction h_red generalizing n
+  · have h := Expr.PiSize.
+    exact Expr.RedTy.decreasing' (by assumption)
+  · rename_i α x α' β β' hr₁ hr₂ ih₁ ih₂
+    
+    sorry
 
 def Expr.step_pi? (e : Expr) : Option Expr :=
   match e with
@@ -433,11 +461,7 @@ def Expr.step_pi? (e : Expr) : Option Expr :=
     | .some α', .some β' =>
       .some (SK (Π α', β'))
     | _, _ => .none
-  | SK (f x) =>
-    if _h : f.ty_size = 0 then
-      .some (SK (f x))
-    else
-      (SK (f x)).step?
+  | SK (f x) => (SK (f x)).step?
   | _ => .none
 
 

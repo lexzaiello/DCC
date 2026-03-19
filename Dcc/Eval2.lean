@@ -57,14 +57,8 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
     grind only
 
 def Expr.ty_size : Expr → ℕ
-  | (SK K*) => 1
-  | (SK B) => 1
-  | (SK C) => 1
-  | (SK I) => 1
-  | (SK Π _α, _β) => 0
-  | .comb _c => 0
-  | SK __ ∶ _t => 0
-  | SK Sort _m => 0
+  | (SK K*) | (SK B) | (SK C) | (SK I) => 1
+  | (SK Π _α, _β) | .comb _c | SK __ ∶ _t | SK Sort _m => 0
   | SK (f x) =>
     let n := f.ty_size
     let m := x.ty_size
@@ -98,40 +92,23 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n := by
   induction h_red generalizing n
   · cases h_size
-    rename_i h _
-    cases h
-    rename_i h _
-    cases h
+    iterate 2 (rename_i h _; cases h)
     exact ⟨_, (by assumption), by grind only⟩
   · cases h_size
-    rename_i h _
-    cases h
-    rename_i h _
-    cases h
-    rename_i h _
-    cases h
+    iterate 3 (rename_i h _; cases h)
     exact ⟨_, .app (by assumption) (.app (by assumption) (by assumption)), by grind only⟩
   · cases h_size
-    rename_i h _
-    cases h
-    rename_i h _
-    cases h
-    rename_i h _
-    cases h
+    iterate 3 (rename_i h _; cases h)
     exact ⟨_, .app (.app (by assumption) (by assumption)) (by assumption), by grind only⟩
   · cases h_size
-    rename_i h _
-    cases h
+    rename_i h _; cases h
     exact ⟨_, by assumption, by grind only⟩
   case congrFun f f' x hrf ih =>
     cases h_size
+    rename_i n_x _ _
     have h := ih (by assumption)
     have ⟨m, hf, h₁⟩ := h
-    rename_i n_x _ _
-    refine ⟨m + n_x, ?_, ?_⟩
-    apply TySize.app
-    repeat assumption
-    grind
+    exact ⟨m + n_x, .app (by assumption) (by assumption), by grind⟩
 
 def Expr.RedTyTrans := Relation.TransGen Expr.RedTy
 
@@ -361,7 +338,7 @@ theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.re
 def Expr.RedTy.SN (e : Expr) : Acc (fun b a => Expr.RedTy a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing'
   exact Expr.RedTy.SN e')
-termination_by e
+termination_by e.ty_size
 
 def Expr.RedTyTrans.SN (e : Expr) : Acc (fun b a => Expr.RedTyTrans a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing'

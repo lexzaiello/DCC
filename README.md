@@ -197,7 +197,7 @@ theorem Expr.RedTy.decreasing' (h_red : Expr.RedTy e e') : e'.ty_size < e.ty_siz
 
 ### Strong Normalization Proof (single step and transitive closure)
 
-We use a fairly standard definition of `SN` with Lean's `Acc` accessibility predicate. We have proven it using our decreasing measure for both the transitive closure and single-step reduction:
+We use a fairly standard definition of `SN` with Lean's `Acc` accessibility predicate. We have proven it using our decreasing measure for [both the transitive closure and single-step reduction](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L361):
 
 ```lean
 def Expr.RedTy.SN (e : Expr) : Acc (fun b a => Expr.RedTy a b) e := Acc.intro e (fun e' hr => by
@@ -210,6 +210,18 @@ def Expr.RedTyTrans.SN (e : Expr) : Acc (fun b a => Expr.RedTyTrans a b) e := Ac
   exact Expr.RedTyTrans.SN e')
 termination_by e.ty_size
 ```
+
+Our decreasing measure is extremely powerful, and allows us to recurse in proofs where Lean would have easily hung otherwise.
+
+### Other proofs:
+
+Here is a list of other proofs we have omitted for brevity:
+
+* [Completeness](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L336) of the full beta reducer `reduce : Expr → Expr` with respect to normal transitive forms:
+  * `theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.reduce a = b := by ...`
+* [Completeness](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L328) of the full beta reducer with respect to definitional equality:
+  * `theorem Expr.RedTyTrans.complete : Expr.RedTyTrans a b → Expr.reduce a = Expr.reduce b := ...`
+
 
 ## Dependent S Combinator Type-checks
 

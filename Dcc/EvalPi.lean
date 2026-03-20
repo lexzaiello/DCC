@@ -68,6 +68,28 @@ def Expr.pi_size : Expr → Option ℕ
     | .succ n => .some ((n + 1) + 1)
   | _ => .none
 
+theorem Expr.PiSize.complete : Expr.PiSize e n → Expr.pi_size e = .some n := by
+  intro h
+  induction h
+  · unfold Expr.pi_size
+    rename_i ih
+    split
+    · simp_all
+    · simp_all
+      unfold Expr.pi_size at ih
+      split at ih
+      split at ih
+      simp_all
+      split at ih
+      · contradiction
+      · contradiction
+      · contradiction
+      simp_all only [imp_false, reduceCtorEq]
+  · unfold Expr.pi_size
+    rename_i ht
+    have h := Expr.TySize.complete ht
+    simp_all only
+
 theorem Expr.PiSize.sound : Expr.pi_size e = .some n → Expr.PiSize e n := by
   intro h
   unfold Expr.pi_size at h
@@ -97,5 +119,5 @@ theorem app_size_dec : Expr.RedAppTy t t' → Expr.PiSize t m → Expr.PiSize t'
   cases hr
 
 def Expr.red_app_ty : Expr → Option Expr
-  | SK ((Π α, β) x) => do
-    let β' ← Expr.red_pi
+  | SK ((Π _α, β) x) => Expr.red_pi (SK (β x))
+  | _ => .none

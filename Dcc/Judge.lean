@@ -33,7 +33,19 @@ inductive RedPiTy : Expr → Expr → Prop
   | step  : RedPiTy (SK (α x)) α'
     → RedPiTy (SK (β x)) β'
     → RedPiTy (SK ((Π α, β) x)) (SK (Π α', β'))
-  | ty    : Expr.RedTyTrans t₁ t₂ → Expr.IsNorm t₂ → RedPiTy t₁ t₃
+  | ty    : Expr.RedTyReflTrans t₁ t₂ → Expr.IsNorm t₂ → RedPiTy t₁ t₃
+
+def red_pi_ty (e : Expr) : ((e' : Expr) × (PLift (RedPiTy e e'))) :=
+  match e with
+  | SK ((Π α, β) x) =>
+    let ⟨α', ⟨hα⟩⟩ := red_pi_ty (SK (α x))
+    let ⟨β', ⟨hβ⟩⟩ := red_pi_ty (SK (β x))
+    ⟨SK (Π α', β'), ⟨.step hα hβ⟩⟩
+  | e =>
+    let e' := e.reduce
+    let pr := reduce_sound (e' := e') rfl
+    let pn := reduce_norm (e' := e') rfl
+    ⟨e', ⟨.ty pr pn⟩⟩
 
 /-
 Judgments for Π combinators work inversely.

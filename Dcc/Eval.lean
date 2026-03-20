@@ -195,14 +195,19 @@ def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
       contradiction
     contradiction
 
+-- Full beta-reduction. We use our decreasing measure to recurse.
+-- termination_by e is also possible. It infers ty_size due to our WellfoundedRelation
+-- instance.
 def Expr.reduce (e : Expr) : Expr :=
   match heq : step? e with
   | .some e' =>
+    -- This hypothesis allows the recursion. Easy to prove.
     have _h_size : e'.ty_size < e.ty_size := (Expr.step?_sound heq).decreasing'
     e'.reduce
   | .none => e
-termination_by e
+termination_by e.ty_size
 
+-- Every reduction corresponds to a constructor of reflexive transitive closure of single-step reduction
 theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := by
   intro h
   unfold Expr.reduce at h
@@ -214,30 +219,22 @@ theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := by
     exact h.symm ▸ .refl
 termination_by e.ty_size
 
+-- Congruence implies that the size of the entire expression decreases.
 theorem app_step_size_decrease : Expr.RedTy f f' → Expr.RedTy x x' → (SK (f' x')).ty_size < (SK (f x)).ty_size := by
   intro ha hb
   have h : f'.ty_size < f.ty_size := ha.decreasing'
   have h : x'.ty_size < x.ty_size := hb.decreasing'
   induction ha generalizing x'
-  · unfold Expr.ty_size; grind
-  · unfold Expr.ty_size; grind
-  · unfold Expr.ty_size; grind
-  · unfold Expr.ty_size; grind
-  case congrFun f'' f''' x' hrf ih₁ ih₂ =>
-    unfold Expr.ty_size
-    simp_all only [gt_iff_lt]
-    grind
+  repeat (unfold Expr.ty_size; grind)
 
+-- Same as RedTy.decreasing', but for our computable function
 theorem step?_decreasing : Expr.step? e = .some e' → e'.ty_size < e.ty_size := fun h =>
   (Expr.step?_sound h).decreasing'
 
+-- Completeness of our single-step reduction function
 def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := fun h => by
   induction e generalizing e'
-  · cases h
-  · cases h
-  · cases h
-  · cases h
-  · cases h
+  iterate 5 cases h
   case app f x ih₁ ih₂ =>
     cases h
     repeat rfl
@@ -253,12 +250,14 @@ def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := f
       have h := ih₁ (by assumption)
       simp_all
 
+-- Uniqueness of single-step reductions (determinism of single-step reductions)
 theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by
   intro hr₁ hr₂
   have heq₁ := hr₁.step?_complete
   have heq₂ := hr₂.step?_complete
   simp_all
 
+-- Normal forms reduce to themselves
 theorem Expr.IsNorm.reduce_rfl : Expr.IsNorm e → e.reduce = e := by
   intro h
   unfold Expr.reduce
@@ -270,6 +269,7 @@ theorem Expr.IsNorm.reduce_rfl : Expr.IsNorm e → e.reduce = e := by
     exact h_norm ⟨_, h⟩
   rfl
 
+-- Single-step reduct of a reduces to the reduction of a
 theorem Expr.RedTy.reduce_same : Expr.RedTy a b → reduce a = reduce b := by
   intro ha
   conv =>
@@ -282,6 +282,7 @@ theorem Expr.RedTy.reduce_same : Expr.RedTy a b → reduce a = reduce b := by
   · have h := ha.step?_complete
     simp_all
 
+-- Church-rosser for our reduction function. Implies church-rosser for the predicate version, since we have soundness.
 theorem Expr.RedTyTrans.reduce_same : Expr.RedTyTrans a b → Expr.RedTyTrans a c → reduce b = reduce c := by
   intro h₁ h₂
   induction h₁ generalizing c
@@ -300,6 +301,9 @@ theorem Expr.RedTyTrans.reduce_same : Expr.RedTyTrans a b → Expr.RedTyTrans a 
     have h := hr₂.reduce_same
     simp_all
 
+-- Completeness of full reduction function with respect to the transitive closure of single-step reduction.
+-- Note that there are two forms of this theorem. This one just says that the reduct
+-- reduces to the same thing as a.
 theorem Expr.RedTyTrans.complete : Expr.RedTyTrans a b → Expr.reduce a = Expr.reduce b := by
   intro h
   induction h
@@ -308,6 +312,8 @@ theorem Expr.RedTyTrans.complete : Expr.RedTyTrans a b → Expr.reduce a = Expr.
     have h := h.reduce_same
     simp_all
 
+-- This proof shows that if the reduct under transitive closure of b is a normal form,
+-- then reduce produces the same result.
 theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.reduce a = b := by
   intro ha hnorm
   induction ha
@@ -333,17 +339,14 @@ theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.re
       · rfl
     simp_all
 
+-- Strong normalization of single-step reduction using our decreasing measure.
 def Expr.RedTy.SN (e : Expr) : Acc (fun b a => Expr.RedTy a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing'
   exact Expr.RedTy.SN e')
 termination_by e.ty_size
 
+-- Strong normalization of transitive closure of single-step reduction using our decreasing measure.
 def Expr.RedTyTrans.SN (e : Expr) : Acc (fun b a => Expr.RedTyTrans a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing'
   exact Expr.RedTyTrans.SN e')
 termination_by e.ty_size
-
-#eval Std.format <| (SK (arg 2 I (Sort 1) (Sort 2) (Sort 3))).reduce
-
-inductive Expr.PiSize : Expr → ℕ → Prop
-  

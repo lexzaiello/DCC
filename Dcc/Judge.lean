@@ -55,7 +55,7 @@ inductive PiTyDepth : Expr → ℕ → Prop
   | pi   : PiTyDepth α m → PiTyDepth β n → PiTyDepth (SK Π α, β) (m + n + 1)
 
 inductive PiTySize : Expr → ℕ → Prop
-  | leaf   : PiLeaf x → x.TySize n → PiTySize x nm
+  | leaf   : PiLeaf x → x.TySize n → PiTySize x n
   | branch : PiTySize α m
     → PiTySize β n
     → PiTySize (SK Π α, β) (m + n)
@@ -86,7 +86,12 @@ theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ 
         have ⟨α_n', h_size_α', h_α_n'_ineq⟩ := ha
         have ⟨β_n', h_size_β', h_β_n'_ineq⟩ := hb
         refine ⟨α_n' + β_n', .branch h_size_α' h_size_β', by grind only⟩
-   | _ => sorry
+   | leaf h_leaf h_r_trans h_norm =>
+     rename_i e x e'
+     have h := h_r_trans.decreasing'
+     refine ⟨e'.ty_size, PiTySize.leaf ?_ ?_, ?_⟩
+     
+     sorry
 
 /-theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ n', PiTySize t' n' ∧ n' < n := by
   induction t generalizing t' n with

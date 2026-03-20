@@ -401,3 +401,15 @@ theorem step_tm?_sound : Expr.step_tm? e = .some e' → Expr.RedTm e e' := by
       exact h.symm ▸ .congrArg (step_tm?_sound h_x_step)
     · contradiction
   · contradiction
+
+theorem no_ty_step_norm : Expr.step? t = .none → Expr.IsNorm t := by
+  intro h
+  exact (fun ⟨e', hn⟩ => by have h := hn.step?_complete; simp_all only [reduceCtorEq])
+
+theorem Expr.RedTyTrans.no_step? : Expr.step? t = .none → ¬ Expr.RedTyTrans t t' := by
+  intro h
+  have h := no_ty_step_norm h
+  exact (fun h => by
+    induction h
+    · exact h ⟨_, by assumption⟩
+    · assumption)

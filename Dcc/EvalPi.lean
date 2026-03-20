@@ -57,21 +57,37 @@ of arguments accepted.
 inductive Expr.PiSize : Expr → ℕ → Prop
   | pi  : Expr.PiSize β m
     → Expr.PiSize (SK (Π α, β)) (m + 1)
-  | app : Expr.TySize (SK (f x)) m
-    → Expr.PiSize (SK (f x)) m
+  | app : Expr.PiSize f m
+    → Expr.PiSize x n
+    → Expr.PiSize (SK (f x)) (m + n)
   | tyc : Expr.TySize (.tycomb c) m
     → Expr.PiSize (.tycomb c) m
   | comb  : Expr.PiSize (.comb c) 0
   | hole  : Expr.PiSize (SK __ ∶ t) 0
   | srt   : Expr.PiSize (SK Sort m) 0
 
+theorem Expr.PiSize.unique : Expr.PiSize e m → Expr.PiSize e n → m = n := by
+  intro ha hb
+  induction ha generalizing n
+  · rename_i ih
+    cases hb
+    rw [ih (by assumption)]
+  · cases hb
+    rename_i ih₁ ih₂ _ _ _ _
+    rw [ih₁ (by assumption), ih₂ (by assumption)]
+  · rename_i h_t_c
+    cases hb
+    exact (h_t_c.unique (by assumption)).symm
+  repeat (cases hb; rfl)
+
 def Expr.pi_size (e : Expr) : ℕ :=
   match e with
   | SK (Π _α, β) => β.pi_size + 1
-  | .comb _c | SK __ ∶ _t | (SK Sort m) => 0
+  | .comb _c | SK __ ∶ _t | (SK Sort _m) => 0
+  | SK (f x) => f.pi_size + x.pi_size
   | e => Expr.ty_size e
 
-theorem Expr.PiSize.complete : Expr.PiSize e n → Expr.pi_size e = .some n := by
+/-theorem Expr.PiSize.complete : Expr.PiSize e n → Expr.pi_size e = .some n := by
   intro h
   induction h
   · unfold Expr.pi_size
@@ -91,7 +107,7 @@ theorem Expr.PiSize.complete : Expr.PiSize e n → Expr.pi_size e = .some n := b
   · unfold Expr.pi_size
     rename_i ht
     have h := Expr.TySize.complete ht
-    simp_all only
+    simp_all only-/
 
 theorem Expr.PiSize.sound : Expr.pi_size e = n → Expr.PiSize e n := by
   intro h
@@ -105,11 +121,12 @@ theorem Expr.PiSize.sound : Expr.pi_size e = n → Expr.PiSize e n := by
   · exact h.symm ▸ Expr.PiSize.hole
   · exact h.symm ▸ Expr.PiSize.srt
   · rw [← h]
-    cases e
+    apply Expr.PiSize.app
+    repeat exact Expr.PiSize.sound rfl
+  · cases e
     repeat simp_all
-    · exact .tyc (Expr.TySize.sound h)
+    · exact PiSize.tyc (.sound h)
     repeat simp_all
-    · exact .app (Expr.TySize.sound h)
 
 -- For checking codomain of app types.
 inductive Expr.RedAppTy : Expr → Expr → Prop
@@ -118,9 +135,25 @@ inductive Expr.RedAppTy : Expr → Expr → Prop
 
 theorem app_size_dec : Expr.RedAppTy t t' → Expr.PiSize t m → Expr.PiSize t' n → n < m := by
   intro hr hm hn
-  induction hm
-  cases hr
-  cases hr
+  induction hr
+  · rename_i β x β' α hrβ
+    induction β
+    cases hrβ
+    · rename_i hrt
+      exact absurd hrt (Expr.RedTyTrans.no_step? rfl)
+    cases hrβ
+    · rename_i hrt
+      cases hrt
+      · rename_i hrt
+        cases hrt
+        cases hm
+        · rename_i h _
+          cases h
+          
+          sorry
+        sorry
+      sorry
+    sorry
 
 def Expr.red_app_ty : Expr → Option Expr
   | SK ((Π _α, β) x) => Expr.red_pi (SK (β x))

@@ -85,27 +85,6 @@ theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ 
           have ⟨n₁, hn_size₁, hn_eq₁⟩ := ha
           have ⟨n₂, hn_size₂, hn_eq₂⟩ := hb
           exact ⟨n₁ + n₂, .branch (by assumption) (by assumption), by grind⟩
-        
-    /-· contradiction
-    rename_i size_bind _
-    cases size_bind
-    · contradiction
-    · rename_i α x α' β β' hrα hrβ ih₁ ih₂ d n h_depth_bind h_size_x d₂ m h_size α
-      cases h_depth_bind
-      · contradiction
-      · rename_i depth_α depth_β
-        have ha := ih₁ (.app depth_α h_size h_size_x)
-        have hb := ih₂ (.app depth_β α h_size_x)
-        have ⟨α_n', h_size_α', h_α_n'_ineq⟩ := ha
-        have ⟨β_n', h_size_β', h_β_n'_ineq⟩ := hb
-        refine ⟨α_n' + β_n', .branch h_size_α' h_size_β', by grind only⟩-/
-   | leaf h_leaf h_r_trans h_norm =>
-     induction h_r_trans
-     · rename_i e x e' b h_red
-       cases h_size
-       
-       sorry
-     sorry
 
 /-theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ n', PiTySize t' n' ∧ n' < n := by
   induction t generalizing t' n with

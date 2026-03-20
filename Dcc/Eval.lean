@@ -20,7 +20,8 @@ inductive Expr.TySize : Expr → ℕ → Prop
 
 -- single-ish step reduction
 -- no refl constructor, since this is meant to fire at the top level with Π.
--- Π argument types should always reduce for the argument.
+-- congruence is only to the left (call-by-name reduction), to enable determinism,
+-- and since argument types formed in a Π binder should always reduce fully
 inductive Expr.RedTy : Expr → Expr → Prop
   | next      : RedTy (SK (K* A b)) A
   | comp      : RedTy (SK (B f g x)) (SK (f (g x)))
@@ -29,6 +30,7 @@ inductive Expr.RedTy : Expr → Expr → Prop
   | congrFun  : Expr.RedTy f f'
     → Expr.RedTy (SK (f x)) (SK (f' x))
 
+-- All expressions have a size (including combinator terms)
 theorem Expr.all_size : ∃ n, Expr.TySize e n := by
   induction e
   · exact ⟨0, .hole⟩
@@ -46,6 +48,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     have ⟨m, hm⟩ := ih₂
     exact ⟨n + m, .app hn hm⟩
 
+-- Sizes are unique for an expression `e`
 theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n := by
   induction h₁ generalizing m
   repeat (cases h₂; rfl)
@@ -56,6 +59,7 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
     have hb := ih₂ hnx
     grind only
 
+-- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
   | (SK K*) | (SK B) | (SK C) | (SK I) => 1
   | (SK Π _α, _β) | .comb _c | SK __ ∶ _t | SK Sort _m => 0
@@ -64,6 +68,7 @@ def Expr.ty_size : Expr → ℕ
     let m := x.ty_size
     (n + m)
 
+-- ty_size corresponds to TySize
 theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   intro h
   unfold Expr.ty_size at h
@@ -81,6 +86,7 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   apply Expr.TySize.app
   repeat (apply Expr.TySize.sound; rfl)
 
+-- TySize corresponds to ty_size
 theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
   intro h
   induction h
@@ -89,6 +95,7 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
     rw [← ih₁, ← ih₂]
     rfl
 
+-- For every single-step reduction, there is a TySize for e' that is smaller than e's size.
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n := by
   induction h_red generalizing n
   · cases h_size
@@ -110,9 +117,10 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
     have ⟨m, hf, h₁⟩ := h
     exact ⟨m + n_x, .app (by assumption) (by assumption), by grind⟩
 
+-- The transitive closure of single-step reduction
 def Expr.RedTyTrans := Relation.TransGen Expr.RedTy
 
--- retry with hyp n₂ instead if hard
+-- Same as Expr.RedTy.decreasing, but for transitive closure
 theorem Expr.RedTyTrans.decreasing (h_red : Expr.RedTyTrans a b) (hn : a.TySize n) : ∃ m, b.TySize m ∧ m < n := by
   induction h_red
   · rename_i hr
@@ -122,24 +130,26 @@ theorem Expr.RedTyTrans.decreasing (h_red : Expr.RedTyTrans a b) (hn : a.TySize 
     have ⟨mc, hcm₁, hcm₂⟩ := hr.decreasing hbm₁
     exact ⟨mc, hcm₁, by grind only⟩
 
+-- The "smaller" size of e' in single-step reduction IS its unique size.
 theorem Expr.RedTy.decreasing' (h_red : Expr.RedTy e e') : e'.ty_size < e.ty_size := by
-  let h_size := e.ty_size
-  have ⟨m, h, hp⟩ := Expr.RedTy.decreasing h_red (Expr.TySize.sound (e := e) (n := h_size) rfl)
-  have h := h.complete
-  exact h.symm ▸ hp
+  have ⟨m, h, hp⟩ := Expr.RedTy.decreasing h_red (Expr.TySize.sound (e := e) (n := e.ty_size) rfl)
+  exact h.complete.symm ▸ hp
 
+-- Same as above, but for transitive closure
 theorem Expr.RedTyTrans.decreasing' (h_red : Expr.RedTyTrans e e') : e'.ty_size < e.ty_size := by
-  let h_size := e.ty_size
-  have ⟨m, h, hp⟩ := Expr.RedTyTrans.decreasing h_red (Expr.TySize.sound (e := e) (n := h_size) rfl)
-  have h := h.complete
-  exact h.symm ▸ hp
+  have ⟨m, h, hp⟩ := Expr.RedTyTrans.decreasing h_red (Expr.TySize.sound (e := e) (n := e.ty_size) rfl)
+  exact h.complete.symm ▸ hp
 
+-- This is used by Lean for `termination_by e.ty_size`.
 instance : WellFoundedRelation Expr := ⟨fun x y => x.ty_size < y.ty_size, (measure (fun e => Expr.ty_size e)).wf⟩
 
+-- Reflexive transitive closure. `reduce` function requires this to prove soundness, since beta reduction requires reflexivity for normal forms.
 def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
 
+-- Normal forms have no next single-step reduction.
 def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
 
+-- Single-step reduction. If no reduction is possible, return .none
 def Expr.step? (e : Expr) : Option Expr :=
   match e with
   | (SK (K* A _b)) => .some A
@@ -152,27 +162,15 @@ def Expr.step? (e : Expr) : Option Expr :=
     | _ => .none
   | _e => .none
 
+-- Every result of step? corresponds to a constructor of our single-step reduction predicate
+-- This is essentially the workhorse of all other proofs.
 def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
   induction e generalizing e'
   intro h
   · contradiction
-  · rename_i c
-    intro h
-    unfold Expr.step? at h
-    contradiction
-  · rename_i α β ih₁ ih₂
-    intro h
-    unfold Expr.step? at h
-    contradiction
-  · intro h
-    unfold Expr.step? at h
-    contradiction
-  · intro h
-    unfold Expr.step? at h
-    contradiction
+  iterate 4 (intro h; unfold Expr.step? at h; contradiction)
   · rename_i f x ih₁ ih₂
-    intro h
-    unfold Expr.step? at h
+    intro h; unfold Expr.step? at h
     split at h
     · rename_i heq
       simp_all only [app.injEq, Option.some.injEq, and_self]

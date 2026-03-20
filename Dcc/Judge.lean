@@ -29,11 +29,38 @@ B C K I types should never appear, except as arguments in a nested
 
 They can be reduced as such:
 -/
+
+inductive PiLeaf : Expr → Prop
+  | tycomb : PiLeaf (.tycomb c)
+  | app    : PiLeaf f → (PiLeaf (SK (f x)))
+
+/-
+Note:
+This will cause undefined behaior unless the expression being reduced is typed-checked
+-/
 inductive RedPiTy : Expr → Expr → Prop
-  | step  : RedPiTy (SK (α x)) α'
+  | branch : RedPiTy (SK (α x)) α'
     → RedPiTy (SK (β x)) β'
     → RedPiTy (SK ((Π α, β) x)) (SK (Π α', β'))
-  | ty    : Expr.RedTyReflTrans t₁ t₂ → Expr.IsNorm t₂ → RedPiTy t₁ t₂
+  -- A leaf is either a type combinator, or an application of a type combinator
+  -- otherwise, it is "substituted", and has a ty_size of 0.
+  | leaf   : PiLeaf e
+    → (SK (e x)).RedTyTrans e'
+    → e'.IsNorm
+    → RedPiTy (SK (e x)) e'
+
+-- How many Π binders are nested. For example, in an uncurried type like K's type.
+inductive PiTyDepth : Expr → ℕ → Prop
+  | atom : PiLeaf x → PiTyDepth x 0
+  | pi   : PiTyDepth α m → PiTyDepth β n → PiTyDepth (SK Π α, β) (m + n + 1)
+
+inductive PiTySize : Expr → ℕ → Prop
+  | leaf   : PiLeaf x → x.TySize n → PiTySize x nm
+  | branch : PiTySize α m
+    → PiTySize β n
+    → PiTySize (SK Π α, β) (m + n)
+  | app    : PiTyDepth f d → PiTySize f m → PiTySize x n
+    → PiTySize (SK (f x)) (m + (n * (d + 1)))
 
 theorem RedPiTy.is_norm : RedPiTy t t' → Expr.IsNorm t' := by
   intro h
@@ -41,6 +68,43 @@ theorem RedPiTy.is_norm : RedPiTy t t' → Expr.IsNorm t' := by
   · intro ⟨e', hr⟩
     cases hr
   · assumption
+
+theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ n', PiTySize t' n' ∧ n' < n := by
+  induction h_red generalizing n with
+  | branch _ =>
+    cases h_size
+    · contradiction
+    rename_i size_bind _
+    cases size_bind
+    · contradiction
+    · rename_i α x α' β β' hrα hrβ ih₁ ih₂ d n h_depth_bind h_size_x d₂ m h_size α
+      cases h_depth_bind
+      · contradiction
+      · rename_i depth_α depth_β
+        have ha := ih₁ (.app depth_α h_size h_size_x)
+        have hb := ih₂ (.app depth_β α h_size_x)
+        have ⟨α_n', h_size_α', h_α_n'_ineq⟩ := ha
+        have ⟨β_n', h_size_β', h_β_n'_ineq⟩ := hb
+        refine ⟨α_n' + β_n', .branch h_size_α' h_size_β', by grind only⟩
+   | _ => sorry
+
+/-theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ n', PiTySize t' n' ∧ n' < n := by
+  induction t generalizing t' n with
+  | Pi α β ih₁ ih₂ =>
+    cases h_red with
+    | ty h_bind_size h_refl_trans h_norm =>
+      induction h_refl_trans
+      · contradiction
+      · contradiction
+  | app f x ih₁ ih₂ =>
+    cases h_size with
+    | app h_depth h_size_f h_size_n =>
+      cases h_red with
+      | step hr_α hr_β =>
+        
+        sorry
+      | _ => sorry
+  | _ => contradiction-/
 
 def Expr.red_pi_ty (e : Expr) : ((e' : Expr) × (PLift (RedPiTy e e'))) :=
   match e with
@@ -119,14 +183,4 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
     | _ => none
   | _ => .none
 
-/-
-Challenge: inference for Π:
-
-we can probably do this more reliably. we're not type-checking terms.
-
-cases:
-- atomic type (e.g., Srt) as codomain. we can infer that easily.
-
--/
-
-#eval (infer (SK (K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)))).map (·.fst)
+#eval (infer (SK (K'.{[2, 2]} (Sort 1) (Sort 1)))).map (·.fst)

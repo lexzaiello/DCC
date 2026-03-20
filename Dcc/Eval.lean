@@ -363,3 +363,11 @@ def Expr.RedTyTrans.SN (e : Expr) : Acc (fun b a => Expr.RedTyTrans a b) e := Ac
   have h := hr.decreasing'
   exact Expr.RedTyTrans.SN e')
 termination_by e.ty_size
+
+inductive Expr.RedTm : Expr → Expr → Prop
+  | k     : RedTm (SK (K.{[m, n]} α β x y)) x
+  | k'    : RedTm (SK (K'.{[m, n]} α β x y)) x
+  | s     : RedTm (SK (S.{[m, n, o]} α β γ x y z)) (SK ((x z) (y z)))
+  | congr : RedTm f f' → RedTm x x' → RedTm (SK (f x)) (SK (f' x'))
+
+

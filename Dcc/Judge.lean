@@ -9,7 +9,7 @@ def K.type (m n : Level) : Expr := (SK
 --#eval Std.format <| ((K.type 1 1).reduce_pi (SK Sort 0)).fst
 
 def K'.type (m n : Level) : Expr :=
-  (SK Π Sort m, Π Sort n, Π (arg 0 (ret 1)), Π (arg 1 (ret 1)), (arg 0 (ret 3)))
+  (SK Π Sort m, Π (K* (Sort n)), Π (arg 0 (ret 1)), Π (arg 1 (ret 1)), (arg 0 (ret 3)))
 
 def S.type (m n o : Level) : Expr := (SK
     Π Sort m, -- α
@@ -53,9 +53,15 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
       let h_t_f' := reduce_sound (e := t_f) (e' := (SK Π α, β)) heqf
       let h_t_x' := reduce_sound (e := t_x) (e' := α₂) rfl
 
+      dbg_trace α
+      dbg_trace α₂
+
       if heq : α = α₂ then
-        match (SK ((Π α, β) x)).red_app_ty with
-        | .some β' => .some ⟨β', ⟨.app (.conv h_t_f h_t_f' (reduce_norm heqf)) (heq ▸ (.conv h_t_x h_t_x' (reduce_norm rfl))) (by sorry)⟩⟩
+        match hsomeq : (SK ((Π α, β) x)).red_app_ty with
+        | .some β' => .some ⟨β',
+          ⟨.app (.conv h_t_f h_t_f' (reduce_norm heqf))
+          (heq ▸ (.conv h_t_x h_t_x' (reduce_norm rfl)))
+          (red_app_ty_sound hsomeq)⟩⟩
         | .none => .none
       else
         .none

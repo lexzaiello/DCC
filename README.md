@@ -88,6 +88,8 @@ This enables strong normalization of type formation in SK, since each argument t
 
 # Main Theorems
 
+*Note: See [eval.lean](https://github.com/lexzaiello/DCC/blob/868e86ccb34a3cabcb71cdfaa05d48bb16d43397/Dcc/Eval.lean) for the full list of my results as of March 19, 2026.*
+
 Our main goal is to prove strong normalization of well-typed dependent SK programs. We intend to do so by using our *decreasing measure* for types as a proxy. If a program is well-typed, then its type will strictly decrease upon applying an argument.
 
 ## BCKI Evaluation Rules
@@ -133,7 +135,7 @@ def Expr.ty_size : Expr → ℕ
     (n + m)
 ```
 
-We have proven [soundness and completeness](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L73) of our `ty_size` function with respect to `TySize`.
+We have proven soundness and completeness of our `ty_size` function with respect to `TySize`.
 
 Note that due to our notion of congruence, the left-most head of an application must always fire for reduction to occur. As a result, the size of the application will strictly decrease.
 
@@ -197,7 +199,7 @@ theorem Expr.RedTy.decreasing' (h_red : Expr.RedTy e e') : e'.ty_size < e.ty_siz
 
 ## Strong Normalization Proof (single step and transitive closure)
 
-We use a fairly standard definition of `SN` with Lean's `Acc` accessibility predicate. We have proven it using our decreasing measure for [both the transitive closure and single-step reduction](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L361):
+We use a fairly standard definition of `SN` with Lean's `Acc` accessibility predicate. We have proven it using our decreasing measure for both the transitive closure and single-step reduction:
 
 ```lean
 def Expr.RedTy.SN (e : Expr) : Acc (fun b a => Expr.RedTy a b) e := Acc.intro e (fun e' hr => by
@@ -217,17 +219,17 @@ Our decreasing measure is extremely powerful, and allows us to recurse in proofs
 
 Here is a list of other proofs we have omitted for brevity:
 
-* [Completeness](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L336) of the full beta reducer `reduce : Expr → Expr` with respect to normal transitive forms:
+* Completeness of the full beta reducer `reduce : Expr → Expr` with respect to normal transitive forms:
   * `theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.reduce a = b := ...`
     * This essentially proves uniqueness of normal forms due to soundness of the reducer.
-* [Completeness](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L328) of the full beta reducer with respect to definitional equality:
+* Completeness of the full beta reducer with respect to definitional equality:
   * `theorem Expr.RedTyTrans.complete : Expr.RedTyTrans a b → Expr.reduce a = Expr.reduce b := ...`
   * `theorem Expr.RedTyTrans.reduce_same : Expr.RedTyTrans a b → Expr.RedTyTrans a c → reduce b = reduce c := ...`
     * **Note that this is essentially Church-Rosser, as we have also shown soundness of the reducer:**
-* [Soundness](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L231) of the full beta reducer:
+* Soundness of the full beta reducer:
   * `theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := ...`
 * More of these proofs, but for single-step reduction and the `step?` function.
-  * [Deterministic single-step reduction](https://github.com/lexzaiello/DCC/blob/5aa8889607fde66a7cf44ae06b477a3a7fe17926/Dcc/Eval2.lean#L49): `theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := ...`
+  * Deterministic single-step reduction: `theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := ...`
 
 # References:
 

@@ -33,8 +33,25 @@ def Expr.pi_size : Expr → Option ℕ
     | .zero => match Expr.pi_size β with
       | .some m => .some (m + 1)
       | .none => .none
-    | n => .some (n + 1)
+    | .succ n => .some ((n + 1) + 1)
   | _ => .none
+
+theorem Expr.PiSize.sound : Expr.pi_size e = .some n → Expr.PiSize e n := by
+  intro h
+  unfold Expr.pi_size at h
+  split at h
+  · rename_i x α β
+    split at h
+    · rename_i x heq
+      split at h
+      · simp_all only [Nat.zero_eq, Option.some.injEq]
+        rename_i hsize₂
+        exact h.symm ▸ Expr.PiSize.pi (Expr.PiSize.sound hsize₂)
+      · contradiction
+    · rename_i x hβsize
+      simp_all
+      exact h.symm ▸ Expr.PiSize.ty (Expr.TySize.sound hβsize)
+  · contradiction
 
 -- For checking codomain of app types.
 inductive Expr.RedAppTy : Expr → Expr → Prop

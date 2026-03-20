@@ -43,7 +43,7 @@ theorem Expr.RedPi.sound : Expr.red_pi t = .some t' → Expr.RedPi t t' := by
     rw [← Relation.reflGen_transGen] at h
     cases h
     · contradiction
-    · rename_i ih; exact RedPi.ty ih
+    · rename_i ih; exact RedPi.ty ih (reduce_norm hr')
 
 /-
 Size of a function.

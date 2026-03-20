@@ -74,14 +74,18 @@ theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ 
   induction h_red generalizing n with
   | branch _ =>
     cases h_size
-    case branch.app α x α' x' α'' h_red_α_x_app h_red_β_x_app ih₁ ih₂ d m n_x_size depth_α_x ty_size_α_x ty_size_x =>
+    case branch.app α x α' β α'' h_red_α_x_app h_red_β_x_app ih₁ ih₂ d m n_x_size depth_α_x ty_size_α_x ty_size_x =>
       cases ty_size_α_x
-      case branch m n h_size_α h_size_x' =>
+      case branch m n h_size_α h_size_β =>
         cases depth_α_x
         · contradiction
-        case pi d₁ d₂ h_depth_α h_dept_x =>
-          have h := ih₁ (.app h_depth_α (by sorry))
-        sorry
+        case pi d₁ d₂ h_depth_α h_depth_β =>
+          have ha := ih₁ (.app h_depth_α h_size_α ty_size_x)
+          have hb := ih₂ (.app h_depth_β h_size_β ty_size_x)
+          have ⟨n₁, hn_size₁, hn_eq₁⟩ := ha
+          have ⟨n₂, hn_size₂, hn_eq₂⟩ := hb
+          exact ⟨n₁ + n₂, .branch (by assumption) (by assumption), by grind⟩
+        
     /-· contradiction
     rename_i size_bind _
     cases size_bind

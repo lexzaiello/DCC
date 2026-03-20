@@ -1,6 +1,5 @@
 import Dcc.Ast
 import Dcc.Eval
-import Dcc.EvalPi
 import Mathlib.Data.Nat.Notation
 
 def K.type (m n : Level) : Expr := (SK
@@ -24,19 +23,43 @@ def S.type (m n o : Level) : Expr := (SK
         (__ ∶ Sort o)) (arg 2 (ret 1)))) -- γ z (y z)
 -- ^ note that this is safe, since prior apps were type-checked, and def-eq here is deferred to term-level
 
+/-
+B C K I types should never appear, except as arguments in a nested
+Π binder.
+
+They can be reduced as such:
+-/
+inductive RedPiTy : Expr → Expr → Prop
+  | step  : RedPiTy (SK (α x)) α'
+    → RedPiTy (SK (β x)) β'
+    → RedPiTy (SK ((Π α, β) x)) (SK (Π α', β'))
+  | ty    : Expr.RedTyTrans t₁ t₂ → Expr.IsNorm t₂ → RedPiTy t₁ t₃
+
+/-
+Judgments for Π combinators work inversely.
+
+We use "typed holes." We find the innermost type combinator,
+whose size is greater than 0 (Π binders have size zero), and accumulate "typed holes" as we recurse.
+-/
+inductive FoldElimPi : (fold : Expr → Expr) → Expr → Expr → Prop
+  | single : β.TySize (m + 1)
+    → FoldElimPi fold (SK Π α, β) (fold β)
+  | tail   : FoldElimPi ((fun elim => (SK (elim (__ ∶ α)))) ∘ fold) β γ
+    → FoldElimPi fold (SK Π α, β) γ
+
 inductive Judge : Expr → Expr → Prop
-  | app   : Judge (SK Π α, β) f
+  | app     : Judge (SK Π α, β) f
     → Judge α x
-    → Expr.RedAppTy (SK ((Π α, β) x)) β'
-    → Judge β' (SK (f x))
-  | srt   : Judge    (SK Sort m.succ) (SK Sort m)
-  | k     : Judge    (K.type m n) (SK K.{[m, n]})
-  | k'    : Judge    (K'.type m n) (SK K'.{[m, n]})
-  | s     : Judge    (S.type m n o) (SK S.{[m, n, o]})
-  | pi'   : Expr.PiSize (SK Π α, β) n
-    → Expr.RedAppTy (SK ((Π α, β) (__ ∶ α))) β' → Judge t_β β' → Judge t_β (SK Π α, β)
-  | hole  : Judge α (SK __ ∶ α)-- only visible to the kernel
-  | conv  {α β : Expr} : Judge α x → Expr.RedTyReflTrans α β → Expr.IsNorm β → Judge β x
+    → Judge (SK (β x)) (SK (f x))
+  | srt     : Judge (SK Sort m.succ) (SK Sort m)
+  | k       : Judge (K.type m n) (SK K.{[m, n]})
+  | k'      : Judge (K'.type m n) (SK K'.{[m, n]})
+  | s       : Judge (S.type m n o) (SK S.{[m, n, o]})
+  | pi      : FoldElimPi id (SK Π α, β) elim
+    → RedPiTy elim (SK __ ∶ t_β)
+    → Judge t_β (SK Π α, β)
+  | hole    : Judge α (SK __ ∶ α)-- only visible to the kernel
+  | conv  {α β : Expr} : Judge α x → RedPiTy α β → Expr.IsNorm β → Judge β x
 
 def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
   match h_eq : e with

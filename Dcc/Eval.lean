@@ -10,8 +10,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
   | comp  : Expr.TySize (SK B) 1
   | flip  : Expr.TySize (SK C) 1
   | read  : Expr.TySize (SK I) 1
-  | pi    : Expr.TySize (SK `Π) 1
-  | pi'   : Expr.TySize (SK Π α, β) 0
+  | pi    : Expr.TySize (SK Π α, β) 0
   | comb  : Expr.TySize (.comb c) 0
   | hole  : Expr.TySize (SK __ ∶ t) 0
   | srt   : Expr.TySize (SK Sort m) 0
@@ -24,7 +23,6 @@ inductive Expr.TySize : Expr → ℕ → Prop
 -- congruence is only to the left (call-by-name reduction), to enable determinism,
 -- and since argument types formed in a Π binder should always reduce fully
 inductive Expr.RedTy : Expr → Expr → Prop
-  | pi        : RedTy (SK (`Π α β)) (SK Π α, β)
   | next      : RedTy (SK (K* A b)) A
   | comp      : RedTy (SK (B f g x)) (SK (f (g x)))
   | flip      : RedTy (SK (C x y z)) (SK (x z y))
@@ -42,8 +40,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     · exact ⟨1, .read⟩
     · exact ⟨1, .comp⟩
     · exact ⟨1, .flip⟩
-    · exact ⟨1, .pi⟩
-  · exact ⟨0, .pi'⟩
+  · exact ⟨0, .pi⟩
   · exact ⟨0, .srt⟩
   · exact ⟨0, .comb⟩
   case app f x ih₁ ih₂ =>
@@ -64,7 +61,7 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
-  | (SK `Π) | (SK K*) | (SK B) | (SK C) | (SK I) => 1
+  | (SK K*) | (SK B) | (SK C) | (SK I) => 1
   | (SK Π _α, _β) | .comb _c | SK __ ∶ _t | SK Sort _m => 0
   | SK (f x) =>
     let n := f.ty_size
@@ -77,12 +74,11 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   unfold Expr.ty_size at h
   rw [← h]
   split at h
-  · exact .pi
   · exact .next
   · exact .comp
   · exact .flip
   · exact .read
-  · exact .pi'
+  · exact .pi
   · exact .comb
   · exact .hole
   · exact .srt
@@ -102,12 +98,6 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
 -- For every single-step reduction, there is a TySize for e' that is smaller than e's size.
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n := by
   induction h_red generalizing n
-  · cases h_size
-    rename_i h _
-    cases h
-    rename_i h _
-    cases h
-    exact ⟨0, .pi', by grind only⟩
   · cases h_size
     iterate 2 (rename_i h _; cases h)
     exact ⟨_, (by assumption), by grind only⟩
@@ -162,7 +152,6 @@ def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
 -- Single-step reduction. If no reduction is possible, return .none
 def Expr.step? (e : Expr) : Option Expr :=
   match e with
-  | (SK (`Π α β)) => .some (SK (Π α, β))
   | (SK (K* A _b)) => .some A
   | (SK (B f g x)) => .some (SK (f (g x)))
   | (SK (C x y z)) => .some (SK (x z y))
@@ -178,9 +167,6 @@ def Expr.step? (e : Expr) : Option Expr :=
 def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
   unfold Expr.step?
   split
-  · intro h
-    simp_all only [Option.some.injEq]
-    exact h.symm ▸ RedTy.pi
   · intro h
     simp_all only [Option.some.injEq]
     exact h.symm ▸ RedTy.next

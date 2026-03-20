@@ -96,6 +96,7 @@ syntax "(" expr* ")" : expr
 syntax "Type" term  : expr
 syntax "B" : expr
 syntax "C" : expr
+syntax "`Π" : expr
 syntax "K*" : expr
 syntax "I" : expr
 syntax "Sort" term : expr
@@ -123,6 +124,7 @@ macro_rules
   | `(SK __ ∶ $t:expr) => `(Expr.tyhole (SK $t))
   | `(SK ($f:expr $x:expr $xs:expr*)) => `(SK (($f:expr $x:expr) $xs:expr*))
   | `(SK Π $α:expr, $β:expr) => `(Expr.Pi (SK $α) (SK $β))
+  | `(SK `Π) => `(Expr.tycomb (TyComb.pi))
   | `(SK $α:expr → $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
   | `(SK arg $n:num $fn:expr) =>
     match n.getNat with

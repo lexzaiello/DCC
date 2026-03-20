@@ -156,15 +156,27 @@ I (Π α, β) x
 C (Π α, β) x
 = Π x, β
 
-- I (Π α, β) x = Π α, x
-- C (Π α, β) x = Π x, β
-- W (Π α, β) x = Π x, x
-- B f g (Π α, β) x =
-- f (g (Π α, β) x)
+- I (Π α, β) x     = Π β, x
+- C (Π α, β)       = Π β, α
+- α (Π α, β) x     = Π (α x), β
+- β (Π α, β) x     = Π α, (β x)
+- K* (Π α, β) x    = Π α, β
+- B f g (Π α, β) x = f (g (Π α, β) x)
 
+Nondependent K combinator (K'):
 
-
-I'm tweaking, we can maybe just use S' and K'.
+K' : (B (B (B (B K* C) K*) I) I (Π Sort m, Sort n))
+K' α : (B (B (B K* C) K*) I) (I (Π Sort m, Sort n) α)
+     : (B (B (B K* C) K*) I) (Π Sort n, α)
+K' α β : (B (B K* C) K*) (I (Π Sort n, α) β)
+       : (B (B K* C) K*) (Π α, β)
+K' α β x : (B (B K* C) K*) (Π α, β) x
+         : (B K* C) (K* (Π α, β) x)
+         : (B K* C) (Π α, β)
+         : K* (C (Π α, β))
+         : K* (Π β, α)
+K' α β x y : (Π β, α)
+           : α
 
 K* (Π α, β) x
 = (Π α, β)

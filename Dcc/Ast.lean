@@ -20,10 +20,8 @@ Size is guaranteed to decrease.
 Can reduce all type transformations at once.
 -/
 inductive TyComb where
-  | next   : TyComb
-  | read   : TyComb
-  | comp   : TyComb
-  | flip   : TyComb
+  | I : TyComb
+  | 
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 inductive Expr where

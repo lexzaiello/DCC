@@ -33,6 +33,9 @@ inductive Judge : Expr → Expr → Prop
   | k     : Judge    (K.type m n) (SK K.{[m, n]})
   | k'    : Judge    (K'.type m n) (SK K'.{[m, n]})
   | s     : Judge    (S.type m n o) (SK S.{[m, n, o]})
+  | pi'   : Expr.PiSize (SK Π α, β) n
+    → Expr.RedAppTy (SK ((Π α, β) (__ ∶ α))) β' → Judge t_β β' → Judge t_β (SK Π α, β)
+  | hole  : Judge α (SK __ ∶ α)-- only visible to the kernel
   | conv  {α β : Expr} : Judge α x → Expr.RedTyReflTrans α β → Expr.IsNorm β → Judge β x
 
 def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
@@ -66,7 +69,19 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
       else
         .none
     | _ => .none
+  | SK Π α, β => match heq_size : Expr.pi_size (SK Π α, β), heq_app : Expr.red_app_ty (SK ((Π α, β) (__ ∶ α))) with
+    | .some size, .some β' =>
+      have h : β'.pi_size < (SK (Π α, β)).pi_size := app_size_dec (red_app_ty_sound heq_app) (Expr.PiSize.sound (by sorry))
+      sorry
+    | _, _ => .none
   | _ => .none
+
+theorem RedTm.judge_decreasing : Judge t e → Expr.RedTm e e' → Judge t' e' → Expr.PiSize t' < Expr.PiSize t := by
+  intro ht₀ hr ht₁
+  induction ht₀ generalizing e' t'
+  case app α β f x β' h_t_f h_t_x h_r_β ih₁ ih₂ =>
+    have h := app_size_dec h_r_β (Expr.PiSize.sound (by sorry))
+    sorry
 
 /-
 Challenge: inference for Π:

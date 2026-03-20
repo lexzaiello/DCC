@@ -55,19 +55,21 @@ Just count the number of β binders the way down. This corresponds to the number
 of arguments accepted.
 -/
 inductive Expr.PiSize : Expr → ℕ → Prop
-  | pi : Expr.PiSize β m
+  | pi  : Expr.PiSize β m
     → Expr.PiSize (SK (Π α, β)) (m + 1)
-  | ty : Expr.TySize β (m + 1)
-    → Expr.PiSize (SK (Π α, β)) ((m + 1) + 1)
+  | app : Expr.TySize (SK (f x)) m
+    → Expr.PiSize (SK (f x)) m
+  | tyc : Expr.TySize (.tycomb c) m
+    → Expr.PiSize (.tycomb c) m
+  | comb  : Expr.PiSize (.comb c) 0
+  | hole  : Expr.PiSize (SK __ ∶ t) 0
+  | srt   : Expr.PiSize (SK Sort m) 0
 
-def Expr.pi_size : Expr → Option ℕ
-  | SK (Π _α, β) =>
-    match Expr.ty_size β with
-    | .zero => match Expr.pi_size β with
-      | .some m => .some (m + 1)
-      | .none => .none
-    | .succ n => .some ((n + 1) + 1)
-  | _ => .none
+def Expr.pi_size (e : Expr) : ℕ :=
+  match e with
+  | SK (Π _α, β) => β.pi_size + 1
+  | .comb _c | SK __ ∶ _t | (SK Sort m) => 0
+  | e => Expr.ty_size e
 
 theorem Expr.PiSize.complete : Expr.PiSize e n → Expr.pi_size e = .some n := by
   intro h
@@ -91,22 +93,23 @@ theorem Expr.PiSize.complete : Expr.PiSize e n → Expr.pi_size e = .some n := b
     have h := Expr.TySize.complete ht
     simp_all only
 
-theorem Expr.PiSize.sound : Expr.pi_size e = .some n → Expr.PiSize e n := by
+theorem Expr.PiSize.sound : Expr.pi_size e = n → Expr.PiSize e n := by
   intro h
   unfold Expr.pi_size at h
   split at h
   · rename_i x α β
-    split at h
-    · rename_i x heq
-      split at h
-      · simp_all only [Nat.zero_eq, Option.some.injEq]
-        rename_i hsize₂
-        exact h.symm ▸ Expr.PiSize.pi (Expr.PiSize.sound hsize₂)
-      · contradiction
-    · rename_i x hβsize
-      simp_all
-      exact h.symm ▸ Expr.PiSize.ty (Expr.TySize.sound hβsize)
-  · contradiction
+    rw [← h]
+    apply Expr.PiSize.pi
+    exact Expr.PiSize.sound rfl
+  · exact h.symm ▸ Expr.PiSize.comb
+  · exact h.symm ▸ Expr.PiSize.hole
+  · exact h.symm ▸ Expr.PiSize.srt
+  · rw [← h]
+    cases e
+    repeat simp_all
+    · exact .tyc (Expr.TySize.sound h)
+    repeat simp_all
+    · exact .app (Expr.TySize.sound h)
 
 -- For checking codomain of app types.
 inductive Expr.RedAppTy : Expr → Expr → Prop

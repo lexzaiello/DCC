@@ -1,5 +1,6 @@
 import Dcc.Ast
 import Dcc.Eval
+import Dcc.EvalPi
 import Mathlib.Data.Nat.Notation
 
 def K.type (m n : Level) : Expr := (SK
@@ -26,13 +27,13 @@ def S.type (m n o : Level) : Expr := (SK
 inductive Judge : Expr → Expr → Prop
   | app   : Judge (SK Π α, β) f
     → Judge α x
-    → Expr.RedTyTrans x β β'
+    → Expr.RedAppTy (SK ((Π α, β) x)) β'
     → Judge β' (SK (f x))
   | srt   : Judge    (SK Sort m.succ) (SK Sort m)
   | k     : Judge    (K.type m n) (SK K.{[m, n]})
   | k'    : Judge    (K'.type m n) (SK K'.{[m, n]})
   | s     : Judge    (S.type m n o) (SK S.{[m, n, o]})
-  | conv  {α β : Expr} : Judge α x → Expr.TyRedReflTrans α β → Judge β x
+  | conv  {α β : Expr} : Judge α x → Expr.RedTyReflTrans α β → Expr.IsNorm β → Judge β x
 
 def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
   match h_eq : e with
@@ -43,15 +44,19 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
   | SK (f x) => do
     let ⟨t_f, ⟨h_t_f⟩⟩ ← infer f
     let ⟨t_x, ⟨h_t_x⟩⟩ ← infer x
-    let ⟨t_f', h_r_f⟩ := t_f.reduce_ty
+
+    let α₂ := t_x.reduce
+    let t_f' := t_f.reduce
 
     match heqf : t_f' with
     | (SK Π α, β) =>
-      let ⟨α₂, hrx⟩ := t_x.reduce_ty
+      let h_t_f' := reduce_sound (e := t_f) (e' := (SK Π α, β)) heqf
+      let h_t_x' := reduce_sound (e := t_x) (e' := α₂) rfl
 
       if heq : α = α₂ then
-        let ⟨β', h⟩ := β.reduce_pi_arg x
-        .some <| ⟨β', ⟨.app (.conv h_t_f h_r_f) (by rw [heq]; exact (.conv h_t_x hrx)) h.down⟩⟩
+        match (SK ((Π α, β) x)).red_app_ty with
+        | .some β' => .some ⟨β', ⟨.app (.conv h_t_f h_t_f' (reduce_norm heqf)) (heq ▸ (.conv h_t_x h_t_x' (reduce_norm rfl))) (by sorry)⟩⟩
+        | .none => .none
       else
         .none
     | _ => .none

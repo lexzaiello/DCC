@@ -122,3 +122,12 @@ theorem app_size_dec : Expr.RedAppTy t t' → Expr.PiSize t m → Expr.PiSize t'
 def Expr.red_app_ty : Expr → Option Expr
   | SK ((Π _α, β) x) => Expr.red_pi (SK (β x))
   | _ => .none
+
+theorem red_app_ty_sound : Expr.red_app_ty e = .some e' → Expr.RedAppTy e e' := by
+  intro h
+  unfold Expr.red_app_ty at h
+  split at h
+  · rename_i x₁ α β x
+    have h := Expr.RedPi.sound h
+    exact Expr.RedAppTy.mk h
+  · contradiction

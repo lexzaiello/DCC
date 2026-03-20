@@ -8,7 +8,7 @@ The DCC is a dependently-typed calculus based on [SK combinators](https://en.wik
 
 ### SK Combinators
 
-The [SK combinator calculus](https://en.wikipedia.org/wiki/SKI_combinator_calculus) is a turing complete model of computation equivalent to the lambda calculus. It has to equational / algebraic rewrite rules:
+The [SK combinator calculus](https://en.wikipedia.org/wiki/SKI_combinator_calculus) is a turing complete model of computation equivalent to the lambda calculus. It has two equational / algebraic rewrite rules:
 
 ```
 S x y z = (x z) (y z)

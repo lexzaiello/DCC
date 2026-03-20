@@ -70,6 +70,51 @@ theorem RedPiTy.is_norm : RedPiTy t t' → Expr.IsNorm t' := by
     cases hr
   · assumption
 
+theorem PiTySize.ty_lt_imp (h₁ : Expr.TySize e t₁) (h₂ : Expr.TySize e' t₂) (h_trans : e.RedTyTrans e') (h_lt : t₂ < t₁) (h_pi₁ : PiTySize e tα₁) : (∃ (tα₂ : ℕ), (PiTySize e' tα₂ ∧ tα₂ < tα₁)) := by
+  induction h_trans generalizing t₁ t₂ tα₁ with
+  | single h_red =>
+    rename_i b
+    induction h_red
+    · cases h_pi₁
+      rename_i  h₁ h_pi₁
+      cases h₁
+      rename_i hpi_A
+      refine ⟨_, hpi_A, ?_⟩
+      rename_i d₂ _ _ _ d₁ _
+      cases d₁
+      cases d₂
+      rename_i h_s_next _ _
+      cases h_s_next
+      rename_i h
+      cases h
+      grind
+    · cases h_pi₁
+      iterate 3 (rename_i hp₁ _; cases hp₁)
+      
+      sorry
+    sorry
+
+/-theorem PiTySize.ty_lt_imp (h₁ : Expr.TySize e t₁) (h₂ : Expr.TySize e' t₂) (h_trans : e.RedTyTrans e') (h_lt : t₂ < t₁) (h_pi₁ : PiTySize e ta₁) : ∃ (tα₂ : ℕ), (PiTySize e' ta₂ ∧ tα₂ < tα₁) := by
+  induction h_pi₁ generalizing t₁ t₂ e'
+  · simp_all
+    rename_i c n size_c
+    induction h_trans generalizing t₁ t₂ n ta₁ ta₂
+    · contradiction
+    · rename_i b₀ c₀ hr_trans hr ih
+      have h_dec₁ := hr.decreasing'
+      change Expr.RedTyTrans _ _ at hr_trans
+      have h_dec₂ := hr_trans.decreasing'
+      --have h := ih size₁ (by sorry)
+      --have h := ih (by sorry)
+      
+      simp_all
+      
+      --have ha := ih h₁ (.sound rfl) (.sound rfl) h_dec₂
+      have hb := ih (.sound rfl) (.sound rfl) (.sound rfl) h_dec₂
+      
+      sorry
+  sorry-/
+
 theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ n', PiTySize t' n' ∧ n' < n := by
   induction h_red generalizing n with
   | branch _ =>
@@ -85,6 +130,10 @@ theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ 
           have ⟨n₁, hn_size₁, hn_eq₁⟩ := ha
           have ⟨n₂, hn_size₂, hn_eq₂⟩ := hb
           exact ⟨n₁ + n₂, .branch (by assumption) (by assumption), by grind⟩
+  | leaf h_leaf h_trans h_norm =>
+    have h := h_trans.decreasing'
+    
+    sorry
 
 /-theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ n', PiTySize t' n' ∧ n' < n := by
   induction t generalizing t' n with

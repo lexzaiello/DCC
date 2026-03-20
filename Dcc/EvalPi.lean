@@ -12,6 +12,38 @@ inductive Expr.RedPi : Expr → Expr → Prop
   | ty    : Expr.RedTyTrans e e'
     → Expr.RedPi e e'
 
+def Expr.red_pi : Expr → Option Expr
+  | SK ((Π α, β) x) =>
+    match Expr.red_pi (SK (α x)), Expr.red_pi (SK (β x)) with
+    | .some α', .some β' =>
+      .some (SK (Π α', β'))
+    | _, _ => .none
+  | e =>
+    if _heq : Expr.reduce e = e then
+      .none
+    else
+      .some (Expr.reduce e)
+
+theorem Expr.RedPi.sound : Expr.red_pi t = .some t' → Expr.RedPi t t' := by
+  intro h
+  unfold Expr.red_pi at h
+  simp at h
+  split at h
+  · rename_i x' α β x
+    split at h
+    · rename_i heq₁ heq₂
+      simp_all
+      exact h.symm ▸ Expr.RedPi.pi (Expr.RedPi.sound heq₁) (Expr.RedPi.sound heq₂)
+    · contradiction
+  · rename_i x' heq
+    simp at h
+    have ⟨nheq, hr'⟩ := h
+    have h : Relation.ReflTransGen RedTy t t' := reduce_sound hr'
+    rw [← Relation.reflGen_transGen] at h
+    cases h
+    · contradiction
+    · rename_i ih; exact RedPi.ty ih
+
 /-
 Size of a function.
 
@@ -63,3 +95,7 @@ theorem app_size_dec : Expr.RedAppTy t t' → Expr.PiSize t m → Expr.PiSize t'
   induction hm
   cases hr
   cases hr
+
+def Expr.red_app_ty : Expr → Option Expr
+  | SK ((Π α, β) x) => do
+    let β' ← Expr.red_pi

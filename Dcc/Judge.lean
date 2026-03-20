@@ -103,9 +103,6 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
 
     match _heqf : t_f' with
     | (SK Π α, β) =>
-      dbg_trace α
-      dbg_trace α₂
-
       if heq : α = α₂ then
         let β₁ := Judge.app (.conv h_t_f h_t_f' h_t_f'.is_norm) (.conv h_t_x (heq ▸ h_t_x') (heq ▸ h_t_x'.is_norm))
         match _hsomeq : (SK (β x)).red_pi_ty with
@@ -121,13 +118,6 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
       | _ => none
     | _ => none
   | _ => .none
-
-theorem RedTm.judge_decreasing : Judge t e → Expr.RedTm e e' → Judge t' e' → Expr.PiSize t' < Expr.PiSize t := by
-  intro ht₀ hr ht₁
-  induction ht₀ generalizing e' t'
-  case app α β f x β' h_t_f h_t_x h_r_β ih₁ ih₂ =>
-    have h := app_size_dec h_r_β (Expr.PiSize.sound (by sorry))
-    sorry
 
 /-
 Challenge: inference for Π:

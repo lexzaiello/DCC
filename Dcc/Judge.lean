@@ -44,10 +44,10 @@ inductive RedPiTy : Expr → Expr → Prop
     → RedPiTy (SK ((Π α, β) x)) (SK (Π α', β'))
   -- A leaf is either a type combinator, or an application of a type combinator
   -- otherwise, it is "substituted", and has a ty_size of 0.
-  | leaf   : PiLeaf e
-    → (SK (e x)).RedTyTrans e'
+  | leaf   : PiLeaf (SK (M N))
+    → (SK ((M N) x)).RedTyTrans e'
     → e'.IsNorm
-    → RedPiTy (SK (e x)) e'
+    → RedPiTy (SK ((M N) x)) e'
 
 -- How many Π binders are nested. For example, in an uncurried type like K's type.
 inductive PiTyDepth : Expr → ℕ → Prop

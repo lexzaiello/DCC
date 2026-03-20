@@ -365,9 +365,18 @@ def Expr.RedTyTrans.SN (e : Expr) : Acc (fun b a => Expr.RedTyTrans a b) e := Ac
 termination_by e.ty_size
 
 inductive Expr.RedTm : Expr → Expr → Prop
-  | k     : RedTm (SK (K.{[m, n]} α β x y)) x
-  | k'    : RedTm (SK (K'.{[m, n]} α β x y)) x
-  | s     : RedTm (SK (S.{[m, n, o]} α β γ x y z)) (SK ((x z) (y z)))
-  | congr : RedTm f f' → RedTm x x' → RedTm (SK (f x)) (SK (f' x'))
+  | k        : RedTm (SK (K.{[m, n]} α β x y)) x
+  | k'       : RedTm (SK (K'.{[m, n]} α β x y)) x
+  | s        : RedTm (SK (S.{[m, n, o]} α β γ x y z)) (SK ((x z) (y z)))
+  | congrFun : RedTm f f' → RedTm (SK (f x)) (SK (f' x))
+  | congrArg : RedTm x x' → RedTm (SK (f x)) (SK (f x'))
 
-
+def Expr.red_ty : Expr → Option Expr
+  | (SK (K.{[_m, _n]} _α _β x _y)) => .some x
+  | (SK (K'.{[_m, _n]} _α _β x _y)) => .some x
+  | (SK (S.{[_m, _n, _o]} _α _β _γ x y z)) => .some (SK ((x z) (y z)))
+  | SK ((f x)) => match f.red_ty, x.red_ty with
+    | .some f', _ => .some (SK (f' x))
+    | _, .some x' => .some (SK (f x'))
+    | _, _ => .none
+  | _ => .none

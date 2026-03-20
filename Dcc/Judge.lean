@@ -26,7 +26,7 @@ def S.type (m n o : Level) : Expr := (SK
 inductive Judge : Expr → Expr → Prop
   | app   : Judge (SK Π α, β) f
     → Judge α x
-    → RedPiArg x β β'
+    → Expr.RedTyTrans x β β'
     → Judge β' (SK (f x))
   | srt   : Judge    (SK Sort m.succ) (SK Sort m)
   | k     : Judge    (K.type m n) (SK K.{[m, n]})

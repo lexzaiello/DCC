@@ -339,6 +339,19 @@ theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.re
       · rfl
     simp_all
 
+theorem reduce_norm : Expr.reduce e = e' → Expr.IsNorm e' := by
+  intro h ⟨e'', hr⟩
+  unfold Expr.reduce at h
+  split at h
+  · rename_i e'' h_step
+    have h_dec : e''.ty_size < e.ty_size:= (Expr.step?_sound h_step).decreasing'
+    exact reduce_norm h (⟨_, hr⟩)
+  · rename_i hstep
+    have h := hr.step?_complete
+    simp_all only [reduceCtorEq]
+
+termination_by e.ty_size
+
 -- Strong normalization of single-step reduction using our decreasing measure.
 def Expr.RedTy.SN (e : Expr) : Acc (fun b a => Expr.RedTy a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing'

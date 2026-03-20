@@ -10,6 +10,7 @@ inductive Expr.RedPi : Expr → Expr → Prop
     → Expr.RedPi (SK (β x)) β'
     → Expr.RedPi (SK ((Π α, β) x)) (SK (Π α', β'))
   | ty    : Expr.RedTyTrans e e'
+    → IsNorm e'
     → Expr.RedPi e e'
 
 def Expr.red_pi : Expr → Option Expr

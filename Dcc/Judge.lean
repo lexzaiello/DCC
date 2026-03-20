@@ -33,9 +33,16 @@ inductive RedPiTy : Expr → Expr → Prop
   | step  : RedPiTy (SK (α x)) α'
     → RedPiTy (SK (β x)) β'
     → RedPiTy (SK ((Π α, β) x)) (SK (Π α', β'))
-  | ty    : Expr.RedTyReflTrans t₁ t₂ → Expr.IsNorm t₂ → RedPiTy t₁ t₃
+  | ty    : Expr.RedTyReflTrans t₁ t₂ → Expr.IsNorm t₂ → RedPiTy t₁ t₂
 
-def red_pi_ty (e : Expr) : ((e' : Expr) × (PLift (RedPiTy e e'))) :=
+theorem RedPiTy.is_norm : RedPiTy t t' → Expr.IsNorm t' := by
+  intro h
+  cases h
+  · intro ⟨e', hr⟩
+    cases hr
+  · assumption
+
+def Expr.red_pi_ty (e : Expr) : ((e' : Expr) × (PLift (RedPiTy e e'))) :=
   match e with
   | SK ((Π α, β) x) =>
     let ⟨α', ⟨hα⟩⟩ := red_pi_ty (SK (α x))
@@ -54,10 +61,18 @@ We use "typed holes." We find the innermost type combinator,
 whose size is greater than 0 (Π binders have size zero), and accumulate "typed holes" as we recurse.
 -/
 inductive FoldElimPi : (fold : Expr → Expr) → Expr → Expr → Prop
-  | single : β.TySize (m + 1)
-    → FoldElimPi fold (SK Π α, β) (fold β)
-  | tail   : FoldElimPi ((fun elim => (SK (elim (__ ∶ α)))) ∘ fold) β γ
+  | single : e.TySize (m + 1)
+    → FoldElimPi fold e (fold e)
+  | tail   : FoldElimPi ((Expr.app · (SK (__ ∶ α))) ∘ fold) β γ
     → FoldElimPi fold (SK Π α, β) γ
+
+def Expr.fold_elim_pi (fold : Expr → Expr) (in_e : Expr) : (Option ((e' : Expr) × (PLift (FoldElimPi fold in_e e')))) :=
+  match hneq : in_e.ty_size, heeq : in_e with
+  | .zero, (SK Π α, β) => match β.fold_elim_pi ((Expr.app · (SK (__ ∶ α))) ∘ fold) with
+    | .some ⟨γ, ⟨h⟩⟩ => .some ⟨γ, ⟨.tail h⟩⟩
+    | .none => .none
+  | .succ _n, in_e => .some ⟨fold in_e, ⟨.single (Expr.TySize.sound (heeq ▸ hneq))⟩⟩
+  | _, _ => .none
 
 inductive Judge : Expr → Expr → Prop
   | app     : Judge (SK Π α, β) f
@@ -74,7 +89,7 @@ inductive Judge : Expr → Expr → Prop
   | conv  {α β : Expr} : Judge α x → RedPiTy α β → Expr.IsNorm β → Judge β x
 
 def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
-  match h_eq : e with
+  match _h_eq : e with
   | SK Sort m => .some ⟨SK Sort m.succ, ⟨.srt⟩⟩
   | SK K.{[m, n]} => .some ⟨K.type m n, ⟨.k⟩⟩
   | SK K'.{[m, n]} => .some ⟨K'.type m n, ⟨.k'⟩⟩
@@ -83,32 +98,28 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
     let ⟨t_f, ⟨h_t_f⟩⟩ ← infer f
     let ⟨t_x, ⟨h_t_x⟩⟩ ← infer x
 
-    let α₂ := t_x.reduce
-    let t_f' := t_f.reduce
+    let ⟨α₂, ⟨h_t_x'⟩⟩ := t_x.red_pi_ty
+    let ⟨t_f', ⟨h_t_f'⟩⟩ := t_f.red_pi_ty
 
-    match heqf : t_f' with
+    match _heqf : t_f' with
     | (SK Π α, β) =>
-      let h_t_f' := reduce_sound (e := t_f) (e' := (SK Π α, β)) heqf
-      let h_t_x' := reduce_sound (e := t_x) (e' := α₂) rfl
-
       dbg_trace α
       dbg_trace α₂
 
       if heq : α = α₂ then
-        match hsomeq : (SK ((Π α, β) x)).red_app_ty with
-        | .some β' => .some ⟨β',
-          ⟨.app (.conv h_t_f h_t_f' (reduce_norm heqf))
-          (heq ▸ (.conv h_t_x h_t_x' (reduce_norm rfl)))
-          (red_app_ty_sound hsomeq)⟩⟩
-        | .none => .none
+        let β₁ := Judge.app (.conv h_t_f h_t_f' h_t_f'.is_norm) (.conv h_t_x (heq ▸ h_t_x') (heq ▸ h_t_x'.is_norm))
+        match _hsomeq : (SK (β x)).red_pi_ty with
+        | ⟨β', ⟨h⟩⟩ => .some ⟨β', ⟨β₁.conv h h.is_norm⟩⟩
       else
         .none
     | _ => .none
-  | SK Π α, β => match heq_size : Expr.pi_size (SK Π α, β), heq_app : Expr.red_app_ty (SK ((Π α, β) (__ ∶ α))) with
-    | .some size, .some β' =>
-      have h : β'.pi_size < (SK (Π α, β)).pi_size := app_size_dec (red_app_ty_sound heq_app) (Expr.PiSize.sound (by sorry))
-      sorry
-    | _, _ => .none
+  | SK Π α, β =>
+    match (SK Π α, β).fold_elim_pi id with
+    | .some ⟨elim, ⟨h⟩⟩ =>
+      match elim.red_pi_ty with
+      | ⟨SK __ ∶ t_β, ⟨h_red⟩⟩ => .some ⟨t_β, ⟨.pi h h_red⟩⟩
+      | _ => none
+    | _ => none
   | _ => .none
 
 theorem RedTm.judge_decreasing : Judge t e → Expr.RedTm e e' → Judge t' e' → Expr.PiSize t' < Expr.PiSize t := by

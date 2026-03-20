@@ -6,15 +6,15 @@ import Mathlib.Tactic
 -- Decreasing measure
 -- function arity decreases with each argument
 inductive Expr.TySize : Expr → ℕ → Prop
-  | next : Expr.TySize (SK K*) 1
-  | comp : Expr.TySize (SK B) 1
-  | flip : Expr.TySize (SK C) 1
-  | read : Expr.TySize (SK I) 1
-  | pi   : Expr.TySize (SK Π α, β) 0
-  | comb : Expr.TySize (.comb c) 0
-  | hole : Expr.TySize (SK __ ∶ t) 0
-  | srt  : Expr.TySize (SK Sort m) 0
-  | app  : Expr.TySize f n
+  | next  : Expr.TySize (SK K*) 1
+  | comp  : Expr.TySize (SK B) 1
+  | flip  : Expr.TySize (SK C) 1
+  | read  : Expr.TySize (SK I) 1
+  | pi    : Expr.TySize (SK Π α, β) 0
+  | comb  : Expr.TySize (.comb c) 0
+  | hole  : Expr.TySize (SK __ ∶ t) 0
+  | srt   : Expr.TySize (SK Sort m) 0
+  | app   : Expr.TySize f n
     → Expr.TySize x m
     → Expr.TySize (SK (f x)) (n + m)
 

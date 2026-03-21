@@ -1,6 +1,24 @@
 import Dcc.Ast
 import Dcc.Eval
 import Mathlib.Data.Nat.Notation
+import Mathlib.Logic.Relation
+
+/-
+our decreasing measure is implicit Π substitution.
+
+counting becomes easier if we have a Π combinator, since we have to manually pass things around.
+
+the challenge is, we still need a top-level construct to copy things, or some kind of context.
+
+Contexts are cringe.
+
+With minimal change, we can probably still count the decreasing measure.
+
+our current approach might be fine. we need to stop treating Π copying like some kind of
+algebraic rule. it's not. our old "RunPi" rule was pretty good.
+
+We have a predicatre "IsBinder"
+-/
 
 def K.type (m n : Level) : Expr := (SK
   Π Sort m, Π (Π (arg 0 I), Sort n), Π (arg 0 (ret 1)), Π (arg 1 I), (arg 0 (ret 3)))
@@ -23,147 +41,45 @@ def S.type (m n o : Level) : Expr := (SK
         (__ ∶ Sort o)) (arg 2 (ret 1)))) -- γ z (y z)
 -- ^ note that this is safe, since prior apps were type-checked, and def-eq here is deferred to term-level
 
-/-
-B C K I types should never appear, except as arguments in a nested
-Π binder.
+inductive IsNotPi : Expr → Prop
+  | hole   : IsNotPi (SK __ ∶ α)
+  | t_comb : IsNotPi (.tycomb c)
+  | comb   : IsNotPi (.comb c)
+  | srt    : IsNotPi (.Srt m)
+  | app    : IsNotPi (SK (f x))
 
-They can be reduced as such:
--/
-
-inductive PiLeaf : Expr → Prop
-  | tycomb : PiLeaf (.tycomb c)
-  | app    : PiLeaf f → (PiLeaf (SK (f x)))
-
-/-
-Note:
-This will cause undefined behaior unless the expression being reduced is typed-checked
--/
-inductive RedPiTy : Expr → Expr → Prop
-  | branch : RedPiTy (SK (α x)) α'
-    → RedPiTy (SK (β x)) β'
-    → RedPiTy (SK ((Π α, β) x)) (SK (Π α', β'))
-  -- A leaf is either a type combinator, or an application of a type combinator
-  -- otherwise, it is "substituted", and has a ty_size of 0.
-  | leaf   : PiLeaf (SK (M N))
-    → (SK ((M N) x)).RedTyTrans e'
-    → e'.IsNorm
-    → RedPiTy (SK ((M N) x)) e'
-
--- How many Π binders are nested. For example, in an uncurried type like K's type.
-inductive PiTyDepth : Expr → ℕ → Prop
-  | atom : PiLeaf x → PiTyDepth x 0
-  | pi   : PiTyDepth α m → PiTyDepth β n → PiTyDepth (SK Π α, β) (m + n + 1)
-
-inductive PiTySize : Expr → ℕ → Prop
-  | tycomb : (Expr.tycomb c).TySize n
-    → PiTySize (.tycomb c) n
-  | branch : PiTySize α m
-    → PiTySize β n
-    → PiTySize (SK Π α, β) (m + n)
-  | app    : PiTyDepth f d → PiTySize f m → PiTySize x n
-    → PiTySize (SK (f x)) (m + (n * (d + 1)))
-
-theorem RedPiTy.is_norm : RedPiTy t t' → Expr.IsNorm t' := by
-  intro h
-  cases h
-  · intro ⟨e', hr⟩
-    cases hr
-  · assumption
-
-theorem PiTySize.ty_lt_imp (h₁ : Expr.TySize e t₁) (h₂ : Expr.TySize e' t₂) (h_trans : e.RedTyTrans e') (h_lt : t₂ < t₁) (h_pi₁ : PiTySize e tα₁) : (∃ (tα₂ : ℕ), (PiTySize e' tα₂ ∧ tα₂ < tα₁)) := by
-  induction h_trans generalizing t₁ t₂ tα₁ with
-  | single h_red =>
-    rename_i b
-    induction h_red
-    · cases h_pi₁
-      rename_i  h₁ h_pi₁
-      cases h₁
-      rename_i hpi_A
-      refine ⟨_, hpi_A, ?_⟩
-      rename_i d₂ _ _ _ d₁ _
-      cases d₁
-      cases d₂
-      rename_i h_s_next _ _
-      cases h_s_next
-      rename_i h
-      cases h
-      grind
-    · cases h_pi₁
-      iterate 3 (rename_i hp₁ _; cases hp₁)
-      
-      sorry
-    sorry
-
-/-theorem PiTySize.ty_lt_imp (h₁ : Expr.TySize e t₁) (h₂ : Expr.TySize e' t₂) (h_trans : e.RedTyTrans e') (h_lt : t₂ < t₁) (h_pi₁ : PiTySize e ta₁) : ∃ (tα₂ : ℕ), (PiTySize e' ta₂ ∧ tα₂ < tα₁) := by
-  induction h_pi₁ generalizing t₁ t₂ e'
-  · simp_all
-    rename_i c n size_c
-    induction h_trans generalizing t₁ t₂ n ta₁ ta₂
-    · contradiction
-    · rename_i b₀ c₀ hr_trans hr ih
-      have h_dec₁ := hr.decreasing'
-      change Expr.RedTyTrans _ _ at hr_trans
-      have h_dec₂ := hr_trans.decreasing'
-      --have h := ih size₁ (by sorry)
-      --have h := ih (by sorry)
-      
-      simp_all
-      
-      --have ha := ih h₁ (.sound rfl) (.sound rfl) h_dec₂
-      have hb := ih (.sound rfl) (.sound rfl) (.sound rfl) h_dec₂
-      
-      sorry
-  sorry-/
-
-theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ n', PiTySize t' n' ∧ n' < n := by
-  induction h_red generalizing n with
-  | branch _ =>
-    cases h_size
-    case branch.app α x α' β α'' h_red_α_x_app h_red_β_x_app ih₁ ih₂ d m n_x_size depth_α_x ty_size_α_x ty_size_x =>
-      cases ty_size_α_x
-      case branch m n h_size_α h_size_β =>
-        cases depth_α_x
-        · contradiction
-        case pi d₁ d₂ h_depth_α h_depth_β =>
-          have ha := ih₁ (.app h_depth_α h_size_α ty_size_x)
-          have hb := ih₂ (.app h_depth_β h_size_β ty_size_x)
-          have ⟨n₁, hn_size₁, hn_eq₁⟩ := ha
-          have ⟨n₂, hn_size₂, hn_eq₂⟩ := hb
-          exact ⟨n₁ + n₂, .branch (by assumption) (by assumption), by grind⟩
-  | leaf h_leaf h_trans h_norm =>
-    have h := h_trans.decreasing'
-    
-    sorry
-
-/-theorem RedPiTy.decreasing (h_size : PiTySize t n) (h_red : RedPiTy t t') : ∃ n', PiTySize t' n' ∧ n' < n := by
-  induction t generalizing t' n with
-  | Pi α β ih₁ ih₂ =>
-    cases h_red with
-    | ty h_bind_size h_refl_trans h_norm =>
-      induction h_refl_trans
-      · contradiction
-      · contradiction
-  | app f x ih₁ ih₂ =>
-    cases h_size with
-    | app h_depth h_size_f h_size_n =>
-      cases h_red with
-      | step hr_α hr_β =>
-        
-        sorry
-      | _ => sorry
-  | _ => contradiction-/
-
-def Expr.red_pi_ty (e : Expr) : ((e' : Expr) × (PLift (RedPiTy e e'))) :=
+def is_not_pi (e : Expr) : Option (PLift (IsNotPi e)) :=
   match e with
-  | SK ((Π α, β) x) =>
-    let ⟨α', ⟨hα⟩⟩ := red_pi_ty (SK (α x))
-    let ⟨β', ⟨hβ⟩⟩ := red_pi_ty (SK (β x))
-    ⟨SK (Π α', β'), ⟨.step hα hβ⟩⟩
-  | e =>
-    let e' := e.reduce
-    let pr := reduce_sound (e' := e') rfl
-    let pn := reduce_norm (e' := e') rfl
-    ⟨e', ⟨.ty pr pn⟩⟩
+  | (SK __ ∶ _α) => .some ⟨.hole⟩
+  | (.tycomb _c) => .some ⟨.t_comb⟩
+  | (.comb _c) => .some ⟨.comb⟩
+  | (SK Sort _m) => .some ⟨.srt⟩
+  | (SK (_f _x)) => .some ⟨.app⟩
+  | _ => .none
+
+inductive RunPi (x : Expr) : Expr → Expr → Prop
+  | pi  : RunPi x α α' → RunPi x β β'
+    → RunPi x (SK Π α, β) (SK Π α', β')
+  | app : IsNotPi e → (SK (e x)).RedTyTrans e' → RunPi x e e'
+
+def run_pi (x in_e : Expr) : Option ((e' : Expr) × (PLift (RunPi x in_e e'))) :=
+  match in_e with
+  | SK Π α, β =>
+    match run_pi x α, run_pi x β with
+    | .some ⟨α', ⟨hα⟩⟩, .some ⟨β', ⟨hβ⟩⟩ => .some ⟨(SK Π α', β'), ⟨.pi hα hβ⟩⟩
+    | _, _ => .none
+  | e => match is_not_pi e with
+    | .some ⟨h_not_pi⟩ =>
+      let e' := Expr.reduce e
+      if heq : e' = e then
+        .none
+      else by
+        let h_sound : Relation.ReflTransGen Expr.RedTy e e' := reduce_sound (e' := e') rfl
+        rw [← Relation.reflGen_transGen] at h_sound
+        exact .some ⟨e', ⟨by match heq₂ : h_sound with
+        | .refl => contradiction
+        | .single h => exact .app h_not_pi h⟩⟩
+    | _ => .none
 
 /-
 Judgments for Π combinators work inversely.
@@ -188,16 +104,17 @@ def Expr.fold_elim_pi (fold : Expr → Expr) (in_e : Expr) : (Option ((e' : Expr
 inductive Judge : Expr → Expr → Prop
   | app     : Judge (SK Π α, β) f
     → Judge α x
-    → Judge (SK (β x)) (SK (f x))
+    → RunPi x β β'
+    → Judge β' (SK (f x))
   | srt     : Judge (SK Sort m.succ) (SK Sort m)
   | k       : Judge (K.type m n) (SK K.{[m, n]})
   | k'      : Judge (K'.type m n) (SK K'.{[m, n]})
   | s       : Judge (S.type m n o) (SK S.{[m, n, o]})
-  | pi      : FoldElimPi id (SK Π α, β) elim
-    → RedPiTy elim (SK __ ∶ t_β)
+  | pi      : FoldElimPi id (SK Π α, β) (SK __ ∶ t_β)
+    → Expr.RedTyTrans elim (SK __ ∶ t_β)
     → Judge t_β (SK Π α, β)
   | hole    : Judge α (SK __ ∶ α)-- only visible to the kernel
-  | conv  {α β : Expr} : Judge α x → RedPiTy α β → Expr.IsNorm β → Judge β x
+  | conv  {α β : Expr} : Judge α x → Expr.RedTyTrans α β → Expr.IsNorm β → Judge β x
 
 def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
   match _h_eq : e with

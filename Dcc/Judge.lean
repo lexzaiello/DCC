@@ -41,6 +41,17 @@ def S.type (m n o : Level) : Expr := (SK
         (__ ∶ Sort o)) (arg 2 (ret 1)))) -- γ z (y z)
 -- ^ note that this is safe, since prior apps were type-checked, and def-eq here is deferred to term-level
 
+def Expr.reduce!? (e : Expr) : Option ((e' : Expr) × (PLift (Expr.RedTyTrans e e'))) :=
+  let e' := e.reduce
+  let proof : Relation.ReflTransGen Expr.RedTy e e' := reduce_sound (e' := e') rfl
+  if heq : e = e' then
+    .none
+  else .some ⟨e', ⟨by
+    rw [← Relation.reflGen_transGen] at proof
+    match heq₂ : proof with
+    | .refl => contradiction
+    | .single h => exact h⟩⟩
+
 inductive IsNotPi : Expr → Prop
   | hole   : IsNotPi (SK __ ∶ α)
   | t_comb : IsNotPi (.tycomb c)
@@ -70,15 +81,9 @@ def run_pi (x in_e : Expr) : Option ((e' : Expr) × (PLift (RunPi x in_e e'))) :
     | _, _ => .none
   | e => match is_not_pi e with
     | .some ⟨h_not_pi⟩ =>
-      let e' := Expr.reduce e
-      if heq : e' = e then
-        .none
-      else by
-        let h_sound : Relation.ReflTransGen Expr.RedTy e e' := reduce_sound (e' := e') rfl
-        rw [← Relation.reflGen_transGen] at h_sound
-        exact .some ⟨e', ⟨by match heq₂ : h_sound with
-        | .refl => contradiction
-        | .single h => exact .app h_not_pi h⟩⟩
+      match (SK (e x)).reduce!? with
+      | .some ⟨e', ⟨h⟩⟩ => .some ⟨e', ⟨.app h_not_pi h⟩⟩
+      | _ => .none
     | _ => .none
 
 /-

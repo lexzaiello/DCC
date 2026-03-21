@@ -77,6 +77,23 @@ inductive RunPi (x : Expr) : Expr → Expr → Prop
     → RunPi x (SK Π α, β) (SK Π α', β')
   | app : IsNotPi e → (SK (e x)).RedTyTrans e' → RunPi x e e'
 
+inductive CountPi : Expr → ℕ → Prop
+  | pi   : CountPi α m → CountPi β n → CountPi (SK (Π α, β)) (m + n)
+  | leaf : IsNotPi e   → e.TySize m → CountPi e m
+
+def Expr.count_pi (e : Expr) : ((n : ℕ) × (PLift (CountPi e n))) :=
+  match e with
+  | SK (Π α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.count_pi
+    let ⟨n, ⟨h₂⟩⟩ := β.count_pi
+
+    ⟨m + n, ⟨.pi h₁ h₂⟩⟩
+  | (SK __ ∶ _α) => ⟨0, ⟨.leaf .hole (TySize.sound rfl)⟩⟩
+  | (SK Sort _m) => ⟨0, ⟨.leaf .srt (TySize.sound rfl)⟩⟩
+  | (.comb _c) => ⟨0, ⟨.leaf .comb (TySize.sound rfl)⟩⟩
+  | (.tycomb c) => ⟨(ty_size (.tycomb c)), ⟨.leaf .t_comb (TySize.sound rfl)⟩⟩
+  | (SK (f x)) => ⟨(ty_size (SK (f x))), ⟨.leaf .app (TySize.sound rfl)⟩⟩
+
 def run_pi (x in_e : Expr) : Option ((e' : Expr) × (PLift (RunPi x in_e e'))) :=
   match in_e with
   | SK Π α, β =>

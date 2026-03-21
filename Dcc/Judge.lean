@@ -41,16 +41,20 @@ def S.type (m n o : Level) : Expr := (SK
         (__ ∶ Sort o)) (arg 2 (ret 1)))) -- γ z (y z)
 -- ^ note that this is safe, since prior apps were type-checked, and def-eq here is deferred to term-level
 
-def Expr.reduce!? (e : Expr) : Option ((e' : Expr) × (PLift (Expr.RedTyTrans e e'))) :=
+def Expr.reduce!? (e : Expr) : Option ((e' : Expr) × (PLift (Expr.RedTyTrans e e' ∧ IsNorm e'))) :=
   let e' := e.reduce
-  let proof : Relation.ReflTransGen Expr.RedTy e e' := reduce_sound (e' := e') rfl
+  let proof : Relation.ReflTransGen Expr.RedTy e e' := reduce_sound rfl
+  let norm : IsNorm e' := reduce_norm rfl
   if heq : e = e' then
     .none
-  else .some ⟨e', ⟨by
+  else
+    .some ⟨e', ⟨by
     rw [← Relation.reflGen_transGen] at proof
     match heq₂ : proof with
     | .refl => contradiction
-    | .single h => exact h⟩⟩
+    | .single h =>
+      rename_i heq
+      exact ⟨h, heq ▸ norm⟩⟩⟩
 
 inductive IsNotPi : Expr → Prop
   | hole   : IsNotPi (SK __ ∶ α)
@@ -82,7 +86,7 @@ def run_pi (x in_e : Expr) : Option ((e' : Expr) × (PLift (RunPi x in_e e'))) :
   | e => match is_not_pi e with
     | .some ⟨h_not_pi⟩ =>
       match (SK (e x)).reduce!? with
-      | .some ⟨e', ⟨h⟩⟩ => .some ⟨e', ⟨.app h_not_pi h⟩⟩
+      | .some ⟨e', ⟨h, _⟩⟩ => .some ⟨e', ⟨.app h_not_pi h⟩⟩
       | _ => .none
     | _ => .none
 
@@ -115,11 +119,21 @@ inductive Judge : Expr → Expr → Prop
   | k       : Judge (K.type m n) (SK K.{[m, n]})
   | k'      : Judge (K'.type m n) (SK K'.{[m, n]})
   | s       : Judge (S.type m n o) (SK S.{[m, n, o]})
-  | pi      : FoldElimPi id (SK Π α, β) (SK __ ∶ t_β)
+  | pi      : FoldElimPi id (SK Π α, β) elim
     → Expr.RedTyTrans elim (SK __ ∶ t_β)
     → Judge t_β (SK Π α, β)
   | hole    : Judge α (SK __ ∶ α)-- only visible to the kernel
   | conv  {α β : Expr} : Judge α x → Expr.RedTyTrans α β → Expr.IsNorm β → Judge β x
+
+def Judge.conv? (h_t : Judge α x) : Option ((t' : Expr) × (PLift (Judge t' x ∧ Expr.RedTyTrans α t'))) :=
+  match α.reduce!? with
+  | .some ⟨t', ⟨h_trans, h_norm⟩⟩ => .some ⟨t', ⟨Judge.conv h_t h_trans h_norm, h_trans⟩⟩
+  | _ => .none
+
+def Judge.convD (h_t : Judge α x) : (t' : Expr) × (PLift (Judge t' x)) :=
+  match h_t.conv? with
+  | .some ⟨t', ⟨h_t, _⟩⟩ => ⟨t', ⟨h_t⟩⟩
+  | .none => ⟨α, ⟨h_t⟩⟩
 
 def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
   match _h_eq : e with
@@ -131,25 +145,24 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
     let ⟨t_f, ⟨h_t_f⟩⟩ ← infer f
     let ⟨t_x, ⟨h_t_x⟩⟩ ← infer x
 
-    let ⟨α₂, ⟨h_t_x'⟩⟩ := t_x.red_pi_ty
-    let ⟨t_f', ⟨h_t_f'⟩⟩ := t_f.red_pi_ty
+    let ⟨t_f, ⟨h_t_f⟩⟩ := h_t_f.convD
+    let ⟨t_x, ⟨h_t_x'⟩⟩ := h_t_x.convD
 
-    match _heqf : t_f' with
+    match t_f with
     | (SK Π α, β) =>
-      if heq : α = α₂ then
-        let β₁ := Judge.app (.conv h_t_f h_t_f' h_t_f'.is_norm) (.conv h_t_x (heq ▸ h_t_x') (heq ▸ h_t_x'.is_norm))
-        match _hsomeq : (SK (β x)).red_pi_ty with
-        | ⟨β', ⟨h⟩⟩ => .some ⟨β', ⟨β₁.conv h h.is_norm⟩⟩
+      if heq : α = t_x then
+        let β' ← run_pi x β
+        .some ⟨β'.fst, ⟨Judge.app (x := x) (f := f) h_t_f (by cases heq; exact h_t_x') β'.snd.down⟩⟩
       else
         .none
     | _ => .none
   | SK Π α, β =>
     match (SK Π α, β).fold_elim_pi id with
     | .some ⟨elim, ⟨h⟩⟩ =>
-      match elim.red_pi_ty with
-      | ⟨SK __ ∶ t_β, ⟨h_red⟩⟩ => .some ⟨t_β, ⟨.pi h h_red⟩⟩
+      match elim.reduce!? with
+      | .some ⟨SK __ ∶ t_β, ⟨h_red, _⟩⟩ => .some ⟨t_β, ⟨.pi h h_red⟩⟩
       | _ => none
     | _ => none
   | _ => .none
 
-#eval (infer (SK (K'.{[2, 2]} (Sort 1) (Sort 1)))).map (·.fst)
+#eval (infer (SK (K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)))).map (·.fst)

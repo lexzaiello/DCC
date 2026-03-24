@@ -48,91 +48,6 @@ def Expr.reduce!? (e : Expr) : Option ((e' : Expr) × (PLift (Expr.RedTyTrans e 
       rename_i heq
       exact ⟨h, heq ▸ norm⟩⟩⟩
 
-inductive CountPi : Expr → ℕ → Prop
-  | pi   : CountPi α m → CountPi β n → CountPi (SK (Π α, β)) (2 * (max m n))
-  | leaf : IsNotPi e   → e.TySize m → CountPi e m
-
-theorem RunPi.decreasing : RunPi t t' → CountPi t m → ∃ n, CountPi t' n ∧ n < m := by
-  intro h_r ht
-  induction h_r generalizing m with
-  | pi rα rβ ih₁ ih₂ =>
-    cases ht with
-    | pi =>
-      have ha := ih₁ (by assumption)
-      have hb := ih₂ (by assumption)
-      have ⟨n₁, hn₁, h_lt₁⟩ := ha
-      have ⟨n₂, hn₂, h_lt₂⟩ := hb
-      refine ⟨2 * (max n₁ n₂), .pi hn₁ hn₂, by grind⟩
-    | leaf => contradiction
-
-def Expr.count_pi (e : Expr) : ((n : ℕ) × (PLift (CountPi e n))) :=
-  match e with
-  | SK (Π α, β) =>
-    let ⟨m, ⟨h₁⟩⟩ := α.count_pi
-    let ⟨n, ⟨h₂⟩⟩ := β.count_pi
-
-    ⟨2 * (max m n), ⟨.pi h₁ h₂⟩⟩
-  | (SK __ ∶ _α) => ⟨0, ⟨.leaf .hole (TySize.sound rfl)⟩⟩
-  | (SK Sort _m) => ⟨0, ⟨.leaf .srt (TySize.sound rfl)⟩⟩
-  | (.comb _c) => ⟨0, ⟨.leaf .comb (TySize.sound rfl)⟩⟩
-  | (.tycomb c) => ⟨(ty_size (.tycomb c)), ⟨.leaf .t_comb (TySize.sound rfl)⟩⟩
-  | (SK (f x)) => ⟨(ty_size (SK (f x))), ⟨.leaf .app (TySize.sound rfl)⟩⟩
-
-def fan_pi (x in_e : Expr) : Option ((e' : Expr) × (PLift (FanPi x in_e e'))) :=
-  match in_e with
-  | SK Π α, β =>
-    match fan_pi x α, fan_pi x β with
-    | .some ⟨α', ⟨hα⟩⟩, .some ⟨β', ⟨hβ⟩⟩ => .some ⟨(SK Π α', β'), ⟨.pi hα hβ⟩⟩
-    | _, _ => .none
-  | e => match is_not_pi e with
-    | .some ⟨h_not_pi⟩ => .some ⟨SK (e x), ⟨.app (x := x) (e := e) h_not_pi⟩⟩
-    | _ => .none
-
-def run_pi (in_e : Expr) : Option ((e' : Expr) × (PLift (RunPi in_e e'))) :=
-  match in_e with
-  | SK Π α, β =>
-    match run_pi α, run_pi β with
-    | .some ⟨α', ⟨hα⟩⟩, .some ⟨β', ⟨hβ⟩⟩ => .some ⟨(SK Π α', β'), ⟨.pi hα hβ⟩⟩
-    | _, _ => .none
-  | e => match is_not_pi e with
-    | .some ⟨h_not_pi⟩ =>
-      match e.reduce!? with
-      | .some ⟨e', ⟨h, h_norm⟩⟩ => .some ⟨e', ⟨.app h_not_pi h h_norm⟩⟩
-      | _ => .none
-    | _ => .none
-
-/-
-How does conversion change?
-
-I think for conversion we just compare each slot one by one?
-vaguely?
-
-there should be SOME normalization mechanism
-we already are fully normalized.
-
-the closest we can get to normalizing is
-
-this is actually a hot take, maybe we normalize inside app?
-to check the argument type?
-
-I think this is probably compatible with everything.
-
-this is where the conversion case is nice though.
-
-if we do this, then Judge α x is wrong.
-
-we need to choose between normalizing a step ahead, or normalizing in-context.
-normalizing in-context is better.
-
-type-checking Π????
-who knows???
-
-we just need to re-write that RunPi shit.
-I wish there was a more elegant solution to this...
-
-this is fine ecause it's structural recursion.
--/
-
 inductive JudgePi : (args : Expr) → Expr → Expr → Prop
   | tail : (SK (args α)).RedTyTrans α'
     → JudgePi (args.push_ctx (SK (__ ∶ α'))) t_β xs
@@ -161,8 +76,8 @@ inductive Judge : Expr → Expr → Prop
   | k       : Judge (K.type m n) (SK K.{[m, n]})
   | k'      : Judge (K'.type m n) (SK K'.{[m, n]})
   | s       : Judge (S.type m n o) (SK S.{[m, n, o]})
-  | pi      : Judge t_β (SK ⟨xs, #(args.push_ctx (SK __ ∶ α))⟩)
-    → Judge t_β (SK ⟨(cons α xs), args⟩)
+  | pi      : JudgePi args t_β tys
+    → Judge t_β (SK ⟨tys, args⟩)
   | hole    : Judge α (SK __ ∶ α) -- only visible to the kernel
   | conv  {α β : Expr} : Judge α x → α.RedTyTrans β → Expr.IsNorm β → Judge β x
 
@@ -180,31 +95,29 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
   | SK K.{[m, n]} => .some ⟨K.type m n, ⟨.k⟩⟩
   | SK K'.{[m, n]} => .some ⟨K'.type m n, ⟨.k'⟩⟩
   | SK S.{[m, n, o]} => .some ⟨S.type m n o, ⟨.s⟩⟩
+  | SK ⟨tys, args⟩ =>
+    match infer_pi tys args with
+    | .some ⟨t, ⟨j_t⟩⟩ => .some <| ⟨t, ⟨.pi j_t⟩⟩
+    | .none => .none
   | SK (f x) => do
     let ⟨t_f, ⟨h_t_f⟩⟩ ← infer f
     let ⟨t_x, ⟨h_t_x⟩⟩ ← infer x
 
     let ⟨t_f, ⟨h_t_f⟩⟩ := h_t_f.convD
-    let ⟨t_x, ⟨h_t_x'⟩⟩ := h_t_x.convD
+    let ⟨t_x, ⟨h_t_x⟩⟩ := h_t_x.convD
 
     match t_f with
     | (SK ⟨⟨α, xs⟩, args⟩) =>
-      let α' := Expr.reduce (SK (args α))
-
-      if heq : α' = t_x then
-        let β' := (SK ⟨xs, #(Γ.push args x)⟩)
-        let h_app := Judge.app (x := x) (f := f) h_t_f (by cases heq; exact h_t_x') β'.snd.down
-        .some h_app.convD
-      else
-        .none
+      match (SK (args α)).reduce!? with
+      | .some ⟨α', ⟨h_red_α, _h_norm⟩⟩ =>
+        if heq : α' = t_x then
+          let β' := (SK ⟨xs, #(args.push_ctx x)⟩)
+          let h_app := Judge.app (x := x) (f := f) h_t_f h_red_α (by rw [heq]; exact h_t_x)
+          .some h_app.convD
+        else
+          .none
+      | _ => .none
     | _ => .none
-  | SK ⟨(cons α xs), args⟩ =>
-    match (SK Π α, β).fold_elim_pi id with
-    | .some ⟨elim, ⟨h⟩⟩ =>
-      match run_pi elim with
-      | .some ⟨SK __ ∶ t_β, ⟨h_red⟩⟩ => .some ⟨t_β, ⟨.pi h h_red⟩⟩
-      | _ => none
-    | _ => none
   | _ => .none
 
 theorem app_size_dec : Judge (SK (Π α, β)) f

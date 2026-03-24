@@ -103,6 +103,32 @@ inductive Expr.RunPi : Expr → Expr → Prop
     → RunPi (SK ⟨cod, args⟩) cod'
   | red : Expr.RedTyTrans α α' → α.RunPi α'
 
+inductive Expr.PiSize : Expr → ℕ → Prop
+  | base : ¬ t.IsCons
+    → Expr.TySize t n
+    → Expr.PiSize t n
+  | cons : Expr.PiSize x m
+    → Expr.PiSize xs n
+    → Expr.PiSize (SK ⟨x, xs⟩) (m + n)
+
+theorem Expr.PiSize.unique (h₁ : Expr.PiSize e n) (h₂ : e.PiSize m) : m = n := by
+  induction h₁ generalizing m
+  induction h₂ generalizing n
+  · rename_i h_ty₁ _ h_ty₂
+    exact (h_ty₁.unique (by assumption)).symm
+  · rename_i contra _
+    exfalso; exact contra .mk
+  · rename_i x m xs n hp₁ hp₂ ih₁ ih₂
+    cases h₂
+    · rename_i h _
+      exfalso; exact h .mk
+    · rename_i hp₃ hp₄
+      have ha := ih₁ hp₃
+      have hb := ih₂ hp₄
+      grind only
+
+theorem Expr.run_pi_decreasing : Expr.RunPi t t' → Expr.PiSize t m → Expr.PiSize
+
 inductive Judge : Expr → Expr → Prop
   | app     : Judge (SK ⟨(cons α xs), args⟩) f
     → (SK (args α)).RedTyTrans α'
@@ -142,10 +168,7 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
   | SK K.{[m, n]} => .some ⟨K.type m n, ⟨.k⟩⟩
   | SK K'.{[m, n]} => .some ⟨K'.type m n, ⟨.k'⟩⟩
   | SK S.{[m, n, o]} => .some ⟨S.type m n o, ⟨.s⟩⟩
-  | SK ⟨tys, args⟩ =>
-    match infer_pi tys args with
-    | .some ⟨t, ⟨j_t⟩⟩ => .some <| ⟨t, ⟨.pi j_t⟩⟩
-    | .none => .none
+  | SK ⟨tys, args⟩ => (infer_pi tys args).map (fun ⟨t, ⟨j_t⟩⟩ => ⟨t, ⟨.pi j_t⟩⟩)
   | SK (f x) => do
     let ⟨t_f, ⟨h_t_f⟩⟩ ← infer f
     let ⟨t_x, ⟨h_t_x⟩⟩ ← infer x
@@ -169,8 +192,6 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
 
 #eval Std.format <$> (infer (SK (K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)))).map (·.fst)
 
-/-
-How do we know that the context is no longer required?
-
-if the head contains no more cons'
--/
+theorem app_size_dec : Judge t x → Expr.RedTm x x' → Judge t' x' → Expr.PiSize t m → Expr.PiSize t' n → n < m := by
+  intro h_t₀ h_red_tm h_t' h_size₀ h_size'
+  

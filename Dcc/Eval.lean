@@ -10,7 +10,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
   | comp  : Expr.TySize (SK B) 1
   | flip  : Expr.TySize (SK C) 1
   | read  : Expr.TySize (SK I) 1
-  | pi    : Expr.TySize (SK Π α, β) 0
+  | cons  : Expr.TySize (SK cons) 0
   | comb  : Expr.TySize (.comb c) 0
   | hole  : Expr.TySize (SK __ ∶ t) 0
   | srt   : Expr.TySize (SK Sort m) 0
@@ -40,7 +40,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     · exact ⟨1, .read⟩
     · exact ⟨1, .comp⟩
     · exact ⟨1, .flip⟩
-  · exact ⟨0, .pi⟩
+  · exact ⟨0, .cons⟩
   · exact ⟨0, .srt⟩
   · exact ⟨0, .comb⟩
   case app f x ih₁ ih₂ =>
@@ -62,7 +62,7 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
   | (SK K*) | (SK B) | (SK C) | (SK I) => 1
-  | (SK Π _α, _β) | .comb _c | SK __ ∶ _t | SK Sort _m => 0
+  | (SK cons) | .comb _c | SK __ ∶ _t | SK Sort _m => 0
   | SK (f x) =>
     let n := f.ty_size
     let m := x.ty_size
@@ -78,7 +78,7 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   · exact .comp
   · exact .flip
   · exact .read
-  · exact .pi
+  · exact .cons
   · exact .comb
   · exact .hole
   · exact .srt

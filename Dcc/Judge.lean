@@ -125,13 +125,10 @@ def Judge.conv?_ty (h_t : Judge α x) : Option ((t' : Expr) × (PLift (Judge t' 
 def Judge.conv? (h_t : Judge α x) : Option ((t' : Expr) × (PLift (Judge t' x))) :=
   match α with
   | SK ⟨cod, args⟩ =>
-    match cod with
-    
-    match h_size : cod.ty_size with
-    | .succ _n =>
-      let h_size' := Expr.TySize.sound h_size
+    match cod.is_not_cons with
+    | .some ⟨h⟩ =>
       match (SK (args cod)).reduce!? with
-      | .some ⟨t', ⟨h_r, h_norm⟩⟩ => .some ⟨t', ⟨Judge.conv h_t (.pi h_size' h_r) h_norm⟩⟩
+      | .some ⟨t', ⟨h_r, h_norm⟩⟩ => .some ⟨t', ⟨Judge.conv h_t (.pi h h_r) h_norm⟩⟩
       | _ => .none
     | _ => h_t.conv?_ty
   | _ => h_t.conv?_ty

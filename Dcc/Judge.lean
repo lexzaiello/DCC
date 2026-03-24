@@ -120,17 +120,4 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
     | _ => .none
   | _ => .none
 
-theorem app_size_dec : Judge (SK (Π α, β)) f
-  → (SK (f x)).RedTm e'
-  → Judge t' e'
-  → FanPi x β β'
-  → CountPi β' m
-  → CountPi t' n
-  → n < m := by
-  intro h_t_f h_red h_t_e' h_fan h_m h_n
-  cases h_red with
-  | k' =>
-    
-    sorry
-
 #eval (infer (SK (K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)))).map (·.fst)

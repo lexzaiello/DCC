@@ -273,26 +273,6 @@ def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := f
     simp [h_r_f.step?_complete]
   · cases h; repeat simp_all
 
--- Completeness of our single-step reduction function
-def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := fun h => by
-  induction e generalizing e' with
-  | cons => sorry
-  | app f x ih₁ ih₂ =>
-    cases h
-    repeat rfl
-    · unfold Expr.step?
-      have h := ih₁ (by assumption)
-      split
-      repeat (simp_all; cases h)
-      split
-      simp_all
-      rename_i h
-      exfalso
-      exact h (by assumption) (by simp_all)
-      have h := ih₁ (by assumption)
-      simp_all
-  | _ => iterate 5 cases h
-
 -- Uniqueness of single-step reductions (determinism of single-step reductions)
 theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by
   intro hr₁ hr₂

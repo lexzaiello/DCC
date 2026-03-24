@@ -10,7 +10,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
   | comp  : Expr.TySize (SK B) 1
   | flip  : Expr.TySize (SK C) 1
   | read  : Expr.TySize (SK I) 1
-  | cons  : Expr.TySize (SK cons) 0
+  | cons  : Expr.TySize (SK cons) 1
   | comb  : Expr.TySize (.comb c) 0
   | hole  : Expr.TySize (SK __ ∶ t) 0
   | srt   : Expr.TySize (SK Sort m) 0
@@ -23,6 +23,8 @@ inductive Expr.TySize : Expr → ℕ → Prop
 -- congruence is only to the left (call-by-name reduction), to enable determinism,
 -- and since argument types formed in a Π binder should always reduce fully
 inductive Expr.RedTy : Expr → Expr → Prop
+  | cons      : RedTy (SK (args cod)) α'
+    → RedTy (SK ⟨cod, args⟩) α'
   | next      : RedTy (SK (K* A b)) A
   | comp      : RedTy (SK (B f g x)) (SK (f (g x)))
   | flip      : RedTy (SK (C x y z)) (SK (x z y))
@@ -40,7 +42,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     · exact ⟨1, .read⟩
     · exact ⟨1, .comp⟩
     · exact ⟨1, .flip⟩
-  · exact ⟨0, .cons⟩
+  · exact ⟨1, .cons⟩
   · exact ⟨0, .srt⟩
   · exact ⟨0, .comb⟩
   case app f x ih₁ ih₂ =>
@@ -61,8 +63,8 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
-  | (SK K*) | (SK B) | (SK C) | (SK I) => 1
-  | (SK cons) | .comb _c | SK __ ∶ _t | SK Sort _m => 0
+  | (SK cons) | (SK K*) | (SK B) | (SK C) | (SK I) => 1
+  | .comb _c | SK __ ∶ _t | SK Sort _m => 0
   | SK (f x) =>
     let n := f.ty_size
     let m := x.ty_size
@@ -74,11 +76,11 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   unfold Expr.ty_size at h
   rw [← h]
   split at h
+  · exact .cons
   · exact .next
   · exact .comp
   · exact .flip
   · exact .read
-  · exact .cons
   · exact .comb
   · exact .hole
   · exact .srt
@@ -98,6 +100,12 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
 -- For every single-step reduction, there is a TySize for e' that is smaller than e's size.
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n := by
   induction h_red generalizing n
+  · cases h_size
+    rename_i args cod α' h_r_α ih n m h_t_n h_t_args
+    cases h_t_n
+    rename_i n o h_n h_cod
+    have ⟨p, hα, h₁⟩ := ih (.app h_t_args h_cod)
+    refine ⟨p, by assumption, by grind⟩
   · cases h_size
     iterate 2 (rename_i h _; cases h)
     exact ⟨_, (by assumption), by grind only⟩
@@ -152,6 +160,7 @@ def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
 -- Single-step reduction. If no reduction is possible, return .none
 def Expr.step? (e : Expr) : Option Expr :=
   match e with
+  | (SK ⟨cod, args⟩) => (SK (args cod)).step?
   | (SK (K* A _b)) => .some A
   | (SK (B f g x)) => .some (SK (f (g x)))
   | (SK (C x y z)) => .some (SK (x z y))
@@ -167,6 +176,8 @@ def Expr.step? (e : Expr) : Option Expr :=
 def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
   unfold Expr.step?
   split
+  · intro h
+    exact RedTy.cons (Expr.step?_sound h)
   · intro h
     simp_all only [Option.some.injEq]
     exact h.symm ▸ RedTy.next
@@ -223,11 +234,50 @@ theorem app_step_size_decrease : Expr.RedTy f f' → Expr.RedTy x x' → (SK (f'
 theorem step?_decreasing : Expr.step? e = .some e' → e'.ty_size < e.ty_size := fun h =>
   (Expr.step?_sound h).decreasing'
 
+def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := fun h => by
+  unfold Expr.step?
+  split
+  · cases h
+    rename_i h
+    exact h.step?_complete
+    rename_i h
+    cases h
+    contradiction
+  · cases h
+    rfl
+    repeat (rename_i h; cases h)
+  · cases h
+    rfl
+    rename_i h
+    cases h
+    rename_i h
+    cases h
+    rename_i h
+    cases h
+  · cases h
+    rfl
+    rename_i h
+    cases h
+    rename_i h
+    cases h
+    rename_i h
+    cases h
+  · rename_i h
+    cases h
+    rfl
+    rename_i h
+    cases h
+  · cases h
+    repeat simp_all
+    rename_i h_r_f
+    simp [h_r_f.step?_complete]
+  · cases h; repeat simp_all
+
 -- Completeness of our single-step reduction function
 def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := fun h => by
-  induction e generalizing e'
-  iterate 5 cases h
-  case app f x ih₁ ih₂ =>
+  induction e generalizing e' with
+  | cons => sorry
+  | app f x ih₁ ih₂ =>
     cases h
     repeat rfl
     · unfold Expr.step?
@@ -241,6 +291,7 @@ def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := f
       exact h (by assumption) (by simp_all)
       have h := ih₁ (by assumption)
       simp_all
+  | _ => iterate 5 cases h
 
 -- Uniqueness of single-step reductions (determinism of single-step reductions)
 theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by

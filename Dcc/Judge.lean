@@ -98,39 +98,144 @@ def Expr.is_not_cons (e : Expr) : Option (PLift (¬ e.IsCons)) := by
 
 inductive Expr.RunPi : Expr → Expr → Prop
   -- this measure doesn't actually work
-  | pi  : (¬ cod.IsCons)
-    → (SK (args cod)).RedTyTrans cod'
-    → RunPi (SK ⟨cod, args⟩) cod'
+  | mk  : Expr.RedTyTrans (SK (args cod)) α'
+    → Expr.RunPi (SK ⟨cod, args⟩) α'
   | red : Expr.RedTyTrans α α' → α.RunPi α'
 
+inductive Expr.ConsDepth : Expr → ℕ → Prop
+  | zero_ty_c : Expr.ConsDepth (.tycomb c) 0
+  | zero_app₁ : Expr.ConsDepth (.app (.tycomb c) _e) 0
+
 /-
-I don't like this ¬ IsCons thing.
+cons should have some kind of evaluation rule....
+we might also want explicit nil delimiters. this keeps being a pain point.
 
-We can get a measure, for sure. it's easy.
-we just probably need to bake it into tysize decreasing.
+we should be able to make this cleaner. want to handle currying better.
 
-congratulations, we're back where we started.
-HOWEVER, reasonably the head element is only ever going to come from the list itself.
+⟨tys, args⟩ x = ⟨
 
-instead of this weird RunPi thing, we could have an actual equation,
-instead of ¬ cod.IsCons. constructive.
+this is just prepending to args.
+WAIT ayo.
+we could make this our push_ctx thingy.
+this is really just appending to the context.
 
-bake it into RedTyTrasn.
+this gives us a size, which is nice, but the size doesn't decrease.
 
-could call it like fst projection.
+we want to pop something off tys simultaneously.
 
-this will be undefined, except if we can advance to the final codomain.
+⟨cons x xs, args⟩ x
 
-fst ⟨cod, args⟩ = args cod
+we really need something to distinguish nil. it is extremely annoying.
+
+but how do we distinguish not nil from nil?
+SKULL EMOJI.
+
+could give an eval rule to nil as well, but that's super ugly, too.
+
+all this for a decreasing measure....
+
+we don't distinguish nil, we just give it a size, I think.
+
+so now eval rules for cons are:
+
+cons x xs y = cons xs (cons y args)
+
+is this size actually decreasing?
+kind of?
+we added a cons. that's + 1.
+
+it's even worse if we do our push_ctx thing.
+
+x is not actually guaranteed to be a BCKI expression.
+
+we can't bake it into eval.lean.
+
+we just need our measure to be really robust.
+
+we need to capture how our judgments work INSIDE the measure.
+
+PiSize is only defined if:
+
+head x is SPECIFICALLY a BCKI expr, and we will define that rigorously.
+
+however, this might not be necessary, if we just have x.TySize > 0 as a hypothesis.
+should make the induction work.
+
+The place we kept getting stuck at was the end of the list.
+IsNotCons.
+
+This is becasue the RunPi red case might copy something from the arguments
+register over.
+
+I think what we need to do is never defer to TySize.
+we're just looking at the depth, requiring that each layer
+has a TySize > 1, but not using it.
+This way, it always goes down. The arguments part, we measure by....
+
+unclear...
+
+the size of the arguments register needs to be by default smaller
+than the asssertions size.
+
+However, TySize applies to nothing in the arguments register either,
+because these are also all types, or terms, but BCKI exprs are not
+well-typed terms.
+
+Why can't I just say the size of the BCKI expression at each
+step decreases?
+
+we need to be careful about this measure.
+
+this is all we're working with:
+
+inductive Expr.RunPi : Expr → Expr → Prop
+  -- this measure doesn't actually work
+  | mk  : Expr.RedTyTrans (SK (args cod)) α'
+    → Expr.RunPi (SK ⟨cod, args⟩) α'
+  | red : Expr.RedTyTrans α α' → α.RunPi α'
+
+theoretically, this would decrease, but we have no size measure for cons.
+
+and we don't have eval rules for cons.
+
+we could make the eval rules this thing.
+
+this could be cool, I guess.
+worth a shot. see if it works. why not.
+
+this feels super sus.
+just try it lexi.
+
+⟨cons x xs, args⟩ y = ⟨xs, ⟨y, args⟩⟩
+^ this size obviously decreases. y is just moving, x gets deleted. easy peasy.
+size obviously decreases, except at the last element, maybe?
+unclear....
+
+genuinely keep getting confused on what the point of nil is.
 -/
 
+/-
+The only normal forms of types are cons lists ⟨a, b⟩,
+sorts, ore more cons lists. BCKI shuffling expressions
+cannot be produced as a normal form of a type.
+-/
 inductive Expr.PiSize : Expr → ℕ → Prop
-  | base : ¬ t.IsCons
-    → Expr.TySize t n
-    → Expr.PiSize t n
-  | cons : Expr.PiSize x m
-    → Expr.PiSize xs n
-    → Expr.PiSize (SK ⟨x, xs⟩) (m + n)
+  | srt   : Expr.PiSize
+  | cons' : Expr.TySize 
+  | cons  : Expr.TySize x m
+    → Expr.PiSize xs mxs
+    → Expr.TySize args a
+    → Expr.PiSize (SK ⟨(cons x xs), args⟩) (m + mxs + a)
+
+/-
+The issue seems to stem from treating cons both like and not like a combinator.
+it doesn't have an evaluation rule, so it has no size.
+potentially the move is to represent primitive types like sorts as ⟨Sort, ?⟩
+
+PiSizes can only be cons lists or sorts.
+does tysize need to be involved at all?
+can we just count the depth of the cons list?
+-/
 
 theorem Expr.PiSize.unique (h₁ : Expr.PiSize e n) (h₂ : e.PiSize m) : m = n := by
   induction h₁ generalizing m

@@ -29,7 +29,7 @@ inductive TyComb where
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 inductive Expr where
-  | tyhole : Expr   → Expr -- __ : τ. May not be necessary due to inference rule for BCKI. Vestigial.
+  | tyhole : Expr   → Expr
   | tycomb : TyComb → Expr
   | cons   : Expr
   | Srt    : Level  → Expr

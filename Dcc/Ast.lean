@@ -1,4 +1,5 @@
 import Mathlib.Data.Nat.Notation
+import Batteries.Data.String.Matcher
 open Std (ToFormat Format)
 open Std.ToFormat (format)
 
@@ -29,7 +30,7 @@ deriving BEq, Repr, Lean.ToExpr, DecidableEq
 inductive Expr where
   | tyhole : Expr   → Expr -- __ : τ. May not be necessary due to inference rule for BCKI. Vestigial.
   | tycomb : TyComb → Expr
-  | Pi     : Expr   → Expr → Expr -- Binders. No →. Form → with Π + K*.
+  | cons   : Expr
   | Srt    : Level  → Expr
   | comb   : Comb   → Expr
   | app    : Expr   → Expr → Expr
@@ -75,19 +76,18 @@ namespace dsl
 
 declare_syntax_cat expr
 
-syntax "Π" expr "," expr : expr
-
 declare_syntax_cat levels
 declare_syntax_cat comb
+
+syntax "cons" : expr
+
+syntax "(" expr,* ")" : expr
 
 syntax ".{" term "}" : levels
 
 syntax "K" : comb
 syntax "K'" : comb
 syntax "S" : comb
-
-syntax "arg" num expr : expr
-syntax "ret" num : expr
 
 syntax expr "∘" expr : expr
 syntax comb levels : expr
@@ -96,7 +96,6 @@ syntax "(" expr* ")" : expr
 syntax "Type" term  : expr
 syntax "B" : expr
 syntax "C" : expr
-syntax "`Π" : expr
 syntax "K*" : expr
 syntax "I" : expr
 syntax "Sort" term : expr
@@ -107,6 +106,8 @@ syntax ident : expr
 syntax "SK" expr : term
 
 macro_rules
+  | `(SK cons) => `(Expr.cons)
+  | `(SK ($a:expr, $xs:expr,*)) => `(SK (cons $a:expr ($xs:expr,*)))
   | `(SK #($t:term)) => `($t)
   | `(SK $f:expr ∘ $g:expr) => `(SK (B $f:expr $g:expr))
   | `(SK $idt:ident) => `($idt:term)
@@ -123,21 +124,6 @@ macro_rules
   | `(SK ($f:expr $x:expr)) => `(Expr.app (SK $f:expr) (SK $x:expr))
   | `(SK __ ∶ $t:expr) => `(Expr.tyhole (SK $t))
   | `(SK ($f:expr $x:expr $xs:expr*)) => `(SK (($f:expr $x:expr) $xs:expr*))
-  | `(SK Π $α:expr, $β:expr) => `(Expr.Pi (SK $α) (SK $β))
-  | `(SK `Π) => `(Expr.tycomb (TyComb.pi))
-  | `(SK $α:expr → $β:expr) => `(SK Π ($α:expr), (K* $β:expr))
-  | `(SK arg $n:num $fn:expr) =>
-    match n.getNat with
-    | .zero => `(SK (B $fn I))
-    | .succ n =>
-      let n' := Lean.Syntax.mkNatLit n
-      `(SK arg $n' (K* $fn))
-  | `(SK ret $n:num) =>
-    match n.getNat with
-    | .zero => `(SK I)
-    | .succ n =>
-      let n' := Lean.Syntax.mkNatLit n
-      `(SK (B K* (ret $n')))
 
 end dsl
 
@@ -145,6 +131,7 @@ namespace Expr
 
 def toFormat : Expr → Format
   | SK Sort m => s!"Sort {m}"
+  | SK cons => "cons"
   | SK B => "B"
   | SK C => "C"
   | SK I => "I"
@@ -152,11 +139,117 @@ def toFormat : Expr → Format
   | SK K'.{[m, n]} => "K'.{" ++ (format [m, n]) ++ "}"
   | SK K.{[m, n]} => "K.{" ++ (format [m, n]) ++ "}"
   | SK S.{[m, n, o]} => "S.{" ++ (format [m, n, o]) ++ "}"
-  | SK Π α, β => .paren <| "Π " ++ α.toFormat ++ ", " ++ β.toFormat
   | SK (f x) => .bracket "(" (f.toFormat ++ (.nest 2 <| .line ++ x.toFormat)) ")"
   | SK __ ∶ t => "__ : " ++ t.toFormat
 
 instance : ToFormat Expr := ⟨Expr.toFormat⟩
 instance : ToString Expr := ⟨toString ∘ toFormat⟩
 
+/-
+Bracket abstraction for types
+-/
+
 end Expr
+
+namespace bracket
+
+abbrev Var := String
+
+inductive BExpr where
+  | var  : Var   → BExpr
+  | app  : BExpr → BExpr → BExpr
+  | raw  : Expr  → BExpr
+  | forE : BExpr → BExpr → BExpr → BExpr
+deriving BEq
+
+declare_syntax_cat expr'
+
+syntax "#" term                              : expr'
+syntax expr                                  : expr'
+syntax ident                                 : expr'
+syntax "∀" "(" expr' ":" expr' ")" "," expr' : expr'
+syntax:50 expr':50 expr':51                  : expr'
+
+syntax "SK⟦" expr' "⟧" : term
+
+macro_rules
+  | `(SK⟦#$et:term⟧) => `($et:term)
+  | `(SK⟦$nm:ident⟧) =>
+    let nm := Lean.Syntax.mkStrLit nm.getId.lastComponentAsString
+    `(BExpr.var $nm)
+  | `(SK⟦∀ ($nm:expr' : $α:expr'), $cod:expr'⟧) =>
+    `(BExpr.forE SK⟦$nm⟧ SK⟦$α⟧ SK⟦$cod⟧)
+  | `(SK⟦$f:expr' $x:expr'⟧) => `(BExpr.app SK⟦$f:expr'⟧ SK⟦$x:expr'⟧)
+  | `(SK⟦$e:expr⟧) => `(BExpr.raw (SK $e))
+
+open Lean
+
+#eval SK⟦∀ (x : Sort 1), Sort 1⟧
+
+def BExpr.mem_var (v : Var) (in_e : BExpr) : Bool :=
+  match in_e with
+  | SK⟦∀ (#x : #α), #bdy⟧ => x == .var v ∨ bdy.mem_var v ∨ α.mem_var v
+  | SK⟦#f #x⟧ => f.mem_var v || x.mem_var v
+  | .var v' => v == v'
+  | .raw _e => false
+
+abbrev Ctx := List Var
+
+/-
+abstraction algorithm:
+1. bdy var = bind var, then select the head with I,
+but reject all arguments in the context so far
+2. var other than bind var, find its position in the context
+  K* as many arguments as its index is
+-/
+
+def mk_ret (n : ℕ) : BExpr :=
+  match n with
+  | .zero => SK⟦I⟧
+  | .succ n => SK⟦B K* #mk_ret n⟧
+
+/-
+Replace all vars with new var.
+-/
+def BExpr.rename (replace find : Var) (in_e : BExpr) : BExpr :=
+  match in_e with
+  | .var v => if v == find then .var replace else .var v
+  | .app f x => .app (f.rename replace find) (x.rename replace find)
+  | .forE bind ty bdy => .forE bind (ty.rename replace find) (bdy.rename replace find)
+  | .raw e => .raw e
+
+/-
+Generate a fresh name from v if it is already in context.
+Vars are first in first out.
+-/
+def Var.mk_fresh (ctx : Ctx) (v : Var) : Var :=
+  let matching := ctx.filterMap (fun v' =>
+    if v'.containsSubstr v then
+      pure v'.length
+    else .none)
+  flip Option.getD v <| matching.mergeSort.reverse.head?.map (s!"{·}.1")
+
+/-
+Note: ∀ (x, binder var should only be added to context in the body
+since arg not received in type
+-/
+def Var.mk_var (ctx : Ctx) (v : Var) : Option BExpr := do
+  let idx ← ctx.findIdx? (· == v)
+  let ret := mk_ret <| ctx.length - idx
+  pure <| (List.replicate idx (BExpr.raw (SK K*))).foldr BExpr.app ret
+
+/-
+Ex: ∀ (x : α) (y : β x), γ
+
+assuming in scope [
+-/
+def mk_app (f x : BExpr) : Option BExpr := do
+  sorry
+
+def BExpr.abstract (ctx : Ctx) (bdy : BExpr) : Option BExpr :=
+  match bdy with
+  | .var v => v.mk_var ctx
+  | .app f x =>
+    
+
+end bracket

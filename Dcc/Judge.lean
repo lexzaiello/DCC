@@ -103,6 +103,27 @@ inductive Expr.RunPi : Expr → Expr → Prop
     → RunPi (SK ⟨cod, args⟩) cod'
   | red : Expr.RedTyTrans α α' → α.RunPi α'
 
+/-
+I don't like this ¬ IsCons thing.
+
+We can get a measure, for sure. it's easy.
+we just probably need to bake it into tysize decreasing.
+
+congratulations, we're back where we started.
+HOWEVER, reasonably the head element is only ever going to come from the list itself.
+
+instead of this weird RunPi thing, we could have an actual equation,
+instead of ¬ cod.IsCons. constructive.
+
+bake it into RedTyTrasn.
+
+could call it like fst projection.
+
+this will be undefined, except if we can advance to the final codomain.
+
+fst ⟨cod, args⟩ = args cod
+-/
+
 inductive Expr.PiSize : Expr → ℕ → Prop
   | base : ¬ t.IsCons
     → Expr.TySize t n
@@ -127,7 +148,12 @@ theorem Expr.PiSize.unique (h₁ : Expr.PiSize e n) (h₂ : e.PiSize m) : m = n 
       have hb := ih₂ hp₄
       grind only
 
-theorem Expr.run_pi_decreasing : Expr.RunPi t t' → Expr.PiSize t m → Expr.PiSize
+theorem Expr.run_pi_decreasing : Expr.RunPi t t' → Expr.PiSize t m → ∃ n, Expr.PiSize t' n ∧ n < m := by
+  intro hrt ht₁
+  induction hrt generalizing m
+  case pi args cod cod' h_not_cons hrt =>
+    have h := hrt.decreasing'
+    exact ⟨cod'.ty_size, .base (by sorry) (by sorry), by sorry⟩
 
 inductive Judge : Expr → Expr → Prop
   | app     : Judge (SK ⟨(cons α xs), args⟩) f

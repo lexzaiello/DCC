@@ -1,5 +1,6 @@
 import Mathlib.Data.Nat.Notation
 import Batteries.Data.String.Matcher
+import Mathlib.Tactic
 open Std (ToFormat Format)
 open Std.ToFormat (format)
 
@@ -108,8 +109,17 @@ end dsl
 
 namespace Expr
 
-def toFormat : Expr → Format
+def foldr_cons {α : Type} (map : Expr → α → α) (acc : α) (e : Expr) : α :=
+  match e with
+  | SK (cons a b) =>
+    let inner := b.foldr_cons map acc
+    map a inner
+  | e => map e acc
+
+def toFormat (e : Expr) : Format :=
+  match e with
   | SK Sort m => s!"Sort {m}"
+  | (SK (cons a b)) => s!"⟨{toFormat a}, {toFormat b}⟩"
   | SK cons => "cons"
   | SK B => "B"
   | SK C => "C"

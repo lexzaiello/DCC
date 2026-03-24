@@ -67,6 +67,42 @@ def infer_pi (head spine : Expr) : Option ((t : Expr) × PLift (JudgePi spine t 
     | .none => .none
   | _, _ => .none
 
+/-
+Attempt to normalize a terminal codomain, if possible.
+A terminal codomain is the final cons in a Π list.
+If a proof of TyTransRed can be produced, it is valid.
+
+The TySize must be greater than zero. A cons list, for
+example, has a TySize of zero, and is not eligible.
+
+This is the only case in which types are normalized
+during conversion.
+
+The only other case types are normalized is in the app constructor.
+-/
+
+inductive Expr.IsCons : Expr → Prop
+  | mk : Expr.IsCons (SK (cons a b))
+
+def Expr.is_not_cons (e : Expr) : Option (PLift (¬ e.IsCons)) := by
+  cases e
+  repeat exact .some (.up (fun h => by contradiction))
+  case app f x =>
+    cases f
+    repeat exact .some (.up (fun h => by contradiction))
+    case app f' x' =>
+      cases f'
+      repeat exact .some (.up (fun h => by contradiction))
+      · exact .none
+      repeat exact .some (.up (fun h => by contradiction))
+
+inductive Expr.RunPi : Expr → Expr → Prop
+  -- this measure doesn't actually work
+  | pi  : (¬ cod.IsCons)
+    → (SK (args cod)).RedTyTrans cod'
+    → RunPi (SK ⟨cod, args⟩) cod'
+  | red : Expr.RedTyTrans α α' → α.RunPi α'
+
 inductive Judge : Expr → Expr → Prop
   | app     : Judge (SK ⟨(cons α xs), args⟩) f
     → (SK (args α)).RedTyTrans α'
@@ -79,12 +115,26 @@ inductive Judge : Expr → Expr → Prop
   | pi      : JudgePi args t_β tys
     → Judge t_β (SK ⟨tys, args⟩)
   | hole    : Judge α (SK __ ∶ α) -- only visible to the kernel
-  | conv  {α β : Expr} : Judge α x → α.RedTyTrans β → Expr.IsNorm β → Judge β x
+  | conv  {α β : Expr} : Judge α x → α.RunPi β → Expr.IsNorm β → Judge β x
+
+def Judge.conv?_ty (h_t : Judge α x) : Option ((t' : Expr) × (PLift (Judge t' x))) :=
+  match Expr.reduce!? α with
+  | .some ⟨t', ⟨h_r, h_norm⟩⟩ => .some ⟨t', ⟨.conv h_t (.red h_r) h_norm⟩⟩
+  | _ => .none
 
 def Judge.conv? (h_t : Judge α x) : Option ((t' : Expr) × (PLift (Judge t' x))) :=
-  match α.reduce!? with
-  | .some ⟨t', ⟨h_r, h_norm⟩⟩ => .some ⟨t', ⟨Judge.conv h_t h_r h_norm⟩⟩
-  | _ => .none
+  match α with
+  | SK ⟨cod, args⟩ =>
+    match cod with
+    
+    match h_size : cod.ty_size with
+    | .succ _n =>
+      let h_size' := Expr.TySize.sound h_size
+      match (SK (args cod)).reduce!? with
+      | .some ⟨t', ⟨h_r, h_norm⟩⟩ => .some ⟨t', ⟨Judge.conv h_t (.pi h_size' h_r) h_norm⟩⟩
+      | _ => .none
+    | _ => h_t.conv?_ty
+  | _ => h_t.conv?_ty
 
 def Judge.convD (h_t : Judge α x) : (t' : Expr) × (PLift (Judge t' x)) :=
   h_t.conv?.getD ⟨α, ⟨h_t⟩⟩
@@ -120,4 +170,10 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge t e)) :=
     | _ => .none
   | _ => .none
 
-#eval (infer (SK (K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)))).map (·.fst)
+#eval Std.format <$> (infer (SK (K'.{[2, 2]} (Sort 1) (Sort 1) (Sort 0) (Sort 0)))).map (·.fst)
+
+/-
+How do we know that the context is no longer required?
+
+if the head contains no more cons'
+-/

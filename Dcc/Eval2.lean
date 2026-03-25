@@ -6,6 +6,59 @@ Need more equations for dpair.
 flip probably necessary.
 -/
 
+inductive Expr.HasRedex : Expr → Prop
+  | appe      : HasRedex (SK (App (f, x)))
+  | ide       : HasRedex (SK (id e))
+  | flip      : HasRedex (SK (flip (a, b)))
+  | quoted    : HasRedex (SK ((quot e) y))
+  | comp      : HasRedex (SK ((x ∘ y) z))
+  | fst       : HasRedex (SK (fst (x, y)))
+  | snd       : HasRedex (SK (snd (x, y)))
+  | curr      : HasRedex (SK (Λ(x) y z))
+  | dpair     : HasRedex (SK (⟨f, g⟩ (a, b)))
+  | left      : HasRedex f → HasRedex (SK (f x))
+
+def Expr.has_redex (e : Expr) : Option (PLift e.HasRedex) :=
+  match _heq : e with
+  | (SK (App (_f, _x))) => .some ⟨.appe⟩
+  | (SK (id _e)) => .some ⟨.ide⟩
+  | (SK (flip (_a, _b))) => .some ⟨.flip⟩
+  | (SK ((quot _e) _y)) => .some ⟨.quoted⟩
+  | (SK ((_x ∘ _y) _z)) => .some ⟨.comp⟩
+  | (SK (fst (_x, _y))) => .some ⟨.fst⟩
+  | (SK (snd (_x, _y))) => .some ⟨.snd⟩
+  | (SK (Λ(_x) _y _z)) => .some ⟨.curr⟩
+  | (SK (⟨_f, _g⟩ (_a, _b))) => .some ⟨.dpair⟩
+  | (SK (f _x)) => match _heq₂ : f.has_redex with
+    | .some ⟨h⟩ => .some ⟨.left h⟩
+    | .none => .none
+  | _e => .none
+
+theorem Expr.HasRedex.sound (_h : Expr.has_redex e = .some he) : Expr.HasRedex e := he.down
+
+theorem Expr.HasRedex.complete (h : Expr.HasRedex e) : Expr.has_redex e = .some (.up h) := by
+  unfold Expr.has_redex
+  split
+  repeat rfl
+  case h_10 =>
+    cases heq : h with
+    | dpair =>
+      cases h
+      · simp_all only [reduceCtorEq, app.injEq, false_and, true_and, implies_true, coup.injEq, imp_false, not_and,
+    and_imp]
+        rename_i h
+        exact False.elim <| h _ _ _ _ rfl rfl rfl rfl
+      · simp_all only [reduceCtorEq, app.injEq, false_and, true_and, implies_true, coup.injEq, imp_false, not_and,
+    and_imp]
+        rename_i h
+        exact False.elim <| h _ _ _ _ rfl rfl rfl rfl
+    | left _ =>
+      rename_i hf
+      rw [hf.complete]
+    | _ => simp_all
+  cases h
+  repeat simp_all
+
 -- Decreasing measure
 -- function arity decreases with each argument
 inductive Expr.TySize : Expr → ℕ → Prop
@@ -31,7 +84,12 @@ inductive Expr.TySize : Expr → ℕ → Prop
     → Expr.TySize (SK (f x)) (n + m)
 
 inductive Expr.RedTy : Expr → Expr → Prop
-  | coup      : Expr.RedTy x x' → Expr.RedTy (SK (x, y)) (SK (x', y))
+  | coup      : ¬ Expr.HasRedex y
+    → Expr.RedTy x x'
+    → Expr.RedTy (SK (x, y)) (SK (x', y))
+  | coup'     : ¬ Expr.HasRedex x
+    → Expr.RedTy y y'
+    → Expr.RedTy (SK (x, y)) (SK (x, y'))
   | appe      : Expr.RedTy (SK (App (f, x))) (SK (f x))
   | ide       : Expr.RedTy (SK (id e)) e
   | flip      : Expr.RedTy (SK (flip (a, b))) (SK (b, a))
@@ -41,9 +99,13 @@ inductive Expr.RedTy : Expr → Expr → Prop
   | fst       : Expr.RedTy (SK (fst (x, y))) x
   | snd       : Expr.RedTy (SK (snd (x, y))) y
   | curr      : Expr.RedTy (SK ((Λ(x) y z))) (SK (x (y, z)))
-  | pair      : Expr.RedTy (SK (⟨f, g⟩ (a, b))) (SK ((f a), (g b)))
-  | congrFun  : Expr.RedTy f f'
+  | dpair     : Expr.RedTy (SK (⟨f, g⟩ (a, b))) (SK ((f a), (g b)))
+  | congrFun  : ¬ Expr.HasRedex x
+    → Expr.RedTy f f'
     → Expr.RedTy (SK (f x)) (SK (f' x))
+  | congrArg  : ¬ Expr.HasRedex f
+    → Expr.RedTy x x'
+    → Expr.RedTy (SK (f x)) (SK (f x'))
 
 theorem Expr.all_size : ∃ n, Expr.TySize e n := by
   induction e
@@ -128,7 +190,14 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
 
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n :=
   match heq : h_red with
-  | .coup (x := x) (x' := x') (y := y) h_r_x =>
+  | .coup' (x := x) (y := y) h_r_y h_r_x =>
+    let ⟨n_x', h_size_y', h_lt⟩ := h_r_x.decreasing (TySize.sound rfl)
+    let h := Expr.TySize.sound (e := y) rfl
+    match h_size with
+    | .coup h_n_x h_n_y =>
+      let h := TySize.unique (e := y) h h_n_y
+      ⟨_, .coup h_n_x h_size_y', by simp_all only [heq_eq_eq, add_lt_add_iff_left]⟩
+  | .coup (x := x) (y := y) h_r_y h_r_x =>
     let ⟨n_x', h_size_x', h_lt⟩ := h_r_x.decreasing (TySize.sound rfl)
     let h := Expr.TySize.sound (e := x) rfl
     match h_size with
@@ -163,7 +232,7 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
   | .snd =>
     match h_size with
     | .app .snd (.coup h_t_a h_t_b) => ⟨_, h_t_b, by grind only⟩
-  | .pair (f := f) (g := g) (a := a) (b := b) =>
+  | .dpair (f := f) (g := g) (a := a) (b := b) =>
     match h_size with
     | .app (.app (.app .dpair h_t_f) h_t_g) (.coup h_t_a h_t_b) =>
       ⟨_, .coup (.app h_t_f h_t_a) (.app h_t_g h_t_b), by grind only⟩
@@ -171,7 +240,12 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
     match h_size with
     | .app (.app (.curr h_t_x) h_t_y) h_t_z =>
       ⟨_, .app h_t_x (.coup h_t_y h_t_z), by grind only⟩
-  | .congrFun (f := f) (f' := f') h_r_f =>
+  | .congrArg (f := f) (x := x) (x' := x') h_n_r_f h_r_x =>
+    match h_size with
+    | .app hn_f hn_x (n := m) =>
+      have ⟨n', hx, h₁⟩ := h_r_x.decreasing hn_x
+      ⟨m + n', .app hn_f hx, by simp_all only [heq_eq_eq, add_lt_add_iff_left]⟩
+  | .congrFun (f := f) (f' := f') h_n_r_x h_r_f =>
     match h_size with
     | .app hn_f hn_x (m := n) =>
       have ⟨m, hf, h₁⟩ := h_r_f.decreasing hn_f
@@ -204,9 +278,12 @@ def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
 
 def Expr.step? (e : Expr) : Option Expr :=
   match e with
-  | (SK (a, b)) => match a.step? with
+  | (SK (a, b)) =>
+    match a.step? with
     | .some a' => .some (SK (a', b))
-    | .none => .none
+    | .none => match b.step? with
+      | .some b' => .some (SK (a, b'))
+      | .none => .none
   | (SK (App (f, x))) => (SK (f x))
   | (SK (id e)) => e
   | (SK (flip (a, b))) => (SK (b, a))
@@ -220,7 +297,9 @@ def Expr.step? (e : Expr) : Option Expr :=
   | (SK (f x)) =>
     match f.step? with
     | .some f' => (SK (f' x))
-    | .none => .none
+    | .none => match x.step? with
+      | .some x' => (SK (f x'))
+      | .none => .none
   | _a => .none
 
 def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
@@ -261,7 +340,7 @@ def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
     exact RedTy.curr
   · intro h; simp only [Option.some.injEq] at h
     rw [← h]
-    exact RedTy.pair
+    exact RedTy.dpair
   · intro h
     split at h
     · simp_all only [imp_false, Option.some.injEq]

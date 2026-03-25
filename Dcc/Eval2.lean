@@ -524,7 +524,7 @@ theorem Expr.RedTy.size_pos (h_step : Expr.RedTy e e') : 0 < e.ty_size := by
       sorry
 termination_by e-/
 
-def Expr.RedTy.complete' (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e', ⟨h_step⟩⟩ :=
+def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e', ⟨h_step⟩⟩ :=
   match heq : e with
   | .app f x => match heqs : h_step with
     | .congrFun hnrx hnre hrf =>
@@ -539,73 +539,28 @@ def Expr.RedTy.complete' (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e'
   | .coup a b => by
     match heq' : h_step with
     | .coup (x' := a') hnb hra =>
-      simp_all only [heq_eq_eq, not_false_eq_true, HasRedex.complete', step?, Option.isNone_iff_eq_none, ↓reduceDIte]
-      rw [hra.complete']
+      simp_all only [heq_eq_eq, not_false_eq_true, HasRedex.complete', step?, Option.isNone_iff_eq_none, ↓reduceDIte, hra.complete]
     | .coup' hnx hry =>
       simp_all only [heq_eq_eq, not_false_eq_true, HasRedex.complete', step?, Option.isNone_iff_eq_none, ↓reduceDIte]
-      rw [hry.complete']
-      have h := hry.has_redex.complete
-      simp [h]
+      simp only [hry.has_redex.complete, reduceCtorEq, ↓reduceDIte, hry.complete]
   | .curr _e
   | SK snd | SK fst | SK quot | SK App
   | SK id | SK comp | SK flip | .tyhole t => by cases h_step
 
-def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e', ⟨h_step⟩⟩ := by
-  induction e generalizing e'
-  · cases h_step
-  · cases h_step
-  · cases h_step
-  · rename_i f x ih₁ ih₂
-    cases h_step
-    repeat simp [Expr.step?]
-    case app.congrFun f' hrf hnrx hrne =>
-      exact False.elim <| (no_redex_no_step hrne) ⟨_, .congrFun hnrx hrne hrf⟩
-    case app.congrArg x' hnrf hrx hrne =>
-      exact False.elim <| (no_redex_no_step hrne) ⟨_, .congrArg hnrf hrne hrx⟩
-  · cases h_step
-  · cases h_step
-  · cases h_step
-  · cases h_step
-  · cases h_step
-  · cases h_step
-  · cases h_step
-  · cases h_step
-  · cases h_step
-  case coup a b ih₁ ih₂ =>
-    cases h_step
-    · rename_i x' hra hnr
-      simp_all only [not_false_eq_true, no_redex_no_step', IsEmpty.forall_iff, implies_true]
-      have h := Expr.HasRedex.complete' hnr
-      have dec : x'.ty_size < a.ty_size := hra.decreasing'
-      have hra := hra.complete
-      simp [Expr.step?, h, hra]
-    · rename_i y' hnr hrb
-      simp_all only [not_false_eq_true, no_redex_no_step', IsEmpty.forall_iff, implies_true]
-      have h := Expr.HasRedex.complete' hnr
-      have hrb := hrb.complete
-      simp [Expr.step?, h, hrb]
-      intro h
-      have h := no_redex_step_none hnr
-      rename_i hrb' _ hcontra
-      have h := hrb'.has_redex
-      have h := Expr.HasRedex.sound' hcontra
-      contradiction
-termination_by e.ty_size
-
 theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by
   intro hr₁ hr₂
-  have heq₁ := hr₁.step?_complete
-  have heq₂ := hr₂.step?_complete
+  have heq₁ := hr₁.complete
+  have heq₂ := hr₂.complete
   simp_all
 
 -- Normal forms reduce to themselves
 theorem Expr.IsNorm.reduce_rfl : Expr.IsNorm e → e.reduce = e := by
-  intro h
+  intro h_norm
   unfold Expr.reduce
   split
   · rename_i heq
     have h := Expr.step?_sound heq
-    rename_i h_norm e''
+    rename_i e''
     exfalso
     exact h_norm ⟨_, h⟩
   rfl
@@ -620,7 +575,7 @@ theorem Expr.RedTy.reduce_same : Expr.RedTy a b → reduce a = reduce b := by
   split
   · rename_i e' heq
     simp [ha.unique (Expr.step?_sound heq)]
-  · have h := ha.step?_complete
+  · have h := ha.complete
     simp_all
 
 -- Church-rosser for our reduction function. Implies church-rosser for the predicate version, since we have soundness.
@@ -663,7 +618,7 @@ theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.re
       exact hnorm ⟨_, Expr.step?_sound (by assumption)⟩
     · rfl
   · rename_i b₂ c htrans hrb ih
-    have h := hrb.step?_complete
+    have h := hrb.complete
     change Expr.RedTyTrans a b₂ at htrans
     rw [htrans.complete]
     unfold Expr.reduce
@@ -681,11 +636,12 @@ theorem reduce_norm : Expr.reduce e = e' → Expr.IsNorm e' := by
   intro h ⟨e'', hr⟩
   unfold Expr.reduce at h
   split at h
-  · rename_i e'' h_step
+  · rename_i e'' heq h_step
     have h_dec : e''.ty_size < e.ty_size:= (Expr.step?_sound h_step).decreasing'
     exact reduce_norm h (⟨_, hr⟩)
   · rename_i hstep
-    have h := hr.step?_complete
+    rw [h] at hstep
+    have h := hr.complete
     simp_all only [reduceCtorEq]
 termination_by e.ty_size
 
@@ -703,7 +659,7 @@ termination_by e.ty_size
 
 theorem no_ty_step_norm : Expr.step? t = .none → Expr.IsNorm t := by
   intro h
-  exact (fun ⟨e', hn⟩ => by have h := hn.step?_complete; simp_all only [reduceCtorEq])
+  exact (fun ⟨e', hn⟩ => by have h := hn.complete; simp_all only [reduceCtorEq])
 
 theorem Expr.RedTyTrans.no_step? : Expr.step? t = .none → ¬ Expr.RedTyTrans t t' := by
   intro h

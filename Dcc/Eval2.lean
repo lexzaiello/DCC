@@ -509,16 +509,6 @@ theorem Expr.IsRedex.can_step : Expr.IsRedex e → ∃ e', e.RedTy e' := by
   · exact ⟨_, .curr⟩
   · exact ⟨_, .dpair⟩
 
-theorem Expr.HasRedex.can_step : Expr.HasRedex e → ∃ e', e.RedTy e' := by
-  intro h
-  induction heq : h
-  · exact Expr.IsRedex.can_step (by assumption)
-  case coupl a bb h_red_a ih =>
-    
-    have ⟨e', h_r_a⟩ := ih (by assumption) rfl
-    
-    exact ⟨SK (
-
 theorem Expr.RedTy.size_pos (h_step : Expr.RedTy e e') : 0 < e.ty_size := by
   have h := h_step.decreasing'
   omega
@@ -556,20 +546,17 @@ def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e',
           sorry
       | coupl h => sorry
       | coupr h  =>
-        cases h_red_eq : h_red'
-        · simp_all only [not_true_eq_false]
-        · cases h_step
-          · contradiction
-          · simp [Expr.step?, h]
-            rename_i h_step
-            simp [h_step.complete]
-        rename_i h
-        simp [Expr.step?]
-        simp_all
-        split
-        · sorry
-        · simp_all
-          
+        cases h : h_step
+        · unfold Expr.step?
+          simp_all
+          cases h_step
+          simp_all
+          rename_i h
+          simp [h.complete]
+        · unfold Expr.step?
+          simp_all
+          rename_i h
+          simp [h.complete]
     else sorry
   else
     have h : e.IsRedex := by simp_all

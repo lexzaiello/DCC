@@ -19,6 +19,7 @@ inductive Expr where
   | Srt    : Level  → Expr
   | comb   : Comb   → Expr
   | app    : Expr   → Expr → Expr
+  | App    : Expr
   | comp   : Expr
   | nil    : Expr
   | quot   : Expr
@@ -44,6 +45,7 @@ syntax "K" : comb
 syntax "K'" : comb
 syntax "S" : comb
 
+syntax "App" : expr
 syntax "B" : expr
 syntax expr "∘" expr : expr
 syntax comb levels : expr
@@ -68,6 +70,7 @@ syntax ident : expr
 syntax "SK" expr : term
 
 macro_rules
+  | `(SK App) => `(Expr.App)
   | `(SK id) => `(Expr.id)
   | `(SK flip) => `(Expr.flip)
   | `(SK quot) => `(Expr.quot)
@@ -98,6 +101,7 @@ namespace Expr
 
 def toFormat (e : Expr) : Format :=
   match e with
+  | SK App => "App"
   | SK id => "id"
   | SK dpair => "dpair"
   | SK flip => "flip"

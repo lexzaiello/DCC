@@ -9,6 +9,7 @@ flip probably necessary.
 -- Decreasing measure
 -- function arity decreases with each argument
 inductive Expr.TySize : Expr → ℕ → Prop
+  | appe   : Expr.TySize (SK App) 1
   | ide    : Expr.TySize (SK id) 1
   | quoted : Expr.TySize (SK quot) 1
   | flip   : Expr.TySize (SK flip) 1
@@ -30,6 +31,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
     → Expr.TySize (SK (f x)) (n + m)
 
 inductive Expr.RedTy : Expr → Expr → Prop
+  | appe      : Expr.RedTy (SK (App (f, x))) (SK (f x))
   | ide       : Expr.RedTy (SK (id e)) e
   | flip      : Expr.RedTy (SK (flip (a, b))) (SK (b, a))
   | flip'     : Expr.RedTy (SK (flip ⟨a, b⟩)) (SK ⟨b, a⟩)
@@ -52,6 +54,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     have ⟨m, hm⟩ := ih₂
     exact ⟨n + m, .app hn hm⟩
   case comp => exact ⟨1, .comp⟩
+  · exact ⟨1, .appe⟩
   · exact ⟨0, .nil⟩
   · exact ⟨1, .quoted⟩
   · exact ⟨1, .flip⟩
@@ -75,7 +78,7 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
-  | .id | .flip | .quot | .comp | .dpair | .fst | .snd => 1
+  | .App | .id | .flip | .quot | .comp | .dpair | .fst | .snd => 1
   | .curr x =>
     let m := x.ty_size
     m.succ
@@ -94,6 +97,7 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   unfold Expr.ty_size at h
   rw [← h]
   split at h
+  · exact .appe
   · exact .ide
   · exact .flip
   · exact .quoted
@@ -123,6 +127,10 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
 
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n :=
   match heq : h_red with
+  | .appe (f := f) (x := x) =>
+    match h_size with
+    | .app .appe (.coup h_t_f h_t_x) =>
+      ⟨_, .app h_t_f h_t_x, by grind only⟩
   | .ide (e := e) =>
     match h_size with
     | .app .ide h_t_e =>

@@ -151,9 +151,11 @@ inductive Expr.RedTy : Expr → Expr → Prop
   | curr      : Expr.RedTy (SK ((Λ(x) y z))) (SK (x (y, z)))
   | dpair     : Expr.RedTy (SK (⟨f, g⟩ (a, b))) (SK ((f a), (g b)))
   | congrFun  : ¬ Expr.HasRedex x
+    → ¬ Expr.HasRedex (SK (f x))
     → Expr.RedTy f f'
     → Expr.RedTy (SK (f x)) (SK (f' x))
   | congrArg  : ¬ Expr.HasRedex f
+    → ¬ Expr.HasRedex (SK (f x))
     → Expr.RedTy x x'
     → Expr.RedTy (SK (f x)) (SK (f x'))
 
@@ -354,21 +356,26 @@ def Expr.step? (e : Expr) : Option ((e' : Expr) × (PLift (e.RedTy e'))) :=
   | (SK ((Λ(x) y z))) => .some ⟨SK (x (y, z)), ⟨.curr⟩⟩
   | (SK (⟨f, g⟩ (a, b))) => .some ⟨(SK ((f a), (g b))), ⟨.dpair⟩⟩
   | (SK (f x)) =>
-    if h : x.has_redex.isNone then
-      match f.step? with
-      | .some ⟨f', ⟨hf⟩⟩ => .some ⟨(SK (f' x)), ⟨.congrFun (fun h => by
-        have h := h.complete
-        simp_all only [Option.isNone_iff_eq_none, reduceCtorEq, exists_const]
-        ) hf⟩⟩
-      | .none => .none
-    else if h : f.has_redex.isNone then
-      match x.step? with
-      | .some ⟨x', ⟨hx⟩⟩ => .some ⟨(SK (f x')), ⟨.congrArg (fun h => by
-        have h := h.complete
-        simp_all only [Option.isNone_iff_eq_none, reduceCtorEq, exists_const]) hx⟩⟩
-      | .none => .none
-    else
-      .none
+    if h₀ : (SK (f x)).has_redex.isNone then
+      let h₀ : ¬ (SK (f x)).HasRedex := fun h => by
+        let ⟨hp, heq⟩ := h.complete
+        simp_all only [Option.isNone_some, Bool.false_eq_true]
+      if h : x.has_redex.isNone then
+        match f.step? with
+        | .some ⟨f', ⟨hf⟩⟩ => .some ⟨(SK (f' x)), ⟨.congrFun (fun h => by
+          have h := h.complete
+          simp_all only [Option.isNone_iff_eq_none, reduceCtorEq, exists_const]
+          ) h₀ hf⟩⟩
+        | .none => .none
+      else if h : f.has_redex.isNone then
+        match x.step? with
+        | .some ⟨x', ⟨hx⟩⟩ => .some ⟨(SK (f x')), ⟨.congrArg (fun h => by
+          have h := h.complete
+          simp_all only [Option.isNone_iff_eq_none, reduceCtorEq, exists_const]) h₀ hx⟩⟩
+        | .none => .none
+      else
+        .none
+    else .none
   | _a => .none
 
 def Expr.step?_sound (_h : Expr.step? e = .some ⟨e', he⟩) : Expr.RedTy e e' := he.down
@@ -478,19 +485,82 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
   · exact Expr.HasRedex.left (by assumption)
   · exact Expr.HasRedex.right (by assumption)
 
-def Expr.RedTy.step?_complete (h_step : Expr.RedTy e e') : ∃ h', Expr.step? e = .some ⟨e', ⟨h'⟩⟩ := by
+/-def Expr.RedTy.complete (h_step : Expr.RedTy e e') : ∃ h', Expr.step? e = .some ⟨e', ⟨h'⟩⟩ := by
+  unfold Expr.step?
+  split
+  · cases h_step
+    · rename_i x y x' hrx hnred
+      refine ⟨.coup hnred hrx, ?_⟩
+      have ⟨h_x, h_step_x⟩ := hrx.complete
+      simp_all only [not_false_eq_true, HasRedex.complete', Option.isNone_none, ↓reduceDIte]
+    · rename_i x y y' hnred hry
+      refine ⟨.coup' hnred hry, ?_⟩
+      have ⟨h_y, h_step_y⟩ := hry.complete
+      have h_red := hry.has_redex
+      have h_red' := h_red.complete
+      simp_all only [exists_true_left, Option.isNone_some, Bool.false_eq_true, ↓reduceDIte, not_false_eq_true,
+    HasRedex.complete', Option.isNone_none]
+  · refine ⟨h_step, ?_⟩
+    simp only [Option.some.injEq, Sigma.mk.injEq]
+    
+    sorry
+    cases h_step
+    · exact ⟨.appe, rfl⟩
+    · rename_i f x f' hrf hred
+      have ⟨f', h_step⟩ := hrf.complete
+      have h_red := hrf.has_redex
+      have h_red' := h_red.complete
+      simp_all only [exists_true_left, Option.some.injEq, Sigma.mk.injEq, app.injEq, exists_and_left,
+    HasRedex.sound]
+      constructor
+      repeat cases h_step
+    · rename_i f x x' hred hrx
+      have ⟨hp, h_step⟩ := hrx.complete
+      have h_red := hrx.has_redex
+      have h_red' := h_red.complete
+      simp_all only [exists_true_left, Option.some.injEq, Sigma.mk.injEq, app.injEq, exists_and_left,
+    HasRedex.sound]
+      
+      sorry
+  sorry-/
+
+def Expr.RedTy.complete (h_step : Expr.RedTy e e') : ∃ h', Expr.step? e = .some ⟨e', ⟨h'⟩⟩ := by
   induction h_step
   · rename_i ih
     simp_all only [exists_true_left]
     exact ⟨.coup (by assumption) (by assumption), by simp [Expr.step?]; simp_all⟩
   · rename_i x y y' hnrx hry ih
-    have h := no_redex_no_step' hnrx
     refine ⟨.coup' hnrx hry, ?_⟩
+    have h_y_redex := hry.has_redex
+    have h_y_redex' := h_y_redex.complete
     simp only [step?, Option.isNone_iff_eq_none]
-    simp_all only [exists_true_left, not_false_eq_true, no_redex_no_step', implies_true]
-    split
+    simp_all only [exists_true_left, not_false_eq_true, reduceCtorEq,
+      ↓reduceDIte, HasRedex.complete']
+  · exact ⟨.appe, rfl⟩
+  · exact ⟨.ide, rfl⟩
+  · exact ⟨.flip, rfl⟩
+  · exact ⟨.flip', rfl⟩
+  · exact ⟨.quoted, rfl⟩
+  · exact ⟨.comp, rfl⟩
+  · exact ⟨.fst, rfl⟩
+  · exact ⟨.snd, rfl⟩
+  · exact ⟨.curr, rfl⟩
+  · exact ⟨.dpair, rfl⟩
+  case congrFun x f f' hnx hrf ih =>
+    have ⟨hp, heq⟩ := ih
     
-    sorry
+    /-have ⟨h', heq⟩ := ih
+    refine ⟨.congrFun hnx h', ?_⟩
+    unfold Expr.step?
+    simp_all only [exists_const, Option.isNone_iff_eq_none]
+    induction h' generalizing x
+    repeat simp_all only [not_false_eq_true, HasRedex.complete', ↓reduceDIte]
+    case congrFun x₁ f₁ f'₁ hnrx hnf ih =>
+      have ⟨f'', hrt⟩ := hnf.complete
+      have ha := ih hnx hrt
+      
+      simp_all
+      sorry-/
 
 theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by
   intro hr₁ hr₂

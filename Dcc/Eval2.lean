@@ -143,3 +143,41 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
       have ⟨m, hf, h₁⟩ := h_r_f.decreasing hn_f
       ⟨m + n, .app hf hn_x, by simp_all only [heq_eq_eq, add_lt_add_iff_right]⟩
 
+def Expr.RedTyTrans := Relation.TransGen Expr.RedTy
+
+theorem Expr.RedTyTrans.decreasing (h_red : Expr.RedTyTrans a b) (hn : a.TySize n) : ∃ m, b.TySize m ∧ m < n := by
+  induction h_red
+  · rename_i hr
+    exact hr.decreasing hn
+  · rename_i b c htrans hr ih
+    have ⟨m, hbm₁, hbm₂⟩ := ih
+    have ⟨mc, hcm₁, hcm₂⟩ := hr.decreasing hbm₁
+    exact ⟨mc, hcm₁, by grind only⟩
+
+theorem Expr.RedTy.decreasing' (h_red : Expr.RedTy e e') : e'.ty_size < e.ty_size := by
+  have ⟨m, h, hp⟩ := Expr.RedTy.decreasing h_red (Expr.TySize.sound (e := e) (n := e.ty_size) rfl)
+  exact h.complete.symm ▸ hp
+
+theorem Expr.RedTyTrans.decreasing' (h_red : Expr.RedTyTrans e e') : e'.ty_size < e.ty_size := by
+  have ⟨m, h, hp⟩ := Expr.RedTyTrans.decreasing h_red (Expr.TySize.sound (e := e) (n := e.ty_size) rfl)
+  exact h.complete.symm ▸ hp
+
+instance : WellFoundedRelation Expr := ⟨fun x y => x.ty_size < y.ty_size, (measure (fun e => Expr.ty_size e)).wf⟩
+
+def Expr.RedTyReflTrans := Relation.ReflTransGen Expr.RedTy
+
+def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
+
+def Expr.step? (e : Expr) : Option Expr :=
+  match e with
+  | (SK ((x ∘ y) z)) => (SK (x (y z)))
+  | (SK (fst (x, _y))) => x
+  | (SK (snd (_x, y))) => y
+  | (SK ((Λ(x) y z))) => (SK (x (y, z)))
+  | (SK (⟨f, g⟩ (a, b))) => (SK ((f a), (g b)))
+  | (SK (f x)) =>
+    match f.step? with
+    | .some f' => (SK (f' x))
+    | .none => .none
+  | _a => .none
+

@@ -21,6 +21,7 @@ inductive Expr where
   | app    : Expr   → Expr → Expr
   | comp   : Expr → Expr → Expr
   | nil    : Expr
+  | quot   : Expr → Expr
   | fst    : Expr
   | snd    : Expr
   | curr   : Expr → Expr
@@ -46,6 +47,7 @@ syntax comb levels : expr
 syntax "#(" term ")" : expr
 syntax "(" expr* ")" : expr
 syntax "fst" : expr
+syntax "quot" expr : expr
 syntax "snd" : expr
 syntax "Λ" "(" expr ")" : expr
 syntax "(" expr "," expr ")" : expr
@@ -60,6 +62,7 @@ syntax ident : expr
 syntax "SK" expr : term
 
 macro_rules
+  | `(SK quot $e:expr) => `(Expr.quot (SK $e:expr))
   | `(SK ⟨$a:expr, $b:expr⟩) => `(Expr.pair (SK $a) (SK $b))
   | `(SK ($a:expr, $b:expr)) => `(Expr.coup (SK $a) (SK $b))
   | `(SK nil) => `(Expr.nil)
@@ -85,6 +88,7 @@ namespace Expr
 
 def toFormat (e : Expr) : Format :=
   match e with
+  | SK quot e => "$" ++ e.toFormat
   | SK nil => "nil"
   | SK Sort m => s!"Sort {m}"
   | SK f ∘ g => f.toFormat ++ " ∘ " ++ g.toFormat

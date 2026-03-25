@@ -196,6 +196,7 @@ def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
 
 def Expr.step? (e : Expr) : Option Expr :=
   match e with
+  | (SK (App (f, x))) => (SK (f x))
   | (SK (id e)) => e
   | (SK (flip (a, b))) => (SK (b, a))
   | (SK (flip ⟨a, b⟩)) => (SK ⟨b, a⟩)
@@ -214,6 +215,9 @@ def Expr.step? (e : Expr) : Option Expr :=
 def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
   unfold Expr.step?
   split
+  · intro h; simp only [Option.some.injEq] at h
+    rw [← h]
+    exact RedTy.appe
   · intro h; simp only [Option.some.injEq] at h
     rw [← h]
     exact RedTy.ide
@@ -303,6 +307,10 @@ def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := f
     · rfl
     · rename_i h
       cases h
+  · cases h
+    · rfl
+    · rename_i h
+      cases h
       rename_i h
       cases h
   · cases h
@@ -332,9 +340,9 @@ def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := f
     · rename_i h
       cases h
       rename_i h
-      · cases h
-        rename_i h
-        cases h
+      cases h
+      rename_i h
+      cases h
   · cases h
     repeat simp_all
     · rename_i ih

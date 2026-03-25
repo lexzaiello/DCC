@@ -46,17 +46,16 @@ def Expr.has_redex (e : Expr) : Option (PLift e.HasRedex) :=
 
 @[simp] theorem Expr.HasRedex.sound (_h : Expr.has_redex e = .some he) : Expr.HasRedex e := he.down
 
-theorem Expr.HasRedex.complete (h : Expr.HasRedex e) : ∃ hp, Expr.has_redex e = .some (.up hp) := by
+theorem Expr.HasRedex.complete (h : Expr.HasRedex e) : Expr.has_redex e = .some (.up h) := by
   unfold Expr.has_redex
   split
-  · exact ⟨.appe, rfl⟩
-  repeat exact ⟨h, rfl⟩
+  repeat rfl
   case h_11 =>
     cases heq : h with
     | coupl =>
       rename_i ha
-      have ⟨ha, heq⟩ := ha.complete
-      simp_all only [exists_true_left]
+      have heq := ha.complete
+      simp_all only
       split
       · repeat rfl
       · repeat rfl
@@ -64,30 +63,29 @@ theorem Expr.HasRedex.complete (h : Expr.HasRedex e) : ∃ hp, Expr.has_redex e 
         exact False.elim <| ih₁ ha heq
     | coupr =>
       rename_i ha
-      have ⟨ha, heq⟩ := ha.complete
-      simp_all only [exists_true_left]
+      have heq := ha.complete
+      simp_all only
       split
       · repeat rfl
       · repeat rfl
       · rename_i ih₁ ih₂
         exact False.elim <| ih₂ ha heq
   case h_12 =>
-    refine ⟨h, ?_⟩
     simp_all only [imp_false]
     cases h
     repeat simp_all
     case dpair f g a b ih =>
       exact False.elim <| ih _ _ _ _ rfl rfl rfl rfl
     · rename_i h
-      have ⟨ha, heq⟩ := h.complete
+      have heq := h.complete
       split
       · rfl
       · rename_i ih
-        exact False.elim <| ih ha (by assumption)
+        exact False.elim <| ih h (by assumption)
       · rename_i ih
         simp_all only [imp_false, not_true_eq_false]
     · rename_i h
-      have ⟨ha, heq⟩ := h.complete
+      have heq := h.complete
       split
       · rfl
       · rename_i ih

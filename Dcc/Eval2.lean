@@ -97,6 +97,10 @@ theorem Expr.HasRedex.complete (h : Expr.HasRedex e) : ∃ hp, Expr.has_redex e 
   cases h
   repeat simp_all
 
+@[simp] theorem Expr.HasRedex.some_complete (h : Expr.HasRedex e) : (Expr.has_redex e).isSome := by
+  have ⟨h, a⟩ := h.complete
+  simp_all only [Option.some.injEq, sound, Option.isSome_some]
+
 @[simp] theorem Expr.HasRedex.complete' (h : ¬ Expr.HasRedex e) : Expr.has_redex e = .none := by
   have h : ¬ ∃ h, e.has_redex = .some ⟨h⟩ := fun ⟨hp, heq⟩ => by
     have h : e.HasRedex := Expr.HasRedex.sound heq
@@ -453,18 +457,40 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
     simp_all only [imp_false, not_not]
     exact no_redex_appr_contra h (by assumption)
 
+@[simp] theorem no_redex_no_step' : ¬ Expr.HasRedex e → ∀ e', ¬ e.RedTy e' := by
+  intro h e' hr
+  exact no_redex_no_step h ⟨e', hr⟩
+
+@[simp] theorem Expr.RedTy.has_redex : Expr.RedTy e e' → e.HasRedex := fun h => by
+  induction h
+  · exact Expr.HasRedex.coupl (by assumption)
+  · exact Expr.HasRedex.coupr (by assumption)
+  · exact Expr.HasRedex.appe
+  · exact Expr.HasRedex.ide
+  · exact Expr.HasRedex.flip
+  · exact Expr.HasRedex.flip'
+  · exact Expr.HasRedex.quoted
+  · exact Expr.HasRedex.comp
+  · exact Expr.HasRedex.fst
+  · exact Expr.HasRedex.snd
+  · exact Expr.HasRedex.curr
+  · exact Expr.HasRedex.dpair
+  · exact Expr.HasRedex.left (by assumption)
+  · exact Expr.HasRedex.right (by assumption)
+
 def Expr.RedTy.step?_complete (h_step : Expr.RedTy e e') : ∃ h', Expr.step? e = .some ⟨e', ⟨h'⟩⟩ := by
   induction h_step
   · rename_i ih
     simp_all only [exists_true_left]
     exact ⟨.coup (by assumption) (by assumption), by simp [Expr.step?]; simp_all⟩
-  · rename_i ih
-    simp_all only [exists_true_left]
-    refine ⟨.coup' (by assumption) (by assumption), ?_⟩
+  · rename_i x y y' hnrx hry ih
+    have h := no_redex_no_step' hnrx
+    refine ⟨.coup' hnrx hry, ?_⟩
     simp only [step?, Option.isNone_iff_eq_none]
-    simp_all only [not_false_eq_true, HasRedex.complete', ↓reduceDIte, dite_eq_right_iff]
-    intro h
+    simp_all only [exists_true_left, not_false_eq_true, no_redex_no_step', implies_true]
+    split
     
+    sorry
 
 theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by
   intro hr₁ hr₂

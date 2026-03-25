@@ -32,6 +32,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
 inductive Expr.RedTy : Expr → Expr → Prop
   | ide       : Expr.RedTy (SK (id e)) e
   | flip      : Expr.RedTy (SK (flip (a, b))) (SK (b, a))
+  | flip'     : Expr.RedTy (SK (flip ⟨a, b⟩)) (SK ⟨b, a⟩)
   | quoted    : Expr.RedTy (SK ((quot e) y)) e
   | comp      : Expr.RedTy (SK ((x ∘ y) z)) (SK (x (y z)))
   | fst       : Expr.RedTy (SK (fst (x, y))) x
@@ -126,6 +127,10 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
     match h_size with
     | .app .ide h_t_e =>
       ⟨_, h_t_e, by grind only⟩
+  | .flip' (a := a) (b := b) =>
+    match h_size with
+    | .app .flip (.app (.app .dpair h_t_a) h_t_b) =>
+      ⟨_, .app (.app .dpair h_t_b) h_t_a, by grind only⟩
   | .flip (a := a) (b := b) =>
     match h_size with
     | .app .flip (.coup h_t_a h_t_b) =>
@@ -185,6 +190,7 @@ def Expr.step? (e : Expr) : Option Expr :=
   match e with
   | (SK (id e)) => e
   | (SK (flip (a, b))) => (SK (b, a))
+  | (SK (flip ⟨a, b⟩)) => (SK ⟨b, a⟩)
   | (SK ((quot e) _y)) => e
   | (SK ((x ∘ y) z)) => (SK (x (y z)))
   | (SK (fst (x, _y))) => x
@@ -206,6 +212,9 @@ def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
   · intro h; simp only [Option.some.injEq] at h
     rw [← h]
     exact RedTy.flip
+  · intro h; simp only [Option.some.injEq] at h
+    rw [← h]
+    exact RedTy.flip'
   · intro h; simp only [Option.some.injEq] at h
     rw [← h]
     exact RedTy.quoted
@@ -270,6 +279,10 @@ theorem step?_decreasing : Expr.step? e = .some e' → e'.ty_size < e.ty_size :=
 def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := fun h => by
   unfold Expr.step?
   split
+  · cases h
+    · rfl
+    · rename_i h
+      cases h
   · cases h
     · rfl
     · rename_i h

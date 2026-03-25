@@ -23,6 +23,7 @@ inductive Expr where
   | nil    : Expr
   | quot   : Expr
   | flip   : Expr
+  | id     : Expr
   | fst    : Expr
   | snd    : Expr
   | curr   : Expr → Expr
@@ -51,6 +52,7 @@ syntax "(" expr* ")" : expr
 syntax "fst" : expr
 syntax "quot" : expr
 syntax "flip" : expr
+syntax "id" : expr
 syntax "snd" : expr
 syntax "Λ" "(" expr ")" : expr
 syntax "(" expr "," expr ")" : expr
@@ -66,6 +68,7 @@ syntax ident : expr
 syntax "SK" expr : term
 
 macro_rules
+  | `(SK id) => `(Expr.id)
   | `(SK flip) => `(Expr.flip)
   | `(SK quot) => `(Expr.quot)
   | `(SK pair) => `(Expr.dpair)
@@ -95,6 +98,7 @@ namespace Expr
 
 def toFormat (e : Expr) : Format :=
   match e with
+  | SK id => "id"
   | SK dpair => "dpair"
   | SK flip => "flip"
   | SK quot => "quot"

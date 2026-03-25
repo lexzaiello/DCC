@@ -9,6 +9,7 @@ flip probably necessary.
 -- Decreasing measure
 -- function arity decreases with each argument
 inductive Expr.TySize : Expr → ℕ → Prop
+  | ide    : Expr.TySize (SK id) 1
   | quoted : Expr.TySize (SK quot) 1
   | flip   : Expr.TySize (SK flip) 1
   | fst    : Expr.TySize (SK fst) 1
@@ -29,6 +30,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
     → Expr.TySize (SK (f x)) (n + m)
 
 inductive Expr.RedTy : Expr → Expr → Prop
+  | ide       : Expr.RedTy (SK (id e)) e
   | flip      : Expr.RedTy (SK (flip (a, b))) (SK (b, a))
   | quoted    : Expr.RedTy (SK ((quot e) y)) e
   | comp      : Expr.RedTy (SK ((x ∘ y) z)) (SK (x (y z)))
@@ -52,6 +54,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
   · exact ⟨0, .nil⟩
   · exact ⟨1, .quoted⟩
   · exact ⟨1, .flip⟩
+  · exact ⟨1, .ide⟩
   · exact ⟨1, .fst⟩
   · exact ⟨1, .snd⟩
   · rename_i ih
@@ -71,7 +74,7 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
-  | .flip | .quot | .comp | .dpair | .fst | .snd => 1
+  | .id | .flip | .quot | .comp | .dpair | .fst | .snd => 1
   | .curr x =>
     let m := x.ty_size
     m.succ
@@ -90,6 +93,7 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   unfold Expr.ty_size at h
   rw [← h]
   split at h
+  · exact .ide
   · exact .flip
   · exact .quoted
   · exact .comp
@@ -118,6 +122,10 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
 
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n :=
   match heq : h_red with
+  | .ide (e := e) =>
+    match h_size with
+    | .app .ide h_t_e =>
+      ⟨_, h_t_e, by grind only⟩
   | .flip (a := a) (b := b) =>
     match h_size with
     | .app .flip (.coup h_t_a h_t_b) =>
@@ -175,6 +183,7 @@ def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
 
 def Expr.step? (e : Expr) : Option Expr :=
   match e with
+  | (SK (id e)) => e
   | (SK (flip (a, b))) => (SK (b, a))
   | (SK ((quot e) _y)) => e
   | (SK ((x ∘ y) z)) => (SK (x (y z)))
@@ -191,6 +200,9 @@ def Expr.step? (e : Expr) : Option Expr :=
 def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
   unfold Expr.step?
   split
+  · intro h; simp only [Option.some.injEq] at h
+    rw [← h]
+    exact RedTy.ide
   · intro h; simp only [Option.some.injEq] at h
     rw [← h]
     exact RedTy.flip
@@ -258,6 +270,10 @@ theorem step?_decreasing : Expr.step? e = .some e' → e'.ty_size < e.ty_size :=
 def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := fun h => by
   unfold Expr.step?
   split
+  · cases h
+    · rfl
+    · rename_i h
+      cases h
   · cases h
     · rfl
     · rename_i h

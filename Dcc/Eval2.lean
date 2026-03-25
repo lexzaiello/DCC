@@ -139,8 +139,7 @@ inductive Expr.RedTy : Expr → Expr → Prop
   | coup      : ¬ Expr.HasRedex y
     → Expr.RedTy x x'
     → Expr.RedTy (SK (x, y)) (SK (x', y))
-  | coup'     : ¬ Expr.HasRedex x
-    → Expr.RedTy y y'
+  | coup'     : Expr.RedTy y y'
     → Expr.RedTy (SK (x, y)) (SK (x, y'))
   | appe      : Expr.RedTy (SK (App (f, x))) (SK (f x))
   | ide       : Expr.RedTy (SK (id e)) e
@@ -156,8 +155,7 @@ inductive Expr.RedTy : Expr → Expr → Prop
     → ¬ Expr.HasRedex (SK (f x))
     → Expr.RedTy f f'
     → Expr.RedTy (SK (f x)) (SK (f' x))
-  | congrArg  : ¬ Expr.HasRedex f
-    → ¬ Expr.HasRedex (SK (f x))
+  | congrArg  : ¬ Expr.HasRedex (SK (f x))
     → Expr.RedTy x x'
     → Expr.RedTy (SK (f x)) (SK (f x'))
 
@@ -244,7 +242,7 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
 
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n :=
   match heq : h_red with
-  | .coup' (x := x) (y := y) h_r_y h_r_x =>
+  | .coup' (x := x) (y := y) h_r_x =>
     let ⟨n_x', h_size_y', h_lt⟩ := h_r_x.decreasing (TySize.sound rfl)
     let h := Expr.TySize.sound (e := y) rfl
     match h_size with
@@ -294,7 +292,7 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
     match h_size with
     | .app (.app (.curr h_t_x) h_t_y) h_t_z =>
       ⟨_, .app h_t_x (.coup h_t_y h_t_z), by grind only⟩
-  | .congrArg (f := f) (x := x) (x' := x') h_n_r_all h_n_r_f h_r_x =>
+  | .congrArg (f := f) (x := x) (x' := x') h_n_r_all h_r_x =>
     match h_size with
     | .app hn_f hn_x (n := m) =>
       have ⟨n', hx, h₁⟩ := h_r_x.decreasing hn_x
@@ -339,14 +337,9 @@ def Expr.step? (e : Expr) : Option ((e' : Expr) × (PLift (e.RedTy e'))) :=
         have h := h.complete
         simp_all only [Option.isNone_iff_eq_none, reduceCtorEq]) hr⟩⟩
       | .none => .none
-    else if h₂ : a.has_redex.isNone then
-      match b.step? with
-      | .some ⟨b', ⟨hr⟩⟩ => .some ⟨SK (a, b'), ⟨.coup' (fun h => by
-        have h := h.complete
-        simp_all only [Option.isNone_iff_eq_none, reduceCtorEq]) hr⟩⟩
+    else match b.step? with
+      | .some ⟨b', ⟨hr⟩⟩ => .some ⟨SK (a, b'), ⟨.coup' hr⟩⟩
       | .none => .none
-    else
-      .none
   | (SK (App (f, x))) => .some ⟨SK (f x), ⟨.appe⟩⟩
   | (SK (id e)) => .some ⟨e, ⟨.ide⟩⟩
   | (SK (flip (a, b))) => .some ⟨SK (b, a), ⟨.flip⟩⟩
@@ -369,14 +362,9 @@ def Expr.step? (e : Expr) : Option ((e' : Expr) × (PLift (e.RedTy e'))) :=
           simp_all only [Option.isNone_iff_eq_none, reduceCtorEq]
           ) h₀ hf⟩⟩
         | .none => .none
-      else if h : f.has_redex.isNone then
-        match x.step? with
-        | .some ⟨x', ⟨hx⟩⟩ => .some ⟨(SK (f x')), ⟨.congrArg (fun h => by
-          have h := h.complete
-          simp_all only [Option.isNone_iff_eq_none, reduceCtorEq]) h₀ hx⟩⟩
+      else match x.step? with
+        | .some ⟨x', ⟨hx⟩⟩ => .some ⟨(SK (f x')), ⟨.congrArg h₀ hx⟩⟩
         | .none => .none
-      else
-        .none
     else .none
   | _a => .none
 
@@ -504,8 +492,8 @@ def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e',
   | .app f x => match heqs : h_step with
     | .congrFun hnrx hnre hrf =>
       False.elim (no_redex_no_step hnre ⟨_, .congrFun hnrx hnre hrf⟩)
-    | .congrArg hnrf hnre hrx =>
-      False.elim (no_redex_no_step hnre ⟨_, .congrArg hnrf hnre hrx⟩)
+    | .congrArg hnre hrx =>
+      False.elim (no_redex_no_step hnre ⟨_, .congrArg hnre hrx⟩)
     | h => by
       cases h
       repeat simp [Expr.step?]
@@ -515,8 +503,8 @@ def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e',
     match heq' : h_step with
     | .coup (x' := a') hnb hra =>
       simp_all only [heq_eq_eq, not_false_eq_true, HasRedex.complete', step?, Option.isNone_iff_eq_none, ↓reduceDIte, hra.complete]
-    | .coup' hnx hry =>
-      simp_all only [heq_eq_eq, not_false_eq_true, HasRedex.complete', step?, Option.isNone_iff_eq_none, ↓reduceDIte]
+    | .coup' hry =>
+      simp_all only [heq_eq_eq, step?, Option.isNone_iff_eq_none]
       simp only [hry.has_redex.complete, reduceCtorEq, ↓reduceDIte, hry.complete]
   | .curr _e
   | SK snd | SK fst | SK quot | SK App

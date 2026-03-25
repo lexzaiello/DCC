@@ -429,7 +429,7 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
 @[simp] theorem no_redex_coupr_contra : ¬ Expr.HasRedex (SK (f, x)) → x.HasRedex → False := fun h hf => by
   exact absurd hf (no_redex_coupr h)
 
-theorem no_redex_no_step : ¬ Expr.HasRedex e → ¬ ∃ e', e.RedTy e' := by
+@[simp] theorem no_redex_no_step : ¬ Expr.HasRedex e → ¬ ∃ e', e.RedTy e' := by
   intro h ⟨e', hr⟩
   induction hr
   · simp_all only [imp_false, not_not]
@@ -439,10 +439,19 @@ theorem no_redex_no_step : ¬ Expr.HasRedex e → ¬ ∃ e', e.RedTy e' := by
   · exact h .appe
   · exact h .ide
   · exact h .flip
-  · rename_i a b
-    exact h .flip'
-  
-  sorry
+  · exact h .flip'
+  · exact h .quoted
+  · exact h .comp
+  · exact h .fst
+  · exact h .snd
+  · exact h .curr
+  · exact h .dpair
+  · rename_i x f f' hrx hrf ih
+    simp_all only [imp_false, not_not]
+    exact no_redex_appl_contra h (by assumption)
+  · rename_i x x' f hrx hrf ih
+    simp_all only [imp_false, not_not]
+    exact no_redex_appr_contra h (by assumption)
 
 def Expr.RedTy.step?_complete (h_step : Expr.RedTy e e') : ∃ h', Expr.step? e = .some ⟨e', ⟨h'⟩⟩ := by
   induction h_step

@@ -181,3 +181,28 @@ def Expr.step? (e : Expr) : Option Expr :=
     | .none => .none
   | _a => .none
 
+def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
+  unfold Expr.step?
+  split
+  · intro h; simp only [Option.some.injEq] at h
+    rw [← h]
+    exact RedTy.comp
+  · intro h; simp only [Option.some.injEq] at h
+    rw [← h]
+    exact RedTy.fst
+  · intro h; simp only [Option.some.injEq] at h
+    rw [← h]
+    exact RedTy.snd
+  · intro h; simp only [Option.some.injEq] at h
+    rw [← h]
+    exact RedTy.curr
+  · intro h; simp only [Option.some.injEq] at h
+    rw [← h]
+    exact RedTy.pair
+  · intro h
+    split at h
+    · simp_all only [imp_false, Option.some.injEq]
+      rename_i fheq
+      exact h.symm ▸ (RedTy.congrFun (Expr.step?_sound fheq))
+    · contradiction
+  · intro h; contradiction

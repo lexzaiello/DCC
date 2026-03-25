@@ -385,3 +385,14 @@ def Expr.RedTyTrans.SN (e : Expr) : Acc (fun b a => Expr.RedTyTrans a b) e := Ac
   exact Expr.RedTyTrans.SN e')
 termination_by e.ty_size
 
+theorem no_ty_step_norm : Expr.step? t = .none → Expr.IsNorm t := by
+  intro h
+  exact (fun ⟨e', hn⟩ => by have h := hn.step?_complete; simp_all only [reduceCtorEq])
+
+theorem Expr.RedTyTrans.no_step? : Expr.step? t = .none → ¬ Expr.RedTyTrans t t' := by
+  intro h
+  have h := no_ty_step_norm h
+  exact (fun h => by
+    induction h
+    · exact h ⟨_, by assumption⟩
+    · assumption)

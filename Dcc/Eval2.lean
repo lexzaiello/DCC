@@ -275,3 +275,113 @@ def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := f
     · rename_i h_r_f
       simp only [h_r_f.step?_complete]
   · cases h; repeat simp_all
+
+theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by
+  intro hr₁ hr₂
+  have heq₁ := hr₁.step?_complete
+  have heq₂ := hr₂.step?_complete
+  simp_all
+
+-- Normal forms reduce to themselves
+theorem Expr.IsNorm.reduce_rfl : Expr.IsNorm e → e.reduce = e := by
+  intro h
+  unfold Expr.reduce
+  split
+  · rename_i heq
+    have h := Expr.step?_sound heq
+    rename_i h_norm e''
+    exfalso
+    exact h_norm ⟨_, h⟩
+  rfl
+
+-- Single-step reduct of a reduces to the reduction of a
+theorem Expr.RedTy.reduce_same : Expr.RedTy a b → reduce a = reduce b := by
+  intro ha
+  conv =>
+    left
+    unfold reduce
+    rfl
+  split
+  · rename_i e' heq
+    simp [ha.unique (Expr.step?_sound heq)]
+  · have h := ha.step?_complete
+    simp_all
+
+-- Church-rosser for our reduction function. Implies church-rosser for the predicate version, since we have soundness.
+theorem Expr.RedTyTrans.reduce_same : Expr.RedTyTrans a b → Expr.RedTyTrans a c → reduce b = reduce c := by
+  intro h₁ h₂
+  induction h₁ generalizing c
+  · induction h₂ generalizing b
+    · rename_i b₁ hr₁ b₂ hr₂
+      have ha := hr₁.reduce_same
+      have hb := hr₂.reduce_same
+      simp_all
+    · rename_i b₁ hrr₁ b₂ c htrans hb₂ ih
+      rw [ih]
+      exact hb₂.reduce_same
+      exact b₂
+  · rename_i b₁ c₁ htrans hr₂ ih
+    have h := ih h₂
+    rw [← h]
+    have h := hr₂.reduce_same
+    simp_all
+
+theorem Expr.RedTyTrans.complete : Expr.RedTyTrans a b → Expr.reduce a = Expr.reduce b := by
+  intro h
+  induction h
+  · exact Expr.RedTy.reduce_same (by assumption)
+  · rename_i h _
+    have h := h.reduce_same
+    simp_all
+
+-- This proof shows that if the reduct under transitive closure of b is a normal form,
+-- then reduce produces the same result.
+theorem Expr.RedTyTrans.complete' : Expr.RedTyTrans a b → IsNorm b → Expr.reduce a = b := by
+  intro ha hnorm
+  induction ha
+  · rename_i _ hr
+    simp [hr.reduce_same]
+    unfold Expr.reduce
+    split
+    · exfalso
+      exact hnorm ⟨_, Expr.step?_sound (by assumption)⟩
+    · rfl
+  · rename_i b₂ c htrans hrb ih
+    have h := hrb.step?_complete
+    change Expr.RedTyTrans a b₂ at htrans
+    rw [htrans.complete]
+    unfold Expr.reduce
+    split
+    · simp_all
+      unfold Expr.reduce
+      split
+      · simp
+        exfalso
+        exact hnorm ⟨_, Expr.step?_sound (by assumption)⟩
+      · rfl
+    simp_all
+
+theorem reduce_norm : Expr.reduce e = e' → Expr.IsNorm e' := by
+  intro h ⟨e'', hr⟩
+  unfold Expr.reduce at h
+  split at h
+  · rename_i e'' h_step
+    have h_dec : e''.ty_size < e.ty_size:= (Expr.step?_sound h_step).decreasing'
+    exact reduce_norm h (⟨_, hr⟩)
+  · rename_i hstep
+    have h := hr.step?_complete
+    simp_all only [reduceCtorEq]
+termination_by e.ty_size
+
+-- Strong normalization of single-step reduction using our decreasing measure.
+def Expr.RedTy.SN (e : Expr) : Acc (fun b a => Expr.RedTy a b) e := Acc.intro e (fun e' hr => by
+  have h := hr.decreasing'
+  exact Expr.RedTy.SN e')
+termination_by e.ty_size
+
+-- Strong normalization of transitive closure of single-step reduction using our decreasing measure.
+def Expr.RedTyTrans.SN (e : Expr) : Acc (fun b a => Expr.RedTyTrans a b) e := Acc.intro e (fun e' hr => by
+  have h := hr.decreasing'
+  exact Expr.RedTyTrans.SN e')
+termination_by e.ty_size
+

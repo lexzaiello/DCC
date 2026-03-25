@@ -518,66 +518,6 @@ theorem Expr.RedTy.size_pos (h_step : Expr.RedTy e e') : 0 < e.ty_size := by
   have h := h_step.decreasing'
   omega
 
-/-def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e', ⟨h_step⟩⟩ := by
-  induction heq : h_step
-  · simp_all
-    rename_i h _
-    simp [Expr.step?, h.has_redex]
-    rename_i h
-    simp [h]
-  · simp_all
-    rename_i h_n h_red ih
-    simp [Expr.step?, h_n, ih]
-  · simp_all
-    cases h_step
-    · rfl
-    · rename_i h _
-      exfalso
-      exact h .appe
-  · simp_all
-    cases h_step
-    · rfl
-    · rename_i h
-      exfalso
-      exact h .ide
-  · simp_all
-    cases h_step
-    · rfl
-  · simp_all
-    cases h_step
-    · rfl
-  · simp_all
-    cases h_step
-    · rfl
-    · rename_i h
-      exfalso
-      exact h .quoted
-  · simp_all
-    cases h_step
-    · rfl
-  · simp_all
-    cases h_step
-    · rfl
-    · rename_i h
-      exfalso
-      exact h .fst
-  · simp_all
-    cases h_step
-    · rfl
-    · rename_i h
-      exfalso
-      exact h .snd
-  · simp_all
-    cases h_step
-    · rfl
-  · simp_all
-    cases h_step
-    · rfl
-  case congrFun x f f' hnx h_red h_red_f ih =>
-    unfold Expr.step?
-    
-    sorry-/
-
 def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e', ⟨h_step⟩⟩ := by
   if h_top_red : e.IsRedex then
     induction h_step
@@ -635,8 +575,7 @@ def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e',
         apply HasRedex.right
         exact h_r_x.has_redex
         have h := HasRedex.complete h_r_x.has_redex
-        simp [h]
-        simp [h_r_x.complete]
+        simp [h, h_r_x.complete]
 
 /-def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e', ⟨h_step⟩⟩ :=
   match heq : e with

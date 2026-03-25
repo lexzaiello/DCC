@@ -98,3 +98,12 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   · exact .srt
   · rename_i x₁ f x
     exact .app (Expr.TySize.sound (e := f) rfl) (Expr.TySize.sound (e := x) rfl)
+
+theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
+  intro h
+  induction h with
+  | pair hf hx ih₁ ih₂ | comp hf hx ih₁ ih₂ | app hf hx ih₁ ih₂ =>
+    rw [← ih₁, ← ih₂]
+    rfl
+  | curr _a ih₁ => rw [← ih₁]; rfl
+  | _ => rfl

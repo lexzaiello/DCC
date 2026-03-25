@@ -103,7 +103,7 @@ def toFormat (e : Expr) : Format :=
   match e with
   | SK App => "App"
   | SK id => "id"
-  | SK dpair => "dpair"
+  | SK dpair => "pair"
   | SK flip => "flip"
   | SK quot => "quot"
   | SK nil => "nil"

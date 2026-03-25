@@ -20,7 +20,7 @@ inductive Expr where
   | comb   : Comb   → Expr
   | app    : Expr   → Expr → Expr
   | App    : Expr
-  | comp   : Expr
+  | compe  : Expr
   | nil    : Expr
   | quot   : Expr
   | flip   : Expr
@@ -46,7 +46,7 @@ syntax "K'" : comb
 syntax "S" : comb
 
 syntax "App" : expr
-syntax "B" : expr
+syntax "comp" : expr
 syntax expr "∘" expr : expr
 syntax comb levels : expr
 syntax "#(" term ")" : expr
@@ -81,8 +81,8 @@ macro_rules
   | `(SK fst) => `(Expr.fst)
   | `(SK snd) => `(Expr.snd)
   | `(SK Λ($f:expr)) => `(Expr.curr (SK $f))
-  | `(SK B) => `(Expr.comp)
-  | `(SK $f ∘ $g) => `(SK (B $f $g))
+  | `(SK comp) => `(Expr.compe)
+  | `(SK $f ∘ $g) => `(SK (comp $f $g))
   | `(SK #($t:term)) => `($t)
   | `(SK $idt:ident) => `($idt:term)
   | `(SK K.{[$m:term, $n:term]}) => `(Expr.comb (Comb.K $m:term $n:term))
@@ -108,7 +108,7 @@ def toFormat (e : Expr) : Format :=
   | SK quot => "quot"
   | SK nil => "nil"
   | SK Sort m => s!"Sort {m}"
-  | SK B => "B"
+  | SK comp => "comp"
   | SK f ∘ g => f.toFormat ++ " ∘ " ++ g.toFormat
   | SK fst => "fst"
   | SK snd => "snd"

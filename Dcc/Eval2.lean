@@ -15,7 +15,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
   | flip   : Expr.TySize (SK flip) 1
   | fst    : Expr.TySize (SK fst) 1
   | snd    : Expr.TySize (SK snd) 1
-  | comp   : Expr.TySize (SK B) 1
+  | compe  : Expr.TySize (SK comp) 1
   | coup   : Expr.TySize a m
     → Expr.TySize b n
     → Expr.TySize (SK (a, b)) (m + n)
@@ -31,6 +31,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
     → Expr.TySize (SK (f x)) (n + m)
 
 inductive Expr.RedTy : Expr → Expr → Prop
+  | coup      : Expr.RedTy x x' → Expr.RedTy (SK (x, y)) (SK (x', y))
   | appe      : Expr.RedTy (SK (App (f, x))) (SK (f x))
   | ide       : Expr.RedTy (SK (id e)) e
   | flip      : Expr.RedTy (SK (flip (a, b))) (SK (b, a))
@@ -53,7 +54,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     have ⟨n, hn⟩ := ih₁
     have ⟨m, hm⟩ := ih₂
     exact ⟨n + m, .app hn hm⟩
-  case comp => exact ⟨1, .comp⟩
+  case compe => exact ⟨1, .compe⟩
   · exact ⟨1, .appe⟩
   · exact ⟨0, .nil⟩
   · exact ⟨1, .quoted⟩
@@ -78,7 +79,7 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
-  | .App | .id | .flip | .quot | .comp | .dpair | .fst | .snd => 1
+  | .App | .id | .flip | .quot | .compe | .dpair | .fst | .snd => 1
   | .curr x =>
     let m := x.ty_size
     m.succ
@@ -101,7 +102,7 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   · exact .ide
   · exact .flip
   · exact .quoted
-  · exact .comp
+  · exact .compe
   · exact .dpair
   · exact .fst
   · exact .snd
@@ -127,6 +128,13 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
 
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n :=
   match heq : h_red with
+  | .coup (x := x) (x' := x') (y := y) h_r_x =>
+    let ⟨n_x', h_size_x', h_lt⟩ := h_r_x.decreasing (TySize.sound rfl)
+    let h := Expr.TySize.sound (e := x) rfl
+    match h_size with
+    | .coup h_n_x h_n_y =>
+      let h := TySize.unique (e := x) h h_n_x
+      ⟨_, .coup h_size_x' h_n_y, by simp_all only [heq_eq_eq, add_lt_add_iff_right]⟩
   | .appe (f := f) (x := x) =>
     match h_size with
     | .app .appe (.coup h_t_f h_t_x) =>
@@ -148,7 +156,7 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
     | .app (.app .quoted h_t_x) _ => ⟨_, h_t_x, by grind only⟩
   | .comp (x := x) (y := y) (z := z) =>
      match h_size with
-     | .app (.app (.app .comp h_t_x) h_t_y) h_t_z => ⟨_, Expr.TySize.app h_t_x (.app h_t_y h_t_z), by grind only⟩
+     | .app (.app (.app .compe h_t_x) h_t_y) h_t_z => ⟨_, Expr.TySize.app h_t_x (.app h_t_y h_t_z), by grind only⟩
   | .fst =>
     match h_size with
     | .app .fst (.coup h_t_a h_t_b) => ⟨_, h_t_a, by grind only⟩
@@ -196,6 +204,9 @@ def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
 
 def Expr.step? (e : Expr) : Option Expr :=
   match e with
+  | (SK (a, b)) => match a.step? with
+    | .some a' => .some (SK (a', b))
+    | .none => .none
   | (SK (App (f, x))) => (SK (f x))
   | (SK (id e)) => e
   | (SK (flip (a, b))) => (SK (b, a))
@@ -215,6 +226,12 @@ def Expr.step? (e : Expr) : Option Expr :=
 def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
   unfold Expr.step?
   split
+  · intro h;
+    split at h
+    · rename_i h_e_step
+      simp at h; rw [← h]
+      exact RedTy.coup (Expr.step?_sound h_e_step)
+    · contradiction
   · intro h; simp only [Option.some.injEq] at h
     rw [← h]
     exact RedTy.appe
@@ -289,67 +306,18 @@ theorem step?_decreasing : Expr.step? e = .some e' → e'.ty_size < e.ty_size :=
   (Expr.step?_sound h).decreasing'
 
 def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := fun h => by
-  unfold Expr.step?
-  split
-  · cases h
-    · rfl
-    · rename_i h
-      cases h
-  · cases h
-    · rfl
-    · rename_i h
-      cases h
-  · cases h
-    · rfl
-    · rename_i h
-      cases h
-  · cases h
-    · rfl
-    · rename_i h
-      cases h
-  · cases h
-    · rfl
-    · rename_i h
-      cases h
-      rename_i h
-      cases h
-  · cases h
-    · rfl
-    · rename_i h
-      cases h
-      · rename_i h
-        cases h
-        · rename_i h
-          cases h
-  · cases h
-    · rfl
-    · rename_i h
-      cases h
-  · cases h
-    · rfl
-    · rename_i h
-      cases h
-  · cases h
-    · rfl
-    · rename_i h
-      cases h
-      rename_i h
-      cases h
-  · cases h
-    · rfl
-    · rename_i h
-      cases h
-      rename_i h
-      cases h
-      rename_i h
-      cases h
-  · cases h
-    repeat simp_all
-    · rename_i ih
-      exact False.elim <| ih _ _ _ _ rfl rfl rfl rfl
-    · rename_i h_r_f
-      simp only [h_r_f.step?_complete]
-  · cases h; repeat simp_all
+  induction h with
+  | congrFun h_r_f ih =>
+    unfold Expr.step?
+    split
+    · rename_i heq
+      cases heq
+    repeat (rename_i heq; cases heq; cases ih)
+    · rename_i heq
+      cases heq
+      simp_all only [imp_false]
+    simp_all only [reduceCtorEq, implies_true, app.injEq, imp_false, not_and, forall_apply_eq_imp_iff, forall_eq']
+  | _ => unfold Expr.step?; simp_all only
 
 theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by
   intro hr₁ hr₂

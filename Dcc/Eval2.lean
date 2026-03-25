@@ -206,3 +206,72 @@ def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
       exact h.symm ▸ (RedTy.congrFun (Expr.step?_sound fheq))
     · contradiction
   · intro h; contradiction
+
+-- Full beta-reduction. We use our decreasing measure to recurse.
+-- termination_by e is also possible. It infers ty_size due to our WellfoundedRelation
+-- instance.
+def Expr.reduce (e : Expr) : Expr :=
+  match heq : step? e with
+  | .some e' =>
+    -- This hypothesis allows the recursion. Easy to prove.
+    have _h_size : e'.ty_size < e.ty_size := (Expr.step?_sound heq).decreasing'
+    e'.reduce
+  | .none => e
+termination_by e.ty_size
+
+-- Every reduction corresponds to a constructor of reflexive transitive closure of single-step reduction
+theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := by
+  intro h
+  unfold Expr.reduce at h
+  split at h
+  · rename_i e'' heq
+    have _h_size : e''.ty_size < e.ty_size := (Expr.step?_sound heq).decreasing'
+    exact .trans (.single (Expr.step?_sound heq)) (reduce_sound h)
+  · rename_i heq
+    exact h.symm ▸ .refl
+termination_by e.ty_size
+
+-- Congruence implies that the size of the entire expression decreases.
+theorem app_step_size_decrease : Expr.RedTy f f' → Expr.RedTy x x' → (SK (f' x')).ty_size < (SK (f x)).ty_size := by
+  intro ha hb
+  have h : f'.ty_size < f.ty_size := ha.decreasing'
+  have h : x'.ty_size < x.ty_size := hb.decreasing'
+  induction ha generalizing x'
+  repeat (unfold Expr.ty_size; grind)
+
+theorem step?_decreasing : Expr.step? e = .some e' → e'.ty_size < e.ty_size := fun h =>
+  (Expr.step?_sound h).decreasing'
+
+def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := fun h => by
+  unfold Expr.step?
+  split
+  · cases h
+    · rename_i h
+      rfl
+    · rename_i h
+      cases h
+  · cases h
+    · rfl
+    · rename_i h
+      cases h
+  · cases h
+    · rfl
+    · rename_i h
+      cases h
+  · cases h
+    · rfl
+    · rename_i h
+      cases h
+      rename_i h
+      cases h
+  · cases h
+    · rfl
+    · rename_i h
+      cases h
+  · cases h
+    repeat simp_all
+    · rename_i ih
+      exact False.elim <| ih _ _ _ _ rfl rfl rfl rfl
+    · rename_i h_r_f
+      simp only [h_r_f.step?_complete]
+  · cases h; repeat simp_all

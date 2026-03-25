@@ -7,15 +7,11 @@ inductive Expr.TySize : Expr → ℕ → Prop
     → Expr.TySize (SK (quot e)) m.succ
   | fst  : Expr.TySize (SK fst) 1
   | snd  : Expr.TySize (SK snd) 1
-  | comp : Expr.TySize f m
-    → Expr.TySize g n
-    → Expr.TySize (SK f ∘ g) (m + n).succ
+  | comp : Expr.TySize (SK B) 1
   | coup  : Expr.TySize a m
     → Expr.TySize b n
     → Expr.TySize (SK (a, b)) (m + n)
-  | pair  : Expr.TySize a m
-    → Expr.TySize b n
-    → Expr.TySize (SK ⟨a, b⟩) (m + n).succ
+  | dpair : Expr.TySize (SK pair) 1
   | curr  : Expr.TySize x m
     → Expr.TySize (SK Λ(x)) m.succ
   | nil   : Expr.TySize (SK nil) 0
@@ -45,10 +41,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     have ⟨n, hn⟩ := ih₁
     have ⟨m, hm⟩ := ih₂
     exact ⟨n + m, .app hn hm⟩
-  case comp f g ih₁ ih₂ =>
-    have ⟨m, h₁⟩ := ih₁
-    have ⟨n, h₂⟩ := ih₂
-    exact ⟨(m + n).succ, .comp h₁ h₂⟩
+  case comp => exact ⟨1, .comp⟩
   · exact ⟨0, .nil⟩
   · rename_i e ih
     have ⟨_, ih⟩ := ih
@@ -62,24 +55,17 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     have ⟨m, h₁⟩ := ih₁
     have ⟨n, h₂⟩ := ih₂
     exact ⟨m + n, .coup h₁ h₂⟩
-  case pair f g ih₁ ih₂ =>
-    have ⟨m, h₁⟩ := ih₁
-    have ⟨n, h₂⟩ := ih₂
-    exact ⟨(m + n).succ, .pair h₁ h₂⟩
+  case dpair => exact ⟨1, .dpair⟩
 
 theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n := by
   induction h₁ generalizing m with
-  | quoted | pair | curr | app | comp | coup =>
+  | quoted | curr | app | coup =>
     cases h₂; grind only
   | _ => cases h₂; rfl
 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
-  | .fst | .snd => 1
-  | .pair f g | .comp f g =>
-    let m := f.ty_size
-    let n := g.ty_size
-    (m + n).succ
+  | .comp | .dpair | .fst | .snd => 1
   | .quot x | .curr x =>
     let m := x.ty_size
     m.succ
@@ -98,12 +84,10 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   unfold Expr.ty_size at h
   rw [← h]
   split at h
+  · exact .comp
+  · exact .dpair
   · exact .fst
   · exact .snd
-  · rename_i x f g
-    exact .pair (Expr.TySize.sound (e := f) rfl) (Expr.TySize.sound (e := g) rfl)
-  · rename_i x f g
-    exact .comp (Expr.TySize.sound (e := f) rfl) (Expr.TySize.sound (e := g) rfl)
   · rename_i x
     exact .quoted (Expr.TySize.sound (e := x) rfl)
   · rename_i x
@@ -120,7 +104,7 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
 theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
   intro h
   induction h with
-  | coup hf hx ih₁ ih₂ | pair hf hx ih₁ ih₂ | comp hf hx ih₁ ih₂ | app hf hx ih₁ ih₂ =>
+  | coup hf hx ih₁ ih₂ | app hf hx ih₁ ih₂ =>
     rw [← ih₁, ← ih₂]
     rfl
   | quoted _a ih₁ | curr _a ih₁ => rw [← ih₁]; rfl
@@ -133,7 +117,7 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
     | .app (.quoted h_t_x) _ => ⟨_, h_t_x, by grind only⟩
   | .comp (x := x) (y := y) (z := z) =>
      match h_size with
-     | .app (.comp h_t_x h_t_y) h_t_z => ⟨_, Expr.TySize.app h_t_x (.app h_t_y h_t_z), by grind only⟩
+     | .app (.app (.app .comp h_t_x) h_t_y) h_t_z => ⟨_, Expr.TySize.app h_t_x (.app h_t_y h_t_z), by grind only⟩
   | .fst =>
     match h_size with
     | .app .fst (.coup h_t_a h_t_b) => ⟨_, h_t_a, by grind only⟩
@@ -142,7 +126,7 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
     | .app .snd (.coup h_t_a h_t_b) => ⟨_, h_t_b, by grind only⟩
   | .pair (f := f) (g := g) (a := a) (b := b) =>
     match h_size with
-    | .app (.pair h_t_f h_t_g) (.coup h_t_a h_t_b) =>
+    | .app (.app (.app .dpair h_t_f) h_t_g) (.coup h_t_a h_t_b) =>
       ⟨_, .coup (.app h_t_f h_t_a) (.app h_t_g h_t_b), by grind only⟩
   | .curr (x := x) (y := y) (z := z) =>
     match h_size with
@@ -265,10 +249,13 @@ def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := f
     · rename_i h
       cases h
   · cases h
-    · rename_i h
-      rfl
+    · rfl
     · rename_i h
       cases h
+      · rename_i h
+        cases h
+        · rename_i h
+          cases h
   · cases h
     · rfl
     · rename_i h
@@ -287,6 +274,10 @@ def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := f
     · rfl
     · rename_i h
       cases h
+      rename_i h
+      · cases h
+        rename_i h
+        cases h
   · cases h
     repeat simp_all
     · rename_i ih

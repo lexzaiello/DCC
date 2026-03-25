@@ -8,7 +8,9 @@ inductive Expr.TySize : Expr → ℕ → Prop
   | comp : Expr.TySize f m
     → Expr.TySize g n
     → Expr.TySize (SK f ∘ g) (m + n).succ
-  | coup  : Expr.TySize (SK (a, b)) 0
+  | coup  : Expr.TySize a m
+    → Expr.TySize b n
+    → Expr.TySize (SK (a, b)) (m + n)
   | pair  : Expr.TySize a m
     → Expr.TySize b n
     → Expr.TySize (SK ⟨a, b⟩) (m + n).succ
@@ -50,7 +52,10 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
   case curr f ih =>
     have ⟨m, h₁⟩ := ih
     exact ⟨m.succ, .curr h₁⟩
-  · exact ⟨0, .coup⟩
+  case coup a b ih₁ ih₂ =>
+    have ⟨m, h₁⟩ := ih₁
+    have ⟨n, h₂⟩ := ih₂
+    exact ⟨m + n, .coup h₁ h₂⟩
   case pair f g ih₁ ih₂ =>
     have ⟨m, h₁⟩ := ih₁
     have ⟨n, h₂⟩ := ih₂
@@ -58,7 +63,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
 
 theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n := by
   induction h₁ generalizing m with
-  | pair | curr | app | comp =>
+  | pair | curr | app | comp | coup =>
     cases h₂; grind only
   | _ => cases h₂; rfl
 
@@ -72,7 +77,11 @@ def Expr.ty_size : Expr → ℕ
   | .curr x =>
     let m := x.ty_size
     m.succ
-  | .coup _a _b | .nil | .comb _c | .tyhole _m | .Srt _m => 0
+  | .coup a b =>
+    let m := a.ty_size
+    let n := b.ty_size
+    (m + n)
+  | .nil | .comb _c | .tyhole _m | .Srt _m => 0
   | .app f x =>
     let m := f.ty_size
     let n := x.ty_size
@@ -91,7 +100,8 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
     exact .comp (Expr.TySize.sound (e := f) rfl) (Expr.TySize.sound (e := g) rfl)
   · rename_i x
     exact .curr (Expr.TySize.sound (e := x) rfl)
-  · exact .coup
+  · rename_i a b
+    exact .coup (Expr.TySize.sound (e := a) rfl) (Expr.TySize.sound (e := b) rfl)
   · exact .nil
   · exact .comb
   · exact .hole
@@ -102,8 +112,34 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
 theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
   intro h
   induction h with
-  | pair hf hx ih₁ ih₂ | comp hf hx ih₁ ih₂ | app hf hx ih₁ ih₂ =>
+  | coup hf hx ih₁ ih₂ | pair hf hx ih₁ ih₂ | comp hf hx ih₁ ih₂ | app hf hx ih₁ ih₂ =>
     rw [← ih₁, ← ih₂]
     rfl
   | curr _a ih₁ => rw [← ih₁]; rfl
   | _ => rfl
+
+theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n :=
+  match heq : h_red with
+  | .comp (x := x) (y := y) (z := z) =>
+     match h_size with
+     | .app (.comp h_t_x h_t_y) h_t_z => ⟨_, Expr.TySize.app h_t_x (.app h_t_y h_t_z), by grind only⟩
+  | .fst =>
+    match h_size with
+    | .app .fst (.coup h_t_a h_t_b) => ⟨_, h_t_a, by grind only⟩
+  | .snd =>
+    match h_size with
+    | .app .snd (.coup h_t_a h_t_b) => ⟨_, h_t_b, by grind only⟩
+  | .pair (f := f) (g := g) (a := a) (b := b) =>
+    match h_size with
+    | .app (.pair h_t_f h_t_g) (.coup h_t_a h_t_b) =>
+      ⟨_, .coup (.app h_t_f h_t_a) (.app h_t_g h_t_b), by grind only⟩
+  | .curr (x := x) (y := y) (z := z) =>
+    match h_size with
+    | .app (.app (.curr h_t_x) h_t_y) h_t_z =>
+      ⟨_, .app h_t_x (.coup h_t_y h_t_z), by grind only⟩
+  | .congrFun (f := f) (f' := f') h_r_f =>
+    match h_size with
+    | .app hn_f hn_x (m := n) =>
+      have ⟨m, hf, h₁⟩ := h_r_f.decreasing hn_f
+      ⟨m + n, .app hf hn_x, by simp_all only [heq_eq_eq, add_lt_add_iff_right]⟩
+

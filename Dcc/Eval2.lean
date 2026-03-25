@@ -577,31 +577,6 @@ def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e',
         have h := HasRedex.complete h_r_x.has_redex
         simp [h, h_r_x.complete]
 
-/-def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e', ⟨h_step⟩⟩ :=
-  match heq : e with
-  | .app f x => match heqs : h_step with
-    | .congrFun hnrx hnre hrf => by
-      unfold Expr.step?
-      simp_all only [heq_eq_eq]
-      
-    | .congrArg hnre hrx =>
-      False.elim (no_redex_no_step hnre ⟨_, .congrArg hnre hrx⟩)
-    | h => by
-      cases h
-      repeat simp [Expr.step?]
-      repeat simp_all only [not_false_eq_true, no_redex_no_step', heq_eq_eq, no_redex_step_none
-      , reduceCtorEq, not_false_eq_true, no_redex_no_step']
-  | .coup a b => by
-    match heq' : h_step with
-    | .coup (x' := a') hnb hra =>
-      simp_all only [heq_eq_eq, not_false_eq_true, HasRedex.complete', step?, Option.isNone_iff_eq_none, ↓reduceDIte, hra.complete]
-    | .coup' hry =>
-      simp_all only [heq_eq_eq, step?, Option.isNone_iff_eq_none]
-      simp only [hry.has_redex.complete, reduceCtorEq, ↓reduceDIte, hry.complete]
-  | .curr _e
-  | SK snd | SK fst | SK quot | SK App
-  | SK id | SK comp | SK flip | .tyhole t => by cases h_step-/
-
 theorem Expr.RedTy.unique : Expr.RedTy a b → Expr.RedTy a c → b = c := by
   intro hr₁ hr₂
   have heq₁ := hr₁.complete

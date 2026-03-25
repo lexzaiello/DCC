@@ -1,28 +1,35 @@
 import Dcc.Ast2
 
-  -- Decreasing measure
+/-
+Need more equations for dpair.
+
+flip probably necessary.
+-/
+
+-- Decreasing measure
 -- function arity decreases with each argument
 inductive Expr.TySize : Expr → ℕ → Prop
-  | quoted : Expr.TySize e m
-    → Expr.TySize (SK (quot e)) m.succ
-  | fst  : Expr.TySize (SK fst) 1
-  | snd  : Expr.TySize (SK snd) 1
-  | comp : Expr.TySize (SK B) 1
-  | coup  : Expr.TySize a m
+  | quoted : Expr.TySize (SK quot) 1
+  | flip   : Expr.TySize (SK flip) 1
+  | fst    : Expr.TySize (SK fst) 1
+  | snd    : Expr.TySize (SK snd) 1
+  | comp   : Expr.TySize (SK B) 1
+  | coup   : Expr.TySize a m
     → Expr.TySize b n
     → Expr.TySize (SK (a, b)) (m + n)
-  | dpair : Expr.TySize (SK pair) 1
-  | curr  : Expr.TySize x m
+  | dpair  : Expr.TySize (SK pair) 1
+  | curr   : Expr.TySize x m
     → Expr.TySize (SK Λ(x)) m.succ
-  | nil   : Expr.TySize (SK nil) 0
-  | comb  : Expr.TySize (.comb c) 0
-  | hole  : Expr.TySize (SK __ ∶ t) 0
-  | srt   : Expr.TySize (SK Sort m) 0
-  | app   : Expr.TySize f n
+  | nil    : Expr.TySize (SK nil) 0
+  | comb   : Expr.TySize (.comb c) 0
+  | hole   : Expr.TySize (SK __ ∶ t) 0
+  | srt    : Expr.TySize (SK Sort m) 0
+  | app    : Expr.TySize f n
     → Expr.TySize x m
     → Expr.TySize (SK (f x)) (n + m)
 
 inductive Expr.RedTy : Expr → Expr → Prop
+  | flip      : Expr.RedTy (SK (flip (a, b))) (SK (b, a))
   | quoted    : Expr.RedTy (SK ((quot e) y)) e
   | comp      : Expr.RedTy (SK ((x ∘ y) z)) (SK (x (y z)))
   | fst       : Expr.RedTy (SK (fst (x, y))) x
@@ -43,14 +50,13 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     exact ⟨n + m, .app hn hm⟩
   case comp => exact ⟨1, .comp⟩
   · exact ⟨0, .nil⟩
-  · rename_i e ih
-    have ⟨_, ih⟩ := ih
-    exact ⟨_, .quoted ih⟩
+  · exact ⟨1, .quoted⟩
+  · exact ⟨1, .flip⟩
   · exact ⟨1, .fst⟩
   · exact ⟨1, .snd⟩
-  case curr f ih =>
-    have ⟨m, h₁⟩ := ih
-    exact ⟨m.succ, .curr h₁⟩
+  · rename_i ih
+    let ⟨_, ih⟩ := ih
+    exact ⟨_, .curr ih⟩
   case coup a b ih₁ ih₂ =>
     have ⟨m, h₁⟩ := ih₁
     have ⟨n, h₂⟩ := ih₂
@@ -65,8 +71,8 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
-  | .comp | .dpair | .fst | .snd => 1
-  | .quot x | .curr x =>
+  | .flip | .quot | .comp | .dpair | .fst | .snd => 1
+  | .curr x =>
     let m := x.ty_size
     m.succ
   | .coup a b =>
@@ -84,12 +90,12 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   unfold Expr.ty_size at h
   rw [← h]
   split at h
+  · exact .flip
+  · exact .quoted
   · exact .comp
   · exact .dpair
   · exact .fst
   · exact .snd
-  · rename_i x
-    exact .quoted (Expr.TySize.sound (e := x) rfl)
   · rename_i x
     exact .curr (Expr.TySize.sound (e := x) rfl)
   · rename_i a b
@@ -107,14 +113,18 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
   | coup hf hx ih₁ ih₂ | app hf hx ih₁ ih₂ =>
     rw [← ih₁, ← ih₂]
     rfl
-  | quoted _a ih₁ | curr _a ih₁ => rw [← ih₁]; rfl
+  | curr _a ih₁ => rw [← ih₁]; rfl
   | _ => rfl
 
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n :=
   match heq : h_red with
+  | .flip (a := a) (b := b) =>
+    match h_size with
+    | .app .flip (.coup h_t_a h_t_b) =>
+      ⟨_, .coup h_t_b h_t_a, by grind only⟩
   | .quoted (e := e) =>
     match h_size with
-    | .app (.quoted h_t_x) _ => ⟨_, h_t_x, by grind only⟩
+    | .app (.app .quoted h_t_x) _ => ⟨_, h_t_x, by grind only⟩
   | .comp (x := x) (y := y) (z := z) =>
      match h_size with
      | .app (.app (.app .comp h_t_x) h_t_y) h_t_z => ⟨_, Expr.TySize.app h_t_x (.app h_t_y h_t_z), by grind only⟩
@@ -165,6 +175,7 @@ def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
 
 def Expr.step? (e : Expr) : Option Expr :=
   match e with
+  | (SK (flip (a, b))) => (SK (b, a))
   | (SK ((quot e) _y)) => e
   | (SK ((x ∘ y) z)) => (SK (x (y z)))
   | (SK (fst (x, _y))) => x
@@ -180,6 +191,9 @@ def Expr.step? (e : Expr) : Option Expr :=
 def Expr.step?_sound : Expr.step? e = .some e' → Expr.RedTy e e' := by
   unfold Expr.step?
   split
+  · intro h; simp only [Option.some.injEq] at h
+    rw [← h]
+    exact RedTy.flip
   · intro h; simp only [Option.some.injEq] at h
     rw [← h]
     exact RedTy.quoted
@@ -247,6 +261,12 @@ def Expr.RedTy.step?_complete : Expr.RedTy e e' → Expr.step? e = .some e' := f
   · cases h
     · rfl
     · rename_i h
+      cases h
+  · cases h
+    · rfl
+    · rename_i h
+      cases h
+      rename_i h
       cases h
   · cases h
     · rfl

@@ -495,6 +495,35 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
   · exact Expr.HasRedex.left (by assumption)
   · exact Expr.HasRedex.right (by assumption)
 
+theorem Expr.RedTy.size_pos (h_step : Expr.RedTy e e') : 0 < e.ty_size := by
+  have h := h_step.decreasing'
+  omega
+
+/-theorem Expr.HasRedex.has_red (h : Expr.HasRedex e) : ∃ e', Expr.RedTy e e' :=
+  match h with
+  | appe => ⟨_, .appe⟩
+  | ide => ⟨_, .ide⟩
+  | .flip => ⟨_, .flip⟩
+  | .flip' =>  ⟨_, .flip'⟩
+  | .quoted => ⟨_, .quoted⟩
+  | .comp => ⟨_, .comp⟩
+  | .fst => ⟨_, .fst⟩
+  | .snd =>  ⟨_, .snd⟩
+  | .curr => ⟨_, .curr⟩
+  | .dpair => ⟨_, .dpair⟩
+  | .coupl hra =>
+    if hnb : Expr.HasRedex b then
+      
+    have ⟨a', heq⟩ := ih
+    if hn : ¬ Expr.HasRedex b then
+      exact ⟨SK (a', b), .coup hn heq⟩
+    else
+      simp_all
+      have h := hn.has_red
+      
+      sorry
+termination_by e-/
+
 def Expr.RedTy.complete' (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e', ⟨h_step⟩⟩ :=
   match heq : e with
   | .app f x => match heqs : h_step with
@@ -507,13 +536,16 @@ def Expr.RedTy.complete' (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e'
       repeat simp [Expr.step?]
       repeat simp_all only [not_false_eq_true, no_redex_no_step', heq_eq_eq, no_redex_step_none
       , reduceCtorEq, not_false_eq_true, no_redex_no_step']
-  | .coup f x => by
-    match h_step with
-    | .coup hny hrx =>
-      have h := Expr.HasRedex.complete' hny
-      have dec : x'.ty_size < a.ty_size := hra.decreasing'
-      sorry
-    | .coup' hnx hry =>  sorry
+  | .coup a b => by
+    match heq' : h_step with
+    | .coup (x' := a') hnb hra =>
+      simp_all only [heq_eq_eq, not_false_eq_true, HasRedex.complete', step?, Option.isNone_iff_eq_none, ↓reduceDIte]
+      rw [hra.complete']
+    | .coup' hnx hry =>
+      simp_all only [heq_eq_eq, not_false_eq_true, HasRedex.complete', step?, Option.isNone_iff_eq_none, ↓reduceDIte]
+      rw [hry.complete']
+      have h := hry.has_redex.complete
+      simp [h]
   | .curr _e
   | SK snd | SK fst | SK quot | SK App
   | SK id | SK comp | SK flip | .tyhole t => by cases h_step

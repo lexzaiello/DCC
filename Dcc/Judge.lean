@@ -4,17 +4,159 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
 
 /-
+arguments register is like an "environment."
+
+- fst and snd are mildly no-go, because raw BCI need to handle everything. we're not doing raw BCI, though, BCKI.
+
+couples vs pairs.
+
+pairs are data, projections on them, etc.
+
+couples are functions that turn into pairs.
+
+⟨f, g⟩ (a, b) = ⟨f a, g b⟩
+
+we can still duplicate in linear logic, though.
+this is an interesting thought.
+
+(β : α → Type)
+
+create a new pair via Λ
+
+⟨x, y⟩ (a, b) = (x a, y b)
+
+
+-/
+
+/-
 (B (C I arg) I) head
 I head
 (C I arg) (I head)
 I head arg
+
+can we side-step more suss-ness with push-ctx?
+
+| cons      : RedTy (SK (args cod)) α'
+    → RedTy (SK ⟨cod, args⟩) α'
+
+SK (args cod) = α' → 
+  (SK ⟨cod, args⟩) = α'
+
+we are hitting normal forms in the arguments context too early.
+
+we should only ever be able to hit that reduction until the very end.
+
+why are we reducing for x : α? no.
+
+push_ctx super sus.
+
+I want something like
+
+why is any of this running in the program?
+
+we need an equational theory of the "context" version.
+
+this version is kinda sus.
+
+Λ(⟨K*, K* Type⟩)
+
+Λ(x)yz = x (y, z)
+
+⟨K*
+
+⟨
+
+ingredients we need:
+- fst for pairs: fst (x, y) = x
+- snd for pairs: snd (x, y) = y
+- mpair / coupling matching: ⟨f, g⟩ (a, b) = (f a, g b)
+- B / comp / ∘, same as always
+- Λ par app: Λ(x)yz = x(y, z)
+  - ac? App(Λ(x)y, z) = x(y, z)
+- potentially ! from linear logic for the global argument type duplication
+- composition, obviously
+
+actually probably don't need duplication, since each step type argument produces a couple,
+which we can view and manipulate later.
+
+if we want to expand the "context" (previous step), we can just tack nil on.
+
+would be cool if we had a combinator to selectively duplicate. explicit, though.
+
+need a decreasing measure for that.
+
+- "chain" combinator
+
+(α, β) is the type of the domain and codomain
+
+convention is α is static, apply x to β.
+
+can make a Π combinator built with our CAM primitives.
+
+need a combinator that consumes fst, and applies it to snd.
+
+- can do this with Eval(f, x) = f(x)
+- don't actually clone, just pass in the previous α to get β, map over that.
+
+ac is just like a more pair-y way of doing Λ.
+
+App(Λ(x)y, z) = x(y, z)
+
+turns data into computation.
+
+App ∘ ⟨Fst, Snd⟩
+
+App ∘
+
+if we want things fully linear, we might not even want fst / snd.
+
+we probably want instead:
+fst(a, b) = a(b)
+snd(a, b) = b(a)
+
+α → β is: (α isn't evaluated, but β has context )
+(α, Λ(fst) β)
+
+to get β, add x to the context:
+
+((nil, α), x)
+
+Λ(fst) β ((nil, α), x)
+= fst (β ((nil, α), x)) = β
+
+Summary of ingredients:
+- nil
+- Λ, skipping app for now
+- fst
+-snd
+- couples (a, b)
+- pairs ⟨a, b⟩
+- composition, as before. doesn't need to be a combinator, though, just a ∘ b, due to Λ.
+- grow context with (fst, x)
+
+this is quite nice, because we don't need cons as a combinator now.
+derived from Λ
+
+nil as identity is kinda nice. pairs well with fst / snd. can get rid of K*.
+
+nil inside types is probably useful, too, since it shows us the end of a type kinda.
+
+
+
+fst / snd is probably necessary, though.
+
+we can derive these rules, though.
+
+App ∘ ⟨Fst, Snd⟩ respectively.
+
 
 -/
 
 def Expr.push_ctx (Γ x : Expr) : Expr :=
   SK (B (C I x) Γ)
 
-def K.type (m n : Level) : Expr := SK ⟨⟨Sort m, arg 0 (C cons (K* Sort n)), ret 1, arg 1 (ret 1), ret 3⟩, I⟩
+def K.type (m n : Level) : Expr := SK ⟨
+  ⟨Sort m, arg 0 (C cons (K* Sort n)), ret 1, arg 1 (ret 1), ret 3⟩, I⟩
 
 --#eval Std.format <| ((K.type 1 1).reduce_pi (SK Sort 0)).fst
 
@@ -96,170 +238,6 @@ def Expr.is_not_cons (e : Expr) : Option (PLift (¬ e.IsCons)) := by
       · exact .none
       repeat exact .some (.up (fun h => by contradiction))
 
-inductive Expr.RunPi : Expr → Expr → Prop
-  -- this measure doesn't actually work
-  | mk  : Expr.RedTyTrans (SK (args cod)) α'
-    → Expr.RunPi (SK ⟨cod, args⟩) α'
-  | red : Expr.RedTyTrans α α' → α.RunPi α'
-
-inductive Expr.ConsDepth : Expr → ℕ → Prop
-  | zero_ty_c : Expr.ConsDepth (.tycomb c) 0
-  | zero_app₁ : Expr.ConsDepth (.app (.tycomb c) _e) 0
-
-/-
-cons should have some kind of evaluation rule....
-we might also want explicit nil delimiters. this keeps being a pain point.
-
-we should be able to make this cleaner. want to handle currying better.
-
-⟨tys, args⟩ x = ⟨
-
-this is just prepending to args.
-WAIT ayo.
-we could make this our push_ctx thingy.
-this is really just appending to the context.
-
-this gives us a size, which is nice, but the size doesn't decrease.
-
-we want to pop something off tys simultaneously.
-
-⟨cons x xs, args⟩ x
-
-we really need something to distinguish nil. it is extremely annoying.
-
-but how do we distinguish not nil from nil?
-SKULL EMOJI.
-
-could give an eval rule to nil as well, but that's super ugly, too.
-
-all this for a decreasing measure....
-
-we don't distinguish nil, we just give it a size, I think.
-
-so now eval rules for cons are:
-
-cons x xs y = cons xs (cons y args)
-
-is this size actually decreasing?
-kind of?
-we added a cons. that's + 1.
-
-it's even worse if we do our push_ctx thing.
-
-x is not actually guaranteed to be a BCKI expression.
-
-we can't bake it into eval.lean.
-
-we just need our measure to be really robust.
-
-we need to capture how our judgments work INSIDE the measure.
-
-PiSize is only defined if:
-
-head x is SPECIFICALLY a BCKI expr, and we will define that rigorously.
-
-however, this might not be necessary, if we just have x.TySize > 0 as a hypothesis.
-should make the induction work.
-
-The place we kept getting stuck at was the end of the list.
-IsNotCons.
-
-This is becasue the RunPi red case might copy something from the arguments
-register over.
-
-I think what we need to do is never defer to TySize.
-we're just looking at the depth, requiring that each layer
-has a TySize > 1, but not using it.
-This way, it always goes down. The arguments part, we measure by....
-
-unclear...
-
-the size of the arguments register needs to be by default smaller
-than the asssertions size.
-
-However, TySize applies to nothing in the arguments register either,
-because these are also all types, or terms, but BCKI exprs are not
-well-typed terms.
-
-Why can't I just say the size of the BCKI expression at each
-step decreases?
-
-we need to be careful about this measure.
-
-this is all we're working with:
-
-inductive Expr.RunPi : Expr → Expr → Prop
-  -- this measure doesn't actually work
-  | mk  : Expr.RedTyTrans (SK (args cod)) α'
-    → Expr.RunPi (SK ⟨cod, args⟩) α'
-  | red : Expr.RedTyTrans α α' → α.RunPi α'
-
-theoretically, this would decrease, but we have no size measure for cons.
-
-and we don't have eval rules for cons.
-
-we could make the eval rules this thing.
-
-this could be cool, I guess.
-worth a shot. see if it works. why not.
-
-this feels super sus.
-just try it lexi.
-
-⟨cons x xs, args⟩ y = ⟨xs, ⟨y, args⟩⟩
-^ this size obviously decreases. y is just moving, x gets deleted. easy peasy.
-size obviously decreases, except at the last element, maybe?
-unclear....
-
-genuinely keep getting confused on what the point of nil is.
--/
-
-/-
-The only normal forms of types are cons lists ⟨a, b⟩,
-sorts, ore more cons lists. BCKI shuffling expressions
-cannot be produced as a normal form of a type.
--/
-inductive Expr.PiSize : Expr → ℕ → Prop
-  | srt   : Expr.PiSize
-  | cons' : Expr.TySize 
-  | cons  : Expr.TySize x m
-    → Expr.PiSize xs mxs
-    → Expr.TySize args a
-    → Expr.PiSize (SK ⟨(cons x xs), args⟩) (m + mxs + a)
-
-/-
-The issue seems to stem from treating cons both like and not like a combinator.
-it doesn't have an evaluation rule, so it has no size.
-potentially the move is to represent primitive types like sorts as ⟨Sort, ?⟩
-
-PiSizes can only be cons lists or sorts.
-does tysize need to be involved at all?
-can we just count the depth of the cons list?
--/
-
-theorem Expr.PiSize.unique (h₁ : Expr.PiSize e n) (h₂ : e.PiSize m) : m = n := by
-  induction h₁ generalizing m
-  induction h₂ generalizing n
-  · rename_i h_ty₁ _ h_ty₂
-    exact (h_ty₁.unique (by assumption)).symm
-  · rename_i contra _
-    exfalso; exact contra .mk
-  · rename_i x m xs n hp₁ hp₂ ih₁ ih₂
-    cases h₂
-    · rename_i h _
-      exfalso; exact h .mk
-    · rename_i hp₃ hp₄
-      have ha := ih₁ hp₃
-      have hb := ih₂ hp₄
-      grind only
-
-theorem Expr.run_pi_decreasing : Expr.RunPi t t' → Expr.PiSize t m → ∃ n, Expr.PiSize t' n ∧ n < m := by
-  intro hrt ht₁
-  induction hrt generalizing m
-  case pi args cod cod' h_not_cons hrt =>
-    have h := hrt.decreasing'
-    exact ⟨cod'.ty_size, .base (by sorry) (by sorry), by sorry⟩
-
 inductive Judge : Expr → Expr → Prop
   | app     : Judge (SK ⟨(cons α xs), args⟩) f
     → (SK (args α)).RedTyTrans α'
@@ -272,23 +250,12 @@ inductive Judge : Expr → Expr → Prop
   | pi      : JudgePi args t_β tys
     → Judge t_β (SK ⟨tys, args⟩)
   | hole    : Judge α (SK __ ∶ α) -- only visible to the kernel
-  | conv  {α β : Expr} : Judge α x → α.RunPi β → Expr.IsNorm β → Judge β x
-
-def Judge.conv?_ty (h_t : Judge α x) : Option ((t' : Expr) × (PLift (Judge t' x))) :=
-  match Expr.reduce!? α with
-  | .some ⟨t', ⟨h_r, h_norm⟩⟩ => .some ⟨t', ⟨.conv h_t (.red h_r) h_norm⟩⟩
-  | _ => .none
+  | conv  {α β : Expr} : Judge α x → α.RedTyTrans β → Expr.IsNorm β → Judge β x
 
 def Judge.conv? (h_t : Judge α x) : Option ((t' : Expr) × (PLift (Judge t' x))) :=
-  match α with
-  | SK ⟨cod, args⟩ =>
-    match cod.is_not_cons with
-    | .some ⟨h⟩ =>
-      match (SK (args cod)).reduce!? with
-      | .some ⟨t', ⟨h_r, h_norm⟩⟩ => .some ⟨t', ⟨Judge.conv h_t (.pi h h_r) h_norm⟩⟩
-      | _ => .none
-    | _ => h_t.conv?_ty
-  | _ => h_t.conv?_ty
+  match Expr.reduce!? α with
+  | .some ⟨t', ⟨h_r, h_norm⟩⟩ => .some ⟨t', ⟨.conv h_t h_r h_norm⟩⟩
+  | _ => .none
 
 def Judge.convD (h_t : Judge α x) : (t' : Expr) × (PLift (Judge t' x)) :=
   h_t.conv?.getD ⟨α, ⟨h_t⟩⟩

@@ -56,3 +56,45 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
     have ⟨n, h₂⟩ := ih₂
     exact ⟨(m + n).succ, .pair h₁ h₂⟩
 
+theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n := by
+  induction h₁ generalizing m with
+  | pair | curr | app | comp =>
+    cases h₂; grind only
+  | _ => cases h₂; rfl
+
+-- Compute the size of an expression
+def Expr.ty_size : Expr → ℕ
+  | .fst | .snd => 1
+  | .pair f g | .comp f g =>
+    let m := f.ty_size
+    let n := g.ty_size
+    (m + n).succ
+  | .curr x =>
+    let m := x.ty_size
+    m.succ
+  | .coup _a _b | .nil | .comb _c | .tyhole _m | .Srt _m => 0
+  | .app f x =>
+    let m := f.ty_size
+    let n := x.ty_size
+    m + n
+
+theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
+  intro h
+  unfold Expr.ty_size at h
+  rw [← h]
+  split at h
+  · exact .fst
+  · exact .snd
+  · rename_i x f g
+    exact .pair (Expr.TySize.sound (e := f) rfl) (Expr.TySize.sound (e := g) rfl)
+  · rename_i x f g
+    exact .comp (Expr.TySize.sound (e := f) rfl) (Expr.TySize.sound (e := g) rfl)
+  · rename_i x
+    exact .curr (Expr.TySize.sound (e := x) rfl)
+  · exact .coup
+  · exact .nil
+  · exact .comb
+  · exact .hole
+  · exact .srt
+  · rename_i x₁ f x
+    exact .app (Expr.TySize.sound (e := f) rfl) (Expr.TySize.sound (e := x) rfl)

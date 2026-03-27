@@ -167,16 +167,20 @@ TODO:
 -/
 
 def K'.type (m n : Level) : Expr :=
-  SK (Sort m, ⟨(quot Sort n), Λ(⟨id, Λ(⟨snd, quot ∘ snd⟩)⟩)⟩)
+  SK (Sort m, ⟨(quot Sort n), Λ(⟨id, Λ(⟨snd, quot ∘ fst⟩)⟩)⟩)
 
 def K.type (m n : Level) : Expr :=
-  SK (Sort m, ⟨(quot (quot Sort n)), id⟩ ≫ ⟨fst, (((≫) flip)  ∘ (flip' pair quot))⟩)
+  SK (Sort m, (flip ∘ ⟨(quot (quot Sort n)), id⟩) ≫ (flip' coup
+    ⟨fst, (((≫) flip)  ∘ (flip' pair quot))⟩) -- ((α, (quot (Sort n))), β)
+  --  ≫ ⟨fst, (((≫) flip)  ∘ (flip' pair quot))⟩
+  )
 
 /-def S.type (m n o : Level) : Expr :=
   sorry-/
 
 inductive Judge : Expr → Expr → Prop
 --  | k    : Judge (K.type m n) (SK K.{[m, n]})
+  | k    : Judge (K.type m n) (SK K.{[m, n]})
   | k'   : Judge (K'.type m n) (SK K'.{[m, n]})
   --| s    : Judge (S.type m n o) (SK S.{[m, n, o]})
   | srt  : Judge (SK Sort m.succ) (SK Sort m)
@@ -202,6 +206,7 @@ def Judge.convD (h_t : Judge t e) : ((t' : Expr) × (PLift (Judge t' e))) :=
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
   match e with
+  | (SK K.{[m, n]}) => .some ⟨K.type m n, ⟨.k⟩⟩
   | (SK K'.{[m, n]}) => .some ⟨K'.type m n, ⟨.k'⟩⟩
   | (SK Sort m) => .some ⟨(SK Sort m.succ), ⟨.srt⟩⟩
   | (SK (_α, _β)) => .some ⟨(SK Sort 1), ⟨.coup⟩⟩
@@ -222,4 +227,8 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
     | _ => .none
   | _ => .none -- TODO: K type, S type
 
+#eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1)))
+
 #eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 2]} (Sort 2) (Sort 1) (Sort 1) (Sort 0)))
+#eval Std.format <| (·.fst) <$> infer (SK (K.{[3, 2]} (Sort 2)
+  (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1)) (Sort 1)))

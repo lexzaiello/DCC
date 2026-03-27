@@ -136,13 +136,12 @@ inductive Expr.TySize : Expr → ℕ → Prop
   | flip   : Expr.TySize (SK flip) 1
   | fst    : Expr.TySize (SK fst) 1
   | snd    : Expr.TySize (SK snd) 1
-  | compe  : Expr.TySize (SK comp) 1
+  | compe  : Expr.TySize (SK (∘)) 1
   | coup   : Expr.TySize a m
     → Expr.TySize b n
     → Expr.TySize (SK (a, b)) (m + n)
   | dpair  : Expr.TySize (SK pair) 1
-  | curr   : Expr.TySize x m
-    → Expr.TySize (SK Λ(x)) m.succ
+  | curr   : Expr.TySize (SK (Λ)) 1
   | nil    : Expr.TySize (SK nil) 0
   | comb   : Expr.TySize (.comb c) 0
   | hole   : Expr.TySize (SK __ ∶ t) 0
@@ -192,9 +191,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
   · exact ⟨1, .ide⟩
   · exact ⟨1, .fst⟩
   · exact ⟨1, .snd⟩
-  · rename_i ih
-    let ⟨_, ih⟩ := ih
-    exact ⟨_, .curr ih⟩
+  · exact ⟨1, .curr⟩
   case coup a b ih₁ ih₂ =>
     have ⟨m, h₁⟩ := ih₁
     have ⟨n, h₂⟩ := ih₂
@@ -209,10 +206,7 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
-  | .App | .id | .flip | .quot | .compe | .dpair | .fst | .snd => 1
-  | .curr x =>
-    let m := x.ty_size
-    m.succ
+  | .curr | .App | .id | .flip | .quot | .compe | .dpair | .fst | .snd => 1
   | .coup a b =>
     let m := a.ty_size
     let n := b.ty_size
@@ -228,6 +222,7 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   unfold Expr.ty_size at h
   rw [← h]
   split at h
+  · exact .curr
   · exact .appe
   · exact .ide
   · exact .flip
@@ -236,8 +231,6 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   · exact .dpair
   · exact .fst
   · exact .snd
-  · rename_i x
-    exact .curr (Expr.TySize.sound (e := x) rfl)
   · rename_i a b
     exact .coup (Expr.TySize.sound (e := a) rfl) (Expr.TySize.sound (e := b) rfl)
   · exact .nil
@@ -253,7 +246,6 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
   | coup hf hx ih₁ ih₂ | app hf hx ih₁ ih₂ =>
     rw [← ih₁, ← ih₂]
     rfl
-  | curr _a ih₁ => rw [← ih₁]; rfl
   | _ => rfl
 
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n :=
@@ -306,7 +298,7 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
       ⟨_, .coup (.app h_t_f h_t_a) (.app h_t_g h_t_b), by grind only⟩
   | .curr (x := x) (y := y) (z := z) =>
     match h_size with
-    | .app (.app (.curr h_t_x) h_t_y) h_t_z =>
+    | .app (.app (.app .curr h_t_x) h_t_y) h_t_z =>
       ⟨_, .app h_t_x (.coup h_t_y h_t_z), by grind only⟩
   | .congrArg (f := f) (x := x) (x' := x') h_n_r_all h_r_x =>
     match h_size with

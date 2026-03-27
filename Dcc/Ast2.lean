@@ -27,7 +27,7 @@ inductive Expr where
   | id     : Expr
   | fst    : Expr
   | snd    : Expr
-  | curr   : Expr → Expr
+  | curr   : Expr
   | coup   : Expr → Expr → Expr
   | dpair  : Expr
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
@@ -46,7 +46,7 @@ syntax "K'" : comb
 syntax "S" : comb
 
 syntax "App" : expr
-syntax "comp" : expr
+syntax "(∘)" : expr
 syntax expr "∘" expr : expr
 syntax comb levels : expr
 syntax "#(" term ")" : expr
@@ -56,6 +56,7 @@ syntax "quot" : expr
 syntax "flip" : expr
 syntax "id" : expr
 syntax "snd" : expr
+syntax "(Λ)" : expr
 syntax "Λ" "(" expr ")" : expr
 syntax "(" expr "," expr ")" : expr
 syntax "pair" : expr
@@ -80,9 +81,10 @@ macro_rules
   | `(SK nil) => `(Expr.nil)
   | `(SK fst) => `(Expr.fst)
   | `(SK snd) => `(Expr.snd)
-  | `(SK Λ($f:expr)) => `(Expr.curr (SK $f))
-  | `(SK comp) => `(Expr.compe)
-  | `(SK $f ∘ $g) => `(SK (comp $f $g))
+  | `(SK Λ($f:expr)) => `(Expr.app Expr.curr (SK $f))
+  | `(SK (Λ)) => `(Expr.curr)
+  | `(SK (∘)) => `(Expr.compe)
+  | `(SK $f ∘ $g) => `(SK ((∘) $f $g))
   | `(SK #($t:term)) => `($t)
   | `(SK $idt:ident) => `($idt:term)
   | `(SK K.{[$m:term, $n:term]}) => `(Expr.comb (Comb.K $m:term $n:term))
@@ -108,8 +110,9 @@ def toFormat (e : Expr) : Format :=
   | SK quot => "quot"
   | SK nil => "nil"
   | SK Sort m => s!"Sort {m}"
-  | SK comp => "comp"
   | SK f ∘ g => f.toFormat ++ " ∘ " ++ g.toFormat
+  | SK (∘) => "(∘)"
+  | SK (Λ) => "(Λ)"
   | SK fst => "fst"
   | SK snd => "snd"
   | SK (a, b) => .paren <| a.toFormat ++ ", " ++ b.toFormat

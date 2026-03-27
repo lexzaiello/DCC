@@ -77,15 +77,6 @@ def K.type (m n : Level) : Expr :=
       ≫ (flip' coup ⟨fst, (((≫) flip) ∘ (flip' pair quot))⟩))
 
 /-
-S.{[m, n]} : ∀ (α : Sort m) (β : α → Sort n) (γ : ∀ (x : α) (y : β x), Sort o)
-  (x : ∀ (x : α) (y : β x), γ x y)
-  (y : ∀ (x : α), β x)
-  (z : α), γ z (y z)
-
-S.{[m, n]} : (Sort m,
-    (flip ∘ ⟨(quot (quot Sort n)), id⟩)
-    ≫ (⟨fst, (((≫) snd) ≫ (flip' pair (quot (Sort o))))⟩
-
 S.{[m, n, o]} :
   (Sort m,
     {snd ≫ (flip' coup (quot (Sort n))),
@@ -96,41 +87,6 @@ S.{[m, n, o]} :
             {fst ≫ fst ≫ fst ≫ fst ≫ snd,
             Λ(Λ(Λ(Λ(Λ(⟨⟨((App ∘ ⟨App ∘ ⟨snd ≫ S.{[m, n, o.succ]}, snd⟩,
             quot (quot (quot (Sort o)))⟩) ∘ fst), snd⟩, snd⟩)))))}}}}})
-
-S α β (quot (quot (Sort o))) γ y z
-
-_t_γ is of the form (α, ⟨snd ≫ β, (quot (Sort o))⟩)
-
-
-
-S.{[m, n]} : (Sort m,
-  {(flip ∘ ⟨(quot (quot Sort n)), id⟩)
-  , 
-[
-
-S.{[m, n]} : (Sort m,
-    (flip ∘ ⟨(quot (quot Sort n)), id⟩)
-    ≫ (⟨fst, (((≫) snd) ≫ (flip' pair (quot (Sort o))))⟩
-[((α, ⟨snd ≫ β, (quot (Sort o))⟩), γ)] ≫ 
-    ⟨fst, (((≫) snd) ≫ (flip' pair (quot (Sort o))))⟩
---[((α, (quot (Sort n))), β)] (α, ⟨(snd ≫ β), (quot (Sort o))⟩)
-[(α, 
-[((α, ⟨(snd ≫ β), (quot (Sort o))⟩), γ)]
-[((α, ⟨(snd ≫ β), (quot (Sort o))⟩), γ)]
-
-assuming fst ({a, b} x) = (a x) and snd ({a, b} x) = (b x):
-
-[((α, ⟨(snd ≫ β), (quot (Sort o))⟩), γ)]
-
-γ doesn't need to see the type, though. but it needs to see y.
-snd {(snd ≫ β), (snd ≫ γ)} (α, x) = γ x
-fst {(snd ≫ β), (snd ≫ γ)} (α, x) = β x
-γ receives [β x, y]
-{a, b} x =
-{(snd ≫ β), 
-
-    ≫ ((⟨id, App₂ pair ∘ ⟨id, ) ∘ assoc ∘ ⟨⟨id, fst⟩, id⟩)
-  )
 -/
 
 /-def S.type (m n o : Level) : Expr :=

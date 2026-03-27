@@ -63,15 +63,25 @@ def Judge.convD (h_t : Judge t e) : ((t' : Expr) × (PLift (Judge t' e))) :=
           exact Judge.conv h_t h (heq' ▸ h_norm)
   ⟨t', ⟨h_conv⟩⟩
 
-def infer (e : Expr) : ((t : Expr) × (PLift (Judge t e))) :=
+def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
   match e with
-  | (SK K'.{[m, n]}) => ⟨K'.type m n, ⟨.k'⟩⟩
-  | (SK Sort m) => ⟨(SK Sort m.succ), ⟨.srt⟩⟩
-  | (SK (α, β)) => ⟨(SK Sort 1), ⟨.coup⟩⟩
-  | (SK ⟨α, β⟩) => ⟨(SK Sort 1), ⟨.pair⟩⟩
+  | (SK K'.{[m, n]}) => .some ⟨K'.type m n, ⟨.k'⟩⟩
+  | (SK Sort m) => .some ⟨(SK Sort m.succ), ⟨.srt⟩⟩
+  | (SK (_α, _β)) => .some ⟨(SK Sort 1), ⟨.coup⟩⟩
+  | (SK ⟨_α, _β⟩) => .some ⟨(SK Sort 1), ⟨.pair⟩⟩
   | (SK (f x)) => do
-    let t_f ← infer f
-    let t_x ← infer x
+    let ⟨_t_f, ⟨j_f⟩⟩ ← infer f
+    let ⟨_t_x, ⟨j_x⟩⟩ ← infer x
+
+    let ⟨t_f, ⟨j_f⟩⟩ := j_f.convD
+    let ⟨t_x, ⟨j_x⟩⟩ := j_x.convD
 
     match t_f with
-    | 
+    | (SK (α, _β)) =>
+      if heq : α = t_x then
+        let h_t' := Judge.app j_f (heq ▸ j_x)
+        .some (Judge.convD h_t')
+      else .none
+    | _ => .none
+  | _ => .none -- TODO: K type, S type
+

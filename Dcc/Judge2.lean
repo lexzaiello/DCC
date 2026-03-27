@@ -25,6 +25,8 @@ in scope: (Sort m, α)
 [α (Sort n, β)] , Λ(⟨id
 [(Sort n, β) α] , Λ(⟨snd, quot⟩)⟩)⟩)
 
+Λ(⟨snd, quot⟩) (Sort n, β) α = ⟨β, quot α⟩
+
 (Sort m, ⟨(quot Sort n), Λ(⟨id, Λ(⟨snd, quot⟩)⟩)⟩)
 
 TODO:
@@ -33,7 +35,7 @@ TODO:
 -/
 
 def K'.type (m n : Level) : Expr :=
-  SK (Sort m, ⟨(quot Sort n), Λ(⟨id, Λ(⟨snd, quot⟩)⟩)⟩)
+  SK (Sort m, ⟨(quot Sort n), Λ(⟨id, Λ(⟨snd, quot ∘ snd⟩)⟩)⟩)
 
 /-def S.type (m n o : Level) : Expr :=
   sorry-/
@@ -45,7 +47,7 @@ inductive Judge : Expr → Expr → Prop
   | srt  : Judge (SK Sort m.succ) (SK Sort m)
   | app  : Judge (SK (α, β)) f
     → Judge α x
-    → Judge (SK (β α x)) (SK (f x))
+    → Judge (SK (β (α, x))) (SK (f x))
   | coup : Judge (SK Sort 1) (SK (α, β))
   | pair : Judge (SK Sort 1) (SK ⟨α, β⟩)
   | conv  {α β : Expr} : Judge α x → α.RedTyTrans β → Expr.IsNorm β → Judge β x
@@ -85,3 +87,4 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
     | _ => .none
   | _ => .none -- TODO: K type, S type
 
+#eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 2]} (Sort 2) (Sort 1) (Sort 1) (Sort 0)))

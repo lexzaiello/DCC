@@ -47,7 +47,15 @@ def flip' : Expr :=
 -/
 
 def pipe : Expr :=
-  sorry
+  SK (flip' (∘))
+
+syntax:50 expr:50 "≫" expr:51 : expr
+
+syntax "(" "≫" ")" : expr
+
+macro_rules
+  | `(SK $f:expr ≫ $g:expr) => `(SK (#(pipe) $f:expr $g:expr))
+  | `(SK (≫)) => `(pipe)
 
 def assoc : Expr :=
   (SK (App ∘ ⟨App ∘ ⟨(∘) ∘ pair, pair⟩, id⟩))
@@ -55,22 +63,18 @@ def assoc : Expr :=
 /-
 App₂ f (x, y) = f x y
 
-2-argument version of App
+⟨f, id⟩ (x, y) = (f x, y)
 
-App ∘ ⟨App ∘ f, id⟩
+(App ∘ ⟨f, id⟩) (x, y) = f x y
 
-App (f, (x, y)) = f (x, y)
+((pair ≫ id) ≫ ((∘) App)) f = ⟨f, id⟩
 
-(App ∘ ⟨f, id⟩ (x, y)) = (App (f x, y)) = (f x y)
-
-f (x, y)
-
-(App ∘ flip ∘ (pair id)) f = ⟨f, id⟩
+((pair ≫ id)
 -/
 def App₂ : Expr :=
-  SK (((∘) App) ∘ flip ∘ (pair id))
+  SK (((flip' pair id)) ≫ ((∘) App))
 
-#eval Std.format <| (SK (App₂ Sort 0(Sort 1, Sort 2))).reduce
+#eval Std.format <| (SK (App₂ (Sort 0) (Sort 1, Sort 2))).reduce
 
 /-
 ((a, b), c)
@@ -112,6 +116,11 @@ def unassoc : Expr :=
 #eval Std.format <| (SK (App ∘ ⟨App ∘ ⟨pair, id⟩, id⟩ ((Sort 0, Sort 1), Sort 2))).reduce
 
 /-
+K type:
+[]                       (Sort m,
+[Sort m, α]                ⟨(quot (quot Sort n)), id⟩
+[((α, (quot Sort n)), β)]  ≫ ⟨fst, (((≫) flip)  ∘ (flip' pair quot))⟩)                       => (α, β ∘ fst) -- ⟨β, quot⟩ ∘ flip (α, x) = (β x, quot α)
+
 
 K type:
 
@@ -159,6 +168,9 @@ TODO:
 
 def K'.type (m n : Level) : Expr :=
   SK (Sort m, ⟨(quot Sort n), Λ(⟨id, Λ(⟨snd, quot ∘ snd⟩)⟩)⟩)
+
+def K.type (m n : Level) : Expr :=
+  SK (Sort m, ⟨(quot (quot Sort n)), id⟩ ≫ ⟨fst, (((≫) flip)  ∘ (flip' pair quot))⟩)
 
 /-def S.type (m n o : Level) : Expr :=
   sorry-/

@@ -28,7 +28,7 @@ inductive Expr where
   | fst    : Expr
   | snd    : Expr
   | curr   : Expr
-  | coup   : Expr → Expr → Expr
+  | coupe  : Expr
   | dpair  : Expr
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
@@ -60,6 +60,7 @@ syntax "(Λ)" : expr
 syntax "Λ" "(" expr ")" : expr
 syntax "(" expr "," expr ")" : expr
 syntax "pair" : expr
+syntax "coup" : expr
 syntax "⟨" expr "," expr "⟩" : expr
 syntax "nil" : expr
 syntax "Type" term  : expr
@@ -77,7 +78,8 @@ macro_rules
   | `(SK quot) => `(Expr.quot)
   | `(SK pair) => `(Expr.dpair)
   | `(SK ⟨$a:expr, $b:expr⟩) => `(SK (pair $a $b))
-  | `(SK ($a:expr, $b:expr)) => `(Expr.coup (SK $a) (SK $b))
+  | `(SK coup) => `(Expr.coupe)
+  | `(SK ($a:expr, $b:expr)) => `(SK (coup $a $b))
   | `(SK nil) => `(Expr.nil)
   | `(SK fst) => `(Expr.fst)
   | `(SK snd) => `(Expr.snd)
@@ -115,6 +117,7 @@ def toFormat (e : Expr) : Format :=
   | SK (Λ) => "(Λ)"
   | SK fst => "fst"
   | SK snd => "snd"
+  | SK coup => "coup"
   | SK (a, b) => .paren <| a.toFormat ++ ", " ++ b.toFormat
   | SK ⟨a, b⟩ => .bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩"
   | SK Λ(x) => "Λ" ++ (.paren x.toFormat)

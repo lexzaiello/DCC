@@ -22,8 +22,6 @@ inductive Expr.HasRedex : Expr → Prop
   | single : Expr.IsRedex a → HasRedex a
   | left   : HasRedex f → HasRedex (SK (f x))
   | right  : HasRedex x → HasRedex (SK (f x))
-  | coupl  : HasRedex a → HasRedex (SK (a, b))
-  | coupr  : HasRedex b → HasRedex (SK (a, b))
 
 def Expr.is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   match _heq : e with
@@ -43,10 +41,6 @@ def Expr.has_redex (e : Expr) : Option (PLift e.HasRedex) :=
   match _heq : e.is_redex with
   | .some ⟨h⟩ => .some ⟨.single h⟩
   | .none => match e with
-    | (SK (f, x)) => match _heq₂ : f.has_redex, _heq₃ : x.has_redex with
-      | .some ⟨h⟩, _ => .some ⟨.coupl h⟩
-      | _, .some ⟨h⟩ => .some ⟨.coupr h⟩
-      | _, _ => .none
     | (SK (f x)) => match _heq₂ : f.has_redex, _heq₃ : x.has_redex with
       | .some ⟨h⟩, _ => .some ⟨.left h⟩
       | _, .some ⟨h⟩ => .some ⟨.right h⟩
@@ -72,7 +66,7 @@ theorem Expr.HasRedex.complete (h : Expr.HasRedex e) : Expr.has_redex e = .some 
   · simp_all only
   case h_2 =>
     cases heq : h with
-    | coupl | left =>
+    | left =>
       rename_i ha _
       have heq := ha.complete
       simp_all only
@@ -81,7 +75,7 @@ theorem Expr.HasRedex.complete (h : Expr.HasRedex e) : Expr.has_redex e = .some 
       · repeat rfl
       · rename_i ih₁ ih₂
         exact False.elim <| ih₁ ha heq
-    | coupr | right =>
+    | right =>
       rename_i ha _
       have heq := ha.complete
       simp_all only
@@ -137,11 +131,9 @@ inductive Expr.TySize : Expr → ℕ → Prop
   | fst    : Expr.TySize (SK fst) 1
   | snd    : Expr.TySize (SK snd) 1
   | compe  : Expr.TySize (SK (∘)) 1
-  | coup   : Expr.TySize a m
-    → Expr.TySize b n
-    → Expr.TySize (SK (a, b)) (m + n)
+  | coupe  : Expr.TySize (SK coup) 1
   | dpair  : Expr.TySize (SK pair) 1
-  | curr   : Expr.TySize (SK (Λ)) 1
+  | curr   : Expr.TySize (SK (Λ)) 2
   | nil    : Expr.TySize (SK nil) 0
   | comb   : Expr.TySize (.comb c) 0
   | hole   : Expr.TySize (SK __ ∶ t) 0
@@ -151,11 +143,6 @@ inductive Expr.TySize : Expr → ℕ → Prop
     → Expr.TySize (SK (f x)) (n + m)
 
 inductive Expr.RedTy : Expr → Expr → Prop
-  | coup      : Expr.RedTy x x'
-    → Expr.RedTy (SK (x, y)) (SK (x', y))
-  | coup'     : (¬ Expr.HasRedex x)
-    → Expr.RedTy y y'
-    → Expr.RedTy (SK (x, y)) (SK (x, y'))
   | appe      : Expr.RedTy (SK (App (f, x))) (SK (f x))
   | ide       : Expr.RedTy (SK (id e)) e
   | flip      : Expr.RedTy (SK (flip (a, b))) (SK (b, a))
@@ -191,26 +178,20 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
   · exact ⟨1, .ide⟩
   · exact ⟨1, .fst⟩
   · exact ⟨1, .snd⟩
-  · exact ⟨1, .curr⟩
-  case coup a b ih₁ ih₂ =>
-    have ⟨m, h₁⟩ := ih₁
-    have ⟨n, h₂⟩ := ih₂
-    exact ⟨m + n, .coup h₁ h₂⟩
+  · exact ⟨2, .curr⟩
+  · exact ⟨1, .coupe⟩
   case dpair => exact ⟨1, .dpair⟩
 
 theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n := by
   induction h₁ generalizing m with
-  | quoted | curr | app | coup =>
+  | quoted | curr | app =>
     cases h₂; grind only
   | _ => cases h₂; rfl
 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
-  | .curr | .App | .id | .flip | .quot | .compe | .dpair | .fst | .snd => 1
-  | .coup a b =>
-    let m := a.ty_size
-    let n := b.ty_size
-    (m + n)
+  | .curr => 2
+  | .coupe | .App | .id | .flip | .quot | .compe | .dpair | .fst | .snd => 1
   | .nil | .comb _c | .tyhole _m | .Srt _m => 0
   | .app f x =>
     let m := f.ty_size
@@ -223,6 +204,7 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   rw [← h]
   split at h
   · exact .curr
+  · exact .coupe
   · exact .appe
   · exact .ide
   · exact .flip
@@ -231,8 +213,6 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   · exact .dpair
   · exact .fst
   · exact .snd
-  · rename_i a b
-    exact .coup (Expr.TySize.sound (e := a) rfl) (Expr.TySize.sound (e := b) rfl)
   · exact .nil
   · exact .comb
   · exact .hole
@@ -243,30 +223,16 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
 theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
   intro h
   induction h with
-  | coup hf hx ih₁ ih₂ | app hf hx ih₁ ih₂ =>
+  | app hf hx ih₁ ih₂ =>
     rw [← ih₁, ← ih₂]
     rfl
   | _ => rfl
 
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n :=
   match heq : h_red with
-  | .coup' (x := x) (y := y) h_n_r h_r_y =>
-    let ⟨n_x', h_size_y', h_lt⟩ := h_r_y.decreasing (TySize.sound rfl)
-    let h := Expr.TySize.sound (e := y) rfl
-    match h_size with
-    | .coup h_n_x h_n_y =>
-      let h := TySize.unique (e := y) h h_n_y
-      ⟨_, .coup h_n_x h_size_y', by simp_all only [heq_eq_eq, add_lt_add_iff_left]⟩
-  | .coup (x := x) (y := y) h_r_x =>
-    let ⟨n_x', h_size_x', h_lt⟩ := h_r_x.decreasing (TySize.sound rfl)
-    let h := Expr.TySize.sound (e := x) rfl
-    match h_size with
-    | .coup h_n_x h_n_y =>
-      let h := TySize.unique (e := x) h h_n_x
-      ⟨_, .coup h_size_x' h_n_y, by simp_all only [heq_eq_eq, add_lt_add_iff_right]⟩
   | .appe (f := f) (x := x) =>
     match h_size with
-    | .app .appe (.coup h_t_f h_t_x) =>
+    | .app .appe (.app (.app .coupe h_t_f) h_t_x) =>
       ⟨_, .app h_t_f h_t_x, by grind only⟩
   | .ide (e := e) =>
     match h_size with
@@ -278,8 +244,8 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
       ⟨_, .app (.app .dpair h_t_b) h_t_a, by grind only⟩
   | .flip (a := a) (b := b) =>
     match h_size with
-    | .app .flip (.coup h_t_a h_t_b) =>
-      ⟨_, .coup h_t_b h_t_a, by grind only⟩
+    | .app .flip (.app (.app .coupe h_t_a) h_t_b) =>
+      ⟨_, .app (.app .coupe h_t_b) h_t_a, by grind only⟩
   | .quoted (e := e) =>
     match h_size with
     | .app (.app .quoted h_t_x) _ => ⟨_, h_t_x, by grind only⟩
@@ -288,18 +254,18 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
      | .app (.app (.app .compe h_t_x) h_t_y) h_t_z => ⟨_, Expr.TySize.app h_t_x (.app h_t_y h_t_z), by grind only⟩
   | .fst =>
     match h_size with
-    | .app .fst (.coup h_t_a h_t_b) => ⟨_, h_t_a, by grind only⟩
+    | .app .fst (.app (.app .coupe h_t_a) h_t_b) => ⟨_, h_t_a, by grind only⟩
   | .snd =>
     match h_size with
-    | .app .snd (.coup h_t_a h_t_b) => ⟨_, h_t_b, by grind only⟩
+    | .app .snd (.app (.app .coupe h_t_a) h_t_b) => ⟨_, h_t_b, by grind only⟩
   | .dpair (f := f) (g := g) (a := a) (b := b) =>
     match h_size with
-    | .app (.app (.app .dpair h_t_f) h_t_g) (.coup h_t_a h_t_b) =>
-      ⟨_, .coup (.app h_t_f h_t_a) (.app h_t_g h_t_b), by grind only⟩
+    | .app (.app (.app .dpair h_t_f) h_t_g) (.app (.app .coupe h_t_a) h_t_b) =>
+      ⟨_, .app (.app .coupe (.app h_t_f h_t_a)) (.app h_t_g h_t_b), by grind only⟩
   | .curr (x := x) (y := y) (z := z) =>
     match h_size with
     | .app (.app (.app .curr h_t_x) h_t_y) h_t_z =>
-      ⟨_, .app h_t_x (.coup h_t_y h_t_z), by grind only⟩
+      ⟨_, .app h_t_x (.app (.app .coupe h_t_y) h_t_z), by simp_all; grind⟩
   | .congrArg (f := f) (x := x) (x' := x') h_n_r_all h_r_x =>
     match h_size with
     | .app hn_f hn_x (n := m) =>
@@ -351,15 +317,6 @@ def Expr.step? (e : Expr) : Option ((e' : Expr) × (PLift (e.RedTy e'))) :=
     | (SK (⟨f, g⟩ (a, b))) => .some ⟨(SK ((f a), (g b))), ⟨.dpair⟩⟩
   else
     match e with
-    | (SK (a, b)) =>
-      if h : ¬ a.HasRedex then
-        match b.step? with
-        | .some ⟨b', ⟨hr⟩⟩ => .some ⟨SK (a, b'), ⟨.coup' (fun h => by
-          simp_all only [not_true_eq_false]) hr⟩⟩
-        | .none => .none
-      else match a.step? with
-        | .some ⟨a', ⟨hr⟩⟩ => .some ⟨SK (a', b), ⟨.coup hr⟩⟩
-        | .none => .none
     | (SK (f x)) =>
       if h₀ : ¬ (SK (f x)).IsRedex then
         if h₁ : (SK (f x)).HasRedex then
@@ -421,31 +378,21 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
 @[simp] theorem no_redex_appr : ¬ Expr.HasRedex (SK (f x)) → ¬ x.HasRedex := fun h hno => by
   exact h (Expr.HasRedex.right hno (x := x))
 
-@[simp] theorem no_redex_coupl : ¬ Expr.HasRedex (SK (f, x)) → ¬ f.HasRedex := fun h hno => by
-  exact h (Expr.HasRedex.coupl hno (a := f))
-
-@[simp] theorem no_redex_coupr : ¬ Expr.HasRedex (SK (f, x)) → ¬ x.HasRedex := fun h hno => by
-  exact h (Expr.HasRedex.coupr hno (b := x))
-
 @[simp] theorem no_redex_appl_contra : ¬ Expr.HasRedex (SK (f x)) → f.HasRedex → False := fun h hf => by
   exact absurd hf (no_redex_appl h)
 
 @[simp] theorem no_redex_appr_contra : ¬ Expr.HasRedex (SK (f x)) → x.HasRedex → False := fun h hf => by
   exact absurd hf (no_redex_appr h)
 
-@[simp] theorem no_redex_coupl_contra : ¬ Expr.HasRedex (SK (f, x)) → f.HasRedex → False := fun h hf => by
-  exact absurd hf (no_redex_coupl h)
+@[simp] theorem no_redex_coupl_contra : ¬ Expr.HasRedex (SK (a, b)) → a.HasRedex → False := fun h hf => by
+  exact h (.left (.right (by assumption)))
 
-@[simp] theorem no_redex_coupr_contra : ¬ Expr.HasRedex (SK (f, x)) → x.HasRedex → False := fun h hf => by
-  exact absurd hf (no_redex_coupr h)
+@[simp] theorem no_redex_coupr_contra : ¬ Expr.HasRedex (SK (a, b)) → b.HasRedex → False := fun h hf => by
+  exact h (.right (by assumption))
 
 @[simp] theorem no_redex_no_step : ¬ Expr.HasRedex e → ¬ ∃ e', e.RedTy e' := by
   intro h ⟨e', hr⟩
   induction hr
-  · simp_all only [imp_false, not_not]
-    exact no_redex_coupl_contra h (by assumption)
-  · simp_all only [imp_false, not_not]
-    exact no_redex_coupr_contra h (by assumption)
   · exact h (.single .appe)
   · exact h (.single .ide)
   · exact h (.single .flip)
@@ -477,8 +424,6 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
 
 @[simp] theorem Expr.RedTy.has_redex : Expr.RedTy e e' → e.HasRedex := fun h => by
   induction h
-  · exact Expr.HasRedex.coupl (by assumption)
-  · exact Expr.HasRedex.coupr (by assumption)
   · exact .single .appe
   · exact .single .ide
   · exact .single .flip
@@ -517,29 +462,9 @@ def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e',
       contradiction
     case congrFun =>
       contradiction
-    · contradiction
-    · contradiction
     repeat rfl
   else
     match e with
-    | SK (a, b) =>
-      have h : ¬ (SK (a, b)).IsRedex := fun h => by cases h
-      have h₁ := h_step.has_redex
-      unfold Expr.step?
-      simp [h]
-      cases h_step : h_step
-      cases h_red : h₁
-      · rename_i h_redex
-        simp_all
-      · rename_i h_redex
-        simp_all
-        rename_i h
-        simp [h.complete]
-      rename_i h _ _
-      simp [h.has_redex, h.complete]
-      simp_all
-      rename_i h
-      simp [h.complete]
     | SK (a b) =>
       cases h_step
       · exfalso; exact h_top_red .appe

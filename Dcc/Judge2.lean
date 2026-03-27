@@ -4,7 +4,7 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
 
 def assoc : Expr :=
-  (SK (App ∘ ⟨App ∘ ⟨comp ∘ pair, pair⟩, id⟩))
+  (SK (App ∘ ⟨App ∘ ⟨(∘) ∘ pair, pair⟩, id⟩))
 
 /-
 ((a, b), c)
@@ -24,48 +24,18 @@ App ∘ ⟨comp ∘ ⟨Λ(Id), Λ(Id)⟩, Id ⟩
 App ∘ ⟨ (∘) ∘ ⟨Λ(Id), Λ(Id)⟩, Id ⟩
 -/
 def assoc_couple : Expr :=
-  (SK (App ∘ ⟨App ∘ ⟨comp ∘ pair, pair⟩, id⟩))
+  (SK (App ∘ ⟨App ∘ ⟨(∘) ∘ pair, pair⟩, id⟩))
 
 /-
 (a, (b, c)) => ((a, b), c)
 
-⟨id, flip⟩ (a, (b, c)) = (a, (c, b))
-flip ∘ ⟨id, flip⟩ = ((c, b), a)
-assoc ∘ flip ∘ ⟨id, flip⟩ = (c, (b, a))
-flip ∘ ⟨id, flip⟩ ∘ assoc ∘ flip ∘ ⟨id, flip⟩ = ((a, b), c)
-
-assoc ∘ flip ∘ ⟨id, flip⟩ (a, (b, c)) = (c, (b, a))
-
-App ((pair Sort 0) ∘ (pair Sort 1), Sort 2)
-= (pair Sort 0) ∘ (pair Sort 1) (Sort 2)
-= ⟨Sort 0, ⟨Sort 1, Sort 2⟩⟩
-
-(⟨Λ(id), Λ(id)⟩ Sort 0) ∘ (Sort 1, Sort 2)
-
-App ∘ ⟨App ∘ ⟨pair, id⟩⟩ ((a, b), c) = (a, b) c
-
-App (a, b) = a b
-
-(() ∘ pair (Sort 0))
-
-simpler combinator
-
-app₂ (a, (b, c)) = a b c
-
-App (a, (b, c)) = a (b, c)
-
-(App ∘ ⟨App, id⟩ (a, (b, c))) = App (App a, (b, c))
-= (App a) (b, c) = a (b, c)
-
-⟨pair a, id⟩ (b, c) =
-
-Λ(a) (b, c) = 
+(App ∘ ⟨(Λ), id⟩ (a, (b, c))) => App (Λ(a), (b, c))
 -/
 def unassoc : Expr :=
-  (SK App ∘ ⟨comp ∘ ⟨Λ(id), Λ(id)⟩, id⟩)
+  (SK App ∘ ⟨(∘) ∘ ⟨Λ(id), Λ(id)⟩, id⟩)
   --(SK flip ∘ ⟨id, flip⟩ ∘ assoc ∘ flip ∘ ⟨id, flip⟩)
 
-#eval Std.format <| (SK ((⟨App ∘ ⟨comp ∘ pair, pair⟩, id⟩ ((Sort 0, Sort 1), Sort 2)))).reduce
+#eval Std.format <| (SK ((⟨App ∘ ⟨(∘) ∘ pair, pair⟩, id⟩ ((Sort 0, Sort 1), Sort 2)))).reduce
 #eval Std.format <| (SK (#(assoc) ((Sort 0, Sort 1), Sort 2))).reduce
 
 #eval Std.format <| (SK (App ∘ ⟨App ∘ ⟨pair, id⟩, id⟩ ((Sort 0, Sort 1), Sort 2))).reduce

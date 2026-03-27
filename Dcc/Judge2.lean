@@ -85,6 +85,33 @@ S.{[m, n]} : ∀ (α : Sort m) (β : α → Sort n) (γ : ∀ (x : α) (y : β x
 S.{[m, n]} : (Sort m,
     (flip ∘ ⟨(quot (quot Sort n)), id⟩)
     ≫ (⟨fst, (((≫) snd) ≫ (flip' pair (quot (Sort o))))⟩
+
+S.{[m, n, o]} :
+  (Sort m,
+    {snd ≫ (flip' coup (quot (Sort n))),
+      {Λ(⟨snd, (((≫) snd) ∘ snd) ≫ flip' pair (quot (Sort o))⟩),
+        {Λ(Λ(assoc ≫ (⟨snd, ⟨snd ≫ (((≫) snd) ≫ lens),
+                   (Λ(Λ(snd ∘ ⟨App ∘ ⟨snd, snd⟩, snd⟩)))⟩⟩))),
+          {Λ(Λ(Λ(fst ≫ fst ≫ ⟨snd, snd ≫ ((≫) snd)⟩))),
+            {fst ≫ fst ≫ fst ≫ fst ≫ snd,
+            Λ(Λ(Λ(Λ(Λ(⟨⟨((App ∘ ⟨App ∘ ⟨snd ≫ S.{[m, n, o.succ]}, snd⟩,
+            quot (quot (quot (Sort o)))⟩) ∘ fst), snd⟩, snd⟩)))))}}}}})
+
+S α β (quot (quot (Sort o))) γ y z
+
+_t_γ is of the form (α, ⟨snd ≫ β, (quot (Sort o))⟩)
+
+
+
+S.{[m, n]} : (Sort m,
+  {(flip ∘ ⟨(quot (quot Sort n)), id⟩)
+  , 
+[
+
+S.{[m, n]} : (Sort m,
+    (flip ∘ ⟨(quot (quot Sort n)), id⟩)
+    ≫ (⟨fst, (((≫) snd) ≫ (flip' pair (quot (Sort o))))⟩
+[((α, ⟨snd ≫ β, (quot (Sort o))⟩), γ)] ≫ 
     ⟨fst, (((≫) snd) ≫ (flip' pair (quot (Sort o))))⟩
 --[((α, (quot (Sort n))), β)] (α, ⟨(snd ≫ β), (quot (Sort o))⟩)
 [(α, 
@@ -96,8 +123,8 @@ assuming fst ({a, b} x) = (a x) and snd ({a, b} x) = (b x):
 [((α, ⟨(snd ≫ β), (quot (Sort o))⟩), γ)]
 
 γ doesn't need to see the type, though. but it needs to see y.
-snd {(snd ≫ β), γ} x = γ x
-fst {(snd ≫ β), γ} x = β x
+snd {(snd ≫ β), (snd ≫ γ)} (α, x) = γ x
+fst {(snd ≫ β), (snd ≫ γ)} (α, x) = β x
 γ receives [β x, y]
 {a, b} x =
 {(snd ≫ β), 
@@ -117,7 +144,7 @@ inductive Judge : Expr → Expr → Prop
   | srt  : Judge (SK Sort m.succ) (SK Sort m)
   | app  : Judge (SK t_f) f
     → Judge (SK (fst t_f)) x
-    → Judge (SK ((snd t_f) ((fst t_f), x))) (SK (f x))
+    → Judge (SK ((snd t_f) ((fst t_f), x))) (SK (f x)) -- TODO: if can't decrease here, just use {}
   | coup : Judge (SK Sort 1) (SK (α, β))
   | pair : Judge (SK Sort 1) (SK ⟨α, β⟩)
   | conv  {α β : Expr} : Judge α x → α.RedTyTrans β → Expr.IsNorm β → Judge β x

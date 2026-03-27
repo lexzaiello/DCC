@@ -3,6 +3,52 @@ import Dcc.Eval2
 import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
 
+/-
+
+-/
+
+/-
+Combinator version of flip.
+
+flip f x y = f y x
+
+App ∘ flip ∘ ⟨id, f⟩
+
+Λ(?) 
+
+Λ(pair f) x y = (f, (x, y))
+
+flip' f x y = f y x
+
+(coup f) x y = (f, x)
+
+(App ∘ flip ∘ (pair id) f x y) = f y x
+
+(pair id) f = ⟨id, f⟩
+
+⟨id, f⟩ x y
+
+(Λ(App ∘ flip ∘ ⟨id, Sort 0⟩) (Sort 1) (Sort 2))
+
+Λ ∘ (((∘) App)∘ ((∘) flip) ∘ (pair id))
+
+⟨f, id⟩ x y = ⟨f, id⟩(x, y) = (f x, y)
+-/
+def flip' : Expr :=
+  SK ((Λ) ∘ (((∘) (App ∘ flip)) ∘ (pair id)))
+
+#eval Std.format <| (SK ((((Λ) ∘ (((∘) (App ∘ flip)) ∘ (pair id))) (Sort 0)) (Sort 1) (Sort 2))).reduce
+
+#eval Std.format <| (SK (Λ(App ∘ flip ∘ ⟨id, Sort 0⟩) (Sort 1) (Sort 2))).reduce
+#eval Std.format <| (SK (flip' (Sort 0) (Sort 1) (Sort 2))).reduce
+
+/-
+(f ≫ g) a = g (f a), as opposed to (f ∘ g) a = f (g a)
+-/
+
+def pipe : Expr :=
+  sorry
+
 def assoc : Expr :=
   (SK (App ∘ ⟨App ∘ ⟨(∘) ∘ pair, pair⟩, id⟩))
 
@@ -66,6 +112,12 @@ def unassoc : Expr :=
 #eval Std.format <| (SK (App ∘ ⟨App ∘ ⟨pair, id⟩, id⟩ ((Sort 0, Sort 1), Sort 2))).reduce
 
 /-
+
+K type:
+
+[]           (Sort m,
+[Sort m, α]  flip ∘ ⟨(quot (quot Sort n)), id⟩ => (α, quot Sort n)
+
 K type:
 
 []                     (Sort m,

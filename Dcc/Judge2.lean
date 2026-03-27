@@ -6,12 +6,88 @@ import Mathlib.Logic.Relation
 def assoc : Expr :=
   (SK (App ∘ ⟨App ∘ ⟨comp ∘ pair, pair⟩, id⟩))
 
+/-
+((a, b), c)
+
+flip ((a, b), c) = (c, (a, b))
+⟨id, ⟨Λ(flip ((a, b), c) = (c, (a, b))
+Λ(⟨pair, id⟩
+
+⟨fst ∘ fst, ⟨snd ∘ fst, snd⟩⟩ ((a, b), c)
+= (a, (
+
+Λ(Λ(App∘⟨fst∘fst,⟨snd∘fst,snd⟩⟩))
+
+App ∘ ⟨ (∘) ∘ ⟨Λ(Id), Λ(Id)⟩, Id ⟩
+App ∘ ⟨(comp) ∘ ⟨Λ(Id), Λ(Id)⟩, Id⟩ ((a, b), c)
+App ∘ ⟨comp ∘ ⟨Λ(Id), Λ(Id)⟩, Id ⟩
+App ∘ ⟨ (∘) ∘ ⟨Λ(Id), Λ(Id)⟩, Id ⟩
+-/
 def assoc_couple : Expr :=
-  (SK (⟨id, ⟨id, id⟩⟩ ∘ assoc))
+  (SK (App ∘ ⟨App ∘ ⟨comp ∘ pair, pair⟩, id⟩))
+
+/-
+(a, (b, c)) => ((a, b), c)
+
+⟨id, flip⟩ (a, (b, c)) = (a, (c, b))
+flip ∘ ⟨id, flip⟩ = ((c, b), a)
+assoc ∘ flip ∘ ⟨id, flip⟩ = (c, (b, a))
+flip ∘ ⟨id, flip⟩ ∘ assoc ∘ flip ∘ ⟨id, flip⟩ = ((a, b), c)
+
+assoc ∘ flip ∘ ⟨id, flip⟩ (a, (b, c)) = (c, (b, a))
+
+App ((pair Sort 0) ∘ (pair Sort 1), Sort 2)
+= (pair Sort 0) ∘ (pair Sort 1) (Sort 2)
+= ⟨Sort 0, ⟨Sort 1, Sort 2⟩⟩
+
+(⟨Λ(id), Λ(id)⟩ Sort 0) ∘ (Sort 1, Sort 2)
+
+App ∘ ⟨App ∘ ⟨pair, id⟩⟩ ((a, b), c) = (a, b) c
+
+App (a, b) = a b
+
+(() ∘ pair (Sort 0))
+
+simpler combinator
+
+app₂ (a, (b, c)) = a b c
+
+App (a, (b, c)) = a (b, c)
+
+(App ∘ ⟨App, id⟩ (a, (b, c))) = App (App a, (b, c))
+= (App a) (b, c) = a (b, c)
+
+⟨pair a, id⟩ (b, c) =
+
+Λ(a) (b, c) = 
+-/
+def unassoc : Expr :=
+  (SK App ∘ ⟨comp ∘ ⟨Λ(id), Λ(id)⟩, id⟩)
+  --(SK flip ∘ ⟨id, flip⟩ ∘ assoc ∘ flip ∘ ⟨id, flip⟩)
 
 #eval Std.format <| (SK ((⟨App ∘ ⟨comp ∘ pair, pair⟩, id⟩ ((Sort 0, Sort 1), Sort 2)))).reduce
 #eval Std.format <| (SK (#(assoc) ((Sort 0, Sort 1), Sort 2))).reduce
 
+#eval Std.format <| (SK (App ∘ ⟨App ∘ ⟨pair, id⟩, id⟩ ((Sort 0, Sort 1), Sort 2))).reduce
+
+/-
+K type:
+
+[]                     (Sort m,
+                          Λ(flip)
+[((α, (quot Sort n)), β)]  (⟨fst,
+[β (α, x)]                       Λ(
+[(                                   _
+                                   ∘ (unassoc ∘ ⟨App, flip⟩)) -- TODO: (β, (α, x)) -> ((β x), α)
+[Sort m, α]               (flip ∘ ⟨(quot Sort n), id⟩))
+
+[]                 (Sort m,
+                     Λ(flip) (
+[((α, Sort n), β)]     (⟨fst,
+[β (                              ))) ∘
+[(Sort m, α)]      (flip ∘ ⟨(quot Sort n), quot⟩))
+
+-/
 /-def K.type (m n : Level) : Expr :=
   SK (Sort m, ⟨(flip ∘ ⟨(quot Sort n), id⟩), Λ(⟨fst, (Λ((((Λ(App ∘ flip) (flip ∘ Λ(⟨id, quot⟩))) ∘ flip) id)⟩)⟩)⟩)-/
 

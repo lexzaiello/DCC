@@ -85,9 +85,24 @@ S.{[m, n]} : ∀ (α : Sort m) (β : α → Sort n) (γ : ∀ (x : α) (y : β x
 S.{[m, n]} : (Sort m,
     (flip ∘ ⟨(quot (quot Sort n)), id⟩)
     ≫ (⟨fst, (((≫) snd) ≫ (flip' pair (quot (Sort o))))⟩
-[((α, ⟨β, (quot (Sort o))⟩), γ)]
-[(α, (⟨β, (quot (Sort o))⟩, γ))]
-    ≫ (assoc ∘ ⟨⟨id, (? fst / snd here somehow?)⟩, id⟩)
+    ⟨fst, (((≫) snd) ≫ (flip' pair (quot (Sort o))))⟩
+--[((α, (quot (Sort n))), β)] (α, ⟨(snd ≫ β), (quot (Sort o))⟩)
+[(α, 
+[((α, ⟨(snd ≫ β), (quot (Sort o))⟩), γ)]
+[((α, ⟨(snd ≫ β), (quot (Sort o))⟩), γ)]
+
+assuming fst ({a, b} x) = (a x) and snd ({a, b} x) = (b x):
+
+[((α, ⟨(snd ≫ β), (quot (Sort o))⟩), γ)]
+
+γ doesn't need to see the type, though. but it needs to see y.
+snd {(snd ≫ β), γ} x = γ x
+fst {(snd ≫ β), γ} x = β x
+γ receives [β x, y]
+{a, b} x =
+{(snd ≫ β), 
+
+    ≫ ((⟨id, App₂ pair ∘ ⟨id, ) ∘ assoc ∘ ⟨⟨id, fst⟩, id⟩)
   )
 -/
 

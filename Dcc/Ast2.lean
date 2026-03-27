@@ -30,6 +30,7 @@ inductive Expr where
   | curr   : Expr
   | coupe  : Expr
   | dpair  : Expr
+  | lense  : Expr
 deriving BEq, Repr, Lean.ToExpr, DecidableEq
 
 namespace dsl
@@ -57,6 +58,8 @@ syntax "flip" : expr
 syntax "id" : expr
 syntax "snd" : expr
 syntax "(Λ)" : expr
+syntax "{" expr "," expr "}" : expr
+syntax "lens" : expr
 syntax "Λ" "(" expr ")" : expr
 syntax "(" expr "," expr ")" : expr
 syntax "pair" : expr
@@ -77,6 +80,8 @@ macro_rules
   | `(SK flip) => `(Expr.flip)
   | `(SK quot) => `(Expr.quot)
   | `(SK pair) => `(Expr.dpair)
+  | `(SK lens) => `(Expr.lense)
+  | `(SK {$a:expr, $b:expr}) => `(SK (lens $a $b))
   | `(SK ⟨$a:expr, $b:expr⟩) => `(SK (pair $a $b))
   | `(SK coup) => `(Expr.coupe)
   | `(SK ($a:expr, $b:expr)) => `(SK (coup $a $b))
@@ -118,6 +123,7 @@ def toFormat (e : Expr) : Format :=
   | SK fst => "fst"
   | SK snd => "snd"
   | SK coup => "coup"
+  | SK {a, b} => .bracket "{" (a.toFormat ++ "," ++ b.toFormat) "}"
   | SK (a, b) => .paren <| a.toFormat ++ ", " ++ b.toFormat
   | SK ⟨a, b⟩ => .bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩"
   | SK Λ(x) => "Λ" ++ (.paren x.toFormat)

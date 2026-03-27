@@ -7,6 +7,8 @@ flip probably necessary.
 -/
 
 inductive Expr.IsRedex : Expr → Prop
+  | k'        : IsRedex (SK (K'.{[m, n]} α β x y))
+  | k         : IsRedex (SK (K.{[m, n]} α β x y))
   | appe      : IsRedex (SK (App (f, x)))
   | ide       : IsRedex (SK (id e))
   | flip      : IsRedex (SK (flip (a, b)))
@@ -25,6 +27,8 @@ inductive Expr.HasRedex : Expr → Prop
 
 def Expr.is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   match _heq : e with
+  | (SK (K'.{[_m, _n]} _α _β _x _y)) => .some ⟨.k'⟩
+  | (SK (K.{[_m, _n]} _α _β _x _y)) => .some ⟨.k⟩
   | (SK (App (_f, _x))) => .some ⟨.appe⟩
   | (SK (id _e)) => .some ⟨.ide⟩
   | (SK (flip (_a, _b))) => .some ⟨.flip⟩
@@ -52,13 +56,9 @@ def Expr.has_redex (e : Expr) : Option (PLift e.HasRedex) :=
 theorem Expr.IsRedex.sound (_h : Expr.is_redex e = .some he) : Expr.IsRedex e := he.down
 
 theorem Expr.IsRedex.complete (h : Expr.IsRedex e) : Expr.is_redex e = .some (.up h) := by
-  unfold Expr.is_redex
-  split
-  repeat rfl
-  cases h
-  repeat simp_all
-  · rename_i f g a b h
-    exact h _ _ _ _ rfl rfl rfl rfl
+  match h with
+  | .flip' | .quoted | .comp | .fst | .snd | curr | .flip | appe | dpair | ide | k | k' =>
+    simp only [Expr.is_redex]
 
 theorem Expr.HasRedex.complete (h : Expr.HasRedex e) : Expr.has_redex e = .some (.up h) := by
   unfold Expr.has_redex
@@ -124,6 +124,8 @@ instance Expr.HasRedex.instDecidable : Decidable (Expr.HasRedex e) :=
 -- Decreasing measure
 -- function arity decreases with each argument
 inductive Expr.TySize : Expr → ℕ → Prop
+  | k'     : Expr.TySize (SK K'.{[m, n]}) 1
+  | k      : Expr.TySize (SK K.{[m, n]}) 1
   | appe   : Expr.TySize (SK App) 1
   | ide    : Expr.TySize (SK id) 1
   | quoted : Expr.TySize (SK quot) 1
@@ -135,7 +137,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
   | dpair  : Expr.TySize (SK pair) 1
   | curr   : Expr.TySize (SK (Λ)) 2
   | nil    : Expr.TySize (SK nil) 0
-  | comb   : Expr.TySize (.comb c) 0
+  | s      : Expr.TySize (SK S.{[m, n, o]}) 0
   | hole   : Expr.TySize (SK __ ∶ t) 0
   | srt    : Expr.TySize (SK Sort m) 0
   | app    : Expr.TySize f n
@@ -143,6 +145,8 @@ inductive Expr.TySize : Expr → ℕ → Prop
     → Expr.TySize (SK (f x)) (n + m)
 
 inductive Expr.RedTy : Expr → Expr → Prop
+  | k'        : Expr.RedTy (SK (K'.{[m, n]} α β x y)) x
+  | k         : Expr.RedTy (SK (K.{[m, n]} α β x y)) x
   | appe      : Expr.RedTy (SK (App (f, x))) (SK (f x))
   | ide       : Expr.RedTy (SK (id e)) e
   | flip      : Expr.RedTy (SK (flip (a, b))) (SK (b, a))
@@ -165,7 +169,11 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
   induction e
   · exact ⟨0, .hole⟩
   · exact ⟨0, .srt⟩
-  · exact ⟨0, .comb⟩
+  · rename_i c
+    cases c
+    · exact ⟨1, .k'⟩
+    · exact ⟨1, .k⟩
+    · exact ⟨0, .s⟩
   case app f x ih₁ ih₂ =>
     have ⟨n, hn⟩ := ih₁
     have ⟨m, hm⟩ := ih₂
@@ -186,13 +194,15 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
   induction h₁ generalizing m with
   | quoted | curr | app =>
     cases h₂; grind only
-  | _ => cases h₂; rfl
+  | _ => repeat (cases h₂; rfl)
 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
   | .curr => 2
-  | .coupe | .App | .id | .flip | .quot | .compe | .dpair | .fst | .snd => 1
-  | .nil | .comb _c | .tyhole _m | .Srt _m => 0
+  | (SK K'.{[_m, _n]}) | (SK K.{[_m, _n]}) | .coupe | .App | .id | .flip | .quot | .compe | .dpair | .fst | .snd => 1
+  | .nil => 0
+  | (SK S.{[_m, _n, _o]}) => 0
+  | .tyhole _m | .Srt _m => 0
   | .app f x =>
     let m := f.ty_size
     let n := x.ty_size
@@ -204,6 +214,8 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   rw [← h]
   split at h
   · exact .curr
+  · exact .k'
+  · exact .k
   · exact .coupe
   · exact .appe
   · exact .ide
@@ -214,7 +226,7 @@ theorem Expr.TySize.sound : Expr.ty_size e = n → Expr.TySize e n := by
   · exact .fst
   · exact .snd
   · exact .nil
-  · exact .comb
+  · exact .s
   · exact .hole
   · exact .srt
   · rename_i x₁ f x
@@ -230,6 +242,14 @@ theorem Expr.TySize.complete : Expr.TySize e n → Expr.ty_size e = n := by
 
 theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : ∃ m, e'.TySize m ∧ m < n :=
   match heq : h_red with
+  | .k (α := α) (β := β) (x := x) (y := y) =>
+    match h_size with
+    | .app (.app (.app (.app .k h_t_α) h_t_β) h_t_x) h_t_y =>
+      ⟨_, h_t_x, by grind only⟩
+  | .k' (α := α) (β := β) (x := x) (y := y) =>
+    match h_size with
+    | .app (.app (.app (.app .k' h_t_α) h_t_β) h_t_x) h_t_y =>
+      ⟨_, h_t_x, by grind only⟩
   | .appe (f := f) (x := x) =>
     match h_size with
     | .app .appe (.app (.app .coupe h_t_f) h_t_x) =>
@@ -305,6 +325,8 @@ def Expr.IsNorm (e : Expr) : Prop := ¬ ∃ e', RedTy e e'
 def Expr.step? (e : Expr) : Option ((e' : Expr) × (PLift (e.RedTy e'))) :=
   if h : e.IsRedex then
     match _heq : e with
+    | (SK (K'.{[_m, _n]} _α _β x _y)) => .some ⟨x, ⟨.k'⟩⟩
+    | (SK (K.{[_m, _n]} _α _β x _y)) => .some ⟨x, ⟨.k⟩⟩
     | (SK (App (f, x))) => .some ⟨SK (f x), ⟨.appe⟩⟩
     | (SK (id e)) => .some ⟨e, ⟨.ide⟩⟩
     | (SK (flip (a, b))) => .some ⟨SK (b, a), ⟨.flip⟩⟩
@@ -393,6 +415,8 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
 @[simp] theorem no_redex_no_step : ¬ Expr.HasRedex e → ¬ ∃ e', e.RedTy e' := by
   intro h ⟨e', hr⟩
   induction hr
+  · exact h (.single .k')
+  · exact h (.single .k)
   · exact h (.single .appe)
   · exact h (.single .ide)
   · exact h (.single .flip)
@@ -424,6 +448,8 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
 
 @[simp] theorem Expr.RedTy.has_redex : Expr.RedTy e e' → e.HasRedex := fun h => by
   induction h
+  · exact .single .k'
+  · exact .single .k
   · exact .single .appe
   · exact .single .ide
   · exact .single .flip
@@ -440,6 +466,8 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
 theorem Expr.IsRedex.can_step : Expr.IsRedex e → ∃ e', e.RedTy e' := by
   intro h
   cases h
+  · exact ⟨_, .k'⟩
+  · exact ⟨_, .k⟩
   · exact ⟨_, .appe⟩
   · exact ⟨_, .ide⟩
   · exact ⟨_, .flip⟩
@@ -467,6 +495,8 @@ def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e',
     match e with
     | SK (a b) =>
       cases h_step
+      · exfalso; exact h_top_red .k'
+      · exfalso; exact h_top_red .k
       · exfalso; exact h_top_red .appe
       · exfalso; exact h_top_red .ide
       · exfalso; exact h_top_red .flip

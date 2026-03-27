@@ -66,10 +66,28 @@ App₂ f (x, y) = f x y
 def App₂ : Expr :=
   SK (((flip' pair id)) ≫ ((∘) App))
 
+/-
+K' type using lenses without (α, x):
+
+K'.{[m, n]} : (Sort m, {
+  quot (Sort n), {
+    Λ(fst), Λ(Λ(fst ≫ snd))
+  }
+})
+
+K.{[m, n]} : (Sort m, {
+  flip' coup (quot (Sort n)), {
+    Λ(fst), {
+      Λ(Λ(App ∘ ⟨snd, id⟩)), Λ(Λ(Λ(fst ∘ fst ∘ fst)))
+    }
+  }
+}
+-/
+
 #eval Std.format <| (SK (App₂ (Sort 0) (Sort 1, Sort 2))).reduce
 
 def K'.type (m n : Level) : Expr :=
-  SK (Sort m, ⟨(quot Sort n), Λ(⟨id, Λ(⟨snd, quot ∘ fst⟩)⟩)⟩)
+  SK (Sort m, {(quot (Sort n)), Λ({fst, Λ({fst ≫ snd, Λ(fst ≫ fst ≫ fst)})})})
 
 def K.type (m n : Level) : Expr :=
   SK (Sort m,
@@ -94,7 +112,7 @@ inductive Judge : Expr → Expr → Prop
   | srt  : Judge (SK Sort m.succ) (SK Sort m)
   | app  : Judge (SK t_f) f
     → Judge (SK (fst t_f)) x
-    → Judge (SK ((snd t_f) ((fst t_f), x))) (SK (f x)) -- TODO: if can't decrease here, just use {}
+    → Judge (SK ((snd t_f) x)) (SK (f x)) -- TODO: if can't decrease here, just use {}
   | coup : Judge (SK Sort 1) (SK (α, β))
   | pair : Judge (SK Sort 1) (SK ⟨α, β⟩)
   | conv  {α β : Expr} : Judge α x → α.RedTyTrans β → Expr.IsNorm β → Judge β x
@@ -141,7 +159,7 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
     | .none => .none
   | _ => .none -- TODO: K type, S type
 
-#eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1)))
+#eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1) (Sort 1)))
 
 #eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 2]} (Sort 2) (Sort 1) (Sort 1) (Sort 0)))
 #eval Std.format <| (·.fst) <$> infer (SK (K.{[3, 2]} (Sort 2)

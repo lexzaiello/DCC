@@ -401,6 +401,12 @@ def Expr.reduce (e : Expr) : Expr :=
   | .none => e
 termination_by e.ty_size
 
+def Expr.reduce!? (e : Expr) : Option Expr :=
+  if _heq : e.reduce = e then
+    .none
+  else
+    .some e.reduce
+
 -- Every reduction corresponds to a constructor of reflexive transitive closure of single-step reduction
 theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := by
   intro h
@@ -413,6 +419,16 @@ theorem reduce_sound : Expr.reduce e = e' → Expr.RedTyReflTrans e e' := by
   · rename_i heq
     exact h.symm ▸ .refl
 termination_by e.ty_size
+
+theorem reduce!?_sound : Expr.reduce!? e = .some e' → Expr.RedTyTrans e e' := by
+  intro h
+  simp [Expr.reduce!?] at h
+  have ⟨hneq, hr⟩ := h
+  have hrfl : Relation.ReflTransGen Expr.RedTy e e' := reduce_sound hr
+  rw [← Relation.reflGen_transGen] at hrfl
+  match heq : hrfl with
+  | .refl => contradiction
+  | .single h => exact h
 
 -- Congruence implies that the size of the entire expression decreases.
 theorem app_step_size_decrease : Expr.RedTy f f' → Expr.RedTy x x' → (SK (f' x')).ty_size < (SK (f x)).ty_size := by
@@ -668,6 +684,12 @@ theorem reduce_norm : Expr.reduce e = e' → Expr.IsNorm e' := by
     have h := hr.complete
     simp_all only [reduceCtorEq]
 termination_by e.ty_size
+
+theorem reduce!?_norm : Expr.reduce!? e = .some e' → Expr.IsNorm e' := by
+  intro h
+  simp [Expr.reduce!?] at h
+  have ⟨a, b⟩ := h
+  exact reduce_norm b
 
 -- Strong normalization of single-step reduction using our decreasing measure.
 def Expr.RedTy.SN (e : Expr) : Acc (fun b a => Expr.RedTy a b) e := Acc.intro e (fun e' hr => by

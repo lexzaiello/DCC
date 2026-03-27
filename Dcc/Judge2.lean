@@ -115,12 +115,13 @@ inductive Judge : Expr → Expr → Prop
   | k'   : Judge (K'.type m n) (SK K'.{[m, n]})
   --| s    : Judge (S.type m n o) (SK S.{[m, n, o]})
   | srt  : Judge (SK Sort m.succ) (SK Sort m)
-  | app  : Judge (SK (α, β)) f
-    → Judge α x
-    → Judge (SK (β (α, x))) (SK (f x))
+  | app  : Judge (SK t_f) f
+    → Judge (SK (fst t_f)) x
+    → Judge (SK ((snd t_f) ((fst t_f), x))) (SK (f x))
   | coup : Judge (SK Sort 1) (SK (α, β))
   | pair : Judge (SK Sort 1) (SK ⟨α, β⟩)
   | conv  {α β : Expr} : Judge α x → α.RedTyTrans β → Expr.IsNorm β → Judge β x
+  | conv' {α β : Expr} : Judge β x → α.RedTyTrans β → Expr.IsNorm β → Judge α x
 
 def Judge.convD (h_t : Judge t e) : ((t' : Expr) × (PLift (Judge t' e))) :=
   let t' := t.reduce
@@ -149,13 +150,18 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
     let ⟨t_f, ⟨j_f⟩⟩ := j_f.convD
     let ⟨t_x, ⟨j_x⟩⟩ := j_x.convD
 
-    match t_f with
-    | (SK (α, _β)) =>
-      if heq : α = t_x then
-        let h_t' := Judge.app j_f (heq ▸ j_x)
-        .some (Judge.convD h_t')
+    let maybe_α := (SK (fst t_f)).reduce!?
+
+    match heq : maybe_α with
+    | .some α =>
+      let red_α := reduce!?_sound (e' := α) (by rw [← heq])
+      let h_norm : Expr.IsNorm α := reduce!?_norm (by rw [← heq])
+      if heq' : α = t_x then
+          let h_t' :=
+            Judge.app j_f (.conv' j_x (by rw [← heq']; exact red_α) (by rw [← heq']; exact h_norm))
+          .some (Judge.convD h_t')
       else .none
-    | _ => .none
+    | .none => .none
   | _ => .none -- TODO: K type, S type
 
 #eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1)))

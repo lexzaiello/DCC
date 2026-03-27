@@ -123,6 +123,7 @@ def toFormat (e : Expr) : Format :=
   | SK fst => "fst"
   | SK snd => "snd"
   | SK coup => "coup"
+  | SK lens => "lens"
   | SK {a, b} => .bracket "{" (a.toFormat ++ "," ++ b.toFormat) "}"
   | SK (a, b) => .paren <| a.toFormat ++ ", " ++ b.toFormat
   | SK ⟨a, b⟩ => .bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩"

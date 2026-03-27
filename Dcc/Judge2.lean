@@ -231,4 +231,4 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
 
 #eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 2]} (Sort 2) (Sort 1) (Sort 1) (Sort 0)))
 #eval Std.format <| (·.fst) <$> infer (SK (K.{[3, 2]} (Sort 2)
-  (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1)) (Sort 1)))
+  (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1)) (Sort 1) (Sort 0)))

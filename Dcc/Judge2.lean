@@ -10,29 +10,7 @@ import Mathlib.Logic.Relation
 /-
 Combinator version of flip.
 
-flip f x y = f y x
-
-App ∘ flip ∘ ⟨id, f⟩
-
-Λ(?) 
-
-Λ(pair f) x y = (f, (x, y))
-
 flip' f x y = f y x
-
-(coup f) x y = (f, x)
-
-(App ∘ flip ∘ (pair id) f x y) = f y x
-
-(pair id) f = ⟨id, f⟩
-
-⟨id, f⟩ x y
-
-(Λ(App ∘ flip ∘ ⟨id, Sort 0⟩) (Sort 1) (Sort 2))
-
-Λ ∘ (((∘) App)∘ ((∘) flip) ∘ (pair id))
-
-⟨f, id⟩ x y = ⟨f, id⟩(x, y) = (f x, y)
 -/
 def flip' : Expr :=
   SK ((Λ) ∘ (((∘) (App ∘ flip)) ∘ (pair id)))
@@ -45,7 +23,6 @@ def flip' : Expr :=
 /-
 (f ≫ g) a = g (f a), as opposed to (f ∘ g) a = f (g a)
 -/
-
 def pipe : Expr :=
   SK (flip' (∘))
 
@@ -56,9 +33,6 @@ syntax "(" "≫" ")" : expr
 macro_rules
   | `(SK $f:expr ≫ $g:expr) => `(SK (#(pipe) $f:expr $g:expr))
   | `(SK (≫)) => `(pipe)
-
-def assoc : Expr :=
-  (SK (App ∘ ⟨App ∘ ⟨(∘) ∘ pair, pair⟩, id⟩))
 
 /-
 App₂ f (x, y) = f x y
@@ -76,104 +50,13 @@ def App₂ : Expr :=
 
 #eval Std.format <| (SK (App₂ (Sort 0) (Sort 1, Sort 2))).reduce
 
-/-
-((a, b), c)
-
-flip ((a, b), c) = (c, (a, b))
-⟨id, ⟨Λ(flip ((a, b), c) = (c, (a, b))
-Λ(⟨pair, id⟩
-
-⟨fst ∘ fst, ⟨snd ∘ fst, snd⟩⟩ ((a, b), c)
-= (a, (
-
-Λ(Λ(App∘⟨fst∘fst,⟨snd∘fst,snd⟩⟩))
-
-App ∘ ⟨ (∘) ∘ ⟨Λ(Id), Λ(Id)⟩, Id ⟩
-App ∘ ⟨(comp) ∘ ⟨Λ(Id), Λ(Id)⟩, Id⟩ ((a, b), c)
-App ∘ ⟨comp ∘ ⟨Λ(Id), Λ(Id)⟩, Id ⟩
-App ∘ ⟨ (∘) ∘ ⟨Λ(Id), Λ(Id)⟩, Id ⟩
--/
-def assoc_couple : Expr :=
-  (SK (App ∘ ⟨App ∘ ⟨(∘) ∘ pair, pair⟩, id⟩))
-
-/-
-(a, (b, c)) => ((a, b), c)
-
-App ∘ ⟨coup ∘ (coup a), id⟩
-
-⟨() ∘ coup
-
-(App ∘ ⟨(Λ), id⟩ (a, (b, c))) => App (Λ(a), (b, c))
-=> Λ(a) (b, c) =>
--/
-def unassoc : Expr :=
-  (SK App ∘ ⟨(∘) ∘ ⟨Λ(id), Λ(id)⟩, id⟩)
-  --(SK flip ∘ ⟨id, flip⟩ ∘ assoc ∘ flip ∘ ⟨id, flip⟩)
-
-#eval Std.format <| (SK ((⟨App ∘ ⟨(∘) ∘ pair, pair⟩, id⟩ ((Sort 0, Sort 1), Sort 2)))).reduce
-#eval Std.format <| (SK (#(assoc) ((Sort 0, Sort 1), Sort 2))).reduce
-
-#eval Std.format <| (SK (App ∘ ⟨App ∘ ⟨pair, id⟩, id⟩ ((Sort 0, Sort 1), Sort 2))).reduce
-
-/-
-K type:
-[]                       (Sort m,
-[Sort m, α]                ⟨(quot (quot Sort n)), id⟩
-[((α, (quot Sort n)), β)]  ≫ ⟨fst, (((≫) flip)  ∘ (flip' pair quot))⟩)                       => (α, β ∘ fst) -- ⟨β, quot⟩ ∘ flip (α, x) = (β x, quot α)
-
-
-K type:
-
-[]           (Sort m,
-[Sort m, α]  flip ∘ ⟨(quot (quot Sort n)), id⟩ => (α, quot Sort n)
-
-K type:
-
-[]                     (Sort m,
-                          Λ(flip)
-[((α, (quot Sort n)), β)]  (⟨fst,
-[β (α, x)]                       Λ(
-[(                                   _
-                                   ∘ (unassoc ∘ ⟨App, flip⟩)) -- TODO: (β, (α, x)) -> ((β x), α)
-[Sort m, α]               (flip ∘ ⟨(quot Sort n), id⟩))
-
-[]                 (Sort m,
-                     Λ(flip) (
-[((α, Sort n), β)]     (⟨fst,
-[β (                              ))) ∘
-[(Sort m, α)]      (flip ∘ ⟨(quot Sort n), quot⟩))
-
--/
-/-def K.type (m n : Level) : Expr :=
-  SK (Sort m, ⟨(flip ∘ ⟨(quot Sort n), id⟩), Λ(⟨fst, (Λ((((Λ(App ∘ flip) (flip ∘ Λ(⟨id, quot⟩))) ∘ flip) id)⟩)⟩)⟩)-/
-
-/-
-K' type:
-
-(Sort m,
-in scope: (Sort m, α)
-[]                (Sort m
-[(Sort m, α)]   , ⟨(quot Sort n)
-[α (Sort n, β)] , Λ(⟨id
-[(Sort n, β) α] , Λ(⟨snd, quot⟩)⟩)⟩)
-
-Λ(⟨snd, quot⟩) (Sort n, β) α = ⟨β, quot α⟩
-
-(Sort m, ⟨(quot Sort n), Λ(⟨id, Λ(⟨snd, quot⟩)⟩)⟩)
-
-TODO:
-- check K' type
-- write K type
--/
-
 def K'.type (m n : Level) : Expr :=
   SK (Sort m, ⟨(quot Sort n), Λ(⟨id, Λ(⟨snd, quot ∘ fst⟩)⟩)⟩)
 
 def K.type (m n : Level) : Expr :=
-  SK (Sort m, (flip ∘ ⟨(quot (quot Sort n)), id⟩) ≫ (flip' coup
-    ⟨fst, (((≫) flip)  ∘ (flip' pair quot))⟩) -- ((α, (quot (Sort n))), β)
-  --  ≫ ⟨fst, (((≫) flip)  ∘ (flip' pair quot))⟩
-  )
+  SK (Sort m,
+    (flip ∘ ⟨(quot (quot Sort n)), id⟩)
+      ≫ (flip' coup ⟨fst, (((≫) flip)  ∘ (flip' pair quot))⟩))
 
 /-def S.type (m n o : Level) : Expr :=
   sorry-/

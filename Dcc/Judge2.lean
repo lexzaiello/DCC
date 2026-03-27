@@ -86,8 +86,8 @@ S.{[m, n]} : (Sort m,
     (flip ∘ ⟨(quot (quot Sort n)), id⟩)
     ≫ (⟨fst, (((≫) snd) ≫ (flip' pair (quot (Sort o))))⟩
 [((α, ⟨β, (quot (Sort o))⟩), γ)]
-
-    ≫ ⟨id, (flip' id pair, )⟩
+[(α, (⟨β, (quot (Sort o))⟩, γ))]
+    ≫ (assoc ∘ ⟨⟨id, (? fst / snd here somehow?)⟩, id⟩)
   )
 -/
 

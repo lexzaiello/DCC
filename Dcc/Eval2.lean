@@ -16,7 +16,9 @@ inductive Expr.IsRedex : Expr → Prop
   | quoted    : IsRedex (SK ((quot e) y))
   | comp      : IsRedex (SK ((x ∘ y) z))
   | fst       : IsRedex (SK (fst (x, y)))
+  | fst'      : IsRedex (SK (fst ⟨x, y⟩))
   | snd       : IsRedex (SK (snd (x, y)))
+  | snd'      : IsRedex (SK (snd ⟨x, y⟩))
   | curr      : IsRedex (SK (Λ(x) y z))
   | dpair     : IsRedex (SK (⟨f, g⟩ (a, b)))
 
@@ -36,7 +38,9 @@ def Expr.is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   | (SK ((quot _e) _y)) => .some ⟨.quoted⟩
   | (SK ((_x ∘ _y) _z)) => .some ⟨.comp⟩
   | (SK (fst (_x, _y))) => .some ⟨.fst⟩
+  | (SK (fst ⟨_x, _y⟩)) => .some ⟨.fst'⟩
   | (SK (snd (_x, _y))) => .some ⟨.snd⟩
+  | (SK (snd ⟨_x, _y⟩)) => .some ⟨.snd'⟩
   | (SK (Λ(_x) _y _z)) => .some ⟨.curr⟩
   | (SK (⟨_f, _g⟩ (_a, _b))) => .some ⟨.dpair⟩
   | _ => .none
@@ -57,7 +61,7 @@ theorem Expr.IsRedex.sound (_h : Expr.is_redex e = .some he) : Expr.IsRedex e :=
 
 theorem Expr.IsRedex.complete (h : Expr.IsRedex e) : Expr.is_redex e = .some (.up h) := by
   match h with
-  | .flip' | .quoted | .comp | .fst | .snd | curr | .flip | appe | dpair | ide | k | k' =>
+  | .flip' | .quoted | .comp | .fst | .fst' | .snd | .snd' | curr | .flip | appe | dpair | ide | k | k' =>
     simp only [Expr.is_redex]
 
 theorem Expr.HasRedex.complete (h : Expr.HasRedex e) : Expr.has_redex e = .some (.up h) := by
@@ -154,7 +158,9 @@ inductive Expr.RedTy : Expr → Expr → Prop
   | quoted    : Expr.RedTy (SK ((quot e) y)) e
   | comp      : Expr.RedTy (SK ((x ∘ y) z)) (SK (x (y z)))
   | fst       : Expr.RedTy (SK (fst (x, y))) x
+  | fst'      : Expr.RedTy (SK (fst ⟨x, y⟩)) x
   | snd       : Expr.RedTy (SK (snd (x, y))) y
+  | snd'      : Expr.RedTy (SK (snd ⟨x, y⟩)) y
   | curr      : Expr.RedTy (SK ((Λ(x) y z))) (SK (x (y, z)))
   | dpair     : Expr.RedTy (SK (⟨f, g⟩ (a, b))) (SK ((f a), (g b)))
   | congrFun  : ¬ Expr.HasRedex x
@@ -275,9 +281,15 @@ theorem Expr.RedTy.decreasing (h_red : Expr.RedTy e e') (h_size : e.TySize n) : 
   | .fst =>
     match h_size with
     | .app .fst (.app (.app .coupe h_t_a) h_t_b) => ⟨_, h_t_a, by grind only⟩
+  | .fst' =>
+    match h_size with
+    | .app .fst (.app (.app .dpair h_t_a) h_t_b) => ⟨_, h_t_a, by grind only⟩
   | .snd =>
     match h_size with
     | .app .snd (.app (.app .coupe h_t_a) h_t_b) => ⟨_, h_t_b, by grind only⟩
+  | .snd' =>
+    match h_size with
+    | .app .snd (.app (.app .dpair h_t_a) h_t_b) => ⟨_, h_t_b, by grind only⟩
   | .dpair (f := f) (g := g) (a := a) (b := b) =>
     match h_size with
     | .app (.app (.app .dpair h_t_f) h_t_g) (.app (.app .coupe h_t_a) h_t_b) =>
@@ -334,7 +346,9 @@ def Expr.step? (e : Expr) : Option ((e' : Expr) × (PLift (e.RedTy e'))) :=
     | (SK ((quot e) _y)) => .some ⟨e, ⟨.quoted⟩⟩
     | (SK ((x ∘ y) z)) => .some ⟨(SK (x (y z))), ⟨.comp⟩⟩
     | (SK (fst (x, _y))) => .some ⟨x, ⟨.fst⟩⟩
+    | (SK (fst ⟨x, _y⟩)) => .some ⟨x, ⟨.fst'⟩⟩
     | (SK (snd (_x, y))) => .some ⟨y, ⟨.snd⟩⟩
+    | (SK (snd ⟨_x, y⟩)) => .some ⟨y, ⟨.snd'⟩⟩
     | (SK ((Λ(x) y z))) => .some ⟨SK (x (y, z)), ⟨.curr⟩⟩
     | (SK (⟨f, g⟩ (a, b))) => .some ⟨(SK ((f a), (g b))), ⟨.dpair⟩⟩
   else
@@ -424,7 +438,9 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
   · exact h (.single .quoted)
   · exact h (.single .comp)
   · exact h (.single .fst)
+  · exact h (.single .fst')
   · exact h (.single .snd)
+  · exact h (.single .snd')
   · exact h (.single .curr)
   · exact h (.single .dpair)
   · rename_i x f f' hrx hrf ih
@@ -457,7 +473,9 @@ theorem step?_decreasing (_h_step : Expr.step? e = .some ⟨e', h⟩) : e'.ty_si
   · exact .single .quoted
   · exact .single .comp
   · exact .single .fst
+  · exact .single .fst'
   · exact .single .snd
+  · exact .single .snd'
   · exact .single .curr
   · exact .single .dpair
   · exact Expr.HasRedex.left (by assumption)
@@ -475,7 +493,9 @@ theorem Expr.IsRedex.can_step : Expr.IsRedex e → ∃ e', e.RedTy e' := by
   · exact ⟨_, .quoted⟩
   · exact ⟨_, .comp⟩
   · exact ⟨_, .fst⟩
+  · exact ⟨_, .fst'⟩
   · exact ⟨_, .snd⟩
+  · exact ⟨_, .snd'⟩
   · exact ⟨_, .curr⟩
   · exact ⟨_, .dpair⟩
 
@@ -504,7 +524,9 @@ def Expr.RedTy.complete (h_step : Expr.RedTy e e') : Expr.step? e = .some ⟨e',
       · exfalso; exact h_top_red .quoted
       · exfalso; exact h_top_red .comp
       · exfalso; exact h_top_red .fst
+      · exfalso; exact h_top_red .fst'
       · exfalso; exact h_top_red .snd
+      · exfalso; exact h_top_red .snd'
       · exfalso; exact h_top_red .curr
       · exfalso; exact h_top_red .dpair
       case congrFun f' h_f'' h_n_red h_n_e_red =>

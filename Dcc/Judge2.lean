@@ -7,6 +7,26 @@ def assoc : Expr :=
   (SK (App ∘ ⟨App ∘ ⟨(∘) ∘ pair, pair⟩, id⟩))
 
 /-
+App₂ f (x, y) = f x y
+
+2-argument version of App
+
+App ∘ ⟨App ∘ f, id⟩
+
+App (f, (x, y)) = f (x, y)
+
+(App ∘ ⟨f, id⟩ (x, y)) = (App (f x, y)) = (f x y)
+
+f (x, y)
+
+(App ∘ flip ∘ (pair id)) f = ⟨f, id⟩
+-/
+def App₂ : Expr :=
+  SK (((∘) App) ∘ flip ∘ (pair id))
+
+#eval Std.format <| (SK (App₂ Sort 0(Sort 1, Sort 2))).reduce
+
+/-
 ((a, b), c)
 
 flip ((a, b), c) = (c, (a, b))
@@ -29,7 +49,12 @@ def assoc_couple : Expr :=
 /-
 (a, (b, c)) => ((a, b), c)
 
+App ∘ ⟨coup ∘ (coup a), id⟩
+
+⟨() ∘ coup
+
 (App ∘ ⟨(Λ), id⟩ (a, (b, c))) => App (Λ(a), (b, c))
+=> Λ(a) (b, c) =>
 -/
 def unassoc : Expr :=
   (SK App ∘ ⟨(∘) ∘ ⟨Λ(id), Λ(id)⟩, id⟩)

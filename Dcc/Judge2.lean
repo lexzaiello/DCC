@@ -89,8 +89,16 @@ S.{[m, n, o]} :
             quot (quot (quot (Sort o)))⟩) ∘ fst), snd⟩, snd⟩)))))}}}}})
 -/
 
-/-def S.type (m n o : Level) : Expr :=
-  sorry-/
+def S.type (m n o : Level) : Expr :=
+  SK (Sort m,
+    {snd ≫ (flip' coup (quot (Sort n))),
+      {Λ(⟨snd, (((≫) snd) ∘ snd) ≫ (flip' pair (quot (Sort o)))⟩),
+        {Λ(Λ(assoc ≫ (⟨snd, ⟨snd ≫ (((≫) snd) ≫ lens),
+                   (Λ(Λ(snd ∘ ⟨App ∘ ⟨snd, snd⟩, snd⟩)))⟩⟩))),
+          {Λ(Λ(Λ(fst ≫ fst ≫ ⟨snd, snd ≫ ((≫) snd)⟩))),
+            {fst ≫ fst ≫ fst ≫ fst ≫ snd,
+            Λ(Λ(Λ(Λ(Λ(⟨⟨((App ∘ ⟨App ∘ ⟨snd ≫ S.{[m, n, o.succ]}, snd⟩,
+            (quot (quot (quot (Sort o))))⟩) ∘ fst), snd⟩, snd⟩)))))}}}}})
 
 inductive Judge : Expr → Expr → Prop
 --  | k    : Judge (K.type m n) (SK K.{[m, n]})

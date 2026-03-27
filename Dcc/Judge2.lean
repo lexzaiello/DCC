@@ -4,16 +4,34 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
 
 /-
-
--/
-
-/-
 Combinator version of flip.
 
 flip' f x y = f y x
 -/
 def flip' : Expr :=
   SK ((Λ) ∘ (((∘) (App ∘ flip)) ∘ (pair id)))
+
+/-
+assoc ((a, b), c) = (a, (b, c))
+
+App ((a, b), c) = (a, b) c
+
+flip ((a, b), c) = (c, (b, a))
+App (c, (b, a)) = c (b, a)
+flip ∘ ⟨flip' coup c, id⟩ (b, a) = (a, (b, c))
+
+((flip' pair id) ∘ (flip' coup)) c = ⟨(flip' coup c), id⟩
+
+⟨id, ((pair id) ∘ (flip' coup))⟩ ((a, b), c)
+= ((a, b), ⟨id, (flip' coup c)⟩)
+
+App ∘ flip ∘ ⟨id, ((pair id) ∘ (flip' coup))⟩ = (⟨id, (flip' coup c)⟩, (a, b))
+= ⟨id, (flip' coup c)⟩ (a, b) = (a, (b, c))
+-/
+def assoc : Expr :=
+  SK App ∘ flip ∘ ⟨id, ((pair id) ∘ (flip' coup))⟩
+
+#eval Std.format <| (SK (assoc ((Sort 0, Sort 1), Sort 2))).reduce
 
 #eval Std.format <| (SK ((((Λ) ∘ (((∘) (App ∘ flip)) ∘ (pair id))) (Sort 0)) (Sort 1) (Sort 2))).reduce
 
@@ -56,7 +74,22 @@ def K'.type (m n : Level) : Expr :=
 def K.type (m n : Level) : Expr :=
   SK (Sort m,
     (flip ∘ ⟨(quot (quot Sort n)), id⟩)
-      ≫ (flip' coup ⟨fst, (((≫) flip)  ∘ (flip' pair quot))⟩))
+      ≫ (flip' coup ⟨fst, (((≫) flip) ∘ (flip' pair quot))⟩))
+
+/-
+S.{[m, n]} : ∀ (α : Sort m) (β : α → Sort n) (γ : ∀ (x : α) (y : β x), Sort o)
+  (x : ∀ (x : α) (y : β x), γ x y)
+  (y : ∀ (x : α), β x)
+  (z : α), γ z (y z)
+
+S.{[m, n]} : (Sort m,
+    (flip ∘ ⟨(quot (quot Sort n)), id⟩)
+    ≫ (⟨fst, (((≫) snd) ≫ (flip' pair (quot (Sort o))))⟩
+[((α, ⟨β, (quot (Sort o))⟩), γ)]
+
+    ≫ ⟨id, (flip' id pair, )⟩
+  )
+-/
 
 /-def S.type (m n o : Level) : Expr :=
   sorry-/

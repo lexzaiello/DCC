@@ -90,9 +90,9 @@ def K'.type (m n : Level) : Expr :=
   SK (Sort m, {(quot (Sort n)), Λ({fst, Λ({fst ≫ snd, Λ(fst ≫ fst ≫ fst)})})})
 
 def K.type (m n : Level) : Expr :=
-  SK (Sort m,
-    (flip ∘ ⟨(quot (quot Sort n)), id⟩)
-      ≫ (flip' coup ⟨fst, (((≫) flip) ∘ (flip' pair quot))⟩))
+  SK (Sort m, {
+    (flip' coup (quot (Sort n))), Λ({
+    fst, Λ({App ∘ ⟨snd, id⟩, Λ(Λ(Λ(fst ∘ fst ∘ fst)))})})})
 
 def S.type (m n o : Level) : Expr :=
   SK (Sort m,
@@ -105,31 +105,160 @@ def S.type (m n o : Level) : Expr :=
             Λ(Λ(Λ(Λ(Λ(⟨⟨((App ∘ ⟨App ∘ ⟨snd ≫ S.{[m, n, o.succ]}, snd⟩,
             (quot (quot (quot (Sort o))))⟩) ∘ fst), snd⟩, snd⟩)))))}}}}})
 
+inductive Expr.Reduced : Expr → Expr → Prop
+  | mk : Expr.RedTyReflTrans e e' → e'.IsNorm → e.Reduced e'
+
+inductive Expr.Reduces : Expr → Expr → Prop
+  | mk : Expr.RedTyTrans e e' → e'.IsNorm → e.Reduces e'
+
+/-
+Pair-like objects like (a, b) can be projected.
+However, if snd is applied to something that is not a pair,
+no projection occurs.
+-/
+inductive Expr.Projects : Expr → Expr → Expr → Prop
+  | fst : Expr.IsRedex (SK (fst e)) → (SK (fst e)).Reduces e' → Expr.Projects (SK fst) e e'
+  | snd : Expr.IsRedex (SK (snd e)) → (SK (snd e)).Reduces e' → Expr.Projects (SK snd) e e'
+
+theorem Expr.Reduces.decreasing : Expr.Reduces e e' → e'.ty_size < e.ty_size
+  | ⟨hred, _e⟩ => hred.decreasing'
+
+theorem Expr.RedTyTrans.fst_decreasing (h_redex : Expr.IsRedex (SK (fst e)))
+  (h : Expr.RedTyTrans (SK (fst e)) a) : a.ty_size < e.ty_size := by
+  induction heq : h with
+  | single h_red =>
+    cases h_red
+    repeat (simp only [ty_size]; grind only)
+  | tail h_trans h_single =>
+    rename_i b c ih
+    have dec₁ := ih h_trans
+    have dec₂ := h_single.decreasing'
+    grind only
+
+-- IsRedex here is essentially a proof that e is some kind of pair-like object
+theorem Expr.RedTyTrans.snd_decreasing (h_redex : Expr.IsRedex (SK (snd e)))
+  (h : Expr.RedTyTrans (SK (snd e)) a) : a.ty_size < e.ty_size := by
+  induction heq : h with
+  | single h_red =>
+    cases h_red
+    repeat (simp only [ty_size]; grind only)
+  | tail h_trans h_single =>
+    rename_i b c ih
+    have dec₁ := ih h_trans
+    have dec₂ := h_single.decreasing'
+    grind only
+
+theorem Expr.Projects.decreasing (h : Expr.Projects π e e') : e'.ty_size < e.ty_size :=
+  match h with
+  | .fst h_redex ⟨h_red, h_norm⟩ =>
+    h_red.fst_decreasing h_redex
+  | .snd h_redex ⟨h_red, h_norm⟩ =>
+    h_red.snd_decreasing h_redex
+
+inductive DefEq : Expr → Expr → Prop
+  | single : Expr.Reduced a c → Expr.Reduced b c → DefEq a b
+  | pair   : (SK fst).Projects t₁ α₁
+    → (SK fst).Projects t₂ α₂
+    → (SK snd).Projects t₁ β₁
+    → (SK snd).Projects t₂ β₂
+    → DefEq α₁ α₂
+    → DefEq β₁ β₂
+    → DefEq t₁ t₂
+
 inductive Judge : Expr → Expr → Prop
   | k    : Judge (K.type m n) (SK K.{[m, n]})
   | k'   : Judge (K'.type m n) (SK K'.{[m, n]})
   | s    : Judge (S.type m n o) (SK S.{[m, n, o]})
   | srt  : Judge (SK Sort m.succ) (SK Sort m)
   | app  : Judge (SK t_f) f
-    → Judge (SK (fst t_f)) x
-    → Judge (SK ((snd t_f) x)) (SK (f x)) -- TODO: if can't decrease here, just use {}
+    → (SK (fst t_f)).Reduces α₁
+    → Judge α₂ x
+    → DefEq α₁ α₂
+    → (SK (snd t_f)).Reduces β
+    → Judge (SK (β x)) (SK (f x))
   | coup : Judge (SK Sort 1) (SK (α, β))
   | pair : Judge (SK Sort 1) (SK ⟨α, β⟩)
-  | conv  {α β : Expr} : Judge α x → α.RedTyTrans β → Expr.IsNorm β → Judge β x
-  | conv' {α β : Expr} : Judge β x → α.RedTyTrans β → Expr.IsNorm β → Judge α x
+  | conv  {α β : Expr} : Judge α x → α.Reduces β → Expr.IsNorm β → Judge β x
+  | conv' {α β : Expr} : Judge β x → α.Reduces β → Expr.IsNorm β → Judge α x
+
+def Expr.mk_reduced (e : Expr) : ((e' : Expr) × (PLift (e.Reduced e'))) :=
+  ⟨e.reduce, ⟨⟨reduce_sound rfl, reduce_norm rfl⟩⟩⟩
+
+def Expr.mk_reduces (e : Expr) : Option ((e' : Expr) × (PLift (e.Reduces e'))) :=
+  match heq : e.reduce!? with
+  | .none => .none
+  | .some t' =>
+    let h_norm := reduce!?_norm heq
+    let ht := reduce!?_sound heq
+    .some ⟨t', ⟨⟨ht, h_norm⟩⟩⟩
+
+def Expr.project (π e : Expr) : Option ((e' : Expr) × (PLift (Expr.Projects π e e'))) := do
+  if h : (SK (π e)).IsRedex then
+    let ⟨e', ⟨red⟩⟩ ← (SK (π e)).mk_reduces
+    match π with
+    | SK fst =>
+      .some ⟨e', ⟨.fst h red⟩⟩
+    | SK snd =>
+      .some ⟨e', ⟨.snd h red⟩⟩
+    | _ => .none
+  else
+    .none
+
+def Expr.mk_def_eq (t₁ t₂ : Expr) : Option (PLift (DefEq t₁ t₂)) := do
+  let ⟨t₁', ⟨h₁⟩⟩ := t₁.mk_reduced
+  let ⟨t₂', ⟨h₂⟩⟩ := t₂.mk_reduced
+  if h_same : t₁' = t₂' then
+      .some ⟨.single (h_same ▸ h₁) h₂⟩
+  else
+    let ⟨α₁, ⟨h_r_α₁⟩⟩ ← (SK fst).project t₁
+    let ⟨α₂, ⟨h_r_α₂⟩⟩ ← (SK fst).project t₂
+
+    let ⟨β₁, ⟨h_r_β₁⟩⟩ ← (SK snd).project t₁
+    let ⟨β₂, ⟨h_r_β₂⟩⟩ ← (SK snd).project t₂
+
+    let _dec₁ := h_r_α₁.decreasing
+    let _dec₂ := h_r_β₁.decreasing
+    let _dec₃ := h_r_α₂.decreasing
+    let _dec₄ := h_r_β₂.decreasing
+
+    let ⟨h₁⟩ ← mk_def_eq α₁ α₂
+    let ⟨h₂⟩ ← mk_def_eq β₁ β₂
+
+    .some ⟨.pair h_r_α₁ h_r_α₂ h_r_β₁ h_r_β₂ h₁ h₂⟩
+termination_by t₁.ty_size
+
+def Expr.gen_def_eq (t : Expr) : Option ((t' : Expr) × (PLift (DefEq t t'))) :=
+  match t with
+  /-| SK ({t_fst, t_snd} x) =>
+    match (SK (t_fst x)).gen_def_eq, (SK (t_snd x)).gen_def_eq with
+    | .some ⟨α, ⟨h₁⟩⟩, .some ⟨β, ⟨h₂⟩⟩ =>
+      .some ⟨SK (α, β), ⟨.pair h₁ h₂⟩⟩
+    | _, _ => .none-/
+  /-| SK (f x) =>
+    match f.gen_def_eq with
+    | .some ⟨f', ⟨h⟩⟩ => .some ⟨SK (f' x), ⟨.congrFun h⟩⟩
+    | _ => .none-/
+  | t =>
+    match heq : t.reduce!? with
+    | .none => .none
+    | .some t' =>
+      let h_norm := reduce!?_norm heq
+      let ht := reduce!?_sound heq
+      .some ⟨t', ⟨.single ht h_norm⟩⟩
+
+def Expr.reduce!?' (e : Expr) : Option ((e' : Expr) × (PLift (RedTyTrans e e' ∧ e'.IsNorm))) :=
+  match heq : e.reduce!? with
+  | .some e' =>
+    .some ⟨e', ⟨⟨reduce!?_sound (e' := e') heq, reduce!?_norm (e' := e') heq⟩⟩⟩
+  | _ => .none
 
 def Judge.convD (h_t : Judge t e) : ((t' : Expr) × (PLift (Judge t' e))) :=
-  let t' := t.reduce
-  let h_t' : Relation.ReflTransGen Expr.RedTy t t' := reduce_sound rfl
-  let h_norm := reduce_norm (e := t) (e' := t') rfl
-  let h_conv : Judge t' e := by
-        rw [← Relation.reflGen_transGen] at h_t'
-        match heq : h_t' with
-        | .refl => exact h_t
-        | .single h =>
-          rename_i heq'
-          exact Judge.conv h_t h (heq' ▸ h_norm)
-  ⟨t', ⟨h_conv⟩⟩
+  match heq : t.reduce!? with
+  | .none => ⟨t, ⟨h_t⟩⟩
+  | .some t' =>
+      let h_norm := reduce!?_norm heq
+      let ht := reduce!?_sound heq
+      ⟨t', ⟨.conv h_t ht h_norm⟩⟩
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
   match e with
@@ -139,28 +268,24 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
   | (SK (_α, _β)) => .some ⟨(SK Sort 1), ⟨.coup⟩⟩
   | (SK ⟨_α, _β⟩) => .some ⟨(SK Sort 1), ⟨.pair⟩⟩
   | (SK (f x)) => do
-    let ⟨_t_f, ⟨j_f⟩⟩ ← infer f
-    let ⟨_t_x, ⟨j_x⟩⟩ ← infer x
+    let ⟨t_f, ⟨j_f⟩⟩ ← infer f
+    let ⟨t_x, ⟨j_x⟩⟩ ← infer x
 
-    let ⟨t_f, ⟨j_f⟩⟩ := j_f.convD
-    let ⟨t_x, ⟨j_x⟩⟩ := j_x.convD
+    let maybe_α := (SK (fst t_f)).gen_def_eq
+    let maybe_β := (SK (snd t_f)).gen_def_eq
 
-    let maybe_α := (SK (fst t_f)).reduce!?
-
-    match heq : maybe_α with
-    | .some α =>
-      let red_α := reduce!?_sound (e' := α) (by rw [← heq])
-      let h_norm : Expr.IsNorm α := reduce!?_norm (by rw [← heq])
+    match heq : maybe_α, heq₂ : maybe_β with
+    | .some ⟨α, ⟨hdq⟩⟩, .some ⟨β, ⟨hdq₂⟩⟩ =>
       if heq' : α = t_x then
-          let h_t' :=
-            Judge.app j_f (.conv' j_x (by rw [← heq']; exact red_α) (by rw [← heq']; exact h_norm))
-          .some (Judge.convD h_t')
+        .some (Judge.convD (Judge.app j_f hdq (by rw [heq']; exact j_x) hdq₂))
       else .none
-    | .none => .none
+    | _, _ => .none
   | _ => .none -- TODO: K type, S type
 
 #eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1) (Sort 1)))
 
-#eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 2]} (Sort 2) (Sort 1) (Sort 1) (Sort 0)))
+#eval Std.format <| (·.fst) <$> infer (SK ((K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1))))
 #eval Std.format <| (·.fst) <$> infer (SK (K.{[3, 2]} (Sort 2)
-  (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1)) (Sort 1) (Sort 0)))
+  ))
+
+#eval Std.format <| (SK (fst ({(Λ(App ∘ flip ∘ ⟨id, coup⟩) (quot Sort 2)),Λ({fst,Λ({App ∘ ⟨snd, id⟩,Λ(Λ(Λ(fst ∘ fst ∘ fst)))})})} Sort 2))).reduce

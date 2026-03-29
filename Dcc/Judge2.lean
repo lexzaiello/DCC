@@ -4,6 +4,34 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
 
 /-
+Π extensionality. we can compare Π exactly, but we need to simulate the argument x as well when
+we determine equality.
+
+fst is concrete. snd needs "substitution." this is a very frequent operation. can we prove the size decreases
+there, too? at least, the reduction of (pair-like x) decreases? certainly, but we can't recurse on it in
+def-eq compute.
+
+we need better def-eq anyway. we don't need to reduce necessarily.
+
+syntax-directed def-eq.
+
+we always apply x to snd.
+
+we can carry the "context" as an argument. similar to RunPi.
+RunPi (arg : Expr) : Expr → Expr → Prop.
+
+we don't need to reduce to get snd.
+we can just make Projects structural.
+
+projects size of is decreasing.
+
+we can do fold argument.
+
+single is the terminal endpoint.
+can carry fold argument.
+-/
+
+/-
 Combinator version of flip.
 
 flip' f x y = f y x
@@ -162,7 +190,7 @@ inductive DefEq : Expr → Expr → Prop
     → (SK snd).Projects t₁ β₁
     → (SK snd).Projects t₂ β₂
     → DefEq α₁ α₂
-    → DefEq β₁ β₂
+    → DefEq β₁ β₂ -- here, need to apply x. we can do structural recursion.
     → DefEq t₁ t₂
 
 inductive Judge : Expr → Expr → Prop
@@ -178,8 +206,8 @@ inductive Judge : Expr → Expr → Prop
     → Judge (SK (β x)) (SK (f x))
   | coup : Judge (SK Sort 1) (SK (α, β))
   | pair : Judge (SK Sort 1) (SK ⟨α, β⟩)
-  | conv  {α β : Expr} : Judge α x → α.Reduces β → Expr.IsNorm β → Judge β x
-  | conv' {α β : Expr} : Judge β x → α.Reduces β → Expr.IsNorm β → Judge α x
+  | conv  {α β : Expr} : Judge α x → α.Reduces β → Judge β x
+  | conv' {α β : Expr} : Judge β x → α.Reduces β → Judge α x
 
 def Expr.mk_reduced (e : Expr) : ((e' : Expr) × (PLift (e.Reduced e'))) :=
   ⟨e.reduce, ⟨⟨reduce_sound rfl, reduce_norm rfl⟩⟩⟩
@@ -227,25 +255,6 @@ def Expr.mk_def_eq (t₁ t₂ : Expr) : Option (PLift (DefEq t₁ t₂)) := do
     .some ⟨.pair h_r_α₁ h_r_α₂ h_r_β₁ h_r_β₂ h₁ h₂⟩
 termination_by t₁.ty_size
 
-def Expr.gen_def_eq (t : Expr) : Option ((t' : Expr) × (PLift (DefEq t t'))) :=
-  match t with
-  /-| SK ({t_fst, t_snd} x) =>
-    match (SK (t_fst x)).gen_def_eq, (SK (t_snd x)).gen_def_eq with
-    | .some ⟨α, ⟨h₁⟩⟩, .some ⟨β, ⟨h₂⟩⟩ =>
-      .some ⟨SK (α, β), ⟨.pair h₁ h₂⟩⟩
-    | _, _ => .none-/
-  /-| SK (f x) =>
-    match f.gen_def_eq with
-    | .some ⟨f', ⟨h⟩⟩ => .some ⟨SK (f' x), ⟨.congrFun h⟩⟩
-    | _ => .none-/
-  | t =>
-    match heq : t.reduce!? with
-    | .none => .none
-    | .some t' =>
-      let h_norm := reduce!?_norm heq
-      let ht := reduce!?_sound heq
-      .some ⟨t', ⟨.single ht h_norm⟩⟩
-
 def Expr.reduce!?' (e : Expr) : Option ((e' : Expr) × (PLift (RedTyTrans e e' ∧ e'.IsNorm))) :=
   match heq : e.reduce!? with
   | .some e' =>
@@ -258,7 +267,7 @@ def Judge.convD (h_t : Judge t e) : ((t' : Expr) × (PLift (Judge t' e))) :=
   | .some t' =>
       let h_norm := reduce!?_norm heq
       let ht := reduce!?_sound heq
-      ⟨t', ⟨.conv h_t ht h_norm⟩⟩
+      ⟨t', ⟨.conv h_t ⟨ht, h_norm⟩⟩⟩
 
 def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
   match e with
@@ -271,21 +280,26 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
     let ⟨t_f, ⟨j_f⟩⟩ ← infer f
     let ⟨t_x, ⟨j_x⟩⟩ ← infer x
 
-    let maybe_α := (SK (fst t_f)).gen_def_eq
-    let maybe_β := (SK (snd t_f)).gen_def_eq
+    let ⟨α, ⟨hdq⟩⟩ ← (SK (fst t_f)).mk_reduces
+    let ⟨_β, ⟨hdq₂⟩⟩ ← (SK (snd t_f)).mk_reduces
 
-    match heq : maybe_α, heq₂ : maybe_β with
-    | .some ⟨α, ⟨hdq⟩⟩, .some ⟨β, ⟨hdq₂⟩⟩ =>
-      if heq' : α = t_x then
-        .some (Judge.convD (Judge.app j_f hdq (by rw [heq']; exact j_x) hdq₂))
-      else .none
-    | _, _ => .none
+    dbg_trace α
+    dbg_trace t_x
+
+    let ⟨defeq⟩ ← Expr.mk_def_eq α t_x
+    .some (Judge.convD (Judge.app j_f hdq j_x defeq hdq₂))
   | _ => .none -- TODO: K type, S type
 
 #eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1) (Sort 1)))
 
+#eval Std.format <| (SK ({snd ∘ fst,Λ(fst ∘ fst ∘ fst)} ((Sort 2, Sort 2), Sort 1))).reduce
+
+#eval Std.format <| (SK (fst ({snd ∘ fst,Λ(fst ∘ fst ∘ fst)} ((Sort 2, Sort 2), Sort 1)))).reduce
+
 #eval Std.format <| (·.fst) <$> infer (SK ((K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1))))
 #eval Std.format <| (·.fst) <$> infer (SK (K.{[3, 2]} (Sort 2)
-  ))
+  (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1))))
+
+#eval Std.format <| (SK (((snd ({snd ∘ fst,Λ(fst ∘ fst ∘ fst)} ((Sort 2, Sort 2), Sort 1))) (Sort 1)))).reduce
 
 #eval Std.format <| (SK (fst ({(Λ(App ∘ flip ∘ ⟨id, coup⟩) (quot Sort 2)),Λ({fst,Λ({App ∘ ⟨snd, id⟩,Λ(Λ(Λ(fst ∘ fst ∘ fst)))})})} Sort 2))).reduce

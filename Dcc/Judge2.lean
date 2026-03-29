@@ -152,10 +152,10 @@ def S.type (m n o : Level) : Expr :=
   SK (Sort m,
     {(flip' coup (quot (Sort n))),
       Λ({⟨id, (flip' lens (quot (quot (Sort o))))⟩,
-        Λ({assoc ≫ ({}) ∘ ⟨id, ({}) ∘ id⟩,
-          Λ({fst ≫ fst,
+        Λ({assoc ≫ ⟨id, ({}) ∘ id⟩,
+          Λ({fst ≫ fst, -- (((α, β), γ), x)
             -- ((((α, β), γ), x), y)
-            Λ({fst ≫ snd,
+            Λ({fst ≫ fst ≫ fst ≫ fst,
             -- (((((α, β), γ), x), y), z)
             App ∘ ⟨App ∘ ⟨fst ≫ (App ∘ ⟨out_α_β_γ, id⟩), id⟩, id⟩})})})})})
 
@@ -346,7 +346,10 @@ def test_S' : Option Expr := do
 
 def test_S : Option Expr := do
   (·.fst) <$> infer (SK (S.{[3, 3, 3]} (Sort 2) (K'.{[4, 3]} (Sort 3) (Sort 2) (Sort 2))
-  (K'.{[1, 3]} (Sort 2, (quot (Sort 3))) (Sort 2) (K'.{[4, 3]} (Sort 3) (Sort 2) (Sort 2)))))
+  (K'.{[1, 3]} (Sort 2, (quot (Sort 3))) (Sort 2) (K'.{[4, 3]} (Sort 3) (Sort 2) (Sort 2)))
+  (K'.{[3, 3]} (Sort 2) (Sort 2))
+  (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1))
+  (Sort 1)))
 
 #eval Std.format <| (·.fst) <$> infer (SK (K'.{[1, 3]} (Sort 3, (quot Sort 3)) (Sort 2) (K'.{[4, 4]} (Sort 3) (Sort 3) (Sort 2))))
 
@@ -368,43 +371,8 @@ def test_S : Option Expr := do
    ((({snd ∘ fst,Λ(fst ∘ fst ∘ fst)} ((Sort 3, Sort 3), Sort 2)), Sort 2), (((K'.{[4, 4]} Sort 3) Sort 3) Sort 2)))) (Sort 1)))).reduce
 
 #eval Std.format <| test_S
-
---({snd ∘ fst,Λ(fst ∘ fst ∘ fst)} ((Sort 3, Sort 3), Sort 2))
-
-/-def test_S : Option Expr := do
-  let s := SK S.{[3, 3, 3]}
-  let α := (SK Sort 2)
-  let z := (SK Sort 1)
-  let y := (SK (K'.{[3, 3]} (Sort 2) (Sort 2)))
-  let β ← match Sigma.fst <$> infer (SK (y (Sort 1))) with
-  | .some β => do
-    match ← Sigma.fst <$> infer α with
-    | SK Sort out =>
-      dbg_trace β
-      
-      .some (SK (K'.{[(out + 1), 1]} (Sort out) α β))
-    | _ => .none
-  | _ => none
-  let t_yz ← (Sigma.fst <$> infer (SK (y z)))
-  let t_t_yz ← Sigma.fst <$> infer t_yz
-  let x ← match (Sigma.fst <$> infer t_yz) with
-  | SK Sort m => .some (SK (K'.{[3, m]} α t_yz))
-  | _ => .none
-  let γ : Expr := ← (do
-    let t_xzyz ← Sigma.fst <$> infer (SK (x z (y z)))
-    let t_t_xzyz ← Sigma.fst <$> infer t_xzyz
-    match t_xzyz, t_t_xzyz, t_t_yz with
-    | t_out, (SK Sort out), (SK Sort yzm) =>
-      let inner := SK (K'.{[out.succ, yzm]} (Sort out) t_yz t_out)
-      let t_inner ← Sigma.fst <$> (infer inner)
-      match ← Sigma.fst <$> infer t_inner with
-      | (SK Sort in_m) =>
-        .some (SK (K'.{[in_m, 3]} t_inner α inner))
-      | _ => .none
-    | _, _, _ => .none
-  )
-  dbg_trace Sigma.fst <$> infer β
-  Sigma.fst <$> infer (SK (s α β))-/
+#eval Std.format <| (SK (snd ({Sort 2,{(((K'.{[4, 3]} Sort 3) Sort 2)
+     Sort 2),(((K'.{[1, 3]} (Sort 2, (quot Sort 3))) Sort 2) (((K'.{[4, 3]} Sort 3) Sort 2) Sort 2))}}))).reduce
 
 #eval test_S
 #eval (SK (fst ({(((K'.{[4, 3]} Sort 3) Sort 2) Sort 2),(quot Sort 3)} (__ ∶ Sort 2)))).reduce

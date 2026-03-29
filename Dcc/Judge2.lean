@@ -133,9 +133,22 @@ we can change TySize so app is more constrained.
 
 we can say ¬ IsRedex in TySize, manually calculate others.
 this would mean we can reduce fst {} instantly.
+
+experiment failed.
+
+we should just use S.
+
+t_γ z (y z) = (Sort o)
+
+S α β 
 -/
 
 def S.type (m n o : Level) : Expr :=
+  let discard_sort_o := SK (K'.{[1, m]}
+    ((__ ∶ Sort n), (quot (Sort o.succ)))
+    (__ ∶ Sort m)
+    (K'.{[o.succ.succ, n]} (Sort o.succ) (__ ∶ Sort n) (Sort o)))
+  let out_α_β_γ := SK (Λ(App ∘ flip) discard_sort_o) ∘ App₂ ∘ ⟨S.{[m, n, o.succ]}, id⟩
   SK (Sort m,
     {(flip' coup (quot (Sort n))),
       Λ({⟨id, (flip' lens (quot (quot (Sort o))))⟩,
@@ -144,7 +157,7 @@ def S.type (m n o : Level) : Expr :=
             -- ((((α, β), γ), x), y)
             Λ({fst ≫ snd,
             -- (((((α, β), γ), x), y), z)
-            App₂ ∘ {App₂ ∘ ⟨fst ≫ fst ≫ snd, id⟩, ⟨snd, id⟩}})})})})})
+            App ∘ ⟨App ∘ ⟨fst ≫ (App ∘ ⟨out_α_β_γ, id⟩), id⟩, id⟩})})})})})
 
 inductive Expr.Reduced : Expr → Expr → Prop
   | mk : Expr.RedTyReflTrans e e' → e'.IsNorm → e.Reduced e'

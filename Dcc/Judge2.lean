@@ -4,13 +4,6 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
 
 /-
-Π extensionality. we can compare Π exactly, but we need to simulate the argument x as well when
-we determine equality.
-
-fold is not actually necessary, because we're decreasing by the size of t₁.
--/
-
-/-
 Combinator version of flip.
 
 flip' f x y = f y x
@@ -74,22 +67,17 @@ def App₂ : Expr :=
   SK (((flip' pair id)) ≫ ((∘) App))
 
 /-
-K' type using lenses without (α, x):
+Make a lens from a couple
 
-K'.{[m, n]} : (Sort m, {
-  quot (Sort n), {
-    Λ(fst), Λ(Λ(fst ≫ snd))
-  }
-})
-
-K.{[m, n]} : (Sort m, {
-  flip' coup (quot (Sort n)), {
-    Λ(fst), {
-      Λ(Λ(App ∘ ⟨snd, id⟩)), Λ(Λ(Λ(fst ∘ fst ∘ fst)))
-    }
-  }
-}
+lens' (a, b) = { a, b }
 -/
+def lens' : Expr :=
+  (SK (App₂ lens))
+
+syntax "({})" : expr
+
+macro_rules
+  | `(SK ({})) => `(lens')
 
 #eval Std.format <| (SK (App₂ (Sort 0) (Sort 1, Sort 2))).reduce
 
@@ -101,16 +89,62 @@ def K.type (m n : Level) : Expr :=
     (flip' coup (quot (Sort n))), Λ({
     fst, Λ({App ∘ ⟨snd, id⟩, Λ(fst ∘ fst ∘ fst)})})})
 
+/-
+Can we use lenses for S final codomain?
+
+our defeq should support it
+we need to differentiate Π lens from normal lens.
+they're different. if we can differentiate, then we can do this:
+
+we should check existing arguments first, though.
+
+actually I don't think we need to change anything. this should just work.
+But we don't have App for lenses. Increases size.
+we can define App for lenses...
+But then we're copying. we can't do that.
+can leave un-normalized?
+independently, they both decrease size.
+γ is guaranteed to be a type combinator.
+z and (y z) are seperate terms.
+we can normalize like conditionally?
+can have some kind of like fuel.
+
+we don't do this at the core calculus level.
+
+giving linear logic vibes.
+
+"you can make at most two copies of this."
+
+each duplication must be consumed.
+
+(a x).ty_size < a.ty_size + x.ty_size
+(b x).ty_size < b.ty_size + x.ty_size
+
+{a, b} x = (a', b')
+
+size of ⟨a, b⟩ x is
+
+{a, b} x does not actually reduce.
+calculate size of {a, b} x independently?
+why not?
+
+this conflicts with our general rule, but
+we can change TySize so app is more constrained.
+
+we can say ¬ IsRedex in TySize, manually calculate others.
+this would mean we can reduce fst {} instantly.
+-/
+
 def S.type (m n o : Level) : Expr :=
   SK (Sort m,
     {(flip' coup (quot (Sort n))),
       Λ({⟨id, (flip' lens (quot (quot (Sort o))))⟩,
-        {Λ(Λ(assoc ≫ (⟨snd, ⟨snd ≫ (((≫) snd) ≫ lens),
-                   (Λ(Λ(snd ∘ ⟨App ∘ ⟨snd, snd⟩, snd⟩)))⟩⟩))),
-          {Λ(Λ(Λ(fst ≫ fst ≫ ⟨snd, snd ≫ ((≫) snd)⟩))),
-            {fst ≫ fst ≫ fst ≫ fst ≫ snd,
-            Λ(Λ(Λ(Λ(Λ(⟨⟨((App ∘ ⟨App ∘ ⟨snd ≫ S.{[m, n, o.succ]}, snd⟩,
-            (quot (quot (quot (Sort o))))⟩) ∘ fst), snd⟩, snd⟩)))))}}}})})
+        Λ({assoc ≫ ({}) ∘ ⟨id, ({}) ∘ id⟩,
+          Λ({fst ≫ fst,
+            -- ((((α, β), γ), x), y)
+            Λ({fst ≫ snd,
+            -- (((((α, β), γ), x), y), z)
+            App₂ ∘ {App₂ ∘ ⟨fst ≫ fst ≫ snd, id⟩, ⟨snd, id⟩}})})})})})
 
 inductive Expr.Reduced : Expr → Expr → Prop
   | mk : Expr.RedTyReflTrans e e' → e'.IsNorm → e.Reduced e'
@@ -233,13 +267,8 @@ def Expr.mk_def_eq (t₁ t₂ : Expr) : Option (PLift (DefEq t₁ t₂)) := do
   if h_same : t₁' = t₂' then
       .some ⟨.single (h_same ▸ h₁') h₂'⟩
   else
-    dbg_trace t₁
-    dbg_trace t₂
     let ⟨α₁, ⟨h_r_α₁⟩⟩ ← (SK fst).project t₁
     let ⟨α₂, ⟨h_r_α₂⟩⟩ ← (SK fst).project t₂
-
-    dbg_trace α₁
-    dbg_trace α₂
 
     let ⟨β₁, ⟨h_r_β₁⟩⟩ ← (SK snd).project t₁
     let ⟨β₂, ⟨h_r_β₂⟩⟩ ← (SK snd).project t₂

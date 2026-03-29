@@ -89,60 +89,6 @@ def K.type (m n : Level) : Expr :=
     (flip' coup (quot (Sort n))), Λ({
     fst, Λ({App ∘ ⟨snd, id⟩, Λ(fst ∘ fst ∘ fst)})})})
 
-/-
-Can we use lenses for S final codomain?
-
-our defeq should support it
-we need to differentiate Π lens from normal lens.
-they're different. if we can differentiate, then we can do this:
-
-we should check existing arguments first, though.
-
-actually I don't think we need to change anything. this should just work.
-But we don't have App for lenses. Increases size.
-we can define App for lenses...
-But then we're copying. we can't do that.
-can leave un-normalized?
-independently, they both decrease size.
-γ is guaranteed to be a type combinator.
-z and (y z) are seperate terms.
-we can normalize like conditionally?
-can have some kind of like fuel.
-
-we don't do this at the core calculus level.
-
-giving linear logic vibes.
-
-"you can make at most two copies of this."
-
-each duplication must be consumed.
-
-(a x).ty_size < a.ty_size + x.ty_size
-(b x).ty_size < b.ty_size + x.ty_size
-
-{a, b} x = (a', b')
-
-size of ⟨a, b⟩ x is
-
-{a, b} x does not actually reduce.
-calculate size of {a, b} x independently?
-why not?
-
-this conflicts with our general rule, but
-we can change TySize so app is more constrained.
-
-we can say ¬ IsRedex in TySize, manually calculate others.
-this would mean we can reduce fst {} instantly.
-
-experiment failed.
-
-we should just use S.
-
-t_γ z (y z) = (Sort o)
-
-S α β 
--/
-
 def S.type (m n o : Level) : Expr :=
   let discard_sort_o := SK (K'.{[1, m]}
     ((__ ∶ Sort n), (quot (Sort o.succ)))

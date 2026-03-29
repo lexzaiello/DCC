@@ -29,6 +29,8 @@ we can do fold argument.
 
 single is the terminal endpoint.
 can carry fold argument.
+
+accumulate holes in fold, once you reach single, you reduce with fold.
 -/
 
 /-
@@ -120,7 +122,7 @@ def K'.type (m n : Level) : Expr :=
 def K.type (m n : Level) : Expr :=
   SK (Sort m, {
     (flip' coup (quot (Sort n))), Λ({
-    fst, Λ({App ∘ ⟨snd, id⟩, Λ(Λ(Λ(fst ∘ fst ∘ fst)))})})})
+    fst, Λ({App ∘ ⟨snd, id⟩, Λ(fst ∘ fst ∘ fst)})})})
 
 def S.type (m n o : Level) : Expr :=
   SK (Sort m,
@@ -183,15 +185,15 @@ theorem Expr.Projects.decreasing (h : Expr.Projects π e e') : e'.ty_size < e.ty
   | .snd h_redex ⟨h_red, h_norm⟩ =>
     h_red.snd_decreasing h_redex
 
-inductive DefEq : Expr → Expr → Prop
-  | single : Expr.Reduced a c → Expr.Reduced b c → DefEq a b
+inductive DefEq : (fold : Expr → Expr) → Expr → Expr → Prop
+  | single : Expr.Reduced (fold a) c → Expr.Reduced (fold b) c → DefEq fold a b
   | pair   : (SK fst).Projects t₁ α₁
     → (SK fst).Projects t₂ α₂
     → (SK snd).Projects t₁ β₁
     → (SK snd).Projects t₂ β₂
-    → DefEq α₁ α₂
-    → DefEq β₁ β₂ -- here, need to apply x. we can do structural recursion.
-    → DefEq t₁ t₂
+    → DefEq fold α₁ α₂
+    → DefEq ((fun e => (SK (e (__ ∶ α₁)))) ∘ fold) β₁ β₂ -- here, need to apply x. we can do structural recursion.
+    → DefEq fold t₁ t₂
 
 inductive Judge : Expr → Expr → Prop
   | k    : Judge (K.type m n) (SK K.{[m, n]})
@@ -201,7 +203,7 @@ inductive Judge : Expr → Expr → Prop
   | app  : Judge (SK t_f) f
     → (SK (fst t_f)).Reduces α₁
     → Judge α₂ x
-    → DefEq α₁ α₂
+    → DefEq (fun e => e) α₁ α₂
     → (SK (snd t_f)).Reduces β
     → Judge (SK (β x)) (SK (f x))
   | coup : Judge (SK Sort 1) (SK (α, β))
@@ -232,9 +234,9 @@ def Expr.project (π e : Expr) : Option ((e' : Expr) × (PLift (Expr.Projects π
   else
     .none
 
-def Expr.mk_def_eq (t₁ t₂ : Expr) : Option (PLift (DefEq t₁ t₂)) := do
-  let ⟨t₁', ⟨h₁⟩⟩ := t₁.mk_reduced
-  let ⟨t₂', ⟨h₂⟩⟩ := t₂.mk_reduced
+def Expr.mk_def_eq (fold : Expr → Expr) (t₁ t₂ : Expr) : Option (PLift (DefEq fold t₁ t₂)) := do
+  let ⟨t₁', ⟨h₁⟩⟩ := (fold t₁).mk_reduced
+  let ⟨t₂', ⟨h₂⟩⟩ := (fold t₂).mk_reduced
   if h_same : t₁' = t₂' then
       .some ⟨.single (h_same ▸ h₁) h₂⟩
   else
@@ -249,8 +251,8 @@ def Expr.mk_def_eq (t₁ t₂ : Expr) : Option (PLift (DefEq t₁ t₂)) := do
     let _dec₃ := h_r_α₂.decreasing
     let _dec₄ := h_r_β₂.decreasing
 
-    let ⟨h₁⟩ ← mk_def_eq α₁ α₂
-    let ⟨h₂⟩ ← mk_def_eq β₁ β₂
+    let ⟨h₁⟩ ← mk_def_eq fold α₁ α₂
+    let ⟨h₂⟩ ← mk_def_eq ((fun e => SK (e (__ ∶ α₁))) ∘ fold) β₁ β₂
 
     .some ⟨.pair h_r_α₁ h_r_α₂ h_r_β₁ h_r_β₂ h₁ h₂⟩
 termination_by t₁.ty_size
@@ -283,10 +285,7 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
     let ⟨α, ⟨hdq⟩⟩ ← (SK (fst t_f)).mk_reduces
     let ⟨_β, ⟨hdq₂⟩⟩ ← (SK (snd t_f)).mk_reduces
 
-    dbg_trace α
-    dbg_trace t_x
-
-    let ⟨defeq⟩ ← Expr.mk_def_eq α t_x
+    let ⟨defeq⟩ ← Expr.mk_def_eq (fun e => e) α t_x
     .some (Judge.convD (Judge.app j_f hdq j_x defeq hdq₂))
   | _ => .none -- TODO: K type, S type
 
@@ -298,7 +297,7 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
 
 #eval Std.format <| (·.fst) <$> infer (SK ((K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1))))
 #eval Std.format <| (·.fst) <$> infer (SK (K.{[3, 2]} (Sort 2)
-  (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1))))
+  (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1)) (Sort 1) (Sort 0)))
 
 #eval Std.format <| (SK (((snd ({snd ∘ fst,Λ(fst ∘ fst ∘ fst)} ((Sort 2, Sort 2), Sort 1))) (Sort 1)))).reduce
 

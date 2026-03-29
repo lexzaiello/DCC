@@ -132,7 +132,7 @@ def toFormat (e : Expr) : Format :=
   | SK K.{[m, n]} => "K.{" ++ (format [m, n]) ++ "}"
   | SK S.{[m, n, o]} => "S.{" ++ (format [m, n, o]) ++ "}"
   | SK (f x) => .bracket "(" (f.toFormat ++ (.nest 2 <| .line ++ x.toFormat)) ")"
-  | SK __ ∶ t => "__ : " ++ t.toFormat
+  | SK __ ∶ t => .paren <| "__ ∶ " ++ t.toFormat
 
 instance : ToFormat Expr := ⟨Expr.toFormat⟩
 instance : ToString Expr := ⟨toString ∘ toFormat⟩

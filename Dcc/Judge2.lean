@@ -148,7 +148,7 @@ def S.type (m n o : Level) : Expr :=
     ((__ ∶ Sort n), (quot (Sort o.succ)))
     (__ ∶ Sort m)
     (K'.{[o.succ.succ, n]} (Sort o.succ) (__ ∶ Sort n) (Sort o)))
-  let out_α_β_γ := SK (Λ(App ∘ flip) discard_sort_o) ∘ App₂ ∘ ⟨S.{[m, n, o.succ]}, id⟩
+  let out_α_β_γ := SK (Λ(App ∘ flip) discard_sort_o) ∘ (App₂ S.{[m, n, o.succ]})
   SK (Sort m,
     {(flip' coup (quot (Sort n))),
       Λ({⟨id, (flip' lens (quot (quot (Sort o))))⟩,
@@ -156,8 +156,8 @@ def S.type (m n o : Level) : Expr :=
           Λ({fst ≫ fst, -- (((α, β), γ), x)
             -- ((((α, β), γ), x), y)
             Λ({fst ≫ fst ≫ fst ≫ fst,
-            -- (((((α, β), γ), x), y), z)
-            App ∘ ⟨App ∘ ⟨fst ≫ (App ∘ ⟨out_α_β_γ, id⟩), id⟩, id⟩})})})})})
+            -- (((((α, β), γ), x), y), z) ⟨⟨fst ≫ (⟨out_α_β_γ, id⟩ ≫ App), id⟩ ≫ App, id⟩ ≫ App
+            Λ(App ∘ ⟨App ∘ ⟨App ∘ ⟨out_α_β_γ, id⟩, id⟩, id⟩)})})})})})
 
 inductive Expr.Reduced : Expr → Expr → Prop
   | mk : Expr.RedTyReflTrans e e' → e'.IsNorm → e.Reduced e'
@@ -374,5 +374,4 @@ def test_S : Option Expr := do
 #eval Std.format <| (SK (snd ({Sort 2,{(((K'.{[4, 3]} Sort 3) Sort 2)
      Sort 2),(((K'.{[1, 3]} (Sort 2, (quot Sort 3))) Sort 2) (((K'.{[4, 3]} Sort 3) Sort 2) Sort 2))}}))).reduce
 
-#eval test_S
-#eval (SK (fst ({(((K'.{[4, 3]} Sort 3) Sort 2) Sort 2),(quot Sort 3)} (__ ∶ Sort 2)))).reduce
+#eval Std.format <| test_S

@@ -187,13 +187,10 @@ inductive Judge : Expr → Expr → Prop
     → (SK (fst t_f)).Reduces α₁
     → Judge α₂ x
     → DefEq α₁ α₂
-    → (SK (snd t_f)).Reduces β
-    → Judge (SK (β x)) (SK (f x))
+    → Judge (SK ((snd t_f) x)) (SK (f x))
   | pair : Judge (SK Sort 1) (SK ⟨α, β⟩)
   | coup : Judge (SK Sort 1) (SK (α, β))
   | lens : Judge (SK Sort 1) (SK ({α, β} _e))
-  | conv  {α β : Expr} : Judge α x → α.Reduces β → Judge β x
-  | conv' {α β : Expr} : Judge β x → α.Reduces β → Judge α x
 
 def Expr.mk_reduced (e : Expr) : ((e' : Expr) × (PLift (e.Reduced e'))) :=
   ⟨e.reduce, ⟨⟨reduce_sound rfl, reduce_norm rfl⟩⟩⟩
@@ -247,14 +244,6 @@ def Expr.reduce!?' (e : Expr) : Option ((e' : Expr) × (PLift (RedTyTrans e e' �
     .some ⟨e', ⟨⟨reduce!?_sound (e' := e') heq, reduce!?_norm (e' := e') heq⟩⟩⟩
   | _ => .none
 
-def Judge.convD (h_t : Judge t e) : ((t' : Expr) × (PLift (Judge t' e))) :=
-  match heq : t.reduce!? with
-  | .none => ⟨t, ⟨h_t⟩⟩
-  | .some t' =>
-      let h_norm := reduce!?_norm heq
-      let ht := reduce!?_sound heq
-      ⟨t', ⟨.conv h_t ⟨ht, h_norm⟩⟩⟩
-
 def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
   match e with
   | (SK S.{[m, n, o]}) => .some ⟨S.type m n o, ⟨.s⟩⟩
@@ -269,37 +258,41 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
     let ⟨t_x, ⟨j_x⟩⟩ ← infer x
 
     let ⟨α, ⟨hdq⟩⟩ ← (SK (fst t_f)).mk_reduces
-    let ⟨_β, ⟨hdq₂⟩⟩ ← (SK (snd t_f)).mk_reduces
 
     let ⟨defeq⟩ ← Expr.mk_def_eq α t_x
-    .some (Judge.convD (Judge.app j_f hdq j_x defeq hdq₂))
+    .some ⟨_, ⟨Judge.app j_f hdq j_x defeq⟩⟩
   | _e => .none
 
-#eval Std.format <| (·.fst) <$> infer (SK (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1) (Sort 1)))
+def infer_conv (e : Expr) : Option ((t' : Expr) × (PLift (∃ t, Judge t e ∧ t.Reduced t'))) := do
+  let ⟨t, ⟨h_t⟩⟩ ← infer e
+  let ⟨t', ⟨h_red⟩⟩ := t.mk_reduced
+  .some ⟨t', ⟨t, h_t, h_red⟩⟩
+
+#eval Std.format <| (·.fst) <$> infer_conv (SK (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1) (Sort 1)))
 
 #eval Std.format <| (SK ({snd ∘ fst,Λ(fst ∘ fst ∘ fst)} ((Sort 2, Sort 2), Sort 1))).reduce
 
 #eval Std.format <| (SK (fst ({snd ∘ fst,Λ(fst ∘ fst ∘ fst)} ((Sort 2, Sort 2), Sort 1)))).reduce
 
-#eval Std.format <| (·.fst) <$> infer (SK ((K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1))))
-#eval Std.format <| (·.fst) <$> infer (SK (K.{[3, 2]} (Sort 2)
+#eval Std.format <| (·.fst) <$> infer_conv (SK ((K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1))))
+#eval Std.format <| (·.fst) <$> infer_conv (SK (K.{[3, 2]} (Sort 2)
   (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1)) (Sort 1) (Sort 0)))
 
-#eval Std.format <| (·.fst) <$> infer (SK (K'.{[4, 4]} (Sort 3) (Sort 3) (Sort 2)))
+#eval Std.format <| (·.fst) <$> infer_conv (SK (K'.{[4, 4]} (Sort 3) (Sort 3) (Sort 2)))
 
 def test_S' : Option Expr := do
-  (·.fst) <$> infer (SK (S.{[3, 3, 3]} (Sort 2) (K'.{[4, 3]} (Sort 3) (Sort 2) (Sort 2))))
+  (·.fst) <$> infer_conv (SK (S.{[3, 3, 3]} (Sort 2) (K'.{[4, 3]} (Sort 3) (Sort 2) (Sort 2))))
 
 def test_S : Option Expr := do
-  (·.fst) <$> infer (SK (S.{[3, 3, 3]} (Sort 2) (K'.{[4, 3]} (Sort 3) (Sort 2) (Sort 2))
+  (·.fst) <$> infer_conv (SK (S.{[3, 3, 3]} (Sort 2) (K'.{[4, 3]} (Sort 3) (Sort 2) (Sort 2))
   (K'.{[1, 3]} (Sort 2, (quot (Sort 3))) (Sort 2) (K'.{[4, 3]} (Sort 3) (Sort 2) (Sort 2)))
   (K'.{[3, 3]} (Sort 2) (Sort 2))
   (K'.{[3, 3]} (Sort 2) (Sort 2) (Sort 1))
   (Sort 1)))
 
-#eval Std.format <| (·.fst) <$> infer (SK (K'.{[1, 3]} (Sort 3, (quot Sort 3)) (Sort 2) (K'.{[4, 4]} (Sort 3) (Sort 3) (Sort 2))))
+#eval Std.format <| (·.fst) <$> infer_conv (SK (K'.{[1, 3]} (Sort 3, (quot Sort 3)) (Sort 2) (K'.{[4, 4]} (Sort 3) (Sort 3) (Sort 2))))
 
-#eval Std.format <| (·.fst) <$> infer (SK ((K'.{[4, 4]} (Sort 3) (Sort 3) (Sort 2))))
+#eval Std.format <| (·.fst) <$> infer_conv (SK ((K'.{[4, 4]} (Sort 3) (Sort 3) (Sort 2))))
 
 --(K'.{[1, 3]} ({snd ∘ fst,Λ(fst ∘ fst ∘ fst)} ((Sort 3, Sort 3), Sort 2)) (Sort 2) (K'.{[4, 4]} (Sort 3) (Sort 3) (Sort 2)))
 

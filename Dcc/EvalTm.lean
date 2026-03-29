@@ -40,7 +40,7 @@ theorem Expr.IsRedexTm.sound' (_h : Expr.is_redex_tm e = .none) : ¬ Expr.IsRede
   have h := h.complete
   simp_all only [reduceCtorEq]
 
-instance Expr.IsRedex.instDecidable : Decidable (Expr.IsRedexTm e) :=
+instance Expr.IsRedexTm.instDecidable : Decidable (Expr.IsRedexTm e) :=
   if h : e.is_redex_tm.isSome then
     .isTrue (e.is_redex_tm.get h).down
   else

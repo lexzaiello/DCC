@@ -188,9 +188,9 @@ inductive Judge : Expr → Expr → Prop
     → Judge α₂ x
     → DefEq α₁ α₂
     → Judge (SK ((snd t_f) x)) (SK (f x))
-  | pair : Judge (SK Sort 1) (SK ⟨α, β⟩)
-  | coup : Judge (SK Sort 1) (SK (α, β))
-  | lens : Judge (SK Sort 1) (SK ({α, β} _e))
+  | paire : Judge (SK Sort 1) (SK ⟨α, β⟩)
+  | coupe : Judge (SK Sort 1) (SK (α, β))
+  | lense : Judge (SK Sort 1) (SK ({α, β}))
 
 def Expr.mk_reduced (e : Expr) : ((e' : Expr) × (PLift (e.Reduced e'))) :=
   ⟨e.reduce, ⟨⟨reduce_sound rfl, reduce_norm rfl⟩⟩⟩
@@ -250,9 +250,9 @@ def infer (e : Expr) : Option ((t : Expr) × (PLift (Judge t e))) :=
   | (SK K.{[m, n]}) => .some ⟨K.type m n, ⟨.k⟩⟩
   | (SK K'.{[m, n]}) => .some ⟨K'.type m n, ⟨.k'⟩⟩
   | (SK Sort m) => .some ⟨(SK Sort m.succ), ⟨.srt⟩⟩
-  | SK ⟨_a, _b⟩ => .some ⟨SK Sort 1, ⟨.pair⟩⟩
-  | SK (_a, _b) => .some ⟨SK Sort 1, ⟨.coup⟩⟩
-  | SK ({_a, _b} _e) => .some ⟨SK Sort 1, ⟨.lens⟩⟩
+  | SK ⟨_a, _b⟩ => .some ⟨SK Sort 1, ⟨.paire⟩⟩
+  | SK (_a, _b) => .some ⟨SK Sort 1, ⟨.coupe⟩⟩
+  | SK ({_a, _b}) => .some ⟨SK Sort 1, ⟨.lense⟩⟩
   | (SK (f x)) => do
     let ⟨t_f, ⟨j_f⟩⟩ ← infer f
     let ⟨t_x, ⟨j_x⟩⟩ ← infer x

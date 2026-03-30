@@ -145,10 +145,14 @@ def CcExpr.toFormat (e : CcExpr) : Format :=
   | (CC (f x))     => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
   | .ty t          => t.toFormat
 
-def toFormat (e : Expr) : Format :=
+def Expr.toFormat (e : Expr) : Format :=
   match e with
   | .cc e => e.toFormat
   | SK S.{[m, n, o]} => "S.{[" ++ s!"{m}, {n}, {o}" ++ "]}"
   | SK K.{[m, n]} => "K.{[" ++ s!"{m}, {n}" ++ "]}"
   | SK K'.{[m, n]} => "K'.{[" ++ s!"{m}, {n}" ++ "]}"
   | SK (f x)       => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
+
+instance CTy.instToFormat : Std.ToFormat CTy := ⟨CTy.toFormat⟩
+instance CcExpr.instToFormat : Std.ToFormat CcExpr := ⟨CcExpr.toFormat⟩
+instance Expr.instToFormat : Std.ToFormat Expr := ⟨Expr.toFormat⟩

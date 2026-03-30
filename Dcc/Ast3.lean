@@ -49,17 +49,17 @@ declare_syntax_cat expr
 syntax "(" cty ")"             : cty
 syntax "(" ccexpr+ ")"         : ccexpr
 syntax "#(" term ")"           : ccexpr
-syntax:max "Id" "(" cty ")"    : ccexpr
+syntax:max "Id(" cty ")"       : ccexpr
 syntax:50 ident                : cty
 syntax "#(" term ")"           : cty
 syntax "Fst"                   : ccexpr
 syntax "Snd"                   : ccexpr
 syntax "App"                   : ccexpr
-syntax:max (priority := high) "Λ" "(" ccexpr ")"  : ccexpr
+syntax:max (priority := high) "Λ(" ccexpr ")"  : ccexpr
 syntax ccexpr "∘" ccexpr       : ccexpr
-syntax:max "Fst" "(" cty,* ")" : ccexpr
-syntax:max "Snd" "(" cty,* ")" : ccexpr
-syntax:max "App" "(" cty,* ")" : ccexpr
+syntax:max "Fst(" cty,* ")"    : ccexpr
+syntax:max "Snd(" cty,* ")"    : ccexpr
+syntax:max "App(" cty,* ")"    : ccexpr
 syntax "Id"                    : ccexpr
 syntax cty "×" cty             : cty
 syntax cty "→" cty             : cty
@@ -88,14 +88,14 @@ syntax "SK" expr     : term
 macro_rules
   | `(SK ($f:expr $x:expr))                 => `(Expr.app   (SK $f:expr)   (SK $x:expr))
   | `(SK ($f:expr $x:expr $xs:expr*))       => `(SK (($f:expr $x:expr) $xs:expr*))
+  | `(CC ($f:ccexpr $x:ccexpr))             => `(CcExpr.app (CC $f:ccexpr) (CC $x:ccexpr))
+  | `(CC ($f:ccexpr $x:ccexpr $xs:ccexpr*)) => `(CC (($f:ccexpr $x:ccexpr) $xs:ccexpr*))
   | `(CC Λ($e:ccexpr))                      => `(CcExpr.curr (CC $e))
   | `(CC ⟨$x:ccexpr, $y:ccexpr⟩)            => `(CcExpr.pair (CC $x) (CC $y))
   | `(CC ($x:ccexpr, $y:ccexpr))            => `(CcExpr.coup (CC $x) (CC $y))
   | `(SK S.{[$m, $n, $o]})                  => `(Expr.sk (SkComb.S $m $n $o))
   | `(SK K.{[$m, $n]})                      => `(Expr.sk (SkComb.K $m $n))
   | `(SK K'.{[$m, $n]})                     => `(Expr.sk (SkComb.K' $m $n))
-  | `(CC $t:cty)                            => `(CcExpr.ty (CTY $t))
-  | `(CC ($t:cty))                          => `(CcExpr.ty (CTY $t))
   | `(CTY ($e:cty))                         => `(CTY $e)
   | `(CTY Sort $m:term)                     => `(CTy.sort $m)
   | `(CTY $α:cty × $β:cty)                  => `(CTy.prod  (CTY $α) (CTY $β))
@@ -109,18 +109,17 @@ macro_rules
   | `(CC Snd)                               => `(CcExpr.snd')
   | `(CC Id)                                => `(CcExpr.id')
   | `(CC $f:ccexpr ∘ $g:ccexpr)             => `(CcExpr.comp (CC $f:ccexpr) (CC $g:ccexpr))
-  | `(CC ($f:ccexpr $x:ccexpr))             => `(CcExpr.app (CC $f:ccexpr) (CC $x:ccexpr))
   | `(SK #($t:term))                        => `($t)
   | `(CTY #($t:term))                       => `($t)
   | `(CC #($t:term))                        => `($t)
   | `(CC $idt:ident)                        => `($idt:term)
   | `(CTY $idt:ident)                       => `($idt:term)
   | `(SK $idt:ident)                        => `($idt:term)
-  | `(CC ($f:ccexpr $x:ccexpr $xs:ccexpr*)) => `(CC (($f:ccexpr $x:ccexpr) $xs:ccexpr*))
+  | `(CC $t:cty)                            => `(CcExpr.ty (CTY $t))
+  | `(CC ($t:cty))                          => `(CcExpr.ty (CTY $t))
+  | `(CC ($c:ccexpr))                       => `(CC $c)
+  | `(SK ($e:expr))                         => `(SK $e)
   | `(SK $e:ccexpr)                         => `(Expr.cc (CC $e))
-
-#eval CC (Id(Sort 0) (Sort 0))
-#eval SK (K.{[1, 1]} K'.{[1, 1]})
 
 def CTy.toFormat (e : CTy) : Format :=
   match e with

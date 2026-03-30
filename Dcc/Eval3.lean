@@ -194,21 +194,131 @@ theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
     unfold size
     rw [ih₁, ih₂]
 
-inductive Judge : CTy → CcExpr → Prop
-  | id    : Judge (CTY α → α) (CC Id(α))
-  | comp  : Judge (CTY α → β) g
-    → Judge (CTY β → γ) f
-    → Judge (CTY α → γ) (CC f ∘ g)
-  | pair  : Judge (CTY α → τ₁) f
-    → Judge (CTY α → τ₂) g
-    → Judge (CTY α → (τ₁ × τ₂)) (CC ⟨f, g⟩)
-  | fst   : Judge (CTY (α × β) → α) (CC Fst(α, β))
-  | snd   : Judge (CTY (α × β) → β) (CC Snd(α, β))
-  | curr  : Judge (CTY (α × β) → γ) x → Judge (CTY α → (β → γ)) (CC Λ(x))
-  | app_e : Judge (CTY (((δ → τ) × δ) → τ)) (CC App(δ, τ))
-  | coup  : Judge α a → Judge β b → Judge (CTY α × β) (CC (a, b))
-  | app   : Judge (CTY α → β) f → Judge α x → Judge β (CC (f x))
-  | sk    : Judge (CTY Base) (.sk _e)
-  | sort  : Judge (CTY Base) (CC Sort _m)
+inductive Judge : CcExpr → CTy → Prop
+  | id    : Judge (CC Id(α)) (CTY α → α)
+  | comp  : Judge g (CTY α → β)
+    → Judge f (CTY β → γ)
+    → Judge (CC f ∘ g) (CTY α → γ)
+  | pair  : Judge f (CTY α → τ₁)
+    → Judge g (CTY α → τ₂)
+    → Judge (CC ⟨f, g⟩) (CTY α → (τ₁ × τ₂))
+  | fst   : Judge (CC Fst(α, β)) (CTY (α × β) → α)
+  | snd   : Judge (CC Snd(α, β)) (CTY (α × β) → β)
+  | curr  : Judge x (CTY (α × β) → γ) → Judge (CC Λ(x)) (CTY α → (β → γ))
+  | app_e : Judge (CC App(δ, τ)) (CTY (((δ → τ) × δ) → τ))
+  | coup  : Judge a α → Judge b β → Judge (CC (a, b)) (CTY α × β)
+  | app   : Judge f (CTY α → β) → Judge x α → Judge (CC (f x)) β
+  | sk    : Judge (.sk _e) (CTY Base)
+  | sort  : Judge (CC Sort _m) (CTY Base)
+
+end CcExpr
+
+namespace CTy
+
+inductive Size : CTy → ℕ → Prop
+  | base  : Size (CTY Base) 1
+  | arrow : Size α m → Size β n → Size (CTY α → β) (m + n).succ
+  | prod  : Size α m → Size β n → Size (CTY α × β) (m + n).succ
+
+def size (t : CTy) : ((n : ℕ) × (PLift (Size t n))) :=
+  match t with
+  | CTY (α → β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+
+    ⟨(m + n).succ, ⟨.arrow h₁ h₂⟩⟩
+  | CTY (α × β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+
+    ⟨(m + n).succ, ⟨.prod h₁ h₂⟩⟩
+  | CTY Base => ⟨1, ⟨.base⟩⟩
+
+theorem Size.sound (_h : size e = ⟨n, ⟨h⟩⟩) : Size e n := h
+
+theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
+  induction h with
+  | base => rfl
+  | arrow h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+  | prod h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+
+end CTy
+
+namespace CcExpr
+
+inductive TySize : CcExpr → ℕ → Prop
+  | id     : CTy.Size α m
+    → TySize (CC Id(α)) m.succ
+  | id'    : TySize (CC Id) 1
+  | comp   : TySize f m
+    → TySize g n
+    → TySize (CC f ∘ g) (m + n).succ
+  | pair   : TySize f m
+    → TySize g n
+    → TySize (CC ⟨f, g⟩) (m + n).succ
+  | fst    : CTy.Size α m
+    → CTy.Size β n
+    → TySize (CC Fst(α, β)) (m + n).succ
+  | fst'   : TySize (CC Fst) 1
+  | snd    : CTy.Size α m
+    → CTy.Size β n
+    → TySize (CC Snd(α, β)) (m + n).succ
+  | snd'   : TySize (CC Snd) 1
+  | curr   : TySize x m → TySize (CC Λ(x)) m.succ
+  | app_e  : CTy.Size α m
+    → CTy.Size β n
+    → TySize (CC App(δ, τ)) (m + n).succ
+  | app_e' : TySize (CC App) 1
+  | coup   : TySize a m → TySize b n → TySize (CC (a, b)) (m + n).succ
+  | sk     : TySize (.sk _e) 1
+  | sort   : TySize (CC Sort _m) 1
+  | app    : TySize f m → TySize x n → TySize (CC (f x)) (m + n)
+
+def ty_size (e : CcExpr) : ((n : ℕ) × (PLift (TySize e n))) :=
+  match e with
+  | .sk _e     => ⟨1, ⟨.sk⟩⟩
+  | CC Sort _m => ⟨1, ⟨.sort⟩⟩
+  | CC Id(α)  =>
+    let ⟨m, ⟨h⟩⟩ := α.size
+    ⟨m.succ, ⟨.id h⟩⟩
+  | CC Id => ⟨1, ⟨.id'⟩⟩
+  | CC (f ∘ g) =>
+    let ⟨m, ⟨h₁⟩⟩ := f.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := g.ty_size
+    ⟨(m + n).succ, ⟨.comp h₁ h₂⟩⟩
+  | CC (a, b) =>
+    let ⟨m, ⟨h₁⟩⟩ := a.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := b.ty_size
+    ⟨(m + n).succ, ⟨.coup h₁ h₂⟩⟩
+  | CC ⟨a, b⟩ =>
+    let ⟨m, ⟨h₁⟩⟩ := a.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := b.ty_size
+    ⟨(m + n).succ, ⟨.pair h₁ h₂⟩⟩
+  | CC Fst(α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+    ⟨(m + n).succ, ⟨.fst h₁ h₂⟩⟩
+  | CC Fst => ⟨1, ⟨.fst'⟩⟩
+  | CC Snd(α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+    ⟨(m + n).succ, ⟨.snd h₁ h₂⟩⟩
+  | CC Snd => ⟨1, ⟨.snd'⟩⟩
+  | CC Λ(x) =>
+    let ⟨m, ⟨h⟩⟩ := x.ty_size
+    ⟨m.succ, ⟨.curr h⟩⟩
+  | CC App(α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+    ⟨(m + n).succ, ⟨.app_e h₁ h₂⟩⟩
+   | CC App => ⟨1, ⟨.app_e'⟩⟩
+   | CC (f x) =>
+    let ⟨m, ⟨h₁⟩⟩ := f.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := x.ty_size
+    ⟨(m + n), ⟨.app h₁ h₂⟩⟩
 
 end CcExpr

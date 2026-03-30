@@ -125,6 +125,8 @@ inductive Red : CcExpr → CcExpr → Prop
   | some val => exfalso; exact h ⟨val.down, by simp_all only [IsEmpty.exists_iff, not_false_eq_true]⟩
 
 inductive Size : CcExpr → ℕ → Prop
+  | sk     : Size (.sk _e)     1
+  | sort   : Size (CC Sort m) 1
   | id     : Size (CC Id(_α)) 1
   | id'    : Size (CC Id) 1
   | comp   : Size f m → Size g n → Size (CC (f ∘ g)) (m + n).succ
@@ -141,7 +143,9 @@ inductive Size : CcExpr → ℕ → Prop
 
 def size (e : CcExpr) : ((n : ℕ) × (PLift (Size e n))) :=
   match e with
-  | CC Id(_α) => ⟨1, ⟨.id⟩⟩
+  | .sk _e     => ⟨1, ⟨.sk⟩⟩
+  | CC Sort _m => ⟨1, ⟨.sort⟩⟩
+  | CC Id(_α)  => ⟨1, ⟨.id⟩⟩
   | CC Id => ⟨1, ⟨.id'⟩⟩
   | CC (f ∘ g) =>
     let ⟨m, ⟨h₁⟩⟩ := f.size
@@ -173,7 +177,7 @@ theorem Size.sound (_h : CcExpr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
 
 theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
-  | id | id' | fst | fst' | snd | snd' | app_e | app_e' => rfl
+  | sk | sort | id | id' | fst | fst' | snd | snd' | app_e | app_e' => rfl
   | curr h ih =>
     unfold size
     rw [ih]
@@ -189,5 +193,22 @@ theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   | app h₁ h₂ ih₁ ih₂ =>
     unfold size
     rw [ih₁, ih₂]
+
+inductive Judge : CTy → CcExpr → Prop
+  | id    : Judge (CTY α → α) (CC Id(α))
+  | comp  : Judge (CTY α → β) g
+    → Judge (CTY β → γ) f
+    → Judge (CTY α → γ) (CC f ∘ g)
+  | pair  : Judge (CTY α → τ₁) f
+    → Judge (CTY α → τ₂) g
+    → Judge (CTY α → (τ₁ × τ₂)) (CC ⟨f, g⟩)
+  | fst   : Judge (CTY (α × β) → α) (CC Fst(α, β))
+  | snd   : Judge (CTY (α × β) → β) (CC Snd(α, β))
+  | curr  : Judge (CTY (α × β) → γ) x → Judge (CTY α → (β → γ)) (CC Λ(x))
+  | app_e : Judge (CTY (((δ → τ) × δ) → τ)) (CC App(δ, τ))
+  | coup  : Judge α a → Judge β b → Judge (CTY α × β) (CC (a, b))
+  | app   : Judge (CTY α → β) f → Judge α x → Judge β (CC (f x))
+  | sk    : Judge (CTY Base) (.sk _e)
+  | sort  : Judge (CTY Base) (CC Sort _m)
 
 end CcExpr

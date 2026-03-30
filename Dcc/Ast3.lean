@@ -14,13 +14,15 @@ inductive SkComb where
 deriving BEq, Repr, DecidableEq
 
 inductive CTy where
-  | sort  : Level     → CTy
+  | base  : CTy
   | arrow : CTy → CTy → CTy
   | prod  : CTy → CTy → CTy
 deriving BEq, Repr, DecidableEq
 
 inductive CcExpr where
-  | id   : CTy → CcExpr
+  | sk   : SkComb → CcExpr
+  | sort : Level  → CcExpr
+  | id   : CTy    → CcExpr
   | id'  : CcExpr
   | comp : CcExpr → CcExpr → CcExpr
   | pair : CcExpr → CcExpr → CcExpr
@@ -45,6 +47,7 @@ declare_syntax_cat cty
 declare_syntax_cat skexpr
 declare_syntax_cat expr
 
+syntax skexpr                  : ccexpr
 syntax "(" cty ")"             : cty
 syntax "(" ccexpr+ ")"         : ccexpr
 syntax "#(" term ")"           : ccexpr
@@ -62,7 +65,8 @@ syntax:max "App(" cty,* ")"    : ccexpr
 syntax "Id"                    : ccexpr
 syntax cty "×" cty             : cty
 syntax cty "→" cty             : cty
-syntax "Sort" term             : cty
+syntax:max "Sort" term         : ccexpr
+syntax "Base"                  : cty
 syntax (priority := high) "⟨" ccexpr,* "⟩" : ccexpr
 syntax (priority := high) "(" ccexpr,* ")" : ccexpr
 syntax:40 ident                : ccexpr
@@ -82,7 +86,8 @@ syntax "#(" term ")" : expr
 syntax skexpr        : expr
 syntax ccexpr        : expr
 
-syntax "SK" expr     : term
+syntax "SK"  expr     : term
+syntax "SKC" skexpr   : term
 
 macro_rules
   | `(SK ($f:expr $x:expr))                 => `(Expr.app   (SK $f:expr)   (SK $x:expr))
@@ -92,11 +97,13 @@ macro_rules
   | `(CC Λ($e:ccexpr))                      => `(CcExpr.curr (CC $e))
   | `(CC ⟨$x:ccexpr, $y:ccexpr⟩)            => `(CcExpr.pair (CC $x) (CC $y))
   | `(CC ($x:ccexpr, $y:ccexpr))            => `(CcExpr.coup (CC $x) (CC $y))
-  | `(SK S.{[$m, $n, $o]})                  => `(Expr.sk (SkComb.S $m $n $o))
-  | `(SK K.{[$m, $n]})                      => `(Expr.sk (SkComb.K $m $n))
-  | `(SK K'.{[$m, $n]})                     => `(Expr.sk (SkComb.K' $m $n))
+  | `(SKC S.{[$m, $n, $o]})                  => `(SkComb.S $m $n $o)
+  | `(SKC K.{[$m, $n]})                      => `(SkComb.K $m $n)
+  | `(SKC K'.{[$m, $n]})                     => `(SkComb.K' $m $n)
+  | `(SK $c:skexpr)                          => `(Expr.sk (SKC $c))
   | `(CTY ($e:cty))                         => `(CTY $e)
-  | `(CTY Sort $m:term)                     => `(CTy.sort $m)
+  | `(CC Sort $m:term)                      => `(CcExpr.sort $m)
+  | `(CTY Base)                             => `(CTy.base)
   | `(CTY $α:cty × $β:cty)                  => `(CTy.prod  (CTY $α) (CTY $β))
   | `(CTY $α:cty → $β:cty)                  => `(CTy.arrow (CTY $α) (CTY $β))
   | `(CC Id($α:cty))                        => `(CcExpr.id (CTY $α))
@@ -119,15 +126,23 @@ macro_rules
   | `(CC ($c:ccexpr))                       => `(CC $c)
   | `(SK ($e:expr))                         => `(SK $e)
   | `(SK $e:ccexpr)                         => `(Expr.cc (CC $e))
+  | `(CC $e:skexpr)                         => `(CcExpr.sk (SKC $e))
 
 def CTy.toFormat (e : CTy) : Format :=
   match e with
-  | (CTY Sort m) => s!"Sort {m}"
+  | CTY Base     => "Base"
   | (CTY α → β)  => α.toFormat ++ " → " ++ β.toFormat
   | (CTY α × β)  => α.toFormat ++ " × " ++ β.toFormat
 
+def SkComb.toFormat (e : SkComb) : Format :=
+  match e with
+  | SKC S.{[m, n, o]} => "S.{[" ++ s!"{m}, {n}, {o}" ++ "]}"
+  | SKC K.{[m, n]} => "K.{[" ++ s!"{m}, {n}" ++ "]}"
+  | SKC K'.{[m, n]} => "K'.{[" ++ s!"{m}, {n}" ++ "]}"
+
 def CcExpr.toFormat (e : CcExpr) : Format :=
   match e with
+  | (CC Sort m) => s!"Sort {m}"
   | (CC Id(α))     => "Id(" ++ α.toFormat ++ ")"
   | (CC Id)        => "Id"
   | (CC Fst(α, β)) => "Fst(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
@@ -141,14 +156,13 @@ def CcExpr.toFormat (e : CcExpr) : Format :=
   | (CC (a, b))    => .bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")"
   | (CC f ∘ g)     => f.toFormat ++ " ∘ " ++ g.toFormat
   | (CC (f x))     => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
+  | .sk c          => c.toFormat
 
 def Expr.toFormat (e : Expr) : Format :=
   match e with
-  | .cc e => e.toFormat
-  | SK S.{[m, n, o]} => "S.{[" ++ s!"{m}, {n}, {o}" ++ "]}"
-  | SK K.{[m, n]} => "K.{[" ++ s!"{m}, {n}" ++ "]}"
-  | SK K'.{[m, n]} => "K'.{[" ++ s!"{m}, {n}" ++ "]}"
-  | SK (f x)       => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
+  | .cc e    => e.toFormat
+  | .sk e    => e.toFormat
+  | SK (f x) => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
 
 instance CTy.instToFormat : Std.ToFormat CTy := ⟨CTy.toFormat⟩
 instance CcExpr.instToFormat : Std.ToFormat CcExpr := ⟨CcExpr.toFormat⟩

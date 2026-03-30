@@ -1,10 +1,7 @@
 import Dcc.Ast2
 
-/-
-Need more equations for dpair.
-
-flip probably necessary.
--/
+inductive Expr.IsPair : Expr → Prop
+  | mk : IsPair (SK ⟨a, b⟩)
 
 inductive Expr.IsRedex : Expr → Prop
   | k'        : IsRedex (SK (K'.{[m, n]} α β x y))
@@ -141,7 +138,7 @@ inductive Expr.TySize : Expr → ℕ → Prop
   | fst    : Expr.TySize (SK fst) 1
   | snd    : Expr.TySize (SK snd) 1
   | compe  : Expr.TySize (SK (∘)) 1
-  | coupe  : Expr.TySize (SK coup) 1
+  | coupe  : Expr.TySize (SK coup) 0
   | dpair  : Expr.TySize (SK pair) 1
   | lense  : Expr.TySize (SK lens) 1
   | curr   : Expr.TySize (SK (Λ)) 2
@@ -200,7 +197,7 @@ theorem Expr.all_size : ∃ n, Expr.TySize e n := by
   · exact ⟨1, .fst⟩
   · exact ⟨1, .snd⟩
   · exact ⟨2, .curr⟩
-  · exact ⟨1, .coupe⟩
+  · exact ⟨0, .coupe⟩
   case dpair => exact ⟨1, .dpair⟩
   case lense => exact ⟨1, .lense⟩
 
@@ -213,7 +210,9 @@ theorem Expr.TySize.unique (h₁ : Expr.TySize e n) (h₂ : e.TySize m) : m = n 
 -- Compute the size of an expression
 def Expr.ty_size : Expr → ℕ
   | .curr => 2
-  | SK lens | (SK K'.{[_m, _n]}) | (SK K.{[_m, _n]}) | .coupe | .App | .id | .flip | .quot | .compe | .dpair | .fst | .snd => 1
+  | SK lens | (SK K'.{[_m, _n]}) | (SK K.{[_m, _n]}) => 1
+  | .coupe => 0
+  | .App | .id | .flip | .quot | .compe | .dpair | .fst | .snd => 1
   | .nil => 0
   | (SK S.{[_m, _n, _o]}) => 0
   | .tyhole _m | .Srt _m => 0
@@ -714,3 +713,39 @@ theorem Expr.RedTyTrans.no_step? : Expr.step? t = .none → ¬ Expr.RedTyTrans t
     induction h
     · exact h ⟨_, by assumption⟩
     · assumption)
+
+theorem Expr.RedTyTrans.unique : Expr.RedTyTrans e e' → Expr.IsNorm e → e' = e := by
+  intro h_red h_norm
+  simp [IsNorm] at h_norm
+  induction h_red
+  · exfalso; exact h_norm _ (by assumption)
+  · rename_i b c h_r_b h_r_b' ih
+    simp_all only
+
+theorem Expr.RedTyTrans.unique' : Expr.RedTyTrans a b → Expr.RedTyTrans a c → b.IsNorm → c.IsNorm → b = c := by
+  intro ha hb h₁ h₂
+  have h := ha.complete' h₁
+  have h' := hb.complete' h₂
+  simp_all
+
+theorem Expr.RedTyReflTrans.unique : Expr.RedTyReflTrans a b → Expr.RedTyReflTrans a c → b.IsNorm → c.IsNorm → b = c := by
+  intro ha hb hnorm₁ hnorm₂
+  change Relation.ReflTransGen Expr.RedTy _ _ at ha
+  change Relation.ReflTransGen Expr.RedTy _ _ at hb
+  rw [← Relation.reflGen_transGen] at ha
+  rw [← Relation.reflGen_transGen] at hb
+  induction ha
+  induction hb
+  rfl
+  rename_i h
+  change Expr.RedTyTrans _ _ at h
+  exact (h.unique (by assumption)).symm
+  induction hb
+  rename_i h
+  change Expr.RedTyTrans _ _ at h
+  exact (h.unique (by assumption))
+  rename_i h₁ _ h₂
+  change Expr.RedTyTrans _ _ at h₁
+  change Expr.RedTyTrans _ _ at h₂
+  exact h₁.unique' (by assumption) (by assumption) (by assumption)
+

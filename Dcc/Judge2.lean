@@ -168,6 +168,17 @@ theorem Expr.Projects.decreasing (h : Expr.Projects π e e'') : e''.ty_size < e.
     let h := h_red.snd_decreasing h_redex
     linarith
 
+theorem Expr.Projects.is_norm (h : Expr.Projects π e e') : e'.IsNorm := by
+  induction h
+  rename_i h
+  cases h
+  rename_i h
+  exact h
+  rename_i h
+  cases h
+  rename_i h
+  exact h
+
 inductive DefEq : Expr → Expr → Prop
   | single : Expr.Reduced a c → Expr.Reduced b c → DefEq a b
   | pair   : (SK fst).Projects t₁ α₁
@@ -219,6 +230,9 @@ def Expr.project (π e : Expr) : Option ((e' : Expr) × (PLift (Expr.Projects π
 def Expr.mk_def_eq (t₁ t₂ : Expr) : Option (PLift (DefEq t₁ t₂)) := do
   let ⟨t₁', ⟨h₁'⟩⟩ := t₁.mk_reduced
   let ⟨t₂', ⟨h₂'⟩⟩ := t₂.mk_reduced
+
+  dbg_trace s!"one: {t₁'}"
+  dbg_trace s!"two: {t₂'}"
 
   if h_same : t₁' = t₂' then
       .some ⟨.single (h_same ▸ h₁') h₂'⟩
@@ -309,7 +323,6 @@ def test_S : Option Expr := do
 #eval (SK (fst ((snd ({snd ∘ fst,Λ(fst ∘ fst ∘ fst)}
    ((({snd ∘ fst,Λ(fst ∘ fst ∘ fst)} ((Sort 3, Sort 3), Sort 2)), Sort 2), (((K'.{[4, 4]} Sort 3) Sort 3) Sort 2)))) (Sort 1)))).reduce
 
-#eval Std.format <| test_S
 #eval Std.format <| (SK (snd ({Sort 2,{(((K'.{[4, 3]} Sort 3) Sort 2)
      Sort 2),(((K'.{[1, 3]} (Sort 2, (quot Sort 3))) Sort 2) (((K'.{[4, 3]} Sort 3) Sort 2) Sort 2))}}))).reduce
 

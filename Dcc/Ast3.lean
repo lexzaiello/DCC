@@ -156,3 +156,6 @@ def Expr.toFormat (e : Expr) : Format :=
 instance CTy.instToFormat : Std.ToFormat CTy := ⟨CTy.toFormat⟩
 instance CcExpr.instToFormat : Std.ToFormat CcExpr := ⟨CcExpr.toFormat⟩
 instance Expr.instToFormat : Std.ToFormat Expr := ⟨Expr.toFormat⟩
+instance : ToString Expr := ⟨toString ∘ Expr.toFormat⟩
+instance : ToString CcExpr := ⟨toString ∘ CcExpr.toFormat⟩
+instance : ToString CTy := ⟨toString ∘ CTy.toFormat⟩

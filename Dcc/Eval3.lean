@@ -125,25 +125,28 @@ inductive Red : CcExpr → CcExpr → Prop
   | some val => exfalso; exact h ⟨val.down, by simp_all only [IsEmpty.exists_iff, not_false_eq_true]⟩
 
 inductive Size : CcExpr → ℕ → Prop
-  | id    : Size (CC Id(_α)) 1
-  | id'   : Size (CC Id) 1
-  | comp  : Size (CC (_f ∘ _g)) 1
-  | coup  : Size f m → Size g n → Size (CC (f, g)) (m + n).succ
-  | pair  : Size f m → Size g n → Size (CC ⟨f, g⟩) (m + n).succ
-  | fst   : Size (CC Fst(_α, _β)) 1
-  | fst'  : Size (CC Fst) 1
-  | snd   : Size (CC Snd(_α, _β)) 1
-  | snd'  : Size (CC Snd) 1
-  | curr  : Size x m → Size (CC Λ(x)) m.succ
-  | App   : Size (CC App(_α, _β)) 1
-  | App'  : Size (CC App) 1
-  | app   : Size f m → Size x n → Size (CC (f x)) (m + n)
+  | id     : Size (CC Id(_α)) 1
+  | id'    : Size (CC Id) 1
+  | comp   : Size f m → Size g n → Size (CC (f ∘ g)) (m + n).succ
+  | coup   : Size f m → Size g n → Size (CC (f, g)) (m + n).succ
+  | pair   : Size f m → Size g n → Size (CC ⟨f, g⟩) (m + n).succ
+  | fst    : Size (CC Fst(_α, _β)) 1
+  | fst'   : Size (CC Fst) 1
+  | snd    : Size (CC Snd(_α, _β)) 1
+  | snd'   : Size (CC Snd) 1
+  | curr   : Size x m → Size (CC Λ(x)) m.succ
+  | app_e  : Size (CC App(_α, _β)) 1
+  | app_e' : Size (CC App) 1
+  | app    : Size f m → Size x n → Size (CC (f x)) (m + n)
 
 def size (e : CcExpr) : ((n : ℕ) × (PLift (Size e n))) :=
   match e with
   | CC Id(_α) => ⟨1, ⟨.id⟩⟩
   | CC Id => ⟨1, ⟨.id'⟩⟩
-  | CC (_f ∘ _g) => ⟨1, ⟨.comp⟩⟩
+  | CC (f ∘ g) =>
+    let ⟨m, ⟨h₁⟩⟩ := f.size
+    let ⟨n, ⟨h₂⟩⟩ := g.size
+    ⟨(m + n).succ, ⟨.comp h₁ h₂⟩⟩
   | CC (a, b) =>
     let ⟨m, ⟨h₁⟩⟩ := a.size
     let ⟨n, ⟨h₂⟩⟩ := b.size
@@ -159,11 +162,32 @@ def size (e : CcExpr) : ((n : ℕ) × (PLift (Size e n))) :=
   | CC Λ(x) =>
     let ⟨m, ⟨h⟩⟩ := x.size
     ⟨m.succ, ⟨.curr h⟩⟩
-  | CC App(_α, _β) => ⟨1, ⟨.App⟩⟩
-   | CC App => ⟨1, ⟨.App'⟩⟩
+  | CC App(_α, _β) => ⟨1, ⟨.app_e⟩⟩
+   | CC App => ⟨1, ⟨.app_e'⟩⟩
    | CC (f x) =>
     let ⟨m, ⟨h₁⟩⟩ := f.size
     let ⟨n, ⟨h₂⟩⟩ := x.size
     ⟨(m + n), ⟨.app h₁ h₂⟩⟩
+
+theorem Size.sound (_h : CcExpr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
+
+theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
+  induction h with
+  | id | id' | fst | fst' | snd | snd' | app_e | app_e' => rfl
+  | curr h ih =>
+    unfold size
+    rw [ih]
+  | comp h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+  | coup h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+  | pair h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+  | app h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
 
 end CcExpr

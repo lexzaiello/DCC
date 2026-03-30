@@ -33,7 +33,6 @@ inductive CcExpr where
   | App  : CTy    → CTy    → CcExpr
   | App' : CcExpr
   | app  : CcExpr → CcExpr → CcExpr
-  | ty   : CTy    → CcExpr
 deriving BEq, Repr, DecidableEq
 
 inductive Expr where
@@ -142,7 +141,6 @@ def CcExpr.toFormat (e : CcExpr) : Format :=
   | (CC (a, b))    => .bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")"
   | (CC f ∘ g)     => f.toFormat ++ " ∘ " ++ g.toFormat
   | (CC (f x))     => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
-  | .ty t          => t.toFormat
 
 def Expr.toFormat (e : Expr) : Format :=
   match e with

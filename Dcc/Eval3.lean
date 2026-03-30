@@ -124,4 +124,46 @@ inductive Red : CcExpr → CcExpr → Prop
   | none => rfl
   | some val => exfalso; exact h ⟨val.down, by simp_all only [IsEmpty.exists_iff, not_false_eq_true]⟩
 
+inductive Size : CcExpr → ℕ → Prop
+  | id    : Size (CC Id(_α)) 1
+  | id'   : Size (CC Id) 1
+  | comp  : Size (CC (_f ∘ _g)) 1
+  | coup  : Size f m → Size g n → Size (CC (f, g)) (m + n).succ
+  | pair  : Size f m → Size g n → Size (CC ⟨f, g⟩) (m + n).succ
+  | fst   : Size (CC Fst(_α, _β)) 1
+  | fst'  : Size (CC Fst) 1
+  | snd   : Size (CC Snd(_α, _β)) 1
+  | snd'  : Size (CC Snd) 1
+  | curr  : Size x m → Size (CC Λ(x)) m.succ
+  | App   : Size (CC App(_α, _β)) 1
+  | App'  : Size (CC App) 1
+  | app   : Size f m → Size x n → Size (CC (f x)) (m + n)
+
+def size (e : CcExpr) : ((n : ℕ) × (PLift (Size e n))) :=
+  match e with
+  | CC Id(_α) => ⟨1, ⟨.id⟩⟩
+  | CC Id => ⟨1, ⟨.id'⟩⟩
+  | CC (_f ∘ _g) => ⟨1, ⟨.comp⟩⟩
+  | CC (a, b) =>
+    let ⟨m, ⟨h₁⟩⟩ := a.size
+    let ⟨n, ⟨h₂⟩⟩ := b.size
+    ⟨(m + n).succ, ⟨.coup h₁ h₂⟩⟩
+  | CC ⟨a, b⟩ =>
+    let ⟨m, ⟨h₁⟩⟩ := a.size
+    let ⟨n, ⟨h₂⟩⟩ := b.size
+    ⟨(m + n).succ, ⟨.pair h₁ h₂⟩⟩
+  | CC Fst(_α, _β) => ⟨1, ⟨.fst⟩⟩
+  | CC Fst => ⟨1, ⟨.fst'⟩⟩
+  | CC Snd(_α, _β) => ⟨1, ⟨.snd⟩⟩
+  | CC Snd => ⟨1, ⟨.snd'⟩⟩
+  | CC Λ(x) =>
+    let ⟨m, ⟨h⟩⟩ := x.size
+    ⟨m.succ, ⟨.curr h⟩⟩
+  | CC App(_α, _β) => ⟨1, ⟨.App⟩⟩
+   | CC App => ⟨1, ⟨.App'⟩⟩
+   | CC (f x) =>
+    let ⟨m, ⟨h₁⟩⟩ := f.size
+    let ⟨n, ⟨h₂⟩⟩ := x.size
+    ⟨(m + n), ⟨.app h₁ h₂⟩⟩
+
 end CcExpr

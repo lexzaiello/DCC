@@ -137,7 +137,7 @@ inductive Size : Expr → ℕ → Prop
   | snd    : Size (DCC Snd(_α, _β)) 1
   | curr   : Size x m → Size (DCC Λ(x)) m.succ
   | pi     : Size x m → Size (DCC Π(x)) m.succ
-  | app_e  : Size (DCC App(_α, _β)) 1
+  | appl   : Size (DCC App(_α, _β)) 1
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
   | sig    : Size (DCC Σ a, b) 1
 
@@ -166,7 +166,7 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
   | DCC Π(x) =>
     let ⟨m, ⟨h⟩⟩ := x.size
     ⟨m.succ, ⟨.pi h⟩⟩
-  | DCC App(_α, _β) => ⟨1, ⟨.app_e⟩⟩
+  | DCC App(_α, _β) => ⟨1, ⟨.appl⟩⟩
   | DCC (f x) =>
     let ⟨m, ⟨h₁⟩⟩ := f.size
     let ⟨n, ⟨h₂⟩⟩ := x.size
@@ -176,7 +176,7 @@ theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
 
 theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
-  | sig | sort | id | fst | snd | app_e => rfl
+  | sig | sort | id | fst | snd | appl => rfl
   | curr h ih =>
     unfold size
     rw [ih]
@@ -195,5 +195,75 @@ theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   | app h₁ h₂ ih₁ ih₂ =>
     unfold size
     rw [ih₁, ih₂]
+
+inductive TySize : Expr → ℕ → Prop
+  | id     : TySize α m
+    → TySize (DCC Id(α)) m.succ
+  | comp   : TySize f m
+    → TySize g n
+    → TySize (DCC f ∘ g) (m + n).succ
+  | pair   : TySize f m
+    → TySize g n
+    → TySize (DCC ⟨f, g⟩) (m + n).succ
+  | fst    : TySize α m
+    → TySize β n
+    → TySize (DCC Fst(α, β)) (m + n).succ
+  | snd    : TySize α m
+    → TySize β n
+    → TySize (DCC Snd(α, β)) (m + n).succ
+  | curr   : TySize x m → TySize (DCC Λ(x)) m.succ
+  | pi     : TySize x m → TySize (DCC Π(x)) m.succ
+  | sig    : TySize α m → TySize β n → TySize (DCC Σ α, β) (m + n).succ
+  | appl   : TySize α m
+    → TySize β n
+    → TySize (DCC App(δ, τ)) (m + n).succ
+  | mk     : TySize a m → TySize b n → TySize (DCC ⟦a, b⟧) (m + n).succ
+  | sort   : TySize (DCC Sort _m) 1
+  | app    : TySize f m → TySize x n → TySize (DCC (f x)) (m + n)
+
+def ty_size (e : Expr) : ((n : ℕ) × (PLift (TySize e n))) :=
+  match e with
+  | DCC Sort _m => ⟨1, ⟨.sort⟩⟩
+  | DCC Id(α)  =>
+    let ⟨m, ⟨h⟩⟩ := α.ty_size
+    ⟨m.succ, ⟨.id h⟩⟩
+  | DCC (f ∘ g) =>
+    let ⟨m, ⟨h₁⟩⟩ := f.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := g.ty_size
+    ⟨(m + n).succ, ⟨.comp h₁ h₂⟩⟩
+  | DCC ⟦a, b⟧ =>
+    let ⟨m, ⟨h₁⟩⟩ := a.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := b.ty_size
+    ⟨(m + n).succ, ⟨.mk h₁ h₂⟩⟩
+  | DCC ⟨a, b⟩ =>
+    let ⟨m, ⟨h₁⟩⟩ := a.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := b.ty_size
+    ⟨(m + n).succ, ⟨.pair h₁ h₂⟩⟩
+  | DCC Σ a, b =>
+    let ⟨m, ⟨h₁⟩⟩ := a.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := b.ty_size
+    ⟨(m + n).succ, ⟨.sig h₁ h₂⟩⟩
+  | DCC Fst(α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := β.ty_size
+    ⟨(m + n).succ, ⟨.fst h₁ h₂⟩⟩
+  | DCC Snd(α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := β.ty_size
+    ⟨(m + n).succ, ⟨.snd h₁ h₂⟩⟩
+  | DCC Λ(x) =>
+    let ⟨m, ⟨h⟩⟩ := x.ty_size
+    ⟨m.succ, ⟨.curr h⟩⟩
+  | DCC Π(x) =>
+    let ⟨m, ⟨h⟩⟩ := x.ty_size
+    ⟨m.succ, ⟨.pi h⟩⟩
+  | DCC App(α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := β.ty_size
+    ⟨(m + n).succ, ⟨.appl h₁ h₂⟩⟩
+   | DCC (f x) =>
+    let ⟨m, ⟨h₁⟩⟩ := f.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := x.ty_size
+    ⟨(m + n), ⟨.app h₁ h₂⟩⟩
 
 end Expr

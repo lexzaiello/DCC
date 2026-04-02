@@ -90,5 +90,6 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC (f x))     => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
 
 instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
+instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
 
 end Expr

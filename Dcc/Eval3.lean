@@ -321,4 +321,25 @@ def ty_size (e : CcExpr) : ((n : ℕ) × (PLift (TySize e n))) :=
     let ⟨n, ⟨h₂⟩⟩ := x.ty_size
     ⟨(m + n), ⟨.app h₁ h₂⟩⟩
 
+theorem TySize.sound (_h : ty_size e = ⟨n, ⟨h⟩⟩) : TySize e n := h
+
+theorem TySize.complete (h : TySize e n) : ty_size e = ⟨n, .up h⟩ := by
+  induction h with
+  | sk | sort | id | id' | fst | fst' | snd | snd' | app_e | app_e' => rfl
+  | curr h ih =>
+    unfold ty_size
+    rw [ih]
+  | comp h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+  | coup h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+  | pair h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+  | app h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+
 end CcExpr

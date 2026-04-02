@@ -7,7 +7,7 @@ inductive IsRedex : Expr → Prop
   | fst    : IsRedex (DCC (Fst(_δ, _τ) ⟦a, b⟧))
   | snd    : IsRedex (DCC (Snd(_δ, _τ) ⟦a, b⟧))
   | comp   : IsRedex (DCC ((x ∘ y) z))
-  | dpair  : IsRedex (DCC (⟨f, g⟩ x))
+  | pair  : IsRedex (DCC (⟨f, g⟩ x))
   | curr   : IsRedex (DCC (Λ(x) y z))
   | pi     : IsRedex (DCC (Π(B) A x))
 
@@ -24,7 +24,7 @@ def is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   | (DCC (Fst(_δ, _τ) ⟦_a, _b⟧))  => .some ⟨.fst⟩
   | (DCC (Snd(_δ, _τ) ⟦_a, _b⟧))  => .some ⟨.snd⟩
   | (DCC ((_x ∘ _y) _z))          => .some ⟨.comp⟩
-  | (DCC (⟨_f, _g⟩ _x))           => .some ⟨.dpair⟩
+  | (DCC (⟨_f, _g⟩ _x))           => .some ⟨.pair⟩
   | (DCC (Λ(_x) _y _z))           => .some ⟨.curr⟩
   | (DCC (Π(_x) _y _z))           => .some ⟨.pi⟩
   | _                            => .none
@@ -33,7 +33,7 @@ theorem IsRedex.sound (_h : Expr.is_redex e = .some he) : IsRedex e := he.down
 
 theorem IsRedex.complete (h : IsRedex e) : is_redex e = .some (.up h) := by
   match h with
-  | .pi | .snd | .fst | .comp | .curr | .app | .dpair =>
+  | .pi | .snd | .fst | .comp | .curr | .app | .pair =>
     simp only [is_redex]
 
 theorem IsRedex.sound' (_h : is_redex e = .none) : ¬ IsRedex e := fun h => by
@@ -119,7 +119,7 @@ inductive Red : CcExpr → CcExpr → Prop
   | fst      : Red (DCC (Fst(_δ, _τ) ⟦a, b⟧)) a
   | snd      : Red (DCC (Snd(_δ, _τ) ⟦a, b⟧)) a
   | comp     : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
-  | dpair    : Red (DCC (⟨f, g⟩ x))  (DCC ⟦(f x), (g x)⟧)
+  | pair    : Red (DCC (⟨f, g⟩ x))  (DCC ⟦(f x), (g x)⟧)
   | curr     : Red (DCC (Λ(x) y z)) (DCC (x ⟦y, z⟧))
   | pi       : Red (DCC (Π(B) A x)) (DCC (B ⟦A, x⟧))
   | sigl     : ¬ HasRedex b → Red a a' → Red (DCC ⟦a, b⟧) (DCC ⟦a', b⟧)
@@ -216,7 +216,7 @@ inductive TySize : Expr → ℕ → Prop
   | sig    : TySize α m → TySize β n → TySize (DCC Σ α, β) (m + n).succ
   | appl   : TySize α m
     → TySize β n
-    → TySize (DCC App(δ, τ)) (m + n).succ
+    → TySize (DCC App(α, β)) (m + n).succ
   | mk     : TySize a m → TySize b n → TySize (DCC ⟦a, b⟧) (m + n).succ
   | sort   : TySize (DCC Sort _m) 1
   | app    : TySize f m → TySize x n → TySize (DCC (f x)) (m + n)
@@ -265,5 +265,44 @@ def ty_size (e : Expr) : ((n : ℕ) × (PLift (TySize e n))) :=
     let ⟨m, ⟨h₁⟩⟩ := f.ty_size
     let ⟨n, ⟨h₂⟩⟩ := x.ty_size
     ⟨(m + n), ⟨.app h₁ h₂⟩⟩
+
+theorem TySize.sound (_h : Expr.ty_size e = ⟨n, ⟨h⟩⟩) : TySize e n := h
+
+theorem TySize.complete (h : TySize e n) : ty_size e = ⟨n, .up h⟩ := by
+  induction h with
+  | sort => rfl
+  | curr h ih =>
+    unfold ty_size
+    rw [ih]
+  | pi h ih =>
+    unfold ty_size
+    rw [ih]
+  | id h ih =>
+    unfold ty_size
+    rw [ih]
+  | comp h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+  | mk h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+  | pair h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+  | fst h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+  | snd h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+  | sig h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+  | appl h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
+  | app h₁ h₂ ih₁ ih₂ =>
+    unfold ty_size
+    rw [ih₁, ih₂]
 
 end Expr

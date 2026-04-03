@@ -24,6 +24,7 @@ inductive Expr where
   | id    : Expr  → Expr
   | fst   : Expr  → Expr → Expr
   | snd   : Expr  → Expr → Expr
+  | quot  : Expr  → Expr → Expr
   | comp  : Expr  → Expr → Expr
   | pair  : Expr  → Expr → Expr
   | sigma : Expr  → Expr → Expr
@@ -41,6 +42,7 @@ syntax:max "Id(" expr ")"                    : expr
 syntax:max "Fst(" expr,* ")"                 : expr
 syntax:max "App(" expr,* ")"                 : expr
 syntax:max "Snd(" expr,* ")"                 : expr
+syntax:max "`(" expr,* ")"                   : expr
 syntax "Σ" expr "," expr                     : expr
 syntax "Σ" expr "," expr                     : expr
 syntax:max (priority := high) "Λ(" expr ")"  : expr
@@ -57,6 +59,7 @@ syntax "DCC"  expr : term
 macro_rules
   | `(DCC ($f:expr $x:expr))             => `(Expr.app   (DCC $f:expr)   (DCC $x:expr))
   | `(DCC ($f:expr $x:expr $xs:expr*))   => `(DCC (($f:expr $x:expr) $xs:expr*))
+  | `(DCC `($β:expr, $x:expr))           => `(Expr.quot (DCC $β) (DCC $x))
   | `(DCC Λ($e:expr))                    => `(Expr.curr (DCC $e))
   | `(DCC Π($e:expr))                    => `(Expr.pi (DCC $e))
   | `(DCC ⟨$x:expr, $y:expr⟩)            => `(Expr.pair (DCC $x) (DCC $y))
@@ -78,6 +81,7 @@ def toFormat (e : Expr) : Std.Format :=
   match e with
   | (DCC Sort m)    => s!"Sort {m}"
   | (DCC Id(α))     => "Id(" ++ α.toFormat ++ ")"
+  | (DCC `(x, β))   => "`(" ++ x.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Fst(α, β)) => "Fst(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Snd(α, β)) => "Snd(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC App(α, β)) => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"

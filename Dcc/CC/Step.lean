@@ -17,8 +17,28 @@ inductive HasRedex : Expr → Prop
   | single : IsRedex a  → HasRedex a
   | left   : HasRedex f → HasRedex (DCC (f x))
   | right  : HasRedex x → HasRedex (DCC (f x))
-  | sigl   : HasRedex a → HasRedex (DCC ⟦β⟧(a, b))
-  | sigr   : HasRedex b → HasRedex (DCC ⟦β⟧(a, b))
+  | coupl  : HasRedex a → HasRedex (DCC ⟦β⟧(a, b))
+  | coupr  : HasRedex b → HasRedex (DCC ⟦β⟧(a, b))
+  | coupβ  : HasRedex β → HasRedex (DCC ⟦β⟧(a, b))
+  | pairl  : HasRedex a → HasRedex (DCC ⟦β⟧⟨a, b⟩)
+  | pairr  : HasRedex b → HasRedex (DCC ⟦β⟧⟨a, b⟩)
+  | pairβ  : HasRedex β → HasRedex (DCC ⟦β⟧⟨a, b⟩)
+  | app₁   : HasRedex δ → HasRedex (DCC App(δ, _τ))
+  | app₂   : HasRedex τ → HasRedex (DCC App(_δ, τ))
+  | fst₁   : HasRedex α → HasRedex (DCC Fst(α, _β))
+  | fst₂   : HasRedex β → HasRedex (DCC Fst(_α, β))
+  | snd₁   : HasRedex α → HasRedex (DCC Snd(α, _β))
+  | snd₂   : HasRedex β → HasRedex (DCC Snd(_α, β))
+  | id     : HasRedex α → HasRedex (DCC Id(α))
+  | quot₁  : HasRedex α → HasRedex (DCC `(α, _β, _x))
+  | quot₂  : HasRedex β → HasRedex (DCC `(_α, β, _x))
+  | quot₃  : HasRedex x → HasRedex (DCC `(_α, _β, x))
+  | comp₁  : HasRedex f → HasRedex (DCC (f ∘ _g))
+  | comp₂  : HasRedex g → HasRedex (DCC (_f ∘ g))
+  | sigα   : HasRedex α → HasRedex (DCC (Σ(α, _β)))
+  | sigβ   : HasRedex β → HasRedex (DCC (Σ(_α, β)))
+  | curr₁  : HasRedex β → HasRedex (DCC (Λ(β, _x)))
+  | curr₂  : HasRedex x → HasRedex (DCC (Λ(_β, x)))
 
 def is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   match e with
@@ -54,9 +74,47 @@ def has_redex (e : Expr) : Option (PLift e.HasRedex) :=
     .some ⟨.single h⟩
   else
     match e with
-    | (DCC ⟦_β⟧(x, y)) => match _heq₂ : x.has_redex, _heq₃ : y.has_redex with
-      | .some ⟨h⟩, _ => .some ⟨.sigl h⟩
-      | _, .some ⟨h⟩ => .some ⟨.sigr h⟩
+    | (DCC ⟦β⟧(x, y)) => match _heq₁ : β.has_redex, _heq₂ : x.has_redex, _heq₃ : y.has_redex with
+      | .some ⟨h⟩, _, _ => .some ⟨.coupβ h⟩
+      | _, .some ⟨h⟩, _ => .some ⟨.coupl h⟩
+      | _, _, .some ⟨h⟩ => .some ⟨.coupr h⟩
+      | _, _, _ => .none
+    | (DCC ⟦β⟧⟨x, y⟩) => match _heq₁ : β.has_redex, _heq₂ : x.has_redex, _heq₃ : y.has_redex with
+      | .some ⟨h⟩, _, _ => .some ⟨.pairβ h⟩
+      | _, .some ⟨h⟩, _ => .some ⟨.pairl h⟩
+      | _, _, .some ⟨h⟩ => .some ⟨.pairr h⟩
+      | _, _, _ => .none
+    | (DCC App(δ, τ)) => match _heq₁ : δ.has_redex, _heq₂ : τ.has_redex with
+      | .some ⟨h⟩, _ => .some ⟨.app₁ h⟩
+      | _, .some ⟨h⟩ => .some ⟨.app₂ h⟩
+      | _, _ => .none
+    | (DCC Fst(α, β)) => match _heq₁ : α.has_redex, _heq₂ : β.has_redex with
+      | .some ⟨h⟩, _ => .some ⟨.fst₁ h⟩
+      | _, .some ⟨h⟩ => .some ⟨.fst₂ h⟩
+      | _, _ => .none
+    | (DCC Snd(α, β)) => match _heq₁ : α.has_redex, _heq₂ : β.has_redex with
+      | .some ⟨h⟩, _ => .some ⟨.snd₁ h⟩
+      | _, .some ⟨h⟩ => .some ⟨.snd₂ h⟩
+      | _, _ => .none
+    | (DCC Id(α)) => match _heq₁ : α.has_redex with
+      | .some ⟨h⟩ => .some ⟨.id h⟩
+      | _ => .none
+    | (DCC `(α, β, x)) => match _heq₁ : α.has_redex, _heq₂ : β.has_redex, _heq₃ : x.has_redex with
+      | .some ⟨h⟩, _, _ => .some ⟨.quot₁ h⟩
+      | _, .some ⟨h⟩, _ => .some ⟨.quot₂ h⟩
+      | _, _, .some ⟨h⟩ => .some ⟨.quot₃ h⟩
+      | _, _, _ => none
+    | (DCC f ∘ g) => match _heq₁ : f.has_redex, _heq₂ : g.has_redex with
+      | .some ⟨h⟩, _ => .some ⟨.comp₁ h⟩
+      | _, .some ⟨h⟩ => .some ⟨.comp₂ h⟩
+      | _, _ => .none
+    | (DCC Σ(α, β)) => match _heq₁ : α.has_redex, _heq₂ : β.has_redex with
+      | .some ⟨h⟩, _ => .some ⟨.sigα h⟩
+      | _, .some ⟨h⟩ => .some ⟨.sigβ h⟩
+      | _, _ => .none
+    | (DCC Λ(β, x)) => match _heq₁ : β.has_redex, _heq₂ : x.has_redex with
+      | .some ⟨h⟩, _ => .some ⟨.curr₁ h⟩
+      | _, .some ⟨h⟩ => .some ⟨.curr₂ h⟩
       | _, _ => .none
     | (DCC (f x)) => match _heq₂ : f.has_redex, _heq₃ : x.has_redex with
       | .some ⟨h⟩, _ => .some ⟨.left h⟩
@@ -66,7 +124,34 @@ def has_redex (e : Expr) : Option (PLift e.HasRedex) :=
 
 @[simp] theorem HasRedex.sound (_h : Expr.has_redex e = .some he) : HasRedex e := he.down
 
-@[simp] theorem sig_not_redex : ¬ IsRedex (DCC ⟦_β⟧(_a, _b)) := fun h => by
+@[simp] theorem sig_not_redex : ¬ IsRedex (DCC Σ(_α, _β)) := fun h => by
+  cases h
+
+@[simp] theorem curr_not_redex : ¬ IsRedex (DCC Λ(_β, x)) := fun h => by
+  cases h
+
+@[simp] theorem coupl_not_redex : ¬ IsRedex (DCC ⟦_β⟧(_a, _b)) := fun h => by
+  cases h
+
+@[simp] theorem pair_not_redex : ¬ IsRedex (DCC ⟦_β⟧⟨_a, _b⟩) := fun h => by
+  cases h
+
+@[simp] theorem app_not_redex : ¬ IsRedex (DCC App(_α, _β)) := fun h => by
+  cases h
+
+@[simp] theorem fst_not_redex : ¬ IsRedex (DCC Fst(_α, _β)) := fun h => by
+  cases h
+
+@[simp] theorem id_not_redex : ¬ IsRedex (DCC Id(_α)) := fun h => by
+  cases h
+
+@[simp] theorem snd_not_redex : ¬ IsRedex (DCC Snd(_α, _β)) := fun h => by
+  cases h
+
+@[simp] theorem quot_not_redex : ¬ IsRedex (DCC `(_α, _β, _x)) := fun h => by
+  cases h
+
+@[simp] theorem comp_not_redex : ¬ IsRedex (DCC (f ∘ g)) := fun h => by
   cases h
 
 theorem HasRedex.complete (h : HasRedex e) : has_redex e = .some (.up h) := by
@@ -74,16 +159,118 @@ theorem HasRedex.complete (h : HasRedex e) : has_redex e = .some (.up h) := by
   | single h =>
     unfold has_redex
     simp only [h, ↓reduceDIte]
-  | sigr h_redex h_redex_eq =>
+  | coupr h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [coupl_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
+  | pairr h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [pair_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
+  | coupl h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [coupl_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
+  | pairl h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [pair_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
+  | coupβ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [coupl_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+  | pairβ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [pair_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+  | id h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [id_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+  | fst₁ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [fst_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+  | fst₂ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [fst_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
+  | snd₁ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [snd_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+  | snd₂ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [snd_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
+  | app₁ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [app_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+  | app₂ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [app_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
+  | quot₁ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [quot_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+  | quot₂ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [quot_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
+  | quot₃ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [quot_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
+  | comp₁ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [comp_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+  | comp₂ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [comp_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
+  | sigα h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [sig_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+  | sigβ h_redex h_redex_eq =>
     unfold has_redex
     simp only [sig_not_redex, ↓reduceDIte]
     rw [h_redex_eq]
     split
     repeat simp_all
-  | sigl h_redex h_redex_eq =>
+  | curr₁ h_redex h_redex_eq =>
     unfold has_redex
-    simp only [sig_not_redex, ↓reduceDIte]
+    simp only [curr_not_redex, ↓reduceDIte]
     rw [h_redex_eq]
+  | curr₂ h_redex h_redex_eq =>
+    unfold has_redex
+    simp only [curr_not_redex, ↓reduceDIte]
+    rw [h_redex_eq]
+    split
+    repeat simp_all
   | right h_redex h_redex_eq =>
     unfold has_redex
     split
@@ -268,6 +455,8 @@ inductive Red : Expr → Expr → Prop
   | curr     : Red (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl     : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a', b))
   | sigr     : Red b b'     → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a, b'))
+  | pairl    : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧⟨a, b⟩) (DCC ⟦β⟧⟨a', b⟩)
+  | pairr    : Red b b'     → Red (DCC ⟦β⟧⟨a, b⟩) (DCC ⟦β⟧⟨a, b'⟩)
   | congrFun : ¬ HasRedex x → ¬ IsRedex (DCC (f x)) → Red f f' → Red (DCC (f x)) (DCC (f' x))
   | congrArg : ¬ IsRedex (DCC (f x)) → Red x x' → Red (DCC (f x)) (DCC (f x'))
 
@@ -281,8 +470,10 @@ theorem Red.HasRedex : Red a b → a.HasRedex := fun h => by
   · simp [HasRedex.single IsRedex.comp]
   · simp [HasRedex.single IsRedex.pair]
   · simp [HasRedex.single IsRedex.curr]
-  · simp [HasRedex.sigl (by assumption)]
-  · simp [HasRedex.sigr (by assumption)]
+  · simp [HasRedex.coupl (by assumption)]
+  · simp [HasRedex.coupr (by assumption)]
+  · simp [HasRedex.pairl (by assumption)]
+  · simp [HasRedex.pairr (by assumption)]
   · simp [HasRedex.left (by assumption)]
   · simp [HasRedex.right (by assumption)]
 
@@ -508,6 +699,17 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (e.Red e'))) :=
         match b.step? with
         | .some ⟨b', ⟨h₁⟩⟩ =>
           .some ⟨DCC ⟦β⟧(a, b'), ⟨.sigr h₁⟩⟩
+        | .none => .none
+    | DCC ⟦β⟧⟨a, b⟩ =>
+      if hr : ¬ b.HasRedex then
+        match a.step? with
+        | .some ⟨a', ⟨h₁⟩⟩ =>
+          .some ⟨DCC ⟦β⟧⟨a', b⟩, ⟨.pairl hr h₁⟩⟩
+        | .none => .none
+      else
+        match b.step? with
+        | .some ⟨b', ⟨h₁⟩⟩ =>
+          .some ⟨DCC ⟦β⟧⟨a, b'⟩, ⟨.pairr h₁⟩⟩
         | .none => .none
     | DCC (f x) =>
       if hr : ¬ x.HasRedex then

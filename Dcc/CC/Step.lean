@@ -524,7 +524,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (e.Red e'))) :=
 
 theorem Step?.sound (_h : step? e = .some ⟨e', ⟨hr⟩⟩) : Red e e' := hr
 
-theorem Step?.complete (h : Red e e') : step? e = .some ⟨e', ⟨h⟩⟩ := by
+theorem Red.complete (h : Red e e') : step? e = .some ⟨e', ⟨h⟩⟩ := by
   induction h with
   | app =>
     unfold step?
@@ -570,5 +570,27 @@ theorem Step?.complete (h : Red e e') : step? e = .some ⟨e', ⟨h⟩⟩ := by
     have h := hr.HasRedex
     unfold step?
     simp_all
+
+instance ParRed.instDecidable : Decidable (ParRed A B) :=
+  if h : A.red_par.fst = B then
+    .isTrue (h.symm ▸ (A.red_par.snd.down))
+  else
+    .isFalse (fun h => by simp [h.complete] at *)
+
+theorem red_none : step? e = .none → ¬ Red e e' := fun h ha => by
+  simp [ha.complete] at *
+
+instance Red.instDecidable : Decidable (Red A B) :=
+  if heq : (step? A).isSome then
+    if heq' : ((step? A).get heq).fst = B then
+      .isTrue (heq' ▸ ((step? A).get heq).snd.down)
+    else
+      .isFalse (fun h => by simp [h.complete] at *)
+  else
+    have h : (step? A) = none := by
+      simp_all only [Bool.not_eq_true, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none]
+
+    have h := red_none (e' := B) h
+    .isFalse (fun h => by simp [h.complete] at *)
 
 end Expr

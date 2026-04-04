@@ -469,8 +469,10 @@ inductive Red : Expr → Expr → Prop
   | comp      : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
   | pair      : Red (DCC (⟦β⟧⟨f, g⟩ x)) (DCC ⟦β⟧((f x), (g x)))
   | curr      : Red (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
+  | sigα      : ¬ HasRedex a → ¬ HasRedex b → Red β β' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β'⟧(a, b))
   | sigl      : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a', b))
   | sigr      : Red b b'     → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a, b'))
+  | pairα     : ¬ HasRedex a → ¬ HasRedex b → Red β β' → Red (DCC ⟦β⟧⟨a, b⟩) (DCC ⟦β'⟧⟨a, b⟩)
   | pairl     : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧⟨a, b⟩) (DCC ⟦β⟧⟨a', b⟩)
   | pairr     : Red b b'     → Red (DCC ⟦β⟧⟨a, b⟩) (DCC ⟦β⟧⟨a, b'⟩)
   | congrFun  : ¬ HasRedex x → ¬ IsRedex (DCC (f x)) → Red f f' → Red (DCC (f x)) (DCC (f' x))
@@ -488,7 +490,7 @@ theorem Red.HasRedex : Red a b → a.HasRedex := fun h => by
   · simp [HasRedex.fst₂ (by assumption)]
   · simp [HasRedex.snd₁ (by assumption)]
   · simp [HasRedex.snd₂ (by assumption)]
-  · simp [HasRedex.idα (by assumption)]
+  · simp [HasRedex.id (by assumption)]
   · simp [HasRedex.quot₁ (by assumption)]
   · simp [HasRedex.quot₂ (by assumption)]
   · simp [HasRedex.quot₃ (by assumption)]
@@ -502,8 +504,10 @@ theorem Red.HasRedex : Red a b → a.HasRedex := fun h => by
   · simp [HasRedex.single IsRedex.comp]
   · simp [HasRedex.single IsRedex.pair]
   · simp [HasRedex.single IsRedex.curr]
+  · simp [HasRedex.coupβ (by assumption)]
   · simp [HasRedex.coupl (by assumption)]
   · simp [HasRedex.coupr (by assumption)]
+  · simp [HasRedex.pairβ (by assumption)]
   · simp [HasRedex.pairl (by assumption)]
   · simp [HasRedex.pairr (by assumption)]
   · simp [HasRedex.left (by assumption)]
@@ -718,9 +722,65 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (e.Red e'))) :=
     | (DCC ((x ∘ y) z))               => .some ⟨DCC (x (y z)), ⟨.comp⟩⟩
     | (DCC (⟦β⟧⟨f, g⟩ x))             => .some ⟨(DCC ⟦β⟧((f x), (g x))), ⟨.pair⟩⟩
     | (DCC (Λ(β, x) y z))             => .some ⟨DCC (x ⟦β⟧(y, z)), ⟨.curr⟩⟩
-  else
+  else do
     match e with
     | DCC Sort _m => .none
+    | DCC Λ(α, β) =>
+      if hr : ¬ β.HasRedex then
+        let ⟨α', ⟨h⟩⟩ ← α.step?
+        .some ⟨DCC Λ(α', β), ⟨.curr₁ hr h⟩⟩
+      else
+        let ⟨β', ⟨h⟩⟩ ← β.step?
+        .some ⟨DCC Λ(α, β'), ⟨.curr₂ h⟩⟩
+    | DCC Fst(α, β) =>
+      if hr : ¬ β.HasRedex then
+        let ⟨α', ⟨h⟩⟩ ← α.step?
+        .some ⟨DCC Fst(α', β), ⟨.fst₁ hr h⟩⟩
+      else
+        let ⟨β', ⟨h⟩⟩ ← β.step?
+        .some ⟨DCC Fst(α, β'), ⟨.fst₂ h⟩⟩
+    | DCC Snd(α, β) =>
+      if hr : ¬ β.HasRedex then
+        let ⟨α', ⟨h⟩⟩ ← α.step?
+        .some ⟨DCC Snd(α', β), ⟨.snd₁ hr h⟩⟩
+      else
+        let ⟨β', ⟨h⟩⟩ ← β.step?
+        .some ⟨DCC Snd(α, β'), ⟨.snd₂ h⟩⟩
+    | DCC App(α, β) =>
+      if hr : ¬ β.HasRedex then
+        let ⟨α', ⟨h⟩⟩ ← α.step?
+        .some ⟨DCC App(α', β), ⟨.app₁ hr h⟩⟩
+      else
+        let ⟨β', ⟨h⟩⟩ ← β.step?
+        .some ⟨DCC App(α, β'), ⟨.app₂ h⟩⟩
+    | DCC Id(α) =>
+      let ⟨α', ⟨h⟩⟩ ← α.step?
+      .some ⟨DCC Id(α'), ⟨.id₁ h⟩⟩
+    | DCC `(α, β, x) =>
+      if hr₁ : ¬ x.HasRedex then
+        if hr₂ : ¬ β.HasRedex then
+          let ⟨α', ⟨h⟩⟩ ← α.step?
+          .some ⟨DCC `(α', β, x), ⟨.quot₁ hr₁ hr₂ h⟩⟩
+        else
+          let ⟨β', ⟨h⟩⟩ ← β.step?
+          .some ⟨DCC `(α, β', x), ⟨.quot₂ hr₁ h⟩⟩
+      else
+        let ⟨x', ⟨h⟩⟩ ← x.step?
+        .some ⟨DCC `(α, β, x'), ⟨.quot₃ h⟩⟩
+    | DCC (f ∘ g) =>
+      if hr : ¬ g.HasRedex then
+        let ⟨f', ⟨h⟩⟩ ← f.step?
+        .some ⟨DCC (f' ∘ g), ⟨.comp₁ hr h⟩⟩
+      else
+        let ⟨g', ⟨h⟩⟩ ← g.step?
+        .some ⟨DCC (f ∘ g'), ⟨.comp₂ h⟩⟩
+    | DCC (Σ(α, β)) =>
+      if hr : ¬ β.HasRedex then
+        let ⟨α', ⟨h⟩⟩ ← α.step?
+        .some ⟨DCC Σ(α', β), ⟨.sig₁ hr h⟩⟩
+      else
+        let ⟨β', ⟨h⟩⟩ ← β.step?
+        .some ⟨DCC Σ(α, β'), ⟨.sig₂ h⟩⟩
     | DCC ⟦β⟧(a, b) =>
       if hr : ¬ b.HasRedex then
         match a.step? with

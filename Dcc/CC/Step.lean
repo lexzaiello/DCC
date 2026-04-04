@@ -117,6 +117,19 @@ instance HasRedex.instDecidable : Decidable (HasRedex e) :=
   | none => rfl
   | some val => exfalso; exact h ⟨val.down, by simp_all only [Option.some.injEq, sound, not_true_eq_false]⟩
 
+/-
+TySize
+
+⟦β⟧⟨a, b⟩ x → (a x, b x) size does decrease because we can consider term size and type size.
+can just define size of couple to be 1?
+
+then we consider both TySize and Size
+
+it's actually even simpler, because the type doesn't mention x.
+
+however this requires judge.
+-/
+
 inductive Size : Expr → ℕ → Prop
   | sort   : Size (DCC Sort m) 1
   | id     : Size α m → Size (DCC Id(α)) m.succ
@@ -243,6 +256,20 @@ theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
     rw [ih₁, ih₂]
 
 instance instSizeOf : SizeOf Expr := ⟨fun e => e.size.fst⟩
+
+inductive Red : Expr → Expr → Prop
+  | app      : Red (DCC (App(_δ, _τ) ⟦β⟧(f, x))) (DCC (f x))
+  | fst      : Red (DCC (Fst(_δ, _τ) ⟦β⟧(a, b))) a
+  | snd      : Red (DCC (Snd(_δ, _τ) ⟦β⟧(a, b))) b
+  | id       : Red (DCC (Id(_α) x)) x
+  | quot     : Red (DCC (`(_α, _β, x) y)) x
+  | comp     : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
+  | pair     : Red (DCC (⟦β⟧⟨f, g⟩ x)) (DCC ⟦β⟧((a x), (b x)))
+  | curr     : Red (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
+  | sigl     : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a', b))
+  | sigr     : Red b b'     → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a, b'))
+  | congrFun : ¬ HasRedex x → ¬ IsRedex (DCC (f x)) → Red f f' → Red (DCC (f x)) (DCC (f' x))
+  | congrArg : ¬ IsRedex (DCC (f x)) → Red x x' → Red (DCC (f x)) (DCC (f x'))
 
 /-
 Π(m, n) A B x -> B ⟦Id(Sort m)⟧(a, x)
@@ -432,5 +459,52 @@ theorem ParRed.complete (h : ParRed e e') : red_par e = ⟨e', ⟨h⟩⟩ := by
     simp_all
     congr
     repeat simp_all
+
+theorem ParRed.diamond (h₁ : ParRed A B) (h₂ : ParRed A C) : ∃ D, ParRed B D ∧ ParRed C D := by
+  have ha := h₁.complete
+  have hb := h₂.complete
+  simp_all
+  exact ⟨_, ParRed.sound rfl⟩
+
+def ParRed.Trans     := Relation.TransGen ParRed
+def ParRed.ReflTrans := Relation.ReflTransGen ParRed
+
+def step? (e : Expr) : Option ((e' : Expr) × (PLift (e.Red e'))) :=
+  if h : e.IsRedex then
+    match e with
+    | (DCC (App(_δ, _τ) ⟦_β⟧(f, x)))  => .some ⟨(DCC (f x)), ⟨.app⟩⟩
+    | (DCC (Fst(_δ, _τ) ⟦_β⟧(a, _b))) => .some ⟨a, ⟨.fst⟩⟩
+    | (DCC (Snd(_δ, _τ) ⟦_β⟧(_a, b))) => .some ⟨b, ⟨.snd⟩⟩
+    | (DCC (Id(_α) x))                => .some ⟨x, ⟨.id⟩⟩
+    | (DCC (`(_α, _β, x) _y))         => .some ⟨x, ⟨.quot⟩⟩
+    | (DCC ((x ∘ y) z))               => .some ⟨DCC (x (y z)), ⟨.comp⟩⟩
+    | (DCC (⟦β⟧⟨f, g⟩ x))             => .some ⟨(DCC ⟦β⟧((f x), (g x))), ⟨.pair⟩⟩
+    | (DCC (Λ(β, x) y z))             => .some ⟨DCC (x ⟦β⟧(y, z)), ⟨.curr⟩⟩
+  else
+    match e with
+    | DCC Sort _m => .none
+    | DCC ⟦β⟧(a, b) =>
+      if hr : ¬ b.HasRedex then
+        match a.step? with
+        | .some ⟨a', ⟨h₁⟩⟩ =>
+          .some ⟨DCC ⟦β⟧(a', b), ⟨.sigl hr h₁⟩⟩
+        | .none => .none
+      else
+        match b.step? with
+        | .some ⟨b', ⟨h₁⟩⟩ =>
+          .some ⟨DCC ⟦β⟧(a, b'), ⟨.sigr h₁⟩⟩
+        | .none => .none
+    | DCC (f x) =>
+      if hr : ¬ x.HasRedex then
+        match f.step? with
+        | .some ⟨f', ⟨h₁⟩⟩ =>
+          .some ⟨DCC (f' x), ⟨.congrFun hr h h₁⟩⟩
+        | .none => .none
+      else
+        match x.step? with
+        | .some ⟨x', ⟨h₁⟩⟩ =>
+          .some ⟨DCC (f x'), ⟨.congrArg h h₁⟩⟩
+        | .none => .none
+    | _ => .none
 
 end Expr

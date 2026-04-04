@@ -13,6 +13,10 @@ Similar to the categorical combinators and contextual categories.
 ⟦α, x⟧ : Σ Type, id(Type)
 Fst(α, β) : Σ α β → α
 Snd(α, β) : Σ (x : α) β → β x
+
+we can derive `()
+
+Λ(Fst(α, β)
 -/
 
 inductive Expr where
@@ -20,13 +24,13 @@ inductive Expr where
   | id    : Expr  → Expr
   | fst   : Expr  → Expr  → Expr
   | snd   : Expr  → Expr  → Expr
-  | quot  : Expr  → Expr  → Expr
+  | quot  : Expr → Expr   → Expr  → Expr
   | comp  : Expr  → Expr  → Expr
   | pair  : Expr  → Expr  → Expr  → Expr
   | sigma : Expr  → Expr  → Expr
   | mk    : Expr  → Expr  → Expr  → Expr
   | pi    : Level → Level → Expr
-  | curr  : Expr  → Expr
+  | curr  : Expr  → Expr  → Expr
   | appl  : Expr  → Expr → Expr
   | app   : Expr  → Expr → Expr
 deriving BEq, Repr, DecidableEq
@@ -54,8 +58,8 @@ syntax "DCC"  expr : term
 macro_rules
   | `(DCC ($f:expr $x:expr))             => `(Expr.app   (DCC $f:expr)   (DCC $x:expr))
   | `(DCC ($f:expr $x:expr $xs:expr*))   => `(DCC (($f:expr $x:expr) $xs:expr*))
-  | `(DCC `($β:expr, $x:expr))           => `(Expr.quot (DCC $β) (DCC $x))
-  | `(DCC Λ($e:expr))                    => `(Expr.curr (DCC $e))
+  | `(DCC `($α:expr, $β:expr, $x:expr))  => `(Expr.quot (DCC $α) (DCC $β) (DCC $x))
+  | `(DCC Λ($β:expr, $e:expr))           => `(Expr.curr (DCC $β) (DCC $e))
   | `(DCC Π($m:term, $n:term))           => `(Expr.pi $m $n)
   | `(DCC ⟦$β:expr⟧⟨$x:expr, $y:expr⟩)   => `(Expr.pair (DCC $β) (DCC $x) (DCC $y))
   | `(DCC ⟦$β:expr⟧($x:expr, $y:expr))   => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
@@ -76,11 +80,11 @@ def toFormat (e : Expr) : Std.Format :=
   match e with
   | (DCC Sort m)    => s!"Sort {m}"
   | (DCC Id(α))     => "Id(" ++ α.toFormat ++ ")"
-  | (DCC `(x, β))   => "`(" ++ x.toFormat ++ ", " ++ β.toFormat ++ ")"
+  | (DCC `(α, β, x))   => "`(" ++ α.toFormat ++ ", " ++ x.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Fst(α, β)) => "Fst(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Snd(α, β)) => "Snd(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC App(α, β)) => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC Λ(e))   => "Λ(" ++ e.toFormat ++ ")"
+  | (DCC Λ(β, e))   => "Λ(" ++ β.toFormat ++ "," ++ e.toFormat ++ ")"
   | (DCC Π(m, n))   => "Π" ++ (.bracket "(" ((Std.format m) ++ ", " ++ (Std.format n)) ")")
   | (DCC ⟦β⟧⟨a, b⟩) => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
   | (DCC ⟦β⟧(a, b)) => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")

@@ -8,7 +8,7 @@ inductive IsRedex : Expr → Prop
   | fst    : IsRedex (DCC (Fst(_δ, _τ) ⟦β⟧(a, b)))
   | snd    : IsRedex (DCC (Snd(_δ, _τ) ⟦β⟧(a, b)))
   | id     : IsRedex (DCC (Id(_α) x))
-  | quot   : IsRedex (DCC (`(x, α) y))
+  | quot   : IsRedex (DCC (`(α, β, x) y))
   | comp   : IsRedex (DCC ((x ∘ y) z))
   | pair   : IsRedex (DCC (⟦β⟧⟨f, g⟩ x))
   | curr   : IsRedex (DCC (Λ(β, x) y z))
@@ -27,7 +27,7 @@ def is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   | (DCC (Fst(_δ, _τ) ⟦_β⟧(_a, _b))) => .some ⟨.fst⟩
   | (DCC (Snd(_δ, _τ) ⟦_β⟧(_a, _b))) => .some ⟨.snd⟩
   | (DCC (Id(_α) _x))                => .some ⟨.id⟩
-  | (DCC (`(_x, _α) _y))             => .some ⟨.quot⟩
+  | (DCC (`(_α, _β, _x) _y))             => .some ⟨.quot⟩
   | (DCC ((_x ∘ _y) _z))             => .some ⟨.comp⟩
   | (DCC (⟦_β⟧⟨_f, _g⟩ _x))          => .some ⟨.pair⟩
   | (DCC (Λ(_β, _x) _y _z))          => .some ⟨.curr⟩
@@ -128,7 +128,7 @@ inductive Red : Expr → Expr → Prop
   | fst      : Red (DCC (Fst(_δ, _τ) ⟦β⟧(a, b))) a
   | snd      : Red (DCC (Snd(_δ, _τ) ⟦β⟧(a, b))) a
   | id       : Red (DCC (Id(_α) x)) x
-  | quot     : Red (DCC (`(x, _α) y)) x
+  | quot     : Red (DCC (`(_α, _β, x) y)) x
   | comp     : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
   | pair     : Red (DCC (f x)) a'
     → Red (DCC (g x)) b'
@@ -142,9 +142,9 @@ inductive Red : Expr → Expr → Prop
 inductive Size : Expr → ℕ → Prop
   | sort   : Size (DCC Sort m) 1
   | id     : Size (DCC Id(_α)) 1
-  | quot   : Size (DCC `(_β, _x)) 1
+  | quot   : Size (DCC `(_α, _β, _x)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
-  | mk     : Size f m → Size g n → Size (DCC ⟦β⟧(f, g)) (m + n).succ
+  | coup   : Size f m → Size g n → Size (DCC ⟦β⟧(f, g)) (m + n).succ
   | pair   : Size f m → Size g n → Size (DCC ⟦β⟧⟨f, g⟩) (m + n).succ
   | fst    : Size (DCC Fst(_α, _β)) 1
   | snd    : Size (DCC Snd(_α, _β)) 1
@@ -159,7 +159,7 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
   | DCC Sort _m => ⟨1, ⟨.sort⟩⟩
   | DCC Σ(_α, _β) => ⟨1, ⟨.sig⟩⟩
   | DCC Id(_α)  => ⟨1, ⟨.id⟩⟩
-  | DCC `(_β, _x)  => ⟨1, ⟨.quot⟩⟩
+  | DCC `(_α, _β, _x)  => ⟨1, ⟨.quot⟩⟩
   | DCC (f ∘ g) =>
     let ⟨m, ⟨h₁⟩⟩ := f.size
     let ⟨n, ⟨h₂⟩⟩ := g.size
@@ -167,7 +167,7 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
   | DCC ⟦_β⟧(a, b) =>
     let ⟨m, ⟨h₁⟩⟩ := a.size
     let ⟨n, ⟨h₂⟩⟩ := b.size
-    ⟨(m + n).succ, ⟨.mk h₁ h₂⟩⟩
+    ⟨(m + n).succ, ⟨.coup h₁ h₂⟩⟩
   | DCC ⟦_β⟧⟨a, b⟩ =>
     let ⟨m, ⟨h₁⟩⟩ := a.size
     let ⟨n, ⟨h₂⟩⟩ := b.size
@@ -243,7 +243,7 @@ id : Π
 -/
 
 def arrow (α β : Expr) (m n : Level) : Expr :=
-  DCC (Π(m, n) α `(Σ(Sort m, Id(Sort m)), β))
+  DCC (Π(m, n) α `(Sort n, Σ(Sort m, Id(Sort m)), β))
 
 def Pi.type (m n : Level) : Expr :=
   arrow (DCC Sort m)
@@ -264,7 +264,7 @@ inductive Judge : Expr → Expr → Prop
   | id    : Judge α (DCC (Sort m))
     → Judge (DCC Id(α)) (arrow α α m m)
   -- g : Π β A
-  | comp  : Judge g (mk_arrow α β m n)
+  | comp  : Judge g (arrow α β m n)
     → Judge f (DCC (Π(n, o) β γ))
     → Judge (DCC f ∘ g) (DCC (Π(m, o) α (γ ∘ g)))
   -- f  : α → τ₁
@@ -305,12 +305,12 @@ inductive Judge : Expr → Expr → Prop
       β ∘ Snd(Sort m, Id(Sort m))
   -/
   | curr  : Judge x (DCC (Π(max m n, o) Σ(α, β) γ))
-    → Judge (DCC Λ(x)) (DCC (Π(m, o) α
-      (App(`(#(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Sort o),
+    → Judge (DCC Λ(β, x)) (DCC (Π(m, o) α
+      (App(`(Sort o.succ, #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Sort o),
         #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ)) ∘
-        ⟦`(#(Pi.type₁ n o), #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ))⟧⟨
+        ⟦`(Sort o.succ, #(Pi.type₁ n o), #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ))⟧⟨
           Π(n, o) ∘ β ∘ Snd(Sort m, Id(Sort m)),
-          `(Σ(Sort m, Id(Sort m)), γ)⟩)))
+          `(#(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Σ(Sort m, Id(Sort m)), γ)⟩)))
   /-
     App(γ, β) : (Π(max o n, o)
       (Σ(o, n) (Π(n, o) β γ) `((Π(n, o) β γ), β))
@@ -319,8 +319,8 @@ inductive Judge : Expr → Expr → Prop
   | app_e : Judge β (DCC Sort n)
     → Judge γ (arrow β (DCC (Sort o)) n o.succ)
     → Judge (DCC App(γ, β)) (DCC (Π(max o n, o)
-      Σ((Π(n, o) β γ), `((Π(n, o) β γ), β))
-      (γ ∘ (Snd((Π(n, o) β γ), `((Π(n, o) β γ), β)) ∘ Snd(Sort (max o n), Id(Sort (max o n)))))))
+      Σ((Π(n, o) β γ), `(Sort n, (Π(n, o) β γ), β))
+      (γ ∘ (Snd((Π(n, o) β γ), `(Sort n, (Π(n, o) β γ), β)) ∘ Snd(Sort (max o n), Id(Sort (max o n)))))))
   /-
     a : α
     b : β a
@@ -329,6 +329,11 @@ inductive Judge : Expr → Expr → Prop
   | coup  : Judge a α
     → Judge b (DCC (β a))
     → Judge (DCC ⟦β⟧(a, b)) (DCC Σ(α, β))
+  -- Can derive dependent quotation
+  | quot  : Judge α (DCC Sort m)
+    → Judge β (DCC Sort m)
+    → Judge x α
+    → Judge (DCC `(α, β, x)) (arrow α (arrow β α n m) m m)
   | app   : Judge f (DCC (Π(m, n) α β)) → Judge x α
     → Judge (DCC (f x)) (DCC (β ⟦Id(Sort m)⟧(α, x)))
   | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
@@ -339,22 +344,24 @@ inductive TySize : Expr → ℕ → Prop
   | comp   : TySize f m
     → TySize g n
     → TySize (DCC f ∘ g) (m + n + 1)
-  | pair   : TySize f m
-    → TySize g n
-    → TySize (DCC ⟨f, g⟩) (m + n + 1)
+  | pair   : TySize β m
+    → TySize a n
+    → TySize b o
+    → TySize (DCC ⟦β⟧⟨a, b⟩) (m + n + o).succ
   | fst    : TySize α m
     → TySize β n
     → TySize (DCC Fst(α, β)) (m + n + 1)
   | snd    : TySize α m
     → TySize β n
     → TySize (DCC Snd(α, β)) (m + n + 1)
-  | curr   : TySize x m → TySize (DCC Λ(x)) (m + 2)
-  | pi     : TySize x m → TySize (DCC Π(x)) (m + 2)
-  | sig    : TySize α m → TySize β n → TySize (DCC Σ α, β) (m + n).succ
+  | curr   : TySize β m → TySize x n → TySize (DCC Λ(β, x)) (m + n).succ
+  | pi     : TySize (DCC Π(m, n)) 1
+  | sig    : TySize α m → TySize β n → TySize (DCC Σ(α, β)) (m + n).succ
   | appl   : TySize α m
     → TySize β n
     → TySize (DCC App(α, β)) (m + n + 1)
-  | mk     : TySize a m → TySize b n → TySize (DCC ⟦a, b⟧) (m + n).succ
+  | coup   : TySize β m → TySize a n → TySize b o → TySize (DCC ⟦β⟧(a, b)) (m + n + o).succ
+  | quot   : TySize α m → TySize β n → TySize (DCC `(α, β, x)) (m + n).succ
   | sort   : TySize (DCC Sort _m) 1
   | app    : TySize f m → TySize x n → TySize (DCC (f x)) (m + n)
 
@@ -368,15 +375,21 @@ def ty_size (e : Expr) : ((n : ℕ) × (PLift (TySize e n))) :=
     let ⟨m, ⟨h₁⟩⟩ := f.ty_size
     let ⟨n, ⟨h₂⟩⟩ := g.ty_size
     ⟨m + n + 1, ⟨.comp h₁ h₂⟩⟩
-  | DCC ⟦a, b⟧ =>
-    let ⟨m, ⟨h₁⟩⟩ := a.ty_size
-    let ⟨n, ⟨h₂⟩⟩ := b.ty_size
-    ⟨(m + n).succ, ⟨.mk h₁ h₂⟩⟩
-  | DCC ⟨a, b⟩ =>
-    let ⟨m, ⟨h₁⟩⟩ := a.ty_size
-    let ⟨n, ⟨h₂⟩⟩ := b.ty_size
-    ⟨m + n + 1, ⟨.pair h₁ h₂⟩⟩
-  | DCC Σ a, b =>
+  | DCC ⟦β⟧(a, b) =>
+    let ⟨m, ⟨h₁⟩⟩ := β.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := a.ty_size
+    let ⟨o, ⟨h₃⟩⟩ := b.ty_size
+    ⟨(m + n + o).succ, ⟨.coup h₁ h₂ h₃⟩⟩
+  | DCC `(α, β, _x) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := β.ty_size
+    ⟨(m + n).succ, ⟨.quot h₁ h₂⟩⟩
+  | DCC ⟦β⟧⟨a, b⟩ =>
+    let ⟨m, ⟨h₁⟩⟩ := β.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := a.ty_size
+    let ⟨o, ⟨h₃⟩⟩ := b.ty_size
+    ⟨(m + n + o).succ, ⟨.pair h₁ h₂ h₃⟩⟩
+  | DCC Σ(a, b) =>
     let ⟨m, ⟨h₁⟩⟩ := a.ty_size
     let ⟨n, ⟨h₂⟩⟩ := b.ty_size
     ⟨(m + n).succ, ⟨.sig h₁ h₂⟩⟩
@@ -388,12 +401,12 @@ def ty_size (e : Expr) : ((n : ℕ) × (PLift (TySize e n))) :=
     let ⟨m, ⟨h₁⟩⟩ := α.ty_size
     let ⟨n, ⟨h₂⟩⟩ := β.ty_size
     ⟨(m + n + 1), ⟨.snd h₁ h₂⟩⟩
-  | DCC Λ(x) =>
-    let ⟨m, ⟨h⟩⟩ := x.ty_size
-    ⟨m + 2, ⟨.curr h⟩⟩
-  | DCC Π(x) =>
-    let ⟨m, ⟨h⟩⟩ := x.ty_size
-    ⟨m + 2, ⟨.pi h⟩⟩
+  | DCC Λ(β, x) =>
+    let ⟨m, ⟨h₁⟩⟩ := β.ty_size
+    let ⟨n, ⟨h₂⟩⟩ := x.ty_size
+    ⟨(m + n).succ, ⟨.curr h₁ h₂⟩⟩
+  | DCC Π(m, n) =>
+    ⟨1, ⟨.pi⟩⟩
   | DCC App(α, β) =>
     let ⟨m, ⟨h₁⟩⟩ := α.ty_size
     let ⟨n, ⟨h₂⟩⟩ := β.ty_size
@@ -408,24 +421,25 @@ theorem TySize.sound (_h : Expr.ty_size e = ⟨n, ⟨h⟩⟩) : TySize e n := h
 theorem TySize.complete (h : TySize e n) : ty_size e = ⟨n, .up h⟩ := by
   induction h with
   | sort => rfl
-  | curr h ih =>
+  | quot h₁ h₂ ih₁ ih₂ =>
     unfold ty_size
-    rw [ih]
-  | pi h ih =>
+    rw [ih₁, ih₂]
+  | curr h₁ h₂ ih₁ ih₂ =>
     unfold ty_size
-    rw [ih]
+    rw [ih₁, ih₂]
+  | pi => unfold ty_size; rfl
   | id h ih =>
     unfold ty_size
     rw [ih]
   | comp h₁ h₂ ih₁ ih₂ =>
     unfold ty_size
     rw [ih₁, ih₂]
-  | mk h₁ h₂ ih₁ ih₂ =>
+  | coup h₁ h₂ h₃ ih₁ ih₂ ih₃ =>
     unfold ty_size
-    rw [ih₁, ih₂]
-  | pair h₁ h₂ ih₁ ih₂ =>
+    rw [ih₁, ih₂, ih₃]
+  | pair h₁ h₂ h₃ ih₁ ih₂ ih₃ =>
     unfold ty_size
-    rw [ih₁, ih₂]
+    rw [ih₁, ih₂, ih₃]
   | fst h₁ h₂ ih₁ ih₂ =>
     unfold ty_size
     rw [ih₁, ih₂]

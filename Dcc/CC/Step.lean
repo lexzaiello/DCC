@@ -26,7 +26,7 @@ def is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   | (DCC (Fst(_δ, _τ) ⟦_β⟧(_a, _b))) => .some ⟨.fst⟩
   | (DCC (Snd(_δ, _τ) ⟦_β⟧(_a, _b))) => .some ⟨.snd⟩
   | (DCC (Id(_α) _x))                => .some ⟨.id⟩
-  | (DCC (`(_α, _β, _x) _y))             => .some ⟨.quot⟩
+  | (DCC (`(_α, _β, _x) _y))         => .some ⟨.quot⟩
   | (DCC ((_x ∘ _y) _z))             => .some ⟨.comp⟩
   | (DCC (⟦_β⟧⟨_f, _g⟩ _x))          => .some ⟨.pair⟩
   | (DCC (Λ(_β, _x) _y _z))          => .some ⟨.curr⟩
@@ -194,10 +194,10 @@ theorem Size.no_zero (h : Size e n) : n ≠ 0 := by
 
 theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
 
-theorem no_zero_size' : size e ≠ ⟨0, ⟨h⟩⟩ := by
+theorem no_zero_size' : (size e).fst ≠ 0 := by
   intro ha
-  have h := h.no_zero
-  simp_all only [ne_eq, not_true_eq_false]
+  have h := (size e).snd.down.no_zero
+  simp_all only
 
 theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
@@ -236,6 +236,8 @@ theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
     unfold size
     rw [ih₁, ih₂]
 
+instance instSizeOf : SizeOf Expr := ⟨fun e => e.size.fst⟩
+
 /-
 Π(m, n) A B x -> B ⟦Id(Sort m)⟧(a, x)
 -/
@@ -269,58 +271,58 @@ inductive Red : Expr → Expr → Prop
 
 def red_par (e : Expr) : ((e' : Expr) × PLift (Red e e')) :=
   if h : e.IsRedex then
-    match e with
+    match heq : e with
+    | DCC (`(_α, _β, x) y) =>
+      have _h₁ : x.size.fst < ((_α.quot _β x).app y).size.fst := by
+        simp [size]
+        grind
+      let ⟨x', ⟨h⟩⟩ := x.red_par
+      ⟨x', ⟨.quot h⟩⟩
     | DCC (App(_δ, _τ) ⟦β⟧(f, x)) =>
-      have _h : (f.app x).size.fst < ((_δ.appl _τ).app (β.mk f x)).size.fst := by
+      have _h₂ : (f.app x).size.fst < ((_δ.appl _τ).app (β.mk f x)).size.fst := by
         simp only [size, Nat.succ_eq_add_one]
         grind
       let ⟨e', ⟨h⟩⟩ := (DCC (f x)).red_par
       ⟨e', ⟨.app h⟩⟩
     | DCC (Fst(_α, _β) ⟦_γ⟧(a, b)) =>
-      have _h : a.size.fst < ((_α.fst _β).app (_γ.mk a b)).size.fst := by
+      have _h₃ : a.size.fst < ((_α.fst _β).app (_γ.mk a b)).size.fst := by
         simp only [size, Nat.succ_eq_add_one]
         grind
       let ⟨a', ⟨h⟩⟩ := a.red_par
       ⟨a', ⟨.fst h⟩⟩
     | DCC (Snd(_α, _β) ⟦_γ⟧(a, b)) =>
-      have _h : b.size.fst < ((_α.snd _β).app (_γ.mk a b)).size.fst := by
+      have _h₄ : b.size.fst < ((_α.snd _β).app (_γ.mk a b)).size.fst := by
         simp only [size, Nat.succ_eq_add_one]
         grind
       let ⟨b', ⟨h⟩⟩ := b.red_par
       ⟨b', ⟨.snd h⟩⟩
-    | DCC (`(_α, _β, x) y) =>
-      have _h : x.size.fst < ((_α.quot _β x).app y).size.fst := by
-        simp only [size, Nat.succ_eq_add_one]
-        grind
-      let ⟨x', ⟨h⟩⟩ := x.red_par
-      ⟨x', ⟨.quot h⟩⟩
-    | DCC (Id(_α) x) =>
-      have _h : x.size.fst < (_α.id.app x).size.fst := by
-        simp only [size, Nat.succ_eq_add_one, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
-      let ⟨x', ⟨h⟩⟩ := x.red_par
-      ⟨x', ⟨.id h⟩⟩
     | DCC ((f ∘ g) x) =>
-      have _h : (f.app (g.app x)).size.fst < ((f.comp g).app x).size.fst := by
+      have _h₆ : (f.app (g.app x)).size.fst < ((f.comp g).app x).size.fst := by
         simp [size]
         grind
       let ⟨e', ⟨h⟩⟩ := (DCC (f (g x))).red_par
       ⟨e', ⟨.comp h⟩⟩
     | DCC (⟦β⟧⟨f, g⟩ x) =>
-      have _h₁ : (f.app x).size.fst < ((β.pair f g).app x).size.fst := by
+      have _h₇ : (f.app x).size.fst < ((β.pair f g).app x).size.fst := by
         simp only [size, Nat.succ_eq_add_one, add_lt_add_iff_right]
         grind
-      have _h₂ : (g.app x).size.fst < ((β.pair f g).app x).size.fst := by
+      have _h₈ : (g.app x).size.fst < ((β.pair f g).app x).size.fst := by
         simp only [size, Nat.succ_eq_add_one, add_lt_add_iff_right]
         grind
       let ⟨a', ⟨h₁⟩⟩ := red_par (DCC (f x))
       let ⟨b', ⟨h₂⟩⟩ := red_par (DCC (g x))
       ⟨DCC ⟦β⟧(a', b'), ⟨.pair h₁ h₂⟩⟩
     | DCC (Λ(β, x) y z) =>
-      have _h : (x.app (β.mk y z)).size.fst < (((β.curr x).app y).app z).size.fst := by
+      have _h₉ : (x.app (β.mk y z)).size.fst < (((β.curr x).app y).app z).size.fst := by
         simp [size]
         grind
       let ⟨e', ⟨h⟩⟩ := red_par (DCC (x ⟦β⟧(y, z)))
       ⟨e', ⟨.curr h⟩⟩
+    | DCC (Id(_α) x) =>
+      have _h₅ : x.size.fst < (_α.id.app x).size.fst := by
+        simp [size]
+      let ⟨x', ⟨h⟩⟩ := x.red_par
+      ⟨x', ⟨.id h⟩⟩
   else
     match e with
     | DCC Sort m       => ⟨DCC Sort m, ⟨.refl_sort⟩⟩
@@ -329,7 +331,6 @@ def red_par (e : Expr) : ((e' : Expr) × PLift (Red e e')) :=
     | DCC Snd(_δ, _τ)  => ⟨DCC Snd(_δ, _τ), ⟨.refl_snd⟩⟩
     | DCC Id(_α)       => ⟨DCC Id(_α), ⟨.refl_id⟩⟩
     | DCC Λ(_β, _x)    => ⟨DCC Λ(_β, _x), ⟨.refl_curr⟩⟩
-    | DCC App(_β, _x)  => ⟨DCC App(_β, _x), ⟨.refl_app⟩⟩
     | DCC ⟦_β⟧⟨_a, _b⟩ => ⟨DCC ⟦_β⟧⟨_a, _b⟩, ⟨.refl_pair⟩⟩
     | DCC Σ(a, b)      => ⟨DCC Σ(a, b), ⟨.refl_sig⟩⟩
     | DCC Π(m, n)      => ⟨DCC Π(m, n), ⟨.refl_pi⟩⟩
@@ -337,13 +338,13 @@ def red_par (e : Expr) : ((e' : Expr) × PLift (Red e e')) :=
     | DCC f ∘ g        => ⟨DCC f ∘ g, ⟨.refl_comp⟩⟩
     | DCC ⟦β⟧(a, b)    =>
       if h₁ : ¬ b.HasRedex then
-        have _h : a.size.fst < (β.mk a b).size.fst := by
+        have _h10 : a.size.fst < (β.mk a b).size.fst := by
           simp [size]
           grind
         let ⟨a', ⟨h₂⟩⟩ := a.red_par
         ⟨DCC ⟦β⟧(a', b), ⟨.sigl h₁ h₂⟩⟩
       else
-        have _h : b.size.fst < (β.mk a b).size.fst := by
+        have _h11 : b.size.fst < (β.mk a b).size.fst := by
           simp [size]
           grind
         let ⟨b', ⟨h₂⟩⟩ := b.red_par
@@ -352,15 +353,24 @@ def red_par (e : Expr) : ((e' : Expr) × PLift (Red e e')) :=
       have h₁ : ¬ (DCC (f x)).IsRedex := by
         simp_all
       if h₂ : ¬ x.HasRedex then
-        have _h : f.size.fst < (f.app x).size.fst := by
+        have _h12 : f.size.fst < (f.app x).size.fst := by
           simp [size]
-          
+          if h : x.size.fst = 0 then
+            exact (no_zero_size' h).elim
+          else
+            grind
         let ⟨f', ⟨h⟩⟩ := f.red_par
         ⟨DCC (f' x), ⟨.congrFun h₂ h₁ h⟩⟩
       else
+        have _h13 : x.size.fst < (f.app x).size.fst := by
+          simp [size]
+          if h : f.size.fst = 0 then
+            exact (no_zero_size' h).elim
+          else
+            grind
         let ⟨x', ⟨h⟩⟩ := x.red_par
         ⟨DCC (f x'), ⟨.congrArg h₁ h⟩⟩
-termination_by e.size.fst
+termination_by e
 
 /-
 Π B A x

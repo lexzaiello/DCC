@@ -119,6 +119,112 @@ instance HasRedex.instDecidable : Decidable (HasRedex e) :=
   | none => rfl
   | some val => exfalso; exact h ⟨val.down, by simp_all only [Option.some.injEq, sound, not_true_eq_false]⟩
 
+inductive Size : Expr → ℕ → Prop
+  | sort   : Size (DCC Sort m) 1
+  | id     : Size α m → Size (DCC Id(α)) m.succ
+  | quot   : Size α m → Size β n → Size x o → Size (DCC `(α, β, x)) (m + n + o).succ
+  | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
+  | coup   : Size β m → Size f n → Size g o → Size (DCC ⟦β⟧(f, g)) (m + n + o).succ
+  | pair   : Size β m → Size f n → Size g o → Size (DCC ⟦β⟧⟨f, g⟩) (m + n + o).succ
+  | fst    : Size α m → Size β n → Size (DCC Fst(α, β)) (m + n).succ
+  | snd    : Size α m → Size β n → Size (DCC Snd(α, β)) (m + n).succ
+  | curr   : Size β m → Size x n → Size (DCC Λ(β, x)) (m + n).succ.succ
+  | pi     : Size (DCC Π(_m, _n)) 1
+  | appl   : Size α m → Size β n → Size (DCC App(α, β)) (m + n).succ
+  | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
+  | sig    : Size α m → Size β n → Size (DCC Σ(α, β)) (m + n).succ
+
+def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
+  match e with
+  | DCC Sort _m => ⟨1, ⟨.sort⟩⟩
+  | DCC Σ(α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+    ⟨(m + n).succ, ⟨.sig h₁ h₂⟩⟩
+  | DCC Id(α) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    ⟨m.succ, ⟨.id h₁⟩⟩
+  | DCC `(α, β, x) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+    let ⟨o, ⟨h₃⟩⟩ := x.size
+    ⟨(m + n + o).succ, ⟨.quot h₁ h₂ h₃⟩⟩
+  | DCC (f ∘ g) =>
+    let ⟨m, ⟨h₁⟩⟩ := f.size
+    let ⟨n, ⟨h₂⟩⟩ := g.size
+    ⟨(m + n).succ, ⟨.comp h₁ h₂⟩⟩
+  | DCC ⟦β⟧(a, b) =>
+    let ⟨m, ⟨h₁⟩⟩ := β.size
+    let ⟨n, ⟨h₂⟩⟩ := a.size
+    let ⟨o, ⟨h₃⟩⟩ := b.size
+    ⟨(m + n + o).succ, ⟨.coup h₁ h₂ h₃⟩⟩
+  | DCC ⟦β⟧⟨a, b⟩ =>
+    let ⟨m, ⟨h₁⟩⟩ := β.size
+    let ⟨n, ⟨h₂⟩⟩ := a.size
+    let ⟨o, ⟨h₃⟩⟩ := b.size
+    ⟨(m + n + o).succ, ⟨.pair h₁ h₂ h₃⟩⟩
+  | DCC Fst(α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+    ⟨(m + n).succ, ⟨.fst h₁ h₂⟩⟩
+  | DCC Snd(α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+    ⟨(m + n).succ, ⟨.snd h₁ h₂⟩⟩
+  | DCC Λ(β, x) =>
+    let ⟨m, ⟨h₁⟩⟩ := β.size
+    let ⟨n, ⟨h₂⟩⟩ := x.size
+    ⟨(m + n).succ.succ, ⟨.curr h₁ h₂⟩⟩
+  | DCC Π(_m, _n) =>
+    ⟨1, ⟨.pi⟩⟩
+  | DCC App(α, β) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+    ⟨(m + n).succ, ⟨.appl h₁ h₂⟩⟩
+  | DCC (f x) =>
+    let ⟨m, ⟨h₁⟩⟩ := f.size
+    let ⟨n, ⟨h₂⟩⟩ := x.size
+    ⟨(m + n), ⟨.app h₁ h₂⟩⟩
+
+theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
+
+theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
+  induction h with
+  | sort | pi => rfl
+  | curr h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+  | quot h₁ h₂ h₃ ih₁ ih₂ ih₃ =>
+    unfold size
+    rw [ih₁, ih₂, ih₃]
+  | fst h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+  | snd h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+  | sig h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+  | id h₁ ih₁ =>
+    unfold size
+    rw [ih₁]
+  | appl h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+  | comp h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+  | pair h₁ h₂ h₃ ih₁ ih₂ ih₃ =>
+    unfold size
+    rw [ih₁, ih₂, ih₃]
+  | coup h₁ h₂ h₃ ih₁ ih₂ ih₃ =>
+    unfold size
+    rw [ih₁, ih₂, ih₃]
+  | app h₁ h₂ ih₁ ih₂ =>
+    unfold size
+    rw [ih₁, ih₂]
+
 /-
 Π(m, n) A B x -> B ⟦Id(Sort m)⟧(a, x)
 -/
@@ -157,7 +263,39 @@ def red_par (e : Expr) : ((e' : Expr) × PLift (Red e e')) :=
   | DCC Λ(_β, _x)    => ⟨DCC Λ(_β, _x), ⟨.refl_curr⟩⟩
   | DCC App(_β, _x)  => ⟨DCC App(_β, _x), ⟨.refl_app⟩⟩
   | DCC ⟦_β⟧⟨_a, _b⟩ => ⟨DCC ⟦_β⟧⟨_a, _b⟩, ⟨.refl_pair⟩⟩
-  
+  | DCC (App(_δ, _τ) ⟦β⟧(f, x)) =>
+    have _h : (f.app x).size.fst < ((_δ.appl _τ).app (β.mk f x)).size.fst := by
+      simp only [size, Nat.succ_eq_add_one]
+      grind
+    let ⟨e', ⟨h⟩⟩ := (DCC (f x)).red_par
+    ⟨e', ⟨.app h⟩⟩
+  | DCC (Fst(_α, _β) ⟦_γ⟧(a, b)) =>
+    have _h : a.size.fst < ((_α.fst _β).app (_γ.mk a b)).size.fst := by
+      simp only [size, Nat.succ_eq_add_one]
+      grind
+    let ⟨a', ⟨h⟩⟩ := a.red_par
+    ⟨a', ⟨.fst h⟩⟩
+  | DCC (Snd(_α, _β) ⟦_γ⟧(a, b)) =>
+    have _h : b.size.fst < ((_α.snd _β).app (_γ.mk a b)).size.fst := by
+      simp only [size, Nat.succ_eq_add_one]
+      grind
+    let ⟨b', ⟨h⟩⟩ := b.red_par
+    ⟨b', ⟨.snd h⟩⟩
+  | DCC (`(_α, _β, x) y) =>
+    have _h : x.size.fst < ((_α.quot _β x).app y).size.fst := by
+      simp only [size, Nat.succ_eq_add_one]
+      grind
+    let ⟨x', ⟨h⟩⟩ := x.red_par
+    ⟨x', ⟨.quot h⟩⟩
+  | DCC (Id(_α) x) =>
+    have _h : x.size.fst < (_α.id.app x).size.fst := by
+      simp only [size, Nat.succ_eq_add_one, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
+    let ⟨x', ⟨h⟩⟩ := x.red_par
+    ⟨x', ⟨.id h⟩⟩
+  | DCC ((f ∘ g) x) =>
+    let ⟨e', ⟨h⟩⟩ := (DCC (f (g x))).red_par
+    ⟨e', ⟨.comp h⟩⟩
+termination_by e.size.fst
 
 /-
 Π B A x
@@ -290,109 +428,5 @@ inductive Judge : Expr → Expr → Prop
   | app   : Judge f (DCC (Π(m, n) α β)) → Judge x α
     → Judge (DCC (f x)) (DCC (β ⟦Id(Sort m)⟧(α, x)))
   | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
-
-inductive Size : Expr → ℕ → Prop
-  | sort   : Size (DCC Sort m) 1
-  | id     : Size α m → Size (DCC Id(α)) m.succ
-  | quot   : Size α m → Size β n → Size x o → Size (DCC `(α, β, x)) (m + n + o).succ
-  | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
-  | coup   : Size f m → Size g n → Size (DCC ⟦β⟧(f, g)) (m + n).succ
-  | pair   : Size f m → Size g n → Size (DCC ⟦β⟧⟨f, g⟩) (m + n).succ
-  | fst    : Size α m → Size β n → Size (DCC Fst(α, β)) (m + n).succ
-  | snd    : Size α m → Size β n → Size (DCC Snd(α, β)) (m + n).succ
-  | curr   : Size β m → Size x n → Size (DCC Λ(β, x)) (m + n).succ.succ
-  | pi     : Size (DCC Π(_m, _n)) 1
-  | appl   : Size α m → Size β n → Size (DCC App(α, β)) (m + n).succ
-  | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
-  | sig    : Size α m → Size β n → Size (DCC Σ(α, β)) (m + n).succ
-
-def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
-  match e with
-  | DCC Sort _m => ⟨1, ⟨.sort⟩⟩
-  | DCC Σ(α, β) =>
-    let ⟨m, ⟨h₁⟩⟩ := α.size
-    let ⟨n, ⟨h₂⟩⟩ := β.size
-    ⟨(m + n).succ, ⟨.sig h₁ h₂⟩⟩
-  | DCC Id(α) =>
-    let ⟨m, ⟨h₁⟩⟩ := α.size
-    ⟨m.succ, ⟨.id h₁⟩⟩
-  | DCC `(α, β, x) =>
-    let ⟨m, ⟨h₁⟩⟩ := α.size
-    let ⟨n, ⟨h₂⟩⟩ := β.size
-    let ⟨o, ⟨h₃⟩⟩ := x.size
-    ⟨(m + n + o).succ, ⟨.quot h₁ h₂ h₃⟩⟩
-  | DCC (f ∘ g) =>
-    let ⟨m, ⟨h₁⟩⟩ := f.size
-    let ⟨n, ⟨h₂⟩⟩ := g.size
-    ⟨(m + n).succ, ⟨.comp h₁ h₂⟩⟩
-  | DCC ⟦_β⟧(a, b) =>
-    let ⟨m, ⟨h₁⟩⟩ := a.size
-    let ⟨n, ⟨h₂⟩⟩ := b.size
-    ⟨(m + n).succ, ⟨.coup h₁ h₂⟩⟩
-  | DCC ⟦_β⟧⟨a, b⟩ =>
-    let ⟨m, ⟨h₁⟩⟩ := a.size
-    let ⟨n, ⟨h₂⟩⟩ := b.size
-    ⟨(m + n).succ, ⟨.pair h₁ h₂⟩⟩
-  | DCC Fst(α, β) =>
-    let ⟨m, ⟨h₁⟩⟩ := α.size
-    let ⟨n, ⟨h₂⟩⟩ := β.size
-    ⟨(m + n).succ, ⟨.fst h₁ h₂⟩⟩
-  | DCC Snd(α, β) =>
-    let ⟨m, ⟨h₁⟩⟩ := α.size
-    let ⟨n, ⟨h₂⟩⟩ := β.size
-    ⟨(m + n).succ, ⟨.snd h₁ h₂⟩⟩
-  | DCC Λ(β, x) =>
-    let ⟨m, ⟨h₁⟩⟩ := β.size
-    let ⟨n, ⟨h₂⟩⟩ := x.size
-    ⟨(m + n).succ.succ, ⟨.curr h₁ h₂⟩⟩
-  | DCC Π(_m, _n) =>
-    ⟨1, ⟨.pi⟩⟩
-  | DCC App(α, β) =>
-    let ⟨m, ⟨h₁⟩⟩ := α.size
-    let ⟨n, ⟨h₂⟩⟩ := β.size
-    ⟨(m + n).succ, ⟨.appl h₁ h₂⟩⟩
-  | DCC (f x) =>
-    let ⟨m, ⟨h₁⟩⟩ := f.size
-    let ⟨n, ⟨h₂⟩⟩ := x.size
-    ⟨(m + n), ⟨.app h₁ h₂⟩⟩
-
-theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
-
-theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
-  induction h with
-  | sort | pi => rfl
-  | curr h₁ h₂ ih₁ ih₂ =>
-    unfold size
-    rw [ih₁, ih₂]
-  | quot h₁ h₂ h₃ ih₁ ih₂ ih₃ =>
-    unfold size
-    rw [ih₁, ih₂, ih₃]
-  | fst h₁ h₂ ih₁ ih₂ =>
-    unfold size
-    rw [ih₁, ih₂]
-  | snd h₁ h₂ ih₁ ih₂ =>
-    unfold size
-    rw [ih₁, ih₂]
-  | sig h₁ h₂ ih₁ ih₂ =>
-    unfold size
-    rw [ih₁, ih₂]
-  | id h₁ ih₁ =>
-    unfold size
-    rw [ih₁]
-  | appl h₁ h₂ ih₁ ih₂ =>
-    unfold size
-    rw [ih₁, ih₂]
-  | comp h₁ h₂ ih₁ ih₂ =>
-    unfold size
-    rw [ih₁, ih₂]
-  | pair h₁ h₂ ih₁ ih₂ =>
-    unfold size
-    rw [ih₁, ih₂]
-  | coup h₁ h₂ ih₁ ih₂ =>
-    unfold size
-    rw [ih₁, ih₂]
-  | app h₁ h₂ ih₁ ih₂ =>
-    unfold size
-    rw [ih₁, ih₂]
 
 end Expr

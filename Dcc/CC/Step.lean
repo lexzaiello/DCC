@@ -4,35 +4,35 @@ import Mathlib.Tactic
 namespace Expr
 
 inductive IsRedex : Expr → Prop
-  | app    : IsRedex (DCC (App(_δ, _τ) ⟦f, x⟧))
-  | fst    : IsRedex (DCC (Fst(_δ, _τ) ⟦a, b⟧))
-  | snd    : IsRedex (DCC (Snd(_δ, _τ) ⟦a, b⟧))
+  | app    : IsRedex (DCC (App(_δ, _τ) ⟦β⟧(a, b)))
+  | fst    : IsRedex (DCC (Fst(_δ, _τ) ⟦β⟧(a, b)))
+  | snd    : IsRedex (DCC (Snd(_δ, _τ) ⟦β⟧(a, b)))
   | id     : IsRedex (DCC (Id(_α) x))
   | quot   : IsRedex (DCC (`(x, α) y))
   | comp   : IsRedex (DCC ((x ∘ y) z))
-  | pair   : IsRedex (DCC (⟨f, g⟩ x))
-  | curr   : IsRedex (DCC (Λ(x) y z))
-  | pi     : IsRedex (DCC (Π(B) A x))
+  | pair   : IsRedex (DCC (⟦β⟧⟨f, g⟩ x))
+  | curr   : IsRedex (DCC (Λ(β, x) y z))
+  | pi     : IsRedex (DCC (Π(m, n) A B x))
 
 inductive HasRedex : Expr → Prop
   | single : IsRedex a  → HasRedex a
   | left   : HasRedex f → HasRedex (DCC (f x))
   | right  : HasRedex x → HasRedex (DCC (f x))
-  | sigl   : HasRedex a → HasRedex (DCC ⟦a, b⟧)
-  | sigr   : HasRedex b → HasRedex (DCC ⟦a, b⟧)
+  | sigl   : HasRedex a → HasRedex (DCC ⟦β⟧(a, b))
+  | sigr   : HasRedex b → HasRedex (DCC ⟦β⟧(a, b))
 
 def is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   match e with
-  | (DCC (App(_δ, _τ) ⟦_f, _x⟧))  => .some ⟨.app⟩
-  | (DCC (Fst(_δ, _τ) ⟦_a, _b⟧))  => .some ⟨.fst⟩
-  | (DCC (Snd(_δ, _τ) ⟦_a, _b⟧))  => .some ⟨.snd⟩
-  | (DCC (Id(_α) _x))             => .some ⟨.id⟩
-  | (DCC (`(_x, _α) _y))          => .some ⟨.quot⟩
-  | (DCC ((_x ∘ _y) _z))          => .some ⟨.comp⟩
-  | (DCC (⟨_f, _g⟩ _x))           => .some ⟨.pair⟩
-  | (DCC (Λ(_x) _y _z))           => .some ⟨.curr⟩
-  | (DCC (Π(_x) _y _z))           => .some ⟨.pi⟩
-  | _                            => .none
+  | (DCC (App(_δ, _τ) ⟦_β⟧(_a, _b))) => .some ⟨.app⟩
+  | (DCC (Fst(_δ, _τ) ⟦_β⟧(_a, _b))) => .some ⟨.fst⟩
+  | (DCC (Snd(_δ, _τ) ⟦_β⟧(_a, _b))) => .some ⟨.snd⟩
+  | (DCC (Id(_α) _x))                => .some ⟨.id⟩
+  | (DCC (`(_x, _α) _y))             => .some ⟨.quot⟩
+  | (DCC ((_x ∘ _y) _z))             => .some ⟨.comp⟩
+  | (DCC (⟦_β⟧⟨_f, _g⟩ _x))          => .some ⟨.pair⟩
+  | (DCC (Λ(_β, _x) _y _z))          => .some ⟨.curr⟩
+  | (DCC (Π(_m, _n) _α _β _x))       => .some ⟨.pi⟩
+  | _                                => .none
 
 theorem IsRedex.sound (_h : Expr.is_redex e = .some he) : IsRedex e := he.down
 
@@ -56,7 +56,7 @@ def has_redex (e : Expr) : Option (PLift e.HasRedex) :=
     .some ⟨.single h⟩
   else
     match e with
-    | (DCC ⟦x, y⟧) => match _heq₂ : x.has_redex, _heq₃ : y.has_redex with
+    | (DCC ⟦_β⟧(x, y)) => match _heq₂ : x.has_redex, _heq₃ : y.has_redex with
       | .some ⟨h⟩, _ => .some ⟨.sigl h⟩
       | _, .some ⟨h⟩ => .some ⟨.sigr h⟩
       | _, _ => .none
@@ -68,7 +68,7 @@ def has_redex (e : Expr) : Option (PLift e.HasRedex) :=
 
 @[simp] theorem HasRedex.sound (_h : Expr.has_redex e = .some he) : HasRedex e := he.down
 
-@[simp] theorem sig_not_redex : ¬ IsRedex (DCC ⟦a, b⟧) := fun h => by
+@[simp] theorem sig_not_redex : ¬ IsRedex (DCC ⟦_β⟧(_a, _b)) := fun h => by
   cases h
 
 theorem HasRedex.complete (h : HasRedex e) : has_redex e = .some (.up h) := by
@@ -119,64 +119,67 @@ instance HasRedex.instDecidable : Decidable (HasRedex e) :=
   | none => rfl
   | some val => exfalso; exact h ⟨val.down, by simp_all only [Option.some.injEq, sound, not_true_eq_false]⟩
 
+/-
+Π(m, n) A B x -> B ⟦Id(Sort m)⟧(a, x)
+-/
+
 inductive Red : Expr → Expr → Prop
-  | app      : Red (DCC (App(_δ, _τ) ⟦f, x⟧)) (DCC (f x))
-  | fst      : Red (DCC (Fst(_δ, _τ) ⟦a, b⟧)) a
-  | snd      : Red (DCC (Snd(_δ, _τ) ⟦a, b⟧)) a
+  | app      : Red (DCC (App(_δ, _τ) ⟦β⟧(f, x))) (DCC (f x))
+  | fst      : Red (DCC (Fst(_δ, _τ) ⟦β⟧(a, b))) a
+  | snd      : Red (DCC (Snd(_δ, _τ) ⟦β⟧(a, b))) a
   | id       : Red (DCC (Id(_α) x)) x
   | quot     : Red (DCC (`(x, _α) y)) x
   | comp     : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
   | pair     : Red (DCC (f x)) a'
     → Red (DCC (g x)) b'
-    → Red (DCC (⟨f, g⟩ x))  (DCC ⟦a', b'⟧)
-  | curr     : Red (DCC (Λ(x) y z)) (DCC (x ⟦y, z⟧))
-  | pi       : Red (DCC (Π(B) A x)) (DCC (B ⟦A, x⟧))
-  | sigl     : ¬ HasRedex b → Red a a' → Red (DCC ⟦a, b⟧) (DCC ⟦a', b⟧)
-  | sigr     : Red b b'     → Red (DCC ⟦a, b⟧) (DCC ⟦a, b'⟧)
+    → Red (DCC (⟦β⟧⟨f, g⟩ x))  (DCC ⟦β⟧(a', b'))
+  | curr     : Red (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
+  | pi       : Red (DCC (Π(m, n) A B x)) (DCC (B ⟦Id(Sort m)⟧(A, x)))
+  | sigl     : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a', b))
+  | sigr     : Red b b'     → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a, b'))
   | congrFun : ¬ HasRedex x → ¬ IsRedex (DCC (f x)) → Red f f' → Red (DCC (f x)) (DCC (f' x))
   | congrArg : ¬ IsRedex (DCC (f x)) → Red x x' → Red (DCC (f x)) (DCC (f x'))
 
 inductive Size : Expr → ℕ → Prop
   | sort   : Size (DCC Sort m) 1
   | id     : Size (DCC Id(_α)) 1
-  | quot   : Size (DCC `(_α, _x)) 1
+  | quot   : Size (DCC `(_β, _x)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
-  | mk     : Size f m → Size g n → Size (DCC ⟦f, g⟧) (m + n).succ
-  | pair   : Size f m → Size g n → Size (DCC ⟨f, g⟩) (m + n).succ
+  | mk     : Size f m → Size g n → Size (DCC ⟦β⟧(f, g)) (m + n).succ
+  | pair   : Size f m → Size g n → Size (DCC ⟦β⟧⟨f, g⟩) (m + n).succ
   | fst    : Size (DCC Fst(_α, _β)) 1
   | snd    : Size (DCC Snd(_α, _β)) 1
-  | curr   : Size x m → Size (DCC Λ(x)) m.succ.succ
-  | pi     : Size x m → Size (DCC Π(x)) m.succ.succ
+  | curr   : Size x m → Size (DCC Λ(β, x)) m.succ.succ
+  | pi     : Size (DCC Π(_m, _n)) 1
   | appl   : Size (DCC App(_α, _β)) 1
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
-  | sig    : Size (DCC Σ a, b) 1
+  | sig    : Size (DCC Σ(_m, _n)) 1
 
 def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
   match e with
   | DCC Sort _m => ⟨1, ⟨.sort⟩⟩
-  | DCC Σ _a, _b => ⟨1, ⟨.sig⟩⟩
+  | DCC Σ(_m, _n) => ⟨1, ⟨.sig⟩⟩
   | DCC Id(_α)  => ⟨1, ⟨.id⟩⟩
-  | DCC `(_x, _α)  => ⟨1, ⟨.quot⟩⟩
+  | DCC `(_β, _x)  => ⟨1, ⟨.quot⟩⟩
   | DCC (f ∘ g) =>
     let ⟨m, ⟨h₁⟩⟩ := f.size
     let ⟨n, ⟨h₂⟩⟩ := g.size
     ⟨(m + n).succ, ⟨.comp h₁ h₂⟩⟩
-  | DCC ⟦a, b⟧ =>
+  | DCC ⟦_β⟧(a, b) =>
     let ⟨m, ⟨h₁⟩⟩ := a.size
     let ⟨n, ⟨h₂⟩⟩ := b.size
     ⟨(m + n).succ, ⟨.mk h₁ h₂⟩⟩
-  | DCC ⟨a, b⟩ =>
+  | DCC ⟦_β⟧⟨a, b⟩ =>
     let ⟨m, ⟨h₁⟩⟩ := a.size
     let ⟨n, ⟨h₂⟩⟩ := b.size
     ⟨(m + n).succ, ⟨.pair h₁ h₂⟩⟩
   | DCC Fst(_α, _β) => ⟨1, ⟨.fst⟩⟩
   | DCC Snd(_α, _β) => ⟨1, ⟨.snd⟩⟩
-  | DCC Λ(x) =>
+  | DCC Λ(_β, x) =>
     let ⟨m, ⟨h⟩⟩ := x.size
     ⟨m.succ.succ, ⟨.curr h⟩⟩
-  | DCC Π(x) =>
-    let ⟨m, ⟨h⟩⟩ := x.size
-    ⟨m.succ.succ, ⟨.pi h⟩⟩
+  | DCC Π(_m, _n) =>
+    ⟨1, ⟨.pi⟩⟩
   | DCC App(_α, _β) => ⟨1, ⟨.appl⟩⟩
   | DCC (f x) =>
     let ⟨m, ⟨h₁⟩⟩ := f.size
@@ -187,11 +190,8 @@ theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
 
 theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
-  | quot | sig | sort | id | fst | snd | appl => rfl
+  | pi | quot | sig | sort | id | fst | snd | appl => rfl
   | curr h ih =>
-    unfold size
-    rw [ih]
-  | pi h ih =>
     unfold size
     rw [ih]
   | comp h₁ h₂ ih₁ ih₂ =>
@@ -208,26 +208,122 @@ theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
     rw [ih₁, ih₂]
 
 /-
-α → α corresponds to:
-Π(Fst(Sort m, Id(Sort m))) α
+Π B A x
+
+(Σ A (= x))
+
+Π B A x
+
+B receives ⟦x, refl x⟧
+
+refl x : (x = x)
+
+refl x : = A x x
+
+need explicit α and β argument for couples,
+but this is super annoying.
+
+would be nicer if we could instead elevate a couple
+to a sigma pair?
+
+we could just have the default β argument
+be fun _ => B
+
+how does this change how pairs work?
+I think we would need the β argument here too.
+
+⟨f, g⟩ x = ⟦f x, g x⟧
+
+Sigma.mk α β x y
+
+id : Π
+
+Π A B x = ⟦Id(Sort m)⟧(A, x)
+
+α → β = Π(m, n) A `(Σ α, Id(α))
 -/
 
-def mk_arrow (α β : Expr) (m n : Level) : Expr :=
-  DCC (Π((Λ(Fst(Sort n, Σ Sort m, Id(Sort m))) β)) α)
+def arrow (α β : Expr) (m n : Level) : Expr :=
+  DCC (Π(m, n) α `((Σ(m, m) (Sort m) Id(Sort m)), β))
+
+def Pi.type (m n : Level) : Expr :=
+  arrow (DCC Sort m)
+    (arrow
+      (arrow
+        (DCC (Σ(m.succ, m) (Sort m) Id(Sort m)))
+        (DCC Sort n) m.succ n.succ)
+      (DCC Sort n) n.succ n.succ) m.succ n.succ
+
+def Pi.type₁ (m n : Level) : Expr :=
+  arrow
+    (arrow
+      (DCC (Σ(m.succ, m) (Sort m) Id(Sort m)))
+        (DCC Sort n) m.succ n.succ)
+      (DCC Sort n) n.succ n.succ
 
 inductive Judge : Expr → Expr → Prop
   | id    : Judge α (DCC (Sort m))
-    → Judge (DCC Id(α)) (DCC (Π(Fst(Sort m, Id(Sort m))) α))
-  | comp  : Judge g (DCC CTY α → β)
-    → Judge f (CTY β → γ)
-    → Judge (DCC f ∘ g) (CTY α → γ)
-  | pair  : Judge f (CTY α → τ₁)
-    → Judge g (CTY α → τ₂)
-    → Judge (DCC ⟨f, g⟩) (CTY α → (τ₁ × τ₂))
-  | fst   : Judge (DCC Fst(α, β)) (CTY (α × β) → α)
-  | snd   : Judge (DCC Snd(α, β)) (CTY (α × β) → β)
-  | curr  : Judge x (CTY (α × β) → γ) → Judge (DCC Λ(x)) (CTY α → (β → γ))
-  | app_e : Judge (DCC App(δ, τ)) (CTY (((δ → τ) × δ) → τ))
+    → Judge (DCC Id(α)) (arrow α α m m)
+  -- g : Π β A
+  | comp  : Judge g (mk_arrow α β m n)
+    → Judge f (DCC (Π(n, o) β γ))
+    → Judge (DCC f ∘ g) (DCC (Π(m, o) α (γ ∘ g)))
+  -- f  : α → τ₁
+  -- α  : Sort m
+  -- τ₁ : Sort n
+  -- β : τ₁ → Sort o
+  -- g : DCC (Π(m, o) α (β ∘ f ∘ Snd(Sort m, Id(Sort m))))
+  -- β :
+  -- ⟦β⟧⟨a, b⟩ : α → (Σ τ₁ β)
+  -- this is essentially substitution in the category of contexts
+  -- y₀ : B₀, y₁ : B₁(y₀)
+  | pair  : Judge α (DCC (Sort m))
+    → Judge τ₁ (DCC (Sort n))
+    → Judge β (arrow τ₁ (DCC Sort o) n o.succ)
+    → Judge f (arrow α τ₁ m n)
+    → Judge g (DCC (Π(m, o) α (β ∘ f ∘ Snd(Sort m, Id(Sort m)))))
+    → Judge (DCC ⟦β⟧⟨f, g⟩) (arrow α (DCC (Σ(n, o) τ₁ β)) m (max n o))
+  -- fst(α, β) : (Σ α β) → α
+  | fst   : Judge α (DCC Sort m)
+    → Judge β (arrow α (DCC Sort n) m n.succ)
+    → Judge (DCC Fst(α, β)) (arrow (DCC (Σ(m, n) α β)) α (max m n) m)
+  /- snd(α, β) : 
+  -/
+  | snd   : Judge α (DCC Sort m)
+    → Judge β (arrow α (DCC Sort n) m n.succ)
+    → Judge (DCC Snd(α, β)) (DCC (Π(max m n, n)
+    (Σ(m, n) α β) (β ∘ Fst(α, β) ∘ Snd(Sort (max m n), Id(Sort (max m n))))))
+  /-
+    App f x types are nondependent.
+    At least, x does not depend on x. need to bake that into ⟦β⟧
+    x : Π(max m n, o) (Σ α, β) γ
+    γ : (Σ α, β) → Sort o
+    γ : arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ
+    (Π(m, o) α 
+      (App(Pi.type₁ n o, arrow (`(#(Pi.type₁ n o), arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ))) ∘
+        ⟦`(#(Pi.type₁ n o), arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ)⟧⟨Π(n, o) ∘ β ∘ Snd(Sort m, Id(Sort m)), `((Σ(m.succ, m) (Sort m) Id(Sort m)), γ)⟩))
+    Λ(x) : Π(m, o) α (
+      App(?, ?)
+        ∘ ⟦`(#(arrow (DCC Sort o), Sort o)⟧⟨Π(n, o) ∘ (β ∘ Snd(Sort m, Id(Sort m))), `((Σ(m.succ, m) (Sort m) (Id(Sort m))), γ)⟩
+      β ∘ Snd(Sort m, Id(Sort m))
+  -/
+  | curr  : Judge x (DCC (Π(max m n, o) (Σ(m, n) α β) γ))
+    → Judge (DCC Λ(x)) (DCC (Π(m, o) α
+      (App(`(#(arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ), Sort o),
+        #(arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ)) ∘
+        ⟦`(#(Pi.type₁ n o), #(arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ))⟧⟨
+          Π(n, o) ∘ β ∘ Snd(Sort m, Id(Sort m)),
+          `((Σ(m.succ, m) (Sort m) Id(Sort m)), γ)⟩)))
+  /-
+    App(γ, β) : (Π(max o n, o)
+      (Σ(o, n) (Π(n, o) β γ) `((Π(n, o) β γ), β))
+      (γ ∘ (Snd((Π(n, o) β γ), `((Π(n, o) β γ), β)) ∘ Snd(Sort (max o n), Id(Sort (max o n))))))
+  -/
+  | app_e : Judge β (Sort n)
+    → Judge γ (arrow β (DCC (Sort o)) n o.succ)
+    → Judge (DCC App(γ, β)) (DCC (Π(max o n, o)
+      (Σ(o, n) (Π(n, o) β γ) `((Π(n, o) β γ), β))
+      (γ ∘ (Snd((Π(n, o) β γ), `((Π(n, o) β γ), β)) ∘ Snd(Sort (max o n), Id(Sort (max o n)))))))
   | coup  : Judge a α → Judge b β → Judge (DCC (a, b)) (CTY α × β)
   | app   : Judge f (CTY α → β) → Judge x α → Judge (DCC (f x)) β
   | sk    : Judge (.sk _e) (CTY Base)

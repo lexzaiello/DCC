@@ -264,12 +264,27 @@ inductive Red : Expr → Expr → Prop
   | id       : Red (DCC (Id(_α) x)) x
   | quot     : Red (DCC (`(_α, _β, x) y)) x
   | comp     : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
-  | pair     : Red (DCC (⟦β⟧⟨f, g⟩ x)) (DCC ⟦β⟧((a x), (b x)))
+  | pair     : Red (DCC (⟦β⟧⟨f, g⟩ x)) (DCC ⟦β⟧((f x), (g x)))
   | curr     : Red (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl     : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a', b))
   | sigr     : Red b b'     → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a, b'))
   | congrFun : ¬ HasRedex x → ¬ IsRedex (DCC (f x)) → Red f f' → Red (DCC (f x)) (DCC (f' x))
   | congrArg : ¬ IsRedex (DCC (f x)) → Red x x' → Red (DCC (f x)) (DCC (f x'))
+
+theorem Red.HasRedex : Red a b → a.HasRedex := fun h => by
+  induction h
+  · simp [HasRedex.single IsRedex.app]
+  · simp [HasRedex.single IsRedex.fst]
+  · simp [HasRedex.single IsRedex.snd]
+  · simp [HasRedex.single IsRedex.id]
+  · simp [HasRedex.single IsRedex.quot]
+  · simp [HasRedex.single IsRedex.comp]
+  · simp [HasRedex.single IsRedex.pair]
+  · simp [HasRedex.single IsRedex.curr]
+  · simp [HasRedex.sigl (by assumption)]
+  · simp [HasRedex.sigr (by assumption)]
+  · simp [HasRedex.left (by assumption)]
+  · simp [HasRedex.right (by assumption)]
 
 /-
 Π(m, n) A B x -> B ⟦Id(Sort m)⟧(a, x)
@@ -506,5 +521,54 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (e.Red e'))) :=
           .some ⟨DCC (f x'), ⟨.congrArg h h₁⟩⟩
         | .none => .none
     | _ => .none
+
+theorem Step?.sound (_h : step? e = .some ⟨e', ⟨hr⟩⟩) : Red e e' := hr
+
+theorem Step?.complete (h : Red e e') : step? e = .some ⟨e', ⟨h⟩⟩ := by
+  induction h with
+  | app =>
+    unfold step?
+    simp [IsRedex.app]
+  | id =>
+    unfold step?
+    simp [IsRedex.id]
+  | fst =>
+    unfold step?
+    simp [IsRedex.fst]
+  | snd =>
+    unfold step?
+    simp [IsRedex.snd]
+  | quot =>
+    unfold step?
+    simp [IsRedex.quot]
+  | comp =>
+    unfold step?
+    simp [IsRedex.comp]
+  | pair =>
+    unfold step?
+    simp [IsRedex.pair]
+  | curr =>
+    unfold step?
+    simp [IsRedex.curr]
+  | sigl hredex hr ih =>
+    rename_i b a a' β
+    have h : ¬ (β.mk a b).IsRedex := fun h => by cases h
+    unfold step?
+    simp_all
+  | sigr hr ih =>
+    rename_i b a a' β
+    have h := hr.HasRedex
+    unfold step?
+    simp_all
+  | congrFun =>
+    rename_i hr _
+    have h := hr.HasRedex
+    unfold step?
+    simp_all
+  | congrArg =>
+    rename_i hr _
+    have h := hr.HasRedex
+    unfold step?
+    simp_all
 
 end Expr

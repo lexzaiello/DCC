@@ -12,7 +12,6 @@ inductive IsRedex : Expr → Prop
   | comp   : IsRedex (DCC ((x ∘ y) z))
   | pair   : IsRedex (DCC (⟦β⟧⟨f, g⟩ x))
   | curr   : IsRedex (DCC (Λ(β, x) y z))
-  | pi     : IsRedex (DCC (Π(m, n) A B x))
 
 inductive HasRedex : Expr → Prop
   | single : IsRedex a  → HasRedex a
@@ -31,14 +30,13 @@ def is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   | (DCC ((_x ∘ _y) _z))             => .some ⟨.comp⟩
   | (DCC (⟦_β⟧⟨_f, _g⟩ _x))          => .some ⟨.pair⟩
   | (DCC (Λ(_β, _x) _y _z))          => .some ⟨.curr⟩
-  | (DCC (Π(_m, _n) _α _β _x))       => .some ⟨.pi⟩
   | _                                => .none
 
 theorem IsRedex.sound (_h : Expr.is_redex e = .some he) : IsRedex e := he.down
 
 theorem IsRedex.complete (h : IsRedex e) : is_redex e = .some (.up h) := by
   match h with
-  | .quot | .id | .pi | .snd | .fst | .comp | .curr | .app | .pair =>
+  | .quot | .id | .snd | .fst | .comp | .curr | .app | .pair =>
     simp only [is_redex]
 
 theorem IsRedex.sound' (_h : is_redex e = .none) : ¬ IsRedex e := fun h => by
@@ -186,7 +184,20 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
     let ⟨n, ⟨h₂⟩⟩ := x.size
     ⟨(m + n), ⟨.app h₁ h₂⟩⟩
 
+theorem Size.no_zero (h : Size e n) : n ≠ 0 := by
+  induction h
+  repeat simp
+  case app f m x n hf hx ih₁ ih₂ =>
+    intro h
+    simp_all only [ne_eq, not_true_eq_false]
+  simp
+
 theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
+
+theorem no_zero_size' : size e ≠ ⟨0, ⟨h⟩⟩ := by
+  intro ha
+  have h := h.no_zero
+  simp_all only [ne_eq, not_true_eq_false]
 
 theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
@@ -230,14 +241,17 @@ theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
 -/
 
 inductive Red : Expr → Expr → Prop
+  | refl_sig  : Red (DCC Σ(a, b)) (DCC Σ(a, b))
   | refl_app  : Red (DCC App(_δ, _τ)) (DCC App(_δ, _τ))
   | refl_fst  : Red (DCC Fst(_δ, _τ)) (DCC Fst(_δ, _τ))
   | refl_snd  : Red (DCC Snd(_δ, _τ)) (DCC Snd(_δ, _τ))
   | refl_id   : Red (DCC Id(_α)) (DCC Id(_α))
+  | refl_pi   : Red (DCC Π(m, n)) (DCC Π(m, n))
   | refl_quot : Red (DCC `(_α, _β, x)) (DCC `(_α, _β, x))
   | refl_curr : Red (DCC Λ(_β, _x)) (DCC Λ(_β, _x))
   | refl_pair : Red (DCC ⟦β⟧⟨_f, _g⟩) (DCC ⟦β⟧⟨_f, _g⟩)
   | refl_sort : Red (DCC Sort m) (DCC Sort m)
+  | refl_comp : Red (DCC f ∘ g)  (DCC f ∘ g)
   | app       : Red (DCC (f x)) e' → Red (DCC (App(_δ, _τ) ⟦β⟧(f, x))) e'
   | fst       : Red a a' → Red (DCC (Fst(_δ, _τ) ⟦β⟧(a, b))) a'
   | snd       : Red b b' → Red (DCC (Snd(_δ, _τ) ⟦β⟧(a, b))) b'
@@ -254,47 +268,98 @@ inductive Red : Expr → Expr → Prop
   | congrArg  : ¬ IsRedex (DCC (f x)) → Red x x' → Red (DCC (f x)) (DCC (f x'))
 
 def red_par (e : Expr) : ((e' : Expr) × PLift (Red e e')) :=
-  match e with
-  | DCC Sort m       => ⟨DCC Sort m, ⟨.refl_sort⟩⟩
-  | DCC App(_δ, _τ)  => ⟨DCC App(_δ, _τ), ⟨.refl_app⟩⟩
-  | DCC Fst(_δ, _τ)  => ⟨DCC Fst(_δ, _τ), ⟨.refl_fst⟩⟩
-  | DCC Snd(_δ, _τ)  => ⟨DCC Snd(_δ, _τ), ⟨.refl_snd⟩⟩
-  | DCC Id(_α)       => ⟨DCC Id(_α), ⟨.refl_id⟩⟩
-  | DCC Λ(_β, _x)    => ⟨DCC Λ(_β, _x), ⟨.refl_curr⟩⟩
-  | DCC App(_β, _x)  => ⟨DCC App(_β, _x), ⟨.refl_app⟩⟩
-  | DCC ⟦_β⟧⟨_a, _b⟩ => ⟨DCC ⟦_β⟧⟨_a, _b⟩, ⟨.refl_pair⟩⟩
-  | DCC (App(_δ, _τ) ⟦β⟧(f, x)) =>
-    have _h : (f.app x).size.fst < ((_δ.appl _τ).app (β.mk f x)).size.fst := by
-      simp only [size, Nat.succ_eq_add_one]
-      grind
-    let ⟨e', ⟨h⟩⟩ := (DCC (f x)).red_par
-    ⟨e', ⟨.app h⟩⟩
-  | DCC (Fst(_α, _β) ⟦_γ⟧(a, b)) =>
-    have _h : a.size.fst < ((_α.fst _β).app (_γ.mk a b)).size.fst := by
-      simp only [size, Nat.succ_eq_add_one]
-      grind
-    let ⟨a', ⟨h⟩⟩ := a.red_par
-    ⟨a', ⟨.fst h⟩⟩
-  | DCC (Snd(_α, _β) ⟦_γ⟧(a, b)) =>
-    have _h : b.size.fst < ((_α.snd _β).app (_γ.mk a b)).size.fst := by
-      simp only [size, Nat.succ_eq_add_one]
-      grind
-    let ⟨b', ⟨h⟩⟩ := b.red_par
-    ⟨b', ⟨.snd h⟩⟩
-  | DCC (`(_α, _β, x) y) =>
-    have _h : x.size.fst < ((_α.quot _β x).app y).size.fst := by
-      simp only [size, Nat.succ_eq_add_one]
-      grind
-    let ⟨x', ⟨h⟩⟩ := x.red_par
-    ⟨x', ⟨.quot h⟩⟩
-  | DCC (Id(_α) x) =>
-    have _h : x.size.fst < (_α.id.app x).size.fst := by
-      simp only [size, Nat.succ_eq_add_one, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
-    let ⟨x', ⟨h⟩⟩ := x.red_par
-    ⟨x', ⟨.id h⟩⟩
-  | DCC ((f ∘ g) x) =>
-    let ⟨e', ⟨h⟩⟩ := (DCC (f (g x))).red_par
-    ⟨e', ⟨.comp h⟩⟩
+  if h : e.IsRedex then
+    match e with
+    | DCC (App(_δ, _τ) ⟦β⟧(f, x)) =>
+      have _h : (f.app x).size.fst < ((_δ.appl _τ).app (β.mk f x)).size.fst := by
+        simp only [size, Nat.succ_eq_add_one]
+        grind
+      let ⟨e', ⟨h⟩⟩ := (DCC (f x)).red_par
+      ⟨e', ⟨.app h⟩⟩
+    | DCC (Fst(_α, _β) ⟦_γ⟧(a, b)) =>
+      have _h : a.size.fst < ((_α.fst _β).app (_γ.mk a b)).size.fst := by
+        simp only [size, Nat.succ_eq_add_one]
+        grind
+      let ⟨a', ⟨h⟩⟩ := a.red_par
+      ⟨a', ⟨.fst h⟩⟩
+    | DCC (Snd(_α, _β) ⟦_γ⟧(a, b)) =>
+      have _h : b.size.fst < ((_α.snd _β).app (_γ.mk a b)).size.fst := by
+        simp only [size, Nat.succ_eq_add_one]
+        grind
+      let ⟨b', ⟨h⟩⟩ := b.red_par
+      ⟨b', ⟨.snd h⟩⟩
+    | DCC (`(_α, _β, x) y) =>
+      have _h : x.size.fst < ((_α.quot _β x).app y).size.fst := by
+        simp only [size, Nat.succ_eq_add_one]
+        grind
+      let ⟨x', ⟨h⟩⟩ := x.red_par
+      ⟨x', ⟨.quot h⟩⟩
+    | DCC (Id(_α) x) =>
+      have _h : x.size.fst < (_α.id.app x).size.fst := by
+        simp only [size, Nat.succ_eq_add_one, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
+      let ⟨x', ⟨h⟩⟩ := x.red_par
+      ⟨x', ⟨.id h⟩⟩
+    | DCC ((f ∘ g) x) =>
+      have _h : (f.app (g.app x)).size.fst < ((f.comp g).app x).size.fst := by
+        simp [size]
+        grind
+      let ⟨e', ⟨h⟩⟩ := (DCC (f (g x))).red_par
+      ⟨e', ⟨.comp h⟩⟩
+    | DCC (⟦β⟧⟨f, g⟩ x) =>
+      have _h₁ : (f.app x).size.fst < ((β.pair f g).app x).size.fst := by
+        simp only [size, Nat.succ_eq_add_one, add_lt_add_iff_right]
+        grind
+      have _h₂ : (g.app x).size.fst < ((β.pair f g).app x).size.fst := by
+        simp only [size, Nat.succ_eq_add_one, add_lt_add_iff_right]
+        grind
+      let ⟨a', ⟨h₁⟩⟩ := red_par (DCC (f x))
+      let ⟨b', ⟨h₂⟩⟩ := red_par (DCC (g x))
+      ⟨DCC ⟦β⟧(a', b'), ⟨.pair h₁ h₂⟩⟩
+    | DCC (Λ(β, x) y z) =>
+      have _h : (x.app (β.mk y z)).size.fst < (((β.curr x).app y).app z).size.fst := by
+        simp [size]
+        grind
+      let ⟨e', ⟨h⟩⟩ := red_par (DCC (x ⟦β⟧(y, z)))
+      ⟨e', ⟨.curr h⟩⟩
+  else
+    match e with
+    | DCC Sort m       => ⟨DCC Sort m, ⟨.refl_sort⟩⟩
+    | DCC App(_δ, _τ)  => ⟨DCC App(_δ, _τ), ⟨.refl_app⟩⟩
+    | DCC Fst(_δ, _τ)  => ⟨DCC Fst(_δ, _τ), ⟨.refl_fst⟩⟩
+    | DCC Snd(_δ, _τ)  => ⟨DCC Snd(_δ, _τ), ⟨.refl_snd⟩⟩
+    | DCC Id(_α)       => ⟨DCC Id(_α), ⟨.refl_id⟩⟩
+    | DCC Λ(_β, _x)    => ⟨DCC Λ(_β, _x), ⟨.refl_curr⟩⟩
+    | DCC App(_β, _x)  => ⟨DCC App(_β, _x), ⟨.refl_app⟩⟩
+    | DCC ⟦_β⟧⟨_a, _b⟩ => ⟨DCC ⟦_β⟧⟨_a, _b⟩, ⟨.refl_pair⟩⟩
+    | DCC Σ(a, b)      => ⟨DCC Σ(a, b), ⟨.refl_sig⟩⟩
+    | DCC Π(m, n)      => ⟨DCC Π(m, n), ⟨.refl_pi⟩⟩
+    | DCC `(α, β, x)   => ⟨DCC `(α, β, x), ⟨.refl_quot⟩⟩
+    | DCC f ∘ g        => ⟨DCC f ∘ g, ⟨.refl_comp⟩⟩
+    | DCC ⟦β⟧(a, b)    =>
+      if h₁ : ¬ b.HasRedex then
+        have _h : a.size.fst < (β.mk a b).size.fst := by
+          simp [size]
+          grind
+        let ⟨a', ⟨h₂⟩⟩ := a.red_par
+        ⟨DCC ⟦β⟧(a', b), ⟨.sigl h₁ h₂⟩⟩
+      else
+        have _h : b.size.fst < (β.mk a b).size.fst := by
+          simp [size]
+          grind
+        let ⟨b', ⟨h₂⟩⟩ := b.red_par
+        ⟨DCC ⟦β⟧(a, b'), ⟨.sigr h₂⟩⟩
+    | DCC (f x) =>
+      have h₁ : ¬ (DCC (f x)).IsRedex := by
+        simp_all
+      if h₂ : ¬ x.HasRedex then
+        have _h : f.size.fst < (f.app x).size.fst := by
+          simp [size]
+          
+        let ⟨f', ⟨h⟩⟩ := f.red_par
+        ⟨DCC (f' x), ⟨.congrFun h₂ h₁ h⟩⟩
+      else
+        let ⟨x', ⟨h⟩⟩ := x.red_par
+        ⟨DCC (f x'), ⟨.congrArg h₁ h⟩⟩
 termination_by e.size.fst
 
 /-

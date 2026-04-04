@@ -32,7 +32,7 @@ def is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   | (DCC (Λ(_β, _x) _y _z))          => .some ⟨.curr⟩
   | _                                => .none
 
-theorem IsRedex.sound (_h : Expr.is_redex e = .some he) : IsRedex e := he.down
+@[simp] theorem IsRedex.sound (_h : Expr.is_redex e = .some he) : IsRedex e := he.down
 
 theorem IsRedex.complete (h : IsRedex e) : is_redex e = .some (.up h) := by
   match h with
@@ -199,6 +199,12 @@ theorem no_zero_size' : (size e).fst ≠ 0 := by
   have h := (size e).snd.down.no_zero
   simp_all only
 
+theorem size_pos : 0 < (size e).fst := by
+  have h := no_zero_size' (e := e)
+  if h : (size e).fst = 0 then
+    contradiction
+  else grind
+
 theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
   | sort | pi => rfl
@@ -242,34 +248,32 @@ instance instSizeOf : SizeOf Expr := ⟨fun e => e.size.fst⟩
 Π(m, n) A B x -> B ⟦Id(Sort m)⟧(a, x)
 -/
 
-inductive Red : Expr → Expr → Prop
-  | refl_sig  : Red (DCC Σ(a, b)) (DCC Σ(a, b))
-  | refl_app  : Red (DCC App(_δ, _τ)) (DCC App(_δ, _τ))
-  | refl_fst  : Red (DCC Fst(_δ, _τ)) (DCC Fst(_δ, _τ))
-  | refl_snd  : Red (DCC Snd(_δ, _τ)) (DCC Snd(_δ, _τ))
-  | refl_id   : Red (DCC Id(_α)) (DCC Id(_α))
-  | refl_pi   : Red (DCC Π(m, n)) (DCC Π(m, n))
-  | refl_quot : Red (DCC `(_α, _β, x)) (DCC `(_α, _β, x))
-  | refl_curr : Red (DCC Λ(_β, _x)) (DCC Λ(_β, _x))
-  | refl_pair : Red (DCC ⟦β⟧⟨_f, _g⟩) (DCC ⟦β⟧⟨_f, _g⟩)
-  | refl_sort : Red (DCC Sort m) (DCC Sort m)
-  | refl_comp : Red (DCC f ∘ g)  (DCC f ∘ g)
-  | app       : Red (DCC (f x)) e' → Red (DCC (App(_δ, _τ) ⟦β⟧(f, x))) e'
-  | fst       : Red a a' → Red (DCC (Fst(_δ, _τ) ⟦β⟧(a, b))) a'
-  | snd       : Red b b' → Red (DCC (Snd(_δ, _τ) ⟦β⟧(a, b))) b'
-  | id        : Red x x' → Red (DCC (Id(_α) x)) x'
-  | quot      : Red x x' → Red (DCC (`(_α, _β, x) y)) x'
-  | comp      : Red (DCC (x (y z))) e' → Red (DCC ((x ∘ y) z)) e'
-  | pair      : Red (DCC (f x)) a'
-    → Red (DCC (g x)) b'
-    → Red (DCC (⟦β⟧⟨f, g⟩ x)) (DCC ⟦β⟧(a', b'))
-  | curr      : Red (DCC (x ⟦β⟧(y, z))) e' → Red (DCC (Λ(β, x) y z)) e'
-  | sigl      : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a', b))
-  | sigr      : Red b b'     → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a, b'))
-  | congrFun  : ¬ HasRedex x → ¬ IsRedex (DCC (f x)) → Red f f' → Red (DCC (f x)) (DCC (f' x))
-  | congrArg  : ¬ IsRedex (DCC (f x)) → Red x x' → Red (DCC (f x)) (DCC (f x'))
+inductive ParRed : Expr → Expr → Prop
+  | refl_sig  : ParRed (DCC Σ(a, b)) (DCC Σ(a, b))
+  | refl_app  : ParRed (DCC App(_δ, _τ)) (DCC App(_δ, _τ))
+  | refl_fst  : ParRed (DCC Fst(_δ, _τ)) (DCC Fst(_δ, _τ))
+  | refl_snd  : ParRed (DCC Snd(_δ, _τ)) (DCC Snd(_δ, _τ))
+  | refl_id   : ParRed (DCC Id(_α)) (DCC Id(_α))
+  | refl_pi   : ParRed (DCC Π(m, n)) (DCC Π(m, n))
+  | refl_quot : ParRed (DCC `(_α, _β, x)) (DCC `(_α, _β, x))
+  | refl_curr : ParRed (DCC Λ(_β, _x)) (DCC Λ(_β, _x))
+  | refl_pair : ParRed (DCC ⟦β⟧⟨_f, _g⟩) (DCC ⟦β⟧⟨_f, _g⟩)
+  | refl_sort : ParRed (DCC Sort m) (DCC Sort m)
+  | refl_comp : ParRed (DCC f ∘ g)  (DCC f ∘ g)
+  | app       : ParRed (DCC (f x)) e' → ParRed (DCC (App(_δ, _τ) ⟦β⟧(f, x))) e'
+  | fst       : ParRed a a' → ParRed (DCC (Fst(_δ, _τ) ⟦β⟧(a, b))) a'
+  | snd       : ParRed b b' → ParRed (DCC (Snd(_δ, _τ) ⟦β⟧(a, b))) b'
+  | id        : ParRed x x' → ParRed (DCC (Id(_α) x)) x'
+  | quot      : ParRed x x' → ParRed (DCC (`(_α, _β, x) y)) x'
+  | comp      : ParRed (DCC (x (y z))) e' → ParRed (DCC ((x ∘ y) z)) e'
+  | pair      : ParRed (DCC (f x)) a'
+    → ParRed (DCC (g x)) b'
+    → ParRed (DCC (⟦β⟧⟨f, g⟩ x)) (DCC ⟦β⟧(a', b'))
+  | curr      : ParRed (DCC (x ⟦β⟧(y, z))) e' → ParRed (DCC (Λ(β, x) y z)) e'
+  | coupl     : ParRed a a' → ParRed b b'     → ParRed (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a', b'))
+  | congr     : ¬ IsRedex (DCC (f x)) → ParRed f f'  → ParRed x x' → ParRed (DCC (f x)) (DCC (f' x'))
 
-def red_par (e : Expr) : ((e' : Expr) × PLift (Red e e')) :=
+def red_par (e : Expr) : ((e' : Expr) × PLift (ParRed e e')) :=
   if h : e.IsRedex then
     match heq : e with
     | DCC (`(_α, _β, x) y) =>
@@ -337,171 +341,96 @@ def red_par (e : Expr) : ((e' : Expr) × PLift (Red e e')) :=
     | DCC `(α, β, x)   => ⟨DCC `(α, β, x), ⟨.refl_quot⟩⟩
     | DCC f ∘ g        => ⟨DCC f ∘ g, ⟨.refl_comp⟩⟩
     | DCC ⟦β⟧(a, b)    =>
-      if h₁ : ¬ b.HasRedex then
-        have _h10 : a.size.fst < (β.mk a b).size.fst := by
-          simp [size]
-          grind
-        let ⟨a', ⟨h₂⟩⟩ := a.red_par
-        ⟨DCC ⟦β⟧(a', b), ⟨.sigl h₁ h₂⟩⟩
-      else
-        have _h11 : b.size.fst < (β.mk a b).size.fst := by
-          simp [size]
-          grind
-        let ⟨b', ⟨h₂⟩⟩ := b.red_par
-        ⟨DCC ⟦β⟧(a, b'), ⟨.sigr h₂⟩⟩
+      have _h0 : (size a).fst < (size (β.mk a b)).fst := by
+        simp [size]
+        grind
+      have _h01 : (size b).fst < (size (β.mk a b)).fst := by
+        simp [size]
+        grind
+      let ⟨a', ⟨h₂⟩⟩ := a.red_par
+      let ⟨b', ⟨h₃⟩⟩ := b.red_par
+      ⟨DCC ⟦β⟧(a', b'), ⟨.coupl h₂ h₃⟩⟩
     | DCC (f x) =>
       have h₁ : ¬ (DCC (f x)).IsRedex := by
         simp_all
-      if h₂ : ¬ x.HasRedex then
-        have _h12 : f.size.fst < (f.app x).size.fst := by
-          simp [size]
-          if h : x.size.fst = 0 then
-            exact (no_zero_size' h).elim
-          else
-            grind
-        let ⟨f', ⟨h⟩⟩ := f.red_par
-        ⟨DCC (f' x), ⟨.congrFun h₂ h₁ h⟩⟩
-      else
-        have _h13 : x.size.fst < (f.app x).size.fst := by
-          simp [size]
-          if h : f.size.fst = 0 then
-            exact (no_zero_size' h).elim
-          else
-            grind
-        let ⟨x', ⟨h⟩⟩ := x.red_par
-        ⟨DCC (f x'), ⟨.congrArg h₁ h⟩⟩
+      have _ha : (size f).fst < (size (f.app x)).fst := by
+        simp [size, size_pos]
+      have _hb : (size x).fst < (size (f.app x)).fst := by
+        simp [size, size_pos]
+      let ⟨f', ⟨h₂⟩⟩ := f.red_par
+      let ⟨x', ⟨h₃⟩⟩ := x.red_par
+      ⟨DCC (f' x'), ⟨.congr h₁ h₂ h₃⟩⟩
 termination_by e
 
-/-
-Π B A x
+theorem ParRed.sound (_h : red_par e = ⟨e', ⟨hr⟩⟩) : ParRed e e' := hr
 
-(Σ A (= x))
-
-Π B A x
-
-B receives ⟦x, refl x⟧
-
-refl x : (x = x)
-
-refl x : = A x x
-
-need explicit α and β argument for couples,
-but this is super annoying.
-
-would be nicer if we could instead elevate a couple
-to a sigma pair?
-
-we could just have the default β argument
-be fun _ => B
-
-how does this change how pairs work?
-I think we would need the β argument here too.
-
-⟨f, g⟩ x = ⟦f x, g x⟧
-
-Sigma.mk α β x y
-
-id : Π
-
-Π A B x = ⟦Id(Sort m)⟧(A, x)
-
-α → β = Π(m, n) A `(Σ α, Id(α))
--/
-
-def arrow (α β : Expr) (m n : Level) : Expr :=
-  DCC (Π(m, n) α `(Sort n, Σ(Sort m, Id(Sort m)), β))
-
-def Pi.type (m n : Level) : Expr :=
-  arrow (DCC Sort m)
-    (arrow
-      (arrow
-        (DCC (Σ(Sort m, Id(Sort m))))
-        (DCC Sort n) m.succ n.succ)
-      (DCC Sort n) n.succ n.succ) m.succ n.succ
-
-def Pi.type₁ (m n : Level) : Expr :=
-  arrow
-    (arrow
-      (DCC (Σ(Sort m, Id(Sort m))))
-        (DCC Sort n) m.succ n.succ)
-      (DCC Sort n) n.succ n.succ
-
-inductive Judge : Expr → Expr → Prop
-  | id    : Judge α (DCC (Sort m))
-    → Judge (DCC Id(α)) (arrow α α m m)
-  -- g : Π β A
-  | comp  : Judge g (arrow α β m n)
-    → Judge f (DCC (Π(n, o) β γ))
-    → Judge (DCC f ∘ g) (DCC (Π(m, o) α (γ ∘ g)))
-  -- f  : α → τ₁
-  -- α  : Sort m
-  -- τ₁ : Sort n
-  -- β : τ₁ → Sort o
-  -- g : DCC (Π(m, o) α (β ∘ f ∘ Snd(Sort m, Id(Sort m))))
-  -- β :
-  -- ⟦β⟧⟨a, b⟩ : α → (Σ τ₁ β)
-  -- this is essentially substitution in the category of contexts
-  -- y₀ : B₀, y₁ : B₁(y₀)
-  | pair  : Judge β (arrow τ₁ (DCC Sort o) n o.succ)
-    → Judge f (arrow α τ₁ m n)
-    → Judge g (DCC (Π(m, o) α (β ∘ f ∘ Snd(Sort m, Id(Sort m)))))
-    → Judge (DCC ⟦β⟧⟨f, g⟩) (arrow α (DCC Σ(τ₁, β)) m (max n o))
-  -- fst(α, β) : (Σ α β) → α
-  | fst   : Judge α (DCC Sort m)
-    → Judge β (arrow α (DCC Sort n) m n.succ)
-    → Judge (DCC Fst(α, β)) (arrow (DCC Σ(α, β)) α (max m n) m)
-  /- snd(α, β) : 
-  -/
-  | snd   : Judge α (DCC Sort m)
-    → Judge β (arrow α (DCC Sort n) m n.succ)
-    → Judge (DCC Snd(α, β)) (DCC (Π(max m n, n)
-    Σ(α, β) (β ∘ Fst(α, β) ∘ Snd(Sort (max m n), Id(Sort (max m n))))))
-  /-
-    App f x types are nondependent.
-    At least, x does not depend on x. need to bake that into ⟦β⟧
-    x : Π(max m n, o) (Σ α, β) γ
-    γ : (Σ α, β) → Sort o
-    γ : arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ
-    (Π(m, o) α 
-      (App(Pi.type₁ n o, arrow (`(#(Pi.type₁ n o), arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ))) ∘
-        ⟦`(#(Pi.type₁ n o), arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ)⟧⟨Π(n, o) ∘ β ∘ Snd(Sort m, Id(Sort m)), `((Σ(m.succ, m) (Sort m) Id(Sort m)), γ)⟩))
-    Λ(x) : Π(m, o) α (
-      App(?, ?)
-        ∘ ⟦`(#(arrow (DCC Sort o), Sort o)⟧⟨Π(n, o) ∘ (β ∘ Snd(Sort m, Id(Sort m))), `((Σ(m.succ, m) (Sort m) (Id(Sort m))), γ)⟩
-      β ∘ Snd(Sort m, Id(Sort m))
-  -/
-  | curr  : Judge x (DCC (Π(max m n, o) Σ(α, β) γ))
-    → Judge (DCC Λ(β, x)) (DCC (Π(m, o) α
-      (App(`(Sort o.succ, #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Sort o),
-        #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ)) ∘
-        ⟦`(Sort o.succ, #(Pi.type₁ n o), #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ))⟧⟨
-          Π(n, o) ∘ β ∘ Snd(Sort m, Id(Sort m)),
-          `(#(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Σ(Sort m, Id(Sort m)), γ)⟩)))
-  /-
-    App(γ, β) : (Π(max o n, o)
-      (Σ(o, n) (Π(n, o) β γ) `((Π(n, o) β γ), β))
-      (γ ∘ (Snd((Π(n, o) β γ), `((Π(n, o) β γ), β)) ∘ Snd(Sort (max o n), Id(Sort (max o n))))))
-  -/
-  | app_e : Judge β (DCC Sort n)
-    → Judge γ (arrow β (DCC (Sort o)) n o.succ)
-    → Judge (DCC App(γ, β)) (DCC (Π(max o n, o)
-      Σ((Π(n, o) β γ), `(Sort n, (Π(n, o) β γ), β))
-      (γ ∘ (Snd((Π(n, o) β γ), `(Sort n, (Π(n, o) β γ), β)) ∘ Snd(Sort (max o n), Id(Sort (max o n)))))))
-  /-
-    a : α
-    b : β a
-    ⟦β⟧(a, b) : Σ α β
-  -/
-  | coup  : Judge a α
-    → Judge b (DCC (β a))
-    → Judge (DCC ⟦β⟧(a, b)) (DCC Σ(α, β))
-  -- Can derive dependent quotation
-  | quot  : Judge α (DCC Sort m)
-    → Judge β (DCC Sort m)
-    → Judge x α
-    → Judge (DCC `(α, β, x)) (arrow α (arrow β α n m) m m)
-  | app   : Judge f (DCC (Π(m, n) α β)) → Judge x α
-    → Judge (DCC (f x)) (DCC (β ⟦Id(Sort m)⟧(α, x)))
-  | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
+theorem ParRed.complete (h : ParRed e e') : red_par e = ⟨e', ⟨h⟩⟩ := by
+  induction heq : h with
+  | refl_comp | refl_pair | refl_curr | refl_quot | refl_pi | refl_sort | refl_id | refl_snd | refl_fst | refl_app | refl_sig =>
+    simp only [red_par, dite_eq_right_iff]
+    intro h
+    contradiction
+  | app ih₁ ih₂ =>
+    unfold red_par
+    simp [IsRedex.app]
+    simp_all
+    congr
+    repeat simp_all
+  | fst ih₁ =>
+    unfold red_par
+    simp [IsRedex.fst]
+    simp_all
+    congr
+    repeat simp_all
+  | snd ih₁ =>
+    unfold red_par
+    simp [IsRedex.snd]
+    simp_all
+    congr
+    repeat simp_all
+  | id =>
+    unfold red_par
+    simp [IsRedex.id]
+    simp_all
+    congr
+    repeat simp_all
+  | quot =>
+    unfold red_par
+    simp [IsRedex.quot]
+    simp_all
+    congr
+    repeat simp_all
+  | comp =>
+    unfold red_par
+    simp [IsRedex.comp]
+    simp_all
+    congr
+    repeat simp_all
+  | pair =>
+    unfold red_par
+    simp [IsRedex.pair]
+    simp_all
+    congr
+    repeat simp_all
+  | curr =>
+    unfold red_par
+    simp [IsRedex.curr]
+    simp_all
+    congr
+    repeat simp_all
+  | coupl =>
+    rename_i a a' b b' β hra hrb ih₁ ih₂
+    have h : ¬ (β.mk a b).IsRedex := fun h => by cases h
+    unfold red_par
+    simp_all
+    congr
+    repeat simp_all
+  | congr =>
+    rename_i f x f' x' h_n_redex h_r_f h_r_x ih₁ ih₂
+    unfold red_par
+    simp [h_n_redex]
+    simp_all
+    congr
+    repeat simp_all
 
 end Expr

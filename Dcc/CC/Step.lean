@@ -134,7 +134,6 @@ inductive Red : Expr → Expr → Prop
     → Red (DCC (g x)) b'
     → Red (DCC (⟦β⟧⟨f, g⟩ x))  (DCC ⟦β⟧(a', b'))
   | curr     : Red (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
-  | pi       : Red (DCC (Π(m, n) A B x)) (DCC (B ⟦Id(Sort m)⟧(A, x)))
   | sigl     : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a', b))
   | sigr     : Red b b'     → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a, b'))
   | congrFun : ¬ HasRedex x → ¬ IsRedex (DCC (f x)) → Red f f' → Red (DCC (f x)) (DCC (f' x))
@@ -153,12 +152,12 @@ inductive Size : Expr → ℕ → Prop
   | pi     : Size (DCC Π(_m, _n)) 1
   | appl   : Size (DCC App(_α, _β)) 1
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
-  | sig    : Size (DCC Σ(_m, _n)) 1
+  | sig    : Size (DCC Σ(_α, _β)) 1
 
 def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
   match e with
   | DCC Sort _m => ⟨1, ⟨.sort⟩⟩
-  | DCC Σ(_m, _n) => ⟨1, ⟨.sig⟩⟩
+  | DCC Σ(_α, _β) => ⟨1, ⟨.sig⟩⟩
   | DCC Id(_α)  => ⟨1, ⟨.id⟩⟩
   | DCC `(_β, _x)  => ⟨1, ⟨.quot⟩⟩
   | DCC (f ∘ g) =>
@@ -244,20 +243,20 @@ id : Π
 -/
 
 def arrow (α β : Expr) (m n : Level) : Expr :=
-  DCC (Π(m, n) α `((Σ(m, m) (Sort m) Id(Sort m)), β))
+  DCC (Π(m, n) α `(Σ(Sort m, Id(Sort m)), β))
 
 def Pi.type (m n : Level) : Expr :=
   arrow (DCC Sort m)
     (arrow
       (arrow
-        (DCC (Σ(m.succ, m) (Sort m) Id(Sort m)))
+        (DCC (Σ(Sort m, Id(Sort m))))
         (DCC Sort n) m.succ n.succ)
       (DCC Sort n) n.succ n.succ) m.succ n.succ
 
 def Pi.type₁ (m n : Level) : Expr :=
   arrow
     (arrow
-      (DCC (Σ(m.succ, m) (Sort m) Id(Sort m)))
+      (DCC (Σ(Sort m, Id(Sort m))))
         (DCC Sort n) m.succ n.succ)
       (DCC Sort n) n.succ n.succ
 
@@ -277,22 +276,20 @@ inductive Judge : Expr → Expr → Prop
   -- ⟦β⟧⟨a, b⟩ : α → (Σ τ₁ β)
   -- this is essentially substitution in the category of contexts
   -- y₀ : B₀, y₁ : B₁(y₀)
-  | pair  : Judge α (DCC (Sort m))
-    → Judge τ₁ (DCC (Sort n))
-    → Judge β (arrow τ₁ (DCC Sort o) n o.succ)
+  | pair  : Judge β (arrow τ₁ (DCC Sort o) n o.succ)
     → Judge f (arrow α τ₁ m n)
     → Judge g (DCC (Π(m, o) α (β ∘ f ∘ Snd(Sort m, Id(Sort m)))))
-    → Judge (DCC ⟦β⟧⟨f, g⟩) (arrow α (DCC (Σ(n, o) τ₁ β)) m (max n o))
+    → Judge (DCC ⟦β⟧⟨f, g⟩) (arrow α (DCC Σ(τ₁, β)) m (max n o))
   -- fst(α, β) : (Σ α β) → α
   | fst   : Judge α (DCC Sort m)
     → Judge β (arrow α (DCC Sort n) m n.succ)
-    → Judge (DCC Fst(α, β)) (arrow (DCC (Σ(m, n) α β)) α (max m n) m)
+    → Judge (DCC Fst(α, β)) (arrow (DCC Σ(α, β)) α (max m n) m)
   /- snd(α, β) : 
   -/
   | snd   : Judge α (DCC Sort m)
     → Judge β (arrow α (DCC Sort n) m n.succ)
     → Judge (DCC Snd(α, β)) (DCC (Π(max m n, n)
-    (Σ(m, n) α β) (β ∘ Fst(α, β) ∘ Snd(Sort (max m n), Id(Sort (max m n))))))
+    Σ(α, β) (β ∘ Fst(α, β) ∘ Snd(Sort (max m n), Id(Sort (max m n))))))
   /-
     App f x types are nondependent.
     At least, x does not depend on x. need to bake that into ⟦β⟧
@@ -307,27 +304,34 @@ inductive Judge : Expr → Expr → Prop
         ∘ ⟦`(#(arrow (DCC Sort o), Sort o)⟧⟨Π(n, o) ∘ (β ∘ Snd(Sort m, Id(Sort m))), `((Σ(m.succ, m) (Sort m) (Id(Sort m))), γ)⟩
       β ∘ Snd(Sort m, Id(Sort m))
   -/
-  | curr  : Judge x (DCC (Π(max m n, o) (Σ(m, n) α β) γ))
+  | curr  : Judge x (DCC (Π(max m n, o) Σ(α, β) γ))
     → Judge (DCC Λ(x)) (DCC (Π(m, o) α
-      (App(`(#(arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ), Sort o),
-        #(arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ)) ∘
-        ⟦`(#(Pi.type₁ n o), #(arrow (DCC (Σ(m, n) α β)) (DCC Sort o) (max m n) o.succ))⟧⟨
+      (App(`(#(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Sort o),
+        #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ)) ∘
+        ⟦`(#(Pi.type₁ n o), #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ))⟧⟨
           Π(n, o) ∘ β ∘ Snd(Sort m, Id(Sort m)),
-          `((Σ(m.succ, m) (Sort m) Id(Sort m)), γ)⟩)))
+          `(Σ(Sort m, Id(Sort m)), γ)⟩)))
   /-
     App(γ, β) : (Π(max o n, o)
       (Σ(o, n) (Π(n, o) β γ) `((Π(n, o) β γ), β))
       (γ ∘ (Snd((Π(n, o) β γ), `((Π(n, o) β γ), β)) ∘ Snd(Sort (max o n), Id(Sort (max o n))))))
   -/
-  | app_e : Judge β (Sort n)
+  | app_e : Judge β (DCC Sort n)
     → Judge γ (arrow β (DCC (Sort o)) n o.succ)
     → Judge (DCC App(γ, β)) (DCC (Π(max o n, o)
-      (Σ(o, n) (Π(n, o) β γ) `((Π(n, o) β γ), β))
+      Σ((Π(n, o) β γ), `((Π(n, o) β γ), β))
       (γ ∘ (Snd((Π(n, o) β γ), `((Π(n, o) β γ), β)) ∘ Snd(Sort (max o n), Id(Sort (max o n)))))))
-  | coup  : Judge a α → Judge b β → Judge (DCC (a, b)) (CTY α × β)
-  | app   : Judge f (CTY α → β) → Judge x α → Judge (DCC (f x)) β
-  | sk    : Judge (.sk _e) (CTY Base)
-  | sort  : Judge (DCC Sort _m) (CTY Base)
+  /-
+    a : α
+    b : β a
+    ⟦β⟧(a, b) : Σ α β
+  -/
+  | coup  : Judge a α
+    → Judge b (DCC (β a))
+    → Judge (DCC ⟦β⟧(a, b)) (DCC Σ(α, β))
+  | app   : Judge f (DCC (Π(m, n) α β)) → Judge x α
+    → Judge (DCC (f x)) (DCC (β ⟦Id(Sort m)⟧(α, x)))
+  | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
 
 inductive TySize : Expr → ℕ → Prop
   | id     : TySize α m

@@ -469,10 +469,10 @@ inductive Red : Expr → Expr → Prop
   | comp      : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
   | pair      : Red (DCC (⟦β⟧⟨f, g⟩ x)) (DCC ⟦β⟧((f x), (g x)))
   | curr      : Red (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
-  | sigβ      : ¬ HasRedex a → ¬ HasRedex b → Red β β' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β'⟧(a, b))
+  | sigα      : ¬ HasRedex a → ¬ HasRedex b → Red β β' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β'⟧(a, b))
   | sigl      : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a', b))
   | sigr      : Red b b'     → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a, b'))
-  | pairβ     : ¬ HasRedex a → ¬ HasRedex b → Red β β' → Red (DCC ⟦β⟧⟨a, b⟩) (DCC ⟦β'⟧⟨a, b⟩)
+  | pairα     : ¬ HasRedex a → ¬ HasRedex b → Red β β' → Red (DCC ⟦β⟧⟨a, b⟩) (DCC ⟦β'⟧⟨a, b⟩)
   | pairl     : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧⟨a, b⟩) (DCC ⟦β⟧⟨a', b⟩)
   | pairr     : Red b b'     → Red (DCC ⟦β⟧⟨a, b⟩) (DCC ⟦β⟧⟨a, b'⟩)
   | congrFun  : ¬ HasRedex x → ¬ IsRedex (DCC (f x)) → Red f f' → Red (DCC (f x)) (DCC (f' x))
@@ -783,14 +783,10 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (e.Red e'))) :=
         .some ⟨DCC Σ(α, β'), ⟨.sig₂ h⟩⟩
     | DCC ⟦β⟧(a, b) =>
       if hr : ¬ b.HasRedex then
-        if hr₂ : ¬ a.HasRedex then
-          let ⟨β', ⟨h⟩⟩ ← β.step?
-          .some ⟨DCC ⟦β'⟧(a, b), ⟨.sigβ hr₂ hr h⟩⟩
-        else
-          match a.step? with
-          | .some ⟨a', ⟨h₁⟩⟩ =>
-            .some ⟨DCC ⟦β⟧(a', b), ⟨.sigl hr h₁⟩⟩
-          | .none => .none
+        match a.step? with
+        | .some ⟨a', ⟨h₁⟩⟩ =>
+          .some ⟨DCC ⟦β⟧(a', b), ⟨.sigl hr h₁⟩⟩
+        | .none => .none
       else
         match b.step? with
         | .some ⟨b', ⟨h₁⟩⟩ =>
@@ -798,14 +794,10 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (e.Red e'))) :=
         | .none => .none
     | DCC ⟦β⟧⟨a, b⟩ =>
       if hr : ¬ b.HasRedex then
-        if hr₂ : ¬ a.HasRedex then
-          let ⟨β', ⟨h⟩⟩ ← β.step?
-          .some ⟨DCC ⟦β'⟧⟨a, b⟩, ⟨.pairβ hr₂ hr h⟩⟩
-        else
-          match a.step? with
-          | .some ⟨a', ⟨h₁⟩⟩ =>
-            .some ⟨DCC ⟦β⟧⟨a', b⟩, ⟨.pairl hr h₁⟩⟩
-          | .none => .none
+        match a.step? with
+        | .some ⟨a', ⟨h₁⟩⟩ =>
+          .some ⟨DCC ⟦β⟧⟨a', b⟩, ⟨.pairl hr h₁⟩⟩
+        | .none => .none
       else
         match b.step? with
         | .some ⟨b', ⟨h₁⟩⟩ =>
@@ -856,7 +848,7 @@ theorem Red.complete (h : Red e e') : step? e = .some ⟨e', ⟨h⟩⟩ := by
     rename_i b a a' β
     have h : ¬ (β.mk a b).IsRedex := fun h => by cases h
     unfold step?
-    simp [coupl_not_redex, hredex, hr.HasRedex, ih]
+    simp_all
   | sigr hr ih =>
     rename_i b a a' β
     have h := hr.HasRedex
@@ -864,83 +856,14 @@ theorem Red.complete (h : Red e e') : step? e = .some ⟨e', ⟨h⟩⟩ := by
     simp_all
   | pairl hredex hr ih =>
     rename_i b a a' β
-    have h : ¬ (β.pair a b).IsRedex := fun h => by cases h
+    have h : ¬ (β.mk a b).IsRedex := fun h => by cases h
     unfold step?
-    simp [pair_not_redex, hredex, hr.HasRedex, ih]
+    simp_all
   | pairr hr ih =>
     rename_i b a a' β
     have h := hr.HasRedex
     unfold step?
     simp_all
-  | curr₁ hredex hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [curr_not_redex, hredex, ih₁]
-  | curr₂ hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [curr_not_redex, hr.HasRedex, ih₁]
-  | sig₁ hredex hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [sig_not_redex, hredex, ih₁]
-  | sig₂ hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [sig_not_redex, hr.HasRedex, ih₁]
-  | sigβ hr ih₁ ih₂ ih₃ =>
-    unfold step?
-    simp [coupl_not_redex, ih₁, hr, ih₃]
-  | pairβ hr ih₁ ih₂ ih₃ =>
-    unfold step?
-    simp [pair_not_redex, ih₁, hr, ih₃]
-  | app₁ hredex hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [app_not_redex, hredex, ih₁]
-  | app₂ hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [app_not_redex, hr.HasRedex, ih₁]
-  | comp₁ hredex hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [comp_not_redex, hredex, ih₁]
-  | comp₂ hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [comp_not_redex, hr.HasRedex, ih₁]
-  | fst₁ hredex hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [fst_not_redex, hredex, ih₁]
-  | fst₂ hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [fst_not_redex, hr.HasRedex, ih₁]
-  | snd₁ hredex hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [snd_not_redex, hredex, ih₁]
-  | snd₂ hr ih₁ =>
-    rename_i β α α'
-    unfold step?
-    simp [snd_not_redex, hr.HasRedex, ih₁]
-  | id₁ hr ih₁ =>
-    unfold step?
-    simp [id_not_redex, ih₁]
-  | quot₁ hredex hr ih₁ ih₂ =>
-    rename_i β α α'
-    unfold step?
-    simp [quot_not_redex, hredex, hr, ih₂]
-  | quot₂ hr ih₁ ih₂ =>
-    rename_i β α α'
-    unfold step?
-    simp [quot_not_redex, hr, ih₁.HasRedex, ih₂]
-  | quot₃ ih₁ ih₂ =>
-    rename_i β α α'
-    unfold step?
-    simp [quot_not_redex, ih₁.HasRedex, ih₂]
   | congrFun =>
     rename_i hr _
     have h := hr.HasRedex

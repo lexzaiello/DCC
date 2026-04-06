@@ -419,6 +419,15 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
     | _, _ => .none
   | _ => .none
 
+def reduce (e : Expr) : ((e' : Expr) × (PLift (RedAffReflTrans e e'))) :=
+  match heq : step? e with
+  | .some ⟨e', ⟨h⟩⟩ =>
+    -- This hypothesis allows the recursion. Easy to prove.
+    have _h_size : e'.size.fst < e.size.fst := h.decreasing
+    let ⟨e'', ⟨h⟩⟩ := e'.reduce
+    ⟨e'', ⟨.trans (.single (by assumption)) h⟩⟩
+  | .none => ⟨e, ⟨.refl⟩⟩
+
 /-
 TODO: using global confluence, prove uniqueness of normal forms to show completeness of a full beta-reducer
 - change Judge types to only use Affine reduction

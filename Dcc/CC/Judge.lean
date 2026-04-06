@@ -23,6 +23,12 @@ def Pi.type₁ (m n : Level) : Expr :=
         (DCC Sort n) m.succ n.succ)
       (DCC Sort n) n.succ n.succ
 
+/-
+Σ α β : Sort (max m n)
+-/
+def Sigma.type (m n : Level) : Expr :=
+  DCC (Sort (max m n))
+
 def id.type (α : Expr) (m : Level) : Expr :=
   arrow α α m m
 
@@ -122,10 +128,15 @@ inductive Judge : Expr → Expr → Prop
     → Judge (DCC ⟦β⟧(a, b)) (coup.type α β)
   -- Can derive dependent quotation
   | quot  : Judge α (DCC Sort m)
-    → Judge β (DCC Sort m)
+    → Judge β (DCC Sort n)
     → Judge x α
     → Judge (DCC `(α, β, x)) (arrow α (arrow β α n m) m m)
-  | app   : Judge f (DCC (Π(m, n) α β)) → Judge x α
+  | pi    : Judge (DCC Π(m, n)) (Pi.type m n)
+  | sigma : Judge α (DCC (Sort m))
+    → Judge β (arrow α (DCC (Sort n)) m n.succ)
+    → Judge (DCC Σ(α, β)) (Sigma.type m n)
+  | app   : Judge f (DCC (Π(m, n) α β))
+    → Judge x α
     → Judge (DCC (f x)) (DCC (β ⟦Id(Sort m)⟧(α, x)))
   | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
   | conv  : Judge x A → (∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C) → Judge x B

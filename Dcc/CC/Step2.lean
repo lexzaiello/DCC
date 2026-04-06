@@ -428,6 +428,14 @@ def reduce (e : Expr) : ((e' : Expr) × (PLift (RedAffReflTrans e e'))) :=
     ⟨e'', ⟨.trans (.single (by assumption)) h⟩⟩
   | .none => ⟨e, ⟨.refl⟩⟩
 
+def IsNormAff (e : Expr) : Prop := ¬ ∃ e', RedAff e e'
+
+def reduce_diamond (A B : Expr) : Option ((C : Expr) × (PLift (RedAffReflTrans A C ∧ RedAffReflTrans B C))) :=
+  if heq : (reduce A).fst = (reduce B).fst then
+    .some ⟨(reduce A).fst, ⟨⟨(reduce A).snd.down, heq ▸ (reduce B).snd.down⟩⟩⟩
+  else
+    .none
+
 /-
 TODO: using global confluence, prove uniqueness of normal forms to show completeness of a full beta-reducer
 - change Judge types to only use Affine reduction

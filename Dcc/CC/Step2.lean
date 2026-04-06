@@ -441,4 +441,45 @@ TODO: using global confluence, prove uniqueness of normal forms to show complete
 - change Judge types to only use Affine reduction
 -/
 
+theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) = .some ⟨B, _h₂⟩ := by
+  induction h₁
+  repeat simp [step?]
+  case sigl a a' β b hra ih =>
+    unfold IsNormAff at h_norm
+    simp at h_norm
+    if h : a'.IsNormAff then
+      split
+      have h := ih (_h₂ := ⟨(by assumption)⟩) (by assumption)
+      simp_all
+      congr
+      repeat simp_all
+    else
+      simp [IsNormAff] at h
+      have ⟨_, h⟩ := h
+      exact (h_norm _ (.sigl h)).elim
+  case sigr b b' β a h_r_b ih =>
+    simp [step?]
+    unfold IsNormAff at h_norm
+    simp at h_norm
+    if h : b'.IsNormAff then
+      split
+      have h := ih (_h₂ := ⟨(by assumption)⟩) (by assumption)
+      rename_i a' hred₂ heq₂
+      · exact (h_norm _ (.sigl (by assumption))).elim
+      · simp_all
+        have ⟨h₁, h₂⟩ := ih (_h₂ := ⟨(by assumption)⟩)
+        simp_all
+        congr
+        simp_all
+      simp_all
+    else
+      simp [IsNormAff] at h
+      have ⟨_, h⟩ := h
+      exact (h_norm _ (.sigr h)).elim
+    
+
+theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
+  
+  sorry
+
 end Expr

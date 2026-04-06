@@ -40,26 +40,10 @@ theorem preserves (h_t : Judge x T) (h_red : Red x x') : Judge x' T := by
   | app h_t_f h_t_x ih₁ ih₂ =>
     cases h_red with
     | id =>
-      cases h_t_f with
-      | id =>
-        rename_i α x h_t_α
-        exact Judge.conv h_t_x ⟨α, .refl, .single .quot⟩
-      | conv h_t_α h_conv =>
-        cases h_t_α with
-        | id h =>
-          have ⟨c, h₁, h₂⟩ := h_conv
-          cases h₂ with
-          | refl =>
-            cases h₁ with
-            | refl =>
-              
-              sorry
-            | tail =>
-              sorry
-          | tail =>
-            sorry
-        | conv =>
-          sorry
+      have ⟨m, n, α, β, h_t_f, h_t_x, C, h₁, h₂⟩ := (Judge.app h_t_f h_t_x).app_invert rfl
+      cases h_t_f
+      
+      sorry
   | coup => sorry
   | conv => sorry
 

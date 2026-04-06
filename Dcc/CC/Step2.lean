@@ -230,6 +230,36 @@ theorem RedAffReflTrans.congrFun (h_red : RedAffReflTrans f f') : RedAffReflTran
     rw [← Relation.reflGen_transGen]
     exact .single (RedAffTrans.congrFun h)
 
+theorem RedAffTrans.sigr (h_red : RedAffTrans x x') : RedAffTrans (DCC (⟦β⟧(f, x))) (DCC (⟦β⟧(f, x'))) := by
+  induction h_red with
+  | single h => exact .single (.sigr (by assumption))
+  | tail h => exact .trans (by assumption) (.single (.sigr (by assumption)))
+
+theorem RedAffTrans.sigl (h_red : RedAffTrans f f') : RedAffTrans (DCC (⟦β⟧(f, x))) (DCC (⟦β⟧(f', x))) := by
+  induction h_red with
+  | single h => exact .single (.sigl (by assumption))
+  | tail h => exact .trans (by assumption) (.single (.sigl (by assumption)))
+
+theorem RedAffReflTrans.sigr (h_red : RedAffReflTrans x x') : RedAffReflTrans (DCC (⟦β⟧(f, x))) (DCC (⟦β⟧(f, x'))) := by
+  unfold RedAffReflTrans at h_red
+  rw [← Relation.reflGen_transGen] at h_red
+  match heq : h_red with
+  | .refl => exact .refl
+  | .single h =>
+    unfold RedAffReflTrans
+    rw [← Relation.reflGen_transGen]
+    exact .single (RedAffTrans.sigr h)
+
+theorem RedAffReflTrans.sigl (h_red : RedAffReflTrans f f') : RedAffReflTrans (DCC (⟦β⟧(f, x))) (DCC (⟦β⟧(f', x))) := by
+  unfold RedAffReflTrans at h_red
+  rw [← Relation.reflGen_transGen] at h_red
+  match heq : h_red with
+  | .refl => exact .refl
+  | .single h =>
+    unfold RedAffReflTrans
+    rw [← Relation.reflGen_transGen]
+    exact .single (RedAffTrans.sigl h)
+
 theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflTrans B D ∧ RedAffReflTrans C D := by
   induction h₁ generalizing C with
   | app =>
@@ -289,13 +319,22 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
       | congrArg h => exact ⟨_, .single (.congrArg (.sigl (by assumption))), .single .curr⟩
     | congrArg h => exact ⟨_, .single (.congrArg (.sigr (by assumption))), .single .curr⟩
   | sigl h_r ih =>
-    cases h₂ with
+    cases heq₂ : h₂ with
     | sigl h_r₂ =>
       have ⟨D, h₁, h₂⟩ := ih h_r₂
-      exact ⟨_, .single (.sigl h₁), .single (.sigl (by assumption))⟩
-      
-    | sigr =>
-      sorry
+      exact ⟨_, .sigl h₁, .sigl (by assumption)⟩
+    | sigr h_r₂ =>
+      exact ⟨_, .sigr (.single (by assumption)), .sigl (.single (by assumption))⟩
+  | sigr h_r ih =>
+    cases heq₂ : h₂ with
+    | sigr h_r₂ =>
+      have ⟨D, h₁, h₂⟩ := ih h_r₂
+      exact ⟨_, .sigr h₁, .sigr (by assumption)⟩
+    | sigl h_r₂ =>
+      exact ⟨_, .sigl (.single (by assumption)), .sigr (.single (by assumption))⟩
+  | congrFun =>
+    
+    sorry
 
 end Expr
 

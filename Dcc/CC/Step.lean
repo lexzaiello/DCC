@@ -577,6 +577,15 @@ instance ParRed.instDecidable : Decidable (ParRed A B) :=
   else
     .isFalse (fun h => by simp [h.complete] at *)
 
+instance ParRed.bothDecidable : Decidable (∃ C, ParRed A C ∧ ParRed B C) :=
+  if h : A.red_par.fst = B.red_par.fst then
+    .isTrue ⟨A.red_par.fst, A.red_par.snd.down, h ▸ B.red_par.snd.down⟩
+  else
+    .isFalse (fun ⟨C, h₁, h₂⟩ => by
+      have ha := h₁.complete
+      have hb := h₂.complete
+      simp_all)
+
 theorem red_none : step? e = .none → ¬ Red e e' := fun h ha => by
   simp [ha.complete] at *
 
@@ -592,5 +601,11 @@ instance Red.instDecidable : Decidable (Red A B) :=
 
     have h := red_none (e' := B) h
     .isFalse (fun h => by simp [h.complete] at *)
+
+instance Red.instExistsRedDecidable : Decidable (∃ B, Red A B) :=
+  if heq : (step? A).isSome then
+    .isTrue ⟨_, ((step? A).get heq).snd.down⟩
+  else
+    .isFalse (fun ⟨_, h⟩ => by simp [h.complete] at *)
 
 end Expr

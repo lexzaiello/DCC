@@ -1,40 +1,8 @@
 import Dcc.CC.Ast
-import Dcc.CC.Step
+import Dcc.CC.Step2
 
 /-
-Π B A x
-
-(Σ A (= x))
-
-Π B A x
-
-B receives ⟦x, refl x⟧
-
-refl x : (x = x)
-
-refl x : = A x x
-
-need explicit α and β argument for couples,
-but this is super annoying.
-
-would be nicer if we could instead elevate a couple
-to a sigma pair?
-
-we could just have the default β argument
-be fun _ => B
-
-how does this change how pairs work?
-I think we would need the β argument here too.
-
-⟨f, g⟩ x = ⟦f x, g x⟧
-
-Sigma.mk α β x y
-
-id : Π
-
-Π A B x = ⟦Id(Sort m)⟧(A, x)
-
-α → β = Π(m, n) A `(Σ α, Id(α))
+Π using couples - significantly more annoying. don't do.
 -/
 
 def arrow (α β : Expr) (m n : Level) : Expr :=
@@ -61,6 +29,40 @@ def id.type (α : Expr) (m : Level) : Expr :=
 def comp.type (α γ g : Expr) (m o : Level) : Expr :=
   DCC (Π(m, o) α (γ ∘ g))
 
+def pair.type (α β τ₁ : Expr) (m n o : Level) : Expr :=
+  (arrow α (DCC Σ(τ₁, β)) m (max n o))
+
+def fst.type (α β : Expr) (m n : Level) : Expr :=
+  (arrow (DCC Σ(α, β)) α (max m n) m)
+
+def snd.type (α β : Expr) (m n : Level) : Expr :=
+  (DCC (Π(max m n, n)
+    Σ(α, β) (β ∘ Fst(α, β) ∘ Snd(Sort (max m n), Id(Sort (max m n))))))
+
+def app_e.type (β γ : Expr) (n o : Level) : Expr :=
+  DCC (Π(max o n, o)
+      Σ((Π(n, o) β γ), `(Sort n, (Π(n, o) β γ), β))
+      (γ ∘ (Snd((Π(n, o) β γ), `(Sort n, (Π(n, o) β γ), β)) ∘ Snd(Sort (max o n), Id(Sort (max o n))))))
+
+/-
+x : Π (Σ α β) γ
+Λ(x) : Π α (flip Π γ)
+-/
+
+def curr.type (α β γ : Expr) (m n o : Level) : Expr :=
+  (DCC (Π(m, o) α
+      (App(`(Sort o.succ, #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Sort o),
+        #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ)) ∘
+        ⟦`(Sort o.succ, #(Pi.type₁ n o), #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ))⟧⟨
+          Π(n, o) ∘ β ∘ Snd(Sort m, Id(Sort m)),
+          `(#(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Σ(Sort m, Id(Sort m)), γ)⟩)))
+
+def coup.type (α β : Expr) : Expr :=
+  (DCC Σ(α, β))
+
+def quot.type (α β : Expr) (n m : Level) : Expr :=
+  (arrow α (arrow β α n m) m m)
+
 namespace Expr
 
 inductive Judge : Expr → Expr → Prop
@@ -82,17 +84,16 @@ inductive Judge : Expr → Expr → Prop
   | pair  : Judge β (arrow τ₁ (DCC Sort o) n o.succ)
     → Judge f (arrow α τ₁ m n)
     → Judge g (DCC (Π(m, o) α (β ∘ f ∘ Snd(Sort m, Id(Sort m)))))
-    → Judge (DCC ⟦β⟧⟨f, g⟩) (arrow α (DCC Σ(τ₁, β)) m (max n o))
+    → Judge (DCC ⟦β⟧⟨f, g⟩) (pair.type α β τ₁ m n o)
   -- fst(α, β) : (Σ α β) → α
   | fst   : Judge α (DCC Sort m)
     → Judge β (arrow α (DCC Sort n) m n.succ)
-    → Judge (DCC Fst(α, β)) (arrow (DCC Σ(α, β)) α (max m n) m)
+    → Judge (DCC Fst(α, β)) (fst.type α β m n)
   /- snd(α, β) : 
   -/
   | snd   : Judge α (DCC Sort m)
     → Judge β (arrow α (DCC Sort n) m n.succ)
-    → Judge (DCC Snd(α, β)) (DCC (Π(max m n, n)
-    Σ(α, β) (β ∘ Fst(α, β) ∘ Snd(Sort (max m n), Id(Sort (max m n))))))
+    → Judge (DCC Snd(α, β)) (snd.type α β m n)
   /-
     App f x types are nondependent.
     At least, x does not depend on x. need to bake that into ⟦β⟧
@@ -108,12 +109,7 @@ inductive Judge : Expr → Expr → Prop
       β ∘ Snd(Sort m, Id(Sort m))
   -/
   | curr  : Judge x (DCC (Π(max m n, o) Σ(α, β) γ))
-    → Judge (DCC Λ(β, x)) (DCC (Π(m, o) α
-      (App(`(Sort o.succ, #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Sort o),
-        #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ)) ∘
-        ⟦`(Sort o.succ, #(Pi.type₁ n o), #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ))⟧⟨
-          Π(n, o) ∘ β ∘ Snd(Sort m, Id(Sort m)),
-          `(#(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Σ(Sort m, Id(Sort m)), γ)⟩)))
+    → Judge (DCC Λ(β, x)) (curr.type α β γ m n o)
   /-
     App(γ, β) : (Π(max o n, o)
       (Σ(o, n) (Π(n, o) β γ) `((Π(n, o) β γ), β))
@@ -121,9 +117,7 @@ inductive Judge : Expr → Expr → Prop
   -/
   | app_e : Judge β (DCC Sort n)
     → Judge γ (arrow β (DCC (Sort o)) n o.succ)
-    → Judge (DCC App(γ, β)) (DCC (Π(max o n, o)
-      Σ((Π(n, o) β γ), `(Sort n, (Π(n, o) β γ), β))
-      (γ ∘ (Snd((Π(n, o) β γ), `(Sort n, (Π(n, o) β γ), β)) ∘ Snd(Sort (max o n), Id(Sort (max o n)))))))
+    → Judge (DCC App(γ, β)) (app_e.type β γ n o)
   /-
     a : α
     b : β a
@@ -131,7 +125,7 @@ inductive Judge : Expr → Expr → Prop
   -/
   | coup  : Judge a α
     → Judge b (DCC (β a))
-    → Judge (DCC ⟦β⟧(a, b)) (DCC Σ(α, β))
+    → Judge (DCC ⟦β⟧(a, b)) (coup.type α β)
   -- Can derive dependent quotation
   | quot  : Judge α (DCC Sort m)
     → Judge β (DCC Sort m)
@@ -140,5 +134,24 @@ inductive Judge : Expr → Expr → Prop
   | app   : Judge f (DCC (Π(m, n) α β)) → Judge x α
     → Judge (DCC (f x)) (DCC (β ⟦Id(Sort m)⟧(α, x)))
   | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
+  | conv  : Judge x A → Red A B → Judge x B
+  | conv' : Judge x B → Red A B → Judge x A
+
+/-def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) := do
+  match e with
+  | DCC Sort m => return ⟨DCC Sort m.succ, ⟨.sort⟩⟩
+  | DCC Id(α)  => match ← α.infer with
+    | ⟨DCC Sort m, ⟨h⟩⟩ => return ⟨id.type α m, ⟨.id h⟩⟩
+    | _ => .none
+  | DCC f ∘ g => match ← g.infer, ← f.infer with
+    | ⟨DCC (Π(m, n₁) α `(Sort n₂, Σ(Sort m₂, Id(Sort m₃)), β)), ⟨h₁⟩⟩, ⟨DCC (Π(n₃, o) β₂ γ), ⟨h₂⟩⟩ =>
+      if heq₁ : m = m₂ ∧ m = m₃ ∧ n₁ = n₂ ∧ n₁ = n₃ ∧ β = β₂ then
+      by
+        have ⟨heq₁, heq₂, heq₃, heq₄, heq₅⟩ := heq₁
+        simp [← heq₁, ← heq₂, ← heq₃, ← heq₄, ← heq₅] at *
+        exact .some ⟨comp.type α γ g m o, ⟨.comp h₁ h₂⟩⟩
+      else
+        .none
+    | _, _ => .none-/
 
 end Expr

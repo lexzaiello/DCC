@@ -21,6 +21,7 @@ we can derive `()
 
 inductive Expr where
   | sort  : Level → Expr
+  | flip  : Expr  → Expr
   | id    : Expr  → Expr
   | fst   : Expr  → Expr  → Expr
   | snd   : Expr  → Expr  → Expr
@@ -38,6 +39,7 @@ deriving BEq, Repr, DecidableEq
 declare_syntax_cat expr
 
 syntax "#(" term ")"                                    : expr
+syntax:max "Flip(" expr ")"                             : expr
 syntax:max "Id(" expr ")"                               : expr
 syntax:max "Fst(" expr,* ")"                            : expr
 syntax:max "App(" expr,* ")"                            : expr
@@ -65,6 +67,7 @@ macro_rules
   | `(DCC ⟦$β:expr⟧($x:expr, $y:expr))   => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                  => `(Expr.sort $m)
   | `(DCC Σ($m:expr, $n:expr))           => `(Expr.sigma (DCC $m) (DCC $n))
+  | `(DCC Flip($e:expr))                 => `(Expr.flip (DCC $e))
   | `(DCC Id($α:expr))                   => `(Expr.id (DCC $α))
   | `(DCC Fst($α:expr, $β:expr))         => `(Expr.fst (DCC $α) (DCC $β))
   | `(DCC Snd($α:expr, $β:expr))         => `(Expr.snd (DCC $α) (DCC $β))
@@ -78,19 +81,20 @@ namespace Expr
 
 def toFormat (e : Expr) : Std.Format :=
   match e with
-  | (DCC Sort m)    => s!"Sort {m}"
-  | (DCC Id(α))     => "Id(" ++ α.toFormat ++ ")"
-  | (DCC `(α, β, x))   => "`(" ++ α.toFormat ++ ", " ++ x.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC Fst(α, β)) => "Fst(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC Snd(α, β)) => "Snd(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC App(α, β)) => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC Λ(β, e))   => "Λ(" ++ β.toFormat ++ "," ++ e.toFormat ++ ")"
-  | (DCC Π(m, n))   => "Π" ++ (.bracket "(" ((Std.format m) ++ ", " ++ (Std.format n)) ")")
-  | (DCC ⟦β⟧⟨a, b⟩) => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
-  | (DCC ⟦β⟧(a, b)) => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
-  | (DCC Σ(m, n))   => "Σ" ++ (.bracket "(" (m.toFormat ++ ", " ++ n.toFormat) ")")
-  | (DCC f ∘ g)     => f.toFormat ++ " ∘ " ++ g.toFormat
-  | (DCC (f x))     => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
+  | (DCC Sort m)     => s!"Sort {m}"
+  | (DCC Id(α))      => "Id(" ++ α.toFormat ++ ")"
+  | (DCC `(α, β, x)) => "`(" ++ α.toFormat ++ ", " ++ x.toFormat ++ ", " ++ β.toFormat ++ ")"
+  | (DCC Flip(e))    => "Flip(" ++ e.toFormat ++ ")"
+  | (DCC Fst(α, β))  => "Fst(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
+  | (DCC Snd(α, β))  => "Snd(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
+  | (DCC App(α, β))  => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
+  | (DCC Λ(β, e))    => "Λ(" ++ β.toFormat ++ "," ++ e.toFormat ++ ")"
+  | (DCC Π(m, n))    => "Π" ++ (.bracket "(" ((Std.format m) ++ ", " ++ (Std.format n)) ")")
+  | (DCC ⟦β⟧⟨a, b⟩)  => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
+  | (DCC ⟦β⟧(a, b))  => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
+  | (DCC Σ(m, n))    => "Σ" ++ (.bracket "(" (m.toFormat ++ ", " ++ n.toFormat) ")")
+  | (DCC f ∘ g)      => f.toFormat ++ " ∘ " ++ g.toFormat
+  | (DCC (f x))      => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
 
 instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
 instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩

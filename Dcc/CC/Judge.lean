@@ -128,7 +128,7 @@ inductive Judge : Expr → Expr → Prop
   | app   : Judge f (DCC (Π(m, n) α β)) → Judge x α
     → Judge (DCC (f x)) (DCC (β ⟦Id(Sort m)⟧(α, x)))
   | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
-  | conv  : Judge x A → Red A B → Judge x B
+  | conv  : Judge x A → (∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C) → Judge x B
 
 /-def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) := do
   match e with

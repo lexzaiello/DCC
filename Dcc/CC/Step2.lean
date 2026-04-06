@@ -441,8 +441,18 @@ TODO: using global confluence, prove uniqueness of normal forms to show complete
 - change Judge types to only use Affine reduction
 -/
 
+theorem RedAff.norm_unique (h₁ : RedAff A B) (h_norm : B.IsNormAff) (h₂ : RedAff A C) (h_norm₂ : C.IsNormAff) : B = C := by
+  have ⟨D, ha, hb⟩ := h₁.conf h₂
+  match ha.cases_head, hb.cases_head with
+  | .inl h₁, .inl h₂ =>
+    simp_all
+  | .inr ⟨c₁, h₁, h₂⟩, _ =>
+    exact h_norm.elim ⟨_, h₁⟩
+  | _, .inr ⟨c₁, h₁, h₂⟩ =>
+    exact h_norm₂.elim ⟨_, h₁⟩
+
 theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) = .some ⟨B, _h₂⟩ := by
-  induction h₁
+  induction heq : h₁
   repeat simp [step?]
   case sigl a a' β b hra ih =>
     unfold IsNormAff at h_norm
@@ -476,7 +486,13 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
       simp [IsNormAff] at h
       have ⟨_, h⟩ := h
       exact (h_norm _ (.sigr h)).elim
+  case congrFun f f' x h_r_f ih =>
+    have h : f'.IsNormAff := fun ⟨e', h⟩ => h_norm ⟨_, .congrFun h⟩
+    have h := ih h_r_f h (_h₂ := ⟨by assumption⟩) rfl
+    unfold step?
+    simp_all
     
+    sorry
 
 theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
   

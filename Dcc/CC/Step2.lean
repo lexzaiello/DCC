@@ -397,4 +397,31 @@ theorem RedAffReflTrans.conf (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTran
       rw [← heq₁]
       exact ⟨_, .refl, h₁⟩
 
+def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
+  match e with
+  | (DCC (App(_δ, _τ) ⟦_β⟧(f, x)))  => .some ⟨(DCC (f x)), ⟨.app⟩⟩
+  | (DCC (Fst(_δ, _τ) ⟦_β⟧(a, _b))) => .some ⟨a, ⟨.fst⟩⟩
+  | (DCC (Snd(_δ, _τ) ⟦_β⟧(_a, b))) => .some ⟨b, ⟨.snd⟩⟩
+  | (DCC (Flip(e) x y))             => .some ⟨(DCC (e y x)), ⟨.flip⟩⟩
+  | (DCC (Id(_α) x))                => .some ⟨x, ⟨.id⟩⟩
+  | (DCC (`(_α, _β, x) _y))         => .some ⟨x, ⟨.quot⟩⟩
+  | (DCC ((x ∘ y) z))               => .some ⟨(DCC (x (y z))), ⟨.comp⟩⟩
+  | (DCC (Λ(β, x) y z))             => .some ⟨(DCC (x ⟦β⟧(y, z))), ⟨.curr⟩⟩
+  | (DCC ⟦β⟧(a, b))                 =>
+    match a.step?, b.step? with
+    | .some ⟨a', ⟨h₁⟩⟩, _ => .some ⟨(DCC ⟦β⟧(a', b)), ⟨.sigl h₁⟩⟩
+    | _, .some ⟨b', ⟨h₁⟩⟩ => .some ⟨(DCC ⟦β⟧(a, b')), ⟨.sigr h₁⟩⟩
+    | _, _ => .none
+  | DCC (f x) =>
+    match f.step?, x.step? with
+    | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC (f' x)), ⟨.congrFun h₁⟩⟩
+    | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC (f x')), ⟨.congrArg h₁⟩⟩
+    | _, _ => .none
+  | _ => .none
+
+/-
+TODO: using global confluence, prove uniqueness of normal forms to show completeness of a full beta-reducer
+- change Judge types to only use Affine reduction
+-/
+
 end Expr

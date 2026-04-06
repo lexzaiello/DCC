@@ -46,16 +46,10 @@ def app_e.type (β γ : Expr) (n o : Level) : Expr :=
 
 /-
 x : Π (Σ α β) γ
-Λ(x) : Π α (flip Π γ)
+Λ(x) : Π(m, o) α ((Flip(Π(n, o)) γ) ∘ β)
 -/
-
 def curr.type (α β γ : Expr) (m n o : Level) : Expr :=
-  (DCC (Π(m, o) α
-      (App(`(Sort o.succ, #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Sort o),
-        #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ)) ∘
-        ⟦`(Sort o.succ, #(Pi.type₁ n o), #(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ))⟧⟨
-          Π(n, o) ∘ β ∘ Snd(Sort m, Id(Sort m)),
-          `(#(arrow (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ), Σ(Sort m, Id(Sort m)), γ)⟩)))
+  (DCC (Π(m, o) α ((Flip(Π(n, o)) γ) ∘ β)))
 
 def coup.type (α β : Expr) : Expr :=
   (DCC Σ(α, β))

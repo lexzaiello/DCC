@@ -190,15 +190,19 @@ theorem RedAffTrans.decreasing : RedAffTrans e e' → (size e').fst < (size e).f
     have h := hr.decreasing
     grind
 
-def RedAff.SN (e : Expr) : Acc (fun b a => RedAff a b) e := Acc.intro e (fun e' hr => by
+def sn (e : Expr) : Acc (fun b a => RedAff a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing
-  exact RedAff.SN e')
+  exact e'.sn)
 termination_by e
 
-def RedAffTrans.SN (e : Expr) : Acc (fun b a => RedAffTrans a b) e := Acc.intro e (fun e' hr => by
+def sn_trans (e : Expr) : Acc (fun b a => RedAffTrans a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing
-  exact RedAffTrans.SN e')
+  exact e'.sn_trans)
 termination_by e
+
+instance instWellFounded : WellFounded (fun a b => RedAff b a) := ⟨sn⟩
+
+instance instWellFoundedTrans : WellFounded (fun a b => RedAffTrans b a) := ⟨sn_trans⟩
 
 theorem RedAffTrans.congrArg (h_red : RedAffTrans x x') : RedAffTrans (DCC (f x)) (DCC (f x')) := by
   induction h_red with
@@ -371,12 +375,26 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
       have ⟨D, h₁, h₂⟩ := ih h
       exact ⟨_, .congrArg h₁, .congrArg h₂⟩
 
+theorem RedAffReflTrans.conf (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTrans A C) : ∃ D, RedAffReflTrans B D ∧ RedAffReflTrans C D := by
+  have h := A.sn
+  induction h generalizing B C with
+  | intro _ ih₁ ih₂ =>
+    match h₁.cases_head, h₂.cases_head with
+    | .inr ⟨c₁, ha, hrefl₁⟩, .inr ⟨c₂, hb, hrefl₂⟩ =>
+      have ⟨D₃, h₅, h₆⟩ := ha.conf hb
+      have ⟨D₄, hB_D₄, hD₃_D₄⟩ := ih₂ c₁ ha hrefl₁ h₅
+      have hc₂_D₄ : c₂.RedAffReflTrans D₄ := .trans h₆ hD₃_D₄
+      have ⟨D₅, hC_D₅, hD₄_D₅⟩ := ih₂ c₂ hb hrefl₂ hc₂_D₄
+      have hB_D₅ : B.RedAffReflTrans D₅ := .trans hB_D₄ hD₄_D₅
+      exact ⟨D₅, hB_D₅, hC_D₅⟩
+    | .inl heq₁, .inl heq₂ =>
+      rw [← heq₁, ← heq₂]
+      exact ⟨_, .refl, .refl⟩
+    | .inl heq₁, .inr _ =>
+      rw [← heq₁]
+      exact ⟨_, h₂, .refl⟩
+    | .inr _, .inl heq₁ =>
+      rw [← heq₁]
+      exact ⟨_, .refl, h₁⟩
+
 end Expr
-
-/-
-Types reduce under SN:
-
-- set of all possible types
-- conversion is the only way to get another type
-
--/

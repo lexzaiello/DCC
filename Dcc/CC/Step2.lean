@@ -332,9 +332,44 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
       exact ⟨_, .sigr h₁, .sigr (by assumption)⟩
     | sigl h_r₂ =>
       exact ⟨_, .sigl (.single (by assumption)), .sigr (.single (by assumption))⟩
-  | congrFun =>
-    
-    sorry
+  | congrFun h_r ih =>
+    cases h₂
+    repeat cases h_r
+    · rename_i h; cases h
+    · exact ⟨_, .single .flip, .single (.congrArg (by assumption))⟩
+    repeat cases h_r
+    · rename_i h; cases h
+    · exact ⟨_, .single .curr, .single (.congrArg (.sigl (by assumption)))⟩
+    case congrFun f f' x f'' h =>
+      have ⟨D, h₁, h₂⟩ := ih h
+      exact ⟨_, .congrFun h₁, .congrFun h₂⟩
+    case congrArg f f' x x'' h_x =>
+      exact ⟨_, .congrArg (.single (by assumption)), .congrFun (.single (by assumption))⟩
+  | congrArg h_r ih =>
+    cases h₂ with
+    | app =>
+      cases h_r
+      · exact ⟨_, .single .app, .congrFun (.single (by assumption))⟩
+      · exact ⟨_, .single .app, .congrArg (.single (by assumption))⟩
+    | fst =>
+      cases h_r
+      · rename_i h
+        exact ⟨_, .single .fst, .single h⟩
+      · exact ⟨_, .single .fst, .refl⟩
+    | snd =>
+      cases h_r
+      · exact ⟨_, .single .snd, .refl⟩
+      · rename_i h
+        exact ⟨_, .single .snd, .single h⟩
+    | id => exact ⟨_, .single .id, .single (by assumption)⟩
+    | flip => exact ⟨_, .single .flip, .single (.congrFun (.congrArg (by assumption)))⟩
+    | quot => exact ⟨_, .single .quot, .refl⟩
+    | comp => exact ⟨_, .single .comp, .congrArg (.congrArg (.single (by assumption)))⟩
+    | curr => exact ⟨_, .single .curr, .congrArg (.sigr (.single (by assumption)))⟩
+    | congrFun => exact ⟨_, .congrFun (.single (by assumption)), .congrArg (.single (by assumption))⟩
+    | congrArg h =>
+      have ⟨D, h₁, h₂⟩ := ih h
+      exact ⟨_, .congrArg h₁, .congrArg h₂⟩
 
 end Expr
 

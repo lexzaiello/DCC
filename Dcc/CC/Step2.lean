@@ -659,23 +659,16 @@ theorem reduce_norm (h : (reduce A).fst = B) : B.IsNormAff := by
     · rename_i hred heq
       have h := ih _ hred rfl
       simp_all
-    · simp_all
-      rename_i heq
+    · rename_i heq
       have h := step?_none heq
       simp_all
 
 theorem RedAff.reduce_same (h : RedAff A B) : (reduce A).fst = (reduce B).fst := by
-  induction A using instWellFounded.induction generalizing B with
-  | h a ih =>
-    unfold reduce
-    · split
-      rename_i h_red₂ _
-      simp_all
-      split
-      · have heq := ih _ h (by assumption)
-        
-        sorry
-      · sorry
+  apply RedAffReflTrans.norm_unique
+  · exact (reduce _).snd.down
+  · exact reduce_norm rfl
+  · exact .trans (.single h) (reduce _).snd.down
+  · exact reduce_norm rfl
 
 theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
   match h₁.cases_head with

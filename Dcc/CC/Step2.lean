@@ -681,4 +681,19 @@ theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNorm
     rw [h₁.reduce_same, h]
 termination_by A
 
+instance : Decidable (RedAffReflTrans A B ∧ B.IsNormAff) :=
+  if h : (reduce A).fst = B then
+    .isTrue (⟨h ▸ A.reduce.snd.down, reduce_norm h⟩)
+  else
+    .isFalse (fun ⟨h_red, heq⟩ => by simp [h_red.complete heq] at *)
+
+instance : Decidable (∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C ∧ C.IsNormAff) :=
+  if heq : (reduce A).fst = (reduce B).fst then .isTrue
+    ⟨_, (reduce A).snd.down, heq ▸ (reduce B).snd.down, reduce_norm rfl⟩
+  else
+    .isFalse (fun ⟨C, h₁, h₂, h_norm⟩ => by
+      have ha := h₁.complete h_norm
+      have hb := h₂.complete h_norm
+      simp_all)
+
 end Expr

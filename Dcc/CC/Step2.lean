@@ -541,4 +541,134 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
     · cases h₁
     · simp_all
 
+theorem IsNormAff.complete_reduce (h : A.IsNormAff) : (reduce A).fst = A := by
+  unfold reduce
+  rw [h.complete]
+
+theorem RedAff.complete' (h_red : RedAff A B) : (step? A).isSome := by
+  unfold step?
+  split
+  repeat rfl
+  · rename_i e β a b
+    cases h_red
+    · rename_i a' h_red_a
+      have h := h_red_a.complete'
+      split
+      · rfl
+      · simp_all
+      · rename_i ih₁ ih₂
+        have heq : a.step? = .some ⟨(a.step?.get h).fst, (a.step?.get h).snd⟩ := by
+          simp_all
+        exact (ih₁ _ (a.step?.get h).snd.down heq).elim
+    · rename_i b' h_red_b
+      have h := h_red_b.complete'
+      split
+      · rfl
+      · simp_all
+      · rename_i ih₁ ih₂
+        have heq : b.step? = .some ⟨(b.step?.get h).fst, (b.step?.get h).snd⟩ := by
+          simp_all
+        exact (ih₂ _ (b.step?.get h).snd.down heq).elim
+  · rename_i e f x
+    simp_all
+    cases h_red
+    case fst | snd | app  =>
+      simp_all
+      rename_i h
+      exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
+    case flip | quot | id | comp | curr =>
+      simp_all
+    case congrFun =>
+      split
+      · rfl
+      · rfl
+      · rename_i ih₁ ih₂
+        rename_i _ f₀ _ _ _ _ _ _ _ h_r_f _ _
+        have h_some := h_r_f.complete'
+        have heq : f₀.step? = .some ⟨(f₀.step?.get h_some).fst, (f₀.step?.get h_some).snd⟩ := by
+          simp_all
+        exact (ih₁ (f₀.step?.get h_some).fst (f₀.step?.get h_some).snd.down heq).elim
+    case congrArg =>
+      split
+      · rfl
+      · rfl
+      · rename_i ih₁ ih₂
+        rename_i _ _ x₀ _ _ _ _ _ _ h_r_x _ _
+        have h_some := h_r_x.complete'
+        have heq : x₀.step? = .some ⟨(x₀.step?.get h_some).fst, (x₀.step?.get h_some).snd⟩ := by
+          simp_all
+        exact (ih₂ (x₀.step?.get h_some).fst (x₀.step?.get h_some).snd.down heq).elim
+  · cases h_red
+    repeat simp_all
+    · rename_i h; exact h _ _ _ _ rfl rfl rfl rfl
+    · simp_all
+    · simp_all; rename_i h; exact h _ _ _ _ rfl rfl rfl rfl
+    · simp_all
+    · simp_all
+    · simp_all
+    case congrArg h =>
+      rename_i _ x₉ _ f _ _ _ _ _ _ _ _ _ _
+      exact (h f x₉ rfl).elim
+
+/-instance : Decidable (IsNormAff A) :=
+  if heq : (step? A).isSome then
+    let h := (step? A).get heq
+    .isFalse (fun _h => by
+      let h' := _h.complete
+      obtain ⟨fst, snd⟩ := h
+      simp_all only [Option.isSome_none, Bool.false_eq_true])
+  else .isTrue (fun h => by sorry)
+
+instance : Decidable (RedAff A B ∧ B.IsNormAff) :=
+  sorry
+  /-if h : (step? A).isSome then
+    let e' := ((step? A).get h).fst
+    if h : 
+    sorry
+  else
+    .isFalse (fun ⟨h_red, h_norm⟩ =>
+      have h := h_red.complete h_norm
+      by simp_all)-/
+
+/-theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
+  refine Relation.TransGen.head_induction_on h₁ ?_ ?_
+  have h := h_norm.complete_reduce
+  · intro _ h
+    have h := h.complete (by assumption)
+    unfold reduce
+    rw [h]
+    split
+    · simp_all
+      exact h_norm.complete_reduce
+    · simp_all
+  · intro c c' h_red h_r_trans h_r_eq
+    unfold reduce
+    split
+    · simp_all
+      
+      sorry
+    · sorry-/
+
+
+theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
+  induction h₁ with
+  | single h_red =>
+    have h := h_red.complete h_norm
+    unfold reduce
+    rw [h]
+    split
+    · simp_all
+      exact h_norm.complete_reduce
+    · simp_all
+  | tail =>
+    rename_i h_r_trans h_red ih
+    rename_i c
+    have _h := h_red.decreasing
+    have _h : sizeOf c < sizeOf B := by
+      
+      sorry
+    exact RedAffTrans.complete (.trans h_r_trans (.single h_red)) h_norm
+termination_by B
+-/
+
 end Expr

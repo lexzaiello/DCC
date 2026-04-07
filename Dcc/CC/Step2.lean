@@ -622,15 +622,24 @@ instance : Decidable (IsNormAff A) :=
     by simp_all)
 
 instance : Decidable (RedAff A B ∧ B.IsNormAff) :=
-  sorry
-  /-if h : (step? A).isSome then
-    let e' := ((step? A).get h).fst
-    if h : 
-    sorry
+  if h : (step? A).isSome then
+    if heq : ((step? A).get h).fst = B then
+      if h_norm : IsNormAff ((step? A).get h).fst then
+        .isTrue (⟨heq ▸ ((step? A).get h).snd.down, heq ▸ h_norm⟩)
+      else
+        .isFalse (fun ⟨h_r_a, h_norm⟩ => by
+          have h := h_r_a.complete h_norm
+          simp_all)
+    else
+      .isFalse (fun ⟨h_r_a, h_norm⟩ => by
+        have heq₂ := h_r_a.complete h_norm
+        have heq₃ : A.step? = .some ⟨((step? A).get h).fst, (A.step?.get h).snd⟩ := by
+          simp_all
+        simp_all)
   else
     .isFalse (fun ⟨h_red, h_norm⟩ =>
       have h := h_red.complete h_norm
-      by simp_all)-/
+      by simp_all)
 
 /-theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
   refine Relation.TransGen.head_induction_on h₁ ?_ ?_
@@ -671,6 +680,5 @@ theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : B.IsNormAff) : (
       sorry
     exact RedAffTrans.complete (.trans h_r_trans (.single h_red)) h_norm
 termination_by B
--/
 
 end Expr

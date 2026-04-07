@@ -681,44 +681,4 @@ theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNorm
     rw [h₁.reduce_same, h]
 termination_by A
 
-theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
-  refine Relation.TransGen.head_induction_on h₁ ?_ ?_
-  have h := h_norm.complete_reduce
-  · intro _ h
-    have h := h.complete (by assumption)
-    unfold reduce
-    rw [h]
-    split
-    · simp_all
-      exact h_norm.complete_reduce
-    · simp_all
-  · intro c c' h_red h_r_trans h_r_eq
-    unfold reduce
-    split
-    · simp_all
-      
-      sorry
-    · sorry
-
-
-theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
-  induction h₁ with
-  | single h_red =>
-    have h := h_red.complete h_norm
-    unfold reduce
-    rw [h]
-    split
-    · simp_all
-      exact h_norm.complete_reduce
-    · simp_all
-  | tail =>
-    rename_i h_r_trans h_red ih
-    rename_i c
-    have _h := h_red.decreasing
-    have _h : sizeOf c < sizeOf B := by
-      
-      sorry
-    exact RedAffTrans.complete (.trans h_r_trans (.single h_red)) h_norm
-termination_by B
-
 end Expr

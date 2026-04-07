@@ -123,7 +123,8 @@ inductive Judge : Expr → Expr → Prop
     b : β a
     ⟦β⟧(a, b) : Σ α β
   -/
-  | coup  : Judge a α
+  | coup  : Judge β (arrow α (DCC (Sort n)) m n.succ)
+    → Judge a α
     → Judge b (DCC (β a))
     → Judge (DCC ⟦β⟧(a, b)) (coup.type α β)
   -- Can derive dependent quotation

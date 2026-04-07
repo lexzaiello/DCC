@@ -610,14 +610,16 @@ theorem RedAff.complete' (h_red : RedAff A B) : (step? A).isSome := by
       rename_i _ x₉ _ f _ _ _ _ _ _ _ _ _ _
       exact (h f x₉ rfl).elim
 
-/-instance : Decidable (IsNormAff A) :=
+instance : Decidable (IsNormAff A) :=
   if heq : (step? A).isSome then
     let h := (step? A).get heq
     .isFalse (fun _h => by
       let h' := _h.complete
       obtain ⟨fst, snd⟩ := h
       simp_all only [Option.isSome_none, Bool.false_eq_true])
-  else .isTrue (fun h => by sorry)
+  else .isTrue (fun ⟨_, h⟩ =>
+    have h := h.complete'
+    by simp_all)
 
 instance : Decidable (RedAff A B ∧ B.IsNormAff) :=
   sorry

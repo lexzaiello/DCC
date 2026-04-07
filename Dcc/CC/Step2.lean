@@ -134,7 +134,7 @@ theorem size_pos : 0 < (size e).fst := by
 theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
   | sort | pi => rfl
-  | flip h ih₁ =>
+  | flip h₁ ih₁ =>
     unfold size
     rw [ih₁]
   | curr h₁ h₂ ih₁ ih₂ =>
@@ -302,7 +302,7 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
     | congrFun h =>
       cases h with
       | congrFun h => cases h
-      | congrArg => exact ⟨_, .single (.congrArg (by assumption)), .single .flip⟩
+      | congrArg h => exact ⟨_, .single (.congrArg h), .single .flip⟩
     | congrArg => exact ⟨_, .single (.congrFun (.congrArg (by assumption))), .single .flip⟩
   | quot =>
     cases h₂ with
@@ -338,9 +338,6 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
       exact ⟨_, .sigl (.single (by assumption)), .sigr (.single (by assumption))⟩
   | congrFun h_r ih =>
     cases h₂
-    repeat cases h_r
-    · rename_i h; cases h
-    · exact ⟨_, .single .flip, .single (.congrArg (by assumption))⟩
     repeat cases h_r
     · rename_i h; cases h
     · exact ⟨_, .single .curr, .single (.congrArg (.sigl (by assumption)))⟩
@@ -451,7 +448,217 @@ theorem RedAff.norm_unique (h₁ : RedAff A B) (h_norm : B.IsNormAff) (h₂ : Re
   | _, .inr ⟨c₁, h₁, h₂⟩ =>
     exact h_norm₂.elim ⟨_, h₁⟩
 
-theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) = .some ⟨B, _h₂⟩ := by
+theorem RedAffReflTrans.norm_unique (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff) (h₂ : RedAffReflTrans A C) (h_norm₂ : C.IsNormAff) : B = C := by
+  have ⟨D, ha, hb⟩ := h₁.conf h₂
+  match ha.cases_head, hb.cases_head with
+  | .inl h₁, .inl h₂ =>
+    simp_all
+  | .inr ⟨c₁, h₁, h₂⟩, _ =>
+    exact h_norm.elim ⟨_, h₁⟩
+  | _, .inr ⟨c₁, h₁, h₂⟩ =>
+    exact h_norm₂.elim ⟨_, h₁⟩
+
+@[simp] theorem RedAff.no_refl : ¬ RedAff A A := fun h => by
+  have h := h.decreasing
+  omega
+
+theorem IsNormAff.complete (h : A.IsNormAff) : (step? A) = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨e', ⟨h₂⟩⟩ heq
+  exact (h ⟨_, h₂⟩)
+
+@[simp] theorem IsNormAff.congrFun (h : (DCC (f x)).IsNormAff) : f.IsNormAff := fun ⟨_, h₂⟩ =>
+  h ⟨_, .congrFun h₂⟩
+
+@[simp] theorem IsNormAff.congrArg (h : (DCC (f x)).IsNormAff) : x.IsNormAff := fun ⟨_, h₂⟩ =>
+  h ⟨_, .congrArg h₂⟩
+
+@[simp] theorem IsNormAff.sigl (h : (DCC ⟦β⟧(a, b)).IsNormAff) : a.IsNormAff := fun ⟨_, h₂⟩ =>
+  h ⟨_, .sigl h₂⟩
+
+@[simp] theorem IsNormAff.sigr (h : (DCC ⟦β⟧(a, b)).IsNormAff) : b.IsNormAff := fun ⟨_, h₂⟩ =>
+  h ⟨_, .sigr h₂⟩
+
+theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) = .some ⟨B, ⟨h₁⟩⟩ := by
+  induction A generalizing B
+  repeat cases h₁
+  case mk.sigl ih₁ ih₂ ih₃ _ h_r =>
+    simp [step?, ih₂ h_r h_norm.sigl]
+  case mk.sigr ih₁ ih₂ ih₃ _ h_r  =>
+    simp [step?, ih₃ h_r h_norm.sigr, h_norm.sigl.complete]
+  · cases h₁
+  · cases h₁
+  · cases h₁
+  case app f x ih₁ ih₂ =>
+    induction f generalizing x
+    case sort =>
+      cases heq : h₁
+      · rename_i h; cases h
+      · simp [step?, RedAff.complete (by assumption) h_norm.congrArg]
+    case flip =>
+      cases heq : h₁
+      · rename_i h _; cases h
+      · rename_i h _
+        simp [step?, h.complete h_norm.congrArg]
+    case id =>
+      cases heq : h₁
+      · simp [step?]
+      · rename_i h _; cases h
+      · have h := h_norm.complete
+        simp [step?] at h
+    case quot =>
+      cases heq : h₁
+      · simp [step?]
+      · rename_i h _ _ _; cases h
+      · have h := h_norm.complete
+        simp [step?] at h
+    
+    case fst | snd =>
+      unfold step?
+      induction x
+      · simp
+        cases h₁
+        · simp [ih₁ (by assumption) h_norm.congrFun]
+        · rename_i h _ _
+          cases h
+      · simp
+        cases h₁
+        · simp [ih₁ (by assumption) h_norm.congrFun]
+        · rename_i h _ _ _; cases h
+      · simp
+        cases h₁
+        · simp [ih₁ (by assumption) h_norm.congrFun]
+        · rename_i h _ _ _; cases h
+      · simp
+        cases h₁
+        · simp [ih₁ (by assumption) h_norm.congrFun]
+        · rename_i h _ _ _ _; cases h
+      · simp
+        cases h₁
+        · simp [ih₁ (by assumption) h_norm.congrFun]
+        · rename_i h _ _ _ _; cases h
+      · simp
+        cases h₁
+        · simp [ih₁ (by assumption) h_norm.congrFun]
+        · rename_i h _ _ _ _ _; cases h
+      · simp
+        cases h₁
+        · simp [ih₁ (by assumption) h_norm.congrFun]
+        · rename_i h _ _ _ _; cases h
+      · simp
+        cases h₁
+        · simp [ih₁ (by assumption) h_norm.congrFun]
+        · rename_i h _ _ _ _ _; cases h
+      · simp
+        cases h₁
+        · simp [ih₁ (by assumption) h_norm.congrFun]
+        · rename_i h _ _ _ _; cases h
+      · cases h₁
+        · simp
+        · rename_i h _ _ _ _ _; cases h
+        · rename_i h _ _ _ _ _
+          cases h
+          · rename_i h _ _ _ _ _
+            have h := h_norm.complete
+            simp [step?] at h
+          · rename_i h _ _ _ _ _
+            have h := h_norm.complete
+            simp [step?] at h
+      · simp
+        cases h₁
+        · rename_i h _ _; simp [h.complete h_norm.congrFun]
+        · rename_i h _ _; cases h
+      · simp
+        cases h₁
+        · rename_i h _ _ _ _; cases h
+        · rename_i h _ _ _ _; cases h
+      · simp
+        cases h₁
+        · rename_i h _ _ _ _; cases h
+        · rename_i h _ _ _ _; cases h
+      · simp
+        cases h₁
+        · rename_i h _ _ _ _; cases h
+        · rename_i h _ _ _ _
+          simp [h.complete h_norm.congrArg, h_norm.congrFun.complete]
+    
+    sorry
+
+/-theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) = .some ⟨B, ⟨h₁⟩⟩ := by
+  induction heq : h₁
+  case sigl h_r_a ih =>
+    rename_i a a' _ _
+    have h_a'_norm : a'.IsNormAff := fun ⟨_, h⟩ => (h_norm ⟨_, .sigl h⟩)
+    have h := ih (by assumption) h_a'_norm rfl
+    unfold step?
+    simp [h]
+  case sigr h_r_b ih =>
+    rename_i b b' _ a
+    have h_b'_norm : b'.IsNormAff := fun ⟨_, h⟩ => (h_norm ⟨_, .sigr h⟩)
+    have h : a.IsNormAff := fun ⟨_, h⟩ => (h_norm ⟨_, .sigl h⟩)
+    have h := ih (by assumption) h_b'_norm rfl
+    rename_i a_norm
+    have h_a_norm := a_norm.complete
+    unfold step?
+    simp_all
+  case congrFun =>
+    rename_i f f' x h_r_f ih
+    have h_f_norm : f'.IsNormAff := h_norm.congrFun
+    have h_x_norm : x.IsNormAff := h_norm.congrArg
+    have h_step_x := h_x_norm.complete
+    unfold step?
+    cases f
+    iterate 9 (cases h_r_f)
+    iterate 3 ({
+      have h := ih (by assumption) h_norm.congrFun rfl
+      simp [h]})
+    · cases h_r_f
+    case app f₀ x₁ =>
+      let h := ih (by assumption) h_norm.congrFun rfl
+      cases f₀
+      repeat simp_all
+      case app =>
+        simp [h]
+      case curr =>
+        cases h_r_f
+        · simp [step?] at h
+          split at h
+          · simp_all
+          · rename_i hn
+            have h_x₁_norm := h_f_norm.congrArg
+            have h := (x₁.step?.get (by simp_all)).snd.down
+            exact (h_x₁_norm ⟨_, h⟩).elim
+          · simp_all
+        · simp [step?] at h
+          split at h
+          · simp_all
+          · simp_all
+            rename_i hx' hx'' _ _ _
+            
+          · simp_all
+      case appl =>
+        sorry
+  case congrArg =>
+    
+    sorry
+  repeat simp [step?]
+
+theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) = .some ⟨B, ⟨h₁⟩⟩ := by
+  unfold step?
+  split
+  · cases heq₁ : h₁
+    · rfl
+    · rename_i h
+      cases h
+    · rename_i h
+      cases heq₂ : h
+      · simp_all
+        
+        sorry
+      sorry
+  sorry
+
+theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) = .some ⟨B, ⟨h₁⟩⟩ := by
   induction heq : h₁
   repeat simp [step?]
   case sigl a a' β b hra ih =>
@@ -459,10 +666,16 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
     simp at h_norm
     if h : a'.IsNormAff then
       split
-      have h := ih (_h₂ := ⟨(by assumption)⟩) (by assumption)
+      have h := ih (by assumption)
       simp_all
       congr
       repeat simp_all
+      exact (h_norm _ (.sigr (by assumption))).elim
+      have h := ih (by assumption) (by assumption) rfl
+      cases h₁
+      rename_i hn _ _
+      exact (hn _ (by assumption) (by assumption)).elim
+      exact (h_norm _ (.sigr (by assumption))).elim
     else
       simp [IsNormAff] at h
       have ⟨_, h⟩ := h
@@ -473,14 +686,17 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
     simp at h_norm
     if h : b'.IsNormAff then
       split
-      have h := ih (_h₂ := ⟨(by assumption)⟩) (by assumption)
+      have h := ih (by assumption)
       rename_i a' hred₂ heq₂
       · exact (h_norm _ (.sigl (by assumption))).elim
       · simp_all
-        have ⟨h₁, h₂⟩ := ih (_h₂ := ⟨(by assumption)⟩)
+        have ⟨h₁, h₂⟩ := ih
         simp_all
         congr
         simp_all
+      simp_all
+      rename_i hn₁ hn₂
+      have h := hn₂ _ (by assumption) rfl
       simp_all
     else
       simp [IsNormAff] at h
@@ -488,14 +704,30 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
       exact (h_norm _ (.sigr h)).elim
   case congrFun f f' x h_r_f ih =>
     have h : f'.IsNormAff := fun ⟨e', h⟩ => h_norm ⟨_, .congrFun h⟩
-    have h := ih h_r_f h (_h₂ := ⟨by assumption⟩) rfl
+    have h := ih h_r_f h rfl
     unfold step?
-    simp_all
-    
-    sorry
+    cases f
+    repeat simp_all
+    · cases h_r_f
+    · cases h_r_f
+    · cases h_r_f
+    · cases h_r_f
+    · cases h_r_f
+    · cases h_r_f
+    repeat simp_all
+    · cases h_r_f
+    case app =>
+      rename_i a₁ a₂
+      cases a₁
+      repeat simp_all
+      case curr =>
+        exact absurd h_norm (by sorry)
+        sorry
+      case appl => simp_all
+      case app => simp_all
 
 theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
   
   sorry
-
+-/
 end Expr

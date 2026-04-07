@@ -39,7 +39,7 @@ deriving BEq, Repr, DecidableEq
 declare_syntax_cat expr
 
 syntax "#(" term ")"                                    : expr
-syntax:max "Flip(" expr ")"                             : expr
+syntax:max "Flip(" expr,* ")"                           : expr
 syntax:max "Id(" expr ")"                               : expr
 syntax:max "Fst(" expr,* ")"                            : expr
 syntax:max "App(" expr,* ")"                            : expr
@@ -67,7 +67,7 @@ macro_rules
   | `(DCC ⟦$β:expr⟧($x:expr, $y:expr))   => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                  => `(Expr.sort $m)
   | `(DCC Σ($m:expr, $n:expr))           => `(Expr.sigma (DCC $m) (DCC $n))
-  | `(DCC Flip($e:expr))                 => `(Expr.flip (DCC $e))
+  | `(DCC Flip($e:expr))                => `(Expr.flip (DCC $e))
   | `(DCC Id($α:expr))                   => `(Expr.id (DCC $α))
   | `(DCC Fst($α:expr, $β:expr))         => `(Expr.fst (DCC $α) (DCC $β))
   | `(DCC Snd($α:expr, $β:expr))         => `(Expr.snd (DCC $α) (DCC $β))

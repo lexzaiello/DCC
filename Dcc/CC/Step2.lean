@@ -419,22 +419,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
     | _, _ => .none
   | _ => .none
 
-def reduce (e : Expr) : ((e' : Expr) × (PLift (RedAffReflTrans e e'))) :=
-  match heq : step? e with
-  | .some ⟨e', ⟨h⟩⟩ =>
-    -- This hypothesis allows the recursion. Easy to prove.
-    have _h_size : e'.size.fst < e.size.fst := h.decreasing
-    let ⟨e'', ⟨h⟩⟩ := e'.reduce
-    ⟨e'', ⟨.trans (.single (by assumption)) h⟩⟩
-  | .none => ⟨e, ⟨.refl⟩⟩
-
 def IsNormAff (e : Expr) : Prop := ¬ ∃ e', RedAff e e'
-
-def reduce_diamond (A B : Expr) : Option ((C : Expr) × (PLift (RedAffReflTrans A C ∧ RedAffReflTrans B C))) :=
-  if heq : (reduce A).fst = (reduce B).fst then
-    .some ⟨(reduce A).fst, ⟨⟨(reduce A).snd.down, heq ▸ (reduce B).snd.down⟩⟩⟩
-  else
-    .none
 
 /-
 TODO: using global confluence, prove uniqueness of normal forms to show completeness of a full beta-reducer
@@ -541,10 +526,6 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
     · cases h₁
     · simp_all
 
-theorem IsNormAff.complete_reduce (h : A.IsNormAff) : (reduce A).fst = A := by
-  unfold reduce
-  rw [h.complete]
-
 theorem RedAff.complete' (h_red : RedAff A B) : (step? A).isSome := by
   unfold step?
   split
@@ -641,7 +622,73 @@ instance : Decidable (RedAff A B ∧ B.IsNormAff) :=
       have h := h_red.complete h_norm
       by simp_all)
 
-/-theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
+instance : Decidable (∃ A', RedAff A A') :=
+  if h : (step? A).isSome then
+    .isTrue ⟨_, ((step? A).get h).snd.down⟩
+  else
+    .isFalse (fun ⟨A', hred⟩ => by simp [hred.complete'] at *)
+
+def reduce (e : Expr) : ((e' : Expr) × (PLift (RedAffReflTrans e e'))) :=
+  match heq : step? e with
+  | .some ⟨e', ⟨h⟩⟩ =>
+    -- This hypothesis allows the recursion. Easy to prove.
+    have _h_size : e'.size.fst < e.size.fst := h.decreasing
+    let ⟨e'', ⟨h⟩⟩ := e'.reduce
+    ⟨e'', ⟨.trans (.single (by assumption)) h⟩⟩
+  | .none => ⟨e, ⟨.refl⟩⟩
+
+def reduce_diamond (A B : Expr) : Option ((C : Expr) × (PLift (RedAffReflTrans A C ∧ RedAffReflTrans B C))) :=
+  if heq : (reduce A).fst = (reduce B).fst then
+    .some ⟨(reduce A).fst, ⟨⟨(reduce A).snd.down, heq ▸ (reduce B).snd.down⟩⟩⟩
+  else
+    .none
+
+theorem IsNormAff.complete_reduce (h : A.IsNormAff) : (reduce A).fst = A := by
+  unfold reduce
+  rw [h.complete]
+
+theorem step?_none : step? A = .none → A.IsNormAff := fun h_step ⟨e', h_red⟩ => by
+  have h := h_red.complete'
+  simp_all
+
+theorem reduce_norm (h : (reduce A).fst = B) : B.IsNormAff := by
+  induction A using instWellFounded.induction generalizing B with
+  | h a ih =>
+    unfold reduce at h
+    split at h
+    · rename_i hred heq
+      have h := ih _ hred rfl
+      simp_all
+    · simp_all
+      rename_i heq
+      have h := step?_none heq
+      simp_all
+
+theorem RedAff.reduce_same (h : RedAff A B) : (reduce A).fst = (reduce B).fst := by
+  induction A using instWellFounded.induction generalizing B with
+  | h a ih =>
+    unfold reduce
+    · split
+      rename_i h_red₂ _
+      simp_all
+      split
+      · have heq := ih _ h (by assumption)
+        
+        sorry
+      · sorry
+
+theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
+  match h₁.cases_head with
+  | .inl h =>
+    rw [h]
+    exact h_norm.complete_reduce
+  | .inr ⟨c, h₁, h₂⟩ =>
+    have _h : sizeOf c < sizeOf A := h₁.decreasing
+    have h := RedAffReflTrans.complete h₂ h_norm
+    rw [h₁.reduce_same, h]
+termination_by A
+
+theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
   refine Relation.TransGen.head_induction_on h₁ ?_ ?_
   have h := h_norm.complete_reduce
   · intro _ h
@@ -658,7 +705,7 @@ instance : Decidable (RedAff A B ∧ B.IsNormAff) :=
     · simp_all
       
       sorry
-    · sorry-/
+    · sorry
 
 
 theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by

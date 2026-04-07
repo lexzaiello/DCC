@@ -491,10 +491,40 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
   · cases h₁
   case app f x ih₁ ih₂ =>
     induction f generalizing x
+    case appl =>
+      cases heq : h₁
+      · simp [step?]
+      · rename_i h _ _; cases h
+      · rename_i h _ _
+        induction x
+        iterate 9 (cases h)
+        · cases h
+          · rename_i h _ _ _ _ _; have h := h_norm.complete; simp [step?] at h
+          · rename_i h _ _ _ _ _; have h := h_norm.complete; simp [step?] at h
+        iterate 3 (cases h)
+        · simp [step?, h.complete h_norm.congrArg]
     case sort =>
       cases heq : h₁
       · rename_i h; cases h
       · simp [step?, RedAff.complete (by assumption) h_norm.congrArg]
+    case mk =>
+      cases heq : h₁
+      · rename_i h _ _ _
+        cases h
+        · rename_i h _ _ _
+          simp [step?, h.complete h_norm.congrFun.sigl]
+        · rename_i h _ _ _
+          simp [step?, h.complete h_norm.congrFun.sigr, h_norm.congrFun.sigl.complete]
+      · rename_i h _ _ _
+        simp [step?, h.complete h_norm.congrArg, h_norm.congrFun.sigl.complete, h_norm.congrFun.sigr.complete]
+    case pi =>
+      cases heq : h₁
+      · rename_i h; cases h
+      · rename_i h; simp [step?, h.complete h_norm.congrArg]
+    case sigma =>
+      cases heq : h₁
+      · rename_i h _ _; cases h
+      · rename_i h _ _; simp [step?, h.complete h_norm.congrArg]
     case flip =>
       cases heq : h₁
       · rename_i h _; cases h
@@ -506,13 +536,23 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
       · rename_i h _; cases h
       · have h := h_norm.complete
         simp [step?] at h
+    case comp =>
+      cases heq : h₁
+      · simp [step?]
+      · rename_i h _ _; cases h
+      · have h := h_norm.complete
+        simp [step?] at h
     case quot =>
       cases heq : h₁
       · simp [step?]
       · rename_i h _ _ _; cases h
       · have h := h_norm.complete
         simp [step?] at h
-    
+    case pair =>
+      cases heq : h₁
+      · rename_i h _ _ _; cases h
+      · rename_i h _ _ _
+        simp [step?, h.complete h_norm.congrArg]
     case fst | snd =>
       unfold step?
       induction x
@@ -581,8 +621,6 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
         · rename_i h _ _ _ _; cases h
         · rename_i h _ _ _ _
           simp [h.complete h_norm.congrArg, h_norm.congrFun.complete]
-    
-    sorry
 
 /-theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) = .some ⟨B, ⟨h₁⟩⟩ := by
   induction heq : h₁

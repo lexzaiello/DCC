@@ -61,7 +61,7 @@ def coup.type (α β : Expr) : Expr :=
   (DCC Σ(α, β))
 
 def quot.type (α β : Expr) (n m : Level) : Expr :=
-  (arrow α (arrow β α n m) m m)
+  (arrow β α n m)
 
 namespace Expr
 
@@ -139,7 +139,7 @@ inductive Judge : Expr → Expr → Type where
   | quot  : Judge α (DCC Sort m)
     → Judge β (DCC Sort n)
     → Judge x α
-    → Judge (DCC `(α, β, x)) (arrow α (arrow β α n m) m m).reduce.fst
+    → Judge (DCC `(α, β, x)) (quot.type α β m n).reduce.fst
   | pi    : Judge (DCC Π(m, n)) (Pi.type m n)
   | sigma : Judge α (DCC (Sort m))
     → Judge β (arrow α (DCC (Sort n)) m n.succ)
@@ -148,6 +148,9 @@ inductive Judge : Expr → Expr → Type where
     → Judge x α
     → Judge (DCC (f x)) (DCC (β ⟦Id(Sort m)⟧(α, x))).reduce.fst
   | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
+deriving Repr
+
+instance : Std.ToFormat (Judge A B) := ⟨repr⟩
 
 def match_arrow (t : Expr) : Option ((α β : Expr) × (m n : ℕ) × (PLift (t = arrow α β m n))) :=
   match t with
@@ -292,5 +295,23 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
         .some ⟨(DCC (β ⟦Id(Sort m)⟧(α₁, x))).reduce.fst, .app h_f (heq ▸ h_x)⟩
       else .none
     | _, _ => .none
+
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Id(Sort 1) (Sort 0)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC (⟦Id(Sort 2)⟧(Sort 1, Sort 0)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Fst(Sort 2, Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Snd(Sort 2, Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC Σ(Sort 1, Id(Sort 1)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Π(1, 1) (Sort 0)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC Id(Sort 1))
+#eval (Std.format ∘ Sigma.fst) <$> infer (Expr.app
+   (Expr.app (Expr.pi 2 2) (Expr.sort 1))
+   (Expr.quot
+     (Expr.sort 2)
+     (Expr.sigma (Expr.sort 2) (Expr.id (Expr.sort 2)))
+     (Expr.sort 1)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (id.type (DCC Sort 0) 1)
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC (`(Sort 1, Sort 1, Sort 0) (Sort 0)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC (⟦Id(Sort 2)⟧⟨`(Sort 2, Sort 1, Sort 1), Id(Sort 1)⟩ (Sort 0)))
+#eval infer (pair.type (DCC Sort 1) (DCC Id(Sort 1)) (DCC (Sort 1)) 2 2 2)
 
 end Expr

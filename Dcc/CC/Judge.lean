@@ -75,7 +75,7 @@ inductive Judge : Expr → Expr → Type where
     Flip(x)
   -/
   | flip  : Judge x (arrow α (arrow β γ n o) m o)
-    → Judge (DCC Flip(x)) (arrow β (arrow α γ m o) n o)
+    → Judge (DCC Flip(x)) (arrow β (arrow α γ m o) n o).reduce.fst
   -- g : Π β A
   | comp  : Judge g (arrow α β m n)
     → Judge f (DCC (Π(n, o) β γ))
@@ -117,7 +117,7 @@ inductive Judge : Expr → Expr → Type where
       β ∘ Snd(Sort m, Id(Sort m))
   -/
   | curr  : Judge x (DCC (Π(max m n, o) Σ(α, β) γ))
-    → Judge (DCC Λ(β, x)) (curr.type α β γ m n o).reduce.fst
+    → Judge (DCC Λ(m, β, x)) (curr.type α β γ m n o).reduce.fst
   /-
     App(γ, β) : (Π(max o n, o)
       (Σ(o, n) (Π(n, o) β γ) `((Π(n, o) β γ), β))
@@ -211,10 +211,18 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
           .none
       | _ => .none
     | _ => .none
-  | DCC Λ(β, x) =>
-    match ← x.infer with
-    | ⟨DCC (Π(max m n, o) Σ(α, β₂) γ), h_t_x⟩ =>
-      sorry
+  | DCC Λ(m, β, x) =>
+    let ⟨t_β, h_t_β⟩ ← β.infer
+    match ← β.match_arrow with
+    | ⟨α, DCC Sort n, m₂, n₂, ⟨heq₁⟩⟩ =>
+      match ← x.infer with
+      | ⟨DCC (Π(mn, o) Σ(α₂, β₂) γ), h_t_x⟩ =>
+        if heq : max m n = mn ∧ n.succ = n₂ ∧ β = β₂ ∧ α = α₂ ∧ m = m₂ then
+          have ⟨ha, hb, hc, _⟩ := heq
+          .some ⟨_, .curr (by rw [← ha, ← hc] at h_t_x; exact h_t_x)⟩
+        else
+          sorry
+      | _ => .none
     | _ => .none
   | DCC ⟦β⟧⟨f, g⟩ =>
     let ⟨t_β, h_t_β⟩ ← infer β

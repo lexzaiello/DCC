@@ -10,7 +10,7 @@ inductive IsRedex : Expr → Prop
   | id     : IsRedex (DCC (Id(_α) x))
   | quot   : IsRedex (DCC (`(α, β, x) y))
   | comp   : IsRedex (DCC ((x ∘ y) z))
-  | pair   : IsRedex (DCC (⟦β⟧⟨f, g⟩ x))
+  | pair   : IsRedex (DCC (⟦β, γ⟧⟨f, g⟩ x))
   | curr   : IsRedex (DCC (Λ(β, x) y z))
 
 inductive HasRedex : Expr → Prop
@@ -28,7 +28,7 @@ def is_redex (e : Expr) : Option (PLift e.IsRedex) :=
   | (DCC (Id(_α) _x))                => .some ⟨.id⟩
   | (DCC (`(_α, _β, _x) _y))         => .some ⟨.quot⟩
   | (DCC ((_x ∘ _y) _z))             => .some ⟨.comp⟩
-  | (DCC (⟦_β⟧⟨_f, _g⟩ _x))          => .some ⟨.pair⟩
+  | (DCC (⟦_β, _γ⟧⟨_f, _g⟩ _x))      => .some ⟨.pair⟩
   | (DCC (Λ(_β, _x) _y _z))          => .some ⟨.curr⟩
   | _                                => .none
 
@@ -136,7 +136,7 @@ inductive Size : Expr → ℕ → Prop
   | quot   : Size α m → Size β n → Size x o → Size (DCC `(α, β, x)) (m + n + o).succ
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
   | coup   : Size β m → Size f n → Size g o → Size (DCC ⟦β⟧(f, g)) (m + n + o).succ
-  | pair   : Size β m → Size f n → Size g o → Size (DCC ⟦β⟧⟨f, g⟩) (m + n + o).succ
+  | pair   : Size β m → Size γ n → Size f o → Size g p → Size (DCC ⟦β, γ⟧⟨f, g⟩) (m + n + o + p).succ
   | fst    : Size α m → Size β n → Size (DCC Fst(α, β)) (m + n).succ
   | snd    : Size α m → Size β n → Size (DCC Snd(α, β)) (m + n).succ
   | curr   : Size β m → Size x n → Size (DCC Λ(β, x)) (m + n).succ.succ
@@ -264,7 +264,7 @@ inductive Red : Expr → Expr → Prop
   | id       : Red (DCC (Id(_α) x)) x
   | quot     : Red (DCC (`(_α, _β, x) y)) x
   | comp     : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
-  | pair     : Red (DCC (⟦β⟧⟨f, g⟩ x)) (DCC ⟦β⟧((f x), (g x)))
+  | pair     : Red (DCC (⟦β, γ⟧⟨f, g⟩ x)) (DCC ⟦γ⟧((f x), (g x)))
   | curr     : Red (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl     : ¬ HasRedex b → Red a a' → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a', b))
   | sigr     : Red b b'     → Red (DCC ⟦β⟧(a, b)) (DCC ⟦β⟧(a, b'))

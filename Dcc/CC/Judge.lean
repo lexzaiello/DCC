@@ -198,6 +198,24 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
           .some ⟨_, .flip (by rw [heq, heq₂, ← heq₃] at h_t_x; exact h_t_x)⟩
         else
           .none
+  | DCC App(γ, β) =>
+    let ⟨t_γ, h_t_γ⟩ ← γ.infer
+    match ← β.infer with
+    | ⟨DCC Sort n, h_t_β⟩ =>
+      match ← t_γ.match_arrow with
+      | ⟨β₂, DCC Sort o, n₂, o₂, ⟨heq₂⟩⟩ =>
+        if heq : β = β₂ ∧ n = n₂ ∧ o.succ = o₂ then
+          have ⟨ha, hb, hc⟩ := heq
+          .some ⟨_, .app_e h_t_β (by rw [heq₂, ← ha, ← hb, ← hc] at h_t_γ; exact h_t_γ)⟩
+        else
+          .none
+      | _ => .none
+    | _ => .none
+  | DCC Λ(β, x) =>
+    match ← x.infer with
+    | ⟨DCC (Π(max m n, o) Σ(α, β₂) γ), h_t_x⟩ =>
+      sorry
+    | _ => .none
   | DCC ⟦β⟧⟨f, g⟩ =>
     let ⟨t_β, h_t_β⟩ ← infer β
     let ⟨t_f, h_t_f⟩ ← infer f

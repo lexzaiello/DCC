@@ -133,7 +133,7 @@ inductive Judge : Expr → Expr → Type where
   -/
   | coup  : Judge β (arrow α (DCC (Sort n)) m n.succ)
     → Judge a α
-    → Judge b (DCC (β a))
+    → Judge b (DCC (β a)).reduce.fst
     → Judge (DCC ⟦β⟧(a, b)) (coup.type α β).reduce.fst
   -- Can derive dependent quotation
   | quot  : Judge α (DCC Sort m)
@@ -160,7 +160,45 @@ def match_arrow (t : Expr) : Option ((α β : Expr) × (m n : ℕ) × (PLift (t 
 
 def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
   match e with
-  | DCC Sort m => return ⟨DCC Sort m.succ, .sort⟩
+  | DCC Π(m, n) => .some ⟨_, .pi⟩
+  | DCC Σ(α, β) =>
+    let ⟨t_β, h_t_β⟩ ← β.infer
+    match ← α.infer with
+    | ⟨DCC Sort m, h_t_α⟩ =>
+      match ← t_β.match_arrow with
+      | ⟨α₂, DCC Sort n, m₂, n₂, ⟨heq₂⟩⟩ =>
+        if ha : α = α₂ then
+          if hb : m = m₂ then
+            if hc : n.succ = n₂ then
+              .some ⟨_, .sigma h_t_α (ha ▸ hb ▸ hc ▸ heq₂ ▸ h_t_β)⟩
+            else .none
+          else .none
+        else .none
+      | _ => .none
+    | _ => .none
+  | DCC ⟦β⟧(a, b) =>
+    let ⟨t_β, h_t_β⟩ ← β.infer
+    match ← t_β.match_arrow with
+    | ⟨α, DCC Sort n, m, n₂, ⟨heq₀⟩⟩ =>
+      let ⟨α₂, h_t_a⟩  ← a.infer
+      let ⟨t_b, h_t_b⟩ ← b.infer
+      if heq₂ : α = α₂ then
+        if heq₃ : t_b = (DCC (β a)).reduce.fst then
+          if heq₄ : n₂ = n.succ then
+            .some ⟨_, .coup (heq₄ ▸ (heq₀ ▸ h_t_β)) (heq₂ ▸ h_t_a) (heq₃ ▸ h_t_b)⟩
+          else .none
+        else .none
+      else .none
+    | _ => .none
+  | DCC Sort m => .some ⟨DCC Sort m.succ, .sort⟩
+  | DCC `(α, β, x) =>
+    let ⟨t_x, h_t_x⟩ ← x.infer
+    match ← α.infer, ← β.infer with
+    | ⟨DCC Sort m, h_t_α⟩, ⟨DCC Sort n, h_t_β⟩ =>
+      if heq : t_x = α then
+        .some ⟨_, .quot h_t_α h_t_β (heq ▸ h_t_x)⟩
+      else .none
+    | _, _ => .none
   | DCC Id(α)  => match ← α.infer with
     | ⟨DCC Sort m, h⟩ => return ⟨(id.type α m).reduce.fst, .id h⟩
     | _ => .none
@@ -172,8 +210,7 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
         if heq : α = α₁ ∧ n.succ = n₁ ∧ m = m₁ then
           have ⟨heqa, heqb, heqc⟩ := heq
           .some ⟨_, .fst h_t_α (by rw [heq₁, ← heqa, ← heqb, ← heqc] at h_t_β; exact h_t_β)⟩
-        else
-          .none
+        else .none
       | _ => .none
     | _ => .none
   | DCC Snd(α, β) => match ← infer α with
@@ -184,8 +221,7 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
         if heq : α = α₁ ∧ n.succ = n₁ ∧ m = m₁ then
           have ⟨heqa, heqb, heqc⟩ := heq
           .some ⟨_, .snd h_t_α (by rw [heq₁, ← heqa, ← heqb, ← heqc] at h_t_β; exact h_t_β)⟩
-        else
-          .none
+        else .none
       | _ => .none
     | _ => .none
   | DCC Flip(x) =>
@@ -196,8 +232,7 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
       | ⟨β, γ, n, o₂, ⟨heq₂⟩⟩ =>
         if heq₃ : o = o₂ then
           .some ⟨_, .flip (by rw [heq, heq₂, ← heq₃] at h_t_x; exact h_t_x)⟩
-        else
-          .none
+        else .none
   | DCC App(γ, β) =>
     let ⟨t_γ, h_t_γ⟩ ← γ.infer
     match ← β.infer with
@@ -207,8 +242,7 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
         if heq : β = β₂ ∧ n = n₂ ∧ o.succ = o₂ then
           have ⟨ha, hb, hc⟩ := heq
           .some ⟨_, .app_e h_t_β (by rw [heq₂, ← ha, ← hb, ← hc] at h_t_γ; exact h_t_γ)⟩
-        else
-          .none
+        else .none
       | _ => .none
     | _ => .none
   | DCC Λ(m, β, x) =>
@@ -220,8 +254,7 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
         if heq : max m n = mn ∧ n.succ = n₂ ∧ β = β₂ ∧ α = α₂ ∧ m = m₂ then
           have ⟨ha, hb, hc, _⟩ := heq
           .some ⟨_, .curr (by rw [← ha, ← hc] at h_t_x; exact h_t_x)⟩
-        else
-          sorry
+        else .none
       | _ => .none
     | _ => .none
   | DCC ⟦β⟧⟨f, g⟩ =>
@@ -251,15 +284,13 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
           rw [← heqa, ← heqb] at heq₂
           rw [heq₂] at h_t_f
           exact h_t_f)⟩
-      else
-        .none
+      else .none
     | _, _ => .none
   | DCC (f x) => match ← f.infer, ← x.infer with
     | ⟨DCC (Π(m, n) α₁ β), h_f⟩, ⟨α₂, h_x⟩ =>
       if heq : α₁ = α₂ then
         .some ⟨(DCC (β ⟦Id(Sort m)⟧(α₁, x))).reduce.fst, .app h_f (heq ▸ h_x)⟩
-      else
-        .none
+      else .none
     | _, _ => .none
 
 end Expr

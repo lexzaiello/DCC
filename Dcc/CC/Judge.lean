@@ -7,6 +7,60 @@ need to make Σ point-free.
 Σ(m, n) : (Π(m.succ, (max m n).succ)
   (Sort m)
   ((Flip(Π(n.succ, (max m n).succ)) (Sort (max m n))) ∘ ((Flip(Π(m, n.succ)) (Sort n)) ∘ Snd(Sort m, Id(Sort m)))))
+
+id(α) : Π(m, m) α (
+
+this all seems to suggest γ receives
+
+(?, f x)
+^ can put dependent type here
+
+assuming we had more point-free things:
+
+Fst(m, n) : Π(m, m) (Sort m) (Flip(Π(m, n.succ)) ∘ Fst(Sort m, Id(Sort m))
+
+Fst(m, n) : ∀ (α : Type) (β : α → Type) (x : Σ(α, β)), α
+
+question 2:
+
+does pair need to be dependent at all? can we derive dependent type with couples / sigma?
+
+very important question: is it even possible to derive dependent Fst, for example?
+
+Fst'(m, n) : ∀ (α : Sort m) (β : α → Sort n) (x : Σ(α, β)), α
+
+Fst'(m, n) :=
+  -- ⟦snd_β⟧(α, β)
+  -- snd_β : Sort m → Sort n.succ
+  -- snd_β := fun α => α → Sort n
+  -- this dictates the type of snd received by Λ(...) α β with (α, β)
+  -- results in: ∀ (α : Sort m) (β : α → Sort n) ....
+  let snd_β := (Flip(Π(m, n.succ)) (Sort n))
+
+  let π₁_α_β := Fst(Sort m, snd_β)
+  let π₂_α_β := Snd(Sort m, snd_β)
+
+  -- take ⟦snd_β⟧(α, β), and make Σ(m, n) α β
+  -- my_γ computes the type of π₂_α_β, which is just (α → Sort n), but we need α to do that
+  let mk_t_sigma := ⟦(Σ(m.succ, n.succ) (Sort m) snd_β), my_γ⟧⟨Σ(m, n) ∘ π₁_α_β, π₂_α_β⟩
+
+  Λ(snd_β, )
+
+⟨f, g⟩
+
+f : ∀ (x : α) (y : β x), γ x y
+g : ∀ (x : α), β x
+
+f : α → β
+⟨f, g⟩ : α → ⟦`(Sort n,
+
+⟦β, `(Sort o, Σ(
+γ : Σ(Sort n, Id(Sort n))
+
+g : ∀ (x : α), γ
+g x : γ (β, (f x))
+
+⟦α, β, γ⟧⟨,⟩ : ∀ (f : ∀ (x : α), β x) (g : ∀ (x : α), γ (f x))
 -/
 
 def arrow (α β : Expr) (m n : Level) : Expr :=
@@ -20,12 +74,6 @@ def Pi.type (m n : Level) : Expr :=
         (DCC Sort n) m.succ n.succ)
       (DCC Sort n) n.succ n.succ) m.succ n.succ
 
-def Pi.type₁ (m n : Level) : Expr :=
-  arrow
-    (arrow
-      (DCC (Σ(m.succ, m) (Sort m) Id(Sort m)))
-        (DCC Sort n) m.succ n.succ)
-      (DCC Sort n) n.succ n.succ
 
 /-
 Σ α β : Sort (max m n)
@@ -39,15 +87,18 @@ def Sigma.type (m n : Level) : Expr :=
 def id.type (α : Expr) (m : Level) : Expr :=
   arrow α α m m
 
+def flip.type (α β γ : Expr) (m n o : Level) : Expr :=
+  (arrow β (arrow α γ m o) n o).reduce.fst
+
 def comp.type (α γ g : Expr) (m o : Level) : Expr :=
   DCC (Π(m, o) α (γ ∘ g))
 
 /-
-⟦β, γ⟧⟨f, x⟩ : Π(m, (max n o)) α (() ∘ f
+⟦α, γ⟧⟨f, x⟩ : Π(m, (max n o)) α (() ∘ f
 -/
 
 def pair.type (α β γ : Expr) (m n o : Level) : Expr :=
-  (arrow α (DCC (Σ(n, o) β γ)) m (max n o))
+  (DCC (Π(m, (max n o)) α ((Flip(Σ(n, o)) γ) ∘ β)))
 
 def fst.type (α β : Expr) (m n : Level) : Expr :=
   (arrow (DCC (Σ(m, n) α β)) α (max m n) m)
@@ -71,7 +122,7 @@ def curr.type (α β γ : Expr) (m n o : Level) : Expr :=
 def coup.type (α β : Expr) (m n : Level) : Expr :=
   (DCC (Σ(m, n) α β))
 
-def quot.type (α β : Expr) (n m : Level) : Expr :=
+def quot.type (α β : Expr) (m n : Level) : Expr :=
   (arrow β α n m)
 
 namespace Expr
@@ -86,33 +137,26 @@ inductive Judge : Expr → Expr → Type where
     Flip(x)
   -/
   | flip  : Judge x (arrow α (arrow β γ n o) m o)
-    → Judge (DCC Flip(x)) (arrow β (arrow α γ m o) n o).reduce.fst
+    → Judge (DCC Flip(x)) (flip.type α β γ n n o)
   -- g : Π β A
   | comp  : Judge g (arrow α β m n)
     → Judge f (DCC (Π(n, o) β γ))
     → Judge (DCC f ∘ g) (comp.type α γ g m o).reduce.fst
   /-
-    ⟦β, γ⟧⟨f, g⟩ x = (f x, g x)
-    f : α → β
+    ⟦m, α, γ⟧⟨f, g⟩ x = ⟦(γ ⟦Id(Sort m)⟧(α, x))⟧(f x, g x)
+    f : ∀ (x : α), β x
     g : ∀ (x : α), γ ∘ f
-    γ : β → Type
+    γ : ∀ (x : (Σ(m.succ, m) (Sort m) Id(Sort m))), (β ∘ Snd((Sort m), Id(Sort m))) → Sort o
 
-    g x : γ x
-
-    ⟦Sort 2, Id(Sort 2)⟧⟨Id(Sort 2), `(Sort 1, Sort 2, Sort 0) ∘ Id(Sort 2)⟩
-
-    ⟦Sort 2, Id(Sort 2)⟧⟨Id(Sort 2), `(Sort 1, Sort 2, Sort 0) ∘ Id(Sort 2)⟩ (Sort 1)
-    = ⟦Id(Sort 2)⟧(Sort 1, Sort 0)
-
-    
-
-    (f x, g x) : Σ(β, γ)
+    ⟦m, α, γ⟧⟨f, g⟩ x : (Σ(n, o) (β x) γ)
   -/
-  | pair  : Judge β (DCC Sort n)
-    → Judge γ (arrow β (DCC Sort o) n o.succ)
-    → Judge f (arrow α β m n)
-    → Judge g (DCC (Π(m, o) α (γ ∘ f)))
-    → Judge (DCC ⟦β, γ⟧⟨f, g⟩) (pair.type α β γ m n o).reduce.fst
+  | pair  : Judge f (DCC (Π(m, n) α β))
+    → Judge g (DCC  (Π(m, o) α (γ ∘ f)))
+    → Judge γ (DCC (
+      Π(m.succ, o.succ)
+       (Σ(m.succ, m) (Sort m) Id(Sort m))
+       ((Flip(Π(n, o.succ)) (Sort o)) ∘ (β ∘ Snd((Sort m), Id(Sort m))))))
+    → Judge (DCC ⟦m, α, γ⟧⟨f, g⟩) (pair.type α β γ m n o).reduce.fst
   -- fst(α, β) : (Σ α β) → α
   | fst   : Judge α (DCC Sort m)
     → Judge β (arrow α (DCC Sort n) m n.succ)
@@ -261,28 +305,25 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
         .some ⟨_, .curr (by rw [← ha, ← hb] at h_t_x; exact h_t_x)⟩
       else .none
     | _ => .none
-  | DCC ⟦β, γ⟧⟨f, g⟩ =>
-    let ⟨t_β, h_t_β⟩ ← infer β
+  | DCC ⟦m, α, γ⟧⟨f, g⟩ =>
     let ⟨t_γ, h_t_γ⟩ ← infer γ
     let ⟨t_f, h_t_f⟩ ← infer f
     let ⟨t_g, h_t_g⟩ ← infer g
-    match t_β, t_γ.match_arrow, t_f.match_arrow, t_g with
-    | DCC Sort n, .some ⟨β₁, (DCC Sort o), n₁, o₂, ⟨heq₁⟩⟩,
-      .some ⟨α, β₂, m, n₂, ⟨heq₂⟩⟩,
-      (DCC (Π(m₂, o₃) α₂ (γ₂ ∘ f₂))) =>
-      dbg_trace Std.format β
-      dbg_trace Std.format t_γ
-      dbg_trace Std.format t_f
-      dbg_trace Std.format t_g
-      if heq₃ : β = β₁ ∧ β = β₂ ∧ o.succ = o₂ ∧ o = o₃ ∧ n = n₁ ∧ n = n₂ ∧ m = m₂ ∧ f = f₂ ∧ β = β₂ ∧ α = α₂ ∧ γ = γ₂ then
-        have ⟨ha, hb, hc, hd, he, hf, hj, hk, hl, hm, ho⟩ := heq₃
+    match t_f, t_g, t_γ with
+    | (DCC (Π(m₁, n₁) α₁ β)),
+      (DCC  (Π(m₂, o₂) α₂ (γ₂ ∘ f₂))),
+      (DCC (Π(m₃, o₃ + 1)
+       (Σ(m₄, m₅) (Sort m₆) Id(Sort m₇))
+       ((Flip(Π(n₂, o₄ + 1)) (Sort o₅)) ∘ (β₂ ∘ Snd((Sort m₉), Id(Sort m10)))))) =>
+      if heq₃ : m = m₁ ∧ m = m₂ ∧ m.succ = m₃ ∧ m.succ = m₄ ∧ m = m₅ ∧ m = m₆ ∧ m = m₇ ∧ m = m₉ ∧ m = m10
+        ∧ n₁ = n₂ ∧ o₂ = o₃ ∧ o₂ = o₄ ∧ o₂ = o₅ ∧ β = β₂ ∧ α = α₁ ∧ α = α₂ ∧ γ = γ₂ ∧ f = f₂ then
+        have ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, h16, h17, h18⟩ := heq₃
         .some ⟨_, .pair
-          h_t_β
-          (by rw [← ha, ← he, ← hc] at heq₁; rw [heq₁] at h_t_γ; exact h_t_γ)
-          (by rw [heq₂, ← hb, ← hf] at h_t_f; exact h_t_f)
-          (by rw [← hj, ← hd, ← ho, ← hm, ← hk] at h_t_g; exact h_t_g)⟩
+          (by rw [← h1, ← h15] at h_t_f; exact h_t_f)
+          (by rw [← h2, ← h16, ← h17, ← h18] at h_t_g; exact h_t_g)
+          (by rw [← h3, ← h11, ← h4, ← h5, ← h6, ← h7, ← h8, ← h9, ← h12, ← h14, ← h10, ← h13] at h_t_γ; simp at h_t_γ; exact h_t_γ)⟩
       else .none
-    | _, _, _, _ => .none
+    | _, _, _ => .none
   | DCC f ∘ g =>
     let ⟨t_g, h_t_g⟩ ← g.infer
     let ⟨t_f, h_t_f⟩ ← f.infer
@@ -312,8 +353,8 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC Id(Sort 1))
 #eval (Std.format ∘ Sigma.fst) <$> infer (id.type (DCC Sort 0) 1)
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (`(Sort 1, Sort 1, Sort 0) (Sort 0)))
-#eval infer (DCC ((Id(Sort 1) ∘ Id(Sort 1)) (Sort 0)))
-#eval (Std.format ∘ Sigma.fst) <$> infer (DCC ⟦Sort 2, Id(Sort 2)⟧⟨Id(Sort 2), `(Sort 1, Sort 2, Sort 0) ∘ Id(Sort 2)⟩)
+#eval infer (DCC (`(Sort 1, Sort 2, Sort 0) ∘ Id(Sort 2)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC ⟦3, Sort 2, Id(Sort 2)⟧⟨Id(Sort 2), Id(Sort 2) ∘ Id(Sort 2)⟩)
 #eval infer (pair.type (DCC Sort 1) (DCC Id(Sort 1)) (DCC (Sort 1)) 2 2 2)
 
 /-

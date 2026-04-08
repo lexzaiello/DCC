@@ -67,11 +67,19 @@ namespace Expr
 
 inductive Judge : Expr → Expr → Type where
   | id    : Judge α (DCC (Sort m))
-    → Judge (DCC Id(α)) (id.type α m)
+    → Judge (DCC Id(α)) (id.type α m).reduce.fst
+  /-
+    (α, y)
+    x : (Π(m, o) α ((Flip(Π(n, o)) γ) ∘ β)))
+    (DCC (Π(m, o) α ((Flip(Π(n, o)) γ) ∘ β)))
+    Flip(x)
+  -/
+  | flip  : Judge x (arrow α (arrow β γ n o) m o)
+    → Judge (DCC Flip(x)) (arrow β (arrow α γ m o) n o)
   -- g : Π β A
   | comp  : Judge g (arrow α β m n)
     → Judge f (DCC (Π(n, o) β γ))
-    → Judge (DCC f ∘ g) (comp.type α γ g m o)
+    → Judge (DCC f ∘ g) (comp.type α γ g m o).reduce.fst
   -- f  : α → τ₁
   -- α  : Sort m
   -- τ₁ : Sort n
@@ -84,16 +92,16 @@ inductive Judge : Expr → Expr → Type where
   | pair  : Judge β (arrow τ₁ (DCC Sort o) n o.succ)
     → Judge f (arrow α τ₁ m n)
     → Judge g (DCC (Π(m, o) α (β ∘ f ∘ Snd(Sort m, Id(Sort m)))))
-    → Judge (DCC ⟦β⟧⟨f, g⟩) (pair.type α β τ₁ m n o)
+    → Judge (DCC ⟦β⟧⟨f, g⟩) (pair.type α β τ₁ m n o).reduce.fst
   -- fst(α, β) : (Σ α β) → α
   | fst   : Judge α (DCC Sort m)
     → Judge β (arrow α (DCC Sort n) m n.succ)
-    → Judge (DCC Fst(α, β)) (fst.type α β m n)
+    → Judge (DCC Fst(α, β)) (fst.type α β m n).reduce.fst
   /- snd(α, β) : 
   -/
   | snd   : Judge α (DCC Sort m)
     → Judge β (arrow α (DCC Sort n) m n.succ)
-    → Judge (DCC Snd(α, β)) (snd.type α β m n)
+    → Judge (DCC Snd(α, β)) (snd.type α β m n).reduce.fst
   /-
     App f x types are nondependent.
     At least, x does not depend on x. need to bake that into ⟦β⟧
@@ -109,7 +117,7 @@ inductive Judge : Expr → Expr → Type where
       β ∘ Snd(Sort m, Id(Sort m))
   -/
   | curr  : Judge x (DCC (Π(max m n, o) Σ(α, β) γ))
-    → Judge (DCC Λ(β, x)) (curr.type α β γ m n o)
+    → Judge (DCC Λ(β, x)) (curr.type α β γ m n o).reduce.fst
   /-
     App(γ, β) : (Π(max o n, o)
       (Σ(o, n) (Π(n, o) β γ) `((Π(n, o) β γ), β))
@@ -117,7 +125,7 @@ inductive Judge : Expr → Expr → Type where
   -/
   | app_e : Judge β (DCC Sort n)
     → Judge γ (arrow β (DCC (Sort o)) n o.succ)
-    → Judge (DCC App(γ, β)) (app_e.type β γ n o)
+    → Judge (DCC App(γ, β)) (app_e.type β γ n o).reduce.fst
   /-
     a : α
     b : β a
@@ -126,37 +134,106 @@ inductive Judge : Expr → Expr → Type where
   | coup  : Judge β (arrow α (DCC (Sort n)) m n.succ)
     → Judge a α
     → Judge b (DCC (β a))
-    → Judge (DCC ⟦β⟧(a, b)) (coup.type α β)
+    → Judge (DCC ⟦β⟧(a, b)) (coup.type α β).reduce.fst
   -- Can derive dependent quotation
   | quot  : Judge α (DCC Sort m)
     → Judge β (DCC Sort n)
     → Judge x α
-    → Judge (DCC `(α, β, x)) (arrow α (arrow β α n m) m m)
+    → Judge (DCC `(α, β, x)) (arrow α (arrow β α n m) m m).reduce.fst
   | pi    : Judge (DCC Π(m, n)) (Pi.type m n)
   | sigma : Judge α (DCC (Sort m))
     → Judge β (arrow α (DCC (Sort n)) m n.succ)
-    → Judge (DCC Σ(α, β)) (Sigma.type m n)
-  | app   : Judge f (DCC (Π(m, n) α₁ β))
-    → Judge x α₂
-    → (reduce α₁).fst = (reduce α₂).fst
-    → Judge (DCC (f x)) (reduce (DCC (β ⟦Id(Sort m)⟧(α₁, x)))).fst
+    → Judge (DCC Σ(α, β)) (Sigma.type m n).reduce.fst
+  | app   : Judge f (DCC (Π(m, n) α β))
+    → Judge x α
+    → Judge (DCC (f x)) (DCC (β ⟦Id(Sort m)⟧(α, x))).reduce.fst
   | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
 
-/-def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) := do
+def match_arrow (t : Expr) : Option ((α β : Expr) × (m n : ℕ) × (PLift (t = arrow α β m n))) :=
+  match t with
+  | DCC (Π(m₁, n₁) α `(Sort n₂, Σ(Sort m₂, Id(Sort m₃)), β)) =>
+    if heq : m₁ = m₂ ∧ m₁ = m₃ ∧ n₁ = n₂ then
+      .some ⟨α, β, m₁, n₁, ⟨by have ⟨heq₁, heq₂, heq₃⟩ := heq; rw [← heq₁, ← heq₂, ← heq₃]; rfl⟩⟩
+    else
+      .none
+  | _ => .none
+
+def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
   match e with
-  | DCC Sort m => return ⟨DCC Sort m.succ, ⟨.sort⟩⟩
+  | DCC Sort m => return ⟨DCC Sort m.succ, .sort⟩
   | DCC Id(α)  => match ← α.infer with
-    | ⟨DCC Sort m, ⟨h⟩⟩ => return ⟨id.type α m, ⟨.id h⟩⟩
+    | ⟨DCC Sort m, h⟩ => return ⟨(id.type α m).reduce.fst, .id h⟩
     | _ => .none
-  | DCC f ∘ g => match ← g.infer, ← f.infer with
-    | ⟨DCC (Π(m, n₁) α `(Sort n₂, Σ(Sort m₂, Id(Sort m₃)), β)), ⟨h₁⟩⟩, ⟨DCC (Π(n₃, o) β₂ γ), ⟨h₂⟩⟩ =>
-      if heq₁ : m = m₂ ∧ m = m₃ ∧ n₁ = n₂ ∧ n₁ = n₃ ∧ β = β₂ then
-      by
-        have ⟨heq₁, heq₂, heq₃, heq₄, heq₅⟩ := heq₁
-        simp [← heq₁, ← heq₂, ← heq₃, ← heq₄, ← heq₅] at *
-        exact .some ⟨comp.type α γ g m o, ⟨.comp h₁ h₂⟩⟩
+  | DCC Fst(α, β) => match ← infer α with
+    | ⟨DCC Sort m, h_t_α⟩ =>
+      let ⟨t_β, h_t_β⟩ ← infer β
+      match ← t_β.match_arrow with
+      | ⟨α₁, DCC Sort n, m₁, n₁, ⟨heq₁⟩⟩ =>
+        if heq : α = α₁ ∧ n.succ = n₁ ∧ m = m₁ then
+          have ⟨heqa, heqb, heqc⟩ := heq
+          .some ⟨_, .fst h_t_α (by rw [heq₁, ← heqa, ← heqb, ← heqc] at h_t_β; exact h_t_β)⟩
+        else
+          .none
+      | _ => .none
+    | _ => .none
+  | DCC Snd(α, β) => match ← infer α with
+    | ⟨DCC Sort m, h_t_α⟩ =>
+      let ⟨t_β, h_t_β⟩ ← infer β
+      match ← t_β.match_arrow with
+      | ⟨α₁, DCC Sort n, m₁, n₁, ⟨heq₁⟩⟩ =>
+        if heq : α = α₁ ∧ n.succ = n₁ ∧ m = m₁ then
+          have ⟨heqa, heqb, heqc⟩ := heq
+          .some ⟨_, .snd h_t_α (by rw [heq₁, ← heqa, ← heqb, ← heqc] at h_t_β; exact h_t_β)⟩
+        else
+          .none
+      | _ => .none
+    | _ => .none
+  | DCC Flip(x) =>
+    let ⟨t_x, h_t_x⟩ ← x.infer
+    match ← t_x.match_arrow with
+    | ⟨α, βγ, m, o, ⟨heq⟩⟩ =>
+      match ← βγ.match_arrow with
+      | ⟨β, γ, n, o₂, ⟨heq₂⟩⟩ =>
+        if heq₃ : o = o₂ then
+          .some ⟨_, .flip (by rw [heq, heq₂, ← heq₃] at h_t_x; exact h_t_x)⟩
+        else
+          .none
+  | DCC ⟦β⟧⟨f, g⟩ =>
+    let ⟨t_β, h_t_β⟩ ← infer β
+    let ⟨t_f, h_t_f⟩ ← infer f
+    let ⟨t_g, h_t_g⟩ ← infer g
+    match t_β.match_arrow, t_f.match_arrow, t_g with
+    | .some ⟨τ₁, (DCC Sort o), n₁, o₂, ⟨heq₁⟩⟩,
+      .some ⟨α, τ₁', m, n₂, ⟨heq₂⟩⟩,
+      (DCC (Π(m₂, o₃) α₂ (β₂ ∘ f₂ ∘ Snd(Sort m₃, Id(Sort m₄))))) =>
+      if heq₃ : τ₁ = τ₁' ∧ o.succ = o₂ ∧ o = o₃ ∧ n₁ = n₂ ∧ m = m₂ ∧ m = m₃ ∧ m = m₄ ∧ f = f₂ ∧ β = β₂ ∧ α = α₂ then
+        have ⟨heqa, heqb, heqc, heqd, heqe, heqf, heqg, heqh, heqj, heqk⟩ := heq₃
+        .some ⟨_, .pair
+          (by rw [heq₁, ← heqb] at h_t_β; exact h_t_β)
+          (by rw [heq₂, ← heqa, ← heqd] at h_t_f; exact h_t_f)
+          (by rw [← heqe, ← heqc, ← heqj, ← heqk, ← heqh, ← heqf, ← heqg] at h_t_g; exact h_t_g)⟩
+      else .none
+    | _, _, _ => .none
+  | DCC f ∘ g =>
+    let ⟨t_g, h_t_g⟩ ← g.infer
+    let ⟨t_f, h_t_f⟩ ← f.infer
+    match t_g.match_arrow, t_f.match_arrow with
+    | .some ⟨α, β₁, m, n₁, ⟨heq₁⟩⟩, .some ⟨β₂, γ, n₂, o, ⟨heq₂⟩⟩ =>
+      if heq₃ : β₁ = β₂ ∧ n₁ = n₂ then
+        .some ⟨_, .comp (heq₁ ▸ h_t_g) (by
+          have ⟨heqa, heqb⟩ := heq₃
+          rw [← heqa, ← heqb] at heq₂
+          rw [heq₂] at h_t_f
+          exact h_t_f)⟩
       else
         .none
-    | _, _ => .none-/
+    | _, _ => .none
+  | DCC (f x) => match ← f.infer, ← x.infer with
+    | ⟨DCC (Π(m, n) α₁ β), h_f⟩, ⟨α₂, h_x⟩ =>
+      if heq : α₁ = α₂ then
+        .some ⟨(DCC (β ⟦Id(Sort m)⟧(α₁, x))).reduce.fst, .app h_f (heq ▸ h_x)⟩
+      else
+        .none
+    | _, _ => .none
 
 end Expr

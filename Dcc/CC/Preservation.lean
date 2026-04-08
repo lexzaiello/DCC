@@ -5,6 +5,18 @@ import Mathlib.Tactic
 
 namespace Expr
 
+theorem reduce_same (heq : a = b) : (reduce a).fst = (reduce b).fst := by
+  rw [heq]
+
+@[simp] theorem reduce_reduce : (reduce A).fst.reduce.fst = (reduce A).fst := by
+  exact (reduce_norm (A := A) rfl).complete_reduce
+
+theorem reduce_congr (h_step : step? A = .some ⟨A', ⟨_h⟩⟩) : (reduce A).fst = A'.reduce.fst := by
+  have h : RedAff A A' := by
+    have h := (A.step?.get (by simp_all)).snd.down
+    simp_all only [Option.get_some]
+  exact h.reduce_same
+
 namespace Judge
 
 /-
@@ -60,10 +72,10 @@ macro_rules
         exact .refl, (reduce _).snd.down, reduce_norm rfl⟩)
 
 def id_well_typed (h_t_α : Judge α (DCC (Sort m))) (h_t_x : Judge x α) : Judge (DCC (Id(α) x)) α.reduce.fst := by
-  have h := Judge.app (.id h_t_α) h_t_x rfl
-  simp [reduce] at h
-  simp only [step?] at h
-  exact h
+  have h := Judge.id h_t_α (by simp [reduce, step?]; rfl)
+  have h_id := (Judge.id h_t_α (by simp [reduce, step?]; rfl)).app h_t_x reduce_reduce
+  rw [reduce_congr (by simp [step?]; exact ⟨rfl, by congr⟩), reduce_reduce] at h_id
+  exact h_id
 
 def app_invert {e t f x : Expr} (h_t : Judge e t) (heq : e = (DCC (f x))) : ((m n : ℕ) × (α₁ α₂ β : Expr) ×
   (Judge f (DCC (Π(m, n) α₁ β)))
@@ -78,70 +90,11 @@ def app_invert {e t f x : Expr} (h_t : Judge e t) (heq : e = (DCC (f x))) : ((m 
     rename_i f' m n α₁ β x α₂ heq₁ heq₃
     exact ⟨m, n, α₁, α₂, β, heqa ▸ h_t_f, heqb ▸ h_t_x, ⟨by assumption⟩, ⟨by rw [← heqb]⟩⟩
 
---theorem preserves_arrow (h_t_e : Judge
+--theorem reduce_trans : (reduce a).fst = (reduce b).fst
 
-theorem invert_sort (h₁ : Judge x A) (h₂ : Judge x B) (heq₁ : A = (DCC (Sort m))) (heq₂ : B = (DCC (Sort n))) : m = n := by
-  induction h₁ generalizing B m n with
-  | app_e | comp | curr | pi | quot | coup | pair | app | fst | snd | id =>
-    contradiction
-  | sort =>
-    simp_all
-    cases h₂ with
-    | conv h_t' h_conv =>
-      cases_conv [h_conv]
-      
-      /-cases_conv [h_conv]
-      rename_i h
-      cases h
-      cases h_t' with
-      | sort =>
-        rename_i h_red
-        simp [step?] at h_red
-        grind
-      | conv =>
-        rename_i h
-        have ⟨C, h₁, h₂, h_norm⟩ := h
-        rename_i h_a₁_sort _ h_sort_norm _ _ _ 
-        have h := h₂.norm_unique (by assumption) h_a₁_sort h_sort_norm
-        simp_all
-        
-        sorry-/
-    | sort =>
-      sorry
-
-/-theorem invert_sort (h₁ : Judge x (DCC (Sort m))) (h₂ : Judge x (DCC (Sort n))) : m = n := by
-  induction x generalizing m n
-  · cases h₁
-    · cases h₂
-      · rfl
-      · rename_i h _
-        cases h
-        · rename_i h_conv
-          cases_conv [h_conv]
-          rename_i h₁ h₂
-          cases h₁; cases h₂; rfl
-        · -/
-
-theorem invert_conv (h₁ : Judge x A) (h₂ : Judge x B) : ∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C ∧ C.IsNormAff := by
-  induction h₁ generalizing B
-  · rename_i ih
-    cases h₂
-    · rename_i h
-      have h := ih h
-      simp [id.type, arrow]
-      
+def preserves_id (h_t_α : Judge α (DCC (Sort m))) (h_t : Judge (DCC (Id(α) x)) α₂) : Judge x (reduce α).fst := by
+  
   sorry
-
-theorem preserves_id (h_t_α : Judge α (DCC (Sort m))) (h_t : Judge (DCC (Id(α) x)) α) : Judge x α := by
-  have ⟨m, n, α₁, β, h_t_f, h₁, h_t_x, h_conv⟩ := app_invert h_t rfl
-  cases h_t_f with
-  | id => exact h₁
-  | conv =>
-    rename_i h_conv'
-    cases_conv [h_conv, h_conv']
-    rename_i h _ _ _
-    
-    sorry
 
 /-theorem preserves_id (h_t_α : Judge α (DCC (Sort m))) (h_t : Judge (DCC (Id(α) x)) α) : Judge x α := by
   cases h_t with

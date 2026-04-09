@@ -236,13 +236,13 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
       | _ => .none
     | _, _ => .none
   | DCC Λ(β, x) =>
-    match β.infer, x.infer with
-    | .some ⟨t_β, h_t_β⟩, .some ⟨DCC (Π(mn, o) (Σ(m₂, n) α β₂) γ), h_t_x⟩ =>
+    match x.infer with
+    | .some ⟨DCC (Π(mn, o) (Σ(m₂, n) α β₂) γ), h_t_x⟩ =>
       if heq : max m₂ n = mn ∧ β = β₂ then
         have ⟨ha, hb⟩ := heq
         .some ⟨_, .curr (by rw [← ha, ← hb] at h_t_x; exact h_t_x)⟩
       else .none
-    | _, _ => .none
+    | _ => .none
   | DCC ⟦m, α, γ⟧⟨f, g⟩ =>
     match infer γ, infer f, infer g with
     | .some ⟨t_γ, h_t_γ⟩, .some ⟨t_f, h_t_f⟩, .some ⟨t_g, h_t_g⟩ =>
@@ -301,11 +301,33 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
 
 theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
   induction h_t with
+  | curr _ ih =>
+    simp [infer, ih]
+    split
+    rename_i heq ha hb
+    simp_all only [and_self]
+  | pair _ _ _ ih₁ ih₂ ih₃ =>
+    simp [infer, ih₁, ih₂, ih₃]
+    simp_all only [Nat.succ_eq_add_one]
+    split
+    rename_i heq₃ h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18 h19 h20 h21 h22 h23
+    simp_all only [Nat.succ_eq_add_one, and_self]
+  | coup _ _ _ ih₁ ih₂ ih₃ => simp [infer, ih₁, ih₂, ih₃, arrow, match_arrow]
+  | quot _ _ _ ih₁ ih₂ ih₃ => simp [infer, ih₁, ih₂, ih₃]
+  | pi => simp [infer]
+  | sigma => simp [infer]
+  | app_e _ _ ih₁ ih₂ =>
+    simp [infer, ih₁, ih₂, arrow, match_arrow]
+    simp_all only [Nat.succ_eq_add_one]
+    split
+    rename_i heq ha hb hc
+    simp_all only [Nat.succ_eq_add_one, and_self]
   | flip _ ih => simp [infer, ih, arrow, match_arrow]
   | comp _ _ ih₁ ih₂ =>
-    rw [infer, ih₁, ih₂]
-    simp only [arrow]
-    
+    simp [infer, ih₁, ih₂, arrow, match_arrow]
+    split
+    rename_i heq₃ heqa heqb
+    simp_all only [and_self]
   | id h_t_α ih => simp [infer, ih]
   | fst _ _ ih₁ ih₂ =>
     simp [infer, ih₁, ih₂, arrow, match_arrow]

@@ -343,6 +343,17 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
     simp_all only [Nat.succ_eq_add_one, and_self]
   | sort => simp [infer]
   | app a b ih₁ ih₂ => simp [infer, ih₁, ih₂]
-  
+
+def Judge.decide : Judge e t ⊕ (PLift (Judge e t → False)) :=
+  if h : (infer e).isSome then
+    if heq : ((infer e).get h).fst = t then
+      .inl (heq ▸ ((infer e).get h).snd)
+    else
+      .inr ⟨fun hn => by
+        have h_comp := hn.complete
+        simp_all⟩
+  else .inr ⟨fun hn => by
+    have h_comp := hn.complete
+    simp_all⟩
 
 end Expr

@@ -159,7 +159,7 @@ def match_arrow (t : Expr) : Option ((α β : Expr) × (m n : ℕ) × (PLift (t 
       .none
   | _ => .none
 
-set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
+set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) :=
   match e with
   | DCC Π(m, n) => .some ⟨_, .pi⟩
   | DCC Σ(m, n) => .some ⟨_, .sigma⟩
@@ -212,74 +212,77 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
       | _ => .none
     | _, _ => .none
   | DCC Flip(x) =>
-    let ⟨t_x, h_t_x⟩ ← x.infer
-    match ← t_x.match_arrow with
-    | ⟨α, βγ, m, o, ⟨heq⟩⟩ =>
-      match ← βγ.match_arrow with
-      | ⟨β, γ, n, o₂, ⟨heq₂⟩⟩ =>
-        if heq₃ : o = o₂ then
-          .some ⟨_, .flip (by rw [heq, heq₂, ← heq₃] at h_t_x; exact h_t_x)⟩
-        else .none
+    match x.infer with
+    | .some ⟨t_x, h_t_x⟩ =>
+      match t_x.match_arrow with
+      | .some ⟨α, βγ, m, o, ⟨heq⟩⟩ =>
+        match βγ.match_arrow with
+        | .some ⟨β, γ, n, o₂, ⟨heq₂⟩⟩ =>
+          if heq₃ : o = o₂ then
+            .some ⟨_, .flip (by rw [heq, heq₂, ← heq₃] at h_t_x; exact h_t_x)⟩
+          else .none
+        | _ => .none
+      | _ => .none
+    | _ => .none
   | DCC App(γ, β) =>
-    let ⟨t_γ, h_t_γ⟩ ← γ.infer
-    match ← β.infer with
-    | ⟨DCC Sort n, h_t_β⟩ =>
-      match ← t_γ.match_arrow with
-      | ⟨β₂, DCC Sort o, n₂, o₂, ⟨heq₂⟩⟩ =>
+    match γ.infer, β.infer with
+    | .some ⟨t_γ, h_t_γ⟩, .some ⟨DCC Sort n, h_t_β⟩ =>
+      match t_γ.match_arrow with
+      | .some ⟨β₂, DCC Sort o, n₂, o₂, ⟨heq₂⟩⟩ =>
         if heq : β = β₂ ∧ n = n₂ ∧ o.succ = o₂ then
           have ⟨ha, hb, hc⟩ := heq
           .some ⟨_, .app_e h_t_β (by rw [heq₂, ← ha, ← hb, ← hc] at h_t_γ; exact h_t_γ)⟩
         else .none
       | _ => .none
-    | _ => .none
+    | _, _ => .none
   | DCC Λ(β, x) =>
-    let ⟨t_β, h_t_β⟩ ← β.infer
-    match ← x.infer with
-    | ⟨DCC (Π(mn, o) (Σ(m₂, n) α β₂) γ), h_t_x⟩ =>
+    match β.infer, x.infer with
+    | .some ⟨t_β, h_t_β⟩, .some ⟨DCC (Π(mn, o) (Σ(m₂, n) α β₂) γ), h_t_x⟩ =>
       if heq : max m₂ n = mn ∧ β = β₂ then
         have ⟨ha, hb⟩ := heq
         .some ⟨_, .curr (by rw [← ha, ← hb] at h_t_x; exact h_t_x)⟩
       else .none
-    | _ => .none
+    | _, _ => .none
   | DCC ⟦m, α, γ⟧⟨f, g⟩ =>
-    let ⟨t_γ, h_t_γ⟩ ← infer γ
-    let ⟨t_f, h_t_f⟩ ← infer f
-    let ⟨t_g, h_t_g⟩ ← infer g
-    match t_f, t_g, t_γ with
-    | (DCC (Π(m₁, n₁) α₁ β)),
-      (DCC  (Π(m₂, o₂) α₂ (γ₂ ∘ f₂))),
-      (DCC (Π(m₃, o₃ + 1)
-       (Σ(m₄, m₅) (Sort m₆) Id(Sort m₇))
-       ((Flip(Π(n₂, o₄ + 1)) `(Sort o₅ + 1, (Σ(n₃, n₄) (Sort n₅) Id(Sort n₆)), Sort o₆))
-       ∘ (β₂ ∘ Snd((Sort m₉), Id(Sort m10)))))) =>
-      if heq₃ : m = m₁ ∧ m = m₂ ∧ m.succ = m₃ ∧ m.succ = m₄ ∧ m = m₅ ∧ m = m₆ ∧ n₁.succ = n₃
-        ∧ n₁ = n₄ ∧ n₁ = n₅ ∧ n₁ = n₆ ∧ m = m₇ ∧ m = m₉ ∧ m = m10
-        ∧ n₁ = n₂ ∧ o₂ = o₃ ∧ o₂ = o₄ ∧ o₂ = o₅ ∧ o₃ = o₆ ∧ β = β₂ ∧ α = α₁ ∧ α = α₂ ∧ γ = γ₂ ∧ f = f₂ then
-        have ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11
-          , h12, h13, h14, h15, h16, h17, h18, h19, h20, h21, h22, h23⟩ := heq₃
-        .some ⟨_, .pair
-          (by rw [← h1, ← h20] at h_t_f; exact h_t_f)
-          (by rw [← h2, ← h21, ← h22, ← h23] at h_t_g; exact h_t_g)
-          (by
-            rw [← h3, ← h11, ← h4, ← h5, ← h6, ← h7
-              , ← h8, ← h9, ← h12, ← h14, ← h10, ← h13, ← h15, ← h16, ← h17, ← h18, ← h19, ← h15] at h_t_γ
-            exact h_t_γ)⟩
-      else .none
+    match infer γ, infer f, infer g with
+    | .some ⟨t_γ, h_t_γ⟩, .some ⟨t_f, h_t_f⟩, .some ⟨t_g, h_t_g⟩ =>
+      match t_f, t_g, t_γ with
+      | (DCC (Π(m₁, n₁) α₁ β)),
+        (DCC  (Π(m₂, o₂) α₂ (γ₂ ∘ f₂))),
+        (DCC (Π(m₃, o₃ + 1)
+         (Σ(m₄, m₅) (Sort m₆) Id(Sort m₇))
+         ((Flip(Π(n₂, o₄ + 1)) `(Sort o₅ + 1, (Σ(n₃, n₄) (Sort n₅) Id(Sort n₆)), Sort o₆))
+         ∘ (β₂ ∘ Snd((Sort m₉), Id(Sort m10)))))) =>
+        if heq₃ : m = m₁ ∧ m = m₂ ∧ m.succ = m₃ ∧ m.succ = m₄ ∧ m = m₅ ∧ m = m₆ ∧ n₁.succ = n₃
+          ∧ n₁ = n₄ ∧ n₁ = n₅ ∧ n₁ = n₆ ∧ m = m₇ ∧ m = m₉ ∧ m = m10
+          ∧ n₁ = n₂ ∧ o₂ = o₃ ∧ o₂ = o₄ ∧ o₂ = o₅ ∧ o₃ = o₆ ∧ β = β₂ ∧ α = α₁ ∧ α = α₂ ∧ γ = γ₂ ∧ f = f₂ then
+          have ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11
+            , h12, h13, h14, h15, h16, h17, h18, h19, h20, h21, h22, h23⟩ := heq₃
+          .some ⟨_, .pair
+            (by rw [← h1, ← h20] at h_t_f; exact h_t_f)
+            (by rw [← h2, ← h21, ← h22, ← h23] at h_t_g; exact h_t_g)
+            (by
+              rw [← h3, ← h11, ← h4, ← h5, ← h6, ← h7
+                , ← h8, ← h9, ← h12, ← h14, ← h10, ← h13, ← h15, ← h16, ← h17, ← h18, ← h19, ← h15] at h_t_γ
+              exact h_t_γ)⟩
+        else .none
+      | _, _, _ => .none
     | _, _, _ => .none
   | DCC f ∘ g =>
-    let ⟨t_g, h_t_g⟩ ← g.infer
-    let ⟨t_f, h_t_f⟩ ← f.infer
-    match t_g.match_arrow, t_f with
-    | .some ⟨α, β₁, m, n₁, ⟨heq₁⟩⟩, DCC (Π(n₂, o) β₂ γ) =>
-      if heq₃ : β₁ = β₂ ∧ n₁ = n₂ then
-        .some ⟨_, .comp (heq₁ ▸ h_t_g) (by
-          have ⟨heqa, heqb⟩ := heq₃
-          rw [← heqa, ← heqb] at h_t_f
-          exact h_t_f)⟩
-      else .none
+    match g.infer, f.infer with
+    | .some ⟨t_g, h_t_g⟩, .some ⟨t_f, h_t_f⟩ =>
+      match t_g.match_arrow, t_f with
+      | .some ⟨α, β₁, m, n₁, ⟨heq₁⟩⟩, DCC (Π(n₂, o) β₂ γ) =>
+        if heq₃ : β₁ = β₂ ∧ n₁ = n₂ then
+          .some ⟨_, .comp (heq₁ ▸ h_t_g) (by
+            have ⟨heqa, heqb⟩ := heq₃
+            rw [← heqa, ← heqb] at h_t_f
+            exact h_t_f)⟩
+        else .none
+      | _, _ => .none
     | _, _ => .none
-  | DCC (f x) => match ← f.infer, ← x.infer with
-    | ⟨DCC (Π(m, n) α₁ β), h_f⟩, ⟨α₂, h_x⟩ =>
+  | DCC (f x) => match f.infer, x.infer with
+    | .some ⟨DCC (Π(m, n) α₁ β), h_f⟩, .some ⟨α₂, h_x⟩ =>
       if heq : α₁ = α₂ then
         .some ⟨(DCC (β ⟦Id(Sort m)⟧(α₁, x))).reduce.fst, .app h_f (heq ▸ h_x)⟩
       else .none

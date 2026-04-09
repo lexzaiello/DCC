@@ -1,0 +1,158 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper, margin={1in}]{geometry}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{authblk}
+\usepackage{biblatex}
+\usepackage{mathpartir}
+\usepackage{stmaryrd}
+\usepackage{amssymb}
+\addbibresource{refs.bib}
+
+\newcommand{\sort}[1]{\text{Sort}\ #1}
+
+\title{Decidable Type-Checking for a Dependent Categorical Combinator Calculus}
+\author[1]{Lexi Aiello}
+\author[2]{Eric Klavins}
+\affil[1]{Department of Philosophy, University of Washington}
+\affil[2]{Electrical \& Computer Engineering Department, University of Washington} 
+
+\begin{document}
+\maketitle
+\begin{abstract}
+\textit{TODO later...}
+We present "DCC": a dependently-typed combinator calculus based on categorial combinators \cite{CURIEN1986188} with decidable type-checking, global confluence, and strong normalization of types. We achieve judgmental decidability by showing that the types of all objects can be expressed using a strongly-normalizing affine subset of the DCC. We show that this affine calculus is strongly normalizing by defining a decreasing measure under reduction. We also summarize a formalization of the theory and its properties in Lean 4.
+\end{abstract}
+\section{Introduction}
+
+Simply-typed combinatory logics are known to be equivalent to the simply-typed \(\lambda\)-calculus \cite{Altenkirch2023CombinatoryLA}. These calculi can avoid contexts, and might enjoy benefits as such (e.g., unification). Work has been done on extending these logics with dependent types \cite{altenkirch2023munchhausen}, but no implementation has been proposed, nor have such theories been formalized.
+
+\textit{TODO...}
+
+%- definition of combinatory logic
+  %- prototypical SK
+%- advantages for dependent typing:
+  %- no contexts
+  %- no unification
+  %- probably link Altenkirch's paper here
+%- state of dependent combinatory logic:
+  %- no implementation so far
+%- disadvantages:
+  %- link 
+  %- exponential term blowup
+  %- link CAM paper here
+  %- link to Altenkirch's note about U family
+%- explain the CAM
+  %- model variable substitution / context as a nested series of couples
+    %- traverse and find variable with Fst, Snd, and Id
+  %- cite performance advantages over the usual SK compilation
+%- explain Curien's simply-typed variant
+  %- explain that categorical combinators as used in the CAM correspond to cartesian closed categories (reference CAM paper)
+%- how we extend the CAM combinators to dependent typing
+  %- like contextual categories here?
+  %- pairs kind of like substitution
+
+\section{Background}
+
+\subsection{The Untyped Categorical Combinators}
+
+The categorical combinators \cite{CURIEN1986188} are the basis of the Categorical Abstract Machine \cite{COUSINEAU1987173}. As shown by Cousineau et al., they are a potential compilation target for the \(\lambda\)-calculus. Categorical combinators model variable substitution with projection over nested tuples ("couples" constituting the "environment") and a curry combinator (\(\Lambda\)). The reduction rules for this calculus \eqref{red_untyped_cat} resemble the rules of the SK combinator calculus, and their categorical semantics are given by cartesian-closed categories \cite[p. 178]{COUSINEAU1987173}.
+
+\begin{figure}[h!]\label{red_untyped_cat}
+\begin{center}
+\begin{tabular}{l l}
+  (ass) & \((x \circ y) z = x(y z)\) \\
+  (fst) & \(Fst(a, b) = a\) \\
+  (snd) & \(Snd(a, b) = b\) \\
+  (dpair) & \(\langle x, y\rangle z = (x z, y z)\) \\
+  (curr) & \(\Lambda(x)yz = x(y, z)\) \\
+  (app) & \(App(f, x) = f x\) \\
+  (quote) & \(`(x) y = x\)
+\end{tabular}
+\end{center}
+\caption{Reduction rules of the untyped combinators as seen in the Categorical Abstract Machine.}
+\end{figure}
+
+\subsection{The Simply-Typed Categorical Combinators}
+
+Curien extends the combinators with type annotations, enabling simple typing. Quotation is omitted in the simply-typed variant, but it can be derived from \(Id(\alpha)\) and projections. The inference rules are as such:
+
+\begin{center}
+\begin{figure}[h!]
+\begin{center}
+\begin{tabular}{c c c}
+\inferrule[Id]
+{ \Gamma \vdash \alpha : \text{Type}}
+{\Gamma \vdash Id(\alpha) : \alpha \rightarrow \alpha}
+ & 
+\inferrule[Coup]
+{ \Gamma \vdash x : \alpha, y : \beta}
+{ \Gamma \vdash (x, y) : \alpha \times \beta}
+&
+\inferrule[Comp]
+{ \Gamma \vdash x : \beta \rightarrow \gamma, y : \alpha \rightarrow \beta}
+{ \Gamma \vdash (x \circ y) : \alpha \rightarrow \gamma} \\\\
+\inferrule[Fst]
+{ \Gamma \vdash \alpha : \text{Type}, \beta : \text{Type}}
+{ \Gamma \vdash Fst(\alpha, \beta) : \alpha \times \beta \rightarrow \alpha}
+&
+\inferrule[Snd]
+{ \Gamma \vdash \alpha : \text{Type}, \beta : \text{Type}}
+{ \Gamma \vdash Snd(\alpha, \beta) : \alpha \times \beta \rightarrow \beta}
+&
+\inferrule[Pair]
+{ \Gamma \vdash x : \alpha \rightarrow \tau_{1}, y : \alpha \rightarrow \tau_{2}}
+{ \Gamma \vdash \langle x, y \rangle : \alpha \rightarrow \tau_{1} \times \tau_{2}}\\\\
+\inferrule[Curr]
+{ \Gamma \vdash x : (\alpha \times \beta) \rightarrow \tau}
+{\Gamma \vdash \Lambda(x) : \alpha \rightarrow \beta \rightarrow \tau}
+&
+\inferrule[App]
+{ \Gamma \vdash \alpha : \text{Type}, \beta : \text{Type}}
+{ \Gamma \vdash App(\alpha, \beta) : (\alpha \rightarrow \beta) \times \alpha \rightarrow \beta}&
+\end{tabular}
+\end{center}
+\caption{Inference rules of the simpy-typed categorical combinators}
+\end{figure}
+\end{center}
+
+\section{Dependent Categorical Combinators}
+
+We extend the simply-typed categorical combinators to dependent types by re-interpreting couples (\(a, b\)) as \(\Sigma\)-terms:
+\begin{center}\label{coup_exp}
+\begin{figure}[h!]\label{coup_dep}
+\begin{center}
+\begin{equation}
+\inferrule[Coup]
+{ \Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, x : \alpha, y : \beta x}
+{\Gamma \vdash \llbracket \beta \rrbracket (a, b) : (\Sigma(m, n) \alpha \beta)}
+\end{equation}
+\end{center}
+\caption{Couples are \(\Sigma\)-terms.}
+\end{figure}
+\end{center}
+We require that \(\beta : \alpha \rightarrow \sort{m}\) be given explicitly by the type annotation \(\llbracket \beta \rrbracket\). We have also added type arguments to pairs (\(\llbracket m, \alpha, \beta\rrbracket \langle f, g\rangle\)) which allow the resulting couple's \texttt{snd} component to depend on the type of the argument \(x\) and \(f x\).
+
+Our reduction rules are otherwise the same as in the categorical abstract machine \cite{COUSINEAU1987173}. We use \(f(x_1, \ldots, x_n)\) to denote a combinator requiring \(n\) type annotations. Type annotations for pairs and couples are given by \(\llbracket \ldots \rrbracket\). Application is denoted by juxtaposition:
+
+\begin{center}
+\begin{figure}[h!]\label{red_untyped_cat}
+\begin{center}
+\begin{tabular}{l l}
+  (ass) & \((x \circ y) z = x(y z)\) \\
+  (fst) & \(Fst(\alpha, \beta)\ \llbracket \beta \rrbracket (a, b) = a\) \\
+  (snd) & \(Snd(\alpha, \beta)\ \llbracket \beta \rrbracket (a, b) = b\) \\
+  (curr) & \(\Lambda(\beta, x)yz = x\ \llbracket \beta \rrbracket(y, z)\) \\
+  (app) & \(App(\gamma, \beta)\ \llbracket \beta \rrbracket (f, x) = f x\) \\
+  (quote) & \(`(\alpha, \beta, x) y = x\) \\
+  (flip) & \(Flip(x)y z = x z y\)\\
+  (dpair) & \(\llbracket m, \alpha, \beta \rrbracket \langle x, y\rangle\ z = \llbracket \gamma \llbracket Id(\sort{m}) \rrbracket (\alpha, x) \rrbracket (x z, y z)\)
+\end{tabular}
+\end{center}
+\caption{Reduction rules of our dependently-typed categorical combinators.}
+\end{figure}
+\end{center}
+
+\end{document}

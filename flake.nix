@@ -101,10 +101,10 @@
             '';
           });
         papers = [
-          #{
-          #  name = "paper";
-          #  path = "papers/paper";
-          #}
+          {
+            name = "paper";
+            path = "papers/paper";
+          }
           #{
           #  name = "adapting_equations";
           #  path = "papers/adapting_equations";

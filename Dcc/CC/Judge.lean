@@ -344,16 +344,16 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
   | sort => simp [infer]
   | app a b ih₁ ih₂ => simp [infer, ih₁, ih₂]
 
-def Judge.decide : Judge e t ⊕ (PLift (Judge e t → False)) :=
+def Judge.decide : Judge e t ⊕ (Judge e t → PLift False) :=
   if h : (infer e).isSome then
     if heq : ((infer e).get h).fst = t then
       .inl (heq ▸ ((infer e).get h).snd)
     else
-      .inr ⟨fun hn => by
+      .inr fun hn => by
         have h_comp := hn.complete
-        simp_all⟩
-  else .inr ⟨fun hn => by
+        simp_all
+  else .inr fun hn => by
     have h_comp := hn.complete
-    simp_all⟩
+    simp_all
 
 end Expr

@@ -155,7 +155,7 @@ inductive Judge : Expr → Expr → Type where
     → Judge γ (DCC (
       Π(m.succ, o.succ)
        (Σ(m.succ, m) (Sort m) Id(Sort m))
-       ((Flip(Π(n, o.succ)) (Sort o)) ∘ (β ∘ Snd((Sort m), Id(Sort m))))))
+       ((Flip(Π(n, o.succ)) `(Sort o.succ, (Σ(n.succ, n) (Sort n) Id(Sort n)), Sort o)) ∘ (β ∘ Snd((Sort m), Id(Sort m))))))
     → Judge (DCC ⟦m, α, γ⟧⟨f, g⟩) (pair.type α β γ m n o).reduce.fst
   -- fst(α, β) : (Σ α β) → α
   | fst   : Judge α (DCC Sort m)
@@ -314,14 +314,20 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
       (DCC  (Π(m₂, o₂) α₂ (γ₂ ∘ f₂))),
       (DCC (Π(m₃, o₃ + 1)
        (Σ(m₄, m₅) (Sort m₆) Id(Sort m₇))
-       ((Flip(Π(n₂, o₄ + 1)) (Sort o₅)) ∘ (β₂ ∘ Snd((Sort m₉), Id(Sort m10)))))) =>
-      if heq₃ : m = m₁ ∧ m = m₂ ∧ m.succ = m₃ ∧ m.succ = m₄ ∧ m = m₅ ∧ m = m₆ ∧ m = m₇ ∧ m = m₉ ∧ m = m10
-        ∧ n₁ = n₂ ∧ o₂ = o₃ ∧ o₂ = o₄ ∧ o₂ = o₅ ∧ β = β₂ ∧ α = α₁ ∧ α = α₂ ∧ γ = γ₂ ∧ f = f₂ then
-        have ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, h16, h17, h18⟩ := heq₃
+       ((Flip(Π(n₂, o₄ + 1)) `(Sort o₅ + 1, (Σ(n₃, n₄) (Sort n₅) Id(Sort n₆)), Sort o₆))
+       ∘ (β₂ ∘ Snd((Sort m₉), Id(Sort m10)))))) =>
+      if heq₃ : m = m₁ ∧ m = m₂ ∧ m.succ = m₃ ∧ m.succ = m₄ ∧ m = m₅ ∧ m = m₆ ∧ n₁.succ = n₃
+        ∧ n₁ = n₄ ∧ n₁ = n₅ ∧ n₁ = n₆ ∧ m = m₇ ∧ m = m₉ ∧ m = m10
+        ∧ n₁ = n₂ ∧ o₂ = o₃ ∧ o₂ = o₄ ∧ o₂ = o₅ ∧ o₃ = o₆ ∧ β = β₂ ∧ α = α₁ ∧ α = α₂ ∧ γ = γ₂ ∧ f = f₂ then
+        have ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11
+          , h12, h13, h14, h15, h16, h17, h18, h19, h20, h21, h22, h23⟩ := heq₃
         .some ⟨_, .pair
-          (by rw [← h1, ← h15] at h_t_f; exact h_t_f)
-          (by rw [← h2, ← h16, ← h17, ← h18] at h_t_g; exact h_t_g)
-          (by rw [← h3, ← h11, ← h4, ← h5, ← h6, ← h7, ← h8, ← h9, ← h12, ← h14, ← h10, ← h13] at h_t_γ; simp at h_t_γ; exact h_t_γ)⟩
+          (by rw [← h1, ← h20] at h_t_f; exact h_t_f)
+          (by rw [← h2, ← h21, ← h22, ← h23] at h_t_g; exact h_t_g)
+          (by
+            rw [← h3, ← h11, ← h4, ← h5, ← h6, ← h7
+              , ← h8, ← h9, ← h12, ← h14, ← h10, ← h13, ← h15, ← h16, ← h17, ← h18, ← h19, ← h15] at h_t_γ
+            exact h_t_γ)⟩
       else .none
     | _, _, _ => .none
   | DCC f ∘ g =>
@@ -354,78 +360,17 @@ def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) := do
 #eval (Std.format ∘ Sigma.fst) <$> infer (id.type (DCC Sort 0) 1)
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (`(Sort 1, Sort 1, Sort 0) (Sort 0)))
 #eval infer (DCC (`(Sort 1, Sort 2, Sort 0) ∘ Id(Sort 2)))
-#eval (Std.format ∘ Sigma.fst) <$> infer (DCC ⟦3, Sort 2, Id(Sort 2)⟧⟨Id(Sort 2), Id(Sort 2) ∘ Id(Sort 2)⟩)
+-- γ gets ⟦Id(Sort 3)⟧(Sort 2, Sort 1) and Sort 1
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC ⟦3, Sort 2, Id(Sort 2)⟧⟨Id(Sort 2), Id(Sort 2)⟩)
+--#eval (Std.format ∘ Sigma.fst) <$> infer (DCC ⟦3, Sort 2, Id(Sort 2)⟧⟨Id(Sort 2), Id(Sort 2)⟩)
 #eval infer (pair.type (DCC Sort 1) (DCC Id(Sort 1)) (DCC (Sort 1)) 2 2 2)
 
 /-
-example: deriving nondependent pair rule:
-
-⟨a, b⟩ x = (a x, b x) : Σ α (`(Sort n, α, β))
-
-⟦`(Sort 2, Sort 1, Sort 1)⟧⟨Id(Sort 1), Id(Sort 1)⟩
-
-can just change g here...
-
-⟦`(Sort 2, Sort 1, Sort 1)⟧⟨Id(Sort 1), Id(Sort 1)⟩
-
-g receives Sort 0
-
-we need g's type to be
-β ∘ f ∘ Snd(_, _)
-
-what's an example of App?
-
-example: deriving S combinator
-
-S x y z = (x z) (y z)
-
-S = App ∘ ⟨x, App ∘ y⟩
-
-S : ∀ (α : Type)
-  (β : α → Type)
-  (γ : ∀ (x : α) (y : β x), Type)
-  (x : ∀ (x : α) (y : β x), γ x y)
-  (y : ∀ (x : α), β x)
-  (z : α), γ z (y z)
-
-f : ∀ (x : α), β x
-
-App(α, β) : ∀ (x : Σ(∀ (x : α), β x, β)), 
-App(α, β) (f, x) = f x
-
-assuming
-
-App(β, γ) : (x : Σ((Π(?, ?) β γ), `(Sort n, Π(?, ?) β γ, β))), γ x.snd
-
-S(α, β, γ) = App(γ, β) ∘ ⟨x, y⟩
-
-x's type receives
-
-(α, z) then (
-
-S(α, β, γ) = ⟨y, x⟩
-
-⟨y, x⟩ z = (y z, x z)
-
-⟨Snd, Fst⟩ ∘ ⟨y, x⟩
-
-App (f, x) = f x
-
-f : ∀ (x : α), γ x
-
-β : α → Type
-γ : ∀ (
-App(γ, β) : ∀ (x : Σ(α, β)), 
-App(γ, β) (f, x) = f x
-
-S α β γ = App ∘ ⟨x, App ∘ y⟩
+Thoughts on pairs:
 
 ⟨f, g⟩ x = (f x, g x)
 
-f : ∀ (x : α), β x
-(g x) : γ (f x)
 
-g : ∀ (x : α), γ ∘ f
 -/
 
 end Expr

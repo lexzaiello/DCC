@@ -350,12 +350,11 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
     split
     rename_i heq ha hb
     simp_all only [and_self]
-  | pair _ _ _ ih₁ ih₂ ih₃ =>
-    simp [infer, ih₁, ih₂, ih₃]
-    simp_all only [Nat.succ_eq_add_one]
+  | pair _ _ ih₁ ih₂ =>
+    simp [infer, ih₁, ih₂, arrow, match_arrow]
     split
-    rename_i heq₃ h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18 h19 h20 h21 h22 h23
-    simp_all only [Nat.succ_eq_add_one, and_self]
+    rename_i heq₃ h1 h2 h3 h4 h5
+    simp_all only [and_self]
   | coup _ _ _ ih₁ ih₂ ih₃ => simp [infer, ih₁, ih₂, ih₃, arrow, match_arrow]
   | quot _ _ _ ih₁ ih₂ ih₃ => simp [infer, ih₁, ih₂, ih₃]
   | pi => simp [infer]

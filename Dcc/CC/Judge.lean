@@ -60,6 +60,12 @@ f x : β x
 g x : 
 -/
 
+/-
+TODO:
+- make Π app only give x, not (α, x)
+- remove Map₁ and Map₂
+-/
+
 def arrow (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(m, n) α `(Sort n, (Σ(m.succ, m) (Sort m) (Id(Sort m))), β))
 
@@ -87,8 +93,25 @@ def id.type (α : Expr) (m : Level) : Expr :=
 def flip.type (α β γ : Expr) (m n o : Level) : Expr :=
   (arrow β (arrow α γ m o) n o).reduce.fst
 
-def comp.type (α γ g : Expr) (m o : Level) : Expr :=
-  DCC (Π(m, o) α (γ ∘ g))
+/-
+γ is a function of (β, x)
+good primitive for this is to be able to map over the snd component.
+
+γ ∘ (map_fst g)
+
+map_fst f (a, b) = (f a, b)
+we might need pattern matching again for this.
+
+I don't really want to add another primitive, though.
+
+maybe we can derive this?
+
+we can actually just do
+
+
+-/
+def comp.type (α β γ g : Expr) (m n o : Level) : Expr :=
+  DCC (Π(m, o) α ((Λ(Id(Sort n), γ) β) ∘ g))
 
 /-
 ⟦α, γ⟧⟨f, x⟩ : Π(m, (max n o)) α (() ∘ f
@@ -138,7 +161,7 @@ inductive Judge : Expr → Expr → Type where
   -- g : Π β A
   | comp  : Judge g (arrow α β m n)
     → Judge f (DCC (Π(n, o) β γ))
-    → Judge (DCC f ∘ g) (comp.type α γ g m o).reduce.fst
+    → Judge (DCC f ∘ g) (comp.type α β γ g m n o).reduce.fst
   /-
     ⟦m, α, γ⟧⟨f, g⟩ x = ⟦(γ ⟦Id(Sort m)⟧(α, x))⟧(f x, g x)
     f : ∀ (x : α), β x
@@ -341,7 +364,7 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC Id(Sort 1))
 #eval (Std.format ∘ Sigma.fst) <$> infer (id.type (DCC Sort 0) 1)
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (`(Sort 1, Sort 1, Sort 0) (Sort 0)))
-#eval infer (DCC (`(Sort 1, Sort 2, Sort 0) ∘ Id(Sort 2)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC ((`(Sort 1, Sort 2, Sort 0) ∘ Id(Sort 2)) (Sort 1)))
 
 theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
   induction h_t with

@@ -27,7 +27,7 @@ inductive Expr where
   | snd   : Expr  → Expr  → Expr
   | quot  : Expr  → Expr  → Expr  → Expr
   | comp  : Expr  → Expr  → Expr
-  | pair  : Level → Expr  → Expr  → Expr  → Expr  → Expr
+  | pair  : Expr  → Expr  → Expr  → Expr
   | sigma : Level → Level → Expr
   | mk    : Expr  → Expr  → Expr  → Expr
   | pi    : Level → Level → Expr
@@ -52,7 +52,7 @@ syntax expr "∘" expr                                             : expr
 syntax:30 ident                                                  : expr
 syntax "(" expr+ ")"                                             : expr
 syntax:max "Sort" term                                           : expr
-syntax (priority := high) "⟦" term "," expr,* "⟧" "⟨" expr,* "⟩" : expr
+syntax (priority := high) "⟦" expr,* "⟧" "⟨" expr,* "⟩" : expr
 syntax (priority := high) "⟦" expr,* "⟧" "(" expr,* ")"          : expr
 
 syntax "DCC"  expr : term
@@ -63,7 +63,7 @@ macro_rules
   | `(DCC `($α:expr, $β:expr, $x:expr))         => `(Expr.quot (DCC $α) (DCC $β) (DCC $x))
   | `(DCC Λ($β:expr, $e:expr))                  => `(Expr.curr (DCC $β) (DCC $e))
   | `(DCC Π($m:term, $n:term))                  => `(Expr.pi $m $n)
-  | `(DCC ⟦$m:term, $β:expr, $γ:expr⟧⟨$x:expr, $y:expr⟩) => `(Expr.pair $m (DCC $β) (DCC $γ) (DCC $x) (DCC $y))
+  | `(DCC ⟦$β:expr⟧⟨$x:expr, $y:expr⟩)          => `(Expr.pair (DCC $β) (DCC $x) (DCC $y))
   | `(DCC ⟦$β:expr⟧($x:expr, $y:expr))          => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                         => `(Expr.sort $m)
   | `(DCC Σ($m:term, $n:term))                  => `(Expr.sigma $m $n)
@@ -90,7 +90,7 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC App(α, β))  => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Λ(β, e))    => "Λ(" ++ β.toFormat ++ "," ++ e.toFormat ++ ")"
   | (DCC Π(m, n))    => "Π" ++ (.bracket "(" ((Std.format m) ++ ", " ++ (Std.format n)) ")")
-  | (DCC ⟦m, α, β⟧⟨a, b⟩)  => (.bracket "⟦" ((Std.format m) ++ ", " ++ α.toFormat ++ ", " ++ β.toFormat) "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
+  | (DCC ⟦β⟧⟨a, b⟩)  => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
   | (DCC ⟦β⟧(a, b))  => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
   | (DCC Σ(m, n))    => "Σ" ++ (.bracket "(" ((Std.format m) ++ ", " ++ (Std.format n)) ")")
   | (DCC f ∘ g)      => f.toFormat ++ " ∘ " ++ g.toFormat

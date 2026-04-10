@@ -1,6 +1,65 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
+/-
+
+⟨f, g⟩ x
+
+f : α → τ
+g : ∀ (x : α), β (f x)
+β : τ → Type
+
+⟨f, g⟩ x : Σ τ β
+
+Λ(β, x) y z = x ⟦β⟧(y, z)
+
+first element in pair is not dependent
+- this aligns with syntactic categories a bit.
+- second element is.
+
+⟨f, g⟩ x
+
+f : ∀ (x : α), β x
+g : ∀ (x : α), γ (f x)
+
+γ : α → Sort o
+
+f : α → β
+g : ∀ (x : α)
+
+(f x, g x) : Σ (β x) (γ x (f x))
+
+g x : 
+
+cut elimination or substitution?
+
+- substitution
+
+Γ ⊢ x : α, y x : β x, z x : γ (
+[x := M] →
+Δ ⊢ (y M) : (β M0, (z M) : (γ m) (y M)
+
+f : ∀ (x : α), β x
+g : ∀ (x : α), γ (f x)
+
+γ : ∀ (x : β x), 
+
+(Γ[x := y] ≈ (
+
+⟦α, β⟧⟨f, g⟩
+
+f : ∀ (x : α), β x
+g : ∀ (x : α), γ (f x)
+
+f : ∀ (x : α), β x
+g : ∀ (x : α), γ ∘ f
+γ : ∀ (x : (Σ(m.succ, m) (Sort m) Id(Sort m))), (β ∘ Snd((Sort m), Id(Sort m))) → Sort o
+
+(f x, g x)
+f x : β x
+g x : 
+-/
+
 def arrow (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(m, n) α `(Sort n, (Σ(m.succ, m) (Sort m) (Id(Sort m))), β))
 
@@ -36,7 +95,7 @@ def comp.type (α γ g : Expr) (m o : Level) : Expr :=
 -/
 
 def pair.type (α β γ : Expr) (m n o : Level) : Expr :=
-  (DCC (Π(m, (max n o)) α ((Flip(Σ(n, o)) γ) ∘ β)))
+  (arrow α (DCC (Σ(n, o) β γ)) m (max n o))
 
 def fst.type (α β : Expr) (m n : Level) : Expr :=
   (arrow (DCC (Σ(m, n) α β)) α (max m n) m)
@@ -88,13 +147,9 @@ inductive Judge : Expr → Expr → Type where
 
     ⟦m, α, γ⟧⟨f, g⟩ x : (Σ(n, o) (β x) γ)
   -/
-  | pair  : Judge f (DCC (Π(m, n) α β))
+  | pair  : Judge f (arrow α β m n)
     → Judge g (DCC (Π(m, o) α (γ ∘ f)))
-    → Judge γ (DCC (
-      Π(m.succ, o.succ)
-       (Σ(m.succ, m) (Sort m) Id(Sort m))
-       ((Flip(Π(n, o.succ)) `(Sort o.succ, (Σ(n.succ, n) (Sort n) Id(Sort n)), Sort o)) ∘ (β ∘ Snd((Sort m), Id(Sort m))))))
-    → Judge (DCC ⟦m, α, γ⟧⟨f, g⟩) (pair.type α β γ m n o).reduce.fst
+    → Judge (DCC ⟦γ⟧⟨f, g⟩) (pair.type α β γ m n o).reduce.fst
   -- fst(α, β) : (Σ α β) → α
   | fst   : Judge α (DCC Sort m)
     → Judge β (arrow α (DCC Sort n) m n.succ)
@@ -243,31 +298,20 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
         .some ⟨_, .curr (by rw [← ha, ← hb] at h_t_x; exact h_t_x)⟩
       else .none
     | _ => .none
-  | DCC ⟦m, α, γ⟧⟨f, g⟩ =>
-    match infer γ, infer f, infer g with
-    | .some ⟨t_γ, h_t_γ⟩, .some ⟨t_f, h_t_f⟩, .some ⟨t_g, h_t_g⟩ =>
-      match t_f, t_g, t_γ with
-      | (DCC (Π(m₁, n₁) α₁ β)),
-        (DCC  (Π(m₂, o₂) α₂ (γ₂ ∘ f₂))),
-        (DCC (Π(m₃, o₃ + 1)
-         (Σ(m₄, m₅) (Sort m₆) Id(Sort m₇))
-         ((Flip(Π(n₂, o₄ + 1)) `(Sort o₅ + 1, (Σ(n₃, n₄) (Sort n₅) Id(Sort n₆)), Sort o₆))
-         ∘ (β₂ ∘ Snd((Sort m₉), Id(Sort m10)))))) =>
-        if heq₃ : m = m₁ ∧ m = m₂ ∧ m.succ = m₃ ∧ m.succ = m₄ ∧ m = m₅ ∧ m = m₆ ∧ n₁.succ = n₃
-          ∧ n₁ = n₄ ∧ n₁ = n₅ ∧ n₁ = n₆ ∧ m = m₇ ∧ m = m₉ ∧ m = m10
-          ∧ n₁ = n₂ ∧ o₂ = o₃ ∧ o₂ = o₄ ∧ o₂ = o₅ ∧ o₃ = o₆ ∧ β = β₂ ∧ α = α₁ ∧ α = α₂ ∧ γ = γ₂ ∧ f = f₂ then
-          have ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11
-            , h12, h13, h14, h15, h16, h17, h18, h19, h20, h21, h22, h23⟩ := heq₃
+  | DCC ⟦γ⟧⟨f, g⟩ =>
+    match infer f, infer g with
+    | .some ⟨t_f, h_t_f⟩, .some ⟨t_g, h_t_g⟩ =>
+      match t_f.match_arrow, t_g with
+      | .some ⟨α, β, m, n, ⟨heq₁⟩⟩,
+        (DCC  (Π(m₂, o₂) α₂ (γ₂ ∘ f₂))) =>
+        if heq₃ : m = m₂ ∧ m = m₂ ∧ α = α₂ ∧ γ = γ₂ ∧ f = f₂ then
+          have ⟨h1, h2, h3, h4, h5⟩ := heq₃
           .some ⟨_, .pair
-            (by rw [← h1, ← h20] at h_t_f; exact h_t_f)
-            (by rw [← h2, ← h21, ← h22, ← h23] at h_t_g; exact h_t_g)
-            (by
-              rw [← h3, ← h11, ← h4, ← h5, ← h6, ← h7
-                , ← h8, ← h9, ← h12, ← h14, ← h10, ← h13, ← h15, ← h16, ← h17, ← h18, ← h19, ← h15] at h_t_γ
-              exact h_t_γ)⟩
+            (heq₁ ▸ h_t_f)
+            (by rw [← h1, ← h3, ← h4, ← h5] at h_t_g; exact h_t_g)⟩
         else .none
-      | _, _, _ => .none
-    | _, _, _ => .none
+      | _, _ => .none
+    | _, _ => .none
   | DCC f ∘ g =>
     match g.infer, f.infer with
     | .some ⟨t_g, h_t_g⟩, .some ⟨t_f, h_t_f⟩ =>

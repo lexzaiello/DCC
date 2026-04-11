@@ -36,8 +36,10 @@ inductive Expr where
   | mk    : Expr  → Expr  → Expr  → Expr
   | pi    : Level → Level → Expr
   | curr  : Expr  → Expr  → Expr
+  -- Nondependent curry
+  | curr' : Expr  → Expr  → Expr
   | appl  : Level → Expr  → Expr → Expr
-  | app   : Expr → Expr → Expr
+  | app   : Expr  → Expr  → Expr
 deriving BEq, Repr, DecidableEq
 
 declare_syntax_cat expr
@@ -52,6 +54,7 @@ syntax:max "Snd'(" expr,* ")"                                    : expr
 syntax:max "`(" expr,* ")"                                       : expr
 syntax "Σ(" expr,* ")"                                           : expr
 syntax:max (priority := high) "Λ(" expr,* ")"                    : expr
+syntax:max (priority := high) "Λ'(" expr,* ")"                   : expr
 syntax:max (priority := high) "Π(" term,* ")"                    : expr
 syntax expr "∘'" expr                                            : expr
 syntax expr "∘" expr                                             : expr
@@ -68,6 +71,7 @@ macro_rules
   | `(DCC ($f:expr $x:expr $xs:expr*))          => `(DCC (($f:expr $x:expr) $xs:expr*))
   | `(DCC `($α:expr, $β:expr, $x:expr))         => `(Expr.quot (DCC $α) (DCC $β) (DCC $x))
   | `(DCC Λ($β:expr, $e:expr))                  => `(Expr.curr (DCC $β) (DCC $e))
+  | `(DCC Λ'($β:expr, $e:expr))                 => `(Expr.curr' (DCC $β) (DCC $e))
   | `(DCC Π($m:term, $n:term))                  => `(Expr.pi $m $n)
   | `(DCC ⟦$β:expr⟧⟨$x:expr, $y:expr⟩)          => `(Expr.pair (DCC $β) (DCC $x) (DCC $y))
   | `(DCC ⟦$β:expr⟧($x:expr, $y:expr))          => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
@@ -97,13 +101,14 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Snd(α, β))     => "Snd(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Snd'(α, β))    => "Snd'(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC App(n, α, β))  => "App(" ++ (Std.format n) ++ ", " ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC Λ(β, e))       => "Λ(" ++ β.toFormat ++ "," ++ e.toFormat ++ ")"
+  | (DCC Λ(β, e))       => "Λ(" ++ β.toFormat ++ ", " ++ e.toFormat ++ ")"
+  | (DCC Λ'(β, e))      => "Λ'(" ++ β.toFormat ++ ", " ++ e.toFormat ++ ")"
   | (DCC Π(m, n))       => "Π" ++ (.bracket "(" ((Std.format m) ++ ", " ++ (Std.format n)) ")")
   | (DCC ⟦β⟧⟨a, b⟩)     => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
   | (DCC ⟦β⟧(a, b))     => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
   | (DCC Σ(α, β))       => "Σ" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
-  | (DCC f ∘ g)         => f.toFormat ++ " ∘ " ++ g.toFormat
-  | (DCC f ∘' g)        => f.toFormat ++ " ∘' " ++ g.toFormat
+  | (DCC f ∘ g)         => (.bracket "(" (f.toFormat ++ " ∘ " ++ g.toFormat) ")")
+  | (DCC f ∘' g)        => (.bracket "(" (f.toFormat ++ " ∘' " ++ g.toFormat) ")")
   | (DCC (f x))         => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
 
 instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩

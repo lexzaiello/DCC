@@ -60,11 +60,18 @@ def flip.type (α β γ : Expr) (m n o : Level) : Expr :=
   (arrow β (arrow α γ m o) n o).reduce.fst
 
 /-
-g : Π (x : A), Σ A B
-f : Π (x : Σ A B), C x
+
+-/
+def comp'.type (α β γ g : Expr) (m n o : Level) : Expr :=
+  DCC (Π(m, o) α ((Λ(Id(Sort n), γ) β) ∘' (g ∘' Snd'(Sort m, α))))
+
+/-
+  g : Π (x : α), Σ α β
+  f : Π (x : Σ α β), γ x
+  (f ∘ g) : (Π(m, o) α ((Λ(Id(Sort n), γ) (Σ(α, β))) ∘' (g ∘' Snd'(Sort m, α))))
 -/
 def comp.type (α β γ g : Expr) (m n o : Level) : Expr :=
-  DCC (Π(m, o) α ((Λ(Id(Sort n), γ) β) ∘ (g ∘ Snd'(Sort m, α))))
+  DCC (Π(m, o) α ((Λ(Id(Sort n), γ) (Σ(α, β))) ∘' (g ∘' Snd'(Sort m, α))))
 
 /-
 Derivation of point-free Id(α)
@@ -88,7 +95,7 @@ def snd'.type (α β : Expr) (m n : Level) : Expr :=
 
 def snd.type (α β : Expr) (m n : Level) : Expr :=
   (DCC (Π(max m n, n)
-    Σ(α, β) (β ∘ Fst(α, β) ∘ Snd'(Sort (max m n), Σ(α, β)))))
+    Σ(α, β) (β ∘' Fst(α, β) ∘' Snd'(Sort (max m n), Σ(α, β)))))
 
 /-
 α is type of x in (f, x)
@@ -100,14 +107,14 @@ def app_e.type (α β : Expr) (m n : Level) : Expr :=
 
   DCC (Π(max m n, n)
       Σ(t_f, t_x)
-      ((Λ(Id(Sort m), β) α) ∘ (Snd(t_f, t_x) ∘ Snd'(Sort (max m n), Σ(t_f, t_x)))))
+      ((Λ(Id(Sort m), β) α) ∘' (Snd(t_f, t_x) ∘' Snd'(Sort (max m n), Σ(t_f, t_x)))))
 
 /-
 x : Π (Σ α β) γ
 Λ(x) : Π(m, o) α ((Flip(Π(n, o)) γ) ∘ β)
 -/
 def curr.type (α β γ : Expr) (m n o : Level) : Expr :=
-  (DCC (Π(m, o) α ((Flip(Π(n, o)) γ) ∘ (β ∘ Snd'(Sort m, α)))))
+  (DCC (Π(m, o) α ((Flip(Π(n, o)) γ) ∘' (β ∘' Snd'(Sort m, α)))))
 
 def coup.type (α β : Expr) : Expr :=
   (DCC Σ(α, β))
@@ -131,9 +138,13 @@ inductive Judge : Expr → Expr → Type where
     → IsArrow τ₂ β γ n o 
     → Judge (DCC Flip(x)) (flip.type α β γ m n o).reduce.fst
   -- g : Π β A
-  | comp  : Judge g τ₁
+  | comp'  : Judge g τ₁
     → IsArrow τ₁ α β m n
     → Judge f (DCC (Π(n, o) β γ))
+    → Judge (DCC f ∘' g) (comp'.type α β γ g m n o).reduce.fst
+  | comp   : Judge g τ₁
+    → IsArrow τ₁ α (DCC Σ(α, β)) m n
+    → Judge f (DCC (Π(n, o) Σ(α, β) γ))
     → Judge (DCC f ∘ g) (comp.type α β γ g m n o).reduce.fst
   /-
     ⟦m, α, γ⟧⟨f, g⟩ x = ⟦(γ ⟦Id(Sort m)⟧(α, x))⟧(f x, g x)
@@ -144,7 +155,7 @@ inductive Judge : Expr → Expr → Type where
   -/
   | pair  : Judge f τ₁
     → IsArrow τ₁ α β m n
-    → Judge g (DCC (Π(m, o) α (γ ∘ (f ∘ Snd'(Sort m, α)))))
+    → Judge g (DCC (Π(m, o) α (γ ∘' (f ∘' Snd'(Sort m, α)))))
     → Judge (DCC ⟦γ⟧⟨f, g⟩) (pair.type α β γ m n o).reduce.fst
   -- fst(α, β) : (Σ α β) → α
   | fst   : Judge α (DCC Sort m)
@@ -327,7 +338,7 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
     | .some ⟨t_f, h_t_f⟩, .some ⟨t_g, h_t_g⟩ =>
       match t_f.is_arrow, t_g with
       | .some ⟨α, β, m, n, heq₁⟩,
-        (DCC  (Π(m₂, o₂) α₂ (γ₂ ∘ (f₂ ∘ Snd'(Sort m₃, α₃))))) =>
+        (DCC  (Π(m₂, o₂) α₂ (γ₂ ∘' (f₂ ∘' Snd'(Sort m₃, α₃))))) =>
         if heq₃ : m = m₂ ∧ m = m₂ ∧ α = α₂ ∧ γ = γ₂ ∧ f = f₂ ∧ m = m₃ ∧ α = α₃ then
           have ⟨h1, h2, h3, h4, h5, h6, h7⟩ := heq₃
           .some ⟨_, .pair
@@ -339,15 +350,28 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
         else .none
       | _, _ => .none
     | _, _ => .none
-  | DCC f ∘ g =>
+  | DCC f ∘' g =>
     match g.infer, f.infer with
     | .some ⟨t_g, h_t_g⟩, .some ⟨t_f, h_t_f⟩ =>
       match t_g.is_arrow, t_f with
       | .some ⟨α, β₁, m, n₁, heq₁⟩, DCC (Π(n₂, o) β₂ γ) =>
         if heq₃ : β₁ = β₂ ∧ n₁ = n₂ then
-          .some ⟨_, .comp h_t_g heq₁ (by
+          .some ⟨_, .comp' h_t_g heq₁ (by
             have ⟨heqa, heqb⟩ := heq₃
             rw [← heqa, ← heqb] at h_t_f
+            exact h_t_f)⟩
+        else .none
+      | _, _ => .none
+    | _, _ => .none
+  | DCC f ∘ g =>
+    match g.infer, f.infer with
+    | .some ⟨t_g, h_t_g⟩, .some ⟨t_f, h_t_f⟩ =>
+      match t_g.is_arrow, t_f with
+      | .some ⟨α, DCC Σ(α₂, β₁), m, n₁, heq₁⟩, DCC (Π(n₂, o) Σ(α₃, β₂) γ) =>
+        if heq₃ : α = α₂ ∧ α = α₃ ∧ β₁ = β₂ ∧ n₁ = n₂ then
+          have ⟨ha, hb, hc, hd⟩ := heq₃
+          .some ⟨_, .comp h_t_g (by rw [← ha] at heq₁; exact heq₁) (by
+            rw [← hb, ← hc, ← hd] at h_t_f
             exact h_t_f)⟩
         else .none
       | _, _ => .none
@@ -368,18 +392,18 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC Id(Sort 1))
 #eval (Std.format ∘ Sigma.fst) <$> infer (id.type (DCC Sort 0) 1)
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (`(Sort 1, Sort 1, Sort 0) (Sort 0)))
-#eval (Std.format ∘ Sigma.fst) <$> infer (DCC ((`(Sort 1, Sort 2, Sort 0) ∘ Id(Sort 2)) (Sort 1)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC ((`(Sort 1, Sort 2, Sort 0) ∘' Id(Sort 2)) (Sort 1)))
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Λ(Id(Sort 2), Id((Σ(Sort 2,  Id(Sort 2))))) (Sort 1) (Sort 0)))
 
 /-
 ⟦Id(Sort 2)⟧⟨Id(Sort 2), `(Sort 1, Sort 2, Sort 0)⟩
 -/
 
-#eval (Std.format ∘ Sigma.fst) <$> infer (DCC Id(Sort 2) ∘ Id(Sort 2))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC Id(Sort 2) ∘' Id(Sort 2))
 
 def test_pair : Option Expr :=
   let f := DCC Id(Sort 2)
-  let g := DCC Id(Sort 2) ∘ Id(Sort 2)
+  let g := DCC Id(Sort 2) ∘' Id(Sort 2)
   -- γ receives (f x)
   /-
     Id(Sort 2) ∘ Id(Sort 2) :
@@ -425,6 +449,11 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
     · rfl
   | sort => unfold infer; rfl
   | pi => unfold infer; rfl
+  | comp' _ h_t_arrow _ ih₁ ih₂ =>
+    have h := h_t_arrow.complete
+    unfold infer
+    rw [ih₁, ih₂]
+    aesop
   | comp _ h_t_arrow _ ih₁ ih₂ =>
     have h := h_t_arrow.complete
     unfold infer

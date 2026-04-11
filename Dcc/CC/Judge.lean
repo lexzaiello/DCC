@@ -1,71 +1,6 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
-/-
-
-⟨f, g⟩ x
-
-f : α → τ
-g : ∀ (x : α), β (f x)
-β : τ → Type
-
-⟨f, g⟩ x : Σ τ β
-
-Λ(β, x) y z = x ⟦β⟧(y, z)
-
-first element in pair is not dependent
-- this aligns with syntactic categories a bit.
-- second element is.
-
-⟨f, g⟩ x
-
-f : ∀ (x : α), β x
-g : ∀ (x : α), γ (f x)
-
-γ : α → Sort o
-
-f : α → β
-g : ∀ (x : α)
-
-(f x, g x) : Σ (β x) (γ x (f x))
-
-g x : 
-
-cut elimination or substitution?
-
-- substitution
-
-Γ ⊢ x : α, y x : β x, z x : γ (
-[x := M] →
-Δ ⊢ (y M) : (β M0, (z M) : (γ m) (y M)
-
-f : ∀ (x : α), β x
-g : ∀ (x : α), γ (f x)
-
-γ : ∀ (x : β x), 
-
-(Γ[x := y] ≈ (
-
-⟦α, β⟧⟨f, g⟩
-
-f : ∀ (x : α), β x
-g : ∀ (x : α), γ (f x)
-
-f : ∀ (x : α), β x
-g : ∀ (x : α), γ ∘ f
-γ : ∀ (x : (Σ(m.succ, m) (Sort m) Id(Sort m))), (β ∘ Snd((Sort m), Id(Sort m))) → Sort o
-
-(f x, g x)
-f x : β x
-g x : 
--/
-
-/-
-TODO:
-- make Π app only give x, not (α, x)
-- remove Map₁ and Map₂
--/
-
 def arrow (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(m, n) α `(Sort n, (Σ(m.succ, m) (Sort m) (Id(Sort m))), β))
 
@@ -111,7 +46,7 @@ we can actually just do
 
 -/
 def comp.type (α β γ g : Expr) (m n o : Level) : Expr :=
-  DCC (Π(m, o) α ((Λ(Id(Sort n), γ) β) ∘ g))
+  DCC (Π(m, o) α ((Λ(Id(Sort n), γ) β) ∘ (g ∘ Snd(Sort m, Id(Sort m)))))
 
 /-
 ⟦α, γ⟧⟨f, x⟩ : Π(m, (max n o)) α (() ∘ f
@@ -164,14 +99,13 @@ inductive Judge : Expr → Expr → Type where
     → Judge (DCC f ∘ g) (comp.type α β γ g m n o).reduce.fst
   /-
     ⟦m, α, γ⟧⟨f, g⟩ x = ⟦(γ ⟦Id(Sort m)⟧(α, x))⟧(f x, g x)
-    f : ∀ (x : α), β x
-    g : ∀ (x : α), γ ∘ f
-    γ : ∀ (x : (Σ(m.succ, m) (Sort m) Id(Sort m))), (β ∘ Snd((Sort m), Id(Sort m))) → Sort o
+    f : α → β
+    g : ∀ (x : α), γ x
 
     ⟦m, α, γ⟧⟨f, g⟩ x : (Σ(n, o) (β x) γ)
   -/
   | pair  : Judge f (arrow α β m n)
-    → Judge g (DCC (Π(m, o) α (γ ∘ f)))
+    → Judge g (DCC (Π(m, o) α (γ ∘ (f ∘ Snd(Sort m, Id(Sort m))))))
     → Judge (DCC ⟦γ⟧⟨f, g⟩) (pair.type α β γ m n o).reduce.fst
   -- fst(α, β) : (Σ α β) → α
   | fst   : Judge α (DCC Sort m)
@@ -326,12 +260,14 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
     | .some ⟨t_f, h_t_f⟩, .some ⟨t_g, h_t_g⟩ =>
       match t_f.match_arrow, t_g with
       | .some ⟨α, β, m, n, ⟨heq₁⟩⟩,
-        (DCC  (Π(m₂, o₂) α₂ (γ₂ ∘ f₂))) =>
-        if heq₃ : m = m₂ ∧ m = m₂ ∧ α = α₂ ∧ γ = γ₂ ∧ f = f₂ then
-          have ⟨h1, h2, h3, h4, h5⟩ := heq₃
+        (DCC  (Π(m₂, o₂) α₂ (γ₂ ∘ (f₂ ∘ Snd(Sort m₃, Id(Sort m₄)))))) =>
+        if heq₃ : m = m₂ ∧ m = m₂ ∧ α = α₂ ∧ γ = γ₂ ∧ f = f₂ ∧ m = m₃ ∧ m = m₄ then
+          have ⟨h1, h2, h3, h4, h5, h6, h7⟩ := heq₃
           .some ⟨_, .pair
             (heq₁ ▸ h_t_f)
-            (by rw [← h1, ← h3, ← h4, ← h5] at h_t_g; exact h_t_g)⟩
+            (by
+              rw [← h1, ← h3, ← h4, ← h5, ← h6, ← h7] at h_t_g
+              exact h_t_g)⟩
         else .none
       | _, _ => .none
     | _, _ => .none
@@ -366,6 +302,29 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (`(Sort 1, Sort 1, Sort 0) (Sort 0)))
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC ((`(Sort 1, Sort 2, Sort 0) ∘ Id(Sort 2)) (Sort 1)))
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Λ(Id(Sort 2), Id((Σ(3, 2) (Sort 2) Id(Sort 2)))) (Sort 1) (Sort 0)))
+
+/-
+⟦Id(Sort 2)⟧⟨Id(Sort 2), `(Sort 1, Sort 2, Sort 0)⟩
+-/
+
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC Id(Sort 2) ∘ Id(Sort 2))
+
+def test_pair : Option Expr :=
+  let f := DCC Id(Sort 2)
+  let g := DCC Id(Sort 2) ∘ Id(Sort 2)
+  -- γ receives (f x)
+  /-
+    Id(Sort 2) ∘ Id(Sort 2) :
+    (some ((Π(3, 3) Sort 2) (Λ(Id(Sort 3),`(Sort 3, ((Σ(4, 3) Sort 3) Id(Sort 3)), Sort 2)) Sort 2)
+      ∘ Id(Sort 2) ∘ Snd(Sort 3, Id(Sort 3))))
+  -/
+  let γ := DCC (Λ(Id(Sort 3),`(Sort 3, ((Σ(4, 3) Sort 3) Id(Sort 3)), Sort 2)) Sort 2)
+  let e := DCC (⟦γ⟧⟨f, g⟩ (Sort 1))
+  Sigma.fst <$> e.infer
+
+#eval test_pair.format
+
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC ⟦Id(Sort 2)⟧⟨Id(Sort 2), Id(Sort 2) ∘ Id(Sort 2)⟩)
 
 theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
   induction h_t with

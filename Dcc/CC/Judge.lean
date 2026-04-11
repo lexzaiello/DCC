@@ -503,18 +503,12 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
   | id _ ih =>
     unfold infer
     simp [ih]
-  | fst _ _ h_arrow ih₁ ih₂ =>
-    have h := h_arrow.complete
-    unfold infer
-    rw [ih₁, ih₂]
-    aesop
   | flip _ h_arrow₁ h_arrow₂ ih =>
     have ha := h_arrow₁.complete
     have hb := h_arrow₂.complete
     unfold infer
     rw [ih]
     aesop
-  
 
 def Judge.decide : Judge e t ⊕ (Judge e t → PLift False) :=
   if h : (infer e).isSome then

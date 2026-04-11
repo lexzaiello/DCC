@@ -1,5 +1,6 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
+\usepackage{textcomp}
 \usepackage[a4paper, margin={1in}]{geometry}
 \usepackage[english]{babel}
 \usepackage{graphicx}
@@ -9,7 +10,7 @@
 \usepackage{mathpartir}
 \usepackage{stmaryrd}
 \usepackage{amssymb}
-\addbibresource{refs.bib}
+\addbibresource{./refs.bib}
 
 \newcommand{\sort}[1]{\text{Sort}\ #1}
 
@@ -117,7 +118,7 @@ Curien extends the combinators with type annotations, enabling simple typing. Qu
 { \Gamma \vdash f x : \beta}
 \end{tabular}
 \end{center}
-\caption{Inference rules of the simpy-typed categorical combinators}
+\caption{Inference rules of the simply-typed categorical combinators}
 \end{figure}
 \end{center}
 
@@ -144,6 +145,8 @@ We interpret couples \((a, b)\) as sigma terms like such:
 \end{figure}
 \end{center}
 
+We require that \(\beta : \alpha \rightarrow \sort{m}\) be given explicitly in couples through the type annotation \(\llbracket \beta \rrbracket\). Similarly, we add type arguments to pairs (\(\llbracket m, \alpha, \beta\rrbracket \langle f, g\rangle\)) which allow the resulting couple's \texttt{snd} component to depend on the type of the argument \(x\), the term \(x\), and \(f x\).
+
 This view of couples as sigma terms naturally encodes the notion of judgments. For example, the term \(\llbracket Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
 
 \begin{equation}
@@ -152,6 +155,12 @@ This view of couples as sigma terms naturally encodes the notion of judgments. F
 \end{equation}
 
 In the categorical abstract machine, this encoding of judgments corresponds to an environment where variable assignments are explicitly typed. We use this encoding in our inference ruls to avoid copying types under \(\Pi\) binders.
+
+\subsection{Type Annotations as Points via Couple-Judgments}
+
+Except for \(\Pi\) and \(\Sigma\), all combinator objects have type annotations specified as points. For example, the projection \(Fst(\alpha, \beta)\) is indexed by terms dnoting the type of the expected \(\Sigma\)-couple. This contradicts intuition that type arguments must be able to depend on other terms, and thus, cannot be points. However, by referring to types in the context as the \text{snd} component of a \(\Sigma\)-couple (\(\Sigma(m, n)\ \sort{m}\ Id(\sort{m})\)), they only need to be mentioned by their respective sorts. This convention is modeled after the categorical combinators, where curry (\(\Lambda(x)\)), pairs, and couples mention their arguments as points. As a result, we avoid another potential duplication of type-points inside the combinators' types.
+
+\textit{TODO: derivation of point-free \(Fst\ \alpha\ \beta\).}
 
 \subsection{Inference Rules}
 
@@ -165,26 +174,36 @@ We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\text{Sort
   { \Gamma \vdash f x : \beta\ \llbracket Id(\sort{m}) \rrbracket (\alpha, x)}
 \end{equation}
 
-The inference rule for function application is as usual, except the codomain \(\beta\) is indexed by the judgment \(x : \alpha\) encoded as a \(\Sigma\)-couple. This convention is indispensible in dependent types. For example, in \(\forall (\alpha : \sort{m}) (x : \alpha), \beta\), \(\alpha\) may be mentioned in \(\beta\) even though it has been consumed by \(x : \alpha\). By supplying \(\beta\) with \(x\) and its type, \(\alpha\) never needs to be copied, as long as it appears at most once under each subsequent \(\Pi\) binder.
+The inference rule for function application is as usual, except the codomain \(\beta\) is indexed by the judgment \(x : \alpha\) encoded as a \(\Sigma\)-couple. This convention is indispensible in dependent types. For example, in \(\forall (\alpha : \sort{m}) (x : \alpha), \beta\), \(\alpha\) may be mentioned in \(\beta\) even though it has been consumed by \(x : \alpha\). By supplying \(\beta\) with \(x\) and its type, \(\alpha\) never needs to be copied, as long as it appears at most once under each subsequent \(\Pi\) binder.\\
 
 We define nondependent arrows (\(\alpha \rightarrow \beta\)) as such:
 
 \begin{equation}
-  ((\alpha : \sort{m}) \rightarrow (\beta : \sort{n})) = Π(m, n) \alpha `(\sort{n}, \Simga(\sort{n}, Id(\sort{m})), \beta)
+  ((\alpha : \sort{m}) \rightarrow (\beta : \sort{n})) = \Pi(m, n)\ \alpha\ `(\sort{n}, \Sigma(\sort{n}, Id(\sort{m})), \beta)
 \end{equation}
 
 Since we do not make use of variables, we encode \(\Pi\)-types as application of a \(\Pi(m, n)\) combinator (where \(m\) and \(n\) are universe levels). Using our definition of arrows and our application inference rule, we give the inference rule for \(\Pi(m, n)\):
 
 \begin{equation}
-  \inferrule[\Pi(m, n)]
-  {}
-  { \Gamma \vdash \Pi(m, n) : ((\Pi(m + 1, n + 1) \sort{m}) `(\sort{n + 1}, \Sigma(\sort{m + 1}, Id(\sort{m + 1})), ((\Pi(n + 1, n + 1) ((\Pi(m + 1, n + 1) \Sigma(\sort{m}, Id(\sort{m}))) `(\sort{n + 1}, \Sigma(\sort{m + 1}, Id(\sort{m + 1})), \sort{n}))) `(\sort{n + 1}, \Sigma(\sort{n + 1}, Id(\sort{n + 1})), \sort{n})))) }
+  \inferrule
+  { }
+  { \Gamma \vdash \Pi(m, n) : \sort{m} \rightarrow ((\Sigma(\sort{m}, Id(\sort{m})) \rightarrow \sort{n}) \rightarrow \sort{n}) }
 \end{equation}
 
-- how Pi uses this
-- how pair rule corresponds to context substitution
+Our judgment-couple convention allows the type of \(\Pi\) to be nondependent. This proves to be useful in several other combinator types, avoiding duplication of elements in the context.
 
-We require that \(\beta : \alpha \rightarrow \sort{m}\) be given explicitly in couples through the type annotation \(\llbracket \beta \rrbracket\). Similarly, we add type arguments to pairs (\(\llbracket m, \alpha, \beta\rrbracket \langle f, g\rangle\)) which allow the resulting couple's \texttt{snd} component to depend on the type of the argument \(x\), the term \(x\), and \(f x\).
+\subsubsection{Couple Projections}
+
+The inference rules for projection on \(\Sigma\)-couples are as such:
+
+\begin{tabular}{c c}
+  \inferrule[Fst]
+  {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+  {\Gamma \vdash Fst(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \alpha}&
+  \inferrule[Snd]
+  {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+  {\Gamma \vdash Snd(\alpha, \beta) : \Pi(\text{max}\ m\ n, n)\ \Sigma(\alpha, \beta)\ (\beta \circ Fst(\alpha, \beta) \circ Snd'(\sort{max m n}, \Sigma(\alpha, \beta)))}
+\end{tabular}
 
 Our reduction rules are otherwise the same as in the categorical abstract machine \autocite{cmachine}. We use \(f(x_1, \ldots, x_n)\) to denote a combinator requiring \(n\) type annotations. Type annotations for pairs and couples are given by \(\llbracket \ldots \rrbracket\). Application is denoted by juxtaposition:
 
@@ -197,7 +216,7 @@ Our reduction rules are otherwise the same as in the categorical abstract machin
   (snd) & \(Snd(\alpha, \beta)\ \llbracket \beta \rrbracket (a, b) \rightarrow b\) \\
   (curr) & \(\Lambda(\beta, x)yz \rightarrow x\ \llbracket \beta \rrbracket(y, z)\) \\
   (app) & \(App(\gamma, \beta)\ \llbracket \beta \rrbracket (f, x) \rightarrow f x\) \\
-  (quote) & \(`(\alpha, \beta, x) y \rightarrow x\) \\
+  (quote) & \(\text{`}(\alpha, \beta, x) y \rightarrow x\) \\
   (flip) & \(Flip(x)y z \rightarrow x z y\)\\
   (dpair) & \(\llbracket m, \alpha, \beta \rrbracket \langle x, y\rangle\ z \rightarrow \llbracket \gamma \llbracket Id(\sort{m}) \rrbracket (\alpha, x) \rrbracket (x z, y z)\)
 \end{tabular}

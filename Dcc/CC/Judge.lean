@@ -1,6 +1,34 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
+inductive IsArrow : Expr → (α β : Expr) → Level → Level → Type
+  | sort  : (DCC (γ (Sort 1))).reduce.fst = (DCC (Sort n))
+    → IsArrow (DCC (Π(m, n.succ) α γ)) α (DCC (Sort n)) m n.succ
+  | sigma : (DCC (γ (Sort 1))).reduce.fst = (DCC Σ(Sort n, Sort o))
+    → IsArrow (DCC (Π(m, (max n o).succ) α γ)) α (DCC Σ(Sort n, Sort o)) m (max n o).succ
+  | pi    : (DCC (γ (Sort 1))).reduce.fst = (DCC (Π(n, o) δ τ))
+    → IsArrow (DCC (Π(m, o) α γ)) α (DCC (Π(n, o) δ τ)) m o
+
+def is_arrow (t : Expr) : Option ((α β : Expr) × (m n : Level) × IsArrow t α β m n) :=
+  match t with
+  | DCC (Π(m, n) α γ) =>
+    let t' := (DCC (γ Sort 1)).reduce.fst
+    match heq₁ : t' with
+    | (DCC (Sort n₂)) =>
+      if heq : n₂.succ = n then
+        .some ⟨α, DCC Sort n₂, m, n₂.succ, heq ▸ (.sort (heq₁.symm ▸ rfl))⟩
+      else .none
+    | (DCC Σ(Sort n₂, Sort o)) =>
+      if heq : (max n₂ o).succ = n then
+        .some ⟨α, DCC Σ(Sort n₂, Sort o), m, (max n₂ o).succ, heq ▸ (.sigma (heq₁.symm ▸ rfl))⟩
+      else .none
+    | DCC (Π(o, n₂) δ τ) =>
+      if heq : n₂ = n then
+        .some ⟨α, DCC (Π(o, n₂) δ τ), m, n₂, heq ▸ (.pi (heq₁.symm ▸ rfl))⟩
+      else .none
+    | _ => .none
+  | _ => .none
+
 def arrow (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(m, n) α `(Sort n, Σ(Sort m, Id(Sort m)), β))
 

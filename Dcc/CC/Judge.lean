@@ -137,7 +137,7 @@ x : Π (Σ α β) γ
 Λ(x) : Π(m, o) α ((Flip(Π(n, o)) γ) ∘ β)
 -/
 def curr.type (α β γ : Expr) (m n o : Level) : Expr :=
-  (DCC (Π(m, o) α ((Flip(Π(n, o)) γ) ∘ β)))
+  (DCC (Π(m, o) α ((Flip(Π(n, o)) γ) ∘ (β ∘ Snd(Sort m, Id(Sort m))))))
 
 def coup.type (α β : Expr) (m n : Level) : Expr :=
   (DCC (Σ(m, n) α β))
@@ -365,6 +365,7 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
 #eval (Std.format ∘ Sigma.fst) <$> infer (id.type (DCC Sort 0) 1)
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (`(Sort 1, Sort 1, Sort 0) (Sort 0)))
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC ((`(Sort 1, Sort 2, Sort 0) ∘ Id(Sort 2)) (Sort 1)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Λ(Id(Sort 2), Id((Σ(3, 2) (Sort 2) Id(Sort 2)))) (Sort 1) (Sort 0)))
 
 theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
   induction h_t with

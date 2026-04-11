@@ -39,8 +39,6 @@ I don't really want to add another primitive, though.
 maybe we can derive this?
 
 we can actually just do
-
-
 -/
 -- TODO: composition doesn't like the dependent Snd here.
 -- can make nondependent Snd.
@@ -351,29 +349,7 @@ def test_pair : Option Expr :=
 
 #eval test_pair.format
 
-def test_app : Option Expr := do
-  let f := DCC Id(Sort 2) ∘ Id(Sort 2)
-  let x := DCC Sort 1
-  let β ←
-    match ← Sigma.fst <$> f.infer with
-    | DCC (Π(_m, _n) _α β) => .some β
-    | _ => .none
-
-  let α := DCC Sort 2
-  let t_f ← Sigma.fst <$> infer f
-  let γ := DCC (`(Sort 3, t_f, α))
-
-  dbg_trace γ
-  dbg_trace t_f
-  dbg_trace Sigma.fst <$> t_f.infer
-
-  dbg_trace (Std.format ∘ Sigma.fst) <$> (DCC ⟦γ⟧(f, x)).infer
-
-  Sigma.fst <$> (DCC (App(2, α, β) ⟦γ⟧(f, x))).infer
-
-#eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 2) ∘ Snd'(Sort 3, Sort 2)).infer
-
-#eval test_app
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (App(2, Sort 1, `(Sort 2, Σ(Sort 2, Id(Sort 2)), Sort 1)) ⟦`(Sort 2, ((Π(2, 2) Sort 1) `(Sort 2, Σ(Sort 2, Id(Sort 2)), Sort 1)), Sort 1)⟧(Id(Sort 1), Sort 0))).infer
 
 theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
   induction h_t with
@@ -402,6 +378,12 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
     split
     rename_i heq₂ ha hb hc hd
     simp_all only [heq_eq_eq, Nat.succ_eq_add_one, and_self]
+    simp [arrow, match_arrow]
+    simp_all only [Nat.succ_eq_add_one, Option.some.injEq, Sigma.mk.injEq, Expr.app.injEq, pi.injEq, Expr.sigma.injEq,
+      imp_false, not_and, and_imp]
+    split
+    rename_i heq₂ ha hb hc hd
+    simp_all only [Nat.succ_eq_add_one, and_self]
   | pair _ _ ih₁ ih₂ =>
     simp [infer, ih₁, ih₂, arrow, match_arrow]
     split

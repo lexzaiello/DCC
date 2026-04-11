@@ -115,7 +115,7 @@ x : Σ(α, β) → γ
 Λ'(β, x) : α → β → γ
 -/
 def curr'.type (α β γ : Expr) (m n o : Level) : Expr :=
-  DCC (Π(m, o) α ((Flip(Π(n, o)) `(Sort o, Σ(Sort n, Id(Sort n)), γ)) (β ∘' Snd'(Sort m, α))))
+  DCC (Π(m, o) α ((Flip(Π(n, o)) `(Sort o, Σ(Sort n, Id(Sort n)), γ)) ∘' (β ∘' Snd'(Sort m, α))))
 
 /-
 x : Π (Σ α β) γ
@@ -138,15 +138,10 @@ x : ∀ (y : Σ(α, `(Sort (max m n), α, Σ(α, β)))), γ y
 Λ(β, x) : ∀ (x : α) (y : Σ(α, `(Sort (max m n), α, Σ(α, β)))), γ (Snd'(α, Σ(α, β)) y)
 -/
 def curr.type (α β γ : Expr) (m n o : Level) : Expr :=
-  -- accept (Σ(α, `(Sort (max m n), α, Σ(α, β))), (y, (y, z)))
-  let get_y_z_coup := DCC ((Snd'(α, Σ(α, β))) ∘' Snd'(Sort (max m (max m n)), Σ(α, `(Sort (max m n), α, Σ(α, β)))))
-  -- accept (y, z)
-  let wrap_type := DCC (Λ'(Id(Sort (max m n)), Id(Σ(Sort (max m n), Id(Sort (max m n))))) Σ(α, β))
+  -- receives (α, x). make Σ(α, β)
+  let mk_y_type := DCC `(Sort (max m n), Σ(Sort m, Id(Sort m)), Σ(α, β))
 
-  -- receives (α, x). make Σ(α, `(Sort (max m n), α, Σ(α, β)))
-  let mk_y_type := DCC `(Sort (max m n), Σ(Sort m, Id(Sort m)), Σ(α, `(Sort (max m n), α, Σ(α, β))))
-
-  (DCC (Π(m, o) α (Flip(Π((max m n), o)) (γ ∘' wrap_type ∘' get_y_z_coup) mk_y_type)))
+  (DCC (Π(m, o) α ((Flip(Π((max m n), o)) γ) ∘' mk_y_type)))
 
 def coup.type (α β : Expr) : Expr :=
   (DCC Σ(α, β))
@@ -477,15 +472,38 @@ f : Π (x : Σ α β), γ x
     Id(Sort m.succ),
     (Λ(Id(Sort m), Snd(Sort m, Id(Sort m)))
       ∘ Snd'(Sort m.succ, Sort m))) (Sort m))
+
+Λ(
+    `(Sort m.succ, Sort m.succ, Sort m),
+    (Λ(Id(Sort m), Snd(Sort m, Id(Sort m)))
+      ∘' Snd'(Sort m.succ, Sort m)))
+-/
+
+def mk_id.coup_α (m : Level) : Expr :=
+  DCC (Λ'(`(Sort m.succ, Sort m.succ, Sort m), Id(Σ(Sort m.succ, `(Sort m.succ, Sort m.succ, Sort m)))) (Sort m))
+
+/-
+Rethinking mk_id
+
+Λ'(Id(Sort m.succ),
+  Λ'()
+  ) (Sort m)
 -/
 
 def mk_id (m : Level) : Expr :=
   --DCC (Λ(Id(Sort m), Snd(Sort m, Id(Sort m))) ∘' Snd'(Sort m.succ, Sort m))
-  DCC ((Λ(
+  
+DCC (((Λ(
     `(Sort m.succ, Sort m.succ, Sort m),
     (Λ(Id(Sort m), Snd(Sort m, Id(Sort m)))
       ∘' Snd'(Sort m.succ, Sort m)))) (Sort m))
-
+      ∘' #(mk_id.coup_α m))
+  
+  /-DCC ((Λ(
+    `(Sort m.succ, Sort m.succ, Sort m),
+    (Λ(Id(Sort m), Snd(Sort m, Id(Sort m)))
+      ∘' Snd'(Sort m.succ, Sort m)))) (Sort m))-/
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (#(mk_id.coup_α 2) Sort 1)).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (#(Expr.mk_id 2))).infer
 #eval Std.format (DCC (((Λ(Id(Sort 3),(Flip(Π(2, 2)) Id(Sort 2) ∘' Fst(Sort 2, Id(Sort 2)) ∘' Snd'(Sort 3, Σ(Sort 2, Id(Sort 2)))) ∘' Id(Sort 2) ∘' Snd'(Sort 3, Sort 2)) Sort 2) ∘' Snd'(Sort 3, Sort 2) ∘' Snd'(Sort 4, Σ(Sort 3, `(Sort 3, Sort 3, Sort 2)))) ⟦Id(Sort 3)⟧(Sort 2, Sort 1))).reduce.fst
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Snd(Sort 2, Id(Sort 2))).infer
@@ -534,6 +552,13 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
     unfold infer
     rw [ih₁, ih₂]
     aesop
+  | curr' _ h_arrow₁ _ h_arrow₂ ih₁ ih₂ =>
+    have ha := h_arrow₁.complete
+    have hb := h_arrow₂.complete
+    unfold infer
+    simp [ih₁, ih₂, ha, hb]
+    split
+    rfl
   | pair _ h_arrow _ ih₁ ih₂ =>
     have h := h_arrow.complete
     unfold infer

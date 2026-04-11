@@ -163,7 +163,7 @@ In the categorical abstract machine, this encoding of judgments corresponds to a
 
 Except for \(\Pi\) and \(\Sigma\), all combinator objects have type annotations specified as points. For example, the projection \(Fst(\alpha, \beta)\) is indexed by terms dnoting the type of the expected \(\Sigma\)-couple. This contradicts intuition that type arguments must be able to depend on other terms, and thus, cannot be points. However, by referring to types in the context as the \text{snd} component of a \(\Sigma\)-couple (\(\Sigma(m, n)\ \sort{m}\ Id(\sort{m})\)), they only need to be mentioned by their respective sorts. This convention is modeled after the categorical combinators, where curry (\(\Lambda(x)\)), pairs, and couples mention their arguments as points. As a result, we avoid another potential duplication of type-points inside the combinators' types.
 
-\textit{TODO: derivation of point-free \(Fst\ \alpha\ \beta\).}
+See \eqref{point_free_derivation} where we derive point-free \(Id\ \alpha\) using the dependent curry (\(\Lambda\)) combinator and \(\Sigma\)-couples.
 
 \subsection{Inference Rules}
 
@@ -216,13 +216,28 @@ The nondependent \(Snd'(\alpha, \beta)\) can be replaced in these types by \(Snd
 \subsection{Derivation: Point-Free \(Id\)}
 
 \begin{lemma}\label{point_free_derivation}
-  There exists \(Id_{m} : \forall (\alpha : \sort{m}), \alpha \rightarrow \alpha\)
+  There exists \(Id_{m} : \forall (\alpha : \sort{m}), \alpha \rightarrow \alpha\).
 \end{lemma}
 
 \begin{proof}
-  Recall \(Id(\alpha) : \alpha \rightarrow \alpha\), and that $x : \Pi(\text{max \(m\) \(n\)})\ \Sigma(\alpha, \beta)\ \gamma$ implies $\Lambda(\beta, x) : \Pi(m, o) \alpha ((Flip(\Pi(n, o)) \gamma) \circ (\beta \circ Snd'(\sort{m}, \alpha)))$.
-  Also recall, $Snd(\alpha, \beta) : \Pi(\text{max m n \(m\) \(n\)}, n)\ \Sigma(\alpha, \beta)\ (\beta \circ Fst(\alpha, \beta) \circ Snd'(\sort{\text{max \(m\) \(n\)}}, \Sigma(\alpha, \beta)))$.
-  Then, let \(Id_{m} := \Lambda(Id(\sort{m}), \Lambda(Snd(\sort{m}, Id(\sort{m})), Snd(\Sigma(\sort{m}, Id(\sort{m})), Snd(\sort{m}, Id(\sort{m}))))) \sort{m}\).
+  Recall the types of \(Id\), \(\Lambda(\beta, x)\), and \(Snd(\alpha, \beta)\):\\\\
+  \begin{tabular}{c}
+  \inferrule[Id]
+    {}
+    {\Gamma \vdash Id(\alpha) : \alpha \rightarrow \alpha}\\\\
+  \inferrule[Curry]
+    {\Gamma \vdash x : \Pi(\text{max \(m\) \(n\)}, o)\ \Sigma(\alpha, \beta)\ y, \beta : \alpha \rightarrow \sort{n}}
+    {\Gamma \vdash \Lambda(\beta, x) : \Pi(m, o)\ \alpha\ ((Flip(\Pi(n, o))\ \gamma)\ \circ\ (\beta\ \circ\ Snd'(\sort{m}, \alpha)))}\\\\
+  \inferrule[Snd]
+    {}
+    {\Gamma \vdash Snd(\alpha, \beta) : \Pi(\text{max \(m\) \(n\)}, n)\ \Sigma(\alpha, \beta)\ (\beta \circ Fst(\alpha, \beta) \circ Snd'(\sort{\text{max \(m\) \(n\)}}, \Sigma(\alpha, \beta)))}\\\\
+  \end{tabular}\\\\
+  So, let \(Id_{m}\) be as follows:
+  \begin{align*}
+    Id_{m} := \Lambda(Id(\sort{m}), &\\
+    \Lambda(Snd(\sort{m}, Id(\sort{m})), &\\
+    & Snd(\Sigma(\sort{m}, Id(\sort{m})), Snd(\sort{m}, Id(\sort{m}))))) \sort{m}
+  \end{align*}.
 \end{proof}
 
 Our reduction rules are otherwise the same as in the categorical abstract machine \autocite{cmachine}. We use \(f(x_1, \ldots, x_n)\) to denote a combinator requiring \(n\) type annotations. Type annotations for pairs and couples are given by \(\llbracket \ldots \rrbracket\). Application is denoted by juxtaposition:

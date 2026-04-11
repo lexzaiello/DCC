@@ -247,7 +247,8 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
     | .some ⟨DCC Sort m, h_t_α⟩, .some ⟨DCC Sort n, h_t_β⟩ =>
       .some ⟨_, .snd' h_t_α h_t_β⟩
     | _, _ => .none
-  | DCC Snd(α, β) => match infer α, infer β with
+  | DCC Snd(α, β) =>
+    match infer α, infer β with
     | .some ⟨DCC Sort m, h_t_α⟩, .some ⟨t_β, h_t_β⟩ =>
       match t_β.match_arrow with
       | .some ⟨α₁, DCC Sort n, m₁, n₁, ⟨heq₁⟩⟩ =>
@@ -359,6 +360,12 @@ def test_pair : Option Expr :=
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (App(2, Sort 1, `(Sort 2, Σ(Sort 2, Id(Sort 2)), Sort 1)) ⟦`(Sort 2, ((Π(2, 2) Sort 1) `(Sort 2, Σ(Sort 2, Id(Sort 2)), Sort 1)), Sort 1)⟧(Id(Sort 1), Sort 0))).infer
 
+def mk_id (m : Level) : Expr :=
+  DCC Snd(Σ(Sort m, Id(Sort m)), Snd(Sort m, Id(Sort m)))
+  --DCC (Λ(Id(Sort m), Λ(Snd(Sort m, Id(Sort m)), Snd(Σ(Sort m, Id(Sort m)), Snd(Sort m, Id(Sort m))))) (Sort m))
+
+#eval (Expr.mk_id 1).infer
+
 theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
   induction h_t with
   | curr _ _ ih₁ ih₂ =>
@@ -440,4 +447,14 @@ def Judge.decide : Judge e t ⊕ (Judge e t → PLift False) :=
     have h_comp := hn.complete
     simp_all
 
+def judge_sound (_h_t : Expr.infer e = .some ⟨t, h⟩) : e.Judge t := h
+
 end Expr
+
+/-
+def point_free_id (h_t_α : α.Judge (DCC Sort m)) (h_t_x : x.Judge α) : (DCC (#(Expr.mk_id m) α x)).Judge α := by
+  unfold Expr.mk_id
+  have h := Expr.Judge.app 
+  
+  sorry
+-/

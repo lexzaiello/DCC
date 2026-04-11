@@ -117,7 +117,7 @@ Curien extends the combinators with type annotations, enabling simple typing. Qu
 { \Gamma \vdash \alpha : \text{Type}, \beta : \text{Type}}
 { \Gamma \vdash App(\alpha, \beta) : ((\alpha \rightarrow \beta) \times \alpha) \rightarrow \beta}&
 \inferrule[App]
-{ \Gamma \vdash f : \alpha \rightarrow \beta, x : \alpha} 
+{ \Gamma \vdash f : \alpha \rightarrow \beta\\ \Gamma \vdash x : \alpha} 
 { \Gamma \vdash f x : \beta}
 \end{tabular}
 \end{center}
@@ -161,7 +161,7 @@ In the categorical abstract machine, this encoding of judgments corresponds to a
 
 \subsection{Type Annotations as Points via Couple-Judgments}
 
-Except for \(\Pi\) and \(\Sigma\), all combinator objects have type annotations specified as points. For example, the projection \(Fst(\alpha, \beta)\) is indexed by terms dnoting the type of the expected \(\Sigma\)-couple. This contradicts intuition that type arguments must be able to depend on other terms, and thus, cannot be points. However, by referring to types in the context as the \text{snd} component of a \(\Sigma\)-couple (\(\Sigma(m, n)\ \sort{m}\ Id(\sort{m})\)), they only need to be mentioned by their respective sorts. This convention is modeled after the categorical combinators, where curry (\(\Lambda(x)\)), pairs, and couples mention their arguments as points. As a result, we avoid another potential duplication of type-points inside the combinators' types.
+Except for \(\Pi\) and \(\Sigma\), all combinator objects have type annotations specified as points. For example, the projection \(Fst(\alpha, \beta)\) is indexed by terms dnoting the type of the expected \(\Sigma\)-couple. This contradicts intuition that type arguments must be able to depend on other terms, and thus, cannot be points. However, by referring to types in the context as the \text{snd} component of a \(\Sigma\)-couple (\(\Sigma(m, n)\ \sort{m}\ Id(\sort{m})\)), they only need to be mentioned by their respective sorts. This convention is modeled after the categorical combinators, where curry (\(\Lambda(x)\)), pairs, and couples mention their arguments as points. As a result, we avoid another potential duplication of type-points inside the combinators' types.\\\\
 
 See \eqref{point_free_derivation} where we derive point-free \(Id\ \alpha\) using the dependent curry (\(\Lambda\)) combinator and \(\Sigma\)-couples.
 
@@ -173,7 +173,7 @@ We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\text{Sort
 
 \begin{equation}
   \inferrule[App]
-  { \Gamma \vdash f : \Pi(m, n)\ \alpha\ \beta, x : \alpha}
+  { \Gamma \vdash f : \Pi(m, n)\ \alpha\ \beta\\ \Gamma \vdash x : \alpha}
   { \Gamma \vdash f x : \beta\ \llbracket Id(\sort{m}) \rrbracket (\alpha, x)}
 \end{equation}
 
@@ -221,23 +221,26 @@ The nondependent \(Snd'(\alpha, \beta)\) can be replaced in these types by \(Snd
 
 \begin{proof}
   Recall the types of \(Id\), \(\Lambda(\beta, x)\), and \(Snd(\alpha, \beta)\):\\\\
+  \begin{center}
   \begin{tabular}{c}
   \inferrule[Id]
-    {}
+    { }
     {\Gamma \vdash Id(\alpha) : \alpha \rightarrow \alpha}\\\\
   \inferrule[Curry]
-    {\Gamma \vdash x : \Pi(\text{max \(m\) \(n\)}, o)\ \Sigma(\alpha, \beta)\ y, \beta : \alpha \rightarrow \sort{n}}
+    {\Gamma \vdash x : \Pi(\text{max \(m\) \(n\)}, o)\ \Sigma(\alpha, \beta)\ y,\ \beta : \alpha \rightarrow \sort{n}}
     {\Gamma \vdash \Lambda(\beta, x) : \Pi(m, o)\ \alpha\ ((Flip(\Pi(n, o))\ \gamma)\ \circ\ (\beta\ \circ\ Snd'(\sort{m}, \alpha)))}\\\\
   \inferrule[Snd]
-    {}
+    { }
     {\Gamma \vdash Snd(\alpha, \beta) : \Pi(\text{max \(m\) \(n\)}, n)\ \Sigma(\alpha, \beta)\ (\beta \circ Fst(\alpha, \beta) \circ Snd'(\sort{\text{max \(m\) \(n\)}}, \Sigma(\alpha, \beta)))}\\\\
-  \end{tabular}\\\\
+  \end{tabular}
+  \end{center}
   So, let \(Id_{m}\) be as follows:
+  \begin{center}
   \begin{align*}
-    Id_{m} := \Lambda(Id(\sort{m}), &\\
-    \Lambda(Snd(\sort{m}, Id(\sort{m})), &\\
-    & Snd(\Sigma(\sort{m}, Id(\sort{m})), Snd(\sort{m}, Id(\sort{m}))))) \sort{m}
-  \end{align*}.
+    Id_{m} &:= \Lambda(Id(\sort{m}), \Lambda(Snd(\sort{m}, Id(\sort{m})),\\
+           & Snd(\Sigma(\sort{m}, Id(\sort{m})), Snd(\sort{m}, Id(\sort{m})))))\ \sort{m}
+  \end{align*}\end{center}
+  
 \end{proof}
 
 Our reduction rules are otherwise the same as in the categorical abstract machine \autocite{cmachine}. We use \(f(x_1, \ldots, x_n)\) to denote a combinator requiring \(n\) type annotations. Type annotations for pairs and couples are given by \(\llbracket \ldots \rrbracket\). Application is denoted by juxtaposition:

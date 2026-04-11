@@ -1,45 +1,6 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
-/-
-Changing composition: bundles
-
-(f ∘ g)
-
-(f ∘ g) =
-
-g : ∀ (x : α), β x
-g : A → Σ B C
-
-g x = ⟦x, y⟧
-
-f : Π (Σ B C) γ
-
-this allows ∘ to be fully dependent
-
-can we derive normal composition?
-
-nondependent.
-
-f ∘' g = 
-
-f (⟦x, y⟧) = ?
-
-Snd : (DCC (Π(max m n, n)
-    Σ(α, β) (β ∘ (Fst(α, β) ∘ Σ(Σ(α, β), Id(Σ(α, β)))) ∘ ((Λ(Id(Σ(α, β)), Id(Σ(Σ(α, β), Id(Σ(α, β))))) Σ(α, β)) ∘ Snd'(Sort (max m n), Σ(α, β))))))
-
-f : α → Σ B C
-g : Π (Σ B C) γ
-
-(f ∘ g) : ∀ (x : α), γ ∘
-
-Id(m) = Λ(Id(Sort m.succ),
-  (Λ(Id(Sort m), Snd(Sort m, Id(Sort m))))
-    
-
-don't even need to change rule
--/
-
 def arrow (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(m, n) α `(Sort n, Σ(Sort m, Id(Sort m)), β))
 
@@ -99,22 +60,9 @@ def flip.type (α β γ : Expr) (m n o : Level) : Expr :=
   (arrow β (arrow α γ m o) n o).reduce.fst
 
 /-
-γ is a function of (β, x)
-good primitive for this is to be able to map over the snd component.
-
-γ ∘ (map_fst g)
-
-map_fst f (a, b) = (f a, b)
-we might need pattern matching again for this.
-
-I don't really want to add another primitive, though.
-
-maybe we can derive this?
-
-we can actually just do
+g : Π (x : A), Σ A B
+f : Π (x : Σ A B), C x
 -/
--- TODO: composition doesn't like the dependent Snd here.
--- can make nondependent Snd.
 def comp.type (α β γ g : Expr) (m n o : Level) : Expr :=
   DCC (Π(m, o) α ((Λ(Id(Sort n), γ) β) ∘ (g ∘ Snd'(Sort m, α))))
 

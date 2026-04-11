@@ -64,7 +64,7 @@ g : α → β
 f : ∀ (x : β), γ x
 -/
 def comp'.type (α β γ g : Expr) (m n o : Level) : Expr :=
-  DCC (Π(m, o) α ((Λ(Id(Sort n), γ) β) ∘' (g ∘' Snd'(Sort m, α))))
+  DCC (Π(m, o) α ((Λ'(Id(Sort n), γ) β) ∘' (g ∘' Snd'(Sort m, α))))
 
 /-
   g : Π (x : α), Σ α β
@@ -72,7 +72,7 @@ def comp'.type (α β γ g : Expr) (m n o : Level) : Expr :=
   (f ∘ g) : (Π(m, o) α ((Λ(Id(Sort n), γ) (Σ(α, β))) ∘' (g ∘' Snd'(Sort m, α))))
 -/
 def comp.type (α β γ g : Expr) (m n o : Level) : Expr :=
-  DCC (Π(m, o) α ((Λ(Id(Sort n), γ) (Σ(α, β))) ∘' (g ∘' Snd'(Sort m, α))))
+  DCC (Π(m, o) α ((Λ'(Id(Sort n), γ) (Σ(α, β))) ∘' (g ∘' Snd'(Sort m, α))))
 
 /-
 Derivation of point-free Id(α)
@@ -108,7 +108,14 @@ def app_e.type (α β : Expr) (m n : Level) : Expr :=
 
   DCC (Π(max m n, n)
       Σ(t_f, t_x)
-      ((Λ(Id(Sort m), β) α) ∘' (Snd(t_f, t_x) ∘' Snd'(Sort (max m n), Σ(t_f, t_x)))))
+      ((Λ'(Id(Sort m), β) α) ∘' (Snd(t_f, t_x) ∘' Snd'(Sort (max m n), Σ(t_f, t_x)))))
+
+/-
+x : Σ(α, β) → γ
+Λ'(β, x) : α → β → γ
+-/
+def curr'.type (α β γ : Expr) (m n o : Level) : Expr :=
+  DCC (Π(m, o) α ((Flip(Π(n, o)) `(Sort o, Σ(Sort n, Id(Sort n)), γ)) (β ∘' Snd'(Sort m, α))))
 
 /-
 x : Π (Σ α β) γ
@@ -127,9 +134,19 @@ x : Σ(α, β) → γ
 
 x : ∀ (y : Σ(α, `(Sort (max m n), α, Σ(α, β)))), γ y
 (Λ(β, x) y ⟦β⟧(y, z)) : γ ⟦`(Sort (max m n), α, Σ(α, β))⟧(y, ⟦β⟧(y, z))
+
+Λ(β, x) : ∀ (x : α) (y : Σ(α, `(Sort (max m n), α, Σ(α, β)))), γ (Snd'(α, Σ(α, β)) y)
 -/
 def curr.type (α β γ : Expr) (m n o : Level) : Expr :=
-  (DCC (Π(m, o) α ((Flip(Π(n, o)) γ) ∘' (β ∘' Snd'(Sort m, α)))))
+  -- accept (Σ(α, `(Sort (max m n), α, Σ(α, β))), (y, (y, z)))
+  let get_y_z_coup := DCC ((Snd'(α, Σ(α, β))) ∘' Snd'(Sort (max m (max m n)), Σ(α, `(Sort (max m n), α, Σ(α, β)))))
+  -- accept (y, z)
+  let wrap_type := DCC (Λ'(Id(Sort (max m n)), Id(Σ(Sort (max m n), Id(Sort (max m n))))) Σ(α, β))
+
+  -- receives (α, x). make Σ(α, `(Sort (max m n), α, Σ(α, β)))
+  let mk_y_type := DCC `(Sort (max m n), Σ(Sort m, Id(Sort m)), Σ(α, `(Sort (max m n), α, Σ(α, β))))
+
+  (DCC (Π(m, o) α (Flip(Π((max m n), o)) (γ ∘' wrap_type ∘' get_y_z_coup) mk_y_type)))
 
 def coup.type (α β : Expr) : Expr :=
   (DCC Σ(α, β))
@@ -186,6 +203,11 @@ inductive Judge : Expr → Expr → Type where
     → Judge β τ₁
     → IsArrow τ₁ α (DCC Sort n) m n.succ
     → Judge (DCC Snd(α, β)) (snd.type α β m n).reduce.fst
+  | curr' : Judge x τ₁
+    → (IsArrow τ₁ (DCC Σ(α, β)) γ (max m n) o)
+    → Judge β τ₂
+    → IsArrow τ₂ α (DCC Sort n) m n.succ
+    → Judge (DCC Λ'(β, x)) (curr'.type α β γ m n o).reduce.fst
   /-
     x : Σ(α, β) → γ
     β : α → Sort n
@@ -326,6 +348,17 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
     | .some ⟨DCC Sort m, h_t_α⟩ =>
       .some ⟨_, .app_e h_t_α⟩
     | _ => .none
+  | DCC Λ'(β, x) =>
+    match x.infer, β.infer with
+    | .some ⟨t_x, h_t_x⟩, .some ⟨t_β, h_t_β⟩ =>
+      match t_x.is_arrow, t_β.is_arrow with
+      | .some ⟨DCC Σ(α, β₂), γ, mn, o, heq₁⟩, .some ⟨DCC α₂, DCC Sort n, m, n₂, heq₂⟩ =>
+        if heq : mn = max m n ∧ β₂ = β ∧ n₂ = n.succ ∧ α₂ = α then
+          have ⟨ha, hb, hc, hd⟩ := heq
+          .some ⟨_, .curr' h_t_x (by rw [ha, hb] at heq₁; exact heq₁) h_t_β (by rw [hd, hc] at heq₂; exact heq₂)⟩
+        else .none
+      | _, _ => .none
+    | _, _ => .none
   | DCC Λ(β, x) =>
     match heq₀ : x.infer, β.infer with
     | .some ⟨(DCC (Π(mn, o) Σ(α, β₂) γ)), h_t_x⟩, .some ⟨t_β, h_t_β⟩ =>
@@ -400,7 +433,7 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
 #eval (Std.format ∘ Sigma.fst) <$> infer (id.type (DCC Sort 0) 1)
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (`(Sort 1, Sort 1, Sort 0) (Sort 0)))
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC ((`(Sort 1, Sort 2, Sort 0) ∘' Id(Sort 2)) (Sort 1)))
-#eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Λ(Id(Sort 2), Id((Σ(Sort 2,  Id(Sort 2))))) (Sort 1) (Sort 0)))
+#eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Λ'(Id(Sort 2), Id((Σ(Sort 2,  Id(Sort 2))))) (Sort 1)))
 
 /-
 ⟦Id(Sort 2)⟧⟨Id(Sort 2), `(Sort 1, Sort 2, Sort 0)⟩
@@ -417,7 +450,7 @@ def test_pair : Option Expr :=
     (some ((Π(3, 3) Sort 2) (Λ(Id(Sort 3),`(Sort 3, ((Σ(4, 3) Sort 3) Id(Sort 3)), Sort 2)) Sort 2)
       ∘ Id(Sort 2) ∘ Snd(Sort 3, Id(Sort 3))))
   -/
-  let γ := DCC (Λ(Id(Sort 3),`(Sort 3, Σ(Sort 3, Id(Sort 3)), Sort 2)) Sort 2)
+  let γ := DCC (Λ'(Id(Sort 3),`(Sort 3, Σ(Sort 3, Id(Sort 3)), Sort 2)) Sort 2)
   let e := DCC (⟦γ⟧⟨f, g⟩ (Sort 1))
   Sigma.fst <$> e.infer
 

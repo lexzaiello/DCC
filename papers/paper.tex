@@ -5,11 +5,14 @@
 \usepackage[english]{babel}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{amsthm}
 \usepackage{authblk}
 \usepackage{biblatex}
 \usepackage{mathpartir}
 \usepackage{stmaryrd}
 \usepackage{amssymb}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
 \addbibresource{./refs.bib}
 
 \newcommand{\sort}[1]{\text{Sort}\ #1}
@@ -194,16 +197,33 @@ Our judgment-couple convention allows the type of \(\Pi\) to be nondependent. Th
 
 \subsubsection{Couple Projections}
 
-The inference rules for projection on \(\Sigma\)-couples are as such:
+The inference rules for projection on \(\Sigma\)-couples are as such:\\
 
-\begin{tabular}{c c}
+\begin{tabular}{c}
   \inferrule[Fst]
   {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-  {\Gamma \vdash Fst(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \alpha}&
+  {\Gamma \vdash Fst(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \alpha}\\\\
   \inferrule[Snd]
   {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-  {\Gamma \vdash Snd(\alpha, \beta) : \Pi(\text{max}\ m\ n, n)\ \Sigma(\alpha, \beta)\ (\beta \circ Fst(\alpha, \beta) \circ Snd'(\sort{max m n}, \Sigma(\alpha, \beta)))}
+  {\Gamma \vdash Snd(\alpha, \beta) : \Pi(\text{max m n \(m\) \(n\)}, n)\ \Sigma(\alpha, \beta)\ (\beta \circ Fst(\alpha, \beta) \circ Snd'(\sort{\text{max \(m\) \(n\)}}, \Sigma(\alpha, \beta)))}\\\\
+  \inferrule[Snd']
+  {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+  {\Gamma \vdash Snd'(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \beta}\\\\
 \end{tabular}
+
+The nondependent \(Snd'(\alpha, \beta)\) can be replaced in these types by \(Snd(\sort{m}, Id(\sort{m}))\). However, \(g\) in \(f \circ g\) is not dependent (so as not to duplicate the argument \(x\)), and as such, \(Snd'(\alpha, \beta)\) must be used instead.
+
+\subsection{Derivation: Point-Free \(Id\)}
+
+\begin{lemma}\label{point_free_derivation}
+  There exists \(Id_{m} : \forall (\alpha : \sort{m}), \alpha \rightarrow \alpha\)
+\end{lemma}
+
+\begin{proof}
+  Recall \(Id(\alpha) : \alpha \rightarrow \alpha\), and that $x : \Pi(\text{max \(m\) \(n\)})\ \Sigma(\alpha, \beta)\ \gamma$ implies $\Lambda(\beta, x) : \Pi(m, o) \alpha ((Flip(\Pi(n, o)) \gamma) \circ (\beta \circ Snd'(\sort{m}, \alpha)))$.
+  Also recall, $Snd(\alpha, \beta) : \Pi(\text{max m n \(m\) \(n\)}, n)\ \Sigma(\alpha, \beta)\ (\beta \circ Fst(\alpha, \beta) \circ Snd'(\sort{\text{max \(m\) \(n\)}}, \Sigma(\alpha, \beta)))$.
+  Then, let \(Id_{m} := \Lambda(Id(\sort{m}), \Lambda(Snd(\sort{m}, Id(\sort{m})), Snd(\Sigma(\sort{m}, Id(\sort{m})), Snd(\sort{m}, Id(\sort{m}))))) \sort{m}\).
+\end{proof}
 
 Our reduction rules are otherwise the same as in the categorical abstract machine \autocite{cmachine}. We use \(f(x_1, \ldots, x_n)\) to denote a combinator requiring \(n\) type annotations. Type annotations for pairs and couples are given by \(\llbracket \ldots \rrbracket\). Application is denoted by juxtaposition:
 

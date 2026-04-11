@@ -47,6 +47,13 @@ def comp.type (α β γ g : Expr) (m n o : Level) : Expr :=
   DCC (Π(m, o) α ((Λ(Id(Sort n), γ) β) ∘ (g ∘ Snd'(Sort m, α))))
 
 /-
+Derivation of point-free Id(α)
+
+? receives ⟦Id(Sort m)⟧(Sort m, α)
+Λ(Id(Sort m), Λ(Snd(Sort m, Id(Sort m)), Snd(Σ(Sort m, Id(Sort m)), Snd(Sort m, Id(Sort m))))) (Sort m)
+-/
+
+/-
 ⟦α, γ⟧⟨f, x⟩ : Π(m, (max n o)) α (() ∘ f
 -/
 

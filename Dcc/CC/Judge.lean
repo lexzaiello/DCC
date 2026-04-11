@@ -12,6 +12,7 @@ def Pi.type (m n : Level) : Expr :=
         (DCC Sort n) m.succ n.succ)
       (DCC Sort n) n.succ n.succ) m.succ n.succ
 
+#eval Std.format (Pi.type 0 2)
 
 /-
 Σ α β : Sort (max m n)

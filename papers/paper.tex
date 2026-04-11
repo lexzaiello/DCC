@@ -109,9 +109,12 @@ Curien extends the combinators with type annotations, enabling simple typing. Qu
 { \Gamma \vdash x : (\alpha \times \beta) \rightarrow \tau}
 {\Gamma \vdash \Lambda(x) : \alpha \rightarrow \beta \rightarrow \tau}
 &
-\inferrule[App]
+\inferrule[Appl]
 { \Gamma \vdash \alpha : \text{Type}, \beta : \text{Type}}
-{ \Gamma \vdash App(\alpha, \beta) : (\alpha \rightarrow \beta) \times \alpha \rightarrow \beta}&
+{ \Gamma \vdash App(\alpha, \beta) : ((\alpha \rightarrow \beta) \times \alpha) \rightarrow \beta}&
+\inferrule[App]
+{ \Gamma \vdash f : \alpha \rightarrow \beta, x : \alpha} 
+{ \Gamma \vdash f x : \beta}
 \end{tabular}
 \end{center}
 \caption{Inference rules of the simpy-typed categorical combinators}
@@ -122,9 +125,9 @@ Curien extends the combinators with type annotations, enabling simple typing. Qu
 
 Our primary insights when extending the categorical combinators to dependent types are: when typed as \(\Sigma\)-pairs, couples can naturally encode contexts and typing judgments; pairs which produce couples correspond to substitution within contexts; the types of all primimtive objects can be represented without the pair rule (the affine restriction) after adding a \(Flip\) combinator. By showing that the affine restriction is strongly normalizing, we gain decidable judgmental equality (\(\equiv\)) and a decision procedure for type-checking.
 
-As usual, we extend the calculus with a \(\Pi(m, n)\) term. Arrows \(a \rightarrow b\) are represented by terms \(\Pi(m, n) \alpha `(Sort n, \alpha, \beta)\). We also re-interpret the primitives combinators as pertaining to \(\Sigma\)-term couples, instead of tuples.
+As usual, we extend the calculus with a \(\Pi(m, n)\) object. Arrows \(\alpha \rightarrow \beta\) are represented by \(\Pi\) objects that quote their codomain. We re-interpret the base combinators as pertaining to \(\Sigma\) couples, instead of product couples.
 
-\subsection{Couples are Sigma-Terms are Contexts}
+\subsection{Couples as Dependent Sums}
 
 We interpret couples \((a, b)\) as sigma terms like such:
 
@@ -137,7 +140,7 @@ We interpret couples \((a, b)\) as sigma terms like such:
 {\Gamma \vdash \llbracket \beta \rrbracket (a, b) : (\Sigma(m, n) \alpha \beta)}
 \end{equation}
 \end{center}
-\caption{Couples are \(\Sigma\)-terms.}
+\caption{Couples as Dependent Sums}
 \end{figure}
 \end{center}
 
@@ -146,6 +149,36 @@ This view of couples as sigma terms naturally encodes the notion of judgments. F
 \begin{equation}
   x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx
   \llbracket A_2 \rrbracket (\llbracket \llbracket A_1 \rrbracket (x_0, x_1), x_2)
+\end{equation}
+
+In the categorical abstract machine, this encoding of judgments corresponds to an environment where variable assignments are explicitly typed. We use this encoding in our inference ruls to avoid copying types under \(\Pi\) binders.
+
+\subsection{Inference Rules}
+
+We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\text{Sort} : \text{Sort}\)).
+
+\subsubsection{Application and \(\Pi\)}
+
+\begin{equation}
+  \inferrule[App]
+  { \Gamma \vdash f : \Pi(m, n)\ \alpha\ \beta, x : \alpha}
+  { \Gamma \vdash f x : \beta\ \llbracket Id(\sort{m}) \rrbracket (\alpha, x)}
+\end{equation}
+
+The inference rule for function application is as usual, except the codomain \(\beta\) is indexed by the judgment \(x : \alpha\) encoded as a \(\Sigma\)-couple. This convention is indispensible in dependent types. For example, in \(\forall (\alpha : \sort{m}) (x : \alpha), \beta\), \(\alpha\) may be mentioned in \(\beta\) even though it has been consumed by \(x : \alpha\). By supplying \(\beta\) with \(x\) and its type, \(\alpha\) never needs to be copied, as long as it appears at most once under each subsequent \(\Pi\) binder.
+
+We define nondependent arrows (\(\alpha \rightarrow \beta\)) as such:
+
+\begin{equation}
+  ((\alpha : \sort{m}) \rightarrow (\beta : \sort{n})) = Π(m, n) \alpha `(\sort{n}, \Simga(\sort{n}, Id(\sort{m})), \beta)
+\end{equation}
+
+Since we do not make use of variables, we encode \(\Pi\)-types as application of a \(\Pi(m, n)\) combinator (where \(m\) and \(n\) are universe levels). Using our definition of arrows and our application inference rule, we give the inference rule for \(\Pi(m, n)\):
+
+\begin{equation}
+  \inferrule[\Pi(m, n)]
+  {}
+  { \Gamma \vdash \Pi(m, n) : ((\Pi(m + 1, n + 1) \sort{m}) `(\sort{n + 1}, \Sigma(\sort{m + 1}, Id(\sort{m + 1})), ((\Pi(n + 1, n + 1) ((\Pi(m + 1, n + 1) \Sigma(\sort{m}, Id(\sort{m}))) `(\sort{n + 1}, \Sigma(\sort{m + 1}, Id(\sort{m + 1})), \sort{n}))) `(\sort{n + 1}, \Sigma(\sort{n + 1}, Id(\sort{n + 1})), \sort{n})))) }
 \end{equation}
 
 - how Pi uses this

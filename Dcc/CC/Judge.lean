@@ -1,6 +1,48 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
+/-
+Changing composition: bundles
+
+(f ∘ g)
+
+(f ∘ g) =
+
+g : ∀ (x : α), β x
+g : A → Σ B C
+
+g x = ⟦x, y⟧
+
+f : Π (Σ B C) γ
+
+this allows ∘ to be fully dependent
+
+can we derive normal composition?
+
+nondependent.
+
+f ∘' g = 
+
+f (⟦x, y⟧) = ?
+
+Snd : (DCC (Π(max m n, n)
+    Σ(α, β) (β ∘ (Fst(α, β) ∘ Σ(Σ(α, β), Id(Σ(α, β)))) ∘ ((Λ(Id(Σ(α, β)), Id(Σ(Σ(α, β), Id(Σ(α, β))))) Σ(α, β)) ∘ Snd'(Sort (max m n), Σ(α, β))))))
+
+f : α → Σ B C
+g : Π (Σ B C) γ
+
+(f ∘ g) : ∀ (x : α), γ ∘
+
+Id(m) = Λ(Id(Sort m.succ),
+  (Λ(Id(Sort m), Snd(Sort m, Id(Sort m))))
+    
+
+don't even need to change rule
+-/
+
+def arrow (α β : Expr) (m n : Level) : Expr :=
+  DCC (Π(m, n) α `(Sort n, Σ(Sort m, Id(Sort m)), β))
+
 namespace Expr
 
 inductive Reduces : Expr → Expr → Type
@@ -15,69 +57,24 @@ def reduces_sound (h : (reduce A).fst = B) : Reduces A B :=
   ⟨h ▸ (reduce A).snd.down, reduce_norm h⟩
 
 inductive IsArrow : Expr → (α β : Expr) → Level → Level → Type
-  | sort  : Reduces (DCC (γ (Sort 1))) (DCC (Sort n))
-    → IsArrow (DCC (Π(m, n.succ) α γ)) α (DCC (Sort n)) m n.succ
-  | sigma : Reduces (DCC (γ (Sort 1))) (DCC Σ(Sort n, Sort o))
-    → IsArrow (DCC (Π(m, (max n o).succ) α γ)) α (DCC Σ(Sort n, Sort o)) m (max n o).succ
-  | pi    : Reduces (DCC (γ (Sort 1))) (DCC (Π(n, o) δ τ))
-    → IsArrow (DCC (Π(m, o) α γ)) α (DCC (Π(n, o) δ τ)) m o
+  | mk    : IsArrow (arrow α β m n) α β m n
 deriving Repr
 
 def is_arrow (t : Expr) : Option ((α β : Expr) × (m n : Level) × IsArrow t α β m n) :=
   match t with
-  | DCC (Π(m, n) α γ) =>
-    let t' := (DCC (γ Sort 1)).reduce.fst
-    match heq₁ : t' with
-    | (DCC (Sort n₂)) =>
-      if heq : n₂.succ = n then
-        .some ⟨α, DCC Sort n₂, m, n₂.succ, heq ▸ (.sort (reduces_sound (heq₁.symm ▸ rfl)))⟩
-      else .none
-    | (DCC Σ(Sort n₂, Sort o)) =>
-      if heq : (max n₂ o).succ = n then
-        .some ⟨α, DCC Σ(Sort n₂, Sort o), m, (max n₂ o).succ, heq ▸ (.sigma (reduces_sound (heq₁.symm ▸ rfl)))⟩
-      else .none
-    | DCC (Π(o, n₂) δ τ) =>
-      if heq : n₂ = n then
-        .some ⟨α, DCC (Π(o, n₂) δ τ), m, n₂, heq ▸ (.pi (reduces_sound (heq₁.symm ▸ rfl)))⟩
-      else .none
-    | _ => .none
+  | DCC (Π(m, n) α `(Sort n₂, Σ(Sort m₂, Id(Sort m₃)), β)) =>
+    if heq : m = m₂ ∧ m = m₃ ∧ n = n₂ then
+      have ⟨ha, hb, hc⟩ := heq
+      .some ⟨α, β, m, n, (by simp_all; exact .mk)⟩
+    else .none
   | _ => .none
 
 def IsArrow.complete (h : IsArrow e α β m n) : is_arrow e = .some ⟨α, β, m, n, h⟩ := by
-  cases h with
-  | sort h_red =>
-    simp [is_arrow]
-    have h := h_red.complete
-    aesop
-  | sigma h_red =>
-    simp [is_arrow]
-    have h := h_red.complete
-    aesop
-  | pi h_red =>
-    simp [is_arrow]
-    have h := h_red.complete
-    split
-    next n₂ heq => simp_all only [reduceCtorEq]
-    next n₂ o heq => simp_all only [reduceCtorEq]
-    next o n₂ δ_1 τ_1
-      heq =>
-      simp_all only [app.injEq, Expr.pi.injEq, ↓reduceDIte, Option.some.injEq, Sigma.mk.injEq, heq_eq_eq, true_and]
-      obtain ⟨left, right⟩ := h
-      obtain ⟨left, right_1⟩ := left
-      obtain ⟨left, right_2⟩ := left
-      subst right right_1 left right_2
-      simp_all only [heq_eq_eq, Sigma.mk.injEq, pi.injEq, true_and]
-      simp_all only
-      rfl
-    next x x_1
-      x_2 =>
-      simp_all only [reduceCtorEq, implies_true, app.injEq, Expr.pi.injEq, imp_false, not_and, and_imp]
-      exact (x_2 _ _ _ _ rfl rfl rfl rfl).elim
+  cases h
+  simp [is_arrow, arrow]
+  aesop
 
 end Expr
-
-def arrow (α β : Expr) (m n : Level) : Expr :=
-  DCC (Π(m, n) α `(Sort n, Σ(Sort m, Id(Sort m)), β))
 
 def Pi.type (m n : Level) : Expr :=
   arrow (DCC Sort m)
@@ -449,9 +446,20 @@ def test_pair : Option Expr :=
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (App(2, Sort 1, `(Sort 2, Σ(Sort 2, Id(Sort 2)), Sort 1)) ⟦`(Sort 2, ((Π(2, 2) Sort 1) `(Sort 2, Σ(Sort 2, Id(Sort 2)), Sort 1)), Sort 1)⟧(Id(Sort 1), Sort 0))).infer
 
+/-
+f ∘ g
+
+Id(Sort m) ∘ Snd(Sort m, Id(Sort m))
+-/
+
+#eval (Std.format ∘ Sigma.fst) <$> (infer (DCC (Snd(Sort 2, Id(Sort 2)))))
+
 def mk_id (m : Level) : Expr :=
-  DCC Snd(Σ(Sort m, Id(Sort m)), Snd(Sort m, Id(Sort m)))
-  --DCC (Λ(Id(Sort m), Λ(Snd(Sort m, Id(Sort m)), Snd(Σ(Sort m, Id(Sort m)), Snd(Sort m, Id(Sort m))))) (Sort m))
+  --DCC Snd(Σ(Sort m, Id(Sort m)), Snd(Sort m, Id(Sort m)))
+  DCC (Λ(
+    Id(Sort m.succ),
+    (Λ(Id(Sort m), Snd(Sort m, Id(Sort m)))
+      ∘ Snd(Sort m.succ, Id(Sort m.succ)))) (Sort m))
 
 #eval (Expr.mk_id 1).infer
 

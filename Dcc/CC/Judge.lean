@@ -58,9 +58,7 @@ def fst.type (α β : Expr) (m n : Level) : Expr :=
   (arrow (DCC Σ(α, β)) α (max m n) m)
 
 def snd'.type (α β : Expr) (m n : Level) : Expr :=
-  (DCC (Π(max m n, n)
-    (Σ(α, `(Sort n, α, β)))
-    `(Sort n, Σ(α, `(Sort n, α, β)), β)))
+  (arrow (DCC Σ(α, `(Sort n, α, β))) β (max m n) n)
 
 def snd.type (α β : Expr) (m n : Level) : Expr :=
   (DCC (Π(max m n, n)
@@ -372,6 +370,10 @@ def test_app : Option Expr := do
   dbg_trace (Std.format ∘ Sigma.fst) <$> (DCC ⟦γ⟧(f, x)).infer
 
   Sigma.fst <$> (DCC (App(2, α, β) ⟦γ⟧(f, x))).infer
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 2) ∘ Snd'(Sort 3, Sort 2)).infer
+
+#eval test_app
 
 theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
   induction h_t with

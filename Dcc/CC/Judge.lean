@@ -188,10 +188,12 @@ inductive Judge : Expr → Expr → Type where
     → IsArrow τ₁ α β m n
     → Judge f (DCC (Π(n, o) β γ))
     → Judge (DCC f ∘' g) (comp'.type α β γ g m n o).reduce.fst
-  | comp   : Judge g τ₁
-    → IsArrow τ₁ α (DCC Σ(α, β)) m n
-    → Judge f (DCC (Π(n, o) Σ(α, β) γ))
-    → Judge (DCC f ∘ g) (comp.type α β γ g m n o).reduce.fst
+  | comp   : Judge α (DCC Sort m)
+    → Judge β τ₁
+    → IsArrow τ₁ α (DCC (Sort n)) m n.succ
+    → Judge γ τ₂
+    → IsArrow τ₂ (DCC Σ(α, β)) (DCC Sort o) (max m n) o.succ
+    → Judge (DCC ⟦α, β, γ⟧∘) (comp.type α β γ m n o).reduce.fst
   /-
     ⟦m, α, γ⟧⟨f, g⟩ x = ⟦(γ ⟦Id(Sort m)⟧(α, x))⟧(f x, g x)
     f : α → β
@@ -413,19 +415,17 @@ set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judg
         else .none
       | _, _ => .none
     | _, _ => .none
-  | DCC f ∘ g =>
-    match g.infer, f.infer with
-    | .some ⟨t_g, h_t_g⟩, .some ⟨t_f, h_t_f⟩ =>
-      match t_g.is_arrow, t_f with
-      | .some ⟨α, DCC Σ(α₂, β₁), m, n₁, heq₁⟩, DCC (Π(n₂, o) Σ(α₃, β₂) γ) =>
-        if heq₃ : α = α₂ ∧ α = α₃ ∧ β₁ = β₂ ∧ n₁ = n₂ then
-          have ⟨ha, hb, hc, hd⟩ := heq₃
-          .some ⟨_, .comp h_t_g (by rw [← ha] at heq₁; exact heq₁) (by
-            rw [← hb, ← hc, ← hd] at h_t_f
-            exact h_t_f)⟩
+  | DCC ⟦α, β, γ⟧∘ =>
+    match α.infer, β.infer, γ.infer with
+    | .some ⟨DCC Sort m, h_t_α⟩, .some ⟨t_β, h_t_β⟩, .some ⟨t_γ, h_t_γ⟩ =>
+      match t_β.is_arrow, t_γ.is_arrow with
+      | .some ⟨α₂, DCC Sort n, m₂, n₂, heqa⟩, .some ⟨DCC Σ(α₃, β₂), DCC Sort o, mn, o₂, heqb⟩ =>
+        if heq : α₂ = α ∧ α₃ = α ∧ m₂ = m ∧ n₂ = n.succ ∧ mn = (max m n) ∧ o₂ = o.succ ∧ β₂ = β then
+          have ⟨ha, hb, hc, hd, he, hf, hg⟩ := heq
+          .some ⟨_, .comp h_t_α h_t_β (hd ▸ hc ▸ ha ▸ heqa) h_t_γ (he ▸ hf ▸ hg ▸ hb ▸ heqb)⟩
         else .none
       | _, _ => .none
-    | _, _ => .none
+    | _, _, _ => .none
   | DCC (f x) => match f.infer, x.infer with
     | .some ⟨DCC (Π(m, n) α₁ β), h_f⟩, .some ⟨α₂, h_x⟩ =>
       if heq : α₁ = α₂ then

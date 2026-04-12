@@ -205,30 +205,26 @@ The inference rules for projection on \(\Sigma\)-couples are as such:\\
   {\Gamma \vdash Fst(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \alpha}\\\\
   \inferrule[Snd]
   {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-  {\Gamma \vdash Snd(\alpha, \beta) : \Pi(\text{max m n \(m\) \(n\)}, n)\ \Sigma(\alpha, \beta)\ (\beta \circ Fst(\alpha, \beta) \circ Snd'(\sort{\text{max \(m\) \(n\)}}, \Sigma(\alpha, \beta)))}\\\\
+  {\Gamma \vdash Snd(\alpha, \beta) : \Pi(\text{max m n \(m\) \(n\)}, n)\ \Sigma(\alpha, \beta)\ (\beta \circ' Fst(\alpha, \beta) \circ' Snd'(\sort{\text{max \(m\) \(n\)}}, \Sigma(\alpha, \beta)))}\\\\
   \inferrule[Snd']
   {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
   {\Gamma \vdash Snd'(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \beta}\\\\
 \end{tabular}
 
-The nondependent \(Snd'(\alpha, \beta)\) can be replaced in these types by \(Snd(\sort{m}, Id(\sort{m}))\). However, \(g\) in \(f \circ g\) is not dependent (so as not to duplicate the argument \(x\)), and as such, \(Snd'(\alpha, \beta)\) must be used instead.
+We use \(\circ'\) to denote nondependent composition where \(g : \alpha \rightarrow \beta\) and \(f : \beta \rightarrow \alpha\).
 
 \subsection{Derivation: Point-Free \(Id\)}
 
-\begin{lemma}\label{point_free_derivation}
-  There exists \(Id_{m} : \forall (\alpha : \sort{m}), \alpha \rightarrow \alpha\).
-\end{lemma}
-
 \begin{proof}
-  Recall the types of \(Id\), \(\Lambda(\beta, x)\), and \(Snd(\alpha, \beta)\):\\\\
+  Recall the types of \(Id\), \(\Lambda(\alpha, x)\), and \(Snd(\alpha, \beta)\):\\\\
   \begin{center}
   \begin{tabular}{c}
   \inferrule[Id]
     { }
     {\Gamma \vdash Id(\alpha) : \alpha \rightarrow \alpha}\\\\
   \inferrule[Curry]
-    {\Gamma \vdash x : \Pi(\text{max \(m\) \(n\)}, o)\ \Sigma(\alpha, \beta)\ y,\ \beta : \alpha \rightarrow \sort{n}}
-    {\Gamma \vdash \Lambda(\beta, x) : \Pi(m, o)\ \alpha\ ((Flip(\Pi(n, o))\ \gamma)\ \circ\ (\beta\ \circ\ Snd'(\sort{m}, \alpha)))}\\\\
+    {\Gamma \vdash \alpha : \sort{m + 1}, x : \Pi(m + 1, n)\ \Sigma(\alpha, Id(\alpha))}
+    {\Gamma \vdash \Lambda(\alpha, x) : \Pi(m.succ, n)\ \alpha\ ((Flip(\Pi(m, n)) (\gamma \circ' \ldots \circ' Snd'(\sort{m.succ}, \alpha))))}\\\\
   \inferrule[Snd]
     { }
     {\Gamma \vdash Snd(\alpha, \beta) : \Pi(\text{max \(m\) \(n\)}, n)\ \Sigma(\alpha, \beta)\ (\beta \circ Fst(\alpha, \beta) \circ Snd'(\sort{\text{max \(m\) \(n\)}}, \Sigma(\alpha, \beta)))}\\\\
@@ -237,10 +233,9 @@ The nondependent \(Snd'(\alpha, \beta)\) can be replaced in these types by \(Snd
   So, let \(Id_{m}\) be as follows:
   \begin{center}
   \begin{align*}
-    Id_{m} &:= \Lambda(Id(\sort{m}), \Lambda(Snd(\sort{m}, Id(\sort{m})),\\
-           & Snd(\Sigma(\sort{m}, Id(\sort{m})), Snd(\sort{m}, Id(\sort{m})))))\ \sort{m}
+    Id_{m} &:= \Lambda(\sort{m}, Snd(\sort{m}, Id(\sort{m})))
   \end{align*}\end{center}
-  
+  See appendix \textit{TODO} for a mechanized proof that \(Id_{m} (\alpha : \sort{m}) (x : \alpha)\) type-checks.
 \end{proof}
 
 Our reduction rules are otherwise the same as in the categorical abstract machine \autocite{cmachine}. We use \(f(x_1, \ldots, x_n)\) to denote a combinator requiring \(n\) type annotations. Type annotations for pairs and couples are given by \(\llbracket \ldots \rrbracket\). Application is denoted by juxtaposition:

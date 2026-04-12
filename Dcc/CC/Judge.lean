@@ -92,17 +92,6 @@ def comp.type (α β γ : Expr) (m n o : Level) : Expr :=
               App((max m n), α, `(Sort (max m n), α, Σ(α, β)))))))
             ∘' Snd'(Sort (max m n), ((α : Sort m) → (Σ(α, β) : Sort (max m n))))))) : Sort o))
 
-/-
-Derivation of point-free Id(α)
-
-? receives ⟦Id(Sort m)⟧(Sort m, α)
-Λ(Id(Sort m), Λ(Snd(Sort m, Id(Sort m)), Snd(Σ(Sort m, Id(Sort m)), Snd(Sort m, Id(Sort m))))) (Sort m)
--/
-
-/-
-⟦α, γ⟧⟨f, x⟩ : Π(m, (max n o)) α (() ∘ f
--/
-
 def pair.type (α β γ : Expr) (m n o : Level) : Expr :=
   (arrow α (DCC Σ(β, γ)) m (max n o))
 

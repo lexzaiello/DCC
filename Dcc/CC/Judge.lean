@@ -4,6 +4,11 @@ import Dcc.CC.Step2
 def arrow (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(m, n) α `(Sort n, Σ(Sort m, Id(Sort m)), β))
 
+syntax "(" expr ":" expr ")" "→" "(" expr ":" expr ")" : expr
+
+macro_rules
+  | `(DCC ($α:expr : Sort $m) → ($β:expr : Sort $n)) => `(arrow (DCC $α) (DCC $β) $m $n)
+
 namespace Expr
 
 inductive IsArrow : Expr → (α β : Expr) → Level → Level → Type
@@ -59,9 +64,29 @@ def comp'.type (α β γ g : Expr) (m n o : Level) : Expr :=
   g : Π (x : α), Σ α β
   f : Π (x : Σ α β), γ x
   (f ∘ g) : (Π(m, o) α ((Λ(Id(Sort n), γ) (Σ(α, β))) ∘' (g ∘' Snd'(Sort m, α))))
+
+  (⟦α, β, γ⟧∘) : )
 -/
-def comp.type (α β γ g : Expr) (m n o : Level) : Expr :=
-  DCC (Π(m, o) α ((Λ'(Sort n, Id(Sort n), γ) (Σ(α, β))) ∘' (g ∘' Snd'(Sort m, α))))
+def comp.type (α β γ : Expr) (m n o : Level) : Expr :=
+  DCC
+    ((((α : Sort m) → (Σ(α, β) : Sort (max m n))) : Sort (max m n)) →
+    ((Π(n, o) ((α : Sort m) → (Σ(α, β) : Sort (max m n)))
+    ((Π(m, o) α) ∘'
+      (Flip(Λ'(
+          ((α : Sort m) → (Σ(α, β) : Sort (max m n))),
+          α,
+          (⟦Sort (max m n),
+             Id(Sort max m n),
+             `(Sort o.succ,
+               Σ(Sort (max m n), Id(Sort (max m n))),
+               Sort o)⟧∘ γ
+            (⟦α, β,
+                `(Sort (max m n).succ,
+                  Σ(α, β),
+                  Σ(Sort (max m n), Id(Sort (max m n))))⟧∘
+              ⟦Sort (max m n), Id(Sort (max m n))⟧(, Σ(α, β))
+              App((max m n), α, `(Sort (max m n), α, Σ(α, β)))))))
+            ∘' Snd'(Sort (max m n), ((α : Sort m) → (Σ(α, β) : Sort (max m n))))))) : Sort o))
 
 /-
 Derivation of point-free Id(α)
@@ -480,64 +505,56 @@ def mk_id.coup_α (m : Level) : Expr :=
 
 #eval (DCC (#(mk_id.coup_α 2) (Sort 1) (Sort 0))).infer
 
-/-
-Rethinking id. maybe don't need all the Λ? can use pair instead?
-
-we can probably make pairs and couples point-free
-
-(? ∘ ⟦⟧⟨(?, Fst(Sort m, Id(Sort m))), ?⟩) α x = x
-= (? ∘ (Λ(?, Fst(Sort m, Id(Sort m))) α, (, ) α)) x = x
-
-App ∘ ⟨Λ α, (,) α⟩
-
-id : ∀ (α : Type) (α → α)
-
-id α = Λ(?, Fst(α, Id(α))
--/
-
-/-
-Rethinking mk_id
-
-Λ'(Id(Sort m.succ),
-  Λ'()
-  ) (Sort m)
--/
-
-/-def mk_id.inner_comp (m : Level) : Expr :=
-  -- f (α, x) : 
-  let f := DCC Λ(Id(Sort m), Snd(Sort m, Id(Sort m)))
-        ∘' Snd'(Sort m.succ, Sort m)
-  let g := (DCC #(mk_id.coup_α m) ∘' Snd'(Sort m.succ, m))
-
-  DCC ⟦?⟧⟨f, g⟩-/
 
 def mk_id (m : Level) : Expr :=
-  --DCC (Λ(Id(Sort m), Snd(Sort m, Id(Sort m))) ∘' Snd'(Sort m.succ, Sort m))
-
-  /-
-  DCC ((Λ(
-    `(Sort m.succ, Sort m.succ, Sort m),
-      -- have (Sort m, α), then x
-      -- need to wrap x with α
-      Λ(Snd(Sort m.succ, Id(Sort m)),
-        -- have ((Sort m, α), x)
-        Snd(Σ(Sort m.succ, Id(Sort m)), Snd(Sort m.succ, Id(Sort m))))) (Sort m))
-        ∘' #(mk_id.coup_sort m))
-  -/
-
-  /-
-    DCC (((Λ(
-    `(Sort m.succ, Sort m.succ, Sort m),
-      (Λ() ∘ ))) (Sort m))
-        ∘' #(mk_id.coup_sort m))
-  -/
-
   DCC (((Λ(
     Sort m.succ,
     `(Sort m.succ, Sort m.succ, Sort m),
     (Λ(Sort m, Id(Sort m), Snd(Sort m, Id(Sort m)))
       ∘' Snd'(Sort m.succ, Sort m)))) (Sort m))
       ∘' #(mk_id.coup_sort m))
+
+/-
+⟦Sort m, Id(Sort m)⟧(,) α x = ⟦Sort m, Id(Sort m)⟧(α,x)
+
+can use pair intead? no.
+
+Fst ∘ ⟨f, g⟩ x = f x
+
+Λ'(
+
+I feel like we absolutely need point-free composition for this to work.
+
+we can get ((α, Sort m), x). that's easy.
+
+we just can't compose.
+we COULD compose pretty easily if we had point-free composition.
+
+but we should use Λ instead.
+
+Λ() (α, x) x
+
+Λ() ∘ ((,) (α, x))
+
+((Sort m, α), x)
+
+we NEED point-free composition.
+
+I don't think we even need dependent composition.
+
+we could do partially point-free composition.
+does't sound too hard.
+
+(∘ Snd(Σ(Sort m, Id(Sort m)), Snd(Sort m, Id(Sort m)))) ∘ ⟦Sort m, Id(Sort m)⟧(,)
+
+this is super clean.
+
+((,) ∘ App) ∘ Snd(Sort m, Id(Sort m))
+
+⟦α, β, γ⟧
+
+⟨`(
+-/
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (#(mk_id.coup_sort 2) Sort 1)).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (#(Expr.mk_id 2) (Sort 1))).infer

@@ -11,7 +11,7 @@ inductive Red : Expr → Expr → Prop
   | flip     : Red (DCC (Flip(e) x y)) (DCC (e y x))
   | id       : Red (DCC (Id(_α) x)) x
   | quot     : Red (DCC (`(_α, _β, x) y)) x
-  | comp     : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
+  | comp     : Red (DCC ((⟦α, β, γ⟧∘ x y) z)) (DCC (x (y z)))
   | comp'    : Red (DCC ((x ∘' y) z)) (DCC (x (y z)))
   | pair     : Red (DCC (⟦α, β⟧⟨f, g⟩ x)) (DCC ⟦α, β⟧((f x), (g x)))
   | curr     : Red (DCC (Λ(α, β, x) y z)) (DCC (x ⟦α, β⟧(y, z)))
@@ -34,7 +34,7 @@ inductive RedAff : Expr → Expr → Prop
   | flip     : RedAff (DCC (Flip(e) x y)) (DCC (e y x))
   | id       : RedAff (DCC (Id(_α) x)) x
   | quot     : RedAff (DCC (`(_α, _β, x) y)) x
-  | comp     : RedAff (DCC ((x ∘ y) z)) (DCC (x (y z)))
+  | comp     : RedAff (DCC ((⟦α, β, γ⟧∘ x y) z)) (DCC (x (y z)))
   | comp'    : RedAff (DCC ((x ∘' y) z)) (DCC (x (y z)))
   | curr     : RedAff (DCC (Λ(α, β, x) y z)) (DCC (x ⟦α, β⟧(y, z)))
   | curr'    : RedAff (DCC (Λ'(α, β, x) y z)) (DCC (x ⟦α, β⟧(y, z)))
@@ -46,7 +46,7 @@ inductive Size : Expr → ℕ → Prop
   | flip   : Size e m → Size (DCC Flip(e)) m.succ
   | id     : Size α m → Size (DCC Id(α)) m.succ
   | quot   : Size α m → Size β n → Size x o → Size (DCC `(α, β, x)) (m + n + o).succ
-  | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
+  | comp   : Size α m → Size β n → Size γ o → Size (DCC ⟦α, β, γ⟧∘) (m + n + o).succ
   | comp'  : Size f m → Size g n → Size (DCC (f ∘' g)) (m + n).succ
   | coup   : Size α m → Size β n → Size (DCC ⟦α, β⟧(,)) (m + n).succ
   | pair   : Size α m → Size β n → Size f o → Size g p → Size (DCC ⟦α, β⟧⟨f, g⟩) (m + n + o + p).succ
@@ -75,10 +75,11 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
     let ⟨n, ⟨h₂⟩⟩ := β.size
     let ⟨o, ⟨h₃⟩⟩ := x.size
     ⟨(m + n + o).succ, ⟨.quot h₁ h₂ h₃⟩⟩
-  | DCC (f ∘ g) =>
-    let ⟨m, ⟨h₁⟩⟩ := f.size
-    let ⟨n, ⟨h₂⟩⟩ := g.size
-    ⟨(m + n).succ, ⟨.comp h₁ h₂⟩⟩
+  | DCC (⟦α, β, γ⟧∘) =>
+    let ⟨m, ⟨h₁⟩⟩ := α.size
+    let ⟨n, ⟨h₂⟩⟩ := β.size
+    let ⟨o, ⟨h₃⟩⟩ := γ.size
+    ⟨(m + n + o).succ, ⟨.comp h₁ h₂ h₃⟩⟩
   | DCC (f ∘' g) =>
     let ⟨m, ⟨h₁⟩⟩ := f.size
     let ⟨n, ⟨h₂⟩⟩ := g.size
@@ -178,9 +179,9 @@ theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   | appl h₁ h₂ ih₁ ih₂ =>
     unfold size
     rw [ih₁, ih₂]
-  | comp h₁ h₂ ih₁ ih₂ =>
+  | comp h₁ h₂ h₃ ih₁ ih₂ ih₃ =>
     unfold size
-    rw [ih₁, ih₂]
+    rw [ih₁, ih₂, ih₃]
   | comp' h₁ h₂ ih₁ ih₂ =>
     unfold size
     rw [ih₁, ih₂]
@@ -363,7 +364,13 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
   | comp =>
     cases h₂ with
     | comp => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
+    | congrFun h =>
+      cases h with
+      | congrFun h =>
+        cases h with
+        | congrFun h => cases h
+        | congrArg h => exact ⟨_, .single (.congrFun h), .single .comp⟩
+      | congrArg h => exact ⟨_, .single (.congrArg (.congrFun h)), .single .comp⟩
     | congrArg h => exact ⟨_, .single (.congrArg (.congrArg (by assumption))), .single .comp⟩
   | comp' =>
     cases h₂ with
@@ -391,12 +398,27 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
     repeat cases h_r
     · rename_i h; cases h
     · exact ⟨_, .single .flip, .single (.congrArg (by assumption))⟩
-    repeat cases h_r
-    · rename_i h; cases h
-    · exact ⟨_, .single .curr, .single (.congrArg (.sigl (by assumption)))⟩
-    repeat cases h_r
-    · rename_i h; cases h
-    · exact ⟨_, .single .curr', .single (.congrArg (.sigl (by assumption)))⟩
+    · cases h_r
+    · cases h_r
+    case comp =>
+      cases h_r with
+      | congrFun h =>
+        cases h with
+        | congrFun h => cases h
+        | congrArg h =>
+          exact ⟨_, .single .comp, .congrFun (.single h)⟩
+      | congrArg h => exact ⟨_, .single .comp, .congrArg (.congrFun (.single h))⟩
+    case comp' => cases h_r
+    case curr =>
+      cases h_r with
+      | congrFun h => cases h
+      | congrArg h =>
+        exact ⟨_, .single .curr, .single (.congrArg (.sigl (by assumption)))⟩
+    case curr' =>
+      cases h_r with
+      | congrFun h => cases h
+      | congrArg h =>
+        exact ⟨_, .single .curr', .single (.congrArg (.sigl (by assumption)))⟩
     case congrFun f f' x f'' h =>
       have ⟨D, h₁, h₂⟩ := ih h
       exact ⟨_, .congrFun h₁, .congrFun h₂⟩
@@ -477,7 +499,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
   | (DCC (Flip(e) x y))                     => .some ⟨(DCC (e y x)), ⟨.flip⟩⟩
   | (DCC (Id(_α) x))                        => .some ⟨x, ⟨.id⟩⟩
   | (DCC (`(_α, _β, x) _y))                 => .some ⟨x, ⟨.quot⟩⟩
-  | (DCC ((x ∘ y) z))                       => .some ⟨(DCC (x (y z))), ⟨.comp⟩⟩
+  | (DCC ((⟦_α, _β, _γ⟧∘ x y) z))           => .some ⟨(DCC (x (y z))), ⟨.comp⟩⟩
   | (DCC ((x ∘' y) z))                      => .some ⟨(DCC (x (y z))), ⟨.comp'⟩⟩
   | (DCC (Λ(α, β, x) y z))                  => .some ⟨(DCC (x ⟦α, β⟧(y, z))), ⟨.curr⟩⟩
   | (DCC (Λ'(α, β, x) y z))                 => .some ⟨(DCC (x ⟦α, β⟧(y, z))), ⟨.curr'⟩⟩
@@ -564,10 +586,26 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
         simp [step?] at h
     · have h := h_norm.complete
       simp [step?] at h
-  case h_8 | h_7 | h_6 =>
+  case h_7 | h_6 =>
     cases heq : h₁
     · rfl
     · rename_i h; cases h
+    · have h := h_norm.complete
+      simp [step?] at h
+  case h_8 =>
+    cases heq : h₁
+    · rfl
+    · rename_i h
+      cases h with
+      | congrFun h =>
+        cases h with
+        | congrFun h => cases h
+        | congrArg h =>
+          have h := h_norm.complete
+          simp [step?] at h
+      | congrArg h =>
+        have h := h_norm.complete
+        simp [step?] at h
     · have h := h_norm.complete
       simp [step?] at h
   case h_9 =>
@@ -606,7 +644,11 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
       simp_all
       rename_i h
       exact (h _ _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl rfl).elim
-    | comp' | comp | quot | flip | id => simp_all
+    | comp' | quot | flip | id => simp_all
+    | comp =>
+      simp_all
+      rename_i h
+      exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
     | curr' | curr =>
       simp_all
       rename_i h
@@ -631,8 +673,12 @@ theorem RedAff.complete' (h_red : RedAff A B) : (step? A).isSome := by
       simp_all
       rename_i h
       exact (h _ _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl rfl).elim
-    case flip | quot | id | comp | comp' =>
+    case flip | quot | id | comp' =>
       simp_all
+    case comp =>
+      simp_all
+      rename_i h
+      exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
     case curr' | curr =>
       simp_all
       rename_i h

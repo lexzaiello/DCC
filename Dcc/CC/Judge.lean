@@ -1,6 +1,16 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
+/-
+Point-free arrow
+
+→(m, n) : Π(m, n)
+
+→(m, n) := Π(m, n)
+-/
+def arrow₀ (m n : Level) : Expr :=
+  sorry
+
 def arrow (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(m, n) α `(Sort n, Σ(Sort m, Id(Sort m)), β))
 
@@ -178,6 +188,8 @@ inductive Judge : Expr → Expr → Type where
     x : (Π(m, o) α ((Flip(Π(n, o)) γ) ∘ β)))
     (DCC (Π(m, o) α ((Flip(Π(n, o)) γ) ∘ β)))
     Flip(x)
+
+    x : ∀ (x : α)
   -/
   | flip  : Judge x τ₁
     → IsArrow τ₁ α τ₂ m o
@@ -505,6 +517,29 @@ def mk_id.coup_α (m : Level) : Expr :=
 
 #eval (DCC (#(mk_id.coup_α 2) (Sort 1) (Sort 0))).infer
 
+/-
+Can we derive an easier to use curry?
+
+
+Λ(α, β, x) : ∀ (x : α) (y : β x), γ ⟦α, β⟧(
+
+def Curr'.arrow₁ (m n o : Level) (α β γ : Expr) : Expr :=
+  DCC (App(o.succ, Π(n.succ, o.succ) Σ(Sort n, Id(Sort n)) `(Sort o.succ, Σ(Sort n, Id(Sort n)), Sort o), `(Sort o.succ, Π(n.succ, o.succ) Σ(Sort n, Id(Sort n)) `(Sort o.succ, Σ(Sort n, Id(Sort n)), Sort o), Sort o)) ∘ ⟦α, (Π(o.succ, o.succ) (Π(n.succ, o.succ) Σ(Sort n, Id(Sort n)) `(Sort o.succ, Σ(Sort n, Id(Sort n)), Sort o)) `(Sort o.succ, Σ(Sort o.succ, Id(Sort o.succ)), Sort o))⟧⟨Π(n, o) ∘ β, Λ'(α, Σ(Sort n, Id(Sort n)),
+    -- receive (y, (β y, z))
+    γ ∘ ⟦Σ(α, Σ(Sort n, Id(Sort n))), α, β⟧⟨Id(α), Snd(Sort n, Id(Sort n))⟩)⟩)
+
+def Curr' (m n o : Level) (α β γ : Expr) : Expr :=
+  Λ(m, n, o, α, β, γ, x) = App(o, α,
+    #(Curr'.arrow₁ m n o α β γ)) ∘ ⟦α, #(Curr'.arrow₁ m n o α β γ)⟧⟨
+    -- receive y, make Λ(α, β, x) y
+    (∘'⟦α, β,
+      -- receive (y, z) : Σ(α, β)
+      γ⟧) ∘ Λ'(α, β,
+      -- receive (y, (y, z)), feed in (y, z)
+      x ∘ Snd'(α, `(Sort (max m n), α, Σ(α, β)))),
+    -- receive y, make (, y)
+    ⟦α, β⟧(,)⟩
+-/
 
 def mk_id (m : Level) : Expr :=
   DCC (((Λ(
@@ -513,6 +548,57 @@ def mk_id (m : Level) : Expr :=
     (Λ(Sort m, Id(Sort m), Snd(Sort m, Id(Sort m)))
       ∘' Snd'(Sort m.succ, Sort m)))) (Sort m))
       ∘' #(mk_id.coup_sort m))
+
+def mk_id''.comp_β (m : Level) : Expr :=
+  DCC (Flip(Π(m, m.succ)) `(Sort m.succ, Σ(Sort m, Id(Sort m)), Σ(Sort m, Id(Sort m))))
+
+def mk_id''.par_coup (m : Level) : Expr :=
+  DCC ⟦Sort m, #(mk_id''.comp_β m)⟧⟨Id(Sort m), ⟦Sort m, Id(Sort m)⟧(,)⟩
+
+def mk_id''.mk_α_to_α (m : Level) : Expr :=
+  DCC (Flip(Π(m, m)) Fst(Sort m, Id(Sort m))) ∘' Fst(Sort m, #(mk_id''.comp_β m))
+
+-- from (α, (, α))
+def mk_id''.fetch_α_component (m : Level) : Expr :=
+  sorry
+
+-- receive (α, (, α)). receive x, get ((α, (, α)), x). get snd
+def mk_id''.fetch_α (m : Level) : Expr :=
+  DCC (⟦Σ(Sort m, #(mk_id''.comp_β m)), Fst(Sort m, #(mk_id''.comp_β m)), Fst(Sort m, Id(Sort m))⟧∘
+      Snd(Fst(Sort m, #(mk_id''.comp_β m)), Id(Sort m)))
+
+def mk_id'' (m : Level) : Expr :=
+  DCC (⟦Sort m,
+  -- receive α, make (α → Σ(Sort m, Id(Sort m)))
+  #(mk_id''.comp_β m),
+  -- receive (α, (,α)), make α → α by
+  #(mk_id''.mk_α_to_α m)⟧∘
+  -- receive (α, (, α)). receive x, get ((α, (, α)), x). get snd
+  #(mk_id''.fetch_α m)
+  #(mk_id''.par_coup m))
+
+/-
+mk_id''' α = (Sort m, α)
+mk_id''' α x = Snd(Σ(Sort m, Id(Sort m)), Fst(Sort m, Id(Sort m))) ((Sort m, α), x)
+
+mk_id''' = Λ(Sort m.succ, Id(Sort m),
+  Λ()
+  ) (Sort m)
+-/
+def mk_id''' (m : Level) : Expr :=
+  sorry
+
+def mk_id' (m : Level) : Expr :=
+  DCC Λ(Sort m, Id(Sort m), Snd(Sort m, Id(Sort m)))
+
+#eval (DCC (#(mk_id''.comp_β 2))).infer
+#eval (DCC (#(mk_id''.par_coup 2))).infer
+#eval (DCC (#(mk_id''.mk_α_to_α 2))).infer
+#eval (DCC (#(mk_id''.fetch_α 2))).infer
+
+/-
+id(m) := 
+-/
 
 /-
 ⟦Sort m, Id(Sort m)⟧(,) α x = ⟦Sort m, Id(Sort m)⟧(α,x)

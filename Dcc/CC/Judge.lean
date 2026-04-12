@@ -73,7 +73,6 @@ def comp'.type (α β γ g : Expr) (m n o : Level) : Expr :=
 -/
 def comp.type (α β γ : Expr) (m n o : Level) : Expr :=
   DCC
-    ((((α : Sort m) → (Σ(α, β) : Sort (max m n))) : Sort (max m n)) →
     ((Π(n, o) ((α : Sort m) → (Σ(α, β) : Sort (max m n)))
     ((Π(m, o) α) ∘'
       (Flip(Λ'(
@@ -90,7 +89,7 @@ def comp.type (α β γ : Expr) (m n o : Level) : Expr :=
                   Σ(Sort (max m n), Id(Sort (max m n))))⟧∘
               ⟦Sort (max m n), Id(Sort (max m n))⟧(, Σ(α, β))
               App((max m n), α, `(Sort (max m n), α, Σ(α, β)))))))
-            ∘' Snd'(Sort (max m n), ((α : Sort m) → (Σ(α, β) : Sort (max m n))))))) : Sort o))
+            ∘' Snd'(Sort (max m n), ((α : Sort m) → (Σ(α, β) : Sort (max m n))))))))
 
 def pair.type (α β γ : Expr) (m n o : Level) : Expr :=
   (arrow α (DCC Σ(β, γ)) m (max n o))

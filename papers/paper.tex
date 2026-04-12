@@ -231,7 +231,7 @@ The inference rules for projection on couples are as such:\\
 
 \subsection{Identity combinator}
 
-As do all other combinators, \(Id\) accepts \(\alpha\) as a point. As such, its type is a simple arrow:
+As do all other combinators, \(Id\) accepts \(\alpha\) as a point. Its type is a simple arrow:
 
 \begin{equation}
   \inferrule[Id]
@@ -251,15 +251,15 @@ We extend Curien's combinators \autocite{CURIEN1986188} with a \(Flip(x)\) combi
 
 \subsection{Dependent and nondependent composition}
 
-We have nondependent composition as in Curien's combinators, but add a dependent version. Naively interpreting composition as dependent leads to the \(S\) combinator.
+We have nondependent composition as in Curien's combinators, and add a dependent version. Naively interpreting composition as dependent leads to the \(S\) combinator, so we use our \(\Sigma\)-couples to avoid duplication and preserve dependency.
 
 \begin{equation}
-  \inferrule[Naive naive comp.]
-  { \Gamma \vdash f : \Pi(x : \alpha), \beta(x), g : \Pi(x : \delta), \gamma (f x)}
+  \inferrule[Naive comp.]
+  { \Gamma \vdash f : \Pi(x : \alpha), \beta(x), g : \Pi(x : ?), \gamma (f x)}
   { \Gamma \vdash (g \circ f) : \Pi(x : \alpha), \gamma (f x)}
 \end{equation}
 
-Note that the codomain of \(f\) depends on \(x : \alpha\), but the domain of \(g\) also depends on \(f x : \delta\). By duplicating \(x\), \(\delta\) can be determined:
+Note that the codomain of \(f\) depends on \(x : \alpha\), but the domain of \(g\) also depends on \(f x : \beta(x)\). By duplicating \(x\), \(?\) can be determined:
 
 \begin{equation}
   \inferrule[Naive comp.]
@@ -267,15 +267,25 @@ Note that the codomain of \(f\) depends on \(x : \alpha\), but the domain of \(g
   { \Gamma \vdash (g \circ f) : \Pi(x : \alpha), \gamma (f x)}
 \end{equation}
 
-However, we can avoid copying \(x\) altogether by stipulating that \(f\) produce a couple \(\Sigma(\alpha, \beta\). As such, duplication is handed off to the term-level, and our types remain affine. We thus define composition point-free, up to the type arguments \({\alpha, \beta, \gamma}\)\eqref{comp}.
+We avoid copying \(x\) altogether by stipulating that \(f\) produce a couple \(\Sigma(\alpha, \beta\). As such, duplication is handed off to term-level \(\beta\)-reduction, and our types remain affine. We define composition point-free, up to the type arguments \({\alpha, \beta, \gamma}\) \eqref{comp}.
 
-\begin{figure}
+\begin{figure}[h]
   \begin{equation}\label{comp}
     \inferrule[Comp.]
     { \Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, \gamma : \Sigma(\alpha, \beta) \rightarrow \sort{o}}
     { \Gamma \vdash \llbracket \alpha, \beta, \gamma \rrbracket \circ : \Pi(f : \alpha \rightarrow \Sigma(\alpha, \beta), g : \Pi(x : \Sigma(\alpha, \beta)), \gamma(x), x : \alpha), \gamma(f x)}
   \end{equation}
   \caption{Inference rule: composition in illustrative notation. See appendix for full type.}
+\end{figure}
+
+The type of the nondependent composition operator is the same as in Curien's simply-typed combinators \autocite[p. 220]{CURIEN1986188} \eqref{nondep_comp}.
+
+\begin{figure}[h]
+  \begin{equation}\label{nondep_comp}
+    \inferrule[Nondep. comp.]
+    { \Gamma \vdash f : \alpha \rightarrow \beta, g : \beta \rightarrow \gamma}
+    { \Gamma \vdash (g \circ f) : \alpha \rightarrow \gamma}
+  \end{equation}
 \end{figure}
 
 \textit{TODO: after all other types}

@@ -31,13 +31,13 @@ inductive Expr where
   | comp  : Expr  → Expr  → Expr
   -- Nondependent composition
   | comp' : Expr  → Expr  → Expr
-  | pair  : Expr  → Expr  → Expr  → Expr
+  | pair  : Expr  → Expr  → Expr  → Expr  → Expr
   | sigma : Expr  → Expr  → Expr
-  | mk    : Expr  → Expr  → Expr  → Expr
+  | mk    : Expr  → Expr  → Expr
   | pi    : Level → Level → Expr
-  | curr  : Expr  → Expr  → Expr
+  | curr  : Expr  → Expr  → Expr  → Expr
   -- Nondependent curry
-  | curr' : Expr  → Expr  → Expr
+  | curr' : Expr  → Expr  → Expr  → Expr
   | appl  : Level → Expr  → Expr → Expr
   | app   : Expr  → Expr  → Expr
 deriving BEq, Repr, DecidableEq
@@ -63,6 +63,7 @@ syntax "(" expr+ ")"                                             : expr
 syntax:max "Sort" term                                           : expr
 syntax (priority := high) "⟦" expr,* "⟧" "⟨" expr,* "⟩" : expr
 syntax (priority := high) "⟦" expr,* "⟧" "(" expr,* ")"          : expr
+syntax (priority := high) "⟦" expr,* "⟧" "(" "," ")"             : expr
 
 syntax "DCC"  expr : term
 
@@ -70,11 +71,12 @@ macro_rules
   | `(DCC ($f:expr $x:expr))                    => `(Expr.app   (DCC $f:expr)   (DCC $x:expr))
   | `(DCC ($f:expr $x:expr $xs:expr*))          => `(DCC (($f:expr $x:expr) $xs:expr*))
   | `(DCC `($α:expr, $β:expr, $x:expr))         => `(Expr.quot (DCC $α) (DCC $β) (DCC $x))
-  | `(DCC Λ($β:expr, $e:expr))                  => `(Expr.curr (DCC $β) (DCC $e))
-  | `(DCC Λ'($β:expr, $e:expr))                 => `(Expr.curr' (DCC $β) (DCC $e))
+  | `(DCC Λ($α:expr, $β:expr, $e:expr))         => `(Expr.curr (DCC $α) (DCC $β) (DCC $e))
+  | `(DCC Λ'($α:expr, $β:expr, $e:expr))        => `(Expr.curr' (DCC $α) (DCC $β) (DCC $e))
   | `(DCC Π($m:term, $n:term))                  => `(Expr.pi $m $n)
-  | `(DCC ⟦$β:expr⟧⟨$x:expr, $y:expr⟩)          => `(Expr.pair (DCC $β) (DCC $x) (DCC $y))
-  | `(DCC ⟦$β:expr⟧($x:expr, $y:expr))          => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
+  | `(DCC ⟦$α:expr, $β:expr⟧⟨$x:expr, $y:expr⟩) => `(Expr.pair (DCC $α) (DCC $β) (DCC $x) (DCC $y))
+  | `(DCC ⟦$α:expr, $β:expr⟧(,))                => `(Expr.mk (DCC $α) (DCC $β))
+  | `(DCC ⟦$α:expr, $β:expr⟧($x:expr, $y:expr)) => `(DCC (⟦$α, $β⟧(,) $x $y))
   | `(DCC Sort $m:term)                         => `(Expr.sort $m)
   | `(DCC Σ($α:expr, $β:expr))                  => `(Expr.sigma (DCC $α) (DCC $β))
   | `(DCC Flip($e:expr))                        => `(Expr.flip (DCC $e))
@@ -101,11 +103,12 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Snd(α, β))     => "Snd(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Snd'(α, β))    => "Snd'(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC App(n, α, β))  => "App(" ++ (Std.format n) ++ ", " ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC Λ(β, e))       => "Λ(" ++ β.toFormat ++ ", " ++ e.toFormat ++ ")"
-  | (DCC Λ'(β, e))      => "Λ'(" ++ β.toFormat ++ ", " ++ e.toFormat ++ ")"
+  | (DCC Λ(α, β, e))    => "Λ(" ++ (Std.Format.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
+  | (DCC Λ'(α, β, e))   => "Λ'(" ++ (Std.Format.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
   | (DCC Π(m, n))       => "Π" ++ (.bracket "(" ((Std.format m) ++ ", " ++ (Std.format n)) ")")
-  | (DCC ⟦β⟧⟨a, b⟩)     => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
-  | (DCC ⟦β⟧(a, b))     => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
+  | (DCC ⟦α, β⟧⟨a, b⟩)  => (.bracket "⟦" (α.toFormat ++ ", " ++ β.toFormat) "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
+  | (DCC ⟦α, β⟧(a, b))  => (.bracket "⟦" (α.toFormat ++ ", " ++ β.toFormat) "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
+  | (DCC ⟦α, β⟧(,))     => (.bracket "⟦" (α.toFormat ++ ", " ++ β.toFormat) "⟧") ++ (.bracket "(" "," ")")
   | (DCC Σ(α, β))       => "Σ" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
   | (DCC f ∘ g)         => (.bracket "(" (f.toFormat ++ " ∘ " ++ g.toFormat) ")")
   | (DCC f ∘' g)        => (.bracket "(" (f.toFormat ++ " ∘' " ++ g.toFormat) ")")

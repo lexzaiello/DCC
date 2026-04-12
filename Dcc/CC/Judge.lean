@@ -6,17 +6,6 @@ def arrow (α β : Expr) (m n : Level) : Expr :=
 
 namespace Expr
 
-inductive Reduces : Expr → Expr → Type
-  | mk : RedAffReflTrans e e' → e'.IsNormAff → Reduces e e'
-deriving Repr
-
-def Reduces.complete (h : Reduces A B) : A.reduce.fst = B :=
-  match h with
-  | .mk h_red h_norm => h_red.complete h_norm
-
-def reduces_sound (h : (reduce A).fst = B) : Reduces A B :=
-  ⟨h ▸ (reduce A).snd.down, reduce_norm h⟩
-
 inductive IsArrow : Expr → (α β : Expr) → Level → Level → Type
   | mk    : IsArrow (arrow α β m n) α β m n
 deriving Repr
@@ -104,7 +93,7 @@ f : ∀ α, β x
 -/
 def app_e.type (α β : Expr) (m n : Level) : Expr :=
   let t_f := DCC (Π(m, n) α β)
-  let t_x := DCC `(Sort m, t_f, α)
+  let t_x := DCC `(Sort n, t_f, α)
 
   DCC (Π(max m n, n)
       Σ(t_f, t_x)
@@ -142,6 +131,10 @@ def curr.type (α β γ : Expr) (m n o : Level) : Expr :=
   let mk_y_type := DCC `(Sort (max m n), Σ(Sort m, Id(Sort m)), Σ(α, β))
 
   (DCC (Π(m, o) α ((Flip(Π((max m n), o)) γ) ∘' mk_y_type)))
+
+/-
+⟦α, β⟧(,) : ∀ (x : α) (y : β x), Σ(α, β)
+-/
 
 def coup.type (α β : Expr) : Expr :=
   (DCC Σ(α, β))
@@ -479,8 +472,33 @@ f : Π (x : Σ α β), γ x
       ∘' Snd'(Sort m.succ, Sort m)))
 -/
 
-def mk_id.coup_α (m : Level) : Expr :=
+def mk_id.coup_sort (m : Level) : Expr :=
   DCC (Λ'(`(Sort m.succ, Sort m.succ, Sort m), Id(Σ(Sort m.succ, `(Sort m.succ, Sort m.succ, Sort m)))) (Sort m))
+
+/-
+take in (Sort m, α), produce
+
+Λ'(Id(Sort m), Id(Σ(Sort m, Id(Sort m)))) α
+-/
+def mk_id.coup_α (m : Level) : Expr :=
+  DCC Λ'(Id(Sort m), Id(Σ(Sort m, Id(Sort m))))
+
+#eval (DCC (#(mk_id.coup_α 2) (Sort 1) (Sort 0))).infer
+
+/-
+Rethinking id. maybe don't need all the Λ? can use pair instead?
+
+we can probably make pairs and couples point-free
+
+(? ∘ ⟦⟧⟨(?, Fst(Sort m, Id(Sort m))), ?⟩) α x = x
+= (? ∘ (Λ(?, Fst(Sort m, Id(Sort m))) α, (, ) α)) x = x
+
+App ∘ ⟨Λ α, (,) α⟩
+
+id : ∀ (α : Type) (α → α)
+
+id α = Λ(?, Fst(α, Id(α))
+-/
 
 /-
 Rethinking mk_id
@@ -490,21 +508,43 @@ Rethinking mk_id
   ) (Sort m)
 -/
 
+def mk_id.inner_comp (m : Level) : Expr :=
+  -- f (α, x) : 
+  let f := DCC Λ(Id(Sort m), Snd(Sort m, Id(Sort m)))
+        ∘' Snd'(Sort m.succ, Sort m)
+  let g := (DCC #(mk_id.coup_α m) ∘' Snd'(Sort m.succ, m))
+
+  DCC ⟦?⟧⟨f, g⟩
+
 def mk_id (m : Level) : Expr :=
   --DCC (Λ(Id(Sort m), Snd(Sort m, Id(Sort m))) ∘' Snd'(Sort m.succ, Sort m))
-  
-DCC (((Λ(
+
+  /-
+  DCC ((Λ(
+    `(Sort m.succ, Sort m.succ, Sort m),
+      -- have (Sort m, α), then x
+      -- need to wrap x with α
+      Λ(Snd(Sort m.succ, Id(Sort m)),
+        -- have ((Sort m, α), x)
+        Snd(Σ(Sort m.succ, Id(Sort m)), Snd(Sort m.succ, Id(Sort m))))) (Sort m))
+        ∘' #(mk_id.coup_sort m))
+  -/
+
+  /-
+    DCC (((Λ(
+    `(Sort m.succ, Sort m.succ, Sort m),
+      (Λ() ∘ ))) (Sort m))
+        ∘' #(mk_id.coup_sort m))
+  -/
+
+  DCC (((Λ(
     `(Sort m.succ, Sort m.succ, Sort m),
     (Λ(Id(Sort m), Snd(Sort m, Id(Sort m)))
       ∘' Snd'(Sort m.succ, Sort m)))) (Sort m))
-      ∘' #(mk_id.coup_α m))
-  
-  /-DCC ((Λ(
-    `(Sort m.succ, Sort m.succ, Sort m),
-    (Λ(Id(Sort m), Snd(Sort m, Id(Sort m)))
-      ∘' Snd'(Sort m.succ, Sort m)))) (Sort m))-/
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (#(mk_id.coup_α 2) Sort 1)).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (#(Expr.mk_id 2))).infer
+      ∘' #(mk_id.coup_sort m))
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (#(mk_id.coup_sort 2) Sort 1)).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (#(Expr.mk_id 2) (Sort 1))).infer
 #eval Std.format (DCC (((Λ(Id(Sort 3),(Flip(Π(2, 2)) Id(Sort 2) ∘' Fst(Sort 2, Id(Sort 2)) ∘' Snd'(Sort 3, Σ(Sort 2, Id(Sort 2)))) ∘' Id(Sort 2) ∘' Snd'(Sort 3, Sort 2)) Sort 2) ∘' Snd'(Sort 3, Sort 2) ∘' Snd'(Sort 4, Σ(Sort 3, `(Sort 3, Sort 3, Sort 2)))) ⟦Id(Sort 3)⟧(Sort 2, Sort 1))).reduce.fst
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Snd(Sort 2, Id(Sort 2))).infer
 #eval Std.format (DCC (#(Expr.mk_id 2) (Sort 1))).reduce.fst

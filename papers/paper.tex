@@ -141,27 +141,27 @@ We interpret couples \((a, b)\) as sigma terms like such:
 \begin{equation}
 \inferrule[Coup]
 { \Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, x : \alpha, y : \beta x}
-{\Gamma \vdash \llbracket \alpha, \beta \rrbracket (a, b) : (\Sigma(m, n) \alpha \beta)}
+{\Gamma \vdash \llbracket \alpha, \beta \rrbracket (a, b) : \Sigma(\alpha, \beta)}
 \end{equation}
 \end{center}
 \caption{Couples as Dependent Sums}
 \end{figure}
 \end{center}
 
-We require that \(\beta : \alpha \rightarrow \sort{m}\) be given explicitly in couples through the type annotation \(\llbracket \alpha, \beta \rrbracket\). Similarly, we add type arguments to pairs (\(\llbracket \beta, \gamma\rrbracket \langle f, g\rangle\)) which allow the resulting couple's \texttt{snd} component to depend on the type of the argument \(x\) and the term \(f x\).
+We require that \(\beta : \alpha \rightarrow \sort{m}\) be given explicitly in couples through the type annotation \(\llbracket \alpha, \beta \rrbracket\). Similarly, we add type arguments to pairs (\(\llbracket \beta, \gamma\rrbracket \langle f, g\rangle\)) which allow the resulting couple's \texttt{snd} component to depend on the term \(f x\).
 
-This view of couples as sigma terms naturally encodes the notion of judgments. For example, the term \(\llbracket Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
+This view of couples as sigma terms naturally encodes the notion of judgments. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
 
 \begin{equation}
   x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx
-  \llbracket A_2 \rrbracket (\llbracket \llbracket A_1 \rrbracket (x_0, x_1), x_2)
+  \llbracket \Sigma(A_0, A_1), A_2 \rrbracket (\llbracket A_0, A_1 \rrbracket (x_0, x_1), x_2)
 \end{equation}
 
 In the categorical abstract machine, this encoding of judgments corresponds to an environment where variable assignments are explicitly typed.
 
 \subsection{Type Annotations as Points via Couple-Judgments}
 
-Except for \(\Pi\) and \(\Sigma\), all combinator objects have type annotations specified as points. For example, the projection \(Fst(\alpha, \beta)\) is indexed by terms denoting the type of the expected \(\Sigma\)-couple. This contradicts intuition that type arguments must be able to depend on other terms, and thus, cannot be points. However, by referring to terms in the context as the \text{snd} component of a \(\Sigma\)-couple (\(\Sigma(m + 1, n)\ \sort{m}\ Id(\sort{m})\)) mentioning its type, they only need to be mentioned by their respective sorts. As a result, we avoid another potential duplication of type-points inside the combinators' types. \(\Sigma\)-judgements are also an example of ``very dependent'' types, as defined by Altenkirch et al. \cite{altenkirch}.\\\\
+Except for \(\Pi\), all combinator objects have type annotations specified as points. For example, the projection \(Fst(\alpha, \beta)\) is indexed by terms denoting the type of the expected \(\Sigma\)-couple. This contradicts intuition that type arguments must be able to depend on other terms, and thus, cannot be points. However, by referring to terms in the context as the \text{snd} component of a \(\Sigma\)-couple (\(\Sigma(\sort{m}, Id(\sort{m})))\ \sort{m}\ Id(\sort{m})\)) mentioning its type, they only need to be mentioned by their respective sorts. As a result, we avoid another potential duplication of type-points inside the combinators' types. \(\Sigma\)-judgements are also an example of ``very dependent'' types, as defined by Altenkirch et al. \cite{altenkirch}.\\\\
 See \eqref{point_free_derivation} where we derive point-free \(Id\ \alpha\) using the dependent curry (\(\Lambda\)) combinator and \(\Sigma\)-couples.
 
 \subsection{Inference Rules}

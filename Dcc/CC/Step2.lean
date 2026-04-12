@@ -14,7 +14,7 @@ inductive Red : Expr → Expr → Prop
   | comp     : Red (DCC ((⟦α, β, γ⟧∘ x y) z)) (DCC (x (y z)))
   | comp'    : Red (DCC ((x ∘' y) z)) (DCC (x (y z)))
   | pair     : Red (DCC (⟦α, β⟧⟨f, g⟩ x)) (DCC ⟦α, β⟧((f x), (g x)))
-  | curr     : Red (DCC (Λ(α, β, x) y z)) (DCC (x ⟦α, β⟧(y, z)))
+  | curr     : Red (DCC (Λ(α, x) y z)) (DCC (x ⟦α, Id(α)⟧(y, z)))
   | curr'    : Red (DCC (Λ'(α, β, x) y z)) (DCC (x ⟦α, β⟧(y, z)))
   | congrFun : Red f f' → Red (DCC (f x)) (DCC (f' x))
   | congrArg : Red x x' → Red (DCC (f x)) (DCC (f x'))
@@ -36,7 +36,7 @@ inductive RedAff : Expr → Expr → Prop
   | quot     : RedAff (DCC (`(_α, _β, x) y)) x
   | comp     : RedAff (DCC ((⟦α, β, γ⟧∘ x y) z)) (DCC (x (y z)))
   | comp'    : RedAff (DCC ((x ∘' y) z)) (DCC (x (y z)))
-  | curr     : RedAff (DCC (Λ(α, β, x) y z)) (DCC (x ⟦α, β⟧(y, z)))
+  | curr     : RedAff (DCC (Λ(α, x) y z)) (DCC (x ⟦α, Id(α)⟧(y, z)))
   | curr'    : RedAff (DCC (Λ'(α, β, x) y z)) (DCC (x ⟦α, β⟧(y, z)))
   | congrFun : RedAff f f' → RedAff (DCC (f x)) (DCC (f' x))
   | congrArg : RedAff x x' → RedAff (DCC (f x)) (DCC (f x'))
@@ -53,7 +53,7 @@ inductive Size : Expr → ℕ → Prop
   | fst    : Size α m → Size β n → Size (DCC Fst(α, β)) (m + n).succ
   | snd    : Size α m → Size β n → Size (DCC Snd(α, β)) (m + n).succ
   | snd'   : Size α m → Size β n → Size (DCC Snd'(α, β)) (m + n).succ
-  | curr   : Size α m → Size β n → Size x o → Size (DCC Λ(α, β, x)) (m + n + o).succ.succ
+  | curr   : Size α m → Size x n → Size (DCC Λ(α, x)) (m + m.succ + n).succ.succ
   | curr'  : Size α m → Size β n → Size x o → Size (DCC Λ'(α, β, x)) (m + n + o).succ.succ
   | pi     : Size (DCC Π(_m, _n)) 1
   | appl   : Size α m → Size β n → Size (DCC App(_n, α, β)) (m + n).succ
@@ -106,11 +106,10 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
     let ⟨m, ⟨h₁⟩⟩ := α.size
     let ⟨n, ⟨h₂⟩⟩ := β.size
     ⟨(m + n).succ, ⟨.snd' h₁ h₂⟩⟩
-  | DCC Λ(α, β, x) =>
-    let ⟨m, ⟨h₁⟩⟩ := α.size
-    let ⟨n, ⟨h₂⟩⟩ := β.size
-    let ⟨o, ⟨h₃⟩⟩ := x.size
-    ⟨(m + n + o).succ.succ, ⟨.curr h₁ h₂ h₃⟩⟩
+  | DCC Λ(α, x) =>
+    let ⟨_m, ⟨h₁⟩⟩ := α.size
+    let ⟨_n, ⟨h₂⟩⟩ := x.size
+    ⟨_, ⟨.curr h₁ h₂⟩⟩
   | DCC Λ'(α, β, x) =>
     let ⟨m, ⟨h₁⟩⟩ := α.size
     let ⟨n, ⟨h₂⟩⟩ := β.size
@@ -154,9 +153,9 @@ theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   | flip h₁ ih₁ =>
     unfold size
     rw [ih₁]
-  | curr h₁ h₂ h₃ ih₁ ih₂ ih₃ =>
+  | curr h₁ h₂ ih₁ ih₂ =>
     unfold size
-    rw [ih₁, ih₂, ih₃]
+    rw [ih₁, ih₂]
   | curr' h₁ h₂ h₃ ih₁ ih₂ ih₃  =>
     unfold size
     rw [ih₁, ih₂, ih₃]
@@ -501,7 +500,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
   | (DCC (`(_α, _β, x) _y))                 => .some ⟨x, ⟨.quot⟩⟩
   | (DCC ((⟦_α, _β, _γ⟧∘ x y) z))           => .some ⟨(DCC (x (y z))), ⟨.comp⟩⟩
   | (DCC ((x ∘' y) z))                      => .some ⟨(DCC (x (y z))), ⟨.comp'⟩⟩
-  | (DCC (Λ(α, β, x) y z))                  => .some ⟨(DCC (x ⟦α, β⟧(y, z))), ⟨.curr⟩⟩
+  | (DCC (Λ(α, x) y z))                     => .some ⟨(DCC (x ⟦α, Id(α)⟧(y, z))), ⟨.curr⟩⟩
   | (DCC (Λ'(α, β, x) y z))                 => .some ⟨(DCC (x ⟦α, β⟧(y, z))), ⟨.curr'⟩⟩
   | DCC (f x) =>
     match f.step?, x.step? with
@@ -649,10 +648,11 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
       simp_all
       rename_i h
       exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
-    | curr' | curr =>
+    | curr' =>
       simp_all
       rename_i h
       exact (h _ _ _ _ rfl rfl rfl rfl).elim
+    | curr => simp_all
   case h_13 =>
     simp_all
     cases A
@@ -679,10 +679,11 @@ theorem RedAff.complete' (h_red : RedAff A B) : (step? A).isSome := by
       simp_all
       rename_i h
       exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
-    case curr' | curr =>
+    case curr' =>
       simp_all
       rename_i h
       exact (h _ _ _ _ rfl rfl rfl rfl).elim
+    case curr => simp_all
     case congrFun =>
       split
       · rfl

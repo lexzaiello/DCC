@@ -35,7 +35,7 @@ inductive Expr where
   | sigma : Expr  → Expr  → Expr
   | mk    : Expr  → Expr  → Expr
   | pi    : Level → Level → Expr
-  | curr  : Expr  → Expr  → Expr  → Expr
+  | curr  : Expr  → Expr  → Expr
   -- Nondependent curry
   | curr' : Expr  → Expr  → Expr  → Expr
   | appl  : Level → Expr  → Expr → Expr
@@ -72,7 +72,7 @@ macro_rules
   | `(DCC ($f:expr $x:expr))                    => `(Expr.app   (DCC $f:expr)   (DCC $x:expr))
   | `(DCC ($f:expr $x:expr $xs:expr*))          => `(DCC (($f:expr $x:expr) $xs:expr*))
   | `(DCC `($α:expr, $β:expr, $x:expr))         => `(Expr.quot (DCC $α) (DCC $β) (DCC $x))
-  | `(DCC Λ($α:expr, $β:expr, $e:expr))         => `(Expr.curr (DCC $α) (DCC $β) (DCC $e))
+  | `(DCC Λ($α:expr, $e:expr))                  => `(Expr.curr (DCC $α) (DCC $e))
   | `(DCC Λ'($α:expr, $β:expr, $e:expr))        => `(Expr.curr' (DCC $α) (DCC $β) (DCC $e))
   | `(DCC Π($m:term, $n:term))                  => `(Expr.pi $m $n)
   | `(DCC ⟦$α:expr, $β:expr⟧⟨$x:expr, $y:expr⟩) => `(Expr.pair (DCC $α) (DCC $β) (DCC $x) (DCC $y))
@@ -105,7 +105,7 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Snd(α, β))     => "Snd(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Snd'(α, β))    => "Snd'(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC App(n, α, β))  => "App(" ++ (Std.format n) ++ ", " ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC Λ(α, β, e))    => "Λ(" ++ (Std.Format.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
+  | (DCC Λ(α, e))       => "Λ(" ++ α.toFormat ++ ", " ++ e.toFormat ++ ")"
   | (DCC Λ'(α, β, e))   => "Λ'(" ++ (Std.Format.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
   | (DCC Π(m, n))       => "Π" ++ (.bracket "(" ((Std.format m) ++ ", " ++ (Std.format n)) ")")
   | (DCC ⟦α, β⟧⟨a, b⟩)  => (.bracket "⟦" (α.toFormat ++ ", " ++ β.toFormat) "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")

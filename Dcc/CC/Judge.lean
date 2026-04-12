@@ -1,16 +1,6 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
-/-
-Point-free arrow
-
-→(m, n) : Π(m, n)
-
-→(m, n) := Π(m, n)
--/
-def arrow₀ (m n : Level) : Expr :=
-  sorry
-
 def arrow (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(m, n) α `(Sort n, Σ(Sort m, Id(Sort m)), β))
 
@@ -522,23 +512,50 @@ Can we derive an easier to use curry?
 
 
 Λ(α, β, x) : ∀ (x : α) (y : β x), γ ⟦α, β⟧(
+-/
 
 def Curr'.arrow₁ (m n o : Level) (α β γ : Expr) : Expr :=
-  DCC (App(o.succ, Π(n.succ, o.succ) Σ(Sort n, Id(Sort n)) `(Sort o.succ, Σ(Sort n, Id(Sort n)), Sort o), `(Sort o.succ, Π(n.succ, o.succ) Σ(Sort n, Id(Sort n)) `(Sort o.succ, Σ(Sort n, Id(Sort n)), Sort o), Sort o)) ∘ ⟦α, (Π(o.succ, o.succ) (Π(n.succ, o.succ) Σ(Sort n, Id(Sort n)) `(Sort o.succ, Σ(Sort n, Id(Sort n)), Sort o)) `(Sort o.succ, Σ(Sort o.succ, Id(Sort o.succ)), Sort o))⟧⟨Π(n, o) ∘ β, Λ'(α, Σ(Sort n, Id(Sort n)),
+  -- type of Λ'(α, Σ(Sort n, Id(Sort n)),
+    -- γ ∘' ⟦α, β⟧⟨Id(α), Snd(Sort n, Id(Sort n))⟩) x
+  let t_curr_par_app :=
+    sorry
+  DCC (App(o.succ,
+    ((Σ(Sort n, Id(Sort n)) : Sort n.succ) → (Sort o : Sort o.succ)),
+    `(Sort o.succ,
+      (Π(n.succ, o.succ)
+        Σ(Sort n, Id(Sort n))
+        `(Sort o.succ, Σ(Sort n, Id(Sort n)), Sort o)),
+        Sort o)) ∘'
+    ⟦α,
+      (Π(o.succ, o.succ) (Π(n.succ, o.succ) Σ(Sort n, Id(Sort n)) `(Sort o.succ, Σ(Sort n, Id(Sort n)), Sort o)) `(Sort o.succ, Σ(Sort o.succ, Id(Sort o.succ)), Sort o))⟧⟨Π(n, o) ∘' β, Λ'(α, Σ(Sort n, Id(Sort n)),
     -- receive (y, (β y, z))
-    γ ∘ ⟦Σ(α, Σ(Sort n, Id(Sort n))), α, β⟧⟨Id(α), Snd(Sort n, Id(Sort n))⟩)⟩)
+    γ ∘' ⟦α, β⟧⟨Id(α), Snd(Sort n, Id(Sort n))⟩)⟩)
 
-def Curr' (m n o : Level) (α β γ : Expr) : Expr :=
-  Λ(m, n, o, α, β, γ, x) = App(o, α,
-    #(Curr'.arrow₁ m n o α β γ)) ∘ ⟦α, #(Curr'.arrow₁ m n o α β γ)⟧⟨
+def Curr' (m n o : Level) (α β γ x : Expr) : Expr :=
+  DCC (App(o, α,
+    #(Curr'.arrow₁ m n o α β γ)) ∘' ⟦α, #(Curr'.arrow₁ m n o α β γ)⟧⟨
     -- receive y, make Λ(α, β, x) y
-    (∘'⟦α, β,
+    (⟦α, β,
       -- receive (y, z) : Σ(α, β)
-      γ⟧) ∘ Λ'(α, β,
+      γ⟧∘) ∘' Λ'(α, β,
       -- receive (y, (y, z)), feed in (y, z)
-      x ∘ Snd'(α, `(Sort (max m n), α, Σ(α, β)))),
+      x ∘' Snd'(α, `(Sort (max m n), α, Σ(α, β)))),
     -- receive y, make (, y)
-    ⟦α, β⟧(,)⟩
+    ⟦α, β⟧(,)⟩)
+
+/-
+def Id'(m : Level) : Expr :=
+  let t_mk_all := DCC (Π(m.succ, m) Σ(Sort m, Id(Sort m)) (Fst(Sort m, Id(Sort m)) ∘ Snd'(Sort m.succ, Σ(Sort m, Id(Sort m)))))
+  let quot_t_mk_all := DCC `(Sort m, Sort m, t_mk_all)
+  let mk_π := DCC
+    ⟦?, ?⟧∘ Snd(Sort m, Id(Sort m))
+  let t_mk_π :=
+  -- accept 
+  let quot_mk_π := DCC 
+  DCC
+    -- expects y, then (y, z). Can make (y, z) easily with
+    -- this will accept y, then make Snd(Sort m, Id(Sort m)) ∘ (,y)
+    App(m.succ, Sort m, quot_t_mk_all) ∘ ⟨quot_mk_π, ⟦Sort m, Id(Sort m)⟧(,)⟩
 -/
 
 def mk_id (m : Level) : Expr :=

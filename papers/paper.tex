@@ -1,6 +1,7 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
 \usepackage{mathtools}
+\usepackage{float}
 \usepackage{subcaption}
 \usepackage{textcomp}
 \usepackage[a4paper, margin={1in}]{geometry}
@@ -164,7 +165,7 @@ See \eqref{point_free_derivation} where we derive point-free \(Id\ \alpha\) usin
 
 \subsection{Inference Rules}
 
-We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We also use the notation \(\Pi(x : A), B\) to denote an illustration of a type, but the full combinatory, point-free types are accessible in the appendix. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(m, n)\).
+We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We also use the notation \(\Pi(x : A), B\), and may omit type arguments for legibility to denote an illustration of a type. However, the full combinatory, point-free types are accessible in the appendix. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(m, n)\).
 
 \subsubsection{Application and \(\Pi\)}
 
@@ -214,17 +215,20 @@ We define nondependent arrows (\(\alpha \rightarrow \beta\)) as such (where \(`(
 We define dependent and nondependent versions of \(Snd\) projection to bootstrap several of the combinators' types. \(Fst(\alpha, \beta)\) is not dependent, since \(\alpha\) does not depend on \(\beta\) in \(\Sigma(\alpha, \beta)\). We use \(\circ'\) to denote nondependent composition where \(g : \alpha \rightarrow \beta\) and \(f : \beta \rightarrow \alpha\).
 The inference rules for projection on couples are as such:\\
 
-\begin{tabular}{c}
-  \inferrule[Fst]
-  {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-  {\Gamma \vdash Fst(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \alpha}\\\\
+\begin{figure}
+  \centering
+  \begin{tabular}{c c}
+    \inferrule[Fst]
+    {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+    {\Gamma \vdash Fst(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \alpha}&
+    \inferrule[Snd']
+    {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+    {\Gamma \vdash Snd'(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \beta}\\\\
+  \end{tabular}
   \inferrule[Snd]
-  {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-  {\Gamma \vdash Snd(\alpha, \beta) : \Pi(max(m, n), n)\ \Sigma(\alpha, \beta)\ (\beta \circ' Fst(\alpha, \beta) \circ' Snd'(\sort{max(m, n)}, \Sigma(\alpha, \beta)))}\\\\
-  \inferrule[Snd']
-  {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-  {\Gamma \vdash Snd'(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \beta}\\\\
-\end{tabular}
+    {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+    {\Gamma \vdash Snd(\alpha, \beta) : \Pi(s : \Sigma(\alpha, \beta)), \beta(Snd\ s)}
+\end{figure}
 
 \subsubsection{Identity combinator}
 
@@ -258,11 +262,13 @@ We have nondependent composition as in Curien's combinators, and add a dependent
 
 Note that the codomain of \(f\) depends on \(x : \alpha\), but the domain of \(g\) also depends on \(f x : \beta(x)\). By duplicating \(x\), \(?\) can be determined:
 
+\begin{figure}[h!]
 \begin{equation}
   \inferrule[Naive comp.]
   { \Gamma \vdash f : \Pi(x : \alpha), \beta(x), g : \Pi(x : \alpha, y : \beta(x)), \gamma\ x\ (f x)}
   { \Gamma \vdash (g \circ f) : \Pi(x : \alpha), \gamma (f x)}
 \end{equation}
+\end{figure}
 
 We avoid copying \(x\) altogether by stipulating that \(f\) produce a couple \(\Sigma(\alpha, \beta)\). As such, duplication is handed off to term-level \(\beta\)-reduction, and our types remain affine. We define composition point-free, up to the type arguments \({\alpha, \beta, \gamma}\) \eqref{comp}. The type of the nondependent composition operator is the same as in Curien's simply-typed combinators \autocite[p. 220]{CURIEN1986188} \eqref{nondep_comp}.
 
@@ -288,13 +294,13 @@ We avoid copying \(x\) altogether by stipulating that \(f\) produce a couple \(\
 
 \subsubsection{Pairs}
 
-Recall \(\langle f, g \rangle x = (f x, g x)\). We extend the pair operator with type arguments \(\beta\), \(\gamma\), which dictate the types of the resulting \(fst\), and \(snd\) component, respectively. All arguments, up to \(x\), are given by points:
+Recall \(\langle f, g \rangle x = (f x, g x)\). We extend the pair operator with type arguments \(\beta\), \(\gamma\), which dictate the types of the resulting \(fst\), and \(snd\) component, respectively. All arguments, up to \(x\), are given by points \eqref{pair_infer}.
 
-\begin{figure}[h]
+\begin{figure}[h!]
   \centering
   \begin{equation}\label{pair_infer}
     \inferrule[Pair]
-    { \Gamma \vdash \beta : \sort{n}, \gamma : \beta \rightarrow \sort{o}, f : \alpha \rightarrow \beta, g : \Pi(m, o)\ \alpha\ (\gamma \circ' (f \circ' Snd'(\sort{m}, \alpha)))}
+    { \Gamma \vdash \beta : \sort{n}, \gamma : \beta \rightarrow \sort{o}, f : \alpha \rightarrow \beta, g : \Pi(x : \alpha), \gamma(f x)}
     { \Gamma \vdash \llbracket \beta, \gamma \rrbracket \langle f, g \rangle : \alpha \rightarrow \Sigma(\beta, \gamma)}
   \end{equation}
 \end{figure}
@@ -350,12 +356,12 @@ As in Curien's combinators, the \(App\) combinator evaluates a couple as a compu
 %   \caption{Inference rule: \(App\).}
 % \end{figure} PUT IN APPENDIX
 
-\begin{figure}[h!]
+\begin{figure}[H]
   \centering
   \begin{equation}\label{infer_app}
     \inferrule[Appl]
     { \Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-    { \Gamma \vdash App(n, \alpha, \beta) : \Pi(x : \Sigma(\Pi(x : \alpha), \beta(x), `(\ldots, \alpha))), (\beta \circ' Snd(\ldots, \ldots)) x }
+    { \Gamma \vdash App(n, \alpha, \beta) : \Pi(x : \Sigma(\Pi(x : \alpha), \beta(x), \alpha)), \beta(Snd\ x) }
   \end{equation}
   \caption{Inference rule for \(App\) written illustratively.}
 \end{figure}

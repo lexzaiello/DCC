@@ -3,15 +3,16 @@ import Dcc.CC.Step2
 
 namespace Expr
 
-inductive Reduces : Expr → Expr → Prop
+inductive Reduces : Expr → Expr → Type
   | mk : RedAffReflTrans A B → IsNormAff B → Reduces A B
+deriving Repr
 
 theorem Reduces.complete : Reduces A B → reduce A = B :=
   fun ⟨ha, hb⟩ => ha.complete hb
 
-theorem reduce_reduces (h : reduce A = B) : Reduces A B := ⟨reduce_sound h, reduce_norm h⟩
+def reduce_reduces (h : reduce A = B) : Reduces A B := ⟨reduce_sound h, reduce_norm h⟩
 
-theorem reduce_reduces' : Reduces A A.reduce := reduce_reduces rfl
+def reduce_reduces' : Reduces A A.reduce := reduce_reduces rfl
 
 end Expr
 
@@ -39,6 +40,14 @@ theorem RedAff.arrow : RedAff (arrow α β m n) τ₂ →  (∃ γ, RedAff α γ
     | congrArg h =>
       exact (.inl ⟨_, h, rfl⟩)
   | congrArg h => cases h
+
+theorem reduce_congr_quot : reduce (DCC (`(α, β, x) y)) = reduce x := by
+  induction x using instWellFounded.induction with
+  | h a ih =>
+    conv =>
+      left
+      unfold reduce
+    simp [step?]
 
 theorem reduce_congr_self_arrow : reduce (arrow A β m n) = (arrow (reduce A) β m n) := by
   induction A using instWellFounded.induction with
@@ -529,9 +538,22 @@ def infer_conv (e : Expr) : Option ((t : Expr) × JudgeConv e t) :=
     .some ⟨t.reduce, ⟨h, reduce_reduces rfl⟩⟩
   | _ => .none
 
-def id_well_typed (h_t_α : Judge α (DCC Sort m)) (h_t_x : Judge x α) : Judge (DCC (Id(α) x)) α.reduce := by
-  
-  sorry
+def id_well_typed (h_t_α : Judge α (DCC Sort m)) (h_t_x : Judge x α) : JudgeConv (DCC (Id(α) x)) α.reduce := by
+  apply JudgeConv.mk
+  · apply Judge.app
+    apply Judge.id
+    · assumption
+    · exact reduce_reduces (by simp [reduce, step?]; rfl)
+    · exact reduce_reduces (by simp [id.type]; exact reduce_congr_self_arrow)
+    · assumption
+    · exact reduce_reduces rfl
+  · exact reduce_reduces reduce_congr_quot
+
+def id_preservation (h : Judge (DCC (Id(α) x)) α₂) : (JudgeConv x α.reduce) := by
+  cases h with
+  | app h_t_id b h_t_x d =>
+    cases h_t_id with
+    | id => cases reduce_arrow b.complete; exact ⟨h_t_x, by assumption⟩
 
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Id(Sort 1) (Sort 0)))
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (⟦Sort 2, Id(Sort 2)⟧(Sort 1, Sort 0)))

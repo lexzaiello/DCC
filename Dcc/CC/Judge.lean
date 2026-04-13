@@ -919,6 +919,18 @@ def Judge.decide : Judge e t ⊕ (Judge e t → PLift False) :=
     have h_comp := hn.complete
     simp_all
 
+def JudgeConv.decide : JudgeConv e t ⊕ (JudgeConv e t → PLift False) :=
+  if h : (infer e).isSome then
+    if heq : ((infer e).get h).fst.reduce = t then
+      .inl ⟨((infer e).get h).snd, reduce_reduces heq⟩
+    else .inr fun ⟨ha, hb⟩ => by
+      have h := ha.complete
+      simp_all
+      exact (heq hb.complete).elim
+  else .inr fun ⟨ha, hb⟩ => by
+    have h := ha.complete
+    simp_all
+
 def judge_sound (_h_t : Expr.infer e = .some ⟨t, h⟩) : e.Judge t := h
 
 end Expr

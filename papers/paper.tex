@@ -9,6 +9,13 @@
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{amsfonts}
+\usepackage{fontspec}
+\setmonofont{FreeMono}
+\usepackage{minted}
+\newmintinline[lean]{lean4}{bgcolor=white}
+\newminted[leancode]{lean4}{fontsize=\footnotesize}
+\usemintedstyle{tango}
+
 \usepackage{amsthm}
 \usepackage{authblk}
 \usepackage{biblatex}
@@ -175,8 +182,8 @@ The inference rule for function application is as usual, except the codomain \(\
 \begin{figure}[h!]
 \begin{equation}
   \inferrule[App]
-  { \Gamma \vdash f : \Pi(m, n)\ \alpha\ \beta\\ \Gamma \vdash x : \alpha}
-  { \Gamma \vdash f x : \beta\ \llbracket \sort{m}, Id(\sort{m}) \rrbracket (\alpha, x)}
+  { \Gamma \vdash f : \Pi(m, n) \alpha \beta\\ \Gamma \vdash x : \alpha}
+  { \Gamma \vdash f x : \beta \llbracket \sort{m}, Id(\sort{m}) \rrbracket (\alpha, x)}
 \end{equation}
 \caption{Inference rule: application}
 \end{figure}
@@ -386,12 +393,13 @@ Our reduction rules are the same as in the categorical abstract machine \autocit
 \begin{figure}[h!]\label{red_untyped_cat}
 \centering
 \begin{tabular}{l l}
+  (id) & \((x \circ' y) z \rightarrow x(y z)\) \\
   (ass') & \((x \circ' y) z \rightarrow x(y z)\) \\
   (ass) & \(\llbracket \alpha, \beta, \gamma \rrbracket \circ x y z \rightarrow x(y z)\) \\
   (fst) & \(Fst(\alpha, \beta)\ \llbracket \ldots \rrbracket (a, b) \rightarrow a\) \\
   (snd) & \(Snd(\alpha, \beta)\ \llbracket \ldots \rrbracket (a, b) \rightarrow b\) \\
   (snd') & \(Snd(\alpha, \beta)\ \llbracket \ldots \rrbracket (a, b) \rightarrow b\) \\
-  (curr') & \(\Lambda(\alpha, \beta, x) y z \rightarrow x\ \llbracket \alpha, \beta \rrbracket(y, z)\) \\
+  (curr') & \(\Lambda'(\alpha, \beta, x) y z \rightarrow x\ \llbracket \alpha, \beta \rrbracket(y, z)\) \\
   (curr) & \(\Lambda(\alpha, x) y z \rightarrow x\ \llbracket \alpha, Id(\alpha) \rrbracket(y, z)\) \\
   (app) & \(App(n, \alpha, \beta)\ \llbracket \ldots \rrbracket (f, x) \rightarrow f x\) \\
   (quote) & \(`(\alpha, \beta, x) y \rightarrow x\) \\
@@ -422,25 +430,24 @@ Our reduction rules are the same as in the categorical abstract machine \autocit
 
 Note that, excluding our \textit{dpair} rule, each single-step combinator reduction uses each of its arguments at most once. That is, this restriction of single-step reduction is affine. Except for congruence, each rule decreases the number of combinators (we  do not consider the couple \(\llbracket \alpha, \beta \rrbracket (,)\) to be a combinator). We thus define a syntactic measure of term size on objects in our calculus, and show that it decreases under affine reduction (\(\dashrightarrow\)) to show that the affine reduction is strongly normalizing.
 
-Let \(Ob\) denote a sort \(\sort{m}\), a combinator \(C(x_0 \ldots x_n)\) with \(n\) points which is well-typed \eqref{infer_rules}, a couple \(\llbracket \alpha, \beta \rrbracket (,)\), or an application \(M N\). Then, let \(t : Ob \rightarrow \mathbb{N}\) denote the syntactic term size of an object, and be defined as such:
+Formally, we define affine reduction (\(\dashrightarrow\)) as such:
 
-\begin{figure}[h!]
-\begin{align*}
-  &t(\llbracket \alpha, \beta \rrbracket (,)) = t(\alpha) + t(\beta)\\
-  &t(\sort{m}) = 1\\
-  &t(C(x_0 \ldots x_n)) = \left(\sum_{i = 0}^{n} t(x_i)\right) + 1\\
-  &t(M N) = t(M) + t(N)
-\end{align*}
-\caption{Syntactic term size \(t(M)\)}
-\end{figure}
-
-\begin{theorem}
-  If \(A\) and \(B\) are \(Obs\), and \(A \dashrightarrow B\), then \(t(B) < t(A)\).
-\end{theorem}
-
-\begin{proof}
-  sorry
-\end{proof}
+\begin{leancode}
+inductive RedAff : Expr → Expr → Prop
+  | app      : RedAff (DCC (App(_n, _δ, _τ) ⟦α, β⟧(f, x))) (DCC (f x))
+  | fst      : RedAff (DCC (Fst(_δ, _τ) ⟦α, β⟧(a, b))) a
+  | snd      : RedAff (DCC (Snd(_δ, _τ) ⟦α, β⟧(a, b))) b
+  | snd'     : RedAff (DCC (Snd'(_δ, _τ) ⟦α, β⟧(a, b))) b
+  | flip     : RedAff (DCC (Flip(e) x y)) (DCC (e y x))
+  | id       : RedAff (DCC (Id(_α) x)) x
+  | quot     : RedAff (DCC (`(_α, _β, x) y)) x
+  | comp     : RedAff (DCC ((⟦α, β, γ⟧∘ x y) z)) (DCC (x (y z)))
+  | comp'    : RedAff (DCC ((x ∘' y) z)) (DCC (x (y z)))
+  | curr     : RedAff (DCC (Λ(α, x) y z)) (DCC (x ⟦α, Id(α)⟧(y, z)))
+  | curr'    : RedAff (DCC (Λ'(α, β, x) y z)) (DCC (x ⟦α, β⟧(y, z)))
+  | congrFun : RedAff f f' → RedAff (DCC (f x)) (DCC (f' x))
+  | congrArg : RedAff x x' → RedAff (DCC (f x)) (DCC (f x'))
+\end{leancode}
 
 \printbibliography
 

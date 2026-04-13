@@ -1,5 +1,6 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
+\newcommand{\comment}[1]{}
 \usepackage{mathtools}
 \usepackage{float}
 \usepackage{subcaption}
@@ -494,7 +495,7 @@ We define strong normalization using Lean's accessibility predicate, and use our
   If \(A \in Expr\), then \(A\) is strongly-normalizing under affine reduction (\(\dashrightarrow\)).
 \end{theorem}
 
-\begin{proof}
+\begin{proof}\label{wellfounded}
 \begin{leancode}
 
 
@@ -506,6 +507,109 @@ termination_by e.size.fst
 instance instWellFounded : WellFounded (fun a b => RedAff b a) := ⟨sn⟩
 \end{leancode}
 \end{proof}
+
+\subsection{Affine Global Confluence}
+
+We define the transitive (\(\dashrightarrow^{+}\)) and reflexive transitive closure (\(\dashrightarrow^{*}\)) like such:
+
+\begin{leancode}
+def RedAffTrans     := Relation.TransGen RedAff
+def RedAffReflTrans := Relation.ReflTransGen RedAff
+\end{leancode}
+
+\begin{theorem}
+  For all \(A \in Expr\), \(A\) is confluent under \(\dashrightarrow\).
+\end{theorem}
+
+\begin{proof}
+  We proceed by induction and case analysis on \(\dashrightarrow\). Cases have been omitted for brevity. Consult the appendix.
+  \begin{leancode}
+theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) :
+  ∃ D, RedAffReflTrans B D ∧ RedAffReflTrans C D := by
+  induction h₁ generalizing C with
+  | comp =>
+    cases h₂ with
+    | comp => exact ⟨_, .refl, .refl⟩
+    | congrFun h =>
+      cases h with
+      | congrFun h =>
+        cases h with
+        | congrFun h => cases h
+        | congrArg h => exact ⟨_, .single (.congrFun h), .single .comp⟩
+      | congrArg h => exact ⟨_, .single (.congrArg (.congrFun h)), .single .comp⟩
+      | congrArg h =>
+        exact ⟨_, .single (.congrArg (.congrArg (by assumption))), .single .comp⟩
+  | congrFun h_r ih =>
+    cases h₂
+    case comp' | quot | id | app | fst | snd | snd' => cases h_r
+    case flip =>
+      cases h_r with
+      | congrFun h => cases h
+      | congrArg h => exact ⟨_, .single .flip, .single (.congrArg h)⟩
+    case comp =>
+      cases h_r with
+      | congrFun h =>
+        cases h with
+        | congrFun h => cases h
+        | congrArg h => exact ⟨_, .single .comp, .congrFun (.single h)⟩
+      | congrArg h => exact ⟨_, .single .comp, .congrArg (.congrFun (.single h))⟩
+    case curr =>
+      cases h_r with
+      | congrFun h => cases h
+      | congrArg h => exact ⟨_, .single .curr, .single (.congrArg (.sigl (by assumption)))⟩
+    case curr' =>
+      cases h_r with
+      | congrFun h => cases h
+      | congrArg h => exact ⟨_, .single .curr', .single (.congrArg (.sigl (by assumption)))⟩
+    case congrFun f f' x f'' h =>
+      have ⟨_, h₁, h₂⟩ := ih h
+      exact ⟨_, .congrFun h₁, .congrFun h₂⟩
+    case congrArg f f' x x'' h_x =>
+      exact ⟨_, .congrArg (.single h_x), .congrFun (.single h_r)⟩
+  | _ => ...
+  \end{leancode}
+\end{proof}
+
+\begin{theorem}
+  For all \(A \in Expr\), \(A\) is confluent under \(\dashrightarrow^{*}\).
+\end{theorem}
+
+\begin{proof}
+  We proceed by induction on the well-founded relation \(\dashrightarrow\) \eqref{wellfounded}.
+  \begin{leancode}
+theorem RedAffReflTrans.conf (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTrans A C) :
+  ∃ D, RedAffReflTrans B D ∧ RedAffReflTrans C D := by
+  induction A using instWellFounded.induction generalizing B C with
+  | h _ ih =>
+    match h₁.cases_head, h₂.cases_head with
+    | .inr ⟨_, hra, hrc⟩, .inr ⟨_, hra', hrc'⟩ =>
+      have ⟨_, c₁', c₂'⟩ := hra.conf hra'
+      have ⟨_, hrB, hrB'⟩ := ih _ hra hrc c₁'
+      have ⟨_, hrC, hrC'⟩ := ih _ hra' hrc' c₂'
+      have ⟨_, h₁, h₂⟩ := ih _ hra (c₁'.trans hrB') (c₁'.trans hrC')
+      exact ⟨_, .trans hrB h₁, .trans hrC h₂⟩
+    | .inl heq₁, .inl heq₂ =>
+      rw [← heq₁, ← heq₂]
+      exact ⟨_, .refl, .refl⟩
+    | .inl heq₁, .inr _ =>
+      rw [← heq₁]
+      exact ⟨_, h₂, .refl⟩
+    | .inr _, .inl heq₁ =>
+      rw [← heq₁]
+      exact ⟨_, .refl, h₁⟩
+  \end{leancode}
+\end{proof}
+
+\comment{
+  TOOD:
+  - rework judge to use RedAffTrans \(\land\) IsNorm
+  Remaining structure:
+  - show that step? is sound + complete
+  - show reduce is sound + complete
+  - show uniquness of normal forms
+  - show that \(\beta_{=}\) terminates
+  - Show that type-checking is decidable
+}
 
 \printbibliography
 

@@ -303,35 +303,31 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
     | congrArg h => exact ⟨_, .single (.congrArg (.sigr (by assumption))), .single .curr'⟩
   | congrFun h_r ih =>
     cases h₂
-    repeat cases h_r
-    · rename_i h; cases h
-    · exact ⟨_, .single .flip, .single (.congrArg (by assumption))⟩
-    · cases h_r
-    · cases h_r
+    case comp' | quot | id | app | fst | snd | snd' => cases h_r
+    case flip =>
+      cases h_r with
+      | congrFun h => cases h
+      | congrArg h => exact ⟨_, .single .flip, .single (.congrArg h)⟩
     case comp =>
       cases h_r with
       | congrFun h =>
         cases h with
         | congrFun h => cases h
-        | congrArg h =>
-          exact ⟨_, .single .comp, .congrFun (.single h)⟩
+        | congrArg h => exact ⟨_, .single .comp, .congrFun (.single h)⟩
       | congrArg h => exact ⟨_, .single .comp, .congrArg (.congrFun (.single h))⟩
-    case comp' => cases h_r
     case curr =>
       cases h_r with
       | congrFun h => cases h
-      | congrArg h =>
-        exact ⟨_, .single .curr, .single (.congrArg (.sigl (by assumption)))⟩
+      | congrArg h => exact ⟨_, .single .curr, .single (.congrArg (.sigl (by assumption)))⟩
     case curr' =>
       cases h_r with
       | congrFun h => cases h
-      | congrArg h =>
-        exact ⟨_, .single .curr', .single (.congrArg (.sigl (by assumption)))⟩
+      | congrArg h => exact ⟨_, .single .curr', .single (.congrArg (.sigl (by assumption)))⟩
     case congrFun f f' x f'' h =>
-      have ⟨D, h₁, h₂⟩ := ih h
+      have ⟨_, h₁, h₂⟩ := ih h
       exact ⟨_, .congrFun h₁, .congrFun h₂⟩
     case congrArg f f' x x'' h_x =>
-      exact ⟨_, .congrArg (.single (by assumption)), .congrFun (.single (by assumption))⟩
+      exact ⟨_, .congrArg (.single h_x), .congrFun (.single h_r)⟩
   | congrArg h_r ih =>
     cases h₂ with
     | app =>

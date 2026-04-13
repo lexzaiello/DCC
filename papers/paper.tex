@@ -8,6 +8,7 @@
 \usepackage[english]{babel}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{amsfonts}
 \usepackage{amsthm}
 \usepackage{authblk}
 \usepackage{biblatex}
@@ -129,7 +130,7 @@ Curien extends the combinators with type annotations, enabling simple typing. Qu
 
 Our primary insights when extending the categorical combinators to dependent types are: when typed as \(\Sigma\)-pairs, couples can naturally encode contexts and typing judgments; pairs which produce couples correspond to substitution within contexts; the types of all primitive objects can be represented without the pair rule (the affine restriction) after adding a \(Flip\) combinator. By showing that the affine restriction is strongly normalizing, we gain decidable judgmental equality (\(\equiv\)) and a decision procedure for type-checking.
 
-As usual, we extend the calculus with a \(\Pi(m, n)\) object. Arrows \(\alpha \rightarrow \beta\) are represented by \(\Pi\) objects that quote their codomain. We re-interpret the base combinators as pertaining to \(\Sigma\) couples, instead of product couples.
+As usual, we extend the calculus with a \(\Pi(m, n)\) object. Arrows \(\alpha \rightarrow \beta\) are represented by \(\Pi\) objects that quote their codomain. We re-interpret the base combinators as pertaining to \(\Sigma\) couples, instead of product couples. 
 
 \subsection{Couples as Dependent Sums}
 
@@ -163,7 +164,7 @@ In the categorical abstract machine, this encoding of judgments corresponds to a
 Except for \(\Pi\), all combinator objects have type annotations specified as points. For example, the projection \(Fst(\alpha, \beta)\) is indexed by terms denoting the type of the expected \(\Sigma\)-couple. This contradicts intuition that type arguments must be able to depend on other terms, and thus, cannot be points. However, by referring to terms in the context as the \(snd\) component of a \(\Sigma\)-couple (\(\Sigma(\sort{m}, Id(\sort{m}))\)) mentioning its type, they only need to be referred to by their respective sorts. As a result, we avoid another potential duplication of type-points inside the combinators' types. \(\Sigma\)-judgments are also an example of ``very dependent'' types, as defined by Altenkirch et al. \cite{altenkirch}.\\\\
 See \eqref{point_free_derivation} where we derive point-free \(Id\ \alpha\) using the dependent curry (\(\Lambda\)) combinator and \(\Sigma\)-judgments.
 
-\subsection{Inference Rules}
+\subsection{Inference Rules}\label{infer_rules}
 
 We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We also use the notation \(\Pi(x : A), B\), and may omit type arguments for legibility to denote an illustration of a type. However, the full combinatory, point-free types are accessible in the appendix. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(m, n)\).
 
@@ -265,7 +266,7 @@ Note that the codomain of \(f\) depends on \(x : \alpha\), but the domain of \(g
 \begin{figure}[h!]
 \begin{equation}
   \inferrule[Naive comp.]
-  { \Gamma \vdash f : \Pi(x : \alpha), \beta(x), g : \Pi(x : \alpha, y : \beta(x)), \gamma\ x\ (f x)}
+  { \Gamma \vdash f : \Pi(x : \alpha), \beta(x), g : \Pi(x : \alpha, y : \beta(x)), \gamma x (f x)}
   { \Gamma \vdash (g \circ f) : \Pi(x : \alpha), \gamma (f x)}
 \end{equation}
 \end{figure}
@@ -377,7 +378,7 @@ So, let \(Id_{m}\) be as follows:
 
 See the appendix for a mechanized proof that \(Id_{m} (\alpha : \sort{m}) (x : \alpha)\) type-checks.
 
-\subsection{Reduction Rules}
+\section{Reduction Rules}
 
 Our reduction rules are the same as in the categorical abstract machine \autocite{cmachine}, except for \(Flip\), and pairs, which carry type arguments:
 
@@ -414,6 +415,32 @@ Our reduction rules are the same as in the categorical abstract machine \autocit
 \caption{Reduction rules of the dependently-typed categorical combinators}
 \end{figure}
 \end{center}
+
+\subsection{Affine Strong Normalization}
+
+% Link back later: Furthermore, none of our inference rules require referring to \textit{dpair}.
+
+Note that, excluding our \textit{dpair} rule, each single-step combinator reduction uses each of its arguments at most once. That is, this restriction of single-step reduction is affine. Except for congruence, each rule decreases the number of combinators (we  do not consider the couple \(\llbracket \alpha, \beta \rrbracket (,)\) to be a combinator). We thus define a syntactic measure of term size on objects in our calculus, and show that it decreases under affine reduction (\(\dashrightarrow\)) to show that the affine reduction is strongly normalizing.
+
+Let \(Ob\) denote a sort \(\sort{m}\), a combinator \(C(x_0 \ldots x_n)\) with \(n\) points which is well-typed \eqref{infer_rules}, a couple \(\llbracket \alpha, \beta \rrbracket (,)\), or an application \(M N\). Then, let \(t : Ob \rightarrow \mathbb{N}\) denote the syntactic term size of an object, and be defined as such:
+
+\begin{figure}[h!]
+\begin{align*}
+  &t(\llbracket \alpha, \beta \rrbracket (,)) = t(\alpha) + t(\beta)\\
+  &t(\sort{m}) = 1\\
+  &t(C(x_0 \ldots x_n)) = \left(\sum_{i = 0}^{n} t(x_i)\right) + 1\\
+  &t(M N) = t(M) + t(N)
+\end{align*}
+\caption{Syntactic term size \(t(M)\)}
+\end{figure}
+
+\begin{theorem}
+  If \(A\) and \(B\) are \(Obs\), and \(A \dashrightarrow B\), then \(t(B) < t(A)\).
+\end{theorem}
+
+\begin{proof}
+  sorry
+\end{proof}
 
 \printbibliography
 

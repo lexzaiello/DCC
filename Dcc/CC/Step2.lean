@@ -42,64 +42,56 @@ inductive RedAff : Expr → Expr → Prop
   | congrArg : RedAff x x' → RedAff (DCC (f x)) (DCC (f x'))
 
 inductive Size : Expr → ℕ → Prop
-  | sort   : Size (DCC Sort m) 1
-  | flip   : Size e m → Size (DCC Flip(e)) m.succ
-  | id     : Size (DCC Id(α)) 1
-  | quot   : Size x m → Size (DCC `(α, β, x)) m.succ
-  | comp   : Size (DCC ⟦α, β, γ⟧∘) 1
-  | comp'  : Size f m → Size g n → Size (DCC (f ∘' g)) (m + n).succ
+  | sig    : Size (DCC Σ(_m, _n)) 0
   | coup   : Size (DCC ⟦α, β⟧(,)) 0
-  | pair   : Size f m → Size g n → Size (DCC ⟦α, β⟧⟨f, g⟩) (m + n).succ
+  | pi     : Size (DCC Π(_m, _n)) 0
+  | sort   : Size (DCC Sort m) 0
+  | id     : Size (DCC Id(α)) 1
+  | comp   : Size (DCC ⟦α, β, γ⟧∘) 1
   | fst    : Size (DCC Fst(α, β)) 1
   | snd    : Size (DCC Snd(α, β)) 1
   | snd'   : Size (DCC Snd'(α, β)) 1
+  | appl   : Size (DCC App(_n, α, β)) 1
+  | flip   : Size e m → Size (DCC Flip(e)) m.succ
+  | quot   : Size x m → Size (DCC `(α, β, x)) m.succ
+  | comp'  : Size f m → Size g n → Size (DCC (f ∘' g)) (m + n).succ
+  | pair   : Size f m → Size g n → Size (DCC ⟦α, β⟧⟨f, g⟩) (m + n).succ
   | curr   : Size x m → Size (DCC Λ(α, x)) m.succ
   | curr'  : Size x m → Size (DCC Λ'(α, β, x)) m.succ
-  | pi     : Size (DCC Π(_m, _n)) 0
-  | appl   : Size (DCC App(_n, α, β)) 1
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
-  | sig    : Size (DCC Σ(_m, _n)) 0
 
 def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
   match e with
   | DCC Sort _m => ⟨_, ⟨.sort⟩⟩
   | DCC Σ(_m, _n) => ⟨_, ⟨.sig⟩⟩
+  | DCC Id(_α) => ⟨_, ⟨.id⟩⟩
+  | DCC ⟦_α, _β⟧(,) => ⟨_, ⟨.coup⟩⟩
+  | DCC Fst(_α, _β) => ⟨_, ⟨.fst⟩⟩
+  | DCC Snd(_α, _β) => ⟨_, ⟨.snd⟩⟩
+  | DCC Snd'(_α, _β) => ⟨_, ⟨.snd'⟩⟩
+  | DCC Π(_m, _n) => ⟨_, ⟨.pi⟩⟩
+  | DCC App(_n, _α, _β) => ⟨_, ⟨.appl⟩⟩
+  | DCC (⟦_α, _β, _γ⟧∘) => ⟨_, ⟨.comp⟩⟩
   | DCC Flip(e) =>
-    let ⟨m, ⟨h₁⟩⟩ := e.size
-    ⟨m.succ, ⟨.flip h₁⟩⟩
-  | DCC Id(_α) =>
-    ⟨_, ⟨.id⟩⟩
+    let ⟨_m, ⟨h₁⟩⟩ := e.size
+    ⟨_, ⟨.flip h₁⟩⟩
   | DCC `(_α, _β, x) =>
     let ⟨_, ⟨h₁⟩⟩ := x.size
     ⟨_, ⟨.quot h₁⟩⟩
-  | DCC (⟦_α, _β, _γ⟧∘) =>
-    ⟨_, ⟨.comp⟩⟩
   | DCC (f ∘' g) =>
     let ⟨m, ⟨h₁⟩⟩ := f.size
     let ⟨n, ⟨h₂⟩⟩ := g.size
     ⟨(m + n).succ, ⟨.comp' h₁ h₂⟩⟩
-  | DCC ⟦_α, _β⟧(,) =>
-    ⟨_, ⟨.coup⟩⟩
-  | DCC ⟦_α, _β⟧⟨a, b⟩ =>
+    | DCC ⟦_α, _β⟧⟨a, b⟩ =>
     let ⟨_o, ⟨h₁⟩⟩ := a.size
     let ⟨_p, ⟨h₂⟩⟩ := b.size
     ⟨_, ⟨.pair h₁ h₂⟩⟩
-  | DCC Fst(_α, _β) =>
-    ⟨_, ⟨.fst⟩⟩
-  | DCC Snd(_α, _β) =>
-    ⟨_, ⟨.snd⟩⟩
-  | DCC Snd'(_α, _β) =>
-    ⟨_, ⟨.snd'⟩⟩
   | DCC Λ(_α, x) =>
     let ⟨_n, ⟨h₁⟩⟩ := x.size
     ⟨_, ⟨.curr h₁⟩⟩
   | DCC Λ'(_α, _β, x) =>
     let ⟨_o, ⟨h₁⟩⟩ := x.size
     ⟨_, ⟨.curr' h₁⟩⟩
-  | DCC Π(_m, _n) =>
-    ⟨_, ⟨.pi⟩⟩
-  | DCC App(_n, _α, _β) =>
-    ⟨_, ⟨.appl⟩⟩
   | DCC (f x) =>
     let ⟨m, ⟨h₁⟩⟩ := f.size
     let ⟨n, ⟨h₂⟩⟩ := x.size
@@ -133,12 +125,12 @@ theorem RedAffTrans.decreasing : RedAffTrans e e' → (size e').fst < (size e).f
 def sn (e : Expr) : Acc (fun b a => RedAff a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing
   exact e'.sn)
-termination_by e
+termination_by e.size.fst
 
 def sn_trans (e : Expr) : Acc (fun b a => RedAffTrans a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing
   exact e'.sn_trans)
-termination_by e
+termination_by e.size.fst
 
 instance instWellFounded : WellFounded (fun a b => RedAff b a) := ⟨sn⟩
 
@@ -385,17 +377,15 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
       exact ⟨_, .congrArg h₁, .congrArg h₂⟩
 
 theorem RedAffReflTrans.conf (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTrans A C) : ∃ D, RedAffReflTrans B D ∧ RedAffReflTrans C D := by
-  have h := A.sn
-  induction h generalizing B C with
-  | intro _ ih₁ ih₂ =>
+  induction A using instWellFounded.induction generalizing B C with
+  | h _ ih =>
     match h₁.cases_head, h₂.cases_head with
-    | .inr ⟨c₁, ha, hrefl₁⟩, .inr ⟨c₂, hb, hrefl₂⟩ =>
-      have ⟨D₃, h₅, h₆⟩ := ha.conf hb
-      have ⟨D₄, hB_D₄, hD₃_D₄⟩ := ih₂ c₁ ha hrefl₁ h₅
-      have hc₂_D₄ : c₂.RedAffReflTrans D₄ := .trans h₆ hD₃_D₄
-      have ⟨D₅, hC_D₅, hD₄_D₅⟩ := ih₂ c₂ hb hrefl₂ hc₂_D₄
-      have hB_D₅ : B.RedAffReflTrans D₅ := .trans hB_D₄ hD₄_D₅
-      exact ⟨D₅, hB_D₅, hC_D₅⟩
+    | .inr ⟨_, hra, hrc⟩, .inr ⟨_, hra', hrc'⟩ =>
+      have ⟨_, c₁', c₂'⟩ := hra.conf hra'
+      have ⟨_, hrB, hrB'⟩ := ih _ hra hrc c₁'
+      have ⟨_, hrC, hrC'⟩ := ih _ hra' hrc' c₂'
+      have ⟨_, h₁, h₂⟩ := ih _ hra (c₁'.trans hrB') (c₁'.trans hrC')
+      exact ⟨_, .trans hrB h₁, .trans hrC h₂⟩
     | .inl heq₁, .inl heq₂ =>
       rw [← heq₁, ← heq₂]
       exact ⟨_, .refl, .refl⟩

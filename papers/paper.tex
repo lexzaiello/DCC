@@ -449,6 +449,64 @@ inductive RedAff : Expr → Expr → Prop
   | congrArg : RedAff x x' → RedAff (DCC (f x)) (DCC (f x'))
 \end{leancode}
 
+We define the size of all reducible combinators to be the successor of the sum of the sizes of the combinators' constituent term points. For example, \(Id(\alpha)\) has size \(1\), since its point is a term-type, not a term with computational relevance. Irreducible terms are assigned a size of \(0\)~\eqref{fig:size}. We also define a computable \mintinline{lean}{size (e : Expr) : ((n : ℕ) × (PLift (Size e n)))} function which produces a proof of \mintinline{lean}{Size e n}, thus gaining soundness by default (definition omitted, see appendix). 
+
+\begin{figure}
+\begin{leancode}
+inductive Size : Expr → ℕ → Prop
+  | sig    : Size (DCC Σ(_m, _n)) 0
+  | coup   : Size (DCC ⟦α, β⟧(,)) 0
+  | pi     : Size (DCC Π(_m, _n)) 0
+  | sort   : Size (DCC Sort m) 0
+  | id     : Size (DCC Id(α)) 1
+  | comp   : Size (DCC ⟦α, β, γ⟧∘) 1
+  | fst    : Size (DCC Fst(α, β)) 1
+  | snd    : Size (DCC Snd(α, β)) 1
+  | snd'   : Size (DCC Snd'(α, β)) 1
+  | appl   : Size (DCC App(_n, α, β)) 1
+  | flip   : Size e m → Size (DCC Flip(e)) m.succ
+  | quot   : Size x m → Size (DCC `(α, β, x)) m.succ
+  | comp'  : Size f m → Size g n → Size (DCC (f ∘' g)) (m + n).succ
+  | pair   : Size f m → Size g n → Size (DCC ⟦α, β⟧⟨f, g⟩) (m + n).succ
+  | curr   : Size x m → Size (DCC Λ(α, x)) m.succ
+  | curr'  : Size x m → Size (DCC Λ'(α, β, x)) m.succ
+  | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
+\end{leancode}
+\caption{Syntactic size measure for the combinators}\label{fig:size}
+\end{figure}
+
+\begin{theorem}
+  If \(A \in Expr\) and \(A \dashrightarrow B\), then \(size(B) < size(A)\).
+\end{theorem}
+
+\begin{proof}
+\begin{leancode}
+
+
+theorem RedAff.decreasing (h : RedAff e e') : (size e').fst < (size e).fst := by
+  induction h <;> (simp [size]; try grind)
+\end{leancode}
+\end{proof}
+
+We define strong normalization using Lean's accessibility predicate, and use our decreasing measure to produce a proof of \mintinline{lean}{Acc (fun b a => RedAff a b) e}.
+
+\begin{theorem}
+  If \(A \in Expr\), then \(A\) is strongly-normalizing under affine reduction (\(\dashrightarrow\)).
+\end{theorem}
+
+\begin{proof}
+\begin{leancode}
+
+
+def sn (e : Expr) : Acc (fun b a => RedAff a b) e := Acc.intro e (fun e' hr => by
+  have h := hr.decreasing
+  exact e'.sn)
+termination_by e.size.fst
+
+instance instWellFounded : WellFounded (fun a b => RedAff b a) := ⟨sn⟩
+\end{leancode}
+\end{proof}
+
 \printbibliography
 
 \end{document}

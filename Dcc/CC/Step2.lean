@@ -693,6 +693,9 @@ theorem reduce_norm (h : reduce A = B) : B.IsNormAff := by
       have h := step?_none heq
       simp_all
 
+theorem reduce_self : reduce A = reduce (reduce A) :=
+  (reduce_norm (A := A) rfl).complete_reduce.symm
+
 theorem RedAff.reduce_same (h : RedAff A B) : reduce A = reduce B := by
   apply RedAffReflTrans.norm_unique
   · exact reduce_sound rfl

@@ -41,7 +41,11 @@ theorem RedAff.arrow : RedAff (arrow α β m n) τ₂ →  (∃ γ, RedAff α γ
       exact (.inl ⟨_, h, rfl⟩)
   | congrArg h => cases h
 
-theorem reduce_pi_congr : reduce (DCC (Π(m, n) α β)) = (DCC (Π(m, n) α.reduce β.reduce)) := by
+theorem reduce_comp : reduce (DCC (f ∘' g)) =  (DCC (f ∘' g)) := by
+  unfold reduce
+  simp [step?]
+
+theorem reduce_congr_pi : reduce (DCC (Π(m, n) α β)) = (DCC (Π(m, n) α.reduce β.reduce)) := by
   let lex_rel := Prod.lex instWellFoundedRel instWellFoundedRel
   induction heq : (α, β) using lex_rel.wf.induction generalizing α β with
   | h a ih =>
@@ -574,20 +578,6 @@ def id_well_typed (h_t_α : Judge α (DCC Sort m)) (h_t_x : Judge x α) : JudgeC
     · assumption
     · exact reduce_reduces rfl
   · exact reduce_reduces reduce_congr_quot
-
-def preservation (h : JudgeConv e t) (h_red : Red e e') : JudgeConv e' t :=
-  match h with
-  | ⟨h_t, h_red_t⟩ => by
-    cases h_t with
-    | app h_t_f h_red_t_f h_t_x h_red_t_x =>
-      cases h_red with
-      | app =>
-        cases h_t_f with
-        | app_e =>
-          simp [app_e.type] at h_red_t_f
-          
-          sorry
-    | _ => cases h_red
 
 def id_preservation' (h : JudgeConv (DCC (Id(α) x)) α.reduce) : (JudgeConv x α.reduce) :=
   match h with

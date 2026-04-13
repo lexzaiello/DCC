@@ -3,7 +3,7 @@ import Mathlib.Tactic
 
 namespace Expr
 
-inductive Red : Expr → Expr → Prop
+inductive Red : Expr → Expr → Type
   | app      : Red (DCC (App(_n, _δ, _τ) ⟦α, β⟧(f, x))) (DCC (f x))
   | fst      : Red (DCC (Fst(_δ, _τ) ⟦α, β⟧(a, b))) a
   | snd      : Red (DCC (Snd(_δ, _τ) ⟦α, β⟧(a, b))) b
@@ -135,6 +135,8 @@ termination_by e.size.fst
 instance instWellFounded : WellFounded (fun a b => RedAff b a) := ⟨sn⟩
 
 instance instWellFoundedTrans : WellFounded (fun a b => RedAffTrans b a) := ⟨sn_trans⟩
+
+instance instWellFoundedRel : WellFoundedRelation Expr := ⟨fun a b => RedAff b a, instWellFounded⟩
 
 theorem RedAffTrans.congrArg (h_red : RedAffTrans x x') : RedAffTrans (DCC (f x)) (DCC (f x')) := by
   induction h_red with

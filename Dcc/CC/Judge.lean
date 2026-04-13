@@ -41,6 +41,32 @@ theorem RedAff.arrow : RedAff (arrow α β m n) τ₂ →  (∃ γ, RedAff α γ
       exact (.inl ⟨_, h, rfl⟩)
   | congrArg h => cases h
 
+theorem reduce_pi_congr : reduce (DCC (Π(m, n) α β)) = (DCC (Π(m, n) α.reduce β.reduce)) := by
+  let lex_rel := Prod.lex instWellFoundedRel instWellFoundedRel
+  induction heq : (α, β) using lex_rel.wf.induction generalizing α β with
+  | h a ih =>
+    cases heq
+    conv =>
+      left
+      unfold reduce
+    simp [step?]
+    split
+    case h_1 h _ =>
+      cases h
+      case congrFun h _ =>
+        cases h
+        case congrFun h _ => cases h
+        case congrArg x' h _ =>
+          exact h.reduce_same ▸ (ih (x', β) (.left β β h) rfl)
+      case congrArg β' h_r_β heq =>
+        exact h_r_β.reduce_same ▸ ih (α, β') (by apply Prod.Lex.right; exact h_r_β) rfl
+    case h_2 heq =>
+      cases h_α : α.step? <;> simp_all
+      cases h_β : β.step? <;> simp_all
+      have ha := step?_none h_α
+      have hb := step?_none h_β
+      exact ⟨ha.complete_reduce.symm, hb.complete_reduce.symm⟩
+
 theorem reduce_congr_quot : reduce (DCC (`(α, β, x) y)) = reduce x := by
   induction x using instWellFounded.induction with
   | h a ih =>
@@ -548,6 +574,30 @@ def id_well_typed (h_t_α : Judge α (DCC Sort m)) (h_t_x : Judge x α) : JudgeC
     · assumption
     · exact reduce_reduces rfl
   · exact reduce_reduces reduce_congr_quot
+
+def preservation (h : JudgeConv e t) (h_red : Red e e') : JudgeConv e' t :=
+  match h with
+  | ⟨h_t, h_red_t⟩ => by
+    cases h_t with
+    | app h_t_f h_red_t_f h_t_x h_red_t_x =>
+      cases h_red with
+      | app =>
+        cases h_t_f with
+        | app_e =>
+          simp [app_e.type] at h_red_t_f
+          
+          sorry
+    | _ => cases h_red
+
+def id_preservation' (h : JudgeConv (DCC (Id(α) x)) α.reduce) : (JudgeConv x α.reduce) :=
+  match h with
+  | ⟨h_t, h_red⟩=> by
+    cases h_t with
+    | app h_t_id b h_t_x d =>
+      cases h_t_id with
+      | id =>
+        cases reduce_arrow b.complete
+        exact ⟨h_t_x, by assumption⟩
 
 def id_preservation (h : Judge (DCC (Id(α) x)) α₂) : (JudgeConv x α.reduce) := by
   cases h with

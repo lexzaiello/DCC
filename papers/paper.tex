@@ -379,22 +379,38 @@ See the appendix for a mechanized proof that \(Id_{m} (\alpha : \sort{m}) (x : \
 
 \subsection{Reduction Rules}
 
-Our reduction rules are otherwise the same as in the categorical abstract machine \autocite{cmachine}. We use \(f(x_1, \ldots, x_n)\) to denote a combinator requiring \(n\) type annotations. Type annotations for pairs and couples are given by \(\llbracket \ldots \rrbracket\). Application is denoted by juxtaposition:
+Our reduction rules are the same as in the categorical abstract machine \autocite{cmachine}, except for \(Flip\), and pairs, which carry type arguments:
 
 \begin{center}
 \begin{figure}[h!]\label{red_untyped_cat}
-\begin{center}
+\centering
 \begin{tabular}{l l}
-  (ass) & \((x \circ y) z \rightarrow x(y z)\) \\
-  (fst) & \(Fst(\alpha, \beta)\ \llbracket \beta \rrbracket (a, b) \rightarrow a\) \\
-  (snd) & \(Snd(\alpha, \beta)\ \llbracket \beta \rrbracket (a, b) \rightarrow b\) \\
-  (curr) & \(\Lambda(\beta, x)yz \rightarrow x\ \llbracket \beta \rrbracket(y, z)\) \\
-  (app) & \(App(\gamma, \beta)\ \llbracket \beta \rrbracket (f, x) \rightarrow f x\) \\
-  (quote) & \(\text{`}(\alpha, \beta, x) y \rightarrow x\) \\
+  (ass') & \((x \circ' y) z \rightarrow x(y z)\) \\
+  (ass) & \(\llbracket \alpha, \beta, \gamma \rrbracket \circ x y z \rightarrow x(y z)\) \\
+  (fst) & \(Fst(\alpha, \beta)\ \llbracket \ldots \rrbracket (a, b) \rightarrow a\) \\
+  (snd) & \(Snd(\alpha, \beta)\ \llbracket \ldots \rrbracket (a, b) \rightarrow b\) \\
+  (snd') & \(Snd(\alpha, \beta)\ \llbracket \ldots \rrbracket (a, b) \rightarrow b\) \\
+  (curr') & \(\Lambda(\alpha, \beta, x) y z \rightarrow x\ \llbracket \alpha, \beta \rrbracket(y, z)\) \\
+  (curr) & \(\Lambda(\alpha, x) y z \rightarrow x\ \llbracket \alpha, Id(\alpha) \rrbracket(y, z)\) \\
+  (app) & \(App(n, \alpha, \beta)\ \llbracket \ldots \rrbracket (f, x) \rightarrow f x\) \\
+  (quote) & \(`(\alpha, \beta, x) y \rightarrow x\) \\
   (flip) & \(Flip(x)y z \rightarrow x z y\)\\
-  (dpair) & \(\llbracket m, \alpha, \beta \rrbracket \langle x, y\rangle\ z \rightarrow \llbracket \gamma \llbracket Id(\sort{m}) \rrbracket (\alpha, x) \rrbracket (x z, y z)\)
+  (dpair) & \(\llbracket \alpha, \beta \rrbracket \langle x, y\rangle\ z \rightarrow \llbracket \alpha, \beta \rrbracket (x z, y z)\)\\\\
 \end{tabular}
-\end{center}
+\begin{tabular}{c c}
+  \begin{tabular}{l l}
+    (congr. fun.)&
+    \inferrule
+  { f \rightarrow f' }
+                   { f x \rightarrow f' x}
+  \end{tabular}
+  \begin{tabular}{l l}
+    (congr. arg.)&
+  \inferrule
+  { x \rightarrow x' }
+                   { f x \rightarrow f x'}
+  \end{tabular}
+\end{tabular}
 \caption{Reduction rules of the dependently-typed categorical combinators}
 \end{figure}
 \end{center}

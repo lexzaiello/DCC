@@ -1,6 +1,27 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
+namespace Expr
+
+inductive Reduces : Expr → Expr → Prop
+  | mk : RedAffReflTrans A B → IsNormAff B → Reduces A B
+
+theorem reduce_reduces (h : (reduce A).fst = B) : Reduces A B := ⟨h ▸ (reduce A).snd.down, reduce_norm h⟩
+
+theorem reduce_reduces' : Reduces A A.reduce.fst := reduce_reduces rfl
+
+theorem Reduces.complete (h : Reduces A B) : (reduce A).fst = B :=
+  match h with
+  | ⟨h_red_refl, h_norm⟩ => h_red_refl.complete h_norm
+
+theorem Reduces.complete' (h : Reduces A B) : ∃ he, (reduce A) = ⟨B, he⟩ :=
+  match h with
+  | ⟨h_red_refl, h_norm⟩ => by
+    have h := h_red_refl.complete h_norm
+    exact ⟨h ▸ A.reduce.snd, by aesop⟩
+
+end Expr
+
 /-
 Λ(Sort m, Id(Sort m), Snd(Sort m, Id(Sort m))) : ∀ (x : α)
 -/
@@ -16,22 +37,27 @@ macro_rules
 namespace Expr
 
 inductive IsArrow : Expr → (α β : Expr) → Level → Level → Type
-  | mk    : IsArrow (arrow α β m n) α β m n
+  | mk    : Reduces A (arrow α β m n) → IsArrow A α β m n
 deriving Repr
 
 def is_arrow (t : Expr) : Option ((α β : Expr) × (m n : Level) × IsArrow t α β m n) :=
-  match t with
+  let h := t.reduce
+  match (generalizing := true) heq₀ : h.fst with
   | DCC (Π(m, n) α `(Sort n₂, Σ(Sort m₂, Id(Sort m₃)), β)) =>
     if heq : m = m₂ ∧ m = m₃ ∧ n = n₂ then
       have ⟨ha, hb, hc⟩ := heq
-      .some ⟨α, β, m, n, (by simp_all; exact .mk)⟩
+      .some ⟨α, β, m, n, .mk (by
+        rw [← ha, ← hb, ← hc] at heq₀
+        rw [arrow, ← heq₀]
+        exact reduce_reduces')⟩
     else .none
   | _ => .none
 
-def IsArrow.complete (h : IsArrow e α β m n) : is_arrow e = .some ⟨α, β, m, n, h⟩ := by
-  cases h
-  simp [is_arrow, arrow]
-  aesop
+def IsArrow.complete : IsArrow e α β m n → is_arrow e = .some ⟨α, β, m, n, h⟩ := fun ⟨h_reduces⟩ => by
+  have h := h_reduces.complete
+  unfold is_arrow
+  
+  sorry
 
 end Expr
 
@@ -55,7 +81,7 @@ def id.type (α : Expr) (m : Level) : Expr :=
   arrow α α m m
 
 def flip.type (α β γ : Expr) (m n o : Level) : Expr :=
-  (arrow β (arrow α γ m o) n o).reduce.fst
+  (arrow β (arrow α γ m o) n o)
 
 /-
 g : α → β
@@ -144,8 +170,9 @@ def quot.type (α β : Expr) (m n : Level) : Expr :=
 namespace Expr
 
 inductive Judge : Expr → Expr → Type where
-  | id    : Judge α (DCC (Sort m))
-    → Judge (DCC Id(α)) (id.type α m).reduce.fst
+  | id    : Judge α τ
+    → Reduces τ (DCC (Sort m))
+    → Judge (DCC Id(α)) (id.type α m)
   /-
     (α, y)
     x : (Π(m, o) α ((Flip(Π(n, o)) γ) ∘ β)))

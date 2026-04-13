@@ -648,22 +648,32 @@ instance : Decidable (∃ A', RedAff A A') :=
   else
     .isFalse (fun ⟨A', hred⟩ => by simp [hred.complete'] at *)
 
-def reduce (e : Expr) : ((e' : Expr) × (PLift (RedAffReflTrans e e'))) :=
-  match heq : step? e with
+def reduce (e : Expr) : Expr :=
+  match step? e with
   | .some ⟨e', ⟨h⟩⟩ =>
     -- This hypothesis allows the recursion. Easy to prove.
     have _h_size : e'.size.fst < e.size.fst := h.decreasing
-    let ⟨e'', ⟨h⟩⟩ := e'.reduce
-    ⟨e'', ⟨.trans (.single (by assumption)) h⟩⟩
-  | .none => ⟨e, ⟨.refl⟩⟩
+    e'.reduce
+  | .none => e
+
+theorem reduce_sound (heq : reduce A = B) : RedAffReflTrans A B := by
+  induction A using instWellFounded.induction generalizing B with
+  | h a ih =>
+    unfold reduce at heq
+    split at heq
+    case h_1 h_red h_step_eq =>
+      simp at heq
+      have h := ih _ h_red heq
+      exact Relation.ReflTransGen.trans (.single h_red) h
+    case h_2 => simp_all only [forall_eq']; exact .refl
 
 def reduce_diamond (A B : Expr) : Option ((C : Expr) × (PLift (RedAffReflTrans A C ∧ RedAffReflTrans B C))) :=
-  if heq : (reduce A).fst = (reduce B).fst then
-    .some ⟨(reduce A).fst, ⟨⟨(reduce A).snd.down, heq ▸ (reduce B).snd.down⟩⟩⟩
+  if heq : reduce A = reduce B then
+    .some ⟨reduce A, ⟨⟨reduce_sound rfl, reduce_sound heq.symm⟩⟩⟩
   else
     .none
 
-theorem IsNormAff.complete_reduce (h : A.IsNormAff) : (reduce A).fst = A := by
+theorem IsNormAff.complete_reduce (h : A.IsNormAff) : reduce A = A := by
   unfold reduce
   rw [h.complete]
 
@@ -671,7 +681,7 @@ theorem step?_none : step? A = .none → A.IsNormAff := fun h_step ⟨e', h_red�
   have h := h_red.complete'
   simp_all
 
-theorem reduce_norm (h : (reduce A).fst = B) : B.IsNormAff := by
+theorem reduce_norm (h : reduce A = B) : B.IsNormAff := by
   induction A using instWellFounded.induction generalizing B with
   | h a ih =>
     unfold reduce at h
@@ -683,17 +693,24 @@ theorem reduce_norm (h : (reduce A).fst = B) : B.IsNormAff := by
       have h := step?_none heq
       simp_all
 
-theorem RedAff.reduce_same (h : RedAff A B) : (reduce A).fst = (reduce B).fst := by
+theorem RedAff.reduce_same (h : RedAff A B) : reduce A = reduce B := by
   apply RedAffReflTrans.norm_unique
-  · exact (reduce _).snd.down
+  · exact reduce_sound rfl
   · exact reduce_norm rfl
-  · exact .trans (.single h) (reduce _).snd.down
+  · exact .trans (.single h) (reduce_sound rfl)
   · exact reduce_norm rfl
 
-theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff) : (reduce A).fst = B := by
+theorem RedAffReflTrans.reduce_same (h : RedAffReflTrans A B) : reduce A = reduce B := by
+  apply RedAffReflTrans.norm_unique
+  · exact reduce_sound rfl
+  · exact reduce_norm rfl
+  · exact .trans h (reduce_sound rfl)
+  · exact reduce_norm rfl
+
+theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff) : reduce A = B := by
   match h₁.cases_head with
   | .inl h =>
-    rw [h]
+    simp_all
     exact h_norm.complete_reduce
   | .inr ⟨c, h₁, h₂⟩ =>
     have _h : sizeOf c < sizeOf A := h₁.decreasing
@@ -702,14 +719,14 @@ theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNorm
 termination_by A
 
 instance : Decidable (RedAffReflTrans A B ∧ B.IsNormAff) :=
-  if h : (reduce A).fst = B then
-    .isTrue (⟨h ▸ A.reduce.snd.down, reduce_norm h⟩)
+  if h : reduce A = B then
+    .isTrue (⟨reduce_sound h, reduce_norm h⟩)
   else
     .isFalse (fun ⟨h_red, heq⟩ => by simp [h_red.complete heq] at *)
 
 instance : Decidable (∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C ∧ C.IsNormAff) :=
-  if heq : (reduce A).fst = (reduce B).fst then .isTrue
-    ⟨_, (reduce A).snd.down, heq ▸ (reduce B).snd.down, reduce_norm rfl⟩
+  if heq : reduce A = reduce B then .isTrue
+    ⟨_, reduce_sound rfl, reduce_sound heq.symm, reduce_norm rfl⟩
   else
     .isFalse (fun ⟨C, h₁, h₂, h_norm⟩ => by
       have ha := h₁.complete h_norm

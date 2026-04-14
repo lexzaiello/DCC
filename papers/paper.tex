@@ -776,7 +776,7 @@ theorem IsNormAff.complete_reduce (h : A.IsNormAff) : reduce A = A := by
   For all \(A \in Expr\), if \(A \dashrightarrow^{*} B\), and \(B\) is a normal form, then \texttt{reduce A = B}.
 \end{theorem}
 
-\begin{proof}
+\begin{proof}\label{decide_beta_eq}
   By well-founded recursion with respect to the decreasing measure \texttt{size}:
 \begin{leancode}
 theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff) :
@@ -826,6 +826,97 @@ instance : Decidable (∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C ∧ C.I
 %}
 
 \section{Decidable Type Inference}
+
+Note that the types of all of the dependent categorical combinators are affine \eqref{infer_rules}. Hence, we use our decision procedure \eqref{decide_beta_eq} for \(=_{\beta}\) under affine-reduction to prove decidability of type-checking.
+
+We do not normalize inside our judgment relation, nor do we have a conversion case. We bake conversion into each applicable constructor with a \texttt{Reduces} predicate by normalizing the expected and actual types a la carte:
+
+\begin{leancode}
+inductive Reduces : Expr → Expr → Type
+  | mk : RedAffReflTrans A B → IsNormAff B → Reduces A B
+deriving Repr
+
+theorem Reduces.complete : Reduces A B → reduce A = B :=
+  fun ⟨ha, hb⟩ => ha.complete hb
+
+def reduce_reduces (h : reduce A = B) : Reduces A B := ⟨reduce_sound h, reduce_norm h⟩
+
+def reduce_reduces' : Reduces A A.reduce := reduce_reduces rfl
+\end{leancode}
+
+For example, application is inferred like such:
+
+\begin{leancode}
+inductive Judge : Expr → Expr → Type where
+  | app   : Judge f t_f
+    → Reduces t_f (DCC (Π(m, n) α β))
+    → Judge x t_x
+    → Reduces t_x α
+    → Judge (DCC (f x)) (DCC (β ⟦Sort m, Id(Sort m)⟧(α, x)))
+\end{leancode}
+
+We defer full type normalization to a supplementary predicate, \mintinline{lean}{JudgeConv}:
+
+\begin{leancode}
+inductive JudgeConv : Expr → Expr → Type
+  | mk : Judge x A → Reduces A B → JudgeConv x B
+\end{leancode}
+
+We define an \mintinline{lean}{IsArrow} predicate for convenience in pattern matching arrows, which are by convention, \(\Pi\)-objects containing quotation in their codomain. We do not assume \(\Pi\)-extensionality.
+
+\begin{leancode}
+inductive IsArrow : Expr → (α β : Expr) → Level → Level → Type
+  | mk    : Reduces A (arrow α β m n) → IsArrow A α β m n
+deriving Repr
+
+def is_arrow (t : Expr) : Option ((α β : Expr) × (m n : Level) × IsArrow t α β m n) :=
+  match heq₀ : t.reduce with
+  | DCC (Π(m, n) α `(Sort n₂, Σ(Sort m₂, Id(Sort m₃)), β)) =>
+    if heq : m = m₂ ∧ m = m₃ ∧ n = n₂ then by
+      have ⟨ha, hb, hc⟩ := heq
+      rw [← ha, ← hb, ← hc] at heq₀
+      refine .some ⟨α, β, m, n, ?_, ?_⟩
+      · exact reduce_sound heq₀
+      · exact reduce_norm heq₀
+    else .none
+  | _ => .none
+\end{leancode}
+
+Our \mintinline{lean}{Judge} relation models the inference rules \eqref{infer_rules}. We have the individual types and corresponding constructors for brevity, but give the constructor for tail-dependent Curry \eqref{tail_curry} and App \eqref{infer_app} as examples. See the appendix and supplementary materials for the full formalization.
+
+\begin{leancode}
+def curr.type (α γ : Expr) (m n : Level) : Expr :=
+  (DCC (Π(m.succ, n) α ((Flip(Π(m, n)) (γ ∘'
+  (Λ'(Sort m.succ, Id(Sort m.succ), Id(Σ(Sort m.succ, Id(Sort m.succ))))
+    ⟦Sort m.succ, Id(Sort m.succ)⟧(α, Id(α))))) ∘' Snd'(Sort m.succ, α))))
+
+def app_e.type (α β : Expr) (m n : Level) : Expr :=
+  let t_f := DCC (Π(m, n) α β)
+  let t_x := DCC `(Sort n, t_f, α)
+
+  DCC (Π(max m n, n)
+      Σ(t_f, t_x)
+      ((Λ'(Sort m, Id(Sort m), β) α) ∘' (Snd(t_f, t_x) ∘ Snd'(Sort (max m n), Σ(t_f, t_x)))))
+
+inductive Judge : Expr → Expr → Type where
+  | curr  : Judge α t_α
+    → Reduces t_α (DCC (Sort m.succ))
+    → Judge x t_x
+    → Reduces t_x (DCC (Π(m.succ, n) Σ(α, Id(α)) γ))
+    → Judge (DCC Λ(α, x)) (curr.type α γ m n)
+  | app_e : Judge α t_α
+    → Reduces t_α (DCC Sort m)
+    → Judge (DCC App(n, α, β)) (app_e.type α β m n)
+  | app   : Judge f t_f
+    → Reduces t_f (DCC (Π(m, n) α β))
+    → Judge x t_x
+    → Reduces t_x α
+    → Judge (DCC (f x)) (DCC (β ⟦Sort m, Id(Sort m)⟧(α, x)))
+  | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
+deriving Repr
+\end{leancode}
+
+Using our terminating affine \(\beta\)-reduction function and \mintinline{lean}{reduce_reduces}, TODO.
 
 % next section
 \comment{

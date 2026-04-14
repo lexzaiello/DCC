@@ -916,7 +916,11 @@ inductive Judge : Expr → Expr → Type where
 deriving Repr
 \end{leancode}
 
-Using our terminating affine \(\beta\)-reduction function and \mintinline{lean}{reduce_reduces}, TODO.
+Using our terminating affine \(\beta\)-reduction function and \mintinline{lean}{reduce_reduces}, we define an \mintinline{lean}{infer} function with soundness. We give only the cases described in our \mintinline{lean}{Judge} illustration, though the rest are available in supplementary materials. Pattern matching against our \mintinline{lean}{Judge} constructors is somewhat obtuse, primarily due to our design decision to avoid adding a conversion constructor and reducing the inferred types.
+
+\begin{leancode}
+  
+\end{leancode}
 
 % next section
 \comment{

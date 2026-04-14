@@ -369,7 +369,7 @@ inductive JudgeConv : Expr → Expr → Type
 
 instance : Std.ToFormat (Judge A B) := ⟨repr⟩
 
-set_option maxHeartbeats 0 in def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) :=
+def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) :=
   match e with
   | DCC Π(m, n) => .some ⟨_, .pi⟩
   | DCC Σ(α, β) =>
@@ -585,27 +585,6 @@ def id_well_typed (h_t_α : Judge α (DCC Sort m)) (h_t_x : Judge x α) : JudgeC
     · assumption
     · exact reduce_reduces rfl
   · exact reduce_reduces reduce_congr_quot
-
-def comp'_preservation (h : JudgeConv (DCC ((f ∘' g) x)) α) : JudgeConv (DCC (f (g x))) α :=
-  match h with
-  | ⟨h_t, h_red⟩ => by
-    cases h_t with
-    | app h_t_f h_r_t_f h_t_x h_r_t_x =>
-      cases h_t_f with
-      | comp' h_t_g h_arrow_g h_t_f h_r_t_f' =>
-        have ha := h_r_t_f.complete
-        have hb := h_r_t_x.complete
-        have hc := h_red.complete
-        rw [comp'.type, reduce_congr_pi] at ha
-        cases ha
-        simp_all
-        have h_α_norm : α.IsNormAff := reduce_norm hc
-        rw [reduce_step (by simp [step?]; aesop)] at hc
-        cases h_arrow_g with
-        | mk a =>
-          refine ⟨Judge.app h_t_f h_r_t_f' (Judge.app h_t_g a h_t_x ?_) ?_, ?_⟩
-          apply reduce_reduces
-          rw [h]
 
 def id_preservation (h : JudgeConv (DCC (Id(α) x)) α.reduce) : (JudgeConv x α.reduce) :=
   match h with

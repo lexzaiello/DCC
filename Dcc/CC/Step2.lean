@@ -719,7 +719,7 @@ theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNorm
     have _h : sizeOf c < sizeOf A := h₁.decreasing
     have h := RedAffReflTrans.complete h₂ h_norm
     rw [h₁.reduce_same, h]
-termination_by A
+termination_by A.size.fst
 
 instance : Decidable (RedAffReflTrans A B ∧ B.IsNormAff) :=
   if h : reduce A = B then

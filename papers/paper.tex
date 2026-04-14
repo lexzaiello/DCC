@@ -603,7 +603,7 @@ theorem RedAffReflTrans.conf (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTran
 \end{proof}
 
 \begin{theorem}
-  For all \(e \in Expr\), if \(A \dashrightarrow B\) and \(A \dashrightarrow C\), and \(B\) and \(C\) are normal forms, then \(B = C\).
+  For all \(A \in Expr\), if \(A \dashrightarrow B\) and \(A \dashrightarrow C\), and \(B\) and \(C\) are normal forms, then \(B = C\).
 \end{theorem}
 
 \begin{proof}
@@ -611,11 +611,10 @@ theorem RedAffReflTrans.conf (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTran
 \begin{leancode}
 def IsNormAff (e : Expr) : Prop := ¬ ∃ e', RedAff e e'
 \end{leancode}
-
-  We proceed by induction on the confluent reduct of \(B\) and \(C\):
+  We proceed by induction on the common reduct of \(B\) and \(C\):
 
 \begin{leancode}
-  theorem RedAff.norm_unique (h₁ : RedAff A B) (h_norm : B.IsNormAff)
+theorem RedAff.norm_unique (h₁ : RedAff A B) (h_norm : B.IsNormAff)
   (h₂ : RedAff A C) (h_norm₂ : C.IsNormAff) : B = C := by
   have ⟨D, ha, hb⟩ := h₁.conf h₂
   match ha.cases_head, hb.cases_head with
@@ -629,11 +628,11 @@ def IsNormAff (e : Expr) : Prop := ¬ ∃ e', RedAff e e'
 \end{proof}
 
 \begin{theorem}
-  For all \(e \in Expr\), if \(A \dashrightarrow^{*} B\) and \(A \dashrightarrow^{*} C\), and \(B\) and \(C\) are normal forms, then \(B = C\).
+  For all \(A \in Expr\), if \(A \dashrightarrow^{*} B\) and \(A \dashrightarrow^{*} C\), and \(B\) and \(C\) are normal forms, then \(B = C\).
 \end{theorem}
 
 \begin{proof}
-  We proceed by induction on the global-confluent reduct of \(B\) and \(C\).
+  We proceed by induction on the common reduct of \(B\) and \(C\).
 
 \begin{leancode}
 theorem RedAffReflTrans.norm_unique (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff)
@@ -651,7 +650,9 @@ theorem RedAffReflTrans.norm_unique (h₁ : RedAffReflTrans A B) (h_norm : B.IsN
 
 \subsection{Decidable Beta-Equality}
 
-Using our decreasing measure \mintinline{lean}{size}, we give a decision procedure for \(=_{\beta}\). We implement an instance of \mintinline{lean}{∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C ∧ C.IsNormAff} by proving soundness and completeness (with respect to normal-forms) for \(\beta\)-reduction.\\
+We give a decision procedure for \(=_{\beta}\). We do so by proving soundness and completeness for \(\beta\)-reduction (with respect to normal-forms). We thus implement an instance of:\\
+
+\mintinline{lean}{∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C ∧ C.IsNormAff}\\
 
 First, we define \texttt{step} and \texttt{reduce} functions with soundness using our measure:
 
@@ -679,21 +680,20 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
 def reduce (e : Expr) : Expr :=
   match step? e with
   | .some ⟨e', ⟨h⟩⟩ =>
-    -- This hypothesis allows the recursion. Easy to prove.
     have _h_size : e'.size.fst < e.size.fst := h.decreasing
     e'.reduce
   | .none => e
 \end{leancode}
 
 \begin{theorem}
-  For all \(e \in Expr\), and \texttt{reduce A = B}, then \(A \dashrightarrow^{*} B\).
+  For all \(A \in Expr\), and \texttt{reduce A = B}, then \(A \dashrightarrow^{*} B\).
 \end{theorem}
 
 \begin{proof}
 \begin{leancode}
 
 
-  theorem reduce_sound (heq : reduce A = B) : RedAffReflTrans A B := by
+theorem reduce_sound (heq : reduce A = B) : RedAffReflTrans A B := by
   induction A using instWellFounded.induction generalizing B with
   | h a ih =>
     unfold reduce at heq
@@ -706,9 +706,112 @@ def reduce (e : Expr) : Expr :=
 
 By using our decreasing measure and showing completeness for \mintinline{lean}{step?} with respect to normal forms under \(\dashrightarrow\), we prove completeness of \mintinline{lean}{reduce} with respect to normal forms under \(\dashrightarrow^{*}\).
 
+\begin{lemma}
+  For all \(e \in Expr\), if \(e\) is a normal form, then \texttt{step? e = none}.
+\end{lemma}
+
+\begin{proof}
+\begin{leancode}
+
+
+  theorem IsNormAff.complete (h : A.IsNormAff) : (step? A) = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨e', ⟨h₂⟩⟩ heq
+  exact (h ⟨_, h₂⟩)
+\end{leancode}
+\end{proof}
+
 \begin{theorem}
-  For all \(e \in Expr\), if \(A \dashrightarrow B\) and \(B\) is a normal form, then \texttt{step A = B}.
+  For all \(A \in Expr\), if \(A \dashrightarrow B\) and \(B\) is a normal form, then \texttt{step A = some B}.
 \end{theorem}
+
+\begin{proof}
+  We proceed by case analysis with respect to the unfolding of \mintinline{lean}{step?}:
+\begin{leancode}
+theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) :
+  (step? A) = .some ⟨B, ⟨h₁⟩⟩ := by
+  unfold step?
+  split
+  case h_4 | h_3 | h_2 | h_1  =>
+    cases heq : h₁
+    · rfl
+    · rename_i h_r
+      have h := h_r.complete h_norm.congrFun
+      simp [step?] at h
+    · rename_i h_r
+      cases h_r
+      · rename_i h_r
+        cases h_r
+        · rename_i h; cases h
+        · have h := h_norm.complete
+          simp [step?] at h
+      · have h := h_norm.complete
+        simp [step?] at h
+  case h_7 | h_6 =>
+    cases heq : h₁
+    · rfl
+    · rename_i h; cases h
+    · have h := h_norm.complete
+    simp [step?] at h
+  case h_5 | h_8 | h_9 | h_10 | h_11 | h_12 | h_13 =>
+    sorry -- omitted for brevity. See appendix.
+\end{leancode}
+\end{proof}
+
+\begin{lemma}
+For all \(e \in Expr\), if \(e\) is a normal form, then \texttt{reduce e = e}.
+\end{lemma}
+
+\begin{proof}
+\begin{leancode}
+
+
+theorem IsNormAff.complete_reduce (h : A.IsNormAff) : reduce A = A := by
+  unfold reduce
+  rw [h.complete]
+\end{leancode}
+\end{proof}
+
+\begin{theorem}
+  For all \(A \in Expr\), if \(A \dashrightarrow^{*} B\), and \(B\) is a normal form, then \texttt{reduce A = B}.
+\end{theorem}
+
+\begin{proof}
+  By well-founded recursion with respect to the decreasing measure \texttt{size}:
+\begin{leancode}
+theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff) :
+  reduce A = B := by
+  match h₁.cases_head with
+  | .inl h =>
+    simp_all
+    exact h_norm.complete_reduce
+  | .inr ⟨c, h₁, h₂⟩ =>
+    have _h : sizeOf c < sizeOf A := h₁.decreasing
+    have h := RedAffReflTrans.complete h₂ h_norm
+    rw [h₁.reduce_same, h]
+termination_by A.size.fst
+\end{leancode}
+\end{proof}
+
+Finally, we show \(=_{\beta}\) is decidable.
+
+\begin{theorem}
+  For all \(A \in Expr\) and \(B \in Expr\), \((\exists C, A \dashrightarrow^{*} C \land B \dashrightarrow^{*} C \land IsNorm(C)) \lor \neg (\exists C, A \dashrightarrow^{*} C \land B \dashrightarrow^{*} C IsNorm(C))\).
+\end{theorem}
+
+\begin{proof}
+  This follows from completeness and soundness of \texttt{reduce}:
+\begin{leancode}
+instance : Decidable (∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C ∧ C.IsNormAff) :=
+  if heq : reduce A = reduce B then .isTrue
+    ⟨_, reduce_sound rfl, reduce_sound heq.symm, reduce_norm rfl⟩
+  else
+    .isFalse (fun ⟨C, h₁, h₂, h_norm⟩ => by
+      have ha := h₁.complete h_norm
+      have hb := h₂.complete h_norm
+      simp_all)
+\end{leancode}
+\end{proof}
 
 %\comment{
 %  theorems needed for this:

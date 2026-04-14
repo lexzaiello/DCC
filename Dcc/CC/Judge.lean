@@ -673,6 +673,7 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
         rw [heq] at hb
         cases hb
         simp [hc]
+        aesop
       case h_2 h =>
         exact (h _ hb).elim
     case h_2 h =>
@@ -692,6 +693,7 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
         rw [heq] at hb
         cases hb
         simp
+        aesop
       case h_2 h =>
         exact (h _ _ _ _ h_arrow₁ hb).elim
     case h_2 h =>
@@ -858,6 +860,7 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
       cases hb
       cases ha
       simp
+      aesop
     case h_2 h =>
       exact (h _ _ _ _ h_arrow₁ _ _ _ _ hb ha).elim
   | pi => rfl
@@ -872,6 +875,7 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
       cases ha
       cases hb
       simp
+      aesop
     case h_2 h =>
       exact (h _ _ _ _ ha).elim
   | id h_t_α h_red ih =>

@@ -1,6 +1,7 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
 \newcommand{\comment}[1]{}
+\usepackage{hyperref}
 \usepackage{mathtools}
 \usepackage{float}
 \usepackage{subcaption}
@@ -29,7 +30,7 @@
 
 \newcommand{\sort}[1]{\text{Sort}\ #1}
 
-\title{Decidable Type-Checking for a Dependent Categorical Combinator Calculus}
+\title{Decidable Type-Checking for the Dependent Categorical Combinators}
 \author[1]{Lexi Aiello}
 \author[2]{Eric Klavins}
 \affil[1]{Department of Philosophy, University of Washington}
@@ -38,7 +39,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-We present an extension of the categorial combinators \autocite{CURIEN1986188} to a dependently-typed, contextless setting, with a metatheory mechanized in the Lean 4 proof assistant. We prove several important properties of the calculus, most notably that type-checking is decidable, and that the affine restriction of the combinators are strongly-normalizing, globally confluent, and that normal forms are unique. We achieve judgmental decidability in principle by showing that the types of all objects can be expressed using an affine restriction of the reduction rules, which we demonstrate is strongly-normalizing by a syntactic decreasing measure.
+We present an extension of the categorical combinators \autocite{CURIEN1986188} to a dependently-typed, contextless setting, with a metatheory mechanized in the Lean 4 proof assistant. We prove several important properties of the calculus, including that type-checking is decidable, and that the affine restriction of the combinators are strongly-normalizing, globally confluent, and that normal forms are unique. We achieve judgmental decidability in principle by showing that the types of all objects can be expressed using an affine restriction of the reduction rules, which we demonstrate is strongly-normalizing by a syntactic decreasing measure.
 \end{abstract}
 \section{Introduction}
 
@@ -48,7 +49,7 @@ Combinatory logics suffer from the known disadvantage that they are an inefficie
 
 Work has been done on an alternative combinatory compilation target, known as the categorical combinators \autocite{CURIEN1986188}, used in the Categorical Abstract Machine \autocite{cmachine}. The categorical combinators have been extended with simple types \autocite{CURIEN1986188} and dependent types \autocite{ritter1990categorical}, but no implementation has been defined.
 
-Herein, we formalize a meta-theory of a dependently-typed categorical combinator calculus, and show that type inference is decidable. We accomplish this goal in principle by the observation that the types of the dependent categorical combinators are purely affine. By showing that the affine restriction of the calculus is strongly normalizing by a syntactic decreasing measure, we achieve completeness and soundness of an inference function. We also show that the affine restriction is globally confluent, and that normal forms are unique. We mechanize the meta-theory in the Lean 4 proof assistant.
+In this paper, we formalize a meta-theory of a dependently-typed categorical combinator calculus, and show that type inference is decidable. We accomplish this goal in principle by the observation that the types of the dependent categorical combinators are purely affine. By showing that the affine restriction of the calculus is strongly normalizing by a syntactic decreasing measure, we achieve completeness and soundness of an inference function. We also show that the affine restriction is globally confluent, and that normal forms are unique. We mechanize the meta-theory in the Lean 4 proof assistant.
 
 %- definition of combinatory logic
   %- prototypical SK
@@ -79,7 +80,7 @@ Herein, we formalize a meta-theory of a dependently-typed categorical combinator
 
 The categorical combinators \autocite{CURIEN1986188} are the basis of the Categorical Abstract Machine \autocite{cmachine}. As shown by Cousineau et al., they are a potential compilation target for the \(\lambda\)-calculus. Categorical combinators simulate variable substitution with projection over nested tuples (``couples'') constituting the ``environment'' and a curry combinator (\(\Lambda\)). The reduction rules for this calculus resemble the rules of the SK combinator calculus, and their categorical semantics are given by cartesian-closed categories \autocite[p. 178]{cmachine}.
 
-\begin{figure}[h!]
+\begin{figure}[H]
 \begin{center}
 \begin{tabular}{l l}\label{red_untyped_cat}
 (ass) & \((x \circ y) z = x(y z)\) \\
@@ -801,7 +802,7 @@ termination_by A.size.fst
 Finally, we show \(=_{\beta}\) is decidable.
 
 \begin{theorem}
-  For all \(A \in Expr\) and \(B \in Expr\), \((\exists C, A \dashrightarrow^{*} C \land B \dashrightarrow^{*} C \land IsNorm(C)) \lor \neg (\exists C, A \dashrightarrow^{*} C \land B \dashrightarrow^{*} C IsNorm(C))\).
+  For all \(A \in Expr\) and \(B \in Expr\), \((\exists C, A \dashrightarrow^{*} C \land B \dashrightarrow^{*} C \land IsNorm(C)) \lor \neg (\exists C, A \dashrightarrow^{*} C \land B \dashrightarrow^{*} C \land IsNorm(C))\).
 \end{theorem}
 
 \begin{proof}
@@ -1099,11 +1100,19 @@ We hope to use our inference and reduction machinery to mechanize a proof of str
 
 \section{Conclusions}
 
-Our formalization gives a novel extension of the simply-typed categorical combinators \autocite[p. 220]{CURIEN1986188} to a dependently-typed setting. By mechanizing the theory in Lean 4, we provide several indispensible guarantees about the logic. Most importantly, we demonstrate a mechanism for deciding type inference of the calculus. We demonstrate strong normalization of an affine restriction on the categorical combinators, and use this property to prove soundness and completeness of an inference function with respect to typing judgments. In doing so, we also demonstrate a useful technique to avoid conversion in the typing relation, given we have decidable \(\beta_{\rightarrow^{*}}\).
+Our formalization gives a novel extension of the simply-typed categorical combinators \autocite[p. 220]{CURIEN1986188} to a dependently-typed setting. By mechanizing the theory in Lean 4, we provide several indispensable guarantees about the logic. Most importantly, we demonstrate a mechanism for deciding type inference of the calculus. We demonstrate strong normalization of an affine restriction on the categorical combinators, and use this property to prove soundness and completeness of an inference function with respect to typing judgments. In doing so, we also demonstrate a useful technique to avoid conversion in the typing relation, given we have decidable \(\beta_{\rightarrow^{*}}\).
 
-Our proof of judgmental decidability is made possible in principle by the observation that the types of the dependent categorical are purely affine. This fact is not true of equivalent systems, like the dependent \(SK\) combinators.
+Our proof of judgmental decidability is made possible in principle by the observation that the types of the dependent categorical combinators are purely affine. This fact is not true of equivalent systems, like the dependent \(SK\) combinators.
 
 Finally, since the categorical combinators are well-known to be a performant compilation target, we believe that our verified implementation could have ramifications towards the efficient execution of dependent type inference in a purely contextless way.
+
+\appendix
+
+\section{Supplementary Materials}
+
+\textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}\\
+\textbf{Omitted inference cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Judge.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Judge.lean}\\
+\textbf{Omitted reduction cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Step2.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Step2.lean}
 
 \printbibliography
 

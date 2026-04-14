@@ -1073,9 +1073,7 @@ def Judge.decide : Judge e t ⊕ (Judge e t → PLift False) :=
       .inr fun hn => by
         have h_comp := hn.complete
         simp_all
-  else .inr fun hn => by
-    have h_comp := hn.complete
-    simp_all
+  else .inr fun hn => by simp [hn.complete] at *
 
 def JudgeConv.decide : JudgeConv e t ⊕ (JudgeConv e t → PLift False) :=
   if h : (infer e).isSome then
@@ -1085,9 +1083,7 @@ def JudgeConv.decide : JudgeConv e t ⊕ (JudgeConv e t → PLift False) :=
       have h := ha.complete
       simp_all
       exact (heq hb.complete).elim
-  else .inr fun ⟨ha, hb⟩ => by
-    have h := ha.complete
-    simp_all
+  else .inr fun ⟨ha, hb⟩ => by simp [ha.complete] at *
 \end{leancode}
 \end{proof}
 

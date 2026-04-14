@@ -104,37 +104,37 @@ Curien extends the combinators with type annotations, enabling simple typing. Qu
 \begin{center}
 \begin{tabular}{c c c}
 \inferrule[Id]
-{ \Gamma \vdash \alpha : \text{Type}}
-{\Gamma \vdash Id(\alpha) : \alpha \rightarrow \alpha}
+{ \alpha : \text{Type}}
+{Id(\alpha) : \alpha \rightarrow \alpha}
  & 
 \inferrule[Coup]
-{ \Gamma \vdash x : \alpha, y : \beta}
-{ \Gamma \vdash (x, y) : \alpha \times \beta}
+{ x : \alpha, y : \beta}
+{ (x, y) : \alpha \times \beta}
 &
 \inferrule[Comp]
-{ \Gamma \vdash x : \beta \rightarrow \gamma, y : \alpha \rightarrow \beta}
-{ \Gamma \vdash (x \circ y) : \alpha \rightarrow \gamma} \\\\
+{ x : \beta \rightarrow \gamma, y : \alpha \rightarrow \beta}
+{ (x \circ y) : \alpha \rightarrow \gamma} \\\\
 \inferrule[Fst]
-{ \Gamma \vdash \alpha : \text{Type}, \beta : \text{Type}}
-{ \Gamma \vdash Fst(\alpha, \beta) : \alpha \times \beta \rightarrow \alpha}
+{ \alpha : \text{Type}, \beta : \text{Type}}
+{ Fst(\alpha, \beta) : \alpha \times \beta \rightarrow \alpha}
 &
 \inferrule[Snd]
-{ \Gamma \vdash \alpha : \text{Type}, \beta : \text{Type}}
-{ \Gamma \vdash Snd(\alpha, \beta) : \alpha \times \beta \rightarrow \beta}
+{ \alpha : \text{Type}, \beta : \text{Type}}
+{ Snd(\alpha, \beta) : \alpha \times \beta \rightarrow \beta}
 &
 \inferrule[Pair]
-{ \Gamma \vdash x : \alpha \rightarrow \tau_{1}, y : \alpha \rightarrow \tau_{2}}
-{ \Gamma \vdash \langle x, y \rangle : \alpha \rightarrow \tau_{1} \times \tau_{2}}\\\\
+{ x : \alpha \rightarrow \tau_{1}, y : \alpha \rightarrow \tau_{2}}
+{ \langle x, y \rangle : \alpha \rightarrow \tau_{1} \times \tau_{2}}\\\\
 \inferrule[Curr]
-{ \Gamma \vdash x : (\alpha \times \beta) \rightarrow \tau}
-{\Gamma \vdash \Lambda(x) : \alpha \rightarrow \beta \rightarrow \tau}
+{ x : (\alpha \times \beta) \rightarrow \tau}
+{\Lambda(x) : \alpha \rightarrow \beta \rightarrow \tau}
 &
 \inferrule[Appl]
-{ \Gamma \vdash \alpha : \text{Type}, \beta : \text{Type}}
-{ \Gamma \vdash App(\alpha, \beta) : ((\alpha \rightarrow \beta) \times \alpha) \rightarrow \beta}&
+{ \alpha : \text{Type}, \beta : \text{Type}}
+{ App(\alpha, \beta) : ((\alpha \rightarrow \beta) \times \alpha) \rightarrow \beta}&
 \inferrule[App]
-{ \Gamma \vdash f : \alpha \rightarrow \beta\\ \Gamma \vdash x : \alpha} 
-{ \Gamma \vdash f x : \beta}
+{ f : \alpha \rightarrow \beta\\ x : \alpha} 
+{ f x : \beta}
 \end{tabular}
 \end{center}
 \caption{Inference rules of the simply-typed categorical combinators}
@@ -156,8 +156,8 @@ We interpret couples \((a, b)\) as \(\Sigma\)-pairs like such:
 \centering
 \begin{tabular}{c}
   \inferrule[\(\text{Coup}_{1}\)]
-  { \Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}\\ \Gamma \vdash x : \alpha, y : \beta x}
-  {\Gamma \vdash \llbracket \alpha, \beta \rrbracket (a, b) : \Sigma(\alpha, \beta)}
+  { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}\\ x : \alpha, y : \beta x}
+  {\llbracket \alpha, \beta \rrbracket (a, b) : \Sigma(\alpha, \beta)}
 \end{tabular}
 \caption{Couples as dependent sums}
 \end{figure}
@@ -190,8 +190,8 @@ The inference rule for function application is as usual, except the codomain \(\
 \begin{figure}[h!]
 \begin{equation}
   \inferrule[App]
-  { \Gamma \vdash f : \Pi(m, n) \alpha \beta\\ \Gamma \vdash x : \alpha}
-  { \Gamma \vdash f x : \beta \llbracket \sort{m}, Id(\sort{m}) \rrbracket (\alpha, x)}
+  { f : \Pi(m, n) \alpha \beta\\ x : \alpha}
+  { f x : \beta \llbracket \sort{m}, Id(\sort{m}) \rrbracket (\alpha, x)}
 \end{equation}
 \caption{Inference rule: application}
 \end{figure}
@@ -209,7 +209,7 @@ Since we do not make use of variables, \(\Pi(m, n)\) is itself a dependent combi
   \begin{equation}\label{arrow_pi}
     \inferrule
     { }
-    {\Gamma \vdash \Pi(m, n) : \sort{m} \rightarrow (\Sigma(\sort{m}, Id(\sort{m})) \rightarrow \sort{n}) \rightarrow \sort{n}}
+    {\Pi(m, n) : \sort{m} \rightarrow (\Sigma(\sort{m}, Id(\sort{m})) \rightarrow \sort{n}) \rightarrow \sort{n}}
   \end{equation}
   \caption{Arrow typing of \(\Pi(m, n)\) using \(\Sigma\)-judgments}
 \end{figure}
@@ -221,8 +221,8 @@ We define nondependent arrows (\(\alpha \rightarrow \beta\)) as such (where \(`(
 \begin{figure}[h!]
 \begin{equation}\label{arrow_def}
   \inferrule
-  { \Gamma \vdash \alpha : \sort{m}\\ \Gamma \vdash \beta : \sort{n}}
-  {\Gamma \vdash \alpha \rightarrow \beta \coloneq \Pi(m, n)\ \alpha\ `(\sort{n}, \Sigma(\sort{n}, Id(\sort{m})), \beta)}
+  { \alpha : \sort{m}\\ \beta : \sort{n}}
+  {\alpha \rightarrow \beta \coloneq \Pi(m, n)\ \alpha\ `(\sort{n}, \Sigma(\sort{n}, Id(\sort{m})), \beta)}
 \end{equation}
 \end{figure}
 
@@ -235,15 +235,15 @@ The inference rules for projection on couples are as such:\\
   \centering
   \begin{tabular}{c c}
     \inferrule[Fst]
-    {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-    {\Gamma \vdash Fst(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \alpha}&
+    {\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+    {Fst(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \alpha}&
     \inferrule[Snd']
-    {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-    {\Gamma \vdash Snd'(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \beta}\\\\
+    {\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+    {Snd'(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \beta}\\\\
   \end{tabular}
   \inferrule[Snd]
-    {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-    {\Gamma \vdash Snd(\alpha, \beta) : \Pi(s : \Sigma(\alpha, \beta)), \beta(Snd\ s)}
+    {\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+    {Snd(\alpha, \beta) : \Pi(s : \Sigma(\alpha, \beta)), \beta(Snd\ s)}
 \end{figure}
 
 \subsubsection{Identity combinator}
@@ -252,8 +252,8 @@ As do all other combinators, \(Id\) accepts \(\alpha\) as a point. Its type is a
 
 \begin{equation}
   \inferrule[Id]
-  {\Gamma \vdash \alpha : \sort{m}}
-  {\Gamma \vdash Id(\alpha) : \alpha \rightarrow \alpha}
+  {\alpha : \sort{m}}
+  {Id(\alpha) : \alpha \rightarrow \alpha}
 \end{equation}
 
 \subsubsection{Flip combinator}
@@ -262,8 +262,8 @@ We extend Curien's combinators \autocite{CURIEN1986188} with a \(Flip(x)\) combi
 
 \begin{equation}
   \inferrule[Flip]
-  { \Gamma \vdash x : \alpha \rightarrow \beta \rightarrow \gamma}
-  { \Gamma \vdash Flip(x) : \beta \rightarrow \alpha \rightarrow \gamma}
+  { x : \alpha \rightarrow \beta \rightarrow \gamma}
+  { Flip(x) : \beta \rightarrow \alpha \rightarrow \gamma}
 \end{equation}
 
 \subsubsection{Dependent and nondependent composition}
@@ -272,8 +272,8 @@ We have nondependent composition as in Curien's combinators, and add a dependent
 
 \begin{equation}
   \inferrule[Naive comp.]
-  { \Gamma \vdash f : \Pi(x : \alpha), \beta(x), g : \Pi(x : ?), \gamma (f x)}
-  { \Gamma \vdash (g \circ f) : \Pi(x : \alpha), \gamma (f x)}
+  { f : \Pi(x : \alpha), \beta(x), g : \Pi(x : ?), \gamma (f x)}
+  { (g \circ f) : \Pi(x : \alpha), \gamma (f x)}
 \end{equation}
 
 Note that the codomain of \(f\) depends on \(x : \alpha\), but the domain of \(g\) also depends on \(f x : \beta(x)\). By duplicating \(x\), \(?\) can be determined:
@@ -281,8 +281,8 @@ Note that the codomain of \(f\) depends on \(x : \alpha\), but the domain of \(g
 \begin{figure}[h!]
 \begin{equation}
   \inferrule[Naive comp.]
-  { \Gamma \vdash f : \Pi(x : \alpha), \beta(x), g : \Pi(x : \alpha, y : \beta(x)), \gamma x (f x)}
-  { \Gamma \vdash (g \circ f) : \Pi(x : \alpha), \gamma (f x)}
+  { f : \Pi(x : \alpha), \beta(x), g : \Pi(x : \alpha, y : \beta(x)), \gamma x (f x)}
+  { (g \circ f) : \Pi(x : \alpha), \gamma (f x)}
 \end{equation}
 \end{figure}
 
@@ -292,8 +292,8 @@ We avoid copying \(x\) altogether by stipulating that \(f\) produce a couple \(\
   \centering
   \begin{equation}\label{comp}
     \inferrule[Comp.]
-    { \Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, \gamma : \Sigma(\alpha, \beta) \rightarrow \sort{o}}
-    { \Gamma \vdash \llbracket \alpha, \beta, \gamma \rrbracket \circ : \Pi(f : \alpha \rightarrow \Sigma(\alpha, \beta), g : \Pi(x : \Sigma(\alpha, \beta)), \gamma(x), x : \alpha), \gamma(f x)}
+    { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, \gamma : \Sigma(\alpha, \beta) \rightarrow \sort{o}}
+    { \llbracket \alpha, \beta, \gamma \rrbracket \circ : \Pi(f : \alpha \rightarrow \Sigma(\alpha, \beta), g : \Pi(x : \Sigma(\alpha, \beta)), \gamma(x), x : \alpha), \gamma(f x)}
   \end{equation}
   \caption{Inference rule: composition in illustrative notation.}
 \end{figure}
@@ -302,8 +302,8 @@ We avoid copying \(x\) altogether by stipulating that \(f\) produce a couple \(\
   \centering
   \begin{equation}\label{nondep_comp}
     \inferrule[Nondep. comp.]
-    { \Gamma \vdash f : \alpha \rightarrow \beta, g : \beta \rightarrow \gamma}
-    { \Gamma \vdash (g \circ f) : \alpha \rightarrow \gamma}
+    { f : \alpha \rightarrow \beta, g : \beta \rightarrow \gamma}
+    { (g \circ f) : \alpha \rightarrow \gamma}
   \end{equation}
   \caption{Inference rule: nondependent composition}
 \end{figure}
@@ -316,8 +316,8 @@ Recall \(\langle f, g \rangle x = (f x, g x)\). We extend the pair operator with
   \centering
   \begin{equation}\label{pair_infer}
     \inferrule[Pair]
-    { \Gamma \vdash \beta : \sort{n}, \gamma : \beta \rightarrow \sort{o}, f : \alpha \rightarrow \beta, g : \Pi(x : \alpha), \gamma(f x)}
-    { \Gamma \vdash \llbracket \beta, \gamma \rrbracket \langle f, g \rangle : \alpha \rightarrow \Sigma(\beta, \gamma)}
+    { \beta : \sort{n}, \gamma : \beta \rightarrow \sort{o}, f : \alpha \rightarrow \beta, g : \Pi(x : \alpha), \gamma(f x)}
+    { \llbracket \beta, \gamma \rrbracket \langle f, g \rangle : \alpha \rightarrow \Sigma(\beta, \gamma)}
   \end{equation}
 \end{figure}
 
@@ -329,8 +329,8 @@ The quotation operator (\(`(\alpha, \beta, x)\)) is not dependent, but a depende
   \centering
   \begin{equation}
     \inferrule[Quot]
-    { \Gamma \vdash \alpha : \sort{m}, \beta : \sort{n}, x : \alpha}
-    { \Gamma \vdash `(\alpha, \beta, x) : \beta \rightarrow \alpha }
+    { \alpha : \sort{m}, \beta : \sort{n}, x : \alpha}
+    { `(\alpha, \beta, x) : \beta \rightarrow \alpha }
   \end{equation}
 \end{figure}
 
@@ -341,8 +341,8 @@ Recall \(\Lambda(x) y z = x (y, z)\). Since \(x\) is applied a \(\Sigma\)-couple
 \begin{figure}[h!]
 \begin{equation}\label{head_curry}
   \inferrule[Head Curry]
-  {\Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, x : \Sigma(\alpha, \beta) \rightarrow \gamma}
-  {\Gamma \vdash \Lambda'(\alpha, \beta, x) : \Pi(x : \alpha, y : \beta(x)), \gamma}
+  {\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, x : \Sigma(\alpha, \beta) \rightarrow \gamma}
+  {\Lambda'(\alpha, \beta, x) : \Pi(x : \alpha, y : \beta(x)), \gamma}
 \end{equation}
 \caption{Inference rule: head-dependent curry}
 \end{figure}
@@ -350,8 +350,8 @@ Recall \(\Lambda(x) y z = x (y, z)\). Since \(x\) is applied a \(\Sigma\)-couple
 \begin{figure}[h!]
 \begin{equation}\label{tail_curry}
   \inferrule[Tail Curry]
-  {\Gamma \vdash \alpha : \sort{m + 1}, x : \Pi(s : \Sigma(\alpha, Id(\alpha))), \gamma(s)}
-  {\Gamma \vdash \Lambda(\alpha, x) : \Pi(x : \alpha, y : x), \gamma \llbracket \alpha, Id(\alpha) \rrbracket (x, y)}
+  {\alpha : \sort{m + 1}, x : \Pi(s : \Sigma(\alpha, Id(\alpha))), \gamma(s)}
+  {\Lambda(\alpha, x) : \Pi(x : \alpha, y : x), \gamma \llbracket \alpha, Id(\alpha) \rrbracket (x, y)}
 \end{equation}
 \caption{Inference rule: tail-dependent curry}
 \end{figure}
@@ -364,8 +364,8 @@ As in Curien's combinators, the \(App\) combinator evaluates a couple as a compu
 %   \centering
 %   \begin{equation}\label{infer_app}
 %     \inferrule[Appl]
-%     { \Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-%     { \Gamma \vdash App(n, \alpha, \beta) : \Pi(max m n, n)\
+%     { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+%     { App(n, \alpha, \beta) : \Pi(max m n, n)\
 %       \Sigma(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha))\
 %       ((\Lambda'(\sort{m}, Id(\sort{m}), \beta) \alpha) \circ' (Snd(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha)) \circ' Snd'(\sort{max(m, n)}, \Sigma(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha))))) }
 %   \end{equation}
@@ -376,8 +376,8 @@ As in Curien's combinators, the \(App\) combinator evaluates a couple as a compu
   \centering
   \begin{equation}\label{infer_app}
     \inferrule[Appl]
-    { \Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-    { \Gamma \vdash App(n, \alpha, \beta) : \Pi(x : \Sigma(\Pi(x : \alpha), \beta(x), \alpha)), \beta(Snd\ x) }
+    { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+    { App(n, \alpha, \beta) : \Pi(x : \Sigma(\Pi(x : \alpha), \beta(x), \alpha)), \beta(Snd\ x) }
   \end{equation}
   \caption{Inference rule for \(App\) written illustratively.}
 \end{figure}

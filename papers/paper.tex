@@ -824,7 +824,7 @@ instance : Decidable (∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C ∧ C.I
 %  - decidable instance for \(=_{\beta}\), some proofs about the reduction function if relevant
 %}
 
-\section{Decidable Type Inference}
+\section{Type Inference}
 
 Note that the types of all of the dependent categorical combinators are affine \eqref{infer_rules}. Hence, we use our decision procedure \eqref{decide_beta_eq} for \(=_{\beta}\) under affine-reduction to prove decidability of type-checking.
 
@@ -989,31 +989,105 @@ def id_preservation (h : JudgeConv (DCC (Id(α) x)) α.reduce) : (JudgeConv x α
 
 \subsubsection{Infer Completeness}
 
+Yet another advantage of avoiding a conversion constructor, and of having decidable \(\beta_{=}\) is that completeness is provable. We have omitted all but the \mintinline{lean}{curr}, \mintinline{lean}{app_e}, \mintinline{lean}{sort}, and \mintinline{lean}{app} constructors (see supplementary materials).
 
+\begin{theorem}
+  For all \(e \in Expr\) and \(t \in Expr\), if \(e : t\), then \texttt{infer e = some t}.
+\end{theorem}
 
-% next section
-\comment{
-  - lead with how decidable \(=_{\beta}\) means we can implement decidable type-checking
-  - explain design decisions with ``bridge'' between reduction relation and the reduce function
-    - explain how we don't reduce inside infer, just to compare where applicable with Reduces
-  - give two of the key constructors for Judge
-    - sort
-    - \(\Lambda\)
-    - application
-  - briefly outline implementation of the infer function
-  - show completeness proof, in full, maybe refactor a little to make it cleaner
-  - show decidable theorem
-}
+\begin{proof}
+We proceed by parallel induction on the typing derivation and case analysis on the unfolding of \mintinline{lean}{infer}.
+\begin{leancode}
+theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
+  induction h_t with
+  | sort =>
+    unfold infer
+    rfl
+  | curr h_t_α h_red₁ h_t_x h_red₂ ih₁ ih₂ =>
+    have ha := h_red₁.complete
+    have hb := h_red₂.complete
+    unfold infer
+    rw [ih₁, ih₂]
+    simp
+    split
+    case h_1 heq =>
+      rw [heq] at ha
+      cases ha
+      split
+      case h_1 heq =>
+        rw [heq] at hb
+        cases hb
+        simp
+        split
+        rfl
+      case h_2 h =>
+        exact (h _ _ _ _ _ hb).elim
+    case h_2 h =>
+      exact (h _ ha).elim
+  | app_e h_t_α h_red₁ ih =>
+    have ha := h_red₁.complete
+    unfold infer
+    rw [ih]
+    simp
+    split
+    case h_1 heq =>
+      rw [heq] at ha
+      cases ha
+      rfl
+    case h_2 h =>
+      exact (h _ ha).elim
+  | app h_t_f h_red_f h_t_x h_red_x ih₁ ih₂ =>
+    have ha := h_red_f.complete
+    have hb := h_red_x.complete
+    unfold infer
+    simp [ih₁, ih₂]
+    split
+    case h_1 heq =>
+      rw [heq] at ha
+      cases ha
+      cases hb
+      simp
+      aesop
+    case h_2 h =>
+      exact (h _ _ _ _ ha).elim
+\end{leancode}
+\end{proof}
 
-\comment{
-  TOOD:
-  Remaining structure:
-  - show that step? is sound + complete
-  - show reduce is sound + complete
-  - show uniquness of normal forms
-  - show that \(\beta_{=}\) terminates
-  - Show that type-checking is decidable
-}
+\subsection{Judgmental Decidability}
+
+Using our proof of completeness and soundness proof produced by \mintinline{lean}{infer}, we demonstrate judgmental decidability.
+
+\begin{theorem}
+  For all \(e \in Expr\) and \(t \in Expr\), \(e : t \lor \neg e : t\).
+\end{theorem}
+
+\begin{proof}
+\begin{leancode}
+def Judge.decide : Judge e t ⊕ (Judge e t → PLift False) :=
+  if h : (infer e).isSome then
+    if heq : ((infer e).get h).fst = t then
+      .inl (heq ▸ ((infer e).get h).snd)
+    else
+      .inr fun hn => by
+        have h_comp := hn.complete
+        simp_all
+  else .inr fun hn => by
+    have h_comp := hn.complete
+    simp_all
+
+def JudgeConv.decide : JudgeConv e t ⊕ (JudgeConv e t → PLift False) :=
+  if h : (infer e).isSome then
+    if heq : ((infer e).get h).fst.reduce = t then
+      .inl ⟨((infer e).get h).snd, reduce_reduces heq⟩
+    else .inr fun ⟨ha, hb⟩ => by
+      have h := ha.complete
+      simp_all
+      exact (heq hb.complete).elim
+  else .inr fun ⟨ha, hb⟩ => by
+    have h := ha.complete
+    simp_all
+\end{leancode}
+\end{proof}
 
 \printbibliography
 

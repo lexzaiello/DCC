@@ -997,11 +997,3 @@ def JudgeConv.decide : JudgeConv e t ⊕ (JudgeConv e t → PLift False) :=
 def judge_sound (_h_t : Expr.infer e = .some ⟨t, h⟩) : e.Judge t := h
 
 end Expr
-
-/-
-def point_free_id (h_t_α : α.Judge (DCC Sort m)) (h_t_x : x.Judge α) : (DCC (#(Expr.mk_id m) α x)).Judge α := by
-  unfold Expr.mk_id
-  have h := Expr.Judge.app 
-  
-  sorry
--/

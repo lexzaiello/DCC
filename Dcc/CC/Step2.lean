@@ -664,9 +664,7 @@ theorem reduce_sound (heq : reduce A = B) : RedAffReflTrans A B := by
     unfold reduce at heq
     split at heq
     case h_1 h_red h_step_eq =>
-      simp at heq
-      have h := ih _ h_red heq
-      exact Relation.ReflTransGen.trans (.single h_red) h
+      exact Relation.ReflTransGen.trans (.single h_red) (ih _ h_red heq)
     case h_2 => simp_all only [forall_eq']; exact .refl
 
 def reduce_diamond (A B : Expr) : Option ((C : Expr) × (PLift (RedAffReflTrans A C ∧ RedAffReflTrans B C))) :=

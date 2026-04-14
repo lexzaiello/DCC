@@ -394,7 +394,7 @@ Our reduction rules are the same as in the categorical abstract machine \autocit
 \begin{figure}[h!]\label{red_untyped_cat}
 \centering
 \begin{tabular}{l l}
-  (id) & \((x \circ' y) z \rightarrow x(y z)\) \\
+  (id) & \(Id(\alpha) x \rightarrow x\) \\
   (ass') & \((x \circ' y) z \rightarrow x(y z)\) \\
   (ass) & \(\llbracket \alpha, \beta, \gamma \rrbracket \circ x y z \rightarrow x(y z)\) \\
   (fst) & \(Fst(\alpha, \beta)\ \llbracket \ldots \rrbracket (a, b) \rightarrow a\) \\
@@ -566,7 +566,9 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) :
       exact ⟨_, .congrFun h₁, .congrFun h₂⟩
     case congrArg f f' x x'' h_x =>
       exact ⟨_, .congrArg (.single h_x), .congrFun (.single h_r)⟩
-  | _ => ...
+  | _ =>
+    -- remaining cases omitted
+    sorry
   \end{leancode}
 \end{proof}
 
@@ -599,6 +601,142 @@ theorem RedAffReflTrans.conf (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTran
       exact ⟨_, .refl, h₁⟩
   \end{leancode}
 \end{proof}
+
+\begin{theorem}
+  For all \(e \in Expr\), if \(A \dashrightarrow B\) and \(A \dashrightarrow C\), and \(B\) and \(C\) are normal forms, then \(B = C\).
+\end{theorem}
+
+\begin{proof}
+  We define normal forms as such:
+\begin{leancode}
+def IsNormAff (e : Expr) : Prop := ¬ ∃ e', RedAff e e'
+\end{leancode}
+
+  We proceed by induction on the confluent reduct of \(B\) and \(C\):
+
+\begin{leancode}
+  theorem RedAff.norm_unique (h₁ : RedAff A B) (h_norm : B.IsNormAff)
+  (h₂ : RedAff A C) (h_norm₂ : C.IsNormAff) : B = C := by
+  have ⟨D, ha, hb⟩ := h₁.conf h₂
+  match ha.cases_head, hb.cases_head with
+  | .inl h₁, .inl h₂ =>
+    simp_all
+  | .inr ⟨c₁, h₁, h₂⟩, _ =>
+    exact h_norm.elim ⟨_, h₁⟩
+  | _, .inr ⟨c₁, h₁, h₂⟩ =>
+    exact h_norm₂.elim ⟨_, h₁⟩
+\end{leancode}
+\end{proof}
+
+\begin{theorem}
+  For all \(e \in Expr\), if \(A \dashrightarrow^{*} B\) and \(A \dashrightarrow^{*} C\), and \(B\) and \(C\) are normal forms, then \(B = C\).
+\end{theorem}
+
+\begin{proof}
+  We proceed by induction on the global-confluent reduct of \(B\) and \(C\).
+
+\begin{leancode}
+theorem RedAffReflTrans.norm_unique (h₁ : RedAffReflTrans A B) (h_norm : B.IsNormAff)
+  (h₂ : RedAffReflTrans A C) (h_norm₂ : C.IsNormAff) : B = C := by
+  have ⟨D, ha, hb⟩ := h₁.conf h₂
+  match ha.cases_head, hb.cases_head with
+  | .inl h₁, .inl h₂ =>
+    simp_all
+  | .inr ⟨c₁, h₁, h₂⟩, _ =>
+    exact h_norm.elim ⟨_, h₁⟩
+  | _, .inr ⟨c₁, h₁, h₂⟩ =>
+    exact h_norm₂.elim ⟨_, h₁⟩
+\end{leancode}
+\end{proof}
+
+\subsection{Decidable Beta-Equality}
+
+Using our decreasing measure \mintinline{lean}{size}, we give a decision procedure for \(=_{\beta}\). We implement an instance of \mintinline{lean}{∃ C, RedAffReflTrans A C ∧ RedAffReflTrans B C ∧ C.IsNormAff} by proving soundness and completeness (with respect to normal-forms) for \(\beta\)-reduction.\\
+
+First, we define \texttt{step} and \texttt{reduce} functions with soundness using our measure:
+
+\begin{leancode}
+def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
+  match e with
+  | (DCC (App(_n, _δ, _τ) ⟦_α, _β⟧(f, x)))  => .some ⟨(DCC (f x)), ⟨.app⟩⟩
+  | (DCC (Fst(_δ, _τ) ⟦_α, _β⟧(a, _b)))     => .some ⟨a, ⟨.fst⟩⟩
+  | (DCC (Snd(_δ, _τ) ⟦_α, _β⟧(_a, b)))     => .some ⟨b, ⟨.snd⟩⟩
+  | (DCC (Snd'(_δ, _τ) ⟦_α, _β⟧(_a, b)))    => .some ⟨b, ⟨.snd'⟩⟩
+  | (DCC (Flip(e) x y))                     => .some ⟨(DCC (e y x)), ⟨.flip⟩⟩
+  | (DCC (Id(_α) x))                        => .some ⟨x, ⟨.id⟩⟩
+  | (DCC (`(_α, _β, x) _y))                 => .some ⟨x, ⟨.quot⟩⟩
+  | (DCC ((⟦_α, _β, _γ⟧∘ x y) z))           => .some ⟨(DCC (x (y z))), ⟨.comp⟩⟩
+  | (DCC ((x ∘' y) z))                      => .some ⟨(DCC (x (y z))), ⟨.comp'⟩⟩
+  | (DCC (Λ(α, x) y z))                     => .some ⟨(DCC (x ⟦α, Id(α)⟧(y, z))), ⟨.curr⟩⟩
+  | (DCC (Λ'(α, β, x) y z))                 => .some ⟨(DCC (x ⟦α, β⟧(y, z))), ⟨.curr'⟩⟩
+  | DCC (f x) =>
+    match f.step?, x.step? with
+    | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC (f' x)), ⟨.congrFun h₁⟩⟩
+    | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC (f x')), ⟨.congrArg h₁⟩⟩
+    | _, _ => .none
+  | _ => .none
+
+def reduce (e : Expr) : Expr :=
+  match step? e with
+  | .some ⟨e', ⟨h⟩⟩ =>
+    -- This hypothesis allows the recursion. Easy to prove.
+    have _h_size : e'.size.fst < e.size.fst := h.decreasing
+    e'.reduce
+  | .none => e
+\end{leancode}
+
+\begin{theorem}
+  For all \(e \in Expr\), and \texttt{reduce A = B}, then \(A \dashrightarrow^{*} B\).
+\end{theorem}
+
+\begin{proof}
+\begin{leancode}
+
+
+  theorem reduce_sound (heq : reduce A = B) : RedAffReflTrans A B := by
+  induction A using instWellFounded.induction generalizing B with
+  | h a ih =>
+    unfold reduce at heq
+    split at heq
+    case h_1 h_red h_step_eq =>
+      exact Relation.ReflTransGen.trans (.single h_red) (ih _ h_red heq)
+    case h_2 => simp_all only [forall_eq']; exact .refl
+\end{leancode}
+\end{proof}
+
+By using our decreasing measure and showing completeness for \mintinline{lean}{step?} with respect to normal forms under \(\dashrightarrow\), we prove completeness of \mintinline{lean}{reduce} with respect to normal forms under \(\dashrightarrow^{*}\).
+
+\begin{theorem}
+  For all \(e \in Expr\), if \(A \dashrightarrow B\) and \(B\) is a normal form, then \texttt{step A = B}.
+\end{theorem}
+
+%\comment{
+%  theorems needed for this:
+%  - 
+%}
+%
+%\comment{
+%  - Using our decreasing measure, we give a decision procedure for \(=_{\beta}\).
+%  - brief skim-by step? function
+%  - full-reduction function, show how it uses ty_size.decreasing
+%  - decidable instance for \(=_{\beta}\), some proofs about the reduction function if relevant
+%}
+
+\section{Decidable Type Inference}
+
+% next section
+\comment{
+  - lead with how decidable \(=_{\beta}\) means we can implement decidable type-checking
+  - explain design decisions with ``bridge'' between reduction relation and the reduce function
+    - explain how we don't reduce inside infer, just to compare where applicable with Reduces
+  - give two of the key constructors for Judge
+    - sort
+    - \(\Lambda\)
+    - application
+  - briefly outline implementation of the infer function
+  - show completeness proof, in full, maybe refactor a little to make it cleaner
+  - show decidable theorem
+}
 
 \comment{
   TOOD:

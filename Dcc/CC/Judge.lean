@@ -41,7 +41,14 @@ theorem RedAff.arrow : RedAff (arrow α β m n) τ₂ →  (∃ γ, RedAff α γ
       exact (.inl ⟨_, h, rfl⟩)
   | congrArg h => cases h
 
-theorem reduce_comp : reduce (DCC (f ∘' g)) =  (DCC (f ∘' g)) := by
+theorem reduce_step : (step? e) = .some ⟨e', _h⟩ → reduce e = reduce e' := by
+  intro h
+  conv =>
+    left
+    unfold reduce
+    rw [h]
+
+@[simp] theorem reduce_comp'₀ : reduce (DCC (f ∘' g)) = (DCC (f ∘' g)) := by
   unfold reduce
   simp [step?]
 
@@ -71,7 +78,7 @@ theorem reduce_congr_pi : reduce (DCC (Π(m, n) α β)) = (DCC (Π(m, n) α.redu
       have hb := step?_none h_β
       exact ⟨ha.complete_reduce.symm, hb.complete_reduce.symm⟩
 
-theorem reduce_congr_quot : reduce (DCC (`(α, β, x) y)) = reduce x := by
+@[simp] theorem reduce_congr_quot : reduce (DCC (`(α, β, x) y)) = reduce x := by
   induction x using instWellFounded.induction with
   | h a ih =>
     conv =>
@@ -86,7 +93,7 @@ theorem reduce_congr_self_arrow : reduce (arrow A β m n) = (arrow (reduce A) β
     simp [arrow, step?]
     aesop
 
-theorem reduce_congr_arrow (h : reduce A = B) : reduce (arrow A β m n) = (arrow B β m n) := by
+@[simp] theorem reduce_congr_arrow (h : reduce A = B) : reduce (arrow A β m n) = (arrow B β m n) := by
   rw [← h]
   exact reduce_congr_self_arrow
 
@@ -574,26 +581,41 @@ def id_well_typed (h_t_α : Judge α (DCC Sort m)) (h_t_x : Judge x α) : JudgeC
     apply Judge.id
     · assumption
     · exact reduce_reduces (by simp [reduce, step?]; rfl)
-    · exact reduce_reduces (by simp [id.type]; exact reduce_congr_self_arrow)
+    · exact reduce_reduces (by simp [id.type]; rfl)
     · assumption
     · exact reduce_reduces rfl
   · exact reduce_reduces reduce_congr_quot
 
-def id_preservation' (h : JudgeConv (DCC (Id(α) x)) α.reduce) : (JudgeConv x α.reduce) :=
+def comp'_preservation (h : JudgeConv (DCC ((f ∘' g) x)) α) : JudgeConv (DCC (f (g x))) α :=
   match h with
-  | ⟨h_t, h_red⟩=> by
+  | ⟨h_t, h_red⟩ => by
+    cases h_t with
+    | app h_t_f h_r_t_f h_t_x h_r_t_x =>
+      cases h_t_f with
+      | comp' h_t_g h_arrow_g h_t_f h_r_t_f' =>
+        have ha := h_r_t_f.complete
+        have hb := h_r_t_x.complete
+        have hc := h_red.complete
+        rw [comp'.type, reduce_congr_pi] at ha
+        cases ha
+        simp_all
+        have h_α_norm : α.IsNormAff := reduce_norm hc
+        rw [reduce_step (by simp [step?]; aesop)] at hc
+        cases h_arrow_g with
+        | mk a =>
+          refine ⟨Judge.app h_t_f h_r_t_f' (Judge.app h_t_g a h_t_x ?_) ?_, ?_⟩
+          apply reduce_reduces
+          rw [h]
+
+def id_preservation (h : JudgeConv (DCC (Id(α) x)) α.reduce) : (JudgeConv x α.reduce) :=
+  match h with
+  | ⟨h_t, h_red⟩ => by
     cases h_t with
     | app h_t_id b h_t_x d =>
       cases h_t_id with
       | id =>
         cases reduce_arrow b.complete
         exact ⟨h_t_x, by assumption⟩
-
-def id_preservation (h : Judge (DCC (Id(α) x)) α₂) : (JudgeConv x α.reduce) := by
-  cases h with
-  | app h_t_id b h_t_x d =>
-    cases h_t_id with
-    | id => cases reduce_arrow b.complete; exact ⟨h_t_x, by assumption⟩
 
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Id(Sort 1) (Sort 0)))
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (⟦Sort 2, Id(Sort 2)⟧(Sort 1, Sort 0)))

@@ -919,8 +919,73 @@ deriving Repr
 Using our terminating affine \(\beta\)-reduction function and \mintinline{lean}{reduce_reduces}, we define an \mintinline{lean}{infer} function with soundness. We give only the cases described in our \mintinline{lean}{Judge} illustration, though the rest are available in supplementary materials. Pattern matching against our \mintinline{lean}{Judge} constructors is somewhat obtuse, primarily due to our design decision to avoid adding a conversion constructor and reducing the inferred types.
 
 \begin{leancode}
-  
+def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) :=
+  match e with
+  | DCC Sort m => .some ⟨DCC Sort m.succ, .sort⟩
+  | DCC Λ'(α, β, x) =>
+    match x.infer, β.infer with
+    | .some ⟨t_x, h_t_x⟩, .some ⟨t_β, h_t_β⟩ =>
+      match t_x.is_arrow, t_β.is_arrow with
+      | .some ⟨DCC Σ(α₁, β₂), γ, mn, o, heq₁⟩, .some ⟨DCC α₂, DCC Sort n, m, n₂, heq₂⟩ =>
+        if heq : mn = max m n ∧ β₂ = β ∧ n₂ = n.succ ∧ α₂ = α ∧ α₁ = α then
+          have ⟨ha, hb, hc, hd, he⟩ := heq
+          .some ⟨_, .curr' h_t_x (by rw [ha, hb, he] at heq₁; exact heq₁) h_t_β (by rw [hd, hc] at heq₂; exact heq₂)⟩
+        else .none
+      | _, _ => .none
+    | _, _ => .none
+  | DCC Λ(α, x) =>
+    match heq₀ : α.infer, x.infer with
+    | .some ⟨t_α, h_t_α⟩, .some ⟨t_x, h_t_x⟩ =>
+      match heq₁ : t_α.reduce with
+      | DCC Sort m + 1 =>
+        match heq₃ : t_x.reduce with
+        | (DCC (Π(m₂ + 1, n) Σ(α₁, Id(α₂)) γ₂)) =>
+          if heq₂ : m₂ = m ∧ α₁ = α ∧ α = α₂ then
+            have ⟨ha, hb, hc⟩ := heq₂
+            .some ⟨_, Judge.curr
+              h_t_α
+              (reduce_reduces heq₁)
+              h_t_x
+              (ha ▸ hb ▸ hc ▸ (reduce_reduces heq₃))⟩
+          else .none
+        | _ => .none
+      | _ => .none
+    | _, _ => .none
+  | DCC (f x) => match f.infer, x.infer with
+    | .some ⟨t_f, h_f⟩, .some ⟨t_x, h_x⟩ =>
+      match heq₀ : t_f.reduce, heq₁ : t_x.reduce with
+      | DCC (Π(m, n) α₁ β), α₂ =>
+        if heq : α₁ = α₂ then
+          .some ⟨(DCC (β ⟦Sort m, Id(Sort m)⟧(α₁, x))), .app h_f (reduce_reduces heq₀) h_x (reduce_reduces (heq ▸ heq₁))⟩
+        else .none
+      | _, _ => .none
+    | _, _ => .none
+  | _ => sorry -- remaining cases omitted for brevity
+
+def infer_conv (e : Expr) : Option ((t : Expr) × JudgeConv e t) :=
+  match infer e with
+  | .some ⟨t, h⟩ =>
+    .some ⟨t.reduce, ⟨h, reduce_reduces rfl⟩⟩
+  | _ => .none
 \end{leancode}
+
+Avoiding a conversion constructor proves to be quite advantageous, since neither confluence or induction are necessary, and case analysis suffices to prove useful properties. For example, a proof of preservation of \(Id(\alpha) x\) is quite straightforward.
+
+\begin{theorem}
+  For all \(\alpha \in Expr\) and \(x \in Expr\), if \(Id(\alpha) x : reduce(\alpha)\), then \(x : reduce(\alpha)\).
+\end{theorem}
+
+\begin{proof}
+  We proceed by case analysis on the judgment \(Id(\alpha) x : reduce(\alpha)\).
+
+\begin{leancode}
+def id_preservation (h : JudgeConv (DCC (Id(α) x)) α.reduce) : (JudgeConv x α.reduce) :=
+  match h with
+  | ⟨.app (.id _ _) b h_t_x _, h_red⟩ => by
+    cases reduce_arrow b.complete
+    exact ⟨h_t_x, by assumption⟩
+\end{leancode}
+\end{proof}
 
 % next section
 \comment{

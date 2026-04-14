@@ -588,13 +588,9 @@ def id_well_typed (h_t_α : Judge α (DCC Sort m)) (h_t_x : Judge x α) : JudgeC
 
 def id_preservation (h : JudgeConv (DCC (Id(α) x)) α.reduce) : (JudgeConv x α.reduce) :=
   match h with
-  | ⟨h_t, h_red⟩ => by
-    cases h_t with
-    | app h_t_id b h_t_x d =>
-      cases h_t_id with
-      | id =>
-        cases reduce_arrow b.complete
-        exact ⟨h_t_x, by assumption⟩
+  | ⟨.app (.id _ _) b h_t_x _, h_red⟩ => by
+    cases reduce_arrow b.complete
+    exact ⟨h_t_x, by assumption⟩
 
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (Id(Sort 1) (Sort 0)))
 #eval (Std.format ∘ Sigma.fst) <$> infer (DCC (⟦Sort 2, Id(Sort 2)⟧(Sort 1, Sort 0)))

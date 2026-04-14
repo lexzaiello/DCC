@@ -1063,6 +1063,8 @@ Using our proof of completeness and soundness proof produced by \mintinline{lean
 
 \begin{proof}
 \begin{leancode}
+
+
 def Judge.decide : Judge e t ⊕ (Judge e t → PLift False) :=
   if h : (infer e).isSome then
     if heq : ((infer e).get h).fst = t then

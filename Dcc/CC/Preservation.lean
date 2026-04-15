@@ -4,6 +4,13 @@ import Dcc.CC.Judge
 
 namespace Expr
 
+def Reduces.reduce_self (h : Reduces τ τ') : Reduces τ τ'.reduce :=
+  match h with
+  | ⟨h_red, h_norm⟩ =>
+    reduce_reduces (by
+      rw [← h_red.complete h_norm]
+      exact _root_.Expr.reduce_self)
+
 namespace IsArrow
 
 def reduce (h : IsArrow τ α β m n) : Reduces τ (DCC (Π(m, n) α.reduce `(Sort n, Σ(Sort m, Id(Sort m)), β))) :=
@@ -67,8 +74,23 @@ def preservation_flip : JudgeConv (DCC (Flip(x) y z)) t → JudgeConv (DCC (x z 
     | app h_t_flip_x t_flip_x_red h_t_y red_t_y =>
       cases h_t_flip_x with
       | flip h_t_x arrow₁_t_x arrow₂_t_x =>
-        refine ⟨.app (.app h_t_x arrow₁_t_x.reduce h_t_z (by sorry)) ?_ h_t_y ?_, ?_⟩
-        sorry
+        cases reduce_arrow t_flip_x_red.complete
+        have h := reduce_congr_quot ▸ t_xy_red.complete
+        rename_i α₁ _ _ _ _ _ _ α _ _ _ _ _
+        have heq : α.reduce = α₁ := by
+          simp_all
+          cases h
+          rfl
+        simp_all
+        cases h
+        have h := arrow₂_t_x.reduce
+        refine ⟨.app (.app h_t_x arrow₁_t_x.reduce h_t_z (by rw [heq]; exact t_z_red)) (by
+          rw [heq]
+          apply reduce_reduces
+          rw [reduce_congr_quot]
+          exact h.complete) h_t_y red_t_y, reduce_reduces ?_⟩
+        rw [reduce_congr_quot]
+        exact reduce_congr_quot ▸ h_red.complete
 
 def preservation_comp' : JudgeConv (DCC ((f ∘' g) x)) t
   → JudgeConv (DCC (f (g x))) t := fun h@⟨h_t, h_red⟩ =>

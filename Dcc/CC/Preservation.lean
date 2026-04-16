@@ -21,6 +21,32 @@ def reduce (h : IsArrow τ α β m n) : Reduces τ (DCC (Π(m, n) α.reduce `(So
 
 end IsArrow
 
+theorem reduce_sigl_congrArg : reduce (DCC ⟦α, β⟧(a, b)) = (DCC ⟦α, β⟧(a.reduce, b.reduce)) := by
+  let lex_rel := Prod.lex instWellFoundedRel instWellFoundedRel
+  induction heq : (a, b) using lex_rel.wf.induction generalizing a b with
+  | h a ih =>
+    cases heq
+    conv =>
+      left
+      unfold reduce
+    simp [step?]
+    split
+    case h_1 h _ =>
+      cases h
+      case congrFun h _ =>
+        cases h
+        case congrFun h _ => cases h
+        case congrArg x' h _ =>
+          exact h.reduce_same ▸ (ih (x', b) (.left b b h) rfl)
+      case congrArg b' h_r_b heq =>
+        exact h_r_b.reduce_same ▸ ih (a, b') (by apply Prod.Lex.right; exact h_r_b) rfl
+    case h_2 heq =>
+      cases h_a : a.step? <;> simp_all
+      cases h_b : b.step? <;> simp_all
+      have ha := step?_none h_a
+      have hb := step?_none h_b
+      exact ⟨ha.complete_reduce.symm, hb.complete_reduce.symm⟩
+
 theorem reduce_curr : reduce (DCC (Λ(α, x) y z)) = (DCC (x ⟦α, Id(α)⟧(y, z))).reduce := by
   conv =>
     left
@@ -65,6 +91,34 @@ def invert_app : JudgeConv (DCC (f x)) t → (α β : Expr) × (m n : Level)
   match h_t with
   | .app (α := α) (β := β) (m := m) (n := n) h_t_f h_red_pi h_t_x h_red_α =>
     ⟨α, β, m, n, ⟨h_t_x, h_red_α⟩, ⟨h_t_f, h_red_pi⟩, h_red⟩
+
+def preservation_id (h : JudgeConv (DCC (Id(α) x)) α.reduce) : (JudgeConv x α.reduce) :=
+  match h with
+  | ⟨.app (.id _ _) b h_t_x _, h_red⟩ => by
+    cases reduce_arrow b.complete
+    exact ⟨h_t_x, by assumption⟩
+
+def preservation_comp (h : JudgeConv (DCC (⟦α, β, γ⟧∘ x y z)) τ) : JudgeConv (DCC (x (y z))) τ :=
+  match h with
+  | t@⟨h_t, h_red ⟩ => by
+    cases h_t with
+    | app h_t_f red_t_f h_t_x h_red_x =>
+      cases h_t_f with
+      | app h_t_f₂ red_t_f₂ h_t_x₂ red_x₂ =>
+        cases h_t_f₂ with
+        | app h_t_f red_t_f₃ h_t_x₃ red_x₃ =>
+          cases h_t_f with
+          | comp h_t_α red_t_α h_t_β h_arrow₁ h_t_γ h_arrow₂ =>
+            have h := red_t_f₃.complete
+            unfold comp.type at h
+            rw [reduce_congr_pi, reduce_comp'₀] at h
+            simp_all
+            have ⟨⟨heq₁, heq₂⟩, heq₃⟩ := h
+            have h := red_t_f₂.complete
+            rw [reduce_congrArg] at h
+            
+            refine ⟨.app h_t_x₃ (reduce_reduces (by rw [red_x₃.complete]; exact heq₂.symm))
+              (.app h_t_x₂ (by sorry) h_t_x ?_) (by sorry), ?_⟩
 
 def preservation_flip : JudgeConv (DCC (Flip(x) y z)) t → JudgeConv (DCC (x z y)) t :=
   fun h@⟨h_t, h_red⟩ => by

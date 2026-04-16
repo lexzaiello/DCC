@@ -47,6 +47,12 @@ theorem reduce_sigl_congrArg : reduce (DCC ⟦α, β⟧(a, b)) = (DCC ⟦α, β�
       have hb := step?_none h_b
       exact ⟨ha.complete_reduce.symm, hb.complete_reduce.symm⟩
 
+@[simp] theorem reduce_comp' : reduce (DCC ((f ∘' g) x)) = (DCC (f (g x))).reduce := by
+  conv =>
+    left
+    unfold reduce
+  rw [step?]
+
 theorem reduce_curr : reduce (DCC (Λ(α, x) y z)) = (DCC (x ⟦α, Id(α)⟧(y, z))).reduce := by
   conv =>
     left
@@ -115,10 +121,12 @@ def preservation_comp (h : JudgeConv (DCC (⟦α, β, γ⟧∘ x y z)) τ) : Jud
             simp_all
             have ⟨⟨heq₁, heq₂⟩, heq₃⟩ := h
             have h := red_t_f₂.complete
-            rw [reduce_congrArg] at h
-            
-            refine ⟨.app h_t_x₃ (reduce_reduces (by rw [red_x₃.complete]; exact heq₂.symm))
-              (.app h_t_x₂ (by sorry) h_t_x ?_) (by sorry), ?_⟩
+            rw [← heq₃, reduce_comp', reduce_congr_pi] at h
+            conv at h =>
+              left
+              rw [reduce_congr]
+              rfl
+            sorry
 
 def preservation_flip : JudgeConv (DCC (Flip(x) y z)) t → JudgeConv (DCC (x z y)) t :=
   fun h@⟨h_t, h_red⟩ => by

@@ -75,6 +75,139 @@ def MExpr.from_expr (e : Q(_root_.Expr)) : TermElabM MExpr :=
       (do pure <| (← from_expr f).app (← from_expr x)) <|> return .lean e
     | e => return .lean e
 
+namespace MExpr
+
+declare_syntax_cat mexpr
+
+syntax "#(" term ")"                                             : mexpr
+syntax:max "Flip(" mexpr,* ")"                                    : mexpr
+syntax:max "Id(" mexpr ")"                                        : mexpr
+syntax:max "Fst(" mexpr,* ")"                                     : mexpr
+syntax:max "App(" term "," mexpr,* ")"                            : mexpr
+syntax:max "Snd(" mexpr,* ")"                                     : mexpr
+syntax:max "Snd'(" mexpr,* ")"                                    : mexpr
+syntax:max "`(" mexpr,* ")"                                       : mexpr
+syntax "Σ(" mexpr,* ")"                                           : mexpr
+syntax:max (priority := high) "Λ(" mexpr,* ")"                    : mexpr
+syntax:max (priority := high) "Λ'(" mexpr,* ")"                   : mexpr
+syntax:max (priority := high) "Π(" term,* ")"                    : mexpr
+syntax mexpr "∘'" mexpr                                            : mexpr
+syntax "⟦" mexpr,* "⟧" "∘"                                        : mexpr
+syntax:30 ident                                                  : mexpr
+syntax "(" mexpr+ ")"                                             : mexpr
+syntax:max "Sort" term                                           : mexpr
+syntax (priority := high) "⟦" mexpr,* "⟧" "⟨" mexpr,* "⟩" : mexpr
+syntax (priority := high) "⟦" mexpr,* "⟧" "(" mexpr,* ")"          : mexpr
+syntax (priority := high) "⟦" mexpr,* "⟧" "(" "," ")"             : mexpr
+syntax (priority := high) "⟦" mexpr,* "⟧" "(" "," mexpr ")"        : mexpr
+
+syntax "MDCC"  mexpr : term
+
+macro_rules
+  | `(MDCC ($f:mexpr $x:mexpr))                    => `(MExpr.app   (MDCC $f:mexpr)   (MDCC $x:mexpr))
+  | `(MDCC ($f:mexpr $x:mexpr $xs:mexpr*))          => `(MDCC (($f:mexpr $x:mexpr) $xs:mexpr*))
+  | `(MDCC `($α:mexpr, $β:mexpr, $x:mexpr))         => `(MExpr.quot (MDCC $α) (MDCC $β) (MDCC $x))
+  | `(MDCC Λ($α:mexpr, $e:mexpr))                  => `(MExpr.curr (MDCC $α) (MDCC $e))
+  | `(MDCC Λ'($α:mexpr, $β:mexpr, $e:mexpr))        => `(MExpr.curr' (MDCC $α) (MDCC $β) (MDCC $e))
+  | `(MDCC Π($m:term, $n:term))                  => `(MExpr.pi $m $n)
+  | `(MDCC ⟦$α:mexpr, $β:mexpr⟧⟨$x:mexpr, $y:mexpr⟩) => `(MExpr.pair (MDCC $α) (MDCC $β) (MDCC $x) (MDCC $y))
+  | `(MDCC ⟦$α:mexpr, $β:mexpr⟧(,))                => `(MExpr.mk (MDCC $α) (MDCC $β))
+  | `(MDCC ⟦$α:mexpr, $β:mexpr⟧(, $x:mexpr))        => `(MDCC (⟦$α, $β⟧(,) $x))
+  | `(MDCC ⟦$α:mexpr, $β:mexpr⟧($x:mexpr, $y:mexpr)) => `(MDCC (⟦$α, $β⟧(,) $x $y))
+  | `(MDCC Sort $m:term)                         => `(MExpr.sort $m)
+  | `(MDCC Σ($α:mexpr, $β:mexpr))                  => `(MExpr.sigma (MDCC $α) (MDCC $β))
+  | `(MDCC Flip($e:mexpr))                        => `(MExpr.flip (MDCC $e))
+  | `(MDCC Id($α:mexpr))                          => `(MExpr.id (MDCC $α))
+  | `(MDCC Fst($α:mexpr, $β:mexpr))                => `(MExpr.fst (MDCC $α) (MDCC $β))
+  | `(MDCC Snd($α:mexpr, $β:mexpr))                => `(MExpr.snd (MDCC $α) (MDCC $β))
+  | `(MDCC Snd'($α:mexpr, $β:mexpr))               => `(MExpr.snd' (MDCC $α) (MDCC $β))
+  | `(MDCC App($n:term, $α:mexpr, $β:mexpr))       => `(MExpr.appl $n (MDCC $α) (MDCC $β))
+  | `(MDCC ⟦$α:mexpr, $β:mexpr, $γ:mexpr⟧∘)         => `(MExpr.comp (MDCC $α:mexpr) (MDCC $β:mexpr) (MDCC $γ:mexpr))
+  | `(MDCC $f:mexpr ∘' $g:mexpr)                   => `(MExpr.comp' (MDCC $f:mexpr) (MDCC $g:mexpr))
+  | `(MDCC #($t:term))                           => `($t)
+  | `(MDCC $idt:ident)                           => `($idt:term)
+  | `(MDCC ($t:mexpr))                            => `(MDCC $t)
+
+
+def unify (e : MExpr) : Lean.Elab.Tactic.TacticM Q(_root_.Expr) :=
+  match e with
+  | MDCC Sort m => do
+    let e := Lean.Expr.app (.const ``_root_.Expr.sort []) m
+    let some e' ← checkTypeQ e q(_root_.Expr) | throwError s!"not an expr: {e}"
+    return e'
+  | .lean e => do
+    let some e ← checkTypeQ e q(_root_.Expr) | throwError s!"not an expr: {e}"
+    return e
+  | MDCC (Λ(α, x)) => do
+    let α ← α.unify
+    let x ← x.unify
+    return q(_root_.Expr.curr $α $x)
+  | MDCC (Λ'(α, β, x)) => do
+    let α ← α.unify
+    let β ← β.unify
+    let x ← x.unify
+    return q(_root_.Expr.curr' $α $β $x)
+  | MDCC (App(m, α, x)) => do
+    let α ← α.unify
+    let x ← x.unify
+    let some m' ← checkTypeQ m q(_root_.Level) | throwError s!"not a level: {m}"
+    return q(_root_.Expr.appl $m' $α $x)
+  | MDCC (Π(m, n)) => do
+    let some m' ← checkTypeQ m q(_root_.Level) | throwError s!"not a level: {m}"
+    let some n' ← checkTypeQ n q(_root_.Level) | throwError s!"not a level: {n}"
+    return q(_root_.Expr.pi $m' $n')
+  | MDCC (f x) => do
+    let f' ← f.unify
+    let x' ← x.unify
+    return q(_root_.Expr.app $f' $x')
+
+inductive RedAff' : MExpr → MExpr → Type
+  | app      : RedAff' (MDCC (App(_n, _δ, _τ) ⟦α, β⟧(f, x))) (MDCC (f x))
+  | fst      : RedAff' (MDCC (Fst(_δ, _τ) ⟦α, β⟧(a, b))) a
+  | snd      : RedAff' (MDCC (Snd(_δ, _τ) ⟦α, β⟧(a, b))) b
+  | snd'     : RedAff' (MDCC (Snd'(_δ, _τ) ⟦α, β⟧(a, b))) b
+  | flip     : RedAff' (MDCC (Flip(e) x y)) (MDCC (e y x))
+  | id       : RedAff' (MDCC (Id(_α) x)) x
+  | quot     : RedAff' (MDCC (`(_α, _β, x) y)) x
+  | comp     : RedAff' (MDCC ((⟦α, β, γ⟧∘ x y) z)) (MDCC (x (y z)))
+  | comp'    : RedAff' (MDCC ((x ∘' y) z)) (MDCC (x (y z)))
+  | curr     : RedAff' (MDCC (Λ(α, x) y z)) (MDCC (x ⟦α, Id(α)⟧(y, z)))
+  | curr'    : RedAff' (MDCC (Λ'(α, β, x) y z)) (MDCC (x ⟦α, β⟧(y, z)))
+  | congrFun : RedAff' f f' → RedAff' (MDCC (f x)) (MDCC (f' x))
+  | congrArg : RedAff' x x' → RedAff' (MDCC (f x)) (MDCC (f x'))
+  | lean     : Lean.Expr    → RedAff' A B
+
+def step? (e : MExpr) : Lean.Elab.Tactic.TacticM (Option ((e' : MExpr) × (RedAff' e e'))) :=
+  match e with
+  | (MDCC (App(_n, _δ, _τ) ⟦_α, _β⟧(f, x)))  => return .some ⟨(MDCC (f x)), .app⟩
+  | (MDCC (Fst(_δ, _τ) ⟦_α, _β⟧(a, _b)))     => return .some ⟨a, .fst⟩
+  | (MDCC (Snd(_δ, _τ) ⟦_α, _β⟧(_a, b)))     => return .some ⟨b, .snd⟩
+  | (MDCC (Snd'(_δ, _τ) ⟦_α, _β⟧(_a, b)))    => return .some ⟨b, .snd'⟩
+  | (MDCC (Flip(e) x y))                     => return .some ⟨(MDCC (e y x)), .flip⟩
+  | (MDCC (Id(_α) x))                        => return .some ⟨x, .id⟩
+  | (MDCC (`(_α, _β, x) _y))                 => return .some ⟨x, .quot⟩
+  | (MDCC ((⟦_α, _β, _γ⟧∘ x y) z))           => return .some ⟨(MDCC (x (y z))), .comp⟩
+  | (MDCC ((x ∘' y) z))                      => return .some ⟨(MDCC (x (y z))), .comp'⟩
+  | (MDCC (Λ(α, x) y z))                     => return .some ⟨(MDCC (x ⟦α, Id(α)⟧(y, z))), .curr⟩
+  | (MDCC (Λ'(α, β, x) y z))                 => return .some ⟨(MDCC (x ⟦α, β⟧(y, z))), .curr'⟩
+  | MDCC (f x) => do
+    match ← f.step?, ← x.step? with
+    | .some ⟨f', h₁⟩, _ => return .some ⟨(MDCC (f' x)), .congrFun h₁⟩
+    | _, .some ⟨x', h₁⟩ => return .some ⟨(MDCC (f x')), .congrArg h₁⟩
+    | _, _ => pure .none
+  | e => do
+    Lean.Elab.Tactic.withMainContext do
+      let lctx ← getLCtx
+      lctx.findDeclM? (fun hyp => do
+        match hyp.type with
+        | .app (.app (.const ``_root_.Expr.RedAff []) e') b =>
+          let _ ← Lean.Meta.isDefEq (← e.unify) e'
+          return Option.some (Sigma.mk (MExpr.lean b)
+            (RedAff'.lean hyp.value))
+        | _ => return Option.none)
+
+end MExpr
+
 /-
 Tactic to reduce hypotheses like Reduce a b into Reduce a (reduce b), except b is reduced to normal form.
 -/

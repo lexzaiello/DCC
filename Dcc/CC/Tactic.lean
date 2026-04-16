@@ -156,6 +156,52 @@ def unify (e : MExpr) : Lean.Elab.Tactic.TacticM Q(_root_.Expr) :=
     let some m' ← checkTypeQ m q(_root_.Level) | throwError s!"not a level: {m}"
     let some n' ← checkTypeQ n q(_root_.Level) | throwError s!"not a level: {n}"
     return q(_root_.Expr.pi $m' $n')
+  | MDCC (Σ(α, β)) => do
+    let α ← α.unify
+    let β ← β.unify
+    return q(_root_.Expr.sigma $α $β)
+  | MDCC (Fst(α, β)) => do
+    let α ← α.unify
+    let β ← β.unify
+    return q(_root_.Expr.fst $α $β)
+  | MDCC (Snd(α, β)) => do
+    let α ← α.unify
+    let β ← β.unify
+    return q(_root_.Expr.snd $α $β)
+  | MDCC (Snd'(α, β)) => do
+    let α ← α.unify
+    let β ← β.unify
+    return q(_root_.Expr.snd' $α $β)
+  | MDCC (Id(α)) => do
+    let α ← α.unify
+    return q(_root_.Expr.id $α)
+  | MDCC (`(α, β, x)) => do
+    let α ← α.unify
+    let β ← β.unify
+    let x ← x.unify
+    return q(_root_.Expr.quot $α $β $x)
+  | MDCC (Flip(x)) => do
+    let x ← x.unify
+    return q(_root_.Expr.flip $x)
+  | MDCC (⟦α, β⟧(,)) => do
+    let α ← α.unify
+    let β ← β.unify
+    return q(_root_.Expr.mk $α $β)
+  | MDCC ⟦α, β⟧⟨a, b⟩ => do
+    let α ← α.unify
+    let β ← β.unify
+    let a ← a.unify
+    let b ← b.unify
+    return q(_root_.Expr.pair $α $β $a $b)
+  | MDCC f ∘' g => do
+    let f ← f.unify
+    let g ← g.unify
+    return q(_root_.Expr.comp' $f $g)
+  | MDCC ⟦α, β, γ⟧∘ => do
+    let α ← α.unify
+    let β ← β.unify
+    let γ ← γ.unify
+    return q(_root_.Expr.comp $α $β $γ)
   | MDCC (f x) => do
     let f' ← f.unify
     let x' ← x.unify
@@ -205,6 +251,21 @@ def step? (e : MExpr) : Lean.Elab.Tactic.TacticM (Option ((e' : MExpr) × (RedAf
           return Option.some (Sigma.mk (MExpr.lean b)
             (RedAff'.lean hyp.value))
         | _ => return Option.none)
+
+inductive RedAff'ReflTrans : MExpr → MExpr → Type where
+  | refl  : RedAff'ReflTrans e e
+  | trans : RedAff' A B → RedAff'ReflTrans B C → RedAff'ReflTrans A C
+
+def reduce (e : MExpr) (gas : ℕ := 100000) : Lean.Elab.Tactic.TacticM ((e' : MExpr) ×  (RedAff'ReflTrans e e')) := do
+  match gas with
+  | .zero => return ⟨e, .refl⟩
+  | .succ n =>
+    match ← step? e with
+    | .some ⟨e', h⟩ =>
+      -- This hypothesis allows the recursion. Easy to prove.
+      let ⟨e'', h₂⟩ ← e'.reduce n
+      return ⟨e'', .trans h h₂⟩
+    | .none => return ⟨e, .refl⟩
 
 end MExpr
 

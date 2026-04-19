@@ -6,7 +6,7 @@ def arrow (α β : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α)
 
 def id.type (α : Expr) (m : Level) : Expr :=
-  arrow α (arrow α α m) m
+  arrow α α m
 
 def fst.type (α β : Expr) (m n : Level) : Expr :=
   arrow (DCC Σ(β)) α (max m n)
@@ -333,63 +333,5 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
         .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
-
-/-theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
-  induction h with
-  | app =>
-    
-    sorry
-  | id _ h_red ih =>
-    have ha := h_red.complete
-    dsimp only [infer, with_red]
-    simp [ih]
-    split
-    case h_1 heq =>
-      rename_i ht₁ _ _ _ ht₂ hr₂
-      have ha := ht₁.unique ht₂
-      have hb := h_red.unique (ha ▸ hr₂)
-      aesop
-    case h_2 =>
-      rename_i h
-      exact (h _ _ (by assumption) (by assumption) (by
-        congr
-        aesop)).elim
-  | comp h_t_g h_arr h_t_f h_red ih₁ ih₂ =>
-    have ha := h_red.complete
-    have ha := h_arr.complete
-    dsimp only [infer, with_red]
-    rw [ih₁, ih₂, with_arr]
-    split
-    case h_1 =>
-      split
-      case h_1 =>
-        aesop
-      case h_2 h =>
-        exact (h _ _ _ _ (by assumption) (by assumption) (by simp_all; congr; aesop)).elim
-    case h_2 h =>
-      exact (h _ _ _ _ (by assumption) (by assumption) (by simp_all)).elim
-  | sigma h_t h_arr ih | snd h_t h_arr ih | fst h_t h_arr ih =>
-    have ha := h_arr.complete
-    dsimp only [infer, with_red]
-    rw [ih, with_arr]
-    split
-    case h_1 =>
-      aesop
-    case h_2 h =>
-      exact (h _ _ _ _ (by assumption) (by assumption) (by simp_all)).elim
-  | snd' ht₁ hr₁ ht₂ hr₂ ih₁ ih₂ =>
-    have ha := hr₁.complete
-    have hb := hr₂.complete
-    dsimp only [infer, with_red]
-    rw [ih₁, ih₂]
-    split
-    case h_1 =>
-      split
-      case h_1 =>
-        aesop
-      case h_2 h =>
-        exact (h _ _ (by assumption) (by assumption) (by simp_all; congr; aesop)).elim
-    case h_2 h =>
-      exact (h _ _ (by assumption) (by assumption) (by simp_all; congr; aesop)).elim-/
 
 end Expr

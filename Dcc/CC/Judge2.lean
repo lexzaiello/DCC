@@ -40,7 +40,7 @@ f : ∀ (x : β), γ x
 
 
 def arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(m, Id(Sort m), `(Sort m, `(α, β))) α)
+  DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α)
 
 def id.type (α : Expr) (m : Level) : Expr :=
   arrow α (arrow α α m) m
@@ -49,8 +49,7 @@ def fst.type (α β : Expr) (m n : Level) : Expr :=
   arrow (DCC Σ(β)) α (max m n)
 
 def snd.type (β : Expr) (m n : Level) : Expr :=
-  DCC (Π(max m n,
-    Id(Sort (max m n)),
+  DCC (Π(Id(Sort (max m n)),
     `(Sort (max m n),
       β ∘ Fst(β))) Σ(β))
 
@@ -61,9 +60,9 @@ def coup.type (β : Expr) : Expr :=
 x : ∀ (s : Σ(β)), γ s
 Λ(β, x) : ∀ (x : α) (y : β x), γ ⟦β⟧(x, y)
 -/
-def curr.type (α β γ : Expr) (m n : Level) : Expr :=
-  DCC (Π(m, Id(Sort m),
-    `(Sort m, Π(n, β,
+def curr.type (α β γ : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m),
+    `(Sort m, Π(β,
       Λ(β, (γ Σ(β)))))) α) -- weaken α, keep x
 
 /-
@@ -91,15 +90,15 @@ dependent composition can be derived, however, if g's codomain is Σ α, β
 f ∘ g : ∀ (x : α), γ (g x)
 -/
 def comp.type (α β γ g : Expr) (m : Level) : Expr :=
-  DCC (Π(m, Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
+  DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
 
 /-
 f : ∀ (x : α), β x
 App(β) : ∀ (s : Σ(`(Π(m, Id(Sort m), β), α))), (β α) ∘ Snd'(Π(m, Id(Sort m), β), β)
 -/
 def App.type (α β : Expr) (m n : Level) : Expr :=
-  DCC (Π(max m n, Id(Sort (max m n)), (β α) ∘ Snd'(Π(m, Id(Sort m), β), β))
-    Σ(`(Π(m, Id(Sort m), β), α)))
+  DCC (Π(Id(Sort (max m n)), (β α) ∘ Snd'(Π(Id(Sort m), β), β))
+    Σ(`(Π(Id(Sort m), β), α)))
 
 def snd'.type (α β : Expr) (m n : Level) : Expr :=
   arrow (DCC Σ(`(α, β))) β (max m n)
@@ -134,7 +133,7 @@ deriving Repr
 
 def is_arrow (t : Expr) : Option ((α β : Expr) × (m : Level) × IsArrow t α β m) :=
   match t.reduce with
-  | DCC (Π(m, Id(_m), `(α, β)) _a) =>
+  | DCC (Π(Id(Sort m), `(α, β)) _a) =>
     if heq : t.reduce = arrow α β m then
       .some ⟨α, β, m, ⟨reduce_sound heq, heq ▸ reduce_norm rfl⟩⟩
     else
@@ -148,14 +147,17 @@ inductive Judge : Expr → Expr → Type where
   | comp : Judge g τ₁
     → IsArrow τ₁ α β m
     → Judge f τ₂
-    → Reduces τ₂ (DCC (Π(n, Id(Sort n), γ) β))
+    → Reduces τ₂ (DCC (Π(Id(Sort n), γ) β))
     → Judge (DCC f ∘ g) (comp.type α β γ g m)
   | fst  : Judge β τ₁
     → IsArrow τ₁ α (DCC Sort n) m
     → Judge (DCC Fst(β)) (fst.type α β m n)
-  | snd  : Judge β τ₁
+  | snd   : Judge β τ₁
     → IsArrow τ₁ α (DCC Sort n) m
     → Judge (DCC Snd(β)) (snd.type β m n)
+  | sigma : Judge β τ₁
+    → IsArrow τ₁ α (DCC Sort n) m
+    → Judge (DCC Σ(β)) (Sigma.type m n)
   | snd' : Judge α τ₁
     → Reduces τ₁ (DCC Sort m)
     → Judge β τ₂
@@ -164,40 +166,140 @@ inductive Judge : Expr → Expr → Type where
   | coup : Judge x τ₁
     → Reduces τ₁ α
     → Judge y τ₂
-    → IsArrow β α (DCC Sort n) m
+    → Judge β τ₃
+    → IsArrow τ₃ α (DCC Sort n) m
     → Reduces (DCC (β x)) τ₂'
     → Reduces τ₂ τ₂'
     → Judge (DCC ⟦β⟧(x, y)) (coup.type β)
   | curr : Judge β τ₁
     → IsArrow τ₁ α (DCC Sort n) m
     → Judge x τ₂
-    → Reduces τ₂ (DCC (Π(max m n, f_α, γ) x_α))
+    → Reduces τ₂ (DCC (Π(f_α, γ) x_α))
     → Reduces (DCC (f_α x_α)) (DCC Σ(β))
-    → Judge (DCC Λ(β, x)) (curr.type α β γ m n)
+    → Judge (DCC Λ(β, x)) (curr.type α β γ m)
   | quot : Judge x τ₁
     → Reduces τ₁ α
     → Judge β τ₂
     → Reduces τ₂ (DCC Sort n)
     → Judge (DCC `(β, x)) (quot.type α β n)
   | pair : Judge f τ₁
-    → Reduces τ₁ (DCC (Π(m, f_α, β) x_α))
+    → Reduces τ₁ (DCC (Π(f_α, β) x_α))
     → Reduces (DCC (f_α x_α)) α
-    → Judge g (DCC (Π(m, f_α₂, `(Sort m, γ ∘ f)) x_α₂))
+    → Judge g τ₂
+    → Reduces τ₂ (DCC (Π(f_α₂, `(Sort m, γ ∘ f)) x_α₂))
     → Reduces (DCC (f_α₂ x_α₂)) α
     → Judge (DCC ⟦γ⟧⟨f, g⟩) (pair.type α γ m)
   | appl : Judge β τ₁
-    → IsArrow β α (DCC Sort n) m
+    → IsArrow τ₁ α (DCC Sort n) m
     → Judge (DCC App(β)) (App.type α β m n)
   | pi   : Judge f_α τ₁
     → IsArrow τ₁ α (DCC Sort n) m
-    → Judge f_β (DCC Π(m, Id(α), Π(n, f_α, `(α, `(Sort n, Sort o)))))
-    → Judge (DCC Π(m, f_α, f_β)) (Pi.type α m n)
+    → Judge f_β τ₂
+    → Reduces τ₂ (DCC Π(Id(α), Π(f_α, `(α, `(Sort n, Sort o)))))
+    → Judge (DCC Π(f_α, f_β)) (Pi.type α m n)
   | sort : Judge (DCC Sort m) (DCC Sort m.succ)
   | app  : Judge f τ₁
-    → Reduces τ₁ (DCC (Π(m, f_α, f_β) x_α))
+    → Reduces τ₁ (DCC (Π(f_α, f_β) x_α))
     → Reduces (DCC (f_α x_α)) α
     → Judge x τ₂
     → Reduces τ₂ α
     → Judge (DCC (f x)) (DCC (f_β x_α x))
+
+abbrev with_red (h : Option ((t : Expr) × Judge e t)) :
+  Option ((τ₁ τ₂ : Expr) × Judge e τ₁ × Reduces τ₁ τ₂) := do
+  match ← h with
+  | ⟨t, h⟩ => .some ⟨t, t.reduce, h, reduce_reduces rfl⟩
+
+abbrev with_arr (h : Option ((t : Expr) × Judge e t)) :
+  Option ((τ α β : Expr) × (m : Level) × Judge e τ × IsArrow τ α β m) := do
+    match ← h with
+    | ⟨t, h⟩ => match ← is_arrow t with
+      | ⟨α, β, m, h_arr⟩ => .some ⟨t, α, β, m, h, h_arr⟩
+
+def infer (e : Expr) : Option ((t : Expr) × Judge e t) := do
+  match e with
+  | DCC Sort m => .some ⟨_, .sort⟩
+  | DCC (Id(α)) => do
+    match ← with_red (infer α) with
+    | ⟨_, DCC Sort m, ht, h_red⟩ => .some ⟨_, .id ht h_red⟩
+    | _ => .none
+  | DCC (f ∘ g) => do
+    match ← with_arr (infer g), ← with_red (infer f) with
+    | ⟨_, α, β, m, ht₁, harr₁⟩, ⟨_, (DCC (Π(Id(Sort n₂), γ) β₂)), ht₂, hred⟩ =>
+      if heq : β₂ = β then
+        .some ⟨_, .comp ht₁ harr₁ ht₂ (heq ▸ hred)⟩
+      else .none
+    | _, _ => .none
+  | DCC Fst(β) => do
+    match ← with_arr (infer β) with
+    | ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ =>
+      .some ⟨_, .fst ht harr⟩
+    | _ => .none
+  | DCC Snd(β) => do
+    match ← with_arr (infer β) with
+    | ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ =>
+      .some ⟨_, .snd ht harr⟩
+    | _ => .none
+  | DCC Σ(β) => do
+    match ← with_arr (infer β) with
+    | ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ =>
+      .some ⟨_, .sigma ht harr⟩
+    | _ => .none
+  | DCC Snd'(α, β) => do
+    match ← with_red (infer α), ← with_red (infer β) with
+    | ⟨τ₁, DCC Sort m, ht₁, hr₁⟩, ⟨τ₂, DCC Sort n, ht₂, hr₂⟩ =>
+      .some ⟨_, .snd' ht₁ hr₁ ht₂ hr₂⟩
+    | _, _ => .none
+  | DCC ⟦β⟧(x, y) => do
+    match ← with_red (infer x), ← with_red (infer y), ← with_arr (infer β) with
+    | ⟨τ₁, α, ht₁, hr₁⟩, ⟨τ₂, βxm, ht₂, hr₂⟩, ⟨_, α₂, DCC Sort n, m, ht₃, harr⟩ =>
+      if heq : (reduce (DCC (β x))) = βxm ∧ α = α₂ then
+        have ⟨h₁, h₂⟩ := heq
+        .some ⟨_, .coup ht₁ hr₁ ht₂ ht₃ (h₂ ▸ harr) (reduce_reduces h₁) hr₂⟩
+      else .none
+    | _, _, _ => .none
+  | DCC Λ(β, x) => do
+    match ← with_arr (infer β), ← with_red (infer x) with
+    | ⟨τ₁, α, DCC Sort n, m, ht₁, harr₁⟩, ⟨τ₂, DCC (Π(f_α, γ) x_α), ht₂, hr₂⟩ =>
+      if heq : (reduce (DCC (f_α x_α)) = DCC Σ(β)) then
+        .some ⟨_, .curr ht₁ harr₁ ht₂ hr₂ (reduce_reduces heq)⟩
+      else .none
+    | _, _ => .none
+  | DCC `(β, x) => do
+    match ← with_red (infer x), ← with_red (infer β) with
+    | ⟨τ₁, α, ht₁, hr₁⟩, ⟨τ₂, DCC Sort n, ht₂, hr₂⟩ =>
+      .some ⟨_, .quot ht₁ hr₁ ht₂ hr₂⟩
+    | _, _ => .none
+  | DCC ⟦γ⟧⟨f, g⟩ => do
+    match ← with_red (infer f), ← with_red (infer g) with
+    | ⟨τ₁, DCC (Π(f_α, β) x_α), ht₁, hr₁⟩, ⟨τ₂, DCC (Π(f_α₂, `(Sort m₃, γ₂ ∘ f₂)) x_α₂), ht₂, hr₂⟩ =>
+      if heq : (reduce (DCC (f_α x_α)) = reduce (DCC (f_α₂ x_α₂))) ∧ f₂ = f ∧ γ₂ = γ then
+        have ⟨h₁, h₂, h₃⟩ := heq
+        .some ⟨_, .pair ht₁ hr₁ (reduce_reduces rfl) ht₂ (by
+          rw [h₂, h₃] at hr₂
+          exact hr₂) (reduce_reduces h₁.symm)⟩
+      else .none
+    | _, _ => .none
+  | DCC App(β) =>
+    match ← with_arr (infer β) with
+    | ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ => .some ⟨_, .appl ht harr⟩
+    | _ => .none
+  | DCC Π(f_α, f_β) =>
+    match ← with_arr (infer f_α), ← with_red (infer f_β) with
+    | ⟨τ₁, α, DCC Sort n, m₂, ht₁, harr⟩, ⟨τ₂, DCC Π(Id(α₂), Π(f_α₂, `(α₃, `(Sort n₃, Sort o)))), ht₂, hr₂⟩ =>
+      if heq : α₂ = α ∧ f_α₂ = f_α ∧ α₃ = α ∧ n₃ = n then
+        have ⟨h₁, h₂, h₃, h₄⟩ := heq
+        .some ⟨_, .pi ht₁ harr ht₂ (by
+          rw [h₁, h₂, h₃, h₄] at hr₂
+          exact hr₂)⟩
+      else .none
+    | _, _ => .none
+  | DCC (f x) =>
+    match ← with_red (infer f), ← with_red (infer x) with
+    | ⟨τ₁, DCC (Π(f_α, f_β) x_α), ht₁, hr₁⟩, ⟨τ₂, τ₂', ht₂, hr₂⟩ =>
+      if heq : (reduce (DCC (f_α x_α))) = τ₂' then
+        .some ⟨_, .app ht₁ hr₁ (reduce_reduces rfl) ht₂ (heq ▸ hr₂)⟩
+      else .none
+    | _, _ => .none
 
 end Expr

@@ -43,7 +43,7 @@ inductive Size : Expr → ℕ → Prop
   | sig    : Size (DCC Σ(_n)) 0
   | coup   : Size x m → Size y n → Size (DCC ⟦β⟧(x, y)) (m + n)
   | sort   : Size (DCC Sort m) 0
-  | pi     : Size (DCC Π(_m, _α, _β)) 0
+  | pi     : Size (DCC Π(_α, _β)) 0
   | quot   : Size x m → Size (DCC `(β, x)) m.succ
   | id     : Size (DCC Id(α)) 1
   | fst    : Size (DCC Fst(β)) 1
@@ -70,7 +70,7 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
   | DCC Fst(_β) => ⟨_, ⟨.fst⟩⟩
   | DCC Snd'(_α, _β) => ⟨_, ⟨.snd'⟩⟩
   | DCC Snd(_β) => ⟨_, ⟨.snd⟩⟩
-  | DCC Π(_m, _α, _β) => ⟨_, ⟨.pi⟩⟩
+  | DCC Π(_α, _β) => ⟨_, ⟨.pi⟩⟩
   | DCC App(_β) => ⟨_, ⟨.appl⟩⟩
   | DCC (f ∘ g) =>
     let ⟨_m, ⟨h₁⟩⟩ := f.size

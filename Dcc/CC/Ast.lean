@@ -21,74 +21,58 @@ we can derive `()
 
 inductive Expr where
   | sort  : Level → Expr
-  | flip  : Expr  → Expr
-  | id    : Expr  → Expr
-  | fst   : Expr  → Expr  → Expr
-  | snd   : Expr  → Expr  → Expr
-  -- Nondependent snd
+  | fst   : Expr  → Expr
+  | snd   : Expr  → Expr
   | snd'  : Expr  → Expr  → Expr
-  | quot  : Expr  → Expr  → Expr  → Expr
-  | comp  : Expr  → Expr  → Expr  → Expr
-  -- Nondependent composition
-  | comp' : Expr  → Expr  → Expr
-  | pair  : Expr  → Expr  → Expr  → Expr  → Expr
-  | sigma : Expr  → Expr  → Expr
-  | mk    : Expr  → Expr  → Expr
-  | pi    : Level → Level → Expr
+  | comp  : Expr  → Expr  → Expr
+  | pair  : Expr  → Expr  → Expr  → Expr
+  | sigma : Expr  → Expr
+  | mk    : Expr  → Expr  → Expr  → Expr
+  | pi    : Expr  → Expr  → Expr
   | curr  : Expr  → Expr  → Expr
-  -- Nondependent curry
-  | curr' : Expr  → Expr  → Expr  → Expr
-  | appl  : Level → Expr  → Expr → Expr
+  | appl  : Expr  → Expr
+  | quot  : Expr  → Expr  → Expr
+  | id    : Expr  → Expr
   | app   : Expr  → Expr  → Expr
 deriving BEq, Repr, DecidableEq
 
 declare_syntax_cat expr
 
 syntax "#(" term ")"                                             : expr
-syntax:max "Flip(" expr,* ")"                                    : expr
-syntax:max "Id(" expr ")"                                        : expr
-syntax:max "Fst(" expr,* ")"                                     : expr
-syntax:max "App(" term "," expr,* ")"                            : expr
-syntax:max "Snd(" expr,* ")"                                     : expr
-syntax:max "Snd'(" expr,* ")"                                    : expr
 syntax:max "`(" expr,* ")"                                       : expr
+syntax:max "Id(" expr,* ")"                                      : expr
+syntax:max "Fst(" expr,* ")"                                     : expr
+syntax:max "Snd'(" expr,* ")"                                    : expr
+syntax:max "App(" expr,* ")"                                     : expr
+syntax:max "Snd(" expr,* ")"                                     : expr
 syntax "Σ(" expr,* ")"                                           : expr
 syntax:max (priority := high) "Λ(" expr,* ")"                    : expr
-syntax:max (priority := high) "Λ'(" expr,* ")"                   : expr
-syntax:max (priority := high) "Π(" term,* ")"                    : expr
-syntax expr "∘'" expr                                            : expr
-syntax "⟦" expr,* "⟧" "∘"                                        : expr
+syntax:max (priority := high) "Π(" expr,* ")"                    : expr
+syntax expr "∘" expr                                             : expr
 syntax:30 ident                                                  : expr
 syntax "(" expr+ ")"                                             : expr
 syntax:max "Sort" term                                           : expr
 syntax (priority := high) "⟦" expr,* "⟧" "⟨" expr,* "⟩" : expr
 syntax (priority := high) "⟦" expr,* "⟧" "(" expr,* ")"          : expr
-syntax (priority := high) "⟦" expr,* "⟧" "(" "," ")"             : expr
-syntax (priority := high) "⟦" expr,* "⟧" "(" "," expr ")"        : expr
 
 syntax "DCC"  expr : term
 
 macro_rules
   | `(DCC ($f:expr $x:expr))                    => `(Expr.app   (DCC $f:expr)   (DCC $x:expr))
   | `(DCC ($f:expr $x:expr $xs:expr*))          => `(DCC (($f:expr $x:expr) $xs:expr*))
-  | `(DCC `($α:expr, $β:expr, $x:expr))         => `(Expr.quot (DCC $α) (DCC $β) (DCC $x))
+  | `(DCC `($β:expr, $x:expr))                  => `(Expr.quot (DCC $β) (DCC $x))
   | `(DCC Λ($α:expr, $e:expr))                  => `(Expr.curr (DCC $α) (DCC $e))
-  | `(DCC Λ'($α:expr, $β:expr, $e:expr))        => `(Expr.curr' (DCC $α) (DCC $β) (DCC $e))
-  | `(DCC Π($m:term, $n:term))                  => `(Expr.pi $m $n)
-  | `(DCC ⟦$α:expr, $β:expr⟧⟨$x:expr, $y:expr⟩) => `(Expr.pair (DCC $α) (DCC $β) (DCC $x) (DCC $y))
-  | `(DCC ⟦$α:expr, $β:expr⟧(,))                => `(Expr.mk (DCC $α) (DCC $β))
-  | `(DCC ⟦$α:expr, $β:expr⟧(, $x:expr))        => `(DCC (⟦$α, $β⟧(,) $x))
-  | `(DCC ⟦$α:expr, $β:expr⟧($x:expr, $y:expr)) => `(DCC (⟦$α, $β⟧(,) $x $y))
+  | `(DCC Π($α:expr, $β:expr))         => `(Expr.pi (DCC $α) (DCC $β))
+  | `(DCC ⟦$β:expr⟧⟨$x:expr, $y:expr⟩)          => `(Expr.pair (DCC $β) (DCC $x) (DCC $y))
+  | `(DCC ⟦$β:expr⟧($x, $y))                    => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                         => `(Expr.sort $m)
-  | `(DCC Σ($α:expr, $β:expr))                  => `(Expr.sigma (DCC $α) (DCC $β))
-  | `(DCC Flip($e:expr))                        => `(Expr.flip (DCC $e))
-  | `(DCC Id($α:expr))                          => `(Expr.id (DCC $α))
-  | `(DCC Fst($α:expr, $β:expr))                => `(Expr.fst (DCC $α) (DCC $β))
-  | `(DCC Snd($α:expr, $β:expr))                => `(Expr.snd (DCC $α) (DCC $β))
+  | `(DCC Σ($β:expr))                           => `(Expr.sigma (DCC $β))
+  | `(DCC Fst($β:expr))                         => `(Expr.fst (DCC $β))
+  | `(DCC Snd($β:expr))                         => `(Expr.snd (DCC $β))
   | `(DCC Snd'($α:expr, $β:expr))               => `(Expr.snd' (DCC $α) (DCC $β))
-  | `(DCC App($n:term, $α:expr, $β:expr))       => `(Expr.appl $n (DCC $α) (DCC $β))
-  | `(DCC ⟦$α:expr, $β:expr, $γ:expr⟧∘)         => `(Expr.comp (DCC $α:expr) (DCC $β:expr) (DCC $γ:expr))
-  | `(DCC $f:expr ∘' $g:expr)                   => `(Expr.comp' (DCC $f:expr) (DCC $g:expr))
+  | `(DCC App($β:expr))                         => `(Expr.appl (DCC $β))
+  | `(DCC Id($α:expr))                          => `(Expr.id (DCC $α))
+  | `(DCC $f:expr ∘ $g:expr)                    => `(Expr.comp (DCC $f:expr) (DCC $g:expr))
   | `(DCC #($t:term))                           => `($t)
   | `(DCC $idt:ident)                           => `($idt:term)
   | `(DCC ($t:expr))                            => `(DCC $t)
@@ -97,24 +81,19 @@ namespace Expr
 
 def toFormat (e : Expr) : Std.Format :=
   match e with
-  | (DCC Sort m)        => s!"Sort {m}"
+  | (DCC `(β, x))       => "`(" ++ β.toFormat ++ ", " ++ x.toFormat ++ ")"
   | (DCC Id(α))         => "Id(" ++ α.toFormat ++ ")"
-  | (DCC `(α, β, x))    => "`(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ", " ++ x.toFormat ++ ")"
-  | (DCC Flip(e))       => "Flip(" ++ e.toFormat ++ ")"
-  | (DCC Fst(α, β))     => "Fst(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC Snd(α, β))     => "Snd(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
+  | (DCC Sort m)        => s!"Sort {m}"
+  | (DCC Fst(β))        => "Fst(" ++ β.toFormat ++ ")"
   | (DCC Snd'(α, β))    => "Snd'(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC App(n, α, β))  => "App(" ++ (Std.format n) ++ ", " ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
+  | (DCC Snd(β))        => "Snd(" ++ β.toFormat ++ ")"
+  | (DCC App(β))        => "App(" ++ β.toFormat ++ ")"
   | (DCC Λ(α, e))       => "Λ(" ++ α.toFormat ++ ", " ++ e.toFormat ++ ")"
-  | (DCC Λ'(α, β, e))   => "Λ'(" ++ (Std.Format.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
-  | (DCC Π(m, n))       => "Π" ++ (.bracket "(" ((Std.format m) ++ ", " ++ (Std.format n)) ")")
-  | (DCC ⟦α, β⟧⟨a, b⟩)  => (.bracket "⟦" (α.toFormat ++ ", " ++ β.toFormat) "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
-  | (DCC ⟦α, β⟧(a, b))  => (.bracket "⟦" (α.toFormat ++ ", " ++ β.toFormat) "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
-  | (DCC ⟦α, β⟧(,a))  => (.bracket "⟦" (α.toFormat ++ ", " ++ β.toFormat) "⟧") ++ (.bracket "(" (", " ++ a.toFormat) ")")
-  | (DCC ⟦α, β⟧(,))     => (.bracket "⟦" (α.toFormat ++ ", " ++ β.toFormat) "⟧") ++ (.bracket "(" "," ")")
-  | (DCC Σ(α, β))       => "Σ" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
-  | (DCC ⟦α, β, γ⟧∘)    => (.bracket "⟦" (Std.Format.joinSep [α.toFormat, β.toFormat, γ.toFormat] ", ") "⟧") ++ "∘"
-  | (DCC f ∘' g)        => (.bracket "(" (f.toFormat ++ " ∘' " ++ g.toFormat) ")")
+  | (DCC Π(α, β))       => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
+  | (DCC ⟦β⟧⟨a, b⟩)     => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
+  | (DCC ⟦β⟧(a, b))     => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
+  | (DCC Σ(β))          => "Σ" ++ (.bracket "(" β.toFormat ")")
+  | (DCC f ∘ g)         => (.bracket "(" (f.toFormat ++ " ∘ " ++ g.toFormat) ")")
   | (DCC (f x))         => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
 
 instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩

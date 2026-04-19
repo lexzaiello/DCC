@@ -1,43 +1,6 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
-/-
-Experimenting with simpler app:
-
-| app   : Judge f t_f
-    → Reduces t_f (DCC (Π(f_α, f_β) x_α))
-    → Judge x t_x
-    → Reduces (DCC (fα x_α)) α
-    → Reduces t_x α
-    → Judge (DCC (f x)) (DCC (f_β x_α x))
-
-need types for:
-
-- ~sigma~
-- ~pi~
-- ~snd'~
-- ~comp~
-- ~App~
-- ~pair~
-- ~snd~
-- ~quot~
-- ~curry~
-- ~id~
-- ~fst~
-- ~couples~
-
-don't need:
-- snd'
-- flip
-- quotation (see if necessary in types)
-- can make composition pointed again??
-
-f ∘ g
-
-g : α → β
-f : ∀ (x : β), γ x
--/
-
 
 def arrow (α β : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α)
@@ -120,6 +83,9 @@ inductive Reduces : Expr → Expr → Type
   | mk : RedAffReflTrans A B → IsNormAff B → Reduces A B
 deriving Repr
 
+theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b⟩ ⟨c, d⟩ =>
+  a.norm_unique b c d
+
 theorem Reduces.complete : Reduces A B → reduce A = B :=
   fun ⟨ha, hb⟩ => ha.complete hb
 
@@ -131,7 +97,16 @@ inductive IsArrow : Expr → (α β : Expr) → Level → Type
   | mk    : Reduces A (arrow α β m) → IsArrow A α β m
 deriving Repr
 
-def is_arrow (t : Expr) : Option ((α β : Expr) × (m : Level) × IsArrow t α β m) :=
+def IsArrow.unique (h₁ : IsArrow τ α β m) (h₂ : IsArrow τ α₂ β₂ n) : m = n ∧ α = α₂ ∧ β = β₂ := by
+  induction h₁ generalizing n
+  induction h₂ generalizing m
+  rename_i h₁ h₂
+  have h := h₂.complete
+  rw [h₁.complete] at h
+  unfold arrow at h
+  simp_all
+
+@[inline] abbrev is_arrow (t : Expr) : Option ((α β : Expr) × (m : Level) × IsArrow t α β m) :=
   match t.reduce with
   | DCC (Π(Id(Sort m), `(α, β)) _a) =>
     if heq : t.reduce = arrow α β m then
@@ -205,74 +180,167 @@ inductive Judge : Expr → Expr → Type where
     → Reduces τ₂ α
     → Judge (DCC (f x)) (DCC (f_β x_α x))
 
-abbrev with_red (h : Option ((t : Expr) × Judge e t)) :
-  Option ((τ₁ τ₂ : Expr) × Judge e τ₁ × Reduces τ₁ τ₂) := do
-  match ← h with
-  | ⟨t, h⟩ => .some ⟨t, t.reduce, h, reduce_reduces rfl⟩
+@[inline] abbrev with_red (h : Option ((t : Expr) × Judge e t)) :
+  Option ((τ₁ τ₂ : Expr) × Judge e τ₁ × Reduces τ₁ τ₂) :=
+  match h with
+  | .some ⟨t, h⟩ => .some ⟨t, t.reduce, h, reduce_reduces rfl⟩
+  | _ => .none
 
-abbrev with_arr (h : Option ((t : Expr) × Judge e t)) :
-  Option ((τ α β : Expr) × (m : Level) × Judge e τ × IsArrow τ α β m) := do
-    match ← h with
-    | ⟨t, h⟩ => match ← is_arrow t with
-      | ⟨α, β, m, h_arr⟩ => .some ⟨t, α, β, m, h, h_arr⟩
+@[inline] abbrev with_arr (h : Option ((t : Expr) × Judge e t)) :
+  Option ((τ α β : Expr) × (m : Level) × Judge e τ × IsArrow τ α β m) :=
+    match h with
+    | .some ⟨t, h⟩ => match is_arrow t with
+      | .some ⟨α, β, m, h_arr⟩ => .some ⟨t, α, β, m, h, h_arr⟩
+      | _ => .none
+    | _ => .none
 
-def infer (e : Expr) : Option ((t : Expr) × Judge e t) := do
+def Judge.unique (h₁ : Judge x τ₁) (h₂ : Judge x τ₂) : τ₁ = τ₂ := by
+  induction h₁ generalizing τ₂ with
+  | app ht₁ hr₁ hr₂ ht₂ hr₃ ih₁ ih₂ =>
+    cases h₂
+    rename_i hr₄ hr₅ hr₆ ht₃ ht₄
+    have ha := ih₁ ht₃
+    have hb := ih₂ ht₄
+    have h₁ := hr₁.unique (ha ▸ hr₄)
+    have h₂ := hr₃.unique (hb ▸ hr₆)
+    simp_all
+  | pair ht₁ hr₁ hr₂ ht₂ hra hr₄ ih₁ ih₂ =>
+    cases h₂
+    rename_i hr₃ hr₄ hr₅ ht₃ hr₆ ht₇
+    have ha := ih₁ ht₃
+    have hb := ih₂ ht₇
+    have h₁ := hr₁.unique (ha ▸ hr₃)
+    have h₂ := hra.unique (hb ▸ hr₆)
+    simp_all
+    have h₁ := hr₂.unique (by simp_all; exact hr₄)
+    simp_all
+  | pi ht₁ harr₁ ht₂ hr₁ ih₁ ih₂ =>
+    cases h₂
+    rename_i harr₂ ht₃ hr₂ ht₄
+    have ha := ih₁ ht₃
+    have hb := ih₂ ht₄
+    have h₁ := harr₁.unique (ha ▸ harr₂)
+    have h₂ := hr₁.unique (hb ▸ hr₂)
+    simp_all
+  | appl ht harr ih =>
+    cases h₂
+    rename_i harr₂ ht₂
+    have h := ih ht₂
+    have h := harr.unique (h ▸ harr₂)
+    simp_all
+  | quot ht₁ hr₁ ht₂ hr₂ ih₁ ih₂  =>
+    cases h₂
+    rename_i hr₃ hr₄ ht₃ ht₄
+    have ha := ih₁ ht₄
+    have hb := ih₂ ht₃
+    have h₁ := hr₁.unique (ha ▸ hr₃)
+    have h₂ := hr₂.unique (hb ▸ hr₄)
+    simp_all
+  | sort => cases h₂; rfl
+  | curr _ harr₁ _ hr₁ hr₂ ih₁ ih₂  =>
+    cases h₂
+    rename_i harrb hrb ht₂ hr₂ ht₃
+    have ha := ih₁ ht₂
+    have hb := ih₂ ht₃
+    have h₁ := harr₁.unique (ha ▸ harrb)
+    have h₂ := hr₁.unique (hb ▸ hrb)
+    simp_all
+  | id _ hred ih =>
+    have ha := hred.complete
+    cases h₂ with
+    | id h₂ hred =>
+      have hb := hred.complete
+      have h := ih h₂
+      simp_all
+  | comp _ _ _ hr₁ ih₁ ih₂ =>
+    cases h₂ with
+    | comp =>
+      rename_i hr₂ _ _
+      have ha := hr₁.complete
+      have hb := hr₂.complete
+      rename_i h₂ h₃
+      have hc := ih₁ h₃
+      have hd := ih₂ h₂
+      rename_i h_arrow₁ _ _ _ _ _ _ _ _ h_arrow₂
+      have h := h_arrow₁.unique (hc ▸ h_arrow₂)
+      simp_all
+  | sigma | snd | fst =>
+    cases h₂
+    rename_i h_arrow₁ ih _ _ _ _ h_arrow₂ h
+    have h := ih h
+    have h := h_arrow₁.unique (h ▸ h_arrow₂)
+    simp_all
+  | snd' =>
+    cases h₂
+    rename_i ih₁ ih₂ _ _ _ _ _ _ ha hb
+    have ha := ih₁ ha
+    have hb := ih₂ hb
+    rename_i hr₁ _ hr₂ _ _ _ _ hr₃ hr₄ _ _
+    have h₁ := hr₁.unique (ha ▸ hr₃)
+    have h₂ := hr₂.unique (hb ▸ hr₄)
+    simp_all
+  | coup _ _ _ _ _ _ _ ih₁ ih₂ ih₃ =>
+    cases h₂
+    rfl
+  
+
+def infer (e : Expr) : Option ((t : Expr) × Judge e t) :=
   match e with
   | DCC Sort m => .some ⟨_, .sort⟩
-  | DCC (Id(α)) => do
-    match ← with_red (infer α) with
-    | ⟨_, DCC Sort m, ht, h_red⟩ => .some ⟨_, .id ht h_red⟩
+  | DCC (Id(α)) =>
+    match with_red (infer α) with
+    | .some ⟨_, DCC Sort m, ht, h_red⟩ => .some ⟨_, .id ht h_red⟩
     | _ => .none
-  | DCC (f ∘ g) => do
-    match ← with_arr (infer g), ← with_red (infer f) with
-    | ⟨_, α, β, m, ht₁, harr₁⟩, ⟨_, (DCC (Π(Id(Sort n₂), γ) β₂)), ht₂, hred⟩ =>
+  | DCC (f ∘ g) =>
+    match with_arr (infer g), with_red (infer f) with
+    | .some ⟨_, α, β, m, ht₁, harr₁⟩, .some ⟨_, (DCC (Π(Id(Sort n₂), γ) β₂)), ht₂, hred⟩ =>
       if heq : β₂ = β then
         .some ⟨_, .comp ht₁ harr₁ ht₂ (heq ▸ hred)⟩
       else .none
     | _, _ => .none
-  | DCC Fst(β) => do
-    match ← with_arr (infer β) with
-    | ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ =>
+  | DCC Fst(β) =>
+    match with_arr (infer β) with
+    | .some ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ =>
       .some ⟨_, .fst ht harr⟩
     | _ => .none
-  | DCC Snd(β) => do
-    match ← with_arr (infer β) with
-    | ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ =>
+  | DCC Snd(β) =>
+    match with_arr (infer β) with
+    | .some ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ =>
       .some ⟨_, .snd ht harr⟩
     | _ => .none
-  | DCC Σ(β) => do
-    match ← with_arr (infer β) with
-    | ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ =>
+  | DCC Σ(β) =>
+    match with_arr (infer β) with
+    | .some ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ =>
       .some ⟨_, .sigma ht harr⟩
     | _ => .none
-  | DCC Snd'(α, β) => do
-    match ← with_red (infer α), ← with_red (infer β) with
-    | ⟨τ₁, DCC Sort m, ht₁, hr₁⟩, ⟨τ₂, DCC Sort n, ht₂, hr₂⟩ =>
+  | DCC Snd'(α, β) =>
+    match with_red (infer α), with_red (infer β) with
+    | .some ⟨τ₁, DCC Sort m, ht₁, hr₁⟩, .some ⟨τ₂, DCC Sort n, ht₂, hr₂⟩ =>
       .some ⟨_, .snd' ht₁ hr₁ ht₂ hr₂⟩
     | _, _ => .none
-  | DCC ⟦β⟧(x, y) => do
-    match ← with_red (infer x), ← with_red (infer y), ← with_arr (infer β) with
-    | ⟨τ₁, α, ht₁, hr₁⟩, ⟨τ₂, βxm, ht₂, hr₂⟩, ⟨_, α₂, DCC Sort n, m, ht₃, harr⟩ =>
+  | DCC ⟦β⟧(x, y) =>
+    match with_red (infer x), with_red (infer y), with_arr (infer β) with
+    | .some ⟨τ₁, α, ht₁, hr₁⟩, .some ⟨τ₂, βxm, ht₂, hr₂⟩, .some ⟨_, α₂, DCC Sort n, m, ht₃, harr⟩ =>
       if heq : (reduce (DCC (β x))) = βxm ∧ α = α₂ then
         have ⟨h₁, h₂⟩ := heq
         .some ⟨_, .coup ht₁ hr₁ ht₂ ht₃ (h₂ ▸ harr) (reduce_reduces h₁) hr₂⟩
       else .none
     | _, _, _ => .none
-  | DCC Λ(β, x) => do
-    match ← with_arr (infer β), ← with_red (infer x) with
-    | ⟨τ₁, α, DCC Sort n, m, ht₁, harr₁⟩, ⟨τ₂, DCC (Π(f_α, γ) x_α), ht₂, hr₂⟩ =>
+  | DCC Λ(β, x) =>
+    match with_arr (infer β), with_red (infer x) with
+    | .some ⟨τ₁, α, DCC Sort n, m, ht₁, harr₁⟩, .some ⟨τ₂, DCC (Π(f_α, γ) x_α), ht₂, hr₂⟩ =>
       if heq : (reduce (DCC (f_α x_α)) = DCC Σ(β)) then
         .some ⟨_, .curr ht₁ harr₁ ht₂ hr₂ (reduce_reduces heq)⟩
       else .none
     | _, _ => .none
-  | DCC `(β, x) => do
-    match ← with_red (infer x), ← with_red (infer β) with
-    | ⟨τ₁, α, ht₁, hr₁⟩, ⟨τ₂, DCC Sort n, ht₂, hr₂⟩ =>
+  | DCC `(β, x) =>
+    match with_red (infer x), with_red (infer β) with
+    | .some ⟨τ₁, α, ht₁, hr₁⟩, .some ⟨τ₂, DCC Sort n, ht₂, hr₂⟩ =>
       .some ⟨_, .quot ht₁ hr₁ ht₂ hr₂⟩
     | _, _ => .none
-  | DCC ⟦γ⟧⟨f, g⟩ => do
-    match ← with_red (infer f), ← with_red (infer g) with
-    | ⟨τ₁, DCC (Π(f_α, β) x_α), ht₁, hr₁⟩, ⟨τ₂, DCC (Π(f_α₂, `(Sort m₃, γ₂ ∘ f₂)) x_α₂), ht₂, hr₂⟩ =>
+  | DCC ⟦γ⟧⟨f, g⟩ =>
+    match with_red (infer f), with_red (infer g) with
+    | .some ⟨τ₁, DCC (Π(f_α, β) x_α), ht₁, hr₁⟩, .some ⟨τ₂, DCC (Π(f_α₂, `(Sort m₃, γ₂ ∘ f₂)) x_α₂), ht₂, hr₂⟩ =>
       if heq : (reduce (DCC (f_α x_α)) = reduce (DCC (f_α₂ x_α₂))) ∧ f₂ = f ∧ γ₂ = γ then
         have ⟨h₁, h₂, h₃⟩ := heq
         .some ⟨_, .pair ht₁ hr₁ (reduce_reduces rfl) ht₂ (by
@@ -281,12 +349,12 @@ def infer (e : Expr) : Option ((t : Expr) × Judge e t) := do
       else .none
     | _, _ => .none
   | DCC App(β) =>
-    match ← with_arr (infer β) with
-    | ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ => .some ⟨_, .appl ht harr⟩
+    match with_arr (infer β) with
+    | .some ⟨τ₁, α, DCC Sort n, m, ht, harr⟩ => .some ⟨_, .appl ht harr⟩
     | _ => .none
   | DCC Π(f_α, f_β) =>
-    match ← with_arr (infer f_α), ← with_red (infer f_β) with
-    | ⟨τ₁, α, DCC Sort n, m₂, ht₁, harr⟩, ⟨τ₂, DCC Π(Id(α₂), Π(f_α₂, `(α₃, `(Sort n₃, Sort o)))), ht₂, hr₂⟩ =>
+    match with_arr (infer f_α), with_red (infer f_β) with
+    | .some ⟨τ₁, α, DCC Sort n, m₂, ht₁, harr⟩, .some ⟨τ₂, DCC Π(Id(α₂), Π(f_α₂, `(α₃, `(Sort n₃, Sort o)))), ht₂, hr₂⟩ =>
       if heq : α₂ = α ∧ f_α₂ = f_α ∧ α₃ = α ∧ n₃ = n then
         have ⟨h₁, h₂, h₃, h₄⟩ := heq
         .some ⟨_, .pi ht₁ harr ht₂ (by
@@ -295,11 +363,24 @@ def infer (e : Expr) : Option ((t : Expr) × Judge e t) := do
       else .none
     | _, _ => .none
   | DCC (f x) =>
-    match ← with_red (infer f), ← with_red (infer x) with
-    | ⟨τ₁, DCC (Π(f_α, f_β) x_α), ht₁, hr₁⟩, ⟨τ₂, τ₂', ht₂, hr₂⟩ =>
+    match with_red (infer f), with_red (infer x) with
+    | .some ⟨τ₁, DCC (Π(f_α, f_β) x_α), ht₁, hr₁⟩, .some ⟨τ₂, τ₂', ht₂, hr₂⟩ =>
       if heq : (reduce (DCC (f_α x_α))) = τ₂' then
         .some ⟨_, .app ht₁ hr₁ (reduce_reduces rfl) ht₂ (heq ▸ hr₂)⟩
       else .none
     | _, _ => .none
+
+def Judge.complete (h : Judge e t) : infer e = .some ⟨t, h⟩ := by
+  induction h with
+  | id _ h_red ih =>
+    have h := h_red.complete
+    dsimp only [infer, with_red]
+    rw [ih]
+    split
+    case h_1 =>
+      
+      sorry
+    case h_2 =>
+      sorry
 
 end Expr

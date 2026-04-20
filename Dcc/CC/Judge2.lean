@@ -1,16 +1,8 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
-/-
 def arrow (α β : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), Λ(Id(Sort m), `(Σ(Id(Sort m)), β))) α)
--/
-
-def arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), Λ(Id(Sort m), `(Σ(Id(Sort m)), β))) α)
-
-/-def arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α)-/
 
 def id.type (α : Expr) (m : Level) : Expr :=
   arrow α α m
@@ -48,13 +40,6 @@ g : ∀ (x : α), γ (f x)
 def pair.type (α γ : Expr) (m : Level) : Expr :=
   arrow α (DCC Σ(γ)) m
 
-/-
-f ∘ g is tail-dependent composition. f is dependent, but g is not.
-
-dependent composition can be derived, however, if g's codomain is Σ α, β
-
-f ∘ g : ∀ (x : α), γ (g x)
--/
 def comp.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
 

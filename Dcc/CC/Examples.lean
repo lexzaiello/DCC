@@ -27,28 +27,8 @@ def test_pair : Option Expr :=
 
 #eval test_pair
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC App(Sort 1, `(Σ(Id(Sort 2)), Sort 1))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (App(Sort 1, `(Σ(Id(Sort 2)), Sort 1))  ⟦`((Π(Id(Sort 2), Λ(Id(Sort 2), `(Σ(Id(Sort 2)), Sort 1))) Sort 1), Sort 1)⟧(Id(Sort 1), Sort 0))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (App(Sort 1, `(Σ(Id(Sort 2)), Sort 1))
+  ⟦`((Π(Id(Sort 2), Λ(Id(Sort 2), `(Σ(Id(Sort 2)), Sort 1))) Sort 1), Sort 1)⟧(
+    Id(Sort 1),
+    Sort 0))).infer
 
-/-
-expected:
-Σ(`((Π(Id(Sort 2), `(Σ(Id(Sort 1)), Sort 1)) Sort 1), Sort 1)))
-
-actual:
-Σ(`((Π(Id(Sort 2), Λ(Id(Sort 2), `(Σ(Id(Sort 2)), Sort 1))) Sort 1), Sort 1))
-
-expected':
-Σ(`((Π(Id(Sort 2), Λ(Id(Sort 2), `(Σ(Id(Sort 1)), Sort 1))) Sort 1), Sort 1))
--/
-
-/-
-α → α
-Π(Id(Sort m), `(Sort m, `(α, α))) α
-(some (Π(Id(Sort 3), `(Sort 3, `(Sort 2, (Π(Id(Sort 2), `(Sort 2, `(Sort 1, Sort 2))) Sort 1)))) Sort 2))
-
-`(Sort m, `(α, α))
-: (some (Π(Id(Sort 3), `(Sort 3, `(Sort 2, (Π(Id(Sort 2), `(Sort 2, `(Sort 1, Sort 2))) Sort 1)))) Sort 2))
-
-
--/

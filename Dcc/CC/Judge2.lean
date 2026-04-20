@@ -29,7 +29,7 @@ x : ∀ (s : Σ(β)), γ s
 Λ(β, x) : ∀ (x : α) (y : β x), γ ⟦β⟧(x, y)
 -/
 def curr.type (α β γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, Π(β, Λ(β, (γ Σ(β)))))) α) -- weaken α, keep x
+  DCC (Π(Id(Sort m), `(Sort m, Π(β, Λ(β, γ)))) α) -- weaken α, keep x
 
 /-
 Nondependent quotation.
@@ -138,7 +138,7 @@ inductive Judge : Expr → Expr → Prop where
   | curr : Judge β (arrow α (DCC Sort n) m)
     → Judge x (DCC (Π(f_α, γ) x_α))
     → Reduces (DCC (f_α x_α)) (DCC Σ(β))
-    → Reduces (curr.type α β γ m) τ
+    → Reduces (curr.type α β (DCC (γ x_α)) m) τ
     → Judge (DCC Λ(β, x)) τ
   | quot : Judge x α
     → Judge β (DCC Sort n)
@@ -157,11 +157,9 @@ inductive Judge : Expr → Expr → Prop where
     ef_α : α → Sort m
     f_β : ∀ (x : α) (y : f_α x), Sort n
     Π(f_α, f_β)
-
-    f_β : (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(f_α, `(Σ(f_α), Sort o))))) α)
   -/
   | pi   : Judge f_α (arrow α (DCC Sort n) m)
-    → Judge f_β (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(f_α, `(Σ(f_α), Sort o))))) α))
+    → Judge f_β (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(f_α, (Λ(Id(Sort m), `(Σ(Id(Sort m)), Sort o)) Σ(f_α)))))) α))
     → Reduces (Pi.type α m o) τ
     → Judge (DCC Π(f_α, f_β)) τ
   | sort : Judge (DCC Sort m) (DCC Sort m.succ)
@@ -268,16 +266,12 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
       (reduce_reduces rfl)⟩⟩
     | _ => .none
   | DCC Π(f_α, f_β) =>
-    dbg_trace (Std.format ∘ Sigma.fst) <$> f_α.infer
-    dbg_trace Std.format f_β
-    dbg_trace (Std.format ∘ Sigma.fst) <$> f_β.infer
-    
     match with_arr (infer f_α), infer f_β with
     | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩,
-      .some ⟨(DCC (Π(Id(Sort m₂), `(Sort m₃, Π(f_α₂, Λ(f_α₃, `(Σ(f_α₄), Sort _o))))) α₂)), ⟨ht₂⟩⟩ =>
-      if heq : α₂ = α ∧ f_α₂ = f_α ∧ f_α₃ = f_α ∧ f_α₄ = f_α ∧ m₂ = m ∧ m₃ = m then
-        have ⟨h₁, h₂, h₃, h₄, h₅, h₆⟩ := heq
-        .some ⟨_, ⟨.pi (harr ▸ ht₁) (h₆ ▸ h₅ ▸ h₄ ▸ h₃ ▸ h₂ ▸ h₁ ▸ ht₂) (reduce_reduces rfl)⟩⟩
+      .some ⟨(DCC (Π(Id(Sort m₂), `(Sort m₃, Π(f_α₂, Λ(f_α₃, (Λ(Id(Sort m₄), `(Σ(Id(Sort m₅)), Sort _o)) Σ(f_α₄)))))) α₂)), ⟨ht₂⟩⟩ =>
+      if heq : α₂ = α ∧ f_α₂ = f_α ∧ f_α₃ = f_α ∧ f_α₄ = f_α ∧ m₂ = m ∧ m₃ = m ∧ m₄ = m ∧ m₅ = m then
+        have ⟨h₁, h₂, h₃, h₄, h₅, h₆, h₇, h₈⟩ := heq
+        .some ⟨_, ⟨.pi (harr ▸ ht₁) (h₈ ▸ h₇ ▸ h₆ ▸ h₅ ▸ h₄ ▸ h₃ ▸ h₂ ▸ h₁ ▸ ht₂) (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
   | DCC (f x) =>

@@ -27,6 +27,11 @@ def test_pair : Option Expr :=
 
 #eval test_pair
 
+def test_app : Option Expr :=
+  let f := DCC Id(Sort 1)
+  match infer f with
+  | DCC Π(_f_α, β)
+
 /-
 α → α
 Π(Id(Sort m), `(Sort m, `(α, α))) α

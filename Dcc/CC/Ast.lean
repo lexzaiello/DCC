@@ -30,7 +30,7 @@ inductive Expr where
   | mk    : Expr  → Expr  → Expr  → Expr
   | pi    : Expr  → Expr  → Expr
   | curr  : Expr  → Expr  → Expr
-  | appl  : Expr  → Expr
+  | appl  : Expr  → Expr  → Expr
   | quot  : Expr  → Expr  → Expr
   | id    : Expr  → Expr
   | app   : Expr  → Expr  → Expr
@@ -70,7 +70,7 @@ macro_rules
   | `(DCC Fst($β:expr))                         => `(Expr.fst (DCC $β))
   | `(DCC Snd($β:expr))                         => `(Expr.snd (DCC $β))
   | `(DCC Snd'($α:expr, $β:expr))               => `(Expr.snd' (DCC $α) (DCC $β))
-  | `(DCC App($β:expr))                         => `(Expr.appl (DCC $β))
+  | `(DCC App($α:expr, $β:expr))                => `(Expr.appl (DCC $α) (DCC $β))
   | `(DCC Id($α:expr))                          => `(Expr.id (DCC $α))
   | `(DCC $f:expr ∘ $g:expr)                    => `(Expr.comp (DCC $f:expr) (DCC $g:expr))
   | `(DCC #($t:term))                           => `($t)
@@ -87,7 +87,7 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Fst(β))        => "Fst(" ++ β.toFormat ++ ")"
   | (DCC Snd'(α, β))    => "Snd'(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Snd(β))        => "Snd(" ++ β.toFormat ++ ")"
-  | (DCC App(β))        => "App(" ++ β.toFormat ++ ")"
+  | (DCC App(α, β))     => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Λ(α, e))       => "Λ(" ++ α.toFormat ++ ", " ++ e.toFormat ++ ")"
   | (DCC Π(α, β))       => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
   | (DCC ⟦β⟧⟨a, b⟩)     => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")

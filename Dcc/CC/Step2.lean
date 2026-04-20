@@ -7,7 +7,7 @@ inductive Red : Expr → Expr → Type
   | snd'      : Red (DCC (Snd'(α, β) ⟦γ⟧(x, y))) x
   | quot      : Red (DCC (`(β, x) y)) x
   | id        : Red (DCC (Id(α) x)) x
-  | app       : Red (DCC (App(_τ) ⟦β⟧(f, x))) (DCC (f x))
+  | app       : Red (DCC (App(_α, _τ) ⟦β⟧(f, x))) (DCC (f x))
   | fst       : Red (DCC (Fst(_τ) ⟦β⟧(a, b))) a
   | snd       : Red (DCC (Snd(_τ) ⟦β⟧(a, b))) b
   | comp      : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
@@ -29,7 +29,7 @@ inductive RedAff : Expr → Expr → Prop
   | snd'     : RedAff (DCC (Snd'(_δ, _τ) ⟦β⟧(a, b))) b
   | quot     : RedAff (DCC (`(β, x) y)) x
   | id       : RedAff (DCC (Id(α) x)) x
-  | app      : RedAff (DCC (App(_τ) ⟦β⟧(f, x))) (DCC (f x))
+  | app      : RedAff (DCC (App(_α, _τ) ⟦β⟧(f, x))) (DCC (f x))
   | fst      : RedAff (DCC (Fst(_τ) ⟦β⟧(a, b))) a
   | snd      : RedAff (DCC (Snd(_τ) ⟦β⟧(a, b))) b
   | comp     : RedAff (DCC ((x ∘ y) z)) (DCC (x (y z)))
@@ -49,7 +49,7 @@ inductive Size : Expr → ℕ → Prop
   | fst    : Size (DCC Fst(β)) 1
   | snd'   : Size (DCC Snd'(δ, β)) 1
   | snd    : Size (DCC Snd(β)) 1
-  | appl   : Size (DCC App(β)) 1
+  | appl   : Size (DCC App(α, β)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
   | pair   : Size f m → Size g n → Size (DCC ⟦β⟧⟨f, g⟩) (m + n).succ
   | curr   : Size x m → Size (DCC Λ(α, x)) m.succ
@@ -71,7 +71,7 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
   | DCC Snd'(_α, _β) => ⟨_, ⟨.snd'⟩⟩
   | DCC Snd(_β) => ⟨_, ⟨.snd⟩⟩
   | DCC Π(_α, _β) => ⟨_, ⟨.pi⟩⟩
-  | DCC App(_β) => ⟨_, ⟨.appl⟩⟩
+  | DCC App(_α, _β) => ⟨_, ⟨.appl⟩⟩
   | DCC (f ∘ g) =>
     let ⟨_m, ⟨h₁⟩⟩ := f.size
     let ⟨_n, ⟨h₂⟩⟩ := g.size
@@ -333,7 +333,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
   | (DCC (Snd'(_α, _τ) ⟦_β⟧(_a, b)))       => .some ⟨b, ⟨.snd'⟩⟩
   | (DCC (`(_β, x) _y))                    => .some ⟨x, ⟨.quot⟩⟩
   | (DCC (Id(_α) x))                       => .some ⟨x, ⟨.id⟩⟩
-  | (DCC (App(_τ) ⟦_β⟧(f, x)))             => .some ⟨(DCC (f x)), ⟨.app⟩⟩
+  | (DCC (App(_α, _τ) ⟦_β⟧(f, x)))         => .some ⟨(DCC (f x)), ⟨.app⟩⟩
   | (DCC (Fst(_τ) ⟦_β⟧(a, _b)))            => .some ⟨a, ⟨.fst⟩⟩
   | (DCC (Snd(_τ) ⟦_β⟧(_a, b)))            => .some ⟨b, ⟨.snd⟩⟩
   | (DCC ((x ∘ y) z))                      => .some ⟨(DCC (x (y z))), ⟨.comp⟩⟩
@@ -468,7 +468,7 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
     | app =>
       simp_all
       rename_i h
-      exact (h _ _ _ _ rfl rfl rfl rfl).elim
+      exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
     | quot | id | comp | curr => simp_all
   case h_11 =>
     simp_all
@@ -516,7 +516,7 @@ set_option maxHeartbeats 1000000000 in theorem RedAff.complete' (h_red : RedAff 
     case app =>
       simp_all
       rename_i h
-      exact (h _ _ _ _ rfl rfl rfl rfl).elim
+      exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
     case quot | id | comp | curr =>
       simp_all
     case congrFun =>

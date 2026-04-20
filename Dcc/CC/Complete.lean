@@ -14,8 +14,7 @@ theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
     | comp h_r ih₁ ih₂ | fst h_r ih
     | snd h_r ih | snd' h_r ih₁ ih₂
     | quot h_r ih₁ ih₂
-    | appl h_r ih
-    | pi h_r ih₁ ih₂ =>
+    | appl h_r ih₁ ih₂ | pi h_r ih₁ ih₂ =>
     have h := h_r.complete
     dsimp only [infer]
     aesop

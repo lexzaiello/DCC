@@ -63,7 +63,7 @@ f : ∀ (x : α), β x
 App(β) : ∀ (s : Σ(`(Π(m, Id(Sort m), β), α))), (β α) ∘ Snd'(Π(m, Id(Sort m), β), β)
 -/
 def App.type (α β : Expr) (m n : Level) : Expr :=
-  DCC (Π(Id(Sort (max m n)), (β α) ∘ Snd'(Π(Id(Sort m), β), β)) Σ(`(Π(Id(Sort m), β), α)))
+  DCC (Π(Id(Sort (max m n)), (Λ(Id(Sort m), β) α) ∘ Snd'((Π(Id(Sort m), β) α), α)) Σ(`((Π(Id(Sort m), β) α), α)))
 
 def snd'.type (α β : Expr) (m n : Level) : Expr :=
   arrow (DCC Σ(`(α, β))) β (max m n)
@@ -150,9 +150,10 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (DCC (f_α₂ x_α₂)) α
     → Reduces (pair.type α γ m) τ
     → Judge (DCC ⟦γ⟧⟨f, g⟩) τ
-  | appl : Judge β (arrow α (DCC Sort n) m)
+  | appl : Judge α (DCC Sort m)
+    → Judge β (arrow (DCC Σ(Id(Sort m))) (DCC Sort n) m.succ)
     → Reduces (App.type α β m n) τ
-    → Judge (DCC App(β)) τ
+    → Judge (DCC App(α, β)) τ
   /-
     ef_α : α → Sort m
     f_β : ∀ (x : α) (y : f_α x), Sort n
@@ -260,11 +261,16 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
         .some ⟨_, ⟨.pair ht₁ (reduce_reduces rfl) (h₂ ▸ h₃ ▸ ht₂) (reduce_reduces h₁.symm) (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
-  | DCC App(β) =>
-    match with_arr (infer β) with
-    | .some ⟨_τ₁, _α, DCC Sort _n, _m, ⟨ht⟩, ⟨harr⟩⟩ => .some ⟨_, ⟨.appl (harr ▸ ht)
-      (reduce_reduces rfl)⟩⟩
-    | _ => .none
+  | DCC App(α, β) =>
+      match infer α, with_arr (infer β) with
+      | .some ⟨(DCC Sort m), ⟨ht₁⟩⟩,
+        .some ⟨_τ₁, DCC Σ(Id(Sort m₂)), DCC Sort _n, m₃, ⟨ht⟩, ⟨harr⟩⟩ =>
+          if heq : m₂ = m ∧ m.succ = m₃ then
+            have ⟨h₁, h₂⟩ := heq
+            .some ⟨_, ⟨.appl ht₁ (h₁ ▸ h₂ ▸ harr ▸ ht)
+              (reduce_reduces rfl)⟩⟩
+          else .none
+      | _, _ => .none
   | DCC Π(f_α, f_β) =>
     match with_arr (infer f_α), infer f_β with
     | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩,

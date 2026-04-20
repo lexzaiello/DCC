@@ -1,9 +1,16 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
+/-
+def arrow (α β : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), Λ(Id(Sort m), `(Σ(Id(Sort m)), β))) α)
+-/
 
 def arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α)
+  DCC (Π(Id(Sort m), Λ(Id(Sort m), `(Σ(Id(Sort m)), β))) α)
+
+/-def arrow (α β : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α)-/
 
 def id.type (α : Expr) (m : Level) : Expr :=
   arrow α α m
@@ -12,9 +19,7 @@ def fst.type (α β : Expr) (m n : Level) : Expr :=
   arrow (DCC Σ(β)) α (max m n)
 
 def snd.type (β : Expr) (m n : Level) : Expr :=
-  DCC (Π(Id(Sort (max m n)),
-    `(Sort (max m n),
-      β ∘ Fst(β))) Σ(β))
+  DCC (Π(Id(Sort (max m n)), `(Sort (max m n), β ∘ Fst(β))) Σ(β))
 
 def coup.type (β : Expr) : Expr :=
   DCC Σ(β)
@@ -24,9 +29,7 @@ x : ∀ (s : Σ(β)), γ s
 Λ(β, x) : ∀ (x : α) (y : β x), γ ⟦β⟧(x, y)
 -/
 def curr.type (α β γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m),
-    `(Sort m, Π(β,
-      Λ(β, (γ Σ(β)))))) α) -- weaken α, keep x
+  DCC (Π(Id(Sort m), `(Sort m, Π(β, Λ(β, (γ Σ(β)))))) α) -- weaken α, keep x
 
 /-
 Nondependent quotation.
@@ -60,8 +63,7 @@ f : ∀ (x : α), β x
 App(β) : ∀ (s : Σ(`(Π(m, Id(Sort m), β), α))), (β α) ∘ Snd'(Π(m, Id(Sort m), β), β)
 -/
 def App.type (α β : Expr) (m n : Level) : Expr :=
-  DCC (Π(Id(Sort (max m n)), (β α) ∘ Snd'(Π(Id(Sort m), β), β))
-    Σ(`(Π(Id(Sort m), β), α)))
+  DCC (Π(Id(Sort (max m n)), (β α) ∘ Snd'(Π(Id(Sort m), β), β)) Σ(`(Π(Id(Sort m), β), α)))
 
 def snd'.type (α β : Expr) (m n : Level) : Expr :=
   arrow (DCC Σ(`(α, β))) β (max m n)
@@ -71,8 +73,8 @@ f_α : α → Sort m
 f_β : (x : α) (y : f_α x) → Sort n
 Π(m, f_α, f_β) : α → Sort n
 -/
-def Pi.type (α : Expr) (m n : Level) : Expr :=
-  arrow α (DCC Sort n) m
+def Pi.type (α : Expr) (m o : Level) : Expr :=
+  arrow α (DCC Sort o) m
 
 def Sigma.type (m n : Level) : Expr :=
   DCC (Sort (max m n))
@@ -97,75 +99,15 @@ def reduce_reduces (h : reduce A = B) : Reduces A B := ⟨reduce_sound h, reduce
 
 def reduce_reduces' : Reduces A A.reduce := reduce_reduces rfl
 
-inductive IsArrow : Expr → (α β : Expr) → Level → Prop
-  | mk    : Reduces A (arrow α β m) → IsArrow A α β m
-
-def IsArrow.unique (h₁ : IsArrow τ α β m) (h₂ : IsArrow τ α₂ β₂ n) : m = n ∧ α = α₂ ∧ β = β₂ := by
-  induction h₁ generalizing n
-  induction h₂ generalizing m
-  rename_i h₁ h₂
-  have h := h₂.complete
-  rw [h₁.complete] at h
-  unfold arrow at h
-  simp_all
-
-def IsArrow.unique' (h₁ : IsArrow τ α β m) (h₂ : IsArrow τ α β m) : h₁ = h₂ := by
-  induction h₁
-  cases h₂
-  rename_i h₁ h₂
-  cases h₁.unique' h₂
-  rfl
-
-@[inline] abbrev is_arrow (t : Expr) : Option ((α β : Expr) × (m : Level) × PLift (IsArrow t α β m)) :=
-  match heq₀ : t.reduce with
-  | DCC (Π(Id(Sort m), `(Sort m₂, `(α, β))) α₂) =>
-    if heq : m = m₂ ∧ α = α₂ then
-      have ⟨h₁, h₂⟩ := heq
-      .some ⟨α, β, m, ⟨reduce_sound (by
-        rw [← h₁, ← h₂] at heq₀
-        exact heq₀), reduce_norm (by
-        rw [← h₁, ← h₂] at heq₀
-        exact heq₀)⟩⟩
-    else
-      .none
-  | _ => .none
-
 @[inline] abbrev match_arrow (t : Expr) : Option ((α β : Expr) × (m : Level) × PLift (t = arrow α β m)) :=
   match t with
-  | DCC (Π(Id(Sort m), `(Sort m₂, `(α, β))) α₂) =>
-    if heq : m = m₂ ∧ α = α₂ then
+  | DCC (Π(Id(Sort m), Λ(Id(Sort m₂), `(Σ(Id(Sort m₃)), β))) α) =>
+    if heq : m = m₂ ∧ m = m₃ then
       have ⟨h₁, h₂⟩ := heq
-      .some ⟨α, β, m, ⟨h₁.symm ▸ h₂.symm ▸ rfl⟩⟩
+      .some ⟨α, β, m, ⟨by rw [← h₁, ← h₂]; rfl⟩⟩
     else
       .none
   | _ => .none
-
-def IsArrow.complete (h : IsArrow e α β m) : is_arrow e = .some ⟨α, β, m, ⟨h⟩⟩ := by
-  match h with
-  | ⟨h⟩ =>
-    have ha := h.complete
-    simp [is_arrow]
-    split
-    case h_1 heq' =>
-      split
-      case isTrue h =>
-        split
-        rw [heq'] at ha
-        cases ha
-        rfl
-      case isFalse h =>
-        rw [heq'] at ha
-        cases ha
-        exact (h ⟨rfl, rfl⟩).elim
-    case h_2 h => exact (h _ _ _ _ _ ha).elim
-
-instance : Decidable (∃ α β m, IsArrow e α β m) :=
-  if h : (is_arrow e).isSome then
-    .isTrue ⟨_, _, _, ((is_arrow e).get h).snd.snd.snd.down⟩
-  else
-    .isFalse (fun ⟨_, _, _, h⟩ => by
-      have h := h.complete
-      simp_all)
 
 inductive Judge : Expr → Expr → Prop where
   | id   : Judge α (DCC Sort m)
@@ -211,9 +153,16 @@ inductive Judge : Expr → Expr → Prop where
   | appl : Judge β (arrow α (DCC Sort n) m)
     → Reduces (App.type α β m n) τ
     → Judge (DCC App(β)) τ
+  /-
+    ef_α : α → Sort m
+    f_β : ∀ (x : α) (y : f_α x), Sort n
+    Π(f_α, f_β)
+
+    f_β : (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(f_α, `(Σ(f_α), Sort o))))) α)
+  -/
   | pi   : Judge f_α (arrow α (DCC Sort n) m)
-    → Judge f_β (DCC Π(Id(α), Π(f_α, `(α, `(Sort n, Sort o)))))
-    → Reduces (Pi.type α m n) τ
+    → Judge f_β (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(f_α, `(Σ(f_α), Sort o))))) α))
+    → Reduces (Pi.type α m o) τ
     → Judge (DCC Π(f_α, f_β)) τ
   | sort : Judge (DCC Sort m) (DCC Sort m.succ)
   | app  : Judge f (DCC (Π(f_α, f_β) x_α))
@@ -319,11 +268,16 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
       (reduce_reduces rfl)⟩⟩
     | _ => .none
   | DCC Π(f_α, f_β) =>
+    dbg_trace (Std.format ∘ Sigma.fst) <$> f_α.infer
+    dbg_trace Std.format f_β
+    dbg_trace (Std.format ∘ Sigma.fst) <$> f_β.infer
+    
     match with_arr (infer f_α), infer f_β with
-    | .some ⟨_τ₁, α, DCC Sort n, _m₂, ⟨ht₁⟩, ⟨harr⟩⟩, .some ⟨DCC Π(Id(α₂), Π(f_α₂, `(α₃, `(Sort n₃, Sort _o)))), ⟨ht₂⟩⟩ =>
-      if heq : α₂ = α ∧ f_α₂ = f_α ∧ α₃ = α ∧ n₃ = n then
-        have ⟨h₁, h₂, h₃, h₄⟩ := heq
-        .some ⟨_, ⟨.pi (harr ▸ ht₁) (h₁ ▸ h₂ ▸ h₃ ▸ h₄ ▸ ht₂) (reduce_reduces rfl)⟩⟩
+    | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩,
+      .some ⟨(DCC (Π(Id(Sort m₂), `(Sort m₃, Π(f_α₂, Λ(f_α₃, `(Σ(f_α₄), Sort _o))))) α₂)), ⟨ht₂⟩⟩ =>
+      if heq : α₂ = α ∧ f_α₂ = f_α ∧ f_α₃ = f_α ∧ f_α₄ = f_α ∧ m₂ = m ∧ m₃ = m then
+        have ⟨h₁, h₂, h₃, h₄, h₅, h₆⟩ := heq
+        .some ⟨_, ⟨.pi (harr ▸ ht₁) (h₆ ▸ h₅ ▸ h₄ ▸ h₃ ▸ h₂ ▸ h₁ ▸ ht₂) (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
   | DCC (f x) =>

@@ -27,10 +27,20 @@ def test_pair : Option Expr :=
 
 #eval test_pair
 
-def test_app : Option Expr :=
-  let f := DCC Id(Sort 1)
-  match infer f with
-  | DCC Π(_f_α, β)
+#eval (Std.format ∘ Sigma.fst) <$> (DCC App(Sort 1, `(Σ(Id(Sort 2)), Sort 1))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (App(Sort 1, `(Σ(Id(Sort 2)), Sort 1))  ⟦`((Π(Id(Sort 2), Λ(Id(Sort 2), `(Σ(Id(Sort 2)), Sort 1))) Sort 1), Sort 1)⟧(Id(Sort 1), Sort 0))).infer
+
+/-
+expected:
+Σ(`((Π(Id(Sort 2), `(Σ(Id(Sort 1)), Sort 1)) Sort 1), Sort 1)))
+
+actual:
+Σ(`((Π(Id(Sort 2), Λ(Id(Sort 2), `(Σ(Id(Sort 2)), Sort 1))) Sort 1), Sort 1))
+
+expected':
+Σ(`((Π(Id(Sort 2), Λ(Id(Sort 2), `(Σ(Id(Sort 1)), Sort 1))) Sort 1), Sort 1))
+-/
 
 /-
 α → α

@@ -63,7 +63,9 @@ f : ∀ (x : α), β x
 App(β) : ∀ (s : Σ(`(Π(m, Id(Sort m), β), α))), (β α) ∘ Snd'(Π(m, Id(Sort m), β), β)
 -/
 def App.type (α β : Expr) (m n : Level) : Expr :=
-  DCC (Π(Id(Sort (max m n)), (Λ(Id(Sort m), β) α) ∘ Snd'((Π(Id(Sort m), β) α), α)) Σ(`((Π(Id(Sort m), β) α), α)))
+  DCC (Π(Id(Sort (max m n)),
+    `(Sort (max m n), (Λ(Id(Sort m), β) α) ∘ Snd'((Π(Id(Sort m), Λ(Id(Sort m), β)) α), α)))
+    Σ(`((Π(Id(Sort m), Λ(Id(Sort m), β)) α), α)))
 
 def snd'.type (α β : Expr) (m n : Level) : Expr :=
   arrow (DCC Σ(`(α, β))) β (max m n)

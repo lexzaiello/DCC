@@ -20,10 +20,14 @@ def test_pair : Option Expr := do
 
 --#eval (DCC (Π(Id(Sort 2), `(Sort 2, `(Sort 1, Sort 1))) Sort 1)).infer
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (App(Sort 1, `(Σ(Id(Sort 2)), Sort 1))
-  ⟦`((Π(Id(Sort 2), `(Sort 2, `(Sort 1, Sort 1))) Sort 1), Sort 1)⟧(
-    Id(Sort 1),
-    Sort 0))).infer
+def test_app : Option Expr := do
+  match ← (DCC Id(Sort 1)).infer with
+  | ⟨t@(DCC (Π(_f_α, Λ(_a, _b, β)) _x)), _⟩ =>
+    let e := DCC (App(Sort 1, β) ⟦`(t, Sort 1)⟧(Id(Sort 1), Sort 0))
+    Sigma.fst <$> e.infer
+  | _ => .none
+
+#eval Std.format <$> test_app
 
 /-
 Uncurry:

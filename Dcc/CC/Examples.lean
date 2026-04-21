@@ -30,6 +30,18 @@ def test_app : Option Expr := do
 #eval Std.format <$> test_app
 
 /-
+New app type:
+
+needs to work with environment.
+
+Coup(n, Π(f_α, f_β) env, `(Π(f_α, f_β) env, (f_α env)))
+
+App(f_α, f_β, env) : Π(Id(Sort n),
+  (f_β env) ∘ Snd'(Π(f_α, f_β) env, (f_α env))
+  ) Coup(n, Π(f_α, f_β) env, `(Π(f_α, f_β) env, (f_α env)))
+-/
+
+/-
 Uncurry:
 
 uncurry(f) (x, y) = f x y

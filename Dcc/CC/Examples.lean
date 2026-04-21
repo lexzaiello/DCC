@@ -36,7 +36,13 @@ uncurry(f) (x, y) = f x y
 
 f : Π(Id(Sort m),
 
-uncurry := ⟨f ∘ Fst(β), Snd(β)⟩
+f x : 
 
-uncurry := ⟦β ∘ Fst(Π(β, γ))⟧⟨⟦Π(β, γ)⟧⟨Fst(β), f ∘ Fst(β)⟩, Snd(β)⟩
+uncurry := ⟦`(Sort m, Π(β, Λ(α, β, γ))), β ∘ Snd'(Sort m, α)⟧⟨f ∘ Fstc(α, β), Sndc(α, β)⟩
+
+uncurry := App() ∘
+  ⟦`(Sort m, Π(β, Λ(α, β, γ))), β ∘ Snd'(Sort m, α)⟧⟨f ∘ Fstc(α, β), Sndc(α, β)⟩
 -/
+
+def uncurry (α β γ f : Expr) (m : Level) : Expr :=
+  sorry

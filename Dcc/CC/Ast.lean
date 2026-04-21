@@ -101,4 +101,55 @@ def toFormat (e : Expr) : Std.Format :=
 instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
 instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
 
+/-
+⟦β⟧(x, y) : Σ(Λ(Id(Sort m), β)) α <- β receives (α, x)
+
+Σ(f_β) x : Sort (max m n)
+
+f_β : δ → α → Sort n
+
+Λ(β, x) = x ⟦β⟧(x, y)
+
+β receives (α, x)
+-/
+
+/-
+β receives (α, x)
+⟦β⟧(x, y) : Σ(
+-/
+def coup.type (α β : Expr) (m : Level) : Expr :=
+  DCC (Σ(Λ(Fst(`(Sort m, `(Sort m, α)), α), β)) α)
+
+/-
+The main Fst is indexed by the environment map and the environment:
+
+Fst(f_β, env).
+
+Fstc is a derived version of Fst more closely aligned with traditional couples.
+
+Fstc(α, β) ⟦β⟧(x, y) : α
+Sndc(α, β) ⟦β⟧(x, y) : β (α, x)
+
+Snd' is specifically for couples with this encoding.
+
+Curry is also designed for couples with the (α, x) β encoding.
+That is, β in ⟦β⟧(x, y) receives (α, x)
+-/
+def mk_fstc (α β : Expr) (m : Level) : Expr :=
+  DCC Fst(Λ(Fst(`(Sort m, `(Sort m, α)), α), β ∘ Snd'(Sort m, α)), α)
+
+def mk_sndc (α β : Expr) (m : Level) : Expr :=
+  DCC Snd(Λ(Fst(`(Sort m, `(Sort m, α)), α), β ∘ Snd'(Sort m, α)), α)
+
+syntax "Fstc(" term "," expr,* ")" : expr
+syntax "Sndc(" term "," expr,* ")" : expr
+
+macro_rules
+  | `(DCC Fstc($m:term, $α:expr, $β:expr)) => `(mk_fstc (DCC $α) (DCC $β) $m)
+  | `(DCC Sndc($m:term, $α:expr, $β:expr)) => `(mk_sndc (DCC $α) (DCC $β) $m)
+
+def arrow (α β : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), Λ(Fstc(m.succ, Sort m, Id(Sort m)),
+    `(#(coup.type (DCC Sort m) (DCC Id(Sort m)) m.succ), β))) α)
+
 end Expr

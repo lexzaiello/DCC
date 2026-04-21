@@ -2,23 +2,15 @@ import Dcc.CC.Ast
 import Dcc.CC.Step2
 
 /-
-⟦β⟧(x, y) : Σ(Λ(Id(Sort m), β)) α <- β receives (α, x)
+Fst(α, β)
 
-Σ(f_β) x : Sort (max m n)
-
-f_β : δ → α → Sort n
-
-Λ(β, x) = x ⟦β⟧(x, y)
-
-β receives (α, x)
+β (α, x) : Sort n
 -/
+/-def fst.β.type (m n : Level) : Expr :=
+  arrow (coup.type (DCC Sort m) (DCC Id(Sort m)) m.succ) (DCC (Sort n)) m.succ-/
 
-def coup.type (α β : Expr) (m : Level) : Expr :=
-  DCC (Σ(Λ(Fst(Id(Sort m)), β)) α)
-
-def arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), Λ(Fst(Id(Sort m)),
-    `((Σ(Λ(Fst(Id(Sort m.succ)), Fst(Id(Sort m)))) Sort m), β))) α)
+def fst.f_β.type (α δ : Expr) (m n o : Level) : Expr :=
+  arrow δ (arrow α (DCC Sort n) m) o
 
 def id.type (α : Expr) (m : Level) : Expr :=
   arrow α α m
@@ -36,18 +28,31 @@ I don't think we actually want to change Σ.
 We just need some mechanism of CREATING Σ, but Σ itself does not necessarily depend on context.
 -/
 
-def fst.type (α β : Expr) (m n : Level) : Expr :=
-  arrow (coup.type α β m) α (max m n)
+/-
+f_β env : α → Sort n
+Fst(f_β, env) : Σ(f_β, δ) → α
+-/
 
-def snd.type (α β : Expr) (m n : Level) : Expr :=
-  DCC (Π(Id(Sort (max m n)), `(Sort (max m n), (Λ(Fst(Id(Sort m)), β) α) ∘ Fst(β))) #(coup.type α β m))
+def fst.type (α f_β env : Expr) (m n : Level) : Expr :=
+  arrow (DCC (Σ(f_β) env)) α (max m n)
 
 /-
-x : ∀ (s : Σ(β)), γ s
-Λ(β, x) : ∀ (x : α) (y : β x), γ ⟦β⟧(x, y)
+f_β env : α → Sort n
+Snd(f_β, env) : Π(Id(Sort max m n), Λ((f_β env) ∘ Fst(f_β, env)) (Σ(f_β) env)
+-/
+def snd.type (f_β env : Expr) (m n : Level) : Expr :=
+  DCC (Π(Id(Sort (max m n)), `(Sort (max m n), (f_β env) ∘ Fst(f_β, env))) (Σ(f_β) env))
+
+/-
+Λ(β, x) y z → x ⟦β⟧(y, z)
+
+β receives (α, x)
+
+x : ∀ (s : coup.type α β m), γ s
 -/
 def curr.type (α β γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, Π(β, Λ(β, γ)))) α) -- weaken α, keep x
+  DCC (Π(Id(Sort m), Λ(Fstc(m.succ, Sort m, Id(Sort m)),
+    Π(β, Λ(β, γ)))) α) -- weaken α, keep x
 
 /-
 Nondependent quotation.
@@ -64,7 +69,7 @@ g : ∀ (x : α), γ x
 
 ⟦β, γ⟧⟨f, g⟩ x : ⟦`((β x), (γ x))⟧((f x), (g x))
 
-⟦β, γ⟧⟨f, g⟩ : Π(Id(Sort m), Λ(?, Σ(Λ(?, ?)))
+⟦β, γ⟧⟨f, g⟩ : (Π(Id(Sort m), `(Sort m, Σ(?))) α)
 -/
 def pair.type (α γ : Expr) (m : Level) : Expr :=
   arrow α (DCC Σ(γ)) m
@@ -78,9 +83,9 @@ App(β) : ∀ (s : Σ(`(Π(m, Id(Sort m), β), α))), (β α) ∘ Snd'(Π(m, Id(
 -/
 def App.type (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(Id(Sort (max m n)),
-    `(Sort (max m n), (Λ(Fst(Id(Sort m)), β) α)
-      ∘ Snd'((Π(Id(Sort m), Λ(Fst(Id(Sort m)), β)) α), α)))
-    Σ(`((Π(Id(Sort m), Λ(Fst(Id(Sort m)), β)) α), α)))
+    `(Sort (max m n), (Λ(Fst(Sort m, Id(Sort m)), β) α)
+      ∘ Snd'((Π(Id(Sort m), Λ(Fst(Sort m, Id(Sort m)), β)) α), α)))
+    Σ(`((Π(Id(Sort m), Λ(Fst(Sort m, Id(Sort m)), β)) α), α)))
 
 def snd'.type (α β : Expr) (m n : Level) : Expr :=
   arrow (DCC Σ(`(α, β))) β (max m n)
@@ -96,7 +101,7 @@ def Pi.type (α : Expr) (m o : Level) : Expr :=
 /-
 Σ(f_β)
 
-f_β : δ → (Σ(Fst(Id(Sort m))) α) → Sort n
+f_β : δ → α → Sort n
 
 Σ(f_β) : δ → Sort n
 -/
@@ -125,11 +130,11 @@ def reduce_reduces' : Reduces A A.reduce := reduce_reduces rfl
 
 @[inline] abbrev match_arrow (t : Expr) : Option ((α β : Expr) × (m : Level) × PLift (t = arrow α β m)) :=
   match t with
-  | DCC (Π(Id(Sort m), Λ(Fst(Id(Sort m₂)),
-    `((Σ(Λ(Fst(Id(Sort m₃)), Fst(Id(Sort m₄)))) Sort m₅), β))) α) =>
-    if heq : m = m₂ ∧ m.succ = m₃ ∧ m = m₄ ∧ m = m₅ then
-      have ⟨h₁, h₂, h₃, h₄⟩ := heq
-      .some ⟨α, β, m, ⟨by rw [← h₁, ← h₂, ← h₃, ← h₄]; rfl⟩⟩
+  | DCC (Π(Id(Sort m), Λ(π, `(t_β, β))) α) =>
+    if heq : π = (DCC Fst(Sort m, Id(Sort m)))
+      ∧ t_β = (coup.type (DCC Sort m) (DCC Id(Sort m)) m.succ) then
+      have ⟨h₁, h₂⟩ := heq
+      .some ⟨α, β, m, ⟨by rw [h₁, h₂]; rfl⟩⟩
     else
       .none
   | _ => .none
@@ -142,14 +147,24 @@ inductive Judge : Expr → Expr → Prop where
     → Judge f (DCC (Π(Id(Sort n), γ) β))
     → Reduces (comp.type α β γ g m) τ
     → Judge (DCC f ∘ g) τ
-  | fst  : Judge β (arrow α (DCC Sort n) m)
-    → Reduces (fst.type α β m n) τ
-    → Judge (DCC Fst(β)) τ
-  | snd   : Judge β (arrow α (DCC Sort n) m)
-    → Reduces (snd.type β m n) τ
-    → Judge (DCC Snd(β)) τ
-  | sigma : Judge β (arrow α (DCC Sort n) m)
-    → Judge (DCC Σ(β)) (Sigma.type m n)
+  /-
+    f_β δ : α → Sort n
+    Fst(f_β, δ) : Σ(f_β) δ → α
+  -/
+  | fst  : Judge env δ
+    → Judge f_β (fst.f_β.type α δ m n o)
+    → Reduces (fst.type α f_β env m n) τ
+    → Judge (DCC Fst(f_β, env)) τ
+  /-
+    f_β δ : α → Sort n
+    Snd(f_β, δ) : ∀ (s : Σ(f_β) δ), f_β δ ∘ Fst
+  -/
+  | snd   : Judge env δ
+    → Judge f_β (fst.f_β.type α δ m n o)
+    → Reduces (snd.type α f_β env m n) τ
+    → Judge (DCC Snd(α, β)) τ
+  | sigma : Judge f_β (arrow δ (arrow α (DCC Sort n) m) o)
+    → Judge (DCC Σ(f_β)) (Sigma.type δ m n o)
   | snd' : Judge α (DCC Sort m)
     → Judge β (DCC Sort n)
     → Reduces (snd'.type α β m n) τ

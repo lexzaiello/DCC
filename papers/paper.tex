@@ -39,7 +39,10 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-We present an extension of the categorical combinators \autocite{CURIEN1986188} to a dependently-typed, contextless setting, with a metatheory mechanized in the Lean 4 proof assistant. We prove several important properties of the calculus, including that type-checking is decidable, and that the affine restriction of the combinators are strongly-normalizing, globally confluent, and that normal forms are unique. We achieve judgmental decidability in principle by showing that the types of all objects can be expressed using an affine restriction of the reduction rules, which we demonstrate is strongly-normalizing by a syntactic decreasing measure.
+  We present an extension of the categorical combinators \autocite{CURIEN1986188} to a dependently-typed, contextless setting, with a metatheory mechanized in the Lean 4 proof assistant. We prove several important properties of the calculus, including that type-checking is decidable, and that the affine restriction of the combinators are strongly-normalizing, globally confluent, and that normal forms are unique. We achieve judgmental decidability in principle by showing that the types of all objects can be expressed using an affine restriction of the reduction rules, which we demonstrate is strongly-normalizing by a syntactic decreasing measure.
+
+  % May want to note the design decisions that allowed affinely expressing not obviously affine types. How is this interesting?
+  % TODO: this will come to us more after re-writing the inference rules. Some category theory reference.
 \end{abstract}
 \section{Introduction}
 
@@ -82,14 +85,14 @@ The categorical combinators \autocite{CURIEN1986188} are the basis of the Catego
 
 \begin{figure}[H]
 \begin{center}
-\begin{tabular}{l l}\label{red_untyped_cat}
-(ass) & \((x \circ y) z = x(y z)\) \\
-(fst) & \(Fst(a, b) = a\) \\
-(snd) & \(Snd(a, b) = b\) \\
-(dpair) & \(\langle x, y\rangle z = (x z, y z)\) \\
-(curr) & \(\Lambda(x)yz = x(y, z)\) \\
-(app) & \(App(f, x) = f x\) \\
-(quote) & \(`(x) y = x\)
+\begin{tabular}{l l l}\label{red_untyped_cat}
+&(ass) & \((x \circ y) z = x(y z)\) \\
+&(fst) & \(Fst(a, b) = a\) \\
+&(snd) & \(Snd(a, b) = b\) \\
+&(dpair) & \(\langle x, y\rangle z = (x z, y z)\) \\
+&(curr) & \(\Lambda(x)yz = x(y, z)\) \\
+&(app) & \(App(f, x) = f x\) \\
+&(quote) & \(`(x) y = x\)
 \end{tabular}
 \end{center}
 \caption{Reduction rules of the untyped combinators as seen in the Categorical Abstract Machine.}
@@ -143,11 +146,48 @@ Curien extends the combinators with type annotations, enabling simple typing. Qu
 
 \section{Dependent Categorical Combinators}
 
-Our primary insights when extending the categorical combinators to dependent types are: when typed as \(\Sigma\)-pairs, couples can naturally encode contexts and typing judgments; pairs which produce couples correspond to substitution within contexts; the types of all primitive objects can be represented without the pair rule (the affine restriction) after adding a \(Flip\) combinator. By showing that the affine restriction is strongly normalizing, we gain decidable judgmental equality (\(\equiv\)) and a decision procedure for type-checking.
+Our primary insights when extending the categorical combinators to dependent types are: when typed as \(\Sigma\)-pairs, couples can naturally encode contexts and typing judgments; and the types of all primitive objects can be represented in their most intutiuive dependent form without the pair rule. We refer to the subset of the categorical combinators excluding the pair rule as the ``affine restriction.'' By showing that the affine restriction is strongly normalizing, we gain decidable judgmental equality (\(\equiv\)) and a decision procedure for type-checking.
 
-As usual, we extend the calculus with a \(\Pi(m, n)\) object. Arrows \(\alpha \rightarrow \beta\) are represented by \(\Pi\) objects that quote their codomain. We re-interpret the base combinators as pertaining to \(\Sigma\) couples, instead of product couples. 
+Curien's categorical combinators are nominally combinatory, but might perplex those familiar with the \(SK\) and \(BCKI\) calculi, due to their unusually pointed nature. In its simply-typed form \autocite[p. 220]{CURIEN1986188}, the calculus has not one primitive combinator without a point, and no object (besides application) has an arity of more than one. Type arguments are given as points, projection mappings in pairs are given as points (\(\langle f, g \rangle\)), the Curry combinator is given with a point (\(\Lambda(x)\)), couple members are given as points (\((a, b)\)), and composition is pointed with respect to \(f\) and \(g\) (i.e., \((f \circ g) x\)). This design decision, although seemingly obscure, is quite natural when interpreting couples (\(((x_1, x_2), \ldots x_{n})\)) as bound debruijn indices. Take an example reduction in the untyped calculus:
 
-\subsection{Couples as Dependent Sums}
+\begin{equation}
+\begin{split}
+  & \Lambda(\Lambda(App \circ \langle Snd \circ Fst, App \circ \langle App \circ Fst, Snd \rangle \rangle)) n f x \\
+  & = \Lambda(App \circ \langle Snd \circ Fst, App \circ \langle App \circ Fst, Snd \rangle \rangle) (n, f) x \\
+  & = (App \circ \langle Snd \circ Fst, App \circ \langle App \circ Fst, Snd \rangle \rangle) ((n, f), x) \\
+  & = App (f, App (App (n, f), x)) \\
+  & = f (n f x) \\
+\end{split}
+\end{equation}
+
+Despite every visible operation being bound by a point, we are able to robustly rearrange arguments in scope by viewing couples as an ``environment'' of variables traversable by composed projection.
+
+We similarly regard couples as meaningful traversable data, but reinterpret them as \(\Sigma\)-pairs. Serindipitously, \(\Sigma\)-couples make traversing data in a well-typed way quite easy, and can naturally encode typing judgments. We use this fact to define most of our type arguments as functions of the environment specified by points (i.e., in the style of the Curry combinator). By specifying type arguments as points instead of point-free, potential duplication of items in context can be avoided, thus further enabling a purely affine type theory.
+
+\subsection{Couples as Degenerate Dependent Sums}
+
+Recall the typical typing of a \(\Sigma\)-pair:
+
+\begin{equation}
+\inferrule
+{ \Gamma \vdash \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
+{ \Gamma \vdash \Sigma(\alpha, \beta) : \sort{max(m, n)}}
+\end{equation}
+
+A \(\Sigma\)-type can be placed under a \(\Lambda\)-binder, referencing bound variables in its \(fst\) and \(snd\) types. \(\Sigma\)-types are one of the canonical dependent types, alongside \(\Pi\). In fact, there is a known equivalence between \(\Pi\) and \(\Sigma\) \autocite[50]{martin1984intuitionistic}, in that a function \(\Pi (x : \alpha) (y : \beta x), \gamma x y\) can be easily repackaged as a function \(\Pi (s : \Sigma(\alpha, \beta)), \gamma s.fst s.snd\), and vice-versa (``currying''-''uncurrying'').
+
+In the untyped categorical combinators, Curry-Uncurry can be written as:
+
+\begin{equation}\label{curr_uncurr}
+  \begin{split}
+    Curry(x) &:= \Lambda(x) \\
+    Uncurry(x) &:= App \circ \langle x \circ Fst, Snd \rangle
+  \end{split}
+\end{equation}
+
+In a dependently-typed categorical combinator calculus where couples are naively interpreted as raw, type-point-free \(\Sigma\)-pairs, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially if an affine type theory is desired. In \(Uncurry(x)\), the \(Snd\) component (\(z : \beta y\)) of the composed pair depends on the first component of its own couple' preimage (\(y : \alpha\)), despite \(y\) being destroyed upon reducing the pair operation. \(App\) has no knowledge of \(y\), and cannot calculate the type of \((x y, z)\). However, we avoid this stumbling point by interpreting \(\Sigma\) as a type-pointed object, similarly to how Curry (\(Lambda\)) is term-pointed. That is, the arguments \(\alpha\) and \(\beta\) to \(\Sigma\) are not given point-free, but by a function \(f_\beta\) of an arbitrary environment and \(fst\).
+
+
 
 We interpret couples \((a, b)\) as \(\Sigma\)-pairs like such:
 

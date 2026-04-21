@@ -25,7 +25,7 @@ inductive Expr where
   | snd   : Expr  → Expr  → Expr
   | snd'  : Expr  → Expr  → Expr
   | comp  : Expr  → Expr  → Expr
-  | pair  : Expr  → Expr  → Expr  → Expr  → Expr
+  | pair  : Level → Level → Expr  → Expr  → Expr  → Expr
   -- Σ(β) is the usual sigma type
   | sigma : Expr  → Expr
   | mk    : Expr  → Expr  → Expr  → Expr
@@ -53,7 +53,8 @@ syntax expr "∘" expr                                             : expr
 syntax:30 ident                                                  : expr
 syntax "(" expr+ ")"                                             : expr
 syntax:max "Sort" term                                           : expr
-syntax (priority := high) "⟦" expr,* "⟧" "⟨" expr,* "⟩" : expr
+syntax (priority := high) "⟦" term "," term "," expr,* "⟧"
+                                                  "⟨" expr,* "⟩" : expr
 syntax (priority := high) "⟦" expr,* "⟧" "(" expr,* ")"          : expr
 
 syntax "DCC"  expr : term
@@ -64,7 +65,7 @@ macro_rules
   | `(DCC `($β:expr, $x:expr))                   => `(Expr.quot (DCC $β) (DCC $x))
   | `(DCC Λ($α:expr, $e:expr))                   => `(Expr.curr (DCC $α) (DCC $e))
   | `(DCC Π($α:expr, $β:expr))                   => `(Expr.pi (DCC $α) (DCC $β))
-  | `(DCC ⟦$β:expr, $γ:expr⟧⟨$x:expr, $y:expr⟩)  => `(Expr.pair (DCC $β) (DCC $γ) (DCC $x) (DCC $y))
+  | `(DCC ⟦$n:term, $o:term, $γ:expr⟧⟨$x:expr, $y:expr⟩)  => `(Expr.pair $n $o (DCC $γ) (DCC $x) (DCC $y))
   | `(DCC ⟦$β:expr⟧($x, $y))                     => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                          => `(Expr.sort $m)
   | `(DCC Σ($β:expr))                            => `(Expr.sigma (DCC $β))
@@ -85,14 +86,14 @@ def toFormat (e : Expr) : Std.Format :=
   match e with
   | (DCC `(β, x))       => "`(" ++ β.toFormat ++ ", " ++ x.toFormat ++ ")"
   | (DCC Id(α))         => "Id(" ++ α.toFormat ++ ")"
-  | (DCC Sort m)        => s!"Sort {m}"
+  | (DCC Sort m)        => "Sort" ++ (Std.format m)
   | (DCC Fst(α, β))     => "Fst" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
   | (DCC Snd(α, β))     => "Snd" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
   | (DCC Snd'(α, β))    => "Snd'" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
   | (DCC App(α, β))     => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Λ(α, e))       => "Λ(" ++ α.toFormat ++ ", " ++ e.toFormat ++ ")"
   | (DCC Π(α, β))       => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
-  | (DCC ⟦β, γ⟧⟨a, b⟩)     => (.bracket "⟦" (β.toFormat ++ ", " ++ γ.toFormat) "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
+  | (DCC ⟦n, o, γ⟧⟨a, b⟩)     => (.bracket "⟦" (.joinSep [Std.format n, Std.format o, γ.toFormat] ", ") "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
   | (DCC ⟦β⟧(a, b))     => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
   | (DCC Σ(β))       => "Σ" ++ (.bracket "(" β.toFormat ")")
   | (DCC f ∘ g)         => (.bracket "(" (f.toFormat ++ " ∘ " ++ g.toFormat) ")")
@@ -143,13 +144,32 @@ def mk_sndc (α β : Expr) (m : Level) : Expr :=
 
 syntax "Fstc(" term "," expr,* ")" : expr
 syntax "Sndc(" term "," expr,* ")" : expr
+syntax "Coup(" term "," expr,* ")" : expr
+
+syntax "(" expr ":" expr ")" "→" expr : expr
 
 macro_rules
   | `(DCC Fstc($m:term, $α:expr, $β:expr)) => `(mk_fstc (DCC $α) (DCC $β) $m)
   | `(DCC Sndc($m:term, $α:expr, $β:expr)) => `(mk_sndc (DCC $α) (DCC $β) $m)
+  | `(DCC Coup($m:term, $α:expr, $β:expr)) => `(coup.type (DCC $α) (DCC $β) $m)
 
 def arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), Λ(Fstc(m.succ, Sort m, Id(Sort m)),
-    `(#(coup.type (DCC Sort m) (DCC Id(Sort m)) m.succ), β))) α)
+  DCC (Π(Id(Sort m), Λ(Fstc(m.succ, Sort m, Id(Sort m)), `(Coup(m.succ, Sort m, Id(Sort m)), β))) α)
+
+macro_rules
+  | `(DCC ($α:expr : Sort $m) → $β:expr) => `(arrow (DCC $α) (DCC $β) $m)
+
+/-
+Version of quotation that is point-free with respect to x.
+
+β is not dependent.
+-/
+def quot' (α β : Expr) (m : Level) : Expr :=
+  DCC Λ(`(Coup(m.succ, Sort m, Id(Sort m)), β), Fstc(m, α, `(Coup(m.succ, Sort m, Id(Sort m)), β)))
+
+syntax "Quot(" term "," expr,* ")" : expr
+
+macro_rules
+  | `(DCC Quot($m:term, $α:expr, $β:expr)) => `(quot' (DCC $α) (DCC $β) $m)
 
 end Expr

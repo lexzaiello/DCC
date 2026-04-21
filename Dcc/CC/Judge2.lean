@@ -240,7 +240,7 @@ inductive Judge : Expr → Expr → Prop where
   | subst  : Judge x (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
     → Reduces (Subst₁.type β γ δ o) τ
     → Judge (DCC Subst(x, Fst(β))) τ
-  | appl   : Judge f (DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), Π(β, γ) ∘ Snd'(Sort m, α))) α))
+  | appl   : Judge f (DCC (Π(Id(Sort m), `(Sort m, Π(β, γ))) α))
     → Judge β (DCC (α : Sort m) → Sort n)
     → Reduces (App.type α β γ m n) τ
     → Judge (DCC App(β, f)) τ
@@ -400,13 +400,13 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
     | _ => .none
   | DCC App(β, f) =>
       match infer f with
-      | .some ⟨(DCC (Π(Id(Sort m), Λ(Sort m₂, Id(Sort m₃), Π(β₂, γ) ∘ Snd'(Sort m₄, α))) α₂)), ⟨h_t⟩⟩ =>
+      | .some ⟨(DCC (Π(Id(Sort m), `(Sort m₂, Π(β₂, γ))) α)), ⟨h_t⟩⟩ =>
         match with_arr (infer β) with
-        | .some ⟨_, α₃, DCC Sort n, m₅, ⟨h_t₂⟩, ⟨h_arr⟩⟩ =>
-          if heq : m = m₂ ∧ m = m₃ ∧ m = m₄ ∧ α = α₂ ∧ α₃ = α ∧ m₅ = m ∧ β₂ = β then
-            have ⟨ha, hb, hc, hd, he, hf, hg⟩ := heq
+        | .some ⟨_, α₂, DCC Sort n, m₅, ⟨h_t₂⟩, ⟨h_arr⟩⟩ =>
+          if heq : m = m₂ ∧ α₂ = α ∧ m₅ = m ∧ β₂ = β then
+            have ⟨ha, he, hf, hg⟩ := heq
             .some ⟨_,
-              ⟨.appl (hg ▸ ha.symm ▸ hb.symm ▸ hc.symm ▸ hd.symm ▸ h_t) (he ▸ hf ▸ h_arr ▸ h_t₂) (reduce_reduces rfl)⟩⟩
+              ⟨.appl (ha.symm ▸ hg ▸ h_t) (he ▸ hf ▸ h_arr ▸ h_t₂) (reduce_reduces rfl)⟩⟩
           else .none
         | _ => .none
       | _ => .none

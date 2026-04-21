@@ -188,7 +188,7 @@ In the untyped categorical combinators, Curry-Uncurry can be written as:
 
 In a dependently-typed categorical combinator calculus where couples are naively interpreted as raw, type-point-free \(\Sigma\)-pairs, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially if an affine type theory is desired. In \(Uncurry(x)\), the \(Snd\) component (\(z : \beta y\)) of the composed pair depends on the first component of its own couple' preimage (\(y : \alpha\)), despite \(y\) being destroyed upon reducing the pair operation. \(App\) has no knowledge of \(y\), and cannot calculate the type of \((x y, z)\). However, we avoid this stumbling point by interpreting \(\Sigma\) as a type-pointed object, similarly to how Curry (\(\Lambda\)) is term-pointed. That is, the arguments \(\alpha\) and \(\beta\) to \(\Sigma\) are not given point-free, but by a function \(f_\beta\) of an arbitrary environment and \(fst\) given as a point \eqref{infer_sigma_types}.
 
-\begin{figure}
+\begin{figure}[h!]
 \begin{equation}\label{infer_sigma_types}
   \inferrule[Sigma Types]
   { \alpha : \sort{m}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
@@ -196,6 +196,8 @@ In a dependently-typed categorical combinator calculus where couples are naively
 \end{equation}
 \caption{Where \(\delta\) denotes an arbitrary environment and \(\alpha\) denotes the \(fst\) component. \(\Sigma(f_\beta) (env : \delta) : \sort{max(m, n)}\)}
 \end{figure}
+
+\textit{OLD: ....}
 
 We interpret couples \((a, b)\) as \(\Sigma\)-pairs like such:
 

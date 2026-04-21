@@ -11,9 +11,7 @@ inductive Red : Expr → Expr → Type
   | fst       : Red (DCC (Fst(_α, _β) ⟦β⟧(a, b))) a
   | snd       : Red (DCC (Snd(_α, _β) ⟦β⟧(a, b))) b
   | comp      : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
-  | pair      : Red
-    (DCC (⟦n, o, α, β, γ⟧⟨f, g⟩ x))
-    (DCC ⟦`((β x), (γ x))⟧((f x), (g x)))
+  | pair      : Red (DCC (⟦α, β, γ⟧⟨f, g⟩ x)) (DCC ⟦`((β x), (γ x))⟧((f x), (g x)))
   | curr      : Red (DCC (Λ(α, β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl      : Red x x' → Red (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))
   | sigr      : Red y y' → Red (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y'))
@@ -53,7 +51,7 @@ inductive Size : Expr → ℕ → Prop
   | snd    : Size (DCC Snd(α, β)) 1
   | appl   : Size (DCC App(α, β)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
-  | pair   : Size f m → Size g n → Size (DCC ⟦_n, _o, α, β, γ⟧⟨f, g⟩) (m + n).succ
+  | pair   : Size f m → Size g n → Size (DCC ⟦α, β, γ⟧⟨f, g⟩) (m + n).succ
   | curr   : Size x m → Size (DCC Λ(α, β, x)) m.succ
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
 
@@ -78,7 +76,7 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
     let ⟨_m, ⟨h₁⟩⟩ := f.size
     let ⟨_n, ⟨h₂⟩⟩ := g.size
     ⟨_, ⟨.comp h₁ h₂⟩⟩
-  | DCC ⟦_n, _o, _α, _β, _γ⟧⟨a, b⟩ =>
+  | DCC ⟦_α, _β, _γ⟧⟨a, b⟩ =>
     let ⟨_o, ⟨h₁⟩⟩ := a.size
     let ⟨_p, ⟨h₂⟩⟩ := b.size
     ⟨_, ⟨.pair h₁ h₂⟩⟩

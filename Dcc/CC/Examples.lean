@@ -5,28 +5,15 @@ import Dcc.CC.Judge2
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1) (Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Fst(`(Sort 1, `(Sort 1, Sort 1)), Sort 0)).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Σ(`(Sort 1, `(Sort 1, Sort 1))) (Sort 0))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Fstc(3, Sort 2, Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(3, Sort 2, Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC Σ(Id(Sort 1))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (id.type (DCC Sort 1) 2).infer
-#eval Std.format (id.type (DCC Sort 1) 2)
-#eval (Std.format ∘ Sigma.fst) <$> (DCC `(Sort 2, `(Sort 1, Sort 1))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (`(Sort 1, `(Sort 1, Sort 0)) (Sort 0) (Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘ Id(Sort 1)) (Sort 0))).infer
 
 def test_pair : Option Expr :=
-  let f := DCC Id(Sort 2)
-  let g := DCC Id(Sort 2) ∘ Id(Sort 2)
-  -- γ receives (f x)
-  /-
-    Id(Sort 2) ∘ Id(Sort 2) :
-    (some ((Π(3, 3) Sort 2) (Λ(Id(Sort 3),`(Sort 3, ((Σ(4, 3) Sort 3) Id(Sort 3)), Sort 2)) Sort 2)
-      ∘ Id(Sort 2) ∘ Snd(Sort 3, Id(Sort 3))))
-  -/
-  let γ := DCC (Λ(Id(Sort 3), `(Σ(Id(Sort 3)), Sort 2)) Sort 2)
-  let e := DCC (⟦γ⟧⟨f, g⟩ (Sort 1))
+  let e := DCC (⟦Sort 1, `(Sort 1, Sort 1), `(Sort 1, Sort 1)⟧⟨Id(Sort 1), Id(Sort 1)⟩ (Sort 0))
   Sigma.fst <$> e.infer
 
-#eval test_pair
+#eval Std.format test_pair
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (App(Sort 1, `(Σ(Id(Sort 2)), Sort 1))
   ⟦`((Π(Id(Sort 2), Λ(Id(Sort 2), `(Σ(Id(Sort 2)), Sort 1))) Sort 1), Sort 1)⟧(

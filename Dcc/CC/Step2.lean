@@ -11,17 +11,9 @@ inductive Red : Expr → Expr → Type
   | fst       : Red (DCC (Fst(_α, _β) ⟦β⟧(a, b))) a
   | snd       : Red (DCC (Snd(_α, _β) ⟦β⟧(a, b))) b
   | comp      : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
-  -- β in coup receives ((β x), (f x))
-  /-
-  ⟦β, γ⟧⟨f, g⟩ x = ⟦
-    -- receive ((β x), (f x)).
-    `(Coup(Sort n, Id(Sort n)), (γ x))
-    ⟧((f x), (g x))
-  -/
-  | pair      : Red (DCC (⟦n, o, α, β, γ⟧⟨f, g⟩ x))
-    (DCC ⟦
-      -- receive ((β α x), (f x)). Output (γ x) as type of (g x)
-      (Quot(o.succ, Sort o, Coup(n.succ, Sort n, Id(Sort n))) (γ α x))⟧((f x), (g x)))
+  | pair      : Red
+    (DCC (⟦n, o, α, β, γ⟧⟨f, g⟩ x))
+    (DCC ⟦`((β x), (γ x))⟧((f x), (g x)))
   | curr      : Red (DCC (Λ(α, β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl      : Red x x' → Red (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))
   | sigr      : Red y y' → Red (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y'))

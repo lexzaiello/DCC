@@ -108,22 +108,16 @@ instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
 
 /-
 ⟦β⟧(x, y) : Σ(Λ(Id(Sort m), β)) α <- β receives (α, x)
-
-Σ(f_β) x : Sort (max m n)
-
-f_β : δ → α → Sort n
-
-Λ(β, x) = x ⟦β⟧(x, y)
-
-β receives (α, x)
+β : α → Sort n
 -/
 
 /-
-β receives (α, x)
-⟦β⟧(x, y) : Σ(
+β receives (x : α)
+
+DCC (Σ(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β)) α)
 -/
 def coup.type (α β : Expr) (m : Level) : Expr :=
-  DCC (Σ(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β)) α)
+  DCC (Σ(`(Sort m, β)) α)
 
 /-
 The main Fst is indexed by the environment map and the environment:
@@ -141,10 +135,10 @@ Curry is also designed for couples with the (α, x) β encoding.
 That is, β in ⟦β⟧(x, y) receives (α, x)
 -/
 def mk_fstc (α β : Expr) (m : Level) : Expr :=
-  DCC Fst(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β ∘ Snd'(Sort m, α)), α)
+  DCC Fst(`(Sort m, β), α)
 
 def mk_sndc (α β : Expr) (m : Level) : Expr :=
-  DCC Snd(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β ∘ Snd'(Sort m, α)), α)
+  DCC Snd(`(Sort m, β), α)
 
 syntax "Fstc(" term "," expr,* ")" : expr
 syntax "Sndc(" term "," expr,* ")" : expr
@@ -158,7 +152,7 @@ macro_rules
   | `(DCC Coup($m:term, $α:expr, $β:expr)) => `(coup.type (DCC $α) (DCC $β) $m)
 
 def arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), Λ(Sort m, Fstc(m.succ, Sort m, Id(Sort m)), `(Coup(m.succ, Sort m, Id(Sort m)), β))) α)
+  DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α)
 
 macro_rules
   | `(DCC ($α:expr : Sort $m) → $β:expr) => `(arrow (DCC $α) (DCC $β) $m)

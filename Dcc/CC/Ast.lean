@@ -20,27 +20,29 @@ we can derive `()
 -/
 
 inductive Expr where
-  | sort  : Level → Expr
-  | fst   : Expr  → Expr  → Expr
-  | snd   : Expr  → Expr  → Expr
-  | snd'  : Expr  → Expr  → Expr
-  | comp  : Expr  → Expr  → Expr
-  | pair  : Level → Expr  → Expr  → Expr  → Expr → Expr → Expr
+  | sort   : Level → Expr
+  | fst    : Expr  → Expr
+  | snd    : Expr  → Expr
+  | snd'   : Expr  → Expr  → Expr
+  | comp   : Expr  → Expr  → Expr
+  | subst  : Expr  → Expr  → Expr
+  | pair   : Level → Expr  → Expr  → Expr  → Expr → Expr → Expr
   -- Σ(β) is the usual sigma type
-  | sigma : Expr  → Expr
-  | mk    : Expr  → Expr  → Expr  → Expr
-  | pi    : Expr  → Expr  → Expr
-  | curr  : Expr  → Expr  → Expr  → Expr
-  | appl  : Expr  → Expr  → Expr
-  | quot  : Expr  → Expr  → Expr
-  | id    : Expr  → Expr
-  | app   : Expr  → Expr  → Expr
+  | sigma  : Expr  → Expr
+  | mk     : Expr  → Expr  → Expr  → Expr
+  | pi     : Expr  → Expr  → Expr
+  | curr   : Expr  → Expr  → Expr  → Expr
+  | appl   : Expr  → Expr  → Expr
+  | quot   : Expr  → Expr  → Expr
+  | id     : Expr  → Expr
+  | app    : Expr  → Expr  → Expr
 deriving BEq, Repr, DecidableEq
 
 declare_syntax_cat expr
 
 syntax "#(" term ")"                                             : expr
 syntax:max "`(" expr,* ")"                                       : expr
+syntax:max "Subst(" expr,* ")"                                   : expr
 syntax:max "Id(" expr,* ")"                                      : expr
 syntax:max "Fst(" expr,* ")"                                     : expr
 syntax:max "Snd'(" expr,* ")"                                    : expr
@@ -68,9 +70,9 @@ macro_rules
   | `(DCC ⟦$β:expr⟧($x, $y))                     => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                          => `(Expr.sort $m)
   | `(DCC Σ($β:expr))                            => `(Expr.sigma (DCC $β))
-  | `(DCC Fst($α:expr, $β:expr))                 => `(Expr.fst (DCC $α) (DCC $β))
-  | `(DCC Snd($α:expr, $β:expr))                 => `(Expr.snd (DCC $α) (DCC $β))
+  | `(DCC Fst($β:expr))                          => `(Expr.fst (DCC $β))
   | `(DCC Snd($β:expr))                          => `(Expr.snd (DCC $β))
+  | `(DCC Subst($β, $x))                         => `(Expr.subst (DCC $β) (DCC $x))
   | `(DCC Snd'($α:expr, $β:expr))                => `(Expr.snd' (DCC $α) (DCC $β))
   | `(DCC App($α:expr, $β:expr))                 => `(Expr.appl (DCC $α) (DCC $β))
   | `(DCC Id($α:expr))                           => `(Expr.id (DCC $α))
@@ -83,11 +85,12 @@ namespace Expr
 
 def toFormat (e : Expr) : Std.Format :=
   match e with
+  | DCC Subst(β, x)          => "Subst" ++ (.bracket "(" (.joinSep [β.toFormat, x.toFormat] ", ") ")")
   | (DCC `(β, x))            => "`(" ++ β.toFormat ++ ", " ++ x.toFormat ++ ")"
   | (DCC Id(α))              => "Id(" ++ α.toFormat ++ ")"
   | (DCC Sort m)             => "Sort " ++ (Std.format m)
-  | (DCC Fst(α, β))          => "Fst" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
-  | (DCC Snd(α, β))          => "Snd" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
+  | (DCC Fst(β))             => "Fst" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
+  | (DCC Snd(β))             => "Snd" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
   | (DCC Snd'(α, β))         => "Snd'" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
   | (DCC App(α, β))          => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Λ(α, β, e))         => "Λ(" ++ (.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
@@ -131,10 +134,10 @@ Curry is also designed for couples with the (α, x) β encoding.
 That is, β in ⟦β⟧(x, y) receives (α, x)
 -/
 def mk_fstc (α β : Expr) (m : Level) : Expr :=
-  DCC Fst(`(Sort m, β), α)
+  DCC (Fst(`(Sort m, β)) α)
 
 def mk_sndc (α β : Expr) (m : Level) : Expr :=
-  DCC Snd(`(Sort m, β), α)
+  DCC (Snd(`(Sort m, β)) α)
 
 syntax "Fstc(" term "," expr,* ")" : expr
 syntax "Sndc(" term "," expr,* ")" : expr

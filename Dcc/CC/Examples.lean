@@ -58,3 +58,20 @@ uncurry := App() ∘
 
 def uncurry (α β γ f : Expr) (m : Level) : Expr :=
   sorry
+
+/-
+env pipelininig:
+- "substitution" combinator? replace env somewhere.
+
+Γ(x, β) env s = (x env) (Snd(β, env) s)
+
+
+
+Snd(f_β) env
+
+Γ(x, y) env = (x env) (y env)
+
+Γ(x, y) env = Γ(
+
+x gets whole env, y 
+-/

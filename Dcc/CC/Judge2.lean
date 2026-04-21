@@ -19,19 +19,16 @@ def id.type (α : Expr) (m : Level) : Expr :=
   DCC (α : Sort m) → α
 
 /-
-f_β env : α → Sort n
-Fst(f_β, env) : Σ(f_β, δ) → α
+f_β : δ → α → Sort n
+Fst(f_β) : ∀ (env : δ) (s : Σ(f_β) env), α
 -/
 
-def fst.type (α f_β env : Expr) (m n : Level) : Expr :=
-  DCC ((Σ(f_β) env) : Sort (max m n)) → α
+def fst.type (α f_β δ : Expr) (m o : Level) : Expr :=
+  DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(f_β), Λ(δ, Σ(f_β), `(Coup(m, δ, Σ(f_β)), α))) ∘ Snd'(Sort o, δ))) δ) 
 
-/-
-f_β env : α → Sort n
-Snd(f_β, env) : Π(Id(Sort max m n), Λ((f_β env) ∘ Fst(f_β, env)) (Σ(f_β) env)
--/
-def snd.type (f_β env : Expr) (m n : Level) : Expr :=
-  DCC (Π(Id(Sort (max m n)), `(Sort (max m n), (f_β env) ∘ Fst(f_β, env))) (Σ(f_β) env))
+def snd.type (f_β δ : Expr) (o : Level) : Expr :=
+  DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(f_β), Subst(f_β, Fst(f_β))) ∘ Snd'(Sort o, δ))) δ) 
+
 
 /-
 Λ(β, x) y z → x ⟦β⟧(y, z)
@@ -79,8 +76,14 @@ def comp.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
 
 /-
-f : ∀ (x : α), β x
-App(β) : ∀ (s : Σ(`(Π(m, Id(Sort m), β), α))), (β α) ∘ Snd'(Π(m, Id(Sort m), β), β)
+f_α : δ → Sort m
+f_β : (env : δ) → (x : f_α env) → Sort n
+App(f_α, f_β) : ∀ (env : δ) (s : Σ(Λ(n, δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))) env),
+  (f_β env) (Snd(Λ(n, δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))) env s)
+
+App(f_α, f_β) env
+
+Idea: env pipelining?
 -/
 def App.type (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(Id(Sort (max m n)),
@@ -187,18 +190,16 @@ inductive Judge : Expr → Expr → Prop where
     f_β δ : α → Sort n
     Fst(f_β, δ) : Σ(f_β) δ → α
   -/
-  | fst  : Judge env δ
-    → Judge f_β (fst.f_β.type α δ m n o)
-    → Reduces (fst.type α f_β env m n) τ
-    → Judge (DCC Fst(f_β, env)) τ
+  | fst  : Judge f_β (fst.f_β.type α δ m n o)
+    → Reduces (fst.type α f_β δ m o) τ
+    → Judge (DCC Fst(f_β)) τ
   /-
     f_β δ : α → Sort n
     Snd(f_β, δ) : ∀ (s : Σ(f_β) δ), f_β δ ∘ Fst
   -/
-  | snd   : Judge env δ
-    → Judge f_β (fst.f_β.type α δ m n o)
-    → Reduces (snd.type f_β env m n) τ
-    → Judge (DCC Snd(f_β, env)) τ
+  | snd  : Judge f_β (fst.f_β.type α δ m n o)
+    → Reduces (snd.type f_β δ o) τ
+    → Judge (DCC Snd(f_β)) τ
   | sigma : Judge f_β (fst.f_β.type α δ m n o)
     → Reduces (Sigma.type δ m n o) τ
     → Judge (DCC Σ(f_β)) τ
@@ -310,26 +311,16 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  | DCC Fst(f_β, env) =>
-    match infer env with
-    | .some ⟨δ, ⟨ht₁⟩⟩ =>
-      match with_fst_fβ_type (infer f_β) with
-      | .some ⟨_τ₁, _α, δ₂, m, n, o, ⟨ht₂⟩, ⟨harr⟩⟩ =>
-        if heq : δ = δ₂ then
-          .some ⟨_, ⟨.fst ht₁ (heq ▸ harr ▸ ht₂) (reduce_reduces rfl)⟩⟩
-        else .none
-      | _ => .none
-    | _ => .none
-  | DCC Snd(f_β, env) =>
-    match infer env with
-    | .some ⟨δ, ⟨ht₁⟩⟩ =>
-      match with_fst_fβ_type (infer f_β) with
-      | .some ⟨_τ₁, _α, δ₂, m, n, o, ⟨ht₂⟩, ⟨harr⟩⟩ =>
-        if heq : δ = δ₂ then
-          .some ⟨_, ⟨.snd ht₁ (heq ▸ harr ▸ ht₂) (reduce_reduces rfl)⟩⟩
-        else .none
-      | _ => .none
-    | _ => .none
+  | DCC Fst(f_β) =>
+     match with_fst_fβ_type (infer f_β) with
+     | .some ⟨_τ₁, _α, δ₂, m, n, o, ⟨ht₂⟩, ⟨harr⟩⟩ =>
+       .some ⟨_, ⟨.fst (harr ▸ ht₂) (reduce_reduces rfl)⟩⟩
+     | _ => .none
+  | DCC Snd(f_β) =>
+     match with_fst_fβ_type (infer f_β) with
+     | .some ⟨_τ₁, _α, δ₂, m, n, o, ⟨ht₂⟩, ⟨harr⟩⟩ =>
+       .some ⟨_, ⟨.snd (harr ▸ ht₂) (reduce_reduces rfl)⟩⟩
+     | _ => .none
   | DCC Σ(β) =>
     match with_fst_fβ_type (infer β) with
     | .some ⟨_τ₁, _α, _δ, _m, _n, _o, ⟨ht⟩, ⟨harr⟩⟩ =>

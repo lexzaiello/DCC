@@ -9,8 +9,8 @@ namespace Expr
 @[simp] theorem match_f_β : fst.f_β.type.matcher (fst.f_β.type α δ m n o) = .some ⟨α, δ, m, n, o, ⟨rfl⟩⟩ := by
   simp [fst.f_β.type.matcher, fst.f_β.type]
 
-@[simp] theorem match_pair_β : pair.β.type.matcher (pair.β.type α m n) = .some ⟨α, m, n, ⟨rfl⟩⟩ := by
-  simp [pair.β.type.matcher, pair.β.type]
+@[simp] theorem match_pair_β : pair.β.type.matcher (pair.β.type m n) = .some ⟨m, n, ⟨rfl⟩⟩ := by
+  simp [pair.β.type.matcher, pair.β.type, coup.type, arrow]
 
 @[simp] theorem match_curr_β_type : curr.β.type.matcher (curr.β.type α m n) = .some ⟨α, m, n, ⟨rfl⟩⟩ := by
   simp [curr.β.type.matcher, curr.β.type]
@@ -21,7 +21,7 @@ namespace Expr
 @[simp] theorem with_fst_fβ_fβ : with_fst_fβ_type (.some ⟨fst.f_β.type α δ m n o, h⟩) = .some ⟨fst.f_β.type α δ m n o, α, δ, m, n, o, h, ⟨rfl⟩⟩ := by
   simp [with_fst_fβ_type, fst.f_β.type.matcher, fst.f_β.type, arrow, arrow.matcher]
 
-@[simp] theorem with_pair_β_pair_β_type : with_pair_β_type (.some ⟨pair.β.type α m n, h⟩) = .some ⟨pair.β.type α m n, α, m, n, h, ⟨rfl⟩⟩ := by
+@[simp] theorem with_pair_β_pair_β_type : with_pair_β_type (.some ⟨pair.β.type m n, h⟩) = .some ⟨pair.β.type m n, m, n, h, ⟨rfl⟩⟩ := by
   simp [with_pair_β_type]
 
 @[simp] theorem with_curr_β_type_curr_β_type : with_curr_β_type (.some ⟨curr.β.type α m n, h⟩) = .some ⟨curr.β.type α m n, α, m, n, h, ⟨rfl⟩⟩ := by

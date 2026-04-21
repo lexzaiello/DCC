@@ -73,10 +73,7 @@ g : ∀ (x : α), γ x
 def pair.type (α β γ : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, Σ(
     -- receive (x : α), then (f x)
-    Λ(α, β, γ ∘ Fstc(m, α, β))))) α)
-
-def pair.β.type (α : Expr) (m n : Level) : Expr :=
-  DCC (α : Sort m) → Sort n
+    Λ(α, (Λ(Sort m, Id(Sort m), β) α), (Λ(Sort m, Id(Sort m), γ) α) ∘ Fstc(m, α, (Λ(Sort m, Id(Sort m), β) α)))))) α)
 
 def comp.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
@@ -102,6 +99,11 @@ def Pi.type (α : Expr) (m o : Level) : Expr :=
 
 def Pi.f_β.type (f_α α : Expr) (m o : Level) :=
   (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(α, f_α, `(Coup(m, α, f_α), Sort o))))) α))
+
+def pair.β.type (m n : Level) : Expr :=
+  DCC (Coup(m.succ, Sort m, Id(Sort m)) : Sort m.succ) → Sort n
+
+#eval Std.format <| pair.β.type 10 0
 
 /-
 Σ(f_β)
@@ -135,7 +137,7 @@ def reduce_reduces' : Reduces A A.reduce := reduce_reduces rfl
 
 @[inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PLift (t = (DCC (α : Sort m) → β))) :=
   match heq₀ : t with
-  | DCC (Π(Id(Sort m), `(_a, `(_b, β))) α) =>
+  | DCC (Π(Id(Sort m), Λ(_a, _b, `(_e, β))) α) =>
     if heq₁ : t = (DCC (α : Sort m) → β) then
       .some ⟨α, β, m, ⟨by simp_all⟩⟩
     else
@@ -151,10 +153,12 @@ def reduce_reduces' : Reduces A A.reduce := reduce_reduces rfl
     | _ => .none
   | _ => .none
 
-@[inline] abbrev pair.β.type.matcher (t : Expr) : Option ((α : Expr) × (m n : Level) × (PLift (t = pair.β.type α m n))) :=
-  match arrow.matcher t with
-  | .some ⟨α, DCC Sort n, m, ⟨h_arr⟩⟩ =>
-    .some ⟨α, m, n, ⟨by rw [h_arr]; rfl⟩⟩
+@[inline] abbrev pair.β.type.matcher (t : Expr) : Option ((m n : Level) × (PLift (t = pair.β.type m n))) :=
+  match t with
+  | DCC (Π(_a, Λ(_b, _c, `(_d, Sort n))) (_e Sort m)) =>
+    if heq : DCC (Π(_a, Λ(_b, _c, `(_d, Sort n))) (_e Sort m)) = pair.β.type m n then
+      .some ⟨m, n, ⟨by rw [heq]⟩⟩
+    else .none
   | _ => .none
 
 @[inline] abbrev curr.β.type.matcher (t : Expr) : Option
@@ -216,12 +220,12 @@ inductive Judge : Expr → Expr → Prop where
     → Judge β (DCC Sort n)
     → Reduces (quot.type α β n) τ
     → Judge (DCC `(β, x)) τ
-  | pair : Judge f (DCC (Π(Id(Sort m), `(Sort m, β)) α))
-    → Judge g (DCC (Π(Id(Sort m), `(Sort m, γ)) α))
-    → Judge β (pair.β.type α m n)
-    → Judge γ (pair.β.type α m o)
+  | pair : Judge f (DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), β)) α))
+    → Judge g (DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), γ)) α))
+    → Judge β (pair.β.type m n)
+    → Judge γ (pair.β.type m o)
     → Reduces (pair.type α β γ m) τ
-    → Judge (DCC ⟦β, γ⟧⟨f, g⟩) τ
+    → Judge (DCC ⟦m, α, β, γ⟧⟨f, g⟩) τ
   | appl : Judge α (DCC Sort m)
     → Judge β (arrow (DCC Σ(Id(Sort m))) (DCC Sort n) m.succ)
     → Reduces (App.type α β m n) τ
@@ -267,10 +271,10 @@ def with_fst_fβ_type (h : Option ((t : Expr) × PLift (Judge e t))) :
   | _ => none
 
 def with_pair_β_type (h : Option ((t : Expr) × PLift (Judge e t))) :
-  Option ((τ α : Expr) × (m n : Level) × PLift (Judge e τ) × (PLift (τ = pair.β.type α m n))) :=
+  Option ((τ : Expr) × (m n : Level) × PLift (Judge e τ) × (PLift (τ = pair.β.type m n))) :=
   match h with
   | .some ⟨t, h⟩ => match pair.β.type.matcher t with
-    | .some ⟨α, m, n, h₂⟩ => .some ⟨t, α, m, n, h, h₂⟩
+    | .some ⟨m, n, h₂⟩ => .some ⟨t, m, n, h, h₂⟩
     | _ => .none
   | _ => .none
 
@@ -366,22 +370,19 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
     | .some ⟨_α, ⟨ht₁⟩⟩, .some ⟨DCC Sort _n, ⟨ht₂⟩⟩ =>
       .some ⟨_, ⟨.quot ht₁ ht₂ (reduce_reduces rfl)⟩⟩
     | _, _ => .none
-  | DCC ⟦β, γ⟧⟨f, g⟩ =>
+  | DCC ⟦m, α, β, γ⟧⟨f, g⟩ =>
     match infer f, infer g with
-    | .some ⟨DCC (Π(Id(Sort m), `(Sort ma, β₂)) α), ⟨ht₁⟩⟩, .some ⟨DCC (Π(Id(Sort m₂), `(Sort mb, γ₂)) α₂), ⟨ht₂⟩⟩ =>
+    | .some ⟨DCC (Π(Id(Sort m₀), Λ(Sort ma, Id(Sort mb), β₂)) α₁), ⟨ht₁⟩⟩, .some ⟨DCC (Π(Id(Sort m₂), Λ(Sort mc, Id(Sort md), γ₂)) α₂), ⟨ht₂⟩⟩ =>
       match with_pair_β_type (infer β), with_pair_β_type (infer γ) with
-      | .some ⟨_, α₃, m₃, n, ⟨ht₃⟩, ⟨harr₁⟩⟩, .some ⟨_, α₄, m₄, o, ⟨ht₄⟩, ⟨harr₂⟩⟩ =>
-        if heq : α = α₂ ∧ β = β₂ ∧ γ = γ₂ ∧ α = α₃ ∧ α = α₄ ∧ m = m₂ ∧ m = m₃ ∧ m = m₄ ∧ α = α₃ ∧ α = α₄ then
-          if heq₂ : m = ma ∧ m = mb then
-            have ⟨h₁, h₂, h₄, h₅, h₆, h₇, h₈, h₉, h12, h13⟩ := heq
-            have ⟨ha, hb⟩ := heq₂
-            .some ⟨_, ⟨.pair
-              (ha.symm ▸ h₂ ▸ ht₁)
-              (by rw [← h₁, ← hb, ← h₇, ← h₄] at ht₂; exact ht₂)
-              (by rw [← h₈, ← h12] at harr₁; rw [← harr₁]; exact ht₃)
-              (by rw [← h₉, ← h₆] at harr₂; rw [← harr₂]; exact ht₄)
-              (reduce_reduces rfl)⟩⟩
-           else .none
+      | .some ⟨_, m₃, n, ⟨ht₃⟩, ⟨harr₁⟩⟩, .some ⟨_, m₄, o, ⟨ht₄⟩, ⟨harr₂⟩⟩ =>
+        if heq : α = α₂ ∧ β = β₂ ∧ γ = γ₂ ∧ m = m₂ ∧ m = m₃ ∧ m = m₄ ∧ m = ma ∧ m = mb ∧ m = mc ∧ m = md ∧ m = m₀ ∧ α = α₁ then
+          have ⟨h₁, h₂, h₄, h₅, h₆, h₇, h₈, h₉, h12, h13, h14, h15⟩ := heq
+          .some ⟨_, ⟨.pair
+            (by rw [← h14, ← h15, ← h₈, ← h₉, ← h₂] at ht₁; exact ht₁)
+            (by rw [← h₁, ← h₄, ← h13, ← h12, ← h₅] at ht₂; exact ht₂)
+            (by rw [← h₆] at harr₁; rw [← harr₁]; exact ht₃)
+            (by rw [← h₇] at harr₂; rw [← harr₂]; exact ht₄)
+            (reduce_reduces rfl)⟩⟩
         else .none
       | _, _ => .none
     | _, _ => .none

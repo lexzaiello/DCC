@@ -32,3 +32,14 @@ def test_pair : Option Expr :=
     Id(Sort 1),
     Sort 0))).infer
 
+/-
+Uncurry:
+
+uncurry(f) (x, y) = f x y
+
+f : Π(Id(Sort m),
+
+uncurry := ⟨f ∘ Fst(β), Snd(β)⟩
+
+uncurry := ⟦β ∘ Fst(Π(β, γ))⟧⟨⟦Π(β, γ)⟧⟨Fst(β), f ∘ Fst(β)⟩, Snd(β)⟩
+-/

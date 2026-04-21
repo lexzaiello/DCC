@@ -1,20 +1,46 @@
 import Dcc.CC.Ast
 import Dcc.CC.Step2
 
+/-
+⟦β⟧(x, y) : Σ(Λ(Id(Sort m), β)) α <- β receives (α, x)
+
+Σ(f_β) x : Sort (max m n)
+
+f_β : δ → α → Sort n
+
+Λ(β, x) = x ⟦β⟧(x, y)
+
+β receives (α, x)
+-/
+
+def coup.type (α β : Expr) (m : Level) : Expr :=
+  DCC (Σ(Λ(Fst(Id(Sort m)), β)) α)
+
 def arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), Λ(Id(Sort m), `(Σ(Id(Sort m)), β))) α)
+  DCC (Π(Id(Sort m), Λ(Fst(Id(Sort m)),
+    `((Σ(Λ(Fst(Id(Sort m.succ)), Fst(Id(Sort m)))) Sort m), β))) α)
 
 def id.type (α : Expr) (m : Level) : Expr :=
   arrow α α m
 
+/-
+Fst(β), what does β indicate?
+
+need some way to fill in environment.
+Fst(β) : ∀
+
+Fst / Snd are supposed to work with couples.
+
+I don't think we actually want to change Σ.
+
+We just need some mechanism of CREATING Σ, but Σ itself does not necessarily depend on context.
+-/
+
 def fst.type (α β : Expr) (m n : Level) : Expr :=
-  arrow (DCC Σ(β)) α (max m n)
+  arrow (coup.type α β m) α (max m n)
 
-def snd.type (β : Expr) (m n : Level) : Expr :=
-  DCC (Π(Id(Sort (max m n)), `(Sort (max m n), β ∘ Fst(β))) Σ(β))
-
-def coup.type (β : Expr) : Expr :=
-  DCC Σ(β)
+def snd.type (α β : Expr) (m n : Level) : Expr :=
+  DCC (Π(Id(Sort (max m n)), `(Sort (max m n), (Λ(Fst(Id(Sort m)), β) α) ∘ Fst(β))) #(coup.type α β m))
 
 /-
 x : ∀ (s : Σ(β)), γ s
@@ -34,8 +60,11 @@ def quot.type (α β : Expr) (n : Level) : Expr :=
 
 /-
 f : ∀ (x : α), β x
-g : ∀ (x : α), γ (f x)
-⟨f, g⟩ : α → Σ(γ)
+g : ∀ (x : α), γ x
+
+⟦β, γ⟧⟨f, g⟩ x : ⟦`((β x), (γ x))⟧((f x), (g x))
+
+⟦β, γ⟧⟨f, g⟩ : Π(Id(Sort m), Λ(?, Σ(Λ(?, ?)))
 -/
 def pair.type (α γ : Expr) (m : Level) : Expr :=
   arrow α (DCC Σ(γ)) m
@@ -49,8 +78,9 @@ App(β) : ∀ (s : Σ(`(Π(m, Id(Sort m), β), α))), (β α) ∘ Snd'(Π(m, Id(
 -/
 def App.type (α β : Expr) (m n : Level) : Expr :=
   DCC (Π(Id(Sort (max m n)),
-    `(Sort (max m n), (Λ(Id(Sort m), β) α) ∘ Snd'((Π(Id(Sort m), Λ(Id(Sort m), β)) α), α)))
-    Σ(`((Π(Id(Sort m), Λ(Id(Sort m), β)) α), α)))
+    `(Sort (max m n), (Λ(Fst(Id(Sort m)), β) α)
+      ∘ Snd'((Π(Id(Sort m), Λ(Fst(Id(Sort m)), β)) α), α)))
+    Σ(`((Π(Id(Sort m), Λ(Fst(Id(Sort m)), β)) α), α)))
 
 def snd'.type (α β : Expr) (m n : Level) : Expr :=
   arrow (DCC Σ(`(α, β))) β (max m n)
@@ -63,8 +93,15 @@ f_β : (x : α) (y : f_α x) → Sort n
 def Pi.type (α : Expr) (m o : Level) : Expr :=
   arrow α (DCC Sort o) m
 
-def Sigma.type (m n : Level) : Expr :=
-  DCC (Sort (max m n))
+/-
+Σ(f_β)
+
+f_β : δ → (Σ(Fst(Id(Sort m))) α) → Sort n
+
+Σ(f_β) : δ → Sort n
+-/
+def Sigma.type (δ : Expr) (m n o : Level) : Expr :=
+  arrow δ (DCC (Sort max m n)) o
 
 namespace Expr
 
@@ -88,10 +125,11 @@ def reduce_reduces' : Reduces A A.reduce := reduce_reduces rfl
 
 @[inline] abbrev match_arrow (t : Expr) : Option ((α β : Expr) × (m : Level) × PLift (t = arrow α β m)) :=
   match t with
-  | DCC (Π(Id(Sort m), Λ(Id(Sort m₂), `(Σ(Id(Sort m₃)), β))) α) =>
-    if heq : m = m₂ ∧ m = m₃ then
-      have ⟨h₁, h₂⟩ := heq
-      .some ⟨α, β, m, ⟨by rw [← h₁, ← h₂]; rfl⟩⟩
+  | DCC (Π(Id(Sort m), Λ(Fst(Id(Sort m₂)),
+    `((Σ(Λ(Fst(Id(Sort m₃)), Fst(Id(Sort m₄)))) Sort m₅), β))) α) =>
+    if heq : m = m₂ ∧ m.succ = m₃ ∧ m = m₄ ∧ m = m₅ then
+      have ⟨h₁, h₂, h₃, h₄⟩ := heq
+      .some ⟨α, β, m, ⟨by rw [← h₁, ← h₂, ← h₃, ← h₄]; rfl⟩⟩
     else
       .none
   | _ => .none

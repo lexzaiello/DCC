@@ -8,10 +8,10 @@ inductive Red : Expr → Expr → Type
   | quot      : Red (DCC (`(β, x) y)) x
   | id        : Red (DCC (Id(α) x)) x
   | app       : Red (DCC (App(_α, _τ) ⟦β⟧(f, x))) (DCC (f x))
-  | fst       : Red (DCC (Fst(_τ) ⟦β⟧(a, b))) a
-  | snd       : Red (DCC (Snd(_τ) ⟦β⟧(a, b))) b
+  | fst       : Red (DCC (Fst(_α, _β) ⟦β⟧(a, b))) a
+  | snd       : Red (DCC (Snd(_α, _β) ⟦β⟧(a, b))) b
   | comp      : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
-  | pair      : Red (DCC (⟦β⟧⟨f, g⟩ x)) (DCC ⟦β⟧((f x), (g x)))
+  | pair      : Red (DCC (⟦β, γ⟧⟨f, g⟩ x)) (DCC ⟦`((β x), (γ x))⟧((f x), (g x)))
   | curr      : Red (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl      : Red x x' → Red (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))
   | sigr      : Red y y' → Red (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y'))
@@ -30,8 +30,8 @@ inductive RedAff : Expr → Expr → Prop
   | quot     : RedAff (DCC (`(β, x) y)) x
   | id       : RedAff (DCC (Id(α) x)) x
   | app      : RedAff (DCC (App(_α, _τ) ⟦β⟧(f, x))) (DCC (f x))
-  | fst      : RedAff (DCC (Fst(_τ) ⟦β⟧(a, b))) a
-  | snd      : RedAff (DCC (Snd(_τ) ⟦β⟧(a, b))) b
+  | fst      : RedAff (DCC (Fst(_α, _β) ⟦β⟧(a, b))) a
+  | snd      : RedAff (DCC (Snd(_α, _β) ⟦β⟧(a, b))) b
   | comp     : RedAff (DCC ((x ∘ y) z)) (DCC (x (y z)))
   | curr     : RedAff (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl     : RedAff x x' → RedAff (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))
@@ -46,12 +46,12 @@ inductive Size : Expr → ℕ → Prop
   | pi     : Size (DCC Π(_α, _β)) 0
   | quot   : Size x m → Size (DCC `(β, x)) m.succ
   | id     : Size (DCC Id(α)) 1
-  | fst    : Size (DCC Fst(β)) 1
+  | fst    : Size (DCC Fst(α, β)) 1
   | snd'   : Size (DCC Snd'(δ, β)) 1
-  | snd    : Size (DCC Snd(β)) 1
+  | snd    : Size (DCC Snd(α, β)) 1
   | appl   : Size (DCC App(α, β)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
-  | pair   : Size f m → Size g n → Size (DCC ⟦β⟧⟨f, g⟩) (m + n).succ
+  | pair   : Size f m → Size g n → Size (DCC ⟦β, γ⟧⟨f, g⟩) (m + n).succ
   | curr   : Size x m → Size (DCC Λ(α, x)) m.succ
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
 
@@ -67,16 +67,16 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
     let ⟨_, ⟨h₂⟩⟩ := y.size
     ⟨_, ⟨.coup h₁ h₂⟩⟩
   | DCC Id(_α)      => ⟨_, ⟨.id⟩⟩
-  | DCC Fst(_β) => ⟨_, ⟨.fst⟩⟩
+  | DCC Fst(_α, _β) => ⟨_, ⟨.fst⟩⟩
   | DCC Snd'(_α, _β) => ⟨_, ⟨.snd'⟩⟩
-  | DCC Snd(_β) => ⟨_, ⟨.snd⟩⟩
+  | DCC Snd(_α, _β) => ⟨_, ⟨.snd⟩⟩
   | DCC Π(_α, _β) => ⟨_, ⟨.pi⟩⟩
   | DCC App(_α, _β) => ⟨_, ⟨.appl⟩⟩
   | DCC (f ∘ g) =>
     let ⟨_m, ⟨h₁⟩⟩ := f.size
     let ⟨_n, ⟨h₂⟩⟩ := g.size
     ⟨_, ⟨.comp h₁ h₂⟩⟩
-  | DCC ⟦_β⟧⟨a, b⟩ =>
+  | DCC ⟦_β, _γ⟧⟨a, b⟩ =>
     let ⟨_o, ⟨h₁⟩⟩ := a.size
     let ⟨_p, ⟨h₂⟩⟩ := b.size
     ⟨_, ⟨.pair h₁ h₂⟩⟩
@@ -334,8 +334,8 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
   | (DCC (`(_β, x) _y))                    => .some ⟨x, ⟨.quot⟩⟩
   | (DCC (Id(_α) x))                       => .some ⟨x, ⟨.id⟩⟩
   | (DCC (App(_α, _τ) ⟦_β⟧(f, x)))         => .some ⟨(DCC (f x)), ⟨.app⟩⟩
-  | (DCC (Fst(_τ) ⟦_β⟧(a, _b)))            => .some ⟨a, ⟨.fst⟩⟩
-  | (DCC (Snd(_τ) ⟦_β⟧(_a, b)))            => .some ⟨b, ⟨.snd⟩⟩
+  | (DCC (Fst(_α, _β) ⟦_γ⟧(a, _b)))        => .some ⟨a, ⟨.fst⟩⟩
+  | (DCC (Snd(_α, _β) ⟦_γ⟧(_a, b)))        => .some ⟨b, ⟨.snd⟩⟩
   | (DCC ((x ∘ y) z))                      => .some ⟨(DCC (x (y z))), ⟨.comp⟩⟩
   | (DCC (Λ(β, x) y z))                    => .some ⟨(DCC (x ⟦β⟧(y, z))), ⟨.curr⟩⟩
   | DCC ⟦β⟧(x, y) =>
@@ -460,7 +460,7 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
     | snd | fst =>
       simp_all
       rename_i h
-      exact (h _ _ _ _ rfl rfl rfl rfl).elim
+      exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
     | snd'  =>
       simp_all
       rename_i h
@@ -508,7 +508,7 @@ set_option maxHeartbeats 1000000000 in theorem RedAff.complete' (h_red : RedAff 
     case fst | snd =>
       simp_all
       rename_i h
-      exact (h _ _ _ _ rfl rfl rfl rfl).elim
+      exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
     case snd' =>
       simp_all
       rename_i h

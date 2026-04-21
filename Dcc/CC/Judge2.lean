@@ -399,10 +399,15 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
     match infer f, infer g with
     | .some ⟨DCC (Π(Id(Sort m), β₂) α₁), ⟨ht₁⟩⟩, .some ⟨DCC (Π(Id(Sort m₂), γ₂) α₂), ⟨ht₂⟩⟩ =>
       match with_pair_β_type (infer β), with_pair_β_type (infer γ) with
-      | .some ⟨α₃, DCC Sort n, m₃, n₂, ⟨ht₃⟩, ⟨harr₁⟩⟩, .some ⟨α₄, DCC Sort o, m₄, o₂, ⟨ht₄⟩, ⟨harr₂⟩⟩ =>
-        if heq : α = α₁ ∧ β = β₂ ∧ α = α₂ ∧ α = α₃ ∧ α = α₄ ∧ m = m₂ ∧ m = m₃ ∧ m = m₄ ∧ n.succ = n₂ ∧ o.succ = o₂ then
-          have ⟨h₁, h₂, h₃, h₄, h₅, h₆, h₇, h₈, h₉⟩ := heq
-          .some ⟨_, ⟨.pair (h₂ ▸ h₁ ▸ ht₁) (by sorry) (by sorry) (by sorry) (by sorry)⟩⟩
+      | .some ⟨_, α₃, m₃, n₂, ⟨ht₃⟩, ⟨harr₁⟩⟩, .some ⟨_, α₄, m₄, o₂, ⟨ht₄⟩, ⟨harr₂⟩⟩ =>
+        if heq : α = α₁ ∧ β = β₂ ∧ α = α₂ ∧ γ = γ₂ ∧ α = α₃ ∧ α = α₄ ∧ m = m₂ ∧ m = m₃ ∧ m = m₄ ∧ n = n₂ ∧ o = o₂ ∧ α = α₃ ∧ α = α₄ then
+          have ⟨h₁, h₂, h₃, h₄, h₅, h₆, h₇, h₈, h₉, h10, h11, h12, h13⟩ := heq
+          .some ⟨_, ⟨.pair
+            (h₂ ▸ h₁ ▸ ht₁)
+            (by rw [← h₃, ← h₇, ← h₄] at ht₂; exact ht₂)
+            (by rw [← h10, ← h₈, ← h12] at harr₁; rw [← harr₁]; exact ht₃)
+            (by rw [← h13, ← h₉, ← h11] at harr₂; rw [← harr₂]; exact ht₄)
+            (reduce_reduces rfl)⟩⟩
         else .none
       | _, _ => .none
     | _, _ => .none

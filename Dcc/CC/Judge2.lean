@@ -26,6 +26,10 @@ Fst(f_β) : ∀ (env : δ) (s : Σ(f_β) env), α
 def fst.type (α f_β δ : Expr) (m o : Level) : Expr :=
   DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(f_β), Λ(δ, Σ(f_β), `(Coup(m, δ, Σ(f_β)), α))) ∘ Snd'(Sort o, δ))) δ) 
 
+/-
+Snd(f_β) : ∀ (env : δ) (s : Σ(f_β) env), f_β env (Fst(f_β) env s)
+-/
+
 def snd.type (f_β δ : Expr) (o : Level) : Expr :=
   DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(f_β), Subst(f_β, Fst(f_β))) ∘ Snd'(Sort o, δ))) δ) 
 
@@ -116,6 +120,14 @@ def pair.β.type (m n : Level) : Expr :=
 #eval Std.format <| pair.β.type 10 0
 
 /-
+β : δ → α → Sort n
+x : ∀ (env : δ) (x : α), γ env x
+Subst(x, Fst(β)) : ∀ 
+-/
+def Subst₁.type (β γ δ : Expr) (o : Level) : Expr :=
+  (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(β), Subst(γ, Fst(β))) ∘ Snd'(Sort o, δ))) δ))
+
+/-
 Σ(f_β)
 
 f_β : δ → α → Sort n
@@ -179,10 +191,10 @@ def reduce_reduces' : Reduces A A.reduce := reduce_reduces rfl
   | _ => .none
 
 inductive Judge : Expr → Expr → Prop where
-  | id   : Judge α (DCC Sort m)
+  | id     : Judge α (DCC Sort m)
     → Reduces (id.type α m) τ
     → Judge (DCC Id(α)) τ
-  | comp : Judge g (arrow α β m)
+  | comp   : Judge g (arrow α β m)
     → Judge f (DCC (Π(Id(Sort n), γ) β))
     → Reduces (comp.type α β γ g m) τ
     → Judge (DCC f ∘ g) τ
@@ -190,24 +202,24 @@ inductive Judge : Expr → Expr → Prop where
     f_β δ : α → Sort n
     Fst(f_β, δ) : Σ(f_β) δ → α
   -/
-  | fst  : Judge f_β (fst.f_β.type α δ m n o)
+  | fst    : Judge f_β (fst.f_β.type α δ m n o)
     → Reduces (fst.type α f_β δ m o) τ
     → Judge (DCC Fst(f_β)) τ
   /-
     f_β δ : α → Sort n
     Snd(f_β, δ) : ∀ (s : Σ(f_β) δ), f_β δ ∘ Fst
   -/
-  | snd  : Judge f_β (fst.f_β.type α δ m n o)
+  | snd    : Judge f_β (fst.f_β.type α δ m n o)
     → Reduces (snd.type f_β δ o) τ
     → Judge (DCC Snd(f_β)) τ
-  | sigma : Judge f_β (fst.f_β.type α δ m n o)
+  | sigma   : Judge f_β (fst.f_β.type α δ m n o)
     → Reduces (Sigma.type δ m n o) τ
     → Judge (DCC Σ(f_β)) τ
-  | snd' : Judge α (DCC Sort m)
+  | snd'   : Judge α (DCC Sort m)
     → Judge β (DCC Sort n)
     → Reduces (snd'.type α β m n) τ
     → Judge (DCC Snd'(α, β)) τ
-  | coup : Judge x α
+  | coup   : Judge x α
     → Judge y τ₂
     → Judge β (curr.β.type α m n)
     → Reduces (DCC (β x)) τ₂
@@ -218,23 +230,25 @@ inductive Judge : Expr → Expr → Prop where
     β receives (α, x)
     β : Coup(Sort m, Id(Sort m)) → Sort n
   -/
-  | curr : Judge β (curr.β.type α m n)
+  | curr   : Judge β (curr.β.type α m n)
     → Judge x (DCC (Π(f_α, γ) x_α))
     → Reduces (DCC Coup(m, α, β)) τα
     → Reduces (DCC (f_α x_α)) τα
     → Reduces (curr.type α β (DCC (γ x_α)) m) τ
     → Judge (DCC Λ(α, β, x)) τ
-  | quot : Judge x α
+  | quot   : Judge x α
     → Judge β (DCC Sort n)
     → Reduces (quot.type α β n) τ
     → Judge (DCC `(β, x)) τ
-  | pair : Judge f (DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), β)) α))
+  | pair   : Judge f (DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), β)) α))
     → Judge g (DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), γ)) α))
     → Judge β (pair.β.type m n)
     → Judge γ (pair.β.type m o)
     → Reduces (pair.type α β γ m) τ
     → Judge (DCC ⟦m, α, β, γ⟧⟨f, g⟩) τ
-  | appl : Judge α (DCC Sort m)
+  | subst  : Judge x (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
+    → Judge (DCC Subst(x, Fst(β))) (Subst₁.type β γ δ o)
+  | appl   : Judge α (DCC Sort m)
     → Judge β (pair.β.type m n)
     → Reduces (App.type α β m n) τ
     → Judge (DCC App(α, β)) τ
@@ -243,12 +257,12 @@ inductive Judge : Expr → Expr → Prop where
     f_β : ∀ (x : α) (y : f_α x), Sort n
     Π(f_α, f_β)
   -/
-  | pi   : Judge f_α (arrow α (DCC Sort n) m)
+  | pi     : Judge f_α (arrow α (DCC Sort n) m)
     → Judge f_β (Pi.f_β.type f_α α m o)
     → Reduces (Pi.type α m o) τ
     → Judge (DCC Π(f_α, f_β)) τ
-  | sort : Judge (DCC Sort m) (DCC Sort m.succ)
-  | app  : Judge f (DCC (Π(f_α, f_β) x_α))
+  | sort   : Judge (DCC Sort m) (DCC Sort m.succ)
+  | app    : Judge f (DCC (Π(f_α, f_β) x_α))
     → Reduces (DCC (f_α x_α)) α
     → Judge x α
     → Reduces (DCC (f_β x_α x)) τ

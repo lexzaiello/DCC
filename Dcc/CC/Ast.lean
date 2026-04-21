@@ -25,16 +25,16 @@ inductive Expr where
   | snd    : Expr  → Expr
   | snd'   : Expr  → Expr  → Expr
   | comp   : Expr  → Expr  → Expr
-  | subst  : Expr  → Expr  → Expr
   | pair   : Level → Expr  → Expr  → Expr  → Expr → Expr → Expr
   -- Σ(β) is the usual sigma type
   | sigma  : Expr  → Expr
   | mk     : Expr  → Expr  → Expr  → Expr
   | pi     : Expr  → Expr  → Expr
   | curr   : Expr  → Expr  → Expr  → Expr
-  | appl   : Expr  → Expr  → Expr
+  | appl   : Expr  → Expr
   | quot   : Expr  → Expr  → Expr
   | id     : Expr  → Expr
+  | subst  : Expr  → Expr  → Expr
   | app    : Expr  → Expr  → Expr
 deriving BEq, Repr, DecidableEq
 
@@ -42,12 +42,12 @@ declare_syntax_cat expr
 
 syntax "#(" term ")"                                             : expr
 syntax:max "`(" expr,* ")"                                       : expr
-syntax:max "Subst(" expr,* ")"                                   : expr
 syntax:max "Id(" expr,* ")"                                      : expr
 syntax:max "Fst(" expr,* ")"                                     : expr
 syntax:max "Snd'(" expr,* ")"                                    : expr
 syntax:max "App(" expr,* ")"                                     : expr
 syntax:max "Snd(" expr,* ")"                                     : expr
+syntax:max "Subst(" expr,* ")"                                   : expr
 syntax "Σ(" expr ")"                                             : expr
 syntax:max (priority := high) "Λ(" expr,* ")"                    : expr
 syntax:max (priority := high) "Π(" expr,* ")"                    : expr
@@ -72,10 +72,10 @@ macro_rules
   | `(DCC Σ($β:expr))                            => `(Expr.sigma (DCC $β))
   | `(DCC Fst($β:expr))                          => `(Expr.fst (DCC $β))
   | `(DCC Snd($β:expr))                          => `(Expr.snd (DCC $β))
-  | `(DCC Subst($β, $x))                         => `(Expr.subst (DCC $β) (DCC $x))
   | `(DCC Snd'($α:expr, $β:expr))                => `(Expr.snd' (DCC $α) (DCC $β))
-  | `(DCC App($α:expr, $β:expr))                 => `(Expr.appl (DCC $α) (DCC $β))
+  | `(DCC App($f:expr))                          => `(Expr.appl (DCC $f))
   | `(DCC Id($α:expr))                           => `(Expr.id (DCC $α))
+  | `(DCC Subst($x:expr, $β:expr))               => `(Expr.subst (DCC $x) (DCC $β))
   | `(DCC $f:expr ∘ $g:expr)                     => `(Expr.comp (DCC $f:expr) (DCC $g:expr))
   | `(DCC #($t:term))                            => `($t)
   | `(DCC $idt:ident)                            => `($idt:term)
@@ -85,14 +85,14 @@ namespace Expr
 
 def toFormat (e : Expr) : Std.Format :=
   match e with
-  | DCC Subst(β, x)          => "Subst" ++ (.bracket "(" (.joinSep [β.toFormat, x.toFormat] ", ") ")")
   | (DCC `(β, x))            => "`(" ++ β.toFormat ++ ", " ++ x.toFormat ++ ")"
   | (DCC Id(α))              => "Id(" ++ α.toFormat ++ ")"
+  | (DCC Subst(β, x))        => "Subst(" ++ β.toFormat ++ ", " ++ x.toFormat ++ ")"
   | (DCC Sort m)             => "Sort " ++ (Std.format m)
   | (DCC Fst(β))             => "Fst" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
   | (DCC Snd(β))             => "Snd" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
   | (DCC Snd'(α, β))         => "Snd'" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
-  | (DCC App(α, β))          => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
+  | (DCC App(f))             => "App(" ++ f.toFormat ++ ")"
   | (DCC Λ(α, β, e))         => "Λ(" ++ (.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
   | (DCC Π(α, β))            => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
   | (DCC ⟦m, α, β, γ⟧⟨a, b⟩)    => (.bracket "⟦" (.joinSep [Std.format m, α.toFormat, β.toFormat, γ.toFormat] ", ") "⟧")

@@ -31,7 +31,7 @@ inductive Expr where
   | sigma : Expr  → Expr
   | mk    : Expr  → Expr  → Expr  → Expr
   | pi    : Expr  → Expr  → Expr
-  | curr  : Expr  → Expr  → Expr
+  | curr  : Expr  → Expr  → Expr  → Expr
   | appl  : Expr  → Expr  → Expr
   | quot  : Expr  → Expr  → Expr
   | id    : Expr  → Expr
@@ -64,7 +64,7 @@ macro_rules
   | `(DCC ($f:expr $x:expr))                     => `(Expr.app   (DCC $f:expr)   (DCC $x:expr))
   | `(DCC ($f:expr $x:expr $xs:expr*))           => `(DCC (($f:expr $x:expr) $xs:expr*))
   | `(DCC `($β:expr, $x:expr))                   => `(Expr.quot (DCC $β) (DCC $x))
-  | `(DCC Λ($α:expr, $e:expr))                   => `(Expr.curr (DCC $α) (DCC $e))
+  | `(DCC Λ($α:expr, $β:expr, $e:expr))          => `(Expr.curr (DCC $α) (DCC $β) (DCC $e))
   | `(DCC Π($α:expr, $β:expr))                   => `(Expr.pi (DCC $α) (DCC $β))
   | `(DCC ⟦$n:term, $o:term, $α:expr,
     $β:expr, $γ:expr⟧⟨$x:expr, $y:expr⟩)         => `(Expr.pair $n $o (DCC $α) (DCC $β) (DCC $γ) (DCC $x) (DCC $y))
@@ -93,7 +93,7 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Snd(α, β))          => "Snd" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
   | (DCC Snd'(α, β))         => "Snd'" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
   | (DCC App(α, β))          => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC Λ(α, e))            => "Λ(" ++ α.toFormat ++ ", " ++ e.toFormat ++ ")"
+  | (DCC Λ(α, β, e))         => "Λ(" ++ (.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
   | (DCC Π(α, β))            => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
   | (DCC ⟦n, o,
     α, β, γ⟧⟨a, b⟩)          => (.bracket "⟦" (.joinSep [Std.format n, Std.format o, α.toFormat, β.toFormat, γ.toFormat] ", ") "⟧")
@@ -123,7 +123,7 @@ f_β : δ → α → Sort n
 ⟦β⟧(x, y) : Σ(
 -/
 def coup.type (α β : Expr) (m : Level) : Expr :=
-  DCC (Σ(Λ(Fst(`(Sort m, `(Sort m, α)), α), β)) α)
+  DCC (Σ(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β)) α)
 
 /-
 The main Fst is indexed by the environment map and the environment:
@@ -141,10 +141,10 @@ Curry is also designed for couples with the (α, x) β encoding.
 That is, β in ⟦β⟧(x, y) receives (α, x)
 -/
 def mk_fstc (α β : Expr) (m : Level) : Expr :=
-  DCC Fst(Λ(Fst(`(Sort m, `(Sort m, α)), α), β ∘ Snd'(Sort m, α)), α)
+  DCC Fst(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β ∘ Snd'(Sort m, α)), α)
 
 def mk_sndc (α β : Expr) (m : Level) : Expr :=
-  DCC Snd(Λ(Fst(`(Sort m, `(Sort m, α)), α), β ∘ Snd'(Sort m, α)), α)
+  DCC Snd(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β ∘ Snd'(Sort m, α)), α)
 
 syntax "Fstc(" term "," expr,* ")" : expr
 syntax "Sndc(" term "," expr,* ")" : expr
@@ -158,7 +158,7 @@ macro_rules
   | `(DCC Coup($m:term, $α:expr, $β:expr)) => `(coup.type (DCC $α) (DCC $β) $m)
 
 def arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), Λ(Fstc(m.succ, Sort m, Id(Sort m)), `(Coup(m.succ, Sort m, Id(Sort m)), β))) α)
+  DCC (Π(Id(Sort m), Λ(Sort m, Fstc(m.succ, Sort m, Id(Sort m)), `(Coup(m.succ, Sort m, Id(Sort m)), β))) α)
 
 macro_rules
   | `(DCC ($α:expr : Sort $m) → $β:expr) => `(arrow (DCC $α) (DCC $β) $m)
@@ -169,7 +169,7 @@ Version of quotation that is point-free with respect to x.
 β is not dependent.
 -/
 def quot' (α β : Expr) (m : Level) : Expr :=
-  DCC Λ(`(Coup(m.succ, Sort m, Id(Sort m)), β), Fstc(m, α, `(Coup(m.succ, Sort m, Id(Sort m)), β)))
+  DCC Λ(α, `(Coup(m.succ, Sort m, Id(Sort m)), β), Fstc(m, α, `(Coup(m.succ, Sort m, Id(Sort m)), β)))
 
 syntax "Quot(" term "," expr,* ")" : expr
 

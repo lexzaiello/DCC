@@ -22,7 +22,7 @@ inductive Red : Expr → Expr → Type
     (DCC ⟦
       -- receive ((β α x), (f x)). Output (γ x) as type of (g x)
       (Quot(o.succ, Sort o, Coup(n.succ, Sort n, Id(Sort n))) (γ α x))⟧((f x), (g x)))
-  | curr      : Red (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
+  | curr      : Red (DCC (Λ(α, β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl      : Red x x' → Red (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))
   | sigr      : Red y y' → Red (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y'))
   | congrFun  : Red f f' → Red (DCC (f x)) (DCC (f' x))
@@ -43,7 +43,7 @@ inductive RedAff : Expr → Expr → Prop
   | fst      : RedAff (DCC (Fst(_α, _β) ⟦β⟧(a, b))) a
   | snd      : RedAff (DCC (Snd(_α, _β) ⟦β⟧(a, b))) b
   | comp     : RedAff (DCC ((x ∘ y) z)) (DCC (x (y z)))
-  | curr     : RedAff (DCC (Λ(β, x) y z)) (DCC (x ⟦β⟧(y, z)))
+  | curr     : RedAff (DCC (Λ(α, β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl     : RedAff x x' → RedAff (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))
   | sigr     : RedAff y y' → RedAff (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y'))
   | congrFun : RedAff f f' → RedAff (DCC (f x)) (DCC (f' x))
@@ -62,7 +62,7 @@ inductive Size : Expr → ℕ → Prop
   | appl   : Size (DCC App(α, β)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
   | pair   : Size f m → Size g n → Size (DCC ⟦_n, _o, α, β, γ⟧⟨f, g⟩) (m + n).succ
-  | curr   : Size x m → Size (DCC Λ(α, x)) m.succ
+  | curr   : Size x m → Size (DCC Λ(α, β, x)) m.succ
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
 
 def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
@@ -90,7 +90,7 @@ def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
     let ⟨_o, ⟨h₁⟩⟩ := a.size
     let ⟨_p, ⟨h₂⟩⟩ := b.size
     ⟨_, ⟨.pair h₁ h₂⟩⟩
-  | DCC Λ(_α, x) =>
+  | DCC Λ(_α, _β, x) =>
     let ⟨_n, ⟨h₁⟩⟩ := x.size
     ⟨_, ⟨.curr h₁⟩⟩
   | DCC (f x) =>
@@ -347,7 +347,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
   | (DCC (Fst(_α, _β) ⟦_γ⟧(a, _b)))        => .some ⟨a, ⟨.fst⟩⟩
   | (DCC (Snd(_α, _β) ⟦_γ⟧(_a, b)))        => .some ⟨b, ⟨.snd⟩⟩
   | (DCC ((x ∘ y) z))                      => .some ⟨(DCC (x (y z))), ⟨.comp⟩⟩
-  | (DCC (Λ(β, x) y z))                    => .some ⟨(DCC (x ⟦β⟧(y, z))), ⟨.curr⟩⟩
+  | (DCC (Λ(_α, β, x) y z))                => .some ⟨(DCC (x ⟦β⟧(y, z))), ⟨.curr⟩⟩
   | DCC ⟦β⟧(x, y) =>
     match x.step?, y.step? with
     | .some ⟨x', ⟨h₁⟩⟩, _ => .some ⟨(DCC ⟦β⟧(x', y)), ⟨.sigl h₁⟩⟩
@@ -479,7 +479,10 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
       simp_all
       rename_i h
       exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
-    | quot | id | comp | curr => simp_all
+    | quot | id | comp => simp_all
+    | curr =>
+      rename_i h
+      exact (h _ _ _ _ rfl).elim
   case h_11 =>
     simp_all
     cases A with
@@ -527,8 +530,11 @@ set_option maxHeartbeats 1000000000 in theorem RedAff.complete' (h_red : RedAff 
       simp_all
       rename_i h
       exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
-    case quot | id | comp | curr =>
+    case quot | id | comp =>
       simp_all
+    case curr =>
+      rename_i h
+      exact (h _ _ _ _ rfl).elim
     case congrFun =>
       split
       · rfl

@@ -25,7 +25,8 @@ inductive Expr where
   | snd   : Expr  → Expr  → Expr
   | snd'  : Expr  → Expr  → Expr
   | comp  : Expr  → Expr  → Expr
-  | pair  : Level → Level → Expr  → Expr  → Expr  → Expr
+  | pair  : Level → Level → Expr
+    → Expr → Expr → Expr → Expr → Expr
   -- Σ(β) is the usual sigma type
   | sigma : Expr  → Expr
   | mk    : Expr  → Expr  → Expr  → Expr
@@ -65,7 +66,8 @@ macro_rules
   | `(DCC `($β:expr, $x:expr))                   => `(Expr.quot (DCC $β) (DCC $x))
   | `(DCC Λ($α:expr, $e:expr))                   => `(Expr.curr (DCC $α) (DCC $e))
   | `(DCC Π($α:expr, $β:expr))                   => `(Expr.pi (DCC $α) (DCC $β))
-  | `(DCC ⟦$n:term, $o:term, $γ:expr⟧⟨$x:expr, $y:expr⟩)  => `(Expr.pair $n $o (DCC $γ) (DCC $x) (DCC $y))
+  | `(DCC ⟦$n:term, $o:term, $α:expr,
+    $β:expr, $γ:expr⟧⟨$x:expr, $y:expr⟩)         => `(Expr.pair $n $o (DCC $α) (DCC $β) (DCC $γ) (DCC $x) (DCC $y))
   | `(DCC ⟦$β:expr⟧($x, $y))                     => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                          => `(Expr.sort $m)
   | `(DCC Σ($β:expr))                            => `(Expr.sigma (DCC $β))
@@ -84,20 +86,22 @@ namespace Expr
 
 def toFormat (e : Expr) : Std.Format :=
   match e with
-  | (DCC `(β, x))       => "`(" ++ β.toFormat ++ ", " ++ x.toFormat ++ ")"
-  | (DCC Id(α))         => "Id(" ++ α.toFormat ++ ")"
-  | (DCC Sort m)        => "Sort" ++ (Std.format m)
-  | (DCC Fst(α, β))     => "Fst" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
-  | (DCC Snd(α, β))     => "Snd" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
-  | (DCC Snd'(α, β))    => "Snd'" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
-  | (DCC App(α, β))     => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
-  | (DCC Λ(α, e))       => "Λ(" ++ α.toFormat ++ ", " ++ e.toFormat ++ ")"
-  | (DCC Π(α, β))       => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
-  | (DCC ⟦n, o, γ⟧⟨a, b⟩)     => (.bracket "⟦" (.joinSep [Std.format n, Std.format o, γ.toFormat] ", ") "⟧") ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
-  | (DCC ⟦β⟧(a, b))     => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
-  | (DCC Σ(β))       => "Σ" ++ (.bracket "(" β.toFormat ")")
-  | (DCC f ∘ g)         => (.bracket "(" (f.toFormat ++ " ∘ " ++ g.toFormat) ")")
-  | (DCC (f x))         => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
+  | (DCC `(β, x))            => "`(" ++ β.toFormat ++ ", " ++ x.toFormat ++ ")"
+  | (DCC Id(α))              => "Id(" ++ α.toFormat ++ ")"
+  | (DCC Sort m)             => "Sort " ++ (Std.format m)
+  | (DCC Fst(α, β))          => "Fst" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
+  | (DCC Snd(α, β))          => "Snd" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
+  | (DCC Snd'(α, β))         => "Snd'" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
+  | (DCC App(α, β))          => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
+  | (DCC Λ(α, e))            => "Λ(" ++ α.toFormat ++ ", " ++ e.toFormat ++ ")"
+  | (DCC Π(α, β))            => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
+  | (DCC ⟦n, o,
+    α, β, γ⟧⟨a, b⟩)          => (.bracket "⟦" (.joinSep [Std.format n, Std.format o, α.toFormat, β.toFormat, γ.toFormat] ", ") "⟧")
+    ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
+  | (DCC ⟦β⟧(a, b))          => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
+  | (DCC Σ(β))               => "Σ" ++ (.bracket "(" β.toFormat ")")
+  | (DCC f ∘ g)              => (.bracket "(" (f.toFormat ++ " ∘ " ++ g.toFormat) ")")
+  | (DCC (f x))              => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
 
 instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
 instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩

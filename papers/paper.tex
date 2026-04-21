@@ -190,32 +190,24 @@ In a dependently-typed categorical combinator calculus where couples are naively
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_sigma_types}
-  \inferrule[Sigma Types]
+  \inferrule[Sigma]
   { \alpha : \sort{m}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
   { \Sigma(f_\beta) : \delta \rightarrow \sort{max(m, n)}}
 \end{equation}
 \caption{Where \(\delta\) denotes an arbitrary environment and \(\alpha\) denotes the \(fst\) component. \(\Sigma(f_\beta) (env : \delta) : \sort{max(m, n)}\)}
 \end{figure}
 
-\textit{OLD: ....}
+We formally interpret couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\), where the environment conveys no extra meaningful information, and \(\beta\) depends only on \(fst\).
 
-We interpret couples \((a, b)\) as \(\Sigma\)-pairs like such:
-
-\begin{center}\label{coup_exp}
-\begin{figure}[h!]\label{coup_dep}
-\centering
-\begin{tabular}{c}
-  \inferrule[\(\text{Coup}_{1}\)]
-  { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}\\ x : \alpha, y : \beta x}
-  {\llbracket \alpha, \beta \rrbracket (a, b) : \Sigma(\alpha, \beta)}
-\end{tabular}
-\caption{Couples as dependent sums}
+\begin{figure}[h!]
+  \begin{equation}
+    \inferrule[Coup]
+    { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, x : \alpha, y : (\beta x), }
+    { \llbracket \beta \rrbracket (x, y) : \Sigma(`(\sort{m}, \beta)) \alpha}
+  \end{equation}
 \end{figure}
-\end{center}
 
-We require that \(\beta : \alpha \rightarrow \sort{m}\) be given explicitly in couples through the type annotation \(\llbracket \alpha, \beta \rrbracket\). Similarly, we add type arguments to pairs (\(\llbracket \beta, \gamma\rrbracket \langle f, g\rangle\)) which allow the resulting couple's \(snd\) component to depend on the term \(f x\). Pairs are not point-free, but couples are (with respect to \(x\) and \(y\)), since the categorical combinator \(\Lambda(\ldots)\) can simulate a binder, but its type (and other combinators' types) must be bootstrapped with point-free couples. The point-free type of \(\llbracket \alpha, \beta \rrbracket (,)\) is available in the appendix.
-
-This view of couples as sigma terms naturally encodes the notion of judgments. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
+\textbf{MUCH TO REWRITE FOLLOWING.} This view of couples as sigma terms naturally encodes the notion of judgments. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
 
 \begin{equation}
   x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx

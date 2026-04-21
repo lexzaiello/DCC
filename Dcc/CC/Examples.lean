@@ -10,7 +10,7 @@ import Dcc.CC.Judge2
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘ Id(Sort 1)) (Sort 0))).infer
 
 def test_pair : Option Expr :=
-  let e := DCC (⟦Sort 1, `(Sort 1, Sort 1), `(Sort 1, Sort 1)⟧⟨Id(Sort 1), Id(Sort 1)⟩ (Sort 0))
+  let e := DCC (⟦`(Sort 1, Sort 1), `(Sort 1, Sort 1)⟧⟨Id(Sort 1), Id(Sort 1)⟩ (Sort 0))
   Sigma.fst <$> e.infer
 
 #eval Std.format test_pair

@@ -25,7 +25,7 @@ inductive Expr where
   | snd   : Expr  → Expr  → Expr
   | snd'  : Expr  → Expr  → Expr
   | comp  : Expr  → Expr  → Expr
-  | pair  : Expr  → Expr → Expr → Expr → Expr → Expr
+  | pair  : Expr  → Expr  → Expr → Expr → Expr
   -- Σ(β) is the usual sigma type
   | sigma : Expr  → Expr
   | mk    : Expr  → Expr  → Expr  → Expr
@@ -64,8 +64,7 @@ macro_rules
   | `(DCC `($β:expr, $x:expr))                   => `(Expr.quot (DCC $β) (DCC $x))
   | `(DCC Λ($α:expr, $β:expr, $e:expr))          => `(Expr.curr (DCC $α) (DCC $β) (DCC $e))
   | `(DCC Π($α:expr, $β:expr))                   => `(Expr.pi (DCC $α) (DCC $β))
-  | `(DCC ⟦$α:expr,$β:expr, $γ:expr⟧⟨
-                      $x:expr, $y:expr⟩)         => `(Expr.pair (DCC $α) (DCC $β) (DCC $γ) (DCC $x) (DCC $y))
+  | `(DCC ⟦$β:expr, $γ:expr⟧⟨$x:expr, $y:expr⟩)  => `(Expr.pair (DCC $β) (DCC $γ) (DCC $x) (DCC $y))
   | `(DCC ⟦$β:expr⟧($x, $y))                     => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                          => `(Expr.sort $m)
   | `(DCC Σ($β:expr))                            => `(Expr.sigma (DCC $β))
@@ -93,7 +92,7 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC App(α, β))          => "App(" ++ α.toFormat ++ ", " ++ β.toFormat ++ ")"
   | (DCC Λ(α, β, e))         => "Λ(" ++ (.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
   | (DCC Π(α, β))            => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
-  | (DCC ⟦α, β, γ⟧⟨a, b⟩)    => (.bracket "⟦" (.joinSep [α.toFormat, β.toFormat, γ.toFormat] ", ") "⟧")
+  | (DCC ⟦β, γ⟧⟨a, b⟩)    => (.bracket "⟦" (.joinSep [β.toFormat, γ.toFormat] ", ") "⟧")
     ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
   | (DCC ⟦β⟧(a, b))          => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
   | (DCC Σ(β))               => "Σ" ++ (.bracket "(" β.toFormat ")")

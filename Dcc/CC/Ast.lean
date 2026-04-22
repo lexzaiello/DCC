@@ -73,7 +73,7 @@ macro_rules
   | `(DCC Fst($β:expr))                          => `(Expr.fst (DCC $β))
   | `(DCC Snd($β:expr))                          => `(Expr.snd (DCC $β))
   | `(DCC Snd'($α:expr, $β:expr))                => `(Expr.snd' (DCC $α) (DCC $β))
-  | `(DCC App($β:expr, $f:expr))                 => `(Expr.appl (DCC $β) (DCC $f))
+  | `(DCC App($f_α:expr, $f_β:expr))             => `(Expr.appl (DCC $f_α) (DCC $f_β))
   | `(DCC Id($α:expr))                           => `(Expr.id (DCC $α))
   | `(DCC Subst($x:expr, $β:expr))               => `(Expr.subst (DCC $x) (DCC $β))
   | `(DCC $f:expr ∘ $g:expr)                     => `(Expr.comp (DCC $f:expr) (DCC $g:expr))
@@ -92,7 +92,7 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Fst(β))             => "Fst" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
   | (DCC Snd(β))             => "Snd" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
   | (DCC Snd'(α, β))         => "Snd'" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
-  | (DCC App(β, f))          => "App(" ++ β.toFormat ++ ", " ++f.toFormat ++ ")"
+  | (DCC App(f_α, f_β))      => "App" ++ .bracket "(" (.joinSep [f_α.toFormat, f_β.toFormat] ", ") ")"
   | (DCC Λ(α, β, e))         => "Λ(" ++ (.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
   | (DCC Π(α, β))            => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
   | (DCC ⟦m, α, β, γ⟧⟨a, b⟩)    => (.bracket "⟦" (.joinSep [Std.format m, α.toFormat, β.toFormat, γ.toFormat] ", ") "⟧")
@@ -113,7 +113,18 @@ instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
 /-
 β receives (x : α)
 
+better coup type:
+
+Σ(Λ()) β
+
+Σ(Λ(Sort m, Id(Sort m), β ∘ Snd'(Sort m, α))) α
+
+the environment is somewhat arbitrary, but what's inside matters a bit.
+Λ(δ, ?, ? ∘ (Fst(?) ?))
+
 DCC (Σ(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β)) α)
+
+DCC (Σ(Λ(Sort m, Id(Sort m), (Fst() (Sort m)))) α)
 -/
 def coup.type (α β : Expr) (m : Level) : Expr :=
   DCC (Σ(`(Sort m, β)) α)

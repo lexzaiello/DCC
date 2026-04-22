@@ -5,7 +5,7 @@ namespace Expr
 
 inductive Red : Expr → Expr → Type
   | subst₁    : Red (DCC (Subst(x, Fst(f_β)) env ⟦β⟧(y, z))) (DCC (x env y))
-  | subst₂    : Red (DCC (Subst(x, Snd(f_β)) env ⟦β⟧(y, z))) (DCC (x env z))
+  | subst₂    : Red (DCC (Subst(x, Snd(f_β)) env ⟦β⟧(y, z))) (DCC (x env y z))
   | snd'      : Red (DCC (Snd'(α, β) ⟦γ⟧(x, y))) x
   | quot      : Red (DCC (`(β, x) y)) x
   | id        : Red (DCC (Id(α) x)) x
@@ -29,7 +29,7 @@ This is essentially reduction, but without the pair rule.
 -/
 inductive RedAff : Expr → Expr → Prop
   | subst₁   : RedAff (DCC (Subst(x, Fst(f_β)) env ⟦β⟧(y, z))) (DCC (x env y))
-  | subst₂   : RedAff (DCC (Subst(x, Snd(f_β)) env ⟦β⟧(y, z))) (DCC (x env z))
+  | subst₂   : RedAff (DCC (Subst(x, Snd(f_β)) env ⟦β⟧(y, z))) (DCC (x env y z))
   | snd'     : RedAff (DCC (Snd'(_δ, _τ) ⟦β⟧(a, b))) b
   | quot     : RedAff (DCC (`(β, x) y)) x
   | id       : RedAff (DCC (Id(α) x)) x
@@ -44,7 +44,7 @@ inductive RedAff : Expr → Expr → Prop
   | congrArg : RedAff x x' → RedAff (DCC (f x)) (DCC (f x'))
 
 inductive Size : Expr → ℕ → Prop
-  | subst  : Size x m → Size (DCC Subst(x, y)) m.succ
+  | subst  : Size x m → Size y n → Size (DCC Subst(x, y)) (m + n).succ
   | sig    : Size (DCC Σ(_n)) 0
   | coup   : Size x m → Size y n → Size (DCC ⟦β⟧(x, y)) (m + n)
   | sort   : Size (DCC Sort m) 0
@@ -62,9 +62,10 @@ inductive Size : Expr → ℕ → Prop
 
 @[grind] def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
   match e with
-  | DCC Subst(x, _y) =>
+  | DCC Subst(x, y) =>
     let ⟨_, ⟨h₁⟩⟩ := x.size
-    ⟨_, ⟨.subst h₁⟩⟩
+    let ⟨_, ⟨h₂⟩⟩ := y.size
+    ⟨_, ⟨.subst h₁ h₂⟩⟩
   | DCC Sort _m => ⟨_, ⟨.sort⟩⟩
   | DCC Σ(_n) => ⟨_, ⟨.sig⟩⟩
   | DCC `(_β, x) =>
@@ -102,8 +103,8 @@ theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
   | appl | snd' | id | snd | fst | pi | sig | sort => rfl
   | comp _ _ ih₁ ih₂ | coup _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
-  | subst _ ih | quot _ ih | curr _ ih => rw [size, ih]
-  | app _ _ ih₁ ih₂ | pair _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
+  | quot _ ih | curr _ ih => rw [size, ih]
+  | subst _ _ ih₁ ih₂ | app _ _ ih₁ ih₂ | pair _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
 
 instance instSizeOf : SizeOf Expr := ⟨fun e => e.size.fst⟩
 
@@ -213,9 +214,9 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
     | subst₂ => exact ⟨_, .refl, .refl⟩
     | congrFun h => cases h with
       | congrFun h => cases h
-      | congrArg h => exact ⟨_, .congrFun (.congrArg (.single h)), .single .subst₂⟩
+      | congrArg h => exact ⟨_, .congrFun (.congrFun (.congrArg (.single h))), .single .subst₂⟩
     | congrArg h => cases h with
-      | sigl h => exact ⟨_, .refl, .single .subst₂⟩
+      | sigl h => exact ⟨_, .congrFun (.congrArg (.single h)), .single .subst₂⟩
       | sigr h => exact ⟨_, .congrArg (.single h), .single .subst₂⟩
   | quot =>
     cases h₂ with
@@ -310,7 +311,7 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
     case subst₂ =>
       cases h_r with
       | congrFun h => cases h
-      | congrArg h => exact ⟨_, .single .subst₂, .congrFun (.congrArg (.single h))⟩
+      | congrArg h => exact ⟨_, .single .subst₂, .congrFun (.congrFun (.congrArg (.single h)))⟩
     case fst =>
       cases h_r with
       | congrFun h => cases h
@@ -339,7 +340,7 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
       | sigl h => exact ⟨_, .single .subst₁, .congrArg (.single h)⟩
       | sigr h => exact ⟨_, .single .subst₁, .refl⟩
     | subst₂ => cases h_r with
-      | sigl h => exact ⟨_, .single .subst₂, .refl⟩
+      | sigl h => exact ⟨_, .single .subst₂, .congrFun (.congrArg (.single h))⟩
       | sigr h => exact ⟨_, .single .subst₂, .congrArg (.single h)⟩
     | quot => exact ⟨_, .single .quot, .refl⟩
     | id => exact ⟨_, .single .id, .single h_r⟩

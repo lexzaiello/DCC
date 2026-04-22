@@ -113,6 +113,12 @@ def Subst₁.type (β γ δ : Expr) (o : Level) : Expr :=
   (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(β), Subst(γ, Fst(β))) ∘ Snd'(Sort o, δ))) δ))
 
 /-
+Subst(x, Snd(β₀)) env (y, z) = x env y z
+-/
+def Subst₂.type (β γ δ : Expr) (o : Level) : Expr :=
+  (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(β), Subst(γ, Snd(β))) ∘ Snd'(Sort o, δ))) δ))
+
+/-
 Σ(f_β)
 
 f_β : δ → α → Sort n
@@ -231,7 +237,7 @@ inductive Judge : Expr → Expr → Prop where
     → Judge γ (pair.β.type m o)
     → Reduces (pair.type α β γ m) τ
     → Judge (DCC ⟦m, α, β, γ⟧⟨f, g⟩) τ
-  | subst  : Judge x (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
+  | subst₁ : Judge x (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
     → Reduces (Subst₁.type β γ δ o) τ
     → Judge (DCC Subst(x, Fst(β))) τ
   | appl   : Judge f_α (arrow δ (DCC Sort m) o)
@@ -387,7 +393,7 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
     | .some ⟨(DCC (Π(Id(Sort o), Λ(Sort o₂, Id(Sort o₃), Π(`(δ, α), γ)) ∘ Snd'(Sort o₄, δ₂)) δ₃)), ⟨ht⟩⟩ =>
       if heq : o₂ = o ∧ o₃ = o ∧ o₄ = o ∧ δ₂ = δ ∧ δ₃ = δ then
         have ⟨ha, hb, hc, hd, he⟩ := heq
-        .some ⟨_, ⟨.subst (ha ▸ hb ▸ hc ▸ hd ▸ he ▸ ht) (reduce_reduces rfl)⟩⟩
+        .some ⟨_, ⟨.subst₁ (ha ▸ hb ▸ hc ▸ hd ▸ he ▸ ht) (reduce_reduces rfl)⟩⟩
       else .none
     | _ => .none
   | DCC App(f_α, f_β) =>

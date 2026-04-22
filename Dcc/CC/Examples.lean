@@ -5,8 +5,8 @@ import Dcc.CC.Judge2
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1) (Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Fst(`(Sort 1, `(Sort 1, Sort 1))) (Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Σ(`(Sort 1, `(Sort 1, Sort 1))) (Sort 0))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Fstc(3, Sort 2, Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(3, Sort 2, Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘ Id(Sort 1)) (Sort 0))).infer
 
 def test_pair : Option Expr := do
@@ -20,7 +20,7 @@ def test_pair : Option Expr := do
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC Λ(Sort 1, Id(Sort 1), Fstc(2, Sort 1, Id(Sort 1)))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Λ(Sort 2, Id(Sort 2), Fstc(Id(Sort 2))) (Sort 1) (Sort 0))).infer
 
 /-
 App is most naturally used with rendered pairs.

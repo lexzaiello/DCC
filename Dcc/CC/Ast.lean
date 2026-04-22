@@ -115,8 +115,8 @@ instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
 
 DCC (Σ(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β)) α)
 -/
-def coup.type (α β : Expr) (m : Level) : Expr :=
-  DCC (Σ(`(Sort m, β)) α)
+def coup.type (β : Expr) : Expr :=
+  DCC (Σ(`(Sort 1, β)) Sort 0)
 
 /-
 The main Fst is indexed by the environment map and the environment:
@@ -133,25 +133,25 @@ Snd' is specifically for couples with this encoding.
 Curry is also designed for couples with the (α, x) β encoding.
 That is, β in ⟦β⟧(x, y) receives (α, x)
 -/
-def mk_fstc (α β : Expr) (m : Level) : Expr :=
-  DCC (Fst(`(Sort m, β)) α)
+def mk_fstc (β : Expr) : Expr :=
+  DCC (Fst(`(Sort 1, β)) Sort 0)
 
-def mk_sndc (α β : Expr) (m : Level) : Expr :=
-  DCC (Snd(`(Sort m, β)) α)
+def mk_sndc (β : Expr) : Expr :=
+  DCC (Snd(`(Sort 1, β)) Sort 0)
 
-syntax "Fstc(" term "," expr,* ")" : expr
-syntax "Sndc(" term "," expr,* ")" : expr
-syntax "Coup(" term "," expr,* ")" : expr
+syntax "Fstc(" expr,* ")" : expr
+syntax "Sndc(" expr,* ")" : expr
+syntax "Coup(" expr,* ")" : expr
 
 syntax "(" expr ":" expr ")" "→" expr : expr
 
 macro_rules
-  | `(DCC Fstc($m:term, $α:expr, $β:expr)) => `(mk_fstc (DCC $α) (DCC $β) $m)
-  | `(DCC Sndc($m:term, $α:expr, $β:expr)) => `(mk_sndc (DCC $α) (DCC $β) $m)
-  | `(DCC Coup($m:term, $α:expr, $β:expr)) => `(coup.type (DCC $α) (DCC $β) $m)
+  | `(DCC Fstc($β:expr)) => `(mk_fstc   (DCC $β))
+  | `(DCC Sndc($β:expr)) => `(mk_sndc   (DCC $β))
+  | `(DCC Coup($β:expr)) => `(coup.type (DCC $β))
 
 def arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), `(Coup(m.succ, Sort m, Id(Sort m)), β))) α)
+  DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), `(Coup(Id(Sort m)), β))) α)
 
 macro_rules
   | `(DCC ($α:expr : Sort $m) → $β:expr) => `(arrow (DCC $α) (DCC $β) $m)
@@ -161,12 +161,12 @@ Version of quotation that is point-free with respect to x.
 
 β is dependent.
 -/
-def quot' (α β : Expr) (m : Level) : Expr :=
-  DCC Λ(α, β, Fstc(m, α, β))
+def quot' (α β : Expr) : Expr :=
+  DCC Λ(α, β, Fstc(β))
 
-syntax "Quot(" term "," expr,* ")" : expr
+syntax "Quot(" expr,* ")" : expr
 
 macro_rules
-  | `(DCC Quot($m:term, $α:expr, $β:expr)) => `(quot' (DCC $α) (DCC $β) $m)
+  | `(DCC Quot($α:expr, $β:expr)) => `(quot' (DCC $α) (DCC $β))
 
 end Expr

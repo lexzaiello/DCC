@@ -18,11 +18,7 @@ def test_pair : Option Expr := do
 
 #eval Std.format test_pair
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
-
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (App(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(Sort 3, Id(Sort 2))) Sort 2), Sort 1))) (Sort 1)
-  )).infer
-
-#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟦`((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(Sort 3, Id(Sort 2))) Sort 2), Sort 1))) Sort 1), Sort 1)⟧(Id(Sort 1), Sort 0)).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (App(Id(Sort 2),
+  Λ(Sort 2, Id(Sort 2), Fstc(3, Sort 2, Id(Sort 2)))) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Λ(Sort 1, Id(Sort 1), Fstc(2, Sort 1, Id(Sort 1)))).infer

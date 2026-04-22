@@ -80,16 +80,12 @@ def comp.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
 
 /-
-App(f_α, f_β) : ∀ (env : δ) (s : Σ(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β))))
-
-App(f_α, f_β) : (Π(Id(Sort o), `(Sort o, Π(Σ(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))),
-  Subst(f_β, Fst(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))))))) δ)
+f : ∀ (x : α) (y : β x), γ x y
+App(f) : 
 -/
-def App.type (f_α f_β δ : Expr) (o : Level) : Expr :=
-  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(o, δ, Π(f_α, f_β)))),
-    Subst(f_β, Fst(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(o, δ, Π(f_α, f_β)))))))) δ)
-  /-DCC (Π(Id(Sort max m n),
-    Λ(Sort max m n, Id(Sort max m n), App(n, γ) ∘ Snd'(Sort max m n, Coup(m, α, β)))) Coup(m, α, β))-/
+def App.type (α β γ : Expr) (m n : Level) : Expr :=
+  DCC (Π(Id(Sort max m n),
+    Λ(Sort max m n, Id(Sort max m n), App(β, γ) ∘ Snd'(Sort max m n, Coup(m, α, β)))) Coup(m, α, β))
 
 def snd'.type (α β : Expr) (m n : Level) : Expr :=
   DCC (Coup(m, α, β) : Sort max m n) → β
@@ -244,17 +240,12 @@ inductive Judge : Expr → Expr → Prop where
   | subst  : Judge x (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
     → Reduces (Subst₁.type β γ δ o) τ
     → Judge (DCC Subst(x, Fst(β))) τ
+  | appl   : Judge f (DCC (Π(Id(Sort m), `(Sort m, Π(β, γ))) α))
+    → Judge β (DCC (α : Sort m) → Sort n)
+    → Reduces (App.type α β γ m n) τ
+    → Judge (DCC App(β, f)) τ
   /-
-    f_β receives env and x
-    this is a mirror image of Pi
-    App(f_α, f_β) env : ∀ (Coup(
-  -/
-  | appl   : Judge f_α (arrow δ (DCC Sort m) o)
-    → Judge f_β (Pi.f_β.type f_α δ o n)
-    → Reduces (App.type f_α f_β δ o) τ
-    → Judge (DCC App(f_α, f_β)) τ
-  /-
-    f_α : α → Sort m
+    ef_α : α → Sort m
     f_β : ∀ (x : α) (y : f_α x), Sort n
     Π(f_α, f_β)
   -/
@@ -407,16 +398,18 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
         .some ⟨_, ⟨.subst (ha ▸ hb ▸ hc ▸ hd ▸ he ▸ ht) (reduce_reduces rfl)⟩⟩
       else .none
     | _ => .none
-  | DCC App(f_α, f_β) =>
-    match with_arr (infer f_α) with
-    | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>
-      match infer f_β with
-      | .some ⟨(DCC (Π(_aa, `(_a, Π(_b, Λ(_c, _d, (Λ(_e, _f, `(_g, Sort o)) _h))))) _i)), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_aa, `(_a, Π(_b, Λ(_c, _d, (Λ(_e, _f, `(_g, Sort o)) _h))))) _i)) = Pi.f_β.type f_α α m o then
-          .some ⟨_, ⟨.appl (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
-        else .none
+  | DCC App(β, f) =>
+      match infer f with
+      | .some ⟨(DCC (Π(Id(Sort m), `(Sort m₂, Π(β₂, γ))) α)), ⟨h_t⟩⟩ =>
+        match with_arr (infer β) with
+        | .some ⟨_, α₂, DCC Sort n, m₅, ⟨h_t₂⟩, ⟨h_arr⟩⟩ =>
+          if heq : m = m₂ ∧ α₂ = α ∧ m₅ = m ∧ β₂ = β then
+            have ⟨ha, he, hf, hg⟩ := heq
+            .some ⟨_,
+              ⟨.appl (ha.symm ▸ hg ▸ h_t) (he ▸ hf ▸ h_arr ▸ h_t₂) (reduce_reduces rfl)⟩⟩
+          else .none
+        | _ => .none
       | _ => .none
-    | _ => .none
   | DCC Π(f_α, f_β) =>
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>

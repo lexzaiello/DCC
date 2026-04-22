@@ -79,6 +79,21 @@ def pair.type (α β γ : Expr) (m : Level) : Expr :=
 def comp.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
 
+/-
+Alternative App encoding.
+
+f_α and env determine α and
+
+we want to make basically a couple
+
+f_α env indicates α
+and f_β env indicates
+
+f element : (Π(Id(Sort m), Λ(Sort m, Id(Sort m), (f_β env))) (f_α env))
+g element : (f_α env)
+Σ(
+-/
+
 def App.type (f_α f_β δ : Expr) (o : Level) : Expr :=
   let f_β_sig := DCC Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(o, δ, Π(f_α, f_β)))
   DCC (Π(Id(Sort o), `(Sort o, Π(Σ(f_β_sig), Subst(f_β, Snd(f_β_sig))))) δ)

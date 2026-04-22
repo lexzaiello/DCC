@@ -159,10 +159,10 @@ macro_rules
 /-
 Version of quotation that is point-free with respect to x.
 
-β is not dependent.
+β is dependent.
 -/
 def quot' (α β : Expr) (m : Level) : Expr :=
-  DCC Λ(α, `(Coup(m.succ, Sort m, Id(Sort m)), β), Fstc(m, α, `(Coup(m.succ, Sort m, Id(Sort m)), β)))
+  DCC Λ(α, β, Fstc(m, α, β))
 
 syntax "Quot(" term "," expr,* ")" : expr
 

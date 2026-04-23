@@ -30,40 +30,13 @@ namespace Expr
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
   induction h
   case top | bot | tintro | sort => dsimp only [infer]
-  case subst₁ | pi | app | pair | quot | fst | snd | snd' | coup | comp | id | sigma =>
+  case app' | appl | subst₁ | pi | app | pair | quot | fst | snd | snd' | coup | comp | id | sigma =>
     dsimp only [infer]
     aesop
-  case appl h_r₁ h_r₂ h_r₃ ih₁ ih₂ ih₃ =>
-    have ha := h_r₁.complete
-    have hb := h_r₂.complete
-    have hc := h_r₃.complete
-    dsimp only [infer]
-    rw [ih₁, ih₂, ih₃, with_arr, match_arrow]
-    cases hc
-    cases ha
-    dsimp
-    split
-    case isTrue heqa =>
-      cases heqa
-      dsimp only [with_app_γ_ty, App.type.t_γ.matcher]
-      have h₁ := h_r₁.complete
-      have h₂ := h_r₂.complete
-      split
-      case h_1 =>
-        dsimp
-        split
-        case isTrue =>
-          cases h₁
-          dsimp [App.type.t_γ, mk_app_env, coup.type]
-          dsimp only [App.type.t_γ, mk_app_env, coup.type] at hb
-          
-          sorry
-      case h_2 =>
-        sorry
   case subst₂ h_r₁ ih₁ =>
     dsimp only [infer]
     rw [ih₁]
-    dsimp only [Subst₂.x.type, App.type.t_f, mk_app_env, coup.type]
+    dsimp only [Subst₂.x.type]
     aesop
   case curr h_r₁ h_r₂ h_r₃ ih₁ ih₂ =>
     have ha := h_r₁.complete

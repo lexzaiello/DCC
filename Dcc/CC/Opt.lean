@@ -24,7 +24,7 @@ inductive RedEta : Expr → Expr → Prop
     → IsNormAff β
     → RedAffReflTrans (DCC (f_γ env)) γ
     → IsNormAff γ
-    → RedEta (DCC (App(f_α, f_β, f_γ) env)) (DCC App'(α, β, γ))
+    → RedEta (DCC (App(m, n, o, f_α, f_β, f_γ) env)) (App'.type α β γ m n o)
   | quot_curr : RedEta (DCC Λ(α, β, `(_γ, x))) (DCC `(Coup(β), x))
   /-
    pi rule might break things
@@ -39,12 +39,12 @@ inductive RedEta : Expr → Expr → Prop
   | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) y
   | snd'      : RedEta (DCC Λ(α, _b, x ∘ (Snd(_c) _env))) (DCC `(α, x))
   | beta      : RedEta
-    (DCC ((App(_f_α, _f_β, _f_γ) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩))
+    (DCC ((App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩))
     (DCC (x ∘ ⟦m, α, Fstc(Id(Sort m)), γ⟧⟨Id(α), y⟩))
-  | ai        : RedEta (DCC Λ(α, β, (App(f_α, f_β, f_γ) env))) (DCC Id((Π(f_α, f_β) env)))
+  | ai        : RedEta (DCC Λ(α, β, (App'(f_α, f_β, f_γ) env))) (DCC Id((Π(f_α, f_β) env)))
   | fsi       : RedEta (DCC ⟦m, a, b, c⟧⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) (DCC Id((Σ(_β) env)))
   | uncur     : RedEta (DCC Λ(α, β,
-    (App(_f_α, _f_β, _f_γ) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
+    (App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
 
 @[aesop safe apply, grind ., grind →, simp] theorem RedEta.decreasing (h : RedEta e e') : (size e').fst < (size e).fst := by
   induction h <;> (try grind)
@@ -107,7 +107,7 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
 
 @[simp] def step_η? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta e e'))) :=
   match e with
-  | DCC (App(f_α, f_β, f_γ) env) =>
+  | DCC (App(m, n, o, f_α, f_β, f_γ) env) =>
     .some ⟨_, ⟨.appl
       (reduce_sound rfl) (reduce_norm rfl)
       (reduce_sound rfl) (reduce_norm rfl)
@@ -128,11 +128,11 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
   | (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) => .some ⟨_, ⟨.fst⟩⟩
   | (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) => .some ⟨_, ⟨.snd⟩⟩
   | (DCC Λ(α, _b, x ∘ (Snd(_c) _env))) => .some ⟨_, ⟨.snd'⟩⟩
-  | (DCC ((App(_f_α, _f_β, _f_γ) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩)) => .some ⟨_, ⟨.beta⟩⟩
-  | (DCC Λ(α, β, (App(f_α, f_β, f_γ) env))) => .some ⟨_, ⟨.ai⟩⟩
+  | (DCC ((App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩)) => .some ⟨_, ⟨.beta⟩⟩
+  | (DCC Λ(α, β, (App'(f_α, f_β, f_γ) env))) => .some ⟨_, ⟨.ai⟩⟩
   | (DCC ⟦m, a, b, c⟧⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
   | (DCC Λ(α, β,
-    (App(_f_α, _f_β, _f_γ) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
+    (App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
       .some ⟨_, ⟨.uncur⟩⟩
   | _ => .none
 termination_by sizeOf e

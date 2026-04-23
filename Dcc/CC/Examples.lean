@@ -22,11 +22,16 @@ def test_pair : Option Expr := do
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Λ(Sort 2, Id(Sort 2), Fstc(Id(Sort 2))) (Sort 1) (Sort 0))).infer
 
-/-
-App is most naturally used with rendered pairs.
+def test_id_nested : Option Expr := do
+  let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer
+  Sigma.fst <$> (DCC (Id(t) Id(Sort 1) (Sort 0))).infer
 
-⟨f, g⟩ x produces a sigma-typed term, but its type is more the shape that App expects
-and can introspect into with f_α and f_β
+#eval test_id_nested
+
+/-
+App(f_α, f_β, f_γ) env x (y, z) = x y z
+
+App(Id(Sort 1)
 -/
 def test_app : Option Expr := do
   match ← (DCC `(Sort 1, Id(Sort 1))).infer, ← (DCC Id(Sort 1)).infer with

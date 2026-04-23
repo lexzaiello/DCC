@@ -123,7 +123,7 @@ def RedAffTrans     := Relation.TransGen RedAff
 def RedAffReflTrans := Relation.ReflTransGen RedAff
 
 @[aesop safe apply, grind ., grind →, simp] theorem RedAff.decreasing (h : RedAff e e') : (size e').fst < (size e).fst := by
-  induction h <;> (try grind)  
+  induction h <;> (try grind)
 
 @[aesop safe apply, grind ., grind →, simp] theorem RedAffTrans.decreasing : RedAffTrans e e' → (size e').fst < (size e).fst := by
   intro h
@@ -452,6 +452,9 @@ theorem RedAffReflTrans.norm_unique (h₁ : RedAffReflTrans A B) (h_norm : B.IsN
     exact h_norm.elim ⟨_, h₁⟩
   | _, .inr ⟨c₁, h₁, h₂⟩ =>
     exact h_norm₂.elim ⟨_, h₁⟩
+
+theorem RedAffTrans.norm_unique (h₁ : RedAffTrans A B) (h_norm : B.IsNormAff) (h₂ : RedAffTrans A C) (h_norm₂ : C.IsNormAff) : B = C :=
+  RedAffReflTrans.norm_unique (Relation.TransGen.to_reflTransGen h₁) h_norm (Relation.TransGen.to_reflTransGen h₂) h_norm₂
 
 @[simp] theorem RedAff.no_refl : ¬ RedAff A A := fun h => by
   have h := h.decreasing

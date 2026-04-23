@@ -87,6 +87,22 @@ def pair.type (α β γ : Expr) (m : Level) : Expr :=
 def comp.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
 
+
+/-
+Can we make some combinator
+
+App(f_α, f_β, f_γ) env : (Mkt(f_α, f_β, f_v) env = ...)
+
+Subst?
+
+Subst(Π(), App(f_α, f_β, f_γ)) env =
+
+subst calculates each domain element
+
+App(f_α, f_β, f_γ) env : ∀ (f : (Π(Id(Sort m), `(Sort m, Π(?, ?))) (f_α env)
+^ can half do this with η-reduce Π
+-/
+
 def mk_app_env (f_α δ f : Expr) (u_δ u_cod : Level) : Expr :=
   DCC (App(Id(Sort u_δ), `(Sort u_δ, f_α), Λ(δ, f_α, `(Coup(f_α), Sort u_cod))) δ f)
 
@@ -99,6 +115,8 @@ f_γ env x y denotes the codomain
 /-
 f : ∀ (x : f_α env) (y : f_β env x), f_γ x y
 
+f : Π(f_α, Π()
+
 this accepts the environment as a point.
 -/
 def App.type.t_f (f_α f_β f_γ δ : Expr) (u_δ u_β u_γ : Level) : Expr :=
@@ -109,7 +127,8 @@ def App.type.t_f (f_α f_β f_γ δ : Expr) (u_δ u_β u_γ : Level) : Expr :=
 f_β : ∀ (env : δ) (x : f_α env), Sort n
 -/
 @[simp] def App.type.t_β (f_α δ : Expr) (o n : Level) :=
-  DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, `(Coup(f_α), Sort n))))) δ)
+  (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, (Λ(Sort o, Id(Sort o),
+    `(Coup(Id(Sort o)), Sort n)) Coup(f_α)))))) δ))
 
 def App.type.t_γ (f_α f_β δ : Expr) (o n p : Level) :=
   (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, Π(
@@ -510,10 +529,10 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
-      | .some ⟨DCC (Π(Id(Sort _o), `(_a, Π(_f_α, Λ(_δ, _b, `(_c, Sort n))))) _d), ⟨ht₂⟩⟩ =>
+      | .some ⟨(DCC (Π(Id(Sort _a), `(Sort _b, Π(_c, Λ(_d, _e, (Λ(_f, Id(_g), `(_h, Sort n)) _j))))) _k)), ⟨ht₂⟩⟩ =>
         match with_app_γ_ty (infer f_γ) with
         | .some ⟨_, f_α₂, f_β₂, δ₂, o₂, n₂, p₂, ⟨ht₃⟩, ⟨heq_γ⟩⟩ =>
-          if heqa : (DCC (Π(Id(Sort _o), `(_a, Π(_f_α, Λ(_δ, _b, `(_c, Sort n))))) _d)) = (App.type.t_β f_α δ o n) then
+          if heqa : (DCC (Π(Id(Sort _a), `(Sort _b, Π(_c, Λ(_d, _e, (Λ(_f, Id(_g), `(_h, Sort n)) _j))))) _k)) = (App.type.t_β f_α δ o n) then
             if heqb : f_α₂ = f_α ∧ f_β₂ = f_β ∧ o₂ = o ∧ n₂ = n ∧ δ₂ = δ then
               have ⟨ha, hb, hc, hd, he⟩ := heqb
               .some ⟨_, ⟨.appl (harr ▸ ht₁) (heqa ▸ ht₂) (ha ▸ hb ▸ hc ▸ hd ▸ he ▸ heq_γ ▸ ht₃) (reduce_reduces rfl)⟩⟩

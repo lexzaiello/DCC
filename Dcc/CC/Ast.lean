@@ -131,7 +131,7 @@ instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
 DCC (Σ(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β)) α)
 -/
 def coup.type (β : Expr) : Expr :=
-  DCC (Σ(`(Sort 1, β)) Sort 0)
+  DCC (Σ(`(⊤, β)) ∗)
 
 /-
 The main Fst is indexed by the environment map and the environment:
@@ -149,10 +149,10 @@ Curry is also designed for couples with the (α, x) β encoding.
 That is, β in ⟦β⟧(x, y) receives (α, x)
 -/
 def mk_fstc (β : Expr) : Expr :=
-  DCC (Fst(`(Sort 1, β)) Sort 0)
+  DCC (Fst(`(⊤, β)) ∗)
 
 def mk_sndc (β : Expr) : Expr :=
-  DCC (Snd(`(Sort 1, β)) Sort 0)
+  DCC (Snd(`(⊤, β)) ∗)
 
 syntax "Fstc(" expr,* ")" : expr
 syntax "Sndc(" expr,* ")" : expr

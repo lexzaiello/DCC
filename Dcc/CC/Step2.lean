@@ -55,19 +55,19 @@ inductive Size : Expr → ℕ → Prop
   | sig    : Size (DCC Σ(_n)) 0
   | coup   : Size x m → Size y n → Size (DCC ⟦β⟧(x, y)) (m + n)
   | sort   : Size (DCC Sort m) 0
-  | pi     : Size (DCC Π(_α, _β)) 0
+  | pi     : Size (DCC Π(α, β)) 0
   | quot   : Size x m → Size (DCC `(β, x)) m.succ
   | id     : Size (DCC Id(α)) 1
   | fst    : Size (DCC Fst(_α)) 1
   | snd'   : Size (DCC Snd'(δ, β)) 1
   | snd    : Size (DCC Snd(_α)) 1
   | appl   : Size (DCC App(_α, β, _γ)) 1
-  | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
+  | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ.succ
   | pair   : Size f m → Size g n → Size (DCC ⟦_m, α, β, γ⟧⟨f, g⟩) (m + n).succ
   | curr   : Size x m → Size (DCC Λ(α, β, x)) m.succ
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
 
-@[grind] def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
+@[simp, grind] def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
   match e with
   | DCC ∗ => ⟨_, ⟨.tintro⟩⟩
   | DCC ⊤ => ⟨_, ⟨.top⟩⟩
@@ -89,7 +89,8 @@ inductive Size : Expr → ℕ → Prop
   | DCC Fst(_α) => ⟨_, ⟨.fst⟩⟩
   | DCC Snd'(_α,_β) => ⟨_, ⟨.snd'⟩⟩
   | DCC Snd(_α) => ⟨_, ⟨.snd⟩⟩
-  | DCC Π(_α, _β) => ⟨_, ⟨.pi⟩⟩
+  | DCC Π(_α, _β) =>
+    ⟨_, ⟨.pi⟩⟩
   | DCC App(_α, _β, _γ) => ⟨_, ⟨.appl⟩⟩
   | DCC (f ∘ g) =>
     let ⟨_m, ⟨h₁⟩⟩ := f.size
@@ -103,15 +104,15 @@ inductive Size : Expr → ℕ → Prop
     let ⟨_n, ⟨h₁⟩⟩ := x.size
     ⟨_, ⟨.curr h₁⟩⟩
   | DCC (f x) =>
-    let ⟨m, ⟨h₁⟩⟩ := f.size
-    let ⟨n, ⟨h₂⟩⟩ := x.size
-    ⟨(m + n), ⟨.app h₁ h₂⟩⟩
+    let ⟨_, ⟨h₁⟩⟩ := f.size
+    let ⟨_, ⟨h₂⟩⟩ := x.size
+    ⟨_, ⟨.app h₁ h₂⟩⟩
 
 theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
 
-theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
+@[aesop safe destruct, grind =_, grind →, simp] theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
-  | tintro | bot | top | appl | snd' | id | snd | fst | pi | sig | sort => rfl
+  | pi | tintro | bot | top | appl | snd' | id | snd | fst | sig | sort => rfl
   | comp _ _ ih₁ ih₂ | coup _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
   | quot _ ih | curr _ ih => rw [size, ih]
   | subst _ _ ih₁ ih₂ | app _ _ ih₁ ih₂ | pair _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
@@ -121,10 +122,10 @@ instance instSizeOf : SizeOf Expr := ⟨fun e => e.size.fst⟩
 def RedAffTrans     := Relation.TransGen RedAff
 def RedAffReflTrans := Relation.ReflTransGen RedAff
 
-theorem RedAff.decreasing (h : RedAff e e') : (size e').fst < (size e).fst := by
-  induction h <;> (try grind)
+@[aesop safe apply, grind ., grind →, simp] theorem RedAff.decreasing (h : RedAff e e') : (size e').fst < (size e).fst := by
+  induction h <;> (try grind)  
 
-theorem RedAffTrans.decreasing : RedAffTrans e e' → (size e').fst < (size e).fst := by
+@[aesop safe apply, grind ., grind →, simp] theorem RedAffTrans.decreasing : RedAffTrans e e' → (size e').fst < (size e).fst := by
   intro h
   induction h with
   | single h => exact h.decreasing

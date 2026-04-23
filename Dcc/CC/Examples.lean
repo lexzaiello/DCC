@@ -31,18 +31,20 @@ def test_id_nested : Option Expr := do
 /-
 App(f_α, f_β, f_γ) env x (y, z) = x y z
 
+f_β env x = Sort 1
+
 App(Id(Sort 1)
 -/
 def test_app : Option Expr := do
-  match ← (DCC `(Sort 1, Id(Sort 1))).infer, ← (DCC Id(Sort 1)).infer with
-  | ⟨DCC (Π(_f_α, Λ(_a, _b, β)) _x), _⟩, ⟨DCC (Π(_f_α₂, Λ(_a₂, _b₂, β₂)) _x₂), _⟩ =>
-    let my_pair := DCC (⟦2, Sort 1, β, β₂⟧⟨`(Sort 1, Id(Sort 1)), Id(Sort 1)⟩ Sort 0)
-    dbg_trace (Std.format ∘ Sigma.fst) <$> my_pair.infer
-    Sigma.fst <$> (DCC ((App(_f_α₂, Λ(_a₂, _b₂, β₂)) _x₂))).infer
-    --dbg_trace my_app.infer.isSome
-    -- (my_pair (Sort 0))
-    --.none
-  | _, _ => .none
+  let ⟨env, _⟩ ← (DCC Id(Sort 1)).infer
+  match ← env.infer with
+  | ⟨δ@(DCC Sort m), _⟩ =>
+    let f_α := DCC Id(Sort m)
+    let f_β := DCC Λ(Sort m, f_α, `(Coup(f_α), Sort 1))
+    -- f_γ env Id(Sort 1) (Sort 0) = (Sort 1)
+    let f_γ := DCC Λ(δ, f_α, Λ(Coup(f_α), `(Coup(f_α), Sort 1), `(Coup(`(Coup(f_α), Sort 1)), Sort 1)))
+    Sigma.fst <$> (DCC (App(f_α, f_β, f_γ) env)).infer
+  | _ => .none
 
 #eval Std.format <$> test_app
 

@@ -117,8 +117,6 @@ theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
   | quot _ ih | curr _ ih => rw [size, ih]
   | subst _ _ ih₁ ih₂ | app _ _ ih₁ ih₂ | pair _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
 
-instance instSizeOf : SizeOf Expr := ⟨fun e => e.size.fst⟩
-
 def RedAffTrans     := Relation.TransGen RedAff
 def RedAffReflTrans := Relation.ReflTransGen RedAff
 
@@ -721,6 +719,7 @@ def reduce (e : Expr) : Expr :=
     have _h_size : e'.size.fst < e.size.fst := h.decreasing
     e'.reduce
   | .none => e
+termination_by e.size.fst
 
 def step_star? (e : Expr) : Option Expr :=
   if (reduce e) = e then
@@ -800,7 +799,7 @@ theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNorm
     simp_all
     exact h_norm.complete_reduce
   | .inr ⟨c, h₁, h₂⟩ =>
-    have _h : sizeOf c < sizeOf A := h₁.decreasing
+    have _h : c.size.fst < A.size.fst := h₁.decreasing
     have h := RedAffReflTrans.complete h₂ h_norm
     rw [h₁.reduce_same, h]
 termination_by A.size.fst
@@ -820,6 +819,17 @@ theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : IsNormAff B) : (
   have h := RedAffReflTrans.complete h₁.to_reflTransGen h_norm
   simp [step_star?]
   exact ⟨fun h₂ => (((h₂ ▸ h).symm ▸ h_norm) h₁.next), h⟩
+
+theorem step_star?_norm (heq : step_star? A = .some B) : B.IsNormAff := by
+  simp [step_star?] at heq
+  match heq with
+  | ⟨_, h⟩ => exact reduce_norm h
+
+instance : Decidable (RedAffTrans A B ∧ B.IsNormAff) :=
+  if h : step_star? A = .some B then
+    .isTrue (⟨step_star?_sound h, step_star?_norm h⟩)
+  else
+    .isFalse (fun ⟨h_red, heq⟩ => by simp [h_red.complete heq] at *)
 
 instance : Decidable (RedAffReflTrans A B ∧ B.IsNormAff) :=
   if h : reduce A = B then

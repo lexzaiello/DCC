@@ -31,6 +31,7 @@ inductive Expr where
   | mk     : Expr  → Expr  → Expr  → Expr
   | pi     : Expr  → Expr  → Expr
   | curr   : Expr  → Expr  → Expr  → Expr
+  | app'   : Expr  → Expr  → Expr  → Expr
   | appl   : Expr  → Expr  → Expr  → Expr
   | quot   : Expr  → Expr  → Expr
   | id     : Expr  → Expr
@@ -54,6 +55,7 @@ syntax:max "`(" expr,* ")"                                       : expr
 syntax:max "Id(" expr,* ")"                                      : expr
 syntax:max "Fst(" expr,* ")"                                     : expr
 syntax:max "Snd'(" expr,* ")"                                    : expr
+syntax:max "App'(" expr,* ")"                                    : expr
 syntax:max "App(" expr,* ")"                                     : expr
 syntax:max "Snd(" expr,* ")"                                     : expr
 syntax:max "Subst(" expr,* ")"                                   : expr
@@ -85,6 +87,7 @@ macro_rules
   | `(DCC Fst($β:expr))                          => `(Expr.fst (DCC $β))
   | `(DCC Snd($β:expr))                          => `(Expr.snd (DCC $β))
   | `(DCC Snd'($α:expr, $β:expr))                => `(Expr.snd' (DCC $α) (DCC $β))
+  | `(DCC App'($α:expr, $β:expr, $γ:expr))       => `(Expr.app' (DCC $α) (DCC $β) (DCC $γ))
   | `(DCC App($f_α:expr, $f_β:expr, $f_γ:expr))  => `(Expr.appl (DCC $f_α) (DCC $f_β) (DCC $f_γ))
   | `(DCC Id($α:expr))                           => `(Expr.id (DCC $α))
   | `(DCC Subst($x:expr, $β:expr))               => `(Expr.subst (DCC $x) (DCC $β))
@@ -107,6 +110,7 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Fst(β))             => "Fst" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
   | (DCC Snd(β))             => "Snd" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
   | (DCC Snd'(α, β))         => "Snd'" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
+  | (DCC App'(α, β, γ))      => "App'(" ++ (.joinSep [α.toFormat, β.toFormat, γ.toFormat] ", ") ++ ")"
   | (DCC App(f_α, f_β, f_γ)) => "App(" ++ (.joinSep [f_α.toFormat, f_β.toFormat, f_γ.toFormat] ", ") ++ ")"
   | (DCC Λ(α, β, e))         => "Λ(" ++ (.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
   | (DCC Π(α, β))            => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")

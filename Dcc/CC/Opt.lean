@@ -2,11 +2,7 @@ import Dcc.CC.Ast
 import Dcc.CC.Step2
 
 /-
-Λ(?, ?, x ∘ Snd) = `(x)
-
-f ∘ `(x) = `(f x)
-
-`(?, `(
+App(f_α, f_β, f_γ) env = App(f_α env, f_β env, f_γ env)
 -/
 
 namespace Expr
@@ -22,6 +18,13 @@ Need eta rules to handle potential apps produced by Π
 -/
 
 inductive RedEta : Expr → Expr → Prop
+  | appl      : RedAffReflTrans (DCC (f_α env)) α
+    → IsNormAff α
+    → RedAffReflTrans (DCC (f_β env)) β
+    → IsNormAff β
+    → RedAffReflTrans (DCC (f_γ env)) γ
+    → IsNormAff γ
+    → RedEta (DCC (App(f_α, f_β, f_γ) env)) (DCC App'(α, β, γ))
   | quot_curr : RedEta (DCC Λ(α, β, `(_γ, x))) (DCC `(Coup(β), x))
   /-
    pi rule might break things
@@ -72,6 +75,13 @@ termination_by e.size.fst
 -/
 theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
+  | appl h_r₁ h_norm₁ h_r₂ h_norm₂ h_r₃ h_norm₃ =>
+    cases h₂ with
+    | appl h_r₁' h_norm₁' h_r₂' h_norm₂' h_r₃' h_norm₃' =>
+      have ha := h_r₁.norm_unique h_norm₁ h_r₁' h_norm₁'
+      have hb := h_r₂.norm_unique h_norm₂ h_r₂' h_norm₂'
+      have hc := h_r₃.norm_unique h_norm₃ h_r₃' h_norm₃'
+      simp_all
   | pi _ h_r₁ h_norm₁ _ ih =>
     cases h₂ with
     | pi _ hr₂ h_norm₂ =>
@@ -97,6 +107,11 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
 
 @[simp] def step_η? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta e e'))) :=
   match e with
+  | DCC (App(f_α, f_β, f_γ) env) =>
+    .some ⟨_, ⟨.appl
+      (reduce_sound rfl) (reduce_norm rfl)
+      (reduce_sound rfl) (reduce_norm rfl)
+      (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | DCC Λ(α, β, `(_γ, x)) => .some ⟨_, ⟨.quot_curr⟩⟩
   | DCC (Π(f_α, f_β) env) =>
     match env.size with
@@ -144,6 +159,11 @@ theorem RedEta.complete (h_red : RedEta A B) : step_η? A = .some ⟨B, ⟨h_red
   induction h_red with
   | pi h_size hrt h_norm h ih =>
     have h := hrt.complete h_norm
+    aesop
+  | appl h_r₁ h_norm₁ h_r₂ h_norm₂ h_r₃ h_norm₃ =>
+    have ha := h_r₁.complete h_norm₁
+    have hb := h_r₂.complete h_norm₂
+    have hc := h_r₃.complete h_norm₃
     aesop
   | _ => simp
 

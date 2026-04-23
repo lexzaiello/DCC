@@ -3,6 +3,18 @@ import Dcc.CC.Step2
 import Dcc.CC.Opt
 
 /-
+App is quite annoying.
+
+We can possibly simplify with Subst. Can do this with Opt.
+
+Subst(Id(Sort ?), App(f_α, f_β, f_γ)) env
+
+Use this to generate type.
+
+= ∀ (x : ∀ (x : f_α env) (y : f_β env x), f_γ env x y) (s : (Coup(β))), App(?, ?, ?) γ s
+-/
+
+/-
 Need to retain nice properties for pair. (α, x)
 
 but need to reduce amount of (α, x).
@@ -116,8 +128,6 @@ f_γ env x y denotes the codomain
 /-
 f : ∀ (x : f_α env) (y : f_β env x), f_γ x y
 
-f : Π(f_α, Π()
-
 this accepts the environment as a point.
 -/
 def App.type.t_f (f_α f_β f_γ δ : Expr) (u_δ u_β u_γ : Level) : Expr :=
@@ -125,11 +135,14 @@ def App.type.t_f (f_α f_β f_γ δ : Expr) (u_δ u_β u_γ : Level) : Expr :=
     Λ(δ, f_α, Π(#(mk_app_env f_α δ f_β u_δ u_β), #(mk_app_env f_α δ f_γ u_δ u_γ))))
 
 /-
-f_β : ∀ (env : δ) (x : f_α env), Sort n
+Need to simplify t_γ
+
+f : ∀ (x : f_α env) (y : f_β env x), z x y
+
+γ : ∀ (env : δ) (x : f_α env) (y : f_β env x), Sort n
+
+γ : Π(
 -/
-@[simp] def App.type.t_β (f_α δ : Expr) (o n : Level) :=
-  (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, (Λ(Sort o, Id(Sort o),
-    `(Coup(Id(Sort o)), Sort n)) Coup(f_α)))))) δ))
 
 def App.type.t_γ (f_α f_β δ : Expr) (o n p : Level) :=
   (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, Π(
@@ -171,7 +184,7 @@ def pair.β.type (m n : Level) : Expr :=
 /-
 β : δ → α → Sort n
 x : ∀ (env : δ) (x : α), γ env x
-Subst(x, Fst(β)) : ∀ 
+Subst(x, Fst(β)) : ∀
 -/
 def Subst₁.type (β γ δ : Expr) (o : Level) : Expr :=
   (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(β), Subst(γ, Fst(β))) ∘ Snd'(Sort o, δ))) δ))
@@ -266,12 +279,13 @@ def reduce_reduces' : Reduces A A.reduce.reduce_η := reduce_reduces rfl
     .some ⟨α, m, n, ⟨by rw [h_arr]; rfl⟩⟩
   | _ => .none
 
-@[inline] abbrev App.type.t_γ.matcher (t : Expr) : Option
-  ((f_α f_β δ: Expr) × (o n p : Level) × (PLift (t = App.type.t_γ f_α f_β δ o n p))) :=
+@[inline] abbrev App.type.t_γ.matcher (t f_α f_β δ : Expr) (o n : Level): Option
+  ((t_γ' : Expr) × (p : Level) × (PLift (Reduces t t_γ' ∧ Reduces (App.type.t_γ f_α f_β δ o n p) t_γ'))) :=
   match t with
-  | DCC (Π(Id(Sort o), `(_a, Π(f_α, Λ(δ, _b, Π(((App(Id(_c), `(_d, _e), Λ(_f, _g, `((Σ(`(_h, _i)) _j), Sort n))) _k) _l), Λ(_m, ((App(Id(_n), `(_o, _p), Λ(_q, _r, `(_s, _t))) _u) f_β), `(_v, Sort p))))))) _w) =>
-    if heq : DCC (Π(Id(Sort o), `(_a, Π(f_α, Λ(δ, _b, Π(((App(Id(_c), `(_d, _e), Λ(_f, _g, `((Σ(`(_h, _i)) _j), Sort n))) _k) _l), Λ(_m, ((App(Id(_n), `(_o, _p), Λ(_q, _r, `(_s, _t))) _u) f_β), `(_v, Sort p))))))) _w) = App.type.t_γ f_α f_β δ o n p then
-      .some ⟨f_α, f_β, δ, o, n, p, ⟨heq⟩⟩
+  | DCC (Π(_aa, `(_a, Π(_f_α, Λ(_δ, _b, Π(_c, Λ(_m, _n, `(_v, Sort p))))))) _w) =>
+    let t_γ' := ((reduce_η ∘ reduce) (App.type.t_γ f_α f_β δ o n p))
+    if heq : (reduce_η ∘ reduce) (DCC (Π(_aa, `(_a, Π(_f_α, Λ(_δ, _b, Π(_c, Λ(_m, _n, `(_v, Sort p))))))) _w)) = t_γ' then
+      .some ⟨t_γ', p, ⟨reduce_reduces heq, reduce_reduces rfl⟩⟩
     else .none
   | _ => .none
 
@@ -337,19 +351,21 @@ inductive Judge : Expr → Expr → Prop where
   /-
     γ : ∀ (env : δ) (x : α) (y : f_β env x), γ env x y
     x : ∀ (env : δ) (x : f_α env) (y : f_β env x), γ env x y
-    x : 
+    x :
     Subst(x, Snd(f_β)) env (y, z) = x env y z
   -/
   | subst₂ : Judge x (Subst₂.x.type f_α f_β f_γ δ o u_β u_γ)
     → Reduces (Subst₂.type f_β f_γ δ o) τ
     → Judge (DCC Subst(x, Snd(β))) τ
   | appl   : Judge f_α (arrow δ (DCC Sort m) o)
+    → Judge f_β (Pi.f_β.type f_α δ o n)
     /-
       f_β : ∀ (env : δ) (x : f_α env), Sort n
       App(f_α, f_β, f_γ)
     -/
-    → Judge f_β (App.type.t_β f_α δ o n)
-    → Judge f_γ (App.type.t_γ f_α f_β δ o n p)
+    → Judge f_γ t_γ₀
+    → Reduces t_γ₀ t_γ'
+    → Reduces (App.type.t_γ f_α f_β δ o n p) t_γ'
     → Reduces (App.type f_α f_β f_γ δ o n p) τ
     → Judge (DCC App(f_α, f_β, f_γ)) τ
   /-
@@ -393,11 +409,11 @@ def with_fst_fβ_type (h : Option ((t : Expr) × PLift (Judge e t))) :
     | _ => .none
   | _ => none
 
-def with_app_γ_ty (h : Option ((t : Expr) × PLift (Judge e t))) :
-  Option ((τ f_α f_β δ : Expr) × (o n p : Level) × PLift (Judge e τ) × (PLift (τ = App.type.t_γ f_α f_β δ o n p))) :=
+def with_app_γ_ty (h : Option ((t : Expr) × PLift (Judge e t))) (f_α f_β δ : Expr) (n o : Level):
+  Option ((τ t_γ' : Expr) × (p : Level) × PLift (Judge e τ) × (PLift (PLift (Reduces τ t_γ' ∧ Reduces (App.type.t_γ f_α f_β δ o n p) t_γ')))) :=
   match h with
-  | .some ⟨t, h⟩ => match App.type.t_γ.matcher t with
-    | .some ⟨f_α, f_β, δ, o, n, p, h₂⟩ => .some ⟨t, f_α, f_β, δ, o, n, p, h, h₂⟩
+  | .some ⟨t, h⟩ => match App.type.t_γ.matcher t f_α f_β δ o n with
+    | .some ⟨t_γ, p, ⟨h_red_γ, h_red_t⟩⟩ => .some ⟨t, t_γ, p, h, h_red_γ, h_red_t⟩
     | _ => .none
   | _ => none
 
@@ -529,16 +545,13 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
-      | .some ⟨(DCC (Π(Id(Sort _a), `(Sort _b, Π(_c, Λ(_d, _e, (Λ(_f, Id(_g), `(_h, Sort n)) _j))))) _k)), ⟨ht₂⟩⟩ =>
-        match with_app_γ_ty (infer f_γ) with
-        | .some ⟨_, f_α₂, f_β₂, δ₂, o₂, n₂, p₂, ⟨ht₃⟩, ⟨heq_γ⟩⟩ =>
-          if heqa : (DCC (Π(Id(Sort _a), `(Sort _b, Π(_c, Λ(_d, _e, (Λ(_f, Id(_g), `(_h, Sort n)) _j))))) _k)) = (App.type.t_β f_α δ o n) then
-            if heqb : f_α₂ = f_α ∧ f_β₂ = f_β ∧ o₂ = o ∧ n₂ = n ∧ δ₂ = δ then
-              have ⟨ha, hb, hc, hd, he⟩ := heqb
-              .some ⟨_, ⟨.appl (harr ▸ ht₁) (heqa ▸ ht₂) (ha ▸ hb ▸ hc ▸ hd ▸ he ▸ heq_γ ▸ ht₃) (reduce_reduces rfl)⟩⟩
-            else .none
-          else .none
-        | _ => .none
+      | .some ⟨(DCC (Π(_aa, `(_a, Π(_b, Λ(_c, _d, (Λ(_e, _f, `(_g, Sort n)) _h))))) _i)), ⟨ht₂⟩⟩ =>
+        if heqa : (DCC (Π(_aa, `(_a, Π(_b, Λ(_c, _d, (Λ(_e, _f, `(_g, Sort n)) _h))))) _i)) = Pi.f_β.type f_α δ o n then
+          match with_app_γ_ty (infer f_γ) f_α f_β δ n o with
+          | .some ⟨_, t_γ', p, ⟨ht₃⟩, ⟨hred_τ, hred_γ⟩⟩ =>
+            .some ⟨_, ⟨.appl (harr ▸ ht₁) (heqa ▸ ht₂) ht₃ hred_τ hred_γ (reduce_reduces rfl)⟩⟩
+          | _ => .none
+        else .none
       | _ => .none
     | _ => .none
   | DCC Π(f_α, f_β) =>

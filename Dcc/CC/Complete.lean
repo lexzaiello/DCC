@@ -49,7 +49,7 @@ theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
     have hb := h_r₂.complete
     have hc := h_r₃.complete
     dsimp only [infer]
-    simp [ih₁, ih₂, hc, ha ▸ hb]
+    simp [ih₁, ih₂]
     aesop
 
 instance : Decidable (Judge e t) :=

@@ -1,5 +1,5 @@
 import Dcc.CC.Ast
-import Dcc.CC.Judge2
+import Dcc.CC.Step2
 
 /-
 Λ(?, ?, x ∘ Snd) = `(x)
@@ -17,27 +17,30 @@ Only count β in size of Pi so we can normalize greedily.
 
 /-
 Need eta rules to handle potential apps produced by Π
+
+Λ(?, ?, Λ(α, β, `(?, y))) x → `(Coup(α, β, y))
 -/
 
 inductive RedEta : Expr → Expr → Prop
+  | quot_curr : RedEta (DCC Λ(α, β, `(_γ, x))) (DCC `(Coup(β), x))
   /-
    pi rule might break things
   -/
-  | pi       : Size env (m + 1)
+  | pi        : Size env (m + 1)
     → RedAffTrans (DCC (f_α env)) α
     → IsNormAff α
     → RedEta (DCC (f_β env)) β
     → RedEta (DCC (Π(f_α, f_β) env)) (DCC (Π(`(⊤, α), `(⊤, β)) ∗))
-  | idr      : RedEta (DCC (f ∘ Id(α))) f
-  | fst      : RedEta (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) x
-  | snd      : RedEta (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) y
-  | snd'     : RedEta (DCC Λ(α, _b, x ∘ (Snd(_c) _env))) (DCC `(α, x))
-  | beta     : RedEta
+  | idr       : RedEta (DCC (f ∘ Id(α))) f
+  | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) x
+  | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) y
+  | snd'      : RedEta (DCC Λ(α, _b, x ∘ (Snd(_c) _env))) (DCC `(α, x))
+  | beta      : RedEta
     (DCC ((App(_f_α, _f_β, _f_γ) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩))
     (DCC (x ∘ ⟦m, α, Fstc(Id(Sort m)), γ⟧⟨Id(α), y⟩))
-  | ai       : RedEta (DCC Λ(α, β, (App(f_α, f_β, f_γ) env))) (DCC Id((Π(f_α, f_β) env)))
-  | fsi      : RedEta (DCC ⟦m, a, b, c⟧⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) (DCC Id((Σ(_β) env)))
-  | uncur    : RedEta (DCC Λ(α, β,
+  | ai        : RedEta (DCC Λ(α, β, (App(f_α, f_β, f_γ) env))) (DCC Id((Π(f_α, f_β) env)))
+  | fsi       : RedEta (DCC ⟦m, a, b, c⟧⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) (DCC Id((Σ(_β) env)))
+  | uncur     : RedEta (DCC Λ(α, β,
     (App(_f_α, _f_β, _f_γ) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
 
 @[aesop safe apply, grind ., grind →, simp] theorem RedEta.decreasing (h : RedEta e e') : (size e').fst < (size e).fst := by
@@ -75,7 +78,7 @@ theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
       have ha := h_r₁.norm_unique h_norm₁ hr₂ h_norm₂
       have hb := ih (by assumption)
       simp_all
-  | uncur | ai | fsi | beta | snd' | snd | fst | idr => cases h₂; rfl
+  | quot_curr | uncur | ai | fsi | beta | snd' | snd | fst | idr => cases h₂; rfl
 
 instance instWellFoundedEta      : WellFounded (fun a b => RedEta b a) := ⟨sn_eta⟩
 instance instWellFoundedEtaTrans : WellFounded (fun a b => RedEtaTrans b a) := ⟨sn_eta_trans⟩
@@ -94,6 +97,7 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
 
 @[simp] def step_η? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta e e'))) :=
   match e with
+  | DCC Λ(α, β, `(_γ, x)) => .some ⟨_, ⟨.quot_curr⟩⟩
   | DCC (Π(f_α, f_β) env) =>
     match env.size with
     | ⟨m + 1, ⟨h_size⟩⟩ =>

@@ -3,9 +3,14 @@ import Dcc.CC.Judge2
 
 /-
 Λ(?, ?, x ∘ Snd) = `(x)
+
+f ∘ `(x) = `(f x)
+
+`(?, `(
 -/
 
 inductive RedAffEta : Expr → Expr → Prop
+  | quot     : RedAffEta (DCC f ∘ `(β, x)) (DCC `(β, (f x)))
   | idl      : RedAffEta (DCC (Id(α) ∘ f)) f
   | idr      : RedAffEta (DCC (f ∘ Id(α))) f
   | fst      : RedAffEta (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) x

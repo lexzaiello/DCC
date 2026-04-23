@@ -17,22 +17,7 @@ Need eta rules to handle potential apps produced by Π
 Λ(?, ?, Λ(α, β, `(?, y))) x → `(Coup(α, β, y))
 -/
 
-inductive CanRedEta : Expr → Prop
-  | quot      : CanRedEta x → CanRedEta (DCC `(β, x))
-  | appl      : CanRedEta (DCC (App(m, n, o, f_α, f_β, f_γ) env))
-  | quot_curr : CanRedEta (DCC Λ(α, β, `(_γ, x)))
-  | pi        : CanRedEta (DCC (Π(f_α, f_β) env))
-  | idr       : CanRedEta (DCC (f ∘ Id(α)))
-  | fst       : CanRedEta (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩)
-  | snd       : CanRedEta (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩)
-  | snd'      : CanRedEta (DCC Λ(α, _b, x ∘ (Snd(_c) _env)))
-  | beta      : CanRedEta (DCC ((App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩))
-  | ai        : CanRedEta (DCC Λ(α, β, (App'(f_α, f_β, f_γ) env)))
-  | fsi       : CanRedEta (DCC ⟦m, a, b, c⟧⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩)
-  | uncur     : CanRedEta (DCC Λ(α, β, (App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩))
-
 inductive RedEta : Expr → Expr → Prop
-  | quot      : RedEta x x' → RedEta (DCC `(β, x)) x'
   | appl      : RedAffReflTrans (DCC (f_α env)) α
     → IsNormAff α
     → RedAffReflTrans (DCC (f_β env)) β
@@ -45,17 +30,9 @@ inductive RedEta : Expr → Expr → Prop
    pi rule might break things
   -/
   | pi        : Size env (m + 1)
-    → RedAffReflTrans (DCC (f_α env)) α
+    → RedAffTrans (DCC (f_α env)) α
     → IsNormAff α
-    → CanRedEta (DCC (f_β env))
     → RedEta (DCC (f_β env)) β
-    → RedEta (DCC (Π(f_α, f_β) env)) (DCC (Π(`(⊤, α), `(⊤, β)) ∗))
-  | pin       : Size env (m + 1)
-    → RedAffReflTrans (DCC (f_α env)) α
-    → IsNormAff α
-    → (¬ CanRedEta (DCC (f_β env)))
-    → RedAffReflTrans (DCC (f_β env)) β
-    → IsNormAff β
     → RedEta (DCC (Π(f_α, f_β) env)) (DCC (Π(`(⊤, α), `(⊤, β)) ∗))
   | idr       : RedEta (DCC (f ∘ Id(α))) f
   | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) x
@@ -98,10 +75,6 @@ termination_by e.size.fst
 -/
 theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
-  | quot _ ih =>
-    cases h₂ with
-    | quot h =>
-      exact ih h
   | appl h_r₁ h_norm₁ h_r₂ h_norm₂ h_r₃ h_norm₃ =>
     cases h₂ with
     | appl h_r₁' h_norm₁' h_r₂' h_norm₂' h_r₃' h_norm₃' =>
@@ -109,19 +82,11 @@ theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
       have hb := h_r₂.norm_unique h_norm₂ h_r₂' h_norm₂'
       have hc := h_r₃.norm_unique h_norm₃ h_r₃' h_norm₃'
       simp_all
-  | pi _ hrt h_norm₁ h_red₁ h_red₂ ih =>
+  | pi _ h_r₁ h_norm₁ _ ih =>
     cases h₂ with
     | pi _ hr₂ h_norm₂ =>
-      have ha := hrt.norm_unique h_norm₁ hr₂ h_norm₂
+      have ha := h_r₁.norm_unique h_norm₁ hr₂ h_norm₂
       have hb := ih (by assumption)
-      simp_all
-    | pin => simp_all
-  | pin _ hrt h_norm₁ hn_red hrt₂ h_norm₂ =>
-    cases h₂ with
-    | pi => simp_all
-    | pin _ hrt₃ h_norm₃ hn_red hrt₄ h_norm₄ =>
-      have ha := hrt.norm_unique h_norm₁ hrt₃ h_norm₃
-      have hb := hrt₂.norm_unique h_norm₂ hrt₄ h_norm₄
       simp_all
   | quot_curr | uncur | ai | fsi | beta | snd' | snd | fst | idr => cases h₂; rfl
 
@@ -140,51 +105,8 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
     | .inl heq₁, .inr _ => exact ⟨C, heq₁.symm ▸ h₂, .refl⟩
     | .inr _, .inl heq₁ => exact ⟨B, .refl, heq₁.symm ▸ h₁⟩
 
-@[simp] def can_red_η (e : Expr) : Option (PLift (CanRedEta e)) :=
-  match e with
-  | DCC `(_β, x) =>
-    match x.can_red_η with
-    | .some ⟨h⟩ => .some ⟨.quot h⟩
-    | _ => .none
-  | DCC (App(_m, _n, _o, _f_α, _f_β, _f_γ) _env) => .some ⟨.appl⟩
-  | DCC Λ(_α, _β, `(_γ, _x)) => .some ⟨.quot_curr⟩
-  | DCC (Π(_f_α, _f_β) _env) => .some ⟨.pi⟩
-  | (DCC (_f ∘ Id(_α))) => .some ⟨.idr⟩
-  | (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨_x, _y⟩) => .some ⟨.fst⟩
-  | (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨_x, _y⟩) => .some ⟨.snd⟩
-  | (DCC Λ(_α, _b, _x ∘ (Snd(_c) _env))) => .some ⟨.snd'⟩
-  | (DCC ((App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦_m, _α, _b, _γ⟧⟨Λ(__α, __β, _x), _y⟩)) => .some ⟨.beta⟩
-  | (DCC Λ(_α, _β, (App'(_f_α, _f_β, _f_γ) _env))) => .some ⟨.ai⟩
-  | (DCC ⟦_m, _a, _b, _c⟧⟨(Fst(_β) _env), (Snd(_β₂) _env₂)⟩) => .some ⟨.fsi⟩
-  | (DCC Λ(_α, _β,
-    (App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦_m, _a, _b, _c⟧⟨_f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
-      .some ⟨.uncur⟩
-  | _ => .none
-
-theorem CanRedEta.complete (h : CanRedEta A) : (can_red_η A) = .some ⟨h⟩ := by
-  induction h <;> simp_all
-
-theorem CanRedEta.complete' (h : ¬ CanRedEta A) : (can_red_η A) = .none := by
-  apply Option.eq_none_iff_forall_ne_some.mpr
-  intro ⟨h₂⟩ heq
-  exact h h₂
-
-theorem CanRedEta.sound' (h : can_red_η A = .none) : ¬ CanRedEta A := fun h₂ => by
-  simp [h₂.complete] at *
-
-instance : Decidable (CanRedEta A) :=
-  if heq : (can_red_η A).isSome then
-    .isTrue ((can_red_η A).get heq).down
-  else
-    have h := CanRedEta.sound' (A := A) (by simp_all)
-    .isFalse (fun h => by simp [h] at *)
-
 @[simp] def step_η? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta e e'))) :=
   match e with
-  | DCC `(β, x) =>
-    match x.step_η? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot h⟩⟩
-    | _ => .none
   | DCC (App(m, n, o, f_α, f_β, f_γ) env) =>
     .some ⟨_, ⟨.appl
       (reduce_sound rfl) (reduce_norm rfl)
@@ -194,14 +116,13 @@ instance : Decidable (CanRedEta A) :=
   | DCC (Π(f_α, f_β) env) =>
     match env.size with
     | ⟨m + 1, ⟨h_size⟩⟩ =>
-      if h_can : (DCC (f_β env)).CanRedEta then
+      match heq₀ : step_star? (DCC (f_α env)) with
+      | .some α =>
         match (DCC (f_β env)).step_η? with
-        | .some ⟨_, ⟨h⟩⟩ =>
-          .some ⟨_, ⟨.pi h_size (reduce_sound rfl) (reduce_norm rfl) h_can h⟩⟩
+        | .some ⟨β, ⟨h⟩⟩ =>
+          .some ⟨_, ⟨.pi h_size (step_star?_sound heq₀) (step_star?_norm heq₀) h⟩⟩
         | _ => .none
-      else
-        .some ⟨_, ⟨.pin h_size (reduce_sound rfl) (reduce_norm rfl)
-          h_can (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+      | _ => .none
     | _ => .none
   | (DCC (f ∘ Id(α))) => .some ⟨_, ⟨.idr⟩⟩
   | (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) => .some ⟨_, ⟨.fst⟩⟩
@@ -236,7 +157,6 @@ theorem reduce_η_sound (heq : reduce_η A = B) : RedEtaReflTrans A B := by
 
 theorem RedEta.complete (h_red : RedEta A B) : step_η? A = .some ⟨B, ⟨h_red⟩⟩ := by
   induction h_red with
-  | quot => simp_all
   | pi h_size hrt h_norm h ih =>
     have h := hrt.complete h_norm
     aesop
@@ -244,10 +164,6 @@ theorem RedEta.complete (h_red : RedEta A B) : step_η? A = .some ⟨B, ⟨h_red
     have ha := h_r₁.complete h_norm₁
     have hb := h_r₂.complete h_norm₂
     have hc := h_r₃.complete h_norm₃
-    aesop
-  | pin h_size hrt₁ h_norm₁ h_n_can hrt₂ h_norm₂ =>
-    have ha := hrt₁.complete h_norm₁
-    have ha := hrt₂.complete h_norm₂
     aesop
   | _ => simp
 

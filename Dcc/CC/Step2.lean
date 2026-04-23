@@ -54,8 +54,8 @@ inductive Size : Expr → ℕ → Prop
   | subst  : Size x m → Size y n → Size (DCC Subst(x, y)) (m + n).succ
   | sig    : Size (DCC Σ(_n)) 0
   | coup   : Size x m → Size y n → Size (DCC ⟦β⟧(x, y)) (m + n)
-  | sort   : Size (DCC Sort m) 1
-  | pi     : Size (DCC Π(α, β)) 1
+  | sort   : Size (DCC Sort m) 0
+  | pi     : Size (DCC Π(α, β)) 0
   | quot   : Size x m → Size (DCC `(β, x)) m.succ
   | id     : Size (DCC Id(α)) 1
   | fst    : Size (DCC Fst(_α)) 1

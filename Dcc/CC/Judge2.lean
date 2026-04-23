@@ -111,7 +111,7 @@ f_β : ∀ (env : δ) (x : f_α env), Sort n
     `(Coup(Id(Sort o)), Sort n)) Coup(f_α)))))) δ))
 
 @[simp] def App'.type.t_γ (δ f_α f_β : Expr) (o n p : Level) :=
-  DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Π(Id(Sort n), Λ(Sort n, Id(Sort n), `(Coup(Id(Sort n)), Sort p)) ∘ f_β)))) δ)
+  DCC (Π(Id(Sort o), `(Sort o, Π(f_α, (Π(Id(Sort n), Λ(Sort n, Id(Sort n), `(Coup(Id(Sort n)), Sort p))) ∘ f_β)))) δ)
 
 def App'.type₂ (f_α f_β f_γ δ : Expr) (u_δ u_α u_β u_γ : Level) : Expr :=
   DCC (Π(Id(Sort u_δ), `(Sort u_δ, App(u_α, u_β, u_γ, f_α, f_β, f_γ))) δ)
@@ -506,8 +506,8 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
       | .some ⟨(DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, (Λ(_f, _g, `(_h, Sort n)) _i))))) _j)), ⟨ht₂⟩⟩ =>
         if heqa : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, (Λ(_f, _g, `(_h, Sort n)) _i))))) _j)) = (App'.type.t_β f_α δ o n) then
           match (infer f_γ) with
-          | .some ⟨DCC (Π(__a, `(__b, Π(__c, Π(__d, Λ(__e, __f, `(__g, Sort p)) ∘ __h)))) __i), ⟨ht₃⟩⟩ =>
-            if heqb : DCC (Π(__a, `(__b, Π(__c, Π(__d, Λ(__e, __f, `(__g, Sort p)) ∘ __h)))) __i) = (App'.type.t_γ δ f_α f_β o n p) then
+          | .some ⟨DCC (Π(__a, `(__b, Π(__c, (Π(__d, Λ(__e, __f, `(__g, Sort p))) ∘ __h)))) __i), ⟨ht₃⟩⟩ =>
+            if heqb : DCC (Π(__a, `(__b, Π(__c, (Π(__d, Λ(__e, __f, `(__g, Sort p))) ∘ __h)))) __i) = (App'.type.t_γ δ f_α f_β o n p) then
               .some ⟨_, ⟨.app' (harr ▸ ht₁) (heqa ▸ ht₂) (heqb ▸ ht₃) (reduce_reduces rfl)⟩⟩
             else .none
           | _ => .none

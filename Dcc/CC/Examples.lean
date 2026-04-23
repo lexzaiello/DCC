@@ -44,7 +44,7 @@ def test_app : Option Expr := do
     -- f_γ env Id(Sort 1) (Sort 0) = (Sort 1)
     let f_γ := DCC Λ(δ, f_α, Λ(Coup(f_α), `(Coup(f_α), Sort 1), `(Coup(`(Coup(f_α), Sort 1)), Sort 1)))
     dbg_trace (Std.format ∘ Sigma.fst) <$> f_γ.infer
-    Sigma.fst <$> (DCC (App(f_α, f_β, f_γ) env)).infer
+    Sigma.fst <$> (DCC (App'(f_α, f_β, f_γ) env)).infer
   | _ => .none
 
 #eval Std.format <$> test_app

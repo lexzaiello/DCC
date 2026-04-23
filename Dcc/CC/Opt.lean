@@ -236,4 +236,19 @@ theorem RedEtaReflTrans.complete (h₁ : RedEtaReflTrans A B) (h_norm : B.IsNorm
     rw [h₁.reduce_same, h]
 termination_by A.size.fst
 
+instance : Decidable (RedEtaReflTrans A B ∧ B.IsNormEta) :=
+  if h : reduce_η A = B then
+    .isTrue (⟨reduce_η_sound h, reduce_η_norm h⟩)
+  else
+    .isFalse (fun ⟨h_red, heq⟩ => by simp [h_red.complete heq] at *)
+
+instance : Decidable (∃ C, RedEtaReflTrans A C ∧ RedEtaReflTrans B C ∧ C.IsNormEta) :=
+  if heq : reduce_η A = reduce_η B then .isTrue
+    ⟨_, reduce_η_sound rfl, reduce_η_sound heq.symm, reduce_η_norm rfl⟩
+  else
+    .isFalse (fun ⟨C, h₁, h₂, h_norm⟩ => by
+      have ha := h₁.complete h_norm
+      have hb := h₂.complete h_norm
+      simp_all)
+
 end Expr

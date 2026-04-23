@@ -722,6 +722,11 @@ def reduce (e : Expr) : Expr :=
     e'.reduce
   | .none => e
 
+def step_star? (e : Expr) : Option Expr :=
+  if (reduce e) = e then
+    .none
+  else reduce e
+
 theorem reduce_sound (heq : reduce A = B) : RedAffReflTrans A B := by
   induction A using instWellFounded.induction generalizing B with
   | h a ih =>
@@ -730,6 +735,21 @@ theorem reduce_sound (heq : reduce A = B) : RedAffReflTrans A B := by
     case h_1 h_red h_step_eq =>
       exact Relation.ReflTransGen.trans (.single h_red) (ih _ h_red heq)
     case h_2 => simp_all only [forall_eq']; exact .refl
+
+theorem star_reduce (heq : step_star? A = .some B) : reduce A = B := by
+  unfold step_star? at heq
+  simp_all
+
+theorem star_no_self (heq : step_star? A = .some B) : A ≠ B := fun h => by
+  unfold step_star? at heq
+  simp_all
+
+theorem step_star?_sound (heq : step_star? A = .some B) : RedAffTrans A B := by
+  have h : Relation.ReflTransGen _ _ _ := reduce_sound (star_reduce heq)
+  rw [← Relation.reflGen_transGen] at h
+  match h with
+  | .refl => have hn := star_no_self heq; simp_all
+  | .single h => exact h
 
 def reduce_diamond (A B : Expr) : Option ((C : Expr) × (PLift (RedAffReflTrans A C ∧ RedAffReflTrans B C))) :=
   if heq : reduce A = reduce B then
@@ -784,6 +804,22 @@ theorem RedAffReflTrans.complete (h₁ : RedAffReflTrans A B) (h_norm : B.IsNorm
     have h := RedAffReflTrans.complete h₂ h_norm
     rw [h₁.reduce_same, h]
 termination_by A.size.fst
+
+theorem RedAffTrans.next (h : RedAffTrans A B) : ∃ C, RedAff A C := by
+  induction h with
+  | single h => exact ⟨_, h⟩
+  | tail _ _ ih => exact ih
+
+theorem RedAffTrans.complete' (h₁ : RedAffTrans A B) : (step_star? A).isSome := by
+  simp [step_star?]
+  induction h₁ with
+  | single h => exact (reduce_norm · ⟨_, h⟩)
+  | tail h => exact fun h => by simp_all
+
+theorem RedAffTrans.complete (h₁ : RedAffTrans A B) (h_norm : IsNormAff B) : (step_star? A) = .some B := by
+  have h := RedAffReflTrans.complete h₁.to_reflTransGen h_norm
+  simp [step_star?]
+  exact ⟨fun h₂ => (((h₂ ▸ h).symm ▸ h_norm) h₁.next), h⟩
 
 instance : Decidable (RedAffReflTrans A B ∧ B.IsNormAff) :=
   if h : reduce A = B then

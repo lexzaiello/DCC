@@ -136,11 +136,104 @@ theorem reduce_η_sound (heq : reduce_η A = B) : RedEtaReflTrans A B := by
       exact Relation.ReflTransGen.trans (.single h_red) (ih _ h_red heq)
     case h_2 => simp_all only [forall_eq']; exact .refl
 
-theorem RedEta.complete' (h_red : RedEta A B) : step_η? A = .some ⟨B, ⟨h⟩⟩ := by
+theorem RedEta.complete (h_red : RedEta A B) : step_η? A = .some ⟨B, ⟨h_red⟩⟩ := by
   induction h_red with
   | pi h_size hrt h_norm h ih =>
     have h := hrt.complete h_norm
     aesop
   | _ => simp
+
+def IsNormEta (e : Expr) : Prop := ¬ ∃ e', RedEta e e'
+
+def RedEtaTrans.next (h : RedEtaTrans A B) : ∃ h, RedEta A (A.step_η?.get h).fst := by
+  induction h with
+  | single h => exact ⟨_, (A.step_η?.get (by simp [h.complete])).snd.down⟩
+  | tail _ _ ih => exact ih
+
+def RedEtaReflTrans.next (h₁ : RedEtaReflTrans A B) (h₂ : RedEta B C) : ∃ h, RedEta A (A.step_η?.get h).fst := by
+  change Relation.ReflTransGen _ _ _ at h₁
+  rw [← Relation.reflGen_transGen] at h₁
+  induction heq : h₁ with
+  | refl => exact RedEtaTrans.next (.single h₂)
+  | single h => exact RedEtaTrans.next h
+
+theorem RedEta.norm_unique (h₁ : RedEta A B) (h_norm : IsNormEta B) (h_trans : RedEtaTrans A C) : B = C := by
+  induction h_trans with
+  | single h =>
+    exact h₁.unique h
+  | tail h ih heq => exact (h_norm ⟨_, heq ▸ ih⟩).elim
+
+
+theorem RedEtaReflTrans.norm_same (h : RedEtaReflTrans A B) (h_norm : A.IsNormEta) : A = B := by
+  induction h with
+  | refl => rfl
+  | tail hrt h_red heq =>
+    rename_i b c
+    exact (h_norm ⟨c, heq ▸ h_red⟩).elim
+
+theorem RedEtaReflTrans.norm_unique (h₁ : RedEtaReflTrans A B) (h_norm₁ : IsNormEta B)
+  (h₂ : RedEtaReflTrans A C) (h_norm₂ : IsNormEta C) : B = C := by
+  induction A using instWellFoundedEta.induction generalizing B with
+  | h _ ih =>
+    match h₁.cases_head, h₂.cases_head with
+    | .inl heq₁, .inl heq₂ => exact heq₁.symm.trans heq₂
+    | .inr ⟨_, hra, hrc⟩, .inr ⟨_, hra', hrc'⟩ =>
+      exact ih _ hra hrc h_norm₁ ((hra.unique hra') ▸ hrc')
+    | .inl heq₁, .inr _ => exact ((heq₁ ▸ h₂).norm_same h_norm₁)
+    | .inr _, .inl heq₁ => exact ((heq₁ ▸ h₁).norm_same h_norm₂).symm
+
+theorem RedEtaTrans.norm_unique (h₁ : RedEtaTrans A B) (h_norm₁ : IsNormEta B)
+  (h₂ : RedEtaTrans A C) (h_norm₂ : IsNormEta C) : B = C :=
+  RedEtaReflTrans.norm_unique h₁.to_reflTransGen h_norm₁ h₂.to_reflTransGen h_norm₂
+
+theorem RedEtaReflTrans.to_trans (h_red : RedEtaReflTrans A B) (heq : A ≠ B) : RedEtaTrans A B := by
+  change Relation.ReflTransGen _ _ _ at h_red
+  rw [← Relation.reflGen_transGen] at h_red
+  induction h_red with
+  | refl => simp_all
+  | single h => exact h
+
+theorem IsNormEta.complete (h : A.IsNormEta) : (step_η? A) = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨e', ⟨h₂⟩⟩ heq
+  exact (h ⟨_, h₂⟩)
+
+theorem IsNormEta.complete_reduce (h : A.IsNormEta) : reduce_η A = A := by
+  unfold reduce_η
+  rw [h.complete]
+
+theorem step_η?_none : step_η? A = .none → A.IsNormEta := fun h_step ⟨e', h_red⟩ => by
+  have h := h_red.complete
+  simp_all
+
+theorem reduce_η_norm (h : reduce_η A = B) : B.IsNormEta := by
+  induction A using instWellFoundedEta.induction generalizing B with
+  | h a ih =>
+    unfold reduce_η at h
+    split at h
+    · rename_i hred heq
+      have h := ih _ hred rfl
+      simp_all
+    · rename_i heq
+      have h := step_η?_none heq
+      simp_all
+
+theorem RedEta.reduce_same (h : RedEta A B) : reduce_η A = reduce_η B := by
+  apply RedEtaReflTrans.norm_unique
+  · exact reduce_η_sound rfl
+  · exact reduce_η_norm rfl
+  · exact .trans (.single h) (reduce_η_sound rfl)
+  · exact reduce_η_norm rfl
+
+theorem RedEtaReflTrans.complete (h₁ : RedEtaReflTrans A B) (h_norm : B.IsNormEta) : reduce_η A = B := by
+  match h₁.cases_head with
+  | .inl h =>
+    simp_all
+    exact h_norm.complete_reduce
+  | .inr ⟨c, h₁, h₂⟩ =>
+    have _h : c.size.fst < A.size.fst := h₁.decreasing
+    have h := RedEtaReflTrans.complete h₂ h_norm
+    rw [h₁.reduce_same, h]
+termination_by A.size.fst
 
 end Expr

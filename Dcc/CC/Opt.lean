@@ -51,6 +51,22 @@ termination_by e.size.fst
 def RedEtaTrans     := Relation.TransGen RedAffEta
 def RedEtaReflTrans := Relation.ReflTransGen RedAffEta
 
+@[aesop safe apply, grind ., grind →, simp] theorem RedEtaTrans.decreasing : RedEtaTrans e e' → (size e').fst < (size e).fst := by
+  intro h
+  induction h with
+  | single h => exact h.decreasing
+  | tail h₁ hr ih =>
+    have h := hr.decreasing
+    grind
+
+theorem sn_eta_trans (e : Expr) : Acc (fun b a => RedEtaTrans a b) e := Acc.intro e (fun e' hr => by
+  have h := hr.decreasing
+  exact e'.sn_eta_trans)
+termination_by e.size.fst
+
+/-
+η-reduction is deterministic
+-/
 theorem RedAffEta.unique (h₁ : RedAffEta A B) (h₂ : RedAffEta A C) : B = C := by
   induction h₁ generalizing C with
   | pi _ h_r₁ h_norm₁ _ ih =>
@@ -60,5 +76,20 @@ theorem RedAffEta.unique (h₁ : RedAffEta A B) (h₂ : RedAffEta A C) : B = C :
       have hb := ih (by assumption)
       simp_all
   | uncur | ai | fsi | beta | snd' | snd | fst | idr => cases h₂; rfl
+
+instance instWellFoundedEta      : WellFounded (fun a b => RedAffEta b a) := ⟨sn_eta⟩
+instance instWellFoundedEtaTrans : WellFounded (fun a b => RedEtaTrans b a) := ⟨sn_eta_trans⟩
+
+theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTrans A C) :
+  ∃ D, RedEtaReflTrans B D ∧ RedEtaReflTrans C D := by
+  induction A using instWellFoundedEta.induction generalizing B C with
+  | h _ ih =>
+    match h₁.cases_head, h₂.cases_head with
+    | .inr ⟨_, hra, hrc⟩, .inr ⟨_, hra', hrc'⟩ =>
+      have heq := hra.unique hra'
+      exact ih _ hra hrc (heq ▸ hrc')
+    | .inl heq₁, .inl heq₂ => exact ⟨B, .refl, heq₂.symm ▸ h₁⟩
+    | .inl heq₁, .inr _ => exact ⟨C, heq₁.symm ▸ h₂, .refl⟩
+    | .inr _, .inl heq₁ => exact ⟨B, .refl, heq₁.symm ▸ h₁⟩
 
 end Expr

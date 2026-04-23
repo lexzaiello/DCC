@@ -33,11 +33,6 @@ theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
   case app' | appl | subst₁ | pi | app | pair | quot | fst | snd | snd' | coup | comp | id | sigma =>
     dsimp only [infer]
     aesop
-  case subst₂ h_r₁ ih₁ =>
-    dsimp only [infer]
-    rw [ih₁]
-    dsimp only [Subst₂.x.type]
-    aesop
   case curr h_r₁ h_r₂ h_r₃ ih₁ ih₂ =>
     have ha := h_r₁.complete
     have hb := h_r₂.complete

@@ -31,8 +31,8 @@ inductive Expr where
   | mk     : Expr  → Expr  → Expr  → Expr
   | pi     : Expr  → Expr  → Expr
   | curr   : Expr  → Expr  → Expr  → Expr
-  | app'   : Expr  → Expr  → Expr  → Expr
-  | appl   : Level → Level → Level → Expr  → Expr  → Expr  → Expr
+  | app'   : Expr  → Expr  → Expr
+  | appl   : Level → Level → Expr  → Expr  → Expr
   | quot   : Expr  → Expr  → Expr
   | id     : Expr  → Expr
   | subst  : Expr  → Expr  → Expr
@@ -56,7 +56,7 @@ syntax:max "Id(" expr,* ")"                                      : expr
 syntax:max "Fst(" expr,* ")"                                     : expr
 syntax:max "Snd'(" expr,* ")"                                    : expr
 syntax:max "App'(" expr,* ")"                                    : expr
-syntax:max "App(" term "," term "," term "," expr,* ")"          : expr
+syntax:max "App(" term "," term "," expr,* ")"          : expr
 syntax:max "Snd(" expr,* ")"                                     : expr
 syntax:max "Subst(" expr,* ")"                                   : expr
 syntax "Σ(" expr ")"                                             : expr
@@ -87,8 +87,8 @@ macro_rules
   | `(DCC Fst($β:expr))                          => `(Expr.fst (DCC $β))
   | `(DCC Snd($β:expr))                          => `(Expr.snd (DCC $β))
   | `(DCC Snd'($α:expr, $β:expr))                => `(Expr.snd' (DCC $α) (DCC $β))
-  | `(DCC App'($α:expr, $β:expr, $γ:expr))       => `(Expr.app' (DCC $α) (DCC $β) (DCC $γ))
-  | `(DCC App($m, $n, $o, $f_α:expr, $f_β:expr, $f_γ:expr)) => `(Expr.appl $m $n $o (DCC $f_α) (DCC $f_β) (DCC $f_γ))
+  | `(DCC App'($α:expr, $β:expr))       => `(Expr.app' (DCC $α) (DCC $β))
+  | `(DCC App($m, $n, $f_α:expr, $f_β:expr)) => `(Expr.appl $m $n (DCC $f_α) (DCC $f_β))
   | `(DCC Id($α:expr))                           => `(Expr.id (DCC $α))
   | `(DCC Subst($x:expr, $β:expr))               => `(Expr.subst (DCC $x) (DCC $β))
   | `(DCC $f:expr ∘ $g:expr)                     => `(Expr.comp (DCC $f:expr) (DCC $g:expr))
@@ -110,8 +110,8 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Fst(β))             => "Fst" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
   | (DCC Snd(β))             => "Snd" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
   | (DCC Snd'(α, β))         => "Snd'" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
-  | (DCC App'(α, β, γ))      => "App'(" ++ (.joinSep [α.toFormat, β.toFormat, γ.toFormat] ", ") ++ ")"
-  | (DCC App(m, n, o, f_α, f_β, f_γ)) => "App(" ++ (.joinSep [Std.format m, Std.format n, Std.format o, f_α.toFormat, f_β.toFormat, f_γ.toFormat] ", ") ++ ")"
+  | (DCC App'(α, β))         => "App'(" ++ (.joinSep [α.toFormat, β.toFormat] ", ") ++ ")"
+  | (DCC App(m, n, f_α, f_β)) => "App(" ++ (.joinSep [Std.format m, Std.format n, f_α.toFormat, f_β.toFormat] ", ") ++ ")"
   | (DCC Λ(α, β, e))         => "Λ(" ++ (.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
   | (DCC Π(α, β))            => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
   | (DCC ⟦m, α, β, γ⟧⟨a, b⟩)    => (.bracket "⟦" (.joinSep [Std.format m, α.toFormat, β.toFormat, γ.toFormat] ", ") "⟧")
@@ -134,7 +134,7 @@ instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
 
 DCC (Σ(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β)) α)
 -/
-def coup.type (β : Expr) : Expr :=
+@[simp] def coup.type (β : Expr) : Expr :=
   DCC (Σ(`(⊤, β)) ∗)
 
 /-
@@ -188,11 +188,10 @@ syntax "Quot(" expr,* ")" : expr
 macro_rules
   | `(DCC Quot($α:expr, $β:expr)) => `(quot' (DCC $α) (DCC $β))
 
-/-
-App(α, β, γ) : ∀ (f : ∀ (x : α) (y : β x), γ x y) (s : Σ(β)), App(α, β, `(Coup(β), Sort o))
--/
-@[grind →, grind ., simp] def App'.type (α β γ : Expr) (m n o : Level) : Expr :=
-  let t_f := DCC (Π(Id(Sort m), `(Sort m, Π(β, γ))) α)
-  (DCC (Π(`(t_f, ⊤), `(Sort o, `(t_f, (Π(Id(Sort n), (App'(α, β, `(Coup(β), Sort o)) γ)) (Σ(`(⊤, β)) ∗))))) ∗))
+
+@[grind →, grind ., simp] def App'.type (α β : Expr) (m n : Level) : Expr :=
+  let t_f := DCC Π(Id(Sort m), `(Sort m, β))
+  DCC (Π(Id(Sort n), `(Sort n, β ∘ Snd'(t_f, α))) Coup(`(t_f, α)))
+
 
 end Expr

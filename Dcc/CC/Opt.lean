@@ -22,9 +22,7 @@ inductive RedEta : Expr → Expr → Prop
     → IsNormAff α
     → RedAffReflTrans (DCC (f_β env)) β
     → IsNormAff β
-    → RedAffReflTrans (DCC (f_γ env)) γ
-    → IsNormAff γ
-    → RedEta (DCC (App(m, n, o, f_α, f_β, f_γ) env)) (App'.type α β γ m n o)
+    → RedEta (DCC (App(m, n, f_α, f_β) env)) (App'.type α β m n)
   | quot_curr : RedEta (DCC Λ(α, β, `(_γ, x))) (DCC `(Coup(β), x))
   /-
    pi rule might break things
@@ -39,15 +37,15 @@ inductive RedEta : Expr → Expr → Prop
   | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) y
   | snd'      : RedEta (DCC Λ(α, _b, x ∘ (Snd(_c) _env))) (DCC `(α, x))
   | beta      : RedEta
-    (DCC ((App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩))
+    (DCC ((App'(_f_α, _f_β) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩))
     (DCC (x ∘ ⟦m, α, Fstc(Id(Sort m)), γ⟧⟨Id(α), y⟩))
-  | ai        : RedEta (DCC Λ(α, β, (App'(f_α, f_β, f_γ) env))) (DCC Id((Π(f_α, f_β) env)))
+  | ai        : RedEta (DCC Λ(α, β, (App'(f_α, f_β) env))) (DCC Id((Π(f_α, f_β) env)))
   | fsi       : RedEta (DCC ⟦m, a, b, c⟧⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) (DCC Id((Σ(_β) env)))
   | uncur     : RedEta (DCC Λ(α, β,
-    (App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
+    (App'(_f_α, _f_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
 
 @[aesop safe apply, grind ., grind →, simp] theorem RedEta.decreasing (h : RedEta e e') : (size e').fst < (size e).fst := by
-  induction h <;> (try grind)
+  induction h <;> (simp_all; try grind)
 
 def sn_eta (e : Expr) : Acc (fun b a => RedEta a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing
@@ -75,12 +73,11 @@ termination_by e.size.fst
 -/
 theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
-  | appl h_r₁ h_norm₁ h_r₂ h_norm₂ h_r₃ h_norm₃ =>
+  | appl h_r₁ h_norm₁ h_r₂ h_norm₂ =>
     cases h₂ with
-    | appl h_r₁' h_norm₁' h_r₂' h_norm₂' h_r₃' h_norm₃' =>
-      have ha := h_r₁.norm_unique h_norm₁ h_r₁' h_norm₁'
-      have hb := h_r₂.norm_unique h_norm₂ h_r₂' h_norm₂'
-      have hc := h_r₃.norm_unique h_norm₃ h_r₃' h_norm₃'
+    | appl h_r₃ h_norm₃ h_r₄ h_norm₄ =>
+      have ha := h_r₁.norm_unique h_norm₁ h_r₃ h_norm₃
+      have hb := h_r₂.norm_unique h_norm₂ h_r₄ h_norm₄
       simp_all
   | pi _ h_r₁ h_norm₁ _ ih =>
     cases h₂ with
@@ -107,9 +104,8 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
 
 @[simp] def step_η? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta e e'))) :=
   match e with
-  | DCC (App(m, n, o, f_α, f_β, f_γ) env) =>
+  | DCC (App(m, n, f_α, f_β) env) =>
     .some ⟨_, ⟨.appl
-      (reduce_sound rfl) (reduce_norm rfl)
       (reduce_sound rfl) (reduce_norm rfl)
       (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | DCC Λ(α, β, `(_γ, x)) => .some ⟨_, ⟨.quot_curr⟩⟩
@@ -128,11 +124,11 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
   | (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) => .some ⟨_, ⟨.fst⟩⟩
   | (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) => .some ⟨_, ⟨.snd⟩⟩
   | (DCC Λ(α, _b, x ∘ (Snd(_c) _env))) => .some ⟨_, ⟨.snd'⟩⟩
-  | (DCC ((App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩)) => .some ⟨_, ⟨.beta⟩⟩
-  | (DCC Λ(α, β, (App'(f_α, f_β, f_γ) env))) => .some ⟨_, ⟨.ai⟩⟩
+  | (DCC ((App'(_f_α, _f_β) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩)) => .some ⟨_, ⟨.beta⟩⟩
+  | (DCC Λ(α, β, (App'(f_α, f_β) env))) => .some ⟨_, ⟨.ai⟩⟩
   | (DCC ⟦m, a, b, c⟧⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
   | (DCC Λ(α, β,
-    (App'(_f_α, _f_β, _f_γ) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
+    (App'(_f_α, _f_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
       .some ⟨_, ⟨.uncur⟩⟩
   | _ => .none
 termination_by sizeOf e
@@ -160,10 +156,9 @@ theorem RedEta.complete (h_red : RedEta A B) : step_η? A = .some ⟨B, ⟨h_red
   | pi h_size hrt h_norm h ih =>
     have h := hrt.complete h_norm
     aesop
-  | appl h_r₁ h_norm₁ h_r₂ h_norm₂ h_r₃ h_norm₃ =>
+  | appl h_r₁ h_norm₁ h_r₂ h_norm₂ =>
     have ha := h_r₁.complete h_norm₁
     have hb := h_r₂.complete h_norm₂
-    have hc := h_r₃.complete h_norm₃
     aesop
   | _ => simp
 

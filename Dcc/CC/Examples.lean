@@ -36,16 +36,7 @@ f_β env x = Sort 1
 App(Id(Sort 1)
 -/
 def test_app : Option Expr := do
-  let ⟨env, _⟩ ← (DCC Id(Sort 1)).infer
-  match ← env.infer with
-  | ⟨δ@(DCC Sort m), _⟩ =>
-    let f_α := DCC Id(Sort m)
-    let f_β := DCC Λ(Sort m, f_α, `(Coup(f_α), Sort 1))
-    -- f_γ env Id(Sort 1) (Sort 0) = (Sort 1)
-    let f_γ := DCC Λ(δ, f_α, Λ(Coup(f_α), `(Coup(f_α), Sort 1), `(Coup(`(Coup(f_α), Sort 1)), Sort 1)))
-    dbg_trace (Std.format ∘ Sigma.fst) <$> f_γ.infer
-    Sigma.fst <$> (DCC (App(f_α, f_β, f_γ) env)).infer
-  | _ => .none
+  Sigma.fst <$> (DCC (App'(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))))).infer
 
 #eval Std.format <$> test_app
 

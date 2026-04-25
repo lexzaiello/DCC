@@ -176,6 +176,31 @@ def reduce_reduces (h : (reduce_η ∘ reduce) A = B) : Reduces A B := ⟨reduce
 
 def reduce_reduces' : Reduces A A.reduce.reduce_η := reduce_reduces rfl
 
+namespace Eta
+
+inductive Reduces : Expr → Expr → Prop
+  | mk : RedAffReflTrans A B → IsNormAff B → RedEtaReflTrans B C → IsNormEta C → Reduces A C
+
+@[simp] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d⟩ ⟨e, f, g, h⟩ =>
+  c.norm_unique d (a.norm_unique b e f ▸ g) h
+
+@[simp] theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
+  have h := h₁.unique h₂
+  cases h
+  congr
+
+@[simp, aesop safe destruct, aesop safe apply] theorem Reduces.complete : Reduces A B → (reduce_η ∘ reduce) A = B :=
+  fun ⟨ha, hb, hc, hd⟩ => by
+    have h₁ := ha.complete hb
+    have h₂ := hc.complete hd
+    simp_all
+
+def reduce_reduces (h : (reduce_η ∘ reduce) A = B) : Reduces A B := ⟨reduce_sound rfl, reduce_norm rfl, reduce_η_sound h, reduce_η_norm h⟩
+
+def reduce_reduces' : Reduces A A.reduce.reduce_η := reduce_reduces rfl
+
+end Eta
+
 @[inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PLift (t = (DCC (α : Sort m) → β))) :=
   match heq₀ : t with
   | DCC (Π(Id(Sort m), Λ(_a, _b, `(_e, β))) α) =>

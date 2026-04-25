@@ -5,7 +5,9 @@ import Dcc.CC.Step2
 Need η reduction for this thingy:
 (Π(Id(Sort 2), `(Sort 2, Σ(Λ(Sort 1, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1), ((Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1) ∘ (Fst(`(⊤, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1))) ∗)))))) Sort 1)
 
+Eta reduction:
 
+(Λ(..., ..., x ∘ Fstc) y) = `(..., (x y))
 -/
 
 /-
@@ -25,6 +27,11 @@ Need eta rules to handle potential apps produced by Π
 -/
 
 inductive RedEta : Expr → Expr → Prop
+  | curr_fst  : RedAffReflTrans (DCC (x y)) x'
+    → x'.IsNormAff
+    → RedAffReflTrans (DCC (β y)) β'
+    → β'.IsNormAff
+    → RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `(β', x'))
   | quot      : RedEta x x' → RedEta (DCC `(β, x)) (DCC `(β, x'))
   | appl      : RedAffReflTrans (DCC (f_α env)) α
     → α.IsNormAff
@@ -34,13 +41,12 @@ inductive RedEta : Expr → Expr → Prop
    pi rule might break things
   -/
   | pi        : Size env (m + 1)
-    → RedAffTrans (DCC (f_α env)) α
+    → RedAffReflTrans (DCC (f_α env)) α
     → IsNormAff α
     → RedEta (DCC (f_β env)) β
     → RedEta (DCC (Π(f_α, f_β) env)) (DCC (Π(`(⊤, α), `(⊤, β)) ∗))
-  | sig       : Size env (m + 1)
-    → RedEta (DCC (f_β env)) β
-    → RedEta (DCC (Σ(f_β) env)) (DCC (Σ(`(⊤, β)) ∗))
+  | sig       : RedEta f_β f_β'
+    → RedEta (DCC Σ(f_β)) (DCC Σ(f_β'))
   | idr       : RedEta (DCC (f ∘ Id(α))) f
   | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) x
   | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) y
@@ -54,7 +60,8 @@ inductive RedEta : Expr → Expr → Prop
     (App'(_f_α, _f_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
 
 @[aesop safe apply, grind ., grind →, simp] theorem RedEta.decreasing (h : RedEta e e') : (size e').fst < (size e).fst := by
-  induction h <;> (simp_all; try grind)
+  induction h
+  repeat (simp_all; try grind)
 
 def sn_eta (e : Expr) : Acc (fun b a => RedEta a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing
@@ -82,10 +89,13 @@ termination_by e.size.fst
 -/
 @[simp] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
-  | quot ih₁ => cases h₂; aesop
-  | sig _ h_red ih =>
+  | curr_fst hrt₁ h_norm₁ hrt₂ h_norm₂ =>
     cases h₂ with
-    | sig _ h_red₂ => simp [ih h_red₂] at *
+    | curr_fst hrt₃ hnorm₃ hrt₄ hnorm₄ =>
+      have ha := hrt₁.norm_unique h_norm₁ hrt₃ hnorm₃
+      have hb := hrt₂.norm_unique h_norm₂ hrt₄ hnorm₄
+      aesop
+  | sig | quot => cases h₂; aesop
   | appl h_r₁ h_norm₁ =>
     cases h₂ with
     | appl h_r₂ h_norm₂ =>
@@ -116,6 +126,8 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
 
 @[simp] def step_η? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta e e'))) :=
   match e with
+  | DCC (Λ(α, β, x ∘ Fstc(_β₂)) y) =>
+    .some ⟨_, ⟨.curr_fst (reduce_sound rfl) (reduce_norm rfl) (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | DCC (`(_β, x)) =>
     match x.step_η? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot h⟩⟩
@@ -123,23 +135,16 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
   | DCC (App(m, n, f_α, f_β) env) =>
     .some ⟨_, ⟨.appl (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | DCC Λ(α, β, `(_γ, x)) => .some ⟨_, ⟨.quot_curr⟩⟩
-  | DCC (Σ(f_β) env) =>
-    match env.size with
-    | ⟨m + 1, ⟨h_size⟩⟩ =>
-      match (DCC (f_β env)).step_η? with
-      | .some ⟨β, ⟨h⟩⟩ =>
-        .some ⟨_, ⟨.sig h_size h⟩⟩
-      | _ => .none
+  | DCC Σ(f_β) =>
+    match f_β.step_η? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig h⟩⟩
     | _ => .none
   | DCC (Π(f_α, f_β) env) =>
     match env.size with
     | ⟨m + 1, ⟨h_size⟩⟩ =>
-      match heq₀ : step_star? (DCC (f_α env)) with
-      | .some α =>
-        match (DCC (f_β env)).step_η? with
-        | .some ⟨β, ⟨h⟩⟩ =>
-          .some ⟨_, ⟨.pi h_size (step_star?_sound heq₀) (step_star?_norm heq₀) h⟩⟩
-        | _ => .none
+      match (DCC (f_β env)).step_η? with
+      | .some ⟨β, ⟨h⟩⟩ =>
+        .some ⟨_, ⟨.pi h_size (reduce_sound rfl) (reduce_norm rfl) h⟩⟩
       | _ => .none
     | _ => .none
   | (DCC (f ∘ Id(α))) => .some ⟨_, ⟨.idr⟩⟩
@@ -177,6 +182,10 @@ theorem RedEta.complete (h_red : RedEta A B) : step_η? A = .some ⟨B, ⟨h_red
   induction h_red with
   | appl hrt h_norm | pi h_size hrt h_norm h ih =>
     have h := hrt.complete h_norm
+    aesop
+  | curr_fst hrt₁ hnorm₁ hrt₂ hnorm₂ =>
+    have ha := hrt₁.complete hnorm₁
+    have hb := hrt₂.complete hnorm₂
     aesop
   | _ => aesop
 

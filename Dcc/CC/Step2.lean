@@ -46,7 +46,7 @@ inductive Size : Expr → ℕ → Prop
   | top    : Size (DCC ⊤) 0
   | bot    : Size (DCC ⊥) 0
   | subst  : Size x m → Size y n → Size (DCC Subst(x, y)) (m + n).succ
-  | sig    : Size (DCC Σ(_n)) 0
+  | sig    : Size β m → Size (DCC Σ(β)) (m + 3)
   | coup   : Size x m → Size y n → Size (DCC ⟦β⟧(x, y)) (m + n)
   | sort   : Size (DCC Sort m) 0
   | pi     : Size (DCC Π(α, β)) 0
@@ -55,7 +55,7 @@ inductive Size : Expr → ℕ → Prop
   | fst    : Size (DCC Fst(_α)) 1
   | snd'   : Size (DCC Snd'(δ, β)) 1
   | snd    : Size (DCC Snd(_α)) 1
-  | appl   : Size α m → Size (DCC App(_m, _n, α, β)) m.succ.succ
+  | appl   : Size α m → Size (DCC App(_m, _n, α, β)) (m + 6)
   | app'   : Size (DCC App'(_α, β)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ.succ
   | pair   : Size f m → Size g n → Size (DCC ⟦_m, α, β, γ⟧⟨f, g⟩) (m + n).succ
@@ -72,7 +72,9 @@ inductive Size : Expr → ℕ → Prop
     let ⟨_, ⟨h₂⟩⟩ := y.size
     ⟨_, ⟨.subst h₁ h₂⟩⟩
   | DCC Sort _m => ⟨_, ⟨.sort⟩⟩
-  | DCC Σ(_n) => ⟨_, ⟨.sig⟩⟩
+  | DCC Σ(β) =>
+    match β.size with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.sig h⟩⟩
   | DCC `(_β, x) =>
     let ⟨_, ⟨h₁⟩⟩ := x.size
     ⟨_, ⟨.quot h₁⟩⟩
@@ -110,9 +112,9 @@ theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
 
 @[aesop safe destruct, grind =_, grind →, simp] theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
-  | app' | pi | tintro | bot | top | snd' | id | snd | fst | sig | sort => rfl
+  | app' | pi | tintro | bot | top | snd' | id | snd | fst | sort => rfl
   | comp _ _ ih₁ ih₂ | coup _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
-  | appl _ ih | quot _ ih | curr _ ih => rw [size, ih]
+  | sig _ ih | appl _ ih | quot _ ih | curr _ ih => rw [size, ih]
   | subst _ _ ih₁ ih₂ | app _ _ ih₁ ih₂ | pair _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
 
 def RedAffTrans     := Relation.TransGen RedAff
@@ -128,6 +130,14 @@ def RedAffReflTrans := Relation.ReflTransGen RedAff
   | tail h₁ hr ih =>
     have h := hr.decreasing
     grind
+
+@[aesop safe apply, grind ., grind →, simp] theorem RedAffReflTrans.le : RedAffReflTrans e e' → (size e').fst ≤ (size e).fst := by
+  intro h_red
+  change Relation.ReflTransGen _ _ _ at h_red
+  rw [← Relation.reflGen_transGen] at h_red
+  cases h_red with
+  | refl => simp only [le_refl]
+  | single h => exact le_of_lt (RedAffTrans.decreasing h)
 
 def sn (e : Expr) : Acc (fun b a => RedAff a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing

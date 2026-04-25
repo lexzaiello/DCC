@@ -12,7 +12,7 @@ import Dcc.CC.Judge2
 def test_pair : Option Expr := do
   match ← (DCC Id(Sort 1)).infer with
   | ⟨DCC (Π(_f_α, Λ(_a, _b, β)) _x), _⟩ =>
-    let e := DCC (⟦2, Sort 1, β, β⟧⟨Id(Sort 1), Id(Sort 1)⟩ (Sort 0))
+    let e := DCC (⟦2, Sort 1, β, β⟧⟨Id(Sort 1), Id(Sort 1)⟩)
     Sigma.fst <$> e.infer
   | _ => .none
 

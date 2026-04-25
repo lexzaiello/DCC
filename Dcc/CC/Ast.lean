@@ -43,7 +43,7 @@ inductive Expr where
   | tintro : Expr
   -- 0 : Sort 0
   | bot    : Expr
-deriving BEq, Repr, DecidableEq
+deriving BEq, DecidableEq
 
 declare_syntax_cat expr
 
@@ -98,32 +98,6 @@ macro_rules
 
 namespace Expr
 
-def toFormat (e : Expr) : Std.Format :=
-  match e with
-  | (DCC ⊤)                  => "⊤"
-  | (DCC ⊥)                  => "⊥"
-  | (DCC ∗)                  => "∗"
-  | (DCC `(β, x))            => "`(" ++ β.toFormat ++ ", " ++ x.toFormat ++ ")"
-  | (DCC Id(α))              => "Id(" ++ α.toFormat ++ ")"
-  | (DCC Subst(β, x))        => "Subst(" ++ β.toFormat ++ ", " ++ x.toFormat ++ ")"
-  | (DCC Sort m)             => "Sort " ++ (Std.format m)
-  | (DCC Fst(β))             => "Fst" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
-  | (DCC Snd(β))             => "Snd" ++ .bracket "(" (.joinSep [β.toFormat] ", ") ")"
-  | (DCC Snd'(α, β))         => "Snd'" ++ .bracket "(" (.joinSep [α.toFormat, β.toFormat] ", ") ")"
-  | (DCC App'(α, β))         => "App'(" ++ (.joinSep [α.toFormat, β.toFormat] ", ") ++ ")"
-  | (DCC App(m, n, f_α, f_β)) => "App(" ++ (.joinSep [Std.format m, Std.format n, f_α.toFormat, f_β.toFormat] ", ") ++ ")"
-  | (DCC Λ(α, β, e))         => "Λ(" ++ (.joinSep [α.toFormat, β.toFormat, e.toFormat] ", ") ++ ")"
-  | (DCC Π(α, β))            => "Π" ++ (.bracket "(" (α.toFormat ++ ", " ++ β.toFormat) ")")
-  | (DCC ⟦m, α, β, γ⟧⟨a, b⟩)    => (.bracket "⟦" (.joinSep [Std.format m, α.toFormat, β.toFormat, γ.toFormat] ", ") "⟧")
-    ++ (.bracket "⟨" (a.toFormat ++ ", " ++ b.toFormat) "⟩")
-  | (DCC ⟦β⟧(a, b))          => (.bracket "⟦" β.toFormat "⟧") ++ (.bracket "(" (a.toFormat ++ ", " ++ b.toFormat) ")")
-  | (DCC Σ(β))               => "Σ" ++ (.bracket "(" β.toFormat ")")
-  | (DCC f ∘ g)              => (.bracket "(" (f.toFormat ++ " ∘ " ++ g.toFormat) ")")
-  | (DCC (f x))              => .bracket "(" (f.toFormat ++ " " ++ x.toFormat) ")"
-
-instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
-instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
-
 /-
 ⟦β⟧(x, y) : Σ(Λ(Id(Sort m), β)) α <- β receives (α, x)
 β : α → Sort n
@@ -165,9 +139,9 @@ syntax "Coup(" expr,* ")" : expr
 syntax "(" expr ":" expr ")" "→" expr : expr
 
 macro_rules
-  | `(DCC Fstc($β:expr)) => `(mk_fstc   (DCC $β))
-  | `(DCC Sndc($β:expr)) => `(mk_sndc   (DCC $β))
-  | `(DCC Coup($β:expr)) => `(coup.type (DCC $β))
+  | `(DCC Fstc($β:expr)) => `(DCC (Fst(`(⊤, $β)) ∗))
+  | `(DCC Sndc($β:expr)) => `(DCC (Snd(`(⊤, $β)) ∗))
+  | `(DCC Coup($β:expr)) => `(DCC (Σ(`(⊤, $β)) ∗))
 
 def arrow (α β : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), `(Coup(Id(Sort m)), β))) α)
@@ -191,5 +165,49 @@ macro_rules
 @[grind →, grind ., simp] def App'.type (α f_α f_β env : Expr) (n : Level) : Expr :=
   let t_f := DCC (Π(f_α, f_β) env)
   DCC (Π(Id(Sort n), `(Sort n, (f_β env) ∘ Snd'(t_f, α))) Coup(`(t_f, α)))
+
+def toFormat (e : Expr) : Std.Format :=
+
+  let sepD (l : List Std.Format) (sep : Std.Format := ",") : Std.Format :=
+    (.joinSep l (sep ++ .line))
+  let paren (s : Std.Format) : Std.Format :=
+    .bracket "(" (.fill s) ")"
+  let angle (s : Std.Format) : Std.Format :=
+    .bracket "⟨" (.fill s) "⟩"
+  let bbracket (s : Std.Format) : Std.Format :=
+    .bracket "⟦" (.fill s) "⟧"
+
+  let comb (pre : Std.Format) (points : List Std.Format) : Std.Format :=
+    pre ++ (paren (sepD points))
+
+  match e with
+  | (DCC ⊤)                   => "⊤"
+  | (DCC ⊥)                   => "⊥"
+  | (DCC ∗)                   => "∗"
+  | (DCC `(β, x))             => comb "`" [β.toFormat, x.toFormat]
+  | (DCC Id(α))               => comb "Id" [α.toFormat]
+  | (DCC Subst(β, x))         => comb "Subst" [β.toFormat, x.toFormat]
+  | (DCC Sort m)              => "Sort " ++ (Std.format m)
+  | (DCC Fstc(β))             => comb "Fstc" [β.toFormat]
+  | (DCC Fst(β))              => comb "Fst" [β.toFormat]
+  | (DCC Sndc(β))             => comb "Sndc" [β.toFormat]
+  | (DCC Snd(β))              => comb "Snd" [β.toFormat]
+  | (DCC Snd'(α, β))          => comb "Snd'" [α.toFormat, β.toFormat]
+  | (DCC App'(α, β))          => comb "App'" [α.toFormat, β.toFormat]
+  | (DCC App(m, n, f_α, f_β)) => comb "App" [Std.format m, Std.format n, f_α.toFormat, f_β.toFormat]
+  | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat, β.toFormat, e.toFormat]
+  | (DCC Π(α, β))             => comb "Π" [α.toFormat, β.toFormat]
+  | (DCC ⟦m, α, β, γ⟧⟨a, b⟩)  => (bbracket (sepD [Std.format m, α.toFormat, β.toFormat, γ.toFormat])) ++ (angle (sepD [a.toFormat, b.toFormat]))
+  | (DCC ⟦β⟧(a, b))           => comb (bbracket (sepD [β.toFormat])) [a.toFormat, b.toFormat]
+  | DCC Coup(β)               => comb "Coup" [β.toFormat]
+  | (DCC Σ(β))                => comb "Σ" [β.toFormat]
+  | (DCC f ∘ g)               => sepD [f.toFormat, g.toFormat] " ∘"
+  | (DCC (f x))               => (paren (f.toFormat ++ .line ++ x.toFormat))
+
+instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
+instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
+instance instRepr : Repr Expr := ⟨Function.const _ ∘ toFormat⟩
+
+#eval (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0)))
 
 end Expr

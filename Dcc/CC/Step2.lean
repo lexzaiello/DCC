@@ -125,7 +125,7 @@ def RedAffTrans     := Relation.TransGen RedAff
 def RedAffReflTrans := Relation.ReflTransGen RedAff
 
 @[aesop safe apply, grind ., grind →, simp] theorem RedAff.decreasing (h : RedAff e e') : (size e').fst < (size e).fst := by
-  induction h <;> (try grind)
+  induction h <;> (simp_all; try grind)
 
 @[aesop safe apply, grind ., grind →, simp] theorem RedAffTrans.decreasing : RedAffTrans e e' → (size e').fst < (size e).fst := by
   intro h

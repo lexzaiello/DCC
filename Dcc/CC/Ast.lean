@@ -189,9 +189,9 @@ macro_rules
   | `(DCC Quot($α:expr, $β:expr)) => `(quot' (DCC $α) (DCC $β))
 
 
-@[grind →, grind ., simp] def App'.type (α β : Expr) (m n : Level) : Expr :=
-  let t_f := DCC Π(Id(Sort m), `(Sort m, β))
-  DCC (Π(Id(Sort n), `(Sort n, β ∘ Snd'(t_f, α))) Coup(`(t_f, α)))
+@[grind →, grind ., simp] def App'.type (α f_α f_β env : Expr) (n : Level) : Expr :=
+  let t_f := DCC (Π(f_α, f_β) env)
+  DCC (Π(Id(Sort n), `(Sort n, (f_β env) ∘ Snd'(t_f, α))) Coup(`(t_f, α)))
 
 
 end Expr

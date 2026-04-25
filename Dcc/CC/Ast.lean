@@ -215,6 +215,13 @@ instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
 instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
 instance instRepr : Repr Expr := ⟨Function.const _ ∘ toFormat⟩
 
+instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
+  match me with
+  | .none => Std.format me
+  | .some e =>
+    let l := "(some".length.succ
+    .group ("(some " ++ (.fill (.nest l e.toFormat)) ++ ")")⟩
+
 #eval (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0)))
 
 end Expr

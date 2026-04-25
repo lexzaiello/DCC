@@ -36,7 +36,6 @@ inductive RedEta : Expr → Expr → Prop
   | appl      : RedAffReflTrans (DCC (f_α env)) α
     → α.IsNormAff
     → RedEta (DCC (App(m, n, f_α, f_β) env)) (App'.type α f_α f_β env m)
-  | quot_curr : RedEta (DCC Λ(α, β, `(_γ, x))) (DCC `(Coup(β), x))
   /-
    pi rule might break things
   -/
@@ -107,7 +106,7 @@ termination_by e.size.fst
       have ha := h_r₁.norm_unique h_norm₁ hr₂ h_norm₂
       have hb := ih (by assumption)
       simp_all
-  | quot_curr | uncur | ai | fsi | beta | snd' | snd | fst | idr => cases h₂; rfl
+  | uncur | ai | fsi | beta | snd' | snd | fst | idr => cases h₂; rfl
 
 instance instWellFoundedEta      : WellFounded (fun a b => RedEta b a) := ⟨sn_eta⟩
 instance instWellFoundedEtaTrans : WellFounded (fun a b => RedEtaTrans b a) := ⟨sn_eta_trans⟩
@@ -134,7 +133,6 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
     | _ => .none
   | DCC (App(m, n, f_α, f_β) env) =>
     .some ⟨_, ⟨.appl (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | DCC Λ(α, β, `(_γ, x)) => .some ⟨_, ⟨.quot_curr⟩⟩
   | DCC Σ(f_β) =>
     match f_β.step_η? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig h⟩⟩

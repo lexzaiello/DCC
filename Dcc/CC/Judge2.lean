@@ -97,7 +97,7 @@ def pair.type (α β γ : Expr) (m : Level) : Expr :=
     -- receive (x : α), then (f x)
     Λ(α, (Λ(Sort m, Id(Sort m), β) α), (Λ(Sort m, Id(Sort m), γ) α) ∘ Fstc((Λ(Sort m, Id(Sort m), β) α)))))) α)
 
-def comp.type (α β γ g : Expr) (m : Level) : Expr :=
+def comp'.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
 
 def App.type (δ : Expr) (u_δ o : Level) : Expr :=
@@ -240,9 +240,9 @@ inductive Judge : Expr → Expr → Prop where
   | id     : Judge α (DCC Sort m)
     → Reduces (id.type α m) τ
     → Judge (DCC Id(α)) τ
-  | comp   : Judge g (arrow α β m)
+  | comp'  : Judge g (arrow α β m)
     → Judge f (DCC (Π(Id(Sort n), γ) β))
-    → Reduces (comp.type α β γ g m) τ
+    → Reduces (comp'.type α β γ g m) τ
     → Judge (DCC f ∘ g) τ
   /-
     f_β δ : α → Sort n
@@ -380,7 +380,7 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
       match (infer f) with
       | .some ⟨(DCC (Π(Id(Sort _n₂), _γ) β₂)), ⟨ht₂⟩⟩ =>
         if heq : β₂ = β then
-          .some ⟨_, ⟨.comp (harr₁ ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
+          .some ⟨_, ⟨.comp' (harr₁ ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
     | _ => .none

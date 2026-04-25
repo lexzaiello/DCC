@@ -30,6 +30,9 @@ inductive RedEta : Expr → Expr → Prop
     → IsNormAff α
     → RedEta (DCC (f_β env)) β
     → RedEta (DCC (Π(f_α, f_β) env)) (DCC (Π(`(⊤, α), `(⊤, β)) ∗))
+  | sig       : Size env (m + 1)
+    → RedEta (DCC (f_β env)) β
+    → RedEta (DCC (Σ(f_β) env)) (DCC (Σ(`(⊤, β)) ∗))
   | idr       : RedEta (DCC (f ∘ Id(α))) f
   | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) x
   | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) y
@@ -71,6 +74,9 @@ termination_by e.size.fst
 -/
 theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
+  | sig _ h_red ih =>
+    cases h₂ with
+    | sig _ h_red₂ => simp [ih h_red₂] at *
   | appl h_r₁ h_norm₁ =>
     cases h₂ with
     | appl h_r₂ h_norm₂ =>
@@ -104,6 +110,14 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
   | DCC (App(m, n, f_α, f_β) env) =>
     .some ⟨_, ⟨.appl (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | DCC Λ(α, β, `(_γ, x)) => .some ⟨_, ⟨.quot_curr⟩⟩
+  | DCC (Σ(f_β) env) =>
+    match env.size with
+    | ⟨m + 1, ⟨h_size⟩⟩ =>
+      match (DCC (f_β env)).step_η? with
+      | .some ⟨β, ⟨h⟩⟩ =>
+        .some ⟨_, ⟨.sig h_size h⟩⟩
+      | _ => .none
+    | _ => .none
   | DCC (Π(f_α, f_β) env) =>
     match env.size with
     | ⟨m + 1, ⟨h_size⟩⟩ =>
@@ -151,7 +165,7 @@ theorem RedEta.complete (h_red : RedEta A B) : step_η? A = .some ⟨B, ⟨h_red
   | appl hrt h_norm | pi h_size hrt h_norm h ih =>
     have h := hrt.complete h_norm
     aesop
-  | _ => simp
+  | _ => aesop
 
 def IsNormEta (e : Expr) : Prop := ¬ ∃ e', RedEta e e'
 

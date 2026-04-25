@@ -30,7 +30,7 @@ namespace Expr
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
   induction h
   case top | bot | tintro | sort => dsimp only [infer]
-  case app' | appl | subst₁ | pi | app | pair | quot | fst | snd | snd' | coup | comp | id | sigma =>
+  case app' | appl | subst₁ | pi | app | pair | quot | fst | snd | snd' | coup | comp' | id | sigma =>
     dsimp only [infer]
     aesop
   case curr h_r₁ h_r₂ h_r₃ ih₁ ih₂ =>

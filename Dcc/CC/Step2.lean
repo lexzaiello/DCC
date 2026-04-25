@@ -3,13 +3,8 @@ import Mathlib.Tactic
 
 namespace Expr
 
-/-
-
--/
-
 inductive Red : Expr → Expr → Type
   | subst₁    : Red (DCC (Subst(x, Fst(f_β)) env ⟦β⟧(y, z))) (DCC (x env y))
-  | subst₂    : Red (DCC (Subst(x, Snd(f_β)) env ⟦β⟧(y, z))) (DCC (x env y z))
   | snd'      : Red (DCC (Snd'(α, β) ⟦γ⟧(x, y))) x
   | quot      : Red (DCC (`(β, x) y)) x
   | id        : Red (DCC (Id(α) x)) x
@@ -33,7 +28,6 @@ This is essentially reduction, but without the pair rule.
 -/
 inductive RedAff : Expr → Expr → Prop
   | subst₁   : RedAff (DCC (Subst(x, Fst(f_β)) env ⟦β⟧(y, z))) (DCC (x env y))
-  | subst₂   : RedAff (DCC (Subst(x, Snd(f_β)) env ⟦β⟧(y, z))) (DCC (x env y z))
   | snd'     : RedAff (DCC (Snd'(_δ, _τ) ⟦β⟧(a, b))) b
   | quot     : RedAff (DCC (`(β, x) y)) x
   | id       : RedAff (DCC (Id(α) x)) x
@@ -222,15 +216,6 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
     | congrArg h => cases h with
       | sigl h => exact ⟨_, .congrArg (.single h), .single .subst₁⟩
       | sigr h => exact ⟨_, .refl, .single .subst₁⟩
-  | subst₂ =>
-    cases h₂ with
-    | subst₂ => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h with
-      | congrFun h => cases h
-      | congrArg h => exact ⟨_, .congrFun (.congrFun (.congrArg (.single h))), .single .subst₂⟩
-    | congrArg h => cases h with
-      | sigl h => exact ⟨_, .congrFun (.congrArg (.single h)), .single .subst₂⟩
-      | sigr h => exact ⟨_, .congrArg (.single h), .single .subst₂⟩
   | quot =>
     cases h₂ with
     | quot => exact ⟨_, .refl, .refl⟩
@@ -323,10 +308,6 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
       cases h_r with
       | congrFun h => cases h
       | congrArg h => exact ⟨_, .single .subst₁, .congrFun (.congrArg (.single h))⟩
-    case subst₂ =>
-      cases h_r with
-      | congrFun h => cases h
-      | congrArg h => exact ⟨_, .single .subst₂, .congrFun (.congrFun (.congrArg (.single h)))⟩
     case fst =>
       cases h_r with
       | congrFun h => cases h
@@ -356,9 +337,6 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAffReflT
     | subst₁ => cases h_r with
       | sigl h => exact ⟨_, .single .subst₁, .congrArg (.single h)⟩
       | sigr h => exact ⟨_, .single .subst₁, .refl⟩
-    | subst₂ => cases h_r with
-      | sigl h => exact ⟨_, .single .subst₂, .congrFun (.congrArg (.single h))⟩
-      | sigr h => exact ⟨_, .single .subst₂, .congrArg (.single h)⟩
     | quot => exact ⟨_, .single .quot, .refl⟩
     | id => exact ⟨_, .single .id, .single h_r⟩
     | app' =>
@@ -407,7 +385,6 @@ theorem RedAffReflTrans.conf (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTran
 def step? (e : Expr) : Option ((e' : Expr) × (PLift (RedAff e e'))) :=
   match e with
   | (DCC (Subst(_x, Fst(_f_β)) _env ⟦_β⟧(_y, _z))) => .some ⟨_, ⟨.subst₁⟩⟩
-  | (DCC (Subst(_x, Snd(_f_β)) _env ⟦_β⟧(_y, _z))) => .some ⟨_, ⟨.subst₂⟩⟩
   | (DCC (Snd'(_α, _τ) ⟦_β⟧(_a, b)))               => .some ⟨b, ⟨.snd'⟩⟩
   | (DCC (`(_β, x) _y))                            => .some ⟨x, ⟨.quot⟩⟩
   | (DCC (Id(_α) x))                               => .some ⟨x, ⟨.id⟩⟩
@@ -482,7 +459,7 @@ theorem IsNormAff.complete (h : A.IsNormAff) : (step? A) = .none := by
 theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) = .some ⟨B, ⟨h₁⟩⟩ := by
   unfold step?
   split
-  case h_1 | h_2 =>
+  case h_1 =>
     cases heq : h₁ with
     | congrFun h => cases h with
       | congrFun h => cases h
@@ -491,18 +468,18 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
       | sigl h => have h := h_norm.complete; simp [step?] at h
       | sigr h => have h := h_norm.complete; simp [step?] at h
     | _ => rfl
-  case h_4 =>
+  case h_3 =>
     cases heq : h₁ with
     | quot => rfl
     | congrFun h => cases h
     | congrArg h => have h := h_norm.complete; simp [step?] at h
-  case h_5 =>
+  case h_4 =>
     cases heq : h₁ with
     | id =>
       rfl
     | congrFun h => cases h
     | congrArg h => have h := h_norm.complete; simp [step?] at h
-  case h_3  =>
+  case h_2  =>
     cases heq : h₁
     · rfl
     · rename_i h_r
@@ -515,7 +492,7 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
         simp [step?] at h
       · have h := h_norm.complete
         simp [step?] at h
-  case h_6 =>
+  case h_5 =>
     cases heq : h₁
     · rfl
     · rename_i h_r
@@ -529,7 +506,7 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
       cases h
       · have h := h_norm.complete; simp [step?] at h
       · have h := h_norm.complete; simp [step?] at h
-  case h_8 | h_7 =>
+  case h_6 | h_7 =>
     cases heq : h₁
     · rfl
     · rename_i h_r
@@ -543,14 +520,14 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
         simp [step?] at h
       · have h := h_norm.complete
         simp [step?] at h
-  case h_9 =>
+  case h_8 =>
     cases heq : h₁
     · simp
     · rename_i h
       cases h
     · have h := h_norm.complete
       simp [step?] at h
-  case h_10 =>
+  case h_9 =>
     cases heq : h₁ with
     | curr => simp
     | congrArg h =>
@@ -563,17 +540,13 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
         simp [step?] at h
       | congrFun h =>
         cases h
-  case h_11 =>
+  case h_10 =>
     cases h₁ with
     | sigl h => simp [h.complete h_norm.sigl]
     | sigr h => simp [h.complete h_norm.sigr, h_norm.sigl.complete]
-  case h_12 =>
+  case h_11 =>
     cases h₁ with
     | subst₁ =>
-      simp_all
-      rename_i h
-      exact (h _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl).elim
-    | subst₂ =>
       simp_all
       rename_i h
       exact (h _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl).elim
@@ -599,7 +572,7 @@ theorem RedAff.complete (h₁ : RedAff A B) (h_norm : B.IsNormAff) : (step? A) =
     | curr =>
       rename_i h
       exact (h _ _ _ _ rfl).elim
-  case h_13 =>
+  case h_12 =>
     simp_all
     cases A with
     | appl | tintro | top | bot | subst | snd' | quot | id | curr | app' | pi | sigma | snd | fst | pair | comp | sort => cases h₁
@@ -609,7 +582,7 @@ set_option maxHeartbeats 1000000000 in theorem RedAff.complete' (h_red : RedAff 
   unfold step?
   split
   repeat rfl
-  case h_11 =>
+  case h_10 =>
     cases heq : h_red with
     | sigl h =>
       rename_i x x' _
@@ -632,7 +605,7 @@ set_option maxHeartbeats 1000000000 in theorem RedAff.complete' (h_red : RedAff 
         simp at h_maybe
         rw [h_maybe, heq']
         simp
-  · rename_i e f x _ _ _ _ _ _ _ _ _ _
+  · rename_i e f x _ _ _ _ _ _ _ _ _
     cases h_red
     case fst | snd =>
       simp_all
@@ -648,7 +621,7 @@ set_option maxHeartbeats 1000000000 in theorem RedAff.complete' (h_red : RedAff 
       exact (h _ _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl rfl).elim
     case quot | id | comp =>
       simp_all
-    case subst₁ | subst₂ =>
+    case subst₁ =>
       simp_all
       rename_i h
       exact (h _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl).elim
@@ -676,7 +649,7 @@ set_option maxHeartbeats 1000000000 in theorem RedAff.complete' (h_red : RedAff 
           simp_all
         exact (ih₂ (x.step?.get h_some).fst (x.step?.get h_some).snd.down heq).elim
   · cases h_red with
-    | subst₂ | subst₁ | snd' | quot | id | sigl | sigr | congrFun | congrArg | curr | app' | snd | fst | comp =>
+    | subst₁ | snd' | quot | id | sigl | sigr | congrFun | congrArg | curr | app' | snd | fst | comp =>
       simp at *
 
 instance : Decidable (IsNormAff A) :=

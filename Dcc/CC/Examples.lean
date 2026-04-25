@@ -69,6 +69,7 @@ f_β env x = Sort 1
 
 App(Id(Sort 1)
 -/
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
 def test_app : Option Expr := do
   Sigma.fst <$> (DCC (App'(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1)))
     (Sort 1)

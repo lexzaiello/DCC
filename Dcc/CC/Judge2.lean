@@ -507,10 +507,8 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match (infer f_β) with
-      | .some ⟨(DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, (Λ(_f, Id(_g),
-    `(_h, Sort n)) _i))))) _j)), ⟨ht₂⟩⟩ =>
-        if heqa : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, (Λ(_f, Id(_g),
-    `(_h, Sort n)) _i))))) _j)) = (Pi.f_β.type f_α δ o n) then
+      | .some ⟨(DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _j)), ⟨ht₂⟩⟩ =>
+        if heqa : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _j)) = (Pi.f_β.type f_α δ o n) then
           .some ⟨_, ⟨.app' (harr ▸ ht₁) (heqa ▸ ht₂) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
@@ -518,8 +516,6 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
   | DCC Π(f_α, f_β) =>
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>
-      dbg_trace f_β
-      dbg_trace Sigma.fst <$> (infer f_β)
       match infer f_β with
       | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩ =>
         if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g)) = Pi.f_β.type f_α α m o then

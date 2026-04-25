@@ -9,7 +9,6 @@ import Dcc.CC.Judge2
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘ Id(Sort 1)) (Sort 0))).infer
 
-
 def test_pair : Option Expr := do
   match ← (DCC Id(Sort 1)).infer with
   | ⟨DCC (Π(_f_α, β) _x), _⟩ =>
@@ -18,7 +17,7 @@ def test_pair : Option Expr := do
     Sigma.fst <$> e.infer
   | _ => .none
 
-#eval test_pair
+#eval ((Expr.reduce)) <$> test_pair
 
 /-
 ⟨f, g⟩
@@ -38,10 +37,13 @@ for one thing, our pair type doesn't actually type-check.
 
 def test_pair_comp : Option Expr := do
   match ← (DCC Id(Sort 1)).infer with
-  | ⟨DCC (Π(_f_α, Λ(_a, _b, β)) _x), _⟩ =>
-    let e := DCC (⟦2, Sort 1, β, β⟧⟨Id(Sort 1), Id(Sort 1)⟩ (Sort 0))
+  | ⟨DCC (Π(_f_α, β) _x), _⟩ =>
+    let β' := β.reduce.reduce_η
+    let e := DCC (⟦2, Sort 1, β', β'⟧⟨Id(Sort 1), Id(Sort 1)⟩)
     Sigma.fst <$> e.infer
   | _ => .none
+
+#eval test_pair_comp
 
 /-
 Want to change pair type so that it aligns with the environment pattern.

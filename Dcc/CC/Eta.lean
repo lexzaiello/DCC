@@ -27,6 +27,7 @@ Need eta rules to handle potential apps produced by Π
 -/
 
 inductive RedEta : Expr → Expr → Prop
+  | curr_quot : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
   | curr_fst  : RedAffReflTrans (DCC (x y)) x'
     → x'.IsNormAff
     → RedAffReflTrans (DCC (β y)) β'
@@ -106,7 +107,7 @@ termination_by e.size.fst
       have ha := h_r₁.norm_unique h_norm₁ hr₂ h_norm₂
       have hb := ih (by assumption)
       simp_all
-  | uncur | ai | fsi | beta | snd' | snd | fst | idr => cases h₂; rfl
+  | curr_quot | uncur | ai | fsi | beta | snd' | snd | fst | idr => cases h₂; rfl
 
 instance instWellFoundedEta      : WellFounded (fun a b => RedEta b a) := ⟨sn_eta⟩
 instance instWellFoundedEtaTrans : WellFounded (fun a b => RedEtaTrans b a) := ⟨sn_eta_trans⟩
@@ -124,7 +125,14 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
     | .inr _, .inl heq₁ => exact ⟨B, .refl, heq₁.symm ▸ h₁⟩
 
 @[simp] def step_η? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta e e'))) :=
+  dbg_trace s!"hi: {e}"
   match e with
+  | DCC (Λ(α, _b, `(_c, x)) y) =>
+    dbg_trace s!"a: {e}"
+    
+    if heq : DCC (Λ(α, _b, `(_c, x)) y) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
+      heq ▸ .some ⟨_, ⟨.curr_quot⟩⟩
+    else .none
   | DCC (Λ(α, β, x ∘ Fstc(_β₂)) y) =>
     .some ⟨_, ⟨.curr_fst (reduce_sound rfl) (reduce_norm rfl) (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | DCC (`(_β, x)) =>

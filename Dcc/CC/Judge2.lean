@@ -3,26 +3,51 @@ import Dcc.CC.Step2
 import Dcc.CC.Eta
 
 /-
-App is quite annoying.
+Want to be able to compose pair with other things.
 
-We can possibly simplify with Subst. Can do this with Opt.
+f ∘ ⟨f, g⟩
 
-Subst(Id(Sort ?), App(f_α, f_β, f_γ)) env
+⟨f, g⟩ is pretty dependent, but can we get it to type-check as an
+arrow in special circumstances?
 
-Use this to generate type.
+Subst should handle this. However, this is essentially the S combinator.
+I suspect we wouldn't be able to write the type for the general version.
+Or maybe we could?
 
-= ∀ (x : ∀ (x : f_α env) (y : f_β env x), f_γ env x y) (s : (Coup(β))), App(?, ?, ?) γ s
--/
+this is the inverse of quotation.
 
-/-
-Need to retain nice properties for pair. (α, x)
+Fstc is done with β :=
+(Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1)) Sort 1)
+this itself should be η-reduced
 
-but need to reduce amount of (α, x).
-we could instead feed β α and then x.
+(Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1)) Sort 1)
+→ `(Sort 2, Sort 1)
 
-probably makes more sense, but might not even be necessary.
+we should then simplify the resulting Σ using the ⊤ rule.
+similar to Π.
 
-couples just receive x, not (α, x).
+Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))
+
+some (Π(Id(Sort 2),
+   `(Sort 2,
+     Σ(Λ(Sort 1, (Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1)) Sort 1),
+         Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1)) ∘
+           Fstc((Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1)) Sort 1))))))
+   Sort 1)
+
+x : ∀ (x : α) (y : β x), γ x y
+y : ∀ (x : α), β x
+Subst(x, y) z : ∀ (x : α), γ
+
+Λ(..., x ∘ Fst) y z
+= (x ∘ fst) (y, z)
+= x y
+
+curr_fst tells us
+
+Λ(..., x ∘ Fst) = `(..., x)
+
+Subst(f, ⟨f, g⟩
 -/
 
 def Top.type : Expr :=
@@ -33,6 +58,7 @@ def Tintro.type : Expr :=
 
 def Bot.type : Expr :=
   DCC Sort 0
+
 
 def fst.f_β.type (α δ : Expr) (m n o : Level) : Expr :=
   (DCC (δ : Sort o) → ((α : Sort m) → Sort n))
@@ -51,7 +77,6 @@ def fst.type (α f_β δ : Expr) (o : Level) : Expr :=
 /-
 Snd(f_β) : ∀ (env : δ) (s : Σ(f_β) env), f_β env (Fst(f_β) env s)
 -/
-
 def snd.type (f_β δ : Expr) (o : Level) : Expr :=
   DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(f_β), Subst(f_β, Fst(f_β))) ∘ Snd'(Sort o, δ))) δ)
 
@@ -109,9 +134,12 @@ f_β : (x : α) (y : f_α x) → Sort n
 def Pi.type (α : Expr) (m o : Level) : Expr :=
   DCC (α : Sort m) → Sort o
 
+/-
+(Π(Id(Sort 3), `(Sort 3, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), (`(⊤, `(Coup(Id(Sort 2)), Sort 2)) ∗))))) Sort 2)
+-/
+
 @[simp] def Pi.f_β.type (f_α α : Expr) (m o : Level) :=
-  (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(α, f_α, (Λ(Sort m, Id(Sort m),
-    `(Coup(Id(Sort m)), Sort o)) Coup(f_α)))))) α))
+  (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(α, f_α, `(Coup(f_α), Sort o))))) α))
 
 /-def Pi.f_β.type (f_α α : Expr) (m o : Level) :=
   (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(α, f_α, `(Coup(m, α, f_α), Sort o))))) α))-/
@@ -195,7 +223,7 @@ end Eta
 
 @[inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PLift (t = (DCC (α : Sort m) → β))) :=
   match heq₀ : t with
-  | DCC (Π(Id(Sort m), Λ(_a, _b, `(_e, β))) α) =>
+  | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
     if heq₁ : t = (DCC (α : Sort m) → β) then
       .some ⟨α, β, m, ⟨by simp_all⟩⟩
     else
@@ -222,7 +250,7 @@ def is_arrow (e : Expr) : Bool :=
 
 @[inline] abbrev pair.β.type.matcher (t α : Expr) (m : Level) : Option ((n : Level) × (PLift (t = pair.β.type α m n))) :=
   match arrow.matcher t with
-  | .some ⟨_srt, t', _mm, ⟨_heq⟩⟩ =>
+  | .some ⟨_srt, t', _mm,  ⟨_heq⟩⟩ =>
     match arrow.matcher t' with
     | .some ⟨_α₂, DCC Sort n, _m, ⟨_heq₂⟩⟩ =>
       if h : t = pair.β.type α m n then
@@ -242,7 +270,7 @@ inductive Judge : Expr → Expr → Prop where
   | id     : Judge α (DCC Sort m)
     → Reduces (id.type α m) τ
     → Judge (DCC Id(α)) τ
-  | comp'  : Judge g (arrow α β m)
+  | comp'  : Judge g (DCC ((α : Sort m) → β))
     → Judge f (DCC (Π(Id(Sort n), γ) β))
     → Reduces (comp'.type α β γ g m) τ
     → Judge (DCC f ∘ g) τ
@@ -487,9 +515,11 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
   | DCC Π(f_α, f_β) =>
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>
+      dbg_trace f_β
+      dbg_trace Sigma.fst <$> (infer f_β)
       match infer f_β with
-      | .some ⟨(DCC (Π(_aa, `(_a, Π(_b, Λ(_c, _d, (Λ(_e, _f, `(_g, Sort o)) _h))))) _i)), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_aa, `(_a, Π(_b, Λ(_c, _d, (Λ(_e, _f, `(_g, Sort o)) _h))))) _i)) = Pi.f_β.type f_α α m o then
+      | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, (`(⊤, `(_f, Sort o)) ∗))))) _g), ⟨ht₂⟩⟩ =>
+        if heq : DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, (`(⊤, `(_f, Sort o)) ∗))))) _g) = Pi.f_β.type f_α α m o then
           .some ⟨_, ⟨.pi (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
@@ -502,5 +532,24 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
       else .none
     | _, _ => .none
   | _ => .none
+
+def test_pair_comp : Option Expr := do
+  match ← (DCC Id(Sort 1)).infer with
+  | ⟨DCC (Π(_f_α, β) _x), _⟩ =>
+    let β' := β.reduce.reduce_η
+    let e := DCC (⟦2, Sort 1, β', β'⟧⟨Id(Sort 1), Id(Sort 1)⟩)
+    Sigma.fst <$> e.infer
+  | _ => .none
+
+#eval test_pair_comp
+
+def test_id_nested : Option Expr := do
+  let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer
+  dbg_trace t
+  Sigma.fst <$> (DCC (Id(t) Id(Sort 1) (Sort 0))).infer
+
+#eval (DCC (Π(Id(Sort 3), `(Sort 3, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), (`(⊤, `(Coup(Id(Sort 2)), Sort 2)) ∗))))) Sort 2)).reduce_η
+
+#eval test_id_nested
 
 end Expr

@@ -47,7 +47,7 @@ inductive Size : Expr → ℕ → Prop
   | top    : Size (DCC ⊤) 0
   | bot    : Size (DCC ⊥) 0
   | subst  : Size x m → Size y n → Size (DCC Subst(x, y)) (m + n).succ
-  | sig    : Size β m → Size (DCC Σ(β)) (m + 3)
+  | sig    : Size (DCC Σ(β)) 0
   | coup   : Size x m → Size y n → Size (DCC ⟦β⟧(x, y)) (m + n)
   | sort   : Size (DCC Sort m) 0
   | pi     : Size (DCC Π(α, β)) 0
@@ -56,7 +56,7 @@ inductive Size : Expr → ℕ → Prop
   | fst    : Size (DCC Fst(_α)) 1
   | snd'   : Size (DCC Snd'(δ, β)) 1
   | snd    : Size (DCC Snd(_α)) 1
-  | appl   : Size α m → Size (DCC App(_m, _n, α, β)) (m + 6)
+  | appl   : Size f_α m → Size (DCC App(_m, _n, f_α, f_β)) (m + 6)
   | app'   : Size (DCC App'(_α, β)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ.succ
   | pair   : Size f m → Size g n → Size (DCC ⟦_m, α, β, γ⟧⟨f, g⟩) (m + n).succ
@@ -73,9 +73,7 @@ inductive Size : Expr → ℕ → Prop
     let ⟨_, ⟨h₂⟩⟩ := y.size
     ⟨_, ⟨.subst h₁ h₂⟩⟩
   | DCC Sort _m => ⟨_, ⟨.sort⟩⟩
-  | DCC Σ(β) =>
-    match β.size with
-    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.sig h⟩⟩
+  | DCC Σ(_β) => ⟨_, ⟨.sig⟩⟩
   | DCC `(_β, x) =>
     let ⟨_, ⟨h₁⟩⟩ := x.size
     ⟨_, ⟨.quot h₁⟩⟩
@@ -87,8 +85,7 @@ inductive Size : Expr → ℕ → Prop
   | DCC Fst(_α) => ⟨_, ⟨.fst⟩⟩
   | DCC Snd'(_α,_β) => ⟨_, ⟨.snd'⟩⟩
   | DCC Snd(_α) => ⟨_, ⟨.snd⟩⟩
-  | DCC Π(_α, _β) =>
-    ⟨_, ⟨.pi⟩⟩
+  | DCC Π(_α, _β) => ⟨_, ⟨.pi⟩⟩
   | DCC App'(_α, _β) => ⟨_, ⟨.app'⟩⟩
   | DCC App(_m, _n, α, _β)  =>
     let ⟨_, ⟨h⟩⟩ := α.size
@@ -113,9 +110,9 @@ theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
 
 @[aesop safe destruct, grind =_, grind →, simp] theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
   induction h with
-  | app' | pi | tintro | bot | top | snd' | id | snd | fst | sort => rfl
+  | sig | app' | pi | tintro | bot | top | snd' | id | snd | fst | sort => rfl
   | comp _ _ ih₁ ih₂ | coup _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
-  | sig _ ih | appl _ ih | quot _ ih | curr _ ih => rw [size, ih]
+  | appl _ ih | quot _ ih | curr _ ih => rw [size, ih]
   | subst _ _ ih₁ ih₂ | app _ _ ih₁ ih₂ | pair _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
 
 def RedAffTrans     := Relation.TransGen RedAff

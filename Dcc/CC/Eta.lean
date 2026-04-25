@@ -2,51 +2,290 @@ import Dcc.CC.Ast
 import Dcc.CC.Step2
 
 /-
-Need η reduction for this thingy:
-(Π(Id(Sort 2), `(Sort 2, Σ(Λ(Sort 1, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1), ((Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1) ∘ (Fst(`(⊤, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1))) ∗)))))) Sort 1)
+(DCC Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1)) ∘
+           Fstc((Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1)) Sort 1)))
 
-Eta reduction:
-
-(Λ(..., ..., x ∘ Fstc) y) = `(..., (x y))
+need to reduce this
 -/
 
 /-
-App(f_α, f_β, f_γ) env = App(f_α env, f_β env, f_γ env)
+Π eta rule is very suspicious.
+
+is wrong entirely.
+
+should be just left and right components.
+one rule for if there is an env, one for if not.
+
+neither f_α nor f_β should be normalized, but f_β should be RedEta'd
+This means we will need β in size.
+
+this is problematic for App, but we can fix.
+
+for app, final β =
+`(Sort n, (f_β env) ∘ Snd'(t_f, α))
+
+
+need to sum f_β, env, t_f, and α
+Size(`(Sort n, (f_β env) ∘ Snd'(t_f, α)))
+= (1 + (Size(f_β) + Size(env))) + Size(α) + 2
+
+Size(App(m, n, f_α, f_β) env))
+= Size(App(m, n, f_α, f_β)) + Size(env)
+= (((Size(f_β) + Size(env)) + 1) + 2) + 1
+= Size(f_β) + Size(env) + 4 + Size(Σ(`(⊤, `(..., (f_α env)))))
+
+maybe we want to split Size up? Then put Appl inside the other Red?
+Could work.
+Putting Appl in main RedAff, make size of tys 0 in RedAff, then
+make a TySize. Yep.
+Will not help.
+We will duplicate env anyway.
+We need to make a separate RedTy.
+
+If we keep the size of Π and all Ty's 0 in main Size,
+then get rid of appl rule in RedEta, keep in RedAff,
+we will be set.
+
+so need f_α * 2
+
+App(m, n, f_α, f_β) = (1 + ((Size(f_β) + Size(env)) + (Size((f_α env)))
+
+env is not duplicated. Snd' type argument does not count.
+
+Appty breaks confluence.
+
+Why can't we just plug App into its own inductive?
 -/
 
 namespace Expr
 
-/-
-Only count β in size of Pi so we can normalize greedily.
--/
-
-/-
-Need eta rules to handle potential apps produced by Π
-
-Λ(?, ?, Λ(α, β, `(?, y))) x → `(Coup(α, β, y))
--/
-
-inductive RedEta : Expr → Expr → Prop
-  | curr_quot : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
-  | curr_fst  : RedAffReflTrans (DCC (x y)) x'
-    → x'.IsNormAff
-    → RedAffReflTrans (DCC (β y)) β'
-    → β'.IsNormAff
-    → RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `(β', x'))
-  | quot      : RedEta x x' → RedEta (DCC `(β, x)) (DCC `(β, x'))
+inductive RedMeta : Expr → Expr → Prop
   | appl      : RedAffReflTrans (DCC (f_α env)) α
     → α.IsNormAff
-    → RedEta (DCC (App(m, n, f_α, f_β) env)) (App'.type α f_α f_β env m)
+    → RedMeta (DCC (App(m, n, f_α, f_β) env)) (App'.type α f_α f_β env m)
+
+def IsNormMeta (e : Expr) : Prop := ¬ ∃ e', RedMeta e e'
+
+theorem RedMeta.decreasing (h : RedMeta e e') : (size e').fst < (size e).fst := by
+  cases h; grind
+
+@[simp] def step_meta? (e : Expr) : Option ((e' : Expr) × (PLift (RedMeta e e'))) :=
+  match e with
+  | DCC (App(_m, _n, _f_α, _f_β) _env) => .some ⟨_, ⟨.appl (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+  | _ => .none
+
+def RedMetaTrans     := Relation.TransGen RedMeta
+def RedMetaReflTrans := Relation.ReflTransGen RedMeta
+
+@[aesop safe apply, grind ., grind →, simp] theorem RedMetaTrans.decreasing : RedMetaTrans e e' → (size e').fst < (size e).fst := by
+  intro h
+  induction h with
+  | single h => exact h.decreasing
+  | tail h₁ hr ih =>
+    have h := hr.decreasing
+    grind
+
+theorem RedMeta.complete (h_red : RedMeta A B) : step_meta? A = .some ⟨B, ⟨h_red⟩⟩ :=
+  match h_red with
+  | .appl hrt h_norm => by
+    have h := hrt.complete h_norm
+    aesop
+
+def sn_meta (e : Expr) : Acc (fun b a => RedMeta a b) e := Acc.intro e (fun e' hr => by
+  have h := hr.decreasing
+  exact e'.sn_meta)
+termination_by e.size.fst
+
+instance instWellFoundedMeta : WellFounded (fun a b => RedMeta b a) := ⟨sn_meta⟩
+
+def reduce_meta (e : Expr) : Expr :=
+  match step_meta? e with
+  | .some ⟨e', ⟨h⟩⟩ =>
+    -- This hypothesis allows the recursion. Easy to prove.
+    have _h_size : e'.size.fst < e.size.fst := h.decreasing
+    e'.reduce_meta
+  | .none => e
+termination_by e.size.fst
+
+theorem reduce_meta_sound (heq : reduce_meta A = B) : RedMetaReflTrans A B := by
+  induction A using instWellFoundedMeta.induction generalizing B with
+  | h a ih =>
+    unfold reduce_meta at heq
+    split at heq
+    case h_1 h_red h_step_eq =>
+      exact Relation.ReflTransGen.trans (.single h_red) (ih _ h_red heq)
+    case h_2 => simp_all only [forall_eq']; exact .refl
+
+theorem sn_meta_trans (e : Expr) : Acc (fun b a => RedMetaTrans a b) e := Acc.intro e (fun e' hr => by
+  have h := hr.decreasing
+  exact e'.sn_meta_trans)
+termination_by e.size.fst
+
+instance instWellFoundedMetaTrans : WellFounded (fun a b => RedMetaTrans b a) := ⟨sn_meta_trans⟩
+
+theorem IsNormMeta.complete (h : IsNormMeta A) : (step_meta? A) = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨e', ⟨h₂⟩⟩ heq
+  exact (h ⟨_, h₂⟩)
+
+theorem IsNormMeta.complete_reduce (h : IsNormMeta A) : reduce_meta A = A := by
+  unfold reduce_meta
+  rw [h.complete]
+
+theorem step_meta_none : step_meta? A = .none → A.IsNormMeta := fun h_step ⟨e', h_red⟩ => by
+  have h := h_red.complete
+  simp_all
+
+theorem reduce_meta_norm (h : reduce_meta A = B) : B.IsNormMeta := by
+  induction A using instWellFoundedMeta.induction generalizing B with
+  | h a ih =>
+    unfold reduce_meta at h
+    split at h
+    · rename_i hred heq
+      have h := ih _ hred rfl
+      simp_all
+    · rename_i heq
+      have h := step_meta_none heq
+      simp_all
+
+@[simp] theorem RedMeta.unique (h₁ : RedMeta A B) (h₂ : RedMeta A C) : B = C := by
+  induction h₁ generalizing C with
+  | appl hrt₁ hnorm₁ => cases h₂ with
+    | appl hrt₂ hnorm₂ =>
+      have h := hrt₁.norm_unique hnorm₁ hrt₂ hnorm₂
+      simp_all
+
+theorem RedMeta.norm_unique (h₁ : RedMeta A B) (h_norm : IsNormMeta B) (h_trans : RedMetaTrans A C) : B = C := by
+  induction h_trans with
+  | single h =>
+    exact h₁.unique h
+  | tail h ih heq => exact (h_norm ⟨_, heq ▸ ih⟩).elim
+
+theorem RedMetaReflTrans.norm_same (h : RedMetaReflTrans A B) (h_norm : A.IsNormMeta) : A = B := by
+  induction h with
+  | refl => rfl
+  | tail hrt h_red heq =>
+    rename_i b c
+    exact (h_norm ⟨c, heq ▸ h_red⟩).elim
+
+theorem RedMetaReflTrans.norm_unique (h₁ : RedMetaReflTrans A B) (h_norm₁ : IsNormMeta B)
+  (h₂ : RedMetaReflTrans A C) (h_norm₂ : IsNormMeta C) : B = C := by
+  induction A using instWellFoundedMeta.induction generalizing B with
+  | h _ ih =>
+    match h₁.cases_head, h₂.cases_head with
+    | .inl heq₁, .inl heq₂ => exact heq₁.symm.trans heq₂
+    | .inr ⟨_, hra, hrc⟩, .inr ⟨_, hra', hrc'⟩ =>
+      exact ih _ hra hrc h_norm₁ ((hra.unique hra') ▸ hrc')
+    | .inl heq₁, .inr _ => exact ((heq₁ ▸ h₂).norm_same h_norm₁)
+    | .inr _, .inl heq₁ => exact ((heq₁ ▸ h₁).norm_same h_norm₂).symm
+
+theorem RedMeta.reduce_same (h : RedMeta A B) : reduce_meta A = reduce_meta B := by
+  apply RedMetaReflTrans.norm_unique
+  · exact reduce_meta_sound rfl
+  · exact reduce_meta_norm rfl
+  · exact .trans (.single h) (reduce_meta_sound rfl)
+  · exact reduce_meta_norm rfl
+
+theorem RedMetaReflTrans.complete (h₁ : RedMetaReflTrans A B) (h_norm : B.IsNormMeta) : reduce_meta A = B := by
+  match h₁.cases_head with
+  | .inl h =>
+    simp_all
+    exact h_norm.complete_reduce
+  | .inr ⟨c, h₁, h₂⟩ =>
+    have _h : c.size.fst < A.size.fst := h₁.decreasing
+    have h := RedMetaReflTrans.complete h₂ h_norm
+    rw [h₁.reduce_same, h]
+termination_by A.size.fst
+
+inductive EtaSize : Expr → ℕ → Prop
+  | tintro : EtaSize (DCC ∗) 1
+  | top    : EtaSize (DCC ⊤) 1
+  | bot    : EtaSize (DCC ⊥) 1
+  | subst  : EtaSize x m → EtaSize y n → EtaSize (DCC Subst(x, y)) (m + n).succ.succ
+  | sig    : EtaSize β m → EtaSize (DCC Σ(β)) m.succ
+  | coup   : EtaSize x m → EtaSize y n → EtaSize (DCC ⟦β⟧(x, y)) (m + n).succ
+  | sort   : EtaSize (DCC Sort m) 1
+  | pi     : EtaSize β m → EtaSize (DCC Π(α, β)) m.succ
+  | quot   : EtaSize x m → EtaSize (DCC `(β, x)) m.succ.succ
+  | id     : EtaSize (DCC Id(α)) 2
+  | fst    : EtaSize (DCC Fst(_α)) 2
+  | snd'   : EtaSize (DCC Snd'(δ, β)) 2
+  | snd    : EtaSize (DCC Snd(_α)) 2
+  | appl   : EtaSize f_α m → EtaSize (DCC App(_m, _n, f_α, f_β)) (m + 7)
+  | app'   : EtaSize (DCC App'(_α, β)) 2
+  | comp   : EtaSize f m → EtaSize g n → EtaSize (DCC (f ∘ g)) (m + n).succ.succ.succ
+  | pair   : EtaSize f m → EtaSize g n → EtaSize (DCC ⟦_m, α, β, γ⟧⟨f, g⟩) (m + n).succ.succ
+  | curr   : EtaSize x m → EtaSize (DCC Λ(α, β, x)) m.succ.succ
+  | app    : EtaSize f m → EtaSize x n → EtaSize (DCC (f x)) (m + n)
+
+@[simp, grind] def eta_size (e : Expr) : ((n : ℕ) × (PLift (EtaSize e n))) :=
+  match e with
+  | DCC ∗ => ⟨_, ⟨.tintro⟩⟩
+  | DCC ⊤ => ⟨_, ⟨.top⟩⟩
+  | DCC ⊥ => ⟨_, ⟨.bot⟩⟩
+  | DCC Subst(x, y) =>
+    let ⟨_, ⟨h₁⟩⟩ := x.eta_size
+    let ⟨_, ⟨h₂⟩⟩ := y.eta_size
+    ⟨_, ⟨.subst h₁ h₂⟩⟩
+  | DCC Sort _m => ⟨_, ⟨.sort⟩⟩
+  | DCC Σ(β) =>
+    let ⟨_, ⟨h₁⟩⟩ := β.eta_size
+    ⟨_, ⟨.sig h₁⟩⟩
+  | DCC `(_β, x) =>
+    let ⟨_, ⟨h₁⟩⟩ := x.eta_size
+    ⟨_, ⟨.quot h₁⟩⟩
+  | DCC ⟦_β⟧(x, y) =>
+    let ⟨_, ⟨h₁⟩⟩ := x.eta_size
+    let ⟨_, ⟨h₂⟩⟩ := y.eta_size
+    ⟨_, ⟨.coup h₁ h₂⟩⟩
+  | DCC Id(_α)      => ⟨_, ⟨.id⟩⟩
+  | DCC Fst(_α) => ⟨_, ⟨.fst⟩⟩
+  | DCC Snd'(_α,_β) => ⟨_, ⟨.snd'⟩⟩
+  | DCC Snd(_α) => ⟨_, ⟨.snd⟩⟩
+  | DCC Π(_α, β) =>
+    let ⟨_, ⟨h₁⟩⟩ := β.eta_size
+    ⟨_, ⟨.pi h₁⟩⟩
+  | DCC App'(_α, _β) => ⟨_, ⟨.app'⟩⟩
+  | DCC App(_m, _n, α, _β)  =>
+    let ⟨_, ⟨h⟩⟩ := α.eta_size
+    ⟨_, ⟨.appl h⟩⟩
+  | DCC (f ∘ g) =>
+    let ⟨_m, ⟨h₁⟩⟩ := f.eta_size
+    let ⟨_n, ⟨h₂⟩⟩ := g.eta_size
+    ⟨_, ⟨.comp h₁ h₂⟩⟩
+  | DCC ⟦_m, _α, _β, _γ⟧⟨a, b⟩ =>
+    let ⟨_o, ⟨h₁⟩⟩ := a.eta_size
+    let ⟨_p, ⟨h₂⟩⟩ := b.eta_size
+    ⟨_, ⟨.pair h₁ h₂⟩⟩
+  | DCC Λ(_α, _β, x) =>
+    let ⟨_n, ⟨h₁⟩⟩ := x.eta_size
+    ⟨_, ⟨.curr h₁⟩⟩
+  | DCC (f x) =>
+    let ⟨_, ⟨h₁⟩⟩ := f.eta_size
+    let ⟨_, ⟨h₂⟩⟩ := x.eta_size
+    ⟨_, ⟨.app h₁ h₂⟩⟩
+
+theorem EtaSize.sound (_h : Expr.eta_size e = ⟨n, ⟨h⟩⟩) : EtaSize e n := h
+
+@[aesop safe destruct, grind =_, grind →, simp] theorem EtaSize.complete (h : EtaSize e n) : eta_size e = ⟨n, .up h⟩ := by
+  induction h with
+  | app' | tintro | bot | top | snd' | id | snd | fst | sort => rfl
+  | comp _ _ ih₁ ih₂ | coup _ _ ih₁ ih₂ => rw [eta_size, ih₁, ih₂]
+  | pi _ ih | sig _ ih | appl _ ih | quot _ ih | curr _ ih => rw [eta_size, ih]
+  | subst _ _ ih₁ ih₂ | app _ _ ih₁ ih₂ | pair _ _ ih₁ ih₂ => rw [eta_size, ih₁, ih₂]
+
+inductive RedEta : Expr → Expr → Prop
+  | curr      : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
+  | curr_quot : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
+  | curr_fst  : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `(β, x))
   /-
    pi rule might break things
   -/
-  | pi        : Size env (m + 1)
-    → RedAffReflTrans (DCC (f_α env)) α
-    → IsNormAff α
-    → RedEta (DCC (f_β env)) β
-    → RedEta (DCC (Π(f_α, f_β) env)) (DCC (Π(`(⊤, α), `(⊤, β)) ∗))
-  | sig       : RedEta f_β f_β'
-    → RedEta (DCC Σ(f_β)) (DCC Σ(f_β'))
+  | pi        : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
+  | pi_quot   : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
+  | pi'       : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
+  | sig       : RedEta (DCC (Σ(β))) b' → RedEta (DCC (Σ(β) env)) (DCC (b' env))
+  | sig'      : RedEta β β' → RedEta (DCC (Σ(β))) (DCC Σ(β'))
   | idr       : RedEta (DCC (f ∘ Id(α))) f
   | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) x
   | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) y
@@ -59,19 +298,24 @@ inductive RedEta : Expr → Expr → Prop
   | uncur     : RedEta (DCC Λ(α, β,
     (App'(_f_α, _f_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
 
-@[aesop safe apply, grind ., grind →, simp] theorem RedEta.decreasing (h : RedEta e e') : (size e').fst < (size e).fst := by
+def IsNormEta (e : Expr) : Prop := ¬ ∃ e', RedEta e e'
+
+@[simp] theorem size_lt_eta_size : (size e).fst < (eta_size e).fst := by
+  induction e <;> grind
+
+@[aesop safe apply, grind ., grind →, simp] theorem RedEta.decreasing (h : RedEta e e') : (eta_size e').fst < (eta_size e).fst := by
   induction h
   repeat (simp_all; try grind)
 
 def sn_eta (e : Expr) : Acc (fun b a => RedEta a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing
   exact e'.sn_eta)
-termination_by e.size.fst
+termination_by e.eta_size.fst
 
 def RedEtaTrans     := Relation.TransGen RedEta
 def RedEtaReflTrans := Relation.ReflTransGen RedEta
 
-@[aesop safe apply, grind ., grind →, simp] theorem RedEtaTrans.decreasing : RedEtaTrans e e' → (size e').fst < (size e).fst := by
+@[aesop safe apply, grind ., grind →, simp] theorem RedEtaTrans.decreasing : RedEtaTrans e e' → (eta_size e').fst < (eta_size e).fst := by
   intro h
   induction h with
   | single h => exact h.decreasing
@@ -82,32 +326,31 @@ def RedEtaReflTrans := Relation.ReflTransGen RedEta
 theorem sn_eta_trans (e : Expr) : Acc (fun b a => RedEtaTrans a b) e := Acc.intro e (fun e' hr => by
   have h := hr.decreasing
   exact e'.sn_eta_trans)
-termination_by e.size.fst
+termination_by e.eta_size.fst
 
 /-
 η-reduction is deterministic
 -/
 @[simp] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
-  | curr_fst hrt₁ h_norm₁ hrt₂ h_norm₂ =>
+  | sig' | pi | curr_fst | sig => cases h₂; aesop
+  | pi_quot hr ih =>
+    cases h₂
+    · rename_i hr₂; aesop
+    · rename_i hr₂; cases hr₂
+  | pi' hr ih =>
+    cases h₂
+    · rename_i hr₂; cases hr
+    · aesop
+  | curr hr ih =>
     cases h₂ with
-    | curr_fst hrt₃ hnorm₃ hrt₄ hnorm₄ =>
-      have ha := hrt₁.norm_unique h_norm₁ hrt₃ hnorm₃
-      have hb := hrt₂.norm_unique h_norm₂ hrt₄ hnorm₄
-      aesop
-  | sig | quot => cases h₂; aesop
-  | appl h_r₁ h_norm₁ =>
-    cases h₂ with
-    | appl h_r₂ h_norm₂ =>
-      have ha := h_r₁.norm_unique h_norm₁ h_r₂ h_norm₂
-      simp_all
-  | pi _ h_r₁ h_norm₁ _ ih =>
-    cases h₂ with
-    | pi _ hr₂ h_norm₂ =>
-      have ha := h_r₁.norm_unique h_norm₁ hr₂ h_norm₂
-      have hb := ih (by assumption)
-      simp_all
-  | curr_quot | uncur | ai | fsi | beta | snd' | snd | fst | idr => cases h₂; rfl
+    | curr hr₂ => rw [ih hr₂]
+    | snd' | ai | uncur => cases hr
+  | ai | uncur | snd' =>
+    cases h₂
+    · rename_i h; cases h
+    · rfl
+  | curr_quot | snd | fst | idr | beta | fsi => cases h₂; rfl
 
 instance instWellFoundedEta      : WellFounded (fun a b => RedEta b a) := ⟨sn_eta⟩
 instance instWellFoundedEtaTrans : WellFounded (fun a b => RedEtaTrans b a) := ⟨sn_eta_trans⟩
@@ -125,55 +368,60 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
     | .inr _, .inl heq₁ => exact ⟨B, .refl, heq₁.symm ▸ h₁⟩
 
 @[simp] def step_η? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta e e'))) :=
-  dbg_trace s!"hi: {e}"
   match e with
   | DCC (Λ(α, _b, `(_c, x)) y) =>
-    dbg_trace s!"a: {e}"
-    
     if heq : DCC (Λ(α, _b, `(_c, x)) y) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
       heq ▸ .some ⟨_, ⟨.curr_quot⟩⟩
     else .none
-  | DCC (Λ(α, β, x ∘ Fstc(_β₂)) y) =>
-    .some ⟨_, ⟨.curr_fst (reduce_sound rfl) (reduce_norm rfl) (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | DCC (`(_β, x)) =>
-    match x.step_η? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot h⟩⟩
-    | _ => .none
-  | DCC (App(m, n, f_α, f_β) env) =>
-    .some ⟨_, ⟨.appl (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+  | DCC (Λ(_α, _β, _x ∘ Fstc(_β₂)) _y) => .some ⟨_, ⟨.curr_fst⟩⟩
   | DCC Σ(f_β) =>
     match f_β.step_η? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig' h⟩⟩
+    | _ => .none
+  | DCC (Σ(f_β) _env) =>
+    match (DCC Σ(f_β)).step_η? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig h⟩⟩
     | _ => .none
-  | DCC (Π(f_α, f_β) env) =>
-    match env.size with
-    | ⟨m + 1, ⟨h_size⟩⟩ =>
-      match (DCC (f_β env)).step_η? with
-      | .some ⟨β, ⟨h⟩⟩ =>
-        .some ⟨_, ⟨.pi h_size (reduce_sound rfl) (reduce_norm rfl) h⟩⟩
-      | _ => .none
+  | DCC (Π(_f_α, f_β) _env) =>
+    match (DCC Π(_f_α, f_β)).step_η? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi h⟩⟩
     | _ => .none
-  | (DCC (f ∘ Id(α))) => .some ⟨_, ⟨.idr⟩⟩
-  | (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) => .some ⟨_, ⟨.fst⟩⟩
-  | (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) => .some ⟨_, ⟨.snd⟩⟩
-  | (DCC Λ(α, _b, x ∘ (Snd(_c) _env))) => .some ⟨_, ⟨.snd'⟩⟩
-  | (DCC ((App'(_f_α, _f_β) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩)) => .some ⟨_, ⟨.beta⟩⟩
-  | (DCC Λ(α, β, (App'(f_α, f_β) env))) => .some ⟨_, ⟨.ai⟩⟩
-  | (DCC ⟦m, a, b, c⟧⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
-  | (DCC Λ(α, β,
-    (App'(_f_α, _f_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
-      .some ⟨_, ⟨.uncur⟩⟩
+  | DCC (Π(_f_α, f_β)) =>
+    match f_β with
+    | DCC `(_β, x) =>
+      match x.step_η? with
+      | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi_quot h⟩⟩
+      | _ => .none
+    | x =>
+      match x.step_η? with
+      | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi' h⟩⟩
+      | _ => .none
+  | (DCC (_f ∘ Id(_α))) => .some ⟨_, ⟨.idr⟩⟩
+  | (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨_x, _y⟩) => .some ⟨_, ⟨.fst⟩⟩
+  | (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨_x, _y⟩) => .some ⟨_, ⟨.snd⟩⟩
+  | DCC Λ(α, β, x) =>
+    match x.step_η? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr h⟩⟩
+    | .none =>
+      match DCC Λ(α, β, x) with
+      | (DCC Λ(_α, _b, _x ∘ (Snd(_c) _env))) => .some ⟨_, ⟨.snd'⟩⟩
+      | (DCC Λ(_α, _β, (App'(_f_α, _f_β) _env))) => .some ⟨_, ⟨.ai⟩⟩
+      | (DCC Λ(_α, _β,
+        (App'(_f_α, _f_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨_f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
+        .some ⟨_, ⟨.uncur⟩⟩
+      | _ => .none
+  | (DCC ((App'(_f_α, _f_β) _env) ∘ ⟦_m, _α, _b, _γ⟧⟨Λ(__α, __β, _x), _y⟩)) => .some ⟨_, ⟨.beta⟩⟩
+  | (DCC ⟦_m, _a, _b, _c⟧⟨(Fst(_β) _env), (Snd(_β₂) _env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
   | _ => .none
-termination_by sizeOf e
 
 def reduce_η (e : Expr) : Expr :=
   match step_η? e with
   | .some ⟨e', ⟨h⟩⟩ =>
     -- This hypothesis allows the recursion. Easy to prove.
-    have _h_size : e'.size.fst < e.size.fst := h.decreasing
+    have _h_size : e'.eta_size.fst < e.eta_size.fst := h.decreasing
     e'.reduce_η
   | .none => e
-termination_by e.size.fst
+termination_by e.eta_size.fst
 
 theorem reduce_η_sound (heq : reduce_η A = B) : RedEtaReflTrans A B := by
   induction A using instWellFoundedEta.induction generalizing B with
@@ -185,17 +433,7 @@ theorem reduce_η_sound (heq : reduce_η A = B) : RedEtaReflTrans A B := by
     case h_2 => simp_all only [forall_eq']; exact .refl
 
 theorem RedEta.complete (h_red : RedEta A B) : step_η? A = .some ⟨B, ⟨h_red⟩⟩ := by
-  induction h_red with
-  | appl hrt h_norm | pi h_size hrt h_norm h ih =>
-    have h := hrt.complete h_norm
-    aesop
-  | curr_fst hrt₁ hnorm₁ hrt₂ hnorm₂ =>
-    have ha := hrt₁.complete hnorm₁
-    have hb := hrt₂.complete hnorm₂
-    aesop
-  | _ => aesop
-
-def IsNormEta (e : Expr) : Prop := ¬ ∃ e', RedEta e e'
+  induction h_red <;> (unfold step_η?; aesop)
 
 def RedEtaTrans.next (h : RedEtaTrans A B) : ∃ h, RedEta A (A.step_η?.get h).fst := by
   induction h with
@@ -214,7 +452,6 @@ theorem RedEta.norm_unique (h₁ : RedEta A B) (h_norm : IsNormEta B) (h_trans :
   | single h =>
     exact h₁.unique h
   | tail h ih heq => exact (h_norm ⟨_, heq ▸ ih⟩).elim
-
 
 theorem RedEtaReflTrans.norm_same (h : RedEtaReflTrans A B) (h_norm : A.IsNormEta) : A = B := by
   induction h with
@@ -283,10 +520,10 @@ theorem RedEtaReflTrans.complete (h₁ : RedEtaReflTrans A B) (h_norm : B.IsNorm
     simp_all
     exact h_norm.complete_reduce
   | .inr ⟨c, h₁, h₂⟩ =>
-    have _h : c.size.fst < A.size.fst := h₁.decreasing
+    have _h : c.eta_size.fst < A.eta_size.fst := h₁.decreasing
     have h := RedEtaReflTrans.complete h₂ h_norm
     rw [h₁.reduce_same, h]
-termination_by A.size.fst
+termination_by A.eta_size.fst
 
 instance : Decidable (RedEtaReflTrans A B ∧ B.IsNormEta) :=
   if h : reduce_η A = B then

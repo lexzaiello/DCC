@@ -1,4 +1,5 @@
 import Mathlib.Data.Nat.Notation
+import Init.Data.String.Search
 
 -- Infinite sort universe hierarchy
 abbrev Level := ℕ
@@ -167,9 +168,8 @@ macro_rules
   DCC (Π(Id(Sort n), `(Sort n, (f_β env) ∘ Snd'(t_f, α))) Coup(`(t_f, α)))
 
 def toFormat (e : Expr) : Std.Format :=
-
-  let sepD (l : List Std.Format) (sep : Std.Format := ",") : Std.Format :=
-    .fill (.joinSep l (sep ++ .line))
+  let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=
+    .nest indent (.fill (.joinSep l (sep ++ .line)))
   let paren (s : Std.Format) : Std.Format :=
     .bracket "(" (.fill s) ")"
   let angle (s : Std.Format) : Std.Format :=
@@ -178,7 +178,7 @@ def toFormat (e : Expr) : Std.Format :=
     .bracket "⟦" (.fill s) "⟧"
 
   let comb (pre : Std.Format) (points : List Std.Format) : Std.Format :=
-    pre ++ (paren (sepD points))
+    .group (pre ++ (paren (sepD points (indent := pre.pretty.length))))
 
   match e with
   | (DCC ⊤)                   => "⊤"
@@ -197,12 +197,19 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC App(m, n, f_α, f_β)) => comb "App" [Std.format m, Std.format n, f_α.toFormat, f_β.toFormat]
   | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat, β.toFormat, e.toFormat]
   | (DCC Π(α, β))             => comb "Π" [α.toFormat, β.toFormat]
-  | (DCC ⟦m, α, β, γ⟧⟨a, b⟩)  => (bbracket (sepD [Std.format m, α.toFormat, β.toFormat, γ.toFormat])) ++ (angle (sepD [a.toFormat, b.toFormat]))
-  | (DCC ⟦β⟧(a, b))           => comb (bbracket (sepD [β.toFormat])) [a.toFormat, b.toFormat]
+  | (DCC ⟦m, α, β, γ⟧⟨a, b⟩)  =>
+    let pts := (bbracket (sepD [Std.format m, α.toFormat, β.toFormat, γ.toFormat]))
+    let pts_length := match pts.pretty.splitOn "\n" |>.head? with
+    | .some line => line.length
+    | .none      => 0
+    pts ++ (angle (sepD [a.toFormat, b.toFormat] (indent := pts_length)))
+  | (DCC ⟦β⟧(a, b))           =>
+    comb (bbracket (sepD [β.toFormat])) [a.toFormat, b.toFormat]
   | DCC Coup(β)               => comb "Coup" [β.toFormat]
   | (DCC Σ(β))                => comb "Σ" [β.toFormat]
-  | (DCC f ∘ g)               => sepD [f.toFormat, g.toFormat] " ∘"
-  | (DCC (f x))               => (paren (f.toFormat ++ .line ++ x.toFormat))
+  | (DCC f ∘ g)               =>
+    sepD [f.toFormat, g.toFormat] " ∘"
+  | (DCC (f x))               => (paren (f.toFormat ++ (.indentD x.toFormat)))
 
 instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
 instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩

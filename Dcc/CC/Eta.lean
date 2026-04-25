@@ -2,6 +2,13 @@ import Dcc.CC.Ast
 import Dcc.CC.Step2
 
 /-
+Need η reduction for this thingy:
+(Π(Id(Sort 2), `(Sort 2, Σ(Λ(Sort 1, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1), ((Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1) ∘ (Fst(`(⊤, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1))) ∗)))))) Sort 1)
+
+
+-/
+
+/-
 App(f_α, f_β, f_γ) env = App(f_α env, f_β env, f_γ env)
 -/
 
@@ -18,6 +25,7 @@ Need eta rules to handle potential apps produced by Π
 -/
 
 inductive RedEta : Expr → Expr → Prop
+  | quot      : RedEta x x' → RedEta (DCC `(β, x)) (DCC `(β, x'))
   | appl      : RedAffReflTrans (DCC (f_α env)) α
     → α.IsNormAff
     → RedEta (DCC (App(m, n, f_α, f_β) env)) (App'.type α f_α f_β env m)
@@ -72,8 +80,9 @@ termination_by e.size.fst
 /-
 η-reduction is deterministic
 -/
-theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
+@[simp] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
+  | quot ih₁ => cases h₂; aesop
   | sig _ h_red ih =>
     cases h₂ with
     | sig _ h_red₂ => simp [ih h_red₂] at *
@@ -107,6 +116,10 @@ theorem RedEtaReflTrans.conf (h₁ : RedEtaReflTrans A B) (h₂ : RedEtaReflTran
 
 @[simp] def step_η? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta e e'))) :=
   match e with
+  | DCC (`(_β, x)) =>
+    match x.step_η? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot h⟩⟩
+    | _ => .none
   | DCC (App(m, n, f_α, f_β) env) =>
     .some ⟨_, ⟨.appl (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | DCC Λ(α, β, `(_γ, x)) => .some ⟨_, ⟨.quot_curr⟩⟩

@@ -169,7 +169,7 @@ macro_rules
 def toFormat (e : Expr) : Std.Format :=
 
   let sepD (l : List Std.Format) (sep : Std.Format := ",") : Std.Format :=
-    (.joinSep l (sep ++ .line))
+    .fill (.joinSep l (sep ++ .line))
   let paren (s : Std.Format) : Std.Format :=
     .bracket "(" (.fill s) ")"
   let angle (s : Std.Format) : Std.Format :=

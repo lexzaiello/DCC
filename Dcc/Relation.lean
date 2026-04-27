@@ -66,13 +66,6 @@ def IsNorm.unique_refl {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : (Rel
   | refl => rfl
   | single h => exact hn.unique_trans h
 
-theorem RedRel.norm_complete {r : Expr → Expr → Prop}
-  (t : outParam (Expr → ℕ → Prop))
-  [hM : Measure t] [hR : RedRel r t (hM := hM) (m := Option)] (h_norm : IsNorm r A) : (hR.run A) = .none := by
-  apply Option.eq_none_iff_forall_ne_some.mpr
-  intro ⟨e', ⟨h₂⟩⟩ heq
-  exact (h_norm ⟨_, h₂⟩)
-
 def RedRel.sn {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ → Prop))
   {m : Type → Type} [Monad m] [hM : Measure t]
   (hR : RedRel r t (m := m) (hM := hM)) (e : Expr) : Acc (fun b a => r a b) e := Acc.intro e (fun e' hr => by
@@ -223,11 +216,37 @@ open Confluent in def RedRel.globally_confluent
         have ⟨_, h₁, h₂⟩ := ih _ hr₁ (hrt₁b.trans hrtt₁b) (hrt₁b.trans hrtt₂b)
         exact ⟨_, .trans hrtt₁ h₁, .trans hrtt₂ h₂⟩
 
-open Rel in class DecidableNorm {t : Expr → ℕ → Prop} [hM : Measure t]
+@[simp, aesop safe forward] def IsNorm.sigl {r : Expr → Expr → Prop} [hC : Congruent r]
+  (hn : IsNorm r (DCC ⟦β⟧(x, y))) : IsNorm r x := fun ⟨_, h⟩ =>
+  (hn ⟨_, hC.sigl' h⟩).elim
+
+@[simp, aesop safe forward] def IsNorm.sigr {r : Expr → Expr → Prop} [hC : Congruent r]
+  (hn : IsNorm r (DCC ⟦β⟧(x, y))) : IsNorm r y := fun ⟨_, h⟩ =>
+  (hn ⟨_, hC.sigr' h⟩).elim
+
+@[simp, aesop safe forward] def IsNorm.congrFun {r : Expr → Expr → Prop} [hC : Congruent r]
+  (hn : IsNorm r (DCC (f x))) : IsNorm r f := fun ⟨_, h⟩ =>
+  (hn ⟨_, hC.congrFun' h⟩).elim
+
+@[simp, aesop safe forward] def IsNorm.congrArg {r : Expr → Expr → Prop} [hC : Congruent r]
+  (hn : IsNorm r (DCC (f x))) : IsNorm r x := fun ⟨_, h⟩ =>
+  (hn ⟨_, hC.congrArg' h⟩).elim
+
+@[simp, aesop safe forward] def IsNorm.complete
+  {r : Expr → Expr → Prop}
+  {t : Expr → ℕ → Prop}
+  [hM : Measure t]
+  [hR : RedRel r t (m := Option) (hM := hM)]
+  (h : IsNorm r A) : (hR.run A) = Option.none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨e', ⟨h₂⟩⟩ heq
+  exact (h ⟨_, h₂⟩)
+
+open Rel in class SoundNorm {t : Expr → ℕ → Prop} [hM : Measure t]
   (r : Expr → Expr → Prop)
   [hR : RedRel r t (m := Option) (hM := hM)] where
-  norm_sound    : (hR.run A) = Option.none → IsNorm r A
-  norm_complete : (IsNorm r A) → (hR.run A) = Option.none
+  norm_sound    : (hR.run A).isSome →  ¬ IsNorm r A
+  norm_sound'   : (hR.run A) = Option.none → IsNorm r A
 
 class ExtRel (r : Expr → Expr → Prop) where
   ext (h₁ : r A B) (h₂ : r A B) : h₁ = h₂
@@ -246,13 +265,13 @@ If b is a normal form, then b' = b, since b' and b have a common reduct via Conf
 and if b ≠ b, then b also has a next reduct, but Norm b, so b' = b.
 -/
 
-open RedRel Measure DecidableNorm Confluent in theorem step_complete' {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
-  [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM)) [hN : DecidableNorm r (hR := hR)]
+open RedRel Measure SoundNorm Confluent in theorem step_complete' {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+  [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM)) [hN : SoundNorm r (hR := hR)]
   {A B : Expr} (hr : r A B) : ∃ B' hr', hR.run A = .some ⟨B', ⟨hr'⟩⟩ := by
   -- if run is none, then A is a norma value, but it is not.
   match heq : hR.run A with
   | .some ⟨B', ⟨h⟩⟩ => exact ⟨B', h, rfl⟩
-  | .none => exact (hN.norm_sound heq ⟨_, hr⟩).elim
+  | .none => exact (hN.norm_sound' heq ⟨_, hr⟩).elim
 
 /-
 If A → B, and Norm B, and A → B₂, then the diamond B -*> C and B₂ -*> C can only be constructed by
@@ -310,7 +329,7 @@ if there is a step, do induction to show
 reduce B' = B, then you're set.
 -/
 theorem RedRel.reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
-  [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM)) [hN : DecidableNorm r (hR := hR)] [Confluent r]
+  [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM)) [hN : SoundNorm r (hR := hR)] [Confluent r]
   {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (hR.reduce t A) = ⟨B, ⟨hr⟩⟩ := by
   simp [RedRel.reduce]
   split
@@ -342,7 +361,7 @@ theorem RedRel.reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ �
       match hr.cases_head with
       | .inl h => exact h
       | .inr ⟨_, hr, hrt⟩ =>
-        exact (hN.norm_sound hneq ⟨_, hr⟩).elim
+        exact (hN.norm_sound' hneq ⟨_, hr⟩).elim
     aesop
 termination_by (hM.size t A)
 
@@ -353,7 +372,7 @@ set_option diagnostics true
 
 instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM))
-  [hN : DecidableNorm r (hR := hR)] [Confluent r] : Complete.{0, 0, 0}
+  [hN : SoundNorm r (hR := hR)] [Confluent r] : Complete.{0, 0, 0}
     (r := Relation.ReflTransGen r) (P := IsNorm r) (hR := hR.to_reflTrans (r := r) (t := t) (hM := hM)) :=
   ⟨fun hr hn => hR.reduce_complete (r := r) (t := t) (hM := hM) hr hn⟩
 

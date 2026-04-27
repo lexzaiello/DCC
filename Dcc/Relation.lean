@@ -15,6 +15,8 @@ class Rel.{u} (r : α → β → Type u) (m : Type u → Type u := Id) [Monad m]
   run (x : α) : m ((y : β) × r x y)
   sound       : run x = pure ⟨y, h⟩ → r x y := fun _ => h
 
+def Rel.rel.{u} {r : α → β → Type u} {m : Type u → Type u} [Monad m] (_hR : Rel.{u} r (m := m)) : (α → β → Type u) := r
+
 open Rel in class Complete.{u} (r : α → β → Sort u) (m : Type u → Type u := Id) [hM : Monad m]
   [hR : Rel (fun x y => PULift.{u + 1, u} (r x y)) (m := m)] where
   complete : ∀ (h : r x y), hR.run x = hM.pure ⟨y, PULift.up h⟩
@@ -75,7 +77,7 @@ def RedRel.reduce {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t 
   | .none => ⟨e, ⟨.refl⟩⟩
 termination_by (hT.run e).fst
 
-open RedRel in def RedRel.Trans {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t) : RedRel (Relation.TransGen r) t where
+open RedRel in def RedRel.to_trans {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t) : RedRel (Relation.TransGen r) t where
   decreasing := fun h => by
     induction h with
     | single h =>
@@ -95,7 +97,46 @@ open RedRel in def RedRel.Trans {t : Expr → ℕ → Prop} [hT : Measure t] (hR
         | refl => simp_all
         | single h => exact h⟩⟩
 
-open RedRel in def RedRel.ReflTrans {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t) : Rel (fun x y => PLift (Relation.ReflTransGen r x y)) where
+open RedRel in def RedRel.to_reflTrans {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t) : Rel (fun x y => PLift (Relation.ReflTransGen r x y)) where
   run := hR.reduce
+
+def RedRel.ReflTrans {t : Expr → ℕ → Prop} [Measure t] {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m)) := Relation.ReflTransGen r
+def RedRel.Trans {t : Expr → ℕ → Prop} [Measure t] {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m))     := Relation.TransGen r
+
+open Rel in class Confluent (r : α → α → Prop) where
+  conf : (r A B) → (r A C) → ∃ D, Relation.ReflTransGen r B D ∧ Relation.ReflTransGen r C D
+
+open Rel in class Confluent.Global (r : α → α → Prop) where
+  conf : (Relation.ReflTransGen r A B) → (Relation.ReflTransGen r A C)
+    → ∃ D, Relation.ReflTransGen r B D ∧ Relation.ReflTransGen r C D
+
+open Confluent in instance RedRel.instGlobal
+  {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} {m : Type → Type}
+  [Measure t] [Monad m] [Confluent r]
+  (hR : RedRel r t (m := m)) : Confluent.Global r where
+  conf := fun {A B C} (h₁ : hR.ReflTrans A B) (h₂ : hR.ReflTrans A C) => by
+    induction A using hR.wellFounded.induction generalizing B C with
+    | h x ih =>
+      match h₁.cases_head, h₂.cases_head with
+      | .inl heq₁, .inl heq₂ =>
+        exact ⟨x, heq₁ ▸ .refl, heq₂ ▸ .refl⟩
+      | .inl heq₁, _ =>
+        exact ⟨C, heq₁ ▸ h₂, .refl⟩
+      | _, .inl heq₁ =>
+        exact ⟨B, .refl, heq₁ ▸ h₁⟩
+      | .inr ⟨C₁, hr₁, hrt₁⟩, .inr ⟨C₂, hr₂, hrt₂⟩ =>
+        have ⟨D, hrt₁b, hrt₂b⟩ := conf hr₁ hr₂
+        have ⟨_, hrtt₁, hrtt₁b⟩ := ih _ hr₁ hrt₁ hrt₁b
+        have ⟨_, hrtt₂, hrtt₂b⟩ := ih _ hr₂ hrt₂ hrt₂b
+        have ⟨_, h₁, h₂⟩ := ih _ hr₁ (hrt₁b.trans hrtt₁b) (hrt₁b.trans hrtt₂b)
+        exact ⟨_, .trans hrtt₁ h₁, .trans hrtt₂ h₂⟩
+
+theorem RedRel.norm_sound {r : Expr → Expr → Prop}
+  {t : Expr → ℕ → Prop}
+  [hM : Measure t] [hR : RedRel r t (m := Option)] (heq : hR.run A = .none) : hR.IsNorm A := by
+  intro ⟨e', hr⟩
+  have h := hR.decreasing hr
+  
+  sorry
 
 end Expr

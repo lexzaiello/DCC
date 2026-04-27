@@ -1,11 +1,20 @@
 import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
+import Mathlib.Tactic
 import Dcc.Ast
+import Qq
+import Lean
+import Lean.Elab
+import Mathlib.Tactic.CasesM
+
+namespace Expr
 
 syntax "decreases_obvious" : tactic
 
 macro_rules
   | `(tactic| decreases_obvious) => `(tactic| induction ‹_› <;> (simp_all; try grind))
+
+@[simp] theorem id_pure_ext {α : Type u} (x : α) : (pure x : Id α) = x := rfl
 
 class Rel.{u} (r : α → β → Type u) (m : Type u → Type u := Id) [Monad m] where
   run (x : α) : m ((y : β) × r x y)
@@ -15,8 +24,16 @@ open Rel in class Complete.{u} (r : α → β → Sort u) (m : Type u → Type u
   [hR : Rel (fun x y => PULift.{u + 1, u} (r x y)) (m := m)] where
   complete : ∀ (h : r x y), hR.run x = hM.pure ⟨y, PULift.up h⟩
 
-class Measure (r : Expr → ℕ → Prop)
+open Rel in class Measure (r : Expr → ℕ → Prop)
   extends Rel (fun x n => PULift.{1, 0} (r x n)), Complete r where
+  complete := by
+    intro x y h
+    induction h
+    all_goals (
+      simp_all [pure, id_pure_ext]
+      try rfl
+      try grind
+    )
 
 class RedRel (r : Expr → Expr → Prop) (t : Expr → ℕ → Prop)
   (m : Type → Type := Option) [Monad m]
@@ -65,3 +82,5 @@ open RedRel in def RedRel.Trans {t : Expr → ℕ → Prop} [hT : Measure t] (hR
         cases h with
         | refl => simp_all
         | single h => exact h⟩⟩
+
+end Expr

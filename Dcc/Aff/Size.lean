@@ -1,4 +1,5 @@
 import Dcc.Ast
+import Dcc.Relation
 import Mathlib.Tactic
 
 namespace Expr
@@ -24,7 +25,7 @@ inductive Size : Expr → ℕ → Prop
   | curr   : Size x m → Size (DCC Λ(α, β, x)) m.succ
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
 
-@[simp, grind] def size (e : Expr) : ((n : ℕ) × (PLift (Size e n))) :=
+@[aesop norm, simp, grind] def size (e : Expr) : ((n : ℕ) × (PULift.{1, 0} (Size e n))) :=
   match e with
   | DCC ∗ => ⟨_, ⟨.tintro⟩⟩
   | DCC ⊤ => ⟨_, ⟨.top⟩⟩
@@ -66,6 +67,9 @@ inductive Size : Expr → ℕ → Prop
     let ⟨_, ⟨h₁⟩⟩ := f.size
     let ⟨_, ⟨h₂⟩⟩ := x.size
     ⟨_, ⟨.app h₁ h₂⟩⟩
+
+instance Size.instMeasure : Measure Size where
+  run := size
 
 theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
 

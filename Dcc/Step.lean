@@ -1,4 +1,5 @@
 import Dcc.Ast
+import Dcc.Relation
 import Mathlib.Tactic
 
 namespace Expr

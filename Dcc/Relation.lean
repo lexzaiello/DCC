@@ -95,4 +95,7 @@ open RedRel in def RedRel.Trans {t : Expr → ℕ → Prop} [hT : Measure t] (hR
         | refl => simp_all
         | single h => exact h⟩⟩
 
+open RedRel in def RedRel.ReflTrans {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t) : Rel (fun x y => PLift (Relation.ReflTransGen r x y)) where
+  run := hR.reduce
+
 end Expr

@@ -201,6 +201,8 @@ open Congruent in theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : 
 
 @[simp] instance RedAff.instConf : Confluent RedAff := ⟨RedAff.conf⟩
 
+@[simp] instance instConfRedAffTrans : Confluent RedAff (m := Relation.ReflTransGen) := RedAff.instRedRel.globally_confluent
+
 def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
   change ∃ _, ∃ _, (step? _) = .some _
   unfold step?
@@ -254,7 +256,8 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
     simp_all
     cases hr <;> aesop
 
-instance RedAff.instSemicomplete : SemiComplete RedAff where
-  complete := semi_complete
+@[simp] instance RedAff.instSemicomplete : SemiComplete RedAff := ⟨semi_complete⟩
+
+@[simp] instance instComplete : Complete (Relation.ReflTransGen RedAff) (P := IsNorm RedAff) := RedAff.instRedRel.instComplete
 
 end Expr

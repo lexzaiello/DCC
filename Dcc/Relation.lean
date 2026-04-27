@@ -12,6 +12,8 @@ namespace Expr
 
 @[simp] theorem id_pure_ext {α : Type u} (x : α) : (pure x : Id α) = x := rfl
 
+def IsNorm.{u} {α : Type u} (r : α → α → Prop) (A : α) := ¬ ∃ B, r A B
+
 class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Type v) (m : Type (max v s) → Type (max v s) := Id) [hM : Monad m] where
   run (x : α) : m ((y : β) × (r x y))
   sound       : run x = pure ⟨y, h⟩ → r x y := fun _ => h
@@ -29,11 +31,15 @@ instance Complete.instDecidable.{u}
   {α : Type u}
   [DecidableEq α]
   (r : α → α → Prop)
+  (P : α → Prop := fun _ => True)
+  (hDec : outParam (∀ (a : α), Decidable (P a)) := by infer_instance)
   (hR : outParam (Rel.{u, 0, u} (fun (x : α) (y : α) => PULift.{1, 0} (r x y)) (m := Id)))
-  (hC : outParam (Complete.{u, 0, u} r)) : ∀ (A B : α), Decidable (r A B) := fun A B =>
+  (hC : outParam (Complete.{u, 0, u} r (P := P))) : ∀ (A B : α), Decidable (r A B ∧ P B) := fun A B =>
   if heq : (hR.run A).fst = B then
-    .isTrue (heq ▸ (hR.run A).snd.down)
-  else .isFalse (fun h => by simp [hC.complete h .intro] at *)
+    if heq₂ : P B then
+      .isTrue (⟨heq ▸ (hR.run A).snd.down, heq₂⟩)
+    else .isFalse (by simp_all)
+  else .isFalse (fun ⟨h, hp⟩ => by simp [hC.complete h hp] at *)
 
 open Rel in class Measure (r : Expr → ℕ → Prop)
   extends Rel.{0, 0, 0} (fun x n => PULift.{1, 0} (r x n)), Complete.{0} r where
@@ -61,8 +67,6 @@ class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ → Prop))
       try aesop
       try rfl)
 
-def IsNorm (r : Expr → Expr → Prop) (A : Expr) := ¬ ∃ B, r A B
-
 def IsNorm.unique {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : r A B) : A = B :=
   (hn ⟨_, hr⟩).elim
 
@@ -88,7 +92,7 @@ def RedRel.wellFounded {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ 
   {m : Type → Type} [Monad m] [hM : Measure t]
   (hR : RedRel r t (m := m) (hM := hM)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
 
-@[simp] def RedRel.reduce (t : outParam (Expr → ℕ → Prop)) [hT : Measure t] (hR : RedRel r t (hM := hT))
+@[simp] def RedRel.reduce {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t (hM := hT))
   (e : Expr) : ((e' : Expr) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
   match hR.run e with
   | .some ⟨e', ⟨h⟩⟩ =>
@@ -108,7 +112,7 @@ open RedRel in def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : 
       grind
   -- reducer given decreasing
   run (e : Expr) :=
-    let ⟨e', ⟨h⟩⟩ := reduce t e (hR := hR)
+    let ⟨e', ⟨h⟩⟩ := reduce e (hR := hR)
     if heq : e = e' then
       .none
     else
@@ -294,7 +298,7 @@ theorem triangle_collapse {r : Expr → Expr → Prop} {A B : Expr}
 theorem RedRel.reduce_norm
  {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM))
-  {A : Expr} (hn : IsNorm r A) : (hR.reduce t A) = ⟨A, ⟨.refl⟩⟩ := by
+  {A : Expr} (hn : IsNorm r A) : (hR.reduce A) = ⟨A, ⟨.refl⟩⟩ := by
   simp
   split
   case h_1 h _ =>
@@ -303,7 +307,7 @@ theorem RedRel.reduce_norm
 
 @[simp, aesop safe forward] theorem RedRel.reduce_norm_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM))
-  {A : Expr} (hn : IsNorm r A) : (hR.reduce t A).fst = A := by
+  {A : Expr} (hn : IsNorm r A) : (hR.reduce A).fst = A := by
   have h := hR.reduce_norm hn
   simp_all
 /-
@@ -333,7 +337,7 @@ reduce B' = B, then you're set.
 -/
 theorem RedRel.reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM)) [hN : SemiComplete r (hR := hR)] [Confluent r]
-  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (hR.reduce t A) = ⟨B, ⟨hr⟩⟩ := by
+  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (hR.reduce A) = ⟨B, ⟨hr⟩⟩ := by
   simp [RedRel.reduce]
   split
   -- hr is an actual step, not noop
@@ -355,7 +359,7 @@ theorem RedRel.reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ �
         have h₂ := hR.decreasing hrB'
         grind
       have h := hR.reduce_complete (.trans (.single hrB') hrt) hn
-      have h_fst : (hR.reduce t B').fst = B := by
+      have h_fst : (hR.reduce B').fst = B := by
         simp_all
       cases h_fst
       congr
@@ -366,11 +370,6 @@ theorem RedRel.reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ �
       have ⟨_, hA₁, hA₂⟩ := hN.complete hrb'
       simp_all
 termination_by ((hM.size t A), (hM.size t B))
-
---set_option trace.Meta.SynthInstance true
-set_option pp.universes true
-
-set_option diagnostics true
 
 instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM))

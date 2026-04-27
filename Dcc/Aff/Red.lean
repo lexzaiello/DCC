@@ -263,4 +263,17 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
 -- RedRel.reduce Size RedAff.instRedRel : (e : Expr) → (e' : Expr) × PULift (Relation.ReflTransGen RedAff e e')
 #check RedAff.instRedRel.reduce
 
+/-
+Messages here:
+266:0:
+Complete.instDecidable
+  RedAff : (hR : outParam (Rel (fun x y => PULift (x.RedAff y)) Id)) →
+  outParam (Complete RedAff (fun x => True) Id) → (A B : Expr) → Decidable (A.RedAff B)
+-/
+instance : Decidable (Relation.ReflTransGen RedAff A B ∧ IsNorm RedAff B) :=
+  let inst := Complete.instDecidable (r := Relation.ReflTransGen RedAff) (P := IsNorm RedAff) (by sorry)
+  if heq :  (by sorry) A B then
+    sorry
+  else sorry
+
 end Expr

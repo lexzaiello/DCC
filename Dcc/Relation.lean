@@ -33,7 +33,7 @@ open Rel in class Measure (r : Expr → ℕ → Prop)
     )
 
 class RedRel (r : Expr → Expr → Prop) (t : Expr → ℕ → Prop)
-  (m : Type → Type := Option) [Monad m]
+  (m : Type → Type := Option) [_hM : Monad m]
   [hM : Measure t] extends Rel (fun x y => PLift (r x y)) (m := m) where
   decreasing : r x y → (hM.run y).fst < (hM.run x).fst := by
     intro x y h
@@ -100,8 +100,66 @@ open RedRel in def RedRel.to_trans {t : Expr → ℕ → Prop} [hT : Measure t] 
 open RedRel in def RedRel.to_reflTrans {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t) : Rel (fun x y => PLift (Relation.ReflTransGen r x y)) where
   run := hR.reduce
 
-def RedRel.ReflTrans {t : Expr → ℕ → Prop} [Measure t] {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m)) := Relation.ReflTransGen r
-def RedRel.Trans {t : Expr → ℕ → Prop} [Measure t] {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m))     := Relation.TransGen r
+abbrev RedRel.ReflTrans {t : Expr → ℕ → Prop} [Measure t] {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m)) := Relation.ReflTransGen r
+abbrev RedRel.Trans {t : Expr → ℕ → Prop} [Measure t] {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m))     := Relation.TransGen r
+
+open Rel in class Congruent (r : Expr → Expr → Prop) where
+  congrFun_ (h : r f f') : r (DCC (f x)) (DCC (f' x)) := by exact .congrFun
+  congrArg_ (h : r x x') : r (DCC (f x)) (DCC (f x')) := by exact .congrArg
+  sigl_     (h : r x x') : r (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y)) := by exact .sigl
+  sigr_     (h : r y y') : r (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y')) := by exact .sigr
+
+theorem Congruent.congrFun' {r : Expr → Expr → Prop} [hR : Congruent r] (h : r f f') : r (DCC (f x)) (DCC (f' x)) :=
+  (hR.congrFun_ h)
+
+theorem Congruent.congrArg' {r : Expr → Expr → Prop} [hR : Congruent r] (h : r x x') : r (DCC (f x)) (DCC (f x')) :=
+  (hR.congrArg_ h)
+
+theorem Congruent.sigl' {r : Expr → Expr → Prop} [hR : Congruent r] (h : r x x') : r (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y)) :=
+  (hR.sigl_ h)
+
+theorem Congruent.sigr' {r : Expr → Expr → Prop} [hR : Congruent r] (h : r y y') : r (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y')) :=
+  (hR.sigr_ h)
+
+instance Congruent.trans {r : Expr → Expr → Prop} [hC : Congruent r] : Congruent (Relation.TransGen r) where
+  congrFun_ h := by
+    induction h with
+    | single h => exact .single (hC.congrFun' h)
+    | tail => exact .trans (by assumption) (.single (hC.congrFun' (by assumption)))
+  congrArg_ h := by
+    induction h with
+    | single h => exact .single (hC.congrArg' h)
+    | tail => exact .trans (by assumption) (.single (hC.congrArg' (by assumption)))
+  sigl_ h := by
+    induction h with
+    | single h => exact .single (hC.sigl' h)
+    | tail => exact .trans (by assumption) (.single (hC.sigl' (by assumption)))
+  sigr_ h := by
+    induction h with
+    | single h => exact .single (hC.sigr' h)
+    | tail => exact .trans (by assumption) (.single (hC.sigr' (by assumption)))
+
+instance Congruent.reflTrans {r : Expr → Expr → Prop} [hC : Congruent r] : Congruent (Relation.ReflTransGen r) where
+  congrFun_ h := by
+    rw [← Relation.reflGen_transGen] at *
+    cases h with
+    | single h => exact .single (hC.trans.congrFun' h)
+    | refl => exact .refl
+  congrArg_ h := by
+    rw [← Relation.reflGen_transGen] at *
+    cases h with
+    | single h => exact .single (hC.trans.congrArg' h)
+    | refl => exact .refl
+  sigl_ h := by
+    rw [← Relation.reflGen_transGen] at *
+    cases h with
+    | single h => exact .single (hC.trans.sigl' h)
+    | refl => exact .refl
+  sigr_ h := by
+    rw [← Relation.reflGen_transGen] at *
+    cases h with
+    | single h => exact .single (hC.trans.sigr' h)
+    | refl => exact .refl
 
 open Rel in class Confluent (r : α → α → Prop) where
   conf : (r A B) → (r A C) → ∃ D, Relation.ReflTransGen r B D ∧ Relation.ReflTransGen r C D
@@ -110,7 +168,7 @@ open Rel in class Confluent.Global (r : α → α → Prop) where
   conf : (Relation.ReflTransGen r A B) → (Relation.ReflTransGen r A C)
     → ∃ D, Relation.ReflTransGen r B D ∧ Relation.ReflTransGen r C D
 
-open Confluent in instance RedRel.instGlobal
+open Confluent in def RedRel.globally_confluent
   {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} {m : Type → Type}
   [Measure t] [Monad m] [Confluent r]
   (hR : RedRel r t (m := m)) : Confluent.Global r where
@@ -130,6 +188,27 @@ open Confluent in instance RedRel.instGlobal
         have ⟨_, hrtt₂, hrtt₂b⟩ := ih _ hr₂ hrt₂ hrt₂b
         have ⟨_, h₁, h₂⟩ := ih _ hr₁ (hrt₁b.trans hrtt₁b) (hrt₁b.trans hrtt₂b)
         exact ⟨_, .trans hrtt₁ h₁, .trans hrtt₂ h₂⟩
+
+/-
+Confluence diamond proofs
+
+are essentially this constructor repeated a bunch of times:
+
+| subst₁ =>
+  cases h₂ with
+  | subst₁ => exact ⟨_, .refl, .refl⟩
+  | congrFun h => cases h with
+    | congrFun h => cases h
+    | congrArg h => exact ⟨_, .congrFun (.congrArg (.single h)), .single .subst₁⟩
+  | congrArg h => cases h with
+    | sigl h => exact ⟨_, .congrArg (.single h), .single .subst₁⟩
+    | sigr h => exact ⟨_, .refl, .single .subst₁⟩
+
+(Relation.ReflTransGen r A B) → (Relation.ReflTransGen r A C)
+    → ∃ D, Relation.ReflTransGen r B D ∧ Relation.ReflTransGen r C D
+
+
+-/
 
 theorem RedRel.norm_sound {r : Expr → Expr → Prop}
   {t : Expr → ℕ → Prop}

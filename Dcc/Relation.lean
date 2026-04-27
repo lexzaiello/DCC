@@ -262,6 +262,14 @@ open Rel in class SemiComplete {t : Expr → ℕ → Prop} [hM : Measure t]
   [hR : RedRel r t (m := Option) (hM := hM)] where
   complete : r A B → ∃ B h, (hR.run A) = .some ⟨B, ⟨h⟩⟩
 
+theorem run_none {t : Expr → ℕ → Prop} [hM : Measure t]
+  (r : Expr → Expr → Prop)
+  [hR : RedRel r t (m := Option) (hM := hM)]
+  [hC : SemiComplete r] : hR.run A = .none → IsNorm r A := by
+  intro heq ⟨A', h_red⟩
+  have ⟨B, h₁, h₂⟩ := hC.complete h_red
+  simp_all
+
 class ExtRel (r : Expr → Expr → Prop) where
   ext (h₁ : r A B) (h₂ : r A B) : h₁ = h₂
 
@@ -310,6 +318,7 @@ theorem RedRel.reduce_norm
   {A : Expr} (hn : IsNorm r A) : (hR.reduce A).fst = A := by
   have h := hR.reduce_norm hn
   simp_all
+
 /-
 (RedRel R).reduce holds completeness because:
 
@@ -376,5 +385,20 @@ instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ → 
   [hN : SemiComplete r (hR := hR)] [Confluent r] : Complete.{0, 0, 0}
     (r := Relation.ReflTransGen r) (P := IsNorm r) (hR := hR.to_reflTrans (r := r) (t := t) (hM := hM)) :=
   ⟨fun hr hn => hR.reduce_complete (r := r) (t := t) (hM := hM) hr hn⟩
+
+theorem reduce_norm {t : Expr → ℕ → Prop} [hT : Measure t]
+  [hR : RedRel r t (hM := hT)]
+  [hN : SemiComplete r (hR := hR)]
+  (heq : RedRel.reduce hR A = ⟨B, ⟨h⟩⟩) : IsNorm r B := by
+  induction A using hR.wellFounded.induction generalizing B with
+  | h x ih =>
+    simp [RedRel.reduce] at heq
+    split at heq
+    case h_1 hred' heq' =>
+      have h := ih _ hred' (by cases heq; rfl)
+      simp_all
+    case h_2 heq' =>
+      have h_norm := (run_none r (by cases heq; exact heq'))
+      exact (h_norm.unique_refl h) ▸ h_norm
 
 end Expr

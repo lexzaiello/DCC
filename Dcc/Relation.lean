@@ -12,17 +12,28 @@ namespace Expr
 
 @[simp] theorem id_pure_ext {α : Type u} (x : α) : (pure x : Id α) = x := rfl
 
-class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Type v) (m : Type (max v s) → Type (max v s) := Id) [Monad m] where
+class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Type v) (m : Type (max v s) → Type (max v s) := Id) [hM : Monad m] where
   run (x : α) : m ((y : β) × (r x y))
   sound       : run x = pure ⟨y, h⟩ → r x y := fun _ => h
 
-def Rel.rel.{u, v, s} {α : Type u} {β : Type s} {r : α → β → Type v} {m : Type (max v s) → Type (max v s)} [Monad m]
+def Rel.rel.{u, v, s} {α : Type u} {β : Type s}
+  {r : α → β → Type v} {m : Type (max v s) → Type (max v s)} [Monad m]
   (_hR : Rel.{u, v, s} r (m := m)) : (α → β → Type v) := r
 
 open Rel in class Complete.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Sort v) (P : β → Prop := fun _ => True)
   (m : Type (max v s) → Type (max v s) := Id) [hm : Monad m]
   [hR : Rel.{u, v, s} (fun (x : α) (y : β) => PULift.{v + 1, v} (r x y)) (m := m)] where
   complete : ∀ (h : r x y) (_p : P y), hR.run x = hm.pure ⟨y, PULift.up h⟩
+
+instance Complete.instDecidable.{u}
+  {α : Type u}
+  [DecidableEq α]
+  (r : α → α → Prop)
+  (hR : outParam (Rel.{u, 0, u} (fun (x : α) (y : α) => PULift.{1, 0} (r x y)) (m := Id)))
+  (hC : outParam (Complete.{u, 0, u} r)) : ∀ (A B : α), Decidable (r A B) := fun A B =>
+  if heq : (hR.run A).fst = B then
+    .isTrue (heq ▸ (hR.run A).snd.down)
+  else .isFalse (fun h => by simp [hC.complete h .intro] at *)
 
 open Rel in class Measure (r : Expr → ℕ → Prop)
   extends Rel.{0, 0, 0} (fun x n => PULift.{1, 0} (r x n)), Complete.{0} r where
@@ -111,8 +122,8 @@ def RedRel.to_reflTrans {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   (fun x y => PULift.{1, 0} (Relation.ReflTransGen.{0} r x y)) Id.{0} where
   run := hR.reduce
 
-instance RedRel.instReflTransRel {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} 
-  [hM : Measure t] [hR : RedRel r t (m := Option) (hM := hM)] : 
+instance RedRel.instReflTransRel {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+  [hM : Measure t] [hR : RedRel r t (m := Option) (hM := hM)] :
   Rel.{0,0,0} (fun x y => PULift.{1,0} (Relation.ReflTransGen r x y)) Id.{0} :=
   hR.to_reflTrans
 
@@ -280,7 +291,8 @@ theorem triangle_collapse {r : Expr → Expr → Prop} {A B : Expr}
   | .inl heq => heq
   | .inr ⟨_c, hC, _hrt⟩ => (hn ⟨_, hC⟩).elim
 
-theorem RedRel.reduce_norm {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+theorem RedRel.reduce_norm
+ {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM))
   {A : Expr} (hn : IsNorm r A) : (hR.reduce t A) = ⟨A, ⟨.refl⟩⟩ := by
   simp

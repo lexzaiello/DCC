@@ -71,13 +71,4 @@ inductive Size : Expr → ℕ → Prop
 instance Size.instMeasure : Measure Size where
   run := size
 
-theorem Size.sound (_h : Expr.size e = ⟨n, ⟨h⟩⟩) : Size e n := h
-
-@[aesop safe destruct, grind =_, grind →, simp] theorem Size.complete (h : Size e n) : size e = ⟨n, .up h⟩ := by
-  induction h with
-  | sig | app' | pi | tintro | bot | top | snd' | id | snd | fst | sort => rfl
-  | comp _ _ ih₁ ih₂ | coup _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
-  | appl _ ih | quot _ ih | curr _ ih => rw [size, ih]
-  | subst _ _ ih₁ ih₂ | app _ _ ih₁ ih₂ | pair _ _ ih₁ ih₂ => rw [size, ih₁, ih₂]
-
 end Expr

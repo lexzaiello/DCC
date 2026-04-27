@@ -1,4 +1,5 @@
 import Dcc.Ast
+import Dcc.Aff.Size
 import Dcc.Relation
 import Mathlib.Tactic
 

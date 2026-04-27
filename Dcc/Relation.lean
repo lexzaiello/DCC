@@ -6,23 +6,26 @@ import Qq
 import Lean
 import Lean.Elab
 import Mathlib.Tactic.CasesM
+import Init.Prelude
 
 namespace Expr
 
 @[simp] theorem id_pure_ext {α : Type u} (x : α) : (pure x : Id α) = x := rfl
 
-class Rel.{u} (r : α → β → Type u) (m : Type u → Type u := Id) [Monad m] where
-  run (x : α) : m ((y : β) × r x y)
+class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Type v) (m : Type (max v s) → Type (max v s) := Id) [Monad m] where
+  run (x : α) : m ((y : β) × (r x y))
   sound       : run x = pure ⟨y, h⟩ → r x y := fun _ => h
 
-def Rel.rel.{u} {r : α → β → Type u} {m : Type u → Type u} [Monad m] (_hR : Rel.{u} r (m := m)) : (α → β → Type u) := r
+def Rel.rel.{u, v, s} {α : Type u} {β : Type s} {r : α → β → Type v} {m : Type (max v s) → Type (max v s)} [Monad m]
+  (_hR : Rel.{u, v, s} r (m := m)) : (α → β → Type v) := r
 
-open Rel in class Complete.{u} (r : α → β → Sort u) (P : β → Prop := fun _ => True) (m : Type u → Type u := Id) [hM : Monad m]
-  [hR : Rel (fun x y => PULift.{u + 1, u} (r x y)) (m := m)] where
-  complete : ∀ (h : r x y) (_p : P y), hR.run x = hM.pure ⟨y, PULift.up h⟩
+open Rel in class Complete.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Sort v) (P : β → Prop := fun _ => True)
+  (m : Type (max v s) → Type (max v s) := Id) [hm : Monad m]
+  [hR : Rel.{u, v, s} (fun (x : α) (y : β) => PULift.{v + 1, v} (r x y)) (m := m)] where
+  complete : ∀ (h : r x y) (_p : P y), hR.run x = hm.pure ⟨y, PULift.up h⟩
 
 open Rel in class Measure (r : Expr → ℕ → Prop)
-  extends Rel (fun x n => PULift.{1, 0} (r x n)), Complete r where
+  extends Rel.{0, 0, 0} (fun x n => PULift.{1, 0} (r x n)), Complete.{0} r where
   complete := by
     intro x y h _h
     induction h
@@ -32,11 +35,11 @@ open Rel in class Measure (r : Expr → ℕ → Prop)
       try grind
     )
 
-abbrev Measure.size {r : Expr → ℕ → Prop} [hM : Measure r] (e : Expr) : ℕ := (hM.run e).fst
+abbrev Measure.size (t : outParam (Expr → ℕ → Prop)) [hM : Measure t] (e : Expr) : ℕ := (hM.run e).fst
 
-class RedRel (r : Expr → Expr → Prop) (t : Expr → ℕ → Prop)
+class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ → Prop))
   (m : Type → Type := Option) [_hM : Monad m]
-  [hM : Measure t] extends Rel (fun x y => PULift.{1, 0} (r x y)) (m := m) where
+  [hM : Measure t] extends Rel.{0, 0, 0} (fun (x : Expr) (y : Expr) => PULift.{1, 0} (r x y)) (m := m) where
   decreasing : r x y → (hM.run y).fst < (hM.run x).fst := by
     intro x y h
     induction h
@@ -64,24 +67,24 @@ def IsNorm.unique_refl {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : (Rel
   | single h => exact hn.unique_trans h
 
 theorem RedRel.norm_complete {r : Expr → Expr → Prop}
-  {t : Expr → ℕ → Prop}
-  [hM : Measure t] [hR : RedRel r t (m := Option)] (h_norm : IsNorm r A) : (hR.run A) = .none := by
+  (t : outParam (Expr → ℕ → Prop))
+  [hM : Measure t] [hR : RedRel r t (hM := hM) (m := Option)] (h_norm : IsNorm r A) : (hR.run A) = .none := by
   apply Option.eq_none_iff_forall_ne_some.mpr
   intro ⟨e', ⟨h₂⟩⟩ heq
   exact (h_norm ⟨_, h₂⟩)
 
-def RedRel.sn {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+def RedRel.sn {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ → Prop))
   {m : Type → Type} [Monad m] [hM : Measure t]
-  (hR : RedRel r t (m := m)) (e : Expr) : Acc (fun b a => r a b) e := Acc.intro e (fun e' hr => by
+  (hR : RedRel r t (m := m) (hM := hM)) (e : Expr) : Acc (fun b a => r a b) e := Acc.intro e (fun e' hr => by
     have h := hR.decreasing hr
-    exact sn hR e')
+    exact sn t hR e')
 termination_by (hM.run e).fst
 
-def RedRel.wellFounded {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+def RedRel.wellFounded {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ → Prop))
   {m : Type → Type} [Monad m] [hM : Measure t]
-  (hR : RedRel r t (m := m)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
+  (hR : RedRel r t (m := m) (hM := hM)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
 
-@[simp] def RedRel.reduce {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t (hM := hT))
+@[simp] def RedRel.reduce (t : outParam (Expr → ℕ → Prop)) [hT : Measure t] (hR : RedRel r t (hM := hT))
   (e : Expr) : ((e' : Expr) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
   match hR.run e with
   | .some ⟨e', ⟨h⟩⟩ =>
@@ -91,7 +94,7 @@ def RedRel.wellFounded {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   | .none => ⟨e, ⟨.refl⟩⟩
 termination_by (hT.run e).fst
 
-open RedRel in def RedRel.to_trans {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t) : RedRel (Relation.TransGen r) t where
+open RedRel in def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : Measure t] (hR : RedRel r t (hM := hM)) : RedRel (Relation.TransGen r) (hM := hM) t where
   decreasing := fun h => by
     induction h with
     | single h =>
@@ -101,7 +104,7 @@ open RedRel in def RedRel.to_trans {t : Expr → ℕ → Prop} [hT : Measure t] 
       grind
   -- reducer given decreasing
   run (e : Expr) :=
-    let ⟨e', ⟨h⟩⟩ := reduce e (hR := hR)
+    let ⟨e', ⟨h⟩⟩ := reduce t e (hR := hR)
     if heq : e = e' then
       .none
     else
@@ -111,11 +114,17 @@ open RedRel in def RedRel.to_trans {t : Expr → ℕ → Prop} [hT : Measure t] 
         | refl => simp_all
         | single h => exact h⟩⟩
 
-open RedRel in def RedRel.to_reflTrans {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t) : Rel (fun x y => PULift.{1, 0} (Relation.ReflTransGen r x y)) where
+def RedRel.to_reflTrans {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} [hM : Measure t] (hR : RedRel r t (hM := hM) (m := Option)) : Rel.{0, 0, 0}
+  (fun x y => PULift.{1, 0} (Relation.ReflTransGen.{0} r x y)) Id.{0} where
   run := hR.reduce
 
-abbrev RedRel.ReflTrans {t : Expr → ℕ → Prop} [Measure t] {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m)) := Relation.ReflTransGen r
-abbrev RedRel.Trans {t : Expr → ℕ → Prop} [Measure t] {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m))     := Relation.TransGen r
+instance RedRel.instReflTransRel {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} 
+  [hM : Measure t] [hR : RedRel r t (m := Option) (hM := hM)] : 
+  Rel.{0,0,0} (fun x y => PULift.{1,0} (Relation.ReflTransGen r x y)) Id.{0} :=
+  hR.to_reflTrans
+
+abbrev RedRel.ReflTrans {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} [hM : Measure t] {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m) (hM := hM)) : Expr → Expr → Prop := Relation.ReflTransGen r
+abbrev RedRel.Trans {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} [hM : Measure t] {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m) (hM := hM)) : Expr → Expr → Prop    := Relation.TransGen r
 
 open Rel in class Congruent (r : Expr → Expr → Prop) where
   congrFun_ (h : r f f') : r (DCC (f x)) (DCC (f' x)) := by exact .congrFun
@@ -189,14 +198,14 @@ macro_rules
     | exact Congruent.sigr' (by assumption)
     | exact Congruent.sigr' (.single (by assumption))))
 
-
-open Rel in class Confluent (r : α → α → Prop) (m : (α → α → Prop) → α → α → Prop := fun p => p) where
-  conf : (m r A B) → (m r A C) → ∃ D, Relation.ReflTransGen r B D ∧ Relation.ReflTransGen r C D
+open Rel in class Confluent.{u} {α : Type u} (r : α → α → Prop)
+  (m : (α → α → Prop) → α → α → Prop := fun x => x) where
+  conf : (m r A B) → (m r A C) → ∃ D, Relation.ReflTransGen.{u} r B D ∧ Relation.ReflTransGen.{u} r C D
 
 open Confluent in def RedRel.globally_confluent
   {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} {m : Type → Type}
-  [Measure t] [Monad m] [hC : Confluent r]
-  [hR : RedRel r t (m := m)] : (Confluent r (m := Relation.ReflTransGen)) where
+  [hM : Measure t] [Monad m] [hC : Confluent r]
+  [hR : RedRel r t (m := m) (hM := hM)] : (Confluent r (m := Relation.ReflTransGen)) where
   conf := fun {A B C} (h₁ : hR.ReflTrans A B) (h₂ : hR.ReflTrans A C) => by
     induction A using hR.wellFounded.induction generalizing B C with
     | h x ih =>
@@ -214,8 +223,9 @@ open Confluent in def RedRel.globally_confluent
         have ⟨_, h₁, h₂⟩ := ih _ hr₁ (hrt₁b.trans hrtt₁b) (hrt₁b.trans hrtt₂b)
         exact ⟨_, .trans hrtt₁ h₁, .trans hrtt₂ h₂⟩
 
-open Rel in class DecidableNorm (r : Expr → Expr → Prop)
-  [hR : Rel (fun x y => PULift.{1, 0} (r x y)) (m := Option)] where
+open Rel in class DecidableNorm {t : Expr → ℕ → Prop} [hM : Measure t]
+  (r : Expr → Expr → Prop)
+  [hR : RedRel r t (m := Option) (hM := hM)] where
   norm_sound    : (hR.run A) = Option.none → IsNorm r A
   norm_complete : (IsNorm r A) → (hR.run A) = Option.none
 
@@ -237,7 +247,7 @@ and if b ≠ b, then b also has a next reduct, but Norm b, so b' = b.
 -/
 
 open RedRel Measure DecidableNorm Confluent in theorem step_complete' {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
-  [hM : Measure t] (hR : RedRel r t (m := Option)) [hN : DecidableNorm r]
+  [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM)) [hN : DecidableNorm r (hR := hR)]
   {A B : Expr} (hr : r A B) : ∃ B' hr', hR.run A = .some ⟨B', ⟨hr'⟩⟩ := by
   -- if run is none, then A is a norma value, but it is not.
   match heq : hR.run A with
@@ -261,8 +271,8 @@ theorem triangle_collapse {r : Expr → Expr → Prop} {A B : Expr}
   | .inr ⟨_c, hC, _hrt⟩ => (hn ⟨_, hC⟩).elim
 
 theorem RedRel.reduce_norm {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
-  [Measure t] (hR : RedRel r t (m := Option))
-  {A : Expr} (hn : IsNorm r A) : (hR.reduce A) = ⟨A, ⟨.refl⟩⟩ := by
+  [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM))
+  {A : Expr} (hn : IsNorm r A) : (hR.reduce t A) = ⟨A, ⟨.refl⟩⟩ := by
   simp
   split
   case h_1 h _ =>
@@ -270,8 +280,8 @@ theorem RedRel.reduce_norm {r : Expr → Expr → Prop} {t : Expr → ℕ → Pr
   case h_2 => congr
 
 @[simp, aesop safe forward] theorem RedRel.reduce_norm_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
-  [Measure t] (hR : RedRel r t (m := Option))
-  {A : Expr} (hn : IsNorm r A) : (hR.reduce A).fst = A := by
+  [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM))
+  {A : Expr} (hn : IsNorm r A) : (hR.reduce t A).fst = A := by
   have h := hR.reduce_norm hn
   simp_all
 /-
@@ -300,8 +310,8 @@ if there is a step, do induction to show
 reduce B' = B, then you're set.
 -/
 theorem RedRel.reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
-  [hM : Measure t] (hR : RedRel r t (m := Option)) [hN : DecidableNorm r] [Confluent r]
-  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (hR.reduce A) = ⟨B, ⟨hr⟩⟩ := by
+  [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM)) [hN : DecidableNorm r (hR := hR)] [Confluent r]
+  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (hR.reduce t A) = ⟨B, ⟨hr⟩⟩ := by
   simp [RedRel.reduce]
   split
   -- hr is an actual step, not noop
@@ -318,12 +328,12 @@ theorem RedRel.reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ �
       repeat simp_all
     | .inr ⟨_, hrB', hrt⟩ =>
       rename_i w
-      have h_dec : (hM.size B') < (hM.size A) := by
+      have h_dec : (hM.size t B') < (hM.size t A) := by
         have h₁ := hR.decreasing hr₂
         have h₂ := hR.decreasing hrB'
         grind
       have h := hR.reduce_complete (.trans (.single hrB') hrt) hn
-      have h_fst : (hR.reduce B').fst = B := by
+      have h_fst : (hR.reduce t B').fst = B := by
         simp_all
       cases h_fst
       congr
@@ -334,6 +344,17 @@ theorem RedRel.reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ �
       | .inr ⟨_, hr, hrt⟩ =>
         exact (hN.norm_sound hneq ⟨_, hr⟩).elim
     aesop
-termination_by (hM.size A)
+termination_by (hM.size t A)
+
+--set_option trace.Meta.SynthInstance true
+set_option pp.universes true
+
+set_option diagnostics true
+
+instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+  [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM))
+  [hN : DecidableNorm r (hR := hR)] [Confluent r] : Complete.{0, 0, 0}
+    (r := Relation.ReflTransGen r) (P := IsNorm r) (hR := hR.to_reflTrans (r := r) (t := t) (hM := hM)) :=
+  ⟨fun hr hn => hR.reduce_complete (r := r) (t := t) (hM := hM) hr hn⟩
 
 end Expr

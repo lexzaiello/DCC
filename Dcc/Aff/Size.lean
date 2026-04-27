@@ -68,6 +68,7 @@ inductive Size : Expr → ℕ → Prop
     let ⟨_, ⟨h₂⟩⟩ := x.size
     ⟨_, ⟨.app h₁ h₂⟩⟩
 
+@[simp]
 instance Size.instMeasure : Measure Size where
   run := size
 

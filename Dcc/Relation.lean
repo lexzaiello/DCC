@@ -9,11 +9,6 @@ import Mathlib.Tactic.CasesM
 
 namespace Expr
 
-syntax "decreases_obvious" : tactic
-
-macro_rules
-  | `(tactic| decreases_obvious) => `(tactic| induction ‹_› <;> (simp_all; try grind))
-
 @[simp] theorem id_pure_ext {α : Type u} (x : α) : (pure x : Id α) = x := rfl
 
 class Rel.{u} (r : α → β → Type u) (m : Type u → Type u := Id) [Monad m] where
@@ -38,8 +33,15 @@ open Rel in class Measure (r : Expr → ℕ → Prop)
 class RedRel (r : Expr → Expr → Prop) (t : Expr → ℕ → Prop)
   (m : Type → Type := Option) [Monad m]
   [hM : Measure t] extends Rel (fun x y => PLift (r x y)) (m := m) where
-  decreasing (h : r x y) : (hM.run y).fst < (hM.run x).fst := by
-    decreases_obvious
+  decreasing : r x y → (hM.run y).fst < (hM.run x).fst := by
+    intro x y h
+    induction h
+    all_goals (
+      try dsimp
+      try simp_all
+      try grind
+      try aesop
+      try rfl)
   IsNorm (e : Expr) := ¬ ∃ e', r e e'
 
 def RedRel.sn {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}

@@ -42,7 +42,17 @@ class RedRel (r : Expr → Expr → Prop) (t : Expr → ℕ → Prop)
       try grind
       try aesop
       try rfl)
-  IsNorm (e : Expr) := ¬ ∃ e', r e e'
+
+def RedRel.IsNorm {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} {m : Type → Type}
+  [Measure t] [Monad m] (_hR : RedRel r t (m := m)) (e : Expr) : Prop :=
+  ¬ ∃ e', r e e'
+
+theorem RedRel.IsNorm.complete {r : Expr → Expr → Prop}
+  {t : Expr → ℕ → Prop}
+  [hM : Measure t] [hR : RedRel r t (m := Option)] (h_norm : hR.IsNorm A) : (hR.run A) = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨e', ⟨h₂⟩⟩ heq
+  exact (h_norm ⟨_, h₂⟩)
 
 def RedRel.sn {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   {m : Type → Type} [Monad m] [hM : Measure t]

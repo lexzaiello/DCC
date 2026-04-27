@@ -264,16 +264,9 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
 #check RedAff.instRedRel.reduce
 
 /-
-Messages here:
-266:0:
-Complete.instDecidable
-  RedAff : (hR : outParam (Rel (fun x y => PULift (x.RedAff y)) Id)) →
-  outParam (Complete RedAff (fun x => True) Id) → (A B : Expr) → Decidable (A.RedAff B)
+Complete.complete
+  Id : ∀ (h : Relation.ReflTransGen RedAff ?m.8 ?m.9), IsNorm RedAff ?m.9 → Rel.run Id ?m.8 = pure ⟨?m.9, { down := h }⟩
 -/
-instance : Decidable (Relation.ReflTransGen RedAff A B ∧ IsNorm RedAff B) :=
-  let inst := Complete.instDecidable (r := Relation.ReflTransGen RedAff) (P := IsNorm RedAff) (by sorry)
-  if heq :  (by sorry) A B then
-    sorry
-  else sorry
+#check instComplete.complete
 
 end Expr

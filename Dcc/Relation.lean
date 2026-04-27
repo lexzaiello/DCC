@@ -55,12 +55,12 @@ def RedRel.wellFounded {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   {m : Type → Type} [Monad m] [hM : Measure t]
   (hR : RedRel r t (m := m)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
 
-def reduce {t : Expr → ℕ → Prop} [hT : Measure t] [hR : RedRel r t (hM := hT)]
+def RedRel.reduce {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t (hM := hT))
   (e : Expr) : ((e' : Expr) × (PLift (Relation.ReflTransGen r e e'))) :=
   match hR.run e with
   | .some ⟨e', ⟨h⟩⟩ =>
     have _size_ : (hT.run e').fst < (hT.run e).fst := hR.decreasing h
-    let ⟨e'', ⟨h₂⟩⟩ := reduce (r := r) (t := t) e'
+    let ⟨e'', ⟨h₂⟩⟩ := hR.reduce (r := r) (t := t) e'
     ⟨e'', ⟨.trans (.single h) h₂⟩⟩
   | .none => ⟨e, ⟨.refl⟩⟩
 termination_by (hT.run e).fst

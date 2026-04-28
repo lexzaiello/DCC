@@ -9,13 +9,28 @@ import Dcc.Judge
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘ Id(Sort 1)) (Sort 0))).infer
 
-def test_pair : Option Expr := do
+def mk_test_pair : Option Expr := do
   match ← (DCC Id(Sort 1)).infer with
   | ⟨DCC (Π(_f_α, β) _x), _⟩ =>
     let β' := Expr.reduce_all β
     let e := DCC (⟦2, Sort 1, β', β'⟧⟨Id(Sort 1), Id(Sort 1)⟩ (Sort 0))
-    Sigma.fst <$> e.infer
+    pure e
   | _ => .none
+
+def test_pair : Option Expr := do
+  let e ← mk_test_pair
+  Sigma.fst <$> e.infer
+
+def mk_test_pair₂ : Option Expr := do
+  match ← (DCC `(Sort 1, Id(Sort 1))).infer, ← (DCC Id(Sort 1)).infer with
+  | ⟨DCC (Π(_f_α, β₁) _x), _⟩, ⟨DCC (Π(_f_α₂, β₂) _x₂), _⟩ =>
+    let β'₁ := β₁.reduce_all
+    let β'₂ := β₂.reduce_all
+    let e := DCC (⟦2, Sort 1, β'₁, β'₂⟧⟨`(Sort 1, Id(Sort 1)), Id(Sort 1)⟩ (Sort 0))
+    .some e
+  | _, _ => .none
+
+#eval (Expr.reduce_all <$> mk_test_pair₂)
 
 #eval Expr.reduce_all <$> test_pair
 
@@ -57,9 +72,11 @@ App(Id(Sort 1)
 -/
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
 def test_app : Option Expr := do
-  Sigma.fst <$> (DCC (App'(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1)))
+  let e ← mk_test_pair₂
+  dbg_trace (Std.format ∘ Sigma.fst) <$> e.infer
+  Sigma.fst <$> (DCC (App'(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)))
     (Sort 1)
-    ⟦`((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), Sort 1)⟧(Id(Sort 1), Sort 0))).infer
+    e)).infer
 
 /-
 (Σ(`(⊤, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))) ∗)
@@ -107,3 +124,16 @@ Id(Sort 1)
 I should have gotten f_α and f_β corrrectly.
 The main challenge is the structure of the Σ itself.
 -/
+
+/-
+Subst(x, Snd(Λ(δ, f_α, f_t_snd ∘ Fstc(f_α₂)))) (y, z) = x env z
+
+x depends on the environment and snd, and snd (z) depends on the environment,
+but not fst.
+
+A good example of this is projecting over pairs.
+-/
+def test_subst_snd : Option Expr := do
+  let p ← mk_test_pair
+  
+  sorry

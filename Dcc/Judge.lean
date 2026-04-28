@@ -160,7 +160,7 @@ inductive Judge : Expr → Expr → Prop where
     → Judge (DCC (Subst(x, Snd(Λ(δ, f_α, f_t_snd ∘ Fstc(f_α)))))) τ
   | app'   : Judge f_α (arrow δ (DCC Sort m) o)
     → Judge f_β (Pi.f_β.type f_α δ o n)
-    → Reduces (App'.type₂ f_α f_β δ o m n) τ
+    → Reduces (App'.type₃ f_α f_β δ o) τ
     → Judge (DCC App'(f_α, f_β)) τ
   | appl   : Judge f_α (arrow δ (DCC Sort m) o)
     → Judge f_β (Pi.f_β.type f_α δ o n)

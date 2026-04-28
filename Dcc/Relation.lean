@@ -92,15 +92,18 @@ def RedRel.wellFounded {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ 
   {m : Type → Type} [Monad m] [hM : Measure t]
   (hR : RedRel r t (m := m) (hM := hM)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
 
-@[simp] def RedRel.reduce {t : Expr → ℕ → Prop} [hT : Measure t] (hR : RedRel r t (hM := hT))
+@[simp] def reduce {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
   (e : Expr) : ((e' : Expr) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
   match hR.run e with
   | .some ⟨e', ⟨h⟩⟩ =>
     have _size_ : (hT.run e').fst < (hT.run e).fst := hR.decreasing h
-    let ⟨e'', ⟨h₂⟩⟩ := hR.reduce (r := r) (t := t) e'
+    let ⟨e'', ⟨h₂⟩⟩ := reduce r (t := t) e'
     ⟨e'', ⟨.trans (.single h) h₂⟩⟩
   | .none => ⟨e, ⟨.refl⟩⟩
 termination_by (hT.run e).fst
+
+@[simp] abbrev reduce' {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
+  (e : Expr) : Expr := (reduce r e).fst
 
 open RedRel in def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : Measure t] (hR : RedRel r t (hM := hM)) : RedRel (Relation.TransGen r) (hM := hM) t where
   decreasing := fun h => by
@@ -112,7 +115,7 @@ open RedRel in def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : 
       grind
   -- reducer given decreasing
   run (e : Expr) :=
-    let ⟨e', ⟨h⟩⟩ := reduce e (hR := hR)
+    let ⟨e', ⟨h⟩⟩ := reduce r e
     if heq : e = e' then
       .none
     else
@@ -124,7 +127,7 @@ open RedRel in def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : 
 
 def RedRel.to_reflTrans {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} [hM : Measure t] (hR : RedRel r t (hM := hM) (m := Option)) : Rel.{0, 0, 0}
   (fun x y => PULift.{1, 0} (Relation.ReflTransGen.{0} r x y)) Id.{0} where
-  run := hR.reduce
+  run := reduce r
 
 instance RedRel.instReflTransRel {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] [hR : RedRel r t (m := Option) (hM := hM)] :
@@ -280,7 +283,7 @@ open Confluent in theorem norm_unique {r : Expr → Expr → Prop} {m : (Expr �
 theorem RedRel.reduce_norm
  {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM))
-  {A : Expr} (hn : IsNorm r A) : (hR.reduce A) = ⟨A, ⟨.refl⟩⟩ := by
+  {A : Expr} (hn : IsNorm r A) : (reduce r A) = ⟨A, ⟨.refl⟩⟩ := by
   simp
   split
   case h_1 h _ =>
@@ -289,7 +292,7 @@ theorem RedRel.reduce_norm
 
 @[simp] theorem RedRel.reduce_norm_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM))
-  {A : Expr} (hn : IsNorm r A) : (hR.reduce A).fst = A := by
+  {A : Expr} (hn : IsNorm r A) : (reduce r A).fst = A := by
   have h := hR.reduce_norm hn
   simp_all
 
@@ -320,8 +323,8 @@ reduce B' = B, then you're set.
 -/
 theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
-  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (hR.reduce A) = ⟨B, ⟨hr⟩⟩ := by
-  simp [RedRel.reduce]
+  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A) = ⟨B, ⟨hr⟩⟩ := by
+  simp [reduce]
   split
   -- hr is an actual step, not noop
   -- we get B', make a diamond with B to C, and show B = C since B IsNorm
@@ -342,7 +345,7 @@ theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
         have h₂ := hR.decreasing hrB'
         grind
       have h := reduce_complete (.trans (.single hrB') hrt) hn
-      have h_fst : (hR.reduce B').fst = B := by
+      have h_fst : (reduce r B').fst = B := by
         simp_all
       cases h_fst
       congr
@@ -354,22 +357,28 @@ theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
       simp_all
 termination_by ((hM.size t A), (hM.size t B))
 
+theorem reduce_complete_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+  [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
+  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).fst = B := by
+  have h := reduce_complete hr hn
+  simp_all
+
 instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM))
   [hN : SemiComplete r (hR := hR)] [Confluent r] : Complete.{0, 0, 0}
     (r := Relation.ReflTransGen r) (P := IsNorm r) (hR := hR.to_reflTrans (r := r) (t := t) (hM := hM)) :=
   ⟨fun hr hn => reduce_complete (r := r) (t := t) (hM := hM) hr hn⟩
 
-theorem reduce_sound {t : Expr → ℕ → Prop} [hT : Measure t] [hR : RedRel r t (hM := hT)]
-  (_heq : RedRel.reduce hR A = ⟨B, ⟨h⟩⟩) : Relation.ReflTransGen r A B := h
+theorem reduce_sound {t : Expr → ℕ → Prop} [hT : Measure t] [RedRel r t (hM := hT)]
+  (_heq : reduce r A = ⟨B, ⟨h⟩⟩) : Relation.ReflTransGen r A B := h
 
 theorem reduce_norm {t : Expr → ℕ → Prop} [hT : Measure t]
   [hR : RedRel r t (hM := hT)]
   [hN : SemiComplete r (hR := hR)]
-  (heq : RedRel.reduce hR A = ⟨B, ⟨h⟩⟩) : IsNorm r B := by
+  (heq : reduce r A = ⟨B, ⟨h⟩⟩) : IsNorm r B := by
   induction A using hR.wellFounded.induction generalizing B with
   | h x ih =>
-    simp [RedRel.reduce] at heq
+    simp [reduce] at heq
     split at heq
     case h_1 hred' heq' =>
       have h := ih _ hred' (by cases heq; rfl)

@@ -1,28 +1,39 @@
 import Dcc.Ast
 import Dcc.Types
-import Dcc.Step
-import Dcc.Eta
+import Dcc.Aff.Red
+import Dcc.Meta.Red
+import Dcc.Eta.Red
+import Mathlib.Logic.Relation
 
 namespace Expr
 
 inductive Reduces : Expr → Expr → Prop
-  | mk : RedAffReflTrans A B → IsNormAff B → RedMetaReflTrans B C → IsNormMeta C → RedEtaReflTrans C D → IsNormEta D → Reduces A D
+  | mk : Relation.ReflTransGen RedAff A B
+    → IsNorm RedAff B
+    → Relation.ReflTransGen RedMeta B C
+    → IsNorm RedMeta C
+    → Relation.ReflTransGen RedEta C D
+    → IsNorm RedEta D
+    → Reduces A D
 
 @[simp] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d, e, f⟩ ⟨g, h, i, j, k, l⟩ => by
-  have ha := a.norm_unique b g h
-  have hb := c.norm_unique d (ha ▸ i) j
-  exact e.norm_unique f (hb ▸ k) l
+  have ha := norm_unique a b g h
+  have hb := norm_unique c d (ha ▸ i) j
+  exact norm_unique e f (hb ▸ k) l
 
 @[simp] theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
   have h := h₁.unique h₂
   cases h
   congr
 
-@[simp, aesop safe destruct, aesop safe apply] theorem Reduces.complete : Reduces A B → (reduce_η ∘ reduce_meta ∘ reduce) A = B :=
+@[simp, aesop safe destruct, aesop safe apply] theorem Reduces.complete : Reduces A B → (reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff) A = B :=
   fun ⟨ha, hb, hc, hd, he, hf⟩ => by
-    have h₁ := ha.complete hb
-    have h₂ := hc.complete hd
-    have h₃ := he.complete hf
+    unfold reduce'
+    have h₁ := reduce_complete_fst ha hb
+    have h₂ := reduce_complete_fst hc hd
+    have h₃ := reduce_complete_fst he hf
+    
+    rw [← h₃]
     simp_all
 
 def reduce_reduces (h : (reduce_η ∘ reduce_meta ∘ reduce) A = B) : Reduces A B := ⟨reduce_sound rfl, reduce_norm rfl, reduce_meta_sound rfl, reduce_meta_norm rfl, reduce_η_sound h, reduce_η_norm h⟩

@@ -12,19 +12,19 @@ import Dcc.Judge
 def test_pair : Option Expr := do
   match ← (DCC Id(Sort 1)).infer with
   | ⟨DCC (Π(_f_α, β) _x), _⟩ =>
-    let β' := β.reduce.reduce_η
+    let β' := Expr.reduce_all β
     let e := DCC (⟦2, Sort 1, β', β'⟧⟨Id(Sort 1), Id(Sort 1)⟩ (Sort 0))
     Sigma.fst <$> e.infer
   | _ => .none
 
-#eval ((Expr.reduce)) <$> test_pair
+#eval Expr.reduce_all <$> test_pair
 
 #eval Std.format test_pair
 
 def test_pair_comp : Option Expr := do
   match ← (DCC Id(Sort 1)).infer with
   | ⟨DCC (Π(_f_α, β) _x), _⟩ =>
-    let β' := β.reduce.reduce_η
+    let β' := Expr.reduce_all β
     let e := DCC (⟦2, Sort 1, β', β'⟧⟨Id(Sort 1), Id(Sort 1)⟩)
     Sigma.fst <$> e.infer
   | _ => .none

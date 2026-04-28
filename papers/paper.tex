@@ -139,7 +139,7 @@ Curien extends the combinators with type annotations \autocite[p. 220]{CURIEN198
 { \alpha : \text{Type}, \beta : \text{Type}}
 { App(\alpha, \beta) : ((\alpha \rightarrow \beta) \times \alpha) \rightarrow \beta}&
 \inferrule[App]
-{ f : \alpha \rightarrow \beta\\ x : \alpha} 
+{ f : \alpha \rightarrow \beta x : \alpha} 
 { f x : \beta}
 \end{tabular}
 \end{center}
@@ -169,9 +169,9 @@ We interpret \(\Sigma\)-types as a telescope context as usual. Finally, as in th
 
 \begin{figure}[h!]
   \centering
-  \begin{equation}\label{pi_example}
+  \begin{equation}\label{infer_pi}
     \inferrule [Pi]
-    { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi(s : \delta)(x : f_\alpha(s)).\sort{o}}
+    { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi(s : \delta)(x : f_\alpha s),\sort{o}}
     { \Pi(f_\alpha, f_\beta) : \delta \rightarrow \sort{o}}
   \end{equation}
 \end{figure}
@@ -200,7 +200,7 @@ In the untyped categorical combinators, Curry-Uncurry can be written as:
   \end{split}
 \end{equation}
 
-In a dependently-typed categorical combinator calculus where couples are naively interpreted as \(\Sigma\) pairs with point-free type arguments, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially in an affine setting. In \(\textit{Uncurry}(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reducing the pair application. \(App\) has no knowledge of \(y\), and thus cannot calculate the type of \((x y, z)\). We circumvent this contention by indexing \(\Sigma\) with a map of the environment \(f_\beta : \Pi(s : \delta)(x : f_\alpha(s)).\sort{n}\) \eqref{infer_sigma_types}, similarly to the point \(x\) in Curry (\(\Lambda(x)\)).
+In a dependently-typed categorical combinator calculus where couples are naively interpreted as \(\Sigma\) pairs with point-free type arguments, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially in an affine setting. In \(\textit{Uncurry}(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reducing the pair application. \(App\) has no knowledge of \(y\), and thus cannot calculate the type of \((x y, z)\). We circumvent this contention by indexing \(\Sigma\) with a map of the environment \(f_\beta : \Pi(s : \delta)(x : f_\alpha s).\sort{n}\) \eqref{infer_sigma_types}, similarly to the point \(x\) in Curry (\(\Lambda(x)\)).
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_sigma_types}
@@ -211,11 +211,11 @@ In a dependently-typed categorical combinator calculus where couples are naively
 \caption{Where \(\delta\) denotes an arbitrary environment and \(\alpha\) denotes the \(fst\) component. \(\Sigma(f_\beta) (env : \delta) : \sort{max(m, n)}\)}
 \end{figure}
 
-We thus define couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\), where the environment conveys no extra meaningful information, and \(\beta\) depends only on \(fst\). We represent a no-op indexing of the environment with a unit type \(\top\) so as to avoid universe arguments to \(\Sigma\). For legibility, we use the notation \(Coup(\beta)\) to refer to the type of a couple where \(\beta : \alpha \rightarrow \sort{n}\).
+We thus define couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\), where the environment conveys no extra meaningful information, and \(\beta\) depends only on \(fst\). We represent a no-op indexing of the environment with a unit type \(\top\) so as to avoid universe arguments to \(\Sigma\). For legibility, we use the notation \(Coup(\beta)\) to refer to the type of a couple where \(\beta : \alpha \rightarrow \sort{n}\) \eqref{coup_def}. We always refer to couples with their \(\beta\) points, since they cannot be reasonable inferred. We use the notation \(f(x, y)\) to denote application for readability purposes.
 
 \begin{figure}[h!]
   \centering
-    \begin{align*}
+    \begin{align*}\label{coup_def}
     \inferrule[Top]
     { }
     { \top : \sort{0}}\ &
@@ -246,22 +246,22 @@ All combinator objects have type annotations specified as points (usually as fam
 
 \subsection{Inference Rules}\label{infer_rules}
 
-We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We use the notation \(\Pi(x : A).B(x)\) to illustrate our inference rules. We omit some type points for legibility. However, the full combinatory types are accessible in the appendix \eqref{appendix:sup}. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(f_\alpha, f_\beta) s\).
+We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We use the notation \(\Pi(x : A),B(x)\) to illustrate our inference rules. We omit some type points for legibility. However, the full combinatory types are accessible in the appendix \eqref{appendix:sup}. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(f_\alpha, f_\beta) s\).
 
 \subsubsection{Application and \(\Pi\)}
 
-The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha(s)\). Since \(f_\alpha(s)\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object (see inference rule \eqref{pi_example}) without causing nontermination. In practice, we normalize types eagerly, but we do not always indicate so in our inference rules (see \eqref{appendix:sup}). We use \(\rightarrow^{!}\) to denote star-step affine reduction to a normal form.
+The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha s\). Since \(f_\alpha s\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object (see inference rule \eqref{infer_pi}) without causing nontermination. In practice, we normalize types eagerly, but we do not always indicate so in our inference rules (see \eqref{appendix:sup}). We use \(\rightarrow^{!}\) to denote star-step affine reduction to a normal form.
 
 \begin{figure}[h!]
 \begin{equation}
   \inferrule[App]
-  { f : \Pi(f_\alpha, f_\beta) s\\ f_\alpha(x) \rightarrow^{!} \alpha\\ x : \alpha_{2}\\ \alpha_{2} \rightarrow^{!} \alpha\\ f_\beta(s, x) \rightarrow^{!} \beta}
+  { f : \Pi(f_\alpha, f_\beta) s, f_\alpha x \rightarrow^{!} \alpha\\ x : \alpha_{2}, \alpha_{2} \rightarrow^{!} \alpha\\ f_\beta s x \rightarrow^{!} \beta}
   { f x : \beta}
 \end{equation}
 \caption{Inference rule: application}
 \end{figure}
 
-Since we do not make use of variables, \(\Pi\) is itself a combinator (\(\Pi(f_\alpha, f_\beta)\)) dependent on an environment and the argument \(x\). Since the dependency is internalized by \(f_\alpha\) and \(f_\beta\), its type can be expressed with an arrow \eqref{pi_example}.
+Since we do not make use of variables, \(\Pi\) is itself a combinator (\(\Pi(f_\alpha, f_\beta)\)) dependent on an environment and the argument \(x\). Since the dependency is internalized by \(f_\alpha\) and \(f_\beta\), its type can be expressed with an arrow \eqref{infer_pi}.
 
 \subsubsection{Arrow types}
 
@@ -277,7 +277,7 @@ We define nondependent arrows (\(A \rightarrow B\)) as such \(\Pi\) objects quot
 
 \subsubsection{Couple Projections}
 
-We define dependent and nondependent versions of the \(Snd\) projection to bootstrap several of the combinators' types. We also derive a \(Sndc\) combinator which accepts a coupe not depending on an environment. \(Fst(\beta)\) is not dependent, since \(\alpha\) does not refer to any object in context. Composition (\(f \circ g\)) is nondependent with respect to \(g\), although \(f\) may depend on \(g(x)\). A form of semi-dependent can be derived if \(g\) gives its dependency by a couple (\(g(x) : \Sigma(\ldots) \ldots\)).
+We define dependent and nondependent versions of the \(Snd\) projection to bootstrap several of the combinators' types. We also derive a \(Sndc\) combinator which accepts a coupe not depending on an environment. \(Fst(\beta)\) is not dependent, since \(\alpha\) does not refer to any object in context. Composition (\(f \circ g\)) is nondependent with respect to \(g\), although \(f\) may depend on \(g x\). A form of semi-dependent can be derived if \(g\) gives its dependency by a couple (\(g x : \Sigma(\ldots) \ldots\)).
 The inference rules for projection on \(\Sigma\)-terms are as such:\\
 
 \begin{figure}[h]
@@ -285,13 +285,13 @@ The inference rules for projection on \(\Sigma\)-terms are as such:\\
   \begin{tabularx}{\textwidth}{X X X X X X}
     \multicolumn{3}{c}{\inferrule[Fst]
     {\alpha : \sort{m}, \delta : \sort{o}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
-    {Fst(\beta) : \Pi (env : \delta) (s : \Sigma(f_\beta)\ s).\alpha}} &
+    {Fst(\beta) : \Pi (env : \delta) (s : \Sigma(f_\beta)\ s),\alpha}} &
     \multicolumn{3}{c}{\inferrule[Snd]
     {\alpha : \sort{m}, \delta : \sort{o}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
-    {Snd(\beta) : \Pi (env : \delta) (s : \Sigma(f_\beta)\ s).f_\beta(env, Fst(f_\beta)\ env\ s)}} \\\\
+    {Snd(\beta) : \Pi (env : \delta) (s : \Sigma(f_\beta)\ s), f_{\beta}\ env\ (Fst(f_\beta) \textit{env} s))}} \\\\
     \multicolumn{2}{c}{\inferrule[Snd']
     {\alpha : \sort{m}, \beta : \sort{n}}
-    {Snd'(\alpha, \beta) : Coup(\alpha, `(\alpha, \beta)) \rightarrow \beta}} &
+    {Snd'(\alpha, \beta) : Coup(`(\alpha, \beta)) \rightarrow \beta}} &
     \multicolumn{2}{c}{\inferrule
     { }
     {Sndc(\beta) \coloneq Snd(`(\top, \beta)) \ast}}&
@@ -301,7 +301,7 @@ The inference rules for projection on \(\Sigma\)-terms are as such:\\
   \end{tabularx}\\
 \end{figure}
 
-\subsubsection{Identity combinator}
+\subsubsection{Identity}
 
 \(Id\) accepts \(\alpha\) as a point, but not a function of the environment. A type-point-free variant of \(Id\) can be derived easily with Curry (\(\Lambda\)). The type of \(Id(\alpha)\) is a simple arrow:
 
@@ -313,7 +313,7 @@ The inference rules for projection on \(\Sigma\)-terms are as such:\\
 
 \subsubsection{Composition}
 
-We have nondependent composition as in Curien's combinators, except that the codomain of \(f\) can depend on \(g(x)\), but the codomain of \(g\) cannot depend on \(x\) \eqref{nondep_comp}. Allowing both \(f\) and \(g\) to depend on their inputs would require duplicating the argument \(x\), which would not satisfy our affine restriction on types.
+We have nondependent composition as in Curien's combinators, except that the codomain of \(f\) can depend on \(g x\), but the codomain of \(g\) cannot depend on \(x\) \eqref{nondep_comp}. Allowing both \(f\) and \(g\) to depend on their inputs would require duplicating the argument \(x\), which would not satisfy our affine restriction on types.
 
 \begin{figure}[h!]
   \centering
@@ -329,20 +329,20 @@ Despite composition being only half-dependent, full dependency can be recovered 
 
 \subsubsection{Pairs}
 
-\textbf{TODO: left off here with updates.} Recall \(\langle f, g \rangle x = (f x, g x)\). We extend the pair operator with type arguments \(\beta\), \(\gamma\), which dictate the types of the resulting \(fst\), and \(snd\) component, respectively. All arguments, up to \(x\), are given by points \eqref{pair_infer}.
+Recall \(\langle f, g \rangle x = (f x, g x)\). We extend the pair operator with type and universe-level arguments \(m\), \(\alpha\), \(f_{\beta}\), and \(f_{\gamma}\), which dictate the types of the resulting \(fst\), and \(snd\) components, respectively. All arguments, up to \(x\), are given by points \eqref{pair_infer}. \(f\) and \(g\) may depend on \(x\), but \(g x\) does not depend on \(f x\), as this would require changing the pair rule.
 
 \begin{figure}[h!]
   \centering
   \begin{equation}\label{pair_infer}
     \inferrule[Pair]
-    { \beta : \sort{n}, \gamma : \beta \rightarrow \sort{o}, f : \alpha \rightarrow \beta, g : \Pi(x : \alpha). \gamma(f x)}
-    { \llbracket \beta, \gamma \rrbracket \langle f, g \rangle : \alpha \rightarrow \Sigma(\beta, \gamma)}
+    { f : \Pi(x : \alpha), \beta \alpha x\\ g : \Pi (x : \alpha), \gamma \alpha x}
+    { \llbracket m, \alpha, \beta, \gamma \rrbracket \langle f, g \rangle : \Pi (x : \alpha), `(\sort{m}, \Sigma (\Lambda (\alpha, \beta \alpha, \gamma \circ Fstc(f_\beta alpha))))}
   \end{equation}
 \end{figure}
 
 \subsubsection{Quotation}
 
-The quotation operator (\(`(\alpha, \beta, x)\)) is not dependent, but a dependent version like the dependent \(K\) combinator can be derived as in our \(Id(m)\) derivation \eqref{point_free_derivation}.
+The quotation operator (\(`(\alpha, \beta, x)\)) is not dependent, but a dependent version like the dependent \(K\) combinator can be derived.
 
 \begin{figure}[h]
   \centering
@@ -353,31 +353,40 @@ The quotation operator (\(`(\alpha, \beta, x)\)) is not dependent, but a depende
   \end{equation}
 \end{figure}
 
-\subsubsection{Tail and head-dependent Curry}
+\subsubsection{Curry}
 
-Recall \(\Lambda(x) y z = x (y, z)\). Since \(x\) is applied a \(\Sigma\)-couple, \(z\) must depend on \(y\). That is, \(z : \beta(y)\). However, \(x\) also depends on the couple \(\llbracket \alpha, \beta \rrbracket (y, z)\). To keep usages of \(y\) and \(z\) affine, we define two versions of \(\Lambda(x)\). The former, \(\Lambda'(\alpha, \beta, x)\) is ``head-dependent'', in that \(z\) may depend on \(y\), but \(x\) has a fixed codomain \eqref{head_curry}. The latter, \(\Lambda(\alpha, x)\) is ``tail-dependent'', in that \(y\) is itself a sort, z is an inhabitant of \(y\), and \(x\) depends on \(\llbracket \alpha, Id(\alpha) \rrbracket (y, z)\) \eqref{tail_curry}.
-
-\begin{figure}[h!]
-\begin{equation}\label{head_curry}
-  \inferrule[Head Curry]
-  {\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, x : \Sigma(\alpha, \beta) \rightarrow \gamma}
-  {\Lambda'(\alpha, \beta, x) : \Pi(x : \alpha, y : \beta(x)). \gamma}
-\end{equation}
-\caption{Inference rule: head-dependent curry}
-\end{figure}
+Recall \(\Lambda(x) y z = x (y, z)\). Since \(x\) is applied a \(\Sigma\)-couple, \(z\) must depend on \(y\). That is, \(z : \beta y\). However, \(x\) also depends on the couple \(\llbracket \alpha, \beta \rrbracket (y, z)\). Our inference rule for application \eqref{infer_app} proves to be useful, since terms in context can be used more than once in a \(\Pi\) tree, so long as they are used at most once in each argument type.
 
 \begin{figure}[h!]
-\begin{equation}\label{tail_curry}
-  \inferrule[Tail Curry]
-  {\alpha : \sort{m + 1}, x : \Pi(s : \Sigma(\alpha, Id(\alpha))). \gamma(s)}
-  {\Lambda(\alpha, x) : \Pi(x : \alpha, y : x). \gamma (\llbracket Id(\alpha) \rrbracket (x, y))}
+\begin{equation}\label{infer_curry}
+  \inferrule[Curry]
+  {\beta : \alpha \rightarrow \sort{n}, x : (\Pi (x : f_\alpha x_\alpha), \gamma x), (f_\alpha x_\alpha) \rightarrow^{!} Coup(\beta)}
+  {\Lambda'(\alpha, \beta, x) : \Pi(x : \alpha) (y : \beta x), \Lambda(\alpha, \beta, \gamma x_\alpha)\ x y}
 \end{equation}
-\caption{Inference rule: tail-dependent curry}
+\caption{Inference rule: curry}
 \end{figure}
 
-\subsubsection{App combinator}
+\subsubsection{App and Subst combinator}
 
-As in Curien's combinators, the \(App\) combinator evaluates a couple as a computation. We extend \(App\) with type arguments (\(App(n, \alpha, \beta)\)) and give it the obvious dependent type \eqref{infer_app}.
+As in Curien's combinators, the \(App\) combinator evaluates a couple as a computation. We intuitively mirror the inference rule for \(\Pi\), in that the types points for \(App\) embody Tarski universes \eqref{infer_app}. In fact, the types of the points \(f_\alpha\) and \(f_\beta\) are the exact same as in \(\Pi\). However, as in \(\Pi\), \(f_\beta\) depends both on the environment, and \(f\) in the type of \(App(f_\alpha, f_\beta) \llbracket \ldots \rrbracket (f, x)\). Furthermore, since \(f : \Pi(f_\alpha, f_\beta) (env : \delta)\), the environment must be duplicated across the codomain \(f_\beta\) and the \(Snd\) projection of \(\llbracket \ldots \rrbracket (f, x)\). This would seem to violate our affine requirement. Hence, we make use of a \(Subst\) construction, which behaves similarly to the \(S\) combinator. However, we view the environment as being computationally irrelevant. \(Subst\) can thus be viewed as performing context substitution, determining only the respective types. We only define \(Subst\) on projections, since no other usages are required to express our metatheory (although they may be beneficial for practical expressivity) \eqref{subst_defs}.
+
+\begin{figure}[h!]
+  \centering
+  \begin{align*}\label{subst_defs}
+    \inferrule[Subst_{Fst}^{\rightarrow}]
+    { }
+    { Subst(x, Fst(f_\beta)) \textit{env} \llbracket \beta \rrbracket (y, z) \rightarrow x \textit{env} y} &
+    \inferrule[Subst_{Snd}^{\rightarrow}]
+    { }
+    { Subst(x, Snd(f_\beta)) \textit{env} \llbracket \beta \rrbracket (y, z) \rightarrow x \textit{env} z}\\
+    \inferrule[Subst_{Fst}]
+    { x : \Pi (env : \delta) (x : \alpha), \gamma env x }
+    { Subst(x, Fst(f_\beta)) : \Pi (\textit{env} : \delta) (s : \Sigma(\beta)), Subst(\gamma, Fst(\beta)) \textit{env} s}
+    \inferrule[Subst_{Snd}]
+    { x : \Pi (\textit{env} : \delta) (x : f_{\beta} \textit{env}), \beta \textit{env} x}
+    { f_{\beta s} \coloneq \Lambda(\delta, f_\alpha, f_\beta \circ Fstc(f_\alpha)) Subst(x, Snd(f_{\beta s})) : \Pi (\textit{env} : \delta) (s : \Sigma(f_{\beta s})), Subst(\beta, Fst(f_{\beta s})) \textit{env} s}
+  \end{align*}
+\end{figure}
 
 % \begin{figure}[h!]
 %   \centering
@@ -394,9 +403,9 @@ As in Curien's combinators, the \(App\) combinator evaluates a couple as a compu
 \begin{figure}[H]
   \centering
   \begin{equation}\label{infer_app}
-    \inferrule[Appl]
-    { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-    { App(n, \alpha, \beta) : \Pi(x : \Sigma(\Pi(x : \alpha), \beta(x), \alpha)). \beta(Snd\ x) }
+    \inferrule [Pi]
+    { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi(s : \delta)(x : f_\alpha s),\sort{o}}
+    { t_{\beta x y} \coloneq \Lambda(\delta, \Pi(f_\alpha, f_\beta), f_\alpha \circ Fstc(\Pi(f_\alpha, f_\beta))), App(f_\alpha, f_\beta) : \Pi(env : \delta) (s : \Sigma(t_{\beta x y}) env), Subst(f_\beta, Snd(t_{\beta x y}))}
   \end{equation}
   \caption{Inference rule for \(App\) written illustratively.}
 \end{figure}
@@ -1139,16 +1148,11 @@ To Jake, for teaching me lambda-calculus.
 
 \section{Todos left}
 
-\subsection{\textit{Subst} combinator and \textit{App'}}
-
-The \textit{App'} combinator is what I am using to duplicate 
-
 \begin{itemize}
-  \item Subst operation: Subst combinator is used in only one place, but it is very powerful. Subst duplicates the environment across two points, but only if env is consumed to determine a type, not as a computation. This allows a decreasing measure. I would like to have this in the final version, as it enables the \(\lambda\)-calculus compilation app case, which I am still stuck on. All the current types are totally fine.
-    \begin{itemize}
-      \item This also plugs the hole with the distinction between App and App'.
-      \item Can achieve this with a lexicographic ordering of TyArity and the syntactic size.
-    \end{itemize}
+  \item Notation inconsistencies: I mix and match \(f(x, y)\) and \(f x y\). \(f x y\) is the preferred notation. Mixing and matching notation for our calculus and normal inference rule notation is also ambiguous and confusing. How to handle this?
+  \item My notation for application is ugly. Usually application is written as \(f x\), not \(f\ x\)
+  \item More background: want a reference for telescope
+  \item More background: want a reference for Tarski universes that isn't ncatlab
   \item If time permits, I want to finish the \(\lambda\)-calculus compiler.
 \end{itemize}
 

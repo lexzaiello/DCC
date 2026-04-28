@@ -1,6 +1,7 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
 \newcommand{\comment}[1]{}
+\usepackage{tabularx}
 \usepackage{hyperref}
 \usepackage{mathtools}
 \usepackage{float}
@@ -17,6 +18,8 @@
 \newmintinline[lean]{lean4}{bgcolor=white}
 \newminted[leancode]{lean4}{fontsize=\footnotesize}
 \usemintedstyle{tango}
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
 
 \usepackage{amsthm}
 \usepackage{authblk}
@@ -39,7 +42,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-  We present an extension of the categorical combinators \autocite{CURIEN1986188} to symmetric monoidal categories, enabling affine dependent typing of the categorical, non-linear combinators. We formalize the metatheory in the Lean 4 proof assistant. We prove several important properties of the calculus, including that type-checking is decidable, and that the affine restriction of the combinators is strongly-normalizing, and globally confluent. We achieve judgmental decidability in principle by showing that the types of all objects can be expressed using the affine restriction, which we demonstrate is strongly-normalizing by a syntactic decreasing measure. We outline key challenges and architectural strategies for formalizing a dependent combinator calculus with such properties in a proof assistant, and describe our progress towards compiling a \(\lambda\)-calculus with dependent types (\(\Pi\)-types and \(\Sigma\)-types) to our combinators.
+  We present an extension of the categorical combinators \autocite{CURIEN1986188} to symmetric monoidal categories, enabling affine dependent types of the nonlinear categorical combinator terms. We formalize the metatheory in the Lean 4 proof assistant. We prove several important properties of the calculus, including that type-checking is decidable, and that the affine restriction of the combinators is strongly-normalizing, and globally confluent. We achieve judgmental decidability in principle by showing that the types of all objects can be expressed using the affine restriction, which we demonstrate is strongly-normalizing by a syntactic decreasing measure. We outline key challenges and architectural strategies for formalizing a dependent combinator calculus with such properties in a proof assistant, and describe our progress towards compiling a \(\lambda\)-calculus with dependent types (\(\Pi\)-types and \(\Sigma\)-types) to our combinators.
 
   % May want to note the design decisions that allowed affinely expressing not obviously affine types. How is this interesting?
   % TODO: this will come to us more after re-writing the inference rules. Some category theory reference.
@@ -168,7 +171,7 @@ We interpret \(\Sigma\)-types as a telescope context as usual. Finally, as in th
   \centering
   \begin{equation}\label{pi_example}
     \inferrule [Pi]
-    { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi(s : \delta)(x : f_\alpha(s)), \sort{o}}
+    { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi(s : \delta)(x : f_\alpha(s)).\sort{o}}
     { \Pi(f_\alpha, f_\beta) : \delta \rightarrow \sort{o}}
   \end{equation}
 \end{figure}
@@ -185,7 +188,7 @@ Recall the usual typing of a \(\Sigma\)-pair:
 { \Gamma \vdash \Sigma(\alpha, \beta) : \sort{max(m, n)}}
 \end{equation}
 
-A \(\Sigma\)-type can be placed under a \(\lambda\)-binder, referencing bound variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) \autocite[50]{martin1984intuitionistic}, in that a function \(\Pi(x : \alpha)(y : \beta(x)), \gamma(x, y)\) can be transformed into a dependent function \(\Pi(s : \Sigma(\alpha, \beta)), \gamma(fst(s), snd(s))\), and vice-versa (``currying''-''uncurrying'').
+A \(\Sigma\)-type can be placed under a \(\lambda\)-binder, referencing bound variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) \autocite[50]{martin1984intuitionistic}, in that a function \(\Pi(x : \alpha)(y : \beta(x)). \gamma(x, y)\) can be transformed into a dependent function \(\Pi(s : \Sigma(\alpha, \beta)).\gamma(fst(s), snd(s))\), and vice-versa (``currying''-''uncurrying'').
 
 In the untyped categorical combinators, Curry-Uncurry can be written as:
 
@@ -197,7 +200,7 @@ In the untyped categorical combinators, Curry-Uncurry can be written as:
   \end{split}
 \end{equation}
 
-In a dependently-typed categorical combinator calculus where couples are naively interpreted as \(\Sigma\) pairs with point-free type arguments, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially in an affine setting. In \(\textit{Uncurry}(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reducing the pair application. \(App\) has no knowledge of \(y\), and thus cannot calculate the type of \((x y, z)\). We circumvent this contention by indexing \(\Sigma\) with a map of the environment \(f_\beta : \Pi(s : \delta)(x : f_\alpha(s)), \sort{n}\) \eqref{infer_sigma_types}, similarly to the point \(x\) in Curry (\(\Lambda(x)\)).
+In a dependently-typed categorical combinator calculus where couples are naively interpreted as \(\Sigma\) pairs with point-free type arguments, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially in an affine setting. In \(\textit{Uncurry}(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reducing the pair application. \(App\) has no knowledge of \(y\), and thus cannot calculate the type of \((x y, z)\). We circumvent this contention by indexing \(\Sigma\) with a map of the environment \(f_\beta : \Pi(s : \delta)(x : f_\alpha(s)).\sort{n}\) \eqref{infer_sigma_types}, similarly to the point \(x\) in Curry (\(\Lambda(x)\)).
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_sigma_types}
@@ -243,7 +246,7 @@ All combinator objects have type annotations specified as points (usually as fam
 
 \subsection{Inference Rules}\label{infer_rules}
 
-We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We also use the notation \(\Pi(x : A), B(x)\), and may omit type arguments for legibility to give an illustration of a type. However, the full combinatory types are accessible in the appendix \eqref{appendix:sup}. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(f_\alpha, f_\beta) s\).
+We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We use the notation \(\Pi(x : A).B(x)\) to illustrate our inference rules. We omit some type points for legibility. However, the full combinatory types are accessible in the appendix \eqref{appendix:sup}. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(f_\alpha, f_\beta) s\).
 
 \subsubsection{Application and \(\Pi\)}
 
@@ -275,26 +278,32 @@ We define nondependent arrows (\(A \rightarrow B\)) as such \(\Pi\) objects quot
 \subsubsection{Couple Projections}
 
 We define dependent and nondependent versions of the \(Snd\) projection to bootstrap several of the combinators' types. We also derive a \(Sndc\) combinator which accepts a coupe not depending on an environment. \(Fst(\beta)\) is not dependent, since \(\alpha\) does not refer to any object in context. Composition (\(f \circ g\)) is nondependent with respect to \(g\), although \(f\) may depend on \(g(x)\). A form of semi-dependent can be derived if \(g\) gives its dependency by a couple (\(g(x) : \Sigma(\ldots) \ldots\)).
-The inference rules for projection on couples are as such \textbf{TODO: UPDATING LEFT OFF HERE, CONTINUE TOMORROW MORNING}:\\
+The inference rules for projection on \(\Sigma\)-terms are as such:\\
 
 \begin{figure}[h]
   \centering
-  \begin{tabular}{c c}
-    \inferrule[Fst]
-    {\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-    {Fst(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \alpha}&
-    \inferrule[Snd']
-    {\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-    {Snd'(\alpha, \beta) : \Sigma(\alpha, \beta) \rightarrow \beta}\\\\
-  \end{tabular}
-  \inferrule[Snd]
-    {\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-    {Snd(\alpha, \beta) : \Pi(s : \Sigma(\alpha, \beta)), \beta(Snd\ s)}
+  \begin{tabularx}{\textwidth}{X X X X X X}
+    \multicolumn{3}{c}{\inferrule[Fst]
+    {\alpha : \sort{m}, \delta : \sort{o}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
+    {Fst(\beta) : \Pi (env : \delta) (s : \Sigma(f_\beta)\ s).\alpha}} &
+    \multicolumn{3}{c}{\inferrule[Snd]
+    {\alpha : \sort{m}, \delta : \sort{o}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
+    {Snd(\beta) : \Pi (env : \delta) (s : \Sigma(f_\beta)\ s).f_\beta(env, Fst(f_\beta)\ env\ s)}} \\\\
+    \multicolumn{2}{c}{\inferrule[Snd']
+    {\alpha : \sort{m}, \beta : \sort{n}}
+    {Snd'(\alpha, \beta) : Coup(\alpha, `(\alpha, \beta)) \rightarrow \beta}} &
+    \multicolumn{2}{c}{\inferrule
+    { }
+    {Sndc(\beta) \coloneq Snd(`(\top, \beta)) \ast}}&
+    \multicolumn{2}{c}{\inferrule
+    { }
+    {Fstc(\beta) \coloneq Fst(`(\top, \beta)) \ast}}
+  \end{tabularx}\\
 \end{figure}
 
 \subsubsection{Identity combinator}
 
-As do all other combinators, \(Id\) accepts \(\alpha\) as a point. Its type is a simple arrow:
+\(Id\) accepts \(\alpha\) as a point, but not a function of the environment. A type-point-free variant of \(Id\) can be derived easily with Curry (\(\Lambda\)). The type of \(Id(\alpha)\) is a simple arrow:
 
 \begin{equation}
   \inferrule[Id]
@@ -302,47 +311,9 @@ As do all other combinators, \(Id\) accepts \(\alpha\) as a point. Its type is a
   {Id(\alpha) : \alpha \rightarrow \alpha}
 \end{equation}
 
-\subsubsection{Flip combinator}
+\subsubsection{Composition}
 
-We extend Curien's combinators \autocite{CURIEN1986188} with a \(Flip(x)\) combinator. We do so to avoid copying when applying an argument under \(\Pi(m, n)\) as the domain of a subsequent \(\Pi(n, o) \beta\) object:
-
-\begin{equation}
-  \inferrule[Flip]
-  { x : \alpha \rightarrow \beta \rightarrow \gamma}
-  { Flip(x) : \beta \rightarrow \alpha \rightarrow \gamma}
-\end{equation}
-
-\subsubsection{Dependent and nondependent composition}
-
-We have nondependent composition as in Curien's combinators, and add a dependent version. Naively interpreting composition as dependent leads to the \(S\) combinator, so we use our \(\Sigma\)-couples to avoid duplication and preserve dependency.
-
-\begin{equation}
-  \inferrule[Naive comp.]
-  { f : \Pi(x : \alpha), \beta(x), g : \Pi(x : ?), \gamma (f x)}
-  { (g \circ f) : \Pi(x : \alpha), \gamma (f x)}
-\end{equation}
-
-Note that the codomain of \(f\) depends on \(x : \alpha\), but the domain of \(g\) also depends on \(f x : \beta(x)\). By duplicating \(x\), \(?\) can be determined:
-
-\begin{figure}[h!]
-\begin{equation}
-  \inferrule[Naive comp.]
-  { f : \Pi(x : \alpha), \beta(x), g : \Pi(x : \alpha, y : \beta(x)), \gamma x (f x)}
-  { (g \circ f) : \Pi(x : \alpha), \gamma (f x)}
-\end{equation}
-\end{figure}
-
-We avoid copying \(x\) altogether by stipulating that \(f\) produce a couple \(\Sigma(\alpha, \beta)\). As such, duplication is handed off to term-level \(\beta\)-reduction, and our types remain affine. We define composition point-free, up to the type arguments \({\alpha, \beta, \gamma}\) \eqref{comp}. The type of the nondependent composition operator is the same as in Curien's simply-typed combinators \autocite[p. 220]{CURIEN1986188} \eqref{nondep_comp}.
-
-\begin{figure}[h!]
-  \centering
-  \begin{equation}\label{comp}
-    \inferrule[Comp.]
-    { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, \gamma : \Sigma(\alpha, \beta) \rightarrow \sort{o}}
-    { \llbracket \alpha, \beta, \gamma \rrbracket \circ : \Pi(f : \alpha \rightarrow \Sigma(\alpha, \beta), g : \Pi(x : \Sigma(\alpha, \beta)), \gamma(x), x : \alpha), \gamma(f x)}
-  \end{equation}
-  \caption{Inference rule: composition in illustrative notation.}
-\end{figure}
+We have nondependent composition as in Curien's combinators, except that the codomain of \(f\) can depend on \(g(x)\), but the codomain of \(g\) cannot depend on \(x\) \eqref{nondep_comp}. Allowing both \(f\) and \(g\) to depend on their inputs would require duplicating the argument \(x\), which would not satisfy our affine restriction on types.
 
 \begin{figure}[h!]
   \centering
@@ -354,15 +325,17 @@ We avoid copying \(x\) altogether by stipulating that \(f\) produce a couple \(\
   \caption{Inference rule: nondependent composition}
 \end{figure}
 
+Despite composition being only half-dependent, full dependency can be recovered when \(g\) produces a \(\Sigma\)-term encoding its dependency (i.e., \(g : A \rightarrow Coup(B)\), where \(B : A \rightarrow \sort{n}\)).
+
 \subsubsection{Pairs}
 
-Recall \(\langle f, g \rangle x = (f x, g x)\). We extend the pair operator with type arguments \(\beta\), \(\gamma\), which dictate the types of the resulting \(fst\), and \(snd\) component, respectively. All arguments, up to \(x\), are given by points \eqref{pair_infer}.
+\textbf{TODO: left off here with updates.} Recall \(\langle f, g \rangle x = (f x, g x)\). We extend the pair operator with type arguments \(\beta\), \(\gamma\), which dictate the types of the resulting \(fst\), and \(snd\) component, respectively. All arguments, up to \(x\), are given by points \eqref{pair_infer}.
 
 \begin{figure}[h!]
   \centering
   \begin{equation}\label{pair_infer}
     \inferrule[Pair]
-    { \beta : \sort{n}, \gamma : \beta \rightarrow \sort{o}, f : \alpha \rightarrow \beta, g : \Pi(x : \alpha), \gamma(f x)}
+    { \beta : \sort{n}, \gamma : \beta \rightarrow \sort{o}, f : \alpha \rightarrow \beta, g : \Pi(x : \alpha). \gamma(f x)}
     { \llbracket \beta, \gamma \rrbracket \langle f, g \rangle : \alpha \rightarrow \Sigma(\beta, \gamma)}
   \end{equation}
 \end{figure}
@@ -388,7 +361,7 @@ Recall \(\Lambda(x) y z = x (y, z)\). Since \(x\) is applied a \(\Sigma\)-couple
 \begin{equation}\label{head_curry}
   \inferrule[Head Curry]
   {\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, x : \Sigma(\alpha, \beta) \rightarrow \gamma}
-  {\Lambda'(\alpha, \beta, x) : \Pi(x : \alpha, y : \beta(x)), \gamma}
+  {\Lambda'(\alpha, \beta, x) : \Pi(x : \alpha, y : \beta(x)). \gamma}
 \end{equation}
 \caption{Inference rule: head-dependent curry}
 \end{figure}
@@ -396,8 +369,8 @@ Recall \(\Lambda(x) y z = x (y, z)\). Since \(x\) is applied a \(\Sigma\)-couple
 \begin{figure}[h!]
 \begin{equation}\label{tail_curry}
   \inferrule[Tail Curry]
-  {\alpha : \sort{m + 1}, x : \Pi(s : \Sigma(\alpha, Id(\alpha))), \gamma(s)}
-  {\Lambda(\alpha, x) : \Pi(x : \alpha, y : x), \gamma \llbracket \alpha, Id(\alpha) \rrbracket (x, y)}
+  {\alpha : \sort{m + 1}, x : \Pi(s : \Sigma(\alpha, Id(\alpha))). \gamma(s)}
+  {\Lambda(\alpha, x) : \Pi(x : \alpha, y : x). \gamma (\llbracket Id(\alpha) \rrbracket (x, y))}
 \end{equation}
 \caption{Inference rule: tail-dependent curry}
 \end{figure}
@@ -423,7 +396,7 @@ As in Curien's combinators, the \(App\) combinator evaluates a couple as a compu
   \begin{equation}\label{infer_app}
     \inferrule[Appl]
     { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-    { App(n, \alpha, \beta) : \Pi(x : \Sigma(\Pi(x : \alpha), \beta(x), \alpha)), \beta(Snd\ x) }
+    { App(n, \alpha, \beta) : \Pi(x : \Sigma(\Pi(x : \alpha), \beta(x), \alpha)). \beta(Snd\ x) }
   \end{equation}
   \caption{Inference rule for \(App\) written illustratively.}
 \end{figure}

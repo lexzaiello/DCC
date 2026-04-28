@@ -27,13 +27,13 @@ inductive RedMeta : Expr → Expr → Prop
       have h := norm_unique hrt₁ hnorm₁ hrt₂ hnorm₂
       simp_all
 
-open Congruent in theorem RedMeta.conf (h₁ : RedMeta A B) (h₂ : RedMeta A C) : ∃ D, RedMeta.instRedRel.ReflTrans B D ∧ RedMeta.instRedRel.ReflTrans C D :=
+open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedMeta.conf (h₁ : RedMeta A B) (h₂ : RedMeta A C) : ∃ D, RedMeta.instRedRel.ReflTrans B D ∧ RedMeta.instRedRel.ReflTrans C D :=
   have h := RedMeta.unique h₁ h₂
   ⟨B, .refl, h ▸ .refl⟩
 
-@[simp] instance RedMeta.instConf : Confluent RedMeta := ⟨RedMeta.conf⟩
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedMeta.instConf : Confluent RedMeta := ⟨RedMeta.conf⟩
 
-@[simp] instance instConfRedMetaTrans : Confluent RedMeta (m := Relation.ReflTransGen) := RedMeta.instRedRel.globally_confluent
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instConfRedMetaTrans : Confluent RedMeta (m := Relation.ReflTransGen) := RedMeta.instRedRel.globally_confluent
 
 def meta_semi_complete {A B : Expr} (hr : A.RedMeta B) : ∃ B', ∃ (h : A.RedMeta B'), (step_meta? A) = .some ⟨B', ⟨h⟩⟩ := by
   induction hr with
@@ -41,8 +41,8 @@ def meta_semi_complete {A B : Expr} (hr : A.RedMeta B) : ∃ B', ∃ (h : A.RedM
     have hc := reduce_complete hrt hn
     refine ⟨_, .appl hrt hn, by repeat (first | simp_all [dcc_step] | congr)⟩
 
-@[simp] instance RedMeta.instSemicomplete : SemiComplete RedMeta := ⟨meta_semi_complete⟩
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedMeta.instSemicomplete : SemiComplete RedMeta := ⟨meta_semi_complete⟩
 
-@[simp] instance instCompleteMeta : Complete (Relation.ReflTransGen RedMeta) (P := IsNorm RedMeta) := RedMeta.instRedRel.instComplete
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instCompleteMeta : Complete (Relation.ReflTransGen RedMeta) (P := IsNorm RedMeta) := RedMeta.instRedRel.instComplete
 
 end Expr

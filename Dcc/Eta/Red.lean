@@ -28,7 +28,7 @@ inductive RedEta : Expr → Expr → Prop
   | uncur     : RedEta (DCC Λ(α, β,
     (App'(_f_α, _f_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
 
-@[simp] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
+@[dcc_step, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
   | DCC (Λ(α, _b, `(_c, x)) y) =>
     if heq : DCC (Λ(α, _b, `(_c, x)) y) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
@@ -75,7 +75,7 @@ inductive RedEta : Expr → Expr → Prop
   | (DCC ⟦_m, _a, _b, _c⟧⟨(Fst(_β) _env), (Snd(_β₂) _env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
   | _ => .none
 
-@[simp] instance RedEta.instRedRel : RedRel RedEta EtaSize where
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedEta.instRedRel : RedRel RedEta EtaSize where
   run := step_eta?
 
 @[simp] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
@@ -103,18 +103,18 @@ open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : 
   have h := h₁.unique h₂
   exact ⟨B, h ▸ .refl, h ▸ .refl⟩
 
-@[simp] instance RedEta.instConf : Confluent RedEta := ⟨RedEta.conf⟩
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedEta.instConf : Confluent RedEta := ⟨RedEta.conf⟩
 
-@[simp] instance instConfRedEtaTrans : Confluent RedEta (m := Relation.ReflTransGen) := RedEta.instRedRel.globally_confluent
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instConfRedEtaTrans : Confluent RedEta (m := Relation.ReflTransGen) := RedEta.instRedRel.globally_confluent
 
 theorem RedEta.complete (h_red : RedEta A B) : step_eta? A = .some ⟨B, ⟨h_red⟩⟩ := by
-  induction h_red <;> (unfold step_eta?; aesop)
+  induction h_red <;> (unfold step_eta?; aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel]))
 
 def eta_semi_complete {A B : Expr} (h_red : A.RedEta B) : ∃ B', ∃ (h : A.RedEta B'), (step_eta? A) = .some ⟨B', ⟨h⟩⟩ :=
   ⟨_, _, h_red.complete⟩
 
-@[simp] instance RedEta.instSemicomplete : SemiComplete RedEta := ⟨eta_semi_complete⟩
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedEta.instSemicomplete : SemiComplete RedEta := ⟨eta_semi_complete⟩
 
-@[simp] instance instCompleteEta : Complete (Relation.ReflTransGen RedEta) (P := IsNorm RedEta) := RedEta.instRedRel.instComplete
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instCompleteEta : Complete (Relation.ReflTransGen RedEta) (P := IsNorm RedEta) := RedEta.instRedRel.instComplete
 
 end Expr

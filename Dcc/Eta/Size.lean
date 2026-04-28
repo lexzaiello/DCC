@@ -24,7 +24,7 @@ inductive EtaSize : Expr → ℕ → Prop
   | curr   : EtaSize x m → EtaSize (DCC Λ(α, β, x)) m.succ.succ
   | app    : EtaSize f m → EtaSize x n → EtaSize (DCC (f x)) (m + n)
 
-@[aesop norm, simp, grind] def eta_size (e : Expr) : ((n : ℕ) × (PULift.{1, 0} (EtaSize e n))) :=
+@[aesop norm (rule_sets := [DccSize]), dcc_size, grind] def eta_size (e : Expr) : ((n : ℕ) × (PULift.{1, 0} (EtaSize e n))) :=
   match e with
   | DCC ∗ => ⟨_, ⟨.tintro⟩⟩
   | DCC ⊤ => ⟨_, ⟨.top⟩⟩
@@ -71,7 +71,7 @@ inductive EtaSize : Expr → ℕ → Prop
     let ⟨_, ⟨h₂⟩⟩ := x.eta_size
     ⟨_, ⟨.app h₁ h₂⟩⟩
 
-@[simp] instance EtaSize.instMeasure : Measure EtaSize where
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance EtaSize.instMeasure : Measure EtaSize where
   run := eta_size
 
 end Expr

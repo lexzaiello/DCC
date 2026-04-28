@@ -53,60 +53,15 @@ macro_rules
   let t_f := DCC (Π(f_α, f_β) env)
   DCC (Π(Id(Sort n), `(Sort n, (f_β env) ∘ Snd'(t_f, α))) Coup(`(t_f, α)))
 
-def toFormat (e : Expr) : Std.Format :=
-  let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=
-    .nest indent (.fill (.joinSep l (sep ++ .line)))
-  let paren (s : Std.Format) : Std.Format :=
-    .bracket "(" (.fill s) ")"
-  let angle (s : Std.Format) : Std.Format :=
-    .bracket "⟨" (.fill s) "⟩"
-  let bbracket (s : Std.Format) : Std.Format :=
-    .bracket "⟦" (.fill s) "⟧"
+/-
+TODO: Replace App with
 
-  let comb (pre : Std.Format) (points : List Std.Format) : Std.Format :=
-    .group (pre ++ (paren (sepD points (indent := pre.pretty.length))))
+let s_β := Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))
+let t_s := Σ(s_β)
+Π(t_s, Λ(δ, t_s, Subst(f_β, `(Sort n, (f_β env) ∘ Snd'(t_f, α)))
 
-  match e with
-  | (DCC ⊤)                   => "⊤"
-  | (DCC ⊥)                   => "⊥"
-  | (DCC ∗)                   => "∗"
-  | (DCC `(β, x))             => comb "`" [β.toFormat, x.toFormat]
-  | (DCC Id(α))               => comb "Id" [α.toFormat]
-  | (DCC Subst(β, x))         => comb "Subst" [β.toFormat, x.toFormat]
-  | (DCC Sort m)              => "Sort " ++ (Std.format m)
-  | (DCC Fstc(β))             => comb "Fstc" [β.toFormat]
-  | (DCC Fst(β))              => comb "Fst" [β.toFormat]
-  | (DCC Sndc(β))             => comb "Sndc" [β.toFormat]
-  | (DCC Snd(β))              => comb "Snd" [β.toFormat]
-  | (DCC Snd'(α, β))          => comb "Snd'" [α.toFormat, β.toFormat]
-  | (DCC App'(α, β))          => comb "App'" [α.toFormat, β.toFormat]
-  | (DCC App(m, n, f_α, f_β)) => comb "App" [Std.format m, Std.format n, f_α.toFormat, f_β.toFormat]
-  | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat, β.toFormat, e.toFormat]
-  | (DCC Π(α, β))             => comb "Π" [α.toFormat, β.toFormat]
-  | (DCC ⟦m, α, β, γ⟧⟨a, b⟩)  =>
-    let pts := (bbracket (sepD [Std.format m, α.toFormat, β.toFormat, γ.toFormat]))
-    let pts_length := match pts.pretty.splitOn "\n" |>.head? with
-    | .some line => line.length
-    | .none      => 0
-    pts ++ (angle (sepD [a.toFormat, b.toFormat] (indent := pts_length)))
-  | (DCC ⟦β⟧(a, b))           =>
-    comb (bbracket (sepD [β.toFormat])) [a.toFormat, b.toFormat]
-  | DCC Coup(β)               => comb "Coup" [β.toFormat]
-  | (DCC Σ(β))                => comb "Σ" [β.toFormat]
-  | (DCC f ∘ g)               =>
-    sepD [f.toFormat, g.toFormat] " ∘"
-  | (DCC (f x))               => (paren (f.toFormat ++ (.indentD x.toFormat)))
-
-instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
-instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
-instance instRepr : Repr Expr := ⟨Function.const _ ∘ toFormat⟩
-
-instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
-  match me with
-  | .none => Std.format me
-  | .some e =>
-    let l := "(some".length.succ
-    .group ("(some " ++ (.fill (.nest l e.toFormat)) ++ ")")⟩
+...
+-/
 
 #eval (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0)))
 

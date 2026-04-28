@@ -71,7 +71,7 @@ inductive EtaSize : Expr → ℕ → Prop
     let ⟨_, ⟨h₂⟩⟩ := x.eta_size
     ⟨_, ⟨.app h₁ h₂⟩⟩
 
-instance Size.instMeasure : Measure EtaSize where
+@[simp] instance Size.instMeasure : Measure EtaSize where
   run := eta_size
 
 end Expr

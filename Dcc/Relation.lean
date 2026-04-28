@@ -247,7 +247,7 @@ open Confluent in def RedRel.globally_confluent
   (hn : IsNorm r (DCC (f x))) : IsNorm r x := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.congrArg' h⟩).elim
 
-@[simp, aesop safe destruct] def IsNorm.complete
+@[simp] def IsNorm.complete
   {r : Expr → Expr → Prop}
   {t : Expr → ℕ → Prop}
   [hM : Measure t]
@@ -270,38 +270,12 @@ theorem run_none {t : Expr → ℕ → Prop} [hM : Measure t]
   have ⟨B, h₁, h₂⟩ := hC.complete h_red
   simp_all
 
-class ExtRel (r : Expr → Expr → Prop) where
-  ext (h₁ : r A B) (h₂ : r A B) : h₁ = h₂
-
-open Confluent in theorem Confluent.norm_unique {r : Expr → Expr → Prop} {m : (Expr → Expr → Prop) → Expr → Expr → Prop}
-  (hC : Confluent r m) (hn₁ : IsNorm r B) (h₁ : m r A B) (hn₂ : IsNorm r C) (h₂ : m r A C) : B = C := by
+open Confluent in theorem norm_unique {r : Expr → Expr → Prop} {m : (Expr → Expr → Prop) → Expr → Expr → Prop}
+  [hC : Confluent r m] (h₁ : m r A B) (hn₁ : IsNorm r B) (h₂ : m r A C) (hn₂ : IsNorm r C) : B = C := by
   have ⟨D, hr₁, hr₂⟩ := hC.conf h₁ h₂
   have ha := hn₁.unique_refl hr₁
   have hb := hn₂.unique_refl hr₂
   simp_all
-
-/-
-R a b → ∃ b' h, (run a) = .some ⟨b', ⟨h⟩⟩
-
-If b is a normal form, then b' = b, since b' and b have a common reduct via Conf,
-and if b ≠ b, then b also has a next reduct, but Norm b, so b' = b.
--/
-
-/-
-If A → B, and Norm B, and A → B₂, then the diamond B -*> C and B₂ -*> C can only be constructed by
-C = B.
-
-A diamond where one of the lower vertices which is not D is normal, then D = the normal vertex
-
-Most of the arguments are unnecesary, but they help visualize.
--/
-theorem triangle_collapse {r : Expr → Expr → Prop} {A B : Expr}
-  (_hr₁ : r A B) (_hr₂ : r A C)
-  (h_diamond : Relation.ReflTransGen r B D ∧ Relation.ReflTransGen r C D) (hn : IsNorm r C) : C = D :=
-  have ⟨_ha, hb⟩ := h_diamond
-  match hb.cases_head with
-  | .inl heq => heq
-  | .inr ⟨_c, hC, _hrt⟩ => (hn ⟨_, hC⟩).elim
 
 theorem RedRel.reduce_norm
  {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
@@ -313,7 +287,7 @@ theorem RedRel.reduce_norm
     exact (hn ⟨_, h⟩).elim
   case h_2 => congr
 
-@[simp, aesop safe forward] theorem RedRel.reduce_norm_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+@[simp] theorem RedRel.reduce_norm_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM))
   {A : Expr} (hn : IsNorm r A) : (hR.reduce A).fst = A := by
   have h := hR.reduce_norm hn
@@ -344,8 +318,8 @@ if refl, trivial
 if there is a step, do induction to show
 reduce B' = B, then you're set.
 -/
-theorem RedRel.reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
-  [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM)) [hN : SemiComplete r (hR := hR)] [Confluent r]
+theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+  [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
   {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (hR.reduce A) = ⟨B, ⟨hr⟩⟩ := by
   simp [RedRel.reduce]
   split
@@ -367,7 +341,7 @@ theorem RedRel.reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ �
         have h₁ := hR.decreasing hr₂
         have h₂ := hR.decreasing hrB'
         grind
-      have h := hR.reduce_complete (.trans (.single hrB') hrt) hn
+      have h := reduce_complete (.trans (.single hrB') hrt) hn
       have h_fst : (hR.reduce B').fst = B := by
         simp_all
       cases h_fst
@@ -384,7 +358,10 @@ instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ → 
   [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM))
   [hN : SemiComplete r (hR := hR)] [Confluent r] : Complete.{0, 0, 0}
     (r := Relation.ReflTransGen r) (P := IsNorm r) (hR := hR.to_reflTrans (r := r) (t := t) (hM := hM)) :=
-  ⟨fun hr hn => hR.reduce_complete (r := r) (t := t) (hM := hM) hr hn⟩
+  ⟨fun hr hn => reduce_complete (r := r) (t := t) (hM := hM) hr hn⟩
+
+theorem reduce_sound {t : Expr → ℕ → Prop} [hT : Measure t] [hR : RedRel r t (hM := hT)]
+  (_heq : RedRel.reduce hR A = ⟨B, ⟨h⟩⟩) : Relation.ReflTransGen r A B := h
 
 theorem reduce_norm {t : Expr → ℕ → Prop} [hT : Measure t]
   [hR : RedRel r t (hM := hT)]

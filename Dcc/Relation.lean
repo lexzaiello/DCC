@@ -295,38 +295,11 @@ open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theore
   have h := hR.reduce_norm hn
   simp_all
 
-/-
-(RedRel R).reduce holds completeness because:
-
-A -*> B
-IsNorm B
-
-by the definition of reduce,
-if step? is some, then we get
-A -> B'
-
-then create a diamond
-
-B -*> C
-B' -*> C
-
-since B is norm, B = C
-
-hence, B' -*> B
-
-case_head analysis on B' -*> B
-if refl, trivial
-
-if there is a step, do induction to show
-reduce B' = B, then you're set.
--/
 theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
   {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A) = ⟨B, ⟨hr⟩⟩ := by
   simp [reduce]
   split
-  -- hr is an actual step, not noop
-  -- we get B', make a diamond with B to C, and show B = C since B IsNorm
   case h_1 B' hr₂ heq =>
     have ⟨C, h₁, h₂⟩ := hR.globally_confluent.conf hr (.single hr₂)
     have h_b_c_eq := hn.unique_refl h₁

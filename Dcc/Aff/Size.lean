@@ -19,9 +19,8 @@ inductive Size : Expr → ℕ → Prop
   | fst    : Size (DCC Fst(_α)) 1
   | snd'   : Size (DCC Snd'(δ, β)) 1
   | snd    : Size (DCC Snd(_α)) 1
-  | appl   : Size f_α m → Size (DCC App(_m, _n, f_α, f_β)) (m + 6)
-  | app'   : Size (DCC App'(_α, β)) 1
-  | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ.succ
+  | appl   : Size (DCC App(_α, β)) 1
+  | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
   | pair   : Size f m → Size g n → Size (DCC ⟦_m, α, β, γ⟧⟨f, g⟩) (m + n).succ
   | curr   : Size x m → Size (DCC Λ(α, β, x)) m.succ
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
@@ -49,10 +48,7 @@ inductive Size : Expr → ℕ → Prop
   | DCC Snd'(_α,_β) => ⟨_, ⟨.snd'⟩⟩
   | DCC Snd(_α) => ⟨_, ⟨.snd⟩⟩
   | DCC Π(_α, _β) => ⟨_, ⟨.pi⟩⟩
-  | DCC App'(_α, _β) => ⟨_, ⟨.app'⟩⟩
-  | DCC App(_m, _n, α, _β)  =>
-    let ⟨_, ⟨h⟩⟩ := α.size
-    ⟨_, ⟨.appl h⟩⟩
+  | DCC App(_α, _β) => ⟨_, ⟨.appl⟩⟩
   | DCC (f ∘ g) =>
     let ⟨_m, ⟨h₁⟩⟩ := f.size
     let ⟨_n, ⟨h₂⟩⟩ := g.size

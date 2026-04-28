@@ -33,8 +33,7 @@ inductive Expr where
   | mk     : Expr  → Expr  → Expr  → Expr
   | pi     : Expr  → Expr  → Expr
   | curr   : Expr  → Expr  → Expr  → Expr
-  | app'   : Expr  → Expr  → Expr
-  | appl   : Level → Level → Expr  → Expr  → Expr
+  | appl   : Expr  → Expr  → Expr
   | quot   : Expr  → Expr  → Expr
   | id     : Expr  → Expr
   | subst  : Expr  → Expr  → Expr
@@ -57,8 +56,7 @@ syntax:max "`(" expr,* ")"                                       : expr
 syntax:max "Id(" expr,* ")"                                      : expr
 syntax:max "Fst(" expr,* ")"                                     : expr
 syntax:max "Snd'(" expr,* ")"                                    : expr
-syntax:max "App'(" expr,* ")"                                    : expr
-syntax:max "App(" term "," term "," expr,* ")"          : expr
+syntax:max "App(" expr,* ")"                                     : expr
 syntax:max "Snd(" expr,* ")"                                     : expr
 syntax:max "Subst(" expr,* ")"                                   : expr
 syntax "Σ(" expr ")"                                             : expr
@@ -89,8 +87,7 @@ macro_rules
   | `(DCC Fst($β:expr))                          => `(Expr.fst (DCC $β))
   | `(DCC Snd($β:expr))                          => `(Expr.snd (DCC $β))
   | `(DCC Snd'($α:expr, $β:expr))                => `(Expr.snd' (DCC $α) (DCC $β))
-  | `(DCC App'($α:expr, $β:expr))       => `(Expr.app' (DCC $α) (DCC $β))
-  | `(DCC App($m, $n, $f_α:expr, $f_β:expr)) => `(Expr.appl $m $n (DCC $f_α) (DCC $f_β))
+  | `(DCC App($α:expr, $β:expr))       => `(Expr.appl (DCC $α) (DCC $β))
   | `(DCC Id($α:expr))                           => `(Expr.id (DCC $α))
   | `(DCC Subst($x:expr, $β:expr))               => `(Expr.subst (DCC $x) (DCC $β))
   | `(DCC $f:expr ∘ $g:expr)                     => `(Expr.comp (DCC $f:expr) (DCC $g:expr))
@@ -125,8 +122,7 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Fst(β))              => comb "Fst" [β.toFormat]
   | (DCC Snd(β))              => comb "Snd" [β.toFormat]
   | (DCC Snd'(α, β))          => comb "Snd'" [α.toFormat, β.toFormat]
-  | (DCC App'(α, β))          => comb "App'" [α.toFormat, β.toFormat]
-  | (DCC App(m, n, f_α, f_β)) => comb "App" [Std.format m, Std.format n, f_α.toFormat, f_β.toFormat]
+  | (DCC App(α, β))           => comb "App" [α.toFormat, β.toFormat]
   | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat, β.toFormat, e.toFormat]
   | (DCC Π(α, β))             => comb "Π" [α.toFormat, β.toFormat]
   | (DCC ⟦m, α, β, γ⟧⟨a, b⟩)  =>

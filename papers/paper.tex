@@ -400,9 +400,305 @@ Using our \(Subst\) rules, we define the \(App\) inference rule \eqref{infer_app
   \caption{\(App\) inference rule}
 \end{figure}
 
+\section{Affine and \(\eta\)-Reduction}
+
+In general, dependent, point-free combinatory logics result in sizeable and complex types. We do not assume \(\Pi\)-extensionality, but make use of aggressive \(\eta\)-reduction rules based on Curien's rules for the simply-typed categorical combinators \autocite[221]{CURIEN1986188}. We invoke \(\beta\) and \(\eta\)-reduction in our judgment relation. Hence, we prove soundness and completeness of reduction functions for each scheme. We do so by a syntactic decreasing measure. The derivations of completeness and soundness for \(\beta\) and \(\eta\)-reduction are quite similar structurally. Thus, we make the practical design decision of abstracting the notion of a size, step, and reduction relations with Lean's typeclass system.
+
+\subsection{Affine Single-Step Reduction}
+
+We formally define affine single-step reduction (\(\rightarrowtail\)) as such:
+
+\begin{leancode}
+inductive RedAff : Expr → Expr → Prop
+  | subst₁   : RedAff (DCC (Subst(x, Fst(f_β)) env ⟦β⟧(y, z))) (DCC (x env y))
+  | subst₂   : RedAff (DCC (Subst(x, Snd(f_β)) env ⟦β⟧(y, z))) (DCC (x env z))
+  | snd'     : RedAff (DCC (Snd'(_δ, _τ) ⟦β⟧(a, b))) b
+  | quot     : RedAff (DCC (`(β, x) y)) x
+  | id       : RedAff (DCC (Id(α) x)) x
+  | appl     : RedAff (DCC (App(_α, _β) ⟦δ⟧(env, ⟦β⟧(x, y)))) (DCC (x y))
+  | fst      : RedAff (DCC (Fst(_α) _env ⟦β⟧(a, b))) a
+  | snd      : RedAff (DCC (Snd(_α) _env ⟦β⟧(a, b))) b
+  | comp     : RedAff (DCC ((x ∘ y) z)) (DCC (x (y z)))
+  | curr     : RedAff (DCC (Λ(α, β, x) y z)) (DCC (x ⟦β⟧(y, z)))
+  | sigl     : RedAff x x' → RedAff (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))
+  | sigr     : RedAff y y' → RedAff (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y'))
+  | congrFun : RedAff f f' → RedAff (DCC (f x)) (DCC (f' x))
+  | congrArg : RedAff x x' → RedAff (DCC (f x)) (DCC (f x'))
+\end{leancode}
+
+Notably, none of our \(\rightarrowtail\) rules duplicate any of their term arguments. Furthermore, each rule (except for congruence) eliminates at least one combinator. Hence, we define a syntactic notion of term size:
+
+\begin{leancode}
+inductive Size : Expr → ℕ → Prop
+  | tintro : Size (DCC ∗) 0
+  | top    : Size (DCC ⊤) 0
+  | bot    : Size (DCC ⊥) 0
+  | subst  : Size x m → Size y n → Size (DCC Subst(x, y)) (m + n).succ
+  | sig    : Size (DCC Σ(β)) 0
+  | coup   : Size x m → Size y n → Size (DCC ⟦β⟧(x, y)) (m + n)
+  | sort   : Size (DCC Sort m) 0
+  | pi     : Size (DCC Π(α, β)) 0
+  | quot   : Size x m → Size (DCC `(β, x)) m.succ
+  | id     : Size (DCC Id(α)) 1
+  | fst    : Size (DCC Fst(_α)) 1
+  | snd'   : Size (DCC Snd'(δ, β)) 1
+  | snd    : Size (DCC Snd(_α)) 1
+  | appl   : Size (DCC App(_α, β)) 1
+  | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
+  | pair   : Size f m → Size g n → Size (DCC ⟦_m, α, β, γ⟧⟨f, g⟩) (m + n).succ
+  | curr   : Size x m → Size (DCC Λ(α, β, x)) m.succ
+  | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
+\end{leancode}
+
+Except for objects with no reduction rules, sizes are defined by at least the successor of the constituent computationally-relevant terms. For example, type points like \(\alpha\) in \(Snd'\) are only of use to the kernel, so they have no weight. We account for permutation of term points in combinators (e.g., in composition) by incrementing their sizes to reflect the elimination of the combinator.
+
+\subsection{Relations}
+
+The structure of our completeness and soundness proofs for \(\eta\), \(\rightarrowtail\), and their respective closures, are quite similar. Hence, we identify a set of minimal requirements for completeness and strong normalization for our rules: soundness of a computable definition with respect to the inductive relation, a proof that our size measure decreases over the reduction, local confluence of only the respective single-step relations, and ``semi-completeness''. We define these properties as typeclasses and instantiate them for our \(\eta\) and \(\rightarrowtail\) relations. By doing so, we automatically gain global confluence by Nemann's lemma, an instance of our reduction relation for the transitive closure, a total, terminating reduction function, strong normalization, well-foundedness with respect to the relation, uniqueness of normal forms, and, most importantly, completeness of the respective reduction functions and decidability of the reduction relation.
+
+Our notion of a relation is defined by an inductive representation and a computable definition with soundness:
+
+\begin{leancode}
+class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Type v)
+  (m : Type (max v s) → Type (max v s) := Id) [hM : Monad m] where
+  run (x : α) : m ((y : β) × (r x y))
+  sound       : run x = pure ⟨y, h⟩ → r x y := fun _ => h
+\end{leancode}
+
+We use universe and monadic polymorphism to enable expressing single-step reduction, size measures, star-step reduction, and multi-step reduction through \mintinline{lean}{Rel}.
+
+We define completeness with respect to a relation (\mintinline{lean}{Rel}) as such:
+
+\begin{leancode}
+open Rel in class Complete.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Sort v) (P : β → Prop := fun _ => True)
+  (m : Type (max v s) → Type (max v s) := Id) [hm : Monad m]
+  [hR : Rel.{u, v, s} (fun (x : α) (y : β) => PULift.{v + 1, v} (r x y)) (m := m)] where
+  complete : ∀ (h : r x y) (_p : P y), hR.run x = hm.pure ⟨y, PULift.up h⟩
+\end{leancode}
+
+We define a size measure, and are able to automatically derive completeness with tactics:
+
+\begin{leancode}
+open Rel in class Measure (r : Expr → ℕ → Prop)
+  extends Rel.{0, 0, 0} (fun x n => PULift.{1, 0} (r x n)), Complete.{0} r where
+  complete := by
+    intro x y h _h
+    induction h
+    all_goals (
+      simp_all [pure, id_pure_ext]
+      try rfl
+      try grind
+    )
+
+abbrev Measure.size (t : outParam (Expr → ℕ → Prop)) [hM : Measure t] (e : Expr) : ℕ := (hM.run e).fst
+\end{leancode}
+
+We define a reduction relation as a relation satisfying the decreasing measure property. Similarly, we automatically derive the proof using tactics and custom aesop and simp-sets.
+
+\begin{leancode}
+class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ → Prop))
+  (m : Type → Type := Option) [_hM : Monad m]
+  [hM : Measure t] extends Rel.{0, 0, 0} (fun (x : Expr) (y : Expr) => PULift.{1, 0} (r x y)) (m := m) where
+  decreasing : r x y → (hM.run y).fst < (hM.run x).fst := by
+    intro x y h
+    induction h
+    all_goals (
+      try dsimp
+      try simp_all [dcc_rel, dcc_size]
+      try grind
+      try aesop (rule_sets := [DccRel, DccSize])
+      try rfl)
+\end{leancode}
+
+In doing so, we inherit strong normalization and well-foundedness:
+
+\begin{leancode}
+def RedRel.sn {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ → Prop))
+  {m : Type → Type} [Monad m] [hM : Measure t]
+  (hR : RedRel r t (m := m) (hM := hM)) (e : Expr) : Acc (fun b a => r a b) e := Acc.intro e (fun e' hr => by
+    have h := hR.decreasing hr
+    exact sn t hR e')
+termination_by (hM.run e).fst
+
+def RedRel.wellFounded {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ → Prop))
+  {m : Type → Type} [Monad m] [hM : Measure t]
+  (hR : RedRel r t (m := m) (hM := hM)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
+\end{leancode}
+
+Using our decreasing measure proof, we derive a reduction function with soundness with respect to the reflexive transitive closure of a reduction relation:
+
+\begin{leancode}
+def reduce {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
+  (e : Expr) : ((e' : Expr) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
+  match hR.run e with
+  | .some ⟨e', ⟨h⟩⟩ =>
+    have _size_ : (hT.run e').fst < (hT.run e).fst := hR.decreasing h
+    let ⟨e'', ⟨h₂⟩⟩ := reduce r (t := t) e'
+    ⟨e'', ⟨.trans (.single h) h₂⟩⟩
+  | .none => ⟨e, ⟨.refl⟩⟩
+termination_by (hT.run e).fst
+
+@[dcc_reduce, inline] abbrev reduce' {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
+  (e : Expr) : Expr := (reduce r e).fst
+\end{leancode}
+
+We make extensive use of these derived reducers in our type inference implementation.
+
+Since our \(\rightarrowtail\) rules include congruence, we must prove confluence to demonstrate completeness of our \(\beta\)-reducer. We define local confluence like such:
+
+\begin{leancode}
+open Rel in class Confluent.{u} {α : Type u} (r : α → α → Prop)
+  (m : (α → α → Prop) → α → α → Prop := fun x => x) where
+  conf : (m r A B) → (m r A C) → ∃ D, Relation.ReflTransGen.{u} r B D ∧ Relation.ReflTransGen.{u} r C D
+\end{leancode}
+
+By Newmann's lemma, we derive global confluence and uniqueness of normal forms given a decreasing measure under our definition of a reduction relation:
+
+\begin{leancode}
+open Confluent in def RedRel.globally_confluent
+  {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} {m : Type → Type}
+  [hM : Measure t] [Monad m] [hC : Confluent r]
+  [hR : RedRel r t (m := m) (hM := hM)] : (Confluent r (m := Relation.ReflTransGen)) where
+  conf := fun {A B C} (h₁ : hR.ReflTrans A B) (h₂ : hR.ReflTrans A C) => by
+    induction A using hR.wellFounded.induction generalizing B C with
+    | h x ih =>
+      match h₁.cases_head, h₂.cases_head with
+      | .inl heq₁, .inl heq₂ =>
+        exact ⟨x, heq₁ ▸ .refl, heq₂ ▸ .refl⟩
+      | .inl heq₁, _ =>
+        exact ⟨C, heq₁ ▸ h₂, .refl⟩
+      | _, .inl heq₁ =>
+        exact ⟨B, .refl, heq₁ ▸ h₁⟩
+      | .inr ⟨C₁, hr₁, hrt₁⟩, .inr ⟨C₂, hr₂, hrt₂⟩ =>
+        have ⟨D, hrt₁b, hrt₂b⟩ := hC.conf hr₁ hr₂
+        have ⟨_, hrtt₁, hrtt₁b⟩ := ih _ hr₁ hrt₁ hrt₁b
+        have ⟨_, hrtt₂, hrtt₂b⟩ := ih _ hr₂ hrt₂ hrt₂b
+        have ⟨_, h₁, h₂⟩ := ih _ hr₁ (hrt₁b.trans hrtt₁b) (hrt₁b.trans hrtt₂b)
+        exact ⟨_, .trans hrtt₁ h₁, .trans hrtt₂ h₂⟩
+
+def IsNorm.unique_refl {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : (Relation.ReflTransGen r) A B) : A = B := by
+  rw [← Relation.reflGen_transGen] at hr
+  cases hr with
+  | refl => rfl
+  | single h => exact hn.unique_trans h
+
+open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theorem norm_unique {r : Expr → Expr → Prop} {m : (Expr → Expr → Prop) → Expr → Expr → Prop}
+  [hC : Confluent r m] (h₁ : m r A B) (hn₁ : IsNorm r B) (h₂ : m r A C) (hn₂ : IsNorm r C) : B = C := by
+  have ⟨D, hr₁, hr₂⟩ := hC.conf h₁ h₂
+  have ha := hn₁.unique_refl hr₁
+  have hb := hn₂.unique_refl hr₂
+  simp_all
+
+open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theorem norm_unique {r : Expr → Expr → Prop} {m : (Expr → Expr → Prop) → Expr → Expr → Prop}
+  [hC : Confluent r m] (h₁ : m r A B) (hn₁ : IsNorm r B) (h₂ : m r A C) (hn₂ : IsNorm r C) : B = C := by
+  have ⟨D, hr₁, hr₂⟩ := hC.conf h₁ h₂
+  have ha := hn₁.unique_refl hr₁
+  have hb := hn₂.unique_refl hr₂
+  simp_all
+\end{leancode}
+
+Finally, we require a weak form of completeness to derive full completeness with respect to normal-form reduction. That is, if the inductive reduction relation \(A \rightarrow B\) can be constructed, then there must exist a proof \(h\) that some \(C\) is computable by \(run\):
+
+\begin{leancode}
+open Rel in class SemiComplete {t : Expr → ℕ → Prop} [hM : Measure t]
+  (r : Expr → Expr → Prop)
+  [hR : RedRel r t (m := Option) (hM := hM)] where
+  complete : r A B → ∃ B h, (hR.run A) = .some ⟨B, ⟨h⟩⟩
+\end{leancode}
+
+Finally, we derive completeness of the reduction function with respect to our relation from confluence, an instance of \mintinline{lean}{RedRel}, and semi-completeness:
+
+\begin{leancode}
+theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+  [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
+  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A) = ⟨B, ⟨hr⟩⟩ := by
+  simp [reduce]
+  split
+  case h_1 B' hr₂ heq =>
+    have ⟨C, h₁, h₂⟩ := hR.globally_confluent.conf hr (.single hr₂)
+    have h_b_c_eq := hn.unique_refl h₁
+    have hr_b'_b := h_b_c_eq ▸ h₂
+    match hr_b'_b.cases_head with
+    | .inl h =>
+      have h_red_norm := hR.reduce_norm_fst hn
+      cases h_b_c_eq; cases h
+      congr
+      repeat simp_all
+    | .inr ⟨_, hrB', hrt⟩ =>
+      rename_i w
+      have h_dec : (hM.size t B') < (hM.size t A) := by
+        have h₁ := hR.decreasing hr₂
+        have h₂ := hR.decreasing hrB'
+        grind
+      have h := reduce_complete (.trans (.single hrB') hrt) hn
+      have h_fst : (reduce r B').fst = B := by
+        simp_all
+      cases h_fst
+      congr
+  case h_2 hneq =>
+    match hr.cases_head with
+    | .inl h => cases h; congr
+    | .inr ⟨_, hrb', hrt⟩ =>
+      have ⟨_, hA₁, hA₂⟩ := hN.complete hrb'
+      simp_all
+termination_by ((hM.size t A), (hM.size t B))
+\end{leancode}
+
+\subsection{Instances: \(\rightarrowtail\) reduction}
+
+Fortunately, most of our instances can be automated with our default tactics. We manually demonstrate local confluence and semi-completeness by case analysis (available in the appendix \eqref{appendix:sup}). Finally, we inherit full completeness.
+
+\begin{leancode}
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instRedRel : RedRel RedAff Size where
+  run := step?
+
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instCongruent : Congruent RedAff where
+
+open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
+  induction h₁ generalizing C with
+  | subst₁ =>
+    cases h₂ with
+    | subst₁ => exact ⟨_, .refl, .refl⟩
+    | congrFun h => cases h with
+      | congrFun h => cases h
+      | congrArg h => exact ⟨_, congrFun' (congrArg' (.single h)), .single .subst₁⟩
+    | congrArg h => cases h with
+      | sigl h => exact ⟨_, congrArg' (.single h), .single .subst₁⟩
+      | sigr h => exact ⟨_, .refl, .single .subst₁⟩
+  ... omitted
+
+def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
+  change ∃ _, ∃ _, (step? _) = .some _
+  unfold step?
+  split
+  repeat exact ⟨_, (RedAff.instRedRel.sound rfl).down, rfl⟩
+  case h_11 =>
+    cases hr with
+    | sigl h_x =>
+      have ⟨_, hrx', heq'⟩ := semi_complete h_x
+      exact ⟨_, .sigl (by assumption), by rw [heq']⟩
+    | sigr h_y =>
+      rename_i x y _
+      have ⟨_, hry', heq'⟩ := semi_complete h_y
+      match x.step? with
+      | .none =>
+        exact ⟨_, .sigr (by assumption), by rw [heq']⟩
+      | .some ⟨_, ⟨h_x'⟩⟩ =>
+        exact ⟨_, .sigl (by assumption), by rw [heq']⟩
+  ... omitted
+
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instSemicomplete : SemiComplete RedAff := ⟨semi_complete⟩
+
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instComplete : Complete (Relation.ReflTransGen RedAff) (P := IsNorm RedAff) := RedAff.instRedRel.instComplete
+\end{leancode}
+
+We define our minimal notion of a relation by an inductive representation, and a computable implementation with soundness. We show that our size measure, single-step reduction, and normal-form reduction for the affine restriction and \(\eta\), respectively, all satisfy our notion of a (computable) relation.
+
+
+
 \section{Reduction \& Affine Reduction}
 
-Our reduction rules are the same as in the categorical abstract machine \autocite{cmachine}, except for \(Flip\), and pairs, which carry type arguments:
+Our reduction rules are largely the same as in the categorical abstract machine \autocite{cmachine}, with alterations and additions to enable affine dependent types \eqref{infer_rules}.
 
 \begin{center}
 \begin{figure}[h!]\label{red_untyped_cat}
@@ -443,9 +739,9 @@ Our reduction rules are the same as in the categorical abstract machine \autocit
 
 % Link back later: Furthermore, none of our inference rules require referring to \textit{dpair}.
 
-Note that, excluding our \textit{dpair} rule, each single-step combinator reduction uses each of its arguments at most once. That is, this restriction of single-step reduction is affine. Except for congruence, each rule decreases the number of combinators (we  do not consider the couple \(\llbracket \alpha, \beta \rrbracket (,)\) to be a combinator). We thus define a syntactic measure of term size on objects in our calculus, and show that it decreases under affine reduction (\(\dashrightarrow\)) to show that the affine reduction is strongly normalizing.
+Note that, excluding our \textit{dpair} rule, each single-step combinator reduction uses each of its arguments at most once. That is, this restriction of single-step reduction is affine. Except for congruence, each rule decreases the number of combinators (we  do not consider the couple \(\llbracket \alpha, \beta \rrbracket (,)\) to be a combinator). We thus define a syntactic measure of term size on objects in our calculus, and show that it decreases under affine reduction (\(\rightarrowtail\)) to show that the affine reduction is strongly normalizing.
 
-Formally, we define affine reduction (\(\dashrightarrow\)) as such:
+Formally, we define affine reduction (\(\rightarrowtail\)) as such:
 
 \begin{leancode}
 inductive RedAff : Expr → Expr → Prop
@@ -491,7 +787,7 @@ inductive Size : Expr → ℕ → Prop
 \end{figure}
 
 \begin{theorem}
-  If \(A \in Expr\) and \(A \dashrightarrow B\), then \(size(B) < size(A)\).
+  If \(A \in Expr\) and \(A \rightarrowtail B\), then \(size(B) < size(A)\).
 \end{theorem}
 
 \begin{proof}
@@ -506,7 +802,7 @@ theorem RedAff.decreasing (h : RedAff e e') : (size e').fst < (size e).fst := by
 We define strong normalization using Lean's accessibility predicate, and use our decreasing measure to produce a proof of \mintinline{lean}{Acc (fun b a => RedAff a b) e}.
 
 \begin{theorem}
-  If \(A \in Expr\), then \(A\) is strongly-normalizing under affine reduction (\(\dashrightarrow\)).
+  If \(A \in Expr\), then \(A\) is strongly-normalizing under affine reduction (\(\rightarrowtail\)).
 \end{theorem}
 
 \begin{proof}\label{wellfounded}
@@ -524,7 +820,7 @@ instance instWellFounded : WellFounded (fun a b => RedAff b a) := ⟨sn⟩
 
 \subsection{Affine Global Confluence}
 
-We define the transitive (\(\dashrightarrow^{+}\)) and reflexive transitive closure (\(\dashrightarrow^{*}\)) like such:
+We define the transitive (\(\rightarrowtail^{+}\)) and reflexive transitive closure (\(\rightarrowtail^{*}\)) like such:
 
 \begin{leancode}
 def RedAffTrans     := Relation.TransGen RedAff
@@ -532,11 +828,11 @@ def RedAffReflTrans := Relation.ReflTransGen RedAff
 \end{leancode}
 
 \begin{theorem}
-  For all \(A \in Expr\), \(A\) is confluent under \(\dashrightarrow\).
+  For all \(A \in Expr\), \(A\) is confluent under \(\rightarrowtail\).
 \end{theorem}
 
 \begin{proof}
-  We proceed by induction and case analysis on \(\dashrightarrow\). Cases have been omitted for brevity. Consult the appendix.
+  We proceed by induction and case analysis on \(\rightarrowtail\). Cases have been omitted for brevity. Consult the appendix.
   \begin{leancode}
 theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) :
   ∃ D, RedAffReflTrans B D ∧ RedAffReflTrans C D := by
@@ -587,11 +883,11 @@ theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) :
 \end{proof}
 
 \begin{theorem}
-  For all \(A \in Expr\), \(A\) is confluent under \(\dashrightarrow^{*}\).
+  For all \(A \in Expr\), \(A\) is confluent under \(\rightarrowtail^{*}\).
 \end{theorem}
 
 \begin{proof}
-  We proceed by induction on the well-founded relation \(\dashrightarrow\) \eqref{wellfounded}.
+  We proceed by induction on the well-founded relation \(\rightarrowtail\) \eqref{wellfounded}.
   \begin{leancode}
 theorem RedAffReflTrans.conf (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTrans A C) :
   ∃ D, RedAffReflTrans B D ∧ RedAffReflTrans C D := by
@@ -617,7 +913,7 @@ theorem RedAffReflTrans.conf (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTran
 \end{proof}
 
 \begin{theorem}
-  For all \(A \in Expr\), if \(A \dashrightarrow B\) and \(A \dashrightarrow C\), and \(B\) and \(C\) are normal forms, then \(B = C\).
+  For all \(A \in Expr\), if \(A \rightarrowtail B\) and \(A \rightarrowtail C\), and \(B\) and \(C\) are normal forms, then \(B = C\).
 \end{theorem}
 
 \begin{proof}
@@ -642,7 +938,7 @@ theorem RedAff.norm_unique (h₁ : RedAff A B) (h_norm : B.IsNormAff)
 \end{proof}
 
 \begin{theorem}
-  For all \(A \in Expr\), if \(A \dashrightarrow^{*} B\) and \(A \dashrightarrow^{*} C\), and \(B\) and \(C\) are normal forms, then \(B = C\).
+  For all \(A \in Expr\), if \(A \rightarrowtail^{*} B\) and \(A \rightarrowtail^{*} C\), and \(B\) and \(C\) are normal forms, then \(B = C\).
 \end{theorem}
 
 \begin{proof}
@@ -700,7 +996,7 @@ def reduce (e : Expr) : Expr :=
 \end{leancode}
 
 \begin{theorem}
-  For all \(A \in Expr\), and \texttt{reduce A = B}, then \(A \dashrightarrow^{*} B\).
+  For all \(A \in Expr\), and \texttt{reduce A = B}, then \(A \rightarrowtail^{*} B\).
 \end{theorem}
 
 \begin{proof}
@@ -718,7 +1014,7 @@ theorem reduce_sound (heq : reduce A = B) : RedAffReflTrans A B := by
 \end{leancode}
 \end{proof}
 
-By using our decreasing measure and showing completeness for \mintinline{lean}{step?} with respect to normal forms under \(\dashrightarrow\), we prove completeness of \mintinline{lean}{reduce} with respect to normal forms under \(\dashrightarrow^{*}\).
+By using our decreasing measure and showing completeness for \mintinline{lean}{step?} with respect to normal forms under \(\rightarrowtail\), we prove completeness of \mintinline{lean}{reduce} with respect to normal forms under \(\rightarrowtail^{*}\).
 
 \begin{lemma}
   For all \(e \in Expr\), if \(e\) is a normal form, then \texttt{step? e = none}.
@@ -736,7 +1032,7 @@ By using our decreasing measure and showing completeness for \mintinline{lean}{s
 \end{proof}
 
 \begin{theorem}
-  For all \(A \in Expr\), if \(A \dashrightarrow B\) and \(B\) is a normal form, then \texttt{step A = some B}.
+  For all \(A \in Expr\), if \(A \rightarrowtail B\) and \(B\) is a normal form, then \texttt{step A = some B}.
 \end{theorem}
 
 \begin{proof}
@@ -787,7 +1083,7 @@ theorem IsNormAff.complete_reduce (h : A.IsNormAff) : reduce A = A := by
 \end{proof}
 
 \begin{theorem}
-  For all \(A \in Expr\), if \(A \dashrightarrow^{*} B\), and \(B\) is a normal form, then \texttt{reduce A = B}.
+  For all \(A \in Expr\), if \(A \rightarrowtail^{*} B\), and \(B\) is a normal form, then \texttt{reduce A = B}.
 \end{theorem}
 
 \begin{proof}\label{decide_beta_eq}
@@ -809,7 +1105,7 @@ termination_by A.size.fst
 Finally, we show \(=_{\beta}\) is decidable.
 
 \begin{theorem}
-  For all \(A \in Expr\) and \(B \in Expr\), \((\exists C, A \dashrightarrow^{*} C \land B \dashrightarrow^{*} C \land IsNorm(C)) \lor \neg (\exists C, A \dashrightarrow^{*} C \land B \dashrightarrow^{*} C \land IsNorm(C))\).
+  For all \(A \in Expr\) and \(B \in Expr\), \((\exists C, A \rightarrowtail^{*} C \land B \rightarrowtail^{*} C \land IsNorm(C)) \lor \neg (\exists C, A \rightarrowtail^{*} C \land B \rightarrowtail^{*} C \land IsNorm(C))\).
 \end{theorem}
 
 \begin{proof}

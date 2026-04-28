@@ -169,7 +169,7 @@ Finally, as in the curry combinator, we specify combinator type arguments as ter
 \begin{figure}[h!]
   \centering
   \begin{equation}\label{pi_example}
-    \inferrule [\(Pi_{I}\)]
+    \inferrule [Pi]
     { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi_{s : \delta, x : f_\alpha(s)}, \sort{o}}
     { \Pi(f_\alpha, f_\beta) : \delta \rightarrow \sort{o}}
   \end{equation}
@@ -203,7 +203,7 @@ In a dependently-typed categorical combinator calculus where couples are naively
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_sigma_types}
-  \inferrule[\(\Sigma_{I}\)]
+  \inferrule[Sigma]
   { \alpha : \sort{m}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
   { \Sigma(f_\beta) : \delta \rightarrow \sort{max(m, n)}}
 \end{equation}
@@ -226,7 +226,7 @@ We formally interpret couples \(\llbracket \beta \rrbracket (a, b)\) as a degene
 \begin{minipage}{0.30\textwidth}
   \centering
   \begin{equation}
-    \inferrule[Top]
+    \inferrule[Unit]
     { }
     { \ast : \top}
   \end{equation}
@@ -242,7 +242,7 @@ We formally interpret couples \(\llbracket \beta \rrbracket (a, b)\) as a degene
 \end{minipage}
 \end{figure}
 
-\textbf{MUCH TO REWRITE FOLLOWING.} This view of couples as sigma terms naturally encodes the notion of judgments. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
+This view of couples as sigma terms naturally encodes the notion of judgments. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
 
 \begin{equation}
   x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx

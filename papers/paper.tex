@@ -1140,8 +1140,11 @@ To Jake, for teaching me lambda-calculus.
 \section{The Todo List}
 
 \begin{itemize}
-  \item \textbf{Most important:} I think I may have made a typo in the type of \(\Sigma\), but I will have to double check because I was sleepy when I wrote this note.
-  \item Subst operation: Subst combinator is used in only one place, but it is very powerful. Subst duplicates the environment across two points, but only if env is consumed to index a type, not as a computation. This allows a decreasing measure. I would like to have this in the final version, as it makes the Tarski universe narrative compelling.
+  \item Subst operation: Subst combinator is used in only one place, but it is very powerful. Subst duplicates the environment across two points, but only if env is consumed to determine a type, not as a computation. This allows a decreasing measure. I would like to have this in the final version, as it enables the \(\lambda\)-calculus compilation app case, which I am still stuck on. All the current types are totally fine.
+    \begin{itemize}
+      \item This also plugs the hole with the distinction between App and App'.
+      \item Can achieve this with a lexicographic ordering of TyArity and the syntactic size.
+    \end{itemize}
   \item If time permits, I want to finish the \(\lambda\)-calculus compiler.
 \end{itemize}
 

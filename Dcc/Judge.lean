@@ -1,3 +1,4 @@
+import Dcc.Attrs
 import Dcc.Ast
 import Dcc.Types
 import Dcc.Aff.Red
@@ -19,23 +20,23 @@ inductive Reduces : Expr → Expr → Prop
 
 @[inline] abbrev reduce_all := reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff
 
-@[simp] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d, e, f⟩ ⟨g, h, i, j, k, l⟩ => by
+@[dcc_reduce, aesop norm (rule_sets := [DccReduce])] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d, e, f⟩ ⟨g, h, i, j, k, l⟩ => by
   have ha := norm_unique a b g h
   have hb := norm_unique c d (ha ▸ i) j
   exact norm_unique e f (hb ▸ k) l
 
-@[simp] theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
+@[aesop safe apply (rule_sets := [DccReduce])] theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
   have h := h₁.unique h₂
   cases h
   congr
 
-@[simp, aesop safe destruct, aesop safe apply] theorem Reduces.complete : Reduces A B → reduce_all A = B :=
+@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem Reduces.complete : Reduces A B → reduce_all A = B :=
   fun ⟨ha, hb, hc, hd, he, hf⟩ => by
     unfold reduce_all
     unfold reduce'
     cases reduce_complete_fst ha hb; cases reduce_complete_fst hc hd; cases reduce_complete_fst he hf; rfl
 
-def reduce_reduces (h : (reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff) A = B) : Reduces A B := ⟨
+@[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] def reduce_reduces (h : (reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff) A = B) : Reduces A B := ⟨
   reduce_sound rfl,
   reduce_norm rfl,
   reduce_sound rfl,
@@ -45,7 +46,7 @@ def reduce_reduces (h : (reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff) 
 
 def reduce_reduces' : Reduces A (reduce' RedEta (reduce' RedMeta (reduce' RedAff A))) := reduce_reduces rfl
 
-@[inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
+@[dcc_judge, aesop norm (rule_sets := [DccJudge]), inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
   match heq₀ : t with
   | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
     if heq₁ : t = (DCC (α : Sort m) → β) then
@@ -57,7 +58,7 @@ def reduce_reduces' : Reduces A (reduce' RedEta (reduce' RedMeta (reduce' RedAff
 def is_arrow (e : Expr) : Bool :=
   (arrow.matcher e).isSome
 
-@[inline] abbrev fst.f_β.type.matcher (t : Expr) : Option ((α δ : Expr) × (m n o : Level) × (PULift.{1, 0} (t = fst.f_β.type α δ m n o))) :=
+@[dcc_judge, aesop norm (rule_sets := [DccJudge]), inline] abbrev fst.f_β.type.matcher (t : Expr) : Option ((α δ : Expr) × (m n o : Level) × (PULift.{1, 0} (t = fst.f_β.type α δ m n o))) :=
   match arrow.matcher t with
   | .some ⟨δ, arr', o, ⟨h_arr⟩⟩ =>
     match arrow.matcher arr' with
@@ -72,7 +73,7 @@ def is_arrow (e : Expr) : Bool :=
 
 -/
 
-@[inline] abbrev pair.β.type.matcher (t α : Expr) (m : Level) : Option ((n : Level) × (PULift.{1, 0} (t = pair.β.type α m n))) :=
+@[dcc_judge, aesop norm (rule_sets := [DccJudge]), inline] abbrev pair.β.type.matcher (t α : Expr) (m : Level) : Option ((n : Level) × (PULift.{1, 0} (t = pair.β.type α m n))) :=
   match arrow.matcher t with
   | .some ⟨_srt, t', _mm,  ⟨_heq⟩⟩ =>
     match arrow.matcher t' with
@@ -83,7 +84,7 @@ def is_arrow (e : Expr) : Bool :=
     | _ => .none
   | _ => .none
 
-@[inline] abbrev curr.β.type.matcher (t : Expr) : Option
+@[dcc_judge, aesop norm (rule_sets := [DccJudge]), inline] abbrev curr.β.type.matcher (t : Expr) : Option
   ((α : Expr) × (m n : Level) × (PULift.{1, 0} (t = curr.β.type α m n))) :=
   match arrow.matcher t with
   | .some ⟨α, DCC Sort n, m, ⟨h_arr⟩⟩ =>
@@ -184,7 +185,7 @@ def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   | .some ⟨t, h⟩ => .some ⟨t, reduce_all t, h, ⟨reduce_reduces rfl⟩⟩
   | _ => .none
 
-def with_arr (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+@[dcc_judge, aesop norm (rule_sets := [DccJudge])] def with_arr (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   Option ((τ α β : Expr) × (m : Level) × PULift.{1, 0} (Judge e τ) × PULift.{1, 0} (τ = arrow α β m)) :=
     match h with
     | .some ⟨t, h⟩ => match arrow.matcher t with
@@ -192,7 +193,7 @@ def with_arr (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
       | _ => .none
     | _ => .none
 
-def with_fst_fβ_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+@[dcc_judge, aesop norm (rule_sets := [DccJudge])] def with_fst_fβ_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   Option ((τ α δ : Expr) × (m n o : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = fst.f_β.type α δ m n o))) :=
   match h with
   | .some ⟨t, h⟩ => match fst.f_β.type.matcher t with
@@ -200,7 +201,7 @@ def with_fst_fβ_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
     | _ => .none
   | _ => none
 
-def with_pair_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) (α : Expr) (m : Level) :
+@[dcc_judge, aesop norm (rule_sets := [DccJudge])] def with_pair_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) (α : Expr) (m : Level) :
   Option ((τ : Expr) × (n : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = pair.β.type α m n))) :=
   match h with
   | .some ⟨t, h⟩ => match pair.β.type.matcher t α m with
@@ -208,7 +209,7 @@ def with_pair_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) (α
     | _ => .none
   | _ => .none
 
-def with_curr_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+@[dcc_judge, aesop norm (rule_sets := [DccJudge])] def with_curr_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   Option ((τ : Expr) × (α : Expr) × (m n : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = curr.β.type α m n))) :=
   match h with
   | .some ⟨t, h⟩ => match curr.β.type.matcher t with
@@ -373,7 +374,7 @@ def test_id_nested : Option Expr := do
 
 --#eval .reduce_η
 
-instance Judge.instRel : Rel (fun x y => PULift.{1, 0} (Judge x y)) (m := Option) where
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance Judge.instRel : Rel (fun x y => PULift.{1, 0} (Judge x y)) (m := Option) where
   run := infer
 
 end Expr

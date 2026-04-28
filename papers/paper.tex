@@ -212,31 +212,23 @@ We thus define couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate ca
 
 \begin{figure}[h!]
   \centering
-  \begin{minipage}{0.4\textwidth}
-    \centering
-    \[
+    \begin{align*}
     \inferrule[Top]
     { }
-    { \top : \sort{0}}
-  \]
-  \[
+    { \top : \sort{0}}\ &
     \inferrule[Unit]
     { }
-    { \ast : \top}
-    \]
-\end{minipage}
-  \hfill
-  \begin{minipage}{0.6\textwidth}
-    \centering
-  \begin{equation}
+    { \ast : \top}\ &
     \inferrule[Coup]
-    { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, x : \alpha, y : (\beta x), }
-    { \llbracket \beta \rrbracket (x, y) : \Sigma(`(\sort{m}, \beta)) \alpha}
-  \end{equation}
-\end{minipage}
+    { A : \sort{m}, B : A \rightarrow \sort{n}, x : A, y : B(x), }
+    { \llbracket B \rrbracket (x, y) : \Sigma(`(\sort{m}, B)) A}\ &
+    \inferrule
+    { }
+    { Coup(B) \coloneq (\Sigma(`(\top, B)) \ast)}
+  \end{align*}
 \end{figure}
 
-This view of couples as sigma terms naturally encodes the notion of a context, and proves to be invaluable when compiling dependently-typed \(\lambda\)-calculi to the categorical combinators. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
+This view of couples as sigma terms naturally encodes the notion of a telescope context, and proves to be invaluable when compiling dependently-typed \(\lambda\)-calculi to the categorical combinators. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
 
 \begin{equation}
   x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx
@@ -247,7 +239,7 @@ In the categorical abstract machine, this encoding of judgments corresponds to a
 
 \subsection{Type Annotations as Tarski Universes}
 
-All combinator objects have type annotations specified as points (usually as families indexing the environment). For example, the projection \(Snd(f_\beta)\) is indexed by the term \(f_\beta\) which depends on an arbitrary environment (\(s : \delta\)), and the term \(fst : \alpha\) (\textbf{TODO: double check this. Does \(\alpha\) also need to depend on \(\delta\)? All examples work, which suggests no. Might be an expressivity thing. If there is an advantage, it would be quite easy to fix}).
+All combinator objects have type annotations specified as points (usually as families indexing the environment). For example, the projection \(Snd(f_\beta)\) is indexed by the term \(f_\beta\) which depends on an arbitrary environment (\(s : \delta\)) and the term \(fst : \alpha\). A projection for degenerate couples with no relevant environment can be derived, and we refer to it as \(Sndc(\beta)\).
 
 \subsection{Inference Rules}\label{infer_rules}
 
@@ -255,37 +247,37 @@ We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} :
 
 \subsubsection{Application and \(\Pi\)}
 
-The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha(s)\). Since \(f_\alpha(s)\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object (see inference rule \eqref{pi_example}) without causing nontermination. In practice, we normalize types eagerly, but we do not always indicate this in the prose inference rules (see \eqref{appendix:sup}). We use \(\rightarrow^{!}\) to denote star-step affine reduction to a normal form.
+The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha(s)\). Since \(f_\alpha(s)\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object (see inference rule \eqref{pi_example}) without causing nontermination. In practice, we normalize types eagerly, but we do not always indicate so in our inference rules (see \eqref{appendix:sup}). We use \(\rightarrow^{!}\) to denote star-step affine reduction to a normal form.
 
 \begin{figure}[h!]
 \begin{equation}
   \inferrule[App]
-  { f : \Pi(f_\alpha, f_\beta) s, f_\alpha(x) \rightarrow^{!} \alpha\\ x : \alpha_{2}, \alpha_{2} \rightarrow^{!} \alpha}
-  { f_\beta(s, x) \rightarrow^{!} \beta, f x : \beta}
+  { f : \Pi(f_\alpha, f_\beta) s\\ f_\alpha(x) \rightarrow^{!} \alpha\\ x : \alpha_{2}\\ \alpha_{2} \rightarrow^{!} \alpha\\ f_\beta(s, x) \rightarrow^{!} \beta}
+  { f x : \beta}
 \end{equation}
 \caption{Inference rule: application}
 \end{figure}
 
-Since we do not make use of variables, \(\Pi(f_\alpha, f_\beta)\) is itself a combinator dependent on the environment and the argument \(x\). Since the dependency is internalized by \(f_\alpha\) and \(f_\beta\), its type can be expressed with an arrow \eqref{pi_example}.
+Since we do not make use of variables, \(\Pi\) is itself a combinator (\(\Pi(f_\alpha, f_\beta)\)) dependent on an environment and the argument \(x\). Since the dependency is internalized by \(f_\alpha\) and \(f_\beta\), its type can be expressed with an arrow \eqref{pi_example}.
 
 \subsubsection{Arrow types}
 
-We define nondependent arrows (\(A \rightarrow B\) as such:
+We define nondependent arrows (\(A \rightarrow B\)) as such \(\Pi\) objects quoting their codomain to discard the environment-argument couple \eqref{arrow_def}.
 
 \begin{figure}[h!]
 \begin{equation}\label{arrow_def}
   \inferrule
   { A : \sort{m}, B : \sort{n}}
-  {A \rightarrow B \coloneq (\Pi(Id(\sort{m}), \Lambda(\sort{m}, Id(\sort{m}), `(Coup(Id(\sort{m})), B)))\ A)}
+  {A \rightarrow B \coloneq (\Pi(Id(\sort{m}), \Lambda(\sort{m}, Id(\sort{m}), `(Coup(Id(\sort{m})), B))) A)}
 \end{equation}
 \end{figure}
 
 \subsubsection{Couple Projections}
 
-We define dependent and nondependent versions of \(Snd\) projection to bootstrap several of the combinators' types. \(Fst(\alpha, \beta)\) is not dependent, since \(\alpha\) does not depend on \(\beta\) in \(\Sigma(\alpha, \beta)\). We use \(\circ'\) to denote nondependent composition where \(g : \alpha \rightarrow \beta\) and \(f : \beta \rightarrow \alpha\).
-The inference rules for projection on couples are as such:\\
+We define dependent and nondependent versions of the \(Snd\) projection to bootstrap several of the combinators' types. We also derive a \(Sndc\) combinator which accepts a coupe not depending on an environment. \(Fst(\beta)\) is not dependent, since \(\alpha\) does not refer to any object in context. Composition (\(f \circ g\)) is nondependent with respect to \(g\), although \(f\) may depend on \(g(x)\). A form of semi-dependent can be derived if \(g\) gives its dependency by a couple (\(g(x) : \Sigma(\ldots) \ldots\)).
+The inference rules for projection on couples are as such \textbf{TODO: UPDATING LEFT OFF HERE, CONTINUE TOMORROW MORNING}:\\
 
-\begin{figure}
+\begin{figure}[h]
   \centering
   \begin{tabular}{c c}
     \inferrule[Fst]
@@ -421,7 +413,7 @@ As in Curien's combinators, the \(App\) combinator evaluates a couple as a compu
 %     { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
 %     { App(n, \alpha, \beta) : \Pi(max m n, n)\
 %       \Sigma(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha))\
-%       ((\Lambda'(\sort{m}, Id(\sort{m}), \beta) \alpha) \circ' (Snd(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha)) \circ' Snd'(\sort{max(m, n)}, \Sigma(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha))))) }
+%       ((\Lambda'(\sort{m}, Id(\sort{m}), \beta) \alpha) \circ (Snd(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha)) \circ Snd'(\sort{max(m, n)}, \Sigma(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha))))) }
 %   \end{equation}
 %   \caption{Inference rule: \(App\).}
 % \end{figure} PUT IN APPENDIX
@@ -456,7 +448,7 @@ Our reduction rules are the same as in the categorical abstract machine \autocit
 \centering
 \begin{tabular}{l l}
   (id) & \(Id(\alpha) x \rightarrow x\) \\
-  (ass') & \((x \circ' y) z \rightarrow x(y z)\) \\
+  (ass') & \((x \circ y) z \rightarrow x(y z)\) \\
   (ass) & \(\llbracket \alpha, \beta, \gamma \rrbracket \circ x y z \rightarrow x(y z)\) \\
   (fst) & \(Fst(\alpha, \beta)\ \llbracket \ldots \rrbracket (a, b) \rightarrow a\) \\
   (snd) & \(Snd(\alpha, \beta)\ \llbracket \ldots \rrbracket (a, b) \rightarrow b\) \\

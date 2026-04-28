@@ -208,22 +208,25 @@ In a dependently-typed categorical combinator calculus where couples are naively
 \caption{Where \(\delta\) denotes an arbitrary environment and \(\alpha\) denotes the \(fst\) component. \(\Sigma(f_\beta) (env : \delta) : \sort{max(m, n)}\)}
 \end{figure}
 
-We thus define couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\), where the environment conveys no extra meaningful information, and \(\beta\) depends only on \(fst\). We represent a no-op indexing of the environment with a unit type \(\top\) so as to avoid universe arguments to \(\Sigma\).
+We thus define couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\), where the environment conveys no extra meaningful information, and \(\beta\) depends only on \(fst\). We represent a no-op indexing of the environment with a unit type \(\top\) so as to avoid universe arguments to \(\Sigma\). For legibility, we use the notation \(Coup(\beta)\) to refer to the type of a couple where \(\beta : \alpha \rightarrow \sort{n}\).
 
 \begin{figure}[h!]
   \centering
-  \begin{minipage}{0.3\textwidth}
-  \centering
+  \begin{minipage}{0.4\textwidth}
+    \centering
+    \[
     \inferrule[Top]
     { }
     { \top : \sort{0}}
+  \]
+  \[
     \inferrule[Unit]
     { }
     { \ast : \top}
+    \]
 \end{minipage}
-\hfill
   \hfill
-  \begin{minipage}{0.7\textwidth}
+  \begin{minipage}{0.6\textwidth}
     \centering
   \begin{equation}
     \inferrule[Coup]
@@ -242,54 +245,38 @@ This view of couples as sigma terms naturally encodes the notion of a context, a
 
 In the categorical abstract machine, this encoding of judgments corresponds to an environment where variable assignments are explicitly typed.
 
-\subsection{Type Annotations as Points via Couple-Judgments}
+\subsection{Type Annotations as Tarski Universes}
 
-All combinator objects have type annotations specified as points (usually as families indexing the environment). For example, the projection \(Fst(f_\beta)\) is indexed by the term \(f_\beta\) which depends on an environment (\(s : \delta\)), and the term \(fst : f_\alpha(s)\).
+All combinator objects have type annotations specified as points (usually as families indexing the environment). For example, the projection \(Snd(f_\beta)\) is indexed by the term \(f_\beta\) which depends on an arbitrary environment (\(s : \delta\)), and the term \(fst : \alpha\) (\textbf{TODO: double check this. Does \(\alpha\) also need to depend on \(\delta\)? All examples work, which suggests no. Might be an expressivity thing. If there is an advantage, it would be quite easy to fix}).
 
 \subsection{Inference Rules}\label{infer_rules}
 
-We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We also use the notation \(\Pi(x : A), B\), and may omit type arguments for legibility to denote an illustration of a type. However, the full combinatory, point-free types are accessible in the appendix. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(f_\alpha, f_\beta)\).
+We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We also use the notation \(\Pi(x : A), B(x)\), and may omit type arguments for legibility to give an illustration of a type. However, the full combinatory types are accessible in the appendix \eqref{appendix:sup}. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(f_\alpha, f_\beta) s\).
 
 \subsubsection{Application and \(\Pi\)}
 
-The inference rule for function application is as usual, except the codomain \(\beta\) is applied the \(\Sigma\)-judgment \(\llbracket \sort{m}, Id(\sort{m}) \rrbracket (\alpha, x)\).
+The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha(s)\). Since \(f_\alpha(s)\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object (see inference rule \eqref{pi_example}) without causing nontermination. In practice, we normalize types eagerly, but we do not always indicate this in the prose inference rules (see \eqref{appendix:sup}). We use \(\rightarrow^{!}\) to denote star-step affine reduction to a normal form.
 
 \begin{figure}[h!]
 \begin{equation}
   \inferrule[App]
-  { f : \Pi(m, n) \alpha \beta\\ x : \alpha}
-  { f x : \beta \llbracket \sort{m}, Id(\sort{m}) \rrbracket (\alpha, x)}
+  { f : \Pi(f_\alpha, f_\beta) s, f_\alpha(x) \rightarrow^{!} \alpha\\ x : \alpha_{2}, \alpha_{2} \rightarrow^{!} \alpha}
+  { f_\beta(s, x) \rightarrow^{!} \beta, f x : \beta}
 \end{equation}
 \caption{Inference rule: application}
 \end{figure}
 
-Since we do not make use of variables, \(\Pi(m, n)\) is itself a dependent combinator, naively dependently typed \eqref{naive}. However, since we apply function type codomains (\(\beta\)) with \(\llbracket \ldots \rrbracket(\alpha, x)\), it can be expressed as an arrow type \eqref{arrow_pi}. Our use of the judgment-couple convention in the type of \(\Pi(m, n)\) proves to be useful in several other combinator types, avoiding duplication of elements in the context.
-
-\begin{figure}[h]
-\begin{equation}\label{naive}
-  \Pi(m, n) : \Pi(\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}), \sort{n}
-\end{equation}
-\caption{Naive typing of \(\Pi(m, n)\) with a dependent type}
-\end{figure}
-
-\begin{figure}[h]
-  \begin{equation}\label{arrow_pi}
-    \inferrule
-    { }
-    {\Pi(m, n) : \sort{m} \rightarrow (\Sigma(\sort{m}, Id(\sort{m})) \rightarrow \sort{n}) \rightarrow \sort{n}}
-  \end{equation}
-  \caption{Arrow typing of \(\Pi(m, n)\) using \(\Sigma\)-judgments}
-\end{figure}
+Since we do not make use of variables, \(\Pi(f_\alpha, f_\beta)\) is itself a combinator dependent on the environment and the argument \(x\). Since the dependency is internalized by \(f_\alpha\) and \(f_\beta\), its type can be expressed with an arrow \eqref{pi_example}.
 
 \subsubsection{Arrow types}
 
-We define nondependent arrows (\(\alpha \rightarrow \beta\)) as such (where \(`(\ldots)\) denotes the quotation combinator of arity 3):
+We define nondependent arrows (\(A \rightarrow B\) as such:
 
 \begin{figure}[h!]
 \begin{equation}\label{arrow_def}
   \inferrule
-  { \alpha : \sort{m}\\ \beta : \sort{n}}
-  {\alpha \rightarrow \beta \coloneq \Pi(m, n)\ \alpha\ `(\sort{n}, \Sigma(\sort{n}, Id(\sort{m})), \beta)}
+  { A : \sort{m}, B : \sort{n}}
+  {A \rightarrow B \coloneq (\Pi(Id(\sort{m}), \Lambda(\sort{m}, Id(\sort{m}), `(Coup(Id(\sort{m})), B)))\ A)}
 \end{equation}
 \end{figure}
 
@@ -1179,7 +1166,7 @@ To Jake, for teaching me lambda-calculus.
 
 \appendix
 
-\section{Supplementary Materials}
+\section{Supplementary Materials}\label{appendix:sup}
 
 \textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}\\
 \textbf{Omitted inference cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Judge.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Judge.lean}\\
@@ -1188,6 +1175,7 @@ To Jake, for teaching me lambda-calculus.
 \section{The Todo List}
 
 \begin{itemize}
+  \item \textbf{Most important:} I think I may have made a typo in the type of \(\Sigma\), but I will have to double check because I was sleepy when I wrote this note.
   \item Subst operation: Subst combinator is used in only one place, but it is very powerful. Subst duplicates the environment across two points, but only if env is consumed to index a type, not as a computation. This allows a decreasing measure. I would like to have this in the final version, as it makes the Tarski universe narrative compelling.
   \item If time permits, I want to finish the \(\lambda\)-calculus compiler.
 \end{itemize}

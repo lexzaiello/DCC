@@ -55,6 +55,53 @@ macro_rules
   DCC (Π(Id(Sort n), `(Sort n, (f_β env) ∘ Snd'(t_f, α))) Coup(`(t_f, α)))
 
 /-
+TODO: Need to put this back in, remove App vs App' distinction.
+
+f_β depends on the environment and x. x depends on the environment,
+but not fst.
+
+assuming
+
+Subst(f_β, Snd(...)) env (y, z) = f_β env y z
+
+@[dcc_judge, grind →, grind .] abbrev App.type (f_α f_β δ : Expr) (o : Level) : Expr :=
+  let t_x_y_β := DCC Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(Π(f_α, f_β)))
+  let t_x_y   := DCC Σ(t_x_y_β)
+  DCC (Π(Id(Sort o), `(Sort o, Π(t_x_y, Subst(f_β, Snd(t_x_y_β))))) δ)
+-/
+
+/-
+Subst(x, Snd(f_β)) refers to the "simply-typed" Snd.
+As in, Snd is only determined by the environment, not fst.
+
+x : ∀ (env : δ) (x : f_t_snd env), β(env, x)
+
+x : (Π(Id(Sort o), `(Sort o, Π(f_t_snd, β))) δ)
+
+so s : Σ(Λ(δ, f_α, f_β ∘ Fstc(f_α))
+
+x   : ∀ (env : δ) (x : f_α₁ env), β env x
+x   : (Π(Id(Sort o), `(Sort o, Π(f_α₁, β))) δ)
+f_β : (Π(Id(Sort o), `(Sort o, Π(f_α₂, Λ(δ, f_α₂, `(Coup(f_α₂), Sort n))))) δ)
+
+f_β : ∀ (env : δ) (x : f_α x), Sort n
+
+Subst(x, Snd(f_β)) env (y, z) = x env z
+
+f_α₁ = f_α₂
+
+Sigma snd type:
+f_β : ∀ (env : δ) (x : f_α₂ env), Sort n
+-/
+@[dcc_judge] abbrev Subst₂.type (f_α f_β β δ : Expr) (o : Level) : Expr :=
+  let f_β_s := DCC Λ(δ, f_α, f_β ∘ Fstc(f_α))
+  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(f_β_s),
+    Subst(β, Snd(f_β_s))))) δ)
+
+@[dcc_judge] abbrev Subst₂.x.type (f_t_snd β δ : Expr) (o : Level) : Expr :=
+  DCC (Π(Id(Sort o), `(Sort o, Π(f_t_snd, β))) δ)
+
+/-
 TODO: Replace App with
 
 let s_β := Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))
@@ -75,6 +122,9 @@ let t_s := Σ(s_β)
 @[dcc_judge] abbrev Bot.type : Expr :=
   DCC Sort 0
 
+/-
+TODO: x needs to depend on (env : δ)
+-/
 @[dcc_judge] abbrev fst.f_β.type (α δ : Expr) (m n o : Level) : Expr :=
   (DCC (δ : Sort o) → ((α : Sort m) → Sort n))
 
@@ -163,12 +213,19 @@ f_β : (x : α) (y : f_α x) → Sort n
   DCC (Sort m : Sort m.succ) → ((α : Sort m) → Sort n)
 
 /-
-β : δ → α → Sort n
+β : ∀ (env : δ) (x : f_α env), Sort n
 x : ∀ (env : δ) (x : α), γ env x
 Subst(x, Fst(β)) : ∀
 -/
 @[dcc_judge] abbrev Subst₁.type (β γ δ : Expr) (o : Level) : Expr :=
   (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(β), Subst(γ, Fst(β))) ∘ Snd'(Sort o, δ))) δ))
+
+/-
+f_β : ∀ (env : δ) (x : α), Sort n
+x : ∀ (env : δ) (y : β),
+β = f_β env x
+Subst(x, Snd(f_β)) : ∀ (env : δ) (s : Σ(f_β) env), 
+-/
 
 /-
 (Π(Id(Sort o), `(_a, Π(f_α, Λ(δ, _b, Π(((App(Id(_c), `(_d, _e), Λ(_f, _g, `((Σ(`(_h, _i)) _j), Sort n))) _k) _l), Λ(_m, ((App(Id(_n), `(_o, _p), Λ(_q, _r, `(_s, _t))) _u) f_β), `(_v, Sort p))))))) _w)

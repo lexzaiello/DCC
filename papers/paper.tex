@@ -1137,7 +1137,11 @@ To Jake, for teaching me lambda-calculus.
 \textbf{Omitted inference cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Judge.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Judge.lean}\\
 \textbf{Omitted reduction cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Step2.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Step2.lean}
 
-\section{The Todo List}
+\section{Todos left}
+
+\subsection{\textit{Subst} combinator and \textit{App'}}
+
+The \textit{App'} combinator is what I am using to duplicate 
 
 \begin{itemize}
   \item Subst operation: Subst combinator is used in only one place, but it is very powerful. Subst duplicates the environment across two points, but only if env is consumed to determine a type, not as a computation. This allows a decreasing measure. I would like to have this in the final version, as it enables the \(\lambda\)-calculus compilation app case, which I am still stuck on. All the current types are totally fine.

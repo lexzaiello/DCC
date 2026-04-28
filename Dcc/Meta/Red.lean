@@ -7,6 +7,35 @@ import Dcc.Relation
 
 namespace Expr
 
+/-
+This is inline and extremely ugly.
+
+(Π(Id(Sort n), `(Sort n, (f_β env) ∘ Snd'(t_f, α))) Coup(`(Π(f_α, f_β) env), α))
+
+f_α : δ → Sort m
+f_β : ∀ (env : δ) (x : f_α env), Sort n
+
+App(f_α, f_β) : ∀ (env : δ) (s : (Σ(Λ(δ, Π(f_α, f_β), f_α ∘ (Fst(`(⊤, Π(f_α, f_β))) ∗))) env
+
+-- with (env : δ) (x : ∀ ...) in scope
+let t_x_y_β := Λ(δ, Π(f_α, f_β), f_α ∘ (Fst(`(⊤, Π(f_α, f_β))) ∗))
+-- with env : δ in scope
+let t_x_y := DCC Σ(t_x_y_β)
+
+App(f_α, f_β) : (Π(Id(Sort o), `(Sort o, Π(t_x_y, Subst(f_β, Snd(t_x_y_β))))) δ)
+
+question is Snd type.
+this was tricky to figure out. take this example. we already know f_β : ∀ (env : δ) (x : f_α env)
+wait
+
+f_β : (Π(Id(Sort o), `(Sort o, Π(f_α, β))) δ)
+we have all we need to write inference rule
+
+Issue is Snd gives:
+∀ (env : δ) (s : (Σ(t_x_y_β) env))
+t_x_y_β : δ → 
+-/
+
 inductive RedMeta : Expr → Expr → Prop
   | appl      : Relation.ReflTransGen RedAff (DCC (f_α env)) α
     → IsNorm RedAff α

@@ -233,23 +233,23 @@ open Confluent in def RedRel.globally_confluent
         have ⟨_, h₁, h₂⟩ := ih _ hr₁ (hrt₁b.trans hrtt₁b) (hrt₁b.trans hrtt₂b)
         exact ⟨_, .trans hrtt₁ h₁, .trans hrtt₂ h₂⟩
 
-@[simp] def IsNorm.sigl {r : Expr → Expr → Prop} [hC : Congruent r]
+@[dcc_rel] def IsNorm.sigl {r : Expr → Expr → Prop} [hC : Congruent r]
   (hn : IsNorm r (DCC ⟦β⟧(x, y))) : IsNorm r x := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.sigl' h⟩).elim
 
-@[simp] def IsNorm.sigr {r : Expr → Expr → Prop} [hC : Congruent r]
+@[dcc_rel] def IsNorm.sigr {r : Expr → Expr → Prop} [hC : Congruent r]
   (hn : IsNorm r (DCC ⟦β⟧(x, y))) : IsNorm r y := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.sigr' h⟩).elim
 
-@[simp] def IsNorm.congrFun {r : Expr → Expr → Prop} [hC : Congruent r]
+@[dcc_rel] def IsNorm.congrFun {r : Expr → Expr → Prop} [hC : Congruent r]
   (hn : IsNorm r (DCC (f x))) : IsNorm r f := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.congrFun' h⟩).elim
 
-@[simp] def IsNorm.congrArg {r : Expr → Expr → Prop} [hC : Congruent r]
+@[dcc_rel] def IsNorm.congrArg {r : Expr → Expr → Prop} [hC : Congruent r]
   (hn : IsNorm r (DCC (f x))) : IsNorm r x := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.congrArg' h⟩).elim
 
-@[simp] def IsNorm.complete
+@[dcc_rel] def IsNorm.complete
   {r : Expr → Expr → Prop}
   {t : Expr → ℕ → Prop}
   [hM : Measure t]

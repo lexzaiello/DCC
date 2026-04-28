@@ -16,6 +16,8 @@ inductive Reduces : Expr → Expr → Prop
     → IsNorm RedEta D
     → Reduces A D
 
+@[simp, inline] abbrev reduce_all := reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff
+
 @[simp] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d, e, f⟩ ⟨g, h, i, j, k, l⟩ => by
   have ha := norm_unique a b g h
   have hb := norm_unique c d (ha ▸ i) j
@@ -26,44 +28,21 @@ inductive Reduces : Expr → Expr → Prop
   cases h
   congr
 
-@[simp, aesop safe destruct, aesop safe apply] theorem Reduces.complete : Reduces A B → (reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff) A = B :=
+@[simp, aesop safe destruct, aesop safe apply] theorem Reduces.complete : Reduces A B → reduce_all A = B :=
   fun ⟨ha, hb, hc, hd, he, hf⟩ => by
+    unfold reduce_all
     unfold reduce'
-    have h₁ := reduce_complete_fst ha hb
-    have h₂ := reduce_complete_fst hc hd
-    have h₃ := reduce_complete_fst he hf
-    
-    rw [← h₃]
-    simp_all
+    cases reduce_complete_fst ha hb; cases reduce_complete_fst hc hd; cases reduce_complete_fst he hf; rfl
 
-def reduce_reduces (h : (reduce_η ∘ reduce_meta ∘ reduce) A = B) : Reduces A B := ⟨reduce_sound rfl, reduce_norm rfl, reduce_meta_sound rfl, reduce_meta_norm rfl, reduce_η_sound h, reduce_η_norm h⟩
+def reduce_reduces (h : (reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff) A = B) : Reduces A B := ⟨
+  reduce_sound rfl,
+  reduce_norm rfl,
+  reduce_sound rfl,
+  reduce_norm rfl,
+  h ▸ (reduce_sound rfl),
+  h ▸ (reduce_norm rfl)⟩
 
-def reduce_reduces' : Reduces A A.reduce.reduce_meta.reduce_η := reduce_reduces rfl
-
-namespace Eta
-
-inductive Reduces : Expr → Expr → Prop
-  | mk : RedAffReflTrans A B → IsNormAff B → RedEtaReflTrans B C → IsNormEta C → Reduces A C
-
-@[simp] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d⟩ ⟨e, f, g, h⟩ =>
-  c.norm_unique d (a.norm_unique b e f ▸ g) h
-
-@[simp] theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
-  have h := h₁.unique h₂
-  cases h
-  congr
-
-@[simp, aesop safe destruct, aesop safe apply] theorem Reduces.complete : Reduces A B → (reduce_η ∘ reduce) A = B :=
-  fun ⟨ha, hb, hc, hd⟩ => by
-    have h₁ := ha.complete hb
-    have h₂ := hc.complete hd
-    simp_all
-
-def reduce_reduces (h : (reduce_η ∘ reduce) A = B) : Reduces A B := ⟨reduce_sound rfl, reduce_norm rfl, reduce_η_sound h, reduce_η_norm h⟩
-
-def reduce_reduces' : Reduces A A.reduce.reduce_η := reduce_reduces rfl
-
-end Eta
+def reduce_reduces' : Reduces A (reduce' RedEta (reduce' RedMeta (reduce' RedAff A))) := reduce_reduces rfl
 
 @[inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PLift (t = (DCC (α : Sort m) → β))) :=
   match heq₀ : t with
@@ -201,7 +180,7 @@ inductive Judge : Expr → Expr → Prop where
 def with_red (h : Option ((t : Expr) × PLift (Judge e t))) :
   Option ((τ₁ τ₂ : Expr) × PLift (Judge e τ₁) × PLift (Reduces τ₁ τ₂)) :=
   match h with
-  | .some ⟨t, h⟩ => .some ⟨t, t.reduce.reduce_meta.reduce_η, h, ⟨reduce_reduces rfl⟩⟩
+  | .some ⟨t, h⟩ => .some ⟨t, reduce_all t, h, ⟨reduce_reduces rfl⟩⟩
   | _ => .none
 
 def with_arr (h : Option ((t : Expr) × PLift (Judge e t))) :
@@ -286,7 +265,7 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
       | .some ⟨βxm, ⟨ht₂⟩⟩ =>
         match with_curr_β_type (infer β) with
         | .some ⟨_, α₂, m, n, ⟨ht₃⟩, ⟨harr⟩⟩ =>
-          if heq : (reduce_η ∘ reduce_meta ∘ reduce) (DCC (β x)) = βxm then
+          if heq : reduce_all (DCC (β x)) = βxm then
             if heq₂ : α = α₂ then
               .some ⟨_, ⟨.coup ht₁ ht₂ (heq₂ ▸ harr ▸ ht₃) (reduce_reduces heq) (reduce_reduces rfl)⟩⟩
             else .none
@@ -299,7 +278,7 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
     | .some ⟨_, α₂, m, n, ⟨htβ⟩, ⟨harrβ⟩⟩ =>
       match infer x with
       | .some ⟨DCC (Π(f_α, _γ) x_α), ⟨ht₂⟩⟩ =>
-        if heq : (reduce_η ∘ reduce_meta ∘ reduce) (DCC (f_α x_α)) = (reduce_η ∘ reduce_meta ∘ reduce) (DCC Coup(β)) then
+        if heq : reduce_all (DCC (f_α x_α)) = reduce_all (DCC Coup(β)) then
           if heq₂ : α = α₂ then
             .some ⟨_, ⟨.curr (heq₂ ▸ harrβ ▸ htβ) ht₂ (reduce_reduces heq.symm)
               (reduce_reduces rfl)
@@ -367,8 +346,8 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
   | DCC (f x) =>
     match infer f, infer x with
     | .some ⟨DCC (Π(f_α, _f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
-      if heq : (reduce_η ∘ reduce_meta ∘ reduce) (DCC (f_α x_α)) = τ₂' then
-        .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
+      if heq : reduce_all (DCC (f_α x_α)) = τ₂' then
+        .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by change Judge _ (reduce_all _); rw [heq]; exact ht₂) (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
   | _ => .none
@@ -376,7 +355,7 @@ def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
 def test_pair_comp : Option Expr := do
   match ← (DCC Id(Sort 1)).infer with
   | ⟨DCC (Π(_f_α, β) _x), _⟩ =>
-    let β' := β.reduce.reduce_η
+    let β' := reduce_all β
     let e := DCC (⟦2, Sort 1, β', β'⟧⟨Id(Sort 1), Id(Sort 1)⟩)
     Sigma.fst <$> e.infer
   | _ => .none

@@ -162,15 +162,13 @@ Despite every visible operation being bound by a point, arguments in scope can b
 
 Our primary insight when extending the categorical combinators to dependent types is that the types of all of the categorical combinators are representable without making use of the pair rule. That is, their types are affine. We refer to the subset of the categorical combinators excluding the pair rule as the ``affine restriction.'' By showing that the affine restriction is strongly normalizing, we gain decidable judgmental equality (\(\equiv\)) and a decision procedure for type-checking.
 
-Second, we interpret \(\Sigma\)-types as a telescope-encoded context as usual, but also view the pair rule (\(\langle f, g \rangle x = (f x, g x)\)) as a substitution or morphism between contexts.
-
-Finally, as in the curry combinator, we specify combinator type arguments as term points that internalize an indexing of the environment (as in Tarski universes). For example, the \(\Pi\) combinator is inferred like such:
+We interpret \(\Sigma\)-types as a telescope context as usual. Finally, as in the Curry combinator, we specify combinator type arguments as term points that internalize an indexing of the environment (as in Tarski universes). For example, the \(\Pi\) combinator is inferred like such:
 
 \begin{figure}[h!]
   \centering
   \begin{equation}\label{pi_example}
     \inferrule [Pi]
-    { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi_{s : \delta, x : f_\alpha(s)}, \sort{o}}
+    { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi(s : \delta)(x : f_\alpha(s)), \sort{o}}
     { \Pi(f_\alpha, f_\beta) : \delta \rightarrow \sort{o}}
   \end{equation}
 \end{figure}
@@ -179,7 +177,7 @@ We similarly regard couples as meaningful traversable data, but reinterpret them
 
 \subsection{Couples as Degenerate Dependent Sums}
 
-Recall the typical typing of a \(\Sigma\)-pair:
+Recall the usual typing of a \(\Sigma\)-pair:
 
 \begin{equation}
 \inferrule
@@ -187,7 +185,7 @@ Recall the typical typing of a \(\Sigma\)-pair:
 { \Gamma \vdash \Sigma(\alpha, \beta) : \sort{max(m, n)}}
 \end{equation}
 
-A \(\Sigma\)-type can be placed under a \(\lambda\)-binder, referencing bound variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) \autocite[50]{martin1984intuitionistic}, in that a function \(\Pi_{x : \alpha, y : \beta(x)}, \gamma x y\) can be transofmred into a dependent function \(\Pi_{s : \Sigma(\alpha, \beta)}, \gamma(s.fst, s.snd)\), and vice-versa (``currying''-''uncurrying'').
+A \(\Sigma\)-type can be placed under a \(\lambda\)-binder, referencing bound variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) \autocite[50]{martin1984intuitionistic}, in that a function \(\Pi(x : \alpha)(y : \beta(x)), \gamma x y\) can be transofmred into a dependent function \(\Pi(s : \Sigma(\alpha, \beta)), \gamma(s.fst, s.snd)\), and vice-versa (``currying''-''uncurrying'').
 
 In the untyped categorical combinators, Curry-Uncurry can be written as:
 
@@ -242,7 +240,7 @@ We formally interpret couples \(\llbracket \beta \rrbracket (a, b)\) as a degene
 \end{minipage}
 \end{figure}
 
-This view of couples as sigma terms naturally encodes the notion of judgments. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
+This view of couples as sigma terms naturally encodes the notion of a context, and proves to be invaluable when compiling dependently-typed \(\lambda\)-calculi to the categorical combinators. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
 
 \begin{equation}
   x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx
@@ -253,12 +251,11 @@ In the categorical abstract machine, this encoding of judgments corresponds to a
 
 \subsection{Type Annotations as Points via Couple-Judgments}
 
-Except for \(\Pi\), all combinator objects have type annotations specified as points. For example, the projection \(Fst(\alpha, \beta)\) is indexed by terms denoting the type of the expected \(\Sigma\)-couple. This contradicts intuition that type arguments must be able to depend on other terms, and thus, cannot be points. However, by referring to terms in the context as the \(snd\) component of a \(\Sigma\)-couple (\(\Sigma(\sort{m}, Id(\sort{m}))\)) mentioning its type, they only need to be referred to by their respective sorts. As a result, we avoid another potential duplication of type-points inside the combinators' types. \(\Sigma\)-judgments are also an example of ``very dependent'' types, as defined by Altenkirch et al. \cite{altenkirch}.\\\\
-See \eqref{point_free_derivation} where we derive point-free \(Id\ \alpha\) using the dependent curry (\(\Lambda\)) combinator and \(\Sigma\)-judgments.
+All combinator objects have type annotations specified as points (usually as families indexing the environment). For example, the projection \(Fst(f_\beta)\) is indexed by the term \(f_\beta\) which depends on an environment (\(s : \delta\)), and the term \(fst : f_\alpha(s)\).
 
 \subsection{Inference Rules}\label{infer_rules}
 
-We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We also use the notation \(\Pi(x : A), B\), and may omit type arguments for legibility to denote an illustration of a type. However, the full combinatory, point-free types are accessible in the appendix. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(m, n)\).
+We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We also use the notation \(\Pi(x : A), B\), and may omit type arguments for legibility to denote an illustration of a type. However, the full combinatory, point-free types are accessible in the appendix. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(f_\alpha, f_\beta)\).
 
 \subsubsection{Application and \(\Pi\)}
 
@@ -1198,10 +1195,8 @@ To Jake, for teaching me lambda-calculus.
 \section{The Todo List}
 
 \begin{itemize}
-  \item Inference rules I am not happy enough with:
-    \begin{itemize}
-      \item 
-    \end{itemize}
+  \item Subst operation: Subst combinator is used in only one place, but it is very powerful. Subst duplicates the environment across two points, but only if env is consumed to index a type, not as a computation. This allows a decreasing measure. I would like to have this in the final version, as it makes the Tarski universe narrative compelling.
+  \item If time permits, I want to finish the \(\lambda\)-calculus compiler.
 \end{itemize}
 
 \printbibliography

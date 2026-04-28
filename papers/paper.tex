@@ -173,7 +173,7 @@ We interpret \(\Sigma\)-types as a telescope context as usual. Finally, as in th
   \end{equation}
 \end{figure}
 
-We similarly regard couples as meaningful traversable data, but reinterpret them as \(\Sigma\)-pairs. \(\Sigma\)-couples make traversing data in a well-typed way quite convenient, and can naturally encode typing judgments. This approach also allows \(\Pi\) universe levels to be computed by our core inference rules without any modification. We similarly define most of the type arguments of the combinators through Tarski universe. By specifying type arguments in this way, some potential duplication of items in the context can be avoided, thus further enabling a purely affine type theory.
+We similarly regard couples as meaningful traversable data, but reinterpret them as \(\Sigma\)-pairs. \(\Sigma\)-couples make traversing data in a well-typed way quite convenient, and can naturally encode typing judgments. This approach also allows computing \(\Pi\) sort through our core inference rules without any modification. We define most of the type arguments of the combinators through Tarski universe environment-indexing points. By specifying type arguments in this way, some potential duplication of items in the context can be avoided (e.g., in \(\Pi\), where the environment traverses both \(f_\alpha\) and \(f_\beta\)), thus further enabling a purely affine type theory.
 
 \subsection{Couples as Degenerate Dependent Sums}
 
@@ -185,19 +185,19 @@ Recall the usual typing of a \(\Sigma\)-pair:
 { \Gamma \vdash \Sigma(\alpha, \beta) : \sort{max(m, n)}}
 \end{equation}
 
-A \(\Sigma\)-type can be placed under a \(\lambda\)-binder, referencing bound variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) \autocite[50]{martin1984intuitionistic}, in that a function \(\Pi(x : \alpha)(y : \beta(x)), \gamma x y\) can be transofmred into a dependent function \(\Pi(s : \Sigma(\alpha, \beta)), \gamma(s.fst, s.snd)\), and vice-versa (``currying''-''uncurrying'').
+A \(\Sigma\)-type can be placed under a \(\lambda\)-binder, referencing bound variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) \autocite[50]{martin1984intuitionistic}, in that a function \(\Pi(x : \alpha)(y : \beta(x)), \gamma(x, y)\) can be transformed into a dependent function \(\Pi(s : \Sigma(\alpha, \beta)), \gamma(fst(s), snd(s))\), and vice-versa (``currying''-''uncurrying'').
 
 In the untyped categorical combinators, Curry-Uncurry can be written as:
 
 \begin{equation}\label{curr_uncurr}
   \begin{split}
-    Curry(x) &:= \Lambda(x) \\
-    Uncurry(x) &:= App \circ \langle x \circ Fst, Snd \rangle\\
-    Uncurry(x) (y, z) = x y z
+    \textit{Curry}(x) &:= \Lambda(x) \\
+    \textit{Uncurry}(x) &:= App \circ \langle x \circ Fst, Snd \rangle\\
+    \textit{Uncurry}(x) (y, z) = x y z
   \end{split}
 \end{equation}
 
-In a dependently-typed categorical combinator calculus where couples are naively interpreted as \(\Sigma\) pairs with point-free type arguments, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially in an affine setting. In \(Uncurry(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reducing the pair application. \(App\) has no knowledge of \(y\), and cannot calculate the type of \((x y, z)\). We avoid this contention by interpreting the type of \(\Sigma\) through type points indexing the environment \eqref{infer_sigma_types}, similarly to the term \(x\) in Curry (\(\Lambda(x)\)).
+In a dependently-typed categorical combinator calculus where couples are naively interpreted as \(\Sigma\) pairs with point-free type arguments, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially in an affine setting. In \(\textit{Uncurry}(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reducing the pair application. \(App\) has no knowledge of \(y\), and thus cannot calculate the type of \((x y, z)\). We circumvent this contention by indexing \(\Sigma\) with a map of the environment \(f_\beta : \Pi(s : \delta)(x : f_\alpha(s)), \sort{n}\) \eqref{infer_sigma_types}, similarly to the point \(x\) in Curry (\(\Lambda(x)\)).
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_sigma_types}
@@ -208,29 +208,22 @@ In a dependently-typed categorical combinator calculus where couples are naively
 \caption{Where \(\delta\) denotes an arbitrary environment and \(\alpha\) denotes the \(fst\) component. \(\Sigma(f_\beta) (env : \delta) : \sort{max(m, n)}\)}
 \end{figure}
 
-We formally interpret couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\), where the environment conveys no extra meaningful information, and \(\beta\) depends only on \(fst\). We represent a no-op indexing of the environment with a unit type \(\top\) so as to avoid universe arguments to \(\Sigma\).
+We thus define couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\), where the environment conveys no extra meaningful information, and \(\beta\) depends only on \(fst\). We represent a no-op indexing of the environment with a unit type \(\top\) so as to avoid universe arguments to \(\Sigma\).
 
 \begin{figure}[h!]
   \centering
-  \begin{minipage}{0.45\textwidth}
+  \begin{minipage}{0.3\textwidth}
   \centering
-  \begin{equation}
     \inferrule[Top]
     { }
     { \top : \sort{0}}
-  \end{equation}
-\end{minipage}
-\hfill
-\begin{minipage}{0.30\textwidth}
-  \centering
-  \begin{equation}
     \inferrule[Unit]
     { }
     { \ast : \top}
-  \end{equation}
-  \end{minipage}
+\end{minipage}
+\hfill
   \hfill
-  \begin{minipage}{0.22\textwidth}
+  \begin{minipage}{0.7\textwidth}
     \centering
   \begin{equation}
     \inferrule[Coup]

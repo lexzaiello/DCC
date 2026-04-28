@@ -373,16 +373,16 @@ As in Curien's combinators, the \(App\) combinator evaluates a couple as a compu
 \begin{figure}[h!]
   \centering
   \begin{align*}\label{subst_defs}
-    \inferrule[Subst_{Fst}^{\rightarrow}]
+    \inferrule[\(Subst_{Fst}^{\rightarrow}\)]
     { }
     { Subst(x, Fst(f_\beta)) \textit{env} \llbracket \beta \rrbracket (y, z) \rightarrow x \textit{env} y} &
-    \inferrule[Subst_{Snd}^{\rightarrow}]
+    \inferrule[\(Subst_{Snd}^{\rightarrow}\)]
     { }
     { Subst(x, Snd(f_\beta)) \textit{env} \llbracket \beta \rrbracket (y, z) \rightarrow x \textit{env} z}\\
-    \inferrule[Subst_{Fst}]
+    \inferrule[\(Subst_{Fst}\)]
     { x : \Pi (env : \delta) (x : \alpha), \gamma env x }
     { Subst(x, Fst(f_\beta)) : \Pi (\textit{env} : \delta) (s : \Sigma(\beta)), Subst(\gamma, Fst(\beta)) \textit{env} s} &
-    \inferrule[Subst_{Snd}]
+    \inferrule[\(Subst_{Snd}\)]
     { x : \Pi (\textit{env} : \delta) (x : f_{\beta} \textit{env}), \beta \textit{env} x}
     { f_{\beta s} \coloneq \Lambda(\delta, f_\alpha, f_\beta \circ Fstc(f_\alpha)) Subst(x, Snd(f_{\beta s})) : \Pi (\textit{env} : \delta) (s : \Sigma(f_{\beta s})), Subst(\beta, Fst(f_{\beta s})) \textit{env} s}
   \end{align*}

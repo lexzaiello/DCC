@@ -18,25 +18,27 @@ inductive Reduces : Expr → Expr → Prop
     → IsNorm RedEta D
     → Reduces A D
 
-@[inline] abbrev reduce_all := reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff
+def reduce_all := reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff
 
-@[dcc_reduce, aesop norm (rule_sets := [DccReduce])] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d, e, f⟩ ⟨g, h, i, j, k, l⟩ => by
+@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d, e, f⟩ ⟨g, h, i, j, k, l⟩ => by
   have ha := norm_unique a b g h
   have hb := norm_unique c d (ha ▸ i) j
   exact norm_unique e f (hb ▸ k) l
 
-@[aesop safe apply (rule_sets := [DccReduce])] theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
+@[aesop safe destruct (rule_sets := [DccReduce])] theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
   have h := h₁.unique h₂
   cases h
   congr
 
-@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem Reduces.complete : Reduces A B → reduce_all A = B :=
+@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])] theorem Reduces.complete : Reduces A B → reduce_all A = B :=
   fun ⟨ha, hb, hc, hd, he, hf⟩ => by
     unfold reduce_all
     unfold reduce'
     cases reduce_complete_fst ha hb; cases reduce_complete_fst hc hd; cases reduce_complete_fst he hf; rfl
 
-@[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] def reduce_reduces (h : (reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff) A = B) : Reduces A B := ⟨
+--@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])] theorem
+
+def reduce_reduces (h : reduce_all A = B) : Reduces A B := ⟨
   reduce_sound rfl,
   reduce_norm rfl,
   reduce_sound rfl,
@@ -44,13 +46,13 @@ inductive Reduces : Expr → Expr → Prop
   h ▸ (reduce_sound rfl),
   h ▸ (reduce_norm rfl)⟩
 
-def reduce_reduces' : Reduces A (reduce' RedEta (reduce' RedMeta (reduce' RedAff A))) := reduce_reduces rfl
+def reduce_reduces' : Reduces A (reduce_all A) := reduce_reduces rfl
 
-@[dcc_judge, aesop norm (rule_sets := [DccJudge]), inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
+@[dcc_judge, inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
   match heq₀ : t with
   | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
     if heq₁ : t = (DCC (α : Sort m) → β) then
-      .some ⟨α, β, m, ⟨by simp_all⟩⟩
+      .some ⟨α, β, m, ⟨by rw [← heq₀, heq₁]⟩⟩
     else
       .none
   | _ => .none
@@ -58,12 +60,12 @@ def reduce_reduces' : Reduces A (reduce' RedEta (reduce' RedMeta (reduce' RedAff
 def is_arrow (e : Expr) : Bool :=
   (arrow.matcher e).isSome
 
-@[dcc_judge, aesop norm (rule_sets := [DccJudge]), inline] abbrev fst.f_β.type.matcher (t : Expr) : Option ((α δ : Expr) × (m n o : Level) × (PULift.{1, 0} (t = fst.f_β.type α δ m n o))) :=
+@[dcc_judge, inline] abbrev fst.f_β.type.matcher (t : Expr) : Option ((α δ : Expr) × (m n o : Level) × (PULift.{1, 0} (t = fst.f_β.type α δ m n o))) :=
   match arrow.matcher t with
   | .some ⟨δ, arr', o, ⟨h_arr⟩⟩ =>
     match arrow.matcher arr' with
     | .some ⟨α, DCC Sort n, m, ⟨h_arr₂⟩⟩ =>
-      .some ⟨α, δ, m, n, o, ⟨by rw [h_arr, h_arr₂]; rfl⟩⟩
+      .some ⟨α, δ, m, n, o, ⟨by rw [h_arr, h_arr₂]⟩⟩
     | _ => .none
   | _ => .none
 
@@ -73,7 +75,7 @@ def is_arrow (e : Expr) : Bool :=
 
 -/
 
-@[dcc_judge, aesop norm (rule_sets := [DccJudge]), inline] abbrev pair.β.type.matcher (t α : Expr) (m : Level) : Option ((n : Level) × (PULift.{1, 0} (t = pair.β.type α m n))) :=
+@[dcc_judge, inline] abbrev pair.β.type.matcher (t α : Expr) (m : Level) : Option ((n : Level) × (PULift.{1, 0} (t = pair.β.type α m n))) :=
   match arrow.matcher t with
   | .some ⟨_srt, t', _mm,  ⟨_heq⟩⟩ =>
     match arrow.matcher t' with
@@ -84,11 +86,11 @@ def is_arrow (e : Expr) : Bool :=
     | _ => .none
   | _ => .none
 
-@[dcc_judge, aesop norm (rule_sets := [DccJudge]), inline] abbrev curr.β.type.matcher (t : Expr) : Option
+@[dcc_judge, inline] abbrev curr.β.type.matcher (t : Expr) : Option
   ((α : Expr) × (m n : Level) × (PULift.{1, 0} (t = curr.β.type α m n))) :=
   match arrow.matcher t with
   | .some ⟨α, DCC Sort n, m, ⟨h_arr⟩⟩ =>
-    .some ⟨α, m, n, ⟨by rw [h_arr]; rfl⟩⟩
+    .some ⟨α, m, n, ⟨by rw [h_arr]⟩⟩
   | _ => .none
 
 inductive Judge : Expr → Expr → Prop where
@@ -185,7 +187,7 @@ def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   | .some ⟨t, h⟩ => .some ⟨t, reduce_all t, h, ⟨reduce_reduces rfl⟩⟩
   | _ => .none
 
-@[dcc_judge, aesop norm (rule_sets := [DccJudge])] def with_arr (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+@[dcc_judge] def with_arr (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   Option ((τ α β : Expr) × (m : Level) × PULift.{1, 0} (Judge e τ) × PULift.{1, 0} (τ = arrow α β m)) :=
     match h with
     | .some ⟨t, h⟩ => match arrow.matcher t with
@@ -193,7 +195,7 @@ def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
       | _ => .none
     | _ => .none
 
-@[dcc_judge, aesop norm (rule_sets := [DccJudge])] def with_fst_fβ_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+@[dcc_judge] def with_fst_fβ_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   Option ((τ α δ : Expr) × (m n o : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = fst.f_β.type α δ m n o))) :=
   match h with
   | .some ⟨t, h⟩ => match fst.f_β.type.matcher t with
@@ -201,7 +203,7 @@ def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
     | _ => .none
   | _ => none
 
-@[dcc_judge, aesop norm (rule_sets := [DccJudge])] def with_pair_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) (α : Expr) (m : Level) :
+@[dcc_judge] def with_pair_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) (α : Expr) (m : Level) :
   Option ((τ : Expr) × (n : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = pair.β.type α m n))) :=
   match h with
   | .some ⟨t, h⟩ => match pair.β.type.matcher t α m with
@@ -209,7 +211,7 @@ def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
     | _ => .none
   | _ => .none
 
-@[dcc_judge, aesop norm (rule_sets := [DccJudge])] def with_curr_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+@[dcc_judge] def with_curr_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   Option ((τ : Expr) × (α : Expr) × (m n : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = curr.β.type α m n))) :=
   match h with
   | .some ⟨t, h⟩ => match curr.β.type.matcher t with
@@ -349,7 +351,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     match infer f, infer x with
     | .some ⟨DCC (Π(f_α, _f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
       if heq : reduce_all (DCC (f_α x_α)) = τ₂' then
-        .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by change Judge _ (reduce_all _); rw [heq]; exact ht₂) (reduce_reduces rfl)⟩⟩
+        .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by rw [heq]; exact ht₂) (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
   | _ => .none

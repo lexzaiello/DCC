@@ -101,7 +101,7 @@ def reduce {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → P
   | .none => ⟨e, ⟨.refl⟩⟩
 termination_by (hT.run e).fst
 
-abbrev reduce' {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
+@[dcc_reduce, inline] abbrev reduce' {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
   (e : Expr) : Expr := (reduce r e).fst
 
 open RedRel in def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : Measure t] (hR : RedRel r t (hM := hM)) : RedRel (Relation.TransGen r) (hM := hM) t where
@@ -264,7 +264,7 @@ open Rel in class SemiComplete {t : Expr → ℕ → Prop} [hM : Measure t]
   [hR : RedRel r t (m := Option) (hM := hM)] where
   complete : r A B → ∃ B h, (hR.run A) = .some ⟨B, ⟨h⟩⟩
 
-@[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theorem run_none {t : Expr → ℕ → Prop} [hM : Measure t]
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] theorem run_none {t : Expr → ℕ → Prop} [hM : Measure t]
   (r : Expr → Expr → Prop)
   [hR : RedRel r t (m := Option) (hM := hM)]
   [hC : SemiComplete r] : hR.run A = .none → IsNorm r A := by
@@ -320,7 +320,7 @@ if refl, trivial
 if there is a step, do induction to show
 reduce B' = B, then you're set.
 -/
-@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
   {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A) = ⟨B, ⟨hr⟩⟩ := by
   simp [reduce]
@@ -356,13 +356,13 @@ reduce B' = B, then you're set.
       simp_all
 termination_by ((hM.size t A), (hM.size t B))
 
-@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem reduce_complete_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+theorem reduce_complete_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
   {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).fst = B := by
   have h := reduce_complete hr hn
   simp_all
 
-@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+@[dcc_rel] instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM))
   [hN : SemiComplete r (hR := hR)] [Confluent r] : Complete.{0, 0, 0}
     (r := Relation.ReflTransGen r) (P := IsNorm r) (hR := hR.to_reflTrans (r := r) (t := t) (hM := hM)) :=
@@ -371,7 +371,7 @@ termination_by ((hM.size t A), (hM.size t B))
 @[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce_sound {t : Expr → ℕ → Prop} [hT : Measure t] [RedRel r t (hM := hT)]
   (_heq : reduce r A = ⟨B, ⟨h⟩⟩) : Relation.ReflTransGen r A B := h
 
-theorem reduce_norm {t : Expr → ℕ → Prop} [hT : Measure t]
+@[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce_norm {t : Expr → ℕ → Prop} [hT : Measure t]
   [hR : RedRel r t (hM := hT)]
   [hN : SemiComplete r (hR := hR)]
   (heq : reduce r A = ⟨B, ⟨h⟩⟩) : IsNorm r B := by

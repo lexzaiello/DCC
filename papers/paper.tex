@@ -381,45 +381,24 @@ As in Curien's combinators, the \(App\) combinator evaluates a couple as a compu
     { Subst(x, Snd(f_\beta)) \textit{env} \llbracket \beta \rrbracket (y, z) \rightarrow x \textit{env} z}\\
     \inferrule[Subst_{Fst}]
     { x : \Pi (env : \delta) (x : \alpha), \gamma env x }
-    { Subst(x, Fst(f_\beta)) : \Pi (\textit{env} : \delta) (s : \Sigma(\beta)), Subst(\gamma, Fst(\beta)) \textit{env} s}
+    { Subst(x, Fst(f_\beta)) : \Pi (\textit{env} : \delta) (s : \Sigma(\beta)), Subst(\gamma, Fst(\beta)) \textit{env} s} &
     \inferrule[Subst_{Snd}]
     { x : \Pi (\textit{env} : \delta) (x : f_{\beta} \textit{env}), \beta \textit{env} x}
     { f_{\beta s} \coloneq \Lambda(\delta, f_\alpha, f_\beta \circ Fstc(f_\alpha)) Subst(x, Snd(f_{\beta s})) : \Pi (\textit{env} : \delta) (s : \Sigma(f_{\beta s})), Subst(\beta, Fst(f_{\beta s})) \textit{env} s}
   \end{align*}
 \end{figure}
 
-% \begin{figure}[h!]
-%   \centering
-%   \begin{equation}\label{infer_app}
-%     \inferrule[Appl]
-%     { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}}
-%     { App(n, \alpha, \beta) : \Pi(max m n, n)\
-%       \Sigma(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha))\
-%       ((\Lambda'(\sort{m}, Id(\sort{m}), \beta) \alpha) \circ (Snd(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha)) \circ Snd'(\sort{max(m, n)}, \Sigma(\Pi(m, n) \alpha \beta, `(\sort{n}, \Pi(m, n) \alpha \beta, \alpha))))) }
-%   \end{equation}
-%   \caption{Inference rule: \(App\).}
-% \end{figure} PUT IN APPENDIX
+Using our \(Subst\) rules, we define the \(App\) inference rule \eqref{infer_app}.
 
 \begin{figure}[H]
   \centering
   \begin{equation}\label{infer_app}
-    \inferrule [Pi]
+    \inferrule [Appl]
     { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi(s : \delta)(x : f_\alpha s),\sort{o}}
     { t_{\beta x y} \coloneq \Lambda(\delta, \Pi(f_\alpha, f_\beta), f_\alpha \circ Fstc(\Pi(f_\alpha, f_\beta))), App(f_\alpha, f_\beta) : \Pi(env : \delta) (s : \Sigma(t_{\beta x y}) env), Subst(f_\beta, Snd(t_{\beta x y}))}
   \end{equation}
-  \caption{Inference rule for \(App\) written illustratively.}
+  \caption{\(App\) inference rule}
 \end{figure}
-
-\subsubsection{Derivation: Point-Free \(Id\)}\label{point_free_derivation}
-
-Recall the types of \(Id\), \(\Lambda(\alpha, x)\), and \(Snd(\alpha, \beta)\) as above. Note that the projection \(Snd(\sort{m}, Id(\sort{m}))\) is well-typed, even if \(\alpha\) in \(Id(m)\ \alpha\) is not known.
-So, let \(Id_{m}\) be as follows:
-\begin{center}
-\begin{align*}
-  Id_{m} &\coloneq \Lambda(\sort{m}, Snd(\sort{m}, Id(\sort{m})))
-\end{align*}\end{center}
-
-See the appendix for a mechanized proof that \(Id_{m} (\alpha : \sort{m}) (x : \alpha)\) type-checks.
 
 \section{Reduction \& Affine Reduction}
 

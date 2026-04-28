@@ -1,16 +1,15 @@
+import Dcc.Attrs
 import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
 import Mathlib.Tactic
 import Dcc.Ast
-import Qq
 import Lean
-import Lean.Elab
-import Mathlib.Tactic.CasesM
 import Init.Prelude
 
 namespace Expr
 
-@[simp] theorem id_pure_ext {α : Type u} (x : α) : (pure x : Id α) = x := rfl
+@[simp]
+theorem id_pure_ext {α : Type u} (x : α) : (pure x : Id α) = x := rfl
 
 def IsNorm.{u} {α : Type u} (r : α → α → Prop) (A : α) := ¬ ∃ B, r A B
 
@@ -62,9 +61,9 @@ class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ → Prop))
     induction h
     all_goals (
       try dsimp
-      try simp_all
+      try simp_all [dcc_rel, dcc_size]
       try grind
-      try aesop
+      try aesop (rule_sets := [DccRel, DccSize])
       try rfl)
 
 def IsNorm.unique {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : r A B) : A = B :=
@@ -92,7 +91,7 @@ def RedRel.wellFounded {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ 
   {m : Type → Type} [Monad m] [hM : Measure t]
   (hR : RedRel r t (m := m) (hM := hM)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
 
-@[simp] def reduce {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
+def reduce {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
   (e : Expr) : ((e' : Expr) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
   match hR.run e with
   | .some ⟨e', ⟨h⟩⟩ =>
@@ -102,7 +101,7 @@ def RedRel.wellFounded {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ 
   | .none => ⟨e, ⟨.refl⟩⟩
 termination_by (hT.run e).fst
 
-@[simp] abbrev reduce' {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
+abbrev reduce' {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
   (e : Expr) : Expr := (reduce r e).fst
 
 open RedRel in def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : Measure t] (hR : RedRel r t (hM := hM)) : RedRel (Relation.TransGen r) (hM := hM) t where
@@ -265,7 +264,7 @@ open Rel in class SemiComplete {t : Expr → ℕ → Prop} [hM : Measure t]
   [hR : RedRel r t (m := Option) (hM := hM)] where
   complete : r A B → ∃ B h, (hR.run A) = .some ⟨B, ⟨h⟩⟩
 
-theorem run_none {t : Expr → ℕ → Prop} [hM : Measure t]
+@[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theorem run_none {t : Expr → ℕ → Prop} [hM : Measure t]
   (r : Expr → Expr → Prop)
   [hR : RedRel r t (m := Option) (hM := hM)]
   [hC : SemiComplete r] : hR.run A = .none → IsNorm r A := by
@@ -273,24 +272,24 @@ theorem run_none {t : Expr → ℕ → Prop} [hM : Measure t]
   have ⟨B, h₁, h₂⟩ := hC.complete h_red
   simp_all
 
-open Confluent in theorem norm_unique {r : Expr → Expr → Prop} {m : (Expr → Expr → Prop) → Expr → Expr → Prop}
+open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theorem norm_unique {r : Expr → Expr → Prop} {m : (Expr → Expr → Prop) → Expr → Expr → Prop}
   [hC : Confluent r m] (h₁ : m r A B) (hn₁ : IsNorm r B) (h₂ : m r A C) (hn₂ : IsNorm r C) : B = C := by
   have ⟨D, hr₁, hr₂⟩ := hC.conf h₁ h₂
   have ha := hn₁.unique_refl hr₁
   have hb := hn₂.unique_refl hr₂
   simp_all
 
-theorem RedRel.reduce_norm
+@[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedRel.reduce_norm
  {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM))
   {A : Expr} (hn : IsNorm r A) : (reduce r A) = ⟨A, ⟨.refl⟩⟩ := by
-  simp
+  simp [reduce]
   split
   case h_1 h _ =>
     exact (hn ⟨_, h⟩).elim
   case h_2 => congr
 
-@[simp] theorem RedRel.reduce_norm_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem RedRel.reduce_norm_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option) (hM := hM))
   {A : Expr} (hn : IsNorm r A) : (reduce r A).fst = A := by
   have h := hR.reduce_norm hn
@@ -321,7 +320,7 @@ if refl, trivial
 if there is a step, do induction to show
 reduce B' = B, then you're set.
 -/
-theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
   {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A) = ⟨B, ⟨hr⟩⟩ := by
   simp [reduce]
@@ -357,19 +356,19 @@ theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
       simp_all
 termination_by ((hM.size t A), (hM.size t B))
 
-theorem reduce_complete_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem reduce_complete_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
   {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).fst = B := by
   have h := reduce_complete hr hn
   simp_all
 
-instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] (hR : RedRel r t (m := Option.{0}) (hM := hM))
   [hN : SemiComplete r (hR := hR)] [Confluent r] : Complete.{0, 0, 0}
     (r := Relation.ReflTransGen r) (P := IsNorm r) (hR := hR.to_reflTrans (r := r) (t := t) (hM := hM)) :=
   ⟨fun hr hn => reduce_complete (r := r) (t := t) (hM := hM) hr hn⟩
 
-theorem reduce_sound {t : Expr → ℕ → Prop} [hT : Measure t] [RedRel r t (hM := hT)]
+@[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce_sound {t : Expr → ℕ → Prop} [hT : Measure t] [RedRel r t (hM := hT)]
   (_heq : reduce r A = ⟨B, ⟨h⟩⟩) : Relation.ReflTransGen r A B := h
 
 theorem reduce_norm {t : Expr → ℕ → Prop} [hT : Measure t]

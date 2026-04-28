@@ -1,3 +1,4 @@
+import Dcc.Attrs
 import Dcc.Ast
 import Dcc.Types
 import Dcc.Aff.Size
@@ -11,15 +12,15 @@ inductive RedMeta : Expr → Expr → Prop
     → IsNorm RedAff α
     → RedMeta (DCC (App(m, n, f_α, f_β) env)) (App'.type α f_α f_β env m)
 
-@[simp] def step_meta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedMeta e e'))) :=
+@[dcc_step, aesop norm (rule_sets := [DccStep])] def step_meta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedMeta e e'))) :=
   match e with
   | DCC (App(_m, _n, _f_α, _f_β) _env) => .some ⟨_, ⟨.appl (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | _ => .none
 
-@[simp] instance RedMeta.instRedRel : RedRel RedMeta Size where
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedMeta.instRedRel : RedRel RedMeta Size where
   run := step_meta?
 
-@[simp] theorem RedMeta.unique (h₁ : RedMeta A B) (h₂ : RedMeta A C) : B = C := by
+@[dcc_step, aesop safe destruct (rule_sets := [DccStep])] theorem RedMeta.unique (h₁ : RedMeta A B) (h₂ : RedMeta A C) : B = C := by
   induction h₁ generalizing C with
   | appl hrt₁ hnorm₁ => cases h₂ with
     | appl hrt₂ hnorm₂ =>
@@ -38,7 +39,7 @@ def meta_semi_complete {A B : Expr} (hr : A.RedMeta B) : ∃ B', ∃ (h : A.RedM
   induction hr with
   | appl hrt hn =>
     have hc := reduce_complete hrt hn
-    refine ⟨_, .appl hrt hn, by repeat (first | simp_all | congr)⟩
+    refine ⟨_, .appl hrt hn, by repeat (first | simp_all [dcc_step] | congr)⟩
 
 @[simp] instance RedMeta.instSemicomplete : SemiComplete RedMeta := ⟨meta_semi_complete⟩
 

@@ -3,6 +3,7 @@ import Dcc.Types
 import Dcc.Aff.Red
 import Dcc.Meta.Red
 import Dcc.Eta.Red
+import Dcc.Relation
 import Mathlib.Logic.Relation
 
 namespace Expr
@@ -16,7 +17,7 @@ inductive Reduces : Expr → Expr → Prop
     → IsNorm RedEta D
     → Reduces A D
 
-@[simp, inline] abbrev reduce_all := reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff
+@[inline] abbrev reduce_all := reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff
 
 @[simp] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d, e, f⟩ ⟨g, h, i, j, k, l⟩ => by
   have ha := norm_unique a b g h
@@ -44,7 +45,7 @@ def reduce_reduces (h : (reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff) 
 
 def reduce_reduces' : Reduces A (reduce' RedEta (reduce' RedMeta (reduce' RedAff A))) := reduce_reduces rfl
 
-@[inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PLift (t = (DCC (α : Sort m) → β))) :=
+@[inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
   match heq₀ : t with
   | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
     if heq₁ : t = (DCC (α : Sort m) → β) then
@@ -56,7 +57,7 @@ def reduce_reduces' : Reduces A (reduce' RedEta (reduce' RedMeta (reduce' RedAff
 def is_arrow (e : Expr) : Bool :=
   (arrow.matcher e).isSome
 
-@[inline] abbrev fst.f_β.type.matcher (t : Expr) : Option ((α δ : Expr) × (m n o : Level) × (PLift (t = fst.f_β.type α δ m n o))) :=
+@[inline] abbrev fst.f_β.type.matcher (t : Expr) : Option ((α δ : Expr) × (m n o : Level) × (PULift.{1, 0} (t = fst.f_β.type α δ m n o))) :=
   match arrow.matcher t with
   | .some ⟨δ, arr', o, ⟨h_arr⟩⟩ =>
     match arrow.matcher arr' with
@@ -71,7 +72,7 @@ def is_arrow (e : Expr) : Bool :=
 
 -/
 
-@[inline] abbrev pair.β.type.matcher (t α : Expr) (m : Level) : Option ((n : Level) × (PLift (t = pair.β.type α m n))) :=
+@[inline] abbrev pair.β.type.matcher (t α : Expr) (m : Level) : Option ((n : Level) × (PULift.{1, 0} (t = pair.β.type α m n))) :=
   match arrow.matcher t with
   | .some ⟨_srt, t', _mm,  ⟨_heq⟩⟩ =>
     match arrow.matcher t' with
@@ -83,7 +84,7 @@ def is_arrow (e : Expr) : Bool :=
   | _ => .none
 
 @[inline] abbrev curr.β.type.matcher (t : Expr) : Option
-  ((α : Expr) × (m n : Level) × (PLift (t = curr.β.type α m n))) :=
+  ((α : Expr) × (m n : Level) × (PULift.{1, 0} (t = curr.β.type α m n))) :=
   match arrow.matcher t with
   | .some ⟨α, DCC Sort n, m, ⟨h_arr⟩⟩ =>
     .some ⟨α, m, n, ⟨by rw [h_arr]; rfl⟩⟩
@@ -177,45 +178,45 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (DCC (f_β x_α x)) τ
     → Judge (DCC (f x)) τ
 
-def with_red (h : Option ((t : Expr) × PLift (Judge e t))) :
-  Option ((τ₁ τ₂ : Expr) × PLift (Judge e τ₁) × PLift (Reduces τ₁ τ₂)) :=
+def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+  Option ((τ₁ τ₂ : Expr) × PULift.{1, 0} (Judge e τ₁) × PULift.{1, 0} (Reduces τ₁ τ₂)) :=
   match h with
   | .some ⟨t, h⟩ => .some ⟨t, reduce_all t, h, ⟨reduce_reduces rfl⟩⟩
   | _ => .none
 
-def with_arr (h : Option ((t : Expr) × PLift (Judge e t))) :
-  Option ((τ α β : Expr) × (m : Level) × PLift (Judge e τ) × PLift (τ = arrow α β m)) :=
+def with_arr (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+  Option ((τ α β : Expr) × (m : Level) × PULift.{1, 0} (Judge e τ) × PULift.{1, 0} (τ = arrow α β m)) :=
     match h with
     | .some ⟨t, h⟩ => match arrow.matcher t with
       | .some ⟨α, β, m, h_arr⟩ => .some ⟨t, α, β, m, h, h_arr⟩
       | _ => .none
     | _ => .none
 
-def with_fst_fβ_type (h : Option ((t : Expr) × PLift (Judge e t))) :
-  Option ((τ α δ : Expr) × (m n o : Level) × PLift (Judge e τ) × (PLift (τ = fst.f_β.type α δ m n o))) :=
+def with_fst_fβ_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+  Option ((τ α δ : Expr) × (m n o : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = fst.f_β.type α δ m n o))) :=
   match h with
   | .some ⟨t, h⟩ => match fst.f_β.type.matcher t with
     | .some ⟨α, δ, m, n, o, h₂⟩ => .some ⟨t, α, δ, m, n, o, h, h₂⟩
     | _ => .none
   | _ => none
 
-def with_pair_β_type (h : Option ((t : Expr) × PLift (Judge e t))) (α : Expr) (m : Level) :
-  Option ((τ : Expr) × (n : Level) × PLift (Judge e τ) × (PLift (τ = pair.β.type α m n))) :=
+def with_pair_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) (α : Expr) (m : Level) :
+  Option ((τ : Expr) × (n : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = pair.β.type α m n))) :=
   match h with
   | .some ⟨t, h⟩ => match pair.β.type.matcher t α m with
     | .some ⟨n, h₂⟩ => .some ⟨t, n, h, h₂⟩
     | _ => .none
   | _ => .none
 
-def with_curr_β_type (h : Option ((t : Expr) × PLift (Judge e t))) :
-  Option ((τ : Expr) × (α : Expr) × (m n : Level) × PLift (Judge e τ) × (PLift (τ = curr.β.type α m n))) :=
+def with_curr_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+  Option ((τ : Expr) × (α : Expr) × (m n : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = curr.β.type α m n))) :=
   match h with
   | .some ⟨t, h⟩ => match curr.β.type.matcher t with
     | .some ⟨α, m, n, h₂⟩ => .some ⟨t, α, m, n, h, h₂⟩
     | _ => .none
   | _ => none
 
-def infer (e : Expr) : Option ((t : Expr) × PLift (Judge e t)) :=
+def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
   match e with
   | DCC ⊤ => .some ⟨_, ⟨.top⟩⟩
   | DCC ⊥ => .some ⟨_, ⟨.bot⟩⟩
@@ -371,5 +372,8 @@ def test_id_nested : Option Expr := do
 #eval test_id_nested
 
 --#eval .reduce_η
+
+instance Judge.instRel : Rel (fun x y => PULift.{1, 0} (Judge x y)) (m := Option) where
+  run := infer
 
 end Expr

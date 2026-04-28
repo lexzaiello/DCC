@@ -1,5 +1,6 @@
 import Dcc.Judge
 import Dcc.Ast
+import Dcc.Relation
 
 namespace Expr
 
@@ -27,6 +28,8 @@ namespace Expr
 @[simp] theorem with_curr_β_type_curr_β_type : with_curr_β_type (.some ⟨curr.β.type α m n, h⟩) = .some ⟨curr.β.type α m n, α, m, n, h, ⟨rfl⟩⟩ := by
   simp [with_curr_β_type]
 
+set_option diagnostics true
+
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
   induction h
   case top | bot | tintro | sort => dsimp only [infer]
@@ -39,7 +42,7 @@ theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
     have hc := h_r₃.complete
     dsimp only [infer]
     simp [ih₁, ih₂]
-    aesop
+    --aesop
 
 instance : Decidable (Judge e t) :=
   if h : (infer e).isSome then

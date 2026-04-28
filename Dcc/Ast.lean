@@ -1,3 +1,4 @@
+import Dcc.Attrs
 import Mathlib.Data.Nat.Notation
 import Init.Data.String.Search
 
@@ -151,7 +152,5 @@ instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
   | .some e =>
     let l := "(some".length.succ
     .group ("(some " ++ (.fill (.nest l e.toFormat)) ++ ")")⟩
-
-#eval (DCC (Fst(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0)))
 
 end Expr

@@ -1,3 +1,4 @@
+import Dcc.Attrs
 import Dcc.Ast
 import Dcc.Relation
 import Dcc.Aff.Size
@@ -42,12 +43,12 @@ def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
     | _, _ => .none
   | _ => .none
 
-@[simp] instance RedAff.instRedRel : RedRel RedAff Size where
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instRedRel : RedRel RedAff Size where
   run := step?
 
-@[simp] instance RedAff.instCongruent : Congruent RedAff where
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instCongruent : Congruent RedAff where
 
-open Congruent in theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
+open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
   induction h₁ generalizing C with
   | subst₁ =>
     cases h₂ with
@@ -199,9 +200,9 @@ open Congruent in theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : 
       have ⟨D, h₁, h₂⟩ := ih h
       exact ⟨_, congrArg' h₁, congrArg' h₂⟩
 
-@[simp] instance RedAff.instConf : Confluent RedAff := ⟨RedAff.conf⟩
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instConf : Confluent RedAff := ⟨RedAff.conf⟩
 
-@[simp] instance instConfRedAffTrans : Confluent RedAff (m := Relation.ReflTransGen) := RedAff.instRedRel.globally_confluent
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instConfRedAffTrans : Confluent RedAff (m := Relation.ReflTransGen) := RedAff.instRedRel.globally_confluent
 
 def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
   change ∃ _, ∃ _, (step? _) = .some _
@@ -256,9 +257,9 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
     simp_all
     cases hr <;> aesop
 
-@[simp] instance RedAff.instSemicomplete : SemiComplete RedAff := ⟨semi_complete⟩
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instSemicomplete : SemiComplete RedAff := ⟨semi_complete⟩
 
-@[simp] instance instComplete : Complete (Relation.ReflTransGen RedAff) (P := IsNorm RedAff) := RedAff.instRedRel.instComplete
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instComplete : Complete (Relation.ReflTransGen RedAff) (P := IsNorm RedAff) := RedAff.instRedRel.instComplete
 
 -- RedRel.reduce Size RedAff.instRedRel : (e : Expr) → (e' : Expr) × PULift (Relation.ReflTransGen RedAff e e')
 #check reduce RedAff

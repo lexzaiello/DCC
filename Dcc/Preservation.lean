@@ -1,6 +1,6 @@
-import Dcc.CC.Ast
-import Dcc.CC.Step2
-import Dcc.CC.Judge
+import Dcc.Ast
+import Dcc.Step
+import Dcc.Judge
 
 namespace Expr
 

@@ -1,3 +1,9 @@
-import Dcc.CC.Ast
-import Dcc.CC.Step2
-import Dcc.CC.Judge
+import Dcc.Ast
+import Dcc.Types
+import Dcc.Aff.Size
+import Dcc.Aff.Red
+import Dcc.Eta.Size
+import Dcc.Eta.Red
+import Dcc.Meta.Red
+import Dcc.Judge
+import Dcc.Examples

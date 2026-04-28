@@ -39,20 +39,20 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-  We present an extension of the categorical combinators \autocite{CURIEN1986188} to a dependently-typed, contextless setting, with a metatheory mechanized in the Lean 4 proof assistant. We prove several important properties of the calculus, including that type-checking is decidable, and that the affine restriction of the combinators are strongly-normalizing, globally confluent, and that normal forms are unique. We achieve judgmental decidability in principle by showing that the types of all objects can be expressed using an affine restriction of the reduction rules, which we demonstrate is strongly-normalizing by a syntactic decreasing measure.
+  We present an extension of the categorical combinators \autocite{CURIEN1986188} to symmetric monoidal categories, enabling affine dependent typing of the categorical, non-linear combinators. We formalize the metatheory in the Lean 4 proof assistant. We prove several important properties of the calculus, including that type-checking is decidable, and that the affine restriction of the combinators is strongly-normalizing, and globally confluent. We achieve judgmental decidability in principle by showing that the types of all objects can be expressed using the affine restriction, which we demonstrate is strongly-normalizing by a syntactic decreasing measure. We outline key challenges and architectural strategies for formalizing a dependent combinator calculus with such properties in a proof assistant, and describe our progress towards compiling a \(\lambda\)-calculus with dependent types (\(\Pi\)-types and \(\Sigma\)-types) to our combinators.
 
   % May want to note the design decisions that allowed affinely expressing not obviously affine types. How is this interesting?
   % TODO: this will come to us more after re-writing the inference rules. Some category theory reference.
 \end{abstract}
 \section{Introduction}
 
-Simply-typed combinatory logics like the simply-typed \(SK\)-combinators are known to be equivalent to the simply-typed \(\lambda\)-calculus \autocite{Altenkirch2023CombinatoryLA}. These calculi can avoid contexts, and might enjoy benefits as such (e.g., unification). Work has been done on extending these logics with dependent types \autocite{altenkirch}, but no implementation has been proposed, nor have such theories been formalized.
+Simply-typed combinatory logics like the \(SK\)-combinators are known to be equivalent to the simply-typed \(\lambda\)-calculus \autocite{Altenkirch2023CombinatoryLA}. These calculi can avoid contexts, and might enjoy benefits as such (e.g., unification). Work has been done on extending these logics with dependent types \autocite{altenkirch}, but no implementation has been proposed, nor have such theories been formalized in a proof assistant.
 
-Combinatory logics suffer from the known disadvantage that they are an inefficient compilation target. When compiling the \(\lambda\)-calculus to the \(SK\)-combinators, for example, terms explode in size due to lacking variable substitution \autocite[p. 267]{10.5555/1096899}.
+Combinatory logics suffer from the known disadvantage that they are an inefficient compilation target. For example, when compiling the \(\lambda\)-calculus to the \(SK\)-combinators, terms explode in size due to lacking variable substitution \autocite[p. 267]{10.5555/1096899}.
 
-Work has been done on an alternative combinatory compilation target, known as the categorical combinators \autocite{CURIEN1986188}, used in the Categorical Abstract Machine \autocite{cmachine}. The categorical combinators have been extended with simple types \autocite{CURIEN1986188} and dependent types \autocite{ritter1990categorical}, but no implementation has been defined.
+Numerous alternative combinatory compilation targets have been proposed. One such calculus is the categorical combinator calculus \autocite{CURIEN1986188}. The categorical combinators are best described as a literal interpretation of cartesian closed categories as a Lisp-like Debruijn-indexed machine (the Categorical Abstract Machine \autocite{cmachine}). Variable substitution is modeled intuitively as composing binary product projections \autocite[p. 6]{cmachine} over an environment of nested tuples. The categorical combinators have been extended with simple types \autocite{CURIEN1986188}. There has also been some investigation into extending them to a dependent type theory similar to the Calculus of Constructions \autocite{ritter1990categorical}, but no implementation has been defined.
 
-In this paper, we formalize a meta-theory of a dependently-typed categorical combinator calculus, and show that type inference is decidable. We accomplish this goal in principle by the observation that the types of the dependent categorical combinators are purely affine. By showing that the affine restriction of the calculus is strongly normalizing by a syntactic decreasing measure, we achieve completeness and soundness of an inference function. We also show that the affine restriction is globally confluent, and that normal forms are unique. We mechanize the meta-theory in the Lean 4 proof assistant.
+In this paper, we formalize a metatheory of a dependently-typed categorical combinator calculus with affine types and non-linear terms based on symmetric monoidal categories. We show that type inference is decidable and deterministic. We accomplish this goal in principle by observing that the types of the dependent non-linear categorical combinators are encodable with an affine subset of the usual reduction rules. By showing that the affine restriction of the calculus is strongly normalizing through a syntactic decreasing measure, we achieve total affine \(\beta\)-reduction. We show that the calculus satisfies global confluence by Newman's lemma \autocite{newman1942theories} using our measure. We prove completeness and soundness of affine \(\beta\)-reduction, and soundness of \(\beta\)-normal forms with respect to our reduction relation, and hence achieve decidable affine equality. We are able to avoid a conversion rule in the typing judgment by eagerly normalizing types, and thus achieve deterministic, decidable type inference. We do not assume \(\Pi\)-extensionality, but describe \(\eta\)-reduction rules used for a weak form of extensionality as in Curien et al. \autocite[p. 221]{CURIEN1986188}. We outline several of our architectural decisions including proof automation with typeclasses critical to satisfying our formalization goals in Lean 4.
 
 %- definition of combinatory logic
   %- prototypical SK
@@ -81,7 +81,7 @@ In this paper, we formalize a meta-theory of a dependently-typed categorical com
 
 \subsection{The Untyped Categorical Combinators}
 
-The categorical combinators \autocite{CURIEN1986188} are the basis of the Categorical Abstract Machine \autocite{cmachine}. As shown by Cousineau et al., they are a potential compilation target for the \(\lambda\)-calculus. Categorical combinators simulate variable substitution with projection over nested tuples (``couples'') constituting the ``environment'' and a curry combinator (\(\Lambda\)). The reduction rules for this calculus resemble the rules of the SK combinator calculus, and their categorical semantics are given by cartesian-closed categories \autocite[p. 178]{cmachine}.
+The categorical combinators \autocite{CURIEN1986188} are the basis of the Categorical Abstract Machine \autocite{cmachine}. They are a potential compilation target for the \(\lambda\)-calculus \autocite{cmachine}. Categorical combinators simulate variable substitution through projections over nested tuples (``couples'', or binary products) constituting an ``environment''. Binders are simulated through a curry combinator (\(\Lambda\)) which applies its two arguments as a couple to the body (\(\Lambda(x)\)). The reduction rules for the calculus resemble the rules of the SK combinator calculus, and their categorical semantics are given by cartesian-closed categories \autocite[p. 178]{cmachine}.
 
 \begin{figure}[H]
 \begin{center}
@@ -100,7 +100,7 @@ The categorical combinators \autocite{CURIEN1986188} are the basis of the Catego
 
 \subsection{The Simply-Typed Categorical Combinators}
 
-Curien extends the combinators with type annotations, enabling simple typing. Quotation is omitted in the simply-typed variant, but it can be derived. The inference rules are as such:
+Curien extends the combinators with type annotations \autocite[p. 220]{CURIEN1986188}, enabling simple typing. Quotation is omitted in the simply-typed variant. The inference rules are as such:
 
 \begin{center}
 \begin{figure}[h!]
@@ -144,13 +144,9 @@ Curien extends the combinators with type annotations, enabling simple typing. Qu
 \end{figure}
 \end{center}
 
-\section{Dependent Categorical Combinators}
+Curien's categorical combinators are nominally combinatory, but differ from \(SK\) and \(BCKI\) calculi in that points are still present. In its simply-typed form \autocite[p. 220]{CURIEN1986188}, the calculus has not one primitive combinator without a point, and no object (besides application) has an arity of more than one \autocite[p. 177]{cmachine}. Type arguments are given as points, projection mappings in pairs are given as points (\(\langle f, g \rangle\)), the Curry combinator is defined by a point (\(\Lambda(x)\)), couple members are specified as points (\((a, b)\)), and composition is pointed with respect to \(f\) and \(g\) (\((f \circ g) x\)). This superficially obscure design decision is quite natural when interpreting projection over couples (\(((x_1, x_2), \ldots x_{n})\)) as debruijn argument indexing. Take an example reduction in the untyped calculus:
 
-Our primary insights when extending the categorical combinators to dependent types are: when typed as \(\Sigma\)-pairs, couples can naturally encode contexts and typing judgments; and the types of all primitive objects can be represented in their most intutiuive dependent form without the pair rule. We refer to the subset of the categorical combinators excluding the pair rule as the ``affine restriction.'' By showing that the affine restriction is strongly normalizing, we gain decidable judgmental equality (\(\equiv\)) and a decision procedure for type-checking.
-
-Curien's categorical combinators are nominally combinatory, but might perplex those familiar with the \(SK\) and \(BCKI\) calculi, due to their unusually pointed nature. In its simply-typed form \autocite[p. 220]{CURIEN1986188}, the calculus has not one primitive combinator without a point, and no object (besides application) has an arity of more than one. Type arguments are given as points, projection mappings in pairs are given as points (\(\langle f, g \rangle\)), the Curry combinator is given with a point (\(\Lambda(x)\)), couple members are given as points (\((a, b)\)), and composition is pointed with respect to \(f\) and \(g\) (i.e., \((f \circ g) x\)). This design decision, although seemingly obscure, is quite natural when interpreting couples (\(((x_1, x_2), \ldots x_{n})\)) as bound debruijn indices. Take an example reduction in the untyped calculus:
-
-\begin{equation}
+\begin{equation}\label{curr_point}
 \begin{split}
   & \Lambda(\Lambda(App \circ \langle Snd \circ Fst, App \circ \langle App \circ Fst, Snd \rangle \rangle)) n f x \\
   & = \Lambda(App \circ \langle Snd \circ Fst, App \circ \langle App \circ Fst, Snd \rangle \rangle) (n, f) x \\
@@ -160,9 +156,26 @@ Curien's categorical combinators are nominally combinatory, but might perplex th
 \end{split}
 \end{equation}
 
-Despite every visible operation being bound by a point, we are able to robustly rearrange arguments in scope by viewing couples as an ``environment'' of variables traversable by composed projection.
+Despite every visible operation being bound by a point, arguments in scope can be rearranged through projections, composition, pairing, and the application combinator which corresponds to evaluation in the cartesian closed category.
 
-We similarly regard couples as meaningful traversable data, but reinterpret them as \(\Sigma\)-pairs. Serindipitously, \(\Sigma\)-couples make traversing data in a well-typed way quite easy, and can naturally encode typing judgments. We use this fact to define most of our type arguments as functions of the environment specified by points (i.e., in the style of the Curry combinator). By specifying type arguments as points instead of point-free, potential duplication of items in context can be avoided, thus further enabling a purely affine type theory.
+\section{Dependent Categorical Combinators}
+
+Our primary insight when extending the categorical combinators to dependent types is that the types of all of the categorical combinators are representable without making use of the pair rule. That is, their types are affine. We refer to the subset of the categorical combinators excluding the pair rule as the ``affine restriction.'' By showing that the affine restriction is strongly normalizing, we gain decidable judgmental equality (\(\equiv\)) and a decision procedure for type-checking.
+
+Second, we interpret \(\Sigma\)-types as a telescope-encoded context as usual, but also view the pair rule (\(\langle f, g \rangle x = (f x, g x)\)) as a substitution or morphism between contexts.
+
+Finally, as in the curry combinator, we specify combinator type arguments as term points that internalize an indexing of the environment (as in Tarski universes). For example, the \(\Pi\) combinator is inferred like such:
+
+\begin{figure}[h!]
+  \centering
+  \begin{equation}\label{pi_example}
+    \inferrule [\(Pi_{I}\)]
+    { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi_{s : \delta, x : f_\alpha(s)}, \sort{o}}
+    { \Pi(f_\alpha, f_\beta) : \delta \rightarrow \sort{o}}
+  \end{equation}
+\end{figure}
+
+We similarly regard couples as meaningful traversable data, but reinterpret them as \(\Sigma\)-pairs. \(\Sigma\)-couples make traversing data in a well-typed way quite convenient, and can naturally encode typing judgments. This approach also allows \(\Pi\) universe levels to be computed by our core inference rules without any modification. We similarly define most of the type arguments of the combinators through Tarski universe. By specifying type arguments in this way, some potential duplication of items in the context can be avoided, thus further enabling a purely affine type theory.
 
 \subsection{Couples as Degenerate Dependent Sums}
 
@@ -174,7 +187,7 @@ Recall the typical typing of a \(\Sigma\)-pair:
 { \Gamma \vdash \Sigma(\alpha, \beta) : \sort{max(m, n)}}
 \end{equation}
 
-A \(\Sigma\)-type can be placed under a \(\lambda\)-binder, referencing bound variables in its \(fst\) and \(snd\) types, and \(fst\) itself in \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside \(\Pi\). In fact, there is a known equivalence between \(\Pi\) and \(\Sigma\) \autocite[50]{martin1984intuitionistic}, in that a function \(\Pi (x : \alpha) (y : \beta x), \gamma x y\) can be easily repackaged as a function \(\Pi (s : \Sigma(\alpha, \beta)), \gamma(s.fst, s.snd)\), and vice-versa (``currying''-''uncurrying'').
+A \(\Sigma\)-type can be placed under a \(\lambda\)-binder, referencing bound variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) \autocite[50]{martin1984intuitionistic}, in that a function \(\Pi_{x : \alpha, y : \beta(x)}, \gamma x y\) can be transofmred into a dependent function \(\Pi_{s : \Sigma(\alpha, \beta)}, \gamma(s.fst, s.snd)\), and vice-versa (``currying''-''uncurrying'').
 
 In the untyped categorical combinators, Curry-Uncurry can be written as:
 
@@ -186,25 +199,47 @@ In the untyped categorical combinators, Curry-Uncurry can be written as:
   \end{split}
 \end{equation}
 
-In a dependently-typed categorical combinator calculus where couples are naively interpreted as raw, type-point-free \(\Sigma\)-pairs, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially if an affine type theory is desired. In \(Uncurry(x)\), the \(Snd\) component (\(z : \beta y\)) of the composed pair depends on the first component of its own couple' preimage (\(y : \alpha\)), despite \(y\) being destroyed upon reducing the pair operation. \(App\) has no knowledge of \(y\), and cannot calculate the type of \((x y, z)\). However, we avoid this stumbling point by interpreting \(\Sigma\) as a type-pointed object, similarly to how Curry (\(\Lambda\)) is term-pointed. That is, the arguments \(\alpha\) and \(\beta\) to \(\Sigma\) are not given point-free, but by a function \(f_\beta\) of an arbitrary environment and \(fst\) given as a point \eqref{infer_sigma_types}.
+In a dependently-typed categorical combinator calculus where couples are naively interpreted as \(\Sigma\) pairs with point-free type arguments, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially in an affine setting. In \(Uncurry(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reducing the pair application. \(App\) has no knowledge of \(y\), and cannot calculate the type of \((x y, z)\). We avoid this contention by interpreting the type of \(\Sigma\) through type points indexing the environment \eqref{infer_sigma_types}, similarly to the term \(x\) in Curry (\(\Lambda(x)\)).
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_sigma_types}
-  \inferrule[Sigma]
+  \inferrule[\(\Sigma_{I}\)]
   { \alpha : \sort{m}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
   { \Sigma(f_\beta) : \delta \rightarrow \sort{max(m, n)}}
 \end{equation}
 \caption{Where \(\delta\) denotes an arbitrary environment and \(\alpha\) denotes the \(fst\) component. \(\Sigma(f_\beta) (env : \delta) : \sort{max(m, n)}\)}
 \end{figure}
 
-We formally interpret couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\), where the environment conveys no extra meaningful information, and \(\beta\) depends only on \(fst\).
+We formally interpret couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\), where the environment conveys no extra meaningful information, and \(\beta\) depends only on \(fst\). We represent a no-op indexing of the environment with a unit type \(\top\) so as to avoid universe arguments to \(\Sigma\).
 
 \begin{figure}[h!]
+  \centering
+  \begin{minipage}{0.45\textwidth}
+  \centering
+  \begin{equation}
+    \inferrule[Top]
+    { }
+    { \top : \sort{0}}
+  \end{equation}
+\end{minipage}
+\hfill
+\begin{minipage}{0.30\textwidth}
+  \centering
+  \begin{equation}
+    \inferrule[Top]
+    { }
+    { \ast : \top}
+  \end{equation}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.22\textwidth}
+    \centering
   \begin{equation}
     \inferrule[Coup]
     { \alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, x : \alpha, y : (\beta x), }
     { \llbracket \beta \rrbracket (x, y) : \Sigma(`(\sort{m}, \beta)) \alpha}
   \end{equation}
+\end{minipage}
 \end{figure}
 
 \textbf{MUCH TO REWRITE FOLLOWING.} This view of couples as sigma terms naturally encodes the notion of judgments. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
@@ -1159,6 +1194,15 @@ To Jake, for teaching me lambda-calculus.
 \textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}\\
 \textbf{Omitted inference cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Judge.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Judge.lean}\\
 \textbf{Omitted reduction cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Step2.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Step2.lean}
+
+\section{The Todo List}
+
+\begin{itemize}
+  \item Inference rules I am not happy enough with:
+    \begin{itemize}
+      \item 
+    \end{itemize}
+\end{itemize}
 
 \printbibliography
 

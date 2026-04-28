@@ -470,7 +470,8 @@ We use universe and monadic polymorphism to enable expressing single-step reduct
 We define completeness with respect to a relation (\mintinline{lean}{Rel}) as such:
 
 \begin{leancode}
-open Rel in class Complete.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Sort v) (P : β → Prop := fun _ => True)
+open Rel in class Complete.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Sort v)
+  (P : β → Prop := fun _ => True)
   (m : Type (max v s) → Type (max v s) := Id) [hm : Monad m]
   [hR : Rel.{u, v, s} (fun (x : α) (y : β) => PULift.{v + 1, v} (r x y)) (m := m)] where
   complete : ∀ (h : r x y) (_p : P y), hR.run x = hm.pure ⟨y, PULift.up h⟩
@@ -490,7 +491,8 @@ open Rel in class Measure (r : Expr → ℕ → Prop)
       try grind
     )
 
-abbrev Measure.size (t : outParam (Expr → ℕ → Prop)) [hM : Measure t] (e : Expr) : ℕ := (hM.run e).fst
+abbrev Measure.size (t : outParam (Expr → ℕ → Prop)) [hM : Measure t]
+  (e : Expr) : ℕ := (hM.run e).fst
 \end{leancode}
 
 We define a reduction relation as a relation satisfying the decreasing measure property. Similarly, we automatically derive the proof using tactics and custom aesop and simp-sets.
@@ -498,7 +500,8 @@ We define a reduction relation as a relation satisfying the decreasing measure p
 \begin{leancode}
 class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ → Prop))
   (m : Type → Type := Option) [_hM : Monad m]
-  [hM : Measure t] extends Rel.{0, 0, 0} (fun (x : Expr) (y : Expr) => PULift.{1, 0} (r x y)) (m := m) where
+  [hM : Measure t] extends Rel.{0, 0, 0} (fun (x : Expr)
+  (y : Expr) => PULift.{1, 0} (r x y)) (m := m) where
   decreasing : r x y → (hM.run y).fst < (hM.run x).fst := by
     intro x y h
     induction h
@@ -515,7 +518,8 @@ In doing so, we inherit strong normalization and well-foundedness:
 \begin{leancode}
 def RedRel.sn {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ → Prop))
   {m : Type → Type} [Monad m] [hM : Measure t]
-  (hR : RedRel r t (m := m) (hM := hM)) (e : Expr) : Acc (fun b a => r a b) e := Acc.intro e (fun e' hr => by
+  (hR : RedRel r t (m := m) (hM := hM)) (e : Expr) : Acc (fun b a => r a b) e :=
+    Acc.intro e (fun e' hr => by
     have h := hR.decreasing hr
     exact sn t hR e')
 termination_by (hM.run e).fst
@@ -528,8 +532,9 @@ def RedRel.wellFounded {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ 
 Using our decreasing measure proof, we derive a reduction function with soundness with respect to the reflexive transitive closure of a reduction relation:
 
 \begin{leancode}
-def reduce {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
-  (e : Expr) : ((e' : Expr) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
+def reduce {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop)
+  [hR : RedRel r t (hM := hT)] (e : Expr) :
+  ((e' : Expr) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
   match hR.run e with
   | .some ⟨e', ⟨h⟩⟩ =>
     have _size_ : (hT.run e').fst < (hT.run e).fst := hR.decreasing h
@@ -538,7 +543,8 @@ def reduce {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → P
   | .none => ⟨e, ⟨.refl⟩⟩
 termination_by (hT.run e).fst
 
-@[dcc_reduce, inline] abbrev reduce' {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
+@[dcc_reduce, inline] abbrev reduce' {t : Expr → ℕ → Prop} [hT : Measure t]
+  (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
   (e : Expr) : Expr := (reduce r e).fst
 \end{leancode}
 
@@ -549,7 +555,8 @@ Since our \(\rightarrowtail\) rules include congruence, we must prove confluence
 \begin{leancode}
 open Rel in class Confluent.{u} {α : Type u} (r : α → α → Prop)
   (m : (α → α → Prop) → α → α → Prop := fun x => x) where
-  conf : (m r A B) → (m r A C) → ∃ D, Relation.ReflTransGen.{u} r B D ∧ Relation.ReflTransGen.{u} r C D
+  conf : (m r A B) → (m r A C) → ∃ D, Relation.ReflTransGen.{u} r B D
+  ∧ Relation.ReflTransGen.{u} r C D
 \end{leancode}
 
 By Newmann's lemma, we derive global confluence and uniqueness of normal forms given a decreasing measure under our definition of a reduction relation:
@@ -576,7 +583,8 @@ open Confluent in def RedRel.globally_confluent
         have ⟨_, h₁, h₂⟩ := ih _ hr₁ (hrt₁b.trans hrtt₁b) (hrt₁b.trans hrtt₂b)
         exact ⟨_, .trans hrtt₁ h₁, .trans hrtt₂ h₂⟩
 
-def IsNorm.unique_refl {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : (Relation.ReflTransGen r) A B) : A = B := by
+def IsNorm.unique_refl {r : Expr → Expr → Prop} (hn : IsNorm r A)
+  (hr : (Relation.ReflTransGen r) A B) : A = B := by
   rw [← Relation.reflGen_transGen] at hr
   cases hr with
   | refl => rfl
@@ -693,8 +701,6 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
 \end{leancode}
 
 We define our minimal notion of a relation by an inductive representation, and a computable implementation with soundness. We show that our size measure, single-step reduction, and normal-form reduction for the affine restriction and \(\eta\), respectively, all satisfy our notion of a (computable) relation.
-
-
 
 \section{Reduction \& Affine Reduction}
 

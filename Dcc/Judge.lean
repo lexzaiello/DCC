@@ -2,7 +2,6 @@ import Dcc.Attrs
 import Dcc.Ast
 import Dcc.Types
 import Dcc.Aff.Red
-import Dcc.Meta.Red
 import Dcc.Eta.Red
 import Dcc.Relation
 import Mathlib.Logic.Relation
@@ -12,18 +11,15 @@ namespace Expr
 inductive Reduces : Expr → Expr → Prop
   | mk : Relation.ReflTransGen RedAff A B
     → IsNorm RedAff B
-    → Relation.ReflTransGen RedMeta B C
-    → IsNorm RedMeta C
-    → Relation.ReflTransGen RedEta C D
-    → IsNorm RedEta D
-    → Reduces A D
+    → Relation.ReflTransGen RedEta B C
+    → IsNorm RedEta C
+    → Reduces A C
 
-def reduce_all := reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff
+def reduce_all := reduce' RedEta ∘ reduce' RedAff
 
-@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d, e, f⟩ ⟨g, h, i, j, k, l⟩ => by
+@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d⟩ ⟨g, h, i, j⟩ => by
   have ha := norm_unique a b g h
-  have hb := norm_unique c d (ha ▸ i) j
-  exact norm_unique e f (hb ▸ k) l
+  exact norm_unique c d (ha ▸ i) j
 
 @[aesop safe destruct (rule_sets := [DccReduce])] theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
   have h := h₁.unique h₂
@@ -31,16 +27,14 @@ def reduce_all := reduce' RedEta ∘ reduce' RedMeta ∘ reduce' RedAff
   congr
 
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])] theorem Reduces.complete : Reduces A B → reduce_all A = B :=
-  fun ⟨ha, hb, hc, hd, he, hf⟩ => by
+  fun ⟨ha, hb, hc, hd⟩ => by
     unfold reduce_all
     unfold reduce'
-    cases reduce_complete_fst ha hb; cases reduce_complete_fst hc hd; cases reduce_complete_fst he hf; rfl
+    cases reduce_complete_fst ha hb; cases reduce_complete_fst hc hd; rfl
 
 --@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])] theorem
 
 def reduce_reduces (h : reduce_all A = B) : Reduces A B := ⟨
-  reduce_sound rfl,
-  reduce_norm rfl,
   reduce_sound rfl,
   reduce_norm rfl,
   h ▸ (reduce_sound rfl),
@@ -146,7 +140,7 @@ inductive Judge : Expr → Expr → Prop where
   | pair   : Judge f (DCC (Π(Id(Sort m), β) α))
     → Judge g (DCC (Π(Id(Sort m), γ) α))
     → Reduces (pair.type α β γ m) τ
-    → Judge (DCC ⟦m, α, β, γ⟧⟨f, g⟩) τ
+    → Judge (DCC ⟨f, g⟩) τ
   -- TODO: Change all occurrences of `(δ, α) to just f_α. Needs to depend on the environment
   | subst₁ : Judge x (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
     → Reduces (Subst₁.type β γ δ o) τ
@@ -158,18 +152,10 @@ inductive Judge : Expr → Expr → Prop where
   | subst₂ : Judge x (Subst₂.x.type f_t_snd β δ o)
     → Reduces (Subst₂.type f_α f_t_snd β δ o) τ
     → Judge (DCC (Subst(x, Snd(Λ(δ, f_α, f_t_snd ∘ Fstc(f_α)))))) τ
-  | app'   : Judge f_α (arrow δ (DCC Sort m) o)
-    → Judge f_β (Pi.f_β.type f_α δ o n)
-    → Reduces (App'.type₃ f_α f_β δ o) τ
-    → Judge (DCC App'(f_α, f_β)) τ
   | appl   : Judge f_α (arrow δ (DCC Sort m) o)
     → Judge f_β (Pi.f_β.type f_α δ o n)
-    /-
-      f_β : ∀ (env : δ) (x : f_α env), Sort n
-      App(f_α, f_β, f_γ)
-    -/
-    → Reduces (App.type δ o n) τ
-    → Judge (DCC App(m, n, f_α, f_β)) τ
+    → Reduces (App.type f_α f_β δ o) τ
+    → Judge (DCC App(f_α, f_β)) τ
   /-
     ef_α : α → Sort m
     f_β : ∀ (x : α) (y : f_α x), Sort n
@@ -304,14 +290,14 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨_α, ⟨ht₁⟩⟩, .some ⟨DCC Sort _n, ⟨ht₂⟩⟩ =>
       .some ⟨_, ⟨.quot ht₁ ht₂ (reduce_reduces rfl)⟩⟩
     | _, _ => .none
-  | DCC ⟦m, α, β, γ⟧⟨f, g⟩ =>
+  | DCC ⟨f, g⟩ =>
     match infer f, infer g with
-    | .some ⟨DCC (Π(Id(Sort m₀), f_β) α₁), ⟨ht₁⟩⟩, .some ⟨DCC (Π(Id(Sort m₂), f_γ) α₂), ⟨ht₂⟩⟩ =>
-      if heq : α = α₂ ∧ β = f_β ∧ γ = f_γ ∧ m = m₂ ∧ m = m₀ ∧ α = α₁ then
-        have ⟨h₁, h₂, h₄, h₅, h14, h15⟩ := heq
+    | .some ⟨DCC (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩, .some ⟨DCC (Π(Id(Sort m₂), f_γ) α₂), ⟨ht₂⟩⟩ =>
+      if heq : α = α₂ ∧ m = m₂ then
+        have ⟨h₁, h₂⟩ := heq
         .some ⟨_, ⟨.pair
-          (by rw [← h14, ← h15, ← h₂] at ht₁; exact ht₁)
-          (by rw [← h₁, ← h₄, ← h₅] at ht₂; exact ht₂)
+          ht₁
+          (h₁.symm ▸ h₂.symm ▸ ht₂)
           (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
@@ -333,25 +319,13 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       else .none
     | _ => .none
-  | DCC App(m, n, f_α, f_β) =>
-    match with_arr (infer f_α) with
-    | .some ⟨_τ₁, δ, DCC Sort m₂, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
-      if heq₀ : m₂ = m then
-        match infer f_β with
-        | .some ⟨t_β, ⟨ht₂⟩⟩ =>
-          if heqa : t_β = Pi.f_β.type f_α δ o n then
-            .some ⟨_, ⟨.appl (heq₀ ▸ harr ▸ ht₁) (heqa ▸ ht₂) (reduce_reduces rfl)⟩⟩
-          else .none
-        | _ => .none
-      else .none
-    | _ => .none
-  | DCC App'(f_α, f_β) =>
+  | DCC App(f_α, f_β) =>
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match (infer f_β) with
       | .some ⟨(DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _j)), ⟨ht₂⟩⟩ =>
         if heqa : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _j)) = (Pi.f_β.type f_α δ o n) then
-          .some ⟨_, ⟨.app' (harr ▸ ht₁) (heqa ▸ ht₂) (reduce_reduces rfl)⟩⟩
+          .some ⟨_, ⟨.appl (harr ▸ ht₁) (heqa ▸ ht₂) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
     | _ => .none
@@ -376,9 +350,8 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
 
 def test_pair_comp : Option Expr := do
   match ← (DCC Id(Sort 1)).infer with
-  | ⟨DCC (Π(_f_α, β) _x), _⟩ =>
-    let β' := reduce_all β
-    let e := DCC (⟦2, Sort 1, β', β'⟧⟨Id(Sort 1), Id(Sort 1)⟩)
+  | ⟨DCC (Π(_f_α, _β) _x), _⟩ =>
+    let e := DCC (⟨Id(Sort 1), Id(Sort 1)⟩)
     Sigma.fst <$> e.infer
   | _ => .none
 

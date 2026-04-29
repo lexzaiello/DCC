@@ -17,16 +17,16 @@ inductive RedEta : Expr → Expr → Prop
   | sig       : RedEta (DCC (Σ(β))) b' → RedEta (DCC (Σ(β) env)) (DCC (b' env))
   | sig'      : RedEta β β' → RedEta (DCC (Σ(β))) (DCC Σ(β'))
   | idr       : RedEta (DCC (f ∘ Id(α))) f
-  | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) x
-  | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨x, y⟩) y
+  | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟨x, y⟩) x
+  | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟨x, y⟩) y
   | snd'      : RedEta (DCC Λ(α, _b, x ∘ (Snd(_c) _env))) (DCC `(α, x))
   | beta      : RedEta
-    (DCC ((App'(_f_α, _f_β) _env) ∘ ⟦m, α, _b, γ⟧⟨Λ(_α, _β, x), y⟩))
-    (DCC (x ∘ ⟦m, α, Fstc(Id(Sort m)), γ⟧⟨Id(α), y⟩))
-  | ai        : RedEta (DCC Λ(α, β, (App'(f_α, f_β) env))) (DCC Id((Π(f_α, f_β) env)))
-  | fsi       : RedEta (DCC ⟦m, a, b, c⟧⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) (DCC Id((Σ(_β) env)))
+    (DCC ((App(_f_α, _f_β) _env) ∘ ⟨Λ(α, _β, x), y⟩))
+    (DCC (x ∘ ⟨Id(α), y⟩))
+  | ai        : RedEta (DCC Λ(α, β, (App(f_α, f_β) env))) (DCC Id((Π(f_α, f_β) env)))
+  | fsi       : RedEta (DCC ⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) (DCC Id((Σ(_β) env)))
   | uncur     : RedEta (DCC Λ(α, β,
-    (App'(_f_α, _f_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
+    (App(_f_α, _f_β) _env) ∘ ⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
 
 @[dcc_step, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
@@ -58,21 +58,21 @@ inductive RedEta : Expr → Expr → Prop
       | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi' h⟩⟩
       | _ => .none
   | (DCC (_f ∘ Id(_α))) => .some ⟨_, ⟨.idr⟩⟩
-  | (DCC (Fst(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨_x, _y⟩) => .some ⟨_, ⟨.fst⟩⟩
-  | (DCC (Snd(_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨_x, _y⟩) => .some ⟨_, ⟨.snd⟩⟩
+  | (DCC (Fst(_β) _env) ∘ ⟨_x, _y⟩) => .some ⟨_, ⟨.fst⟩⟩
+  | (DCC (Snd(_β) _env) ∘ ⟨_x, _y⟩) => .some ⟨_, ⟨.snd⟩⟩
   | DCC Λ(α, β, x) =>
     match x.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr h⟩⟩
     | .none =>
       match DCC Λ(α, β, x) with
       | (DCC Λ(_α, _b, _x ∘ (Snd(_c) _env))) => .some ⟨_, ⟨.snd'⟩⟩
-      | (DCC Λ(_α, _β, (App'(_f_α, _f_β) _env))) => .some ⟨_, ⟨.ai⟩⟩
+      | (DCC Λ(_α, _β, (App(_f_α, _f_β) _env))) => .some ⟨_, ⟨.ai⟩⟩
       | (DCC Λ(_α, _β,
-        (App'(_f_α, _f_β) _env) ∘ ⟦_m, _a, _b, _c⟧⟨_f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
+        (App(_f_α, _f_β) _env) ∘ ⟨_f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
         .some ⟨_, ⟨.uncur⟩⟩
       | _ => .none
-  | (DCC ((App'(_f_α, _f_β) _env) ∘ ⟦_m, _α, _b, _γ⟧⟨Λ(__α, __β, _x), _y⟩)) => .some ⟨_, ⟨.beta⟩⟩
-  | (DCC ⟦_m, _a, _b, _c⟧⟨(Fst(_β) _env), (Snd(_β₂) _env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
+  | (DCC ((App(_f_α, _f_β) _env) ∘ ⟨Λ(__α, __β, _x), _y⟩)) => .some ⟨_, ⟨.beta⟩⟩
+  | (DCC ⟨(Fst(_β) _env), (Snd(_β₂) _env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
   | _ => .none
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedEta.instRedRel : RedRel RedEta EtaSize where

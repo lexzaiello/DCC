@@ -9,40 +9,23 @@ import Dcc.Judge
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘ Id(Sort 1)) (Sort 0))).infer
 
-def mk_test_pair : Option Expr := do
-  match ← (DCC Id(Sort 1)).infer with
-  | ⟨DCC (Π(_f_α, β) _x), _⟩ =>
-    let β' := Expr.reduce_all β
-    let e := DCC (⟦2, Sort 1, β', β'⟧⟨Id(Sort 1), Id(Sort 1)⟩ (Sort 0))
-    pure e
-  | _ => .none
+def mk_test_pair : Expr :=
+  DCC (⟨Id(Sort 1), Id(Sort 1)⟩ (Sort 0))
 
-def test_pair : Option Expr := do
-  let e ← mk_test_pair
-  Sigma.fst <$> e.infer
+def test_pair : Option Expr := Sigma.fst <$> mk_test_pair.infer
 
-def mk_test_pair₂ : Option Expr := do
-  match ← (DCC `(Sort 1, Id(Sort 1))).infer, ← (DCC Id(Sort 1)).infer with
-  | ⟨DCC (Π(_f_α, β₁) _x), _⟩, ⟨DCC (Π(_f_α₂, β₂) _x₂), _⟩ =>
-    let β'₁ := β₁.reduce_all
-    let β'₂ := β₂.reduce_all
-    let e := DCC (⟦2, Sort 1, β'₁, β'₂⟧⟨`(Sort 1, Id(Sort 1)), Id(Sort 1)⟩ (Sort 0))
-    .some e
-  | _, _ => .none
+def mk_test_pair₂ : Expr :=
+  DCC (⟨`(Sort 1, Id(Sort 1)), Id(Sort 1)⟩ (Sort 0))
 
-#eval (Expr.reduce_all <$> mk_test_pair₂)
+#eval (Expr.reduce_all mk_test_pair₂)
 
 #eval Expr.reduce_all <$> test_pair
 
 #eval Std.format test_pair
 
 def test_pair_comp : Option Expr := do
-  match ← (DCC Id(Sort 1)).infer with
-  | ⟨DCC (Π(_f_α, β) _x), _⟩ =>
-    let β' := Expr.reduce_all β
-    let e := DCC (⟦2, Sort 1, β', β'⟧⟨Id(Sort 1), Id(Sort 1)⟩)
-    Sigma.fst <$> e.infer
-  | _ => .none
+  let e := DCC (⟨Id(Sort 1), Id(Sort 1)⟩)
+  Sigma.fst <$> e.infer
 
 #eval test_pair_comp
 
@@ -74,7 +57,7 @@ App(Id(Sort 1)
 def test_app : Option Expr := do
   let e ← mk_test_pair₂
   dbg_trace (Std.format ∘ Sigma.fst) <$> e.infer
-  Sigma.fst <$> (DCC (App'(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)))
+  Sigma.fst <$> (DCC (App(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)))
     (Sort 1)
     e)).infer
 

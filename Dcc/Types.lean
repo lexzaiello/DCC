@@ -111,8 +111,6 @@ let t_s := Σ(s_β)
 ...
 -/
 
-#eval (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0)))
-
 @[dcc_judge] abbrev Top.type : Expr :=
   DCC Sort 0
 
@@ -182,13 +180,7 @@ g : (Π(Id(Sort m), f_γ) α)
 @[dcc_judge] abbrev comp'.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
 
-@[dcc_judge] abbrev App.type (δ : Expr) (u_δ o : Level) : Expr :=
-  DCC (δ : Sort u_δ) → Sort o
-
-@[dcc_judge] abbrev App'.type₂ (f_α f_β δ : Expr) (u_δ u_α u_β : Level) : Expr :=
-  DCC (Π(Id(Sort u_δ), `(Sort u_δ, App(u_α, u_β, f_α, f_β))) δ)
-
-@[dcc_judge, grind →, grind .] abbrev App'.type₃ (f_α f_β δ : Expr) (o : Level) : Expr :=
+@[dcc_judge, grind →, grind .] abbrev App.type (f_α f_β δ : Expr) (o : Level) : Expr :=
   let t_x_y_β := DCC Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(Π(f_α, f_β)))
   let t_x_y   := DCC Σ(t_x_y_β)
   DCC (Π(Id(Sort o), `(Sort o, Π(t_x_y, Subst(f_β, Snd(t_x_y_β))))) δ)

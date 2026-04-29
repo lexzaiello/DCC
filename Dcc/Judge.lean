@@ -137,8 +137,10 @@ inductive Judge : Expr → Expr → Prop where
     → Judge β (DCC Sort n)
     → Reduces (quot.type α β n) τ
     → Judge (DCC `(β, x)) τ
-  | pair   : Judge f (DCC (Π(Id(Sort m), β) α))
-    → Judge g (DCC (Π(Id(Sort m), γ) α))
+  | pair   : Judge f (DCC (Π(Id(Sort m), f_β) α))
+    → Judge g (DCC (Π(Id(Sort m), f_γ) α))
+    → Reduces (DCC (f_β α)) β
+    → Reduces (DCC (f_β α)) γ
     → Reduces (pair.type α β γ m) τ
     → Judge (DCC ⟨f, g⟩) τ
   -- TODO: Change all occurrences of `(δ, α) to just f_α. Needs to depend on the environment
@@ -298,6 +300,8 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         .some ⟨_, ⟨.pair
           ht₁
           (h₁.symm ▸ h₂.symm ▸ ht₂)
+          (reduce_reduces rfl)
+          (reduce_reduces rfl)
           (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
@@ -323,8 +327,8 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match (infer f_β) with
-      | .some ⟨(DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _j)), ⟨ht₂⟩⟩ =>
-        if heqa : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _j)) = (Pi.f_β.type f_α δ o n) then
+      | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
+        if heqa : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = (Pi.f_β.type f_α δ o n) then
           .some ⟨_, ⟨.appl (harr ▸ ht₁) (heqa ▸ ht₂) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none

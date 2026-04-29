@@ -55,11 +55,19 @@ App(Id(Sort 1)
 -/
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
 def test_app : Option Expr := do
-  let e ← mk_test_pair₂
-  dbg_trace (Std.format ∘ Sigma.fst) <$> e.infer
-  Sigma.fst <$> (DCC (App(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)))
-    (Sort 1)
-    e)).infer
+  let e := mk_test_pair₂
+  Sigma.fst <$> (DCC (App(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) (Sort 1)
+  )
+    ).infer
+
+#eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1),
+         (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))).infer
+
+-- (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)
+
+#eval ((· == (DCC (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)))∘ Expr.reduce_all ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
+
+#eval Sigma.fst <$> (DCC Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))).infer
 
 /-
 (Σ(`(⊤, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))) ∗)
@@ -88,7 +96,109 @@ expected
 what is actual Id type?
 -/
 
+-- f_α := `(Sort 1, Sort 1)
+/-
+f_β := Λ(Sort 1, `(Sort 1, Sort 1),
+         (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))
+-/
+
+/-
+We need the pair type to align with App as much as possible, or change pair to be more flexible.
+
+It's specifically f_β that it chokes on. we might need to change it from Π.f_β
+-/
+
+#eval (DCC (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 2)) ∗)).reduce_all
+#eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1),
+         (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))).infer
+#eval Sigma.fst <$> (DCC (⟨Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1))), Id(Sort 1)⟩ (Sort 0))).infer
+
+#eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer
+
+#eval (DCC (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗)).reduce_all
+
+/-
+(Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗)
+Σ(`(⊤, `(Sort 1, Sort 1))) ∗ => Coup(`(Sort 1, Sort 1))
+New η-reduction ^^^
+
+Judge x (DCC (Π(f_α, γ) x_α))
+^ this is the culprit
+γ takes arguments in order, NOT curried.
+curr type curries for reason?
+
+partial app of Λ
+-/
+
+/-
+f_β type:
+
+(Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 2)) ∗)
+^ this is the difference
+
+(Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 2)) ∗)
+β
+Σ(`(⊤, `(Sort 1, Sort 1))) ∗ = Coup(`(Sort 1, Sort 1))
+
+this can be simplified to just `(Coup(`(Sort 1, Sort 1)), Sort 2)
+
+foramlly, this is just partial application of Λ, so we can
+
+this occurs because (f_β α) may not reduce to anything
+
+
+^ we should be able to η-reduce this...
+
+this is due to some types using `(Coup, and others not.
+the convention should be Λ, ideally.
+
+(Π(Id(Sort 2),
+   `(Sort 2,
+     Π(`(Sort 1, Sort 1),
+       Λ(Sort 1, `(Sort 1, Sort 1),
+         (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 2)) ∗)))))
+   Sort 1)
+-/
+
+#eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1),
+         (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))).infer
+
+/-
+Expected:
+(Σ(Λ(Sort 1,
+     Π(`(Sort 1, Sort 1),
+       Λ(Sort 1, `(Sort 1, Sort 1),
+         (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))),
+     Π(`(Sort 1, Sort 1),
+         Λ(Sort 1, `(Sort 1, Sort 1),
+           (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))) ∘
+       (Fst(`(⊤,
+              Π(`(Sort 1, Sort 1),
+                Λ(Sort 1, `(Sort 1, Sort 1),
+                  (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗)))))
+          ∗)))
+   Sort 0)
+
+Σ(Λ(Sort 2, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) -- this is right),
+       Id(Sort 2) ∘ (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)))
+
+this should be η-reducible to Coup(`(Π(Id(Sort 2),
+
+Id(Sort 2) ∘ (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)
+^ this has numerous obvious η-reductions
+
+we will need to make single-step η nondeterministic, but that is fine.
+we don't have idl currently.
+-/
+#eval (DCC (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)).reduce_all
+#eval (DCC Id(Sort 2) ∘ (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)).reduce_all
+
 #eval Std.format <$> test_app
+
+#eval Sigma.fst <$> (DCC (⟨Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1))), Id(Sort 1)⟩ Sort 0)).infer
+
+#eval (DCC (Σ(Λ(Sort 2, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))),
+       Id(Sort 2) ∘ (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗))) (Sort 1))).reduce_all
 
 /-
 (Σ(`(⊤, `(Π(Id(Sort 2), `(Sort 2, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1))), Sort 1))) ∗)
@@ -117,6 +227,6 @@ but not fst.
 A good example of this is projecting over pairs.
 -/
 def test_subst_snd : Option Expr := do
-  let p ← mk_test_pair
+  let p := mk_test_pair
   
   sorry

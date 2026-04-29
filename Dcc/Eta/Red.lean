@@ -19,7 +19,6 @@ inductive RedEta : Expr → Expr → Prop
   | idr       : RedEta (DCC (f ∘ Id(α))) f
   | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟨x, y⟩) x
   | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟨x, y⟩) y
-  | snd'      : RedEta (DCC Λ(α, _b, x ∘ (Snd(_c) _env))) (DCC `(α, x))
   | beta      : RedEta
     (DCC ((App(_f_α, _f_β) _env) ∘ ⟨Λ(α, _β, x), y⟩))
     (DCC (x ∘ ⟨Id(α), y⟩))
@@ -65,7 +64,6 @@ inductive RedEta : Expr → Expr → Prop
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr h⟩⟩
     | .none =>
       match DCC Λ(α, β, x) with
-      | (DCC Λ(_α, _b, _x ∘ (Snd(_c) _env))) => .some ⟨_, ⟨.snd'⟩⟩
       | (DCC Λ(_α, _β, (App(_f_α, _f_β) _env))) => .some ⟨_, ⟨.ai⟩⟩
       | (DCC Λ(_α, _β,
         (App(_f_α, _f_β) _env) ∘ ⟨_f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
@@ -92,8 +90,8 @@ inductive RedEta : Expr → Expr → Prop
   | curr hr ih =>
     cases h₂ with
     | curr hr₂ => rw [ih hr₂]
-    | snd' | ai | uncur => cases hr
-  | ai | uncur | snd' =>
+    | ai | uncur => cases hr
+  | ai | uncur =>
     cases h₂
     · rename_i h; cases h
     · rfl

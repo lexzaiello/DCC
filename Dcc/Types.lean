@@ -174,8 +174,8 @@ g : (Π(Id(Sort m), f_γ) α)
 
 ⟦α, f_β, f_γ⟧⟨f, g⟩ : (Π(Id(Sort m), Σ(Λ(α, (f_β α), f_γ ∘ Fstc(α, (f_β α))))) α)
 -/
-@[dcc_judge] abbrev pair.type (α f_β f_γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, Σ(Λ(α, (f_β α), f_γ ∘ Fstc((f_β α)))))) α)
+@[dcc_judge] abbrev pair.type (α β γ : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), `(Sort m, Σ(Λ(α, β, γ ∘ Fstc(β))))) α)
 
 @[dcc_judge] abbrev comp'.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)

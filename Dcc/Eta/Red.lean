@@ -16,7 +16,6 @@ inductive RedEta : Expr → Expr → Prop
   | pi'       : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
   | sig       : RedEta (DCC (Σ(β))) b' → RedEta (DCC (Σ(β) env)) (DCC (b' env))
   | sig'      : RedEta β β' → RedEta (DCC (Σ(β))) (DCC Σ(β'))
-  | idr       : RedEta (DCC (f ∘ Id(α))) f
   | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟨x, y⟩) x
   | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟨x, y⟩) y
   | beta      : RedEta
@@ -56,7 +55,6 @@ inductive RedEta : Expr → Expr → Prop
       match x.step_eta? with
       | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi' h⟩⟩
       | _ => .none
-  | (DCC (_f ∘ Id(_α))) => .some ⟨_, ⟨.idr⟩⟩
   | (DCC (Fst(_β) _env) ∘ ⟨_x, _y⟩) => .some ⟨_, ⟨.fst⟩⟩
   | (DCC (Snd(_β) _env) ∘ ⟨_x, _y⟩) => .some ⟨_, ⟨.snd⟩⟩
   | DCC Λ(α, β, x) =>
@@ -95,7 +93,7 @@ inductive RedEta : Expr → Expr → Prop
     cases h₂
     · rename_i h; cases h
     · rfl
-  | curr_quot | snd | fst | idr | beta | fsi => cases h₂; rfl
+  | curr_quot | snd | fst | beta | fsi => cases h₂; rfl
 
 open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : ∃ D, RedEta.instRedRel.ReflTrans B D ∧ RedEta.instRedRel.ReflTrans C D := by
   have h := h₁.unique h₂

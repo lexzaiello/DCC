@@ -27,7 +27,7 @@ inductive Expr where
   | snd    : Expr  → Expr
   | snd'   : Expr  → Expr  → Expr
   | comp   : Expr  → Expr  → Expr
-  | pair   : Level → Expr  → Expr  → Expr → Expr → Expr → Expr
+  | pair   : Expr  → Expr → Expr
   -- Σ(β) is the usual sigma type
   | sigma  : Expr  → Expr
   | mk     : Expr  → Expr  → Expr  → Expr
@@ -66,7 +66,7 @@ syntax expr "∘" expr                                             : expr
 syntax:30 ident                                                  : expr
 syntax "(" expr+ ")"                                             : expr
 syntax:max "Sort" term                                           : expr
-syntax (priority := high) "⟦" term "," expr,* "⟧" "⟨" expr,* "⟩"          : expr
+syntax (priority := high) "⟨" expr,* "⟩"                         : expr
 syntax (priority := high) "⟦" expr,* "⟧" "(" expr,* ")"          : expr
 
 syntax "DCC"  expr : term
@@ -80,7 +80,7 @@ macro_rules
   | `(DCC `($β:expr, $x:expr))                   => `(Expr.quot (DCC $β) (DCC $x))
   | `(DCC Λ($α:expr, $β:expr, $e:expr))          => `(Expr.curr (DCC $α) (DCC $β) (DCC $e))
   | `(DCC Π($α:expr, $β:expr))                   => `(Expr.pi (DCC $α) (DCC $β))
-  | `(DCC ⟦$m:term, $α:expr, $β:expr, $γ:expr⟧⟨$x:expr, $y:expr⟩) => `(Expr.pair $m (DCC $α) (DCC $β) (DCC $γ) (DCC $x) (DCC $y))
+  | `(DCC ⟨$x:expr, $y:expr⟩)                    => `(Expr.pair (DCC $x) (DCC $y))
   | `(DCC ⟦$β:expr⟧($x, $y))                     => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                          => `(Expr.sort $m)
   | `(DCC Σ($β:expr))                            => `(Expr.sigma (DCC $β))
@@ -125,12 +125,7 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC App(α, β))           => comb "App" [α.toFormat, β.toFormat]
   | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat, β.toFormat, e.toFormat]
   | (DCC Π(α, β))             => comb "Π" [α.toFormat, β.toFormat]
-  | (DCC ⟦m, α, β, γ⟧⟨a, b⟩)  =>
-    let pts := (bbracket (sepD [Std.format m, α.toFormat, β.toFormat, γ.toFormat]))
-    let pts_length := match pts.pretty.splitOn "\n" |>.head? with
-    | .some line => line.length
-    | .none      => 0
-    pts ++ (angle (sepD [a.toFormat, b.toFormat] (indent := pts_length)))
+  | (DCC ⟨a, b⟩)              => (angle (sepD [a.toFormat, b.toFormat] (indent := 1)))
   | (DCC ⟦β⟧(a, b))           =>
     comb (bbracket (sepD [β.toFormat])) [a.toFormat, b.toFormat]
   | (DCC Σ(β))                => comb "Σ" [β.toFormat]

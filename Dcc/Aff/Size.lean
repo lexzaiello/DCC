@@ -21,7 +21,7 @@ inductive Size : Expr → ℕ → Prop
   | snd    : Size (DCC Snd(_α)) 1
   | appl   : Size (DCC App(_α, β)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
-  | pair   : Size f m → Size g n → Size (DCC ⟦_m, α, β, γ⟧⟨f, g⟩) (m + n).succ
+  | pair   : Size f m → Size g n → Size (DCC ⟨f, g⟩) (m + n).succ
   | curr   : Size x m → Size (DCC Λ(α, β, x)) m.succ
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
 
@@ -53,7 +53,7 @@ inductive Size : Expr → ℕ → Prop
     let ⟨_m, ⟨h₁⟩⟩ := f.size
     let ⟨_n, ⟨h₂⟩⟩ := g.size
     ⟨_, ⟨.comp h₁ h₂⟩⟩
-  | DCC ⟦_m, _α, _β, _γ⟧⟨a, b⟩ =>
+  | DCC ⟨a, b⟩ =>
     let ⟨_o, ⟨h₁⟩⟩ := a.size
     let ⟨_p, ⟨h₂⟩⟩ := b.size
     ⟨_, ⟨.pair h₁ h₂⟩⟩

@@ -183,12 +183,6 @@ App(f_α, f_β) : Π(Id(Sort o), `(Sort o, Π(Σ(tβ_coup), Subst(f_β, Fst(tβ_
 
 @[dcc_judge, grind →, grind .] abbrev App.type (f_α f_β δ : Expr) (o : Level) : Expr :=
   let tβ_coup := DCC Λ(δ, f_α, Π(f_α, f_β) ∘ Fstc(f_α))
-  -- ∀ (env : δ) (coup : Σ (env : δ), fun (fst : ∀ (x : f_α env), f_β env x) => f_α env
-  -- can we get rid of the env first?
-  -- env is used in the conclusion f_β env and the type of fst (the function)
-  -- in Σ hypothesis, we can maybe normalize first? no.
-  -- t_x_y ∘
-  -- can we replace t_x_y here with composing with mk_coup to make the conclusion?
   DCC (Π(Id(Sort o), `(Sort o, Π(Σ(tβ_coup), Subst(f_β, Fst(tβ_coup))))) δ)
 
 @[dcc_judge] abbrev snd'.type (α β : Expr) (m n : Level) : Expr :=

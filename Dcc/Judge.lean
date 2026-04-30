@@ -17,16 +17,19 @@ inductive Reduces : Expr → Expr → Prop
 
 def reduce_all := reduce' RedEta ∘ reduce' RedAff
 
-@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d⟩ ⟨g, h, i, j⟩ => by
+@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])]
+theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d⟩ ⟨g, h, i, j⟩ => by
   have ha := norm_unique a b g h
   exact norm_unique c d (ha ▸ i) j
 
-@[aesop safe destruct (rule_sets := [DccReduce])] theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
+@[aesop safe destruct (rule_sets := [DccReduce])]
+theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
   have h := h₁.unique h₂
   cases h
   congr
 
-@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])] theorem Reduces.complete : Reduces A B → reduce_all A = B :=
+@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
+theorem Reduces.complete : Reduces A B → reduce_all A = B :=
   fun ⟨ha, hb, hc, hd⟩ => by
     unfold reduce_all
     unfold reduce'
@@ -42,7 +45,8 @@ def reduce_reduces (h : reduce_all A = B) : Reduces A B := ⟨
 
 def reduce_reduces' : Reduces A (reduce_all A) := reduce_reduces rfl
 
-@[dcc_judge, inline] abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
+@[dcc_judge, inline]
+abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
   match heq₀ : t with
   | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
     if heq₁ : t = (DCC (α : Sort m) → β) then

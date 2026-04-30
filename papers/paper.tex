@@ -256,7 +256,7 @@ We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} :
 The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha s\). Since \(f_\alpha s\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object affinely (see inference rule \eqref{infer_pi}). We normalize types eagerly, but we do not always indicate so in our inference rules (see \eqref{appendix:sup}). We use \(\rightarrowtail^{!}\) to denote star-step affine reduction to a normal form.
 
 \begin{figure}[h!]
-\begin{equation}
+\begin{equation}\label{infer_application}
   \inferrule[App]
   { f : \Pi(f_\alpha, f_\beta) s, f_\alpha x \affarr^{!} \alpha\\ x : \alpha_{2}, \alpha_{2} \affarr^{!} \alpha\\ f_\beta s x \affarr^{!} \beta}
   { f x : \beta}
@@ -363,7 +363,7 @@ The quotation combinator (\(`(\beta, x)\)) is not dependent, but a dependent ver
 
 \subsubsection{Curry}
 
-Recall \(\Lambda(x) y z = x (y, z)\). Our inference rule for application \eqref{infer_app} proves to be useful in defining the type, since terms in context can be used more than once in a \(\Pi\) tree, so long as they are used at most once in each argument type.
+Recall \(\Lambda(x) y z = x (y, z)\). Our inference rule for application \eqref{infer_application} proves to be useful in defining the type, since terms in context can be used more than once in a \(\Pi\) tree, so long as they are used at most once in each argument type.
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_curry}
@@ -1214,230 +1214,210 @@ theorem eta_complete (h : Relation.ReflTransGen RedEta A B)
 
 \section{Type Inference}
 
-Note that the types of all of the dependent categorical combinators are affine \eqref{infer_rules}. Hence, we use our decision procedure \eqref{decide_beta_eq} for \(=_{\beta}\) under affine-reduction to prove decidability of type-checking.
+Note that the types of all of the dependent categorical combinators are affine \eqref{infer_rules}. We use our affine and \(\eta\) reduction functions with soundness and completeness with respect to normal forms to prove decidability of type-checking.
 
-We do not normalize inside our judgment relation, nor do we have a conversion case. We bake conversion into each applicable constructor with a \texttt{Reduces} predicate by normalizing the expected and actual types a la carte:
+We do not assume a general conversion constructor in our judgment relation. Instead, we eagerly \(\beta\) and \(\eta\) normalize our types. We do not refer to our computable reduction functions in the judgment relation. Instead, we define a predicate \mintinline{lean}{Reduces} with completeness and soundness.
 
 \begin{leancode}
-inductive Reduces : Expr → Expr → Type
-  | mk : RedAffReflTrans A B → IsNormAff B → Reduces A B
-deriving Repr
+inductive Reduces : Expr → Expr → Prop
+  | mk : Relation.ReflTransGen RedAff A B
+    → IsNorm RedAff B
+    → Relation.ReflTransGen RedEta B C
+    → IsNorm RedEta C
+    → Reduces A C
 
-theorem Reduces.complete : Reduces A B → reduce A = B :=
-  fun ⟨ha, hb⟩ => ha.complete hb
+def reduce_all := reduce' RedEta ∘ reduce' RedAff
 
-def reduce_reduces (h : reduce A = B) : Reduces A B := ⟨reduce_sound h, reduce_norm h⟩
+@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])]
+theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d⟩ ⟨g, h, i, j⟩ => by
+  have ha := norm_unique a b g h
+  exact norm_unique c d (ha ▸ i) j
 
-def reduce_reduces' : Reduces A A.reduce := reduce_reduces rfl
+@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
+theorem Reduces.complete : Reduces A B → reduce_all A = B :=
+  fun ⟨ha, hb, hc, hd⟩ => by
+    unfold reduce_all
+    unfold reduce'
+    cases reduce_complete_fst ha hb; cases reduce_complete_fst hc hd; rfl
+
+def reduce_reduces (h : reduce_all A = B) : Reduces A B := ⟨
+  reduce_sound rfl,
+  reduce_norm rfl,
+  h ▸ (reduce_sound rfl),
+  h ▸ (reduce_norm rfl)⟩
 \end{leancode}
 
 For example, application is inferred like such:
 
 \begin{leancode}
-inductive Judge : Expr → Expr → Type where
-  | app   : Judge f t_f
-    → Reduces t_f (DCC (Π(m, n) α β))
-    → Judge x t_x
-    → Reduces t_x α
-    → Judge (DCC (f x)) (DCC (β ⟦Sort m, Id(Sort m)⟧(α, x)))
+inductive Judge : Expr → Expr → Prop where
+  | app    : Judge f (DCC (Π(f_α, f_β) x_α))
+    → Reduces (DCC (f_α x_α)) α
+    → Judge x α
+    → Reduces (DCC (f_β x_α x)) τ
+    → Judge (DCC (f x)) τ
 \end{leancode}
 
-We defer full type normalization to a supplementary predicate, \mintinline{lean}{JudgeConv}:
+For convenience, we define a function to pattern-match arrows, which are \(\Pi\)-objects defined as such:
 
 \begin{leancode}
-inductive JudgeConv : Expr → Expr → Type
-  | mk : Judge x A → Reduces A B → JudgeConv x B
-\end{leancode}
+@[dcc_judge] abbrev arrow (α β : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), `(Coup(Id(Sort m)), β))) α)
 
-We define an \mintinline{lean}{IsArrow} predicate for convenience in pattern matching arrows, which are by convention, \(\Pi\)-objects containing quotation in their codomain. We do not assume \(\Pi\)-extensionality.
+macro_rules
+  | `(DCC ($α:expr : Sort $m) → $β:expr) => `(arrow (DCC $α) (DCC $β) $m)
 
-\begin{leancode}
-inductive IsArrow : Expr → (α β : Expr) → Level → Level → Type
-  | mk    : Reduces A (arrow α β m n) → IsArrow A α β m n
-deriving Repr
-
-def is_arrow (t : Expr) : Option ((α β : Expr) × (m n : Level) × IsArrow t α β m n) :=
-  match heq₀ : t.reduce with
-  | DCC (Π(m, n) α `(Sort n₂, Σ(Sort m₂, Id(Sort m₃)), β)) =>
-    if heq : m = m₂ ∧ m = m₃ ∧ n = n₂ then by
-      have ⟨ha, hb, hc⟩ := heq
-      rw [← ha, ← hb, ← hc] at heq₀
-      refine .some ⟨α, β, m, n, ?_, ?_⟩
-      · exact reduce_sound heq₀
-      · exact reduce_norm heq₀
-    else .none
+@[dcc_judge, inline]
+abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
+  match heq₀ : t with
+  | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
+    if heq₁ : t = (DCC (α : Sort m) → β) then
+      .some ⟨α, β, m, ⟨by rw [← heq₀, heq₁]⟩⟩
+    else
+      .none
   | _ => .none
 \end{leancode}
 
-Our \mintinline{lean}{Judge} relation models the inference rules \eqref{infer_rules}. We have omitted the individual types and corresponding constructors for brevity, but give the constructor for tail-dependent Curry \eqref{tail_curry} and App \eqref{infer_app} as examples. See the appendix and supplementary materials for the full formalization.
+Our \mintinline{lean}{Judge} relation models the inference rules \eqref{infer_rules}. We have omitted the individual types and corresponding constructors for brevity, but give the constructor for dependent Curry \eqref{infer_curry}, App \eqref{infer_app}, \(\Pi\) \eqref{infer_pi} and application as examples. See the appendix \eqref{appendix:supp} for the full formalization.
 
 \begin{leancode}
-def curr.type (α γ : Expr) (m n : Level) : Expr :=
-  (DCC (Π(m.succ, n) α ((Flip(Π(m, n)) (γ ∘'
-  (Λ'(Sort m.succ, Id(Sort m.succ), Id(Σ(Sort m.succ, Id(Sort m.succ))))
-    ⟦Sort m.succ, Id(Sort m.succ)⟧(α, Id(α))))) ∘' Snd'(Sort m.succ, α))))
+@[dcc_judge] abbrev curr.type (α β γ : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), `(Sort m, Π(β, Λ(α, β, γ)))) α) -- weaken α, keep x
 
-def app_e.type (α β : Expr) (m n : Level) : Expr :=
-  let t_f := DCC (Π(m, n) α β)
-  let t_x := DCC `(Sort n, t_f, α)
+@[dcc_judge, grind →, grind .] abbrev App.type (f_α f_β δ : Expr) (o : Level) : Expr :=
+  let tβ_coup := DCC Λ(δ, f_α, Π(f_α, f_β) ∘ Fstc(f_α))
+  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(tβ_coup), Subst(f_β, Fst(tβ_coup))))) δ)
 
-  DCC (Π(max m n, n)
-      Σ(t_f, t_x)
-      ((Λ'(Sort m, Id(Sort m), β) α) ∘' (Snd(t_f, t_x) ∘ Snd'(Sort (max m n), Σ(t_f, t_x)))))
+@[dcc_judge] abbrev Pi.type (α : Expr) (m o : Level) : Expr :=
+  DCC (α : Sort m) → Sort o
 
-inductive Judge : Expr → Expr → Type where
-  | curr  : Judge α t_α
-    → Reduces t_α (DCC (Sort m.succ))
-    → Judge x t_x
-    → Reduces t_x (DCC (Π(m.succ, n) Σ(α, Id(α)) γ))
-    → Judge (DCC Λ(α, x)) (curr.type α γ m n)
-  | app_e : Judge α t_α
-    → Reduces t_α (DCC Sort m)
-    → Judge (DCC App(n, α, β)) (app_e.type α β m n)
-  | app   : Judge f t_f
-    → Reduces t_f (DCC (Π(m, n) α β))
-    → Judge x t_x
-    → Reduces t_x α
-    → Judge (DCC (f x)) (DCC (β ⟦Sort m, Id(Sort m)⟧(α, x)))
-  | sort  : Judge (DCC Sort m) (DCC Sort m.succ)
-deriving Repr
+@[dcc_judge] abbrev Pi.f_β.type (f_α α : Expr) (m o : Level) :=
+  (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(α, f_α, `(Coup(f_α), Sort o))))) α))
+
+@[dcc_judge] abbrev curr.β.type (α : Expr) (m n : Level) : Expr :=
+  DCC (α : Sort m) → Sort n
+
+inductive Judge : Expr → Expr → Prop where
+  | curr   : Judge β (curr.β.type α m n)
+    → Judge x (DCC (Π(f_α, γ) x_α))
+    → Reduces (DCC Coup(β)) τα
+    → Reduces (DCC (f_α x_α)) τα
+    → Reduces (curr.type α β (DCC (γ x_α)) m) τ
+    → Judge (DCC Λ(α, β, x)) τ
+  | pi     : Judge f_α (arrow α (DCC Sort n) m)
+    → Judge f_β (Pi.f_β.type f_α α m o)
+    → Reduces (Pi.type α m o) τ
+    → Judge (DCC Π(f_α, f_β)) τ
+  | appl   : Judge f_α (arrow δ (DCC Sort m) o)
+    → Judge f_β (Pi.f_β.type f_α δ o n)
+    → Reduces (App.type f_α f_β δ o) τ
+    → Judge (DCC App(f_α, f_β)) τ
+  | app    : Judge f (DCC (Π(f_α, f_β) x_α))
+    → Reduces (DCC (f_α x_α)) α
+    → Judge x α
+    → Reduces (DCC (f_β x_α x)) τ
+    → Judge (DCC (f x)) τ
+  | sort   : Judge (DCC Sort m) (DCC Sort m.succ)
+  | top    : Judge (DCC ⊤) Top.type
+  | bot    : Judge (DCC ⊥) Bot.type
+  | tintro : Judge (DCC ∗) Tintro.type
 \end{leancode}
 
-\subsection{Computing Type Inference}
+\subsection{Type Inference Algorithm}
 
-Using our terminating affine \(\beta\)-reduction function and \mintinline{lean}{reduce_reduces}, we define an \mintinline{lean}{infer} function with soundness. We give only the cases described in our \mintinline{lean}{Judge} illustration, though the rest are available in supplementary materials. Pattern matching against our \mintinline{lean}{Judge} constructors is somewhat obtuse, primarily due to our design decision to avoid adding a conversion constructor and reducing the inferred types.
+Using our terminating affine and \(\eta\) reduction functions, we define an \mintinline{lean}{infer} function with soundness. We give only the cases described in our \mintinline{lean}{Judge} illustration, though the rest are available in \eqref{appendix:supp}. Pattern matching our types is somewhat obtuse, primarily due to the combinators having several points. Hence, we make use of helper functions to pattern match against them and provide equality proofs. For example, the helper function for pattern-matching arrows and the type of \(\beta\) in \(\Lambda\) are defined as such:
 
 \begin{leancode}
-def infer (e : Expr) : Option ((t : Expr) × (Judge e t)) :=
-  match e with
-  | DCC Sort m => .some ⟨DCC Sort m.succ, .sort⟩
-  | DCC App(n, α, β) =>
-    match α.infer with
-    | .some ⟨t_α, h_t_α⟩ =>
-      match heq₀ : t_α.reduce with
-      | DCC Sort m =>
-        .some ⟨_, .app_e h_t_α (reduce_reduces heq₀)⟩
+@[dcc_judge] def with_arr (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+  Option ((τ α β : Expr) × (m : Level) × PULift.{1, 0} (Judge e τ) × PULift.{1, 0} (τ = arrow α β m)) :=
+    match h with
+    | .some ⟨t, h⟩ => match arrow.matcher t with
+      | .some ⟨α, β, m, h_arr⟩ => .some ⟨t, α, β, m, h, h_arr⟩
       | _ => .none
     | _ => .none
-  | DCC Λ(α, x) =>
-    match heq₀ : α.infer, x.infer with
-    | .some ⟨t_α, h_t_α⟩, .some ⟨t_x, h_t_x⟩ =>
-      match heq₁ : t_α.reduce with
-      | DCC Sort m + 1 =>
-        match heq₃ : t_x.reduce with
-        | (DCC (Π(m₂ + 1, n) Σ(α₁, Id(α₂)) γ₂)) =>
-          if heq₂ : m₂ = m ∧ α₁ = α ∧ α = α₂ then
-            have ⟨ha, hb, hc⟩ := heq₂
-            .some ⟨_, Judge.curr
-              h_t_α
-              (reduce_reduces heq₁)
-              h_t_x
-              (ha ▸ hb ▸ hc ▸ (reduce_reduces heq₃))⟩
+
+@[dcc_judge, inline] abbrev curr.β.type.matcher (t : Expr) : Option
+  ((α : Expr) × (m n : Level) × (PULift.{1, 0} (t = curr.β.type α m n))) :=
+  match arrow.matcher t with
+  | .some ⟨α, DCC Sort n, m, ⟨h_arr⟩⟩ =>
+    .some ⟨α, m, n, ⟨by rw [h_arr]⟩⟩
+  | _ => .none
+
+@[dcc_judge] def with_curr_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
+  Option ((τ : Expr) × (α : Expr) × (m n : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = curr.β.type α m n))) :=
+  match h with
+  | .some ⟨t, h⟩ => match curr.β.type.matcher t with
+    | .some ⟨α, m, n, h₂⟩ => .some ⟨t, α, m, n, h, h₂⟩
+    | _ => .none
+  | _ => none
+\end{leancode}
+
+Inference is computed like such:
+
+\begin{leancode}
+def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
+  match e with
+  | DCC ⊤ => .some ⟨_, ⟨.top⟩⟩
+  | DCC ⊥ => .some ⟨_, ⟨.bot⟩⟩
+  | DCC ∗ => .some ⟨_, ⟨.tintro⟩⟩
+  | DCC Sort _m => .some ⟨_, ⟨.sort⟩⟩
+  | DCC Λ(α, β, x) =>
+    match with_curr_β_type (infer β) with
+    | .some ⟨_, α₂, m, n, ⟨htβ⟩, ⟨harrβ⟩⟩ =>
+      match infer x with
+      | .some ⟨DCC (Π(f_α, _γ) x_α), ⟨ht₂⟩⟩ =>
+        if heq : reduce_all (DCC (f_α x_α)) = reduce_all (DCC Coup(β)) then
+          if heq₂ : α = α₂ then
+            .some ⟨_, ⟨.curr (heq₂ ▸ harrβ ▸ htβ) ht₂ (reduce_reduces heq.symm)
+              (reduce_reduces rfl)
+              (reduce_reduces rfl)⟩⟩
           else .none
-        | _ => .none
-      | _ => .none
-    | _, _ => .none
-  | DCC (f x) => match f.infer, x.infer with
-    | .some ⟨t_f, h_f⟩, .some ⟨t_x, h_x⟩ =>
-      match heq₀ : t_f.reduce, heq₁ : t_x.reduce with
-      | DCC (Π(m, n) α₁ β), α₂ =>
-        if heq : α₁ = α₂ then
-          .some ⟨(DCC (β ⟦Sort m, Id(Sort m)⟧(α₁, x))),
-            .app h_f (reduce_reduces heq₀)
-                 h_x (reduce_reduces (heq ▸ heq₁))⟩
         else .none
-      | _, _ => .none
+      | _ => .none
+    | _ => .none
+  | DCC App(f_α, f_β) =>
+    match with_arr (infer f_α) with
+    | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
+      match (infer f_β) with
+      | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
+        if heqa : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = (Pi.f_β.type f_α δ o n) then
+          .some ⟨_, ⟨.appl (harr ▸ ht₁) (heqa ▸ ht₂) (reduce_reduces rfl)⟩⟩
+        else .none
+      | _ => .none
+    | _ => .none
+  | DCC Π(f_α, f_β) =>
+    match with_arr (infer f_α) with
+    | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>
+      match infer f_β with
+      | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩ =>
+        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g)) = Pi.f_β.type f_α α m o then
+          .some ⟨_, ⟨.pi (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
+        else .none
+      | _ => .none
+    | _ => .none
+  | DCC (f x) =>
+    match infer f, infer x with
+    | .some ⟨DCC (Π(f_α, _f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
+      if heq : reduce_all (DCC (f_α x_α)) = τ₂' then
+        .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by rw [heq]; exact ht₂) (reduce_reduces rfl)⟩⟩
+      else .none
     | _, _ => .none
   | _ => sorry -- remaining cases omitted for brevity
-
-def infer_conv (e : Expr) : Option ((t : Expr) × JudgeConv e t) :=
-  match infer e with
-  | .some ⟨t, h⟩ =>
-    .some ⟨t.reduce, ⟨h, reduce_reduces rfl⟩⟩
-  | _ => .none
 \end{leancode}
 
-Avoiding a conversion constructor proves to be quite advantageous, since neither confluence or induction are necessary, and case analysis suffices to prove useful properties. For example, a proof of preservation of \(Id(\alpha) x\) is quite straightforward.
+Avoiding a conversion constructor proves to be quite advantageous, since neither confluence or induction are necessary to prove useful properties. Furthermore, since we have sound and complete type reduction, completeness is provable.
 
 \begin{theorem}
-  For all \(\alpha \in Expr\) and \(x \in Expr\), if \(Id(\alpha)\ x : reduce(\alpha)\), then \(x : reduce(\alpha)\).
+  For all \(e \in Expr\) and \(t \in Expr\), if \(h\) is a proof that \(e : t\), then \texttt{infer e = some (t, h)}.
 \end{theorem}
 
 \begin{proof}
-  We proceed by case analysis on the judgment \(Id(\alpha)\ x : reduce(\alpha)\).
-
+  By tactic automation using our type-class hierarchy and completeness and soundness proofs.
 \begin{leancode}
-def id_preservation (h : JudgeConv (DCC (Id(α) x)) α.reduce) : (JudgeConv x α.reduce) :=
-  match h with
-  | ⟨.app (.id _ _) b h_t_x _, h_red⟩ => by
-    cases reduce_arrow b.complete
-    exact ⟨h_t_x, by assumption⟩
-\end{leancode}
-\end{proof}
-
-\subsubsection{Infer Completeness}
-
-Yet another advantage of avoiding a conversion constructor, and of having decidable \(\beta_{=}\) is that completeness is provable. We have omitted all but the \mintinline{lean}{curr}, \mintinline{lean}{app_e}, \mintinline{lean}{sort}, and \mintinline{lean}{app} constructors (see supplementary materials).
-
-\begin{theorem}
-  For all \(e \in Expr\) and \(t \in Expr\), if \(e : t\), then \texttt{infer e = some t}.
-\end{theorem}
-
-\begin{proof}
-We proceed by parallel induction on the typing derivation and case analysis on the unfolding of \mintinline{lean}{infer}.
-\begin{leancode}
-theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
-  induction h_t with
-  | sort =>
-    unfold infer
-    rfl
-  | curr h_t_α h_red₁ h_t_x h_red₂ ih₁ ih₂ =>
-    have ha := h_red₁.complete
-    have hb := h_red₂.complete
-    unfold infer
-    rw [ih₁, ih₂]
-    simp
-    split
-    case h_1 heq =>
-      rw [heq] at ha
-      cases ha
-      split
-      case h_1 heq =>
-        rw [heq] at hb
-        cases hb
-        simp
-        split
-        rfl
-      case h_2 h =>
-        exact (h _ _ _ _ _ hb).elim
-    case h_2 h =>
-      exact (h _ ha).elim
-  | app_e h_t_α h_red₁ ih =>
-    have ha := h_red₁.complete
-    unfold infer
-    rw [ih]
-    simp
-    split
-    case h_1 heq =>
-      rw [heq] at ha
-      cases ha
-      rfl
-    case h_2 h =>
-      exact (h _ ha).elim
-  | app h_t_f h_red_f h_t_x h_red_x ih₁ ih₂ =>
-    have ha := h_red_f.complete
-    have hb := h_red_x.complete
-    unfold infer
-    simp [ih₁, ih₂]
-    split
-    case h_1 heq =>
-      rw [heq] at ha
-      cases ha
-      cases hb
-      simp
-      aesop
-    case h_2 h =>
-      exact (h _ _ _ _ ha).elim
+theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
+  induction h <;> (
+    dsimp only [infer]
+    try (simp_all [dcc_judge, dcc_reduce]; aesop (rule_sets := [DccReduce])))
 \end{leancode}
 \end{proof}
 
@@ -1446,32 +1426,21 @@ theorem Judge.complete (h_t : Judge e t) : infer e = .some ⟨t, h_t⟩ := by
 Using our proof of completeness and soundness proof produced by \mintinline{lean}{infer}, we demonstrate judgmental decidability.
 
 \begin{theorem}
-  For all \(e \in Expr\) and \(t \in Expr\), \(e : t \lor \neg e : t\).
+  For all \(e \in Expr\) and \(t \in Expr\), then \(e : t \lor \neg e : t\).
 \end{theorem}
 
 \begin{proof}
 \begin{leancode}
 
 
-def Judge.decide : Judge e t ⊕ (Judge e t → PLift False) :=
+instance : Decidable (Judge e t) :=
   if h : (infer e).isSome then
     if heq : ((infer e).get h).fst = t then
-      .inl (heq ▸ ((infer e).get h).snd)
+      .isTrue (heq ▸ ((infer e).get h).snd.down)
     else
-      .inr fun hn => by
-        have h_comp := hn.complete
-        simp_all
-  else .inr fun hn => by simp [hn.complete] at *
-
-def JudgeConv.decide : JudgeConv e t ⊕ (JudgeConv e t → PLift False) :=
-  if h : (infer e).isSome then
-    if heq : ((infer e).get h).fst.reduce = t then
-      .inl ⟨((infer e).get h).snd, reduce_reduces heq⟩
-    else .inr fun ⟨ha, hb⟩ => by
-      have h := ha.complete
-      simp_all
-      exact (heq hb.complete).elim
-  else .inr fun ⟨ha, hb⟩ => by simp [ha.complete] at *
+      isFalse (fun h => by simp [h.complete] at *)
+  else
+    isFalse (fun h => by simp [h.complete] at *)
 \end{leancode}
 \end{proof}
 

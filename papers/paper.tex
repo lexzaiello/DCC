@@ -1193,9 +1193,19 @@ As in \(\affarr\), we inherit completeness of full reduction with respect to \(\
 \end{theorem}
 
 \begin{proof}
+  By typeclass automation:
 \begin{leancode}
 
 
+def eta_semi_complete {A B : Expr} (h_red : A.RedEta B) :
+  ∃ B', ∃ (h : A.RedEta B'), (step_eta? A) = .some ⟨B', ⟨h⟩⟩ :=
+  ⟨_, _, h_red.complete⟩
+
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedEta.instSemicomplete : SemiComplete RedEta := ⟨eta_semi_complete⟩
+
+theorem eta_complete (h : Relation.ReflTransGen RedEta A B)
+  (hn : IsNorm RedEta B) : reduce RedEta A = ⟨B, ⟨h⟩⟩ :=
+  RedEta.instRedRel.instComplete.complete h hn
 \end{leancode}
 \end{proof}
 

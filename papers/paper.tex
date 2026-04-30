@@ -32,6 +32,7 @@
 \addbibresource{./refs.bib}
 
 \newcommand{\sort}[1]{\text{Sort}\ #1}
+\newcommand{\affarr}{\rightarrowtail}
 
 \title{Decidable Type-Checking for the Dependent Categorical Combinators}
 \author[1]{Lexi Aiello}
@@ -147,7 +148,7 @@ Curien extends the combinators with type annotations \autocite[p. 220]{CURIEN198
 \end{figure}
 \end{center}
 
-Curien's categorical combinators are nominally combinatory, but differ from \(SK\) and \(BCKI\) calculi in that points are still present. In its simply-typed form \autocite[p. 220]{CURIEN1986188}, the calculus has not one primitive combinator without a point, and no object (besides application) has an arity of more than one \autocite[p. 177]{cmachine}. Type arguments are given as points, projection mappings in pairs are given as points (\(\langle f, g \rangle\)), the Curry combinator is defined by a point (\(\Lambda(x)\)), couple members are specified as points (\((a, b)\)), and composition is pointed with respect to \(f\) and \(g\) (\((f \circ g) x\)). This superficially obscure design decision is quite natural when interpreting projection over couples (\(((x_1, x_2), \ldots x_{n})\)) as debruijn argument indexing. Take an example reduction in the untyped calculus:
+Curien's categorical combinators are nominally combinatory, but differ from \(SK\) and \(BCKI\) calculi in that points are still present. Type arguments are given as points, projection mappings in pairs are given as points (\(\langle f, g \rangle\)), the Curry combinator is defined by a point (\(\Lambda(x)\)), couple members are specified as points (\((a, b)\)), and composition is pointed with respect to \(f\) and \(g\) (\((f \circ g) x\)). This design is quite natural when interpreting projection as corresponding to Debruijn indices. Take an example reduction in the untyped calculus:
 
 \begin{equation}\label{curr_point}
 \begin{split}
@@ -159,13 +160,13 @@ Curien's categorical combinators are nominally combinatory, but differ from \(SK
 \end{split}
 \end{equation}
 
-Despite every visible operation being bound by a point, arguments in scope can be rearranged through projections, composition, pairing, and the application combinator which corresponds to evaluation in the cartesian closed category.
+Despite every visible operation being bound by a point, arguments in scope can be rearranged through projections, composition, pairing, and application (evaluation in the CCC).
 
 \section{Dependent Categorical Combinators}
 
 Our primary insight when extending the categorical combinators to dependent types is that the types of all of the categorical combinators are representable without making use of the pair rule. That is, their types are affine. We refer to the subset of the categorical combinators excluding the pair rule as the ``affine restriction.'' By showing that the affine restriction is strongly normalizing, we gain decidable judgmental equality (\(\equiv\)) and a decision procedure for type-checking.
 
-We interpret \(\Sigma\)-types as a telescope context as usual. Finally, as in the Curry combinator, we specify combinator type arguments as term points that internalize an indexing of the environment (as in Tarski universes). For example, the \(\Pi\) combinator is inferred like such:
+We interpret \(\Sigma\)-types as a telescope context as usual. As in the Curry combinator, we specify combinator type arguments as points that internalize an indexing of the environment. For example, the \(\Pi\) combinator is inferred like such:
 
 \begin{figure}[h!]
   \centering
@@ -176,9 +177,9 @@ We interpret \(\Sigma\)-types as a telescope context as usual. Finally, as in th
   \end{equation}
 \end{figure}
 
-We similarly regard couples as meaningful traversable data, but reinterpret them as \(\Sigma\)-pairs. \(\Sigma\)-couples make traversing data in a well-typed way quite convenient, and can naturally encode typing judgments. This approach also allows computing \(\Pi\) sort through our core inference rules without any modification. We define most of the type arguments of the combinators through Tarski universe environment-indexing points. By specifying type arguments in this way, some potential duplication of items in the context can be avoided (e.g., in \(\Pi\), where the environment traverses both \(f_\alpha\) and \(f_\beta\)), thus further enabling a purely affine type theory.
+We interpret couples as dependent sums. \(\Sigma\)-couples make traversing data in a well-typed way quite convenient. All of our objects are well-typed, and \(\Pi\) elimination sorts can be computed with no extra assumptions. We define most of the type arguments of the combinators as functions of the environment eliminating into \(\sort{n}\). By specifying type arguments in this way, some potential duplication of items in the context can be avoided (e.g., in \(\Pi\), where the environment is shared across \(f_\alpha\) and \(f_\beta\)), thus further enabling a purely affine type theory.
 
-\subsection{Couples as Degenerate Dependent Sums}
+\subsection{\(\Sigma\)-Couples}
 
 Recall the usual typing of a \(\Sigma\)-pair:
 
@@ -188,9 +189,9 @@ Recall the usual typing of a \(\Sigma\)-pair:
 { \Gamma \vdash \Sigma(\alpha, \beta) : \sort{max(m, n)}}
 \end{equation}
 
-A \(\Sigma\)-type can be placed under a \(\lambda\)-binder, referencing bound variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) \autocite[50]{martin1984intuitionistic}, in that a function \(\Pi(x : \alpha)(y : \beta(x)). \gamma(x, y)\) can be transformed into a dependent function \(\Pi(s : \Sigma(\alpha, \beta)).\gamma(fst(s), snd(s))\), and vice-versa (``currying''-''uncurrying'').
+A \(\Sigma\)-type can refer to variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) in that a function \(\Pi(x : \alpha)(y : \beta x). \gamma x y\) can be transformed into a dependent function \(\Pi(s : \Sigma (x : \alpha), \beta x),\gamma fst(s) snd(s)\), and vice-versa (``currying''-''uncurrying'').
 
-In the untyped categorical combinators, Curry-Uncurry can be written as:
+In the untyped categorical combinators, Uncurry can be written as:
 
 \begin{equation}\label{curr_uncurr}
   \begin{split}
@@ -200,7 +201,7 @@ In the untyped categorical combinators, Curry-Uncurry can be written as:
   \end{split}
 \end{equation}
 
-In a dependently-typed categorical combinator calculus where couples are naively interpreted as \(\Sigma\) pairs with point-free type arguments, this \eqref{curr_uncurr} derivation becomes prohibitively difficult, especially in an affine setting. In \(\textit{Uncurry}(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reducing the pair application. \(App\) has no knowledge of \(y\), and thus cannot calculate the type of \((x y, z)\). We circumvent this contention by indexing \(\Sigma\) with a map of the environment \(f_\beta : \Pi(s : \delta)(x : f_\alpha s).\sort{n}\) \eqref{infer_sigma_types}, similarly to the point \(x\) in Curry (\(\Lambda(x)\)).
+Naively interpreting couples as \(\Sigma\) pairs with point-free type arguments makes this example \eqref{curry_uncurry} quite difficult, especially in an affine setting. In \(\textit{Uncurry}(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reduction. \(App\) has no knowledge of \(y\), and thus cannot compute the type of \((x y, z)\). We remedy this by indexing \(\Sigma\) with functions of the environment \(f_\beta : \Pi(s : \delta)(x : f_\alpha s),\sort{n}\) \eqref{infer_sigma_types}, similarly to in Curry (\(\Lambda(x)\)).
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_sigma_types}
@@ -211,7 +212,7 @@ In a dependently-typed categorical combinator calculus where couples are naively
 \caption{Where \(\delta\) denotes an arbitrary environment and \(\alpha\) denotes the \(fst\) component. \(\Sigma(f_\beta) (env : \delta) : \sort{max(m, n)}\)}
 \end{figure}
 
-We thus define couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\), where the environment conveys no extra meaningful information, and \(\beta\) depends only on \(fst\). We represent a no-op indexing of the environment with a unit type \(\top\) so as to avoid universe arguments to \(\Sigma\). For legibility, we use the notation \(Coup(\beta)\) to refer to the type of a couple where \(\beta : \alpha \rightarrow \sort{n}\) \eqref{coup_def}. We always refer to couples with their \(\beta\) points, since they cannot be reasonable inferred. We use the notation \(f(x, y)\) to denote application for readability purposes.
+We thus define couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate case of \(\Sigma\) where \(\beta\) depends only on \(fst\) and not the environment. We represent a no-op indexing of the environment with a unit type \(\top\) so as to avoid universe level arguments to \(\Sigma\). We use the notation \(Coup(\beta)\) to refer to the type of a couple where \(\beta : \alpha \rightarrow \sort{n}\) \eqref{coup_def}. We always refer to couples with their \(\beta\) points, since they cannot be inferred.
 
 \begin{figure}[h!]
   \centering
@@ -231,64 +232,67 @@ We thus define couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate ca
   \end{align*}
 \end{figure}
 
-This view of couples as sigma terms naturally encodes the notion of a telescope context, and proves to be invaluable when compiling dependently-typed \(\lambda\)-calculi to the categorical combinators. For example, the term \(\llbracket \sort{m}, Id(\sort{m})\rrbracket (\alpha, x)\) corresponds to the judgment \(x : \alpha\). Similarly, a context \(\Gamma\) can be encoded as a nested couple:
+This view of couples as \(\Sigma\)-types naturally encodes a telescope context, and proves to be invaluable when compiling dependently-typed \(\lambda\)-calculi to the categorical combinators. A context \(\Gamma\) can be encoded as a nested couple:
 
 \begin{equation}
   x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx
-  \llbracket \Sigma(A_0, A_1), A_2 \rrbracket (\llbracket A_0, A_1 \rrbracket (x_0, x_1), x_2)
+  \llbracket \Sigma(A_1), A_2 \rrbracket (\llbracket A_1 \rrbracket (x_0, x_1), x_2)
 \end{equation}
 
-In the categorical abstract machine, this encoding of judgments corresponds to an environment where variable assignments are explicitly typed.
+We make use of this isomorphism to represent contexts in our ongoing effort to compile dependent \(\lambda\)-calculus to our combinators.
 
-\subsection{Type Annotations as Tarski Universes}
+\subsection{Type Arguments Index the Environment}
 
-All combinator objects have type annotations specified as points (usually as families indexing the environment). For example, the projection \(Snd(f_\beta)\) is indexed by the term \(f_\beta\) which depends on an arbitrary environment (\(s : \delta\)) and the term \(fst : \alpha\). A projection for degenerate couples with no relevant environment can be derived, and we refer to it as \(Sndc(\beta)\).
+All combinator objects have type annotations specified as points (usually as families indexing the environment). For example, the projection \(Snd(f_\beta)\) is indexed by the term \(f_\beta\) which depends on an arbitrary environment (\(s : \delta\)) and the term \(fst : \alpha\). Couple projection can be derived, and we refer to it as \(Sndc(\beta)\).
 
 \subsection{Inference Rules}\label{infer_rules}
 
-We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). We use the notation \(\Pi(x : A),B(x)\) to illustrate our inference rules. We omit some type points for legibility. However, the full combinatory types are accessible in the appendix \eqref{appendix:sup}. We use \(A \rightarrow B\) as shorthand for our definition of arrows \eqref{arrow_def}, but arrows are not first-class, and are merely an application of \(\Pi(f_\alpha, f_\beta) s\).
+We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} : \sort{m + 1}\)). Arrows are not first-class, and can be defined with \(\Pi\). We do not explicitly apply the environment to the codomain in \(\Pi\) in our written inference rules. The full types in our deep embedding are accessible in the appendix \eqref{appendix:sup}. 
 
 \subsubsection{Application and \(\Pi\)}
 
-The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha s\). Since \(f_\alpha s\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object (see inference rule \eqref{infer_pi}) without causing nontermination. In practice, we normalize types eagerly, but we do not always indicate so in our inference rules (see \eqref{appendix:sup}). We use \(\rightarrow^{!}\) to denote star-step affine reduction to a normal form.
+The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha s\). Since \(f_\alpha s\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object affinely (see inference rule \eqref{infer_pi}). We normalize types eagerly, but we do not always indicate so in our inference rules (see \eqref{appendix:sup}). We use \(\rightarrowtail^{!}\) to denote star-step affine reduction to a normal form.
 
 \begin{figure}[h!]
 \begin{equation}
   \inferrule[App]
-  { f : \Pi(f_\alpha, f_\beta) s, f_\alpha x \rightarrow^{!} \alpha\\ x : \alpha_{2}, \alpha_{2} \rightarrow^{!} \alpha\\ f_\beta s x \rightarrow^{!} \beta}
+  { f : \Pi(f_\alpha, f_\beta) s, f_\alpha x \affarr^{!} \alpha\\ x : \alpha_{2}, \alpha_{2} \affarr^{!} \alpha\\ f_\beta s x \affarr^{!} \beta}
   { f x : \beta}
 \end{equation}
 \caption{Inference rule: application}
 \end{figure}
 
-Since we do not make use of variables, \(\Pi\) is itself a combinator (\(\Pi(f_\alpha, f_\beta)\)) dependent on an environment and the argument \(x\). Since the dependency is internalized by \(f_\alpha\) and \(f_\beta\), its type can be expressed with an arrow \eqref{infer_pi}.
+Since we do not make use of variables, \(\Pi\) is itself a combinator dependent on an environment. Since the dependency is internalized by \(f_\alpha\) and \(f_\beta\), its type can be expressed with an arrow \eqref{infer_pi}.
 
 \subsubsection{Arrow types}
 
-We define nondependent arrows (\(A \rightarrow B\)) as such \(\Pi\) objects quoting their codomain to discard the environment-argument couple \eqref{arrow_def}.
+We define arrows (\(A \rightarrow B\)) as \(\Pi\) objects quoting their codomain to discard the environment-argument couple \eqref{arrow_def}.
 
 \begin{figure}[h!]
 \begin{equation}\label{arrow_def}
   \inferrule
-  { A : \sort{m}, B : \sort{n}}
+  { A : \sort{m}}
   {A \rightarrow B \coloneq (\Pi(Id(\sort{m}), \Lambda(\sort{m}, Id(\sort{m}), `(Coup(Id(\sort{m})), B))) A)}
 \end{equation}
 \end{figure}
 
 \subsubsection{Couple Projections}
 
-We define dependent and nondependent versions of the \(Snd\) projection to bootstrap several of the combinators' types. We also derive a \(Sndc\) combinator which accepts a coupe not depending on an environment. \(Fst(\beta)\) is not dependent, since \(\alpha\) does not refer to any object in context. Composition (\(f \circ g\)) is nondependent with respect to \(g\), although \(f\) may depend on \(g x\). A form of semi-dependent can be derived if \(g\) gives its dependency by a couple (\(g x : \Sigma(\ldots) \ldots\)).
-The inference rules for projection on \(\Sigma\)-terms are as such:\\
+We define dependent and nondependent versions of the \(Snd\) projection to bootstrap several of the combinators' types. We also derive a \(Sndc\) combinator which accepts a \(Coup(\beta)\) not depending on an environment. \(Fst(\beta)\) depends on an environment, and \(Fstc\) is similarly derived. Composition (\(f \circ g\)) is nondependent with respect to \(g\), although \(f\) may depend on \(g x\). A form of semi-dependency can be derived if \(g\) carries its dependency in a couple (\(g x : \Sigma(\ldots) \ldots\)).
+
+We use thunking to reduce pairs (\(\langle f, g \rangle x\)) lazily. That is, \(\langle f, g \rangle x\) is a normal form, and projections and evaluation are defined on it as if it were the reduced couple \((f x, g x)\). This approach enables some usage of the pair rule in our types, though we do not use it to define any of our core types.
+
+The inference rules for projection on \(\Sigma\)-terms (couples and pairs) are as such:\\
 
 \begin{figure}[h]
   \centering
   \begin{tabularx}{\textwidth}{X X X X X X}
     \multicolumn{3}{c}{\inferrule[Fst]
     {\alpha : \sort{m}, \delta : \sort{o}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
-    {Fst(\beta) : \Pi (env : \delta) (s : \Sigma(f_\beta)\ s),\alpha}} &
+    {Fst(\beta) : \Pi (\textit{env} : \delta) (s : \Sigma (f_\beta) \textit{env}),\alpha}} &
     \multicolumn{3}{c}{\inferrule[Snd]
     {\alpha : \sort{m}, \delta : \sort{o}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
-    {Snd(\beta) : \Pi (env : \delta) (s : \Sigma(f_\beta)\ s), f_{\beta}\ env\ (Fst(f_\beta) \textit{env} s))}} \\\\
+    {Snd(\beta) : \Pi (\textit{env} : \delta) (s : \Sigma(f_\beta) \textit{env}), f_{\beta} \textit{env} (Fst(f_\beta) \textit{env} s))}} \\\\
     \multicolumn{2}{c}{\inferrule[Snd']
     {\alpha : \sort{m}, \beta : \sort{n}}
     {Snd'(\alpha, \beta) : Coup(`(\alpha, \beta)) \rightarrow \beta}} &
@@ -301,11 +305,13 @@ The inference rules for projection on \(\Sigma\)-terms are as such:\\
   \end{tabularx}\\
 \end{figure}
 
+Our inference rules for projection apply to applied pairs as well, since they conceptually reduce to couples.
+
 \subsubsection{Identity}
 
-\(Id\) accepts \(\alpha\) as a point, but not a function of the environment. A type-point-free variant of \(Id\) can be derived easily with Curry (\(\Lambda\)). The type of \(Id(\alpha)\) is a simple arrow:
+\(Id\) accepts \(\alpha\) as a point, but not a function of the environment. A type-point-free variant of \(Id\) can be derived easily with Curry (\(\Lambda\)). The type of \(Id(\alpha)\) is an arrow \eqref{infer_id}.
 
-\begin{equation}
+\begin{equation}\label{infer_id}
   \inferrule[Id]
   {\alpha : \sort{m}}
   {Id(\alpha) : \alpha \rightarrow \alpha}
@@ -313,111 +319,122 @@ The inference rules for projection on \(\Sigma\)-terms are as such:\\
 
 \subsubsection{Composition}
 
-We have nondependent composition as in Curien's combinators, except that the codomain of \(f\) can depend on \(g x\), but the codomain of \(g\) cannot depend on \(x\) \eqref{nondep_comp}. Allowing both \(f\) and \(g\) to depend on their inputs would require duplicating the argument \(x\), which would not satisfy our affine restriction on types.
+We have nondependent composition as in Curien's combinators, except that the codomain of \(f\) can depend on \(g x\), but the codomain of \(g\) cannot depend on \(x\) \eqref{nondep_comp}. Allowing both \(f\) and \(g\) to depend on their inputs would require duplicating the argument \(x\) in our reduction rules, whereas \(x\) is not usually duplicated in the categorical combinators.
 
 \begin{figure}[h!]
   \centering
   \begin{equation}\label{nondep_comp}
-    \inferrule[Nondep. comp.]
-    { f : \alpha \rightarrow \beta, g : \beta \rightarrow \gamma}
-    { (g \circ f) : \alpha \rightarrow \gamma}
+    \inferrule[Comp.]
+    { f : \Pi (x : \beta), \gamma x, g : \beta \rightarrow \beta}
+    { (f \circ g) : \Pi (x : \alpha), \gamma (g x)}
   \end{equation}
-  \caption{Inference rule: nondependent composition}
+  \caption{Inference rule: composition}
 \end{figure}
 
-Despite composition being only half-dependent, full dependency can be recovered when \(g\) produces a \(\Sigma\)-term encoding its dependency (i.e., \(g : A \rightarrow Coup(B)\), where \(B : A \rightarrow \sort{n}\)).
+Full dependency can be recovered when \(g\) produces a \(\Sigma\)-term encoding its dependency (e.g., \(g : \alpha \rightarrow Coup(\beta)\)).
 
 \subsubsection{Pairs}
 
-Recall \(\langle f, g \rangle x = (f x, g x)\). We extend the pair operator with type and universe-level arguments \(m\), \(\alpha\), \(f_{\beta}\), and \(f_{\gamma}\), which dictate the types of the resulting \(fst\), and \(snd\) components, respectively. All arguments, up to \(x\), are given by points \eqref{pair_infer}. \(f\) and \(g\) may depend on \(x\), but \(g x\) does not depend on \(f x\), as this would require changing the pair rule.
+Recall \(\langle f, g \rangle x = (f x, g x)\). We do not define reduction directly on pairs, and instead give projections and evaluation rules for \(\langle f, g \rangle x\) as if it were the reduced couple.
 
 \begin{figure}[h!]
   \centering
   \begin{equation}\label{pair_infer}
     \inferrule[Pair]
-    { f : \Pi(x : \alpha), \beta \alpha x\\ g : \Pi (x : \alpha), \gamma \alpha x}
-    { \llbracket m, \alpha, \beta, \gamma \rrbracket \langle f, g \rangle : \Pi (x : \alpha), `(\sort{m}, \Sigma (\Lambda (\alpha, \beta \alpha, \gamma \circ Fstc(f_\beta alpha))))}
+    { f : \Pi(x : \alpha), \beta x\\ g : \Pi (x : \alpha), \gamma x}
+    { \langle f, g \rangle : \Pi (x : \alpha), \Sigma(\Lambda(\alpha, \beta, \gamma ∘ Fstc(\beta))) x}
   \end{equation}
 \end{figure}
 
 \subsubsection{Quotation}
 
-The quotation operator (\(`(\alpha, \beta, x)\)) is not dependent, but a dependent version like the dependent \(K\) combinator can be derived.
+The quotation combinator (\(`(\beta, x)\)) is not dependent, but a dependent version similar to dependent \(K\) can be derived.
 
 \begin{figure}[h]
   \centering
   \begin{equation}
     \inferrule[Quot]
-    { \alpha : \sort{m}, \beta : \sort{n}, x : \alpha}
-    { `(\alpha, \beta, x) : \beta \rightarrow \alpha }
+    { \beta : \sort{n}, x : \alpha}
+    { `(\beta, x) : \beta \rightarrow \alpha }
   \end{equation}
 \end{figure}
 
 \subsubsection{Curry}
 
-Recall \(\Lambda(x) y z = x (y, z)\). Since \(x\) is applied a \(\Sigma\)-couple, \(z\) must depend on \(y\). That is, \(z : \beta y\). However, \(x\) also depends on the couple \(\llbracket \alpha, \beta \rrbracket (y, z)\). Our inference rule for application \eqref{infer_app} proves to be useful, since terms in context can be used more than once in a \(\Pi\) tree, so long as they are used at most once in each argument type.
+Recall \(\Lambda(x) y z = x (y, z)\). Our inference rule for application \eqref{infer_app} proves to be useful in defining the type, since terms in context can be used more than once in a \(\Pi\) tree, so long as they are used at most once in each argument type.
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_curry}
   \inferrule[Curry]
-  {\beta : \alpha \rightarrow \sort{n}, x : (\Pi (x : f_\alpha x_\alpha), \gamma x), (f_\alpha x_\alpha) \rightarrow^{!} Coup(\beta)}
-  {\Lambda'(\alpha, \beta, x) : \Pi(x : \alpha) (y : \beta x), \Lambda(\alpha, \beta, \gamma x_\alpha)\ x y}
+  {\alpha : \sort{m}, \beta : \alpha \rightarrow \sort{n}, x : (\Pi (s : Coup(\beta)), \gamma s)}
+  {\Lambda(\alpha, \beta, x) : \Pi(x : \alpha) (y : \beta x), \Lambda(\alpha, \beta, \gamma) x y}
 \end{equation}
 \caption{Inference rule: curry}
 \end{figure}
 
-\subsubsection{App and Subst combinator}
+\subsubsection{App and Subst Combinators}
 
-As in Curien's combinators, the \(App\) combinator evaluates a couple as a computation. We intuitively mirror the inference rule for \(\Pi\), in that the types points for \(App\) embody Tarski universes \eqref{infer_app}. In fact, the types of the points \(f_\alpha\) and \(f_\beta\) are the exact same as in \(\Pi\). However, as in \(\Pi\), \(f_\beta\) depends both on the environment, and \(f\) in the type of \(App(f_\alpha, f_\beta) \llbracket \ldots \rrbracket (f, x)\). Furthermore, since \(f : \Pi(f_\alpha, f_\beta) (env : \delta)\), the environment must be duplicated across the codomain \(f_\beta\) and the \(Snd\) projection of \(\llbracket \ldots \rrbracket (f, x)\). This would seem to violate our affine requirement. Hence, we make use of a \(Subst\) construction, which behaves similarly to the \(S\) combinator. However, we view the environment as being computationally irrelevant. \(Subst\) can thus be viewed as performing context substitution, determining only the respective types. We only define \(Subst\) on projections, since no other usages are required to express our metatheory (although they may be beneficial for practical expressivity) \eqref{subst_defs}.
+As in Curien's combinators, the \(App\) combinator evaluates a couple as a computation. Its reduction rule is:
 
-\begin{figure}[h!]
-  \centering
-  \begin{align*}\label{subst_defs}
-    \inferrule[\(Subst_{Fst}^{\rightarrow}\)]
-    { }
-    { Subst(x, Fst(f_\beta)) \textit{env} \llbracket \beta \rrbracket (y, z) \rightarrow x \textit{env} y} &
-    \inferrule[\(Subst_{Snd}^{\rightarrow}\)]
-    { }
-    { Subst(x, Snd(f_\beta)) \textit{env} \llbracket \beta \rrbracket (y, z) \rightarrow x \textit{env} z}\\
-    \inferrule[\(Subst_{Fst}\)]
-    { x : \Pi (env : \delta) (x : \alpha), \gamma env x }
-    { Subst(x, Fst(f_\beta)) : \Pi (\textit{env} : \delta) (s : \Sigma(\beta)), Subst(\gamma, Fst(\beta)) \textit{env} s} &
-    \inferrule[\(Subst_{Snd}\)]
-    { x : \Pi (\textit{env} : \delta) (x : f_{\beta} \textit{env}), \beta \textit{env} x}
-    { f_{\beta s} \coloneq \Lambda(\delta, f_\alpha, f_\beta \circ Fstc(f_\alpha)) Subst(x, Snd(f_{\beta s})) : \Pi (\textit{env} : \delta) (s : \Sigma(f_{\beta s})), Subst(\beta, Fst(f_{\beta s})) \textit{env} s}
-  \end{align*}
-\end{figure}
+\begin{equation}
+  App (f, x) \affarr f x
+\end{equation}
 
-Using our \(Subst\) rules, we define the \(App\) inference rule \eqref{infer_app}.
+Defining the type of \(App\) proves to be quite difficult in this configuration, since \(\llbracket \beta \rrbracket (f, x)\) is a \(\Sigma\)-couple. The term \(x\) does not actually depend on \(f\). The book-keeping required to discard \(f\) in \(\beta\) can be easily avoided by adopting the rule \(App (x, f) \affarr (f x)\), as in Seely \autocite[p. 39]{Seely_1984}.
+
+We mirror the inference rule for \(\Pi\) in that the types points for \(App\) index an environment. In fact, the types of the points \(f_\alpha\) and \(f_\beta\) are the exact same as in \(\Pi\). Since \(App\) indexes the environment, we define its reduction rule as:
+
+\begin{equation}
+  App(f_\alpha, f_\beta) \textit{env} \llbracket \ldots \rrbracket (x, f) \affarr f x
+\end{equation}
+
+The inference rule requires duplicating the environment in the codomain of \(App(\ldots, \ldots) \textit{env} \llbracket \ldots \rrbracket (x, f)\), since \(f_\beta\) depends on the environment and the \(Fst\) projection \(x\), which also depends on the environment. However, the environment is not computationally relevant to the result of projection, and behaves more like a context. That is, duplicating the environment corresponds directly to context substitution. We can avoid the duplication altogether by defining \(Subst\) with respect to the combinator depending on the environment. The reduction and inference rule is defined for \(Fst\) like such:
+
+\begin{equation}\label{red_subst_fst}
+\begin{split}
+  Subst(x, Fst(f_\beta)) \textit{env} \llbracket \ldots \rrbracket (y, z) &\affarr x \textit{env} y\\
+  Subst(x, Fst(f_\beta)) \textit{env} \llbracket \ldots (\langle f, g \rangle z) &\affarr x \textit{env} (f z)
+\end{split}
+\inferrule[Subst Fst]
+{ x : \Pi (\textit{env} : \delta) (x : \alpha), \gamma \textit{env} x}
+{ Subst(x, Fst(f_\beta)) : \Pi (\textit{env} : \delta) (s : \Sigma(f_\beta)), Subst(\gamma, Fst(f_|beta)) }
+\end{equation}
+
+We define the \(App\) inference rule \eqref{infer_app} using our \(Subst\) combinator.
 
 \begin{figure}[H]
   \centering
   \begin{equation}\label{infer_app}
     \inferrule [Appl]
-    { \delta : \sort{m}, f_{\alpha} : \alpha \rightarrow \sort{n}, f_{\beta} : \Pi(s : \delta)(x : f_\alpha s),\sort{o}}
-    { t_{\beta x y} \coloneq \Lambda(\delta, \Pi(f_\alpha, f_\beta), f_\alpha \circ Fstc(\Pi(f_\alpha, f_\beta))), App(f_\alpha, f_\beta) : \Pi(env : \delta) (s : \Sigma(t_{\beta x y}) env), Subst(f_\beta, Snd(t_{\beta x y}))}
+    { \delta : \sort{m}, f_{\alpha} : \delta \rightarrow \sort{m}, f_{\beta} : \Pi(s : \delta) (x : f_\alpha s),\sort{o}}
+    { t_{\beta x y} \coloneq \Lambda(\delta, f_\alpha, \Pi(f_\alpha, f_\beta) \circ Fstc(f_\alpha)), App(f_\alpha, f_\beta) : \Pi(env : \delta) (s : \Sigma(t_{\beta x y}) env), Subst(f_\beta, Fst(t_{\beta x y}))}
   \end{equation}
   \caption{\(App\) inference rule}
 \end{figure}
 
 \section{Affine and \(\eta\)-Reduction}
 
-In general, dependent, point-free combinatory logics result in sizeable and complex types. We do not assume \(\Pi\)-extensionality, but make use of aggressive \(\eta\)-reduction rules based on Curien's rules for the simply-typed categorical combinators \autocite[221]{CURIEN1986188}. We invoke \(\beta\) and \(\eta\)-reduction in our judgment relation. Hence, we prove soundness and completeness of reduction functions for each scheme. We do so by a syntactic decreasing measure. The derivations of completeness and soundness for \(\beta\) and \(\eta\)-reduction are quite similar structurally. Thus, we make the practical design decision of abstracting the notion of a size, step, and reduction relations with Lean's typeclass system.
+In general, dependent combinatory logics require complex types. Hence, we extend Curien's \(\eta\)-reduction rules for the categorical combinators to enable some examples \autocite[p. 221]{CURIEN1986188}. Since our types are affine \eqref{infer_rules}, we can realize decidable type-checking by demonstrating strong normalization of \(\eta^{!}\) and \(\affarr^{!}\) and expressing conversion in our judgment relation as composition of \(\affarr^{!}\) and \(\eta^{!}\).
+
+We prove soundness and completeness of reduction functions for each scheme. We demonstrate strong normalization by a syntactic decreasing measure.
 
 \subsection{Affine Single-Step Reduction}
 
-We formally define affine single-step reduction (\(\rightarrowtail\)) as such:
+We formally define \(\affarr\) as such:
 
 \begin{leancode}
 inductive RedAff : Expr → Expr → Prop
+  | subst₁p  : RedAff (DCC (Subst(x, Fst(f_β)) env (⟨f, g⟩ z))) (DCC (x env (f z)))
   | subst₁   : RedAff (DCC (Subst(x, Fst(f_β)) env ⟦β⟧(y, z))) (DCC (x env y))
   | subst₂   : RedAff (DCC (Subst(x, Snd(f_β)) env ⟦β⟧(y, z))) (DCC (x env z))
   | snd'     : RedAff (DCC (Snd'(_δ, _τ) ⟦β⟧(a, b))) b
   | quot     : RedAff (DCC (`(β, x) y)) x
   | id       : RedAff (DCC (Id(α) x)) x
-  | appl     : RedAff (DCC (App(_α, _β) ⟦δ⟧(env, ⟦β⟧(x, y)))) (DCC (x y))
+  | appl     : RedAff (DCC (App(_α, _β) env ⟦β⟧(x, y))) (DCC (x y))
   | fst      : RedAff (DCC (Fst(_α) _env ⟦β⟧(a, b))) a
+  | fstp     : RedAff (DCC (Fst(_α) _env (⟨f, g⟩ x))) (DCC (f x))
   | snd      : RedAff (DCC (Snd(_α) _env ⟦β⟧(a, b))) b
+  | sndp     : RedAff (DCC (Snd(_α) _env (⟨f, g⟩ x))) (DCC (g x))
   | comp     : RedAff (DCC ((x ∘ y) z)) (DCC (x (y z)))
   | curr     : RedAff (DCC (Λ(α, β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl     : RedAff x x' → RedAff (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))
@@ -426,7 +443,7 @@ inductive RedAff : Expr → Expr → Prop
   | congrArg : RedAff x x' → RedAff (DCC (f x)) (DCC (f x'))
 \end{leancode}
 
-Notably, none of our \(\rightarrowtail\) rules duplicate any of their term arguments. Furthermore, each rule (except for congruence) eliminates at least one combinator. Hence, we define a syntactic notion of term size:
+None of our \(\affarr\) rules duplicate their term arguments. Furthermore, each rule (except for congruence) eliminates a combinator. We thus define a syntactic notion of term size:
 
 \begin{leancode}
 inductive Size : Expr → ℕ → Prop
@@ -445,18 +462,20 @@ inductive Size : Expr → ℕ → Prop
   | snd    : Size (DCC Snd(_α)) 1
   | appl   : Size (DCC App(_α, β)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
-  | pair   : Size f m → Size g n → Size (DCC ⟦_m, α, β, γ⟧⟨f, g⟩) (m + n).succ
+  | pair   : Size f m → Size g n → Size (DCC ⟨f, g⟩) (m + n).succ
   | curr   : Size x m → Size (DCC Λ(α, β, x)) m.succ
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
 \end{leancode}
 
-Except for objects with no reduction rules, sizes are defined by at least the successor of the constituent computationally-relevant terms. For example, type points like \(\alpha\) in \(Snd'\) are only of use to the kernel, so they have no weight. We account for permutation of term points in combinators (e.g., in composition) by incrementing their sizes to reflect the elimination of the combinator.
+Except for objects with no reduction rules, sizes are given by the successor of the sum of the constituent term point sizes. For example, type points like \(\alpha\) in \(Snd'\) have no weight, since they are computationally irrelevant.
 
-\subsection{Relations}
+\subsection{Reduction Typeclasses}
 
-The structure of our completeness and soundness proofs for \(\eta\), \(\rightarrowtail\), and their respective closures, are quite similar. Hence, we identify a set of minimal requirements for completeness and strong normalization for our rules: soundness of a computable definition with respect to the inductive relation, a proof that our size measure decreases over the reduction, local confluence of only the respective single-step relations, and ``semi-completeness''. We define these properties as typeclasses and instantiate them for our \(\eta\) and \(\rightarrowtail\) relations. By doing so, we automatically gain global confluence by Nemann's lemma, an instance of our reduction relation for the transitive closure, a total, terminating reduction function, strong normalization, well-foundedness with respect to the relation, uniqueness of normal forms, and, most importantly, completeness of the respective reduction functions and decidability of the reduction relation.
+The derivations of completeness and soundness for \(\affarr\) and \(\eta\)-reduction are structurally quite similar. Thus, we make the practical design decision to abstract the notions of a size and step-like relations with Lean's typeclass system.
 
-Our notion of a relation is defined by an inductive representation and a computable definition with soundness:
+We identify a set of minimal requirements for completeness and strong normalization of our rules: soundness of a computable definition with respect to the inductive relation, a proof that a size measure decreases over the reduction, local confluence of the respective single-step relation, and ``semi-completeness''. We define these properties as typeclasses and instantiate them for \(\eta\) and \(\affarr\). In doing so, we automatically inherit global confluence by Nemann's lemma, a total, terminating reduction function, strong normalization, well-foundedness with respect to the relation, uniqueness of normal forms, completeness of the reduction function with respect to \(\rightarrow^{!}\), and decidability of the reduction relation up to normal forms.
+
+Our notion of a relation requires an inductive relation and an implementation with soundness:
 
 \begin{leancode}
 class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Type v)
@@ -465,7 +484,7 @@ class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Type v)
   sound       : run x = pure ⟨y, h⟩ → r x y := fun _ => h
 \end{leancode}
 
-We use universe and monadic polymorphism to enable expressing single-step reduction, size measures, star-step reduction, and multi-step reduction through \mintinline{lean}{Rel}.
+We use universe and monadic polymorphism to express single-step reduction with \mintinline{lean}{Rel}, since single-step reduction is not always defined.
 
 We define completeness with respect to a relation (\mintinline{lean}{Rel}) as such:
 
@@ -477,7 +496,7 @@ open Rel in class Complete.{u, v, s} {α : Type u} {β : Type s} (r : α → β 
   complete : ∀ (h : r x y) (_p : P y), hR.run x = hm.pure ⟨y, PULift.up h⟩
 \end{leancode}
 
-We define a size measure, and are able to automatically derive completeness with tactics:
+We define a the general form of a size measure, automatically derive completeness with tactics:
 
 \begin{leancode}
 open Rel in class Measure (r : Expr → ℕ → Prop)
@@ -495,7 +514,7 @@ abbrev Measure.size (t : outParam (Expr → ℕ → Prop)) [hM : Measure t]
   (e : Expr) : ℕ := (hM.run e).fst
 \end{leancode}
 
-We define a reduction relation as a relation satisfying the decreasing measure property. Similarly, we automatically derive the proof using tactics and custom aesop and simp-sets.
+We define a reduction relation as a relation satisfying the decreasing measure property. We can usually derive the proof using tactics.
 
 \begin{leancode}
 class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ → Prop))
@@ -513,7 +532,7 @@ class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ → Prop))
       try rfl)
 \end{leancode}
 
-In doing so, we inherit strong normalization and well-foundedness:
+Relations with a decreasing measure inherit strong normalization, well-foundedness, and a total reduction function:
 
 \begin{leancode}
 def RedRel.sn {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ → Prop))
@@ -527,11 +546,7 @@ termination_by (hM.run e).fst
 def RedRel.wellFounded {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ → Prop))
   {m : Type → Type} [Monad m] [hM : Measure t]
   (hR : RedRel r t (m := m) (hM := hM)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
-\end{leancode}
 
-Using our decreasing measure proof, we derive a reduction function with soundness with respect to the reflexive transitive closure of a reduction relation:
-
-\begin{leancode}
 def reduce {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop)
   [hR : RedRel r t (hM := hT)] (e : Expr) :
   ((e' : Expr) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
@@ -548,9 +563,7 @@ termination_by (hT.run e).fst
   (e : Expr) : Expr := (reduce r e).fst
 \end{leancode}
 
-We make extensive use of these derived reducers in our type inference implementation.
-
-Since our \(\rightarrowtail\) rules include congruence, we must prove confluence to demonstrate completeness of our \(\beta\)-reducer. We define local confluence like such:
+Since \(\affarr\) has congruence, confluence is required to show completeness of \mintinline{lean}{reduce}. We define the notion like such:
 
 \begin{leancode}
 open Rel in class Confluent.{u} {α : Type u} (r : α → α → Prop)
@@ -559,7 +572,7 @@ open Rel in class Confluent.{u} {α : Type u} (r : α → α → Prop)
   ∧ Relation.ReflTransGen.{u} r C D
 \end{leancode}
 
-By Newmann's lemma, we derive global confluence and uniqueness of normal forms given a decreasing measure under our definition of a reduction relation:
+By Newmann's lemma, we derive global confluence for relations with a measure:
 
 \begin{leancode}
 open Confluent in def RedRel.globally_confluent
@@ -590,14 +603,8 @@ def IsNorm.unique_refl {r : Expr → Expr → Prop} (hn : IsNorm r A)
   | refl => rfl
   | single h => exact hn.unique_trans h
 
-open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theorem norm_unique {r : Expr → Expr → Prop} {m : (Expr → Expr → Prop) → Expr → Expr → Prop}
-  [hC : Confluent r m] (h₁ : m r A B) (hn₁ : IsNorm r B) (h₂ : m r A C) (hn₂ : IsNorm r C) : B = C := by
-  have ⟨D, hr₁, hr₂⟩ := hC.conf h₁ h₂
-  have ha := hn₁.unique_refl hr₁
-  have hb := hn₂.unique_refl hr₂
-  simp_all
-
-open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theorem norm_unique {r : Expr → Expr → Prop} {m : (Expr → Expr → Prop) → Expr → Expr → Prop}
+open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])]
+  theorem norm_unique {r : Expr → Expr → Prop} {m : (Expr → Expr → Prop) → Expr → Expr → Prop}
   [hC : Confluent r m] (h₁ : m r A B) (hn₁ : IsNorm r B) (h₂ : m r A C) (hn₂ : IsNorm r C) : B = C := by
   have ⟨D, hr₁, hr₂⟩ := hC.conf h₁ h₂
   have ha := hn₁.unique_refl hr₁
@@ -605,7 +612,7 @@ open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theore
   simp_all
 \end{leancode}
 
-Finally, we require a weak form of completeness to derive full completeness with respect to normal-form reduction. That is, if the inductive reduction relation \(A \rightarrow B\) can be constructed, then there must exist a proof \(h\) that some \(C\) is computable by \(run\):
+Finally, we require a weak form of completeness to derive full completeness for \mintinline{lean}{reduce}: if \(A \rightarrow B\), then there exists some \(C\) and a proof \(h\) produced by \mintinline{lean}{run} that \(A \rightarrow C\):
 
 \begin{leancode}
 open Rel in class SemiComplete {t : Expr → ℕ → Prop} [hM : Measure t]
@@ -614,7 +621,7 @@ open Rel in class SemiComplete {t : Expr → ℕ → Prop} [hM : Measure t]
   complete : r A B → ∃ B h, (hR.run A) = .some ⟨B, ⟨h⟩⟩
 \end{leancode}
 
-Finally, we derive completeness of the reduction function with respect to our relation from confluence, an instance of \mintinline{lean}{RedRel}, and semi-completeness:
+Relations with a measure, semi-completeness, and confluence inherit completeness of \mintinline{lean}{reduce} with respect to normal forms:
 
 \begin{leancode}
 theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
@@ -652,9 +659,13 @@ theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
 termination_by ((hM.size t A), (hM.size t B))
 \end{leancode}
 
-\subsection{Instances: \(\rightarrowtail\) reduction}
+\subsection{Completeness of Affine Reduction}
 
-Fortunately, most of our instances can be automated with our default tactics. We manually demonstrate local confluence and semi-completeness by case analysis (available in the appendix \eqref{appendix:sup}). Finally, we inherit full completeness.
+We demonstrate local confluence and semi-completeness by case analysis:
+
+\begin{theorem}
+  
+\end{theorem}
 
 \begin{leancode}
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instRedRel : RedRel RedAff Size where

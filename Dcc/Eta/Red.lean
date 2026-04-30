@@ -2,6 +2,16 @@ import Dcc.Ast
 import Dcc.Types
 import Dcc.Eta.Size
 
+/-
+Σ-normalization to Coup:
+
+Σ(f_β) env
+
+f_β env →_η f_β'
+
+Coup(f_β')
+-/
+
 namespace Expr
 
 inductive RedEta : Expr → Expr → Prop
@@ -11,7 +21,7 @@ inductive RedEta : Expr → Expr → Prop
   | pi        : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
   | pi_quot   : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
   | pi'       : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
-  | sig       : RedEta (DCC (Σ(β))) b' → RedEta (DCC (Σ(β) env)) (DCC (b' env))
+  | sig       : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(β) env)) (DCC Coup(β'))
   | sig'      : RedEta β β' → RedEta (DCC (Σ(β))) (DCC Σ(β'))
   | idl       : RedEta (DCC (Id(α) ∘ f)) f
   | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟨x, y⟩) x
@@ -29,8 +39,8 @@ inductive RedEta : Expr → Expr → Prop
     match f_β.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig' h⟩⟩
     | _ => .none
-  | DCC (Σ(f_β) _env) =>
-    match (DCC Σ(f_β)).step_eta? with
+  | DCC (Σ(f_β) env) =>
+    match (DCC (f_β env)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig h⟩⟩
     | _ => .none
   | DCC (Π(_f_α, f_β) _env) =>

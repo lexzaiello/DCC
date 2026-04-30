@@ -57,10 +57,13 @@ App(Id(Sort 1)
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
 def test_app : Option Expr := do
   Sigma.fst <$> (DCC (App(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Coup(`(Sort 1, Sort 1)))))
-  (Sort 0)
-  (⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩ (Sort 0))
+  
   )
     ).infer
+
+#eval test_app
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), ⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩⟩ (Sort 0))).infer
 
 /-
 This should eta reduce

@@ -4,15 +4,15 @@ import Dcc.Relation
 namespace Expr
 
 inductive EtaSize : Expr → ℕ → Prop
-  | tintro : EtaSize (DCC ∗) 1
-  | top    : EtaSize (DCC ⊤) 1
+  | tintro : EtaSize (DCC ∗) 0
+  | top    : EtaSize (DCC ⊤) 0
   | bot    : EtaSize (DCC ⊥) 1
   | subst  : EtaSize x m → EtaSize y n → EtaSize (DCC Subst(x, y)) (m + n).succ.succ
   | sig    : EtaSize β m → EtaSize (DCC Σ(β)) m.succ
   | coup   : EtaSize x m → EtaSize y n → EtaSize (DCC ⟦β⟧(x, y)) (m + n).succ
   | sort   : EtaSize (DCC Sort m) 1
   | pi     : EtaSize β m → EtaSize (DCC Π(α, β)) m.succ
-  | quot   : EtaSize x m → EtaSize (DCC `(β, x)) m.succ.succ
+  | quot   : EtaSize x m → EtaSize (DCC `(β, x)) m
   | id     : EtaSize (DCC Id(α)) 2
   | fst    : EtaSize (DCC Fst(_α)) 2
   | snd'   : EtaSize (DCC Snd'(δ, β)) 2

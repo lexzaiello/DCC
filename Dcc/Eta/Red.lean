@@ -1,6 +1,8 @@
+import Dcc.Relation
 import Dcc.Ast
 import Dcc.Types
 import Dcc.Eta.Size
+import Dcc.Aff.Red
 
 /-
 Σ-normalization to Coup:
@@ -17,7 +19,9 @@ namespace Expr
 inductive RedEta : Expr → Expr → Prop
   | curr      : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
   | curr_quot : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
-  | curr_fst  : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `(β, x))
+  | curr_fst  : Relation.ReflTransGen RedAff (DCC (β y)) β'
+    → IsNorm RedAff β'
+    → RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `(β', (x y)))
   | pi        : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
   | pi_quot   : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
   | pi'       : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
@@ -34,7 +38,9 @@ inductive RedEta : Expr → Expr → Prop
     if heq : DCC (Λ(α, _b, `(_c, x)) y) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
       heq ▸ .some ⟨_, ⟨.curr_quot⟩⟩
     else .none
-  | DCC (Λ(_α, _β, _x ∘ Fstc(_β₂)) _y) => .some ⟨_, ⟨.curr_fst⟩⟩
+  | DCC (Λ(_α, β, x ∘ Fstc(_β₂)) y) => .some ⟨_, ⟨.curr_fst
+    (reduce_sound rfl)
+    (reduce_norm rfl)⟩⟩
   | DCC Σ(f_β) =>
     match f_β.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig' h⟩⟩
@@ -77,7 +83,11 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
 
 @[simp] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
-  | sig' | pi | curr_fst | sig => cases h₂; aesop
+  | sig' | pi | sig => cases h₂; aesop
+  | curr_fst hr₁ hn₁ =>
+    cases h₂ with
+    | curr_fst hr₂ hn₂ =>
+      simp_all [norm_unique hr₁ hn₁ hr₂ hn₂]
   | pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop
@@ -100,7 +110,15 @@ open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instConfRedEtaTrans : Confluent RedEta (m := Relation.ReflTransGen) := RedEta.instRedRel.globally_confluent
 
 theorem RedEta.complete (h_red : RedEta A B) : step_eta? A = .some ⟨B, ⟨h_red⟩⟩ := by
-  induction h_red <;> (unfold step_eta?; aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel]))
+  induction h_red
+  any_goals (focus
+    unfold step_eta?
+    aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel])
+    done)
+  case curr_fst hr hn =>
+    unfold step_eta?
+    cases reduce_complete_fst (by assumption) (by assumption)
+    aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel])
 
 def eta_semi_complete {A B : Expr} (h_red : A.RedEta B) : ∃ B', ∃ (h : A.RedEta B'), (step_eta? A) = .some ⟨B', ⟨h⟩⟩ :=
   ⟨_, _, h_red.complete⟩

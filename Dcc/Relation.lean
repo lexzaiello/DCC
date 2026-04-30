@@ -295,6 +295,7 @@ open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theore
   have h := hR.reduce_norm hn
   simp_all
 
+@[aesop safe apply (rule_sets := [DccReduce])]
 theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
   {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A) = ⟨B, ⟨hr⟩⟩ := by
@@ -329,9 +330,24 @@ theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
       simp_all
 termination_by ((hM.size t A), (hM.size t B))
 
+@[aesop safe apply (rule_sets := [DccReduce])]
 theorem reduce_complete_fst {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
   [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
   {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).fst = B := by
+  have h := reduce_complete hr hn
+  simp_all
+
+@[aesop safe apply (rule_sets := [DccReduce])]
+theorem reduce_complete_snd {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+  [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
+  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).snd.down ≍ hr := by
+  have h := reduce_complete hr hn
+  simp_all
+
+@[aesop safe apply (rule_sets := [DccReduce])]
+theorem reduce_complete_pointwise {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
+  [hM : Measure t] [hR : RedRel r t (m := Option.{0}) (hM := hM)] [hN : SemiComplete r (hR := hR)] [Confluent r]
+  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).fst = B ∧ (reduce r A).snd.down ≍ hr := by
   have h := reduce_complete hr hn
   simp_all
 

@@ -61,9 +61,19 @@ def test_app : Option Expr := do
   )
     ).infer
 
+/-
+Expected:
+
+Coup(Σ(Λ(Sort 1, `(Sort 1, Sort 1),
+            Π(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Coup(`(Sort 1, Sort 1))))) ∘
+              Fstc(`(Sort 1, Sort 1)))))
+-/
+
 #eval test_app
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), ⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩⟩ (Sort 0))).infer
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩).infer
 
 /-
 This should eta reduce

@@ -140,7 +140,7 @@ inductive Judge : Expr → Expr → Prop where
   | pair   : Judge f (DCC (Π(Id(Sort m), f_β) α))
     → Judge g (DCC (Π(Id(Sort m), f_γ) α))
     → Reduces (DCC (f_β α)) β
-    → Reduces (DCC (f_β α)) γ
+    → Reduces (DCC (f_γ α)) γ
     → Reduces (pair.type α β γ m) τ
     → Judge (DCC ⟨f, g⟩) τ
   -- TODO: Change all occurrences of `(δ, α) to just f_α. Needs to depend on the environment

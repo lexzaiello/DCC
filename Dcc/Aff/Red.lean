@@ -11,7 +11,7 @@ inductive RedAff : Expr → Expr → Prop
   | snd'     : RedAff (DCC (Snd'(_δ, _τ) ⟦β⟧(a, b))) b
   | quot     : RedAff (DCC (`(β, x) y)) x
   | id       : RedAff (DCC (Id(α) x)) x
-  | appl     : RedAff (DCC (App(_α, _β) ⟦δ⟧(env, ⟦β⟧(x, y)))) (DCC (x y))
+  | appl     : RedAff (DCC (App(_α, _β) env ⟦β⟧(x, y))) (DCC (x y))
   | fst      : RedAff (DCC (Fst(_α) _env ⟦β⟧(a, b))) a
   | fstp     : RedAff (DCC (Fst(_α) _env (⟨f, g⟩ x))) (DCC (f x))
   | snd      : RedAff (DCC (Snd(_α) _env ⟦β⟧(a, b))) b
@@ -30,7 +30,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
   | (DCC (Snd'(_α, _τ) ⟦_β⟧(_a, _b)))              => .some ⟨_, ⟨.snd'⟩⟩
   | (DCC (`(_β, _x) _y))                           => .some ⟨_, ⟨.quot⟩⟩
   | (DCC (Id(_α) _x))                              => .some ⟨_, ⟨.id⟩⟩
-  | (DCC (App(_α, _β) ⟦_δ⟧(_env, ⟦_β₂⟧(_x, _y))))  => .some ⟨_, ⟨.appl⟩⟩
+  | (DCC (App(_α, _β) _env ⟦_β₂⟧(_x, _y)))         => .some ⟨_, ⟨.appl⟩⟩
   | (DCC (Fst(_α) _env ⟦_γ⟧(_a, _b)))              => .some ⟨_, ⟨.fst⟩⟩
   | (DCC (Fst(_α) _env (⟨_f, _g⟩ _x)))             => .some ⟨_, ⟨.fstp⟩⟩
   | (DCC (Snd(_α) _env ⟦_γ⟧(_a, _b)))              => .some ⟨_, ⟨.snd⟩⟩
@@ -101,15 +101,13 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
   | appl =>
     cases h₂ with
     | appl => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
+    | congrFun h => cases h with
+      | congrFun h => cases h
+      | congrArg h => exact ⟨_, .refl, .single .appl⟩
     | congrArg h =>
       cases h with
-      | sigl h =>
-        exact ⟨_, .refl, .single .appl⟩
-      | sigr h =>
-        cases h with
-        | sigl h => exact ⟨_, .single (.congrFun h), .single .appl⟩
-        | sigr h => exact ⟨_, .single (.congrArg h), .single .appl⟩
+      | sigl h => exact ⟨_, .single (.congrFun h), .single .appl⟩
+      | sigr h => exact ⟨_, .single (.congrArg h), .single .appl⟩
   | fst =>
     cases h₂ with
     | fst => exact ⟨_, .refl, .refl⟩
@@ -202,7 +200,9 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
       | congrFun h => cases h
       | congrArg h => exact ⟨_, .single .snd, .refl⟩
     case snd' | quot | id | comp => cases h_r
-    case appl => cases h_r
+    case appl => cases h_r with
+      | congrFun h => cases h
+      | congrArg h => exact ⟨_, .single .appl, .refl⟩
     case curr =>
       cases h_r with
       | congrFun h => cases h
@@ -224,11 +224,8 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
     | id => exact ⟨_, .single .id, .single h_r⟩
     | appl =>
       cases h_r with
-      | sigl h => exact ⟨_, .single .appl, .refl⟩
-      | sigr h =>
-        cases h with
-        | sigl h => exact ⟨_, .single .appl, .single (.congrFun h)⟩
-        | sigr h => exact ⟨_, .single .appl, .single (.congrArg h)⟩
+      | sigl h => exact ⟨_, .single .appl, .single (.congrFun h)⟩
+      | sigr h => exact ⟨_, .single .appl, .single (.congrArg h)⟩
     | fst =>
       cases h_r with
       | sigl h => exact ⟨_, .single .fst, .single h⟩
@@ -298,13 +295,11 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
       | .none => exact ⟨_, .congrArg hrx, by simp_all⟩
       | .some ⟨_, ⟨hrf⟩⟩ => exact ⟨_, .congrFun hrf, by simp_all⟩
     | fstp =>
-      simp [*] at *
       rename_i h _ _
-      exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
+      exact (h _ _ _ _ _ rfl rfl).elim
     | sndp =>
-      simp [*] at *
       rename_i h
-      exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
+      exact (h _ _ _ _ _ rfl rfl).elim
     | fst =>
       rename_i h _ _ _
       exact (h _ _ _ _ _ rfl rfl).elim
@@ -316,7 +311,7 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
       exact (h _ _ _ _ _ rfl rfl).elim
     | appl =>
       rename_i h _ _ _ _
-      exact (h _ _ _ _ _ _ _ rfl rfl).elim
+      exact (h _ _ _ _ _ _ rfl rfl).elim
     | quot | id | comp => simp_all
     | curr =>
       rename_i h

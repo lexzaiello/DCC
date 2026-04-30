@@ -8,9 +8,6 @@ inductive RedEta : Expr → Expr → Prop
   | curr      : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
   | curr_quot : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
   | curr_fst  : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `(β, x))
-  /-
-   pi rule might break things
-  -/
   | pi        : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
   | pi_quot   : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
   | pi'       : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))

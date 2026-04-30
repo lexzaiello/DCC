@@ -50,10 +50,6 @@ macro_rules
 macro_rules
   | `(DCC ($α:expr : Sort $m) → $β:expr) => `(arrow (DCC $α) (DCC $β) $m)
 
-@[dcc_judge, grind →, grind .] abbrev App'.type (α f_α f_β env : Expr) (n : Level) : Expr :=
-  let t_f := DCC (Π(f_α, f_β) env)
-  DCC (Π(Id(Sort n), `(Sort n, (f_β env) ∘ Snd'(t_f, α))) Coup(`(t_f, α)))
-
 /-
 TODO: Need to put this back in, remove App vs App' distinction.
 
@@ -180,10 +176,20 @@ g : (Π(Id(Sort m), f_γ) α)
 @[dcc_judge] abbrev comp'.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
 
+/-
+let tβ_coup := Λ(f_α, Π(f_α, f_β) ∘ Fstc(f_α))
+App(f_α, f_β) : Π(Id(Sort o), `(Sort o, Π(Σ(tβ_coup), Subst(f_β, Fst(tβ_coup)))))
+-/
+
 @[dcc_judge, grind →, grind .] abbrev App.type (f_α f_β δ : Expr) (o : Level) : Expr :=
-  let t_x_y_β := DCC Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(Π(f_α, f_β)))
-  let t_x_y   := DCC Σ(t_x_y_β)
-  DCC (Π(Id(Sort o), `(Sort o, Π(t_x_y, Subst(f_β, Snd(t_x_y_β))))) δ)
+  let tβ_coup := DCC Λ(δ, f_α, Π(f_α, f_β) ∘ Fstc(f_α))
+  -- ∀ (env : δ) (coup : Σ (env : δ), fun (fst : ∀ (x : f_α env), f_β env x) => f_α env
+  -- can we get rid of the env first?
+  -- env is used in the conclusion f_β env and the type of fst (the function)
+  -- in Σ hypothesis, we can maybe normalize first? no.
+  -- t_x_y ∘
+  -- can we replace t_x_y here with composing with mk_coup to make the conclusion?
+  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(tβ_coup), Subst(f_β, Fst(tβ_coup))))) δ)
 
 @[dcc_judge] abbrev snd'.type (α β : Expr) (m n : Level) : Expr :=
   DCC (Coup(`(α, β)) : Sort max m n) → β
@@ -241,5 +247,54 @@ f_β : δ → α → Sort n
 -/
 @[dcc_judge] abbrev Sigma.type (δ : Expr) (m n o : Level) : Expr :=
   DCC (δ : Sort o) → Sort max m n
+
+def toFormat (e : Expr) : Std.Format :=
+  let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=
+    .nest indent (.fill (.joinSep l (sep ++ .line)))
+  let paren (s : Std.Format) : Std.Format :=
+    .bracket "(" (.fill s) ")"
+  let angle (s : Std.Format) : Std.Format :=
+    .bracket "⟨" (.fill s) "⟩"
+  let bbracket (s : Std.Format) : Std.Format :=
+    .bracket "⟦" (.fill s) "⟧"
+
+  let comb (pre : Std.Format) (points : List Std.Format) : Std.Format :=
+    .group (pre ++ (paren (sepD points (indent := pre.pretty.length))))
+
+  match e with
+  | (DCC ⊤)                   => "⊤"
+  | (DCC ⊥)                   => "⊥"
+  | (DCC ∗)                   => "∗"
+  | (DCC `(β, x))             => comb "`" [β.toFormat, x.toFormat]
+  | (DCC Id(α))               => comb "Id" [α.toFormat]
+  | (DCC Subst(β, x))         => comb "Subst" [β.toFormat, x.toFormat]
+  | (DCC Sort m)              => "Sort " ++ (Std.format m)
+  | (DCC Fstc(β))             => comb "Fstc" [β.toFormat]
+  | (DCC Fst(β))              => comb "Fst" [β.toFormat]
+  | (DCC Sndc(β))             => comb "Sndc" [β.toFormat]
+  | (DCC Snd(β))              => comb "Snd" [β.toFormat]
+  | (DCC Snd'(α, β))          => comb "Snd'" [α.toFormat, β.toFormat]
+  | (DCC App(α, β))           => comb "App" [α.toFormat, β.toFormat]
+  | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat, β.toFormat, e.toFormat]
+  | (DCC Π(α, β))             => comb "Π" [α.toFormat, β.toFormat]
+  | (DCC ⟨a, b⟩)              => (angle (sepD [a.toFormat, b.toFormat] (indent := 1)))
+  | (DCC ⟦β⟧(a, b))           =>
+    comb (bbracket (sepD [β.toFormat])) [a.toFormat, b.toFormat]
+  | (DCC Coup(β))             => comb "Coup" [β.toFormat]
+  | (DCC Σ(β))                => comb "Σ" [β.toFormat]
+  | (DCC f ∘ g)               =>
+    sepD [f.toFormat, g.toFormat] " ∘"
+  | (DCC (f x))               => (paren (f.toFormat ++ (.indentD x.toFormat)))
+
+instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
+instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
+instance instRepr : Repr Expr := ⟨Function.const _ ∘ toFormat⟩
+
+instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
+  match me with
+  | .none => Std.format me
+  | .some e =>
+    let l := "(some".length.succ
+    .group ("(some " ++ (.fill (.nest l e.toFormat)) ++ ")")⟩
 
 end Expr

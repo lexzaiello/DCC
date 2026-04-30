@@ -1,5 +1,6 @@
 import Dcc.Ast
 import Dcc.Judge
+import Dcc.Types
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1) ∘ Id(Sort 1)).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1) (Sort 0))).infer
@@ -55,10 +56,30 @@ App(Id(Sort 1)
 -/
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
 def test_app : Option Expr := do
-  let e := mk_test_pair₂
-  Sigma.fst <$> (DCC (App(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) (Sort 1)
+  Sigma.fst <$> (DCC (App(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Coup(`(Sort 1, Sort 1)))))
+  (Sort 0)
+  (⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩ (Sort 0))
   )
     ).infer
+
+/-
+This should eta reduce
+(Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `(Coup(Σ(`(⊤, `(Sort 1, Sort 1)))), Sort 1)) ∗)
+
+
+-/
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1),
+           (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `(Coup(Σ(`(⊤, `(Sort 1, Sort 1)))), Sort 1)) ∗))).infer
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩ (Sort 0))).infer
+
+/-
+
+-/
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1),
+           (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `(Coup(Σ(`(⊤, `(Sort 1, Sort 1)))), Sort 1)) ∗))).infer
 
 #eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1),
          (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))).infer
@@ -123,7 +144,30 @@ It's specifically f_β that it chokes on. we might need to change it from Π.f_�
 #eval (DCC (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)).reduce_all
 #eval (DCC Id(Sort 2) ∘ (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)).reduce_all
 
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨`(Sort 1, Id(Sort 1)), Id(Sort 1)⟩ (Sort 0))).infer
+
+#eval (DCC (Σ(Λ(Sort 1, `(Sort 1, (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)),
+     `(Sort 1, (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)) ∘
+       Fstc(`(Sort 1, (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)))))
+   Sort 0)).reduce_all
+
+#eval (DCC (Σ(Λ(Sort 1, `(Sort 1, (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)),
+     `(Sort 1, (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)) ∘
+       Fstc(`(Sort 1, (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)))))
+   Sort 0)).reduce_all
+
+#eval (DCC (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)).reduce_all
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩ (Sort 0))).infer
 #eval Std.format <$> test_app
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟦`((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), Sort 1)⟧(Id(Sort 1), Sort 0)).infer
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟦`((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), Sort 1)⟧(Id(Sort 1), Sort 0)).infer
+
+/-
+Maybe my example is wrong? We should try it with the couple example from before.
+-/
 
 #eval Sigma.fst <$> (DCC (⟨Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1))), Id(Sort 1)⟩ Sort 0)).infer
 
@@ -142,21 +186,3 @@ Id(Sort 1)
 -/
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
-
-/-
-I should have gotten f_α and f_β corrrectly.
-The main challenge is the structure of the Σ itself.
--/
-
-/-
-Subst(x, Snd(Λ(δ, f_α, f_t_snd ∘ Fstc(f_α₂)))) (y, z) = x env z
-
-x depends on the environment and snd, and snd (z) depends on the environment,
-but not fst.
-
-A good example of this is projecting over pairs.
--/
-def test_subst_snd : Option Expr := do
-  let p := mk_test_pair
-  
-  sorry

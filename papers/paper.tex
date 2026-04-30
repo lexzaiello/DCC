@@ -1444,13 +1444,15 @@ instance : Decidable (Judge e t) :=
 \end{leancode}
 \end{proof}
 
+% TODO: work on cmopilation of lambda calc.
+
 \section{Future Work}
 
-We hope to use our inference and reduction machinery to mechanize a proof of strong normalization of the entire calculus in the future. That is, a proof of strong normalization for the calculus including the pair combinator, which is not affine.
+We hope to use our inference and reduction machinery to mechanize a proof of strong normalization of the entire calculus in the future. That is, a proof of strong normalization for the calculus including the pair combinator, which is not affine. We have also made significant efforts on compiling dependent \(\lambda\)-calculus to our combinators, which we hope to finish soon.
 
 \section{Conclusions}
 
-Our formalization gives a novel extension of the simply-typed categorical combinators \autocite[p. 220]{CURIEN1986188} to a dependently-typed setting. By mechanizing the theory in Lean 4, we provide several indispensable guarantees about the logic. Most importantly, we demonstrate a mechanism for deciding type inference of the calculus. We demonstrate strong normalization of an affine restriction on the categorical combinators, and use this property to prove soundness and completeness of an inference function with respect to typing judgments. In doing so, we also demonstrate a useful technique to avoid conversion in the typing relation, given we have decidable \(\beta_{\rightarrow^{*}}\).
+Our formalization gives an extension of the simply-typed categorical combinators \autocite[p. 220]{CURIEN1986188} to a dependently-typed setting. By mechanizing the theory in Lean 4, we provide several guarantees about the logic. Most importantly, we demonstrate a mechanism for deciding type inference in the calculus. We prove strong normalization of an affine restriction on the categorical combinators and \(\eta\)-reduction, and use this property to prove soundness and completeness of an inference function with respect to typing judgments. We also demonstrate a useful technique to avoid conversion in the typing relation, given we have decidable \(\beta\) and \(\eta\)-reduction.
 
 Our proof of judgmental decidability is made possible in principle by the observation that the types of the dependent categorical combinators are purely affine. This fact is not true of equivalent systems, like the dependent \(SK\) combinators.
 
@@ -1465,18 +1467,8 @@ To Jake, for teaching me lambda-calculus.
 \section{Supplementary Materials}\label{appendix:sup}
 
 \textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}\\
-\textbf{Omitted inference cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Judge.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Judge.lean}\\
-\textbf{Omitted reduction cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Step2.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/CC/Step2.lean}
-
-\section{Todos left}
-
-\begin{itemize}
-  \item Notation inconsistencies: I mix and match \(f(x, y)\) and \(f x y\). \(f x y\) is the preferred notation. Mixing and matching notation for our calculus and normal inference rule notation is also ambiguous and confusing. How to handle this?
-  \item My notation for application is ugly. Usually application is written as \(f x\), not \(f\ x\)
-  \item More background: want a reference for telescope
-  \item More background: want a reference for Tarski universes that isn't ncatlab
-  \item If time permits, I want to finish the \(\lambda\)-calculus compiler.
-\end{itemize}
+\textbf{Omitted inference cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge.lean}\\
+\textbf{Omitted reduction cases:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Aff/Red.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Aff/Red.lean}
 
 \printbibliography
 

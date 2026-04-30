@@ -219,16 +219,16 @@ We thus define couples \(\llbracket \beta \rrbracket (a, b)\) as a degenerate ca
 \begin{figure}[h!]
   \centering
     \begin{align*}\label{coup_def}
-    \inferrule[Top]
+    &\inferrule[Top]
     { }
-    { \top : \sort{0}}\ &
-    \inferrule[Unit]
+    { \top : \sort{0}} &
+    &\inferrule[Unit]
     { }
-    { \ast : \top}\ &
-    \inferrule[Coup]
-    { A : \sort{m}, B : A \rightarrow \sort{n}, x : A, y : B(x), }
-    { \llbracket B \rrbracket (x, y) : \Sigma(`(\sort{m}, B)) A}\ &
-    \inferrule
+    { \ast : \top} &
+    &\inferrule[Coup]
+    { A : \sort{m}, B : A \rightarrow \sort{n}, x : A, y : B x, }
+    { \llbracket B \rrbracket (x, y) : \Sigma(`(\sort{m}, B)) A} &
+    & \inferrule
     { }
     { Coup(B) \coloneq (\Sigma(`(\top, B)) \ast)}
   \end{align*}
@@ -294,7 +294,7 @@ The inference rules for projection on \(\Sigma\)-terms (couples and pairs) are a
     {Fst(\beta) : \Pi (\textit{env} : \delta) (s : \Sigma (f_\beta) \textit{env}),\alpha}} &
     \multicolumn{3}{c}{\inferrule[Snd]
     {\alpha : \sort{m}, \delta : \sort{o}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
-    {Snd(\beta) : \Pi (\textit{env} : \delta) (s : \Sigma(f_\beta) \textit{env}), f_{\beta} \textit{env} (Fst(f_\beta) \textit{env} s))}} \\\\
+    {Snd(\beta) : \Pi (\textit{env} : \delta) (s : \Sigma(f_\beta) \textit{env}), f_{\beta} \textit{env} (Fst(f_\beta) (\textit{env}) s))}} \\\\
     \multicolumn{2}{c}{\inferrule[Snd']
     {\alpha : \sort{m}, \beta : \sort{n}}
     {Snd'(\alpha, \beta) : Coup(`(\alpha, \beta)) \rightarrow \beta}} &
@@ -395,7 +395,7 @@ The inference rule requires duplicating the environment in the codomain of \(App
 \begin{equation}\label{red_subst_fst}
 \begin{split}
   Subst(x, Fst(f_\beta)) \textit{env} \llbracket \ldots \rrbracket (y, z) &\affarr x \textit{env} y\\
-  Subst(x, Fst(f_\beta)) \textit{env} \llbracket \ldots (\langle f, g \rangle z) &\affarr x \textit{env} (f z)
+  Subst(x, Fst(f_\beta)) \textit{env} \llbracket \ldots (\langle f, g \rangle z) &\affarr x \textit{env} (f z)\\\\
 \end{split}
 \inferrule[Subst Fst]
 { x : \Pi (\textit{env} : \delta) (x : \alpha), \gamma \textit{env} x}
@@ -407,9 +407,14 @@ We define the \(App\) inference rule \eqref{infer_app} using our \(Subst\) combi
 \begin{figure}[H]
   \centering
   \begin{equation}\label{infer_app}
-    \inferrule [Appl]
+    \begin{split}
+    & \inferrule [Notation]
+    { }
+    { t_{\beta x y} \coloneq \Lambda(\delta, f_\alpha, \Pi(f_\alpha, f_\beta) \circ Fstc(f_\alpha)) }\\
+    & \inferrule [Appl]
     { \delta : \sort{m}, f_{\alpha} : \delta \rightarrow \sort{m}, f_{\beta} : \Pi(s : \delta) (x : f_\alpha s),\sort{o}}
-    { t_{\beta x y} \coloneq \Lambda(\delta, f_\alpha, \Pi(f_\alpha, f_\beta) \circ Fstc(f_\alpha)), App(f_\alpha, f_\beta) : \Pi(env : \delta) (s : \Sigma(t_{\beta x y}) env), Subst(f_\beta, Fst(t_{\beta x y}))}
+    { App(f_\alpha, f_\beta) : \Pi(env : \delta) (s : \Sigma(t_{\beta x y}) env), Subst(f_\beta, Fst(t_{\beta x y}))}
+    \end{split}
   \end{equation}
   \caption{\(App\) inference rule}
 \end{figure}

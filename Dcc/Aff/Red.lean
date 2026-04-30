@@ -54,6 +54,10 @@ def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
 instance RedAff.instRedRel : RedRel RedAff Size where
   run := step?
 
+theorem red_aff_sn : ∀ (e : Expr), Acc (fun b a => RedAff a b) e := RedAff.instRedRel.sn
+
+theorem red_aff_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen RedAff a b) e := RedAff.instRedRel.to_trans.sn
+
 instance RedAff.instCongruent : Congruent RedAff where
 
 open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
@@ -273,6 +277,10 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instConf : Confluent RedAff := ⟨RedAff.conf⟩
 
+theorem red_aff_globally_conf : Relation.ReflTransGen RedAff A B → Relation.ReflTransGen RedAff A C → ∃ D,
+  Relation.ReflTransGen RedAff B D ∧ Relation.ReflTransGen RedAff C D :=
+  RedAff.instRedRel.globally_confluent.conf
+
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instConfRedAffTrans : Confluent RedAff (m := Relation.ReflTransGen) := RedAff.instRedRel.globally_confluent
 
 def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
@@ -348,6 +356,10 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
       | (exact (happ _ _ rfl).elim))
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instSemicomplete : SemiComplete RedAff := ⟨semi_complete⟩
+
+theorem aff_complete (h : Relation.ReflTransGen RedAff A B)
+  (hn : IsNorm RedAff B) : reduce RedAff A = ⟨B, ⟨h⟩⟩ :=
+  RedAff.instRedRel.instComplete.complete h hn
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instComplete : Complete (Relation.ReflTransGen RedAff) (P := IsNorm RedAff) := RedAff.instRedRel.instComplete
 

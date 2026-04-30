@@ -70,8 +70,13 @@ inductive RedEta : Expr → Expr → Prop
   | (DCC ⟨(Fst(_β) _env), (Snd(_β₂) _env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
   | _ => .none
 
-@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedEta.instRedRel : RedRel RedEta EtaSize where
+@[dcc_rel, aesop norm (rule_sets := [DccRel])]
+instance RedEta.instRedRel : RedRel RedEta EtaSize where
   run := step_eta?
+
+theorem red_eta_sn : ∀ (e : Expr), Acc (fun b a => RedEta a b) e := RedEta.instRedRel.sn
+
+theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen RedEta a b) e := RedEta.instRedRel.to_trans.sn
 
 @[simp] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with

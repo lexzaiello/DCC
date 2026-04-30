@@ -16,13 +16,7 @@ inductive RedEta : Expr → Expr → Prop
   | idl       : RedEta (DCC (Id(α) ∘ f)) f
   | fst       : RedEta (DCC (Fst(_β) _env) ∘ ⟨x, y⟩) x
   | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟨x, y⟩) y
-  | beta      : RedEta
-    (DCC ((App(_f_α, _f_β) _env) ∘ ⟨Λ(α, _β, x), y⟩))
-    (DCC (x ∘ ⟨Id(α), y⟩))
-  | ai        : RedEta (DCC Λ(α, β, (App(f_α, f_β) env))) (DCC Id((Π(f_α, f_β) env)))
   | fsi       : RedEta (DCC ⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) (DCC Id((Σ(_β) env)))
-  | uncur     : RedEta (DCC Λ(α, β,
-    (App(_f_α, _f_β) _env) ∘ ⟨f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) f
 
 @[dcc_step, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
@@ -56,17 +50,10 @@ inductive RedEta : Expr → Expr → Prop
   | (DCC (Id(_α) ∘ _f)) => .some ⟨_, ⟨.idl⟩⟩
   | (DCC (Fst(_β) _env) ∘ ⟨_x, _y⟩) => .some ⟨_, ⟨.fst⟩⟩
   | (DCC (Snd(_β) _env) ∘ ⟨_x, _y⟩) => .some ⟨_, ⟨.snd⟩⟩
-  | DCC Λ(α, β, x) =>
+  | DCC Λ(_α, _β, x) =>
     match x.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr h⟩⟩
-    | .none =>
-      match DCC Λ(α, β, x) with
-      | (DCC Λ(_α, _β, (App(_f_α, _f_β) _env))) => .some ⟨_, ⟨.ai⟩⟩
-      | (DCC Λ(_α, _β,
-        (App(_f_α, _f_β) _env) ∘ ⟨_f ∘ (Fst(_x) _env₁), (Snd(_x₂) _env₂)⟩)) =>
-        .some ⟨_, ⟨.uncur⟩⟩
-      | _ => .none
-  | (DCC ((App(_f_α, _f_β) _env) ∘ ⟨Λ(__α, __β, _x), _y⟩)) => .some ⟨_, ⟨.beta⟩⟩
+    | .none => .none
   | (DCC ⟨(Fst(_β) _env), (Snd(_β₂) _env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
   | _ => .none
 
@@ -92,12 +79,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   | curr hr ih =>
     cases h₂ with
     | curr hr₂ => rw [ih hr₂]
-    | ai | uncur => cases hr
-  | ai | uncur =>
-    cases h₂
-    · rename_i h; cases h
-    · rfl
-  | curr_quot | snd | fst | idl | beta | fsi => cases h₂; rfl
+  | curr_quot | snd | fst | idl | fsi => cases h₂; rfl
 
 open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : ∃ D, RedEta.instRedRel.ReflTrans B D ∧ RedEta.instRedRel.ReflTrans C D := by
   have h := h₁.unique h₂

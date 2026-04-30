@@ -67,35 +67,19 @@ Subst(f_β, Snd(...)) env (y, z) = f_β env y z
 -/
 
 /-
-Subst(x, Snd(f_β)) refers to the "simply-typed" Snd.
-As in, Snd is only determined by the environment, not fst.
+f_β : ∀ (s : δ) (x : f_α x), Sort n
+^ same as in Π
 
-x : ∀ (env : δ) (x : f_t_snd env), β(env, x)
+x : ∀ (s : δ) (x : f_α x), γ s x
 
-x : (Π(Id(Sort o), `(Sort o, Π(f_t_snd, β))) δ)
 
-so s : Σ(Λ(δ, f_α, f_β ∘ Fstc(f_α))
-
-x   : ∀ (env : δ) (x : f_α₁ env), β env x
-x   : (Π(Id(Sort o), `(Sort o, Π(f_α₁, β))) δ)
-f_β : (Π(Id(Sort o), `(Sort o, Π(f_α₂, Λ(δ, f_α₂, `(Coup(f_α₂), Sort n))))) δ)
-
-f_β : ∀ (env : δ) (x : f_α x), Sort n
-
-Subst(x, Snd(f_β)) env (y, z) = x env z
-
-f_α₁ = f_α₂
-
-Sigma snd type:
-f_β : ∀ (env : δ) (x : f_α₂ env), Sort n
+Subst(x, Snd(f_β)) : ∀ (s : Coup(Σ(f_β))), Subst(γ, Snd(f_β))
 -/
-@[dcc_judge] abbrev Subst₂.type (f_α f_β β δ : Expr) (o : Level) : Expr :=
-  let f_β_s := DCC Λ(δ, f_α, f_β ∘ Fstc(f_α))
-  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(f_β_s),
-    Subst(β, Snd(f_β_s))))) δ)
+@[dcc_judge] abbrev Subst₂.type (f_β γ : Expr) (o : Level) : Expr :=
+  DCC (Π(Id(Sort o), `(Sort o, Subst(γ, Snd(f_β)))) Coup(Σ(f_β)))
 
-@[dcc_judge] abbrev Subst₂.x.type (f_t_snd β δ : Expr) (o : Level) : Expr :=
-  DCC (Π(Id(Sort o), `(Sort o, Π(f_t_snd, β))) δ)
+@[dcc_judge] abbrev Subst₂.x.type (f_α γ δ : Expr) (o : Level) : Expr :=
+  DCC (Π(Id(Sort o), `(Sort o, Π(f_α, γ))) δ)
 
 /-
 x : (Π(f_α, `(Sort m, Π(f_β, f_γ)) x_α)
@@ -185,13 +169,16 @@ g : (Π(Id(Sort m), f_γ) α)
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
 
 /-
-let tβ_coup := Λ(f_α, Π(f_α, f_β) ∘ Fstc(f_α))
-App(f_α, f_β) : Π(Id(Sort o), `(Sort o, Π(Σ(tβ_coup), Subst(f_β, Fst(tβ_coup)))))
+f_α : δ → Sort m
+f_β : ∀ (env : δ) (x : f_α env), Sort n
+
+App(f_α, f_β) ⟦?⟧((env : δ), ⟦?⟧((x : f_α env), (f : (Π(f_α, f_β) env)))) : f_β env x
 -/
 
-@[dcc_judge, grind →, grind .] abbrev App.type (f_α f_β δ : Expr) (o : Level) : Expr :=
-  let tβ_coup := DCC Λ(δ, f_α, Π(f_α, f_β) ∘ Fstc(f_α))
-  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(tβ_coup), Subst(f_β, Fst(tβ_coup))))) δ)
+@[dcc_judge, grind →, grind .] abbrev App.type (f_α f_β δ : Expr) (n : Level) : Expr :=
+  let bdy_sig  := DCC Λ(δ, f_α, Π(f_α, f_β) ∘ Fstc(f_α))
+
+  DCC (Π(Id(Sort n), `(Sort n, Subst(f_β, Snd(`(⊤, Σ(bdy_sig)))))) Coup(Σ(bdy_sig)))
 
 @[dcc_judge] abbrev snd'.type (α β : Expr) (m n : Level) : Expr :=
   DCC (Coup(`(α, β)) : Sort max m n) → β

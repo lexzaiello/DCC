@@ -186,3 +186,5 @@ Id(Sort 1)
 -/
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), Id(Sort 1)⟩)).infer

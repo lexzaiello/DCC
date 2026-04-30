@@ -155,9 +155,10 @@ inductive Judge : Expr → Expr → Prop where
     x : ∀ (env : δ) (y : f_t_snd env), β(env, y)
     Subst(x, Snd(f_β)) env (y, z) = x env z
   -/
-  | subst₂ : Judge x (Subst₂.x.type f_t_snd β δ o)
-    → Reduces (Subst₂.type f_α f_t_snd β δ o) τ
-    → Judge (DCC (Subst(x, Snd(Λ(δ, f_α, f_t_snd ∘ Fstc(f_α)))))) τ
+  | subst₂ : Judge f_β (Pi.f_β.type f_α δ o n)
+    → Judge x (Subst₂.x.type f_α γ δ o)
+    → Reduces (Subst₂.type f_β γ o) τ
+    → Judge (DCC (Subst(x, Snd(f_β)))) τ
   | appl   : Judge f_α (arrow δ (DCC Sort m) o)
     → Judge f_β (Pi.f_β.type f_α δ o n)
     → Reduces (App.type f_α f_β δ o) τ
@@ -317,14 +318,16 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         .some ⟨_, ⟨.subst₁ (ha ▸ hb ▸ hc ▸ hd ▸ he ▸ ht) (reduce_reduces rfl)⟩⟩
       else .none
     | _ => .none
-  | DCC Subst(x, Snd(Λ(δ, f_α, f_t_snd ∘ Fstc(f_α₂)))) =>
-    match infer x with
-    | .some ⟨DCC (Π(Id(Sort o), `(_b, Π(_c, β))) _d), ⟨ht⟩⟩ =>
-      if heq : f_α₂ = f_α then
-        if heq₂ : DCC (Π(Id(Sort o), `(_b, Π(_c, β))) _d) = Subst₂.x.type f_t_snd β δ o then by
-          rw [heq]
-          exact .some ⟨_, ⟨.subst₂ (heq₂ ▸ ht) (reduce_reduces rfl)⟩⟩
-        else .none
+  | DCC Subst(x, Snd(f_β)) => -- ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩
+    match infer f_β with
+    | .some ⟨DCC (Π(Id(Sort o), `(Sort o₁, Π(f_α, Λ(_d, _e, `(_f, Sort n))))) δ), ⟨ht⟩⟩ =>
+      if heq : (DCC (Π(Id(Sort o), `(Sort o₁, Π(f_α, Λ(_d, _e, `(_f, Sort n))))) δ)) = Pi.f_β.type f_α δ o n then
+        match infer x with
+        | .some ⟨DCC (Π(Id(Sort o₂), `(Sort o₃, Π(f_α₂, γ))) δ₂), ⟨ht₂⟩⟩ =>
+          if heq₂ : DCC (Π(Id(Sort o₂), `(Sort o₃, Π(f_α₂, γ))) δ₂) = Subst₂.x.type f_α γ δ o then by
+            exact .some ⟨_, ⟨.subst₂ (heq ▸ ht) (heq₂ ▸ ht₂) (reduce_reduces rfl)⟩⟩
+          else .none
+        | _ => .none
       else .none
     | _ => .none
   | DCC App(f_α, f_β) =>

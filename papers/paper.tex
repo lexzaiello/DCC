@@ -58,7 +58,7 @@ Combinatory logics suffer from the known disadvantage that they are an inefficie
 
 Numerous alternative combinatory compilation targets have been proposed. One such calculus is the categorical combinator calculus \autocite{CURIEN1986188}. The categorical combinators are best described as a literal interpretation of cartesian closed categories as a Lisp-like Debruijn-indexed machine (the Categorical Abstract Machine \autocite{cmachine}). Variable substitution is modeled intuitively as composing binary product projections \autocite[p. 6]{cmachine} over an environment of nested tuples. The categorical combinators have been extended with simple types \autocite{CURIEN1986188}. There has also been some investigation into extending them to a dependent type theory similar to the Calculus of Constructions \autocite{ritter1990categorical}, but no implementation has been defined.
 
-In this paper, we formalize a metatheory of a dependently-typed categorical combinator calculus with affine types and non-linear terms based on symmetric monoidal categories. We show that type inference is decidable and deterministic. We accomplish this goal in principle by observing that the types of the dependent non-linear categorical combinators are encodable with an affine subset of the usual reduction rules. By showing that the affine restriction of the calculus is strongly normalizing through a syntactic decreasing measure, we achieve total affine \(\beta\)-reduction. We show that the calculus satisfies global confluence by Newman's lemma \autocite{newman1942theories} using our measure. We prove completeness and soundness of affine \(\beta\)-reduction, and soundness of \(\beta\)-normal forms with respect to our reduction relation, and hence achieve decidable affine equality. We are able to avoid a conversion rule in the typing judgment by eagerly normalizing types, and thus achieve deterministic, decidable type inference. We do not assume \(\Pi\)-extensionality, but describe \(\eta\)-reduction rules used for a weak form of extensionality as in Curien et al. \autocite[p. 221]{CURIEN1986188}. We outline several of our architectural decisions including proof automation with typeclasses critical to satisfying our formalization goals in Lean 4.
+In this paper, we formalize a metatheory of a dependently-typed categorical combinator calculus with affine types and non-linear terms. We show that type inference is decidable and deterministic. We accomplish this goal in principle by observing that the types of the dependent categorical combinators are encodable with an affine subset of the usual reduction rules. We do not assume \(\Pi\)-extensionality, but give an \(\eta\)-reduction algorithm as in Curien's categorical combinators \autocite[p. 221]{CURIEN1986188}. By showing that the affine restriction of the calculus \(\eta\)-reduction are strongly normalizing through a syntactic decreasing measure, we achieve total affine reduction. We show that the calculus satisfies global confluence by Newman's lemma \autocite{newman1942theories} using our measure. We prove completeness and soundness of \(\eta\) and affine \(\beta\)-reduction with respect to normal forms. We avoid conversion in the typing judgment by eagerly normalizing types, and thus achieve deterministic, decidable type inference. We outline several of our architectural decisions including proof automation with typeclasses critical to satisfying our formalization goals in Lean 4.
 
 %- definition of combinatory logic
   %- prototypical SK
@@ -87,7 +87,7 @@ In this paper, we formalize a metatheory of a dependently-typed categorical comb
 
 \subsection{The Untyped Categorical Combinators}
 
-The categorical combinators \autocite{CURIEN1986188} are the basis of the Categorical Abstract Machine \autocite{cmachine}. They are a potential compilation target for the \(\lambda\)-calculus \autocite{cmachine}. Categorical combinators simulate variable substitution through projections over nested tuples (``couples'', or binary products) constituting an ``environment''. Binders are simulated through a curry combinator (\(\Lambda\)) which applies its two arguments as a couple to the body (\(\Lambda(x)\)). The reduction rules for the calculus resemble the rules of the SK combinator calculus, and their categorical semantics are given by cartesian-closed categories \autocite[p. 178]{cmachine}.
+The categorical combinators \autocite{CURIEN1986188} are the basis of the Categorical Abstract Machine \autocite{cmachine}. They are a potential compilation target for the \(\lambda\)-calculus \autocite{cmachine}. Categorical combinators simulate variable substitution through projections over nested tuples (``couples'', or binary products) constituting an ``environment''. Binders are simulated through a curry combinator (\(\Lambda\)) which applies its two arguments as a couple to the body (\(\Lambda(x)\)). The reduction rules for the calculus resemble the rules of the SK combinator calculus with Debruijn indices, and their categorical semantics are given by cartesian-closed categories \autocite[p. 178]{cmachine}.
 
 \begin{figure}[H]
 \begin{center}
@@ -166,7 +166,7 @@ Despite every visible operation being bound by a point, arguments in scope can b
 
 \section{Dependent Categorical Combinators}
 
-Our primary insight when extending the categorical combinators to dependent types is that the types of all of the categorical combinators are representable without making use of the pair rule. That is, their types are affine. We refer to the subset of the categorical combinators excluding the pair rule as the ``affine restriction.'' By showing that the affine restriction is strongly normalizing, we gain decidable judgmental equality (\(\equiv\)) and a decision procedure for type-checking.
+Our primary insight when extending the categorical combinators to dependent types is that the types of all of the categorical combinators are representable without making use of the pair rule. That is, their types are affine. We refer to the subset of the categorical combinators excluding the pair rule as the ``affine restriction.'' By showing that the affine restriction is strongly normalizing and that reduction is complete, we gain decidable judgmental equality (\(\equiv\)) and a decision procedure for type-checking.
 
 We interpret \(\Sigma\)-types as a telescope context as usual. As in the Curry combinator, we specify combinator type arguments as points that internalize an indexing of the environment. For example, the \(\Pi\) combinator is inferred like such:
 
@@ -179,7 +179,7 @@ We interpret \(\Sigma\)-types as a telescope context as usual. As in the Curry c
   \end{equation}
 \end{figure}
 
-We interpret couples as dependent sums. \(\Sigma\)-couples make traversing data in a well-typed way quite convenient. All of our objects are well-typed, and \(\Pi\) elimination sorts can be computed with no extra assumptions. We define most of the type arguments of the combinators as functions of the environment eliminating into \(\sort{n}\). By specifying type arguments in this way, some potential duplication of items in the context can be avoided (e.g., in \(\Pi\), where the environment is shared across \(f_\alpha\) and \(f_\beta\)), thus further enabling a purely affine type theory.
+We interpret couples as dependent sums. \(\Sigma\)-couples make traversing data in a well-typed way quite convenient. All of our objects are well-typed, and \(\Pi\) elimination sorts can be computed with no extra assumptions. We define most of the type arguments of the combinators as functions of the environment eliminating into \(\sort{n}\). By specifying type arguments in this way, potential duplication of items in the context can be avoided (e.g., in \(\Pi\), where the environment is shared across \(f_\alpha\) and \(f_\beta\)), thus further enabling a purely affine type theory.
 
 \subsection{\(\Sigma\)-Couples}
 
@@ -191,7 +191,7 @@ Recall the usual typing of a \(\Sigma\)-pair:
 { \Gamma \vdash \Sigma(\alpha, \beta) : \sort{max(m, n)}}
 \end{equation}
 
-A \(\Sigma\)-type can refer to variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) in that a function \(\Pi(x : \alpha)(y : \beta x). \gamma x y\) can be transformed into a dependent function \(\Pi(s : \Sigma (x : \alpha), \beta x),\gamma fst(s) snd(s)\), and vice-versa (``currying''-''uncurrying'').
+A \(\Sigma\)-type can refer to variables in its \(fst\) and \(snd\) types, and \(fst\) itself in the type of \(snd\). \(\Sigma\)-types are one of the canonical dependent types, alongside dependent products. There is a known equivalence between \(\Pi\) and \(\Sigma\) in that a function \(\Pi(x : \alpha)(y : \beta x), \gamma x y\) can be transformed into a dependent function \(\Pi(s : \Sigma (x : \alpha), \beta x),\gamma fst(s) snd(s)\), and vice-versa (``currying''-''uncurrying'').
 
 In the untyped categorical combinators, Uncurry can be written as:
 
@@ -203,7 +203,7 @@ In the untyped categorical combinators, Uncurry can be written as:
   \end{split}
 \end{equation}
 
-Naively interpreting couples as \(\Sigma\) pairs with point-free type arguments makes this example \eqref{curry_uncurry} quite difficult, especially in an affine setting. In \(\textit{Uncurry}(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reduction. \(App\) has no knowledge of \(y\), and thus cannot compute the type of \((x y, z)\). We remedy this by indexing \(\Sigma\) with functions of the environment \(f_\beta : \Pi(s : \delta)(x : f_\alpha s),\sort{n}\) \eqref{infer_sigma_types}, similarly to in Curry (\(\Lambda(x)\)).
+Naively interpreting couples as \(\Sigma\) pairs with point-free type arguments makes this example \eqref{curry_uncurry} quite difficult, especially in an affine setting. In \(\textit{Uncurry}(x)\), \(snd\) (\(z : \beta y\)) depends on the \(fst\) component (\(y : \alpha\)) of the encapsulating couple's preimage, despite \(y\) being destroyed upon reduction. \(App\) has no knowledge of \(y\), and thus cannot compute the type of \((x y, z)\). We remedy this by indexing \(\Sigma\) with functions of the environment \(f_\beta : \Pi(s : \delta)(x : f_\alpha s),\sort{n}\) \eqref{infer_sigma_types} that determine the type of \(snd\).
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_sigma_types}
@@ -253,7 +253,7 @@ We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} :
 
 \subsubsection{Application and \(\Pi\)}
 
-The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha s\). Since \(f_\alpha s\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object affinely (see inference rule \eqref{infer_pi}). We normalize types eagerly, but we do not always indicate so in our inference rules (see \eqref{appendix:sup}). We use \(\rightarrowtail^{!}\) to denote star-step affine reduction to a normal form.
+The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha s\). Since \(f_\alpha s\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object affinely (see inference rule \eqref{infer_pi}). We normalize types eagerly, but we do not always indicate so in our inference rules (see \eqref{appendix:sup}). We use \(\affarr^{!}\) to denote star-step affine reduction to a normal form.
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_application}
@@ -810,7 +810,7 @@ We demonstrate local confluence by induction on the reduction relation.
 \end{theorem}
 
 \begin{proof}
-  We proceed by induction on the reduction relation. We have omitted several repetitive cases for brevity (see \eqref{appendix:supp}).
+  We proceed by induction on the reduction relation. We have omitted several repetitive cases for brevity (see \eqref{appendix:sup}).
 
 \begin{leancode}
 open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
@@ -1278,7 +1278,7 @@ abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULif
   | _ => .none
 \end{leancode}
 
-Our \mintinline{lean}{Judge} relation models the inference rules \eqref{infer_rules}. We have omitted the individual types and corresponding constructors for brevity, but give the constructor for dependent Curry \eqref{infer_curry}, App \eqref{infer_app}, \(\Pi\) \eqref{infer_pi} and application as examples. See the appendix \eqref{appendix:supp} for the full formalization.
+Our \mintinline{lean}{Judge} relation models the inference rules \eqref{infer_rules}. We have omitted the individual types and corresponding constructors for brevity, but give the constructor for dependent Curry \eqref{infer_curry}, App \eqref{infer_app}, \(\Pi\) \eqref{infer_pi} and application as examples. See the appendix \eqref{appendix:sup} for the full formalization.
 
 \begin{leancode}
 @[dcc_judge] abbrev curr.type (α β γ : Expr) (m : Level) : Expr :=
@@ -1325,7 +1325,7 @@ inductive Judge : Expr → Expr → Prop where
 
 \subsection{Type Inference Algorithm}
 
-Using our terminating affine and \(\eta\) reduction functions, we define an \mintinline{lean}{infer} function with soundness. We give only the cases described in our \mintinline{lean}{Judge} illustration, though the rest are available in \eqref{appendix:supp}. Pattern matching our types is somewhat obtuse, primarily due to the combinators having several points. Hence, we make use of helper functions to pattern match against them and provide equality proofs. For example, the helper function for pattern-matching arrows and the type of \(\beta\) in \(\Lambda\) are defined as such:
+Using our terminating affine and \(\eta\) reduction functions, we define an \mintinline{lean}{infer} function with soundness. We give only the cases described in our \mintinline{lean}{Judge} illustration, though the rest are available in \eqref{appendix:sup}. Pattern matching our types is somewhat obtuse, primarily due to the combinators having several points. Hence, we make use of helper functions to pattern match against them and provide equality proofs. For example, the helper function for pattern-matching arrows and the type of \(\beta\) in \(\Lambda\) are defined as such:
 
 \begin{leancode}
 @[dcc_judge] def with_arr (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :

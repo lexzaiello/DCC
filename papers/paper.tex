@@ -15,6 +15,7 @@
 \usepackage{fontspec}
 \setmonofont{FreeMono}
 \usepackage{minted}
+\setminted{breaklines=true}
 \newmintinline[lean]{lean4}{bgcolor=white}
 \newminted[leancode]{lean4}{fontsize=\footnotesize}
 \usemintedstyle{tango}
@@ -930,7 +931,7 @@ theorem aff_complete (h : Relation.ReflTransGen RedAff A B)
 
 \subsection{\(\eta\)-Reduction}
 
-To simplify type expressions, we employ Curien's \(\eta\)-reduction rules \autocite[p. 221]{CURIEN1986188}, and extend them to \(\Pi\) and \(\Sigma\). We do not have congruence, and as such inherit deterministic reduction. We define \(\arrow_{\eta}\) like such:
+To simplify type expressions, we employ Curien's \(\eta\)-reduction rules \autocite[p. 221]{CURIEN1986188}, and extend them to \(\Pi\) and \(\Sigma\). We do not have congruence, and as such inherit deterministic reduction. We define \(\etaarr\) like such:
 
 \begin{leancode}
 inductive RedEta : Expr → Expr → Prop
@@ -1009,7 +1010,7 @@ def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e')))
 
 \subsubsection{Syntactic size under \(\eta\)-reduction}
 
-We define a size measure for \(\arrow_{\eta}\), since \(\eta\)-reduction modifies \(\Pi\) codomains, whereas affine reduction does not. The size measure is exactly the same, except type terms are given weights:
+We define a size measure for \(\etaarr\), since \(\eta\)-reduction modifies \(\Pi\) codomains, whereas affine reduction does not. The size measure is exactly the same, except type terms are given weights:
 
 \begin{leancode}
 inductive EtaSize : Expr → ℕ → Prop

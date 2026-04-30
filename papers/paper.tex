@@ -34,6 +34,7 @@
 
 \newcommand{\sort}[1]{\text{Sort}\ #1}
 \newcommand{\affarr}{\rightarrowtail}
+\newcommand{\affetaarr}{\rightarrowtail_{\eta}}
 \newcommand{\etaarr}{\rightarrow_{\eta}}
 
 \title{Decidable Type-Checking for the Dependent Categorical Combinators}
@@ -253,12 +254,12 @@ We make use of an infinite sort hierarchy to avoid paradoxes (i.e., \(\sort{m} :
 
 \subsubsection{Application and \(\Pi\)}
 
-The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha s\). Since \(f_\alpha s\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object affinely (see inference rule \eqref{infer_pi}). We normalize types eagerly, but we do not always indicate so in our inference rules (see \eqref{appendix:sup}). We use \(\affarr^{!}\) to denote star-step affine reduction to a normal form.
+The inference rule for function application is as usual, except the codomain \(\beta\) is applied the environment \(s : \delta\), and the argument \(x : f_\alpha s\). Since \(f_\alpha s\) is discarded after type-checking, the environment can safely traverse the \(\Pi\) object affinely (see inference rule \eqref{infer_pi}). We normalize types eagerly, but we do not always indicate so in our inference rules (see \eqref{appendix:sup}). We use \(\affetaarr^{!}\) to denote star-step affine reduction to a normal form composed with \(\eta\)-reduction to a normal form.
 
 \begin{figure}[h!]
 \begin{equation}\label{infer_application}
   \inferrule[App]
-  { f : \Pi(f_\alpha, f_\beta) s, f_\alpha x \affarr^{!} \alpha\\ x : \alpha_{2}, \alpha_{2} \affarr^{!} \alpha\\ f_\beta s x \affarr^{!} \beta}
+  { f : \Pi(f_\alpha, f_\beta) s, f_\alpha x \affetaarr^{!} \alpha\\ x : \alpha_{2}, \alpha_{2} \affetaarr^{!} \alpha\\ f_\beta s x \affetaarr^{!} \beta}
   { f x : \beta}
 \end{equation}
 \caption{Inference rule: application}
@@ -379,7 +380,7 @@ Recall \(\Lambda(x) y z = x (y, z)\). Our inference rule for application \eqref{
 As in Curien's combinators, the \(App\) combinator evaluates a couple as a computation. Its reduction rule is:
 
 \begin{equation}
-  App (f, x) \affarr f x
+  App (f, x) \rightarrow f x
 \end{equation}
 
 Defining the type of \(App\) proves to be quite difficult in this configuration, since \(\llbracket \beta \rrbracket (f, x)\) is a \(\Sigma\)-couple. The term \(x\) does not actually depend on \(f\). The book-keeping required to discard \(f\) in \(\beta\) can be easily avoided by adopting the rule \(App (x, f) \affarr (f x)\), as in Seely \autocite[p. 39]{Seely_1984}.
@@ -395,11 +396,13 @@ The inference rule requires duplicating the environment in the codomain of \(App
 \begin{equation}\label{red_subst_fst}
 \begin{split}
   Subst(x, Fst(f_\beta)) \textit{env} \llbracket \ldots \rrbracket (y, z) &\affarr x \textit{env} y\\
-  Subst(x, Fst(f_\beta)) \textit{env} \llbracket \ldots (\langle f, g \rangle z) &\affarr x \textit{env} (f z)\\\\
+  Subst(x, Fst(f_\beta)) \textit{env} \llbracket \ldots (\langle f, g \rangle z) &\affarr x \textit{env} (f z)\\
 \end{split}
-\inferrule[Subst Fst]
-{ x : \Pi (\textit{env} : \delta) (x : \alpha), \gamma \textit{env} x}
-{ Subst(x, Fst(f_\beta)) : \Pi (\textit{env} : \delta) (s : \Sigma(f_\beta)), Subst(\gamma, Fst(f_|beta)) }
+\end{equation}
+\begin{equation}
+  \inferrule[Subst Fst]
+  { x : \Pi (\textit{env} : \delta) (x : \alpha), \gamma \textit{env} x}
+  { Subst(x, Fst(f_\beta)) : \Pi (\textit{env} : \delta) (s : \Sigma(f_\beta)), Subst(\gamma, Fst(f_|beta)) }
 \end{equation}
 
 We define the \(App\) inference rule \eqref{infer_app} using our \(Subst\) combinator.
@@ -407,31 +410,31 @@ We define the \(App\) inference rule \eqref{infer_app} using our \(Subst\) combi
 \begin{figure}[H]
   \centering
   \begin{equation}\label{infer_app}
-    \begin{split}
-    & \inferrule [Notation]
+    \begin{gathered}
+    \inferrule [Notation]
     { }
     { t_{\beta x y} \coloneq \Lambda(\delta, f_\alpha, \Pi(f_\alpha, f_\beta) \circ Fstc(f_\alpha)) }\\
-    & \inferrule [Appl]
+    \inferrule [Appl]
     { \delta : \sort{m}, f_{\alpha} : \delta \rightarrow \sort{m}, f_{\beta} : \Pi(s : \delta) (x : f_\alpha s),\sort{o}}
     { App(f_\alpha, f_\beta) : \Pi(env : \delta) (s : \Sigma(t_{\beta x y}) env), Subst(f_\beta, Fst(t_{\beta x y}))}
-    \end{split}
+    \end{gathered}
   \end{equation}
   \caption{\(App\) inference rule}
 \end{figure}
 
 \section{Affine and \(\eta\)-Reduction}
 
-In general, dependent combinatory logics require complex types. Hence, we extend Curien's \(\eta\)-reduction rules for the categorical combinators to enable some examples \autocite[p. 221]{CURIEN1986188}. Since our types are affine \eqref{infer_rules}, we can realize decidable type-checking by demonstrating strong normalization of \(\eta^{!}\) and \(\affarr^{!}\) and expressing conversion in our judgment relation as composition of \(\affarr^{!}\) and \(\eta^{!}\).
+In general, dependent combinatory logics require complex types. Hence, we extend Curien's \(\eta\)-reduction rules for the categorical combinators to enable some examples \autocite[p. 221]{CURIEN1986188}. Since our types are affine \eqref{infer_rules}, we can realize decidable type-checking by demonstrating strong normalization of \(\etaarr^{!}\) and \(\affarr^{!}\) and expressing conversion in our judgment relation as composition of \(\affarr^{!}\) and \(\etaarr^{!}\) (\(\affetaarr^{!}\)).
 
 We prove soundness and completeness of reduction functions for each scheme. We demonstrate strong normalization by a syntactic decreasing measure.
 
 \subsection{Automating Completeness}\label{red_classes}
 
-The derivations of completeness and soundness for \(\affarr\) and \(\eta\)-reduction are structurally quite similar. Thus, we make the practical design decision to abstract the notions of a size and step-like relations with Lean's typeclass system.
+The derivations of completeness and soundness for affine and \(\eta\)-reduction are structurally quite similar. Thus, we make the practical design decision to abstract the notions of a size and step-like relations with Lean's typeclass system.
 
-We identify a set of minimal requirements to prove completeness and strong normalization for our rules: soundness of a computable definition with respect to the inductive relation, a proof that a size measure decreases over the reduction, local confluence of the respective single-step relation, and ``semi-completeness''. We define these properties as typeclasses and instantiate them for \(\eta\) and \(\affarr\). In doing so, we automatically inherit global confluence by Nemann's lemma, a total, terminating reduction function, strong normalization, well-foundedness with respect to the relation, uniqueness of normal forms, completeness of the reduction function with respect to \(\rightarrow^{!}\), and decidability of the reduction relation up to normal forms.
+We identify a set of minimal requirements to prove completeness and strong normalization for our rules: soundness of a computable definition with respect to the inductive relation, a proof that a size measure decreases over the reduction, local confluence of the respective single-step relation, and ``semi-completeness''. We define these properties as typeclasses and instantiate them for \(\etaarr\) and \(\affarr\). In doing so, we inherit global confluence by Nemann's lemma, a total, terminating reduction function, strong normalization, well-foundedness with respect to the relation, uniqueness of normal forms, completeness of the reduction function with respect to \(\affarr^{!}\) and \(\etaarr^{!}\), and decidability of the reduction relation up to normal forms.
 
-Our notion of a relation requires an inductive relation and an implementation with soundness:
+Our notion of a relation requires an inductive relation and a corresponding implementation with soundness:
 
 \begin{leancode}
 class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Type v)
@@ -452,7 +455,7 @@ open Rel in class Complete.{u, v, s} {α : Type u} {β : Type s} (r : α → β 
   complete : ∀ (h : r x y) (_p : P y), hR.run x = hm.pure ⟨y, PULift.up h⟩
 \end{leancode}
 
-We define a the general form of a size measure, automatically derive completeness with tactics:
+We generalize the notion of a size measure, and automatically derive completeness with tactics:
 
 \begin{leancode}
 open Rel in class Measure (r : Expr → ℕ → Prop)
@@ -519,7 +522,7 @@ termination_by (hT.run e).fst
   (e : Expr) : Expr := (reduce r e).fst
 \end{leancode}
 
-Since \(\affarr\) has congruence, confluence is required to show completeness of \mintinline{lean}{reduce}. We define the notion like such:
+Since \(\affarr\) has congruence rules, confluence is required to show completeness of \mintinline{lean}{reduce}. We define the notion like such:
 
 \begin{leancode}
 open Rel in class Confluent.{u} {α : Type u} (r : α → α → Prop)
@@ -528,7 +531,7 @@ open Rel in class Confluent.{u} {α : Type u} (r : α → α → Prop)
   ∧ Relation.ReflTransGen.{u} r C D
 \end{leancode}
 
-By Newmann's lemma, we derive global confluence and uniqueness of normal forms for relations with a measure.
+We derive global confluence and uniqueness of normal forms for relations with a measure by Newmann's lemma.
 
 \begin{theorem}
   If \(r\) is locally confluent and strongly normalizing by a decreasing measure, then \(r\) is globally confluent.
@@ -562,7 +565,7 @@ open Confluent in def RedRel.globally_confluent
 \end{proof}
 
 \begin{theorem}
-  If \(r\) confluent, and \(r A C\) and \(r A B\) and \(B\) and \(C\) are normal forms, then \(B = C\).
+  If \(\rightarrow_{r}\) is confluent, and \(A \rightarrow_{r} C\) and \(A \rightarrow_{r} B\) and \(B\) and \(C\) are normal forms, then \(B = C\).
 \end{theorem}
 
 \begin{proof}
@@ -598,11 +601,11 @@ open Rel in class SemiComplete {t : Expr → ℕ → Prop} [hM : Measure t]
 Relations with a measure, semi-completeness, and confluence inherit completeness of \mintinline{lean}{reduce} with respect to normal forms.
 
 \begin{theorem}
-  Suppose \(\rightarrow_{r}\) is strongly normalizing under a decreasing measure, semi-complete, and confluent. Then, if \(hr\) is a proof that \(A \rightarrow_{r}^{*} B\) and \(B\) is a normal form, then \mintinline{lean}{reduce A = (B, hr)}.
+  Suppose \(\rightarrow_{r}\) is strongly normalizing under a decreasing measure, semi-complete, and confluent. Then, if \(hr\) is a proof that \(A \rightarrow_{r}^{*} B\), and \(B\) is a normal form, then \mintinline{lean}{reduce A = (B, hr)}.
 \end{theorem}
 
 \begin{proof}
-
+By case analysis on the definition of \mintinline{lean}{reduce}.
 
 \begin{leancode}
 theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
@@ -643,7 +646,7 @@ termination_by ((hM.size t A), (hM.size t B))
 
 \subsection{Affine Reduction Rules}\label{aff_red}
 
-Our affine reduction rules are mostly the same as in \autocite{cmachine}, except we omit the general pair rule, define a context substitution combinator \(Subst\) \eqref{red_subst_fst}, and flip the order of the couple argument to \(App\):
+Our affine reduction rules are mostly the same as in the categorical abstract machine \autocite{cmachine}, except we omit the general pair rule, define a context substitution combinator \(Subst\) \eqref{red_subst_fst}, and flip the order of the couple argument to \(App\):
 
 \begin{leancode}
 inductive RedAff : Expr → Expr → Prop

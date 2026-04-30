@@ -154,7 +154,7 @@ def LExpr.compile (bdy : LExpr) (ctx : Ctx) : Option Expr :=
       let α  := (DCC (f_α₁ env)).reduce
       let Mβ := DCC Λ(Sort m, f_α', Π(f_β, f_γ))
 
-      let pair_MN := DCC ⟦m, α, Mβ, Nβ⟧⟨M', N'⟩
+      let pair_MN := DCC ⟨M', N'⟩
 
       let t_pair_MN ← match pair_MN.infer with
         | DCC (Π(Id(_a), b) _c) => .some b
@@ -179,74 +179,48 @@ def LExpr.compile (bdy : LExpr) (ctx : Ctx) : Option Expr :=
     sorry
 
 /-
-Keep coming back to Subst.
+M N = App ∘ ⟨N, M⟩
 
-reworking Subst with {f, g}?
+This is literally Subst.
 
-{f, g} (x, y) = (f x, g y)
+Only the environment is duplicated.
 
-Subst(x, y) env = (x env) (y env)
+Subst(App, ⟨x, y⟩) x = App x
 
-Subst(f, g) (Γ := ⟦β⟧(x, y))
-= (f x, g y)
+This looks like the S combinator, but it still validates our
+thesis in that it has points.
 
-If we leave context inside a couple for App,
+Can we generalize the Subst type rule?
 
-we can avoid duplication? Yes. Match is pretty much perfect for this.
-Maybe we can remove some other things with match as well.
+x : (Π(f_α, `(Sort m, Π(f_β, f_γ)) x_α)
+y : (Π(f_α, `(Sort m, f_β) x_α₂) x_α)
 
-App (env, (x, y)) = x y
+Subst(x, y) : (Π(f_α, f_γ x (y x)) x_α)
 
-env : δ
-App(f_α, f_β) : (Π(Id(Sort n), `(Sort n, ...))
-  Coup(Σ(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))))
-  ⟨Id(t_env), { f_β Id(t_env),
-    -- snd type here can depend on fst
-    Snd(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))) }⟩
-  )
+if we define subst on all operations, then we can invoke it in our type.
 
-⟨Id(t_env), { f_β Id(t_env),
-    -- snd type here can depend on fst
-    Snd(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))) }⟩ (env, (f, x))
-    = (env, (f_β env, x : α))
+(Π(f_α, Subst(f_γ, y)) x_α)
 
-App ∘ { f_β Id(t_env),
-    -- snd type here can depend on fst
-    Snd(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))) }
+we will do this later by seeing which of our types don't reduce as expected.
 
-{ π₁, π₂ }
+Subst(App(f_α, f_β), ⟨x, y⟩) x = App x (⟨x, y⟩ x)
 
-can this replace Subst(x, Fst) = x env (Fst(β) env)
+this is slightly problematic, but we can use a lexicographic ordering for the size.
 
-Yes. {
+Alternatively, we can count the arity.
 
-App(f_α, f_β) : (Π(Id(Sort n), `(Sort n, ...))
-  Coup(Σ(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))))
-  ⟨Id(t_env), { f_β ∘ Id(t_env),
-    -- snd type here can depend on fst
-    Snd(Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))) }⟩
-  )
+In our congruence cases, we can check that the tyarity is zero.
+if it's not zero,
 
-It would be super cool if we could distinguish term arguments in size
-from type arguments.
-Type arguments should not affect global size.
+size
 
-e.g.,
+App x = 1
 
-Subst(x, y) env = x env (y env)
 
-Then we can just use Subst.
+the reason we can't do this now is because of congruence.
+if TyArity f = 0 as a hypothesis.
 
-TyArity x 1
-→ TyArity (Subst(x, y)) 1
+Otherwise, we use our individual cases.
 
-TyArity f 0
-→ Size f m
-→ Size x n
-→ Size (f x) (m + n)
-
-then we can generalize Subst.
-
-match is nice, but doesn't really solve the general problem.
-Subst is the best.
+we don't actually need an inductive definition.
 -/

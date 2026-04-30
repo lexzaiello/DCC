@@ -98,6 +98,14 @@ f_β : ∀ (env : δ) (x : f_α₂ env), Sort n
   DCC (Π(Id(Sort o), `(Sort o, Π(f_t_snd, β))) δ)
 
 /-
+x : (Π(f_α, `(Sort m, Π(f_β, f_γ)) x_α)
+y : (Π(f_α, `(Sort m, f_β) x_α₂) x_α)
+
+Subst(x, y) : (Π(f_α, Subst(f_γ x (y x)) x_α)
+-/
+--def Subst.type (
+
+/-
 TODO: Replace App with
 
 let s_β := Λ(δ, Π(f_α, f_β), f_α ∘ Fstc(δ, Π(f_α, f_β)))

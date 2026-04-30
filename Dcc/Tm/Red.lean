@@ -2,8 +2,7 @@ import Dcc.Attrs
 import Dcc.Ast
 
 inductive Red : Expr → Expr → Prop
-  | subst₁   : Red (DCC (Subst(x, Fst(f_β)) env ⟦β⟧(y, z))) (DCC (x env y))
-  | subst₂   : Red (DCC (Subst(x, Snd(f_β)) env ⟦β⟧(y, z))) (DCC (x env z))
+  | subst    : Red (DCC (Subst(x, y) z)) (DCC ((x z) (y z)))
   | snd'     : Red (DCC (Snd'(_δ, _τ) ⟦β⟧(a, b))) b
   | quot     : Red (DCC (`(β, x) y)) x
   | id       : Red (DCC (Id(α) x)) x

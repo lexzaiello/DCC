@@ -275,7 +275,8 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
       have ⟨D, h₁, h₂⟩ := ih h
       exact ⟨_, congrArg' h₁, congrArg' h₂⟩
 
-@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instConf : Confluent RedAff := ⟨RedAff.conf⟩
+@[dcc_rel, aesop norm (rule_sets := [DccRel])]
+instance RedAff.instConf : Confluent RedAff := ⟨RedAff.conf⟩
 
 theorem red_aff_globally_conf : Relation.ReflTransGen RedAff A B → Relation.ReflTransGen RedAff A C → ∃ D,
   Relation.ReflTransGen RedAff B D ∧ Relation.ReflTransGen RedAff C D :=

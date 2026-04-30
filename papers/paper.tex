@@ -1111,7 +1111,7 @@ We prove confluence by demonstrating that single-step \(\eta\)-reduction is dete
   If \(A \rightarrow_{\eta} B\) and \(A \rightarrow_{\eta} C\), then \(B = C\).
 \end{theorem}
 
-\begin{proof}
+\begin{proof}\label{unique_eta}
   We proceed by induction on the reduction relation.
 \begin{leancode}
 @[simp] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
@@ -1141,8 +1141,62 @@ We prove confluence by demonstrating that single-step \(\eta\)-reduction is dete
   If \(A \etaarr B\) and \(A \etaarr C\), then there exists \(D\), such that \(B \etaarr^{*} D\) and \(C \etaarr^{*} D\).
 \end{theorem}
 
-\begin{proof}
+\begin{proof}\eqref{unique_eta}
+  By uniqueness under \(\etaarr\):
 
+\begin{leancode}
+theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) :
+  ∃ D, Relation.ReflTransGen B D
+  ∧ Relation.ReflTransGen C D := by
+  have h := h₁.unique h₂
+  exact ⟨B, h ▸ .refl, h ▸ .refl⟩
+\end{leancode}
+\end{proof}
+
+\begin{theorem}
+  If \(A \etaarr^{*} B\) and \(A \etaarr^{*} C\), then there exists \(D\), such that \(B \etaarr^{*} D\) and \(C \etaarr^{*} D\).
+\end{theorem}
+
+\begin{proof}
+  By Newmann's lemma.
+  \begin{leancode}
+@[dcc_rel, aesop norm (rule_sets := [DccRel])]
+instance RedEta.instConf : Confluent RedEta := ⟨RedEta.conf⟩
+
+theorem red_eta_globally_conf : Relation.ReflTransGen RedEta A B → Relation.ReflTransGen RedEta A C → ∃ D,
+  Relation.ReflTransGen RedEta B D ∧ Relation.ReflTransGen RedEta C D :=
+  RedEta.instRedRel.globally_confluent.conf
+\end{leancode}
+\end{proof}
+
+Due to determinism, we have completeness under single-step \(\etaarr\).
+
+\begin{theorem}
+  If \(h\) is a proof that \(A \etaarr B\), then \(step_eta? A = some (B, h)\).
+\end{theorem}
+
+\begin{proof}
+  We proceed by induction on the step relation.
+
+\begin{leancode}
+theorem RedEta.complete (h_red : RedEta A B) : step_eta? A = .some ⟨B, ⟨h_red⟩⟩ := by
+  induction h_red <;> (
+    unfold step_eta?
+    aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel]))
+\end{leancode}
+\end{proof}
+
+As in \(\affarr\), we inherit completeness of full reduction with respect to \(\etaarr^{*}\) and normal forms.
+
+\begin{theorem}
+  If \(h\) is a proof that \(A \etaarr^{*} B\) and \(B\) is a normal form, then \(reduce A = (B, h)\).
+\end{theorem}
+
+\begin{proof}
+\begin{leancode}
+
+
+\end{leancode}
 \end{proof}
 
 % TODO: eta-reduction

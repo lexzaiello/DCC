@@ -157,13 +157,14 @@ x : α
   DCC (β : Sort n) → α
 
 /-
-f : (Π(Id(Sort m), f_β) α)
-g : (Π(Id(Sort m), f_γ) α)
+⟨f, g⟩ x = (f x, g x (f x))
 
-⟦α, f_β, f_γ⟧⟨f, g⟩ : (Π(Id(Sort m), Σ(Λ(α, (f_β α), f_γ ∘ Fstc(α, (f_β α))))) α)
+f : ∀ (x : α), β x
+g : ∀ (x : α) (y : β x), γ x y
+⟨f, g⟩ : ∀ (x : α), Σ(Λ(α, β, γ)) x
 -/
 @[dcc_judge] abbrev pair.type (α β γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, Σ(Λ(α, β, γ ∘ Fstc(β))))) α)
+  DCC (Π(Id(Sort m), `(Sort m, Σ(Λ(α, β, γ)))) α)
 
 @[dcc_judge] abbrev comp'.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)

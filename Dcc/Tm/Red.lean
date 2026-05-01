@@ -11,7 +11,7 @@ inductive Red : Expr → Expr → Prop
   | fst      : Red (DCC (Fst(_α) _env ⟦β⟧(a, b))) a
   | fstp     : Red (DCC (Fst(_α) _env (⟨f, g⟩ x))) (DCC (f x))
   | snd      : Red (DCC (Snd(_α) _env ⟦β⟧(a, b))) b
-  | sndp     : Red (DCC (Snd(_α) _env (⟨f, g⟩ x))) (DCC (g x))
+  | sndp     : Red (DCC (Snd(_α) _env (⟨f, g⟩ x))) (DCC (g x (f x)))
   | comp     : Red (DCC ((x ∘ y) z)) (DCC (x (y z)))
   | curr     : Red (DCC (Λ(α, β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl     : Red x x' → Red (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))

@@ -11,24 +11,13 @@ import Dcc.Types
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘ Id(Sort 1)) (Sort 0))).infer
 
 def mk_test_pair : Expr :=
-  DCC (⟨Id(Sort 1), Id(Sort 1)⟩ (Sort 0))
+  DCC (⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩ (Sort 0))
 
 def test_pair : Option Expr := Sigma.fst <$> mk_test_pair.infer
-
-def mk_test_pair₂ : Expr :=
-  DCC (⟨`(Sort 1, Id(Sort 1)), Id(Sort 1)⟩ (Sort 0))
-
-#eval (Expr.reduce_all mk_test_pair₂)
 
 #eval Expr.reduce_all <$> test_pair
 
 #eval Std.format test_pair
-
-def test_pair_comp : Option Expr := do
-  let e := DCC (⟨Id(Sort 1), Id(Sort 1)⟩)
-  Sigma.fst <$> e.infer
-
-#eval test_pair_comp
 
 /-
 Want to change pair type so that it aligns with the environment pattern.
@@ -83,7 +72,12 @@ Coup(Σ(Λ(Sort 1, `(Sort 1, Sort 1),
 -/
 
 #eval test_app
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), ⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩⟩ (Sort 0))).infer
+
+/-
+
+-/
+
+--#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), ⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩⟩ (Sort 0))).infer
 
 /-
 This should eta reduce
@@ -94,8 +88,6 @@ This should eta reduce
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1),
            (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `(Coup(Σ(`(⊤, `(Sort 1, Sort 1)))), Sort 1)) ∗))).infer
-
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩ (Sort 0))).infer
 
 /-
 
@@ -155,7 +147,6 @@ It's specifically f_β that it chokes on. we might need to change it from Π.f_�
 #eval (DCC (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 2)) ∗)).reduce_all
 #eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1),
          (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))).infer
-#eval Sigma.fst <$> (DCC (⟨Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1))), Id(Sort 1)⟩ (Sort 0))).infer
 
 #eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer
 
@@ -167,7 +158,6 @@ It's specifically f_β that it chokes on. we might need to change it from Π.f_�
 #eval (DCC (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)).reduce_all
 #eval (DCC Id(Sort 2) ∘ (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)).reduce_all
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨`(Sort 1, Id(Sort 1)), Id(Sort 1)⟩ (Sort 0))).infer
 
 #eval (DCC (Σ(Λ(Sort 1, `(Sort 1, (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)),
      `(Sort 1, (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)) ∘
@@ -181,9 +171,6 @@ It's specifically f_β that it chokes on. we might need to change it from Π.f_�
 
 #eval (DCC (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)).reduce_all
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1),
-  Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩ (Sort 0))).infer
-#eval Std.format <$> test_app
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ⟦`((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), Sort 1)⟧(Id(Sort 1), Sort 0)).infer
 
@@ -192,8 +179,6 @@ It's specifically f_β that it chokes on. we might need to change it from Π.f_�
 /-
 Maybe my example is wrong? We should try it with the couple example from before.
 -/
-
-#eval Sigma.fst <$> (DCC (⟨Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1))), Id(Sort 1)⟩ Sort 0)).infer
 
 #eval (DCC (Σ(Λ(Sort 2, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))),
        Id(Sort 2) ∘ (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗))) (Sort 1))).reduce_all
@@ -211,4 +196,3 @@ Id(Sort 1)
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), Id(Sort 1)⟩)).infer

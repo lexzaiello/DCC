@@ -142,13 +142,14 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (quot.type α β n) τ
     → Judge (DCC `(β, x)) τ
   | pair   : Judge f (DCC (Π(Id(Sort m), f_β) α))
-    → Judge g (DCC (Π(Id(Sort m), f_γ) α))
     → Reduces (DCC (f_β α)) β
-    → Reduces (DCC (f_γ α)) γ
+    → Judge g (DCC (Π(Id(Sort m), f_β₂) α))
+    → Reduces (DCC (f_β₂ α)) (DCC (Π(β, γ)))
     → Reduces (pair.type α β γ m) τ
     → Judge (DCC ⟨f, g⟩) τ
   -- TODO: Change all occurrences of `(δ, α) to just f_α. Needs to depend on the environment
-  | subst₁ : Judge x (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
+  | subst₁ : Judge x (DCC (Π(Id(Sort o),
+    Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
     → Reduces (Subst₁.type β γ δ o) τ
     → Judge (DCC Subst(x, Fst(β))) τ
   /-
@@ -298,17 +299,24 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
       .some ⟨_, ⟨.quot ht₁ ht₂ (reduce_reduces rfl)⟩⟩
     | _, _ => .none
   | DCC ⟨f, g⟩ =>
+    dbg_trace (Std.format ∘ Sigma.fst) <$> infer f
+    dbg_trace (Std.format ∘ Sigma.fst) <$> infer g
     match infer f, infer g with
-    | .some ⟨DCC (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩, .some ⟨DCC (Π(Id(Sort m₂), f_γ) α₂), ⟨ht₂⟩⟩ =>
-      if heq : α = α₂ ∧ m = m₂ then
-        have ⟨h₁, h₂⟩ := heq
-        .some ⟨_, ⟨.pair
-          ht₁
-          (h₁.symm ▸ h₂.symm ▸ ht₂)
-          (reduce_reduces rfl)
-          (reduce_reduces rfl)
-          (reduce_reduces rfl)⟩⟩
-      else .none
+    | .some ⟨DCC (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩,
+      .some ⟨DCC (Π(Id(Sort m₂), f_β₂) α₂), ⟨ht₂⟩⟩ =>
+      let β := (DCC (f_β α)).reduce_all
+      match heqm : (DCC (f_β₂ α)).reduce_all with
+      | DCC (Π(β₂, γ)) =>
+        if heq : α₂ = α ∧ m₂ = m ∧ β₂ = β then
+          have ⟨h₁, h₂, h₃⟩ := heq
+          .some ⟨_, ⟨.pair
+            ht₁
+            (reduce_reduces rfl)
+            (h₁ ▸ h₂ ▸ ht₂)
+            (reduce_reduces (h₃ ▸ heqm))
+            (reduce_reduces rfl)⟩⟩
+        else .none
+      | _ => .none
     | _, _ => .none
   | DCC Subst(x, Fst(β)) =>
     match infer x with
@@ -360,11 +368,9 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
   | _ => .none
 
 def test_pair_comp : Option Expr := do
-  match ← (DCC Id(Sort 1)).infer with
-  | ⟨DCC (Π(_f_α, _β) _x), _⟩ =>
-    let e := DCC (⟨Id(Sort 1), Id(Sort 1)⟩)
-    Sigma.fst <$> e.infer
-  | _ => .none
+  let e := DCC (⟨Id(Sort 1),
+      Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩)
+  Sigma.fst <$> e.infer
 
 #eval test_pair_comp
 

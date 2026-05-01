@@ -163,8 +163,8 @@ f : ∀ (x : α), β x
 g : ∀ (x : α) (y : β x), γ x y
 ⟨f, g⟩ : ∀ (x : α), Σ(Λ(α, β, γ)) x
 -/
-@[dcc_judge] abbrev pair.type (α β γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, Σ(Λ(α, β, γ)))) α)
+@[dcc_judge] abbrev pair.type (α γ : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), `(Sort m, Σ(γ))) α)
 
 @[dcc_judge] abbrev comp'.type (α β γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)

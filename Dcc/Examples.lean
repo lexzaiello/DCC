@@ -196,3 +196,32 @@ Id(Sort 1)
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
 
+/-
+App example:
+
+
+⟨Id(Sort 1),
+  -- have in scope (Sort 0), (Sort 0)
+  `(Sort 1,
+  ⟨Id(Sort 1),
+  -- have in scope (Sort 0), (Sort 0)
+
+question: is App even necessary with this new rule?
+
+Old way (env is here to calculate types of x and f given f_α and f_β):
+App(f_α, f_β) (env, (x, f)) := x f
+
+Background: Fstc is just a macro for my Fst combinator. Fst explicitly takes the environment in Σ(...) env. Couples don't depend on an environment, snd just depends on fst. Pairs, for example, are of a sigma type similarly to couples, except couples don't have relevant environment information, but pairs do, so Fst(f_β) env is for any Σ, whereas Fstc(β) = Fst(`(⊤, β)) ∗. ⊤ is unit type, ∗ is unit constructor, and β is the snd element type dependent on the first element. Same thing for Sndc.
+
+Remember, new pair rule (required for snd to actually depend on fst):
+⟨f, g⟩ x = (f x, g x (f x)⟩
+
+Derivation:
+
+App(f_α, f_β) ⟦...some env handling stuff⟧(env, ⟦...⟧(x, f)) = x f
+= (Sndc(...) ∘ ⟨Fstc(...), Sndc(...)⟩ ∘ Sndc(...)) (env, (x, f))
+= (Sndc(...) ∘ ⟨Fstc(...), Sndc(...)⟩) (x, f)
+= Sndc(...) (x, Sndc(...) (x, f) x)
+= Sndc(...) (x, f x)
+= (f x)
+-/

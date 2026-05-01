@@ -62,6 +62,19 @@ def test_app : Option Expr := do
     ).infer
 
 /-
+(some (Coup(`(Sort 1,
+       (Σ(Λ(Sort 1, `(Sort 1, Sort 1),
+            Π(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Coup(`(Sort 1, Sort 1))))) ∘
+              Fstc(`(Sort 1, Sort 1))))
+          Sort 0)))))
+
+this is exactly as expected, except the environment is discarded? Why?
+I think this is due to the pair type.
+
+this could actually be due to η-reduction...
+-/
+
+/-
 Expected:
 
 Coup(Σ(Λ(Sort 1, `(Sort 1, Sort 1),
@@ -70,10 +83,7 @@ Coup(Σ(Λ(Sort 1, `(Sort 1, Sort 1),
 -/
 
 #eval test_app
-
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), ⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩⟩ (Sort 0))).infer
-
-#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩).infer
 
 /-
 This should eta reduce
@@ -171,7 +181,8 @@ It's specifically f_β that it chokes on. we might need to change it from Π.f_�
 
 #eval (DCC (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)).reduce_all
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩ (Sort 0))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1),
+  Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩ (Sort 0))).infer
 #eval Std.format <$> test_app
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ⟦`((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), Sort 1)⟧(Id(Sort 1), Sort 0)).infer

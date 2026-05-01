@@ -38,7 +38,8 @@ inductive RedEta : Expr → Expr → Prop
     if heq : DCC (Λ(α, _b, `(_c, x)) y) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
       heq ▸ .some ⟨_, ⟨.curr_quot⟩⟩
     else .none
-  | DCC (Λ(_α, β, x ∘ Fstc(_β₂)) y) => .some ⟨_, ⟨.curr_fst
+  | DCC (Λ(_α, β, x ∘ Fstc(_β₂)) y) =>
+    .some ⟨_, ⟨.curr_fst
     (reduce_sound rfl)
     (reduce_norm rfl)⟩⟩
   | DCC Σ(f_β) =>

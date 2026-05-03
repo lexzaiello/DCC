@@ -169,7 +169,7 @@ def LExpr.cc (root : LExpr) : Option Expr :=
 #eval (DLCC ((λ : (Sort 1) → 0) (Sort 0))).cc
 #eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 1) → 0) (Sort 0))).cc).infer)
 #eval (DLCC ((λ : (Sort 1) → λ : 0 → 0))).cc
-#eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 1) → λ : 0 → 0))).cc).infer)
+#eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 0) → λ : 0 → 0) ⊤ ∗)).cc).infer)
 #eval (DLCC ((λ : (Sort 2) → λ : 0 → 0))).cc
 #eval Sigma.fst <$> (DCC Sndc(Sndc(`(⊤, Sort 2)))).infer
 #eval Sigma.fst <$> (DCC Sndc(`(⊤, Sort 2))).infer

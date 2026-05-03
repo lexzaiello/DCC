@@ -13,7 +13,7 @@ namespace Expr
 @[dcc_judge] theorem match_pair_β : pair.β.type.matcher (pair.β.type α m n) α m = .some ⟨n, ⟨rfl⟩⟩ := by
   simp [dcc_judge]
 
-@[dcc_judge] theorem match_curr_β_type : curr.β.type.matcher (curr.β.type α m n) = .some ⟨α, m, n, ⟨rfl⟩⟩ := by
+@[dcc_judge] theorem match_curr_β_type : curr.β.type.matcher (curr.β.type f_α x_α m n) = .some ⟨f_α, x_α, m, n, ⟨rfl⟩⟩ := by
   simp [dcc_judge]
 
 @[dcc_judge] theorem with_arr_arr : with_arr (.some ⟨arrow α β m, h⟩) = .some ⟨arrow α β m, α, β, m, h, ⟨rfl⟩⟩ := by
@@ -25,7 +25,7 @@ namespace Expr
 @[dcc_judge] theorem with_pair_β_pair_β_type : with_pair_β_type (.some ⟨pair.β.type α m n, h⟩) α m = .some ⟨pair.β.type α m n, n, h, ⟨rfl⟩⟩ := by
   simp [dcc_judge]
 
-@[dcc_judge] theorem with_curr_β_type_curr_β_type : with_curr_β_type (.some ⟨curr.β.type α m n, h⟩) = .some ⟨curr.β.type α m n, α, m, n, h, ⟨rfl⟩⟩ := by
+@[dcc_judge] theorem with_curr_β_type_curr_β_type : with_curr_β_type (.some ⟨curr.β.type f_α x_α m n, h⟩) = .some ⟨curr.β.type f_α x_α m n, f_α, x_α, m, n, h, ⟨rfl⟩⟩ := by
   simp [dcc_judge]
 
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by

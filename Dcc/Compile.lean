@@ -175,7 +175,7 @@ def LExpr.cc (root : LExpr) : Option Expr :=
   | e => (·.app .tintro) <$> abstract e Ctx.empty
 
 #eval (DLCC (λ : (Sort 1) → 0)).cc
-#eval (do Sigma.fst <$> (← (DLCC (λ : (Sort 1) → 0)).cc).infer)
+#eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 1) → 0) (Sort 0))).cc).infer)
 
 /-
 TODO Σ-terms compile

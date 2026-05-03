@@ -45,19 +45,6 @@ def reduce_reduces (h : reduce_all A = B) : Reduces A B := ⟨
 
 def reduce_reduces' : Reduces A (reduce_all A) := reduce_reduces rfl
 
-@[dcc_judge, inline]
-abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
-  match heq₀ : t with
-  | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
-    if heq₁ : t = (DCC (α : Sort m) → β) then
-      .some ⟨α, β, m, ⟨by rw [← heq₀, heq₁]⟩⟩
-    else
-      .none
-  | _ => .none
-
-def is_arrow (e : Expr) : Bool :=
-  (arrow.matcher e).isSome
-
 @[dcc_judge, inline] abbrev fst.f_β.type.matcher (t : Expr) : Option ((α δ : Expr) × (m n o : Level) × (PULift.{1, 0} (t = fst.f_β.type α δ m n o))) :=
   match arrow.matcher t with
   | .some ⟨δ, arr', o, ⟨h_arr⟩⟩ =>
@@ -85,10 +72,12 @@ def is_arrow (e : Expr) : Bool :=
   | _ => .none
 
 @[dcc_judge, inline] abbrev curr.β.type.matcher (t : Expr) : Option
-  ((α : Expr) × (m n : Level) × (PULift.{1, 0} (t = curr.β.type α m n))) :=
-  match arrow.matcher t with
-  | .some ⟨α, DCC Sort n, m, ⟨h_arr⟩⟩ =>
-    .some ⟨α, m, n, ⟨by rw [h_arr]⟩⟩
+  ((f_α x_α : Expr) × (m n : Level) × (PULift.{1, 0} (t = curr.β.type f_α x_α m n))) :=
+  match t with
+  | DCC (Π(f_α, Λ(Sort m, _a, `(_b, Sort n))) x_α) =>
+    if h : (DCC (Π(f_α, Λ(Sort m, _a, `(_b, Sort n))) x_α)) = curr.β.type f_α x_α m n then
+      .some ⟨f_α, x_α, m, n, ⟨h⟩⟩
+    else .none
   | _ => .none
 
 inductive Judge : Expr → Expr → Prop where
@@ -110,7 +99,7 @@ inductive Judge : Expr → Expr → Prop where
     f_β δ : α → Sort n
     Snd(f_β, δ) : ∀ (s : Σ(f_β) δ), f_β δ ∘ Fst
   -/
-  | snd    : Judge f_β (fst.f_β.type α δ m n o)
+  | snd    : Judge f_β (snd.f_β.type δ _β o)
     → Reduces (snd.type f_β δ o) τ
     → Judge (DCC Snd(f_β)) τ
   | sigma   : Judge f_β (fst.f_β.type α δ m n o)
@@ -122,7 +111,8 @@ inductive Judge : Expr → Expr → Prop where
     → Judge (DCC Snd'(α, β)) τ
   | coup   : Judge x α
     → Judge y τ₂
-    → Judge β (curr.β.type α m n)
+    → Judge β (curr.β.type f_α x_α m n)
+    → Reduces (DCC (f_α x_α)) α
     → Reduces (DCC (β x)) τ₂
     → Reduces (coup.type β) τ
     → Judge (DCC ⟦β⟧(x, y)) τ
@@ -131,7 +121,7 @@ inductive Judge : Expr → Expr → Prop where
     β receives (α, x)
     β : Coup(Sort m, Id(Sort m)) → Sort n
   -/
-  | curr   : Judge β (curr.β.type α m n)
+  | curr   : Judge α (DCC Sort m)
     → Judge x (DCC (Π(f_α, γ) x_α))
     → Reduces (DCC Coup(β)) τα
     → Reduces (DCC (f_α x_α)) τα
@@ -211,10 +201,10 @@ def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   | _ => .none
 
 @[dcc_judge] def with_curr_β_type (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
-  Option ((τ : Expr) × (α : Expr) × (m n : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = curr.β.type α m n))) :=
+  Option ((τ : Expr) × (f_α x_α : Expr) × (m n : Level) × PULift.{1, 0} (Judge e τ) × (PULift.{1, 0} (τ = curr.β.type f_α x_α m n))) :=
   match h with
   | .some ⟨t, h⟩ => match curr.β.type.matcher t with
-    | .some ⟨α, m, n, h₂⟩ => .some ⟨t, α, m, n, h, h₂⟩
+    | .some ⟨f_α, x_α, m, n, h₂⟩ => .some ⟨t, f_α, x_α, m, n, h, h₂⟩
     | _ => .none
   | _ => none
 
@@ -244,9 +234,9 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
        .some ⟨_, ⟨.fst (harr ▸ ht₂) (reduce_reduces rfl)⟩⟩
      | _ => .none
   | DCC Snd(f_β) =>
-     match with_fst_fβ_type (infer f_β) with
-     | .some ⟨_τ₁, _α, δ₂, m, n, o, ⟨ht₂⟩, ⟨harr⟩⟩ =>
-       .some ⟨_, ⟨.snd (harr ▸ ht₂) (reduce_reduces rfl)⟩⟩
+     match (infer f_β) with
+     | .some ⟨(DCC (Π(Id(Sort o), _β) δ)), ⟨ht₂⟩⟩ =>
+       .some ⟨_, ⟨.snd ht₂ (reduce_reduces rfl)⟩⟩
      | _ => .none
   | DCC Σ(β) =>
     match with_fst_fβ_type (infer β) with
@@ -267,26 +257,27 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
       match infer y with
       | .some ⟨βxm, ⟨ht₂⟩⟩ =>
         match with_curr_β_type (infer β) with
-        | .some ⟨_, α₂, m, n, ⟨ht₃⟩, ⟨harr⟩⟩ =>
+        | .some ⟨_, f_α₂, x_α₂, m, n, ⟨ht₃⟩, ⟨harr⟩⟩ =>
           if heq : reduce_all (DCC (β x)) = βxm then
-            if heq₂ : α = α₂ then
-              .some ⟨_, ⟨.coup ht₁ ht₂ (heq₂ ▸ harr ▸ ht₃) (reduce_reduces heq) (reduce_reduces rfl)⟩⟩
+            if heq₂ : α = (DCC (f_α₂ x_α₂)).reduce_all then
+              .some ⟨_, ⟨.coup ht₁ ht₂ (harr ▸ ht₃) (reduce_reduces heq₂.symm) (reduce_reduces heq) (reduce_reduces rfl)⟩⟩
             else .none
           else .none
         | _ => .none
       | _ => .none
     | _ => .none
   | DCC Λ(α, β, x) =>
-    match with_curr_β_type (infer β) with
-    | .some ⟨_, α₂, m, n, ⟨htβ⟩, ⟨harrβ⟩⟩ =>
+    match α.infer with
+    | .some ⟨DCC Sort m, ⟨ht⟩⟩ =>
       match infer x with
       | .some ⟨DCC (Π(f_α, _γ) x_α), ⟨ht₂⟩⟩ =>
         if heq : reduce_all (DCC (f_α x_α)) = reduce_all (DCC Coup(β)) then
-          if heq₂ : α = α₂ then
-            .some ⟨_, ⟨.curr (heq₂ ▸ harrβ ▸ htβ) ht₂ (reduce_reduces heq.symm)
-              (reduce_reduces rfl)
-              (reduce_reduces rfl)⟩⟩
-          else .none
+          .some ⟨_, ⟨.curr
+            ht
+            ht₂
+            (reduce_reduces heq.symm)
+            (reduce_reduces rfl)
+            (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
     | _ => .none

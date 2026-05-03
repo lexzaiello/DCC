@@ -38,6 +38,7 @@ syntax "Fstc(" expr,* ")" : expr
 syntax "Sndc(" expr,* ")" : expr
 
 syntax "(" expr ":" expr ")" "→" expr : expr
+syntax "(" ":" expr ")" "→" expr : expr
 
 macro_rules
   | `(DCC Fstc($β:expr)) => `(DCC (Fst(`(⊤, $β)) ∗))
@@ -49,6 +50,20 @@ macro_rules
 
 macro_rules
   | `(DCC ($α:expr : Sort $m) → $β:expr) => `(arrow (DCC $α) (DCC $β) $m)
+  | `(DCC (: Sort $m) → $β:expr) => `(DCC Λ(Sort $m, Id(Sort $m), `(Coup(Id(Sort $m)), $β)))
+
+@[dcc_judge, inline]
+abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
+  match heq₀ : t with
+  | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
+    if heq₁ : t = (DCC (α : Sort m) → β) then
+      .some ⟨α, β, m, ⟨by rw [← heq₀, heq₁]⟩⟩
+    else
+      .none
+  | _ => .none
+
+def is_arrow (e : Expr) : Bool :=
+  (arrow.matcher e).isSome
 
 /-
 Subst(x, Snd(f_β) env) ⟦β⟧(y, z)
@@ -82,6 +97,9 @@ TODO: x needs to depend on (env : δ)
 @[dcc_judge] abbrev fst.f_β.type (α δ : Expr) (m n o : Level) : Expr :=
   (DCC (δ : Sort o) → ((α : Sort m) → Sort n))
 
+@[dcc_judge] abbrev snd.f_β.type (δ _β : Expr) (o : Level) : Expr :=
+  (DCC (Π(Id(Sort o), _β) δ))
+
 @[dcc_judge] abbrev id.type (α : Expr) (m : Level) : Expr :=
   DCC (α : Sort m) → α
 
@@ -91,13 +109,15 @@ Fst(f_β) : ∀ (env : δ) (s : Σ(f_β) env), α
 -/
 
 @[dcc_judge] abbrev fst.type (α f_β δ : Expr) (o : Level) : Expr :=
-  DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(f_β), Λ(δ, Σ(f_β), `(Coup(Σ(f_β)), α))) ∘ Snd'(Sort o, δ))) δ)
+  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(f_β), Λ(δ, Σ(f_β), `(Coup(Σ(f_β)), α))))) δ)
 
 /-
 Snd(f_β) : ∀ (env : δ) (s : Σ(f_β) env), f_β env (Fst(f_β) env s)
+
+snd : ∀ (env : δ) (s : Σ(f_β) env), Fst(f_β) env
 -/
 @[dcc_judge] abbrev snd.type (f_β δ : Expr) (o : Level) : Expr :=
-  DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(f_β), Subst(f_β, Fst(f_β))) ∘ Snd'(Sort o, δ))) δ)
+  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(f_β), Subst(f_β, Fst(f_β))))) δ)
 
 /-
 Λ(β, x) y z → x ⟦β⟧(y, z)
@@ -112,8 +132,8 @@ x : ∀ (s : coup.type α β m), γ s
 /-
 β : α → Sort n
 -/
-@[dcc_judge] abbrev curr.β.type (α : Expr) (m n : Level) : Expr :=
-  DCC (α : Sort m) → Sort n
+@[dcc_judge] abbrev curr.β.type (f_α x_α : Expr) (m n : Level) : Expr :=
+  (DCC (Π(f_α, (: Sort m) → Sort n) x_α))
 
 /-
 Nondependent quotation.
@@ -213,7 +233,8 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Snd(β))              => comb "Snd" [β.toFormat]
   | (DCC Snd'(α, β))          => comb "Snd'" [α.toFormat, β.toFormat]
   | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat, β.toFormat, e.toFormat]
-  | (DCC Π(α, β))             => comb "Π" [α.toFormat, β.toFormat]
+  | (DCC Π(α, β))             =>
+    comb "Π" [α.toFormat, β.toFormat]
   | (DCC ⟨a, b⟩)              => (angle (sepD [a.toFormat, b.toFormat] (indent := 1)))
   | (DCC ⟦β⟧(a, b))           =>
     comb (bbracket (sepD [β.toFormat])) [a.toFormat, b.toFormat]
@@ -233,5 +254,7 @@ instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
   | .some e =>
     let l := "(some".length.succ
     .group ("(some " ++ (.fill (.nest l e.toFormat)) ++ ")")⟩
+
+#eval (DCC ((Sort 1 : Sort 2) → Sort 2))
 
 end Expr

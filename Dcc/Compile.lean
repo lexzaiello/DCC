@@ -100,14 +100,6 @@ def LExpr.abstract (bdy : LExpr) (ctx : Ctx) : Option Expr :=
   match bdy with
   | .idx n => mk_lookup ctx n
   | DLCC Σ : α, β => do
-    /-
-      α and β might depend on the environment.
-      also, β might depend on α.
-      luckily, DCC Σ works perfectly for this
-      Σ(f_β) env
-      we don't actually care about α, except to get
-      the context to abstract β
-    -/
     let α' ← α.abstract ctx
     let β' ← β.abstract (DCC Coup(α'))
     .some (DCC Σ(β'))
@@ -174,8 +166,17 @@ def LExpr.cc (root : LExpr) : Option Expr :=
   | DLCC Sort m => .some (DCC Sort m)
   | e => (·.app .tintro) <$> abstract e Ctx.empty
 
-#eval (DLCC (λ : (Sort 1) → 0)).cc
+#eval (DLCC ((λ : (Sort 1) → 0) (Sort 0))).cc
 #eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 1) → 0) (Sort 0))).cc).infer)
+#eval (DLCC ((λ : (Sort 1) → λ : 0 → 0))).cc
+#eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 1) → λ : 0 → 0))).cc).infer)
+#eval (DLCC ((λ : (Sort 2) → λ : 0 → 0))).cc
+#eval Sigma.fst <$> (DCC Sndc(Sndc(`(⊤, Sort 2)))).infer
+#eval Sigma.fst <$> (DCC Sndc(`(⊤, Sort 2))).infer
+#eval Sigma.fst <$> (DCC Λ(Coup(`(⊤, Sort 2)), Sndc(`(⊤, Sort 2)), Sndc(Sndc(`(⊤, Sort 2))))).infer
+#eval Sigma.fst <$> (DCC Sndc(Sndc(`(⊤, Sort 2)))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC `(⊤, Sndc(`(⊤, Sort 2)))).infer
+--#eval (do Sigma.fst <$> (← (DLCC (λ : (Sort 2) → λ : 0 → 0)).cc).infer)
 
 /-
 TODO Σ-terms compile

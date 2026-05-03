@@ -3,6 +3,7 @@ import Dcc.Types
 import Dcc.Judge
 import Lean
 import Qq
+open Qq
 
 inductive LExpr where
   | idx    : ℕ     → LExpr
@@ -44,25 +45,25 @@ def mk_lookup (ctx : Ctx) (idx : ℕ) : Option Expr :=
     | _ => .none
   | _, _ => .none
 
-open Lean Qq in def abstract_lean (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
+open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
   match e with
   | .bvar n => mk_lookup ctx n
   | .app (.app (.const ``Sigma []) α) β => do
-    let α' ← abstract_lean α ctx
-    let β' ← abstract_lean β (DCC Coup(α'))
+    let α' ← Lean.Expr.abstract' α ctx
+    let β' ← Lean.Expr.abstract' β (DCC Coup(α'))
     .some (DCC Σ(β'))
   | .lam _a α bdy _binfo => do
-    let α' ← abstract_lean α ctx
-    let inner ← abstract_lean bdy (DCC Coup(α'))
+    let α' ← Lean.Expr.abstract' α ctx
+    let inner ← Lean.Expr.abstract' bdy (DCC Coup(α'))
     .some (DCC Λ(ctx, α', inner))
   | .forallE _name α β _binfo => do
-    let α' ← abstract_lean α ctx
-    let β' ← abstract_lean β (DCC Coup(α'))
+    let α' ← Lean.Expr.abstract' α ctx
+    let β' ← Lean.Expr.abstract' β (DCC Coup(α'))
 
     .some (DCC (Π(α', Λ(ctx, α', β'))))
   | .app M N => do
-    let M' ← abstract_lean M ctx
-    let N' ← abstract_lean N ctx
+    let M' ← Lean.Expr.abstract' M ctx
+    let N' ← Lean.Expr.abstract' N ctx
 
     match (← M'.infer).fst with
     | DCC (Π(f_α, f_β) x_α) =>
@@ -95,52 +96,34 @@ open Lean Qq in def abstract_lean (e : Lean.Expr) (ctx : Ctx) : Option _root_.Ex
   | .const ``False [] => DCC (`(ctx, ⊥))
   | .sort .zero => DCC (`(ctx, Sort 0))
   | .sort (.succ m) => do
-    match ← (abstract_lean (.sort m)) ctx with
-    | DCC Sort n => pure (DCC Sort (n + 1))
+    match ← (Lean.Expr.abstract' (.sort m)) ctx with
+    | DCC (`(ctx, Sort n)) => pure (DCC (`(ctx, Sort (n + 1))))
     | _ => .none
   | _ => .none
 
-def cc_lean (root : Lean.Expr) : Option _root_.Expr :=
+def Lean.Expr.cc (root : Lean.Expr) : Option _root_.Expr :=
   match root with
   | .app (.lam _a α bdy _binfo) x => do
     let ctx₀ := Ctx.empty
-    let f' ← abstract_lean (.lam _a α bdy _binfo) ctx₀
-    let x' ← cc_lean x
+    let f' ← Lean.Expr.abstract' (.lam _a α bdy _binfo) ctx₀
+    let x' ← Lean.Expr.cc x
     .some (DCC (f' ∗ x'))
   | .app M N => do
-    let M' ← cc_lean M
-    let N' ← cc_lean N
+    let M' ← Lean.Expr.cc M
+    let N' ← Lean.Expr.cc N
     .some (DCC (M' N'))
   | .const ``True.intro [] => DCC (∗)
   | .const ``True [] => DCC (⊤)
   | .const ``False [] => DCC (⊥)
   | .sort .zero => DCC (Sort 0)
   | .sort (.succ m) => do
-    match ← (cc_lean (.sort m)) with
+    match ← (Lean.Expr.cc (.sort m)) with
     | DCC Sort n => pure (DCC Sort (n + 1))
     | _ => .none
-  | e => (·.app .tintro) <$> abstract_lean e Ctx.empty
-/-
-Snd is our debruijn index 1 because we always have an environment.
+  | e => (·.app .tintro) <$> Lean.Expr.abstract' e Ctx.empty
 
-empty ctx: ⊤.
-
--/
-
-/-
-λ (x : α) → λ (y : β x) → x = Λ(α, β, Fstc(m, α, β))
-
-type might depend on any number of arguments in scope.
-
-λ (: α) → λ (: β 0) → x
-
-Ctx.push, just compile type with previous context as context,
-
-ctx₀
-
-ctx at inner x is Coup(m, α, β)
--/
---def Ctx.push (ctx : Ctx) (
+def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) : Option _root_.Expr :=
+  Lean.Expr.cc root
 
 declare_syntax_cat lexpr
 
@@ -257,6 +240,10 @@ def LExpr.cc (root : LExpr) : Option Expr :=
   | DLCC ⊥ => .some (DCC ⊥)
   | DLCC Sort m => .some (DCC Sort m)
   | e => (·.app .tintro) <$> abstract e Ctx.empty
+
+#eval Lean.Expr.cc' q(λ (x : Sort 1) => x)
+
+#eval (do Sigma.fst <$> (← (Lean.Expr.cc' q((λ (α : Sort 0) => λ (x : α) => x) True True.intro))).infer)
 
 #eval (DLCC ((λ : (Sort 1) => 0) (Sort 0))).cc
 #eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 1) => 0) (Sort 0))).cc).infer)

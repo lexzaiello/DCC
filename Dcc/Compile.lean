@@ -144,36 +144,30 @@ def LExpr.compile (bdy : LExpr) (ctx : Ctx) : Option Expr :=
   | DLCC (M N) => do
     let M' ← M.compile ctx
     let N' ← M.compile ctx
-    match M'.infer, N'.infer with
-    -- Need to handle nondependent case as well
-    | .some ⟨DCC (Π(f_α₁, Λ(Sort m, f_α', Π(f_β, f_γ))) env), ⟨ht₁⟩⟩,
-      .some ⟨DCC (Π(f_α₂, Nβ) env), ⟨ht₂⟩⟩ =>
-      let elim_sort ← match (DCC (Π(f_α₁, Λ(Sort m, f_α', Π(f_β, f_γ))) env)).infer with
-        | DCC Sort n => .some <| DCC Sort n
-        | _ => .none
-      let α  := (DCC (f_α₁ env)).reduce
-      let Mβ := DCC Λ(Sort m, f_α', Π(f_β, f_γ))
 
-      let pair_MN := DCC ⟨M', N'⟩
+    match (← M'.infer).fst with
+    | DCC (Π(f_α, f_β) x_α) =>
+      let α := (DCC (f_α x_α)).reduce_all
 
-      let t_pair_MN ← match pair_MN.infer with
-        | DCC (Π(Id(_a), b) _c) => .some b
-        | _ => .none
+      match (DCC (f_β x_α)).reduce_all with
+      | DCC (Π(_f_β, γ)) =>
+        /-
+          ⟨N, M⟩ x = ⟨Id(α), Snd(γ) ∘ ⟨N, M⟩⟩ x = (x, (N x, M x (N x)) x)
+          ⟨?, Snd(γ)⟩ x = (? x, Snd(γ) x ?)
+          ⟨⟨N, M⟩, Snd(γ)⟩
+          ⟨⟨N, M⟩, Snd(γ)⟩ x = ((N x, M x (N x)), Snd(γ) x (N x, M x (N x)))
+          = (..., M x (N x))
 
-      -- App x (M x, N x)
-      -- f_β is the type of (N x), dictated by x
-      -- a function of App's environment, which is x
-      -- f_γ is determined by x, and (N x)
-      let app_MN := DCC App'(f_β, f_γ)
 
-      -- dup_env x = App x (M x, N x)
-      let dup_env := DCC ⟦m, α, `(Sort m, App(m, elim_sort, f_β, f_γ)), t_pair_MN⟧⟨app_MN, pair_MN⟩
+          ⟨⟨N, M⟩, Snd(γ)⟩
+          (M N) = ⟨Id(α), ⟨
+        -/
 
-      match (← inner_app.infer).fst, (← inner_pair.infer).fst with
-      | DCC (Π(_a, inner_app_β) _ax), DCC (Π(_pa, inner_pair_β) _pαx) =>
-      -- λ M N --> App ∘ ⟨[M], [N]⟩
-      -- (M' x) : Π(f_β, f_γ) x
-      -- App(f_β, f_γ) x (M' x, N' x)
-      -- f_β x is the second argument accepted by M
-      .some <| DCC ⟦m, f_β, f_γ, ⟧⟨inner_app, ⟩
-    sorry
+        .some (DCC (Sndc(#(sorry)) ∘ ⟨sorry
+      | _ => .none
+    | _ => .none
+
+/-
+TODO:
+- always initialize env. with unit ∗
+-/

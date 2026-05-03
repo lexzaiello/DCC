@@ -37,20 +37,6 @@ def test_id_nested : Option Expr := do
 #eval test_id_nested
 
 /-
-App(f_α, f_β, f_γ) env x (y, z) = x y z
-
-f_β env x = Sort 1
-
-App(Id(Sort 1)
--/
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
-def test_app : Option Expr := do
-  Sigma.fst <$> (DCC (App(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Coup(`(Sort 1, Sort 1)))))
-  
-  )
-    ).infer
-
-/-
 (some (Coup(`(Sort 1,
        (Σ(Λ(Sort 1, `(Sort 1, Sort 1),
             Π(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Coup(`(Sort 1, Sort 1))))) ∘
@@ -70,8 +56,6 @@ Coup(Σ(Λ(Sort 1, `(Sort 1, Sort 1),
             Π(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Coup(`(Sort 1, Sort 1))))) ∘
               Fstc(`(Sort 1, Sort 1)))))
 -/
-
-#eval test_app
 
 /-
 
@@ -138,12 +122,6 @@ f_β := Λ(Sort 1, `(Sort 1, Sort 1),
          (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))
 -/
 
-/-
-We need the pair type to align with App as much as possible, or change pair to be more flexible.
-
-It's specifically f_β that it chokes on. we might need to change it from Π.f_β
--/
-
 #eval (DCC (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 2)) ∗)).reduce_all
 #eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1),
          (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))).infer
@@ -197,17 +175,6 @@ Id(Sort 1)
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
 
 /-
-App example:
-
-
-⟨Id(Sort 1),
-  -- have in scope (Sort 0), (Sort 0)
-  `(Sort 1,
-  ⟨Id(Sort 1),
-  -- have in scope (Sort 0), (Sort 0)
-
-question: is App even necessary with this new rule?
-
 Old way (env is here to calculate types of x and f given f_α and f_β):
 App(f_α, f_β) (env, (x, f)) := x f
 

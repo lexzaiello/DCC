@@ -145,7 +145,7 @@ inductive Judge : Expr → Expr → Prop where
     Subst(x, Fst(f_β)) : 
   -/
   | subst₁ : Judge x
-    (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
+    (Subst₁.x.type α γ δ m o)
     → Reduces (Subst₁.type β γ δ o) τ
     → Judge (DCC Subst(x, Fst(β))) τ
   /-
@@ -312,10 +312,9 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | _, _ => .none
   | DCC Subst(x, Fst(β)) =>
     match infer x with
-    | .some ⟨(DCC (Π(Id(Sort o), Λ(Sort o₂, Id(Sort o₃), Π(`(δ, α), γ)) ∘ Snd'(Sort o₄, δ₂)) δ₃)), ⟨ht⟩⟩ =>
-      if heq : o₂ = o ∧ o₃ = o ∧ o₄ = o ∧ δ₂ = δ ∧ δ₃ = δ then
-        have ⟨ha, hb, hc, hd, he⟩ := heq
-        .some ⟨_, ⟨.subst₁ (ha ▸ hb ▸ hc ▸ hd ▸ he ▸ ht) (reduce_reduces rfl)⟩⟩
+    | .some ⟨DCC (Π(Id(Sort o), Λ(_b, _c, `(_d, (Π(Id(Sort m), γ) α)))) δ), ⟨ht⟩⟩ =>
+      if heq : (DCC (Π(Id(Sort o), Λ(_b, _c, `(_d, (Π(Id(Sort m), γ) α)))) δ)) = (Subst₁.x.type α γ δ m o) then
+        .some ⟨_, ⟨.subst₁ (heq ▸ ht) (reduce_reduces rfl)⟩⟩
       else .none
     | _ => .none
   | DCC Subst(x, (Snd(f_β) env)) => -- ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩

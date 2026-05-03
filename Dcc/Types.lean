@@ -189,6 +189,9 @@ Subst(x, Fst(β)) : ∀
 @[dcc_judge] abbrev Subst₁.type (β γ δ : Expr) (o : Level) : Expr :=
   (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(β), Subst(γ, Fst(β))) ∘ Snd'(Sort o, δ))) δ))
 
+@[dcc_judge] abbrev Subst₁.x.type (α γ δ : Expr) (m o : Level) : Expr :=
+  (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), `(Coup(Id(Sort o)), (Π(Id(Sort m), γ) α)))) δ))
+
 /-
 f_β : ∀ (env : δ) (x : α), Sort n
 x : ∀ (env : δ) (y : β),
@@ -206,7 +209,7 @@ f_β : δ → α → Sort n
 @[dcc_judge] abbrev Sigma.type (δ : Expr) (m n o : Level) : Expr :=
   DCC (δ : Sort o) → Sort max m n
 
-def toFormat (e : Expr) : Std.Format :=
+def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=
     .nest indent (.fill (.joinSep l (sep ++ .line)))
   let paren (s : Std.Format) : Std.Format :=
@@ -219,43 +222,58 @@ def toFormat (e : Expr) : Std.Format :=
   let comb (pre : Std.Format) (points : List Std.Format) : Std.Format :=
     .group (pre ++ (paren (sepD points (indent := pre.pretty.length))))
 
-  match e with
+  match heq₀ : e with
   | (DCC ⊤)                   => "⊤"
   | (DCC ⊥)                   => "⊥"
   | (DCC ∗)                   => "∗"
-  | (DCC `(β, x))             => comb "`" [β.toFormat, x.toFormat]
-  | (DCC Id(α))               => comb "Id" [α.toFormat]
-  | (DCC Subst(β, x))         => comb "Subst" [β.toFormat, x.toFormat]
+  | (DCC `(β, x))             => comb "`" [β.toFormat pretty, x.toFormat pretty]
+  | (DCC Id(α))               => comb "Id" [α.toFormat pretty]
+  | (DCC Subst(β, x))         => comb "Subst" [β.toFormat pretty, x.toFormat pretty]
   | (DCC Sort m)              => "Sort " ++ (Std.format m)
-  | (DCC Fstc(β))             => comb "Fstc" [β.toFormat]
-  | (DCC Fst(β))              => comb "Fst" [β.toFormat]
-  | (DCC Sndc(β))             => comb "Sndc" [β.toFormat]
-  | (DCC Snd(β))              => comb "Snd" [β.toFormat]
-  | (DCC Snd'(α, β))          => comb "Snd'" [α.toFormat, β.toFormat]
-  | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat, β.toFormat, e.toFormat]
-  | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
-    sepD [(paren (sepD [α.toFormat, s!"Sort {m}"] " :")), β.toFormat] " →"
+  | (DCC Fstc(β))             => comb "Fstc" [β.toFormat pretty]
+  | (DCC Fst(β))              => comb "Fst" [β.toFormat pretty]
+  | (DCC Sndc(β))             => comb "Sndc" [β.toFormat pretty]
+  | (DCC Snd(β))              => comb "Snd" [β.toFormat pretty]
+  | (DCC Snd'(α, β))          => comb "Snd'" [α.toFormat pretty, β.toFormat pretty]
+  | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC Π(α, β))             =>
-    comb "Π" [α.toFormat, β.toFormat]
-  | (DCC ⟨a, b⟩)              => (angle (sepD [a.toFormat, b.toFormat] (indent := 1)))
+    comb "Π" [α.toFormat pretty, β.toFormat pretty]
+  | (DCC ⟨a, b⟩)              => (angle (sepD [a.toFormat pretty, b.toFormat pretty] (indent := 1)))
   | (DCC ⟦β⟧(a, b))           =>
-    comb (bbracket (sepD [β.toFormat])) [a.toFormat, b.toFormat]
-  | (DCC Coup(β))             => comb "Coup" [β.toFormat]
-  | (DCC Σ(β))                => comb "Σ" [β.toFormat]
+    comb (bbracket (sepD [β.toFormat pretty])) [a.toFormat pretty, b.toFormat pretty]
+  | (DCC Coup(β))             => comb "Coup" [β.toFormat pretty]
+  | (DCC Σ(β))                => comb "Σ" [β.toFormat pretty]
   | (DCC f ∘ g)               =>
-    sepD [f.toFormat, g.toFormat] " ∘"
-  | (DCC (f x))               => (paren (f.toFormat ++ (.indentD x.toFormat)))
+    sepD [f.toFormat pretty, g.toFormat pretty] " ∘"
+  | (DCC (f x))               =>
+    if pretty then
+      match heq₁ : (DCC (f x)) with
+      | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
+        have _h : sizeOf α < sizeOf e := by
+          rw [heq₁] at heq₀
+          rw [heq₀]
+          simp [sizeOf, Expr._sizeOf_1]
+          grind
+        have _h : sizeOf β < sizeOf e := by
+          rw [heq₁] at heq₀
+          rw [heq₀]
+          simp [sizeOf, Expr._sizeOf_1]
+          grind
+        sepD [(paren (sepD [(α.toFormat pretty), s!"Sort {m}"] " :")), β.toFormat pretty] " →"
+      | _ => (paren (f.toFormat pretty ++ (.indentD (x.toFormat pretty))))
+    else (paren (f.toFormat pretty ++ (.indentD (x.toFormat pretty))))
+termination_by e
 
-instance instToFormat : Std.ToFormat Expr := ⟨toFormat⟩
-instance instToString : ToString Expr     := ⟨toString ∘ toFormat⟩
-instance instRepr : Repr Expr := ⟨Function.const _ ∘ toFormat⟩
+instance instToFormat : Std.ToFormat Expr := ⟨toFormat (pretty := true)⟩
+instance instToString : ToString Expr     := ⟨toString ∘ toFormat (pretty := true)⟩
+instance instRepr : Repr Expr := ⟨Function.const _ ∘ toFormat (pretty := false)⟩
 
 instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
   match me with
   | .none => Std.format me
   | .some e =>
     let l := "(some".length.succ
-    .group ("(some " ++ (.fill (.nest l e.toFormat)) ++ ")")⟩
+    .group ("(some " ++ (.fill (.nest l (e.toFormat (pretty := true)))) ++ ")")⟩
 
 #eval (DCC ((Sort 1 : Sort 2) → Sort 2))
 

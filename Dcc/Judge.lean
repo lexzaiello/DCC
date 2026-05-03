@@ -296,8 +296,6 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
       .some ⟨_, ⟨.quot ht₁ ht₂ (reduce_reduces rfl)⟩⟩
     | _, _ => .none
   | DCC ⟨f, g⟩ =>
-    dbg_trace (Std.format ∘ Sigma.fst) <$> infer f
-    dbg_trace (Std.format ∘ Sigma.fst) <$> infer g
     match infer f, infer g with
     | .some ⟨DCC (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩,
       .some ⟨DCC (Π(Id(Sort m₂), f_β₂) α₂), ⟨ht₂⟩⟩ =>

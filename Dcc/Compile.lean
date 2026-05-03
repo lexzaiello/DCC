@@ -96,24 +96,9 @@ macro_rules
   | `(DLCC $idt:ident) => `($idt:term)
   | `(DLCC ($t:lexpr)) => `(DLCC $t)
 
-def push_ctx_β (ctx : Ctx) (t_α α' : Expr) : Option Expr :=
-  match t_α with
-  | DCC Sort _m =>
-    -- Does not depend on environment
-    .some <| DCC `(ctx, α')
-  | DCC (Λ(_n, _f_α, _f_β) _env) =>
-    -- Does depend on environment, so feed it the environment
-    .some <| DCC t_α
-  | _ => .none
-
-def LExpr.compile (bdy : LExpr) (ctx : Ctx) : Option Expr :=
+def LExpr.abstract (bdy : LExpr) (ctx : Ctx) : Option Expr :=
   match bdy with
-  | DLCC ∗ => .some (DCC ∗)
-  | DLCC ⊤ => .some (DCC ⊤)
-  | DLCC ⊥ => .some (DCC ⊥)
-  | .idx n =>
-    mk_lookup ctx n
-  | DLCC Sort m => .some (DCC Sort m)
+  | .idx n => mk_lookup ctx n
   | DLCC Σ : α, β => do
     /-
       α and β might depend on the environment.
@@ -121,43 +106,29 @@ def LExpr.compile (bdy : LExpr) (ctx : Ctx) : Option Expr :=
       luckily, DCC Σ works perfectly for this
       Σ(f_β) env
       we don't actually care about α, except to get
-      the context to compile β
+      the context to abstract β
     -/
-    let α' ← α.compile ctx
-    let ⟨t_α, _⟩ ← α'.infer
-    let ctx'_β ← push_ctx_β ctx t_α α'
-    let ctx' := DCC Coup(ctx'_β)
-    let β' ← β.compile ctx'
+    let α' ← α.abstract ctx
+    let β' ← β.abstract (DCC Coup(α'))
     .some (DCC Σ(β'))
   | DLCC (λ : α → bdy) => do
     -- how to append context?
     /-
-      α may depend on env, so we compile it
+      α may depend on env, so we abstract it
       then we can infer to see if it depends on the environment. e.g.,
       λ (α : Sort m) → λ (y : α) → y
     -/
-    let α' ← α.compile ctx
-    let ⟨t_α, _⟩ ← α'.infer
-    let ctx'_β ← push_ctx_β ctx t_α α'
-    let ctx' := DCC Coup(ctx'_β)
-    let inner ← bdy.compile ctx'
-    .some (DCC Λ(ctx, ctx'_β, inner))
-  | DLCC (∀ : α, bdy) => do
-    let α' ← α.compile ctx
-    let ⟨t_α, _⟩ ← α'.infer
-    let ctx'_β ← push_ctx_β ctx t_α α'
-    let ctx' := DCC Coup(ctx'_β)
-    let inner ← bdy.compile ctx'
-    let ⟨β, _⟩ ← inner.infer
-    match t_α with
-    | (DCC Sort m) =>
-      .some (DCC (Π(Id(Sort m), β) α'))
-    | (DCC (Π(_a, _b) _env)) =>
-      .some (DCC (Π(t_α, β)))
-    | _ => .none
+    let α' ← α.abstract ctx
+    let inner ← bdy.abstract (DCC Coup(α'))
+    .some (DCC Λ(ctx, α', inner))
+  | DLCC (∀ : α, β) => do
+    let α' ← α.abstract ctx
+    let β' ← β.abstract (DCC Coup(α'))
+
+    .some (DCC (Π(α', β')))
   | DLCC (M N) => do
-    let M' ← M.compile ctx
-    let N' ← N.compile ctx
+    let M' ← M.abstract ctx
+    let N' ← N.abstract ctx
 
     match (← M'.infer).fst with
     | DCC (Π(f_α, f_β) x_α) =>
@@ -181,5 +152,31 @@ def LExpr.compile (bdy : LExpr) (ctx : Ctx) : Option Expr :=
         .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N', M'⟩)⟩)
       | _ => .none
     | _ => .none
+  | DLCC ∗ => DCC (`(ctx, ∗))
+  | DLCC ⊤ => DCC (`(ctx, ⊤))
+  | DLCC ⊥ => DCC (`(ctx, ⊥))
+  | DLCC Sort m => DCC (`(ctx, Sort m))
 
-def LExpr.cc (root : LExpr) : Option Expr := (DLCC (root ∗)).compile Ctx.empty
+def LExpr.cc (root : LExpr) : Option Expr :=
+  match root with
+  | DLCC ((λ :α → bdy) x) => do
+    let ctx₀ := Ctx.empty
+    let f' ← (DLCC (λ :α → bdy)).abstract ctx₀
+    let x' ← x.cc
+    .some (DCC (f' ∗ x'))
+  | DLCC (M N) => do
+    let M' ← M.cc
+    let N' ← N.cc
+    .some (DCC (M' N'))
+  | DLCC ∗ => .some (DCC ∗)
+  | DLCC ⊤ => .some (DCC ⊤)
+  | DLCC ⊥ => .some (DCC ⊥)
+  | DLCC Sort m => .some (DCC Sort m)
+  | e => (·.app .tintro) <$> abstract e Ctx.empty
+
+#eval (DLCC (λ : (Sort 1) → 0)).cc
+#eval (do Sigma.fst <$> (← (DLCC (λ : (Sort 1) → 0)).cc).infer)
+
+/-
+TODO Σ-terms compile
+-/

@@ -2,12 +2,15 @@ import Dcc.Ast
 import Dcc.Judge
 
 inductive LExpr where
-  | idx   : ℕ     → LExpr
-  | lam   : LExpr → LExpr → LExpr
-  | forE  : LExpr → LExpr → LExpr
-  | app   : LExpr → LExpr → LExpr
-  | sort  : Level → LExpr
-  | sigma : LExpr → LExpr → LExpr
+  | idx    : ℕ     → LExpr
+  | lam    : LExpr → LExpr → LExpr
+  | forE   : LExpr → LExpr → LExpr
+  | app    : LExpr → LExpr → LExpr
+  | sort   : Level → LExpr
+  | bot    : LExpr
+  | top    : LExpr
+  | tintro : LExpr
+  | sigma  : LExpr → LExpr → LExpr
 
 def Ctx := Expr
 
@@ -20,9 +23,15 @@ def Ctx.empty := DCC ⊤
 
 def mk_lookup (ctx : Ctx) (idx : ℕ) : Option Expr :=
   match ctx, idx with
-  | DCC (Σ(`(Sort _m, β)) _α), .zero => pure <| DCC Sndc(β)
+  | DCC Coup(β), .zero => pure <| DCC Sndc(β)
   -- Singleton context
-  | DCC (Σ(`(Sort _m, β)) α), .succ n => (Expr.comp · (DCC Fstc(β))) <$> mk_lookup α n
+  | DCC Coup(β), .succ n => do
+    -- β is a function of fst
+    match (← β.infer).fst with
+    | DCC (Π(a, _b) x_α) =>
+      let ctx' := (DCC (a x_α)).reduce_all
+      (Expr.comp · (DCC Fstc(β))) <$> mk_lookup ctx' n
+    | _ => .none
   | _, _ => .none
 
 /-
@@ -49,6 +58,9 @@ ctx at inner x is Coup(m, α, β)
 
 declare_syntax_cat lexpr
 
+syntax "∗"                      : lexpr
+syntax "⊤"                      : lexpr
+syntax "⊥"                      : lexpr
 syntax "Sort" term              : lexpr
 syntax "v" ident                : lexpr
 syntax num                      : lexpr
@@ -62,6 +74,9 @@ syntax "(" lexpr+ ")"           : lexpr
 syntax "DLCC" lexpr : term
 
 macro_rules
+  | `(DLCC ∗) => `(LExpr.tintro)
+  | `(DLCC ⊤) => `(LExpr.top)
+  | `(DLCC ⊥) => `(LExpr.bot)
   | `(DLCC Sort $m:term) => `(LExpr.sort $m)
   | `(DLCC v $idt:ident) => `(LExpr.idx $idt)
   | `(DLCC $n:num) =>
@@ -81,10 +96,6 @@ macro_rules
   | `(DLCC $idt:ident) => `($idt:term)
   | `(DLCC ($t:lexpr)) => `(DLCC $t)
 
-/-
-This is just bracket abstraction
--/
-
 def push_ctx_β (ctx : Ctx) (t_α α' : Expr) : Option Expr :=
   match t_α with
   | DCC Sort _m =>
@@ -97,6 +108,9 @@ def push_ctx_β (ctx : Ctx) (t_α α' : Expr) : Option Expr :=
 
 def LExpr.compile (bdy : LExpr) (ctx : Ctx) : Option Expr :=
   match bdy with
+  | DLCC ∗ => .some (DCC ∗)
+  | DLCC ⊤ => .some (DCC ⊤)
+  | DLCC ⊥ => .some (DCC ⊥)
   | .idx n =>
     mk_lookup ctx n
   | DLCC Sort m => .some (DCC Sort m)
@@ -143,7 +157,7 @@ def LExpr.compile (bdy : LExpr) (ctx : Ctx) : Option Expr :=
     | _ => .none
   | DLCC (M N) => do
     let M' ← M.compile ctx
-    let N' ← M.compile ctx
+    let N' ← N.compile ctx
 
     match (← M'.infer).fst with
     | DCC (Π(f_α, f_β) x_α) =>
@@ -160,14 +174,12 @@ def LExpr.compile (bdy : LExpr) (ctx : Ctx) : Option Expr :=
 
 
           ⟨⟨N, M⟩, Snd(γ)⟩
-          (M N) = ⟨Id(α), ⟨
+          (N x, M x (N x))
+          (M N) = Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N, M⟩)⟩
         -/
 
-        .some (DCC (Sndc(#(sorry)) ∘ ⟨sorry
+        .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N', M'⟩)⟩)
       | _ => .none
     | _ => .none
 
-/-
-TODO:
-- always initialize env. with unit ∗
--/
+def LExpr.cc (root : LExpr) : Option Expr := (DLCC (root ∗)).compile Ctx.empty

@@ -113,7 +113,11 @@ def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) : Option _ro
 
 #eval (do Sigma.fst <$> (← (Lean.Expr.cc' q((λ (α : Sort 0) => λ (x : α) => x) True True.intro))).infer)
 
+#eval (DCC `(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)).infer.isSome
+#eval Sigma.fst <$> (DCC Λ(Sort 0, Id(Sort 0), `(Coup(Id(Sort 0)), Sort 1))).infer
+#eval (DCC Subst(Λ(Sort 0, Id(Sort 0), `(Coup(Id(Sort 0)), Sort 1)),
+                               Fst(`(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))))).infer.isSome
 #eval (Lean.Expr.cc' q((λ (f : ((Sort 0) → Sort 0)) => λ (x : (Sort 0)) => (f x))))
--- #eval (Lean.Expr.cc' q((λ (f : ((Sort 0) → Sort 0)) => λ (x : (Sort 0)) => (f x))))
+#eval (do Sigma.fst <$> (← (Lean.Expr.cc' q((λ (f : ((Sort 0) → Sort 0)) => λ (x : (Sort 0)) => (f x))))).infer)
 
 #eval repr (DCC ((Sort 0 : Sort 1) → Sort 0)).reduce_all

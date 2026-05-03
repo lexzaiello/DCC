@@ -1,4 +1,5 @@
 import Dcc.Ast
+import Dcc.Types
 import Dcc.Judge
 
 inductive LExpr where
@@ -11,6 +12,7 @@ inductive LExpr where
   | top    : LExpr
   | tintro : LExpr
   | sigma  : LExpr → LExpr → LExpr
+deriving Repr
 
 def Ctx := Expr
 
@@ -21,6 +23,12 @@ and pushing onto the context is Λ.
 -/
 def Ctx.empty := DCC ⊤
 
+/-
+Should be using subst here instead?
+Fstc should be nondependent anyway.
+
+
+-/
 def mk_lookup (ctx : Ctx) (idx : ℕ) : Option Expr :=
   match ctx, idx with
   | DCC Coup(β), .zero => pure <| DCC Sndc(β)
@@ -30,7 +38,7 @@ def mk_lookup (ctx : Ctx) (idx : ℕ) : Option Expr :=
     match (← β.infer).fst with
     | DCC (Π(a, _b) x_α) =>
       let ctx' := (DCC (a x_α)).reduce_all
-      (Expr.comp · (DCC Fstc(β))) <$> mk_lookup ctx' n
+      (·.comp (DCC (Fstc(β)))) <$> mk_lookup ctx' n
     | _ => .none
   | _, _ => .none
 
@@ -58,22 +66,24 @@ ctx at inner x is Coup(m, α, β)
 
 declare_syntax_cat lexpr
 
-syntax "∗"                      : lexpr
-syntax "⊤"                      : lexpr
-syntax "⊥"                      : lexpr
-syntax "Sort" term              : lexpr
-syntax "v" ident                : lexpr
-syntax num                      : lexpr
-syntax "#(" term ")"            : lexpr
-syntax "λ" ":" lexpr "→" lexpr  : lexpr
-syntax "∀" ":" lexpr "," lexpr  : lexpr
-syntax "Σ" ":" lexpr "," lexpr  : lexpr
-syntax:30 ident                 : lexpr
-syntax "(" lexpr+ ")"           : lexpr
+syntax "∗"                       : lexpr
+syntax "⊤"                       : lexpr
+syntax "⊥"                       : lexpr
+syntax "Sort" term               : lexpr
+syntax "v" ident                 : lexpr
+syntax num                       : lexpr
+syntax "#(" term ")"             : lexpr
+syntax "λ" ":" lexpr "=>" lexpr  : lexpr
+syntax lexpr "→" lexpr           : lexpr
+syntax "∀" ":" lexpr "," lexpr   : lexpr
+syntax "Σ" ":" lexpr "," lexpr   : lexpr
+syntax:30 ident                  : lexpr
+syntax "(" lexpr+ ")"            : lexpr
 
 syntax "DLCC" lexpr : term
 
 macro_rules
+  | `(DLCC $α:lexpr → $β:lexpr) => `(DLCC ∀ : $α:lexpr, $β:lexpr)
   | `(DLCC ∗) => `(LExpr.tintro)
   | `(DLCC ⊤) => `(LExpr.top)
   | `(DLCC ⊥) => `(LExpr.bot)
@@ -82,7 +92,7 @@ macro_rules
   | `(DLCC $n:num) =>
     let n' := Lean.Syntax.mkNatLit n.getNat
     `(LExpr.idx $n')
-  | `(DLCC λ :$α:lexpr → $x:lexpr) =>
+  | `(DLCC λ :$α:lexpr => $x:lexpr) =>
     `(LExpr.lam (DLCC $α) (DLCC $x))
   | `(DLCC ∀ :$α:lexpr, $x:lexpr)   =>
     `(LExpr.forE (DLCC $α) (DLCC $x))
@@ -103,7 +113,7 @@ def LExpr.abstract (bdy : LExpr) (ctx : Ctx) : Option Expr :=
     let α' ← α.abstract ctx
     let β' ← β.abstract (DCC Coup(α'))
     .some (DCC Σ(β'))
-  | DLCC (λ : α → bdy) => do
+  | DLCC (λ : α => bdy) => do
     -- how to append context?
     /-
       α may depend on env, so we abstract it
@@ -117,10 +127,13 @@ def LExpr.abstract (bdy : LExpr) (ctx : Ctx) : Option Expr :=
     let α' ← α.abstract ctx
     let β' ← β.abstract (DCC Coup(α'))
 
-    .some (DCC (Π(α', β')))
+    .some (DCC (Π(α', Λ(ctx, α', β'))))
   | DLCC (M N) => do
+    dbg_trace repr M
     let M' ← M.abstract ctx
+    dbg_trace M'
     let N' ← N.abstract ctx
+    dbg_trace Sigma.fst <$> M'.infer
 
     match (← M'.infer).fst with
     | DCC (Π(f_α, f_β) x_α) =>
@@ -151,9 +164,9 @@ def LExpr.abstract (bdy : LExpr) (ctx : Ctx) : Option Expr :=
 
 def LExpr.cc (root : LExpr) : Option Expr :=
   match root with
-  | DLCC ((λ :α → bdy) x) => do
+  | DLCC ((λ :α => bdy) x) => do
     let ctx₀ := Ctx.empty
-    let f' ← (DLCC (λ :α → bdy)).abstract ctx₀
+    let f' ← (DLCC (λ :α => bdy)).abstract ctx₀
     let x' ← x.cc
     .some (DCC (f' ∗ x'))
   | DLCC (M N) => do
@@ -166,18 +179,34 @@ def LExpr.cc (root : LExpr) : Option Expr :=
   | DLCC Sort m => .some (DCC Sort m)
   | e => (·.app .tintro) <$> abstract e Ctx.empty
 
-#eval (DLCC ((λ : (Sort 1) → 0) (Sort 0))).cc
-#eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 1) → 0) (Sort 0))).cc).infer)
-#eval (DLCC ((λ : (Sort 1) → λ : 0 → 0))).cc
-#eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 0) → λ : 0 → 0) ⊤ ∗)).cc).infer)
-#eval (DLCC ((λ : (Sort 2) → λ : 0 → 0))).cc
+#eval (DLCC ((λ : (Sort 1) => 0) (Sort 0))).cc
+#eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 1) => 0) (Sort 0))).cc).infer)
+#eval (DLCC ((λ : (Sort 1) => λ : 0 => 0))).cc
+#eval (DLCC ((λ : (Sort 0) => λ : 0 => 0) ⊤ ∗)).cc
+#eval (do Sigma.fst <$> (← (DLCC ((λ : (Sort 0) => λ : 0 => 0) ⊤ ∗)).cc).infer)
+#eval (DLCC ((λ : (Sort 2) => λ : 0 => 0))).cc
 #eval Sigma.fst <$> (DCC Sndc(Sndc(`(⊤, Sort 2)))).infer
 #eval Sigma.fst <$> (DCC Sndc(`(⊤, Sort 2))).infer
 #eval Sigma.fst <$> (DCC Λ(Coup(`(⊤, Sort 2)), Sndc(`(⊤, Sort 2)), Sndc(Sndc(`(⊤, Sort 2))))).infer
 #eval Sigma.fst <$> (DCC Sndc(Sndc(`(⊤, Sort 2)))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC `(⊤, Sndc(`(⊤, Sort 2)))).infer
---#eval (do Sigma.fst <$> (← (DLCC (λ : (Sort 2) → λ : 0 → 0)).cc).infer)
+--#eval (do Sigma.fst <$> (← (DLCC (λ : (Sort 2) => λ : 0 => 0)).cc).infer)
 
 /-
 TODO Σ-terms compile
 -/
+
+/-
+This does not pass judgment.
+`(Coup(Π(`(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))), Sort 0)
+
+I think the issue is that we need to curry the environment first.
+-/
+#eval (DCC `(Coup(`(⊤, Sort 0)), Sort 0)).infer.isSome
+
+#eval Sigma.fst <$> (DCC Fstc(Id(Sort 1))).infer
+
+#eval (DLCC (λ : ((Sort 0) → Sort 0) => λ : (Sort 0) => (1 0))).cc
+#eval Sigma.fst <$> (DCC Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))).infer
+
+#eval Sigma.fst <$> (DCC Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))).infer

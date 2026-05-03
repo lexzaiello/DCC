@@ -1,6 +1,8 @@
 import Dcc.Ast
 import Dcc.Types
 import Dcc.Judge
+import Lean
+import Qq
 
 inductive LExpr where
   | idx    : ℕ     → LExpr
@@ -42,6 +44,82 @@ def mk_lookup (ctx : Ctx) (idx : ℕ) : Option Expr :=
     | _ => .none
   | _, _ => .none
 
+open Lean Qq in def abstract_lean (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
+  match e with
+  | .bvar n => mk_lookup ctx n
+  | .app (.app (.const ``Sigma []) α) β => do
+    let α' ← abstract_lean α ctx
+    let β' ← abstract_lean β (DCC Coup(α'))
+    .some (DCC Σ(β'))
+  | .lam _a α bdy _binfo => do
+    let α' ← abstract_lean α ctx
+    let inner ← abstract_lean bdy (DCC Coup(α'))
+    .some (DCC Λ(ctx, α', inner))
+  | .forallE _name α β _binfo => do
+    let α' ← abstract_lean α ctx
+    let β' ← abstract_lean β (DCC Coup(α'))
+
+    .some (DCC (Π(α', Λ(ctx, α', β'))))
+  | .app M N => do
+    let M' ← abstract_lean M ctx
+    let N' ← abstract_lean N ctx
+
+    match (← M'.infer).fst with
+    | DCC (Π(f_α, f_β) x_α) =>
+      let α := (DCC (f_α x_α)).reduce_all
+
+      dbg_trace M'
+      dbg_trace (← M'.infer).fst.reduce_all
+      dbg_trace (DCC (f_β x_α)).reduce_all
+
+      match (DCC (f_β x_α)).reduce_all with
+      | DCC (Π(_f_β, γ)) =>
+        /-
+          ⟨N, M⟩ x = ⟨Id(α), Snd(γ) ∘ ⟨N, M⟩⟩ x = (x, (N x, M x (N x)) x)
+          ⟨?, Snd(γ)⟩ x = (? x, Snd(γ) x ?)
+          ⟨⟨N, M⟩, Snd(γ)⟩
+          ⟨⟨N, M⟩, Snd(γ)⟩ x = ((N x, M x (N x)), Snd(γ) x (N x, M x (N x)))
+          = (..., M x (N x))
+
+
+          ⟨⟨N, M⟩, Snd(γ)⟩
+          (N x, M x (N x))
+          (M N) = Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N, M⟩)⟩
+        -/
+
+        .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N', M'⟩)⟩)
+      | _ => .none
+    | _ => .none
+  | .const ``True.intro [] => DCC (`(ctx, ∗))
+  | .const ``True [] => DCC (`(ctx, ⊤))
+  | .const ``False [] => DCC (`(ctx, ⊥))
+  | .sort .zero => DCC (`(ctx, Sort 0))
+  | .sort (.succ m) => do
+    match ← (abstract_lean (.sort m)) ctx with
+    | DCC Sort n => pure (DCC Sort (n + 1))
+    | _ => .none
+  | _ => .none
+
+def cc_lean (root : Lean.Expr) : Option _root_.Expr :=
+  match root with
+  | .app (.lam _a α bdy _binfo) x => do
+    let ctx₀ := Ctx.empty
+    let f' ← abstract_lean (.lam _a α bdy _binfo) ctx₀
+    let x' ← cc_lean x
+    .some (DCC (f' ∗ x'))
+  | .app M N => do
+    let M' ← cc_lean M
+    let N' ← cc_lean N
+    .some (DCC (M' N'))
+  | .const ``True.intro [] => DCC (∗)
+  | .const ``True [] => DCC (⊤)
+  | .const ``False [] => DCC (⊥)
+  | .sort .zero => DCC (Sort 0)
+  | .sort (.succ m) => do
+    match ← (cc_lean (.sort m)) with
+    | DCC Sort n => pure (DCC Sort (n + 1))
+    | _ => .none
+  | e => (·.app .tintro) <$> abstract_lean e Ctx.empty
 /-
 Snd is our debruijn index 1 because we always have an environment.
 
@@ -129,15 +207,16 @@ def LExpr.abstract (bdy : LExpr) (ctx : Ctx) : Option Expr :=
 
     .some (DCC (Π(α', Λ(ctx, α', β'))))
   | DLCC (M N) => do
-    dbg_trace repr M
     let M' ← M.abstract ctx
-    dbg_trace M'
     let N' ← N.abstract ctx
-    dbg_trace Sigma.fst <$> M'.infer
 
     match (← M'.infer).fst with
     | DCC (Π(f_α, f_β) x_α) =>
       let α := (DCC (f_α x_α)).reduce_all
+
+      dbg_trace M'
+      dbg_trace (← M'.infer).fst.reduce_all
+      dbg_trace (DCC (f_β x_α)).reduce_all
 
       match (DCC (f_β x_α)).reduce_all with
       | DCC (Π(_f_β, γ)) =>
@@ -202,11 +281,22 @@ This does not pass judgment.
 
 I think the issue is that we need to curry the environment first.
 -/
-#eval (DCC `(Coup(`(⊤, Sort 0)), Sort 0)).infer.isSome
 
-#eval Sigma.fst <$> (DCC Fstc(Id(Sort 1))).infer
-
+-- Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))
 #eval (DLCC (λ : ((Sort 0) → Sort 0) => λ : (Sort 0) => (1 0))).cc
-#eval Sigma.fst <$> (DCC Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))).infer
+
+#eval (DCC Subst(`(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+           Fst(`(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))))).infer.isSome
+#eval (DCC Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))).infer.isSome
 
 #eval Sigma.fst <$> (DCC Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))).infer
+
+/-
+No easy way to extract the nested Π.
+we could look at the input type and extract a "fake" witness.
+
+we could also do this through η-reduction.
+move the logic into f_α and f_β.
+
+We could also pair our LCC exprs with lean exprs, or just write them in Lean altogether.
+-/

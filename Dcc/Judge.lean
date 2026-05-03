@@ -85,15 +85,17 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (id.type α m) τ
     → Judge (DCC Id(α)) τ
   | comp'  : Judge g (DCC ((α : Sort m) → β))
-    → Judge f (DCC (Π(Id(Sort n), γ) β))
-    → Reduces (comp'.type α β γ g m) τ
+    → Judge f (DCC (Π(f_β, f_γ) x_β))
+    → Reduces (DCC (f_β x_β)) β
+    → Reduces (DCC (f_γ x_β)) γ
+    → Reduces (comp'.type α γ g m) τ
     → Judge (DCC f ∘ g) τ
   /-
     f_β δ : α → Sort n
     Fst(f_β, δ) : Σ(f_β) δ → α
   -/
   | fst    : Judge f_β (fst.f_β.type α δ m n o)
-    → Reduces (fst.type α f_β δ o) τ
+    → Reduces (fst.type α f_β δ n o) τ
     → Judge (DCC Fst(f_β)) τ
   /-
     f_β δ : α → Sort n
@@ -142,7 +144,8 @@ inductive Judge : Expr → Expr → Prop where
     x : ∀ (env : δ) (x : 
     Subst(x, Fst(f_β)) : 
   -/
-  | subst₁ : Judge x (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
+  | subst₁ : Judge x
+    (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(`(δ, α), γ)) ∘ Snd'(Sort o, δ)) δ))
     → Reduces (Subst₁.type β γ δ o) τ
     → Judge (DCC Subst(x, Fst(β))) τ
   /-
@@ -225,9 +228,9 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     match with_arr (infer g) with
     | .some ⟨_, _α, β, _m, ⟨ht₁⟩, ⟨harr₁⟩⟩ =>
       match (infer f) with
-      | .some ⟨(DCC (Π(Id(Sort _n₂), _γ) β₂)), ⟨ht₂⟩⟩ =>
-        if heq : β₂ = β then
-          .some ⟨_, ⟨.comp' (harr₁ ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
+      | .some ⟨(DCC (Π(f_β, _γ) x_β)), ⟨ht₂⟩⟩ =>
+        if heq : (DCC (f_β x_β)).reduce_all = β then
+          .some ⟨_, ⟨.comp' (harr₁ ▸ ht₁) ht₂ (reduce_reduces heq) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
     | _ => .none

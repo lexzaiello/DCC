@@ -108,8 +108,8 @@ f_β : δ → α → Sort n
 Fst(f_β) : ∀ (env : δ) (s : Σ(f_β) env), α
 -/
 
-@[dcc_judge] abbrev fst.type (α f_β δ : Expr) (o : Level) : Expr :=
-  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(f_β), Λ(δ, Σ(f_β), `(Coup(Σ(f_β)), α))))) δ)
+@[dcc_judge] abbrev fst.type (α f_β δ : Expr) (n o : Level) : Expr :=
+  DCC (Π(Id(Sort o), `(Sort o, (Π(Id(Sort n), Λ(Sort n, Id(Sort n), `(Coup(Id(Sort n)), α))) ∘ Σ(f_β)))) δ)
 
 /-
 Snd(f_β) : ∀ (env : δ) (s : Σ(f_β) env), f_β env (Fst(f_β) env s)
@@ -154,8 +154,8 @@ g : ∀ (x : α) (y : β x), γ x y
 @[dcc_judge] abbrev pair.type (α γ : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, Σ(γ))) α)
 
-@[dcc_judge] abbrev comp'.type (α β γ g : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, (γ β) ∘ g)) α)
+@[dcc_judge] abbrev comp'.type (α γ g : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) α)
 
 @[dcc_judge] abbrev snd'.type (α β : Expr) (m n : Level) : Expr :=
   DCC (Coup(`(α, β)) : Sort max m n) → β
@@ -233,6 +233,8 @@ def toFormat (e : Expr) : Std.Format :=
   | (DCC Snd(β))              => comb "Snd" [β.toFormat]
   | (DCC Snd'(α, β))          => comb "Snd'" [α.toFormat, β.toFormat]
   | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat, β.toFormat, e.toFormat]
+  | DCC (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
+    sepD [(paren (sepD [α.toFormat, s!"Sort {m}"] " :")), β.toFormat] " →"
   | (DCC Π(α, β))             =>
     comb "Π" [α.toFormat, β.toFormat]
   | (DCC ⟨a, b⟩)              => (angle (sepD [a.toFormat, b.toFormat] (indent := 1)))

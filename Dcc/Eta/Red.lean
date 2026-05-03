@@ -5,6 +5,13 @@ import Dcc.Eta.Size
 import Dcc.Aff.Red
 
 /-
+(Subst(`(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+         Fst(`(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))))
+     ∗) ∘
+  Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))
+-/
+
+/-
 Σ-normalization to Coup:
 
 Σ(f_β) env

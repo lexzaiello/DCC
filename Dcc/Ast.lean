@@ -91,3 +91,6 @@ macro_rules
   | `(DCC #($t:term))                            => `($t)
   | `(DCC $idt:ident)                            => `($idt:term)
   | `(DCC ($t:expr))                             => `(DCC $t)
+
+def runDcc : Lean.Syntax → Lean.MacroM Lean.Syntax
+  | `(expr| $e:expr) => `(DCC $e:expr)

@@ -1,9 +1,6 @@
 import Dcc.Ast
 import Dcc.Judge
-import Qq
 import Lean
-
-open Qq
 
 def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
   match e with
@@ -81,7 +78,7 @@ elab "dcc_trace" e:expr : command => do
           <| Lean.Elab.Term.withoutErrToSorry
             (Lean.Elab.Term.elabTermEnsuringType stx' (.some (.const ``_root_.Expr [])) >>= decode_dcc)
         let fmt := ((Std.format ∘ Sigma.fst) <$> e.infer).getD "?"
-        Lean.logInfoAt stx fmt
+        Lean.logInfoAt stx m!"{stx}: {fmt}"
       catch _e =>
         continue
 

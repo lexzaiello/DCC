@@ -124,3 +124,4 @@ def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) : Option _ro
 
 #eval repr (DCC ((Sort 0 : Sort 1) → Sort 0)).reduce_all
 
+-- ⟨N, Λ(?)⟩ x = (N x, M x (N x))

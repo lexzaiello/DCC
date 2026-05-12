@@ -7,7 +7,7 @@ inductive EtaSize : Expr → ℕ → Prop
   | tintro : EtaSize (DCC ∗) 0
   | top    : EtaSize (DCC ⊤) 0
   | bot    : EtaSize (DCC ⊥) 1
-  | subst  : EtaSize x m → EtaSize y n → EtaSize (DCC Subst(x, y)) (m + n).succ.succ
+  | subst  : EtaSize x m → EtaSize y n → EtaSize (DCC Subst(x, y)) (m + m + n).succ.succ.succ
   | sig    : EtaSize β m → EtaSize (DCC Σ(β)) m.succ
   | coup   : EtaSize x m → EtaSize y n → EtaSize (DCC ⟦β⟧(x, y)) (m + n).succ
   | sort   : EtaSize (DCC Sort m) 1
@@ -17,7 +17,7 @@ inductive EtaSize : Expr → ℕ → Prop
   | fst    : EtaSize (DCC Fst(_α)) 2
   | snd'   : EtaSize (DCC Snd'(δ, β)) 2
   | snd    : EtaSize (DCC Snd(_α)) 2
-  | comp   : EtaSize f m → EtaSize g n → EtaSize (DCC (f ∘ g)) (m + n).succ.succ
+  | comp   : EtaSize f m → EtaSize g n → EtaSize (DCC (f ∘ g)) (m + m + n).succ.succ
   | pair   : EtaSize f m → EtaSize g n → EtaSize (DCC ⟨f, g⟩) (m + n).succ.succ
   | curr   : EtaSize x m → EtaSize (DCC Λ(α, β, x)) m.succ.succ
   | app    : EtaSize f m → EtaSize x n → EtaSize (DCC (f x)) (m + n)

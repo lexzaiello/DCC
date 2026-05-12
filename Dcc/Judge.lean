@@ -142,8 +142,8 @@ inductive Judge : Expr → Expr → Prop where
     → Judge (DCC ⟨f, g⟩) τ
   /-
     f_β : ∀ (env : δ) (s : Σ(f_β) env), Sort n
-    x : ∀ (env : δ) (x : 
-    Subst(x, Fst(f_β)) : 
+    x : ∀ (env : δ) (x :
+    Subst(x, Fst(f_β)) :
   -/
   | subst₁ : Judge x (Subst₁.x.type α γ δ m o)
     → Reduces (Subst₁.type β γ δ o) τ

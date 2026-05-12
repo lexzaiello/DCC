@@ -9,7 +9,7 @@ import Init.Prelude
 namespace Expr
 
 @[simp]
-theorem id_pure_ext {α : Type u} (x : α) : (pure x : Id α) = x := rfl
+theorem id_pure_ext.{u} {α : Type u} (x : α) : (pure x : Id α) = x := rfl
 
 def IsNorm.{u} {α : Type u} (r : α → α → Prop) (A : α) := ¬ ∃ B, r A B
 
@@ -61,7 +61,7 @@ class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ → Prop))
     induction h
     all_goals (
       try dsimp
-      try simp_all [dcc_rel, dcc_size]
+      try simp_all [dcc_rel, dcc_size, Rel.run]
       try grind
       try aesop (rule_sets := [DccRel, DccSize])
       try rfl)
@@ -104,7 +104,7 @@ termination_by (hT.run e).fst
 @[dcc_reduce, inline] abbrev reduce' {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
   (e : Expr) : Expr := (reduce r e).fst
 
-open RedRel in def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : Measure t] (hR : RedRel r t (hM := hM)) : RedRel (Relation.TransGen r) (hM := hM) t where
+open RedRel in @[reducible] def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : Measure t] (hR : RedRel r t (hM := hM)) : RedRel (Relation.TransGen r) (hM := hM) t where
   decreasing := fun h => by
     induction h with
     | single h =>
@@ -124,8 +124,8 @@ open RedRel in def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : 
         | refl => simp_all
         | single h => exact h⟩⟩
 
-def RedRel.to_reflTrans {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} [hM : Measure t] (hR : RedRel r t (hM := hM) (m := Option)) : Rel.{0, 0, 0}
-  (fun x y => PULift.{1, 0} (Relation.ReflTransGen.{0} r x y)) Id.{0} where
+@[reducible] def RedRel.to_reflTrans {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} [hM : Measure t] (hR : RedRel r t (hM := hM) (m := Option)) : Rel.{0, 0, 0}
+  (fun (x y : Expr) => PULift.{1, 0} (Relation.ReflTransGen r x y)) Id.{0} where
   run := reduce r
 
 instance RedRel.instReflTransRel {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop}
@@ -210,9 +210,9 @@ macro_rules
 
 open Rel in class Confluent.{u} {α : Type u} (r : α → α → Prop)
   (m : (α → α → Prop) → α → α → Prop := fun x => x) where
-  conf : (m r A B) → (m r A C) → ∃ D, Relation.ReflTransGen.{u} r B D ∧ Relation.ReflTransGen.{u} r C D
+  conf : (m r A B) → (m r A C) → ∃ D, Relation.ReflTransGen r B D ∧ Relation.ReflTransGen r C D
 
-open Confluent in def RedRel.globally_confluent
+open Confluent in @[reducible] def RedRel.globally_confluent
   {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} {m : Type → Type}
   [hM : Measure t] [Monad m] [hC : Confluent r]
   [hR : RedRel r t (m := m) (hM := hM)] : (Confluent r (m := Relation.ReflTransGen)) where

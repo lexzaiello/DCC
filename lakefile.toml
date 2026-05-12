@@ -11,12 +11,17 @@ name = "Docs"
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
-rev = "v4.26.0"
+rev = "v4.29.0"
 
 [[require]]
 name = "verso"
 git = "https://github.com/leanprover/verso"
-rev = "v4.26.0-rc2"
+rev = "v4.29.0"
+
+[[require]]
+name = "verso-slides"
+git = "https://github.com/leanprover/verso-slides"
+rev = "v4.29.0"
 
 [[lean_exe]]
 name = "docs"

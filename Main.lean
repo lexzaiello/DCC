@@ -4,22 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 
-import Std.Data.HashMap
-import VersoManual
+import VersoSlides
+import DccSlides
 
-import Docs
+open VersoSlides
 
-open Verso Doc
-open Verso.Genre Manual
-
-open Std (HashMap)
-
-open Docs
-
-def config : Config where
-  emitTeX := false
-  emitHtmlSingle := false
-  emitHtmlMulti := true
-  htmlDepth := 2
-
-def main := manualMain (%doc Docs) (config := config)
+def main : IO UInt32 :=
+  slidesMain
+    (config := { theme := "white", slideNumber := true,
+                 transition := "fade", center := true, mathPrelude :=
+      "\\def\\RR{\\mathbb{R}}\n\\newcommand{\\Hom}[2]{\\mathrm{Hom}(#1, #2)}\n" })
+    (doc := %doc DccSlides)

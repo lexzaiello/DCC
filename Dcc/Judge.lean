@@ -145,7 +145,8 @@ inductive Judge : Expr → Expr → Prop where
   | pair   : Judge f (DCC (Π(f_α, f_β) x_α))
     → Reduces (DCC (f_β x_α)) β
     → Judge g (DCC (Π(Id(Sort m), f_β₂) α))
-    → Reduces (DCC (f_β₂ α)) (DCC (Π(β, γ)))
+    → Reduces (DCC (f_β₂ α)) (DCC (Π(β₂, γ)))
+    → Reduces β₂ β
     → Reduces (DCC (f_α x_α)) α
     → Reduces (pair.type α γ m) τ
     → Judge (DCC ⟨f, g⟩) τ
@@ -334,13 +335,14 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
       let β := (DCC (f_β x_α)).reduce_all
       match heqm : (DCC (f_β₂ α)).reduce_all with
       | DCC (Π(β₂, γ)) =>
-        if heq : α₂ = α ∧ β₂ = β then
+        if heq : α₂ = α ∧ β₂.reduce_all = β then
           have ⟨h₁, h₃⟩ := heq
           .some ⟨_, ⟨.pair
             ht₁
             (reduce_reduces rfl)
             ht₂
-            (reduce_reduces (h₃ ▸ heqm))
+            (reduce_reduces heqm)
+            (reduce_reduces h₃)
             (reduce_reduces h₁)
             (reduce_reduces rfl)⟩⟩
         else .none

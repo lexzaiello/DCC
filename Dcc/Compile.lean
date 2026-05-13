@@ -54,14 +54,10 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
     let M' ← Lean.Expr.abstract' M ctx
     let N' ← Lean.Expr.abstract' N ctx
 
-    dbg_trace Sigma.fst <$> M'.infer
-    dbg_trace Sigma.fst <$> N'.infer
-
-    dbg_trace Sigma.fst <$> (DCC ⟨N', M'⟩).infer
-
     match (← M'.infer).fst with
     | DCC (Π(f_α, f_β) x_α) =>
       let α := (DCC (f_α x_α)).reduce_all
+      dbg_trace Sigma.fst <$> (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘ Fstc(`(α, α)))⟩).infer
 
       match (DCC (f_β x_α)).reduce_all with
       | DCC Π(_f_β, γ) =>
@@ -78,7 +74,7 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
           (M N) = Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N, M⟩)⟩
         -/
 
-        .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N', M'⟩)⟩)
+        .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘ Fstc(`(α, α)))⟩)
       | _ => .none
     | _ => .none
   | .const ``True.intro [] => DCC (`(ctx, ∗))

@@ -1,6 +1,6 @@
+import Mathlib
 import VersoSlides
 import Verso.Doc.Concrete
-import Lean4Lean.Theory.Typing.Strong
 
 open VersoSlides
 
@@ -19,15 +19,26 @@ $$`\frac{\Gamma \vdash M : A \quad A =_{\beta} B \quad \Gamma \vdash B : K}{\Gam
 
 In the _Calculus of Constructions_, if $`A` has type $`B` and $`C` is def-eq. ($`=_{\beta}`) $`B`, then $`A : C`.
 
+# Example: Types Can Contain Computations
+
+```lean
+def ex : (if 1 == 1 then ℕ else ℝ) :=
+--                              ^ !click
+  .zero
+
+#check ex
+-- !fragment fadeUp
+#check (fun (x : ℕ) => x) ex
+-- !fragment fadeUp
+```
+
 # Definitional Equality is Complicated: Lean4Lean
 
-%%%
-vertical := some true
-%%%
+Lean4Lean is a formalization of Lean's metatheory in Lean. It defines definitional equality in a 67-line inductive.
 
-Lean4Lean is a formalization of Lean's metatheory in Lean. It defines definitional equality in a 67-line inductive:
+# Def-eq / conversion: Lean4Lean
 
-```leanLibCode Lean4Lean.Theory.Typing.Strong (startLine := 16) (endLine := 84)
+```leanLibCode Lean4Lean.Theory.Typing.Strong (startLine := 16) (endLine := 32)
 inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop where
   | bvar : Lookup Γ i A → u.WF uvars → Γ ⊢ A : .sort u → Γ ⊢ .bvar i : A
   | symm : Γ ⊢ e ≡ e' : A → Γ ⊢ e' ≡ e : A
@@ -45,56 +56,12 @@ inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop wher
     [] ⊢ ci.type.instL ls ≡ ci.type.instL ls' : .sort u →
     Γ ⊢ ci.type.instL ls ≡ ci.type.instL ls' : .sort u →
     Γ ⊢ .const c ls ≡ .const c ls' : ci.type.instL ls
-  | appDF :
-    u.WF uvars → v.WF uvars →
-    Γ ⊢ A : .sort u →
-    A::Γ ⊢ B : .sort v →
-    Γ ⊢ f ≡ f' : .forallE A B →
-    Γ ⊢ a ≡ a' : A →
-    Γ ⊢ B.inst a ≡ B.inst a' : .sort v →
-    Γ ⊢ .app f a ≡ .app f' a' : B.inst a
-  | lamDF :
-    u.WF uvars → v.WF uvars →
-    Γ ⊢ A ≡ A' : .sort u →
-    A::Γ ⊢ B : .sort v →
-    A'::Γ ⊢ B : .sort v →
-    A::Γ ⊢ body ≡ body' : B →
-    A'::Γ ⊢ body ≡ body' : B →
-    Γ ⊢ .lam A body ≡ .lam A' body' : .forallE A B
-  | forallEDF :
-    u.WF uvars → v.WF uvars →
-    Γ ⊢ A ≡ A' : .sort u →
-    A::Γ ⊢ body ≡ body' : .sort v →
-    A'::Γ ⊢ body ≡ body' : .sort v →
-    Γ ⊢ .forallE A body ≡ .forallE A' body' : .sort (.imax u v)
-  | defeqDF :
-    u.WF uvars → Γ ⊢ A ≡ B : .sort u → Γ ⊢ e1 ≡ e2 : A → Γ ⊢ e1 ≡ e2 : B
-  | beta :
-    u.WF uvars → v.WF uvars → Γ ⊢ A : .sort u → A::Γ ⊢ B : .sort v →
-    A::Γ ⊢ e : B → Γ ⊢ e' : A →
-    Γ ⊢ B.inst e' : .sort v →
-    Γ ⊢ e.inst e' : B.inst e' →
-    Γ ⊢ .app (.lam A e) e' ≡ e.inst e' : B.inst e'
-  | eta :
-    u.WF uvars → v.WF uvars →
-    Γ ⊢ A : .sort u →
-    A::Γ ⊢ B : .sort v →
-    A.lift::A::Γ ⊢ B.liftN 1 1 : .sort v →
-    Γ ⊢ e : .forallE A B →
-    A::Γ ⊢ e.lift : .forallE A.lift (B.liftN 1 1) →
-    A::Γ ⊢ A.lift : .sort u →
-    Γ ⊢ .lam A (.app e.lift (.bvar 0)) ≡ e : .forallE A B
-  | proofIrrel :
-    Γ ⊢ p : .sort .zero → Γ ⊢ h : p → Γ ⊢ h' : p →
-    Γ ⊢ h ≡ h' : p
-  | extra :
-    env.defeqs df → (∀ l ∈ ls, l.WF uvars) → ls.length = df.uvars →
-    u.WF uvars →
-    [] ⊢ df.type.instL ls : .sort u →
-    [] ⊢ df.lhs.instL ls : df.type.instL ls →
-    [] ⊢ df.rhs.instL ls : df.type.instL ls →
-    Γ ⊢ df.lhs.instL ls : df.type.instL ls →
-    Γ ⊢ df.rhs.instL ls : df.type.instL ls →
-    Γ ⊢ df.lhs.instL ls ≡ df.rhs.instL ls : df.type.instL ls
+```
 
+# Problem: Type-checking runs programs (might not terminate)
+
+## Classic example: Omega combinator
+
+```lean
+#check_failure (fun x => x x) (fun x => x x)
 ```

@@ -298,7 +298,5 @@ Since none of our primitive types invoke $`dpair`, our types are strongly-normal
 6. I use the reducer in my inference function
 7. I avoid conversion *altogether* by reducing types to normal form eagerly in each judgment constructor
 8. I use completeness + soundness of the reducer to show soundness + completeness of `infer`
-9. I show completeness + soundness of `infer`
-10. *I show type-checking is decidable*
-
+9. *I show type-checking is decidable*
 

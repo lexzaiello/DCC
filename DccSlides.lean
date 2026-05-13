@@ -1,6 +1,8 @@
 import Mathlib
 import VersoSlides
 import Verso.Doc.Concrete
+import Dcc.Ast
+import Dcc.Judge
 
 open VersoSlides
 
@@ -32,6 +34,53 @@ def ex : (if 1 == 1 then ℕ else ℝ) :=
 -- !fragment fadeUp
 ```
 
+# Problem: Type-checking runs programs (might not terminate)
+
+Classic example: Omega combinator
+
+```lean
+#check_failure (fun x => x x) (fun x => x x)
+-- !fragment fadeUp
+```
+
+# Strong-Normalization
+
+Strong normalization is defined in Mathlib:
+
+```lean
+/--
+`Acc` is the accessibility predicate. Given some relation `r` (e.g. `<`) and a value `x`,
+`Acc r x` means that `x` is accessible through `r`:
+
+`x` is accessible if there exists no infinite sequence `... < y₂ < y₁ < y₀ < x`.
+-/
+inductive Acc' {α : Sort u} (r : α → α → Prop) : α → Prop where
+  /--
+  A value is accessible if for all `y` such that `r y x`, `y` is also accessible.
+  Note that if there exists no `y` such that `r y x`, then `x` is accessible. Such an `x` is called a
+  _base case_.
+  -/
+  | intro (x : α) (h : (y : α) → r y x → Acc' r y) : Acc' r x
+```
+
+# Strong-Normalization
+
+Strong normalization says that there is *no infinite series of reductions* on some object with respect to a relation.
+
+Lean knows a program will terminate if it follows the typing rules.
+
+```lean
+variable (MyExpr : Type) (MyJudge : MyExpr → MyExpr → Prop) (StepsTo : MyExpr → MyExpr → Prop)
+-- If an expression is well typed at t, then there is no infinite sequence of reductions.
+-- Reduction will terminate
+theorem sn_typed {e t : MyExpr} (ht : MyJudge e t) : Acc (fun a b => StepsTo b a) e := by
+  sorry
+```
+
+# Problem: The Meta-Theoretical Ouroboros
+
+To prove strong-normalization, you usually need to prove theorems about type-checking:
+
 # Definitional Equality is Complicated: Lean4Lean
 
 Lean4Lean is a formalization of Lean's metatheory in Lean. It defines definitional equality in a 67-line inductive.
@@ -56,12 +105,4 @@ inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop wher
     [] ⊢ ci.type.instL ls ≡ ci.type.instL ls' : .sort u →
     Γ ⊢ ci.type.instL ls ≡ ci.type.instL ls' : .sort u →
     Γ ⊢ .const c ls ≡ .const c ls' : ci.type.instL ls
-```
-
-# Problem: Type-checking runs programs (might not terminate)
-
-## Classic example: Omega combinator
-
-```lean
-#check_failure (fun x => x x) (fun x => x x)
 ```

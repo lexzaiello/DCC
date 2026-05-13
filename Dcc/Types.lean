@@ -89,7 +89,7 @@ Fstc(β) : ∀ (s : Coup(β)), α
 Sndc(β) : ∀ (s : Coup(β)), (β ∘ Fstc(β)) s
 -/
 @[dcc_judge] abbrev sndc.type (β : Expr) (m n : Level) : Expr :=
-  DCC (Π(Id(Sort (max m n)), `(Sort (max m n), β ∘ Fstc(β))) Coup(β))
+  DCC (Π(Id(Sort (max m n)), `(Sort (max m n), β ∘' Fstc(β))) Coup(β))
 
 /-
 f_β : δ → α → Sort n
@@ -97,7 +97,7 @@ Fst(f_β) : ∀ (env : δ) (s : Σ(f_β) env), α
 -/
 
 @[dcc_judge] abbrev fst.type (α f_β δ : Expr) (n o : Level) : Expr :=
-  DCC (Π(Id(Sort o), `(Sort o, (Π(Id(Sort n), Λ(Sort n, Id(Sort n), `(Coup(Id(Sort n)), α))) ∘ Σ(f_β)))) δ)
+  DCC (Π(Id(Sort o), `(Sort o, (Π(Id(Sort n), Λ(Sort n, Id(Sort n), `(Coup(Id(Sort n)), α))) ∘' Σ(f_β)))) δ)
 
 /-
 Snd(f_β) : ∀ (env : δ) (s : Σ(f_β) env), f_β env (Fst(f_β) env s)
@@ -143,7 +143,14 @@ g : ∀ (x : α) (y : β x), γ x y
   DCC (Π(Id(Sort m), `(Sort m, Σ(γ))) α)
 
 @[dcc_judge] abbrev comp'.type (α γ g : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) α)
+  DCC (Π(Id(Sort m), `(Sort m, γ ∘' g)) α)
+
+/-
+g : ∀ (x : α), Σ(f_β) x
+f : ∀ (x : 
+f ∘ g
+-/
+--@[dcc_judge]
 
 @[dcc_judge] abbrev snd'.type (α β : Expr) (m n : Level) : Expr :=
   DCC (Coup(`(α, β)) : Sort max m n) → β
@@ -175,7 +182,7 @@ x : ∀ (env : δ) (x : α), γ env x
 Subst(x, Fst(β)) : ∀
 -/
 @[dcc_judge] abbrev Subst₁.type (β γ δ : Expr) (o : Level) : Expr :=
-  (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(β), Subst(γ, Fst(β))) ∘ Snd'(Sort o, δ))) δ))
+  (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(β), Subst(γ, Fst(β))) ∘' Snd'(Sort o, δ))) δ))
 -- (Π(Id(Sort 1), `(Sort 1, Π(Id(Sort 0), Λ(Sort 0, Id(Sort 0), `(Coup(Id(Sort 0)), Sort 2))))) Sort 0)
 @[dcc_judge] abbrev Subst₁.x.type (α γ δ : Expr) (m o : Level) : Expr :=
   (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), `(Coup(Id(Sort o)), (Π(Id(Sort m), γ) α)))) δ))
@@ -233,6 +240,8 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC Σ(β))                => comb "Σ" [β.toFormat pretty]
   | (DCC f ∘ g)               =>
     sepD [f.toFormat pretty, g.toFormat pretty] " ∘"
+  | (DCC f ∘' g)               =>
+    sepD [f.toFormat pretty, g.toFormat pretty] " ∘'"
   | (DCC (f x))               =>
     if pretty then
       match heq₁ : (DCC (f x)) with

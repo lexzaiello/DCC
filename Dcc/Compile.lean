@@ -30,7 +30,7 @@ def mk_lookup (ctx : Ctx) (idx : ℕ) : Option Expr :=
     match (← β.infer).fst with
     | DCC (Π(a, _b) x_α) =>
       let ctx' := (DCC (a x_α)).reduce_all
-      (·.comp (DCC (Fstc(β)))) <$> mk_lookup ctx' n
+      (·.comp' (DCC (Fstc(β)))) <$> mk_lookup ctx' n
     | _ => .none
   | _, _ => .none
 
@@ -57,7 +57,7 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
     match (← M'.infer).fst with
     | DCC (Π(f_α, f_β) x_α) =>
       let α := (DCC (f_α x_α)).reduce_all
-      dbg_trace Sigma.fst <$> (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘ Fstc(`(α, α)))⟩).infer
+      dbg_trace Sigma.fst <$> (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩).infer
 
       match (DCC (f_β x_α)).reduce_all with
       | DCC Π(_f_β, γ) =>
@@ -74,7 +74,7 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
           (M N) = Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N, M⟩)⟩
         -/
 
-        .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘ Fstc(`(α, α)))⟩)
+        .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘' ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
       | _ => .none
     | _ => .none
   | .const ``True.intro [] => DCC (`(ctx, ∗))
@@ -126,5 +126,14 @@ macro_rules
 #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
 
 #eval dcc_compile (fun (f : Sort 0 → Sort 0) (x : Sort 0) => f x)
+
+#eval (DCC (`(Sort 1,
+            Σ(Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)) ∘'
+                    Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘'
+                  Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))) ∘'
+              Fstc(`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)),
+                     Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))))
+            Coup(`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)),
+                   Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))))).reduce_all
 
 -- `(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Sort 0)

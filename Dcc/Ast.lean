@@ -33,6 +33,7 @@ inductive Expr where
   | pair   : Expr  → Expr → Expr
   -- Σ(β) is the usual sigma type
   | sigma  : Expr  → Expr
+  | coup   : Expr  → Expr
   | mk     : Expr  → Expr  → Expr  → Expr
   | pi     : Expr  → Expr  → Expr
   | curr   : Expr  → Expr  → Expr  → Expr
@@ -63,6 +64,7 @@ syntax:max "Snd'(" expr,* ")"                                    : expr
 syntax:max "Snd(" expr,* ")"                                     : expr
 syntax:max "Subst(" expr,* ")"                                   : expr
 syntax "Σ(" expr ")"                                             : expr
+syntax "Coup(" expr ")"                                          : expr
 syntax:max (priority := high) "Λ(" expr,* ")"                    : expr
 syntax:max (priority := high) "Π(" expr,* ")"                    : expr
 syntax expr "∘'" expr                                            : expr
@@ -88,6 +90,7 @@ macro_rules
   | `(DCC ⟦$β:expr⟧($x, $y))                     => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                          => `(Expr.sort $m)
   | `(DCC Σ($β:expr))                            => `(Expr.sigma (DCC $β))
+  | `(DCC Coup($β:expr))                         => `(Expr.coup (DCC $β))
   | `(DCC Fst($β:expr))                          => `(Expr.fst (DCC $β))
   | `(DCC Fstc($β:expr))                         => `(Expr.fstc (DCC $β))
   | `(DCC Sndc($β:expr))                         => `(Expr.sndc (DCC $β))

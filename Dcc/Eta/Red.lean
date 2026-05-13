@@ -35,10 +35,14 @@ inductive RedEta : Expr → Expr → Prop
   | curr_quot : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
   | curr_fst  : Relation.ReflTransGen RedAff (DCC (β y)) β'
     → IsNorm RedAff β'
-    → RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `(β', (x y)))
+    → Relation.ReflTransGen RedAff (DCC (x y)) (DCC xy)
+    → IsNorm RedAff (DCC xy)
+    → RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `(β', xy))
   | curr_fst' : Relation.ReflTransGen RedAff (DCC (β y)) β'
     → IsNorm RedAff β'
-    → RedEta (DCC (Λ(α, β, x ∘' Fstc(β₂)) y)) (DCC `(β', (x y)))
+    → Relation.ReflTransGen RedAff (DCC (x y)) (DCC xy)
+    → IsNorm RedAff (DCC xy)
+    → RedEta (DCC (Λ(α, β, x ∘' Fstc(β₂)) y)) (DCC `(β', xy))
   | pi         : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
   | pi_quot    : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
   | pi'        : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
@@ -70,9 +74,13 @@ inductive RedEta : Expr → Expr → Prop
   | DCC (Λ(_α, β, x ∘ Fstc(_β₂)) y) =>
     .some ⟨_, ⟨.curr_fst
     (reduce_sound rfl)
+    (reduce_norm rfl)
+    (reduce_sound rfl)
     (reduce_norm rfl)⟩⟩
   | DCC (Λ(_α, β, x ∘' Fstc(_β₂)) y) =>
     .some ⟨_, ⟨.curr_fst'
+    (reduce_sound rfl)
+    (reduce_norm rfl)
     (reduce_sound rfl)
     (reduce_norm rfl)⟩⟩
   | DCC Σ(f_β) =>
@@ -122,7 +130,7 @@ inductive RedEta : Expr → Expr → Prop
   | _ => .none
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
-instance RedEta.instRedRel : RedRel RedEta EtaSize where
+instance RedEta.instRedRel : RedRel RedEta Size where
   run := step_eta?
 
 theorem red_eta_sn : ∀ (e : Expr), Acc (fun b a => RedEta a b) e := RedEta.instRedRel.sn
@@ -132,14 +140,14 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
 @[simp] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
   | pi'_comp | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | pi_comp | quot_snd | quot_fst | subst_fst | sig' | pi | sig => cases h₂; aesop
-  | curr_fst hr₁ hn₁ =>
+  | curr_fst hr₁ hn₁ hr₁a hn₁a =>
     cases h₂ with
-    | curr_fst hr₂ hn₂ =>
-      simp_all [norm_unique hr₁ hn₁ hr₂ hn₂]
-  | curr_fst' hr₁ hn₁ =>
+    | curr_fst hr₂ hn₂ hr₂a hn₂a =>
+      simp_all [norm_unique hr₁ hn₁ hr₂ hn₂, norm_unique hr₁a hn₁a hr₂a hn₂a]
+  | curr_fst' hr₁ hn₁ hr₁a hn₁a =>
     cases h₂ with
-    | curr_fst' hr₂ hn₂ =>
-      simp_all [norm_unique hr₁ hn₁ hr₂ hn₂]
+    | curr_fst' hr₂ hn₂ hr₂a hn₂a =>
+      simp_all [norm_unique hr₁ hn₁ hr₂ hn₂, norm_unique hr₁a hn₁a hr₂a hn₂a]
   /-| quot_comp ih =>
     cases h₂
     aesop-/
@@ -170,9 +178,10 @@ theorem RedEta.complete (h_red : RedEta A B) : step_eta? A = .some ⟨B, ⟨h_re
     unfold step_eta?
     aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel])
     done)
-  case curr_fst' hr hn | curr_fst hr hn =>
+  case curr_fst' hr₁ hn₁ hr₂ hn₂ | curr_fst hr₁ hn₁ hr₂ hn₂ =>
     unfold step_eta?
-    cases reduce_complete_fst (by assumption) (by assumption)
+    have ha := reduce_complete_fst hr₁ hn₁
+    have hb := reduce_complete_fst hr₂ hn₂
     aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel])
 
 def eta_semi_complete {A B : Expr} (h_red : A.RedEta B) : ∃ B', ∃ (h : A.RedEta B'), (step_eta? A) = .some ⟨B', ⟨h⟩⟩ :=

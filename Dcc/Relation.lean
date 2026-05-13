@@ -59,12 +59,14 @@ class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ → Prop))
   decreasing : r x y → (hM.run y).fst < (hM.run x).fst := by
     intro x y h
     induction h
-    all_goals (
+    any_goals (
+      focus
       try dsimp
       try simp_all [dcc_rel, dcc_size, Rel.run]
       try grind
       try aesop (rule_sets := [DccRel, DccSize])
-      try rfl)
+      try rfl
+      done)
 
 def IsNorm.unique {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : r A B) : A = B :=
   (hn ⟨_, hr⟩).elim
@@ -141,6 +143,7 @@ open Rel in class Congruent (r : Expr → Expr → Prop) where
   congrArg_ (h : r x x') : r (DCC (f x)) (DCC (f x')) := by exact .congrArg
   sigl_     (h : r x x') : r (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y)) := by exact .sigl
   sigr_     (h : r y y') : r (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y')) := by exact .sigr
+  coup_     (h : r β β') : r (DCC Coup(β)) (DCC Coup(β'))     := by exact .coup
 
 theorem Congruent.congrFun' {r : Expr → Expr → Prop} [hR : Congruent r] (h : r f f') : r (DCC (f x)) (DCC (f' x)) :=
   (hR.congrFun_ h)
@@ -153,6 +156,9 @@ theorem Congruent.sigl' {r : Expr → Expr → Prop} [hR : Congruent r] (h : r x
 
 theorem Congruent.sigr' {r : Expr → Expr → Prop} [hR : Congruent r] (h : r y y') : r (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y')) :=
   (hR.sigr_ h)
+
+theorem Congruent.coup' {r : Expr → Expr → Prop} [hR : Congruent r] (h : r β β') : r (DCC Coup(β)) (DCC Coup(β')) :=
+  (hR.coup_ h)
 
 instance Congruent.trans {r : Expr → Expr → Prop} [hC : Congruent r] : Congruent (Relation.TransGen r) where
   congrFun_ h := by
@@ -171,6 +177,10 @@ instance Congruent.trans {r : Expr → Expr → Prop} [hC : Congruent r] : Congr
     induction h with
     | single h => exact .single (hC.sigr' h)
     | tail => exact .trans (by assumption) (.single (hC.sigr' (by assumption)))
+  coup_ h := by
+    induction h with
+    | single h => exact .single (hC.coup' h)
+    | tail => exact .trans (by assumption) (.single (hC.coup' (by assumption)))
 
 instance Congruent.reflTrans {r : Expr → Expr → Prop} [hC : Congruent r] : Congruent (Relation.ReflTransGen r) where
   congrFun_ h := by
@@ -192,6 +202,11 @@ instance Congruent.reflTrans {r : Expr → Expr → Prop} [hC : Congruent r] : C
     rw [← Relation.reflGen_transGen] at *
     cases h with
     | single h => exact .single (hC.trans.sigr' h)
+    | refl => exact .refl
+  coup_ h := by
+    rw [← Relation.reflGen_transGen] at *
+    cases h with
+    | single h => exact .single (hC.trans.coup' h)
     | refl => exact .refl
 
 syntax "some_congr" : tactic

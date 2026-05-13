@@ -3,21 +3,8 @@ import Dcc.Ast
 
 namespace Expr
 
-/-
-β receives (x : α)
-
-DCC (Σ(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β)) α)
--/
-@[dcc_judge] abbrev coup.type (β : Expr) : Expr :=
-  DCC (Σ(`(⊤, β)) ∗)
-
-syntax "Coup(" expr,* ")" : expr
-
 syntax "(" expr ":" expr ")" "→" expr : expr
 syntax "(" ":" expr ")" "→" expr : expr
-
-macro_rules
-  | `(DCC Coup($β:expr)) => `(DCC (Σ(`(⊤, $β)) ∗))
 
 @[dcc_judge] abbrev arrow (α β : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), `(Coup(Id(Sort m)), β))) α)
@@ -203,6 +190,9 @@ f_β : δ → α → Sort n
 -/
 @[dcc_judge] abbrev Sigma.type (δ : Expr) (m n o : Level) : Expr :=
   DCC (δ : Sort o) → Sort max m n
+
+@[dcc_judge] abbrev Coup.type (m n : Level) : Expr :=
+  DCC Sort max m n
 
 def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=

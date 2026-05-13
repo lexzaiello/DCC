@@ -1,6 +1,7 @@
 import Mathlib
 import VersoSlides
 import Verso.Doc.Concrete
+import Dcc.Compile
 
 open VersoSlides
 
@@ -163,17 +164,15 @@ A formalization of this scale in Lean requires very carefully constructed abstra
 # The Categorical Combinators
 
 $$`
-\begin{center}
-\begin{tabular}{l l l}
-&(ass) & \((x \circ y) z = x(y z)\) \\
-&(fst) & \(Fst(a, b) = a\) \\
-&(snd) & \(Snd(a, b) = b\) \\
-&(dpair) & \(\langle x, y\rangle z = (x z, y z)\) \\
-&(curr) & \(\Lambda(x)yz = x(y, z)\) \\
-&(app) & \(App(f, x) = f x\) \\
-&(quote) & \('(x) y = x\)
-\end{tabular}
-\end{center}
+\begin{array}{l l l}
+&(ass) & (x \circ y) z = x(y z) \\
+&(fst) & Fst(a, b) = a \\
+&(snd) & Snd(a, b) = b \\
+&(dpair) & \langle x, y\rangle z = (x z, y z) \\
+&(curr) & \Lambda(x)yz = x(y, z) \\
+&(app) & App(f, x) = f x \\
+&(quote) & '(x) y = x
+\end{array}
 `
 
 # The Categorical Combinators
@@ -194,6 +193,112 @@ $$`
 - Instead of modeling untyped variables, I model *contexts*:
 
 $$`
-x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx
+x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx \\
   \llbracket \Sigma(A_1), A_2 \rrbracket (\llbracket A_1 \rrbracket (x_0, x_1), x_2)
 `
+
+# The Dependent Categorical Combinators
+
+- Instead of modeling untyped variables, I model *contexts*:
+
+$$`
+\frac{x : \Pi (x : \Sigma (x : A), B x), C x
+}{\Lambda(A, B, x) : \Pi (x : A) (y : B x), C (\llbracket B \rrbracket (x, y))}
+`
+
+# Demo: Lean Compiler
+
+```lean -panel
+#eval dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
+-- !fragment fadeUp
+   #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
+-- !fragment fadeUp
+```
+
+# Demo: Type-Checker Performance
+
+```lean
+#time dcc_trace (Π(Id(Sort 1),
+   `(Sort 1,
+     Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))) ∘
+         Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘
+       Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))))
+   Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))
+```
+
+My type-checker inferred the types of *all* sub-expressions in this tree in *92ms*. Somewhat impressive for a tree this size.
+
+# Demo / Theorem: Judgmental Completeness
+
+A judgment is valid iff the type-checker can infer it:
+
+```leanLibCode Dcc.Complete (startLine := 31) (endLine := 32)
+theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
+  induction h <;> (dsimp only [infer]; try (simp_all [dcc_judge, dcc_reduce]; aesop (rule_sets := [DccReduce])))
+```
+
+# Demo / Theorem: Judgmental Completeness
+
+```leanLibCode Dcc.Complete (startLine := 31) (endLine := 32)
+theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
+  induction h <;> (dsimp only [infer]; try (simp_all [dcc_judge, dcc_reduce]; aesop (rule_sets := [DccReduce])))
+```
+
+This theorem is usually impossible for a dependent type theory. Since two types might be valid for the same expression, judgments are not deterministic. In the DCC, types are *canonical*, since I prove strong normalization *before* meta-theory.
+
+# Theorem: Type-Checking is Decidable
+
+```leanLibCode Dcc.Complete (startLine := 36) (endLine := 43)
+instance : Decidable (Judge e t) :=
+  if h : (infer e).isSome then
+    if heq : ((infer e).get h).fst = t then
+      .isTrue (heq ▸ ((infer e).get h).snd.down)
+    else
+      isFalse (fun h => by simp [h.complete] at *)
+  else
+    isFalse (fun h => by simp [h.complete] at *)
+```
+
+# Principal Result: The Dependent Categorical Combinators have Affine Types
+
+# Principal Result
+
+$$`
+\begin{array}{l l l}
+&(ass) & (x \circ y) z = x(y z) \\
+&(fst) & Fst(a, b) = a \\
+&(snd) & Snd(a, b) = b \\
+&(curr) & \Lambda(x)yz = x(y, z) \\
+&(app) & App(f, x) = f x \\
+&(quote) & '(x) y = x \\
+&(dpair) & \langle x, y\rangle z = (x z, y z)
+\end{array}
+`
+
+$`dpair` is the only rule that increases the size of the program.
+
+# Principal Result
+
+The types of the dependent categorical combinators, including $`dpair`, can be encoded *without invoking the $`dpair` rule*. DCC's types are *affine*. Each term in the type context is used *at most once* for each argument being checked.
+
+# Principal Result
+
+Since none of our primitive types invoke $`dpair`, our types are strongly-normalizing *by default*. The size of our types strictly decrease. I leverage this fact to prove decidability of type-checking.
+
+# Principal Result
+
+1. I define a very simple notion of "size" for an expression
+2. I show the size decreases when the affine combinators reduce
+3. I use my size measure as `termination_by` to prove SN and define a terminating reduction function
+4. I show the reduction function produces normal forms
+
+# Principal Result
+
+5. Since the reduction function produces normal forms, I have determinism (Church-Rosser proven, but not necessary)
+6. I use the reducer in my inference function
+7. I avoid conversion *altogether* by reducing types to normal form eagerly in each judgment constructor
+8. I use completeness + soundness of the reducer to show soundness + completeness of `infer`
+9. I show completeness + soundness of `infer`
+10. *I show type-checking is decidable*
+
+

@@ -54,6 +54,8 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
     let M' ← Lean.Expr.abstract' M ctx
     let N' ← Lean.Expr.abstract' N ctx
 
+    --dbg_trace Sigma.fst <$> M'.
+
     match (← M'.infer).fst with
     | DCC (Π(f_α, f_β) x_α) =>
       let α := (DCC (f_α x_α)).reduce_all
@@ -117,3 +119,22 @@ def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) : Option _ro
 #eval Lean.Expr.cc' q(λ (x : Sort 1) => x)
 
 #eval (do Sigma.fst <$> (← (Lean.Expr.cc' q((λ (α : Sort 0) => λ (x : α) => x) True True.intro))).infer)
+
+syntax "dcc_compile" term : term
+syntax "dcc_infer" term   : term
+
+macro_rules
+  | `(dcc_compile $tm:term) => `((Lean.Expr.cc' q($tm:term)))
+  | `(dcc_infer $tm:term) => `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))
+
+#eval dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
+#eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
+
+#eval dcc_compile (fun (f : Sort 0 → Sort 0) (x : Sort 0) => f x)
+
+#time dcc_trace (Π(Id(Sort 1),
+   `(Sort 1,
+     Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))) ∘
+         Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘
+       Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))))
+   Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))

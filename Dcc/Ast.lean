@@ -2,8 +2,6 @@ import Dcc.Attrs
 import Mathlib.Data.Nat.Notation
 import Init.Data.String.Search
 
-#doc Nat
-
 -- Infinite sort universe hierarchy
 abbrev Level := ℕ
 

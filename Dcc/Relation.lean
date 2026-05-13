@@ -106,6 +106,18 @@ termination_by (hT.run e).fst
 @[dcc_reduce, inline] abbrev reduce' {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
   (e : Expr) : Expr := (reduce r e).fst
 
+def reduce? {t : Expr → ℕ → Prop} [hT : Measure t] (r : Expr → Expr → Prop) [hR : RedRel r t (hM := hT)]
+  (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Relation.TransGen r e e'))) :=
+  let ⟨e', ⟨h⟩⟩ := reduce r e
+  if heq : e = e' then
+    .none
+  else
+    .some ⟨e', ⟨by
+      rw [← Relation.reflGen_transGen] at h
+      cases h with
+      | refl => simp_all
+      | single h => exact h⟩⟩
+
 open RedRel in @[reducible] def RedRel.to_trans (t : outParam (Expr → ℕ → Prop)) [hM : Measure t] (hR : RedRel r t (hM := hM)) : RedRel (Relation.TransGen r) (hM := hM) t where
   decreasing := fun h => by
     induction h with
@@ -115,16 +127,7 @@ open RedRel in @[reducible] def RedRel.to_trans (t : outParam (Expr → ℕ → 
       have h := hR.decreasing hr
       grind
   -- reducer given decreasing
-  run (e : Expr) :=
-    let ⟨e', ⟨h⟩⟩ := reduce r e
-    if heq : e = e' then
-      .none
-    else
-      .some ⟨e', ⟨by
-        rw [← Relation.reflGen_transGen] at h
-        cases h with
-        | refl => simp_all
-        | single h => exact h⟩⟩
+  run := reduce? r
 
 @[reducible] def RedRel.to_reflTrans {r : Expr → Expr → Prop} {t : Expr → ℕ → Prop} [hM : Measure t] (hR : RedRel r t (hM := hM) (m := Option)) : Rel.{0, 0, 0}
   (fun (x y : Expr) => PULift.{1, 0} (Relation.ReflTransGen r x y)) Id.{0} where

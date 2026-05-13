@@ -133,11 +133,20 @@ g : ∀ (x : α) (y : β x), γ x y
   DCC (Π(Id(Sort m), `(Sort m, γ ∘' g)) α)
 
 /-
-g : ∀ (x : α), Σ(f_β) x
-f : ∀ (x : 
-f ∘ g
+g : ∀ (x : α), Σ(Λ(α, `(α, α), f_β ∘ Fstc(`(α, α)))) x
+f : ∀ (s : Coup(f_β)), `(Sort n, γ)
+
+f ∘ g : ∀ (x : α), γ ∘ g
 -/
---@[dcc_judge]
+
+@[dcc_judge] abbrev comp.g.type (α f_β : Expr) (m : Level) :=
+  (DCC (Π(Id(Sort m), Σ(Λ(α, `(α, α), f_β ∘' Fstc(`(α, α))))) α))
+
+@[dcc_judge] abbrev comp.f.type (f_β f_γ : Expr) (n : Level) :=
+  (DCC (Π(Id(Sort n), f_γ) Coup(f_β)))
+
+@[dcc_judge] abbrev comp.type (α γ g : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) α)
 
 @[dcc_judge] abbrev snd'.type (α β : Expr) (m n : Level) : Expr :=
   DCC (Coup(`(α, β)) : Sort max m n) → β

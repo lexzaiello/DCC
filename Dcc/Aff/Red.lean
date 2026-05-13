@@ -407,4 +407,8 @@ theorem red_aff_decreasing? (h : Relation.ReflTransGen RedAff A B) : (size B).fs
       have hn' : B.size.fst < A.size.fst := RedAff.instRedRel.to_trans.decreasing h
       grind
 
+@[grind ., grind →]
+theorem red_aff_trans_decreasing : Relation.TransGen RedAff A B → (size B).fst < (size A).fst :=
+  RedAff.instRedRel.to_trans.decreasing
+
 end Expr

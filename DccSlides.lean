@@ -1,14 +1,14 @@
 import Mathlib
 import VersoSlides
 import Verso.Doc.Concrete
-import Dcc.Ast
-import Dcc.Judge
 
 open VersoSlides
 
 #doc (Slides) "Dependently-Typed Categorical Combinators" =>
 
 # The Dependently-Typed Combinator Calculus
+
+Lexi Aiello
 
 # Contribution
 
@@ -23,7 +23,7 @@ In the _Calculus of Constructions_, if $`A` has type $`B` and $`C` is def-eq. ($
 
 # Example: Types Can Contain Computations
 
-```lean
+```lean -panel
 def ex : (if 1 == 1 then ℕ else ℝ) :=
 --                              ^ !click
   .zero
@@ -38,42 +38,36 @@ def ex : (if 1 == 1 then ℕ else ℝ) :=
 
 Classic example: Omega combinator
 
-```lean
-#check_failure (fun x => x x) (fun x => x x)
--- !fragment fadeUp
+```lean -panel
+#check_failure (λ x => x x) (λ x => x x)
 ```
 
 # Strong-Normalization
 
-Strong normalization is defined in Mathlib:
+Strong normalization says that there is *no infinite series of reductions* on some object with respect to a relation. It is defined in Mathlib:
 
-```lean
+```lean -panel
 /--
-`Acc` is the accessibility predicate. Given some relation `r` (e.g. `<`) and a value `x`,
 `Acc r x` means that `x` is accessible through `r`:
 
-`x` is accessible if there exists no infinite sequence `... < y₂ < y₁ < y₀ < x`.
+`x` is accessible if there exists no infinite sequence
+  `... < y₂ < y₁ < y₀ < x`.
 -/
 inductive Acc' {α : Sort u} (r : α → α → Prop) : α → Prop where
-  /--
-  A value is accessible if for all `y` such that `r y x`, `y` is also accessible.
-  Note that if there exists no `y` such that `r y x`, then `x` is accessible. Such an `x` is called a
-  _base case_.
-  -/
   | intro (x : α) (h : (y : α) → r y x → Acc' r y) : Acc' r x
 ```
 
 # Strong-Normalization
 
-Strong normalization says that there is *no infinite series of reductions* on some object with respect to a relation.
-
 Lean knows a program will terminate if it follows the typing rules.
 
-```lean
-variable (MyExpr : Type) (MyJudge : MyExpr → MyExpr → Prop) (StepsTo : MyExpr → MyExpr → Prop)
--- If an expression is well typed at t, then there is no infinite sequence of reductions.
--- Reduction will terminate
-theorem sn_typed {e t : MyExpr} (ht : MyJudge e t) : Acc (fun a b => StepsTo b a) e := by
+```lean -panel
+variable (MyExpr : Type) (MyJudge : MyExpr → MyExpr → Prop)
+  (StepsTo : MyExpr → MyExpr → Prop)
+-- If an expression is well typed at t, then there is
+-- no infinite sequence of reductions.
+theorem sn_typed {e t : MyExpr} (ht : MyJudge e t) :
+  Acc (fun a b => StepsTo b a) e := by
   sorry
 ```
 
@@ -81,13 +75,25 @@ theorem sn_typed {e t : MyExpr} (ht : MyJudge e t) : Acc (fun a b => StepsTo b a
 
 To prove strong-normalization, you usually need to prove theorems about type-checking:
 
+- Preservation: if $`M : A` and $`M \rightarrow N`, then $`N : A`
+- Progress: if $`M : A`, then $`\exists N, M \rightarrow N`
+
+Among others...
+
+# Problem: The Meta-Theoretical Ouroboros
+
+- Types can contain computations, so proofs need to handle *conversion* (def. eq)
+  - Requires very complex machinery
+- Automating conversion requires an algorithm to reduce expressions
+  - Requires *strong-normalization* ⟺ requires meta-theory proofs (*cycle*)
+
 # Definitional Equality is Complicated: Lean4Lean
 
 Lean4Lean is a formalization of Lean's metatheory in Lean. It defines definitional equality in a 67-line inductive.
 
 # Def-eq / conversion: Lean4Lean
 
-```leanLibCode Lean4Lean.Theory.Typing.Strong (startLine := 16) (endLine := 32)
+```leanLibCode Lean4Lean.Theory.Typing.Strong (startLine := 16) (endLine := 32) -panel
 inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop where
   | bvar : Lookup Γ i A → u.WF uvars → Γ ⊢ A : .sort u → Γ ⊢ .bvar i : A
   | symm : Γ ⊢ e ≡ e' : A → Γ ⊢ e' ≡ e : A
@@ -106,3 +112,43 @@ inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop wher
     Γ ⊢ ci.type.instL ls ≡ ci.type.instL ls' : .sort u →
     Γ ⊢ .const c ls ≡ .const c ls' : ci.type.instL ls
 ```
+
+# Contribution 1
+
+*A Technique to Avoid Conversion Altogether*
+- I show that types in combinatory logic can be automatically reduced *without progress, preservation, or logical relations*.
+
+# Contribution 1
+
+Most meta-theories do progress, preservation, etc. first. *I do strong-normalization first.*
+
+- I show that all the types you need can be expressed using rules that are *guaranteed to decrease in size*.
+  - Strong normalization proof is dead-simple:
+    - Just do $`\texttt{termination_by e.ty_size}` and recurse in $`Acc` proof.
+  - Further proofs (e.g., preservation, progress) can automate conversion with a function $`reduce`
+    - Avoid hundreds of lines of induction, normalization by evaluation, or other complex machinery
+
+# Contribution 2
+
+Since I have an *algorithm to reduce expressions*:
+
+- Type-checking is deterministic
+- Type-checking is decidable
+- A judgment $`e : t` is valid iff it is inferred by the type-checker
+  - Very strong property for a dependent type theory (completeness + soundness)
+- All formalized in Lean
+
+# Contribution 3
+
+My work builds off an existing theory: the simply-typed categorical combinators.
+
+- Categorical combinators have performance advantages as a `$λ$-calculus compilation target
+- Fits nicely into existing work
+- Compiler from Lean (minus inductive types) to my dependently-typed combinators in < 100 lines of Lean
+
+# Contribution 4
+
+A formalization of this scale in Lean requires very carefully constructed abstraction and boilerplate:
+- Of practical interest to others doing metatheory in proof assistants
+- Extensive use of tactic and typeclass automation
+  - Proof of completeness is *1 line of Lean*

@@ -13,5 +13,5 @@ def main : IO UInt32 :=
   slidesMain
     (config := { theme := "white", slideNumber := true,
                  transition := "fade", center := true, mathPrelude :=
-      "\\def\\RR{\\mathbb{R}}\n\\newcommand{\\Hom}[2]{\\mathrm{Hom}(#1, #2)}\n" })
+      "\\def\\RR{\\mathbb{R}}\n\\newcommand{\\Hom}[2]{\\mathrm{Hom}(#1, #2)}\n", margin := 0 })
     (doc := %doc DccSlides)

@@ -10,9 +10,14 @@ name = "verso-slides"
 git = "https://github.com/leanprover/verso-slides"
 rev = "main"
 
+[[require]]
+name = "Lean4Lean.Theory"
+git = "https://github.com/digama0/lean4lean"
+rev = "master"
+
 [[lean_lib]]
 name = "DccSlides"
-needs = ["@Dcc/+Dcc:highlighted"]
+needs = ["@Dcc/+Dcc:highlighted", "+Lean4Lean.Theory.Typing.Strong:highlighted"]
 
 [[lean_exe]]
 name = "docs"

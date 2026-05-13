@@ -84,7 +84,8 @@ inductive Judge : Expr → Expr → Prop where
   | id     : Judge α (DCC Sort m)
     → Reduces (id.type α m) τ
     → Judge (DCC Id(α)) τ
-  | comp'  : Judge g (DCC ((α : Sort m) → β))
+  | comp'  : Judge g (DCC (Π(Id(Sort m), f_β₀) α))
+    → Reduces (DCC (f_β₀ α)) (DCC (`(α, β)))
     → Judge f (DCC (Π(f_β, f_γ) x_β))
     → Reduces (DCC (f_β x_β)) β
     → Reduces (DCC (f_γ x_β)) γ
@@ -104,6 +105,14 @@ inductive Judge : Expr → Expr → Prop where
   | snd    : Judge f_β (snd.f_β.type δ _β o)
     → Reduces (snd.type f_β δ o) τ
     → Judge (DCC Snd(f_β)) τ
+  | fstc   : Judge β (DCC (Π(Id(Sort m), f_β) α))
+    → Reduces (DCC (f_β α)) (DCC `(α, Sort n))
+    → Reduces (fstc.type α β m n) τ
+    → Judge (DCC Fstc(β)) τ
+  | sndc    : Judge β (DCC (Π(Id(Sort m), f_β) α))
+    → Reduces (DCC (f_β α)) (DCC `(α, Sort n))
+    → Reduces (sndc.type β m n) τ
+    → Judge (DCC Sndc(β)) τ
   | sigma   : Judge f_β (fst.f_β.type α δ m n o)
     → Reduces (Sigma.type δ m n o) τ
     → Judge (DCC Σ(f_β)) τ
@@ -225,12 +234,17 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨DCC Sort _m, ⟨ht⟩⟩ => .some ⟨_, ⟨.id ht (reduce_reduces rfl)⟩⟩
     | _ => .none
   | DCC (f ∘ g) =>
-    match with_arr (infer g) with
-    | .some ⟨_, _α, β, _m, ⟨ht₁⟩, ⟨harr₁⟩⟩ =>
-      match (infer f) with
-      | .some ⟨(DCC (Π(f_β, _γ) x_β)), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (f_β x_β)).reduce_all = β then
-          .some ⟨_, ⟨.comp' (harr₁ ▸ ht₁) ht₂ (reduce_reduces heq) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
+    match infer g with
+    | .some ⟨(DCC (Π(Id(Sort m), f_β₀) α)), ⟨ht⟩⟩ =>
+      match (DCC (f_β₀ α)).reduce_all with
+      | DCC `(α₀', β) =>
+        if heq₀ : (DCC (f_β₀ α)).reduce_all = (DCC (`(α, β))) then
+          match (infer f) with
+          | .some ⟨(DCC (Π(f_β, _γ) x_β)), ⟨ht₂⟩⟩ =>
+            if heq : (DCC (f_β x_β)).reduce_all = β then
+              .some ⟨_, ⟨.comp' ht (reduce_reduces heq₀) ht₂ (reduce_reduces heq) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
+            else .none
+          | _ => .none
         else .none
       | _ => .none
     | _ => .none
@@ -270,6 +284,26 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
             else .none
           else .none
         | _ => .none
+      | _ => .none
+    | _ => .none
+  | DCC Fstc(β) =>
+    match infer β with
+    | .some ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
+      match (DCC (f_β α)).reduce_all with
+      | DCC `(α₂, Sort n) =>
+        if heq : (DCC (f_β α)).reduce_all = DCC `(α, Sort n) then
+          .some ⟨_, ⟨.fstc ht (reduce_reduces heq) (reduce_reduces rfl)⟩⟩
+        else .none
+      | _ => .none
+    | _ => .none
+  | DCC Sndc(β) =>
+    match infer β with
+    | .some ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
+      match (DCC (f_β α)).reduce_all with
+      | DCC `(α₂, Sort n) =>
+        if heq : (DCC (f_β α)).reduce_all = DCC `(α, Sort n) then
+          .some ⟨_, ⟨.sndc ht (reduce_reduces heq) (reduce_reduces rfl)⟩⟩
+        else .none
       | _ => .none
     | _ => .none
   | DCC Λ(α, β, x) =>

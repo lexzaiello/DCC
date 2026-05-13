@@ -39,6 +39,8 @@ inductive RedEta : Expr → Expr → Prop
   | snd       : RedEta (DCC (Snd(_β) _env) ∘ ⟨x, y⟩) y
   | fsi       : RedEta (DCC ⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) (DCC Id((Σ(_β) env)))
   | subst_fst : RedEta (DCC (Subst(`(⊤, x), Fst(`(⊤, f_β))) ∗)) (DCC (x ∘ Fstc(f_β)))
+  | quot_fst  : RedEta (DCC `(α, x) ∘ Fstc(β)) (DCC `(Coup(β), x))
+  | quot_snd  : RedEta (DCC `(α, x) ∘ Sndc(β)) (DCC `(Coup(β), x))
 
 @[dcc_step, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
@@ -81,6 +83,8 @@ inductive RedEta : Expr → Expr → Prop
     | .none => .none
   | (DCC ⟨(Fst(_β) _env), (Snd(_β₂) _env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
   | DCC (Subst(`(⊤, x), Fst(`(⊤, f_β))) ∗) => .some ⟨_, ⟨.subst_fst⟩⟩
+  | (DCC `(α, x) ∘ Fstc(β)) => .some ⟨_, ⟨.quot_fst⟩⟩
+  | (DCC `(α, x) ∘ Sndc(β)) => .some ⟨_, ⟨.quot_snd⟩⟩
   | _ => .none
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
@@ -93,7 +97,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
 
 @[simp] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
-  | subst_fst | sig' | pi | sig => cases h₂; aesop
+  | quot_snd | quot_fst | subst_fst | sig' | pi | sig => cases h₂; aesop
   | curr_fst hr₁ hn₁ =>
     cases h₂ with
     | curr_fst hr₂ hn₂ =>

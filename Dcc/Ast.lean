@@ -22,6 +22,8 @@ we can derive `()
 -/
 
 inductive Expr where
+  | fstc   : Expr  → Expr
+  | sndc   : Expr  → Expr
   | sort   : Level → Expr
   | fst    : Expr  → Expr
   | snd    : Expr  → Expr
@@ -54,6 +56,8 @@ syntax "⊥"                                                       : expr
 syntax:max "`(" expr,* ")"                                       : expr
 syntax:max "Id(" expr,* ")"                                      : expr
 syntax:max "Fst(" expr,* ")"                                     : expr
+syntax:max "Fstc(" expr,* ")"                                    : expr
+syntax:max "Sndc(" expr,* ")"                                    : expr
 syntax:max "Snd'(" expr,* ")"                                    : expr
 syntax:max "Snd(" expr,* ")"                                     : expr
 syntax:max "Subst(" expr,* ")"                                   : expr
@@ -83,6 +87,8 @@ macro_rules
   | `(DCC Sort $m:term)                          => `(Expr.sort $m)
   | `(DCC Σ($β:expr))                            => `(Expr.sigma (DCC $β))
   | `(DCC Fst($β:expr))                          => `(Expr.fst (DCC $β))
+  | `(DCC Fstc($β:expr))                         => `(Expr.fstc (DCC $β))
+  | `(DCC Sndc($β:expr))                         => `(Expr.sndc (DCC $β))
   | `(DCC Snd($β:expr))                          => `(Expr.snd (DCC $β))
   | `(DCC Snd'($α:expr, $β:expr))                => `(Expr.snd' (DCC $α) (DCC $β))
   | `(DCC Id($α:expr))                           => `(Expr.id (DCC $α))

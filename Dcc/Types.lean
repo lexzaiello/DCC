@@ -13,36 +13,10 @@ DCC (Σ(Λ(Sort m, Fst(`(Sort m, `(Sort m, α)), α), β)) α)
 
 syntax "Coup(" expr,* ")" : expr
 
-/-
-The main Fst is indexed by the environment map and the environment:
-
-Fst(f_β, env).
-
-Fstc is a derived version of Fst more closely aligned with traditional couples.
-
-Fstc(α, β) ⟦β⟧(x, y) : α
-Sndc(α, β) ⟦β⟧(x, y) : β (α, x)
-
-Snd' is specifically for couples with this encoding.
-
-Curry is also designed for couples with the (α, x) β encoding.
-That is, β in ⟦β⟧(x, y) receives (α, x)
--/
-@[dcc_judge] abbrev mk_fstc (β : Expr) : Expr :=
-  DCC (Fst(`(⊤, β)) ∗)
-
-@[dcc_judge] abbrev mk_sndc (β : Expr) : Expr :=
-  DCC (Snd(`(⊤, β)) ∗)
-
-syntax "Fstc(" expr,* ")" : expr
-syntax "Sndc(" expr,* ")" : expr
-
 syntax "(" expr ":" expr ")" "→" expr : expr
 syntax "(" ":" expr ")" "→" expr : expr
 
 macro_rules
-  | `(DCC Fstc($β:expr)) => `(DCC (Fst(`(⊤, $β)) ∗))
-  | `(DCC Sndc($β:expr)) => `(DCC (Snd(`(⊤, $β)) ∗))
   | `(DCC Coup($β:expr)) => `(DCC (Σ(`(⊤, $β)) ∗))
 
 @[dcc_judge] abbrev arrow (α β : Expr) (m : Level) : Expr :=
@@ -102,6 +76,20 @@ TODO: x needs to depend on (env : δ)
 
 @[dcc_judge] abbrev id.type (α : Expr) (m : Level) : Expr :=
   DCC (α : Sort m) → α
+
+/-
+β : ∀ (x : α), Sort n
+Fstc(β) : ∀ (s : Coup(β)), α
+-/
+@[dcc_judge] abbrev fstc.type (α β : Expr) (m n : Level) : Expr :=
+  DCC (Coup(β) : Sort (max m n)) → α
+
+/-
+β : ∀ (x : α), Sort n
+Sndc(β) : ∀ (s : Coup(β)), (β ∘ Fstc(β)) s
+-/
+@[dcc_judge] abbrev sndc.type (β : Expr) (m n : Level) : Expr :=
+  DCC (Π(Id(Sort (max m n)), `(Sort (max m n), β ∘ Fstc(β))) Coup(β))
 
 /-
 f_β : δ → α → Sort n

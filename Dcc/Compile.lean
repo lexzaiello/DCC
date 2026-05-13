@@ -54,7 +54,10 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
     let M' ← Lean.Expr.abstract' M ctx
     let N' ← Lean.Expr.abstract' N ctx
 
-    --dbg_trace Sigma.fst <$> M'.
+    dbg_trace Sigma.fst <$> M'.infer
+    dbg_trace Sigma.fst <$> N'.infer
+
+    dbg_trace Sigma.fst <$> (DCC ⟨N', M'⟩).infer
 
     match (← M'.infer).fst with
     | DCC (Π(f_α, f_β) x_α) =>
@@ -74,10 +77,6 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
           (N x, M x (N x))
           (M N) = Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N, M⟩)⟩
         -/
-        dbg_trace Sigma.fst <$> N'.infer
-        dbg_trace Sigma.fst <$> M'.infer
-        dbg_trace M'
-        dbg_trace Sigma.fst <$> (DCC ⟨N', M'⟩).infer
 
         .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N', M'⟩)⟩)
       | _ => .none
@@ -131,10 +130,3 @@ macro_rules
 #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
 
 #eval dcc_compile (fun (f : Sort 0 → Sort 0) (x : Sort 0) => f x)
-
-#time dcc_trace (Π(Id(Sort 1),
-   `(Sort 1,
-     Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))) ∘
-         Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘
-       Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))))
-   Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))

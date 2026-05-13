@@ -17,7 +17,9 @@ inductive Size : Expr → ℕ → Prop
   | quot   : Size x m → Size (DCC `(β, x)) m.succ
   | id     : Size (DCC Id(α)) 1
   | fst    : Size (DCC Fst(_α)) 1
+  | fstc   : Size (DCC Fstc(_α)) 1
   | snd'   : Size (DCC Snd'(δ, β)) 1
+  | sndc   : Size (DCC Sndc(_α)) 1
   | snd    : Size (DCC Snd(_α)) 1
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + n).succ
   | pair   : Size f m → Size g n → Size (DCC ⟨f, g⟩) (m + n).succ
@@ -44,8 +46,10 @@ inductive Size : Expr → ℕ → Prop
     ⟨_, ⟨.coup h₁ h₂⟩⟩
   | DCC Id(_α)      => ⟨_, ⟨.id⟩⟩
   | DCC Fst(_α) => ⟨_, ⟨.fst⟩⟩
+  | DCC Fstc(_α) => ⟨_, ⟨.fstc⟩⟩
   | DCC Snd'(_α,_β) => ⟨_, ⟨.snd'⟩⟩
   | DCC Snd(_α) => ⟨_, ⟨.snd⟩⟩
+  | DCC Sndc(_α) => ⟨_, ⟨.sndc⟩⟩
   | DCC Π(_α, _β) => ⟨_, ⟨.pi⟩⟩
   | DCC (f ∘ g) =>
     let ⟨_m, ⟨h₁⟩⟩ := f.size

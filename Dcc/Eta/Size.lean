@@ -15,7 +15,9 @@ inductive EtaSize : Expr → ℕ → Prop
   | quot   : EtaSize x m → EtaSize (DCC `(β, x)) m
   | id     : EtaSize (DCC Id(α)) 2
   | fst    : EtaSize (DCC Fst(_α)) 2
+  | fstc   : EtaSize (DCC Fstc(_α)) 2
   | snd'   : EtaSize (DCC Snd'(δ, β)) 2
+  | sndc   : EtaSize (DCC Sndc(_α)) 2
   | snd    : EtaSize (DCC Snd(_α)) 2
   | comp   : EtaSize f m → EtaSize g n → EtaSize (DCC (f ∘ g)) (m + m + n).succ.succ
   | pair   : EtaSize f m → EtaSize g n → EtaSize (DCC ⟨f, g⟩) (m + n).succ.succ
@@ -44,6 +46,8 @@ inductive EtaSize : Expr → ℕ → Prop
     ⟨_, ⟨.coup h₁ h₂⟩⟩
   | DCC Id(_α)      => ⟨_, ⟨.id⟩⟩
   | DCC Fst(_α) => ⟨_, ⟨.fst⟩⟩
+  | DCC Fstc(_α) => ⟨_, ⟨.fstc⟩⟩
+  | DCC Sndc(_α) => ⟨_, ⟨.sndc⟩⟩
   | DCC Snd'(_α,_β) => ⟨_, ⟨.snd'⟩⟩
   | DCC Snd(_α) => ⟨_, ⟨.snd⟩⟩
   | DCC Π(_α, β) =>

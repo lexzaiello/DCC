@@ -16,6 +16,12 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
   | .app (.const ``_root_.Expr.fst []) β =>
     let β' ← decode_dcc β
     return .fst β'
+  | .app (.const ``_root_.Expr.sndc []) β =>
+    let β' ← decode_dcc β
+    return .sndc β'
+  | .app (.const ``_root_.Expr.fstc []) β =>
+    let β' ← decode_dcc β
+    return .fstc β'
   | .app (.const ``_root_.Expr.snd []) β =>
     let β' ← decode_dcc β
     return .snd β'
@@ -65,9 +71,9 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
     return .app f x
   | e => throwError s!"unsupported: {e}"
 
-syntax "dcc_trace" expr : command
+syntax "dcc_trace" "?"? expr : command
 
-elab "dcc_trace" e:expr : command => do
+elab "dcc_trace" err:"?"? e:expr : command => do
   for stx in Lean.Syntax.topDown e do
     match stx with
     | `(expr| ($_e)) => continue
@@ -77,8 +83,14 @@ elab "dcc_trace" e:expr : command => do
         let e ← Lean.Elab.Command.liftTermElabM
           <| Lean.Elab.Term.withoutErrToSorry
             (Lean.Elab.Term.elabTermEnsuringType stx' (.some (.const ``_root_.Expr [])) >>= decode_dcc)
-        let fmt := ((Std.format ∘ Sigma.fst) <$> e.infer).getD "?"
-        Lean.logInfoAt stx m!"{stx}: {fmt}"
+        match e.infer with
+        | .some t =>
+          if err.isNone then
+            let fmt := ((Std.format ∘ Sigma.fst) <$> e.infer).getD "?"
+            Lean.logInfoAt stx m!"{stx}: {fmt}"
+          else
+            continue
+        | _ => Lean.logInfoAt stx m!"{stx}: ?"
       catch _e =>
         continue
 

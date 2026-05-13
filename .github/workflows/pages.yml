@@ -12,7 +12,7 @@ jobs:
         id: deployment
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _slides/
+          path: ./_slides/
 
   # Deployment job
   deploy:

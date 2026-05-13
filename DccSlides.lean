@@ -4,9 +4,9 @@ import Verso.Doc.Concrete
 
 open VersoSlides
 
-#doc (Slides) "Dependently-Typed Categorical Combinators" =>
+#doc (Slides) "Dependent Categorical Combinators" =>
 
-# The Dependently-Typed Combinator Calculus
+# The Dependent Categorical Combinators
 
 Lexi Aiello
 
@@ -159,3 +159,41 @@ A formalization of this scale in Lean requires very carefully constructed abstra
 - Of practical interest to others doing metatheory in proof assistants
 - Extensive use of tactic and typeclass automation
   - Proof of completeness is *1 line of Lean*
+
+# The Categorical Combinators
+
+$$`
+\begin{center}
+\begin{tabular}{l l l}
+&(ass) & \((x \circ y) z = x(y z)\) \\
+&(fst) & \(Fst(a, b) = a\) \\
+&(snd) & \(Snd(a, b) = b\) \\
+&(dpair) & \(\langle x, y\rangle z = (x z, y z)\) \\
+&(curr) & \(\Lambda(x)yz = x(y, z)\) \\
+&(app) & \(App(f, x) = f x\) \\
+&(quote) & \('(x) y = x\)
+\end{tabular}
+\end{center}
+`
+
+# The Categorical Combinators
+
+- Model cartesian closed categories (categorical semantics of simply-typed $`\lambda`-calculus) literally
+- Theoretical performance advantages: original compilation target of OCaml
+- Have been extended to simply-typed before (Curien, "Categorical combinators")
+
+# The Categorical Combinators
+
+- Variables are modeled as nested tuples:
+$$`
+\Lambda(Fst) x y = x \approx (\lambda x. \lambda y. x) x = x
+`
+
+# The Dependent Categorical Combinators
+
+- Instead of modeling untyped variables, I model *contexts*:
+
+$$`
+x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx
+  \llbracket \Sigma(A_1), A_2 \rrbracket (\llbracket A_1 \rrbracket (x_0, x_1), x_2)
+`

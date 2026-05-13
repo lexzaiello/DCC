@@ -119,7 +119,7 @@ inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop wher
 2. Result: type-checking the dependently-typed *categorical combinators* is *deterministic* and *decidable*
 3. Novel: the categorical combinators have never been extended before to dependent types
 4. Practical: a formalization of this scale requires very careful abstraction and boilerplate
-  - Useful for others doing metatheory in proof assistants
+  - Useful for others doing metatheory
 
 # Contribution 1
 

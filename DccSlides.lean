@@ -113,20 +113,27 @@ inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop wher
     Γ ⊢ .const c ls ≡ .const c ls' : ci.type.instL ls
 ```
 
+# Contributions
+
+1. Theory: A technique to *avoid conversion altogether*
+2. Result: type-checking the dependently-typed *categorical combinators* is *deterministic* and *decidable*
+3. Novel: the categorical combinators have never been extended before to dependent types
+4. Practical: a formalization of this scale requires very careful abstraction and boilerplate
+  - Useful for others doing metatheory in proof assistants
+
 # Contribution 1
 
 *A Technique to Avoid Conversion Altogether*
 - I show that types in combinatory logic can be automatically reduced *without progress, preservation, or logical relations*.
+- Most meta-theories do progress, preservation, etc. first. *I do strong-normalization first.*
 
 # Contribution 1
 
-Most meta-theories do progress, preservation, etc. first. *I do strong-normalization first.*
-
 - I show that all the types you need can be expressed using rules that are *guaranteed to decrease in size*.
   - Strong normalization proof is dead-simple:
-    - Just do $`\texttt{termination_by e.ty_size}` and recurse in $`Acc` proof.
-  - Further proofs (e.g., preservation, progress) can automate conversion with a function $`reduce`
-    - Avoid hundreds of lines of induction, normalization by evaluation, or other complex machinery
+    - Just do `termination_by e.ty_size` and recurse in `Acc` proof.
+  - Further proofs (e.g., preservation, progress) can automate conversion with a function `reduce`
+    - Avoid hundreds of lines of induction
 
 # Contribution 2
 
@@ -142,8 +149,8 @@ Since I have an *algorithm to reduce expressions*:
 
 My work builds off an existing theory: the simply-typed categorical combinators.
 
-- Categorical combinators have performance advantages as a `$λ$-calculus compilation target
-- Fits nicely into existing work
+- I extend them with dependent types
+- Cat. combinators have theoretical performance advantages as a $`λ`-calculus compilation target
 - Compiler from Lean (minus inductive types) to my dependently-typed combinators in < 100 lines of Lean
 
 # Contribution 4

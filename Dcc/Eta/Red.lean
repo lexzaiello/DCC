@@ -39,8 +39,8 @@ inductive RedEta : Expr → Expr → Prop
   | subst_fst : RedEta (DCC (Subst(`(⊤, x), Fst(`(⊤, f_β))) ∗)) (DCC (x ∘ Fstc(f_β)))
   | quot_fst  : RedEta (DCC `(α, x) ∘ Fstc(β)) (DCC `(Coup(β), x))
   | quot_snd  : RedEta (DCC `(α, x) ∘ Sndc(β)) (DCC `(Coup(β), x))
-  | quot_fst' : RedEta (DCC `(α, x) ∘ Fstc(β) ∘ z) (DCC `(Coup(β), x) ∘ z)
-  | quot_snd' : RedEta (DCC `(α, x) ∘ Sndc(β) ∘ z) (DCC `(Coup(β), x) ∘ z)
+  | quot_fst' : RedEta (DCC (`(α, x) ∘ Fstc(β)) ∘ z) (DCC `(Coup(β), x) ∘ z)
+  | quot_snd' : RedEta (DCC (`(α, x) ∘ Sndc(β)) ∘ z) (DCC `(Coup(β), x) ∘ z)
   | pi_comp   : RedEta (DCC (Π(f_α, f_β) ∘ x)) (DCC (Π(f_α ∘ x, f_β ∘ x)))
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
@@ -87,8 +87,8 @@ inductive RedEta : Expr → Expr → Prop
   | (DCC `(α, x) ∘ Fstc(β)) => .some ⟨_, ⟨.quot_fst⟩⟩
   | (DCC `(α, x) ∘ Sndc(β)) => .some ⟨_, ⟨.quot_snd⟩⟩
   | DCC (Π(f_α, f_β) ∘ x) => .some ⟨_, ⟨.pi_comp⟩⟩
-  | (DCC `(α, x) ∘ Fstc(β) ∘ z) => .some ⟨_, ⟨.quot_fst'⟩⟩
-  | (DCC `(α, x) ∘ Sndc(β) ∘ z) => .some ⟨_, ⟨.quot_snd'⟩⟩
+  | (DCC (`(α, x) ∘ Fstc(β)) ∘ z) => .some ⟨_, ⟨.quot_fst'⟩⟩
+  | (DCC (`(α, x) ∘ Sndc(β)) ∘ z) => .some ⟨_, ⟨.quot_snd'⟩⟩
   /-| (DCC (`(α, x) ∘ (y ∘ z))) =>
     match (DCC `(α, x) ∘ y).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot_comp h⟩⟩

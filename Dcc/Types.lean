@@ -140,7 +140,7 @@ f ∘ g : ∀ (x : α), γ ∘ g
 -/
 
 @[dcc_judge] abbrev comp.g.type (α f_β : Expr) (m : Level) :=
-  (DCC (Π(Id(Sort m), Σ(Λ(α, `(α, α), f_β ∘' Fstc(`(α, α))))) α))
+  (DCC (Π(Id(Sort m), `(Sort m, Σ(Λ(α, `(α, α), f_β ∘' Fstc(`(α, α)))))) α))
 
 @[dcc_judge] abbrev comp.f.type (f_β f_γ : Expr) (n : Level) :=
   (DCC (Π(Id(Sort n), f_γ) Coup(f_β)))

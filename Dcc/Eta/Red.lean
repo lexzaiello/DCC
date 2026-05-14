@@ -32,7 +32,9 @@ Will need to mess around with size a bit for this to work.
 
 inductive RedEta : Expr → Expr → Prop
   | curr      : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
-  | curr_quot : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
+  | curr_quot : Relation.ReflTransGen RedAff (DCC (β y)) β'
+    → IsNorm RedAff β'
+    → RedEta (DCC (Λ(α₁, β, `(Coup(α), x)) y)) (DCC `(β', x))
   | curr_fst  : Relation.ReflTransGen RedAff (DCC (β y)) β'
     → IsNorm RedAff β'
     → Relation.ReflTransGen RedAff (DCC (x y)) (DCC xy)
@@ -65,12 +67,17 @@ inductive RedEta : Expr → Expr → Prop
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
 
+/-
+Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 1)) ∘'
+  Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘'
+    Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))
+-/
+
 @[dcc_step, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
-  | DCC (Λ(α, _b, `(_c, x)) y) =>
-    if heq : DCC (Λ(α, _b, `(_c, x)) y) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
-      heq ▸ .some ⟨_, ⟨.curr_quot⟩⟩
-    else .none
+  | DCC (Λ(α₁, β₁, `(Coup(α₂), x)) y) => .some ⟨_, ⟨.curr_quot
+    (reduce_sound rfl)
+    (reduce_norm rfl)⟩⟩
   | DCC (Λ(_α, β, x ∘ Fstc(_β₂)) y) =>
     .some ⟨_, ⟨.curr_fst
     (reduce_sound rfl)
@@ -162,7 +169,11 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   | curr hr ih =>
     cases h₂ with
     | curr hr₂ => rw [ih hr₂]
-  | idl' | curr_quot | idl | fsi => cases h₂; rfl
+  | curr_quot hr₁ hn₁ =>
+    cases h₂ with
+    | curr_quot hr₂ hn₂ =>
+      simp_all [norm_unique hr₁ hn₁ hr₂ hn₂]
+  | idl' | idl | fsi => cases h₂; rfl
 
 open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : ∃ D, RedEta.instRedRel.ReflTrans B D ∧ RedEta.instRedRel.ReflTrans C D := by
   have h := h₁.unique h₂
@@ -182,6 +193,10 @@ theorem RedEta.complete (h_red : RedEta A B) : step_eta? A = .some ⟨B, ⟨h_re
     unfold step_eta?
     have ha := reduce_complete_fst hr₁ hn₁
     have hb := reduce_complete_fst hr₂ hn₂
+    aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel])
+  case curr_quot hr₁ hn₁ =>
+    unfold step_eta?
+    have ha := reduce_complete_fst hr₁ hn₁
     aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel])
 
 def eta_semi_complete {A B : Expr} (h_red : A.RedEta B) : ∃ B', ∃ (h : A.RedEta B'), (step_eta? A) = .some ⟨B', ⟨h⟩⟩ :=

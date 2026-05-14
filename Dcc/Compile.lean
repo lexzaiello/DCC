@@ -57,8 +57,6 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
     match (← M'.infer).fst with
     | DCC (Π(f_α, f_β) x_α) =>
       let α := (DCC (f_α x_α)).reduce_all
-      dbg_trace Sigma.fst <$> (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩).infer
-
       match (DCC (f_β x_α)).reduce_all with
       | DCC Π(_f_β, γ) =>
         /-
@@ -73,6 +71,11 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
           (N x, M x (N x))
           (M N) = Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N, M⟩)⟩
         -/
+
+        dbg_trace Sigma.fst <$> γ.infer
+        dbg_trace Sigma.fst <$> (DCC Σ(γ)).infer
+        dbg_trace Sigma.fst <$> (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩).infer
+        --dbg_trace Sigma.fst <$> (DCC Subst(Snd(γ), Sndc(Σ(γ)))).infer
 
         .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘' ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
       | _ => .none

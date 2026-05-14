@@ -172,11 +172,11 @@ inductive Judge : Expr → Expr → Prop where
     x : ∀ (env : δ) (y : f_t_snd env), β(env, y)
     Subst(x, Snd(f_β)) env (y, z) = x env z
   -/
-  | subst₂ : Judge f_β (Pi.f_β.type f_α δ o n)
-    → Reduces (DCC (f_β env)) β
-    → Judge x (Subst₂.x.type (DCC (f_α env)) β γ m)
-    → Reduces (Subst₂.type f_β env γ n) τ
-    → Judge (DCC (Subst(x, (Snd(f_β) env)))) τ
+  | subst₂ : Judge β (DCC (Π(Id(Sort m), f_β) α))
+    → Reduces (DCC (f_β α)) (DCC `(α, Sort n))
+    → Judge x (Subst₂.x.type α β γ m) -- TODO: may have to switch to reduces f_α x_α
+    → Reduces (Subst₂.type β γ n) τ
+    → Judge (DCC (Subst(x, Sndc(β)))) τ
   /-
     ef_α : α → Sort m
     f_β : ∀ (x : α) (y : f_α x), Sort n
@@ -388,17 +388,20 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         .some ⟨_, ⟨.subst₁ (heq ▸ ht) (reduce_reduces rfl)⟩⟩
       else .none
     | _ => .none
-  | DCC Subst(x, (Snd(f_β) env)) => -- ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩
-    match infer f_β with
-    | .some ⟨DCC (Π(Id(Sort o), `(Sort o₁, Π(f_α, Λ(_d, _e, `(_f, Sort n))))) δ), ⟨ht⟩⟩ =>
-      if heq : (DCC (Π(Id(Sort o), `(Sort o₁, Π(f_α, Λ(_d, _e, `(_f, Sort n))))) δ)) = Pi.f_β.type f_α δ o n then
-        match infer x with
-        | .some ⟨DCC (Π(Id(Sort m), `(_b, Π(_c, γ))) _d), ⟨ht₂⟩⟩ =>
-          if heq₂ : DCC (Π(Id(Sort m), `(_b, Π(_c, γ))) _d) = Subst₂.x.type (DCC (f_α env)) (DCC (f_β env)).reduce_all γ m then by
-            exact .some ⟨_, ⟨.subst₂ (heq ▸ ht) (reduce_reduces rfl) (heq₂ ▸ ht₂) (reduce_reduces rfl)⟩⟩
-          else .none
-        | _ => .none
-      else .none
+  | DCC Subst(x, Sndc(β)) => -- ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩
+    match infer β with
+    | .some ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
+      match (DCC (f_β α)).reduce_all with
+      | DCC `(α₂, Sort n) =>
+        if heq : (DCC (f_β α)).reduce_all = DCC `(α, Sort n) then
+          match infer x with
+          | .some ⟨DCC (Π(_a, `(_b, Π(_c, γ))) _d), ⟨ht₂⟩⟩ =>
+            if heq₂ : DCC (Π(_a, `(_b, Π(_c, γ))) _d) = (Subst₂.x.type α β γ m) then
+              .some ⟨_, ⟨.subst₂ ht (reduce_reduces heq) (heq₂ ▸ ht₂) (reduce_reduces rfl)⟩⟩
+            else .none
+          | _ => .none
+        else .none
+      | _ => .none
     | _ => .none
   | DCC Π(f_α, f_β) =>
     match with_arr (infer f_α) with

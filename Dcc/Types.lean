@@ -37,8 +37,8 @@ x : ∀ (x : α) (y : β x), γ x y
 
 Subst(x, Snd(f_β) env) : ∀ (s : Σ(f_β) env), Subst(γ, Snd(f_β) env)
 -/
-@[dcc_judge] abbrev Subst₂.type (f_β env γ : Expr) (n : Level) : Expr :=
-  DCC (Π(Id(Sort n), `(Sort n, Subst(γ, (Snd(f_β) env)))) (Σ(f_β) env))
+@[dcc_judge] abbrev Subst₂.type (β γ : Expr) (n : Level) : Expr :=
+  DCC (Π(Id(Sort n), `(Sort n, Subst(γ, Sndc(β)))) Coup(β))
 
 @[dcc_judge] abbrev Subst₂.x.type (α β γ : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, Π(β, γ))) α)

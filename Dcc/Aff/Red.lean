@@ -8,7 +8,7 @@ namespace Expr
 inductive RedAff : Expr → Expr → Prop
   | subst₁p  : RedAff (DCC (Subst(x, Fst(f_β)) env (⟨f, g⟩ z))) (DCC (x env (f z)))
   | subst₁   : RedAff (DCC (Subst(x, Fst(f_β)) env ⟦β⟧(y, z))) (DCC (x env y))
-  | subst₂   : RedAff (DCC (Subst(x, (Snd(f_β) env)) ⟦β⟧(y, z))) (DCC (x y z))
+  | subst₂   : RedAff (DCC (Subst(x, Sndc(_β)) ⟦β⟧(y, z))) (DCC (x y z))
   | snd'     : RedAff (DCC (Snd'(_δ, _τ) ⟦β⟧(a, b))) b
   | quot     : RedAff (DCC (`(β, x) y)) x
   | id       : RedAff (DCC (Id(α) x)) x
@@ -31,7 +31,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
   match e with
   | (DCC (Subst(_x, Fst(_f_β)) _env (⟨_f, _g⟩ _z)))  => .some ⟨_, ⟨.subst₁p⟩⟩
   | (DCC (Subst(_x, Fst(_f_β)) _env ⟦_β⟧(_y, _z)))   => .some ⟨_, ⟨.subst₁⟩⟩
-  | (DCC (Subst(_x, (Snd(_f_β) _env)) ⟦_β⟧(_y, _z))) => .some ⟨_, ⟨.subst₂⟩⟩
+  | (DCC (Subst(_x, Sndc(__β)) ⟦_β⟧(_y, _z)))        => .some ⟨_, ⟨.subst₂⟩⟩
   | (DCC (Snd'(_α, _τ) ⟦_β⟧(_a, _b)))                => .some ⟨_, ⟨.snd'⟩⟩
   | (DCC (`(_β, _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
   | (DCC (Id(_α) _x))                                => .some ⟨_, ⟨.id⟩⟩
@@ -341,7 +341,7 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
     | subst₂ =>
       simp_all
       rename_i h
-      exact (h _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl).elim
+      exact (h _ _ _ _ _ rfl rfl rfl rfl rfl).elim
     | congrFun h =>
       have ⟨_, hrf, heqf⟩ := semi_complete h
       exact ⟨_, .congrFun hrf, by rw [heqf]⟩

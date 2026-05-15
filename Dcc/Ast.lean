@@ -25,14 +25,13 @@ inductive Expr where
   | fstc   : Expr  → Expr
   | sndc   : Expr  → Expr
   | sort   : Level → Expr
-  | fst    : Expr  → Expr
-  | snd    : Expr  → Expr
+  | fst    : Expr  → Expr  → Expr
+  | snd    : Expr  → Expr  → Expr
   | snd'   : Expr  → Expr  → Expr
   | comp'  : Expr  → Expr  → Expr
   | comp   : Expr  → Expr  → Expr
   | pair   : Expr  → Expr → Expr
-  -- Σ(β) is the usual sigma type
-  | sigma  : Expr  → Expr
+  | sigma  : Expr  → Expr  → Expr
   | coup   : Expr  → Expr
   | mk     : Expr  → Expr  → Expr  → Expr
   | pi     : Expr  → Expr  → Expr
@@ -63,7 +62,7 @@ syntax:max "Sndc(" expr,* ")"                                    : expr
 syntax:max "Snd'(" expr,* ")"                                    : expr
 syntax:max "Snd(" expr,* ")"                                     : expr
 syntax:max "Subst(" expr,* ")"                                   : expr
-syntax "Σ(" expr ")"                                             : expr
+syntax "Σ(" expr,* ")"                                           : expr
 syntax "Coup(" expr ")"                                          : expr
 syntax:max (priority := high) "Λ(" expr,* ")"                    : expr
 syntax:max (priority := high) "Π(" expr,* ")"                    : expr
@@ -89,12 +88,12 @@ macro_rules
   | `(DCC ⟨$x:expr, $y:expr⟩)                    => `(Expr.pair (DCC $x) (DCC $y))
   | `(DCC ⟦$β:expr⟧($x, $y))                     => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
   | `(DCC Sort $m:term)                          => `(Expr.sort $m)
-  | `(DCC Σ($β:expr))                            => `(Expr.sigma (DCC $β))
+  | `(DCC Σ($α:expr, $β:expr))                   => `(Expr.sigma (DCC $α) (DCC $β))
   | `(DCC Coup($β:expr))                         => `(Expr.coup (DCC $β))
-  | `(DCC Fst($β:expr))                          => `(Expr.fst (DCC $β))
+  | `(DCC Fst($α:expr, $β:expr))                 => `(Expr.fst (DCC $α) (DCC $β))
+  | `(DCC Snd($α:expr, $β:expr))                 => `(Expr.snd (DCC $α) (DCC $β))
   | `(DCC Fstc($β:expr))                         => `(Expr.fstc (DCC $β))
   | `(DCC Sndc($β:expr))                         => `(Expr.sndc (DCC $β))
-  | `(DCC Snd($β:expr))                          => `(Expr.snd (DCC $β))
   | `(DCC Snd'($α:expr, $β:expr))                => `(Expr.snd' (DCC $α) (DCC $β))
   | `(DCC Id($α:expr))                           => `(Expr.id (DCC $α))
   | `(DCC Subst($x:expr, $β:expr))               => `(Expr.subst (DCC $x) (DCC $β))

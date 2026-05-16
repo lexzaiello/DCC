@@ -6,44 +6,44 @@ import Dcc.Aff.Size
 namespace Expr
 
 inductive RedAff : Expr → Expr → Prop
-  | subst₁p  : RedAff (DCC (Subst(x, Fst(f_α, f_β)) env (⟨f, g⟩ z))) (DCC (x env (f z)))
-  | subst₁   : RedAff (DCC (Subst(x, Fst(f_α, f_β)) env ⟦β⟧(y, z))) (DCC (x env y))
+  | subst₁p  : RedAff (DCC (Subst(x, Fst(f_β)) env (⟨f, g⟩ z))) (DCC (x env (f z)))
+  | subst₁   : RedAff (DCC (Subst(x, Fst(f_β)) env ⟦β⟧(y, z))) (DCC (x env y))
   | subst₂   : RedAff (DCC (Subst(x, Sndc(_β)) ⟦β⟧(y, z))) (DCC (x y z))
   | snd'     : RedAff (DCC (Snd'(_δ, _τ) ⟦β⟧(a, b))) b
   | quot     : RedAff (DCC (`(β, x) y)) x
   | id       : RedAff (DCC (Id(α) x)) x
-  | fst      : RedAff (DCC (Fst(_α, _β) _env ⟦β⟧(a, b))) a
+  | fst      : RedAff (DCC (Fst(_α) _env ⟦β⟧(a, b))) a
   | fstc     : RedAff (DCC (Fstc(_α) ⟦β⟧(a, b))) a
-  | fstp     : RedAff (DCC (Fst(_α, _β) _env (⟨f, g⟩ x))) (DCC (f x))
-  | snd      : RedAff (DCC (Snd(_α, _β) _env ⟦β⟧(a, b))) b
+  | fstp     : RedAff (DCC (Fst(_α) _env (⟨f, g⟩ x))) (DCC (f x))
+  | snd      : RedAff (DCC (Snd(_α) _env ⟦β⟧(a, b))) b
   | sndc     : RedAff (DCC (Sndc(_α) ⟦β⟧(a, b))) b
   | comp'    : RedAff (DCC ((x ∘' y) z)) (DCC (x (y z)))
   | comp     : RedAff (DCC ((x ∘ y) z)) (DCC (x (y z)))
   | curr     : RedAff (DCC (Λ(α, β, x) y z)) (DCC (x ⟦β⟧(y, z)))
   | sigl     : RedAff x x' → RedAff (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))
   | sigr     : RedAff y y' → RedAff (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y'))
-  | sigma    : RedAff (DCC (Σ(_f_α, f_β) env)) (DCC (Coup((f_β env))))
+  | sigma    : RedAff (DCC (Σ(f_β) env)) (DCC (Coup((f_β env))))
   | coup     : RedAff β β' → RedAff (DCC (Coup(β))) (DCC (Coup(β')))
   | congrFun : RedAff f f' → RedAff (DCC (f x)) (DCC (f' x))
   | congrArg : RedAff x x' → RedAff (DCC (f x)) (DCC (f x'))
 
 def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
   match e with
-  | (DCC (Subst(_x, Fst(_f_α, _f_β)) _env (⟨_f, _g⟩ _z)))  => .some ⟨_, ⟨.subst₁p⟩⟩
-  | (DCC (Subst(_x, Fst(_f_α, _f_β)) _env ⟦_β⟧(_y, _z)))   => .some ⟨_, ⟨.subst₁⟩⟩
+  | (DCC (Subst(_x, Fst(_f_β)) _env (⟨_f, _g⟩ _z)))  => .some ⟨_, ⟨.subst₁p⟩⟩
+  | (DCC (Subst(_x, Fst(_f_β)) _env ⟦_β⟧(_y, _z)))   => .some ⟨_, ⟨.subst₁⟩⟩
   | (DCC (Subst(_x, Sndc(__β)) ⟦_β⟧(_y, _z)))        => .some ⟨_, ⟨.subst₂⟩⟩
   | (DCC (Snd'(_α, _τ) ⟦_β⟧(_a, _b)))                => .some ⟨_, ⟨.snd'⟩⟩
   | (DCC (`(_β, _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
   | (DCC (Id(_α) _x))                                => .some ⟨_, ⟨.id⟩⟩
-  | (DCC (Fst(_f_α, _α) _env ⟦_γ⟧(_a, _b)))                => .some ⟨_, ⟨.fst⟩⟩
+  | (DCC (Fst(_α) _env ⟦_γ⟧(_a, _b)))                => .some ⟨_, ⟨.fst⟩⟩
   | (DCC (Fstc(_α) ⟦_γ⟧(_a, _b)))                    => .some ⟨_, ⟨.fstc⟩⟩
-  | (DCC (Fst(_f_α, _α) _env (⟨_f, _g⟩ _x)))               => .some ⟨_, ⟨.fstp⟩⟩
-  | (DCC (Snd(_f_α, _α) _env ⟦_γ⟧(_a, _b)))                => .some ⟨_, ⟨.snd⟩⟩
+  | (DCC (Fst(_α) _env (⟨_f, _g⟩ _x)))               => .some ⟨_, ⟨.fstp⟩⟩
+  | (DCC (Snd(_α) _env ⟦_γ⟧(_a, _b)))                => .some ⟨_, ⟨.snd⟩⟩
   | (DCC (Sndc(_α) ⟦_γ⟧(_a, _b)))                    => .some ⟨_, ⟨.sndc⟩⟩
   | (DCC ((x ∘' y) z))                               => .some ⟨(DCC (x (y z))), ⟨.comp'⟩⟩
   | (DCC ((x ∘ y) z))                                => .some ⟨(DCC (x (y z))), ⟨.comp⟩⟩
   | (DCC (Λ(_α, β, x) y z))                          => .some ⟨(DCC (x ⟦β⟧(y, z))), ⟨.curr⟩⟩
-  | (DCC (Σ(_f_α, _f_β) _env))                       => .some ⟨_, ⟨.sigma⟩⟩
+  | (DCC (Σ(_f_β) _env))                             => .some ⟨_, ⟨.sigma⟩⟩
   | DCC ⟦β⟧(x, y) =>
     match x.step?, y.step? with
     | .some ⟨x', ⟨h₁⟩⟩, _ => .some ⟨(DCC ⟦β⟧(x', y)), ⟨.sigl h₁⟩⟩
@@ -333,11 +333,11 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
     | subst₁ =>
       simp_all
       rename_i h
-      exact (h _ _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl rfl).elim
+      exact (h _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl).elim
     | subst₁p =>
       simp_all
       rename_i h
-      exact (h _ _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl rfl).elim
+      exact (h _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl).elim
     | subst₂ =>
       simp_all
       rename_i h
@@ -353,13 +353,13 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
       | .some ⟨_, ⟨hrf⟩⟩ => exact ⟨_, .congrFun hrf, by simp⟩
     | fstp =>
       rename_i h _ _
-      exact (h _ _ _ _ _ _ rfl rfl).elim
+      exact (h _ _ _ _ _ rfl rfl).elim
     | fst =>
       rename_i h _ _ _ _
-      exact (h _ _ _ _ _ _ rfl rfl).elim
+      exact (h _ _ _ _ _ rfl rfl).elim
     | snd =>
       rename_i h _
-      exact (h _ _ _ _ _ _ rfl rfl).elim
+      exact (h _ _ _ _ _ rfl rfl).elim
     | snd'  =>
       rename_i h _ _ _ _ _
       exact (h _ _ _ _ _ rfl rfl).elim

@@ -13,27 +13,21 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
     return .bot
   | .const ``_root_.Expr.tintro [] =>
     return .tintro
+  | .app (.const ``_root_.Expr.fst []) β =>
+    let β' ← decode_dcc β
+    return .fst β'
   | .app (.const ``_root_.Expr.sndc []) β =>
     let β' ← decode_dcc β
     return .sndc β'
-  | .app (.const ``_root_.Expr.coup []) β =>
-    let β' ← decode_dcc β
-    return .coup β'
   | .app (.const ``_root_.Expr.fstc []) β =>
     let β' ← decode_dcc β
     return .fstc β'
-  | .app (.app (.const ``_root_.Expr.fst []) f_α) f_β =>
-    let α' ← decode_dcc f_α
-    let β' ← decode_dcc f_β
-    return .fst α' β'
-  | .app (.app (.const ``_root_.Expr.snd []) f_α) f_β =>
-    let α' ← decode_dcc f_α
-    let β' ← decode_dcc f_β
-    return .snd α' β'
-  | .app (.app (.const ``_root_.Expr.sigma []) f_α) f_β =>
-    let α' ← decode_dcc f_α
-    let β' ← decode_dcc f_β
-    return .sigma α' β'
+  | .app (.const ``_root_.Expr.snd []) β =>
+    let β' ← decode_dcc β
+    return .snd β'
+  | .app (.const ``_root_.Expr.sigma []) β =>
+    let β' ← decode_dcc β
+    return .sigma β'
   | .app (.const ``_root_.Expr.id []) α =>
     let α' ← decode_dcc α
     return .id α'
@@ -45,10 +39,6 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
     let f ← decode_dcc f
     let g ← decode_dcc g
     return .comp f g
-  | .app (.app (.const ``_root_.Expr.comp' []) f) g =>
-    let f ← decode_dcc f
-    let g ← decode_dcc g
-    return .comp' f g
   | .app (.app (.const ``_root_.Expr.pair []) f) g =>
     let f ← decode_dcc f
     let g ← decode_dcc g
@@ -94,7 +84,7 @@ elab "dcc_trace" err:"?"? e:expr : command => do
           <| Lean.Elab.Term.withoutErrToSorry
             (Lean.Elab.Term.elabTermEnsuringType stx' (.some (.const ``_root_.Expr [])) >>= decode_dcc)
         match e.infer with
-        | .some _t =>
+        | .some t =>
           if err.isNone then
             let fmt := ((Std.format ∘ Sigma.fst) <$> e.infer).getD "?"
             Lean.logInfoAt stx m!"{stx}: {fmt}"

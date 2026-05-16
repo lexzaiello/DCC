@@ -21,7 +21,7 @@ needs = ["@Dcc/+Dcc:highlighted", "+Lean4Lean.Theory.Typing.Strong:highlighted"]
 
 [[lean_exe]]
 name = "docs"
-root = "Main"
+root = "Slides"
 srcDir = "."
 
 [[require]]

@@ -317,18 +317,26 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
       | _ => .none
     |_ => .none
   | DCC Snd(f_α, f_β) =>
+    dbg_trace "a"
     match f_α.infer with
     | .some ⟨DCC (Π(Id(Sort o), f_β₀) δ), ⟨ht₁⟩⟩ =>
+      dbg_trace "b"
       match f_β.infer with
       | .some ⟨(DCC (Π(f_α₁, f_β₁) x_α₁)), ⟨ht₂⟩⟩ =>
+        dbg_trace "c"
         if heq : (DCC (f_α₁ x_α₁)).reduce_all = δ then
           match heq₂ : (DCC (f_β₀ δ)).reduce_all with
           | (DCC (`(__a, Sort m))) =>
+            dbg_trace "d"
             if heq₃ : (DCC (`(__a, Sort m))) = (DCC (`(δ, Sort m))) then
+              dbg_trace "e"
+              dbg_trace (DCC (f_β₁ x_α₁)).reduce_all
               match heq₄ : (DCC (f_β₁ x_α₁)).reduce_all with
               | (DCC (Π(_a, Λ(_b, _c, `(_d, Sort n))))) =>
+                dbg_trace "f"
                 if heq₅ : (DCC (Π(_a, Λ(_b, _c, `(_d, Sort n))))) =
                   (DCC (Π(f_α, Λ(δ, f_α, `(Coup(f_α), Sort n))))) then
+                    dbg_trace "g"
                   .some ⟨_, ⟨.snd ht₁
                     (reduce_reduces (heq₃ ▸ heq₂))
                     ht₂

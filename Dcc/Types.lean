@@ -238,9 +238,9 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC Coup(β))             => comb "Coup" [β.toFormat pretty]
   | (DCC Σ(f_α, f_β))         => comb "Σ" [f_α.toFormat pretty, f_β.toFormat pretty]
   | (DCC f ∘ g)               =>
-    sepD [f.toFormat pretty, g.toFormat pretty] " ∘"
+    paren (sepD [f.toFormat pretty, g.toFormat pretty] " ∘")
   | (DCC f ∘' g)               =>
-    sepD [f.toFormat pretty, g.toFormat pretty] " ∘'"
+    paren (sepD [f.toFormat pretty, g.toFormat pretty] " ∘'")
   | (DCC (f x))               =>
     if pretty then
       match heq₁ : (DCC (f x)) with

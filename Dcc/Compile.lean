@@ -59,29 +59,25 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
       let α := (DCC (f_α x_α)).reduce_all
       match (DCC (f_β x_α)).reduce_all with
       | DCC Π(_f_β, γ) =>
-        --dbg_trace Sigma.fst <$> (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩).infer
-        match ← (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩).infer with
-        | ⟨(DCC (Π(_a, `(__a, Σ(Λ(_b, `(_c, _d), f_β ∘' _e)))) _f)), _⟩ =>
-          /-
-            ⟨N, M⟩ x = ⟨Id(α), Snd(γ) ∘ ⟨N, M⟩⟩ x = (x, (N x, M x (N x)) x)
-            ⟨?, Snd(γ)⟩ x = (? x, Snd(γ) x ?)
-            ⟨⟨N, M⟩, Snd(γ)⟩
-            ⟨⟨N, M⟩, Snd(γ)⟩ x = ((N x, M x (N x)), Snd(γ) x (N x, M x (N x)))
-            = (..., M x (N x))
+        /-
+          ⟨N, M⟩ x = ⟨Id(α), Snd(γ) ∘ ⟨N, M⟩⟩ x = (x, (N x, M x (N x)) x)
+          ⟨?, Snd(γ)⟩ x = (? x, Snd(γ) x ?)
+          ⟨⟨N, M⟩, Snd(γ)⟩
+          ⟨⟨N, M⟩, Snd(γ)⟩ x = ((N x, M x (N x)), Snd(γ) x (N x, M x (N x)))
+          = (..., M x (N x))
 
 
-            ⟨⟨N, M⟩, Snd(γ)⟩
-            (N x, M x (N x))
-            (M N) = Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N, M⟩)⟩
-          -/
+          ⟨⟨N, M⟩, Snd(γ)⟩
+          (N x, M x (N x))
+          (M N) = Subst(Snd(γ), Sndc(Σ(γ))) ∘ ⟨Id(α), `(α, ⟨N, M⟩)⟩
+        -/
 
-          dbg_trace γ
-          dbg_trace Sigma.fst <$> γ.infer
-          --dbg_trace Sigma.fst <$> (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩).infer
-          --dbg_trace Sigma.fst <$> (DCC Subst(Snd(γ), Sndc(Σ(γ)))).infer
+        dbg_trace Sigma.fst <$> γ.infer
+        dbg_trace Sigma.fst <$> (DCC Σ(γ)).infer
+        dbg_trace Sigma.fst <$> (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩).infer
+        --dbg_trace Sigma.fst <$> (DCC Subst(Snd(γ), Sndc(Σ(γ)))).infer
 
-          .some (DCC Subst(Snd(γ), Sndc(f_β)) ∘' ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
-        | _ => .none
+        .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘' ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
       | _ => .none
     | _ => .none
   | .const ``True.intro [] => DCC (`(ctx, ∗))
@@ -135,20 +131,3 @@ macro_rules
 #eval dcc_compile (fun (f : Sort 0 → Sort 0) (x : Sort 0) => f x)
 
 -- `(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Sort 0)
-dcc_trace Σ(Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)) ∘'
-      Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘'
-    Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))
-
-#eval Sigma.fst <$> (DCC Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)) ∘'
-      Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘'
-    Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))).infer
-
-#eval (DCC (`(⊤, Sort 0) ∘'
-         Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))) ∘'
-           Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))).reduce_all
-
-#eval (DCC Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 1)) ∘'
-           Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘'
-         Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))).reduce_all
-
-#eval (DCC Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 1))).reduce_all

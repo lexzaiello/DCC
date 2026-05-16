@@ -80,7 +80,18 @@ open Lean Qq in def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _ro
             DCC `(t_discard, Coup(f_β))
           | e => e
 
-          .some (DCC Subst(Snd(_f_β, γ), Sndc(f_β'')) ∘ ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
+          dbg_trace γ
+          dbg_trace Sigma.fst <$> γ.infer
+          --dbg_trace f_β'
+          --dbg_trace Sigma.fst <$> f_β'.infer
+          dbg_trace Sigma.fst <$> f_β''.infer
+          dbg_trace Sigma.fst <$> (DCC Sndc(f_β'')).infer
+          dbg_trace Sigma.fst <$> _f_β.infer
+          dbg_trace Sigma.fst <$> γ.infer
+          --dbg_trace Sigma.fst <$> (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩).infer
+          --dbg_trace Sigma.fst <$> (DCC Subst(Snd(γ), Sndc(Σ(γ)))).infer
+
+          .some (DCC Subst(Snd(_f_β, γ), Sndc(f_β'')) ∘' ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
         | _ => .none
       | _ => .none
     | _ => .none
@@ -132,28 +143,51 @@ macro_rules
 #eval dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
 
+/-
+left of here:
+- made Σ more dependent, but now η gives us an arrow
+-/
 #eval dcc_compile (fun (f : Sort 0 → Sort 0) (x : Sort 0) => f x)
 
-dcc_trace ? (Λ(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))),
-   Λ(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-     `(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0),
-     (Sndc(`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Sort 0)) ∘'
-        (Sndc(`(Sort 0, Sort 0)) ∘'
-           ⟨Id(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))),
-             Λ(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)),
-               `(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)),
-                 Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))),
-               (⟨Sndc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)),
-                    (Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘'
-                       Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))⟩ ∘'
-                  Fstc(`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)),
-                         Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-                                Sort 0))))))⟩))))
-   ∗)
-
-#eval (DCC ((`(⊤, Sort 0) ∘' Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))) ∘'
-   Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))).reduce_all
+dcc_trace ? Σ(`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Sort 0),
+  Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)) ∘'
+      Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘'
+    Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))
 
 /-
-`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Sort 0)
+Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 1)) ∘'
+    Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘'
+      Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))
+
+This needs to η-reduce to a quotation so we can infer the resulting sort.
+
+Does it η-reduce?
+
+Yes. Just double quotation `(a, `(b, Sort 1))
+this does not seem like a reliable method.
+however, this is β, so it eliminates into sort, so it will be quoted anyway.
+
+Λ(α, `(α, β), `(_x, y)) =>
+`(
 -/
+dcc_trace ? Σ(`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Sort 0),
+  `(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), `(Sort 0, Sort 0)))
+
+/-
+Σ(`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Sort 0),
+  `(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), `(Sort 0, Sort 0)))
+
+this is equivalent to
+
+`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Coup(`(Sort 0, Sort 0)))
+
+η-reduce it.
+-/
+
+/-
+Σ(`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Sort 0),
+  `(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), `(Sort 0, Sort 0)))
+-> `(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Coup(`(Sort 0, Sort 0)))
+-/
+
+#eval Sigma.fst <$> (DCC Sndc(`(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)), Coup(`(Sort 0, Sort 0))))).infer

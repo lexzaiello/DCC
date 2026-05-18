@@ -13,10 +13,9 @@ Lexi Aiello
 
 # Contribution
 
-## Result ⟺ Practical Formalization Techniques
+## Affine Restriction: A New(?) Technique for Normalization in DTT
 
 Formalizing a dependent type theory is challenging because *computations can appear in types*.
-
 
 $$`\frac{\Gamma \vdash M : A \quad A =_{\beta} B \quad \Gamma \vdash B : K}{\Gamma \vdash M : B}`
 
@@ -114,19 +113,53 @@ inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop wher
     Γ ⊢ .const c ls ≡ .const c ls' : ci.type.instL ls
 ```
 
-# Contributions
+# Existing Solution: Normalization by Evaluation (NbE)
 
-1. Theory: A technique to *avoid conversion altogether*
-2. Result: type-checking the dependently-typed *categorical combinators* is *deterministic* and *decidable*
-3. Novel: the categorical combinators have never been extended before to dependent types
-4. Practical: a formalization of this scale requires very careful abstraction and boilerplate
-  - Useful for others doing metatheory
+:::table
+*
+  * *Deep embedding* (AST in Lean)
+  * *Semantic model* (e.g., actual Lean functions)
+:::
+
+# Existing Solution: Normalization by Evaluation (NbE)
+
+:::table
+*
+  * *Deep embedding* (AST in Lean)
+  * *Semantic model* (e.g., actual Lean functions)
+*
+  * Reification ➡️
+  * ⬅️ Reflection
+:::
+
+# Existing Solution: Normalization by Evaluation (NbE)
+
+:::table
+*
+  * *Deep embedding* (AST in Lean)
+  * *Semantic model* (e.g., actual Lean functions)
+*
+  * Reification ➡️
+  * ⬅️ Reflection
+*
+  * `MyExpr.Lam` becomes `fun abc => xyz`
+  * Reduce term, convert back to `MyExpr`
+:::
+
+# Contribution
+
+Affine restriction: a new(?) technique to *automate conversion*
+
+- Restrict term reduction in types to the "affine fragment" (terms that decrease in size)
+  - Get strong normalization in types for free
+  - Decidable type-checking
+- This technique is practically applicable (specifically in categorical combinators)
+  - Probably other combinatory logics, too
 
 # Contribution 1
 
-*A Technique to Avoid Conversion Altogether*
-- I show that types in combinatory logic can be automatically reduced *without progress, preservation, or logical relations*.
-- Most meta-theories do progress, preservation, etc. first. *I do strong-normalization first.*
+- Technique is quite obvious and requires far less boilerplate than NbE
+  - Works with the deep embedding directly, not appealing to denotational semantics
 
 # Contribution 1
 
@@ -136,17 +169,16 @@ inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop wher
   - Further proofs (e.g., preservation, progress) can automate conversion with a function `reduce`
     - Avoid hundreds of lines of induction
 
-# Contribution 2
+# Practically applicable
 
 Since I have an *algorithm to reduce expressions*:
 
 - Type-checking is deterministic
 - Type-checking is decidable
-- A judgment $`e : t` is valid iff it is inferred by the type-checker
-  - Very strong property for a dependent type theory (completeness + soundness)
+  - A judgment $`e : t` is valid iff it is inferred by the type-checker
 - All formalized in Lean
 
-# Contribution 3
+# Practically applicable
 
 My work builds off an existing theory: the simply-typed categorical combinators.
 
@@ -154,7 +186,7 @@ My work builds off an existing theory: the simply-typed categorical combinators.
 - Cat. combinators have theoretical performance advantages as a $`λ`-calculus compilation target
 - Compiler from Lean (minus inductive types) to my dependently-typed combinators in < 100 lines of Lean
 
-# Contribution 4
+# Practically applicable
 
 A formalization of this scale in Lean requires very carefully constructed abstraction and boilerplate:
 - Of practical interest to others doing metatheory in proof assistants
@@ -215,6 +247,62 @@ $$`
 -- !fragment fadeUp
 ```
 
+# Demo: Lean Compiler
+
+- Compiles raw Lean terms (`Lean.Expr`) into my combinators
+- The entire compiler is 100 lines of code
+- No book-keeping for contexts:
+  - Since contexts can include terms (dependent), complex data structures are usually required just to compile
+  - My context book-keeping is just a combinator `Expr`
+
+# Demo: Lean Compiler
+
+- My context book-keeping is just a combinator `Expr`
+
+```leanLibCode Dcc.Compile (startLine := 9) (endLine := 21)
+def Ctx := Expr
+
+def Ctx.empty := DCC ⊤
+
+def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
+  match ctx, idx with
+  | DCC Coup(β), .zero => pure <| DCC Sndc(β)
+  | DCC Coup(β), .succ n => do
+    match (← β.infer).fst with
+    | DCC (Π(a, _b) x_α) =>
+      (·.comp' (DCC (Fstc(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
+    | _ => .none
+  | _, _ => .none
+```
+
+# Demo: Lean Compiler
+
+- Debruijn indices are just projection, like usual (it *just works*)
+
+```lean
+/- !hide -/namespace _tmp
+open Expr
+-- !end hide
+def Ctx := Expr
+
+def Ctx.empty := DCC ⊤
+
+def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
+  match ctx, idx with
+  | DCC Coup(β), .zero => pure <| DCC Sndc(β)
+                                   -- ^ !click
+  | DCC Coup(β), .succ n => do
+    match (← β.infer).fst with
+    | DCC (Π(a, _b) x_α) =>
+      (·.comp' (DCC (Fstc(β)))) <$>
+                  -- ^ !click
+       cc_var (DCC (a x_α)).reduce_all n
+    | _ => .none
+  | _, _ => .none
+/- !hide -/end _tmp
+-- !end hide
+```
+
 # Demo: Type-Checker Performance
 
 ```lean
@@ -226,11 +314,11 @@ $$`
    Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))
 ```
 
-My type-checker inferred the types of *all* sub-expressions in this tree in *92ms*. Somewhat impressive for a tree this size.
+My type-checker inferred the types of *each* sub-expression in this tree in *52ms*. Somewhat impressive for a tree this size.
 
 # Demo / Theorem: Judgmental Completeness
 
-A judgment is valid iff the type-checker can infer it:
+In DCC, a judgment is valid iff the type-checker can infer it:
 
 ```leanLibCode Dcc.Complete (startLine := 31) (endLine := 32)
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
@@ -300,3 +388,8 @@ Since none of our primitive types invoke $`dpair`, our types are strongly-normal
 8. I use completeness + soundness of the reducer to show soundness + completeness of `infer`
 9. *I show type-checking is decidable*
 
+# Decidability is only possible due to the affine restriction
+
+- Otherwise, conversion would require normalization by evaluation (NbE)
+  - Unclear if decidability can be proven (would need completeness / soundness for reflection and reification)
+- Affine restriction feels "elegant" (remove just 1 combinator, and you get decidability)

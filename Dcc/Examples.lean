@@ -4,7 +4,7 @@ import Dcc.Types
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1) ∘' Id(Sort 1)).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1) (Sort 0))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Fst(Sort 1, `(Sort 1, `(Sort 1, Sort 1))) (Sort 0))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Fst(`(Sort 1, `(Sort 1, Sort 1))) (Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Σ(`(Sort 1, `(Sort 1, Sort 1))) (Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
@@ -133,8 +133,8 @@ f_β := Λ(Sort 1, `(Sort 1, Sort 1),
 #eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1),
          (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))).infer
 
-#eval (DCC (Fst(⊤, `(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)).reduce_all
-#eval (DCC Id(Sort 2) ∘' (Fst(⊤, `(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)).reduce_all
+#eval (DCC (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)).reduce_all
+#eval (DCC Id(Sort 2) ∘' (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗)).reduce_all
 
 
 #eval (DCC (Σ(Λ(Sort 1, `(Sort 1, (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)),
@@ -155,7 +155,7 @@ Maybe my example is wrong? We should try it with the couple example from before.
 -/
 
 #eval (DCC (Σ(Λ(Sort 2, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))),
-       Id(Sort 2) ∘' (Fst(⊤, `(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗))) (Sort 1))).reduce_all
+       Id(Sort 2) ∘' (Fst(`(⊤, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))))) ∗))) (Sort 1))).reduce_all
 
 /-
 (Σ(`(⊤, `(Π(Id(Sort 2), `(Sort 2, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1))), Sort 1))) ∗)

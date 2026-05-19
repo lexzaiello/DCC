@@ -1,0 +1,152 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\newcommand{\comment}[1]{}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{textcomp}
+\usepackage[a4paper, margin={1in}]{geometry}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\setmonofont{FreeMono}
+\usepackage{minted}
+\setminted{breaklines=true}
+\newmintinline[lean]{lean4}{bgcolor=white}
+\newminted[leancode]{lean4}{fontsize=\footnotesize}
+\usemintedstyle{tango}
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+
+\usepackage{amsthm}
+\usepackage{authblk}
+\usepackage{biblatex}
+\usepackage{mathpartir}
+\usepackage{stmaryrd}
+\usepackage{amssymb}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\addbibresource{./refs.bib}
+
+\newcommand{\set}{\text{Set}}
+\newcommand{\sort}[1]{\text{Sort}\ #1}
+\newcommand{\affarr}{\rightarrowtail}
+\newcommand{\affetaarr}{\rightarrowtail_{\eta}}
+\newcommand{\etaarr}{\rightarrow_{\eta}}
+
+\title{TODO TODO}
+\author[1]{Lexi Aiello}
+\author[2]{Eric Klavins}
+\affil[1]{Department of Philosophy, University of Washington}
+\affil[2]{Electrical \& Computer Engineering Department, University of Washington}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+  TODO
+\end{abstract}
+
+\section{Semi-Affine Types}
+
+\subsection{SK Combinators}
+
+The SK combinators are the prototypical combinatory logic. They are defined by two reduction rules \eqref{sk_red}.
+
+\begin{split}\label{sk_red}
+  K x y &= x \\
+  S x y z = x z (y z)
+\end{split}
+
+The combinators have been interpreted dependently \cite{altenkirch} \eqref{sk_types}.
+
+\begin{split}\label{sk_types}
+  S : \Pi (A : \set) (B : A \rightarrow \set) (C : \Pi (x : A) (y : B x), \set) (x : \Pi (x : A) (y : B x), C x y) (y : \Pi (x : A), B x) (z : A), \gamma z (y z)
+  K : \Pi (A : \set) (B : A \rightarrow \set) (x : A) (y : B x), A
+\end{split}
+
+Notably, each term in the context is used at most once, except in positive occurrences. Except for the ``final'' codomain of \(S\), each argument type consumes the context affinely. Hence, its types are ``semi-affine.''
+
+\subsection{BCKW Combinators}
+
+The BCKW combinators have the rewrite equations:
+
+\begin{split}
+  B x y z &= x (y z)\\
+  C x y z &= x z y\\
+  K x y &= x\\
+  W x y &= x y y
+\end{split}
+
+The BCKW combinators are turing-complete. They can be extended with dependent types \eqref{bckw_types}.
+
+\begin{split}\label{bckw_types}
+  &B : \Pi (A : \set) (B : \set) (C : B \rightarrow \set) (x : \Pi (x : B), C x) (y : A \rightarrow B) (z : A), C (y x) \\
+  &C : \Pi (A : \set) (B : \set) (C : A \rightarrow B \rightarrow \set) (x : \Pi (x : A) (y : B), C x y) (y : B) (z : A), C z y \\
+  &K : \Pi (A : \set) (B : A \rightarrow \set) (x : A) (y : B x), A \\
+  &W : \Pi (A : \set) (B : A \rightarrow A \rightarrow \set) (x : \Pi (x : A) (y : A), B x y) (y : A), W B y
+\end{split}
+
+Similarly to \(SK\), terms in the context are used non-affinely, but only positively.
+
+\section{The Categorical Combinators}
+
+The observation that \(SK\) has semi-affine types is unsatisfying. \(SK\) are well-known to be equivalent to \(\lambda\)-calculus, but there is an arguably closer relative to the \(\lambda\)-calculus: the categorical combinators.
+
+The categorical combinators \autocite{CURIEN1986188} are the basis of the Categorical Abstract Machine \autocite{cmachine}. They are a potential compilation target for the \(\lambda\)-calculus \autocite{cmachine}. Categorical combinators simulate variable substitution through projections over nested tuples (``couples'', or binary products) constituting an ``environment''. Binders are simulated through a curry combinator (\(\Lambda\)) which applies its two arguments as a couple to the body (\(\Lambda(x)\)). The categorical semantics of the calculus are given by cartesian-closed categories \autocite[p. 178]{cmachine}.
+
+\begin{figure}[H]
+\begin{center}
+\begin{tabular}{l l l}\label{red_untyped_cat}
+&(ass) & \((x \circ y) z = x(y z)\) \\
+&(fst) & \(Fst(a, b) = a\) \\
+&(snd) & \(Snd(a, b) = b\) \\
+&(dpair) & \(\langle x, y\rangle z = (x z, y z)\) \\
+&(curr) & \(\Lambda(x)yz = x(y, z)\) \\
+&(app) & \(App(f, x) = f x\) \\
+&(quote) & \(`(x) y = x\)
+\end{tabular}
+\end{center}
+\caption{Reduction rules of the untyped combinators as seen in the Categorical Abstract Machine.}
+\end{figure}
+
+Obviously, the only rule that duplicates any terms in scope is \textit{dpair}. Serendipitously, its dependent type can be expressed affinely. The size of its type (and all other types) strictly decrease (unlike in \(SK\) or \(BCKW\)). Our primary contribution in this paper is a technique for normalization in dependent type theories which avoids appealing to denotational semantics based on this insight: by restricting rewrite rules to the affine fragment of the calculus, decidability of \(\beta_{=}\) is automatic. By removing just one combinator (\textit{dpair}), types become strongly normalizing, and type-checking becomes decidable (almost for free). The rest of this paper is dedicated to a practical formalization of the dependently-typed categorical combinators, demonstrating decidability of type-checking, achieved in principal by affine restriction.
+
+% As a result of Sigma types, we can avoid duplication
+
+% Introduction
+
+% SK combinators
+
+% Categorical combinators
+
+% Formalization of dependently-typed SK has yet to be achieved
+
+% Semi-affine types of SK
+
+% Fully affine types of categorical combinators
+
+  % Frame this as a discovery, not a construction
+
+% Affine restriction as a formalization technique
+
+  % Compare and contrast to NbE
+
+% How we used the affine restriction to achieve decidable type-checking for the categorical combinators
+
+% Affine restriction proofs:
+
+  % Decreasing measure
+
+  % Briefly skim typeclass automation
+
+  % \beta-reduction decidability
+
+% Type inference
+
+  % Don't get bogged down into technicals
+
+\end{document}

@@ -238,6 +238,15 @@ $$`
 }{\Lambda(A, B, x) : \Pi (x : A) (y : B x), C (\llbracket B \rrbracket (x, y))}
 `
 
+# The Dependent Categorical Combinators
+
+- $`\Pi`'s domain and codomain depend on an environment (the context)
+
+$$`
+\frac{f_{\alpha} : \delta \rightarrow \text{Sort}\ m \quad f_{\beta} : \Pi (s : \delta) (x : f_\alpha s), \text{Sort}\ n}
+{\Pi(f_\alpha, f_\beta) : \delta \rightarrow \text{Sort}\ max(m, n)}
+`
+
 # Demo: Lean Compiler
 
 ```lean -panel
@@ -253,17 +262,15 @@ $$`
 - The entire compiler is 100 lines of code
 - No book-keeping for contexts:
   - Since contexts can include terms (dependent), complex data structures are usually required just to compile
-  - My context book-keeping is just a combinator `Expr`
+  - Context book-keeping is just a combinator `Expr`
 
 # Demo: Lean Compiler
 
-- My context book-keeping is just a combinator `Expr`
+- Context book-keeping is just a combinator `Expr`
 
 ```leanLibCode Dcc.Compile (startLine := 9) (endLine := 21)
 def Ctx := Expr
-
 def Ctx.empty := DCC ⊤
-
 def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
   match ctx, idx with
   | DCC Coup(β), .zero => pure <| DCC Sndc(β)
@@ -273,34 +280,6 @@ def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
       (·.comp' (DCC (Fstc(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
     | _ => .none
   | _, _ => .none
-```
-
-# Demo: Lean Compiler
-
-- Debruijn indices are just projection, like usual (it *just works*)
-
-```lean
-/- !hide -/namespace _tmp
-open Expr
--- !end hide
-def Ctx := Expr
-
-def Ctx.empty := DCC ⊤
-
-def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
-  match ctx, idx with
-  | DCC Coup(β), .zero => pure <| DCC Sndc(β)
-                                   -- ^ !click
-  | DCC Coup(β), .succ n => do
-    match (← β.infer).fst with
-    | DCC (Π(a, _b) x_α) =>
-      (·.comp' (DCC (Fstc(β)))) <$>
-                  -- ^ !click
-       cc_var (DCC (a x_α)).reduce_all n
-    | _ => .none
-  | _, _ => .none
-/- !hide -/end _tmp
--- !end hide
 ```
 
 # Demo: Type-Checker Performance

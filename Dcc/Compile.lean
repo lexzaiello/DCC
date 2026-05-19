@@ -26,7 +26,7 @@ def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
   | .app (.app (.const ``Sigma []) α) β => do
     let α' ← Lean.Expr.abstract' α ctx
     let β' ← Lean.Expr.abstract' β (DCC Coup(α'))
-    .some (DCC Σ(β'))
+    .some (DCC Σ(α', β'))
   | .lam _a α bdy _binfo => do
     let α' ← Lean.Expr.abstract' α ctx
     let inner ← Lean.Expr.abstract' bdy (DCC Coup(α'))
@@ -45,7 +45,7 @@ def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
       let α := (DCC (f_α x_α)).reduce_all
       match (DCC (f_β x_α)).reduce_all with
       | DCC Π(_f_β, γ) =>
-        .some (DCC Subst(Snd(γ), Sndc(Σ(γ))) ∘' ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
+        .some (DCC Subst(Snd(_f_β, γ), Sndc(Σ(_f_β, γ))) ∘' ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
       | _ => .none
     | _ => .none
   | .const ``True.intro [] => DCC (`(ctx, ∗))

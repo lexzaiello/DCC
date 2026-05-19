@@ -84,15 +84,15 @@ Fst(f_β) : ∀ (env : δ) (s : Σ(f_β) env), α
 -/
 
 @[dcc_judge] abbrev fst.type (α f_β δ : Expr) (n o : Level) : Expr :=
-  DCC (Π(Id(Sort o), `(Sort o, (Π(Id(Sort n), Λ(Sort n, Id(Sort n), `(Coup(Id(Sort n)), α))) ∘' Σ(f_β)))) δ)
+  DCC (Π(Id(Sort o), `(Sort o, (Π(Id(Sort n), Λ(Sort n, Id(Sort n), `(Coup(Id(Sort n)), α))) ∘' Σ(α, f_β)))) δ)
 
 /-
 Snd(f_β) : ∀ (env : δ) (s : Σ(f_β) env), f_β env (Fst(f_β) env s)
 
 snd : ∀ (env : δ) (s : Σ(f_β) env), Fst(f_β) env
 -/
-@[dcc_judge] abbrev snd.type (f_β δ : Expr) (o : Level) : Expr :=
-  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(f_β), Subst(f_β, Fst(f_β))))) δ)
+@[dcc_judge] abbrev snd.type (α f_β δ : Expr) (o : Level) : Expr :=
+  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(α, f_β), Subst(f_β, Fst(α, f_β))))) δ)
 
 /-
 Λ(β, x) y z → x ⟦β⟧(y, z)
@@ -126,8 +126,8 @@ f : ∀ (x : α), β x
 g : ∀ (x : α) (y : β x), γ x y
 ⟨f, g⟩ : ∀ (x : α), Σ(Λ(α, β, γ)) x
 -/
-@[dcc_judge] abbrev pair.type (α γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, Σ(γ))) α)
+@[dcc_judge] abbrev pair.type (α β γ : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), `(Sort m, Σ(β, γ))) α)
 
 @[dcc_judge] abbrev comp'.type (α γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, γ ∘' g)) α)
@@ -140,7 +140,7 @@ f ∘ g : ∀ (x : α), γ ∘ g
 -/
 
 @[dcc_judge] abbrev comp.g.type (α f_β : Expr) (m : Level) :=
-  (DCC (Π(Id(Sort m), Σ(Λ(α, `(α, α), f_β ∘' Fstc(`(α, α))))) α))
+  (DCC (Π(Id(Sort m), Σ(`(α, α), Λ(α, `(α, α), f_β ∘' Fstc(`(α, α))))) α))
 
 @[dcc_judge] abbrev comp.f.type (f_β f_γ : Expr) (n : Level) :=
   (DCC (Π(Id(Sort n), f_γ) Coup(f_β)))
@@ -177,8 +177,8 @@ f_β : (x : α) (y : f_α x) → Sort n
 x : ∀ (env : δ) (x : α), γ env x
 Subst(x, Fst(β)) : ∀
 -/
-@[dcc_judge] abbrev Subst₁.type (β γ δ : Expr) (o : Level) : Expr :=
-  (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(β), Subst(γ, Fst(β))) ∘' Snd'(Sort o, δ))) δ))
+@[dcc_judge] abbrev Subst₁.type (α β γ δ : Expr) (o : Level) : Expr :=
+  (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(α, β), Subst(γ, Fst(α, β))) ∘' Snd'(Sort o, δ))) δ))
 -- (Π(Id(Sort 1), `(Sort 1, Π(Id(Sort 0), Λ(Sort 0, Id(Sort 0), `(Coup(Id(Sort 0)), Sort 2))))) Sort 0)
 @[dcc_judge] abbrev Subst₁.x.type (α γ δ : Expr) (m o : Level) : Expr :=
   (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), `(Coup(Id(Sort o)), (Π(Id(Sort m), γ) α)))) δ))
@@ -225,9 +225,9 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC Subst(β, x))         => comb "Subst" [β.toFormat pretty, x.toFormat pretty]
   | (DCC Sort m)              => "Sort " ++ (Std.format m)
   | (DCC Fstc(β))             => comb "Fstc" [β.toFormat pretty]
-  | (DCC Fst(β))              => comb "Fst" [β.toFormat pretty]
+  | (DCC Fst(α, β))           => comb "Fst" [α.toFormat pretty, β.toFormat pretty]
   | (DCC Sndc(β))             => comb "Sndc" [β.toFormat pretty]
-  | (DCC Snd(β))              => comb "Snd" [β.toFormat pretty]
+  | (DCC Snd(α, β))           => comb "Snd" [α.toFormat pretty, β.toFormat pretty]
   | (DCC Snd'(α, β))          => comb "Snd'" [α.toFormat pretty, β.toFormat pretty]
   | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC Π(α, β))             =>
@@ -236,7 +236,7 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC ⟦β⟧(a, b))           =>
     comb (bbracket (sepD [β.toFormat pretty])) [a.toFormat pretty, b.toFormat pretty]
   | (DCC Coup(β))             => comb "Coup" [β.toFormat pretty]
-  | (DCC Σ(β))                => comb "Σ" [β.toFormat pretty]
+  | (DCC Σ(α, β))             => comb "Σ" [α.toFormat pretty, β.toFormat pretty]
   | (DCC f ∘ g)               =>
     sepD [f.toFormat pretty, g.toFormat pretty] " ∘"
   | (DCC f ∘' g)               =>

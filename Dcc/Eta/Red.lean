@@ -5,30 +5,7 @@ import Dcc.Eta.Size
 import Dcc.Aff.Red
 import Dcc.Aff.Size
 
-/-
-(Subst(`(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-         Fst(`(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))))
-     ∗) ∘
-  Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))
--/
-
-/-
-Σ-normalization to Coup:
-
-Σ(f_β) env
-
-f_β env →_η f_β'
-
-Coup(f_β')
--/
-
 namespace Expr
-
-/-
-TODO: need to reduce (x y) in curr_fst.
-Very dumb in the first place.
-Will need to mess around with size a bit for this to work.
--/
 
 inductive RedEta : Expr → Expr → Prop
   | curr      : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
@@ -46,12 +23,12 @@ inductive RedEta : Expr → Expr → Prop
   | pi         : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
   | pi_quot    : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
   | pi'        : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
-  | sig        : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(β) env)) (DCC Coup(β'))
-  | sig'       : RedEta β β' → RedEta (DCC (Σ(β))) (DCC Σ(β'))
+  | sig        : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(α, β) env)) (DCC Coup(β'))
+  | sig'       : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
   | idl        : RedEta (DCC (Id(α) ∘ f)) f
   | idl'       : RedEta (DCC (Id(α) ∘' f)) f
-  | fsi        : RedEta (DCC ⟨(Fst(_β) env), (Snd(_β₂) env₂)⟩) (DCC Id((Σ(_β) env)))
-  | subst_fst  : RedEta (DCC (Subst(`(⊤, x), Fst(`(⊤, f_β))) ∗)) (DCC (x ∘' Fstc(f_β)))
+  | fsi        : RedEta (DCC ⟨(Fst(_α, _β) env), (Snd(_α₂, _β₂) env₂)⟩) (DCC Id((Σ(_α, _β) env)))
+  | subst_fst  : RedEta (DCC (Subst(`(⊤, x), Fst(⊤, `(⊤, f_β))) ∗)) (DCC (x ∘' Fstc(f_β)))
   | quot_fst   : RedEta (DCC `(α, x) ∘ Fstc(β)) (DCC `(Coup(β), x))
   | quot'_fst  : RedEta (DCC `(α, x) ∘' Fstc(β)) (DCC `(Coup(β), x))
   | quot_snd   : RedEta (DCC `(α, x) ∘ Sndc(β)) (DCC `(Coup(β), x))
@@ -83,11 +60,11 @@ inductive RedEta : Expr → Expr → Prop
     (reduce_norm rfl)
     (reduce_sound rfl)
     (reduce_norm rfl)⟩⟩
-  | DCC Σ(f_β) =>
+  | DCC Σ(α, f_β) =>
     match f_β.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig' h⟩⟩
     | _ => .none
-  | DCC (Σ(f_β) env) =>
+  | DCC (Σ(α, f_β) env) =>
     match (DCC (f_β env)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig h⟩⟩
     | _ => .none
@@ -111,8 +88,8 @@ inductive RedEta : Expr → Expr → Prop
     match x.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr h⟩⟩
     | .none => .none
-  | (DCC ⟨(Fst(_β) _env), (Snd(_β₂) _env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
-  | DCC (Subst(`(⊤, x), Fst(`(⊤, f_β))) ∗) => .some ⟨_, ⟨.subst_fst⟩⟩
+  | (DCC ⟨(Fst(_α, _β) _env), (Snd(_α₂, _β₂) _env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
+  | DCC (Subst(`(⊤, x), Fst(⊤, `(⊤, f_β))) ∗) => .some ⟨_, ⟨.subst_fst⟩⟩
   | (DCC `(α, x) ∘ Fstc(β)) => .some ⟨_, ⟨.quot_fst⟩⟩
   | (DCC `(α, x) ∘' Fstc(β)) => .some ⟨_, ⟨.quot'_fst⟩⟩
   | (DCC `(α, x) ∘ Sndc(β)) => .some ⟨_, ⟨.quot_snd⟩⟩
@@ -123,10 +100,6 @@ inductive RedEta : Expr → Expr → Prop
   | (DCC (`(α, x) ∘' Fstc(β)) ∘' z) => .some ⟨_, ⟨.quot'_fst'⟩⟩
   | (DCC (`(α, x) ∘ Sndc(β)) ∘ z) => .some ⟨_, ⟨.quot_snd'⟩⟩
   | (DCC (`(α, x) ∘' Sndc(β)) ∘' z) => .some ⟨_, ⟨.quot'_snd'⟩⟩
-  /-| (DCC (`(α, x) ∘ (y ∘ z))) =>
-    match (DCC `(α, x) ∘ y).step_eta? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot_comp h⟩⟩
-    | .none => .none-/
   | _ => .none
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
@@ -148,9 +121,6 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
     cases h₂ with
     | curr_fst' hr₂ hn₂ hr₂a hn₂a =>
       simp_all [norm_unique hr₁ hn₁ hr₂ hn₂, norm_unique hr₁a hn₁a hr₂a hn₂a]
-  /-| quot_comp ih =>
-    cases h₂
-    aesop-/
   | pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop

@@ -13,9 +13,10 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
     return .bot
   | .const ``_root_.Expr.tintro [] =>
     return .tintro
-  | .app (.const ``_root_.Expr.fst []) β =>
+  | .app (.app (.const ``_root_.Expr.fst []) α) β =>
+    let α' ← decode_dcc α
     let β' ← decode_dcc β
-    return .fst β'
+    return .fst α' β'
   | .app (.const ``_root_.Expr.sndc []) β =>
     let β' ← decode_dcc β
     return .sndc β'
@@ -25,12 +26,14 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
   | .app (.const ``_root_.Expr.coup []) β =>
     let β' ← decode_dcc β
     return .coup β'
-  | .app (.const ``_root_.Expr.snd []) β =>
+  | .app (.app (.const ``_root_.Expr.snd []) α) β =>
+    let α' ← decode_dcc α
     let β' ← decode_dcc β
-    return .snd β'
-  | .app (.const ``_root_.Expr.sigma []) β =>
+    return .snd α' β'
+  | .app (.app (.const ``_root_.Expr.sigma []) α) β =>
+    let α' ← decode_dcc α
     let β' ← decode_dcc β
-    return .sigma β'
+    return .sigma α' β'
   | .app (.const ``_root_.Expr.id []) α =>
     let α' ← decode_dcc α
     return .id α'
@@ -87,7 +90,7 @@ elab "dcc_trace" err:"?"? e:expr : command => do
           <| Lean.Elab.Term.withoutErrToSorry
             (Lean.Elab.Term.elabTermEnsuringType stx' (.some (.const ``_root_.Expr [])) >>= decode_dcc)
         match e.infer with
-        | .some t =>
+        | .some _ =>
           if err.isNone then
             let fmt := ((Std.format ∘ Sigma.fst) <$> e.infer).getD "?"
             Lean.logInfoAt stx m!"{stx}: {fmt}"

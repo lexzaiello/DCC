@@ -10,18 +10,18 @@ inductive EtaSize : Expr → ℕ → Prop
   | top    : EtaSize (DCC ⊤) 1
   | bot    : EtaSize (DCC ⊥) 1
   | subst  : EtaSize x m → EtaSize y n → EtaSize (DCC Subst(x, y)) (m + m + n).succ.succ.succ
-  | sig    : EtaSize β m → EtaSize (DCC Σ(β)) m.succ
+  | sig    : EtaSize α m → EtaSize β n → EtaSize (DCC Σ(α, β)) (m + n).succ
   | coup   : EtaSize β m → EtaSize (DCC Coup(β)) m
   | mk     : EtaSize x m → EtaSize y n → EtaSize (DCC ⟦β⟧(x, y)) (m + n).succ
   | sort   : EtaSize (DCC Sort m) 1
   | pi     : EtaSize β m → EtaSize (DCC Π(α, β)) m.succ
   | quot   : EtaSize x m → EtaSize (DCC `(β, x)) m.succ
   | id     : EtaSize (DCC Id(α)) 2
-  | fst    : EtaSize (DCC Fst(_α)) 2
+  | fst    : EtaSize (DCC Fst(_α, _β)) 2
   | fstc   : EtaSize (DCC Fstc(_α)) 2
   | snd'   : EtaSize (DCC Snd'(δ, β)) 2
   | sndc   : EtaSize (DCC Sndc(_α)) 2
-  | snd    : EtaSize (DCC Snd(_α)) 2
+  | snd    : EtaSize (DCC Snd(_α, _β)) 2
   | comp   : EtaSize f m → EtaSize g n → EtaSize (DCC (f ∘ g)) (m + m + n).succ.succ
   | comp'  : EtaSize f m → EtaSize g n → EtaSize (DCC (f ∘' g)) (m + m + n).succ.succ
   | pair   : EtaSize f m → EtaSize g n → EtaSize (DCC ⟨f, g⟩) (m + n).succ.succ
@@ -38,9 +38,10 @@ inductive EtaSize : Expr → ℕ → Prop
     let ⟨_, ⟨h₂⟩⟩ := y.eta_size
     ⟨_, ⟨.subst h₁ h₂⟩⟩
   | DCC Sort _m => ⟨_, ⟨.sort⟩⟩
-  | DCC Σ(β) =>
-    let ⟨_, ⟨h₁⟩⟩ := β.eta_size
-    ⟨_, ⟨.sig h₁⟩⟩
+  | DCC Σ(α, β) =>
+    let ⟨_, ⟨h₁⟩⟩ := α.eta_size
+    let ⟨_, ⟨h₂⟩⟩ := β.eta_size
+    ⟨_, ⟨.sig h₁ h₂⟩⟩
   | DCC Coup(β) =>
     let ⟨_, ⟨h₁⟩⟩ := β.eta_size
     ⟨_, ⟨.coup h₁⟩⟩
@@ -52,11 +53,11 @@ inductive EtaSize : Expr → ℕ → Prop
     let ⟨_, ⟨h₂⟩⟩ := y.eta_size
     ⟨_, ⟨.mk h₁ h₂⟩⟩
   | DCC Id(_α)      => ⟨_, ⟨.id⟩⟩
-  | DCC Fst(_α) => ⟨_, ⟨.fst⟩⟩
+  | DCC Fst(_α, _β) => ⟨_, ⟨.fst⟩⟩
   | DCC Fstc(_α) => ⟨_, ⟨.fstc⟩⟩
   | DCC Sndc(_α) => ⟨_, ⟨.sndc⟩⟩
   | DCC Snd'(_α,_β) => ⟨_, ⟨.snd'⟩⟩
-  | DCC Snd(_α) => ⟨_, ⟨.snd⟩⟩
+  | DCC Snd(_α, _β) => ⟨_, ⟨.snd⟩⟩
   | DCC Π(_α, β) =>
     let ⟨_, ⟨h₁⟩⟩ := β.eta_size
     ⟨_, ⟨.pi h₁⟩⟩

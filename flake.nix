@@ -113,6 +113,10 @@
           name = "paper";
           path = "papers/paper";
         }
+        {
+          name = "paper2";
+          path = "papers/paper2";
+        }
         #{
         #  name = "adapting_equations";
         #  path = "papers/adapting_equations";

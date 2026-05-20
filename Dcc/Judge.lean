@@ -81,6 +81,14 @@ def reduce_reduces' : Reduces A (reduce_all A) := reduce_reduces rfl
   | _ => .none
 
 inductive Judge : Expr → Expr → Prop where
+  | eq     : Judge f_α (DCC (δ : Sort o) → Sort m)
+    → Judge f_β (Pi.f_β.type f_α δ n o)
+    → Reduces (DCC ((δ : Sort o) → Sort (max m n))) τ
+    → Judge (DCC =(f_α, f_β)) τ
+  | refl   : Judge f_α (DCC (δ : Sort o) → Sort m)
+    → Reduces (DCC (Π(Id(Sort o), `(Sort o,
+      Π(f_α, =(f_α, Λ(δ, f_α, f_α ∘ Fstc(f_α)))))) δ)) τ
+      → Judge (DCC refl(f_α)) τ
   | id     : Judge α (DCC Sort m)
     → Reduces (id.type α m) τ
     → Judge (DCC Id(α)) τ
@@ -283,6 +291,21 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
           .some ⟨_, ⟨.fst (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
+    | _ => .none
+  | DCC =(f_α, f_β) =>
+    match with_arr (infer f_α) with
+    | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
+      match infer f_β with
+      | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
+        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type f_α δ m o then
+          .some ⟨_, ⟨.eq (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
+        else .none
+      | _ => .none
+    | _ => .none
+  | DCC refl(f_α) =>
+    match with_arr (infer f_α) with
+    | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
+      .some ⟨_, ⟨.refl (harr ▸ ht₁) (reduce_reduces rfl)⟩⟩
     | _ => .none
   | DCC Snd(f_α, f_β) =>
     match with_arr (infer f_α) with

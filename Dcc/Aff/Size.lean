@@ -26,6 +26,8 @@ inductive Size : Expr → ℕ → Prop
   | comp   : Size f m → Size g n → Size (DCC (f ∘ g)) (m + m + n).succ
   | pair   : Size f m → Size g n → Size (DCC ⟨f, g⟩) (m + n).succ
   | curr   : Size x m → Size (DCC Λ(α, β, x)) m.succ
+  | eq     : Size α m → Size β n → Size (DCC =(α, β)) (m + n).succ
+  | refl   : Size α m → Size (DCC refl(α)) m.succ
   | app    : Size f m → Size x n → Size (DCC (f x)) (m + n)
 
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind] def size (e : Expr) : ((n : ℕ) × (PULift.{1, 0} (Size e n))) :=
@@ -33,6 +35,13 @@ inductive Size : Expr → ℕ → Prop
   | DCC ∗ => ⟨_, ⟨.tintro⟩⟩
   | DCC ⊤ => ⟨_, ⟨.top⟩⟩
   | DCC ⊥ => ⟨_, ⟨.bot⟩⟩
+  | DCC =(α, β) =>
+    let ⟨_, ⟨h₁⟩⟩ := α.size
+    let ⟨_, ⟨h₂⟩⟩ := β.size
+    ⟨_, ⟨.eq h₁ h₂⟩⟩
+  | DCC refl(α) =>
+    let ⟨_, ⟨h₁⟩⟩ := α.size
+    ⟨_, ⟨.refl h₁⟩⟩
   | DCC Subst(x, y) =>
     let ⟨_, ⟨h₁⟩⟩ := x.size
     let ⟨_, ⟨h₂⟩⟩ := y.size

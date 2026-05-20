@@ -26,6 +26,8 @@ inductive EtaSize : Expr → ℕ → Prop
   | comp'  : EtaSize f m → EtaSize g n → EtaSize (DCC (f ∘' g)) (m + m + n).succ.succ
   | pair   : EtaSize f m → EtaSize g n → EtaSize (DCC ⟨f, g⟩) (m + n).succ.succ
   | curr   : EtaSize x m → EtaSize (DCC Λ(α, β, x)) m.succ.succ
+  | eq     : EtaSize α m → EtaSize β n → EtaSize (DCC =(α, β)) (m + n).succ
+  | refl   : EtaSize α m → EtaSize (DCC refl(α)) m.succ
   | app    : EtaSize f m → EtaSize x n → EtaSize (DCC (f x)) (m + n)
 
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind] def eta_size (e : Expr) : ((n : ℕ) × (PULift.{1, 0} (EtaSize e n))) :=
@@ -57,6 +59,13 @@ inductive EtaSize : Expr → ℕ → Prop
   | DCC Fstc(_α) => ⟨_, ⟨.fstc⟩⟩
   | DCC Sndc(_α) => ⟨_, ⟨.sndc⟩⟩
   | DCC Snd'(_α,_β) => ⟨_, ⟨.snd'⟩⟩
+  | DCC =(α, β) =>
+    let ⟨_, ⟨h₁⟩⟩ := α.eta_size
+    let ⟨_, ⟨h₂⟩⟩ := β.eta_size
+    ⟨_, ⟨.eq h₁ h₂⟩⟩
+  | DCC refl(α) =>
+    let ⟨_, ⟨h₁⟩⟩ := α.eta_size
+    ⟨_, ⟨.refl h₁⟩⟩
   | DCC Snd(_α, _β) => ⟨_, ⟨.snd⟩⟩
   | DCC Π(_α, β) =>
     let ⟨_, ⟨h₁⟩⟩ := β.eta_size

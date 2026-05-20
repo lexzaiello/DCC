@@ -237,6 +237,8 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
     comb (bbracket (sepD [β.toFormat pretty])) [a.toFormat pretty, b.toFormat pretty]
   | (DCC Coup(β))             => comb "Coup" [β.toFormat pretty]
   | (DCC Σ(α, β))             => comb "Σ" [α.toFormat pretty, β.toFormat pretty]
+  | (DCC =(f_α, f_β))         => comb "=" [f_α.toFormat pretty, f_β.toFormat pretty]
+  | (DCC refl(f_α))           => comb "refl" [f_α.toFormat pretty]
   | (DCC f ∘ g)               =>
     sepD [f.toFormat pretty, g.toFormat pretty] " ∘"
   | (DCC f ∘' g)               =>

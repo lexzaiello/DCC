@@ -60,7 +60,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
     | _, _ => .none
   | _ => .none
 
-instance RedAff.instRedRel : RedRel RedAff Size where
+instance RedAff.instRedRel : RedRel RedAff size where
   run := step?
 
 theorem red_aff_sn : ∀ (e : Expr), Acc (fun b a => RedAff a b) e := RedAff.instRedRel.sn
@@ -396,19 +396,19 @@ Complete.complete
 #check instComplete.complete
 
 @[grind ., grind →]
-theorem red_aff_decreasing? (h : Relation.ReflTransGen RedAff A B) : (size B).fst ≤ (size A).fst := by
-  if hs : (size A).fst = (size B).fst then
+theorem red_aff_decreasing? (h : Relation.ReflTransGen RedAff A B) : (size B) ≤ (size A) := by
+  if hs : (size A) = (size B) then
     simp_all
   else
     rw [← Relation.reflGen_transGen] at h
     match h with
     | .refl => grind
     | .single h =>
-      have hn' : B.size.fst < A.size.fst := RedAff.instRedRel.to_trans.decreasing h
+      have hn' : B.size < A.size := RedAff.instRedRel.to_trans.decreasing h
       grind
 
 @[grind ., grind →]
-theorem red_aff_trans_decreasing : Relation.TransGen RedAff A B → (size B).fst < (size A).fst :=
+theorem red_aff_trans_decreasing : Relation.TransGen RedAff A B → (size B) < (size A) :=
   RedAff.instRedRel.to_trans.decreasing
 
 end Expr

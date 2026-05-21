@@ -82,13 +82,16 @@ def reduce_reduces' : Reduces A (reduce_all A) := reduce_reduces rfl
 
 inductive Judge : Expr → Expr → Prop where
   | eq     : Judge f_α (DCC (δ : Sort o) → Sort m)
-    → Judge f_β (Pi.f_β.type f_α δ n o)
-    → Reduces (DCC ((δ : Sort o) → Sort (max m n))) τ
-    → Judge (DCC =(f_α, f_β)) τ
+    → Reduces (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, Π(Id(Sort m),
+      Λ(Sort m, Id(Sort m), `(Coup(Id(Sort m)), Sort 0))) ∘' f_α ∘' Fstc(f_α))))) δ)) τ
+    → Judge (DCC =(f_α)) τ
   | refl   : Judge f_α (DCC (δ : Sort o) → Sort m)
     → Reduces (DCC (Π(Id(Sort o), `(Sort o,
-      Π(f_α, =(f_α, Λ(δ, f_α, f_α ∘ Fstc(f_α)))))) δ)) τ
+      Π(f_α, Eql(f_α)))) δ)) τ
       → Judge (DCC refl(f_α)) τ
+  | eql    : Judge f_α (DCC (δ : Sort o) → Sort m)
+    → Reduces (DCC Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, Π(Id(Sort m), `(Coup(Id(Sort m)), Sort 0))))))) τ
+    → Judge (DCC Eql(f_α)) τ
   | id     : Judge α (DCC Sort m)
     → Reduces (id.type α m) τ
     → Judge (DCC Id(α)) τ
@@ -109,7 +112,7 @@ inductive Judge : Expr → Expr → Prop where
     Fst(f_β, δ) : Σ(f_β) δ → α
   -/
   | fst    : Judge f_α (arrow δ (DCC Sort m) o)
-    → Judge f_β (Pi.f_β.type f_α δ n o)
+    → Judge f_β (Pi.f_β.type f_α δ o n)
     → Reduces (fst.type f_α f_β δ n o) τ
     → Judge (DCC Fst(f_α, f_β)) τ
   /-
@@ -117,7 +120,7 @@ inductive Judge : Expr → Expr → Prop where
     Snd(f_β, δ) : ∀ (s : Σ(f_β) δ), f_β δ ∘ Fst
   -/
   | snd    : Judge f_α (arrow δ (DCC Sort m) o)
-    → Judge f_β (Pi.f_β.type f_α δ n o)
+    → Judge f_β (Pi.f_β.type f_α δ o n)
     → Reduces (snd.type f_α f_β δ o) τ
     → Judge (DCC Snd(f_α, f_β)) τ
   | coup   : Judge β (DCC (Π(Id(Sort m), f_β) α))
@@ -133,7 +136,7 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (sndc.type β m n) τ
     → Judge (DCC Sndc(β)) τ
   | sigma   : Judge f_α (arrow δ (DCC Sort m) o)
-    → Judge f_β (Pi.f_β.type f_α δ n o)
+    → Judge f_β (Pi.f_β.type f_α δ o n)
     → Reduces (Sigma.type δ m n o) τ
     → Judge (DCC Σ(f_α, f_β)) τ
   | snd'   : Judge α (DCC Sort m)
@@ -287,20 +290,20 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
       | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type f_α δ m o then
+        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type f_α δ o n then
           .some ⟨_, ⟨.fst (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
     | _ => .none
-  | DCC =(f_α, f_β) =>
+  | DCC =(f_α) =>
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
-      match infer f_β with
-      | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type f_α δ m o then
-          .some ⟨_, ⟨.eq (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
-        else .none
-      | _ => .none
+      .some ⟨_, ⟨.eq (harr ▸ ht₁) (reduce_reduces rfl)⟩⟩
+    | _ => .none
+  | DCC Eql(f_α) =>
+    match with_arr (infer f_α) with
+    | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
+      .some ⟨_, ⟨.eql (harr ▸ ht₁) (reduce_reduces rfl)⟩⟩
     | _ => .none
   | DCC refl(f_α) =>
     match with_arr (infer f_α) with
@@ -312,7 +315,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
       | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type f_α δ m o then
+        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type f_α δ o n then
           .some ⟨_, ⟨.snd (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
@@ -322,7 +325,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
       | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type f_α δ m o then
+        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type f_α δ o n then
           .some ⟨_, ⟨.sigma (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
@@ -482,5 +485,8 @@ def test_id_nested : Option Expr := do
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance Judge.instRel : Rel (fun x y => PULift.{1, 0} (Judge x y)) (m := Option) where
   run := infer
+
+theorem canon_refl (h : Judge e (DCC (=(f_α) env x y))) : x = y := by
+  sorry
 
 end Expr

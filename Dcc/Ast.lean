@@ -25,7 +25,8 @@ inductive Expr where
   -- refl(f_α) env
   | refl   : Expr  → Expr
   -- eq(f_α, f_β) env
-  | eq     : Expr  → Expr → Expr
+  | eq     : Expr  → Expr
+  | eql    : Expr  → Expr
   | fstc   : Expr  → Expr
   | sndc   : Expr  → Expr
   | sort   : Level → Expr
@@ -56,6 +57,7 @@ deriving BEq, DecidableEq
 declare_syntax_cat expr
 
 syntax "=(" expr,* ")"                                           : expr
+syntax "Eql(" expr,* ")"                                         : expr
 syntax "refl(" expr,* ")"                                        : expr
 syntax "#(" term ")"                                             : expr
 syntax "⊤"                                                       : expr
@@ -87,7 +89,8 @@ macro_rules
   | `(DCC ⊤)                                     => `(Expr.top)
   | `(DCC ⊥)                                     => `(Expr.bot)
   | `(DCC ∗)                                     => `(Expr.tintro)
-  | `(DCC =($f_α:expr, $f_β:expr))               => `(Expr.eq (DCC $f_α) (DCC $f_β))
+  | `(DCC =($f_α:expr))                          => `(Expr.eq (DCC $f_α))
+  | `(DCC Eql($f_α:expr))                        => `(Expr.eql (DCC $f_α))
   | `(DCC refl($f_α:expr))                       => `(Expr.refl (DCC $f_α))
   | `(DCC ($f:expr $x:expr))                     => `(Expr.app   (DCC $f:expr)   (DCC $x:expr))
   | `(DCC ($f:expr $x:expr $xs:expr*))           => `(DCC (($f:expr $x:expr) $xs:expr*))

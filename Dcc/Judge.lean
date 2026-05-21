@@ -398,4 +398,11 @@ def test_id_nested : Option Expr := do
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance Judge.instRel : Rel (fun x y => PULift.{1, 0} (Judge x y)) (m := Option) where
   run := infer
 
+macro "dcc_simp_all" : tactic =>
+  `(tactic| try dsimp only [infer]; simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce])
+
+macro "dcc_simp_all" "[" args:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
+  `(tactic| try dsimp only [infer]; simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce, $args,*])
+
+
 end Expr

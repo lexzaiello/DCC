@@ -29,7 +29,7 @@ namespace Expr
   simp [dcc_judge]
 
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
-  induction h <;> (dsimp only [infer]; try (dcc_simp_all; dcc_aesop!); try grind)
+  induction h <;> (try (dcc_simp_all; dcc_aesop!); try grind)
 
 instance Judge.instComplete : Complete (m := Option) (hR := Judge.instRel) := ⟨fun h _ => h.complete⟩
 

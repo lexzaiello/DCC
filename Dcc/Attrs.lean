@@ -14,6 +14,9 @@ initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_judge ("Simplifies using theorems about inference in DCC")
 
 initialize do pure () <*
+  Lean.Meta.registerSimpAttr `dcc_infer ("Dsimp DCC inference function")
+
+initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_rel ("Simplifies using theorems about DCC relations")
 
 initialize do pure () <*
@@ -22,28 +25,28 @@ initialize do pure () <*
 declare_aesop_rule_sets [DccStep, DccReduce, DccSize, DccJudge, DccRel, DccForceReduce]
 
 macro "dcc_simp" : tactic =>
-  `(tactic| simp [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce])
+  `(tactic| try simp only [dcc_infer]; simp [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce])
 
 macro "dcc_simp?" : tactic =>
-  `(tactic| simp? [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce])
+  `(tactic| try simp? only [dcc_infer]; simp? [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce])
 
 macro "dcc_simp" "[" args:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
-  `(tactic| simp [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce, $args,*])
+  `(tactic| try simp only [dcc_infer]; simp [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce, $args,*])
 
 macro "dcc_simp?" "[" args:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
-  `(tactic| simp? [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce, $args,*])
+  `(tactic| try simp? only [dcc_infer]; simp? [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce, $args,*])
 
 macro "dcc_simp_all" : tactic =>
-  `(tactic| simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce])
+  `(tactic| try simp only [dcc_infer]; simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce])
 
 macro "dcc_simp_all?" : tactic =>
-  `(tactic| simp_all? [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce])
+  `(tactic| try simp? only [dcc_infer]; simp_all? [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce])
 
 macro "dcc_simp_all" "[" args:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
-  `(tactic| simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce, $args,*])
+  `(tactic| try simp only [dcc_infer]; simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce, $args,*])
 
 macro "dcc_simp_all?" "[" args:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
-  `(tactic| simp_all? [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce, $args,*])
+  `(tactic| try simp? only [dcc_infer]; simp_all? [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce, $args,*])
 
 syntax "dcc_aesop" (Aesop.tactic_clause)* : tactic
 syntax "dcc_aesop?" (Aesop.tactic_clause)* : tactic

@@ -19,8 +19,6 @@ inductive RedEta : Expr → Expr → Prop
   | sig'       : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
   | idl        : RedEta (DCC (Id(α) ∘ f)) f
   | idl'       : RedEta (DCC (Id(α) ∘' f)) f
-  | fsi        : RedEta (DCC ⟨(Fst(_α, _β) env), (Snd(_α₂, _β₂) env₂)⟩) (DCC Id((Σ(_α, _β) env)))
-  | subst_fst  : RedEta (DCC (Subst(`(⊤, x), Fst(⊤, `(⊤, f_β))) ∗)) (DCC (x ∘' Fstc(f_β)))
   | quot_fst   : RedEta (DCC `(α, x) ∘ Fstc(β)) (DCC `(Coup(β), x))
   | quot'_fst  : RedEta (DCC `(α, x) ∘' Fstc(β)) (DCC `(Coup(β), x))
   | quot_snd   : RedEta (DCC `(α, x) ∘ Sndc(β)) (DCC `(Coup(β), x))
@@ -72,8 +70,6 @@ inductive RedEta : Expr → Expr → Prop
     match x.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr h⟩⟩
     | .none => .none
-  | (DCC ⟨(Fst(_α, _β) _env), (Snd(_α₂, _β₂) _env₂)⟩) => .some ⟨_, ⟨.fsi⟩⟩
-  | DCC (Subst(`(⊤, x), Fst(⊤, `(⊤, f_β))) ∗) => .some ⟨_, ⟨.subst_fst⟩⟩
   | (DCC `(α, x) ∘ Fstc(β)) => .some ⟨_, ⟨.quot_fst⟩⟩
   | (DCC `(α, x) ∘' Fstc(β)) => .some ⟨_, ⟨.quot'_fst⟩⟩
   | (DCC `(α, x) ∘ Sndc(β)) => .some ⟨_, ⟨.quot_snd⟩⟩
@@ -96,7 +92,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
 
 @[dcc_reduce] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
-  | eql | curr_fst' | curr_fst | pi'_comp | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | pi_comp | quot_snd | quot_fst | subst_fst | sig' | pi | sig => cases h₂; aesop
+  | eql | curr_fst' | curr_fst | pi'_comp | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | pi_comp | quot_snd | quot_fst | sig' | pi | sig => cases h₂; aesop
   | pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop
@@ -108,7 +104,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   | curr hr ih =>
     cases h₂ with
     | curr hr₂ => rw [ih hr₂]
-  | idl' | curr_quot | idl | fsi => cases h₂; rfl
+  | idl' | curr_quot | idl => cases h₂; rfl
 
 open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : ∃ D, RedEta.instRedRel.ReflTrans B D ∧ RedEta.instRedRel.ReflTrans C D := by
   have h := h₁.unique h₂

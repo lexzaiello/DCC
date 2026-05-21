@@ -13,16 +13,13 @@ namespace Expr
   | DCC =(α)    => α.eta_size + 1
   | DCC Eql(α)  => α.eta_size + 1
   | DCC refl(α) => α.eta_size + 1
-  | DCC Subst(x, y) => x.eta_size + x.eta_size + y.eta_size + 3
   | DCC Sort _m => 0
   | DCC Σ(α, β) => α.eta_size + β.eta_size + 1
   | DCC `(_β, x) => x.eta_size + 1
   | DCC ⟦_β⟧(x, y) => x.eta_size + y.eta_size
   | DCC Coup(β) => β.eta_size
   | DCC Id(_α)      => 1
-  | DCC Fst(_α, _β) => 1
   | DCC Fstc(_α)    => 1
-  | DCC Snd(_α, _β) => 1
   | DCC Sndc(_α)    => 1
   | DCC Π(_α, β) => β.eta_size + 1
   | DCC (f ∘' g) => f.eta_size + f.eta_size + g.eta_size + 1

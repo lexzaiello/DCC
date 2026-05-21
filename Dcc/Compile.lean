@@ -44,8 +44,8 @@ def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
     | DCC (Π(f_α, f_β) x_α) =>
       let α := (DCC (f_α x_α)).reduce_all
       match (DCC (f_β x_α)).reduce_all with
-      | DCC Π(_f_β, γ) =>
-        .some (DCC Subst(Snd(_f_β, γ), Sndc(Σ(_f_β, γ))) ∘' ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
+      | DCC Π(_f_β, _γ) =>
+        .some (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
       | _ => .none
     | _ => .none
   | .const ``True.intro [] => DCC (`(ctx, ∗))

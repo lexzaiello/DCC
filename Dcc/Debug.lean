@@ -13,10 +13,6 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
     return .bot
   | .const ``_root_.Expr.tintro [] =>
     return .tintro
-  | .app (.app (.const ``_root_.Expr.fst []) α) β =>
-    let α' ← decode_dcc α
-    let β' ← decode_dcc β
-    return .fst α' β'
   | .app (.const ``_root_.Expr.sndc []) β =>
     let β' ← decode_dcc β
     return .sndc β'
@@ -26,10 +22,6 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
   | .app (.const ``_root_.Expr.coup []) β =>
     let β' ← decode_dcc β
     return .coup β'
-  | .app (.app (.const ``_root_.Expr.snd []) α) β =>
-    let α' ← decode_dcc α
-    let β' ← decode_dcc β
-    return .snd α' β'
   | .app (.app (.const ``_root_.Expr.sigma []) α) β =>
     let α' ← decode_dcc α
     let β' ← decode_dcc β
@@ -63,10 +55,6 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
     let β ← decode_dcc β
     let x ← decode_dcc x
     return .quot β x
-  | .app (.app (.const ``_root_.Expr.subst []) f_α) f =>
-    let f_α ← decode_dcc f_α
-    let f ← decode_dcc f
-    return .subst f_α f
   | .app (.app (.const ``_root_.Expr.app []) f) x =>
     let f ← decode_dcc f
     let x ← decode_dcc x

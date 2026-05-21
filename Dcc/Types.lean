@@ -70,14 +70,6 @@ Fst(f_β) : ∀ (env : δ) (s : Σ(f_β) env), α
   DCC (Π(Id(Sort o), `(Sort o, (Π(Id(Sort n), Λ(Sort n, Id(Sort n), `(Coup(Id(Sort n)), α))) ∘' Σ(α, f_β)))) δ)
 
 /-
-Snd(f_β) : ∀ (env : δ) (s : Σ(f_β) env), f_β env (Fst(f_β) env s)
-
-snd : ∀ (env : δ) (s : Σ(f_β) env), Fst(f_β) env
--/
-@[dcc_judge] abbrev snd.type (α f_β δ : Expr) (o : Level) : Expr :=
-  DCC (Π(Id(Sort o), `(Sort o, Π(Σ(α, f_β), Subst(f_β, Fst(α, f_β))))) δ)
-
-/-
 Λ(β, x) y z → x ⟦β⟧(y, z)
 
 β receives x
@@ -153,17 +145,6 @@ f_β : (x : α) (y : f_α x) → Sort n
   DCC (Sort m : Sort m.succ) → ((α : Sort m) → Sort n)
 
 /-
-β : ∀ (env : δ) (x : f_α env), Sort n
-x : ∀ (env : δ) (x : α), γ env x
-Subst(x, Fst(β)) : ∀
--/
-@[dcc_judge] abbrev Subst₁.type (α β γ δ : Expr) (o : Level) : Expr :=
-  (DCC (Π(Id(Sort o), `(Sort o, Π(Σ(α, β), Subst(γ, Fst(α, β))))) δ))
--- (Π(Id(Sort 1), `(Sort 1, Π(Id(Sort 0), Λ(Sort 0, Id(Sort 0), `(Coup(Id(Sort 0)), Sort 2))))) Sort 0)
-@[dcc_judge] abbrev Subst₁.x.type (α γ δ : Expr) (m o : Level) : Expr :=
-  (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), `(Coup(Id(Sort o)), (Π(Id(Sort m), γ) α)))) δ))
-
-/-
 f_β : ∀ (env : δ) (x : α), Sort n
 x : ∀ (env : δ) (y : β),
 β = f_β env x
@@ -202,12 +183,9 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC ∗)                   => "∗"
   | (DCC `(β, x))             => comb "`" [β.toFormat pretty, x.toFormat pretty]
   | (DCC Id(α))               => comb "Id" [α.toFormat pretty]
-  | (DCC Subst(β, x))         => comb "Subst" [β.toFormat pretty, x.toFormat pretty]
   | (DCC Sort m)              => "Sort " ++ (Std.format m)
   | (DCC Fstc(β))             => comb "Fstc" [β.toFormat pretty]
-  | (DCC Fst(α, β))           => comb "Fst" [α.toFormat pretty, β.toFormat pretty]
   | (DCC Sndc(β))             => comb "Sndc" [β.toFormat pretty]
-  | (DCC Snd(α, β))           => comb "Snd" [α.toFormat pretty, β.toFormat pretty]
   | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC Π(α, β))             =>
     comb "Π" [α.toFormat pretty, β.toFormat pretty]

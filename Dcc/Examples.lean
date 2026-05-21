@@ -2,6 +2,12 @@ import Dcc.Ast
 import Dcc.Judge
 import Dcc.Types
 
+/-
+Can quot be derived?
+
+`(β, x) = Λ(α, Λ(
+-/
+
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1) ∘' Id(Sort 1)).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1) (Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Σ(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1)) )(Sort 0))).infer

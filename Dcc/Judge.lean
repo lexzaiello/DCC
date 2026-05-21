@@ -15,15 +15,14 @@ inductive Reduces : Expr → Expr → Prop
     → IsNorm RedEta C
     → Reduces A C
 
-@[dcc_reduce, aesop norm (rule_sets := [DccReduce])]
-abbrev reduce_all := reduce' RedEta ∘ reduce' RedAff
+def reduce_all := reduce' RedEta ∘ reduce' RedAff
 
 @[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])]
 theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d⟩ ⟨g, h, i, j⟩ => by
   have ha := norm_unique a b g h
   exact norm_unique c d (ha ▸ i) j
 
-@[aesop safe destruct (rule_sets := [DccReduce])]
+@[aesop safe destruct (rule_sets := [DccReduce]), aesop safe apply (rule_sets := [DccReduce])]
 theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h₂ := by
   have h := h₁.unique h₂
   cases h

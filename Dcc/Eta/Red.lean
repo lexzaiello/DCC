@@ -90,7 +90,7 @@ theorem red_eta_sn : ∀ (e : Expr), Acc (fun b a => RedEta a b) e := RedEta.ins
 
 theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen RedEta a b) e := RedEta.instRedRel.to_trans.sn
 
-@[dcc_reduce] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
+@[dcc_reduce, aesop safe forward (rule_sets := [DccRel])] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
   | eql | curr_fst' | curr_fst | pi'_comp | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | pi_comp | quot_snd | quot_fst | sig' | pi | sig => cases h₂; aesop
   | pi_quot hr ih =>

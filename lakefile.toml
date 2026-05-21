@@ -1,6 +1,6 @@
 name = "Dcc"
 version = "0.1.0"
-defaultTargets = ["Dcc", "docs"]
+defaultTargets = ["Dcc"]
 
 [[lean_lib]]
 name = "Dcc"

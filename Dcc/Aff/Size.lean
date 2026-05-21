@@ -22,7 +22,6 @@ namespace Expr
   | DCC Id(_α)      => 1
   | DCC Fst(_α, _β) => 1
   | DCC Fstc(_α)    => 1
-  | DCC Snd'(_α,_β) => 1
   | DCC Snd(_α, _β) => 1
   | DCC Sndc(_α)    => 1
   | DCC Π(_α, β) => β.size + 1

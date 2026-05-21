@@ -16,4 +16,7 @@ initialize do pure () <*
 initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_rel ("Simplifies using single-step reduction theorems")
 
-declare_aesop_rule_sets [DccStep, DccReduce, DccSize, DccJudge, DccRel]
+initialize do pure () <*
+  Lean.Meta.registerSimpAttr `dcc_force_reduce ("Simplifies using single-step reduction theorems")
+
+declare_aesop_rule_sets [DccStep, DccReduce, DccSize, DccJudge, DccRel, DccForceReduce]

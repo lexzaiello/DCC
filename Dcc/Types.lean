@@ -26,23 +26,6 @@ abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULif
 def is_arrow (e : Expr) : Bool :=
   (arrow.matcher e).isSome
 
-/-
-Subst(x, Snd(f_β) env) ⟦β⟧(y, z)
-
-= x y z
-
-f_β env : ∀ (x : α), β x
-
-x : ∀ (x : α) (y : β x), γ x y
-
-Subst(x, Snd(f_β) env) : ∀ (s : Σ(f_β) env), Subst(γ, Snd(f_β) env)
--/
-@[dcc_judge] abbrev Subst₂.type (β γ : Expr) (n : Level) : Expr :=
-  DCC (Π(Id(Sort n), `(Sort n, Subst(γ, Sndc(β)))) Coup(β))
-
-@[dcc_judge] abbrev Subst₂.x.type (α β γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, Π(β, γ))) α)
-
 @[dcc_judge] abbrev Top.type : Expr :=
   DCC Sort 0
 
@@ -148,9 +131,6 @@ f ∘ g : ∀ (x : α), γ ∘ g
 @[dcc_judge] abbrev comp.type (α γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) α)
 
-@[dcc_judge] abbrev snd'.type (α β : Expr) (m n : Level) : Expr :=
-  DCC (Coup(`(α, β)) : Sort max m n) → β
-
 /-
 f_α : α → Sort m
 f_β : (x : α) (y : f_α x) → Sort n
@@ -178,7 +158,7 @@ x : ∀ (env : δ) (x : α), γ env x
 Subst(x, Fst(β)) : ∀
 -/
 @[dcc_judge] abbrev Subst₁.type (α β γ δ : Expr) (o : Level) : Expr :=
-  (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), Π(Σ(α, β), Subst(γ, Fst(α, β))) ∘' Snd'(Sort o, δ))) δ))
+  (DCC (Π(Id(Sort o), `(Sort o, Π(Σ(α, β), Subst(γ, Fst(α, β))))) δ))
 -- (Π(Id(Sort 1), `(Sort 1, Π(Id(Sort 0), Λ(Sort 0, Id(Sort 0), `(Coup(Id(Sort 0)), Sort 2))))) Sort 0)
 @[dcc_judge] abbrev Subst₁.x.type (α γ δ : Expr) (m o : Level) : Expr :=
   (DCC (Π(Id(Sort o), Λ(Sort o, Id(Sort o), `(Coup(Id(Sort o)), (Π(Id(Sort m), γ) α)))) δ))
@@ -228,7 +208,6 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC Fst(α, β))           => comb "Fst" [α.toFormat pretty, β.toFormat pretty]
   | (DCC Sndc(β))             => comb "Sndc" [β.toFormat pretty]
   | (DCC Snd(α, β))           => comb "Snd" [α.toFormat pretty, β.toFormat pretty]
-  | (DCC Snd'(α, β))          => comb "Snd'" [α.toFormat pretty, β.toFormat pretty]
   | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC Π(α, β))             =>
     comb "Π" [α.toFormat pretty, β.toFormat pretty]

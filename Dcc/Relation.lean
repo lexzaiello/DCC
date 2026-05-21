@@ -79,6 +79,7 @@ def RedRel.wellFounded {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ)
   {m : Type → Type} [Monad m]
   (hR : RedRel r t (m := m)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
 
+@[dcc_force_reduce, aesop norm (rule_sets := [DccForceReduce])]
 def reduce {t : Expr → ℕ} (r : Expr → Expr → Prop) [hR : RedRel r t]
   (e : Expr) : ((e' : Expr) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
   match hR.run e with
@@ -378,5 +379,12 @@ theorem reduce_sound {t : Expr → ℕ} [RedRel r t]
     case h_2 heq' =>
       have h_norm := (run_none r (by cases heq; exact heq'))
       exact (h_norm.unique_refl h) ▸ h_norm
+
+@[dcc_force_reduce] theorem reduce_self {t : Expr → ℕ}
+  (r : Expr → Expr → Prop) [hR : RedRel r t] [SemiComplete r] : (reduce r (reduce r e).fst).fst = (reduce r e).fst := by
+  have h := hR.reduce_norm (reduce_norm (A := e) (hR := hR) (B := (reduce r e).fst) rfl)
+  simp_all
+
+attribute [dcc_force_reduce] Rel.run.eq_def
 
 end Expr

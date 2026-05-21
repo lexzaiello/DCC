@@ -15,7 +15,8 @@ inductive Reduces : Expr → Expr → Prop
     → IsNorm RedEta C
     → Reduces A C
 
-def reduce_all := reduce' RedEta ∘ reduce' RedAff
+@[dcc_reduce, aesop norm (rule_sets := [DccReduce])]
+abbrev reduce_all := reduce' RedEta ∘ reduce' RedAff
 
 @[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])]
 theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d⟩ ⟨g, h, i, j⟩ => by
@@ -139,10 +140,6 @@ inductive Judge : Expr → Expr → Prop where
     → Judge f_β (Pi.f_β.type f_α δ o n)
     → Reduces (Sigma.type δ m n o) τ
     → Judge (DCC Σ(f_α, f_β)) τ
-  | snd'   : Judge α (DCC Sort m)
-    → Judge β (DCC Sort n)
-    → Reduces (snd'.type α β m n) τ
-    → Judge (DCC Snd'(α, β)) τ
   | mk     : Judge x α
     → Judge y τ₂
     → Judge β (curr.β.type f_α x_α m n)
@@ -182,15 +179,6 @@ inductive Judge : Expr → Expr → Prop where
   | subst₁ : Judge x (Subst₁.x.type α γ δ m o)
     → Reduces (Subst₁.type α β γ δ o) τ
     → Judge (DCC Subst(x, Fst(α, β))) τ
-  /-
-    x : ∀ (env : δ) (y : f_t_snd env), β(env, y)
-    Subst(x, Snd(f_β)) env (y, z) = x env z
-  -/
-  | subst₂ : Judge β (DCC (Π(Id(Sort m), f_β) α))
-    → Reduces (DCC (f_β α)) (DCC `(α, Sort n))
-    → Judge x (Subst₂.x.type α β γ m) -- TODO: may have to switch to reduces f_α x_α
-    → Reduces (Subst₂.type β γ n) τ
-    → Judge (DCC (Subst(x, Sndc(β)))) τ
   /-
     ef_α : α → Sort m
     f_β : ∀ (x : α) (y : f_α x), Sort n
@@ -330,14 +318,6 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  | DCC Snd'(α, β) =>
-    match infer α with
-    | .some ⟨DCC Sort _m, ⟨ht₁⟩⟩ =>
-      match (infer β) with
-      | .some ⟨DCC Sort _n, ⟨ht₂⟩⟩ =>
-        .some ⟨_, ⟨.snd' ht₁ ht₂ (reduce_reduces rfl)⟩⟩
-      | _ => .none
-    | _ => .none
   | DCC ⟦β⟧(x, y) =>
     match infer x with
     | .some ⟨α, ⟨ht₁⟩⟩ =>
@@ -432,21 +412,6 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         .some ⟨_, ⟨.subst₁ (heq ▸ ht) (reduce_reduces rfl)⟩⟩
       else .none
     | _ => .none
-  | DCC Subst(x, Sndc(β)) => -- ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩
-    match infer β with
-    | .some ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
-      match (DCC (f_β α)).reduce_all with
-      | DCC `(α₂, Sort n) =>
-        if heq : (DCC (f_β α)).reduce_all = DCC `(α, Sort n) then
-          match infer x with
-          | .some ⟨DCC (Π(_a, `(_b, Π(_c, γ))) _d), ⟨ht₂⟩⟩ =>
-            if heq₂ : DCC (Π(_a, `(_b, Π(_c, γ))) _d) = (Subst₂.x.type α β γ m) then
-              .some ⟨_, ⟨.subst₂ ht (reduce_reduces heq) (heq₂ ▸ ht₂) (reduce_reduces rfl)⟩⟩
-            else .none
-          | _ => .none
-        else .none
-      | _ => .none
-    | _ => .none
   | DCC Π(f_α, f_β) =>
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>
@@ -485,8 +450,5 @@ def test_id_nested : Option Expr := do
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance Judge.instRel : Rel (fun x y => PULift.{1, 0} (Judge x y)) (m := Option) where
   run := infer
-
-theorem canon_refl (h : Judge e (DCC (=(f_α) env x y))) : x = y := by
-  sorry
 
 end Expr

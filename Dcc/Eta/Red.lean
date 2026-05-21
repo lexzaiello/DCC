@@ -35,7 +35,7 @@ inductive RedEta : Expr → Expr → Prop
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
 
-@[dcc_step, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
+@[dcc_force_reduce, dcc_step, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
   | DCC (Eql(f_α) env x) => .some ⟨_, ⟨.eql⟩⟩
   | DCC (Λ(α, _b, `(_c, x)) y) =>
@@ -86,7 +86,7 @@ inductive RedEta : Expr → Expr → Prop
   | (DCC (`(α, x) ∘' Sndc(β)) ∘' z) => .some ⟨_, ⟨.quot'_snd'⟩⟩
   | _ => .none
 
-@[dcc_rel, aesop norm (rule_sets := [DccRel])]
+@[dcc_rel, dcc_force_reduce, aesop norm (rule_sets := [DccRel])]
 instance RedEta.instRedRel : RedRel RedEta eta_size where
   run := step_eta?
 
@@ -94,7 +94,7 @@ theorem red_eta_sn : ∀ (e : Expr), Acc (fun b a => RedEta a b) e := RedEta.ins
 
 theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen RedEta a b) e := RedEta.instRedRel.to_trans.sn
 
-@[simp] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
+@[dcc_reduce] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
   | eql | curr_fst' | curr_fst | pi'_comp | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | pi_comp | quot_snd | quot_fst | subst_fst | sig' | pi | sig => cases h₂; aesop
   | pi_quot hr ih =>
@@ -133,5 +133,13 @@ theorem eta_complete (h : Relation.ReflTransGen RedEta A B)
   RedEta.instRedRel.instComplete.complete h hn
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instCompleteEta : Complete (Relation.ReflTransGen RedEta) (P := IsNorm RedEta) := RedEta.instRedRel.instComplete
+
+@[dcc_force_reduce]
+abbrev RedEta.reduce := Expr.reduce RedEta
+
+attribute [dcc_force_reduce] RedEta.reduce.eq_def step_eta?.eq_def RedEta.instRedRel.eq_def
+
+@[dcc_force_reduce] theorem step_eta_fst (h : step_eta? A = .some ⟨x, y⟩) : ((step_eta? A).get (by simp_all)).fst = x := by
+  simp_all
 
 end Expr

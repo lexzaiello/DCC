@@ -21,57 +21,52 @@ we can derive `()
 Λ(Fst(α, β)
 -/
 
-inductive GenExpr (τ : Type) where
-  -- refl(f_α) env
-  | refl   : GenExpr τ  → GenExpr τ
-  -- eq(f_α, f_β) env
-  | eq     : GenExpr τ  → GenExpr τ
-  | eql    : GenExpr τ  → GenExpr τ
-  | fstc   : GenExpr τ  → GenExpr τ
-  | sndc   : GenExpr τ  → GenExpr τ
-  | sort   : Level → GenExpr τ
-  | comp'  : GenExpr τ  → GenExpr τ  → GenExpr τ
-  | comp   : GenExpr τ  → GenExpr τ  → GenExpr τ
-  | pair   : GenExpr τ  → GenExpr τ → GenExpr τ
-  -- Σ(β) is the usual sigma type
-  | sigma  : GenExpr τ  → GenExpr τ  → GenExpr τ
-  | coup   : GenExpr τ  → GenExpr τ
-  | mkc    : GenExpr τ  → GenExpr τ  → GenExpr τ  → GenExpr τ
-  | pi     : GenExpr τ  → GenExpr τ  → GenExpr τ
-  | curr   : GenExpr τ  → GenExpr τ  → GenExpr τ  → GenExpr τ
-  | quot   : GenExpr τ  → GenExpr τ  → GenExpr τ
-  | id     : GenExpr τ  → GenExpr τ
-  | app    : GenExpr τ  → GenExpr τ  → GenExpr τ
-  -- ⊤ : Sort 0
-  | top    : GenExpr τ
-  -- ∗ : ⊤
-  | tintro : GenExpr τ
-  -- 0 : Sort 0
-  | bot    : GenExpr τ
-  /-
-    For meta-tactics, we often want to inject Lean.GenExpr, but not always
-  -/
-  | ext    : τ → GenExpr τ
-deriving BEq, DecidableEq
-
 namespace GenExpr
 
 open Lean Macro Parser.Command
 
+inductive Flag where
+  | ext   : TSyntax `ident         → Flag
+  | deriv : Array (TSyntax `ident) → Flag
+deriving Repr
+
 declare_syntax_cat gen_expr_flag
-syntax ("with" ident)  : gen_expr_flag
+syntax ("with" ident)       : gen_expr_flag
+syntax ("deriving" ident,*) : gen_expr_flag
 
-syntax "gen_expr" ident (gen_expr_flag)? : command
+def parse_flag (stx : TSyntax `gen_expr_flag) : Lean.MacroM Flag :=
+  match stx with
+  | `(gen_expr_flag| with $idt:ident) => pure (.ext idt)
+  | `(gen_expr_flag| deriving $idts:ident,*) => pure (.deriv idts)
+  | s => Lean.Macro.throwErrorAt stx s!"this is not a flag: {s}"
 
-def mk_my_expr (my_name : TSyntax `ident) (with_ext : Option (TSyntax `gen_expr_flag)) : MacroM (TSyntax `command) := do
+def parse_flags (stx : TSyntaxArray `gen_expr_flag) : Lean.MacroM (List Flag) :=
+  (·.toList) <$> stx.mapM parse_flag
+
+def ext? (flags : List Flag) : Option (TSyntax `ident) :=
+  flags.findSome? (fun f =>
+    match f with
+    | .ext e => .some e
+    | _ => .none)
+
+def deriv? (flags : List Flag) : Option (Array (TSyntax `ident)) :=
+  flags.findSome? (fun f =>
+    match f with
+    | .deriv e => .some e
+    | _ => .none)
+
+syntax "gen_expr" ident gen_expr_flag* : command
+
+def mk_my_expr (my_name : TSyntax `ident) (flags : List Flag) : MacroM (TSyntax `command) := do
+  let with_ext    := (ext? flags)
+  let with_derive := (deriv? flags).getD #[]
   let field (s : String) : TSyntax `ident :=
     Lean.mkIdent (Lean.Name.mkSimple s).eraseMacroScopes
 
   -- Optional embedded datatype (e.g., Lean.Expr for metatactics)
-  let ext : (Array (TSyntax ``ctor)) := (← with_ext.mapM (fun flag => do match flag with
-  | `(gen_expr_flag| with $tau:ident) =>
-    pure #[← `(ctor| | $(field "ext"):ident : $tau:ident → $my_name)]
-  | _ => pure #[])) |> (Option.getD · #[])
+  let ext : (Array (TSyntax ``ctor)) := (← with_ext.mapM (fun tau => do
+    pure #[← `(ctor| | $(field "ext"):ident : $tau:ident → $my_name)]))
+    |> (Option.getD · #[])
 
   let base : (Array (TSyntax ``ctor)) := #[
   ← `(ctor| | $(field "refl"):ident   : $my_name:ident → $my_name:ident),
@@ -97,16 +92,19 @@ def mk_my_expr (my_name : TSyntax `ident) (with_ext : Option (TSyntax `gen_expr_
 
   let all := base ++ ext
 
-  let cmd := `(command| inductive $my_name:ident where
-    $all:ctor*)
+  let cmd := if with_derive.toList.isEmpty then
+    `(command| inductive $my_name:ident where
+      $all:ctor*)
+  else
+  `(command| inductive $my_name:ident where
+      $all:ctor*
+      deriving $(⟨with_derive⟩),*)
 
   cmd
 
 macro_rules
-  | `(command| gen_expr $idt:ident $flag:gen_expr_flag) =>
-    mk_my_expr idt (.some flag)
-  | `(command| gen_expr $idt:ident) =>
-    mk_my_expr idt .none
+  | `(command| gen_expr $idt:ident $flags:gen_expr_flag*) => do
+    mk_my_expr idt (← parse_flags flags)
 
 end GenExpr
 

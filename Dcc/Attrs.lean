@@ -1,4 +1,5 @@
 import Lean
+import Lean.Elab
 import Aesop
 import Mathlib.Data.Nat.Notation
 
@@ -36,10 +37,44 @@ declare_syntax_cat dcc_loc
 syntax "dcc_simp"                                 : dcc_cmd
 syntax "dcc_simp_all"                             : dcc_cmd
 
+/-
+Flags: see later for explanation
+-/
+
+inductive Flag where
+  -- ?
+  | trace : Flag
+  -- !
+  | force : Flag
+  -- :
+  | infer : Flag
+  -- (!!!!!)
+  | group : Flag → Flag → Flag
+deriving Nonempty, Inhabited, BEq
+
+def flag_priority (for_flag : Flag) (in_f : Flag) : ℕ :=
+  match in_f with
+  | .group x xs => (flag_priority for_flag x) + (flag_priority for_flag xs)
+  | f => if for_flag == f then 1 else 0
+
 syntax (name := flagq) "?"                        : dcc_flag
 syntax (name := flagb) "!"                        : dcc_flag
 syntax (name := flagc) ":"                        : dcc_flag
 syntax (name := flagg) "(" dcc_flag+ ")"          : dcc_flag
+
+syntax (name := parseFlag) "f{" dcc_flag "}"      : term
+
+partial def parse_flag [Monad m] [Lean.MonadError m] [Lean.MonadQuotation m]
+  (stx : Lean.TSyntax `dcc_flag) : m Flag :=
+  match stx with
+  | `(dcc_flag| ?) => return .trace
+  | `(dcc_flag| !) => return .force
+  | `(dcc_flag| :) => return .infer
+  | `(dcc_flag| ($f:dcc_flag $fs:dcc_flag*)) => do
+    let f' ← parse_flag f
+    let fs' ← parse_flag (← `(dcc_flag| ($fs:dcc_flag*)))
+    return .group f' fs'
+  | _ => throwErrorAt stx "unexpected dcc_flag syntax"
 
 syntax "[" Lean.Parser.Tactic.simpLemma,* "]"     : dcc_target
 syntax ("at"
@@ -49,12 +84,9 @@ syntax "nowhere"                                  : dcc_loc
 
 syntax dcc_cmd dcc_flag* dcc_target* dcc_loc*     : tactic
 
-def priority (for_flag : Lean.Name) (f : Lean.Syntax) : ℕ :=
-  match f with
-  | .node _ ``flagg ⟨_lp :: flags⟩ =>
-    flags.foldl (fun acc x => acc + (priority for_flag x)) 0
-  | .node _ nm _         => if nm == for_flag then 1 else 0
-  | _                    => 0
+-- TODO: debug name checking right
+def has_flag (flag : Flag) (flags : List Flag) : Bool :=
+  0 < (flags.map (flag_priority flag)).sum
 
 abbrev SSet := Lean.Syntax.TSepArray `Lean.Parser.Tactic.simpLemma ","
 
@@ -117,8 +149,6 @@ macro_rules
         | .zero => Option.none
         | n@(.succ _) => .some n))
 
-    dbg_trace "c"
-
     -- Up to severity of dangerous thms
     let dangerous_thms := prioritize_thms (flag_priority ``flagb) (thms := ← dcc_dangerous_force)
     -- Activate with : flag
@@ -137,7 +167,6 @@ macro_rules
       | `(dcc_cmd| dcc_simp), _ =>
         cases? `(tactic| simp? [$thms,*]) `(tactic| simp [$thms,*])
       | `(dcc_cmd| dcc_simp_all), _ =>
-        dbg_trace (← cases? `(tactic| simp_all? [$thms,*]) `(tactic| simp_all [$thms,*]))
         cases? `(tactic| simp_all? [$thms,*]) `(tactic| simp_all [$thms,*])
       | _, _ => Lean.Macro.throwUnsupported
     discharge thms

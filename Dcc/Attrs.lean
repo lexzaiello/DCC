@@ -24,6 +24,12 @@ initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_force_reduce ("Simplifies by forcing DCC eta and affine reduction")
 
 initialize do pure () <*
+  Lean.Meta.registerSimpAttr `dcc_force_aff ("Simplifies by forcing DCC eta and affine reduction")
+
+initialize do pure () <*
+  Lean.Meta.registerSimpAttr `dcc_force_eta ("Simplifies by forcing DCC eta and affine reduction")
+
+initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_force_rel ("Simplifies by forcing DCC eta and affine reduction")
 
 initialize do pure () <*
@@ -181,7 +187,7 @@ open attrs in macro_rules
     let user_thms      ← unwrap_target tgt
     -- Do dangerous theorems first. This is less likely (?) to cause infinite loops
     let base           ← dcc_base
-    let thms           := base.concat (user_thms.concat dangerous_thms)
+    let thms           := base.concat (dangerous_thms.concat user_thms)
 
     let cases? (a b : Lean.MacroM (Lean.TSyntax `tactic)) : Lean.MacroM (Lean.TSyntax `tactic) := do
       if flags.contains .trace then a else b

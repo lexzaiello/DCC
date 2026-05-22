@@ -28,7 +28,7 @@ theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h�
   have h := h₁.unique h₂
   cases h
   congr
-  
+
 
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
 theorem Reduces.complete : Reduces A B → reduce_all A = B :=

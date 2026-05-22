@@ -33,7 +33,7 @@ inductive RedEta : Expr → Expr → Prop
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
 
-@[dcc_force_reduce, dcc_step, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
+@[dcc_force_eta, dcc_force_reduce, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
   | DCC (Eql(f_α) env x) => .some ⟨_, ⟨.eql⟩⟩
   | DCC (Λ(α, _b, `(_c, x)) y) =>
@@ -82,7 +82,7 @@ inductive RedEta : Expr → Expr → Prop
   | (DCC (`(α, x) ∘' Sndc(β)) ∘' z) => .some ⟨_, ⟨.quot'_snd'⟩⟩
   | _ => .none
 
-@[dcc_rel, dcc_force_reduce, aesop norm (rule_sets := [DccRel])]
+@[dcc_force_reduce, dcc_force_eta, aesop norm (rule_sets := [DccRel])]
 instance RedEta.instRedRel : RedRel RedEta eta_size where
   run := step_eta?
 
@@ -130,12 +130,9 @@ theorem eta_complete (h : Relation.ReflTransGen RedEta A B)
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instCompleteEta : Complete (Relation.ReflTransGen RedEta) (P := IsNorm RedEta) := RedEta.instRedRel.instComplete
 
-@[dcc_force_reduce]
+@[dcc_force_reduce, dcc_force_eta]
 abbrev RedEta.reduce := Expr.reduce RedEta
 
-attribute [dcc_force_reduce] RedEta.reduce.eq_def step_eta?.eq_def RedEta.instRedRel.eq_def
-
-@[dcc_force_reduce] theorem step_eta_fst (h : step_eta? A = .some ⟨x, y⟩) : ((step_eta? A).get (by simp_all)).fst = x := by
-  simp_all
+attribute [dcc_force_reduce, dcc_force_eta] RedEta.reduce.eq_def
 
 end Expr

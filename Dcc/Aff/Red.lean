@@ -20,7 +20,7 @@ inductive RedAff : Expr → Expr → Prop
   | congrFun : RedAff f f' → RedAff (DCC (f x)) (DCC (f' x))
   | congrArg : RedAff x x' → RedAff (DCC (f x)) (DCC (f x'))
 
-@[dcc_force_reduce]
+@[dcc_force_reduce, dcc_force_aff]
 def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
   match e with
   | (DCC (`(_β, _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
@@ -47,7 +47,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
     | _, _ => .none
   | _ => .none
 
-@[dcc_force_reduce]
+@[dcc_force_reduce, dcc_force_aff]
 instance RedAff.instRedRel : RedRel RedAff size where
   run := step?
 
@@ -261,9 +261,9 @@ theorem red_aff_decreasing? (h : Relation.ReflTransGen RedAff A B) : (size B) �
 theorem red_aff_trans_decreasing : Relation.TransGen RedAff A B → (size B) < (size A) :=
   RedAff.instRedRel.to_trans.decreasing
 
-@[dcc_force_reduce]
+@[dcc_force_reduce, dcc_force_aff]
 abbrev RedAff.reduce := Expr.reduce RedAff
 
-attribute [dcc_force_reduce] RedAff.reduce.eq_def
+attribute [dcc_force_reduce, dcc_force_aff] RedAff.reduce.eq_def
 
 end Expr

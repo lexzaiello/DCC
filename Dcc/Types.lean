@@ -164,7 +164,7 @@ f_β : δ → α → Sort n
   DCC Sort max m n
 
 open Std (ToFormat Format format) in
-def toFormat {τ : Type} [ToFormat τ] (e : Expr τ) (pretty : Bool := False) : Std.Format :=
+def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=
     .nest indent (.fill (.joinSep l (sep ++ .line)))
   let paren (s : Std.Format) : Std.Format :=
@@ -218,17 +218,16 @@ def toFormat {τ : Type} [ToFormat τ] (e : Expr τ) (pretty : Bool := False) : 
         sepD [(paren (sepD [(α.toFormat pretty), s!"Sort {m}"] " :")), β.toFormat pretty] " →"
       | _ => (paren (f.toFormat pretty ++ (.indentD (x.toFormat pretty))))
     else (paren (f.toFormat pretty ++ (.indentD (x.toFormat pretty))))
-  | .ext e => format e
 termination_by e
 
 open Std (ToFormat Format format) in
-instance instToFormat {τ : Type} [ToFormat τ] : Std.ToFormat (Expr τ) :=
+instance instToFormat : Std.ToFormat (Expr) :=
   ⟨Expr.toFormat (pretty := true)⟩
 open Std (ToFormat Format format) in
-instance instToString {τ : Type} [ToFormat τ] : ToString (Expr τ) :=
+instance instToString : ToString Expr :=
   ⟨toString ∘ toFormat (pretty := true)⟩
 open Std (ToFormat Format format) in
-instance instRepr {τ : Type} [ToFormat τ] : Repr (Expr τ) :=
+instance instRepr : Repr Expr :=
   ⟨Function.const _ ∘ toFormat (pretty := false)⟩
 
 instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>

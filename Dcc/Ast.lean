@@ -29,20 +29,29 @@ open Lean (Parser.Command.derivingClass)
 inductive Flag where
   | ext   : TSyntax `ident                  → Flag
   | deriv : Array (TSyntax ``derivingClass) → Flag
+  | into  : TSyntax `term                   → Flag
 deriving Repr
 
 declare_syntax_cat gen_expr_flag
-syntax ("with" ident)              : gen_expr_flag
+syntax ("into" term)                : gen_expr_flag
+syntax ("with" ident)               : gen_expr_flag
 syntax ("deriving" derivingClass,*) : gen_expr_flag
 
 def parse_flag (stx : TSyntax `gen_expr_flag) : Lean.MacroM Flag :=
   match stx with
   | `(gen_expr_flag| with $idt:ident) => pure (.ext idt)
   | `(gen_expr_flag| deriving $idts:derivingClass,*) => pure (.deriv idts)
+  | `(gen_expr_flag| into $tm:term) => pure (.into tm)
   | s => Lean.Macro.throwErrorAt stx s!"this is not a flag: {s}"
 
 def parse_flags (stx : TSyntaxArray `gen_expr_flag) : Lean.MacroM (List Flag) :=
   (·.toList) <$> stx.mapM parse_flag
+
+def into? (flags : List Flag) : Option (TSyntax `term) :=
+  flags.findSome? (fun f =>
+    match f with
+    | .into e => .some e
+    | _ => .none)
 
 def ext? (flags : List Flag) : Option (TSyntax `ident) :=
   flags.findSome? (fun f =>
@@ -58,11 +67,12 @@ def deriv? (flags : List Flag) : Option (Array (TSyntax ``derivingClass)) :=
 
 syntax "gen_expr" ident gen_expr_flag,* : command
 
+def field (s : String) : TSyntax `ident :=
+    Lean.mkIdent (Lean.Name.mkSimple s).eraseMacroScopes
+
 def mk_my_expr (my_name : TSyntax `ident) (flags : List Flag) : MacroM (TSyntax `command) := do
   let with_ext    := (ext? flags)
   let with_derive : Syntax.TSepArray ``derivingClass "," := (deriv? flags).getD #[]
-  let field (s : String) : TSyntax `ident :=
-    Lean.mkIdent (Lean.Name.mkSimple s).eraseMacroScopes
 
   -- Optional embedded datatype (e.g., Lean.Expr for metatactics)
   let ext : (Array (TSyntax ``ctor)) := (← with_ext.mapM (fun tau => do

@@ -4,7 +4,88 @@ import Mathlib.Logic.Relation
 import Mathlib.Tactic
 import Dcc.Ast
 import Lean
+import Qq
 import Init.Prelude
+
+namespace GenRel
+
+open GenExpr Lean Elab Command Meta
+open Lean Parser Command
+open Qq
+
+/-
+A relation Expr → Expr → Prop should be mirror-imaged, for
+metaprogramming purposes, to Expr → Expr → Type.
+
+Also, the inductive r should be extended to include lean
+hypotheses (.lean_e : Lean.Expr → r A B)
+
+This utility automates that codegen.
+-/
+
+-- shoutout to gemini for helping me w this one
+def ctor_args_no_implicit (cval : ConstructorVal) : MetaM (Array Lean.Expr) := do
+  forallBoundedTelescope
+    (type := cval.type)
+    (maxFVars? := .some (cval.numParams + cval.numFields)) fun xs _body => do
+      let fields := xs.extract cval.numParams xs.size
+      let explicit ← fields.filterM fun fvar => do
+        let decl ← fvar.fvarId!.getDecl
+        return decl.binderInfo.isExplicit
+      return explicit
+
+-- final conclusion, literal
+def ctor_concl (cval : ConstructorVal) : MetaM Lean.Expr :=
+  forallTelescope cval.type (fun _ => pure)
+
+def literal_ctor (cval : ConstructorVal) : MetaM (Lean.TSyntax `term) :=
+  Lean.PrettyPrinter.delab cval.type
+
+def ctors (nm : Lean.Name) : MetaM (Array (TSyntax ``ctor)) := do
+  let arr! (t : Lean.Expr) : MetaM (Lean.Expr × Lean.Expr) := do
+    let some (a, b) ← (pure t.arrow?) | throwError m!"this is not an arrow: {t}"
+    pure (a, b)
+
+  let concl : Lean.Expr → MetaM Lean.Expr  := (forallTelescope · (fun _ => pure))
+
+  let env ← getEnv
+  let some (.inductInfo info) := env.find? nm
+    | throwError "this is not an inductive: {nm}"
+
+  match ← arr! info.type with
+  | ⟨α, arr'⟩ =>
+    match ← arr! arr' with
+    | ⟨β, .sort u⟩ =>
+      let some a ← checkTypeQ α q(Type) | throwError m!"not a type: {α}"
+      let some b ← checkTypeQ α q(Type) | throwError m!"not a type: {β}"
+
+      let some rel ← checkTypeQ info.type q($a → $b → Sort $u)
+        | throwError m!"this is not a valid relation: {info.type}
+expected type: {a} → {b} → Sort {u}"
+
+      let h : List (TSyntax ``ctor) ← info.ctors.mapM (fun cname => do
+        let constr_idt := Lean.mkIdent cname.eraseMacroScopes
+        let some (.ctorInfo cinfo) := env.find? cname
+          | throwError "(should not be possible) no constructor found: {cname}"
+        let constr_bdy ← literal_ctor cinfo
+        `(ctor| | $constr_idt:ident : $constr_bdy))
+      sorry
+    | ⟨_, m⟩ => throwError m!"this is not a sort (a → b → Sort *): {m}"
+
+def add_rel_clone (my_name : TSyntax `ident) (flags : List Flag) : CommandElabM Unit := do
+  -- Constructor to add
+  let with_ext    := (ext? flags)
+  -- Deriv classes
+  let with_derive : Syntax.TSepArray ``derivingClass "," := (deriv? flags).getD #[]
+  -- New elim sort
+  let with_into   := (into? flags).getD (← `(term| Type))
+  sorry
+
+elab "mirror" idt:ident flags:gen_expr_flag,* : command => do
+  
+  sorry
+
+end GenRel
 
 namespace Expr
 

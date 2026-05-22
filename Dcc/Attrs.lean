@@ -78,6 +78,10 @@ partial def parse_flag  (stx : Lean.TSyntax `dcc_flag) : Lean.MacroM Flag :=
   | `(dcc_flag| ?) => return .trace
   | `(dcc_flag| !) => return .force
   | `(dcc_flag| ∶) => return .infer
+  | `(dcc_flag| ($f:dcc_flag $x:dcc_flag)) => do
+    let f' ← parse_flag f
+    let x' ← parse_flag x
+    return .group f' x'
   | `(dcc_flag| ($f:dcc_flag $fs:dcc_flag*)) => do
     let f' ← parse_flag f
     let fs' ← parse_flag (← `(dcc_flag| ($fs:dcc_flag*)))
@@ -93,6 +97,7 @@ syntax ("at" (Lean.Parser.Tactic.locationWildcard <|>
 syntax "nowhere"                                         : dcc_loc
 
 syntax dcc_cmd dcc_flag* dcc_target* dcc_loc*     : tactic
+syntax dcc_cmd dcc_flag* dcc_target* dcc_loc*     : conv
 
 abbrev Dispatcher := Lean.TSyntax `tactic
 
@@ -155,6 +160,8 @@ def prioritize_thms (n : Nat) (thms : SSet) : SSet :=
 end attrs
 
 open attrs in macro_rules
+  | `(conv| $cmd:dcc_cmd $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) =>
+    `(conv| tactic => $cmd:dcc_cmd $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*)
   | `(tactic| dcc_simp_all? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) =>
     `(tactic| dcc_simp_all ? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*)
   | `(tactic| dcc_simp? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) =>
@@ -165,11 +172,7 @@ open attrs in macro_rules
     let flags ← get_flags flags
     -- Number of ! flags dictates which number of "dangerous" sets to use
     -- ! = just dcc_force_reduce, !! = dcc_force_rel
-    let flag_priority (fname : Flag) :=
-      ((Option.getD · 0) <| flags.firstM (fun (flag : Flag) =>
-        match flag_priority fname flag with
-        | .zero => Option.none
-        | n@(.succ _) => .some n))
+    let flag_priority (fname : Flag) := (flags.map (fun (flag : Flag) => flag_priority fname flag)).sum
 
     -- Up to severity of dangerous thms
     let dangerous_thms := prioritize_thms (flag_priority .force) (thms := ← dcc_dangerous_force)

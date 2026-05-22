@@ -36,6 +36,8 @@ declare_syntax_cat dcc_loc
 
 syntax "dcc_simp"                                 : dcc_cmd
 syntax "dcc_simp_all"                             : dcc_cmd
+syntax "dcc_simp?"                                : dcc_cmd
+syntax "dcc_simp_all?"                            : dcc_cmd
 
 /-
 Flags: see later for explanation
@@ -57,24 +59,26 @@ def flag_priority (for_flag : Flag) (in_f : Flag) : ℕ :=
   | .group x xs => (flag_priority for_flag x) + (flag_priority for_flag xs)
   | f => if for_flag == f then 1 else 0
 
-syntax (name := flagq) "?"                        : dcc_flag
-syntax (name := flagb) "!"                        : dcc_flag
-syntax (name := flagc) ":"                        : dcc_flag
-syntax (name := flagg) "(" dcc_flag+ ")"          : dcc_flag
+def Flag.has (flag : Flag) (flags : List Flag) : Bool :=
+  0 < (flags.map (flag_priority flag)).sum
 
-syntax (name := parseFlag) "f{" dcc_flag "}"      : term
+syntax "?" : dcc_flag
+syntax "!" : dcc_flag
+syntax "∶" : dcc_flag
+syntax "(" dcc_flag+ ")"          : dcc_flag
 
-partial def parse_flag [Monad m] [Lean.MonadError m] [Lean.MonadQuotation m]
-  (stx : Lean.TSyntax `dcc_flag) : m Flag :=
+syntax "f{" dcc_flag "}"          : term
+
+partial def parse_flag  (stx : Lean.TSyntax `dcc_flag) : Lean.MacroM Flag :=
   match stx with
   | `(dcc_flag| ?) => return .trace
   | `(dcc_flag| !) => return .force
-  | `(dcc_flag| :) => return .infer
+  | `(dcc_flag| ∶) => return .infer
   | `(dcc_flag| ($f:dcc_flag $fs:dcc_flag*)) => do
     let f' ← parse_flag f
     let fs' ← parse_flag (← `(dcc_flag| ($fs:dcc_flag*)))
     return .group f' fs'
-  | _ => throwErrorAt stx "unexpected dcc_flag syntax"
+  | _ => Lean.Macro.throwErrorAt stx "unexpected dcc_flag syntax"
 
 syntax "[" Lean.Parser.Tactic.simpLemma,* "]"     : dcc_target
 syntax ("at"
@@ -83,10 +87,6 @@ syntax ("at"
 syntax "nowhere"                                  : dcc_loc
 
 syntax dcc_cmd dcc_flag* dcc_target* dcc_loc*     : tactic
-
--- TODO: debug name checking right
-def has_flag (flag : Flag) (flags : List Flag) : Bool :=
-  0 < (flags.map (flag_priority flag)).sum
 
 abbrev SSet := Lean.Syntax.TSepArray `Lean.Parser.Tactic.simpLemma ","
 
@@ -107,6 +107,9 @@ abbrev unwrap_target (stx : Lean.TSyntaxArray `dcc_target) : SSet :=
     | `(dcc_target| [$lms,*]) => lms
     | _                       => ⟨⟨[]⟩⟩
   | _                         => ⟨⟨[]⟩⟩
+
+abbrev get_flags (stx : Lean.TSyntaxArray `dcc_flag) : Lean.MacroM (List Flag) :=
+  stx.toList.mapM parse_flag
 
 /-
 DCC top-level simp-sets:
@@ -134,31 +137,36 @@ def dcc_dangerous_force : Lean.MacroM SSet := do
     ← `(Lean.Parser.Tactic.simpLemma| dcc_force_rel)]⟩⟩
 
 def dcc_infer_force : Lean.MacroM SSet := do
-  return ⟨⟨[← `(dcc_force_infer)]⟩⟩
+  return ⟨⟨[← `(Lean.Parser.Tactic.simpLemma| dcc_force_infer)]⟩⟩
 
 def prioritize_thms (n : ℕ) (thms : SSet) : SSet := thms.getElems.take n
 
 macro_rules
+  | `(tactic| dcc_simp_all? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) =>
+    `(tactic| dcc_simp_all ? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*)
+  | `(tactic| dcc_simp? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) =>
+    `(tactic| dcc_simp ? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*)
   | `(tactic| $cmd:dcc_cmd $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) => do
-    let loc   := ← unwrap_locs loc
-    let flags := flags.toList
+    let loc   ← unwrap_locs loc
+    let flags ← get_flags flags
     -- Number of ! flags dictates which number of "dangerous" sets to use
     -- ! = just dcc_force_reduce, !! = dcc_force_rel
-    let flag_priority (fname : Lean.Name) := ((Option.getD · 0) <| flags.firstM (fun (flag : Lean.TSyntax `dcc_flag) =>
-        match priority fname flag with
+    let flag_priority (fname : Flag) :=
+      ((Option.getD · 0) <| flags.firstM (fun (flag : Flag) =>
+        match flag_priority fname flag with
         | .zero => Option.none
         | n@(.succ _) => .some n))
 
     -- Up to severity of dangerous thms
-    let dangerous_thms := prioritize_thms (flag_priority ``flagb) (thms := ← dcc_dangerous_force)
+    let dangerous_thms := prioritize_thms (flag_priority .force) (thms := ← dcc_dangerous_force)
     -- Activate with : flag
-    let infer_thms     := prioritize_thms (flag_priority ``flagc) (thms := ← dcc_infer_force)
+    let infer_thms     := prioritize_thms (flag_priority .infer) (thms := ← dcc_infer_force)
     let user_thms      := unwrap_target tgt
     -- Do dangerous theorems first. This is less likely (?) to cause infinite loops
     let thms           := ((infer_thms.concat dangerous_thms).concat (← dcc_base)).concat user_thms
 
     let cases? (a b : Lean.MacroM (Lean.TSyntax `tactic)) : Lean.MacroM (Lean.TSyntax `tactic) := do
-      if flags.contains (← `(dcc_flag| ?)) then a else b
+      if flags.contains .trace then a else b
 
     let discharge (thms : SSet) : Lean.MacroM (Lean.TSyntax `tactic) := do
       match cmd, loc with

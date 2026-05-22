@@ -50,6 +50,67 @@ inductive Expr where
   | bot    : Expr
 deriving BEq, DecidableEq
 
+class DccLike (τ : Type) where
+  refl   : τ  → τ := by exact .refl
+  eq     : τ  → τ := by exact .eq
+  eql    : τ  → τ := by exact .eql
+  fstc   : τ  → τ := by exact .fstc
+  sndc   : τ  → τ := by exact .sndc
+  sort   : Level → τ := by exact .sort
+  comp'  : τ  → τ  → τ := by exact .comp'
+  comp   : τ  → τ  → τ := by exact .comp
+  pair   : τ  → τ → τ := by exact .pair
+  sigma  : τ  → τ  → τ := by exact .sigma
+  coup   : τ  → τ := by exact .coup
+  mkc    : τ  → τ  → τ  → τ := by exact .mk
+  pi     : τ  → τ  → τ := by exact .pi
+  curr   : τ  → τ  → τ  → τ := by exact .curr
+  quot   : τ  → τ  → τ := by exact .quot
+  id     : τ  → τ := by exact .id
+  app    : τ → τ  → τ := by exact .app
+  top    : τ := by exact .top
+  tintro : τ := by exact .tintro
+  bot    : τ := by exact .bot
+
+instance : DccLike Expr where
+
+syntax "gen_dsl" str "for" term : command
+
+macro_rules
+  | `(gen_dsl $pre:str for $ty:ident) => do
+    let field : Lean.Name → Lean.Name := .str pre
+    let cat : Lean.TSyntax `ident   :=
+      ⟨Lean.mkIdent (.str .anonymous s!"expr_{pre}")⟩
+    let mk_cat : Lean.TSyntaxArray `command := #[
+      ← `(command| declare_syntax_cat $cat:ident),
+      ← `(command| syntax "=(" $cat:ident,* ")"                        : $cat:ident),
+      ← `(command| syntax "Eql(" $cat:ident,* ")"                      : $cat:ident),
+      ← `(command| syntax "refl(" $cat:ident,* ")"                     : $cat:ident),
+      ← `(command| syntax "#(" term ")"                                : $cat:ident),
+      ← `(command| syntax "⊤"                                          : $cat:ident),
+      ← `(command| syntax "∗"                                          : $cat:ident),
+      ← `(command| syntax "⊥"                                          : $cat:ident),
+      ← `(command| syntax:max "`(" $cat:ident,* ")"                    : $cat:ident),
+      ← `(command| syntax:max "Id(" $cat:ident,* ")"                   : $cat:ident),
+      ← `(command| syntax:max "Fstc(" $cat:ident,* ")"                 : $cat:ident),
+      ← `(command| syntax:max "Sndc(" $cat:ident,* ")"                 : $cat:ident),
+      ← `(command| syntax "Σ(" $cat:ident,* ")"                        : $cat:ident),
+      ← `(command| syntax "Coup(" $cat:ident ")"                       : $cat:ident),
+      ← `(command| syntax:max (priority := high) "Λ(" $cat:ident,* ")" : $cat:ident),
+      ← `(command| syntax:max (priority := high) "Π(" $cat:ident,* ")" : $cat:ident),
+      ← `(command| syntax $cat:ident "∘'" $cat:ident                   : $cat:ident),
+      ← `(command| syntax $cat:ident "∘" $cat:ident                    : $cat:ident),
+      ← `(command| syntax:30 ident                                     : $cat:ident),
+      ← `(command| syntax "(" $cat:ident+ ")"                          : $cat:ident),
+      ← `(command| syntax:max "Sort" term                              : $cat:ident),
+      ← `(command| syntax (priority := high) "⟨" $cat:ident,* "⟩"      : $cat:ident),
+      ← `(command| syntax (priority := high) "⟦" $cat:ident,* "⟧"
+                                                  "(" $cat:ident,* ")" : $cat:ident)
+    ]
+    let parser : Lean.TSyntax `command ← `(command| syntax $pre:str $cat:ident : term)
+    
+    sorry
+
 declare_syntax_cat expr
 
 syntax "=(" expr,* ")"                                           : expr

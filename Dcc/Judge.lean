@@ -84,8 +84,7 @@ inductive Judge : Expr → Expr → Prop where
       Λ(Sort m, Id(Sort m), `(Coup(Id(Sort m)), Sort 0))) ∘' f_α ∘' Fstc(f_α))))) δ)) τ
     → Judge (DCC =(f_α)) τ
   | refl   : Judge f_α (DCC (δ : Sort o) → Sort m)
-    → Reduces (DCC (Π(Id(Sort o), `(Sort o,
-      Π(f_α, Eql(f_α)))) δ)) τ
+    → Reduces (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Eql(f_α)))) δ)) τ
       → Judge (DCC refl(f_α)) τ
   | eql    : Judge f_α (DCC (δ : Sort o) → Sort m)
     → Reduces (DCC Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, Π(Id(Sort m), `(Coup(Id(Sort m)), Sort 0))))))) τ

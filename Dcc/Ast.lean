@@ -69,6 +69,9 @@ def mk_my_expr (my_name : TSyntax `ident) (flags : List Flag) : MacroM (TSyntax 
     pure #[← `(ctor| | $(field "ext"):ident : $tau:ident → $my_name)]))
     |> (Option.getD · #[])
 
+  /-
+    Core DCC constructors. This is a spec so that meta-layer (tactic) mirror-image can be updated
+  -/
   let base : (Array (TSyntax ``ctor)) := #[
   ← `(ctor| | $(field "refl"):ident   : $my_name:ident → $my_name:ident),
   ← `(ctor| | $(field "eq"):ident     : $my_name:ident → $my_name:ident),
@@ -107,11 +110,6 @@ macro_rules
   | `(command| gen_expr $idt:ident $flags:gen_expr_flag,*) => do
     mk_my_expr idt (← parse_flags flags.getElems)
 
-end GenExpr
-
-open GenExpr in
-gen_expr Expr
-
 namespace _test
 
 gen_expr StrExpr with String, deriving Repr
@@ -120,6 +118,11 @@ gen_expr StrExpr with String, deriving Repr
 #check Repr StrExpr
 
 end _test
+
+end GenExpr
+
+open GenExpr in
+gen_expr Expr deriving BEq, DecidableEq
 
 #check Expr.sort
 

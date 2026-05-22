@@ -70,13 +70,16 @@ syntax "gen_expr" ident gen_expr_flag,* : command
 def field (s : String) : TSyntax `ident :=
     Lean.mkIdent (Lean.Name.mkSimple s).eraseMacroScopes
 
+def mk_ext (my_name ext : TSyntax `ident) : MacroM (TSyntax ``ctor) := do
+    `(ctor| | $(field "ext"):ident : $ext:ident → $my_name)
+
 def mk_my_expr (my_name : TSyntax `ident) (flags : List Flag) : MacroM (TSyntax `command) := do
   let with_ext    := (ext? flags)
   let with_derive : Syntax.TSepArray ``derivingClass "," := (deriv? flags).getD #[]
 
   -- Optional embedded datatype (e.g., Lean.Expr for metatactics)
   let ext : (Array (TSyntax ``ctor)) := (← with_ext.mapM (fun tau => do
-    pure #[← `(ctor| | $(field "ext"):ident : $tau:ident → $my_name)]))
+    pure #[← mk_ext my_name tau]))
     |> (Option.getD · #[])
 
   /-

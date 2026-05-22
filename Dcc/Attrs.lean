@@ -33,17 +33,21 @@ declare_syntax_cat dcc_flag
 declare_syntax_cat dcc_target
 declare_syntax_cat dcc_loc
 
-syntax "dcc_simp"     : dcc_cmd
-syntax "dcc_simp_all" : dcc_cmd
+syntax "dcc_simp"                                 : dcc_cmd
+syntax "dcc_simp_all"                             : dcc_cmd
 
-syntax (name := flagq) "?"               : dcc_flag
-syntax (name := flagb) "!"               : dcc_flag
-syntax (name := flagc) ":"               : dcc_flag
-syntax (name := flagg) "(" dcc_flag+ ")" : dcc_flag
+syntax (name := flagq) "?"                        : dcc_flag
+syntax (name := flagb) "!"                        : dcc_flag
+syntax (name := flagc) ":"                        : dcc_flag
+syntax (name := flagg) "(" dcc_flag+ ")"          : dcc_flag
 
-syntax ("[" Lean.Parser.Tactic.simpLemma,* "]")? : dcc_target
-syntax ("at" (Lean.Parser.Tactic.locationWildcard <|> Lean.Parser.Tactic.locationHyp)) : dcc_loc
-syntax dcc_cmd dcc_flag* dcc_target (dcc_loc)? : tactic
+syntax "[" Lean.Parser.Tactic.simpLemma,* "]"     : dcc_target
+syntax ("at"
+  (Lean.Parser.Tactic.locationWildcard <|>
+                Lean.Parser.Tactic.locationHyp))  : dcc_loc
+syntax "nowhere"                                  : dcc_loc
+
+syntax dcc_cmd dcc_flag* dcc_target* dcc_loc*     : tactic
 
 def priority (for_flag : Lean.Name) (f : Lean.Syntax) : ℕ :=
   match f with
@@ -59,10 +63,18 @@ abbrev STgt := Lean.TSyntax `dcc_target
 abbrev SSet.concat (a b : SSet) : SSet :=
   a.getElems ++ b.getElems
 
-abbrev unwrap_target (stx : Lean.TSyntax `dcc_target) : SSet :=
+abbrev unwrap_locs (stx : Lean.TSyntaxArray `dcc_loc) : Lean.MacroM (Lean.TSyntax `dcc_loc) :=
+  match stx.toList with
+  | [locs] => pure locs
+  | _      => `(dcc_loc| nowhere)
+
+abbrev unwrap_target (stx : Lean.TSyntaxArray `dcc_target) : SSet :=
   match stx with
-  | `(dcc_target| [$lms,*]) => lms
-  | _                       => ⟨⟨[]⟩⟩
+  | ⟨[tgt]⟩ =>
+    match tgt with
+    | `(dcc_target| [$lms,*]) => lms
+    | _                       => ⟨⟨[]⟩⟩
+  | _                         => ⟨⟨[]⟩⟩
 
 /-
 DCC top-level simp-sets:
@@ -79,10 +91,15 @@ repeat ! or : to indicate how dangerous to go (how many sub-sets to choose. they
 -/
 
 def dcc_base : Lean.MacroM SSet := do
-  return ⟨⟨[← `(dcc_step), ← `(dcc_reduce), ← `(dcc_size), ← `(dcc_judge), ← `(dcc_rel)]⟩⟩
+  return ⟨⟨[← `(Lean.Parser.Tactic.simpLemma| dcc_step),
+    ← `(Lean.Parser.Tactic.simpLemma| dcc_reduce),
+    ← `(Lean.Parser.Tactic.simpLemma| dcc_size),
+    ← `(Lean.Parser.Tactic.simpLemma| dcc_judge),
+    ← `(Lean.Parser.Tactic.simpLemma| dcc_rel)]⟩⟩
 
 def dcc_dangerous_force : Lean.MacroM SSet := do
-  return ⟨⟨[← `(dcc_force_reduce), ← `(dcc_force_rel)]⟩⟩
+  return ⟨⟨[← `(Lean.Parser.Tactic.simpLemma| dcc_force_reduce),
+    ← `(Lean.Parser.Tactic.simpLemma| dcc_force_rel)]⟩⟩
 
 def dcc_infer_force : Lean.MacroM SSet := do
   return ⟨⟨[← `(dcc_force_infer)]⟩⟩
@@ -90,15 +107,17 @@ def dcc_infer_force : Lean.MacroM SSet := do
 def prioritize_thms (n : ℕ) (thms : SSet) : SSet := thms.getElems.take n
 
 macro_rules
-  | `(tactic| $cmd:dcc_cmd $flags:dcc_flag* $tgt:dcc_target $loc:dcc_loc) => do
+  | `(tactic| $cmd:dcc_cmd $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) => do
+    let loc   := ← unwrap_locs loc
     let flags := flags.toList
-
     -- Number of ! flags dictates which number of "dangerous" sets to use
     -- ! = just dcc_force_reduce, !! = dcc_force_rel
     let flag_priority (fname : Lean.Name) := ((Option.getD · 0) <| flags.firstM (fun (flag : Lean.TSyntax `dcc_flag) =>
         match priority fname flag with
         | .zero => Option.none
         | n@(.succ _) => .some n))
+
+    dbg_trace "c"
 
     -- Up to severity of dangerous thms
     let dangerous_thms := prioritize_thms (flag_priority ``flagb) (thms := ← dcc_dangerous_force)
@@ -118,6 +137,7 @@ macro_rules
       | `(dcc_cmd| dcc_simp), _ =>
         cases? `(tactic| simp? [$thms,*]) `(tactic| simp [$thms,*])
       | `(dcc_cmd| dcc_simp_all), _ =>
+        dbg_trace (← cases? `(tactic| simp_all? [$thms,*]) `(tactic| simp_all [$thms,*]))
         cases? `(tactic| simp_all? [$thms,*]) `(tactic| simp_all [$thms,*])
       | _, _ => Lean.Macro.throwUnsupported
     discharge thms

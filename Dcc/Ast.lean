@@ -21,38 +21,107 @@ we can derive `()
 Λ(Fst(α, β)
 -/
 
-inductive Expr (τ : Type := Unit) where
+inductive GenExpr (τ : Type) where
   -- refl(f_α) env
-  | refl   : Expr τ  → Expr τ
+  | refl   : GenExpr τ  → GenExpr τ
   -- eq(f_α, f_β) env
-  | eq     : Expr τ  → Expr τ
-  | eql    : Expr τ  → Expr τ
-  | fstc   : Expr τ  → Expr τ
-  | sndc   : Expr τ  → Expr τ
-  | sort   : Level → Expr τ
-  | comp'  : Expr τ  → Expr τ  → Expr τ
-  | comp   : Expr τ  → Expr τ  → Expr τ
-  | pair   : Expr τ  → Expr τ → Expr τ
+  | eq     : GenExpr τ  → GenExpr τ
+  | eql    : GenExpr τ  → GenExpr τ
+  | fstc   : GenExpr τ  → GenExpr τ
+  | sndc   : GenExpr τ  → GenExpr τ
+  | sort   : Level → GenExpr τ
+  | comp'  : GenExpr τ  → GenExpr τ  → GenExpr τ
+  | comp   : GenExpr τ  → GenExpr τ  → GenExpr τ
+  | pair   : GenExpr τ  → GenExpr τ → GenExpr τ
   -- Σ(β) is the usual sigma type
-  | sigma  : Expr τ  → Expr τ  → Expr τ
-  | coup   : Expr τ  → Expr τ
-  | mkc    : Expr τ  → Expr τ  → Expr τ  → Expr τ
-  | pi     : Expr τ  → Expr τ  → Expr τ
-  | curr   : Expr τ  → Expr τ  → Expr τ  → Expr τ
-  | quot   : Expr τ  → Expr τ  → Expr τ
-  | id     : Expr τ  → Expr τ
-  | app    : Expr τ → Expr τ  → Expr τ
+  | sigma  : GenExpr τ  → GenExpr τ  → GenExpr τ
+  | coup   : GenExpr τ  → GenExpr τ
+  | mkc    : GenExpr τ  → GenExpr τ  → GenExpr τ  → GenExpr τ
+  | pi     : GenExpr τ  → GenExpr τ  → GenExpr τ
+  | curr   : GenExpr τ  → GenExpr τ  → GenExpr τ  → GenExpr τ
+  | quot   : GenExpr τ  → GenExpr τ  → GenExpr τ
+  | id     : GenExpr τ  → GenExpr τ
+  | app    : GenExpr τ  → GenExpr τ  → GenExpr τ
   -- ⊤ : Sort 0
-  | top    : Expr τ
+  | top    : GenExpr τ
   -- ∗ : ⊤
-  | tintro : Expr τ
+  | tintro : GenExpr τ
   -- 0 : Sort 0
-  | bot    : Expr τ
+  | bot    : GenExpr τ
   /-
-    For meta-tactics, we often want to inject Lean.Expr, but not always
+    For meta-tactics, we often want to inject Lean.GenExpr, but not always
   -/
-  | ext    : τ → Expr τ
+  | ext    : τ → GenExpr τ
 deriving BEq, DecidableEq
+
+namespace GenExpr
+
+open Lean Macro Parser.Command
+
+declare_syntax_cat gen_expr_flag
+syntax ("with" ident)  : gen_expr_flag
+
+syntax "gen_expr" ident (gen_expr_flag)? : command
+
+def mk_my_expr (my_name : TSyntax `ident) (with_ext : Option (TSyntax `gen_expr_flag)) : MacroM (TSyntax `command) := do
+  let field (s : String) : TSyntax `ident :=
+    Lean.mkIdent (Lean.Name.mkSimple s).eraseMacroScopes
+
+  -- Optional embedded datatype (e.g., Lean.Expr for metatactics)
+  let ext : (Array (TSyntax ``ctor)) := (← with_ext.mapM (fun flag => do match flag with
+  | `(gen_expr_flag| with $tau:ident) =>
+    pure #[← `(ctor| | $(field "ext"):ident : $tau:ident → $my_name)]
+  | _ => pure #[])) |> (Option.getD · #[])
+
+  let base : (Array (TSyntax ``ctor)) := #[
+  ← `(ctor| | $(field "refl"):ident   : $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "eq"):ident     : $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "eql"):ident    : $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "fstc"):ident   : $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "sndc"):ident   : $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "sort"):ident   : _root_.Level → $my_name:ident),
+  ← `(ctor| | $(field "comp'"):ident  : $my_name:ident → $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "comp"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "pair"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "sigma"):ident  : $my_name:ident → $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "coup"):ident   : $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "mkc"):ident    : $my_name:ident → $my_name:ident → $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "pi"):ident     : $my_name:ident → $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "curr"):ident   : $my_name:ident → $my_name:ident → $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "quot"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "id"):ident     : $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "app"):ident    : $my_name:ident → $my_name:ident → $my_name:ident),
+  ← `(ctor| | $(field "top"):ident    : $my_name:ident),
+  ← `(ctor| | $(field "tintro"):ident : $my_name:ident),
+  ← `(ctor| | $(field "bot"):ident    : $my_name:ident)]
+
+  let all := base ++ ext
+
+  let cmd := `(command| inductive $my_name:ident where
+    $all:ctor*)
+
+  cmd
+
+macro_rules
+  | `(command| gen_expr $idt:ident $flag:gen_expr_flag) =>
+    mk_my_expr idt (.some flag)
+  | `(command| gen_expr $idt:ident) =>
+    mk_my_expr idt .none
+
+end GenExpr
+
+open GenExpr in
+gen_expr Expr
+
+namespace _test
+
+gen_expr StrExpr with String
+
+#check StrExpr.ext
+
+end _test
+
+#check Expr.sort
 
 declare_syntax_cat gen_dcc
 
@@ -145,6 +214,8 @@ macro_rules
     `(command| macro $pre:str exp:gen_dcc : term => `(DCC[$ty:ident] $$exp))
 
 gen_dsl "DCC" for Expr
+
+#eval (DCC Sort 0)
 
 def runDcc : Lean.TSyntax `gen_dcc → Lean.MacroM Lean.Syntax
   | `(gen_dcc| $e:gen_dcc) => `(DCC $e:gen_dcc)

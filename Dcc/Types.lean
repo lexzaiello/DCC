@@ -1,8 +1,6 @@
 import Dcc.Attrs
 import Dcc.Ast
 
-open Std (ToFormat Format format)
-
 namespace Expr
 
 syntax "(" gen_dcc ":" gen_dcc ")" "→" gen_dcc : gen_dcc
@@ -165,6 +163,7 @@ f_β : δ → α → Sort n
 @[dcc_judge] abbrev Coup.type (m n : Level) : Expr :=
   DCC Sort max m n
 
+open Std (ToFormat Format format) in
 def toFormat {τ : Type} [ToFormat τ] (e : Expr τ) (pretty : Bool := False) : Std.Format :=
   let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=
     .nest indent (.fill (.joinSep l (sep ++ .line)))
@@ -222,9 +221,15 @@ def toFormat {τ : Type} [ToFormat τ] (e : Expr τ) (pretty : Bool := False) : 
   | .ext e => format e
 termination_by e
 
-instance instToFormat : Std.ToFormat Expr := ⟨toFormat (pretty := true)⟩
-instance instToString : ToString Expr     := ⟨toString ∘ toFormat (pretty := true)⟩
-instance instRepr : Repr Expr := ⟨Function.const _ ∘ toFormat (pretty := false)⟩
+open Std (ToFormat Format format) in
+instance instToFormat {τ : Type} [ToFormat τ] : Std.ToFormat (Expr τ) :=
+  ⟨Expr.toFormat (pretty := true)⟩
+open Std (ToFormat Format format) in
+instance instToString {τ : Type} [ToFormat τ] : ToString (Expr τ) :=
+  ⟨toString ∘ toFormat (pretty := true)⟩
+open Std (ToFormat Format format) in
+instance instRepr {τ : Type} [ToFormat τ] : Repr (Expr τ) :=
+  ⟨Function.const _ ∘ toFormat (pretty := false)⟩
 
 instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
   match me with

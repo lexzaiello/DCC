@@ -112,9 +112,15 @@ def update_ind (nm : Lean.Name)
         `(ctor| | $constr_idt:ident : $constr_bdy))
       let all_ctrs : Lean.TSyntaxArray _ := (Array.mk h) ++ ext_ctrs
       -- or try delab pretty α β
-      `(command|
-        inductive $new_name:ident : $a_str:ident → $b_str:ident → $new_elim_sort
-          $all_ctrs:ctor*)
+      if derivs.getElems.isEmpty then
+        `(command|
+          inductive $new_name:ident : $a_str:ident → $b_str:ident → $new_elim_sort
+            $all_ctrs:ctor*)
+      else
+        `(command|
+          inductive $new_name:ident : $a_str:ident → $b_str:ident → $new_elim_sort
+            $all_ctrs:ctor*
+            deriving $derivs,*)
     | ⟨_, m⟩ => throwError m!"this is not a sort (a → b → Sort *): {m}"
 
 def add_rel_clone (my_name : TSyntax `ident) (flags : List Flag) : CommandElabM Unit := do
@@ -127,13 +133,12 @@ def add_rel_clone (my_name : TSyntax `ident) (flags : List Flag) : CommandElabM 
   let with_into   := (into? flags).getD (← `(term| Type))
   let some new_name ← (pure (as? flags)) | throwError "missing new name"
 
-  let ind ← update_ind my_name new_name ⟨with_ext⟩ (pure with_into)
+  let ind ← update_ind my_name new_name ⟨with_ext⟩ with_derive (pure with_into)
 
   elabCommand ind
 
 elab "mirror" idt:ident flags:gen_expr_flag,* : command => do
-  
-  sorry
+  add_rel_clone idt (← liftMacroM <| parse_flags flags.getElems)
 
 end GenRel
 

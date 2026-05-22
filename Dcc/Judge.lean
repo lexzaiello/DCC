@@ -15,6 +15,7 @@ inductive Reduces : Expr → Expr → Prop
     → IsNorm RedEta C
     → Reduces A C
 
+@[dcc_force_reduce]
 def reduce_all := reduce' RedEta ∘ reduce' RedAff
 
 @[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])]
@@ -27,6 +28,7 @@ theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h�
   have h := h₁.unique h₂
   cases h
   congr
+  
 
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
 theorem Reduces.complete : Reduces A B → reduce_all A = B :=
@@ -55,10 +57,6 @@ def reduce_reduces' : Reduces A (reduce_all A) := reduce_reduces rfl
   | _ => .none
 
 #eval Std.format <| pair.β.type (DCC (Sort 30)) 10 20
-
-/-
-
--/
 
 @[dcc_judge, inline] abbrev pair.β.type.matcher (t α : Expr) (m : Level) : Option ((n : Level) × (PULift.{1, 0} (t = pair.β.type α m n))) :=
   match arrow.matcher t with
@@ -399,10 +397,10 @@ def test_id_nested : Option Expr := do
   run := infer
 
 macro "dcc_simp_all" : tactic =>
-  `(tactic| try dsimp only [infer]; simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce])
+  `(tactic| ((try dsimp only [infer]); simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel]))
 
 macro "dcc_simp_all" "[" args:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
-  `(tactic| try dsimp only [infer]; simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, dcc_force_reduce, $args,*])
+  `(tactic| ((try dsimp only [infer]); simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, $args,*]))
 
 
 end Expr

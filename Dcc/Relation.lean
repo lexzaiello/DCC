@@ -54,6 +54,8 @@ class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ))
       try rfl
       done)
 
+attribute [dcc_force_rel] RedRel.toRel.eq_def RedRel.toRel Rel.run Rel.run.eq_def
+
 def IsNorm.unique {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : r A B) : A = B :=
   (hn ⟨_, hr⟩).elim
 

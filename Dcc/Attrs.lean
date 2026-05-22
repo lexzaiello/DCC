@@ -1,7 +1,6 @@
 import Lean
 import Lean.Elab
 import Aesop
-import Mathlib.Data.Nat.Notation
 
 initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_step ("Simplifies using single-step reduction theorems")
@@ -25,9 +24,14 @@ initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_force_reduce ("Simplifies by forcing DCC eta and affine reduction")
 
 initialize do pure () <*
+  Lean.Meta.registerSimpAttr `dcc_force_rel ("Simplifies by forcing DCC eta and affine reduction")
+
+initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_force_infer ("Runs the type-checker")
 
 declare_aesop_rule_sets [DccStep, DccReduce, DccSize, DccJudge, DccRel, DccForceReduce]
+
+namespace attrs
 
 declare_syntax_cat dcc_cmd
 declare_syntax_cat dcc_flag
@@ -54,7 +58,7 @@ inductive Flag where
   | group : Flag → Flag → Flag
 deriving Nonempty, Inhabited, BEq
 
-def flag_priority (for_flag : Flag) (in_f : Flag) : ℕ :=
+def flag_priority (for_flag : Flag) (in_f : Flag) : Nat :=
   match in_f with
   | .group x xs => (flag_priority for_flag x) + (flag_priority for_flag xs)
   | f => if for_flag == f then 1 else 0
@@ -141,9 +145,11 @@ def dcc_dangerous_force : Lean.MacroM SSet := do
 def dcc_infer_force : Lean.MacroM SSet := do
   return ⟨⟨[← `(Lean.Parser.Tactic.simpLemma| dcc_force_infer)]⟩⟩
 
-def prioritize_thms (n : ℕ) (thms : SSet) : SSet := thms.getElems.take n
+def prioritize_thms (n : Nat) (thms : SSet) : SSet := thms.getElems.take n
 
-macro_rules
+end attrs
+
+open attrs in macro_rules
   | `(tactic| dcc_simp_all? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) =>
     `(tactic| dcc_simp_all ? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*)
   | `(tactic| dcc_simp? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) =>
@@ -180,47 +186,6 @@ macro_rules
         cases? `(tactic| simp_all? [$thms,*]) `(tactic| simp_all [$thms,*])
       | _, _ => Lean.Macro.throwUnsupported
     discharge thms
-
-/-macro_rules
-  | `(tactic| dcc_simp [$args,*] at $loc) => do
-    `(tactic| (simp [$(← conc dcc_base (pure args)),*] at $loc))
-  | `(tactic| dcc_simp [$args,*]) => do
-    `(tactic| (simp [$(← conc dcc_base (pure args)),*]))
-  | `(tactic| dcc_simp_all [$args,*]) => do
-    `(tactic| (simp_all [$(← conc dcc_base (pure args)),*]))
-  | `(tactic| dcc_simp at $loc) => `(tactic| dcc_simp [] at $loc)
-  | `(tactic| dcc_simp_all) => `(tactic| dcc_simp_all [])
-  | `(tactic| dcc_simp) => `(tactic| dcc_simp [])
-  | `(tactic| $cmd:dcc_cmd ! [$args,*] at $loc) => `(tactic| $cmd:dcc_cmd [dcc_force_reduce, $args,*] at $loc)
-  | `(tactic| $cmd:dcc_cmd ! [$args,*]) => `(tactic| $cmd:dcc_cmd [dcc_force_reduce, $args,*])
-  | `(tactic| $cmd:dcc_cmd !) => `(tactic| $cmd:dcc_cmd ! [])-/
-
-/-macro "dcc_simp" : tactic =>
-  `(tactic| ((try simp only [dcc_infer]); simp [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel]))
-
-macro "dcc_simp" "[" args:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
-  `(tactic| ((try simp only [dcc_infer]); simp [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, $args,*]))
-
-macro "dcc_simp" "[" args:Lean.Parser.Tactic.simpLemma,* "]" "at" loc:Lean.Parser.Tactic.locationHyp : tactic =>
-  `(tactic| ((try simp only [dcc_infer] at $loc); simp [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, $args,*] at $loc))
-
-macro "dcc_simp" "at" loc:Lean.Parser.Tactic.locationHyp : tactic =>
-  `(tactic| ((try simp only [dcc_infer] at $loc); simp [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel] at $loc))
-
-macro "dcc_simp" "at" loc:Lean.Parser.Tactic.locationWildcard : tactic =>
-  `(tactic| ((try simp only [dcc_infer] at $loc); simp [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel] at $loc))
-
-macro "dcc_simp_all" : tactic =>
-  `(tactic| ((try simp only [dcc_infer]); simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel]))
-
-macro "dcc_simp_all" "[" args:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
-  `(tactic| ((try simp only [dcc_infer]); simp_all [dcc_step, dcc_reduce, dcc_size, dcc_judge, dcc_rel, $args,*]))
-
-macro "dcc_simp_all!" : tactic =>
-  `(tactic| dcc_simp_all [dcc_force_reduce, dcc_force_rel])
-
-macro "dcc_simp_all" : tactic =>
-  `(tactic| dcc_simp [dcc_force_reduce, dcc_force_rel])-/
 
 syntax "dcc_aesop" (Aesop.tactic_clause)* : tactic
 syntax "dcc_aesop?" (Aesop.tactic_clause)* : tactic

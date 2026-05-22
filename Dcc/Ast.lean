@@ -36,7 +36,7 @@ inductive Expr where
   -- Σ(β) is the usual sigma type
   | sigma  : Expr  → Expr  → Expr
   | coup   : Expr  → Expr
-  | mk     : Expr  → Expr  → Expr  → Expr
+  | mkc    : Expr  → Expr  → Expr  → Expr
   | pi     : Expr  → Expr  → Expr
   | curr   : Expr  → Expr  → Expr  → Expr
   | quot   : Expr  → Expr  → Expr
@@ -62,7 +62,7 @@ class DccLike (τ : Type) where
   pair   : τ  → τ → τ := by exact .pair
   sigma  : τ  → τ  → τ := by exact .sigma
   coup   : τ  → τ := by exact .coup
-  mkc    : τ  → τ  → τ  → τ := by exact .mk
+  mkc    : τ  → τ  → τ  → τ := by exact .mkc
   pi     : τ  → τ  → τ := by exact .pi
   curr   : τ  → τ  → τ  → τ := by exact .curr
   quot   : τ  → τ  → τ := by exact .quot
@@ -74,95 +74,90 @@ class DccLike (τ : Type) where
 
 instance : DccLike Expr where
 
+declare_syntax_cat gen_dcc
+
+syntax "=(" gen_dcc,* ")"                                     : gen_dcc
+syntax "Eql(" gen_dcc,* ")"                                   : gen_dcc
+syntax "refl(" gen_dcc,* ")"                                  : gen_dcc
+syntax "#(" term ")"                                          : gen_dcc
+syntax "⊤"                                                    : gen_dcc
+syntax "∗"                                                    : gen_dcc
+syntax "⊥"                                                    : gen_dcc
+syntax:max "`(" gen_dcc,* ")"                                 : gen_dcc
+syntax:max "Id(" gen_dcc,* ")"                                : gen_dcc
+syntax:max "Fstc(" gen_dcc,* ")"                              : gen_dcc
+syntax:max "Sndc(" gen_dcc,* ")"                              : gen_dcc
+syntax "Σ(" gen_dcc,* ")"                                     : gen_dcc
+syntax "Coup(" gen_dcc ")"                                    : gen_dcc
+syntax:max (priority := high) "Λ(" gen_dcc,* ")"              : gen_dcc
+syntax:max (priority := high) "Π(" gen_dcc,* ")"              : gen_dcc
+syntax gen_dcc "∘'" gen_dcc                                   : gen_dcc
+syntax gen_dcc "∘" gen_dcc                                    : gen_dcc
+syntax:30 ident                                               : gen_dcc
+syntax "(" gen_dcc+ ")"                                       : gen_dcc
+syntax:max "Sort" term                                        : gen_dcc
+syntax (priority := high) "⟨" gen_dcc,* "⟩"                   : gen_dcc
+syntax (priority := high) "⟦" gen_dcc,* "⟧" "(" gen_dcc,* ")" : gen_dcc
+
+syntax "DCC" "[" ident "]" gen_dcc : term
+syntax "DCC" "[" "." "]"   gen_dcc : term
+
+def field (in_ty : Lean.TSyntax `ident) (fld : String) : Lean.MacroM (Lean.TSyntax `term) := do
+  let nm := (in_ty.getId ++ Lean.Name.mkSimple fld).eraseMacroScopes
+  return Lean.mkIdent nm
+
+open Lean.Syntax in macro_rules
+  | `(DCC[$ty:ident] ⊤)                                        => field ty "top"
+  | `(DCC[$ty:ident] ⊥)                                        => field ty "bot"
+  | `(DCC[$ty:ident] ∗)                                        => field ty "tintro"
+  | `(DCC[$ty:ident] =($f_α:gen_dcc))                          => do
+    return mkApp (← field ty "eq") #[← `(DCC[$ty:ident] $f_α)]
+  | `(DCC[$ty:ident] Eql($f_α:gen_dcc))                        => do
+    return mkApp (← field ty "eql") #[← `(DCC[$ty:ident] $f_α)]
+  | `(DCC[$ty:ident] refl($f_α:gen_dcc))                       => do
+    return mkApp (← field ty "refl") #[← `(DCC[$ty:ident] $f_α)]
+  | `(DCC[$ty:ident] ($f:gen_dcc $x:gen_dcc))                  => do
+    return mkApp (← field ty "app") #[← `(DCC[$ty:ident] $f:gen_dcc), ← `(DCC[$ty:ident] $x:gen_dcc)]
+  | `(DCC[$ty:ident] ($f:gen_dcc $x:gen_dcc $xs:gen_dcc*))     =>
+    `(DCC[$ty:ident] (($f:gen_dcc $x:gen_dcc) $xs:gen_dcc*))
+  | `(DCC[$ty:ident] `($β:gen_dcc, $x:gen_dcc))                => do
+    return mkApp (← field ty "quot") #[← `(DCC[$ty:ident] $β), ← `(DCC[$ty:ident] $x)]
+  | `(DCC[$ty:ident] Λ($α:gen_dcc, $β:gen_dcc, $e:gen_dcc))    => do
+    return mkApp (← field ty "curr") #[← `(DCC[$ty:ident] $α), ← `(DCC[$ty:ident] $β), ← `(DCC[$ty:ident] $e)]
+  | `(DCC[$ty:ident] Π($α:gen_dcc, $β:gen_dcc))                => do
+    return mkApp (← field ty "pi") #[← `(DCC[$ty:ident] $α), ← `(DCC[$ty:ident] $β)]
+  | `(DCC[$ty:ident] ⟨$x:gen_dcc, $y:gen_dcc⟩)                 => do
+    return mkApp (← field ty "pair") #[← `(DCC[$ty:ident] $x), ← `(DCC[$ty:ident] $y)]
+  | `(DCC[$ty:ident] ⟦$β:gen_dcc⟧($x, $y))                     => do
+    return mkApp (← field ty "mkc") #[← `(DCC[$ty:ident] $β), ← `(DCC[$ty:ident] $x), ← `(DCC[$ty:ident] $y)]
+  | `(DCC[$ty:ident] Sort $m:term)                             => do
+    return mkApp (← field ty "sort") #[m]
+  | `(DCC[$ty:ident] Σ($α:gen_dcc, $β:gen_dcc))                => do
+    return mkApp (← field ty "sigma") #[← `(DCC[$ty:ident] $α), ← `(DCC[$ty:ident] $β)]
+  | `(DCC[$ty:ident] Coup($β:gen_dcc))                         => do
+    return mkApp (← field ty "coup") #[← `(DCC[$ty:ident] $β)]
+  | `(DCC[$ty:ident] Fstc($β:gen_dcc))                         => do
+    return mkApp (← field ty "fstc") #[← `(DCC[$ty:ident] $β)]
+  | `(DCC[$ty:ident] Sndc($β:gen_dcc))                         => do
+    return mkApp (← field ty "sndc") #[← `(DCC[$ty:ident] $β)]
+  | `(DCC[$ty:ident] Id($α:gen_dcc))                           => do
+    return mkApp (← field ty "id") #[← `(DCC[$ty:ident] $α)]
+  | `(DCC[$ty:ident] $f:gen_dcc ∘' $g:gen_dcc)                 => do
+    return mkApp (← field ty "comp'") #[← `(DCC[$ty:ident] $f:gen_dcc), ← `(DCC[$ty:ident] $g:gen_dcc)]
+  | `(DCC[$ty:ident] $f:gen_dcc ∘ $g:gen_dcc)                  => do
+    return mkApp (← field ty "comp") #[← `(DCC[$ty:ident] $f:gen_dcc), ← `(DCC[$ty:ident] $g:gen_dcc)]
+  | `(DCC[$_ty:ident] #($t:term))                              => `($t)
+  | `(DCC[$_ty:ident] $idt:ident)                              => `($idt:term)
+  | `(DCC[$ty:ident] ($t:gen_dcc))                             => `(DCC[$ty:ident] $t)
+
 syntax "gen_dsl" str "for" term : command
 
 macro_rules
-  | `(gen_dsl $pre:str for $ty:ident) => do
-    let field : Lean.Name → Lean.Name := .str pre
-    let cat : Lean.TSyntax `ident   :=
-      ⟨Lean.mkIdent (.str .anonymous s!"expr_{pre}")⟩
-    let mk_cat : Lean.TSyntaxArray `command := #[
-      ← `(command| declare_syntax_cat $cat:ident),
-      ← `(command| syntax "=(" $cat:ident,* ")"                        : $cat:ident),
-      ← `(command| syntax "Eql(" $cat:ident,* ")"                      : $cat:ident),
-      ← `(command| syntax "refl(" $cat:ident,* ")"                     : $cat:ident),
-      ← `(command| syntax "#(" term ")"                                : $cat:ident),
-      ← `(command| syntax "⊤"                                          : $cat:ident),
-      ← `(command| syntax "∗"                                          : $cat:ident),
-      ← `(command| syntax "⊥"                                          : $cat:ident),
-      ← `(command| syntax:max "`(" $cat:ident,* ")"                    : $cat:ident),
-      ← `(command| syntax:max "Id(" $cat:ident,* ")"                   : $cat:ident),
-      ← `(command| syntax:max "Fstc(" $cat:ident,* ")"                 : $cat:ident),
-      ← `(command| syntax:max "Sndc(" $cat:ident,* ")"                 : $cat:ident),
-      ← `(command| syntax "Σ(" $cat:ident,* ")"                        : $cat:ident),
-      ← `(command| syntax "Coup(" $cat:ident ")"                       : $cat:ident),
-      ← `(command| syntax:max (priority := high) "Λ(" $cat:ident,* ")" : $cat:ident),
-      ← `(command| syntax:max (priority := high) "Π(" $cat:ident,* ")" : $cat:ident),
-      ← `(command| syntax $cat:ident "∘'" $cat:ident                   : $cat:ident),
-      ← `(command| syntax $cat:ident "∘" $cat:ident                    : $cat:ident),
-      ← `(command| syntax:30 ident                                     : $cat:ident),
-      ← `(command| syntax "(" $cat:ident+ ")"                          : $cat:ident),
-      ← `(command| syntax:max "Sort" term                              : $cat:ident),
-      ← `(command| syntax (priority := high) "⟨" $cat:ident,* "⟩"      : $cat:ident),
-      ← `(command| syntax (priority := high) "⟦" $cat:ident,* "⟧"
-                                                  "(" $cat:ident,* ")" : $cat:ident)
-    ]
-    let parser : Lean.TSyntax `command ← `(command| syntax $pre:str $cat:ident : term)
-    
-    sorry
+  | `(gen_dsl $pre:str for $ty:ident) =>
+    `(command| macro $pre:str exp:gen_dcc : term => `(DCC[$ty:ident] $$exp))
 
-declare_syntax_cat expr
+gen_dsl "DCC"  for Expr
+gen_dsl "DCC*" for DccLike
 
-syntax "=(" expr,* ")"                                           : expr
-syntax "Eql(" expr,* ")"                                         : expr
-syntax "refl(" expr,* ")"                                        : expr
-syntax "#(" term ")"                                             : expr
-syntax "⊤"                                                       : expr
-syntax "∗"                                                       : expr
-syntax "⊥"                                                       : expr
-syntax:max "`(" expr,* ")"                                       : expr
-syntax:max "Id(" expr,* ")"                                      : expr
-syntax:max "Fstc(" expr,* ")"                                    : expr
-syntax:max "Sndc(" expr,* ")"                                    : expr
-syntax "Σ(" expr,* ")"                                           : expr
-syntax "Coup(" expr ")"                                          : expr
-syntax:max (priority := high) "Λ(" expr,* ")"                    : expr
-syntax:max (priority := high) "Π(" expr,* ")"                    : expr
-syntax expr "∘'" expr                                            : expr
-syntax expr "∘" expr                                             : expr
-syntax:30 ident                                                  : expr
-syntax "(" expr+ ")"                                             : expr
-syntax:max "Sort" term                                           : expr
-syntax (priority := high) "⟨" expr,* "⟩"                         : expr
-syntax (priority := high) "⟦" expr,* "⟧" "(" expr,* ")"          : expr
-
-syntax "DCC"  expr : term
-
-macro_rules
-  | `(DCC ⊤)                                     => `(Expr.top)
-  | `(DCC ⊥)                                     => `(Expr.bot)
-  | `(DCC ∗)                                     => `(Expr.tintro)
-  | `(DCC =($f_α:expr))                          => `(Expr.eq (DCC $f_α))
-  | `(DCC Eql($f_α:expr))                        => `(Expr.eql (DCC $f_α))
-  | `(DCC refl($f_α:expr))                       => `(Expr.refl (DCC $f_α))
-  | `(DCC ($f:expr $x:expr))                     => `(Expr.app   (DCC $f:expr)   (DCC $x:expr))
-  | `(DCC ($f:expr $x:expr $xs:expr*))           => `(DCC (($f:expr $x:expr) $xs:expr*))
-  | `(DCC `($β:expr, $x:expr))                   => `(Expr.quot (DCC $β) (DCC $x))
-  | `(DCC Λ($α:expr, $β:expr, $e:expr))          => `(Expr.curr (DCC $α) (DCC $β) (DCC $e))
-  | `(DCC Π($α:expr, $β:expr))                   => `(Expr.pi (DCC $α) (DCC $β))
-  | `(DCC ⟨$x:expr, $y:expr⟩)                    => `(Expr.pair (DCC $x) (DCC $y))
-  | `(DCC ⟦$β:expr⟧($x, $y))                     => `(Expr.mk (DCC $β) (DCC $x) (DCC $y))
-  | `(DCC Sort $m:term)                          => `(Expr.sort $m)
-  | `(DCC Σ($α:expr, $β:expr))                   => `(Expr.sigma (DCC $α) (DCC $β))
-  | `(DCC Coup($β:expr))                         => `(Expr.coup (DCC $β))
-  | `(DCC Fstc($β:expr))                         => `(Expr.fstc (DCC $β))
-  | `(DCC Sndc($β:expr))                         => `(Expr.sndc (DCC $β))
-  | `(DCC Id($α:expr))                           => `(Expr.id (DCC $α))
-  | `(DCC $f:expr ∘' $g:expr)                    => `(Expr.comp' (DCC $f:expr) (DCC $g:expr))
-  | `(DCC $f:expr ∘ $g:expr)                     => `(Expr.comp (DCC $f:expr) (DCC $g:expr))
-  | `(DCC #($t:term))                            => `($t)
-  | `(DCC $idt:ident)                            => `($idt:term)
-  | `(DCC ($t:expr))                             => `(DCC $t)
-
-def runDcc : Lean.Syntax → Lean.MacroM Lean.Syntax
-  | `(expr| $e:expr) => `(DCC $e:expr)
+def runDcc : Lean.TSyntax `gen_dcc → Lean.MacroM Lean.Syntax
+  | `(gen_dcc| $e:gen_dcc) => `(DCC $e:gen_dcc)

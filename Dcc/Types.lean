@@ -3,15 +3,14 @@ import Dcc.Ast
 
 namespace Expr
 
-syntax "(" expr ":" expr ")" "→" expr : expr
-syntax "(" ":" expr ")" "→" expr : expr
-
-@[dcc_judge] abbrev arrow (α β : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), Λ(Sort m, Id(Sort m), `(Coup(Id(Sort m)), β))) α)
+syntax "(" gen_dcc ":" gen_dcc ")" "→" gen_dcc : gen_dcc
+syntax "(" ":" gen_dcc ")" "→" gen_dcc : gen_dcc
 
 macro_rules
-  | `(DCC ($α:expr : Sort $m) → $β:expr) => `(arrow (DCC $α) (DCC $β) $m)
-  | `(DCC (: Sort $m) → $β:expr) => `(DCC Λ(Sort $m, Id(Sort $m), `(Coup(Id(Sort $m)), $β)))
+  | `(DCC[$ty:ident] ($α:gen_dcc : Sort $m) → $β:gen_dcc) =>
+    `(DCC[$ty:ident] (Π(Id(Sort $m), Λ(Sort $m, Id(Sort $m), `(Coup(Id(Sort $m)), $β))) $α))
+  | `(DCC[$ty:ident] (: Sort $m) → $β:gen_dcc) =>
+    `(DCC[$ty:ident] Λ(Sort $m, Id(Sort $m), `(Coup(Id(Sort $m)), $β)))
 
 @[dcc_judge, inline]
 abbrev arrow.matcher (t : Expr) : Option ((α β : Expr) × (m : Level) × PULift.{1, 0} (t = (DCC (α : Sort m) → β))) :=
@@ -164,7 +163,7 @@ f_β : δ → α → Sort n
 @[dcc_judge] abbrev Coup.type (m n : Level) : Expr :=
   DCC Sort max m n
 
-def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
+def toFormat {τ : Type} [DccLike τ] (e : τ) (pretty : Bool := False) : Std.Format :=
   let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=
     .nest indent (.fill (.joinSep l (sep ++ .line)))
   let paren (s : Std.Format) : Std.Format :=

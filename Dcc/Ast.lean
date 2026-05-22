@@ -27,18 +27,21 @@ open Lean Macro Parser.Command
 open Lean (Parser.Command.derivingClass)
 
 inductive Flag where
+  | as    : TSyntax `ident                  → Flag
   | ext   : TSyntax `ident                  → Flag
   | deriv : Array (TSyntax ``derivingClass) → Flag
   | into  : TSyntax `term                   → Flag
 deriving Repr
 
 declare_syntax_cat gen_expr_flag
-syntax ("into" term)                : gen_expr_flag
-syntax ("with" ident)               : gen_expr_flag
-syntax ("deriving" derivingClass,*) : gen_expr_flag
+syntax "as" ident                 : gen_expr_flag
+syntax "into" term                : gen_expr_flag
+syntax "with" ident               : gen_expr_flag
+syntax "deriving" derivingClass,* : gen_expr_flag
 
 def parse_flag (stx : TSyntax `gen_expr_flag) : Lean.MacroM Flag :=
   match stx with
+  | `(gen_expr_flag| as $idt:ident) => pure (.as idt)
   | `(gen_expr_flag| with $idt:ident) => pure (.ext idt)
   | `(gen_expr_flag| deriving $idts:derivingClass,*) => pure (.deriv idts)
   | `(gen_expr_flag| into $tm:term) => pure (.into tm)
@@ -47,10 +50,22 @@ def parse_flag (stx : TSyntax `gen_expr_flag) : Lean.MacroM Flag :=
 def parse_flags (stx : TSyntaxArray `gen_expr_flag) : Lean.MacroM (List Flag) :=
   (·.toList) <$> stx.mapM parse_flag
 
+def as? (flags : List Flag) : Option (TSyntax `ident) :=
+  flags.findSome? (fun f =>
+    match f with
+    | .as e => .some e
+    | _ => .none)
+
 def into? (flags : List Flag) : Option (TSyntax `term) :=
   flags.findSome? (fun f =>
     match f with
     | .into e => .some e
+    | _ => .none)
+
+def all_ext (flags : List Flag) : (List (TSyntax `ident)) :=
+  flags.filterMap (fun f =>
+    match f with
+    | .ext e => .some e
     | _ => .none)
 
 def ext? (flags : List Flag) : Option (TSyntax `ident) :=

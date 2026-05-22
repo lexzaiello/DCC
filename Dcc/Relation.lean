@@ -84,6 +84,7 @@ def update_ind (nm : Lean.Name)
   (new_name : TSyntax `ident)
   -- new constructors. takes just one tau
   (ext : Array (TSyntax `ident))
+  (derivs : Syntax.TSepArray ``derivingClass "," := ⟨#[]⟩)
   (new_elim_sort : Lean.MacroM (TSyntax `term) := `(term| Type))
   : CommandElabM (TSyntax `command) := do
   let new_elim_sort ← liftMacroM new_elim_sort
@@ -92,8 +93,6 @@ def update_ind (nm : Lean.Name)
     let some (a, b) ← (pure t.arrow?) | throwError m!"this is not an arrow: {t}"
     pure (a, b)
 
-  let concl : Lean.Expr → MetaM Lean.Expr  := (forallTelescope · (fun _ => pure))
-
   let env ← getEnv
   let some (.inductInfo info) := env.find? nm
     | throwError "this is not an inductive: {nm}"
@@ -101,7 +100,7 @@ def update_ind (nm : Lean.Name)
   match ← arr! info.type with
   | ⟨α, arr'⟩ =>
     match ← arr! arr' with
-    | ⟨β, .sort u⟩ =>
+    | ⟨β, .sort _u⟩ =>
       let a_str ← literal_param α
       let b_str ← literal_param β
 
@@ -119,13 +118,18 @@ def update_ind (nm : Lean.Name)
     | ⟨_, m⟩ => throwError m!"this is not a sort (a → b → Sort *): {m}"
 
 def add_rel_clone (my_name : TSyntax `ident) (flags : List Flag) : CommandElabM Unit := do
+  let my_name := my_name.getId
   -- Constructor to add
-  let with_ext    := (ext? flags)
+  let with_ext    := (all_ext flags)
   -- Deriv classes
   let with_derive : Syntax.TSepArray ``derivingClass "," := (deriv? flags).getD #[]
   -- New elim sort
   let with_into   := (into? flags).getD (← `(term| Type))
-  sorry
+  let some new_name ← (pure (as? flags)) | throwError "missing new name"
+
+  let ind ← update_ind my_name new_name ⟨with_ext⟩ (pure with_into)
+
+  elabCommand ind
 
 elab "mirror" idt:ident flags:gen_expr_flag,* : command => do
   

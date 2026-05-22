@@ -24,20 +24,21 @@ we can derive `()
 namespace GenExpr
 
 open Lean Macro Parser.Command
+open Lean (Parser.Command.derivingClass)
 
 inductive Flag where
-  | ext   : TSyntax `ident         → Flag
-  | deriv : Array (TSyntax `ident) → Flag
+  | ext   : TSyntax `ident                  → Flag
+  | deriv : Array (TSyntax ``derivingClass) → Flag
 deriving Repr
 
 declare_syntax_cat gen_expr_flag
-syntax ("with" ident)       : gen_expr_flag
-syntax ("deriving" ident,*) : gen_expr_flag
+syntax ("with" ident)              : gen_expr_flag
+syntax ("deriving" derivingClass,*) : gen_expr_flag
 
 def parse_flag (stx : TSyntax `gen_expr_flag) : Lean.MacroM Flag :=
   match stx with
   | `(gen_expr_flag| with $idt:ident) => pure (.ext idt)
-  | `(gen_expr_flag| deriving $idts:ident,*) => pure (.deriv idts)
+  | `(gen_expr_flag| deriving $idts:derivingClass,*) => pure (.deriv idts)
   | s => Lean.Macro.throwErrorAt stx s!"this is not a flag: {s}"
 
 def parse_flags (stx : TSyntaxArray `gen_expr_flag) : Lean.MacroM (List Flag) :=
@@ -49,17 +50,17 @@ def ext? (flags : List Flag) : Option (TSyntax `ident) :=
     | .ext e => .some e
     | _ => .none)
 
-def deriv? (flags : List Flag) : Option (Array (TSyntax `ident)) :=
+def deriv? (flags : List Flag) : Option (Array (TSyntax ``derivingClass)) :=
   flags.findSome? (fun f =>
     match f with
     | .deriv e => .some e
     | _ => .none)
 
-syntax "gen_expr" ident gen_expr_flag* : command
+syntax "gen_expr" ident gen_expr_flag,* : command
 
 def mk_my_expr (my_name : TSyntax `ident) (flags : List Flag) : MacroM (TSyntax `command) := do
   let with_ext    := (ext? flags)
-  let with_derive := (deriv? flags).getD #[]
+  let with_derive : Syntax.TSepArray ``derivingClass "," := (deriv? flags).getD #[]
   let field (s : String) : TSyntax `ident :=
     Lean.mkIdent (Lean.Name.mkSimple s).eraseMacroScopes
 
@@ -92,19 +93,19 @@ def mk_my_expr (my_name : TSyntax `ident) (flags : List Flag) : MacroM (TSyntax 
 
   let all := base ++ ext
 
-  let cmd := if with_derive.toList.isEmpty then
+  let cmd := if with_derive.getElems.toList.isEmpty then
     `(command| inductive $my_name:ident where
       $all:ctor*)
   else
   `(command| inductive $my_name:ident where
       $all:ctor*
-      deriving $(⟨with_derive⟩),*)
+      deriving $with_derive,*)
 
   cmd
 
 macro_rules
-  | `(command| gen_expr $idt:ident $flags:gen_expr_flag*) => do
-    mk_my_expr idt (← parse_flags flags)
+  | `(command| gen_expr $idt:ident $flags:gen_expr_flag,*) => do
+    mk_my_expr idt (← parse_flags flags.getElems)
 
 end GenExpr
 
@@ -113,9 +114,10 @@ gen_expr Expr
 
 namespace _test
 
-gen_expr StrExpr with String
+gen_expr StrExpr with String, deriving Repr
 
 #check StrExpr.ext
+#check Repr StrExpr
 
 end _test
 

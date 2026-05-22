@@ -13,6 +13,8 @@ open GenExpr Lean Elab Command Meta
 open Lean Parser Command
 open Qq
 
+namespace imp
+
 /-
 A relation Expr → Expr → Prop should be mirror-imaged, for
 metaprogramming purposes, to Expr → Expr → Type.
@@ -23,105 +25,91 @@ hypotheses (.lean_e : Lean.Expr → r A B)
 This utility automates that codegen.
 -/
 
--- shoutout to gemini for helping me w this one
-def ctor_args_no_implicit (cval : ConstructorVal) : MetaM (Array Lean.Expr) := do
-  forallBoundedTelescope
-    (type := cval.type)
-    (maxFVars? := .some (cval.numParams + cval.numFields)) fun xs _body => do
-      let fields := xs.extract cval.numParams xs.size
-      let explicit ← fields.filterM fun fvar => do
-        let decl ← fvar.fvarId!.getDecl
-        return decl.binderInfo.isExplicit
-      return explicit
+def update_name (old new here : Name) : Lean.Name :=
+  match old.components.reverse.head?,
+    new.components.reverse.head?,
+    here.components.reverse.head? with
+  | .some old, .some (.str _ new), .some here_last =>
+    if here_last == old then
+      here.updateLast (fun _ => new)
+    else here
+  | _, _, _ => here
 
--- final conclusion, literal
-def ctor_concl (cval : ConstructorVal) : MetaM Lean.Expr :=
-  forallTelescope cval.type (fun _ => pure)
+def update_names (old new : Name) (e : Lean.Expr) : Lean.Expr :=
+  let name' : Name → Name := update_name old new
 
-def literal_ctor (cval : ConstructorVal) : CommandElabM (Lean.TSyntax `term) :=
-  liftTermElabM <| Lean.PrettyPrinter.delab cval.type
+  match e with
+  | .const nm info => .const (name' nm) info
+  | .forallE bname bty bdy binfo =>
+    .forallE (name' bname)
+      (update_names old new bty)
+      (update_names old new bdy) binfo
+  | .app f x =>
+    .app (update_names old new f) (update_names old new x)
+  | e => e
+
+def literal_ctor (typ : Lean.Expr) : CommandElabM (Lean.TSyntax `term) :=
+  liftTermElabM <| Lean.PrettyPrinter.delab typ
 
 def literal_param (param : Lean.Expr) : CommandElabM (Lean.TSyntax `ident) := do
   match param with
   | .const idt _ => return mkIdent idt.eraseMacroScopes
   | t => throwError m!"can't handle this parameter yet: {t}"
 
-/-
-def ctors (nm : Lean.Name) : MetaM (Array (TSyntax ``ctor)) := do
-  let arr! (t : Lean.Expr) : MetaM (Lean.Expr × Lean.Expr) := do
-    let some (a, b) ← (pure t.arrow?) | throwError m!"this is not an arrow: {t}"
-    pure (a, b)
-
-  let concl : Lean.Expr → MetaM Lean.Expr  := (forallTelescope · (fun _ => pure))
-
-  let env ← getEnv
-  let some (.inductInfo info) := env.find? nm
-    | throwError "this is not an inductive: {nm}"
-
-  match ← arr! info.type with
-  | ⟨α, arr'⟩ =>
-    match ← arr! arr' with
-    | ⟨β, .sort u⟩ =>
-      let some a ← checkTypeQ α q(Type) | throwError m!"not a type: {α}"
-      let some b ← checkTypeQ α q(Type) | throwError m!"not a type: {β}"
-
-      let some rel ← checkTypeQ info.type q($a → $b → Sort $u)
-        | throwError m!"this is not a valid relation: {info.type}
-expected type: {a} → {b} → Sort {u}"
-
-      let h : List (TSyntax ``ctor) ← info.ctors.mapM (fun cname => do
-        let constr_idt := Lean.mkIdent cname.eraseMacroScopes
-        let some (.ctorInfo cinfo) := env.find? cname
-          | throwError "(should not be possible) no constructor found: {cname}"
-        let constr_bdy ← literal_ctor cinfo
-        `(ctor| | $constr_idt:ident : $constr_bdy))
-      
-      sorry
-    | ⟨_, m⟩ => throwError m!"this is not a sort (a → b → Sort *): {m}"
--/
-
 def update_ind (nm : Lean.Name)
   (new_name : TSyntax `ident)
   -- new constructors. takes just one tau
   (ext : Array (TSyntax `ident))
   (derivs : Syntax.TSepArray ``derivingClass "," := ⟨#[]⟩)
-  (new_elim_sort : Lean.MacroM (TSyntax `term) := `(term| Type))
+  (new_elim : TSyntax `term)
   : CommandElabM (TSyntax `command) := do
-  let new_elim_sort ← liftMacroM new_elim_sort
   let ext_ctrs ← (liftMacroM <| ext.mapM (mk_ext new_name))
-  let arr! (t : Lean.Expr) : CommandElabM (Lean.Expr × Lean.Expr) := do
-    let some (a, b) ← (pure t.arrow?) | throwError m!"this is not an arrow: {t}"
-    pure (a, b)
 
-  let env ← getEnv
-  let some (.inductInfo info) := env.find? nm
-    | throwError "this is not an inductive: {nm}"
+  dbg_trace "a"
+  let new_nm := new_name.getId.eraseMacroScopes
+  dbg_trace "b"
 
-  match ← arr! info.type with
-  | ⟨α, arr'⟩ =>
-    match ← arr! arr' with
-    | ⟨β, .sort _u⟩ =>
-      let a_str ← literal_param α
-      let b_str ← literal_param β
+  let info ← match (← getConstInfo nm) with
+    | .inductInfo info => pure info
+    | _ => throwError m!"this is not an inductive: {nm}"
 
-      let h : List (TSyntax ``ctor) ← info.ctors.mapM (fun cname => do
-        let constr_idt := Lean.mkIdent cname.eraseMacroScopes
-        let some (.ctorInfo cinfo) := env.find? cname
-          | throwError "(should not be possible) no constructor found: {cname}"
-        let constr_bdy ← literal_ctor cinfo
-        `(ctor| | $constr_idt:ident : $constr_bdy))
-      let all_ctrs : Lean.TSyntaxArray _ := (Array.mk h) ++ ext_ctrs
-      -- or try delab pretty α β
-      if derivs.getElems.isEmpty then
-        `(command|
-          inductive $new_name:ident : $a_str:ident → $b_str:ident → $new_elim_sort
-            $all_ctrs:ctor*)
-      else
-        `(command|
-          inductive $new_name:ident : $a_str:ident → $b_str:ident → $new_elim_sort
-            $all_ctrs:ctor*
-            deriving $derivs,*)
-    | ⟨_, m⟩ => throwError m!"this is not a sort (a → b → Sort *): {m}"
+  let old_param ← match info.type with
+    | .app (.app _rel (.const a [])) _b =>
+      pure a
+    | exp => throwError m!"this is not a relation: {exp}"
+
+  let new_param ← match new_elim with
+    | `(term| $new_param:ident → $_b → $_c) =>
+      pure new_param.getId.eraseMacroScopes
+    | exp => throwError m!"this is not a relation: {exp}"
+
+  dbg_trace "c"
+
+  let h : List (TSyntax ``ctor) ← info.ctors.mapM (fun cname => do
+    let cinfo ← match (← getConstInfo cname) with
+      | .ctorInfo info => pure info
+      | _ => throwError m!"this is not a constructor: {cname}"
+    let constr_idt := Lean.mkIdent
+      (.str .anonymous cinfo.name.eraseMacroScopes.lastComponentAsString)
+    dbg_trace constr_idt
+    let ty := ((update_names old_param new_param)
+      ∘ update_names nm new_nm) cinfo.type
+
+    let constr_bdy ← literal_ctor ty
+    `(ctor| | $constr_idt:ident : $constr_bdy))
+  dbg_trace h
+  dbg_trace "d"
+  let all_ctrs : Lean.TSyntaxArray _ := (Array.mk h) ++ ext_ctrs
+  -- or try delab pretty α β
+  if derivs.getElems.isEmpty then
+    `(command|
+      inductive $new_name:ident : $new_elim:term
+        $all_ctrs:ctor*)
+  else
+    `(command|
+      inductive $new_name:ident : $new_elim:term
+        $all_ctrs:ctor*
+        deriving $derivs,*)
 
 def add_rel_clone (my_name : TSyntax `ident) (flags : List Flag) : CommandElabM Unit := do
   let my_name := my_name.getId
@@ -130,13 +118,16 @@ def add_rel_clone (my_name : TSyntax `ident) (flags : List Flag) : CommandElabM 
   -- Deriv classes
   let with_derive : Syntax.TSepArray ``derivingClass "," := (deriv? flags).getD #[]
   -- New elim sort
-  let with_into   := (into? flags).getD (← `(term| Type))
+  let some with_into ← (pure (into? flags)) | throwError "must specify new type"
   let some new_name ← (pure (as? flags)) | throwError "missing new name"
 
-  let ind ← update_ind my_name new_name ⟨with_ext⟩ with_derive (pure with_into)
+  let ind ← update_ind my_name new_name ⟨with_ext⟩ with_derive with_into
 
   elabCommand ind
 
+end imp
+
+open GenRel.imp in
 elab "mirror" idt:ident flags:gen_expr_flag,* : command => do
   add_rel_clone idt (← liftMacroM <| parse_flags flags.getElems)
 

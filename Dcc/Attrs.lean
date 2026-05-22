@@ -16,13 +16,13 @@ initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_judge ("Simplifies using theorems about inference in DCC")
 
 initialize do pure () <*
+  Lean.Meta.registerSimpAttr `dcc_infer ("Dsimp DCC inference function")
+
+initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_rel ("Simplifies using theorems about DCC relations")
 
 initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_force_reduce ("Simplifies by forcing DCC eta and affine reduction")
-
-initialize do pure () <*
-  Lean.Meta.registerSimpAttr `dcc_force_rel ("Simplifies relation instances eagerly")
 
 initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_force_infer ("Runs the type-checker")

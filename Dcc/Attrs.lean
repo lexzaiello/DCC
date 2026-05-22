@@ -80,11 +80,13 @@ partial def parse_flag  (stx : Lean.TSyntax `dcc_flag) : Lean.MacroM Flag :=
     return .group f' fs'
   | _ => Lean.Macro.throwErrorAt stx "unexpected dcc_flag syntax"
 
-syntax "[" Lean.Parser.Tactic.simpLemma,* "]"     : dcc_target
-syntax ("at"
-  (Lean.Parser.Tactic.locationWildcard <|>
-                Lean.Parser.Tactic.locationHyp))  : dcc_loc
-syntax "nowhere"                                  : dcc_loc
+syntax (Lean.Parser.Tactic.locationWildcard <|>
+                Lean.Parser.Tactic.locationHyp)   : dcc_loc
+
+syntax "[" Lean.Parser.Tactic.simpLemma,* "]"            : dcc_target
+syntax ("at" (Lean.Parser.Tactic.locationWildcard <|>
+                        Lean.Parser.Tactic.locationHyp)) : dcc_loc
+syntax "nowhere"                                         : dcc_loc
 
 syntax dcc_cmd dcc_flag* dcc_target* dcc_loc*     : tactic
 
@@ -170,8 +172,8 @@ macro_rules
 
     let discharge (thms : SSet) : Lean.MacroM (Lean.TSyntax `tactic) := do
       match cmd, loc with
-      | `(dcc_cmd| dcc_simp), `(dcc_loc| at [$locs,*]) =>
-        cases? `(tactic| simp? [$thms,*] at [$locs,*]) `(tactic| simp [$thms,*] at [$locs,*])
+      | `(dcc_cmd| dcc_simp), `(dcc_loc| at $locs) =>
+        cases? `(tactic| simp? [$thms,*] at $locs) `(tactic| simp [$thms,*] at $locs)
       | `(dcc_cmd| dcc_simp), _ =>
         cases? `(tactic| simp? [$thms,*]) `(tactic| simp [$thms,*])
       | `(dcc_cmd| dcc_simp_all), _ =>

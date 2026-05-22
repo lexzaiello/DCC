@@ -38,10 +38,10 @@ def ctor_args_no_implicit (cval : ConstructorVal) : MetaM (Array Lean.Expr) := d
 def ctor_concl (cval : ConstructorVal) : MetaM Lean.Expr :=
   forallTelescope cval.type (fun _ => pure)
 
-def literal_ctor (cval : ConstructorVal) : MetaM (Lean.TSyntax `term) :=
-  Lean.PrettyPrinter.delab cval.type
+def literal_ctor (cval : ConstructorVal) : CommandElabM (Lean.TSyntax `term) :=
+  liftTermElabM <| Lean.PrettyPrinter.delab cval.type
 
-def literal_param (param : Lean.Expr) : MetaM (Lean.TSyntax `ident) := do
+def literal_param (param : Lean.Expr) : CommandElabM (Lean.TSyntax `ident) := do
   match param with
   | .const idt _ => return mkIdent idt.eraseMacroScopes
   | t => throwError m!"can't handle this parameter yet: {t}"
@@ -84,10 +84,11 @@ def update_ind (nm : Lean.Name)
   (new_name : TSyntax `ident)
   -- new constructors. takes just one tau
   (ext : Array (TSyntax `ident))
-  (new_elim_sort : TSyntax `term := `(term| Type))
-  : MetaM (TSyntax `command) := do
-  let ext_ctrs ← ext.mapM (mk_ext new_name)
-  let arr! (t : Lean.Expr) : MetaM (Lean.Expr × Lean.Expr) := do
+  (new_elim_sort : Lean.MacroM (TSyntax `term) := `(term| Type))
+  : CommandElabM (TSyntax `command) := do
+  let new_elim_sort ← liftMacroM new_elim_sort
+  let ext_ctrs ← (liftMacroM <| ext.mapM (mk_ext new_name))
+  let arr! (t : Lean.Expr) : CommandElabM (Lean.Expr × Lean.Expr) := do
     let some (a, b) ← (pure t.arrow?) | throwError m!"this is not an arrow: {t}"
     pure (a, b)
 
@@ -101,15 +102,8 @@ def update_ind (nm : Lean.Name)
   | ⟨α, arr'⟩ =>
     match ← arr! arr' with
     | ⟨β, .sort u⟩ =>
-      let some a ← checkTypeQ α q(Type) | throwError m!"not a type: {α}"
-      let some b ← checkTypeQ α q(Type) | throwError m!"not a type: {β}"
-
-      let a_str ← PrettyPrinter.delab a
-      let b_str ← PrettyPrinter.delab b
-
-      let some rel ← checkTypeQ info.type q($a → $b → Sort $u)
-        | throwError m!"this is not a valid relation: {info.type}
-expected type: {a} → {b} → Sort {u}"
+      let a_str ← literal_param α
+      let b_str ← literal_param β
 
       let h : List (TSyntax ``ctor) ← info.ctors.mapM (fun cname => do
         let constr_idt := Lean.mkIdent cname.eraseMacroScopes
@@ -117,9 +111,11 @@ expected type: {a} → {b} → Sort {u}"
           | throwError "(should not be possible) no constructor found: {cname}"
         let constr_bdy ← literal_ctor cinfo
         `(ctor| | $constr_idt:ident : $constr_bdy))
+      let all_ctrs : Lean.TSyntaxArray _ := (Array.mk h) ++ ext_ctrs
+      -- or try delab pretty α β
       `(command|
-        inductive $new_name : 
-      sorry
+        inductive $new_name:ident : $a_str:ident → $b_str:ident → $new_elim_sort
+          $all_ctrs:ctor*)
     | ⟨_, m⟩ => throwError m!"this is not a sort (a → b → Sort *): {m}"
 
 def add_rel_clone (my_name : TSyntax `ident) (flags : List Flag) : CommandElabM Unit := do

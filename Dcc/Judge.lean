@@ -393,11 +393,8 @@ def test_id_nested : Option Expr := do
 
 --#eval .reduce_η
 
-@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance Judge.instRel : Rel (fun x y => PULift.{1, 0} (Judge x y)) (m := Option) where
+@[dcc_rel, aesop norm (rule_sets := [DccRel])]
+instance Judge.instRel : Rel (fun x y => PULift.{1, 0} (Judge x y)) (m := Option) where
   run := infer
-
-macro_rules
-  | `(tactic| $cmd:dcc_cmd : $target:dcc_target $loc:dcc_loc) =>
-    `(tactic| (try dsimp only [infer]; $cmd:dcc_cmd ! $target:dcc_target $loc:dcc_loc))
 
 end Expr

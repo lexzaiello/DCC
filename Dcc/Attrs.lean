@@ -94,25 +94,30 @@ syntax "nowhere"                                         : dcc_loc
 
 syntax dcc_cmd dcc_flag* dcc_target* dcc_loc*     : tactic
 
-abbrev SSet := Lean.Syntax.TSepArray `Lean.Parser.Tactic.simpLemma ","
+abbrev Dispatcher := Lean.TSyntax `tactic
+
+abbrev SItems := Array (Lean.TSyntax ``Lean.Parser.Tactic.simpLemma)
+abbrev SSet := Dispatcher × SItems
 
 abbrev STgt := Lean.TSyntax `dcc_target
 
 abbrev SSet.concat (a b : SSet) : SSet :=
-  a.getElems ++ b.getElems
+  match a, b with
+  | ⟨dsp, a⟩, ⟨_, b⟩ =>
+    ⟨dsp, a ++ b⟩
 
 abbrev unwrap_locs (stx : Lean.TSyntaxArray `dcc_loc) : Lean.MacroM (Lean.TSyntax `dcc_loc) :=
   match stx.toList with
   | [locs] => pure locs
   | _      => `(dcc_loc| nowhere)
 
-abbrev unwrap_target (stx : Lean.TSyntaxArray `dcc_target) : SSet :=
+abbrev unwrap_target (stx : Lean.TSyntaxArray `dcc_target) : Lean.MacroM SSet :=
   match stx with
   | ⟨[tgt]⟩ =>
     match tgt with
-    | `(dcc_target| [$lms,*]) => lms
-    | _                       => ⟨⟨[]⟩⟩
-  | _                         => ⟨⟨[]⟩⟩
+    | `(dcc_target| [$lms,*]) => (⟨·, lms⟩) <$> `(tactic| simp)
+    | _                       => (⟨·, ⟨[]⟩⟩) <$> `(tactic| simp)
+  | _                         => (⟨·, ⟨[]⟩⟩) <$> `(tactic| simp)
 
 abbrev get_flags (stx : Lean.TSyntaxArray `dcc_flag) : Lean.MacroM (List Flag) :=
   stx.toList.mapM parse_flag
@@ -131,21 +136,21 @@ DCC top-level simp-sets:
 repeat ! or : to indicate how dangerous to go (how many sub-sets to choose. they are ordered as such)
 -/
 
+def mk_set (nms : Array Lean.Name) : Lean.MacroM SItems :=
+  nms.mapM (`(Lean.Parser.Tactic.simpLemma| $(Lean.mkIdent ·):ident))
+
 def dcc_base : Lean.MacroM SSet := do
-  return ⟨⟨[← `(Lean.Parser.Tactic.simpLemma| dcc_step),
-    ← `(Lean.Parser.Tactic.simpLemma| dcc_reduce),
-    ← `(Lean.Parser.Tactic.simpLemma| dcc_size),
-    ← `(Lean.Parser.Tactic.simpLemma| dcc_judge),
-    ← `(Lean.Parser.Tactic.simpLemma| dcc_rel)]⟩⟩
+  return ⟨← `(tactic| simp), ← mk_set ⟨[`dcc_step, `dcc_reduce, `dcc_size, `dcc_judge, `dcc_rel]⟩⟩
 
 def dcc_dangerous_force : Lean.MacroM SSet := do
-  return ⟨⟨[← `(Lean.Parser.Tactic.simpLemma| dcc_force_reduce),
-    ← `(Lean.Parser.Tactic.simpLemma| dcc_force_rel)]⟩⟩
+  return ⟨← `(tactic| simp), ← mk_set ⟨[`dcc_force_reduce, `dcc_force_rel]⟩⟩
 
 def dcc_infer_force : Lean.MacroM SSet := do
-  return ⟨⟨[← `(Lean.Parser.Tactic.simpLemma| dcc_force_infer)]⟩⟩
+  return ⟨← `(tactic| dsimp only), ← mk_set ⟨[`dcc_force_infer]⟩⟩
 
-def prioritize_thms (n : Nat) (thms : SSet) : SSet := thms.getElems.take n
+def prioritize_thms (n : Nat) (thms : SSet) : SSet :=
+  match thms with
+  | ⟨dsp, thms⟩ => ⟨dsp, thms.take n⟩
 
 end attrs
 
@@ -155,6 +160,7 @@ open attrs in macro_rules
   | `(tactic| dcc_simp? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) =>
     `(tactic| dcc_simp ? $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*)
   | `(tactic| $cmd:dcc_cmd $flags:dcc_flag* $tgt:dcc_target* $loc:dcc_loc*) => do
+    let smp   ← `(tactic| simp)
     let loc   ← unwrap_locs loc
     let flags ← get_flags flags
     -- Number of ! flags dictates which number of "dangerous" sets to use
@@ -169,25 +175,42 @@ open attrs in macro_rules
     let dangerous_thms := prioritize_thms (flag_priority .force) (thms := ← dcc_dangerous_force)
     -- Activate with : flag
     let infer_thms     := prioritize_thms (flag_priority .infer) (thms := ← dcc_infer_force)
-    let user_thms      := unwrap_target tgt
+    let user_thms      ← unwrap_target tgt
     -- Do dangerous theorems first. This is less likely (?) to cause infinite loops
-    let thms           := ((infer_thms.concat dangerous_thms).concat (← dcc_base)).concat user_thms
+    let base           ← dcc_base
+    let thms           := base.concat (user_thms.concat dangerous_thms)
 
     let cases? (a b : Lean.MacroM (Lean.TSyntax `tactic)) : Lean.MacroM (Lean.TSyntax `tactic) := do
       if flags.contains .trace then a else b
 
     let discharge (thms : SSet) : Lean.MacroM (Lean.TSyntax `tactic) := do
+      let dsp  := thms.1
+      let thms := thms.2
       match cmd, loc with
       | `(dcc_cmd| dcc_simp), `(dcc_loc| at $locs) =>
-        cases? `(tactic| simp? [$thms,*] at $locs) `(tactic| simp [$thms,*] at $locs)
+        if dsp == smp then
+          cases? `(tactic| simp? [$thms,*] at $locs) `(tactic| simp [$thms,*] at $locs)
+        else cases? `(tactic| try dsimp? only [$thms,*] at $locs) `(tactic| try dsimp [$thms,*] at $locs)
       | `(dcc_cmd| dcc_simp), _ =>
-        cases? `(tactic| simp? [$thms,*]) `(tactic| simp [$thms,*])
+        if dsp == smp then
+          cases? `(tactic| simp? [$thms,*]) `(tactic| simp [$thms,*])
+        else
+          cases? `(tactic| try dsimp? only [$thms,*]) `(tactic| try dsimp only [$thms,*])
       | `(dcc_cmd| dcc_simp_all), _ =>
-        cases? `(tactic| simp_all? [$thms,*]) `(tactic| simp_all [$thms,*])
+        if dsp == smp then
+          cases? `(tactic| simp_all? [$thms,*]) `(tactic| simp_all [$thms,*])
+        else
+          cases? `(tactic| try simp_all? only [$thms,*]) `(tactic| try simp_all only [$thms,*])
       | _, _ => Lean.Macro.throwUnsupported
-    discharge thms
+    let do_infer ← discharge infer_thms
+    let do_rst   ← discharge thms
+    `(tactic| (
+      first
+      | $do_rst:tactic
+      | $do_infer:tactic
+      | ($do_infer; $do_rst)))
 
-syntax "dcc_aesop" (Aesop.tactic_clause)* : tactic
+syntax "dcc_aesop" (Aesop.tactic_clause)*  : tactic
 syntax "dcc_aesop?" (Aesop.tactic_clause)* : tactic
 syntax "dcc_aesop!" (Aesop.tactic_clause)* : tactic
 

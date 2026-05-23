@@ -165,8 +165,10 @@ def update_ind (nm : Lean.Name)
         $all_ctrs:ctor*
         deriving $derivs,*)
 
-def add_rel_clone (my_name : TSyntax `ident) (attrs : TSyntax ``attrInstance) (flags : Flag) : CommandElabM Unit := do
+def add_rel_clone (flags : Flag) : CommandElabM Unit := do
+  let my_name ← flags.get! Flag.from?
   let my_name := my_name.getId
+  let attrs ← liftMacroM flags.attrs
   -- Constructor to add
   let with_ext    := flags.with!
   -- Deriv classes
@@ -182,11 +184,8 @@ def add_rel_clone (my_name : TSyntax `ident) (attrs : TSyntax ``attrInstance) (f
 end imp
 
 open GenRel.imp Lean.Syntax in
-elab "mirror" flags:gen_flag_set : command => do
-  let pflags := parse_flags flags
-  let idt ← pflags.get! Flag.from?
-  let attrs ← liftMacroM `(attrInstance| dcc_gen $flags:gen_flag_set)
-  add_rel_clone idt attrs (parse_flags flags)
+elab "mirror" flags:gen_flag_set : command =>
+  add_rel_clone (parse_flags flags)
 
 end GenRel
 

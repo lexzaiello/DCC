@@ -35,7 +35,7 @@ def field (s : String) : TSyntax `ident :=
 def mk_ext (my_name ext : TSyntax `ident) : MacroM (TSyntax ``ctor) := do
     `(ctor| | $(field "ext"):ident : $ext:ident → $my_name)
 
-def Flag.base_ctors (flags : Flag) : Lean.MacroM (Array (TSyntax ``ctor)) := do
+def Flag.ast_base_ctors (flags : Flag) : Lean.MacroM (Array (TSyntax ``ctor)) := do
   let my_name ← flags.get!' Flag.as?
   return #[
     ← `(ctor| | $(field "refl"):ident   : $my_name:ident → $my_name:ident),
@@ -59,22 +59,22 @@ def Flag.base_ctors (flags : Flag) : Lean.MacroM (Array (TSyntax ``ctor)) := do
     ← `(ctor| | $(field "tintro"):ident : $my_name:ident),
     ← `(ctor| | $(field "bot"):ident    : $my_name:ident)]
 
-def Flag.ext_ctors (flags : Flag) : Lean.MacroM (Array (TSyntax ``ctor)) := do
+def Flag.ast_ext_ctors (flags : Flag) : Lean.MacroM (Array (TSyntax ``ctor)) := do
   let my_name ← flags.get!' Flag.as?
   flags.with!.mapM (mk_ext my_name)
 
-def mk_my_expr (my_attrs : TSyntax ``attrInstance)
-  (flags : Flag) : MacroM (TSyntax `command) := do
+def mk_my_expr (flags : Flag) : MacroM (TSyntax `command) := do
+  let my_attrs ← flags.attrs
   let my_name ← flags.as!'
   let with_derive : Syntax.TSepArray ``derivingClass "," := flags.deriving?.getD #[]
 
   -- Optional embedded datatype (e.g., Lean.Expr for metatactics)
-  let ext ← flags.ext_ctors
+  let ext ← flags.ast_ext_ctors
 
   /-
     Core DCC constructors. This is a spec so that meta-layer (tactic) mirror-image can be updated
   -/
-  let base ← flags.base_ctors
+  let base ← flags.ast_base_ctors
 
   let all := base ++ ext
 
@@ -93,11 +93,8 @@ def mk_my_expr (my_attrs : TSyntax ``attrInstance)
   cmd
 
 macro_rules
-  | `(command| gen_ast $flags:gen_flag_set) => do
-    let pflags := parse_flags flags
-    let attrs ← pflags.attrs
-
-    mk_my_expr attrs pflags
+  | `(command| gen_ast $flags:gen_flag_set) =>
+    mk_my_expr (parse_flags flags)
 
 namespace _test
 

@@ -4,7 +4,7 @@ import Dcc.Aff.Red
 import Dcc.Eta.Red
 import Lean
 
-open Lean Elab Term Tactic
+open Lean Elab Term Tactic GenAst
 
 gen_ast as MetaExpr
   with Lean.Expr
@@ -14,8 +14,8 @@ gen_dsl "DCC'" for MetaExpr
 namespace MetaExpr
 
 mirror from Expr.RedAff
-  with Lean.Expr
   as RedAffMeta
+  with Lean.Expr
   into MetaExpr → MetaExpr → Type
 mirror from Expr.RedEta
   with Lean.Expr

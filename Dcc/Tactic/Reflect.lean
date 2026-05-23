@@ -130,9 +130,8 @@ macro_rules
   | `(gen_encode $flags:gen_flag_set) => do mk_encode (parse_flags flags) (← ast_base_fields)
 
 open GenAst in
-def dedup_fields (fields : Array AstField) : Array AstField :=
-  fields.foldl (fun (acc : Array AstField) e =>
-    if acc.any (·.nm == e.nm) then acc else acc ++ #[e]) #[]
+def dedup_fields (ext_fields fields : Array AstField) : Array AstField :=
+  fields.filter (fun f => (ext_fields.find? (fun f' => f'.nm == f.nm)).isNone)
 
 open GenAst Lean Elab in
 open Lean.Elab.Command in
@@ -141,11 +140,11 @@ elab "gen_encode'" flags:gen_flag_set : command => do
   let flags := parse_flags flags
   let src   ← flags.get! Flag.from?
   let nm := src.getId
-  let fields := flags.ext_fields
-  let (found_flags, fields') ← liftTermElabM <| get_def_flags nm
+  let ext_fields := flags.ext_fields
+  let (found_flags, found_fields) ← liftTermElabM <| get_def_flags nm
   let n_idx ← found_flags.get! Flag.n_indexes
   let all_flags := flags ++ found_flags
-  let all_fields := dedup_fields <| fields ++ fields'
+  let all_fields := dedup_fields ext_fields found_fields
   let cmd ← liftMacroM <| mk_encode all_flags all_fields n_idx
   elabCommand cmd
 

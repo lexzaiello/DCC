@@ -43,9 +43,12 @@ def AstField.to_lean (then_do : TSyntax `term → MacroM (TSyntax `term))
   let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
       let idt : TSyntax `ident := mkIdent (Name.str .anonymous s!"x_{n}").eraseMacroScopes
       idt)
-  let bdr ← vars.foldlM (init := ← `(term| $nm_long))
-      (fun (acc : TSyntax `term) (e : TSyntax `ident) => `(term| $acc:term $e:ident))
-  let mut_vars ← vars.mapM then_do
+  let bdr ← `(term| $nm_long:ident $(⟨vars⟩)*)
+
+  let mut_vars ← if fld.is_ext then
+    vars.mapM (fun e => `(term| Lean.ToExpr.toExpr $e:term))
+  else vars.mapM then_do
+
   let bdy ← mut_vars.foldlM (init := ← `(term| $nm_quot))
       (fun (acc : TSyntax `term) (e : TSyntax `term) => `(term| $lean_app $acc:term $e:term))
 
@@ -115,8 +118,18 @@ gen_decode from Expr
   as MetaExpr
   with Lean.Expr *
 
+gen_encode from Expr
+  as MetaExpr
+  with Lean.Expr *
+
 gen_decode from Expr
   as Expr
+
+gen_encode from Expr
+  as Expr
+
+#check Expr.encode
+#check MetaExpr.encode
 
 namespace _test
 
@@ -149,4 +162,11 @@ def test_decode'' : TermElabM MetaExpr := do
 
 #eval test_decode''
 
+def test_encode   : Lean.Expr :=
+  let expr : MetaExpr := DCC[MetaExpr] Id(#(MetaExpr.lean_expr (Lean.Expr.const `garbage [])))
+  expr.encode
+
+#eval test_encode
+
 end _test
+

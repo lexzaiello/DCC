@@ -106,14 +106,16 @@ def AstField.meta_matcher (rec_handler : TSyntax `term) (from_ind_name to_ind_na
 
     `(matchAltExpr| | $bdr => do $do_with:term)
 
-def ast_base_fields : MacroM (Array AstField) := do
-  return #[
+def sort_field : MacroM AstField := do
+  return ⟨← `(term| decode_level), "sort", 0, #[mkIdent (``_root_.Level).eraseMacroScopes], False⟩
+
+def ast_basic_fields : (Array AstField) :=
+  #[
     ⟨.none, "refl", 1, #[], False⟩,
     ⟨.none, "eq", 1, #[], False⟩,
     ⟨.none, "eql", 1, #[], False⟩,
     ⟨.none, "fstc", 1, #[], False⟩,
     ⟨.none, "sndc", 1, #[], False⟩,
-    ⟨← `(term| decode_level), "sort", 0, #[mkIdent (``_root_.Level).eraseMacroScopes], False⟩,
     ⟨.none, "comp'", 2, #[], False⟩,
     ⟨.none, "comp", 2, #[], False⟩,
     ⟨.none, "pair", 2, #[], False⟩,
@@ -128,6 +130,9 @@ def ast_base_fields : MacroM (Array AstField) := do
     ⟨.none, "top", 0, #[], False⟩,
     ⟨.none, "bot", 0, #[], False⟩,
     ⟨.none, "tintro", 0, #[], False⟩]
+
+def ast_base_fields : MacroM (Array AstField) := do
+  return ast_basic_fields ++ #[← sort_field]
 
 def Flag.ext_fields (flags : Flag) : Array AstField :=
   flags.with!.map (fun (dec, fld, is_wc) =>
@@ -145,6 +150,13 @@ where to_camel (s : String) : String :=
     else s!"{acc}{c}")
   |>.dropWhile (· == '_')
   |>.copy
+
+-- Fields that mention types other than the inductive in ctor
+def Flag.synth_fields (flags : Flag) : MacroM (Array AstField) := do
+  return flags.ext_fields ++ #[← sort_field]
+
+def Flag.basic_fields (_flags : Flag) : MacroM (Array AstField) :=
+  pure ast_basic_fields
 
 def Flag.all_fields (flags : Flag) : MacroM (Array AstField) := do
   return (← ast_base_fields) ++ flags.ext_fields

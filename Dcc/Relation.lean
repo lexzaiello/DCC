@@ -9,7 +9,7 @@ import Init.Prelude
 
 namespace GenRel
 
-open GenExpr Lean Elab Command Meta
+open GenAst Lean Elab Command Meta
 open Lean Parser Command
 open Qq
 
@@ -176,7 +176,7 @@ def add_rel_clone (my_name : TSyntax `ident) (flags : List Flag) : CommandElabM 
 end imp
 
 open GenRel.imp in
-elab "mirror" idt:ident flags:gen_expr_flag,* : command => do
+elab "mirror" idt:ident flags:gen_flag,* : command => do
   add_rel_clone idt (← liftMacroM <| parse_flags flags.getElems)
 
 end GenRel

@@ -21,66 +21,13 @@ we can derive `()
 Λ(Fst(α, β)
 -/
 
-namespace GenExpr
+namespace GenAst
 
 open Lean Macro Parser.Command
 open Lean (Parser.Command.derivingClass)
+open Lean.Parser.Term
 
-inductive Flag where
-  | as    : TSyntax `ident                  → Flag
-  | ext   : TSyntax `ident                  → Flag
-  | deriv : Array (TSyntax ``derivingClass) → Flag
-  | into  : TSyntax `term                   → Flag
-deriving Repr
-
-declare_syntax_cat gen_expr_flag
-syntax "as" ident                 : gen_expr_flag
-syntax "into" term                : gen_expr_flag
-syntax "with" ident               : gen_expr_flag
-syntax "deriving" derivingClass,* : gen_expr_flag
-
-def parse_flag (stx : TSyntax `gen_expr_flag) : Lean.MacroM Flag :=
-  match stx with
-  | `(gen_expr_flag| as $idt:ident) => pure (.as idt)
-  | `(gen_expr_flag| with $idt:ident) => pure (.ext idt)
-  | `(gen_expr_flag| deriving $idts:derivingClass,*) => pure (.deriv idts)
-  | `(gen_expr_flag| into $tm:term) => pure (.into tm)
-  | s => Lean.Macro.throwErrorAt stx s!"this is not a flag: {s}"
-
-def parse_flags (stx : TSyntaxArray `gen_expr_flag) : Lean.MacroM (List Flag) :=
-  (·.toList) <$> stx.mapM parse_flag
-
-def as? (flags : List Flag) : Option (TSyntax `ident) :=
-  flags.findSome? (fun f =>
-    match f with
-    | .as e => .some e
-    | _ => .none)
-
-def into? (flags : List Flag) : Option (TSyntax `term) :=
-  flags.findSome? (fun f =>
-    match f with
-    | .into e => .some e
-    | _ => .none)
-
-def all_ext (flags : List Flag) : (List (TSyntax `ident)) :=
-  flags.filterMap (fun f =>
-    match f with
-    | .ext e => .some e
-    | _ => .none)
-
-def ext? (flags : List Flag) : Option (TSyntax `ident) :=
-  flags.findSome? (fun f =>
-    match f with
-    | .ext e => .some e
-    | _ => .none)
-
-def deriv? (flags : List Flag) : Option (Array (TSyntax ``derivingClass)) :=
-  flags.findSome? (fun f =>
-    match f with
-    | .deriv e => .some e
-    | _ => .none)
-
-syntax "gen_expr" ident gen_expr_flag,* : command
+syntax "gen_ast" gen_flag_set                   : command
 
 def field (s : String) : TSyntax `ident :=
     Lean.mkIdent (Lean.Name.mkSimple s).eraseMacroScopes
@@ -88,14 +35,12 @@ def field (s : String) : TSyntax `ident :=
 def mk_ext (my_name ext : TSyntax `ident) : MacroM (TSyntax ``ctor) := do
     `(ctor| | $(field "ext"):ident : $ext:ident → $my_name)
 
-def mk_my_expr (my_name : TSyntax `ident) (flags : List Flag) : MacroM (TSyntax `command) := do
-  let with_ext    := (ext? flags)
-  let with_derive : Syntax.TSepArray ``derivingClass "," := (deriv? flags).getD #[]
+def mk_my_expr (my_name : TSyntax `ident) (my_attrs : TSyntax ``attrInstance)
+  (flags : Flag) : MacroM (TSyntax `command) := do
+  let with_derive : Syntax.TSepArray ``derivingClass "," := flags.deriving?.getD #[]
 
   -- Optional embedded datatype (e.g., Lean.Expr for metatactics)
-  let ext : (Array (TSyntax ``ctor)) := (← with_ext.mapM (fun tau => do
-    pure #[← mk_ext my_name tau]))
-    |> (Option.getD · #[])
+  let ext ← flags.with!.mapM (mk_ext my_name)
 
   /-
     Core DCC constructors. This is a spec so that meta-layer (tactic) mirror-image can be updated
@@ -125,32 +70,44 @@ def mk_my_expr (my_name : TSyntax `ident) (flags : List Flag) : MacroM (TSyntax 
   let all := base ++ ext
 
   let cmd := if with_derive.getElems.toList.isEmpty then
-    `(command| inductive $my_name:ident where
+    `(command|
+      @[$my_attrs]
+      inductive $my_name:ident where
       $all:ctor*)
   else
-  `(command| inductive $my_name:ident where
+  `(command|
+    @[$my_attrs]
+    inductive $my_name:ident where
       $all:ctor*
       deriving $with_derive,*)
 
   cmd
 
 macro_rules
-  | `(command| gen_expr $idt:ident $flags:gen_expr_flag,*) => do
-    mk_my_expr idt (← parse_flags flags.getElems)
+  | `(command| gen_ast $flags:gen_flag_set) => do
+    let pflags := parse_flags flags
+
+    let my_name ← pflags.get!' Flag.as?
+
+    let attrs ← `(attrInstance| dcc_gen $flags:gen_flag_set)
+    mk_my_expr my_name attrs pflags
 
 namespace _test
 
-gen_expr StrExpr with String, deriving Repr
+gen_ast as StrExpr
+  with String
+  deriving Repr
 
 #check StrExpr.ext
 #check Repr StrExpr
 
 end _test
 
-end GenExpr
+end GenAst
 
-open GenExpr in
-gen_expr Expr deriving BEq, DecidableEq
+open GenAst in
+gen_ast as Expr
+  deriving BEq, DecidableEq
 
 #check Expr.sort
 

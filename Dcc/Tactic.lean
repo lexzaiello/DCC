@@ -6,7 +6,8 @@ import Lean
 
 open Lean Elab Term Tactic
 
-gen_expr MetaExpr with Lean.Expr, deriving BEq, Repr
+gen_ast MetaExpr with Lean.Expr, deriving BEq, Repr
+gen_dsl "DCC'" for MetaExpr
 
 namespace MetaExpr
 

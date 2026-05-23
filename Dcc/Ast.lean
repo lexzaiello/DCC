@@ -38,10 +38,13 @@ def mk_ext (my_name ext : TSyntax `ident) : MacroM (TSyntax ``ctor) := do
 
 -- Expr → Expr → ... up to arity
 structure AstField where
+  decoder      : Option (TSyntax `term) := .none
   nm           : String
   -- only self arity
   arity        : ℕ
   other_params : Array (TSyntax `ident) := #[]
+  -- this field doesn't map onto an actual term-level constructor
+  wildcard     : Bool := False
 
 def AstField.total_arity (fld : AstField) : ℕ :=
   fld.arity + fld.other_params.toList.length
@@ -67,49 +70,63 @@ def AstField.nm_quoted (ast_ind_name : TSyntax `ident) (fld : AstField) : MacroM
   let nm := fld.nm_long ast_ind_name
   `(.const ``$(nm) [])
 
--- uses an alphabet of x1 x2 x3 x... to bind arguments
-def AstField.matcher (do_with : TSyntax `term) (ast_ind_name : TSyntax `ident)
-  (fld : AstField) : MacroM (TSyntax ``matchAltExpr) := do
-  let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
-    let idt : TSyntax `ident := mkIdent (ast_ind_name.getId.eraseMacroScopes
-      ++ (Name.str .anonymous s!"{n}").eraseMacroScopes).eraseMacroScopes
-    idt)
-  let bdr ← vars.foldlM (init := ← `(term| $ast_ind_name))
-    (fun (acc : TSyntax `term) (e : TSyntax `ident) => `(term| .app $acc:term $e:ident))
-  `(matchAltExpr| | $bdr => $do_with:term)
+def AstField.is_ext (fld : AstField) : Bool := ¬ fld.other_params.toList.isEmpty
 
-def ast_base_fields : Array AstField :=
-  #[
-    ⟨"refl", 1, #[]⟩,
-    ⟨"eq", 1, #[]⟩,
-    ⟨"eql", 1, #[]⟩,
-    ⟨"fstc", 1, #[]⟩,
-    ⟨"sndc", 1, #[]⟩,
-    ⟨"sort", 0, #[mkIdent (``_root_.Level).eraseMacroScopes]⟩,
-    ⟨"comp'", 2, #[]⟩,
-    ⟨"comp", 2, #[]⟩,
-    ⟨"pair", 2, #[]⟩,
-    ⟨"sigma", 2, #[]⟩,
-    ⟨"coup", 1, #[]⟩,
-    ⟨"mkc", 3, #[]⟩,
-    ⟨"pi", 2, #[]⟩,
-    ⟨"curr", 3, #[]⟩,
-    ⟨"quot", 2, #[]⟩,
-    ⟨"id", 1, #[]⟩,
-    ⟨"app", 2, #[]⟩,
-    ⟨"top", 0, #[]⟩,
-    ⟨"bot", 0, #[]⟩,
-    ⟨"tintro", 0, #[]⟩]
+-- uses an alphabet of x1 x2 x3 x... to bind arguments
+-- do_with operates on each bound variable
+-- return .constructor at the end
+def AstField.matcher (rec_handler : TSyntax `term) (ast_ind_name : TSyntax `ident)
+  (fld : AstField) : MacroM (TSyntax ``matchAlt) := do
+  let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
+      let idt : TSyntax `ident := mkIdent (ast_ind_name.getId.eraseMacroScopes
+        ++ (Name.str .anonymous s!"{n}").eraseMacroScopes).eraseMacroScopes
+      idt)
+  let nm_long := fld.nm_long ast_ind_name
+  let apps_extra : List (TSyntax `term) ← (vars.take fld.other_params.toList.length).mapM
+    (fun (e : TSyntax `ident) => `($e:term))
+  let apps_main := vars.drop fld.other_params.toList.length
+  if fld.wildcard then
+    `(matchAltExpr| | x => return $nm_long:term x)
+  else
+    let bdr ← vars.foldlM (init := ← `(term| $ast_ind_name))
+      (fun (acc : TSyntax `term) (e : TSyntax `ident) => `(term| .app $acc:term $e:ident))
+    let do_with   ← apps_main.foldlM (init := ← `(term| return $nm_long:term $(⟨apps_extra⟩)*))
+      (fun (acc : TSyntax `term) (e : TSyntax `ident) => `(term| $acc ($rec_handler:term $e:term)))
+
+    `(matchAltExpr| | $bdr => $do_with:term)
+
+def ast_base_fields : MacroM (Array AstField) := do
+  return #[
+    ⟨.none, "refl", 1, #[], False⟩,
+    ⟨.none, "eq", 1, #[], False⟩,
+    ⟨.none, "eql", 1, #[], False⟩,
+    ⟨.none, "fstc", 1, #[], False⟩,
+    ⟨.none, "sndc", 1, #[], False⟩,
+    ⟨← `(term| Lean.Expr.nat?), "sort", 0, #[mkIdent (``_root_.Level).eraseMacroScopes], False⟩,
+    ⟨.none, "comp'", 2, #[], False⟩,
+    ⟨.none, "comp", 2, #[], False⟩,
+    ⟨.none, "pair", 2, #[], False⟩,
+    ⟨.none, "sigma", 2, #[], False⟩,
+    ⟨.none, "coup", 1, #[], False⟩,
+    ⟨.none, "mkc", 3, #[], False⟩,
+    ⟨.none, "pi", 2, #[], False⟩,
+    ⟨.none, "curr", 3, #[], False⟩,
+    ⟨.none, "quot", 2, #[], False⟩,
+    ⟨.none, "id", 1, #[], False⟩,
+    ⟨.none, "app", 2, #[], False⟩,
+    ⟨.none, "top", 0, #[], False⟩,
+    ⟨.none, "bot", 0, #[], False⟩,
+    ⟨.none, "tintro", 0, #[], False⟩]
 
 def Flag.ext_fields (flags : Flag) : Array AstField :=
-  flags.with!.map (fun (fld : TSyntax `ident) =>
+  flags.with!.map (fun (dec, fld, is_wc) =>
     let nm := fld.getId.eraseMacroScopes
     let nm_camel_case := nm.components.filterMap (fun c =>
       match c with
       | .str _ s => some (to_camel s)
       | _ => none)
   |> String.intercalate "_"
-    { nm := nm_camel_case, other_params := #[fld], arity := 0})
+    { decoder := dec, wildcard := is_wc, nm := nm_camel_case, other_params := #[fld], arity := 0})
 where to_camel (s : String) : String :=
   s.foldl (init := "") (fun (acc : String) c =>
     if c.isUpper then
@@ -118,29 +135,13 @@ where to_camel (s : String) : String :=
   |>.dropWhile (· == '_')
   |>.copy
 
-def Flag.all_fields (flags : Flag) : Array AstField :=
-  ast_base_fields ++ flags.ext_fields
+def Flag.all_fields (flags : Flag) : MacroM (Array AstField) := do
+  return (← ast_base_fields) ++ flags.ext_fields
 
 def mk_my_expr (flags : Flag) : MacroM (TSyntax `command) := do
-  let my_attrs ← flags.attrs
   let my_name ← flags.as!'
-  let with_derive : Syntax.TSepArray ``derivingClass "," := flags.deriving?.getD #[]
-
-  let all ← flags.all_fields.mapM (AstField.ctor my_name)
-
-  let cmd := if with_derive.getElems.toList.isEmpty then
-    `(command|
-      @[$my_attrs]
-      inductive $my_name:ident where
-      $all:ctor*)
-  else
-  `(command|
-    @[$my_attrs]
-    inductive $my_name:ident where
-      $all:ctor*
-      deriving $with_derive,*)
-
-  cmd
+  let all ← (← flags.all_fields).mapM (AstField.ctor my_name)
+  flags.build_inductive all
 
 macro_rules
   | `(command| gen_ast $flags:gen_flag_set) =>

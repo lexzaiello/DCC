@@ -5,7 +5,7 @@ import Dcc.Eta.Red
 import Lean
 
 gen_ast as MetaExpr
-  with Lean.Expr
+  with Lean.Expr *
   deriving BEq, Repr
 gen_dsl "DCC'" for MetaExpr
 

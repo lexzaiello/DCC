@@ -170,7 +170,7 @@ def add_rel_clone (flags : Flag) : CommandElabM Unit := do
   let my_name := my_name.getId
   let attrs ← liftMacroM flags.attrs
   -- Constructor to add
-  let with_ext    := flags.with!
+  let with_ext    := flags.with!.map (·.snd.fst)
   -- Deriv classes
   let with_derive : Syntax.TSepArray ``derivingClass "," := flags.deriving?.getD #[]
   -- New elim sort

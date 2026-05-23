@@ -237,10 +237,12 @@ open Lean.Parser.Term
 
 namespace GenAst
 
+abbrev GenExt := (Option (TSyntax `term)) × TSyntax `ident × Bool
+
 inductive Flag where
   | src   : TSyntax `ident                  → Flag
   | as    : TSyntax `ident                  → Flag
-  | ext   : Array (TSyntax `ident)          → Flag
+  | ext   : Array GenExt                    → Flag
   | deriv : Array (TSyntax ``derivingClass) → Flag
   | into  : TSyntax `term                   → Flag
   | and   : Flag → Flag                     → Flag
@@ -251,22 +253,34 @@ deriving Repr, Inhabited, Nonempty
 
 declare_syntax_cat gen_flag
 declare_syntax_cat gen_flag_set
+declare_syntax_cat gen_flag_ext
+
+syntax ident                       : gen_flag_ext
+syntax ident "*"                   : gen_flag_ext
+syntax term "decodes" gen_flag_ext : gen_flag_ext
+
 syntax "from" ident                       : gen_flag
 syntax "as" ident                         : gen_flag
 syntax "into" term                        : gen_flag
-syntax "with" ident,*                     : gen_flag
+syntax "with" gen_flag_ext,*              : gen_flag
 syntax "deriving" derivingClass,*         : gen_flag
 
 syntax gen_flag*                          : gen_flag_set
 
 def Flag.stx (flag : Flag) : Lean.MacroM (TSyntax `gen_flag_set) :=
   match flag with
-  | .src e   => `(gen_flag_set| from $e)
-  | .as  e   => `(gen_flag_set| as $e)
-  | .ext e   => `(gen_flag_set| with $e,*)
-  | .deriv e => `(gen_flag_set| deriving $e,*)
-  | .into e  => `(gen_flag_set| into $e)
-  | .and a b => do
+  | .src e       => `(gen_flag_set| from $e)
+  | .as  e       => `(gen_flag_set| as $e)
+  | .ext e       => do
+    let exts ← e.mapM (fun e => match e with
+      | ⟨.none, idt, .true⟩  => `(gen_flag_ext| $idt:ident *)
+      | ⟨.none, idt, .false⟩ => `(gen_flag_ext| $idt:ident)
+      | ⟨.some dec, idt, .true⟩ => `(gen_flag_ext| $dec:term decodes $idt:ident *)
+      | ⟨.some dec, idt, .false⟩ => `(gen_flag_ext| $dec:term decodes $idt:ident))
+    `(gen_flag_set| with $exts,*)
+  | .deriv e     => `(gen_flag_set| deriving $e,*)
+  | .into e      => `(gen_flag_set| into $e)
+  | .and a b     => do
     let a' ← a.stx
     let b' ← b.stx
     match a' with
@@ -278,11 +292,21 @@ def Flag.stx (flag : Flag) : Lean.MacroM (TSyntax `gen_flag_set) :=
     | _ => throwUnsupported
   | .nil     => `(gen_flag_set| $(⟨[]⟩):gen_flag*)
 
+def parse_ext (stx : TSyntax `gen_flag_ext) : Option GenExt :=
+  match stx with
+  | `(gen_flag_ext| $dec:term decodes $idt:ident *) => .some ⟨.some dec, idt, True⟩
+  | `(gen_flag_ext| $dec:term decodes $idt:ident) => .some ⟨.some dec, idt, False⟩
+  | `(gen_flag_ext| $idt:ident *) => .some ⟨.none, idt, True⟩
+  | `(gen_flag_ext| $idt:ident)   => .some ⟨.none, idt, False⟩
+  | _ => .none
+
 def parse_flag (stx : TSyntax `gen_flag) : (Option Flag) :=
   match stx with
   | `(gen_flag| from $idt:ident) => .some <| .src idt
   | `(gen_flag| as $idt:ident) => .some <| .as idt
-  | `(gen_flag| with $idts:ident,*) => .some <| .ext idts
+  | `(gen_flag| with $idts:gen_flag_ext,*) => do
+    let exts ← idts.getElems.toList.mapM parse_ext
+    .some <| .ext ⟨exts⟩
   | `(gen_flag| deriving $idts:derivingClass,*) => .some <| .deriv idts
   | `(gen_flag| into $tm:term) => .some <| .into tm
   | _ => .none
@@ -323,12 +347,12 @@ def Flag.as? (flag : Flag) : Option (TSyntax `ident) :=
     | .as e => .some e
     | _ => .none)
 
-def Flag.with? (flag : Flag) : Option (Array (TSyntax `ident)) :=
+def Flag.with? (flag : Flag) : Option (Array GenExt) :=
   flag.find? (fun flag => match flag with
     | .ext e => .some e
     | _ => .none)
 
-def Flag.with! (flag : Flag) : Array (TSyntax `ident) :=
+def Flag.with! (flag : Flag) : Array GenExt :=
   flag.with?.getD #[]
 
 def Flag.as! {m : Type → Type} [Monad m] [MonadRef m]
@@ -380,5 +404,22 @@ def Flag.def_field (s : String) (flag : Flag) : MacroM (TSyntax `ident) := do
 
 def mk_ident (s : String) : TSyntax `ident :=
   mkIdent (Lean.Name.mkSimple s).eraseMacroScopes
+
+def Flag.build_inductive (ctors : TSyntaxArray ``ctor) (flag : Flag) : MacroM (TSyntax `command) := do
+  let my_name  ← flag.as!'
+  let my_attrs ← flag.attrs
+  match flag.deriving? with
+  | .some drvs =>
+    let my_deriv : Syntax.TSepArray ``derivingClass "," := drvs
+    `(command|
+      @[$my_attrs]
+      inductive $my_name:ident where
+      $ctors:ctor*
+      deriving $my_deriv,*)
+  | .none =>
+    `(command|
+      @[$my_attrs]
+      inductive $my_name:ident where
+      $ctors:ctor*)
 
 end GenAst

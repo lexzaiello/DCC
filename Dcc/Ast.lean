@@ -6,6 +6,10 @@ import Lean
 -- Infinite sort universe hierarchy
 abbrev Level := ℕ
 
+def decode_level (e : Lean.Expr) : Lean.Elab.TermElabM ℕ := do
+  let some n ← (pure e.nat?) | throwError s!"not a valid universe: {e}"
+  return n
+
 /-
 Similar to the categorical combinators and contextual categories.
 
@@ -75,25 +79,29 @@ def AstField.is_ext (fld : AstField) : Bool := ¬ fld.other_params.toList.isEmpt
 -- uses an alphabet of x1 x2 x3 x... to bind arguments
 -- do_with operates on each bound variable
 -- return .constructor at the end
-def AstField.matcher (rec_handler : TSyntax `term) (ast_ind_name : TSyntax `ident)
+def AstField.matcher (rec_handler : TSyntax `term) (from_ind_name to_ind_name : TSyntax `ident)
   (fld : AstField) : MacroM (TSyntax ``matchAlt) := do
   let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
-      let idt : TSyntax `ident := mkIdent (ast_ind_name.getId.eraseMacroScopes
-        ++ (Name.str .anonymous s!"{n}").eraseMacroScopes).eraseMacroScopes
+      let idt : TSyntax `ident := mkIdent (Name.str .anonymous s!"x_{n}").eraseMacroScopes
       idt)
-  let nm_long := fld.nm_long ast_ind_name
+  let nm_long := fld.nm_long to_ind_name
   let apps_extra : List (TSyntax `term) ← (vars.take fld.other_params.toList.length).mapM
-    (fun (e : TSyntax `ident) => `($e:term))
-  let apps_main := vars.drop fld.other_params.toList.length
+    (fun (e : TSyntax `ident) =>
+      match fld.decoder with
+      | .some dec => `(term| ← $dec:term $e:term)
+      | _ => `(return $e:term))
   if fld.wildcard then
-    `(matchAltExpr| | x => return $nm_long:term x)
+    `(matchAltExpr| | x => do return $nm_long:term x)
   else
-    let bdr ← vars.foldlM (init := ← `(term| $ast_ind_name))
-      (fun (acc : TSyntax `term) (e : TSyntax `ident) => `(term| .app $acc:term $e:ident))
-    let do_with   ← apps_main.foldlM (init := ← `(term| return $nm_long:term $(⟨apps_extra⟩)*))
-      (fun (acc : TSyntax `term) (e : TSyntax `ident) => `(term| $acc ($rec_handler:term $e:term)))
+    let lean_app : TSyntax `ident := mkIdent ``Lean.Expr.app
+    let nm_quot ← fld.nm_quoted from_ind_name
+    let bdr ← vars.foldlM (init := ← `(term| $nm_quot))
+      (fun (acc : TSyntax `term) (e : TSyntax `ident) => `(term| $lean_app $acc:term $e:ident))
+    let apps_main ← (vars.drop fld.other_params.toList.length).mapM
+      (fun (e : TSyntax `ident) => `(term| (← $rec_handler:term $e:term)))
+    let do_with   ← `(term| return $nm_long:term $(⟨apps_extra⟩)* $(⟨apps_main⟩)*)
 
-    `(matchAltExpr| | $bdr => $do_with:term)
+    `(matchAltExpr| | $bdr => do $do_with:term)
 
 def ast_base_fields : MacroM (Array AstField) := do
   return #[
@@ -102,7 +110,7 @@ def ast_base_fields : MacroM (Array AstField) := do
     ⟨.none, "eql", 1, #[], False⟩,
     ⟨.none, "fstc", 1, #[], False⟩,
     ⟨.none, "sndc", 1, #[], False⟩,
-    ⟨← `(term| Lean.Expr.nat?), "sort", 0, #[mkIdent (``_root_.Level).eraseMacroScopes], False⟩,
+    ⟨← `(term| decode_level), "sort", 0, #[mkIdent (``_root_.Level).eraseMacroScopes], False⟩,
     ⟨.none, "comp'", 2, #[], False⟩,
     ⟨.none, "comp", 2, #[], False⟩,
     ⟨.none, "pair", 2, #[], False⟩,

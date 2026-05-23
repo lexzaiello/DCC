@@ -1,5 +1,6 @@
 import Dcc.Ast
 import Dcc.Relation
+import Dcc.Tactic
 import Lean
 
 /-
@@ -20,23 +21,32 @@ open Lean Parser Term
 open Lean.Parser.Term (matchAlt)
 
 def mk_decode (flags : Flag) : MacroM (TSyntax `command) := do
-  let my_attrs ← flags.attrs
-  let my_name  ← flags.as!'
-  let fun_name ← flags.def_field "decode"
-  let do_with : TSyntax `term ← `(term| ← $fun_name:term)
+  let my_attrs  ← flags.attrs
+  let from_name ← flags.get!' Flag.from?
+  let my_name   ← flags.as!'
+  let fun_name  ← flags.def_field "decode"
+  let do_with : TSyntax `term ← `(term| $fun_name:term)
   let get_matcher := AstField.matcher
     (rec_handler := do_with)
-    (ast_ind_name := my_name)
+    (from_ind_name := from_name)
+    (to_ind_name := my_name)
   let matchers : Array (TSyntax ``matchAlt) ← (← flags.all_fields).mapM get_matcher
 
-  `(command|
+  let cmd ← `(command|
     @[$my_attrs]
-    def $fun_name (e : Lean.Expr) : Lean.Elab.Term.TermElabM $my_name := do
-    match e with
-    $(matchers):matchAlt*)
+    def $fun_name (e : Lean.Expr) : Lean.Elab.Term.TermElabM $my_name :=
+      match e with
+      $(matchers):matchAlt*)
+  return cmd
 
-syntax "gen_reflect" gen_flag_set : command
+syntax "gen_decode" gen_flag_set : command
 
 open GenAst Lean Elab in
 macro_rules
-  | `(gen_reflect $flags:gen_flag_set) => mk_decode (parse_flags flags)
+  | `(gen_decode $flags:gen_flag_set) => mk_decode (parse_flags flags)
+
+gen_decode from Expr
+  as MetaExpr
+  with Lean.Expr *
+
+#check MetaExpr.decode

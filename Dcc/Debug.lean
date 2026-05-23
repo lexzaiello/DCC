@@ -37,11 +37,11 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
     let f ← decode_dcc f
     let g ← decode_dcc g
     return .pair f g
-  | .app (.app (.app (.const ``_root_.Expr.mk []) β) x) y =>
+  | .app (.app (.app (.const ``_root_.Expr.mkc []) β) x) y =>
     let β ← decode_dcc β
     let x ← decode_dcc x
     let y ← decode_dcc y
-    return .mk β x y
+    return .mkc β x y
   | .app (.app (.const ``_root_.Expr.pi []) f_α) f_β =>
     let f_α ← decode_dcc f_α
     let f_β ← decode_dcc f_β

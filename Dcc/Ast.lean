@@ -35,37 +35,46 @@ def field (s : String) : TSyntax `ident :=
 def mk_ext (my_name ext : TSyntax `ident) : MacroM (TSyntax ``ctor) := do
     `(ctor| | $(field "ext"):ident : $ext:ident → $my_name)
 
-def mk_my_expr (my_name : TSyntax `ident) (my_attrs : TSyntax ``attrInstance)
+def Flag.base_ctors (flags : Flag) : Lean.MacroM (Array (TSyntax ``ctor)) := do
+  let my_name ← flags.get!' Flag.as?
+  return #[
+    ← `(ctor| | $(field "refl"):ident   : $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "eq"):ident     : $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "eql"):ident    : $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "fstc"):ident   : $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "sndc"):ident   : $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "sort"):ident   : _root_.Level → $my_name:ident),
+    ← `(ctor| | $(field "comp'"):ident  : $my_name:ident → $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "comp"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "pair"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "sigma"):ident  : $my_name:ident → $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "coup"):ident   : $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "mkc"):ident    : $my_name:ident → $my_name:ident → $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "pi"):ident     : $my_name:ident → $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "curr"):ident   : $my_name:ident → $my_name:ident → $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "quot"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "id"):ident     : $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "app"):ident    : $my_name:ident → $my_name:ident → $my_name:ident),
+    ← `(ctor| | $(field "top"):ident    : $my_name:ident),
+    ← `(ctor| | $(field "tintro"):ident : $my_name:ident),
+    ← `(ctor| | $(field "bot"):ident    : $my_name:ident)]
+
+def Flag.ext_ctors (flags : Flag) : Lean.MacroM (Array (TSyntax ``ctor)) := do
+  let my_name ← flags.get!' Flag.as?
+  flags.with!.mapM (mk_ext my_name)
+
+def mk_my_expr (my_attrs : TSyntax ``attrInstance)
   (flags : Flag) : MacroM (TSyntax `command) := do
+  let my_name ← flags.as!'
   let with_derive : Syntax.TSepArray ``derivingClass "," := flags.deriving?.getD #[]
 
   -- Optional embedded datatype (e.g., Lean.Expr for metatactics)
-  let ext ← flags.with!.mapM (mk_ext my_name)
+  let ext ← flags.ext_ctors
 
   /-
     Core DCC constructors. This is a spec so that meta-layer (tactic) mirror-image can be updated
   -/
-  let base : (Array (TSyntax ``ctor)) := #[
-  ← `(ctor| | $(field "refl"):ident   : $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "eq"):ident     : $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "eql"):ident    : $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "fstc"):ident   : $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "sndc"):ident   : $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "sort"):ident   : _root_.Level → $my_name:ident),
-  ← `(ctor| | $(field "comp'"):ident  : $my_name:ident → $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "comp"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "pair"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "sigma"):ident  : $my_name:ident → $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "coup"):ident   : $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "mkc"):ident    : $my_name:ident → $my_name:ident → $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "pi"):ident     : $my_name:ident → $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "curr"):ident   : $my_name:ident → $my_name:ident → $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "quot"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "id"):ident     : $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "app"):ident    : $my_name:ident → $my_name:ident → $my_name:ident),
-  ← `(ctor| | $(field "top"):ident    : $my_name:ident),
-  ← `(ctor| | $(field "tintro"):ident : $my_name:ident),
-  ← `(ctor| | $(field "bot"):ident    : $my_name:ident)]
+  let base ← flags.base_ctors
 
   let all := base ++ ext
 
@@ -86,11 +95,9 @@ def mk_my_expr (my_name : TSyntax `ident) (my_attrs : TSyntax ``attrInstance)
 macro_rules
   | `(command| gen_ast $flags:gen_flag_set) => do
     let pflags := parse_flags flags
+    let attrs ← pflags.attrs
 
-    let my_name ← pflags.get!' Flag.as?
-    let attrs ← `(attrInstance| dcc_gen $flags:gen_flag_set)
-
-    mk_my_expr my_name attrs pflags
+    mk_my_expr attrs pflags
 
 namespace _test
 

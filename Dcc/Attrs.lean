@@ -231,11 +231,11 @@ macro_rules
   | `(tactic| dcc_aesop! $clauses:Aesop.tactic_clause*) =>
     `(tactic| aesop (config := {terminal := false, warnOnNonterminal := false}) (rule_sets := [DccStep, DccReduce, DccSize, DccJudge, DccRel, DccForceReduce]) $clauses*)
 
-namespace GenAst
-
 open Lean Macro Parser.Command
 open Lean (Parser.Command.derivingClass)
 open Lean.Parser.Term
+
+namespace GenAst
 
 inductive Flag where
   | src   : TSyntax `ident                  → Flag
@@ -258,6 +258,25 @@ syntax "with" ident,*                     : gen_flag
 syntax "deriving" derivingClass,*         : gen_flag
 
 syntax gen_flag*                          : gen_flag_set
+
+def Flag.stx (flag : Flag) : Lean.MacroM (TSyntax `gen_flag_set) :=
+  match flag with
+  | .src e   => `(gen_flag_set| from $e)
+  | .as  e   => `(gen_flag_set| as $e)
+  | .ext e   => `(gen_flag_set| with $e,*)
+  | .deriv e => `(gen_flag_set| deriving $e,*)
+  | .into e  => `(gen_flag_set| into $e)
+  | .and a b => do
+    let a' ← a.stx
+    let b' ← b.stx
+    match a' with
+    | `(gen_flag_set| $x:gen_flag*) =>
+      match b' with
+      | `(gen_flag_set| $y:gen_flag*) =>
+        `(gen_flag_set| $(x ++ y):gen_flag*)
+      | _ => throwUnsupported
+    | _ => throwUnsupported
+  | .nil     => `(gen_flag_set| $(⟨[]⟩):gen_flag*)
 
 def parse_flag (stx : TSyntax `gen_flag) : (Option Flag) :=
   match stx with
@@ -312,6 +331,13 @@ def Flag.with? (flag : Flag) : Option (Array (TSyntax `ident)) :=
 def Flag.with! (flag : Flag) : Array (TSyntax `ident) :=
   flag.with?.getD #[]
 
+def Flag.as! {m : Type → Type} [Monad m] [MonadRef m]
+  [MonadError m] (flag : Flag) : m (TSyntax `ident) :=
+  flag.get! Flag.as?
+
+def Flag.as!' (flag : Flag) : MacroM (TSyntax `ident) :=
+  flag.get!' Flag.as?
+
 def Flag.deriving? (flag : Flag) : Option (Array (TSyntax ``derivingClass)) :=
   flag.find? (fun flag => match flag with
     | .deriv e => .some e
@@ -339,3 +365,11 @@ initialize impl_dcc_gen : ParametricAttribute Flag ← registerParametricAttribu
       return parse_flags flags
     | e => throwError s!"not supported: {e}"
 }
+
+namespace GenAst
+
+def Flag.attrs (flags : Flag) : Lean.MacroM (TSyntax ``attrInstance) := do
+  let flags_stx ← flags.stx
+  `(attrInstance| dcc_gen $flags_stx:gen_flag_set)
+
+end GenAst

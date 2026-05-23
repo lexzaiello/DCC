@@ -7,6 +7,17 @@ open Lean Elab Term Tactic
 
 namespace MetaExpr
 
+mirror from Expr.RedAff
+  as RedAffMeta
+  with Lean.Expr
+  into MetaExpr → MetaExpr → Type
+
+/-
+Need encoder for mirrored. This isn't too bad because
+it is generated now with the right names.
+-/
+
+
 /-def find_hyp (nm : Name) (for_exp :  : TacticM (Option Lean.Expr) := do
   let lctx ← getLCtx
   let decl ← lctx.findDecl? (fun decl =>
@@ -40,7 +51,7 @@ def step? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedAffMeta e e')
     | .some ⟨f', h₁⟩, _ => return .some ⟨(DCC[.] (f' x)), .congrFun h₁⟩
     | _, .some ⟨x', h₁⟩ => return .some ⟨(DCC[.] (f x')), .congrArg h₁⟩
     | _, _ => return .none
-  | .ext lean_e => return .none -- TODO
+  | .lean_expr lean_e => return .none -- TODO
   | _ => return .none
 
 end MetaExpr

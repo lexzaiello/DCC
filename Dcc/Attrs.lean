@@ -308,7 +308,7 @@ def parse_ext (stx : TSyntax `gen_flag_ext) : Option GenExt :=
 
 def parse_flag (stx : TSyntax `gen_flag) : (Option Flag) :=
   match stx with
-  | `(gen_flag| from $idt:ident) => .some <| .src idt
+  | `(gen_flag| from $idt) => .some <| .src idt
   | `(gen_flag| as $idt:ident) => .some <| .as idt
   | `(gen_flag| with $idts:gen_flag_ext,*) => do
     let exts ← idts.getElems.toList.mapM parse_ext
@@ -345,6 +345,15 @@ def Flag.find? {α : Type} (f : Flag → Option α) (flag : Flag) : Option α :=
     a.find? f <|> b.find? f
   | .nil => .none
   | flag => f flag
+
+partial def Flag.n_indexes (flag : Flag) : Option Nat :=
+  let rec count_indices (tm : TSyntax `term) : Nat :=
+    match tm with
+    | `($_a → $b) => (count_indices b).succ
+    | _ => .zero
+  flag.find? (fun flag => match flag with
+    | .index tm => .some (count_indices tm)
+    | _ => .none)
 
 def Flag.indexes? (flag : Flag) : Option (TSyntax `term) :=
   flag.find? (fun flag => match flag with
@@ -449,14 +458,11 @@ def Flag.attrs (flags : Flag) : Lean.MacroM (TSyntax ``attrInstance) := do
   let flags_stx ← flags.stx
   `(attrInstance| dcc_gen $flags_stx:gen_flag_set)
 
-def Flag.def_field (s : String) (flag : Flag) : MacroM (TSyntax `ident) := do
-  let my_name := (← flag.as!').getId.eraseMacroScopes
+def Flag.def_field (s : String) (flag : Flag) (find : Flag → Option (TSyntax `ident) := Flag.as?) : MacroM (TSyntax `ident) := do
+  let my_name := (← flag.get!' find).getId.eraseMacroScopes
   let f_name  := (Lean.Name.mkSimple s).eraseMacroScopes
 
   return mkIdent (my_name ++ f_name)
-
-def mk_ident (s : String) : TSyntax `ident :=
-  mkIdent (Lean.Name.mkSimple s).eraseMacroScopes
 
 def Flag.build_inductive (ctors : TSyntaxArray ``ctor) (flag : Flag) : MacroM (TSyntax `command) := do
   let my_name  ← flag.as!'

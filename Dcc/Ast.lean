@@ -48,6 +48,7 @@ structure AstField where
   other_params : Array (TSyntax `ident) := #[]
   -- this field doesn't map onto an actual term-level constructor
   wildcard     : Bool := False
+deriving Repr
 
 def AstField.total_arity (fld : AstField) : ℕ :=
   fld.arity + fld.other_params.toList.length

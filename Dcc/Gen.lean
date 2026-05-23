@@ -1,4 +1,6 @@
 import Dcc.Ast
+import Lean
+import Lean.Elab.Command
 
 namespace GenAst
 
@@ -16,8 +18,8 @@ def get_def_flags (nm : Lean.Name) : TermElabM (Flag × Array AstField) := do
     | .inductInfo info => pure info
     | _ => throwError m!"this is not an inductive: {nm}"
 
-  let nm'    := Flag.src (mkIdent nm.eraseMacroScopes)
-  let index  := Flag.index (← pretty_stx info.type)
+  let nm'    := Flag.as (mkIdent nm.eraseMacroScopes)
+  let index  := Flag.index (← liftM <| pretty_stx info.type)
   let fields : List AstField ← info.ctors.mapM (fun cname => do
     let cinfo ← match (← getConstInfo cname) with
       | .ctorInfo info => pure info
@@ -40,3 +42,8 @@ def get_def_flags (nm : Lean.Name) : TermElabM (Flag × Array AstField) := do
       )
       return { nm := constr_nm, arity := arity, other_params := other_params })
     return ((nm' ++ index), ⟨fields⟩)
+
+/-
+TODO: Use this to make elab encoders for RedAff and RedEta. need this to reflect back into term
+/ goals.
+-/

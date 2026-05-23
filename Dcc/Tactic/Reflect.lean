@@ -1,8 +1,14 @@
 import Dcc.Ast
 import Dcc.Relation
 import Dcc.Tactic
+import Dcc.Tactic.Aff
+import Dcc.Tactic.Eta
 import Lean
+import Lean.Elab.Command
+import Lean.Parser.Term.Basic
 import Qq
+
+open MetaExpr
 
 namespace GenAst
 
@@ -22,6 +28,7 @@ open GenAst Lean Meta Macro
 open Lean Parser Term
 
 open Lean.Parser.Term (matchAlt)
+open Lean.Parser.Term (implicitBinder)
 
 /-
 adding custom handlers for the extensions of a generated
@@ -38,8 +45,8 @@ we are matching on a meta term here, not a quoted expr.
 def AstField.to_lean (then_do : TSyntax `term → MacroM (TSyntax `term))
   (flags : Flag) (fld : AstField) : MacroM (TSyntax ``matchAlt) := do
   let lean_app : TSyntax `ident := mkIdent ``Lean.Expr.app
-  let nm_long := fld.nm_long (← flags.as!')
-  let nm_quot ← fld.nm_quoted (← flags.as!')
+  let nm_long := fld.nm_long (← flags.get!' Flag.from?)
+  let nm_quot ← fld.nm_quoted (← flags.get!' Flag.from?)
   let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
       let idt : TSyntax `ident := mkIdent (Name.str .anonymous s!"x_{n}").eraseMacroScopes
       idt)
@@ -54,11 +61,11 @@ def AstField.to_lean (then_do : TSyntax `term → MacroM (TSyntax `term))
 
   `(matchAltExpr| | $bdr => $bdy:term)
 
-def mk_encode (flags : Flag) : MacroM (TSyntax `command) := do
+def mk_encode (flags : Flag) (base_fields : Array AstField) (ind_arity : ℕ := 0) : MacroM (TSyntax `command) := do
   let my_ext    := flags.ext_fields
   let my_attrs  ← flags.attrs
-  let my_name   ← flags.as!'
-  let fun_name  ← flags.def_field "encode"
+  let my_name   ← flags.get!' Flag.from?
+  let fun_name  ← flags.def_field "encode" Flag.from?
 
   let ext_matches : Array (TSyntax ``matchAlt) ← my_ext.mapM (fun fld =>
     -- If this is already a Lean.Expr, do not quot it again
@@ -70,15 +77,27 @@ def mk_encode (flags : Flag) : MacroM (TSyntax `command) := do
   let then_do (child_e : TSyntax `term) : MacroM (TSyntax `term) :=
     `(term| $fun_name $child_e)
 
-  let base_matches : Array (TSyntax ``matchAlt) ← (← ast_base_fields).mapM (AstField.to_lean then_do flags)
+  let base_matches : Array (TSyntax ``matchAlt) ← base_fields.mapM (AstField.to_lean then_do flags)
 
   let matchers := base_matches ++ ext_matches
 
-  `(command|
-    @[$my_attrs]
-    def $fun_name (e : $my_name) : Lean.Expr :=
-      match e with
-      $(matchers):matchAlt*)
+  match ind_arity with
+  | .zero =>
+    `(command|
+      @[$my_attrs]
+      def $fun_name (e : $my_name) : Lean.Expr :=
+        match e with
+        $(matchers):matchAlt*)
+  | n@(.succ _) =>
+    let vars : List (TSyntax `ident) := (List.range n).map (fun n =>
+      let idt : TSyntax `ident := mkIdent (Name.str .anonymous s!"x_{n}").eraseMacroScopes
+      idt)
+    let bdrs : List (TSyntax ``bracketedBinder) ← vars.mapM (fun v => `(bracketedBinder| {$v : _}))
+    `(command|
+      @[$my_attrs]
+      def $fun_name $(⟨bdrs⟩)* (e : $my_name $(⟨vars⟩)*) : Lean.Expr :=
+        match e with
+        $(matchers):matchAlt*)
 
 def mk_decode (flags : Flag) : MacroM (TSyntax `command) := do
   let my_attrs  ← flags.attrs
@@ -108,25 +127,48 @@ syntax "gen_encode" gen_flag_set : command
 open GenAst Lean Elab in
 macro_rules
   | `(gen_decode $flags:gen_flag_set) => mk_decode (parse_flags flags)
-  | `(gen_encode $flags:gen_flag_set) => mk_encode (parse_flags flags)
+  | `(gen_encode $flags:gen_flag_set) => do mk_encode (parse_flags flags) (← ast_base_fields)
+
+open GenAst in
+def dedup_fields (fields : Array AstField) : Array AstField :=
+  fields.foldl (fun (acc : Array AstField) e =>
+    if acc.any (·.nm == e.nm) then acc else acc ++ #[e]) #[]
+
+open GenAst Lean Elab in
+open Lean.Elab.Command in
+open Lean.Elab.Term in
+elab "gen_encode'" flags:gen_flag_set : command => do
+  let flags := parse_flags flags
+  let src   ← flags.get! Flag.from?
+  let nm := src.getId
+  let fields := flags.ext_fields
+  let (found_flags, fields') ← liftTermElabM <| get_def_flags nm
+  let n_idx ← found_flags.get! Flag.n_indexes
+  let all_flags := flags ++ found_flags
+  let all_fields := dedup_fields <| fields ++ fields'
+  let cmd ← liftMacroM <| mk_encode all_flags all_fields n_idx
+  elabCommand cmd
 
 gen_decode from Expr
   as MetaExpr
   sort decoded_by decode_level
   with Lean.Expr *
 
-gen_encode from Expr
-  as MetaExpr
+gen_decode from Expr
+  as Expr
+  sort decoded_by decode_level
+
+gen_encode from MetaExpr
+  as Expr
   with Lean.Expr *
 
-gen_decode from Expr
+gen_encode'
+  from MetaExpr.RedAffMeta
+  as RedAff
   sort decoded_by decode_level
-  as Expr
+  with Lean.Expr *
 
-gen_encode from Expr
-  as Expr
-
-#check Expr.encode
+#check MetaExpr.encode
 #check MetaExpr.encode
 
 namespace _test

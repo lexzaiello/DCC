@@ -23,13 +23,67 @@ open Lean Parser Term
 
 open Lean.Parser.Term (matchAlt)
 
+/-
+adding custom handlers for the extensions of a generated
+inductive.
+
+these are terminal nodes. all other nodes are just normal nodes,
+and we handle them as always.
+
+we are matching on a meta term here, not a quoted expr.
+-/
+
+-- then_do specifies how to handle children of the node
+-- the recursor
+def AstField.to_lean (then_do : TSyntax `term → MacroM (TSyntax `term))
+  (flags : Flag) (fld : AstField) : MacroM (TSyntax ``matchAlt) := do
+  let lean_app : TSyntax `ident := mkIdent ``Lean.Expr.app
+  let nm_long := fld.nm_long (← flags.as!')
+  let nm_quot ← fld.nm_quoted (← flags.as!')
+  let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
+      let idt : TSyntax `ident := mkIdent (Name.str .anonymous s!"x_{n}").eraseMacroScopes
+      idt)
+  let bdr ← vars.foldlM (init := ← `(term| $nm_long))
+      (fun (acc : TSyntax `term) (e : TSyntax `ident) => `(term| $acc:term $e:ident))
+  let mut_vars ← vars.mapM then_do
+  let bdy ← mut_vars.foldlM (init := ← `(term| $nm_quot))
+      (fun (acc : TSyntax `term) (e : TSyntax `term) => `(term| $lean_app $acc:term $e:term))
+
+  `(matchAltExpr| | $bdr => $bdy:term)
+
+def mk_encode (flags : Flag) : MacroM (TSyntax `command) := do
+  let my_ext    := flags.ext_fields
+  let my_attrs  ← flags.attrs
+  let my_name   ← flags.as!'
+  let fun_name  ← flags.def_field "encode"
+
+  let ext_matches : Array (TSyntax ``matchAlt) ← my_ext.mapM (fun fld =>
+    -- If this is already a Lean.Expr, do not quot it again
+    let nm := fld.nm_long my_name
+    if fld.nm == "lean_expr" then
+      `(matchAltExpr| | $nm x => x)
+    else `(matchAltExpr| | $nm x => Lean.ToExpr.toExpr x))
+
+  let then_do (child_e : TSyntax `term) : MacroM (TSyntax `term) :=
+    `(term| $fun_name $child_e)
+
+  let base_matches : Array (TSyntax ``matchAlt) ← (← ast_base_fields).mapM (AstField.to_lean then_do flags)
+
+  let matchers := base_matches ++ ext_matches
+
+  `(command|
+    @[$my_attrs]
+    def $fun_name (e : $my_name) : Lean.Expr :=
+      match e with
+      $(matchers):matchAlt*)
+
 def mk_decode (flags : Flag) : MacroM (TSyntax `command) := do
   let my_attrs  ← flags.attrs
   let from_name ← flags.get!' Flag.from?
   let my_name   ← flags.as!'
   let fun_name  ← flags.def_field "decode"
   let do_with : TSyntax `term ← `(term| $fun_name:term)
-  let get_matcher := AstField.matcher
+  let get_matcher := AstField.meta_matcher
     (rec_handler := do_with)
     (from_ind_name := from_name)
     (to_ind_name := my_name)
@@ -50,10 +104,12 @@ def mk_decode (flags : Flag) : MacroM (TSyntax `command) := do
 end GenAst
 
 syntax "gen_decode" gen_flag_set : command
+syntax "gen_encode" gen_flag_set : command
 
 open GenAst Lean Elab in
 macro_rules
   | `(gen_decode $flags:gen_flag_set) => mk_decode (parse_flags flags)
+  | `(gen_encode $flags:gen_flag_set) => mk_encode (parse_flags flags)
 
 gen_decode from Expr
   as MetaExpr
@@ -80,6 +136,12 @@ def test_decode' : TermElabM MetaExpr := do
   MetaExpr.decode test
 
 #eval test_decode'
+
+def test_decode''' : TermElabM MetaExpr := do
+  let test := toExpr (DCC[Expr] (Id(Sort 1) Sort 0))
+  MetaExpr.decode test
+
+#eval test_decode'''
 
 def test_decode'' : TermElabM MetaExpr := do
   let test := Lean.Expr.app (.const ``Expr.id []) (.const `garbage_name [])

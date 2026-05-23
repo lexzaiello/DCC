@@ -82,7 +82,7 @@ def AstField.is_ext (fld : AstField) : Bool := ¬ fld.other_params.toList.isEmpt
 -- uses an alphabet of x1 x2 x3 x... to bind arguments
 -- do_with operates on each bound variable
 -- return .constructor at the end
-def AstField.matcher (rec_handler : TSyntax `term) (from_ind_name to_ind_name : TSyntax `ident)
+def AstField.meta_matcher (rec_handler : TSyntax `term) (from_ind_name to_ind_name : TSyntax `ident)
   (fld : AstField) : MacroM (TSyntax ``matchAlt) := do
   let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
       let idt : TSyntax `ident := mkIdent (Name.str .anonymous s!"x_{n}").eraseMacroScopes

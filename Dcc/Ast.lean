@@ -88,8 +88,8 @@ macro_rules
     let pflags := parse_flags flags
 
     let my_name ← pflags.get!' Flag.as?
-
     let attrs ← `(attrInstance| dcc_gen $flags:gen_flag_set)
+
     mk_my_expr my_name attrs pflags
 
 namespace _test

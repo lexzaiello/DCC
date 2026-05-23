@@ -6,13 +6,21 @@ import Lean
 
 open Lean Elab Term Tactic
 
-gen_ast MetaExpr with Lean.Expr, deriving BEq, Repr
+gen_ast as MetaExpr
+  with Lean.Expr
+  deriving BEq, Repr
 gen_dsl "DCC'" for MetaExpr
 
 namespace MetaExpr
 
-mirror Expr.RedAff with Lean.Expr, as RedAffMeta, into MetaExpr → MetaExpr → Type
-mirror Expr.RedEta with Lean.Expr, as RedEtaMeta, into MetaExpr → MetaExpr → Type
+mirror from Expr.RedAff
+  with Lean.Expr
+  as RedAffMeta
+  into MetaExpr → MetaExpr → Type
+mirror from Expr.RedEta
+  with Lean.Expr
+  as RedEtaMeta
+  into MetaExpr → MetaExpr → Type
 
 #check MetaExpr.ext
 -- MetaExpr.ext : Lean.Expr → MetaExpr

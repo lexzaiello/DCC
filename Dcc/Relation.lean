@@ -159,25 +159,27 @@ def update_ind (nm : Lean.Name)
         $all_ctrs:ctor*
         deriving $derivs,*)
 
-def add_rel_clone (my_name : TSyntax `ident) (flags : List Flag) : CommandElabM Unit := do
+def add_rel_clone (my_name : TSyntax `ident) (flags : Flag) : CommandElabM Unit := do
   let my_name := my_name.getId
   -- Constructor to add
-  let with_ext    := (all_ext flags)
+  let with_ext    := flags.with!
   -- Deriv classes
-  let with_derive : Syntax.TSepArray ``derivingClass "," := (deriv? flags).getD #[]
+  let with_derive : Syntax.TSepArray ``derivingClass "," := flags.deriving?.getD #[]
   -- New elim sort
-  let some with_into ← (pure (into? flags)) | throwError "must specify new type"
-  let some new_name ← (pure (as? flags)) | throwError "missing new name"
+  let with_into ← (flags.get! Flag.into?)
+  let new_name ← (flags.get! Flag.as?)
 
-  let ind ← update_ind my_name new_name ⟨with_ext⟩ with_derive with_into
+  let ind ← update_ind my_name new_name with_ext with_derive with_into
 
   elabCommand ind
 
 end imp
 
 open GenRel.imp in
-elab "mirror" idt:ident flags:gen_flag,* : command => do
-  add_rel_clone idt (← liftMacroM <| parse_flags flags.getElems)
+elab "mirror" flags:gen_flag_set : command => do
+  let pflags := parse_flags flags
+  let idt ← pflags.get! Flag.from?
+  add_rel_clone idt (parse_flags flags)
 
 end GenRel
 

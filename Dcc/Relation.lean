@@ -25,36 +25,61 @@ hypotheses (.lean_e : Lean.Expr → r A B)
 This utility automates that codegen.
 -/
 
-def update_name (old new here : Name) : Lean.Name :=
-  match old.components.reverse.head?,
-    new.components.reverse.head?,
-    here.components.reverse.head? with
-  | .some old, .some (.str _ new), .some here_last =>
-    if here_last == old then
-      here.updateLast (fun _ => new)
-    else here
-  | _, _, _ => here
+def name_contains (find in_nm : Name) : Bool :=
+  in_nm.components.contains find
 
-def update_names (old new : Name) (e : Lean.Expr) : Lean.Expr :=
-  let name' : Name → Name := update_name old new
+def name_last (nm : Name) : Name :=
+  nm.components.reverse.head?.getD nm
 
+def modify_first (new_nm nm : Name) : Name :=
+  match nm with
+  | .str .anonymous _ => new_nm
+  | .str pre post => .str (modify_first new_nm pre) post
+  | _ => nm
+
+def name_first (nm : Name) : Name :=
+  nm.components.head?.getD nm
+
+def all_names (old new here : Name) : Lean.Name :=
+  match name_last old,
+    name_last new with
+  | (.str _ old_str), (.str _ new_str) =>
+    match here with
+    | .str pre str =>
+      if str == old_str then
+        .str (all_names old new pre) new_str
+      else
+        .str (all_names old new pre) str
+    | _ => here
+  | _, _ => here
+
+def update_names (name' : Name → Name) (e : Lean.Expr) : Lean.Expr :=
   match e with
   | .const nm info => .const (name' nm) info
   | .forallE bname bty bdy binfo =>
     .forallE (name' bname)
-      (update_names old new bty)
-      (update_names old new bdy) binfo
+      (update_names name' bty)
+      (update_names name' bdy) binfo
   | .app f x =>
-    .app (update_names old new f) (update_names old new x)
-  | e => e
+    .app (update_names name' f) (update_names name' x)
+  | .lam bname bty bdy binfo =>
+    .lam (name' bname)
+      (update_names name' bty)
+      (update_names name' bdy) binfo
+  | .proj tname idx struct =>
+    .proj (name' tname) idx (update_names name' struct)
+  | .sort m => .sort m
+  | .bvar v => .bvar v
+  | .mdata v bd => .mdata v (update_names name' bd)
+  | .mvar m => .mvar m
+  | .fvar v => .fvar v
+  | .lit l => .lit l
+  | .letE dname type value body nondep =>
+    .letE (name' dname) (update_names name' type)
+      (update_names name' value) (update_names name' body) nondep
 
 def literal_ctor (typ : Lean.Expr) : CommandElabM (Lean.TSyntax `term) :=
   liftTermElabM <| Lean.PrettyPrinter.delab typ
-
-def literal_param (param : Lean.Expr) : CommandElabM (Lean.TSyntax `ident) := do
-  match param with
-  | .const idt _ => return mkIdent idt.eraseMacroScopes
-  | t => throwError m!"can't handle this parameter yet: {t}"
 
 def update_ind (nm : Lean.Name)
   (new_name : TSyntax `ident)
@@ -65,25 +90,26 @@ def update_ind (nm : Lean.Name)
   : CommandElabM (TSyntax `command) := do
   let ext_ctrs ← (liftMacroM <| ext.mapM (mk_ext new_name))
 
-  dbg_trace "a"
+  let old_nm := nm.eraseMacroScopes
   let new_nm := new_name.getId.eraseMacroScopes
-  dbg_trace "b"
 
   let info ← match (← getConstInfo nm) with
     | .inductInfo info => pure info
     | _ => throwError m!"this is not an inductive: {nm}"
 
-  let old_param ← match info.type with
-    | .app (.app _rel (.const a [])) _b =>
-      pure a
-    | exp => throwError m!"this is not a relation: {exp}"
+  let arrow! (e : Lean.Expr) : CommandElabM (Lean.Expr × Lean.Expr) :=
+    match e.arrow? with
+    | .some (a, b) => pure (a, b)
+    | _ => throwError m!"not an arrow: {e}"
+
+  let old_param ← match (← arrow! info.type).fst with
+    | .const nm _ => pure nm
+    | _ => throwError m!"not a relation: {info.type}"
 
   let new_param ← match new_elim with
     | `(term| $new_param:ident → $_b → $_c) =>
       pure new_param.getId.eraseMacroScopes
-    | exp => throwError m!"this is not a relation: {exp}"
-
-  dbg_trace "c"
+    | exp => throwError m!"this is not a relation (new param): {exp}"
 
   let h : List (TSyntax ``ctor) ← info.ctors.mapM (fun cname => do
     let cinfo ← match (← getConstInfo cname) with
@@ -91,14 +117,30 @@ def update_ind (nm : Lean.Name)
       | _ => throwError m!"this is not a constructor: {cname}"
     let constr_idt := Lean.mkIdent
       (.str .anonymous cinfo.name.eraseMacroScopes.lastComponentAsString)
-    dbg_trace constr_idt
-    let ty := ((update_names old_param new_param)
-      ∘ update_names nm new_nm) cinfo.type
+    /-
+      Expr.xyz -> New.xyz
+      xyz.Expr -> New
+    -/
+    let update_param (name : Name) : Name :=
+      if name_contains nm name
+        ∨ name_contains (name_last nm) name
+        ∨ name_contains old_nm name
+        ∨ name_contains (name_last old_nm) name then
+        new_nm
+      else if name_first name == name_last old_param then
+        modify_first new_param name
+      else if name_last name == name_last old_param then
+        new_param
+      else if name_first name == name_last old_param then
+        modify_first new_param name
+      else if name_last name == name_last old_param then
+        new_param
+      else name
+
+    let ty := update_names update_param cinfo.type
 
     let constr_bdy ← literal_ctor ty
     `(ctor| | $constr_idt:ident : $constr_bdy))
-  dbg_trace h
-  dbg_trace "d"
   let all_ctrs : Lean.TSyntaxArray _ := (Array.mk h) ++ ext_ctrs
   -- or try delab pretty α β
   if derivs.getElems.isEmpty then

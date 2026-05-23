@@ -4,8 +4,6 @@ import Dcc.Aff.Red
 import Dcc.Eta.Red
 import Lean
 
-open Lean Elab Term Tactic GenAst
-
 gen_ast as MetaExpr
   with Lean.Expr
   deriving BEq, Repr
@@ -22,7 +20,7 @@ mirror from Expr.RedEta
   as RedEtaMeta
   into MetaExpr → MetaExpr → Type
 
-#check MetaExpr.ext
+#check MetaExpr.lean_expr
 -- MetaExpr.ext : Lean.Expr → MetaExpr
 #check RedAffMeta
 -- RedAffMeta : MetaExpr → MetaExpr → Type

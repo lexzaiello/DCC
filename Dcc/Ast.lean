@@ -1,6 +1,7 @@
 import Dcc.Attrs
 import Mathlib.Data.Nat.Notation
 import Init.Data.String.Search
+import Lean
 
 -- Infinite sort universe hierarchy
 abbrev Level := ℕ
@@ -23,9 +24,9 @@ we can derive `()
 
 namespace GenAst
 
-open Lean Macro Parser.Command
-open Lean (Parser.Command.derivingClass)
-open Lean.Parser.Term
+open Lean.Macro Lean.Parser.Command
+open Lean (Parser.Command.derivingClass TSyntax MacroM mkIdent Name Syntax)
+open Lean.Parser.Term (matchAlt matchAltExpr)
 
 syntax "gen_ast" gen_flag_set                   : command
 
@@ -35,48 +36,97 @@ def field (s : String) : TSyntax `ident :=
 def mk_ext (my_name ext : TSyntax `ident) : MacroM (TSyntax ``ctor) := do
     `(ctor| | $(field "ext"):ident : $ext:ident → $my_name)
 
-def Flag.ast_base_ctors (flags : Flag) : Lean.MacroM (Array (TSyntax ``ctor)) := do
-  let my_name ← flags.get!' Flag.as?
-  return #[
-    ← `(ctor| | $(field "refl"):ident   : $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "eq"):ident     : $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "eql"):ident    : $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "fstc"):ident   : $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "sndc"):ident   : $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "sort"):ident   : _root_.Level → $my_name:ident),
-    ← `(ctor| | $(field "comp'"):ident  : $my_name:ident → $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "comp"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "pair"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "sigma"):ident  : $my_name:ident → $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "coup"):ident   : $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "mkc"):ident    : $my_name:ident → $my_name:ident → $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "pi"):ident     : $my_name:ident → $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "curr"):ident   : $my_name:ident → $my_name:ident → $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "quot"):ident   : $my_name:ident → $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "id"):ident     : $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "app"):ident    : $my_name:ident → $my_name:ident → $my_name:ident),
-    ← `(ctor| | $(field "top"):ident    : $my_name:ident),
-    ← `(ctor| | $(field "tintro"):ident : $my_name:ident),
-    ← `(ctor| | $(field "bot"):ident    : $my_name:ident)]
+-- Expr → Expr → ... up to arity
+structure AstField where
+  nm           : String
+  -- only self arity
+  arity        : ℕ
+  other_params : Array (TSyntax `ident) := #[]
 
-def Flag.ast_ext_ctors (flags : Flag) : Lean.MacroM (Array (TSyntax ``ctor)) := do
-  let my_name ← flags.get!' Flag.as?
-  flags.with!.mapM (mk_ext my_name)
+def AstField.total_arity (fld : AstField) : ℕ :=
+  fld.arity + fld.other_params.toList.length
+
+def AstField.nm_short : AstField → TSyntax `ident :=
+  field ∘ AstField.nm
+
+def AstField.nm_long (ast_ind_name : TSyntax `ident) (fld : AstField) : TSyntax `ident :=
+  mkIdent <| (ast_ind_name.getId ++ Lean.Name.mkSimple fld.nm).eraseMacroScopes
+
+def AstField.type (ast_ind_name : TSyntax `ident) (fld : AstField) : MacroM (TSyntax `term) :=
+  (fld.other_params ++ ⟨List.replicate fld.arity ast_ind_name⟩).foldrM
+    (fun (e : TSyntax `ident) (acc : TSyntax `term) => `(term| $e:ident → $acc:term))
+    ast_ind_name
+
+def AstField.ctor (ast_ind_name : TSyntax `ident) (fld : AstField) : MacroM (TSyntax ``ctor) := do
+  let nm  := fld.nm_short
+  let typ ← fld.type ast_ind_name
+  `(ctor| | $nm:ident : $typ:term)
+
+-- const field
+def AstField.nm_quoted (ast_ind_name : TSyntax `ident) (fld : AstField) : MacroM (Lean.TSyntax `term) :=
+  let nm := fld.nm_long ast_ind_name
+  `(.const ``$(nm) [])
+
+-- uses an alphabet of x1 x2 x3 x... to bind arguments
+def AstField.matcher (do_with : TSyntax `term) (ast_ind_name : TSyntax `ident)
+  (fld : AstField) : MacroM (TSyntax ``matchAltExpr) := do
+  let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
+    let idt : TSyntax `ident := mkIdent (ast_ind_name.getId.eraseMacroScopes
+      ++ (Name.str .anonymous s!"{n}").eraseMacroScopes).eraseMacroScopes
+    idt)
+  let bdr ← vars.foldlM (init := ← `(term| $ast_ind_name))
+    (fun (acc : TSyntax `term) (e : TSyntax `ident) => `(term| .app $acc:term $e:ident))
+  `(matchAltExpr| | $bdr => $do_with:term)
+
+def ast_base_fields : Array AstField :=
+  #[
+    ⟨"refl", 1, #[]⟩,
+    ⟨"eq", 1, #[]⟩,
+    ⟨"eql", 1, #[]⟩,
+    ⟨"fstc", 1, #[]⟩,
+    ⟨"sndc", 1, #[]⟩,
+    ⟨"sort", 0, #[mkIdent (``_root_.Level).eraseMacroScopes]⟩,
+    ⟨"comp'", 2, #[]⟩,
+    ⟨"comp", 2, #[]⟩,
+    ⟨"pair", 2, #[]⟩,
+    ⟨"sigma", 2, #[]⟩,
+    ⟨"coup", 1, #[]⟩,
+    ⟨"mkc", 3, #[]⟩,
+    ⟨"pi", 2, #[]⟩,
+    ⟨"curr", 3, #[]⟩,
+    ⟨"quot", 2, #[]⟩,
+    ⟨"id", 1, #[]⟩,
+    ⟨"app", 2, #[]⟩,
+    ⟨"top", 0, #[]⟩,
+    ⟨"bot", 0, #[]⟩,
+    ⟨"tintro", 0, #[]⟩]
+
+def Flag.ext_fields (flags : Flag) : Array AstField :=
+  flags.with!.map (fun (fld : TSyntax `ident) =>
+    let nm := fld.getId.eraseMacroScopes
+    let nm_camel_case := nm.components.filterMap (fun c =>
+      match c with
+      | .str _ s => some (to_camel s)
+      | _ => none)
+  |> String.intercalate "_"
+    { nm := nm_camel_case, other_params := #[fld], arity := 0})
+where to_camel (s : String) : String :=
+  s.foldl (init := "") (fun (acc : String) c =>
+    if c.isUpper then
+      s!"{acc}_{c.toLower}"
+    else s!"{acc}{c}")
+  |>.dropWhile (· == '_')
+  |>.copy
+
+def Flag.all_fields (flags : Flag) : Array AstField :=
+  ast_base_fields ++ flags.ext_fields
 
 def mk_my_expr (flags : Flag) : MacroM (TSyntax `command) := do
   let my_attrs ← flags.attrs
   let my_name ← flags.as!'
   let with_derive : Syntax.TSepArray ``derivingClass "," := flags.deriving?.getD #[]
 
-  -- Optional embedded datatype (e.g., Lean.Expr for metatactics)
-  let ext ← flags.ast_ext_ctors
-
-  /-
-    Core DCC constructors. This is a spec so that meta-layer (tactic) mirror-image can be updated
-  -/
-  let base ← flags.ast_base_ctors
-
-  let all := base ++ ext
+  let all ← flags.all_fields.mapM (AstField.ctor my_name)
 
   let cmd := if with_derive.getElems.toList.isEmpty then
     `(command|
@@ -102,7 +152,7 @@ gen_ast as StrExpr
   with String
   deriving Repr
 
-#check StrExpr.ext
+#check StrExpr.string
 #check Repr StrExpr
 
 end _test

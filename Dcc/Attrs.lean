@@ -372,4 +372,13 @@ def Flag.attrs (flags : Flag) : Lean.MacroM (TSyntax ``attrInstance) := do
   let flags_stx ← flags.stx
   `(attrInstance| dcc_gen $flags_stx:gen_flag_set)
 
+def Flag.def_field (s : String) (flag : Flag) : MacroM (TSyntax `ident) := do
+  let my_name := (← flag.as!').getId.eraseMacroScopes
+  let f_name  := (Lean.Name.mkSimple s).eraseMacroScopes
+
+  return mkIdent (my_name ++ f_name)
+
+def mk_ident (s : String) : TSyntax `ident :=
+  mkIdent (Lean.Name.mkSimple s).eraseMacroScopes
+
 end GenAst

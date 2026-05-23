@@ -116,7 +116,7 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (DCC (f_β α)) (DCC `(α, Sort n))
     → Reduces (sndc.type β m n) τ
     → Judge (DCC Sndc(β)) τ
-  | sigma   : Judge f_α (arrow δ (DCC Sort m) o)
+  | sigma   : Judge f_α (DCC ((δ : Sort o) → Sort m))
     → Judge f_β (Pi.f_β.type f_α δ o n)
     → Reduces (Sigma.type δ m n o) τ
     → Judge (DCC Σ(f_α, f_β)) τ
@@ -156,7 +156,7 @@ inductive Judge : Expr → Expr → Prop where
     f_β : ∀ (x : α) (y : f_α x), Sort n
     Π(f_α, f_β)
   -/
-  | pi     : Judge f_α (arrow α (DCC Sort n) m)
+  | pi     : Judge f_α (DCC ((α : Sort m) → Sort n))
     → Judge f_β (Pi.f_β.type f_α α m o)
     → Reduces (Pi.type α m o) τ
     → Judge (DCC Π(f_α, f_β)) τ
@@ -177,7 +177,7 @@ def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   | _ => .none
 
 @[dcc_judge] def with_arr (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
-  Option ((τ α β : Expr) × (m : Level) × PULift.{1, 0} (Judge e τ) × PULift.{1, 0} (τ = arrow α β m)) :=
+  Option ((τ α β : Expr) × (m : Level) × PULift.{1, 0} (Judge e τ) × PULift.{1, 0} (τ = DCC ((α : Sort m) → β))) :=
     match h with
     | .some ⟨t, h⟩ => match arrow.matcher t with
       | .some ⟨α, β, m, h_arr⟩ => .some ⟨t, α, β, m, h, h_arr⟩

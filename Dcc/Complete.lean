@@ -16,7 +16,8 @@ namespace Expr
 @[dcc_judge] theorem match_curr_β_type : curr.β.type.matcher (curr.β.type f_α x_α m n) = .some ⟨f_α, x_α, m, n, ⟨rfl⟩⟩ := by
   simp [dcc_judge]
 
-@[dcc_judge] theorem with_arr_arr : with_arr (.some ⟨arrow α β m, h⟩) = .some ⟨arrow α β m, α, β, m, h, ⟨rfl⟩⟩ := by
+@[dcc_judge] theorem with_arr_arr : with_arr (.some ⟨(DCC ((α : Sort m) → β)), h⟩) =
+  .some ⟨(DCC ((α : Sort m) → β)), α, β, m, h, ⟨rfl⟩⟩ := by
   simp [dcc_judge]
 
 @[dcc_judge] theorem with_fst_fβ_fβ : with_fst_fβ_type (.some ⟨fst.f_β.type α δ m n o, h⟩) = .some ⟨fst.f_β.type α δ m n o, α, δ, m, n, o, h, ⟨rfl⟩⟩ := by

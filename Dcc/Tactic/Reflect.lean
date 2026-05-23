@@ -82,14 +82,10 @@ def mk_encode (flags : Flag) : MacroM (TSyntax `command) := do
 
 def mk_decode (flags : Flag) : MacroM (TSyntax `command) := do
   let my_attrs  ← flags.attrs
-  let from_name ← flags.get!' Flag.from?
   let my_name   ← flags.as!'
   let fun_name  ← flags.def_field "decode"
   let do_with : TSyntax `term ← `(term| $fun_name:term)
-  let get_matcher := AstField.meta_matcher
-    (rec_handler := do_with)
-    (from_ind_name := from_name)
-    (to_ind_name := my_name)
+  let get_matcher := AstField.meta_matcher (rec_handler := do_with) flags
   let otherwise : Array (TSyntax ``matchAlt) ← do
     if flags.has_wild_card then
       pure #[]
@@ -116,6 +112,7 @@ macro_rules
 
 gen_decode from Expr
   as MetaExpr
+  sort decoded_by decode_level
   with Lean.Expr *
 
 gen_encode from Expr
@@ -123,6 +120,7 @@ gen_encode from Expr
   with Lean.Expr *
 
 gen_decode from Expr
+  sort decoded_by decode_level
   as Expr
 
 gen_encode from Expr

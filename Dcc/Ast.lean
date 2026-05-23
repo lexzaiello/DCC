@@ -42,7 +42,6 @@ def mk_ext (my_name ext : TSyntax `ident) : MacroM (TSyntax ``ctor) := do
 
 -- Expr → Expr → ... up to arity
 structure AstField where
-  decoder      : Option (TSyntax `term) := .none
   nm           : String
   -- only self arity
   arity        : ℕ
@@ -82,15 +81,18 @@ def AstField.is_ext (fld : AstField) : Bool := ¬ fld.other_params.toList.isEmpt
 -- uses an alphabet of x1 x2 x3 x... to bind arguments
 -- do_with operates on each bound variable
 -- return .constructor at the end
-def AstField.meta_matcher (rec_handler : TSyntax `term) (from_ind_name to_ind_name : TSyntax `ident)
-  (fld : AstField) : MacroM (TSyntax ``matchAlt) := do
+def AstField.meta_matcher (rec_handler : TSyntax `term) (flags : Flag) (fld : AstField) :
+  MacroM (TSyntax ``matchAlt) := do
+  let from_ind_name : TSyntax `ident ← flags.get!' Flag.from?
+  let to_ind_name   : TSyntax `ident ← flags.as!'
+
   let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
       let idt : TSyntax `ident := mkIdent (Name.str .anonymous s!"x_{n}").eraseMacroScopes
       idt)
   let nm_long := fld.nm_long to_ind_name
   let apps_extra : List (TSyntax `term) ← (vars.take fld.other_params.toList.length).mapM
     (fun (e : TSyntax `ident) =>
-      match fld.decoder with
+      match flags.decoder? fld.nm_short with
       | .some dec => `(term| ← $dec:term $e:term)
       | _ => `(return $e:term))
   if fld.wildcard then
@@ -107,42 +109,42 @@ def AstField.meta_matcher (rec_handler : TSyntax `term) (from_ind_name to_ind_na
     `(matchAltExpr| | $bdr => do $do_with:term)
 
 def sort_field : MacroM AstField := do
-  return ⟨← `(term| decode_level), "sort", 0, #[mkIdent (``_root_.Level).eraseMacroScopes], False⟩
+  return ⟨"sort", 0, #[mkIdent (``_root_.Level).eraseMacroScopes], False⟩
 
 def ast_basic_fields : (Array AstField) :=
   #[
-    ⟨.none, "refl", 1, #[], False⟩,
-    ⟨.none, "eq", 1, #[], False⟩,
-    ⟨.none, "eql", 1, #[], False⟩,
-    ⟨.none, "fstc", 1, #[], False⟩,
-    ⟨.none, "sndc", 1, #[], False⟩,
-    ⟨.none, "comp'", 2, #[], False⟩,
-    ⟨.none, "comp", 2, #[], False⟩,
-    ⟨.none, "pair", 2, #[], False⟩,
-    ⟨.none, "sigma", 2, #[], False⟩,
-    ⟨.none, "coup", 1, #[], False⟩,
-    ⟨.none, "mkc", 3, #[], False⟩,
-    ⟨.none, "pi", 2, #[], False⟩,
-    ⟨.none, "curr", 3, #[], False⟩,
-    ⟨.none, "quot", 2, #[], False⟩,
-    ⟨.none, "id", 1, #[], False⟩,
-    ⟨.none, "app", 2, #[], False⟩,
-    ⟨.none, "top", 0, #[], False⟩,
-    ⟨.none, "bot", 0, #[], False⟩,
-    ⟨.none, "tintro", 0, #[], False⟩]
+    ⟨"refl", 1, #[], False⟩,
+    ⟨"eq", 1, #[], False⟩,
+    ⟨"eql", 1, #[], False⟩,
+    ⟨"fstc", 1, #[], False⟩,
+    ⟨"sndc", 1, #[], False⟩,
+    ⟨"comp'", 2, #[], False⟩,
+    ⟨"comp", 2, #[], False⟩,
+    ⟨"pair", 2, #[], False⟩,
+    ⟨"sigma", 2, #[], False⟩,
+    ⟨"coup", 1, #[], False⟩,
+    ⟨"mkc", 3, #[], False⟩,
+    ⟨"pi", 2, #[], False⟩,
+    ⟨"curr", 3, #[], False⟩,
+    ⟨"quot", 2, #[], False⟩,
+    ⟨"id", 1, #[], False⟩,
+    ⟨"app", 2, #[], False⟩,
+    ⟨"top", 0, #[], False⟩,
+    ⟨"bot", 0, #[], False⟩,
+    ⟨"tintro", 0, #[], False⟩]
 
 def ast_base_fields : MacroM (Array AstField) := do
   return ast_basic_fields ++ #[← sort_field]
 
 def Flag.ext_fields (flags : Flag) : Array AstField :=
-  flags.with!.map (fun (dec, fld, is_wc) =>
+  flags.with!.map (fun (fld, is_wc) =>
     let nm := fld.getId.eraseMacroScopes
     let nm_camel_case := nm.components.filterMap (fun c =>
       match c with
       | .str _ s => some (to_camel s)
       | _ => none)
   |> String.intercalate "_"
-    { decoder := dec, wildcard := is_wc, nm := nm_camel_case, other_params := #[fld], arity := 0})
+    { wildcard := is_wc, nm := nm_camel_case, other_params := #[fld], arity := 0})
 where to_camel (s : String) : String :=
   s.foldl (init := "") (fun (acc : String) c =>
     if c.isUpper then

@@ -237,16 +237,18 @@ open Lean.Parser.Term
 
 namespace GenAst
 
-abbrev GenExt := (Option (TSyntax `term)) × TSyntax `ident × Bool
+abbrev GenExt := TSyntax `ident × Bool
 
 inductive Flag where
-  | src   : TSyntax `ident                  → Flag
-  | as    : TSyntax `ident                  → Flag
-  | ext   : Array GenExt                    → Flag
-  | deriv : Array (TSyntax ``derivingClass) → Flag
-  | into  : TSyntax `term                   → Flag
-  | and   : Flag → Flag                     → Flag
-  | nil   : Flag
+  | enc     : TSyntax `ident → TSyntax `term  → Flag
+  | dec     : TSyntax `ident → TSyntax `term  → Flag
+  | src     : TSyntax `ident                  → Flag
+  | as      : TSyntax `ident                  → Flag
+  | ext     : Array GenExt                    → Flag
+  | deriv   : Array (TSyntax ``derivingClass) → Flag
+  | into    : TSyntax `term                   → Flag
+  | and     : Flag → Flag                     → Flag
+  | nil     : Flag
 deriving Repr, Inhabited, Nonempty
 
 --structure GenCfg where
@@ -257,8 +259,9 @@ declare_syntax_cat gen_flag_ext
 
 syntax ident                       : gen_flag_ext
 syntax ident "*"                   : gen_flag_ext
-syntax term "decodes" gen_flag_ext : gen_flag_ext
 
+syntax ident "decoded_by" term            : gen_flag
+syntax ident "encoded_by" term            : gen_flag
 syntax "from" ident                       : gen_flag
 syntax "as" ident                         : gen_flag
 syntax "into" term                        : gen_flag
@@ -269,14 +272,14 @@ syntax gen_flag*                          : gen_flag_set
 
 def Flag.stx (flag : Flag) : Lean.MacroM (TSyntax `gen_flag_set) :=
   match flag with
+  | .enc idt e   => `(gen_flag_set| $idt:ident encoded_by $e:term)
+  | .dec idt e   => `(gen_flag_set| $idt:ident decoded_by $e:term)
   | .src e       => `(gen_flag_set| from $e)
   | .as  e       => `(gen_flag_set| as $e)
   | .ext e       => do
     let exts ← e.mapM (fun e => match e with
-      | ⟨.none, idt, .true⟩  => `(gen_flag_ext| $idt:ident *)
-      | ⟨.none, idt, .false⟩ => `(gen_flag_ext| $idt:ident)
-      | ⟨.some dec, idt, .true⟩ => `(gen_flag_ext| $dec:term decodes $idt:ident *)
-      | ⟨.some dec, idt, .false⟩ => `(gen_flag_ext| $dec:term decodes $idt:ident))
+      | ⟨idt, .true⟩  => `(gen_flag_ext| $idt:ident *)
+      | ⟨idt, .false⟩ => `(gen_flag_ext| $idt:ident))
     `(gen_flag_set| with $exts,*)
   | .deriv e     => `(gen_flag_set| deriving $e,*)
   | .into e      => `(gen_flag_set| into $e)
@@ -294,10 +297,8 @@ def Flag.stx (flag : Flag) : Lean.MacroM (TSyntax `gen_flag_set) :=
 
 def parse_ext (stx : TSyntax `gen_flag_ext) : Option GenExt :=
   match stx with
-  | `(gen_flag_ext| $dec:term decodes $idt:ident *) => .some ⟨.some dec, idt, True⟩
-  | `(gen_flag_ext| $dec:term decodes $idt:ident) => .some ⟨.some dec, idt, False⟩
-  | `(gen_flag_ext| $idt:ident *) => .some ⟨.none, idt, True⟩
-  | `(gen_flag_ext| $idt:ident)   => .some ⟨.none, idt, False⟩
+  | `(gen_flag_ext| $idt:ident *) => .some ⟨idt, True⟩
+  | `(gen_flag_ext| $idt:ident)   => .some ⟨idt, False⟩
   | _ => .none
 
 def parse_flag (stx : TSyntax `gen_flag) : (Option Flag) :=
@@ -309,6 +310,8 @@ def parse_flag (stx : TSyntax `gen_flag) : (Option Flag) :=
     .some <| .ext ⟨exts⟩
   | `(gen_flag| deriving $idts:derivingClass,*) => .some <| .deriv idts
   | `(gen_flag| into $tm:term) => .some <| .into tm
+  | `(gen_flag| $idt:ident decoded_by $tm:term) => .some <| .dec idt tm
+  | `(gen_flag| $idt:ident encoded_by $tm:term) => .some <| .enc idt tm
   | _ => .none
 
 def parse_flags (stx : TSyntax `gen_flag_set) : Flag :=
@@ -336,6 +339,18 @@ def Flag.find? {α : Type} (f : Flag → Option α) (flag : Flag) : Option α :=
     a.find? f <|> b.find? f
   | .nil => .none
   | flag => f flag
+
+def Flag.encoder? (for_idt : TSyntax `ident) (flag : Flag) : Option (TSyntax `term) :=
+  flag.find? (fun flag => match flag with
+    | .enc idt tm =>
+      if idt == for_idt then .some tm else .none
+    | _ => .none)
+
+def Flag.decoder? (for_idt : TSyntax `ident) (flag : Flag) : Option (TSyntax `term) :=
+  flag.find? (fun flag => match flag with
+    | .dec idt tm =>
+      if idt == for_idt then .some tm else .none
+    | _ => .none)
 
 def Flag.from? (flag : Flag) : Option (TSyntax `ident) :=
   flag.find? (fun flag => match flag with
@@ -427,7 +442,7 @@ def Flag.has_wild_card (flag : Flag) : Bool :=
     match flag with
     | .ext ⟨exts⟩ =>
       (exts.find? (fun (e : GenExt) => match e with
-        | ⟨_, _, .true⟩ => true
+        | ⟨_, .true⟩ => true
         | _ => false)).map (fun _ => true)
     | _ => .none)
   |> (Option.getD · Bool.false)

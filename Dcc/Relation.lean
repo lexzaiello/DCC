@@ -88,7 +88,8 @@ def update_ind (nm : Lean.Name)
   (derivs : Syntax.TSepArray ``derivingClass "," := ⟨#[]⟩)
   (new_elim : TSyntax `term)
   : CommandElabM (TSyntax `command) := do
-  let ext_ctrs ← (liftMacroM <| ext.mapM (mk_ext new_name))
+  --let ext_ctrs ← (liftMacroM <| ext.mapM (mk_ext new_name (elim :=
+    --(← `(term| $new_name:ident a b)))))
 
   let old_nm := nm.eraseMacroScopes
   let new_nm := new_name.getId.eraseMacroScopes
@@ -106,10 +107,15 @@ def update_ind (nm : Lean.Name)
     | .const nm _ => pure nm
     | _ => throwError m!"not a relation: {info.type}"
 
-  let new_param ← match new_elim with
+  let (new_param, new_param_idt) ← match new_elim with
     | `(term| $new_param:ident → $_b → $_c) =>
-      pure new_param.getId.eraseMacroScopes
+      pure (new_param.getId.eraseMacroScopes, new_param)
     | exp => throwError m!"this is not a relation (new param): {exp}"
+
+  let ext_ctr ← (liftMacroM <| ext.mapIdxM (fun idx (ctr_name : TSyntax `ident) =>
+    let idt := field (ctr_name.getId.eraseMacroScopes.toString ++ s!"{idx}")
+    `(ctor| | $(idt):ident : ∀ {a b : $new_param_idt}, $ctr_name:ident → $new_name a b)
+    ))
 
   let h : List (TSyntax ``ctor) ← info.ctors.mapM (fun cname => do
     let cinfo ← match (← getConstInfo cname) with
@@ -141,7 +147,7 @@ def update_ind (nm : Lean.Name)
 
     let constr_bdy ← literal_ctor ty
     `(ctor| | $constr_idt:ident : $constr_bdy))
-  let all_ctrs : Lean.TSyntaxArray _ := (Array.mk h) ++ ext_ctrs
+  let all_ctrs : Lean.TSyntaxArray _ := (Array.mk h) ++ ext_ctr
   -- or try delab pretty α β
   if derivs.getElems.isEmpty then
     `(command|

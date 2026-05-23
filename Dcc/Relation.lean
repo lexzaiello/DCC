@@ -11,7 +11,10 @@ namespace GenRel
 
 open GenAst Lean Elab Command Meta
 open Lean Parser Command
-open Qq
+
+open Lean Macro Parser.Command
+open Lean (Parser.Command.derivingClass)
+open Lean.Parser.Term
 
 namespace imp
 
@@ -82,6 +85,7 @@ def literal_ctor (typ : Lean.Expr) : CommandElabM (Lean.TSyntax `term) :=
   liftTermElabM <| Lean.PrettyPrinter.delab typ
 
 def update_ind (nm : Lean.Name)
+  (attrs : TSyntax ``attrInstance)
   (new_name : TSyntax `ident)
   -- new constructors. takes just one tau
   (ext : Array (TSyntax `ident))
@@ -151,15 +155,17 @@ def update_ind (nm : Lean.Name)
   -- or try delab pretty α β
   if derivs.getElems.isEmpty then
     `(command|
+      @[$attrs]
       inductive $new_name:ident : $new_elim:term
         $all_ctrs:ctor*)
   else
     `(command|
+      @[$attrs]
       inductive $new_name:ident : $new_elim:term
         $all_ctrs:ctor*
         deriving $derivs,*)
 
-def add_rel_clone (my_name : TSyntax `ident) (flags : Flag) : CommandElabM Unit := do
+def add_rel_clone (my_name : TSyntax `ident) (attrs : TSyntax ``attrInstance) (flags : Flag) : CommandElabM Unit := do
   let my_name := my_name.getId
   -- Constructor to add
   let with_ext    := flags.with!
@@ -169,17 +175,18 @@ def add_rel_clone (my_name : TSyntax `ident) (flags : Flag) : CommandElabM Unit 
   let with_into ← (flags.get! Flag.into?)
   let new_name ← (flags.get! Flag.as?)
 
-  let ind ← update_ind my_name new_name with_ext with_derive with_into
+  let ind ← update_ind my_name attrs new_name with_ext with_derive with_into
 
   elabCommand ind
 
 end imp
 
-open GenRel.imp in
+open GenRel.imp Lean.Syntax in
 elab "mirror" flags:gen_flag_set : command => do
   let pflags := parse_flags flags
   let idt ← pflags.get! Flag.from?
-  add_rel_clone idt (parse_flags flags)
+  let attrs ← liftMacroM `(attrInstance| dcc_gen $flags:gen_flag_set)
+  add_rel_clone idt attrs (parse_flags flags)
 
 end GenRel
 

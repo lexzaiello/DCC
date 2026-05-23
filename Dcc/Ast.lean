@@ -52,6 +52,15 @@ structure AstField where
 def AstField.total_arity (fld : AstField) : ℕ :=
   fld.arity + fld.other_params.toList.length
 
+def AstField.nm_camel (fld : AstField) : TSyntax `ident :=
+  let parts := (fld.nm.splitOn "_").filter (· ≠ "")
+  mkIdent (parts.foldl
+    (fun acc p => Lean.Name.str acc (cap_first p)) Lean.Name.anonymous).eraseMacroScopes
+where cap_first (s : String) : String :=
+  match s.toList with
+  | []      => ""
+  | c :: cs => String.ofList (c.toUpper :: cs)
+
 def AstField.nm_short : AstField → TSyntax `ident :=
   field ∘ AstField.nm
 

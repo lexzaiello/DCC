@@ -88,7 +88,7 @@ def update_ind (nm : Lean.Name)
   (attrs : TSyntax ``attrInstance)
   (new_name : TSyntax `ident)
   -- new constructors. takes just one tau
-  (ext : Array (TSyntax `ident))
+  (ext : Array AstField)
   (derivs : Syntax.TSepArray ``derivingClass "," := ⟨#[]⟩)
   (new_elim : TSyntax `term)
   : CommandElabM (TSyntax `command) := do
@@ -116,8 +116,9 @@ def update_ind (nm : Lean.Name)
       pure (new_param.getId.eraseMacroScopes, new_param)
     | exp => throwError m!"this is not a relation (new param): {exp}"
 
-  let ext_ctr ← (liftMacroM <| ext.mapIdxM (fun idx (ctr_name : TSyntax `ident) =>
-    let idt := field (ctr_name.getId.eraseMacroScopes.toString ++ s!"{idx}")
+  let ext_ctr ← (liftMacroM <| ext.mapM (fun (field : AstField) =>
+    let idt      := field.nm_short
+    let ctr_name := field.nm_camel
     `(ctor| | $(idt):ident : ∀ {a b : $new_param_idt}, $ctr_name:ident → $new_name a b)
     ))
 
@@ -170,7 +171,7 @@ def add_rel_clone (flags : Flag) : CommandElabM Unit := do
   let my_name := my_name.getId
   let attrs ← liftMacroM flags.attrs
   -- Constructor to add
-  let with_ext    := flags.with!.map (·.fst)
+  let with_ext    := flags.ext_fields
   -- Deriv classes
   let with_derive : Syntax.TSepArray ``derivingClass "," := flags.deriving?.getD #[]
   -- New elim sort

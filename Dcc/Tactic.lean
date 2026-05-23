@@ -26,8 +26,8 @@ mirror from Expr.RedEta
 -- MetaExpr.ext : Lean.Expr → MetaExpr
 #check RedAffMeta
 -- RedAffMeta : MetaExpr → MetaExpr → Type
-#check RedAffMeta.«Lean.Expr0»
--- RedAffMeta.«Lean.Expr0» {a a¹ : MetaExpr} : Lean.Expr → RedAffMeta a a¹
+#check RedAffMeta.lean_expr
+-- MetaExpr.RedAffMeta.lean_expr {a a¹ : MetaExpr} : Lean.Expr → a.RedAffMeta a¹
 
 #check RedAffMeta.id (α := DCC[MetaExpr] Sort 1) (x := DCC[MetaExpr] Sort 0)
 

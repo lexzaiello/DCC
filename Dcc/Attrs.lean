@@ -240,6 +240,7 @@ namespace GenAst
 abbrev GenExt := TSyntax `ident × Bool
 
 inductive Flag where
+  | index   : TSyntax `term                   → Flag
   | enc     : TSyntax `ident → TSyntax `term  → Flag
   | dec     : TSyntax `ident → TSyntax `term  → Flag
   | src     : TSyntax `ident                  → Flag
@@ -250,6 +251,8 @@ inductive Flag where
   | and     : Flag → Flag                     → Flag
   | nil     : Flag
 deriving Repr, Inhabited, Nonempty
+
+instance : Append Flag := ⟨Flag.and⟩
 
 --structure GenCfg where
 
@@ -267,11 +270,13 @@ syntax "as" ident                         : gen_flag
 syntax "into" term                        : gen_flag
 syntax "with" gen_flag_ext,*              : gen_flag
 syntax "deriving" derivingClass,*         : gen_flag
+syntax "indexed" term                     : gen_flag
 
 syntax gen_flag*                          : gen_flag_set
 
 def Flag.stx (flag : Flag) : Lean.MacroM (TSyntax `gen_flag_set) :=
   match flag with
+  | .index tm    => `(gen_flag_set| indexed $tm:term)
   | .enc idt e   => `(gen_flag_set| $idt:ident encoded_by $e:term)
   | .dec idt e   => `(gen_flag_set| $idt:ident decoded_by $e:term)
   | .src e       => `(gen_flag_set| from $e)
@@ -312,6 +317,7 @@ def parse_flag (stx : TSyntax `gen_flag) : (Option Flag) :=
   | `(gen_flag| into $tm:term) => .some <| .into tm
   | `(gen_flag| $idt:ident decoded_by $tm:term) => .some <| .dec idt tm
   | `(gen_flag| $idt:ident encoded_by $tm:term) => .some <| .enc idt tm
+  | `(gen_flag| indexed $tm:term) => .some <| .index tm
   | _ => .none
 
 def parse_flags (stx : TSyntax `gen_flag_set) : Flag :=
@@ -339,6 +345,38 @@ def Flag.find? {α : Type} (f : Flag → Option α) (flag : Flag) : Option α :=
     a.find? f <|> b.find? f
   | .nil => .none
   | flag => f flag
+
+def Flag.indexes? (flag : Flag) : Option (TSyntax `term) :=
+  flag.find? (fun flag => match flag with
+    | .index tm => .some tm
+    | _ => .none)
+
+partial def Flag.elim? (flag : Flag) : Option (TSyntax `term) :=
+  let rec get_elim (tm : TSyntax `term) : Option (TSyntax `term) :=
+    match tm with
+    | `(term| $_a:term → $xs:term) => get_elim xs
+    | `(term| Sort $_m)
+    | `(term| Type $_m)
+    | `(term| Prop)    => .some tm
+    | _ => .none
+
+  flag.find? (fun flag => match flag with
+    | .index tm => get_elim tm
+    | _ => .none)
+
+partial def Flag.index_n (flag : Flag) (n : Nat) : Option (TSyntax `term) :=
+  let rec tm_param_n (n : Nat) (tm : TSyntax `term) : Option (TSyntax `term) :=
+    match tm with
+    | `(term| $a:term → $xs:term) =>
+      match n with
+      | .zero => .some a
+      | .succ n' =>
+        tm_param_n n' xs
+    | _ => .none
+
+  flag.find? (fun flag => match flag with
+    | .index tm => tm_param_n n tm
+    | _ => .none)
 
 def Flag.encoder? (for_idt : TSyntax `ident) (flag : Flag) : Option (TSyntax `term) :=
   flag.find? (fun flag => match flag with

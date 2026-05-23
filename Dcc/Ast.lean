@@ -56,6 +56,9 @@ def AstField.total_arity (fld : AstField) : ℕ :=
 def AstField.nm_short : AstField → TSyntax `ident :=
   field ∘ AstField.nm
 
+def AstField.name_long (ast_ind_name : TSyntax `ident) (fld : AstField) : Name :=
+  (ast_ind_name.getId ++ Lean.Name.mkSimple fld.nm).eraseMacroScopes
+
 def AstField.nm_long (ast_ind_name : TSyntax `ident) (fld : AstField) : TSyntax `ident :=
   mkIdent <| (ast_ind_name.getId ++ Lean.Name.mkSimple fld.nm).eraseMacroScopes
 
@@ -72,7 +75,7 @@ def AstField.ctor (ast_ind_name : TSyntax `ident) (fld : AstField) : MacroM (TSy
 -- const field
 def AstField.nm_quoted (ast_ind_name : TSyntax `ident) (fld : AstField) : MacroM (Lean.TSyntax `term) :=
   let nm := fld.nm_long ast_ind_name
-  `(.const ``$(nm) [])
+  `(Lean.Expr.const ``$(nm) [])
 
 def AstField.is_ext (fld : AstField) : Bool := ¬ fld.other_params.toList.isEmpty
 
@@ -169,8 +172,9 @@ end _test
 end GenAst
 
 open GenAst in
+open Lean (ToExpr) in
 gen_ast as Expr
-  deriving BEq, DecidableEq
+  deriving BEq, DecidableEq, ToExpr
 
 #check Expr.sort
 

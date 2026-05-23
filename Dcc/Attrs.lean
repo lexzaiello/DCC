@@ -422,4 +422,14 @@ def Flag.build_inductive (ctors : TSyntaxArray ``ctor) (flag : Flag) : MacroM (T
       inductive $my_name:ident where
       $ctors:ctor*)
 
+def Flag.has_wild_card (flag : Flag) : Bool :=
+  flag.find? (fun flag =>
+    match flag with
+    | .ext ⟨exts⟩ =>
+      (exts.find? (fun (e : GenExt) => match e with
+        | ⟨_, _, .true⟩ => true
+        | _ => false)).map (fun _ => true)
+    | _ => .none)
+  |> (Option.getD · Bool.false)
+
 end GenAst

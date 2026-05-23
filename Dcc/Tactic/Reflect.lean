@@ -2,6 +2,9 @@ import Dcc.Ast
 import Dcc.Relation
 import Dcc.Tactic
 import Lean
+import Qq
+
+namespace GenAst
 
 /-
 Conversion to / from Lean.Expr for any instance of the AST
@@ -30,7 +33,12 @@ def mk_decode (flags : Flag) : MacroM (TSyntax `command) := do
     (rec_handler := do_with)
     (from_ind_name := from_name)
     (to_ind_name := my_name)
-  let matchers : Array (TSyntax ``matchAlt) ← (← flags.all_fields).mapM get_matcher
+  let otherwise : Array (TSyntax ``matchAlt) ← do
+    if flags.has_wild_card then
+      pure #[]
+    else pure #[← `(matchAltExpr| | e => throwError m!"this is not an expr: {e}")]
+  let matchers : Array (TSyntax ``matchAlt) := (← (← flags.all_fields).mapM get_matcher)
+    ++ otherwise
 
   let cmd ← `(command|
     @[$my_attrs]
@@ -38,6 +46,8 @@ def mk_decode (flags : Flag) : MacroM (TSyntax `command) := do
       match e with
       $(matchers):matchAlt*)
   return cmd
+
+end GenAst
 
 syntax "gen_decode" gen_flag_set : command
 
@@ -49,4 +59,32 @@ gen_decode from Expr
   as MetaExpr
   with Lean.Expr *
 
+gen_decode from Expr
+  as Expr
+
+namespace _test
+
+open Lean Elab
+
 #check MetaExpr.decode
+#check Expr.decode
+
+def test_decode : TermElabM _root_.Expr := do
+  let test := toExpr (DCC (Id(Sort 1) Sort 0))
+  Expr.decode test
+
+#eval test_decode
+
+def test_decode' : TermElabM MetaExpr := do
+  let test := toExpr (DCC (Id(Sort 1) Sort 0))
+  MetaExpr.decode test
+
+#eval test_decode'
+
+def test_decode'' : TermElabM MetaExpr := do
+  let test := Lean.Expr.app (.const ``Expr.id []) (.const `garbage_name [])
+  MetaExpr.decode test
+
+#eval test_decode''
+
+end _test

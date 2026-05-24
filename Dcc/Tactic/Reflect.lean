@@ -126,8 +126,12 @@ syntax "gen_encode" gen_flag_set : command
 
 open GenAst Lean Elab in
 macro_rules
-  | `(gen_decode $flags:gen_flag_set) => mk_decode (parse_flags flags)
-  | `(gen_encode $flags:gen_flag_set) => do mk_encode (parse_flags flags) (← ast_base_fields)
+  | `(gen_decode $flags:gen_flag_set) => do
+    let cmd ← mk_decode (parse_flags flags)
+    return cmd
+  | `(gen_encode $flags:gen_flag_set) => do
+    let flags := parse_flags flags
+    mk_encode flags (← ast_base_fields flags)
 
 open GenAst in
 def dedup_fields (ext_fields fields : Array AstField) : Array AstField :=
@@ -148,9 +152,9 @@ elab "gen_encode'" flags:gen_flag_set : command => do
   let cmd ← liftMacroM <| mk_encode all_flags all_fields n_idx
   elabCommand cmd
 
-gen_decode from Expr
+gen_decode from _root_.Expr
   as MetaExpr
-  sort decoded_by decode_level
+  sort decoded_by pure
   with Lean.Expr *
 
 gen_decode from Expr
@@ -164,7 +168,7 @@ gen_encode from MetaExpr
 gen_encode'
   from MetaExpr.RedAffMeta
   as RedAff
-  sort decoded_by decode_level
+  sort decoded_by @id Lean.Expr
   with Lean.Expr *
 
 gen_encode'

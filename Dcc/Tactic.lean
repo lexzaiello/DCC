@@ -8,6 +8,7 @@ open Lean (ToExpr)
 
 gen_ast as MetaExpr
   with Lean.Expr *
+  sort decoded_by @id Lean.Expr
   deriving BEq, Repr, ToExpr
 gen_dsl "DCC'" for MetaExpr
 

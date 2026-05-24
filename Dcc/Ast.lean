@@ -93,6 +93,7 @@ def AstField.is_ext (fld : AstField) : Bool := ¬ fld.other_params.toList.isEmpt
 -- return .constructor at the end
 def AstField.meta_matcher (rec_handler : TSyntax `term) (flags : Flag) (fld : AstField) :
   MacroM (TSyntax ``matchAlt) := do
+  let rec_handler := (flags.decoder? fld.nm_short).getD rec_handler
   let from_ind_name : TSyntax `ident ← flags.get!' Flag.from?
   let to_ind_name   : TSyntax `ident ← flags.as!'
 
@@ -118,8 +119,14 @@ def AstField.meta_matcher (rec_handler : TSyntax `term) (flags : Flag) (fld : As
 
     `(matchAltExpr| | $bdr => do $do_with:term)
 
-def sort_field : MacroM AstField := do
-  return ⟨"sort", 0, #[mkIdent (``_root_.Level).eraseMacroScopes], False⟩
+def sort_field (flags : Flag) : MacroM AstField := do
+  let default_ctor := mkIdent (``_root_.Level).eraseMacroScopes
+  let ctor ← if (flags.decoder? (field "sort")).isSome then
+    `(ident| Lean.Expr)
+  else
+    pure default_ctor
+
+  return ⟨"sort", 0, #[ctor], False⟩
 
 def ast_basic_fields : (Array AstField) :=
   #[
@@ -143,8 +150,8 @@ def ast_basic_fields : (Array AstField) :=
     ⟨"bot", 0, #[], False⟩,
     ⟨"tintro", 0, #[], False⟩]
 
-def ast_base_fields : MacroM (Array AstField) := do
-  return ast_basic_fields ++ #[← sort_field]
+def ast_base_fields (flags : Flag) : MacroM (Array AstField) := do
+  return ast_basic_fields ++ #[← (sort_field flags)]
 
 def Flag.ext_fields (flags : Flag) : Array AstField :=
   flags.with!.map (fun (fld, is_wc) =>
@@ -165,13 +172,13 @@ where to_camel (s : String) : String :=
 
 -- Fields that mention types other than the inductive in ctor
 def Flag.synth_fields (flags : Flag) : MacroM (Array AstField) := do
-  return flags.ext_fields ++ #[← sort_field]
+  return flags.ext_fields ++ #[← (sort_field flags)]
 
 def Flag.basic_fields (_flags : Flag) : MacroM (Array AstField) :=
   pure ast_basic_fields
 
 def Flag.all_fields (flags : Flag) : MacroM (Array AstField) := do
-  return (← ast_base_fields) ++ flags.ext_fields
+  return (← (ast_base_fields flags)) ++ flags.ext_fields
 
 def mk_my_expr (flags : Flag) : MacroM (TSyntax `command) := do
   let my_name ← flags.as!'

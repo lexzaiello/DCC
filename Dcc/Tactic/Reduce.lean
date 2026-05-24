@@ -124,60 +124,63 @@ partial def reduce_eta (e : MetaExpr) : TacticM
 
 declare_syntax_cat reduce_cmd
 
-syntax "step"   reduce_cmd : reduce_cmd
-syntax "reduce" reduce_cmd : reduce_cmd
-syntax "aff"               : reduce_cmd
-syntax "eta"               : reduce_cmd
+syntax "step"   reduce_cmd  : reduce_cmd
+syntax "reduce!" reduce_cmd : reduce_cmd
+syntax "aff"                : reduce_cmd
+syntax "eta"                : reduce_cmd
 
 open Lean Elab Tactic
 elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
   let g  ← getMainGoal
-  -- Assume some relation r A B
-  let lctx ← getLCtx
-  let nm  := hyp.getId
-  let nm' := Name.str .anonymous s!"{hyp.getId}_'"
-  let some decl    ← lctx.findDeclM? (fun decl =>
-    if decl.userName == nm then
-      match decl.type with
-      | .app (.app _ _) _ => return Option.some decl
-      | e => throwError m!"not a relation on Expr: {e}"
-    else return Option.none) | throwError m!"couldn't find hypothesis: {hyp}"
-  let raw_expr ← lctx.findDeclM? (fun decl =>
-    if decl.userName == nm then
-      match decl.type with
-      | .app (.app _ a) _ => return Option.some a
-      | e => throwError m!"not a relation on Expr: {e}"
-    else return Option.none)
-  match raw_expr with
-  | .some A =>
-    let dec ← MetaExpr.decode A
-    match cmd with
-    | `(reduce_cmd| step $kind:reduce_cmd) =>
-      let maybe_ty_proof ← match kind with
-      | `(reduce_cmd| aff) =>
-        match ← dec.step? with
-        | .some ⟨actual_B, actual_proof⟩ =>
-          let B            := actual_B.encode
-          let ty           := Lean.Expr.app (.app (.const ``Expr.RedAff []) A) B
-          let raw_proof    := actual_proof.encode
-          pure (Option.some (ty, raw_proof))
-        | .none => pure Option.none
-      | `(reduce_cmd| eta) =>
-        match ← dec.step_eta? with
-        | .some ⟨actual_B, actual_proof⟩ =>
-          let B            := actual_B.encode
-          let ty           := Lean.Expr.app (.app (.const ``Expr.RedAff []) A) B
-          let raw_proof    := actual_proof.encode
-          pure (Option.some (ty, raw_proof))
-        | .none => pure .none
-      | _ => pure .none
-      match maybe_ty_proof with
-      | .some (ty, raw_proof) =>
-        let g' ← g.assertAfter decl.fvarId nm' ty raw_proof
-        replaceMainGoal [g'.mvarId]
+  g.withContext do
+    -- Assume some relation r A B
+    let lctx ← getLCtx
+    let nm  := hyp.getId
+    let nm' := Name.str .anonymous s!"{hyp.getId}_'"
+    let some decl    ← lctx.findDeclM? (fun decl =>
+      if decl.userName.eraseMacroScopes == nm.eraseMacroScopes then
+        match decl.type with
+        | .app (.app _ _) _ => return Option.some decl
+        | e => throwError m!"not a relation on Expr: {e}"
+      else return Option.none) | throwError m!"couldn't find hypothesis: {hyp}"
+    let raw_expr ← lctx.findDeclM? (fun decl =>
+      if decl.userName == nm then
+        match decl.type with
+        | .app (.app _ a) _ => return Option.some a
+        | e => throwError m!"not a relation on Expr: {e}"
+      else return Option.none)
+    match raw_expr with
+    | .some A =>
+      let dec ← MetaExpr.decode A
+      match cmd with
+      | `(reduce_cmd| step $kind:reduce_cmd) =>
+        let maybe_ty_proof ← match kind with
+        | `(reduce_cmd| aff) =>
+          dbg_trace repr dec
+          match ← dec.step? with
+          | .some ⟨actual_B, actual_proof⟩ =>
+            dbg_trace repr actual_B
+            let B            := actual_B.encode
+            let ty           := Lean.Expr.app (.app (.const ``Expr.RedAff []) A) B
+            let raw_proof    := actual_proof.encode
+            pure (Option.some (ty, raw_proof))
+          | .none => pure Option.none
+        | `(reduce_cmd| eta) =>
+          match ← dec.step_eta? with
+          | .some ⟨actual_B, actual_proof⟩ =>
+            let B            := actual_B.encode
+            let ty           := Lean.Expr.app (.app (.const ``Expr.RedEta []) A) B
+            let raw_proof    := actual_proof.encode
+            pure (Option.some (ty, raw_proof))
+          | .none => pure .none
+        | _ => pure .none
+        match maybe_ty_proof with
+        | .some (ty, raw_proof) =>
+          let g' ← g.assertAfter decl.fvarId nm' ty raw_proof
+          replaceMainGoal [g'.mvarId]
+        | _ => pure ()
       | _ => pure ()
     | _ => pure ()
-  | _ => pure ()
 
 namespace _test
 

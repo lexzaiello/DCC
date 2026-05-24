@@ -1,5 +1,6 @@
 import Dcc.Judge
 import Dcc.Types
+import Dcc.Tactic.Reduce
 
 namespace Expr
 
@@ -79,6 +80,13 @@ def view (hR : Reduces A C) : Option ((B : Expr) × PLift (View A B C)) :=
   | _ => .none
 
 end Reduces
+
+open Reduces in theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
+  cases ht with
+  | eq ht hr =>
+    dcc step aff from hr
+    sorry
+  | _ => sorry
 
 open Reduces in theorem reflect (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
   cases ht with

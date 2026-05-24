@@ -260,8 +260,8 @@ declare_syntax_cat gen_flag
 declare_syntax_cat gen_flag_set
 declare_syntax_cat gen_flag_ext
 
-syntax ident                       : gen_flag_ext
-syntax ident "*"                   : gen_flag_ext
+syntax ident                              : gen_flag_ext
+syntax ident "*"                          : gen_flag_ext
 
 syntax ident "decoded_by" term            : gen_flag
 syntax ident "encoded_by" term            : gen_flag

@@ -8,7 +8,7 @@ import Lean.Elab.Command
 import Lean.Parser.Term.Basic
 import Qq
 
-open MetaExpr
+open Expr (RedAff RedEta)
 
 namespace GenAst
 
@@ -46,20 +46,29 @@ def AstField.to_lean (then_do : TSyntax `term → MacroM (TSyntax `term))
   (flags : Flag) (fld : AstField) : MacroM (TSyntax ``matchAlt) := do
   let lean_app : TSyntax `ident := mkIdent ``Lean.Expr.app
   let nm_long := fld.nm_long (← flags.get!' Flag.from?)
-  let nm_quot ← fld.nm_quoted (← flags.get!' Flag.from?)
+  let nm_quot ← fld.nm_quoted (← flags.as!')
   let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
       let idt : TSyntax `ident := mkIdent (Name.str .anonymous s!"x_{n}").eraseMacroScopes
       idt)
   let bdr ← `(term| $nm_long:ident $(⟨vars⟩)*)
 
-  let mut_vars ← if fld.is_ext then
-    vars.mapM (fun e => `(term| Lean.ToExpr.toExpr $e:term))
-  else vars.mapM then_do
+  match flags.encoder? fld.nm_short with
+  | .some enc =>
+    match vars with
+    /-| [x] =>
+      `(matchAltExpr| | $bdr => $enc:term $x:term)-/
+    | _ =>
+      let mut_vars ← vars.mapM (fun v => `(term| $enc:term $v:term))
+      let bdy ← mut_vars.foldlM (init := ← `(term| $nm_quot))
+          (fun (acc : TSyntax `term) (e : TSyntax `term) => `(term| $lean_app $acc:term $e:term))
 
-  let bdy ← mut_vars.foldlM (init := ← `(term| $nm_quot))
-      (fun (acc : TSyntax `term) (e : TSyntax `term) => `(term| $lean_app $acc:term $e:term))
+      `(matchAltExpr| | $bdr => $bdy:term)
+  | _ =>
+    let mut_vars ← vars.mapM then_do
+    let bdy ← mut_vars.foldlM (init := ← `(term| $nm_quot))
+        (fun (acc : TSyntax `term) (e : TSyntax `term) => `(term| $lean_app $acc:term $e:term))
 
-  `(matchAltExpr| | $bdr => $bdy:term)
+    `(matchAltExpr| | $bdr => $bdy:term)
 
 def mk_encode (flags : Flag) (base_fields : Array AstField) (ind_arity : ℕ := 0) : MacroM (TSyntax `command) := do
   let my_ext    := flags.ext_fields
@@ -154,28 +163,230 @@ elab "gen_encode'" flags:gen_flag_set : command => do
 
 gen_decode from _root_.Expr
   as MetaExpr
-  sort decoded_by pure
+  decode sort with pure
   with Lean.Expr *
 
 gen_decode from Expr
   as Expr
-  sort decoded_by decode_level
+  decode sort with decode_level
 
 gen_encode from MetaExpr
   as Expr
+  encode sort with _root_.id
+  encode lean_expr with _root_.id
   with Lean.Expr *
 
-gen_encode'
-  from MetaExpr.RedAffMeta
-  as RedAff
-  sort decoded_by @id Lean.Expr
-  with Lean.Expr *
+open Qq in
+def MetaExpr.RedAffMeta.encode (e : MetaExpr.RedAffMeta A B) : Lean.Expr :=
+  match e with
+  | .quot (β := β) (x := x) (y := y) =>
+    let β  : Q(_root_.Expr) := β.encode
+    let x  : Q(_root_.Expr) := x.encode
+    let y  : Q(_root_.Expr) := y.encode
+    q(Expr.RedAff.quot (β := $β) (x := $x) (y := $y))
+  | .id (α := α) (x := x) =>
+    let α  : Q(_root_.Expr) := α.encode
+    let x  : Q(_root_.Expr) := x.encode
+    q(Expr.RedAff.id (α := $α) (x := $x))
+  | .fstc (_α := _α) (β := β) (a := a) (b := b) =>
+    let _α  : Q(_root_.Expr) := _α.encode
+    let β  : Q(_root_.Expr)  := β.encode
+    let a  : Q(_root_.Expr)  := a.encode
+    let b  : Q(_root_.Expr)  := b.encode
+    q(@Expr.RedAff.fstc $_α $β $a $b)
+  | .sndc (_α := _α) (β := β) (a := a) (b := b) =>
+    let _α  : Q(_root_.Expr) := _α.encode
+    let β  : Q(_root_.Expr)  := β.encode
+    let a  : Q(_root_.Expr)  := a.encode
+    let b  : Q(_root_.Expr)  := b.encode
+    q(@Expr.RedAff.sndc $_α $β $a $b)
+  | .comp' (x := x) (y := y) (z := z) =>
+    let x  : Q(_root_.Expr) := x.encode
+    let y  : Q(_root_.Expr) := y.encode
+    let z  : Q(_root_.Expr) := z.encode
+    q(@Expr.RedAff.comp' $x $y $z)
+  | .comp (x := x) (y := y) (z := z) =>
+    let x  : Q(_root_.Expr) := x.encode
+    let y  : Q(_root_.Expr) := y.encode
+    let z  : Q(_root_.Expr) := z.encode
+    q(@Expr.RedAff.comp $x $y $z)
+  | .curr (α := α) (β := β) (x := x) (y := y) (z := z) =>
+    let α  : Q(_root_.Expr) := α.encode
+    let β  : Q(_root_.Expr) := β.encode
+    let x  : Q(_root_.Expr) := x.encode
+    let y  : Q(_root_.Expr) := y.encode
+    let z  : Q(_root_.Expr) := z.encode
+    q(@Expr.RedAff.curr $α $β $x $y $z)
+  | .sigl (β := β) (x := x) (x' := x') (y := y) h =>
+    let β  : Q(_root_.Expr) := β.encode
+    let x  : Q(_root_.Expr) := x.encode
+    let x' : Q(_root_.Expr) := x'.encode
+    let y  : Q(_root_.Expr) := y.encode
+    let h : Q(Expr.RedAff (Expr.mkc $β $x $y) (Expr.mkc $β $x' $y)) := h.encode
+    .app (.app (.app (.app (Lean.Expr.app (.const ``Expr.RedAff.sigl []) x) x') β) y) h
+  | .sigr (β := β) (x := x) (y' := y') (y := y) h =>
+    let β  : Q(_root_.Expr) := β.encode
+    let x  : Q(_root_.Expr) := x.encode
+    let y' : Q(_root_.Expr) := y'.encode
+    let y  : Q(_root_.Expr) := y.encode
+    let h  := h.encode
+    let h : Q(Expr.RedAff (Expr.mkc $β $x $y) (Expr.mkc $β $x $y')) := h
+    .app (.app (.app (.app (Lean.Expr.app (.const ``Expr.RedAff.sigr []) x) y') β) y) h
+  | .sigma (f_α := f_α) (f_β := f_β) (env := env) =>
+    let f_α : Q(_root_.Expr):= f_α.encode
+    let f_β : Q(_root_.Expr):= f_β.encode
+    let env : Q(_root_.Expr):= env.encode
+    q(@Expr.RedAff.sigma $f_α $f_β $env)
+  | .coup (β := β) (β' := β') h =>
+    let β  : Q(_root_.Expr) := β.encode
+    let β' : Q(_root_.Expr) := β'.encode
+    let h := h.encode
+    .app (.app (.app (.const ``Expr.RedAff.coup []) β) β') h
+  | .congrFun (f := f) (f' := f') (x := x) h =>
+    let x  : Q(_root_.Expr) := x.encode
+    let f  : Q(_root_.Expr) := f.encode
+    let f' : Q(_root_.Expr) := f'.encode
+    let h := h.encode
+    .app (.app (.app (.app (.const ``Expr.RedAff.congrFun []) f) f') x) h
+  | .congrArg (x := x) (x' := x') (f := f) h =>
+    let x  : Q(_root_.Expr)  := x.encode
+    let x'  : Q(_root_.Expr) := x'.encode
+    let f : Q(_root_.Expr)   := f.encode
+    let h := h.encode
+    .app (.app (.app (.app (.const ``Expr.RedAff.congrArg []) x) x') f) h
+  | .lean_expr e => e
 
-gen_encode'
-  from MetaExpr.RedEtaMeta
-  as RedAff
-  sort decoded_by decode_level
-  with Lean.Expr *
+open Qq in
+def MetaExpr.RedEtaMeta.encode (e : MetaExpr.RedEtaMeta A B) : Lean.Expr :=
+  match e with
+  | .curr (α := α) (β := β) (x := x) (x' := x') h =>
+    let α  : Q(_root_.Expr) := α.encode
+    let β  : Q(_root_.Expr) := β.encode
+    let x  : Q(_root_.Expr) := x.encode
+    let x' : Q(_root_.Expr) := x'.encode
+    let h := h.encode
+    .app (.app (.app (.app (.app (.const ``_root_.Expr.RedEta.curr []) x) x') α) β) h
+  | .curr_quot (α := α) (x := x) (y := y) =>
+    let α : Q(_root_.Expr) := α.encode
+    let x : Q(_root_.Expr) := x.encode
+    let y : Q(_root_.Expr) := y.encode
+    q(@_root_.Expr.RedEta.curr_quot $α $x $y)
+  | .curr_fst (α := α) (β := β) (x := x) (β₂ := β₂) (y := y) =>
+    let α : Q(_root_.Expr) := α.encode
+    let β : Q(_root_.Expr)  := β.encode
+    let x  : Q(_root_.Expr) := x.encode
+    let β₂ : Q(_root_.Expr)  := β₂.encode
+    let y : Q(_root_.Expr) := y.encode
+    q(@_root_.Expr.RedEta.curr_fst $α $β $x $β₂ $y)
+  | .curr_fst' (α := α) (β := β) (x := x) (β₂ := β₂) (y := y) =>
+    let α : Q(_root_.Expr) := α.encode
+    let β : Q(_root_.Expr)  := β.encode
+    let x  : Q(_root_.Expr) := x.encode
+    let β₂ : Q(_root_.Expr)  := β₂.encode
+    let y : Q(_root_.Expr) := y.encode
+    q(@_root_.Expr.RedEta.curr_fst' $α $β $x $β₂ $y)
+  | .pi (α := α) (β := β) (p' := p') (env := env) h =>
+    let α : Q(_root_.Expr) := α.encode
+    let β : Q(_root_.Expr)  := β.encode
+    let p' : Q(_root_.Expr) := p'.encode
+    let env := env.encode
+    let h := h.encode
+
+    .app (.app (.app (.app (.app (.const ``Expr.RedEta.pi []) α) β) p') env) h
+  | .pi_quot (x := x) (x' := x') (α := α) (β := β) h =>
+    let x  : Q(_root_.Expr) := x.encode
+    let x' : Q(_root_.Expr) := x'.encode
+    let α : Q(_root_.Expr) := α.encode
+    let β : Q(_root_.Expr)  := β.encode
+    let h := h.encode
+    .app (.app (.app (.app (.app (.const ``Expr.RedEta.pi_quot []) x) x') α) β) h
+  | .pi' (β := β) (β' := β') (α := α) h =>
+    let β : Q(_root_.Expr)  := β.encode
+    let β' : Q(_root_.Expr) := β'.encode
+    let α : Q(_root_.Expr) := α.encode
+    let h := h.encode
+    .app (.app (.app (.app (.const ``Expr.RedEta.pi' []) β) β') α) h
+  | .sig (β := β) (env := env) (β' := β') (α := α) h =>
+    let β : Q(_root_.Expr)   := β.encode
+    let env : Q(_root_.Expr) := env.encode
+    let β' : Q(_root_.Expr)  := β'.encode
+    let α : Q(_root_.Expr)   := α.encode
+    let h := h.encode
+    .app (.app (.app (.app (.app (.const ``Expr.RedEta.sig []) β) env) β') α) h
+  | .sig' (β := β) (β' := β') (α := α) h =>
+    let β : Q(_root_.Expr)  := β.encode
+    let β' : Q(_root_.Expr) := β'.encode
+    let α : Q(_root_.Expr) := α.encode
+    let h := h.encode
+    .app (.app (.app (.app (.const ``Expr.RedEta.sig' []) β) β') α) h
+  | .idl (α := α) (f := f) =>
+    let α : Q(_root_.Expr) := α.encode
+    let f : Q(_root_.Expr) := f.encode
+    q(_root_.Expr.RedEta.idl (α := $α) (f := $f))
+  | .idl' (α := α) (f := f) =>
+    let α : Q(_root_.Expr) := α.encode
+    let f : Q(_root_.Expr) := f.encode
+    q(_root_.Expr.RedEta.idl' (α := $α) (f := $f))
+  | .quot_fst (α := α) (x := x) (β := β) =>
+    let α : Q(_root_.Expr) := α.encode
+    let x : Q(_root_.Expr) := x.encode
+    let β : Q(_root_.Expr) := β.encode
+    q(_root_.Expr.RedEta.quot_fst (α := $α) (x := $x) (β := $β))
+  | .quot'_fst (α := α) (x := x) (β := β) =>
+    let α : Q(_root_.Expr) := α.encode
+    let x : Q(_root_.Expr) := x.encode
+    let β : Q(_root_.Expr) := β.encode
+    q(_root_.Expr.RedEta.quot'_fst (α := $α) (x := $x) (β := $β))
+  | .quot_snd (α := α) (x := x) (β := β) =>
+    let α : Q(_root_.Expr) := α.encode
+    let x : Q(_root_.Expr) := x.encode
+    let β : Q(_root_.Expr) := β.encode
+    q(_root_.Expr.RedEta.quot_snd (α := $α) (x := $x) (β := $β))
+  | .quot'_snd (α := α) (x := x) (β := β) =>
+    let α : Q(_root_.Expr) := α.encode
+    let x : Q(_root_.Expr) := x.encode
+    let β : Q(_root_.Expr) := β.encode
+    q(_root_.Expr.RedEta.quot'_snd (α := $α) (x := $x) (β := $β))
+  | .quot_fst' (α := α) (x := x) (β := β) (z := z) =>
+    let α : Q(_root_.Expr) := α.encode
+    let x : Q(_root_.Expr) := x.encode
+    let β : Q(_root_.Expr) := β.encode
+    let z : Q(_root_.Expr) := z.encode
+    q(_root_.Expr.RedEta.quot_fst' (α := $α) (x := $x) (β := $β) (z := $z))
+  | .quot'_fst' (α := α) (x := x) (β := β) (z := z) =>
+    let α : Q(_root_.Expr) := α.encode
+    let x : Q(_root_.Expr) := x.encode
+    let β : Q(_root_.Expr) := β.encode
+    let z : Q(_root_.Expr) := z.encode
+    q(_root_.Expr.RedEta.quot'_fst' (α := $α) (x := $x) (β := $β) (z := $z))
+  | .quot_snd' (α := α) (x := x) (β := β) (z := z) =>
+    let α : Q(_root_.Expr) := α.encode
+    let x : Q(_root_.Expr) := x.encode
+    let β : Q(_root_.Expr) := β.encode
+    let z : Q(_root_.Expr) := z.encode
+    q(_root_.Expr.RedEta.quot_snd' (α := $α) (x := $x) (β := $β) (z := $z))
+  | .quot'_snd' (α := α) (x := x) (β := β) (z := z) =>
+    let α : Q(_root_.Expr) := α.encode
+    let x : Q(_root_.Expr) := x.encode
+    let β : Q(_root_.Expr) := β.encode
+    let z : Q(_root_.Expr) := z.encode
+    q(_root_.Expr.RedEta.quot'_snd' (α := $α) (x := $x) (β := $β) (z := $z))
+  | .pi_comp (f_α := f_α) (f_β := f_β) (x := x) =>
+    let f_α : Q(_root_.Expr) := f_α.encode
+    let f_β : Q(_root_.Expr) := f_β.encode
+    let x   : Q(_root_.Expr) := x.encode
+    q(_root_.Expr.RedEta.pi_comp (f_α := $f_α) (f_β := $f_β) (x := $x))
+  | .pi'_comp (f_α := f_α) (f_β := f_β) (x := x) =>
+    let f_α : Q(_root_.Expr) := f_α.encode
+    let f_β : Q(_root_.Expr) := f_β.encode
+    let x   : Q(_root_.Expr) := x.encode
+    q(_root_.Expr.RedEta.pi'_comp (f_α := $f_α) (f_β := $f_β) (x := $x))
+  | .eql (f_α := f_α) (env := env) (x := x) =>
+    let f_α : Q(_root_.Expr) := f_α.encode
+    let env : Q(_root_.Expr) := env.encode
+    let x   : Q(_root_.Expr) := x.encode
+    q(_root_.Expr.RedEta.eql (f_α := $f_α) (x := $x) (env := $env))
+  | .lean_expr e => e
 
 #check MetaExpr.RedAffMeta.encode
 #check MetaExpr.RedEtaMeta.encode

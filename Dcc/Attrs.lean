@@ -263,8 +263,8 @@ declare_syntax_cat gen_flag_ext
 syntax ident                              : gen_flag_ext
 syntax ident "*"                          : gen_flag_ext
 
-syntax ident "decoded_by" term            : gen_flag
-syntax ident "encoded_by" term            : gen_flag
+syntax "decode" ident "with" term         : gen_flag
+syntax "encode" ident "with" term         : gen_flag
 syntax "from" ident                       : gen_flag
 syntax "as" ident                         : gen_flag
 syntax "into" term                        : gen_flag
@@ -277,8 +277,8 @@ syntax gen_flag*                          : gen_flag_set
 def Flag.stx (flag : Flag) : Lean.MacroM (TSyntax `gen_flag_set) :=
   match flag with
   | .index tm    => `(gen_flag_set| indexed $tm:term)
-  | .enc idt e   => `(gen_flag_set| $idt:ident encoded_by $e:term)
-  | .dec idt e   => `(gen_flag_set| $idt:ident decoded_by $e:term)
+  | .enc idt e   => `(gen_flag_set| encode $idt:ident with $e:term)
+  | .dec idt e   => `(gen_flag_set| decode $idt:ident with $e:term)
   | .src e       => `(gen_flag_set| from $e)
   | .as  e       => `(gen_flag_set| as $e)
   | .ext e       => do
@@ -315,8 +315,8 @@ def parse_flag (stx : TSyntax `gen_flag) : (Option Flag) :=
     .some <| .ext ⟨exts⟩
   | `(gen_flag| deriving $idts:derivingClass,*) => .some <| .deriv idts
   | `(gen_flag| into $tm:term) => .some <| .into tm
-  | `(gen_flag| $idt:ident decoded_by $tm:term) => .some <| .dec idt tm
-  | `(gen_flag| $idt:ident encoded_by $tm:term) => .some <| .enc idt tm
+  | `(gen_flag| decode $idt:ident with $tm:term) => .some <| .dec idt tm
+  | `(gen_flag| encode $idt:ident with $tm:term) => .some <| .enc idt tm
   | `(gen_flag| indexed $tm:term) => .some <| .index tm
   | _ => .none
 

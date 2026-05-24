@@ -81,10 +81,13 @@ def view (hR : Reduces A C) : Option ((B : Expr) × PLift (View A B C)) :=
 
 end Reduces
 
-open Reduces in theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
-  cases ht with
-  | eq ht hr =>
-    dcc step aff from hr
+end Expr
+
+open Expr (Judge RedEta)
+
+theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
+  match ht with
+  | .eq ht ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
     sorry
   | _ => sorry
 
@@ -99,4 +102,12 @@ open Reduces in theorem reflect (ht : Judge e (DCC (=(f_α) env x y))) : x = y :
     sorry
   | _ => sorry
 
-end Expr
+/-
+Need full reducer
+
+reduce A = B
+
+We need IsNorm for this.
+
+but for this we need a proof of reduce A = B.
+-/

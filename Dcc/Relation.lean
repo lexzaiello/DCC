@@ -150,7 +150,10 @@ def update_ind (nm : Lean.Name)
 
     let ty := update_names update_param cinfo.type
 
+    dbg_trace ty
+
     let constr_bdy ← literal_ctor ty
+
     `(ctor| | $constr_idt:ident : $constr_bdy))
   let all_ctrs : Lean.TSyntaxArray _ := (Array.mk h) ++ ext_ctr
   -- or try delab pretty α β

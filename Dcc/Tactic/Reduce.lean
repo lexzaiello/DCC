@@ -17,6 +17,22 @@ open Expr (RedEta)
 
 namespace MetaExpr
 
+open Lean Elab Tactic in
+def lookup_local_hyp (pre : Lean.Name) (nm : Lean.Expr) : TacticM (Option (MetaExpr × Lean.Expr)) := do
+  let g ← getMainGoal
+  g.withContext do
+    let lctx ← getLCtx
+    lctx.findDeclM? (fun decl => do
+      match decl.type with
+      | .app (.app pre' A) B =>
+        if ← isDefEq (.const pre []) pre' then
+          if ← isDefEq nm A then
+            let B ← MetaExpr.decode B
+            return .some (B, (Lean.Expr.const decl.userName []))
+          else return .none
+        else return .none
+      | _ => return .none)
+
 @[dcc_force_reduce, dcc_force_aff]
 def step? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedAffMeta e e'))) :=
   match e with
@@ -42,7 +58,11 @@ def step? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedAffMeta e e')
     | .some ⟨f', h₁⟩, _ => return .some ⟨(DCC[.] (f' x)), .congrFun h₁⟩
     | _, .some ⟨x', h₁⟩ => return .some ⟨(DCC[.] (f x')), .congrArg h₁⟩
     | _, _ => return .none
-  | _ => return .none
+  | .lean_expr e => do
+    match ← lookup_local_hyp ``Expr.RedAff e with
+    | .some (a, b) => return .some ⟨a, .lean_expr b⟩
+    | _ => return .none
+  | _            => return .none
 
 set_option maxHeartbeats 2000000 in
 def step_eta? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedEtaMeta e e'))) :=
@@ -98,6 +118,10 @@ def step_eta? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedEtaMeta e
   | (DCC[.] (`(α, x) ∘' Fstc(β)) ∘' z) => return .some ⟨_, .quot'_fst'⟩
   | (DCC[.] (`(α, x) ∘ Sndc(β)) ∘ z) => return .some ⟨_, .quot_snd'⟩
   | (DCC[.] (`(α, x) ∘' Sndc(β)) ∘' z) => return .some ⟨_, .quot'_snd'⟩
+  | .lean_expr e => do
+    match ← lookup_local_hyp ``Expr.RedEta e with
+    | .some (a, b) => return .some ⟨a, .lean_expr b⟩
+    | _ => return .none
   | _ => return .none
 
 partial def reduce_aff (e : MetaExpr) : TacticM
@@ -136,7 +160,7 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
     -- Assume some relation r A B
     let lctx ← getLCtx
     let nm  := hyp.getId
-    let nm' := Name.str .anonymous s!"{hyp.getId}_'"
+    let nm' := Name.str .anonymous s!"{hyp.getId}'"
     let some decl    ← lctx.findDeclM? (fun decl =>
       if decl.userName.eraseMacroScopes == nm.eraseMacroScopes then
         match decl.type with
@@ -159,7 +183,6 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
           dbg_trace repr dec
           match ← dec.step? with
           | .some ⟨actual_B, actual_proof⟩ =>
-            dbg_trace repr actual_B
             let B            := actual_B.encode
             let ty           := Lean.Expr.app (.app (.const ``Expr.RedAff []) A) B
             let raw_proof    := actual_proof.encode

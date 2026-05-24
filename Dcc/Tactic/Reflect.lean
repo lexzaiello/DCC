@@ -167,6 +167,15 @@ gen_encode'
   sort decoded_by decode_level
   with Lean.Expr *
 
+gen_encode'
+  from MetaExpr.RedEtaMeta
+  as RedAff
+  sort decoded_by decode_level
+  with Lean.Expr *
+
+#check MetaExpr.RedAffMeta.encode
+#check MetaExpr.RedEtaMeta.encode
+
 #check MetaExpr.encode
 #check MetaExpr.encode
 

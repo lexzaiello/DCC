@@ -150,6 +150,7 @@ declare_syntax_cat reduce_cmd
 
 syntax "step"   reduce_cmd  : reduce_cmd
 syntax "reduce!" reduce_cmd : reduce_cmd
+syntax "reduce*" reduce_cmd : reduce_cmd
 syntax "aff"                : reduce_cmd
 syntax "eta"                : reduce_cmd
 
@@ -180,7 +181,6 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
       | `(reduce_cmd| step $kind:reduce_cmd) =>
         let maybe_ty_proof ← match kind with
         | `(reduce_cmd| aff) =>
-          dbg_trace repr dec
           match ← dec.step? with
           | .some ⟨actual_B, actual_proof⟩ =>
             let B            := actual_B.encode
@@ -202,6 +202,15 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
           let g' ← g.assertAfter decl.fvarId nm' ty raw_proof
           replaceMainGoal [g'.mvarId]
         | _ => pure ()
+      | `(reduce_cmd| reduce* $kind:reduce_cmd) =>
+        let (actual_B, raw_proof) ← match kind with
+        | `(reduce_cmd| aff) =>
+          dec.reduce_aff
+        | _ => dec.reduce_eta
+        let B            := actual_B.encode
+        let ty           := Lean.Expr.app (.app (.app (.const ``Relation.ReflTransGen []) (.const ``Expr.RedEta [])) A) B
+        let g' ← g.assertAfter decl.fvarId nm' ty raw_proof
+        replaceMainGoal [g'.mvarId]
       | _ => pure ()
     | _ => pure ()
 

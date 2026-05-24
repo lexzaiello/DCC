@@ -139,7 +139,7 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
   let some decl    ← lctx.findDeclM? (fun decl =>
     if decl.userName == nm then
       match decl.type with
-      | .app (.app _ a) _ => return Option.some decl
+      | .app (.app _ _) _ => return Option.some decl
       | e => throwError m!"not a relation on Expr: {e}"
     else return Option.none) | throwError m!"couldn't find hypothesis: {hyp}"
   let raw_expr ← lctx.findDeclM? (fun decl =>
@@ -182,7 +182,7 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
 namespace _test
 
 open Expr in
-example (h_absurd : RedAff (DCC (Id(Sort 1) Sort 0)) (DCC Sort 1)) : RedAff (DCC Sort 0) (DCC Sort 1) := by
+example (h_absurd : RedAff (DCC (Id(Sort 1) α)) (DCC Sort 1)) : RedAff (DCC Sort 0) (DCC Sort 1) := by
   dcc step aff from h_absurd
   sorry
 

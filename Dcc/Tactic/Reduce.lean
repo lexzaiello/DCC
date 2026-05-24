@@ -259,6 +259,7 @@ namespace _test
 open Expr in
 example (h_absurd : RedAff (DCC (Id(Sort 1) α)) (DCC Sort 1)) : RedAff (DCC Sort 0) (DCC Sort 1) := by
   dcc step aff from h_absurd
+  dcc reduce! aff from h_absurd
   sorry
 
 end _test

@@ -146,11 +146,28 @@ partial def reduce_eta (e : MetaExpr) : TacticM
       (.app (.const ``Relation.ReflTransGen.single []) h_raw)) h₂_raw)
   | .none => return (e, .const ``Relation.ReflTransGen.refl [])
 
+def reduce_aff_norm (A : MetaExpr) : TacticM
+  (MetaExpr × Lean.Expr × Lean.Expr) := do
+  let ⟨B, h⟩ ← reduce_aff A
+  let B' : Q(_root_.Expr) := B.encode
+  let to_decide : Lean.Expr := q(_root_.Expr.IsNorm _root_.Expr.RedAff $B')
+  let proof ← Lean.Meta.mkDecideProof to_decide
+  return (B, proof, h)
+
+def reduce_eta_norm (A : MetaExpr) : TacticM
+  (MetaExpr × Lean.Expr × Lean.Expr) := do
+  let ⟨B, h⟩ ← reduce_eta A
+  let B' : Q(_root_.Expr) := B.encode
+  let to_decide : Lean.Expr := q(_root_.Expr.IsNorm _root_.Expr.RedEta $B')
+  let proof ← Lean.Meta.mkDecideProof to_decide
+  return (B, proof, h)
+
 declare_syntax_cat reduce_cmd
 
 syntax "step"   reduce_cmd  : reduce_cmd
 syntax "reduce!" reduce_cmd : reduce_cmd
 syntax "reduce*" reduce_cmd : reduce_cmd
+syntax "norm" reduce_cmd    : reduce_cmd
 syntax "aff"                : reduce_cmd
 syntax "eta"                : reduce_cmd
 
@@ -203,14 +220,37 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
           replaceMainGoal [g'.mvarId]
         | _ => pure ()
       | `(reduce_cmd| reduce* $kind:reduce_cmd) =>
-        let (actual_B, raw_proof) ← match kind with
+        let (ty, raw_proof) ← match kind with
         | `(reduce_cmd| aff) =>
-          dec.reduce_aff
-        | _ => dec.reduce_eta
-        let B            := actual_B.encode
-        let ty           := Lean.Expr.app (.app (.app (.const ``Relation.ReflTransGen []) (.const ``Expr.RedEta [])) A) B
+          let (actual_B, raw_proof) ← dec.reduce_aff
+          let B            := actual_B.encode
+          pure (Lean.Expr.app (.app (.app (.const ``Relation.ReflTransGen []) (.const ``Expr.RedAff [])) A) B, raw_proof)
+        | _ =>
+          let (actual_B, raw_proof) ← dec.reduce_eta
+
+          let B            := actual_B.encode
+          pure (Lean.Expr.app (.app (.app (.const ``Relation.ReflTransGen []) (.const ``Expr.RedEta [])) A) B, raw_proof)
         let g' ← g.assertAfter decl.fvarId nm' ty raw_proof
         replaceMainGoal [g'.mvarId]
+      | `(reduce_cmd| reduce! $kind:reduce_cmd) =>
+        let ((ty, raw_proof), (ty_norm, raw_proof_norm)) ← match kind with
+        | `(reduce_cmd| aff) =>
+          let (actual_B, norm_proof, raw_proof) ← dec.reduce_aff_norm
+          let B            := actual_B.encode
+          let tup_red := (Lean.Expr.app
+            (.app (.app (.const ``Relation.ReflTransGen []) (.const ``Expr.RedAff [])) A) B, raw_proof)
+          let tup_norm := (Lean.Expr.app (.app (.const ``Expr.IsNorm []) (.const ``Expr.RedAff [])) B, norm_proof)
+          pure (tup_red, tup_norm)
+        | _ =>
+          let (actual_B, norm_proof, raw_proof) ← dec.reduce_eta_norm
+          let B            := actual_B.encode
+          let tup_red := (Lean.Expr.app
+            (.app (.app (.const ``Relation.ReflTransGen []) (.const ``Expr.RedEta [])) A) B, raw_proof)
+          let tup_norm := (Lean.Expr.app (.app (.const ``Expr.IsNorm []) (.const ``Expr.RedEta [])) B, norm_proof)
+          pure (tup_red, tup_norm)
+        let nm₁' := Name.str .anonymous s!"{hyp.getId}'₁"
+        let ⟨_, g'⟩ ← g.assertHypotheses #[{ userName := nm', type := ty, value := raw_proof, binderInfo := .default, kind := .default}, { userName := nm₁', type := ty_norm, value := raw_proof_norm, binderInfo := .default, kind := .default}]
+        replaceMainGoal [g']
       | _ => pure ()
     | _ => pure ()
 

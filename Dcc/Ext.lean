@@ -1,6 +1,9 @@
 import Dcc.Judge
+import Dcc.Relation
 import Dcc.Types
 import Dcc.Tactic.Reduce
+import Dcc.Aff.Red
+import Dcc.Eta.Red
 
 namespace Expr
 
@@ -83,11 +86,13 @@ end Reduces
 
 end Expr
 
-open Expr (Judge RedEta)
+namespace Expr
+
 
 theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
   match ht with
   | .eq ht ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    
     sorry
   | _ => sorry
 
@@ -101,6 +106,8 @@ open Reduces in theorem reflect (ht : Judge e (DCC (=(f_α) env x y))) : x = y :
     let heq := hr.complete
     sorry
   | _ => sorry
+
+end Expr
 
 /-
 Need full reducer

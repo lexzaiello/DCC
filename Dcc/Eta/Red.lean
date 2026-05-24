@@ -135,4 +135,16 @@ abbrev RedEta.reduce := Expr.reduce RedEta
 
 attribute [dcc_force_reduce, dcc_force_eta] RedEta.reduce.eq_def
 
+instance : Decidable (IsNorm RedEta A) :=
+  match heq₀ : reduce RedEta A with
+  | ⟨A', ⟨h⟩⟩ =>
+    if heq : A' = A then
+      have h_norm := reduce_norm (h := heq ▸ h) (A := A) (B := A) (hR := RedEta.instRedRel) (heq ▸ heq₀)
+      .isTrue (fun ⟨a, b⟩ => by
+        exact h_norm ⟨_, b⟩)
+    else
+      .isFalse (fun h => by
+        have h := RedEta.instRedRel.reduce_norm_fst h
+        simp_all)
+
 end Expr

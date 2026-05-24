@@ -266,4 +266,16 @@ abbrev RedAff.reduce := Expr.reduce RedAff
 
 attribute [dcc_force_reduce, dcc_force_aff] RedAff.reduce.eq_def
 
+instance : Decidable (IsNorm RedAff A) :=
+  match heq₀ : reduce RedAff A with
+  | ⟨A', ⟨h⟩⟩ =>
+    if heq : A' = A then
+      have h_norm := reduce_norm (h := heq ▸ h) (A := A) (B := A) (hR := RedAff.instRedRel) (heq ▸ heq₀)
+      .isTrue (fun ⟨a, b⟩ => by
+        exact h_norm ⟨_, b⟩)
+    else
+      .isFalse (fun h => by
+        have h := RedAff.instRedRel.reduce_norm_fst h
+        simp_all)
+
 end Expr

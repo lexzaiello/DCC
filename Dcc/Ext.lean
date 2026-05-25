@@ -297,6 +297,12 @@ theorem no_pi_eq (h_r : RedEtaReflTrans (DCC (Π(f_α, f_β) env)) (DCC x = y)) 
         exact no_pi_eq h₂
 termination_by f_β.size
 
+@[dcc_reduce]
+theorem coup (h : RedEtaReflTrans (DCC Coup(β)) B) : (DCC Coup(β)) = B := by
+  match h.cases_head with
+  | .inl h => exact h
+  | .inr ⟨C, h₁, h₂⟩ => cases h₁
+
 end RedEtaReflTrans
 
 namespace RedEtaTrans
@@ -327,6 +333,22 @@ termination_by A.size
 
 end RedEtaTrans
 
+namespace RedEtaReflTrans
+
+def eq (hr : RedEtaReflTrans A (DCC (x = y))) :
+  (∃ f_α env, A = (DCC (Eql(f_α) env x)) ∧ x = y) ∨ A = (DCC (x = y)) := by
+  unfold RedEtaReflTrans at hr
+  rw [← Relation.reflGen_transGen] at hr
+  match heq : hr with
+  | .refl => exact .inr rfl
+  | .single hr =>
+    rename_i heq'
+    change RedEtaTrans _ _ at hr
+    cases heq'.symm
+    exact hr.eq
+
+end RedEtaReflTrans
+
 inductive NfType : Expr → Prop
   | sort  : NfType (DCC Sort m)
   | eql   : NfType (DCC x = x)
@@ -340,12 +362,6 @@ def NfType.eq_elim (heq : τ = (DCC x = y)) (is_nf : NfType τ) : x = y := by
   cases heq; cases is_nf; rfl
 
 --theorem IsNorm.coup_
-
-@[dcc_reduce]
-theorem RedEtaReflTrans.coup (h : RedEtaReflTrans (DCC Coup(β)) B) : (DCC Coup(β)) = B := by
-  match h.cases_head with
-  | .inl h => exact h
-  | .inr ⟨C, h₁, h₂⟩ => cases h₁
 
 theorem Reduces.coup (h : Reduces (DCC Coup(β)) B) : ∃ β', B = (DCC Coup(β')) :=
   match h with
@@ -443,7 +459,7 @@ theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DC
     | app h_t_f h_t_x h_r_α h_r_τ =>
       match h_r_τ with
       | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-        have h := hr₂.red_eq
+        have h := hr₂.eq
         
         /-match hr₂.cases_head with
         | .inl h =>

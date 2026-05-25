@@ -13,7 +13,8 @@ inductive RedEta : Expr → Expr → Prop
   | curr_fst   : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `((β y), (x y)))
   | curr_fst'  : RedEta (DCC (Λ(α, β, x ∘' Fstc(β₂)) y)) (DCC `((β y), (x y)))
   | pi         : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
-  | pi_quot    : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
+  --| pi_quot    : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
+  | quot       : RedEta x x' → RedEta (DCC `(β, x)) (DCC `(β, x'))
   | pi'        : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
 --  | sig        : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(α, β) env)) (DCC Coup(β'))
   | sig'       : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
@@ -31,8 +32,6 @@ inductive RedEta : Expr → Expr → Prop
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
 
-
-
 theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff B := by
   induction h
   any_goals (
@@ -43,7 +42,7 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   )
   case pi h ih =>
     cases h with
-    | pi_quot =>
+    /-| pi_quot =>
       have h := ih hn.congrFun
       have h_norm_env := hn.congrArg
       intro ⟨_, h⟩
@@ -51,7 +50,7 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
       | congrFun hr =>
         exact h ⟨_, hr⟩
       | congrArg hr =>
-        exact h_norm_env ⟨_, hr⟩
+        exact h_norm_env ⟨_, hr⟩-/
     | pi' =>
       have hn_env := hn.congrArg
       have h := ih hn.congrFun
@@ -83,12 +82,16 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     match (DCC Π(_f_α, f_β)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi h⟩⟩
     | _ => .none
+  | DCC `(β, x) =>
+    match x.step_eta? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot h⟩⟩
+    | _              => .none
   | DCC (Π(_f_α, f_β)) =>
     match f_β with
-    | DCC `(_β, x) =>
+    /-| DCC `(_β, x) =>
       match x.step_eta? with
       | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi_quot h⟩⟩
-      | _ => .none
+      | _ => .none-/
     | x =>
       match x.step_eta? with
       | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi' h⟩⟩
@@ -121,13 +124,15 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   induction h₁ generalizing C with
   -- | pi_comp | pi'_comp => sorry
   | eql | curr_fst' | curr_fst | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | quot_snd | quot_fst | sig' | pi => cases h₂; aesop
-  | pi_quot hr ih =>
+  /-| pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop
-    · rename_i hr₂; cases hr₂
+    · rename_i hr₂; cases hr₂-/
+  | quot =>
+    cases h₂
+    · aesop
   | pi' hr ih =>
     cases h₂
-    · rename_i hr₂; cases hr
     · aesop
   | curr hr ih =>
     cases h₂ with

@@ -40,7 +40,7 @@ inductive EqFn : Expr → Expr → Prop
   | sndc  : Judge f_β (DCC ((α : Sort m) → Sort 0))
     → EqFn f_β (DCC ((α : Sort m) → Sort 0))
     → EqFn (DCC (Sndc(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
-  | quot  : Reduces x (DCC y = z)
+  | quot  : Reduces x (DCC y = y)
     → Judge β (DCC Sort n)
     → EqFn (DCC `(β, x)) (DCC ((β : Sort n) → Sort 0))
   | comp' : Judge g (DCC ((α : Sort m) → β))
@@ -59,6 +59,35 @@ inductive EqFn : Expr → Expr → Prop
     → EqFn x (DCC ((Coup(f_β) : Sort (max m n)) → Sort 0))
     → Reduces (DCC (f_β y)) β
     → EqFn (DCC (Λ(α, β, x) y)) (DCC ((β : Sort n) → Sort 0))
+
+/-
+f_β in Π(f_α, f_β).
+This takes an environment and a term, yielding an x = y.
+-/
+inductive EqFn₂ : Expr → Expr → Prop
+  | eql   : Judge f_α (DCC (δ : Sort o) → Sort m)
+    → EqFn₂ (DCC (Eql(f_α))) (eql.type f_α δ m o)
+  | quot  : EqFn₂ x (DCC ((γ : Sort o) → Sort 0))
+    → EqFn₂ (DCC `(β, x)) (DCC ((β : Sort n) → ((γ : Sort o) → Sort 0)))
+  | comp' : Judge g (DCC ((α : Sort m) → β))
+    → Judge β (DCC Sort n)
+    → EqFn₂ f (DCC ((β : Sort n) → ((γ : Sort o) → Sort 0)))
+    → EqFn₂ (DCC (f ∘' g)) (DCC ((α : Sort m) → ((γ : Sort o) → Sort 0)))
+  -- may need to handle fully dependent
+  | comp  : Judge g (comp.g.type α f_β m)
+    → Judge f (DCC (Π(Id(Sort n), f_γ) Coup(f_β)))
+    → EqFn₂ f (DCC ((Coup(f_β) : Sort n) → ((γ : Sort o) → Sort 0)))
+    → EqFn₂ (DCC (f ∘ g)) (DCC ((α : Sort m) → ((γ : Sort o) → Sort 0)))
+  | id    : Reduces α (DCC ((β : Sort n) → Sort 0))
+    → EqFn₂ (DCC Id(α)) (DCC (((x = y) : Sort 0) → ((β : Sort n) → Sort 0)))
+  | curr  : Judge α (DCC Sort m)
+    → Judge f_β (DCC ((α : Sort m) → Sort n))
+    → EqFn₂ x (DCC ((Coup(f_β) : Sort (max m n)) → Sort 0))
+    → EqFn₂ (DCC Λ(α, β, x)) (curr.type α β (DCC `(Coup(f_β), Sort 0)) m)
+
+/-
+Todo: mk_app?
+-/
 
 /-
 Operations that can occur under a Λ() that introduce a value (that is not the couple)
@@ -342,24 +371,32 @@ namespace RedEtaReflTrans
 theorem pi_norm
   (h : RedEtaReflTrans (DCC (Π(f_α, f_β) env)) B)
   (hn : IsNorm RedEta B) :
-    ∃ f_β', B = (DCC (Π(f_α, f_β') env)) := by
+    ∃ f_β', (B = (DCC (Π(f_α, f_β') env)) ∧ RedEtaReflTrans f_β f_β' ∧ IsNorm RedEta f_β') := by
   match h.cases_head with
-  | .inl h => exact ⟨_, h.symm⟩
+  | .inl h => exact ⟨_, h.symm, .refl, by
+    cases h
+    intro ⟨_, hr⟩
+    exact (hn ⟨_, .pi (.pi' hr)⟩).elim⟩
   | .inr ⟨c, h₁, h₂⟩ =>
     cases h₁ with
     | pi h =>
       cases h with
-      | pi_quot hr =>
+      /-| pi_quot hr =>
         rename_i x x' β
         have h_dec : (DCC `(β, x')).size < (DCC `(β, x)).size := by
           have h := RedEta.instRedRel.decreasing hr
           grind
-        exact pi_norm h₂ hn
+        have ⟨f_β', heq, h_r_f_β, h_norm_f_β'⟩ := pi_norm h₂ hn
+        exact ⟨f_β', by simp_all, by
+          cases heq
+          
+          sorry, by sorry⟩-/
       | pi' hr =>
         rename_i β'
         have h_dec : β'.size < f_β.size := by
           exact RedEta.instRedRel.decreasing hr
-        exact pi_norm h₂ hn
+        have ⟨f_β', heq, h_r_β', h_n_β'⟩ := pi_norm h₂ hn
+        exact ⟨_, heq, .trans (.single hr) h_r_β', h_n_β'⟩
 termination_by f_β.size
 
 @[dcc_reduce]
@@ -380,13 +417,6 @@ theorem no_pi_eq (h_r : RedEtaReflTrans (DCC (Π(f_α, f_β) env)) (DCC x = y)) 
     cases heq₁ : h₁ with
     | pi h =>
       cases h with
-      | pi_quot h=>
-        rename_i p'
-        have h_dec := RedEta.instRedRel.decreasing p'
-        rename_i x x' β
-        have _heq : (β.quot x').size < f_β₀.size := by
-          grind
-        exact no_pi_eq h₂
       | pi' h =>
         have h_dec := RedEta.instRedRel.decreasing h
         exact no_pi_eq h₂
@@ -401,6 +431,27 @@ theorem coup (h : RedEtaReflTrans (DCC Coup(β)) B) : (DCC Coup(β)) = B := by
 end RedEtaReflTrans
 
 namespace RedAffTrans
+
+theorem pi_norm (hr : RedAffTrans (DCC (Π(f_α, f_β) env)) τ') (hn : IsNorm RedAff τ') : ∃ env',
+  RedAffTrans env env' ∧ IsNorm RedAff env' ∧ τ' = (DCC (Π(f_α, f_β) env')) := by
+  cases hr using Relation.TransGen.head_induction_on with
+  | single h =>
+    have ⟨env', heq⟩ := h.pi
+    cases heq
+    exact ⟨env', by
+      cases h with
+      | congrFun h => cases h
+      | congrArg h => exact (.single h), hn.congrArg, rfl⟩
+  | head h ih =>
+    have ⟨env', heq⟩ := h.pi
+    cases heq
+    cases h with
+    | congrFun h => cases h
+    | congrArg h =>
+      have h_dec := RedAff.instRedRel.decreasing h
+      have ⟨env'', h_env', hn_env', heq'⟩ := RedAffTrans.pi_norm ih hn
+      exact ⟨_, .trans (.single h) h_env', hn_env', heq'⟩
+termination_by env.size
 
 -- RedEq ((Λ(α, β, Eql(f_β) env) y z)) (Eql(f_β) env ⟦β⟧(y, z))
 
@@ -523,7 +574,7 @@ def eq (hr : RedEtaTrans A (DCC (x = y))) :
     | .inl ⟨f_α, env, heq₁, heq₂⟩ =>
       cases heq₁ ▸ hr with
       | pi =>
-        have ⟨_, h⟩ := RedEtaReflTrans.pi_norm
+        have ⟨_, h, h_r_β, h_n_β⟩ := RedEtaReflTrans.pi_norm
           (.trans (.single hr) (.single (heq₁.symm ▸ RedEta.eql)))
           (fun ⟨_, h⟩ => by cases h)
         cases h
@@ -628,7 +679,7 @@ theorem Reduces.pi_shape (h : Reduces (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β'
   | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
     have ⟨env', heq, hrt⟩ := hr₁.pi_norm hn₁
     cases heq
-    have ⟨_, heq⟩ := hr₂.pi_norm hn₂
+    have ⟨_, heq, _, _⟩ := hr₂.pi_norm hn₂
     exact ⟨_, _, heq⟩
 
 /-def Relation.Reduced.red_aff_eq (hr : Reduced A (DCC (x = y)))
@@ -1184,6 +1235,71 @@ theorem Reduced.curr_eq (hr : Reduced (DCC (x y z)) (DCC (a = b))) : RedAff.Curr
 Instead of doing judge on the app first, do it on the function, as in is_canon_type.
 
 -/
+
+theorem Reduces.pi (h : Reduces (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env',
+  RedEtaReflTrans f_β f_β' ∧ IsNorm RedEta f_β'
+    ∧ RedAffReflTrans env env' ∧ IsNorm RedAff env'
+    ∧ τ = (DCC (Π(f_α, f_β') env')) := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    have ⟨env', heq, hrt_env, h_norm_env'⟩ := hr₁.pi_norm hn₁
+    have ⟨f_β', heq', h_r_f_β, h_n_f_β⟩ := (heq ▸ hr₂).pi_norm hn₂
+    cases heq
+    cases heq'
+    refine ⟨f_β', env', ?_⟩
+    exact ⟨h_r_f_β, h_n_f_β, hrt_env, h_norm_env', rfl⟩
+
+theorem Reduced.pi (h : Reduced (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env',
+  RedEtaReflTrans f_β f_β' ∧ IsNorm RedEta f_β'
+    ∧ RedAffTrans env env' ∧ IsNorm RedAff env'
+    ∧ τ = (DCC (Π(f_α, f_β') env')) := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    have ⟨env', hrt_env, h_norm_env', heq⟩ := hr₁.pi_norm hn₁
+    have ⟨f_β', heq', h_r_f_β, h_n_f_β⟩ := (heq ▸ hr₂).pi_norm hn₂
+    cases heq
+    cases heq'
+    refine ⟨f_β', env', ?_⟩
+    refine ⟨h_r_f_β, h_n_f_β, hrt_env, h_norm_env', rfl⟩
+
+namespace EqFn
+
+theorem EqFn.elim_eq (h_t_f : Judge f (DCC (Π(f_α, f_β) env)))
+  (h_r_α   : Reduces (DCC (f_α env)) α)
+  (h_t_α   : Judge α (DCC Sort m))
+  
+
+theorem EqFn.elim_eq (h_t_f : Judge f (DCC (Π(f_α, f_β) env)))
+  (h_r_α   : Reduces (DCC (f_α env)) α)
+  (h_t_α   : Judge α (DCC Sort m))
+  (h_r_f_β : RedAffReflTrans (DCC (f_β env)) f_β')
+  (h_n_f_β : IsNorm RedAff f_β')
+  (h_eq_fn : EqFn f_β' (DCC ((α : Sort m) → Sort 0)))
+  (h_t_x   : Judge x α)
+  (h_r_x'  : Reduces x x')
+  (h_t     : Judge (DCC (f x)) (DCC (a = b))) : a = x' ∧ b = x' := by
+  have h_f_β₀_norm : IsNorm RedEta f_β := fun ⟨_, h⟩ => h_t_f.norm_eta ⟨_, .pi (.pi' h)⟩
+  cases h_t with
+  | app h_t_f' h_r_α' h_t_x' h_red =>
+    cases h_t_f with
+    | refl =>
+      cases h_t_f' with
+      | refl h_t_f_α h_red'  =>
+        rename_i h_r _ _ _
+        have ⟨f_β', env', hrt_f_β, hnorm_f_β, hr_eta_δ, h_norm_env', heq⟩ := h_r.pi
+        cases heq
+        match hrt_f_β.cases_head with
+        | .inl h =>
+          cases h
+          
+          sorry
+        | .inr h =>
+          sorry
+    | app =>
+      
+      sorry
+
+end EqFn
 
 open Reduces in theorem Judge.eq_fun (ht : Judge e (DCC (Π(f_α, f_β) (x = y)))) : x = y
 

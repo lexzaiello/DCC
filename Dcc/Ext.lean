@@ -7,6 +7,59 @@ import Dcc.Eta.Red
 
 namespace Expr
 
+inductive IsComb : Expr → Type
+  | refl  : IsComb (DCC refl(f_α))
+  | eql   : IsComb (DCC Eql(f_α))
+  | id    : IsComb (DCC Id(α))
+  | comp  : IsComb (DCC (f ∘ g))
+  | comp' : IsComb (DCC (f ∘' g))
+  | fstc  : IsComb (DCC Fstc(β))
+  | sndc  : IsComb (DCC Sndc(β))
+  | sigma : IsComb (DCC Σ(f_α, f_β))
+  | quot  : IsComb (DCC `(β, x))
+  | pair  : IsComb (DCC ⟨f, g⟩)
+  | curr  : IsComb (DCC Λ(α, β, x))
+  | pi    : IsComb (DCC (Π(f_α, f_β)))
+
+/-
+A function that can produce an x = y
+which is typed at τ
+
+Note that since all of these return sort 0,
+they can all be  amortized into arrows.
+
+This makes the app case SIGNIFICANTLY easier.
+-/
+inductive EqFn : Expr → Expr → Prop
+  | eql   : Reduces (DCC (f_α env)) α
+    → Judge α (DCC Sort m)
+    → EqFn (DCC (Eql(f_α) env)) (DCC ((α : Sort m) → Sort 0))
+  | fstc  : Judge f_β (DCC ((x = y : Sort 0) → Sort n))
+    → EqFn (DCC (Fstc(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
+  -- snd : x = y. snd component f_β fst. f_β is EqFn.
+  | sndc  : Judge f_β (DCC ((α : Sort m) → Sort 0))
+    → EqFn f_β (DCC ((α : Sort m) → Sort 0))
+    → EqFn (DCC (Sndc(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
+  | quot  : Reduces x (DCC y = z)
+    → Judge β (DCC Sort n)
+    → EqFn (DCC `(β, x)) (DCC ((β : Sort n) → Sort 0))
+  | comp' : Judge g (DCC ((α : Sort m) → β))
+    → Judge β (DCC Sort n)
+    → EqFn f (DCC ((β : Sort n) → Sort 0))
+    → EqFn (DCC (f ∘' g)) (DCC ((α : Sort m) → Sort 0))
+  | comp  : Judge g (comp.g.type α f_β m)
+    → Judge f (DCC (Π(Id(Sort n), f_γ) Coup(f_β)))
+    → EqFn f (DCC ((Coup(f_β) : Sort n) → Sort 0))
+    → EqFn (DCC (f ∘ g)) (DCC ((α : Sort m) → Sort 0))
+  | id    : Reduces α (DCC (x = y))
+    → EqFn (DCC Id(α)) (DCC (((x = y) : Sort 0) → Sort 0))
+  | curr  : Judge α (DCC Sort m)
+    → Judge f_β (DCC ((α : Sort m) → Sort n))
+    → Judge y α
+    → EqFn x (DCC ((Coup(f_β) : Sort (max m n)) → Sort 0))
+    → Reduces (DCC (f_β y)) β
+    → EqFn (DCC (Λ(α, β, x) y)) (DCC ((β : Sort n) → Sort 0))
+
 /-
 Operations that can occur under a Λ() that introduce a value (that is not the couple)
 -/
@@ -28,6 +81,20 @@ inductive RedEql₃ : Expr → Expr → Prop
   | congrFun  : RedAff x (DCC Eql(f_β)) → RedEql₃ (DCC (x y z)) (DCC (Eql(f_β) y z))
   | congrArg  : RedAff y env → RedEql₃ (DCC (Eql(f_β) y z)) (DCC (Eql(f_β) env z))
   | congrArg₁ : RedAff z arg → RedEql₃ (DCC (Eql(f_β) env z)) (DCC (Eql(f_β) env arg))
+
+/-
+Any valid operation that can appear in a type
+-/
+inductive Red' : Expr → Expr → Prop
+  | quot     : Red' (DCC (`(β, x) y)) x
+  | id       : Red' (DCC (Id(α) x)) x
+  | project  : ProjectCurr (DCC (f ⟦β⟧(a, b))) x
+    → Red' (DCC (f ⟦β⟧(a, b))) x
+  | comp     : Red' (DCC ((x ∘ y) z)) (DCC (x (y z)))
+  | comp'    : Red' (DCC ((x ∘' y) z)) (DCC (x (y z)))
+  | curr     : Red' (DCC ((Λ(α, β, x) y z))) (DCC (x ⟦β⟧(y, z)))
+  | congrFun : RedAff f e → Red' (DCC (f x)) (DCC (e x))
+  | congrArg : RedAff x arg → Red' (DCC (f x)) (DCC (f arg))
 
 /-
 Reduces (f x)
@@ -127,6 +194,9 @@ def project_eq (hr : RedAff (DCC (f ⟦β⟧(a, b))) (DCC x = y)) : ProjectCurr 
   | sndc => exact .sndc
   | fstc => exact .fstc
 
+/-
+An expression that reduces to an equality.
+-/
 inductive RedEq : Expr → Expr → Prop
   | proj : ProjectCurr A (DCC (x = y)) → RedEq A (DCC (x = y))
   | id   : RedEq (DCC (Id(α) (x = y))) (DCC (x = y))
@@ -139,18 +209,7 @@ def eq (hr : RedAff A (DCC (x = y))) : RedEq A (DCC (x = y)) := by
   | sndc => exact .proj .sndc
   | quot => exact .quot
 
-inductive RedEql : Expr → Expr → Prop
-  | quot     : RedEql (DCC (`(β, (Eql(f_β) env x)) y)) (DCC (Eql(f_β) env x))
-  | id       : RedEql (DCC (Id(α) (Eql(f_β) env x))) (DCC ((Eql(f_β) env x)))
-  | project  : ProjectCurr (DCC (f ⟦β⟧(a, b))) (DCC (Eql(f_β) env x))
-    → RedEql (DCC (f ⟦β⟧(a, b))) (DCC (Eql(f_β) env x))
-  | comp     : RedEql (DCC (((Eql(f_β) env) ∘ y) z)) (DCC (Eql(f_β) env (y z)))
-  | comp'    : RedEql (DCC (((Eql(f_β) env) ∘' y) z)) (DCC (Eql(f_β) env (y z)))
-  | curr     : RedEql (DCC ((Λ(α, β, (Eql(f_β) env)) y z))) (DCC ((Eql(f_β) env) ⟦β⟧(y, z)))
-  | congrFun : RedAff f (DCC (Eql(f_β) env)) → RedEql (DCC (f x)) (DCC (Eql(f_β) env x))
-  | congrArg : RedAff x arg → RedEql (DCC (Eql(f_β) env x)) (DCC (Eql(f_β) env arg))
-
-def eql (hr : RedAff A (DCC (Eql(f_β) env x))) : RedEql A (DCC (Eql(f_β) env x)) := by
+def eql (hr : RedAff A (DCC (Eql(f_β) env x))) : Red' A (DCC (Eql(f_β) env x)) := by
   cases hr with
   | quot =>
     exact .quot
@@ -373,7 +432,40 @@ namespace RedAffTrans
     have h := ih.eq
     sorry-/
 
-def eql (hr : RedAffTrans (DCC (x y z)) (DCC (Eql(f_β) env arg))) : RedEql₃ (DCC (x y z)) (DCC (Eql(f_β) env arg)) := by
+/-def eql (hr : RedAffTrans x (DCC (Eql(f_β) env arg))) : (Red' x (DCC (Eql(f_β) env arg))) ∨ (∃ x', RedAff x x' ∧ Red' x' (DCC (Eql(f_β) env arg))) := by
+  cases hr using Relation.TransGen.head_induction_on with
+  | single h => exact .inl h.eql
+  | head h ih =>
+    have h_dec := RedAff.instRedRel.decreasing h
+    have h_eql := eql ih
+    match h_eql with
+    | .inl h_eql =>
+      exact .inr ⟨_, h, h_eql⟩
+    | .inr ⟨x', hrc, h⟩ =>
+      
+      sorry
+termination_by x.size
+
+def eql (hr : RedAffTrans x (DCC (Eql(f_β) env arg))) : Red' x (DCC (Eql(f_β) env arg)) := by
+  cases hr with
+  | single h =>
+    exact h.eql
+  | tail ih hr =>
+    rename_i b
+    have h := hr.eql
+    
+    sorry-/
+
+def eql (hr : RedAffTrans x (DCC (Eql(f_β) env arg))) : ∃ x', RedAffReflTrans x x' ∧ Red' x' (DCC (Eql(f_β) env arg)) := by
+  cases hr with
+  | single h =>
+    exact ⟨_, .refl, h.eql⟩
+  | tail ih hr =>
+    rename_i b
+    have h := hr.eql
+    exact ⟨b, ih.to_reflTransGen, h⟩
+
+/-def eql₃ (hr : RedAffTrans (DCC (x y z)) (DCC (Eql(f_β) env arg))) : Red'₃ (DCC (x y z)) (DCC (Eql(f_β) env arg)) := by
   cases hr with
   | single h =>
     cases h with
@@ -391,8 +483,11 @@ def eql (hr : RedAffTrans (DCC (x y z)) (DCC (Eql(f_β) env arg))) : RedEql₃ (
       | congrArg h => exact .congrArg h
     | congrArg h => exact .congrArg₁ h
   | tail h ih =>
-    have h := ih.eq
-    sorry
+    have h := ih.eql
+    cases h with
+    | quot =>
+      cases ih
+      sorry-/
 
 /-inductive RedEq : Expr → Expr → Prop
   | -/
@@ -502,6 +597,31 @@ def type_size (τ : Expr) : ℕ :=
   | DCC (f _x) => f.type_size
   | _ => 0
 
+namespace Reduced
+
+/-
+We need type information to get that x = y meta-level,
+since RedAffTrans A (DCC (x = y)) could just be
+
+Id(...) ... for example, injecting a value.
+-/
+theorem eq (h : Reduced A (DCC x = y)) : (∃ f_α env,
+  RedAffTrans A (DCC (Eql(f_α) env x))
+    ∧ IsNorm RedAff (DCC (Eql(f_α) env x))
+    ∧ RedEtaReflTrans (DCC (Eql(f_α) env x)) (DCC (x = x)) ∧ x = y)
+  ∨ (RedAffTrans A (DCC x = y)) := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    have h := hr₂.eq
+    match h with
+    | .inl ⟨f_α, env, heq, heq₂⟩ =>
+      cases heq
+      exact .inl ⟨f_α, env, hr₁, hn₁, heq₂ ▸ hr₂, heq₂⟩
+    | .inr heq =>
+      cases heq
+      exact .inr (by assumption)
+
+end Reduced
 
 theorem Reduces.pi_shape (h : Reduces (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env', τ = (DCC (Π(f_α, f_β') env')) := by
   match h with
@@ -555,7 +675,22 @@ theorem Judge.norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
     intro ⟨_, h⟩
     cases h
 
-theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
+theorem Judge.refl_canon (h : Judge e τ) (heq : τ = DCC (x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
+  induction h generalizing x with
+  | app h_t_f h_r_α h_t_x h_r_τ ih₁ ih₂ =>
+    cases h_t_f with
+    | app =>
+      simp_all
+      have h := h_r_τ.eq
+      match h with
+      | .inl ⟨f_α, env, hrt₁, hnt₁, hrt₂, heq⟩ =>
+        simp_all
+        
+        sorry
+      | .inr h =>
+        sorry
+
+/-theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
   cases h with
   | app h_t_f h_r_α h_t_x h_r_τ =>
     match h_r_τ with
@@ -563,8 +698,10 @@ theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DC
       have h := hr₂.eq
       match h with
       | .inl ⟨f_α, env, h₁, h₂⟩ =>
-        have h := hr₁.eq
-        sorry
+        cases h₁
+        cases h₂
+        
+        sorry-/
 
 theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
   induction e generalizing x with
@@ -575,15 +712,18 @@ theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DC
       simp_all
   | app _ _ ih₁ ih₂ =>
     cases h with
-    | app h_t_f h_t_x h_r_α h_r_τ =>
+    | app h_t_f h_r_α h_r_x h_r_τ =>
       match h_r_τ with
       | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
         have h := hr₂.eq
         match h with
         | .inl ⟨f_α, env, h₁, h₂⟩ =>
           cases h₁
-          cases h_t_x with
-          | mk =>
+          have ⟨x', hrt, h⟩ := hr₁.eql
+          match hrt.cases_head with
+          | .inl h =>
+            sorry
+          | .inr ⟨C, h₁, h₂⟩ =>
             
             sorry
         | .inr h =>
@@ -703,7 +843,6 @@ termination_by τ.type_size
 theorem canon_elim_eq (ht : is_canon_type (DCC x = y) e) : x = y := by
   grind
 
-
 theorem Judge.is_canon (ht : Judge e τ) : is_canon_type τ e := by
   induction ht with
   | sort | eq =>
@@ -786,20 +925,6 @@ theorem Judge.is_canon (ht : Judge e τ) : is_canon_type τ e := by
   | app _ _ _ hr =>
     
     sorry-/
-
-inductive IsComb : Expr → Type
-  | refl  : IsComb (DCC refl(f_α))
-  | eql   : IsComb (DCC Eql(f_α))
-  | id    : IsComb (DCC Id(α))
-  | comp  : IsComb (DCC (f ∘ g))
-  | comp' : IsComb (DCC (f ∘' g))
-  | fstc  : IsComb (DCC Fstc(β))
-  | sndc  : IsComb (DCC Fstc(β))
-  | sigma : IsComb (DCC Σ(f_α, f_β))
-  | quot  : IsComb (DCC `(β, x))
-  | pair  : IsComb (DCC ⟨f, g⟩)
-  | curr  : IsComb (DCC Λ(α, β, x))
-  | pi    : IsComb (DCC (Π(f_α, f_β)))
 
 /-
 An expression that reduces to an equality.
@@ -1055,6 +1180,13 @@ theorem Reduced.curr_eq (hr : Reduced (DCC (x y z)) (DCC (a = b))) : RedAff.Curr
     
   sorry-/
 
+/-
+Instead of doing judge on the app first, do it on the function, as in is_canon_type.
+
+-/
+
+open Reduces in theorem Judge.eq_fun (ht : Judge e (DCC (Π(f_α, f_β) (x = y)))) : x = y
+
 open Reduces in theorem Judge.refl_eq (ht : Judge e (DCC (Π(f_α, f_β) (x = y)))) : ∃ f_env env, Reduces e (DCC (refl(f_env) env x)) := by
   induction e generalizing f_α f_β x y with
   | app =>
@@ -1063,24 +1195,16 @@ open Reduces in theorem Judge.refl_eq (ht : Judge e (DCC (Π(f_α, f_β) (x = y)
       cases h_t_f with
       | app =>
         rename_i ih h
-        
+        /-
+          f : Π(f_α, f_β)
+          f x = (refl(f_env) app) x
+        -/
+        have h := h_red_τ.eq
         have h := ih (.app (by assumption) (by assumption) (by assumption) (by sorry))
         match h_r_τ with
         | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
           
           sorry
-
--- or try just x = y
-open Reduces in theorem Judge.refl_eq (ht : Judge e (DCC (Π(f_α, Λ(α, β, Fstc(f_β))) (x = y)))) : ∃ f_env env, Reduces e (DCC (refl(f_env) env x)) := by
-  cases ht with
-  | refl _ =>
-    
-    sorry
-  | app h_t_f h_r_α h_t_x h_r_τ =>
-    match h_r_τ with
-    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-      
-      sorry
 
 open Reduces in theorem Judge.elim_eq (ht : Judge e (DCC (x = y))) : x = y := by
   cases ht with

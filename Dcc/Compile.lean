@@ -95,4 +95,3 @@ macro_rules
 #eval dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
 
-#eval dcc_compile (fun (f : Sort 0 → Sort 0) (x : Sort 0) => f x)

@@ -30,7 +30,13 @@ namespace Expr
   simp [dcc_judge]
 
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
-  induction h <;> (dsimp only [infer]; try (dcc_simp_all; dcc_aesop!); try grind)
+  induction h
+  any_goals (
+    focus
+    dsimp only [infer]
+    try (dcc_simp_all; dcc_aesop!)
+    try grind
+    done)
 
 #check Judge.complete
 

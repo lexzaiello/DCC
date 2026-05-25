@@ -28,7 +28,7 @@ namespace Expr
   | DCC (Eql(_f_α) _env _x) => 2
   | DCC (Π(f_α, f_β) _env) =>(DCC Π(f_α, f_β)).eta_size + _env.eta_size + 2
   | DCC (Σ(f_α, f_β) _env) =>(DCC Σ(f_α, f_β)).eta_size + _env.eta_size + 2
-  | DCC (=(x, _y)) => x.size
+  | DCC (x = _y) => x.size
   | DCC (f x) => f.eta_size + x.eta_size
 
 

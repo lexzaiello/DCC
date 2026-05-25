@@ -212,7 +212,7 @@ gen_ast as Expr
 
 declare_syntax_cat gen_dcc
 
-syntax "=(" gen_dcc,* ")"                                     : gen_dcc
+syntax  gen_dcc "=" gen_dcc                                   : gen_dcc
 syntax "Eql(" gen_dcc,* ")"                                   : gen_dcc
 syntax "refl(" gen_dcc,* ")"                                  : gen_dcc
 syntax "#(" term ")"                                          : gen_dcc
@@ -254,7 +254,7 @@ open Lean.Syntax in macro_rules
   | `(DCC[$ty:gen_dcc_loc] ⊤)                                        => field ty "top"
   | `(DCC[$ty:gen_dcc_loc] ⊥)                                        => field ty "bot"
   | `(DCC[$ty:gen_dcc_loc] ∗)                                        => field ty "tintro"
-  | `(DCC[$ty:gen_dcc_loc] =($x:gen_dcc, $y:gen_dcc))                => do
+  | `(DCC[$ty:gen_dcc_loc] $x:gen_dcc = $y:gen_dcc)                  => do
     return mkApp (← field ty "eq") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
   | `(DCC[$ty:gen_dcc_loc] Eql($f_α:gen_dcc))                        => do
     return mkApp (← field ty "eql") #[← `(DCC[$ty:gen_dcc_loc] $f_α)]

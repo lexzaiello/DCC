@@ -170,7 +170,7 @@ def reduce_reduces' : Reduces A (reduce_all A) := reduce_reduces rfl
 inductive Judge : Expr → Expr → Prop where
   | eq     : Judge x α
     → Judge y α
-    → Judge (DCC =(x, y)) (DCC Sort 0)
+    → Judge (DCC x = y) (DCC Sort 0)
   | refl   : Judge f_α (DCC (δ : Sort o) → Sort m)
     → Reduces (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Eql(f_α) ∘ Id(Sort o)))) δ)) τ
     → Judge (DCC refl(f_α)) τ
@@ -309,7 +309,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
   | DCC (f ∘ g) =>
     match infer g with
     | .some ⟨DCC (Π(Id(Sort m), Σ(__a, Λ(_a, _b, f_β ∘' _c))) α), ⟨ht₁⟩⟩ =>
-      if heq : DCC (Π(Id(Sort m), Σ(__a, Λ(_a, _b, f_β ∘' _c))) α) = comp.g.type α f_β m then
+      if heq : (DCC (Π(Id(Sort m), Σ(__a, Λ(_a, _b, f_β ∘' _c))) α)) = comp.g.type α f_β m then
         match infer f with
         | .some ⟨(DCC (Π(Id(Sort n), f_γ) _a)), ⟨ht₂⟩⟩ =>
           if heq₂ : (DCC (Π(Id(Sort n), f_γ) _a)) = comp.f.type f_β f_γ n then
@@ -333,13 +333,16 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  | DCC =(x, y) =>
-    match infer x, infer y with
-    | .some ⟨t_x, ⟨ht₁⟩⟩, .some ⟨t_y, ⟨ht₂⟩⟩ =>
-      if heq : t_x = t_y then
-        .some ⟨_, ⟨.eq ht₁ (heq ▸ ht₂)⟩⟩
-      else .none
-    | _, _ => .none
+  | DCC x = y =>
+    match infer x with
+    | .some ⟨t_x, ⟨ht₁⟩⟩ =>
+      match infer y with
+      | .some ⟨t_y, ⟨ht₂⟩⟩ =>
+        if heq : t_x = t_y then
+          .some ⟨_, ⟨.eq ht₁ (heq ▸ ht₂)⟩⟩
+        else .none
+      | _ => .none
+    | _ => .none
   | DCC Eql(f_α) =>
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>

@@ -29,6 +29,10 @@ end RedEtaReflTrans
 
 namespace RedAffTrans
 
+def single (r : RedAff A B) : RedAffTrans A B := Relation.TransGen.single r
+
+def trans (r₁ : RedAffTrans A B) (r₂ : RedAffTrans B C) : RedAffTrans A C := Relation.TransGen.trans r₁ r₂
+
 def to_reflTrans {a b : Expr} (r : RedAffTrans a b) : RedAffReflTrans a b :=
   Relation.TransGen.to_reflTransGen (a := a) (b := b) r
 
@@ -38,6 +42,10 @@ namespace RedEtaTrans
 
 def to_reflTrans {a b : Expr} (r : RedEtaTrans a b) : RedEtaReflTrans a b :=
   Relation.TransGen.to_reflTransGen (a := a) (b := b) r
+
+def single (r : RedEta A B) : RedEtaTrans A B := Relation.TransGen.single r
+
+def trans (r₁ : RedEtaTrans A B) (r₂ : RedEtaTrans B C) : RedEtaTrans A C := Relation.TransGen.trans r₁ r₂
 
 end RedEtaTrans
 

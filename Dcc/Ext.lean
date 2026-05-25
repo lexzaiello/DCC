@@ -8,6 +8,14 @@ import Dcc.Eta.Red
 namespace Expr
 
 /-
+Operations that can occur under a Λ() that introduce a value (that is not the couple)
+-/
+inductive ProjectCurr : Expr → Expr → Prop
+  | fstc : ProjectCurr (DCC (Fstc(f_β) ⟦β⟧(x, b))) x
+  | sndc : ProjectCurr (DCC (Sndc(f_β) ⟦β⟧(a, x))) x
+  | quot : ProjectCurr (DCC (`(β', x) y))  x
+
+/-
 Reduces (f x)
 view (Reduces (f x)) B
 => .pi (Reduces x x')
@@ -101,19 +109,14 @@ theorem pi (h : RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', B = (DCC (Π(f_
 theorem no_red_pi_aff (h_r : RedAff (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
   cases h_r
 
-inductive ProjectEq : Expr → Expr → Prop
-  | fstc : ProjectEq (DCC (Fstc(f_β) ⟦β⟧(x = y, b))) (DCC (x = y))
-  | sndc : ProjectEq (DCC (Sndc(f_β) ⟦β⟧(a, x = y))) (DCC (x = y))
-  | quot : ProjectEq (DCC (`(β', x = y) ⟦β⟧(a, b)))  (DCC (x = y))
-
-def project_eq (hr : RedAff (DCC (f ⟦β⟧(a, b))) (DCC x = y)) : ProjectEq (DCC (f ⟦β⟧(a, b))) (DCC x = y) := by
+def project_eq (hr : RedAff (DCC (f ⟦β⟧(a, b))) (DCC x = y)) : ProjectCurr (DCC (f ⟦β⟧(a, b))) (DCC x = y) := by
   cases hr with
   | quot => exact .quot
   | sndc => exact .sndc
   | fstc => exact .fstc
 
 inductive RedEq : Expr → Expr → Prop
-  | proj : RedAff.ProjectEq A (DCC (x = y)) → RedEq A (DCC (x = y))
+  | proj : ProjectCurr A (DCC (x = y)) → RedEq A (DCC (x = y))
   | id   : RedEq (DCC (Id(α) (x = y))) (DCC (x = y))
   | quot : RedEq (DCC (`(α, (x = y)) z)) (DCC (x = y))
 
@@ -151,9 +154,6 @@ theorem no_pi_eq (h_r : RedEta (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False :
 
 inductive RedEq : Expr → Expr → Prop
   | eql : RedEq (DCC (Eql(f_α) env x)) (DCC x = x)
-
-/-inductive Reduced.RedEq : Expr → Expr → Prop
-  | curr : -/
 
 def eq (hr : RedEta A (DCC (x = y))) : RedEta.RedEq A (DCC (x = y)) := by
   cases hr with
@@ -307,9 +307,45 @@ end RedEtaReflTrans
 
 namespace RedAffTrans
 
+-- RedEq ((Λ(α, β, Eql(f_β) env) y z)) (Eql(f_β) env ⟦β⟧(y, z))
+
+-- (DCC ((Λ(α, β, Eql(f_β))) y y z)) (DCC (Eql(f_β) ⟦β⟧(y, y) z))
+-- (((f_β.eql.comp y).app y).app z) ((f_β.eql.app (y.app y)).app z)
+inductive RedEq : Expr → Expr → Prop
+  | refl    : RedEq (DCC (f_β env x)) (DCC (Eql(f_β) env x))
+  | curr    : RedEq (DCC ((Λ(α, β, (Eql(f_β) env)) y z))) (DCC (Eql(f_β) env ⟦β⟧(y, z)))
+  | curr₁   : RedEq (DCC ((Λ(α, β, Eql(f_β))) a b z)) (DCC (Eql(f_β) ⟦β⟧(a, b) z))
+  | quot    : RedEq (DCC (`(β, (Eql(f_β) env)) y z)) (DCC (Eql(f_β) env z))
+  | id      : RedEq (DCC ((Id(_α) (Eql(f_β) env)) z)) (DCC (Eql(f_β) env z))
+  | project : ProjectCurr (DCC (f ⟦β⟧(a, b))) (DCC (Eql(f_β) env))
+    → RedEq (DCC (f ⟦β⟧(a, b) z)) (DCC (Eql(f_β) env z))
+  | comp    : RedEq (DCC ((Eql(f_β) ∘ a) b z)) (DCC (Eql(f_β) (a b) z))
+  | comp'   : RedEq (DCC ((Eql(f_β) ∘' a) b z)) (DCC (Eql(f_β) (a b) z))
+
+def eql (hr : RedAffTrans (DCC (x y z)) (DCC (Eql(f_β) env arg))) : RedEq (DCC (x y z)) (DCC (Eql(f_β) env arg)) := by
+  cases hr with
+  | single h =>
+    cases h with
+    | curr => exact .curr
+    | congrFun h =>
+      cases h with
+      | quot => exact .quot
+      | id => exact .id
+      | fstc  => exact .project .fstc
+      | sndc  => exact .project .sndc
+      | curr  => exact .curr₁
+      | comp  => exact .comp
+      | comp' => exact .comp'
+  | tail h ih =>
+    sorry
+
+/-inductive RedEq : Expr → Expr → Prop
+  | -/
+--hr₁ : ((f_β.app x_α).app a).RedAffTrans ((f_α.eql.app env).app x)
+
 open RedAff in
 def eq (hr : RedAffTrans A (DCC (x = y))) : ∃ B,
-  RedAffReflTrans A B ∧ RedAff B (DCC (x = y)) ∧ RedEq B (DCC (x = y)) := by
+  RedAffReflTrans A B ∧ RedAff B (DCC (x = y)) ∧ RedAff.RedEq B (DCC (x = y)) := by
   have h := hr.to_reflTrans.eq
   match h with
   | .inl h =>
@@ -465,6 +501,17 @@ theorem Judge.norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
     cases h
 
 theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
+  cases h with
+  | app h_t_f h_r_α h_t_x h_r_τ =>
+    match h_r_τ with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      have h := hr₂.eq
+      match h with
+      | .inl ⟨f_α, env, h₁, h₂⟩ =>
+        have h := hr₁.eq
+        sorry
+
+theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
   induction e generalizing x with
   | refl =>
     cases h with
@@ -480,8 +527,10 @@ theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DC
         match h with
         | .inl ⟨f_α, env, h₁, h₂⟩ =>
           cases h₁
-          
-          sorry
+          cases h_t_x with
+          | mk =>
+            
+            sorry
         | .inr h =>
           sorry
         /-match hr₂.cases_head with
@@ -888,7 +937,7 @@ open Reduces in theorem reflect (ht : Judge e (DCC (=(f_α) env x y))) : x = y :
   | _ => sorry-/
 
 /-inductive RedAff.CurrEq : Expr → Expr → Prop
-  | mk  : ProjectEq (DCC (f ⟦β⟧(a, b))) (DCC (x = y))
+  | mk  : ProjectCurr (DCC (f ⟦β⟧(a, b))) (DCC (x = y))
     → CurrEq (DCC (Λ(_α, _β, f) a b)) (DCC (x = y))
 
 theorem Reduced.curr_eq (hr : Relation.TransGen RedAff (DCC (Λ(_α, _β, x) y z)) (DCC (a = b))) : RedAff.CurrEq (DCC (x y z)) (DCC (a = b)) := by

@@ -88,14 +88,69 @@ end Expr
 
 namespace Expr
 
+theorem eq_norm_refl (h_step : RedEta A (DCC (=(f_α) env x y))) (h : IsNorm RedEta (DCC (=(f_α) env x y))) : x = y := by
+  cases h_step with
+  | pi h =>
+    cases h
+  | eql => rfl
+
+def head (e : Expr) : Expr :=
+  match e with
+  | .app f _x => f.head
+  | e => e
+
+theorem no_red_pi_aff (h_r : RedAff (DCC (Π(f_α, f_β) env)) (DCC (=(a) b c d))) : False := by
+  cases h_r with
+  | congrFun h => cases h
+
+theorem no_red_pi_eta (h_r : RedEta (DCC (Π(f_α, f_β) env)) (DCC (=(a) b c d))) : False := by
+  cases h_r with
+  | pi h => cases h
+
+theorem no_red_pi_aff_trans (h_r : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env)) (DCC (=(a) b c d))) : False := by
+  cases h_r.cases_head with
+  | inl h => simp_all
+  | inr h =>
+    have ⟨C, h₁, h₂⟩ := h
+    cases h₁ with
+    | congrFun h => cases h
+    | congrArg h =>
+      rename_i x'
+      have h_dec := RedAff.instRedRel.decreasing h
+      exact no_red_pi_aff_trans h₂
+termination_by env.size
+
+theorem no_red_pi_eta_trans (h_r : Relation.ReflTransGen RedEta (DCC (Π(f_α, f_β) env)) (DCC (=(a) b c d))) : False := by
+  let f_β₀ := f_β
+  cases h_r.cases_head with
+  | inl h => simp_all
+  | inr h =>
+    have ⟨C, h₁, h₂⟩ := h
+    cases heq₁ : h₁ with
+    | pi h =>
+      cases h with
+      | pi_quot h=>
+        rename_i p'
+        have h_dec := RedEta.instRedRel.decreasing p'
+        rename_i x x' β
+        have _heq : (β.quot x').eta_size < f_β₀.eta_size := by
+          grind
+        exact no_red_pi_eta_trans h₂
+      | pi' h =>
+        have h_dec := RedEta.instRedRel.decreasing h
+        exact no_red_pi_eta_trans h₂
+termination_by f_β.eta_size
 
 theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
-  match ht with
-  | .eq ht ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-    dcc reduce! aff from hr₁
-    have h := norm_unique hr₁ hn₁ hr₁'
-    dcc reduce! eta from hr₁'
-    sorry
+  cases ht with
+  | eq _ h =>
+    match h with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      cases hr₂ with
+      | refl =>
+        
+        sorry
+      | tail a b => exact eq_norm_refl b hn₂
   | _ => sorry
 
 open Reduces in theorem reflect (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by

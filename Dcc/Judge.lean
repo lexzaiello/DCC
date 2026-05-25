@@ -15,6 +15,8 @@ inductive Reduces : Expr → Expr → Prop
     → IsNorm RedEta C
     → Reduces A C
 
+notation A "≡" B => ∃ C, Reduces A C ∧ Reduces B C
+
 @[dcc_force_reduce]
 def reduce_all := reduce' RedEta ∘ reduce' RedAff
 

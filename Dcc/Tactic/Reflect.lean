@@ -322,14 +322,6 @@ def MetaExpr.RedEtaMeta.encode (e : MetaExpr.RedEtaMeta A B) : Lean.Expr :=
     let α : Q(_root_.Expr) := α.encode
     let h := h.encode
     .app (.app (.app (.app (.const ``Expr.RedEta.sig' []) β) β') α) h
-  | .idl (α := α) (f := f) =>
-    let α : Q(_root_.Expr) := α.encode
-    let f : Q(_root_.Expr) := f.encode
-    q(_root_.Expr.RedEta.idl (α := $α) (f := $f))
-  | .idl' (α := α) (f := f) =>
-    let α : Q(_root_.Expr) := α.encode
-    let f : Q(_root_.Expr) := f.encode
-    q(_root_.Expr.RedEta.idl' (α := $α) (f := $f))
   | .quot_fst (α := α) (x := x) (β := β) =>
     let α : Q(_root_.Expr) := α.encode
     let x : Q(_root_.Expr) := x.encode

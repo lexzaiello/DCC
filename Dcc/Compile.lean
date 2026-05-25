@@ -1,7 +1,7 @@
 import Dcc.Ast
 import Dcc.Types
 import Dcc.Judge
-import Dcc.Debug
+--import Dcc.Debug
 import Lean
 import Qq
 open Qq
@@ -20,30 +20,30 @@ def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
     | _ => .none
   | _, _ => .none
 
-def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
+def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
   match e with
   | .bvar n => cc_var ctx n
   | .app (.app (.const ``Sigma []) α) β => do
-    let α' ← Lean.Expr.abstract' α ctx
-    let β' ← Lean.Expr.abstract' β (DCC Coup(α'))
+    let α' ← abstract' α ctx
+    let β' ← abstract' β (DCC Coup(α'))
     .some (DCC Σ(α', β'))
   | .lam _a α bdy _binfo => do
-    let α' ← Lean.Expr.abstract' α ctx
-    let inner ← Lean.Expr.abstract' bdy (DCC Coup(α'))
+    let α' ← abstract' α ctx
+    let inner ← abstract' bdy (DCC Coup(α'))
     .some (DCC Λ(ctx, α', inner))
   | .forallE _name α β _binfo => do
-    let α' ← Lean.Expr.abstract' α ctx
-    let β' ← Lean.Expr.abstract' β (DCC Coup(α'))
+    let α' ← abstract' α ctx
+    let β' ← abstract' β (DCC Coup(α'))
 
     .some (DCC (Π(α', Λ(ctx, α', β'))))
   | .app M N => do
-    let M' ← Lean.Expr.abstract' M ctx
-    let N' ← Lean.Expr.abstract' N ctx
+    let M' ← abstract' M ctx
+    let N' ← abstract' N ctx
 
     match (← M'.infer).fst with
-    | DCC (Π(f_α, f_β) x_α) =>
-      let α := (DCC (f_α x_α)).reduce_all
-      match (DCC (f_β x_α)).reduce_all with
+    | _root_.Expr.app (.pi f_α f_β) x_α =>
+      let α : _root_.Expr := (f_α.app x_α).reduce_all
+      match (f_β.app x_α).reduce_all with
       | DCC Π(_f_β, _γ) =>
         .some (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
       | _ => .none
@@ -53,33 +53,33 @@ def Lean.Expr.abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
   | .const ``False [] => DCC (`(ctx, ⊥))
   | .sort .zero => DCC (`(ctx, Sort 0))
   | .sort (.succ m) => do
-    match ← (Lean.Expr.abstract' (.sort m)) ctx with
+    match ← (abstract' (.sort m)) ctx with
     | DCC (`(ctx, Sort n)) => pure (DCC (`(ctx, Sort (n + 1))))
     | _ => .none
   | _ => .none
 
-def Lean.Expr.cc (root : Lean.Expr) : Option _root_.Expr :=
+def cc (root : Lean.Expr) : Option _root_.Expr :=
   match root with
   | .app (.lam _a α bdy _binfo) x => do
-    let f' ← Lean.Expr.abstract' (.lam _a α bdy _binfo) Ctx.empty
-    let x' ← Lean.Expr.cc x
+    let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty
+    let x' ← cc x
     .some (DCC (f' ∗ x'))
   | .app M N => do
-    let M' ← Lean.Expr.cc M
-    let N' ← Lean.Expr.cc N
+    let M' ← cc M
+    let N' ← cc N
     .some (DCC (M' N'))
   | .const ``True.intro [] => DCC (∗)
   | .const ``True [] => DCC (⊤)
   | .const ``False [] => DCC (⊥)
   | .sort .zero => DCC (Sort 0)
   | .sort (.succ m) => do
-    match ← (Lean.Expr.cc (.sort m)) with
+    match ← (cc (.sort m)) with
     | DCC Sort n => pure (DCC Sort (n + 1))
     | _ => .none
-  | e => (·.app .tintro) <$> Lean.Expr.abstract' e Ctx.empty
+  | e => (·.app .tintro) <$> abstract' e Ctx.empty
 
 def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) : Option _root_.Expr :=
-  Lean.Expr.cc root
+  cc root
 
 #eval Lean.Expr.cc' q(λ (x : Sort 1) => x)
 

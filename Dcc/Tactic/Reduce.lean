@@ -102,8 +102,6 @@ def step_eta? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedEtaMeta e
       match ← x.step_eta? with
       | .some ⟨_, h⟩ => return .some ⟨_, .pi' h⟩
       | _ => return .none
-  | (DCC[.] (Id(_α) ∘ _f)) => return .some ⟨_, .idl⟩
-  | (DCC[.] (Id(_α) ∘' _f)) => return .some ⟨_, .idl'⟩
   | DCC[.] Λ(_α, _β, x) => do
     match ← x.step_eta? with
     | .some ⟨_, h⟩ => return .some ⟨_, .curr h⟩
@@ -167,12 +165,18 @@ partial def reduce_eta (e : MetaExpr) : TacticM
     return (e'', quot_trans ``_root_.Expr.RedEta e e' e'' h.encode h₂_raw)
   | .none => return (e, quot_refl ``_root_.Expr.RedEta e)
 
+def quot_norm (r_nm : Lean.Name) (e : Lean.Expr) : Lean.Expr :=
+  Lean.mkAppN (.const ``_root_.Expr.IsNorm [.zero])
+    #[.const ``_root_.Expr []
+    , .const r_nm []
+    , e]
+
 def reduce_aff_norm (A : MetaExpr) : TacticM
   (MetaExpr × Lean.Expr × Lean.Expr) := do
   let ⟨B, h⟩ ← reduce_aff A
   let B' : Q(_root_.Expr) := B.encode
-  let to_decide : Lean.Expr := q(_root_.Expr.IsNorm _root_.Expr.RedAff $B')
-  let proof ← Lean.Meta.mkDecideProof to_decide
+  let to_decide : Q(Prop) := q(_root_.Expr.IsNorm _root_.Expr.RedAff $B')
+  let proof ← Qq.mkDecideProofQ to_decide
   return (B, proof, h)
 
 def reduce_eta_norm (A : MetaExpr) : TacticM
@@ -259,13 +263,13 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
           let (actual_B, norm_proof, raw_proof) ← dec.reduce_aff_norm
           let B            := actual_B.encode
           let tup_red := (quot_rtransgen ``Expr.RedAff A B, raw_proof)
-          let tup_norm := (Lean.Expr.app (.app (.const ``Expr.IsNorm []) (.const ``Expr.RedAff [])) B, norm_proof)
+          let tup_norm := (quot_norm ``Expr.RedAff B, norm_proof)
           pure (tup_red, tup_norm)
         | _ =>
           let (actual_B, norm_proof, raw_proof) ← dec.reduce_eta_norm
           let B            := actual_B.encode
           let tup_red := (quot_rtransgen ``Expr.RedEta A B, raw_proof)
-          let tup_norm := (Lean.Expr.app (.app (.const ``Expr.IsNorm []) (.const ``Expr.RedEta [])) B, norm_proof)
+          let tup_norm := (quot_norm ``Expr.RedEta B, norm_proof)
           pure (tup_red, tup_norm)
         let nm₁' := Name.str .anonymous s!"{hyp.getId}'₁"
         let ⟨_, g'⟩ ← g.assertHypotheses #[{ userName := nm', type := ty, value := raw_proof, binderInfo := .default, kind := .default}, { userName := nm₁', type := ty_norm, value := raw_proof_norm, binderInfo := .default, kind := .default}]

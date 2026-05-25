@@ -17,8 +17,6 @@ inductive RedEta : Expr → Expr → Prop
   | pi'        : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
   | sig        : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(α, β) env)) (DCC Coup(β'))
   | sig'       : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
-  | idl        : RedEta (DCC (Id(α) ∘ f)) f
-  | idl'       : RedEta (DCC (Id(α) ∘' f)) f
   | quot_fst   : RedEta (DCC `(α, x) ∘ Fstc(β)) (DCC `(Coup(β), x))
   | quot'_fst  : RedEta (DCC `(α, x) ∘' Fstc(β)) (DCC `(Coup(β), x))
   | quot_snd   : RedEta (DCC `(α, x) ∘ Sndc(β)) (DCC `(Coup(β), x))
@@ -64,8 +62,6 @@ inductive RedEta : Expr → Expr → Prop
       match x.step_eta? with
       | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi' h⟩⟩
       | _ => .none
-  | (DCC (Id(_α) ∘ _f)) => .some ⟨_, ⟨.idl⟩⟩
-  | (DCC (Id(_α) ∘' _f)) => .some ⟨_, ⟨.idl'⟩⟩
   | DCC Λ(_α, _β, x) =>
     match x.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr h⟩⟩
@@ -104,7 +100,9 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   | curr hr ih =>
     cases h₂ with
     | curr hr₂ => rw [ih hr₂]
-  | idl' | curr_quot | idl => cases h₂; rfl
+  --| idl'
+  --| idl
+  | curr_quot => cases h₂; rfl
 
 open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : ∃ D, RedEta.instRedRel.ReflTrans B D ∧ RedEta.instRedRel.ReflTrans C D := by
   have h := h₁.unique h₂

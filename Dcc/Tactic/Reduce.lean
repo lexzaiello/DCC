@@ -124,27 +124,48 @@ def step_eta? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedEtaMeta e
     | _ => return .none
   | _ => return .none
 
+def quot_refl (r : Lean.Name) (A : MetaExpr) : Lean.Expr :=
+  Lean.mkAppN (.const ``Relation.ReflTransGen.refl [.succ .zero])
+  #[.const ``_root_.Expr []
+  , .const r []
+  , A.encode]
+
+def quot_single (r : Lean.Name) (A B : MetaExpr) (h : Lean.Expr) : Lean.Expr :=
+  Lean.mkAppN (.const ``Relation.ReflTransGen.single [.succ .zero])
+    #[.const ``_root_.Expr []
+    , .const r [], A.encode
+    , B.encode, h]
+
+def quot_trans (r : Lean.Name) (A B C : MetaExpr) (h₁ h₂ : Lean.Expr) : Lean.Expr :=
+  Lean.mkAppN (.const ``Relation.ReflTransGen.trans [.succ .zero])
+    #[.const ``_root_.Expr []
+    , .const r [], A.encode
+    , B.encode
+    , C.encode, h₁, h₂]
+
+def quot_rtransgen (r : Lean.Name) (A B : Lean.Expr) : Lean.Expr :=
+  Lean.mkAppN (.const ``Relation.ReflTransGen [.succ .zero])
+    #[.const ``_root_.Expr []
+    , .const r []
+    , A, B]
+
 partial def reduce_aff (e : MetaExpr) : TacticM
   (MetaExpr × Lean.Expr) := do
   match ← step? e with
   | .some ⟨e', h⟩ =>
-    let h_raw := h.encode
     let ⟨e'', h₂_raw⟩ ← reduce_aff e'
-    return (e'', Lean.Expr.app (.app
-      (.const ``Relation.ReflTransGen.trans [])
-      (.app (.const ``Relation.ReflTransGen.single []) h_raw)) h₂_raw)
-  | .none => return (e, .const ``Relation.ReflTransGen.refl [])
+
+    return (e'', quot_trans ``_root_.Expr.RedAff e e' e'' h.encode h₂_raw)
+  | .none => return (e, quot_refl ``_root_.Expr.RedAff e)
 
 partial def reduce_eta (e : MetaExpr) : TacticM
   (MetaExpr × Lean.Expr) := do
   match ← step_eta? e with
   | .some ⟨e', h⟩ =>
-    let h_raw := h.encode
     let ⟨e'', h₂_raw⟩ ← reduce_eta e'
-    return (e'', Lean.Expr.app (.app
-      (.const ``Relation.ReflTransGen.trans [])
-      (.app (.const ``Relation.ReflTransGen.single []) h_raw)) h₂_raw)
-  | .none => return (e, .const ``Relation.ReflTransGen.refl [])
+
+    return (e'', quot_trans ``_root_.Expr.RedEta e e' e'' h.encode h₂_raw)
+  | .none => return (e, quot_refl ``_root_.Expr.RedEta e)
 
 def reduce_aff_norm (A : MetaExpr) : TacticM
   (MetaExpr × Lean.Expr × Lean.Expr) := do
@@ -224,12 +245,12 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
         | `(reduce_cmd| aff) =>
           let (actual_B, raw_proof) ← dec.reduce_aff
           let B            := actual_B.encode
-          pure (Lean.Expr.app (.app (.app (.const ``Relation.ReflTransGen []) (.const ``Expr.RedAff [])) A) B, raw_proof)
+          pure (quot_rtransgen ``Expr.RedAff A B, raw_proof)
         | _ =>
           let (actual_B, raw_proof) ← dec.reduce_eta
 
           let B            := actual_B.encode
-          pure (Lean.Expr.app (.app (.app (.const ``Relation.ReflTransGen []) (.const ``Expr.RedEta [])) A) B, raw_proof)
+          pure (quot_rtransgen ``Expr.RedEta A B, raw_proof)
         let g' ← g.assertAfter decl.fvarId nm' ty raw_proof
         replaceMainGoal [g'.mvarId]
       | `(reduce_cmd| reduce! $kind:reduce_cmd) =>
@@ -237,15 +258,13 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
         | `(reduce_cmd| aff) =>
           let (actual_B, norm_proof, raw_proof) ← dec.reduce_aff_norm
           let B            := actual_B.encode
-          let tup_red := (Lean.Expr.app
-            (.app (.app (.const ``Relation.ReflTransGen []) (.const ``Expr.RedAff [])) A) B, raw_proof)
+          let tup_red := (quot_rtransgen ``Expr.RedAff A B, raw_proof)
           let tup_norm := (Lean.Expr.app (.app (.const ``Expr.IsNorm []) (.const ``Expr.RedAff [])) B, norm_proof)
           pure (tup_red, tup_norm)
         | _ =>
           let (actual_B, norm_proof, raw_proof) ← dec.reduce_eta_norm
           let B            := actual_B.encode
-          let tup_red := (Lean.Expr.app
-            (.app (.app (.const ``Relation.ReflTransGen []) (.const ``Expr.RedEta [])) A) B, raw_proof)
+          let tup_red := (quot_rtransgen ``Expr.RedEta A B, raw_proof)
           let tup_norm := (Lean.Expr.app (.app (.const ``Expr.IsNorm []) (.const ``Expr.RedEta [])) B, norm_proof)
           pure (tup_red, tup_norm)
         let nm₁' := Name.str .anonymous s!"{hyp.getId}'₁"

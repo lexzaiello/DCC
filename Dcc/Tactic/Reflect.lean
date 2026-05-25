@@ -74,6 +74,7 @@ def mk_encode (flags : Flag) (base_fields : Array AstField) (ind_arity : ℕ := 
   let my_ext    := flags.ext_fields
   let my_attrs  ← flags.attrs
   let my_name   ← flags.get!' Flag.from?
+  let to_name   ← flags.as!'
   let fun_name  ← flags.def_field "encode" Flag.from?
 
   let ext_matches : Array (TSyntax ``matchAlt) ← my_ext.mapM (fun fld =>
@@ -93,8 +94,9 @@ def mk_encode (flags : Flag) (base_fields : Array AstField) (ind_arity : ℕ := 
   match ind_arity with
   | .zero =>
     `(command|
+      open Qq in
       @[$my_attrs]
-      def $fun_name (e : $my_name) : Lean.Expr :=
+      def $fun_name (e : $my_name) : Q($to_name) :=
         match e with
         $(matchers):matchAlt*)
   | n@(.succ _) =>
@@ -103,8 +105,9 @@ def mk_encode (flags : Flag) (base_fields : Array AstField) (ind_arity : ℕ := 
       idt)
     let bdrs : List (TSyntax ``bracketedBinder) ← vars.mapM (fun v => `(bracketedBinder| {$v : _}))
     `(command|
+      open Qq in
       @[$my_attrs]
-      def $fun_name $(⟨bdrs⟩)* (e : $my_name $(⟨vars⟩)*) : Lean.Expr :=
+      def $fun_name $(⟨bdrs⟩)* (e : $my_name $(⟨vars⟩)*) : Q($to_name) :=
         match e with
         $(matchers):matchAlt*)
 

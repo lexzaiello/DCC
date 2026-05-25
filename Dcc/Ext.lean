@@ -92,7 +92,9 @@ namespace Expr
 theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
   match ht with
   | .eq ht ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-    
+    dcc reduce! aff from hr₁
+    have h := norm_unique hr₁ hn₁ hr₁'
+    dcc reduce! eta from hr₁'
     sorry
   | _ => sorry
 

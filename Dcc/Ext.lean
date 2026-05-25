@@ -15,6 +15,20 @@ inductive ProjectCurr : Expr → Expr → Prop
   | sndc : ProjectCurr (DCC (Sndc(f_β) ⟦β⟧(a, x))) x
   | quot : ProjectCurr (DCC (`(β', x) y))  x
 
+inductive RedEql₃ : Expr → Expr → Prop
+  | refl      : RedEql₃ (DCC (f_β env x)) (DCC (Eql(f_β) env x))
+  | curr      : RedEql₃ (DCC ((Λ(α, β, (Eql(f_β) env)) y z))) (DCC (Eql(f_β) env ⟦β⟧(y, z)))
+  | curr₁     : RedEql₃ (DCC ((Λ(α, β, Eql(f_β))) a b z)) (DCC (Eql(f_β) ⟦β⟧(a, b) z))
+  | quot      : RedEql₃ (DCC (`(β, (Eql(f_β) env)) y z)) (DCC (Eql(f_β) env z))
+  | id        : RedEql₃ (DCC ((Id(_α) (Eql(f_β) env)) z)) (DCC (Eql(f_β) env z))
+  | project   : ProjectCurr (DCC (f ⟦β⟧(a, b))) (DCC (Eql(f_β) env))
+    → RedEql₃ (DCC (f ⟦β⟧(a, b) z)) (DCC (Eql(f_β) env z))
+  | comp      : RedEql₃ (DCC ((Eql(f_β) ∘ a) b z)) (DCC (Eql(f_β) (a b) z))
+  | comp'     : RedEql₃ (DCC ((Eql(f_β) ∘' a) b z)) (DCC (Eql(f_β) (a b) z))
+  | congrFun  : RedAff x (DCC Eql(f_β)) → RedEql₃ (DCC (x y z)) (DCC (Eql(f_β) y z))
+  | congrArg  : RedAff y env → RedEql₃ (DCC (Eql(f_β) y z)) (DCC (Eql(f_β) env z))
+  | congrArg₁ : RedAff z arg → RedEql₃ (DCC (Eql(f_β) env z)) (DCC (Eql(f_β) env arg))
+
 /-
 Reduces (f x)
 view (Reduces (f x)) B
@@ -68,8 +82,6 @@ theorem reduce_aff_pi : (reduce RedAff (DCC (Π(f_α, f_β) env))).fst = (DCC (�
         case h_1 ih _ _ hr heq =>
           exact (ih _ hr heq).elim
         · rfl
-
-
 
 inductive View : Expr → Expr → Expr → Prop
   | pi        : View
@@ -126,6 +138,30 @@ def eq (hr : RedAff A (DCC (x = y))) : RedEq A (DCC (x = y)) := by
   | fstc => exact .proj .fstc
   | sndc => exact .proj .sndc
   | quot => exact .quot
+
+inductive RedEql : Expr → Expr → Prop
+  | quot     : RedEql (DCC (`(β, (Eql(f_β) env x)) y)) (DCC (Eql(f_β) env x))
+  | id       : RedEql (DCC (Id(α) (Eql(f_β) env x))) (DCC ((Eql(f_β) env x)))
+  | project  : ProjectCurr (DCC (f ⟦β⟧(a, b))) (DCC (Eql(f_β) env x))
+    → RedEql (DCC (f ⟦β⟧(a, b))) (DCC (Eql(f_β) env x))
+  | comp     : RedEql (DCC (((Eql(f_β) env) ∘ y) z)) (DCC (Eql(f_β) env (y z)))
+  | comp'    : RedEql (DCC (((Eql(f_β) env) ∘' y) z)) (DCC (Eql(f_β) env (y z)))
+  | curr     : RedEql (DCC ((Λ(α, β, (Eql(f_β) env)) y z))) (DCC ((Eql(f_β) env) ⟦β⟧(y, z)))
+  | congrFun : RedAff f (DCC (Eql(f_β) env)) → RedEql (DCC (f x)) (DCC (Eql(f_β) env x))
+  | congrArg : RedAff x arg → RedEql (DCC (Eql(f_β) env x)) (DCC (Eql(f_β) env arg))
+
+def eql (hr : RedAff A (DCC (Eql(f_β) env x))) : RedEql A (DCC (Eql(f_β) env x)) := by
+  cases hr with
+  | quot =>
+    exact .quot
+  | id => exact .id
+  | fstc => exact .project .fstc
+  | sndc => exact .project .sndc
+  | comp => exact .comp
+  | comp' => exact .comp'
+  | curr => exact .curr
+  | congrFun h => exact .congrFun h
+  | congrArg h => exact .congrArg h
 
 end RedAff
 
@@ -311,21 +347,33 @@ namespace RedAffTrans
 
 -- (DCC ((Λ(α, β, Eql(f_β))) y y z)) (DCC (Eql(f_β) ⟦β⟧(y, y) z))
 -- (((f_β.eql.comp y).app y).app z) ((f_β.eql.app (y.app y)).app z)
-inductive RedEq : Expr → Expr → Prop
-  | refl      : RedEq (DCC (f_β env x)) (DCC (Eql(f_β) env x))
-  | curr      : RedEq (DCC ((Λ(α, β, (Eql(f_β) env)) y z))) (DCC (Eql(f_β) env ⟦β⟧(y, z)))
-  | curr₁     : RedEq (DCC ((Λ(α, β, Eql(f_β))) a b z)) (DCC (Eql(f_β) ⟦β⟧(a, b) z))
-  | quot      : RedEq (DCC (`(β, (Eql(f_β) env)) y z)) (DCC (Eql(f_β) env z))
-  | id        : RedEq (DCC ((Id(_α) (Eql(f_β) env)) z)) (DCC (Eql(f_β) env z))
-  | project   : ProjectCurr (DCC (f ⟦β⟧(a, b))) (DCC (Eql(f_β) env))
-    → RedEq (DCC (f ⟦β⟧(a, b) z)) (DCC (Eql(f_β) env z))
-  | comp      : RedEq (DCC ((Eql(f_β) ∘ a) b z)) (DCC (Eql(f_β) (a b) z))
-  | comp'     : RedEq (DCC ((Eql(f_β) ∘' a) b z)) (DCC (Eql(f_β) (a b) z))
-  | congrFun  : RedAff x (DCC Eql(f_β)) → RedEq (DCC (x y z)) (DCC (Eql(f_β) y z))
-  | congrArg  : RedAff y env → RedEq (DCC (Eql(f_β) y z)) (DCC (Eql(f_β) env z))
-  | congrArg₁ : RedAff z arg → RedEq (DCC (Eql(f_β) env z)) (DCC (Eql(f_β) env arg))
 
-def eql (hr : RedAffTrans (DCC (x y z)) (DCC (Eql(f_β) env arg))) : RedEq (DCC (x y z)) (DCC (Eql(f_β) env arg)) := by
+/-def eql (hr : RedAffTrans e (DCC (Eql(f_β) env arg))) : RedEq e (DCC (Eql(f_β) env arg)) := by
+  sorry-/
+
+/-def eql (hr : RedAffTrans (DCC (x y z)) (DCC (Eql(f_β) env arg))) : RedEq (DCC (x y z)) (DCC (Eql(f_β) env arg)) := by
+  cases hr using Relation.TransGen.head_induction_on with
+  | single h =>
+    cases h with
+    | curr => exact .curr
+    | congrFun h =>
+      cases h with
+      | quot => exact .quot
+      | id => exact .id
+      | fstc  => exact .project .fstc
+      | sndc  => exact .project .sndc
+      | curr  => exact .curr₁
+      | comp  => exact .comp
+      | comp' => exact .comp'
+      | congrFun h => exact .congrFun h
+      | congrArg h => exact .congrArg h
+    | congrArg h => exact .congrArg₁ h
+  | head ih h =>
+    rename_i ih'
+    have h := ih.eq
+    sorry-/
+
+def eql (hr : RedAffTrans (DCC (x y z)) (DCC (Eql(f_β) env arg))) : RedEql₃ (DCC (x y z)) (DCC (Eql(f_β) env arg)) := by
   cases hr with
   | single h =>
     cases h with
@@ -343,7 +391,7 @@ def eql (hr : RedAffTrans (DCC (x y z)) (DCC (Eql(f_β) env arg))) : RedEq (DCC 
       | congrArg h => exact .congrArg h
     | congrArg h => exact .congrArg₁ h
   | tail h ih =>
-    
+    have h := ih.eq
     sorry
 
 /-inductive RedEq : Expr → Expr → Prop

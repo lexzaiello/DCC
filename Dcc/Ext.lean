@@ -312,15 +312,18 @@ namespace RedAffTrans
 -- (DCC ((Λ(α, β, Eql(f_β))) y y z)) (DCC (Eql(f_β) ⟦β⟧(y, y) z))
 -- (((f_β.eql.comp y).app y).app z) ((f_β.eql.app (y.app y)).app z)
 inductive RedEq : Expr → Expr → Prop
-  | refl    : RedEq (DCC (f_β env x)) (DCC (Eql(f_β) env x))
-  | curr    : RedEq (DCC ((Λ(α, β, (Eql(f_β) env)) y z))) (DCC (Eql(f_β) env ⟦β⟧(y, z)))
-  | curr₁   : RedEq (DCC ((Λ(α, β, Eql(f_β))) a b z)) (DCC (Eql(f_β) ⟦β⟧(a, b) z))
-  | quot    : RedEq (DCC (`(β, (Eql(f_β) env)) y z)) (DCC (Eql(f_β) env z))
-  | id      : RedEq (DCC ((Id(_α) (Eql(f_β) env)) z)) (DCC (Eql(f_β) env z))
-  | project : ProjectCurr (DCC (f ⟦β⟧(a, b))) (DCC (Eql(f_β) env))
+  | refl      : RedEq (DCC (f_β env x)) (DCC (Eql(f_β) env x))
+  | curr      : RedEq (DCC ((Λ(α, β, (Eql(f_β) env)) y z))) (DCC (Eql(f_β) env ⟦β⟧(y, z)))
+  | curr₁     : RedEq (DCC ((Λ(α, β, Eql(f_β))) a b z)) (DCC (Eql(f_β) ⟦β⟧(a, b) z))
+  | quot      : RedEq (DCC (`(β, (Eql(f_β) env)) y z)) (DCC (Eql(f_β) env z))
+  | id        : RedEq (DCC ((Id(_α) (Eql(f_β) env)) z)) (DCC (Eql(f_β) env z))
+  | project   : ProjectCurr (DCC (f ⟦β⟧(a, b))) (DCC (Eql(f_β) env))
     → RedEq (DCC (f ⟦β⟧(a, b) z)) (DCC (Eql(f_β) env z))
-  | comp    : RedEq (DCC ((Eql(f_β) ∘ a) b z)) (DCC (Eql(f_β) (a b) z))
-  | comp'   : RedEq (DCC ((Eql(f_β) ∘' a) b z)) (DCC (Eql(f_β) (a b) z))
+  | comp      : RedEq (DCC ((Eql(f_β) ∘ a) b z)) (DCC (Eql(f_β) (a b) z))
+  | comp'     : RedEq (DCC ((Eql(f_β) ∘' a) b z)) (DCC (Eql(f_β) (a b) z))
+  | congrFun  : RedAff x (DCC Eql(f_β)) → RedEq (DCC (x y z)) (DCC (Eql(f_β) y z))
+  | congrArg  : RedAff y env → RedEq (DCC (Eql(f_β) y z)) (DCC (Eql(f_β) env z))
+  | congrArg₁ : RedAff z arg → RedEq (DCC (Eql(f_β) env z)) (DCC (Eql(f_β) env arg))
 
 def eql (hr : RedAffTrans (DCC (x y z)) (DCC (Eql(f_β) env arg))) : RedEq (DCC (x y z)) (DCC (Eql(f_β) env arg)) := by
   cases hr with
@@ -336,7 +339,11 @@ def eql (hr : RedAffTrans (DCC (x y z)) (DCC (Eql(f_β) env arg))) : RedEq (DCC 
       | curr  => exact .curr₁
       | comp  => exact .comp
       | comp' => exact .comp'
+      | congrFun h => exact .congrFun h
+      | congrArg h => exact .congrArg h
+    | congrArg h => exact .congrArg₁ h
   | tail h ih =>
+    
     sorry
 
 /-inductive RedEq : Expr → Expr → Prop

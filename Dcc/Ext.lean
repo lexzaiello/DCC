@@ -1,4 +1,5 @@
 import Dcc.Judge
+import Dcc.Preservation
 import Dcc.Relation
 import Dcc.Types
 --import Dcc.Tactic.Reduce
@@ -715,18 +716,7 @@ theorem Reduces.pi_shape (h : Reduces (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β'
 
 --theorem Reduced.
 
-theorem Judge.norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
-  cases ht
-  any_goals (exact Reduces.norm_eta (by assumption))
-  case tintro | bot | top | sort =>
-    intro ⟨_, h⟩
-    cases h
-  case app => exact Reduced.norm_eta (by assumption)
-  case eq =>
-    intro ⟨_, h⟩
-    cases h
-
-theorem Judge.refl_canon (h : Judge e τ) (heq : τ = DCC (x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
+/-theorem Judge.refl_canon (h : Judge e τ) (heq : τ = DCC (x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
   induction h generalizing x with
   | app h_t_f h_r_α h_t_x h_r_τ ih₁ ih₂ =>
     cases h_t_f with
@@ -739,7 +729,7 @@ theorem Judge.refl_canon (h : Judge e τ) (heq : τ = DCC (x = x)) : ∃ f_α en
         
         sorry
       | .inr h =>
-        sorry
+        sorry-/
 
 /-theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
   cases h with
@@ -754,7 +744,7 @@ theorem Judge.refl_canon (h : Judge e τ) (heq : τ = DCC (x = x)) : ∃ f_α en
         
         sorry-/
 
-theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
+/-theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
   induction e generalizing x with
   | refl =>
     cases h with
@@ -778,7 +768,7 @@ theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DC
             
             sorry
         | .inr h =>
-          sorry
+          sorry-/
         /-match hr₂.cases_head with
         | .inl h =>
           cases h
@@ -894,7 +884,7 @@ termination_by τ.type_size
 theorem canon_elim_eq (ht : is_canon_type (DCC x = y) e) : x = y := by
   grind
 
-theorem Judge.is_canon (ht : Judge e τ) : is_canon_type τ e := by
+/-theorem Judge.is_canon (ht : Judge e τ) : is_canon_type τ e := by
   induction ht with
   | sort | eq =>
     grind
@@ -927,7 +917,7 @@ theorem Judge.is_canon (ht : Judge e τ) : is_canon_type τ e := by
         split <;> grind)
       (by sorry)
     
-    sorry
+    sorry-/
 
 /-def Judge.is_nf (ht : Judge e τ) : NfType τ := by
   cases ht with
@@ -976,25 +966,6 @@ theorem Judge.is_canon (ht : Judge e τ) : is_canon_type τ e := by
   | app _ _ _ hr =>
     
     sorry-/
-
-/-
-An expression that reduces to an equality.
-This only includes equalities that can be introduced by
-type formers.
--/
-inductive EqlTerm : Expr → Prop
-  
-
-/-
-A function that, when applied a single argument,
-yields some =(f_α) env x y
-
-the output type reduces to =(f_α) env x x
--/
-inductive EqlFn : Expr → Prop
-  | eql  : EqlFn (DCC (Eql(f_α) env))
-  | quot : Reduces x (DCC (
-    EqlFn (DCC `(
 
 /-
 def Judge.is_nf (ht : Judge e τ) : NfType τ := by
@@ -1264,16 +1235,7 @@ theorem Reduced.pi (h : Reduced (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env',
 
 namespace EqFn
 
-theorem Judge.invert (h_t : Judge e τ) (heq : e = (DCC (f x))) : ∃ f_α α f_β env,
-  Judge f (DCC (Π(f_α, f_β) env)) ∧ Reduces (DCC (f_α env)) α
-    ∧ Judge x α ∧ Reduced (DCC (f_β env x)) τ := by
-  induction h_t with
-  | app h_t_f h_r_α h_t_x h_r_τ ih₁ ih₂ =>
-    cases heq
-    exact ⟨_, _, _, _, h_t_f, h_r_α, h_t_x, h_r_τ⟩
-  | _ => contradiction
-
-theorem EqFn.elim_env_arrow (h_t_f : Judge f (DCC (Π(f_α, f_β) env)))
+theorem elim_env_arrow (h_t_f : Judge f (DCC (Π(f_α, f_β) env)))
   (h_r_α   : Reduces (DCC (f_α env)) α)
   (h_t_α   : Judge α (DCC Sort m))
   (h_eq_fn : EqFn₂ f_β (DCC ((Sort m : Sort m + 1) → ((α : Sort m) → Sort 0))))
@@ -1284,7 +1246,7 @@ theorem EqFn.elim_env_arrow (h_t_f : Judge f (DCC (Π(f_α, f_β) env)))
   | quot h =>
     induction f generalizing x with
     | app _ _ ih₁ ih₂ =>
-      
+      have h := h_t_f.invert rfl
       sorry
 
 theorem EqFn.elim_eq (h_t_f : Judge f (DCC (Π(f_α, f_β) env)))

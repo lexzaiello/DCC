@@ -181,9 +181,9 @@ theorem red_aff_pi (h : RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', B = (DC
     rename_i x'
     exact ⟨x', rfl⟩
 
-theorem red_aff_pi' (h : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', B = (DCC (Π(f_α, f_β) env')) := by
+theorem red_aff_pi' (h : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', (B = (DCC (Π(f_α, f_β) env')) ∧ Relation.ReflTransGen RedAff env env') := by
   match h.cases_head with
-  | .inl h => exact ⟨_, h.symm⟩
+  | .inl h => exact ⟨_, ⟨h.symm, .refl⟩⟩
   | .inr ⟨C, hr₁, hr⟩ =>
     have ⟨env', heq⟩ := red_aff_pi hr₁
     have h_dec : env'.size < env.size := by
@@ -192,17 +192,215 @@ theorem red_aff_pi' (h : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env))
       | congrFun h => cases h
       | congrArg h =>
         exact RedAff.instRedRel.decreasing h
-    exact red_aff_pi' (heq ▸ hr)
+    have ⟨env', ⟨heq, hr⟩⟩ := red_aff_pi' (heq ▸ hr)
+    exact ⟨env', heq, by
+      cases hr₁ with
+      | congrFun h => cases h
+      | congrArg h =>
+        cases heq
+        exact .trans (.single h) (by assumption)⟩
 termination_by env.size
 
-/-inductive CanReduceEq : Expr → Expr → Prop
-  | quot : CanReduceEq (DCC (`(-/
+/-def NfType : Expr → Prop
+  | DCC (=(f_α) env x y) => x = y
+  | DCC ⊤ => True
+  | DCC Coup(f_β) => True
+  | DCC (Σ(f_α, f_β) env) => True
+  | DCC Sort m => True
+  | DCC (Π(f_α, f_β) env) => ∀ {x τ' : Expr}
+        (h     : Judge x (reduce_all (DCC (f_α env))))
+        (h_red : Reduces (DCC (f_β env x)) τ'), NfType τ'
+  | _ => False
 
-theorem no_reduce_eq_aff (h : RedAff A (DCC (=(f_α) env x y))) : False := by
+def NfType.eq_elim (is_nf : NfType (DCC (=(f_α) env x y))) : x = y := by
+  
+  sorry-/
+
+/-inductive NfType : Expr → Prop
+  | sort  : NfType (DCC Sort m)
+  | eql   : NfType (DCC (=(f_α) env x x))
+  | fn    : NfType (DCC (Π(f_α, f_β) env))
+  | top   : NfType (DCC ⊤)
+  | coup  : NfType (DCC Coup(f_β))
+  | sigma : NfType (DCC (Σ(f_α, f_β) env))-/
+
+theorem red_aff_pi_norm
+  (h : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env)) B)
+  (hn : IsNorm RedAff B) :
+    ∃ env', (B = (DCC (Π(f_α, f_β) env'))
+      ∧ Relation.ReflTransGen RedAff env env'
+      ∧ IsNorm RedAff env') := by
+  match h.cases_head with
+  | .inl h =>
+    exact ⟨env, h.symm, .refl, (h ▸ hn).congrArg⟩
+  | .inr ⟨C, h₁, h₂⟩ =>
+    cases h₁ with
+    | congrFun h => cases h
+    | congrArg h =>
+      rename_i x'
+      have h_dec : x'.size < env.size := RedAff.instRedRel.decreasing h
+      have ⟨env', heq, hrt, hn⟩ := red_aff_pi_norm h₂ hn
+      exact ⟨env', heq, .trans (.single h) hrt, hn⟩
+termination_by env.size
+
+theorem red_eta_pi_norm
+  (h : Relation.ReflTransGen RedEta (DCC (Π(f_α, f_β) env)) B)
+  (hn : IsNorm RedEta B) :
+    ∃ f_β', B = (DCC (Π(f_α, f_β') env)) := by
+  match h.cases_head with
+  | .inl h => exact ⟨_, h.symm⟩
+  | .inr ⟨c, h₁, h₂⟩ =>
+    cases h₁ with
+    | pi h =>
+      cases h with
+      | pi_quot hr =>
+        rename_i x x' β
+        have h_dec : (DCC `(β, x')).eta_size < (DCC `(β, x)).eta_size := by
+          have h := RedEta.instRedRel.decreasing hr
+          grind
+        exact red_eta_pi_norm h₂ hn
+      | pi' hr =>
+        rename_i β'
+        have h_dec : β'.eta_size < f_β.eta_size := by
+          exact RedEta.instRedRel.decreasing hr
+        exact red_eta_pi_norm h₂ hn
+termination_by f_β.eta_size
+
+/-def NfType.eq_elim (heq : τ = (DCC (=(f_α) env x y))) (is_nf : NfType τ) : x = y := by
+  cases heq; cases is_nf; rfl-/
+
+--theorem IsNorm.coup_
+
+theorem no_step_coup_eta (h : RedEta (DCC Coup(β)) B) : False := by
   cases h
+
+theorem no_step_coup_eta_trans (h : Relation.ReflTransGen RedEta (DCC Coup(β)) B) : (DCC Coup(β)) = B := by
+  match h.cases_head with
+  | .inl h => exact h
+  | .inr ⟨C, h₁, h₂⟩ => cases h₁
+
+theorem Reduces.coup (h : Reduces (DCC Coup(β)) B) : ∃ β', B = (DCC Coup(β')) :=
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ => by
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      match hr₂.cases_head with
+      | .inl h => exact ⟨_, h.symm⟩
+      | .inr ⟨_, h₁, h₂⟩ => cases h₁
+    | .inr ⟨C, h₁, h₂⟩ =>
+      have h_dec := RedAff.instRedRel.decreasing h₁
+      cases h₁ with
+      | coup hβ =>
+        exact Reduces.coup ⟨h₂, hn₁, hr₂, hn₂⟩
+termination_by (DCC Coup(β)).size
+
+/-def Judge.is_nf (ht : Judge e τ) : NfType τ := by
+  cases ht with
+  | eql _ hred
+  | sigma _ _ hred
+  | pair _ _ _ _ _ _ hred
+  | sndc _ _ hred | fstc _ _ hred
+  | quot _ _ hred | pi _ _ hred | curr _ _ _ _ _ hred | comp _ _ _ hred
+  | comp' _ _ _ _ _ hred | id _ hred | refl _ hred | eq _ hred =>
+    match hred with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      have ⟨env', heq, hr₁', hn₁'⟩ := red_aff_pi_norm hr₁ hn₁
+      cases heq
+      have ⟨a, τ_eq⟩ := red_eta_pi_norm hr₂ hn₂
+      cases τ_eq
+      exact .fn
+  | bot | top | sort => exact NfType.sort
+  | tintro => exact .top
+  | coup _ _ hr =>
+    match hr with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      match hr₁.cases_head with
+      | .inl h =>
+        cases h
+        match hr₂.cases_head with
+        | .inl h =>
+          cases h
+          exact .sort
+        | .inr ⟨C, h₁, h₂⟩ => cases h₁
+      | .inr ⟨C, h₁, h₂⟩ => cases h₁
+  | mk h_t_x _ _ _ _ h =>
+    rename_i x α y τ₂ _ _ _ _ _ _ _ _ _
+    have ⟨β', τ_eq⟩ := h.coup
+    cases τ_eq
+    exact .coup
+  | app h_t_f hr_f h_t_x hr_cod =>
+    have h_nf_f := h_t_f.is_nf
+    have h_nf_x := h_t_x.is_nf
+    cases h_nf_f with
+    | fn =>
+      
+      sorry
+
+def Judge.is_nf (ht : Judge e τ) : NfType τ := by
+  cases ht with
+  | eql _ hred | comp' _ _ _ _ _ hred | comp id _ _ hred | id _ hred | eq _ hred =>
+    match hred with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      have ⟨env', heq, hr₁', hn₁'⟩ := red_aff_pi_norm hr₁ hn₁
+      cases heq
+      have ⟨a, τ_eq⟩ := red_eta_pi_norm hr₂ hn₂
+      cases τ_eq
+      exact .fn
+
+def Judge.is_nf (ht : Judge e τ) : NfType τ := by
+  cases ht with
+  | eql _ hred | comp' _ _ _ _ _ hred | comp id _ _ hred | id _ hred | eq _ hred =>
+    match hred with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      have ⟨env', heq, hr₁', hn₁'⟩ := red_aff_pi_norm hr₁ hn₁
+      cases heq
+      have ⟨a, τ_eq⟩ := red_eta_pi_norm hr₂ hn₂
+      cases τ_eq
+      exact .fn-/
   
 
-theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
+/-
+If it type-checks, it's either:
+- the same equality
+- a different equality, rejecting argument,
+  but one that was ultimately created with refl
+-/
+
+/-
+Type normal forms:
+
+- Sort
+- =(f_α) env x (y? should leave y or force x?)
+- (Π(f_α, f_β) env)
+- ⊤
+- Coup(f_β)
+- Σ(f_α, f_β) env
+
+What can reduce to =(f_α) env x y?
+
+Id(_) (=(f_α) env x y)
+
+Fstc(_) (⟦_⟧((=(f_α) env x y), ...))
+
+What is well-typed at =(f_α) env x y?
+
+  - an app. that's it.
+
+    What kind of app?
+
+    - an app with LHS type:
+    Π(f_α, 
+
+How does this help us?
+
+- =(f_α) is only a valid type under an app.
+  - it is only valid under something that reduces to refl
+
+Theorem: the only combinator that duplicates its spine is Eql
+-/
+
+/-theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
   have h := ht.norm_eta
   induction e with
   | refl =>
@@ -210,15 +408,21 @@ theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
     | refl _ hr =>
       match hr with
       | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-        match hr₁.cases_head with
-        | .inl h =>
-          exact (no_red_pi_eta_trans (h ▸ hr₂)).elim
-        | .inr ⟨C, h₁, h₂⟩ =>
-          cases h₁ with
-          | congrFun h => cases h
-          | congrArg h =>
-            
-            sorry
+        have ⟨env', heq, hrt⟩ := red_aff_pi' hr₁
+        cases heq
+        exact (no_red_pi_eta_trans hr₂).elim
+  | app =>
+    cases ht with
+    | app _ _ _ hr =>
+      match hr with
+      | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+        cases hr₂ with
+        | refl =>
+          
+          sorry
+        | tail hrt h =>
+          have h := only_eql_reduces_eq h
+          cases h; cases h; rfl
 
 theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
   have h := ht.norm_eta
@@ -301,7 +505,7 @@ open Reduces in theorem reflect (ht : Judge e (DCC (=(f_α) env x y))) : x = y :
   | refl ht hr =>
     let heq := hr.complete
     sorry
-  | _ => sorry
+  | _ => sorry-/
 
 end Expr
 

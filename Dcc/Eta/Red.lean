@@ -15,7 +15,7 @@ inductive RedEta : Expr → Expr → Prop
   | pi         : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
   | pi_quot    : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
   | pi'        : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
-  | sig        : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(α, β) env)) (DCC Coup(β'))
+--  | sig        : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(α, β) env)) (DCC Coup(β'))
   | sig'       : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
   | quot_fst   : RedEta (DCC `(α, x) ∘ Fstc(β)) (DCC `(Coup(β), x))
   | quot'_fst  : RedEta (DCC `(α, x) ∘' Fstc(β)) (DCC `(Coup(β), x))
@@ -31,6 +31,49 @@ inductive RedEta : Expr → Expr → Prop
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
 
+theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff B := by
+  induction h
+  any_goals (
+    focus
+    intro ⟨_, h⟩
+    cases h
+    done
+  )
+  case pi h ih =>
+    cases h with
+    | pi_quot =>
+      have h := ih hn.congrFun
+      have h_norm_env := hn.congrArg
+      intro ⟨_, h⟩
+      cases h with
+      | congrFun hr =>
+        exact h ⟨_, hr⟩
+      | congrArg hr =>
+        exact h_norm_env ⟨_, hr⟩
+    | pi' =>
+      have hn_env := hn.congrArg
+      have h := ih hn.congrFun
+      intro ⟨_, h⟩
+      cases h with
+      | congrFun hr =>
+        exact h ⟨_, hr⟩
+      | congrArg hr =>
+        exact hn_env ⟨_, hr⟩
+  case eql =>
+    have h_norm_eq := hn.congrFun
+    have h_norm_x := hn.congrArg
+    have h_norm_env := h_norm_eq.congrArg
+    intro ⟨_, h⟩
+    cases h with
+    | congrFun h =>
+      cases h with
+      | congrFun h =>
+        cases h with
+        | congrFun h => cases h
+        | congrArg h => exact h_norm_env ⟨_, h⟩
+      | congrArg h => exact h_norm_x ⟨_, h⟩
+    | congrArg h => exact h_norm_x ⟨_, h⟩
+
 @[dcc_force_eta, dcc_force_reduce, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
   | DCC (Eql(f_α) env x) => .some ⟨_, ⟨.eql⟩⟩
@@ -44,10 +87,10 @@ inductive RedEta : Expr → Expr → Prop
     match f_β.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig' h⟩⟩
     | _ => .none
-  | DCC (Σ(α, f_β) env) =>
+  /-| DCC (Σ(α, f_β) env) =>
     match (DCC (f_β env)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig h⟩⟩
-    | _ => .none
+    | _ => .none-/
   | DCC (Π(_f_α, f_β) _env) =>
     match (DCC Π(_f_α, f_β)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi h⟩⟩
@@ -88,7 +131,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
 
 @[dcc_reduce, aesop safe forward (rule_sets := [DccRel])] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
-  | eql | curr_fst' | curr_fst | pi'_comp | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | pi_comp | quot_snd | quot_fst | sig' | pi | sig => cases h₂; aesop
+  | eql | curr_fst' | curr_fst | pi'_comp | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | pi_comp | quot_snd | quot_fst | sig' | pi => cases h₂; aesop
   | pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop
@@ -103,6 +146,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   --| idl'
   --| idl
   | curr_quot => cases h₂; rfl
+  --| sig => sorry
 
 open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : ∃ D, RedEta.instRedRel.ReflTrans B D ∧ RedEta.instRedRel.ReflTrans C D := by
   have h := h₁.unique h₂

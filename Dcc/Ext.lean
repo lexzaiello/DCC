@@ -107,6 +107,24 @@ theorem no_red_pi_eta (h_r : RedEta (DCC (Π(f_α, f_β) env)) (DCC (=(a) b c d)
   cases h_r with
   | pi h => cases h
 
+theorem no_red_coup_aff_trans (h_r : Relation.ReflTransGen RedAff (DCC Coup(β)) (DCC (=(a) b c d))) : False := by
+  cases h_r.cases_head with
+  | inl h => simp_all
+  | inr h =>
+    have ⟨C, h₁, h₂⟩ := h
+    cases h₁ with
+    | coup h =>
+      have h_dec := RedAff.instRedRel.decreasing h
+      exact no_red_coup_aff_trans h₂
+termination_by β.size
+
+theorem no_red_coup_eta_trans (h_r : Relation.ReflTransGen RedEta (DCC Coup(β)) (DCC (=(a) b c d))) : False := by
+  cases h_r.cases_head with
+  | inl h => simp_all
+  | inr h =>
+    have ⟨C, h₁, h₂⟩ := h
+    cases h₁
+
 theorem no_red_pi_aff_trans (h_r : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env)) (DCC (=(a) b c d))) : False := by
   cases h_r.cases_head with
   | inl h => simp_all
@@ -141,14 +159,71 @@ theorem no_red_pi_eta_trans (h_r : Relation.ReflTransGen RedEta (DCC (Π(f_α, f
         exact no_red_pi_eta_trans h₂
 termination_by f_β.eta_size
 
+theorem Judge.norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
+  cases ht
+  any_goals (
+    exact Reduces.norm_eta (by assumption)
+  )
+  case tintro | bot | top | sort =>
+    intro ⟨_, h⟩
+    cases h
+
 theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
+  have h := ht.norm_eta
   cases ht with
-  | comp _ _ _ h | comp' _ _ _ _ _ h | id _ h | refl _ h | eq _ h =>
+  | eql _ h
+  | sigma _ _ h
+  | pair _ _ _ _ _ _ h
+  | sndc _ _ h | fstc _ _ h
+  | quot _ _ h | pi _ _ h | curr _ _ _ _ _ h | comp _ _ _ h
+  | comp' _ _ _ _ _ h | id _ h | refl _ h | eq _ h =>
     match h with
     | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
       cases hr₂ with
       | refl => exact (no_red_pi_aff_trans hr₁).elim
       | tail a b => exact eq_norm_refl b hn₂
+  | mk _ _ _ _ _ h =>
+    match h with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      cases hr₂ with
+      | refl =>
+        exact (no_red_coup_aff_trans hr₁).elim
+      | tail a b =>
+        exact eq_norm_refl b hn₂
+  | coup _ _ h =>
+    match h with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      unfold Coup.type at *
+      match hr₁.cases_head with
+      | .inl a =>
+        simp_all
+        match hr₂.cases_head with
+        | .inl a => simp_all
+        | .inr ⟨_, h, _⟩ => cases a ▸ h
+  | app h_t_f h_r_α h_t_x h =>
+    have hn₁ := h_t_f.norm_eta
+    have hn₂ := h_t_x.norm_eta
+    
+    match h with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      cases hr₁.cases_head with
+      | inl a =>
+        simp_all
+        match hr₂.cases_head with
+        | .inl a =>
+          cases a; cases a
+          rename_i h _ _
+          
+        | .inr ⟨_, h, h_red_other⟩ =>
+          cases a ▸ h
+          cases h_red_other.cases_head with
+          | inl h =>
+            cases h; rfl
+          | inr h =>
+            
+            sorry
+      | inr h =>
+        sorry
 
 open Reduces in theorem reflect (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
   cases ht with

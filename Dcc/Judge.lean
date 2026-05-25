@@ -31,6 +31,10 @@ theorem Reduces.unique' (h₁ : Reduces A B) (h₂ : Reduces A C) : h₁ ≍ h�
   cases h
   congr
 
+@[dcc_reduce]
+def Reduces.norm_eta (h : Reduces A B) : IsNorm RedEta B :=
+  match h with
+  | ⟨_, _, _, h⟩ => h
 
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
 theorem Reduces.complete : Reduces A B → reduce_all A = B :=
@@ -89,7 +93,7 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Eql(f_α)))) δ)) τ
       → Judge (DCC refl(f_α)) τ
   | eql    : Judge f_α (DCC (δ : Sort o) → Sort m)
-    → Reduces (DCC Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, Π(Id(Sort m), `(Coup(Id(Sort m)), Sort 0))))))) τ
+    → Reduces (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, Π(Id(Sort m), `(Coup(Id(Sort m)), Sort 0)))))) δ)) τ
     → Judge (DCC Eql(f_α)) τ
   | id     : Judge α (DCC Sort m)
     → Reduces (id.type α m) τ

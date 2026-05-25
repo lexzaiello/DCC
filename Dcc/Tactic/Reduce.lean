@@ -84,10 +84,10 @@ def step_eta? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedEtaMeta e
     match ← f_β.step_eta? with
     | .some ⟨_, h⟩ => return .some ⟨_, .sig' h⟩
     | _ => return .none
-  | DCC[.] (Σ(α, f_β) env) => do
+  /-| DCC[.] (Σ(α, f_β) env) => do
     match ← (DCC[.] (f_β env)).step_eta? with
     | .some ⟨_, h⟩ => return .some ⟨_, .sig h⟩
-    | _ => return .none
+    | _ => return .none-/
   | DCC[.] (Π(_f_α, f_β) _env) => do
     match ← (DCC[.] Π(_f_α, f_β)).step_eta? with
     | .some ⟨_, h⟩ => return .some ⟨_, .pi h⟩

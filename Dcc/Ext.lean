@@ -88,30 +88,81 @@ end Expr
 
 namespace Expr
 
-theorem RedEta.eq_eql (h_step : RedEta A (DCC (x = y))) : ∃ f_α env, x = y ∧ A = (DCC (Eql(f_α) env x)) := by
+namespace RedAff
+
+theorem pi (h : RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', B = (DCC (Π(f_α, f_β) env')) := by
+  cases h with
+  | congrFun h => cases h
+  | congrArg h =>
+    rename_i x'
+    exact ⟨x', rfl⟩
+
+@[dcc_reduce]
+theorem no_red_pi_aff (h_r : RedAff (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
+  cases h_r
+
+inductive ProjectEq : Expr → Expr → Prop
+  | fstc : ProjectEq (DCC (Fstc(f_β) ⟦β⟧(x = y, b))) (DCC (x = y))
+  | sndc : ProjectEq (DCC (Sndc(f_β) ⟦β⟧(a, x = y))) (DCC (x = y))
+  | quot : ProjectEq (DCC (`(β', x = y) ⟦β⟧(a, b)))  (DCC (x = y))
+
+def project_eq (hr : RedAff (DCC (f ⟦β⟧(a, b))) (DCC x = y)) : ProjectEq (DCC (f ⟦β⟧(a, b))) (DCC x = y) := by
+  cases hr with
+  | quot => exact .quot
+  | sndc => exact .sndc
+  | fstc => exact .fstc
+
+inductive RedEq : Expr → Expr → Prop
+  | proj : RedAff.ProjectEq A (DCC (x = y)) → RedEq A (DCC (x = y))
+  | id   : RedEq (DCC (Id(α) (x = y))) (DCC (x = y))
+  | quot : RedEq (DCC (`(α, (x = y)) z)) (DCC (x = y))
+
+theorem eq (h : RedEta A (DCC (x = y))) : ∃ f_α env, A = (DCC (Eql(f_α) env x)) := by
+  cases h with
+  | eql => exact ⟨_, _, rfl⟩
+
+end RedAff
+
+namespace RedEta
+
+theorem eq_eql (h_step : RedEta A (DCC (x = y))) : ∃ f_α env, x = y ∧ A = (DCC (Eql(f_α) env x)) := by
   cases h_step with
   | eql => exact ⟨_, _, rfl, rfl⟩
 
 @[dcc_reduce]
-theorem RedEta.eq_norm_refl (h_step : RedEta A (DCC (x = y))) (h : IsNorm RedEta (DCC (x = y))) : x = y := by
+theorem eq_norm_refl (h_step : RedEta A (DCC (x = y))) (h : IsNorm RedEta (DCC (x = y))) : x = y := by
   cases h_step with
   | eql => rfl
+
+@[dcc_reduce]
+theorem no_coup (h : RedEta (DCC Coup(β)) B) : False := by
+  cases h
+
+@[dcc_reduce]
+theorem no_pi_eq (h_r : RedEta (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
+  cases h_r
+
+inductive RedEq : Expr → Expr → Prop
+  | eql : RedEq (DCC (Eql(f_α) env x)) (DCC x = x)
+
+/-inductive Reduced.RedEq : Expr → Expr → Prop
+  | curr : -/
+
+def red_eq (hr : RedEta A (DCC (x = y))) : RedEta.RedEq A (DCC (x = y)) := by
+  cases hr with
+  | eql => exact .eql
+
+end RedEta
 
 def head (e : Expr) : Expr :=
   match e with
   | .app f _x => f.head
   | e => e
 
-@[dcc_reduce]
-theorem no_red_pi_aff (h_r : RedAff (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
-  cases h_r
+namespace RedAffReflTrans
 
 @[dcc_reduce]
-theorem no_red_pi_eta (h_r : RedEta (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
-  cases h_r
-
-@[dcc_reduce]
-theorem no_red_coup_aff_trans (h_r : Relation.ReflTransGen RedAff (DCC Coup(β)) (DCC x = y)) : False := by
+theorem no_coup_eq (h_r : RedAffReflTrans (DCC Coup(β)) (DCC x = y)) : False := by
   cases h_r.cases_head with
   | inl h => simp_all
   | inr h =>
@@ -119,19 +170,11 @@ theorem no_red_coup_aff_trans (h_r : Relation.ReflTransGen RedAff (DCC Coup(β))
     cases h₁ with
     | coup h =>
       have h_dec := RedAff.instRedRel.decreasing h
-      exact no_red_coup_aff_trans h₂
+      exact no_coup_eq h₂
 termination_by β.size
 
 @[dcc_reduce]
-theorem no_red_coup_eta_trans (h_r : Relation.ReflTransGen RedEta (DCC Coup(β)) (DCC x = y)) : False := by
-  cases h_r.cases_head with
-  | inl h => simp_all
-  | inr h =>
-    have ⟨C, h₁, h₂⟩ := h
-    cases h₁
-
-@[dcc_reduce]
-theorem no_red_pi_aff_trans (h_r : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
+theorem no_pi_eq (h_r : RedAffReflTrans (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
   cases h_r.cases_head with
   | inl h => simp_all
   | inr h =>
@@ -141,58 +184,14 @@ theorem no_red_pi_aff_trans (h_r : Relation.ReflTransGen RedAff (DCC (Π(f_α, f
     | congrArg h =>
       rename_i x'
       have h_dec := RedAff.instRedRel.decreasing h
-      exact no_red_pi_aff_trans h₂
+      exact no_pi_eq h₂
 termination_by env.size
 
-@[dcc_reduce]
-theorem no_red_pi_eta_trans (h_r : Relation.ReflTransGen RedEta (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
-  let f_β₀ := f_β
-  cases h_r.cases_head with
-  | inl h => simp_all
-  | inr h =>
-    have ⟨C, h₁, h₂⟩ := h
-    cases heq₁ : h₁ with
-    | pi h =>
-      cases h with
-      | pi_quot h=>
-        rename_i p'
-        have h_dec := RedEta.instRedRel.decreasing p'
-        rename_i x x' β
-        have _heq : (β.quot x').size < f_β₀.size := by
-          grind
-        exact no_red_pi_eta_trans h₂
-      | pi' h =>
-        have h_dec := RedEta.instRedRel.decreasing h
-        exact no_red_pi_eta_trans h₂
-termination_by f_β.size
-
-theorem Judge.norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
-  cases ht
-  any_goals (exact Reduces.norm_eta (by assumption))
-  case tintro | bot | top | sort =>
-    intro ⟨_, h⟩
-    cases h
-  case app => exact Reduced.norm_eta (by assumption)
-  case eq =>
-    intro ⟨_, h⟩
-    cases h
-
-theorem RedEta.red_eql (h : RedEta A (DCC (x = y))) : ∃ f_α env, A = (DCC (Eql(f_α) env x)) := by
-  cases h with
-  | eql => exact ⟨_, _, rfl⟩
-
-theorem red_aff_pi (h : RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', B = (DCC (Π(f_α, f_β) env')) := by
-  cases h with
-  | congrFun h => cases h
-  | congrArg h =>
-    rename_i x'
-    exact ⟨x', rfl⟩
-
-theorem red_aff_pi' (h : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', (B = (DCC (Π(f_α, f_β) env')) ∧ Relation.ReflTransGen RedAff env env') := by
+theorem red_aff_pi' (h : RedAffReflTrans (DCC (Π(f_α, f_β) env)) B) : ∃ env', (B = (DCC (Π(f_α, f_β) env')) ∧ RedAffReflTrans env env') := by
   match h.cases_head with
   | .inl h => exact ⟨_, ⟨h.symm, .refl⟩⟩
   | .inr ⟨C, hr₁, hr⟩ =>
-    have ⟨env', heq⟩ := red_aff_pi hr₁
+    have ⟨env', heq⟩ := hr₁.pi
     have h_dec : env'.size < env.size := by
       rw [heq] at hr₁
       cases hr₁ with
@@ -208,19 +207,11 @@ theorem red_aff_pi' (h : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env))
         exact .trans (.single h) (by assumption)⟩
 termination_by env.size
 
-inductive NfType : Expr → Prop
-  | sort  : NfType (DCC Sort m)
-  | eql   : NfType (DCC x = x)
-  | fn    : NfType (DCC (Π(f_α, f_β) env))
-  | top   : NfType (DCC ⊤)
-  | coup  : NfType (DCC Coup(f_β))
-  | sigma : NfType (DCC (Σ(f_α, f_β) env))
-
-theorem red_aff_pi_norm
-  (h : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env)) B)
+theorem pi_norm
+  (h : RedAffReflTrans (DCC (Π(f_α, f_β) env)) B)
   (hn : IsNorm RedAff B) :
     ∃ env', (B = (DCC (Π(f_α, f_β) env'))
-      ∧ Relation.ReflTransGen RedAff env env'
+      ∧ RedAffReflTrans env env'
       ∧ IsNorm RedAff env') := by
   match h.cases_head with
   | .inl h =>
@@ -231,12 +222,64 @@ theorem red_aff_pi_norm
     | congrArg h =>
       rename_i x'
       have h_dec : x'.size < env.size := RedAff.instRedRel.decreasing h
-      have ⟨env', heq, hrt, hn⟩ := red_aff_pi_norm h₂ hn
+      have ⟨env', heq, hrt, hn⟩ := pi_norm h₂ hn
       exact ⟨env', heq, .trans (.single h) hrt, hn⟩
 termination_by env.size
 
-theorem red_eta_pi_norm
-  (h : Relation.ReflTransGen RedEta (DCC (Π(f_α, f_β) env)) B)
+open RedAff in
+def red_eq (hr : RedAffReflTrans A (DCC (x = y))) : (∃ B,
+  RedAffReflTrans A B ∧ RedAff B (DCC (x = y)) ∧ RedEq B (DCC (x = y))) ∨ (A = (DCC (x = y))) := by
+  cases hr with
+  | refl => exact .inr rfl
+  | tail ih h => exact .inl ⟨_, ih, by assumption, red_eq⟩
+
+end RedAffReflTrans
+
+namespace RedEtaReflTrans
+
+@[dcc_reduce]
+theorem no_coup_eq (h_r : RedEtaReflTrans (DCC Coup(β)) (DCC x = y)) : False := by
+  cases h_r.cases_head with
+  | inl h => simp_all
+  | inr h =>
+    have ⟨C, h₁, h₂⟩ := h
+    cases h₁
+
+@[dcc_reduce]
+theorem no_pi_eq (h_r : RedEtaReflTrans (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
+  let f_β₀ := f_β
+  cases h_r.cases_head with
+  | inl h => simp_all
+  | inr h =>
+    have ⟨C, h₁, h₂⟩ := h
+    cases heq₁ : h₁ with
+    | pi h =>
+      cases h with
+      | pi_quot h=>
+        rename_i p'
+        have h_dec := RedEta.instRedRel.decreasing p'
+        rename_i x x' β
+        have _heq : (β.quot x').size < f_β₀.size := by
+          grind
+        exact no_pi_eq h₂
+      | pi' h =>
+        have h_dec := RedEta.instRedRel.decreasing h
+        exact no_pi_eq h₂
+termination_by f_β.size
+
+end RedEtaReflTrans
+
+inductive NfType : Expr → Prop
+  | sort  : NfType (DCC Sort m)
+  | eql   : NfType (DCC x = x)
+  | fn    : NfType (DCC (Π(f_α, f_β) env))
+  | top   : NfType (DCC ⊤)
+  | coup  : NfType (DCC Coup(f_β))
+  | sigma : NfType (DCC (Σ(f_α, f_β) env))
+
+
+theorem RedEtaReflTrans.pi_norm
+  (h : RedEtaReflTrans (DCC (Π(f_α, f_β) env)) B)
   (hn : IsNorm RedEta B) :
     ∃ f_β', B = (DCC (Π(f_α, f_β') env)) := by
   match h.cases_head with
@@ -250,12 +293,12 @@ theorem red_eta_pi_norm
         have h_dec : (DCC `(β, x')).size < (DCC `(β, x)).size := by
           have h := RedEta.instRedRel.decreasing hr
           grind
-        exact red_eta_pi_norm h₂ hn
+        exact pi_norm h₂ hn
       | pi' hr =>
         rename_i β'
         have h_dec : β'.size < f_β.size := by
           exact RedEta.instRedRel.decreasing hr
-        exact red_eta_pi_norm h₂ hn
+        exact pi_norm h₂ hn
 termination_by f_β.size
 
 @[dcc_reduce]
@@ -265,11 +308,7 @@ def NfType.eq_elim (heq : τ = (DCC x = y)) (is_nf : NfType τ) : x = y := by
 --theorem IsNorm.coup_
 
 @[dcc_reduce]
-theorem no_step_coup_eta (h : RedEta (DCC Coup(β)) B) : False := by
-  cases h
-
-@[dcc_reduce]
-theorem no_step_coup_eta_trans (h : Relation.ReflTransGen RedEta (DCC Coup(β)) B) : (DCC Coup(β)) = B := by
+theorem RedEtaReflTrans.coup (h : RedEtaReflTrans (DCC Coup(β)) B) : (DCC Coup(β)) = B := by
   match h.cases_head with
   | .inl h => exact h
   | .inr ⟨C, h₁, h₂⟩ => cases h₁
@@ -309,26 +348,10 @@ def type_size (τ : Expr) : ℕ :=
 theorem Reduces.pi_shape (h : Reduces (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env', τ = (DCC (Π(f_α, f_β') env')) := by
   match h with
   | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-    have ⟨env', heq, hrt⟩ := red_aff_pi_norm hr₁ hn₁
+    have ⟨env', heq, hrt⟩ := hr₁.pi_norm hn₁
     cases heq
-    have ⟨_, heq⟩ := red_eta_pi_norm hr₂ hn₂
+    have ⟨_, heq⟩ := hr₂.pi_norm hn₂
     exact ⟨_, _, heq⟩
-
-inductive RedAff.ProjectEq : Expr → Expr → Prop
-  | fstc : ProjectEq (DCC (Fstc(f_β) ⟦β⟧(x = y, b))) (DCC (x = y))
-  | sndc : ProjectEq (DCC (Sndc(f_β) ⟦β⟧(a, x = y))) (DCC (x = y))
-  | quot : ProjectEq (DCC (`(β', x = y) ⟦β⟧(a, b)))  (DCC (x = y))
-
-def RedAff.project_eq (hr : RedAff (DCC (f ⟦β⟧(a, b))) (DCC x = y)) : ProjectEq (DCC (f ⟦β⟧(a, b))) (DCC x = y) := by
-  cases hr with
-  | quot => exact .quot
-  | sndc => exact .sndc
-  | fstc => exact .fstc
-
-inductive RedAff.RedEq : Expr → Expr → Prop
-  | proj : RedAff.ProjectEq A (DCC (x = y)) → RedEq A (DCC (x = y))
-  | id   : RedEq (DCC (Id(α) (x = y))) (DCC (x = y))
-  | quot : RedEq (DCC (`(α, (x = y)) z)) (DCC (x = y))
 
 def RedAff.red_eq (hr : RedAff A (DCC (x = y))) : RedEq A (DCC (x = y)) := by
   cases hr with
@@ -337,25 +360,20 @@ def RedAff.red_eq (hr : RedAff A (DCC (x = y))) : RedEq A (DCC (x = y)) := by
   | sndc => exact .proj .sndc
   | quot => exact .quot
 
-open RedAff in
-def refl_trans_red_aff_eq (hr : Relation.ReflTransGen RedAff A (DCC (x = y))) : (∃ B,
-  Relation.ReflTransGen RedAff A B ∧ RedAff B (DCC (x = y)) ∧ RedEq B (DCC (x = y))) ∨ (A = (DCC (x = y))) := by
-  cases hr with
-  | refl => exact .inr rfl
-  | tail ih h => exact .inl ⟨_, ih, by assumption, h.red_eq⟩
-
-def refl_trans_eta_eq (hr : Relation.ReflTransGen RedEta A (DCC (x = y))) :
+def RedEtaTrans.red_eq (hr : RedEtaTrans A (DCC (x = y))) :
   (∃ f_α env, A = (DCC (Eql(f_α) env x)) ∧ x = y) ∨ A = (DCC (x = y)) := by
-  match hr.cases_head with
-  | .inl h => exact .inr h
-  | .inr ⟨C, hr, ih⟩ =>
+  cases hr using Relation.TransGen.head_induction_on with
+  | single h =>
+    cases h
+    exact .inl ⟨_, _, rfl, rfl⟩
+  | head hr ih =>
     have h_dec := RedEta.instRedRel.decreasing hr
-    have h := refl_trans_eta_eq ih
+    have h := red_eq ih
     match h with
     | .inl ⟨f_α, env, heq₁, heq₂⟩ =>
       cases heq₁ ▸ hr with
       | pi =>
-        have ⟨_, h⟩ := red_eta_pi_norm
+        have ⟨_, h⟩ := RedEtaReflTrans.pi_norm
           (.trans (.single hr) (.single (heq₁.symm ▸ RedEta.eql)))
           (fun ⟨_, h⟩ => by cases h)
         cases h
@@ -366,17 +384,24 @@ def refl_trans_eta_eq (hr : Relation.ReflTransGen RedEta A (DCC (x = y))) :
         exact .inl ⟨_, _, rfl, rfl⟩
 termination_by A.size
 
-def Relation.Reduced.red_aff_eq (hr : Reduced A (DCC (x = y)))
+/-def Relation.Reduced.red_aff_eq (hr : Reduced A (DCC (x = y)))
   : (∃ B,
-  Relation.ReflTransGen RedAff A B ∧ RedAff B (DCC (x = y)) ∧ RedAff.RedEq B (DCC (x = y))) ∨ (A = (DCC (x = y))) := by
+  Relation.ReflTransGen RedAff A B ∧ RedAff B (DCC (x = y)) ∧ RedAff.RedEq B (DCC (x = y))) := by
   match hr with
   | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    have h := refl_trans_eta_eq hr₂
+    match h with
+    | .inl ⟨f_α, env, heq₁, heq₂⟩ =>
+      
+      sorry
+    | .inr h =>
+      sorry
     rw [← Relation.reflGen_transGen] at hr₂
     /-
       if it is TransGen, then use lemma
       to extract that it is Eql
     -/
-    sorry
+    sorry-/
 
 /-theorem RedAff.project_eq (hr : RedAff (DCC (f ⟦β⟧(a, b))) (DCC x = y)) :
   (a = (DCC x = y) ∧ (∃ f_β, f = DCC (Fstc(f_β))))
@@ -392,7 +417,18 @@ def Relation.Reduced.red_aff_eq (hr : Reduced A (DCC (x = y)))
 
 --theorem Reduced.
 
-theorem refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
+theorem Judge.norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
+  cases ht
+  any_goals (exact Reduces.norm_eta (by assumption))
+  case tintro | bot | top | sort =>
+    intro ⟨_, h⟩
+    cases h
+  case app => exact Reduced.norm_eta (by assumption)
+  case eq =>
+    intro ⟨_, h⟩
+    cases h
+
+theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
   induction e generalizing x with
   | refl =>
     cases h with
@@ -404,12 +440,21 @@ theorem refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (ref
     | app h_t_f h_t_x h_r_α h_r_τ =>
       match h_r_τ with
       | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-        match hr₂.cases_head with
+        have h := hr₂.red_eq
+        
+        /-match hr₂.cases_head with
         | .inl h =>
           cases h
           cases hr₁ using Relation.TransGen.head_induction_on with
           | single h => cases h
           | head h ih =>
+            have h_eq_red := refl_trans_red_aff_eq ih.to_reflTransGen
+            match h_eq_red with
+            | .inl ⟨B, h₁, h₂⟩ =>
+              
+              sorry
+            | .inr h =>
+              sorry
             cases h with
             | curr =>
               
@@ -429,7 +474,7 @@ theorem refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (ref
                 | .inr (.inr h) =>
                   sorry
               | head h ih =>
-                sorry
+                sorry-/
 
 /-
 An affine expression reduces to =(x, y)

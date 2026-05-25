@@ -8,10 +8,53 @@ import Mathlib.Logic.Relation
 
 namespace Expr
 
+def RedAffReflTrans := Relation.ReflTransGen RedAff
+def RedAffTrans     := Relation.TransGen RedAff
+def RedEtaReflTrans := Relation.ReflTransGen RedEta
+def RedEtaTrans     := Relation.TransGen RedEta
+
+namespace RedAffReflTrans
+
+def cases_head {a b : Expr} (r : RedAffReflTrans a b) :=
+  Relation.ReflTransGen.cases_head (a := a) (b := b) r
+
+end RedAffReflTrans
+
+namespace RedEtaReflTrans
+
+def cases_head {a b : Expr} (r : RedEtaReflTrans a b) :=
+  Relation.ReflTransGen.cases_head (a := a) (b := b) r
+
+end RedEtaReflTrans
+
+namespace RedAffTrans
+
+def to_reflTrans {a b : Expr} (r : RedAffTrans a b) :=
+  Relation.TransGen.to_reflTransGen (a := a) (b := b) r
+
+end RedAffTrans
+
+namespace RedEtaTrans
+
+def to_reflTrans {a b : Expr} (r : RedEtaTrans a b) :=
+  Relation.TransGen.to_reflTransGen (a := a) (b := b) r
+
+end RedEtaTrans
+
+instance : Coe (RedAffReflTrans A B) (Relation.ReflTransGen RedAff A B) := ⟨fun e => e⟩
+instance : Coe (RedEtaReflTrans A B) (Relation.ReflTransGen RedEta A B) := ⟨fun e => e⟩
+instance : Coe (RedAffTrans A B) (Relation.TransGen RedAff A B)         := ⟨fun e => e⟩
+instance : Coe (RedEtaTrans A B) (Relation.TransGen RedEta A B)         := ⟨fun e => e⟩
+
+instance : Coe (Relation.ReflTransGen RedAff A B) (RedAffReflTrans A B) := ⟨fun e => e⟩
+instance : Coe (Relation.ReflTransGen RedEta A B) (RedEtaReflTrans A B) := ⟨fun e => e⟩
+instance : Coe (Relation.TransGen RedAff A B) (RedAffTrans A B)         := ⟨fun e => e⟩
+instance : Coe (Relation.TransGen RedEta A B) (RedEtaTrans A B)         := ⟨fun e => e⟩
+
 inductive Reduced : Expr → Expr → Prop
-  | mk : Relation.TransGen RedAff A B
+  | mk : RedAffTrans A B
     → IsNorm RedAff B
-    → Relation.ReflTransGen RedEta B C
+    → RedEtaReflTrans B C
     → IsNorm RedEta C
     → Reduced A C
 
@@ -64,9 +107,9 @@ theorem reduce_all?_reduces (h_some : (reduce_all? A).isSome) (h : ((reduce_all?
   h ▸ ((reduce_all? A).get h_some).snd.down
 
 inductive Reduces : Expr → Expr → Prop
-  | mk : Relation.ReflTransGen RedAff A B
+  | mk : RedAffReflTrans A B
     → IsNorm RedAff B
-    → Relation.ReflTransGen RedEta B C
+    → RedEtaReflTrans B C
     → IsNorm RedEta C
     → Reduces A C
 

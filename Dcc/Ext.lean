@@ -337,6 +337,47 @@ def RedAff.red_eq (hr : RedAff A (DCC (x = y))) : RedEq A (DCC (x = y)) := by
   | sndc => exact .proj .sndc
   | quot => exact .quot
 
+open RedAff in
+def refl_trans_red_aff_eq (hr : Relation.ReflTransGen RedAff A (DCC (x = y))) : (∃ B,
+  Relation.ReflTransGen RedAff A B ∧ RedAff B (DCC (x = y)) ∧ RedEq B (DCC (x = y))) ∨ (A = (DCC (x = y))) := by
+  cases hr with
+  | refl => exact .inr rfl
+  | tail ih h => exact .inl ⟨_, ih, by assumption, h.red_eq⟩
+
+def refl_trans_eta_eq (hr : Relation.ReflTransGen RedEta A (DCC (x = y))) :
+  (∃ f_α env, A = (DCC (Eql(f_α) env x)) ∧ x = y) ∨ A = (DCC (x = y)) := by
+  match hr.cases_head with
+  | .inl h => exact .inr h
+  | .inr ⟨C, hr, ih⟩ =>
+    have h_dec := RedEta.instRedRel.decreasing hr
+    have h := refl_trans_eta_eq ih
+    match h with
+    | .inl ⟨f_α, env, heq₁, heq₂⟩ =>
+      cases heq₁ ▸ hr with
+      | pi =>
+        have ⟨_, h⟩ := red_eta_pi_norm
+          (.trans (.single hr) (.single (heq₁.symm ▸ RedEta.eql)))
+          (fun ⟨_, h⟩ => by cases h)
+        cases h
+    | .inr h =>
+      cases h
+      cases hr with
+      | eql =>
+        exact .inl ⟨_, _, rfl, rfl⟩
+termination_by A.size
+
+def Relation.Reduced.red_aff_eq (hr : Reduced A (DCC (x = y)))
+  : (∃ B,
+  Relation.ReflTransGen RedAff A B ∧ RedAff B (DCC (x = y)) ∧ RedAff.RedEq B (DCC (x = y))) ∨ (A = (DCC (x = y))) := by
+  match hr with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    rw [← Relation.reflGen_transGen] at hr₂
+    /-
+      if it is TransGen, then use lemma
+      to extract that it is Eql
+    -/
+    sorry
+
 /-theorem RedAff.project_eq (hr : RedAff (DCC (f ⟦β⟧(a, b))) (DCC x = y)) :
   (a = (DCC x = y) ∧ (∃ f_β, f = DCC (Fstc(f_β))))
     ∨ (b = (DCC x = y) ∧ (∃ f_β, f = DCC (Sndc(f_β))))
@@ -371,6 +412,7 @@ theorem refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DCC (ref
           | head h ih =>
             cases h with
             | curr =>
+              
               cases ih using Relation.TransGen.head_induction_on with
               | single h =>
                 match h.project_eq with

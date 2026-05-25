@@ -10,7 +10,6 @@ namespace Expr
   | DCC ∗ => 0
   | DCC ⊤ => 0
   | DCC ⊥ => 0
-  | DCC =(α)    => α.eta_size + 1
   | DCC Eql(α)  => α.eta_size + 1
   | DCC refl(α) => α.eta_size + 1
   | DCC Sort _m => 0
@@ -29,7 +28,9 @@ namespace Expr
   | DCC (Eql(_f_α) _env _x) => 2
   | DCC (Π(f_α, f_β) _env) =>(DCC Π(f_α, f_β)).eta_size + _env.eta_size + 2
   | DCC (Σ(f_α, f_β) _env) =>(DCC Σ(f_α, f_β)).eta_size + _env.eta_size + 2
-  | DCC (=(_f_α) _env _x _y) => 0
+  | DCC (=(x, _y)) => x.size
   | DCC (f x) => f.eta_size + x.eta_size
+
+
 
 end Expr

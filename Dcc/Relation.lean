@@ -569,11 +569,40 @@ theorem reduce_sound {t : Expr → ℕ} [RedRel r t]
       have h_norm := (run_none r (by cases heq; exact heq'))
       exact (h_norm.unique_refl h) ▸ h_norm
 
+@[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce_norm_fst {t : Expr → ℕ}
+  [hR : RedRel r t]
+  [hN : SemiComplete r (hR := hR)]
+  (heq : (reduce r A).fst = B) : IsNorm r B := by
+  cases heq
+  exact reduce_norm rfl (A := A) (B := (reduce r A).fst)
+
+@[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce?_norm {t : Expr → ℕ}
+  (r : Expr → Expr → Prop)
+  [hR : RedRel r t]
+  [hN : SemiComplete r (hR := hR)]
+  (h_some : (reduce? (hR := hR) r A).isSome)
+  (heq : ((reduce? (hR := hR) r A).get h_some).fst = B) : IsNorm r B := by
+  induction A using hR.wellFounded.induction generalizing B with
+  | h x ih =>
+    simp [reduce?] at heq
+    exact reduce_norm_fst heq
+
 @[dcc_force_reduce] theorem reduce_self {t : Expr → ℕ}
   (r : Expr → Expr → Prop) [hR : RedRel r t] [SemiComplete r] : (reduce r (reduce r e).fst).fst = (reduce r e).fst := by
   have h := hR.reduce_norm (reduce_norm (A := e) (hR := hR) (B := (reduce r e).fst) rfl)
   simp_all
 
 attribute [dcc_force_reduce] Rel.run.eq_def
+
+theorem decreasing? {t : Expr → ℕ}
+  (r : Expr → Expr → Prop) [hR : RedRel r t] (hr : Relation.ReflTransGen r A B) : t B ≤ t A := by
+  match hr.cases_head with
+  | .inl h =>
+    grind
+  | .inr ⟨C, h₁, h₂⟩ =>
+    have h := hR.decreasing h₁
+    have h₂ := decreasing? r h₂
+    grind
+termination_by t A
 
 end Expr

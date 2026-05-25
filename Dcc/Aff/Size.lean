@@ -8,12 +8,12 @@ namespace Expr
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind] def size (e : Expr) : ℕ :=
   match e with
   | DCC ∗ => 0
-  | DCC ⊤ => 0
-  | DCC ⊥ => 0
-  | DCC =(α)    => α.size + 1
+  | DCC ⊤ => 2
+  | DCC ⊥ => 2
+  | DCC =(x, _y) => x.size
   | DCC Eql(α)  => α.size + 1
   | DCC refl(α) => α.size + 1
-  | DCC Sort _m => 0
+  | DCC Sort m => m
   | DCC Σ(α, β) => α.size + β.size + 1
   | DCC `(_β, x) => x.size + 1
   | DCC ⟦_β⟧(x, y) => x.size + y.size

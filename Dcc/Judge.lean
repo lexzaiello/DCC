@@ -8,6 +8,61 @@ import Mathlib.Logic.Relation
 
 namespace Expr
 
+inductive Reduced : Expr → Expr → Prop
+  | mk : Relation.TransGen RedAff A B
+    → IsNorm RedAff B
+    → Relation.ReflTransGen RedEta B C
+    → IsNorm RedEta C
+    → Reduced A C
+
+@[grind ., grind →]
+theorem Reduced.decreasing (h : Reduced A B) : B.size < A.size :=
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ => by
+    have hb := decreasing? RedEta hr₂
+    rename_i B'
+    induction hr₁  using Relation.TransGen.head_induction_on generalizing B with
+    | single hr =>
+      have ha := RedAff.instRedRel.decreasing hr
+      grind
+    | head hr hrt h =>
+      rename_i ih
+      have h := RedAff.instRedRel.decreasing hr
+      have h := Reduced.mk hrt hn₁ hr₂ (by assumption)
+      have h := ih h hr₂ hn₂ (by assumption)
+      grind
+
+def reduce_all? (e : Expr) : Option ((e' : Expr) × PLift (Reduced e e')) :=
+  if h_some : (reduce? RedAff e).isSome then
+    .some ⟨reduce' RedEta ((reduce? RedAff e).get h_some).fst, ⟨by
+      have hn := reduce?_norm RedAff (A := e) (B := ((reduce? RedAff e).get h_some).fst)
+        (by simp_all) (by simp_all)
+      exact ⟨((reduce? RedAff e).get h_some).snd.down, hn, reduce_sound rfl, reduce_norm rfl⟩⟩⟩
+  else
+    .none
+    /-sorry
+  match heq : reduce? RedAff e with
+  | .some ⟨e', ⟨h⟩⟩ =>
+    have hn := reduce?_norm RedAff (A := e) (B := e') (by simp_all) (by simp_all)
+    .some ⟨reduce' RedEta e', ⟨h, hn, reduce_sound rfl, reduce_norm rfl⟩⟩
+  | _ => .none-/
+
+theorem Reduced.unique : Reduced A B → Reduced A C → B = C := fun ⟨a, b, c, d⟩ ⟨g, h, i, j⟩ => by
+  have ha := norm_unique a.to_reflTransGen b g.to_reflTransGen h
+  exact norm_unique c d (ha ▸ i) j
+
+theorem Reduced.unique' (h₁ : Reduced A B) (h₂ : Reduced A C) : h₁ ≍ h₂ := by
+  have h := h₁.unique h₂
+  cases h
+  congr
+
+def Reduced.norm_eta (h : Reduced A B) : IsNorm RedEta B :=
+  match h with
+  | ⟨_, _, _, h⟩ => h
+
+theorem reduce_all?_reduces (h_some : (reduce_all? A).isSome) (h : ((reduce_all? A).get h_some).fst = B) : Reduced A B :=
+  h ▸ ((reduce_all? A).get h_some).snd.down
+
 inductive Reduces : Expr → Expr → Prop
   | mk : Relation.ReflTransGen RedAff A B
     → IsNorm RedAff B
@@ -42,6 +97,34 @@ theorem Reduces.complete : Reduces A B → reduce_all A = B :=
     unfold reduce_all
     unfold reduce'
     cases reduce_complete_fst ha hb; cases reduce_complete_fst hc hd; rfl
+
+@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
+theorem Reduced.complete : Reduced A B → ∃ h, reduce_all? A = .some ⟨B, h⟩ :=
+  fun ⟨ha, hb, hc, hd⟩ => by
+    rename_i h₀ _
+    unfold reduce_all?
+    unfold reduce?
+    split
+    case isTrue h =>
+      simp_all
+      constructor
+      have h := Reduces.complete ⟨ha.to_reflTransGen, hb, hc, hd⟩
+      · change reduce' RedEta (reduce' RedAff A) = B
+        exact h
+      · congr
+        simp_all
+        · have h := Reduces.complete ⟨ha.to_reflTransGen, hb, hc, hd⟩
+          change reduce' RedEta (reduce' RedAff A) = B
+          exact h
+        · grind
+    case isFalse heq =>
+      simp_all
+      have h := reduce_norm_fst heq.symm
+      cases ha using Relation.TransGen.head_induction_on with
+      | single hr => exact h ⟨_, heq.symm ▸ hr⟩
+      | head h =>
+        rename_i h_norm _ _ _
+        exact h_norm ⟨_, heq.symm ▸ h⟩
 
 --@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])] theorem
 
@@ -85,12 +168,11 @@ def reduce_reduces' : Reduces A (reduce_all A) := reduce_reduces rfl
   | _ => .none
 
 inductive Judge : Expr → Expr → Prop where
-  | eq     : Judge f_α (DCC (δ : Sort o) → Sort m)
-    → Reduces (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, Π(Id(Sort m),
-      Λ(Sort m, Id(Sort m), `(Coup(Id(Sort m)), Sort 0))) ∘' f_α ∘' Fstc(f_α))))) δ)) τ
-    → Judge (DCC =(f_α)) τ
+  | eq     : Judge x α
+    → Judge y α
+    → Judge (DCC =(x, y)) (DCC Sort 0)
   | refl   : Judge f_α (DCC (δ : Sort o) → Sort m)
-    → Reduces (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Eql(f_α)))) δ)) τ
+    → Reduces (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Eql(f_α) ∘ Id(Sort o)))) δ)) τ
     → Judge (DCC refl(f_α)) τ
   | eql    : Judge f_α (DCC (δ : Sort o) → Sort m)
     → Reduces (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, Π(Id(Sort m), `(Coup(Id(Sort m)), Sort 0)))))) δ)) τ
@@ -173,7 +255,7 @@ inductive Judge : Expr → Expr → Prop where
   | app    : Judge f (DCC (Π(f_α, f_β) x_α))
     → Reduces (DCC (f_α x_α)) α
     → Judge x α
-    → Reduces (DCC (f_β x_α x)) τ
+    → Reduced (DCC (f_β x_α x)) τ
     → Judge (DCC (f x)) τ
 
 def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
@@ -251,11 +333,13 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  | DCC =(f_α) =>
-    match with_arr (infer f_α) with
-    | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
-      .some ⟨_, ⟨.eq (harr ▸ ht₁) (reduce_reduces rfl)⟩⟩
-    | _ => .none
+  | DCC =(x, y) =>
+    match infer x, infer y with
+    | .some ⟨t_x, ⟨ht₁⟩⟩, .some ⟨t_y, ⟨ht₂⟩⟩ =>
+      if heq : t_x = t_y then
+        .some ⟨_, ⟨.eq ht₁ (heq ▸ ht₂)⟩⟩
+      else .none
+    | _, _ => .none
   | DCC Eql(f_α) =>
     match with_arr (infer f_α) with
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
@@ -375,9 +459,12 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | _ => .none
   | DCC (f x) =>
     match infer f, infer x with
-    | .some ⟨DCC (Π(f_α, _f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
+    | .some ⟨DCC (Π(f_α, f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
       if heq : reduce_all (DCC (f_α x_α)) = τ₂' then
-        .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by rw [heq]; exact ht₂) (reduce_reduces rfl)⟩⟩
+        match reduce_all? (DCC (f_β x_α x)) with
+        | .some ⟨τ', ⟨h_red⟩⟩ =>
+          .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by rw [heq]; exact ht₂) h_red⟩⟩
+        | _ => .none
       else .none
     | _, _ => .none
 

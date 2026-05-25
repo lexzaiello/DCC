@@ -1,7 +1,7 @@
 import Dcc.Judge
 import Dcc.Relation
 import Dcc.Types
-import Dcc.Tactic.Reduce
+--import Dcc.Tactic.Reduce
 import Dcc.Aff.Red
 import Dcc.Eta.Red
 
@@ -161,12 +161,11 @@ termination_by f_β.eta_size
 
 theorem Judge.norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
   cases ht
-  any_goals (
-    exact Reduces.norm_eta (by assumption)
-  )
+  any_goals (exact Reduces.norm_eta (by assumption))
   case tintro | bot | top | sort =>
     intro ⟨_, h⟩
     cases h
+  case app => exact Reduced.norm_eta (by assumption)
 
 theorem only_eql_reduces_eq (h : RedEta A (DCC (=(f_α) env x y))) : A = (DCC (Eql(f_α) env x)) := by
   cases h with
@@ -201,28 +200,13 @@ theorem red_aff_pi' (h : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env))
         exact .trans (.single h) (by assumption)⟩
 termination_by env.size
 
-/-def NfType : Expr → Prop
-  | DCC (=(f_α) env x y) => x = y
-  | DCC ⊤ => True
-  | DCC Coup(f_β) => True
-  | DCC (Σ(f_α, f_β) env) => True
-  | DCC Sort m => True
-  | DCC (Π(f_α, f_β) env) => ∀ {x τ' : Expr}
-        (h     : Judge x (reduce_all (DCC (f_α env))))
-        (h_red : Reduces (DCC (f_β env x)) τ'), NfType τ'
-  | _ => False
-
-def NfType.eq_elim (is_nf : NfType (DCC (=(f_α) env x y))) : x = y := by
-  
-  sorry-/
-
-/-inductive NfType : Expr → Prop
+inductive NfType : Expr → Prop
   | sort  : NfType (DCC Sort m)
   | eql   : NfType (DCC (=(f_α) env x x))
   | fn    : NfType (DCC (Π(f_α, f_β) env))
   | top   : NfType (DCC ⊤)
   | coup  : NfType (DCC Coup(f_β))
-  | sigma : NfType (DCC (Σ(f_α, f_β) env))-/
+  | sigma : NfType (DCC (Σ(f_α, f_β) env))
 
 theorem red_aff_pi_norm
   (h : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env)) B)
@@ -266,8 +250,8 @@ theorem red_eta_pi_norm
         exact red_eta_pi_norm h₂ hn
 termination_by f_β.eta_size
 
-/-def NfType.eq_elim (heq : τ = (DCC (=(f_α) env x y))) (is_nf : NfType τ) : x = y := by
-  cases heq; cases is_nf; rfl-/
+def NfType.eq_elim (heq : τ = (DCC (=(f_α) env x y))) (is_nf : NfType τ) : x = y := by
+  cases heq; cases is_nf; rfl
 
 --theorem IsNorm.coup_
 
@@ -294,6 +278,56 @@ theorem Reduces.coup (h : Reduces (DCC Coup(β)) B) : ∃ β', B = (DCC Coup(β'
       | coup hβ =>
         exact Reduces.coup ⟨h₂, hn₁, hr₂, hn₂⟩
 termination_by (DCC Coup(β)).size
+
+@[grind]
+def type_size (τ : Expr) : ℕ :=
+  match τ with
+  | DCC ⊤ | DCC Sort _m => 0
+  | DCC (Π(f_α, f_β)) =>
+    (type_size f_α) + (type_size f_β)
+  | DCC (Π(f_α, f_β) _env) =>
+    (type_size f_α) + (type_size f_β)
+  | DCC Coup(_f_β) => 1
+  | DCC (=(_x, _y)) => 0
+  | DCC (f _x) => f.type_size
+  | _ => 0
+
+@[grind ., grind →]
+theorem RedEta.maintains_type_size (hr : RedEta A B) : type_size B = type_size A := by
+  induction A generalizing B
+  any_goals (
+    focus
+    cases hr <;> grind
+  )
+  case app =>
+    cases hr
+    any_goals (grind)
+    · rename_i h ih
+      cases h
+      · have h := ih (.pi_quot (by assumption))
+        grind
+      · have h := ih (.pi' (by assumption))
+        grind
+
+theorem RedAff.
+
+def is_canon_type (τ e : Expr) : Prop :=
+  match τ with
+  | DCC Sort m + 1 => e = DCC Sort m
+  | DCC (=(x, y)) => ∃ f_α env, x = y ∧ e = (DCC (refl(f_α) env x))
+  | DCC ⊤ => e = DCC ∗
+  | DCC Coup(f_β) =>
+    ∃ x y t_y, e = DCC ⟦f_β⟧(x, y) ∧ Judge y t_y ∧ Reduces (DCC (f_β x)) t_y
+  | DCC (Π(f_α, f_β) env) =>
+    ∀ (x : Expr)
+      (_h_size₁ : (DCC (f_α env)).type_size < (DCC (Π(f_α, f_β) env)).type_size)
+      (_h_size₂ : (DCC (f_β env x)).type_size < (DCC (Π(f_α, f_β) env)).type_size),
+      is_canon_type (DCC (f_α env)) x → is_canon_type (DCC (f_β env x)) (DCC (e x))
+  | τ =>
+    ∀ (τ' : Expr) (hr : Reduced τ τ')
+      (h_size₀ : τ.type_size = 0)
+      (h_size : τ'.size < τ.size), is_canon_type τ' e → is_canon_type τ e
+termination_by τ.type_size
 
 /-def Judge.is_nf (ht : Judge e τ) : NfType τ := by
   cases ht with
@@ -335,8 +369,49 @@ termination_by (DCC Coup(β)).size
     cases h_nf_f with
     | fn =>
       
-      sorry
+      sorry-/
 
+theorem refl_canon (ht : Judge e (DCC (=(f_α) env x x))) : Reduces e (DCC (refl(f_α) env x)) := by
+  cases ht with
+  | app _ _ _ hr =>
+    
+    sorry
+
+inductive IsComb : Expr → Type
+  | eq    : IsComb (DCC =(f_α))
+  | refl  : IsComb (DCC refl(f_α))
+  | eql   : IsComb (DCC Eql(f_α))
+  | id    : IsComb (DCC Id(α))
+  | comp  : IsComb (DCC (f ∘ g))
+  | comp' : IsComb (DCC (f ∘' g))
+  | fstc  : IsComb (DCC Fstc(β))
+  | sndc  : IsComb (DCC Fstc(β))
+  | sigma : IsComb (DCC Σ(f_α, f_β))
+  | quot  : IsComb (DCC `(β, x))
+  | pair  : IsComb (DCC ⟨f, g⟩)
+  | curr  : IsComb (DCC Λ(α, β, x))
+  | pi    : IsComb (DCC (Π(f_α, f_β)))
+
+/-
+An expression that reduces to an equality.
+This only includes equalities that can be introduced by
+type formers.
+-/
+inductive EqlTerm : Expr → Prop
+  
+
+/-
+A function that, when applied a single argument,
+yields some =(f_α) env x y
+
+the output type reduces to =(f_α) env x x
+-/
+inductive EqlFn : Expr → Prop
+  | eql  : EqlFn (DCC (Eql(f_α) env))
+  | quot : Reduces x (DCC (
+    EqlFn (DCC `(
+
+/-
 def Judge.is_nf (ht : Judge e τ) : NfType τ := by
   cases ht with
   | eql _ hred | comp' _ _ _ _ _ hred | comp id _ _ hred | id _ hred | eq _ hred =>

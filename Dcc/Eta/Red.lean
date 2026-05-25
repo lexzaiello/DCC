@@ -27,7 +27,7 @@ inductive RedEta : Expr → Expr → Prop
   | quot'_snd' : RedEta (DCC (`(α, x) ∘' Sndc(β)) ∘' z) (DCC `(Coup(β), x) ∘' z)
   | pi_comp    : RedEta (DCC (Π(f_α, f_β) ∘ x)) (DCC (Π(f_α ∘ x, f_β ∘ x)))
   | pi'_comp   : RedEta (DCC (Π(f_α, f_β) ∘' x)) (DCC (Π(f_α ∘' x, f_β ∘' x)))
-  | eql        : RedEta (DCC (Eql(f_α) env x)) (DCC (=(f_α) env x x))
+  | eql        : RedEta (DCC (Eql(f_α) env x)) (DCC (=(x, x)))
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
 
@@ -61,20 +61,6 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
         exact h ⟨_, hr⟩
       | congrArg hr =>
         exact hn_env ⟨_, hr⟩
-  case eql =>
-    have h_norm_eq := hn.congrFun
-    have h_norm_x := hn.congrArg
-    have h_norm_env := h_norm_eq.congrArg
-    intro ⟨_, h⟩
-    cases h with
-    | congrFun h =>
-      cases h with
-      | congrFun h =>
-        cases h with
-        | congrFun h => cases h
-        | congrArg h => exact h_norm_env ⟨_, h⟩
-      | congrArg h => exact h_norm_x ⟨_, h⟩
-    | congrArg h => exact h_norm_x ⟨_, h⟩
 
 @[dcc_force_eta, dcc_force_reduce, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
@@ -124,7 +110,7 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_eta, aesop norm (rule_sets := [DccRel])]
-instance RedEta.instRedRel : RedRel RedEta eta_size where
+instance RedEta.instRedRel : RedRel RedEta size where
   run := step_eta?
 
 theorem red_eta_sn : ∀ (e : Expr), Acc (fun b a => RedEta a b) e := RedEta.instRedRel.sn

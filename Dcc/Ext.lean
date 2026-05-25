@@ -143,15 +143,12 @@ termination_by f_β.eta_size
 
 theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
   cases ht with
-  | eq _ h =>
+  | comp _ _ _ h | comp' _ _ _ _ _ h | id _ h | refl _ h | eq _ h =>
     match h with
     | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
       cases hr₂ with
-      | refl =>
-        
-        sorry
+      | refl => exact (no_red_pi_aff_trans hr₁).elim
       | tail a b => exact eq_norm_refl b hn₂
-  | _ => sorry
 
 open Reduces in theorem reflect (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
   cases ht with

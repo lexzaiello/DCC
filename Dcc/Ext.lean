@@ -305,6 +305,23 @@ theorem coup (h : RedEtaReflTrans (DCC Coup(β)) B) : (DCC Coup(β)) = B := by
 
 end RedEtaReflTrans
 
+namespace RedAffTrans
+
+open RedAff in
+def eq (hr : RedAffTrans A (DCC (x = y))) : ∃ B,
+  RedAffReflTrans A B ∧ RedAff B (DCC (x = y)) ∧ RedEq B (DCC (x = y)) := by
+  have h := hr.to_reflTrans.eq
+  match h with
+  | .inl h =>
+    exact h
+  | .inr h =>
+    cases h
+    cases hr using Relation.TransGen.head_induction_on with
+    | single h => cases h
+    | head h => cases h
+
+end RedAffTrans
+
 namespace RedEtaTrans
 
 def eq (hr : RedEtaTrans A (DCC (x = y))) :
@@ -460,7 +477,13 @@ theorem Judge.refl_canon (h : Judge e (DCC x = x)) : ∃ f_α env, Reduces e (DC
       match h_r_τ with
       | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
         have h := hr₂.eq
-        
+        match h with
+        | .inl ⟨f_α, env, h₁, h₂⟩ =>
+          cases h₁
+          
+          sorry
+        | .inr h =>
+          sorry
         /-match hr₂.cases_head with
         | .inl h =>
           cases h

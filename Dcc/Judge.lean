@@ -29,14 +29,14 @@ end RedEtaReflTrans
 
 namespace RedAffTrans
 
-def to_reflTrans {a b : Expr} (r : RedAffTrans a b) :=
+def to_reflTrans {a b : Expr} (r : RedAffTrans a b) : RedAffReflTrans a b :=
   Relation.TransGen.to_reflTransGen (a := a) (b := b) r
 
 end RedAffTrans
 
 namespace RedEtaTrans
 
-def to_reflTrans {a b : Expr} (r : RedEtaTrans a b) :=
+def to_reflTrans {a b : Expr} (r : RedEtaTrans a b) : RedEtaReflTrans a b :=
   Relation.TransGen.to_reflTransGen (a := a) (b := b) r
 
 end RedEtaTrans

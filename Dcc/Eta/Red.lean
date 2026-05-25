@@ -31,6 +31,8 @@ inductive RedEta : Expr → Expr → Prop
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
 
+
+
 theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff B := by
   induction h
   any_goals (

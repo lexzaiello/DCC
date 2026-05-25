@@ -168,6 +168,58 @@ theorem Judge.norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
     intro ⟨_, h⟩
     cases h
 
+theorem only_eql_reduces_eq (h : RedEta A (DCC (=(f_α) env x y))) : A = (DCC (Eql(f_α) env x)) := by
+  cases h with
+  | pi h =>
+    cases h
+  | _ => rfl
+
+theorem red_aff_pi (h : RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', B = (DCC (Π(f_α, f_β) env')) := by
+  cases h with
+  | congrFun h => cases h
+  | congrArg h =>
+    rename_i x'
+    exact ⟨x', rfl⟩
+
+theorem red_aff_pi' (h : Relation.ReflTransGen RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', B = (DCC (Π(f_α, f_β) env')) := by
+  match h.cases_head with
+  | .inl h => exact ⟨_, h.symm⟩
+  | .inr ⟨C, hr₁, hr⟩ =>
+    have ⟨env', heq⟩ := red_aff_pi hr₁
+    have h_dec : env'.size < env.size := by
+      rw [heq] at hr₁
+      cases hr₁ with
+      | congrFun h => cases h
+      | congrArg h =>
+        exact RedAff.instRedRel.decreasing h
+    exact red_aff_pi' (heq ▸ hr)
+termination_by env.size
+
+/-inductive CanReduceEq : Expr → Expr → Prop
+  | quot : CanReduceEq (DCC (`(-/
+
+theorem no_reduce_eq_aff (h : RedAff A (DCC (=(f_α) env x y))) : False := by
+  cases h
+  
+
+theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
+  have h := ht.norm_eta
+  induction e with
+  | refl =>
+    cases ht with
+    | refl _ hr =>
+      match hr with
+      | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+        match hr₁.cases_head with
+        | .inl h =>
+          exact (no_red_pi_eta_trans (h ▸ hr₂)).elim
+        | .inr ⟨C, h₁, h₂⟩ =>
+          cases h₁ with
+          | congrFun h => cases h
+          | congrArg h =>
+            
+            sorry
+
 theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
   have h := ht.norm_eta
   cases ht with
@@ -201,29 +253,44 @@ theorem elim_eq (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
         | .inl a => simp_all
         | .inr ⟨_, h, _⟩ => cases a ▸ h
   | app h_t_f h_r_α h_t_x h =>
-    have hn₁ := h_t_f.norm_eta
-    have hn₂ := h_t_x.norm_eta
-    
+    have hn_a := h_t_f.norm_eta
+    have hn_b := h_t_x.norm_eta
     match h with
     | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-      cases hr₁.cases_head with
+      cases heq : hr₂ with
+      | refl =>
+        simp_all
+        
+        sorry
+      | tail _ hr => exact eq_norm_refl hr hn₂
+      /-cases hr₁.cases_head with
       | inl a =>
         simp_all
         match hr₂.cases_head with
         | .inl a =>
           cases a; cases a
           rename_i h _ _
-          
+          exact eq_norm_refl (by sorry) hn₂
         | .inr ⟨_, h, h_red_other⟩ =>
           cases a ▸ h
           cases h_red_other.cases_head with
           | inl h =>
             cases h; rfl
           | inr h =>
-            
-            sorry
+            have ⟨c, h₁, h₂⟩ := h
+            rename_i h_eta
+            have h := h_eta.norm_aff (by assumption)
+            cases h₁
       | inr h =>
-        sorry
+        have ⟨c, h₁, h₂⟩ := h
+        cases h₁ with
+        | curr =>
+          
+          sorry
+        | congrFun h =>
+          sorry
+        | congrArg h =>
+          sorry-/
 
 open Reduces in theorem reflect (ht : Judge e (DCC (=(f_α) env x y))) : x = y := by
   cases ht with

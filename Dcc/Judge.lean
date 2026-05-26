@@ -8,9 +8,16 @@ import Mathlib.Logic.Relation
 
 namespace Expr
 
+@[dcc_judge]
 def RedAffReflTrans := Relation.ReflTransGen RedAff
+
+@[dcc_judge]
 def RedAffTrans     := Relation.TransGen RedAff
+
+@[dcc_judge]
 def RedEtaReflTrans := Relation.ReflTransGen RedEta
+
+@[dcc_judge]
 def RedEtaTrans     := Relation.TransGen RedEta
 
 namespace RedAffReflTrans

@@ -230,7 +230,7 @@ partial def Cmd.runner (cmd : Cmd) (A : MetaExpr) : TacticM (Option ((A' B' : Q(
 declare_syntax_cat reduce_cmd
 
 syntax "step"   reduce_cmd* : reduce_cmd
-syntax "reduce" reduce_cmd* : reduce_cmd
+syntax "red" reduce_cmd*    : reduce_cmd
 syntax "!"                  : reduce_cmd
 syntax "*"                  : reduce_cmd
 syntax "+"                  : reduce_cmd
@@ -255,7 +255,7 @@ partial def parse_cmd (stx : TSyntax `reduce_cmd) : MacroM Cmd :=
   | `(reduce_cmd| step $scheme:reduce_cmd) => do
     let scheme ← parse_scheme scheme
     pure (.step scheme)
-  | `(reduce_cmd| reduce $mode:reduce_cmd $scheme:reduce_cmd) => do
+  | `(reduce_cmd| red $mode:reduce_cmd $scheme:reduce_cmd) => do
     let mode ← parse_mode mode
     let scheme ← parse_scheme scheme
     pure (.reduce scheme mode)
@@ -277,12 +277,11 @@ def find_decl_expr (hyp : TSyntax `ident) (lctx : LocalContext) : TacticM (Local
     else return Option.none) | throwError m!"couldn't find the expr: {hyp}"
   return (decl, raw_expr)
 
-def reduce_goal (cmd : TSyntax `reduce_cmd) (hyp : TSyntax `ident) (g : MVarId) : TacticM (MVarId) := do
+def reduce_goal (cmd : Cmd) (hyp : TSyntax `ident) (g : MVarId) : TacticM (MVarId) := do
   g.withContext do
     let lctx ← getLCtx
     let (decl, A_raw) ← find_decl_expr hyp lctx
     let A ← MetaExpr.decode A_raw
-    let cmd ← liftMacroM <| parse_cmd cmd
     let runner := cmd.runner
     match ← runner A with
     | .some ⟨A', B', _B, ⟨_heq₁, _heq₂⟩, raw_proof⟩ =>
@@ -299,18 +298,6 @@ partial def exprSize : Lean.Expr → Nat
   | .mdata _ e      => 1 + exprSize e
   | .proj _ _ e     => 1 + exprSize e
   | _               => 1
-
-def any_relevant_hyp (g : MVarId) : TacticM (Option (TSyntax `ident)) := do
-  g.withContext do
-    let lctx ← getLCtx
-    lctx.findDeclM? (fun decl => do
-      match decl.type with
-      | .app (.app (.const _ _) A) B =>
-        if exprSize B < exprSize A then
-          return .some (mkIdent decl.userName)
-        else
-          return .none
-      | _ => return .none)
 
 def my_sort [Monad m] [Ord β] (key : α → m β) (l : List α) : m (List α) := do
   let keyed ← l.mapM (fun a => do return (← key a, a))
@@ -349,6 +336,7 @@ def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
     let left_decls ← my_sort (l := (lctx.decls.toList.filterMap _root_.id)) get_left_size
     let right_decls ← my_sort (l := (lctx.decls.toList.filterMap _root_.id)) get_right_size
     let split (decl : LocalDecl) (nm : Lean.Name) : TacticM (Array MVarId) := do
+      let g ← getMainGoal
       let c_head_expr := mkFVar decl.fvarId
       let proof ← Lean.Meta.mkAppM nm #[c_head_expr]
       let ty    ← Lean.Meta.inferType proof
@@ -357,63 +345,123 @@ def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
       let subgoals ← g'.cases fvid'
       return subgoals.map (·.mvarId)
     -- go with left candidates
-    let x : Option (Array MVarId) ←
+    let x : Option (Array MVarId × (TSyntax `ident) × Cmd) ←
       if (← left_decls.head?.mapM get_left_size).getD 0 > (← right_decls.head?.mapM get_right_size).getD 0 then
         right_decls.firstM (fun (decl : LocalDecl) => do
           let idt := mkIdent decl.userName
           match ← Qq.checkTypeQ decl.type q(Prop) with
           | Option.some ty =>
             match ty with
-            | ~q(Relation.ReflTransGen $r $A $B) =>
-              if exprSize A < exprSize B then
-                return Option.some (← split decl ``Relation.ReflTransGen.cases_head)
+            | ~q(Relation.ReflTransGen _root_.Expr.RedAff $A $B) =>
+              if exprSize A > exprSize B then
+                return Option.some ((← split decl ``Relation.ReflTransGen.cases_head), idt, Cmd.reduce .aff .refl_trans)
               else return Option.none
-            | ~q(Relation.TransGen $r $A $B) =>
-              if exprSize A < exprSize B then
+            | ~q(Relation.ReflTransGen _root_.Expr.RedEta $A $B) =>
+              if exprSize A > exprSize B then
+                return Option.some ((← split decl ``Relation.ReflTransGen.cases_head), idt, Cmd.reduce .eta .refl_trans)
+              else return Option.none
+            | ~q(Relation.TransGen _root_.Expr.RedEta $A $B) =>
+              if exprSize A > exprSize B then
+                let refl_name ← mkFreshUserName decl.userName
+                let head_name ← mkFreshUserName decl.userName
+                let refl_idt := mkIdent refl_name
+                let head_idt := mkIdent head_name
                 let _ ← evalTactic (← liftMacroM <| `(tactic|
                   cases $idt:ident using Relation.TransGen.head_induction_on with
                   | single h =>
-                    ?reflCase
+                    ?$refl_idt
                   | head h ih =>
-                    ?headCase))
+                    ?$head_idt))
                 let goals  ← getGoals
-                let some reflG  ← goals.findM? (fun g => return (← g.getTag) == `reflCase) | throwError m!"cannot find case: refl"
-                let .some headG  ← goals.findM? (fun g => return (← g.getTag) == `headCase) | throwError m!"cannot find case: head"
-                return .some #[reflG, headG]
+                let some reflG  ← goals.findM? (fun g =>
+                  return (← g.getTag) == refl_name) | throwError m!"cannot find case: refl"
+                let .some headG  ← goals.findM? (fun g => return (← g.getTag) == head_name) | throwError m!"cannot find case: head"
+                return .some (#[reflG, headG], idt, Cmd.reduce .eta .trans)
+              else return Option.none
+            | ~q(Relation.TransGen _root_.Expr.RedAff $A $B) =>
+              if exprSize A > exprSize B then
+                let refl_name ← mkFreshUserName decl.userName
+                let head_name ← mkFreshUserName decl.userName
+                let refl_idt := mkIdent refl_name
+                let head_idt := mkIdent head_name
+                let _ ← evalTactic (← liftMacroM <| `(tactic|
+                  cases $idt:ident using Relation.TransGen.head_induction_on with
+                  | single h =>
+                    ?$refl_idt
+                  | head h ih =>
+                    ?$head_idt))
+                let goals  ← getGoals
+                let some reflG  ← goals.findM? (fun g =>
+                  return (← g.getTag) == refl_name) | throwError m!"cannot find case: refl"
+                let .some headG  ← goals.findM? (fun g => return (← g.getTag) == head_name) | throwError m!"cannot find case: head"
+                return .some (#[reflG, headG], idt, Cmd.reduce .aff .trans)
               else return Option.none
             | _ => return Option.none
           | .none => return .none)
       else
         right_decls.firstM (fun (decl : LocalDecl) => do
+          let idt := mkIdent decl.userName
           match ← Qq.checkTypeQ decl.type q(Prop) with
           | Option.some ty =>
             match ty with
-            | ~q(Relation.ReflTransGen $r $A $B) =>
-              if exprSize B < exprSize A then
+            | ~q(Relation.ReflTransGen _root_.Expr.RedEta $A $B) =>
+              if exprSize B > exprSize A then
                 let g   ← getMainGoal
-                return Option.some ((← g.cases decl.fvarId).map (·.mvarId))
+                return Option.some (((← g.cases decl.fvarId).map (·.mvarId)), idt, .reduce .eta .refl_trans)
               else return Option.none
-            | ~q(Relation.TransGen $r $A $B) =>
-              if exprSize B < exprSize A then
+            | ~q(Relation.ReflTransGen _root_.Expr.RedAff $A $B) =>
+              if exprSize B > exprSize A then
                 let g   ← getMainGoal
-                return Option.some ((← g.cases decl.fvarId).map (·.mvarId))
+                return Option.some (((← g.cases decl.fvarId).map (·.mvarId)), idt, .reduce .aff .refl_trans)
+              else return Option.none
+            | ~q(Relation.TransGen _root_.Expr.RedAff $A $B) =>
+              if exprSize B > exprSize A then
+                let g   ← getMainGoal
+                return Option.some (((← g.cases decl.fvarId).map (·.mvarId)), idt, Cmd.reduce .aff .trans)
+              else return Option.none
+            | ~q(Relation.TransGen _root_.Expr.RedEta $A $B) =>
+              if exprSize B > exprSize A then
+                let g   ← getMainGoal
+                return Option.some (((← g.cases decl.fvarId).map (·.mvarId)), idt, Cmd.reduce .eta .trans)
               else return Option.none
             | _ => return Option.none
           | _ => return Option.none)
     match x with
-    | .some gs =>
-      pure gs
+    | .some (gs, idt, cmd) =>
+      let gs ← replaceMainGoal gs.toList
+      let g ← getMainGoal
+      let gs ← reduce_goal cmd idt g
+      pure #[gs]
     | .none => pure #[g]
+
+def destruct_reduces : TacticM (List MVarId) := do
+  let g ← getMainGoal
+  Lean.Meta.liftMetaM (g.casesMatching (allowSplit := false) (fun e => do
+    match e with
+    | .app (.app (.const ``_root_.Expr.Reduces []) A) B =>
+      return exprSize B < exprSize A
+    | .app (.app (.const ``_root_.Expr.Reduced []) A) B =>
+      return exprSize B < exprSize A
+    | _ => return false))
 
 elab "dcc" cmd:reduce_cmd : tactic => do
   let g  ← getMainGoal
+  let gs ← runTactic' g (← liftMacroM <| `(tactic| dcc_simp_all))
+  replaceMainGoal gs
+  let gs ← destruct_reduces
+  replaceMainGoal gs
+  let g ← getMainGoal
+  let gs ← runTactic' g (← liftMacroM <| `(tactic| dcc_simp_all))
+  replaceMainGoal gs
+  let g ← getMainGoal
   g.withContext do
     -- Assume some relation r A B
     let g ← getMainGoal
     g.withContext do
       match ← (liftMacroM (parse_cmd cmd)) with
       | .reduce _ .norm =>
-        let subgoals ← (← (split_hyps g)).mapM (fun g => do
+        let subgoals ← (split_hyps g)
+        let subgoals ← subgoals.mapM (fun g => do
           let some relevant_hyp ← any_relevant_hyp g | return g
           reduce_goal cmd relevant_hyp g)
         replaceMainGoal subgoals.toList
@@ -428,6 +476,7 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
     replaceMainGoal gs
     let g ← getMainGoal
     g.withContext do
+      let cmd ← liftMacroM <| parse_cmd cmd
       replaceMainGoal [← reduce_goal cmd hyp g]
 
 namespace _test
@@ -435,14 +484,9 @@ namespace _test
 open Expr in
 example (h_absurd : RedAff (DCC (Id(Sort 1) α)) (DCC Sort 1)) : RedAff (DCC Sort 0) (DCC Sort 1) := by
   dcc step aff from h_absurd
-  dcc reduce* aff from h_absurd
+  dcc red* aff from h_absurd
   sorry
 
 end _test
 
 end MetaExpr
-
-/-
-Producing a proof of IsNorm is not possible since we have holes.
-We're chilling I think.
--/

@@ -336,37 +336,67 @@ def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
       | _ => return .none
     let get_left_size (decl : LocalDecl) : TacticM ℕ := do
       match ← get_components decl with
-      | .some (a, b) => return exprSize a
+      | .some (a, _b) => return exprSize a
       | .none => pure 0
     let get_right_size (decl : LocalDecl) : TacticM ℕ := do
       match ← get_components decl with
-      | .some (a, b) => return exprSize b
+      | .some (_a, b) => return exprSize b
       | .none => pure 0
     let left_decls ← my_sort (l := (lctx.decls.toList.filterMap _root_.id)) get_left_size
     let right_decls ← my_sort (l := (lctx.decls.toList.filterMap _root_.id)) get_right_size
+    let split (decl : LocalDecl) (nm : Lean.Name) : TacticM (Array MVarId) := do
+      let c_head_expr := mkFVar decl.fvarId
+      let proof ← Lean.Meta.mkAppM nm #[c_head_expr]
+      let ty    ← Lean.Meta.inferType proof
+      let nm    ← Meta.getUnusedUserName decl.userName
+      let (fvid', g') ← (← g.assert nm ty proof).intro1
+      let subgoals ← g'.cases fvid'
+      return subgoals.map (·.mvarId)
     -- go with left candidates
-    let candidates := if (← left_decls.head?.mapM get_left_size).getD 0 < (← right_decls.head?.mapM get_right_size).getD 0 then
-      right_decls
-    else
-      left_decls
-    let x : Option (Array MVarId) ← candidates.firstM (fun (decl : LocalDecl) => do
-      match ← Qq.checkTypeQ decl.type q(Prop) with
-      | .some ty =>
-        let split (nm : Lean.Name) : TacticM (Array MVarId) := do
-          let c_head_expr := mkFVar decl.fvarId
-          let proof ← Lean.Meta.mkAppM nm #[c_head_expr]
-          let ty    ← Lean.Meta.inferType proof
-          let nm    ← Meta.getUnusedUserName decl.userName
-          let (fvid', g') ← (← g.assert nm ty proof).intro1
-          let subgoals ← g'.cases fvid'
-          return subgoals.map (·.mvarId)
-        let some (tm : Q($ty)) ← Qq.checkTypeQ decl.value ty | return Option.none
-        match ty with
-        | ~q(Relation.ReflTransGen _root_.Expr.RedAff $A $B) =>
-          if exprSize B < exprSize A then
-            return .some (← split ``Relation.ReflTransGen.cases_head)
-          else return Option.none
-      | .none => return .none)
+    let x : Option (Array MVarId) ←
+      if (← left_decls.head?.mapM get_left_size).getD 0 > (← right_decls.head?.mapM get_right_size).getD 0 then
+        right_decls.firstM (fun (decl : LocalDecl) => do
+          let idt := mkIdent decl.userName
+          match ← Qq.checkTypeQ decl.type q(Prop) with
+          | Option.some ty =>
+            match ty with
+            | ~q(Relation.ReflTransGen $r $A $B) =>
+              if exprSize B < exprSize A then
+                return Option.some (← split decl ``Relation.ReflTransGen.cases_head)
+              else return Option.none
+            | ~q(Relation.TransGen $r $A $B) =>
+              if exprSize B < exprSize A then
+                let _ ← evalTactic (← liftMacroM <| `(tactic|
+                  cases $idt:ident using Relation.TransGen.head_induction_on with
+                  | single h =>
+                    ?reflCase
+                  | head h ih =>
+                    ?headCase))
+                let goals  ← getGoals
+                let some reflG  ← goals.findM? (fun g => return (← g.getTag) == `reflCase) | throwError m!"cannot find case: refl"
+                let .some headG  ← goals.findM? (fun g => return (← g.getTag) == `headCase) | throwError m!"cannot find case: head"
+                return .some #[reflG, headG]
+              else return Option.none
+            | _ => return Option.none
+          | .none => return .none)
+      else
+        right_decls.firstM (fun (decl : LocalDecl) => do
+          let idt := mkIdent decl.userName
+          match ← Qq.checkTypeQ decl.type q(Prop) with
+          | Option.some ty =>
+            match ty with
+            | ~q(Relation.ReflTransGen $r $A $B) =>
+              if exprSize A < exprSize B then
+                let g   ← getMainGoal
+                return Option.some ((← g.cases decl.fvarId).map (·.mvarId))
+              else return Option.none
+            | ~q(Relation.TransGen $r $A $B) =>
+              if exprSize A < exprSize B then
+                let g   ← getMainGoal
+                return Option.some (← g.cases decl.fvarId)
+              else return Option.none
+            | _ => return Option.none
+          | _ => return Option.none)
     match x with
     | .some gs =>
       pure gs

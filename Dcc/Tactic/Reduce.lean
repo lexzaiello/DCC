@@ -234,112 +234,234 @@ def reduce_eta_norm (A : MetaExpr) : TacticM
   let proof ← Lean.Meta.mkDecideProof to_decide
   return (B, proof, h)
 
+open Lean Elab Tactic
+
+inductive Mode where
+  | norm       : Mode
+  | trans      : Mode
+  | refl_trans : Mode
+
+inductive Scheme where
+  | aff : Scheme
+  | eta : Scheme
+
+inductive Cmd where
+  | step   : Scheme → Cmd
+  | reduce : Scheme → Mode → Cmd
+
+def Scheme.tm_rel (cmd : Scheme) : Q(_root_.Expr → _root_.Expr → Prop) :=
+  match cmd with
+  | .aff => q(Expr.RedAff)
+  | .eta => q(Expr.RedEta)
+
+def Mode.tm_rel (mode : Mode) :
+  Q((r : _root_.Expr → _root_.Expr → Prop) → _root_.Expr → _root_.Expr → Prop) :=
+  match mode with
+  | .refl_trans | .norm => q(Relation.ReflTransGen)
+  | .trans => q(Relation.ReflTransGen)
+
+def Scheme.rel (scheme : Scheme) : MetaExpr → MetaExpr → Type :=
+  match scheme with
+  | .aff => MetaExpr.RedAffMeta
+  | .eta => MetaExpr.RedEtaMeta
+
+def Cmd.tm_rel (cmd : Cmd) : Q(_root_.Expr → _root_.Expr → Prop) :=
+  match cmd with
+  | .step scheme => scheme.tm_rel
+  | .reduce scheme mode =>
+    let rel   := scheme.tm_rel
+    let rel_m := mode.tm_rel
+    q($rel_m $rel)
+
+def Scheme.runner (scheme : Scheme) (A : MetaExpr) : TacticM (Option ((A' B' : Q(_root_.Expr))
+  × (B : MetaExpr) × (PLift (A' = A.encode ∧ B' = B.encode))
+  × Q($(scheme.tm_rel) $A' $B'))) := do
+  let A' := A.encode
+  match scheme with
+  | .aff =>
+    match ← step? A with
+    | .some ⟨B, h⟩ =>
+      let B' := B.encode
+      let h' : Q(_root_.Expr.RedAff $A' $B') := h.encode
+      return .some ⟨A', B', B, ⟨⟨rfl, rfl⟩⟩, h'⟩
+    | _ => pure .none
+  | .eta =>
+    match ← step_eta? A with
+    | .some ⟨B, h⟩ =>
+      let B' := B.encode
+      let h' : Q(_root_.Expr.RedEta $A' $B') := h.encode
+      return .some ⟨A', B', B, ⟨⟨rfl, rfl⟩⟩, h'⟩
+    | _ => pure .none
+
+partial def Cmd.runner (cmd : Cmd) (A : MetaExpr) : TacticM (Option ((A' B' : Q(_root_.Expr))
+  × (B : MetaExpr) × (PLift (A' = A.encode ∧ B' = B.encode))
+  × Q($(cmd.tm_rel) $A' $B'))) :=
+  match cmd with
+  | .step scheme => scheme.runner A
+  | .reduce scheme .refl_trans =>
+    let single := scheme.runner
+    let rec runner' (A : MetaExpr) : TacticM ((A' B' : Q(_root_.Expr))
+      × (B : MetaExpr) × (PLift (A' = A.encode ∧ B' = B.encode))
+      × Q(Relation.ReflTransGen $(scheme.tm_rel) $A' $B')) := do
+      let A' := A.encode
+      match ← single A with
+      | .some ⟨A', B', B, ⟨heq₁, heq₂⟩, hr⟩ =>
+        let ⟨B', C', C, ⟨heq₃, heq₄⟩, hr₂⟩ ← runner' B
+        return ⟨A', C', C, ⟨⟨by simp_all, by simp_all⟩⟩, by
+          cases heq₁; cases heq₂; cases heq₃; cases heq₄
+          exact q(Relation.ReflTransGen.trans (.single $hr) $hr₂)⟩
+      | _ => return ⟨A', A', A, ⟨⟨rfl, rfl⟩⟩, q(.refl)⟩
+    runner' A >>= (pure ∘ Option.some)
+  | .reduce scheme .trans =>
+    let single := scheme.runner
+    let rec runner'' (A : MetaExpr) : TacticM (Option ((A' B' : Q(_root_.Expr))
+      × (B : MetaExpr) × (PLift (A' = A.encode ∧ B' = B.encode))
+      × Q(Relation.TransGen $(scheme.tm_rel) $A' $B'))) := do
+      let A' := A.encode
+      match ← single A with
+      | .some ⟨A', B', B, ⟨⟨heq₁, heq₂⟩⟩, hr₁⟩ =>
+        match ← runner'' B with
+        | .some ⟨B', C', C, ⟨⟨heq₃, heq₄⟩⟩, hr₂⟩ =>
+          return .some ⟨A', C', C, ⟨⟨by simp_all, by simp_all⟩⟩, (by
+            cases heq₁; cases heq₂; cases heq₃; cases heq₄
+            exact q(Relation.TransGen.trans (.single $hr₁) $hr₂))⟩
+        | .none => return .some ⟨A', B', B, ⟨⟨heq₁, heq₂⟩⟩, q(Relation.TransGen.single $hr₁)⟩
+      | _ => return .none
+    runner'' A
+  | _ => return .none
+
 declare_syntax_cat reduce_cmd
 
-syntax "step"   reduce_cmd  : reduce_cmd
-syntax "reduce!" reduce_cmd : reduce_cmd
-syntax "reduce+" reduce_cmd : reduce_cmd
-syntax "reduce*" reduce_cmd : reduce_cmd
+syntax "step"   reduce_cmd* : reduce_cmd
+syntax "reduce" reduce_cmd* : reduce_cmd
+syntax "!"                  : reduce_cmd
+syntax "*"                  : reduce_cmd
+syntax "+"                  : reduce_cmd
 syntax "aff"                : reduce_cmd
 syntax "eta"                : reduce_cmd
 
-open Lean Elab Tactic
+def parse_mode (stx : TSyntax `reduce_cmd) : MacroM Mode :=
+  match stx with
+  | `(reduce_cmd| !) => pure .norm
+  | `(reduce_cmd| *) => pure .refl_trans
+  | `(reduce_cmd| +) => pure .trans
+  | e => Macro.throwErrorAt stx s!"unsupported DCC mode: {e}"
+
+def parse_scheme (stx : TSyntax `reduce_cmd) : MacroM Scheme :=
+  match stx with
+  | `(reduce_cmd| aff) => pure .aff
+  | `(reduce_cmd| eta) => pure .eta
+  | e => Macro.throwErrorAt stx s!"unsupported DCC scheme: {e}"
+
+partial def parse_cmd (stx : TSyntax `reduce_cmd) : MacroM Cmd :=
+  match stx with
+  | `(reduce_cmd| step $scheme:reduce_cmd) => do
+    let scheme ← parse_scheme scheme
+    pure (.step scheme)
+  | `(reduce_cmd| reduce $mode:reduce_cmd $scheme:reduce_cmd) => do
+    let mode ← parse_mode mode
+    let scheme ← parse_scheme scheme
+    pure (.reduce scheme mode)
+  | e => Macro.throwErrorAt stx s!"unsupported DCC command: {e}"
+
+def find_decl_expr (hyp : TSyntax `ident) (lctx : LocalContext) : TacticM (LocalDecl × Lean.Expr) := do
+  let nm  := hyp.getId
+  let some decl    ← lctx.findDeclM? (fun decl =>
+  if decl.userName.eraseMacroScopes == nm.eraseMacroScopes then
+    match decl.type with
+    | .app (.app _ _) _ => return Option.some decl
+    | e => throwError m!"not a relation on Expr: {e}"
+  else return Option.none) | throwError m!"couldn't find hypothesis: {hyp}"
+  let some raw_expr ← lctx.findDeclM? (fun decl =>
+    if decl.userName == nm then
+      match decl.type with
+      | .app (.app _ a) _ => return Option.some a
+      | e => throwError m!"not a relation on Expr: {e}"
+    else return Option.none) | throwError m!"couldn't find the expr: {hyp}"
+  return (decl, raw_expr)
+
+partial def parse_cmd (stx : TSyntax `reduce_cmd) : MacroM 
 
 def reduce_goal (cmd : TSyntax `reduce_cmd) (hyp : TSyntax `ident) (g : MVarId) : TacticM Unit := do
   g.withContext do
-    let nm  := hyp.getId
     let lctx ← getLCtx
-    let some decl    ← lctx.findDeclM? (fun decl =>
-    if decl.userName.eraseMacroScopes == nm.eraseMacroScopes then
-      match decl.type with
-      | .app (.app _ _) _ => return Option.some decl
-      | e => throwError m!"not a relation on Expr: {e}"
-    else return Option.none) | throwError m!"couldn't find hypothesis: {hyp}"
-    let raw_expr ← lctx.findDeclM? (fun decl =>
-      if decl.userName == nm then
-        match decl.type with
-        | .app (.app _ a) _ => return Option.some a
-        | e => throwError m!"not a relation on Expr: {e}"
-      else return Option.none)
-    match raw_expr with
-    | .some A =>
-      let dec ← MetaExpr.decode A
-      match cmd with
-      | `(reduce_cmd| step $kind:reduce_cmd) =>
-        let maybe_ty_proof ← match kind with
-        | `(reduce_cmd| aff) =>
-          match ← dec.step? with
-          | .some ⟨actual_B, actual_proof⟩ =>
-            let B            := actual_B.encode
-            let ty           := Lean.Expr.app (.app (.const ``Expr.RedAff []) A) B
-            let raw_proof    := actual_proof.encode
-            pure (Option.some (ty, raw_proof))
-          | .none => logWarning "dcc made no progress" *> pure .none
-        | `(reduce_cmd| eta) =>
-          match ← dec.step_eta? with
-          | .some ⟨actual_B, actual_proof⟩ =>
-            let B            := actual_B.encode
-            let ty           := Lean.Expr.app (.app (.const ``Expr.RedEta []) A) B
-            let raw_proof    := actual_proof.encode
-            pure (Option.some (ty, raw_proof))
-          | .none => logWarning "dcc made no progress" *> pure .none
-        | stx => throwError m!"not a valid dcc command: {stx}"
-        match maybe_ty_proof with
-        | .some (ty, raw_proof) =>
-          let g' ← g.assertAfter decl.fvarId (← Meta.getUnusedUserName hyp.getId) ty raw_proof
-          replaceMainGoal [g'.mvarId]
-        | _ => logWarning "dcc made no progress"
-      | `(reduce_cmd| reduce* $kind:reduce_cmd) =>
-        let (ty, raw_proof) ← match kind with
-        | `(reduce_cmd| aff) =>
-          let (actual_B, raw_proof) ← dec.reduce_aff
+    let (decl, A) ← find_decl_expr hyp lctx
+    let dec ← MetaExpr.decode A
+    match cmd with
+    | `(reduce_cmd| step $kind:reduce_cmd) =>
+      let maybe_ty_proof ← match kind with
+      | `(reduce_cmd| aff) =>
+        match ← dec.step? with
+        | .some ⟨actual_B, actual_proof⟩ =>
           let B            := actual_B.encode
-          pure (quot_rtransgen ``Expr.RedAff A B, raw_proof)
-        | _ =>
-          let (actual_B, raw_proof) ← dec.reduce_eta
-
+          let ty           := Lean.Expr.app (.app (.const ``Expr.RedAff []) A) B
+          let raw_proof    := actual_proof.encode
+          pure (Option.some (ty, raw_proof))
+        | .none => logWarning "dcc made no progress" *> pure .none
+      | `(reduce_cmd| eta) =>
+        match ← dec.step_eta? with
+        | .some ⟨actual_B, actual_proof⟩ =>
           let B            := actual_B.encode
-          pure (quot_rtransgen ``Expr.RedEta A B, raw_proof)
+          let ty           := Lean.Expr.app (.app (.const ``Expr.RedEta []) A) B
+          let raw_proof    := actual_proof.encode
+          pure (Option.some (ty, raw_proof))
+        | .none => logWarning "dcc made no progress" *> pure .none
+      | stx => throwError m!"not a valid dcc command: {stx}"
+      match maybe_ty_proof with
+      | .some (ty, raw_proof) =>
         let g' ← g.assertAfter decl.fvarId (← Meta.getUnusedUserName hyp.getId) ty raw_proof
         replaceMainGoal [g'.mvarId]
-      | `(reduce_cmd| reduce+ $kind:reduce_cmd) =>
-        let maybe_ty_proof ← match kind with
-        | `(reduce_cmd| aff) =>
-          match ← dec.reduce_aff? with
-          | .some (actual_B, raw_proof) =>
-            let B            := actual_B.encode
-            pure (Option.some (quot_transgen ``Expr.RedAff A B, raw_proof))
-          | _ => pure .none
-        | _ =>
-          match ← dec.reduce_eta? with
-          | .some (actual_B, raw_proof) =>
-            let B            := actual_B.encode
-            pure (Option.some (quot_transgen ``Expr.RedEta A B, raw_proof))
-          | _ => pure .none
-        match maybe_ty_proof with
-        | .some (ty, raw_proof) =>
-          let g' ← g.assertAfter decl.fvarId (← Meta.getUnusedUserName hyp.getId) ty raw_proof
-          replaceMainGoal [g'.mvarId]
-        | _ => logWarning "dcc made no progress"
-      | `(reduce_cmd| reduce! $kind:reduce_cmd) =>
-        let ((ty, raw_proof), (ty_norm, raw_proof_norm)) ← match kind with
-        | `(reduce_cmd| aff) =>
-          let (actual_B, norm_proof, raw_proof) ← dec.reduce_aff_norm
+      | _ => logWarning "dcc made no progress"
+    | `(reduce_cmd| reduce* $kind:reduce_cmd) =>
+      let (ty, raw_proof) ← match kind with
+      | `(reduce_cmd| aff) =>
+        let (actual_B, raw_proof) ← dec.reduce_aff
+        let B            := actual_B.encode
+        pure (quot_rtransgen ``Expr.RedAff A B, raw_proof)
+      | _ =>
+        let (actual_B, raw_proof) ← dec.reduce_eta
+
+        let B            := actual_B.encode
+        pure (quot_rtransgen ``Expr.RedEta A B, raw_proof)
+      let g' ← g.assertAfter decl.fvarId (← Meta.getUnusedUserName hyp.getId) ty raw_proof
+      replaceMainGoal [g'.mvarId]
+    | `(reduce_cmd| reduce+ $kind:reduce_cmd) =>
+      let maybe_ty_proof ← match kind with
+      | `(reduce_cmd| aff) =>
+        match ← dec.reduce_aff? with
+        | .some (actual_B, raw_proof) =>
           let B            := actual_B.encode
-          let tup_red := (quot_rtransgen ``Expr.RedAff A B, raw_proof)
-          let tup_norm := (quot_norm ``Expr.RedAff B, norm_proof)
-          pure (tup_red, tup_norm)
-        | _ =>
-          let (actual_B, norm_proof, raw_proof) ← dec.reduce_eta_norm
+          pure (Option.some (quot_transgen ``Expr.RedAff A B, raw_proof))
+        | _ => pure .none
+      | _ =>
+        match ← dec.reduce_eta? with
+        | .some (actual_B, raw_proof) =>
           let B            := actual_B.encode
-          let tup_red := (quot_rtransgen ``Expr.RedEta A B, raw_proof)
-          let tup_norm := (quot_norm ``Expr.RedEta B, norm_proof)
-          pure (tup_red, tup_norm)
-        let nm₁' ← Meta.getUnusedUserName hyp.getId
-        let ⟨_, g'⟩ ← g.assertHypotheses #[{ userName := (← Meta.getUnusedUserName hyp.getId), type := ty, value := raw_proof, binderInfo := .default, kind := .default}, { userName := nm₁', type := ty_norm, value := raw_proof_norm, binderInfo := .default, kind := .default}]
-        replaceMainGoal [g']
-      | _ => throwError m!"not a valid dcc command: {cmd}"
-    | _ => throwError m!"not a valid expr: {raw_expr}"
+          pure (Option.some (quot_transgen ``Expr.RedEta A B, raw_proof))
+        | _ => pure .none
+      match maybe_ty_proof with
+      | .some (ty, raw_proof) =>
+        let g' ← g.assertAfter decl.fvarId (← Meta.getUnusedUserName hyp.getId) ty raw_proof
+        replaceMainGoal [g'.mvarId]
+      | _ => logWarning "dcc made no progress"
+    | `(reduce_cmd| reduce! $kind:reduce_cmd) =>
+      let ((ty, raw_proof), (ty_norm, raw_proof_norm)) ← match kind with
+      | `(reduce_cmd| aff) =>
+        let (actual_B, norm_proof, raw_proof) ← dec.reduce_aff_norm
+        let B            := actual_B.encode
+        let tup_red := (quot_rtransgen ``Expr.RedAff A B, raw_proof)
+        let tup_norm := (quot_norm ``Expr.RedAff B, norm_proof)
+        pure (tup_red, tup_norm)
+      | _ =>
+        let (actual_B, norm_proof, raw_proof) ← dec.reduce_eta_norm
+        let B            := actual_B.encode
+        let tup_red := (quot_rtransgen ``Expr.RedEta A B, raw_proof)
+        let tup_norm := (quot_norm ``Expr.RedEta B, norm_proof)
+        pure (tup_red, tup_norm)
+      let nm₁' ← Meta.getUnusedUserName hyp.getId
+      let ⟨_, g'⟩ ← g.assertHypotheses #[{ userName := (← Meta.getUnusedUserName hyp.getId), type := ty, value := raw_proof, binderInfo := .default, kind := .default}, { userName := nm₁', type := ty_norm, value := raw_proof_norm, binderInfo := .default, kind := .default}]
+      replaceMainGoal [g']
+    | _ => throwError m!"not a valid dcc command: {cmd}"
 
 elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
   let g  ← getMainGoal

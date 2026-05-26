@@ -19,12 +19,8 @@ This takes an environment and a term, yielding an x = y.
 namespace Expr
 
 @[dcc_judge]
-abbrev fn_env_arrow (x δ : Expr) (o : Level) :=
-  (DCC (δ : Sort o) → ((((x = x) : Sort 0) → Sort 0)))
-
-@[dcc_judge]
-abbrev fn_env_forall (f_α env : Expr) (o : Level) :=
-  DCC (Π(Id(Sort o), `(Sort o, Π(Id(Sort 0), `(Coup(Id(Sort 0)), Sort 0)) ∘ (Eql(f_α) env))))
+abbrev fn_env_arrow (x : Expr) :=
+  (DCC ((((x = x) : Sort 0) → Sort 0)))
 
 inductive EqEnvFn : Expr → Expr → Prop
   | eql    : Judge f_α (DCC (δ : Sort o) → Sort m)
@@ -44,12 +40,9 @@ inductive EqEnvFn : Expr → Expr → Prop
     → EqEnvFn f (DCC ((Coup(f_β) : Sort n) → ((γ : Sort o) → Sort 0)))
     → Reduces (DCC ((α : Sort m) → ((γ : Sort o) → Sort 0))) τ
     → EqEnvFn (DCC (f ∘ g)) τ
-  | id     : Reduces (DCC ((#(fn_env_arrow x δ o) : Sort 0)
-    → #(fn_env_arrow x δ o))) τ
-    → EqEnvFn (DCC Id(#(fn_env_arrow x δ o))) τ
-  | id'    : Reduces (DCC ((#(fn_env_forall f_α env o) : Sort 0)
-    → #(fn_env_forall f_α env o))) τ →
-    EqEnvFn (DCC Id(#(fn_env_forall f_α env o))) τ
+  | id     : Judge (DCC Id(#(fn_env_arrow x)))
+    (DCC (#(fn_env_arrow x) : Sort 0) → #(fn_env_arrow x))
+    → EqEnvFn (DCC Id(#(fn_env_arrow x))) (DCC ((#(fn_env_arrow x) : Sort 0) → (((x = x) : Sort 0) → Sort 0)))
   | curr   : Judge α (DCC Sort m)
     → Judge f_β (DCC ((α : Sort m) → Sort n))
     → EqEnvFn x (DCC ((Coup(f_β) : Sort (max m n)) → Sort 0))
@@ -68,7 +61,7 @@ theorem reduces_eq (h : EqEnvFn e τ)
     have ⟨f_α₁, f_β₁, env₂, α₁, h_t_f₁, h_r_α₁, h_t_x₁, h_r_τ₁⟩ := h_t_f.invert rfl
     cases h_t_f₁ with
     | id h_t_arr h_r_id =>
-      dcc red ! aff
+      dcc red ! aff 500
       
       sorry
   | eql =>

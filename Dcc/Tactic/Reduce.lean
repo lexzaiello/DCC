@@ -303,6 +303,95 @@ def my_sort [Monad m] [Ord β] (key : α → m β) (l : List α) : m (List α) :
   let keyed ← l.mapM (fun a => do return (← key a, a))
   return (keyed.mergeSort (fun x y => compare x.1 y.1 |>.isLE)).map (·.2)
 
+def do_norm_unique (h_norm : LocalDecl) (h_r : LocalDecl) : TacticM (Array MVarId) := do
+  let g ← getMainGoal
+  let some h_norm_type ← Qq.checkTypeQ h_norm.type q(Prop) | return #[g]
+  match h_norm_type with
+  | ~q(_root_.Expr.IsNorm _root_.Expr.RedAff $A) =>
+    let some h_r_type ← Qq.checkTypeQ h_r.type q(Prop) | return #[g]
+    let some h_norm_val ← Qq.checkTypeQ h_norm.value q(_root_.Expr.IsNorm _root_.Expr.RedAff $A) | return #[g]
+    match h_r_type with
+    | ~q(Relation.ReflTransGen _root_.Expr.RedAff $A' $B) =>
+      match ← Qq.isDefEqQ (u := .succ .zero) A A' with
+      | .defEq _heq =>
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.ReflTransGen _root_.Expr.RedAff $A $B) | return #[g]
+        let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique_refl $h_norm_val $h_r_val)
+        let nm    ← Meta.getUnusedUserName h_norm.userName
+        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
+        let subgoals ← g'.cases fvid'
+        return subgoals.map (·.mvarId)
+      | .notDefEq =>
+        return #[g]
+    | ~q(Relation.TransGen _root_.Expr.RedAff $A' $B) =>
+      match ← Qq.isDefEqQ (u := .succ .zero) A A' with
+      | .defEq _heq =>
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.TransGen _root_.Expr.RedAff $A $B) | return #[g]
+        let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique_trans $h_norm_val $h_r_val)
+        let nm    ← Meta.getUnusedUserName h_norm.userName
+        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
+        let subgoals ← g'.cases fvid'
+        return subgoals.map (·.mvarId)
+      | .notDefEq =>
+        return #[g]
+    | ~q(_root_.Expr.RedAff $A' $B) =>
+      match ← Qq.isDefEqQ (u := .succ .zero) A A' with
+      | .defEq _heq =>
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(_root_.Expr.RedAff $A $B) | return #[g]
+        let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique $h_norm_val $h_r_val)
+        let nm    ← Meta.getUnusedUserName h_norm.userName
+        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
+        let subgoals ← g'.cases fvid'
+        return subgoals.map (·.mvarId)
+      | .notDefEq =>
+        return #[g]
+  | ~q(_root_.Expr.IsNorm _root_.Expr.RedEta $A) =>
+    let some h_r_type ← Qq.checkTypeQ h_r.type q(Prop) | return #[g]
+    let some h_norm_val ← Qq.checkTypeQ h_norm.value q(_root_.Expr.IsNorm _root_.Expr.RedEta $A) | return #[g]
+    match h_r_type with
+    | ~q(Relation.ReflTransGen _root_.Expr.RedEta $A' $B) =>
+      match ← Qq.isDefEqQ (u := .succ .zero) A A' with
+      | .defEq _heq =>
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.ReflTransGen _root_.Expr.RedEta $A $B) | return #[g]
+        let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique_refl $h_norm_val $h_r_val)
+        let nm    ← Meta.getUnusedUserName h_norm.userName
+        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
+        let subgoals ← g'.cases fvid'
+        return subgoals.map (·.mvarId)
+      | .notDefEq =>
+        return #[g]
+    | ~q(Relation.TransGen _root_.Expr.RedEta $A' $B) =>
+      match ← Qq.isDefEqQ (u := .succ .zero) A A' with
+      | .defEq _heq =>
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.TransGen _root_.Expr.RedEta $A $B) | return #[g]
+        let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique_trans $h_norm_val $h_r_val)
+        let nm    ← Meta.getUnusedUserName h_norm.userName
+        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
+        let subgoals ← g'.cases fvid'
+        return subgoals.map (·.mvarId)
+      | .notDefEq =>
+        return #[g]
+    | ~q(_root_.Expr.RedEta $A' $B) =>
+      match ← Qq.isDefEqQ (u := .succ .zero) A A' with
+      | .defEq _heq =>
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(_root_.Expr.RedEta $A $B) | return #[g]
+        let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique $h_norm_val $h_r_val)
+        let nm    ← Meta.getUnusedUserName h_norm.userName
+        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
+        let subgoals ← g'.cases fvid'
+        return subgoals.map (·.mvarId)
+      | .notDefEq =>
+        return #[g]
+  | _ => pure #[← getMainGoal]
+/-
+If:
+
+- IsNorm A
+- Relation.whatever r A B,
+  then A = B
+-/
+def norm_lhs (g : MVarId) : TacticM (Array MVarId) := do
+  sorry
+
 open Qq in
 def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
   g.withContext do
@@ -428,7 +517,7 @@ def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
           | _ => return Option.none)
     match x with
     | .some (gs, idt, cmd) =>
-      let gs ← replaceMainGoal gs.toList
+      let _ ← replaceMainGoal gs.toList
       let g ← getMainGoal
       let gs ← reduce_goal cmd idt g
       pure #[gs]
@@ -439,12 +528,15 @@ def destruct_reduces : TacticM (List MVarId) := do
   Lean.Meta.liftMetaM (g.casesMatching (allowSplit := false) (fun e => do
     match e with
     | .app (.app (.const ``_root_.Expr.Reduces []) A) B =>
-      return exprSize B < exprSize A
+      return exprSize B > 5 ∨ exprSize A > 5
     | .app (.app (.const ``_root_.Expr.Reduced []) A) B =>
-      return exprSize B < exprSize A
+      return exprSize B > 5 ∨ exprSize A > 5
     | _ => return false))
 
-elab "dcc" cmd:reduce_cmd : tactic => do
+syntax "dcc" reduce_cmd num : tactic
+syntax "dcc" reduce_cmd     : tactic
+
+elab "dcc" cmd:reduce_cmd n_round:num : tactic => do
   let g  ← getMainGoal
   let gs ← runTactic' g (← liftMacroM <| `(tactic| dcc_simp_all))
   replaceMainGoal gs
@@ -460,9 +552,17 @@ elab "dcc" cmd:reduce_cmd : tactic => do
     g.withContext do
       match ← (liftMacroM (parse_cmd cmd)) with
       | .reduce _ .norm =>
-        let subgoals ← (split_hyps g)
-        replaceMainGoal subgoals.toList
+        let _ ← (List.replicate n_round.getNat split_hyps).foldlM (fun _ fn => do
+          let g ← getMainGoal
+          let subgoals ← (fn g)
+          let _ ← replaceMainGoal subgoals.toList
+          pure ()) ()
       | cmd => throwError m!"command not supported by DCC !: {repr cmd}"
+
+elab "dcc" cmd:reduce_cmd : tactic => do
+  let g  ← getMainGoal
+  let gs ← runTactic' g (← liftMacroM <| `(tactic| dcc $cmd 10))
+  replaceMainGoal gs
 
 elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
   let g  ← getMainGoal

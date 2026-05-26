@@ -155,7 +155,7 @@ def Mode.tm_rel (mode : Mode) :
   Q((r : _root_.Expr → _root_.Expr → Prop) → _root_.Expr → _root_.Expr → Prop) :=
   match mode with
   | .refl_trans | .norm => q(Relation.ReflTransGen)
-  | .trans => q(Relation.ReflTransGen)
+  | .trans => q(Relation.TransGen)
 
 def Scheme.rel (scheme : Scheme) : MetaExpr → MetaExpr → Type :=
   match scheme with
@@ -276,6 +276,17 @@ def find_decl_expr (hyp : TSyntax `ident) (lctx : LocalContext) : TacticM (Local
       | e => throwError m!"not a relation on Expr: {e}"
     else return Option.none) | throwError m!"couldn't find the expr: {hyp}"
   return (decl, raw_expr)
+
+def reduce_goal' (cmd : Cmd) (A_raw : Lean.Expr) (g : MVarId) : TacticM (MVarId) := do
+  g.withContext do
+    let A ← MetaExpr.decode A_raw
+    let runner := cmd.runner
+    match ← runner A with
+    | .some ⟨A', B', _B, ⟨_heq₁, _heq₂⟩, raw_proof⟩ =>
+      let ty : Q(Prop) := q($(cmd.tm_rel) $A' $B')
+      let ⟨_, g'⟩ ← g.assertHypotheses #[⟨(← Meta.getUnusedUserName (.str .anonymous "goal")), ty, raw_proof, .default, .default⟩]
+      return g'
+    | .none => logWarning "dcc made no progress" *> return g
 
 def reduce_goal (cmd : Cmd) (hyp : TSyntax `ident) (g : MVarId) : TacticM (MVarId) := do
   g.withContext do
@@ -543,8 +554,79 @@ def destruct_reduces : TacticM (List MVarId) := do
       return exprSize B > 5 ∨ exprSize A > 5
     | _ => return false))
 
-syntax "dcc" reduce_cmd num : tactic
-syntax "dcc" reduce_cmd     : tactic
+syntax "dcc" reduce_cmd num      : tactic
+syntax "dcc" reduce_cmd          : tactic
+syntax "dcc" reduce_cmd "here"   : tactic
+
+syntax "dcc" "show" "at" ident   : tactic
+syntax "dcc" "show" "at" "*"     : tactic
+syntax "dcc" "show" "here"       : tactic
+
+elab "dcc" "show" "at" "*"       : tactic => do
+  let g  ← getMainGoal
+  g.withContext do
+    let lctx ← getLCtx
+    for decl in lctx.decls do
+      let some decl := decl | continue
+      match decl.type with
+        | .app (.app nm A) B =>
+          match ← Meta.liftMetaM <| Qq.checkTypeQ A q(_root_.Expr) with
+          | .some _h =>
+            let A' ← MetaExpr.decode A
+            let B' ← MetaExpr.decode B
+            logInfo (.ofFormat ((← Meta.ppExpr nm) ++ " " ++ ((← Meta.liftMetaM <| A'.toFormat') ++ " ") ++ ((← Meta.liftMetaM <| B'.toFormat') ++ .line)))
+          | _ => pure ()
+        |  _ => pure ()
+    match ← g.getType with
+    | .app (.app nm A) B =>
+      match ← Qq.checkTypeQ A q(_root_.Expr) with
+      | .some _h =>
+        let A' ← MetaExpr.decode A
+        let B' ← MetaExpr.decode B
+        logInfo (.compose (.ofFormat ((← Meta.ppExpr nm) ++ " " ++ ((← Meta.liftMetaM <| A'.toFormat') ++ " ") ++ ((← Meta.liftMetaM <| B'.toFormat') ++ .line))) (Lean.MessageData.ofGoal g))
+      | _ => pure ()
+    | _ => pure ()
+
+elab "dcc" "show" "at" pos:ident : tactic => do
+  let g  ← getMainGoal
+  g.withContext do
+    let lctx ← getLCtx
+    for decl in lctx.decls do
+      let some decl := decl | continue
+      if (mkIdent decl.userName) == pos then
+        match decl.type with
+        | .app (.app nm A) B =>
+          match ← Meta.liftMetaM <| Qq.checkTypeQ A q(_root_.Expr) with
+          | .some _h =>
+            let A' ← MetaExpr.decode A
+            let B' ← MetaExpr.decode B
+            logInfo (.ofFormat ((← Meta.ppExpr nm) ++ " " ++ ((← Meta.liftMetaM <| A'.toFormat') ++ " ") ++ ((← Meta.liftMetaM <| B'.toFormat') ++ .line)))
+          | _ => pure ()
+        |  _ => pure ()
+      else continue
+
+elab "dcc" "show" "here" : tactic => do
+  let g  ← getMainGoal
+  match ← g.getType with
+  | .app (.app nm A) B =>
+    match ← Qq.checkTypeQ A q(_root_.Expr) with
+    | .some _h =>
+      let A' ← MetaExpr.decode A
+      let B' ← MetaExpr.decode B
+      logInfo (.compose (.ofFormat ((← Meta.ppExpr nm) ++ " " ++ ((← Meta.liftMetaM <| A'.toFormat') ++ " ") ++ ((← Meta.liftMetaM <| B'.toFormat') ++ .line))) (Lean.MessageData.ofGoal g))
+    | _ => pure ()
+  | _ => pure ()
+
+elab "dcc" cmd:reduce_cmd "here" : tactic => do
+  let g  ← getMainGoal
+  match ← g.getType with
+  | .app (.app (.const _ _) A) _B =>
+    match ← Qq.checkTypeQ A q(_root_.Expr) with
+    | .some _h =>
+      let g' ← reduce_goal' (← liftMacroM <| parse_cmd cmd) A g
+      replaceMainGoal [g']
+    | .none => pure ()
+  | _ => pure ()
 
 elab "dcc" cmd:reduce_cmd n_round:num : tactic => do
   let g  ← getMainGoal
@@ -567,6 +649,7 @@ elab "dcc" cmd:reduce_cmd n_round:num : tactic => do
           let subgoals ← (fn g)
           let _ ← replaceMainGoal subgoals.toList
           pure ()) ()
+        do_norm_unique_all
       | cmd => throwError m!"command not supported by DCC !: {repr cmd}"
 
 elab "dcc" cmd:reduce_cmd : tactic => do

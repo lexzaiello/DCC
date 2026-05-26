@@ -304,5 +304,5 @@ gen_dsl "DCC" for Expr
 
 #eval (DCC Sort 0)
 
-def runDcc : Lean.TSyntax `gen_dcc → Lean.MacroM Lean.Syntax
+def runDcc : Lean.Syntax → Lean.MacroM Lean.Syntax
   | `(gen_dcc| $e:gen_dcc) => `(DCC $e:gen_dcc)

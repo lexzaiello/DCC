@@ -61,12 +61,12 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
     return .app f x
   | e => throwError s!"unsupported: {e}"
 
-syntax "dcc_trace" "?"? expr : command
+syntax "dcc_trace" "?"? gen_dcc : command
 
-elab "dcc_trace" err:"?"? e:expr : command => do
+elab "dcc_trace" err:"?"? e:gen_dcc : command => do
   for stx in Lean.Syntax.topDown e do
     match stx with
-    | `(expr| ($_e)) => continue
+    | `(gen_dcc| ($_e)) => continue
     | stx =>
       try
         let stx' ← Lean.Elab.liftMacroM <| runDcc stx

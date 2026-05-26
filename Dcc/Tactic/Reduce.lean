@@ -126,114 +126,6 @@ def step_eta? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedEtaMeta e
     | _ => return .none
   | _ => return .none
 
-def quot_refl (r : Lean.Name) (A : MetaExpr) : Lean.Expr :=
-  Lean.mkAppN (.const ``Relation.ReflTransGen.refl [.succ .zero])
-  #[.const ``_root_.Expr []
-  , .const r []
-  , A.encode]
-
-def quot_single (r : Lean.Name) (A B : MetaExpr) (h : Lean.Expr) : Lean.Expr :=
-  Lean.mkAppN (.const ``Relation.ReflTransGen.single [.succ .zero])
-    #[.const ``_root_.Expr []
-    , .const r [], A.encode
-    , B.encode, h]
-
-def quot_trans (r : Lean.Name) (A B C : MetaExpr) (h₁ h₂ : Lean.Expr) : Lean.Expr :=
-  Lean.mkAppN (.const ``Relation.ReflTransGen.trans [.succ .zero])
-    #[.const ``_root_.Expr []
-    , .const r [], A.encode
-    , B.encode
-    , C.encode, h₁, h₂]
-
-def quot_trans' (r : Lean.Name) (A B C : MetaExpr) (h₁ h₂ : Lean.Expr) : Lean.Expr :=
-  Lean.mkAppN (.const ``Relation.TransGen.trans [.succ .zero])
-    #[.const ``_root_.Expr []
-    , .const r [], A.encode
-    , B.encode
-    , C.encode, h₁, h₂]
-
-def quot_single' (r : Lean.Name) (A B : MetaExpr) (h : Lean.Expr) : Lean.Expr :=
-  Lean.mkAppN (.const ``Relation.TransGen.single [.succ .zero])
-    #[.const ``_root_.Expr []
-    , .const r [], A.encode
-    , B.encode, h]
-
-def quot_rtransgen (r : Lean.Name) (A B : Lean.Expr) : Lean.Expr :=
-  Lean.mkAppN (.const ``Relation.ReflTransGen [.succ .zero])
-    #[.const ``_root_.Expr []
-    , .const r []
-    , A, B]
-
-def quot_transgen (r : Lean.Name) (A B : Lean.Expr) : Lean.Expr :=
-  Lean.mkAppN (.const ``Relation.TransGen [.succ .zero])
-    #[.const ``_root_.Expr []
-    , .const r []
-    , A, B]
-
-partial def reduce_aff (e : MetaExpr) : TacticM
-  (MetaExpr × Lean.Expr) := do
-  match ← step? e with
-  | .some ⟨e', h⟩ =>
-    let ⟨e'', h₂_raw⟩ ← reduce_aff e'
-
-    return (e'', quot_trans ``_root_.Expr.RedAff e e' e'' h.encode h₂_raw)
-  | .none => return (e, quot_refl ``_root_.Expr.RedAff e)
-
-partial def reduce_eta (e : MetaExpr) : TacticM
-  (MetaExpr × Lean.Expr) := do
-  match ← step_eta? e with
-  | .some ⟨e', h⟩ =>
-    let ⟨e'', h₂_raw⟩ ← reduce_eta e'
-
-    return (e'', quot_trans ``_root_.Expr.RedEta e e' e'' h.encode h₂_raw)
-  | .none => return (e, quot_refl ``_root_.Expr.RedEta e)
-
-partial def reduce_aff? (e : MetaExpr) : TacticM
-  (Option (MetaExpr × Lean.Expr)) := do
-  match ← step? e with
-  | .some ⟨e', h⟩ =>
-    match ←  reduce_aff? e' with
-    | .some ⟨e'', h₂_raw⟩ =>
-
-      return (e'', quot_trans' ``_root_.Expr.RedAff e e' e'' h.encode h₂_raw)
-    | .none =>
-      return (e', quot_single' ``_root_.Expr.RedAff e e' h.encode)
-  | .none => return .none
-
-partial def reduce_eta? (e : MetaExpr) : TacticM
-  (Option (MetaExpr × Lean.Expr)) := do
-  match ← step_eta? e with
-  | .some ⟨e', h⟩ =>
-    match ←  reduce_eta? e' with
-    | .some ⟨e'', h₂_raw⟩ =>
-
-      return (e'', quot_trans' ``_root_.Expr.RedEta e e' e'' h.encode h₂_raw)
-    | .none =>
-      return (e', quot_single' ``_root_.Expr.RedEta e e' h.encode)
-  | .none => return .none
-
-def quot_norm (r_nm : Lean.Name) (e : Lean.Expr) : Lean.Expr :=
-  Lean.mkAppN (.const ``_root_.Expr.IsNorm [.zero])
-    #[.const ``_root_.Expr []
-    , .const r_nm []
-    , e]
-
-def reduce_aff_norm (A : MetaExpr) : TacticM
-  (MetaExpr × Lean.Expr × Lean.Expr) := do
-  let ⟨B, h⟩ ← reduce_aff A
-  let B' : Q(_root_.Expr) := B.encode
-  let to_decide : Q(Prop) := q(_root_.Expr.IsNorm _root_.Expr.RedAff $B')
-  let proof ← Qq.mkDecideProofQ to_decide
-  return (B, proof, h)
-
-def reduce_eta_norm (A : MetaExpr) : TacticM
-  (MetaExpr × Lean.Expr × Lean.Expr) := do
-  let ⟨B, h⟩ ← reduce_eta A
-  let B' : Q(_root_.Expr) := B.encode
-  let to_decide : Lean.Expr := q(_root_.Expr.IsNorm _root_.Expr.RedEta $B')
-  let proof ← Lean.Meta.mkDecideProof to_decide
-  return (B, proof, h)
-
 open Lean Elab Tactic
 
 inductive Mode where
@@ -380,7 +272,7 @@ def find_decl_expr (hyp : TSyntax `ident) (lctx : LocalContext) : TacticM (Local
     else return Option.none) | throwError m!"couldn't find the expr: {hyp}"
   return (decl, raw_expr)
 
-def reduce_goal (cmd : TSyntax `reduce_cmd) (hyp : TSyntax `ident) (g : MVarId) : TacticM Unit := do
+def reduce_goal (cmd : TSyntax `reduce_cmd) (hyp : TSyntax `ident) (g : MVarId) : TacticM (MVarId) := do
   g.withContext do
     let lctx ← getLCtx
     let (decl, A_raw) ← find_decl_expr hyp lctx
@@ -391,8 +283,30 @@ def reduce_goal (cmd : TSyntax `reduce_cmd) (hyp : TSyntax `ident) (g : MVarId) 
     | .some ⟨A', B', _B, ⟨_heq₁, _heq₂⟩, raw_proof⟩ =>
       let ty : Q(Prop) := q($(cmd.tm_rel) $A' $B')
       let g' ← g.assertAfter decl.fvarId (← Meta.getUnusedUserName hyp.getId) ty raw_proof
-      replaceMainGoal [g'.mvarId]
-    | .none => logWarning "dcc made no progress"
+      return g'.mvarId
+    | .none => logWarning "dcc made no progress" *> return g
+
+partial def exprSize : Lean.Expr → Nat
+  | .app f a        => 1 + exprSize f + exprSize a
+  | .lam _ t b _    => 1 + exprSize t + exprSize b
+  | .forallE _ t b _ => 1 + exprSize t + exprSize b
+  | .letE _ t v b _ => 1 + exprSize t + exprSize v + exprSize b
+  | .mdata _ e      => 1 + exprSize e
+  | .proj _ _ e     => 1 + exprSize e
+  | _               => 1
+
+def any_relevant_hyp (g : MVarId) : TacticM (Option (TSyntax `ident)) := do
+  g.withContext do
+    let lctx ← getLCtx
+    let d_nm : Option (TSyntax `ident) ← lctx.findDeclM? (fun decl => do
+      match decl.type with
+      | .app (.app (.const _ _) A) B =>
+        if exprSize B < exprSize A then
+          return .some (mkIdent decl.userName)
+        else
+          return .none
+      | _ => return .none)
+    return d_nm
 
 elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
   let g  ← getMainGoal
@@ -402,7 +316,21 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
     let gs ← runTactic' g (← liftMacroM <|`(tactic| dcc_simp at $nm_idt:term))
     replaceMainGoal gs
     let g ← getMainGoal
-    reduce_goal cmd hyp g
+    g.withContext do
+      let lctx ← getLCtx
+      match ← (liftMacroM (parse_cmd cmd)) with
+      | .reduce _ .norm =>
+        let (decl, _) ← find_decl_expr hyp lctx
+        let c_head_expr := mkFVar decl.fvarId
+        let proof ← Lean.Meta.mkAppM ``Relation.ReflTransGen.cases_head #[c_head_expr]
+        let ty    ← Lean.Meta.inferType proof
+        let nm    ← Meta.getUnusedUserName hyp.getId
+        let (new_fv, g') ← (← g.assert nm ty proof).intro1
+        let subgoals ← (← (g'.cases new_fv)).mapM (fun sg => do
+          let some relevant_hyp ← any_relevant_hyp sg.mvarId | return sg.mvarId
+          reduce_goal cmd relevant_hyp sg.mvarId)
+        replaceMainGoal subgoals.toList
+      | _ => replaceMainGoal [← reduce_goal cmd hyp g]
 
 namespace _test
 

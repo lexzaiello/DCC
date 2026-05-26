@@ -9,6 +9,7 @@ import Dcc.Eta.Red
 import Dcc.Tactic.Reflect
 import Lean
 import Lean.Elab.Command
+import Lean.Meta.Tactic.Cases
 import Lean.Parser.Term.Basic
 import Qq
 
@@ -361,11 +362,11 @@ def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
           | Option.some ty =>
             match ty with
             | ~q(Relation.ReflTransGen $r $A $B) =>
-              if exprSize B < exprSize A then
+              if exprSize A < exprSize B then
                 return Option.some (← split decl ``Relation.ReflTransGen.cases_head)
               else return Option.none
             | ~q(Relation.TransGen $r $A $B) =>
-              if exprSize B < exprSize A then
+              if exprSize A < exprSize B then
                 let _ ← evalTactic (← liftMacroM <| `(tactic|
                   cases $idt:ident using Relation.TransGen.head_induction_on with
                   | single h =>
@@ -381,19 +382,18 @@ def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
           | .none => return .none)
       else
         right_decls.firstM (fun (decl : LocalDecl) => do
-          let idt := mkIdent decl.userName
           match ← Qq.checkTypeQ decl.type q(Prop) with
           | Option.some ty =>
             match ty with
             | ~q(Relation.ReflTransGen $r $A $B) =>
-              if exprSize A < exprSize B then
+              if exprSize B < exprSize A then
                 let g   ← getMainGoal
                 return Option.some ((← g.cases decl.fvarId).map (·.mvarId))
               else return Option.none
             | ~q(Relation.TransGen $r $A $B) =>
-              if exprSize A < exprSize B then
+              if exprSize B < exprSize A then
                 let g   ← getMainGoal
-                return Option.some (← g.cases decl.fvarId)
+                return Option.some ((← g.cases decl.fvarId).map (·.mvarId))
               else return Option.none
             | _ => return Option.none
           | _ => return Option.none)

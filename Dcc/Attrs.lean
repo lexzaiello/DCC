@@ -360,19 +360,6 @@ def Flag.indexes? (flag : Flag) : Option (TSyntax `term) :=
     | .index tm => .some tm
     | _ => .none)
 
-partial def Flag.elim? (flag : Flag) : Option (TSyntax `term) :=
-  let rec get_elim (tm : TSyntax `term) : Option (TSyntax `term) :=
-    match tm with
-    | `(term| $_a:term → $xs:term) => get_elim xs
-    | `(term| Sort $_m)
-    | `(term| Type $_m)
-    | `(term| Prop)    => .some tm
-    | _ => .none
-
-  flag.find? (fun flag => match flag with
-    | .index tm => get_elim tm
-    | _ => .none)
-
 partial def Flag.index_n (flag : Flag) (n : Nat) : Option (TSyntax `term) :=
   let rec tm_param_n (n : Nat) (tm : TSyntax `term) : Option (TSyntax `term) :=
     match tm with

@@ -1,7 +1,6 @@
 import VersoSlides
 import Verso.Doc.Concrete
 import Dcc.Compile
-import Dcc.Judge
 
 open VersoSlides
 
@@ -188,6 +187,8 @@ App rule in Lean:
 
 ```lean
 /- !hide -/
+def Reduces : Expr → Expr → Prop := fun _ _ => True
+def Reduced : Expr → Expr → Prop := fun _ _ => True
 open Expr
 -- !end hide
 inductive Judge'' : Expr → Expr → Prop

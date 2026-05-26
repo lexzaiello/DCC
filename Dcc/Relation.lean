@@ -1,7 +1,6 @@
 import Dcc.Attrs
 import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
-import Mathlib.Tactic
 import Dcc.Ast
 import Lean
 import Qq

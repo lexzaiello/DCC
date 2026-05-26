@@ -1,7 +1,7 @@
 import Dcc.Attrs
 import Dcc.Ast
 import Dcc.Relation
-import Mathlib.Tactic
+import Mathlib.Data.Nat.Notation
 
 namespace Expr
 

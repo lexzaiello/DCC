@@ -1,9 +1,5 @@
-import Dcc.Ast
 import Dcc.Reduces
 import Dcc.Types
-import Dcc.Aff.Red
-import Dcc.Eta.Red
-import Dcc.Relation
 import Mathlib.Logic.Relation
 
 namespace Expr

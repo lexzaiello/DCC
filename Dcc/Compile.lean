@@ -1,10 +1,4 @@
-import Dcc.Ast
-import Dcc.Types
 import Dcc.Judge
---import Dcc.Debug
-import Lean
-import Qq
-open Qq
 
 def Ctx := Expr
 
@@ -78,16 +72,20 @@ def cc (root : Lean.Expr) : Option _root_.Expr :=
     | _ => .none
   | e => (·.app .tintro) <$> abstract' e Ctx.empty
 
+open Qq in
 def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) : Option _root_.Expr :=
   cc root
 
+open Qq in
 #eval Lean.Expr.cc' q(λ (x : Sort 1) => x)
 
+open Qq in
 #eval (do Sigma.fst <$> (← (Lean.Expr.cc' q((λ (α : Sort 0) => λ (x : α) => x) True True.intro))).infer)
 
 syntax "dcc_compile" term : term
 syntax "dcc_infer" term   : term
 
+open Qq in
 macro_rules
   | `(dcc_compile $tm:term) => `((Lean.Expr.cc' q($tm:term)))
   | `(dcc_infer $tm:term) => `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))

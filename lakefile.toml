@@ -8,7 +8,7 @@ name = "Dcc"
 [[require]]
 name = "verso-slides"
 git = "https://github.com/leanprover/verso-slides"
-rev = "v4.29.0"
+rev = "main"
 
 [[lean_lib]]
 name = "DccSlides"
@@ -22,4 +22,4 @@ srcDir = "."
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
-rev = "v4.29.0"
+rev = "v4.30.0-rc2"

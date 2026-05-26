@@ -131,7 +131,8 @@ def sort_field (flags : Flag) : MacroM AstField := do
 def ast_basic_fields : (Array AstField) :=
   #[
     ⟨"refl", 1, #[], False⟩,
-    ⟨"eq", 1, #[], False⟩,
+    -- =(x, y)
+    ⟨"eq", 2, #[], False⟩,
     ⟨"eql", 1, #[], False⟩,
     ⟨"fstc", 1, #[], False⟩,
     ⟨"sndc", 1, #[], False⟩,
@@ -211,7 +212,7 @@ gen_ast as Expr
 
 declare_syntax_cat gen_dcc
 
-syntax "=(" gen_dcc,* ")"                                     : gen_dcc
+syntax  gen_dcc "=" gen_dcc                                   : gen_dcc
 syntax "Eql(" gen_dcc,* ")"                                   : gen_dcc
 syntax "refl(" gen_dcc,* ")"                                  : gen_dcc
 syntax "#(" term ")"                                          : gen_dcc
@@ -253,8 +254,8 @@ open Lean.Syntax in macro_rules
   | `(DCC[$ty:gen_dcc_loc] ⊤)                                        => field ty "top"
   | `(DCC[$ty:gen_dcc_loc] ⊥)                                        => field ty "bot"
   | `(DCC[$ty:gen_dcc_loc] ∗)                                        => field ty "tintro"
-  | `(DCC[$ty:gen_dcc_loc] =($f_α:gen_dcc))                          => do
-    return mkApp (← field ty "eq") #[← `(DCC[$ty:gen_dcc_loc] $f_α)]
+  | `(DCC[$ty:gen_dcc_loc] $x:gen_dcc = $y:gen_dcc)                  => do
+    return mkApp (← field ty "eq") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
   | `(DCC[$ty:gen_dcc_loc] Eql($f_α:gen_dcc))                        => do
     return mkApp (← field ty "eql") #[← `(DCC[$ty:gen_dcc_loc] $f_α)]
   | `(DCC[$ty:gen_dcc_loc] refl($f_α:gen_dcc))                       => do
@@ -303,5 +304,5 @@ gen_dsl "DCC" for Expr
 
 #eval (DCC Sort 0)
 
-def runDcc : Lean.TSyntax `gen_dcc → Lean.MacroM Lean.Syntax
+def runDcc : Lean.Syntax → Lean.MacroM Lean.Syntax
   | `(gen_dcc| $e:gen_dcc) => `(DCC $e:gen_dcc)

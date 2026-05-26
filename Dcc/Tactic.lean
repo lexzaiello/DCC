@@ -66,3 +66,138 @@ def get_def_flags (nm : Lean.Name) : TermElabM (Flag × Array AstField) := do
     return ((nm' ++ index), ⟨fields⟩)
 
 end GenAst
+
+namespace MetaExpr
+
+open Std (ToFormat Format format) in
+def toFormat (e : MetaExpr) (pretty : Bool := False) : Std.Format :=
+  let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=
+    .nest indent (.fill (.joinSep l (sep ++ .line)))
+  let paren (s : Std.Format) : Std.Format :=
+    .bracket "(" (.fill s) ")"
+  let angle (s : Std.Format) : Std.Format :=
+    .bracket "⟨" (.fill s) "⟩"
+  let bbracket (s : Std.Format) : Std.Format :=
+    .bracket "⟦" (.fill s) "⟧"
+
+  let comb (pre : Std.Format) (points : List Std.Format) : Std.Format :=
+    .group (pre ++ (paren (sepD points (indent := pre.pretty.length))))
+
+  match heq₀ : e with
+  | (DCC[.] ⊤)                   => "⊤"
+  | (DCC[.] ⊥)                   => "⊥"
+  | (DCC[.] ∗)                   => "∗"
+  | (DCC[.] `(β, x))             => comb "`" [β.toFormat pretty, x.toFormat pretty]
+  | (DCC[.] Id(α))               => comb "Id" [α.toFormat pretty]
+  | (DCC[.] Sort m)              => "Sort " ++ (Std.format m)
+  | (DCC[.] Fstc(β))             => comb "Fstc" [β.toFormat pretty]
+  | (DCC[.] Sndc(β))             => comb "Sndc" [β.toFormat pretty]
+  | (DCC[.] Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
+  | (DCC[.] Π(α, β))             =>
+    comb "Π" [α.toFormat pretty, β.toFormat pretty]
+  | (DCC[.] ⟨a, b⟩)              => (angle (sepD [a.toFormat pretty, b.toFormat pretty] (indent := 1)))
+  | (DCC[.] ⟦β⟧(a, b))           =>
+    comb (bbracket (sepD [β.toFormat pretty])) [a.toFormat pretty, b.toFormat pretty]
+  | (DCC[.] Coup(β))             => comb "Coup" [β.toFormat pretty]
+  | (DCC[.] Σ(α, β))             => comb "Σ" [α.toFormat pretty, β.toFormat pretty]
+  | (DCC[.] x = y)               => sepD [x.toFormat pretty, y.toFormat pretty] " ="
+  | (DCC[.] Eql(f_α))            => comb "Eql" [f_α.toFormat pretty]
+  | (DCC[.] refl(f_α))           => comb "refl" [f_α.toFormat pretty]
+  | (DCC[.] f ∘ g)               =>
+    sepD [f.toFormat pretty, g.toFormat pretty] " ∘"
+  | (DCC[.] f ∘' g)               =>
+    sepD [f.toFormat pretty, g.toFormat pretty] " ∘'"
+  | (DCC[.] (f x))               =>
+    if pretty then
+      match heq₁ : (DCC[.] (f x)) with
+      | DCC[.] (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
+        have _h : sizeOf α < sizeOf e := by
+          rw [heq₁] at heq₀
+          rw [heq₀]
+          simp [sizeOf, MetaExpr._sizeOf_1]
+        have _h : sizeOf β < sizeOf e := by
+          rw [heq₁] at heq₀
+          rw [heq₀]
+          simp [sizeOf, MetaExpr._sizeOf_1]
+          grind
+        sepD [(paren (sepD [(α.toFormat pretty), s!"Sort {m}"] " :")), β.toFormat pretty] " →"
+      | _ => (paren (f.toFormat pretty ++ (.indentD (x.toFormat pretty))))
+    else (paren (f.toFormat pretty ++ (.indentD (x.toFormat pretty))))
+  | .lean_expr e => Std.format e
+termination_by e
+
+open Std (ToFormat Format format) in
+def toFormat' (e : MetaExpr) (pretty : Bool := False) : Lean.MetaM Std.Format := do
+  let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=
+    .nest indent (.fill (.joinSep l (sep ++ .line)))
+  let paren (s : Std.Format) : Std.Format :=
+    .bracket "(" (.fill s) ")"
+  let angle (s : Std.Format) : Std.Format :=
+    .bracket "⟨" (.fill s) "⟩"
+  let bbracket (s : Std.Format) : Std.Format :=
+    .bracket "⟦" (.fill s) "⟧"
+
+  let comb (pre : Std.Format) (points : List Std.Format) : Std.Format :=
+    .group (pre ++ (paren (sepD points (indent := pre.pretty.length))))
+
+  match heq₀ : e with
+  | (DCC[.] ⊤)                   => return "⊤"
+  | (DCC[.] ⊥)                   => return "⊥"
+  | (DCC[.] ∗)                   => return "∗"
+  | (DCC[.] `(β, x))             => return comb "`" [← β.toFormat' pretty, ← x.toFormat' pretty]
+  | (DCC[.] Id(α))               => return comb "Id" [← α.toFormat' pretty]
+  | (DCC[.] Sort m)              => return "Sort " ++ (Std.format m)
+  | (DCC[.] Fstc(β))             => return comb "Fstc" [← β.toFormat' pretty]
+  | (DCC[.] Sndc(β))             => return comb "Sndc" [← β.toFormat' pretty]
+  | (DCC[.] Λ(α, β, e))          => return comb "Λ" [← α.toFormat' pretty, ← β.toFormat' pretty, ← e.toFormat' pretty]
+  | (DCC[.] Π(α, β))             =>
+    return comb "Π" [← α.toFormat' pretty, ← β.toFormat' pretty]
+  | (DCC[.] ⟨a, b⟩)              => return (angle (sepD [← a.toFormat' pretty, ← b.toFormat' pretty] (indent := 1)))
+  | (DCC[.] ⟦β⟧(a, b))           =>
+    return comb (bbracket (sepD [← β.toFormat' pretty])) [← a.toFormat' pretty, ← b.toFormat' pretty]
+  | (DCC[.] Coup(β))             => return comb "Coup" [← β.toFormat' pretty]
+  | (DCC[.] Σ(α, β))             => return comb "Σ" [← α.toFormat' pretty, ← β.toFormat' pretty]
+  | (DCC[.] x = y)               => return sepD [← x.toFormat' pretty, ← y.toFormat' pretty] " ="
+  | (DCC[.] Eql(f_α))            => return comb "Eql" [← f_α.toFormat' pretty]
+  | (DCC[.] refl(f_α))           => return comb "refl" [← f_α.toFormat' pretty]
+  | (DCC[.] f ∘ g)               =>
+    return sepD [← f.toFormat' pretty, ← g.toFormat' pretty] " ∘"
+  | (DCC[.] f ∘' g)               =>
+    return sepD [← f.toFormat' pretty, ← g.toFormat' pretty] " ∘'"
+  | (DCC[.] (f x))               =>
+    if pretty then
+      match heq₁ : (DCC[.] (f x)) with
+      | DCC[.] (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
+        have _h : sizeOf α < sizeOf e := by
+          rw [heq₁] at heq₀
+          rw [heq₀]
+          simp [sizeOf, MetaExpr._sizeOf_1]
+        have _h : sizeOf β < sizeOf e := by
+          rw [heq₁] at heq₀
+          rw [heq₀]
+          simp [sizeOf, MetaExpr._sizeOf_1]
+          grind
+        return sepD [(paren (sepD [(← α.toFormat' pretty), s!"Sort {m}"] " :")), ← β.toFormat' pretty] " →"
+      | _ => return (paren ((← f.toFormat' pretty) ++ (.indentD (← x.toFormat' pretty))))
+    else return (paren ((← f.toFormat' pretty) ++ (.indentD ((← x.toFormat' pretty)))))
+  | .lean_expr e => Lean.Meta.ppExpr e
+termination_by e
+
+open Std (ToFormat Format format) in
+instance instToFormat : Std.ToFormat (MetaExpr) :=
+  ⟨MetaExpr.toFormat (pretty := true)⟩
+open Std (ToFormat Format format) in
+instance instToString : ToString MetaExpr :=
+  ⟨toString ∘ toFormat (pretty := true)⟩
+open Std (ToFormat Format format) in
+instance instRepr : Repr MetaExpr :=
+  ⟨Function.const _ ∘ toFormat (pretty := false)⟩
+
+instance instOptToFormat : Std.ToFormat (Option MetaExpr) := ⟨fun me =>
+  match me with
+  | .none => Std.format me
+  | .some e =>
+    let l := "(some".length.succ
+    .group ("(some " ++ (.fill (.nest l (e.toFormat (pretty := true)))) ++ ")")⟩
+
+end MetaExpr

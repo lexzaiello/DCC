@@ -1,4 +1,3 @@
-import Mathlib
 import VersoSlides
 import Verso.Doc.Concrete
 import Dcc.Compile
@@ -7,13 +6,48 @@ open VersoSlides
 
 #doc (Slides) "Dependent Categorical Combinators" =>
 
-# The Dependent Categorical Combinators
+# The Dependent Categorical Combinators (DCC)
 
 Lexi Aiello
 
+# DCC is to dependent type theory what Rust's ownership is to systems programming.
+
+# DCC is to dependent type theory what Rust's ownership is to systems programming:
+
+:::fragment
+- No duplication allowed in types
+- Term-level duplication allowed, but not in types
+:::
+:::fragment
+- Types model move semantics, like in Rust
+:::
+
+# DCC is to dependent type theory what Rust's ownership is to systems programming:
+
+:::fragment
+- Types are strongly normalizing for free
+:::
+:::fragment
+- Type-checking is decidable
+:::
+
+# DCC is to dependent type theory what Rust's ownership is to systems programming:
+
+:::fragment
+- Avoid reasoning about duplication
+:::
+:::fragment
+- Dead-simple def. eq.: just reduce both types (affine is SN)
+  - Type-checking is *fast*
+:::
+:::fragment
+  - Just run the rewrite rules *literally* on the AST
+    - Sound + complete beta-reducer
+:::
+
 # Contribution
 
-## Affine Restriction: A New(?) Technique for Normalization in DTT
+## Affine Restriction: Normalization for Free in DTT
 
 Formalizing a dependent type theory is challenging because *computations can appear in types*.
 
@@ -93,7 +127,7 @@ Lean4Lean is a formalization of Lean's metatheory in Lean. It defines definition
 
 # Def-eq / conversion: Lean4Lean
 
-```leanLibCode Lean4Lean.Theory.Typing.Strong (startLine := 16) (endLine := 32) -panel
+```
 inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop where
   | bvar : Lookup Γ i A → u.WF uvars → Γ ⊢ A : .sort u → Γ ⊢ .bvar i : A
   | symm : Γ ⊢ e ≡ e' : A → Γ ⊢ e' ≡ e : A
@@ -111,6 +145,76 @@ inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop wher
     [] ⊢ ci.type.instL ls ≡ ci.type.instL ls' : .sort u →
     Γ ⊢ ci.type.instL ls ≡ ci.type.instL ls' : .sort u →
     Γ ⊢ .const c ls ≡ .const c ls' : ci.type.instL ls
+```
+
+I side-step these issues altogether by restricting my types affinely
+--------------------------------------------------------------------
+
+Similar to how Rust's type-system works. Objects in the type context₁ can never be duplicated.
+They can be _moved_, like in Rust, but never duplicated.
+
+- ₁Combinators have no contexts
+
+I side-step these issues altogether by restricting my types affinely
+--------------------------------------------------------------------
+
+Notes on notational shorthand when discussing DCC inference rules:
+- $`\forall (x : A)` is notational shorthand (using variables) for an actual $`\Pi` DCC expression (without variables) that couldn't fit on the screen
+- $`A \rightarrow B` is also shorthand for a macro defined to be a `\Pi` expression in DCC
+- $`\rightarrow_{\beta}` indicates affine-eta reduction to a normal form
+
+I side-step these issues altogether by restricting my types affinely
+--------------------------------------------------------------------
+
+To illustrate, here are my inference rules for $`\Pi` and application:
+
+:::hstack
+$$`
+\frac{f_{\alpha} : \delta \rightarrow \text{Sort}\ m \quad f_{\beta} : \forall (s : \delta) (x : f_\alpha s), \text{Sort}\ n}
+{\Pi(f_\alpha, f_\beta) : \delta \rightarrow \text{Sort}\ max(m, n)}
+`
+
+$$`
+\frac{f : \Pi (f_\alpha, f_\beta) x_\alpha, f_{\alpha} x_{\alpha} \rightarrow_{\beta} \alpha, \quad x : \alpha, \quad f_\beta x_\alpha \rightarrow_{\tau}}
+{f x : \tau}
+`
+:::
+
+I side-step these issues altogether by restricting my types affinely
+--------------------------------------------------------------------
+
+App rule in Lean:
+
+```lean
+/- !hide -/
+open Expr
+-- !end hide
+inductive Judge'' : Expr → Expr → Prop
+  | app    : Judge'' f (DCC (Π(f_α, f_β) x_α))
+    → Reduces (DCC (f_α x_α)) α
+    → Judge'' x α
+    → Reduced (DCC (f_β x_α x)) τ
+    → Judge'' (DCC (f x)) τ
+```
+
+I side-step these issues altogether by restricting my types affinely
+--------------------------------------------------------------------
+
+$`\Pi` rule in Lean:
+
+
+```lean
+/- !hide -/
+open Expr
+-- !end hide
+inductive Judge' : Expr → Expr → Prop
+  | pi     : Judge' f_α (DCC ((α : Sort m) → Sort n))
+    → Judge' f_β (DCC (Π(Id(Sort m),
+      `(Sort m,
+        Π(f_α, Λ(α, f_α,
+          `(Coup(f_α), Sort o))))) α))
+    → Reduces (DCC (α : Sort m) → Sort o) τ
+    → Judge' (DCC Π(f_α, f_β)) τ
 ```
 
 # Existing Solution: Normalization by Evaluation (NbE)
@@ -268,7 +372,7 @@ $$`
 
 - Context book-keeping is just a combinator `Expr`
 
-```leanLibCode Dcc.Compile (startLine := 9) (endLine := 21)
+```leanLibCode Dcc.Compile (startLine := 3) (endLine := 13)
 def Ctx := Expr
 def Ctx.empty := DCC ⊤
 def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
@@ -285,37 +389,37 @@ def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
 # Demo: Type-Checker Performance
 
 ```lean
-#time dcc_trace (Π(Id(Sort 1),
+#time #eval Sigma.fst <$> (Expr.infer (DCC (Π(Id(Sort 1),
    `(Sort 1,
      Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))) ∘
          Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘
        Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))))
-   Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))
+   Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))))
 ```
-
-My type-checker inferred the types of *each* sub-expression in this tree in *52ms*. Somewhat impressive for a tree this size.
 
 # Demo / Theorem: Judgmental Completeness
 
 In DCC, a judgment is valid iff the type-checker can infer it:
 
-```leanLibCode Dcc.Complete (startLine := 31) (endLine := 32)
+```leanLibCode Dcc.Complete (startLine := 32) (endLine := 33)
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
-  induction h <;> (dsimp only [infer]; try (simp_all [dcc_judge, dcc_reduce]; aesop (rule_sets := [DccReduce])))
+  induction h <;> (dsimp only [infer]; (try (dcc_simp_all; dcc_aesop!)); try grind)
 ```
+
+There is only one valid type.
 
 # Demo / Theorem: Judgmental Completeness
 
-```leanLibCode Dcc.Complete (startLine := 31) (endLine := 32)
+```leanLibCode Dcc.Complete (startLine := 32) (endLine := 33)
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
-  induction h <;> (dsimp only [infer]; try (simp_all [dcc_judge, dcc_reduce]; aesop (rule_sets := [DccReduce])))
+  induction h <;> (dsimp only [infer]; (try (dcc_simp_all; dcc_aesop!)); try grind)
 ```
 
-This theorem is usually impossible for a dependent type theory. Since two types might be valid for the same expression, judgments are not deterministic. In the DCC, types are *canonical*, since I prove strong normalization *before* meta-theory.
+This theorem is usually impossible for a dependent type theory. Since two types might be valid for the same expression (type conversion), inference is deterministic, but judgments are not. In the DCC, types are *canonical*, since I prove strong normalization *before* meta-theory.
 
 # Theorem: Type-Checking is Decidable
 
-```leanLibCode Dcc.Complete (startLine := 36) (endLine := 43)
+```leanLibCode Dcc.Complete (startLine := 39) (endLine := 46)
 instance : Decidable (Judge e t) :=
   if h : (infer e).isSome then
     if heq : ((infer e).get h).fst = t then
@@ -372,3 +476,61 @@ Since none of our primitive types invoke $`dpair`, our types are strongly-normal
 - Otherwise, conversion would require normalization by evaluation (NbE)
   - Unclear if decidability can be proven (would need completeness / soundness for reflection and reification)
 - Affine restriction feels "elegant" (remove just 1 combinator, and you get decidability)
+
+# The Payoff: Decidable Extensional Type-Checking
+
+# The Payoff: Decidable Extensional Type-Checking
+
+$$`\frac{\Gamma \vdash M : A \quad A =_{\beta} B \quad \Gamma \vdash B : K}{\Gamma \vdash M : B}`
+
+_Figure: the usual judgmental conversion constructor._
+
+DCC has no conversion constructor. There is exactly one (literally, not definitionally) valid type for each term.
+
+# The Payoff: Decidable Extensional Type-Checking
+
+This is the inference rule for $`refl` in Martin-Lof Type Theory. $`refl` is the only constructor of propositional equality in MLTT.
+
+$$`
+\frac{}{refl : \Pi (a : A), a = a}
+`
+
+# The Payoff: Decidable Extensional Type-Checking
+
+$$`
+\frac{}{refl : \Pi (a : A), a = a}
+`
+
+Due to the conversion constructor, $`refl` could type-check as multiple types.
+E.g., if $`x` and $`y` reduce to the same thing in $`x = y`.
+
+# The Payoff: Decidable Extensional Type-Checking
+
+Refl is the constructor in DCC, but we have no general conversion constructor.
+Refl's type is normalized *fully* before it becomes a valid judgment.
+
+# The Payoff: Decidable Extensional Type-Checking
+
+In DCC, $`x = y` iff $`x` and $`y` are literally, syntactically the same.
+
+# The Payoff: Decidable Extensional Type-Checking
+
+```lean
+open Expr in
+theorem Judge.elim_eq (ht : Judge e (DCC (x = y))) : x = y := by
+  sorry
+-- HAVE NOT FINISHED PROVING YET
+```
+
+This theorem says that a propositional equality in my calculus is the same as a meta-level definitional equality.
+
+# The Payoff: Decidable Extensional Type-Checking
+
+This should absolutely be possible. Affine types let us normalize types eagerly and avoid conversion.
+
+-- TODO: more inference rules to explain
+-- TODO: inference rules are kind of the least important part
+-- Size measure first
+-- Go over inference rules quickly
+-- Go over how we avoid conversion in judgment rule
+-- Compare with parallel reduction or another with a general conversion constructor

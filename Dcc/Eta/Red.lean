@@ -13,7 +13,8 @@ inductive RedEta : Expr → Expr → Prop
   | curr_fst   : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `((β y), (x y)))
   | curr_fst'  : RedEta (DCC (Λ(α, β, x ∘' Fstc(β₂)) y)) (DCC `((β y), (x y)))
   | pi         : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
-  | pi_quot    : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
+  --| pi_quot    : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
+  | quot       : RedEta x x' → RedEta (DCC `(β, x)) (DCC `(β, x'))
   | pi'        : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
 --  | sig        : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(α, β) env)) (DCC Coup(β'))
   | sig'       : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
@@ -25,13 +26,11 @@ inductive RedEta : Expr → Expr → Prop
   | quot'_fst' : RedEta (DCC (`(α, x) ∘' Fstc(β)) ∘' z) (DCC `(Coup(β), x) ∘' z)
   | quot_snd'  : RedEta (DCC (`(α, x) ∘ Sndc(β)) ∘ z) (DCC `(Coup(β), x) ∘ z)
   | quot'_snd' : RedEta (DCC (`(α, x) ∘' Sndc(β)) ∘' z) (DCC `(Coup(β), x) ∘' z)
-  | pi_comp    : RedEta (DCC (Π(f_α, f_β) ∘ x)) (DCC (Π(f_α ∘ x, f_β ∘ x)))
-  | pi'_comp   : RedEta (DCC (Π(f_α, f_β) ∘' x)) (DCC (Π(f_α ∘' x, f_β ∘' x)))
-  | eql        : RedEta (DCC (Eql(f_α) env x)) (DCC (=(f_α) env x x))
+  /-| pi_comp    : RedEta (DCC (Π(f_α, f_β) ∘ x)) (DCC (Π(f_α ∘ x, f_β ∘ x)))
+  | pi'_comp   : RedEta (DCC (Π(f_α, f_β) ∘' x)) (DCC (Π(f_α ∘' x, f_β ∘' x)))-/
+  | eql        : RedEta (DCC (Eql(f_α) env x)) (DCC (x = x))
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
-
-
 
 theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff B := by
   induction h
@@ -43,7 +42,7 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   )
   case pi h ih =>
     cases h with
-    | pi_quot =>
+    /-| pi_quot =>
       have h := ih hn.congrFun
       have h_norm_env := hn.congrArg
       intro ⟨_, h⟩
@@ -51,7 +50,7 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
       | congrFun hr =>
         exact h ⟨_, hr⟩
       | congrArg hr =>
-        exact h_norm_env ⟨_, hr⟩
+        exact h_norm_env ⟨_, hr⟩-/
     | pi' =>
       have hn_env := hn.congrArg
       have h := ih hn.congrFun
@@ -61,26 +60,12 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
         exact h ⟨_, hr⟩
       | congrArg hr =>
         exact hn_env ⟨_, hr⟩
-  case eql =>
-    have h_norm_eq := hn.congrFun
-    have h_norm_x := hn.congrArg
-    have h_norm_env := h_norm_eq.congrArg
-    intro ⟨_, h⟩
-    cases h with
-    | congrFun h =>
-      cases h with
-      | congrFun h =>
-        cases h with
-        | congrFun h => cases h
-        | congrArg h => exact h_norm_env ⟨_, h⟩
-      | congrArg h => exact h_norm_x ⟨_, h⟩
-    | congrArg h => exact h_norm_x ⟨_, h⟩
 
 @[dcc_force_eta, dcc_force_reduce, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
   | DCC (Eql(f_α) env x) => .some ⟨_, ⟨.eql⟩⟩
   | DCC (Λ(α, _b, `(_c, x)) y) =>
-    if heq : DCC (Λ(α, _b, `(_c, x)) y) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
+    if heq : (DCC (Λ(α, _b, `(_c, x)) y)) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
       heq ▸ .some ⟨_, ⟨.curr_quot⟩⟩
     else .none
   | DCC (Λ(_α, β, x ∘ Fstc(_β₂)) y) => .some ⟨_, ⟨.curr_fst⟩⟩
@@ -97,12 +82,16 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     match (DCC Π(_f_α, f_β)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi h⟩⟩
     | _ => .none
+  | DCC `(β, x) =>
+    match x.step_eta? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot h⟩⟩
+    | _              => .none
   | DCC (Π(_f_α, f_β)) =>
     match f_β with
-    | DCC `(_β, x) =>
+    /-| DCC `(_β, x) =>
       match x.step_eta? with
       | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi_quot h⟩⟩
-      | _ => .none
+      | _ => .none-/
     | x =>
       match x.step_eta? with
       | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi' h⟩⟩
@@ -115,8 +104,8 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   | (DCC `(α, x) ∘' Fstc(β)) => .some ⟨_, ⟨.quot'_fst⟩⟩
   | (DCC `(α, x) ∘ Sndc(β)) => .some ⟨_, ⟨.quot_snd⟩⟩
   | (DCC `(α, x) ∘' Sndc(β)) => .some ⟨_, ⟨.quot'_snd⟩⟩
-  | DCC (Π(f_α, f_β) ∘ x) => .some ⟨_, ⟨.pi_comp⟩⟩
-  | DCC (Π(f_α, f_β) ∘' x) => .some ⟨_, ⟨.pi'_comp⟩⟩
+  --| DCC (Π(f_α, f_β) ∘ x) => .some ⟨_, ⟨.pi_comp⟩⟩
+  --| DCC (Π(f_α, f_β) ∘' x) => .some ⟨_, ⟨.pi'_comp⟩⟩
   | (DCC (`(α, x) ∘ Fstc(β)) ∘ z) => .some ⟨_, ⟨.quot_fst'⟩⟩
   | (DCC (`(α, x) ∘' Fstc(β)) ∘' z) => .some ⟨_, ⟨.quot'_fst'⟩⟩
   | (DCC (`(α, x) ∘ Sndc(β)) ∘ z) => .some ⟨_, ⟨.quot_snd'⟩⟩
@@ -124,7 +113,7 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_eta, aesop norm (rule_sets := [DccRel])]
-instance RedEta.instRedRel : RedRel RedEta eta_size where
+instance RedEta.instRedRel : RedRel RedEta size where
   run := step_eta?
 
 theorem red_eta_sn : ∀ (e : Expr), Acc (fun b a => RedEta a b) e := RedEta.instRedRel.sn
@@ -133,14 +122,17 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
 
 @[dcc_reduce, aesop safe forward (rule_sets := [DccRel])] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
-  | eql | curr_fst' | curr_fst | pi'_comp | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | pi_comp | quot_snd | quot_fst | sig' | pi => cases h₂; aesop
-  | pi_quot hr ih =>
+  -- | pi_comp | pi'_comp => sorry
+  | eql | curr_fst' | curr_fst | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | quot_snd | quot_fst | sig' | pi => cases h₂; aesop
+  /-| pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop
-    · rename_i hr₂; cases hr₂
+    · rename_i hr₂; cases hr₂-/
+  | quot =>
+    cases h₂
+    · aesop
   | pi' hr ih =>
     cases h₂
-    · rename_i hr₂; cases hr
     · aesop
   | curr hr ih =>
     cases h₂ with

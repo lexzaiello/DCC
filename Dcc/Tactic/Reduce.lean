@@ -461,9 +461,6 @@ elab "dcc" cmd:reduce_cmd : tactic => do
       match ← (liftMacroM (parse_cmd cmd)) with
       | .reduce _ .norm =>
         let subgoals ← (split_hyps g)
-        let subgoals ← subgoals.mapM (fun g => do
-          let some relevant_hyp ← any_relevant_hyp g | return g
-          reduce_goal cmd relevant_hyp g)
         replaceMainGoal subgoals.toList
       | cmd => throwError m!"command not supported by DCC !: {repr cmd}"
 

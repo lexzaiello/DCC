@@ -303,94 +303,104 @@ def my_sort [Monad m] [Ord β] (key : α → m β) (l : List α) : m (List α) :
   let keyed ← l.mapM (fun a => do return (← key a, a))
   return (keyed.mergeSort (fun x y => compare x.1 y.1 |>.isLE)).map (·.2)
 
-def do_norm_unique (h_norm : LocalDecl) (h_r : LocalDecl) : TacticM (Array MVarId) := do
-  let g ← getMainGoal
-  let some h_norm_type ← Qq.checkTypeQ h_norm.type q(Prop) | return #[g]
+def do_norm_unique (h_norm : LocalDecl) (h_r : LocalDecl) : TacticM (Option Meta.Hypothesis) := do
+  let some h_norm_type ← Qq.checkTypeQ h_norm.type q(Prop) | return .none
   match h_norm_type with
   | ~q(_root_.Expr.IsNorm _root_.Expr.RedAff $A) =>
-    let some h_r_type ← Qq.checkTypeQ h_r.type q(Prop) | return #[g]
-    let some h_norm_val ← Qq.checkTypeQ h_norm.value q(_root_.Expr.IsNorm _root_.Expr.RedAff $A) | return #[g]
+    let some h_r_type ← Qq.checkTypeQ h_r.type q(Prop) | return .none
+    let some h_norm_val ← Qq.checkTypeQ h_norm.value q(_root_.Expr.IsNorm _root_.Expr.RedAff $A) | return .none
     match h_r_type with
     | ~q(Relation.ReflTransGen _root_.Expr.RedAff $A' $B) =>
       match ← Qq.isDefEqQ (u := .succ .zero) A A' with
       | .defEq _heq =>
-        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.ReflTransGen _root_.Expr.RedAff $A $B) | return #[g]
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.ReflTransGen _root_.Expr.RedAff $A $B) | return .none
         let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique_refl $h_norm_val $h_r_val)
         let nm    ← Meta.getUnusedUserName h_norm.userName
-        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
-        let subgoals ← g'.cases fvid'
-        return subgoals.map (·.mvarId)
+        return .some ⟨nm, q($A = $B), proof, .default, .default⟩
       | .notDefEq =>
-        return #[g]
+        return .none
     | ~q(Relation.TransGen _root_.Expr.RedAff $A' $B) =>
       match ← Qq.isDefEqQ (u := .succ .zero) A A' with
       | .defEq _heq =>
-        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.TransGen _root_.Expr.RedAff $A $B) | return #[g]
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.TransGen _root_.Expr.RedAff $A $B) | return .none
         let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique_trans $h_norm_val $h_r_val)
         let nm    ← Meta.getUnusedUserName h_norm.userName
-        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
-        let subgoals ← g'.cases fvid'
-        return subgoals.map (·.mvarId)
+        return .some ⟨nm, q($A = $B), proof, .default, .default⟩
       | .notDefEq =>
-        return #[g]
+        return .none
     | ~q(_root_.Expr.RedAff $A' $B) =>
       match ← Qq.isDefEqQ (u := .succ .zero) A A' with
       | .defEq _heq =>
-        let some h_r_val ← Qq.checkTypeQ h_r.value q(_root_.Expr.RedAff $A $B) | return #[g]
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(_root_.Expr.RedAff $A $B) | return .none
         let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique $h_norm_val $h_r_val)
         let nm    ← Meta.getUnusedUserName h_norm.userName
-        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
-        let subgoals ← g'.cases fvid'
-        return subgoals.map (·.mvarId)
+        return .some ⟨nm, q($A = $B), proof, .default, .default⟩
       | .notDefEq =>
-        return #[g]
+        return .none
   | ~q(_root_.Expr.IsNorm _root_.Expr.RedEta $A) =>
-    let some h_r_type ← Qq.checkTypeQ h_r.type q(Prop) | return #[g]
-    let some h_norm_val ← Qq.checkTypeQ h_norm.value q(_root_.Expr.IsNorm _root_.Expr.RedEta $A) | return #[g]
+    let some h_r_type ← Qq.checkTypeQ h_r.type q(Prop) | return .none
+    let some h_norm_val ← Qq.checkTypeQ h_norm.value q(_root_.Expr.IsNorm _root_.Expr.RedEta $A) | return .none
     match h_r_type with
     | ~q(Relation.ReflTransGen _root_.Expr.RedEta $A' $B) =>
       match ← Qq.isDefEqQ (u := .succ .zero) A A' with
       | .defEq _heq =>
-        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.ReflTransGen _root_.Expr.RedEta $A $B) | return #[g]
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.ReflTransGen _root_.Expr.RedEta $A $B) | return .none
         let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique_refl $h_norm_val $h_r_val)
         let nm    ← Meta.getUnusedUserName h_norm.userName
-        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
-        let subgoals ← g'.cases fvid'
-        return subgoals.map (·.mvarId)
+        return .some ⟨nm, q($A = $B), proof, .default, .default⟩
       | .notDefEq =>
-        return #[g]
+        return .none
     | ~q(Relation.TransGen _root_.Expr.RedEta $A' $B) =>
       match ← Qq.isDefEqQ (u := .succ .zero) A A' with
       | .defEq _heq =>
-        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.TransGen _root_.Expr.RedEta $A $B) | return #[g]
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(Relation.TransGen _root_.Expr.RedEta $A $B) | return .none
         let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique_trans $h_norm_val $h_r_val)
         let nm    ← Meta.getUnusedUserName h_norm.userName
-        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
-        let subgoals ← g'.cases fvid'
-        return subgoals.map (·.mvarId)
+        return .some ⟨nm, q($A = $B), proof, .default, .default⟩
       | .notDefEq =>
-        return #[g]
+        return .none
     | ~q(_root_.Expr.RedEta $A' $B) =>
       match ← Qq.isDefEqQ (u := .succ .zero) A A' with
       | .defEq _heq =>
-        let some h_r_val ← Qq.checkTypeQ h_r.value q(_root_.Expr.RedEta $A $B) | return #[g]
+        let some h_r_val ← Qq.checkTypeQ h_r.value q(_root_.Expr.RedEta $A $B) | return .none
         let proof : Q($A = $B) := q(_root_.Expr.IsNorm.unique $h_norm_val $h_r_val)
         let nm    ← Meta.getUnusedUserName h_norm.userName
-        let (fvid', g') ← (← g.assert nm q($A = $B) proof).intro1
-        let subgoals ← g'.cases fvid'
-        return subgoals.map (·.mvarId)
+        return .some ⟨nm, q($A = $B), proof, .default, .default⟩
       | .notDefEq =>
-        return #[g]
-  | _ => pure #[← getMainGoal]
-/-
-If:
+        return .none
+  | _ => pure .none
 
-- IsNorm A
-- Relation.whatever r A B,
-  then A = B
+/-
+TODO: run dcc_simp_all first. Or just put this in dcc_reduce
 -/
-def norm_lhs (g : MVarId) : TacticM (Array MVarId) := do
-  sorry
+
+def do_norm_unique_all : TacticM Unit := do
+  let g ← getMainGoal
+  g.withContext do
+    let lctx ← getLCtx
+    let decls := lctx.decls.toList.filterMap _root_.id
+    let matching_norm : List (List Meta.Hypothesis) ← (lctx.decls.toList.filterMap _root_.id).filterMapM (m := TacticM) (fun (decl : LocalDecl) => do
+      let some decl_ty ← Meta.liftMetaM <| Qq.checkTypeQ decl.type q(Prop) | return Option.none
+      match decl_ty with
+      | ~q(_root_.Expr.IsNorm _root_.Expr.RedAff $A) =>
+        return .some (← decls.filterMapM (m := TacticM) (fun (decl' : LocalDecl) => do
+          match decl'.type with
+          | .app (.app (.const _ _) A') _B  =>
+            if ← Meta.liftMetaM (isDefEq A A') then
+              do_norm_unique decl decl'
+            else return Option.none
+          | _ => return Option.none))
+      | ~q(_root_.Expr.IsNorm _root_.Expr.RedEta $A) =>
+        return .some (← decls.filterMapM (m := TacticM) (fun (decl' : LocalDecl) => do
+          match decl'.type with
+          | .app (.app (.const _ _) A') _B  =>
+            if ← Meta.liftMetaM (isDefEq A A') then
+              do_norm_unique decl decl'
+            else return Option.none
+          | _ => return Option.none))
+      | _ => return Option.none)
+    let ⟨_, g'⟩ ← g.assertHypotheses ⟨matching_norm.flatten⟩
+    replaceMainGoal [g']
 
 open Qq in
 def split_hyps (g : MVarId) : TacticM (Array MVarId) := do

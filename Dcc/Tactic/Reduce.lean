@@ -134,14 +134,17 @@ inductive Mode where
   | norm       : Mode
   | trans      : Mode
   | refl_trans : Mode
+deriving Repr
 
 inductive Scheme where
   | aff : Scheme
   | eta : Scheme
+deriving Repr
 
 inductive Cmd where
   | step   : Scheme → Cmd
   | reduce : Scheme → Mode → Cmd
+deriving Repr
 
 def Scheme.tm_rel (cmd : Scheme) : Q(_root_.Expr → _root_.Expr → Prop) :=
   match cmd with
@@ -402,6 +405,20 @@ def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
       pure gs
     | .none => pure #[g]
 
+elab "dcc" cmd:reduce_cmd : tactic => do
+  let g  ← getMainGoal
+  g.withContext do
+    -- Assume some relation r A B
+    let g ← getMainGoal
+    g.withContext do
+      match ← (liftMacroM (parse_cmd cmd)) with
+      | .reduce _ .norm =>
+        let subgoals ← (← (split_hyps g)).mapM (fun g => do
+          let some relevant_hyp ← any_relevant_hyp g | return g
+          reduce_goal cmd relevant_hyp g)
+        replaceMainGoal subgoals.toList
+      | cmd => throwError m!"command not supported by DCC !: {repr cmd}"
+
 elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
   let g  ← getMainGoal
   g.withContext do
@@ -411,20 +428,7 @@ elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
     replaceMainGoal gs
     let g ← getMainGoal
     g.withContext do
-      let lctx ← getLCtx
-      match ← (liftMacroM (parse_cmd cmd)) with
-      | .reduce _ .norm =>
-        let (decl, _) ← find_decl_expr hyp lctx
-        let c_head_expr := mkFVar decl.fvarId
-        let proof ← Lean.Meta.mkAppM ``Relation.ReflTransGen.cases_head #[c_head_expr]
-        let ty    ← Lean.Meta.inferType proof
-        let nm    ← Meta.getUnusedUserName hyp.getId
-        let (new_fv, g') ← (← g.assert nm ty proof).intro1
-        let subgoals ← (← (g'.cases new_fv)).mapM (fun sg => do
-          let some relevant_hyp ← any_relevant_hyp sg.mvarId | return sg.mvarId
-          reduce_goal cmd relevant_hyp sg.mvarId)
-        replaceMainGoal subgoals.toList
-      | _ => replaceMainGoal [← reduce_goal cmd hyp g]
+      replaceMainGoal [← reduce_goal cmd hyp g]
 
 namespace _test
 

@@ -1,9 +1,7 @@
 import Dcc.Judge
 
 def Ctx := Expr
-
 def Ctx.empty := DCC ⊤
-
 def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
   match ctx, idx with
   | DCC Coup(β), .zero => pure <| DCC Sndc(β)

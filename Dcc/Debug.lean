@@ -1,6 +1,5 @@
 import Dcc.Ast
 import Dcc.Judge
-import Lean
 
 def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
   match e with

@@ -187,8 +187,6 @@ App rule in Lean:
 
 ```lean
 /- !hide -/
-def Reduces : Expr → Expr → Prop := fun _ _ => True
-def Reduced : Expr → Expr → Prop := fun _ _ => True
 open Expr
 -- !end hide
 inductive Judge'' : Expr → Expr → Prop
@@ -374,7 +372,7 @@ $$`
 
 - Context book-keeping is just a combinator `Expr`
 
-```leanLibCode Dcc.Compile (startLine := 9) (endLine := 21)
+```leanLibCode Dcc.Compile (startLine := 3) (endLine := 13)
 def Ctx := Expr
 def Ctx.empty := DCC ⊤
 def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
@@ -391,15 +389,13 @@ def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
 # Demo: Type-Checker Performance
 
 ```lean
-#time dcc_trace (Π(Id(Sort 1),
+#time #eval Sigma.fst <$> (Expr.infer (DCC (Π(Id(Sort 1),
    `(Sort 1,
      Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))) ∘
          Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))) ∘
        Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0))))
-   Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))
+   Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), Sort 0)))))
 ```
-
-My type-checker inferred the types of *each* sub-expression in this tree in *52ms*. Somewhat impressive for a tree this size.
 
 # Demo / Theorem: Judgmental Completeness
 

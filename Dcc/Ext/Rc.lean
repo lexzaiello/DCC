@@ -68,7 +68,7 @@ theorem reduces_eq (h : EqEnvFn e τ)
     have ⟨f_α₁, f_β₁, env₂, α₁, h_t_f₁, h_r_α₁, h_t_x₁, h_r_τ₁⟩ := h_t_f.invert rfl
     cases h_t_f₁ with
     | id h_t_arr h_r_id =>
-      dcc reduce+ eta from h_r_id
+      dcc reduce ! eta from h_r_id
       
       sorry
   | eql =>

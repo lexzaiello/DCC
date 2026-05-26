@@ -1,5 +1,6 @@
 import Mathlib.Logic.Relation
 import Dcc.Ast
+import Dcc.Judge
 import Dcc.Attrs
 import Dcc.Relation
 import Dcc.Attrs
@@ -298,7 +299,7 @@ partial def exprSize : Lean.Expr → Nat
 def any_relevant_hyp (g : MVarId) : TacticM (Option (TSyntax `ident)) := do
   g.withContext do
     let lctx ← getLCtx
-    let d_nm : Option (TSyntax `ident) ← lctx.findDeclM? (fun decl => do
+    lctx.findDeclM? (fun decl => do
       match decl.type with
       | .app (.app (.const _ _) A) B =>
         if exprSize B < exprSize A then
@@ -306,7 +307,70 @@ def any_relevant_hyp (g : MVarId) : TacticM (Option (TSyntax `ident)) := do
         else
           return .none
       | _ => return .none)
-    return d_nm
+
+def my_sort [Monad m] [Ord β] (key : α → m β) (l : List α) : m (List α) := do
+  let keyed ← l.mapM (fun a => do return (← key a, a))
+  return (keyed.mergeSort (fun x y => compare x.1 y.1 |>.isLE)).map (·.2)
+
+open Qq in
+def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
+  g.withContext do
+    let lctx ← getLCtx
+    let get_components (decl : LocalDecl) : TacticM (Option (Q(_root_.Expr) × Q(_root_.Expr))) := do
+      match ← Qq.checkTypeQ decl.type q(Prop) with
+      | .some ty =>
+        match ty with
+        | ~q(Relation.ReflTransGen _root_.Expr.RedAff $A $B) =>
+          return .some (A, B)
+        | ~q(Relation.TransGen _root_.Expr.RedAff $A $B) =>
+          return .some (A, B)
+        | ~q(Relation.ReflTransGen _root_.Expr.RedEta $A $B) =>
+          return .some (A, B)
+        | ~q(Relation.TransGen _root_.Expr.RedEta $A $B) =>
+          return .some (A, B)
+        | ~q(_root_.Expr.RedAffReflTrans $A $B) =>
+          return .some (A, B)
+        | ~q(_root_.Expr.RedAffTrans $A $B) =>
+          return .some (A, B)
+        | _ => return .none
+      | _ => return .none
+    let get_left_size (decl : LocalDecl) : TacticM ℕ := do
+      match ← get_components decl with
+      | .some (a, b) => return exprSize a
+      | .none => pure 0
+    let get_right_size (decl : LocalDecl) : TacticM ℕ := do
+      match ← get_components decl with
+      | .some (a, b) => return exprSize b
+      | .none => pure 0
+    let left_decls ← my_sort (l := (lctx.decls.toList.filterMap _root_.id)) get_left_size
+    let right_decls ← my_sort (l := (lctx.decls.toList.filterMap _root_.id)) get_right_size
+    -- go with left candidates
+    let candidates := if (← left_decls.head?.mapM get_left_size).getD 0 < (← right_decls.head?.mapM get_right_size).getD 0 then
+      right_decls
+    else
+      left_decls
+    let x : Option (Array MVarId) ← candidates.firstM (fun (decl : LocalDecl) => do
+      match ← Qq.checkTypeQ decl.type q(Prop) with
+      | .some ty =>
+        let split (nm : Lean.Name) : TacticM (Array MVarId) := do
+          let c_head_expr := mkFVar decl.fvarId
+          let proof ← Lean.Meta.mkAppM nm #[c_head_expr]
+          let ty    ← Lean.Meta.inferType proof
+          let nm    ← Meta.getUnusedUserName decl.userName
+          let (fvid', g') ← (← g.assert nm ty proof).intro1
+          let subgoals ← g'.cases fvid'
+          return subgoals.map (·.mvarId)
+        let some (tm : Q($ty)) ← Qq.checkTypeQ decl.value ty | return Option.none
+        match ty with
+        | ~q(Relation.ReflTransGen _root_.Expr.RedAff $A $B) =>
+          if exprSize B < exprSize A then
+            return .some (← split ``Relation.ReflTransGen.cases_head)
+          else return Option.none
+      | .none => return .none)
+    match x with
+    | .some gs =>
+      pure gs
+    | .none => pure #[g]
 
 elab "dcc" cmd:reduce_cmd "from" hyp:ident : tactic => do
   let g  ← getMainGoal

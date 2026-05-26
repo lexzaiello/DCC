@@ -296,13 +296,12 @@ def MetaExpr.RedEtaMeta.encode (e : MetaExpr.RedEtaMeta A B) : Lean.Expr :=
     let h := h.encode
 
     .app (.app (.app (.app (.app (.const ``Expr.RedEta.pi []) α) β) p') env) h
-  | .pi_quot (x := x) (x' := x') (α := α) (β := β) h =>
-    let x  : Q(_root_.Expr) := x.encode
-    let x' : Q(_root_.Expr) := x'.encode
-    let α : Q(_root_.Expr) := α.encode
+  | .quot (x := x) (x' := x') (β := β) h =>
     let β : Q(_root_.Expr)  := β.encode
+    let x  : Q(_root_.Expr) := x.encode
+    let x'  : Q(_root_.Expr) := x'.encode
     let h := h.encode
-    .app (.app (.app (.app (.app (.const ``Expr.RedEta.pi_quot []) x) x') α) β) h
+    .app (.app (.app (.app (.const ``Expr.RedEta.quot []) x) x') β) h
   | .pi' (β := β) (β' := β') (α := α) h =>
     let β : Q(_root_.Expr)  := β.encode
     let β' : Q(_root_.Expr) := β'.encode
@@ -359,16 +358,6 @@ def MetaExpr.RedEtaMeta.encode (e : MetaExpr.RedEtaMeta A B) : Lean.Expr :=
     let β : Q(_root_.Expr) := β.encode
     let z : Q(_root_.Expr) := z.encode
     q(_root_.Expr.RedEta.quot'_snd' (α := $α) (x := $x) (β := $β) (z := $z))
-  | .pi_comp (f_α := f_α) (f_β := f_β) (x := x) =>
-    let f_α : Q(_root_.Expr) := f_α.encode
-    let f_β : Q(_root_.Expr) := f_β.encode
-    let x   : Q(_root_.Expr) := x.encode
-    q(_root_.Expr.RedEta.pi_comp (f_α := $f_α) (f_β := $f_β) (x := $x))
-  | .pi'_comp (f_α := f_α) (f_β := f_β) (x := x) =>
-    let f_α : Q(_root_.Expr) := f_α.encode
-    let f_β : Q(_root_.Expr) := f_β.encode
-    let x   : Q(_root_.Expr) := x.encode
-    q(_root_.Expr.RedEta.pi'_comp (f_α := $f_α) (f_β := $f_β) (x := $x))
   | .eql (f_α := f_α) (env := env) (x := x) =>
     let f_α : Q(_root_.Expr) := f_α.encode
     let env : Q(_root_.Expr) := env.encode

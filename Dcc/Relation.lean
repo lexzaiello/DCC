@@ -551,7 +551,7 @@ theorem reduce_complete_pointwise {r : Expr → Expr → Prop} {t : Expr → ℕ
   ⟨fun hr hn => reduce_complete (r := r) (t := t) hr hn⟩
 
 @[dcc_step, aesop safe apply (rule_sets := [DccStep])]
-theorem reduce_sound {t : Expr → ℕ} [RedRel r t]
+theorem reduce_sound {t : Expr → ℕ} [_hR : RedRel r t]
   (_heq : reduce r A = ⟨B, ⟨h⟩⟩) : Relation.ReflTransGen r A B := h
 
 @[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce_norm {t : Expr → ℕ}

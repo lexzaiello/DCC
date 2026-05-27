@@ -1,5 +1,6 @@
 import Dcc.Judge
 import Dcc.Metatheory.Decidability
+import Dcc.Metatheory.Congr
 
 namespace Expr
 
@@ -11,14 +12,13 @@ theorem norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
   case tintro | bot | top | sort =>
     intro ⟨_, h⟩
     cases h
-  case app => exact Reduced.norm_eta (by assumption)
   case eq =>
     intro ⟨_, h⟩
     cases h
 
 theorem invert (ht : Judge e τ) (heq : e = (DCC (f x))) : ∃ f_α f_β env α,
   (Judge f (DCC (Π(f_α, f_β) env)) ∧ Reduces (DCC (f_α env)) α
-    ∧ Judge x α ∧ Reduced (DCC (f_β env x)) τ) := by
+    ∧ Judge x α ∧ Reduces (DCC (f_β env x)) τ) := by
   induction ht with
   | app h_t_f h_r_α h_t_x h_r_τ =>
     cases heq

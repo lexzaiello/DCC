@@ -217,7 +217,7 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
       exact Judge.app (ih₁ h) (by assumption) (by assumption) (by assumption)
     | congrArg h =>
       rename_i hrτ _
-      have ha := hrτ.to_reduces.head_trans (.congrArg h)
+      have ha := hrτ.head_trans (.congrArg h)
       exact Judge.app (by assumption) (by assumption) (ih₂ h) (by assumption)
     | quot =>
       sorry
@@ -243,7 +243,7 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
     obtain ⟨⟨h₁, h₂⟩, h₃⟩ := h₈
     have ⟨x', hrt, heq⟩ := h₄.quot
     cases heq
-    have hr_env := q.to_reduces.quot
+    have hr_env := q.quot
     have ⟨f_β', h_x'_eq, hrtx'⟩ := hrt.pi
     cases h_x'_eq
     have ⟨a, b, c, d, e, f, heq'⟩ := hr_env.pi
@@ -255,17 +255,8 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
       | .inl heq''' =>
         cases heq'''
         simp_all
-        cases hr₁ using Relation.TransGen.head_induction_on with
-        | single h =>
-          cases h with
-          | congrFun h =>
-            match hr₂.eq with
-            | .inl ⟨_, _, h₁, h₂⟩ => exact h₂
-            | .inr h => simp_all
-          | congrArg h =>
-            have h_dec := RedAff.instRedRel.decreasing h
-            have h_t' := h_t.preservation (.congrArg h)
-            exact refl_ty_heq h_t'
+        cases hr₁ using Relation.ReflTransGen.head_induction_on with
+        | refl => exact (hn₁ ⟨_, (.congrFun .comp)⟩).elim
         | head h ih =>
           cases h with
           | congrFun h =>
@@ -275,9 +266,8 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
               cases h
               cases h with
               | comp =>
-                change RedAffTrans _ _ at ih
-                cases ih using Relation.TransGen.head_induction_on with
-                | single h => cases h
+                change RedAffReflTrans _ _ at ih
+                cases ih using Relation.ReflTransGen.head_induction_on with
                 | head h ih =>
                   cases h with
                   | congrFun h =>
@@ -286,8 +276,7 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
                     | congrArg h =>
                       cases h with
                       | id =>
-                        cases ih using Relation.TransGen.head_induction_on with
-                        | single h => cases h
+                        cases ih using Relation.ReflTransGen.head_induction_on with
                         | head h ih =>
                           cases h with
                           | congrFun h =>
@@ -391,7 +380,7 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
           match heq₂.cases_head with
           | .inl h =>
             cases h
-            have h := h_r_τ.to_reduces.quot.pi
+            have h := h_r_τ.quot.pi
             simp_all
           | .inr ⟨_, h₁, h₂⟩ =>
             cases h₁ with
@@ -411,12 +400,12 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
           match heq₂.cases_head with
           | .inl h =>
             cases h
-            have h := h_r_τ.to_reduces.quot.pi
+            have h := h_r_τ.quot.pi
             simp_all
           | .inr ⟨_, h₁, h₂⟩ =>
             cases h₁ with
             | curr h =>
-              have h := h_r_τ.to_reduces.quot.pi
+              have h := h_r_τ.quot.pi
               simp_all
   | tintro | top | eq | bot => cases ht
   | comb => exact (ht.comb_ty_not_eq (by assumption)).elim
@@ -435,7 +424,7 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
         match ha.cases_head with
         | .inl h =>
           cases h
-          have h := h_r_τ.to_reduces.curr
+          have h := h_r_τ.curr
           have h := h.quot₁
           match h with
           | ⟨ha, hb, hc, hd⟩ =>
@@ -469,7 +458,7 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
         | .inl h =>
           cases h
           have h := h_r_α.id
-          have h := h_r_τ.to_reduces.quot.pi
+          have h := h_r_τ.quot.pi
           simp_all
         | .inr ⟨_, h₁, h₂⟩ =>
           cases h₁ with
@@ -493,12 +482,12 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
           | .inl h =>
             cases h
             have h := h_r_α'.id
-            have ⟨_, _, h₁, h₂, h₃, h₄, h₅⟩ := h_r_τ'.to_reduces.quot.pi
+            have ⟨_, _, h₁, h₂, h₃, h₄, h₅⟩ := h_r_τ'.quot.pi
             cases h₅
             match h₁.cases_head with
             | .inl h =>
               cases h
-              have h := h_r_τ.to_reduces.congrFun .comp
+              have h := h_r_τ.congrFun .comp
               have ⟨_, heq⟩ := h.eql
               cases heq
               match h with

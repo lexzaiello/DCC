@@ -123,7 +123,7 @@ inductive Judge : Expr → Expr → Prop where
   | app    : Judge f (DCC (Π(f_α, f_β) x_α))
     → Reduces (DCC (f_α x_α)) α
     → Judge x α
-    → Reduced (DCC (f_β x_α x)) τ
+    → Reduces (DCC (f_β x_α x)) τ
     → Judge (DCC (f x)) τ
 
 def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
@@ -332,10 +332,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     match infer f, infer x with
     | .some ⟨DCC (Π(f_α, f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
       if heq : reduce_all (DCC (f_α x_α)) = τ₂' then
-        match reduce_all? (DCC (f_β x_α x)) with
-        | .some ⟨τ', ⟨h_red⟩⟩ =>
-          .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by rw [heq]; exact ht₂) h_red⟩⟩
-        | _ => .none
+        .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by rw [heq]; exact ht₂) (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
 

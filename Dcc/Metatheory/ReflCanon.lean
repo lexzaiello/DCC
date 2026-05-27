@@ -98,7 +98,7 @@ inductive Value : Expr → Prop
   | coup   : Value (DCC Coup(f_β))
   | eq     : Value (DCC x = y)
   | comb   : IsRedComb c m → Value c
-  | app    : IsRedCombApp (DCC (f x)) (m + 1) → Value f → Value x → Value (DCC (f x))
+  | c_app  : IsRedComb f 2 → Value f → Value x → Value (DCC (f x))
   | top    : Value (DCC ⊤)
   | bot    : Value (DCC ⊥)
   | tintro : Value (DCC ∗)
@@ -298,13 +298,54 @@ a partial application can never have eq type, since partial application has a fu
 IsRedCombApp (m + 1) → ∃ f_α f_β env, τ = (DCC (Π(f_α, f_β), env))
 -/
 
+theorem par_app_has_fn_type (ht : Judge e τ) (hc : IsRedCombApp e (m + 1)) : ∃ f_α f_β env, τ = (DCC (Π(f_α, f_β) env)) := by
+  cases hc with
+  | app =>
+    cases ht with
+    | app =>
+      
+      sorry
+
+/-theorem par_apps_no_eq (ht : Judge e (DCC (x = y))) (hc : IsRedCombApp e (m + 1)) : False := by
+  induction m with
+  | succ h ih =>
+    cases hc with
+    | eql =>
+      
+      sorry
+    | app h =>
+      cases ht with
+      | app =>
+        
+        sorry
+  | zero =>
+    cases hc with
+    | id =>
+      exact (ht.comb_ty_not_eq .id).elim
+      -/
+
 -- Probably somewhat easy to prove
 theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
   (hv : Value e) : ∃ f_α env, e = (DCC (refl(f_α) env x)) ∧ env.Value ∧ x.Value := by
   induction hv with
-  | app a h_val_f h_val_x ih_f ih_x =>
-    
-    sorry
+  | c_app h_c_f h_v_f h_v_x ih₁ ih₂ =>
+    cases h_c_f with
+    | eql =>
+      cases ht with
+      | app h_t_f hb h_t_x h_r_τ =>
+        cases h_t_f with
+        | eql _ hr =>
+          have ⟨a, b, c, d, e, f, g⟩ := hr.pi
+          cases g
+          have h' := hb.id
+          obtain ⟨a, b, c⟩ := c.quot
+          cases c
+          have ⟨_, heq₁, heq₂⟩ := b.pi
+          cases heq₁
+          
+          sorry
+    | curr =>
+      sorry
   | tintro | top | eq | bot => cases ht
   | comb => exact (ht.comb_ty_not_eq (by assumption)).elim
   | pi₁ =>

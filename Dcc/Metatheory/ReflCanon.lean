@@ -156,16 +156,15 @@ theorem refl_inhabits_id
 -- IMPORTANT
 -- somewhat easy
 theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
-  sorry
-
-theorem refl_ty (h_t : Judge (DCC (refl(f_α) env x)) τ)
-  (hr : Reduces x x') : τ = (DCC x' = x') := by
-  sorry
-
-theorem refl_preservation (h_t : Judge (DCC (refl(f_α) env x)) τ)
-  (h_red : Reduces A (DCC (refl(f_α) env x)))
-  (hred' : Reduces x x') : Judge A (DCC x' = x') := by
-  sorry
+  match h_t with
+  | .app h_t_f h_r_α h_t_x h_r_τ =>
+    match h_t_f with
+    | .app h_t_f' h_r_α' h_t_x' h_r_τ' =>
+      match h_t_f' with
+      | .refl h_t_f_α h_r_refl =>
+        dcc red ! aff
+        
+        sorry
 
 /-
 induction using Expr.instWellFounded?

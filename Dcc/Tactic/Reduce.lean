@@ -383,6 +383,55 @@ def do_norm_unique (h_norm : LocalDecl) (h_r : LocalDecl) : TacticM (Option Meta
         return .none
   | _ => pure .none
 
+def is_red_for_norm (b : Q(_root_.Expr)) (r : Q(_root_.Expr → _root_.Expr → Prop)) (decl : LocalDecl) :
+  TacticM (Option ((e₀ : Q(_root_.Expr)) × Q(Relation.ReflTransGen $r $e₀ $b))) := do
+  let some decl_ty ← Meta.liftMetaM <| Qq.checkTypeQ decl.type q(Prop) | return Option.none
+  match decl_ty with
+  | ~q(Relation.ReflTransGen (α := _root_.Expr) $r₂ $A $B) =>
+    if ← isDefEq B b then
+      let some decl_val ← Meta.liftMetaM <| Qq.checkTypeQ decl.value q(Relation.ReflTransGen $r $A $b) | return .none
+      return .some ⟨A, decl_val⟩
+    else return .none
+  | _ => return .none
+
+def mk_hyps (lctx : LocalContext) (r : Q(_root_.Expr → _root_.Expr → Prop))
+  (t : Q(_root_.Expr → ℕ))
+  (r_rel : Q(_root_.Expr.RedRel $r $t))
+  (mk_heq : Q(∀ {A B : _root_.Expr}
+    (hr : Relation.ReflTransGen $r A B),
+    _root_.Expr.IsNorm $r B → (_root_.Expr.reduce (hR := $r_rel) $r A) = ⟨B, ⟨hr⟩⟩)) : TacticM (Array Meta.Hypothesis) := do
+  let decls := lctx.decls.toArray.filterMap _root_.id
+  let base : Array ((a : Q(_root_.Expr)) × Q(_root_.Expr.IsNorm $r $a) × LocalDecl) ← decls.filterMapM (fun (decl : LocalDecl) => do
+    let some decl_ty ← Meta.liftMetaM <| Qq.checkTypeQ decl.type q(Prop) | return Option.none
+    match decl_ty with
+    | ~q(_root_.Expr.IsNorm $r₂ $B) =>
+      if ← isDefEq r r₂ then
+        let some proof ← Meta.liftMetaM <| Qq.checkTypeQ decl.value q(_root_.Expr.IsNorm $r₂ $B) | return Option.none
+        return .some ⟨B, proof, decl⟩
+      else return .none
+    | _ => return Option.none)
+  let hyps : Array Meta.Hypothesis := Array.flatten <| ← base.mapM (fun ⟨a, hn, ldecl⟩ => do
+    let red_proofs ← decls.filterMapM (fun ldecl' => do
+      is_red_for_norm a r ldecl')
+    let hyps : Array Meta.Hypothesis ← red_proofs.mapM (fun ⟨e₀, hrt⟩ => do
+      let h := q($mk_heq $hrt $hn)
+      return ⟨← mkFreshUserName ldecl.userName, q(Expr.reduce $r $e₀ = ⟨$a, ⟨$hrt⟩⟩), h, .default, .default⟩)
+    pure hyps)
+  pure hyps
+
+def do_complete_all : TacticM Unit := do
+  let g ← getMainGoal
+  g.withContext do
+    let lctx ← getLCtx
+    let aff_hyps ← mk_hyps lctx q(_root_.Expr.RedAff) q(_root_.Expr.size)
+      q(_root_.Expr.RedAff.instRedRel) q(_root_.Expr.reduce_complete (r := _root_.Expr.RedAff)
+        (t := _root_.Expr.size) (hR := _root_.Expr.RedAff.instRedRel))
+    let eta_hyps ← mk_hyps lctx q(_root_.Expr.RedEta) q(_root_.Expr.size)
+      q(_root_.Expr.RedEta.instRedRel) q(_root_.Expr.reduce_complete (r := _root_.Expr.RedEta)
+        (t := _root_.Expr.size) (hR := _root_.Expr.RedEta.instRedRel))
+    let ⟨_, g'⟩ ← g.assertHypotheses (aff_hyps ++ eta_hyps)
+    replaceMainGoal [g']
+
 /-
 TODO: run dcc_simp_all first. Or just put this in dcc_reduce
 -/
@@ -548,12 +597,28 @@ def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
 
 def destruct_reduces : TacticM (List MVarId) := do
   let g ← getMainGoal
-  Lean.Meta.liftMetaM (g.casesMatching (allowSplit := false) (fun e => do
+  Lean.Meta.liftMetaM (g.casesMatching (recursive := True) (allowSplit := false) (fun e => do
     match e with
+    | .app (.app (.const ``_root_.Expr.Judge []) A) B =>
+      match A with
+      | .app (.const ``_root_.Expr.id []) _ => return True
+      | .app (.const ``_root_.Expr.refl []) _ => return True
+      | .app (.const ``_root_.Expr.eql []) _ => return True
+      | .app (.app (.const ``_root_.Expr.comp []) _) _ => return True
+      | .app (.app (.const ``_root_.Expr.comp' []) _) _ => return True
+      | .app (.const ``_root_.Expr.fstc []) _ => return True
+      | .app (.const ``_root_.Expr.sndc []) _ => return True
+      | .app (.app (.const ``_root_.Expr.sigma []) _) _ => return True
+      | .app (.app (.const ``_root_.Expr.pi []) _) _ => return True
+      | .app (.app (.const ``_root_.Expr.quot []) _) _ => return True
+      | .app (.app (.const ``_root_.Expr.pair []) _) _ => return True
+      | .app (.app (.app (.const ``_root_.Expr.curr []) _) _) _ => return True
+      | _ =>
+        return exprSize A > exprSize B ∨ (exprSize A > 10)
     | .app (.app (.const ``_root_.Expr.Reduces []) A) B =>
-      return exprSize B > 5 ∨ exprSize A > 5
+      return exprSize A > exprSize B ∨ (exprSize B > 5 ∨ exprSize A > 5)
     | .app (.app (.const ``_root_.Expr.Reduced []) A) B =>
-      return exprSize B > 5 ∨ exprSize A > 5
+      return exprSize A > exprSize B ∨ (exprSize B > 5 ∨ exprSize A > 5)
     | _ => return false))
 
 syntax "dcc" reduce_cmd num      : tactic

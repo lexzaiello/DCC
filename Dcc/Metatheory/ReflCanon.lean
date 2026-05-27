@@ -325,8 +325,9 @@ theorem par_app_has_fn_type (ht : Judge e τ) (hc : IsRedCombApp e (m + 1)) : �
       -/
 
 -- Probably somewhat easy to prove
+open Congruent in
 theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
-  (hv : Value e) : ∃ f_α env, e = (DCC (refl(f_α) env x)) ∧ env.Value ∧ x.Value := by
+  (hv : Value e) : ∃ f_α env x', e = (DCC (refl(f_α) env x')) ∧ Reduces e (DCC (refl(f_α) env x)) := by
   induction hv with
   | c_app h_c_f h_v_f h_v_x ih₁ ih₂ =>
     cases h_c_f with
@@ -431,8 +432,10 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
             cases h with
             | pi' h =>
               cases h
-  | refl₂ =>
-    -- have h_x_y_eq := refl_ty_heq ht
+  | refl₂ h_val_env h_val_x =>
+    have h_norm_env := h_val_env.is_norm_aff
+    have h_norm_x   := h_val_x.is_norm_aff
+    have h_eq_refl  := ht.refl_ty_heq
     cases ht with
     | app h_t_f h_r_α h_t_x h_r_τ =>
       cases h_t_f with
@@ -450,8 +453,19 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
             match h₁.cases_head with
             | .inl h =>
               cases h
-              
-              sorry
+              have h := h_r_τ.to_reduces.congrFun .comp
+              have ⟨_, heq⟩ := h.eql
+              cases heq
+              exact ⟨_, _, _, rfl, ⟨.refl, fun ⟨_, h⟩ => by
+                cases h with
+                | congrFun h =>
+                  cases h with
+                  | congrFun h => cases h
+                  | congrArg h =>
+                    exact (h_norm_env ⟨_, h⟩).elim
+                | congrArg h =>
+                  exact (h_norm_x ⟨_, h⟩).elim
+                , by sorry, by sorry⟩⟩
             | .inr h =>
               sorry
           | .inr ⟨_, h₁, h₂⟩ =>
@@ -472,9 +486,9 @@ theorem eq_is_refl (h_t : Judge e (DCC (x = y))) :
   | h e ih =>
     match h_t.progress with
     | .inl h_val =>
-      have ⟨f_α, env, heq⟩ := h_t.eq_val_is_refl h_val
+      have ⟨f_α, env, x', heq, hred⟩ := h_t.eq_val_is_refl h_val
       simp_all
-      exact ⟨f_α, env, ⟨.refl, h_val.is_norm_aff, .refl, h_val.is_norm_eta⟩⟩
+      exact ⟨f_α, env, hred⟩
     | .inr ⟨e', hr⟩ =>
       match ih _ hr (h_t.preservation hr) with
       | ⟨f_α, env, ⟨hr₁, hn₁, hr₂, hn₂⟩⟩ =>

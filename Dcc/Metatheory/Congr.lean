@@ -348,4 +348,48 @@ theorem pi (h : Reduced (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env',
 
 end Reduced
 
+namespace Reduces
+
+theorem quot (h : Reduces (DCC (`(α, x') x y)) B) : Reduces (DCC (x' y)) B := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      exact (hn₁ ⟨_, .congrFun .quot⟩).elim
+    | .inr ⟨C, h₁, h₂⟩ =>
+      cases h₁ with
+      | congrFun h =>
+        cases h with
+        | quot => exact ⟨h₂, hn₁, hr₂, hn₂⟩
+        | congrFun h => cases h
+        | congrArg h =>
+          have h_dec := RedAff.instRedRel.decreasing h
+          exact quot ⟨h₂, hn₁, hr₂, hn₂⟩
+      | congrArg hr =>
+        have h_dec := RedAff.instRedRel.decreasing hr
+        have h := quot ⟨h₂, hn₁, hr₂, hn₂⟩
+        match h with
+        | ⟨ha, hb, hc, hd⟩ =>
+          exact ⟨.trans (.single (.congrArg hr)) ha, hb, hc, hd⟩
+termination_by (x.size + y.size)
+
+end Reduces
+
+namespace RedEtaReflTrans
+
+theorem quot (h : RedEtaReflTrans (DCC `(α, x)) B) : ∃ x', RedEtaReflTrans x x' ∧ B = (DCC `(α, x')) := by
+  cases h.cases_head with
+  | inl h => cases h; exact ⟨_, .refl, rfl⟩
+  | inr h =>
+    have ⟨C, h₁, h₂⟩ := h
+    cases h₁ with
+    | quot h =>
+      have h_dec := RedEta.instRedRel.decreasing h
+      have ⟨x', hrt, heq⟩ := quot h₂
+      exact ⟨x', .trans (.single h) hrt, heq⟩
+termination_by x.size
+
+end RedEtaReflTrans
+
 end Expr

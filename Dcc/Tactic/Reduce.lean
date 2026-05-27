@@ -616,7 +616,7 @@ def destruct_reduces : TacticM (List MVarId) := do
       | .app (.app (.const ``_root_.Expr.pair []) _) _ => return True
       | .app (.app (.app (.const ``_root_.Expr.curr []) _) _) _ => return True
       | _ =>
-        return exprSize A > exprSize B ∨ (exprSize A > 10)
+      return exprSize A > exprSize B ∨ (exprSize A > 10)
     | .app (.app (.const ``_root_.Expr.Reduces []) A) B =>
       return exprSize A > exprSize B ∨ (exprSize B > 5 ∨ exprSize A > 5)
     | .app (.app (.const ``_root_.Expr.Reduced []) A) B =>
@@ -713,12 +713,12 @@ elab "dcc" cmd:reduce_cmd n_round:num : tactic => do
     g.withContext do
       match ← (liftMacroM (parse_cmd cmd)) with
       | .reduce _ .norm =>
-        let _ ← (List.replicate n_round.getNat split_hyps).foldlM (fun _ fn => do
+        (List.replicate n_round.getNat split_hyps).foldlM (fun _ fn => do
           let g ← getMainGoal
           let subgoals ← (fn g)
           let _ ← replaceMainGoal subgoals.toList
           pure ()) ()
-        do_norm_unique_all
+        --do_norm_unique_all
         --do_reduce_complete_all
       | cmd => throwError m!"command not supported by DCC !: {repr cmd}"
 

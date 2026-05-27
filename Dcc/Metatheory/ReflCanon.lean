@@ -54,6 +54,20 @@ inductive IsRedCombApp : Expr → Arity → Type
   | curr  : IsRedCombApp (DCC Λ(α, β, x)) 2
   | app   : IsRedCombApp f (m + 1) → IsRedCombApp (DCC (f x)) m
 
+namespace Reduced
+
+theorem head (hr : Reduced A D) : ∃ B C, RedEtaReflTrans C D ∧ RedAff A B ∧ (B = C ∨ RedAffTrans B C) ∧ IsNorm RedAff C ∧ IsNorm RedEta D := by
+  match hr with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    cases hr₁ using Relation.TransGen.head_induction_on with
+    | single h => exact ⟨_, _, hr₂, h, .inl rfl, hn₁, hn₂⟩
+    | head h ih => exact ⟨_, _, hr₂, h, .inr ih, hn₁, hn₂⟩
+
+/-theorem Reduced.step_comb₁ (h_f : IsRedComb f 1) (h_r : Reduced (DCC (f x))) : ∃ e' e'',
+  RedAff (DCC (f x)) e' ∧ RedAffReflTrans -/
+
+end Reduced
+
 /-
 A normal form is either:
 - a combinator with fewer than its arity arguments applied
@@ -183,7 +197,117 @@ theorem refl_inhabits_id
         | head h ih =>
           sorry-/
 
+/-
+Other lemmas we need to say:
+
+(refl(f_α) env x) : (x = y) → x = y
+
+this should be due to Eql. It just requires a lot of unfolding.
+there are two arguments, so two Pi's should be useful.
+
+
+-/
+
 theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
+  obtain ⟨a, b, c, d, h_t_refl_env, f, g, ⟨hr₁, hn₁, hr₂, hn₂⟩⟩ := h_t.invert rfl
+  obtain ⟨i, j, k, l, m, o, p, q⟩ := h_t_refl_env.invert rfl
+  cases m with
+  | refl h_t_f_α h_r_refl_ty =>
+    unfold refl.type at h_r_refl_ty
+    obtain ⟨_, _, h₄, h₅, h₆, h₇, h₈⟩ := h_r_refl_ty.pi
+    obtain ⟨⟨h₁, h₂⟩, h₃⟩ := h₈
+    have ⟨x', hrt, heq⟩ := h₄.quot
+    cases heq
+    
+    sorry
+
+theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
+  obtain ⟨a, b, c, d, h_t_refl_env, f, g, ⟨hr₁, hn₁, hr₂, hn₂⟩⟩ := h_t.invert rfl
+  obtain ⟨i, j, k, l, m, o, p, q⟩ := h_t_refl_env.invert rfl
+  cases m with
+  | refl h_t_f_α h_r_refl_ty =>
+    obtain ⟨_, _, h₄, h₅, h₆, h₇, h₈⟩ := h_r_refl_ty.pi
+    simp at h₈
+    obtain ⟨⟨h₁, h₂⟩, h₃⟩ := h₈
+    unfold refl.type at h_r_refl_ty
+    cases h₁; cases h₂; cases h₃
+    match hr₂.eq with
+    | .inl ⟨f_α, env, heq₁, heq₂⟩ => exact heq₂
+    | .inr h =>
+      cases h
+      cases h₄.cases_head with
+      | inl h =>
+        simp_all
+        cases h
+        clear h₄ h_r_refl_ty
+        obtain ⟨B, C, hrc, hr, h, hnc, hnpi⟩ := q.head
+        cases h with
+        | inl h =>
+          cases h
+          cases hr with
+          | congrFun hr =>
+            
+            sorry
+          | congrArg hr_env =>
+            have h_t' := h_t.preservation (.congrFun (.congrArg hr_env))
+            have h_dec := RedAff.instRedRel.decreasing hr_env
+            exact refl_ty_heq h_t'
+        | inr h =>
+          sorry
+      | inr h =>
+        
+        sorry
+termination_by (env.size + x.size)
+      /-match hr₁.to_reflTrans.eq with
+      | .inl ⟨B, hrt, hr, hreq⟩ =>
+        match hreq with
+        | .proj .quot =>
+          
+          sorry
+        | .proj .fstc =>
+          
+          sorry
+        | .proj .sndc =>
+          
+          sorry
+        | .id =>
+          sorry
+        | .quot =>
+          sorry
+      | .inr h =>
+        sorry-/
+
+theorem refl_ty_is_eq (h_t : Judge (DCC (refl(f_α) env x)) τ)
+  (hn₁ : IsNorm RedAff x) (hn₂ : IsNorm RedEta x) : τ = (DCC (x = x)) := by
+  have ⟨a, b, c, d, h_t_refl_env, f, g, h⟩ := h_t.invert rfl
+  have ⟨i, j, k, l, m, o, p, q⟩ := h_t_refl_env.invert rfl
+  cases m with
+  | refl r s =>
+    unfold refl.type at s
+    have ⟨f_β', env', hrt, h_f_β_norm, hrδ, h_env'_norm, heq⟩ := s.pi
+    cases heq
+    
+    /-match h with
+    | ⟨h₁, h₂, h₃, h₄⟩ =>
+      cases h₁ using Relation.TransGen.head_induction_on with
+      | single h =>
+        
+        cases h with
+        | curr =>
+          
+          sorry
+      | head h ih =>
+        cases h with
+        | curr =>
+          
+          sorry
+        | congrArg h =>
+          sorry
+        | congrFun h =>
+          sorry-/
+    sorry
+
+/-theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
   have ⟨a, b, c, d, h_t_refl_env, f, g, h⟩ := h_t.invert rfl
   have ⟨i, j, k, l, m, o, p, q⟩ := h_t_refl_env.invert rfl
   cases m with
@@ -220,8 +344,21 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y :
                         | single h =>
                           sorry
                         | head h ih =>
-                          
-                          sorry
+                          cases h with
+                          | congrFun h =>
+                            cases h with
+                            | comp =>
+                              sorry
+                            | congrArg h =>
+                              --have h_dec := RedAff.instRedRel.decreasing h
+                              --have h_t' := h_t.preservation (.congrFun (.congrArg h))
+                              --exact refl_ty_heq h_t'
+                              sorry
+                            | congrFun h =>
+                              sorry
+                          | congrArg h =>
+                            have h := h_t.preservation (.congrArg h)
+                            sorry
                       | tail ih h => cases h; rfl
                   | inr h =>
                     sorry
@@ -259,7 +396,7 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y :
                   cases h
       | inr h =>
         sorry
-termination_by env.size
+termination_by (env.size + x.size)-/
 
 /-
 refl(f_α) env x

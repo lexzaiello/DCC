@@ -342,10 +342,36 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
           cases c
           have ⟨_, heq₁, heq₂⟩ := b.pi
           cases heq₁
-          
-          sorry
+          match heq₂.cases_head with
+          | .inl h =>
+            cases h
+            have h := h_r_τ.to_reduces.quot.pi
+            simp_all
+          | .inr ⟨_, h₁, h₂⟩ =>
+            cases h₁ with
+            | curr h => cases h with | pi' h => cases h with | quot h => cases h
     | curr =>
-      sorry
+      cases ht with
+      | app h_t_f hb h_t_x h_r_τ =>
+        cases h_t_f with
+        | curr a b c d e f =>
+          have ⟨a₁, b₁, c₁, d₁, e₁, f₁, g₁⟩ := f.pi
+          cases g₁
+          have h := hb.id
+          obtain ⟨a, b, c⟩ := c₁.quot
+          cases c
+          have ⟨_, heq₁, heq₂⟩ := b.pi
+          cases heq₁
+          match heq₂.cases_head with
+          | .inl h =>
+            cases h
+            have h := h_r_τ.to_reduces.quot.pi
+            simp_all
+          | .inr ⟨_, h₁, h₂⟩ =>
+            cases h₁ with
+            | curr h =>
+              have h := h_r_τ.to_reduces.quot.pi
+              simp_all
   | tintro | top | eq | bot => cases ht
   | comb => exact (ht.comb_ty_not_eq (by assumption)).elim
   | pi₁ =>

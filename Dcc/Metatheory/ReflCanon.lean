@@ -279,6 +279,8 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
                     have h_dec := RedAff.instRedRel.decreasing h
                     have h_t' := h_t.preservation (.congrArg h)
                     exact refl_ty_heq h_t'
+              | congrFun h => cases h
+              | congrArg h => exact (f ⟨_, h⟩).elim
           | congrArg h =>
             have h_dec := RedAff.instRedRel.decreasing h
             have h_t' := h_t.preservation (.congrArg h)

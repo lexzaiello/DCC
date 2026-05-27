@@ -154,9 +154,13 @@ theorem refl_inhabits_id
     
     sorry)) (by sorry) (by sorry) (by sorry)) (by sorry) (by sorry) (by sorry)
 
+theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
+  
+  sorry
+
 -- IMPORTANT
 -- somewhat easy
-theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
+/-theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
   match h_t with
   | .app h_t_f h_r_α h_t_x h_r_τ =>
     match h_t_f with
@@ -167,12 +171,30 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y :
         dcc_aesop!
         cases a_30 with
         | refl =>
-          sorry
+          cases a_28 with
+          | single h => cases h
+          | tail ih h =>
+            cases a with
+            | app h_t_refl _ _ _ =>
+              cases h_t_refl with
+              | refl =>
+                cases h with
+                | quot =>
+                  
+                  sorry
+          /-
+          cases a with
+          | app h_t_refl b c d  =>
+            dcc_aesop!
+            cases h_t_refl with
+            | refl =>
+              
+              sorry-/
         | tail ih h =>
           have ⟨f_α, env, heq⟩ := h.eq'
           cases heq
           cases h
-          rfl
+          rfl-/
 
 /-
 induction using Expr.instWellFounded?

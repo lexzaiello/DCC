@@ -350,6 +350,33 @@ end Reduced
 
 namespace Reduces
 
+theorem curr (h : Reduces (DCC (Λ(α, β, x) y z)) B) : Reduces (DCC (x ⟦β⟧(y, z))) B := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      exact (hn₁ ⟨_, .curr⟩).elim
+    | .inr ⟨_, h₁, h₂⟩ =>
+      cases h₁ with
+      | curr => exact ⟨h₂, hn₁, hr₂, hn₂⟩
+      | congrFun h =>
+        cases h with
+        | congrFun h => cases h
+        | congrArg hr =>
+          have h_dec := RedAff.instRedRel.decreasing hr
+          have h := curr ⟨h₂, hn₁, hr₂, hn₂⟩
+          match h with
+          | ⟨ha, hb, hc, hd⟩ =>
+            exact ⟨.trans (.single (.congrArg (.sigl hr))) ha, hb, hc, hd⟩
+      | congrArg hr =>
+        have h_dec := RedAff.instRedRel.decreasing hr
+        have h := curr ⟨h₂, hn₁, hr₂, hn₂⟩
+        match h with
+        | ⟨ha, hb, hc, hd⟩ =>
+          exact ⟨.trans (.single (.congrArg (.sigr hr))) ha, hb, hc, hd⟩
+termination_by (y.size + z.size)
+
 theorem quot (h : Reduces (DCC (`(α, x') x y)) B) : Reduces (DCC (x' y)) B := by
   match h with
   | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>

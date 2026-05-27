@@ -161,11 +161,23 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
         match ha.cases_head with
         | .inl h =>
           cases h
-          
-          sorry
+          have h := h_r_τ.to_reduces.curr
+          have h := h.quot₁
+          match h with
+          | ⟨ha, hb, hc, hd⟩ =>
+            match ha.cases_head with
+            | .inl h =>
+              cases h
+              match hc.cases_head with
+              | .inl h => simp_all
+              | .inr ⟨_, h₁, h₂⟩ => cases h₁
+            | .inr ⟨_, h₁, h₂⟩ => cases h₁
         | .inr ⟨_, h₁, h₂⟩ =>
-          
-          sorry
+          cases h₁ with
+          | curr hr =>
+            cases hr with
+            | quot hr =>
+              cases hr
 
 /-
 Progress might be important for this too since we can establish what normal forms are.

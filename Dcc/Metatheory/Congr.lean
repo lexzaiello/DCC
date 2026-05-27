@@ -350,6 +350,34 @@ end Reduced
 
 namespace Reduces
 
+theorem congrFun (h : RedAff f f') (he : Reduces (DCC (f x)) B) : Reduces (DCC (f' x)) B := by
+  match he with
+  | ⟨ha, hb, hc, hd⟩ =>
+    have h₂ : (DCC (f x)).RedAffReflTrans (DCC (f' x)) := .single (.congrFun h)
+    have ⟨D, h₁, h₂⟩ := RedAff.instRedRel.globally_confluent.conf ha h₂
+    have h := hb.unique_refl h₁
+    cases h
+    exact ⟨h₂, hb, hc, hd⟩
+
+theorem id (h : Reduces (DCC (Id(α) x)) B) : Reduces x B := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      exact (hn₁ ⟨_, .id⟩).elim
+    | .inr ⟨_, h₁, h₂⟩ =>
+      cases h₁ with
+      | id => exact ⟨h₂, hn₁, hr₂, hn₂⟩
+      | congrFun h => cases h
+      | congrArg hr =>
+        have h_dec := RedAff.instRedRel.decreasing hr
+        have h := id ⟨h₂, hn₁, hr₂, hn₂⟩
+        match h with
+        | ⟨ha, hb, hc, hd⟩ =>
+          exact ⟨.trans (.single hr) ha, hb, hc, hd⟩
+termination_by x.size
+
 theorem curr (h : Reduces (DCC (Λ(α, β, x) y z)) B) : Reduces (DCC (x ⟦β⟧(y, z))) B := by
   match h with
   | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
@@ -376,6 +404,22 @@ theorem curr (h : Reduces (DCC (Λ(α, β, x) y z)) B) : Reduces (DCC (x ⟦β�
         | ⟨ha, hb, hc, hd⟩ =>
           exact ⟨.trans (.single (.congrArg (.sigr hr))) ha, hb, hc, hd⟩
 termination_by (y.size + z.size)
+
+theorem quot₁ (h : Reduces (DCC (`(α, x') x)) B) : Reduces x' B := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      exact (hn₁ ⟨_, .quot⟩).elim
+    | .inr ⟨_, h₁, h₂⟩ =>
+      cases h₁ with
+      | quot => exact ⟨h₂, hn₁, hr₂, hn₂⟩
+      | congrFun h => cases h
+      | congrArg hr =>
+        have h_dec := RedAff.instRedRel.decreasing hr
+        exact quot₁ ⟨h₂, hn₁, hr₂, hn₂⟩
+termination_by x.size
 
 theorem quot (h : Reduces (DCC (`(α, x') x y)) B) : Reduces (DCC (x' y)) B := by
   match h with

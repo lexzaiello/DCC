@@ -2,6 +2,7 @@ import Dcc.Ast
 import Dcc.Judge
 import Dcc.Tactic.Reduce
 import Dcc.Metatheory.Congr
+import Dcc.Metatheory.Preservation
 
 /-
 Want to automate IsNorm, but sounds hard.
@@ -121,6 +122,12 @@ theorem Value.is_norm_eta (h : Value e) : IsNorm RedEta e := by
 
 namespace Judge
 
+/-
+Substitution lemma...
+
+adding a 
+-/
+
 -- Probably somewhat easy to prove
 theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
   (hv : Value e) : ∃ f_α env, e = (DCC (refl(f_α) env x)) ∧ env.Value ∧ x.Value := by
@@ -154,9 +161,153 @@ theorem refl_inhabits_id
     
     sorry)) (by sorry) (by sorry) (by sorry)) (by sorry) (by sorry) (by sorry)
 
+/-theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
+  induction env using RedAff.instRedRel.wellFounded.induction with
+  | h env ih =>
+    have ⟨a, b, c, d, h_t_refl_env, f, g, h⟩ := h_t.invert rfl
+    have ⟨i, j, k, l, m, o, p, q⟩ := h_t_refl_env.invert rfl
+    cases m with
+    | refl r s =>
+      match q with
+      | ⟨hr₁, hn₁, hr₂, hr₄⟩ =>
+        cases hr₁ using Relation.TransGen.head_induction_on with
+        | single h =>
+          cases h with
+          | congrFun h =>
+            
+            sorry
+          | congrArg h =>
+            sorry
+          | curr =>
+            sorry
+        | head h ih =>
+          sorry-/
+
 theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
-  
-  sorry
+  have ⟨a, b, c, d, h_t_refl_env, f, g, h⟩ := h_t.invert rfl
+  have ⟨i, j, k, l, m, o, p, q⟩ := h_t_refl_env.invert rfl
+  cases m with
+  | refl r s =>
+    dcc_simp_all (! !)
+    match s with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      cases hr₁.cases_head with
+      | inl h =>
+        cases h
+        cases hr₂.cases_head with
+        | inl h =>
+          cases h
+          match q with
+          | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+            cases hr₁ using Relation.TransGen.head_induction_on with
+            | single h =>
+              cases h with
+              | congrFun h =>
+                cases h with
+                | quot =>
+                  sorry
+                | congrArg h =>
+                  sorry
+                | congrFun h =>
+                  sorry
+              | congrArg h =>
+                sorry
+            | head h ih =>
+              cases h with
+              | congrFun h =>
+                cases h with
+                | quot =>
+                  sorry
+                | congrArg h =>
+                  sorry
+                | congrFun h =>
+                  sorry
+              | congrArg h =>
+                rename_i x' _
+                have h_dec := RedAff.instRedRel.decreasing h
+                let h_t' := h_t.preservation (.congrFun (.congrArg h))
+                exact refl_ty_heq (env := x') h_t'
+        | inr h =>
+          have ⟨C, h₁, h₂⟩ := h
+          cases h₁ with
+          | pi h =>
+            cases h with
+            | pi' h =>
+              cases h with
+              | quot h =>
+                cases h with
+                | pi' h =>
+                  cases h
+      | inr h =>
+        sorry
+
+/-
+refl(f_α) env x
+-/
+theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
+  match h_t with
+  | .app (.app (.refl h_t_f_α h_r_refl_ty) h_r_α h_t_env h_r') h_r'' h_t_x ⟨h_r_xy₁, hn₁, h_r_xy₂, hn₂⟩ =>
+    --dcc_simp_all (! !)
+    match h_r_refl_ty with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      cases hr₁.cases_head with
+      | inl h =>
+        cases h
+        dcc red !  aff
+        dcc_aesop!
+        dcc red !  eta
+        
+        sorry
+      | inr h =>
+        sorry
+    /-cases h_r_xy₂ with
+    | tail ih h => cases h; rfl
+    | refl =>
+      dcc red ! aff
+      dcc_aesop!
+      cases a
+      
+      sorry-/
+
+/-theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
+  cases h_t with
+  | app h_t_f h_r_α h_t_x h_r_τ =>
+    cases h_t_f with
+    | app h_t_f' h_r_α' h_t_x' h_r_τ' =>
+      cases h_t_f' with
+      | refl a b =>
+        match h_r_τ' with
+        | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+          cases hr₁ with
+          | single h =>
+            sorry
+          | tail h ih =>
+            
+            sorry-/
+          /-cases hr₁ using Relation.TransGen.head_induction_on with
+          | single h =>
+            cases h
+            sorry
+          | head h hr₂ =>
+            cases h with
+            | congrFun h =>
+              cases h with
+              | quot =>
+                cases hr₂ using Relation.TransGen.head_induction_on with
+                | single h =>
+                  sorry
+                | head h hr₂ =>
+                  cases h with
+                  | congrFun h => cases h
+                  | congrArg h =>
+                    simp_all
+                    cases hr₂ using Relation.TransGen.head_induction_on with
+                    | single h =>
+                      sorry
+                    | head ha hb =>
+                      cases ha with
+                      | congrFun h => cases h-/
+                      
 
 -- IMPORTANT
 -- somewhat easy

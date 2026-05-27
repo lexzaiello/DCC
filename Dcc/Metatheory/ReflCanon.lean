@@ -95,7 +95,7 @@ inductive Value : Expr → Prop
   | pi₂    : Value f_β → Value env → Value (DCC (Π(f_α, f_β) env))
   | refl₁  : Value env → Value (DCC (refl(f_α) env))
   | refl₂  : Value env → Value x → Value (DCC (refl(f_α) env x))
-  | coup   : Value (DCC Coup(f_β))
+  | coup   : Value f_β → Value (DCC Coup(f_β))
   | eq     : Value (DCC x = y)
   | comb   : IsRedComb c m → Value c
   | c_app  : IsRedComb f 2 → Value f → Value x → Value (DCC (f x))
@@ -105,8 +105,52 @@ inductive Value : Expr → Prop
   | sort   : Value (DCC Sort m)
 
 theorem Value.is_norm_aff (h : Value e) : IsNorm RedAff e := by
-  
-  sorry
+  induction h with
+  | pi₁ h_val_f_β =>
+    exact fun ⟨_, h⟩ => by cases h
+  | pi₂ h_val_f_β h_val_env ih₁ ih₂  =>
+    exact fun ⟨_, h⟩ => by
+      cases h with
+      | congrFun h => cases h
+      | congrArg h =>
+        exact (ih₂ ⟨_, h⟩).elim
+  | refl₁ _ ih =>
+    exact fun ⟨_, h⟩ => by
+      cases h with
+      | congrFun h => cases h
+      | congrArg h =>
+        exact (ih ⟨_, h⟩).elim
+  | refl₂ h_val_f_β h_val_env ih₁ ih₂  =>
+    exact fun ⟨_, h⟩ => by
+      cases h with
+      | congrFun h =>
+        cases h with
+        | congrFun h => cases h
+        | congrArg h =>
+          exact (ih₁ ⟨_, h⟩).elim
+      | congrArg h =>
+        exact (ih₂ ⟨_, h⟩).elim
+  | top | bot | tintro | sort => exact fun ⟨_, h⟩ => by cases h
+  | coup _ ih =>
+    exact fun ⟨_, h⟩ => by
+      cases h with
+    | coup h =>
+      exact (ih ⟨_, h⟩).elim
+  | eq => exact fun ⟨_, h⟩ => by cases h
+  | comb =>
+    sorry
+  | c_app h_c_f h_val_f h_val_x ih₁ ih₂ =>
+    cases h_c_f with
+    | eql =>
+      exact fun ⟨_, h⟩ => by
+        cases h with
+        | congrFun h => cases h
+        | congrArg h => exact (ih₂ ⟨_, h⟩).elim
+    | curr =>
+      exact fun ⟨_, h⟩ => by
+        cases h with
+        | congrFun h => cases h
+        | congrArg h => exact (ih₂ ⟨_, h⟩).elim
 
 theorem Value.is_norm_eta (h : Value e) : IsNorm RedEta e := by
   sorry

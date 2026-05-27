@@ -374,6 +374,17 @@ theorem quot (h : Reduces (DCC (`(α, x') x y)) B) : Reduces (DCC (x' y)) B := b
           exact ⟨.trans (.single (.congrArg hr)) ha, hb, hc, hd⟩
 termination_by (x.size + y.size)
 
+theorem eql_comp_id (h : Reduces (DCC (Eql(f_α) ∘' Id(α₂))) B) : B = (DCC (Eql(f_α) ∘' Id(α₂))) := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      match hr₂.cases_head with
+      | .inl h => cases h; rfl
+      | .inr ⟨_, h₁, h₂⟩ => cases h₁
+    | .inr ⟨_, h₁, h₂⟩ => cases h₁
+
 end Reduces
 
 namespace RedEtaReflTrans

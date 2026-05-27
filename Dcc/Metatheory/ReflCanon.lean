@@ -208,7 +208,7 @@ there are two arguments, so two Pi's should be useful.
 
 -/
 
-theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
+theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = y := by
   obtain ⟨a, b, c, d, h_t_refl_env, f, g, ⟨hr₁, hn₁, hr₂, hn₂⟩⟩ := h_t.invert rfl
   obtain ⟨i, j, k, l, m, o, p, q⟩ := h_t_refl_env.invert rfl
   cases m with
@@ -221,8 +221,58 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y :
     have hr_env := q.to_reduces.quot
     have ⟨f_β', h_x'_eq, hrtx'⟩ := hrt.pi
     cases h_x'_eq
-    
-    sorry
+    have ⟨a, b, c, d, e, f, heq'⟩ := hr_env.pi
+    match hrtx'.cases_head with
+    | .inl heq'' =>
+      cases heq''
+      simp_all
+      match c.cases_head with
+      | .inl heq''' =>
+        cases heq'''
+        simp_all
+        cases hr₁ using Relation.TransGen.head_induction_on with
+        | single h =>
+          cases h with
+          | congrFun h =>
+            match hr₂.eq with
+            | .inl ⟨_, _, h₁, h₂⟩ => exact h₂
+            | .inr h => simp_all
+          | congrArg h =>
+            have h_dec := RedAff.instRedRel.decreasing h
+            have h_t' := h_t.preservation (.congrArg h)
+            exact refl_ty_heq h_t'
+        | head h ih =>
+          cases h with
+          | congrFun h =>
+            match hr₂.eq with
+            | .inl ⟨_, _, h₁, h₂⟩ => exact h₂
+            | .inr h =>
+              cases h
+              cases h with
+              | comp =>
+                change RedAffTrans _ _ at ih
+                cases ih using Relation.TransGen.head_induction_on with
+                | single h => cases h
+                | head h ih =>
+                  cases h with
+                  | congrFun h =>
+                    cases h with
+                    | congrFun h => cases h
+                    | congrArg h =>
+                      cases h with
+                      | id =>
+                        
+                        sorry
+                  | congrArg h =>
+                    have h_dec := RedAff.instRedRel.decreasing h
+                    sorry
+          | congrArg h =>
+            have h_dec := RedAff.instRedRel.decreasing h
+            have h_t' := h_t.preservation (.congrArg h)
+            exact refl_ty_heq h_t'
+      | .inr ⟨_, h, _⟩ => cases h
+    | .inr ⟨_, h, _⟩ => cases h
+termination_by x₀.size
 
 theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y := by
   obtain ⟨a, b, c, d, h_t_refl_env, f, g, ⟨hr₁, hn₁, hr₂, hn₂⟩⟩ := h_t.invert rfl

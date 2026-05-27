@@ -291,39 +291,6 @@ theorem comb_ty_not_eq (ht : Judge c (DCC (x = y))) (hv : IsRedComb c n) : False
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hd.pi
       cases hd
 
-/-
-To prove app case:
-a partial application can never have eq type, since partial application has a function type
-
-IsRedCombApp (m + 1) → ∃ f_α f_β env, τ = (DCC (Π(f_α, f_β), env))
--/
-
-theorem par_app_has_fn_type (ht : Judge e τ) (hc : IsRedCombApp e (m + 1)) : ∃ f_α f_β env, τ = (DCC (Π(f_α, f_β) env)) := by
-  cases hc with
-  | app =>
-    cases ht with
-    | app =>
-      
-      sorry
-
-/-theorem par_apps_no_eq (ht : Judge e (DCC (x = y))) (hc : IsRedCombApp e (m + 1)) : False := by
-  induction m with
-  | succ h ih =>
-    cases hc with
-    | eql =>
-      
-      sorry
-    | app h =>
-      cases ht with
-      | app =>
-        
-        sorry
-  | zero =>
-    cases hc with
-    | id =>
-      exact (ht.comb_ty_not_eq .id).elim
-      -/
-
 -- Probably somewhat easy to prove
 open Congruent in
 theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))

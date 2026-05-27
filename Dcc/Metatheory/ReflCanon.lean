@@ -13,6 +13,7 @@ namespace Expr
 abbrev Arity := ℕ
 
 -- Combinators that can make a step with their well-typed arguments
+-- with a list of their points
 inductive IsRedComb : Expr → Arity → Type
   -- Eql(f_α) env x -> (x = x)
   | eql   : IsRedComb (DCC Eql(f_α)) 2
@@ -140,8 +141,7 @@ theorem Value.is_norm_aff (h : Value e) : IsNorm RedAff e := by
     | coup h =>
       exact (ih ⟨_, h⟩).elim
   | eq => exact fun ⟨_, h⟩ => by cases h
-  | comb =>
-    sorry
+  | comb h => exact h.is_norm_aff
   | c_app h_c_f h_val_f h_val_x ih₁ ih₂ =>
     cases h_c_f with
     | eql =>
@@ -154,9 +154,6 @@ theorem Value.is_norm_aff (h : Value e) : IsNorm RedAff e := by
         cases h with
         | congrFun h => cases h
         | congrArg h => exact (ih₂ ⟨_, h⟩).elim
-
-theorem Value.is_norm_eta (h : Value e) : IsNorm RedEta e := by
-  sorry
 
 /-inductive IsComb : Expr → Arity → Type
   -- env x
@@ -187,7 +184,7 @@ namespace Judge
 /-
 Substitution lemma...
 
-adding a 
+adding a
 -/
 
 /-

@@ -261,11 +261,24 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
                     | congrArg h =>
                       cases h with
                       | id =>
-                        
-                        sorry
+                        cases ih using Relation.TransGen.head_induction_on with
+                        | single h => cases h
+                        | head h ih =>
+                          cases h with
+                          | congrFun h =>
+                            cases h with
+                            | congrFun h => cases h
+                            | congrArg h => exact (f ⟨_, h⟩).elim
+                          | congrArg h =>
+                            have h_dec := RedAff.instRedRel.decreasing h
+                            have h_t' := h_t.preservation (.congrArg h)
+                            exact refl_ty_heq h_t'
+                      | congrFun h => cases h
+                      | congrArg h => exact (f ⟨_, h⟩).elim
                   | congrArg h =>
                     have h_dec := RedAff.instRedRel.decreasing h
-                    sorry
+                    have h_t' := h_t.preservation (.congrArg h)
+                    exact refl_ty_heq h_t'
           | congrArg h =>
             have h_dec := RedAff.instRedRel.decreasing h
             have h_t' := h_t.preservation (.congrArg h)

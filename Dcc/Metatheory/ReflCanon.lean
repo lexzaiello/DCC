@@ -291,10 +291,22 @@ theorem comb_ty_not_eq (ht : Judge c (DCC (x = y))) (hv : IsRedComb c n) : False
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hd.pi
       cases hd
 
+/-
+To prove app case:
+a partial application can never have eq type, since partial application has a function type
+
+IsRedCombApp (m + 1) → ∃ f_α f_β env, τ = (DCC (Π(f_α, f_β), env))
+-/
+
 -- Probably somewhat easy to prove
 theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
   (hv : Value e) : ∃ f_α env, e = (DCC (refl(f_α) env x)) ∧ env.Value ∧ x.Value := by
   induction hv with
+  | app a h_val_f h_val_x ih_f ih_x =>
+    
+    sorry
+  | tintro | top | eq | bot => cases ht
+  | comb => exact (ht.comb_ty_not_eq (by assumption)).elim
   | pi₁ =>
     cases ht with
     | pi h_t_f_α h_t_f_β hr =>

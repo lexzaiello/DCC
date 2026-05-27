@@ -33,6 +33,9 @@ inductive IsRedComb : Expr → Arity → Type
   -- Λ(α, β, x) y z
   | curr  : IsRedComb (DCC Λ(α, β, x)) 2
 
+theorem IsRedComb.is_norm_aff (h : IsRedComb e m) : IsNorm RedAff e := fun ⟨_, hr⟩ => by
+  cases h <;> cases hr
+
 inductive IsRedCombApp : Expr → Arity → Type
   -- Eql(f_α) env x -> (x = x)
   | eql   : IsRedCombApp (DCC Eql(f_α)) 2

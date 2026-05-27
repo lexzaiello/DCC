@@ -105,6 +105,7 @@ inductive Value : Expr → Prop
   | sort   : Value (DCC Sort m)
 
 theorem Value.is_norm_aff (h : Value e) : IsNorm RedAff e := by
+  
   sorry
 
 theorem Value.is_norm_eta (h : Value e) : IsNorm RedEta e := by
@@ -150,11 +151,16 @@ If e : (x = y), then either e is a normal form (e.g., refl), or it reduces to (w
 theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
   sorry
 
+theorem preservation_eta (ht : Judge A t) (hr : RedEta A B) : Judge B t := by
+  sorry
+
 theorem progress (ht : Judge e τ) : Value e ∨ (∃ e', RedAff e e') := by
   sorry
 
 theorem preservation' (ht : Judge A t) (hr : Reduces A B) : Judge B t := by
-  sorry
+  match hr with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    sorry
 
 theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = y := by
   obtain ⟨a, b, c, d, h_t_refl_env, f, g, ⟨hr₁, hn₁, hr₂, hn₂⟩⟩ := h_t.invert rfl

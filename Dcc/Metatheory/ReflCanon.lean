@@ -193,7 +193,34 @@ If e : (x = y), then either e is a normal form (e.g., refl), or it reduces to (w
 -/
 
 theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
-  sorry
+  induction ht generalizing B
+  any_goals (
+    focus
+    cases hr
+    done)
+  case coup ih =>
+    cases hr with
+    | coup h => exact Judge.coup (ih h) (by assumption) (by assumption)
+  case mk ih₁ ih₂ ih₃ =>
+    cases hr with
+    | sigl h =>
+      rename_i βx_red _ _
+      exact Judge.mk (ih₁ h) (by assumption) (by assumption)
+        (by assumption) (βx_red.head_trans (.congrArg h)) (by assumption)
+    | sigr h =>
+      rename_i βx_red _ _
+      exact Judge.mk (by assumption) (ih₂ h) (by assumption)
+        (by assumption) (by assumption) (by assumption)
+  case app ih₁ ih₂ =>
+    cases hr with
+    | congrFun h =>
+      exact Judge.app (ih₁ h) (by assumption) (by assumption) (by assumption)
+    | congrArg h =>
+      rename_i hrτ _
+      have ha := hrτ.to_reduces.head_trans (.congrArg h)
+      exact Judge.app (by assumption) (by assumption) (ih₂ h) (by assumption)
+    | quot =>
+      sorry
 
 theorem preservation_eta (ht : Judge A t) (hr : RedEta A B) : Judge B t := by
   sorry

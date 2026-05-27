@@ -27,7 +27,6 @@ theorem pi (h : RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', B = (DCC (Π(f_
     rename_i x'
     exact ⟨x', rfl⟩
 
-@[dcc_reduce]
 theorem no_red_pi_aff (h_r : RedAff (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
   cases h_r
 
@@ -77,16 +76,13 @@ theorem eq_eql (h_step : RedEta A (DCC (x = y))) : ∃ f_α env, x = y ∧ A = (
   cases h_step with
   | eql => exact ⟨_, _, rfl, rfl⟩
 
-@[dcc_reduce]
 theorem eq_norm_refl (h_step : RedEta A (DCC (x = y))) (h : IsNorm RedEta (DCC (x = y))) : x = y := by
   cases h_step with
   | eql => rfl
 
-@[dcc_reduce]
 theorem no_coup (h : RedEta (DCC Coup(β)) B) : False := by
   cases h
 
-@[dcc_reduce]
 theorem no_pi_eq (h_r : RedEta (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
   cases h_r
 
@@ -106,7 +102,6 @@ def head (e : Expr) : Expr :=
 
 namespace RedAffReflTrans
 
-@[dcc_reduce]
 theorem no_coup_eq (h_r : RedAffReflTrans (DCC Coup(β)) (DCC x = y)) : False := by
   cases h_r.cases_head with
   | inl h => simp_all
@@ -118,7 +113,6 @@ theorem no_coup_eq (h_r : RedAffReflTrans (DCC Coup(β)) (DCC x = y)) : False :=
       exact no_coup_eq h₂
 termination_by β.size
 
-@[dcc_reduce]
 theorem no_pi_eq (h_r : RedAffReflTrans (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
   cases h_r.cases_head with
   | inl h => simp_all
@@ -203,7 +197,6 @@ theorem pi_norm
         exact ⟨_, heq, .trans (.single hr) h_r_β', h_n_β'⟩
 termination_by f_β.size
 
-@[dcc_reduce]
 theorem no_coup_eq (h_r : RedEtaReflTrans (DCC Coup(β)) (DCC x = y)) : False := by
   cases h_r.cases_head with
   | inl h => simp_all
@@ -211,7 +204,6 @@ theorem no_coup_eq (h_r : RedEtaReflTrans (DCC Coup(β)) (DCC x = y)) : False :=
     have ⟨C, h₁, h₂⟩ := h
     cases h₁
 
-@[dcc_reduce]
 theorem no_pi_eq (h_r : RedEtaReflTrans (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
   let f_β₀ := f_β
   cases h_r.cases_head with
@@ -226,7 +218,6 @@ theorem no_pi_eq (h_r : RedEtaReflTrans (DCC (Π(f_α, f_β) env)) (DCC x = y)) 
         exact no_pi_eq h₂
 termination_by f_β.size
 
-@[dcc_reduce]
 theorem coup (h : RedEtaReflTrans (DCC Coup(β)) B) : (DCC Coup(β)) = B := by
   match h.cases_head with
   | .inl h => exact h
@@ -313,8 +304,8 @@ theorem pi_shape (h : Reduces (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env', �
     have ⟨_, heq, _, _⟩ := hr₂.pi_norm hn₂
     exact ⟨_, _, heq⟩
 
-@[dcc_force_reduce, inline] abbrev red_aff (e : Expr) := (reduce RedAff e).fst
-@[dcc_force_reduce, inline] abbrev red_eta (e : Expr) := (reduce RedEta e).fst
+abbrev red_aff (e : Expr) := (reduce RedAff e).fst
+abbrev red_eta (e : Expr) := (reduce RedEta e).fst
 
 /-
 if r A B, then reduce A = reduce B

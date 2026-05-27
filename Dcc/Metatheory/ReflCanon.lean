@@ -1,6 +1,7 @@
 import Dcc.Ast
 import Dcc.Judge
 import Dcc.Tactic.Reduce
+import Dcc.Metatheory.Congr
 
 /-
 Want to automate IsNorm, but sounds hard.
@@ -163,8 +164,15 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y :
       match h_t_f' with
       | .refl h_t_f_α h_r_refl =>
         dcc red ! aff
-        
-        sorry
+        dcc_aesop!
+        cases a_30 with
+        | refl =>
+          sorry
+        | tail ih h =>
+          have ⟨f_α, env, heq⟩ := h.eq'
+          cases heq
+          cases h
+          rfl
 
 /-
 induction using Expr.instWellFounded?

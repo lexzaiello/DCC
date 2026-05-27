@@ -9,7 +9,7 @@ open Lean (ToExpr)
 gen_ast as MetaExpr
   with Lean.Expr *
   decode sort with _root_.id
-  deriving BEq, Repr, ToExpr
+  deriving BEq, Repr, ToExpr, Inhabited
 gen_dsl "DCC'" for MetaExpr
 
 namespace GenAst

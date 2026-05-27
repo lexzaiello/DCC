@@ -396,17 +396,17 @@ def is_red_for_norm (b : Q(_root_.Expr)) (r : Q(_root_.Expr → _root_.Expr → 
 
 def mk_hyps (lctx : LocalContext) (r : Q(_root_.Expr → _root_.Expr → Prop))
   (t : Q(_root_.Expr → ℕ))
-  (r_rel : Q(_root_.Expr.RedRel $r $t))
-  (mk_heq : Q(∀ {A B : _root_.Expr}
+  (r_rel : Q(Expr.RedRel $r $t))
+  (mk_heq : Q(∀ (A B : _root_.Expr)
     (hr : Relation.ReflTransGen $r A B),
-    _root_.Expr.IsNorm $r B → (_root_.Expr.reduce (hR := $r_rel) $r A) = ⟨B, ⟨hr⟩⟩)) : TacticM (Array Meta.Hypothesis) := do
+    Expr.IsNorm $r B → (Expr.reduce (hR := $r_rel) $r A) = ⟨B, ⟨hr⟩⟩)) : TacticM (Array Meta.Hypothesis) := do
   let decls := lctx.decls.toArray.filterMap _root_.id
-  let base : Array ((a : Q(_root_.Expr)) × Q(_root_.Expr.IsNorm $r $a) × LocalDecl) ← decls.filterMapM (fun (decl : LocalDecl) => do
+  let base : Array ((a : Q(_root_.Expr)) × Q(Expr.IsNorm $r $a) × LocalDecl) ← decls.filterMapM (fun (decl : LocalDecl) => do
     let some decl_ty ← Meta.liftMetaM <| Qq.checkTypeQ decl.type q(Prop) | return Option.none
     match decl_ty with
-    | ~q(_root_.Expr.IsNorm $r₂ $B) =>
+    | ~q(Expr.IsNorm (α := _root_.Expr) $r₂ $B) =>
       if ← isDefEq r r₂ then
-        let some proof ← Meta.liftMetaM <| Qq.checkTypeQ decl.value q(_root_.Expr.IsNorm $r₂ $B) | return Option.none
+        let some proof ← Meta.liftMetaM <| Qq.checkTypeQ decl.value q(Expr.IsNorm $r $B) | return Option.none
         return .some ⟨B, proof, decl⟩
       else return .none
     | _ => return Option.none)
@@ -414,21 +414,23 @@ def mk_hyps (lctx : LocalContext) (r : Q(_root_.Expr → _root_.Expr → Prop))
     let red_proofs ← decls.filterMapM (fun ldecl' => do
       is_red_for_norm a r ldecl')
     let hyps : Array Meta.Hypothesis ← red_proofs.mapM (fun ⟨e₀, hrt⟩ => do
-      let h := q($mk_heq $hrt $hn)
-      return ⟨← mkFreshUserName ldecl.userName, q(Expr.reduce $r $e₀ = ⟨$a, ⟨$hrt⟩⟩), h, .default, .default⟩)
+      let h := q($mk_heq (A := $e₀) (B := $a) $hrt $hn)
+      return ⟨← mkFreshUserName ldecl.userName, (← Meta.inferType h), h, .default, .default⟩)
     pure hyps)
   pure hyps
 
-def do_complete_all : TacticM Unit := do
+def do_reduce_complete_all : TacticM Unit := do
   let g ← getMainGoal
   g.withContext do
     let lctx ← getLCtx
-    let aff_hyps ← mk_hyps lctx q(_root_.Expr.RedAff) q(_root_.Expr.size)
-      q(_root_.Expr.RedAff.instRedRel) q(_root_.Expr.reduce_complete (r := _root_.Expr.RedAff)
-        (t := _root_.Expr.size) (hR := _root_.Expr.RedAff.instRedRel))
-    let eta_hyps ← mk_hyps lctx q(_root_.Expr.RedEta) q(_root_.Expr.size)
-      q(_root_.Expr.RedEta.instRedRel) q(_root_.Expr.reduce_complete (r := _root_.Expr.RedEta)
-        (t := _root_.Expr.size) (hR := _root_.Expr.RedEta.instRedRel))
+    let aff_hyps ← mk_hyps lctx q(Expr.RedAff) q(Expr.size)
+      q(Expr.RedAff.instRedRel) q(fun a b => Expr.reduce_complete (A := a) (B := b)
+        (r := Expr.RedAff) (t := Expr.size) (hR := Expr.RedAff.instRedRel)
+        (hC := Expr.RedAff.instConf) (hN := Expr.RedAff.instSemicomplete))
+    let eta_hyps ← mk_hyps lctx q(Expr.RedEta) q(Expr.size)
+      q(Expr.RedEta.instRedRel) q(fun a b => Expr.reduce_complete (A := a) (B := b)
+        (r := Expr.RedEta) (t := Expr.size) (hR := Expr.RedEta.instRedRel)
+        (hC := Expr.RedEta.instConf) (hN := Expr.RedEta.instSemicomplete))
     let ⟨_, g'⟩ ← g.assertHypotheses (aff_hyps ++ eta_hyps)
     replaceMainGoal [g']
 
@@ -717,6 +719,7 @@ elab "dcc" cmd:reduce_cmd n_round:num : tactic => do
           let _ ← replaceMainGoal subgoals.toList
           pure ()) ()
         do_norm_unique_all
+        --do_reduce_complete_all
       | cmd => throwError m!"command not supported by DCC !: {repr cmd}"
 
 elab "dcc" cmd:reduce_cmd : tactic => do

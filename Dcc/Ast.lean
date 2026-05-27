@@ -206,7 +206,7 @@ end GenAst
 open GenAst in
 open Lean (ToExpr) in
 gen_ast as Expr
-  deriving BEq, DecidableEq, ToExpr
+  deriving BEq, DecidableEq, ToExpr, Inhabited
 
 #check Expr.sort
 

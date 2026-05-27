@@ -218,6 +218,9 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y :
     obtain ⟨⟨h₁, h₂⟩, h₃⟩ := h₈
     have ⟨x', hrt, heq⟩ := h₄.quot
     cases heq
+    have hr_env := q.to_reduces.quot
+    have ⟨f_β', h_x'_eq, hrtx'⟩ := hrt.pi
+    cases h_x'_eq
     
     sorry
 

@@ -194,3 +194,9 @@ def reduce_reduces (h : reduce_all A = B) : Reduces A B := ⟨
   h ▸ (reduce_norm rfl)⟩
 
 def reduce_reduces' : Reduces A (reduce_all A) := reduce_reduces rfl
+
+def Reduced.to_reduces (h : Reduced A B) : Reduces A B :=
+  match h with
+  | ⟨ha, hb, hc, hd⟩ => ⟨ha.to_reflTrans, hb, hc, hd⟩
+
+end Expr

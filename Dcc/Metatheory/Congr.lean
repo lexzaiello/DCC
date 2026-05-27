@@ -378,6 +378,20 @@ end Reduces
 
 namespace RedEtaReflTrans
 
+theorem pi (h : RedEtaReflTrans (DCC (Π(f_α, f_β))) B) : ∃ f_β', (B = (DCC Π(f_α, f_β')) ∧ RedEtaReflTrans f_β f_β') := by
+  cases h.cases_head with
+  | inl h =>
+    cases h
+    exact ⟨_, rfl, .refl⟩
+  | inr h =>
+    have ⟨C, h₁, h₂⟩ := h
+    cases h₁ with
+    | pi' h =>
+      have h_dec := RedEta.instRedRel.decreasing h
+      have ⟨x', hrt, heq⟩ := pi h₂
+      exact ⟨_, hrt, .trans (.single h) heq⟩
+termination_by f_β.size
+
 theorem quot (h : RedEtaReflTrans (DCC `(α, x)) B) : ∃ x', RedEtaReflTrans x x' ∧ B = (DCC `(α, x')) := by
   cases h.cases_head with
   | inl h => cases h; exact ⟨_, .refl, rfl⟩

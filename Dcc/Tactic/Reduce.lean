@@ -1,4 +1,6 @@
 import Mathlib.Logic.Relation
+-- Slide deck worked before this change. it might work after. if it breaks that's why
+import Mathlib.Tactic.CasesM
 import Dcc.Ast
 import Dcc.Judge
 import Dcc.Attrs

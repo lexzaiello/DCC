@@ -350,6 +350,18 @@ end Reduced
 
 namespace Reduces
 
+theorem sort (he : Reduces (DCC Sort o) B) : B = (DCC Sort o) := by
+  match he with
+  | ⟨ha, hb, hc, hd⟩ =>
+    match ha.cases_head with
+    | .inl h =>
+      cases h
+      match hc.cases_head with
+      | .inl h =>
+        exact h.symm
+      | .inr ⟨_, h₁, h₂⟩ => cases h₁
+    | .inr ⟨_, h₁, h₂⟩ => cases h₁
+
 theorem congrFun (h : RedAff f f') (he : Reduces (DCC (f x)) B) : Reduces (DCC (f' x)) B := by
   match he with
   | ⟨ha, hb, hc, hd⟩ =>

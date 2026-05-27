@@ -142,43 +142,6 @@ Substitution lemma...
 adding a 
 -/
 
--- Probably somewhat easy to prove
-theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
-  (hv : Value e) : ∃ f_α env, e = (DCC (refl(f_α) env x)) ∧ env.Value ∧ x.Value := by
-  induction hv with
-  | pi₁ =>
-    cases ht with
-    | pi h_t_f_α h_t_f_β hr =>
-      have h := hr.pi
-      simp_all
-  | pi₂ =>
-    cases ht with
-    | app h_t_f h_r_α h_t_x h_r_τ =>
-      cases h_t_f with
-      | pi h₁ h₂ hr =>
-        have ⟨_, _, ha, hb, hc, hd, he⟩ := hr.pi
-        cases he
-        match ha.cases_head with
-        | .inl h =>
-          cases h
-          have h := h_r_τ.to_reduces.curr
-          have h := h.quot₁
-          match h with
-          | ⟨ha, hb, hc, hd⟩ =>
-            match ha.cases_head with
-            | .inl h =>
-              cases h
-              match hc.cases_head with
-              | .inl h => simp_all
-              | .inr ⟨_, h₁, h₂⟩ => cases h₁
-            | .inr ⟨_, h₁, h₂⟩ => cases h₁
-        | .inr ⟨_, h₁, h₂⟩ =>
-          cases h₁ with
-          | curr hr =>
-            cases hr with
-            | quot hr =>
-              cases hr
-
 /-
 Progress might be important for this too since we can establish what normal forms are.
 If e : (x = y), then either e is a normal form (e.g., refl), or it reduces to (what?)
@@ -188,6 +151,9 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
   sorry
 
 theorem progress (ht : Judge e τ) : Value e ∨ (∃ e', RedAff e e') := by
+  sorry
+
+theorem preservation' (ht : Judge A t) (hr : Reduces A B) : Judge B t := by
   sorry
 
 theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = y := by
@@ -270,6 +236,151 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
       | .inr ⟨_, h, _⟩ => cases h
     | .inr ⟨_, h, _⟩ => cases h
 termination_by x₀.size
+
+theorem comb_ty_not_eq (ht : Judge c (DCC (x = y))) (hv : IsRedComb c n) : False := by
+  induction hv with
+  | eql =>
+    cases ht with
+    | eql ht hr =>
+      unfold eql.type at hr
+      have ⟨_, _, ha, hb, hc, hn, hd⟩ := hr.pi
+      cases hd
+  | curr =>
+    cases ht with
+    | curr ha hb hc hd he hf =>
+      have ⟨_, _, ha, hb, hc, hn, hd⟩ := hf.pi
+      cases hd
+  | pair =>
+    cases ht with
+    | pair ha hb hc hd he hf hg =>
+      have ⟨_, _, ha, hb, hc, hn, hd⟩ := hg.pi
+      cases hd
+  | quot =>
+    cases ht with
+    | quot ha hb hc =>
+      have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
+      cases hd
+  | id =>
+    cases ht with
+    | id ha hb =>
+      have ⟨_, _, ha, hb, hc, hn, hd⟩ := hb.pi
+      cases hd
+  | sigma =>
+    cases ht with
+    | sigma ha hb hc =>
+      have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
+      cases hd
+  | sndc =>
+    cases ht with
+    | sndc ha hb hc  =>
+      have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
+      cases hd
+  | fstc =>
+    cases ht with
+    | fstc ha hb hc  =>
+      have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
+      cases hd
+  | comp' =>
+    cases ht with
+    | comp' ha hb hc hd he hf =>
+      have ⟨_, _, ha, hb, hc, hn, hd⟩ := hf.pi
+      cases hd
+  | comp =>
+    cases ht with
+    | comp ha hb hc hd  =>
+      have ⟨_, _, ha, hb, hc, hn, hd⟩ := hd.pi
+      cases hd
+
+-- Probably somewhat easy to prove
+theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
+  (hv : Value e) : ∃ f_α env, e = (DCC (refl(f_α) env x)) ∧ env.Value ∧ x.Value := by
+  induction hv with
+  | pi₁ =>
+    cases ht with
+    | pi h_t_f_α h_t_f_β hr =>
+      have h := hr.pi
+      simp_all
+  | pi₂ =>
+    cases ht with
+    | app h_t_f h_r_α h_t_x h_r_τ =>
+      cases h_t_f with
+      | pi h₁ h₂ hr =>
+        have ⟨_, _, ha, hb, hc, hd, he⟩ := hr.pi
+        cases he
+        match ha.cases_head with
+        | .inl h =>
+          cases h
+          have h := h_r_τ.to_reduces.curr
+          have h := h.quot₁
+          match h with
+          | ⟨ha, hb, hc, hd⟩ =>
+            match ha.cases_head with
+            | .inl h =>
+              cases h
+              match hc.cases_head with
+              | .inl h => simp_all
+              | .inr ⟨_, h₁, h₂⟩ => cases h₁
+            | .inr ⟨_, h₁, h₂⟩ => cases h₁
+        | .inr ⟨_, h₁, h₂⟩ =>
+          cases h₁ with
+          | curr hr =>
+            cases hr with
+            | quot hr =>
+              cases hr
+  | coup =>
+    cases ht with
+    | coup _ _ hr =>
+      have h := hr.sort
+      contradiction
+  | sort => cases ht
+  | refl₁ =>
+    cases ht with
+    | app h_t_f h_r_α h_t_x h_r_τ =>
+      cases h_t_f with
+      | refl h₁ hr =>
+        have ⟨_, _, ha, hb, hc, hd, he⟩ := hr.pi
+        cases he
+        match ha.cases_head with
+        | .inl h =>
+          cases h
+          have h := h_r_α.id
+          have h := h_r_τ.to_reduces.quot.pi
+          simp_all
+        | .inr ⟨_, h₁, h₂⟩ =>
+          cases h₁ with
+          | quot h =>
+            cases h with
+            | pi' h =>
+              cases h
+  | refl₂ =>
+    -- have h_x_y_eq := refl_ty_heq ht
+    cases ht with
+    | app h_t_f h_r_α h_t_x h_r_τ =>
+      cases h_t_f with
+      | app h_t_f' h_r_α' h_t_x' h_r_τ' =>
+        cases h_t_f' with
+        | refl h₁ hr =>
+          have ⟨_, _, ha, hb, hc, hd, he⟩ := hr.pi
+          cases he
+          match ha.cases_head with
+          | .inl h =>
+            cases h
+            have h := h_r_α'.id
+            have ⟨_, _, h₁, h₂, h₃, h₄, h₅⟩ := h_r_τ'.to_reduces.quot.pi
+            cases h₅
+            match h₁.cases_head with
+            | .inl h =>
+              cases h
+              
+              sorry
+            | .inr h =>
+              sorry
+          | .inr ⟨_, h₁, h₂⟩ =>
+            cases h₁ with
+            | quot h =>
+              cases h with
+              | pi' h =>
+                cases h
 
 /-
 induction using Expr.instWellFounded?

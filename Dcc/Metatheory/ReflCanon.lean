@@ -514,9 +514,7 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
                               exact h_norm_env ⟨_, h⟩
                           | congrArg h =>
                             exact h_norm_x ⟨_, h⟩, .refl, fun ⟨_, h⟩ => by cases h⟩⟩
-            | .inr h =>
-              
-              sorry
+            | .inr ⟨_, h₁, h₂⟩ => cases h₁
           | .inr ⟨_, h₁, h₂⟩ =>
             cases h₁ with
             | quot h =>

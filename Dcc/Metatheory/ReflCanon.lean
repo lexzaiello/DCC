@@ -188,7 +188,7 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y :
   have ⟨i, j, k, l, m, o, p, q⟩ := h_t_refl_env.invert rfl
   cases m with
   | refl r s =>
-    dcc_simp_all (! !)
+    --dcc_simp_all (! !)
     match s with
     | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
       cases hr₁.cases_head with
@@ -205,7 +205,26 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y :
               | congrFun h =>
                 cases h with
                 | quot =>
-                  sorry
+                  cases hr₂.cases_head with
+                  | inl h =>
+                    dcc_simp_all
+                    have ⟨⟨h₁, h₂⟩, h₃⟩ := h
+                    simp_all
+                    cases h.symm
+                    rename_i hreql _ _ _
+                    match hreql with
+                    | ⟨h₁, h₂, h₃, h₄⟩ =>
+                      cases h₃ with
+                      | refl =>
+                        cases h₁ using Relation.TransGen.head_induction_on with
+                        | single h =>
+                          sorry
+                        | head h ih =>
+                          
+                          sorry
+                      | tail ih h => cases h; rfl
+                  | inr h =>
+                    sorry
                 | congrArg h =>
                   sorry
                 | congrFun h =>
@@ -240,6 +259,7 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x)) (DCC x = y)) : x = y :
                   cases h
       | inr h =>
         sorry
+termination_by env.size
 
 /-
 refl(f_α) env x

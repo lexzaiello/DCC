@@ -327,7 +327,8 @@ theorem par_app_has_fn_type (ht : Judge e τ) (hc : IsRedCombApp e (m + 1)) : �
 -- Probably somewhat easy to prove
 open Congruent in
 theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
-  (hv : Value e) : ∃ f_α env x', e = (DCC (refl(f_α) env x')) ∧ Reduces e (DCC (refl(f_α) env x)) := by
+  (hv : Value e) : ∃ f_α env x' env'' x'', e = (DCC (refl(f_α) env x'))
+    ∧ Reduces e (DCC (refl(f_α) env'' x'')) := by
   induction hv with
   | c_app h_c_f h_v_f h_v_x ih₁ ih₂ =>
     cases h_c_f with
@@ -456,17 +457,65 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
               have h := h_r_τ.to_reduces.congrFun .comp
               have ⟨_, heq⟩ := h.eql
               cases heq
-              exact ⟨_, _, _, rfl, ⟨.refl, fun ⟨_, h⟩ => by
-                cases h with
-                | congrFun h =>
-                  cases h with
-                  | congrFun h => cases h
+              match h with
+              | ⟨ha₁, hb₁, hc₁, hd₁⟩ =>
+                match ha₁.cases_head with
+                | .inl h =>
+                  cases h
+                  match hc₁.eq with
+                  | .inl ⟨_, _, heq₁, heq₂⟩ =>
+                    cases heq₁; cases heq₂
+                    exact ⟨_, _, _, _, _, rfl, ⟨.refl, fun ⟨_, h⟩ => by
+                      cases h with
+                      | congrFun h =>
+                        cases h with
+                        | congrFun h => cases h
+                        | congrArg h => exact h_norm_env ⟨_, h⟩
+                      | congrArg h =>
+                        exact h_norm_x ⟨_, h⟩, .refl, fun ⟨_, h⟩ => by cases h⟩⟩
+                  | .inr h => simp_all
+                | .inr ⟨_, h₁, h₂⟩ =>
+                  cases h₁ with
+                  | congrFun h =>
+                    cases h with
+                    | congrFun h => cases h
+                    | congrArg hr =>
+                      rename_i env₀ x₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+                      cases hr with
+                      | id =>
+                        exact ⟨_, env₀, x₀, _, _, rfl, ⟨.refl, fun ⟨_, h⟩ => by
+                          cases h with
+                          | congrFun h =>
+                            cases h with
+                            | congrFun h => cases h
+                            | congrArg h  =>
+                              exact h_norm_env ⟨_, h⟩
+                          | congrArg h =>
+                            exact h_norm_x ⟨_, h⟩, .refl, fun ⟨_, h⟩ => by cases h⟩⟩
+                      | congrFun h => cases h
+                      | congrArg hr =>
+                        exact ⟨_, env₀, x₀, _, _, rfl, ⟨.refl, fun ⟨_, h⟩ => by
+                          cases h with
+                          | congrFun h =>
+                            cases h with
+                            | congrFun h => cases h
+                            | congrArg h  =>
+                              exact h_norm_env ⟨_, h⟩
+                          | congrArg h =>
+                            exact h_norm_x ⟨_, h⟩, .refl, fun ⟨_, h⟩ => by cases h⟩⟩
                   | congrArg h =>
-                    exact (h_norm_env ⟨_, h⟩).elim
-                | congrArg h =>
-                  exact (h_norm_x ⟨_, h⟩).elim
-                , by sorry, by sorry⟩⟩
+                    rename_i env₀ x₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+                    exact ⟨_, env₀, x₀, _, _, rfl, ⟨.refl, fun ⟨_, h⟩ => by
+                          cases h with
+                          | congrFun h =>
+                            cases h with
+                            | congrFun h => cases h
+                            | congrArg h  =>
+                              exact h_norm_env ⟨_, h⟩
+                          | congrArg h =>
+                            exact h_norm_x ⟨_, h⟩, .refl, fun ⟨_, h⟩ => by cases h⟩⟩
             | .inr h =>
+              
               sorry
           | .inr ⟨_, h₁, h₂⟩ =>
             cases h₁ with
@@ -481,21 +530,21 @@ induction using Expr.instWellFounded?
 Due to progress
 -/
 theorem eq_is_refl (h_t : Judge e (DCC (x = y))) :
-  ∃ f_α env, Reduces e (DCC (refl(f_α) env x)) := by
+  ∃ f_α env x₀, Reduces e (DCC (refl(f_α) env x₀)) := by
   induction e using RedAff.instRedRel.wellFounded.induction with
   | h e ih =>
     match h_t.progress with
     | .inl h_val =>
-      have ⟨f_α, env, x', heq, hred⟩ := h_t.eq_val_is_refl h_val
+      have ⟨f_α, env, x', env'', x'', heq, hred⟩ := h_t.eq_val_is_refl h_val
       simp_all
-      exact ⟨f_α, env, hred⟩
+      exact ⟨f_α, _, _, hred⟩
     | .inr ⟨e', hr⟩ =>
       match ih _ hr (h_t.preservation hr) with
-      | ⟨f_α, env, ⟨hr₁, hn₁, hr₂, hn₂⟩⟩ =>
-        exact ⟨f_α, env, ⟨.trans (.single hr) hr₁, hn₁, hr₂, hn₂⟩⟩
+      | ⟨f_α, env, _, ⟨hr₁, hn₁, hr₂, hn₂⟩⟩ =>
+        exact ⟨f_α, env, _, ⟨.trans (.single hr) hr₁, hn₁, hr₂, hn₂⟩⟩
 
 theorem elim_eq (h : Judge e (DCC (x = y))) : x = y := by
-  have ⟨f_α, env, h_r⟩ := eq_is_refl h
+  have ⟨f_α, env, _, h_r⟩ := eq_is_refl h
   have ht' := h.preservation' h_r
   exact refl_ty_heq ht'
 

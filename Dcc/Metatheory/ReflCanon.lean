@@ -25,77 +25,6 @@ Progress might be important for this too since we can establish what normal form
 If e : (x = y), then either e is a normal form (e.g., refl), or it reduces to (what?)
 -/
 
-theorem Expr.Judge.preservation_id {f_α f_β x_α α x τ : Expr}
-  (h_r_α : (f_α.app x_α).Reduces α) (h_t_x : x.Judge α)
-  (h_r_τ : ((f_β.app x_α).app x).Reduces τ) (ih₂ : ∀ {B : Expr}, x.RedAff B → B.Judge α) {α_id : Expr}
-  (ht : α_id.id.Judge ((f_α.pi f_β).app x_α))
-  (ih₁ : ∀ {B : Expr}, α_id.RedAff B → B.Judge ((f_α.pi f_β).app x_α)) :
-  x.Judge τ := by
-  match ht with
-  | .id h_t_α h_r_α h_r_id_ty =>
-    simp [id.type] at h_r_id_ty
-    have ⟨f_β', env', h_r_β', hn_β', h_r_α, hn, heq⟩ := h_r_id_ty.pi
-    simp_all
-    have ⟨⟨ha, hb⟩, hc⟩ := heq
-    simp_all
-    cases ha; cases hb; cases hc
-    rename_i hrτ
-    match hrτ with
-    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-      match hr₁.cases_head with
-      | .inl h =>
-        cases h
-        match hr₂.cases_head with
-        | .inl h =>
-          cases h with
-          | refl => exact (hn₁ ⟨_, .id⟩).elim
-        | .inr ⟨_, h₁, h₂⟩ => cases h₁
-      | .inr ⟨_, h₁, h₂⟩ =>
-        have h := hrτ.id
-        cases h₁ with
-        | id =>
-          match h_r_τ.cases_head with
-          | .inl h =>
-            cases h
-            
-            sorry
-          | .inr h =>
-            sorry
-        | congrFun h =>
-          sorry
-        | congrArg h =>
-          sorry
-        /-rename_i hrid _
-        have h := hrid.id
-        have h_x_α_α₁ := h.elim_norm (by assumption)
-        cases h₁ with
-        | curr =>
-          have h := h.elim_norm (by assumption)
-          have h := hrτ.curr
-          match h with
-          | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-            match hr₁.cases_head with
-            | .inl h =>
-              cases h
-              cases h_r_β' with
-              | tail ih h =>
-                cases h with
-                | curr h =>
-                  rename_i h_τ₂ _
-                  clear hrτ hr₁ h hr_ty
-                  match hr₂.cases_head with
-                  | .inl h =>
-                    cases h
-                    sorry
-              | refl => exact (hn₁ ⟨_, .quot⟩).elim
-            | .inr h =>
-              sorry
-        | congrFun h =>
-          
-          sorry
-        | congrArg h =>
-          sorry-/
-
 theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
   induction ht generalizing B
   any_goals (
@@ -125,7 +54,7 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
     | quot =>
       rename_i ht
       cases ht with
-      | quot h_t_B _ hr_ty =>
+      | quot h_t_B _ _ hr_ty =>
         have ⟨α', β', heq, hrt₁, hrt₂⟩ := hr_ty.arrow
         cases heq
         rename_i hr
@@ -172,7 +101,7 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
   obtain ⟨a, b, c, d, e, h_t_refl_env, f, g, _, ⟨hr₁, hn₁, hr₂, hn₂⟩⟩ := h_t.invert rfl
   obtain ⟨i, j, k, l, n, m, o, p, r, q⟩ := h_t_refl_env.invert rfl
   cases m with
-  | refl h_t_f_α h_r_refl_ty =>
+  | refl h_t_f_α _ h_r_refl_ty =>
     unfold refl.type at h_r_refl_ty
     obtain ⟨_, _, h₄, h₅, h₆, h₇, h₈⟩ := h_r_refl_ty.pi
     obtain ⟨⟨h₁, h₂⟩, h₃⟩ := h₈
@@ -214,7 +143,7 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
                           cases h with
                           | congrFun h => cases h
                           | congrArg h =>
-                            rename_i h_r _ _ _ _ _ _ _ _
+                            rename_i h_r _ _ _ _ _ _ _ _ _ _
                             exact (h_r.norm_aff ⟨_, h⟩).elim
                         | congrArg h =>
                           have h_dec := RedAff.instRedRel.decreasing h
@@ -222,7 +151,7 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
                           exact refl_ty_heq h_t'
                     | congrFun h => cases h
                     | congrArg h =>
-                      rename_i h_r _ _ _ _ _ _ _
+                      rename_i h_r _ _ _ _ _ _ _ _ _
                       exact (h_r.norm_aff ⟨_, h⟩).elim
                 | congrArg h =>
                   have h_dec := RedAff.instRedRel.decreasing h
@@ -230,7 +159,7 @@ theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = 
                   exact refl_ty_heq h_t'
             | congrFun h => cases h
             | congrArg h =>
-              rename_i h_r _ _ _ _ _ _
+              rename_i h_r _ _ _ _ _ _ _ _
               exact (h_r.norm_aff ⟨_, h⟩).elim
         | congrArg h =>
           have h_dec := RedAff.instRedRel.decreasing h
@@ -243,23 +172,23 @@ theorem comb_ty_not_eq (ht : Judge c (DCC (x = y))) (hv : IsRedComb c n) : False
   induction hv with
   | eql =>
     cases ht with
-    | eql ht hr =>
+    | eql ht _ hr =>
       unfold eql.type at hr
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hr.pi
       cases hd
   | curr =>
     cases ht with
-    | curr ha hb hc hd he hf =>
+    | curr ha hb hc hd he _ hf =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hf.pi
       cases hd
   | pair =>
     cases ht with
-    | pair ha hb hc hd he hf hg =>
+    | pair ha hb hc hd he hf _ hg =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hg.pi
       cases hd
   | quot =>
     cases ht with
-    | quot ha hb hc =>
+    | quot ha hb _ hc =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
       cases hd
   | id =>
@@ -269,27 +198,27 @@ theorem comb_ty_not_eq (ht : Judge c (DCC (x = y))) (hv : IsRedComb c n) : False
       cases hd
   | sigma =>
     cases ht with
-    | sigma ha hb hc =>
+    | sigma ha hb _ hc =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
       cases hd
   | sndc =>
     cases ht with
-    | sndc ha hb hc  =>
+    | sndc ha hb _ hc  =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
       cases hd
   | fstc =>
     cases ht with
-    | fstc ha hb hc  =>
+    | fstc ha hb _ hc  =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
       cases hd
   | comp' =>
     cases ht with
-    | comp' ha hb hc hd he hf =>
+    | comp' ha hb hc hd he _ hf =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hf.pi
       cases hd
   | comp =>
     cases ht with
-    | comp ha hb hc hd  =>
+    | comp ha hb hc _ hd  =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hd.pi
       cases hd
 
@@ -305,7 +234,7 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
       cases ht with
       | app h_t_f hb h_t_x _ h_r_τ =>
         cases h_t_f with
-        | eql _ hr =>
+        | eql _ _ hr =>
           have ⟨a, b, c, d, e, f, g⟩ := hr.pi
           cases g
           have h' := hb.id
@@ -317,7 +246,7 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
       cases ht with
       | app h_t_f hb h_t_x _ h_r_τ =>
         cases h_t_f with
-        | curr a b c d e f =>
+        | curr a b c d e _ f =>
           have ⟨a₁, b₁, c₁, d₁, e₁, f₁, g₁⟩ := f.pi
           cases g₁
           have h := hb.id
@@ -330,14 +259,14 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
   | comb => exact (ht.comb_ty_not_eq (by assumption)).elim
   | pi₁ =>
     cases ht with
-    | pi h_t_f_α h_t_f_β hr =>
+    | pi h_t_f_α h_t_f_β _ hr =>
       have h := hr.pi
       simp_all
   | pi₂ =>
     cases ht with
     | app h_t_f h_r_α h_t_x _ h_r_τ =>
       cases h_t_f with
-      | pi h₁ h₂ hr =>
+      | pi h₁ h₂ _ hr =>
         have ⟨_, _, ha, hb, hc, hd, he⟩ := hr.pi
         cases he
         match ha.cases_head with
@@ -365,7 +294,7 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
     cases ht with
     | app h_t_f h_r_α h_t_x _ h_r_τ =>
       cases h_t_f with
-      | refl h₁ hr =>
+      | refl h₁ _ hr =>
         have ⟨_, _, ha, hb, hc, hd, he⟩ := hr.pi
         cases he
         match ha.cases_head with
@@ -385,7 +314,7 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
       cases h_t_f with
       | app h_t_f' h_r_α' h_t_x' _ h_r_τ' =>
         cases h_t_f' with
-        | refl h₁ hr =>
+        | refl h₁ _ hr =>
           have ⟨_, _, ha, hb, hc, hd, he⟩ := hr.pi
           cases he
           match ha.cases_head with
@@ -423,7 +352,7 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
                     cases h with
                     | congrFun h => cases h
                     | congrArg hr =>
-                      rename_i env₀ x₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+                      rename_i env₀ x₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
                       cases hr with
                       | id =>
                         exact ⟨_, env₀, x₀, _, _, rfl, ⟨.refl, fun ⟨_, h⟩ => by
@@ -447,7 +376,7 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
                           | congrArg h =>
                             exact h_norm_x ⟨_, h⟩, .refl, fun ⟨_, h⟩ => by cases h⟩⟩
                   | congrArg h =>
-                    rename_i env₀ x₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+                    rename_i env₀ x₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
                     exact ⟨_, env₀, x₀, _, _, rfl, ⟨.refl, fun ⟨_, h⟩ => by
                           cases h with
                           | congrFun h =>

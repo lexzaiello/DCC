@@ -555,6 +555,25 @@ end RedAffReflTrans
 
 namespace RedEtaReflTrans
 
+theorem curr (h : RedEtaReflTrans (DCC Λ(α, β, x)) B) : B = (DCC Λ(α, β, x))
+  ∨ (∃ x', RedEta x x' ∧ RedEtaReflTrans (DCC Λ(α, β, x')) B ∧ RedEtaReflTrans (DCC Λ(α, β, x)) (DCC Λ(α, β, x'))) := by
+  match h.cases_head with
+  | .inl h => exact .inl h.symm
+  | .inr ⟨_, h₁, h₂⟩ =>
+    cases h₁ with
+    | curr h =>
+      exact .inr ⟨_, by assumption, h₂, .single (.curr h)⟩
+
+theorem curr_quot (h : RedEtaReflTrans (DCC (Λ(α, _a, `(_b, x)) y)) B)
+  : (RedEtaReflTrans (DCC `(y, x)) B ∨ B = (DCC (Λ(α, _a, `(_b, x)) y))) := by
+  match h.cases_head with
+  | .inl h =>
+    exact .inr h.symm
+  | .inr ⟨_, h₁, h₂⟩ =>
+    cases h₁ with
+    | curr_quot =>
+      exact .inl h₂
+
 theorem aff_norm (h : RedEtaReflTrans B C) (head_r : RedEta A B) (hn_head : IsNorm RedAff A) : IsNorm RedAff B := by
   induction h with
   | refl =>
@@ -576,6 +595,90 @@ theorem elim_norm (hn : IsNorm RedEta A) (h : RedEtaReflTrans A B) : A = B :=
   | .inl h => h
   | .inr ⟨_, hr, _⟩ => (hn ⟨_, hr⟩).elim
 
+theorem arrow (h : RedEtaReflTrans (DCC (α : Sort m) → β) B) : ∃ β', B = (DCC ((α : Sort m) → β')) ∧ RedEtaReflTrans β β' := by
+  induction β using RedEta.instRedRel.wellFounded.induction with
+  | h β ih =>
+    match h.cases_head with
+    | .inl h =>
+      cases h
+      exact ⟨_, rfl, .refl⟩
+    | .inr ⟨_, h₁, h₂⟩ =>
+      cases h₁ with
+      | pi =>
+        rename_i hr _
+        cases hr with
+        | pi' h =>
+          cases h with
+          | curr h =>
+            cases h with
+            | quot h =>
+              have ⟨_, heq, hrt⟩ := ih _ h h₂
+              exact ⟨_, heq, .trans (.single h) hrt⟩
+
 end RedEtaReflTrans
+
+namespace Reduces
+
+theorem arrow (h : Reduces (DCC (α : Sort m) → β) B) : ∃ α' β', B = (DCC ((α' : Sort m) → β'))
+  ∧ RedEtaReflTrans β β'
+  ∧ RedAffReflTrans α α' := by
+  induction β using RedEta.instRedRel.wellFounded.induction generalizing α m B with
+  | h β ih =>
+    have ⟨_, _, ha, hb, hc, hd, he⟩ := h.pi
+    cases he
+    cases ha using Relation.ReflTransGen.head_induction_on with
+    | refl =>
+      exact ⟨_, _, rfl, .refl, hc⟩
+    | head h₁ h₂ =>
+      cases h₁ with
+      | curr h =>
+        cases h with
+        | quot h =>
+          have h := ih _ h ⟨.refl, (fun ⟨_, h⟩ => by
+            cases h with
+            | congrFun h => cases h
+            | congrArg h =>
+              
+              exact hd ⟨_, h⟩), .single (.pi .refl (by assumption) (by sorry)), by sorry⟩
+          sorry
+
+theorem arrow (h : Reduces (DCC (α : Sort m) → β) B) : ∃ α' β', B = (DCC ((α' : Sort m) → β'))
+  ∧ RedEtaReflTrans β β'
+  ∧ RedAffReflTrans α α' := by
+  have ⟨_, _, ha, hb, hc, hd, he⟩ := h.pi
+  cases he
+  match ha.cases_head with
+  | .inl h =>
+    cases h
+    exact ⟨_, _, rfl, .refl, hc⟩
+  | .inr ⟨_, h₁, h₂⟩ =>
+    cases h₁ with
+    | curr h =>
+      cases h with
+      | quot h =>
+        rename_i x'
+        rename_i α' _
+        have h_dec := RedEta.instRedRel.decreasing h
+        cases h₂ using Relation.ReflTransGen.head_induction_on with
+        | refl =>
+          exact ⟨_, _, rfl, .single (by assumption), by assumption⟩
+        | head h ih =>
+          
+          sorry
+        /-match h₂.cases_head with
+        | .inl h =>
+          cases h
+          exact ⟨_, _, rfl, .single (by assumption), by assumption⟩
+        | .inr ⟨_, h, _⟩ =>
+          have h := arrow (m := m) ⟨.refl, (fun ⟨_, h⟩ => by
+            cases h with
+            | congrFun h => cases h
+            | congrArg h =>
+              
+              exact hd ⟨_, h⟩), .single (.pi .refl (by assumption) (.pi' h)), by sorry⟩ (β := x') (α := α')
+          sorry-/
+termination_by β.size
+
+end Reduces
 
 end Expr

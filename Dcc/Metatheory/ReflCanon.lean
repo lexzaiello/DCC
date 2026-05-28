@@ -2,6 +2,7 @@ import Dcc.Ast
 import Dcc.Judge
 import Dcc.Metatheory.Congr
 import Dcc.Metatheory.Preservation
+import Dcc.Tactic.Reduce
 
 /-
 Want to automate IsNorm, but sounds hard.
@@ -180,7 +181,17 @@ theorem Value.is_norm_aff (h : Value e) : IsNorm RedAff e := by
 
 namespace Judge
 
-theorem judge_reduces (ht : Judge e τ) (hr : Reduces τ τ') : Judge e τ' := by
+theorem red_eta (ht : Judge e τ) (hr : RedEta τ τ' ) : Judge e τ' := by
+  have h₁ := ht.norm_aff
+  have h₂ := ht.norm_eta
+  exact (h₂ ⟨_, (by assumption)⟩).elim
+
+theorem red_aff (ht : Judge e τ) (hr : RedAff τ τ' ) : Judge e τ' := by
+  have h₁ := ht.norm_aff
+  have h₂ := ht.norm_eta
+  exact (h₁ ⟨_, (by assumption)⟩).elim
+
+theorem reduces (ht : Judge e τ) (hr : Reduces τ τ') : Judge e τ' := by
   have h₁ := ht.norm_aff
   have h₂ := ht.norm_eta
   match hr with
@@ -236,16 +247,81 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
       | quot h_t_B _ hr_ty =>
         have ⟨_, _, ha, hb, hc, hd, he⟩ := hr_ty.pi
         cases he
-        match ha.cases_head with
+        match ha.curr with
         | .inl h =>
           cases h
           rename_i hr₁ hr₂
           have h := hr₂.curr.head_trans .quot
           have h := hr₁.id
+          exact h_t_B.reduces (by assumption)
+        | .inr ⟨x', hr, hr₁, hr₂⟩ =>
+          cases hr with
+          | quot h =>
+            
+            sorry
+        /-match ha.cases_head with
+        | .inl h =>
+          cases h
+          rename_i hr₁ hr₂
+          have h := hr₂.curr.head_trans .quot
+          have h := hr₁.id
+          exact h_t_B.reduces (by assumption)
+        | .inr ⟨_, hr₁, hr₂⟩ =>
           
-          sorry
-        | .inr h =>
-          sorry
+          sorry-/
+          /-cases hr₁ with
+          | curr hr =>
+            cases hr with
+            | quot hr =>
+              change RedEtaReflTrans _ _ at hr₂
+              match hr₂.cases_head with
+              | .inl h =>
+                cases h
+                rename_i hr
+                have h := hr.curr.quot₁
+                rename_i hr'
+                exact (h_t_B.red_eta (by assumption)).reduces (by assumption)
+              | .inr ⟨_, h₁, h₂⟩ =>
+                cases h₁ with
+                | curr h =>
+                  cases h with
+                  | quot h =>
+                    match h₂.cases_head with
+                    | .inl h =>
+                      cases h
+                      rename_i hr
+                      have h := hr.curr.quot₁
+                      exact ((h_t_B.red_eta (by assumption)).red_eta (by assumption)).reduces (by assumption)
+                    | .inr ⟨_, h₁, h₂⟩ =>
+                      cases h₁ with
+                      | curr h =>
+                        cases h with
+                        | quot h =>
+                          match h₂.cases_head with
+                          | .inl h =>
+                            match ha.cases_head with
+                            | .inl h =>
+                              cases h
+                              cases h
+                              exact (hb ⟨_, .curr (.quot (by assumption))⟩).elim
+                            | .inr ⟨_, h₁, h₂⟩ =>
+                              simp_all
+                              cases h₁ with
+                              | curr h =>
+                                cases h with
+                                | quot h =>
+                                  rename_i heq _
+                                  cases heq
+                                  rename_i hrτ _ _
+                                  have hτ := hrτ.curr.head_trans .quot
+                                  exact (((h_t_B.red_eta hr).red_eta (by assumption)).red_eta (by assumption)).reduces (by assumption)
+                          | .inr ⟨_, h₁, h₂⟩ =>
+                            cases h₁ with
+                            | curr h =>
+                              cases h with
+                              | quot h =>
+                                have h := ((h_t_B.red_eta hr).red_eta (by assumption)).red_eta (by assumption)
+                                sorry-/
 
 theorem preservation_eta (ht : Judge A t) (hr : RedEta A B) : Judge B t := by
   sorry

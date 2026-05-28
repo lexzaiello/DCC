@@ -617,67 +617,38 @@ theorem arrow (h : RedEtaReflTrans (DCC (α : Sort m) → β) B) : ∃ β', B = 
 
 end RedEtaReflTrans
 
+namespace RedAffReflTrans
+
+theorem arrow (h : RedAffReflTrans (DCC (α : Sort m) → β) B) : ∃ α', B = (DCC ((α' : Sort m) → β)) ∧ RedAffReflTrans α α' := by
+  induction α using RedAff.instRedRel.wellFounded.induction with
+  | h α ih =>
+    match h.cases_head with
+    | .inl h =>
+      cases h
+      exact ⟨_, rfl, .refl⟩
+    | .inr ⟨_, h₁, h₂⟩ =>
+      cases h₁ with
+      | congrFun h => cases h
+      | congrArg h =>
+        have ⟨_, heq, hrt⟩ := ih _ h h₂
+        exact ⟨_, heq, .trans (.single h) hrt⟩
+
+end RedAffReflTrans
+
 namespace Reduces
 
 theorem arrow (h : Reduces (DCC (α : Sort m) → β) B) : ∃ α' β', B = (DCC ((α' : Sort m) → β'))
-  ∧ RedEtaReflTrans β β'
-  ∧ RedAffReflTrans α α' := by
+  ∧ RedAffReflTrans α α'
+  ∧ RedEtaReflTrans β β' := by
   induction β using RedEta.instRedRel.wellFounded.induction generalizing α m B with
   | h β ih =>
-    have ⟨_, _, ha, hb, hc, hd, he⟩ := h.pi
-    cases he
-    cases ha using Relation.ReflTransGen.head_induction_on with
-    | refl =>
-      exact ⟨_, _, rfl, .refl, hc⟩
-    | head h₁ h₂ =>
-      cases h₁ with
-      | curr h =>
-        cases h with
-        | quot h =>
-          have h := ih _ h ⟨.refl, (fun ⟨_, h⟩ => by
-            cases h with
-            | congrFun h => cases h
-            | congrArg h =>
-              
-              exact hd ⟨_, h⟩), .single (.pi .refl (by assumption) (by sorry)), by sorry⟩
-          sorry
-
-theorem arrow (h : Reduces (DCC (α : Sort m) → β) B) : ∃ α' β', B = (DCC ((α' : Sort m) → β'))
-  ∧ RedEtaReflTrans β β'
-  ∧ RedAffReflTrans α α' := by
-  have ⟨_, _, ha, hb, hc, hd, he⟩ := h.pi
-  cases he
-  match ha.cases_head with
-  | .inl h =>
-    cases h
-    exact ⟨_, _, rfl, .refl, hc⟩
-  | .inr ⟨_, h₁, h₂⟩ =>
-    cases h₁ with
-    | curr h =>
-      cases h with
-      | quot h =>
-        rename_i x'
-        rename_i α' _
-        have h_dec := RedEta.instRedRel.decreasing h
-        cases h₂ using Relation.ReflTransGen.head_induction_on with
-        | refl =>
-          exact ⟨_, _, rfl, .single (by assumption), by assumption⟩
-        | head h ih =>
-          
-          sorry
-        /-match h₂.cases_head with
-        | .inl h =>
-          cases h
-          exact ⟨_, _, rfl, .single (by assumption), by assumption⟩
-        | .inr ⟨_, h, _⟩ =>
-          have h := arrow (m := m) ⟨.refl, (fun ⟨_, h⟩ => by
-            cases h with
-            | congrFun h => cases h
-            | congrArg h =>
-              
-              exact hd ⟨_, h⟩), .single (.pi .refl (by assumption) (.pi' h)), by sorry⟩ (β := x') (α := α')
-          sorry-/
-termination_by β.size
+    match h with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      have ⟨α', heq₁, hrt₁⟩ := hr₁.arrow
+      cases heq₁
+      have ⟨β', heq₂, hrt₂⟩ := hr₂.arrow
+      cases heq₂
+      exact ⟨_, _, rfl, hrt₁, hrt₂⟩
 
 end Reduces
 

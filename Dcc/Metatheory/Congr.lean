@@ -762,6 +762,16 @@ theorem cases_head (h : Reduces A B) : RedEtaReflTrans A B ∨ (∃ C D, RedAff 
     | .inr ⟨x, h₁, h₂⟩ =>
       exact .inr ⟨_, _, h₁, h₂, by assumption, by assumption⟩
 
+theorem pop_head (h : Reduces A B) : RedEtaReflTrans A B ∨ (∃ C, RedAff A C ∧ Reduces C B) := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      exact .inl (by assumption)
+    | .inr ⟨_, h₁, h₂⟩ =>
+      exact .inr ⟨_, h₁, ⟨by assumption, by assumption, by assumption, by assumption⟩⟩
+
 end Reduces
 
 namespace RedEtaReflTrans

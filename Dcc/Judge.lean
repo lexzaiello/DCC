@@ -46,7 +46,8 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (eql.type f_α δ m o) τ
     → Judge (DCC Eql(f_α)) τ
   | id     : Judge α (DCC Sort m)
-    → Reduces (id.type α m) τ
+    → Reduces α α'
+    → Reduces (id.type α' m) τ
     → Judge (DCC Id(α)) τ
   | comp   : Judge g (comp.g.type α f_β m)
     → Judge f (comp.f.type f_β f_γ n)
@@ -123,7 +124,8 @@ inductive Judge : Expr → Expr → Prop where
   | app    : Judge f (DCC (Π(f_α, f_β) x_α))
     → Reduces (DCC (f_α x_α)) α
     → Judge x α
-    → Reduces (DCC (f_β x_α x)) τ
+    → Reduces x_α x_α'
+    → Reduces (DCC (f_β x_α' x)) τ
     → Judge (DCC (f x)) τ
 
 def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
@@ -172,7 +174,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
   | DCC Sort _m => .some ⟨_, ⟨.sort⟩⟩
   | DCC (Id(α)) =>
     match infer α with
-    | .some ⟨DCC Sort _m, ⟨ht⟩⟩ => .some ⟨_, ⟨.id ht (reduce_reduces rfl)⟩⟩
+    | .some ⟨DCC Sort _m, ⟨ht⟩⟩ => .some ⟨_, ⟨.id ht (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | _ => .none
   | DCC (f ∘ g) =>
     match infer g with
@@ -332,7 +334,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     match infer f, infer x with
     | .some ⟨DCC (Π(f_α, f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
       if heq : reduce_all (DCC (f_α x_α)) = τ₂' then
-        .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by rw [heq]; exact ht₂) (reduce_reduces rfl)⟩⟩
+        .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by rw [heq]; exact ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
 

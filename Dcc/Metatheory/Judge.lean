@@ -12,13 +12,13 @@ theorem unique (h₁ : Judge e τ₁) (h₂ : Judge e τ₂) : τ₁ = τ₂ := 
   have hf := h₂.complete
   simp_all
 
-theorem invert (ht : Judge e τ) (heq : e = (DCC (f x))) : ∃ f_α f_β env α,
+theorem invert (ht : Judge e τ) (heq : e = (DCC (f x))) : ∃ f_α f_β env α env',
   (Judge f (DCC (Π(f_α, f_β) env)) ∧ Reduces (DCC (f_α env)) α
-    ∧ Judge x α ∧ Reduces (DCC (f_β env x)) τ) := by
+    ∧ Judge x α ∧ Reduces env env' ∧ Reduces (DCC (f_β env' x)) τ) := by
   induction ht with
-  | app h_t_f h_r_α h_t_x h_r_τ =>
+  | app h_t_f h_r_α h_t_x h_r_env h_r_τ =>
     cases heq
-    exact ⟨_, _, _, _, h_t_f, h_r_α, h_t_x, h_r_τ⟩
+    exact ⟨_, _, _, _, _, h_t_f, h_r_α, h_t_x, h_r_env, h_r_τ⟩
   | _ => grind
 
 theorem norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by

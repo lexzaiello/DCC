@@ -189,6 +189,12 @@ theorem TyValue.is_norm_eta (h : TyValue τ) : IsNorm RedEta τ := by
         rename_i h_norm_f_β _ _ _
         exact h_norm_f_β ⟨_, h⟩
 
+theorem TyValue.red_eta (h : TyValue τ) (hr : RedEta τ τ') : False :=
+  h.is_norm_eta ⟨_, hr⟩
+
+theorem TyValue.red_aff (h : TyValue τ) (hr : RedAff τ τ') : False :=
+  h.is_norm_aff ⟨_, hr⟩
+
 theorem TyValue.reduces (h : TyValue τ) (hr : Reduces τ τ') : τ' = τ := by
   induction h with
   | pi =>

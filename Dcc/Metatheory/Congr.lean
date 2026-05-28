@@ -637,6 +637,23 @@ end RedAffReflTrans
 
 namespace Reduces
 
+theorem norm_aff (h : Reduces A B) : IsNorm RedAff B := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      match hr₂.cases_head with
+      | .inl h => simp_all
+      | .inr ⟨_, h₁, h₂⟩ =>
+        cases h
+        change RedEtaReflTrans _ _ at h₂
+        have h := h₁.norm_aff (by assumption)
+        exact h₂.aff_norm' h₁ (by assumption)
+    | .inr ⟨_, h₁, h₂⟩ =>
+      have h_dec := RedAff.instRedRel.decreasing h₁
+      exact norm_aff ⟨h₂, by assumption, by assumption, by assumption⟩
+termination_by A.size
+
 theorem arrow (h : Reduces (DCC (α : Sort m) → β) B) : ∃ α' β', B = (DCC ((α' : Sort m) → β'))
   ∧ RedAffReflTrans α α'
   ∧ RedEtaReflTrans β β' := by
@@ -649,6 +666,54 @@ theorem arrow (h : Reduces (DCC (α : Sort m) → β) B) : ∃ α' β', B = (DCC
       have ⟨β', heq₂, hrt₂⟩ := hr₂.arrow
       cases heq₂
       exact ⟨_, _, rfl, hrt₁, hrt₂⟩
+
+--theorem conf (h₁ : Reduces A B) (h₂ : Reduces A C)
+
+theorem trans (h₁ : Reduces A B) (h₂ : Reduces B C) : B = C := by
+  match h₁, h₂ with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn₄⟩ =>
+    have h := h₁.norm_eta
+    have h := hr₄.elim_norm (by sorry)
+    sorry
+
+theorem trans (h₁ : Reduces A B) (h₂ : Reduces B C) : B = C := by
+  match h₁, h₂ with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn₄⟩ =>
+    induction hr₄ with
+    | refl =>
+      induction hr₂ with
+      | refl =>
+        
+        sorry
+    | tail ih h =>
+      sorry
+
+theorem trans (h₁ : Reduces A B) (h₂ : Reduces B C) : B = C := by
+  match h₁, h₂ with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn₄⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      match hr₂.cases_head with
+      | .inl h =>
+        cases h
+        match hr₃.cases_head with
+        | .inl h =>
+          cases h
+          match hr₄.cases_head with
+          | .inl h =>
+            cases h; rfl
+          | .inr ⟨_, h₁, h₂⟩ =>
+            change RedEtaReflTrans _ _ at h₂
+            exact hr₄.elim_norm hn₂
+      | .inr ⟨_, h₁, h₂⟩ =>
+        have h := h₁.norm_aff (by assumption)
+        change RedEtaReflTrans _ _ at h₂
+        
+        have h := hr₃.elim_norm (by sorry)
+        sorry
+    | .inr h =>
+      sorry
 
 end Reduces
 

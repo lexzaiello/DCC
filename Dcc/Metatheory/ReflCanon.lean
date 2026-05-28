@@ -85,6 +85,62 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
         have h_env_norm := h_norm.norm_aff
         have h_eq := h_.unique h_norm
         simp_all
+    | fstc =>
+      rename_i hrc hrcoup
+      cases hrc with
+      | fstc _ _ _ hrt  =>
+        have ⟨f_β', env', h_r_β', hn_β', h_r_α, hn, heq⟩ := hrt.pi
+        simp_all
+        have ⟨⟨ha, hb⟩, hc⟩ := heq
+        simp_all
+        rename_i h_r_env' _ _ _ _
+        have h := h_r_env'.id
+        cases hrcoup with
+        | mk h_t_B =>
+          rename_i h_r_env₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+          have h_uniq₁ := h_r_env₀.unique h
+          have h := h_r_β'.curr
+          simp_all
+          have h := hr_α.curr.quot₁
+          rename_i h_env_norm_tgt _ _ _ _ _ _
+          have h := h_env_norm_tgt.norm_head (by assumption)
+          rename_i h_r_β'' _ _ _ _ _ _ _
+          have h_norm_β' := h_r_β''.norm_aff
+          have h_env'_eq := h_r_α.elim_norm (fun ⟨_, h⟩ => by
+            cases h with
+            | coup h =>
+              exact h_norm_β' ⟨_, h⟩)
+          simp_all
+          rename_i h_f_β_app _ _ _ _ _ _ _  _
+          rename_i h_β_coup _ _
+          rename_i heq_f_β' _
+          cases heq_f_β'
+          match h_β_coup with
+          | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+            match hr₁.cases_head with
+            | .inl h =>
+              simp_all
+              
+              sorry
+            | .inr ⟨_, h₁, h₂⟩ =>
+              cases h₁ with
+              | coup h =>
+                
+                sorry
+          /-match h_f_β_app with
+          | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+            cases hr₂ with
+            | refl =>
+              
+              sorry
+            | tail ih h =>
+              cases h
+              sorry-/
+    | sndc => sorry
+    | comp' => sorry
+    | comp => sorry
+    | curr => sorry
+    | sigma => sorry
 
 theorem preservation_eta (ht : Judge A t) (hr : RedEta A B) : Judge B t := by
   sorry
@@ -93,9 +149,7 @@ theorem progress (ht : Judge e τ) : Value e ∨ (∃ e', RedAff e e') := by
   sorry
 
 theorem preservation' (ht : Judge A t) (hr : Reduces A B) : Judge B t := by
-  match hr with
-  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-    sorry
+  sorry
 
 theorem refl_ty_heq (h_t : Judge (DCC (refl(f_α) env x₀)) (DCC x = y)) : x = y := by
   obtain ⟨a, b, c, d, e, h_t_refl_env, f, g, _, ⟨hr₁, hn₁, hr₂, hn₂⟩⟩ := h_t.invert rfl

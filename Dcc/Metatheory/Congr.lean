@@ -772,6 +772,12 @@ theorem pop_head (h : Reduces A B) : RedEtaReflTrans A B ∨ (∃ C, RedAff A C 
     | .inr ⟨_, h₁, h₂⟩ =>
       exact .inr ⟨_, h₁, ⟨by assumption, by assumption, by assumption, by assumption⟩⟩
 
+theorem norm_head (h : IsNorm RedAff A) (hr : Reduces A B) : RedEtaReflTrans A B := by
+  match hr with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    cases h.unique_refl hr₁
+    exact hr₂
+
 end Reduces
 
 namespace RedEtaReflTrans

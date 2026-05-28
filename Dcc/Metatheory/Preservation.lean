@@ -10,6 +10,7 @@ namespace Expr
 namespace Judge
 
 theorem ty_is_value (ht : Judge a τ) : τ.TyValue := by
+  
   sorry
 
 theorem preservation_value (ht : Judge A τ) (h_t_val : TyValue τ) (hr : RedAff A B) : Judge B τ := by
@@ -67,6 +68,10 @@ theorem preservation_value (ht : Judge A τ) (h_t_val : TyValue τ) (hr : RedAff
         cases heq
         match h_val_id with
         | .pi h_val_env =>
+          cases hrt_id.curr
+          rename_i hrid h_r_τ
+          have h := h_r_τ.curr.head_trans .quot
+          have h := hrid.id
           
           sorry
 

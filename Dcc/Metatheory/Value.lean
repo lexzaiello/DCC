@@ -1,6 +1,7 @@
 import Dcc.Ast
 import Dcc.Relation
 import Dcc.Reduces
+import Dcc.Metatheory.Congr
 
 namespace Expr
 
@@ -103,7 +104,9 @@ inductive Value : Expr → Prop
   | sort   : Value (DCC Sort m)
 
 inductive TyValue : Expr → Prop
-  | pi     : Value env → TyValue (DCC (Π(f_α, f_β) env))
+  -- potentially sus IsNorm
+  | pi     : IsNorm RedEta f_β → Value env
+    → TyValue (DCC (Π(f_α, f_β) env))
   | eq     : TyValue (DCC x = y)
   | top    : TyValue (DCC ⊤)
   | bot    : TyValue (DCC ⊥)
@@ -156,5 +159,67 @@ theorem Value.is_norm_aff (h : Value e) : IsNorm RedAff e := by
         cases h with
         | congrFun h => cases h
         | congrArg h => exact (ih₂ ⟨_, h⟩).elim
+
+theorem TyValue.is_norm_aff (h : TyValue τ) : IsNorm RedAff τ := by
+  induction h
+  any_goals (
+    focus
+    intro ⟨_, h⟩
+    cases h
+    done)
+  · intro ⟨_, h⟩
+    cases h with
+    | congrFun h => cases h
+    | congrArg h =>
+      rename_i h_v_env _
+      exact h_v_env.is_norm_aff ⟨_, h⟩
+
+theorem TyValue.is_norm_eta (h : TyValue τ) : IsNorm RedEta τ := by
+  induction h
+  any_goals (
+    focus
+    intro ⟨_, h⟩
+    cases h
+    done)
+  · intro ⟨_, h⟩
+    cases h with
+    | pi hr hn_env hrt =>
+      cases hrt with
+      | pi' h =>
+        rename_i h_norm_f_β _ _ _
+        exact h_norm_f_β ⟨_, h⟩
+
+theorem TyValue.reduces (h : TyValue τ) (hr : Reduces τ τ') : τ' = τ := by
+  induction h with
+  | pi =>
+    have ⟨_, _, hr₁, hn₁, hr₂, hn₂, heq⟩ := hr.pi
+    cases heq
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      match hr₂.cases_head with
+      | .inl h =>
+        cases h
+        rfl
+      | .inr ⟨_, h₁, h₂⟩ =>
+        rename_i h_env_value _ _
+        cases h_env_value.is_norm_aff.unique_refl (by assumption)
+        rfl
+    | .inr ⟨_, h₁, h₂⟩ =>
+      rename_i h_n_β _ _ _ _
+      exact (h_n_β ⟨_, h₁⟩).elim
+  | tintro | sort | bot | top | eq =>
+    match hr with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      match hr₁.cases_head with
+      | .inl h =>
+        cases h
+        match hr₂.cases_head with
+        | .inl h =>
+          cases h; rfl
+        | .inr ⟨_, h₁, h₂⟩ =>
+          cases h₁
+      | .inr ⟨_, h₁, h₂⟩ =>
+        cases h₁
 
 end Expr

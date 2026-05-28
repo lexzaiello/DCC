@@ -34,7 +34,6 @@ theorem unique (h₁ : Judge e τ₁) (h₂ : Judge e τ₂) : τ₁ = τ₂ := 
 
 end Judge
 
-
 namespace Reduces
 
 theorem norm_aff (hr : Reduces A B) : IsNorm RedAff B := by
@@ -56,5 +55,14 @@ theorem norm_aff (hr : Reduces A B) : IsNorm RedAff B := by
         exact RedEtaReflTrans.aff_norm' h₂ h₁ hn₁
 
 end Reduces
+
+namespace Judge
+
+theorem norm_aff (ht : Judge e τ) : IsNorm RedAff τ := by
+  cases ht <;> (first
+    | exact Reduces.norm_aff (by assumption)
+    | exact fun ⟨_, h⟩ => by cases h)
+
+end Judge
 
 end Expr

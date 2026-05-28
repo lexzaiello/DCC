@@ -181,8 +181,16 @@ theorem Value.is_norm_aff (h : Value e) : IsNorm RedAff e := by
 namespace Judge
 
 theorem judge_reduces (ht : Judge e τ) (hr : Reduces τ τ') : Judge e τ' := by
-  have h := ht.norm_eta
-  sorry
+  have h₁ := ht.norm_aff
+  have h₂ := ht.norm_eta
+  match hr with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      have h := hr₂.elim_norm (by assumption)
+      simp_all
+    | .inr ⟨_, ha, hb⟩ => exact (h₁ ⟨_, ha⟩).elim
 
 /-
 Substitution lemma...

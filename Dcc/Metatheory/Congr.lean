@@ -531,17 +531,10 @@ theorem pi (h : RedEtaReflTrans (DCC (Π(f_α, f_β))) B) : ∃ f_β', (B = (DCC
       exact ⟨_, hrt, .trans (.single h) heq⟩
 termination_by f_β.size
 
-theorem quot (h : RedEtaReflTrans (DCC `(α, x)) B) : ∃ x', RedEtaReflTrans x x' ∧ B = (DCC `(α, x')) := by
-  cases h.cases_head with
-  | inl h => cases h; exact ⟨_, .refl, rfl⟩
-  | inr h =>
-    have ⟨C, h₁, h₂⟩ := h
-    cases h₁ with
-    | quot h =>
-      have h_dec := RedEta.instRedRel.decreasing h
-      have ⟨x', hrt, heq⟩ := quot h₂
-      exact ⟨x', .trans (.single h) hrt, heq⟩
-termination_by x.size
+theorem quot (h : RedEtaReflTrans (DCC `(α, x)) B) : B = (DCC `(α, x)) := by
+  match h.cases_head with
+  | .inl h => cases h; rfl
+  | .inr ⟨_, h₁, h₂⟩ => cases h₁
 
 end RedEtaReflTrans
 
@@ -556,14 +549,10 @@ end RedAffReflTrans
 
 namespace RedEtaReflTrans
 
-theorem curr (h : RedEtaReflTrans (DCC Λ(α, β, x)) B) : B = (DCC Λ(α, β, x))
-  ∨ (∃ x', RedEta x x' ∧ RedEtaReflTrans (DCC Λ(α, β, x')) B ∧ RedEtaReflTrans (DCC Λ(α, β, x)) (DCC Λ(α, β, x'))) := by
+theorem curr (h : RedEtaReflTrans (DCC Λ(α, β, x)) B) : B = (DCC Λ(α, β, x)) := by
   match h.cases_head with
-  | .inl h => exact .inl h.symm
-  | .inr ⟨_, h₁, h₂⟩ =>
-    cases h₁ with
-    | curr h =>
-      exact .inr ⟨_, by assumption, h₂, .single (.curr h)⟩
+  | .inl h => cases h; rfl
+  | .inr ⟨_, h₁, h₂⟩ => cases h₁
 
 theorem curr_quot (h : RedEtaReflTrans (DCC (Λ(α, _a, `(_b, x)) y)) B)
   : (RedEtaReflTrans (DCC `(y, x)) B ∨ B = (DCC (Λ(α, _a, `(_b, x)) y))) := by
@@ -608,13 +597,7 @@ theorem arrow (h : RedEtaReflTrans (DCC (α : Sort m) → β) B) : ∃ β', B = 
       | pi =>
         rename_i hr _
         cases hr with
-        | pi' h =>
-          cases h with
-          | curr h =>
-            cases h with
-            | quot h =>
-              have ⟨_, heq, hrt⟩ := ih _ h h₂
-              exact ⟨_, heq, .trans (.single h) hrt⟩
+        | pi' h => cases h
 
 end RedEtaReflTrans
 

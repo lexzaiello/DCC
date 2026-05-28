@@ -1,4 +1,5 @@
 import Dcc.Judge
+import Dcc.Aff.Red
 
 namespace Expr
 
@@ -669,7 +670,18 @@ theorem arrow (h : Reduces (DCC (α : Sort m) → β) B) : ∃ α' β', B = (DCC
 
 --theorem conf (h₁ : Reduces A B) (h₂ : Reduces A C)
 
+@[grind ., grind <=, dcc_reduce]
 theorem trans (h₁ : Reduces A B) (h₂ : Reduces B C) : B = C := by
+  match h₁, h₂ with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn₄⟩ =>
+    have h := h₁.norm_aff
+    have h := h₁.norm_eta
+    have heq₁ := hr₃.elim_norm (by assumption)
+    have heq₂ := hr₄.elim_norm (by cases heq₁; assumption)
+    cases heq₁; cases heq₂
+    rfl
+
+/-theorem trans (h₁ : Reduces A B) (h₂ : Reduces B C) : B = C := by
   match h₁, h₂ with
   | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn₄⟩ =>
     have h := h₁.norm_eta
@@ -713,8 +725,82 @@ theorem trans (h₁ : Reduces A B) (h₂ : Reduces B C) : B = C := by
         have h := hr₃.elim_norm (by sorry)
         sorry
     | .inr h =>
-      sorry
+      sorry-/
+
+/-theorem reduce_reduce (h₁ : Reduces A B) (h₂ : Reduces B C) : B = C := by
+  match h₁, h₂ with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn₄⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      match hr₂.cases_head with
+      | .inl h =>
+        cases h
+        match hr₃.cases_head with
+        | .inl h =>
+          cases h
+          match hr₄.cases_head with
+          | .inl h =>
+            cases h; rfl
+          | .inr ⟨_, h₁, h₂⟩ =>
+            change RedEtaReflTrans _ _ at h₂
+            exact hr₄.elim_norm hn₂
+      | .inr ⟨_, h₁, h₂⟩ =>
+        have h := h₁.norm_aff (by assumption)
+        change RedEtaReflTrans _ _ at h₂
+        
+        have h := hr₃.elim_norm (by sorry)
+        sorry
+    | .inr h =>
+      sorry-/
+
+theorem push_head (h : Reduces A B) (hr : RedAffReflTrans A₀ A) : Reduces A₀ B :=
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    ⟨hr.trans hr₁, hn₁, hr₂, hn₂⟩
+
+/-
+Better Pi lemma?
+
+reduces Π(f_α, f_β) env B
+
+parameterize it by RedAffReflTrans env
+and RedEtaRefltrans f_β
+
+combine with trans to get B equality
+-/
+
+theorem cases_head (h : Reduces A B) : RedEtaReflTrans A B ∨ (∃ C D, RedAff A C
+  ∧ RedAffReflTrans C D ∧ RedEtaReflTrans D B ∧ IsNorm RedAff D) := by
+  match h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h => cases h; exact .inl (by assumption)
+    | .inr ⟨x, h₁, h₂⟩ =>
+      exact .inr ⟨_, _, h₁, h₂, by assumption, by assumption⟩
 
 end Reduces
+
+namespace RedEtaReflTrans
+
+theorem mk_pi_β (h : RedEtaReflTrans f_β f_β') (hn_env : IsNorm RedAff env) : RedEtaReflTrans (DCC (Π(f_α, f_β) env)) (DCC (Π(f_α, f_β') env)) := by
+  induction h with
+  | refl => exact .refl
+  | tail ih h a_ih =>
+    exact .trans a_ih (.single (.pi (.refl) (by assumption) (.pi' h)))
+
+open RedAff Congruent in
+theorem pi_extract (h_t_f_α : RedEtaReflTrans f_β f_β') (hn₁ : IsNorm RedEta f_β') (h_t_env : RedAffReflTrans env env') (hn₂ : IsNorm RedAff env') : Reduces (DCC (Π(f_α, f_β) env)) (DCC (Π(f_α, f_β') env')) :=
+  ⟨congrArg' (hR := RedAff.instCongruent.reflTrans) (by assumption), fun ⟨_, h⟩ => by
+    cases h with
+    | congrFun h => cases h
+    | congrArg h =>
+      exact hn₂ ⟨_, h⟩
+  , mk_pi_β h_t_f_α hn₂, fun ⟨_, h⟩ => by
+    cases h with
+    | pi _ _ h_pi => cases h_pi with | pi' =>
+      exact (hn₁ ⟨_, by assumption⟩)⟩
+
+end RedEtaReflTrans
 
 end Expr

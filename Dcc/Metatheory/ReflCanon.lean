@@ -108,6 +108,14 @@ inductive Value : Expr → Prop
   | tintro : Value (DCC ∗)
   | sort   : Value (DCC Sort m)
 
+inductive TyValue : Expr → Prop
+  | pi     : Value env → TyValue (DCC (Π(f_α, f_β) env))
+  | eq     : TyValue (DCC x = y)
+  | top    : TyValue (DCC ⊤)
+  | bot    : TyValue (DCC ⊥)
+  | tintro : TyValue (DCC ∗)
+  | sort   : TyValue (DCC Sort m)
+
 theorem Value.is_norm_aff (h : Value e) : IsNorm RedAff e := by
   induction h with
   | pi₁ h_val_f_β =>
@@ -236,6 +244,77 @@ Progress might be important for this too since we can establish what normal form
 If e : (x = y), then either e is a normal form (e.g., refl), or it reduces to (what?)
 -/
 
+theorem Expr.Judge.preservation_id {f_α f_β x_α α x τ : Expr}
+  (h_r_α : (f_α.app x_α).Reduces α) (h_t_x : x.Judge α)
+  (h_r_τ : ((f_β.app x_α).app x).Reduces τ) (ih₂ : ∀ {B : Expr}, x.RedAff B → B.Judge α) {α_id : Expr}
+  (ht : α_id.id.Judge ((f_α.pi f_β).app x_α))
+  (ih₁ : ∀ {B : Expr}, α_id.RedAff B → B.Judge ((f_α.pi f_β).app x_α)) :
+  x.Judge τ := by
+  match ht with
+  | .id h_t_α h_r_id_ty =>
+    simp [id.type] at h_r_id_ty
+    have ⟨f_β', env', h_r_β', hn_β', h_r_α, hn, heq⟩ := h_r_id_ty.pi
+    simp_all
+    have ⟨⟨ha, hb⟩, hc⟩ := heq
+    simp_all
+    cases ha; cases hb; cases hc
+    rename_i hrτ
+    match hrτ with
+    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+      match hr₁.cases_head with
+      | .inl h =>
+        cases h
+        match hr₂.cases_head with
+        | .inl h =>
+          cases h with
+          | refl => exact (hn₁ ⟨_, .id⟩).elim
+        | .inr ⟨_, h₁, h₂⟩ => cases h₁
+      | .inr ⟨_, h₁, h₂⟩ =>
+        have h := hrτ.id
+        cases h₁ with
+        | id =>
+          match h_r_τ.cases_head with
+          | .inl h =>
+            cases h
+            
+            sorry
+          | .inr h =>
+            sorry
+        | congrFun h =>
+          sorry
+        | congrArg h =>
+          sorry
+        /-rename_i hrid _
+        have h := hrid.id
+        have h_x_α_α₁ := h.elim_norm (by assumption)
+        cases h₁ with
+        | curr =>
+          have h := h.elim_norm (by assumption)
+          have h := hrτ.curr
+          match h with
+          | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+            match hr₁.cases_head with
+            | .inl h =>
+              cases h
+              cases h_r_β' with
+              | tail ih h =>
+                cases h with
+                | curr h =>
+                  rename_i h_τ₂ _
+                  clear hrτ hr₁ h hr_ty
+                  match hr₂.cases_head with
+                  | .inl h =>
+                    cases h
+                    sorry
+              | refl => exact (hn₁ ⟨_, .quot⟩).elim
+            | .inr h =>
+              sorry
+        | congrFun h =>
+          
+          sorry
+        | congrArg h =>
+          sorry-/
+
 theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
   induction ht generalizing B
   any_goals (
@@ -275,14 +354,152 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
     | id =>
       rename_i ht
       cases ht with
-      | id _ hr_ty =>
-        rename_i h_t_x _ _ _ _
-        have ⟨α', β', heq, hrt₁, hrt₂⟩ := hr_ty.arrow
+      | id h_t_α hr_ty =>
+        rename_i h_t_x _ _ _
+        simp [id.type] at hr_ty
+        have ⟨f_β', env', h_r_β', hn_β', h_r_α, hn, heq⟩ := hr_ty.pi
+        simp_all
+        have ⟨⟨ha, hb⟩, hc⟩ := heq
+        simp_all
+        cases ha; cases hb; cases hc
+        rename_i hrτ
+        match hrτ with
+        | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+          match hr₁.cases_head with
+          | .inl h =>
+            cases h
+            match hr₂.cases_head with
+            | .inl h =>
+              cases h
+            | .inr ⟨_, h₁, h₂⟩ =>
+              cases h₁ with
+              | eql =>
+                rename_i hrid _
+                have h := hrid.id
+                cases h_r_β' with
+                | tail ih h => cases h
+          | .inr ⟨_, h₁, h₂⟩ =>
+            rename_i hrid _ _
+            have h := hrid.id
+            have h_x_α_α₁ := h.elim_norm (by assumption)
+            cases h₁ with
+            | curr =>
+              have h := h.elim_norm (by assumption)
+              have h := hrτ.curr
+              match h with
+              | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+                match hr₁.cases_head with
+                | .inl h =>
+                  cases h
+                  cases h_r_β' with
+                  | tail ih h =>
+                    cases h with
+                    | curr h =>
+                      rename_i h_τ₂ _
+                      clear hrτ hr₁ h hr_ty
+                      match hr₂.cases_head with
+                      | .inl h =>
+                        cases h
+                        sorry
+                  | refl => exact (hn₁ ⟨_, .quot⟩).elim
+                | .inr h =>
+                  sorry
+            | congrFun h =>
+              
+              sorry
+            | congrArg h =>
+              sorry
+        /-match h_r_β'.cases_head with
+        | .inl h =>
+          cases h
+          rename_i hr₁ hr₂
+          have ha := hr₁.id
+          have hb := hr₂.curr.head_trans .quot
+          have h := ha.push_head (by assumption)
+          have h_unique := h.unique hb
+          cases h_unique
+          assumption
+        | .inr ⟨_, h₁, h₂⟩ =>
+          cases h₁ with
+          | curr hr =>
+            cases hr with
+            | quot hr =>
+              match h₂.cases_head with
+              | .inl h =>
+                cases h
+                
+                sorry
+              | .inr ⟨_, h₁, h₂⟩ =>
+                
+                sorry-/
+        /-have h := h_r_β'.curr
+        match h with
+        | .inl h =>
+          cases h
+          rename_i hr₁ hr₂
+          have ha := hr₁.id
+          have hb := hr₂.curr.head_trans .quot
+          have h := ha.push_head (by assumption)
+          have h_unique := h.unique hb
+          cases h_unique
+          assumption
+        | .inr ⟨x', hr, hrt₁, hrt₂⟩ =>
+          rename_i hrid _
+          have h := hrid.id
+          cases hr with
+          | quot h =>
+            cases hrt₁ using Relation.ReflTransGen.head_induction_on with
+            | refl =>
+              sorry
+            | head h ih =>
+              cases h with
+              | curr h =>
+                cases h with
+                | quot h =>
+                  
+                  sorry-/
+        /-have ⟨α', β', heq, hrt₁, hrt₂⟩ := hr_ty.arrow
         cases heq
         rename_i hr₁ hr₂
-        have ha := hr₁.id
-        have hb := hr₂.curr.quot₁
-        exact (h_t_x.red_eta_refl_trans (by assumption)).reduces (by assumption)
+        have h_r_β' := hr₂.curr.quot₁
+        have h_r_x_α := hr₁.id
+        dcc_simp_all [dcc_reduce]
+        -- goal: show τ = α₁
+        -- x_α reduces to α₁
+        -- α -*> x_α
+        -- α reduces to α₁
+        -- α -*> β'
+        -- α -*> β'
+        -- β' reduces to τ
+        -- α reduces to τ
+        -- extract RedEtaTrans from h_r_x_α
+        -- both of these should run Reduces on (f_β ...) anyway so I don't see the issue
+        -- can use red_eta lemmas?
+        -- maybe lemma about order of red_eta red_...?
+        -- β' is running both reductions anyway
+        -- to τ
+        -- need to show that τ and α₁ are the same
+        -- I think our arrow lemma is just lame here.
+        -- app should be reducing...?
+        -- we can just change just to force reduce.
+        -- we need a lemma that running reduce on reduce produces the same result
+        rename_i x_α α₁ x τ α m
+        -- α -*> τ because α η-> β' and β' !-> τ
+        -- α and τ are normal forms
+        -- if α -*> τ, then what?
+        -- α partly -> x_α
+        
+        have h_dec' : Reduces _ _ := ⟨hrt₁, by sorry, by sorry, by sorry⟩
+        match h_r_x_α with
+        | ⟨hr₁a, hn₁a, hr₂a, hn₂a⟩ =>
+          have h_t_x₁ := h_t_x.reduces h_r_x_α
+          have h_α₁ : α.Reduces α₁ := by
+            
+            sorry
+          have h_α₂ : α.Reduces τ  := h_r_β'.push_head (by assumption)
+          have h_eq := h_α₁.unique h_α₂
+          cases h_eq
+          assumption-/
 
 theorem preservation_eta (ht : Judge A t) (hr : RedEta A B) : Judge B t := by
   sorry

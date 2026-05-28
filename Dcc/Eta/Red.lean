@@ -12,7 +12,9 @@ inductive RedEta : Expr → Expr → Prop
   | curr_quot  : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
   | curr_fst   : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `((β y), (x y)))
   | curr_fst'  : RedEta (DCC (Λ(α, β, x ∘' Fstc(β₂)) y)) (DCC `((β y), (x y)))
-  | pi         : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
+  | pi         : Relation.ReflTransGen RedAff env env'
+    → IsNorm RedAff env'
+    → RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
   --| pi_quot    : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
   | quot       : RedEta x x' → RedEta (DCC `(β, x)) (DCC `(β, x'))
   | pi'        : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
@@ -80,7 +82,7 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     | _ => .none-/
   | DCC (Π(_f_α, f_β) _env) =>
     match (DCC Π(_f_α, f_β)).step_eta? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi (reduce_sound rfl) (reduce_norm rfl) h⟩⟩
     | _ => .none
   | DCC `(β, x) =>
     match x.step_eta? with

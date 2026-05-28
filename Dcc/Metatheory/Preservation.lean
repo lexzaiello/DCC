@@ -1,4 +1,5 @@
 import Dcc.Judge
+import Dcc.Metatheory.Congr
 import Dcc.Metatheory.Decidability
 import Dcc.Metatheory.Congr
 
@@ -32,5 +33,28 @@ theorem unique (h₁ : Judge e τ₁) (h₂ : Judge e τ₂) : τ₁ = τ₂ := 
   simp_all
 
 end Judge
+
+
+namespace Reduces
+
+theorem norm_aff (hr : Reduces A B) : IsNorm RedAff B := by
+  match hr with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      match hr₂.cases_head with
+      | .inl h => cases h; assumption
+      | .inr ⟨_, h₁, h₂⟩ =>
+        change RedEtaReflTrans _ _ at h₂
+        exact RedEtaReflTrans.aff_norm' h₂ h₁ hn₁
+    | .inr ⟨_, h₁, h₂⟩ =>
+      match hr₂.cases_head with
+      | .inl h => cases h; assumption
+      | .inr ⟨_, h₁, h₂⟩ =>
+        change RedEtaReflTrans _ _ at hr₂
+        exact RedEtaReflTrans.aff_norm' h₂ h₁ hn₁
+
+end Reduces
 
 end Expr

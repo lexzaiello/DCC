@@ -1,6 +1,5 @@
 import Dcc.Ast
 import Dcc.Judge
-import Dcc.Tactic.Reduce
 import Dcc.Metatheory.Congr
 import Dcc.Metatheory.Preservation
 
@@ -181,6 +180,10 @@ theorem Value.is_norm_aff (h : Value e) : IsNorm RedAff e := by
 
 namespace Judge
 
+theorem judge_reduces (ht : Judge e τ) (hr : Reduces τ τ') : Judge e τ' := by
+  have h := ht.norm_eta
+  sorry
+
 /-
 Substitution lemma...
 
@@ -220,7 +223,21 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
       have ha := hrτ.head_trans (.congrArg h)
       exact Judge.app (by assumption) (by assumption) (ih₂ h) (by assumption)
     | quot =>
-      sorry
+      rename_i ht
+      cases ht with
+      | quot h_t_B _ hr_ty =>
+        have ⟨_, _, ha, hb, hc, hd, he⟩ := hr_ty.pi
+        cases he
+        match ha.cases_head with
+        | .inl h =>
+          cases h
+          rename_i hr₁ hr₂
+          have h := hr₂.curr.head_trans .quot
+          have h := hr₁.id
+          
+          sorry
+        | .inr h =>
+          sorry
 
 theorem preservation_eta (ht : Judge A t) (hr : RedEta A B) : Judge B t := by
   sorry

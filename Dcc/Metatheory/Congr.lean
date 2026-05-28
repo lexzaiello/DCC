@@ -183,11 +183,11 @@ theorem pi_norm
   match h.cases_head with
   | .inl h => exact ⟨_, h.symm, .refl, by
     cases h
-    intro ⟨_, hr⟩
-    exact (hn ⟨_, .pi (.pi' hr)⟩).elim⟩
+    intro ⟨_, h⟩
+    exact hn ⟨_, .pi (reduce_sound rfl) (reduce_norm rfl) (.pi' h)⟩⟩
   | .inr ⟨c, h₁, h₂⟩ =>
     cases h₁ with
-    | pi h =>
+    | pi _ _ h =>
       cases h with
       | pi' hr =>
         rename_i β'
@@ -203,20 +203,6 @@ theorem no_coup_eq (h_r : RedEtaReflTrans (DCC Coup(β)) (DCC x = y)) : False :=
   | inr h =>
     have ⟨C, h₁, h₂⟩ := h
     cases h₁
-
-theorem no_pi_eq (h_r : RedEtaReflTrans (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
-  let f_β₀ := f_β
-  cases h_r.cases_head with
-  | inl h => simp_all
-  | inr h =>
-    have ⟨C, h₁, h₂⟩ := h
-    cases heq₁ : h₁ with
-    | pi h =>
-      cases h with
-      | pi' h =>
-        have h_dec := RedEta.instRedRel.decreasing h
-        exact no_pi_eq h₂
-termination_by f_β.size
 
 theorem coup (h : RedEtaReflTrans (DCC Coup(β)) B) : (DCC Coup(β)) = B := by
   match h.cases_head with
@@ -349,6 +335,13 @@ theorem pi (h : Reduced (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env',
 end Reduced
 
 namespace Reduces
+
+theorem elim_norm (h : Reduces A B) (hn : IsNorm RedAff A) : RedEtaReflTrans A B := by
+  match h with
+  | ⟨ha, hb, hc, hd⟩ =>
+    match ha.cases_head with
+    | .inl h => cases h; assumption
+    | .inr ⟨_, h₁, h₂⟩ => exact (hn ⟨_, h₁⟩).elim
 
 theorem sort (he : Reduces (DCC Sort o) B) : B = (DCC Sort o) := by
   match he with
@@ -548,6 +541,40 @@ theorem quot (h : RedEtaReflTrans (DCC `(α, x)) B) : ∃ x', RedEtaReflTrans x 
       have ⟨x', hrt, heq⟩ := quot h₂
       exact ⟨x', .trans (.single h) hrt, heq⟩
 termination_by x.size
+
+end RedEtaReflTrans
+
+namespace RedAffReflTrans
+
+theorem elim_norm (hn : IsNorm RedAff A) (h : RedAffReflTrans A B) : A = B :=
+  match h.cases_head with
+  | .inl h => h
+  | .inr ⟨_, hr, _⟩ => (hn ⟨_, hr⟩).elim
+
+end RedAffReflTrans
+
+namespace RedEtaReflTrans
+
+theorem aff_norm (h : RedEtaReflTrans B C) (head_r : RedEta A B) (hn_head : IsNorm RedAff A) : IsNorm RedAff B := by
+  induction h with
+  | refl =>
+    exact head_r.norm_aff (by assumption)
+  | tail ih h =>
+    have h := h.norm_aff
+    simp_all
+
+theorem aff_norm' (h : RedEtaReflTrans B C) (head_r : RedEta A B) (hn_head : IsNorm RedAff A) : IsNorm RedAff C := by
+  induction h with
+  | refl =>
+    exact head_r.norm_aff (by assumption)
+  | tail ih h =>
+    have h := h.norm_aff
+    simp_all
+
+theorem elim_norm (hn : IsNorm RedEta A) (h : RedEtaReflTrans A B) : A = B :=
+  match h.cases_head with
+  | .inl h => h
+  | .inr ⟨_, hr, _⟩ => (hn ⟨_, hr⟩).elim
 
 end RedEtaReflTrans
 

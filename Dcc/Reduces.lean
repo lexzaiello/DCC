@@ -133,7 +133,7 @@ notation A "≡" B => ∃ C, Reduces A C ∧ Reduces B C
 @[dcc_force_reduce]
 def reduce_all := reduce' RedEta ∘ reduce' RedAff
 
-@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])]
+@[grind ., grind <=, dcc_reduce, aesop safe forward (rule_sets := [DccReduce])]
 theorem Reduces.unique : Reduces A B → Reduces A C → B = C := fun ⟨a, b, c, d⟩ ⟨g, h, i, j⟩ => by
   have ha := norm_unique a b g h
   exact norm_unique c d (ha ▸ i) j

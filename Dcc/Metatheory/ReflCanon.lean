@@ -37,13 +37,11 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
   case mk ih₁ ih₂ ih₃ =>
     cases hr with
     | sigl h =>
-      rename_i βx_red _ _
-      exact Judge.mk (ih₁ h) (by assumption) (by assumption)
-        (by assumption) (βx_red.head_trans (.congrArg h)) (by assumption)
+      rename_i βx_red _ _ _
+      exact Judge.mk (ih₁ h) (by assumption) (βx_red.head_trans (.congrArg h)) (by assumption) (by assumption)
     | sigr h =>
       rename_i βx_red _ _
-      exact Judge.mk (by assumption) (ih₂ h) (by assumption)
-        (by assumption) (by assumption) (by assumption)
+      exact Judge.mk (by assumption) (by assumption) (by assumption) (ih₃ h) (by assumption)
   case app hr_α ih₁ ih₂ =>
     cases hr with
     | congrFun h =>
@@ -88,16 +86,30 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
     | fstc =>
       rename_i hrc hrcoup
       cases hrc with
-      | fstc _ _ _ hrt  =>
+      | fstc _ _ hrα hrt  =>
         have ⟨f_β', env', h_r_β', hn_β', h_r_α, hn, heq⟩ := hrt.pi
         simp_all
         have ⟨⟨ha, hb⟩, hc⟩ := heq
         simp_all
-        rename_i h_r_env' _ _ _ _
+        rename_i h_r_env' _ _ _
         have h := h_r_env'.id
         cases hrcoup with
-        | mk h_t_B =>
-          rename_i h_r_env₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+        | mk h_t_B h_t_β h_r_βx h_t_y h_r_β =>
+          have h := h_r_β'.curr
+          simp_all
+          have heq₂ := hr_α.curr.quot₁
+          cases hb; cases h
+          rename_i h_env'' _ _ _ _ _ _ _
+          have h := h.unique h_env''
+          simp_all
+          cases h
+          cases (h_env''.elim_norm (by assumption)) with
+          | refl =>
+            
+            sorry
+          | tail ih h => cases h
+          --match hr_α
+          /-rename_i h_r_env₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _
           have h_uniq₁ := h_r_env₀.unique h
           have h := h_r_β'.curr
           simp_all
@@ -126,7 +138,7 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
               cases h₁ with
               | coup h =>
                 
-                sorry
+                sorry-/
           /-match h_f_β_app with
           | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
             cases hr₂ with
@@ -262,7 +274,7 @@ theorem comb_ty_not_eq (ht : Judge c (DCC (x = y))) (hv : IsRedComb c n) : False
       cases hd
   | fstc =>
     cases ht with
-    | fstc ha hb _ hc  =>
+    | fstc ha hb _ hc =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
       cases hd
   | comp' =>

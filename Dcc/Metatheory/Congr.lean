@@ -1,4 +1,5 @@
 import Dcc.Judge
+import Dcc.Relation
 import Dcc.Aff.Red
 
 namespace Expr
@@ -617,6 +618,45 @@ theorem arrow (h : RedAffReflTrans (DCC (α : Sort m) → β) B) : ∃ α', B = 
         have ⟨_, heq, hrt⟩ := ih _ h h₂
         exact ⟨_, heq, .trans (.single h) hrt⟩
 
+theorem comp (h : RedAffReflTrans (DCC ((f ∘ g) x)) B) (hn : IsNorm RedAff B) : RedAffReflTrans (DCC (f (g x))) B := by
+  match h.cases_head with
+  | .inl h =>
+    cases h
+    exact (hn ⟨_, .comp⟩).elim
+  | .inr ⟨_, h₁, h₂⟩ =>
+    cases h₁ with
+    | comp =>
+      assumption
+    | congrFun h => cases h
+    | congrArg hr =>
+      have h_dec := RedAff.instRedRel.decreasing hr
+      have h := comp h₂ (by assumption)
+      exact .trans (.single (.congrArg (.congrArg hr))) h
+termination_by x.size
+
+theorem comp' (h : RedAffReflTrans (DCC ((f ∘' g) x)) B) (hn : IsNorm RedAff B) : RedAffReflTrans (DCC (f (g x))) B := by
+  match h.cases_head with
+  | .inl h =>
+    cases h
+    exact (hn ⟨_, .comp'⟩).elim
+  | .inr ⟨_, h₁, h₂⟩ =>
+    cases h₁ with
+    | comp' =>
+      assumption
+    | congrFun h => cases h
+    | congrArg hr =>
+      have h_dec := RedAff.instRedRel.decreasing hr
+      have h := comp' h₂ (by assumption)
+      exact .trans (.single (.congrArg (.congrArg hr))) h
+termination_by x.size
+
+open Congruent in
+theorem congr_arg (h : RedAffReflTrans (DCC (f x)) B) (hn : IsNorm RedAff B) (hr : RedAff x x') : RedAffReflTrans (DCC (f x')) B := by
+  have h_r := RedAff.instCongruent.congrArg' hr (f := f)
+  have ⟨_, h₁, h₂⟩ := RedAff.instRedRel.globally_confluent.conf h (.single h_r)
+  cases hn.unique_refl h₁
+  assumption
+
 end RedAffReflTrans
 
 namespace Reduces
@@ -777,6 +817,42 @@ theorem norm_head (h : IsNorm RedAff A) (hr : Reduces A B) : RedEtaReflTrans A B
   | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
     cases h.unique_refl hr₁
     exact hr₂
+
+/-open Congruent in
+theorem congr_fun (hr : Reduces (DCC (f x)) B) (hrf : Reduces f f') : Reduces (DCC (f' x)) B := by
+  match hr, hrf with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn4⟩ =>
+    have h := Congruent.reflTrans.congrFun' (r := RedAffReflTrans) (h := hr₃) (f := f) (x := x)
+    have ⟨D, h₁, h₂⟩ := RedAff.instRedRel.globally_confluent.conf h hr₁
+    have heq := hn₁.unique_refl h₂
+    rw [← heq] at h₁
+    have h : IsNorm RedAff f' := hrf.norm_aff
+    exact ⟨h.trans h₁, by sorry, by sorry, by sorry⟩
+
+open Congruent in
+theorem congr_fun (hr : Reduces (DCC (f x)) B) (h : Reduces f f') : Reduces (DCC (f' x)) B := by
+  match hr, h with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn4⟩ =>
+    
+    have hn := h.norm_aff
+    have ⟨_, h₁, h₂⟩ := RedAff.instRedRel.globally_confluent.conf hr₁ (congrFun' hr₃)
+    cases hn₁.unique_refl h₁
+    
+    exact ⟨by sorry, by sorry, by assumption, by assumption⟩-/
+
+theorem deterministic (h₁ : Reduces A B) (h₂ : Reduces A C) : B = C := by
+  match h₁, h₂ with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn₄⟩ =>
+    cases norm_unique hr₁ hn₁ hr₃ hn₃
+    cases norm_unique hr₂ hn₂ hr₄ hn₄
+    rfl
+
+/-theorem 
+
+open Congruent in
+theorem congr_fun (hr : Reduces (DCC (f x)) B) (h : Reduces f f') : Reduces (DCC (f' x)) B := by
+  
+  sorry-/
 
 end Reduces
 

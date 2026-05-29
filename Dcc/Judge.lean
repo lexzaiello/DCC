@@ -85,9 +85,9 @@ inductive Judge : Expr → Expr → Prop where
     → Judge (DCC Σ(f_α, f_β)) τ
   | mk     : Judge x α
     → Judge β (DCC ((α : Sort m) → Sort n))
-    → Reduces (DCC (β x)) τ₂
-    → Judge y τ₂
     → Reduces β β'
+    → Reduces (DCC (β' x)) τ₂
+    → Judge y τ₂
     → Judge (DCC ⟦β⟧(x, y)) (DCC Coup(β'))
   /-
     Λ(β, x)
@@ -249,10 +249,11 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
       | .some ⟨βxm, ⟨ht₂⟩⟩ =>
         match with_arr (infer β) with
         | .some ⟨_, α₂, DCC Sort n, m, ⟨ht₃⟩, ⟨harr⟩⟩ =>
-          if heq : reduce_all (DCC (β x)) = βxm then
+          let β' := (reduce_all β)
+          if heq : reduce_all (DCC (β' x)) = βxm then
             if heq₂ : α = α₂ then
               .some ⟨_, ⟨.mk ht₁ (heq₂.symm ▸ harr ▸ ht₃)
-                (reduce_reduces rfl) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
+                (reduce_reduces (B := β') rfl) (reduce_reduces rfl) (heq ▸ ht₂)⟩⟩
             else .none
           else .none
         | _ => .none

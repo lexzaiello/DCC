@@ -840,14 +840,11 @@ theorem congr_fun (hr : Reduces (DCC (f x)) B) (h : Reduces f f') : Reduces (DCC
     
     exact ⟨by sorry, by sorry, by assumption, by assumption⟩-/
 
-theorem deterministic (h₁ : Reduces A B) (h₂ : Reduces A C) : B = C := by
-  match h₁, h₂ with
-  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn₄⟩ =>
-    cases norm_unique hr₁ hn₁ hr₃ hn₃
-    cases norm_unique hr₂ hn₂ hr₄ hn₄
-    rfl
+--theorem 
 
 /-theorem 
+
+aff ∘ eta = eta ∘ aff
 
 open Congruent in
 theorem congr_fun (hr : Reduces (DCC (f x)) B) (h : Reduces f f') : Reduces (DCC (f' x)) B := by
@@ -879,3 +876,30 @@ theorem pi_extract (h_t_f_α : RedEtaReflTrans f_β f_β') (hn₁ : IsNorm RedEt
 end RedEtaReflTrans
 
 end Expr
+
+/-
+Need some lemam about congruence for reduces.
+
+η-reductions are normal affine forms, so reducing them further does nothing.
+Reduces (f x) B
+and f -> f'
+
+so (f' x) -> B
+
+Need the congruence lemma because
+
+Reduces (β x) τ should be the same as
+
+Reduces β β'
+
+Reduces A B
+Reduecs B C
+
+
+this is a variant of the trans lemma.
+theorem trans (h₁ : Reduces A B) (h₂ : Reduces B C) : B = C := by
+
+but for congruence.
+
+a
+-/

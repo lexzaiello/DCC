@@ -41,10 +41,12 @@ theorem norm_aff (ht : Judge e τ) : IsNorm RedAff τ := by
     | intro ⟨_, h⟩; cases h
     done)
   case mk h =>
-    have hn := h.norm_aff
     intro ⟨_, h⟩
     cases h with
-    | coup h => exact hn ⟨_, h⟩
+    | coup h =>
+      rename_i hrβ _ _ _
+      have hn := hrβ.norm_aff
+      exact hn ⟨_, h⟩
 
 theorem red_eta (ht : Judge e τ) (hr : RedEta τ τ' ) : Judge e τ' := by
   have h₁ := ht.norm_aff

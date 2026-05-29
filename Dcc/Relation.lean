@@ -489,7 +489,7 @@ open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theore
 
 @[aesop safe apply (rule_sets := [DccReduce])]
 theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ}
-  [hR : RedRel r t (m := Option.{0})] [hN : SemiComplete r (hR := hR)] [Confluent r]
+  [hR : RedRel r t (m := Option.{0})] [hN : SemiComplete r (hR := hR)] [hC : Confluent r]
   {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A) = ⟨B, ⟨hr⟩⟩ := by
   simp [reduce]
   split

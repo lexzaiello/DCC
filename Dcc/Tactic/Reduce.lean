@@ -1,4 +1,6 @@
 import Mathlib.Logic.Relation
+-- Slide deck worked before this change. it might work after. if it breaks that's why
+import Mathlib.Tactic.CasesM
 import Dcc.Ast
 import Dcc.Judge
 import Dcc.Attrs
@@ -381,6 +383,57 @@ def do_norm_unique (h_norm : LocalDecl) (h_r : LocalDecl) : TacticM (Option Meta
         return .none
   | _ => pure .none
 
+def is_red_for_norm (b : Q(_root_.Expr)) (r : Q(_root_.Expr → _root_.Expr → Prop)) (decl : LocalDecl) :
+  TacticM (Option ((e₀ : Q(_root_.Expr)) × Q(Relation.ReflTransGen $r $e₀ $b))) := do
+  let some decl_ty ← Meta.liftMetaM <| Qq.checkTypeQ decl.type q(Prop) | return Option.none
+  match decl_ty with
+  | ~q(Relation.ReflTransGen (α := _root_.Expr) $r₂ $A $B) =>
+    if ← isDefEq B b then
+      let some decl_val ← Meta.liftMetaM <| Qq.checkTypeQ decl.value q(Relation.ReflTransGen $r $A $b) | return .none
+      return .some ⟨A, decl_val⟩
+    else return .none
+  | _ => return .none
+
+def mk_hyps (lctx : LocalContext) (r : Q(_root_.Expr → _root_.Expr → Prop))
+  (t : Q(_root_.Expr → ℕ))
+  (r_rel : Q(Expr.RedRel $r $t))
+  (mk_heq : Q(∀ (A B : _root_.Expr)
+    (hr : Relation.ReflTransGen $r A B),
+    Expr.IsNorm $r B → (Expr.reduce (hR := $r_rel) $r A) = ⟨B, ⟨hr⟩⟩)) : TacticM (Array Meta.Hypothesis) := do
+  let decls := lctx.decls.toArray.filterMap _root_.id
+  let base : Array ((a : Q(_root_.Expr)) × Q(Expr.IsNorm $r $a) × LocalDecl) ← decls.filterMapM (fun (decl : LocalDecl) => do
+    let some decl_ty ← Meta.liftMetaM <| Qq.checkTypeQ decl.type q(Prop) | return Option.none
+    match decl_ty with
+    | ~q(Expr.IsNorm (α := _root_.Expr) $r₂ $B) =>
+      if ← isDefEq r r₂ then
+        let some proof ← Meta.liftMetaM <| Qq.checkTypeQ decl.value q(Expr.IsNorm $r $B) | return Option.none
+        return .some ⟨B, proof, decl⟩
+      else return .none
+    | _ => return Option.none)
+  let hyps : Array Meta.Hypothesis := Array.flatten <| ← base.mapM (fun ⟨a, hn, ldecl⟩ => do
+    let red_proofs ← decls.filterMapM (fun ldecl' => do
+      is_red_for_norm a r ldecl')
+    let hyps : Array Meta.Hypothesis ← red_proofs.mapM (fun ⟨e₀, hrt⟩ => do
+      let h := q($mk_heq (A := $e₀) (B := $a) $hrt $hn)
+      return ⟨← mkFreshUserName ldecl.userName, (← Meta.inferType h), h, .default, .default⟩)
+    pure hyps)
+  pure hyps
+
+def do_reduce_complete_all : TacticM Unit := do
+  let g ← getMainGoal
+  g.withContext do
+    let lctx ← getLCtx
+    let aff_hyps ← mk_hyps lctx q(Expr.RedAff) q(Expr.size)
+      q(Expr.RedAff.instRedRel) q(fun a b => Expr.reduce_complete (A := a) (B := b)
+        (r := Expr.RedAff) (t := Expr.size) (hR := Expr.RedAff.instRedRel)
+        (hC := Expr.RedAff.instConf) (hN := Expr.RedAff.instSemicomplete))
+    let eta_hyps ← mk_hyps lctx q(Expr.RedEta) q(Expr.size)
+      q(Expr.RedEta.instRedRel) q(fun a b => Expr.reduce_complete (A := a) (B := b)
+        (r := Expr.RedEta) (t := Expr.size) (hR := Expr.RedEta.instRedRel)
+        (hC := Expr.RedEta.instConf) (hN := Expr.RedEta.instSemicomplete))
+    let ⟨_, g'⟩ ← g.assertHypotheses (aff_hyps ++ eta_hyps)
+    replaceMainGoal [g']
+
 /-
 TODO: run dcc_simp_all first. Or just put this in dcc_reduce
 -/
@@ -546,12 +599,28 @@ def split_hyps (g : MVarId) : TacticM (Array MVarId) := do
 
 def destruct_reduces : TacticM (List MVarId) := do
   let g ← getMainGoal
-  Lean.Meta.liftMetaM (g.casesMatching (allowSplit := false) (fun e => do
+  Lean.Meta.liftMetaM (g.casesMatching (recursive := True) (allowSplit := false) (fun e => do
     match e with
+    | .app (.app (.const ``_root_.Expr.Judge []) A) B =>
+      match A with
+      | .app (.const ``_root_.Expr.id []) _ => return True
+      | .app (.const ``_root_.Expr.refl []) _ => return True
+      | .app (.const ``_root_.Expr.eql []) _ => return True
+      | .app (.app (.const ``_root_.Expr.comp []) _) _ => return True
+      | .app (.app (.const ``_root_.Expr.comp' []) _) _ => return True
+      | .app (.const ``_root_.Expr.fstc []) _ => return True
+      | .app (.const ``_root_.Expr.sndc []) _ => return True
+      | .app (.app (.const ``_root_.Expr.sigma []) _) _ => return True
+      | .app (.app (.const ``_root_.Expr.pi []) _) _ => return True
+      | .app (.app (.const ``_root_.Expr.quot []) _) _ => return True
+      | .app (.app (.const ``_root_.Expr.pair []) _) _ => return True
+      | .app (.app (.app (.const ``_root_.Expr.curr []) _) _) _ => return True
+      | _ =>
+      return exprSize A > exprSize B ∨ (exprSize A > 10)
     | .app (.app (.const ``_root_.Expr.Reduces []) A) B =>
-      return exprSize B > 5 ∨ exprSize A > 5
+      return exprSize A > exprSize B ∨ (exprSize B > 5 ∨ exprSize A > 5)
     | .app (.app (.const ``_root_.Expr.Reduced []) A) B =>
-      return exprSize B > 5 ∨ exprSize A > 5
+      return exprSize A > exprSize B ∨ (exprSize B > 5 ∨ exprSize A > 5)
     | _ => return false))
 
 syntax "dcc" reduce_cmd num      : tactic
@@ -644,12 +713,13 @@ elab "dcc" cmd:reduce_cmd n_round:num : tactic => do
     g.withContext do
       match ← (liftMacroM (parse_cmd cmd)) with
       | .reduce _ .norm =>
-        let _ ← (List.replicate n_round.getNat split_hyps).foldlM (fun _ fn => do
+        (List.replicate n_round.getNat split_hyps).foldlM (fun _ fn => do
           let g ← getMainGoal
           let subgoals ← (fn g)
           let _ ← replaceMainGoal subgoals.toList
           pure ()) ()
-        do_norm_unique_all
+        --do_norm_unique_all
+        --do_reduce_complete_all
       | cmd => throwError m!"command not supported by DCC !: {repr cmd}"
 
 elab "dcc" cmd:reduce_cmd : tactic => do

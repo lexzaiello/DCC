@@ -8,13 +8,15 @@ import Dcc.Aff.Size
 namespace Expr
 
 inductive RedEta : Expr → Expr → Prop
-  | curr       : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
+  --| curr       : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
   | curr_quot  : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
   | curr_fst   : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `((β y), (x y)))
   | curr_fst'  : RedEta (DCC (Λ(α, β, x ∘' Fstc(β₂)) y)) (DCC `((β y), (x y)))
-  | pi         : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
+  | pi         : Relation.ReflTransGen RedAff env env'
+    → IsNorm RedAff env'
+    → RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
   --| pi_quot    : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
-  | quot       : RedEta x x' → RedEta (DCC `(β, x)) (DCC `(β, x'))
+  --| quot       : RedEta x x' → RedEta (DCC `(β, x)) (DCC `(β, x'))
   | pi'        : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
 --  | sig        : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(α, β) env)) (DCC Coup(β'))
   | sig'       : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
@@ -80,12 +82,12 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     | _ => .none-/
   | DCC (Π(_f_α, f_β) _env) =>
     match (DCC Π(_f_α, f_β)).step_eta? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi (reduce_sound rfl) (reduce_norm rfl) h⟩⟩
     | _ => .none
-  | DCC `(β, x) =>
+  /-| DCC `(β, x) =>
     match x.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot h⟩⟩
-    | _              => .none
+    | _              => .none-/
   | DCC (Π(_f_α, f_β)) =>
     match f_β with
     /-| DCC `(_β, x) =>
@@ -96,10 +98,10 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
       match x.step_eta? with
       | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi' h⟩⟩
       | _ => .none
-  | DCC Λ(_α, _β, x) =>
+  /-| DCC Λ(_α, _β, x) =>
     match x.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr h⟩⟩
-    | .none => .none
+    | .none => .none-/
   | (DCC `(α, x) ∘ Fstc(β)) => .some ⟨_, ⟨.quot_fst⟩⟩
   | (DCC `(α, x) ∘' Fstc(β)) => .some ⟨_, ⟨.quot'_fst⟩⟩
   | (DCC `(α, x) ∘ Sndc(β)) => .some ⟨_, ⟨.quot_snd⟩⟩
@@ -123,20 +125,21 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
 @[dcc_reduce, aesop safe forward (rule_sets := [DccRel])] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
   -- | pi_comp | pi'_comp => sorry
-  | eql | curr_fst' | curr_fst | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | quot_snd | quot_fst | sig' | pi => cases h₂; aesop
+  | quot_fst
+  | eql | curr_fst' | curr_fst | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | quot_snd | sig' | pi => cases h₂; aesop
   /-| pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop
     · rename_i hr₂; cases hr₂-/
-  | quot =>
+  /-| quot =>
     cases h₂
-    · aesop
+    · aesop-/
   | pi' hr ih =>
     cases h₂
     · aesop
-  | curr hr ih =>
+  /-| curr hr ih =>
     cases h₂ with
-    | curr hr₂ => rw [ih hr₂]
+    | curr hr₂ => rw [ih hr₂]-/
   --| idl'
   --| idl
   | curr_quot => cases h₂; rfl

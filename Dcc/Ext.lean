@@ -8,20 +8,6 @@ import Dcc.Eta.Red
 
 namespace Expr
 
-inductive IsComb : Expr → Type
-  | refl  : IsComb (DCC refl(f_α))
-  | eql   : IsComb (DCC Eql(f_α))
-  | id    : IsComb (DCC Id(α))
-  | comp  : IsComb (DCC (f ∘ g))
-  | comp' : IsComb (DCC (f ∘' g))
-  | fstc  : IsComb (DCC Fstc(β))
-  | sndc  : IsComb (DCC Sndc(β))
-  | sigma : IsComb (DCC Σ(f_α, f_β))
-  | quot  : IsComb (DCC `(β, x))
-  | pair  : IsComb (DCC ⟨f, g⟩)
-  | curr  : IsComb (DCC Λ(α, β, x))
-  | pi    : IsComb (DCC (Π(f_α, f_β)))
-
 /-
 A function that can produce an x = y
 which is typed at τ

@@ -47,10 +47,10 @@ def AstField.to_lean (then_do : TSyntax `term → MacroM (TSyntax `term))
   let lean_app : TSyntax `ident := mkIdent ``Lean.Expr.app
   let nm_long := fld.nm_long (← flags.get!' Flag.from?)
   let nm_quot ← fld.nm_quoted (← flags.as!')
-  let vars : List (TSyntax `ident) := (List.range fld.total_arity).map (fun n =>
+  let vars : List (TSyntax `term) := (List.range fld.total_arity).map (fun n =>
       let idt : TSyntax `ident := mkIdent (Name.str .anonymous s!"x_{n}").eraseMacroScopes
       idt)
-  let bdr ← `(term| $nm_long:ident $(⟨vars⟩)*)
+  let bdr ← `(term| $nm_long:ident $(⟨vars⟩):term*)
 
   match flags.encoder? fld.nm_short with
   | .some enc =>
@@ -103,11 +103,11 @@ def mk_encode (flags : Flag) (base_fields : Array AstField) (ind_arity : ℕ := 
     let vars : List (TSyntax `ident) := (List.range n).map (fun n =>
       let idt : TSyntax `ident := mkIdent (Name.str .anonymous s!"x_{n}").eraseMacroScopes
       idt)
-    let bdrs : List (TSyntax ``bracketedBinder) ← vars.mapM (fun v => `(bracketedBinder| {$v : _}))
+    let bdrs : List (TSyntax ``bracketedBinder) ← vars.mapM (fun v => `(bracketedBinder| {$v:ident : _}))
     `(command|
       open Qq in
       @[$my_attrs]
-      def $fun_name $(⟨bdrs⟩)* (e : $my_name $(⟨vars⟩)*) : Q($to_name) :=
+      def $fun_name $(⟨bdrs⟩):bracketedBinder* (e : $my_name $(⟨vars⟩):ident*) : Q($to_name) :=
         match e with
         $(matchers):matchAlt*)
 

@@ -9,7 +9,7 @@ open Lean (ToExpr)
 gen_ast as MetaExpr
   with Lean.Expr *
   decode sort with _root_.id
-  deriving BEq, Repr, ToExpr
+  deriving BEq, Repr, ToExpr, Inhabited
 gen_dsl "DCC'" for MetaExpr
 
 namespace GenAst
@@ -115,6 +115,7 @@ def toFormat (e : MetaExpr) (pretty : Bool := False) : Std.Format :=
           rw [heq₁] at heq₀
           rw [heq₀]
           simp [sizeOf, MetaExpr._sizeOf_1]
+          grind
         have _h : sizeOf β < sizeOf e := by
           rw [heq₁] at heq₀
           rw [heq₀]
@@ -172,6 +173,7 @@ def toFormat' (e : MetaExpr) (pretty : Bool := False) : Lean.MetaM Std.Format :=
           rw [heq₁] at heq₀
           rw [heq₀]
           simp [sizeOf, MetaExpr._sizeOf_1]
+          grind
         have _h : sizeOf β < sizeOf e := by
           rw [heq₁] at heq₀
           rw [heq₀]
@@ -180,7 +182,8 @@ def toFormat' (e : MetaExpr) (pretty : Bool := False) : Lean.MetaM Std.Format :=
         return sepD [(paren (sepD [(← α.toFormat' pretty), s!"Sort {m}"] " :")), ← β.toFormat' pretty] " →"
       | _ => return (paren ((← f.toFormat' pretty) ++ (.indentD (← x.toFormat' pretty))))
     else return (paren ((← f.toFormat' pretty) ++ (.indentD ((← x.toFormat' pretty)))))
-  | .lean_expr e => Lean.Meta.ppExpr e
+  | .lean_expr e =>
+    return (← Lean.Meta.ppExpr e).pretty
 termination_by e
 
 open Std (ToFormat Format format) in

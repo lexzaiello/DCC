@@ -3,7 +3,7 @@ import Dcc.Aff.Red
 import Dcc.Tactic.Reduce
 import Dcc.Judge
 import Dcc.Complete
-import Dcc.Preservation
+import Dcc.Metatheory.Preservation
 
 /-
 Pseudo-reducibility-candidate-like requirements

@@ -2,7 +2,7 @@ import Dcc.Ast
 import Dcc.Judge
 import Dcc.Metatheory.Value
 import Dcc.Metatheory.Congr
---import Dcc.Metatheory.Preservation
+import Dcc.Metatheory.Preservation
 import Dcc.Metatheory.Judge
 --import Dcc.Tactic.Reduce
 
@@ -37,11 +37,11 @@ theorem preservation (ht : Judge A t) (hr : RedAff A B) : Judge B t := by
   case mk ih₁ ih₂ ih₃ =>
     cases hr with
     | sigl h =>
-      rename_i βx_red _ _ _
-      exact Judge.mk (ih₁ h) (by assumption) (βx_red.head_trans (.congrArg h)) (by assumption) (by assumption)
+      rename_i βx_red _ _
+      exact Judge.mk (ih₁ h) (by assumption) (by assumption) (βx_red.head_trans (.congrArg h)) (by assumption)
     | sigr h =>
       rename_i βx_red _ _
-      exact Judge.mk (by assumption) (by assumption) (by assumption) (ih₃ h) (by assumption)
+      exact Judge.mk (by assumption) (by assumption) (by assumption) (by assumption) (ih₃ h)
   case app hr_α ih₁ ih₂ =>
     cases hr with
     | congrFun h =>
@@ -269,7 +269,7 @@ theorem comb_ty_not_eq (ht : Judge c (DCC (x = y))) (hv : IsRedComb c n) : False
       cases hd
   | sndc =>
     cases ht with
-    | sndc ha hb _ hc  =>
+    | sndc ha hb hc  =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
       cases hd
   | fstc =>

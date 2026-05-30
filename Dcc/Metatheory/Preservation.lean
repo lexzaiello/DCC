@@ -4,7 +4,6 @@ import Dcc.Metatheory.Congr
 import Dcc.Metatheory.Decidability
 import Dcc.Metatheory.Congr
 import Dcc.Metatheory.Judge
-import Dcc.Tactic.Reduce
 
 namespace Expr
 
@@ -38,8 +37,55 @@ theorem coup_fst (h : ⊢ (Fstc(β) ⟦β⟧(x, y)) : α) : ⊢ x : α := by
       cases (h_x_α'.reduces (by assumption)).unique (by assumption)
       exact h_x_α'.reduces (h_r_τ.curr.quot₁)
 
+/-
+Force β₂ = β somehow?
+Both reduce to a common reduct?
+
+
+-/
+
+theorem coup_fst₂ (h : ⊢ (Fstc(β) ⟦β₂⟧(x, y)) : α) : ⊢ x : α := by
+  match h with
+  | .app h_t_f h_r_α h_t_x h_r_env h_r_τ =>
+    match h_t_f with
+    | .fstc h_t_β h_r_β h_r_α h_r_fst_τ =>
+      clear h h_t_f
+      match h_t_x with
+      | .mk h_t_x h_r_β h_r_β' h_r_βx h_t_y =>
+        have h_x_α' := coup_t_x (by assumption) (by assumption)
+        have ⟨_, _, h_r_η, hnη, h_coup, hn_aff, heq⟩ := h_r_fst_τ.pi
+        clear h_r_fst_τ
+        cases heq
+        cases h_r_η.curr
+        have h := h_r_α.id
+        have h := h_r_τ.curr.quot₁
+        rename_i h_x_α''
+        cases h_x_α''.unique h_r_env
+        -- α₁ is normal form because of h_t_β
+        rename_i x_α α₂ h_t_x m₁ n₁ α₁ β₁' α h_r_β h_r_α α m n β' τ₂
+        have h_α₁_norm : IsNorm RedAff α₁ := fun ⟨_, h⟩ => by
+          have hn := h_t_β.norm_aff
+          exact hn ⟨_, (.congrArg h)⟩
+        rename_i h_r_α₁
+        cases h_r_α₁.elim_norm h_α₁_norm
+        cases h_r_α₁.unique h
+        have h_norm_β₁ : IsNorm RedAff β₁' := by
+          rename_i h_r_β₀
+          exact h_r_β₀.norm_aff
+        cases h_coup.elim_norm (fun ⟨_, h⟩ => (by
+          cases h with
+          | coup hr =>
+            exact h_norm_β₁ ⟨_, hr⟩))
+        -- β₂ -> β'
+        -- β -> β₁'
+        -- Coup(β₁') -> Coup(β')
+        -- lemma about Coup(β₁')
+        -- problem: we don't η-reduce inside Coup.
+        cases (h_x_α'.reduces (by assumption)).unique (by assumption)
+        sorry
+
 @[grind ., grind →]
-theorem coup_snd (h : ⊢ (Sndc(β) ⟦β⟧(x, y)) : τ) : Judge y τ := by
+theorem coup_snd (h : ⊢ (Sndc(β) ⟦β⟧(x, y)) : τ) : ⊢ y : τ := by
   match h with
   | .app h_t_f h_r_α h_t_x h_r_env h_r_τ =>
     match h_t_f with

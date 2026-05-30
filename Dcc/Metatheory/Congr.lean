@@ -82,9 +82,6 @@ theorem eq_norm_refl (h_step : RedEta A (DCC (x = y))) (h : IsNorm RedEta (DCC (
   cases h_step with
   | eql => rfl
 
-theorem no_coup (h : RedEta (DCC Coup(β)) B) : False := by
-  cases h
-
 theorem no_pi_eq (h_r : RedEta (DCC (Π(f_α, f_β) env)) (DCC x = y)) : False := by
   cases h_r
 
@@ -199,18 +196,6 @@ theorem pi_norm
         exact ⟨_, heq, .trans (.single hr) h_r_β', h_n_β'⟩
 termination_by f_β.size
 
-theorem no_coup_eq (h_r : RedEtaReflTrans (DCC Coup(β)) (DCC x = y)) : False := by
-  cases h_r.cases_head with
-  | inl h => simp_all
-  | inr h =>
-    have ⟨C, h₁, h₂⟩ := h
-    cases h₁
-
-theorem coup (h : RedEtaReflTrans (DCC Coup(β)) B) : (DCC Coup(β)) = B := by
-  match h.cases_head with
-  | .inl h => exact h
-  | .inr ⟨C, h₁, h₂⟩ => cases h₁
-
 end RedEtaReflTrans
 
 namespace RedAffTrans
@@ -315,7 +300,6 @@ theorem pi (h : Reduces (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env',
     cases heq'
     refine ⟨f_β', env', ?_⟩
     exact ⟨h_r_f_β, h_n_f_β, hrt_env, h_norm_env', rfl⟩
-
 
 end Reduces
 
@@ -600,9 +584,35 @@ theorem arrow (h : RedEtaReflTrans (DCC (α : Sort m) → β) B) : ∃ β', B = 
         cases hr with
         | pi' h => cases h
 
+theorem coup (h : RedEtaReflTrans (DCC Coup(β)) (DCC Coup(β'))) : RedEtaReflTrans β β' := by
+  match h.cases_head with
+  | .inl h =>
+    cases h
+    exact .refl
+  | .inr ⟨_, h₁, h₂⟩ =>
+    cases h₁ with
+    | coup h =>
+      have h_dec := RedEta.instRedRel.decreasing h
+      have h' := coup h₂
+      exact .trans (.single h) h'
+termination_by β.size
+
 end RedEtaReflTrans
 
 namespace RedAffReflTrans
+
+theorem coup (h : RedAffReflTrans (DCC Coup(β)) (DCC Coup(β'))) : RedAffReflTrans β β' := by
+  match h.cases_head with
+  | .inl h =>
+    cases h
+    exact .refl
+  | .inr ⟨_, h₁, h₂⟩ =>
+    cases h₁ with
+    | coup h =>
+      have h_dec := RedAff.instRedRel.decreasing h
+      have h' := coup h₂
+      exact .trans (.single h) h'
+termination_by β.size
 
 theorem arrow (h : RedAffReflTrans (DCC (α : Sort m) → β) B) : ∃ α', B = (DCC ((α' : Sort m) → β)) ∧ RedAffReflTrans α α' := by
   induction α using RedAff.instRedRel.wellFounded.induction with
@@ -818,38 +828,36 @@ theorem norm_head (h : IsNorm RedAff A) (hr : Reduces A B) : RedEtaReflTrans A B
     cases h.unique_refl hr₁
     exact hr₂
 
-/-open Congruent in
-theorem congr_fun (hr : Reduces (DCC (f x)) B) (hrf : Reduces f f') : Reduces (DCC (f' x)) B := by
-  match hr, hrf with
-  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn4⟩ =>
-    have h := Congruent.reflTrans.congrFun' (r := RedAffReflTrans) (h := hr₃) (f := f) (x := x)
-    have ⟨D, h₁, h₂⟩ := RedAff.instRedRel.globally_confluent.conf h hr₁
-    have heq := hn₁.unique_refl h₂
-    rw [← heq] at h₁
-    have h : IsNorm RedAff f' := hrf.norm_aff
-    exact ⟨h.trans h₁, by sorry, by sorry, by sorry⟩
-
-open Congruent in
-theorem congr_fun (hr : Reduces (DCC (f x)) B) (h : Reduces f f') : Reduces (DCC (f' x)) B := by
-  match hr, h with
-  | ⟨hr₁, hn₁, hr₂, hn₂⟩, ⟨hr₃, hn₃, hr₄, hn4⟩ =>
-    
-    have hn := h.norm_aff
-    have ⟨_, h₁, h₂⟩ := RedAff.instRedRel.globally_confluent.conf hr₁ (congrFun' hr₃)
-    cases hn₁.unique_refl h₁
-    
-    exact ⟨by sorry, by sorry, by assumption, by assumption⟩-/
-
---theorem 
-
-/-theorem 
-
-aff ∘ eta = eta ∘ aff
-
-open Congruent in
-theorem congr_fun (hr : Reduces (DCC (f x)) B) (h : Reduces f f') : Reduces (DCC (f' x)) B := by
-  
-  sorry-/
+theorem coup (hr : Reduces (DCC Coup(β)) (DCC (Coup(β')))) : Reduces β β' := by
+  match hr with
+  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      cases h
+      have h_r_β_η := hr₂.coup
+      match hr₂.cases_head with
+      | .inl h =>
+        cases h
+        refine ⟨.refl, ?_, .refl, ?_⟩
+        · intro ⟨_, h⟩
+          exact hn₁ ⟨_, .coup h⟩
+        · intro ⟨_, h⟩
+          exact hn₂ ⟨_, .coup h⟩
+      | .inr ⟨_, h₁, h₂⟩ =>
+        have ha := hr₁.coup
+        have hb := hr₂.coup
+        refine ⟨ha, ?_, hb, ?_⟩
+        · intro ⟨_, h⟩
+          exact hn₁ ⟨_, .coup (by assumption)⟩
+        · intro ⟨_, h⟩
+          exact hn₂ ⟨_, .coup (by assumption)⟩
+    | .inr ⟨_, h₁, h₂⟩ =>
+      cases h₁ with
+      | coup h =>
+        have h_dec := RedAff.instRedRel.decreasing h
+        have h := coup ⟨h₂, hn₁, hr₂, hn₂⟩
+        exact h.push_head (.single (by assumption))
+termination_by β.size
 
 end Reduces
 

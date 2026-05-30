@@ -20,6 +20,7 @@ inductive RedEta : Expr → Expr → Prop
   | pi'        : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
 --  | sig        : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(α, β) env)) (DCC Coup(β'))
   | sig'       : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
+  | coup       : RedEta β β' → RedEta (DCC (Coup(β))) (DCC (Coup(β')))
   | quot_fst   : RedEta (DCC `(α, x) ∘ Fstc(β)) (DCC `(Coup(β), x))
   | quot'_fst  : RedEta (DCC `(α, x) ∘' Fstc(β)) (DCC `(Coup(β), x))
   | quot_snd   : RedEta (DCC `(α, x) ∘ Sndc(β)) (DCC `(Coup(β), x))
@@ -62,6 +63,14 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
         exact h ⟨_, hr⟩
       | congrArg hr =>
         exact hn_env ⟨_, hr⟩
+  case coup ih =>
+    intro ⟨_, h⟩
+    cases h with
+    | coup hr =>
+      rename_i β β'₁ _ _
+      have hn' : IsNorm RedAff β := fun ⟨_, h⟩ => by
+        exact hn ⟨_, .coup h⟩
+      exact (ih (by assumption)) ⟨_, (by assumption)⟩
 
 @[dcc_force_eta, dcc_force_reduce, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
@@ -75,6 +84,10 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   | DCC Σ(α, f_β) =>
     match f_β.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig' h⟩⟩
+    | _ => .none
+  | DCC Coup(f_β) =>
+    match f_β.step_eta? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.coup h⟩⟩
     | _ => .none
   /-| DCC (Σ(α, f_β) env) =>
     match (DCC (f_β env)).step_eta? with
@@ -126,7 +139,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   induction h₁ generalizing C with
   -- | pi_comp | pi'_comp => sorry
   | quot_fst
-  | eql | curr_fst' | curr_fst | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | quot_snd | sig' | pi => cases h₂; aesop
+  | coup | eql | curr_fst' | curr_fst | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | quot_snd | sig' | pi => cases h₂; aesop
   /-| pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop

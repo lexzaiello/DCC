@@ -28,9 +28,17 @@ theorem invert (ht : ⊢ e : τ) (heq : e = (DCC (f x))) : ∃ f_α f_β env α 
 
 theorem norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
   cases ht
-  any_goals (first
+  any_goals (focus
+    first
     | exact Reduces.norm_eta (by assumption)
-    | intro ⟨_, h⟩; cases h)
+    | intro ⟨_, h⟩; cases h
+    done)
+  case mk hrβ hrβx _ =>
+    have h := hrβ.norm_eta
+    intro ⟨_, h⟩
+    cases h with
+    | coup hr =>
+      exact h ⟨_, hr⟩
 
 theorem norm_aff (ht : Judge e τ) : IsNorm RedAff τ := by
   cases ht

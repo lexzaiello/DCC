@@ -67,8 +67,6 @@ theorem coup_fst₂ (h : ⊢ (Fstc(β) ⟦β₂⟧(x, y)) : α) : ⊢ x : α := 
           have hn := h_t_β.norm_aff
           exact hn ⟨_, (.congrArg h)⟩
         rename_i h_r_α₁
-        cases h_r_α₁.elim_norm h_α₁_norm
-        cases h_r_α₁.unique h
         have h_norm_β₁ : IsNorm RedAff β₁' := by
           rename_i h_r_β₀
           exact h_r_β₀.norm_aff
@@ -76,6 +74,21 @@ theorem coup_fst₂ (h : ⊢ (Fstc(β) ⟦β₂⟧(x, y)) : α) : ⊢ x : α := 
           cases h with
           | coup hr =>
             exact h_norm_β₁ ⟨_, hr⟩))
+        have h := h_x_α''.coup
+        have h := h.elim_norm (by
+          rename_i hr _
+          exact hr.norm_aff)
+        cases h.elim_norm (by
+          rename_i hr _ _
+          exact hr.norm_eta)
+        rename_i h_r_α₂ _
+        cases (h_r_α₂.elim_norm (by
+          exact h_r_α₁.norm_aff)).elim_norm (by
+            exact h_r_α₁.norm_eta)
+        cases (h_r_α₁.elim_norm (by assumption)).elim_norm (by
+          have h := h_t_β.norm_eta
+          
+          sorry)
         -- β₂ -> β'
         -- β -> β₁'
         -- Coup(β₁') -> Coup(β')

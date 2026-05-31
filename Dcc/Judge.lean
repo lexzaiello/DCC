@@ -71,8 +71,7 @@ inductive Judge : Expr → Expr → Prop where
     → Judge (DCC Coup(β)) τ
   | fstc   : Judge β (DCC ((α : Sort m) → Sort n))
     → Reduces β β'
-    → Reduces α α'
-    → Reduces (fstc.type α' β' m n) τ
+    → Reduces (fstc.type α β' m n) τ
     → Judge (DCC Fstc(β)) τ
   | sndc    : Judge β (DCC ((α : Sort m) → Sort n))
     → Reduces β β'
@@ -272,7 +271,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
   | DCC Fstc(β) =>
     match with_arr (infer β) with
     | .some ⟨_, α, DCC Sort n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>
-      .some ⟨_, ⟨.fstc (harr ▸ ht₁) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
+      .some ⟨_, ⟨.fstc (harr ▸ ht₁) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | _ => .none
   | DCC Sndc(β) =>
     match with_arr (infer β) with

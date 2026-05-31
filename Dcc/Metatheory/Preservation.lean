@@ -27,13 +27,14 @@ theorem coup_fst (h : ⊢ (Fstc(β) ⟦β⟧(x, y)) : α) : ⊢ x : α := by
   match h with
   | .app h_t_f h_r_α h_t_x h_r_env h_r_τ =>
     match h_t_f with
-    | .fstc h_t_β h_r_β h_r_α h_r_fst_τ =>
+    | .fstc h_t_β h_r_β h_r_fst_τ =>
       clear h h_t_f
       have h_x_α' := coup_t_x h_t_x (by assumption)
       have ⟨_, _, h_r_η, hnη, h_coup, hn_aff, heq⟩ := h_r_fst_τ.pi
       clear h_r_fst_τ
       cases heq
       cases h_r_η.curr
+      have h := h_r_τ.curr.quot₁
       cases (h_x_α'.reduces (by assumption)).unique (by assumption)
       exact h_x_α'.reduces (h_r_τ.curr.quot₁)
 
@@ -44,11 +45,22 @@ Both reduce to a common reduct?
 
 -/
 
+/-theorem coup_fst₂ (h : ⊢ (Fstc(β) ⟦β₂⟧(x, y)) : α) : ⊢ x : α := by
+  match h with
+  | .app h_t_f h_r_α h_t_x h_r_env h_r_τ =>
+    match h_t_f with
+    | .fstc h_t_β h_r_β h_r_fst_τ =>
+      clear h h_t_f
+      match h_t_x with
+      | .mk h_t_x h_r_β h_r_β' h_r_βx h_t_y =>
+        
+        sorry-/
+
 theorem coup_fst₂ (h : ⊢ (Fstc(β) ⟦β₂⟧(x, y)) : α) : ⊢ x : α := by
   match h with
   | .app h_t_f h_r_α h_t_x h_r_env h_r_τ =>
     match h_t_f with
-    | .fstc h_t_β h_r_β h_r_α h_r_fst_τ =>
+    | .fstc h_t_β h_r_β h_r_fst_τ =>
       clear h h_t_f
       match h_t_x with
       | .mk h_t_x h_r_β h_r_β' h_r_βx h_t_y =>
@@ -61,40 +73,9 @@ theorem coup_fst₂ (h : ⊢ (Fstc(β) ⟦β₂⟧(x, y)) : α) : ⊢ x : α := 
         have h := h_r_τ.curr.quot₁
         rename_i h_x_α''
         cases h_x_α''.unique h_r_env
-        -- α₁ is normal form because of h_t_β
-        rename_i x_α α₂ h_t_x m₁ n₁ α₁ β₁' α h_r_β h_r_α α m n β' τ₂
-        have h_α₁_norm : IsNorm RedAff α₁ := fun ⟨_, h⟩ => by
-          have hn := h_t_β.norm_aff
-          exact hn ⟨_, (.congrArg h)⟩
-        rename_i h_r_α₁
-        have h_norm_β₁ : IsNorm RedAff β₁' := by
-          rename_i h_r_β₀
-          exact h_r_β₀.norm_aff
-        cases h_coup.elim_norm (fun ⟨_, h⟩ => (by
-          cases h with
-          | coup hr =>
-            exact h_norm_β₁ ⟨_, hr⟩))
-        have h := h_x_α''.coup
-        have h := h.elim_norm (by
-          rename_i hr _
-          exact hr.norm_aff)
-        cases h.elim_norm (by
-          rename_i hr _ _
-          exact hr.norm_eta)
-        rename_i h_r_α₂ _
-        cases (h_r_α₂.elim_norm (by
-          exact h_r_α₁.norm_aff)).elim_norm (by
-            exact h_r_α₁.norm_eta)
-        cases (h_r_α₁.elim_norm (by assumption)).elim_norm (by
-          have h := h_t_β.norm_eta
-          
-          sorry)
-        -- β₂ -> β'
-        -- β -> β₁'
-        -- Coup(β₁') -> Coup(β')
-        -- lemma about Coup(β₁')
-        -- problem: we don't η-reduce inside Coup.
-        cases (h_x_α'.reduces (by assumption)).unique (by assumption)
+        have h := h_r_τ.curr.quot₁
+        /-have h_x_α' := coup_t_x (x := x) (y := y) (.mk (by sorry) (by sorry) (by sorry) (by sorry) (by sorry))
+          (by assumption)-/
         sorry
 
 @[grind ., grind →]

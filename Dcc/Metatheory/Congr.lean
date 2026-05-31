@@ -660,12 +660,36 @@ theorem comp' (h : RedAffReflTrans (DCC ((f ∘' g) x)) B) (hn : IsNorm RedAff B
       exact .trans (.single (.congrArg (.congrArg hr))) h
 termination_by x.size
 
+theorem congr_fun (hr : RedAffReflTrans (DCC (f x)) B) (hrf : RedAffReflTrans f f') (hn : IsNorm RedAff B) : RedAffReflTrans (DCC (f' x)) B := by
+  have hr' := RedAff.instCongruent.reflTrans.congrFun' hrf (x := x)
+  have ⟨_, h₁, h₂⟩ := RedAff.instRedRel.globally_confluent.conf hr hr'
+  cases hn.unique_refl (by assumption)
+  assumption
+
 open Congruent in
 theorem congr_arg (h : RedAffReflTrans (DCC (f x)) B) (hn : IsNorm RedAff B) (hr : RedAff x x') : RedAffReflTrans (DCC (f x')) B := by
   have h_r := RedAff.instCongruent.congrArg' hr (f := f)
   have ⟨_, h₁, h₂⟩ := RedAff.instRedRel.globally_confluent.conf h (.single h_r)
   cases hn.unique_refl h₁
   assumption
+
+theorem no_eql_eq (h : RedAffReflTrans (DCC (Eql(α) env x)) (DCC (a = b))) : False := by
+  match h.cases_head with
+  | .inl h =>
+    cases h
+  | .inr ⟨_, h₁, h₂⟩ =>
+    cases h₁ with
+    | congrFun h =>
+      cases h with
+      | congrFun h => cases h
+      | congrArg h =>
+        rename_i x'
+        have h_dec := RedAff.instRedRel.decreasing h
+        exact no_eql_eq h₂
+    | congrArg h =>
+      have h_dec := RedAff.instRedRel.decreasing h
+      exact no_eql_eq h₂
+termination_by (x.size + env.size)
 
 end RedAffReflTrans
 
@@ -880,6 +904,18 @@ theorem pi_extract (h_t_f_α : RedEtaReflTrans f_β f_β') (hn₁ : IsNorm RedEt
     cases h with
     | pi _ _ h_pi => cases h_pi with | pi' =>
       exact (hn₁ ⟨_, by assumption⟩)⟩
+
+theorem eql (h : RedEtaReflTrans (DCC (Eql(α) env x)) B) (hn : IsNorm RedEta B) : B = (DCC (x = x)) := by
+  match h.cases_head with
+  | .inl h =>
+    cases h
+    exact (hn ⟨_, .eql⟩).elim
+  | .inr ⟨_, h₁, h₂⟩ =>
+    cases h₁ with
+    | eql =>
+      match h₂.cases_head with
+      | .inl h => cases h; rfl
+      | .inr ⟨_, h₁, h₂⟩ => cases h₁
 
 end RedEtaReflTrans
 

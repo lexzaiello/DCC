@@ -79,7 +79,7 @@ x : ∀ (s : coup.type α β m), γ s
   DCC (Π(Id(Sort m), `(Sort m, Π(β, Λ(α, β, γ)))) α) -- weaken α, keep x
 
 @[dcc_judge] abbrev curr'.type (α β γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, Π(β, !Λ(α, β, γ)))) α) -- weaken α, keep x
+  DCC (Π(Id(Sort m), `(Sort m, Π(!<β>, !Λ(α, β, γ)))) !(α)) -- weaken α, keep x
 
 /-
 β : α → Sort n
@@ -222,6 +222,8 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
     .bracket "(" (.fill s) ")"
   let angle (s : Std.Format) : Std.Format :=
     .bracket "⟨" (.fill s) "⟩"
+  let angle_hard (s : Std.Format) : Std.Format :=
+    .bracket "<" (.fill s) ">"
   let bbracket (s : Std.Format) : Std.Format :=
     .bracket "⟦" (.fill s) "⟧"
 
@@ -232,7 +234,7 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC ⊤)                   => "⊤"
   | (DCC ⊥)                   => "⊥"
   | (DCC ∗)                   => "∗"
-  | (DCC !<f>)                => comb "!" (paren := angle) [f.toFormat pretty]
+  | (DCC !<f>)                => comb "!" (paren := angle_hard) [f.toFormat pretty]
   | (DCC &(x))                => "&" ++ (paren (x.toFormat pretty))
   | (DCC *(x))                => "*" ++ (paren (x.toFormat pretty))
   | (DCC !(x))                => "!" ++ (paren (x.toFormat pretty))

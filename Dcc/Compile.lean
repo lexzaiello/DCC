@@ -21,6 +21,10 @@ open Shared
 def Ctx := Expr
 def Ctx.empty := DCC !(⊤)
 
+def Expr.deref : Expr → Expr
+  | DCC !(Γ) => Γ
+  | Γ => Γ
+
 def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
   match ctx, idx with
   | DCC Coup(β), .zero => pure <| DCC Sndc(β)
@@ -45,9 +49,9 @@ TODO: better logic for detecting duplication. Maybe some kind of user marker.
 def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
   match e with
   | .app (.app (.const ``Shared.deref _us) _α) x => abstract' x ctx
-  | .app (.const ``Shared.share _us) (.sort .zero) => DCC (`(ctx, &(Sort 0)))
+  | .app (.app (.const ``Shared.share _us) _α) (.sort .zero) => DCC (`(ctx, &(Sort 0)))
   | .app (.const ``Shared _us) (.sort .zero) => DCC (`(ctx, !(Sort 0)))
-  | .app (.const ``Shared.share _us) (.sort (.succ m)) => do
+  | .app (.app (.const ``Shared.share _us) _α) (.sort (.succ m)) => do
     match ← (abstract' (.sort m)) ctx with
     | DCC (`(ctx, &(Sort n)))
     | DCC (`(ctx, Sort n)) => pure (DCC (`(ctx, &(Sort (n + 1)))))
@@ -57,7 +61,7 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
     | DCC (`(ctx, !(Sort n)))
     | DCC (`(ctx, Sort n)) => pure (DCC (`(ctx, !(Sort (n + 1)))))
     | _ => .none
-  | .app (.const ``Shared.share _us) (.const ``True.intro []) => DCC (`(ctx, &(∗)))
+  | .app (.app (.const ``Shared.share _us) _α) (.const ``True.intro []) => DCC (`(ctx, &(∗)))
   | .app (.const ``Shared _us) (.const ``False []) => DCC (`(ctx, !(⊥)))
   | .bvar n => cc_var ctx n
   | .app (.app (.const ``Sigma []) α) β => do
@@ -67,7 +71,7 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
   | .lam _a (.app (.const ``Shared _us) α) bdy _binfo => do
     let α' ← abstract' α ctx
     let inner ← abstract' bdy (DCC !(Coup(α')))
-    .some (DCC !Λ(ctx, α', inner))
+    .some (DCC !Λ(ctx.deref, α', inner))
   | .lam _a α bdy _binfo => do
     let α' ← abstract' α ctx
     let inner ← abstract' bdy (DCC Coup(α'))
@@ -76,7 +80,7 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
     let α' ← abstract' α ctx
     let β' ← abstract' β (DCC !(Coup(α')))
 
-    .some (DCC (Π(α', !Λ(ctx, α', β'))))
+    .some (DCC (Π(α', !Λ(ctx.deref, α', β'))))
   | .forallE _name α β _binfo => do
     let α' ← abstract' α ctx
     let β' ← abstract' β (DCC Coup(α'))
@@ -126,10 +130,10 @@ def cc (root : Lean.Expr) : Option _root_.Expr :=
   | .app (.const ``Shared _us) x => do
     let x' ← cc x
     .some (DCC !(x'))
-  | .app (.const ``Shared.share _us) x => do
+  | .app (.app (.const ``Shared.share _us) _α) x => do
     let x' ← cc x
     .some (DCC &(x'))
-  | .app (.lam _a α bdy _binfo) (.app (.const ``Shared.share _us) x) => do
+  | .app (.lam _a α bdy _binfo) (.app (.app (.const ``Shared.share _us) _α) x) => do
     let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty
     let x' ← cc x
     .some (DCC (f' &(∗) &(x')))
@@ -172,4 +176,5 @@ macro_rules
 #eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval Std.format <| dcc_compile (fun (x : Shared (Sort 0)) => (fun (x : Sort 0) => x) x.deref)
-#eval Std.format <| dcc_infer (fun (x : Shared (Sort 0)) => (fun (x : Sort 0) => x) x.deref)
+#eval Std.format <| dcc_infer (((fun (x : Shared (Sort 1)) => (fun (x : Sort 1) => x) x.deref)) (share (Sort 0)))
+

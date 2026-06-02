@@ -11,7 +11,8 @@ Preservation proof:
 -/
 
 inductive RedAff : Expr → Expr → Prop
-  | map      : RedAff (DCC (!<f> &(x))) (DCC &((f x)))
+  | bang     : RedAff x x' → RedAff (DCC !(x)) (DCC !(x'))
+  | map      : RedAff (DCC (!<f> &(x))) (DCC !((f x)))
   | unbox    : RedAff (DCC (*(α) &(x))) x
   | pair     : RedAff (DCC (⟦β⟧⟨M, N⟩ &(x))) (DCC ⟦β⟧((M x), (N x (M x))))
   | evalc    : RedAff (DCC (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC (x y z))
@@ -33,6 +34,10 @@ inductive RedAff : Expr → Expr → Prop
 @[dcc_force_reduce, dcc_force_aff]
 def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
   match e with
+  | DCC !(x) =>
+    match x.step? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.bang h⟩⟩
+    | _ => .none
   | DCC (!<_f> &(_x))                                 => .some ⟨_, ⟨.map⟩⟩
   | DCC (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
   | DCC ((⟦_β⟧⟨_M, _N⟩ &(_x)))                        => .some ⟨_, ⟨.pair⟩⟩
@@ -72,8 +77,19 @@ theorem red_aff_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
 
 instance RedAff.instCongruent : Congruent RedAff where
 
+theorem bang' (h : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC !(x)) (DCC !(x')) := by
+  induction h with
+  | refl => exact .refl
+  | tail ih h a_ih =>
+    exact .trans a_ih (.single (.bang (by assumption)))
+
 open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
   induction h₁ generalizing C with
+  | bang hr₁ ih =>
+    cases h₂ with
+    | bang hr₂ =>
+      have ⟨D, h₁, h₂⟩ := ih hr₂
+      exact ⟨_, ⟨bang' (by assumption), bang' (by assumption)⟩⟩
   | map =>
     cases h₂ with
     | map => exact ⟨_, .refl, .refl⟩
@@ -226,8 +242,14 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
   change ∃ _, ∃ _, (step? _) = .some _
   unfold step?
   split
+  case h_1 =>
+    cases hr with
+    | bang hr =>
+      have ⟨B, h, heq⟩ := semi_complete hr
+      simp [heq]
+      exact .bang h
   repeat exact ⟨_, (RedAff.instRedRel.sound rfl).down, rfl⟩
-  case h_14 =>
+  case h_15 =>
     cases hr with
     | sigl h_x =>
       have ⟨_, hrx', heq'⟩ := semi_complete h_x
@@ -240,12 +262,12 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
         exact ⟨_, .sigr (by assumption), by rw [heq']⟩
       | .some ⟨_, ⟨h_x'⟩⟩ =>
         exact ⟨_, .sigl (by assumption), by rw [heq']⟩
-  case h_15 =>
+  case h_16 =>
     cases hr with
     | coup h =>
       have ⟨_, hrx', heq'⟩ := semi_complete h
       exact ⟨_, .coup hrx', by simp_all⟩
-  case h_16 =>
+  case h_17 =>
     cases hr with
     | curr' =>
       rename_i h
@@ -283,7 +305,7 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
     | curr =>
       rename_i h _
       exact (h _ _ _ _ rfl).elim
-  case h_17 hbox _ _ _ _ _ _ _ _ _ _ hmk hcoup happ =>
+  case h_18 hbang _ _ _ _ _ _ _ _ _ _ _ _ _ hmk hcoup happ =>
     simp_all
     induction A <;> (
       first
@@ -292,7 +314,8 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
         done)
       | (exact (hcoup _ rfl).elim)
       | (exact (happ _ _ rfl).elim)
-      | (exact (hmk _ _ _ rfl).elim))
+      | (exact (hmk _ _ _ rfl).elim)
+      | (exact (hbang _ rfl).elim))
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instSemicomplete : SemiComplete RedAff := ⟨semi_complete⟩
 

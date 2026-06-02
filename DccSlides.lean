@@ -39,7 +39,7 @@ Type-checking is decidable
 # Theorems List
 
 1. Decidable type-checking
-  - $`e : \tau \iff infer (e) = \tau`
+  - $`e : \tau \iff \text{infer} (e) = \tau`
 2. Extensional propositional equality elimination
   - $`h : x = y \iff x \equiv y`
 3. Church-rosser ($`\beta` and $`\eta`)
@@ -57,8 +57,6 @@ Type-checking is decidable
   - Compile lean + type-check DCC + IO to output to info view = 20ms on a modestly large expression
 2. Entire calculus is strongly normalizing
 3. End-to-end verified compiler from Lean (minus inductives) to DCC
-  - Compiler compiles directly to DCC
-  - Type-checker works directly on AST deep embedding (with soundness + completeness)
 4. No variables
 
 # Type-checking is decidable
@@ -278,7 +276,7 @@ $$`
 
 1. Cloneable resource supplied at top level: $`\&(x)`
 2. Cloneable resources joined with $`!\Lambda(\ldots) \&(x) \&(y)`
-3. Cloneable resources manipulated with mapping combinator $`\$<f> \&(e)`
+3. Cloneable resources manipulated with mapping combinator $`\$\langle f \rangle \&(e)`
   - Boxes can be manually unboxed at will
 
 # The Affine Flow:
@@ -641,3 +639,12 @@ def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
 
 - Paper submission: need to write another draft. Narrative is much more solid now.
 - Polish Lean compiler. Maybe people will actually use DCC.
+- PhD thesis (hopefully): full Lean kernel in DCC
+  - Essentially JIT compilation for Lean
+    - Hopefully good memory usage and performance
+    - Likely more portable to other environments (e.g., WASM, CUDA, whatever)
+
+# What's next?
+
+- PhD thesis (hopefully): full Lean kernel in DCC
+  - Submit to [Lean Arena](https://arena.lean-lang.org/)

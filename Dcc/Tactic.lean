@@ -80,7 +80,7 @@ def toFormat (e : MetaExpr) (pretty : Bool := False) : Std.Format :=
   let bbracket (s : Std.Format) : Std.Format :=
     .bracket "⟦" (.fill s) "⟧"
 
-  let comb (pre : Std.Format) (points : List Std.Format) : Std.Format :=
+  let comb (pre : Std.Format) (points : List Std.Format) (paren : Std.Format → Std.Format := paren) : Std.Format :=
     .group (pre ++ (paren (sepD points (indent := pre.pretty.length))))
 
   match heq₀ : e with
@@ -96,7 +96,10 @@ def toFormat (e : MetaExpr) (pretty : Bool := False) : Std.Format :=
   | (DCC[.] Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC[.] Π(α, β))             =>
     comb "Π" [α.toFormat pretty, β.toFormat pretty]
-  | (DCC[.] ⟨a, b⟩)              => (angle (sepD [a.toFormat pretty, b.toFormat pretty] (indent := 1)))
+  | (DCC[.] *(α))                => comb "*" [α.toFormat pretty]
+  | (DCC[.] &(α))                => comb "&" [α.toFormat pretty]
+  | (DCC[.] !(α))                => comb "!" [α.toFormat pretty]
+  | (DCC[.] ⟦β⟧⟨a, b⟩)           => comb (paren := angle) (bbracket (sepD [β.toFormat pretty])) [a.toFormat pretty, b.toFormat pretty]
   | (DCC[.] ⟦β⟧(a, b))           =>
     comb (bbracket (sepD [β.toFormat pretty])) [a.toFormat pretty, b.toFormat pretty]
   | (DCC[.] Coup(β))             => comb "Coup" [β.toFormat pretty]
@@ -139,7 +142,7 @@ def toFormat' (e : MetaExpr) (pretty : Bool := False) : Lean.MetaM Std.Format :=
   let bbracket (s : Std.Format) : Std.Format :=
     .bracket "⟦" (.fill s) "⟧"
 
-  let comb (pre : Std.Format) (points : List Std.Format) : Std.Format :=
+  let comb (pre : Std.Format) (points : List Std.Format) (paren : Std.Format → Std.Format := paren) : Std.Format :=
     .group (pre ++ (paren (sepD points (indent := pre.pretty.length))))
 
   match heq₀ : e with
@@ -155,7 +158,11 @@ def toFormat' (e : MetaExpr) (pretty : Bool := False) : Lean.MetaM Std.Format :=
   | (DCC[.] Eval(α, β, e))       => return comb "Eval" [← α.toFormat' pretty, ← β.toFormat' pretty, ← e.toFormat' pretty]
   | (DCC[.] Π(α, β))             =>
     return comb "Π" [← α.toFormat' pretty, ← β.toFormat' pretty]
-  | (DCC[.] ⟨a, b⟩)              => return (angle (sepD [← a.toFormat' pretty, ← b.toFormat' pretty] (indent := 1)))
+  | (DCC[.] *(α))                => return comb "*" [← α.toFormat' pretty]
+  | (DCC[.] &(α))                => return comb "&" [← α.toFormat' pretty]
+  | (DCC[.] !(α))                => return comb "!" [← α.toFormat' pretty]
+  | (DCC[.] ⟦β⟧⟨a, b⟩)           =>
+    return comb (paren := angle) (bbracket (sepD [β.toFormat pretty])) [a.toFormat pretty, b.toFormat pretty]
   | (DCC[.] ⟦β⟧(a, b))           =>
     return comb (bbracket (sepD [← β.toFormat' pretty])) [← a.toFormat' pretty, ← b.toFormat' pretty]
   | (DCC[.] Coup(β))             => return comb "Coup" [← β.toFormat' pretty]

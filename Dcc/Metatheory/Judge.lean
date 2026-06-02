@@ -27,13 +27,13 @@ theorem invert (ht : ⊢ e : τ) (heq : e = (DCC (f x))) : ∃ f_α f_β env α 
   | _ => grind
 
 theorem norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
-  cases ht
+  induction ht
   any_goals (focus
     first
     | exact Reduces.norm_eta (by assumption)
     | intro ⟨_, h⟩; cases h
     done)
-  case mk hrβ hrβx _ =>
+  case mk hrβ hrβx _ _ _ _ =>
     have h := hrβ.norm_eta
     intro ⟨_, h⟩
     cases h with
@@ -41,7 +41,7 @@ theorem norm_eta (ht : Judge e τ) : IsNorm RedEta τ := by
       exact h ⟨_, hr⟩
 
 theorem norm_aff (ht : Judge e τ) : IsNorm RedAff τ := by
-  cases ht
+  induction ht
   any_goals (
     focus
     first
@@ -52,7 +52,7 @@ theorem norm_aff (ht : Judge e τ) : IsNorm RedAff τ := by
     intro ⟨_, h⟩
     cases h with
     | coup h =>
-      rename_i hrβ _ _ _
+      rename_i hrβ _ _ _ _ _ _
       have hn := hrβ.norm_aff
       exact hn ⟨_, h⟩
 

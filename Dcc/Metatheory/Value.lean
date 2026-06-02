@@ -25,7 +25,7 @@ inductive IsRedComb : Expr → Arity → Type
   -- `(β, x) y
   | quot  : IsRedComb (DCC `(β, x)) 1
   -- ⟨f, g⟩ x
-  | pair  : IsRedComb (DCC ⟨f, g⟩) 1
+  | pair  : IsRedComb (DCC ⟦β⟧⟨f, g⟩) 1
   -- Λ(α, β, x) y z
   | curr  : IsRedComb (DCC Λ(α, β, x)) 2
 
@@ -48,7 +48,7 @@ inductive IsRedCombApp : Expr → Arity → Type
   -- `(β, x) y
   | quot  : IsRedCombApp (DCC `(β, x)) 1
   -- ⟨f, g⟩ x
-  | pair  : IsRedCombApp (DCC ⟨f, g⟩) 1
+  | pair  : IsRedCombApp (DCC ⟦β⟧⟨f, g⟩) 1
   -- Λ(α, β, x) y z
   | curr  : IsRedCombApp (DCC Λ(α, β, x)) 2
   | app   : IsRedCombApp f (m + 1) → IsRedCombApp (DCC (f x)) m

@@ -16,7 +16,8 @@ Can quot be derived?
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘' Id(Sort 1)) (Sort 0))).infer
 
 def mk_test_pair : Expr :=
-  DCC (⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩ (Sort 0))
+  DCC (⟦Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩
+    &(&(Sort 0)))
 
 def test_pair : Option Expr := Sigma.fst <$> mk_test_pair.infer
 

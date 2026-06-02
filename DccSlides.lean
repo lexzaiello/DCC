@@ -372,12 +372,23 @@ $$`
 
 - Context book-keeping is just a combinator `Expr`
 
-```leanLibCode Dcc.Compile (startLine := 3) (endLine := 13)
+```leanLibCode Dcc.Compile (startLine := 30) (endLine := 51)
 def Ctx := Expr
-def Ctx.empty := DCC ⊤
+def Ctx.empty := DCC !(⊤)
+
+def Expr.deref : Expr → Expr
+  | DCC !(Γ) => Γ
+  | Γ => Γ
+
 def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
   match ctx, idx with
   | DCC Coup(β), .zero => pure <| DCC Sndc(β)
+  | DCC !(Coup(β)), .zero => pure <| DCC Sndc(β) ∘' *(Coup(β))
+  | DCC !(Coup(β)), .succ n => do
+    match (← β.infer).fst with
+    | DCC (Π(a, _b) x_α) =>
+      (·.comp' (DCC (Fstc(β)) ∘' !(Coup(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
+    | _ => .none
   | DCC Coup(β), .succ n => do
     match (← β.infer).fst with
     | DCC (Π(a, _b) x_α) =>
@@ -401,7 +412,7 @@ def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
 
 In DCC, a judgment is valid iff the type-checker can infer it:
 
-```leanLibCode Dcc.Complete (startLine := 32) (endLine := 33)
+```leanLibCode Dcc.Metatheory.Decidability (startLine := 32) (endLine := 33)
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
   induction h <;> (dsimp only [infer]; (try (dcc_simp_all; dcc_aesop!)); try grind)
 ```
@@ -410,7 +421,7 @@ There is only one valid type.
 
 # Demo / Theorem: Judgmental Completeness
 
-```leanLibCode Dcc.Complete (startLine := 32) (endLine := 33)
+```leanLibCode Dcc.Metatheory.Decidability (startLine := 32) (endLine := 33)
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
   induction h <;> (dsimp only [infer]; (try (dcc_simp_all; dcc_aesop!)); try grind)
 ```
@@ -419,7 +430,7 @@ This theorem is usually impossible for a dependent type theory. Since two types 
 
 # Theorem: Type-Checking is Decidable
 
-```leanLibCode Dcc.Complete (startLine := 39) (endLine := 46)
+```leanLibCode Dcc.Metatheory.Decidability (startLine := 39) (endLine := 46)
 instance : Decidable (Judge e t) :=
   if h : (infer e).isSome then
     if heq : ((infer e).get h).fst = t then

@@ -137,7 +137,7 @@ theorem elim_eq (h : Judge e (DCC (x = y))) : x = y := by
     all_goals (exact (Reduces.no_pi_eq (by assumption)).elim)
 ```
 
-# DCC is based off the categorical combinators
+# DCC is based on the categorical combinators
 
 $$`
 \begin{array}{l l l}
@@ -278,11 +278,11 @@ $$`
 
 1. Cloneable resource supplied at top level: $`\&(x)`
 2. Cloneable resources joined with $`!\Lambda(\ldots) \&(x) \&(y)`
-3. Cloneable resources manipulated with mapping combinator $`$<f> \&(e)`
+3. Cloneable resources manipulated with mapping combinator $`\$<f> \&(e)`
   - Boxes can be manually unboxed at will
 
 # The Affine Flow:
-4. Cloneable resources consumed, duplicated with pair $`\langle M, N \rangle &(e)`
+4. Cloneable resources consumed, duplicated with pair $`\langle M, N \rangle \&(e)`
   - Can box resources multiple times to allow further duplication
 5. Cloned resources evaluated with eval $`Eval(x) \llbracket \ldots \rrbracket (y, z) = x y z`
 

@@ -148,6 +148,8 @@ def ast_basic_fields : (Array AstField) :=
     ⟨"mkc", 3, #[], False⟩,
     ⟨"pi", 2, #[], False⟩,
     ⟨"curr", 3, #[], False⟩,
+    ⟨"map", 1, #[], False⟩,
+    ⟨"curr'", 3, #[], False⟩,
     ⟨"quot", 2, #[], False⟩,
     ⟨"id", 1, #[], False⟩,
     ⟨"app", 2, #[], False⟩,
@@ -216,9 +218,10 @@ gen_ast as Expr
 
 declare_syntax_cat gen_dcc
 
-syntax "*" noWs gen_dcc                                       : gen_dcc
-syntax "!" noWs gen_dcc                                       : gen_dcc
-syntax "&" noWs gen_dcc                                       : gen_dcc
+syntax "!<" gen_dcc ">"                                       : gen_dcc
+syntax "*(" gen_dcc ")"                                       : gen_dcc
+syntax "!(" gen_dcc ")"                                       : gen_dcc
+syntax "&(" gen_dcc ")"                                       : gen_dcc
 syntax  gen_dcc "=" gen_dcc                                   : gen_dcc
 syntax "Eval(" gen_dcc,* ")"                                  : gen_dcc
 syntax "Eql(" gen_dcc,* ")"                                   : gen_dcc
@@ -234,6 +237,7 @@ syntax:max "Sndc(" gen_dcc,* ")"                              : gen_dcc
 syntax "Σ(" gen_dcc,* ")"                                     : gen_dcc
 syntax "Coup(" gen_dcc ")"                                    : gen_dcc
 syntax:max (priority := high) "Λ(" gen_dcc,* ")"              : gen_dcc
+syntax:max (priority := high) "!Λ(" gen_dcc,* ")"             : gen_dcc
 syntax:max (priority := high) "Π(" gen_dcc,* ")"              : gen_dcc
 syntax gen_dcc "∘'" gen_dcc                                   : gen_dcc
 syntax gen_dcc "∘" gen_dcc                                    : gen_dcc
@@ -265,11 +269,11 @@ open Lean.Syntax in macro_rules
   | `(DCC[$ty:gen_dcc_loc] ∗)                                        => field ty "tintro"
   | `(DCC[$ty:gen_dcc_loc] $x:gen_dcc = $y:gen_dcc)                  => do
     return mkApp (← field ty "eq") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
-  | `(DCC[$ty:gen_dcc_loc] !$x:gen_dcc)                  => do
+  | `(DCC[$ty:gen_dcc_loc] !($x:gen_dcc))                  => do
     return mkApp (← field ty "bang") #[← `(DCC[$ty:gen_dcc_loc] $x)]
-  | `(DCC[$ty:gen_dcc_loc] &$x:gen_dcc)                  => do
+  | `(DCC[$ty:gen_dcc_loc] &($x:gen_dcc))                  => do
     return mkApp (← field ty "box") #[← `(DCC[$ty:gen_dcc_loc] $x)]
-  | `(DCC[$ty:gen_dcc_loc] *$α:gen_dcc)                  => do
+  | `(DCC[$ty:gen_dcc_loc] *($α:gen_dcc))                  => do
     return mkApp (← field ty "unbox") #[← `(DCC[$ty:gen_dcc_loc] $α)]
   | `(DCC[$ty:gen_dcc_loc] Eql($f_α:gen_dcc))                        => do
     return mkApp (← field ty "eql") #[← `(DCC[$ty:gen_dcc_loc] $f_α)]
@@ -283,6 +287,10 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "quot") #[← `(DCC[$ty:gen_dcc_loc] $β), ← `(DCC[$ty:gen_dcc_loc] $x)]
   | `(DCC[$ty:gen_dcc_loc] Λ($α:gen_dcc, $β:gen_dcc, $e:gen_dcc))    => do
     return mkApp (← field ty "curr") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β), ← `(DCC[$ty:gen_dcc_loc] $e)]
+  | `(DCC[$ty:gen_dcc_loc] !<$x:gen_dcc>)    => do
+    return mkApp (← field ty "map") #[← `(DCC[$ty:gen_dcc_loc] $x)]
+  | `(DCC[$ty:gen_dcc_loc] !Λ($α:gen_dcc, $β:gen_dcc, $e:gen_dcc))    => do
+    return mkApp (← field ty "curr'") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β), ← `(DCC[$ty:gen_dcc_loc] $e)]
   | `(DCC[$ty:gen_dcc_loc] Π($α:gen_dcc, $β:gen_dcc))                => do
     return mkApp (← field ty "pi") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β)]
   | `(DCC[$ty:gen_dcc_loc] ⟦$β:gen_dcc⟧⟨$x:gen_dcc, $y:gen_dcc⟩)     => do

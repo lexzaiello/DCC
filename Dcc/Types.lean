@@ -78,6 +78,9 @@ x : ∀ (s : coup.type α β m), γ s
 @[dcc_judge] abbrev curr.type (α β γ : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, Π(β, Λ(α, β, γ)))) α) -- weaken α, keep x
 
+@[dcc_judge] abbrev curr'.type (α β γ : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), `(Sort m, Π(β, !Λ(α, β, γ)))) α) -- weaken α, keep x
+
 /-
 β : α → Sort n
 -/
@@ -101,7 +104,7 @@ g : ∀ (x : α) (y : β x), γ x y
 ⟨f, g⟩ : ∀ (x : α), Σ(Λ(α, β, γ)) x
 -/
 @[dcc_judge] abbrev pair.type (α β γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, Σ(β, γ) ∘' *(α) ∘' *(!(α)))) !(!α))
+  DCC (Π(Id(Sort m), `(Sort m, Σ(β, γ) ∘' *(α))) !(α))
 
 @[dcc_judge] abbrev comp'.type (α γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, γ ∘' g)) α)
@@ -114,7 +117,7 @@ f ∘ g : ∀ (x : α), γ ∘ g
 -/
 
 @[dcc_judge] abbrev comp.g.type (α β : Expr) (m : Level) :=
-  (DCC (Π(Id(Sort m), `(Sort m, Σ(`(α, α), Λ(α, `(α, α), `(Coup(`(α, α)), β))))) α))
+  (DCC (Π(Id(Sort m), `(Sort m, Σ(`(α, α), Λ(α, `(α, α), `(Coup(`(α, α)), β))) ∘' *(α))) !(α)))
 
 /-
 (Π(Id(Sort 1),
@@ -131,7 +134,7 @@ Pair thingy for g f ∘ g
   (DCC (Π(Id(Sort n), f_γ) Coup(`(α, β))))
 
 @[dcc_judge] abbrev comp.type (α γ g : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) α)
+  DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) !(α))
 
 @[dcc_judge] abbrev eql.type (f_α δ : Expr) (m o : Level) : Expr :=
   (DCC (Π(Id(Sort o),
@@ -223,15 +226,16 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
     .bracket "⟦" (.fill s) "⟧"
 
   let comb (pre : Std.Format) (points : List Std.Format) (paren : Std.Format → Std.Format := paren) : Std.Format :=
-    .group (pre ++ (paren (sepD points (indent := pre.pretty.length))))
+    .group (pre ++ (paren (sepD points (indent := min pre.pretty.length 30))))
 
   match heq₀ : e with
   | (DCC ⊤)                   => "⊤"
   | (DCC ⊥)                   => "⊥"
   | (DCC ∗)                   => "∗"
-  | (DCC &x)                  => "&" ++ (x.toFormat pretty)
-  | (DCC *x)                  => "*" ++ (x.toFormat pretty)
-  | (DCC !x)                  => "!" ++ (x.toFormat pretty)
+  | (DCC !<f>)                => comb "!" (paren := angle) [f.toFormat pretty]
+  | (DCC &(x))                => "&" ++ (paren (x.toFormat pretty))
+  | (DCC *(x))                => "*" ++ (paren (x.toFormat pretty))
+  | (DCC !(x))                => "!" ++ (paren (x.toFormat pretty))
   | (DCC Eval(α, β, x))       => comb "Eval" [α.toFormat pretty, β.toFormat pretty, x.toFormat pretty]
   | (DCC `(β, x))             => comb "`" [β.toFormat pretty, x.toFormat pretty]
   | (DCC Id(α))               => comb "Id" [α.toFormat pretty]
@@ -239,6 +243,7 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC Fstc(β))             => comb "Fstc" [β.toFormat pretty]
   | (DCC Sndc(β))             => comb "Sndc" [β.toFormat pretty]
   | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
+  | (DCC !Λ(α, β, e))         => comb "!Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC Π(α, β))             =>
     comb "Π" [α.toFormat pretty, β.toFormat pretty]
   | (DCC ⟦β⟧⟨a, b⟩)           =>

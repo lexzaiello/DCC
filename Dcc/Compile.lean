@@ -30,10 +30,6 @@ macro_rules
 def Ctx := Expr
 def Ctx.empty := DCC !(⊤)
 
-def Expr.deref : Expr → Expr
-  | DCC !(Γ) => Γ
-  | Γ => Γ
-
 def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
   match ctx, idx with
   | DCC Coup(β), .zero => pure <| DCC Sndc(β)
@@ -49,6 +45,10 @@ def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
       (·.comp' (DCC (Fstc(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
     | _ => .none
   | _, _ => .none
+
+def Expr.deref : Expr → Expr
+  | DCC !(Γ) => Γ
+  | Γ => Γ
 
 /-
 TODO: better logic for detecting duplication. Maybe some kind of user marker.

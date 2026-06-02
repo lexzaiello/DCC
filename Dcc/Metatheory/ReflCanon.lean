@@ -444,16 +444,6 @@ theorem eq_val_is_refl (ht : Judge e (DCC (x = y)))
             | .inr ⟨_, h₁, h₂⟩ => cases h₁
           | .inr ⟨_, h₁, h₂⟩ => cases h₁
 
-/-
-In app case:
-- Invoke progress:
-  - if there is a next step, use inductive hypothesis
-  - if it is a Value, use eq_val_is_refl
-
-Progress might not actually need preservation.
-I guess preservation is required :(
--/
-
 theorem elim_eq (h : Judge e (DCC (x = y))) : x = y := by
   induction e using RedAff.instRedRel.wellFounded.induction with
   | h e ih =>

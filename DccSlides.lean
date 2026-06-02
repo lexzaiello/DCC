@@ -10,40 +10,117 @@ open VersoSlides
 
 Lexi Aiello
 
-# DCC is to dependent type theory what Rust's ownership is to systems programming.
+# DCC is the Rust of dependent type theory
 
-# DCC is to dependent type theory what Rust's ownership is to systems programming:
+# DCC is the Rust of dependent type theory:
 
-:::fragment
-- No duplication allowed in types
-- Term-level duplication allowed, but not in types
-:::
+- No duplication allowed
+  - Duplication is explicit via reference counting (a la Rust)
+
 :::fragment
 - Types model move semantics, like in Rust
 :::
 
-# DCC is to dependent type theory what Rust's ownership is to systems programming:
+# DCC is the Rust of dependent type theory:
 
-:::fragment
-- Types are strongly normalizing for free
-:::
+- Entire calculus is strongly normalizing for free
 :::fragment
 - Type-checking is decidable
 :::
 
-# DCC is to dependent type theory what Rust's ownership is to systems programming:
+# DCC is the Rust of dependent type theory:
 
-:::fragment
 - Avoid reasoning about duplication
-:::
 :::fragment
-- Dead-simple def. eq.: just reduce both types (affine is SN)
-  - Type-checking is *fast*
+- Dead-simple def. eq.: just reduce both types
+  - Type-checking is *fast* (21 ms. to compile + type-check a small Lean program to DCC deep embedding)
 :::
 :::fragment
   - Just run the rewrite rules *literally* on the AST
     - Sound + complete beta-reducer
 :::
+
+# Example: Writing DCC Programs in Lean
+
+```lean -panel
+#time #eval dcc_infer (fun (α : Sort 0) (x : α) => x) True True.intro
+-- ^ !click
+```
+
+- Users write normal Lean code
+- Compiles to variable-free, combinatory program
+
+# Example: Writing DCC Programs in Lean
+
+```lean -panel
+#eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
+-- ^ !click
+```
+
+- Users write normal Lean code
+- Compiles to variable-free, combinatory program
+
+# Example: Reference Counting
+
+```lean -panel
+#time #eval Std.format
+-- ^ !click
+  <| dcc_infer (((fun (x : *(Sort 1)) => (fun (x : Sort 1) => x) ↑(x))) &(Sort 0))
+```
+
+- User indicates a cloneable resource with `&(x)`
+
+# Example : Reference Counting
+
+```lean
+#eval Std.format
+  <| dcc_compile (((fun (x : *(Sort 1)) => (fun (x : Sort 1) => x) ↑(x))) &(Sort 0))
+```
+
+- Pair rule (as in cat. combinators) requires argument is boxed as clonable
+- Boxes count their contents three times in size measure
+- Pair downgrades cloneable box to non-clonable term
+
+# Example : Reference Counting
+
+- Strong normalization of the entire calculus *for free* (simple syntactic size measure)
+- Rust-like resource management
+- No need to reason about duplication
+  - Wicked fast evaluation and type inference (no optimizations yet, literally running rewrite rules on the raw AST)
+
+# Inference rule: reference counting
+
+:::hstack
+$$`
+\frac{x : A}{&(x) : !(A)}
+`
+$$`
+\frac{}{
+\llbracket \beta \rrbracket \langle M, N \rangle &(x) \rightarrow \llbracket \beta \rrbracket ((M x), (N x (M x)))}
+`
+:::
+
+- The $`!(A)` modality is taken from linear / affine logic
+- Standard pair duplication rule from cat. combinators
+  - Extended as per my affine design: argument must be cloneable → downgraded to non-cloneable
+    - Simple to count in size
+
+# Size measure: pair
+
+$$`
+\frac{}{size(&(x)) = 3 \cdot size(x) + 1}\quad \frac{}{size(f x) = size(f) + size(x)} \quad \frac{}{size(\llbracket \beta \rrbracket \langle M, N \rangle) = 2 \cdot size(M) + size(N) + 2} \quad \frac{}{size(\llbracket \beta \rrbracket (x, y)) = size(x) + size(y)} \\
+\therefore \\
+size(\llbracket \beta \rrbracket \langle M, N\rangle &(x)) = (2 \cdot size(M) + size(N) + 2) + (3 \cdot size(x) + 1) \quad size(\llbracket \beta \rrbracket ((M x), (N x (M x)))) = (size(M) + size(x)) + (size(N) + size(x) + (size(M) + size(x))) \\
+\therefore
+size(\llbracket \beta \rrbracket \langle M, N \rangle &(x)) > size(\llbracket \beta \rrbracket ((M x), (N x (M x))))
+`
+
+# Inference rule: pair
+
+$$`
+\frac{f : \Pi(x : A), B x \quad g : \Pi(x : A) (y : B x), C x y}{
+\llbracket C \rrbracket \langle f, g \rangle : \Pi (x : !(A)), \Sigma (fst : B *(x)), C *(x) fst}
+`
 
 # Contribution
 
@@ -148,7 +225,7 @@ inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop wher
 ```
 
 I side-step these issues altogether by restricting my types affinely
---------------------------------------------------------------------
+===================================================================
 
 Similar to how Rust's type-system works. Objects in the type context₁ can never be duplicated.
 They can be _moved_, like in Rust, but never duplicated.
@@ -156,7 +233,7 @@ They can be _moved_, like in Rust, but never duplicated.
 - ₁Combinators have no contexts
 
 I side-step these issues altogether by restricting my types affinely
---------------------------------------------------------------------
+===================================================================
 
 Notes on notational shorthand when discussing DCC inference rules:
 - $`\forall (x : A)` is notational shorthand (using variables) for an actual $`\Pi` DCC expression (without variables) that couldn't fit on the screen
@@ -164,7 +241,7 @@ Notes on notational shorthand when discussing DCC inference rules:
 - $`\rightarrow_{\beta}` indicates affine-eta reduction to a normal form
 
 I side-step these issues altogether by restricting my types affinely
---------------------------------------------------------------------
+===================================================================
 
 To illustrate, here are my inference rules for $`\Pi` and application:
 

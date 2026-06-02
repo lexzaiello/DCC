@@ -201,6 +201,6 @@ macro_rules
   | `(dcc_infer $tm:term) => `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))
 
 #eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
-#eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
+#time #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval Std.format <| dcc_compile (fun (x : *(Sort 0)) => (fun (x : Sort 0) => x) x.deref)
 #time #eval Std.format <| dcc_infer (((fun (x : *(Sort 1)) => (fun (x : Sort 1) => x) ↑(x))) &(Sort 0))

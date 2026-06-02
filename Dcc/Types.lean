@@ -170,6 +170,36 @@ f_β : δ → α → Sort n
 @[dcc_judge] abbrev Coup.type (m n : Level) : Expr :=
   DCC Sort max m n
 
+/-
+f_α : δ → Sort m
+Eval(f_α, f_β) : ∀ (s : ∀ (env : δ), (Σ(f_α, f_β) env)) (env : δ),
+  f_β env (Fstc(f_β env) (s env))
+
+Fstc ({ f, g } x) = f x
+
+Eval(f_α, f_β) f x = (Snd ∘ f) x
+
+Eval(f_α, f_β) : ∀ (s : ∀ (env : δ), (Σ(f_α, f_β) env)) (env : δ),
+  f_β env (Fstc(f_β env) (s env))
+
+Eval takes M and N explicitly?
+
+Eval(M, N)
+
+but then we can't destructure couple back into data.
+Need actual eval.
+
+Eval(x) ⟦β⟧(y, z) = x y z?
+
+x : ∀ (x : α) (y : β x), γ x y
+Eval(x) : ∀ (c : Coup(β)), Eval(γ) c
+
+This is canonical.
+-/
+
+@[dcc_judge] abbrev Eval.type (α β γ : Expr) (m n : Level) : Expr :=
+  DCC (Π(Id(Sort (max m n)), `(Sort (max m n), Eval(α, β, γ))) Coup(β))
+
 open Std (ToFormat Format format) in
 def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   let sepD (l : List Std.Format) (sep : Std.Format := ",") (indent : ℕ := 2) : Std.Format :=
@@ -188,6 +218,7 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC ⊤)                   => "⊤"
   | (DCC ⊥)                   => "⊥"
   | (DCC ∗)                   => "∗"
+  | (DCC Eval(α, β, x))       => comb "Eval" [α.toFormat pretty, β.toFormat pretty, x.toFormat pretty]
   | (DCC `(β, x))             => comb "`" [β.toFormat pretty, x.toFormat pretty]
   | (DCC Id(α))               => comb "Id" [α.toFormat pretty]
   | (DCC Sort m)              => "Sort " ++ (Std.format m)

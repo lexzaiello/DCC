@@ -26,6 +26,7 @@ namespace Expr
   | DCC (f ∘ g)  => f.size + f.size + g.size + 1
   | DCC ⟨a, b⟩   => a.size + b.size + 1
   | DCC Λ(_α, _β, x) => x.size + 1
+  | DCC Eval(_α, _β, x) => x.size + 1
   | DCC (f x) => f.size + x.size
 
 end Expr

@@ -101,6 +101,13 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces α α'
     → Reduces (curr.type α' β γ' m) τ
     → Judge (DCC Λ(α, β, x)) τ
+  | eval   : Judge x (DCC (Π(f_α, f_β) env))
+    → Reduces (DCC (f_α env)) α
+    → Reduces (DCC (f_β env)) (DCC (Π(β, γ)))
+    → Judge α (DCC Sort m)
+    → Judge β (DCC ((α : Sort m) → Sort n))
+    → Reduces (Eval.type α β γ m n) τ
+    → Judge (DCC Eval(α, β, x)) τ
   | quot   : Judge x α
     → Judge β (DCC Sort n)
     → Reduces β β'
@@ -294,6 +301,29 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
             (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
+    | _ => .none
+  | DCC Eval(α, β, x) =>
+    match infer x with
+    | .some ⟨DCC (Π(f_α, f_β) env), ⟨ht₁⟩⟩ =>
+      if heq : (DCC (f_α env)).reduce_all = α then
+        match heq₂ : (DCC (f_β env)).reduce_all with
+        | DCC Π(β₂, γ) =>
+          if heq₃ : β₂ = β then
+            match infer α with
+            | .some ⟨DCC Sort m, ⟨ht₂⟩⟩ =>
+              match with_arr (infer β) with
+              | .some ⟨_, α₂, DCC Sort n, m₂, ⟨ht₃⟩, ⟨harr⟩⟩ =>
+                if heq₄ : α₂ = α then
+                  if heq₅ : m₂ = m then
+                    .some ⟨_, ⟨.eval ht₁ (reduce_reduces heq) (heq₃ ▸ (reduce_reduces heq₂))
+                      ht₂ (heq₄ ▸ (heq₅ ▸ harr ▸ ht₃)) (reduce_reduces rfl)⟩⟩
+                  else .none
+                else .none
+              | _ => .none
+            | _ => .none
+          else .none
+        | _ => .none
+      else .none
     | _ => .none
   | DCC `(β, x) =>
     match infer x, infer β with

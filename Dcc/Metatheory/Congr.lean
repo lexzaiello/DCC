@@ -301,6 +301,35 @@ theorem pi (h : Reduces (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env',
     refine ⟨f_β', env', ?_⟩
     exact ⟨h_r_f_β, h_n_f_β, hrt_env, h_norm_env', rfl⟩
 
+theorem no_pi_eq (h : Reduces (DCC (Π(f_α, f_β) env)) (DCC (a = b))) : False := by
+  match h with
+  | ⟨h₁, h₂, h₃, h₄⟩ =>
+    match h₁.cases_head with
+    | .inl h =>
+      cases h
+      match h₃.cases_head with
+      | .inl h =>
+        cases h
+      | .inr ⟨_, h₁, h₂⟩ =>
+        cases h₁ with
+        | pi =>
+          rename_i hrpi _
+          cases hrpi with
+          | pi' hr =>
+            have h_dec := RedEta.instRedRel.decreasing hr
+            rename_i hrenv β'
+            change RedEtaReflTrans _ _ at h₂
+            match h₂.eq with
+            | .inl ⟨_, _, heq₁, heq₂⟩ => simp_all
+            | .inr h => simp_all
+    | .inr ⟨_, h₁, h₂⟩ =>
+      cases h₁ with
+      | congrFun h => cases h
+      | congrArg h =>
+        have h_dec := RedAff.instRedRel.decreasing h
+        exact no_pi_eq ⟨h₂, by assumption, by assumption, by assumption⟩
+termination_by (f_α.size + f_β.size + env.size)
+
 end Reduces
 
 namespace Reduced

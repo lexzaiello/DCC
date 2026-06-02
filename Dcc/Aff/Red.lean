@@ -11,6 +11,8 @@ Preservation proof:
 -/
 
 inductive RedAff : Expr → Expr → Prop
+  | unbox    : RedAff (DCC (*(α) &(x))) x
+  | pair     : RedAff (DCC (⟦β⟧⟨M, N⟩ &(&x))) (DCC ⟦β⟧((M x), (N x (M x))))
   | evalc    : RedAff (DCC (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC (x y z))
   | quot     : RedAff (DCC (`(β, x) y)) x
   | id       : RedAff (DCC (Id(α) x)) x
@@ -29,6 +31,8 @@ inductive RedAff : Expr → Expr → Prop
 @[dcc_force_reduce, dcc_force_aff]
 def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
   match e with
+  | DCC (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
+  | DCC ((⟦_β⟧⟨_M, _N⟩ &(&_x)))                       => .some ⟨_, ⟨.pair⟩⟩
   | (DCC (Eval(_α, _β, _x) ⟦__β⟧(_y, _z)))            => .some ⟨_, ⟨.evalc⟩⟩
   | (DCC (`(_β, _x) _y))                              => .some ⟨_, ⟨.quot⟩⟩
   | (DCC (Id(_α) _x))                                 => .some ⟨_, ⟨.id⟩⟩
@@ -66,6 +70,16 @@ instance RedAff.instCongruent : Congruent RedAff where
 
 open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
   induction h₁ generalizing C with
+  | unbox =>
+    cases h₂ with
+    | unbox => exact ⟨_, .refl, .refl⟩
+    | congrArg h => cases h
+    | congrFun h => cases h
+  | pair =>
+    cases h₂ with
+    | pair => exact ⟨_, .refl, .refl⟩
+    | congrFun h => cases h
+    | congrArg h => cases h
   | evalc =>
     cases h₂ with
     | evalc => exact ⟨_, .refl, .refl⟩
@@ -142,7 +156,7 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
     | congrArg h => exact ⟨_, .single (.congrArg (.sigr (by assumption))), .single .curr⟩
   | congrFun h_r ih =>
     cases h₂
-    case fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
+    case unbox | pair | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
     case curr =>
       cases h_r with
       | congrFun h => cases h
@@ -154,6 +168,8 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
       exact ⟨_, congrArg' (.single h_x), congrFun' (.single h_r)⟩
   | congrArg h_r ih =>
     cases h₂ with
+    | unbox => cases h_r
+    | pair => cases h_r
     | evalc => cases h_r with
       | sigl h => exact ⟨_, .single .evalc, .single (.congrFun (.congrArg h))⟩
       | sigr h => exact ⟨_, .single .evalc, .single (.congrArg h)⟩
@@ -188,7 +204,7 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
   unfold step?
   split
   repeat exact ⟨_, (RedAff.instRedRel.sound rfl).down, rfl⟩
-  case h_10 =>
+  case h_12 =>
     cases hr with
     | sigl h_x =>
       have ⟨_, hrx', heq'⟩ := semi_complete h_x
@@ -201,13 +217,19 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
         exact ⟨_, .sigr (by assumption), by rw [heq']⟩
       | .some ⟨_, ⟨h_x'⟩⟩ =>
         exact ⟨_, .sigl (by assumption), by rw [heq']⟩
-  case h_11 =>
+  case h_13 =>
     cases hr with
     | coup h =>
       have ⟨_, hrx', heq'⟩ := semi_complete h
       exact ⟨_, .coup hrx', by simp_all⟩
-  case h_12 =>
+  case h_14 =>
     cases hr with
+    | unbox =>
+      simp_all
+    | pair =>
+      simp_all
+      rename_i h
+      exact (h _ _ _ _ rfl rfl rfl rfl).elim
     | evalc =>
       simp_all
       rename_i h
@@ -226,7 +248,7 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
       exact ⟨_, .congrFun hrf, by rw [heqf]⟩
     | congrArg h =>
       have ⟨_, hrx, heqx⟩ := semi_complete h
-      rename_i f x _ _ _ _ _ _ _ _ _ _ _
+      rename_i f x _ _ _ _ _ _ _ _ _ _ _ _ _
       match f.step? with
       | .none => exact ⟨_, .congrArg hrx, by simp_all⟩
       | .some ⟨_, ⟨hrf⟩⟩ => exact ⟨_, .congrFun hrf, by simp⟩
@@ -234,7 +256,7 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
     | curr =>
       rename_i h _
       exact (h _ _ _ _  rfl).elim
-  case h_13 hmk hcoup happ =>
+  case h_15 hbox _ _ _ _ _ _ _ _ _ _ hmk hcoup happ =>
     simp_all
     induction A <;> (
       first

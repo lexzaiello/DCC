@@ -101,7 +101,7 @@ g : ∀ (x : α) (y : β x), γ x y
 ⟨f, g⟩ : ∀ (x : α), Σ(Λ(α, β, γ)) x
 -/
 @[dcc_judge] abbrev pair.type (α β γ : Expr) (m : Level) : Expr :=
-  DCC (Π(Id(Sort m), `(Sort m, Σ(β, γ))) α)
+  DCC (Π(Id(Sort m), `(Sort m, Σ(β, γ) ∘' *(α) ∘' *(!(α)))) !(!α))
 
 @[dcc_judge] abbrev comp'.type (α γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, γ ∘' g)) α)
@@ -222,13 +222,16 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   let bbracket (s : Std.Format) : Std.Format :=
     .bracket "⟦" (.fill s) "⟧"
 
-  let comb (pre : Std.Format) (points : List Std.Format) : Std.Format :=
+  let comb (pre : Std.Format) (points : List Std.Format) (paren : Std.Format → Std.Format := paren) : Std.Format :=
     .group (pre ++ (paren (sepD points (indent := pre.pretty.length))))
 
   match heq₀ : e with
   | (DCC ⊤)                   => "⊤"
   | (DCC ⊥)                   => "⊥"
   | (DCC ∗)                   => "∗"
+  | (DCC &x)                  => "&" ++ (x.toFormat pretty)
+  | (DCC *x)                  => "*" ++ (x.toFormat pretty)
+  | (DCC !x)                  => "!" ++ (x.toFormat pretty)
   | (DCC Eval(α, β, x))       => comb "Eval" [α.toFormat pretty, β.toFormat pretty, x.toFormat pretty]
   | (DCC `(β, x))             => comb "`" [β.toFormat pretty, x.toFormat pretty]
   | (DCC Id(α))               => comb "Id" [α.toFormat pretty]
@@ -238,7 +241,8 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC Π(α, β))             =>
     comb "Π" [α.toFormat pretty, β.toFormat pretty]
-  | (DCC ⟨a, b⟩)              => (angle (sepD [a.toFormat pretty, b.toFormat pretty] (indent := 1)))
+  | (DCC ⟦β⟧⟨a, b⟩)           =>
+    comb (paren := angle) (bbracket (sepD [β.toFormat pretty])) [a.toFormat pretty, b.toFormat pretty]
   | (DCC ⟦β⟧(a, b))           =>
     comb (bbracket (sepD [β.toFormat pretty])) [a.toFormat pretty, b.toFormat pretty]
   | (DCC Coup(β))             => comb "Coup" [β.toFormat pretty]

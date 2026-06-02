@@ -41,7 +41,7 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
     | _root_.Expr.app (.pi f_α f_β) x_α =>
       let α : _root_.Expr := (f_α.app x_α).reduce_all
       match (f_β.app x_α).reduce_all with
-      | DCC Π(β, _γ) => .some (DCC Eval(α, β, M') ∘ ⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+      | DCC Π(β, _γ) => .some (DCC Eval(α, β, M') ∘ ⟦β⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
       | _ => .none
     | _ => .none
   | .const ``True.intro [] => DCC (`(ctx, ∗))
@@ -97,3 +97,7 @@ macro_rules
 #eval Std.format <| dcc_compile (fun (x : Sort 0) => ((fun (x : Sort 0) => x) x))
 #eval dcc_infer (fun (x : Sort 0) => ((fun (x : Sort 0) => x) x))
 #eval Std.format <| dcc_infer ((fun (x : Sort 1) => ((fun (x : Sort 1) => x) x)) (Sort 0))
+
+/-
+Need to redo this with !
+-/

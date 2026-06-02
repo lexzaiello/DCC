@@ -1,7 +1,6 @@
 import Dcc.Relation
 import Dcc.Ast
 import Dcc.Types
-import Dcc.Eta.Size
 import Dcc.Aff.Red
 import Dcc.Aff.Size
 

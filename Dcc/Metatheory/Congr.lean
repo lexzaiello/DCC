@@ -27,21 +27,6 @@ def project_eq (hr : RedAff (DCC (f ⟦β⟧(a, b))) (DCC x = y)) : ProjectCurr 
   | sndc => exact .sndc
   | fstc => exact .fstc
 
-/-
-An expression that reduces to an equality.
--/
-inductive RedEq : Expr → Expr → Prop
-  | proj : ProjectCurr A (DCC (x = y)) → RedEq A (DCC (x = y))
-  | id   : RedEq (DCC (Id(α) (x = y))) (DCC (x = y))
-  | quot : RedEq (DCC (`(α, (x = y)) z)) (DCC (x = y))
-
-def eq (hr : RedAff A (DCC (x = y))) : RedEq A (DCC (x = y)) := by
-  cases hr with
-  | id => exact .id
-  | fstc => exact .proj .fstc
-  | sndc => exact .proj .sndc
-  | quot => exact .quot
-
 end RedAff
 
 namespace RedEta
@@ -139,13 +124,6 @@ theorem pi_norm
       have ⟨env', heq, hrt, hn⟩ := pi_norm h₂ hn
       exact ⟨env', heq, .trans (.single h) hrt, hn⟩
 termination_by env.size
-
-open RedAff in
-def eq (hr : RedAffReflTrans A (DCC (x = y))) : (∃ B,
-  RedAffReflTrans A B ∧ RedAff B (DCC (x = y)) ∧ RedEq B (DCC (x = y))) ∨ (A = (DCC (x = y))) := by
-  cases hr with
-  | refl => exact .inr rfl
-  | tail ih h => exact .inl ⟨_, ih, by assumption, h.eq⟩
 
 end RedAffReflTrans
 

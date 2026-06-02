@@ -176,5 +176,4 @@ macro_rules
 #eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval Std.format <| dcc_compile (fun (x : Shared (Sort 0)) => (fun (x : Sort 0) => x) x.deref)
-#eval Std.format <| dcc_infer (((fun (x : Shared (Sort 1)) => (fun (x : Sort 1) => x) x.deref)) (share (Sort 0)))
-
+#time #eval Std.format <| dcc_infer (((fun (x : Shared (Sort 1)) => (fun (x : Sort 1) => x) x.deref)) (share (Sort 0)))

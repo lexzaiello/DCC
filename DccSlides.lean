@@ -11,6 +11,8 @@ open VersoSlides
 
 Lexi Aiello
 
+June 2, 2026
+
 # DCC is the Rust of dependent type theory
 
 # DCC is the Rust of dependent type theory:
@@ -37,21 +39,26 @@ Type-checking is decidable
 # Theorems List
 
 1. Decidable type-checking
-  - $`e : \tau \iff infer e = \tau$
+  - $`e : \tau \iff infer e = \tau`
 2. Extensional propositional equality elimination
   - $`h : x = y \iff x \equiv y`
 3. Church-rosser ($`\beta` and $`\eta`)
   - $`A \rightarrow B \land A \rightarrow C \implies \exists D, B \rightarrow D \land C \rightarrow D`
+
+# Theorems List
+
 4. Strong normalization (entire calculus)
 5. Uniqueness of normal forms
 
 # Features List
 
 1. Wicked fast type-checker
-2. Entire calculus is strongly normalizing
   - Tested on examples
   - Compile lean + type-check DCC + IO to output to info view = 20ms on a modestly large expression
+2. Entire calculus is strongly normalizing
 3. End-to-end verified compiler from Lean (minus inductives) to DCC
+  - Compiler compiles directly to DCC
+  - Type-checker works directly on AST deep embedding (with soundness + completeness)
 4. No variables
 
 # Type-checking is decidable
@@ -80,10 +87,10 @@ instance : Decidable (Judge e t) :=
 
 # Decidable Extensional Type-Checking
 
-This is the inference rule for $`refl` in Martin-Lof Type Theory. $`refl` is the only constructor of propositional equality in MLTT.
+This is the inference rule for `refl` in Martin-Lof Type Theory. `refl` is the only constructor of propositional equality in MLTT.
 
 $$`
-\frac{}{refl : \Pi (a : A), a = a}
+\frac{}{\text{refl} : \Pi (a : A), a = a}
 `
 
 # Decidable Extensional Type-Checking
@@ -143,6 +150,7 @@ $$`
 &(quote) & '(x) y = x
 \end{array}
 `
+
 # The Categorical Combinators
 
 - Model cartesian closed categories (categorical semantics of simply-typed $`\lambda`-calculus) literally
@@ -188,12 +196,12 @@ $$`
 # Potential Nontermination: The Pair Rule
 
 $$`
-(dpair) \langle x, y\rangle z = (x z, y z)
+(dpair) \quad \langle x, y\rangle z = (x z, y z)
 `
 
 The pair rule enables duplication in the cat. combinators. Can cause infinite loops.
 
-# The Affine Solution: Strong-Normalization for Free
+# The Affine Solution → Strong-Normalization for Free
 
 # Pairs and Boxes
 
@@ -206,6 +214,16 @@ $$`
 
 - The $`!(A)` modality is taken from linear / affine logic
   - Indicates a cloneable resource
+
+# Pairs and Boxes
+
+$$`
+\begin{gathered}
+\frac{x : A}{\&(x) : !(A)} \\
+\llbracket \beta \rrbracket \langle M, N \rangle \&(x) \rightarrow \llbracket \beta \rrbracket ((M x), (N x (M x)))
+\end{gathered}
+`
+
 - Pair can only duplicate a cloneable `x`
   - → downgrades to non-cloneable by pair dup
   - Cleanly avoid nontermination
@@ -230,8 +248,15 @@ size & (\llbracket \beta \rrbracket \langle M, N\rangle \&(x)) =\\
   & + (3 \cdot size(x) + 1) \\
 size & (\llbracket \beta \rrbracket ((M x), (N x (M x)))) = \\
   & (size(M) + size(x)) \\
-  & + (size(N) + size(x) + (size(M) + size(x))) \\
-size & (\llbracket \beta \rrbracket \langle M, N \rangle \&(x))
+  & + (size(N) + size(x) + (size(M) + size(x)))
+\end{align*}
+`
+
+# Size measure: pair
+
+$$`
+\begin{align*}
+size & (\llbracket \beta \rrbracket \langle M, N \rangle \&(x)) \\
   & > size(\llbracket \beta \rrbracket ((M x), (N x (M x))))
 \end{align*}
 `
@@ -243,20 +268,22 @@ $$`
 \llbracket C \rrbracket \langle f, g \rangle : \Pi (x : !(A)), \Sigma (a : B (*(x))), C (*(x)) a}
 `
 
-# `!`Curry Is The Inverse of Pair
+# $`!\Lambda` Is The Inverse of Pair
 
 $$`
-!\Lambda(\alpha, \beta, x) \&(y) \&(z) \rightarrow x \&(\llbracket \beta \rrbracket (y, z))
+!\Lambda(\alpha, \beta, x)\ \&(y)\ \&(z) \rightarrow x\ \&(\llbracket \beta \rrbracket (y, z))
 `
 
 # The Affine Flow:
 
-1. Cloneable resource supplied at top level: $`&(x)`
-2. Cloneable resources joined with $`!\Lambda(\ldots) &(x) &(y)`
-3. Cloneable resources manipulated with mapping combinator $`$<f> &(e)`
+1. Cloneable resource supplied at top level: $`\&(x)`
+2. Cloneable resources joined with $`!\Lambda(\ldots) \&(x) \&(y)`
+3. Cloneable resources manipulated with mapping combinator $`$<f> \&(e)`
+  - Boxes can be manually unboxed at will
+
+# The Affine Flow:
 4. Cloneable resources consumed, duplicated with pair $`\langle M, N \rangle &(e)`
   - Can box resources multiple times to allow further duplication
-  - Boxes can be manually unboxed at will
 5. Cloned resources evaluated with eval $`Eval(x) \llbracket \ldots \rrbracket (y, z) = x y z`
 
 # Resource Managemant is by Construction
@@ -317,6 +344,9 @@ Zero-Cost Abstraction
 - Strong normalization *for free* (simple syntactic size measure)
   - Eager normalization - types are canonical
   - Extensional reflection rule for propositional equality
+
+# Example: Reference Counting
+
 - Rust-like resource management
   - No reasoning about duplication - wicked fast type-checker
 
@@ -425,7 +455,7 @@ inductive IsDefEqStrong : List VExpr → VExpr → VExpr → VExpr → Prop wher
 # I side-step these issues altogether by restricting my types affinely
 
 Similar to how Rust's type-system works. Objects in the type context₁ can never be duplicated.
-They can be _moved_, like in Rust, but never duplicated.
+They can be _moved_, like in Rust, or cloned via reference counting, but never duplicated freely.
 
 - ₁Combinators have no contexts
 
@@ -440,17 +470,17 @@ Notes on notational shorthand when discussing DCC inference rules:
 
 To illustrate, here are my inference rules for $`\Pi` and application:
 
-:::hstack
 $$`
 \frac{f_{\alpha} : \delta \rightarrow \text{Sort}\ m \quad f_{\beta} : \forall (s : \delta) (x : f_\alpha s), \text{Sort}\ n}
 {\Pi(f_\alpha, f_\beta) : \delta \rightarrow \text{Sort}\ max(m, n)}
 `
 
+# I side-step these issues altogether by restricting my types affinely
+
 $$`
 \frac{f : \Pi (f_\alpha, f_\beta) x_\alpha, f_{\alpha} x_{\alpha} \rightarrow_{\beta} \alpha, \quad x : \alpha, \quad f_\beta x_\alpha \rightarrow_{\tau}}
 {f x : \tau}
 `
-:::
 
 # I side-step these issues altogether by restricting my types affinely
 
@@ -584,9 +614,7 @@ A formalization of this scale in Lean requires very carefully constructed abstra
   - Since contexts can include terms (dependent), complex data structures are usually required just to compile
   - Context book-keeping is just a combinator `Expr`
 
-# Demo: Lean Compiler
-
-- Context book-keeping is just a combinator `Expr`
+# Context book-keeping is just a combinator `Expr`
 
 ```leanLibCode Dcc.Compile (startLine := 30) (endLine := 47)
 def Ctx := Expr
@@ -613,10 +641,3 @@ def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
 
 - Paper submission: need to write another draft. Narrative is much more solid now.
 - Polish Lean compiler. Maybe people will actually use DCC.
-
--- TODO: more inference rules to explain
--- TODO: inference rules are kind of the least important part
--- Size measure first
--- Go over inference rules quickly
--- Go over how we avoid conversion in judgment rule
--- Compare with parallel reduction or another with a general conversion constructor

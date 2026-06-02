@@ -149,6 +149,7 @@ def ast_basic_fields : (Array AstField) :=
     ⟨"pi", 2, #[], False⟩,
     ⟨"curr", 3, #[], False⟩,
     ⟨"map", 1, #[], False⟩,
+    ⟨"fmap", 1, #[], False⟩,
     ⟨"curr'", 3, #[], False⟩,
     ⟨"quot", 2, #[], False⟩,
     ⟨"id", 1, #[], False⟩,
@@ -219,6 +220,7 @@ gen_ast as Expr
 declare_syntax_cat gen_dcc
 
 syntax "!<" gen_dcc ">"                                       : gen_dcc
+syntax "$<" gen_dcc ">"                                       : gen_dcc
 syntax "*(" gen_dcc ")"                                       : gen_dcc
 syntax "!(" gen_dcc ")"                                       : gen_dcc
 syntax "&(" gen_dcc ")"                                       : gen_dcc
@@ -289,6 +291,8 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "curr") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β), ← `(DCC[$ty:gen_dcc_loc] $e)]
   | `(DCC[$ty:gen_dcc_loc] !<$x:gen_dcc>)    => do
     return mkApp (← field ty "map") #[← `(DCC[$ty:gen_dcc_loc] $x)]
+  | `(DCC[$ty:gen_dcc_loc] $<$x:gen_dcc>)    => do
+    return mkApp (← field ty "fmap") #[← `(DCC[$ty:gen_dcc_loc] $x)]
   | `(DCC[$ty:gen_dcc_loc] !Λ($α:gen_dcc, $β:gen_dcc, $e:gen_dcc))    => do
     return mkApp (← field ty "curr'") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β), ← `(DCC[$ty:gen_dcc_loc] $e)]
   | `(DCC[$ty:gen_dcc_loc] Π($α:gen_dcc, $β:gen_dcc))                => do

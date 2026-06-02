@@ -235,6 +235,7 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC ⊥)                   => "⊥"
   | (DCC ∗)                   => "∗"
   | (DCC !<f>)                => comb "!" (paren := angle_hard) [f.toFormat pretty]
+  | (DCC $<f>)                => comb "$" (paren := angle_hard) [f.toFormat pretty]
   | (DCC &(x))                => "&" ++ (paren (x.toFormat pretty))
   | (DCC *(x))                => "*" ++ (paren (x.toFormat pretty))
   | (DCC !(x))                => "!" ++ (paren (x.toFormat pretty))

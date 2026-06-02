@@ -13,6 +13,7 @@ Preservation proof:
 inductive RedAff : Expr → Expr → Prop
   | bang     : RedAff x x' → RedAff (DCC !(x)) (DCC !(x'))
   | map      : RedAff (DCC (!<f> &(x))) (DCC !((f x)))
+  | fmap     : RedAff (DCC ($<f> &(x))) (DCC &((f x)))
   | unbox    : RedAff (DCC (*(α) &(x))) x
   | pair     : RedAff (DCC (⟦β⟧⟨M, N⟩ &(x))) (DCC ⟦β⟧((M x), (N x (M x))))
   | evalc    : RedAff (DCC (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC (x y z))
@@ -39,6 +40,7 @@ def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.bang h⟩⟩
     | _ => .none
   | DCC (!<_f> &(_x))                                 => .some ⟨_, ⟨.map⟩⟩
+  | DCC ($<_f> &(_x))                                 => .some ⟨_, ⟨.fmap⟩⟩
   | DCC (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
   | DCC ((⟦_β⟧⟨_M, _N⟩ &(_x)))                        => .some ⟨_, ⟨.pair⟩⟩
   | (DCC (Eval(_α, _β, _x) ⟦__β⟧(_y, _z)))            => .some ⟨_, ⟨.evalc⟩⟩
@@ -93,6 +95,11 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
   | map =>
     cases h₂ with
     | map => exact ⟨_, .refl, .refl⟩
+    | congrFun h => cases h
+    | congrArg h => cases h
+  | fmap =>
+    cases h₂ with
+    | fmap => exact ⟨_, .refl, .refl⟩
     | congrFun h => cases h
     | congrArg h => cases h
   | unbox =>
@@ -189,7 +196,7 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
     | congrArg h => cases h
   | congrFun h_r ih =>
     cases h₂
-    case map | unbox | pair | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
+    case fmap | map | unbox | pair | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
     case curr =>
       cases h_r with
       | congrFun h => cases h
@@ -205,6 +212,7 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
       exact ⟨_, congrArg' (.single h_x), congrFun' (.single h_r)⟩
   | congrArg h_r ih =>
     cases h₂ with
+    | fmap
     | map
     | unbox
     | pair => cases h_r
@@ -249,7 +257,7 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
       simp [heq]
       exact .bang h
   repeat exact ⟨_, (RedAff.instRedRel.sound rfl).down, rfl⟩
-  case h_15 =>
+  case h_16 =>
     cases hr with
     | sigl h_x =>
       have ⟨_, hrx', heq'⟩ := semi_complete h_x
@@ -262,12 +270,12 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
         exact ⟨_, .sigr (by assumption), by rw [heq']⟩
       | .some ⟨_, ⟨h_x'⟩⟩ =>
         exact ⟨_, .sigl (by assumption), by rw [heq']⟩
-  case h_16 =>
+  case h_17 =>
     cases hr with
     | coup h =>
       have ⟨_, hrx', heq'⟩ := semi_complete h
       exact ⟨_, .coup hrx', by simp_all⟩
-  case h_17 =>
+  case h_18 =>
     cases hr with
     | curr' =>
       rename_i h
@@ -291,13 +299,13 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
       simp_all
       rename_i h
       exact (h _ _ _ _ rfl rfl rfl rfl).elim
-    | map => simp_all
+    | fmap | map => simp_all
     | congrFun h =>
       have ⟨_, hrf, heqf⟩ := semi_complete h
       exact ⟨_, .congrFun hrf, by rw [heqf]⟩
     | congrArg h =>
       have ⟨_, hrx, heqx⟩ := semi_complete h
-      rename_i f x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      rename_i f x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
       match f.step? with
       | .none => exact ⟨_, .congrArg hrx, by simp_all⟩
       | .some ⟨_, ⟨hrf⟩⟩ => exact ⟨_, .congrFun hrf, by simp⟩
@@ -305,7 +313,7 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
     | curr =>
       rename_i h _
       exact (h _ _ _ _ rfl).elim
-  case h_18 hbang _ _ _ _ _ _ _ _ _ _ _ _ _ hmk hcoup happ =>
+  case h_19 hbang _ _ _ _ _ _ _ _ _ _ _ _ _ _ hmk hcoup happ =>
     simp_all
     induction A <;> (
       first

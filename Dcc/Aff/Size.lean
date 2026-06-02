@@ -32,6 +32,7 @@ namespace Expr
   | DCC *(α)   => α.size + 1
   | DCC &(x)   => x.size + x.size + x.size + 1
   | DCC !<x>   => x.size + x.size + x.size + 1
+  | DCC $<x>   => x.size + x.size + x.size + 1
   | DCC (f x) => f.size + x.size
 
 end Expr

@@ -113,8 +113,12 @@ inductive Judge : Expr → Expr → Prop where
     → Judge (DCC !Λ(α, β, x)) τ
   | map    : Judge x (DCC (Π(Id(Sort m), f_β) α))
     → Reduces (DCC (f_β α)) β
-    → Reduces (DCC (Π(Id(Sort m), `(Sort m, !<β>)) α)) τ
+    → Reduces (DCC (Π(Id(Sort m), `(Sort m, !<β>)) !(α))) τ
     → Judge (DCC !<x>) τ
+  | fmap   : Judge x (DCC (Π(Id(Sort m), f_β) α))
+    → Reduces (DCC (f_β α)) β
+    → Reduces (DCC (Π(Id(Sort m), `(Sort m, !<β>)) !(α))) τ
+    → Judge (DCC $<x>) τ
   | eval   : Judge x (DCC (Π(f_α, f_β) env))
     → Reduces (DCC (f_α env)) α
     → Reduces (DCC (f_β env)) (DCC (Π(β, γ)))
@@ -205,6 +209,10 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
   | DCC !<f> => match f.infer with
     | .some ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
       .some ⟨_, ⟨.map ht (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
+    | _ => .none
+  | DCC $<f> => match f.infer with
+    | .some ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
+      .some ⟨_, ⟨.fmap ht (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | _ => .none
   | DCC *(α) => match α.infer with
     | .some ⟨DCC Sort m, ⟨ht⟩⟩ => .some ⟨_, ⟨.unbox ht (reduce_reduces rfl)⟩⟩

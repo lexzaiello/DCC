@@ -1,4 +1,5 @@
 import Dcc.Judge
+import Dcc.Tactic.Debug
 
 def Ctx := Expr
 def Ctx.empty := DCC ⊤
@@ -88,6 +89,7 @@ macro_rules
   | `(dcc_compile $tm:term) => `((Lean.Expr.cc' q($tm:term)))
   | `(dcc_infer $tm:term) => `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))
 
-#eval dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
+#eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
 
+dcc_trace (((Λ(⊤, `(⊤, Sort 0), Λ(Coup(`(⊤, Sort 0)), Sndc(`(⊤, Sort 0)), Sndc(Sndc(`(⊤, Sort 0))))) ∗) ⊤) ∗)

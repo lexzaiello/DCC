@@ -77,6 +77,8 @@ def toFormat (e : MetaExpr) (pretty : Bool := False) : Std.Format :=
     .bracket "(" (.fill s) ")"
   let angle (s : Std.Format) : Std.Format :=
     .bracket "⟨" (.fill s) "⟩"
+  let angle_hard (s : Std.Format) : Std.Format :=
+    .bracket "<" (.fill s) ">"
   let bbracket (s : Std.Format) : Std.Format :=
     .bracket "⟦" (.fill s) "⟧"
 
@@ -94,6 +96,9 @@ def toFormat (e : MetaExpr) (pretty : Bool := False) : Std.Format :=
   | (DCC[.] Sndc(β))             => comb "Sndc" [β.toFormat pretty]
   | (DCC[.] Eval(α, β, e))       => comb "Eval" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC[.] Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
+  | (DCC[.] !Λ(α, β, e))         => comb "!Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
+  | (DCC[.] $<f>)                => comb "$" [f.toFormat pretty] (paren := angle_hard)
+  | (DCC[.] !<f>)                => comb "!" [f.toFormat pretty] (paren := angle_hard)
   | (DCC[.] Π(α, β))             =>
     comb "Π" [α.toFormat pretty, β.toFormat pretty]
   | (DCC[.] *(α))                => comb "*" [α.toFormat pretty]
@@ -139,6 +144,8 @@ def toFormat' (e : MetaExpr) (pretty : Bool := False) : Lean.MetaM Std.Format :=
     .bracket "(" (.fill s) ")"
   let angle (s : Std.Format) : Std.Format :=
     .bracket "⟨" (.fill s) "⟩"
+  let angle_hard (s : Std.Format) : Std.Format :=
+    .bracket "<" (.fill s) ">"
   let bbracket (s : Std.Format) : Std.Format :=
     .bracket "⟦" (.fill s) "⟧"
 
@@ -155,6 +162,9 @@ def toFormat' (e : MetaExpr) (pretty : Bool := False) : Lean.MetaM Std.Format :=
   | (DCC[.] Fstc(β))             => return comb "Fstc" [← β.toFormat' pretty]
   | (DCC[.] Sndc(β))             => return comb "Sndc" [← β.toFormat' pretty]
   | (DCC[.] Λ(α, β, e))          => return comb "Λ" [← α.toFormat' pretty, ← β.toFormat' pretty, ← e.toFormat' pretty]
+  | (DCC[.] !Λ(α, β, e))         => return comb "!Λ" [← α.toFormat' pretty, ← β.toFormat' pretty, ← e.toFormat' pretty]
+  | (DCC[.] $<f>)                => return comb "$" [← f.toFormat' pretty] (paren := angle_hard)
+  | (DCC[.] !<f>)                => return comb "!" [← f.toFormat' pretty] (paren := angle_hard)
   | (DCC[.] Eval(α, β, e))       => return comb "Eval" [← α.toFormat' pretty, ← β.toFormat' pretty, ← e.toFormat' pretty]
   | (DCC[.] Π(α, β))             =>
     return comb "Π" [← α.toFormat' pretty, ← β.toFormat' pretty]

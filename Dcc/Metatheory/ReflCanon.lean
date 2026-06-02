@@ -458,7 +458,7 @@ theorem elim_eq (h : Judge e (DCC (x = y))) : x = y := by
   induction e using RedAff.instRedRel.wellFounded.induction with
   | h e ih =>
     match heq₂ : h with
-    | .unbox _ h | .eval _ _ _ _ _ h
+    | .curr' _ _ _ _ _ _ h | .map _ _ h | .fmap _ _ h | .unbox _ h | .eval _ _ _ _ _ h
     | .eql _ _ h | .sigma _ _   _ h | .quot _ _ _ h | .pi _ _ _ h | .comp _ _ _ _ h
     | .pair _ _ _ _ _ _ _ h | .comp' _ _ _ _ _ _ h | .curr _ _ _ _ _ _ h
     | .sndc _ _ _ h | .fstc _ _ _ h | .id _ _ h | .refl _ _ h =>

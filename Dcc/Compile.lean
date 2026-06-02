@@ -5,7 +5,7 @@ inductive Shared.{u} (α : Type u) where
   | share : α → Shared α
 deriving Lean.ToExpr
 
-def Shared.deref (s : Shared α) : α :=
+def Shared.deref.{u} {α : Type u} (s : Shared α) : α :=
   match s with
   | ⟨s⟩ => s
 
@@ -17,6 +17,15 @@ def use.{u, v, s} {α : Type u}
   f x.deref (g x.deref)
 
 open Shared
+
+syntax "&(" term ")" : term
+syntax "*(" term ")" : term
+syntax "↑(" term ")" : term
+
+macro_rules
+  | `(&($e:term)) => `(share $e:term)
+  | `(*($e:term)) => `(Shared $e:term)
+  | `(↑($e:term)) => `(deref $e:term)
 
 def Ctx := Expr
 def Ctx.empty := DCC !(⊤)
@@ -127,6 +136,24 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
 
 def cc (root : Lean.Expr) : Option _root_.Expr :=
   match root with
+  | .app (.const ``Shared _us) (.const ``True.intro []) => DCC (*(∗))
+  | .app (.const ``Shared _us) (.const ``True []) => DCC (*(⊤))
+  | .app (.const ``Shared _us) (.const ``False []) => DCC (*(⊥))
+  | .app (.app (.const ``Shared.share _us) _α) (.const ``True.intro []) => DCC (&(∗))
+  | .app (.app (.const ``Shared.share _us) _α) (.const ``False []) => DCC (&(⊥))
+  | .app (.app (.const ``Shared.share _us) _α) (.const ``True []) => DCC (&(⊤))
+  | .app (.app (.const ``Shared.share _us) _α) (.sort .zero) => DCC &(Sort 0)
+  | .app (.app (.const ``Shared _us) _α) (.sort .zero) => DCC *(Sort 0)
+  | .app (.app (.const ``Shared.share _us) _α) (.sort (.succ m)) => do
+    match ← (cc (.app (.app (.const ``Shared.share _us) _α) (.sort m))) with
+    | DCC &(Sort n)
+    | DCC Sort n => pure (DCC &(Sort (n + 1)))
+    | _ => .none
+  | .app (.const ``Shared _us) (.sort (.succ m)) => do
+    match ← cc (.app (.const ``Shared _us) (.sort m)) with
+    | DCC *(Sort n)
+    | DCC Sort n => pure (DCC *(Sort (n + 1)))
+    | _ => .none
   | .app (.const ``Shared _us) x => do
     let x' ← cc x
     .some (DCC !(x'))
@@ -175,5 +202,5 @@ macro_rules
 
 #eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
-#eval Std.format <| dcc_compile (fun (x : Shared (Sort 0)) => (fun (x : Sort 0) => x) x.deref)
-#time #eval Std.format <| dcc_infer (((fun (x : Shared (Sort 1)) => (fun (x : Sort 1) => x) x.deref)) (share (Sort 0)))
+#eval Std.format <| dcc_compile (fun (x : *(Sort 0)) => (fun (x : Sort 0) => x) x.deref)
+#time #eval Std.format <| dcc_infer (((fun (x : *(Sort 1)) => (fun (x : Sort 1) => x) ↑(x))) &(Sort 0))

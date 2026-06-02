@@ -8,14 +8,14 @@ import Qq.MetaM
 namespace MetaExpr
 
 inductive RedEtaMeta : MetaExpr → MetaExpr → Type
-  | curr       : RedEtaMeta x x' → RedEtaMeta (DCC[.] (Λ(α, β, x))) (DCC[.] (Λ(α, β, x')))
+  --| curr       : RedEtaMeta x x' → RedEtaMeta (DCC[.] (Λ(α, β, x))) (DCC[.] (Λ(α, β, x')))
   | curr_quot  : RedEtaMeta (DCC[.] (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC[.] `(y, x))
   | curr_fst   : RedEtaMeta (DCC[.] (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC[.] `((β y), (x y)))
   | curr_fst'  : RedEtaMeta (DCC[.] (Λ(α, β, x ∘' Fstc(β₂)) y)) (DCC[.] `((β y), (x y)))
   | pi         : RedEtaMeta (DCC[.] Π(α, β)) p' → RedEtaMeta (DCC[.] (Π(α, β) env)) (DCC[.] (p' env))
   --| pi_quot    : RedEtaMeta x x' → RedEtaMeta (DCC[.] (Π(α, `(β, x)))) (DCC[.] (Π(α, `(β, x'))))
   | pi'        : RedEtaMeta β β' → RedEtaMeta (DCC[.] (Π(α, β))) (DCC[.] (Π(α, β')))
-  | quot       : RedEtaMeta x x' → RedEtaMeta (DCC[.] `(β, x)) (DCC[.] `(β, x'))
+  --| quot       : RedEtaMeta x x' → RedEtaMeta (DCC[.] `(β, x)) (DCC[.] `(β, x'))
   --| sig        : RedEtaMeta (DCC[.] (β env)) β' → RedEtaMeta (DCC[.] (Σ(α, β) env)) (DCC[.] Coup(β'))
   | sig'       : RedEtaMeta β β' → RedEtaMeta (DCC[.] (Σ(α, β))) (DCC[.] Σ(α, β'))
   | quot_fst   : RedEtaMeta (DCC[.] `(α, x) ∘ Fstc(β)) (DCC[.] `(Coup(β), x))

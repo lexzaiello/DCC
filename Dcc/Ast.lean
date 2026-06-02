@@ -130,6 +130,7 @@ def sort_field (flags : Flag) : MacroM AstField := do
 
 def ast_basic_fields : (Array AstField) :=
   #[
+    ⟨"eval", 3, #[], False⟩,
     ⟨"refl", 1, #[], False⟩,
     -- =(x, y)
     ⟨"eq", 2, #[], False⟩,
@@ -213,6 +214,7 @@ gen_ast as Expr
 declare_syntax_cat gen_dcc
 
 syntax  gen_dcc "=" gen_dcc                                   : gen_dcc
+syntax "Eval(" gen_dcc,* ")"                                  : gen_dcc
 syntax "Eql(" gen_dcc,* ")"                                   : gen_dcc
 syntax "refl(" gen_dcc,* ")"                                  : gen_dcc
 syntax "#(" term ")"                                          : gen_dcc
@@ -251,6 +253,7 @@ def field (in_ty : Lean.TSyntax `gen_dcc_loc) (fld : String) : Lean.MacroM (Lean
   | s => Lean.Macro.throwErrorAt in_ty s!"this is not a DCC-like: {s}"
 
 open Lean.Syntax in macro_rules
+  | `(DCC[$ty:gen_dcc_loc] Eval($α:gen_dcc, $β:gen_dcc, $x:gen_dcc)) => return mkApp (← field ty "eval") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β), ← `(DCC[$ty:gen_dcc_loc] $x)]
   | `(DCC[$ty:gen_dcc_loc] ⊤)                                        => field ty "top"
   | `(DCC[$ty:gen_dcc_loc] ⊥)                                        => field ty "bot"
   | `(DCC[$ty:gen_dcc_loc] ∗)                                        => field ty "tintro"

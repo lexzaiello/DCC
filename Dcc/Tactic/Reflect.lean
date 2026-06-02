@@ -262,13 +262,6 @@ def MetaExpr.RedAffMeta.encode (e : MetaExpr.RedAffMeta A B) : Lean.Expr :=
 open Qq in
 def MetaExpr.RedEtaMeta.encode (e : MetaExpr.RedEtaMeta A B) : Lean.Expr :=
   match e with
-  | .curr (α := α) (β := β) (x := x) (x' := x') h =>
-    let α  : Q(_root_.Expr) := α.encode
-    let β  : Q(_root_.Expr) := β.encode
-    let x  : Q(_root_.Expr) := x.encode
-    let x' : Q(_root_.Expr) := x'.encode
-    let h := h.encode
-    .app (.app (.app (.app (.app (.const ``_root_.Expr.RedEta.curr []) x) x') α) β) h
   | .curr_quot (α := α) (x := x) (y := y) =>
     let α : Q(_root_.Expr) := α.encode
     let x : Q(_root_.Expr) := x.encode
@@ -296,12 +289,6 @@ def MetaExpr.RedEtaMeta.encode (e : MetaExpr.RedEtaMeta A B) : Lean.Expr :=
     let h := h.encode
 
     .app (.app (.app (.app (.app (.const ``Expr.RedEta.pi []) α) β) p') env) h
-  | .quot (x := x) (x' := x') (β := β) h =>
-    let β : Q(_root_.Expr)  := β.encode
-    let x  : Q(_root_.Expr) := x.encode
-    let x'  : Q(_root_.Expr) := x'.encode
-    let h := h.encode
-    .app (.app (.app (.app (.const ``Expr.RedEta.quot []) x) x') β) h
   | .pi' (β := β) (β' := β') (α := α) h =>
     let β : Q(_root_.Expr)  := β.encode
     let β' : Q(_root_.Expr) := β'.encode

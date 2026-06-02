@@ -12,7 +12,7 @@ rev = "main"
 
 [[lean_lib]]
 name = "DccSlides"
-needs = ["@Dcc/+Dcc.Ast:highlighted", "@Dcc/+Dcc.Compile:highlighted"]
+needs = ["@Dcc/+Dcc.Ast:highlighted", "@Dcc/+Dcc.Metatheory:highlighted", "@Dcc/+Dcc.Compile:highlighted"]
 
 [[lean_exe]]
 name = "docs"

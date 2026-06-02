@@ -457,32 +457,16 @@ I guess preservation is required :(
 theorem elim_eq (h : Judge e (DCC (x = y))) : x = y := by
   induction e using RedAff.instRedRel.wellFounded.induction with
   | h e ih =>
-    match heq₂ : h with
-    | .curr' _ _ _ _ _ _ h | .map _ _ h | .fmap _ _ h | .unbox _ h | .eval _ _ _ _ _ h
-    | .eql _ _ h | .sigma _ _   _ h | .quot _ _ _ h | .pi _ _ _ h | .comp _ _ _ _ h
-    | .pair _ _ _ _ _ _ _ h | .comp' _ _ _ _ _ _ h | .curr _ _ _ _ _ _ h
-    | .sndc _ _ _ h | .fstc _ _ _ h | .id _ _ h | .refl _ _ h =>
-      exact h.no_pi_eq.elim
-    | app h_t_f h_r_α h_t_x h_r_x_α ih₂ =>
-      rename_i f f_α f_β x_α α x x_α'
-      match h.progress with
+    have h₀ := h
+    cases h
+    case app h_t_f h_r_α h_t_x h_r_x_α ih₂ =>
+      match h₀.progress with
       | .inl v =>
-        have ⟨f_α, env, x', env'', x'', heq, hr⟩ := h.eq_val_is_refl v
-        cases heq
-        exact h.refl_ty_heq
-      | .inr ⟨e', hr⟩ =>
-        simp_all
-        exact ih _ hr ((x_α' ▸ h).preservation (by assumption))
-    | coup _ _ h =>
-      match h with
-      | ⟨h₁, h₂, h₃, h₄⟩ =>
-        match h₁.cases_head with
-        | .inl h =>
-          cases h
-          match h₃.cases_head with
-          | .inl h => cases h
-          | .inr ⟨_, h₁, h₂⟩ => cases h₁
-        | .inr ⟨_, h₁, h₂⟩ => cases h₁
+        have ⟨f_α, env, x', env'', x'', heq, hr⟩ := h₀.eq_val_is_refl v
+        exact (heq ▸ h₀).refl_ty_heq
+      | .inr ⟨e', hr⟩ => exact ih _ hr (h₀.preservation (by assumption))
+    case coup _ _ h => exact (Reduces.no_sort_eq (by assumption)).elim
+    all_goals (exact (Reduces.no_pi_eq (by assumption)).elim)
 
 end Judge
 

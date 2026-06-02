@@ -62,6 +62,13 @@ def head (e : Expr) : Expr :=
 
 namespace RedAffReflTrans
 
+theorem no_sort_eq (h_r : RedAffReflTrans (DCC Sort m) (DCC x = y)) : False := by
+  cases h_r.cases_head with
+  | inl h => simp_all
+  | inr h =>
+    have ⟨C, h₁, h₂⟩ := h
+    cases h₁
+
 theorem no_coup_eq (h_r : RedAffReflTrans (DCC Coup(β)) (DCC x = y)) : False := by
   cases h_r.cases_head with
   | inl h => simp_all
@@ -222,6 +229,20 @@ def eq (hr : RedEtaReflTrans A (DCC (x = y))) :
 end RedEtaReflTrans
 
 namespace Reduces
+
+theorem no_sort_eq (h_r : Reduces (DCC Sort m) (DCC x = y)) : False := by
+  match h_r with
+  | ⟨hr₁, hn, hr₂, hn₂⟩ =>
+    match hr₁.cases_head with
+    | .inl h =>
+      simp_all
+      match hr₂.cases_head with
+      | .inl h =>
+        simp_all
+      | .inr ⟨_, h₁, h₂⟩ =>
+        cases h
+        cases h₁
+    | .inr ⟨C, h₁, h₂⟩ => cases h₁
 
 theorem pi_shape (h : Reduces (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β' env', τ = (DCC (Π(f_α, f_β') env')) := by
   match h with

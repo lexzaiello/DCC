@@ -1,5 +1,6 @@
 import VersoSlides
 import Verso.Doc.Concrete
+import Dcc.Types
 import Dcc.Compile
 
 open VersoSlides
@@ -14,19 +15,42 @@ Lexi Aiello
 
 # DCC is the Rust of dependent type theory:
 
+- Based on categorical combinators
+  - No variables, no contexts - all combinators
 - No duplication allowed
-  - Duplication is explicit via reference counting (a la Rust)
-
-:::fragment
-- Types model move semantics, like in Rust
-:::
+  - Duplication is explicit via reference counting (a la Rust, linear logic)
+- Strongly-normalizing
+  - Wicked fast type-checker
+  - Types are canonical
+  - *Extensional* - $`x = y \iff x \equiv y`
 
 # DCC is the Rust of dependent type theory:
 
-- Entire calculus is strongly normalizing for free
 :::fragment
-- Type-checking is decidable
+Type-checking is decidable
 :::
+
+# Type-checking is decidable
+
+In DCC, a judgment is valid iff the type-checker can infer it (usually impossible for DTT):
+
+```leanLibCode Dcc.Metatheory.Decidability (startLine := 32) (endLine := 33)
+theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
+  induction h <;> (dsimp only [infer]; (try (dcc_simp_all; dcc_aesop!)); try grind)
+```
+
+# Type-checking is decidable
+
+```leanLibCode Dcc.Metatheory.Decidability (startLine := 39) (endLine := 46)
+instance : Decidable (Judge e t) :=
+  if h : (infer e).isSome then
+    if heq : ((infer e).get h).fst = t then
+      .isTrue (heq ▸ ((infer e).get h).snd.down)
+    else
+      isFalse (fun h => by simp [h.complete] at *)
+  else
+    isFalse (fun h => by simp [h.complete] at *)
+```
 
 # DCC is the Rust of dependent type theory:
 
@@ -35,26 +59,31 @@ Lexi Aiello
 - Dead-simple def. eq.: just reduce both types
   - Type-checking is *fast* (21 ms. to compile + type-check a small Lean program to DCC deep embedding)
 :::
+
+# DCC is the Rust of dependent type theory:
 :::fragment
+- Avoid reasoning about duplication
   - Just run the rewrite rules *literally* on the AST
     - Sound + complete beta-reducer
+- End-to-end verified type-checker and Lean → DCC compiler
 :::
 
 # Example: Writing DCC Programs in Lean
 
-```lean -panel
-#time #eval dcc_infer (fun (α : Sort 0) (x : α) => x) True True.intro
--- ^ !click
+```lean
+#time #eval dcc_infer (fun (α : Sort 0)
+  (x : α) => x) True True.intro
 ```
 
+- ~20ms to compile (compiler itself type-checks parts of expr) + infer in deep embedding
 - Users write normal Lean code
 - Compiles to variable-free, combinatory program
 
 # Example: Writing DCC Programs in Lean
 
 ```lean -panel
-#eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
--- ^ !click
+#eval dcc_compile (fun (α : Sort 0)
+  (x : α) => x) True True.intro
 ```
 
 - Users write normal Lean code
@@ -63,68 +92,139 @@ Lexi Aiello
 # Example: Reference Counting
 
 ```lean -panel
-#time #eval Std.format
--- ^ !click
-  <| dcc_infer (((fun (x : *(Sort 1)) => (fun (x : Sort 1) => x) ↑(x))) &(Sort 0))
+#time #eval dcc_infer (((fun (x : *(Sort 1)) =>
+  (fun (x : Sort 1) => x) ↑(x))) &(Sort 0))
 ```
 
 - User indicates a cloneable resource with `&(x)`
+- Compiled program has application under a $`\lambda`
+  - Requires cloning the context
+  - Constrained and tracked via reference counting
 
 # Example : Reference Counting
 
-```lean
-#eval Std.format
-  <| dcc_compile (((fun (x : *(Sort 1)) => (fun (x : Sort 1) => x) ↑(x))) &(Sort 0))
+```lean -panel
+#eval dcc_compile (((fun (x : *(Sort 1)) =>
+  (fun (x : Sort 1) => x) ↑(x))) &(Sort 0))
 ```
 
+# Example: Reference Counting
+
 - Pair rule (as in cat. combinators) requires argument is boxed as clonable
-- Boxes count their contents three times in size measure
-- Pair downgrades cloneable box to non-clonable term
+  - Pair downgrades cloneable box to non-clonable term
+  - Boxes count their contents three times in size measure
+- Not all operations require cloning (e.g., previous slide)
 
-# Example : Reference Counting
+# Example: Reference Counting
 
-- Strong normalization of the entire calculus *for free* (simple syntactic size measure)
+- Strong normalization *for free* (simple syntactic size measure)
+  - Eager normalization - types are canonical
+  - Extensional reflection rule for propositional equality
 - Rust-like resource management
-- No need to reason about duplication
-  - Wicked fast evaluation and type inference (no optimizations yet, literally running rewrite rules on the raw AST)
+  - No reasoning about duplication - wicked fast type-checker
 
 # Inference rule: reference counting
 
-:::hstack
 $$`
-\frac{x : A}{&(x) : !(A)}
+\begin{gathered}
+\frac{x : A}{\&(x) : !(A)} \\
+\llbracket \beta \rrbracket \langle M, N \rangle \&(x) \rightarrow \llbracket \beta \rrbracket ((M x), (N x (M x)))
+\end{gathered}
 `
-$$`
-\frac{}{
-\llbracket \beta \rrbracket \langle M, N \rangle &(x) \rightarrow \llbracket \beta \rrbracket ((M x), (N x (M x)))}
-`
-:::
 
 - The $`!(A)` modality is taken from linear / affine logic
-- Standard pair duplication rule from cat. combinators
-  - Extended as per my affine design: argument must be cloneable → downgraded to non-cloneable
-    - Simple to count in size
+- Argument must be cloneable → downgraded to non-cloneable by pair dup.
 
 # Size measure: pair
 
 $$`
-\frac{}{size(&(x)) = 3 \cdot size(x) + 1}\quad \frac{}{size(f x) = size(f) + size(x)} \quad \frac{}{size(\llbracket \beta \rrbracket \langle M, N \rangle) = 2 \cdot size(M) + size(N) + 2} \quad \frac{}{size(\llbracket \beta \rrbracket (x, y)) = size(x) + size(y)} \\
-\therefore \\
-size(\llbracket \beta \rrbracket \langle M, N\rangle &(x)) = (2 \cdot size(M) + size(N) + 2) + (3 \cdot size(x) + 1) \quad size(\llbracket \beta \rrbracket ((M x), (N x (M x)))) = (size(M) + size(x)) + (size(N) + size(x) + (size(M) + size(x))) \\
-\therefore
-size(\llbracket \beta \rrbracket \langle M, N \rangle &(x)) > size(\llbracket \beta \rrbracket ((M x), (N x (M x))))
+\begin{gathered}
+\frac{}{size(\&(x)) = 3 \cdot size(x) + 1}\\
+\frac{}{size(f x) = size(f) + size(x)}\\
+\frac{}{size(\llbracket \beta \rrbracket \langle M, N \rangle) = 2 \cdot size(M) + size(N) + 2} \\
+\frac{}{size(\llbracket \beta \rrbracket (x, y)) = size(x) + size(y)}
+\end{gathered}
+`
+
+# Size measure: pair
+
+$$`
+\begin{align*}
+size & (\llbracket \beta \rrbracket \langle M, N\rangle \&(x)) =\\
+  & (2 \cdot size(M) + size(N) + 2) \\
+  & + (3 \cdot size(x) + 1) \\
+size & (\llbracket \beta \rrbracket ((M x), (N x (M x)))) = \\
+  & (size(M) + size(x)) \\
+  & + (size(N) + size(x) + (size(M) + size(x))) \\
+size & (\llbracket \beta \rrbracket \langle M, N \rangle \&(x))
+  & > size(\llbracket \beta \rrbracket ((M x), (N x (M x))))
+\end{align*}
 `
 
 # Inference rule: pair
 
 $$`
 \frac{f : \Pi(x : A), B x \quad g : \Pi(x : A) (y : B x), C x y}{
-\llbracket C \rrbracket \langle f, g \rangle : \Pi (x : !(A)), \Sigma (fst : B *(x)), C *(x) fst}
+\llbracket C \rrbracket \langle f, g \rangle : \Pi (x : !(A)), \Sigma (a : B (*(x))), C (*(x)) a}
 `
+
+# DCC is *Extensional* and *Decidable*
+
+# The Payoff: Decidable Extensional Type-Checking
+
+$$`\frac{\Gamma \vdash M : A \quad A =_{\beta} B \quad \Gamma \vdash B : K}{\Gamma \vdash M : B}`
+
+_Figure: the usual judgmental conversion constructor._
+
+DCC has no conversion constructor. There is exactly one (literally, not definitionally) valid type for each term.
+
+# The Payoff: Decidable Extensional Type-Checking
+
+This is the inference rule for $`refl` in Martin-Lof Type Theory. $`refl` is the only constructor of propositional equality in MLTT.
+
+$$`
+\frac{}{refl : \Pi (a : A), a = a}
+`
+
+# The Payoff: Decidable Extensional Type-Checking
+
+$$`
+\frac{}{refl : \Pi (a : A), a = a}
+`
+
+Due to the conversion constructor, $`refl` could type-check as multiple types.
+E.g., if $`x` and $`y` reduce to the same thing in $`x = y`.
+
+# The Payoff: Decidable Extensional Type-Checking
+
+$`refl` is the constructor for $`=` in DCC, but we have no general conversion constructor.
+Refl's type is normalized *fully* before it becomes a valid judgment.
+
+# The Payoff: Decidable Extensional Type-Checking
+
+In DCC, $`x = y` iff $`x` and $`y` are literally, syntactically the same.
+
+# The Payoff: Decidable Extensional Type-Checking
+
+```leanLibCode Dcc.Metatheory.ReflCanon (startLine := 457) (endLine := 469) -panel
+theorem elim_eq (h : Judge e (DCC (x = y))) : x = y := by
+  induction e using RedAff.instRedRel.wellFounded.induction with
+  | h e ih =>
+    have h₀ := h
+    cases h
+    case app h_t_f h_r_α h_t_x h_r_x_α ih₂ =>
+      match h₀.progress with
+      | .inl v =>
+        have ⟨f_α, env, x', env'', x'', heq, hr⟩ := h₀.eq_val_is_refl v
+        exact (heq ▸ h₀).refl_ty_heq
+      | .inr ⟨e', hr⟩ => exact ih _ hr (h₀.preservation (by assumption))
+    case coup _ _ h => exact (Reduces.no_sort_eq (by assumption)).elim
+    all_goals (exact (Reduces.no_pi_eq (by assumption)).elim)
+```
 
 # Contribution
 
-## Affine Restriction: Normalization for Free in DTT
+## Affine Types: Normalization for Free in DTT
 
 Formalizing a dependent type theory is challenging because *computations can appear in types*.
 
@@ -507,16 +607,7 @@ This theorem is usually impossible for a dependent type theory. Since two types 
 
 # Theorem: Type-Checking is Decidable
 
-```leanLibCode Dcc.Metatheory.Decidability (startLine := 39) (endLine := 46)
-instance : Decidable (Judge e t) :=
-  if h : (infer e).isSome then
-    if heq : ((infer e).get h).fst = t then
-      .isTrue (heq ▸ ((infer e).get h).snd.down)
-    else
-      isFalse (fun h => by simp [h.complete] at *)
-  else
-    isFalse (fun h => by simp [h.complete] at *)
-```
+
 
 # Principal Result: The Dependent Categorical Combinators have Affine Types
 
@@ -564,57 +655,6 @@ Since none of our primitive types invoke $`dpair`, our types are strongly-normal
 - Otherwise, conversion would require normalization by evaluation (NbE)
   - Unclear if decidability can be proven (would need completeness / soundness for reflection and reification)
 - Affine restriction feels "elegant" (remove just 1 combinator, and you get decidability)
-
-# The Payoff: Decidable Extensional Type-Checking
-
-# The Payoff: Decidable Extensional Type-Checking
-
-$$`\frac{\Gamma \vdash M : A \quad A =_{\beta} B \quad \Gamma \vdash B : K}{\Gamma \vdash M : B}`
-
-_Figure: the usual judgmental conversion constructor._
-
-DCC has no conversion constructor. There is exactly one (literally, not definitionally) valid type for each term.
-
-# The Payoff: Decidable Extensional Type-Checking
-
-This is the inference rule for $`refl` in Martin-Lof Type Theory. $`refl` is the only constructor of propositional equality in MLTT.
-
-$$`
-\frac{}{refl : \Pi (a : A), a = a}
-`
-
-# The Payoff: Decidable Extensional Type-Checking
-
-$$`
-\frac{}{refl : \Pi (a : A), a = a}
-`
-
-Due to the conversion constructor, $`refl` could type-check as multiple types.
-E.g., if $`x` and $`y` reduce to the same thing in $`x = y`.
-
-# The Payoff: Decidable Extensional Type-Checking
-
-Refl is the constructor in DCC, but we have no general conversion constructor.
-Refl's type is normalized *fully* before it becomes a valid judgment.
-
-# The Payoff: Decidable Extensional Type-Checking
-
-In DCC, $`x = y` iff $`x` and $`y` are literally, syntactically the same.
-
-# The Payoff: Decidable Extensional Type-Checking
-
-```lean
-open Expr in
-theorem Judge.elim_eq (ht : Judge e (DCC (x = y))) : x = y := by
-  sorry
--- HAVE NOT FINISHED PROVING YET
-```
-
-This theorem says that a propositional equality in my calculus is the same as a meta-level definitional equality.
-
-# The Payoff: Decidable Extensional Type-Checking
-
-This should absolutely be possible. Affine types let us normalize types eagerly and avoid conversion.
 
 -- TODO: more inference rules to explain
 -- TODO: inference rules are kind of the least important part

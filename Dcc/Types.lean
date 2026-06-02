@@ -281,15 +281,17 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
     else (paren (f.toFormat pretty ++ (.indentD (x.toFormat pretty))))
 termination_by e
 
+end Expr
+
 open Std (ToFormat Format format) in
 instance instToFormat : Std.ToFormat (Expr) :=
   ⟨Expr.toFormat (pretty := true)⟩
 open Std (ToFormat Format format) in
 instance instToString : ToString Expr :=
-  ⟨toString ∘ toFormat (pretty := true)⟩
+  ⟨toString ∘ Expr.toFormat (pretty := true)⟩
 open Std (ToFormat Format format) in
 instance instRepr : Repr Expr :=
-  ⟨Function.const _ ∘ toFormat (pretty := false)⟩
+  ⟨Function.const _ ∘ Expr.toFormat (pretty := false)⟩
 
 instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
   match me with
@@ -299,5 +301,3 @@ instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
     .group ("(some " ++ (.fill (.nest l (e.toFormat (pretty := true)))) ++ ")")⟩
 
 #eval (DCC ((Sort 1 : Sort 2) → Sort 2))
-
-end Expr

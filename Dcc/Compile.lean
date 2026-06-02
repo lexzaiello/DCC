@@ -95,14 +95,5 @@ macro_rules
 #eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval Std.format <| dcc_compile (fun (x : Sort 0) => ((fun (x : Sort 0) => x) x))
-#eval Std.format <| dcc_infer (fun (x : Sort 0) => ((fun (x : Sort 0) => x) x))
-
-/-#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟨Id(Coup(`(⊤, Sort 0))),
-             Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
-               Sndc(`(⊤, Sort 0)) ∘' Fstc(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0)))))⟩).infer-/
-#eval (Std.format ∘ Sigma.fst) <$> (DCC Eval(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0),
-                Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0), Sndc(`(Coup(`(⊤, Sort 0)), Sort 0))))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟨Id(Coup(`(⊤, Sort 0))),
-             Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
-               Sndc(`(⊤, Sort 0)) ∘' Fstc(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0)))))⟩).infer
--- `(Coup(`(⊤, Sort 0)), Sort 0) f_β
+#eval dcc_infer (fun (x : Sort 0) => ((fun (x : Sort 0) => x) x))
+#eval Std.format <| dcc_infer ((fun (x : Sort 1) => ((fun (x : Sort 1) => x) x)) (Sort 0))

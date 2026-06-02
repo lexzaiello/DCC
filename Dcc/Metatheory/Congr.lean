@@ -9,17 +9,6 @@ inductive ProjectCurr : Expr → Expr → Prop
   | sndc : ProjectCurr (DCC (Sndc(f_β) ⟦β⟧(a, x))) x
   | quot : ProjectCurr (DCC (`(β', x) y))  x
 
-inductive Red' : Expr → Expr → Prop
-  | quot     : Red' (DCC (`(β, x) y)) x
-  | id       : Red' (DCC (Id(α) x)) x
-  | project  : ProjectCurr (DCC (f ⟦β⟧(a, b))) x
-    → Red' (DCC (f ⟦β⟧(a, b))) x
-  | comp     : Red' (DCC ((x ∘ y) z)) (DCC (x (y z)))
-  | comp'    : Red' (DCC ((x ∘' y) z)) (DCC (x (y z)))
-  | curr     : Red' (DCC ((Λ(α, β, x) y z))) (DCC (x ⟦β⟧(y, z)))
-  | congrFun : RedAff f e → Red' (DCC (f x)) (DCC (e x))
-  | congrArg : RedAff x arg → Red' (DCC (f x)) (DCC (f arg))
-
 namespace RedAff
 
 theorem pi (h : RedAff (DCC (Π(f_α, f_β) env)) B) : ∃ env', B = (DCC (Π(f_α, f_β) env')) := by
@@ -52,19 +41,6 @@ def eq (hr : RedAff A (DCC (x = y))) : RedEq A (DCC (x = y)) := by
   | fstc => exact .proj .fstc
   | sndc => exact .proj .sndc
   | quot => exact .quot
-
-def eql (hr : RedAff A (DCC (Eql(f_β) env x))) : Red' A (DCC (Eql(f_β) env x)) := by
-  cases hr with
-  | quot =>
-    exact .quot
-  | id => exact .id
-  | fstc => exact .project .fstc
-  | sndc => exact .project .sndc
-  | comp => exact .comp
-  | comp' => exact .comp'
-  | curr => exact .curr
-  | congrFun h => exact .congrFun h
-  | congrArg h => exact .congrArg h
 
 end RedAff
 

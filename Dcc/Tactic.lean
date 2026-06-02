@@ -92,6 +92,7 @@ def toFormat (e : MetaExpr) (pretty : Bool := False) : Std.Format :=
   | (DCC[.] Sort m)              => "Sort " ++ (Std.format m)
   | (DCC[.] Fstc(β))             => comb "Fstc" [β.toFormat pretty]
   | (DCC[.] Sndc(β))             => comb "Sndc" [β.toFormat pretty]
+  | (DCC[.] Eval(α, β, e))       => comb "Eval" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC[.] Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC[.] Π(α, β))             =>
     comb "Π" [α.toFormat pretty, β.toFormat pretty]
@@ -151,6 +152,7 @@ def toFormat' (e : MetaExpr) (pretty : Bool := False) : Lean.MetaM Std.Format :=
   | (DCC[.] Fstc(β))             => return comb "Fstc" [← β.toFormat' pretty]
   | (DCC[.] Sndc(β))             => return comb "Sndc" [← β.toFormat' pretty]
   | (DCC[.] Λ(α, β, e))          => return comb "Λ" [← α.toFormat' pretty, ← β.toFormat' pretty, ← e.toFormat' pretty]
+  | (DCC[.] Eval(α, β, e))       => return comb "Eval" [← α.toFormat' pretty, ← β.toFormat' pretty, ← e.toFormat' pretty]
   | (DCC[.] Π(α, β))             =>
     return comb "Π" [← α.toFormat' pretty, ← β.toFormat' pretty]
   | (DCC[.] ⟨a, b⟩)              => return (angle (sepD [← a.toFormat' pretty, ← b.toFormat' pretty] (indent := 1)))

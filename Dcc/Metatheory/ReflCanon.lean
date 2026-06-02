@@ -258,12 +258,12 @@ theorem comb_ty_not_eq (ht : Judge c (DCC (x = y))) (hv : IsRedComb c n) : False
       cases hd
   | sndc =>
     cases ht with
-    | sndc ha hb hc  =>
+    | sndc ha hb _ hc  =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
       cases hd
   | fstc =>
     cases ht with
-    | fstc ha hb hc =>
+    | fstc ha hb _ hc =>
       have ⟨_, _, ha, hb, hc, hn, hd⟩ := hc.pi
       cases hd
   | comp' =>
@@ -457,10 +457,11 @@ I guess preservation is required :(
 theorem elim_eq (h : Judge e (DCC (x = y))) : x = y := by
   induction e using RedAff.instRedRel.wellFounded.induction with
   | h e ih =>
-     match heq₂ : h with
+    match heq₂ : h with
+    | .eval _ _ _ _ _ h
     | .eql _ _ h | .sigma _ _   _ h | .quot _ _ _ h | .pi _ _ _ h | .comp _ _ _ _ h
     | .pair _ _ _ _ _ _ _ h | .comp' _ _ _ _ _ _ h | .curr _ _ _ _ _ _ h
-    | .sndc _ _ h | .fstc _ _ h | .id _ _ h | .refl _ _ h =>
+    | .sndc _ _ _ h | .fstc _ _ _ h | .id _ _ h | .refl _ _ h =>
       exact h.no_pi_eq.elim
     | app h_t_f h_r_α h_t_x h_r_x_α ih₂ =>
       rename_i f f_α f_β x_α α x x_α'

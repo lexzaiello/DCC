@@ -39,7 +39,7 @@ Type-checking is decidable
 # Theorems List
 
 1. Decidable type-checking
-  - $`e : \tau \iff infer e = \tau`
+  - $`e : \tau \iff infer (e) = \tau`
 2. Extensional propositional equality elimination
   - $`h : x = y \iff x \equiv y`
 3. Church-rosser ($`\beta` and $`\eta`)
@@ -104,15 +104,15 @@ DCC has no conversion constructor. There is exactly one (literally, not definiti
 # Decidable Extensional Type-Checking
 
 $$`
-\frac{}{refl : \Pi (a : A), a = a}
+\frac{}{\text{refl} : \Pi (a : A), a = a}
 `
 
-Due to the conversion constructor, $`refl` could type-check as multiple types.
+Due to the conversion constructor, $`\text{refl}` could type-check as multiple types.
 E.g., if $`x` and $`y` reduce to the same thing in $`x = y`.
 
 # Decidable Extensional Type-Checking
 
-$`refl` is the constructor for $`=` in DCC, but we have no general conversion constructor.
+$`\text{refl}` is the constructor for $`=` in DCC, but we have no general conversion constructor.
 Refl's type is normalized *fully* before it becomes a valid judgment.
 
 # Decidable Extensional Type-Checking

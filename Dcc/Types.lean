@@ -113,11 +113,22 @@ f : ∀ (s : Coup(f_β)), `(Sort n, γ)
 f ∘ g : ∀ (x : α), γ ∘ g
 -/
 
-@[dcc_judge] abbrev comp.g.type (α f_β : Expr) (m : Level) :=
-  (DCC (Π(Id(Sort m), Σ(`(α, α), Λ(α, `(α, α), f_β ∘' Fstc(`(α, α))))) α))
+@[dcc_judge] abbrev comp.g.type (α β : Expr) (m : Level) :=
+  (DCC (Π(Id(Sort m), `(Sort m, Σ(`(α, α), Λ(α, `(α, α), `(Coup(`(α, α)), β))))) α))
 
-@[dcc_judge] abbrev comp.f.type (f_β f_γ : Expr) (n : Level) :=
-  (DCC (Π(Id(Sort n), f_γ) Coup(f_β)))
+/-
+(Π(Id(Sort 1),
+   `(Sort 1,
+     Σ(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
+       Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
+         `(Coup(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0)))), Sort 0)))))
+   Coup(`(⊤, Sort 0)))
+
+Pair thingy for g f ∘ g
+-/
+
+@[dcc_judge] abbrev comp.f.type (α β f_γ : Expr) (n : Level) :=
+  (DCC (Π(Id(Sort n), f_γ) Coup(`(α, β))))
 
 @[dcc_judge] abbrev comp.type (α γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) α)

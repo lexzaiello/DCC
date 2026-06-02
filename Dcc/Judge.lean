@@ -51,9 +51,9 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces α α'
     → Reduces (id.type α' m) τ
     → Judge (DCC Id(α)) τ
-  | comp   : Judge g (comp.g.type α f_β m)
-    → Judge f (comp.f.type f_β f_γ n)
-    → Reduces (DCC (f_γ Coup(f_β))) γ
+  | comp   : Judge g (comp.g.type α β m)
+    → Judge f (comp.f.type α β f_γ n)
+    → Reduces (DCC (f_γ Coup(`(α, β)))) γ
     → Reduces α α'
     → Reduces (comp.type α' γ g m) τ
     → Judge (DCC (f ∘ g)) τ
@@ -195,11 +195,11 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | _ => .none
   | DCC (f ∘ g) =>
     match infer g with
-    | .some ⟨DCC (Π(Id(Sort m), Σ(__a, Λ(_a, _b, f_β ∘' _c))) α), ⟨ht₁⟩⟩ =>
-      if heq : (DCC (Π(Id(Sort m), Σ(__a, Λ(_a, _b, f_β ∘' _c))) α)) = comp.g.type α f_β m then
+    | .some ⟨DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, `(___a, β))))) α), ⟨ht₁⟩⟩ =>
+      if heq : (DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, `(___a, β))))) α)) = comp.g.type α β m then
         match infer f with
         | .some ⟨(DCC (Π(Id(Sort n), f_γ) _a)), ⟨ht₂⟩⟩ =>
-          if heq₂ : (DCC (Π(Id(Sort n), f_γ) _a)) = comp.f.type f_β f_γ n then
+          if heq₂ : (DCC (Π(Id(Sort n), f_γ) _a)) = comp.f.type α β f_γ n then
             .some ⟨_, ⟨.comp (heq ▸ ht₁) (heq₂ ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
           else .none
         | _ => .none

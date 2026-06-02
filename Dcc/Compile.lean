@@ -33,12 +33,15 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
     let M' ← abstract' M ctx
     let N' ← abstract' N ctx
 
+    /-
+      M : ∀ (x : α) (y : β x)
+    -/
+
     match (← M'.infer).fst with
     | _root_.Expr.app (.pi f_α f_β) x_α =>
       let α : _root_.Expr := (f_α.app x_α).reduce_all
       match (f_β.app x_α).reduce_all with
-      | DCC Π(_f_β, _γ) =>
-        .some (DCC ⟨Id(α), Λ(α, `(α, α), ⟨N', M'⟩ ∘' Fstc(`(α, α)))⟩)
+      | DCC Π(β, _γ) => .some (DCC Eval(α, β, M') ∘ ⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
       | _ => .none
     | _ => .none
   | .const ``True.intro [] => DCC (`(ctx, ∗))
@@ -91,5 +94,15 @@ macro_rules
 
 #eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
+#eval Std.format <| dcc_compile (fun (x : Sort 0) => ((fun (x : Sort 0) => x) x))
+#eval Std.format <| dcc_infer (fun (x : Sort 0) => ((fun (x : Sort 0) => x) x))
 
-dcc_trace (((Λ(⊤, `(⊤, Sort 0), Λ(Coup(`(⊤, Sort 0)), Sndc(`(⊤, Sort 0)), Sndc(Sndc(`(⊤, Sort 0))))) ∗) ⊤) ∗)
+/-#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟨Id(Coup(`(⊤, Sort 0))),
+             Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
+               Sndc(`(⊤, Sort 0)) ∘' Fstc(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0)))))⟩).infer-/
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Eval(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0),
+                Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0), Sndc(`(Coup(`(⊤, Sort 0)), Sort 0))))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟨Id(Coup(`(⊤, Sort 0))),
+             Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
+               Sndc(`(⊤, Sort 0)) ∘' Fstc(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0)))))⟩).infer
+-- `(Coup(`(⊤, Sort 0)), Sort 0) f_β

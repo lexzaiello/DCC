@@ -221,42 +221,74 @@ def cc (root : Lean.Expr) : Option _root_.Expr :=
     | _ => .none
   | e => (·.app (DCC (&(∗)))) <$> abstract' e Ctx.empty
 
+-- thank you to gemini for writing this
+def map_lam_bvars (e : Lean.Expr) (myTransform : Lean.Expr → Lean.Expr) : Lean.MetaM Lean.Expr := do
+  Lean.Meta.lambdaTelescope e fun fvars body => do
+    if fvars.size == 0 then
+      return e
+    let targetFVar := fvars[0]!
+    let newBody ← Lean.Meta.transform body (pre := fun subExpr => do
+      if subExpr == targetFVar then
+        let modifiedExpr := myTransform subExpr
+        return .done modifiedExpr
+      else
+        return .continue
+    )
+
+    Lean.Meta.mkLambdaFVars fvars newBody
+
 def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
   match e with
-  | .forallE a bty bdy b =>
-    return .forallE a bty (← wrap_share_auto bdy) b
   | .proj a b strt => return .proj a b (← wrap_share_auto strt)
-  | .letE a ty val bdy b => return .letE a (← wrap_share_auto ty) (← wrap_share_auto val) (← wrap_share_auto bdy) b
+  | .letE a ty val bdy b =>
+    return .letE a (← wrap_share_auto ty) (← wrap_share_auto val) (← wrap_share_auto bdy) b
   | .lam a bty bdy b =>
     match shared_in 0 bdy with
-    | 0 =>
-      return .lam a bty (← wrap_share_auto bdy) b
+    | 0 => return .lam a bty (← wrap_share_auto bdy) b
     | _n =>
       let lv ← Lean.Meta.getLevel bty
-      --let bty' := (Lean.Expr.app (.const ``Shared [lv]) bty)
+      let bty' := (Lean.Expr.app (.const ``Shared [lv]) bty)
       let bdy' ← wrap_share_auto bdy
-      Lean.Meta.lambdaTelescope (.lam a bty bdy' b) (fun fvars bdy => do
+      let lam ← map_lam_bvars (.lam a bty bdy' b) (.app (Lean.Expr.app (.const ``Shared.deref [lv]) bty) ·)
+      match lam with
+      | .lam a _ bdy b => return .lam a bty' bdy b
+      | e => return e
+      /-Lean.Meta.lambdaTelescope (.lam a bty bdy' b) (fun fvars bdy => do
         let fvars' := (fvars.map (.app (Lean.Expr.app (.const ``Shared.deref [lv]) bty) ·))
-        Lean.Meta.mkLambdaFVars fvars' bdy)
+        Lean.Meta.mkLambdaFVars fvars' bdy)-/
+  | .forallE a bty bdy b =>
+    return .forallE a bty (← wrap_share_auto bdy) b
   | .app M N =>
     let M' ← wrap_share_auto M
     let N' ← wrap_share_auto N
     match ← Lean.Meta.inferType M' with
-    | .app (.const ``Shared us) α =>
+    | .forallE _ (.app (.const ``Shared us) α) _ _ =>
       return .app M' (.app (.app (.const ``Shared.share us) α) N')
-    | M' =>
-      return .app M' N'
+    | _ => return .app M' N'
   | e => return e
 
 open Qq in
 def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) : Option _root_.Expr :=
   cc root
 
+def Lean.Expr.ccM (root : Lean.Expr) : Lean.MetaM (Option _root_.Expr) :=
+  cc <$> (wrap_share_auto root)
+
 open Qq in
 #eval Lean.Expr.cc' q(λ (x : Sort 1) => x)
 
 open Qq in
 #eval (do Sigma.fst <$> (← (Lean.Expr.cc' q((λ (α : Sort 0) => λ (x : α) => x) True True.intro))).infer)
+
+elab "dcc_compile'" tm:term : term => do
+  let e_tm ← Lean.Elab.Term.elabTerm tm .none
+  let dcc_tm ← Lean.Expr.ccM e_tm
+  match dcc_tm with
+  | .some tm => return Lean.toExpr tm
+  | .none => throwErrorAt tm "could not compile"
+
+macro "dcc_infer'" tm:term : term =>
+  `(term| do Sigma.fst <$> (dcc_compile' $tm).infer)
 
 syntax "dcc_compile" term : term
 syntax "dcc_infer" term   : term
@@ -265,6 +297,13 @@ open Qq in
 macro_rules
   | `(dcc_compile $tm:term) => `((Lean.Expr.cc' q($tm:term)))
   | `(dcc_infer $tm:term) => `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))
+
+#eval Std.format <| dcc_compile' (fun (α : Sort 0) (x : α) => x) True True.intro
+#eval Std.format <| dcc_infer' (fun (α : Sort 0) (x : α) => x) True True.intro
+
+#eval Std.format <| dcc_compile' (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
+#eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
+#eval Std.format <| dcc_compile (fun (x : *(Sort 0)) => (fun (x : Sort 0) => x) x.deref)
 
 #eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
 #time #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro

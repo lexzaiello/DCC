@@ -91,9 +91,6 @@ TODO: better logic for detecting duplication. Maybe some kind of user marker.
 
 -/
 
-def wrap_shares (n : ℕ) (e : Expr) : Expr :=
-  (List.replicate n (DCC !(#(·)))).foldr id e
-
 def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
   match e with
   | .app (.app (.const ``Shared.deref _us) _α) x => abstract' x ctx
@@ -237,33 +234,49 @@ def map_lam_bvars (e : Lean.Expr) (myTransform : Lean.Expr → Lean.Expr) : Lean
 
     Lean.Meta.mkLambdaFVars fvars newBody
 
+def wrap_shares (n : ℕ) (u : Lean.Level) (e : Lean.Expr) : Lean.Expr :=
+  (List.replicate n (Lean.Expr.const ``Shared [u])).foldr .app e
+
+def n_times_shared (e : Lean.Expr) : ℕ × Lean.Expr :=
+  match e with
+  | (.app (.const ``Shared _us) α) =>
+    let (n, e) := (n_times_shared α)
+    (n.succ, e)
+  | e => (.zero, e)
+
+def share_n_times (n : ℕ) (lvl : Lean.Level) (α e : Lean.Expr) : Lean.Expr :=
+  Prod.snd <| (List.replicate n (Lean.Expr.const ``Shared.share [lvl])).foldr (init := (α, e))
+    (f := fun e ((α, x): Lean.Expr × Lean.Expr) =>
+      ((.app (Lean.Expr.const ``Shared [lvl]) α), (.app (Lean.Expr.app e α) x)))
+
 def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
   match e with
   | .proj a b strt => return .proj a b (← wrap_share_auto strt)
   | .letE a ty val bdy b =>
     return .letE a (← wrap_share_auto ty) (← wrap_share_auto val) (← wrap_share_auto bdy) b
   | .lam a bty bdy b =>
-    match shared_in 0 bdy with
+    let n_used := shared_in 0 bdy
+    match n_used with
     | 0 => return .lam a bty (← wrap_share_auto bdy) b
-    | _n =>
+    | k =>
       let lv ← Lean.Meta.getLevel bty
-      let bty' := (Lean.Expr.app (.const ``Shared [lv]) bty)
+      let bty' := wrap_shares k lv bty
       let bdy' ← wrap_share_auto bdy
       let lam ← map_lam_bvars (.lam a bty bdy' b) (.app (Lean.Expr.app (.const ``Shared.deref [lv]) bty) ·)
       match lam with
       | .lam a _ bdy b => return .lam a bty' bdy b
       | e => return e
-      /-Lean.Meta.lambdaTelescope (.lam a bty bdy' b) (fun fvars bdy => do
-        let fvars' := (fvars.map (.app (Lean.Expr.app (.const ``Shared.deref [lv]) bty) ·))
-        Lean.Meta.mkLambdaFVars fvars' bdy)-/
   | .forallE a bty bdy b =>
     return .forallE a bty (← wrap_share_auto bdy) b
   | .app M N =>
     let M' ← wrap_share_auto M
     let N' ← wrap_share_auto N
     match ← Lean.Meta.inferType M' with
-    | .forallE _ (.app (.const ``Shared us) α) _ _ =>
-      return .app M' (.app (.app (.const ``Shared.share us) α) N')
+    | .forallE _ α _ _ =>
+      let lv ← Lean.Meta.getLevel α
+      let ⟨n_shared, α⟩ := n_times_shared α
+      let N'' := share_n_times n_shared lv α N'
+      return .app M' N''
     | _ => return .app M' N'
   | e => return e
 

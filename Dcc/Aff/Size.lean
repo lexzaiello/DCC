@@ -24,11 +24,12 @@ namespace Expr
   | DCC Π(_α, β) => β.size + 1
   | DCC (f ∘' g) => f.size + f.size + g.size + 1
   | DCC (f ∘ g)  => f.size + f.size + g.size + 1
+  | DCC (f ∘∘ g)  => f.size + f.size + g.size + 1
   | DCC ⟦_β⟧⟨a, b⟩   => a.size + a.size + b.size + 2
   | DCC Λ(_α, _β, x) => x.size + 1
   | DCC !Λ(_α, _β, x) => x.size + 1
   | DCC Eval(_α, _β, x) => x.size + 1
-  | DCC !(x)   => x.size + x.size + 1
+  | DCC !(x)   => x.size
   | DCC *(α)   => α.size + 1
   | DCC &(x)   => x.size + x.size + x.size + 1
   | DCC !<x>   => x.size + x.size + x.size + 1

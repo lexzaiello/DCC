@@ -8,29 +8,41 @@ namespace Expr
 
 inductive RedEta : Expr → Expr → Prop
   --| curr       : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
-  | curr_quot  : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
-  | curr_fst   : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `((β y), (x y)))
-  | curr_fst'  : RedEta (DCC (Λ(α, β, x ∘' Fstc(β₂)) y)) (DCC `((β y), (x y)))
-  | pi         : Relation.ReflTransGen RedAff env env'
+  | curr_quot    : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
+  | curr_fst     : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `((β y), (x y)))
+  | curr_fst'    : RedEta (DCC (Λ(α, β, x ∘' Fstc(β₂)) y)) (DCC `((β y), (x y)))
+  | pi           : Relation.ReflTransGen RedAff env env'
     → IsNorm RedAff env'
     → RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
   --| pi_quot    : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
   --| quot       : RedEta x x' → RedEta (DCC `(β, x)) (DCC `(β, x'))
-  | pi'        : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
+  | pi'          : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
 --  | sig        : RedEta (DCC (β env)) β' → RedEta (DCC (Σ(α, β) env)) (DCC Coup(β'))
-  | sig'       : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
-  | coup       : RedEta β β' → RedEta (DCC (Coup(β))) (DCC (Coup(β')))
-  | quot_fst   : RedEta (DCC `(α, x) ∘ Fstc(β)) (DCC `(Coup(β), x))
-  | quot'_fst  : RedEta (DCC `(α, x) ∘' Fstc(β)) (DCC `(Coup(β), x))
-  | quot_snd   : RedEta (DCC `(α, x) ∘ Sndc(β)) (DCC `(Coup(β), x))
-  | quot'_snd  : RedEta (DCC `(α, x) ∘' Sndc(β)) (DCC `(Coup(β), x))
-  | quot_fst'  : RedEta (DCC (`(α, x) ∘ Fstc(β)) ∘ z) (DCC `(Coup(β), x) ∘ z)
-  | quot'_fst' : RedEta (DCC (`(α, x) ∘' Fstc(β)) ∘' z) (DCC `(Coup(β), x) ∘' z)
-  | quot_snd'  : RedEta (DCC (`(α, x) ∘ Sndc(β)) ∘ z) (DCC `(Coup(β), x) ∘ z)
-  | quot'_snd' : RedEta (DCC (`(α, x) ∘' Sndc(β)) ∘' z) (DCC `(Coup(β), x) ∘' z)
+  | sig'          : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
+  | coup          : RedEta β β' → RedEta (DCC (Coup(β))) (DCC (Coup(β')))
+  | quot_unbox    : RedEta (DCC `(α, x) ∘' *(α₂)) (DCC `(!(α), x))
+  | quot_unbox'   : RedEta (DCC `(α, x) ∘ *(α₂)) (DCC `(!(α), x)) 
+  --| quot'_unbox   : RedEta (DCC (`(α, x) ∘' *(α₂)) ∘' z) (DCC `(!(α), x) ∘' z)
+  --| quot'_unbox'  : RedEta (DCC (`(α, x) ∘ *(α₂)) ∘ z) (DCC `(!(α), x) ∘ z)
+  --| quot'_unbox₂  : RedEta (DCC `(α, x) ∘' *(α₂) ∘' z) (DCC `(!(α), x) ∘' z)
+  --| quot'_unbox'₂ : RedEta (DCC `(α, x) ∘ *(α₂) ∘ z) (DCC `(!(α), x) ∘ z)
+  | quot_fst      : RedEta (DCC `(α, x) ∘ Fstc(β)) (DCC `(Coup(β), x))
+  | quot'_fst     : RedEta (DCC `(α, x) ∘' Fstc(β)) (DCC `(Coup(β), x))
+  | quot_snd      : RedEta (DCC `(α, x) ∘ Sndc(β)) (DCC `(Coup(β), x))
+  | quot'_snd     : RedEta (DCC `(α, x) ∘' Sndc(β)) (DCC `(Coup(β), x))
+  --| quot_fst'     : RedEta (DCC (`(α, x) ∘ Fstc(β)) ∘ z) (DCC `(Coup(β), x) ∘ z)
+  --| quot'_fst'    : RedEta (DCC (`(α, x) ∘' Fstc(β)) ∘' z) (DCC `(Coup(β), x) ∘' z)
+  --| quot_snd'     : RedEta (DCC (`(α, x) ∘ Sndc(β)) ∘ z) (DCC `(Coup(β), x) ∘ z)
+  --| quot'_snd'    : RedEta (DCC (`(α, x) ∘' Sndc(β)) ∘' z) (DCC `(Coup(β), x) ∘' z)
+  --| quot_fst'₂     : RedEta (DCC `(α, x) ∘ Fstc(β) ∘ z) (DCC `(Coup(β), x) ∘ z)
+  --| quot'_fst'₂    : RedEta (DCC `(α, x) ∘' Fstc(β) ∘' z) (DCC `(Coup(β), x) ∘' z)
+  --| quot_snd'₂     : RedEta (DCC `(α, x) ∘ Sndc(β) ∘ z) (DCC `(Coup(β), x) ∘ z)
+  --| quot'_snd'₂    : RedEta (DCC `(α, x) ∘' Sndc(β) ∘' z) (DCC `(Coup(β), x) ∘' z)
   /-| pi_comp    : RedEta (DCC (Π(f_α, f_β) ∘ x)) (DCC (Π(f_α ∘ x, f_β ∘ x)))
   | pi'_comp   : RedEta (DCC (Π(f_α, f_β) ∘' x)) (DCC (Π(f_α ∘' x, f_β ∘' x)))-/
-  | eql        : RedEta (DCC (Eql(f_α) env x)) (DCC (x = x))
+  | eql           : RedEta (DCC (Eql(f_α) env x)) (DCC (x = x))
+  | compl         : RedEta (DCC (a ∘ b)) a' → RedEta (DCC ((a ∘ b) ∘ c)) (DCC (a' ∘ c))
+  | compl'        : RedEta (DCC (a ∘' b)) a' → RedEta (DCC ((a ∘' b) ∘' c)) (DCC (a' ∘' c))
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
 
@@ -73,6 +85,12 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
 
 @[dcc_force_eta, dcc_force_reduce, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
+  | (DCC `(α, x) ∘' *(α₂)) => .some ⟨_, ⟨.quot_unbox⟩⟩
+  | (DCC `(α, x) ∘ *(α₂)) => .some ⟨_, ⟨.quot_unbox'⟩⟩
+  --| (DCC (`(α, x) ∘' *(α₂)) ∘' z) => .some ⟨_, ⟨.quot'_unbox⟩⟩
+  --| (DCC (`(α, x) ∘ *(α₂)) ∘ z) => .some ⟨_, ⟨.quot'_unbox'⟩⟩
+  --| (DCC `(α, x) ∘' *(α₂) ∘' z) => .some ⟨_, ⟨.quot'_unbox₂⟩⟩
+  --| (DCC `(α, x) ∘ *(α₂) ∘ z) => .some ⟨_, ⟨.quot'_unbox'₂⟩⟩
   | DCC (Eql(f_α) env x) => .some ⟨_, ⟨.eql⟩⟩
   | DCC (Λ(α, _b, `(_c, x)) y) =>
     if heq : (DCC (Λ(α, _b, `(_c, x)) y)) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
@@ -120,10 +138,22 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   | (DCC `(α, x) ∘' Sndc(β)) => .some ⟨_, ⟨.quot'_snd⟩⟩
   --| DCC (Π(f_α, f_β) ∘ x) => .some ⟨_, ⟨.pi_comp⟩⟩
   --| DCC (Π(f_α, f_β) ∘' x) => .some ⟨_, ⟨.pi'_comp⟩⟩
-  | (DCC (`(α, x) ∘ Fstc(β)) ∘ z) => .some ⟨_, ⟨.quot_fst'⟩⟩
-  | (DCC (`(α, x) ∘' Fstc(β)) ∘' z) => .some ⟨_, ⟨.quot'_fst'⟩⟩
-  | (DCC (`(α, x) ∘ Sndc(β)) ∘ z) => .some ⟨_, ⟨.quot_snd'⟩⟩
-  | (DCC (`(α, x) ∘' Sndc(β)) ∘' z) => .some ⟨_, ⟨.quot'_snd'⟩⟩
+  --| (DCC (`(α, x) ∘ Fstc(β)) ∘ z) => .some ⟨_, ⟨.quot_fst'⟩⟩
+  --| (DCC (`(α, x) ∘' Fstc(β)) ∘' z) => .some ⟨_, ⟨.quot'_fst'⟩⟩
+  --| (DCC (`(α, x) ∘ Sndc(β)) ∘ z) => .some ⟨_, ⟨.quot_snd'⟩⟩
+  --| (DCC (`(α, x) ∘' Sndc(β)) ∘' z) => .some ⟨_, ⟨.quot'_snd'⟩⟩
+  --| (DCC `(α, x) ∘ Fstc(β) ∘ z) => .some ⟨_, ⟨.quot_fst'₂⟩⟩
+  --| (DCC `(α, x) ∘' Fstc(β) ∘' z) => .some ⟨_, ⟨.quot'_fst'₂⟩⟩
+  --| (DCC `(α, x) ∘ Sndc(β) ∘ z) => .some ⟨_, ⟨.quot_snd'₂⟩⟩
+  --| (DCC `(α, x) ∘' Sndc(β) ∘' z) => .some ⟨_, ⟨.quot'_snd'₂⟩⟩
+  | DCC (a ∘ b) ∘ c =>
+    match (DCC (a ∘ b)).step_eta? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.compl h⟩⟩
+    | _ => none
+  | DCC (a ∘' b) ∘' c =>
+    match (DCC (a ∘' b)).step_eta? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.compl' h⟩⟩
+    | _ => none
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_eta, aesop norm (rule_sets := [DccRel])]
@@ -138,7 +168,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   induction h₁ generalizing C with
   -- | pi_comp | pi'_comp => sorry
   | quot_fst
-  | coup | eql | curr_fst' | curr_fst | quot'_snd' | quot'_fst' | quot'_fst | quot'_snd | quot_snd' | quot_fst' | quot_snd | sig' | pi => cases h₂; aesop
+  | compl | compl' | quot_unbox | quot_unbox' | coup | eql | curr_fst' | curr_fst | quot'_fst | quot'_snd | quot_snd | sig' | pi => cases h₂; aesop
   /-| pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop
@@ -197,5 +227,7 @@ instance : Decidable (IsNorm RedEta A) :=
       .isFalse (fun h => by
         have h := RedEta.instRedRel.reduce_norm_fst h
         simp_all)
+
+#check RedEta.reduce
 
 end Expr

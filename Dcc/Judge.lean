@@ -57,6 +57,12 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces α α'
     → Reduces (comp.type α' γ g m) τ
     → Judge (DCC (f ∘ g)) τ
+  | comp₂  : Judge g (comp₂.g.type α β m)
+    → Judge f (comp₂.f.type β f_γ n)
+    → Reduces (DCC (f_γ Coup(β))) γ
+    → Reduces α α'
+    → Reduces (comp.type α' γ g m) τ
+    → Judge (DCC (f ∘∘ g)) τ
   | comp'  : Judge g (DCC (Π(Id(Sort m), f_β₀) α))
     → Reduces (DCC (f_β₀ α)) (DCC (`(α, β)))
     → Judge f (DCC (Π(f_β, f_γ) x_β))
@@ -234,18 +240,25 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨DCC Sort _m, ⟨ht⟩⟩ => .some ⟨_, ⟨.id ht (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | _ => .none
   | DCC (f ∘ g) =>
-    dbg_trace "a"
     match infer g with
     | .some ⟨DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, `(___a, β))) ∘' _a₂)) !(α)), ⟨ht₁⟩⟩ =>
-      dbg_trace "b"
       if heq : (DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, `(___a, β))) ∘' _a₂)) !(α))) = comp.g.type α β m then
-        dbg_trace "c"
         match infer f with
         | .some ⟨(DCC (Π(Id(Sort n), f_γ) _a)), ⟨ht₂⟩⟩ =>
-          dbg_trace "d"
           if heq₂ : (DCC (Π(Id(Sort n), f_γ) _a)) = comp.f.type α β f_γ n then
-            dbg_trace "e"
             .some ⟨_, ⟨.comp (heq ▸ ht₁) (heq₂ ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
+          else .none
+        | _ => .none
+      else .none
+    | _ => .none
+  | DCC (f ∘∘ g) =>
+    match infer g with
+    | .some ⟨DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fstc(___a))) ∘' _a₂)) !(α)), ⟨ht₁⟩⟩ =>
+      if heq : (DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fstc(___a))) ∘' _a₂)) !(α))) = comp₂.g.type α β m then
+        match infer f with
+        | .some ⟨(DCC (Π(Id(Sort n), f_γ) _a)), ⟨ht₂⟩⟩ =>
+          if heq₂ : (DCC (Π(Id(Sort n), f_γ) _a)) = comp₂.f.type β f_γ n then
+            .some ⟨_, ⟨.comp₂ (heq ▸ ht₁) (heq₂ ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
           else .none
         | _ => .none
       else .none

@@ -155,7 +155,10 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
         | DCC (Π(_f_α, f_β₀) x_α₀) =>
           match (DCC (f_β₀ x_α₀)).reduce_all with
           | DCC Π(_β₂, x_γ') =>
-            .some (DCC Eval(α, β, M') ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+            match (← (DCC ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩).infer).fst with
+            | (DCC (Π(_a₁, `(_a₂, Σ(_a₃, Λ(_a₄, _a₅, `(_α₆, _a₇))) ∘' _a₈)) _a₉)) =>
+              .some (DCC Eval(α, β, M') ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+            | _ => .some (DCC Eval(α, β, M') ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
           | _ => .none
         | _ => .none
       | _ => .none
@@ -310,7 +313,7 @@ macro_rules
 #eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
 #eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
 #eval Std.format <| dcc_compile' ((fun (α : Sort 1) (x : α) => (fun (x : α) => x) x) (Sort 0))
-#eval Std.format <| dcc_compile' ((fun (α : Sort 1) (x : α) => (fun (x : α) => x) x) (Sort 0))
+#eval Std.format <| dcc_infer' ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1))
 #eval Std.format <| dcc_compile' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
 
 #eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
@@ -320,153 +323,3 @@ macro_rules
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC *(Coup(`(!(⊤), Sort 1)))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Sndc(`(!(⊤), Sort 1))).infer
-
-/-
-pppneed eta rule for this:
-`(Coup(`(!(⊤), Sort 1)), Sort 1) ∘' *(Coup(`(!(⊤), Sort 1)))
--/
-
-/-dcc_trace ((!Λ(⊤, `(!(⊤), Sort 1),
-     !Λ(Coup(`(!(⊤), Sort 1)), (Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
-        (Eval(Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
-                ((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))) ∘'
-                   Fstc((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))))),
-                Λ(Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
-                  ((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))) ∘'
-                     Fstc((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))))),
-                  Sndc(((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))) ∘'
-                          Fstc((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))))))) ∘
-           ⟦Λ(Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
-                `(Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
-                  Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))))),
-                (((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))) ∘'
-                      Fstc((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))))) ∘'
-                   Fstc(`(Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
-                          Coup((Sndc(`(!(⊤), Sort 1)) ∘'
-                                  *(Coup(`(!(⊤),
-                                          Sort 1)))))))))⟧⟨Id(Coup((Sndc(`(!(⊤), Sort 1)) ∘'
-                                                     *(Coup(`(!(⊤), Sort 1)))))),
-                                          Λ(Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
-                                            `(Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
-                                              Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))))),
-                                            (Sndc((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))) ∘'
-                                               Fstc(`(Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
-                                                      Coup((Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))))))))⟩)))
-    &(∗))
-   &(Sort 0))-/
-
-#eval (Std.format ∘ Sigma.fst) <$> (DCC Eval(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-    ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-    Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-      ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-      Sndc(((Sndc(`(!(⊤),
-                    Sort
-                      1))∘'*(Coup(`(!(⊤),
-                      Sort
-                        1))))∘'Fstc((Sndc(`(!(⊤),
-                      Sort
-                        1))∘'*(Coup(`(!(⊤),
-                        Sort
-                          1)))))))))).infer
-
-#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟦Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-      `(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-        Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-      (((Sndc(`(!(⊤),
-                      Sort
-                        1))∘'*(Coup(`(!(⊤),
-                        Sort
-                          1))))∘'Fstc((Sndc(`(!(⊤),
-                        Sort
-                          1))∘'*(Coup(`(!(⊤),
-                          Sort
-                            1))))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-              Coup((Sndc(`(!(⊤),
-                        Sort
-                          1))∘'*(Coup(`(!(⊤),
-                          Sort 1)))))))))⟧⟨Id(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-    Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-      `(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-        Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-      (Sndc((Sndc(`(!(⊤),
-                    Sort
-                      1))∘'*(Coup(`(!(⊤),
-                      Sort
-                        1)))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-              Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))))))⟩).infer
-
-/-dcc_trace Eval(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-    ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-    Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-      ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-      Sndc(((Sndc(`(!(⊤),
-                    Sort
-                      1))∘'*(Coup(`(!(⊤),
-                      Sort
-                        1))))∘'Fstc((Sndc(`(!(⊤),
-                      Sort
-                        1))∘'*(Coup(`(!(⊤),
-                        Sort
-                          1)))))))))∘⟦Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-      `(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-        Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-      (((Sndc(`(!(⊤),
-                      Sort
-                        1))∘'*(Coup(`(!(⊤),
-                        Sort
-                          1))))∘'Fstc((Sndc(`(!(⊤),
-                        Sort
-                          1))∘'*(Coup(`(!(⊤),
-                          Sort
-                            1))))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-              Coup((Sndc(`(!(⊤),
-                        Sort
-                          1))∘'*(Coup(`(!(⊤),
-                          Sort 1)))))))))⟧⟨Id(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-    Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-      `(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-        Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-      (Sndc((Sndc(`(!(⊤),
-                    Sort
-                      1))∘'*(Coup(`(!(⊤),
-                      Sort
-                        1)))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-              Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))))))⟩-/
-
-#eval (DCC Eval(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-    ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-    Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-      ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-      Sndc(((Sndc(`(!(⊤),
-                    Sort
-                      1))∘'*(Coup(`(!(⊤),
-                      Sort
-                        1))))∘'Fstc((Sndc(`(!(⊤),
-                      Sort
-                        1))∘'*(Coup(`(!(⊤),
-                        Sort
-                          1)))))))))∘⟦Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-      `(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-        Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-      (((Sndc(`(!(⊤),
-                      Sort
-                        1))∘'*(Coup(`(!(⊤),
-                        Sort
-                          1))))∘'Fstc((Sndc(`(!(⊤),
-                        Sort
-                          1))∘'*(Coup(`(!(⊤),
-                          Sort
-                            1))))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-              Coup((Sndc(`(!(⊤),
-                        Sort
-                          1))∘'*(Coup(`(!(⊤),
-                          Sort 1)))))))))⟧⟨Id(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-    Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-      `(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-        Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
-      (Sndc((Sndc(`(!(⊤),
-                    Sort
-                      1))∘'*(Coup(`(!(⊤),
-                      Sort
-                        1)))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-              Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))))))⟩).infer.isSome

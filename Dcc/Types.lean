@@ -119,19 +119,14 @@ f ∘ g : ∀ (x : α), γ ∘ g
 @[dcc_judge] abbrev comp.g.type (α β : Expr) (m : Level) :=
   (DCC (Π(Id(Sort m), `(Sort m, Σ(`(α, α), Λ(α, `(α, α), `(Coup(`(α, α)), β))) ∘' *(α))) !(α)))
 
-/-
-(Π(Id(Sort 1),
-   `(Sort 1,
-     Σ(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
-       Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
-         `(Coup(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0)))), Sort 0)))))
-   Coup(`(⊤, Sort 0)))
-
-Pair thingy for g f ∘ g
--/
+@[dcc_judge] abbrev comp₂.g.type (α β : Expr) (m : Level) :=
+  (DCC (Π(Id(Sort m), `(Sort m, Σ(`(α, α), Λ(α, `(α, α), β ∘' Fstc(`(α, α)))) ∘' *(α))) !(α)))
 
 @[dcc_judge] abbrev comp.f.type (α β f_γ : Expr) (n : Level) :=
   (DCC (Π(Id(Sort n), f_γ) Coup(`(α, β))))
+
+@[dcc_judge] abbrev comp₂.f.type (β f_γ : Expr) (n : Level) :=
+  (DCC (Π(Id(Sort n), f_γ) Coup(β)))
 
 @[dcc_judge] abbrev comp.type (α γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) !(α))
@@ -260,6 +255,8 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC refl(f_α))           => comb "refl" [f_α.toFormat pretty]
   | (DCC f ∘ g)               =>
     paren (sepD [f.toFormat pretty, g.toFormat pretty] " ∘")
+  | (DCC f ∘∘ g)               =>
+    paren (sepD [f.toFormat pretty, g.toFormat pretty] " ∘∘")
   | (DCC f ∘' g)               =>
     paren (sepD [f.toFormat pretty, g.toFormat pretty] " ∘'")
   | (DCC (f x))               =>

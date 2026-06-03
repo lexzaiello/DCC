@@ -1,6 +1,42 @@
 import Dcc.Judge
 import Dcc.Tactic.Debug
 
+/-
+Auto-detecting sharing?
+
+λ x => M N
+
+x should be shared in this scope.
+Just need a stack-like thing.
+
+every variable access under an app needs sharing.
+a tree. every split under the lambda where the variable is used must be accounted for.
+-/
+
+def occurs_in (depth : ℕ) (in_e : Lean.Expr) : Bool :=
+  match in_e with
+  | .bvar n => n == depth
+  | .lam _ bty bdy _ => occurs_in depth bty ∨ occurs_in depth.succ bdy
+  | .forallE _ bty bdy _ => occurs_in depth bty ∨ occurs_in depth.succ bdy
+  | .letE _ ty val bdy _ => occurs_in depth ty ∨ occurs_in depth val ∨ occurs_in depth bdy
+  | .proj _ _ strt => occurs_in depth strt
+  | .mdata _ _ | .lit _ | .const _ _ | .sort _ | .mvar _ | .fvar _ => False
+  | .app M N => occurs_in depth M ∨ occurs_in depth N
+
+def shared_in (depth : ℕ) (in_e : Lean.Expr) : ℕ :=
+  match in_e with
+  | .app M N =>
+    match occurs_in depth M, occurs_in depth N with
+    | .true, .true       => 1 + (shared_in depth M) + (shared_in depth N)
+    | .true, _           => 1 + (shared_in depth M)
+    | _, .true           => 1 + (shared_in depth N)
+    | _, _               => 0
+  | .lam _ bty bdy _     => max (shared_in depth bty) (shared_in depth.succ bdy)
+  | .forallE _ bty bdy _ => max (shared_in depth bty) (shared_in depth.succ bdy)
+  | .proj _ _ strt => shared_in depth strt
+  | .letE _ ty val bdy _ => max (max (shared_in depth ty) (shared_in depth val)) (shared_in depth bdy)
+  | .bvar _ | .mdata _ _ | .lit _ | .const _ _ | .sort _ | .mvar _ | .fvar _ => 0
+
 inductive Shared.{u} (α : Type u) where
   | share : α → Shared α
 deriving Lean.ToExpr
@@ -54,6 +90,9 @@ def Expr.deref : Expr → Expr
 TODO: better logic for detecting duplication. Maybe some kind of user marker.
 
 -/
+
+def wrap_shares (n : ℕ) (e : Expr) : Expr :=
+  (List.replicate n (DCC !(#(·)))).foldr id e
 
 def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
   match e with
@@ -181,6 +220,33 @@ def cc (root : Lean.Expr) : Option _root_.Expr :=
     | DCC Sort n => pure (DCC Sort (n + 1))
     | _ => .none
   | e => (·.app (DCC (&(∗)))) <$> abstract' e Ctx.empty
+
+def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
+  match e with
+  | .forallE a bty bdy b =>
+    return .forallE a bty (← wrap_share_auto bdy) b
+  | .proj a b strt => return .proj a b (← wrap_share_auto strt)
+  | .letE a ty val bdy b => return .letE a (← wrap_share_auto ty) (← wrap_share_auto val) (← wrap_share_auto bdy) b
+  | .lam a bty bdy b =>
+    match shared_in 0 bdy with
+    | 0 =>
+      return .lam a bty (← wrap_share_auto bdy) b
+    | _n =>
+      let lv ← Lean.Meta.getLevel bty
+      --let bty' := (Lean.Expr.app (.const ``Shared [lv]) bty)
+      let bdy' ← wrap_share_auto bdy
+      Lean.Meta.lambdaTelescope (.lam a bty bdy' b) (fun fvars bdy => do
+        let fvars' := (fvars.map (.app (Lean.Expr.app (.const ``Shared.deref [lv]) bty) ·))
+        Lean.Meta.mkLambdaFVars fvars' bdy)
+  | .app M N =>
+    let M' ← wrap_share_auto M
+    let N' ← wrap_share_auto N
+    match ← Lean.Meta.inferType M' with
+    | .app (.const ``Shared us) α =>
+      return .app M' (.app (.app (.const ``Shared.share us) α) N')
+    | M' =>
+      return .app M' N'
+  | e => return e
 
 open Qq in
 def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) : Option _root_.Expr :=

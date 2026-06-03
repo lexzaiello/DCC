@@ -29,6 +29,7 @@ namespace Expr
 @[dcc_judge] theorem with_curr_β_type_curr_β_type : with_curr_β_type (.some ⟨curr.β.type f_α x_α m n, h⟩) = .some ⟨curr.β.type f_α x_α m n, f_α, x_α, m, n, h, ⟨rfl⟩⟩ := by
   simp [dcc_judge]
 
+set_option maxHeartbeats 2000000000000 in
 theorem Judge.complete (h : Judge e t) : infer e = .some ⟨t, ⟨h⟩⟩ := by
   induction h <;> (dsimp only [infer]; (try (dcc_simp_all; dcc_aesop!)); try grind)
 

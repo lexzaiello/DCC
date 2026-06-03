@@ -303,7 +303,7 @@ macro_rules
 
 #eval Std.format <| dcc_compile' (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
 #eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
-#eval Std.format <| dcc_compile (fun (x : *(Sort 0)) => (fun (x : Sort 0) => x) x.deref)
+#eval Std.format <| dcc_compile' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
 
 #eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro
 #time #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro

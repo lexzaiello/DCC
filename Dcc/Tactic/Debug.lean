@@ -3,6 +3,9 @@ import Dcc.Judge
 
 def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
   match e with
+  | .app (.const ``_root_.Expr.fmap []) x =>
+    let x' ← decode_dcc x
+    return .fmap x'
   | .app (.const ``_root_.Expr.sort []) m =>
     let some n ← (pure m.nat?) | throwError s!"unsupported: {m}"
     return .sort n

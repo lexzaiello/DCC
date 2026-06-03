@@ -28,7 +28,7 @@ namespace Expr
   | DCC Λ(_α, _β, x) => x.size + 1
   | DCC !Λ(_α, _β, x) => x.size + 1
   | DCC Eval(_α, _β, x) => x.size + 1
-  | DCC !(x)   => x.size + x.size + 1
+  | DCC !(x)   => x.size
   | DCC *(α)   => α.size + 1
   | DCC &(x)   => x.size + x.size + x.size + 1
   | DCC !<x>   => x.size + x.size + x.size + 1

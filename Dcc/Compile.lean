@@ -172,30 +172,12 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
 
 def cc (root : Lean.Expr) : Option _root_.Expr :=
   match root with
-  | .app (.const ``Shared _us) (.const ``True.intro []) => DCC (*(∗))
-  | .app (.const ``Shared _us) (.const ``True []) => DCC (*(⊤))
-  | .app (.const ``Shared _us) (.const ``False []) => DCC (*(⊥))
-  | .app (.app (.const ``Shared.share _us) _α) (.const ``True.intro []) => DCC (&(∗))
-  | .app (.app (.const ``Shared.share _us) _α) (.const ``False []) => DCC (&(⊥))
-  | .app (.app (.const ``Shared.share _us) _α) (.const ``True []) => DCC (&(⊤))
-  | .app (.app (.const ``Shared.share _us) _α) (.sort .zero) => DCC &(Sort 0)
-  | .app (.app (.const ``Shared _us) _α) (.sort .zero) => DCC *(Sort 0)
-  | .app (.app (.const ``Shared.share _us) _α) (.sort (.succ m)) => do
-    match ← (cc (.app (.app (.const ``Shared.share _us) _α) (.sort m))) with
-    | DCC &(Sort n)
-    | DCC Sort n => pure (DCC &(Sort (n + 1)))
-    | _ => .none
-  | .app (.const ``Shared _us) (.sort (.succ m)) => do
-    match ← cc (.app (.const ``Shared _us) (.sort m)) with
-    | DCC *(Sort n)
-    | DCC Sort n => pure (DCC *(Sort (n + 1)))
-    | _ => .none
   | .app (.const ``Shared _us) x => do
     let x' ← cc x
-    .some (DCC !(x'))
+    return DCC !(x')
   | .app (.app (.const ``Shared.share _us) _α) x => do
     let x' ← cc x
-    .some (DCC &(x'))
+    return DCC &(x')
   | .app (.lam _a α bdy _binfo) (.app (.app (.const ``Shared.share _us) _α) x) => do
     let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty
     let x' ← cc x
@@ -217,37 +199,6 @@ def cc (root : Lean.Expr) : Option _root_.Expr :=
     | DCC Sort n => pure (DCC Sort (n + 1))
     | _ => .none
   | e => (·.app (DCC (&(∗)))) <$> abstract' e Ctx.empty
-
--- thank you to gemini for writing this
-def map_forE_bvars (e : Lean.Expr) (myTransform : Lean.Expr → Lean.Expr) : Lean.MetaM Lean.Expr := do
-  Lean.Meta.forallTelescope e fun fvars body => do
-    if fvars.size == 0 then
-      return e
-    let targetFVar := fvars[0]!
-    let newBody ← Lean.Meta.transform body (pre := fun subExpr => do
-      if subExpr == targetFVar then
-        let modifiedExpr := myTransform subExpr
-        return .done modifiedExpr
-      else
-        return .continue
-    )
-
-    Lean.Meta.mkForallFVars fvars newBody
-
-def map_lam_bvars (e : Lean.Expr) (myTransform : Lean.Expr → Lean.Expr) : Lean.MetaM Lean.Expr := do
-  Lean.Meta.lambdaTelescope e fun fvars body => do
-    if fvars.size == 0 then
-      return e
-    let targetFVar := fvars[0]!
-    let newBody ← Lean.Meta.transform body (pre := fun subExpr => do
-      if subExpr == targetFVar then
-        let modifiedExpr := myTransform subExpr
-        return .done modifiedExpr
-      else
-        return .continue
-    )
-
-    Lean.Meta.mkLambdaFVars fvars newBody
 
 def wrap_shares (n : ℕ) (u : Lean.Level) (e : Lean.Expr) : Lean.Expr :=
   (List.replicate n (Lean.Expr.const ``Shared [u])).foldr .app e
@@ -296,7 +247,6 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
       let lv ← Lean.Meta.getLevel bty <|> Lean.Meta.mkFreshLevelMVar
       let bty' := wrap_shares k lv bty'
       let bdy' := deref_vars k 0 lv bty (← wrap_share_auto bdy)
-      dbg_trace bdy'
       return .lam a bty' bdy' b
   | .forallE a bty bdy b => do
     let bty' ← wrap_share_auto bty
@@ -311,8 +261,6 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
   | .app M N => do
     let M' ← wrap_share_auto M
     let N' ← wrap_share_auto N
-    dbg_trace M
-    dbg_trace M'
     match M' with
     | .lam _ α _ _ =>
       let ⟨lvl, n_shared, α⟩ := n_times_shared α
@@ -369,3 +317,39 @@ macro_rules
 #time #eval dcc_infer   (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval Std.format <| dcc_compile (fun (x : *(Sort 0)) => (fun (x : Sort 0) => x) x.deref)
 #time #eval Std.format <| dcc_infer (((fun (x : *(Sort 1)) => (fun (x : Sort 1) => x) ↑(x))) &(Sort 0))
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC *(Coup(`(!(⊤), Sort 1)))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Sndc(`(!(⊤), Sort 1))).infer
+
+/-
+pppneed eta rule for this:
+`(Coup(`(!(⊤), Sort 1)), Sort 1) ∘' *(Coup(`(!(⊤), Sort 1)))
+-/
+
+dcc_trace ((!Λ(⊤, `(!(⊤), Sort 1),
+     !Λ(Coup(`(!(⊤), Sort 1)), Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))),
+        Eval(Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
+               Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))) ∘'
+                 Fstc(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
+               Λ(Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
+                 Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))) ∘'
+                   Fstc(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
+                 Sndc(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))) ∘'
+                        Fstc(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))))) ∘
+          ⟦Λ(Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
+               `(Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
+                 Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
+               Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))) ∘'
+                   Fstc(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))) ∘'
+                 Fstc(`(Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
+                        Coup(Sndc(`(!(⊤), Sort 1)) ∘'
+                               *(Coup(`(!(⊤),
+                                       Sort 1)))))))⟧⟨Id(Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
+                                         Λ(Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
+                                           `(Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
+                                             Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1))))),
+                                           Sndc(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))) ∘'
+                                             Fstc(`(Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))),
+                                                    Coup(Sndc(`(!(⊤), Sort 1)) ∘' *(Coup(`(!(⊤), Sort 1)))))))⟩))
+    &(∗))
+   &(Sort 0))

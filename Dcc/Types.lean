@@ -259,9 +259,9 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | (DCC Eql(f_α))            => comb "Eql" [f_α.toFormat pretty]
   | (DCC refl(f_α))           => comb "refl" [f_α.toFormat pretty]
   | (DCC f ∘ g)               =>
-    sepD [f.toFormat pretty, g.toFormat pretty] " ∘"
+    paren (sepD [f.toFormat pretty, g.toFormat pretty] " ∘")
   | (DCC f ∘' g)               =>
-    sepD [f.toFormat pretty, g.toFormat pretty] " ∘'"
+    paren (sepD [f.toFormat pretty, g.toFormat pretty] " ∘'")
   | (DCC (f x))               =>
     if pretty then
       match heq₁ : (DCC (f x)) with

@@ -355,7 +355,47 @@ pppneed eta rule for this:
     &(∗))
    &(Sort 0))-/
 
-dcc_trace Eval(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Eval(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+    ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
+    Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+      ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
+      Sndc(((Sndc(`(!(⊤),
+                    Sort
+                      1))∘'*(Coup(`(!(⊤),
+                      Sort
+                        1))))∘'Fstc((Sndc(`(!(⊤),
+                      Sort
+                        1))∘'*(Coup(`(!(⊤),
+                        Sort
+                          1)))))))))).infer
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟦Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+      `(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+        Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
+      (((Sndc(`(!(⊤),
+                      Sort
+                        1))∘'*(Coup(`(!(⊤),
+                        Sort
+                          1))))∘'Fstc((Sndc(`(!(⊤),
+                        Sort
+                          1))∘'*(Coup(`(!(⊤),
+                          Sort
+                            1))))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+              Coup((Sndc(`(!(⊤),
+                        Sort
+                          1))∘'*(Coup(`(!(⊤),
+                          Sort 1)))))))))⟧⟨Id(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
+    Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+      `(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+        Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
+      (Sndc((Sndc(`(!(⊤),
+                    Sort
+                      1))∘'*(Coup(`(!(⊤),
+                      Sort
+                        1)))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+              Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))))))⟩).infer
+
+/-dcc_trace Eval(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
     ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
     Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
       ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
@@ -391,4 +431,42 @@ dcc_trace Eval(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
                       1))∘'*(Coup(`(!(⊤),
                       Sort
                         1)))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
-              Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))))))⟩
+              Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))))))⟩-/
+
+#eval (DCC Eval(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+    ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
+    Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+      ((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))∘'Fstc((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
+      Sndc(((Sndc(`(!(⊤),
+                    Sort
+                      1))∘'*(Coup(`(!(⊤),
+                      Sort
+                        1))))∘'Fstc((Sndc(`(!(⊤),
+                      Sort
+                        1))∘'*(Coup(`(!(⊤),
+                        Sort
+                          1)))))))))∘⟦Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+      `(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+        Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
+      (((Sndc(`(!(⊤),
+                      Sort
+                        1))∘'*(Coup(`(!(⊤),
+                        Sort
+                          1))))∘'Fstc((Sndc(`(!(⊤),
+                        Sort
+                          1))∘'*(Coup(`(!(⊤),
+                          Sort
+                            1))))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+              Coup((Sndc(`(!(⊤),
+                        Sort
+                          1))∘'*(Coup(`(!(⊤),
+                          Sort 1)))))))))⟧⟨Id(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
+    Λ(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+      `(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+        Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))),
+      (Sndc((Sndc(`(!(⊤),
+                    Sort
+                      1))∘'*(Coup(`(!(⊤),
+                      Sort
+                        1)))))∘'Fstc(`(Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1))))),
+              Coup((Sndc(`(!(⊤), Sort 1))∘'*(Coup(`(!(⊤), Sort 1)))))))))⟩).infer.isSome

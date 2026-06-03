@@ -219,6 +219,21 @@ def cc (root : Lean.Expr) : Option _root_.Expr :=
   | e => (·.app (DCC (&(∗)))) <$> abstract' e Ctx.empty
 
 -- thank you to gemini for writing this
+def map_forE_bvars (e : Lean.Expr) (myTransform : Lean.Expr → Lean.Expr) : Lean.MetaM Lean.Expr := do
+  Lean.Meta.forallTelescope e fun fvars body => do
+    if fvars.size == 0 then
+      return e
+    let targetFVar := fvars[0]!
+    let newBody ← Lean.Meta.transform body (pre := fun subExpr => do
+      if subExpr == targetFVar then
+        let modifiedExpr := myTransform subExpr
+        return .done modifiedExpr
+      else
+        return .continue
+    )
+
+    Lean.Meta.mkForallFVars fvars newBody
+
 def map_lam_bvars (e : Lean.Expr) (myTransform : Lean.Expr → Lean.Expr) : Lean.MetaM Lean.Expr := do
   Lean.Meta.lambdaTelescope e fun fvars body => do
     if fvars.size == 0 then
@@ -237,46 +252,75 @@ def map_lam_bvars (e : Lean.Expr) (myTransform : Lean.Expr → Lean.Expr) : Lean
 def wrap_shares (n : ℕ) (u : Lean.Level) (e : Lean.Expr) : Lean.Expr :=
   (List.replicate n (Lean.Expr.const ``Shared [u])).foldr .app e
 
-def n_times_shared (e : Lean.Expr) : ℕ × Lean.Expr :=
+def n_times_shared (e : Lean.Expr) : (Option Lean.Level) × ℕ × Lean.Expr :=
   match e with
-  | (.app (.const ``Shared _us) α) =>
-    let (n, e) := (n_times_shared α)
-    (n.succ, e)
-  | e => (.zero, e)
+  | (.app (.const ``Shared [l]) α) =>
+    let (_l, n, e) := (n_times_shared α)
+    (.some l, n.succ, e)
+  | e => (.none, .zero, e)
 
 def share_n_times (n : ℕ) (lvl : Lean.Level) (α e : Lean.Expr) : Lean.Expr :=
   Prod.snd <| (List.replicate n (Lean.Expr.const ``Shared.share [lvl])).foldr (init := (α, e))
     (f := fun e ((α, x): Lean.Expr × Lean.Expr) =>
       ((.app (Lean.Expr.const ``Shared [lvl]) α), (.app (Lean.Expr.app e α) x)))
 
+def deref_n_times (n : ℕ) (lvl : Lean.Level) (base_ty e : Lean.Expr) : Lean.Expr :=
+  match n with
+  | 0 => e
+  | n' + 1 =>
+    let inner_ty := wrap_shares n' lvl base_ty
+    let e' := Lean.Expr.app (Lean.Expr.app (.const ``Shared.deref [lvl]) inner_ty) e
+    deref_n_times n' lvl base_ty e'
+
+def deref_vars (k depth : ℕ) (lv : Lean.Level) (with_ty in_e : Lean.Expr) : Lean.Expr :=
+  match in_e with
+  | .bvar v => if v == depth then deref_n_times k lv with_ty (.bvar v) else .bvar v
+  | .lam a bty bdy b => .lam a (deref_vars k depth lv with_ty bty) (deref_vars k depth.succ lv with_ty bdy) b
+  | .forallE a bty bdy b => .forallE a (deref_vars k depth lv with_ty bty) (deref_vars k depth.succ lv with_ty bdy) b
+  | .letE a ty val bdy b => .letE a (deref_vars k depth lv with_ty ty) (deref_vars k depth lv with_ty val) (deref_vars k depth lv with_ty bdy) b
+  | .proj a b strt => .proj a b (deref_vars k depth lv with_ty strt)
+  | .mdata _ _ | .lit _ | .const _ _ | .sort _ | .mvar _ | .fvar _ => in_e
+  | .app M N => .app (deref_vars k depth lv with_ty M) (deref_vars k depth lv with_ty N)
+
 def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
   match e with
   | .proj a b strt => return .proj a b (← wrap_share_auto strt)
   | .letE a ty val bdy b =>
     return .letE a (← wrap_share_auto ty) (← wrap_share_auto val) (← wrap_share_auto bdy) b
-  | .lam a bty bdy b =>
+  | .lam a bty bdy b => do
+    let bty' ← wrap_share_auto bty
     let n_used := shared_in 0 bdy
     match n_used with
-    | 0 => return .lam a bty (← wrap_share_auto bdy) b
+    | 0 => return .lam a bty' (← wrap_share_auto bdy) b
     | k =>
-      let lv ← Lean.Meta.getLevel bty
-      let bty' := wrap_shares k lv bty
-      let bdy' ← wrap_share_auto bdy
-      let lam ← map_lam_bvars (.lam a bty bdy' b) (.app (Lean.Expr.app (.const ``Shared.deref [lv]) bty) ·)
-      match lam with
-      | .lam a _ bdy b => return .lam a bty' bdy b
-      | e => return e
-  | .forallE a bty bdy b =>
-    return .forallE a bty (← wrap_share_auto bdy) b
-  | .app M N =>
+      let lv ← Lean.Meta.getLevel bty <|> Lean.Meta.mkFreshLevelMVar
+      let bty' := wrap_shares k lv bty'
+      let bdy' := deref_vars k 0 lv bty (← wrap_share_auto bdy)
+      dbg_trace bdy'
+      return .lam a bty' bdy' b
+  | .forallE a bty bdy b => do
+    let bty' ← wrap_share_auto bty
+    let n_used := shared_in 0 bdy
+    match n_used with
+    | 0 => return .forallE a bty' (← wrap_share_auto bdy) b
+    | k =>
+      let lv ← Lean.Meta.getLevel bty'
+      let bty' := wrap_shares k lv bty'
+      let bdy' := deref_vars k 0 lv bty (← wrap_share_auto bdy)
+      return .forallE a bty' bdy' b
+  | .app M N => do
     let M' ← wrap_share_auto M
     let N' ← wrap_share_auto N
-    match ← Lean.Meta.inferType M' with
-    | .forallE _ α _ _ =>
-      let lv ← Lean.Meta.getLevel α
-      let ⟨n_shared, α⟩ := n_times_shared α
-      let N'' := share_n_times n_shared lv α N'
-      return .app M' N''
+    dbg_trace M
+    dbg_trace M'
+    match M' with
+    | .lam _ α _ _ =>
+      let ⟨lvl, n_shared, α⟩ := n_times_shared α
+      match lvl with
+      | .some lv =>
+        let N'' := share_n_times n_shared lv α N'
+        return .app M' N''
+      | _ => return .app M' N'
     | _ => return .app M' N'
   | e => return e
 
@@ -295,8 +339,8 @@ open Qq in
 
 elab "dcc_compile'" tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
-  let dcc_tm ← Lean.Expr.ccM e_tm
-  match dcc_tm with
+  let e_tm' ← Lean.instantiateExprMVars =<< wrap_share_auto e_tm
+  match cc e_tm' with
   | .some tm => return Lean.toExpr tm
   | .none => throwErrorAt tm "could not compile"
 
@@ -316,6 +360,9 @@ macro_rules
 
 #eval Std.format <| dcc_compile' (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
 #eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
+#eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
+#eval Std.format <| dcc_compile' ((fun (α : Sort 1) (x : α) => (fun (x : α) => x) x) (Sort 0))
+#eval Std.format <| dcc_compile' ((fun (α : Sort 1) (x : α) => (fun (x : α) => x) x) (Sort 0))
 #eval Std.format <| dcc_compile' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
 
 #eval Std.format <| dcc_compile (fun (α : Sort 0) (x : α) => x) True True.intro

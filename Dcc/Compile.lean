@@ -114,11 +114,11 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
     let β' ← abstract' β (DCC Coup(α'))
     .some (DCC Σ(α', β'))
   | .lam _a (.app (.const ``Shared _us) α) bdy _binfo => do
-    let α' ← abstract' α ctx
+    let α' ← abstract' α ctx.deref
     let inner ← abstract' bdy (DCC !(Coup(α')))
     .some (DCC !Λ(ctx.deref, α', inner))
   | .lam _a α bdy _binfo => do
-    let α' ← abstract' α ctx
+    let α' ← abstract' α ctx.deref
     let inner ← abstract' bdy (DCC Coup(α'))
     .some (DCC Λ(ctx, α', inner))
   | .forallE _name (.app (.const ``Shared _us) α) β _binfo => do
@@ -264,6 +264,7 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
   | .app M N => do
     let M' ← wrap_share_auto M
     let N' ← wrap_share_auto N
+    -- try infertype on M' to smartly fetch whether we need to share
     match M' with
     | .lam _ α _ _ =>
       let ⟨lvl, n_shared, α⟩ := n_times_shared α
@@ -272,7 +273,19 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
         let N'' := share_n_times n_shared lv α N'
         return .app M' N''
       | _ => return .app M' N'
-    | _ => return .app M' N'
+    | _ =>
+      try match ← Lean.Meta.inferType M' with
+        | .forallE _ α _ _ =>
+          let ⟨lvl, n_shared, α⟩ := n_times_shared α
+          match lvl with
+          | .some lv =>
+            let N'' := share_n_times n_shared lv α N'
+            return .app M' N''
+          | _ => return .app M' N'
+        | _ =>
+          throwError "panic"
+      catch _ =>
+        return .app M' N'
   | e => return e
 
 open Qq in
@@ -312,7 +325,10 @@ macro_rules
 #eval Std.format <| dcc_compile' (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
 #eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
 #eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
-#eval Std.format <| dcc_compile' ((fun (α : Sort 1) (x : α) => (fun (x : α) => x) x) (Sort 0))
+#eval Std.format <| dcc_compile' ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
+#eval Std.format <| dcc_infer' ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
+
+#eval Std.format <| (DCC (!<(Sndc(`(!(⊤), Sort 2)) ∘' *(Coup(`(!(⊤), Sort 2))))> &(⟦`(!(⊤), Sort 2)⟧(∗, Sort 1)))).reduce_all
 #eval Std.format <| dcc_infer' ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1))
 #eval Std.format <| dcc_compile' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
 

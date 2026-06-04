@@ -31,10 +31,10 @@ def shared_in (depth : ℕ) (in_e : Lean.Expr) : ℕ :=
     | .true, _           => 1 + (shared_in depth M)
     | _, .true           => 1 + (shared_in depth N)
     | _, _               => 0
-  | .lam _ bty bdy _     => max (shared_in depth bty) (shared_in depth.succ bdy)
-  | .forallE _ bty bdy _ => max (shared_in depth bty) (shared_in depth.succ bdy)
+  | .lam _ bty bdy _     => (shared_in depth bty) + (shared_in depth.succ bdy)
+  | .forallE _ bty bdy _ => (shared_in depth bty) + (shared_in depth.succ bdy)
   | .proj _ _ strt => shared_in depth strt
-  | .letE _ ty val bdy _ => max (max (shared_in depth ty) (shared_in depth val)) (shared_in depth bdy)
+  | .letE _ ty val bdy _ => (shared_in depth ty) + (shared_in depth val) + (shared_in depth bdy)
   | .bvar _ | .mdata _ _ | .lit _ | .const _ _ | .sort _ | .mvar _ | .fvar _ => 0
 
 inductive Shared.{u} (α : Type u) where
@@ -66,21 +66,23 @@ macro_rules
 def Ctx := Expr
 def Ctx.empty := DCC !(⊤)
 
-def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
+instance : ToString Ctx := ⟨toString ∘ Expr.toFormat⟩
+
+def cc_var (ctx : Ctx) (idx : ℕ) : Lean.MacroM Expr :=
   match ctx, idx with
   | DCC Coup(β), .zero => pure <| DCC Sndc(β)
   | DCC !(Coup(β)), .zero => pure <| DCC Sndc(β) ∘' *(Coup(β))
   | DCC !(Coup(β)), .succ n => do
-    match (← β.infer).fst with
-    | DCC (Π(a, _b) x_α) =>
+    match (·.fst) <$> β.infer with
+    | .some (DCC (Π(a, _b) x_α)) =>
       (DCC ((#(·) ∘' Fstc(β)) ∘' !(Coup(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
-    | _ => .none
+    | _ => Lean.Macro.throwError s!"Couple β index is not valid: {β}"
   | DCC Coup(β), .succ n => do
-    match (← β.infer).fst with
-    | DCC (Π(a, _b) x_α) =>
+    match (·.fst) <$> β.infer with
+    | .some (DCC (Π(a, _b) x_α)) =>
       (·.comp' (DCC (Fstc(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
-    | _ => .none
-  | _, _ => .none
+    | _ => Lean.Macro.throwError s!"Couple β index is not valid: {β}"
+  | e, n => Lean.Macro.throwError s!"Cannot be indexed at {n} as a couple: {e}"
 
 def Expr.deref : Expr → Expr
   | DCC !(Γ) => Γ
@@ -91,46 +93,46 @@ TODO: better logic for detecting duplication. Maybe some kind of user marker.
 
 -/
 
-def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
+def abstract' (e : Lean.Expr) (ctx : Ctx) : Lean.MacroM _root_.Expr := do
   match e with
   | .app (.app (.const ``Shared.deref _us) _α) x => abstract' x ctx
-  | .app (.app (.const ``Shared.share _us) _α) (.sort .zero) => DCC (`(ctx, &(Sort 0)))
-  | .app (.const ``Shared _us) (.sort .zero) => DCC (`(ctx, !(Sort 0)))
+  | .app (.app (.const ``Shared.share _us) _α) (.sort .zero) => return DCC (`(ctx, &(Sort 0)))
+  | .app (.const ``Shared _us) (.sort .zero) => return DCC (`(ctx, !(Sort 0)))
   | .app (.app (.const ``Shared.share _us) _α) (.sort (.succ m)) => do
     match ← (abstract' (.sort m)) ctx with
     | DCC (`(ctx, &(Sort n)))
-    | DCC (`(ctx, Sort n)) => pure (DCC (`(ctx, &(Sort (n + 1)))))
-    | _ => .none
+    | DCC (`(ctx, Sort n)) => return (DCC (`(ctx, &(Sort (n + 1)))))
+    | m => Lean.Macro.throwError s!"not a valid sort: {m}"
   | .app (.const ``Shared _us) (.sort (.succ m)) => do
     match ← (abstract' (.sort m)) ctx with
     | DCC (`(ctx, !(Sort n)))
-    | DCC (`(ctx, Sort n)) => pure (DCC (`(ctx, !(Sort (n + 1)))))
-    | _ => .none
-  | .app (.app (.const ``Shared.share _us) _α) (.const ``True.intro []) => DCC (`(ctx, &(∗)))
-  | .app (.const ``Shared _us) (.const ``False []) => DCC (`(ctx, !(⊥)))
+    | DCC (`(ctx, Sort n)) => return (DCC (`(ctx, !(Sort (n + 1)))))
+    | m => Lean.Macro.throwError s!"not a valid sort: {m}"
+  | .app (.app (.const ``Shared.share _us) _α) (.const ``True.intro []) => return DCC (`(ctx, &(∗)))
+  | .app (.const ``Shared _us) (.const ``False []) => return DCC (`(ctx, !(⊥)))
   | .bvar n => cc_var ctx n
   | .app (.app (.const ``Sigma []) α) β => do
     let α' ← abstract' α ctx
     let β' ← abstract' β (DCC Coup(α'))
-    .some (DCC Σ(α', β'))
+    return (DCC Σ(α', β'))
   | .lam _a (.app (.const ``Shared _us) α) bdy _binfo => do
     let α' ← abstract' α ctx.deref
     let inner ← abstract' bdy (DCC !(Coup(α')))
-    .some (DCC !Λ(ctx.deref, α', inner))
+    return (DCC !Λ(ctx.deref, α', inner))
   | .lam _a α bdy _binfo => do
     let α' ← abstract' α ctx.deref
     let inner ← abstract' bdy (DCC Coup(α'))
-    .some (DCC Λ(ctx, α', inner))
+    return (DCC Λ(ctx, α', inner))
   | .forallE _name (.app (.const ``Shared _us) α) β _binfo => do
     let α' ← abstract' α ctx
     let β' ← abstract' β (DCC !(Coup(α')))
 
-    .some (DCC (Π(α', !Λ(ctx.deref, α', β'))))
+    return (DCC (Π(α', !Λ(ctx.deref, α', β'))))
   | .forallE _name α β _binfo => do
     let α' ← abstract' α ctx
     let β' ← abstract' β (DCC Coup(α'))
 
-    .some (DCC (Π(α', Λ(ctx, α', β'))))
+    return (DCC (Π(α', Λ(ctx, α', β'))))
   | .app (.app (.app (.app (.app (.app (.const ``use _us) _α) _β) _γ) M) N) _
   | .app (.app (.app (.app (.app (.const ``use _us) _α) _β) _γ) M) N
   | .app M N => do
@@ -144,36 +146,44 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Option _root_.Expr :=
       M : ∀ (x : α) (y : β x)
     -/
 
-    match (← M'.infer).fst with
-    | _root_.Expr.app (.pi f_α f_β) x_α =>
+    match (·.fst) <$> M'.infer with
+    | .some (_root_.Expr.app (.pi f_α f_β) x_α) =>
       let α : _root_.Expr := match (f_α.app x_α).reduce_all with
         | DCC !(α) => α
         | α => α
+      /-
+        Need pi_quot η-reduction maybe?
+        
+      -/
+      -- error here
+      dbg_trace M'
+      dbg_trace (·.fst) <$> M'.infer
+      dbg_trace (f_β.app x_α).reduce_all
       match (f_β.app x_α).reduce_all with
       | DCC Π(β, _γ) =>
-        match (← (DCC Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))).infer).fst with
-        | DCC (Π(_f_α, f_β₀) x_α₀) =>
+        match (·.fst) <$> (DCC Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))).infer with
+        | .some (DCC (Π(_f_α, f_β₀) x_α₀)) =>
           match (DCC (f_β₀ x_α₀)).reduce_all with
           | DCC Π(_β₂, x_γ') =>
-            match (← (DCC ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩).infer).fst with
-            | (DCC (Π(_a₁, `(_a₂, Σ(_a₃, Λ(_a₄, _a₅, `(_α₆, _a₇))) ∘' _a₈)) _a₉)) =>
-              .some (DCC Eval(α, β, M') ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
-            | _ => .some (DCC Eval(α, β, M') ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
-          | _ => .none
-        | _ => .none
-      | _ => .none
-    | _ => .none
-  | .const ``True.intro [] => DCC (`(ctx, ∗))
-  | .const ``True [] => DCC (`(ctx, Ctx.empty))
-  | .const ``False [] => DCC (`(ctx, ⊥))
-  | .sort .zero => DCC (`(ctx, Sort 0))
+            match (·.fst) <$> (DCC ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩).infer with
+            | .some (DCC (Π(_a₁, `(_a₂, Σ(_a₃, Λ(_a₄, _a₅, `(_α₆, _a₇))) ∘' _a₈)) _a₉)) =>
+              return (DCC Eval(α, β, M') ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+            | _ => return (DCC Eval(α, β, M') ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+          | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
+        | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
+      | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
+    | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
+  | .const ``True.intro [] => return DCC (`(ctx, ∗))
+  | .const ``True [] => return DCC (`(ctx, Ctx.empty))
+  | .const ``False [] => return DCC (`(ctx, ⊥))
+  | .sort .zero => return DCC (`(ctx, Sort 0))
   | .sort (.succ m) => do
     match ← (abstract' (.sort m)) ctx with
     | DCC (`(ctx, Sort n)) => pure (DCC (`(ctx, Sort (n + 1))))
-    | _ => .none
-  | _ => .none
+    | m => Lean.Macro.throwError s!"not a valid sort: {m}"
+  | e => Lean.Macro.throwError s!"not a recognized expression: {e}"
 
-def cc (root : Lean.Expr) : Option _root_.Expr :=
+def cc (root : Lean.Expr) : Lean.MacroM _root_.Expr :=
   match root with
   | .app (.const ``Shared _us) x => do
     let x' ← cc x
@@ -184,23 +194,23 @@ def cc (root : Lean.Expr) : Option _root_.Expr :=
   | .app (.lam _a α bdy _binfo) (.app (.app (.const ``Shared.share _us) _α) x) => do
     let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty
     let x' ← cc x
-    .some (DCC (f' &(∗) &(x')))
+    return (DCC (f' &(∗) &(x')))
   | .app (.lam _a α bdy _binfo) x => do
     let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty
     let x' ← cc x
-    .some (DCC (f' &(∗) x'))
+    return (DCC (f' &(∗) x'))
   | .app M N => do
     let M' ← cc M
     let N' ← cc N
-    .some (DCC (M' N'))
-  | .const ``True.intro [] => DCC (∗)
-  | .const ``True [] => DCC (⊤)
-  | .const ``False [] => DCC (⊥)
-  | .sort .zero => DCC (Sort 0)
+    return (DCC (M' N'))
+  | .const ``True.intro [] => return DCC (∗)
+  | .const ``True [] => return DCC (⊤)
+  | .const ``False [] => return DCC (⊥)
+  | .sort .zero => return DCC (Sort 0)
   | .sort (.succ m) => do
     match ← (cc (.sort m)) with
     | DCC Sort n => pure (DCC Sort (n + 1))
-    | _ => .none
+    | m => Lean.Macro.throwError s!"not a valid sort: {m}"
   | e => (·.app (DCC (&(∗)))) <$> abstract' e Ctx.empty
 
 def wrap_shares (n : ℕ) (u : Lean.Level) (e : Lean.Expr) : Lean.Expr :=
@@ -289,24 +299,16 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
   | e => return e
 
 open Qq in
-def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) : Option _root_.Expr :=
+def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) : Lean.MacroM _root_.Expr :=
   cc root
 
-def Lean.Expr.ccM (root : Lean.Expr) : Lean.MetaM (Option _root_.Expr) :=
-  cc <$> (wrap_share_auto root)
-
-open Qq in
-#eval Lean.Expr.cc' q(λ (x : Sort 1) => x)
-
-open Qq in
-#eval (do Sigma.fst <$> (← (Lean.Expr.cc' q((λ (α : Sort 0) => λ (x : α) => x) True True.intro))).infer)
+def Lean.Expr.ccM (root : Lean.Expr) : Lean.Elab.TermElabM (Option _root_.Expr) := do
+  Elab.liftMacroM <| cc (← wrap_share_auto root)
 
 elab "dcc_compile'" tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
   let e_tm' ← Lean.instantiateExprMVars =<< wrap_share_auto e_tm
-  match cc e_tm' with
-  | .some tm => return Lean.toExpr tm
-  | .none => throwErrorAt tm "could not compile"
+  return Lean.toExpr (← Lean.Elab.liftMacroM <| cc e_tm')
 
 macro "dcc_infer'" tm:term : term =>
   `(term| do Sigma.fst <$> (dcc_compile' $tm).infer)
@@ -327,6 +329,9 @@ macro_rules
 #eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
 #eval Std.format <| dcc_compile' ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
 #eval Std.format <| dcc_infer' ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
+#eval Std.format <| dcc_compile' ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun (x : Sort 0) => x) True.intro)
+dcc_trace (Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))
+   `(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), !(⊤)))
 
 #eval Std.format <| (DCC (!<(Sndc(`(!(⊤), Sort 2)) ∘' *(Coup(`(!(⊤), Sort 2))))> &(⟦`(!(⊤), Sort 2)⟧(∗, Sort 1)))).reduce_all
 #eval Std.format <| dcc_infer' ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1))

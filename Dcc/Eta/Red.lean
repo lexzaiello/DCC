@@ -6,6 +6,13 @@ import Dcc.Aff.Size
 
 namespace Expr
 
+/-
+(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))) ∘'
+   Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))))
+
+pi_comp may be safe.
+-/
+
 inductive RedEta : Expr → Expr → Prop
   --| curr       : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
   | curr_quot    : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))

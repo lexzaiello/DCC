@@ -151,14 +151,6 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Lean.MacroM _root_.Expr := do
       let α : _root_.Expr := match (f_α.app x_α).reduce_all with
         | DCC !(α) => α
         | α => α
-      /-
-        Need pi_quot η-reduction maybe?
-        
-      -/
-      -- error here
-      dbg_trace M'
-      dbg_trace (·.fst) <$> M'.infer
-      dbg_trace (f_β.app x_α).reduce_all
       match (f_β.app x_α).reduce_all with
       | DCC Π(β, _γ) =>
         match (·.fst) <$> (DCC Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))).infer with

@@ -323,6 +323,24 @@ macro_rules
 #eval Std.format <| dcc_infer' ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
 #eval Std.format <| dcc_compile' ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun (x : Sort 0) => x) True.intro)
 
+/-
+η-reduce this:
+
+Eval(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+             (`(⊤, Sort 0) ∘' Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
+             (Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)) ∘'
+                Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))))
+
+because body contains simple Λ
+
+Eval(..., ..., Snd) ∘ ⟨A, B⟩
+
+is equivalent to just
+B
+
+Same with Eval fst
+-/
+
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Eval(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
         (`(⊤, Sort 0)∘'Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
         Sndc(Π(`(⊤, Sort 0),

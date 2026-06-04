@@ -47,9 +47,11 @@ inductive RedEta : Expr → Expr → Prop
   --| quot'_snd'₂    : RedEta (DCC `(α, x) ∘' Sndc(β) ∘' z) (DCC `(Coup(β), x) ∘' z)
   | pi_comp    : RedEta (DCC (Π(f_α, f_β) ∘ x)) (DCC (Π(f_α ∘ x, f_β ∘ x)))
   | pi'_comp   : RedEta (DCC (Π(f_α, f_β) ∘' x)) (DCC (Π(f_α ∘' x, f_β ∘' x)))
-  | eql           : RedEta (DCC (Eql(f_α) env x)) (DCC (x = x))
-  | compl         : RedEta (DCC (a ∘ b)) a' → RedEta (DCC ((a ∘ b) ∘ c)) (DCC (a' ∘ c))
-  | compl'        : RedEta (DCC (a ∘' b)) a' → RedEta (DCC ((a ∘' b) ∘' c)) (DCC (a' ∘' c))
+  | eql        : RedEta (DCC (Eql(f_α) env x)) (DCC (x = x))
+  | compl      : RedEta (DCC (a ∘ b)) a' → RedEta (DCC ((a ∘ b) ∘ c)) (DCC (a' ∘ c))
+  | compl'     : RedEta (DCC (a ∘' b)) a' → RedEta (DCC ((a ∘' b) ∘' c)) (DCC (a' ∘' c))
+  | pair_snd   : RedEta (DCC (Eval(_a, _b, Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩)) N
+  | pair_fst   : RedEta (DCC (Eval(_a, _b, Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) M
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
 

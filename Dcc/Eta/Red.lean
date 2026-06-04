@@ -3,6 +3,7 @@ import Dcc.Ast
 import Dcc.Types
 import Dcc.Aff.Red
 import Dcc.Aff.Size
+import Mathlib.Tactic
 
 namespace Expr
 
@@ -50,8 +51,10 @@ inductive RedEta : Expr → Expr → Prop
   | eql        : RedEta (DCC (Eql(f_α) env x)) (DCC (x = x))
   | compl      : RedEta (DCC (a ∘ b)) a' → RedEta (DCC ((a ∘ b) ∘ c)) (DCC (a' ∘ c))
   | compl'     : RedEta (DCC (a ∘' b)) a' → RedEta (DCC ((a ∘' b) ∘' c)) (DCC (a' ∘' c))
-  | pair_snd   : RedEta (DCC (Eval(_a, _b, Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩)) N
-  | pair_fst   : RedEta (DCC (Eval(_a, _b, Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) M
+  | pair_snd   : Relation.ReflTransGen RedAff N N' → IsNorm RedAff N'
+    → RedEta (DCC (Eval(_a, _b, Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩)) N'
+  | pair_fst   : Relation.ReflTransGen RedAff M M'
+    → IsNorm RedAff M' → RedEta (DCC (Eval(_a, _b, Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) M'
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
 
@@ -63,6 +66,12 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     cases h
     done
   )
+  case pair_fst hrt hnm =>
+    intro ⟨_, h⟩
+    exact hnm ⟨_, h⟩
+  case pair_snd hrt hnm =>
+    intro ⟨_, h⟩
+    exact hnm ⟨_, h⟩
   case pi h ih =>
     cases h with
     /-| pi_quot =>
@@ -163,6 +172,10 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     match (DCC (a ∘' b)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.compl' h⟩⟩
     | _ => none
+  | DCC (Eval(_a, _b, Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩) =>
+    .some ⟨_, ⟨.pair_snd (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+  | (DCC (Eval(_a, _b, Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) =>
+    .some ⟨_, ⟨.pair_fst (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_eta, aesop norm (rule_sets := [DccRel])]
@@ -185,6 +198,9 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   /-| quot =>
     cases h₂
     · aesop-/
+  | pair_snd hr ih | pair_fst hr ih =>
+    cases h₂
+    exact norm_unique hr (by assumption) (by assumption) (by assumption)
   | pi' hr ih =>
     cases h₂
     · aesop
@@ -205,9 +221,16 @@ open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instConfRedEtaTrans : Confluent RedEta (m := Relation.ReflTransGen) := RedEta.instRedRel.globally_confluent
 
 theorem RedEta.complete (h_red : RedEta A B) : step_eta? A = .some ⟨B, ⟨h_red⟩⟩ := by
-  induction h_red <;> (
+  induction h_red
+  any_goals (
+    focus
     unfold step_eta?
-    aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel]))
+    aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel])
+    done)
+  case pair_fst | pair_snd =>
+    have h := reduce_complete (by assumption) (by assumption)
+    simp_all [step_eta?]
+    grind
 
 def eta_semi_complete {A B : Expr} (h_red : A.RedEta B) : ∃ B', ∃ (h : A.RedEta B'), (step_eta? A) = .some ⟨B', ⟨h⟩⟩ :=
   ⟨_, _, h_red.complete⟩

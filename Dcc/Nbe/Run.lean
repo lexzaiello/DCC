@@ -216,3 +216,95 @@ def Semantic.Val.apply (f x : Semantic.Val) : Option ((e' : Semantic.Val) × Sem
 termination_by f.measure + x.measure
 
 end
+
+namespace Semantic
+
+mutual
+
+inductive Neutral.Quote : (level : ℕ) → (v : Neutral) → (e : Expr) → Type
+  | tintro : Neutral.Quote level Neutral(∗) (DCC ∗)
+  | top    : Neutral.Quote level Neutral(⊤) (DCC ⊤)
+  | bot    : Neutral.Quote level Neutral(⊥) (DCC ⊥)
+  | eq     : Val.Quote level x x' → Val.Quote level y y'
+    → Neutral.Quote level Neutral(x = y) (DCC (x' = y'))
+  | eql    : Val.Quote level α α' → Neutral.Quote level Neutral(Eql(α)) (DCC Eql(α'))
+  | refl   : Val.Quote level α α' → Neutral.Quote level Neutral(refl(α)) (DCC refl(α'))
+  | sort   : Neutral.Quote level Neutral(Sort m) (DCC Sort m)
+  | sigma  : Val.Quote level x x' → Val.Quote level y y'
+    → Neutral.Quote level Neutral(Σ(x, y)) (DCC (Σ(x', y')))
+  | quot   : Val.Quote level β β' → Val.Quote level x x'
+    → Neutral.Quote level Neutral(`(β, x)) (DCC `(β', x'))
+  | coup   : Val.Quote level β β' → Val.Quote level x x'
+    → Val.Quote level y y' → Neutral.Quote level Neutral(⟦β⟧(x, y)) (DCC ⟦β'⟧(x', y'))
+  | id     : Val.Quote level α α' → Neutral.Quote level Neutral(Id(α)) (DCC Id(α'))
+  | fstc   : Val.Quote level α α' → Neutral.Quote level Neutral(Fstc(α)) (DCC Fstc(α'))
+  | sndc   : Val.Quote level α α' → Neutral.Quote level Neutral(Sndc(α)) (DCC Sndc(α'))
+  | comp'  : Val.Quote level x x' → Val.Quote level y y'
+    → Neutral.Quote level Neutral(x ∘' y) (DCC (x' ∘' y'))
+  | comp   : Val.Quote level x x' → Val.Quote level y y'
+    → Neutral.Quote level Neutral(x ∘ y) (DCC (x' ∘ y'))
+  | comp₂  : Val.Quote level x x' → Val.Quote level y y'
+    → Neutral.Quote level Neutral(x ∘∘ y) (DCC (x' ∘∘ y'))
+  | pair   : Val.Quote level β β' → Val.Quote level x x'
+    → Val.Quote level y y' → Neutral.Quote level Neutral(⟦β⟧⟨x, y⟩) (DCC ⟦β'⟧⟨x', y'⟩)
+  | curr   : Val.Quote level α α' → Val.Quote level β β'
+    → Val.Quote level x x' → Neutral.Quote level Neutral(Λ(α, β, x)) (DCC Λ(α', β', x'))
+  | curr'  : Val.Quote level α α' → Val.Quote level β β'
+    → Val.Quote level x x' → Neutral.Quote level Neutral(!Λ(α, β, x)) (DCC !Λ(α', β', x'))
+  | eval   : Val.Quote level α α' → Val.Quote level β β'
+    → Val.Quote level x x' → Neutral.Quote level Neutral(Eval(α, β, x)) (DCC Eval(α', β', x'))
+  | bang   : Val.Quote level x x' → Neutral.Quote level Neutral(!(x)) (DCC !(x'))
+  | unbox  : Val.Quote level x x' → Neutral.Quote level Neutral(*(x)) (DCC *(x'))
+  | boxed  : Val.Quote level x x' → Neutral.Quote level Neutral(&(x)) (DCC &(x'))
+  | map    : Val.Quote level x x' → Neutral.Quote level Neutral(!<x>) (DCC !<x'>)
+  | fmap   : Val.Quote level x x' → Neutral.Quote level Neutral($<x>) (DCC $<x'>)
+  | app    : Neutral.Quote level f f' → Val.Quote level x x' → Neutral.Quote level
+    Neutral(f x) (DCC (f' x'))
+
+inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
+  
+
+end
+
+mutual
+
+def Neutral.quote (level : ℕ) (v : Neutral) : Option Expr :=
+  match v with
+  | Neutral(var(_v)) => .none
+  | Neutral(∗) => .some (DCC ∗)
+  | Neutral(⊤) => .some (DCC ⊤)
+  | Neutral(⊥) => .some (DCC ⊥)
+  | Neutral(x = y) =>
+    match x.quote level, y.quote level with
+    | .some 
+  | Neutral(Eql(α))  => α.size + 3
+  | Neutral(refl(α)) => α.size + 3
+  | Neutral(Sort _m) => 1
+  | Neutral(Σ(α, β)) => α.size + β.size + 2
+  | Neutral(`(_β, x)) => x.measure + 2
+  | Neutral(⟦_β⟧(x, y)) => x.measure + y.measure
+  | Neutral(Coup(β)) => β.size
+  | Neutral(Id(_α))      => 2
+  | Neutral(Fstc(_α))    => 2
+  | Neutral(Sndc(_α))    => 2
+  | Neutral(f ∘' g) => f.measure + f.measure + g.measure + 2
+  | Neutral(f ∘ g)  => f.measure + f.measure + g.measure + 2
+  | Neutral(f ∘∘ g)  => f.measure + f.measure + g.measure + 2
+  | Neutral(⟦_β⟧⟨a, b⟩)   => a.measure + a.measure + b.measure + 2
+  | Neutral(Λ(α, β, x)) => α.size + β.size + x.measure + 2
+  | Neutral(!Λ(α, β, x)) => α.size + β.size + x.measure + 2
+  | Neutral(Eval(_α, _β, x)) => x.measure + 1
+  | Neutral(!(x))            => x.measure
+  | Neutral(*(α))            => α.size + 1
+  | Neutral(&(x))            => x.measure + x.measure + x.measure + 2
+  | Neutral(!<x>)            => x.measure + x.measure + x.measure + 2
+  | Neutral($<x>)            => x.measure + x.measure + x.measure + 2
+  | Neutral(f x)             => f.size + x.size
+
+def Val.quote (level : ℕ) (v : Val) : Expr :=
+  match v with
+  | 
+
+end
+
+end Semantic

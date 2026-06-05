@@ -16,6 +16,9 @@ mutual
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def NeutralTm.size (nv : NeutralTm) : ℕ :=
   match nv with
+  | NeutralTm(var(_v) x)       => x.measure.succ
+  | NeutralTm(f neutral(var(_v))) => f.size.succ
+  | NeutralTm(f x)             => f.size + x.measure
   | NeutralTm(∗) => 1
   | NeutralTm(⊤) => 2
   | NeutralTm(⊥) => 2
@@ -42,7 +45,6 @@ def NeutralTm.size (nv : NeutralTm) : ℕ :=
   | NeutralTm(&(x))            => x.measure + x.measure + x.measure + 2
   | NeutralTm(!<x>)            => x.measure + x.measure + x.measure + 2
   | NeutralTm($<x>)            => x.measure + x.measure + x.measure + 2
-  | NeutralTm(f x)             => f.size + x.measure
   --| NeutralTm(var(v) x)        => Neutral(var(v)).size + x.size
 
 /-
@@ -108,19 +110,28 @@ theorem Val.measure_pos : 0 < Val.measure x := by
     · grind
 
 @[grind ., grind! .]
-theorem Neutral.size_pos : 0 < Neutral.size x := by
-  cases x
-  · grind
-  case tm trm =>
-    exact trm.size_pos
-
-@[grind ., grind! .]
 theorem NeutralTm.size_pos : 0 < NeutralTm.size x := by
   cases x
   any_goals (grind)
   case app f v =>
-    have h := f.size_pos
-    grind
+    unfold NeutralTm.size
+    cases f
+    case var => simp
+    case tm tm =>
+      have h := tm.size_pos
+      grind
+    /-split
+    any_goals (simp_all)
+    case h_3 =>
+      rename_i nv f₁ x₁ x₁ ih₂ ih₃
+      cases ih₃
+      rename_i left right
+      cases f with
+      | var => exact (x₁ _ rfl).elim
+      | tm =>
+        rename_i tm
+        have h := tm.size_pos
+        grind-/
   case eq x y =>
     have h₁ := x.measure_pos
     have h₂ := y.measure_pos
@@ -130,12 +141,17 @@ theorem NeutralTm.size_pos : 0 < NeutralTm.size x := by
     grind
 
 @[grind ., grind! .]
-theorem Val.size_pos : 0 < Val.size x := by
+theorem Val.size_pos (_h_neq : ¬ ∃ n, x = Val(neutral(var(n)))) : 0 < Val.size x := by
   cases x
   any_goals (grind)
   case neut n =>
-    have h := n.size_pos
-    grind
+    unfold Val.size
+    cases n with
+    | var =>
+      simp_all
+    | tm tm =>
+      have h := tm.size_pos
+      grind
 
 end
 

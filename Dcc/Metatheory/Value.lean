@@ -1,7 +1,6 @@
 import Dcc.Ast
 import Dcc.Relation
 import Dcc.Reduces
-import Dcc.Metatheory.Congr
 
 namespace Expr
 
@@ -28,9 +27,6 @@ inductive IsRedComb : Expr → Arity → Type
   | pair  : IsRedComb (DCC ⟦β⟧⟨f, g⟩) 1
   -- Λ(α, β, x) y z
   | curr  : IsRedComb (DCC Λ(α, β, x)) 2
-
-theorem IsRedComb.is_norm_aff (h : IsRedComb e m) : IsNorm RedAff e := fun ⟨_, hr⟩ => by
-  cases h <;> cases hr
 
 inductive IsRedCombApp : Expr → Arity → Type
   -- Eql(f_α) env x -> (x = x)
@@ -95,7 +91,7 @@ inductive Value : Expr → Prop
   | refl₁  : Value env → Value (DCC (refl(f_α) env))
   | refl₂  : Value env → Value x → Value (DCC (refl(f_α) env x))
   | coup   : Value f_β → Value (DCC Coup(f_β))
-  | eq     : Value (DCC x = y)
+  | eq     : Value x → Value y → Value (DCC x = y)
   | comb   : IsRedComb c m → Value c
   | c_app  : IsRedComb f 2 → Value f → Value x → Value (DCC (f x))
   | top    : Value (DCC ⊤)
@@ -105,127 +101,11 @@ inductive Value : Expr → Prop
 
 inductive TyValue : Expr → Prop
   -- potentially sus IsNorm
-  | pi     : IsNorm RedEta f_β → Value env
-    → TyValue (DCC (Π(f_α, f_β) env))
+  | pi     : IsNorm RedEta f_β → Value env → TyValue (DCC (Π(f_α, f_β) env))
   | eq     : TyValue (DCC x = y)
   | top    : TyValue (DCC ⊤)
   | bot    : TyValue (DCC ⊥)
   | tintro : TyValue (DCC ∗)
   | sort   : TyValue (DCC Sort m)
-
-theorem Value.is_norm_aff (h : Value e) : IsNorm RedAff e := by
-  induction h with
-  | pi₁ h_val_f_β =>
-    exact fun ⟨_, h⟩ => by cases h
-  | pi₂ h_val_f_β h_val_env ih₁ ih₂  =>
-    exact fun ⟨_, h⟩ => by
-      cases h with
-      | congrFun h => cases h
-      | congrArg h =>
-        exact (ih₂ ⟨_, h⟩).elim
-  | refl₁ _ ih =>
-    exact fun ⟨_, h⟩ => by
-      cases h with
-      | congrFun h => cases h
-      | congrArg h =>
-        exact (ih ⟨_, h⟩).elim
-  | refl₂ h_val_f_β h_val_env ih₁ ih₂  =>
-    exact fun ⟨_, h⟩ => by
-      cases h with
-      | congrFun h =>
-        cases h with
-        | congrFun h => cases h
-        | congrArg h =>
-          exact (ih₁ ⟨_, h⟩).elim
-      | congrArg h =>
-        exact (ih₂ ⟨_, h⟩).elim
-  | top | bot | tintro | sort => exact fun ⟨_, h⟩ => by cases h
-  | coup _ ih =>
-    exact fun ⟨_, h⟩ => by
-      cases h with
-    | coup h =>
-      exact (ih ⟨_, h⟩).elim
-  | eq => exact fun ⟨_, h⟩ => by cases h
-  | comb h => exact h.is_norm_aff
-  | c_app h_c_f h_val_f h_val_x ih₁ ih₂ =>
-    cases h_c_f with
-    | eql =>
-      exact fun ⟨_, h⟩ => by
-        cases h with
-        | congrFun h => cases h
-        | congrArg h => exact (ih₂ ⟨_, h⟩).elim
-    | curr =>
-      exact fun ⟨_, h⟩ => by
-        cases h with
-        | congrFun h => cases h
-        | congrArg h => exact (ih₂ ⟨_, h⟩).elim
-
-theorem TyValue.is_norm_aff (h : TyValue τ) : IsNorm RedAff τ := by
-  induction h
-  any_goals (
-    focus
-    intro ⟨_, h⟩
-    cases h
-    done)
-  · intro ⟨_, h⟩
-    cases h with
-    | congrFun h => cases h
-    | congrArg h =>
-      rename_i h_v_env _
-      exact h_v_env.is_norm_aff ⟨_, h⟩
-
-theorem TyValue.is_norm_eta (h : TyValue τ) : IsNorm RedEta τ := by
-  induction h
-  any_goals (
-    focus
-    intro ⟨_, h⟩
-    cases h
-    done)
-  · intro ⟨_, h⟩
-    cases h with
-    | pi hr hn_env hrt =>
-      cases hrt with
-      | pi' h =>
-        rename_i h_norm_f_β _ _ _
-        exact h_norm_f_β ⟨_, h⟩
-
-theorem TyValue.red_eta (h : TyValue τ) (hr : RedEta τ τ') : False :=
-  h.is_norm_eta ⟨_, hr⟩
-
-theorem TyValue.red_aff (h : TyValue τ) (hr : RedAff τ τ') : False :=
-  h.is_norm_aff ⟨_, hr⟩
-
-theorem TyValue.reduces (h : TyValue τ) (hr : Reduces τ τ') : τ' = τ := by
-  induction h with
-  | pi =>
-    have ⟨_, _, hr₁, hn₁, hr₂, hn₂, heq⟩ := hr.pi
-    cases heq
-    match hr₁.cases_head with
-    | .inl h =>
-      cases h
-      match hr₂.cases_head with
-      | .inl h =>
-        cases h
-        rfl
-      | .inr ⟨_, h₁, h₂⟩ =>
-        rename_i h_env_value _ _
-        cases h_env_value.is_norm_aff.unique_refl (by assumption)
-        rfl
-    | .inr ⟨_, h₁, h₂⟩ =>
-      rename_i h_n_β _ _ _ _
-      exact (h_n_β ⟨_, h₁⟩).elim
-  | tintro | sort | bot | top | eq =>
-    match hr with
-    | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-      match hr₁.cases_head with
-      | .inl h =>
-        cases h
-        match hr₂.cases_head with
-        | .inl h =>
-          cases h; rfl
-        | .inr ⟨_, h₁, h₂⟩ =>
-          cases h₁
-      | .inr ⟨_, h₁, h₂⟩ =>
-        cases h₁
 
 end Expr

@@ -127,361 +127,42 @@ Use variables?
 
 apps have an environment. This is either a couple or a neutral value.
 -/
-namespace Semantic
 
-mutual
 
-/-
-Combinators that perform some computation
--/
-inductive Comb where
-  -- !<f>
-  | map   (f : Val)       : Comb
-  -- $<f>
-  | fmap  (f : Val)       : Comb
-  -- *(α)
-  | unbox (α : Val)       : Comb
-  -- ⟨M, N⟩
-  | pair  (β M N : Val)   : Comb
-  -- Eval(α, β, x)
-  | eval  (α β x : Val)   : Comb
-  -- `(β, x)
-  | quot  (β x : Val)     : Comb
-  -- Id(α)
-  | id    (α : Val)       : Comb
-  -- Fstc(β)
-  | fstc  (β : Val)       : Comb
-  -- Sndc(β)
-  | sndc  (β : Val)       : Comb
-  -- f ∘' g
-  | comp' (f g : Val)     : Comb
-  -- f ∘ g
-  | comp  (f g : Val)     : Comb
-  -- f ∘∘ g
-  | comp₂ (f g : Val)     : Comb
-  -- Λ(α, β, x)
-  | curr  (α β x : Val)   : Comb
-  -- !Λ(α, β, x)
-  | curr' (α β x : Val)   : Comb
-  -- Σ(f_α, f_β)
-  | sigma (f_α f_β : Val) : Comb
-  -- Π(f_α, f_β) env doesn't reduce but requires env argument
-  | pi    (f_α f_β : Val) : Comb
-  -- Eql does reduce Eql(f_α) env x = (x = x)
-  | eql   (f_α : Val)     : Comb
-  -- Refl does not reduce, but it requires arguments
-  | refl  (f_α : Val)     : Comb
 
-inductive Neutral where
-  | var (idx : ℕ)               : Neutral
-  | app (f : Neutral) (x : Val) : Neutral
-  | comb (c : Expr)             : Neutral
-  | eq (x y : Val)              : Neutral
-  | bang (x : Val)              : Neutral
-  | boxed (x : Val)             : Neutral
-  | coup  (β x y : Val)         : Neutral
-  | t_coup (β : Val)            : Neutral
-  | top                         : Neutral
-  | bot                         : Neutral
-  | tintro                      : Neutral
-  | sort (m : Level)            : Neutral
-
-inductive Val where
-  -- Combinators get translated into these
-  -- quotation / reflection / reification
-  -- ideally η-simplify these
-  /-
-    For example,
-    env -> e
-    Eql(f_α) env -> .lam [e] 1 Eql(f_α)
-  -/
-  | lam  (env : List Val) (arity : ℕ) (bdy : Expr) : Val
-  | neut (nv  : Neutral)                           : Val
-  /-
-  Thse are handled in neutral now
-  -- vars, partial apps
-  | neut (nv : Neutral) : Val
-  -- Coup(f_β). Reduce inside f_β
-  | coup (f_β : Val) : Val
-  -- = does not reduce.
-  | eq (x : Val) : Val
-  -- ⊤
-  | top : Val
-  -- ∗
-  | tintro : Val
-  -- ⊥
-  | bot : Val
-  -- Sort
-  | sort (m : Level) : Val-/
-
-end
-
-declare_syntax_cat val_expr
-declare_syntax_cat val_list
-declare_syntax_cat neut_expr
-declare_syntax_cat neut_atom
-
-syntax "raw(" gen_dcc ")"                                    : neut_atom
-syntax "#(" term ")"                                         : neut_atom
-syntax "var(" term ")"                                       : neut_atom
-syntax:max ident                                             : neut_expr
-
-syntax neut_expr "(" neut_expr ")"                           : neut_expr
-syntax neut_expr neut_atom                                   : neut_expr
-syntax neut_expr ident                                       : neut_expr
---syntax:1024 neut_expr:1024 neut_expr:1025         : neut_expr
-syntax val_expr                                              : neut_atom
-syntax neut_atom                                             : neut_expr
-
-syntax "⟦" val_expr,* "⟧"                                    : val_list
-syntax val_expr noWs "::" noWs val_list                      : val_list
-syntax ident noWs "::" noWs val_list                         : val_list
-syntax:max ident                                             : val_list
-
-syntax (priority := low) "⟦" val_expr "⟧" "(" val_expr,* ")" : neut_expr
-syntax "λ" val_list term "=>" gen_dcc                        : val_expr
-syntax val_expr "=" val_expr                                 : neut_expr
-syntax "!(" val_expr ")"                                     : neut_expr
-syntax "&(" val_expr ")"                                     : neut_expr
-syntax "neutral(" neut_expr ")"                              : val_expr
-syntax "Coup(" val_expr ")"                                  : neut_expr
-syntax:max ident                                             : val_expr
-syntax "#(" term ")"                                         : val_expr
-syntax "⊤"                                                   : neut_expr
-syntax "⊥"                                                   : neut_expr
-syntax "∗"                                                   : neut_expr
-syntax "Sort" term                                           : neut_expr
-
-syntax "Vals(" val_list ")"         : term
-syntax "Val(" val_expr ")"          : term
-syntax "Neutral(" neut_expr ")"     : term
-syntax "NeutralAtom(" neut_atom ")" : term
-
-open Lean in
-macro_rules
-  | `(Neutral(⊤)) => `(Neutral.top)
-  | `(Neutral(⊥)) => `(Neutral.bot)
-  | `(Neutral(∗)) => `(Neutral.tintro)
-  | `(Neutral(Sort $m:term)) => `(Neutral.sort $m:term)
-  | `(NeutralAtom(raw($e:gen_dcc))) => `(Neutral.comb (DCC($e:gen_dcc)))
-  | `(NeutralAtom(var($n:term))) => `(Neutral.var $n:term)
-  | `(Neutral(Coup($β:val_expr))) => `(Neutral.t_coup Val($β:val_expr))
-  | `(Vals($list:ident)) => `($list:term)
-  | `(Neutral(⟦$β:val_expr⟧($args:val_expr,*))) => do
-    let elems ← args.getElems.mapM (fun (v : TSyntax `val_expr) => `(Val($v)))
-    `(Neutral.coup (Val($β:val_expr)) $elems*)
-  | `(Val($e:ident))     => `($e:term)
-  | `(Vals(⟦$vals:val_expr,*⟧)) => do
-    let elems ← vals.getElems.mapM (fun (v : TSyntax `val_expr) => `(Val($v:val_expr)))
-    `([$elems,*])
-  | `(Vals($x:val_expr::$xs:val_list)) => `((Val($x))::(Vals($xs)))
-  | `(Vals($x:ident::$xs:val_list)) => `($x:term::(Vals($xs)))
-  | `(Neutral($x:val_expr = $y:val_expr)) => `(Neutral.eq (Val($x:val_expr)) (Val($y:val_expr)))
-  | `(Neutral(!($x:val_expr))) => `(Neutral.bang (Val($x)))
-  | `(Neutral(&($x:val_expr))) => `(Neutral.boxed (Val($x)))
-  | `(Val(neutral($x:neut_expr))) => `(Val.neut (Neutral($x:neut_expr)))
-  | `(Val(λ $env:val_list $n:term => $bdy:gen_dcc)) => do
-    `(Val.lam (Vals($env:val_list)) $n:term (DCC($bdy:gen_dcc)))
-  | `(Val(#($tm:term))) => `($tm:term)
-
-open Lean in
-macro_rules
-  | `(Neutral($v:neut_atom)) => `(NeutralAtom($v:neut_atom))
-  | `(NeutralAtom(#($tm:term))) => `($tm:term)
-  | `(NeutralAtom($x:val_expr)) => `(Val($x:val_expr))
-  /-| `(Neutral($f:neut_expr $xs:neut_expr*)) => do
-    let tm ← xs.toList
-      |>.foldlM (init := ← `(term| Neutral($f:neut_expr)))
-        (f := fun
-          (acc : TSyntax `term)
-          (x : TSyntax `neut_expr) => `(Neutral.app $acc:term Neutral($x:neut_expr)))
-    return tm-/
-  | `(Neutral($e:ident)) => `($e:term)
-  | `(Neutral($e:neut_expr)) =>
-    match e with
-    | `(neut_expr| $f:neut_expr $x:val_expr) =>
-      `(Neutral.app (Neutral($f)) Val($x:val_expr))
-    | `(neut_expr| $f:neut_expr ($x:val_expr)) =>
-      `(Neutral.app (Neutral($f)) (Val($x:val_expr)))
-    | `(neut_expr| $f:neut_expr ($x:neut_expr)) =>
-      `(Neutral.app (Neutral($f)) (Val(neutral($x))))
-    | `(neut_expr| $f:neut_expr $idt:ident) =>
-      `(Neutral.app (Neutral($f)) $idt:ident)
-    | _ => Macro.throwUnsupported
-
-mutual
-
-@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
-def Neutral.size (nv : Neutral) : ℕ :=
-  match nv with
-  | Neutral(var(_m)) => 0
-  | Neutral(f x) => f.size + x.size
-  | Neutral(raw(c)) => c.size
-  | Neutral(x = y) => x.size + y.size
-  | Neutral(!(x)) => x.size
-  | Neutral(&(x)) => x.size + x.size + x.size + 1
-  | Neutral(⟦β⟧(x, y)) => x.size + y.size
-  | Neutral(Coup(β)) => β.size
-  | Neutral(⊤) => (DCC ⊤).size
-  | Neutral(⊥) => (DCC ⊥).size
-  | Neutral(∗) => (DCC ∗).size
-  | Neutral(Sort m) => (DCC Sort m).size
-
-@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
-def Val.head_arity (v : Val) : ℕ :=
-  match v with
-  | Val(neutral(_x)) => 0
-  | Val(λ _env n => _bdy) => n
-
-@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
-def Val.size (v : Val) : ℕ :=
-  match v with
-  | Val(neutral(x)) => x.size
-  | Val(λ _env _n => bdy) => bdy.size
-
-end
-
-mutual
-
-/-
-which expressions can be converted to values,
-given an environment.
--/
-inductive Eval : List Val → Expr → Val → Type
-  | top    : Eval env (DCC ⊤) Val(neutral(⊤))
-  | tintro : Eval env (DCC ∗) Val(neutral(∗))
-  | bot    : Eval env (DCC ⊥) Val(neutral(⊥))
-  | sort   : Eval env (DCC Sort m) Val(neutral(Sort m))
-  | map    : Eval env (DCC !<f>) Val(λ env 1 => !<f>)
-  | fmap   : Eval env (DCC $<f>) Val(λ env 1 => $<f>)
-  | boxed  : Eval env x x' → Eval env (DCC &(x)) Val(neutral(&(x')))
-  | bang   : Eval env x x' → Eval env (DCC !(x)) Val(neutral(!(x')))
-  | unbox  : Eval env (DCC *(x)) Val(λ env 1 => *(x))
-  | eval   : Eval env (DCC Eval(α, β, x)) Val(λ env 1 => Eval(α, β, x))
-  | quot   : Eval env (DCC `(β, x)) Val(λ env 1 => `(β, x))
-  | id     : Eval env (DCC Id(α)) Val(λ env 1 => Id(α))
-  | fstc   : Eval env (DCC Fstc(β)) Val(λ env 1 => Fstc(β))
-  | sndc   : Eval env (DCC Sndc(β)) Val(λ env 1 => Sndc(β))
-  | curr   : Eval env (DCC Λ(α, β, x)) Val(λ env 2 => Λ(α, β, x))
-  | curr'  : Eval env (DCC !Λ(α, β, x)) Val(λ env 2 => !Λ(α, β, x))
-  | pi     : Eval env (DCC Π(f_α, f_β)) Val(λ env 1 => Π(f_α, f_β))
-  | pair   : Eval env (DCC ⟦β⟧⟨M, N⟩) Val(λ env 1 => ⟦β⟧⟨M, N⟩)
-  | coup   : Eval env β β' → Eval env a a'
-    → Eval env b b' → Eval env (DCC ⟦β⟧(a, b)) Val(neutral(⟦β'⟧(a', b')))
-  | t_coup : Eval env β β' → Eval env (DCC Coup(β)) Val(neutral(Coup(β')))
-  | sigma  : Eval env (DCC Σ(α, β)) Val(λ env 1 => Σ(α, β))
-  | eq     : Eval env x x' → Eval env y y' → Eval env (DCC (x = y)) Val(neutral(x' = y'))
-  | eql    : Eval env (DCC Eql(f_α)) Val(λ env 2 => Eql(f_α))
-  | refl   : Eval env (DCC refl(f_α)) Val(λ env 2 => refl(f_α))
-  | comp   : Eval env (DCC f ∘ g) Val(λ env 1 => f ∘ g)
-  | comp'  : Eval env (DCC f ∘' g) Val(λ env 1 => f ∘' g)
-  | comp₂  : Eval env (DCC f ∘∘ g) Val(λ env 1 => f ∘∘ g)
-  | app    : Eval env f f' → Eval env x x'
-    → Apply f' x' e' → Eval env (DCC (f x)) e'
-
-inductive Apply : (f : Val) → (x : Val) → Val → Type
-  | eql    : Apply Val(λ env 1 => Eql(f_α)) Val(neutral(&(x))) x
-  | map    : Eval [] f f' → Apply f' x e' → Apply Val(λ env 1 => !<f>) Val(neutral(&(x))) Val(neutral(!(e')))
-  | fmap   : Eval [] f f' → Apply f' x e' → Apply Val(λ env 1 => $<f>) Val(neutral(&(x))) Val(neutral(&(e')))
-  | unbox  : Apply Val(λ env 1 => *(α)) Val(neutral(&(x))) Val(x)
-  | pair   : Eval [] M M' → Eval [] N N' → Apply M' x a → Apply N' x b
-    → Apply b a e'
-    → Apply Val(λ env 1 => ⟦β⟧⟨M, N⟩) Val(neutral(&(x))) Val(neutral(⟦neutral(raw(β))⟧(
-      neutral(raw(M) x), neutral(raw(N) x (raw(M) x)))))
-  | eval   : Eval [] x x' → Apply x' y e₁ → Apply e₁ z e'
-    → Apply Val(λ env 1 => Eval(_α, _β, x)) Val(neutral(⟦__β⟧(y, z))) e'
-  | quot   : Eval [] x x' → Apply Val(λ env 1 => `(β, x)) y x'
-  | id     : Apply Val(λ env 1 => Id(α)) x x
-  | fstc   : Apply Val(λ env 1 => Fstc(_α)) Val(neutral(⟦β⟧(a, b))) a
-  | sndc   : Apply Val(λ env 1 => Sndc(_α)) Val(neutral(⟦β⟧(a, b))) b
-  -- f ∘ g x
-  | comp'  : Eval [] f f' → Eval [] g g' → Apply g' x A → Apply f' A B → Apply Val(λ env 1 => (f ∘' g)) x B
-  | comp   : Eval [] f f' → Eval [] g g' → Apply g' x A → Apply f' A B → Apply Val(λ env 1 => (f ∘ g)) x B
-  | comp₂  : Eval [] f f' → Eval [] g g' → Apply g' x A → Apply f' A B → Apply Val(λ env 1 => (f ∘∘ g)) x B
-  | curr₁  : Apply Val(λ env 2 => Λ(α, β, x)) y Val(λ y::env 1 => Λ(α, β, x))
-  | curr₂  : Eval [] x x' → Apply x' Val(neutral(⟦neutral(raw(β))⟧(y, z))) e'
-    → Apply Val(λ y::env 1 => Λ(α, β, x)) z e'
-  | curr'₁ : Apply Val(λ env 2 => !Λ(α, β, x)) Val(neutral(&(y))) Val(λ neutral(&(y))::env 1 => Λ(α, β, x))
-  | curr'₂ : Eval [] x x' → Apply x' Val(neutral(&(neutral(⟦neutral(raw(β))⟧(y, z))))) e'
-    → Apply Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) Val(neutral(&(z))) e'
-  | neut   : Apply Val(neutral(f)) x Val(neutral(f x))
-
-end
-
-mutual
-
-theorem Apply.decreasing (h : Apply f x e') : e'.size < f.size + x.size := by
+/-theorem Val.head_arity_lt_exp_size (h : Eval env e e') : Val.head_arity e' ≤ Val.size e' := by
   cases h
-  case eql => grind
-  case fmap env h₁ h₂ | map env h₁ h₂ =>
-    have h := h₁.size_eq
-    have h₂ := h₂.decreasing
-    grind
-  case unbox =>
-    grind
-  case pair h₁ h₂ h₃ h₄ h₅ =>
-    have ha := h₁.size_eq
-    have hb := h₂.size_eq
-    have hc := h₃.decreasing
-    have hd := h₄.decreasing
-    have he := h₅.decreasing
-    dsimp [Val.size, Neutral.size, Expr.size]
-    grind
-  case eval h₁ h₂ h₃ =>
-    have ha := h₁.size_eq
-    have hb := h₂.decreasing
-    have hc := h₃.decreasing
-    dsimp [Val.size, Neutral.size, Expr.size]
-    grind
-  case quot h =>
-    have ha := h.size_eq
-    dsimp [Val.size]
-    grind
-  case sndc | fstc | id => grind
-  case comp h₁ h₂ h₃ h₄ | comp₂ h₁ h₂ h₃ h₄ | comp' h₁ h₂ h₃ h₄ =>
-    have ha := h₁.size_eq
-    have hb := h₂.size_eq
-    have hc := h₃.decreasing
-    have hd := h₄.decreasing
-    dsimp [Val.size, Expr.size]
-    grind
-  case curr₁ =>
-    dsimp [Val.size, Expr.size]
-    
-
-@[aesop safe forward (rule_sets := [DccSize])]
-theorem Eval.neut_size_leq (h : Eval _env e Val(neutral(v))) : v.size ≤ e.size := by
-  cases h
-  any_goals (grind)
-  case t_coup h =>
-    have h := h.size_eq
-    grind
-  case bang h =>
-    have h := h.size_eq
-    dsimp [Neutral.size, Expr.size]
-    grind
-  case boxed h =>
-    have h := h.size_eq
-    dsimp [Neutral.size, Expr.size]
+  any_goals grind
+  case app f f' x x' h₁ h₂ h₃ =>
     
     sorry
-  case eq h₁ h₂ =>
-    have ha := h₁.size_eq
-    have hb := h₂.size_eq
+  cases x
+  case neut =>
     grind
-  case coup h₁ h₂ =>
-    have ha := h₁.size_eq
-    have hb := h₂.size_eq
-    grind
-  case app h₁ h₂ h₃ =>
-    have ha := h₁.size_eq
-    have hb := h₂.size_eq
-    have hc := h₃.decreasing
-    simp [Val.size] at hc
-    grind
+  case lam arity bdy =>
+    dcc_simp
+    -/
 
-@[aesop safe forward (rule_sets := [DccSize])]
-theorem Eval.size_eq (h : Eval _env e v) : v.size ≤ e.size := by
+/-@[aesop safe forward (rule_sets := [DccSize])]
+theorem EvalCompound.size_eq (h : EvalCompound env x x') : Val.composite_size x' = (Expr.composite_size x) + x.head_arity := by
+  cases h
+  case boxed h =>
+    dcc_simp_all
+    have h := h.size_eq
+    
+    
+    sorry-/
+
+/-@[aesop safe forward (rule_sets := [DccSize])]
+theorem Eval.size_eq (h : Eval _env x x') : Val.composite_size x' = (Expr.composite_size x) + x.head_arity := by
+  cases h with
+  | compound =>
+    sorry
+  | simple h =>
+    exact h.composite_size_eq-/
+
+/-@[aesop safe forward (rule_sets := [DccSize])]
+theorem Eval.size_eq (h : Eval _env e v) : v.composite_size ≤ e.composite_size := by
   induction e generalizing v
   case sigma ih₁ ih₂ | pair ih₁ ih₂ ih₃ | comp₂ ih₁ ih₂ | comp ih₁ ih₂ | comp' ih₁ ih₂ | fstc ih
     | sndc ih | eql ih | eq ih₁ ih₂ | refl _ _ _
@@ -514,7 +195,61 @@ theorem Eval.size_eq (h : Eval _env e v) : v.size ≤ e.size := by
       have ha := ih₁ (by assumption)
       have hb := ih₂ (by assumption)
       have hc := happ.decreasing
-      grind
+      grind-/
+
+/-theorem ApplyCompound.decreasing (h : ApplyCompound f x e') : e'.size < f.size + x.size + 1 := by
+  cases h
+  case map h₁ h₂ =>
+    have ha := h₂.decreasing
+    dcc_simp
+    
+    sorry-/
+
+mutual
+
+/-theorem Apply.decreasing (h : Apply f x e') : e'.size + e'.head_arity < f.size + x.size + f.head_arity := by
+  cases h
+  case fmap env h₁ h₂ =>
+    dsimp [Val.head_arity, Val.size, Neutral.size, Expr.size]
+    have h := h₁.size_eq
+    have h₂ := h₂.decreasing
+    
+    simp_all
+    
+    grind
+  case map env h₁ h₂ =>
+    sorry
+  case unbox =>
+    grind
+  case pair h₁ h₂ h₃ h₄ h₅ =>
+    have ha := h₁.size_eq
+    have hb := h₂.size_eq
+    have hc := h₃.decreasing
+    have hd := h₄.decreasing
+    have he := h₅.decreasing
+    dsimp [Val.size, Neutral.size, Expr.size]
+    grind
+  case eval h₁ h₂ h₃ =>
+    have ha := h₁.size_eq
+    have hb := h₂.decreasing
+    have hc := h₃.decreasing
+    dsimp [Val.size, Neutral.size, Expr.size]
+    grind
+  case quot h =>
+    have ha := h.size_eq
+    dsimp [Val.size]
+    grind
+  case sndc | fstc | id => grind
+  case comp h₁ h₂ h₃ h₄ | comp₂ h₁ h₂ h₃ h₄ | comp' h₁ h₂ h₃ h₄ =>
+    have ha := h₁.size_eq
+    have hb := h₂.size_eq
+    have hc := h₃.decreasing
+    have hd := h₄.decreasing
+    dsimp [Val.size, Expr.size]
+    grind
+  case curr₁ =>
+    dsimp [Val.size, Expr.size]
+    -/
 
 /-theorem Eval.size_eq (h : Eval _env e v) : e.size = v.size := by
   cases h
@@ -529,25 +264,40 @@ theorem Eval.size_eq (h : Eval _env e v) : v.size ≤ e.size := by
 
 end
 
-def apply (f x : Val) : ((e' : Val) × Apply f x e') :=
-  match f, x with
-  | Val(λ env 1 => Eql(f_α)), Val(neutral(&(x))) => ⟨_, .eql⟩
-  | Val(λ env 1 => !<f>), Val(neutral(&(x))) =>
+/-@[aesop safe forward (rule_sets := [DccSize])]
+theorem Eval.neut_size_leq (h : Eval _env e Val(neutral(v))) : v.size ≤ e.size := by
+  cases h
+  any_goals (grind)
+  case t_coup h =>
+    have h := h.size_eq
+    grind
+  case bang h =>
+    have h := h.size_eq
+    dsimp [Neutral.size, Expr.size]
+    grind
+  case boxed h =>
+    have h := h.size_eq
+    dsimp [Neutral.size, Expr.size]
     
-  | Val(λ env 1 => $<f>), Val(neutral(&(x))) => ⟨_, .fmap⟩
-  | Val(λ env 1 => *(α)), Val(neutral(&(x))) => ⟨_, .unbox⟩
-  | Val(λ env 1 => ⟦β⟧⟨M, N⟩), Val(neutral(&(x))) => ⟨_, .pair⟩
-  | Val(λ env 1 => Eval(_α, _β, x)), Val(neutral(⟦__β⟧(y, z))) => ⟨_, .eval⟩
-  | Val(λ env 1 => `(β, x)), y => ⟨_, .quot⟩
-  | Val(λ env 1 => Id(α)), x => ⟨_, .id⟩
-  | Val(λ env 1 => Fstc(_α)), Val(neutral(⟦β⟧(a, b))) => ⟨_, .fstc⟩
-  | Val(λ env 1 => Sndc(_α)), Val(neutral(⟦β⟧(a, b))) => ⟨_, .sndc⟩
-  | Val(λ env 1 => (x ∘' y)), z =>
-    match 
+    sorry
+  case eq h₁ h₂ =>
+    have ha := h₁.size_eq
+    have hb := h₂.size_eq
+    grind
+  case coup h₁ h₂ =>
+    have ha := h₁.size_eq
+    have hb := h₂.size_eq
+    grind
+  case app h₁ h₂ h₃ =>
+    have ha := h₁.size_eq
+    have hb := h₂.size_eq
+    have hc := h₃.decreasing
+    simp [Val.size] at hc
+    grind-/
 
-def quote (v : Val) : Expr :=
+/-def quote (v : Val) : Expr :=
   match v with
-  | 
+  | -/
 
 end Val
 

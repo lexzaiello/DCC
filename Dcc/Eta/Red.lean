@@ -60,7 +60,6 @@ inductive RedEta : Expr → Expr → Prop
   --| quot'_snd'₂    : RedEta (DCC `(α, x) ∘' Sndc(β) ∘' z) (DCC `(Coup(β), x) ∘' z)
   | pi_comp    : RedEta (DCC (Π(f_α, f_β) ∘ x)) (DCC (Π(f_α ∘ x, f_β ∘ x)))
   | pi'_comp   : RedEta (DCC (Π(f_α, f_β) ∘' x)) (DCC (Π(f_α ∘' x, f_β ∘' x)))
-  | eql        : RedEta (DCC (Eql(f_α) env x)) (DCC (x = x))
   | compl      : RedEta (DCC (a ∘ b)) a' → RedEta (DCC ((a ∘ b) ∘ c)) (DCC (a' ∘ c))
   | compl'     : RedEta (DCC (a ∘' b)) a' → RedEta (DCC ((a ∘' b) ∘' c)) (DCC (a' ∘' c))
   /-| pair_snd   : Relation.ReflTransGen RedAff N N' → IsNorm RedAff N'
@@ -130,7 +129,6 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   --| (DCC (`(α, x) ∘ *(α₂)) ∘ z) => .some ⟨_, ⟨.quot'_unbox'⟩⟩
   --| (DCC `(α, x) ∘' *(α₂) ∘' z) => .some ⟨_, ⟨.quot'_unbox₂⟩⟩
   --| (DCC `(α, x) ∘ *(α₂) ∘ z) => .some ⟨_, ⟨.quot'_unbox'₂⟩⟩
-  | DCC (Eql(f_α) env x) => .some ⟨_, ⟨.eql⟩⟩
   | (DCC Λ(α, `(_a, β), `(Coup(`(_b, _c)), x))) =>
     if heq : (DCC Λ(α, `(_a, β), `(Coup(`(_b, _c)), x))) = (DCC Λ(α, `(α, β), `(Coup(`(α, β)), x))) then
       heq ▸ .some ⟨_, ⟨.curr_quot_c⟩⟩
@@ -233,7 +231,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   induction h₁ generalizing C with
   | pi_comp | pi'_comp
   | quot_fst
-  | curr_quot_c | quot | compl | compl' | quot_unbox | quot_unbox' | coup | eql | curr_fst' | curr_fst | quot'_fst | quot'_snd | quot_snd | sig' | pi => cases h₂; aesop
+  | curr_quot_c | quot | compl | compl' | quot_unbox | quot_unbox' | coup | curr_fst' | curr_fst | quot'_fst | quot'_snd | quot_snd | sig' | pi => cases h₂; aesop
   /-| pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop

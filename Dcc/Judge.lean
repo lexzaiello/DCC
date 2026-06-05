@@ -1,5 +1,6 @@
 import Dcc.Reduces
 import Dcc.Types
+import Dcc.Nbe
 import Mathlib.Logic.Relation
 
 namespace Expr
@@ -375,7 +376,6 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  
   | DCC !Λ(α, β, x) =>
     match α.infer with
     | .some ⟨DCC Sort m, ⟨ht⟩⟩ =>
@@ -469,6 +469,21 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
 def test_id_nested : Option Expr := do
   let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer
   Sigma.fst <$> (DCC (Id(t) Id(Sort 1) (Sort 0))).infer
+
+def infer_nbe_after (e : Expr) : Option ((τ τ' : Expr) × (PULift.{1, 0} (Judge e τ)) × Nbe τ τ') := do
+  let ⟨τ, h₁⟩  ← e.infer
+  let ⟨τ', h₂⟩ ← τ.nbe
+  return ⟨τ, τ', h₁, h₂⟩
+
+def infer' (e : Expr) : Option Expr :=
+  match infer e with
+  | .some ⟨τ, _⟩ => .some τ
+  | _ => .none
+
+def infer_nbe_after' (e : Expr) : Option Expr :=
+  match infer_nbe_after e with
+  | .some ⟨_, τ, _⟩ => τ
+  | _ => .none
 
 --#eval (DCC (Π(Id(Sort 3), `(Sort 3, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), (`(⊤, `(Coup(Id(Sort 2)), Sort 2)) ∗))))) Sort 2)).reduce_η
 

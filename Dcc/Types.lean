@@ -1,4 +1,3 @@
-import Dcc.Attrs
 import Dcc.Ast
 
 namespace Expr
@@ -281,14 +280,17 @@ termination_by e
 end Expr
 
 open Std (ToFormat Format format) in
-instance instToFormat : Std.ToFormat (Expr) :=
+instance (priority := high) instToFormat : Std.ToFormat (Expr) :=
   ⟨Expr.toFormat (pretty := true)⟩
 open Std (ToFormat Format format) in
-instance instToString : ToString Expr :=
+instance (priority := high) instToString : ToString Expr :=
   ⟨toString ∘ Expr.toFormat (pretty := true)⟩
 open Std (ToFormat Format format) in
-instance instRepr : Repr Expr :=
-  ⟨Function.const _ ∘ Expr.toFormat (pretty := false)⟩
+
+open Std (ToFormat Format format) in
+instance (priority := high) instRepr : Repr Expr :=
+  { reprPrec := fun e _ =>
+    Std.Format.pretty (Expr.toFormat e (pretty := true)) }
 
 instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
   match me with

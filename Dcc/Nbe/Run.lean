@@ -269,15 +269,30 @@ Val(neutral(f' neutral(var(level))))
 inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
   | neut : Neutral.Quote level nv e → Val.Quote level Val(neutral(nv)) e
   | lam₁ : Apply Val(λ env n => bdy) Val(neutral(var(level))) Val(neutral(f' neutral(var(level))))
-    → Val.Quote level.succ Val(neutral(f')) e'
+    → Neutral.Quote level.succ f' e'
     → Val.Quote level Val(λ env n => bdy) e'
   | lam₂ : Apply Val(λ env n => bdy) Val(neutral(var(level))) Val(λ env' n' => bdy')
     → Val.Quote level.succ Val(λ env' n' => bdy') e'
     → Val.Quote level Val(λ env n => bdy) e'
-  | pi   : Apply f_α Val(neutral(var(level))) Val(neutral(f_α' neutral(var(level))))
+  | pi₁  : Apply f_α Val(neutral(var(level))) Val(neutral(f_α' neutral(var(level))))
     → Apply f_β Val(neutral(var(level))) Val(neutral(f_β' neutral(var(level))))
-    → Val.Quote level.succ Val(neutral(f_α')) f_α''
-    → Val.Quote level.succ.succ Val(neutral(f_β')) f_β''
+    → Neutral.Quote level.succ f_α' f_α''
+    → Neutral.Quote level.succ.succ f_β' f_β''
+    → Val.Quote level Val(Π (f_α) ⟦⟧ 2, f_β) (DCC (Π(f_α'', f_β'')))
+  | pi₂  : Apply f_α Val(neutral(var(level))) Val(λ env' n' => bdy')
+    → Apply f_β Val(neutral(var(level))) Val(neutral(f_β' neutral(var(level))))
+    → Val.Quote level.succ Val(λ env' n' => bdy') f_α''
+    → Neutral.Quote level.succ.succ f_β' f_β''
+    → Val.Quote level Val(Π (f_α) ⟦⟧ 2, f_β) (DCC (Π(f_α'', f_β'')))
+  | pi₃  : Apply f_α Val(neutral(var(level))) Val(neutral(f_α' neutral(var(level))))
+    → Apply f_β Val(neutral(var(level))) Val(λ env' n' => bdy')
+    → Neutral.Quote level.succ f_α' f_α''
+    → Val.Quote level.succ.succ Val(λ env' n' => bdy') f_β''
+    → Val.Quote level Val(Π (f_α) ⟦⟧ 2, f_β) (DCC (Π(f_α'', f_β'')))
+  | pi₄ : Apply f_α Val(neutral(var(level))) Val(λ env'₁ n'₁ => bdy'₁)
+    → Apply f_β Val(neutral(var(level))) Val(λ env'₂ n'₂ => bdy'₂)
+    → Val.Quote level.succ Val(λ env'₁ n'₁ => bdy'₁) f_α''
+    → Val.Quote level.succ.succ Val(λ env'₂ n'₂ => bdy'₂) f_β''
     → Val.Quote level Val(Π (f_α) ⟦⟧ 2, f_β) (DCC (Π(f_α'', f_β'')))
 
 end
@@ -291,11 +306,18 @@ def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote le
   | Neutral(⊤) => .some ⟨_, .top⟩
   | Neutral(⊥) => .some ⟨_, .bot⟩
   | Neutral(x = y) =>
+    have h_dec₁ : x.measure < Neutral(x = y).size := by
+      
+      grind
+    have h_dec₂ : y.measure < Neutral(x = y).size := by
+      grind
     match x.quote level, y.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
       .some ⟨_, .eq h₁ h₂⟩
     | _, _ => .none
   | Neutral(Eql(α))  =>
+    have h_dec₁ : α.size < Neutral(Eql(α)).size := by
+      grind
     match α.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .eql h⟩
     | _ => .none
@@ -395,6 +417,7 @@ def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote le
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
       .some ⟨_, .app h₁ h₂⟩
     | _, _ => .none
+termination_by v.size
 
 def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :=
   match v with
@@ -402,7 +425,60 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
     match neut.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .neut h⟩
     | _ => .none
-  | 
+  | Val(λ env n => bdy) =>
+    match Val(λ env n => bdy).apply Val(neutral(var(level))) with
+    | .some ⟨Val(neutral(f' neutral(var(level₂)))), h₁⟩ =>
+      if heq : level₂ = level then
+        match f'.quote level.succ with
+        | .some ⟨_, h₂⟩ =>
+          heq ▸ .some ⟨_, .lam₁ (heq.symm ▸ h₁) (heq ▸ h₂)⟩
+        | _ => .none
+      else .none
+    | .some ⟨Val(λ env' n' => bdy'), h₁⟩ =>
+      match Val(λ env' n' => bdy').quote level.succ with
+      | .some ⟨_, h₂⟩ =>
+        .some ⟨_, .lam₂ h₁ h₂⟩
+      | _ => .none
+    | _ => .none
+  | Val(Π (f_α) ⟦⟧ 2, f_β) =>
+    match f_α.apply Val(neutral(var(level))), f_β.apply Val(neutral(var(level))) with
+    | .some ⟨Val(neutral(f_α' neutral(var(level₂)))), h₁⟩,
+      .some ⟨Val(neutral(f_β' neutral(var(level₃)))), h₂⟩ =>
+      if heq₁ : level₂ = level then
+        if heq₂ : level₃ = level then
+          match f_α'.quote level.succ, f_β'.quote level.succ.succ with
+          | .some ⟨_, h₃⟩, .some ⟨_, h₄⟩ => by
+            cases heq₁; cases heq₂
+            exact .some ⟨_, .pi₁ h₁ h₂ h₃ h₄⟩
+          | _, _ => .none
+        else .none
+      else .none
+    | .some ⟨Val(λ env' n' => bdy'), h₁⟩,
+      .some ⟨Val(neutral(f_β' neutral(var(level₂)))), h₂⟩ =>
+      if heq₁ : level₂ = level then
+        match Val(λ env' n' => bdy').quote level.succ, f_β'.quote level.succ.succ with
+        | .some ⟨_, h₃⟩, .some ⟨_, h₄⟩ => by
+          cases heq₁
+          exact .some ⟨_, .pi₂ h₁ h₂ h₃ h₄⟩
+        | _, _ => .none
+      else .none
+    | .some ⟨Val(neutral(f_α' neutral(var(level₂)))), h₁⟩,
+      .some ⟨Val(λ env' n' => bdy'), h₂⟩ =>
+      if heq₁ : level₂ = level then
+        match Val(λ env' n' => bdy').quote level.succ.succ, f_α'.quote level.succ with
+        | .some ⟨_, h₄⟩, .some ⟨_, h₃⟩ => by
+          cases heq₁
+          exact .some ⟨_, .pi₃ h₁ h₂ h₃ h₄⟩
+        | _, _ => .none
+      else .none
+    | .some ⟨Val(λ env'₁ n'₁ => bdy'₁), h₁⟩,
+      .some ⟨Val(λ env'₂ n'₂ => bdy'₂), h₂⟩ =>
+      match Val(λ env'₁ n'₁ => bdy'₁).quote level.succ, Val(λ env'₂ n'₂ => bdy'₂).quote level.succ.succ with
+      | .some ⟨_, h₃⟩, .some ⟨_, h₄⟩ => .some ⟨_, .pi₄ h₁ h₂ h₃ h₄⟩
+      | _, _ => .none
+    | _, _ => .none
+  | _ => .none
+termination_by v.measure.succ
 
 end
 

@@ -75,6 +75,10 @@ end
 theorem Val.size_le_measure : Val.size x ≤ Val.measure x := by
   cases x
   any_goals (grind)
+  case pi env arity f_α f_β =>
+    have ha := f_α.size_le_measure
+    have hb := f_β.size_le_measure
+    grind
 
 @[grind ., grind! .]
 theorem Val.neut_measure_eq_size : Neutral(v).size = Val(neutral(v)).measure := by

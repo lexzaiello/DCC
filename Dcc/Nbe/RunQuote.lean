@@ -276,12 +276,12 @@ def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote le
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
       .some ⟨_, .app h₁ h₂⟩
     | _, _ => .none
-termination_by v.size
+termination_by (v.size, sizeOf v)
 
 def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :=
   match v with
   | Val(neutral(neut)) =>
-    have h_dec : neut.size < Val(neutral(neut)).measure := by
+    have h_dec : neut.size ≤ Val(neutral(neut)).measure := by
       grind
     match neut.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .neut h⟩
@@ -303,8 +303,6 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
     | .some ⟨Val(λ env' n' => bdy'), h₁⟩ =>
       have h_dec₁ : Val(λ env' n' => bdy').measure < Val(λ env n => bdy).measure + Val(neutral(var(level))).measure := h₁.decreasing
       have h_dec₂ : Val(λ env' n' => bdy').measure < Val(λ env n => bdy).measure := by
-        rw [Val.var_zero_size] at h_dec₁
-        
         grind
       match Val(λ env' n' => bdy').quote level.succ with
       | .some ⟨_, h₂⟩ =>
@@ -315,6 +313,18 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
     match f_α.apply Val(neutral(var(level))), f_β.apply Val(neutral(var(level))) with
     | .some ⟨Val(neutral(f_α' neutral(var(level₂)))), h₁⟩,
       .some ⟨Val(neutral(f_β' neutral(var(level₃)))), h₂⟩ =>
+      have h_dec₁ := h₁.decreasing
+      have h_dec₂ : f_α'.size < Val(neutral(f_α' neutral(var(level)))).measure := by
+        grind
+      have h_dec₃ : f_α'.size < f_α.measure := by
+        grind
+      have h_dec₄ : f_α'.size < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+        conv =>
+          right
+          simp [Val.measure]
+          rfl
+        grind
+        
       if heq₁ : level₂ = level then
         if heq₂ : level₃ = level then
           match f_α'.quote level.succ, f_β'.quote level.succ.succ with
@@ -349,7 +359,7 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
       | _, _ => .none
     | _, _ => .none
   | _ => .none
-termination_by v.measure
+termination_by (v.measure, sizeOf v)
 
 end
 

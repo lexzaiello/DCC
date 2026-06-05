@@ -41,7 +41,7 @@ inductive RedEta : Expr → Expr → Prop
   | sig'          : RedEta β β' → RedEta (DCC (Σ(α, β))) (DCC Σ(α, β'))
   | coup          : RedEta β β' → RedEta (DCC (Coup(β))) (DCC (Coup(β')))
   | quot_unbox    : RedEta (DCC `(α, x) ∘' *(α₂)) (DCC `(!(α), x))
-  | quot_unbox'   : RedEta (DCC `(α, x) ∘ *(α₂)) (DCC `(!(α), x)) 
+  | quot_unbox'   : RedEta (DCC `(α, x) ∘ *(α₂)) (DCC `(!(α), x))
   --| quot'_unbox   : RedEta (DCC (`(α, x) ∘' *(α₂)) ∘' z) (DCC `(!(α), x) ∘' z)
   --| quot'_unbox'  : RedEta (DCC (`(α, x) ∘ *(α₂)) ∘ z) (DCC `(!(α), x) ∘ z)
   --| quot'_unbox₂  : RedEta (DCC `(α, x) ∘' *(α₂) ∘' z) (DCC `(!(α), x) ∘' z)

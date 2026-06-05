@@ -452,26 +452,40 @@ def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote le
       .some ⟨_, .eval h₁ h₂ h₃⟩
     | _, _, _ => .none
   | Neutral(!(x))            =>
+    have h_dec₁ : x.measure < Neutral(!(x)).size := by
+      grind
     match x.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .bang h⟩
     | _ => .none
   | Neutral(*(α))            =>
+    have h_dec₁ : α.measure < Neutral(*(α)).size := by
+      grind
     match α.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .unbox h⟩
     | _ => .none
   | Neutral(&(x))            =>
+    have h_dec₁ : x.measure < Neutral(&(x)).size := by
+      grind
     match x.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .boxed h⟩
     | _ => .none
   | Neutral(!<x>)            =>
+    have h_dec₁ : x.measure < Neutral(!<x>).size := by
+      grind
     match x.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .map h⟩
     | _ => .none
   | Neutral($<x>)            =>
+    have h_dec₁ : x.measure < Neutral($<x>).size := by
+      grind
     match x.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .fmap h⟩
     | _ => .none
   | Neutral(f x)             =>
+    have h_dec₁ : f.size < Neutral(f x).size := by
+      grind
+    have h_dec₂ : x.measure < Neutral(f x).size := by
+      grind
     match f.quote level, x.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
       .some ⟨_, .app h₁ h₂⟩

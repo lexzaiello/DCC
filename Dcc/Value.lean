@@ -319,7 +319,7 @@ def Neutral.size (nv : Neutral) : ℕ :=
   | Neutral(raw(c)) => c.size
   | Neutral(x = y) => x.size + y.size
   | Neutral(!(x)) => x.size
-  | Neutral(&(x)) => x.size
+  | Neutral(&(x)) => x.size + x.size + x.size + 1
   | Neutral(⟦β⟧(x, y)) => x.size + y.size
   | Neutral(Coup(β)) => β.size
   | Neutral(⊤) => (DCC ⊤).size
@@ -370,7 +370,8 @@ inductive Eval : List Val → Expr → Val → Type
   | comp   : Eval env (DCC f ∘ g) Val(λ env 1 => f ∘ g)
   | comp'  : Eval env (DCC f ∘' g) Val(λ env 1 => f ∘' g)
   | comp₂  : Eval env (DCC f ∘∘ g) Val(λ env 1 => f ∘∘ g)
-  | app    : Eval env f f' → Eval env x x' → Apply f' x' e' → Eval env (DCC (f x)) e'
+  | app    : Eval env f f' → Eval env x x'
+    → Apply f' x' e' → Eval env (DCC (f x)) e'
 
 inductive Apply : (f : Val) → (x : Val) → Val → Type
   | eql    : Apply Val(λ env 1 => Eql(f_α)) Val(neutral(&(x))) x
@@ -401,10 +402,81 @@ inductive Apply : (f : Val) → (x : Val) → Val → Type
 
 end
 
-theorem eval_size (h : Eval _env e v) : e.size = v.size := by
-  cases h with
-  | top =>
+mutual
+
+theorem Apply.decreasing (h : Apply f x e') : e'.size < f.size + x.size := by
+  sorry
+
+theorem Eval.neut_size_leq (h : Eval _env e Val(neutral(v))) : v.size ≤ e.size := by
+  cases h
+  any_goals (grind)
+  case t_coup h | bang h | boxed h =>
+    have h := h.size_eq
+    grind
+  case eq h₁ h₂ | coup h₁ h₂ =>
+    have ha := h₁.size_eq
+    have hb := h₂.size_eq
+    grind
+  case app h₁ h₂ h₃ =>
+    have ha := h₁.size_eq
+    have hb := h₂.size_eq
+    have hc := h₃.decreasing
+    simp [Val.size] at hc
+    grind
+
+theorem Eval.size_eq (h : Eval _env e v) : e.size = v.size := by
+  induction e generalizing v
+  case sigma ih₁ ih₂ | pair ih₁ ih₂ ih₃ | comp₂ ih₁ ih₂ | comp ih₁ ih₂ | comp' ih₁ ih₂ | fstc ih
+    | sndc ih | eql ih | eq ih₁ ih₂ | refl _ _ _
+    | eval _ _ _ | unbox ih | box ih | bang ih
+    | coup ih₁ | mkc ih₁ ih₂ ih₃ | pi ih₁ ih₂
+    | curr ih₁ ih₂ ih₃ | map ih₁ | fmap ih₁
+    | curr' ih₁ ih₂ ih₃ | quot ih₁ ih₂ | id ih₁ =>
+    focus
+    cases h
+    · rename_i h
+      first
+      | have h := ih h
+        grind
+      | grind
+      | (focus
+        have ha := ih₁ (by assumption)
+        grind
+        done)
+      | (focus
+        have ha := ih₁ (by assumption)
+        have hb := ih₂ (by assumption)
+        grind
+        done)
+      | (focus
+        have ha := ih₁ (by assumption)
+        have hb := ih₂ (by assumption)
+        have hc := ih₃ (by assumption)
+        grind
+        done)
+    done
+  case coup ih₁ =>
+    cases h
+    have h := ih₁ (by assumption)
+    grind
+  /-case eq _ _ =>
+    cases h with
+    | eq =>
+      
+      sorry-/
+
+/-theorem Eval.size_eq (h : Eval _env e v) : e.size = v.size := by
+  cases h
+  any_goals (grind)
+  case bang x x' h | boxed x x' h =>
+    have h := h.size_eq
+    simp [Val.size, Neutral.size, Expr.size]
+    grind
+  case coup h₁ h₂ h₃ =>
     
+    sorry-/
+
+end
 
 def apply (f x : Val) : ((e' : Val) × Apply f x e') :=
   match f, x with

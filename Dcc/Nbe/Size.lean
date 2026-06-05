@@ -26,10 +26,10 @@ def NeutralTm.size (nv : NeutralTm) : ℕ :=
   | NeutralTm(Σ(α, β)) => α.measure + β.measure + 2
   | NeutralTm(`(β, x)) => β.measure + x.measure + 2
   | NeutralTm(⟦β⟧(x, y)) => β.measure + x.measure + y.measure
-  | NeutralTm(Coup(β)) => β.measure
-  | NeutralTm(Id(_α))      => 2
-  | NeutralTm(Fstc(_α))    => 2
-  | NeutralTm(Sndc(_α))    => 2
+  | NeutralTm(Coup(β)) => β.measure + 1
+  | NeutralTm(Id(α))      => α.measure + 1
+  | NeutralTm(Fstc(α))    => α.measure + 1
+  | NeutralTm(Sndc(α))    => α.measure + 1
   | NeutralTm(f ∘' g) => f.measure + f.measure + g.measure + 2
   | NeutralTm(f ∘ g)  => f.measure + f.measure + g.measure + 2
   | NeutralTm(f ∘∘ g)  => f.measure + f.measure + g.measure + 2
@@ -123,9 +123,6 @@ theorem NeutralTm.size_pos : 0 < NeutralTm.size x := by
   any_goals (grind)
   case app f v =>
     have h := f.size_pos
-    grind
-  case t_coup x =>
-    have h := x.measure_pos
     grind
   case eq x y =>
     have h₁ := x.measure_pos

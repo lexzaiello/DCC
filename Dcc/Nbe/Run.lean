@@ -348,58 +348,105 @@ def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote le
   | Neutral(⟦β⟧(x, y)) =>
     have h_dec₁ : β.measure < Neutral(⟦β⟧(x, y)).size := by
       grind
-    
+    have h_dec₂ : x.measure < Neutral(⟦β⟧(x, y)).size := by
+      grind
+    have h_dec₃ : y.measure < Neutral(⟦β⟧(x, y)).size := by
+      grind
     match β.quote level, x.quote level, y.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
       .some ⟨_, .coup h₁ h₂ h₃⟩
     | _, _, _ => .none
   | Neutral(Coup(β)) =>
+    have h_dec₁ : β.measure < Neutral(Coup(β)).size := by
+      grind
     match β.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .t_coup h⟩
     | _ => .none
   | Neutral(Id(α))      =>
+    have h_dec₁ : α.measure < Neutral(Id(α)).size := by
+      grind
     match α.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .id h⟩
     | _ => .none
   | Neutral(Fstc(α))    =>
+    have h_dec₁ : α.measure < Neutral(Fstc(α)).size := by
+      grind
     match α.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .fstc h⟩
     | _ => .none
   | Neutral(Sndc(α))    =>
+    have h_dec₁ : α.measure < Neutral(Sndc(α)).size := by
+      grind
     match α.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .sndc h⟩
     | _ => .none
   | Neutral(f ∘' g) =>
+    have h_dec₁ : f.measure < Neutral(f ∘' g).size := by
+      grind
+    have h_dec₂ : g.measure < Neutral(f ∘' g).size := by
+      grind
     match f.quote level, g.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
       .some ⟨_, .comp' h₁ h₂⟩
     | _, _ => .none
   | Neutral(f ∘ g) =>
+    have h_dec₁ : f.measure < Neutral(f ∘ g).size := by
+      grind
+    have h_dec₂ : g.measure < Neutral(f ∘ g).size := by
+      grind
     match f.quote level, g.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
       .some ⟨_, .comp h₁ h₂⟩
     | _, _ => .none
   | Neutral(f ∘∘ g) =>
+    have h_dec₁ : f.measure < Neutral(f ∘∘ g).size := by
+      grind
+    have h_dec₂ : g.measure < Neutral(f ∘∘ g).size := by
+      grind
     match f.quote level, g.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
       .some ⟨_, .comp₂ h₁ h₂⟩
     | _, _ => .none
   | Neutral(⟦β⟧⟨x, y⟩) =>
+    have h_dec₁ : β.measure < Neutral(⟦β⟧⟨x, y⟩).size := by
+      grind
+    have h_dec₂ : x.measure < Neutral(⟦β⟧⟨x, y⟩).size := by
+      grind
+    have h_dec₃ : y.measure < Neutral(⟦β⟧⟨x, y⟩).size := by
+      grind
     match β.quote level, x.quote level, y.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
       .some ⟨_, .pair h₁ h₂ h₃⟩
     | _, _, _ => .none
   | Neutral(Λ(α, β, x)) =>
+    have h_dec₁ : α.measure < Neutral(Λ(α, β, x)).size := by
+      grind
+    have h_dec₂ : β.measure < Neutral(Λ(α, β, x)).size := by
+      grind
+    have h_dec₃ : x.measure < Neutral(Λ(α, β, x)).size := by
+      grind
     match α.quote level, β.quote level, x.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
       .some ⟨_, .curr h₁ h₂ h₃⟩
     | _, _, _ => .none
   | Neutral(!Λ(α, β, x)) =>
+    have h_dec₁ : α.measure < Neutral(!Λ(α, β, x)).size := by
+      grind
+    have h_dec₂ : β.measure < Neutral(!Λ(α, β, x)).size := by
+      grind
+    have h_dec₃ : x.measure < Neutral(!Λ(α, β, x)).size := by
+      grind
     match α.quote level, β.quote level, x.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
       .some ⟨_, .curr' h₁ h₂ h₃⟩
     | _, _, _ => .none
   | Neutral(Eval(α, β, x)) =>
+    have h_dec₁ : α.measure < Neutral(Eval(α, β, x)).size := by
+      grind
+    have h_dec₂ : β.measure < Neutral(Eval(α, β, x)).size := by
+      grind
+    have h_dec₃ : x.measure < Neutral(Eval(α, β, x)).size := by
+      grind
     match α.quote level, β.quote level, x.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
       .some ⟨_, .eval h₁ h₂ h₃⟩

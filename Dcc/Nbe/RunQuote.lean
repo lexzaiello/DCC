@@ -324,7 +324,17 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
           simp [Val.measure]
           rfl
         grind
-        
+      have h_dec₅ := h₂.decreasing
+      have h_dec₆ : f_β'.size < Val(neutral(f_β' neutral(var(level)))).measure := by
+        grind
+      have h_dec₇ : f_β'.size < f_β.measure := by
+        grind
+      have h_dec₈ : f_β'.size < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+        conv =>
+          right
+          simp [Val.measure]
+          rfl
+        grind
       if heq₁ : level₂ = level then
         if heq₂ : level₃ = level then
           match f_α'.quote level.succ, f_β'.quote level.succ.succ with
@@ -336,6 +346,20 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
       else .none
     | .some ⟨Val(λ env' n' => bdy'), h₁⟩,
       .some ⟨Val(neutral(f_β' neutral(var(level₂)))), h₂⟩ =>
+      have h_dec₁ := h₁.decreasing
+      have h_dec₂ : Val(λ env' n' => bdy').measure < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+        grind
+      have h_dec₅ := h₂.decreasing
+      have h_dec₆ : f_β'.size < Val(neutral(f_β' neutral(var(level)))).measure := by
+        grind
+      have h_dec₇ : f_β'.size < f_β.measure := by
+        grind
+      have h_dec₈ : f_β'.size < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+        conv =>
+          right
+          simp [Val.measure]
+          rfl
+        grind
       if heq₁ : level₂ = level then
         match Val(λ env' n' => bdy').quote level.succ, f_β'.quote level.succ.succ with
         | .some ⟨_, h₃⟩, .some ⟨_, h₄⟩ => by
@@ -345,6 +369,20 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
       else .none
     | .some ⟨Val(neutral(f_α' neutral(var(level₂)))), h₁⟩,
       .some ⟨Val(λ env' n' => bdy'), h₂⟩ =>
+      have h_dec₁ := h₂.decreasing
+      have h_dec₂ : Val(λ env' n' => bdy').measure < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+        grind
+      have h_dec₅ := h₁.decreasing
+      have h_dec₆ : f_α'.size < Val(neutral(f_α' neutral(var(level)))).measure := by
+        grind
+      have h_dec₇ : f_α'.size < f_α.measure := by
+        grind
+      have h_dec₈ : f_α'.size < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+        conv =>
+          right
+          simp [Val.measure]
+          rfl
+        grind
       if heq₁ : level₂ = level then
         match Val(λ env' n' => bdy').quote level.succ.succ, f_α'.quote level.succ with
         | .some ⟨_, h₄⟩, .some ⟨_, h₃⟩ => by
@@ -354,6 +392,12 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
       else .none
     | .some ⟨Val(λ env'₁ n'₁ => bdy'₁), h₁⟩,
       .some ⟨Val(λ env'₂ n'₂ => bdy'₂), h₂⟩ =>
+      have h_dec₁ := h₁.decreasing
+      have h_dec₂ := h₂.decreasing
+      have h_dec₃ : Val(λ env'₁ n'₁ => bdy'₁).measure < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+        grind
+      have h_dec₃ : Val(λ env'₂ n'₂ => bdy'₂).measure < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+        grind
       match Val(λ env'₁ n'₁ => bdy'₁).quote level.succ, Val(λ env'₂ n'₂ => bdy'₂).quote level.succ.succ with
       | .some ⟨_, h₃⟩, .some ⟨_, h₄⟩ => .some ⟨_, .pi₄ h₁ h₂ h₃ h₄⟩
       | _, _ => .none

@@ -36,4 +36,35 @@ namespace Expr
   | DCC $<x>   => x.size + x.size + x.size + 1
   | DCC (f x) => f.size + x.size
 
+@[aesop norm (rule_sets := [DccSize]), dcc_size, grind] def head_arity (e : Expr) : ℕ :=
+  match e with
+  | DCC ∗
+  | DCC ⊤
+  | DCC ⊥
+  | DCC _x = _y => 0
+  | DCC Eql(_α)
+  | DCC refl(_α) => 2
+  | DCC Sort _m => 0
+  | DCC Σ(_α, _β) => 1
+  | DCC `(_β, _x) => 1
+  | DCC ⟦_β⟧(_x, _y) => 0
+  | DCC Coup(_β) => 0
+  | DCC Id(_α)      => 1
+  | DCC Fstc(_α)    => 1
+  | DCC Sndc(_α)    => 1
+  | DCC Π(_α, _β) => 1
+  | DCC (_f ∘' _g) => 1
+  | DCC (_f ∘ _g)  => 1
+  | DCC (_f ∘∘ _g)  => 1
+  | DCC ⟦_β⟧⟨_a, _b⟩ => 1
+  | DCC Λ(_α, _β, _x) => 2
+  | DCC !Λ(_α, _β, _x) => 2
+  | DCC Eval(_α, _β, _x) => 1
+  | DCC !(_x)   => 0
+  | DCC *(_α)   => 1
+  | DCC &(_x)   => 0
+  | DCC !<_x>   => 1
+  | DCC $<_x>   => 1
+  | DCC (f _x) => f.head_arity - 1
+
 end Expr

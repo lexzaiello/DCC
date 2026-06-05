@@ -328,6 +328,12 @@ def Neutral.size (nv : Neutral) : ℕ :=
   | Neutral(Sort m) => (DCC Sort m).size
 
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
+def Val.head_arity (v : Val) : ℕ :=
+  match v with
+  | Val(neutral(_x)) => 0
+  | Val(λ _env n => _bdy) => n
+
+@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def Val.size (v : Val) : ℕ :=
   match v with
   | Val(neutral(x)) => x.size
@@ -405,15 +411,65 @@ end
 mutual
 
 theorem Apply.decreasing (h : Apply f x e') : e'.size < f.size + x.size := by
-  sorry
+  cases h
+  case eql => grind
+  case fmap env h₁ h₂ | map env h₁ h₂ =>
+    have h := h₁.size_eq
+    have h₂ := h₂.decreasing
+    grind
+  case unbox =>
+    grind
+  case pair h₁ h₂ h₃ h₄ h₅ =>
+    have ha := h₁.size_eq
+    have hb := h₂.size_eq
+    have hc := h₃.decreasing
+    have hd := h₄.decreasing
+    have he := h₅.decreasing
+    dsimp [Val.size, Neutral.size, Expr.size]
+    grind
+  case eval h₁ h₂ h₃ =>
+    have ha := h₁.size_eq
+    have hb := h₂.decreasing
+    have hc := h₃.decreasing
+    dsimp [Val.size, Neutral.size, Expr.size]
+    grind
+  case quot h =>
+    have ha := h.size_eq
+    dsimp [Val.size]
+    grind
+  case sndc | fstc | id => grind
+  case comp h₁ h₂ h₃ h₄ | comp₂ h₁ h₂ h₃ h₄ | comp' h₁ h₂ h₃ h₄ =>
+    have ha := h₁.size_eq
+    have hb := h₂.size_eq
+    have hc := h₃.decreasing
+    have hd := h₄.decreasing
+    dsimp [Val.size, Expr.size]
+    grind
+  case curr₁ =>
+    dsimp [Val.size, Expr.size]
+    
 
+@[aesop safe forward (rule_sets := [DccSize])]
 theorem Eval.neut_size_leq (h : Eval _env e Val(neutral(v))) : v.size ≤ e.size := by
   cases h
   any_goals (grind)
-  case t_coup h | bang h | boxed h =>
+  case t_coup h =>
     have h := h.size_eq
     grind
-  case eq h₁ h₂ | coup h₁ h₂ =>
+  case bang h =>
+    have h := h.size_eq
+    dsimp [Neutral.size, Expr.size]
+    grind
+  case boxed h =>
+    have h := h.size_eq
+    dsimp [Neutral.size, Expr.size]
+    
+    sorry
+  case eq h₁ h₂ =>
+    have ha := h₁.size_eq
+    have hb := h₂.size_eq
+    grind
+  case coup h₁ h₂ =>
     have ha := h₁.size_eq
     have hb := h₂.size_eq
     grind
@@ -424,6 +480,7 @@ theorem Eval.neut_size_leq (h : Eval _env e Val(neutral(v))) : v.size ≤ e.size
     simp [Val.size] at hc
     grind
 
+@[aesop safe forward (rule_sets := [DccSize])]
 theorem Eval.size_eq (h : Eval _env e v) : v.size ≤ e.size := by
   induction e generalizing v
   case sigma ih₁ ih₂ | pair ih₁ ih₂ ih₃ | comp₂ ih₁ ih₂ | comp ih₁ ih₂ | comp' ih₁ ih₂ | fstc ih

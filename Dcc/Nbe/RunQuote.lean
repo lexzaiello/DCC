@@ -407,6 +407,8 @@ termination_by (v.measure, sizeOf v)
 
 end
 
+#check Val.quote
+
 end Semantic
 
 /-

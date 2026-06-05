@@ -123,29 +123,40 @@ def Semantic.Val.apply (f x : Semantic.Val) : Option ((e' : Semantic.Val) × Sem
   | Val(λ env 2 => !Λ(α, β, x)), Val(neutral(&(y))) => .some ⟨_, .curr'₁⟩
   | Val(λ env 1 => !<f>), Val(neutral(&(x))) =>
     have h_dec : f.measure + x.measure < Val(λ env 1 => !<f>).measure + Val(neutral(&(x))).measure := by
-      
-      sorry
+      grind
     match f.apply x with
     | .some ⟨_, h⟩ => .some ⟨_, .map h⟩
     | _ => .none
   | Val(λ env 1 => $<f>), Val(neutral(&(x))) =>
+    have h_dec : f.measure + x.measure < Val(λ env 1 => $<f>).measure + Val(neutral(&(x))).measure := by
+      grind
     match f.apply x with
     | .some ⟨_, h⟩ => .some ⟨_, .fmap h⟩
     | _ => .none
   | Val(λ env 1 => ⟦β⟧⟨M, N⟩), Val(neutral(&(x))) =>
+    have h_dec₁ : M.measure + x.measure < Val(λ env 1 => ⟦β⟧⟨M, N⟩).measure + Val(neutral(&(x))).measure := by
+      grind
+    have h_dec₂ : N.measure + x.measure < Val(λ env 1 => ⟦β⟧⟨M, N⟩).measure + Val(neutral(&(x))).measure := by
+      grind
     match M.apply x, N.apply x with
     | .some ⟨A, h₁⟩, .some ⟨B, h₂⟩ =>
       have h_dec₁ := h₁.decreasing
       have h_dec₂ := h₂.decreasing
+      have h_dec₃ : B.measure + A.measure < Val(λ env 1 => ⟦β⟧⟨M, N⟩).measure + Val(neutral(&(x))).measure := by
+        grind
       match B.apply A with
       | .some ⟨_, h₃⟩ =>
         .some ⟨_, .pair h₁ h₂ h₃⟩
       | _ => .none
     | _, _ => .none
   | Val(λ env 1 => Eval(_α, _β, x)), Val(neutral(⟦__β⟧(y, z))) =>
+    have h_dec : x.measure + y.measure < Val(λ env 1 => Eval(_α, _β, x)).measure + Val(neutral(⟦__β⟧(y, z))).measure := by
+      grind
     match x.apply y with
     | .some ⟨f', h₁⟩ =>
       have h_dec₁ := h₁.decreasing
+      have h_dec₂ : f'.measure + z.measure < Val(λ env 1 => Eval(_α, _β, x)).measure + Val(neutral(⟦__β⟧(y, z))).measure := by
+        grind
       match f'.apply z with
       | .some ⟨_, h₂⟩ =>
         .some ⟨_, .eval h₁ h₂⟩
@@ -154,34 +165,50 @@ def Semantic.Val.apply (f x : Semantic.Val) : Option ((e' : Semantic.Val) × Sem
   | Val(λ env 1 => `(β, x)), _y =>
     .some ⟨_, .quot⟩
   | Val(λ env 1 => f ∘' g), x =>
+    have h_dec : g.measure + x.measure < Val(λ env 1 => f ∘' g).measure + x.measure := by
+      grind
     match g.apply x with
     | .some ⟨A, h₁⟩ =>
       have h_dec := h₁.decreasing
+      have h_dec₂ : f.measure + A.measure < Val(λ env 1 => f ∘' g).measure + x.measure := by
+        grind
       match f.apply A with
       | .some ⟨_, h₂⟩ => .some ⟨_, .comp' h₁ h₂⟩
       | _ => .none
     | _ => .none
   | Val(λ env 1 => f ∘ g), x =>
+    have h_dec : g.measure + x.measure < Val(λ env 1 => f ∘ g).measure + x.measure := by
+      grind
     match g.apply x with
     | .some ⟨A, h₁⟩ =>
       have h_dec := h₁.decreasing
+      have h_dec₂ : f.measure + A.measure < Val(λ env 1 => f ∘ g).measure + x.measure := by
+        grind
       match f.apply A with
       | .some ⟨_, h₂⟩ => .some ⟨_, .comp h₁ h₂⟩
       | _ => .none
     | _ => .none
   | Val(λ env 1 => f ∘∘ g), x =>
+    have h_dec : g.measure + x.measure < Val(λ env 1 => f ∘∘ g).measure + x.measure := by
+      grind
     match g.apply x with
     | .some ⟨A, h₁⟩ =>
       have h_dec := h₁.decreasing
+      have h_dec₂ : f.measure + A.measure < Val(λ env 1 => f ∘∘ g).measure + x.measure := by
+        grind
       match f.apply A with
       | .some ⟨_, h₂⟩ => .some ⟨_, .comp₂ h₁ h₂⟩
       | _ => .none
     | _ => .none
   | Val(λ y::env 1 => Λ(α, β, x)), z =>
+    have h_dec : x.measure + Val(neutral(⟦β⟧(y, z))).measure < Val(λ y::env 1 => Λ(α, β, x)).measure + z.measure := by
+      grind
     match x.apply Val(neutral(⟦β⟧(y, z))) with
     | .some ⟨_, h⟩ => .some ⟨_, .curr₂ h⟩
     | _ => .none
   | Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)), Val(neutral(&(z))) =>
+    have h_dec : x.measure + Val(neutral(&(neutral(⟦β⟧(y, z))))).measure < Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)).measure + Val(neutral(&(z))).measure := by
+      grind
     match x.apply Val(neutral(&(neutral(⟦β⟧(y, z))))) with
     | .some ⟨_, h⟩ => .some ⟨_, .curr'₂ h⟩
     | _ => .none
@@ -189,57 +216,3 @@ def Semantic.Val.apply (f x : Semantic.Val) : Option ((e' : Semantic.Val) × Sem
 termination_by f.measure + x.measure
 
 end
-
-mutual
-
-def Expr.evaluate (env : List Semantic.Val) (e : Expr) : ((e' : Semantic.Val) × Semantic.Eval env e e') :=
-  match e with
-  | (DCC ⊤) => ⟨_, .simple .top⟩
-  | (DCC ∗) => ⟨_, .simple .tintro⟩
-  | (DCC ⊥) => ⟨_, .simple .bot⟩
-  | (DCC Sort _m) => ⟨_, .simple .sort⟩
-  | (DCC !<_f>) => ⟨_, .simple .map⟩
-  | (DCC $<_f>) => ⟨_, .simple .fmap⟩
-  | (DCC *(x)) => ⟨_, .simple .unbox⟩
-  | (DCC Eval(α, β, x)) => ⟨_, .simple .eval⟩
-  | (DCC `(β, x)) => ⟨_, .simple .quot⟩
-  | (DCC Id(α)) => ⟨_, .simple .id⟩
-  | (DCC Fstc(β)) => ⟨_, .simple .fstc⟩
-  | (DCC Sndc(β)) => ⟨_, .simple .sndc⟩
-  | (DCC Λ(α, β, x)) => ⟨_, .simple .curr⟩
-  | (DCC !Λ(α, β, x)) => ⟨_, .simple .curr'⟩
-  | (DCC Π(f_α, f_β)) => ⟨_, .simple .pi⟩
-  | (DCC ⟦β⟧⟨M, N⟩) => ⟨_, .simple .pair⟩
-  | (DCC Σ(α, β)) => ⟨_, .simple .sigma⟩
-  | (DCC Eql(f_α)) => ⟨_, .simple .eql⟩
-  | (DCC refl(f_α)) => ⟨_, .simple .refl⟩
-  | (DCC f ∘ g) => ⟨_, .simple .comp⟩
-  | (DCC f ∘' g) => ⟨_, .simple .comp'⟩
-  | (DCC f ∘∘ g) => ⟨_, .simple .comp₂⟩
-  | (DCC &(x)) => ⟨_, .compound (.boxed (x.evaluate env).snd)⟩
-  | (DCC !(x)) => ⟨_, .compound (.bang (x.evaluate env).snd)⟩
-  | (DCC ⟦β⟧(x, y)) => ⟨_, .compound (.coup (β.evaluate env).snd (x.evaluate env).snd (y.evaluate env).snd)⟩
-  | (DCC Coup(β)) => ⟨_, .compound (.t_coup (β.evaluate env).snd)⟩
-  | (DCC (x = y)) => ⟨_, .compound (.eq (x.evaluate env).snd (y.evaluate env).snd)⟩
-  | (DCC (f x)) =>
-    let ⟨f', h₁⟩ := f.evaluate env
-    let ⟨x', h₂⟩ := x.evaluate env
-    let ⟨e', h₃⟩ := f'.apply x'
-    ⟨_, .app h₁ h₂ h₃⟩
-
-def Semantic.Val.apply (f x : Semantic.Val) : ((e' : Semantic.Val) × Semantic.Apply f x e') :=
-  match f, x with
-  | Val(λ xs 2 => Eql(f_α)), Val(neutral(&(env))) => ⟨_, .simple .eql₁⟩
-  | Val(λ env 1 => Eql(f_α)), Val(neutral(&(x))) => ⟨_, .simple .eql₂⟩
-  | Val(λ env 1 => *(α)), Val(neutral(&(x))) => ⟨_, .simple .unbox⟩
-  | Val(λ env 1 => Id(α)), x => ⟨_, .simple .id⟩
-  | Val(λ env 1 => Fstc(_α)), Val(neutral(⟦β⟧(a, b))) => ⟨_, .simple .fstc⟩
-  | Val(λ env 1 => Sndc(_α)), Val(neutral(⟦β⟧(a, b))) => ⟨_, .simple .sndc⟩
-  | Val(λ env 2 => Λ(α, β, x)), Val(neutral(&(y))) => ⟨_, .simple .curr₁⟩
-  | Val(λ env 2 => !Λ(α, β, x)), Val(neutral(&(y))) => ⟨_, .simple .curr'₁⟩
-  | Val(λ env 1 => !<f>), Val(neutral(&(x))) =>
-    let ⟨f', h₁⟩ :=  f.eval []
-    let e' := 
-
-end
-

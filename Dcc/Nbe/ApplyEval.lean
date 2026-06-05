@@ -22,8 +22,7 @@ We might be able to use β-reduction in some places, idk.
 -- Rewrites
 
 inductive Apply : (f : Val) → (x : Val) → Val → Type
-  | eql₁     : Apply Val(λ xs 2 => Eql(f_α)) Val(neutral(&(env)))
-    Val(λ neutral(&(env))::xs 1 => Eql(f_α))
+  | eql₁     : Apply Val(λ xs 2 => Eql(f_α)) Val(neutral(&(env))) Val(λ xs 1 => Eql(f_α))
   | eql₂     : Apply Val(λ env 1 => Eql(f_α)) Val(neutral(&(x))) Val(neutral(x = x))
   | unbox    : Apply Val(λ env 1 => *(α)) Val(neutral(&(x))) Val(x)
   | id       : Apply Val(λ env 1 => Id(α)) x x
@@ -52,7 +51,7 @@ inductive Apply : (f : Val) → (x : Val) → Val → Type
   | comp'    : Apply g x A  → Apply f A B → Apply Val(λ env 1 => f ∘' g) x B
   | comp     : Apply g x A  → Apply f A B → Apply Val(λ env 1 => f ∘ g) x B
   | comp₂    : Apply g x A  → Apply f A B → Apply Val(λ env 1 => f ∘∘ g) x B
-  | curr₂    : Apply x' Val(neutral(⟦β⟧(y, z))) e' → Apply Val(λ y::env 1 => Λ(α, β, x)) z e'
+  | curr₂    : Apply x Val(neutral(⟦β⟧(y, z))) e' → Apply Val(λ y::env 1 => Λ(α, β, x)) z e'
   | curr'₂   : Apply x Val(neutral(&(neutral(⟦β⟧(y, z))))) e'
     → Apply Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) Val(neutral(&(z))) e'
   -- TODO: This shouldn't be possible

@@ -21,56 +21,42 @@ We might be able to use β-reduction in some places, idk.
 
 -- Rewrites
 
-inductive ApplySimple : (f : Val) → (x : Val) → Val → Type
-  | eql₁   : ApplySimple Val(λ xs 2 => Eql(f_α)) Val(neutral(&(env)))
-    Val(λ neutral(&(env))::xs 1 => Eql(f_α))
-  | eql₂   : ApplySimple Val(λ env 1 => Eql(f_α)) Val(neutral(&(x))) Val(neutral(x = x))
-  | unbox  : ApplySimple Val(λ env 1 => *(α)) Val(neutral(&(x))) Val(x)
-  | id     : ApplySimple Val(λ env 1 => Id(α)) x x
-  | fstc   : ApplySimple Val(λ env 1 => Fstc(_α)) Val(neutral(⟦β⟧(a, b))) a
-  | sndc   : ApplySimple Val(λ env 1 => Sndc(_α)) Val(neutral(⟦β⟧(a, b))) b
-  | curr₁  : ApplySimple Val(λ env 2 => Λ(α, β, x)) y Val(λ y::env 1 => Λ(α, β, x))
-  | curr'₁ : ApplySimple Val(λ env 2 => !Λ(α, β, x)) Val(neutral(&(y))) Val(λ neutral(&(y))::env 1 => Λ(α, β, x))
-
-mutual
-
 inductive Apply : (f : Val) → (x : Val) → Val → Type
-  | simple   : ApplySimple f x e'   → Apply f x e'
-  | compound : ApplyCompound f x e' → Apply f x e'
-  -- TODO: This shouldn't be possible
-  --| neut     : Apply Val(neutral(f)) x Val(neutral(f x))
-
-/-
-Decreasing measure should be possible without Λ,
-maybe.u
--/
-
-inductive ApplyCompound : (f : Val) → (x : Val) → Val → Type
-  | map    : Apply f x e'
-    → ApplyCompound Val(λ env 1 => !<f>) Val(neutral(&(x))) Val(neutral(!(e')))
-  | fmap   : Apply f x e' → ApplyCompound Val(λ env 1 => $<f>) Val(neutral(&(x))) Val(neutral(&(e')))
+  | eql₁     : Apply Val(λ xs 2 => Eql(f_α)) Val(neutral(&(env)))
+    Val(λ neutral(&(env))::xs 1 => Eql(f_α))
+  | eql₂     : Apply Val(λ env 1 => Eql(f_α)) Val(neutral(&(x))) Val(neutral(x = x))
+  | unbox    : Apply Val(λ env 1 => *(α)) Val(neutral(&(x))) Val(x)
+  | id       : Apply Val(λ env 1 => Id(α)) x x
+  | fstc     : Apply Val(λ env 1 => Fstc(_α)) Val(neutral(⟦β⟧(a, b))) a
+  | sndc     : Apply Val(λ env 1 => Sndc(_α)) Val(neutral(⟦β⟧(a, b))) b
+  | curr₁    : Apply Val(λ env 2 => Λ(α, β, x)) y Val(λ y::env 1 => Λ(α, β, x))
+  | curr'₁   : Apply Val(λ env 2 => !Λ(α, β, x)) Val(neutral(&(y))) Val(λ neutral(&(y))::env 1 => !Λ(α, β, x))
+  | map      : Apply f x e'
+    → Apply Val(λ env 1 => !<f>) Val(neutral(&(x))) Val(neutral(!(e')))
+  | fmap     : Apply f x e' → Apply Val(λ env 1 => $<f>) Val(neutral(&(x))) Val(neutral(&(e')))
   -- TODO: will need size measure or use β instead, show it is a Val.
   -- we can definitely do a decreasing size. we will just need to rework Λ, probably.
   -- we can separate out our simple rewrite rule ones from our actual ones.
-  | pair   : Apply M x a
+  | pair     : Apply M x a
     → Apply N x b
     → Apply b a c
-    → ApplyCompound Val(λ env 1 => ⟦β⟧⟨M, N⟩) Val(neutral(&(x)))
+    → Apply Val(λ env 1 => ⟦β⟧⟨M, N⟩) Val(neutral(&(x)))
       Val(neutral(⟦β⟧(a, c)))
-  | eval   : Apply x y f'
+  | eval     : Apply x y f'
     → Apply f' z e'
-    → ApplyCompound Val(λ env 1 => Eval(_α, _β, x)) Val(neutral(⟦__β⟧(y, z))) e'
-  | quot   : ApplyCompound Val(λ env 1 => `(β, x)) y x
+    → Apply Val(λ env 1 => Eval(_α, _β, x)) Val(neutral(⟦__β⟧(y, z))) e'
+  | quot     : Apply Val(λ env 1 => `(β, x)) y x
   -- f ∘ g x
   -- again, need to handle second round
   -- can use β-reducer for this.
-  | comp'  : Apply g x A  → Apply f A B → ApplyCompound Val(λ env 1 => f ∘' g) x B
-  | comp   : Apply g x A  → Apply f A B → ApplyCompound Val(λ env 1 => f ∘ g) x B
-  | comp₂  : Apply g x A  → Apply f A B → ApplyCompound Val(λ env 1 => f ∘∘ g) x B
-  | curr₂  : Apply x' Val(neutral(⟦β⟧(y, z))) e' → ApplyCompound Val(λ y::env 1 => Λ(α, β, x)) z e'
-  | curr'₂ : Apply x Val(neutral(&(neutral(⟦β⟧(y, z))))) e' → ApplyCompound Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) Val(neutral(&(z))) e'
-
-end
+  | comp'    : Apply g x A  → Apply f A B → Apply Val(λ env 1 => f ∘' g) x B
+  | comp     : Apply g x A  → Apply f A B → Apply Val(λ env 1 => f ∘ g) x B
+  | comp₂    : Apply g x A  → Apply f A B → Apply Val(λ env 1 => f ∘∘ g) x B
+  | curr₂    : Apply x' Val(neutral(⟦β⟧(y, z))) e' → Apply Val(λ y::env 1 => Λ(α, β, x)) z e'
+  | curr'₂   : Apply x Val(neutral(&(neutral(⟦β⟧(y, z))))) e'
+    → Apply Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) Val(neutral(&(z))) e'
+  -- TODO: This shouldn't be possible
+  --| neut     : Apply Val(neutral(f)) x Val(neutral(f x))
 
 mutual
 

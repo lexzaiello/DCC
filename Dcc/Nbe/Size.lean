@@ -25,19 +25,19 @@ def Neutral.size (nv : Neutral) : ℕ :=
   | Neutral(refl(α)) => α.size + 3
   | Neutral(Sort m) => m
   | Neutral(Σ(α, β)) => α.size + β.size + 2
-  | Neutral(`(_β, x)) => x.size + 2
+  | Neutral(`(_β, x)) => x.measure + 2
   | Neutral(⟦_β⟧(x, y)) => x.measure + y.measure
   | Neutral(Coup(β)) => β.size
   | Neutral(Id(_α))      => 2
   | Neutral(Fstc(_α))    => 2
   | Neutral(Sndc(_α))    => 2
-  | Neutral(f ∘' g) => f.size + f.size + g.size + 2
-  | Neutral(f ∘ g)  => f.size + f.size + g.size + 2
-  | Neutral(f ∘∘ g)  => f.size + f.size + g.size + 2
+  | Neutral(f ∘' g) => f.measure + f.measure + g.measure + 2
+  | Neutral(f ∘ g)  => f.measure + f.measure + g.measure + 2
+  | Neutral(f ∘∘ g)  => f.measure + f.measure + g.measure + 2
   | Neutral(⟦_β⟧⟨a, b⟩)   => a.measure + a.measure + b.measure + 2
-  | Neutral(Λ(α, β, x)) => α.size + β.size + x.size + 2
-  | Neutral(!Λ(α, β, x)) => α.size + β.size + x.size + 2
-  | Neutral(Eval(_α, _β, x)) => x.size + 1
+  | Neutral(Λ(α, β, x)) => α.size + β.size + x.measure + 2
+  | Neutral(!Λ(α, β, x)) => α.size + β.size + x.measure + 2
+  | Neutral(Eval(_α, _β, x)) => x.measure + 1
   | Neutral(!(x))            => x.measure
   | Neutral(*(α))            => α.size + 1
   | Neutral(&(x))            => x.measure + x.measure + x.measure + 2
@@ -66,30 +66,14 @@ theorem Val.size_le_measure : Val.size x ≤ Val.measure x := by
   cases x <;> grind
 
 @[dcc_size]
-theorem ApplySimple.decreasing (h : ApplySimple f x e') : e'.measure < f.measure + x.measure := by
-  cases h <;> grind
+theorem Apply.decreasing (h : Apply f x e') : e'.measure < f.measure + x.measure := by
+  induction h
+  any_goals (grind)
+  case curr₂ =>
+    dcc_simp_all
+    
+    sorry
 
-mutual
-
-@[dcc_size]
-theorem Apply.decreasing (h : Apply f x e') : e'.measure < f.measure + x.measure :=
-  match h with
-  | .simple h => h.decreasing
-  | .compound h => h.decreasing
-
-@[dcc_size]
-theorem ApplyCompound.decreasing (h : ApplyCompound f x e') : e'.measure < f.measure + x.measure := by
-  cases h
-  case fmap f x e' env h | map f x e' env h =>
-    have ha := h.decreasing
-    have hb := e'.size_le_measure
-    have hc := f.size_le_measure
-    have hd := x.size_le_measure
-    dcc_simp
-    grind
-  
-
-end
 
 /-@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def Neutral.head_arity (v : Neutral) : ℕ :=

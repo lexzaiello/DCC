@@ -495,6 +495,8 @@ termination_by v.size
 def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :=
   match v with
   | Val(neutral(neut)) =>
+    have h_dec : neut.size < Val(neutral(neut)).measure := by
+      grind
     match neut.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .neut h⟩
     | _ => .none

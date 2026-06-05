@@ -85,7 +85,7 @@ def Val.size (v : Val) : ℕ :=
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def Val.measure (v : Val) : ℕ :=
   match v with
-  | Val(neutral(x)) => x.size
+  | Val(neutral(x)) => x.size.succ
   | Val(λ env n => bdy) =>
     match env with
     | x :: _xs =>
@@ -106,9 +106,6 @@ theorem Val.measure_pos : 0 < Val.measure x := by
     split
     · grind
     · grind
-  case neut nv =>
-    dsimp [Val.measure]
-    exact Neutral.size_pos
 
 @[grind ., grind! .]
 theorem Neutral.size_pos : 0 < Neutral.size x := by
@@ -173,6 +170,10 @@ theorem Apply.decreasing (h : Apply f x e') : e'.measure < f.measure + x.measure
       unfold Val.measure
       rfl
     split <;> grind)
+
+@[grind ., grind! .]
+theorem Val.neut_measure_lt_size : nv.size < Val(neutral(nv)).measure := by
+  grind
 
 #check Apply.decreasing
 

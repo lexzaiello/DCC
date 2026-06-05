@@ -79,6 +79,14 @@ inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
     → Val.Quote level.succ Val(λ env'₁ n'₁ => bdy'₁) f_α''
     → Val.Quote level.succ.succ Val(λ env'₂ n'₂ => bdy'₂) f_β''
     → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
+  | pi' : Apply f_α env f_α₁
+    → Apply f_α₁ Val(neutral(var(level))) Val(neutral(f_α₂ neutral(var(level))))
+    → Apply f_β env f_β₁
+    → Apply f_β₁ Val(neutral(var(level.succ))) Val(neutral(f_β₂ neutral(var(level.succ))))
+    → Neutral.Quote level.succ f_α₂ f_α'
+    → Neutral.Quote level.succ.succ f_β₂ f_β'
+    → Val.Quote level env env'
+    → Val.Quote level Val(Π (f_α) ⟦env⟧ 0, f_β) (DCC (Π(f_α', f_β') env'))
 
 end
 
@@ -400,6 +408,41 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
       match Val(λ env'₁ n'₁ => bdy'₁).quote level.succ, Val(λ env'₂ n'₂ => bdy'₂).quote level.succ.succ with
       | .some ⟨_, h₃⟩, .some ⟨_, h₄⟩ => .some ⟨_, .pi₄ h₁ h₂ h₃ h₄⟩
       | _, _ => .none
+    | _, _ => .none
+  | Val(Π (f_α) ⟦env⟧ 0, f_β) => do
+    let ⟨f_α₁, h₁⟩ ← f_α.apply env
+    have h_dec₁ := h₁.decreasing
+    have h_dec₁' : f_α₁.measure < Val(Π (f_α) ⟦env⟧ 0, f_β).measure := by
+      grind
+    let ⟨f_α₂, h₂⟩ ← f_α₁.apply Val(neutral(var(level)))
+    let ⟨f_β₁, h₃⟩ ← f_β.apply env
+    have h_dec₂ := h₂.decreasing
+    have h_dec₃₃ := h₃.decreasing
+    have h_dec₂' : f_β₁.measure < Val(Π (f_α) ⟦env⟧ 0, f_β).measure := by
+      grind
+    let ⟨f_β₂, h₄⟩ ← f_β₁.apply Val(neutral(var(level.succ)))
+    have h_dec₃ := h₃.decreasing
+    have h_dec₄ := h₄.decreasing
+    match heq : f_α₂, f_β₂ with
+    | Val(neutral(f_α₂' neutral(var(level₁)))), Val(neutral(f_β₂' neutral(var(level₂ + 1)))) =>
+      if heq₁ : level₁ = level then
+        if heq₂ : level₂ = level then
+          have h_dec₅ : f_α₂'.size < (Val.pi [env] 0 f_α f_β).measure := by
+            grind
+          have h_dec₅ : f_β₂'.size < (Val.pi [env] 0 f_α f_β).measure := by
+            grind
+          let ⟨f_α', h₅⟩ ← f_α₂'.quote level.succ
+          let ⟨f_β', h₆⟩ ← f_β₂'.quote level.succ.succ
+          have h_env_dec : env.measure < (Val.pi [env] 0 f_α f_β).measure := by
+            grind
+          let ⟨env', h₇⟩ ← env.quote level
+          by
+            cases heq
+            cases heq₁
+            cases heq₂
+            exact .some ⟨_, .pi' h₁ h₂ h₃ h₄ h₅ h₆ h₇⟩
+        else .none
+      else .none
     | _, _ => .none
   | _ => .none
 termination_by (v.measure, sizeOf v)

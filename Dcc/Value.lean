@@ -1,4 +1,6 @@
+import Dcc.Attrs
 import Dcc.Ast
+import Dcc.Aff.Size
 import Dcc.Relation
 
 namespace Expr
@@ -174,15 +176,17 @@ inductive Neutral where
   | var (idx : ℕ)               : Neutral
   | app (f : Neutral) (x : Val) : Neutral
   | comb (c : Expr)             : Neutral
+  | eq (x y : Val)              : Neutral
+  | bang (x : Val)              : Neutral
+  | boxed (x : Val)             : Neutral
+  | coup  (β x y : Val)         : Neutral
+  | t_coup (β : Val)            : Neutral
+  | top                         : Neutral
+  | bot                         : Neutral
+  | tintro                      : Neutral
+  | sort (m : Level)            : Neutral
 
 inductive Val where
-  | eq    : Val → Val → Val
-  -- !(v)
-  | bang  : Val → Val
-  -- &(v)
-  | boxed : Val → Val
-  | coup  (β x y : Val) : Val
-  | t_coup (β : Val)    : Val
   -- Combinators get translated into these
   -- quotation / reflection / reification
   -- ideally η-simplify these
@@ -234,15 +238,19 @@ syntax val_expr noWs "::" noWs val_list                      : val_list
 syntax ident noWs "::" noWs val_list                         : val_list
 syntax:max ident                                             : val_list
 
-syntax (priority := low) "⟦" val_expr "⟧" "(" val_expr,* ")" : val_expr
+syntax (priority := low) "⟦" val_expr "⟧" "(" val_expr,* ")" : neut_expr
 syntax "λ" val_list term "=>" gen_dcc                        : val_expr
-syntax val_expr "=" val_expr                                 : val_expr
-syntax "!(" val_expr ")"                                     : val_expr
-syntax "&(" val_expr ")"                                     : val_expr
+syntax val_expr "=" val_expr                                 : neut_expr
+syntax "!(" val_expr ")"                                     : neut_expr
+syntax "&(" val_expr ")"                                     : neut_expr
 syntax "neutral(" neut_expr ")"                              : val_expr
-syntax "Coup(" val_expr ")"                                  : val_expr
+syntax "Coup(" val_expr ")"                                  : neut_expr
 syntax:max ident                                             : val_expr
 syntax "#(" term ")"                                         : val_expr
+syntax "⊤"                                                   : neut_expr
+syntax "⊥"                                                   : neut_expr
+syntax "∗"                                                   : neut_expr
+syntax "Sort" term                                           : neut_expr
 
 syntax "Vals(" val_list ")"         : term
 syntax "Val(" val_expr ")"          : term
@@ -251,22 +259,26 @@ syntax "NeutralAtom(" neut_atom ")" : term
 
 open Lean in
 macro_rules
+  | `(Neutral(⊤)) => `(Neutral.top)
+  | `(Neutral(⊥)) => `(Neutral.bot)
+  | `(Neutral(∗)) => `(Neutral.tintro)
+  | `(Neutral(Sort $m:term)) => `(Neutral.sort $m:term)
   | `(NeutralAtom(raw($e:gen_dcc))) => `(Neutral.comb (DCC($e:gen_dcc)))
   | `(NeutralAtom(var($n:term))) => `(Neutral.var $n:term)
-  | `(Val(Coup($β:val_expr))) => `(Val.t_coup Val($β:val_expr))
+  | `(Neutral(Coup($β:val_expr))) => `(Neutral.t_coup Val($β:val_expr))
   | `(Vals($list:ident)) => `($list:term)
-  | `(Val(⟦$β:val_expr⟧($args:val_expr,*))) => do
+  | `(Neutral(⟦$β:val_expr⟧($args:val_expr,*))) => do
     let elems ← args.getElems.mapM (fun (v : TSyntax `val_expr) => `(Val($v)))
-    `(Val.coup (Val($β:val_expr)) $elems*)
+    `(Neutral.coup (Val($β:val_expr)) $elems*)
   | `(Val($e:ident))     => `($e:term)
   | `(Vals(⟦$vals:val_expr,*⟧)) => do
     let elems ← vals.getElems.mapM (fun (v : TSyntax `val_expr) => `(Val($v:val_expr)))
     `([$elems,*])
   | `(Vals($x:val_expr::$xs:val_list)) => `((Val($x))::(Vals($xs)))
   | `(Vals($x:ident::$xs:val_list)) => `($x:term::(Vals($xs)))
-  | `(Val($x:val_expr = $y:val_expr)) => `(Val.eq (Val($x:val_expr)) (Val($y:val_expr)))
-  | `(Val(!($x:val_expr))) => `(Val.bang (Val($x)))
-  | `(Val(&($x:val_expr))) => `(Val.boxed (Val($x)))
+  | `(Neutral($x:val_expr = $y:val_expr)) => `(Neutral.eq (Val($x:val_expr)) (Val($y:val_expr)))
+  | `(Neutral(!($x:val_expr))) => `(Neutral.bang (Val($x)))
+  | `(Neutral(&($x:val_expr))) => `(Neutral.boxed (Val($x)))
   | `(Val(neutral($x:neut_expr))) => `(Val.neut (Neutral($x:neut_expr)))
   | `(Val(λ $env:val_list $n:term => $bdy:gen_dcc)) => do
     `(Val.lam (Vals($env:val_list)) $n:term (DCC($bdy:gen_dcc)))
@@ -297,7 +309,31 @@ macro_rules
       `(Neutral.app (Neutral($f)) $idt:ident)
     | _ => Macro.throwUnsupported
 
-namespace Val
+mutual
+
+@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
+def Neutral.size (nv : Neutral) : ℕ :=
+  match nv with
+  | Neutral(var(_m)) => 0
+  | Neutral(f x) => f.size + x.size
+  | Neutral(raw(c)) => c.size
+  | Neutral(x = y) => x.size + y.size
+  | Neutral(!(x)) => x.size
+  | Neutral(&(x)) => x.size
+  | Neutral(⟦β⟧(x, y)) => x.size + y.size
+  | Neutral(Coup(β)) => β.size
+  | Neutral(⊤) => (DCC ⊤).size
+  | Neutral(⊥) => (DCC ⊥).size
+  | Neutral(∗) => (DCC ∗).size
+  | Neutral(Sort m) => (DCC Sort m).size
+
+@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
+def Val.size (v : Val) : ℕ :=
+  match v with
+  | Val(neutral(x)) => x.size
+  | Val(λ _env _n => bdy) => bdy.size
+
+end
 
 mutual
 
@@ -306,14 +342,14 @@ which expressions can be converted to values,
 given an environment.
 -/
 inductive Eval : List Val → Expr → Val → Type
-  | top    : Eval env (DCC ⊤) Val(neutral(raw(⊤)))
-  | tintro : Eval env (DCC ∗) Val(neutral(raw(∗)))
-  | bot    : Eval env (DCC ⊥) Val(neutral(raw(⊥)))
-  | sort   : Eval env (DCC Sort m) Val(neutral(raw(Sort m)))
+  | top    : Eval env (DCC ⊤) Val(neutral(⊤))
+  | tintro : Eval env (DCC ∗) Val(neutral(∗))
+  | bot    : Eval env (DCC ⊥) Val(neutral(⊥))
+  | sort   : Eval env (DCC Sort m) Val(neutral(Sort m))
   | map    : Eval env (DCC !<f>) Val(λ env 1 => !<f>)
   | fmap   : Eval env (DCC $<f>) Val(λ env 1 => $<f>)
-  | boxed  : Eval env x x' → Eval env (DCC &(x)) Val(&(x'))
-  | bang   : Eval env x x' → Eval env (DCC !(x)) Val(!(x'))
+  | boxed  : Eval env x x' → Eval env (DCC &(x)) Val(neutral(&(x')))
+  | bang   : Eval env x x' → Eval env (DCC !(x)) Val(neutral(!(x')))
   | unbox  : Eval env (DCC *(x)) Val(λ env 1 => *(x))
   | eval   : Eval env (DCC Eval(α, β, x)) Val(λ env 1 => Eval(α, β, x))
   | quot   : Eval env (DCC `(β, x)) Val(λ env 1 => `(β, x))
@@ -325,10 +361,10 @@ inductive Eval : List Val → Expr → Val → Type
   | pi     : Eval env (DCC Π(f_α, f_β)) Val(λ env 1 => Π(f_α, f_β))
   | pair   : Eval env (DCC ⟦β⟧⟨M, N⟩) Val(λ env 1 => ⟦β⟧⟨M, N⟩)
   | coup   : Eval env β β' → Eval env a a'
-    → Eval env b b' → Eval env (DCC ⟦β⟧(a, b)) Val(⟦β'⟧(a', b'))
-  | t_coup : Eval env β β' → Eval env (DCC Coup(β)) Val(Coup(β'))
+    → Eval env b b' → Eval env (DCC ⟦β⟧(a, b)) Val(neutral(⟦β'⟧(a', b')))
+  | t_coup : Eval env β β' → Eval env (DCC Coup(β)) Val(neutral(Coup(β')))
   | sigma  : Eval env (DCC Σ(α, β)) Val(λ env 1 => Σ(α, β))
-  | eq     : Eval env x x' → Eval env y y' → Eval env (DCC (x = y)) Val(x' = y')
+  | eq     : Eval env x x' → Eval env y y' → Eval env (DCC (x = y)) Val(neutral(x' = y'))
   | eql    : Eval env (DCC Eql(f_α)) Val(λ env 2 => Eql(f_α))
   | refl   : Eval env (DCC refl(f_α)) Val(λ env 2 => refl(f_α))
   | comp   : Eval env (DCC f ∘ g) Val(λ env 1 => f ∘ g)
@@ -337,39 +373,54 @@ inductive Eval : List Val → Expr → Val → Type
   | app    : Eval env f f' → Eval env x x' → Apply f' x' e' → Eval env (DCC (f x)) e'
 
 inductive Apply : (f : Val) → (x : Val) → Val → Type
-  | eql    : Apply Val(λ env 1 => Eql(f_α)) Val(&(x)) x
-  | map    : Apply Val(λ env 1 => !<f>) Val(&(x)) Val(!(neutral(raw(f) x)))
-  | fmap   : Apply Val(λ env 1 => $<f>) Val(&(x)) Val(&(neutral(raw(f) x)))
-  | unbox  : Apply Val(λ env 1 => *(α)) Val(&(x)) Val(x)
-  | pair   : Apply Val(λ env 1 => ⟦β⟧⟨M, N⟩) Val(&(x)) Val(⟦neutral(raw(β))⟧(
-    neutral(raw(M) x), neutral(raw(N) x (raw(M) x))))
-  | eval   : Apply Val(λ env 1 => Eval(_α, _β, x)) Val(⟦__β⟧(y, z)) Val(neutral(raw(x) y z))
-  | quot   : Apply Val(λ env 1 => `(β, x)) y Val(neutral(raw(x)))
+  | eql    : Apply Val(λ env 1 => Eql(f_α)) Val(neutral(&(x))) x
+  | map    : Eval [] f f' → Apply f' x e' → Apply Val(λ env 1 => !<f>) Val(neutral(&(x))) Val(neutral(!(e')))
+  | fmap   : Eval [] f f' → Apply f' x e' → Apply Val(λ env 1 => $<f>) Val(neutral(&(x))) Val(neutral(&(e')))
+  | unbox  : Apply Val(λ env 1 => *(α)) Val(neutral(&(x))) Val(x)
+  | pair   : Eval [] M M' → Eval [] N N' → Apply M' x a → Apply N' x b
+    → Apply b a e'
+    → Apply Val(λ env 1 => ⟦β⟧⟨M, N⟩) Val(neutral(&(x))) Val(neutral(⟦neutral(raw(β))⟧(
+      neutral(raw(M) x), neutral(raw(N) x (raw(M) x)))))
+  | eval   : Eval [] x x' → Apply x' y e₁ → Apply e₁ z e'
+    → Apply Val(λ env 1 => Eval(_α, _β, x)) Val(neutral(⟦__β⟧(y, z))) e'
+  | quot   : Eval [] x x' → Apply Val(λ env 1 => `(β, x)) y x'
   | id     : Apply Val(λ env 1 => Id(α)) x x
-  | fstc   : Apply Val(λ env 1 => Fstc(_α)) Val(⟦β⟧(a, b)) a
-  | sndc   : Apply Val(λ env 1 => Sndc(_α)) Val(⟦β⟧(a, b)) b
-  | comp'  : Apply Val(neutral(raw(y))) z A → Apply Val(neutral(raw(x))) A B
-    → Apply Val(λ env 1 => (x ∘' y)) z Val(neutral(raw(x) (raw(y) z)))
-  | comp   : Apply Val(λ env 1 => (x ∘ y)) z Val(neutral(raw(x) (raw(y) z)))
-  | comp₂  : Apply Val(λ env 1 => (x ∘∘ y)) z Val(neutral(raw(x) (raw(y) z)))
+  | fstc   : Apply Val(λ env 1 => Fstc(_α)) Val(neutral(⟦β⟧(a, b))) a
+  | sndc   : Apply Val(λ env 1 => Sndc(_α)) Val(neutral(⟦β⟧(a, b))) b
+  -- f ∘ g x
+  | comp'  : Eval [] f f' → Eval [] g g' → Apply g' x A → Apply f' A B → Apply Val(λ env 1 => (f ∘' g)) x B
+  | comp   : Eval [] f f' → Eval [] g g' → Apply g' x A → Apply f' A B → Apply Val(λ env 1 => (f ∘ g)) x B
+  | comp₂  : Eval [] f f' → Eval [] g g' → Apply g' x A → Apply f' A B → Apply Val(λ env 1 => (f ∘∘ g)) x B
   | curr₁  : Apply Val(λ env 2 => Λ(α, β, x)) y Val(λ y::env 1 => Λ(α, β, x))
-  | curr₂  : Apply Val(λ y::env 1 => Λ(α, β, x)) z Val(neutral(raw(x) ⟦neutral(raw(β))⟧(y, z)))
-  | curr'₁ : Apply Val(λ env 2 => !Λ(α, β, x)) Val(&(y)) Val(λ &(y)::env 1 => !Λ(α, β, x))
-  | curr'₂ : Apply Val(λ &(y)::env 1 => !Λ(α, β, x)) Val(&(z)) Val(neutral(raw(x) &(⟦neutral(raw(β))⟧(y, z))))
+  | curr₂  : Eval [] x x' → Apply x' Val(neutral(⟦neutral(raw(β))⟧(y, z))) e'
+    → Apply Val(λ y::env 1 => Λ(α, β, x)) z e'
+  | curr'₁ : Apply Val(λ env 2 => !Λ(α, β, x)) Val(neutral(&(y))) Val(λ neutral(&(y))::env 1 => Λ(α, β, x))
+  | curr'₂ : Eval [] x x' → Apply x' Val(neutral(&(neutral(⟦neutral(raw(β))⟧(y, z))))) e'
+    → Apply Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) Val(neutral(&(z))) e'
   | neut   : Apply Val(neutral(f)) x Val(neutral(f x))
 
 end
 
-def apply (f x : Val) : Val :=
-  match f with
-  | .lam ctx arity bdy =>
-    match arity with
-    | .succ (.succ n) =>
-      .lam (x :: ctx) (.succ n) bdy
-    | _ =>
-      match bdy, ctx with
-      | DCC (Eql(f_α)), _ :: (.boxed v) :: _xs => .eq v v
-      
+theorem eval_size (h : Eval _env e v) : e.size = v.size := by
+  cases h with
+  | top =>
+    
+
+def apply (f x : Val) : ((e' : Val) × Apply f x e') :=
+  match f, x with
+  | Val(λ env 1 => Eql(f_α)), Val(neutral(&(x))) => ⟨_, .eql⟩
+  | Val(λ env 1 => !<f>), Val(neutral(&(x))) =>
+    
+  | Val(λ env 1 => $<f>), Val(neutral(&(x))) => ⟨_, .fmap⟩
+  | Val(λ env 1 => *(α)), Val(neutral(&(x))) => ⟨_, .unbox⟩
+  | Val(λ env 1 => ⟦β⟧⟨M, N⟩), Val(neutral(&(x))) => ⟨_, .pair⟩
+  | Val(λ env 1 => Eval(_α, _β, x)), Val(neutral(⟦__β⟧(y, z))) => ⟨_, .eval⟩
+  | Val(λ env 1 => `(β, x)), y => ⟨_, .quot⟩
+  | Val(λ env 1 => Id(α)), x => ⟨_, .id⟩
+  | Val(λ env 1 => Fstc(_α)), Val(neutral(⟦β⟧(a, b))) => ⟨_, .fstc⟩
+  | Val(λ env 1 => Sndc(_α)), Val(neutral(⟦β⟧(a, b))) => ⟨_, .sndc⟩
+  | Val(λ env 1 => (x ∘' y)), z =>
+    match 
 
 def quote (v : Val) : Expr :=
   match v with

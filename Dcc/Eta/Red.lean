@@ -58,8 +58,8 @@ inductive RedEta : Expr → Expr → Prop
   --| quot'_fst'₂    : RedEta (DCC `(α, x) ∘' Fstc(β) ∘' z) (DCC `(Coup(β), x) ∘' z)
   --| quot_snd'₂     : RedEta (DCC `(α, x) ∘ Sndc(β) ∘ z) (DCC `(Coup(β), x) ∘ z)
   --| quot'_snd'₂    : RedEta (DCC `(α, x) ∘' Sndc(β) ∘' z) (DCC `(Coup(β), x) ∘' z)
-  | pi_comp    : RedEta (DCC (Π(f_α, f_β) ∘ x)) (DCC (Π(f_α ∘ x, f_β ∘ x)))
-  | pi'_comp   : RedEta (DCC (Π(f_α, f_β) ∘' x)) (DCC (Π(f_α ∘' x, f_β ∘' x)))
+  --| pi_comp    : RedEta (DCC (Π(f_α, f_β) ∘ x)) (DCC (Π(f_α ∘ x, f_β ∘ x))) TURBO SUS DELETED
+  --| pi'_comp   : RedEta (DCC (Π(f_α, f_β) ∘' x)) (DCC (Π(f_α ∘' x, f_β ∘' x)))
   | compl      : RedEta (DCC (a ∘ b)) a' → RedEta (DCC ((a ∘ b) ∘ c)) (DCC (a' ∘ c))
   | compl'     : RedEta (DCC (a ∘' b)) a' → RedEta (DCC ((a ∘' b) ∘' c)) (DCC (a' ∘' c))
   /-| pair_snd   : Relation.ReflTransGen RedAff N N' → IsNorm RedAff N'
@@ -88,6 +88,24 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   case pair_snd hrt hnm =>
     intro ⟨_, h⟩
     exact hnm ⟨_, h⟩-/
+  /-case pi_comp | pi'_comp =>
+    intro ⟨_, h⟩
+    cases h with
+    | pil h => cases h
+    | pir h => cases h-/
+  case pi' β β' α h ih =>
+    have hnα : IsNorm RedAff α := by
+      intro ⟨_, h⟩
+      exact hn ⟨_, .pil h⟩
+    have hnβ : IsNorm RedAff β := by
+      intro ⟨_, h⟩
+      exact hn ⟨_, .pir h⟩
+    have h := ih hnβ
+    intro ⟨_, hr⟩
+    cases hr with
+    | pil =>
+      exact hnα ⟨_, by assumption⟩
+    | pir => exact h ⟨_, by assumption⟩
   case pi h ih =>
     cases h with
     /-| pi_quot =>
@@ -187,8 +205,8 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   | (DCC `(α, x) ∘' Fstc(β)) => .some ⟨_, ⟨.quot'_fst⟩⟩
   | (DCC `(α, x) ∘ Sndc(β)) => .some ⟨_, ⟨.quot_snd⟩⟩
   | (DCC `(α, x) ∘' Sndc(β)) => .some ⟨_, ⟨.quot'_snd⟩⟩
-  | DCC (Π(f_α, f_β) ∘ x) => .some ⟨_, ⟨.pi_comp⟩⟩
-  | DCC (Π(f_α, f_β) ∘' x) => .some ⟨_, ⟨.pi'_comp⟩⟩
+  /-| DCC (Π(f_α, f_β) ∘ x) => .some ⟨_, ⟨.pi_comp⟩⟩
+  | DCC (Π(f_α, f_β) ∘' x) => .some ⟨_, ⟨.pi'_comp⟩⟩-/
   --| (DCC (`(α, x) ∘ Fstc(β)) ∘ z) => .some ⟨_, ⟨.quot_fst'⟩⟩
   --| (DCC (`(α, x) ∘' Fstc(β)) ∘' z) => .some ⟨_, ⟨.quot'_fst'⟩⟩
   --| (DCC (`(α, x) ∘ Sndc(β)) ∘ z) => .some ⟨_, ⟨.quot_snd'⟩⟩
@@ -229,7 +247,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
 
 @[dcc_reduce, aesop safe forward (rule_sets := [DccRel])] theorem RedEta.unique (h₁ : RedEta A B) (h₂ : RedEta A C) : B = C := by
   induction h₁ generalizing C with
-  | pi_comp | pi'_comp
+  --| pi_comp | pi'_comp
   | quot_fst
   | curr_quot_c | quot | compl | compl' | quot_unbox | quot_unbox' | coup | curr_fst' | curr_fst | quot'_fst | quot'_snd | quot_snd | sig' | pi => cases h₂; aesop
   /-| pi_quot hr ih =>

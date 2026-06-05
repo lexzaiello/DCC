@@ -1,6 +1,5 @@
 import Dcc.Ast
 import Dcc.Relation
-import Dcc.Reduces
 
 namespace Expr
 
@@ -49,20 +48,6 @@ inductive IsRedCombApp : Expr → Arity → Type
   | curr  : IsRedCombApp (DCC Λ(α, β, x)) 2
   | app   : IsRedCombApp f (m + 1) → IsRedCombApp (DCC (f x)) m
 
-namespace Reduced
-
-theorem head (hr : Reduced A D) : ∃ B C, RedEtaReflTrans C D ∧ RedAff A B ∧ (B = C ∨ RedAffTrans B C) ∧ IsNorm RedAff C ∧ IsNorm RedEta D := by
-  match hr with
-  | ⟨hr₁, hn₁, hr₂, hn₂⟩ =>
-    cases hr₁ using Relation.TransGen.head_induction_on with
-    | single h => exact ⟨_, _, hr₂, h, .inl rfl, hn₁, hn₂⟩
-    | head h ih => exact ⟨_, _, hr₂, h, .inr ih, hn₁, hn₂⟩
-
-/-theorem Reduced.step_comb₁ (h_f : IsRedComb f 1) (h_r : Reduced (DCC (f x))) : ∃ e' e'',
-  RedAff (DCC (f x)) e' ∧ RedAffReflTrans -/
-
-end Reduced
-
 /-
 A normal form is either:
 - a combinator with fewer than its arity arguments applied
@@ -85,9 +70,9 @@ A normal form is either:
 - ∗
 -/
 
-inductive Value : Expr → Prop
-  | pi₁    : Value f_β → Value (DCC Π(f_α, f_β))
-  | pi₂    : Value f_β → Value env → Value (DCC (Π(f_α, f_β) env))
+inductive Value : Expr → Type
+  | pi₁    : Value f_α → Value f_β → Value (DCC Π(f_α, f_β))
+  | pi₂    : Value f_α → Value f_β → Value env → Value (DCC (Π(f_α, f_β) env))
   | refl₁  : Value env → Value (DCC (refl(f_α) env))
   | refl₂  : Value env → Value x → Value (DCC (refl(f_α) env x))
   | coup   : Value f_β → Value (DCC Coup(f_β))
@@ -99,10 +84,10 @@ inductive Value : Expr → Prop
   | tintro : Value (DCC ∗)
   | sort   : Value (DCC Sort m)
 
-inductive TyValue : Expr → Prop
+inductive TyValue : Expr → Type
   -- potentially sus IsNorm
-  | pi     : IsNorm RedEta f_β → Value env → TyValue (DCC (Π(f_α, f_β) env))
-  | eq     : TyValue (DCC x = y)
+  | pi     : Value f_α → Value f_β → Value env → TyValue (DCC (Π(f_α, f_β) env))
+  | eq     : Value x → Value y → TyValue (DCC x = y)
   | top    : TyValue (DCC ⊤)
   | bot    : TyValue (DCC ⊥)
   | tintro : TyValue (DCC ∗)

@@ -24,26 +24,50 @@ def NeutralTm.size (nv : NeutralTm) : ℕ :=
   | NeutralTm(refl(α)) => α.measure + 3
   | NeutralTm(Sort _m) => 1
   | NeutralTm(Σ(α, β)) => α.measure + β.measure + 2
-  | NeutralTm(`(_β, x)) => x.measure + 2
-  | NeutralTm(⟦_β⟧(x, y)) => x.measure + y.measure
-  | NeutralTm(Coup(β)) => β.size
+  | NeutralTm(`(β, x)) => β.measure + x.measure + 2
+  | NeutralTm(⟦β⟧(x, y)) => β.measure + x.measure + y.measure
+  | NeutralTm(Coup(β)) => β.measure
   | NeutralTm(Id(_α))      => 2
   | NeutralTm(Fstc(_α))    => 2
   | NeutralTm(Sndc(_α))    => 2
   | NeutralTm(f ∘' g) => f.measure + f.measure + g.measure + 2
   | NeutralTm(f ∘ g)  => f.measure + f.measure + g.measure + 2
   | NeutralTm(f ∘∘ g)  => f.measure + f.measure + g.measure + 2
-  | NeutralTm(⟦_β⟧⟨a, b⟩)   => a.measure + a.measure + b.measure + 2
+  | NeutralTm(⟦β⟧⟨a, b⟩)   => β.measure + a.measure + a.measure + b.measure + 2
   | NeutralTm(Λ(α, β, x)) => α.measure + β.measure + x.measure + 2
-  | NeutralTm(!Λ(α, β, x)) => α.measure + β.measure + x.measure + 2
+  | NeutralTm(!Λ(α, β, x)) => α.measure + β.measure + β.measure + β.measure + x.measure + 2
   | NeutralTm(Eval(_α, _β, x)) => x.measure + 1
   | NeutralTm(!(x))            => x.measure
   | NeutralTm(*(α))            => α.measure + 1
   | NeutralTm(&(x))            => x.measure + x.measure + x.measure + 2
   | NeutralTm(!<x>)            => x.measure + x.measure + x.measure + 2
   | NeutralTm($<x>)            => x.measure + x.measure + x.measure + 2
-  | NeutralTm(f x)             => f.size + x.size
+  | NeutralTm(f x)             => f.size + x.measure
   --| NeutralTm(var(v) x)        => Neutral(var(v)).size + x.size
+
+/-
+a_ih :
+  e'.measure <
+    x.measure +
+      (β.measure + y.measure + z.measure + (β.measure + y.measure + z.measure) +
+          (β.measure + y.measure + z.measure) +
+        2)
+⊢ e'.measure <
+    α.measure + β.measure + x.measure + 2 + (y.measure + y.measure + y.measure + 2) + 1 +
+      (z.measure + z.measure + z.measure + 2)
+
+matching:
+  - 3 ys cancel out
+  - α cancels out
+  - β needs two more
+
+total constant sum:
+  - before: 2
+  - after: 7
+α sum:
+  - before: 
+
+-/
 
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def Neutral.size (nv : Neutral) : ℕ :=
@@ -101,7 +125,7 @@ theorem NeutralTm.size_pos : 0 < NeutralTm.size x := by
     have h := f.size_pos
     grind
   case t_coup x =>
-    have h := x.size_pos
+    have h := x.measure_pos
     grind
   case eq x y =>
     have h₁ := x.measure_pos

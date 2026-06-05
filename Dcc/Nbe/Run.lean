@@ -321,21 +321,34 @@ def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote le
     | .some ⟨_, h⟩ => .some ⟨_, .eql h⟩
     | _ => .none
   | Neutral(refl(α))  =>
+    have h_dec₁ : α.measure < Neutral(refl(α)).size := by
+      grind
     match α.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .refl h⟩
     | _ => .none
   | Neutral(Sort _m) => .some ⟨_, .sort⟩
   | Neutral(Σ(α, β)) =>
+    have h_dec₁ : α.measure < Neutral(Σ(α, β)).size := by
+      grind
+    have h_dec₂ : β.measure < Neutral(Σ(α, β)).size := by
+      grind
     match α.quote level, β.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
       .some ⟨_, .sigma h₁ h₂⟩
     | _, _ => .none
   | Neutral(`(β, x)) =>
+    have h_dec₁ : β.measure < Neutral(`(β, x)).size := by
+      grind
+    have h_dec₂ : x.measure < Neutral(`(β, x)).size := by
+      grind
     match β.quote level, x.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
       .some ⟨_, .quot h₁ h₂⟩
     | _, _ => .none
   | Neutral(⟦β⟧(x, y)) =>
+    have h_dec₁ : β.measure < Neutral(⟦β⟧(x, y)).size := by
+      grind
+    
     match β.quote level, x.quote level, y.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
       .some ⟨_, .coup h₁ h₂ h₃⟩

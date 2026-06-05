@@ -161,7 +161,9 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) : Lean.MacroM _root_.Expr := do
             | .some (DCC (Π(_a₁, `(_a₂, Σ(_a₃, Λ(_a₄, _a₅, `(_α₆, _a₇))) ∘' _a₈)) _a₉)) =>
               return (DCC Eval(α, β, M') ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
             | _ => return (DCC Eval(α, β, M') ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
-          | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
+          | _ => Lean.Macro.throwError ("app is not well-typed:"
+            ++ Std.Format.line ++ (.nestD (repr (Lean.Expr.app M N)))
+            ++ ("couldn't detect codomain:" ++ Std.Format.line ++ (.nestD (Std.format (DCC (f_β₀ x_α₀)).reduce_all)))).pretty
         | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
       | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
     | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
@@ -316,6 +318,14 @@ macro_rules
 #eval Std.format <| dcc_compile' (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval Std.format <| dcc_infer' (fun (α : Sort 0) (x : α) => x) True True.intro
 
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Eval(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0),
+            Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0), Sndc(`(Coup(`(⊤, Sort 0)), Sort 0))))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟦`(Coup(`(⊤, Sort 0)),
+            `(Coup(`(⊤, Sort 0)),
+              Sort 0))⟧⟨Id(Coup(`(⊤, Sort 0))),
+                                      Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
+                                        (Sndc(`(⊤, Sort 0)) ∘' Fstc(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))))))⟩).infer
+
 #eval Std.format <| dcc_compile' (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
 #eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
 #eval Std.format <| dcc_infer' ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
@@ -323,7 +333,50 @@ macro_rules
 #eval Std.format <| dcc_infer' ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
 #eval Std.format <| dcc_compile' ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun (x : Sort 0) => x) True.intro)
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Eval(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Eval(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+        (`(⊤, Sort 0)∘'Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
+        Sndc(Π(`(⊤, Sort 0),
+            Λ(⊤, `(⊤, Sort 0),
+              `(Coup(`(⊤, Sort 0)),
+                Sort
+                  0)))))).infer
+
+-- rule for this
+#eval Std.format <| (DCC Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))).reduce_all
+#eval Std.format <| (DCC (Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)) ∘'
+             Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))))).reduce_all
+
+-- turns this into a quotation
+/-
+(Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)) ∘'
+             Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))))
+-/
+
+/-
+η rules for pair are right, but need refinement
+
+Λ(..., ..., `(...)) ∘' Fstc
+
+Fstc is only applying to first argument.
+
+Λ part is destructing order is reversed in rule.
+Λ dictates what to do.
+-/
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC ⟦Λ(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+          `(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+            Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
+          `(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+                Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))))),
+            Sort 0))⟧⟨Id(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
+        Λ(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+          `(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+            Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
+          (`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+                !(⊤))∘'Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
+                  Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))))))⟩).infer
+
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Eval(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
         (`(⊤, Sort 0)∘'Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
         Sndc(Π(`(⊤, Sort 0),
             Λ(⊤, `(⊤, Sort 0),
@@ -340,7 +393,7 @@ macro_rules
             Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
           (`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
                 !(⊤))∘'Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-                  Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))))))⟩)).infer
+                  Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))))))⟩).infer
 
 dcc_trace (((!Λ(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))),
       Λ(!(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
@@ -388,43 +441,6 @@ dcc_trace (((!Λ(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, S
      &(∗))
     &((Λ(!(⊤), `(⊤, Sort 0), Sndc(`(⊤, Sort 0))) &(∗))))
    ∗)
-
-/-
-η-reduce this:
-
-Eval(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-             (`(⊤, Sort 0) ∘' Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
-             (Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)) ∘'
-                Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))))
-
-because body contains simple Λ
-
-Eval(..., ..., Snd) ∘ ⟨A, B⟩
-
-is equivalent to just
-B
-
-Same with Eval fst
--/
-
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Eval(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-        (`(⊤, Sort 0)∘'Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
-        Sndc(Π(`(⊤, Sort 0),
-            Λ(⊤, `(⊤, Sort 0),
-              `(Coup(`(⊤, Sort 0)),
-                Sort
-                  0)))))∘⟦Λ(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-          `(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-            Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
-          `(Coup(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-                Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))))),
-            Sort 0))⟧⟨Id(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
-        Λ(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-          `(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-            Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),
-          (`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-                !(⊤))∘'Fstc(`(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))),
-                  Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))))))⟩)).infer
 
 /-dcc_trace (((!Λ(⊤, Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))),
       Λ(!(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))),

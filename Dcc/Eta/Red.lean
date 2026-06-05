@@ -14,11 +14,23 @@ namespace Expr
 pi_comp may be safe.
 -/
 
+/-
+η-reduction with NbE:
+
+Note: all combinators have type-points, so we can index them by types.
+
+we can use our type normal forms for this.
+-/
+
 inductive RedEta : Expr → Expr → Prop
   --| curr       : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
+  | comp_fstc    : RedEta (DCC Λ(α, β, x)) f' → RedEta
+    (DCC (Λ(α, β, x) ∘' Fstc(b))) (DCC f' ∘' Fstc(b))
+  | curr_quot_c  : RedEta (DCC Λ(α, `(α, β), `(Coup(`(α, β)), x))) (DCC `(α, `(β, x)))
+  | curr_quot'   : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x) ∘' Id(_a)) y)) (DCC `(y, x))
   | curr_quot    : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
-  | curr_fst     : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `((β y), (x y)))
-  | curr_fst'    : RedEta (DCC (Λ(α, β, x ∘' Fstc(β₂)) y)) (DCC `((β y), (x y)))
+  | curr_fst     : RedEta (DCC (Λ(α, β, x ∘ Fstc(Coup(β))) y)) (DCC `((β y), (x y)))
+  | curr_fst'    : RedEta (DCC (Λ(α, β, x ∘' Fstc(Coup(β))) y)) (DCC `((β y), (x y)))
   | pi           : Relation.ReflTransGen RedAff env env'
     → IsNorm RedAff env'
     → RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
@@ -51,14 +63,14 @@ inductive RedEta : Expr → Expr → Prop
   | eql        : RedEta (DCC (Eql(f_α) env x)) (DCC (x = x))
   | compl      : RedEta (DCC (a ∘ b)) a' → RedEta (DCC ((a ∘ b) ∘ c)) (DCC (a' ∘ c))
   | compl'     : RedEta (DCC (a ∘' b)) a' → RedEta (DCC ((a ∘' b) ∘' c)) (DCC (a' ∘' c))
-  | pair_snd   : Relation.ReflTransGen RedAff N N' → IsNorm RedAff N'
+  /-| pair_snd   : Relation.ReflTransGen RedAff N N' → IsNorm RedAff N'
     → RedEta (DCC (Eval(_a, _b, Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩)) N'
   | pair_snd'  : Relation.ReflTransGen RedAff N N' → IsNorm RedAff N'
     → RedEta (DCC (Eval(_a, _b, f ∘' Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩)) (DCC (f ∘' N'))
   | pair_fst   : Relation.ReflTransGen RedAff M M'
     → IsNorm RedAff M' → RedEta (DCC (Eval(_a, _b, Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) M'
   | pair_fst'  : Relation.ReflTransGen RedAff M M'
-    → IsNorm RedAff M' → RedEta (DCC (Eval(_a, _b, f ∘' Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) (DCC (f ∘' M'))
+    → IsNorm RedAff M' → RedEta (DCC (Eval(_a, _b, f ∘' Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) (DCC (f ∘' M'))-/
   | quot       : RedEta x x' → RedEta (DCC `(β, x)) (DCC `(β, x'))
   /-| quot_comp : RedEta (DCC (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
@@ -71,12 +83,12 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     cases h
     done
   )
-  case pair_fst hrt hnm =>
+  /-case pair_fst hrt hnm =>
     intro ⟨_, h⟩
     exact hnm ⟨_, h⟩
   case pair_snd hrt hnm =>
     intro ⟨_, h⟩
-    exact hnm ⟨_, h⟩
+    exact hnm ⟨_, h⟩-/
   case pi h ih =>
     cases h with
     /-| pi_quot =>
@@ -108,6 +120,10 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
 
 @[dcc_force_eta, dcc_force_reduce, aesop norm (rule_sets := [DccStep])] def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
+  | (DCC Λ(α, β, x) ∘' Fstc(b)) =>
+    match (DCC Λ(α, β, x)).step_eta? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.comp_fstc h⟩⟩
+    | _ => .none
   | (DCC `(α, x) ∘' *(α₂)) => .some ⟨_, ⟨.quot_unbox⟩⟩
   | (DCC `(α, x) ∘ *(α₂)) => .some ⟨_, ⟨.quot_unbox'⟩⟩
   --| (DCC (`(α, x) ∘' *(α₂)) ∘' z) => .some ⟨_, ⟨.quot'_unbox⟩⟩
@@ -115,12 +131,26 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
   --| (DCC `(α, x) ∘' *(α₂) ∘' z) => .some ⟨_, ⟨.quot'_unbox₂⟩⟩
   --| (DCC `(α, x) ∘ *(α₂) ∘ z) => .some ⟨_, ⟨.quot'_unbox'₂⟩⟩
   | DCC (Eql(f_α) env x) => .some ⟨_, ⟨.eql⟩⟩
+  | (DCC Λ(α, `(_a, β), `(Coup(`(_b, _c)), x))) =>
+    if heq : (DCC Λ(α, `(_a, β), `(Coup(`(_b, _c)), x))) = (DCC Λ(α, `(α, β), `(Coup(`(α, β)), x))) then
+      heq ▸ .some ⟨_, ⟨.curr_quot_c⟩⟩
+    else .none
+  | DCC (Λ(α, _b, `(_c, x) ∘' Id(_a)) y) =>
+    if heq : (DCC (Λ(α, _b, `(_c, x) ∘' Id(_a)) y)) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x) ∘' Id(_a)) y)) then
+      heq ▸ .some ⟨_, ⟨.curr_quot'⟩⟩
+    else .none
   | DCC (Λ(α, _b, `(_c, x)) y) =>
     if heq : (DCC (Λ(α, _b, `(_c, x)) y)) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
       heq ▸ .some ⟨_, ⟨.curr_quot⟩⟩
     else .none
-  | DCC (Λ(_α, β, x ∘ Fstc(_β₂)) y) => .some ⟨_, ⟨.curr_fst⟩⟩
-  | DCC (Λ(_α, β, x ∘' Fstc(_β₂)) y) => .some ⟨_, ⟨.curr_fst'⟩⟩
+  | DCC (Λ(_α, β, x ∘ Fstc(Coup(β₂))) y) =>
+    if heq : β₂ = β then
+      heq ▸ .some ⟨_, ⟨.curr_fst⟩⟩
+    else .none
+  | DCC (Λ(_α, β, x ∘' Fstc(Coup(β₂))) y) =>
+    if heq : β₂ = β then
+      heq ▸ .some ⟨_, ⟨.curr_fst'⟩⟩
+    else .none
   | DCC Σ(α, f_β) =>
     match f_β.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig' h⟩⟩
@@ -177,14 +207,14 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     match (DCC (a ∘' b)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.compl' h⟩⟩
     | _ => none
-  | DCC (Eval(_a, _b, Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩) =>
+  /-| DCC (Eval(_a, _b, Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩) =>
     .some ⟨_, ⟨.pair_snd (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | DCC (Eval(_a, _b, f ∘' Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩) =>
     .some ⟨_, ⟨.pair_snd' (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | (DCC (Eval(_a, _b, Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) =>
     .some ⟨_, ⟨.pair_fst (reduce_sound rfl) (reduce_norm rfl)⟩⟩
   | (DCC (Eval(_a, _b, f ∘' Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) =>
-    .some ⟨_, ⟨.pair_fst' (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+    .some ⟨_, ⟨.pair_fst' (reduce_sound rfl) (reduce_norm rfl)⟩⟩-/
   | DCC `(β, x) =>
     match x.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot h⟩⟩
@@ -203,7 +233,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   induction h₁ generalizing C with
   | pi_comp | pi'_comp
   | quot_fst
-  | quot | compl | compl' | quot_unbox | quot_unbox' | coup | eql | curr_fst' | curr_fst | quot'_fst | quot'_snd | quot_snd | sig' | pi => cases h₂; aesop
+  | curr_quot_c | quot | compl | compl' | quot_unbox | quot_unbox' | coup | eql | curr_fst' | curr_fst | quot'_fst | quot'_snd | quot_snd | sig' | pi => cases h₂; aesop
   /-| pi_quot hr ih =>
     cases h₂
     · rename_i hr₂; aesop
@@ -211,15 +241,15 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
   /-| quot =>
     cases h₂
     · aesop-/
-  | pair_snd hr ih | pair_fst hr ih =>
+  /-| pair_snd hr ih | pair_fst hr ih =>
     cases h₂
     exact norm_unique hr (by assumption) (by assumption) (by assumption)
   | pair_fst' hr ih | pair_snd' hr ih =>
     have hra := reduce_complete (by assumption) (by assumption)
     cases h₂
     have hrb := reduce_complete (by assumption) (by assumption)
-    aesop
-  | pi' hr ih =>
+    aesop-/
+  | comp_fstc hr ih | pi' hr ih =>
     cases h₂
     · aesop
   /-| curr hr ih =>
@@ -227,7 +257,7 @@ theorem red_eta_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red
     | curr hr₂ => rw [ih hr₂]-/
   --| idl'
   --| idl
-  | curr_quot => cases h₂; rfl
+  | curr_quot' | curr_quot => cases h₂; rfl
   --| sig => sorry
 
 open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : ∃ D, RedEta.instRedRel.ReflTrans B D ∧ RedEta.instRedRel.ReflTrans C D := by
@@ -239,16 +269,7 @@ open Congruent in theorem RedEta.conf (h₁ : RedEta A B) (h₂ : RedEta A C) : 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instConfRedEtaTrans : Confluent RedEta (m := Relation.ReflTransGen) := RedEta.instRedRel.globally_confluent
 
 theorem RedEta.complete (h_red : RedEta A B) : step_eta? A = .some ⟨B, ⟨h_red⟩⟩ := by
-  induction h_red
-  any_goals (
-    focus
-    unfold step_eta?
-    aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel])
-    done)
-  case pair_fst' | pair_snd' | pair_fst | pair_snd =>
-    have h := reduce_complete (by assumption) (by assumption)
-    simp_all [step_eta?]
-    grind
+  induction h_red <;> (aesop (rule_sets := [DccStep, DccReduce, DccSize, DccRel]))
 
 def eta_semi_complete {A B : Expr} (h_red : A.RedEta B) : ∃ B', ∃ (h : A.RedEta B'), (step_eta? A) = .some ⟨B', ⟨h⟩⟩ :=
   ⟨_, _, h_red.complete⟩

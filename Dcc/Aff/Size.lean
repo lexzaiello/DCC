@@ -10,7 +10,7 @@ namespace Expr
   | DCC ∗ => 0
   | DCC ⊤ => 2
   | DCC ⊥ => 2
-  | DCC x = _y => x.size
+  | DCC x = y => x.size + y.size
   | DCC Eql(α)  => α.size + 1
   | DCC refl(α) => α.size + 1
   | DCC Sort m => m
@@ -26,8 +26,8 @@ namespace Expr
   | DCC (f ∘ g)  => f.size + f.size + g.size + 1
   | DCC (f ∘∘ g)  => f.size + f.size + g.size + 1
   | DCC ⟦_β⟧⟨a, b⟩   => a.size + a.size + b.size + 2
-  | DCC Λ(_α, _β, x) => x.size + 1
-  | DCC !Λ(_α, _β, x) => x.size + 1
+  | DCC Λ(α, β, x) => α.size + β.size + x.size + 2
+  | DCC !Λ(α, β, x) => α.size + β.size + x.size + 2
   | DCC Eval(_α, _β, x) => x.size + 1
   | DCC !(x)   => x.size
   | DCC *(α)   => α.size + 1

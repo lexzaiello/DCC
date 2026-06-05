@@ -424,46 +424,40 @@ theorem Eval.neut_size_leq (h : Eval _env e Val(neutral(v))) : v.size ≤ e.size
     simp [Val.size] at hc
     grind
 
-theorem Eval.size_eq (h : Eval _env e v) : e.size = v.size := by
+theorem Eval.size_eq (h : Eval _env e v) : v.size ≤ e.size := by
   induction e generalizing v
   case sigma ih₁ ih₂ | pair ih₁ ih₂ ih₃ | comp₂ ih₁ ih₂ | comp ih₁ ih₂ | comp' ih₁ ih₂ | fstc ih
     | sndc ih | eql ih | eq ih₁ ih₂ | refl _ _ _
     | eval _ _ _ | unbox ih | box ih | bang ih
     | coup ih₁ | mkc ih₁ ih₂ ih₃ | pi ih₁ ih₂
     | curr ih₁ ih₂ ih₃ | map ih₁ | fmap ih₁
-    | curr' ih₁ ih₂ ih₃ | quot ih₁ ih₂ | id ih₁ =>
-    focus
-    cases h
-    · rename_i h
-      first
-      | have h := ih h
-        grind
-      | grind
-      | (focus
-        have ha := ih₁ (by assumption)
-        grind
-        done)
-      | (focus
-        have ha := ih₁ (by assumption)
-        have hb := ih₂ (by assumption)
-        grind
-        done)
-      | (focus
-        have ha := ih₁ (by assumption)
-        have hb := ih₂ (by assumption)
-        have hc := ih₃ (by assumption)
-        grind
-        done)
-    done
-  case coup ih₁ =>
-    cases h
-    have h := ih₁ (by assumption)
-    grind
-  /-case eq _ _ =>
+    | curr' ih₁ ih₂ ih₃ | quot ih₁ ih₂ | id ih₁
+    | top | bot | tintro | sort =>
+      focus
+      cases h
+      · first
+        | grind
+        | (rename_i h
+           first
+           | have h := ih h
+             grind
+           | grind
+           | (have ha := ih₁ (by assumption)
+              grind)
+           | (have ha := ih₁ (by assumption)
+              have hb := ih₂ (by assumption)
+              grind)
+           | (have ha := ih₁ (by assumption)
+              have hb := ih₂ (by assumption)
+              have hc := ih₃ (by assumption)
+              grind))
+  case app ih₁ ih₂ =>
     cases h with
-    | eq =>
-      
-      sorry-/
+    | app hf hx happ =>
+      have ha := ih₁ (by assumption)
+      have hb := ih₂ (by assumption)
+      have hc := happ.decreasing
+      grind
 
 /-theorem Eval.size_eq (h : Eval _env e v) : e.size = v.size := by
   cases h

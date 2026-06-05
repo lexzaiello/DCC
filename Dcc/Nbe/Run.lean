@@ -307,7 +307,6 @@ def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote le
   | Neutral(⊥) => .some ⟨_, .bot⟩
   | Neutral(x = y) =>
     have h_dec₁ : x.measure < Neutral(x = y).size := by
-      
       grind
     have h_dec₂ : y.measure < Neutral(x = y).size := by
       grind
@@ -316,7 +315,7 @@ def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote le
       .some ⟨_, .eq h₁ h₂⟩
     | _, _ => .none
   | Neutral(Eql(α))  =>
-    have h_dec₁ : α.size < Neutral(Eql(α)).size := by
+    have h_dec₁ : α.measure < Neutral(Eql(α)).size := by
       grind
     match α.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .eql h⟩
@@ -478,7 +477,7 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
       | _, _ => .none
     | _, _ => .none
   | _ => .none
-termination_by v.measure.succ
+termination_by v.measure
 
 end
 

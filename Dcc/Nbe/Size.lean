@@ -19,11 +19,11 @@ def NeutralTm.size (nv : NeutralTm) : ℕ :=
   | NeutralTm(∗) => 1
   | NeutralTm(⊤) => 2
   | NeutralTm(⊥) => 2
-  | NeutralTm(x = y) => x.size + y.size
-  | NeutralTm(Eql(α))  => α.size + 3
-  | NeutralTm(refl(α)) => α.size + 3
+  | NeutralTm(x = y) => x.measure + y.measure
+  | NeutralTm(Eql(α))  => α.measure + 3
+  | NeutralTm(refl(α)) => α.measure + 3
   | NeutralTm(Sort _m) => 1
-  | NeutralTm(Σ(α, β)) => α.size + β.size + 2
+  | NeutralTm(Σ(α, β)) => α.measure + β.measure + 2
   | NeutralTm(`(_β, x)) => x.measure + 2
   | NeutralTm(⟦_β⟧(x, y)) => x.measure + y.measure
   | NeutralTm(Coup(β)) => β.size
@@ -34,11 +34,11 @@ def NeutralTm.size (nv : NeutralTm) : ℕ :=
   | NeutralTm(f ∘ g)  => f.measure + f.measure + g.measure + 2
   | NeutralTm(f ∘∘ g)  => f.measure + f.measure + g.measure + 2
   | NeutralTm(⟦_β⟧⟨a, b⟩)   => a.measure + a.measure + b.measure + 2
-  | NeutralTm(Λ(α, β, x)) => α.size + β.size + x.measure + 2
-  | NeutralTm(!Λ(α, β, x)) => α.size + β.size + x.measure + 2
+  | NeutralTm(Λ(α, β, x)) => α.measure + β.measure + x.measure + 2
+  | NeutralTm(!Λ(α, β, x)) => α.measure + β.measure + x.measure + 2
   | NeutralTm(Eval(_α, _β, x)) => x.measure + 1
   | NeutralTm(!(x))            => x.measure
-  | NeutralTm(*(α))            => α.size + 1
+  | NeutralTm(*(α))            => α.measure + 1
   | NeutralTm(&(x))            => x.measure + x.measure + x.measure + 2
   | NeutralTm(!<x>)            => x.measure + x.measure + x.measure + 2
   | NeutralTm($<x>)            => x.measure + x.measure + x.measure + 2
@@ -100,8 +100,12 @@ theorem NeutralTm.size_pos : 0 < NeutralTm.size x := by
   case app f v =>
     have h := f.size_pos
     grind
-  case t_coup x | eq x y =>
+  case t_coup x =>
     have h := x.size_pos
+    grind
+  case eq x y =>
+    have h₁ := x.measure_pos
+    have h₂ := y.measure_pos
     grind
   case coup x | bang x =>
     have h := x.measure_pos
@@ -148,5 +152,7 @@ theorem Apply.decreasing (h : Apply f x e') : e'.measure < f.measure + x.measure
       unfold Val.measure
       rfl
     split <;> grind)
+
+#check Apply.decreasing
 
 end Semantic

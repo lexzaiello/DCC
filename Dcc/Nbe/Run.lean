@@ -113,6 +113,7 @@ def Expr.evaluate (env : List Semantic.Val) (e : Expr) : Option ((e' : Semantic.
 
 def Semantic.Val.apply (f x : Semantic.Val) : Option ((e' : Semantic.Val) × Semantic.Apply f x e') :=
   match f, x with
+  | Val(Π (f_α) env 2, f_β), x => .some ⟨_, .pi⟩
   | Val(λ xs 2 => Eql(f_α)), Val(neutral(&(env))) => .some ⟨_, .eql₁⟩
   | Val(λ env 1 => Eql(f_α)), Val(neutral(&(x))) => .some ⟨_, .eql₂⟩
   | Val(λ env 1 => *(α)), Val(neutral(&(x))) => .some ⟨_, .unbox⟩
@@ -266,14 +267,11 @@ inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
   | lam₁ : Apply f Val(neutral(var(level))) Val(neutral(f' neutral(var(level))))
     → Val.Quote level Val(neutral(f')) e'
     → Val.Quote level f e'
-  | pi₁  : Apply f_α Val(neutral(var(level))) Val(neutral(f_α' neutral(var(level))))
+  | pi   : Apply f_α Val(neutral(var(level))) Val(neutral(f_α' neutral(var(level))))
     → Apply f_β Val(neutral(var(level))) Val(neutral(f_β' neutral(var(level))))
     → Val.Quote level Val(neutral(f_α')) f_α''
     → Val.Quote level.succ Val(neutral(f_β')) f_β''
     → Val.Quote level Val(Π (f_α) ⟦⟧ 2, f_β) (DCC (Π(f_α'', f_β'')))
-  | pi₂  : Apply Val(Π (f_α) ⟦⟧ 2, f_β) env Val(Π (f_α') ⟦env'⟧ 1, f_β')
-    → 
-  --Apply Val(Π (f_α) ⟦⟧ 2, f_β) Val(neutral(var(level)))
 
 end
 

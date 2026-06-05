@@ -1,4 +1,5 @@
 import Dcc.Nbe.Value
+import Dcc.Types
 import Dcc.Nbe.Size
 import Dcc.Nbe.SizeDecreasing
 import Dcc.Nbe.ApplyEval
@@ -107,6 +108,8 @@ def Expr.evaluate (env : List Semantic.Val) (e : Expr) : Option ((e' : Semantic.
   | (DCC (f x)) =>
     match f.evaluate env, x.evaluate env with
     | .some ⟨f', h₁⟩, .some ⟨x', h₂⟩ =>
+      dbg_trace s!"fail f: {f}"
+      dbg_trace s!"fail x: {x}"
       match f'.apply x' with
       | .some ⟨_, h₃⟩ => .some ⟨_, .app h₁ h₂ h₃⟩
       | _ => .none
@@ -114,7 +117,7 @@ def Expr.evaluate (env : List Semantic.Val) (e : Expr) : Option ((e' : Semantic.
 
 def Semantic.Val.apply (f x : Semantic.Val) : Option ((e' : Semantic.Val) × Semantic.Apply f x e') :=
   match f, x with
-  | Val(Π (f_α) env 2, f_β), x => .some ⟨_, .pi⟩
+  | Val(Π (f_α) env 1, f_β), x => .some ⟨_, .pi⟩
   | Val(λ xs 2 => Eql(f_α)), Val(neutral(&(env))) => .some ⟨_, .eql₁⟩
   | Val(λ env 1 => Eql(f_α)), Val(neutral(&(x))) => .some ⟨_, .eql₂⟩
   | Val(λ env 1 => *(α)), Val(neutral(&(x))) => .some ⟨_, .unbox⟩

@@ -54,7 +54,7 @@ inductive Apply : (f : Val) → (x : Val) → Val → Type
   | curr₂    : Apply x Val(neutral(⟦β⟧(y, z))) e' → Apply Val(λ y::env 1 => Λ(α, β, x)) z e'
   | curr'₂   : Apply x Val(neutral(&(neutral(⟦β⟧(y, z))))) e'
     → Apply Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) Val(neutral(&(z))) e'
-  | pi       : Apply Val(Π (f_α) env 2, f_β) x Val(Π (f_α) x::env 1, f_β)
+  | pi       : Apply Val(Π (f_α) env 1, f_β) x Val(Π (f_α) x::env 0, f_β)
   -- TODO: This shouldn't be possible
   --| neut     : Apply Val(neutral(f)) x Val(neutral(f x))
 

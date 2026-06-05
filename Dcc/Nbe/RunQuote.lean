@@ -63,22 +63,22 @@ inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
     → Apply f_β Val(neutral(var(level))) Val(neutral(f_β' neutral(var(level))))
     → Neutral.Quote level.succ f_α' f_α''
     → Neutral.Quote level.succ.succ f_β' f_β''
-    → Val.Quote level Val(Π (f_α) ⟦⟧ 2, f_β) (DCC (Π(f_α'', f_β'')))
+    → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
   | pi₂  : Apply f_α Val(neutral(var(level))) Val(λ env' n' => bdy')
     → Apply f_β Val(neutral(var(level))) Val(neutral(f_β' neutral(var(level))))
     → Val.Quote level.succ Val(λ env' n' => bdy') f_α''
     → Neutral.Quote level.succ.succ f_β' f_β''
-    → Val.Quote level Val(Π (f_α) ⟦⟧ 2, f_β) (DCC (Π(f_α'', f_β'')))
+    → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
   | pi₃  : Apply f_α Val(neutral(var(level))) Val(neutral(f_α' neutral(var(level))))
     → Apply f_β Val(neutral(var(level))) Val(λ env' n' => bdy')
     → Neutral.Quote level.succ f_α' f_α''
     → Val.Quote level.succ.succ Val(λ env' n' => bdy') f_β''
-    → Val.Quote level Val(Π (f_α) ⟦⟧ 2, f_β) (DCC (Π(f_α'', f_β'')))
+    → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
   | pi₄ : Apply f_α Val(neutral(var(level))) Val(λ env'₁ n'₁ => bdy'₁)
     → Apply f_β Val(neutral(var(level))) Val(λ env'₂ n'₂ => bdy'₂)
     → Val.Quote level.succ Val(λ env'₁ n'₁ => bdy'₁) f_α''
     → Val.Quote level.succ.succ Val(λ env'₂ n'₂ => bdy'₂) f_β''
-    → Val.Quote level Val(Π (f_α) ⟦⟧ 2, f_β) (DCC (Π(f_α'', f_β'')))
+    → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
 
 end
 
@@ -308,7 +308,7 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
         .some ⟨_, .lam₂ h₁ h₂⟩
       | _ => .none
     | _ => .none
-  | Val(Π (f_α) ⟦⟧ 2, f_β) =>
+  | Val(Π (f_α) ⟦⟧ 1, f_β) =>
     match f_α.apply Val(neutral(var(level))), f_β.apply Val(neutral(var(level))) with
     | .some ⟨Val(neutral(f_α' neutral(var(level₂)))), h₁⟩,
       .some ⟨Val(neutral(f_β' neutral(var(level₃)))), h₂⟩ =>
@@ -317,7 +317,7 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
         grind
       have h_dec₃ : f_α'.size < f_α.measure := by
         grind
-      have h_dec₄ : f_α'.size < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+      have h_dec₄ : f_α'.size < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
         conv =>
           right
           simp [Val.measure]
@@ -328,7 +328,7 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
         grind
       have h_dec₇ : f_β'.size < f_β.measure := by
         grind
-      have h_dec₈ : f_β'.size < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+      have h_dec₈ : f_β'.size < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
         conv =>
           right
           simp [Val.measure]
@@ -346,14 +346,14 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
     | .some ⟨Val(λ env' n' => bdy'), h₁⟩,
       .some ⟨Val(neutral(f_β' neutral(var(level₂)))), h₂⟩ =>
       have h_dec₁ := h₁.decreasing
-      have h_dec₂ : Val(λ env' n' => bdy').measure < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+      have h_dec₂ : Val(λ env' n' => bdy').measure < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
         grind
       have h_dec₅ := h₂.decreasing
       have h_dec₆ : f_β'.size < Val(neutral(f_β' neutral(var(level)))).measure := by
         grind
       have h_dec₇ : f_β'.size < f_β.measure := by
         grind
-      have h_dec₈ : f_β'.size < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+      have h_dec₈ : f_β'.size < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
         conv =>
           right
           simp [Val.measure]
@@ -369,14 +369,14 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
     | .some ⟨Val(neutral(f_α' neutral(var(level₂)))), h₁⟩,
       .some ⟨Val(λ env' n' => bdy'), h₂⟩ =>
       have h_dec₁ := h₂.decreasing
-      have h_dec₂ : Val(λ env' n' => bdy').measure < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+      have h_dec₂ : Val(λ env' n' => bdy').measure < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
         grind
       have h_dec₅ := h₁.decreasing
       have h_dec₆ : f_α'.size < Val(neutral(f_α' neutral(var(level)))).measure := by
         grind
       have h_dec₇ : f_α'.size < f_α.measure := by
         grind
-      have h_dec₈ : f_α'.size < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+      have h_dec₈ : f_α'.size < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
         conv =>
           right
           simp [Val.measure]
@@ -393,9 +393,9 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
       .some ⟨Val(λ env'₂ n'₂ => bdy'₂), h₂⟩ =>
       have h_dec₁ := h₁.decreasing
       have h_dec₂ := h₂.decreasing
-      have h_dec₃ : Val(λ env'₁ n'₁ => bdy'₁).measure < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+      have h_dec₃ : Val(λ env'₁ n'₁ => bdy'₁).measure < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
         grind
-      have h_dec₃ : Val(λ env'₂ n'₂ => bdy'₂).measure < Val(Π (f_α) ⟦⟧ 2, f_β).measure := by
+      have h_dec₃ : Val(λ env'₂ n'₂ => bdy'₂).measure < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
         grind
       match Val(λ env'₁ n'₁ => bdy'₁).quote level.succ, Val(λ env'₂ n'₂ => bdy'₂).quote level.succ.succ with
       | .some ⟨_, h₃⟩, .some ⟨_, h₄⟩ => .some ⟨_, .pi₄ h₁ h₂ h₃ h₄⟩

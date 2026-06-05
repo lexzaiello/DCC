@@ -290,7 +290,7 @@ open Std (ToFormat Format format) in
 open Std (ToFormat Format format) in
 instance (priority := high) instRepr : Repr Expr :=
   { reprPrec := fun e _ =>
-    Std.Format.pretty (Expr.toFormat e (pretty := true)) }
+    Expr.toFormat e (pretty := true) }
 
 instance instOptToFormat : Std.ToFormat (Option Expr) := ⟨fun me =>
   match me with

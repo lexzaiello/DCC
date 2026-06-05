@@ -42,10 +42,12 @@ inductive NeutralTm where
   | bot                         : NeutralTm
   | tintro                      : NeutralTm
   | sort (m : Level)            : NeutralTm
+deriving Repr
 
 inductive Neutral where
   | var (idx : ℕ)        : Neutral
   | tm (tm :  NeutralTm) : Neutral
+deriving Repr
 
 inductive Val where
   -- Combinators get translated into these
@@ -75,6 +77,7 @@ inductive Val where
   | bot : Val
   -- Sort
   | sort (m : Level) : Val-/
+deriving Repr
 
 end
 

@@ -485,6 +485,7 @@ def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote le
     have h_dec₁ : f.size < Neutral(f x).size := by
       grind
     have h_dec₂ : x.measure < Neutral(f x).size := by
+      
       grind
     match f.quote level, x.quote level with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>

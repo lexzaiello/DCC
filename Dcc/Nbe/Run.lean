@@ -237,6 +237,7 @@ inductive Neutral.Quote : (level : ℕ) → (v : Neutral) → (e : Expr) → Typ
     → Neutral.Quote level Neutral(`(β, x)) (DCC `(β', x'))
   | coup   : Val.Quote level β β' → Val.Quote level x x'
     → Val.Quote level y y' → Neutral.Quote level Neutral(⟦β⟧(x, y)) (DCC ⟦β'⟧(x', y'))
+  | t_coup : Val.Quote level β β' → Neutral.Quote level Neutral(Coup(β)) (DCC Coup(β'))
   | id     : Val.Quote level α α' → Neutral.Quote level Neutral(Id(α)) (DCC Id(α'))
   | fstc   : Val.Quote level α α' → Neutral.Quote level Neutral(Fstc(α)) (DCC Fstc(α'))
   | sndc   : Val.Quote level α α' → Neutral.Quote level Neutral(Sndc(α)) (DCC Sndc(α'))
@@ -259,61 +260,162 @@ inductive Neutral.Quote : (level : ℕ) → (v : Neutral) → (e : Expr) → Typ
   | boxed  : Val.Quote level x x' → Neutral.Quote level Neutral(&(x)) (DCC &(x'))
   | map    : Val.Quote level x x' → Neutral.Quote level Neutral(!<x>) (DCC !<x'>)
   | fmap   : Val.Quote level x x' → Neutral.Quote level Neutral($<x>) (DCC $<x'>)
-  | app    : Neutral.Quote level f f' → Val.Quote level x x' → Neutral.Quote level
-    Neutral(f x) (DCC (f' x'))
+  | app    : Neutral.Quote level f f' → Val.Quote level x x' → Neutral.Quote level Neutral(f x) (DCC (f' x'))
+
+/-
+Val(neutral(f' neutral(var(level))))
+-/
 
 inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
   | neut : Neutral.Quote level nv e → Val.Quote level Val(neutral(nv)) e
-  | lam₁ : Apply f Val(neutral(var(level))) Val(neutral(f' neutral(var(level))))
-    → Val.Quote level Val(neutral(f')) e'
-    → Val.Quote level f e'
+  | lam₁ : Apply Val(λ env n => bdy) Val(neutral(var(level))) Val(neutral(f' neutral(var(level))))
+    → Val.Quote level.succ Val(neutral(f')) e'
+    → Val.Quote level Val(λ env n => bdy) e'
+  | lam₂ : Apply Val(λ env n => bdy) Val(neutral(var(level))) Val(λ env' n' => bdy')
+    → Val.Quote level.succ Val(λ env' n' => bdy') e'
+    → Val.Quote level Val(λ env n => bdy) e'
   | pi   : Apply f_α Val(neutral(var(level))) Val(neutral(f_α' neutral(var(level))))
     → Apply f_β Val(neutral(var(level))) Val(neutral(f_β' neutral(var(level))))
-    → Val.Quote level Val(neutral(f_α')) f_α''
-    → Val.Quote level.succ Val(neutral(f_β')) f_β''
+    → Val.Quote level.succ Val(neutral(f_α')) f_α''
+    → Val.Quote level.succ.succ Val(neutral(f_β')) f_β''
     → Val.Quote level Val(Π (f_α) ⟦⟧ 2, f_β) (DCC (Π(f_α'', f_β'')))
 
 end
 
 mutual
 
-def Neutral.quote (level : ℕ) (v : Neutral) : Option Expr :=
+def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote level e) :=
   match v with
   | Neutral(var(_v)) => .none
-  | Neutral(∗) => .some (DCC ∗)
-  | Neutral(⊤) => .some (DCC ⊤)
-  | Neutral(⊥) => .some (DCC ⊥)
+  | Neutral(∗) => .some ⟨_, .tintro⟩
+  | Neutral(⊤) => .some ⟨_, .top⟩
+  | Neutral(⊥) => .some ⟨_, .bot⟩
   | Neutral(x = y) =>
     match x.quote level, y.quote level with
-    | .some 
-  | Neutral(Eql(α))  => α.size + 3
-  | Neutral(refl(α)) => α.size + 3
-  | Neutral(Sort _m) => 1
-  | Neutral(Σ(α, β)) => α.size + β.size + 2
-  | Neutral(`(_β, x)) => x.measure + 2
-  | Neutral(⟦_β⟧(x, y)) => x.measure + y.measure
-  | Neutral(Coup(β)) => β.size
-  | Neutral(Id(_α))      => 2
-  | Neutral(Fstc(_α))    => 2
-  | Neutral(Sndc(_α))    => 2
-  | Neutral(f ∘' g) => f.measure + f.measure + g.measure + 2
-  | Neutral(f ∘ g)  => f.measure + f.measure + g.measure + 2
-  | Neutral(f ∘∘ g)  => f.measure + f.measure + g.measure + 2
-  | Neutral(⟦_β⟧⟨a, b⟩)   => a.measure + a.measure + b.measure + 2
-  | Neutral(Λ(α, β, x)) => α.size + β.size + x.measure + 2
-  | Neutral(!Λ(α, β, x)) => α.size + β.size + x.measure + 2
-  | Neutral(Eval(_α, _β, x)) => x.measure + 1
-  | Neutral(!(x))            => x.measure
-  | Neutral(*(α))            => α.size + 1
-  | Neutral(&(x))            => x.measure + x.measure + x.measure + 2
-  | Neutral(!<x>)            => x.measure + x.measure + x.measure + 2
-  | Neutral($<x>)            => x.measure + x.measure + x.measure + 2
-  | Neutral(f x)             => f.size + x.size
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .eq h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(Eql(α))  =>
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .eql h⟩
+    | _ => .none
+  | Neutral(refl(α))  =>
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .refl h⟩
+    | _ => .none
+  | Neutral(Sort _m) => .some ⟨_, .sort⟩
+  | Neutral(Σ(α, β)) =>
+    match α.quote level, β.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .sigma h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(`(β, x)) =>
+    match β.quote level, x.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .quot h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(⟦β⟧(x, y)) =>
+    match β.quote level, x.quote level, y.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
+      .some ⟨_, .coup h₁ h₂ h₃⟩
+    | _, _, _ => .none
+  | Neutral(Coup(β)) =>
+    match β.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .t_coup h⟩
+    | _ => .none
+  | Neutral(Id(α))      =>
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .id h⟩
+    | _ => .none
+  | Neutral(Fstc(α))    =>
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .fstc h⟩
+    | _ => .none
+  | Neutral(Sndc(α))    =>
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .sndc h⟩
+    | _ => .none
+  | Neutral(f ∘' g) =>
+    match f.quote level, g.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .comp' h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(f ∘ g) =>
+    match f.quote level, g.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .comp h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(f ∘∘ g) =>
+    match f.quote level, g.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .comp₂ h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(⟦β⟧⟨x, y⟩) =>
+    match β.quote level, x.quote level, y.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
+      .some ⟨_, .pair h₁ h₂ h₃⟩
+    | _, _, _ => .none
+  | Neutral(Λ(α, β, x)) =>
+    match α.quote level, β.quote level, x.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
+      .some ⟨_, .curr h₁ h₂ h₃⟩
+    | _, _, _ => .none
+  | Neutral(!Λ(α, β, x)) =>
+    match α.quote level, β.quote level, x.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
+      .some ⟨_, .curr' h₁ h₂ h₃⟩
+    | _, _, _ => .none
+  | Neutral(Eval(α, β, x)) =>
+    match α.quote level, β.quote level, x.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
+      .some ⟨_, .eval h₁ h₂ h₃⟩
+    | _, _, _ => .none
+  | Neutral(!(x))            =>
+    match x.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .bang h⟩
+    | _ => .none
+  | Neutral(*(α))            =>
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .unbox h⟩
+    | _ => .none
+  | Neutral(&(x))            =>
+    match x.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .boxed h⟩
+    | _ => .none
+  | Neutral(!<x>)            =>
+    match x.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .map h⟩
+    | _ => .none
+  | Neutral($<x>)            =>
+    match x.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .fmap h⟩
+    | _ => .none
+  | Neutral(f x)             =>
+    match f.quote level, x.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .app h₁ h₂⟩
+    | _, _ => .none
 
-def Val.quote (level : ℕ) (v : Val) : Expr :=
+def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :=
   match v with
+  | Val(neutral(neut)) =>
+    match neut.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .neut h⟩
+    | _ => .none
   | 
 
 end
 
 end Semantic
+
+/-
+Pattern mtaching in some constructors might be able to use quote / the bullet technique to do a form of extensionality.
+
+For example, β : α → Sort n.
+Currently, we just check
+Reduces (f_β env) `(α, ...).
+
+We can instead check similarly to in the Π case.
+
+Or probably just doing reduce_nbe would get us there. tbh.
+-/

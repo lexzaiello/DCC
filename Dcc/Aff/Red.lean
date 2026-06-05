@@ -41,7 +41,7 @@ inductive RedAff : Expr → Expr → Prop
 @[dcc_force_reduce, dcc_force_aff]
 def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
   match e with
-  | (DCC (Eql(f_α) env &(x))) => .some ⟨_, ⟨.eql⟩⟩
+  | (DCC (Eql(_f_α) _env &(_x))) => .some ⟨_, ⟨.eql⟩⟩
   | (DCC (x = y)) =>
     match x.step?, y.step? with
     | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.eql' h₁⟩⟩

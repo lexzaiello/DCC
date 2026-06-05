@@ -131,12 +131,12 @@ f ∘ g : ∀ (x : α), γ ∘ g
 @[dcc_judge] abbrev comp.type (α γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) !(α))
 
-@[dcc_judge] abbrev eql.type (f_α δ : Expr) (m o : Level) : Expr :=
+@[dcc_judge] abbrev eql.type (f_α δ : Expr) (o : Level) : Expr :=
   (DCC (Π(Id(Sort o),
-      `(Sort o, Π(f_α, Λ(δ, f_α, Π(Id(Sort m), `(Coup(Id(Sort m)), Sort 0)))))) δ))
+      `(Sort o, Π(!<f_α>, Λ(!(δ), !<f_α>, `(Coup(!<f_α>), Sort 0))))) !(δ)))
 
 @[dcc_judge] abbrev refl.type (f_α δ : Expr) (o : Level) : Expr :=
-  (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Eql(f_α) ∘ Id(Sort o)))) δ))
+  (DCC (Π(Id(Sort o), `(Sort o, Π(!<f_α>, Eql(f_α)))) !(δ)))
 
 /-
 f_α : α → Sort m

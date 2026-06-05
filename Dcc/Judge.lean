@@ -45,7 +45,7 @@ inductive Judge : Expr → Expr → Prop where
     → Judge (DCC refl(f_α)) τ
   | eql    : Judge f_α (DCC (δ : Sort o) → Sort m)
     → Reduces δ δ'
-    → Reduces (eql.type f_α δ' m o) τ
+    → Reduces (eql.type f_α δ' o) τ
     → Judge (DCC Eql(f_α)) τ
   | id     : Judge α (DCC Sort m)
     → Reduces α α'

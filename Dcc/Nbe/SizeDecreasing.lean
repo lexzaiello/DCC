@@ -124,10 +124,6 @@ theorem Val.var_zero_size : Val(neutral(var((_v) : τ))).size = 0 := by
 theorem Val.var_measure_zero : Val(neutral(var((_v) : τ))).measure = 0 := by
   grind
 
-@[grind ., grind! .]
-theorem Val.var_zero_measure : Val(neutral(var((_v) : τ))).measure = 0 := by
-  grind
-
 /-
 f_α.measure + 3 + 1 + (env.measure + env.measure + env.measure + 2 + 1) + 1 +
         (x.measure + x.measure + x.measure + 2 + 1) +

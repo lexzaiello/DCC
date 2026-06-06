@@ -132,10 +132,7 @@ theorem Val.Domain.decreasing (h : Val.Domain e τ) : τ.measure < e.measure := 
 
 def Val.mk_var (level : ℕ) (τ : Val) : Option ((v : Val) × τ.MkVar level v) :=
   match τ with
-  | Val(neutral(!(τ₀))) =>
-    match τ₀.mk_var level with
-    | .some ⟨_v, h⟩ => .some ⟨_, .boxed h⟩
-    | _ => .none
+  | Val(neutral(!(_τ₀))) => .some ⟨_, .boxed⟩
   | Val(neutral(Sort _m)) => .some ⟨_, .sort⟩
   | Val(Π (_f_α) _env _n, _f_β) => .some ⟨_, .pi⟩
   | Val(neutral(_x = _y)) => .some ⟨_, .eq⟩
@@ -372,37 +369,38 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
     have ha := h₁.decreasing
     dbg_trace s!"apply: {(repr ∘ (·.fst)) <$>  Val(λ env n => bdy).apply Val(neutral(var((level) : τ)))}"
     match Val(λ env n => bdy).apply var with
-    | .some ⟨Val(neutral(f' neutral(var((level₂) : τ₂)))), h₃⟩ =>
+    | .some ⟨Val(neutral(f' v₂)), h₃⟩ =>
       have hb := h₃.decreasing
-      if heq : level₂ = level then by
-        cases heq
+      if heq : v₂ = var then
         have h_dec' : f'.size < (Val.lam env n bdy).measure := by
           grind
         match f'.quote level with
-        | .some ⟨_, h₃⟩ =>
-          exact .some ⟨_, .comp h₁ h₂ h₃⟩
-        | _ => exact .none
+        | .some ⟨_, h₄⟩ =>
+          .some ⟨_, .comp h₁ h₂ (heq ▸ h₃) h₄⟩
+        | _ => .none
       else .none
-    | .some ⟨Val(neutral(var((level₂) : τ₂))), h₂⟩ =>
+    | .some ⟨v₂, h₃⟩ =>
       have ha := h₁.decreasing
-      have hb := h₂.decreasing
-      if heq : level₂ = level then by
-        cases heq
+      have hb := h₃.decreasing
+      if heq : v₂ = var then
         have h_dec' : τ.measure < Val(λ env n => bdy).measure := by
           grind
         match τ.quote level with
-        | .some ⟨_, h₃⟩ =>
-          exact .some ⟨_, .id h₁ h₂ h₃⟩
-        | _ => exact .none
-      else .none
-    | .some ⟨v', h₂⟩ =>
-      have hb := h₂.decreasing
-      if h₃ : ¬ v'.contains_var level τ then
-        match τ.quote level, v'.quote level with
-        | .some ⟨_, h₄⟩, .some ⟨_, h₅⟩ =>
-          .some ⟨_, .const h₁ h₂ h₃ h₄ h₅⟩
-        | _, _ => .none
-      else .none
+        | .some ⟨_, h₄⟩ =>
+          .some ⟨_, .id h₁ h₂ (heq ▸ h₃) h₄⟩
+        | _ => .none
+      else
+        match var with
+        | Val(neutral(var((_v) : _τ))) =>
+          have h_dec' : v₂.measure < Val(λ env n => bdy).measure := by
+            grind
+          if hn : ¬ v₂.contains_var Val(neutral(var((_v) : _τ))) then
+            match τ.quote level, v₂.quote level with
+            | .some ⟨_, h₄⟩, .some ⟨_, h₅⟩ =>
+              .some ⟨_, .const h₁ h₂ h₃ hn h₄ h₅⟩
+            | _, _ => .none
+          else .none
+        | _ => .none
     | _ => .none
   | Val(Π (f_α) ⟦⟧ 1, f_β) =>
     have h_dec₁ : f_α.measure < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by

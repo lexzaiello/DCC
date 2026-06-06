@@ -93,7 +93,7 @@ def Val.measure (v : Val) : ℕ :=
     | x :: _xs =>
       x.measure
     | _ => 0
-  | Val(Π (f_α) env n, f_β) => f_α.measure + f_β.measure + n + 1 + match env with
+  | Val(Π (f_α) env n, f_β) => f_α.measure + f_β.measure + n + 2 + match env with
     | x :: _xs =>
       x.measure
     | _ => 0

@@ -241,17 +241,7 @@ If f' does not contain the variable at all, then we are safe.
     → Apply f' Val(neutral(var((level) : τ₂))) -/
   -- Λ(α, β, x) takes a couple (y, z), but if y and z end up in term app position, that
   -- means the currying was a no-op
-  | curr  : Apply β Val(neutral(var((level) : α))) βx
-    → Apply x Val(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))
-      Val(neutral(x' neutral(var((level) : _a)) neutral(var((level.succ) : _b))))
-    → Neutral.Quote level x' x''
-    → Val.DoEta level Val(neutral(Λ(α, β, x))) x''
-  | curr' : Apply β Val(neutral(&(neutral(var((level) : α))))) βx
-    -- this should be less than curr size
-    → Apply x Val(neutral(&(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))))
-      Val(neutral(x' (&(neutral(var((level) : _a)))) (&(neutral(var((level.succ) : _b))))))
-    → Neutral.Quote level x' x''
-    → Val.DoEta level Val(neutral(!Λ(α, β, x))) x''-/
+  -/
 
 inductive Neutral.Quote : (level : ℕ) → (v : Neutral) → (e : Expr) → Type
   | tintro : Neutral.Quote level Neutral(∗) (DCC ∗)
@@ -318,6 +308,19 @@ inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
     → Apply f Val(neutral(var((level) : τ))) Val(neutral(var((level) : τ₂)))
     → Val.Quote level τ τ'
     → Val.Quote level Val(λ env n => bdy) (DCC Id(τ'))
+  /-| curr  : Apply β Val(neutral(var((level) : α))) βx
+    → Apply x Val(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))
+      Val(neutral(x' neutral(var((level) : _a)) neutral(var((level.succ) : _b))))
+    → Neutral.Quote level x' x''
+    → Val.Quote level Val(neutral(Λ(α, β, x))) x''
+  | curr' : Apply β Val(neutral(&(neutral(var((level) : α))))) βx
+    -- this should be less than curr size
+    → Apply x Val(neutral(&(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))))
+      Val(neutral(x' (&(neutral(var((level) : _a)))) (&(neutral(var((level.succ) : _b))))))
+    → Neutral.Quote level x' x''
+    → Val.Quote level Val(neutral(!Λ(α, β, x))) x''
+    TODO: probably have to add this back. we'll see.
+    -/
 
 /-inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
   | neut : Neutral.Quote level nv e → Val.Quote level Val(neutral(nv)) e
@@ -736,7 +739,6 @@ termination_by (v.measure, sizeOf v)
       if heq : level₂ = level then by
         cases heq
         have h_dec' : τ.measure + 1 < f.measure := by
-          
           sorry
         match τ.quote level with
         | .some ⟨_, h₃⟩ =>

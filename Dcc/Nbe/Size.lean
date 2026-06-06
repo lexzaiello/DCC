@@ -24,7 +24,7 @@ def NeutralTm.size (nv : NeutralTm) : ℕ :=
   | NeutralTm(⊥) => 2
   | NeutralTm(x = y) => x.measure + y.measure + 1
   | NeutralTm(Eql(α))  => α.measure + 3
-  | NeutralTm(refl(α)) => α.measure + 3
+  | NeutralTm(refl(α)) => α.measure + 2
   | NeutralTm(Sort _m) => 1
   | NeutralTm(Σ(α, β)) => α.measure + β.measure + 2
   | NeutralTm(`(β, x)) => β.measure + x.measure + 2
@@ -89,7 +89,7 @@ def Val.measure (v : Val) : ℕ :=
   match v with
   | Val(neutral(x)) => x.size
   | Val(λ env n => bdy) =>
-    bdy.size + 1 + n + match env with
+    bdy.size + 2 + n + match env with
     | x :: _xs =>
       x.measure
     | _ => 0

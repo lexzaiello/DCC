@@ -22,7 +22,9 @@ We might be able to use β-reduction in some places, idk.
 -- Rewrites
 
 inductive Apply : (f : Val) → (x : Val) → Val → Type
-  | eql₁     : Apply Val(λ xs 2 => Eql(f_α)) Val(neutral(&(env))) Val(λ xs 1 => Eql(f_α))
+  | refl₁    : Apply Val(λ xs 2 => refl(f_α)) Val(neutral(&(env))) Val(λ neutral(&(env))::xs 1 => refl(f_α))
+  | refl₂    : Apply Val(λ neutral(&(env))::xs 1 => refl(f_α)) Val(neutral(&(x))) Val(neutral(refl(f_α) (&(env)) (&(x))))
+  | eql₁     : Apply Val(λ xs 2 => Eql(f_α)) Val(neutral(&(env))) Val(λ neutral(&(env))::xs 1 => Eql(f_α))
   | eql₂     : Apply Val(λ env 1 => Eql(f_α)) Val(neutral(&(x))) Val(neutral(x = x))
   | unbox    : Apply Val(λ env 1 => *(α)) Val(neutral(&(x))) Val(x)
   | id       : Apply Val(λ env 1 => Id(α)) x x

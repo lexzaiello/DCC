@@ -124,10 +124,32 @@ theorem Val.var_measure_zero : Val(neutral(var((_v) : τ))).measure = 0 := by
 theorem Val.var_zero_measure : Val(neutral(var((_v) : τ))).measure = 0 := by
   grind
 
+/-
+f_α.measure + 3 + 1 + (env.measure + env.measure + env.measure + 2 + 1) + 1 +
+        (x.measure + x.measure + x.measure + 2 + 1) +
+      1 <
+    f_α.measure + 3 + 1 + 1 + 1 + (env.measure + env.measure + env.measure + 2 + 1) +
+      (x.measure + x.measure + x.measure + 2 + 1)
+
+after:
+  - f_α = 1
+  - x = 3
+  - env = 3
+  - const = 11
+before:
+  - f_α = 1
+  - env = 3
+  - x = 3
+  - const = 12
+-/
+
 @[dcc_size]
 theorem Apply.decreasing (h : Apply f x e') : e'.measure < f.measure + x.measure := by
   induction h
   any_goals (grind)
+  case refl₂ =>
+    simp [Val.measure, Neutral.size, NeutralTm.size]
+    grind
 
 #check Apply.decreasing
 

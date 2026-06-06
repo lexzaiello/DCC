@@ -12,7 +12,7 @@ namespace Expr
   | DCC ⊥ => 2
   | DCC x = y => x.size + y.size
   | DCC Eql(α)  => α.size + 3
-  | DCC refl(α) => α.size + 3
+  | DCC refl(α) => α.size + 2
   | DCC Sort m => m
   | DCC Σ(α, β) => α.size + β.size + 2
   | DCC `(_β, x) => x.size + 2

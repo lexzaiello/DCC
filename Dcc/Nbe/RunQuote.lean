@@ -57,18 +57,38 @@ Todo list:
 6. (Hard) I think we might need the "neutral" app case for Apply. Maybe? Probably not? Idk.
 -/
 
-mutual
-
-/-
-It may be prudent to make vars intrinsically typed.
-Then, Neutral.domain is total, not Option
--/
-inductive NeutralTm.Domain : (f : NeutralTm) → (α : Val) → Type
-
 inductive Val.Domain : (f : Val) → (α : Val) → Type
-  
-
-end
+  | eql₁     : Val.Domain f_α δ → Val(λ xs 2 => Eql(f_α)).Domain δ
+  | eql₂     : Apply f_α Val(neutral(&(env))) α
+    → Val.Domain Val(λ neutral(&(env))::xs 1 => Eql(f_α)) α
+  | refl₁    : Val.Domain f_α δ → Val(λ xs 2 => refl(f_α)).Domain δ
+  | refl₂    : Apply f_α Val(neutral(&(env))) α
+    → Val.Domain Val(λ neutral(&(env))::xs 1 => refl(f_α)) α
+  | unbox    : Val.Domain Val(λ env 1 => *(α)) Val(neutral(!(α)))
+  | id       : Val.Domain Val(λ env 1 => Id(α)) α
+  | fstc     : Val.Domain Val(λ env 1 => Fstc(β)) Val(neutral(Coup(β)))
+  | sndc     : Val.Domain Val(λ env 1 => Sndc(β)) Val(neutral(Coup(β)))
+  | curr₁    : Val.Domain Val(λ env 2 => Λ(α, β, x)) α
+  | curr₂    : Apply β y βx → Val.Domain Val(λ y::env 1 => Λ(α, β, x)) βx
+  | curr₁'   : Val.Domain Val(λ env 2 => !Λ(α, β, x)) Val(neutral(!(α)))
+  | curr₂'   : Apply Val(neutral(!<β>)) Val(neutral(&(y))) βx → Val.Domain Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) βx
+  | map      : Val.Domain f α → Val.Domain Val(λ env 1 => !<f>) Val(neutral(!(α)))
+  | fmap     : Val.Domain f α → Val.Domain Val(λ env 1 => $<f>) Val(neutral(!(α)))
+  | pair     : Val.Domain M α → Val.Domain N α → Val.Domain Val(λ env 1 => ⟦β⟧⟨M, N⟩) α
+  /-
+  TODO: Not sure how to fit Eval in here yet
+  | eval     : Val.Domain Val(λ env 2 => f) α → Val.Domain Val(
+  | eval     : Apply x y f'
+    → Apply f' z e'
+    → Apply Val(λ env 1 => Eval(_α, _β, x)) Val(neutral(⟦__β⟧(y, z))) e'-/
+  | quot     : Val.Domain Val(λ env 1 => `(β, x)) β
+  -- f ∘ g x
+  -- again, need to handle second round
+  -- can use β-reducer for this.
+  | comp'    : Val.Domain g α → Val.Domain Val(λ env 1 => f ∘' g) α
+  | comp     : Val.Domain g α → Val.Domain Val(λ env 1 => f ∘ g) α
+  | comp₂    : Val.Domain g α → Val.Domain Val(λ env 1 => f ∘∘ g) α
+  | pi       : Val.Domain f_α δ → Val.Domain f_β δ → Val.Domain Val(Π (f_α) env 1, f_β) δ
 
 /-
 Need to handle constant values as well.
@@ -144,9 +164,16 @@ inductive Val.DoEta : (level : ℕ) → (f : Val) → (f' : Neutral) → Type
 TODO ^ DoEta - feel like there are other cases I need to handle.
 -/
 
-theorem Val.DoEta.decreasing (h : DoEta level f f') : Val(neutral(f')).size < f.measure := by
-  
-  sorry
+theorem Val.DoEta.decreasing (h : DoEta level f f') : Val(neutral(f')).measure < f.measure := by
+  induction h with
+  | const h₁ h₂ h₃ =>
+    conv =>
+      left
+      dsimp [Val.measure]
+      rfl
+    have h := h₂.decreasing
+    
+    sorry
 
 /-def 
 

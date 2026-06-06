@@ -74,7 +74,7 @@ inductive Val.Domain : (f : Val) → (α : Val) → Type
   | curr₂'   : Apply Val(neutral(!<β>)) Val(neutral(&(y))) βx → Val.Domain Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) βx
   | map      : Val.Domain f α → Val.Domain Val(λ env 1 => !<f>) Val(neutral(!(α)))
   | fmap     : Val.Domain f α → Val.Domain Val(λ env 1 => $<f>) Val(neutral(!(α)))
-  | pair     : Val.Domain M α → Val.Domain N α → Val.Domain Val(λ env 1 => ⟦β⟧⟨M, N⟩) α
+  | pair     : Val.Domain M α → Val.Domain Val(λ env 1 => ⟦β⟧⟨M, N⟩) α
   /-
   TODO: Not sure how to fit Eval in here yet
   | eval     : Val.Domain Val(λ env 2 => f) α → Val.Domain Val(
@@ -88,7 +88,71 @@ inductive Val.Domain : (f : Val) → (α : Val) → Type
   | comp'    : Val.Domain g α → Val.Domain Val(λ env 1 => f ∘' g) α
   | comp     : Val.Domain g α → Val.Domain Val(λ env 1 => f ∘ g) α
   | comp₂    : Val.Domain g α → Val.Domain Val(λ env 1 => f ∘∘ g) α
-  | pi       : Val.Domain f_α δ → Val.Domain f_β δ → Val.Domain Val(Π (f_α) env 1, f_β) δ
+  | pi       : Val.Domain f_α δ → Val.Domain Val(Π (f_α) env 1, f_β) δ
+
+def Val.domain (f : Val) : Option ((α : Val) × f.Domain α) :=
+  match f with
+  | Val(λ xs 2 => Eql(f_α)) =>
+    match f_α.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .eql₁ h⟩
+    | _ => .none
+  | Val(λ neutral(&(env))::xs 1 => Eql(f_α)) =>
+    match f_α.apply Val(neutral(&(env))) with
+    | .some ⟨_, h⟩ => .some ⟨_, .eql₂ h⟩
+    | _ => .none
+  | Val(λ xs 2 => refl(f_α)) =>
+    match f_α.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .refl₁ h⟩
+    | _ => .none
+  | Val(λ neutral(&(env))::xs 1 => refl(f_α)) =>
+    match f_α.apply Val(neutral(&(env))) with
+    | .some ⟨_, h⟩ => .some ⟨_, .refl₂ h⟩
+    | _ => .none
+  | Val(λ env 1 => *(α)) => .some ⟨_, .unbox⟩
+  | Val(λ env 1 => Id(α)) => .some ⟨_, .id⟩
+  | Val(λ env 1 => Fstc(β)) => .some ⟨_, .fstc⟩
+  | Val(λ env 1 => Sndc(β)) => .some ⟨_, .sndc⟩
+  | Val(λ env 2 => Λ(α, β, x)) => .some ⟨_, .curr₁⟩
+  | Val(λ y::env 1 => Λ(α, β, x)) =>
+    match β.apply y with
+    | .some ⟨_, h⟩ => .some ⟨_, .curr₂ h⟩
+    | _ => .none
+  | Val(λ env 2 => !Λ(α, β, x)) => .some ⟨_, .curr₁'⟩
+  | Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) =>
+    match Val(neutral(!<β>)).apply Val(neutral(&(y))) with
+    | .some ⟨_, h⟩ => .some ⟨_, .curr₂' h⟩
+    | _ => .none
+  | Val(λ env 1 => !<f>) =>
+    match f.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .map h⟩
+    | _ => .none
+  | Val(λ env 1 => $<f>) =>
+    match f.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .fmap h⟩
+    | _ => .none
+  | Val(λ env 1 => ⟦β⟧⟨M, N⟩) =>
+    match M.domain with
+    | .some ⟨_, h⟩ =>
+        .some ⟨_, .pair h⟩
+    | _ => .none
+  | Val(λ env 1 => `(β, x)) => .some ⟨_, .quot⟩
+  | Val(λ env 1 => f ∘' g) =>
+    match g.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .comp' h⟩
+    | _ => .none
+  | Val(λ env 1 => f ∘ g) =>
+    match g.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .comp h⟩
+    | _ => .none
+  | Val(λ env 1 => f ∘∘ g) =>
+    match g.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .comp₂ h⟩
+    | _ => .none
+  | Val(Π (f_α) env 1, f_β) =>
+    match f_α.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .pi h⟩
+    | _ => .none
+  | _ => .none
 
 /-
 Need to handle constant values as well.

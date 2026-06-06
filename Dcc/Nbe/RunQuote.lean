@@ -154,6 +154,14 @@ def Val.domain (f : Val) : Option ((α : Val) × f.Domain α) :=
     | _ => .none
   | _ => .none
 
+@[dcc_size]
+theorem Val.Domain.decreasing (h : Val.Domain e τ) : τ.measure < e.measure := by
+  induction h
+  any_goals (grind)
+  case curr₂' h | curr₂ h | refl₂ h | eql₂ h =>
+    have h := h.decreasing
+    grind
+
 /-
 Need to handle constant values as well.
 
@@ -235,7 +243,9 @@ theorem Val.DoEta.decreasing (h : DoEta level f f') : Val(neutral(f')).measure <
       left
       dsimp [Val.measure]
       rfl
-    have h := h₂.decreasing
+    have ha := h₂.decreasing
+    have hb := h₁.decreasing
+    simp [Val.var_measure_zero] at ha
     
     sorry
 

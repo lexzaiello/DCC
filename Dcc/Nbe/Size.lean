@@ -27,7 +27,7 @@ def NeutralTm.size (nv : NeutralTm) : ℕ :=
   | NeutralTm(refl(α)) => α.measure + 2
   | NeutralTm(Sort _m) => 1
   | NeutralTm(Σ(α, β)) => α.measure + β.measure + 2
-  | NeutralTm(`(β, x)) => β.measure + x.measure + 2
+  | NeutralTm(`(β, x)) => β.measure + x.measure
   | NeutralTm(⟦β⟧(x, y)) => β.measure + x.measure + y.measure + 1
   | NeutralTm(Coup(β)) => β.measure + 1
   | NeutralTm(Id(α))      => α.measure + 1
@@ -134,16 +134,16 @@ def NeutralTm.contains_var (v : NeutralTm) (idx : ℕ) (τ : Val) : Bool :=
 
 def Neutral.contains_var (v : Neutral) (idx : ℕ) (τ : Val) : Bool :=
   match v with
-  | Neutral(var((n) : τ')) => n == idx ∧ τ == τ'
+  | Neutral(var((n) : τ')) => n == idx
   | Neutral(tm(tm)) => tm.contains_var idx τ
 
 def Val.contains_var (v : Val) (idx : ℕ) (τ : Val) : Bool :=
   match v with
   | Val(λ env _n => bdy) => env.any (fun v => match v with
-    | Val(neutral(var((n) : τ₂))) => n == idx ∧ τ₂ == τ
+    | Val(neutral(var((n) : τ₂))) => n == idx
     | _ => False) ∨ bdy.contains_var idx τ
   | Val(Π (f_α) env _n, f_β) => env.any (fun v => match v with
-    | Val(neutral(var((n) : τ₂))) => n == idx ∧ τ₂ == τ
+    | Val(neutral(var((n) : τ₂))) => n == idx
     | _ => False) ∨ f_α.contains_var idx τ ∨ f_β.contains_var idx τ
   | Val(neutral(neut)) => neut.contains_var idx τ
 

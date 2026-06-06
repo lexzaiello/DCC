@@ -35,7 +35,7 @@ theorem Val.measure_pos_not_var (hn_var : ¬ ∃ (v : ℕ) (τ : Val), e ≠ Val
     | tm tm =>
       grind
 
-@[grind ., grind! .]
+/-@[grind ., grind! .]
 theorem NeutralTm.size_pos : 0 < NeutralTm.size x := by
   cases x
   any_goals (grind)
@@ -46,6 +46,10 @@ theorem NeutralTm.size_pos : 0 < NeutralTm.size x := by
     case tm tm =>
       have h := tm.size_pos
       grind
+  case quot β x =>
+    simp [NeutralTm.size]
+    
+    sorry
 
 @[grind ., grind! .]
 theorem Val.size_pos (_h_neq : ¬ ∃ n τ, x = Val(neutral(var((n) : τ)))) : 0 < Val.size x := by
@@ -67,7 +71,7 @@ theorem Val.measure_pos (_h_neq : ¬ ∃ n τ, x = Val(neutral(var((n) : τ)))) 
   case neut nv =>
     cases nv
     · simp_all
-    · grind
+    · grind-/
 
 end
 

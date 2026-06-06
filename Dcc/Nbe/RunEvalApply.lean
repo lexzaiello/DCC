@@ -108,8 +108,6 @@ def Expr.evaluate (env : List Semantic.Val) (e : Expr) : Option ((e' : Semantic.
   | (DCC (f x)) =>
     match f.evaluate env, x.evaluate env with
     | .some ⟨f', h₁⟩, .some ⟨x', h₂⟩ =>
-      dbg_trace s!"fail f: {f}"
-      dbg_trace s!"fail x: {x}"
       match f'.apply x' with
       | .some ⟨_, h₃⟩ => .some ⟨_, .app h₁ h₂ h₃⟩
       | _ => .none

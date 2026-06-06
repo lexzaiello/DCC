@@ -58,6 +58,8 @@ inductive Apply : (f : Val) → (x : Val) → Val → Type
     → Apply Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) Val(neutral(&(z))) e'
   | pi       : Apply Val(Π (f_α) env 1, f_β) x Val(Π (f_α) x::env 0, f_β)
   -- TODO: This shouldn't be possible
+  -- TODO: Seem to need this. We need to detect where the
+  -- actual "steps" end and we end up with just a var stuck on
   --| neut     : Apply Val(neutral(f)) x Val(neutral(f x))
 
 inductive Eval : List Val → Expr → Val → Type

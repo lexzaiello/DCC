@@ -2,6 +2,7 @@ import Dcc.Nbe.Value
 import Dcc.Nbe.Size
 import Dcc.Metatheory.Value
 import Dcc.Nbe.RunEvalApply
+import Dcc.Nbe.Quote
 
 namespace Semantic
 
@@ -57,98 +58,65 @@ Todo list:
 6. (Hard) I think we might need the "neutral" app case for Apply. Maybe? Probably not? Idk.
 -/
 
-inductive Val.Domain : (f : Val) → (α : Val) → Type
-  | eql₁     : Val.Domain f_α δ → Val(λ xs 2 => Eql(f_α)).Domain δ
-  | eql₂     : Apply f_α Val(neutral(&(env))) α
-    → Val.Domain Val(λ neutral(&(env))::xs 1 => Eql(f_α)) α
-  | refl₁    : Val.Domain f_α δ → Val(λ xs 2 => refl(f_α)).Domain δ
-  | refl₂    : Apply f_α Val(neutral(&(env))) α
-    → Val.Domain Val(λ neutral(&(env))::xs 1 => refl(f_α)) α
-  | unbox    : Val.Domain Val(λ env 1 => *(α)) Val(neutral(!(α)))
-  | id       : Val.Domain Val(λ env 1 => Id(α)) α
-  | fstc     : Val.Domain Val(λ env 1 => Fstc(β)) Val(neutral(Coup(β)))
-  | sndc     : Val.Domain Val(λ env 1 => Sndc(β)) Val(neutral(Coup(β)))
-  | curr₁    : Val.Domain Val(λ env 2 => Λ(α, β, x)) α
-  | curr₂    : Apply β y βx → Val.Domain Val(λ y::env 1 => Λ(α, β, x)) βx
-  | curr₁'   : Val.Domain Val(λ env 2 => !Λ(α, β, x)) Val(neutral(!(α)))
-  | curr₂'   : Apply Val(neutral(!<β>)) Val(neutral(&(y))) βx → Val.Domain Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) βx
-  | map      : Val.Domain f α → Val.Domain Val(λ env 1 => !<f>) Val(neutral(!(α)))
-  | fmap     : Val.Domain f α → Val.Domain Val(λ env 1 => $<f>) Val(neutral(!(α)))
-  | pair     : Val.Domain M α → Val.Domain Val(λ env 1 => ⟦β⟧⟨M, N⟩) α
-  /-
-  TODO: Not sure how to fit Eval in here yet
-  | eval     : Val.Domain Val(λ env 2 => f) α → Val.Domain Val(
-  | eval     : Apply x y f'
-    → Apply f' z e'
-    → Apply Val(λ env 1 => Eval(_α, _β, x)) Val(neutral(⟦__β⟧(y, z))) e'-/
-  | quot     : Val.Domain Val(λ env 1 => `(β, x)) β
-  -- f ∘ g x
-  -- again, need to handle second round
-  -- can use β-reducer for this.
-  | comp'    : Val.Domain g α → Val.Domain Val(λ env 1 => f ∘' g) α
-  | comp     : Val.Domain g α → Val.Domain Val(λ env 1 => f ∘ g) α
-  | comp₂    : Val.Domain g α → Val.Domain Val(λ env 1 => f ∘∘ g) α
-  | pi       : Val.Domain f_α δ → Val.Domain Val(Π (f_α) env 1, f_β) δ
-
 def Val.domain (f : Val) : Option ((α : Val) × f.Domain α) :=
   match f with
-  | Val(λ xs 2 => Eql(f_α)) =>
+  | Val(λ _xs 2 => Eql(f_α)) =>
     match f_α.domain with
     | .some ⟨_, h⟩ => .some ⟨_, .eql₁ h⟩
     | _ => .none
-  | Val(λ neutral(&(env))::xs 1 => Eql(f_α)) =>
+  | Val(λ neutral(&(env))::_xs 1 => Eql(f_α)) =>
     match f_α.apply Val(neutral(&(env))) with
     | .some ⟨_, h⟩ => .some ⟨_, .eql₂ h⟩
     | _ => .none
-  | Val(λ xs 2 => refl(f_α)) =>
+  | Val(λ _xs 2 => refl(f_α)) =>
     match f_α.domain with
     | .some ⟨_, h⟩ => .some ⟨_, .refl₁ h⟩
     | _ => .none
-  | Val(λ neutral(&(env))::xs 1 => refl(f_α)) =>
+  | Val(λ neutral(&(env))::_xs 1 => refl(f_α)) =>
     match f_α.apply Val(neutral(&(env))) with
     | .some ⟨_, h⟩ => .some ⟨_, .refl₂ h⟩
     | _ => .none
-  | Val(λ env 1 => *(α)) => .some ⟨_, .unbox⟩
-  | Val(λ env 1 => Id(α)) => .some ⟨_, .id⟩
-  | Val(λ env 1 => Fstc(β)) => .some ⟨_, .fstc⟩
-  | Val(λ env 1 => Sndc(β)) => .some ⟨_, .sndc⟩
-  | Val(λ env 2 => Λ(α, β, x)) => .some ⟨_, .curr₁⟩
-  | Val(λ y::env 1 => Λ(α, β, x)) =>
+  | Val(λ _env 1 => *(_α)) => .some ⟨_, .unbox⟩
+  | Val(λ _env 1 => Id(_α)) => .some ⟨_, .id⟩
+  | Val(λ _env 1 => Fstc(_β)) => .some ⟨_, .fstc⟩
+  | Val(λ _env 1 => Sndc(_β)) => .some ⟨_, .sndc⟩
+  | Val(λ _env 2 => Λ(_α, _β, _x)) => .some ⟨_, .curr₁⟩
+  | Val(λ y::_env 1 => Λ(_α, β, _x)) =>
     match β.apply y with
     | .some ⟨_, h⟩ => .some ⟨_, .curr₂ h⟩
     | _ => .none
-  | Val(λ env 2 => !Λ(α, β, x)) => .some ⟨_, .curr₁'⟩
-  | Val(λ neutral(&(y))::env 1 => !Λ(α, β, x)) =>
+  | Val(λ _env 2 => !Λ(_α, _β, _x)) => .some ⟨_, .curr₁'⟩
+  | Val(λ neutral(&(y))::_env 1 => !Λ(_α, β, _x)) =>
     match Val(neutral(!<β>)).apply Val(neutral(&(y))) with
     | .some ⟨_, h⟩ => .some ⟨_, .curr₂' h⟩
     | _ => .none
-  | Val(λ env 1 => !<f>) =>
+  | Val(λ _env 1 => !<f>) =>
     match f.domain with
     | .some ⟨_, h⟩ => .some ⟨_, .map h⟩
     | _ => .none
-  | Val(λ env 1 => $<f>) =>
+  | Val(λ _env 1 => $<f>) =>
     match f.domain with
     | .some ⟨_, h⟩ => .some ⟨_, .fmap h⟩
     | _ => .none
-  | Val(λ env 1 => ⟦β⟧⟨M, N⟩) =>
+  | Val(λ _env 1 => ⟦_β⟧⟨M, _N⟩) =>
     match M.domain with
     | .some ⟨_, h⟩ =>
         .some ⟨_, .pair h⟩
     | _ => .none
-  | Val(λ env 1 => `(β, x)) => .some ⟨_, .quot⟩
-  | Val(λ env 1 => f ∘' g) =>
+  | Val(λ _env 1 => `(_β, _x)) => .some ⟨_, .quot⟩
+  | Val(λ _env 1 => _f ∘' g) =>
     match g.domain with
     | .some ⟨_, h⟩ => .some ⟨_, .comp' h⟩
     | _ => .none
-  | Val(λ env 1 => f ∘ g) =>
+  | Val(λ _env 1 => _f ∘ g) =>
     match g.domain with
     | .some ⟨_, h⟩ => .some ⟨_, .comp h⟩
     | _ => .none
-  | Val(λ env 1 => f ∘∘ g) =>
+  | Val(λ _env 1 => _f ∘∘ g) =>
     match g.domain with
     | .some ⟨_, h⟩ => .some ⟨_, .comp₂ h⟩
     | _ => .none
-  | Val(Π (f_α) env 1, f_β) =>
+  | Val(Π (f_α) _env 1, _f_β) =>
     match f_α.domain with
     | .some ⟨_, h⟩ => .some ⟨_, .pi h⟩
     | _ => .none
@@ -161,6 +129,19 @@ theorem Val.Domain.decreasing (h : Val.Domain e τ) : τ.measure < e.measure := 
   case curr₂' h | curr₂ h | refl₂ h | eql₂ h =>
     have h := h.decreasing
     grind
+
+def Val.mk_var (level : ℕ) (τ : Val) : Option ((v : Val) × τ.MkVar level v) :=
+  match τ with
+  | Val(neutral(!(τ₀))) =>
+    match τ₀.mk_var level with
+    | .some ⟨_v, h⟩ => .some ⟨_, .boxed h⟩
+    | _ => .none
+  | Val(neutral(Sort _m)) => .some ⟨_, .sort⟩
+  | Val(Π (_f_α) _env _n, _f_β) => .some ⟨_, .pi⟩
+  | Val(neutral(_x = _y)) => .some ⟨_, .eq⟩
+  | Val(neutral(⊤)) => .some ⟨_, .top⟩
+  | Val(neutral(Coup(_β))) => .some ⟨_, .coup⟩
+  | _ => .none
 
 /-
 Make do_η mutually inductive with Val.Quote and Neutral.Quote
@@ -186,211 +167,6 @@ def Val.domain (v : Val) : Option Expr :=
   | Val(Π (f_α) env n, f_β) =>
     sorry
   | Neutral(-/
-
-mutual
-
-/-
-Need to handle constant values as well.
-
-If f' does not contain the variable at all, then we are safe.
--/
-/-inductive Val.DoEta : (level : ℕ) → (f : Val) → (f' : Expr) → Type
-  -- If the variable does not appear anywhere in the "substituted"
-  -- environment, it must be a constant
-  /-| pure  : Val.Domain f τ
-    -- this is a partial application.
-    -- for example, top-level Λ(α, β, x) y
-    -- how does Λ(α, `(α, β), `(Coup(`(α, β)), x)) get η-reduced?
-    -- e.g., to η-reduce it to `(α, `(β, y))
-    -- we would need to test multiple arguments....
-    -- Our highest arity term is Λ(α, β, x) with an arity of 2.
-    -- so, we will need an η-rule for Λ, probably.
-    → Apply f Val(neutral(var((level) : τ))) Val(λ env' n' => bdy')
-  -- Λ(α, β, `(.., x)) y clearly η-reduces with the next argument,
-  -- but two arguments is less clear.
-  -- can we just apply two variables? The size should decrease.
-  -- That seems fine. Yes.
-  -- we need to know the arity here, clearly
-  -- TODO: later, check this-/
-  -- Λ(α, β, x) is the only combinator with an arity of 2.
-  -- We apply two "fresh" variables to it,
-  -- example: η-reducing: Λ(α, `(α, β), `(Coup(`(α, β)), x))
-  -- apply fresh variable (0 : α)
-  -- get λ ⟦(0 : α)⟧ 1 => Λ(α, `(α, β), `(Coup(`(α, β)), x))
-  -- apply second variable (1 : β)
-  -- get λ ⟦(1 : β), (0 : α)⟧ 0 => Λ(α, `(α, β), `(Coup(`(α, β)), x))
-  -- supposing `(Coup(`(α, β)), x) ⟦`(α, β)⟧((0 : α), (1 : β)) → x'
-  -- and x' is actually x, then this becomes `(α, `(β, x'))
-  -- η-reducing Λ Curr is asking whether we can skip "coupling" the arguments
-  -- that is, if
-  -- If apply both arguments
-  -- downgrading curry Λ(α, β, x) to quotation is primarily a question of downgrading a dependent type to
-  -- we have a rule that already handles quotation.
-  -- the main question is of whether or not the first component is used. kind of like 2-ary quote?
-  -- if the first argument doesn't show up, we can quote it.
-  -- however, this is already handled by quote rule, somewhat.
-  -- assume x and y are opaque variables
-  -- TODO: this rule is super confusing, and maybe handled by other cases already ?
-  -- If curr apply gives x y z
-  -- that means the "substituted" couple was fully destructured
-  -- meaning, we can η-reduce to just x.
-  TODO: move these into Val.Quote
-  /-| curr  : Val.Domain Val(λ env 2 => f) τ₁
-    → Apply Val(λ env 2 => f) Val(neutral(var((level) : τ₁))) f'
-    → Val.Domain f' τ₂
-    → Apply f' Val(neutral(var((level) : τ₂))) -/
-  -- Λ(α, β, x) takes a couple (y, z), but if y and z end up in term app position, that
-  -- means the currying was a no-op
-  -/
-
-inductive Neutral.Quote : (level : ℕ) → (v : Neutral) → (e : Expr) → Type
-  | tintro : Neutral.Quote level Neutral(∗) (DCC ∗)
-  | top    : Neutral.Quote level Neutral(⊤) (DCC ⊤)
-  | bot    : Neutral.Quote level Neutral(⊥) (DCC ⊥)
-  | eq     : Val.Quote level x x' → Val.Quote level y y'
-    → Neutral.Quote level Neutral(x = y) (DCC (x' = y'))
-  | eql    : Val.Quote level α α' → Neutral.Quote level Neutral(Eql(α)) (DCC Eql(α'))
-  | refl   : Val.Quote level α α' → Neutral.Quote level Neutral(refl(α)) (DCC refl(α'))
-  | sort   : Neutral.Quote level Neutral(Sort m) (DCC Sort m)
-  | sigma  : Val.Quote level x x' → Val.Quote level y y'
-    → Neutral.Quote level Neutral(Σ(x, y)) (DCC (Σ(x', y')))
-  | quot   : Val.Quote level β β' → Val.Quote level x x'
-    → Neutral.Quote level Neutral(`(β, x)) (DCC `(β', x'))
-  | coup   : Val.Quote level β β' → Val.Quote level x x'
-    → Val.Quote level y y' → Neutral.Quote level Neutral(⟦β⟧(x, y)) (DCC ⟦β'⟧(x', y'))
-  | t_coup : Val.Quote level β β' → Neutral.Quote level Neutral(Coup(β)) (DCC Coup(β'))
-  | id     : Val.Quote level α α' → Neutral.Quote level Neutral(Id(α)) (DCC Id(α'))
-  | fstc   : Val.Quote level α α' → Neutral.Quote level Neutral(Fstc(α)) (DCC Fstc(α'))
-  | sndc   : Val.Quote level α α' → Neutral.Quote level Neutral(Sndc(α)) (DCC Sndc(α'))
-  | comp'  : Val.Quote level x x' → Val.Quote level y y'
-    → Neutral.Quote level Neutral(x ∘' y) (DCC (x' ∘' y'))
-  | comp   : Val.Quote level x x' → Val.Quote level y y'
-    → Neutral.Quote level Neutral(x ∘ y) (DCC (x' ∘ y'))
-  | comp₂  : Val.Quote level x x' → Val.Quote level y y'
-    → Neutral.Quote level Neutral(x ∘∘ y) (DCC (x' ∘∘ y'))
-  | pair   : Val.Quote level β β' → Val.Quote level x x'
-    → Val.Quote level y y' → Neutral.Quote level Neutral(⟦β⟧⟨x, y⟩) (DCC ⟦β'⟧⟨x', y'⟩)
-  | curr   : Val.Quote level α α' → Val.Quote level β β'
-    → Val.Quote level x x' → Neutral.Quote level Neutral(Λ(α, β, x)) (DCC Λ(α', β', x'))
-  | curr'  : Val.Quote level α α' → Val.Quote level β β'
-    → Val.Quote level x x' → Neutral.Quote level Neutral(!Λ(α, β, x)) (DCC !Λ(α', β', x'))
-  | eval   : Val.Quote level α α' → Val.Quote level β β'
-    → Val.Quote level x x' → Neutral.Quote level Neutral(Eval(α, β, x)) (DCC Eval(α', β', x'))
-  | bang   : Val.Quote level x x' → Neutral.Quote level Neutral(!(x)) (DCC !(x'))
-  | unbox  : Val.Quote level x x' → Neutral.Quote level Neutral(*(x)) (DCC *(x'))
-  | boxed  : Val.Quote level x x' → Neutral.Quote level Neutral(&(x)) (DCC &(x'))
-  | map    : Val.Quote level x x' → Neutral.Quote level Neutral(!<x>) (DCC !<x'>)
-  | fmap   : Val.Quote level x x' → Neutral.Quote level Neutral($<x>) (DCC $<x'>)
-  | app    : Neutral.Quote level f f' → Val.Quote level x x' → Neutral.Quote level Neutral(f x) (DCC (f' x'))
-
-/-
-Val(neutral(f' neutral(var(level))))
--/
-
-inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
-  | neut : Neutral.Quote level nv e  → Val.Quote level Val(neutral(nv)) e
-  | pi₁  : Val.Quote level f_α f_α'' → Val.Quote level.succ f_β f_β''
-    → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC Π(f_α'', f_β''))
-  | pi₂  : Val.Quote level f_α f_α'' → Val.Quote level.succ f_β f_β''
-    → Val.Quote level env env'
-    → Val.Quote level Val(Π (f_α) ⟦env⟧ 0, f_β) (DCC (Π(f_α'', f_β'') env'))
-  | const : Val.Domain Val(λ env n => bdy) τ
-    → Apply Val(λ env n => bdy) Val(neutral(var((level) : τ))) v'
-    → (¬ v'.contains_var level τ)
-    → Val.Quote level τ τ'
-    → Val.Quote level v' v''
-    → Val.Quote level Val(λ env n => bdy) (DCC `(τ', v''))
-  | comp  : Val.Domain Val(λ env n => bdy) τ
-    → Apply Val(λ env n => bdy) Val(neutral(var((level) : τ))) Val(neutral(f' neutral(var((level) : τ₂))))
-    → Neutral.Quote level f' f''
-    → Val.Quote level Val(λ env n => bdy) f''
-  | id    : Val.Domain Val(λ env n => bdy) τ
-    → Apply f Val(neutral(var((level) : τ))) Val(neutral(var((level) : τ₂)))
-    → Val.Quote level τ τ'
-    → Val.Quote level Val(λ env n => bdy) (DCC Id(τ'))
-  /-| curr  : Apply β Val(neutral(var((level) : α))) βx
-    → Apply x Val(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))
-      Val(neutral(x' neutral(var((level) : _a)) neutral(var((level.succ) : _b))))
-    → Neutral.Quote level x' x''
-    → Val.Quote level Val(neutral(Λ(α, β, x))) x''
-  | curr' : Apply β Val(neutral(&(neutral(var((level) : α))))) βx
-    -- this should be less than curr size
-    → Apply x Val(neutral(&(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))))
-      Val(neutral(x' (&(neutral(var((level) : _a)))) (&(neutral(var((level.succ) : _b))))))
-    → Neutral.Quote level x' x''
-    → Val.Quote level Val(neutral(!Λ(α, β, x))) x''
-    TODO: probably have to add this back. we'll see.
-    -/
-
-/-inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
-  | neut : Neutral.Quote level nv e → Val.Quote level Val(neutral(nv)) e
-  | lam₁ : Val.Domain Val(λ env n => bdy) τ → Apply Val(λ env n => bdy) Val(neutral(var((level) : τ))) Val(neutral(f' neutral(var((level) : τ))))
-    → Neutral.Quote level.succ f' e'
-    → Val.Quote level Val(λ env n => bdy) e'
-  -- This one is wrong. Should be quoting the raw expression. var should NOT be included in the environment
-  | lam₂ : Val.Domain Val(λ env n => bdy) τ
-    → Apply Val(λ env n => bdy) Val(neutral(var((level) : τ))) Val(λ env' n' => bdy')
-    → Val.Quote level.succ Val(λ env' n' => bdy') e'
-    → Val.Quote level Val(λ env n => bdy) e'
-  /-
-    We need to store context / types, so we can output Id(α).
-    | lam₃ : Apply Val(λ env n => bdy) Val(neutral(var(level))) Val(neutral(var(level)))
-    → Neutral.Quote level.succ f' e'
-    → Val.Quote level Val(λ env n => bdy) e'-/
-  | pi₁  : Val.Domain f_α τ₁
-    → Apply f_α Val(neutral(var((level) : τ₁))) Val(neutral(f_α' neutral(var((level) : τ₁))))
-    → Val.Domain f_β τ₂
-    → Apply f_β Val(neutral(var((level) : τ₂))) Val(neutral(f_β' neutral(var((level) : τ₂))))
-    → Neutral.Quote level.succ f_α' f_α''
-    → Neutral.Quote level.succ.succ f_β' f_β''
-    → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
-  | pi₂  : Val.Domain f_α τ₁
-    → Apply f_α Val(neutral(var((level) : τ₁))) Val(λ env' n' => bdy')
-    → Val.Domain f_β τ₂
-    → Apply f_β Val(neutral(var((level) : τ₂))) Val(neutral(f_β' neutral(var((level) : τ₂))))
-    → Val.Quote level.succ Val(λ env' n' => bdy') f_α''
-    → Neutral.Quote level.succ.succ f_β' f_β''
-    → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
-  | pi₃  : Val.Domain f_α τ₁
-    → Apply f_α Val(neutral(var((level) : τ₁))) Val(neutral(f_α' neutral(var((level) : τ₁))))
-    → Val.Domain f_β τ₂
-    → Apply f_β Val(neutral(var((level) : τ₂))) Val(λ env' n' => bdy')
-    → Neutral.Quote level.succ f_α' f_α''
-    → Val.Quote level.succ.succ Val(λ env' n' => bdy') f_β''
-    → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
-  | pi₄ : Val.Domain f_α τ₁
-    → Apply f_α Val(neutral(var((level) : τ₁))) Val(λ env'₁ n'₁ => bdy'₁)
-    → Val.Domain f_β τ₂
-    → Apply f_β Val(neutral(var((level) : τ₂))) Val(λ env'₂ n'₂ => bdy'₂)
-    → Val.Quote level.succ Val(λ env'₁ n'₁ => bdy'₁) f_α''
-    → Val.Quote level.succ.succ Val(λ env'₂ n'₂ => bdy'₂) f_β''
-    → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
-  | pi'₁ : Apply f_α env f_α₁
-    → Val.Domain f_α₁ τ₁
-    → Apply f_α₁ Val(neutral(var((level) : τ₁))) Val(neutral(f_α₂ neutral(var((level) : τ₁))))
-    → Apply f_β env f_β₁
-    → Val.Domain f_β₁ τ₂
-    → Apply f_β₁ Val(neutral(var((level.succ) : τ₂))) Val(neutral(f_β₂ neutral(var((level.succ) : τ₂))))
-    → Neutral.Quote level.succ f_α₂ f_α'
-    → Neutral.Quote level.succ.succ f_β₂ f_β'
-    → Val.Quote level env env'
-    → Val.Quote level Val(Π (f_α) ⟦env⟧ 0, f_β) (DCC (Π(f_α', f_β') env'))-/
-
-/-
-Neutral case for Apply is absolutely necessary.
-
-You can only detect eta-reducible when you get in-between a saturated reduction.
-
-For example:
-Id(α) x reduces to x.
-where f := Id(α)
-
-f is not eta-reducible.
-
-Id(α) ∘ Id(α)
--/
-
-end
 
 mutual
 
@@ -589,43 +365,44 @@ termination_by (v.size, sizeOf v)
 
 def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :=
   match v with
-  | Val(λ env n => bdy) =>
-    match Val(λ env n => bdy).domain with
-    | .some ⟨τ, h₁⟩ =>
+  | Val(λ env n => bdy) => do
+    dbg_trace s!"lam domain: {(repr ∘ (·.fst)) <$> Val(λ env n => bdy).domain}"
+    let ⟨τ, h₁⟩ ← Val(λ env n => bdy).domain
+    let ⟨var, h₂⟩ ← τ.mk_var level
+    have ha := h₁.decreasing
+    dbg_trace s!"apply: {(repr ∘ (·.fst)) <$>  Val(λ env n => bdy).apply Val(neutral(var((level) : τ)))}"
+    match Val(λ env n => bdy).apply var with
+    | .some ⟨Val(neutral(f' neutral(var((level₂) : τ₂)))), h₃⟩ =>
+      have hb := h₃.decreasing
+      if heq : level₂ = level then by
+        cases heq
+        have h_dec' : f'.size < (Val.lam env n bdy).measure := by
+          grind
+        match f'.quote level with
+        | .some ⟨_, h₃⟩ =>
+          exact .some ⟨_, .comp h₁ h₂ h₃⟩
+        | _ => exact .none
+      else .none
+    | .some ⟨Val(neutral(var((level₂) : τ₂))), h₂⟩ =>
       have ha := h₁.decreasing
-      match Val(λ env n => bdy).apply Val(neutral(var((level) : τ))) with
-      | .some ⟨Val(neutral(f' neutral(var((level₂) : τ₂)))), h₂⟩ =>
-        have hb := h₂.decreasing
-        if heq : level₂ = level then by
-          cases heq
-          have h_dec' : f'.size < (Val.lam env n bdy).measure := by
-            grind
-          match f'.quote level with
-          | .some ⟨_, h₃⟩ =>
-            exact .some ⟨_, .comp h₁ h₂ h₃⟩
-          | _ => exact .none
-        else .none
-      | .some ⟨Val(neutral(var((level₂) : τ₂))), h₂⟩ =>
-        have ha := h₁.decreasing
-        have hb := h₂.decreasing
-        if heq : level₂ = level then by
-          cases heq
-          have h_dec' : τ.measure < Val(λ env n => bdy).measure := by
-            grind
-          match τ.quote level with
-          | .some ⟨_, h₃⟩ =>
-            exact .some ⟨_, .id h₁ h₂ h₃⟩
-          | _ => exact .none
-        else .none
-      | .some ⟨v', h₂⟩ =>
-        have hb := h₂.decreasing
-        if h₃ : ¬ v'.contains_var level τ then
-          match τ.quote level, v'.quote level with
-          | .some ⟨_, h₄⟩, .some ⟨_, h₅⟩ =>
-            .some ⟨_, .const h₁ h₂ h₃ h₄ h₅⟩
-          | _, _ => .none
-        else .none
-      | _ => .none
+      have hb := h₂.decreasing
+      if heq : level₂ = level then by
+        cases heq
+        have h_dec' : τ.measure < Val(λ env n => bdy).measure := by
+          grind
+        match τ.quote level with
+        | .some ⟨_, h₃⟩ =>
+          exact .some ⟨_, .id h₁ h₂ h₃⟩
+        | _ => exact .none
+      else .none
+    | .some ⟨v', h₂⟩ =>
+      have hb := h₂.decreasing
+      if h₃ : ¬ v'.contains_var level τ then
+        match τ.quote level, v'.quote level with
+        | .some ⟨_, h₄⟩, .some ⟨_, h₅⟩ =>
+          .some ⟨_, .const h₁ h₂ h₃ h₄ h₅⟩
+        | _, _ => .none
+      else .none
     | _ => .none
   | Val(Π (f_α) ⟦⟧ 1, f_β) =>
     have h_dec₁ : f_α.measure < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
@@ -640,6 +417,8 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
         simp [Val.measure]
         rfl
       grind
+    dbg_trace Sigma.fst <$> f_α.quote level
+    dbg_trace Sigma.fst <$> f_β.quote level.succ
     match f_α.quote level, f_β.quote level.succ with
     | .some ⟨f_α', h₁⟩, .some ⟨f_β', h₂⟩ =>
       .some ⟨_, .pi₁ h₁ h₂⟩
@@ -657,8 +436,12 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
         simp [Val.measure]
         rfl
       grind
+    dbg_trace "hi"
+    dbg_trace Sigma.fst <$> (f_α.quote level)
+    dbg_trace repr f_β
     match f_α.quote level, f_β.quote level.succ with
     | .some ⟨f_α', h₁⟩, .some ⟨f_β', h₂⟩ =>
+      dbg_trace "b"
       have h_dec₁ : env.measure < Val(Π (f_α) ⟦env⟧ 0, f_β).measure := by
         conv =>
           right

@@ -102,50 +102,53 @@ end
 
 mutual
 
-def NeutralTm.contains_var (v : NeutralTm) (idx : ℕ) (τ : Val) : Bool :=
+def NeutralTm.contains_var (v : NeutralTm) (var : Val) : Bool :=
   match v with
-  | NeutralTm(f x)             => f.contains_var idx τ ∨ x.contains_var idx τ
+  | NeutralTm(f x)             => f.contains_var var ∨ x.contains_var var
   | NeutralTm(∗)
   | NeutralTm(⊤)
   | NeutralTm(⊥) => False
-  | NeutralTm(x = y) => x.contains_var idx τ ∨ y.contains_var idx τ
-  | NeutralTm(Eql(α))  => α.contains_var idx τ
-  | NeutralTm(refl(α)) => α.contains_var idx τ
+  | NeutralTm(x = y) => x.contains_var var ∨ y.contains_var var
+  | NeutralTm(Eql(α))  => α.contains_var var
+  | NeutralTm(refl(α)) => α.contains_var var
   | NeutralTm(Sort _m) => False
-  | NeutralTm(Σ(α, β)) => α.contains_var idx τ ∨ β.contains_var idx τ
-  | NeutralTm(`(β, x)) => β.contains_var idx τ ∨ x.contains_var idx τ
-  | NeutralTm(⟦β⟧(x, y)) => β.contains_var idx τ ∨ x.contains_var idx τ ∨ y.contains_var idx τ
-  | NeutralTm(Coup(β)) => β.contains_var idx τ
-  | NeutralTm(Id(α))      => α.contains_var idx τ
-  | NeutralTm(Fstc(α))    => α.contains_var idx τ
-  | NeutralTm(Sndc(α))    => α.contains_var idx τ
-  | NeutralTm(f ∘' g) => f.contains_var idx τ ∨ g.contains_var idx τ
-  | NeutralTm(f ∘ g)  => f.contains_var idx τ ∨ g.contains_var idx τ
-  | NeutralTm(f ∘∘ g)  => f.contains_var idx τ ∨ g.contains_var idx τ
-  | NeutralTm(⟦β⟧⟨a, b⟩)   => β.contains_var idx τ ∨ a.contains_var idx τ ∨ b.contains_var idx τ
-  | NeutralTm(Λ(α, β, x)) => α.contains_var idx τ ∨ β.contains_var idx τ ∨ x.contains_var idx τ
-  | NeutralTm(!Λ(α, β, x)) => α.contains_var idx τ ∨ β.contains_var idx τ ∨ x.contains_var idx τ
-  | NeutralTm(Eval(α, β, x)) => α.contains_var idx τ ∨ β.contains_var idx τ ∨ x.contains_var idx τ
-  | NeutralTm(!(x))            => x.contains_var idx τ
-  | NeutralTm(*(α))            => α.contains_var idx τ
-  | NeutralTm(&(x))            => x.contains_var idx τ
-  | NeutralTm(!<x>)            => x.contains_var idx τ
-  | NeutralTm($<x>)            => x.contains_var idx τ
+  | NeutralTm(Σ(α, β)) => α.contains_var var ∨ β.contains_var var
+  | NeutralTm(`(β, x)) => β.contains_var var ∨ x.contains_var var
+  | NeutralTm(⟦β⟧(x, y)) => β.contains_var var ∨ x.contains_var var ∨ y.contains_var var
+  | NeutralTm(Coup(β)) => β.contains_var var
+  | NeutralTm(Id(α))      => α.contains_var var
+  | NeutralTm(Fstc(α))    => α.contains_var var
+  | NeutralTm(Sndc(α))    => α.contains_var var
+  | NeutralTm(f ∘' g) => f.contains_var var ∨ g.contains_var var
+  | NeutralTm(f ∘ g)  => f.contains_var var ∨ g.contains_var var
+  | NeutralTm(f ∘∘ g)  => f.contains_var var ∨ g.contains_var var
+  | NeutralTm(⟦β⟧⟨a, b⟩)   => β.contains_var var ∨ a.contains_var var ∨ b.contains_var var
+  | NeutralTm(Λ(α, β, x)) => α.contains_var var ∨ β.contains_var var ∨ x.contains_var var
+  | NeutralTm(!Λ(α, β, x)) => α.contains_var var ∨ β.contains_var var ∨ x.contains_var var
+  | NeutralTm(Eval(α, β, x)) => α.contains_var var ∨ β.contains_var var ∨ x.contains_var var
+  | NeutralTm(!(x))            => x.contains_var var
+  | NeutralTm(*(α))            => α.contains_var var
+  | NeutralTm(&(x))            => x.contains_var var
+  | NeutralTm(!<x>)            => x.contains_var var
+  | NeutralTm($<x>)            => x.contains_var var
 
-def Neutral.contains_var (v : Neutral) (idx : ℕ) (τ : Val) : Bool :=
+def Neutral.contains_var (v : Neutral) (var : Val) : Bool :=
   match v with
-  | Neutral(var((n) : τ')) => n == idx
-  | Neutral(tm(tm)) => tm.contains_var idx τ
+  | Neutral(var((n₂) : _τ')) =>
+    match var with
+    | Val(neutral(var((n) : _τ))) => n == n₂
+    | _ => False
+  | Neutral(tm(tm)) => tm.contains_var var
 
-def Val.contains_var (v : Val) (idx : ℕ) (τ : Val) : Bool :=
+def Val.contains_var (v : Val) (var : Val) : Bool :=
   match v with
-  | Val(λ env _n => bdy) => env.any (fun v => match v with
-    | Val(neutral(var((n) : τ₂))) => n == idx
-    | _ => False) ∨ bdy.contains_var idx τ
-  | Val(Π (f_α) env _n, f_β) => env.any (fun v => match v with
-    | Val(neutral(var((n) : τ₂))) => n == idx
-    | _ => False) ∨ f_α.contains_var idx τ ∨ f_β.contains_var idx τ
-  | Val(neutral(neut)) => neut.contains_var idx τ
+  | Val(λ env _n => bdy) => env.any (fun v => match v, var with
+    | Val(neutral(var((n₂) : _τ₂))), Val(neutral(var((n) : _τ))) => n == n₂
+    | _, _ => False) ∨ bdy.contains_var var
+  | Val(Π (f_α) env _n, f_β) => env.any (fun v => match v, var with
+    | Val(neutral(var((n₂) : _τ₂))), Val(neutral(var((n) : _τ)))  => n == n₂
+    | _, _ => False) ∨ f_α.contains_var v ∨ f_β.contains_var v
+  | Val(neutral(neut)) => neut.contains_var v
 
 end
 

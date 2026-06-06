@@ -41,7 +41,7 @@ inductive NeutralTm where
   | top                         : NeutralTm
   | bot                         : NeutralTm
   | tintro                      : NeutralTm
-  | sort (m : Level)            : NeutralTm
+  | sort (m : ℕ)                : NeutralTm
 deriving Repr, BEq
 
 inductive Neutral where
@@ -223,6 +223,84 @@ macro_rules
   | `(Neutral(tm($tm:neut_tm))) => `(Neutral.tm NeutralTm($tm:neut_tm))
   | `(Neutral($e:ident)) => `($e:term)
   | `(Neutral($tm:neut_tm)) => `(Neutral.tm NeutralTm($tm:neut_tm))
+
+
+mutual
+
+def Val.decide_eq (a b : Val) : Decidable (a = b) :=
+  match heq₀ : a, b with
+  | Val(λ x₁::xs₁ n₁ => bdy₁), Val(λ x₂::xs₂ n₂ => bdy₂) =>
+    match x₁.decide_eq x₂, bdy₁.decide_eq bdy₂,
+      Val(λ xs₁ n₁ => bdy₁).decide_eq Val(λ xs₂ n₂ => bdy₂) with
+    | .isTrue h₁, .isTrue h₂, .isTrue h₃ =>
+      if h₄ : n₁ = n₂ then
+        
+        sorry
+      else sorry
+    | _, _, _ => sorry
+  | Val(λ ⟦⟧ n₁ => bdy₁), Val(λ ⟦⟧ n₂ => bdy₂) =>
+    if n₁ = n₂ then
+      match bdy₁.decide_eq bdy₂ with
+      | .isTrue h =>
+        sorry
+      | .isFalse h =>
+        sorry
+    else .isFalse (by sorry)
+  | Val(Π (f_α₁) x₁::xs₁ n₁, f_β₁), Val(Π (f_α₂) x₂::xs₂ n₂, f_β₂) =>
+    match x₁.decide_eq x₂, f_α₁.decide_eq f_α₂, f_β₁.decide_eq f_β₂,
+      Val(Π (f_α₁) xs₁ n₁, f_β₁).decide_eq Val(Π (f_α₂) xs₂ n₂, f_β₂) with
+    | .isTrue h₁, .isTrue h₂, .isTrue h₃, .isTrue h₄ =>
+      if h₄ : n₁ = n₂ then
+        
+        sorry
+      else sorry
+    | _, _, _, _ => sorry
+  | Val(Π (f_α₁) ⟦⟧ n₁, f_β₁), Val(Π (f_α₂) ⟦⟧ n₂, f_β₂) =>
+    if n₁ = n₂ then
+      match f_α₁.decide_eq f_α₂, f_β₁.decide_eq f_β₂ with
+      | .isTrue h₁, .isTrue h₂ =>
+        sorry
+      | .isFalse h₁, _ =>
+        sorry
+      | _, .isFalse h₂ =>
+        sorry
+    else .isFalse (by sorry)
+  | Val(Π (f_α₁) x₁::xs₁ n₁, f_β₁), Val(Π (f_α₂) ⟦⟧ n₂, f_β₂) => .isFalse (fun h => by
+    simp_all)
+  | Val(Π (f_α₁) ⟦⟧ n₁, f_β₁), Val(Π (f_α₂) x₂::xs₂ n₂, f_β₂) => .isFalse (fun h => by
+    simp_all)
+  | Val(λ x₁::xs₁ n₁ => bdy₁), Val(λ ⟦⟧ n₂ => bdy₂) => .isFalse (fun h => by
+    simp_all)
+  | Val(λ ⟦⟧ n₁ => bdy₁), Val(λ x₂::xs₂ n₂ => bdy₂) => .isFalse (fun h => by
+    simp_all)
+  | Val(neutral(nv₁)), Val(neutral(nv₂)) =>
+    match nv₁.decide_eq nv₂ with
+    | .isTrue h =>
+      sorry
+    | .isFalse h =>
+      sorry
+  | .pi _a _b _c _d, .lam __a __b __c => .isFalse (fun h => by
+    simp_all)
+  | .lam __a __b __c, .pi _a _b _c _d => .isFalse (fun h => by
+    simp_all)
+  | .neut nv, .lam __a __b __c => .isFalse (fun h => by
+    simp_all)
+  | .lam __a __b __c, .neut nv => .isFalse (fun h => by
+    simp_all)
+  | .neut nv, .pi __a __b __c __d => .isFalse (fun h => by
+    simp_all)
+  | .pi __a __b __c __d, .neut nv => .isFalse (fun h => by
+    simp_all)
+termination_by sizeOf a
+
+def Neutral.decide_eq (a b : Neutral) : Decidable (a = b) := by
+  
+  sorry
+
+def NeutralTm.decide_eq (a b : NeutralTm) : Decidable (a = b) :=
+  sorry
+
+end
 
 end Semantic
 

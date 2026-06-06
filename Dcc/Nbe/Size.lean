@@ -16,8 +16,8 @@ mutual
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def NeutralTm.size (nv : NeutralTm) : ℕ :=
   match nv with
-  | NeutralTm(var((_v) : _τ) x)       => x.measure.succ.succ
-  | NeutralTm(f neutral(var((_v) : _τ))) => f.size.succ.succ
+  --| NeutralTm(var((_v) : _τ) x)       => x.measure.succ.succ
+  --| NeutralTm(f neutral(var((_v) : _τ))) => f.size.succ.succ
   | NeutralTm(f x)             => f.size + x.measure
   | NeutralTm(∗) => 1
   | NeutralTm(⊤) => 2

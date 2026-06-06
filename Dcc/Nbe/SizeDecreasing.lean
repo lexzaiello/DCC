@@ -151,9 +151,6 @@ before:
 theorem Apply.decreasing (h : Apply f x e') : e'.measure < f.measure + x.measure := by
   induction h
   any_goals (grind)
-  case refl₂ =>
-    simp [Val.measure, Neutral.size, NeutralTm.size]
-    grind
 
 #check Apply.decreasing
 

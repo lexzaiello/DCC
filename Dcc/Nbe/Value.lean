@@ -285,10 +285,8 @@ def Val.decide_eq (a b : Val) : Decidable (a = b) :=
     simp_all)
   | Val(neutral(nv₁)), Val(neutral(nv₂)) =>
     match nv₁.decide_eq nv₂ with
-    | .isTrue h =>
-      sorry
-    | .isFalse h =>
-      sorry
+    | .isTrue h => .isTrue (by simp_all)
+    | .isFalse h => .isFalse (fun h => by simp_all)
   | .pi _a _b _c _d, .lam __a __b __c => .isFalse (fun h => by
     simp_all)
   | .lam __a __b __c, .pi _a _b _c _d => .isFalse (fun h => by
@@ -303,14 +301,71 @@ def Val.decide_eq (a b : Val) : Decidable (a = b) :=
     simp_all)
 termination_by sizeOf a
 
-def Neutral.decide_eq (a b : Neutral) : Decidable (a = b) := by
-  
-  sorry
+def Neutral.decide_eq (a b : Neutral) : Decidable (a = b) :=
+  match heq₀ : a, b with
+  | .var n₁ τ₁, .var n₂ τ₂ =>
+    if h₁ : n₁ = n₂ then
+      match τ₁.decide_eq τ₂ with
+      | .isTrue h₂ =>
+        .isTrue (by simp_all)
+      | .isFalse h₂ =>
+        .isFalse (fun h => by simp_all)
+    else
+      .isFalse (fun h => by simp_all)
+  | .tm tm₁, .tm tm₂ =>
+    match tm₁.decide_eq tm₂ with
+    | .isTrue h₂ =>
+      .isTrue (by simp_all)
+    | .isFalse h₂ =>
+      .isFalse (fun h => by simp_all)
+  | .var _ _, .tm _ => .isFalse (fun h => by simp_all)
+  | .tm _, .var _ _ => .isFalse (fun h => by simp_all)
+termination_by sizeOf a
 
-def NeutralTm.decide_eq (a b : NeutralTm) : Decidable (a = b) :=
-  sorry
+def NeutralTm.decide_eq (a b : NeutralTm) : Decidable (a = b) := by
+  cases h₁ : a <;> cases h₂ : b
+  <;> try exact .isFalse (fun h => by contradiction)
+  case sort m n =>
+    if h : m = n then
+      exact .isTrue (by simp_all)
+    else exact .isFalse (fun h => by simp_all)
+  case top | bot | tintro =>
+    exact .isTrue (by simp_all)
+  case app.app f₁ x₁ f₂ x₂ =>
+    match h₀ : f₁.decide_eq f₂, x₁.decide_eq x₂ with
+    | .isTrue h₁, .isTrue h₂ =>
+      exact .isTrue (by simp_all)
+    | .isFalse h₁, _ | _, .isFalse h₂ => exact .isFalse (fun h => by simp_all)
+  case coup.coup | curr.curr | curr'.curr' | eval.eval | pair.pair =>
+    rename_i a₁ b₁ c₁ a₂ b₂ c₂
+    match h₀ : a₁.decide_eq a₂, b₁.decide_eq b₂, c₁.decide_eq c₂ with
+    | .isTrue h₁, .isTrue h₂, .isTrue h₃ =>
+      exact .isTrue (by simp_all)
+    | .isFalse h₁, _, _ | _, .isFalse h₁, _ | _, _, .isFalse h₁ =>
+      exact .isFalse (fun h => by simp_all)
+  case eq.eq | sigma.sigma | quot.quot | comp'.comp' | comp.comp | comp₂.comp₂ =>
+    rename_i a₁ b₁ a₂ b₂
+    match h₀ : a₁.decide_eq a₂, b₁.decide_eq b₂ with
+    | .isTrue h₁, .isTrue h₂ =>
+      exact .isTrue (by simp_all)
+    | .isFalse h₁, _ | _, .isFalse h₂ => exact .isFalse (fun h => by simp_all)
+  repeat (next a b =>
+    focus
+    cases h₀ : a.decide_eq b with
+    | isTrue h => exact .isTrue (by simp_all)
+    | isFalse h => exact .isFalse (fun h => by simp_all))
+termination_by sizeOf a
 
 end
+
+instance : DecidableEq Val := fun a b =>
+  a.decide_eq b
+
+instance : DecidableEq NeutralTm := fun a b =>
+  a.decide_eq b
+
+instance : DecidableEq Neutral := fun a b =>
+  a.decide_eq b
 
 end Semantic
 

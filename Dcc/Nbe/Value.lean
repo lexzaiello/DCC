@@ -234,37 +234,47 @@ def Val.decide_eq (a b : Val) : Decidable (a = b) :=
       Val(λ xs₁ n₁ => bdy₁).decide_eq Val(λ xs₂ n₂ => bdy₂) with
     | .isTrue h₁, .isTrue h₂, .isTrue h₃ =>
       if h₄ : n₁ = n₂ then
-        
-        sorry
-      else sorry
-    | _, _, _ => sorry
+        .isTrue (by simp_all)
+      else
+        .isFalse (fun h => by simp_all)
+    | .isFalse h₁, _, _ =>
+      .isFalse (fun h => by simp_all)
+    | _, .isFalse h₂, _ =>
+      .isFalse (fun h => by simp_all)
+    | _, _, .isFalse h₃ =>
+      .isFalse (fun h => by simp_all)
   | Val(λ ⟦⟧ n₁ => bdy₁), Val(λ ⟦⟧ n₂ => bdy₂) =>
-    if n₁ = n₂ then
+    if h₁ : n₁ = n₂ then
       match bdy₁.decide_eq bdy₂ with
-      | .isTrue h =>
-        sorry
-      | .isFalse h =>
-        sorry
-    else .isFalse (by sorry)
+      | .isTrue h₂ =>
+        .isTrue (by simp_all)
+      | .isFalse h => .isFalse (fun h => by simp_all)
+    else .isFalse (fun h => by simp_all)
   | Val(Π (f_α₁) x₁::xs₁ n₁, f_β₁), Val(Π (f_α₂) x₂::xs₂ n₂, f_β₂) =>
     match x₁.decide_eq x₂, f_α₁.decide_eq f_α₂, f_β₁.decide_eq f_β₂,
       Val(Π (f_α₁) xs₁ n₁, f_β₁).decide_eq Val(Π (f_α₂) xs₂ n₂, f_β₂) with
     | .isTrue h₁, .isTrue h₂, .isTrue h₃, .isTrue h₄ =>
       if h₄ : n₁ = n₂ then
-        
-        sorry
-      else sorry
-    | _, _, _, _ => sorry
+          .isTrue (by simp_all)
+      else .isFalse (fun h => by simp_all)
+    | .isFalse h₁, _, _, _ =>
+        .isFalse (fun h => by simp_all)
+    | _, .isFalse h₂, _, _ =>
+        .isFalse (fun h => by simp_all)
+    | _, _, .isFalse h₃, _ =>
+      .isFalse (fun h => by simp_all)
+    | _, _, _, .isFalse h₄ =>
+      .isFalse (fun h => by simp_all)
   | Val(Π (f_α₁) ⟦⟧ n₁, f_β₁), Val(Π (f_α₂) ⟦⟧ n₂, f_β₂) =>
-    if n₁ = n₂ then
+    if h₁ : n₁ = n₂ then
       match f_α₁.decide_eq f_α₂, f_β₁.decide_eq f_β₂ with
-      | .isTrue h₁, .isTrue h₂ =>
-        sorry
+      | .isTrue h₂, .isTrue h₃ =>
+        .isTrue (by simp_all)
       | .isFalse h₁, _ =>
-        sorry
+        .isFalse (fun h => by simp_all)
       | _, .isFalse h₂ =>
-        sorry
-    else .isFalse (by sorry)
+        .isFalse (fun h => by simp_all)
+    else .isFalse (fun h => by simp_all)
   | Val(Π (f_α₁) x₁::xs₁ n₁, f_β₁), Val(Π (f_α₂) ⟦⟧ n₂, f_β₂) => .isFalse (fun h => by
     simp_all)
   | Val(Π (f_α₁) ⟦⟧ n₁, f_β₁), Val(Π (f_α₂) x₂::xs₂ n₂, f_β₂) => .isFalse (fun h => by

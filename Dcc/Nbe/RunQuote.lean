@@ -232,6 +232,21 @@ inductive Val.DoEta : (level : ℕ) → (f : Val) → (f' : Neutral) → Type
       Val(neutral(x' (&(neutral(var((level) : _a)))) (&(neutral(var((level.succ) : _b))))))
     → DoEta level Val(neutral(!Λ(α, β, x))) Neutral(x')
 
+/-
+Make do_η mutually inductive with Val.Quote and Neutral.Quote
+
+problematic constructor is const,
+
+τ decreases in size, so
+
+`(τ, v')
+
+is fine to Quote if you Quote τ and v' individually because
+v' decreases by Apply and τ decreases by Domain and
+
+
+-/
+
 def Val.do_eta (level : Level) (f : Val) : Option ((f' : Neutral) × DoEta level f f') :=
   (match f with
   | Val(neutral(Λ(α, β, x))) =>

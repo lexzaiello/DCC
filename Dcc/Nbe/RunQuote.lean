@@ -70,6 +70,84 @@ inductive Val.Domain : (f : Val) → (α : Val) → Type
 
 end
 
+/-
+Need to handle constant values as well.
+
+If f' does not contain the variable at all, then we are safe.
+-/
+inductive Val.DoEta : (level : ℕ) → (f : Val) → (f' : Neutral) → Type
+  -- If the variable does not appear anywhere in the "substituted"
+  -- environment, it must be a constant
+  | const : Val.Domain f τ
+    → Apply f Val(neutral(var((level) : τ))) v'
+    → (¬ v'.contains_var level τ)
+    → DoEta level f Neutral(`(τ, v'))
+  | comp  : Val.Domain f τ
+    → Apply f Val(neutral(var((level) : τ))) Val(neutral(f' neutral(var((level) : τ))))
+    → DoEta level f Neutral(f')
+  | id    : Val.Domain f τ
+    → Apply f Val(neutral(var((level) : τ))) Val(neutral(var((level) : τ)))
+    → DoEta level f Neutral(Id(τ))
+  /-| pure  : Val.Domain f τ
+    -- this is a partial application.
+    -- for example, top-level Λ(α, β, x) y
+    -- how does Λ(α, `(α, β), `(Coup(`(α, β)), x)) get η-reduced?
+    -- e.g., to η-reduce it to `(α, `(β, y))
+    -- we would need to test multiple arguments....
+    -- Our highest arity term is Λ(α, β, x) with an arity of 2.
+    -- so, we will need an η-rule for Λ, probably.
+    → Apply f Val(neutral(var((level) : τ))) Val(λ env' n' => bdy')
+  -- Λ(α, β, `(.., x)) y clearly η-reduces with the next argument,
+  -- but two arguments is less clear.
+  -- can we just apply two variables? The size should decrease.
+  -- That seems fine. Yes.
+  -- we need to know the arity here, clearly
+  -- TODO: later, check this-/
+  -- Λ(α, β, x) is the only combinator with an arity of 2.
+  -- We apply two "fresh" variables to it,
+  -- example: η-reducing: Λ(α, `(α, β), `(Coup(`(α, β)), x))
+  -- apply fresh variable (0 : α)
+  -- get λ ⟦(0 : α)⟧ 1 => Λ(α, `(α, β), `(Coup(`(α, β)), x))
+  -- apply second variable (1 : β)
+  -- get λ ⟦(1 : β), (0 : α)⟧ 0 => Λ(α, `(α, β), `(Coup(`(α, β)), x))
+  -- supposing `(Coup(`(α, β)), x) ⟦`(α, β)⟧((0 : α), (1 : β)) → x'
+  -- and x' is actually x, then this becomes `(α, `(β, x'))
+  -- η-reducing Λ Curr is asking whether we can skip "coupling" the arguments
+  -- that is, if
+  -- If apply both arguments
+  -- downgrading curry Λ(α, β, x) to quotation is primarily a question of downgrading a dependent type to
+  -- we have a rule that already handles quotation.
+  -- the main question is of whether or not the first component is used. kind of like 2-ary quote?
+  -- if the first argument doesn't show up, we can quote it.
+  -- however, this is already handled by quote rule, somewhat.
+  -- assume x and y are opaque variables
+  -- TODO: this rule is super confusing, and maybe handled by other cases already ?
+  -- If curr apply gives x y z
+  -- that means the "substituted" couple was fully destructured
+  -- meaning, we can η-reduce to just x.
+  /-| curr  : Val.Domain Val(λ env 2 => f) τ₁
+    → Apply Val(λ env 2 => f) Val(neutral(var((level) : τ₁))) f'
+    → Val.Domain f' τ₂
+    → Apply f' Val(neutral(var((level) : τ₂))) -/
+  -- Λ(α, β, x) takes a couple (y, z), but if y and z end up in term app position, that
+  -- means the currying was a no-op
+  | curr  : Apply β Val(neutral(var((level) : α))) βx
+    → Apply x Val(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))
+      Val(neutral(x' neutral(var((level) : α)) neutral(var((level.succ) : βx))))
+    → DoEta level Val(neutral(Λ(α, β, x))) Neutral(x')
+  | curr' : Apply β Val(neutral(var((level) : α))) βx
+    → Apply x Val(neutral(&(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))))
+      Val(neutral(x' (&(neutral(var((level) : α)))) (&(neutral(var((level.succ) : βx))))))
+    → DoEta level Val(neutral(Λ(α, β, x))) Neutral(x')
+
+/-
+TODO ^ DoEta - feel like there are other cases I need to handle.
+-/
+
+theorem Val.DoEta.decreasing (h : DoEta level f f') : Val(neutral(f')).size < f.measure := by
+  
+  sorry
+
 /-def 
 
 def Val.domain (v : Val) : Option Expr :=
@@ -123,80 +201,23 @@ inductive Neutral.Quote : (level : ℕ) → (v : Neutral) → (e : Expr) → Typ
   | app    : Neutral.Quote level f f' → Val.Quote level x x' → Neutral.Quote level Neutral(f x) (DCC (f' x'))
 
 /-
-Need to handle constant values as well.
-
-If f' does not contain the variable at all, then we are safe.
--/
-inductive DoEta : (level : ℕ) → (f : Val) → (f' : Val) → Type
-  -- If the variable does not appear anywhere in the "substituted"
-  -- environment, it must be a constant
-  | const : Val.Domain f τ
-    → Apply f Val(neutral(var((level) : τ))) v'
-    → (¬ v'.contains_var level τ)
-    → DoEta level f Val(neutral(`(τ, v')))
-  | comp  : Val.Domain f τ
-    → Apply f Val(neutral(var((level) : τ))) Val(neutral(f' neutral(var((level) : τ))))
-    → DoEta level f Val(neutral(f'))
-  | id    : Val.Domain f τ
-    → Apply f Val(neutral(var((level) : τ))) Val(neutral(var((level) : τ)))
-    → DoEta level f Val(neutral(Id(τ)))
-  /-| pure  : Val.Domain f τ
-    -- this is a partial application.
-    -- for example, top-level Λ(α, β, x) y
-    -- how does Λ(α, `(α, β), `(Coup(`(α, β)), x)) get η-reduced?
-    -- e.g., to η-reduce it to `(α, `(β, y))
-    -- we would need to test multiple arguments....
-    -- Our highest arity term is Λ(α, β, x) with an arity of 2.
-    -- so, we will need an η-rule for Λ, probably.
-    → Apply f Val(neutral(var((level) : τ))) Val(λ env' n' => bdy')
-  -- Λ(α, β, `(.., x)) y clearly η-reduces with the next argument,
-  -- but two arguments is less clear.
-  -- can we just apply two variables? The size should decrease.
-  -- That seems fine. Yes.
-  -- we need to know the arity here, clearly
-  -- TODO: later, check this-/
-  -- Λ(α, β, x) is the only combinator with an arity of 2.
-  -- We apply two "fresh" variables to it,
-  -- example: η-reducing: Λ(α, `(α, β), `(Coup(`(α, β)), x))
-  -- apply fresh variable (0 : α)
-  -- get λ ⟦(0 : α)⟧ 1 => Λ(α, `(α, β), `(Coup(`(α, β)), x))
-  -- apply second variable (1 : β)
-  -- get λ ⟦(1 : β), (0 : α)⟧ 0 => Λ(α, `(α, β), `(Coup(`(α, β)), x))
-  -- supposing `(Coup(`(α, β)), x) ⟦`(α, β)⟧((0 : α), (1 : β)) → x'
-  -- and x' is actually x, then this becomes `(α, `(β, x'))
-  -- η-reducing Λ Curr is asking whether we can skip "coupling" the arguments
-  -- that is, if
-  -- If apply both arguments
-  -- downgrading curry Λ(α, β, x) to quotation is primarily a question of downgrading a dependent type to
-  -- we have a rule that already handles quotation.
-  -- the main question is of whether or not the first component is used. kind of like 2-ary quote?
-  -- if the first argument doesn't show up, we can quote it.
-  -- however, this is already handled by quote rule, somewhat.
-  -- assume x and y are opaque variables
-  -- TODO: this rule is super confusing, and maybe handled by other cases already ?
-  -- If curr apply gives x y z
-  -- that means the "substituted" couple was fully destructured
-  -- meaning, we can η-reduce to just x.
-  /-| curr  : Val.Domain Val(λ env 2 => f) τ₁
-    → Apply Val(λ env 2 => f) Val(neutral(var((level) : τ₁))) f'
-    → Val.Domain f' τ₂
-    → Apply f' Val(neutral(var((level) : τ₂))) -/
-  -- Λ(α, β, x) takes a couple (y, z), but if y and z end up in term app position, that
-  -- means the currying was a no-op
-  | curr  : Apply β Val(neutral(var((level) : α))) βx
-    → Apply x Val(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))
-      Val(neutral(x' neutral(var((level) : α)) neutral(var((level.succ) : βx))))
-    → DoEta level Val(neutral(Λ(α, β, x))) Val(neutral(x'))
-  | curr' : Apply β Val(neutral(var((level) : α))) βx
-    → Apply x Val(neutral(&(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))))
-      Val(neutral(x' (&(neutral(var((level) : α)))) (&(neutral(var((level.succ) : βx))))))
-    → DoEta level Val(neutral(Λ(α, β, x))) Val(neutral(x'))
-
-/-
 Val(neutral(f' neutral(var(level))))
 -/
 
 inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
+  | neut : Neutral.Quote level nv e → Val.Quote level Val(neutral(nv)) e
+  | lam  : Val(λ env n => bdy).DoEta level f' → Neutral.Quote level.succ f' e' → Val.Quote level Val(λ env n => bdy) e'
+  | pi₁  : Val.DoEta level f_α f_α' → Val.DoEta level.succ f_β f_β'
+    → Neutral.Quote level f_α' f_α''
+    → Neutral.Quote level.succ f_β' f_β''
+    → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC Π(f_α'', f_β''))
+  | pi₂  : Val.DoEta level f_α f_α' → Val.DoEta level.succ f_β f_β'
+    → Neutral.Quote level f_α' f_α''
+    → Neutral.Quote level.succ f_β' f_β''
+    → Val.Quote level env env'
+    → Val.Quote level Val(Π (f_α) ⟦env⟧ 0, f_β) (DCC (Π(f_α'', f_β'') env'))
+
+/-inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
   | neut : Neutral.Quote level nv e → Val.Quote level Val(neutral(nv)) e
   | lam₁ : Val.Domain Val(λ env n => bdy) τ → Apply Val(λ env n => bdy) Val(neutral(var((level) : τ))) Val(neutral(f' neutral(var((level) : τ))))
     → Neutral.Quote level.succ f' e'
@@ -248,7 +269,7 @@ inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
     → Neutral.Quote level.succ f_α₂ f_α'
     → Neutral.Quote level.succ.succ f_β₂ f_β'
     → Val.Quote level env env'
-    → Val.Quote level Val(Π (f_α) ⟦env⟧ 0, f_β) (DCC (Π(f_α', f_β') env'))
+    → Val.Quote level Val(Π (f_α) ⟦env⟧ 0, f_β) (DCC (Π(f_α', f_β') env'))-/
 
 /-
 Neutral case for Apply is absolutely necessary.

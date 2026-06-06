@@ -22,15 +22,15 @@ theorem Val.measure_pos_pi : 0 < Val.measure Val(Π (f_α) n env, f_β) := by
   grind
 
 @[grind ., grind! .]
-theorem Val.measure_pos_not_var (hn_var : ¬ ∃ (v : ℕ), e ≠ Val(neutral(var(v)))) : 0 < Val.measure e := by
+theorem Val.measure_pos_not_var (hn_var : ¬ ∃ (v : ℕ) (τ : Val), e ≠ Val(neutral(var((v) : τ)))) : 0 < Val.measure e := by
   cases e
   any_goals (grind)
   case neut nv =>
     cases nv with
-    | var _ =>
+    | var _ τ =>
       dcc_simp_all
       rename_i idx
-      have h := hn_var idx.succ
+      have h := hn_var idx.succ Val(neutral(Coup(τ)))
       omega
     | tm tm =>
       grind
@@ -48,7 +48,7 @@ theorem NeutralTm.size_pos : 0 < NeutralTm.size x := by
       grind
 
 @[grind ., grind! .]
-theorem Val.size_pos (_h_neq : ¬ ∃ n, x = Val(neutral(var(n)))) : 0 < Val.size x := by
+theorem Val.size_pos (_h_neq : ¬ ∃ n τ, x = Val(neutral(var((n) : τ)))) : 0 < Val.size x := by
   cases x
   any_goals (grind)
   case neut n =>
@@ -61,7 +61,7 @@ theorem Val.size_pos (_h_neq : ¬ ∃ n, x = Val(neutral(var(n)))) : 0 < Val.siz
       grind
 
 @[grind ., grind! .]
-theorem Val.measure_pos (_h_neq : ¬ ∃ n, x = Val(neutral(var(n)))) : 0 < Val.size x := by
+theorem Val.measure_pos (_h_neq : ¬ ∃ n τ, x = Val(neutral(var((n) : τ)))) : 0 < Val.size x := by
   cases x
   any_goals (grind)
   case neut nv =>
@@ -109,19 +109,19 @@ theorem Neutral.app_f_size_lt : f.size < Neutral(f x).size := by
     grind
 
 @[grind ., grind! .]
-theorem Neutral.var_zero_size : Neutral(var(_v)).size = 0 := by
+theorem Neutral.var_zero_size : Neutral(var((_v) : τ)).size = 0 := by
   grind
 
 @[grind ., grind! .]
-theorem Val.var_zero_size : Val(neutral(var(_v))).size = 0 := by
+theorem Val.var_zero_size : Val(neutral(var((_v) : τ))).size = 0 := by
   grind
 
 @[grind ., grind! .]
-theorem Val.var_measure_zero : Val(neutral(var(_v))).measure = 0 := by
+theorem Val.var_measure_zero : Val(neutral(var((_v) : τ))).measure = 0 := by
   grind
 
 @[grind ., grind! .]
-theorem Val.var_zero_measure : Val(neutral(var(_v))).measure = 0 := by
+theorem Val.var_zero_measure : Val(neutral(var((_v) : τ))).measure = 0 := by
   grind
 
 @[dcc_size]

@@ -5,6 +5,81 @@ import Dcc.Nbe.RunEvalApply
 
 namespace Semantic
 
+/-
+For later: need this helper to extract out α in the identity η-reduction:
+
+We already have apply and eval, so we're chilling pretty much.
+We can calcuate the codomain, even.
+
+Chilling.
+
+Then plug this into:
+
+| lam₃ : Apply Val(f) Val(neutral(var(level))) Val(neutral(var(level)))
+    → Val.Quote level Val(f) e'
+
+This is the identity. Plug in var 0, get out var 0, meaning it can reduce to Id(α).
+Find α from domain.
+
+Use apply defs to help with this.
+Make an inductive for this + Val.domain def.
+Take a nap first though.
+
+Also lam₁ should probably just be Apply Val(f) not λ. However, that won't handle
+Π.
+
+Two approaches:
+
+- Values are proof-carrying (potentially easier, it's by construction, but requries a bit of reworking - how does this interact with .lam? Probably fine, unless there's mutual induction from eval to apply (there is not))
+
+  Counterpoint: all of our combinator points (type argument points which determine the domain) are already values. No need to embed.
+-/
+
+/-
+Can just do mutual induction between Val.domain and Neutral.domain
+
+Note:
+- will need to write this as an inductive as well
+
+
+Todo list:
+
+5. Using new domain derivation, add η-rule for Id
+  - Simultaneously abstract out the DoEta form Quote
+  - Actually do this first to check if it works
+
+1. (Easiest) Make vars type carrying (these can all be determined, even when we generate fresh variables)
+2. (Easy-ish) Define Val.domain wrapper (should be somewhat blind to the structure of Neutral terms)
+3. (Easy) Define NeutralTm.domain wrapper (does not require vars, easier)
+  - Note: Sort, Top, Bot, etc... do not have domains. Will need to be Option at some point. that is fine.
+4. (Medium) Neutral.domain (wrapper around NeutralTm + vars)
+5. Update quote using domain
+6. (Hard) I think we might need the "neutral" app case for Apply. Maybe? Probably not? Idk.
+-/
+
+mutual
+
+/-
+It may be prudent to make vars intrinsically typed.
+Then, Neutral.domain is total, not Option
+-/
+inductive NeutralTm.Domain : (f : NeutralTm) → (α : Val) → Type
+
+inductive Val.Domain : (f : Val) → (α : Val) → Type
+  
+
+end
+
+/-def 
+
+def Val.domain (v : Val) : Option Expr :=
+  match v with
+  | Val(λ env n => bdy) =>
+    sorry
+  | Val(Π (f_α) env n, f_β) =>
+    sorry
+  | Neutral(-/
+
 mutual
 
 inductive Neutral.Quote : (level : ℕ) → (v : Neutral) → (e : Expr) → Type
@@ -48,45 +123,146 @@ inductive Neutral.Quote : (level : ℕ) → (v : Neutral) → (e : Expr) → Typ
   | app    : Neutral.Quote level f f' → Val.Quote level x x' → Neutral.Quote level Neutral(f x) (DCC (f' x'))
 
 /-
+Need to handle constant values as well.
+
+If f' does not contain the variable at all, then we are safe.
+-/
+inductive DoEta : (level : ℕ) → (f : Val) → (f' : Val) → Type
+  -- If the variable does not appear anywhere in the "substituted"
+  -- environment, it must be a constant
+  | const : Val.Domain f τ
+    → Apply f Val(neutral(var((level) : τ))) v'
+    → (¬ v'.contains_var level τ)
+    → DoEta level f Val(neutral(`(τ, v')))
+  | comp  : Val.Domain f τ
+    → Apply f Val(neutral(var((level) : τ))) Val(neutral(f' neutral(var((level) : τ))))
+    → DoEta level f Val(neutral(f'))
+  | id    : Val.Domain f τ
+    → Apply f Val(neutral(var((level) : τ))) Val(neutral(var((level) : τ)))
+    → DoEta level f Val(neutral(Id(τ)))
+  /-| pure  : Val.Domain f τ
+    -- this is a partial application.
+    -- for example, top-level Λ(α, β, x) y
+    -- how does Λ(α, `(α, β), `(Coup(`(α, β)), x)) get η-reduced?
+    -- e.g., to η-reduce it to `(α, `(β, y))
+    -- we would need to test multiple arguments....
+    -- Our highest arity term is Λ(α, β, x) with an arity of 2.
+    -- so, we will need an η-rule for Λ, probably.
+    → Apply f Val(neutral(var((level) : τ))) Val(λ env' n' => bdy')
+  -- Λ(α, β, `(.., x)) y clearly η-reduces with the next argument,
+  -- but two arguments is less clear.
+  -- can we just apply two variables? The size should decrease.
+  -- That seems fine. Yes.
+  -- we need to know the arity here, clearly
+  -- TODO: later, check this-/
+  -- Λ(α, β, x) is the only combinator with an arity of 2.
+  -- We apply two "fresh" variables to it,
+  -- example: η-reducing: Λ(α, `(α, β), `(Coup(`(α, β)), x))
+  -- apply fresh variable (0 : α)
+  -- get λ ⟦(0 : α)⟧ 1 => Λ(α, `(α, β), `(Coup(`(α, β)), x))
+  -- apply second variable (1 : β)
+  -- get λ ⟦(1 : β), (0 : α)⟧ 0 => Λ(α, `(α, β), `(Coup(`(α, β)), x))
+  -- supposing `(Coup(`(α, β)), x) ⟦`(α, β)⟧((0 : α), (1 : β)) → x'
+  -- and x' is actually x, then this becomes `(α, `(β, x'))
+  -- η-reducing Λ Curr is asking whether we can skip "coupling" the arguments
+  -- that is, if
+  -- If apply both arguments
+  -- downgrading curry Λ(α, β, x) to quotation is primarily a question of downgrading a dependent type to
+  -- we have a rule that already handles quotation.
+  -- the main question is of whether or not the first component is used. kind of like 2-ary quote?
+  -- if the first argument doesn't show up, we can quote it.
+  -- however, this is already handled by quote rule, somewhat.
+  -- assume x and y are opaque variables
+  -- TODO: this rule is super confusing, and maybe handled by other cases already ?
+  -- If curr apply gives x y z
+  -- that means the "substituted" couple was fully destructured
+  -- meaning, we can η-reduce to just x.
+  /-| curr  : Val.Domain Val(λ env 2 => f) τ₁
+    → Apply Val(λ env 2 => f) Val(neutral(var((level) : τ₁))) f'
+    → Val.Domain f' τ₂
+    → Apply f' Val(neutral(var((level) : τ₂))) -/
+  -- Λ(α, β, x) takes a couple (y, z), but if y and z end up in term app position, that
+  -- means the currying was a no-op
+  | curr  : Apply β Val(neutral(var((level) : α))) βx
+    → Apply x Val(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))
+      Val(neutral(x' neutral(var((level) : α)) neutral(var((level.succ) : βx))))
+    → DoEta level Val(neutral(Λ(α, β, x))) Val(neutral(x'))
+  | curr' : Apply β Val(neutral(var((level) : α))) βx
+    → Apply x Val(neutral(&(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx)))))))
+      Val(neutral(x' (&(neutral(var((level) : α)))) (&(neutral(var((level.succ) : βx))))))
+    → DoEta level Val(neutral(Λ(α, β, x))) Val(neutral(x'))
+
+/-
 Val(neutral(f' neutral(var(level))))
 -/
 
 inductive Val.Quote : (level : ℕ) → (v : Val) → (e : Expr) → Type
   | neut : Neutral.Quote level nv e → Val.Quote level Val(neutral(nv)) e
-  | lam₁ : Apply Val(λ env n => bdy) Val(neutral(var(level))) Val(neutral(f' neutral(var(level))))
+  | lam₁ : Val.Domain Val(λ env n => bdy) τ → Apply Val(λ env n => bdy) Val(neutral(var((level) : τ))) Val(neutral(f' neutral(var((level) : τ))))
     → Neutral.Quote level.succ f' e'
     → Val.Quote level Val(λ env n => bdy) e'
-  | lam₂ : Apply Val(λ env n => bdy) Val(neutral(var(level))) Val(λ env' n' => bdy')
+  -- This one is wrong. Should be quoting the raw expression. var should NOT be included in the environment
+  | lam₂ : Val.Domain Val(λ env n => bdy) τ
+    → Apply Val(λ env n => bdy) Val(neutral(var((level) : τ))) Val(λ env' n' => bdy')
     → Val.Quote level.succ Val(λ env' n' => bdy') e'
     → Val.Quote level Val(λ env n => bdy) e'
-  | pi₁  : Apply f_α Val(neutral(var(level))) Val(neutral(f_α' neutral(var(level))))
-    → Apply f_β Val(neutral(var(level))) Val(neutral(f_β' neutral(var(level))))
+  /-
+    We need to store context / types, so we can output Id(α).
+    | lam₃ : Apply Val(λ env n => bdy) Val(neutral(var(level))) Val(neutral(var(level)))
+    → Neutral.Quote level.succ f' e'
+    → Val.Quote level Val(λ env n => bdy) e'-/
+  | pi₁  : Val.Domain f_α τ₁
+    → Apply f_α Val(neutral(var((level) : τ₁))) Val(neutral(f_α' neutral(var((level) : τ₁))))
+    → Val.Domain f_β τ₂
+    → Apply f_β Val(neutral(var((level) : τ₂))) Val(neutral(f_β' neutral(var((level) : τ₂))))
     → Neutral.Quote level.succ f_α' f_α''
     → Neutral.Quote level.succ.succ f_β' f_β''
     → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
-  | pi₂  : Apply f_α Val(neutral(var(level))) Val(λ env' n' => bdy')
-    → Apply f_β Val(neutral(var(level))) Val(neutral(f_β' neutral(var(level))))
+  | pi₂  : Val.Domain f_α τ₁
+    → Apply f_α Val(neutral(var((level) : τ₁))) Val(λ env' n' => bdy')
+    → Val.Domain f_β τ₂
+    → Apply f_β Val(neutral(var((level) : τ₂))) Val(neutral(f_β' neutral(var((level) : τ₂))))
     → Val.Quote level.succ Val(λ env' n' => bdy') f_α''
     → Neutral.Quote level.succ.succ f_β' f_β''
     → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
-  | pi₃  : Apply f_α Val(neutral(var(level))) Val(neutral(f_α' neutral(var(level))))
-    → Apply f_β Val(neutral(var(level))) Val(λ env' n' => bdy')
+  | pi₃  : Val.Domain f_α τ₁
+    → Apply f_α Val(neutral(var((level) : τ₁))) Val(neutral(f_α' neutral(var((level) : τ₁))))
+    → Val.Domain f_β τ₂
+    → Apply f_β Val(neutral(var((level) : τ₂))) Val(λ env' n' => bdy')
     → Neutral.Quote level.succ f_α' f_α''
     → Val.Quote level.succ.succ Val(λ env' n' => bdy') f_β''
     → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
-  | pi₄ : Apply f_α Val(neutral(var(level))) Val(λ env'₁ n'₁ => bdy'₁)
-    → Apply f_β Val(neutral(var(level))) Val(λ env'₂ n'₂ => bdy'₂)
+  | pi₄ : Val.Domain f_α τ₁
+    → Apply f_α Val(neutral(var((level) : τ₁))) Val(λ env'₁ n'₁ => bdy'₁)
+    → Val.Domain f_β τ₂
+    → Apply f_β Val(neutral(var((level) : τ₂))) Val(λ env'₂ n'₂ => bdy'₂)
     → Val.Quote level.succ Val(λ env'₁ n'₁ => bdy'₁) f_α''
     → Val.Quote level.succ.succ Val(λ env'₂ n'₂ => bdy'₂) f_β''
     → Val.Quote level Val(Π (f_α) ⟦⟧ 1, f_β) (DCC (Π(f_α'', f_β'')))
-  | pi' : Apply f_α env f_α₁
-    → Apply f_α₁ Val(neutral(var(level))) Val(neutral(f_α₂ neutral(var(level))))
+  | pi'₁ : Apply f_α env f_α₁
+    → Val.Domain f_α₁ τ₁
+    → Apply f_α₁ Val(neutral(var((level) : τ₁))) Val(neutral(f_α₂ neutral(var((level) : τ₁))))
     → Apply f_β env f_β₁
-    → Apply f_β₁ Val(neutral(var(level.succ))) Val(neutral(f_β₂ neutral(var(level.succ))))
+    → Val.Domain f_β₁ τ₂
+    → Apply f_β₁ Val(neutral(var((level.succ) : τ₂))) Val(neutral(f_β₂ neutral(var((level.succ) : τ₂))))
     → Neutral.Quote level.succ f_α₂ f_α'
     → Neutral.Quote level.succ.succ f_β₂ f_β'
     → Val.Quote level env env'
     → Val.Quote level Val(Π (f_α) ⟦env⟧ 0, f_β) (DCC (Π(f_α', f_β') env'))
+
+/-
+Neutral case for Apply is absolutely necessary.
+
+You can only detect eta-reducible when you get in-between a saturated reduction.
+
+For example:
+Id(α) x reduces to x.
+where f := Id(α)
+
+f is not eta-reducible.
+
+Id(α) ∘ Id(α)
+-/
 
 end
 
@@ -94,7 +270,7 @@ mutual
 
 def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote level e) :=
   match v with
-  | Neutral(var(_v)) => .none
+  | Neutral(var((_v) : _τ)) => .none
   | Neutral(∗) => .some ⟨_, .tintro⟩
   | Neutral(⊤) => .some ⟨_, .top⟩
   | Neutral(⊥) => .some ⟨_, .bot⟩
@@ -440,7 +616,7 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
             cases heq
             cases heq₁
             cases heq₂
-            exact .some ⟨_, .pi' h₁ h₂ h₃ h₄ h₅ h₆ h₇⟩
+            exact .some ⟨_, .pi'₁ h₁ h₂ h₃ h₄ h₅ h₆ h₇⟩
         else .none
       else .none
     | _, _ => .none

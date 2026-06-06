@@ -58,8 +58,6 @@ inductive Apply : (f : Val) → (x : Val) → Val → Type
   -- TODO: This shouldn't be possible
   --| neut     : Apply Val(neutral(f)) x Val(neutral(f x))
 
-mutual
-
 inductive Eval : List Val → Expr → Val → Type
   | top    : Eval env (DCC ⊤) Val(neutral(⊤))
   | tintro : Eval env (DCC ∗) Val(neutral(∗))
@@ -91,7 +89,5 @@ inductive Eval : List Val → Expr → Val → Type
   | t_coup : Eval env β β' → Eval env (DCC Coup(β)) Val(neutral(Coup(β')))
   | eq     : Eval env x x' → Eval env y y' → Eval env (DCC (x = y)) Val(neutral(x' = y'))
   | app    : Eval env f f' → Eval env x x' → Apply f' x' e' → Eval env (DCC (f x)) e'
-
-end
 
 end Semantic

@@ -42,12 +42,12 @@ inductive NeutralTm where
   | bot                         : NeutralTm
   | tintro                      : NeutralTm
   | sort (m : Level)            : NeutralTm
-deriving Repr
+deriving Repr, BEq
 
 inductive Neutral where
-  | var (idx : ℕ)        : Neutral
-  | tm (tm :  NeutralTm) : Neutral
-deriving Repr
+  | var (idx : ℕ) (τ : Val) : Neutral
+  | tm (tm :  NeutralTm)    : Neutral
+deriving Repr, BEq
 
 inductive Val where
   -- Combinators get translated into these
@@ -77,7 +77,7 @@ inductive Val where
   | bot : Val
   -- Sort
   | sort (m : Level) : Val-/
-deriving Repr
+deriving Repr, BEq
 
 end
 
@@ -88,7 +88,7 @@ declare_syntax_cat neut_atom
 declare_syntax_cat neut_tm
 
 syntax "#(" term ")"                                         : neut_atom
-syntax "var(" term ")"                                       : neut_atom
+syntax "var(" "(" term ")" ":" val_expr ")"                  : neut_atom
 syntax:max ident                                             : neut_tm
 
 syntax neut_tm : neut_expr
@@ -172,7 +172,7 @@ macro_rules
   | `(NeutralTm(⊥)) => `((NeutralTm.bot))
   | `(NeutralTm(∗)) => `((NeutralTm.tintro))
   | `(NeutralTm(Sort $m:term)) => `((NeutralTm.sort $m:term))
-  | `(NeutralAtom(var($n:term))) => `(Neutral.var $n:term)
+  | `(NeutralAtom(var(($n:term) : $τ:val_expr))) => `(Neutral.var $n:term Val($τ:val_expr))
   | `(NeutralTm(Coup($β:val_expr))) => `((NeutralTm.t_coup Val($β:val_expr)))
   | `(Vals($list:ident)) => `($list:term)
   | `(NeutralTm(⟦$β:val_expr⟧($args:val_expr,*))) => do
@@ -196,7 +196,7 @@ macro_rules
 
 open Lean in
 macro_rules
-  | `(NeutralTm(var($v:term))) => `(Neutral.var $v:term)
+  | `(NeutralTm(var(($v:term) : $τ:val_expr))) => `(Neutral.var $v:term Val($τ:val_expr))
   | `(NeutralTm($v:neut_atom)) => `(NeutralAtom($v:neut_atom))
   | `(NeutralAtom(#($tm:term))) => `($tm:term)
   | `(NeutralAtom($x:val_expr)) => `(Val($x:val_expr))
@@ -219,10 +219,12 @@ macro_rules
     | `(neut_tm| $f:neut_tm $idt:ident) =>
       `(NeutralTm.app (Neutral($f)) $idt:ident)
     | _ => Macro.throwUnsupported
-  | `(Neutral(var($v:term))) => `(Neutral.var $v:term)
+  | `(Neutral(var(($v:term) : $τ:val_expr))) => `(Neutral.var $v:term Val($τ:val_expr))
   | `(Neutral(tm($tm:neut_tm))) => `(Neutral.tm NeutralTm($tm:neut_tm))
   | `(Neutral($e:ident)) => `($e:term)
   | `(Neutral($tm:neut_tm)) => `(Neutral.tm NeutralTm($tm:neut_tm))
+
+end Semantic
 
 /-
 The plan:

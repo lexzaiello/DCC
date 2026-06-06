@@ -21,6 +21,11 @@ def nbe! (e : Expr) : Expr :=
   | .some ⟨e', _⟩ => e'
   | _ => e
 
-#eval Sigma.fst <$> nbe (DCC (Π(Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2))))) !(Sort 2)))
+--#eval Sigma.fst <$> nbe (DCC (Π(Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2))))) !(Sort 2)))
+
+example : Nbe (DCC (Id(α) ∘' Id(α))) (DCC Id(α)) :=
+  ⟨.comp' (.id (evaluate (by sorry) (by sorry))) (by sorry)
+  , by
+    sorry⟩
 
 end Expr

@@ -143,6 +143,9 @@ before:
   - const = 12
 -/
 
+theorem neut_app_lt_app : Val(neutral(f x)).measure < Val(neutral(f)).measure + x.measure := by
+  sorry
+
 @[dcc_size]
 theorem Apply.decreasing (h : Apply f x e') : e'.measure < f.measure + x.measure := by
   induction h

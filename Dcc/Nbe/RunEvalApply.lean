@@ -7,109 +7,86 @@ import Dcc.Metatheory.Value
 
 mutual
 
-def Expr.evaluate (env : List Semantic.Val) (e : Expr) : Option ((e' : Semantic.Val) × Semantic.Eval env e e') :=
+def Expr.evaluate (env : List Semantic.Val) (e : Expr) : ((e' : Semantic.Val) × Semantic.Eval env e e') :=
   match e with
-  | (DCC ⊤) => .some ⟨_, .top⟩
-  | (DCC ∗) => .some ⟨_, .tintro⟩
-  | (DCC ⊥) => .some ⟨_, .bot⟩
-  | (DCC Sort _m) => .some ⟨_, .sort⟩
+  | (DCC ⊤) => ⟨_, .top⟩
+  | (DCC ∗) => ⟨_, .tintro⟩
+  | (DCC ⊥) => ⟨_, .bot⟩
+  | (DCC Sort _m) => ⟨_, .sort⟩
   | (DCC !<f>) =>
     match f.evaluate env with
-    | .some ⟨_, h⟩ => .some ⟨_, .map h⟩
-    | _ => .none
+    | ⟨_, h⟩ => ⟨_, .map h⟩
   | (DCC $<f>) =>
     match f.evaluate env with
-    | .some ⟨_, h⟩ => .some ⟨_, .fmap h⟩
-    | _ => .none
+    | ⟨_, h⟩ => ⟨_, .fmap h⟩
   | (DCC *(x)) =>
     match x.evaluate env with
-    | .some ⟨_, h⟩ => .some ⟨_, .unbox h⟩
-    | _ => .none
+    | ⟨_, h⟩ => ⟨_, .unbox h⟩
   | (DCC Eval(α, β, x)) =>
     match α.evaluate env, β.evaluate env, x.evaluate env with
-    | .some ⟨_, h_α⟩, .some ⟨_, h_β⟩, .some ⟨_, h_x⟩ => .some ⟨_, .eval h_α h_β h_x⟩
-    | _, _, _ => .none
+    | ⟨_, h_α⟩, ⟨_, h_β⟩, ⟨_, h_x⟩ => ⟨_, .eval h_α h_β h_x⟩
   | (DCC `(β, x)) =>
     match β.evaluate env, x.evaluate env with
-    | .some ⟨_, h_β⟩, .some ⟨_, h_x⟩ => .some ⟨_, .quot h_β h_x⟩
-    | _, _ => .none
+    | ⟨_, h_β⟩, ⟨_, h_x⟩ => ⟨_, .quot h_β h_x⟩
   | (DCC Id(α)) =>
     match α.evaluate env with
-    | .some ⟨_, h_α⟩ => .some ⟨_, .id h_α⟩
-    | _ => .none
+    | ⟨_, h_α⟩ => ⟨_, .id h_α⟩
   | (DCC Fstc(β)) =>
     match β.evaluate env with
-    | .some ⟨_, h_β⟩ => .some ⟨_, .fstc h_β⟩
-    | _ => .none
+    | ⟨_, h_β⟩ => ⟨_, .fstc h_β⟩
   | (DCC Sndc(β)) =>
     match β.evaluate env with
-    | .some ⟨_, h_β⟩ => .some ⟨_, .sndc h_β⟩
-    | _ => .none
+    | ⟨_, h_β⟩ => ⟨_, .sndc h_β⟩
   | (DCC Λ(α, β, x)) =>
     match α.evaluate env, β.evaluate env, x.evaluate env with
-    | .some ⟨_, h_α⟩, .some ⟨_, h_β⟩, .some ⟨_, h_x⟩ => .some ⟨_, .curr h_α h_β h_x⟩
-    | _, _, _ => .none
+    | ⟨_, h_α⟩, ⟨_, h_β⟩, ⟨_, h_x⟩ => ⟨_, .curr h_α h_β h_x⟩
   | (DCC !Λ(α, β, x)) =>
     match α.evaluate env, β.evaluate env, x.evaluate env with
-    | .some ⟨_, h_α⟩, .some ⟨_, h_β⟩, .some ⟨_, h_x⟩ => .some ⟨_, .curr' h_α h_β h_x⟩
-    | _, _, _ => .none
+    | ⟨_, h_α⟩, ⟨_, h_β⟩, ⟨_, h_x⟩ => ⟨_, .curr' h_α h_β h_x⟩
   | (DCC Π(f_α, f_β)) =>
     match f_α.evaluate env, f_β.evaluate env with
-    | .some ⟨_, h_α⟩, .some ⟨_, h_β⟩ => .some ⟨_, .pi h_α h_β⟩
-    | _, _ => .none
+    | ⟨_, h_α⟩, ⟨_, h_β⟩ => ⟨_, .pi h_α h_β⟩
   | (DCC ⟦β⟧⟨M, N⟩) =>
     match β.evaluate env, M.evaluate env, N.evaluate env with
-    | .some ⟨_, h_β⟩, .some ⟨_, h_M⟩, .some ⟨_, h_N⟩ => .some ⟨_, .pair h_β h_M h_N⟩
-    | _, _, _ => .none
+    | ⟨_, h_β⟩, ⟨_, h_M⟩, ⟨_, h_N⟩ => ⟨_, .pair h_β h_M h_N⟩
   | (DCC Σ(α, β)) =>
     match α.evaluate env, β.evaluate env with
-    | .some ⟨_, h_α⟩, .some ⟨_, h_β⟩ => .some ⟨_, .sigma h_α h_β⟩
-    | _, _ => .none
+    | ⟨_, h_α⟩, ⟨_, h_β⟩ => ⟨_, .sigma h_α h_β⟩
   | (DCC Eql(f_α)) =>
     match f_α.evaluate env with
-    | .some ⟨_, h_α⟩ => .some ⟨_, .eql h_α⟩
-    | _ => .none
+    | ⟨_, h_α⟩ => ⟨_, .eql h_α⟩
   | (DCC refl(f_α)) =>
     match f_α.evaluate env with
-    | .some ⟨_, h_α⟩ => .some ⟨_, .refl h_α⟩
-    | _ => .none
+    | ⟨_, h_α⟩ => ⟨_, .refl h_α⟩
   | (DCC f ∘ g) =>
     match f.evaluate env, g.evaluate env with
-    | .some ⟨_, h_f⟩, .some ⟨_, h_g⟩ => .some ⟨_, .comp h_f h_g⟩
-    | _, _ => .none
+    | ⟨_, h_f⟩, ⟨_, h_g⟩ => ⟨_, .comp h_f h_g⟩
   | (DCC f ∘' g) =>
     match f.evaluate env, g.evaluate env with
-    | .some ⟨_, h_f⟩, .some ⟨_, h_g⟩ => .some ⟨_, .comp' h_f h_g⟩
-    | _, _ => .none
+    | ⟨_, h_f⟩, ⟨_, h_g⟩ => ⟨_, .comp' h_f h_g⟩
   | (DCC f ∘∘ g) =>
     match f.evaluate env, g.evaluate env with
-    | .some ⟨_, h_f⟩, .some ⟨_, h_g⟩ => .some ⟨_, .comp₂ h_f h_g⟩
-    | _, _ => .none
+    | ⟨_, h_f⟩, ⟨_, h_g⟩ => ⟨_, .comp₂ h_f h_g⟩
   | (DCC &(x)) =>
     match x.evaluate env with
-    | .some ⟨_, h_x⟩ => .some ⟨_, .boxed h_x⟩
-    | _ => .none
+    | ⟨_, h_x⟩ => ⟨_, .boxed h_x⟩
   | (DCC !(x)) =>
     match x.evaluate env with
-    | .some ⟨_, h_x⟩ => .some ⟨_, .bang h_x⟩
-    | _ => .none
+    | ⟨_, h_x⟩ => ⟨_, .bang h_x⟩
   | (DCC ⟦β⟧(x, y)) =>
     match β.evaluate env, x.evaluate env, y.evaluate env with
-    | .some ⟨_, h_β⟩, .some ⟨_, h_x⟩, .some ⟨_, h_y⟩ => .some ⟨_, .coup h_β h_x h_y⟩
-    | _, _, _ => .none
+    | ⟨_, h_β⟩, ⟨_, h_x⟩, ⟨_, h_y⟩ => ⟨_, .coup h_β h_x h_y⟩
   | (DCC Coup(β)) =>
     match β.evaluate env with
-    | .some ⟨_, h_β⟩ => .some ⟨_, .t_coup h_β⟩
-    | _ => .none
+    | ⟨_, h_β⟩ => ⟨_, .t_coup h_β⟩
   | (DCC (x = y)) =>
     match x.evaluate env, y.evaluate env with
-    | .some ⟨_, h_x⟩, .some ⟨_, h_y⟩ => .some ⟨_, .eq h_x h_y⟩
-    | _, _ => .none
+    | ⟨_, h_x⟩, ⟨_, h_y⟩ => ⟨_, .eq h_x h_y⟩
   | (DCC (f x)) =>
     match f.evaluate env, x.evaluate env with
-    | .some ⟨f', h₁⟩, .some ⟨x', h₂⟩ =>
+    | ⟨f', h₁⟩, ⟨x', h₂⟩ =>
       match f'.apply x' with
-      | .some ⟨_, h₃⟩ => .some ⟨_, .app h₁ h₂ h₃⟩
+      | .some ⟨_, h₃⟩ => ⟨_, .app h₁ h₂ h₃⟩
       | _ => .none
     | _, _ => .none
 

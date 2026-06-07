@@ -192,8 +192,7 @@ def contains (e : EtaExpr) (to_find : EtaExpr) : Bool :=
   | DCCη !<x>   => x.size + x.size + x.size + 2
   | DCCη $<x>   => x.size + x.size + x.size + 2
   | DCCη (f x) => f.size + x.size
-  | .hole _n => 1
-
+  | .hole _n => 0
 
 @[dcc_force_reduce, dcc_force_aff]
 instance RedAffEta.instRedRel : Expr.RedRel RedAffEta size where
@@ -638,5 +637,13 @@ scoped syntax "hole(" term ")" : gen_dcc
 macro_rules
   | `(DCC[$_ty:gen_dcc_loc] $n:num) => `(EtaExpr.hole (Hole.mk $n:term))
   | `(DCC[$_ty:gen_dcc_loc] hole($tm:term)) => `(EtaExpr.hole (Hole.mk $tm:term))
+
+@[grind =, grind! ., dcc_size]
+theorem hole_size_zero : (DCCη hole(m)).size = 0 := by
+  grind
+
+@[grind =, grind! ., dcc_size]
+theorem coup_hole_zero : (DCCη ⟦β⟧(hole(m), hole(n))).size = 0 := by
+  grind
 
 end EtaExpr

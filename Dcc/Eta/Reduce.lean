@@ -4,7 +4,7 @@ import Dcc.Relation
 namespace EtaExpr
 
 open Relation (ReflTransGen)
-open Expr (IsNorm decreasing? reduce RedRel reduce_norm reduce_sound norm_unique Complete)
+open Expr (IsNorm decreasing? reduce RedRel reduce_norm reduce_sound norm_unique Complete reduce_complete)
 
 inductive Domain : EtaExpr → EtaExpr → Prop
   | eql₁     : Domain f_α δ → (DCCη Eql(f_α)).Domain (DCCη !(δ))
@@ -97,6 +97,22 @@ def domain? (e : EtaExpr) : Option ((τ : EtaExpr) × (PULift.{1, 0} (Domain e �
     | _ => .none
   | _ => .none
 
+@[aesop safe forward (rule_sets := [DccReduce])]
+theorem domain?_complete (h : Domain e τ) : domain? e = .some ⟨τ, ⟨h⟩⟩ := by
+  induction h
+  any_goals (
+    focus
+    dsimp [domain?]
+    aesop
+    done)
+  any_goals (
+    rename_i h₁ h₂
+    dsimp [domain?]
+    have h := reduce_complete h₁ h₂
+    simp_all
+    grind)
+  any_goals (dsimp [domain?])
+
 @[dcc_force_reduce, dcc_force_aff]
 instance Domain.instRedRel : Expr.RedRel Domain size where
   run := domain?
@@ -188,36 +204,132 @@ theorem domain_complete (h : Relation.ReflTransGen Domain A B)
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance Domain.instComplete : Complete (Relation.ReflTransGen Domain) (P := Expr.IsNorm Domain) := Domain.instRedRel.instComplete
 
+inductive EtaMap : (dom : EtaExpr) → (out : EtaExpr) → (hole_arg : EtaExpr) → (f' : EtaExpr) → Prop
+  | id    : EtaMap dom hole_arg hole_arg (DCCη Id(dom))
+  | par   : EtaMap dom (DCCη (f hole_arg)) hole_arg f
+  | fstc  : EtaMap dom (DCCη hole(a)) (DCCη ⟦β⟧(hole(a), hole(a + 1))) (DCCη Fstc(β))
+  | sndc  : EtaMap dom (DCCη hole(a + 1)) (DCCη ⟦β⟧(hole(a), hole(a + 1))) (DCCη Sndc(β))
+
+def map_eta (dom : EtaExpr) (out : EtaExpr) (hole_arg : EtaExpr) : Option ((f' : EtaExpr) × PLift (EtaMap dom out hole_arg f')) :=
+  if heq : out = hole_arg then
+    heq ▸ .some ⟨_, ⟨.id⟩⟩
+  else
+    match out, hole_arg with
+    | DCCη (_f hole_arg₂), hole_arg =>
+      if heq : hole_arg₂ = hole_arg then
+        heq ▸ .some ⟨_, ⟨.par⟩⟩
+      else .none
+    | (DCCη hole(n)), (DCCη ⟦_β⟧(hole(a), hole(b))) =>
+      if h₁ : b = a + 1 then
+        if h₂ : n = a then by
+          cases h₁; cases h₂
+          exact .some ⟨_, ⟨.fstc⟩⟩
+        else if h₂ : n = a + 1 then by
+          cases h₁; cases h₂
+          exact .some ⟨_, ⟨.sndc⟩⟩
+        else .none
+      else .none
+    | _, _ => .none
+
+@[aesop safe forward (rule_sets := [DccReduce])]
+theorem map_eta_complete (h : EtaMap dom out hole_arg f') : map_eta dom out hole_arg = .some ⟨f', ⟨h⟩⟩ := by
+  dsimp [map_eta]
+  cases h
+  any_goals (simp)
+  · intro h
+    cases h
+
+@[aesop safe forward (rule_sets := [DccReduce])]
 inductive EtaResult : (dom : EtaExpr) → (out : EtaExpr) → (hole_arg : EtaExpr) → (f' : EtaExpr) → Prop
+  | map   : (EtaExpr.contains out hole_arg)
+    → EtaMap dom out hole_arg f'
+    → EtaResult dom out hole_arg f'
   | quot  : (¬ EtaExpr.contains out hole_arg)
     → EtaResult dom out hole_arg (DCCη `(dom, out))
-  | id    : (out = hole_arg)
-    → EtaResult dom out hole_arg (DCCη Id(dom))
-  | par   : EtaResult dom (DCCη (f hole_arg)) hole_arg f
-  | fstc  : EtaResult dom (DCCη hole(a)) (DCCη ⟦β⟧(hole(a), hole(b))) (DCCη Fstc(β))
-  | sndc  : EtaResult dom (DCCη hole(b)) (DCCη ⟦β⟧(hole(a), hole(b))) (DCCη Sndc(β))
+
+def mk_eta_result (dom : EtaExpr) (out : EtaExpr) (hole_arg : EtaExpr) : Option ((f' : EtaExpr) × PLift (EtaResult dom out hole_arg f')) :=
+  if h₁ : out.contains hole_arg then
+    match map_eta dom out hole_arg with
+    | .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.map h₁ h₂⟩⟩
+    | _ => .none
+  else
+    .some ⟨_, ⟨.quot h₁⟩⟩
+
+theorem mk_eta_result_complete (h : EtaResult dom out hole_arg f') : mk_eta_result dom out hole_arg = .some ⟨f', ⟨h⟩⟩ := by
+  dsimp [mk_eta_result]
+  cases h <;> aesop (rule_sets := [DccReduce])
 
 inductive TmEtaReduces : (level : ℕ) → (f : EtaExpr) → (f' : EtaExpr) → Prop
   | coupl : Domain f (DCCη Coup(β))
     → ReflTransGen RedAffEta (DCCη (f ⟦β⟧(hole(level + 1), hole(level + 2)))) e'
-    → EtaResult (DCCη Coup(β)) e' (DCCη (f ⟦β⟧(hole(level + 1), hole(level + 2)))) f'
+    → IsNorm RedAffEta e'
+    → EtaResult (DCCη Coup(β)) e' (DCCη ⟦β⟧(hole(level + 1), hole(level + 2))) f'
     → TmEtaReduces level f f'
   | sort  : Domain f (DCCη Sort m)
     → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
+    → IsNorm RedAffEta e'
     → EtaResult (DCCη Sort m) e' (DCCη hole(level + 1)) f'
     → TmEtaReduces level f f'
   | top  : Domain f (DCCη ⊤)
     → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
+    → IsNorm RedAffEta e'
     → EtaResult (DCCη ⊤) e' (DCCη hole(level + 1)) f'
     → TmEtaReduces level f f'
   | bot  : Domain f (DCCη ⊥)
     → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
-    → EtaResult (DCCη ⊤) e' (DCCη hole(level + 1)) f'
+    → IsNorm RedAffEta e'
+    → EtaResult (DCCη ⊥) e' (DCCη hole(level + 1)) f'
     → TmEtaReduces level f f'
-  | tm   : Domain f (DCCη (f x))
-    → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
-    → EtaResult (DCCη ⊤) e' (DCCη hole(level + 1)) f'
-    → TmEtaReduces level f f'
+  | tm   : Domain e (DCCη (f x))
+    → ReflTransGen RedAffEta (DCCη (e hole(level + 1))) e'
+    → IsNorm RedAffEta e'
+    → EtaResult (DCCη (f x)) e' (DCCη hole(level + 1)) f'
+    → TmEtaReduces level e f'
+
+def eta_reduce_tm (level : ℕ) (f : EtaExpr) : Option ((f' : EtaExpr) × (PLift (TmEtaReduces level f f'))) :=
+  match f.domain? with
+  | .some ⟨(DCCη Coup(β)), ⟨h₁⟩⟩ =>
+    match mk_eta_result (DCCη Coup(β))
+      (reduce RedAffEta (DCCη (f ⟦β⟧(hole(level + 1), hole(level + 2))))).fst
+      (DCCη ⟦β⟧(hole(level + 1), hole(level + 2))) with
+    | .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.coupl h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
+    | _ => .none
+  | .some ⟨(DCCη Sort m), ⟨h₁⟩⟩ =>
+    match mk_eta_result (DCCη Sort m)
+      (reduce RedAffEta (DCCη (f hole(level + 1)))).fst
+      (DCCη hole(level + 1)) with
+    | .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.sort h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
+    | _ => .none
+  | .some ⟨(DCCη ⊤), ⟨h₁⟩⟩ =>
+    match mk_eta_result (DCCη ⊤)
+      (reduce RedAffEta (DCCη (f hole(level + 1)))).fst
+      (DCCη hole(level + 1)) with
+    | .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.top h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
+    | _ => .none
+  | .some ⟨(DCCη ⊥), ⟨h₁⟩⟩ =>
+    match mk_eta_result (DCCη ⊥)
+      (reduce RedAffEta (DCCη (f hole(level + 1)))).fst
+      (DCCη hole(level + 1)) with
+    | .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.bot h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
+    | _ => .none
+  | .some ⟨DCCη (a b), ⟨h₁⟩⟩ =>
+    match mk_eta_result (DCCη (a b))
+      (reduce RedAffEta (DCCη (f hole(level + 1)))).fst
+      (DCCη hole(level + 1)) with
+    | .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.tm h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
+    | _ => .none
+  | _ => .none
+
+theorem eta_reduce_tm_complete (h : TmEtaReduces level f f') : eta_reduce_tm level f = .some ⟨f', ⟨h⟩⟩ := by
+  dsimp [eta_reduce_tm]
+  induction h
+  · 
+  sorry
 
 inductive FnEtaReduces : (level : ℕ) → (f : EtaExpr) → (f' : EtaExpr) → Prop
   | pi  : FnEtaReduces level.succ f_α f_α'

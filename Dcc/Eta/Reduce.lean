@@ -367,6 +367,19 @@ instance : Decidable (∃ (f_α : EtaExpr) (f_β : EtaExpr), f = f_α.pi f_β) :
       intro ⟨_, _, heq⟩
       simp_all))
 
+instance : Decidable (∃ (f_α : EtaExpr) (f_β : EtaExpr) (env : EtaExpr), f = (f_α.pi f_β).app env) := by
+  cases f
+  case app f x =>
+    if heq : ∃ f_α f_β, f = (DCCη Π(f_α, f_β)) then
+      exact .isTrue (by simp_all)
+    else
+      exact .isFalse (by
+        simp_all)
+  any_goals (
+    exact .isFalse (by
+      intro ⟨_, _, heq⟩
+      simp_all))
+
 def fn_reduces (level : ℕ) (f : EtaExpr) : Option ((f' : EtaExpr) × (PLift (FnEtaReduces level f f'))) :=
   if heq : ∃ f_α f_β, f = (DCCη Π(f_α, f_β)) then
     match _heq : f with
@@ -715,12 +728,12 @@ theorem ToEtaExpr.complete (h : ToEtaExpr e e') : e.to_eta_expr = ⟨e', ⟨h⟩
     try aesop
     try grind)
 
-inductive RedEta : (e₁ : Expr) → (e₄ : Expr) → Prop
-  | mk₁ : ToEtaExpr e₁ e₂ → FnEtaReduces 0 e₂ e₃ → ToExpr e₃ e₄ → RedEta e₁ e₄
-  | mk₂ : ToEtaExpr e₁ e₂ → FnEtaReduces 0 e₂ e₃ → (¬ ∃ e₄, ToExpr e₃ e₄) → RedEta e₁ e₁
-  | mk₃ : ToEtaExpr e₁ e₂ → (¬ ∃ e₃, FnEtaReduces 0 e₂ e₃) → RedEta e₁ e₁
+inductive RedEta? : (e₁ : Expr) → (e₄ : Expr) → Prop
+  | mk₁ : ToEtaExpr e₁ e₂ → FnEtaReduces 0 e₂ e₃ → ToExpr e₃ e₄ → RedEta? e₁ e₄
+  | mk₂ : ToEtaExpr e₁ e₂ → FnEtaReduces 0 e₂ e₃ → (¬ ∃ e₄, ToExpr e₃ e₄) → RedEta? e₁ e₁
+  | mk₃ : ToEtaExpr e₁ e₂ → (¬ ∃ e₃, FnEtaReduces 0 e₂ e₃) → RedEta? e₁ e₁
 
-def red_eta (e₁ : Expr) : ((e₄ : Expr) × PLift (RedEta e₁ e₄)) :=
+def red_eta? (e₁ : Expr) : ((e₄ : Expr) × PLift (RedEta? e₁ e₄)) :=
   if h₁ : ∃ e₃, FnEtaReduces 0 (to_eta_expr e₁).fst e₃ then
     match heq₀ : (to_eta_expr e₁).fst.fn_reduces 0 with
     | .some ⟨e', ⟨h₂⟩⟩ =>
@@ -744,8 +757,8 @@ def red_eta (e₁ : Expr) : ((e₄ : Expr) × PLift (RedEta e₁ e₄)) :=
       simp_all)⟩⟩
 
 @[aesop safe forward (rule_sets := [DccReduce])]
-theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
-  unfold red_eta
+theorem RedEta?.complete (h : RedEta? e e') : e.red_eta? = ⟨e', ⟨h⟩⟩ := by
+  unfold red_eta?
   induction h
   case mk₁ h₁ h₂ h₃ =>
     have ha := h₁.complete
@@ -788,6 +801,57 @@ theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
     simp [ha]
     cases h
     simp [h₂]
+
+instance : Decidable (∃ (f_α : Expr) (f_β : Expr), f = f_α.pi f_β) := by
+  cases f
+  case pi =>
+    exact .isTrue (by aesop)
+  any_goals (
+    exact .isFalse (by
+      intro ⟨_, _, heq⟩
+      simp_all))
+
+instance : Decidable (∃ (f_α : Expr) (f_β : Expr) (env : Expr), f = (f_α.pi f_β).app env) := by
+  cases f
+  case app f x =>
+    if heq : ∃ f_α f_β, f = (DCC Π(f_α, f_β)) then
+      exact .isTrue (by simp_all)
+    else
+      exact .isFalse (by
+        simp_all)
+  any_goals (
+    exact .isFalse (by
+      intro ⟨_, _, heq⟩
+      simp_all))
+
+inductive RedEta : (e : Expr) → (e' : Expr) → Prop
+  | pi : RedEta (DCC (Π(f_α, f_β))) pi' → RedEta env env' → RedEta (DCC (Π(f_α, f_β) env)) (DCC (pi' env'))
+  | tm : (¬ ∃ f_α f_β env, e = (DCC (Π(f_α, f_β) env))) → RedEta? e e' → RedEta e e'
+
+def red_eta (e : Expr) : ((e' : Expr) × (PLift (RedEta e e'))) :=
+  if heq : ∃ f_α f_β env, e = (DCC (Π(f_α, f_β) env)) then
+    match e with
+    | (DCC (Π(f_α, f_β) env)) =>
+      ⟨_, ⟨.pi (DCC Π(f_α, f_β)).red_eta.snd.down env.red_eta.snd.down⟩⟩
+  else
+    ⟨_, ⟨.tm heq e.red_eta?.snd.down⟩⟩
+
+@[aesop safe forward (rule_sets := [DccReduce])]
+theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
+  induction h
+  case pi f_α f_β pi' env env' h₁ h₂ h₃ h₄ =>
+    unfold red_eta
+    have heq : ∃ f_α_1 f_β_1 env_1, (f_α.pi f_β).app env = (DCC (Π(f_α_1, f_β_1) env_1)) := by
+      simp_all
+    simp only [heq]
+    dsimp
+    simp [h₃, h₄]
+    grind
+  case tm e e' heq h₁ =>
+    have ha := h₁.complete
+    unfold red_eta
+    simp [heq, ha]
+    grind
 
 #eval (DCC Id(Sort 1) ∘' Id(Sort 1)).red_eta.fst
 #eval (DCC `(Sort 1, Sort 1)).red_eta.fst

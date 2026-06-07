@@ -29,6 +29,8 @@ If domain is:
 
 - Sort | ⊤ | (Π(f_α, f_β) ...) | (f x)
   Use base
+
+- will need extra cases for Π?
 -/
 
 inductive Hole where
@@ -125,6 +127,40 @@ def step? (e : EtaExpr) : Option ((e' : EtaExpr) × (PULift.{1, 0} (RedAffEta e 
     | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCCη (f x')), ⟨.congrArg h₁⟩⟩
     | _, _ => .none
   | _ => .none
+
+@[aesop norm (rule_sets := [DccReduce]), dcc_reduce]
+def contains (e : EtaExpr) (to_find : EtaExpr) : Bool :=
+  e = to_find ||
+    match e with
+    | DCCη ∗
+    | DCCη ⊤
+    | DCCη Sort _n
+    | DCCη ⊥ => False
+    | DCCη Π(x, y)
+    | DCCη (x ∘' y)
+    | DCCη (x ∘ y)
+    | DCCη (x ∘∘ y)
+    | DCCη (x y)
+    | DCCη x = y => x.contains to_find ∨ y.contains to_find
+    | DCCη Fstc(α)
+    | DCCη Sndc(α)
+    | DCCη Coup(α)
+    | DCCη &(α)
+    | DCCη !<α>
+    | DCCη $<α>
+    | DCCη !(α)
+    | DCCη *(α)
+    | DCCη Id(α)
+    | DCCη Eql(α)
+    | DCCη refl(α) => α.contains to_find
+    | DCCη Σ(α, β) => α.contains to_find ∨ β.contains to_find
+    | DCCη `(β, x) => β.contains to_find ∨ x.contains to_find
+    | DCCη Eval(β, x, y)
+    | DCCη !Λ(β, x, y)
+    | DCCη Λ(β, x, y)
+    | DCCη ⟦β⟧⟨x, y⟩
+    | DCCη ⟦β⟧(x, y) => β.contains to_find ∨ x.contains to_find ∨ y.contains to_find
+    | .hole _n => False
 
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind] def size (e : EtaExpr) : ℕ :=
   match e with
@@ -595,5 +631,12 @@ theorem aff_complete (h : Relation.ReflTransGen RedAffEta A B)
   RedAffEta.instRedRel.instComplete.complete h hn
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instComplete : Expr.Complete (Relation.ReflTransGen RedAffEta) (P := Expr.IsNorm RedAffEta) := RedAffEta.instRedRel.instComplete
+
+scoped syntax num : gen_dcc
+scoped syntax "hole(" term ")" : gen_dcc
+
+macro_rules
+  | `(DCC[$_ty:gen_dcc_loc] $n:num) => `(EtaExpr.hole (Hole.mk $n:term))
+  | `(DCC[$_ty:gen_dcc_loc] hole($tm:term)) => `(EtaExpr.hole (Hole.mk $tm:term))
 
 end EtaExpr

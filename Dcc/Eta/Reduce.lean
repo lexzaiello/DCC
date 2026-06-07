@@ -4,7 +4,7 @@ import Dcc.Relation
 namespace EtaExpr
 
 open Relation (ReflTransGen)
-open Expr (IsNorm decreasing? reduce RedRel reduce_norm reduce_sound norm_unique)
+open Expr (IsNorm decreasing? reduce RedRel reduce_norm reduce_sound norm_unique Complete)
 
 inductive Domain : EtaExpr → EtaExpr → Prop
   | eql₁     : Domain f_α δ → (DCCη Eql(f_α)).Domain (DCCη !(δ))
@@ -180,7 +180,51 @@ def Domain.semi_complete {A B : EtaExpr} (hr : A.Domain B) : ∃ B', ∃ (h : A.
       rename_i h
       exact (h _ _ _ _ rfl rfl rfl rfl).elim
 
-inductive EtaReduces : EtaExpr → EtaExpr → Prop
-  
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance Domain.instSemicomplete : Expr.SemiComplete Domain := ⟨Domain.semi_complete⟩
+
+theorem domain_complete (h : Relation.ReflTransGen Domain A B)
+  (hn : Expr.IsNorm Domain B) : Expr.reduce Domain A = ⟨B, ⟨h⟩⟩ :=
+  Domain.instRedRel.instComplete.complete h hn
+
+@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance Domain.instComplete : Complete (Relation.ReflTransGen Domain) (P := Expr.IsNorm Domain) := Domain.instRedRel.instComplete
+
+inductive EtaResult : (dom : EtaExpr) → (out : EtaExpr) → (hole_arg : EtaExpr) → (f' : EtaExpr) → Prop
+  | quot  : (¬ EtaExpr.contains out hole_arg)
+    → EtaResult dom out hole_arg (DCCη `(dom, out))
+  | id    : (out = hole_arg)
+    → EtaResult dom out hole_arg (DCCη Id(dom))
+  | par   : EtaResult dom (DCCη (f hole_arg)) hole_arg f
+  | fstc  : EtaResult dom (DCCη hole(a)) (DCCη ⟦β⟧(hole(a), hole(b))) (DCCη Fstc(β))
+  | sndc  : EtaResult dom (DCCη hole(b)) (DCCη ⟦β⟧(hole(a), hole(b))) (DCCη Sndc(β))
+
+inductive TmEtaReduces : (level : ℕ) → (f : EtaExpr) → (f' : EtaExpr) → Prop
+  | coupl : Domain f (DCCη Coup(β))
+    → ReflTransGen RedAffEta (DCCη (f ⟦β⟧(hole(level + 1), hole(level + 2)))) e'
+    → EtaResult (DCCη Coup(β)) e' (DCCη (f ⟦β⟧(hole(level + 1), hole(level + 2)))) f'
+    → TmEtaReduces level f f'
+  | sort  : Domain f (DCCη Sort m)
+    → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
+    → EtaResult (DCCη Sort m) e' (DCCη hole(level + 1)) f'
+    → TmEtaReduces level f f'
+  | top  : Domain f (DCCη ⊤)
+    → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
+    → EtaResult (DCCη ⊤) e' (DCCη hole(level + 1)) f'
+    → TmEtaReduces level f f'
+  | bot  : Domain f (DCCη ⊥)
+    → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
+    → EtaResult (DCCη ⊤) e' (DCCη hole(level + 1)) f'
+    → TmEtaReduces level f f'
+  | tm   : Domain f (DCCη (f x))
+    → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
+    → EtaResult (DCCη ⊤) e' (DCCη hole(level + 1)) f'
+    → TmEtaReduces level f f'
+
+inductive FnEtaReduces : (level : ℕ) → (f : EtaExpr) → (f' : EtaExpr) → Prop
+  | pi  : FnEtaReduces level.succ f_α f_α'
+    → FnEtaReduces level.succ.succ f_β f_β'
+    → FnEtaReduces level (DCCη Π(f_α, f_β)) (DCCη Π(f_α', f_β'))
+  | tm  : (¬ ∃ f_α f_β, f = (DCCη Π(f_α, f_β)))
+    → TmEtaReduces level f f'
+    → FnEtaReduces level f f'
 
 end EtaExpr

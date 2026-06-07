@@ -325,8 +325,7 @@ inductive TmEtaReduces₂ : (level : ℕ) → (f : EtaExpr) → (f' : EtaExpr) �
   | map      : Domain₂ f α β
     → (EtaExpr.is_bang α = .none)
     → (EtaExpr.is_bang_map β = .none)
-    → (EtaExpr.contains e' (DCCη hole(level + 1)))
-    → (EtaExpr.contains e' (DCCη hole(level + 2)))
+    → (EtaExpr.contains e' (DCCη hole(level + 1)) ∨ EtaExpr.contains e' (DCCη hole(level + 2)))
     → ReflTransGen RedAffEta (DCCη (f hole(level + 1) hole(level + 2))) e'
     → IsNorm RedAffEta e'
     → (EtaMap₂ α β e' (DCCη hole(level + 1)) (DCCη hole(level + 2)) f')
@@ -392,11 +391,11 @@ def eta_reduce_tm₂ (level : ℕ) (f : EtaExpr) : Option ((f' : EtaExpr) × (PL
             ⟨.quot₂' h h_bang.left h_bang.right h_contains.left h_contains.right (reduce_sound rfl) (reduce_norm rfl)⟩⟩
         else .none
       else if h_contains : e'.contains (DCCη hole(level + 1))
-        ∧ e'.contains (DCCη hole(level + 2)) then
+        ∨ e'.contains (DCCη hole(level + 2)) then
         if h_bang : α₀.is_bang = .none ∧ β₀.is_bang_map = .none then
           match map_eta₂ α₀ β₀ e' (DCCη hole(level + 1)) (DCCη hole(level + 2)) with
           | .some ⟨f', ⟨hf⟩⟩ =>
-            .some ⟨f', ⟨.map h h_bang.left h_bang.right h_contains.left h_contains.right (reduce_sound rfl) (reduce_norm rfl) hf⟩⟩
+            .some ⟨f', ⟨.map h h_bang.left h_bang.right h_contains (reduce_sound rfl) (reduce_norm rfl) hf⟩⟩
           | _ => .none
         else .none
       else .none
@@ -421,7 +420,7 @@ theorem TmEtaReduces₂.complete (h : TmEtaReduces₂ level f f') : eta_reduce_t
     simp [h₁, h₂, h_red_complete]
     grind
   | map =>
-    rename_i h_bang₁ h_bang₂ hn h_contains₁ h_contains₂ h_domain hr h_map
+    rename_i h_bang₁ h_bang₂ hn h_contains h_domain hr h_map
     have h_red_complete := reduce_complete_fst hr hn
     have h := h_domain.complete
     have hb := h_map.complete
@@ -429,7 +428,9 @@ theorem TmEtaReduces₂.complete (h : TmEtaReduces₂ level f f') : eta_reduce_t
     rw [h]
     simp [h_bang₁, h_bang₂]
     cases h_red_complete.symm
-    simp [hb]
+    cases h_contains with
+    | inl hl => simp [hl, hb]
+    | inr hr => simp [hr, hb]
 
 def mk_eta_result (dom : EtaExpr) (out : EtaExpr) (hole_arg : EtaExpr) : Option ((f' : EtaExpr) × PLift (EtaResult dom out hole_arg f')) :=
   if h₁ : out.contains hole_arg then
@@ -1093,6 +1094,8 @@ theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
 #eval (DCC `(Sort 1, Sort 1)).red_eta.fst
 #eval (DCC Id(Sort 1)).red_eta.fst
 #eval (DCC Λ(Sort 1, Id(Sort 1), Id(Coup(Id(Sort 1))) ∘' Id(Coup(Id(Sort 1))))).red_eta.fst
+#eval Sigma.fst <| reduce RedAffEta (DCCη (Λ(Sort 1, Id(Sort 1), Sndc(Coup(Id(Sort 1)))) hole(1) hole(2)))
+#eval (DCC (Λ(Sort 1, Id(Sort 1), Sndc(Coup(Id(Sort 1)))) (Sort 0))).red_eta.fst
 #eval (DCC Eql(Id(Sort 2))).red_eta.fst
 #eval (DCC Eql(Id(Sort 2))).red_eta.fst
 #eval (DCC (Π(Id(Sort 3) ∘' Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2))))) !(Sort 2))).red_eta.fst

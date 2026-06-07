@@ -266,75 +266,64 @@ inductive TmEtaReduces : (level : ℕ) → (f : EtaExpr) → (f' : EtaExpr) → 
     → IsNorm RedAffEta e'
     → EtaResult (DCCη Coup(β)) e' (DCCη ⟦β⟧(hole(level + 1), hole(level + 2))) f'
     → TmEtaReduces level f f'
-  | sort  : Domain f (DCCη Sort m)
+  | tm    : Domain f τ
+    → (¬ ∃ β, τ = (DCCη Coup(β)))
     → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
     → IsNorm RedAffEta e'
-    → EtaResult (DCCη Sort m) e' (DCCη hole(level + 1)) f'
+    → EtaResult τ e' (DCCη hole(level + 1)) f'
     → TmEtaReduces level f f'
-  | top  : Domain f (DCCη ⊤)
-    → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
-    → IsNorm RedAffEta e'
-    → EtaResult (DCCη ⊤) e' (DCCη hole(level + 1)) f'
-    → TmEtaReduces level f f'
-  | bot  : Domain f (DCCη ⊥)
-    → ReflTransGen RedAffEta (DCCη (f hole(level + 1))) e'
-    → IsNorm RedAffEta e'
-    → EtaResult (DCCη ⊥) e' (DCCη hole(level + 1)) f'
-    → TmEtaReduces level f f'
-  | tm   : Domain e (DCCη (f x))
-    → ReflTransGen RedAffEta (DCCη (e hole(level + 1))) e'
-    → IsNorm RedAffEta e'
-    → EtaResult (DCCη (f x)) e' (DCCη hole(level + 1)) f'
-    → TmEtaReduces level e f'
+
+instance : Decidable (∃ (β : EtaExpr), f = (DCCη Coup(β))) := by
+  cases f
+  case coup =>
+    exact .isTrue (by aesop)
+  any_goals (
+    exact .isFalse (by
+      intro ⟨_, heq⟩
+      simp_all))
 
 def eta_reduce_tm (level : ℕ) (f : EtaExpr) : Option ((f' : EtaExpr) × (PLift (TmEtaReduces level f f'))) :=
   match f.domain? with
-  | .some ⟨(DCCη Coup(β)), ⟨h₁⟩⟩ =>
-    match mk_eta_result (DCCη Coup(β))
-      (reduce RedAffEta (DCCη (f ⟦β⟧(hole(level + 1), hole(level + 2))))).fst
-      (DCCη ⟦β⟧(hole(level + 1), hole(level + 2))) with
-    | .some ⟨_, ⟨h₂⟩⟩ =>
-      .some ⟨_, ⟨.coupl h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
-    | _ => .none
-  | .some ⟨(DCCη Sort m), ⟨h₁⟩⟩ =>
-    match mk_eta_result (DCCη Sort m)
-      (reduce RedAffEta (DCCη (f hole(level + 1)))).fst
-      (DCCη hole(level + 1)) with
-    | .some ⟨_, ⟨h₂⟩⟩ =>
-      .some ⟨_, ⟨.sort h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
-    | _ => .none
-  | .some ⟨(DCCη ⊤), ⟨h₁⟩⟩ =>
-    match mk_eta_result (DCCη ⊤)
-      (reduce RedAffEta (DCCη (f hole(level + 1)))).fst
-      (DCCη hole(level + 1)) with
-    | .some ⟨_, ⟨h₂⟩⟩ =>
-      .some ⟨_, ⟨.top h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
-    | _ => .none
-  | .some ⟨(DCCη ⊥), ⟨h₁⟩⟩ =>
-    match mk_eta_result (DCCη ⊥)
-      (reduce RedAffEta (DCCη (f hole(level + 1)))).fst
-      (DCCη hole(level + 1)) with
-    | .some ⟨_, ⟨h₂⟩⟩ =>
-      .some ⟨_, ⟨.bot h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
-    | _ => .none
-  | .some ⟨DCCη (a b), ⟨h₁⟩⟩ =>
-    match mk_eta_result (DCCη (a b))
-      (reduce RedAffEta (DCCη (f hole(level + 1)))).fst
-      (DCCη hole(level + 1)) with
-    | .some ⟨_, ⟨h₂⟩⟩ =>
-      .some ⟨_, ⟨.tm h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
-    | _ => .none
+  | .some ⟨τ, ⟨h₁⟩⟩ =>
+    if heq : ∃ β, τ = (DCCη Coup(β)) then by
+      cases τ
+      case coup β =>
+        match mk_eta_result (DCCη Coup(β))
+          (reduce RedAffEta (DCCη (f ⟦β⟧(hole(level + 1), hole(level + 2))))).fst
+          (DCCη ⟦β⟧(hole(level + 1), hole(level + 2))) with
+        | .some ⟨_, ⟨h₂⟩⟩ =>
+          exact .some ⟨_, ⟨.coupl h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
+        | _ => exact .none
+      any_goals (simp_all)
+    else
+      match mk_eta_result τ
+        (reduce RedAffEta (DCCη (f hole(level + 1)))).fst
+        (DCCη hole(level + 1)) with
+      | .some ⟨_, ⟨h₂⟩⟩ =>
+        .some ⟨_, ⟨.tm h₁ (by simp_all) (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
+      | _ => .none
   | _ => .none
 
+@[aesop safe forward (rule_sets := [DccReduce])]
 theorem TmEtaReduces.complete (h : TmEtaReduces level f f') : eta_reduce_tm level f = .some ⟨f', ⟨h⟩⟩ := by
   dsimp [eta_reduce_tm]
-  induction h <;> (
-    focus
-    rename_i h_domain hr hn hmk
-    have ha := reduce_complete_fst hr hn
-    cases ha
+  induction h
+  case coupl =>
+    rename_i f β level e' f' h_domain hr hn hmk
     have hb := h_domain.complete
+    have ha := reduce_complete_fst hr hn
     have hc := hmk.complete
+    simp_all
+    cases ha
+    simp_all
+  any_goals (
+    focus
+    rename_i f τ level e' f' h_domain heq hr hn hmk
+    have hb := h_domain.complete
+    have ha := reduce_complete_fst hr hn
+    have hc := hmk.complete
+    simp_all
+    cases ha
     simp_all)
 
 instance : Decidable (TmEtaReduces level f f') :=

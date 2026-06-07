@@ -226,6 +226,18 @@ def contains (e : EtaExpr) (to_find : EtaExpr) : Bool :=
   | DCCη (f _x) => f.arity - 1
   | .hole _n => 0
 
+theorem fun_contains : EtaExpr.contains (DCCη (f x)) f = true := by
+  simp [contains]
+  exact .inr (.inl (by
+    unfold contains
+    simp))
+
+theorem arg_contains : EtaExpr.contains (DCCη (f x)) x = true := by
+  simp [contains]
+  exact .inr (.inr (by
+    unfold contains
+    simp))
+
 @[dcc_reduce]
 def is_boxed (e : EtaExpr) : Option EtaExpr :=
   match e with

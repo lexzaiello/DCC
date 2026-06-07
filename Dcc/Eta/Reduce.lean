@@ -46,6 +46,12 @@ inductive Domain : EtaExpr → EtaExpr → Prop
   | comp₂    : Domain g α → Domain (DCCη f ∘∘ g) α
   | pi       : Domain f_α δ → Domain (DCCη Π(f_α, f_β)) δ
 
+inductive Domain₂ : EtaExpr → EtaExpr → EtaExpr → Prop
+  | eql      : Domain f_α δ → (DCCη Eql(f_α)).Domain₂ δ f_α
+  | refl     : Domain f_α δ → (DCCη refl(f_α)).Domain₂ δ f_α
+  | curr     : Domain₂ (DCCη Λ(α, β, x)) α β
+  | curr'    : Domain₂ (DCCη !Λ(α, β, x)) (DCCη !(α)) (DCCη !<β>)
+
 @[dcc_force_reduce, dcc_force_aff]
 def domain? (e : EtaExpr) : Option ((τ : EtaExpr) × (PULift.{1, 0} (Domain e τ))) :=
   match e with
@@ -98,6 +104,20 @@ def domain? (e : EtaExpr) : Option ((τ : EtaExpr) × (PULift.{1, 0} (Domain e �
     | _ => .none
   | _ => .none
 
+def domain₂? (e : EtaExpr) : Option ((α β : EtaExpr) × (PULift.{1, 0} (Domain₂ e α β))) :=
+  match e with
+  | (DCCη Eql(f_α)) =>
+    match f_α.domain? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, _, ⟨.eql h⟩⟩
+    | _ => .none
+  | (DCCη refl(f_α)) =>
+    match f_α.domain? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, _, ⟨.refl h⟩⟩
+    | _ => .none
+  | (DCCη Λ(_α, _β, _x)) => .some ⟨_, _, ⟨.curr⟩⟩
+  | (DCCη !Λ(_α, _β, _x)) => .some ⟨_, _, ⟨.curr'⟩⟩
+  | _ => none
+
 @[aesop safe forward (rule_sets := [DccReduce])]
 theorem Domain.complete (h : Domain e τ) : domain? e = .some ⟨τ, ⟨h⟩⟩ := by
   induction h
@@ -113,6 +133,15 @@ theorem Domain.complete (h : Domain e τ) : domain? e = .some ⟨τ, ⟨h⟩⟩ 
     simp_all
     grind)
   any_goals (dsimp [domain?])
+
+@[aesop safe forward (rule_sets := [DccReduce])]
+theorem Domain₂.complete (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, ⟨h⟩⟩ := by
+  cases h with
+  | refl h_domain | eql h_domain =>
+    have h := h_domain.complete
+    simp [domain₂?, h]
+  | curr | curr' =>
+    simp [domain₂?]
 
 @[dcc_force_reduce, dcc_force_aff]
 instance Domain.instRedRel : Expr.RedRel Domain size where
@@ -274,31 +303,39 @@ inductive EtaMap₂ : (dom₁ : EtaExpr)
   -- this is couple quotation
   -- if dom₂ is quotation i.e., `(dom₁, dom₂), then
   -- this is just simple double quotation `(dom₁, `(dom₂, c))
-  | quot₂    : (EtaExpr.is_boxed hole₁ = .none)
-    → (EtaExpr.is_boxed hole₂ = .none)
-    → (¬ EtaExpr.contains out hole₁)
-    → (¬ EtaExpr.contains out hole₂)
-    → EtaMap₂ dom₁ (DCCη `(dom₁, dom₂))
-      out
-      hole₁ hole₂
-      (DCCη `(dom₁, `(dom₂, out)))
-  -- TODO: might need quot₁ if β is not dependent on α
-  | quot₂'   : (EtaExpr.is_boxed hole₁ = .none)
-    → (EtaExpr.is_boxed hole₂ = .none)
-    → (¬ EtaExpr.contains out hole₁)
-    → (¬ EtaExpr.contains out hole₂)
-    -- β is dependent on dom₁
-    -- TODO: might need to eta dom₂ as well?
-    → (EtaExpr.is_quote dom₂ = .none)
-    → EtaMap₂ dom₁ dom₂
-      out
-      hole₁ hole₂
-      (DCCη Λ(dom₁, dom₂, `(Coup(dom₂), out)))
+
+-- TODO: might need quot₁ if β is not dependent on α
+inductive TmEtaReduces₂ : (level : ℕ) → (f : EtaExpr) → (f' : EtaExpr) → Prop
+  | quot₂    : Domain₂ f α₀ β₀
+    → (EtaExpr.is_bang α₀ = .some α)
+    → (EtaExpr.is_bang_map β₀ = .some β)
+    → (¬ EtaExpr.contains e' (DCCη &(hole(level + 1))))
+    → (¬ EtaExpr.contains e' (DCCη &(hole(level + 2))))
+    → ReflTransGen RedAffEta (DCCη (f &(hole(level + 1)) &(hole(level + 2)))) e'
+    → IsNorm RedAffEta e'
+    → TmEtaReduces₂ level f (DCCη !Λ(α, β, `(!(Coup(β)), e')))
+  | quot₂'   : Domain₂ f α β
+    → (EtaExpr.is_bang α = .none)
+    → (EtaExpr.is_bang_map β = .none)
+    → (¬ EtaExpr.contains e' (DCCη hole(level + 1)))
+    → (¬ EtaExpr.contains e' (DCCη hole(level + 2)))
+    → ReflTransGen RedAffEta (DCCη (f hole(level + 1) hole(level + 2))) e'
+    → IsNorm RedAffEta e'
+    → TmEtaReduces₂ level f (DCCη Λ(α, β, `(Coup(β), e')))
+  | map      : Domain₂ f α β
+    → (EtaExpr.is_bang α = .none)
+    → (EtaExpr.is_bang_map β = .none)
+    → (EtaExpr.contains e' (DCCη hole(level + 1)))
+    → (EtaExpr.contains e' (DCCη hole(level + 2)))
+    → ReflTransGen RedAffEta (DCCη (f hole(level + 1) hole(level + 2))) e'
+    → IsNorm RedAffEta e'
+    → (EtaMap₂ α β e' (DCCη hole(level + 1)) (DCCη hole(level + 2)) f')
+    → TmEtaReduces₂ level f f'
 
 def map_eta₂ (dom₁ dom₂ out hole₁ hole₂ : EtaExpr) : Option ((f' : EtaExpr) × PLift
   (EtaMap₂ dom₁ dom₂ out hole₁ hole₂ f')) :=
   if heqa : out = (DCCη (hole₁ hole₂)) then by
-    simp_all
+    cases heqa
     exact .some ⟨_, ⟨.id⟩⟩
   else
     match heq₁ : out with
@@ -317,138 +354,82 @@ def map_eta₂ (dom₁ dom₂ out hole₁ hole₂ : EtaExpr) : Option ((f' : Eta
       | (DCCη !(α)), (DCCη !<β₂>), (DCCη &(ha)), (DCCη &(hb)) =>
         if heq₄ : (DCCη &(⟦β⟧(hole₃, hole₄))) = (DCCη &(⟦β₂⟧(ha, hb))) then by
           rw [heq₄]
-          simp_all
+          cases heq₄
           exact .some ⟨_, ⟨.curr'⟩⟩
         else .none
       | _, _, _, _ => .none
-    | out =>
-      match heq₂ : dom₂ with
-      | (DCCη `(dom₁', d₂)) =>
-        if ha : dom₁' = dom₁ then
-          if hb : (¬ EtaExpr.contains out hole₁) then
-            if hc : (¬ EtaExpr.contains out hole₂) then
-              if hd : (EtaExpr.is_boxed hole₁ = .none) then
-                if he : (EtaExpr.is_boxed hole₂ = .none) then by
-                  simp_all
-                  cases ha; cases heq₁; cases heq₂
-                  exact .some ⟨_, ⟨.quot₂ (by simp_all) (by simp_all) (by simp_all) (by simp_all)⟩⟩
-                else .none
-              else .none
-            else .none
-          else .none
-        else .none
-      | d₂ =>
-        if ha : (¬ EtaExpr.contains out hole₁) then
-          if hb : (¬ EtaExpr.contains out hole₂) then
-            if hc : (EtaExpr.is_quote dom₂ = .none) then
-              if hd : (EtaExpr.is_boxed hole₁ = .none) then
-                if he : (EtaExpr.is_boxed hole₂ = .none) then by
-                  simp_all
-                  exact .some ⟨_, ⟨.quot₂' (by simp_all) (by simp_all)  (by simp_all) (by simp_all) (by simp_all)⟩⟩
-                else .none
-              else .none
-            else .none
-          else .none
-        else .none
+    | _ => .none
 
-theorem MapEta₂.complete (h : EtaExpr.EtaMap₂ dom₁ dom₂ out hole₁ hole₂ f') : map_eta₂ dom₁ dom₂ out hole₁ hole₂ = .some ⟨f', ⟨h⟩⟩ := by
+theorem EtaMap₂.complete (h : EtaExpr.EtaMap₂ dom₁ dom₂ out hole₁ hole₂ f') : map_eta₂ dom₁ dom₂ out hole₁ hole₂ = .some ⟨f', ⟨h⟩⟩ := by
   cases h
-  any_goals (
-    focus
-    first
-    | simp [map_eta₂]
-      done
-    | simp [map_eta₂]
-      intro h
-      cases h
-      done)
-  case quot₂ =>
-    simp [map_eta₂]
-    split
-    case isTrue heq =>
-      cases heq
-      have ha : (hole₁.app hole₂).contains hole₁ = true := by
-        simp [contains]
-        exact .inr (.inl (by
-          unfold contains
-          simp))
-      simp_all
-    case isFalse heq =>
-      
-      sorry
-
-theorem MapEta₂.complete (h : EtaExpr.EtaMap₂ dom₁ dom₂ out hole₁ hole₂ f') : map_eta₂ dom₁ dom₂ out hole₁ hole₂ = .some ⟨f', ⟨h⟩⟩ := by
-  unfold map_eta₂
-  if ha : ¬ out.contains hole₁ then
-    if hb : ¬ out.contains hole₂ then
-      if hc : (EtaExpr.is_boxed hole₁ = .none) then
-        if hd : (EtaExpr.is_boxed hole₂ = .none) then
-          
-          sorry
-        else sorry
-      else sorry
-    else sorry
-  else sorry
-          /-cases h
-          case par =>
-            have h : ((f'.app hole₁).app hole₂).contains hole₁ = true := by
-              simp [EtaExpr.contains]
-              refine .inr (.inl (.inr (.inr (?_))))
-              unfold EtaExpr.contains
-              simp
-            simp_all
-          case id hole₁ hole₂ =>
-            have h : ((hole (Hole.mk hole₁)).app (hole (Hole.mk hole₂))).contains (hole (Hole.mk hole₁)) = true := by
-              simp [EtaExpr.contains]
-            simp_all
-          case curr =>
-            have h : (dom₂.mkc hole₁ hole₂).contains hole₁ = true := by
-              simp [EtaExpr.contains]
-              exact .inr (.inr (.inl (by
-                unfold EtaExpr.contains
-                simp)))
-            simp_all
-          case curr' =>
-            unfold map_eta₂
-            simp
-          case quot₂ =>
-            unfold map_eta₂
-            simp_all
-            split
-            case h_1 =>
-              split
-              case isTrue f _ _ hn₁ hn₂ heq =>
-                have ⟨h₁, h₂⟩ := heq
-                cases h₁; cases h₂
-                have h : ((f.app hole₁).app hole₂).contains hole₁ := by
-                  simp [EtaExpr.contains]
-                  exact .inr (.inl (.inr (.inr (by
-                    unfold EtaExpr.contains
-                    simp))))
-                simp_all
-              case isFalse =>
-                
-                sorry
-    else
-      sorry
-  else
-    sorry-/
-
-theorem MapEta₂.complete (h : EtaExpr.EtaMap₂ dom₁ dom₂ out hole₁ hole₂ f') : map_eta₂ dom₁ dom₂ out hole₁ hole₂ = .some ⟨f', ⟨h⟩⟩ := by
-  unfold map_eta₂
-  cases heq : h
-  any_goals (
-    focus
+  case par =>
+    dsimp [map_eta₂]
     simp
-    done)
-  case quot₂ heq₁ heq₂ =>
-    split
-    case h_1 =>
-      simp_all
-      simp [EtaExpr.contains] at heq₁
-      simp [EtaExpr.contains] at heq₂
-      
-      sorry
+    intro h
+    cases h
+  case curr' | curr | id =>
+    dsimp [map_eta₂]
+    simp
+
+def eta_reduce_tm₂ (level : ℕ) (f : EtaExpr) : Option ((f' : EtaExpr) × (PLift (TmEtaReduces₂ level f f'))) :=
+  match heq : f.domain₂? with
+  | .some ⟨α₀, β₀, ⟨h⟩⟩ =>
+    if h_bang : (α₀.is_bang).isSome ∧ (β₀.is_bang_map).isSome then
+      let e' := (reduce RedAffEta (DCCη (f &(hole(level + 1)) &(hole(level + 2))))).fst
+      if h_contains : ¬ e'.contains (DCCη &(hole(level + 1)))
+        ∧ ¬ e'.contains (DCCη &(hole(level + 2))) then by
+        exact .some ⟨(DCCη !Λ(#(α₀.is_bang.get h_bang.left), #(β₀.is_bang_map.get h_bang.right), `(!(Coup(#(β₀.is_bang_map.get h_bang.right))), e'))), ⟨.quot₂ h (by
+          simp_all) (by
+            simp_all) h_contains.left h_contains.right
+          (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+      else .none
+    else
+      let e' := (reduce RedAffEta (DCCη (f hole(level + 1) hole(level + 2)))).fst
+      if h_contains : ¬ e'.contains (DCCη hole(level + 1))
+        ∧ ¬ e'.contains (DCCη hole(level + 2)) then
+        if h_bang : α₀.is_bang = .none ∧ β₀.is_bang_map = .none then
+          .some ⟨(DCCη Λ(α₀, β₀, `(Coup(β₀), e'))),
+            ⟨.quot₂' h h_bang.left h_bang.right h_contains.left h_contains.right (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+        else .none
+      else if h_contains : e'.contains (DCCη hole(level + 1))
+        ∧ e'.contains (DCCη hole(level + 2)) then
+        if h_bang : α₀.is_bang = .none ∧ β₀.is_bang_map = .none then
+          match map_eta₂ α₀ β₀ e' (DCCη hole(level + 1)) (DCCη hole(level + 2)) with
+          | .some ⟨f', ⟨hf⟩⟩ =>
+            .some ⟨f', ⟨.map h h_bang.left h_bang.right h_contains.left h_contains.right (reduce_sound rfl) (reduce_norm rfl) hf⟩⟩
+          | _ => .none
+        else .none
+      else .none
+  | .none => .none
+
+theorem TmEtaReduces₂.complete (h : TmEtaReduces₂ level f f') : eta_reduce_tm₂ level f = .some ⟨f', ⟨h⟩⟩ := by
+  unfold eta_reduce_tm₂
+  cases h with
+  | quot₂ h_domain h₁ h₂ h_contains₁ h_contains₂ hr hn =>
+    have h_red_complete := reduce_complete_fst hr hn
+    have h := h_domain.complete
+    simp_all
+    rw [h]
+    simp [h₁, h₂, h_red_complete]
+    grind
+  | quot₂' =>
+    rename_i h₁ h₂ hn h_contains₁ h_contains₂ h_domain hr
+    have h_red_complete := reduce_complete_fst hr hn
+    have h := h_domain.complete
+    simp_all
+    rw [h]
+    simp [h₁, h₂, h_red_complete]
+    grind
+  | map =>
+    rename_i h_bang₁ h_bang₂ hn h_contains₁ h_contains₂ h_domain hr h_map
+    have h_red_complete := reduce_complete_fst hr hn
+    have h := h_domain.complete
+    have hb := h_map.complete
+    simp_all
+    rw [h]
+    simp [h_bang₁, h_bang₂]
+    cases h_red_complete.symm
+    simp [hb]
 
 def mk_eta_result (dom : EtaExpr) (out : EtaExpr) (hole_arg : EtaExpr) : Option ((f' : EtaExpr) × PLift (EtaResult dom out hole_arg f')) :=
   if h₁ : out.contains hole_arg then

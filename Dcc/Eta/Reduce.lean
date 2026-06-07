@@ -571,5 +571,11 @@ def to_expr (e : EtaExpr) : Option ((e' : Expr) × PLift (ToExpr e e')) :=
     | _, _ => .none
   | .hole _n => .none
 
+theorem ToExpr.complete (h : ToExpr e e') : e.to_expr = .some ⟨e', ⟨h⟩⟩ := by
+  induction h
+  any_goals (
+    focus
+    simp [EtaExpr.to_expr]
+    try simp_all)
 
 end EtaExpr

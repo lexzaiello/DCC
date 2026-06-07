@@ -317,4 +317,6 @@ instance : Decidable (IsNorm RedEta A) :=
 
 #check RedEta.reduce
 
+#eval Sigma.fst <| RedEta.reduce (DCC (Λ(Sort 1, Id(Sort 1), Sndc(Coup(Id(Sort 1)))) (Sort 0)))
+
 end Expr

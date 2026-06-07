@@ -4,7 +4,7 @@ import Dcc.Relation
 namespace EtaExpr
 
 open Relation (ReflTransGen)
-open Expr (IsNorm decreasing? reduce RedRel reduce_norm reduce_sound norm_unique Complete reduce_complete)
+open Expr (IsNorm decreasing? reduce RedRel reduce_norm reduce_sound norm_unique Complete reduce_complete reduce_complete_fst)
 
 inductive Domain : EtaExpr → EtaExpr → Prop
   | eql₁     : Domain f_α δ → (DCCη Eql(f_α)).Domain (DCCη !(δ))
@@ -98,7 +98,7 @@ def domain? (e : EtaExpr) : Option ((τ : EtaExpr) × (PULift.{1, 0} (Domain e �
   | _ => .none
 
 @[aesop safe forward (rule_sets := [DccReduce])]
-theorem domain?_complete (h : Domain e τ) : domain? e = .some ⟨τ, ⟨h⟩⟩ := by
+theorem Domain.complete (h : Domain e τ) : domain? e = .some ⟨τ, ⟨h⟩⟩ := by
   induction h
   any_goals (
     focus
@@ -232,7 +232,7 @@ def map_eta (dom : EtaExpr) (out : EtaExpr) (hole_arg : EtaExpr) : Option ((f' :
     | _, _ => .none
 
 @[aesop safe forward (rule_sets := [DccReduce])]
-theorem map_eta_complete (h : EtaMap dom out hole_arg f') : map_eta dom out hole_arg = .some ⟨f', ⟨h⟩⟩ := by
+theorem EtaMap.complete (h : EtaMap dom out hole_arg f') : map_eta dom out hole_arg = .some ⟨f', ⟨h⟩⟩ := by
   dsimp [map_eta]
   cases h
   any_goals (simp)
@@ -255,7 +255,7 @@ def mk_eta_result (dom : EtaExpr) (out : EtaExpr) (hole_arg : EtaExpr) : Option 
   else
     .some ⟨_, ⟨.quot h₁⟩⟩
 
-theorem mk_eta_result_complete (h : EtaResult dom out hole_arg f') : mk_eta_result dom out hole_arg = .some ⟨f', ⟨h⟩⟩ := by
+theorem EtaResult.complete (h : EtaResult dom out hole_arg f') : mk_eta_result dom out hole_arg = .some ⟨f', ⟨h⟩⟩ := by
   dsimp [mk_eta_result]
   cases h <;> aesop (rule_sets := [DccReduce])
 
@@ -325,11 +325,37 @@ def eta_reduce_tm (level : ℕ) (f : EtaExpr) : Option ((f' : EtaExpr) × (PLift
     | _ => .none
   | _ => .none
 
-theorem eta_reduce_tm_complete (h : TmEtaReduces level f f') : eta_reduce_tm level f = .some ⟨f', ⟨h⟩⟩ := by
+theorem TmEtaReduces.complete (h : TmEtaReduces level f f') : eta_reduce_tm level f = .some ⟨f', ⟨h⟩⟩ := by
   dsimp [eta_reduce_tm]
-  induction h
-  · 
-  sorry
+  induction h <;> (
+    focus
+    rename_i h_domain hr hn hmk
+    have ha := reduce_complete_fst hr hn
+    cases ha
+    have hb := h_domain.complete
+    have hc := hmk.complete
+    simp_all)
+
+instance : Decidable (TmEtaReduces level f f') :=
+  if h : (f.eta_reduce_tm level).isSome then
+    if heq : ((f.eta_reduce_tm level).get h).fst = f' then
+      .isTrue (heq ▸ ((f.eta_reduce_tm level).get h).snd.down)
+    else
+      .isFalse (fun h => by
+        have h := h.complete
+        simp_all)
+  else
+    .isFalse (fun h => by
+      have h := h.complete
+      simp_all)
+
+instance : Decidable (∃ f', TmEtaReduces level f f') :=
+  if heq : (f.eta_reduce_tm level).isSome then
+    .isTrue ⟨_, ((f.eta_reduce_tm level).get heq).snd.down⟩
+  else
+    .isFalse (fun ⟨_, h⟩ => by
+      have h := h.complete
+      simp_all)
 
 inductive FnEtaReduces : (level : ℕ) → (f : EtaExpr) → (f' : EtaExpr) → Prop
   | pi  : FnEtaReduces level.succ f_α f_α'
@@ -338,5 +364,56 @@ inductive FnEtaReduces : (level : ℕ) → (f : EtaExpr) → (f' : EtaExpr) → 
   | tm  : (¬ ∃ f_α f_β, f = (DCCη Π(f_α, f_β)))
     → TmEtaReduces level f f'
     → FnEtaReduces level f f'
+  | tm' : (¬ ∃ f_α f_β, f = (DCCη Π(f_α, f_β)))
+    → (¬ ∃ f', TmEtaReduces level f f')
+    → FnEtaReduces level f f
+
+instance : Decidable (∃ (f_α : EtaExpr) (f_β : EtaExpr), f = f_α.pi f_β) := by
+  cases f
+  case pi =>
+    exact .isTrue (by aesop)
+  any_goals (
+    exact .isFalse (by
+      intro ⟨_, _, heq⟩
+      simp_all))
+
+def fn_reduces (level : ℕ) (f : EtaExpr) : Option ((f' : EtaExpr) × (PLift (FnEtaReduces level f f'))) :=
+  if heq : ∃ f_α f_β, f = (DCCη Π(f_α, f_β)) then
+    match _heq : f with
+    | (DCCη Π(f_α, f_β)) =>
+      match f_α.fn_reduces level.succ with
+      | .some ⟨_, ⟨h₁⟩⟩ =>
+        match f_β.fn_reduces level.succ.succ with
+        | .some ⟨_, ⟨h₂⟩⟩ =>
+          .some ⟨_, ⟨.pi h₁ h₂⟩⟩
+        | _ => .none
+      | _ => .none
+  else
+    if heq₂ : ∃ f', TmEtaReduces level f f' then
+      match _heq₃ : f.eta_reduce_tm level with
+      | .some ⟨_f', ⟨h⟩⟩ =>
+        .some ⟨_, ⟨.tm heq h⟩⟩
+      | .none => .none
+    else
+      .some ⟨_, ⟨.tm' heq heq₂⟩⟩
+
+@[aesop safe forward (rule_sets := [DccReduce])]
+theorem FnEtaReduces.complete (h : FnEtaReduces level f f') : fn_reduces level f = .some ⟨f', ⟨h⟩⟩ := by
+  induction h
+  case pi h₁ h₂ heq₁ heq₂ =>
+    dsimp [fn_reduces]
+    simp_all
+  case tm heq h₁ =>
+    have h₂ := h₁.complete
+    unfold fn_reduces
+    simp [heq]
+    split
+    case isTrue =>
+      aesop
+    case isFalse h =>
+      exact (h ⟨_, (by assumption)⟩).elim
+  case tm' heq₁ heq₂ =>
+    unfold fn_reduces
+    simp [heq₁, heq₂]
 
 end EtaExpr

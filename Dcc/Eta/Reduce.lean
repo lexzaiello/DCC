@@ -416,4 +416,38 @@ theorem FnEtaReduces.complete (h : FnEtaReduces level f f') : fn_reduces level f
     unfold fn_reduces
     simp [heq₁, heq₂]
 
+instance : Decidable (∃ f', FnEtaReduces level f f') :=
+  if heq : (f.fn_reduces level).isSome then
+    .isTrue ⟨_, ((f.fn_reduces level).get heq).snd.down⟩
+  else
+    .isFalse (fun ⟨_, h⟩ => by
+      have h := h.complete
+      simp_all)
+
+inductive ToExpr : (e : EtaExpr) → (e' : Expr) → Prop
+  | top    : ToExpr (DCCη ⊤) (DCC ⊤)
+  | bot    : ToExpr (DCCη ⊥) (DCC ⊥)
+  | tintro : ToExpr (DCCη ∗) (DCC ∗)
+  | sort   : ToExpr (DCCη Sort m) (DCC Sort m)
+  | map    : ToExpr f f' → ToExpr (DCCη !<f>) (DCC !<f'>)
+  | fmap   : ToExpr f f' → ToExpr (DCCη $<f>) (DCC $<f'>)
+  | boxed  : ToExpr f f' → ToExpr (DCCη &(f)) (DCC &(f'))
+  | unbox  : ToExpr f f' → ToExpr (DCCη *(f)) (DCC *(f'))
+  | bang   : ToExpr f f' → ToExpr (DCCη !(f)) (DCC !(f'))
+  | eval   : ToExpr α α' → ToExpr β β' → ToExpr x x' → ToExpr (DCCη Eval(α, β, x)) (DCC Eval(α', β', x'))
+  | quot   : ToExpr β β' → ToExpr x x' → ToExpr (DCCη `(β, x)) (DCC `(β', x'))
+  | id     : ToExpr f f' → ToExpr (DCCη Id(f)) (DCC Id(f'))
+  | fstc   : ToExpr f f' → ToExpr (DCCη Fstc(f)) (DCC Fstc(f'))
+  | sndc   : ToExpr f f' → ToExpr (DCCη Sndc(f)) (DCC Sndc(f'))
+  | curr   : ToExpr α α' → ToExpr β β' → ToExpr x x' → ToExpr (DCCη Λ(α, β, x)) (DCC Λ(α', β', x'))
+  | curr'  : ToExpr α α' → ToExpr β β' → ToExpr x x' → ToExpr (DCCη !Λ(α, β, x)) (DCC !Λ(α', β', x'))
+  | sigma  : ToExpr β β' → ToExpr x x' → ToExpr (DCCη Σ(β, x)) (DCC Σ(β', x'))
+  | eq     : ToExpr β β' → ToExpr x x' → ToExpr (DCCη β = x) (DCC β' = x')
+  | eql    : ToExpr f f' → ToExpr (DCCη Eql(f)) (DCC Eql(f'))
+  | refl   : ToExpr f f' → ToExpr (DCCη refl(f)) (DCC refl(f'))
+  | comp'  : ToExpr β β' → ToExpr x x' → ToExpr (DCCη β ∘' x) (DCC β' ∘' x')
+  | comp   : ToExpr β β' → ToExpr x x' → ToExpr (DCCη β ∘ x) (DCC β' ∘ x')
+  | comp₂  : ToExpr β β' → ToExpr x x' → ToExpr (DCCη β ∘∘ x) (DCC β' ∘∘ x')
+  | app    : ToExpr f f' → ToExpr x x' → ToExpr (DCCη (f x)) (DCC (f' x'))
+
 end EtaExpr

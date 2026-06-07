@@ -1,5 +1,6 @@
 import Dcc.Eta.Ast
 import Dcc.Relation
+import Dcc.Types
 
 namespace EtaExpr
 
@@ -730,14 +731,6 @@ inductive RedEta : (e₁ : Expr) → (e₄ : Expr) → Prop
   | mk₂ : ToEtaExpr e₁ e₂ → FnEtaReduces 0 e₂ e₃ → (¬ ∃ e₄, ToExpr e₃ e₄) → RedEta e₁ e₁
   | mk₃ : ToEtaExpr e₁ e₂ → (¬ ∃ e₃, FnEtaReduces 0 e₂ e₃) → RedEta e₁ e₁
 
-/-instance : Decidable (∃ e', FnEtaReduces level f f') :=
-  if heq : (f.fn_reduces level).isSome then
-    .isTrue ⟨_, ((f.fn_reduces level).get heq).snd.down⟩
-  else
-    .isFalse (fun ⟨_, h⟩ => by
-      have h := h.complete
-      simp_all)-/
-
 def red_eta (e₁ : Expr) : ((e₄ : Expr) × PLift (RedEta e₁ e₄)) :=
   if h₁ : ∃ e₃, FnEtaReduces 0 (to_eta_expr e₁).fst e₃ then
     match heq₀ : (to_eta_expr e₁).fst.fn_reduces 0 with
@@ -761,6 +754,7 @@ def red_eta (e₁ : Expr) : ((e₄ : Expr) × PLift (RedEta e₁ e₄)) :=
       have h := h.complete
       simp_all)⟩⟩
 
+@[aesop safe forward (rule_sets := [DccReduce])]
 theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
   unfold red_eta
   induction h
@@ -805,5 +799,12 @@ theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
     simp [ha]
     cases h
     simp [h₂]
+
+#eval (DCC Id(Sort 1) ∘' Id(Sort 1)).red_eta.fst
+#eval (DCC `(Sort 1, Sort 1)).red_eta.fst
+#eval (DCC Id(Sort 1)).red_eta.fst
+#eval (DCC Eql(Id(Sort 2))).red_eta.fst
+#eval (DCC Eql(Id(Sort 2))).red_eta.fst
+#eval (DCC (Π(Id(Sort 3) ∘' Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2))))) !(Sort 2))).red_eta.fst
 
 end Expr

@@ -226,8 +226,8 @@ instance Complete.instDecidable.{u}
     else .isFalse (by simp_all)
   else .isFalse (fun ⟨h, hp⟩ => by simp [hC.complete h hp] at *)
 
-class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ))
-  (m : Type → Type := Option) [_hM : Monad m] extends Rel.{0, 0, 0} (fun (x : Expr) (y : Expr) => PULift.{1, 0} (r x y)) (m := m) where
+class RedRel {α : Type} (r : α → α → Prop) (t : outParam (α → ℕ))
+  (m : Type → Type := Option) [_hM : Monad m] extends Rel.{0, 0, 0} (fun (x : α) (y : α) => PULift.{1, 0} (r x y)) (m := m) where
   decreasing : r x y → t y < t x := by
     intro x y h
     induction h
@@ -242,34 +242,34 @@ class RedRel (r : Expr → Expr → Prop) (t : outParam (Expr → ℕ))
 
 attribute [dcc_force_rel] RedRel.toRel.eq_def RedRel.toRel Rel.run Rel.run.eq_def
 
-def IsNorm.unique {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : r A B) : A = B :=
+def IsNorm.unique {r : α → α → Prop} (hn : IsNorm r A) (hr : r A B) : A = B :=
   (hn ⟨_, hr⟩).elim
 
-def IsNorm.unique_trans {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : (Relation.TransGen r) A B) : A = B :=
+def IsNorm.unique_trans {r : α → α → Prop} (hn : IsNorm r A) (hr : (Relation.TransGen r) A B) : A = B :=
   match hr with
   | .single h => hn.unique h
   | .tail hrt hr => hn.unique ((hn.unique_trans hrt) ▸ hr)
 
-def IsNorm.unique_refl {r : Expr → Expr → Prop} (hn : IsNorm r A) (hr : (Relation.ReflTransGen r) A B) : A = B := by
+def IsNorm.unique_refl {r : α → α → Prop} (hn : IsNorm r A) (hr : (Relation.ReflTransGen r) A B) : A = B := by
   rw [← Relation.reflGen_transGen] at hr
   cases hr with
   | refl => rfl
   | single h => exact hn.unique_trans h
 
-def RedRel.sn {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ))
+def RedRel.sn {r : α → α → Prop} (t : outParam (α → ℕ))
   {m : Type → Type} [Monad m]
-  (hR : RedRel r t (m := m)) (e : Expr) : Acc (fun b a => r a b) e := Acc.intro e (fun e' hr => by
+  (hR : RedRel r t (m := m)) (e : α) : Acc (fun b a => r a b) e := Acc.intro e (fun e' hr => by
     have h := hR.decreasing hr
     exact sn t hR e')
 termination_by t e
 
-def RedRel.wellFounded {r : Expr → Expr → Prop} (t : outParam (Expr → ℕ))
+def RedRel.wellFounded {r : α → α → Prop} (t : outParam (α → ℕ))
   {m : Type → Type} [Monad m]
   (hR : RedRel r t (m := m)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
 
 @[dcc_force_reduce, aesop norm (rule_sets := [DccForceReduce])]
-def reduce {t : Expr → ℕ} (r : Expr → Expr → Prop) [hR : RedRel r t]
-  (e : Expr) : ((e' : Expr) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
+def reduce {t : α → ℕ} (r : α → α → Prop) [hR : RedRel r t]
+  (e : α) : ((e' : α) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
   match hR.run e with
   | .some ⟨e', ⟨h⟩⟩ =>
     have _size_ : t e' < t e := hR.decreasing h
@@ -278,11 +278,11 @@ def reduce {t : Expr → ℕ} (r : Expr → Expr → Prop) [hR : RedRel r t]
   | .none => ⟨e, ⟨.refl⟩⟩
 termination_by t e
 
-@[dcc_reduce, inline] abbrev reduce' {t : Expr → ℕ} (r : Expr → Expr → Prop) [hR : RedRel r t]
-  (e : Expr) : Expr := (reduce r e).fst
+@[dcc_reduce, inline] abbrev reduce' {t : α → ℕ} (r : α → α → Prop) [hR : RedRel r t]
+  (e : α) : α := (reduce r e).fst
 
-def reduce? {t : Expr → ℕ} (r : Expr → Expr → Prop) [hR : RedRel r t]
-  (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Relation.TransGen r e e'))) :=
+def reduce? [DecidableEq α] {t : α → ℕ} (r : α → α → Prop) [hR : RedRel r t]
+  (e : α) : Option ((e' : α) × (PULift.{1, 0} (Relation.TransGen r e e'))) :=
   let ⟨e', ⟨h⟩⟩ := reduce r e
   if heq : e = e' then
     .none
@@ -293,7 +293,7 @@ def reduce? {t : Expr → ℕ} (r : Expr → Expr → Prop) [hR : RedRel r t]
       | refl => simp_all
       | single h => exact h⟩⟩
 
-open RedRel in @[reducible] def RedRel.to_trans (t : outParam (Expr → ℕ)) (hR : RedRel r t) : RedRel (Relation.TransGen r) t where
+open RedRel in @[reducible] def RedRel.to_trans [DecidableEq α] (t : outParam (α → ℕ)) (hR : RedRel r t) : RedRel (Relation.TransGen r) t where
   decreasing := fun h => by
     induction h with
     | single h =>
@@ -304,17 +304,17 @@ open RedRel in @[reducible] def RedRel.to_trans (t : outParam (Expr → ℕ)) (h
   -- reducer given decreasing
   run := reduce? r
 
-@[reducible] def RedRel.to_reflTrans {r : Expr → Expr → Prop} {t : Expr → ℕ} (hR : RedRel r t (m := Option)) : Rel.{0, 0, 0}
-  (fun (x y : Expr) => PULift.{1, 0} (Relation.ReflTransGen r x y)) Id.{0} where
+@[reducible] def RedRel.to_reflTrans {r : α → α → Prop} {t : α → ℕ} (hR : RedRel r t (m := Option)) : Rel.{0, 0, 0}
+  (fun (x y : α) => PULift.{1, 0} (Relation.ReflTransGen r x y)) Id.{0} where
   run := reduce r
 
-instance RedRel.instReflTransRel {r : Expr → Expr → Prop} {t : Expr → ℕ}
+instance RedRel.instReflTransRel {r : α → α → Prop} {t : α → ℕ}
   [hR : RedRel r t (m := Option)] :
   Rel.{0,0,0} (fun x y => PULift.{1,0} (Relation.ReflTransGen r x y)) Id.{0} :=
   hR.to_reflTrans
 
-abbrev RedRel.ReflTrans {r : Expr → Expr → Prop} {t : Expr → ℕ} {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m)) : Expr → Expr → Prop := Relation.ReflTransGen r
-abbrev RedRel.Trans {r : Expr → Expr → Prop} {t : Expr → ℕ} {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m)) : Expr → Expr → Prop    := Relation.TransGen r
+abbrev RedRel.ReflTrans {r : α → α → Prop} {t : α → ℕ} {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m)) : α → α → Prop := Relation.ReflTransGen r
+abbrev RedRel.Trans {r : α → α → Prop} {t : α → ℕ} {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m)) : α → α → Prop    := Relation.TransGen r
 
 open Rel in class Congruent (r : Expr → Expr → Prop) where
   congrFun_ (h : r f f') : r (DCC (f x)) (DCC (f' x)) := by exact .congrFun
@@ -406,7 +406,7 @@ open Rel in class Confluent.{u} {α : Type u} (r : α → α → Prop)
   conf : (m r A B) → (m r A C) → ∃ D, Relation.ReflTransGen r B D ∧ Relation.ReflTransGen r C D
 
 open Confluent in @[reducible] def RedRel.globally_confluent
-  {r : Expr → Expr → Prop} {t : Expr → ℕ} {m : Type → Type}
+  {r : α → α → Prop} {t : α → ℕ} {m : Type → Type}
   [Monad m] [hC : Confluent r]
   [hR : RedRel r t (m := m)] : (Confluent r (m := Relation.ReflTransGen)) where
   conf := fun {A B C} (h₁ : hR.ReflTrans A B) (h₂ : hR.ReflTrans A C) => by
@@ -443,28 +443,28 @@ open Confluent in @[reducible] def RedRel.globally_confluent
   (hn ⟨_, hC.congrArg' h⟩).elim
 
 @[dcc_rel] def IsNorm.complete
-  {r : Expr → Expr → Prop}
-  {t : Expr → ℕ}
+  {r : α → α → Prop}
+  {t : α → ℕ}
   [hR : RedRel r t (m := Option)]
   (h : IsNorm r A) : (hR.run A) = Option.none := by
   apply Option.eq_none_iff_forall_ne_some.mpr
   intro ⟨e', ⟨h₂⟩⟩ heq
   exact (h ⟨_, h₂⟩)
 
-open Rel in class SemiComplete {t : Expr → ℕ}
-  (r : Expr → Expr → Prop)
+open Rel in class SemiComplete {t : α → ℕ}
+  (r : α → α → Prop)
   [hR : RedRel r t (m := Option)] where
   complete : r A B → ∃ B h, (hR.run A) = .some ⟨B, ⟨h⟩⟩
 
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] theorem run_none {t : Expr → ℕ}
-  (r : Expr → Expr → Prop)
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] theorem run_none {t : α → ℕ}
+  (r : α → α → Prop)
   [hR : RedRel r t (m := Option)]
   [hC : SemiComplete r] : hR.run A = .none → IsNorm r A := by
   intro heq ⟨A', h_red⟩
   have ⟨B, h₁, h₂⟩ := hC.complete h_red
   simp_all
 
-open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theorem norm_unique {r : Expr → Expr → Prop} {m : (Expr → Expr → Prop) → Expr → Expr → Prop}
+open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theorem norm_unique {r : α → α → Prop} {m : (α → α → Prop) → α → α → Prop}
   [hC : Confluent r m] (h₁ : m r A B) (hn₁ : IsNorm r B) (h₂ : m r A C) (hn₂ : IsNorm r C) : B = C := by
   have ⟨D, hr₁, hr₂⟩ := hC.conf h₁ h₂
   have ha := hn₁.unique_refl hr₁
@@ -472,25 +472,25 @@ open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])] theore
   simp_all
 
 @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedRel.reduce_norm
- {r : Expr → Expr → Prop} {t : Expr → ℕ}
+ {r : α → α → Prop} {t : α → ℕ}
   (hR : RedRel r t (m := Option))
-  {A : Expr} (hn : IsNorm r A) : (reduce r A) = ⟨A, ⟨.refl⟩⟩ := by
+  {A : α} (hn : IsNorm r A) : (reduce r A) = ⟨A, ⟨.refl⟩⟩ := by
   simp [reduce]
   split
   case h_1 h _ =>
     exact (hn ⟨_, h⟩).elim
   case h_2 => congr
 
-@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem RedRel.reduce_norm_fst {r : Expr → Expr → Prop} {t : Expr → ℕ}
+@[dcc_reduce, aesop safe forward (rule_sets := [DccReduce])] theorem RedRel.reduce_norm_fst {r : α → α → Prop} {t : α → ℕ}
   (hR : RedRel r t (m := Option))
-  {A : Expr} (hn : IsNorm r A) : (reduce r A).fst = A := by
+  {A : α} (hn : IsNorm r A) : (reduce r A).fst = A := by
   have h := hR.reduce_norm hn
   simp_all
 
 @[aesop safe apply (rule_sets := [DccReduce])]
-theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ}
+theorem reduce_complete {r : α → α → Prop} {t : α → ℕ}
   [hR : RedRel r t (m := Option.{0})] [hN : SemiComplete r (hR := hR)] [hC : Confluent r]
-  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A) = ⟨B, ⟨hr⟩⟩ := by
+  {A B : α} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A) = ⟨B, ⟨hr⟩⟩ := by
   simp [reduce]
   split
   case h_1 B' hr₂ heq =>
@@ -523,37 +523,37 @@ theorem reduce_complete {r : Expr → Expr → Prop} {t : Expr → ℕ}
 termination_by (t A, t B)
 
 @[aesop safe apply (rule_sets := [DccReduce])]
-theorem reduce_complete_fst {r : Expr → Expr → Prop} {t : Expr → ℕ}
+theorem reduce_complete_fst {r : α → α → Prop} {t : α → ℕ}
   [hR : RedRel r t (m := Option.{0})] [hN : SemiComplete r (hR := hR)] [Confluent r]
-  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).fst = B := by
+  {A B : α} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).fst = B := by
   have h := reduce_complete hr hn
   simp_all
 
 @[aesop safe apply (rule_sets := [DccReduce])]
-theorem reduce_complete_snd {r : Expr → Expr → Prop} {t : Expr → ℕ}
+theorem reduce_complete_snd {r : α → α → Prop} {t : α → ℕ}
   [hR : RedRel r t (m := Option.{0})] [hN : SemiComplete r (hR := hR)] [Confluent r]
-  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).snd.down ≍ hr := by
+  {A B : α} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).snd.down ≍ hr := by
   have h := reduce_complete hr hn
   simp_all
 
 @[aesop safe apply (rule_sets := [DccReduce])]
-theorem reduce_complete_pointwise {r : Expr → Expr → Prop} {t : Expr → ℕ}
+theorem reduce_complete_pointwise {r : α → α → Prop} {t : α → ℕ}
   [hR : RedRel r t (m := Option.{0})] [hN : SemiComplete r (hR := hR)] [Confluent r]
-  {A B : Expr} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).fst = B ∧ (reduce r A).snd.down ≍ hr := by
+  {A B : α} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce r A).fst = B ∧ (reduce r A).snd.down ≍ hr := by
   have h := reduce_complete hr hn
   simp_all
 
-@[dcc_rel] instance RedRel.instComplete {r : Expr → Expr → Prop} {t : Expr → ℕ}
+@[dcc_rel] instance RedRel.instComplete {r : α → α → Prop} {t : α → ℕ}
   (hR : RedRel r t (m := Option.{0}))
   [hN : SemiComplete r (hR := hR)] [Confluent r] : Complete.{0, 0, 0}
     (r := Relation.ReflTransGen r) (P := IsNorm r) (hR := hR.to_reflTrans (r := r) (t := t)) :=
   ⟨fun hr hn => reduce_complete (r := r) (t := t) hr hn⟩
 
 @[dcc_step, aesop safe apply (rule_sets := [DccStep])]
-theorem reduce_sound {t : Expr → ℕ} [_hR : RedRel r t]
+theorem reduce_sound {t : α → ℕ} [_hR : RedRel r t]
   (_heq : reduce r A = ⟨B, ⟨h⟩⟩) : Relation.ReflTransGen r A B := h
 
-@[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce_norm {t : Expr → ℕ}
+@[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce_norm {t : α → ℕ}
   [hR : RedRel r t]
   [hN : SemiComplete r (hR := hR)]
   (heq : reduce r A = ⟨B, ⟨h⟩⟩) : IsNorm r B := by
@@ -568,15 +568,15 @@ theorem reduce_sound {t : Expr → ℕ} [_hR : RedRel r t]
       have h_norm := (run_none r (by cases heq; exact heq'))
       exact (h_norm.unique_refl h) ▸ h_norm
 
-@[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce_norm_fst {t : Expr → ℕ}
+@[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce_norm_fst {t : α → ℕ}
   [hR : RedRel r t]
   [hN : SemiComplete r (hR := hR)]
   (heq : (reduce r A).fst = B) : IsNorm r B := by
   cases heq
   exact reduce_norm rfl (A := A) (B := (reduce r A).fst)
 
-@[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce?_norm {t : Expr → ℕ}
-  (r : Expr → Expr → Prop)
+@[dcc_step, aesop safe apply (rule_sets := [DccStep])] theorem reduce?_norm [DecidableEq α] {t : α → ℕ}
+  (r : α → α → Prop)
   [hR : RedRel r t]
   [hN : SemiComplete r (hR := hR)]
   (h_some : (reduce? (hR := hR) r A).isSome)
@@ -586,15 +586,15 @@ theorem reduce_sound {t : Expr → ℕ} [_hR : RedRel r t]
     simp [reduce?] at heq
     exact reduce_norm_fst heq
 
-@[dcc_force_reduce] theorem reduce_self {t : Expr → ℕ}
-  (r : Expr → Expr → Prop) [hR : RedRel r t] [SemiComplete r] : (reduce r (reduce r e).fst).fst = (reduce r e).fst := by
+@[dcc_force_reduce] theorem reduce_self {t : α → ℕ}
+  (r : α → α → Prop) [hR : RedRel r t] [SemiComplete r] : (reduce r (reduce r e).fst).fst = (reduce r e).fst := by
   have h := hR.reduce_norm (reduce_norm (A := e) (hR := hR) (B := (reduce r e).fst) rfl)
   simp_all
 
 attribute [dcc_force_reduce] Rel.run.eq_def
 
-theorem decreasing? {t : Expr → ℕ}
-  (r : Expr → Expr → Prop) [hR : RedRel r t] (hr : Relation.ReflTransGen r A B) : t B ≤ t A := by
+theorem decreasing? {t : α → ℕ}
+  (r : α → α → Prop) [hR : RedRel r t] (hr : Relation.ReflTransGen r A B) : t B ≤ t A := by
   match hr.cases_head with
   | .inl h =>
     grind

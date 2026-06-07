@@ -263,9 +263,9 @@ def is_box_map (e : EtaExpr) : Option EtaExpr :=
   | _  => .none
 
 @[dcc_reduce]
-def is_quote (e : EtaExpr) : Option (EtaExpr × EtaExpr) :=
+def is_quote (e : EtaExpr) : Option ((β x : EtaExpr) × PLift (e = (DCCη `(β, x)))) :=
   match e with
-  | DCCη `(β, x) => .some ⟨β, x⟩
+  | DCCη `(β, x) => .some ⟨β, x, ⟨rfl⟩⟩
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_aff]

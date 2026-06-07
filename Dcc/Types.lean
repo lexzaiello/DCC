@@ -287,6 +287,9 @@ instance (priority := high) instToString : ToString Expr :=
   ⟨toString ∘ Expr.toFormat (pretty := true)⟩
 open Std (ToFormat Format format) in
 
+def Expr.raw_repr (e : Expr) : Std.Format :=
+  repr e
+
 open Std (ToFormat Format format) in
 instance (priority := high) instRepr : Repr Expr :=
   { reprPrec := fun e _ =>

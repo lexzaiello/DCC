@@ -530,15 +530,46 @@ instance : Decidable (∃ f', TmEtaReduces level f f') :=
       have h := h.complete
       simp_all)
 
+instance : Decidable (TmEtaReduces₂ level f f') :=
+  if h : (f.eta_reduce_tm₂ level).isSome then
+    if heq : ((f.eta_reduce_tm₂ level).get h).fst = f' then
+      .isTrue (heq ▸ ((f.eta_reduce_tm₂ level).get h).snd.down)
+    else
+      .isFalse (fun h => by
+        have h := h.complete
+        simp_all)
+  else
+    .isFalse (fun h => by
+      have h := h.complete
+      simp_all)
+
+instance : Decidable (∃ f', TmEtaReduces₂ level f f') :=
+  if heq : (f.eta_reduce_tm₂ level).isSome then
+    .isTrue ⟨_, ((f.eta_reduce_tm₂ level).get heq).snd.down⟩
+  else
+    .isFalse (fun ⟨_, h⟩ => by
+      have h := h.complete
+      simp_all)
+
 inductive FnEtaReduces : (level : ℕ) → (f : EtaExpr) → (f' : EtaExpr) → Prop
-  | pi  : FnEtaReduces level.succ f_α f_α'
+  | pi   : FnEtaReduces level.succ f_α f_α'
     → FnEtaReduces level.succ.succ f_β f_β'
     → FnEtaReduces level (DCCη Π(f_α, f_β)) (DCCη Π(f_α', f_β'))
-  | tm  : (¬ ∃ f_α f_β, f = (DCCη Π(f_α, f_β)))
+  | tm₁  : (¬ ∃ f_α f_β, f = (DCCη Π(f_α, f_β)))
+    → f.arity = 1
     → TmEtaReduces level f f'
     → FnEtaReduces level f f'
-  | tm' : (¬ ∃ f_α f_β, f = (DCCη Π(f_α, f_β)))
+  | tm₂  : (¬ ∃ f_α f_β, f = (DCCη Π(f_α, f_β)))
+    → f.arity = 2
+    → TmEtaReduces₂ level f f'
+    → FnEtaReduces level f f'
+  | tm'₁ : (¬ ∃ f_α f_β, f = (DCCη Π(f_α, f_β)))
+    → f.arity = 1
     → (¬ ∃ f', TmEtaReduces level f f')
+    → FnEtaReduces level f f
+  | tm'₂ : (¬ ∃ f_α f_β, f = (DCCη Π(f_α, f_β)))
+    → f.arity = 2
+    → (¬ ∃ f', TmEtaReduces₂ level f f')
     → FnEtaReduces level f f
 
 instance : Decidable (∃ (f_α : EtaExpr) (f_β : EtaExpr), f = f_α.pi f_β) := by
@@ -575,13 +606,23 @@ def fn_reduces (level : ℕ) (f : EtaExpr) : Option ((f' : EtaExpr) × (PLift (F
         | _ => .none
       | _ => .none
   else
-    if heq₂ : ∃ f', TmEtaReduces level f f' then
-      match _heq₃ : f.eta_reduce_tm level with
-      | .some ⟨_f', ⟨h⟩⟩ =>
-        .some ⟨_, ⟨.tm heq h⟩⟩
-      | .none => .none
-    else
-      .some ⟨_, ⟨.tm' heq heq₂⟩⟩
+    if harity : f.arity = 1 then
+      if heq₂ : ∃ f', TmEtaReduces level f f' then
+        match _heq₃ : f.eta_reduce_tm level with
+        | .some ⟨_f', ⟨h⟩⟩ =>
+          .some ⟨_, ⟨.tm₁ heq harity h⟩⟩
+        | .none => .none
+      else
+        .some ⟨_, ⟨.tm'₁ heq harity heq₂⟩⟩
+    else if harity : f.arity = 2 then
+      if heq₂ : ∃ f', TmEtaReduces₂ level f f' then
+        match _heq₃ : f.eta_reduce_tm₂ level with
+        | .some ⟨_f', ⟨h⟩⟩ =>
+          .some ⟨_, ⟨.tm₂ heq harity h⟩⟩
+        | .none => .none
+      else
+        .some ⟨_, ⟨.tm'₂ heq harity heq₂⟩⟩
+    else .none
 
 @[aesop safe forward (rule_sets := [DccReduce])]
 theorem FnEtaReduces.complete (h : FnEtaReduces level f f') : fn_reduces level f = .some ⟨f', ⟨h⟩⟩ := by
@@ -589,18 +630,30 @@ theorem FnEtaReduces.complete (h : FnEtaReduces level f f') : fn_reduces level f
   case pi h₁ h₂ heq₁ heq₂ =>
     dsimp [fn_reduces]
     simp_all
-  case tm heq h₁ =>
+  case tm₁ heq harity h₁ =>
     have h₂ := h₁.complete
     unfold fn_reduces
-    simp [heq]
+    simp [heq, harity]
     split
     case isTrue =>
       aesop
     case isFalse h =>
       exact (h ⟨_, (by assumption)⟩).elim
-  case tm' heq₁ heq₂ =>
+  case tm₂ heq harity h₁ =>
+    have h₂ := h₁.complete
     unfold fn_reduces
-    simp [heq₁, heq₂]
+    simp [heq, harity]
+    split
+    case isTrue =>
+      aesop
+    case isFalse h =>
+      exact (h ⟨_, (by assumption)⟩).elim
+  case tm'₁ heq₁ harity heq₂ =>
+    unfold fn_reduces
+    simp [heq₁, heq₂, harity]
+  case tm'₂ heq₁ harity heq₂ =>
+    unfold fn_reduces
+    simp [heq₁, heq₂, harity]
 
 instance : Decidable (∃ f', FnEtaReduces level f f') :=
   if heq : (f.fn_reduces level).isSome then

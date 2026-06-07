@@ -449,5 +449,127 @@ inductive ToExpr : (e : EtaExpr) → (e' : Expr) → Prop
   | comp   : ToExpr β β' → ToExpr x x' → ToExpr (DCCη β ∘ x) (DCC β' ∘ x')
   | comp₂  : ToExpr β β' → ToExpr x x' → ToExpr (DCCη β ∘∘ x) (DCC β' ∘∘ x')
   | app    : ToExpr f f' → ToExpr x x' → ToExpr (DCCη (f x)) (DCC (f' x'))
+  | pi     : ToExpr f f' → ToExpr x x' → ToExpr (DCCη Π(f, x)) (DCC Π(f', x'))
+  | mk     : ToExpr α α' → ToExpr β β' → ToExpr x x' → ToExpr (DCCη ⟦α⟧(β, x)) (DCC ⟦α'⟧(β', x'))
+  | coup   : ToExpr f f' → ToExpr (DCCη Coup(f)) (DCC Coup(f'))
+  | pair   : ToExpr x x' → ToExpr y y' → ToExpr z z' → ToExpr (DCCη ⟦x⟧⟨y, z⟩) (DCC ⟦x'⟧⟨y', z'⟩)
+
+def to_expr (e : EtaExpr) : Option ((e' : Expr) × PLift (ToExpr e e')) :=
+  match e with
+  | DCCη ∗ => .some ⟨_, ⟨.tintro⟩⟩
+  | DCCη ⊤ => .some ⟨_, ⟨.top⟩⟩
+  | DCCη ⊥ => .some ⟨_, ⟨.bot⟩⟩
+  | DCCη x = y =>
+    match x.to_expr, y.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.eq h₁ h₂⟩⟩
+    | _, _ => .none
+  | DCCη Eql(x)  =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.eql h⟩⟩
+    | _ => .none
+  | DCCη refl(x) =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.refl h⟩⟩
+    | _ => .none
+  | DCCη Sort _m => .some ⟨_, ⟨.sort⟩⟩
+  | DCCη Σ(x, y) =>
+    match x.to_expr, y.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.sigma h₁ h₂⟩⟩
+    | _, _ => .none
+  | DCCη `(x, y) =>
+    match x.to_expr, y.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.quot h₁ h₂⟩⟩
+    | _, _ => .none
+  | DCCη ⟦x⟧(y, z) =>
+    match x.to_expr, y.to_expr, z.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩, .some ⟨_, ⟨h₃⟩⟩ =>
+      .some ⟨_, ⟨.mk h₁ h₂ h₃⟩⟩
+    | _, _, _ => .none
+  | DCCη Coup(x) =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.coup h⟩⟩
+    | _ => .none
+  | DCCη Id(x)      =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.id h⟩⟩
+    | _ => .none
+  | DCCη Fstc(x)    =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.fstc h⟩⟩
+    | _ => .none
+  | DCCη Sndc(x)    =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sndc h⟩⟩
+    | _ => .none
+  | DCCη Π(x, y) =>
+    match x.to_expr, y.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.pi h₁ h₂⟩⟩
+    | _, _ => .none
+  | DCCη (x ∘' y) =>
+    match x.to_expr, y.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.comp' h₁ h₂⟩⟩
+    | _, _ => .none
+  | DCCη (x ∘ y)  =>
+    match x.to_expr, y.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.comp h₁ h₂⟩⟩
+    | _, _ => .none
+  | DCCη (x ∘∘ y)  =>
+    match x.to_expr, y.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.comp₂ h₁ h₂⟩⟩
+    | _, _ => .none
+  | DCCη ⟦x⟧⟨y, z⟩   =>
+    match x.to_expr, y.to_expr, z.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩, .some ⟨_, ⟨h₃⟩⟩ =>
+      .some ⟨_, ⟨.pair h₁ h₂ h₃⟩⟩
+    | _, _, _ => .none
+  | DCCη Λ(x, y, z) =>
+    match x.to_expr, y.to_expr, z.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩, .some ⟨_, ⟨h₃⟩⟩ =>
+      .some ⟨_, ⟨.curr h₁ h₂ h₃⟩⟩
+    | _, _, _ => .none
+  | DCCη !Λ(x, y, z) =>
+    match x.to_expr, y.to_expr, z.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩, .some ⟨_, ⟨h₃⟩⟩ =>
+      .some ⟨_, ⟨.curr' h₁ h₂ h₃⟩⟩
+    | _, _, _ => .none
+  | DCCη Eval(x, y, z) =>
+    match x.to_expr, y.to_expr, z.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩, .some ⟨_, ⟨h₃⟩⟩ =>
+      .some ⟨_, ⟨.eval h₁ h₂ h₃⟩⟩
+    | _, _, _ => .none
+  | DCCη !(x)   =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.bang h⟩⟩
+    | _ => .none
+  | DCCη *(x)   =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.unbox h⟩⟩
+    | _ => .none
+  | DCCη &(x)   =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.boxed h⟩⟩
+    | _ => .none
+  | DCCη !<x>   =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.map h⟩⟩
+    | _ => .none
+  | DCCη $<x>   =>
+    match x.to_expr with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.fmap h⟩⟩
+    | _ => .none
+  | DCCη (x y) =>
+    match x.to_expr, y.to_expr with
+    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.app h₁ h₂⟩⟩
+    | _, _ => .none
+  | .hole _n => .none
+
 
 end EtaExpr

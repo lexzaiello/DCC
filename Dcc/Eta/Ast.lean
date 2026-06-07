@@ -194,6 +194,68 @@ def contains (e : EtaExpr) (to_find : EtaExpr) : Bool :=
   | DCCη (f x) => f.size + x.size
   | .hole _n => 0
 
+@[aesop norm (rule_sets := [DccSize]), dcc_size, grind] def arity (e : EtaExpr) : ℕ :=
+  match e with
+  | DCCη ∗ => 0
+  | DCCη ⊤ => 0
+  | DCCη ⊥ => 0
+  | DCCη _x = _y => 0
+  | DCCη Eql(_α)  => 2
+  | DCCη refl(_α) => 2
+  | DCCη Sort _m => 0
+  | DCCη Σ(_α, _β) => 1
+  | DCCη `(_β, _x) => 1
+  | DCCη ⟦__β⟧(_x, _y) => 0
+  | DCCη Coup(_β) => 0
+  | DCCη Id(_α)      => 1
+  | DCCη Fstc(_α)    => 1
+  | DCCη Sndc(_α)    => 1
+  | DCCη Π(_α, _β) => 1
+  | DCCη (_f ∘' _g) => 1
+  | DCCη (_f ∘ _g)  => 1
+  | DCCη (_f ∘∘ _g)  => 1
+  | DCCη ⟦_β⟧⟨_a, _b⟩   => 1
+  | DCCη Λ(_α, _β, _x) => 2
+  | DCCη !Λ(_α, _β, _x) => 2
+  | DCCη Eval(_α, _β, _x) => 2
+  | DCCη !(_x)   => 1
+  | DCCη *(_α)   => 1
+  | DCCη &(_x)   => 1
+  | DCCη !<_x>   => 1
+  | DCCη $<_x>   => 1
+  | DCCη (f _x) => f.arity - 1
+  | .hole _n => 0
+
+@[dcc_reduce]
+def is_boxed (e : EtaExpr) : Option EtaExpr :=
+  match e with
+  | DCCη &(x) => .some x
+  | _ => .none
+
+@[dcc_reduce]
+def is_bang (e : EtaExpr) : Option EtaExpr :=
+  match e with
+  | DCCη !(x) => .some x
+  | _ => .none
+
+@[dcc_reduce]
+def is_bang_map (e : EtaExpr) : Option EtaExpr :=
+  match e with
+  | DCCη !<f> => .some f
+  | _ => .none
+
+@[dcc_reduce]
+def is_box_map (e : EtaExpr) : Option EtaExpr :=
+  match e with
+  | DCCη $<f> => .some f
+  | _  => .none
+
+@[dcc_reduce]
+def is_quote (e : EtaExpr) : Option (EtaExpr × EtaExpr) :=
+  match e with
+  | DCCη `(β, x) => .some ⟨β, x⟩
+  | _ => .none
+
 @[dcc_force_reduce, dcc_force_aff]
 instance RedAffEta.instRedRel : Expr.RedRel RedAffEta size where
   run := step?

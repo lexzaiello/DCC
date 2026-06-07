@@ -5,10 +5,13 @@ namespace Semantic
 
 mutual
 
-@[grind ., grind! .]
+/-@[grind ., grind! .]
 theorem Val.measure_pos_tm : 0 < Val.measure Val(neutral(tm(x))) := by
   cases x
   any_goals (grind)
+  case app f x =>
+    have h := Val.measure_pos_tm (x := x)
+    -/
 
 @[grind ., grind! .]
 theorem Val.measure_pos_lam : 0 < Val.measure Val(λ env n => bdy) := by
@@ -21,11 +24,11 @@ theorem Val.measure_pos_lam : 0 < Val.measure Val(λ env n => bdy) := by
 theorem Val.measure_pos_pi : 0 < Val.measure Val(Π (f_α) n env, f_β) := by
   grind
 
-@[grind ., grind! .]
+/-@[grind ., grind! .]
 theorem Val.measure_pos_not_var (hn_var : ¬ ∃ (v : ℕ) (τ : Val), e ≠ Val(neutral(var((v) : τ)))) : 0 < Val.measure e := by
   cases e
-  any_goals (grind)
-  case neut nv =>
+  any_goals (grind)-/
+  /-case neut nv =>
     cases nv with
     | var _ τ =>
       dcc_simp_all
@@ -33,7 +36,7 @@ theorem Val.measure_pos_not_var (hn_var : ¬ ∃ (v : ℕ) (τ : Val), e ≠ Val
       have h := hn_var idx.succ Val(neutral(Coup(τ)))
       omega
     | tm tm =>
-      grind
+      grind-/
 
 /-@[grind ., grind! .]
 theorem NeutralTm.size_pos : 0 < NeutralTm.size x := by
@@ -122,7 +125,7 @@ theorem Val.var_zero_size : Val(neutral(var((_v) : τ))).size = 0 := by
 
 @[grind ., grind! .]
 theorem Val.var_measure_zero : Val(neutral(var((_v) : τ))).measure = 0 := by
-  grind
+  simp [Val.measure, Neutral.size]
 
 /-
 f_α.measure + 3 + 1 + (env.measure + env.measure + env.measure + 2 + 1) + 1 +
@@ -143,8 +146,10 @@ before:
   - const = 12
 -/
 
-theorem neut_app_lt_app : Val(neutral(f x)).measure < Val(neutral(f)).measure + x.measure := by
-  sorry
+/-theorem neut_app_lt_app : Val(neutral(f x)).measure < Val(neutral(f)).measure + x.measure := by
+  simp [Val.measure]
+  
+  sorry-/
 
 @[dcc_size]
 theorem Apply.decreasing (h : Apply f x e') : e'.measure < f.measure + x.measure := by

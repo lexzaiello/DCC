@@ -3,6 +3,12 @@ import Dcc.Types
 import Dcc.Nbe.RunEvalApply
 import Dcc.Nbe.RunQuote
 
+namespace Semantic
+
+open Semantic
+
+end Semantic
+
 namespace Expr
 
 open Semantic
@@ -21,11 +27,11 @@ def nbe! (e : Expr) : Expr :=
   | .some ⟨e', _⟩ => e'
   | _ => e
 
---#eval Sigma.fst <$> nbe (DCC (Π(Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2))))) !(Sort 2)))
-
-example : Nbe (DCC (Id(α) ∘' Id(α))) (DCC Id(α)) :=
-  ⟨.comp' (.id (evaluate (by sorry) (by sorry))) (by sorry)
-  , by
-    sorry⟩
+#eval Sigma.fst <$> nbe (DCC Id(Sort 1) ∘' Id(Sort 1))
+#eval Sigma.fst <$> nbe (DCC `(Sort 1, Sort 1))
+#eval Sigma.fst <$> nbe (DCC Id(Sort 1))
+#eval Sigma.fst <$> evaluate [] (DCC Eql(Id(Sort 2)))
+#eval Sigma.fst <$> nbe (DCC Eql(Id(Sort 2)))
+#eval Sigma.fst <$> nbe (DCC (Π(Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2))))) !(Sort 2)))
 
 end Expr

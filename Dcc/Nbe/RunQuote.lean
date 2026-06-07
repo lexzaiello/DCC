@@ -365,42 +365,52 @@ def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :
   | Val(λ env n => bdy) => do
     dbg_trace s!"lam domain: {(repr ∘ (·.fst)) <$> Val(λ env n => bdy).domain}"
     let ⟨τ, h₁⟩ ← Val(λ env n => bdy).domain
-    let ⟨var, h₂⟩ ← τ.mk_var level
     have ha := h₁.decreasing
     dbg_trace s!"apply: {(repr ∘ (·.fst)) <$>  Val(λ env n => bdy).apply Val(neutral(var((level) : τ)))}"
-    match Val(λ env n => bdy).apply var with
+    match Val(λ env n => bdy).apply Val(neutral(var((level) : τ))) with
     | .some ⟨Val(neutral(f' v₂)), h₃⟩ =>
       have hb := h₃.decreasing
-      if heq : v₂ = var then
+      if heq : v₂ = Val(neutral(var((level) : τ))) then
         have h_dec' : f'.size < (Val.lam env n bdy).measure := by
           grind
         match f'.quote level with
         | .some ⟨_, h₄⟩ =>
-          .some ⟨_, .comp h₁ h₂ (heq ▸ h₃) h₄⟩
+          .some ⟨_, .comp h₁ (heq ▸ h₃) h₄⟩
         | _ => .none
       else .none
-    | .some ⟨v₂, h₃⟩ =>
+    | .some ⟨Val(neutral(var((level₂) : τ₂))), h₃⟩ =>
       have ha := h₁.decreasing
       have hb := h₃.decreasing
-      if heq : v₂ = var then
+      if heq : Val(neutral(var((level₂) : τ₂))) = Val(neutral(var((level) : τ))) then
         have h_dec' : τ.measure < Val(λ env n => bdy).measure := by
           grind
         match τ.quote level with
         | .some ⟨_, h₄⟩ =>
-          .some ⟨_, .id h₁ h₂ (heq ▸ h₃) h₄⟩
+          .some ⟨_, .id h₁ (heq ▸ h₃) h₄⟩
         | _ => .none
-      else
-        match var with
-        | Val(neutral(var((_v) : _τ))) =>
-          have h_dec' : v₂.measure < Val(λ env n => bdy).measure := by
-            grind
-          if hn : ¬ v₂.contains_var Val(neutral(var((_v) : _τ))) then
-            match τ.quote level, v₂.quote level with
-            | .some ⟨_, h₄⟩, .some ⟨_, h₅⟩ =>
-              .some ⟨_, .const h₁ h₂ h₃ hn h₄ h₅⟩
-            | _, _ => .none
-          else .none
-        | _ => .none
+      else .none
+    | .some ⟨Val(neutral(f')), h₃⟩ =>
+      have ha := h₃.decreasing
+      have h_dec' : Val(neutral(f')).measure < Val(λ env n => bdy).measure := by
+        grind
+      if hn : ¬ Neutral(f').contains_var Val(neutral(var((level) : τ))) then
+        match τ.quote level, Neutral(f').quote level with
+        | .some ⟨_, h₄⟩, .some ⟨_, h₅⟩ =>
+          .some ⟨_, .const h₁ h₃ hn h₄ h₅⟩
+        | _, _ => .none
+      else .none
+    | .some ⟨Val(λ neutral(var((level₂) : τ₂))::env₂ n₂ => bdy₂), h₃⟩ =>
+      have ha := h₃.decreasing
+      match heq₀ : env with
+      | [] =>
+        have h_dec' : bdy.size < Val(λ ⟦⟧ n => bdy).measure := by
+          simp [Val.measure]
+          grind
+        if heq : Val(λ neutral(var((level₂) : τ₂))::env₂ n₂ => bdy₂) = Val(λ neutral(var((level) : τ))::env₂ n₂ => bdy) then
+          let ⟨_, h₄⟩ ← bdy.quote level.succ
+          .some ⟨_, .pure (by assumption) (heq ▸ h₃) h₄⟩
+        else .none
+      | _ => .none
     | _ => .none
   | Val(Π (f_α) ⟦⟧ 1, f_β) =>
     have h_dec₁ : f_α.measure < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by

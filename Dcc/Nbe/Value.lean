@@ -105,6 +105,7 @@ syntax val_expr noWs "::" noWs val_list                      : val_list
 syntax ident noWs "::" noWs val_list                         : val_list
 syntax:max ident                                             : val_list
 
+syntax "val(" val_expr ")"                                   : neut_tm
 syntax "tm(" neut_tm ")"                                     : neut_tm
 syntax "Sndc(" val_expr,* ")"                                : neut_tm
 syntax "Fstc(" val_expr,* ")"                                : neut_tm
@@ -187,6 +188,7 @@ macro_rules
   | `(NeutralTm($x:val_expr = $y:val_expr)) => `((NeutralTm.eq (Val($x:val_expr)) (Val($y:val_expr))))
   | `(NeutralTm(!($x:val_expr))) => `((NeutralTm.bang (Val($x))))
   | `(NeutralTm(&($x:val_expr))) => `((NeutralTm.boxed (Val($x))))
+  | `(NeutralTm(val($v:val_expr))) => `(Val($v:val_expr))
   | `(Val(neutral($x:neut_tm))) => `(Val.neut Neutral($x:neut_tm))
   | `(Val(λ $env:val_list $n:term => $bdy:neut_tm)) => do
     `(Val.lam (Vals($env:val_list)) $n:term Neutral($bdy:neut_tm))

@@ -571,6 +571,7 @@ def to_expr (e : EtaExpr) : Option ((e' : Expr) × PLift (ToExpr e e')) :=
     | _, _ => .none
   | .hole _n => .none
 
+@[aesop safe forward (rule_sets := [DccReduce])]
 theorem ToExpr.complete (h : ToExpr e e') : e.to_expr = .some ⟨e', ⟨h⟩⟩ := by
   induction h
   any_goals (
@@ -578,4 +579,231 @@ theorem ToExpr.complete (h : ToExpr e e') : e.to_expr = .some ⟨e', ⟨h⟩⟩ 
     simp [EtaExpr.to_expr]
     try simp_all)
 
+instance : Decidable (∃ e', ToExpr e e') :=
+  if heq : e.to_expr.isSome then
+    .isTrue ⟨_, (e.to_expr.get heq).snd.down⟩
+  else
+    .isFalse (fun ⟨_, h⟩ => by
+      have h := h.complete
+      simp_all)
+
 end EtaExpr
+
+namespace Expr
+
+open EtaExpr
+
+inductive ToEtaExpr : (e : Expr) → (e' : EtaExpr) → Prop
+  | top    : ToEtaExpr (DCC ⊤) (DCCη ⊤)
+  | bot    : ToEtaExpr (DCC ⊥) (DCCη ⊥)
+  | tintro : ToEtaExpr (DCC ∗) (DCCη ∗)
+  | sort   : ToEtaExpr (DCC Sort m) (DCCη Sort m)
+  | map    : ToEtaExpr f f' → ToEtaExpr (DCC !<f>) (DCCη !<f'>)
+  | fmap   : ToEtaExpr f f' → ToEtaExpr (DCC $<f>) (DCCη $<f'>)
+  | boxed  : ToEtaExpr f f' → ToEtaExpr (DCC &(f)) (DCCη &(f'))
+  | unbox  : ToEtaExpr f f' → ToEtaExpr (DCC *(f)) (DCCη *(f'))
+  | bang   : ToEtaExpr f f' → ToEtaExpr (DCC !(f)) (DCCη !(f'))
+  | eval   : ToEtaExpr α α' → ToEtaExpr β β' → ToEtaExpr x x' → ToEtaExpr (DCC Eval(α, β, x)) (DCCη Eval(α', β', x'))
+  | quot   : ToEtaExpr β β' → ToEtaExpr x x' → ToEtaExpr (DCC `(β, x)) (DCCη `(β', x'))
+  | id     : ToEtaExpr f f' → ToEtaExpr (DCC Id(f)) (DCCη Id(f'))
+  | fstc   : ToEtaExpr f f' → ToEtaExpr (DCC Fstc(f)) (DCCη Fstc(f'))
+  | sndc   : ToEtaExpr f f' → ToEtaExpr (DCC Sndc(f)) (DCCη Sndc(f'))
+  | curr   : ToEtaExpr α α' → ToEtaExpr β β' → ToEtaExpr x x' → ToEtaExpr (DCC Λ(α, β, x)) (DCCη Λ(α', β', x'))
+  | curr'  : ToEtaExpr α α' → ToEtaExpr β β' → ToEtaExpr x x' → ToEtaExpr (DCC !Λ(α, β, x)) (DCCη !Λ(α', β', x'))
+  | sigma  : ToEtaExpr β β' → ToEtaExpr x x' → ToEtaExpr (DCC Σ(β, x)) (DCCη Σ(β', x'))
+  | eq     : ToEtaExpr β β' → ToEtaExpr x x' → ToEtaExpr (DCC β = x) (DCCη β' = x')
+  | eql    : ToEtaExpr f f' → ToEtaExpr (DCC Eql(f)) (DCCη Eql(f'))
+  | refl   : ToEtaExpr f f' → ToEtaExpr (DCC refl(f)) (DCCη refl(f'))
+  | comp'  : ToEtaExpr β β' → ToEtaExpr x x' → ToEtaExpr (DCC β ∘' x) (DCCη β' ∘' x')
+  | comp   : ToEtaExpr β β' → ToEtaExpr x x' → ToEtaExpr (DCC β ∘ x) (DCCη β' ∘ x')
+  | comp₂  : ToEtaExpr β β' → ToEtaExpr x x' → ToEtaExpr (DCC β ∘∘ x) (DCCη β' ∘∘ x')
+  | app    : ToEtaExpr f f' → ToEtaExpr x x' → ToEtaExpr (DCC (f x)) (DCCη (f' x'))
+  | pi     : ToEtaExpr f f' → ToEtaExpr x x' → ToEtaExpr (DCC Π(f, x)) (DCCη Π(f', x'))
+  | mk     : ToEtaExpr α α' → ToEtaExpr β β' → ToEtaExpr x x' → ToEtaExpr (DCC ⟦α⟧(β, x)) (DCCη ⟦α'⟧(β', x'))
+  | coup   : ToEtaExpr f f' → ToEtaExpr (DCC Coup(f)) (DCCη Coup(f'))
+  | pair   : ToEtaExpr x x' → ToEtaExpr y y' → ToEtaExpr z z' → ToEtaExpr (DCC ⟦x⟧⟨y, z⟩) (DCCη ⟦x'⟧⟨y', z'⟩)
+
+def to_eta_expr (e : Expr) : ((e' : EtaExpr) × PLift (ToEtaExpr e e')) :=
+  match e with
+  | DCC ∗ => ⟨_, ⟨.tintro⟩⟩
+  | DCC ⊤ => ⟨_, ⟨.top⟩⟩
+  | DCC ⊥ => ⟨_, ⟨.bot⟩⟩
+  | DCC x = y =>
+    match x.to_eta_expr, y.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩ =>
+      ⟨_, ⟨.eq h₁ h₂⟩⟩
+  | DCC Eql(x)  =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.eql h⟩⟩
+  | DCC refl(x) =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.refl h⟩⟩
+  | DCC Sort _m => ⟨_, ⟨.sort⟩⟩
+  | DCC Σ(x, y) =>
+    match x.to_eta_expr, y.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩ =>
+      ⟨_, ⟨.sigma h₁ h₂⟩⟩
+  | DCC `(x, y) =>
+    match x.to_eta_expr, y.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩ =>
+      ⟨_, ⟨.quot h₁ h₂⟩⟩
+  | DCC ⟦x⟧(y, z) =>
+    match x.to_eta_expr, y.to_eta_expr, z.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩, ⟨_, ⟨h₃⟩⟩ =>
+      ⟨_, ⟨.mk h₁ h₂ h₃⟩⟩
+  | DCC Coup(x) =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.coup h⟩⟩
+  | DCC Id(x)      =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.id h⟩⟩
+  | DCC Fstc(x)    =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.fstc h⟩⟩
+  | DCC Sndc(x)    =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.sndc h⟩⟩
+  | DCC Π(x, y) =>
+    match x.to_eta_expr, y.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩ =>
+      ⟨_, ⟨.pi h₁ h₂⟩⟩
+  | DCC (x ∘' y) =>
+    match x.to_eta_expr, y.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩ =>
+      ⟨_, ⟨.comp' h₁ h₂⟩⟩
+  | DCC (x ∘ y)  =>
+    match x.to_eta_expr, y.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩ =>
+      ⟨_, ⟨.comp h₁ h₂⟩⟩
+  | DCC (x ∘∘ y)  =>
+    match x.to_eta_expr, y.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩ =>
+      ⟨_, ⟨.comp₂ h₁ h₂⟩⟩
+  | DCC ⟦x⟧⟨y, z⟩   =>
+    match x.to_eta_expr, y.to_eta_expr, z.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩, ⟨_, ⟨h₃⟩⟩ =>
+      ⟨_, ⟨.pair h₁ h₂ h₃⟩⟩
+  | DCC Λ(x, y, z) =>
+    match x.to_eta_expr, y.to_eta_expr, z.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩, ⟨_, ⟨h₃⟩⟩ =>
+      ⟨_, ⟨.curr h₁ h₂ h₃⟩⟩
+  | DCC !Λ(x, y, z) =>
+    match x.to_eta_expr, y.to_eta_expr, z.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩, ⟨_, ⟨h₃⟩⟩ =>
+      ⟨_, ⟨.curr' h₁ h₂ h₃⟩⟩
+  | DCC Eval(x, y, z) =>
+    match x.to_eta_expr, y.to_eta_expr, z.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩, ⟨_, ⟨h₃⟩⟩ =>
+      ⟨_, ⟨.eval h₁ h₂ h₃⟩⟩
+  | DCC !(x)   =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.bang h⟩⟩
+  | DCC *(x)   =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.unbox h⟩⟩
+  | DCC &(x)   =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.boxed h⟩⟩
+  | DCC !<x>   =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.map h⟩⟩
+  | DCC $<x>   =>
+    match x.to_eta_expr with
+    | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.fmap h⟩⟩
+  | DCC (x y) =>
+    match x.to_eta_expr, y.to_eta_expr with
+    | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩ =>
+      ⟨_, ⟨.app h₁ h₂⟩⟩
+
+@[aesop safe forward (rule_sets := [DccReduce])]
+theorem ToEtaExpr.complete (h : ToEtaExpr e e') : e.to_eta_expr = ⟨e', ⟨h⟩⟩ := by
+  induction h
+  any_goals (
+    focus
+    simp [Expr.to_eta_expr]
+    try simp_all
+    try aesop
+    try grind)
+
+inductive RedEta : (e₁ : Expr) → (e₄ : Expr) → Prop
+  | mk₁ : ToEtaExpr e₁ e₂ → FnEtaReduces 0 e₂ e₃ → ToExpr e₃ e₄ → RedEta e₁ e₄
+  | mk₂ : ToEtaExpr e₁ e₂ → FnEtaReduces 0 e₂ e₃ → (¬ ∃ e₄, ToExpr e₃ e₄) → RedEta e₁ e₁
+  | mk₃ : ToEtaExpr e₁ e₂ → (¬ ∃ e₃, FnEtaReduces 0 e₂ e₃) → RedEta e₁ e₁
+
+/-instance : Decidable (∃ e', FnEtaReduces level f f') :=
+  if heq : (f.fn_reduces level).isSome then
+    .isTrue ⟨_, ((f.fn_reduces level).get heq).snd.down⟩
+  else
+    .isFalse (fun ⟨_, h⟩ => by
+      have h := h.complete
+      simp_all)-/
+
+def red_eta (e₁ : Expr) : ((e₄ : Expr) × PLift (RedEta e₁ e₄)) :=
+  if h₁ : ∃ e₃, FnEtaReduces 0 (to_eta_expr e₁).fst e₃ then
+    match heq₀ : (to_eta_expr e₁).fst.fn_reduces 0 with
+    | .some ⟨e', ⟨h₂⟩⟩ =>
+      if h₃ : ∃ e'', ToExpr e' e'' then
+        match heq : e'.to_expr with
+        | .some ⟨_, ⟨h₃⟩⟩ =>
+          ⟨_, ⟨.mk₁ (to_eta_expr e₁).snd.down h₂ h₃⟩⟩
+        | .none => ⟨_, ⟨.mk₂ (to_eta_expr e₁).snd.down h₂ (fun ⟨_, h⟩ => by
+          have h := h.complete
+          simp_all)⟩⟩
+      else
+        ⟨_, ⟨.mk₂ (to_eta_expr e₁).snd.down h₂ (fun ⟨_, h⟩ => by
+          have h := h.complete
+          simp_all)⟩⟩
+    | .none => ⟨_, ⟨.mk₃ (to_eta_expr e₁).snd.down (fun ⟨_, h⟩ => by
+      have h := h.complete
+      simp_all)⟩⟩
+  else
+    ⟨_, ⟨.mk₃ (to_eta_expr e₁).snd.down (fun ⟨_, h⟩ => by
+      have h := h.complete
+      simp_all)⟩⟩
+
+theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
+  unfold red_eta
+  induction h
+  case mk₁ h₁ h₂ h₃ =>
+    have ha := h₁.complete
+    have hb := h₂.complete
+    have hc := h₃.complete
+    rename_i e₂ e₃ e₄
+    have h : e.to_eta_expr.fst = e₂ := by
+      simp_all
+    have hh : ∃ ee, FnEtaReduces 0 e.to_eta_expr.fst ee := ⟨e₃, by
+      simp_all⟩
+    have hhh : ∃ e', ToExpr e₃ e' := ⟨e₄, by
+      simp_all⟩
+    simp [h]
+    simp_all
+    cases h
+    simp_all
+    split
+    case h_1 =>
+      aesop
+    case h_2 =>
+      simp_all
+  case mk₂ e₂ e₃ h₁ h₂ h₃ =>
+    have ha := h₁.complete
+    have hb := h₂.complete
+    have h : e.to_eta_expr.fst = e₂ := by
+      simp_all
+    have hh : ∃ ee, FnEtaReduces 0 e.to_eta_expr.fst ee := ⟨e₃, by
+      simp_all⟩
+    simp [ha]
+    cases h
+    simp [hh]
+    cases ha
+    split
+    · simp_all
+    · simp_all
+  case mk₃ e₂ h₁ h₂ =>
+    have ha := h₁.complete
+    have h : e.to_eta_expr.fst = e₂ := by
+      simp_all
+    simp [ha]
+    cases h
+    simp [h₂]
+
+end Expr

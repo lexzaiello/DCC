@@ -136,12 +136,12 @@ def step? (e : EtaExpr) : Option ((e' : EtaExpr) × (PULift.{1, 0} (RedAffEta e 
   | DCCη refl(α) => α.size + 2
   | DCCη Sort m => m
   | DCCη Σ(α, β) => α.size + β.size + 2
-  | DCCη `(_β, x) => x.size + 2
+  | DCCη `(β, x) => β.size + x.size + 2
   | DCCη ⟦_β⟧(x, y) => x.size + y.size
   | DCCη Coup(β) => β.size
-  | DCCη Id(_α)      => 2
-  | DCCη Fstc(_α)    => 2
-  | DCCη Sndc(_α)    => 2
+  | DCCη Id(α)      => α.size + 2
+  | DCCη Fstc(α)    => α.size + 2
+  | DCCη Sndc(α)    => α.size + 2
   | DCCη Π(α, β) => α.size + β.size + 1
   | DCCη (f ∘' g) => f.size + f.size + g.size + 2
   | DCCη (f ∘ g)  => f.size + f.size + g.size + 2

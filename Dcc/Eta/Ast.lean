@@ -128,7 +128,7 @@ def step? (e : EtaExpr) : Option ((e' : EtaExpr) × (PULift.{1, 0} (RedAffEta e 
     | _, _ => .none
   | _ => .none
 
-@[aesop norm (rule_sets := [DccReduce]), dcc_reduce]
+@[aesop norm (rule_sets := [DccReduce]), dcc_reduce, grind]
 def contains (e : EtaExpr) (to_find : EtaExpr) : Bool :=
   e = to_find ||
     match e with

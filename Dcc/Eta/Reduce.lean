@@ -262,7 +262,7 @@ inductive EtaMap₂ : (dom₁ : EtaExpr)
   → (hole₂ : EtaExpr)
   → (f' : EtaExpr) → Prop
   | par      : EtaMap₂ dom₁ dom₂ (DCCη (f hole₁ hole₂)) hole₁ hole₂ f
-  | id       : EtaMap₂ dom₁ dom₂ (DCCη (hole(hole₁) hole(hole₂))) (DCCη hole(hole₁)) (DCCη hole(hole₂)) (DCCη Id(dom₁))
+  | id       : EtaMap₂ dom₁ dom₂ (DCCη (hole₁ hole₂)) (DCCη hole₁) (DCCη hole₂) (DCCη Id(dom₁))
 -- hole₁ hole₂ = ⟦dom₂⟧(hole₁, hole₂) means this is Λ(dom₁, dom₂, Id(Coup(dom₂)))
 -- this is basically 2 arg version of id
   | curr     : EtaMap₂ dom₁ dom₂ (DCCη ⟦dom₂⟧(hole₁, hole₂)) hole₁ hole₂ (DCCη Λ(dom₁, dom₂, Id(Coup(dom₂))))
@@ -274,14 +274,18 @@ inductive EtaMap₂ : (dom₁ : EtaExpr)
   -- this is couple quotation
   -- if dom₂ is quotation i.e., `(dom₁, dom₂), then
   -- this is just simple double quotation `(dom₁, `(dom₂, c))
-  | quot₂    : (¬ EtaExpr.contains out hole₁)
+  | quot₂    : (EtaExpr.is_boxed hole₁ = .none)
+    → (EtaExpr.is_boxed hole₂ = .none)
+    → (¬ EtaExpr.contains out hole₁)
     → (¬ EtaExpr.contains out hole₂)
     → EtaMap₂ dom₁ (DCCη `(dom₁, dom₂))
       out
       hole₁ hole₂
       (DCCη `(dom₁, `(dom₂, out)))
   -- TODO: might need quot₁ if β is not dependent on α
-  | quot₂'   : (¬ EtaExpr.contains out hole₁)
+  | quot₂'   : (EtaExpr.is_boxed hole₁ = .none)
+    → (EtaExpr.is_boxed hole₂ = .none)
+    → (¬ EtaExpr.contains out hole₁)
     → (¬ EtaExpr.contains out hole₂)
     -- β is dependent on dom₁
     -- TODO: might need to eta dom₂ as well?
@@ -293,56 +297,158 @@ inductive EtaMap₂ : (dom₁ : EtaExpr)
 
 def map_eta₂ (dom₁ dom₂ out hole₁ hole₂ : EtaExpr) : Option ((f' : EtaExpr) × PLift
   (EtaMap₂ dom₁ dom₂ out hole₁ hole₂ f')) :=
-  match heq₁ : out with
-  | (DCCη (f hole₃ hole₄)) =>
-    if heq₂ : (DCCη (f hole₃ hole₄)) = (DCCη (f hole₁ hole₂)) then by
-      rw [heq₂]
-      exact .some ⟨_, ⟨.par⟩⟩
-    else .none
-  | (DCCη (hole(hole₃) hole(hole₄))) =>
-    if heq₂ : (DCCη (hole(hole₃) hole(hole₄))) = (DCCη (hole₁ hole₂)) then by
-      have heq'₁ : hole₁ = (DCCη (hole(hole₃))) := by
-        simp_all
-      have heq'₂ : hole₂ = (DCCη (hole(hole₄))) := by
-        simp_all
-      rw [heq'₁, heq'₂]
-      exact .some ⟨_, ⟨.id⟩⟩
-    else .none
-  | (DCCη ⟦dom₃⟧(hole₃, hole₄)) =>
-    if heq₂ : (DCCη ⟦dom₃⟧(hole₃, hole₄)) = (DCCη ⟦dom₂⟧(hole₁, hole₂)) then by
-      rw [heq₂]
-      exact .some ⟨_, ⟨.curr⟩⟩
-    else .none
-  | (DCCη &(⟦β⟧(hole₃, hole₄))) =>
-    match heq₂ : dom₁, heq₃ : dom₂, heq₄ : hole₁, heq₅ : hole₂ with
-    | (DCCη !(α)), (DCCη !<β₂>), (DCCη &(ha)), (DCCη &(hb)) =>
-      if heq₄ : (DCCη &(⟦β⟧(hole₃, hole₄))) = (DCCη &(⟦β₂⟧(ha, hb))) then by
-        rw [heq₄]
-        simp_all
-        exact .some ⟨_, ⟨.curr'⟩⟩
+  if heqa : out = (DCCη (hole₁ hole₂)) then by
+    simp_all
+    exact .some ⟨_, ⟨.id⟩⟩
+  else
+    match heq₁ : out with
+    | (DCCη (f hole₃ hole₄)) =>
+      if heq₂ : (DCCη (f hole₃ hole₄)) = (DCCη (f hole₁ hole₂)) then by
+        rw [heq₂]
+        exact .some ⟨_, ⟨.par⟩⟩
       else .none
-    | _, _, _, _ => .none
-  | out =>
-    match heq₂ : dom₂ with
-    | (DCCη `(dom₁', d₂)) =>
-      if ha : dom₁' = dom₁ then
-        if hb : (¬ EtaExpr.contains out hole₁) then
-          if hc : (¬ EtaExpr.contains out hole₂) then by
-            simp_all
-            cases ha; cases heq₁; cases heq₂
-            exact .some ⟨_, ⟨.quot₂ (by simp_all) (by simp_all)⟩⟩
+    | (DCCη ⟦dom₃⟧(hole₃, hole₄)) =>
+      if heq₂ : (DCCη ⟦dom₃⟧(hole₃, hole₄)) = (DCCη ⟦dom₂⟧(hole₁, hole₂)) then by
+        rw [heq₂]
+        exact .some ⟨_, ⟨.curr⟩⟩
+      else .none
+    | (DCCη &(⟦β⟧(hole₃, hole₄))) =>
+      match heq₂ : dom₁, heq₃ : dom₂, heq₄ : hole₁, heq₅ : hole₂ with
+      | (DCCη !(α)), (DCCη !<β₂>), (DCCη &(ha)), (DCCη &(hb)) =>
+        if heq₄ : (DCCη &(⟦β⟧(hole₃, hole₄))) = (DCCη &(⟦β₂⟧(ha, hb))) then by
+          rw [heq₄]
+          simp_all
+          exact .some ⟨_, ⟨.curr'⟩⟩
+        else .none
+      | _, _, _, _ => .none
+    | out =>
+      match heq₂ : dom₂ with
+      | (DCCη `(dom₁', d₂)) =>
+        if ha : dom₁' = dom₁ then
+          if hb : (¬ EtaExpr.contains out hole₁) then
+            if hc : (¬ EtaExpr.contains out hole₂) then
+              if hd : (EtaExpr.is_boxed hole₁ = .none) then
+                if he : (EtaExpr.is_boxed hole₂ = .none) then by
+                  simp_all
+                  cases ha; cases heq₁; cases heq₂
+                  exact .some ⟨_, ⟨.quot₂ (by simp_all) (by simp_all) (by simp_all) (by simp_all)⟩⟩
+                else .none
+              else .none
+            else .none
           else .none
         else .none
-      else .none
-    | d₂ =>
-      if ha : (¬ EtaExpr.contains out hole₁) then
-        if hb : (¬ EtaExpr.contains out hole₂) then
-          if hc : (EtaExpr.is_quote dom₂ = .none) then by
-            simp_all
-            exact .some ⟨_, ⟨.quot₂' (by simp_all) (by simp_all) (by simp_all)⟩⟩
+      | d₂ =>
+        if ha : (¬ EtaExpr.contains out hole₁) then
+          if hb : (¬ EtaExpr.contains out hole₂) then
+            if hc : (EtaExpr.is_quote dom₂ = .none) then
+              if hd : (EtaExpr.is_boxed hole₁ = .none) then
+                if he : (EtaExpr.is_boxed hole₂ = .none) then by
+                  simp_all
+                  exact .some ⟨_, ⟨.quot₂' (by simp_all) (by simp_all)  (by simp_all) (by simp_all) (by simp_all)⟩⟩
+                else .none
+              else .none
+            else .none
           else .none
         else .none
-      else .none
+
+theorem MapEta₂.complete (h : EtaExpr.EtaMap₂ dom₁ dom₂ out hole₁ hole₂ f') : map_eta₂ dom₁ dom₂ out hole₁ hole₂ = .some ⟨f', ⟨h⟩⟩ := by
+  cases h
+  any_goals (
+    focus
+    first
+    | simp [map_eta₂]
+      done
+    | simp [map_eta₂]
+      intro h
+      cases h
+      done)
+  case quot₂ =>
+    simp [map_eta₂]
+    split
+    case isTrue heq =>
+      cases heq
+      have ha : (hole₁.app hole₂).contains hole₁ = true := by
+        simp [contains]
+        exact .inr (.inl (by
+          unfold contains
+          simp))
+      simp_all
+    case isFalse heq =>
+      
+      sorry
+
+theorem MapEta₂.complete (h : EtaExpr.EtaMap₂ dom₁ dom₂ out hole₁ hole₂ f') : map_eta₂ dom₁ dom₂ out hole₁ hole₂ = .some ⟨f', ⟨h⟩⟩ := by
+  unfold map_eta₂
+  if ha : ¬ out.contains hole₁ then
+    if hb : ¬ out.contains hole₂ then
+      if hc : (EtaExpr.is_boxed hole₁ = .none) then
+        if hd : (EtaExpr.is_boxed hole₂ = .none) then
+          
+          sorry
+        else sorry
+      else sorry
+    else sorry
+  else sorry
+          /-cases h
+          case par =>
+            have h : ((f'.app hole₁).app hole₂).contains hole₁ = true := by
+              simp [EtaExpr.contains]
+              refine .inr (.inl (.inr (.inr (?_))))
+              unfold EtaExpr.contains
+              simp
+            simp_all
+          case id hole₁ hole₂ =>
+            have h : ((hole (Hole.mk hole₁)).app (hole (Hole.mk hole₂))).contains (hole (Hole.mk hole₁)) = true := by
+              simp [EtaExpr.contains]
+            simp_all
+          case curr =>
+            have h : (dom₂.mkc hole₁ hole₂).contains hole₁ = true := by
+              simp [EtaExpr.contains]
+              exact .inr (.inr (.inl (by
+                unfold EtaExpr.contains
+                simp)))
+            simp_all
+          case curr' =>
+            unfold map_eta₂
+            simp
+          case quot₂ =>
+            unfold map_eta₂
+            simp_all
+            split
+            case h_1 =>
+              split
+              case isTrue f _ _ hn₁ hn₂ heq =>
+                have ⟨h₁, h₂⟩ := heq
+                cases h₁; cases h₂
+                have h : ((f.app hole₁).app hole₂).contains hole₁ := by
+                  simp [EtaExpr.contains]
+                  exact .inr (.inl (.inr (.inr (by
+                    unfold EtaExpr.contains
+                    simp))))
+                simp_all
+              case isFalse =>
+                
+                sorry
+    else
+      sorry
+  else
+    sorry-/
+
+theorem MapEta₂.complete (h : EtaExpr.EtaMap₂ dom₁ dom₂ out hole₁ hole₂ f') : map_eta₂ dom₁ dom₂ out hole₁ hole₂ = .some ⟨f', ⟨h⟩⟩ := by
+  unfold map_eta₂
+  cases heq : h
+  any_goals (
+    focus
+    simp
+    done)
+  case quot₂ heq₁ heq₂ =>
+    split
+    case h_1 =>
+      simp_all
+      simp [EtaExpr.contains] at heq₁
+      simp [EtaExpr.contains] at heq₂
+      
+      sorry
 
 def mk_eta_result (dom : EtaExpr) (out : EtaExpr) (hole_arg : EtaExpr) : Option ((f' : EtaExpr) × PLift (EtaResult dom out hole_arg f')) :=
   if h₁ : out.contains hole_arg then

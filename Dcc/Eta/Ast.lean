@@ -34,7 +34,8 @@ If domain is:
 -/
 
 inductive Hole where
-  | mk : ℕ → Hole
+  | mk   : ℕ → Hole
+  | sort : ℕ → Hole
 deriving BEq, Repr, DecidableEq
 
 gen_ast as EtaExpr
@@ -266,6 +267,18 @@ def is_box_map (e : EtaExpr) : Option EtaExpr :=
 def is_quote (e : EtaExpr) : Option ((β x : EtaExpr) × PLift (e = (DCCη `(β, x)))) :=
   match e with
   | DCCη `(β, x) => .some ⟨β, x, ⟨rfl⟩⟩
+  | _ => .none
+
+@[dcc_reduce]
+def is_id (e : EtaExpr) : Option ((α : EtaExpr) × PLift (e = (DCCη Id(α)))) :=
+  match e with
+  | DCCη Id(_α) => .some ⟨_, ⟨rfl⟩⟩
+  | _ => .none
+
+@[dcc_reduce]
+def is_type (e : EtaExpr) : Option ((n : ℕ) × PLift (e = (DCCη Sort n + 1))) :=
+  match e with
+  | DCCη Sort _n + 1 => .some ⟨_, ⟨rfl⟩⟩
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_aff]
@@ -705,11 +718,13 @@ theorem aff_complete (h : Relation.ReflTransGen RedAffEta A B)
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instComplete : Expr.Complete (Relation.ReflTransGen RedAffEta) (P := Expr.IsNorm RedAffEta) := RedAffEta.instRedRel.instComplete
 
-scoped syntax num : gen_dcc
-scoped syntax "hole(" term ")" : gen_dcc
+scoped syntax num                     : gen_dcc
+scoped syntax "hole(" term ")"        : gen_dcc
+scoped syntax "hole(" "Sort(" term ")" ")" : gen_dcc
 
 macro_rules
   | `(DCC[$_ty:gen_dcc_loc] $n:num) => `(EtaExpr.hole (Hole.mk $n:term))
+  | `(DCC[$_ty:gen_dcc_loc] hole(Sort($tm:term))) => `(EtaExpr.hole (Hole.sort $tm:term))
   | `(DCC[$_ty:gen_dcc_loc] hole($tm:term)) => `(EtaExpr.hole (Hole.mk $tm:term))
 
 @[grind =, grind! ., dcc_size]

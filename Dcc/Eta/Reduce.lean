@@ -2,6 +2,25 @@ import Dcc.Eta.Ast
 import Dcc.Relation
 import Dcc.Types
 
+/-
+Only η rule we probably also need is:
+
+(Π(f_α, f_β) env)
+f_α env -> f_α'
+
+if env exists at the top level, we can reduce
+f_βenv -> f_β'
+
+this gives us the Id curry reduction for free to coerce arrows nicely.
+Although lowkey I want to just try the type-checker first on examples to see what works.
+
+If things don't work, then we can upgrade to the tracer matching
+
+Alternative:
+we could make Λ quotation the canonical quotation, not `(α, β), but see if everything works first.
+debug examples
+-/
+
 namespace EtaExpr
 
 open Relation (ReflTransGen)
@@ -1113,6 +1132,12 @@ theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
     unfold red_eta
     simp [heq, ha]
     grind
+
+@[dcc_force_reduce]
+theorem reduce_eta_sound (_heq : Expr.red_eta e = ⟨e', ⟨h⟩⟩) : Expr.RedEta e e' := h
+
+@[dcc_force_reduce]
+abbrev red_eta' (e : Expr) : Expr := e.red_eta.fst
 
 #eval (DCC Id(Sort 1) ∘' Id(Sort 1)).red_eta.fst
 #eval (DCC `(Sort 1, Sort 1)).red_eta.fst

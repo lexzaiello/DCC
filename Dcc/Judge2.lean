@@ -165,14 +165,16 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces β β'
     → Reduces (quot.type α β' n) τ
     → Judge (DCC `(β, x)) τ
-  | pair   : Judge f (DCC (Π(f_α, f_β) x_α))
+  | pair   : Judge f (DCC (Π(Id(Sort m), f_β) x_α))
     → Reduces (DCC (f_β x_α)) β
-    → Judge g (DCC (Π(Id(Sort m), f_β₂) α))
-    → Reduces (DCC (f_β₂ α)) (DCC (Π(β₂, γ)))
+    → Judge g (DCC (Π(f_α₂, f_β₂) α))
+    → Reduces γ γ'
+    → Reduces (DCC (f_β₂ α)) (DCC (Π(β₂, γ₂)))
+    → Reduces γ₂ γ'
     → Reduces β₂ β
-    → Reduces (DCC (f_α x_α)) α
-    → Reduces α α'
-    → Reduces (pair.type α' β γ m) τ
+    → Reduces (DCC (Id(Sort m) x_α)) α'
+    → Reduces (DCC (f_α₂ α)) α'
+    → Reduces (pair.type α' β γ' m) τ
     → Judge (DCC ⟦γ⟧⟨f, g⟩) τ
   /-
     ef_α : α → Sort m
@@ -461,23 +463,24 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | _, _ => .none
   | DCC ⟦γ⟧⟨f, g⟩ =>
     match infer f, infer g with
-    | .some ⟨DCC (Π(f_α, f_β) x_α), ⟨ht₁⟩⟩,
-      .some ⟨DCC (Π(Id(Sort m), f_β₂) α), ⟨ht₂⟩⟩ =>
-      let α₂ := (DCC (f_α x_α)).reduce_all
+    | .some ⟨DCC (Π(Id(Sort m), f_β) x_α), ⟨ht₁⟩⟩,
+      .some ⟨DCC (Π(f_α₂, f_β₂) α), ⟨ht₂⟩⟩ =>
       let β := (DCC (f_β x_α)).reduce_all
       match heqm : (DCC (f_β₂ α)).reduce_all with
       | DCC (Π(β₂, γ₂)) =>
-        if heq : α₂ = α ∧ β₂.reduce_all = β then
-          if heq₂ : γ₂ = γ then
+        if heq : (DCC (Id(Sort m) x_α)).reduce_all = (DCC (f_α₂ α)).reduce_all ∧ β₂.reduce_all = β then
+          if heq₂ : γ₂.reduce_all = γ.reduce_all then
             have ⟨h₁, h₃⟩ := heq
             .some ⟨_, ⟨.pair
               ht₁
               (reduce_reduces rfl)
               ht₂
-              (reduce_reduces (heq₂ ▸ heqm))
-              (reduce_reduces h₃)
-              (reduce_reduces h₁)
               (reduce_reduces rfl)
+              (reduce_reduces heqm)
+              (reduce_reduces heq₂)
+              (reduce_reduces h₃)
+              (reduce_reduces rfl)
+              (reduce_reduces h₁.symm)
               (reduce_reduces rfl)⟩⟩
           else .none
         else .none

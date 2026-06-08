@@ -12,9 +12,12 @@ Can quot be derived?
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1) (Sort 0))).infer
 #eval (DCC `(Sort 1, Sort 1)).infer'
 #eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))).infer'
-#eval (DCC Π(Id(Sort 0), Λ(Sort 0, Id(Sort 0), Id(Sort 0)))).reduce_all
-#eval (DCC (Π(Id(Sort 0), `(Sort 0, Π(Id(Sort 0), Λ(Sort 0, Id(Sort 0), Id(Sort 0))))) Sort 0)).reduce_all
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Σ(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1)) )(Sort 0))).infer
+#eval (DCC Id(Coup(Id(Sort 2)))).infer'
+#eval (DCC (Π(Id(Sort 1), `(Sort 1, Π(Id(Sort 1), Λ(Sort 1, Id(Sort 1), Id(Sort 2))))) Sort 1)).reduce_all
+#eval (DCC Λ(Sort 2, Id(Sort 2), Id(Coup(Id(Sort 2))))).infer'
+#eval (DCC `(Sort 1, Sort 1)).infer'
+#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))).infer'
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Σ(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 2)))(Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘' Id(Sort 1)) (Sort 0))).infer
@@ -35,9 +38,20 @@ Pretty sure this is just because we need the top-level env rule.
    Sort 1)).red_eta'
 #eval Expr.infer' (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1))))
 
+#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer'
+#eval (DCC (`(Sort 2, Π(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1)))) (Sort 1))).reduce_all
+#eval (DCC Id(Sort 1)).infer'
+
+#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))).reduce_all
+
+#eval (DCC Id(Sort 1)).infer'
+#eval (DCC (`(Sort 2, `(Sort 1, Sort 1)) Sort 1)).reduce_all
+#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer'
+
+
 def mk_test_pair : Expr :=
-  DCC (⟦Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩
-    &(&(Sort 0)))
+  DCC (⟦`(Sort 1, `(Sort 1, Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩
+    &(Sort 0))
 
 def test_pair : Option Expr := Sigma.fst <$> mk_test_pair.infer
 

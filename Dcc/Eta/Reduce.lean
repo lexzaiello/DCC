@@ -1,4 +1,5 @@
 import Dcc.Eta.Ast
+import Dcc.Aff.Red
 import Dcc.Relation
 import Dcc.Types
 
@@ -1069,6 +1070,14 @@ theorem RedEta?.complete (h : RedEta? e e') : e.red_eta? = .some ⟨e', ⟨h⟩�
     · simp_all
     · simp_all
 
+instance : Decidable (∃ e', RedEta? e e') :=
+  match heq : e.red_eta? with
+  | .some ⟨_, ⟨h⟩⟩ => .isTrue ⟨_, h⟩
+  | .none =>
+    .isFalse (fun ⟨_, h⟩ => by
+      have h := h.complete
+      simp_all)
+
 instance : Decidable (∃ (f_α : Expr) (f_β : Expr), f = f_α.pi f_β) := by
   cases f
   case pi =>
@@ -1098,13 +1107,28 @@ inductive RedEta?? : (e : Expr) → (e' : Expr) → Prop
     → ToExpr δ δ'
     → RedEta?? env env'
     → RedEta?? (DCC (f_β env)) f_β'
+    → (f_β' ≠ (DCC (f_β env)))
     → RedEta?? (DCC (Π(f_α, f_β) env)) (DCC (Π(f_α', `(δ', f_β')) env'))
+  | pi₁'  : RedEta?? f_α f_α'
+    → ToEtaExpr f_α f_α₁
+    → Domain f_α₁ δ
+    → ToExpr δ δ'
+    → RedEta?? env env'
+    → RedEta?? (DCC (f_β env)) f_β'
+    → (f_β' = (DCC (f_β env)))
+    → RedEta?? (DCC (Π(f_α, f_β) env)) (DCC (Π(f_α', f_β) env'))
   | pi₂  : RedEta?? f_α f_α'
     → RedEta?? f_β f_β'
     → RedEta?? (DCC Π(f_α, f_β)) (DCC Π(f_α', f_β'))
   | tm₁  : (¬ ∃ f_α f_β env, e = (DCC (Π(f_α, f_β) env)))
     → (¬ ∃ f_α f_β, e = (DCC (Π(f_α, f_β))))
     → RedEta? e e' → RedEta?? e e'
+  | tm₂  : (¬ ∃ f_α f_β env, e = (DCC (Π(f_α, f_β) env)))
+    → (¬ ∃ f_α f_β, e = (DCC (Π(f_α, f_β))))
+    → (¬ ∃ e', RedEta? e e')
+    → Relation.ReflTransGen RedAff e e'
+    → IsNorm RedAff e'
+    → RedEta?? e e
 
 def red_eta?? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta?? e e'))) :=
   if heq : ∃ f_α f_β env, e = (DCC (Π(f_α, f_β) env)) then
@@ -1117,7 +1141,10 @@ def red_eta?? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta?? e e'))) :=
         | .some ⟨δ', ⟨h₃⟩⟩ =>
           match env.red_eta??, f_α.red_eta??, (DCC (f_β env)).red_eta?? with
           | .some ⟨_, ⟨h₄⟩⟩, .some ⟨f_α', ⟨h₅⟩⟩, .some ⟨f_β', ⟨h₆⟩⟩ =>
-            .some ⟨_, ⟨.pi₁ h₅ h₁ h₂ h₃ h₄ h₆⟩⟩
+            if heq : f_β' = (DCC (f_β env)) then
+              .some ⟨_, ⟨.pi₁' h₅ h₁ h₂ h₃ h₄ h₆ heq⟩⟩
+            else
+              .some ⟨_, ⟨.pi₁ h₅ h₁ h₂ h₃ h₄ h₆ heq⟩⟩
           | _, _, _ => .none
         | _ => .none
       | _ => .none
@@ -1129,16 +1156,32 @@ def red_eta?? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta?? e e'))) :=
         | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.pi₂ h₁ h₂⟩⟩
         | _, _ => .none
     else
-      match e.red_eta? with
-      | .some ⟨_, ⟨h⟩⟩ =>
-        .some ⟨_, ⟨.tm₁ heq heq₂ h⟩⟩
-      | _ => .none
+      if heq₃ : ∃ e', RedEta? e e' then
+        match _heq₄ : e.red_eta? with
+        | .some ⟨_, ⟨h⟩⟩ =>
+          .some ⟨_, ⟨.tm₁ heq heq₂ h⟩⟩
+        | _ => .none
+      else
+        .some ⟨_, ⟨.tm₂ heq heq₂ heq₃ (reduce_sound rfl) (reduce_norm rfl)⟩⟩
 
 @[aesop safe forward (rule_sets := [DccReduce])]
 theorem RedEta??.complete (h : RedEta?? e e') : e.red_eta?? = .some ⟨e', ⟨h⟩⟩ := by
   induction h
   case pi₁ =>
-    rename_i f_α f_α' f_α₁ δ δ' env env' f_β f_β' h₁ to_eta_expr h_domain h_to_expr h₃ h₄ heq₁ heq₂ heq₃
+    rename_i f_α f_α' f_α₁ δ δ' env env' f_β f_β' h₁ to_eta_expr h_domain h_to_expr h₃ h₄ hneq heq₁ heq₂ heq₃
+    have heq₄ := to_eta_expr.complete
+    have heq₅ := h_domain.complete
+    have heq₆ : f_α.to_eta_expr.fst = f_α₁ := by
+      simp_all
+    have heq₇ := h_to_expr.complete
+    unfold red_eta??
+    simp
+    simp [heq₁, heq₂, heq₃]
+    cases heq₆
+    simp [heq₅]
+    simp_all
+  case pi₁' =>
+    rename_i f_α f_α' f_α₁ δ δ' env env' f_β f_β' h₁ to_eta_expr h_domain h_to_expr h₃ h₄ hneq heq₁ heq₂ heq₃
     have heq₄ := to_eta_expr.complete
     have heq₅ := h_domain.complete
     have heq₆ : f_α.to_eta_expr.fst = f_α₁ := by
@@ -1155,10 +1198,17 @@ theorem RedEta??.complete (h : RedEta?? e e') : e.red_eta?? = .some ⟨e', ⟨h�
     unfold red_eta??
     simp
     simp [heq₁, heq₂]
-  case tm₁ hn₁ hn₂ h =>
+  case tm₁ e₀ e'' hn₁ hn₂ h =>
+    have he : ∃ e', RedEta? e₀ e' := by
+      exact ⟨_, h⟩
     have h₁ := h.complete
     unfold red_eta??
-    simp [hn₁, hn₂, h₁]
+    simp [hn₁, hn₂, he]
+    rw [h₁]
+  case tm₂ hn₁ hn₂ hn₃ hr hnorm =>
+    have h₁ := reduce_complete hr hnorm
+    rw [red_eta??]
+    simp [hn₁, hn₂, hn₃]
 
 instance : Decidable (∃ e', RedEta?? e e') :=
   match heq : e.red_eta?? with

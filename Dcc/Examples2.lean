@@ -10,10 +10,30 @@ Can quot be derived?
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1) ∘' Id(Sort 1)).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1) (Sort 0))).infer
+#eval (DCC `(Sort 1, Sort 1)).infer'
+#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))).infer'
+#eval (DCC Π(Id(Sort 0), Λ(Sort 0, Id(Sort 0), Id(Sort 0)))).reduce_all
+#eval (DCC (Π(Id(Sort 0), `(Sort 0, Π(Id(Sort 0), Λ(Sort 0, Id(Sort 0), Id(Sort 0))))) Sort 0)).reduce_all
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Σ(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1)) )(Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘' Id(Sort 1)) (Sort 0))).infer
+
+/-
+Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))
+Shuoldn't this reduce?
+
+It does.
+It does very nicely.
+
+Pretty sure this is just because we need the top-level env rule.
+-/
+
+
+#eval Expr.infer' (DCC Id(Sort 1))
+#eval (DCC (Π(Id(Sort 2), `(Sort 2, Π(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1)))))
+   Sort 1)).red_eta'
+#eval Expr.infer' (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1))))
 
 def mk_test_pair : Expr :=
   DCC (⟦Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩
@@ -82,7 +102,8 @@ This should eta reduce
 
 -- (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)
 
-#eval ((· == (DCC (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)))∘ Expr.reduce_all ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
+#eval (DCC Id(Sort 1)).infer'
+#eval ((· == (DCC (Π(Id(Sort 2), `(Sort 2, `(Sort 1, Sort 1))) Sort 1)))∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
 
 /-
 (Σ(`(⊤, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))) ∗)
@@ -140,6 +161,10 @@ Id(Sort 1)
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
 #eval (DCC Id(Sort 1)).infer'
 
+#eval (DCC ((Sort 1 : Sort 2) → ((Sort 3 : Sort 4) → Sort 5))).reduce_all
+
+#eval (DCC Id(Sort 2)).infer'
+#eval (DCC refl(Id(Sort 2))).infer'
 #eval (DCC (refl(Id(Sort 2)) &(Sort 1) &(Sort 0))).infer'
 #eval (DCC (refl(Id(Sort 2)))).infer'
 

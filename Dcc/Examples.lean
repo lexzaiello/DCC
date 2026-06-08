@@ -138,7 +138,7 @@ Id(Sort 1)
 -/
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
-#eval (DCC Id(Sort 1)).infer'
+#eval (Expr.toFormat (pretty := false)) <$> (DCC Id(Sort 1)).infer'
 
 #eval (DCC (refl(Id(Sort 2)) &(Sort 1) &(Sort 0))).infer'
 #eval (DCC (refl(Id(Sort 2)))).infer'

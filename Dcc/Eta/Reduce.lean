@@ -1011,33 +1011,28 @@ theorem ToEtaExpr.complete (h : ToEtaExpr e e') : e.to_eta_expr = ⟨e', ⟨h⟩
 inductive RedEta? : (e₁ : Expr) → (e₄ : Expr) → Prop
   | mk₁ : ToEtaExpr e₁ e₂ → FnEtaReduces 0 e₂ e₃ → ToExpr e₃ e₄ → RedEta? e₁ e₄
   | mk₂ : ToEtaExpr e₁ e₂ → FnEtaReduces 0 e₂ e₃ → (¬ ∃ e₄, ToExpr e₃ e₄) → RedEta? e₁ e₁
-  | mk₃ : ToEtaExpr e₁ e₂ → (¬ ∃ e₃, FnEtaReduces 0 e₂ e₃) → RedEta? e₁ e₁
 
-def red_eta? (e₁ : Expr) : ((e₄ : Expr) × PLift (RedEta? e₁ e₄)) :=
+def red_eta? (e₁ : Expr) : Option ((e₄ : Expr) × PLift (RedEta? e₁ e₄)) :=
   if h₁ : ∃ e₃, FnEtaReduces 0 (to_eta_expr e₁).fst e₃ then
     match heq₀ : (to_eta_expr e₁).fst.fn_reduces 0 with
     | .some ⟨e', ⟨h₂⟩⟩ =>
       if h₃ : ∃ e'', ToExpr e' e'' then
         match heq : e'.to_expr with
         | .some ⟨_, ⟨h₃⟩⟩ =>
-          ⟨_, ⟨.mk₁ (to_eta_expr e₁).snd.down h₂ h₃⟩⟩
-        | .none => ⟨_, ⟨.mk₂ (to_eta_expr e₁).snd.down h₂ (fun ⟨_, h⟩ => by
+          .some ⟨_, ⟨.mk₁ (to_eta_expr e₁).snd.down h₂ h₃⟩⟩
+        | .none => .some ⟨_, ⟨.mk₂ (to_eta_expr e₁).snd.down h₂ (fun ⟨_, h⟩ => by
           have h := h.complete
           simp_all)⟩⟩
       else
-        ⟨_, ⟨.mk₂ (to_eta_expr e₁).snd.down h₂ (fun ⟨_, h⟩ => by
+        .some ⟨_, ⟨.mk₂ (to_eta_expr e₁).snd.down h₂ (fun ⟨_, h⟩ => by
           have h := h.complete
           simp_all)⟩⟩
-    | .none => ⟨_, ⟨.mk₃ (to_eta_expr e₁).snd.down (fun ⟨_, h⟩ => by
-      have h := h.complete
-      simp_all)⟩⟩
+    | .none => .none
   else
-    ⟨_, ⟨.mk₃ (to_eta_expr e₁).snd.down (fun ⟨_, h⟩ => by
-      have h := h.complete
-      simp_all)⟩⟩
+    .none
 
 @[aesop safe forward (rule_sets := [DccReduce])]
-theorem RedEta?.complete (h : RedEta? e e') : e.red_eta? = ⟨e', ⟨h⟩⟩ := by
+theorem RedEta?.complete (h : RedEta? e e') : e.red_eta? = .some ⟨e', ⟨h⟩⟩ := by
   unfold red_eta?
   induction h
   case mk₁ h₁ h₂ h₃ =>
@@ -1045,21 +1040,20 @@ theorem RedEta?.complete (h : RedEta? e e') : e.red_eta? = ⟨e', ⟨h⟩⟩ := 
     have hb := h₂.complete
     have hc := h₃.complete
     rename_i e₂ e₃ e₄
-    have h : e.to_eta_expr.fst = e₂ := by
+    have h₄ : e.to_eta_expr.fst = e₂ := by
       simp_all
     have hh : ∃ ee, FnEtaReduces 0 e.to_eta_expr.fst ee := ⟨e₃, by
       simp_all⟩
     have hhh : ∃ e', ToExpr e₃ e' := ⟨e₄, by
       simp_all⟩
-    simp [h]
-    simp_all
-    cases h
-    simp_all
-    split
-    case h_1 =>
-      aesop
-    case h_2 =>
-      simp_all
+    simp [h₄]
+    cases h₄
+    simp [hh]
+    rw [hb]
+    simp
+    simp [hhh]
+    simp at *
+    aesop
   case mk₂ e₂ e₃ h₁ h₂ h₃ =>
     have ha := h₁.complete
     have hb := h₂.complete
@@ -1074,13 +1068,6 @@ theorem RedEta?.complete (h : RedEta? e e') : e.red_eta? = ⟨e', ⟨h⟩⟩ := 
     split
     · simp_all
     · simp_all
-  case mk₃ e₂ h₁ h₂ =>
-    have ha := h₁.complete
-    have h : e.to_eta_expr.fst = e₂ := by
-      simp_all
-    simp [ha]
-    cases h
-    simp [h₂]
 
 instance : Decidable (∃ (f_α : Expr) (f_β : Expr), f = f_α.pi f_β) := by
   cases f
@@ -1104,34 +1091,118 @@ instance : Decidable (∃ (f_α : Expr) (f_β : Expr) (env : Expr), f = (f_α.pi
       intro ⟨_, _, heq⟩
       simp_all))
 
-inductive RedEta : (e : Expr) → (e' : Expr) → Prop
-  | pi : RedEta (DCC (Π(f_α, f_β))) pi' → RedEta env env' → RedEta (DCC (Π(f_α, f_β) env)) (DCC (pi' env'))
-  | tm : (¬ ∃ f_α f_β env, e = (DCC (Π(f_α, f_β) env))) → RedEta? e e' → RedEta e e'
+inductive RedEta?? : (e : Expr) → (e' : Expr) → Prop
+  | pi₁  : RedEta?? f_α f_α'
+    → ToEtaExpr f_α f_α₁
+    → Domain f_α₁ δ
+    → ToExpr δ δ'
+    → RedEta?? env env'
+    → RedEta?? (DCC (f_β env)) f_β'
+    → RedEta?? (DCC (Π(f_α, f_β) env)) (DCC (Π(f_α', `(δ', f_β')) env'))
+  | pi₂  : RedEta?? f_α f_α'
+    → RedEta?? f_β f_β'
+    → RedEta?? (DCC Π(f_α, f_β)) (DCC Π(f_α', f_β'))
+  | tm₁  : (¬ ∃ f_α f_β env, e = (DCC (Π(f_α, f_β) env)))
+    → (¬ ∃ f_α f_β, e = (DCC (Π(f_α, f_β))))
+    → RedEta? e e' → RedEta?? e e'
 
-def red_eta (e : Expr) : ((e' : Expr) × (PLift (RedEta e e'))) :=
+def red_eta?? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta?? e e'))) :=
   if heq : ∃ f_α f_β env, e = (DCC (Π(f_α, f_β) env)) then
     match e with
     | (DCC (Π(f_α, f_β) env)) =>
-      ⟨_, ⟨.pi (DCC Π(f_α, f_β)).red_eta.snd.down env.red_eta.snd.down⟩⟩
+      let ⟨f_α₁, ⟨h₁⟩⟩ := f_α.to_eta_expr
+      match f_α₁.domain? with
+      | .some ⟨δ, ⟨h₂⟩⟩ =>
+        match δ.to_expr with
+        | .some ⟨δ', ⟨h₃⟩⟩ =>
+          match env.red_eta??, f_α.red_eta??, (DCC (f_β env)).red_eta?? with
+          | .some ⟨_, ⟨h₄⟩⟩, .some ⟨f_α', ⟨h₅⟩⟩, .some ⟨f_β', ⟨h₆⟩⟩ =>
+            .some ⟨_, ⟨.pi₁ h₅ h₁ h₂ h₃ h₄ h₆⟩⟩
+          | _, _, _ => .none
+        | _ => .none
+      | _ => .none
   else
-    ⟨_, ⟨.tm heq e.red_eta?.snd.down⟩⟩
+    if heq₂ : ∃ f_α f_β, e = (DCC Π(f_α, f_β)) then
+      match e with
+      | (DCC Π(f_α, f_β)) =>
+        match f_α.red_eta??, f_β.red_eta?? with
+        | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.pi₂ h₁ h₂⟩⟩
+        | _, _ => .none
+    else
+      match e.red_eta? with
+      | .some ⟨_, ⟨h⟩⟩ =>
+        .some ⟨_, ⟨.tm₁ heq heq₂ h⟩⟩
+      | _ => .none
 
 @[aesop safe forward (rule_sets := [DccReduce])]
-theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
+theorem RedEta??.complete (h : RedEta?? e e') : e.red_eta?? = .some ⟨e', ⟨h⟩⟩ := by
   induction h
-  case pi f_α f_β pi' env env' h₁ h₂ h₃ h₄ =>
-    unfold red_eta
-    have heq : ∃ f_α_1 f_β_1 env_1, (f_α.pi f_β).app env = (DCC (Π(f_α_1, f_β_1) env_1)) := by
+  case pi₁ =>
+    rename_i f_α f_α' f_α₁ δ δ' env env' f_β f_β' h₁ to_eta_expr h_domain h_to_expr h₃ h₄ heq₁ heq₂ heq₃
+    have heq₄ := to_eta_expr.complete
+    have heq₅ := h_domain.complete
+    have heq₆ : f_α.to_eta_expr.fst = f_α₁ := by
       simp_all
-    simp only [heq]
-    dsimp
-    simp [h₃, h₄]
-    grind
-  case tm e e' heq h₁ =>
-    have ha := h₁.complete
+    have heq₇ := h_to_expr.complete
+    unfold red_eta??
+    simp
+    simp [heq₁, heq₂, heq₃]
+    cases heq₆
+    simp [heq₅]
+    simp_all
+  case pi₂ =>
+    rename_i f_α f_α' f_β f_β' h₁ h₂ heq₁ heq₂
+    unfold red_eta??
+    simp
+    simp [heq₁, heq₂]
+  case tm₁ hn₁ hn₂ h =>
+    have h₁ := h.complete
+    unfold red_eta??
+    simp [hn₁, hn₂, h₁]
+
+instance : Decidable (∃ e', RedEta?? e e') :=
+  match heq : e.red_eta?? with
+  | .some ⟨_, ⟨h⟩⟩ => .isTrue ⟨_, h⟩
+  | .none =>
+    .isFalse (fun ⟨_, h⟩ => by
+      have h := h.complete
+      simp_all)
+
+inductive RedEta : Expr → Expr → Prop
+  | refl : (¬ ∃ e', RedEta?? e e') → RedEta e e
+  | step : RedEta?? e e' → RedEta e e'
+
+def red_eta (e : Expr) : ((e' : Expr) × (PLift (RedEta e e'))) :=
+  match heq₂ : e.red_eta?? with
+  | .some ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.step h⟩⟩
+  | .none => ⟨_, ⟨.refl (fun ⟨_, h⟩ => by
+    have h := h.complete
+    simp_all)⟩⟩
+
+theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
+  cases h
+  case refl hn =>
     unfold red_eta
-    simp [heq, ha]
-    grind
+    split
+    case h_1 hr _ => exact (hn ⟨_, hr⟩).elim
+    · rfl
+  case step h =>
+    have h := h.complete
+    simp [red_eta]
+    split
+    case h_1 =>
+      simp_all
+      grind
+    · simp_all
+
+/-
+Top-level Π rule:
+
+If Domain f_α = δ
+and f_β env η-reduces to f_β', then
+
+f_β' = `(δ, f_β')
+-/
 
 @[dcc_force_reduce]
 theorem reduce_eta_sound (_heq : Expr.red_eta e = ⟨e', ⟨h⟩⟩) : Expr.RedEta e e' := h

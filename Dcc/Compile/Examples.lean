@@ -19,6 +19,174 @@ import Dcc.Compile.Core
 def K_example : Expr :=
   dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} (fun (α : Sort 1) (β : α → Sort 1) (x : α) (_y : β x) => x)
 
+#eval (DCC (!Λ(⊤, `(⊤, Sort 1),
+    !Λ(Coup(`(⊤, Sort 1)),
+       Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))),
+       !Λ(Coup(Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))),
+          (Sndc(`(⊤, Sort 1)) ∘'
+             Fstc(Π(Sndc(`(⊤, Sort 1)),
+                    Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))),
+          Λ(!(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                     Fstc(Π(Sndc(`(⊤, Sort 1)),
+                            Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))),
+            (Eval(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                            Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                   Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                    ((Sndc(`(⊤, Sort 1)) ∘'
+                          Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                 Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))) ∘'
+                       Fstc((Sndc(`(⊤, Sort 1)) ∘'
+                               Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                      Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                        `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))),
+                    (Sndc(Π(Sndc(`(⊤, Sort 1)),
+                              Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))) ∘'
+                       Fstc((Sndc(`(⊤, Sort 1)) ∘'
+                               Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                      Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                        `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))))) ∘∘
+               ⟦Λ(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                            Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                   Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                    `(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                              Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                     Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                      Coup((Sndc(`(⊤, Sort 1)) ∘'
+                              Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                     Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                       `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))),
+                    (((Sndc(`(⊤, Sort 1)) ∘'
+                             Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                    Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))) ∘'
+                          Fstc((Sndc(`(⊤, Sort 1)) ∘'
+                                  Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                         Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                           `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))) ∘'
+                       Fstc(`(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                      Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                             Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                               `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                              Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                      Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                             Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                               `(Coup(Sndc(`(⊤, Sort 1))),
+                                                 Sort 1))))))))))⟧⟨Id(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                         Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                  `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))),
+                                              Λ(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                        Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                               Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                 `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                                                `(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                          Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                 Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                   `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                                                  Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                          Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                 Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                   `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))),
+                                                (Sndc((Sndc(`(⊤, Sort 1)) ∘'
+                                                           Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                  Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                    `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))) ∘'
+                                                   Fstc(`(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                                  Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                         Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                           `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                                                          Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                                  Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                         Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                           `(Coup(Sndc(`(⊤, Sort 1))),
+                                                                             Sort 1))))))))))⟩),
+            ((Sndc((Sndc(`(⊤, Sort 1)) ∘'
+                          Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                 Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))) ∘'
+                  *(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                           Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                  Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                    `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))))) ∘'
+               Fstc((Eval(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                    Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                           Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                             `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                            ((Sndc(`(⊤, Sort 1)) ∘'
+                                  Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                         Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                           `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))) ∘'
+                               Fstc((Sndc(`(⊤, Sort 1)) ∘'
+                                       Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                              Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))),
+                            (Sndc(Π(Sndc(`(⊤, Sort 1)),
+                                      Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                        `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))) ∘'
+                               Fstc((Sndc(`(⊤, Sort 1)) ∘'
+                                       Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                              Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))))) ∘∘
+                       ⟦Λ(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                    Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                           Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                             `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                            `(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                      Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                             Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                               `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                              Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                      Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                             Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                               `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))),
+                            (((Sndc(`(⊤, Sort 1)) ∘'
+                                     Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                            Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                              `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))) ∘'
+                                  Fstc((Sndc(`(⊤, Sort 1)) ∘'
+                                          Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                 Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                   `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))) ∘'
+                               Fstc(`(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                              Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                     Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                       `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                                      Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                              Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                     Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                       `(Coup(Sndc(`(⊤, Sort 1))),
+                                                         Sort 1))))))))))⟧⟨Id(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                                 Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                        Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                          `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))),
+                                                      Λ(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                                Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                       Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                         `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                                                        `(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                                  Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                         Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                           `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))),
+                                                          Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                                  Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                         Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                           `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))))),
+                                                        (Sndc((Sndc(`(⊤, Sort 1)) ∘'
+                                                                   Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                          Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
+                                                                            `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))) ∘'
+                                                           Fstc(`(Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                                          Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                                 Λ(Coup(`(⊤, Sort 1)),
+                                                                                   Sndc(`(⊤, Sort 1)),
+                                                                                   `(Coup(Sndc(`(⊤, Sort 1))),
+                                                                                     Sort 1)))))),
+                                                                  Coup((Sndc(`(⊤, Sort 1)) ∘'
+                                                                          Fstc(Π(Sndc(`(⊤, Sort 1)),
+                                                                                 Λ(Coup(`(⊤, Sort 1)),
+                                                                                   Sndc(`(⊤, Sort 1)),
+                                                                                   `(Coup(Sndc(`(⊤, Sort 1))),
+                                                                                     Sort 1))))))))))⟩)))))))
+   &(∗))).infer₂'
+
 #eval Std.format <| K_example
 
 /-

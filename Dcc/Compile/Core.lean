@@ -47,7 +47,9 @@ def shared_in (depth : DebruijnIdx) (in_e : Lean.Expr) : ℕ :=
   | .lam _ bty bdy _     =>
     -- If the variable being checked occurs in another variable that is shared,
     (shared_in depth bty) + (shared_in depth.succ bdy)
-  | .forallE _ bty bdy _ => (shared_in depth bty) + (shared_in depth.succ bdy)
+  | .forallE _ bty bdy _ =>
+    -- If the variable being checked occurs in another variable that is shared,
+    (shared_in depth bty) + (shared_in depth.succ bdy)
   | .proj _ _ strt => shared_in depth strt
   | .letE _ ty val bdy _ => (shared_in depth ty) + (shared_in depth val) + (shared_in depth bdy)
   | .bvar _ | .mdata _ _ | .lit _ | .const _ _ | .sort _ | .mvar _ | .fvar _ => 0
@@ -129,6 +131,9 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
   | .app (.const ``Shared _us) (.const ``True []) => return DCC (`(ctx, !(⊤)))
   | .app (.app (.const ``Shared.share _us) _α) (.const ``True []) => return DCC (`(ctx, &(⊤)))
   | .app (.app (.const ``Shared.share _us) _α) (.const ``True.intro []) => return DCC (`(ctx, &(∗)))
+  | .app (.app (.const ``Shared.share _us) _α) x =>
+    let x' ← abstract' x ctx infer reduce
+    return DCC (`(ctx, &(x')))
   | .app (.const ``Shared _us) (.const ``False []) => return DCC (`(ctx, !(⊥)))
   | .bvar n => cc_var ctx n (infer := infer) (reduce := reduce)
   | .app (.app (.const ``Sigma []) α) β => do
@@ -219,6 +224,13 @@ def cc (root : Lean.Expr) (infer : ParamInfer) (reduce : Expr → Expr) : Lean.M
     let f' ← abstract' (.forallE _a α bdy _binfo) Ctx.empty infer reduce
     let x' ← cc x infer reduce
     return (DCC (f' &(∗) &(x')))
+  | (.lam _a (.app (.const ``Shared _us) α) bdy _binfo) => do
+    dbg_trace "a"
+    let f' ← abstract' (.lam _a (.app (.const ``Shared _us) α) bdy _binfo) Ctx.empty infer reduce
+    return (DCC (f' &(∗)))
+  | (.forallE _a (.app (.const ``Shared _us) α) bdy _binfo) => do
+    let f' ← abstract' (.forallE _a (.app (.const ``Shared _us) α) bdy _binfo) Ctx.empty infer reduce
+    return (DCC (f' &(∗)))
   | .app (.lam _a α bdy _binfo) x => do
     let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty infer reduce
     let x' ← cc x infer reduce
@@ -247,12 +259,6 @@ def cc (root : Lean.Expr) (infer : ParamInfer) (reduce : Expr → Expr) : Lean.M
     match ← (cc (.sort m) infer reduce) with
     | DCC Sort n => pure (DCC Sort (n + 1))
     | m => Lean.Macro.throwError s!"not a valid sort: {m}"
-  | (.lam _a (.app (.const ``Shared _us) α) bdy _binfo) => do
-    let f' ← abstract' (.lam _a (.app (.const ``Shared _us) α) bdy _binfo) Ctx.empty infer reduce
-    return (DCC (f' &(∗)))
-  | (.forallE _a (.app (.const ``Shared _us) α) bdy _binfo) => do
-    let f' ← abstract' (.forallE _a (.app (.const ``Shared _us) α) bdy _binfo) Ctx.empty infer reduce
-    return (DCC (f' &(∗)))
   | (.lam _a α bdy _binfo) => do
     let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty' infer reduce
     return (DCC (f' ∗))
@@ -350,9 +356,7 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
         return .app M' N''
       | _ => return .app M' N'
     | _ =>
-      dbg_trace s!"fun: {M'}"
       try
-        dbg_trace s!"type: {← Lean.Meta.inferType M'}"
         match ← Lean.Meta.inferType M' with
         | .forallE _ α _ _ =>
           dbg_trace α
@@ -368,13 +372,50 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
         return .app M' N'
   | e => return e
 
+def wrap_share_auto_trans (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
+  match e with
+  | .app (.app (.const ``Shared.share _lvs) _α) _x => return e
+  | .proj a b strt => return .proj a b (← wrap_share_auto_trans strt)
+  | .letE a ty val bdy b =>
+    return .letE a (← wrap_share_auto_trans ty) (← wrap_share_auto_trans val) (← wrap_share_auto_trans bdy) b
+  | .lam _a (.app (.const ``Shared _lvs) bty) bdy b => do
+    return .lam _a (.app (.const ``Shared _lvs) bty) (← wrap_share_auto_trans bdy) b
+  | .lam a bty bdy b => do
+    let bty' ← wrap_share_auto_trans bty
+    let n_used := shared_in 0 bdy
+    match n_used with
+    | 0 => return .lam a bty' (← wrap_share_auto_trans bdy) b
+    | _k =>
+      let lv ← Lean.Meta.getLevel bty <|> Lean.Meta.mkFreshLevelMVar
+      let bty' := wrap_shares 1 lv bty'
+      let bdy' := deref_vars 1 0 lv bty (← wrap_share_auto_trans bdy)
+      return .lam a bty' bdy' b
+  | .forallE _a (.app (.const ``Shared _lvs) bty) bdy b => do
+    return .forallE _a (.app (.const ``Shared _lvs) bty) (← wrap_share_auto_trans bdy) b
+  | .forallE a bty bdy b => do
+    let bty' ← wrap_share_auto_trans bty
+    let n_used := shared_in 0 bdy
+    match n_used with
+    | 0 => return .forallE a bty' (← wrap_share_auto_trans bdy) b
+    | _k =>
+      let lv ← Lean.Meta.getLevel bty'
+      let bty' := wrap_shares 1 lv bty'
+      let bdy' := deref_vars 1 0 lv bty (← wrap_share_auto_trans bdy)
+      return .forallE a bty' bdy' b
+  | .app M N => do
+    let M' ← wrap_share_auto_trans M
+    let N' ← wrap_share_auto_trans N
+    -- try infertype on M' to smartly fetch whether we need to share
+    return .app M' N'
+  | e => return e
+
 open Qq in
 def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩)
   (reduce : _root_.Expr → _root_.Expr := Expr.reduce_all) : Lean.MacroM _root_.Expr :=
   cc root (infer := infer) (reduce := reduce)
 
 def Lean.Expr.ccM (root : Lean.Expr) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) (reduce : _root_.Expr → _root_.Expr := Expr.reduce_all) : Lean.Elab.TermElabM (Option _root_.Expr) := do
-  Elab.liftMacroM <| cc (← (wrap_share_auto root)) infer reduce
+  Elab.liftMacroM <| cc (← wrap_share_auto_trans (← (wrap_share_auto root))) infer reduce
 
 declare_syntax_cat infer_cmd_param
 
@@ -383,8 +424,8 @@ syntax "{" term "}" : infer_cmd_param
 elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
   let e_tm ← Lean.instantiateMVars e_tm
-  let e_tm' ← Lean.instantiateExprMVars (← (wrap_share_auto e_tm))
-  dbg_trace e_tm'
+  let e_tm' ← Lean.instantiateExprMVars (← wrap_share_auto_trans (← (wrap_share_auto e_tm)))
+  dbg_trace s!"e_tm': {e_tm'}"
   match infer.toList with
   | [_infer] =>
     return Lean.toExpr (← Lean.Elab.liftMacroM <| cc e_tm' ⟨Expr.Judge₂, Expr.infer₂⟩ Expr.reduce_all)

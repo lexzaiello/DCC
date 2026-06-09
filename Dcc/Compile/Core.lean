@@ -115,6 +115,7 @@ TODO: better logic for detecting duplication. Maybe some kind of user marker.
 
 def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) (reduce : Expr → Expr := Expr.reduce_all) : Lean.MacroM _root_.Expr := do
   match e with
+  | .app (.app (.const ``Shared.deref _us) _α) (.app (.app (.const ``Shared.share _us₁) _α₁) x) => abstract' x ctx infer reduce
   | .app (.app (.const ``Shared.deref _us) _α) x => abstract' x ctx infer reduce
   | .app (.app (.const ``Shared.share _us) _α) (.sort .zero) => return DCC (`(ctx, &(Sort 0)))
   | .app (.const ``Shared _us) (.sort .zero) => return DCC (`(ctx, !(Sort 0)))
@@ -225,7 +226,6 @@ def cc (root : Lean.Expr) (infer : ParamInfer) (reduce : Expr → Expr) : Lean.M
     let x' ← cc x infer reduce
     return (DCC (f' &(∗) &(x')))
   | (.lam _a (.app (.const ``Shared _us) α) bdy _binfo) => do
-    dbg_trace "a"
     let f' ← abstract' (.lam _a (.app (.const ``Shared _us) α) bdy _binfo) Ctx.empty infer reduce
     return (DCC (f' &(∗)))
   | (.forallE _a (.app (.const ``Shared _us) α) bdy _binfo) => do
@@ -242,11 +242,15 @@ def cc (root : Lean.Expr) (infer : ParamInfer) (reduce : Expr → Expr) : Lean.M
   | .app M N => do
     let M' ← cc M infer reduce
     let N' ← cc N infer reduce
-    match infer.snd M' with
-    | .some ⟨DCC (Π(_f_α, _f_β) !(_b)), _h⟩ =>
+    match infer.snd M', N' with
+    | .some ⟨DCC (Π(_f_α, _f_β) !(_b)), _h⟩, _n =>
       return (DCC (M' &(N')))
-    | _ =>
+    | _, (DCC &(_n)) =>
       -- match infer M' to see if we need to wrap &(
+      return (DCC (M' N'))
+    | .some ⟨DCC (Π(!<_f>, _f_β) _b), _h⟩, _n =>
+      return (DCC (M' &(N')))
+    | τ, _ =>
       return (DCC (M' N'))
     /-match M' with
     | DCC (f &(x)) => return (DCC (f &(x) &(N')))
@@ -374,6 +378,7 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
 
 def wrap_share_auto_trans (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
   match e with
+  | .app (.app (.const ``Shared.deref _lvs) _α) _x => return e
   | .app (.app (.const ``Shared.share _lvs) _α) _x => return e
   | .proj a b strt => return .proj a b (← wrap_share_auto_trans strt)
   | .letE a ty val bdy b =>
@@ -405,6 +410,17 @@ def wrap_share_auto_trans (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
   | .app M N => do
     let M' ← wrap_share_auto_trans M
     let N' ← wrap_share_auto_trans N
+    match M', N' with
+    | .lam _ α _ _, (.app (.app (.const ``Shared.share _u) _α) x) =>
+      return .app M' N'
+    | .lam _ α _ _, N' =>
+      let ⟨lvl, n_shared, α⟩ := n_times_shared α
+      match lvl with
+      | .some lv =>
+        let N'' := share_n_times n_shared lv α N'
+        return .app M' N''
+      | _ => return .app M' N'
+    | _, _ =>
     -- try infertype on M' to smartly fetch whether we need to share
     return .app M' N'
   | e => return e

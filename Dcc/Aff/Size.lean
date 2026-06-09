@@ -17,7 +17,7 @@ namespace Expr
   | DCC Σ(α, β) => α.size + β.size + 2
   | DCC `(_β, x) => x.size + 2
   | DCC ⟦_β⟧(x, y) => x.size + y.size
-  | DCC Coup(β) => β.size
+  | DCC Coup(β) => β.size + 1
   | DCC Id(_α)      => 2
   | DCC Fstc(_α)    => 2
   | DCC Sndc(_α)    => 2

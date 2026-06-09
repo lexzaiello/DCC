@@ -54,7 +54,7 @@ inductive Judge₂ : Expr → Expr → Prop where
     → Comp₂.g.type α β m τ_g
     → Judge₂ f (comp₂.f.type β f_γ n)
     → Reduces₂ (DCC (f_γ Coup(β))) γ
-    → Reduces₂ (comp.type α γ g m) τ
+    → Reduces₂ (comp₂.type α γ g m) τ
     → Judge₂ (DCC (f ∘∘ g)) τ
   | comp'  : Judge₂ g (DCC (Π(Id(Sort m), f_β₀) α))
     → Reduces₂ (DCC (f_β₀ α)) (DCC (`(α, β)))
@@ -73,8 +73,8 @@ inductive Judge₂ : Expr → Expr → Prop where
     → Reduces₂ β β'
     → Reduces₂ (fstc.type α β' m n) τ
     → Judge₂ (DCC Fstc(β)) τ
-  | sndc    : Judge₂ β (DCC (Π(Id(Sort m), f_β) α))
-    → Reduces₂ (DCC (f_β α)) (DCC `(α, Sort n))
+  | sndc    : Judge₂ β τ_β
+    → Arrow α (DCC Sort n) m τ_β
     → Reduces₂ β β'
     → Reduces₂ (sndc.type β' m n) τ
     → Judge₂ (DCC Sndc(β)) τ
@@ -161,7 +161,8 @@ inductive Judge₂ : Expr → Expr → Prop where
   | bot    : Judge₂ (DCC ⊥) Bot.type
   | tintro : Judge₂ (DCC ∗) Tintro.type
   | bang   : Judge₂ τ (DCC Sort m) → Judge₂ (DCC !(τ)) (DCC Sort m)
-  | box    : Judge₂ x τ  → Judge₂ (DCC &(x)) (DCC !(τ))
+  | box    : Judge₂ x τ
+    → Judge₂ (DCC &(x)) (DCC !(τ))
   | unbox  : Judge₂ α (DCC Sort m)
     → Reduces₂ (DCC (!(α) : Sort m) → α) τ
     → Judge₂ (DCC *(α)) τ
@@ -320,12 +321,10 @@ def infer₂ (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge₂ e t)) :=
     | _ => .none
   | DCC Sndc(β) =>
     match (infer₂ β) with
-    | .some ⟨DCC (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩ =>
-      match heq : (DCC (f_β α)).reduce_all₂ with
-      | DCC `(α₂, Sort n) =>
-        if heq₂ : α₂ = α then
-          .some ⟨_, ⟨.sndc ht₁ (reduce₂_reduces (heq₂ ▸ heq)) (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
-        else .none
+    | .some ⟨τ_β, ⟨ht₁⟩⟩ =>
+      match τ_β.read_arrow with
+      | .some ⟨α, DCC Sort n, m, harr⟩ =>
+        .some ⟨_, ⟨.sndc ht₁ harr (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
       | _ => .none
     | _ => .none
   | DCC Λ(α, β, x) =>

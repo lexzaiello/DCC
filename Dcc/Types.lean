@@ -14,6 +14,8 @@ macro_rules
 inductive Arrow : Expr → Expr → Level → Expr → Type
   | simple : Arrow α β m (DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α))
   | dep    : Arrow α β m (DCC ((α : Sort m) → β))
+  | eval   : Arrow α β m (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘∘ _g)) α))
+  | eval'  : Arrow α β m (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α))
 
 @[dcc_judge, inline]
 def read_arrow (τ : Expr) : Option ((α β : Expr) × (m : Level) × (Arrow α β m τ)) :=
@@ -25,6 +27,14 @@ def read_arrow (τ : Expr) : Option ((α β : Expr) × (m : Level) × (Arrow α 
   | (DCC (Π(Id(Sort m), `(_a, `(_b, β))) α)) =>
     if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α)) then
       .some ⟨α, β, m, by rw [← heq, heq₁]; exact .simple⟩
+    else .none
+  | (DCC (Π(Id(Sort m), `(_m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘∘ _g)) α)) =>
+    if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘∘ _g)) α)) then
+      .some ⟨α, β, m, by rw [← heq, heq₁]; exact .eval⟩
+    else .none
+  | (DCC (Π(Id(Sort m), `(_m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α)) =>
+    if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α)) then
+      .some ⟨α, β, m, by rw [← heq, heq₁]; exact .eval'⟩
     else .none
   | _ => .none
 
@@ -38,6 +48,14 @@ def read_arrow₁ (τ α : Expr) : Option ((β : Expr) × (m : Level) × (Arrow 
   | (DCC (Π(Id(Sort m), `(_a, `(_b, β))) _d)) =>
     if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α)) then
       .some ⟨β, m, by rw [← heq, heq₁]; exact .simple⟩
+    else .none
+  | (DCC (Π(Id(Sort m), `(_m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘∘ _g)) _α)) =>
+    if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘∘ _g)) α)) then
+      .some ⟨β, m, by rw [← heq, heq₁]; exact .eval⟩
+    else .none
+  | (DCC (Π(Id(Sort m), `(_m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) _α)) =>
+    if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α)) then
+      .some ⟨β, m, by rw [← heq, heq₁]; exact .eval'⟩
     else .none
   | _ => .none
 
@@ -57,11 +75,21 @@ def view_arrow (τ α β : Expr) (m : Level) : Option (Arrow α β m τ) :=
     if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, `(α, β))) α)) then
       .some <| by rw [← heq, heq₁]; exact .simple
     else .none
+  | (DCC (Π(_m₁, `(_m, Eval(_a, _b, `(τ_x, `(τ_y, _β))) ∘∘ _g)) _α)) =>
+    if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘∘ _g)) α)) then
+      .some (by rw [← heq, heq₁]; exact .eval)
+    else .none
+  | (DCC (Π(_m₁, `(_m, Eval(_a, _b, `(τ_x, `(τ_y, _β))) ∘' _g)) _α)) =>
+    if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α)) then
+      .some (by rw [← heq, heq₁]; exact .eval')
+    else .none
   | _ => .none
 
+-- (Π(Id(Sort 0), `(Sort 0, Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 1))))) ⊤)
 inductive Pi.f_β.type (f_α δ : Expr) (o : Level) : Level → Expr → Type
   | canon : Pi.f_β.type f_α δ o n
     (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, `(Coup(f_α), Sort n))))) δ))
+  | semi  : Pi.f_β.type f_α δ o n (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, `(δ, `(f_α₂, Sort n))))) δ))
   | arrow : Pi.f_β.type f_α δ o n
     (DCC (Π(Id(Sort o), `(Sort o, `(δ, (Π(Id(Sort m), `(Sort m, `(α, Sort n))) α)))) δ))
 
@@ -75,6 +103,10 @@ def view_pi_f_β (τ f_α δ : Expr) (o : Level) : Option ((n : Level) × (Pi.f_
   | (DCC (Π(_a, `(_b, `(_c, (Π(Id(Sort m), `(_d, `(_e, Sort n))) α)))) _f)) =>
     if heq₂ : τ = (DCC (Π(Id(Sort o), `(Sort o, `(δ, (Π(Id(Sort m), `(Sort m, `(α, Sort n))) α)))) δ)) then
       .some ⟨n, by rw [← heq₁, heq₂]; exact .arrow (f_α := f_α) (δ := δ) (o := o) (n := n)⟩
+    else .none
+  | (DCC (Π(_a, `(_b, Π(_c, `(_d, `(f_α₂, Sort n))))) _e)) =>
+    if heq₂ : τ = (DCC (Π(Id(Sort o), `(Sort o, Π(f_α, `(δ, `(f_α₂, Sort n))))) δ)) then
+      .some ⟨n, by rw [← heq₁, heq₂]; exact .semi⟩
     else .none
   | _ => .none
 
@@ -250,6 +282,9 @@ theorem Comp₂.g.type.complete (h : Comp₂.g.type α β m τ) : τ.read_comp�
 
 @[dcc_judge] abbrev comp.type (α γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) !(α))
+
+@[dcc_judge] abbrev comp₂.type (α γ g : Expr) (m : Level) : Expr :=
+  DCC (Π(Id(Sort m), `(Sort m, γ ∘∘ g)) !(α))
 
 @[dcc_judge] abbrev eql.type (f_α δ : Expr) (o : Level) : Expr :=
   (DCC (Π(Id(Sort o),

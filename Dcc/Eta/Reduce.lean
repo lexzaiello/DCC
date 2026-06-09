@@ -260,6 +260,41 @@ inductive EtaMap : (dom : EtaExpr) → (out : EtaExpr) → (hole_arg : EtaExpr) 
   | fstc  : EtaMap dom (DCCη hole(a)) (DCCη ⟦β⟧(hole(a), hole(a + 1))) (DCCη Fstc(β))
   | sndc  : EtaMap dom (DCCη hole(a + 1)) (DCCη ⟦β⟧(hole(a), hole(a + 1))) (DCCη Sndc(β))
 
+/-
+hole(a) hole(a + 1)
+
+⟦β⟧(hole(a), hole(a + 1))
+
+This is canonically Eval id
+
+but does it require pair?
+
+
+pair is superfluous
+
+there is some canonical eta reduction for eval.
+for one thing, self application is invalid.
+so hole(1) hole(1)
+is not valid.
+
+From curien's paper
+
+App ∘ ⟨x ∘ Λ, z⟩
+
+If ⟦β⟧(hole(1), hole(2))
+
+reduces to hole(2) !(⊤). this eta-reduction absolutely works.
+the order is just kinda wacky.
+
+no this is fine. because our sorts are wrapped in quotation for the environment.
+absolutely do the eta rule.
+
+but the order is swapped. why did that happen?
+
+can we change the type of ∘∘?
+probably not.
+-/
+
 def map_eta (dom : EtaExpr) (out : EtaExpr) (hole_arg : EtaExpr) : Option ((f' : EtaExpr) × PLift (EtaMap dom out hole_arg f')) :=
   if heq : out = hole_arg then
     heq ▸ .some ⟨_, ⟨.id⟩⟩
@@ -1124,13 +1159,24 @@ instance : Decidable (∃ (β : Expr), f = (DCC Coup(β))) := by
       intro ⟨_, heq⟩
       simp_all))
 
+instance : Decidable (∃ (α : Expr), e = (DCC Id(α))) := by
+  cases e
+  case id =>
+    exact .isTrue (by aesop)
+  any_goals (
+    exact .isFalse (by
+      intro ⟨_, heq⟩
+      simp_all))
+
 inductive RedEta?? : (e : Expr) → (e' : Expr) → Prop
   | pi₁  : RedEta?? f_α f_α'
     → ToEtaExpr f_α f_α₁
     → Domain f_α₁ δ
     → ToExpr δ δ'
     → RedEta?? env env'
-    → RedEta?? (DCC (f_β env)) f_β'
+    → Relation.ReflTransGen RedAff (DCC (f_β env)) f_β_env
+    → IsNorm RedAff f_β_env
+    → RedEta?? f_β_env f_β'
     → (f_β' ≠ (DCC (f_β env)))
     → RedEta?? (DCC (Π(f_α, f_β) env)) (DCC (Π(f_α', `(δ', f_β')) env'))
   | coup  : RedEta?? β β' → RedEta?? (DCC Coup(β)) (DCC Coup(β'))
@@ -1139,7 +1185,9 @@ inductive RedEta?? : (e : Expr) → (e' : Expr) → Prop
     → Domain f_α₁ δ
     → ToExpr δ δ'
     → RedEta?? env env'
-    → RedEta?? (DCC (f_β env)) f_β'
+    → Relation.ReflTransGen RedAff (DCC (f_β env)) f_β_env
+    → IsNorm RedAff f_β_env
+    → RedEta?? f_β_env f_β'
     → (f_β' = (DCC (f_β env)))
     → RedEta?? (DCC (Π(f_α, f_β) env)) (DCC (Π(f_α', f_β) env'))
   | pi₂  : RedEta?? f_α f_α'
@@ -1173,12 +1221,23 @@ def red_eta?? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta?? e e'))) :=
       | .some ⟨δ, ⟨h₂⟩⟩ =>
         match δ.to_expr with
         | .some ⟨δ', ⟨h₃⟩⟩ =>
-          match env.red_eta??, f_α.red_eta??, (DCC (f_β env)).red_eta?? with
+          have h_dec₁ : env.size < (DCC (Π(f_α, f_β) env)).size := by
+            grind
+          have h_dec₂ : f_α.size < (DCC (Π(f_α, f_β) env)).size := by
+            grind
+          have h_dec₂ : (DCC (f_α env)).size < (DCC (Π(f_α, f_β) env)).size := by
+            grind
+          have h_dec₃ : (reduce RedAff (DCC (f_β env))).fst.size < (DCC (Π(f_α, f_β) env)).size := by
+            have h := (reduce RedAff (DCC (f_β env))).snd.down
+            have h_le : (reduce RedAff (DCC (f_β env))).fst.size ≤ (DCC (f_β env)).size :=
+              red_aff_decreasing? h
+            grind
+          match env.red_eta??, f_α.red_eta??, (reduce RedAff (DCC (f_β env))).fst.red_eta?? with
           | .some ⟨_, ⟨h₄⟩⟩, .some ⟨f_α', ⟨h₅⟩⟩, .some ⟨f_β', ⟨h₆⟩⟩ =>
             if heq : f_β' = (DCC (f_β env)) then
-              .some ⟨_, ⟨.pi₁' h₅ h₁ h₂ h₃ h₄ h₆ heq⟩⟩
+              .some ⟨_, ⟨.pi₁' h₅ h₁ h₂ h₃ h₄ (reduce_sound rfl) (reduce_norm rfl) h₆ heq⟩⟩
             else
-              .some ⟨_, ⟨.pi₁ h₅ h₁ h₂ h₃ h₄ h₆ heq⟩⟩
+              .some ⟨_, ⟨.pi₁ h₅ h₁ h₂ h₃ h₄ (reduce_sound rfl) (reduce_norm rfl) h₆ heq⟩⟩
           | _, _, _ => .none
         | _ => .none
       | _ => .none
@@ -1186,6 +1245,10 @@ def red_eta?? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta?? e e'))) :=
     if heq₂ : ∃ f_α f_β, e = (DCC Π(f_α, f_β)) then
       match e with
       | (DCC Π(f_α, f_β)) =>
+        have h_dec₁ : f_α.size < (DCC Π(f_α, f_β)).size := by
+          grind
+        have h_dec₂ : f_β.size < (DCC Π(f_α, f_β)).size := by
+          grind
         match f_α.red_eta??, f_β.red_eta?? with
         | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.pi₂ h₁ h₂⟩⟩
         | _, _ => .none
@@ -1194,6 +1257,8 @@ def red_eta?? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta?? e e'))) :=
         if heq₂'' : ∃ β, e = (DCC Coup(β)) then
           match e with
           | (DCC Coup(β)) =>
+            have h_dec : β.size < (DCC Coup(β)).size := by
+              grind
             match β.red_eta?? with
             | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.coup h⟩⟩
             | _ => .none
@@ -1209,6 +1274,10 @@ def red_eta?? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta?? e e'))) :=
       else
         match e with
         | (DCC (Π(f_α, f_β) ∘' g)) =>
+          have h_dec₁ : (DCC (f_α ∘' g)).size < (DCC Π(f_α, f_β) ∘' g).size := by
+            grind
+          have h_dec₂ : (DCC (f_β ∘' g)).size < (DCC Π(f_α, f_β) ∘' g).size := by
+            grind
           match (DCC (f_α ∘' g)).red_eta??, (DCC (f_β ∘' g)).red_eta?? with
           | .some ⟨f_α', ⟨h₁⟩⟩, .some ⟨f_β', ⟨h₂⟩⟩ =>
             if heq₃ : f_α' ≠ (DCC (f_α ∘' g)) then
@@ -1218,35 +1287,44 @@ def red_eta?? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta?? e e'))) :=
             else .none
           | _, _ => .none
         | _ => .none
+termination_by e.size
 
 @[aesop safe forward (rule_sets := [DccReduce])]
 theorem RedEta??.complete (h : RedEta?? e e') : e.red_eta?? = .some ⟨e', ⟨h⟩⟩ := by
   induction h
   case pi₁ =>
-    rename_i f_α f_α' f_α₁ δ δ' env env' f_β f_β' h₁ to_eta_expr h_domain h_to_expr h₃ h₄ hneq heq₁ heq₂ heq₃
+    rename_i f_α f_α' f_α₁ δ δ' env env' f_β f_β_env f_β' h₁ to_eta_expr h_domain h_to_expr h₃ hrenv hnenv h₄ hneq heq₁ heq₂ heq₃
     have heq₄ := to_eta_expr.complete
     have heq₅ := h_domain.complete
     have heq₆ : f_α.to_eta_expr.fst = f_α₁ := by
       simp_all
     have heq₇ := h_to_expr.complete
+    have heq₈ := reduce_complete hrenv hnenv
+    have heq₉ : (reduce RedAff (DCC (f_β env))).fst = f_β_env := by
+      simp_all
     unfold red_eta??
     simp
-    simp [heq₁, heq₂, heq₃]
+    simp [heq₁, heq₂]
     cases heq₆
     simp [heq₅]
+    cases heq₉
     simp_all
   case pi₁' =>
-    rename_i f_α f_α' f_α₁ δ δ' env env' f_β f_β' h₁ to_eta_expr h_domain h_to_expr h₃ h₄ hneq heq₁ heq₂ heq₃
+    rename_i f_α f_α' f_α₁ δ δ' env env' f_β f_β_env f_β' h₁ to_eta_expr h_domain h_to_expr h₃ hrenv hnenv  h₄ hneq heq₁ heq₂ heq₃
     have heq₄ := to_eta_expr.complete
     have heq₅ := h_domain.complete
     have heq₆ : f_α.to_eta_expr.fst = f_α₁ := by
       simp_all
     have heq₇ := h_to_expr.complete
+    have heq₈ := reduce_complete hrenv hnenv
+    have heq₉ : (reduce RedAff (DCC (f_β env))).fst = f_β_env := by
+      simp_all
     unfold red_eta??
     simp
-    simp [heq₁, heq₂, heq₃]
+    simp [heq₁, heq₂]
     cases heq₆
     simp [heq₅]
+    cases heq₉
     simp_all
   case pi₂ =>
     rename_i f_α f_α' f_β f_β' h₁ h₂ heq₁ heq₂

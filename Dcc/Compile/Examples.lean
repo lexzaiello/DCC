@@ -29,9 +29,16 @@ def K_example' : Option Expr :=
 
 #eval Std.format <| K_example
 
+#eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} (fun (x : Sort 0) => x)
+
 #eval Std.format <| (DCC (!<Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))> &(⟦`(⊤, Sort 1)⟧(∗, Sort 0)))).reduce_all₂
 
+#eval Std.format <| (DCC (Sndc(`(⊤, Sort 1)) (⟦`(⊤, Sort 1)⟧(∗, Sort 0)))).reduce_all₂
+
 #eval Std.format <| K_example₂
+
+#eval Std.format <| (DCC (Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))) ⟦`(⊤, Sort 1)⟧(∗, Sort 0))).reduce_all₂
+#eval (DCC (Sndc(`(⊤, Sort 1)) ⟦`(⊤, Sort 1)⟧(∗, Sort 0))).reduce_all₂
 
 /-
 Λ(Coup((Sndc(`(⊤, Sort 1)) ∘'

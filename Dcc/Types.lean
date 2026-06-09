@@ -214,7 +214,7 @@ f ∘ g : ∀ (x : α), γ ∘ g
 
 inductive Comp₂.g.type : Expr → Expr → Level → Expr → Type
   | dep    : Comp₂.g.type α β m (comp₂.g.type α β m)
-  | simple : Comp₂.g.type α β m (DCC (Π(Id(Sort m), `(Sort m, Σ(`(α, α), `(α, `(α, β))) ∘' *(α))) !(α)))
+  | simple : Comp₂.g.type α β m (DCC (Π(Id(Sort m), `(Sort m, Σ(`(α, α), `(α, β)) ∘' *(α))) !(α)))
 
 def read_comp₂_g_type (τ : Expr) : Option ((α β : Expr) × (m : Level) × (Comp₂.g.type α β m τ)) :=
   match τ with
@@ -224,8 +224,8 @@ def read_comp₂_g_type (τ : Expr) : Option ((α β : Expr) × (m : Level) × (
         cases heq
         exact .dep )⟩
     else .none
-  | (DCC (Π(Id(Sort m), `(_a, Σ(_b, `(_c, `(_d, β))) ∘' _e)) !(α))) =>
-    if heq : (DCC (Π(Id(Sort m), `(_a, Σ(_b, `(_c, `(_d, β))) ∘' _e)) !(α))) = (DCC (Π(Id(Sort m), `(Sort m, Σ(`(α, α), `(α, `(α, β))) ∘' *(α))) !(α))) then
+  | (DCC (Π(Id(Sort m), `(_a, Σ(_b, `(_c, β)) ∘' _e)) !(α))) =>
+    if heq : (DCC (Π(Id(Sort m), `(_a, Σ(_b, `(_c, β)) ∘' _e)) !(α))) = (DCC (Π(Id(Sort m), `(Sort m, Σ(`(α, α), `(α, β)) ∘' *(α))) !(α))) then
       .some ⟨α, β, m, (by
         cases heq
         exact .simple )⟩
@@ -241,6 +241,12 @@ theorem Comp₂.g.type.complete (h : Comp₂.g.type α β m τ) : τ.read_comp�
 
 @[dcc_judge] abbrev comp₂.f.type (β f_γ : Expr) (n : Level) :=
   (DCC (Π(Id(Sort n), f_γ) Coup(β)))
+
+/-
+(Π(Id(Sort 1),
+   `(Sort 1, Eval(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0), `(Coup(`(⊤, Sort 0)), `(Sort 0, Sort 0)))))
+   Coup(`(Coup(`(⊤, Sort 0)), Sort 0)))
+-/
 
 @[dcc_judge] abbrev comp.type (α γ g : Expr) (m : Level) : Expr :=
   DCC (Π(Id(Sort m), `(Sort m, γ ∘ g)) !(α))

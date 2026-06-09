@@ -214,17 +214,12 @@ def infer₂ (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge₂ e t)) :=
       else .none
     | _ => .none
   | DCC (f ∘∘ g) =>
-    dbg_trace "a"
-    dbg_trace Sigma.fst <$> infer₂ g
     match infer₂ g with
     | .some ⟨τ_g, ⟨ht₁⟩⟩ =>
       match τ_g.read_comp₂_g_type with
       | .some ⟨α, β, m, hg⟩ =>
-        dbg_trace "a"
-        dbg_trace "b"
         match infer₂ f with
         | .some ⟨(DCC (Π(Id(Sort n), f_γ) _a)), ⟨ht₂⟩⟩ =>
-          dbg_trace "c"
           if heq₂ : (DCC (Π(Id(Sort n), f_γ) _a)) = comp₂.f.type β f_γ n then
             .some ⟨_, ⟨.comp₂ ht₁ hg (heq₂ ▸ ht₂) (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
           else .none

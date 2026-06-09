@@ -166,6 +166,7 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
       dbg_trace s!"red: {reduce (f_β.app x_α)}"
       match reduce (f_β.app x_α) with
       | DCC Π(β, _γ) =>
+        dbg_trace s!"red: {Std.format (DCC Λ(α, `(α, α), N' ∘' Fstc(`(α, α))))}"
         match (·.fst) <$> infer.snd (DCC Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))) with
         | .some (DCC (Π(_f_α, f_β₀) x_α₀)) =>
           match reduce (DCC (f_β₀ x_α₀)) with
@@ -177,8 +178,9 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
           | _ => Lean.Macro.throwError ("app is not well-typed:"
             ++ Std.Format.line ++ (.nestD (Std.format (Lean.Expr.app M N)))
             ++ ("couldn't detect codomain:" ++ Std.Format.line ++ (.nestD (Std.format (reduce (DCC (f_β₀ x_α₀))))))).pretty
-        | _ => Lean.Macro.throwError ("app is not well-typed [1]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N))).pretty
-      | _ => Lean.Macro.throwError ("app is not well-typed [2]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N))).pretty
+        | τ => Lean.Macro.throwError ("app is not well-typed [1]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ)).pretty
+      | τ => Lean.Macro.throwError ("app is not well-typed [2]:" ++ Std.Format.line ++
+        (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ)).pretty
     | x => Lean.Macro.throwError ("app is not well-typed [3]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "in: " ++ (Std.format (DCC (M' N'))) ++ Std.Format.line ++ "found: " ++ Std.format x).pretty
   | .const ``True.intro [] => return DCC (`(ctx, ∗))
   | .const ``True [] => return DCC (`(ctx, Ctx.empty))
@@ -405,10 +407,10 @@ macro_rules
                                       Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
                                         (Sndc(`(⊤, Sort 0)) ∘' Fstc(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))))))⟩)).infer₂'
 
-#eval Std.format <| dcc_compile' {Expr.infer₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
-#eval Std.format <| dcc_infer' {Expr.infer₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
-#eval Std.format <| dcc_infer' {Expr.infer₂} ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
-#eval Std.format <| dcc_compile' {Expr.infer₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
+#eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
+#eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
+#eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce₂} ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
+#eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
 #eval Std.format <| (DCC (Π(Id(Sort (max 1 2)), `(Sort (max 1 2), Id(Sort 1) ∘' Fstc(`(Sort 1, Sort 1)))) Coup(`(Sort 1, Sort 1)))).reduce_all
 #eval Std.format <| (DCC Sndc(`(⊤, Sort 2))).infer₂'
 #eval Std.format <| (DCC (Π(Id(Sort 3), `(Sort 3, (`(⊤, Sort 2) ∘' Fstc(`(⊤, Sort 2))))) Coup(`(⊤, Sort 2)))).reduce_all
@@ -425,9 +427,15 @@ macro_rules
                                              `(Coup(Sndc(`(⊤, Sort 2))), Coup(Sndc(`(⊤, Sort 2)))),
                                              (Sndc(Sndc(`(⊤, Sort 2))) ∘'
                                                 Fstc(`(Coup(Sndc(`(⊤, Sort 2))), Coup(Sndc(`(⊤, Sort 2)))))))⟩).infer₂'
-#eval Std.format <| dcc_infer' {Expr.infer₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
+#eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))).infer₂
-#eval Std.format <| dcc_compile' {Expr.infer₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun (x : Sort 0) => x) True.intro)
+-- Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))
+#eval Std.format <| (DCC (`(Sort 1,
+     `(Coup(`(Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))), Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))))),
+       Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))))) (Coup(`(Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))), Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0))))))))).reduce_all₂
+#eval Expr.toFormat (pretty := true) <$> (DCC Fstc(`(Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))), Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0))))))).infer₂'
+#eval Std.format <| (DCC `(Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))), !(⊤))).infer₂'
+#eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun (x : Sort 0) => x) True.intro)
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))).infer₂
 #eval Std.format <| (DCC Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))).reduce_all₂
 

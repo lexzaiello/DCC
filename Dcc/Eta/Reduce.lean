@@ -1100,6 +1100,21 @@ instance : Decidable (∃ (f_α : Expr) (f_β : Expr) (env : Expr), f = (f_α.pi
       intro ⟨_, _, heq⟩
       simp_all))
 
+instance : Decidable (∃ (g : Expr) (f_α : Expr) (f_β : Expr), f = (f_α.pi f_β).comp' g) := by
+  cases f
+  case comp' f g =>
+    cases f
+    case pi =>
+      exact .isTrue (by aesop)
+    any_goals (
+      exact .isFalse (by
+        intro ⟨_, _, heq⟩
+        simp_all))
+  any_goals (
+    exact .isFalse (by
+      intro ⟨_, _, heq⟩
+      simp_all))
+
 inductive RedEta?? : (e : Expr) → (e' : Expr) → Prop
   | pi₁  : RedEta?? f_α f_α'
     → ToEtaExpr f_α f_α₁
@@ -1120,11 +1135,18 @@ inductive RedEta?? : (e : Expr) → (e' : Expr) → Prop
   | pi₂  : RedEta?? f_α f_α'
     → RedEta?? f_β f_β'
     → RedEta?? (DCC Π(f_α, f_β)) (DCC Π(f_α', f_β'))
+  | pi₃  : RedEta?? (DCC (f_α ∘' g)) f_α'
+    → RedEta?? (DCC (f_β ∘' g)) f_β'
+    → (f_α' ≠ (DCC (f_α ∘' g)))
+    → (f_β' ≠ (DCC (f_β ∘' g)))
+    → RedEta?? (DCC (Π(f_α, f_β) ∘' g)) (DCC Π(f_α', f_β'))
   | tm₁  : (¬ ∃ f_α f_β env, e = (DCC (Π(f_α, f_β) env)))
     → (¬ ∃ f_α f_β, e = (DCC (Π(f_α, f_β))))
+    → (¬ ∃ g f_α f_β, e = (DCC (Π(f_α, f_β)) ∘' g))
     → RedEta? e e' → RedEta?? e e'
   | tm₂  : (¬ ∃ f_α f_β env, e = (DCC (Π(f_α, f_β) env)))
     → (¬ ∃ f_α f_β, e = (DCC (Π(f_α, f_β))))
+    → (¬ ∃ g f_α f_β, e = (DCC (Π(f_α, f_β)) ∘' g))
     → (¬ ∃ e', RedEta? e e')
     → Relation.ReflTransGen RedAff e e'
     → IsNorm RedAff e'
@@ -1156,13 +1178,26 @@ def red_eta?? (e : Expr) : Option ((e' : Expr) × (PLift (RedEta?? e e'))) :=
         | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.pi₂ h₁ h₂⟩⟩
         | _, _ => .none
     else
-      if heq₃ : ∃ e', RedEta? e e' then
-        match _heq₄ : e.red_eta? with
-        | .some ⟨_, ⟨h⟩⟩ =>
-          .some ⟨_, ⟨.tm₁ heq heq₂ h⟩⟩
-        | _ => .none
+      if heq₂' : ¬ (∃ g f_α f_β, e = (DCC Π(f_α, f_β) ∘' g)) then
+        if heq₃ : ∃ e', RedEta? e e' then
+          match _heq₄ : e.red_eta? with
+          | .some ⟨_, ⟨h⟩⟩ =>
+            .some ⟨_, ⟨.tm₁ heq heq₂ heq₂' h⟩⟩
+          | _ => .none
+        else
+          .some ⟨_, ⟨.tm₂ heq heq₂ heq₂' heq₃ (reduce_sound rfl) (reduce_norm rfl)⟩⟩
       else
-        .some ⟨_, ⟨.tm₂ heq heq₂ heq₃ (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+        match e with
+        | (DCC (Π(f_α, f_β) ∘' g)) =>
+          match (DCC (f_α ∘' g)).red_eta??, (DCC (f_β ∘' g)).red_eta?? with
+          | .some ⟨f_α', ⟨h₁⟩⟩, .some ⟨f_β', ⟨h₂⟩⟩ =>
+            if heq₃ : f_α' ≠ (DCC (f_α ∘' g)) then
+              if heq₄ : f_β' ≠ (DCC (f_β ∘' g)) then
+                .some ⟨_, ⟨.pi₃ h₁ h₂ heq₃ heq₄⟩⟩
+              else .none
+            else .none
+          | _, _ => .none
+        | _ => .none
 
 @[aesop safe forward (rule_sets := [DccReduce])]
 theorem RedEta??.complete (h : RedEta?? e e') : e.red_eta?? = .some ⟨e', ⟨h⟩⟩ := by
@@ -1198,17 +1233,20 @@ theorem RedEta??.complete (h : RedEta?? e e') : e.red_eta?? = .some ⟨e', ⟨h�
     unfold red_eta??
     simp
     simp [heq₁, heq₂]
-  case tm₁ e₀ e'' hn₁ hn₂ h =>
+  case tm₁ e₀ e'' hn' hn₁ hn₂ h =>
     have he : ∃ e', RedEta? e₀ e' := by
       exact ⟨_, h⟩
     have h₁ := h.complete
     unfold red_eta??
-    simp [hn₁, hn₂, he]
+    simp [hn', hn₁, hn₂, he]
     rw [h₁]
-  case tm₂ hn₁ hn₂ hn₃ hr hnorm =>
+  case tm₂ hn' hn₁ hn₂ hn₃ hr hnorm =>
     have h₁ := reduce_complete hr hnorm
     rw [red_eta??]
-    simp [hn₁, hn₂, hn₃]
+    simp [hn', hn₁, hn₂, hn₃]
+  case pi₃ hr₁ hr₂ hn₁ hn₂ heq₁ heq₂ =>
+    unfold red_eta??
+    simp [heq₁, heq₂, hn₁, hn₂]
 
 instance : Decidable (∃ e', RedEta?? e e') :=
   match heq : e.red_eta?? with

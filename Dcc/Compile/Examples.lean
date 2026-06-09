@@ -23,9 +23,14 @@ def K_example₂ : Option Expr :=
   dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 1) (β : α → Sort 1) (x : α) (_y : β x) => x) (Sort 0))
 
 def K_example₃ : Expr :=
-  dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 1) (β : α → Sort 0) (x : α) (_y : β x) => x) (Sort 0) (fun x => x))
+  dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 2) (β : α → Sort 1) (x : α) (_y : β x) => x) (Sort 1) (fun x => x) (Sort 0))
+
+def K_example₃' : Option Expr :=
+  dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 1) (β : α → Sort 0) (x : α) (_y : β x) => x) (Sort 0) (fun x => x))
 
 #eval Std.format <| K_example₃
+
+#eval Std.format <| K_example₃'
 
 def K_example' : Option Expr :=
   dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} (fun (α : Sort 1) (β : α → Sort 1) (x : α) (_y : β x) => x)

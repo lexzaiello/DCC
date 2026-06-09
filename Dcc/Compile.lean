@@ -72,6 +72,7 @@ macro_rules
 
 def Ctx := Expr
 def Ctx.empty := DCC !(⊤)
+def Ctx.empty' := DCC ⊤
 
 instance : ToString Ctx := ⟨toString ∘ Expr.toFormat⟩
 
@@ -117,6 +118,8 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
     | DCC (`(ctx, !(Sort n)))
     | DCC (`(ctx, Sort n)) => return (DCC (`(ctx, !(Sort (n + 1)))))
     | m => Lean.Macro.throwError s!"not a valid sort: {m}"
+  | .app (.const ``Shared _us) (.const ``True []) => return DCC (`(ctx, !(⊤)))
+  | .app (.app (.const ``Shared.share _us) _α) (.const ``True []) => return DCC (`(ctx, &(⊤)))
   | .app (.app (.const ``Shared.share _us) _α) (.const ``True.intro []) => return DCC (`(ctx, &(∗)))
   | .app (.const ``Shared _us) (.const ``False []) => return DCC (`(ctx, !(⊥)))
   | .bvar n => cc_var ctx n (infer := infer) (reduce := reduce)
@@ -182,8 +185,7 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
         (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ)).pretty
     | x => Lean.Macro.throwError ("app is not well-typed [3]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "in: " ++ (Std.format (DCC (M' N'))) ++ Std.Format.line ++ "found: " ++ Std.format x).pretty
   | .const ``True.intro [] => return DCC (`(ctx, ∗))
-  | .const ``True [] =>
-    return DCC (`(ctx, Ctx.empty))
+  | .const ``True [] => return DCC (`(ctx, ⊤))
   | .const ``False [] => return DCC (`(ctx, ⊥))
   | .sort .zero => return DCC (`(ctx, Sort 0))
   | .sort (.succ m) => do
@@ -236,7 +238,7 @@ def cc (root : Lean.Expr) (infer : ParamInfer) (reduce : Expr → Expr) : Lean.M
     match ← (cc (.sort m) infer reduce) with
     | DCC Sort n => pure (DCC Sort (n + 1))
     | m => Lean.Macro.throwError s!"not a valid sort: {m}"
-  | e => (·.app (DCC (&(∗)))) <$> abstract' e Ctx.empty infer reduce
+  | e => (.app (DCC (&(∗)))) <$> abstract' e Ctx.empty infer reduce
 
 def wrap_shares (n : ℕ) (u : Lean.Level) (e : Lean.Expr) : Lean.Expr :=
   match u with
@@ -342,7 +344,6 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
         | _ =>
           throwError "panic"
       catch _ =>
-        dbg_trace "hi"
         return .app M' N'
   | e => return e
 
@@ -748,9 +749,11 @@ Eval(.., ...,
                                              Fstc(`(Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))),
                                                     Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0))))))))⟩)).infer₂'
 #eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x))
+#eval Std.format <| (DCC (Λ(!(⊤), `(!(⊤), Sort 0), Sndc(`(!(⊤), Sort 0))) &(∗))).reduce_all₂
 #eval Std.format <| (DCC &((Λ(!(⊤), `(!(⊤), Sort 0), Sndc(`(!(⊤), Sort 0))) &(∗)))).infer₂'
 #eval Std.format <| (DCC (Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0))) ∗)).reduce_all₂
 #eval Std.format <| (DCC &((Λ(!(⊤), `(⊤, Sort 0), Sndc(`(⊤, Sort 0))) &(∗)))).infer₂'
+#eval Std.format <| (DCC (!<Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))> &(∗))).reduce_all₂
 #eval Std.format <| (DCC (!<Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))> &(∗))).reduce_all₂
 #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x))
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))).infer₂

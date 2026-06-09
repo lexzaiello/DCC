@@ -16,6 +16,7 @@ inductive Arrow : Expr → Expr → Level → Expr → Type
   | dep    : Arrow α β m (DCC ((α : Sort m) → β))
   | eval   : Arrow α β m (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘∘ _g)) α))
   | eval'  : Arrow α β m (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α))
+  | curr   : Arrow α β m (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, Λ(τ_x, τ_y, `(f_τ, β))) ∘∘ _g)) α))
 
 @[dcc_judge, inline]
 def read_arrow (τ : Expr) : Option ((α β : Expr) × (m : Level) × (Arrow α β m τ)) :=
@@ -35,6 +36,10 @@ def read_arrow (τ : Expr) : Option ((α β : Expr) × (m : Level) × (Arrow α 
   | (DCC (Π(Id(Sort m), `(_m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α)) =>
     if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α)) then
       .some ⟨α, β, m, by rw [← heq, heq₁]; exact .eval'⟩
+    else .none
+  | (DCC (Π(Id(Sort m), `(_m, Eval(_a, _b, Λ(τ_x, τ_y, `(f_τ, β))) ∘∘ _g)) α)) =>
+    if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, Λ(τ_x, τ_y, `(f_τ, β))) ∘∘ _g)) α)) then
+      .some ⟨α, β, m, by rw [← heq, heq₁]; exact .curr⟩
     else .none
   | _ => .none
 
@@ -56,6 +61,10 @@ def read_arrow₁ (τ α : Expr) : Option ((β : Expr) × (m : Level) × (Arrow 
   | (DCC (Π(Id(Sort m), `(_m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) _α)) =>
     if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α)) then
       .some ⟨β, m, by rw [← heq, heq₁]; exact .eval'⟩
+    else .none
+  | (DCC (Π(Id(Sort m), `(_m, Eval(_a, _b, Λ(τ_x, τ_y, `(f_τ, β))) ∘∘ _g)) _α)) =>
+    if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, Λ(τ_x, τ_y, `(f_τ, β))) ∘∘ _g)) α)) then
+      .some ⟨β, m, by rw [← heq, heq₁]; exact .curr⟩
     else .none
   | _ => .none
 
@@ -82,6 +91,11 @@ def view_arrow (τ α β : Expr) (m : Level) : Option (Arrow α β m τ) :=
   | (DCC (Π(_m₁, `(_m, Eval(_a, _b, `(τ_x, `(τ_y, _β))) ∘' _g)) _α)) =>
     if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α)) then
       .some (by rw [← heq, heq₁]; exact .eval')
+    else .none
+  | (DCC (Π(__m, `(_m, Eval(_a, _b, Λ(τ_x, τ_y, `(f_τ, _β))) ∘∘ _g)) _α)) =>
+    if heq₁ : τ = (DCC (Π(Id(Sort m), `(Sort m, Eval(_a, _b, Λ(τ_x, τ_y, `(f_τ, β))) ∘∘ _g)) α)) then by
+      rw [← heq, heq₁]
+      exact .some .curr
     else .none
   | _ => .none
 

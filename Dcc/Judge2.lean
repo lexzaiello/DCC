@@ -25,7 +25,84 @@ def reduce₂_reduces (h : reduce_all₂ A = B) : Reduces₂ A B := ⟨reduce_so
   simp [← h]
   exact reduce_eta_sound rfl⟩
 
+@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
+theorem Reduces₂.complete (h : Reduces₂ τ τ') : reduce_all₂ τ = τ' := by
+  cases h with
+  | mk hr hn hr₂ =>
+    have ha := reduce_complete hr hn
+    have hb := hr₂.complete
+    simp [reduce_all₂, reduce', red_eta'₂]
+    rw [ha, hb]
+
 #eval Std.format <| pair.β.type (DCC (Sort 30)) 10 20
+
+-- For checking arguments under apps
+inductive DefEq : Expr → Expr → Prop
+  | pi   : Reduces₂ (DCC (f_α₁ env₁)) f_α'
+    → Reduces₂ (DCC (f_α₂ env₂)) f_α'
+    → Reduces₂ (DCC (f_β₁ env₁)) f_β'
+    → Reduces₂ (DCC (f_β₂ env₂)) f_β'
+    → DefEq (DCC (Π(f_α₁, f_β₁) env₁)) (DCC (Π(f_α₂, f_β₂) env₂))
+  | bang : DefEq τ₁ τ₂ → DefEq (DCC !(τ₁)) (DCC !(τ₂))
+  | tm : ((¬ ∃ f_α f_β env, τ₁ = (DCC (Π(f_α, f_β) env)))
+    ∨ (¬ ∃ f_α f_β env, τ₂ = (DCC (Π(f_α, f_β) env))))
+    → ((¬ ∃ τ, τ₁ = (DCC !(τ))) ∨ (¬ ∃ τ, τ₂ = (DCC !(τ))))
+    → Reduces₂ τ₁ τ'
+    → Reduces₂ τ₂ τ'
+    → DefEq τ₁ τ₂
+
+instance : Decidable (∃ f_α₁ f_β₁ env₁, τ₁ = (DCC (Π(f_α₁, f_β₁) env₁))
+    ∧ ∃ f_α₂ f_β₂ env₂, τ₂ = (DCC (Π(f_α₂, f_β₂) env₂))) :=
+  if h₁ : ∃ f_α₁ f_β₁ env₁, τ₁ = (DCC (Π(f_α₁, f_β₁) env₁)) then
+    if h₂ : ∃ f_α₂ f_β₂ env₂, τ₂ = (DCC (Π(f_α₂, f_β₂) env₂)) then
+      .isTrue (by simp_all)
+    else .isFalse (fun h => by simp_all)
+  else .isFalse (fun h => by simp_all)
+
+instance : Decidable ((∃ α, τ₁ = (DCC !(α)))
+    ∧ ∃ α, τ₂ = (DCC !(α))) :=
+  if h₁ : (∃ τ, τ₁ = (DCC !(τ))) then
+    if h₂ : (∃ τ, τ₂ = (DCC !(τ))) then
+      .isTrue (by simp_all)
+    else .isFalse (fun h => by simp_all)
+  else .isFalse (fun h => by simp_all)
+
+def def_eq? (τ₁ τ₂ : Expr) : Option (PLift (DefEq τ₁ τ₂)) :=
+  if hn₁ : ((¬ ∃ f_α₁ f_β₁ env₁, τ₁ = (DCC (Π(f_α₁, f_β₁) env₁)))
+    ∨ (¬ ∃ f_α₂ f_β₂ env₂, τ₂ = (DCC (Π(f_α₂, f_β₂) env₂))))
+    ∧ ((¬ ∃ τ, τ₁ = (DCC !(τ))) ∨ (¬ ∃ τ, τ₂ = (DCC !(τ)))) then
+    if heq : τ₁.reduce_all₂ = τ₂.reduce_all₂ then
+      .some ⟨.tm (by simp_all) (by simp_all) (reduce₂_reduces rfl) (reduce₂_reduces heq.symm)⟩
+    else .none
+  else
+    match τ₁, τ₂ with
+    | (DCC (Π(f_α₁, f_β₁) env₁)), (DCC (Π(f_α₂, f_β₂) env₂)) =>
+      if heq₁ : (DCC (f_α₁ env₁)).reduce_all₂ = (DCC (f_α₂ env₂)).reduce_all₂ then
+        if heq₂ : (DCC (f_β₁ env₁)).reduce_all₂ = (DCC (f_β₂ env₂)).reduce_all₂ then
+          .some ⟨.pi (reduce₂_reduces rfl) (reduce₂_reduces heq₁.symm)
+            (reduce₂_reduces rfl)  (reduce₂_reduces heq₂.symm)⟩
+        else .none
+      else .none
+    | (DCC !(τ₁)), (DCC !(τ₂)) =>
+      match def_eq? τ₁ τ₂ with
+      | .some ⟨h⟩ => .some ⟨.bang h⟩
+      | _ => .none
+    | _, _ => .none
+
+@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
+theorem DefEq.complete (h : DefEq τ₁ τ₂) : def_eq? τ₁ τ₂ = .some ⟨h⟩ := by
+  induction h
+  · dsimp [def_eq?]
+    dcc_aesop
+  case bang h ih =>
+    dsimp [def_eq?]
+    simp [ih]
+  case tm hn₁ hn₂ hr₁ hr₂ =>
+    have ha := hr₁.complete
+    have hb := hr₂.complete
+    unfold def_eq?
+    simp only [hn₁, hn₂]
+    simp [ha, hb]
 
 inductive Judge₂ : Expr → Expr → Prop where
   | eq     : Judge₂ x α
@@ -68,8 +145,8 @@ inductive Judge₂ : Expr → Expr → Prop where
     → Reduces₂ (DCC (f_β α)) (DCC `(α, Sort n))
     → Reduces₂ (Coup.type m n) τ
     → Judge₂ (DCC Coup(β)) τ
-  | fstc   : Judge₂ β (DCC (Π(Id(Sort m), f_β) α))
-    → Reduces₂ (DCC (f_β α)) (DCC `(α, Sort n))
+  | fstc   : Judge₂ β τ_β
+    → Arrow α (DCC Sort n) m τ_β
     → Reduces₂ β β'
     → Reduces₂ (fstc.type α β' m n) τ
     → Judge₂ (DCC Fstc(β)) τ
@@ -167,8 +244,9 @@ inductive Judge₂ : Expr → Expr → Prop where
     → Reduces₂ (DCC (!(α) : Sort m) → α) τ
     → Judge₂ (DCC *(α)) τ
   | app    : Judge₂ f (DCC (Π(f_α, f_β) x_α))
-    → Reduces₂ (DCC (f_α x_α)) α
-    → Judge₂ x α
+    → Reduces₂ (DCC (f_α x_α)) α₁
+    → Judge₂ x α₂
+    → DefEq α₁ α₂
     → Reduces₂ x_α x_α'
     → Reduces₂ (DCC (f_β x_α' x)) τ
     → Judge₂ (DCC (f x)) τ
@@ -311,12 +389,10 @@ def infer₂ (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge₂ e t)) :=
     | _ => .none
   | DCC Fstc(β) =>
     match (infer₂ β) with
-    | .some ⟨DCC (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩ =>
-      match heq : (DCC (f_β α)).reduce_all₂ with
-      | DCC `(α₂, Sort n) =>
-        if heq₂ : α₂ = α then
-          .some ⟨_, ⟨.fstc ht₁ (reduce₂_reduces (heq₂ ▸ heq)) (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
-        else .none
+    | .some ⟨τ_β, ⟨ht₁⟩⟩ =>
+      match τ_β.read_arrow with
+      | .some ⟨α, DCC Sort n, m, harr⟩ =>
+        .some ⟨_, ⟨.fstc ht₁ harr (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
       | _ => .none
     | _ => .none
   | DCC Sndc(β) =>
@@ -433,10 +509,11 @@ def infer₂ (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge₂ e t)) :=
     | _ => .none
   | DCC (f x) =>
     match infer₂ f, infer₂ x with
-    | .some ⟨DCC (Π(f_α, f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
-      if heq : reduce_all₂ (DCC (f_α x_α)) = τ₂' then
-        .some ⟨_, ⟨.app ht₁ (reduce₂_reduces rfl) (by rw [heq]; exact ht₂) (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
-      else .none
+    | .some ⟨DCC (Π(f_α, _f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
+      match def_eq? (reduce_all₂ (DCC (f_α x_α))) τ₂' with
+      | .some ⟨h⟩ =>
+        .some ⟨_, ⟨.app ht₁ (reduce₂_reduces rfl) ht₂ h (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
+      | _ => .none
     | _, _ => .none
 
 abbrev infer₂' (e : Expr) : Option Expr := Sigma.fst <$> e.infer₂

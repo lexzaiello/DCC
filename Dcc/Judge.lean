@@ -88,7 +88,7 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (sndc.type β' m n) τ
     → Judge (DCC Sndc(β)) τ
   | sigma   : Judge f_α (DCC ((δ : Sort o) → Sort m))
-    → Judge f_β (Pi.f_β.type f_α δ o n)
+    → Judge f_β (Pi.f_β.type' f_α δ o n)
     → Reduces δ δ'
     → Reduces (Sigma.type δ' m n o) τ
     → Judge (DCC Σ(f_α, f_β)) τ
@@ -156,7 +156,7 @@ inductive Judge : Expr → Expr → Prop where
     Π(f_α, f_β)
   -/
   | pi     : Judge f_α (DCC ((α : Sort m) → Sort n))
-    → Judge f_β (Pi.f_β.type f_α α m o)
+    → Judge f_β (Pi.f_β.type' f_α α m o)
     → Reduces α α'
     → Reduces (Pi.type α' m o) τ
     → Judge (DCC Π(f_α, f_β)) τ
@@ -307,7 +307,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
       | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type f_α δ o n then
+        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type' f_α δ o n then
           .some ⟨_, ⟨.sigma (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
@@ -453,7 +453,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
       | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g)) = Pi.f_β.type f_α α m o then
+        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g)) = Pi.f_β.type' f_α α m o then
           .some ⟨_, ⟨.pi (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none

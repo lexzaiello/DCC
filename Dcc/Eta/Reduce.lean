@@ -1218,18 +1218,18 @@ instance : Decidable (∃ e', RedEta?? e e') :=
       have h := h.complete
       simp_all)
 
-inductive RedEta : Expr → Expr → Prop
-  | refl : (¬ ∃ e', RedEta?? e e') → RedEta e e
-  | step : RedEta?? e e' → RedEta e e'
+inductive RedEta₂ : Expr → Expr → Prop
+  | refl : (¬ ∃ e', RedEta?? e e') → RedEta₂ e e
+  | step : RedEta?? e e' → RedEta₂ e e'
 
-def red_eta (e : Expr) : ((e' : Expr) × (PLift (RedEta e e'))) :=
+def red_eta (e : Expr) : ((e' : Expr) × (PLift (RedEta₂ e e'))) :=
   match heq₂ : e.red_eta?? with
   | .some ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.step h⟩⟩
   | .none => ⟨_, ⟨.refl (fun ⟨_, h⟩ => by
     have h := h.complete
     simp_all)⟩⟩
 
-theorem RedEta.complete (h : RedEta e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
+theorem RedEta₂.complete (h : RedEta₂ e e') : e.red_eta = ⟨e', ⟨h⟩⟩ := by
   cases h
   case refl hn =>
     unfold red_eta
@@ -1255,10 +1255,10 @@ f_β' = `(δ, f_β')
 -/
 
 @[dcc_force_reduce]
-theorem reduce_eta_sound (_heq : Expr.red_eta e = ⟨e', ⟨h⟩⟩) : Expr.RedEta e e' := h
+theorem reduce_eta_sound (_heq : Expr.red_eta e = ⟨e', ⟨h⟩⟩) : Expr.RedEta₂ e e' := h
 
 @[dcc_force_reduce]
-abbrev red_eta' (e : Expr) : Expr := e.red_eta.fst
+abbrev red_eta'₂ (e : Expr) : Expr := e.red_eta.fst
 
 #eval (DCC Id(Sort 1) ∘' Id(Sort 1)).red_eta.fst
 #eval (DCC `(Sort 1, Sort 1)).red_eta.fst

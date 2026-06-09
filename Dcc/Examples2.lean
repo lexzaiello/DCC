@@ -8,19 +8,19 @@ Can quot be derived?
 `(β, x) = Λ(α, Λ(
 -/
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1) ∘' Id(Sort 1)).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1) (Sort 0))).infer
-#eval (DCC `(Sort 1, Sort 1)).infer'
-#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))).infer'
-#eval (DCC Id(Coup(Id(Sort 2)))).infer'
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1) ∘' Id(Sort 1)).infer₂
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1) (Sort 0))).infer₂
+#eval (DCC `(Sort 1, Sort 1)).infer₂'
+#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))).infer₂'
+#eval (DCC Id(Coup(Id(Sort 2)))).infer₂'
 #eval (DCC (Π(Id(Sort 1), `(Sort 1, Π(Id(Sort 1), Λ(Sort 1, Id(Sort 1), Id(Sort 2))))) Sort 1)).reduce_all
-#eval (DCC Λ(Sort 2, Id(Sort 2), Id(Coup(Id(Sort 2))))).infer'
-#eval (DCC `(Sort 1, Sort 1)).infer'
-#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))).infer'
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Σ(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 2)))(Sort 0))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘' Id(Sort 1)) (Sort 0))).infer
+#eval (DCC Λ(Sort 2, Id(Sort 2), Id(Coup(Id(Sort 2))))).infer₂'
+#eval (DCC `(Sort 1, Sort 1)).infer₂'
+#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))).infer₂'
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Σ(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 2)))(Sort 0))).infer₂
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer₂
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer₂
+#eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘' Id(Sort 1)) (Sort 0))).infer₂
 
 /-
 Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))
@@ -33,27 +33,27 @@ Pretty sure this is just because we need the top-level env rule.
 -/
 
 
-#eval Expr.infer' (DCC Id(Sort 1))
+#eval Expr.infer₂' (DCC Id(Sort 1))
 #eval (DCC (Π(Id(Sort 2), `(Sort 2, Π(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1)))))
    Sort 1)).red_eta'
-#eval Expr.infer' (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1))))
+#eval Expr.infer₂' (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1))))
 
-#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer'
+#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer₂'
 #eval (DCC (`(Sort 2, Π(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1)))) (Sort 1))).reduce_all
-#eval (DCC Id(Sort 1)).infer'
+#eval (DCC Id(Sort 1)).infer₂'
 
 #eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))).reduce_all
 
-#eval (DCC Id(Sort 1)).infer'
+#eval (DCC Id(Sort 1)).infer₂'
 #eval (DCC (`(Sort 2, `(Sort 1, Sort 1)) Sort 1)).reduce_all
-#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer'
+#eval (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer₂'
 
 
 def mk_test_pair : Expr :=
   DCC (⟦`(Sort 1, `(Sort 1, Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩
     &(Sort 0))
 
-def test_pair : Option Expr := Sigma.fst <$> mk_test_pair.infer
+def test_pair : Option Expr := Sigma.fst <$> mk_test_pair.infer₂
 
 #eval Expr.reduce_all <$> test_pair
 
@@ -66,13 +66,13 @@ Not necessary, since f and g are points.
 why does β need to receive a couple? something with duplication I recall.
 -/
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer₂
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Λ(Sort 2, Id(Sort 2), Fstc(Id(Sort 2))) (Sort 1) (Sort 0))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Λ(Sort 2, Id(Sort 2), Fstc(Id(Sort 2))) (Sort 1) (Sort 0))).infer₂
 
 def test_id_nested : Option Expr := do
-  let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer
-  Sigma.fst <$> (DCC (Id(t) Id(Sort 1) (Sort 0))).infer
+  let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer₂
+  Sigma.fst <$> (DCC (Id(t) Id(Sort 1) (Sort 0))).infer₂
 
 #eval test_id_nested
 
@@ -101,7 +101,7 @@ Coup(Σ(Λ(Sort 1, `(Sort 1, Sort 1),
 
 -/
 
---#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), ⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩⟩ (Sort 0))).infer
+--#eval (Std.format ∘ Sigma.fst) <$> (DCC (⟨Id(Sort 1), ⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Id(Coup(`(Sort 1, Sort 1))))⟩⟩ (Sort 0))).infer₂
 
 /-
 This should eta reduce
@@ -116,8 +116,8 @@ This should eta reduce
 
 -- (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)
 
-#eval (DCC Id(Sort 1)).infer'
-#eval ((· == (DCC (Π(Id(Sort 2), `(Sort 2, `(Sort 1, Sort 1))) Sort 1)))∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
+#eval (DCC Id(Sort 1)).infer₂'
+#eval ((· == (DCC (Π(Id(Sort 2), `(Sort 2, `(Sort 1, Sort 1))) Sort 1)))∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer₂
 
 /-
 (Σ(`(⊤, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))) ∗)
@@ -133,7 +133,7 @@ Coup(`((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), So
 (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1)
 -/
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer₂
 
 /-
 (Π(Id(Sort 2), `(Sort 2, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1))) Sort 1)
@@ -152,7 +152,7 @@ f_β := Λ(Sort 1, `(Sort 1, Sort 1),
          (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))
 -/
 
-#eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer
+#eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer₂
 
 #eval (DCC (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)).reduce_all
 
@@ -172,14 +172,14 @@ fn type:
 Id(Sort 1)
 -/
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer
-#eval (DCC Id(Sort 1)).infer'
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1)).infer₂
+#eval (DCC Id(Sort 1)).infer₂'
 
 #eval (DCC ((Sort 1 : Sort 2) → ((Sort 3 : Sort 4) → Sort 5))).reduce_all
 
-#eval (DCC Id(Sort 2)).infer'
-#eval (DCC refl(Id(Sort 2))).infer'
-#eval (DCC (refl(Id(Sort 2)) &(Sort 1) &(Sort 0))).infer'
-#eval (DCC (refl(Id(Sort 2)))).infer'
+#eval (DCC Id(Sort 2)).infer₂'
+#eval (DCC refl(Id(Sort 2))).infer₂'
+#eval (DCC (refl(Id(Sort 2)) &(Sort 1) &(Sort 0))).infer₂'
+#eval (DCC (refl(Id(Sort 2)))).infer₂'
 
 

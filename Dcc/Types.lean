@@ -82,6 +82,9 @@ def view_pi_f_β (τ f_α δ : Expr) (o : Level) : Option ((n : Level) × (Pi.f_
 theorem Pi.f_β.type.complete (h : Pi.f_β.type f_α δ o n τ) : view_pi_f_β τ f_α δ o = .some ⟨n, h⟩ := by
   cases h <;> simp [view_pi_f_β]
 
+@[dcc_judge] abbrev Pi.f_β.type' (f_α α : Expr) (m o : Level) :=
+  (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(α, f_α, `(Coup(f_α), Sort o))))) α))
+
 @[dcc_judge]
 theorem Arrow.view_complete (h : Arrow α β m τ) : τ.view_arrow α β m = .some h := by
   cases h <;> simp [view_arrow]

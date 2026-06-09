@@ -238,7 +238,32 @@ def cc (root : Lean.Expr) (infer : ParamInfer) (reduce : Expr → Expr) : Lean.M
     match ← (cc (.sort m) infer reduce) with
     | DCC Sort n => pure (DCC Sort (n + 1))
     | m => Lean.Macro.throwError s!"not a valid sort: {m}"
-  | e => (.app (DCC (&(∗)))) <$> abstract' e Ctx.empty infer reduce
+  | (.lam _a (.app (.const ``Shared _us) α) bdy _binfo) => do
+    let f' ← abstract' (.lam _a (.app (.const ``Shared _us) α) bdy _binfo) Ctx.empty infer reduce
+    return (DCC (f' &(∗)))
+  | (.forallE _a (.app (.const ``Shared _us) α) bdy _binfo) => do
+    let f' ← abstract' (.forallE _a (.app (.const ``Shared _us) α) bdy _binfo) Ctx.empty infer reduce
+    return (DCC (f' &(∗)))
+  | (.lam _a α bdy _binfo) => do
+    let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty' infer reduce
+    return (DCC (f' ∗))
+  | (.forallE _a α bdy _binfo) => do
+    let f' ← abstract' (.forallE _a α bdy _binfo) Ctx.empty' infer reduce
+    return (DCC (f' ∗))
+  /-| .app (.forallE _a α bdy _binfo) (.app (.app (.const ``Shared.share _us) _α) x) => do
+    let f' ← abstract' (.forallE _a α bdy _binfo) Ctx.empty infer reduce
+    let x' ← cc x infer reduce
+    return (DCC (f' &(∗) &(x')))
+  | .app (.lam _a α bdy _binfo) x => do
+    let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty infer reduce
+    let x' ← cc x infer reduce
+    return (DCC (f' &(∗) x'))
+  | .app (.forallE _a α bdy _binfo) x => do
+    let f' ← abstract' (.forallE _a α bdy _binfo) Ctx.empty infer reduce
+    let x' ← cc x infer reduce
+    return (DCC (f' &(∗) x'))-/
+  
+  | e => (·.app (DCC (&(∗)))) <$> abstract' e Ctx.empty infer reduce
 
 def wrap_shares (n : ℕ) (u : Lean.Level) (e : Lean.Expr) : Lean.Expr :=
   match u with
@@ -749,6 +774,8 @@ Eval(.., ...,
                                              Fstc(`(Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))),
                                                     Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0))))))))⟩)).infer₂'
 #eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x))
+#eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro)
+#eval Std.format <| (DCC &((Λ(!(⊤), `(!(⊤), Sort 0), Sndc(`(!(⊤), Sort 0))) &(∗)))).infer₂'
 #eval Std.format <| (DCC (Λ(!(⊤), `(!(⊤), Sort 0), Sndc(`(!(⊤), Sort 0))) &(∗))).reduce_all₂
 #eval Std.format <| (DCC &((Λ(!(⊤), `(!(⊤), Sort 0), Sndc(`(!(⊤), Sort 0))) &(∗)))).infer₂'
 #eval Std.format <| (DCC (Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0))) ∗)).reduce_all₂

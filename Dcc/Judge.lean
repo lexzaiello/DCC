@@ -1,5 +1,6 @@
 import Dcc.Reduces
 import Dcc.Types
+import Dcc.Nbe
 import Mathlib.Logic.Relation
 
 namespace Expr
@@ -45,14 +46,15 @@ inductive Judge : Expr → Expr → Prop where
     → Judge (DCC refl(f_α)) τ
   | eql    : Judge f_α (DCC (δ : Sort o) → Sort m)
     → Reduces δ δ'
-    → Reduces (eql.type f_α δ' m o) τ
+    → Reduces (eql.type f_α δ' o) τ
     → Judge (DCC Eql(f_α)) τ
   | id     : Judge α (DCC Sort m)
     → Reduces α α'
     → Reduces (id.type α' m) τ
     → Judge (DCC Id(α)) τ
   | comp   : Judge g (comp.g.type α β m)
-    → Judge f (comp.f.type α β f_γ n)
+    → Judge f (comp.f.type f_β f_γ n)
+    → Reduces f_β (DCC `(α, β))
     → Reduces (DCC (f_γ Coup(`(α, β)))) γ
     → Reduces α α'
     → Reduces (comp.type α' γ g m) τ
@@ -86,7 +88,7 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (sndc.type β' m n) τ
     → Judge (DCC Sndc(β)) τ
   | sigma   : Judge f_α (DCC ((δ : Sort o) → Sort m))
-    → Judge f_β (Pi.f_β.type f_α δ o n)
+    → Judge f_β (Pi.f_β.type' f_α δ o n)
     → Reduces δ δ'
     → Reduces (Sigma.type δ' m n o) τ
     → Judge (DCC Σ(f_α, f_β)) τ
@@ -154,7 +156,7 @@ inductive Judge : Expr → Expr → Prop where
     Π(f_α, f_β)
   -/
   | pi     : Judge f_α (DCC ((α : Sort m) → Sort n))
-    → Judge f_β (Pi.f_β.type f_α α m o)
+    → Judge f_β (Pi.f_β.type' f_α α m o)
     → Reduces α α'
     → Reduces (Pi.type α' m o) τ
     → Judge (DCC Π(f_α, f_β)) τ
@@ -244,9 +246,11 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, `(___a, β))) ∘' _a₂)) !(α)), ⟨ht₁⟩⟩ =>
       if heq : (DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, `(___a, β))) ∘' _a₂)) !(α))) = comp.g.type α β m then
         match infer f with
-        | .some ⟨(DCC (Π(Id(Sort n), f_γ) _a)), ⟨ht₂⟩⟩ =>
-          if heq₂ : (DCC (Π(Id(Sort n), f_γ) _a)) = comp.f.type α β f_γ n then
-            .some ⟨_, ⟨.comp (heq ▸ ht₁) (heq₂ ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
+        | .some ⟨(DCC (Π(Id(Sort n), f_γ) Coup(f_β))), ⟨ht₂⟩⟩ =>
+          if heq₂ : (DCC (Π(Id(Sort n), f_γ) Coup(f_β))) = comp.f.type f_β f_γ n then
+            if heq₃ : f_β.reduce_all = (DCC `(α, β)) then
+              .some ⟨_, ⟨.comp (heq ▸ ht₁) ht₂ (reduce_reduces heq₃) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
+            else .none
           else .none
         | _ => .none
       else .none
@@ -303,7 +307,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
       | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type f_α δ o n then
+        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type' f_α δ o n then
           .some ⟨_, ⟨.sigma (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
@@ -372,7 +376,6 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  
   | DCC !Λ(α, β, x) =>
     match α.infer with
     | .some ⟨DCC Sort m, ⟨ht⟩⟩ =>
@@ -450,7 +453,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
       | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g)) = Pi.f_β.type f_α α m o then
+        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g)) = Pi.f_β.type' f_α α m o then
           .some ⟨_, ⟨.pi (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
@@ -466,6 +469,21 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
 def test_id_nested : Option Expr := do
   let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer
   Sigma.fst <$> (DCC (Id(t) Id(Sort 1) (Sort 0))).infer
+
+def infer_nbe_after (e : Expr) : Option ((τ τ' : Expr) × (PULift.{1, 0} (Judge e τ)) × Nbe τ τ') := do
+  let ⟨τ, h₁⟩  ← e.infer
+  let ⟨τ', h₂⟩ ← τ.nbe
+  return ⟨τ, τ', h₁, h₂⟩
+
+def infer' (e : Expr) : Option Expr :=
+  match infer e with
+  | .some ⟨τ, _⟩ => .some τ
+  | _ => .none
+
+def infer_nbe_after' (e : Expr) : Option Expr :=
+  match infer_nbe_after e with
+  | .some ⟨_, τ, _⟩ => τ
+  | _ => .none
 
 --#eval (DCC (Π(Id(Sort 3), `(Sort 3, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), (`(⊤, `(Coup(Id(Sort 2)), Sort 2)) ∗))))) Sort 2)).reduce_η
 

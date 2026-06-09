@@ -1,0 +1,564 @@
+import Dcc.Nbe.Value
+import Dcc.Nbe.Size
+import Dcc.Metatheory.Value
+import Dcc.Nbe.RunEvalApply
+import Dcc.Nbe.Quote
+
+namespace Semantic
+
+/-
+For later: need this helper to extract out α in the identity η-reduction:
+
+We already have apply and eval, so we're chilling pretty much.
+We can calcuate the codomain, even.
+
+Chilling.
+
+Then plug this into:
+
+| lam₃ : Apply Val(f) Val(neutral(var(level))) Val(neutral(var(level)))
+    → Val.Quote level Val(f) e'
+
+This is the identity. Plug in var 0, get out var 0, meaning it can reduce to Id(α).
+Find α from domain.
+
+Use apply defs to help with this.
+Make an inductive for this + Val.domain def.
+Take a nap first though.
+
+Also lam₁ should probably just be Apply Val(f) not λ. However, that won't handle
+Π.
+
+Two approaches:
+
+- Values are proof-carrying (potentially easier, it's by construction, but requries a bit of reworking - how does this interact with .lam? Probably fine, unless there's mutual induction from eval to apply (there is not))
+
+  Counterpoint: all of our combinator points (type argument points which determine the domain) are already values. No need to embed.
+-/
+
+/-
+Can just do mutual induction between Val.domain and Neutral.domain
+
+Note:
+- will need to write this as an inductive as well
+
+
+Todo list:
+
+5. Using new domain derivation, add η-rule for Id
+  - Simultaneously abstract out the DoEta form Quote
+  - Actually do this first to check if it works
+
+1. (Easiest) Make vars type carrying (these can all be determined, even when we generate fresh variables)
+2. (Easy-ish) Define Val.domain wrapper (should be somewhat blind to the structure of Neutral terms)
+3. (Easy) Define NeutralTm.domain wrapper (does not require vars, easier)
+  - Note: Sort, Top, Bot, etc... do not have domains. Will need to be Option at some point. that is fine.
+4. (Medium) Neutral.domain (wrapper around NeutralTm + vars)
+5. Update quote using domain
+6. (Hard) I think we might need the "neutral" app case for Apply. Maybe? Probably not? Idk.
+-/
+
+def Val.domain (f : Val) : Option ((α : Val) × f.Domain α) :=
+  match f with
+  | Val(λ _xs 2 => Eql(f_α)) =>
+    match f_α.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .eql₁ h⟩
+    | _ => .none
+  | Val(λ neutral(&(env))::_xs 1 => Eql(f_α)) =>
+    match f_α.apply Val(neutral(&(env))) with
+    | .some ⟨_, h⟩ => .some ⟨_, .eql₂ h⟩
+    | _ => .none
+  | Val(λ _xs 2 => refl(f_α)) =>
+    match f_α.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .refl₁ h⟩
+    | _ => .none
+  | Val(λ neutral(&(env))::_xs 1 => refl(f_α)) =>
+    match f_α.apply Val(neutral(&(env))) with
+    | .some ⟨_, h⟩ => .some ⟨_, .refl₂ h⟩
+    | _ => .none
+  | Val(λ _env 1 => *(_α)) => .some ⟨_, .unbox⟩
+  | Val(λ _env 1 => Id(_α)) => .some ⟨_, .id⟩
+  | Val(λ _env 1 => Fstc(_β)) => .some ⟨_, .fstc⟩
+  | Val(λ _env 1 => Sndc(_β)) => .some ⟨_, .sndc⟩
+  | Val(λ _env 2 => Λ(_α, _β, _x)) => .some ⟨_, .curr₁⟩
+  | Val(λ y::_env 1 => Λ(_α, β, _x)) =>
+    match β.apply y with
+    | .some ⟨_, h⟩ => .some ⟨_, .curr₂ h⟩
+    | _ => .none
+  | Val(λ _env 2 => !Λ(_α, _β, _x)) => .some ⟨_, .curr₁'⟩
+  | Val(λ neutral(&(y))::_env 1 => !Λ(_α, β, _x)) =>
+    match Val(neutral(!<β>)).apply Val(neutral(&(y))) with
+    | .some ⟨_, h⟩ => .some ⟨_, .curr₂' h⟩
+    | _ => .none
+  | Val(λ _env 1 => !<f>) =>
+    match f.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .map h⟩
+    | _ => .none
+  | Val(λ _env 1 => $<f>) =>
+    match f.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .fmap h⟩
+    | _ => .none
+  | Val(λ _env 1 => ⟦_β⟧⟨M, _N⟩) =>
+    match M.domain with
+    | .some ⟨_, h⟩ =>
+        .some ⟨_, .pair h⟩
+    | _ => .none
+  | Val(λ _env 1 => `(_β, _x)) => .some ⟨_, .quot⟩
+  | Val(λ _env 1 => _f ∘' g) =>
+    match g.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .comp' h⟩
+    | _ => .none
+  | Val(λ _env 1 => _f ∘ g) =>
+    match g.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .comp h⟩
+    | _ => .none
+  | Val(λ _env 1 => _f ∘∘ g) =>
+    match g.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .comp₂ h⟩
+    | _ => .none
+  | Val(Π (f_α) _env 1, _f_β) =>
+    match f_α.domain with
+    | .some ⟨_, h⟩ => .some ⟨_, .pi h⟩
+    | _ => .none
+  | _ => .none
+
+@[dcc_size]
+theorem Val.Domain.decreasing (h : Val.Domain e τ) : τ.measure < e.measure := by
+  induction h
+  any_goals (grind)
+  case curr₂' h | curr₂ h | refl₂ h | eql₂ h =>
+    have h := h.decreasing
+    grind
+
+def Val.mk_var (level : ℕ) (τ : Val) : Option ((v : Val) × τ.MkVar level v) :=
+  match τ with
+  | Val(neutral(!(_τ₀))) => .some ⟨_, .boxed⟩
+  | Val(neutral(Sort _m)) => .some ⟨_, .sort⟩
+  | Val(Π (_f_α) _env _n, _f_β) => .some ⟨_, .pi⟩
+  | Val(neutral(_x = _y)) => .some ⟨_, .eq⟩
+  | Val(neutral(⊤)) => .some ⟨_, .top⟩
+  | Val(neutral(Coup(_β))) => .some ⟨_, .coup⟩
+  | _ => .none
+
+/-
+Make do_η mutually inductive with Val.Quote and Neutral.Quote
+
+problematic constructor is const,
+
+τ decreases in size, so
+
+`(τ, v')
+
+is fine to Quote if you Quote τ and v' individually because
+v' decreases by Apply and τ decreases by Domain and
+
+
+-/
+
+/-def
+
+def Val.domain (v : Val) : Option Expr :=
+  match v with
+  | Val(λ env n => bdy) =>
+    sorry
+  | Val(Π (f_α) env n, f_β) =>
+    sorry
+  | Neutral(-/
+
+mutual
+
+def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote level e) :=
+  match v with
+  | Neutral(var((_v) : _τ)) => .none
+  | Neutral(∗) => .some ⟨_, .tintro⟩
+  | Neutral(⊤) => .some ⟨_, .top⟩
+  | Neutral(⊥) => .some ⟨_, .bot⟩
+  | Neutral(x = y) =>
+    have h_dec₁ : x.measure < Neutral(x = y).size := by
+      grind
+    have h_dec₂ : y.measure < Neutral(x = y).size := by
+      grind
+    match x.quote level, y.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .eq h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(Eql(α))  =>
+    have h_dec₁ : α.measure < Neutral(Eql(α)).size := by
+      grind
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .eql h⟩
+    | _ => .none
+  | Neutral(refl(α))  =>
+    have h_dec₁ : α.measure < Neutral(refl(α)).size := by
+      grind
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .refl h⟩
+    | _ => .none
+  | Neutral(Sort _m) => .some ⟨_, .sort⟩
+  | Neutral(Σ(α, β)) =>
+    have h_dec₁ : α.measure < Neutral(Σ(α, β)).size := by
+      grind
+    have h_dec₂ : β.measure < Neutral(Σ(α, β)).size := by
+      grind
+    match α.quote level, β.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .sigma h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(`(β, x)) =>
+    have h_dec₁ : β.measure < Neutral(`(β, x)).size := by
+      grind
+    have h_dec₂ : x.measure < Neutral(`(β, x)).size := by
+      grind
+    match β.quote level, x.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .quot h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(⟦β⟧(x, y)) =>
+    have h_dec₁ : β.measure < Neutral(⟦β⟧(x, y)).size := by
+      grind
+    have h_dec₂ : x.measure < Neutral(⟦β⟧(x, y)).size := by
+      grind
+    have h_dec₃ : y.measure < Neutral(⟦β⟧(x, y)).size := by
+      grind
+    match β.quote level, x.quote level, y.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
+      .some ⟨_, .coup h₁ h₂ h₃⟩
+    | _, _, _ => .none
+  | Neutral(Coup(β)) =>
+    have h_dec₁ : β.measure < Neutral(Coup(β)).size := by
+      grind
+    match β.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .t_coup h⟩
+    | _ => .none
+  | Neutral(Id(α))      =>
+    have h_dec₁ : α.measure < Neutral(Id(α)).size := by
+      grind
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .id h⟩
+    | _ => .none
+  | Neutral(Fstc(α))    =>
+    have h_dec₁ : α.measure < Neutral(Fstc(α)).size := by
+      grind
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .fstc h⟩
+    | _ => .none
+  | Neutral(Sndc(α))    =>
+    have h_dec₁ : α.measure < Neutral(Sndc(α)).size := by
+      grind
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .sndc h⟩
+    | _ => .none
+  | Neutral(f ∘' g) =>
+    have h_dec₁ : f.measure < Neutral(f ∘' g).size := by
+      grind
+    have h_dec₂ : g.measure < Neutral(f ∘' g).size := by
+      grind
+    match f.quote level, g.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .comp' h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(f ∘ g) =>
+    have h_dec₁ : f.measure < Neutral(f ∘ g).size := by
+      grind
+    have h_dec₂ : g.measure < Neutral(f ∘ g).size := by
+      grind
+    match f.quote level, g.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .comp h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(f ∘∘ g) =>
+    have h_dec₁ : f.measure < Neutral(f ∘∘ g).size := by
+      grind
+    have h_dec₂ : g.measure < Neutral(f ∘∘ g).size := by
+      grind
+    match f.quote level, g.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .comp₂ h₁ h₂⟩
+    | _, _ => .none
+  | Neutral(⟦β⟧⟨x, y⟩) =>
+    have h_dec₁ : β.measure < Neutral(⟦β⟧⟨x, y⟩).size := by
+      grind
+    have h_dec₂ : x.measure < Neutral(⟦β⟧⟨x, y⟩).size := by
+      grind
+    have h_dec₃ : y.measure < Neutral(⟦β⟧⟨x, y⟩).size := by
+      grind
+    match β.quote level, x.quote level, y.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
+      .some ⟨_, .pair h₁ h₂ h₃⟩
+    | _, _, _ => .none
+  | Neutral(Λ(α, β, x)) =>
+    have h_dec₁ : α.measure < Neutral(Λ(α, β, x)).size := by
+      grind
+    have h_dec₂ : β.measure < Neutral(Λ(α, β, x)).size := by
+      grind
+    have h_dec₃ : x.measure < Neutral(Λ(α, β, x)).size := by
+      grind
+    match α.quote level, β.quote level, x.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
+      .some ⟨_, .curr h₁ h₂ h₃⟩
+    | _, _, _ => .none
+  | Neutral(!Λ(α, β, x)) =>
+    have h_dec₁ : α.measure < Neutral(!Λ(α, β, x)).size := by
+      grind
+    have h_dec₂ : β.measure < Neutral(!Λ(α, β, x)).size := by
+      grind
+    have h_dec₃ : x.measure < Neutral(!Λ(α, β, x)).size := by
+      grind
+    match α.quote level, β.quote level, x.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
+      .some ⟨_, .curr' h₁ h₂ h₃⟩
+    | _, _, _ => .none
+  | Neutral(Eval(α, β, x)) =>
+    have h_dec₁ : α.measure < Neutral(Eval(α, β, x)).size := by
+      grind
+    have h_dec₂ : β.measure < Neutral(Eval(α, β, x)).size := by
+      grind
+    have h_dec₃ : x.measure < Neutral(Eval(α, β, x)).size := by
+      grind
+    match α.quote level, β.quote level, x.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ =>
+      .some ⟨_, .eval h₁ h₂ h₃⟩
+    | _, _, _ => .none
+  | Neutral(!(x))            =>
+    have h_dec₁ : x.measure < Neutral(!(x)).size := by
+      grind
+    match x.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .bang h⟩
+    | _ => .none
+  | Neutral(*(α))            =>
+    have h_dec₁ : α.measure < Neutral(*(α)).size := by
+      grind
+    match α.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .unbox h⟩
+    | _ => .none
+  | Neutral(&(x))            =>
+    have h_dec₁ : x.measure < Neutral(&(x)).size := by
+      grind
+    match x.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .boxed h⟩
+    | _ => .none
+  | Neutral(!<x>)            =>
+    have h_dec₁ : x.measure < Neutral(!<x>).size := by
+      grind
+    match x.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .map h⟩
+    | _ => .none
+  | Neutral($<x>)            =>
+    have h_dec₁ : x.measure < Neutral($<x>).size := by
+      grind
+    match x.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .fmap h⟩
+    | _ => .none
+  | Neutral(f x)             =>
+    have h_dec₁ : f.size < Neutral(f x).size := by
+      grind
+    have h_dec₂ : x.measure < Neutral(f x).size := by
+      grind
+    match f.quote level, x.quote level with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .app h₁ h₂⟩
+    | _, _ => .none
+termination_by (v.size, sizeOf v)
+
+def Val.quote (level : ℕ) (v : Val) : Option ((e : Expr) × v.Quote level e) :=
+  match v with
+  | Val(λ env n => bdy) => do
+    dbg_trace s!"lam domain: {(repr ∘ (·.fst)) <$> Val(λ env n => bdy).domain}"
+    let ⟨τ, h₁⟩ ← Val(λ env n => bdy).domain
+    have ha := h₁.decreasing
+    dbg_trace s!"apply: {(repr ∘ (·.fst)) <$>  Val(λ env n => bdy).apply Val(neutral(var((level) : τ)))}"
+    match Val(λ env n => bdy).apply Val(neutral(var((level) : τ))) with
+    | .some ⟨Val(neutral(f' v₂)), h₃⟩ =>
+      have hb := h₃.decreasing
+      if heq : v₂ = Val(neutral(var((level) : τ))) then
+        have h_dec' : f'.size < (Val.lam env n bdy).measure := by
+          grind
+        match f'.quote level with
+        | .some ⟨_, h₄⟩ =>
+          .some ⟨_, .comp h₁ (heq ▸ h₃) h₄⟩
+        | _ => .none
+      else .none
+    | .some ⟨Val(neutral(var((level₂) : τ₂))), h₃⟩ =>
+      have ha := h₁.decreasing
+      have hb := h₃.decreasing
+      if heq : Val(neutral(var((level₂) : τ₂))) = Val(neutral(var((level) : τ))) then
+        have h_dec' : τ.measure < Val(λ env n => bdy).measure := by
+          grind
+        match τ.quote level with
+        | .some ⟨_, h₄⟩ =>
+          .some ⟨_, .id h₁ (heq ▸ h₃) h₄⟩
+        | _ => .none
+      else .none
+    | .some ⟨Val(neutral(f')), h₃⟩ =>
+      have ha := h₃.decreasing
+      have h_dec' : Val(neutral(f')).measure < Val(λ env n => bdy).measure := by
+        grind
+      if hn : ¬ Neutral(f').contains_var Val(neutral(var((level) : τ))) then
+        match τ.quote level, Neutral(f').quote level with
+        | .some ⟨_, h₄⟩, .some ⟨_, h₅⟩ =>
+          .some ⟨_, .const h₁ h₃ hn h₄ h₅⟩
+        | _, _ => .none
+      else .none
+    | .some ⟨Val(λ neutral(var((level₂) : τ₂))::env₂ n₂ => bdy₂), h₃⟩ =>
+      have ha := h₃.decreasing
+      match heq₀ : env with
+      | [] =>
+        have h_dec' : bdy.size < Val(λ ⟦⟧ n => bdy).measure := by
+          simp [Val.measure]
+          grind
+        if heq : Val(λ neutral(var((level₂) : τ₂))::env₂ n₂ => bdy₂) = Val(λ neutral(var((level) : τ))::env₂ n₂ => bdy) then
+          let ⟨_, h₄⟩ ← bdy.quote level.succ
+          .some ⟨_, .pure (by assumption) (heq ▸ h₃) h₄⟩
+        else .none
+      | _ => .none
+    | _ => .none
+  | Val(Π (f_α) ⟦⟧ 1, f_β) =>
+    have h_dec₁ : f_α.measure < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
+      conv =>
+        right
+        simp [Val.measure]
+        rfl
+      grind
+    have h_dec₁ : f_β.measure < Val(Π (f_α) ⟦⟧ 1, f_β).measure := by
+      conv =>
+        right
+        simp [Val.measure]
+        rfl
+      grind
+    dbg_trace Sigma.fst <$> f_α.quote level
+    dbg_trace Sigma.fst <$> f_β.quote level.succ
+    match f_α.quote level, f_β.quote level.succ with
+    | .some ⟨f_α', h₁⟩, .some ⟨f_β', h₂⟩ =>
+      .some ⟨_, .pi₁ h₁ h₂⟩
+    | _, _ => .none
+  | Val(Π (f_α) ⟦env⟧ 0, f_β) =>
+    have h_dec₁ : f_α.measure < Val(Π (f_α) ⟦env⟧ 0, f_β).measure := by
+      conv =>
+        right
+        simp [Val.measure]
+        rfl
+      grind
+    have h_dec₁ : f_β.measure < Val(Π (f_α) ⟦env⟧ 0, f_β).measure := by
+      conv =>
+        right
+        simp [Val.measure]
+        rfl
+      grind
+    dbg_trace "hi"
+    dbg_trace Sigma.fst <$> (f_α.quote level)
+    dbg_trace repr f_β
+    match f_α.quote level, f_β.quote level.succ with
+    | .some ⟨f_α', h₁⟩, .some ⟨f_β', h₂⟩ =>
+      dbg_trace "b"
+      have h_dec₁ : env.measure < Val(Π (f_α) ⟦env⟧ 0, f_β).measure := by
+        conv =>
+          right
+          simp [Val.measure]
+          rfl
+        grind
+      match env.quote level with
+      | .some ⟨_, h₃⟩ =>
+        .some ⟨_, .pi₂ h₁ h₂ h₃⟩
+      | _ => .none
+    | _, _ => .none
+  | Val(neutral(nv)) =>
+    match nv.quote level with
+    | .some ⟨_, h⟩ => .some ⟨_, .neut h⟩
+    | _ => .none
+  | _ => .none
+termination_by (v.measure, sizeOf v)
+
+/-def Val.do_eta (level : Level) (f : Val) : Option ((f' : Expr) × Val.DoEta level f f') :=
+  (match f with
+  | Val(neutral(Λ(α, β, x))) =>
+    match β.apply Val(neutral(var((level) : α))) with
+    | .some ⟨βx, h₁⟩ =>
+      have ha := h₁.decreasing
+      match x.apply Val(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx))))) with
+      | .some ⟨Val(neutral(x' neutral(var((level₂) : _a)) neutral(var((level₃ + 1) : _b)))), h₂⟩ =>
+        have hb := h₂.decreasing
+        if heq : level₂ = level then
+          if heq₂ : level₃ = level then by
+            cases heq; cases heq₂
+            have h_dec₃ : x'.size + 1 < (Val.neut (Neutral.tm (NeutralTm.curr α β x))).measure := by
+              grind
+            match x'.quote level with
+            | .some ⟨_, h₃⟩ =>
+              exact .some ⟨_, .curr h₁ h₂ h₃⟩
+            | _ => exact .none
+          else .none
+        else .none
+      | _ => .none
+    | _ => .none
+  | Val(neutral(!Λ(α, β, x))) =>
+    match β.apply Val(neutral(&(neutral(var((level) : α))))) with
+    | .some ⟨βx, h₁⟩ =>
+      have ha := h₁.decreasing
+      match x.apply Val(neutral(&(neutral(⟦β⟧(neutral(var((level) : α)), neutral(var((level.succ) : βx))))))) with
+      | .some ⟨Val(neutral(x' (&(neutral(var((level₂) : _a)))) (&(neutral(var((level₃ + 1) : _b)))))), h₂⟩ =>
+        have hb := h₂.decreasing
+        if heq : level₂ = level then
+          if heq₂ : level₃ = level then by
+            cases heq; cases heq₂
+            have h_dec' : x'.size + 1 < (Val.neut (Neutral.tm (NeutralTm.curr' α β x))).measure := by
+              grind
+            match x'.quote level with
+            | .some ⟨_, h₃⟩ =>
+              exact .some ⟨_, .curr' h₁ h₂ h₃⟩
+            | _ => exact .none
+          else .none
+        else .none
+      | _ => .none
+    | _ => .none
+  | _ => .none) <|>(
+  match f.domain with
+  | .some ⟨τ, h₁⟩ =>
+    have ha := h₁.decreasing
+    match f.apply Val(neutral(var((level) : τ))) with
+    | .some ⟨Val(neutral(f' neutral(var((level₂) : τ₂)))), h₂⟩ =>
+      have hb := h₂.decreasing
+      if heq : level₂ = level then by
+        cases heq
+        match f'.quote level with
+        | .some ⟨_, h₃⟩ =>
+          exact .some ⟨_, .comp h₁ h₂ h₃⟩
+        | _ => exact .none
+      else .none
+    | .some ⟨Val(neutral(var((level₂) : τ₂))), h₂⟩ =>
+      have ha := h₁.decreasing
+      have hb := h₂.decreasing
+      if heq : level₂ = level then by
+        cases heq
+        have h_dec' : τ.measure + 1 < f.measure := by
+          sorry
+        match τ.quote level with
+        | .some ⟨_, h₃⟩ =>
+          exact .some ⟨_, .id h₁ h₂ h₃⟩
+        | _ => exact .none
+      else .none
+    | .some ⟨v', h₂⟩ =>
+      if h₃ : ¬ v'.contains_var level τ then
+        match τ.quote level, v'.quote level with
+        | .some ⟨_, h₄⟩, .some ⟨_, h₅⟩ =>
+          .some ⟨_, .const h₁ h₂ h₃ h₄ h₅⟩
+        | _, _ => .none
+      else .none
+    | _ => .none
+  | _ => .none)
+termination_by (f.measure, sizeOf f)-/
+
+end
+
+end Semantic
+
+/-
+Pattern mtaching in some constructors might be able to use quote / the bullet technique to do a form of extensionality.
+
+For example, β : α → Sort n.
+Currently, we just check
+Reduces (f_β env) `(α, ...).
+
+We can instead check similarly to in the Π case.
+
+Or probably just doing reduce_nbe would get us there. tbh.
+-/

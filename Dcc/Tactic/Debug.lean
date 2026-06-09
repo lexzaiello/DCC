@@ -1,5 +1,6 @@
 import Dcc.Ast
 import Dcc.Judge
+import Dcc.Judge2
 
 def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
   match e with
@@ -88,6 +89,7 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
   | e => throwError s!"unsupported: {e}"
 
 syntax "dcc_trace" "?"? gen_dcc : command
+syntax "dcc_trace'" "?"? gen_dcc : command
 
 elab "dcc_trace" err:"?"? e:gen_dcc : command => do
   for stx in Lean.Syntax.topDown e do
@@ -103,6 +105,27 @@ elab "dcc_trace" err:"?"? e:gen_dcc : command => do
         | .some _ =>
           if err.isNone then
             let fmt := ((Std.format ∘ Sigma.fst) <$> e.infer).getD "?"
+            Lean.logInfoAt stx m!"{stx}: {fmt}"
+          else
+            continue
+        | _ => Lean.logInfoAt stx m!"{stx}: ?"
+      catch _e =>
+        continue
+
+elab "dcc_trace'" err:"?"? e:gen_dcc : command => do
+  for stx in Lean.Syntax.topDown e do
+    match stx with
+    | `(gen_dcc| ($_e)) => continue
+    | stx =>
+      try
+        let stx' ← Lean.Elab.liftMacroM <| runDcc stx
+        let e ← Lean.Elab.Command.liftTermElabM
+          <| Lean.Elab.Term.withoutErrToSorry
+            (Lean.Elab.Term.elabTermEnsuringType stx' (.some (.const ``_root_.Expr [])) >>= decode_dcc)
+        match e.infer₂ with
+        | .some _ =>
+          if err.isNone then
+            let fmt := ((Std.format ∘ Sigma.fst) <$> e.infer₂).getD "?"
             Lean.logInfoAt stx m!"{stx}: {fmt}"
           else
             continue

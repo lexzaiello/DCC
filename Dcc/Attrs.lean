@@ -60,6 +60,8 @@ inductive Flag where
   | force : Flag
   -- :
   | infer : Flag
+  -- ??
+  | try   : Flag
   -- (!!!!!)
   | group : Flag → Flag → Flag
 deriving Nonempty, Inhabited, BEq
@@ -72,9 +74,10 @@ def flag_priority (for_flag : Flag) (in_f : Flag) : Nat :=
 def Flag.has (flag : Flag) (flags : List Flag) : Bool :=
   0 < (flags.map (flag_priority flag)).sum
 
-syntax "?" : dcc_flag
-syntax "!" : dcc_flag
-syntax "∶" : dcc_flag
+syntax "?"  : dcc_flag
+syntax "??" : dcc_flag
+syntax "!"  : dcc_flag
+syntax "∶"  : dcc_flag
 syntax "(" dcc_flag+ ")"          : dcc_flag
 
 syntax "f{" dcc_flag "}"          : term
@@ -82,6 +85,7 @@ syntax "f{" dcc_flag "}"          : term
 partial def parse_flag  (stx : Lean.TSyntax `dcc_flag) : Lean.MacroM Flag :=
   match stx with
   | `(dcc_flag| ?) => return .trace
+  | `(dcc_flag| ??) => return .try
   | `(dcc_flag| !) => return .force
   | `(dcc_flag| ∶) => return .infer
   | `(dcc_flag| ($f:dcc_flag $x:dcc_flag)) => do
@@ -153,6 +157,9 @@ def mk_set (nms : Array Lean.Name) : Lean.MacroM SItems :=
 def dcc_base : Lean.MacroM SSet := do
   return ⟨← `(tactic| simp), ← mk_set ⟨[`dcc_step, `dcc_reduce, `dcc_size, `dcc_judge, `dcc_rel]⟩⟩
 
+def dcc_base_dsimp : Lean.MacroM SSet := do
+  return ⟨← `(tactic| dsimp), ← mk_set ⟨[`dcc_step, `dcc_reduce, `dcc_size, `dcc_judge, `dcc_rel]⟩⟩
+
 def dcc_dangerous_force : Lean.MacroM SSet := do
   return ⟨← `(tactic| simp), ← mk_set ⟨[`dcc_force_reduce, `dcc_force_rel]⟩⟩
 
@@ -186,7 +193,7 @@ open attrs in macro_rules
     let infer_thms     := prioritize_thms (flag_priority .infer) (thms := ← dcc_infer_force)
     let user_thms      ← unwrap_target tgt
     -- Do dangerous theorems first. This is less likely (?) to cause infinite loops
-    let base           ← dcc_base
+    let base           ← if Flag.has .try flags then dcc_base_dsimp else dcc_base
     let thms           := base.concat (dangerous_thms.concat user_thms)
 
     let cases? (a b : Lean.MacroM (Lean.TSyntax `tactic)) : Lean.MacroM (Lean.TSyntax `tactic) := do

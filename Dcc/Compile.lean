@@ -384,6 +384,7 @@ macro_rules
 #eval Std.format <| dcc_compile' {Expr.infer₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
 #eval Std.format <| dcc_infer' {Expr.infer₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
 #eval Std.format <| dcc_infer' {Expr.infer₂} ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
+#eval Std.format <| dcc_infer' {Expr.infer₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
 
 /-
 

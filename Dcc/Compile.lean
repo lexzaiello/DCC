@@ -215,7 +215,11 @@ def cc (root : Lean.Expr) (infer : ParamInfer) (reduce : Expr → Expr) : Lean.M
   | .app M N => do
     let M' ← cc M infer reduce
     let N' ← cc N infer reduce
+    -- match infer M' to see if we need to wrap &(
     return (DCC (M' N'))
+    /-match M' with
+    | DCC (f &(x)) => return (DCC (f &(x) &(N')))
+    | _ => return (DCC (M' N'))-/
   | .const ``True.intro [] => return DCC (∗)
   | .const ``True [] => return DCC (⊤)
   | .const ``False [] => return DCC (⊥)
@@ -423,6 +427,7 @@ macro_rules
                                              `(Coup(Sndc(`(⊤, Sort 2))), Coup(Sndc(`(⊤, Sort 2)))),
                                              (Sndc(Sndc(`(⊤, Sort 2))) ∘'
                                                 Fstc(`(Coup(Sndc(`(⊤, Sort 2))), Coup(Sndc(`(⊤, Sort 2)))))))⟩).infer₂'
+#eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
 #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))).infer₂
 -- Coup(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))

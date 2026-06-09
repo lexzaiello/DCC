@@ -68,8 +68,8 @@ inductive Judge₂ : Expr → Expr → Prop where
     → Reduces₂ (DCC (f_β α)) (DCC `(α, Sort n))
     → Reduces₂ (Coup.type m n) τ
     → Judge₂ (DCC Coup(β)) τ
-  | fstc   : Judge₂ β (DCC (Π(Id(Sort m), f_β) α))
-    → Reduces₂ (DCC (f_β α)) (DCC `(α, Sort n))
+  | fstc   : Judge₂ β τ_β
+    → Arrow α (DCC Sort n) m τ_β
     → Reduces₂ β β'
     → Reduces₂ (fstc.type α β' m n) τ
     → Judge₂ (DCC Fstc(β)) τ
@@ -311,12 +311,10 @@ def infer₂ (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge₂ e t)) :=
     | _ => .none
   | DCC Fstc(β) =>
     match (infer₂ β) with
-    | .some ⟨DCC (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩ =>
-      match heq : (DCC (f_β α)).reduce_all₂ with
-      | DCC `(α₂, Sort n) =>
-        if heq₂ : α₂ = α then
-          .some ⟨_, ⟨.fstc ht₁ (reduce₂_reduces (heq₂ ▸ heq)) (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
-        else .none
+    | .some ⟨τ_β, ⟨ht₁⟩⟩ =>
+      match τ_β.read_arrow with
+      | .some ⟨α, DCC Sort n, m, harr⟩ =>
+        .some ⟨_, ⟨.fstc ht₁ harr (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
       | _ => .none
     | _ => .none
   | DCC Sndc(β) =>

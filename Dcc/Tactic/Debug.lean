@@ -45,6 +45,10 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
     let f ← decode_dcc f
     let g ← decode_dcc g
     return .comp' f g
+  | .app (.app (.const ``_root_.Expr.comp₂ []) f) g =>
+    let f ← decode_dcc f
+    let g ← decode_dcc g
+    return .comp₂ f g
   | .app (.app (.app (.const ``_root_.Expr.pair []) β) f) g =>
     let β ← decode_dcc β
     let f ← decode_dcc f
@@ -113,6 +117,7 @@ elab "dcc_trace" err:"?"? e:gen_dcc : command => do
         continue
 
 elab "dcc_trace'" err:"?"? e:gen_dcc : command => do
+  let mut logs : Array (Lean.Syntax × Lean.MessageData) := #[]
   for stx in Lean.Syntax.topDown e do
     match stx with
     | `(gen_dcc| ($_e)) => continue
@@ -126,11 +131,15 @@ elab "dcc_trace'" err:"?"? e:gen_dcc : command => do
         | .some _ =>
           if err.isNone then
             let fmt := ((Std.format ∘ Sigma.fst) <$> e.infer₂).getD "?"
-            Lean.logInfoAt stx m!"{stx}: {fmt}"
+            logs := logs.push (stx, m!"{stx}: {fmt}")
           else
             continue
-        | _ => Lean.logInfoAt stx m!"{stx}: ?"
+        | _ =>
+          logs := logs.push (stx, m!"{stx}: ?")
       catch _e =>
         continue
+  let logs' := logs.mergeSort (fun (e₁, _) (e₂, _) => (toString e₁).length < (toString e₂).length)
+  for (stx, msg) in logs' do
+    Lean.logInfoAt stx msg
 
 dcc_trace (Id(Sort 1) (Sort 1))

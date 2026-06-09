@@ -129,9 +129,7 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
     return (DCC Σ(α', β'))
   | .lam _a (.app (.const ``Shared _us) α) bdy _binfo => do
     let α' ← abstract' α ctx.deref infer reduce
-    dbg_trace s!"α': {α'}"
     let inner ← abstract' bdy (DCC !(Coup(α'))) infer reduce
-    dbg_trace s!"inner: {inner}"
     return (DCC !Λ(ctx.deref, α', inner))
   | .lam _a α bdy _binfo => do
     let α' ← abstract' α ctx infer reduce
@@ -250,19 +248,6 @@ def cc (root : Lean.Expr) (infer : ParamInfer) (reduce : Expr → Expr) : Lean.M
   | (.forallE _a α bdy _binfo) => do
     let f' ← abstract' (.forallE _a α bdy _binfo) Ctx.empty' infer reduce
     return (DCC (f' ∗))
-  /-| .app (.forallE _a α bdy _binfo) (.app (.app (.const ``Shared.share _us) _α) x) => do
-    let f' ← abstract' (.forallE _a α bdy _binfo) Ctx.empty infer reduce
-    let x' ← cc x infer reduce
-    return (DCC (f' &(∗) &(x')))
-  | .app (.lam _a α bdy _binfo) x => do
-    let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty infer reduce
-    let x' ← cc x infer reduce
-    return (DCC (f' &(∗) x'))
-  | .app (.forallE _a α bdy _binfo) x => do
-    let f' ← abstract' (.forallE _a α bdy _binfo) Ctx.empty infer reduce
-    let x' ← cc x infer reduce
-    return (DCC (f' &(∗) x'))-/
-  
   | e => (·.app (DCC (&(∗)))) <$> abstract' e Ctx.empty infer reduce
 
 def wrap_shares (n : ℕ) (u : Lean.Level) (e : Lean.Expr) : Lean.Expr :=
@@ -354,12 +339,9 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
         return .app M' N''
       | _ => return .app M' N'
     | _ =>
-      dbg_trace s!"fun: {M'}"
       try
-        dbg_trace s!"type: {← Lean.Meta.inferType M'}"
         match ← Lean.Meta.inferType M' with
         | .forallE _ α _ _ =>
-          dbg_trace α
           let ⟨lvl, n_shared, α⟩ := n_times_shared α
           match lvl with
           | .some lv =>
@@ -387,7 +369,6 @@ syntax "{" term "}" : infer_cmd_param
 elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
   let e_tm' ← Lean.instantiateExprMVars =<< wrap_share_auto e_tm
-  dbg_trace e_tm'
   match infer.toList with
   | [_infer] =>
     return Lean.toExpr (← Lean.Elab.liftMacroM <| cc e_tm' ⟨Expr.Judge₂, Expr.infer₂⟩ Expr.reduce_all)
@@ -773,8 +754,8 @@ Eval(.., ...,
                                           (`(Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))), !(⊤)) ∘'
                                              Fstc(`(Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0)))),
                                                     Coup(Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 0))))))))⟩)).infer₂'
-#eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x))
-#eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro)
+#eval Std.format <| (dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro))
+#time #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro)
 #eval Std.format <| (DCC &((Λ(!(⊤), `(!(⊤), Sort 0), Sndc(`(!(⊤), Sort 0))) &(∗)))).infer₂'
 #eval Std.format <| (DCC (Λ(!(⊤), `(!(⊤), Sort 0), Sndc(`(!(⊤), Sort 0))) &(∗))).reduce_all₂
 #eval Std.format <| (DCC &((Λ(!(⊤), `(!(⊤), Sort 0), Sndc(`(!(⊤), Sort 0))) &(∗)))).infer₂'
@@ -791,6 +772,7 @@ Eval(.., ...,
 #eval Expr.toFormat (pretty := True) <$> (DCC Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))).infer₂'
 
 /-
+!Λ(α, β, x) &(y) &(z) = x &(⟦β⟧(y, z))
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Eval(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0),
             Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0), Sndc(`(Coup(`(⊤, Sort 0)), Sort 0))))).infer

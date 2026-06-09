@@ -114,6 +114,8 @@ def toFormat (e : MetaExpr) (pretty : Bool := False) : Std.Format :=
   | (DCC[.] refl(f_α))           => comb "refl" [f_α.toFormat pretty]
   | (DCC[.] f ∘ g)               =>
     sepD [f.toFormat pretty, g.toFormat pretty] " ∘"
+  | (DCC[.] f ∘∘ g)               =>
+    sepD [f.toFormat pretty, g.toFormat pretty] " ∘∘"
   | (DCC[.] f ∘' g)               =>
     sepD [f.toFormat pretty, g.toFormat pretty] " ∘'"
   | (DCC[.] (f x))               =>
@@ -124,7 +126,6 @@ def toFormat (e : MetaExpr) (pretty : Bool := False) : Std.Format :=
           rw [heq₁] at heq₀
           rw [heq₀]
           simp [sizeOf, MetaExpr._sizeOf_1]
-          grind
         have _h : sizeOf β < sizeOf e := by
           rw [heq₁] at heq₀
           rw [heq₀]
@@ -180,6 +181,8 @@ def toFormat' (e : MetaExpr) (pretty : Bool := False) : Lean.MetaM Std.Format :=
   | (DCC[.] x = y)               => return sepD [← x.toFormat' pretty, ← y.toFormat' pretty] " ="
   | (DCC[.] Eql(f_α))            => return comb "Eql" [← f_α.toFormat' pretty]
   | (DCC[.] refl(f_α))           => return comb "refl" [← f_α.toFormat' pretty]
+  | (DCC[.] f ∘∘ g)               =>
+    return sepD [← f.toFormat' pretty, ← g.toFormat' pretty] " ∘∘"
   | (DCC[.] f ∘ g)               =>
     return sepD [← f.toFormat' pretty, ← g.toFormat' pretty] " ∘"
   | (DCC[.] f ∘' g)               =>
@@ -192,7 +195,6 @@ def toFormat' (e : MetaExpr) (pretty : Bool := False) : Lean.MetaM Std.Format :=
           rw [heq₁] at heq₀
           rw [heq₀]
           simp [sizeOf, MetaExpr._sizeOf_1]
-          grind
         have _h : sizeOf β < sizeOf e := by
           rw [heq₁] at heq₀
           rw [heq₀]

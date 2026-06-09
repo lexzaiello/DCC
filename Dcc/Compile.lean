@@ -76,19 +76,19 @@ instance : ToString Ctx := ⟨toString ∘ Expr.toFormat⟩
 
 abbrev ParamInfer := (t_judge : (Expr → Expr → Prop)) × (∀ (e : Expr), Option ((τ : Expr) × PULift.{1, 0} (t_judge e τ)))
 
-def cc_var (ctx : Ctx) (idx : ℕ) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) : Lean.MacroM Expr :=
+def cc_var (ctx : Ctx) (idx : ℕ) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) (reduce : Expr → Expr := Expr.reduce_all) : Lean.MacroM Expr :=
   match ctx, idx with
   | DCC Coup(β), .zero => pure <| DCC Sndc(β)
   | DCC !(Coup(β)), .zero => pure <| DCC Sndc(β) ∘' *(Coup(β))
   | DCC !(Coup(β)), .succ n => do
     match (·.fst) <$> infer.snd β with
     | .some (DCC (Π(a, _b) x_α)) =>
-      (DCC ((#(·) ∘' Fstc(β)) ∘' !(Coup(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
+      (DCC ((#(·) ∘' Fstc(β)) ∘' !(Coup(β)))) <$> cc_var (reduce (DCC (a x_α))) n infer reduce
     | _ => Lean.Macro.throwError s!"Couple β index is not valid: {β}"
   | DCC Coup(β), .succ n => do
     match (·.fst) <$> infer.snd β with
     | .some (DCC (Π(a, _b) x_α)) =>
-      (·.comp' (DCC (Fstc(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
+      (·.comp' (DCC (Fstc(β)))) <$> (cc_var (reduce (DCC (a x_α))) n infer (reduce := reduce))
     | _ => Lean.Macro.throwError s!"Couple β index is not valid: {β}"
   | e, n => Lean.Macro.throwError s!"Cannot be indexed at {n} as a couple: {e}"
 
@@ -101,44 +101,46 @@ TODO: better logic for detecting duplication. Maybe some kind of user marker.
 
 -/
 
-def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) : Lean.MacroM _root_.Expr := do
+def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) (reduce : Expr → Expr := Expr.reduce_all) : Lean.MacroM _root_.Expr := do
   match e with
-  | .app (.app (.const ``Shared.deref _us) _α) x => abstract' x ctx infer
+  | .app (.app (.const ``Shared.deref _us) _α) x => abstract' x ctx infer reduce
   | .app (.app (.const ``Shared.share _us) _α) (.sort .zero) => return DCC (`(ctx, &(Sort 0)))
   | .app (.const ``Shared _us) (.sort .zero) => return DCC (`(ctx, !(Sort 0)))
   | .app (.app (.const ``Shared.share _us) _α) (.sort (.succ m)) => do
-    match ← (abstract' (.sort m) ctx infer) with
+    match ← (abstract' (.sort m) ctx infer reduce) with
     | DCC (`(ctx, &(Sort n)))
     | DCC (`(ctx, Sort n)) => return (DCC (`(ctx, &(Sort (n + 1)))))
     | m => Lean.Macro.throwError s!"not a valid sort: {m}"
   | .app (.const ``Shared _us) (.sort (.succ m)) => do
-    match ← (abstract' (.sort m) ctx infer) with
+    match ← (abstract' (.sort m) ctx infer reduce) with
     | DCC (`(ctx, !(Sort n)))
     | DCC (`(ctx, Sort n)) => return (DCC (`(ctx, !(Sort (n + 1)))))
     | m => Lean.Macro.throwError s!"not a valid sort: {m}"
   | .app (.app (.const ``Shared.share _us) _α) (.const ``True.intro []) => return DCC (`(ctx, &(∗)))
   | .app (.const ``Shared _us) (.const ``False []) => return DCC (`(ctx, !(⊥)))
-  | .bvar n => cc_var ctx n (infer := infer)
+  | .bvar n => cc_var ctx n (infer := infer) (reduce := reduce)
   | .app (.app (.const ``Sigma []) α) β => do
-    let α' ← abstract' α ctx infer
-    let β' ← abstract' β (DCC Coup(α')) infer
+    let α' ← abstract' α ctx infer reduce
+    let β' ← abstract' β (DCC Coup(α')) infer reduce
     return (DCC Σ(α', β'))
   | .lam _a (.app (.const ``Shared _us) α) bdy _binfo => do
-    let α' ← abstract' α ctx.deref infer
-    let inner ← abstract' bdy (DCC !(Coup(α'))) infer
+    let α' ← abstract' α ctx.deref infer reduce
+    dbg_trace s!"α': {α'}"
+    let inner ← abstract' bdy (DCC !(Coup(α'))) infer reduce
+    dbg_trace s!"inner: {inner}"
     return (DCC !Λ(ctx.deref, α', inner))
   | .lam _a α bdy _binfo => do
-    let α' ← abstract' α ctx.deref infer
-    let inner ← abstract' bdy (DCC Coup(α')) infer
+    let α' ← abstract' α ctx.deref infer reduce
+    let inner ← abstract' bdy (DCC Coup(α')) infer reduce
     return (DCC Λ(ctx, α', inner))
   | .forallE _name (.app (.const ``Shared _us) α) β _binfo => do
-    let α' ← abstract' α ctx infer
-    let β' ← abstract' β (DCC !(Coup(α'))) infer
+    let α' ← abstract' α ctx infer reduce
+    let β' ← abstract' β (DCC !(Coup(α'))) infer reduce
 
     return (DCC (Π(α', !Λ(ctx.deref, α', β'))))
   | .forallE _name α β _binfo => do
-    let α' ← abstract' α ctx infer
-    let β' ← abstract' β (DCC Coup(α')) infer
+    let α' ← abstract' α ctx infer reduce
+    let β' ← abstract' β (DCC Coup(α')) infer reduce
 
     return (DCC (Π(α', Λ(ctx, α', β'))))
   | .app (.app (.app (.app (.app (.app (.const ``use _us) _α) _β) _γ) M) N) _
@@ -147,8 +149,10 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
     let ctx' := match ctx with
       | DCC !(Γ) => Γ
       | Γ => Γ
-    let M' ← abstract' M ctx' infer
-    let N' ← abstract' N ctx' infer
+    dbg_trace ctx'
+    dbg_trace M
+    let M' ← abstract' M ctx' infer reduce
+    let N' ← abstract' N ctx' infer reduce
 
     /-
       M : ∀ (x : α) (y : β x)
@@ -156,64 +160,73 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
 
     match (·.fst) <$> infer.snd M' with
     | .some (_root_.Expr.app (.pi f_α f_β) x_α) =>
-      let α : _root_.Expr := match (f_α.app x_α).reduce_all with
+      let α : _root_.Expr := match reduce (f_α.app x_α) with
         | DCC !(α) => α
         | α => α
-      match (f_β.app x_α).reduce_all with
+      dbg_trace s!"red: {reduce (f_β.app x_α)}"
+      match reduce (f_β.app x_α) with
       | DCC Π(β, _γ) =>
         match (·.fst) <$> infer.snd (DCC Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))) with
         | .some (DCC (Π(_f_α, f_β₀) x_α₀)) =>
-          match (DCC (f_β₀ x_α₀)).reduce_all with
+          match reduce (DCC (f_β₀ x_α₀)) with
           | DCC Π(_β₂, x_γ') =>
             match (·.fst) <$> infer.snd (DCC ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩) with
             | .some (DCC (Π(_a₁, `(_a₂, Σ(_a₃, Λ(_a₄, _a₅, `(_α₆, _a₇))) ∘' _a₈)) _a₉)) =>
               return (DCC Eval(α, β, M') ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
             | _ => return (DCC Eval(α, β, M') ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
           | _ => Lean.Macro.throwError ("app is not well-typed:"
-            ++ Std.Format.line ++ (.nestD (repr (Lean.Expr.app M N)))
-            ++ ("couldn't detect codomain:" ++ Std.Format.line ++ (.nestD (Std.format (DCC (f_β₀ x_α₀)).reduce_all)))).pretty
-        | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
-      | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
-    | _ => Lean.Macro.throwError ("app is not well-typed:" ++ Std.Format.line ++ (repr (Lean.Expr.app M N))).pretty
+            ++ Std.Format.line ++ (.nestD (Std.format (Lean.Expr.app M N)))
+            ++ ("couldn't detect codomain:" ++ Std.Format.line ++ (.nestD (Std.format (reduce (DCC (f_β₀ x_α₀))))))).pretty
+        | _ => Lean.Macro.throwError ("app is not well-typed [1]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N))).pretty
+      | _ => Lean.Macro.throwError ("app is not well-typed [2]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N))).pretty
+    | x => Lean.Macro.throwError ("app is not well-typed [3]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "in: " ++ (Std.format (DCC (M' N'))) ++ Std.Format.line ++ "found: " ++ Std.format x).pretty
   | .const ``True.intro [] => return DCC (`(ctx, ∗))
   | .const ``True [] => return DCC (`(ctx, Ctx.empty))
   | .const ``False [] => return DCC (`(ctx, ⊥))
   | .sort .zero => return DCC (`(ctx, Sort 0))
   | .sort (.succ m) => do
-    match ← (abstract' (.sort m) ctx infer) with
+    match ← (abstract' (.sort m) ctx infer reduce) with
     | DCC (`(ctx, Sort n)) => pure (DCC (`(ctx, Sort (n + 1))))
     | m => Lean.Macro.throwError s!"not a valid sort: {m}"
   | e => Lean.Macro.throwError s!"not a recognized expression: {e}"
 
-def cc (root : Lean.Expr) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) : Lean.MacroM _root_.Expr :=
+def cc (root : Lean.Expr) (infer : ParamInfer) (reduce : Expr → Expr) : Lean.MacroM _root_.Expr :=
   match root with
   | .app (.const ``Shared _us) x => do
-    let x' ← cc x
+    let x' ← cc x infer reduce
     return DCC !(x')
   | .app (.app (.const ``Shared.share _us) _α) x => do
-    let x' ← cc x
+    let x' ← cc x infer reduce
     return DCC &(x')
   | .app (.lam _a α bdy _binfo) (.app (.app (.const ``Shared.share _us) _α) x) => do
-    let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty infer
-    let x' ← cc x
+    let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty infer reduce
+    let x' ← cc x infer reduce
+    return (DCC (f' &(∗) &(x')))
+  | .app (.forallE _a α bdy _binfo) (.app (.app (.const ``Shared.share _us) _α) x) => do
+    let f' ← abstract' (.forallE _a α bdy _binfo) Ctx.empty infer reduce
+    let x' ← cc x infer reduce
     return (DCC (f' &(∗) &(x')))
   | .app (.lam _a α bdy _binfo) x => do
-    let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty infer
-    let x' ← cc x
+    let f' ← abstract' (.lam _a α bdy _binfo) Ctx.empty infer reduce
+    let x' ← cc x infer reduce
+    return (DCC (f' &(∗) x'))
+  | .app (.forallE _a α bdy _binfo) x => do
+    let f' ← abstract' (.forallE _a α bdy _binfo) Ctx.empty infer reduce
+    let x' ← cc x infer reduce
     return (DCC (f' &(∗) x'))
   | .app M N => do
-    let M' ← cc M
-    let N' ← cc N
+    let M' ← cc M infer reduce
+    let N' ← cc N infer reduce
     return (DCC (M' N'))
   | .const ``True.intro [] => return DCC (∗)
   | .const ``True [] => return DCC (⊤)
   | .const ``False [] => return DCC (⊥)
   | .sort .zero => return DCC (Sort 0)
   | .sort (.succ m) => do
-    match ← (cc (.sort m)) with
+    match ← (cc (.sort m) infer reduce) with
     | DCC Sort n => pure (DCC Sort (n + 1))
     | m => Lean.Macro.throwError s!"not a valid sort: {m}"
-  | e => (·.app (DCC (&(∗)))) <$> abstract' e Ctx.empty infer
+  | e => (·.app (DCC (&(∗)))) <$> abstract' e Ctx.empty infer reduce
 
 def wrap_shares (n : ℕ) (u : Lean.Level) (e : Lean.Expr) : Lean.Expr :=
   (List.replicate n (Lean.Expr.const ``Shared [u])).foldr .app e
@@ -301,11 +314,12 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
   | e => return e
 
 open Qq in
-def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) : Lean.MacroM _root_.Expr :=
-  cc root infer
+def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩)
+  (reduce : _root_.Expr → _root_.Expr := Expr.reduce_all) : Lean.MacroM _root_.Expr :=
+  cc root (infer := infer) (reduce := reduce)
 
-def Lean.Expr.ccM (root : Lean.Expr) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) : Lean.Elab.TermElabM (Option _root_.Expr) := do
-  Elab.liftMacroM <| cc (← wrap_share_auto root) infer
+def Lean.Expr.ccM (root : Lean.Expr) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) (reduce : _root_.Expr → _root_.Expr := Expr.reduce_all) : Lean.Elab.TermElabM (Option _root_.Expr) := do
+  Elab.liftMacroM <| cc (← wrap_share_auto root) infer reduce
 
 declare_syntax_cat infer_cmd_param
 
@@ -316,9 +330,11 @@ elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
   let e_tm' ← Lean.instantiateExprMVars =<< wrap_share_auto e_tm
   match infer.toList with
   | [_infer] =>
-    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc e_tm' ⟨Expr.Judge₂, Expr.infer₂⟩)
+    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc e_tm' ⟨Expr.Judge₂, Expr.infer₂⟩ Expr.reduce_all)
+  | [_infer, _reduce] =>
+    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc e_tm' ⟨Expr.Judge₂, Expr.infer₂⟩ Expr.reduce_all₂)
   | _ =>
-    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc e_tm')
+    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc e_tm' ⟨Expr.Judge, Expr.infer⟩ Expr.reduce_all)
 
 macro "dcc_infer'" infer:infer_cmd_param* tm:term : term =>
   match infer.toList with
@@ -326,7 +342,15 @@ macro "dcc_infer'" infer:infer_cmd_param* tm:term : term =>
     match infer with
     | `(infer_cmd_param| { $infer:term }) =>
       `(term| do Sigma.fst <$> ($infer:term (dcc_compile' {$infer:term} $tm:term)))
-    | _ => `(term| do Sigma.fst <$> (dcc_compile' $tm:term).infer)
+    | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
+  | [infer, reduce] =>
+    match infer with
+    | `(infer_cmd_param| { $infer:term }) =>
+      match reduce with
+      | `(infer_cmd_param| { $reduce:term }) =>
+        `(term| do Sigma.fst <$> ($infer:term (dcc_compile' {$infer:term} {$reduce:term} $tm:term)))
+      | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
+    | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
   | _ =>
     `(term| do Sigma.fst <$> (dcc_compile' $tm:term).infer)
 
@@ -384,7 +408,30 @@ macro_rules
 #eval Std.format <| dcc_compile' {Expr.infer₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
 #eval Std.format <| dcc_infer' {Expr.infer₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
 #eval Std.format <| dcc_infer' {Expr.infer₂} ((fun (x : Sort 1) => (fun (x : Sort 1) => x) x) (Sort 0))
+#eval Std.format <| dcc_compile' {Expr.infer₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
+#eval Std.format <| (DCC (Π(Id(Sort (max 1 2)), `(Sort (max 1 2), Id(Sort 1) ∘' Fstc(`(Sort 1, Sort 1)))) Coup(`(Sort 1, Sort 1)))).reduce_all
+#eval Std.format <| (DCC Sndc(`(⊤, Sort 2))).infer₂'
+#eval Std.format <| (DCC (Π(Id(Sort 3), `(Sort 3, (`(⊤, Sort 2) ∘' Fstc(`(⊤, Sort 2))))) Coup(`(⊤, Sort 2)))).reduce_all
+#eval (DCC Coup(Sndc(`(⊤, Sort 2)))).infer₂'
+#eval Std.format <| (DCC Eval(Coup(Sndc(`(⊤, Sort 2))), (Sndc(`(⊤, Sort 2)) ∘' Fstc(Sndc(`(⊤, Sort 2)))),
+                 Λ(Coup(Sndc(`(⊤, Sort 2))), (Sndc(`(⊤, Sort 2)) ∘' Fstc(Sndc(`(⊤, Sort 2)))),
+                   Sndc((Sndc(`(⊤, Sort 2)) ∘' Fstc(Sndc(`(⊤, Sort 2))))))) ∘∘
+            ⟦Λ(Coup(Sndc(`(⊤, Sort 2))), `(Coup(Sndc(`(⊤, Sort 2))), Coup(Sndc(`(⊤, Sort 2)))),
+                 ((Sndc(`(⊤, Sort 2)) ∘' Fstc(Sndc(`(⊤, Sort 2)))) ∘'
+                    Fstc(`(Coup(Sndc(`(⊤, Sort 2))),
+                           Coup(Sndc(`(⊤,
+                                       Sort 2)))))))⟧⟨Id(Coup(Sndc(`(⊤, Sort 2)))),
+                                           Λ(Coup(Sndc(`(⊤, Sort 2))),
+                                             `(Coup(Sndc(`(⊤, Sort 2))), Coup(Sndc(`(⊤, Sort 2)))),
+                                             (Sndc(Sndc(`(⊤, Sort 2))) ∘'
+                                                Fstc(`(Coup(Sndc(`(⊤, Sort 2))), Coup(Sndc(`(⊤, Sort 2)))))))⟩).infer₂'
 #eval Std.format <| dcc_infer' {Expr.infer₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))).infer₂
+#eval Std.format <| dcc_compile' {Expr.infer₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun (x : Sort 0) => x) True.intro)
+#eval (Std.format ∘ Sigma.fst) <$> (DCC Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))).infer₂
+#eval Std.format <| (DCC Sndc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))))).reduce_all₂
+
+#eval Expr.toFormat (pretty := True) <$> (DCC Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))).infer₂'
 
 /-
 

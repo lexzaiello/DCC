@@ -149,8 +149,6 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
     let ctx' := match ctx with
       | DCC !(Γ) => Γ
       | Γ => Γ
-    dbg_trace ctx'
-    dbg_trace M
     let M' ← abstract' M ctx' infer reduce
     let N' ← abstract' N ctx' infer reduce
 
@@ -163,10 +161,8 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
       let α : _root_.Expr := match reduce (f_α.app x_α) with
         | DCC !(α) => α
         | α => α
-      dbg_trace s!"red: {reduce (f_β.app x_α)}"
       match reduce (f_β.app x_α) with
       | DCC Π(β, _γ) =>
-        dbg_trace s!"red: {Std.format (DCC Λ(α, `(α, α), N' ∘' Fstc(`(α, α))))}"
         match (·.fst) <$> infer.snd (DCC Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))) with
         | .some (DCC (Π(_f_α, f_β₀) x_α₀)) =>
           match reduce (DCC (f_β₀ x_α₀)) with

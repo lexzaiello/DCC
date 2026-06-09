@@ -50,11 +50,11 @@ inductive Judge₂ : Expr → Expr → Prop where
     → Reduces₂ α α'
     → Reduces₂ (comp.type α' γ g m) τ
     → Judge₂ (DCC (f ∘ g)) τ
-  | comp₂  : Judge₂ g (comp₂.g.type α β m)
+  | comp₂  : Judge₂ g τ_g
+    → Comp₂.g.type α β m τ_g
     → Judge₂ f (comp₂.f.type β f_γ n)
     → Reduces₂ (DCC (f_γ Coup(β))) γ
-    → Reduces₂ α α'
-    → Reduces₂ (comp.type α' γ g m) τ
+    → Reduces₂ (comp.type α γ g m) τ
     → Judge₂ (DCC (f ∘∘ g)) τ
   | comp'  : Judge₂ g (DCC (Π(Id(Sort m), f_β₀) α))
     → Reduces₂ (DCC (f_β₀ α)) (DCC (`(α, β)))
@@ -214,16 +214,22 @@ def infer₂ (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge₂ e t)) :=
       else .none
     | _ => .none
   | DCC (f ∘∘ g) =>
+    dbg_trace "a"
+    dbg_trace Sigma.fst <$> infer₂ g
     match infer₂ g with
-    | .some ⟨DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fstc(___a))) ∘' _a₂)) !(α)), ⟨ht₁⟩⟩ =>
-      if heq : (DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fstc(___a))) ∘' _a₂)) !(α))) = comp₂.g.type α β m then
+    | .some ⟨τ_g, ⟨ht₁⟩⟩ =>
+      match τ_g.read_comp₂_g_type with
+      | .some ⟨α, β, m, hg⟩ =>
+        dbg_trace "a"
+        dbg_trace "b"
         match infer₂ f with
         | .some ⟨(DCC (Π(Id(Sort n), f_γ) _a)), ⟨ht₂⟩⟩ =>
+          dbg_trace "c"
           if heq₂ : (DCC (Π(Id(Sort n), f_γ) _a)) = comp₂.f.type β f_γ n then
-            .some ⟨_, ⟨.comp₂ (heq ▸ ht₁) (heq₂ ▸ ht₂) (reduce₂_reduces rfl) (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
+            .some ⟨_, ⟨.comp₂ ht₁ hg (heq₂ ▸ ht₂) (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
           else .none
         | _ => .none
-      else .none
+      | _ => .none
     | _ => .none
   | DCC (f ∘' g) =>
     match infer₂ g with

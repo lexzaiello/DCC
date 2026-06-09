@@ -1,8 +1,11 @@
 import Dcc.Judge
 import Dcc.Judge2
+import Dcc.Types
 import Dcc.Tactic.Debug
 
 deriving instance Lean.ToExpr for Expr
+
+instance (priority := high) : Repr Expr := ⟨Function.const _ ∘ Expr.toFormat (pretty := False)⟩
 
 /-
 Auto-detecting sharing?
@@ -351,6 +354,35 @@ macro_rules
 
 #eval Std.format <| dcc_compile' {Expr.infer₂} (fun (α : Sort 0) (x : α) => x) True True.intro
 #eval Std.format <| dcc_infer' {Expr.infer₂} (fun (α : Sort 0) (x : α) => x) True True.intro
+
+#eval Std.format <| (DCC Id(Coup(`(⊤, Sort 0)))).infer₂'
+#eval Std.format <| (DCC Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
+                                        (Sndc(`(⊤, Sort 0)) ∘' Fstc(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))))))).infer'
+#eval Std.format <| (DCC ⟦`(Coup(`(⊤, Sort 0)),
+            `(Coup(`(⊤, Sort 0)),
+              Sort 0))⟧⟨Id(Coup(`(⊤, Sort 0))),
+                                      Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
+                                        (Sndc(`(⊤, Sort 0)) ∘' Fstc(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))))))⟩).infer'
+
+#eval Std.format <| (DCC Eval(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0),
+            Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0), Sndc(`(Coup(`(⊤, Sort 0)), Sort 0))))).infer'
+
+#eval Std.format <| (DCC ⟦`(Coup(`(⊤, Sort 0)),
+            `(Coup(`(⊤, Sort 0)),
+              Sort 0))⟧⟨Id(Coup(`(⊤, Sort 0))),
+                                      Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
+                                        (Sndc(`(⊤, Sort 0)) ∘' Fstc(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))))))⟩).infer'
+
+#eval Std.format <| (DCC (Eval(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0),
+            Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Sort 0), Sndc(`(Coup(`(⊤, Sort 0)), Sort 0)))) ∘∘
+       ⟦`(Coup(`(⊤, Sort 0)),
+            `(Coup(`(⊤, Sort 0)),
+              Sort 0))⟧⟨Id(Coup(`(⊤, Sort 0))),
+                                      Λ(Coup(`(⊤, Sort 0)), `(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))),
+                                        (Sndc(`(⊤, Sort 0)) ∘' Fstc(`(Coup(`(⊤, Sort 0)), Coup(`(⊤, Sort 0))))))⟩)).infer₂'
+
+#eval Std.format <| dcc_compile' {Expr.infer₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
+#eval Std.format <| dcc_infer' {Expr.infer₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
 
 /-
 

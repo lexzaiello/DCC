@@ -405,8 +405,8 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         simp [Level'.to_level] at heqc
         simp [Level'.to_level, heqb.left, heqb.right, heqc.right.right]⟩⟩
   | (DCC ⟦β⟧⟨a, b⟩)           =>
-    let ⟨.imax u_α₁ (.max (.succ u_fst₁) (.succ u_snd₁))
-       , .imax u_α₁' (.max (.succ u_fst₁') (.succ u_snd₁'))
+    let ⟨.max (.succ u_α₁) (.max (.succ u_fst₁) (.succ u_snd₁))
+       , .max (.succ u_α₁') (.max (.succ u_fst₁') (.succ u_snd₁'))
        , τ_b', b', ⟨heqa⟩⟩ ← to_lean b
        | throwError m!"pair snd function {b} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
     let ⟨.imax u_α₂  u_fst₂
@@ -418,19 +418,22 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
        , τ_β', β', ⟨heqc⟩⟩ ← to_lean β
        | throwError m!"pair couple-image function {β} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
     match τ_b' with
-    | ~q(∀ (x : ($α : Sort u_α₁')) (y : (($f_β x) : Sort (u_fst₁' + 1))), (($γ x y) : Sort (u_snd₁' + 1))) =>
+    | ~q(∀ (x : ($α : Sort (u_α₁' + 1)))
+      (y : (($f_β x) : Sort (u_fst₁' + 1))), (($γ x y) : Sort (u_snd₁' + 1))) =>
       let some a' ← checkTypeQ a' q(∀ (x : $α), $f_β x)
         | throwError m!"pair snd function {a} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
-      pure ⟨.max (.max (.succ u_fst₁) (.succ u_snd₁)) u_α₁
+      pure ⟨.max (.max (.succ u_fst₁) (.succ u_snd₁)) (.succ u_α₁)
           , _
-          , q(∀ (x : $α), Σ (a : ($f_β x)), $γ x a)
-          , q(fun (x : $α) => Sigma.mk ($a' x) ($b' x ($a' x)))
+          , q(∀ (x : (Shared $α)), Σ (a : ($f_β x.deref)), $γ x.deref a)
+          , q(fun (x : (Shared $α)) => Sigma.mk ($a' x.deref) ($b' x.deref ($a' x.deref)))
           , ⟨by
             simp [Level'.to_level] at heqa
             simp [heqa.left, heqa.right]
             rfl⟩⟩
     | τ_β' => throwError m!"pair snd function {b} has type: {τ_β'}, but that was not expected at {(DCC ⟦β⟧⟨a, b⟩)}"
-  | (DCC ⟦β⟧(a, b))           => sorry
+  | (DCC ⟦β⟧(a, b))           =>
+    
+    sorry
   | (DCC Coup(β))             => sorry
   | (DCC Σ(α, β))             => sorry
   | (DCC x = y)               => sorry

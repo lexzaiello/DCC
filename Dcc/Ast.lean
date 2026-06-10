@@ -337,3 +337,17 @@ gen_dsl "DCC" for Expr
 
 def runDcc : Lean.Syntax → Lean.MacroM Lean.Syntax
   | `(gen_dcc| $e:gen_dcc) => `(DCC $e:gen_dcc)
+
+inductive Shared.{u} (α : Type u) where
+  | share : α → Shared α
+deriving Lean.ToExpr
+
+def Shared.deref.{u} {α : Type u} (s : Shared α) : α :=
+  match s with
+  | ⟨s⟩ => s
+
+def Shared.map.{u, v} {α : Type u} {β : Type v} (f : α → β) (s : Shared α) : Shared β :=
+  match s with
+  | ⟨s⟩ => ⟨f s⟩
+
+#check Shared.deref

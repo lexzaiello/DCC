@@ -1,4 +1,5 @@
 import Dcc.Judge
+import Dcc.Ast
 import Dcc.Judge2
 import Dcc.Types
 import Dcc.Eta.Reduce
@@ -53,32 +54,6 @@ def shared_in (depth : DebruijnIdx) (in_e : Lean.Expr) : ℕ :=
   | .proj _ _ strt => shared_in depth strt
   | .letE _ ty val bdy _ => (shared_in depth ty) + (shared_in depth val) + (shared_in depth bdy)
   | .bvar _ | .mdata _ _ | .lit _ | .const _ _ | .sort _ | .mvar _ | .fvar _ => 0
-
-inductive Shared.{u} (α : Type u) where
-  | share : α → Shared α
-deriving Lean.ToExpr
-
-def Shared.deref.{u} {α : Type u} (s : Shared α) : α :=
-  match s with
-  | ⟨s⟩ => s
-
-#check Shared.deref
-
-def use.{u, v, s} {α : Type u}
-  {β : α → Type v} {γ : ∀ (x : α), (β x) → Type s} (f : ∀ (x : α) (y : β x), γ x y)
-  (g : ∀ (x : α), β x) : ∀ (x : Shared α), γ x.deref (g x.deref) := fun x =>
-  f x.deref (g x.deref)
-
-open Shared
-
-syntax "&(" term ")" : term
-syntax "*(" term ")" : term
-syntax "↑(" term ")" : term
-
-macro_rules
-  | `(&($e:term)) => `(share $e:term)
-  | `(*($e:term)) => `(Shared $e:term)
-  | `(↑($e:term)) => `(deref $e:term)
 
 def Ctx := Expr
 def Ctx.empty := DCC !(⊤)
@@ -441,7 +416,6 @@ elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
   let e_tm ← Lean.instantiateMVars e_tm
   let e_tm' ← Lean.instantiateExprMVars (← wrap_share_auto_trans (← (wrap_share_auto e_tm)))
-  dbg_trace s!"e_tm': {e_tm'}"
   match infer.toList with
   | [_infer] =>
     return Lean.toExpr (← Lean.Elab.liftMacroM <| cc e_tm' ⟨Expr.Judge₂, Expr.infer₂⟩ Expr.reduce_all)

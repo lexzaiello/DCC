@@ -478,9 +478,27 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
           simp [Level'.to_level] at heqa
           simp [heqa.left, heqa.right]⟩⟩
     | _ =>  throwError m!"couple type type {β} is not well-typed at {(DCC Coup(β))}"
-  | (DCC Σ(α, β))             =>
-    
-    sorry
+  | (DCC Σ(_f_α, f_β))             =>
+    let ⟨.imax u_env₁ (.imax u_α₁ u_srt₁)
+       , .imax u_env₁' (.imax u_α₁' u_srt₁')
+      , τ_f_β', f_β', ⟨heqa⟩⟩ ← to_lean f_β
+      | throwError m!"Σ domain function {f_β} is not well-typed at {(DCC Σ(_f_α, f_β))}"
+    -- (u_env₁'.max u_srt₁'.succ.succ).max u_α₁'.succ.succ = ((u_env₁.max u_srt₁.succ.succ).imax u_α₁.succ.succ).to_level
+    match τ_f_β' with
+    | ~q(∀ (env : ($α : (Sort u_env₁'))) (x : (($β env) : (Sort u_α₁'))), ($cod : (Sort u_srt₁'))) =>
+      pure ⟨(u_env₁.max u_srt₁.succ.succ).max u_α₁.succ.succ
+        , _
+        , q($α → Sort ((max u_α₁' u_srt₁') + 1))
+        , q(fun (env : $α) => Sort ((max u_α₁' u_srt₁')))
+        , ⟨by
+          simp [Level'.to_level] at heqa
+          simp_all
+          simp [Level'.to_level]⟩⟩
+    | _ => throwError m!"Σ domain function {f_β} is not well-typed at {(DCC Σ(_f_α, f_β))}"
+    /-match τ_f_β' with
+    | ~q(($env : $α) → $β → Sort u_srt₁') =>
+      sorry
+    | throwError m!"Σ domain function {f_β} is not well-typed at {(DCC Σ(_f_α, f_β))}"-/
   | (DCC x = y)               => sorry
   | (DCC Eql(f_α))            => sorry
   | (DCC refl(f_α))           => sorry

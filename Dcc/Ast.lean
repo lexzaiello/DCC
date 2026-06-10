@@ -346,7 +346,7 @@ def Shared.deref.{u} {α : Type u} (s : Shared α) : α :=
   match s with
   | ⟨s⟩ => s
 
-def Shared.map.{u, v} {α : Type u} {β : Type v} (f : α → β) (s : Shared α) : Shared β :=
+def Shared.map.{u, v} {α : Type u} {β : α → Type v} (f : ∀ (x : α), β x) (s : Shared α) : Shared (β s.deref) :=
   match s with
   | ⟨s⟩ => ⟨f s⟩
 

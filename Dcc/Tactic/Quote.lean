@@ -178,21 +178,16 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) × (α
                   .imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)), τ_x, x', ⟨heq₃⟩⟩ =>
                   if heq : u₂ = u then
                     if heqa : u_β₂ = u_β then
-                      by
-                        cases heq
-                        cases heqa
-                        cases heq₁
-                        cases heq₂
                         have α' : Q(Type u') := α'
                         have β_cod' : Q(Type u_β') := β_cod
                         have β' : Q($α' → Type u_β') := β'
-                        simp_all
                         match τ_x with
                         | ~q(∀ (x : ($α' : Type (u₂a + 1))) (y : ($β' : $α' → Type (u_β₂a + 1)) x),
                           ($γ : ∀ (x : $α') (y : $β' x), Type (u'₂a + 1)) x y) =>
-                          
-                          sorry
-                        | _ => exact throwError m!"Eval body {x} is not uncurryable in: {e}"
+                          .pure ⟨.imax (.imax (.succ (.succ u₂)) (.succ (.succ u_β₂))) (.succ (.succ u'₂)),
+                            .imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)),
+                            τ_x, q(fun (x : $α') (y : $β' x) => $x' x y), ⟨by simp_all⟩⟩
+                        | _ => throwError m!"Eval body {x} is not uncurryable in: {e}"
                       else throwError m!"Eval body {x} is not uncurryable in: {e}"
                     else throwError m!"Eval body {x} is not uncurryable in: {e}"
                   | _ => throwError m!"Eval body {β} is not uncurryable in: {e}"

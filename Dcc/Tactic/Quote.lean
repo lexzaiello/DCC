@@ -307,22 +307,19 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
                 let lv_expected := (Level'.imax u_e₁ u_e₂).to_level
                 let some expected_τ_x ← checkTypeQ q(Sort lv_expected) expected_τ_x
                   | throwError m!"this should not be reachable (curry)"
-                match h_def_eq₁ : ← isDefEqQ τ_x expected_τ_x with
-                | .defEq h_τ_eq =>
-                  let e'' : Q(∀ (x : (Σ (a : $α'), $β' a)), $γ x) := e'
-                  let u_all := Level'.imax (Level'.max u u_β) u_e₂
-                  let γ_inst ← instantiateMVarsQ γ
-                  pure ⟨Level'.imax (.succ u) (Level'.imax (Level'.succ u_β) u_e₂),
-                    Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
-                    q(∀ (x : $α') (y : $β' x), $γ (Sigma.mk x y)),
-                    q(fun (x : $α') (y : $β' x) => ($e'' (Sigma.mk x y))) , ⟨by
-                      simp [Level'.to_level]
-                      have ha := Level'.inj₂ (Level'.inj heq.symm)
-                      have hb := Level'.inj₂ (Level'.inj heqb.symm)
-                      simp [Level'.to_level] at heq₃
-                      have hc := heq₃.right
-                      exact ⟨ha.symm, hb.symm, hc⟩⟩⟩
-                | _ => throwError m!"this should not be reachable (curry)"
+                let e'' : Q(∀ (x : (Σ (a : $α'), $β' a)), $γ x) := e'
+                let u_all := Level'.imax (Level'.max u u_β) u_e₂
+                let γ_inst ← instantiateMVarsQ γ (α := q((Σ (a : $α'), $β' a) → Sort u_e₂'))
+                pure ⟨Level'.imax (.succ u) (Level'.imax (Level'.succ u_β) u_e₂),
+                  Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
+                  q(∀ (x : $α') (y : $β' x), $γ (Sigma.mk x y)),
+                  q(fun (x : $α') (y : $β' x) => ($e'' (Sigma.mk x y))) , ⟨by
+                    simp [Level'.to_level]
+                    have ha := Level'.inj₂ (Level'.inj heq.symm)
+                    have hb := Level'.inj₂ (Level'.inj heqb.symm)
+                    simp [Level'.to_level] at heq₃
+                    have hc := heq₃.right
+                    exact ⟨ha.symm, hb.symm, hc⟩⟩⟩
                   --let expected_ty_e' := q(∀ (x : (Σ (a : $α'), $β'' a)),
                   /-match ← isLevelDefEqQ u' u_α₂' with
                   | .defEq heq₃ =>

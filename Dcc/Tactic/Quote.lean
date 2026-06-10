@@ -38,10 +38,10 @@ def Level'.to_level_expr (l : Level') : ((u : Lean.Level) × Q(Sort $u)) :=
   | .succ n => ⟨_, q(Sort $(n.to_level))⟩
   | .imax m n => ⟨_, q(Sort (imax $(m.to_level) $(n.to_level)))⟩
 
-def Level.imax (l₁ l₂ : Level) : Level :=
+/-def Level.imax (l₁ l₂ : Level) : Level :=
   match l₁, l₂ with
   | _, .zero => .zero
-  | m, .succ n => max m (.succ n)
+  | m, .succ n => max m (.succ n)-/
 
 namespace Expr
 
@@ -178,25 +178,34 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) × (α
                   .imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)), τ_x, x', ⟨heq₃⟩⟩ =>
                   if heq : u₂ = u then
                     if heqa : u_β₂ = u_β then
-                        have α' : Q(Type u') := α'
-                        have β_cod' : Q(Type u_β') := β_cod
-                        have β' : Q($α' → Type u_β') := β'
-                        match τ_x with
-                        | ~q(∀ (x : ($α' : Type (u₂a + 1))) (y : ($β' : $α' → Type (u_β₂a + 1)) x),
-                          ($γ : ∀ (x : $α') (y : $β' x), Type (u'₂a + 1)) x y) =>
-                          .pure ⟨.imax (.imax (.succ (.succ u₂)) (.succ (.succ u_β₂))) (.succ (.succ u'₂)),
-                            .imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)),
-                            τ_x, q(fun (x : $α') (y : $β' x) => $x' x y), ⟨by simp_all⟩⟩
-                        | _ => throwError m!"Eval body {x} is not uncurryable in: {e}"
-                      else throwError m!"Eval body {x} is not uncurryable in: {e}"
+                      have α' : Q(Type u') := α'
+                      have β_cod' : Q(Type u_β') := β_cod
+                      have β' : Q($α' → Type u_β') := β'
+                      match τ_x with
+                      | ~q(∀ (x : ($α' : Type (u₂a + 1))) (y : ($β' : $α' → Type (u_β₂a + 1)) x),
+                        ($γ : ∀ (x : $α') (y : $β' x), Type (u'₂a + 1)) x y) =>
+                        .pure ⟨.imax (.imax (.succ (.succ u₂)) (.succ (.succ u_β₂))) (.succ (.succ u'₂)),
+                          .imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)),
+                          τ_x, q(fun (x : $α') (y : $β' x) => $x' x y), ⟨by simp_all⟩⟩
+                      | _ => throwError m!"Eval body {x} is not uncurryable in: {e}"
                     else throwError m!"Eval body {x} is not uncurryable in: {e}"
-                  | _ => throwError m!"Eval body {β} is not uncurryable in: {e}"
+                  else throwError m!"Eval body {x} is not uncurryable in: {e}"
+                | _ => throwError m!"Eval body {β} is not uncurryable in: {e}"
               | _ => throwError m!"Eval body {β} is not uncurryable in: {e}"
             | _ => throwError m!"Eval body {α} is not uncurryable in: {e}"
           else throwError m!"Eval body {α} is not uncurryable in: {e}"
         | _ => throwError m!"Eval body {α} is not uncurryable in: {e}"
     | _ => throwError m!"Eval param {α} is not uncurryable in: {e}"
-  | (DCC `(β, x))             => sorry
+  | (DCC `(β, x))             =>
+    match ← β.to_lean, ← x.to_lean with
+    | ⟨.succ (.succ u), .succ (.succ u'), τ_β, β', ⟨heq₁⟩⟩, ⟨.succ (.succ v), .succ (.succ v'), τ_x, x', ⟨heq₂⟩⟩ =>
+      by
+        cases heq₁; cases heq₂
+        exact .pure ⟨.imax (.succ (.succ u)) (.succ (.succ v)),
+          Lean.Level.imax (Level'.succ (.succ u)).to_level (Level'.succ (.succ v)).to_level , q($τ_β → $τ_x), q(fun (y : $τ_β) => $x'), ⟨by
+          unfold Level'.to_level
+          rw [Level'.to_level_comm, Level'.to_level_comm]⟩⟩
+    | _, _ => throwError m!"Quotation points are not well-typed: `({β}, {x})"
   | (DCC Id(α))               =>
     let α' := α.to_lean
     sorry

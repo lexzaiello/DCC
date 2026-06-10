@@ -515,7 +515,18 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
           simp [Level'.to_level] at heqa
           simp [Level'.to_level, heqa.left, heqa.right]⟩⟩
     | _ => throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
-  | (DCC refl(f_α))           => sorry
+  | (DCC refl(f_α))            =>
+    let ⟨.max (.succ u_env₁) (.succ (.succ u_srt₁))
+      , .max (.succ u_env₁') (.succ (.succ u_srt₁'))
+      , τ_f_α', f_α', ⟨heqa⟩⟩ ← to_lean f_α
+      | throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
+    match τ_f_α' with
+    | ~q(∀ (env : ($α : (Type u_env₁'))), Type u_srt₁') =>
+      pure ⟨.zero, _
+        , q(∀ (env : $α) (x : $f_α' env), x = x)
+        , q(fun (env : $α) (x : $f_α' env) => _root_.refl x)
+        , ⟨by simp [Level'.to_level]⟩⟩
+    | _ => throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
   | (DCC f ∘ g)               => sorry
   | (DCC f ∘∘ g)              => sorry
   | (DCC f ∘' g)              => sorry

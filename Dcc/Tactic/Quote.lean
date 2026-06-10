@@ -320,50 +320,53 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
                     simp [Level'.to_level] at heq₃
                     have hc := heq₃.right
                     exact ⟨ha.symm, hb.symm, hc⟩⟩⟩
-                  --let expected_ty_e' := q(∀ (x : (Σ (a : $α'), $β'' a)),
-                  /-match ← isLevelDefEqQ u' u_α₂' with
-                  | .defEq heq₃ =>
-                    match ← isLevelDefEqQ u_β' u₂' with
-                    | .defEq heq₄ =>
-                      by
-                        let α'' : Q(Type u') := α'
-                        let β'' : Q($α'' → Type u_β') := β'
-                        let t_sigma : Q(Type (max u_α₂' u₂')) := q((Σ (a : $α'), $β'' a))
-                        simp_all
-                        match τ_x with
-                        | ~q(∀ (x : $(t_sigma)), (($γ x) : Type u_x')) =>
-                          --let x ← checkTypeQ e' q(∀ (x : (Σ (a : $α'), $β' a)), Type u_x')
-                          exact pure ⟨_, _
-                          , q(∀ (x : $α') (y : $β'' x), $γ (Sigma.mk x y))
-                          , q(fun (x : $α') (y : $β'' x) => $e' (Sigma.mk x y))
-                          , by sorry⟩
-                        | _ => sorry
-                    | .notDefEq => throwError m!"Curry body {e} is not curryable in: {(DCC Λ(α, β, e))}"
-                  | .notDefEq => throwError m!"Curry body {e} is not curryable in: {(DCC Λ(α, β, e))}"-/
-                /-match ← x.to_lean with
-                | ⟨.imax (.imax (.succ (.succ u₂)) (.succ (.succ u_β₂))) (.succ (.succ u'₂)),
-                  .imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)), τ_x, x', ⟨heq₃⟩⟩ =>
-                  if heq : u₂ = u then
-                    if heqa : u_β₂ = u_β then
-                      have α' : Q(Type u') := α'
-                      have β_cod' : Q(Type u_β') := β_cod
-                      have β' : Q($α' → Type u_β') := β'
-                      match τ_x with
-                      | ~q(∀ (x : ($α' : Type (u₂a + 1))) (y : ($β' : $α' → Type (u_β₂a + 1)) x),
-                        ($γ : ∀ (x : $α') (y : $β' x), Type (u'₂a + 1)) x y) =>
-                        .pure ⟨.imax (.imax (.succ (.succ u₂)) (.succ (.succ u_β₂))) (.succ (.succ u'₂)),
-                          .imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)),
-                          τ_x, q(fun (x : $α') (y : $β' x) => $x' x y), ⟨by simp_all⟩⟩
-                      | _ => throwError m!"Eval body {x} is not uncurryable in: {e}"
-                    else throwError m!"Eval body {x} is not uncurryable in: {e}"
-                  else throwError m!"Eval body {x} is not uncurryable in: {e}"
-                | _ => throwError m!"Eval body {β} is not uncurryable in: {e}"-/
               | _ => throwError m!"Eval body {β} is not curryable in: {e}"
             | _ => throwError m!"Eval body {α} is not curryable in: {e}"
           else throwError m!"Eval body {α} is not curryable in: {e}"
         | _ => throwError m!"Eval body {α} is not curryable in: {e}"
     | _ => throwError m!"Eval param {α} is not curryable in: {e}"
-  | (DCC !Λ(α, β, e))         => sorry
+  | (DCC !Λ(α, β, e))          =>
+    -- switch τ_α to Sort u'?
+    match ← α.to_lean with
+    | ⟨.succ (.succ u), .succ (.succ u'), τ_α, α', ⟨heq⟩⟩ =>
+      match τ_α with
+      | ~q(Type u') =>
+        match ← get_fn_ty_arrow β with
+        | ⟨.succ (.succ u_α), .succ (.succ u_β), .succ (.succ u_α'), .succ (.succ u_β'), α'', β_cod, β', ⟨heqa⟩, ⟨heqb⟩⟩  =>
+          if heq₁ : u_α = u then
+            match ← isDefEqQ α' α'' with
+            | .defEq heq₂ =>
+              --let u_β' := u_β.to_level
+              --let u_β' := (Level'.succ u_β).to_level
+              match β_cod with
+              | ~q(Type u_β') =>
+                let ⟨.imax u_e₁ u_e₂, .imax u_e₁' u_e₂', τ_x, e', ⟨heq₃⟩⟩ ← e.to_lean
+                  | throwError m!"this should not be reachable (curry)"
+                let t_sigma : Q(Type (max u' u_β')) := q(Σ (a : $α'), $β' a)
+                let γ : Q((Shared (Σ (a : $α'), $β' a)) → Sort u_e₂') ← mkFreshExprMVarQ q(Shared $t_sigma → Sort u_e₂')
+                let expected_τ_x : Q(Sort (imax (max (u_β' + 1) (u' + 1)) u_e₂')) :=
+                  q(∀ (x : (Shared (Σ (a : $α'), $β' a))), $γ x)
+                let lv_expected := (Level'.imax u_e₁ u_e₂).to_level
+                let some expected_τ_x ← checkTypeQ q(Sort lv_expected) expected_τ_x
+                  | throwError m!"this should not be reachable (curry)"
+                let e'' : Q(∀ (x : (Shared (Σ (a : $α'), $β' a))), $γ x) := e'
+                let u_all := Level'.imax (Level'.max u u_β) u_e₂
+                let γ_inst ← instantiateMVarsQ γ (α := q((Σ (a : $α'), $β' a) → Sort u_e₂'))
+                pure ⟨Level'.imax (.succ u) (Level'.imax (Level'.succ u_β) u_e₂),
+                  Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
+                  q(∀ (x : Shared $α') (y : Shared ($β' x.deref)), $γ (Shared.share (Sigma.mk (Shared.deref x) (Shared.deref y)))),
+                  q(fun (x : Shared $α') (y : Shared ($β' x.deref)) => ($e'' (Shared.share (Sigma.mk (Shared.deref x) (Shared.deref y))))) , ⟨by
+                    simp [Level'.to_level]
+                    have ha := Level'.inj₂ (Level'.inj heq.symm)
+                    have hb := Level'.inj₂ (Level'.inj heqb.symm)
+                    simp [Level'.to_level] at heq₃
+                    have hc := heq₃.right
+                    exact ⟨ha.symm, hb.symm, hc⟩⟩⟩
+              | _ => throwError m!"Eval body {β} is not curryable in: {e}"
+            | _ => throwError m!"Eval body {α} is not curryable in: {e}"
+          else throwError m!"Eval body {α} is not curryable in: {e}"
+        | _ => throwError m!"Eval body {α} is not curryable in: {e}"
+    | _ => throwError m!"Eval param {α} is not curryable in: {e}"
   | (DCC Π(α, β))             => sorry
   | (DCC ⟦β⟧⟨a, b⟩)           => sorry
   | (DCC ⟦β⟧(a, b))           => sorry

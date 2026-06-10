@@ -43,7 +43,7 @@ def Level'.to_level (l : Level') : Lean.Level :=
   | .imax m n => .imax m.to_level n.to_level
   | .max m n => .max m.to_level n.to_level
 
-theorem Level'.to_level_comm : (Level'.to_level u).succ = (Level'.to_level u.succ) := by
+theorem Level'.to_level_assoc : (Level'.to_level u).succ = (Level'.to_level u.succ) := by
   induction u
   any_goals (simp [to_level])
 
@@ -189,7 +189,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
             rename_i h
             simp [Level'.to_level] at h
             rw [h]
-            simp [Level'.to_level_comm]⟩⟩
+            simp [Level'.to_level_assoc]⟩⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC !(α))                =>
     match ← α.to_lean with
@@ -203,7 +203,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
             rename_i h
             simp [Level'.to_level] at h
             rw [h]
-            simp [Level'.to_level_comm]⟩⟩
+            simp [Level'.to_level_assoc]⟩⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC Eval(α, β, x))       =>
     match ← α.to_lean with
@@ -250,7 +250,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         exact .pure ⟨.imax (.succ (.succ u)) (.succ (.succ v)),
           Lean.Level.imax (Level'.succ (.succ u)).to_level (Level'.succ (.succ v)).to_level , q($τ_β → $τ_x), q(fun (y : $τ_β) => $x'), ⟨by
           unfold Level'.to_level
-          rw [Level'.to_level_comm, Level'.to_level_comm]⟩⟩
+          rw [Level'.to_level_assoc, Level'.to_level_assoc]⟩⟩
     | _, _ => throwError m!"Quotation points are not well-typed: `({β}, {x})"
   | (DCC Id(α))               =>
     match ← α.to_lean with
@@ -264,7 +264,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
             rename_i h
             simp [Level'.to_level] at h
             rw [h]
-            simp [Level'.to_level_comm]⟩⟩
+            simp [Level'.to_level_assoc]⟩⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC Sort m)              =>
     let m₀  := (level'_from_nat m)
@@ -432,8 +432,36 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
             rfl⟩⟩
     | τ_β' => throwError m!"pair snd function {b} has type: {τ_β'}, but that was not expected at {(DCC ⟦β⟧⟨a, b⟩)}"
   | (DCC ⟦β⟧(a, b))           =>
-    
-    sorry
+    let ⟨.max (.succ u_fst₁)  (.succ u_snd₁)
+       , .max (.succ u_fst₁') (.succ u_snd₁')
+       , τ_β, β', ⟨heqa⟩⟩ ← to_lean β
+       | throwError m!"couple snd type {β} is not well-typed at {(DCC ⟦β⟧(a, b))}"
+    let ⟨.succ u_fst₂
+        , .succ u_fst₂'
+        , τ_a, a', ⟨heqb⟩⟩ ← to_lean a
+        | throwError m!"couple fst {a} is not well-typed at {(DCC ⟦β⟧(a, b))}"
+    let ⟨.succ u_snd₂
+        , .succ u_snd₂'
+        , τ_b, b', ⟨heqc⟩⟩ ← to_lean b
+        | throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
+    let some β' ← checkTypeQ τ_β q($τ_a → Sort (u_snd₂' + 1))
+      | throwError m!"couple snd type {β} is not well-typed at {(DCC ⟦β⟧(a, b))}"
+    let b' ← checkTypeQ (u := u_snd₂'.succ) a' q($β' $a')
+    match b' with
+    | .some b' =>
+      pure ⟨(Level'.max (Level'.succ u_snd₂) (Level'.succ u_fst₂))
+        , _, q(Σ (a : $τ_a), $β' a)
+        , q(Sigma.mk $a' $b')
+        , ⟨by
+          simp [Level'.to_level] at heqa
+          simp [Level'.to_level] at heqb
+          simp [heqc]
+          conv =>
+            right
+            rw [Level'.to_level, Level'.to_level]
+            rfl
+          simp [heqb, Level'.to_level_assoc]⟩⟩
+    | .none => throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
   | (DCC Coup(β))             => sorry
   | (DCC Σ(α, β))             => sorry
   | (DCC x = y)               => sorry

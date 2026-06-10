@@ -249,15 +249,28 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
       rfl⟩⟩
   | (DCC Fstc(β))             =>
     match ← β.to_lean with
-    | ⟨.max (.succ u) u_α , .max (.succ u') u_α', τ_β, β', heq⟩ =>
+    | ⟨.max (.succ (.succ u)) (.succ u_α) , .max (.succ (.succ u')) (.succ u_α'), τ_β, β', ⟨heq⟩⟩ =>
       match τ_β with
-      | ~q(∀ (x : ($α : Sort u_α')), Sort u') =>
-        
-        sorry
-      | _ => sorry
-    | _ =>
-      throwError m!"not a valid projection (Fst) index: {β}"
-  | (DCC Sndc(β))             => sorry
+      | ~q(∀ (x : ($α : Type u_α')), Type u') =>
+        pure ⟨(.max u.succ u_α.succ), (Lean.Level.max u'.succ u_α'.succ),
+          q(∀ (x : Σ a : $α, $β' a), $α), q(fun (x : Σ a : $α, $β' a) => Sigma.fst x)
+          , ⟨by
+            cases heq
+            simp [Level'.to_level]⟩⟩
+      | _ => throwError m!"not a well-typed projection (Fst) index: {β}"
+    | _ => throwError m!"not a valid projection (Fst) index: {β}"
+  | (DCC Sndc(β))             =>
+    match ← β.to_lean with
+    | ⟨.max (.succ (.succ u)) (.succ u_α) , .max (.succ (.succ u')) (.succ u_α'), τ_β, β', ⟨heq⟩⟩ =>
+      match τ_β with
+      | ~q(∀ (x : ($α : Type u_α')), Type u') =>
+        pure ⟨(.max u.succ u_α.succ), (Lean.Level.max u'.succ u_α'.succ),
+          q(∀ (x : Σ a : $α, $β' a), $β' (Sigma.fst x)), q(fun (x : Σ a : $α, $β' a) => Sigma.snd x)
+          , ⟨by
+            cases heq
+            simp [Level'.to_level]⟩⟩
+      | _ => throwError m!"not a well-typed projection (Fst) index: {β}"
+    | _ => throwError m!"not a valid projection (Fst) index: {β}"
   | (DCC Λ(α, β, e))          => sorry
   | (DCC !Λ(α, β, e))         => sorry
   | (DCC Π(α, β))             => sorry
@@ -276,3 +289,4 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
 end
 
 end Expr
+

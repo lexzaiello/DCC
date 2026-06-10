@@ -11,11 +11,22 @@ open Lean.Meta
 Display DCC terms as lean expressions.
 -/
 
+def level_from_nat (n : ℕ) : Lean.Level :=
+  match n with
+  | .zero => .zero
+  | .succ n => (level_from_nat n).succ
+
 inductive Level' where
   | zero : Level'
   | succ : Level' → Level'
   | imax : Level' → Level' → Level'
 deriving DecidableEq
+
+@[inline]
+abbrev level'_from_nat (n : ℕ) : Level' :=
+  match n with
+  | .zero => .zero
+  | .succ n => (level'_from_nat n).succ
 
 def Level.to_level' (l : Level) : Level' :=
   match l with
@@ -109,7 +120,8 @@ partial def get_fn_ty (e : Expr) : MetaM ((u v : Level')
         else throwError m!"not well-typed (domain and codomain universe level mismatch): {e}"
   | _, .none | .none, _ => throwError m!"not well-typed (no domain or codomain): {e}"
 
-partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) × (α : Q(Sort $u')) × Q($α) × (PLift (u' = u.to_level))):= do
+partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
+  (α : Q(Sort $u')) × Q($α) × (PLift (u' = u.to_level))):= do
   match heq₀ : e with
   | (DCC ⊤)                   => return ⟨.succ .zero, (Level'.succ .zero).to_level, q(Prop), q(True), ⟨rfl⟩⟩
   | (DCC ⊥)                   => return ⟨.succ .zero, (Level'.succ .zero).to_level, q(Prop), q(False), ⟨rfl⟩⟩
@@ -207,9 +219,31 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) × (α
           rw [Level'.to_level_comm, Level'.to_level_comm]⟩⟩
     | _, _ => throwError m!"Quotation points are not well-typed: `({β}, {x})"
   | (DCC Id(α))               =>
-    let α' := α.to_lean
-    sorry
-  | (DCC Sort m)              => sorry
+    match ← α.to_lean with
+    | ⟨.succ (.succ u), .succ (.succ u'), τ_α, α', heq⟩ =>
+      match τ_α with
+      | ~q(Type u') =>
+        by
+          cases heq
+          rename_i match_eq
+          exact pure ⟨.succ u, _, q($α' → $α'), q(fun (x : $α') => x), ⟨by
+            rename_i h
+            simp [Level'.to_level] at h
+            rw [h]
+            simp [Level'.to_level_comm]⟩⟩
+    | _ => throwError m!"Shared boxes can only live in Type: {e}"
+  | (DCC Sort m)              =>
+    let m₀  := (level'_from_nat m)
+    let m'  := m₀.to_level
+    let s₁  := Lean.Expr.sort m'.succ
+    let s₂ := Lean.Expr.sort m'
+    let some s₁' ← checkTypeQ s₁ q(Type (m' + 1))
+      | throwError m!"not a valid sort: {e}"
+    let some s₂' ← checkTypeQ s₂ q(Type m')
+      | throwError m!"not a valid sort: {e}"
+    pure <| ⟨m₀.succ.succ, m'.succ.succ, s₁, s₂, ⟨by
+      simp_all [Level'.to_level]
+      rfl⟩⟩
   | (DCC Fstc(β))             => sorry
   | (DCC Sndc(β))             => sorry
   | (DCC Λ(α, β, e))          => sorry

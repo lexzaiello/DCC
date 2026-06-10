@@ -367,7 +367,24 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
           else throwError m!"Eval body {α} is not curryable in: {e}"
         | _ => throwError m!"Eval body {α} is not curryable in: {e}"
     | _ => throwError m!"Eval param {α} is not curryable in: {e}"
-  | (DCC Π(α, β))             => sorry
+  | (DCC Π(α, β))             =>
+    let ⟨.imax (.succ u_δ₁) (.succ u_α₁), .imax (.succ u_δ₁') (.succ u_α₁')
+      , ~q($δ → Sort u_α₁'), f_α', ⟨heqb⟩⟩ ← to_lean α
+      | throwError m!"Π domain function {α} is not well-typed at {(DCC Π(α, β))}"
+    let ⟨.imax (.succ _a) (.imax (.succ _b)  (.succ u_β₂))
+      , .imax (.succ _a₂) (.imax (.succ _b₂) (.succ u_β₂'))
+      , τ_f_β', f_β', ⟨heqc⟩⟩ ← to_lean β
+      | throwError m!"Π domain function {α} is not well-typed at {(DCC Π(α, β))}"
+    let some f_β'' ← checkTypeQ f_β' q(∀ (env : $δ) (α : $f_α' env), Sort u_β₂')
+      | throwError m!"Π domain function {α} is not well-typed at {(DCC Π(α, β))}"
+    pure ⟨.max (.succ u_δ₁) (.succ (.imax u_α₁ u_β₂))
+      , _
+      , q($δ → Sort (imax u_α₁' u_β₂'))
+      , q(fun (env : $δ) => (∀ (x : $f_α' env), $f_β'' env x))
+      , ⟨by
+        simp [Level'.to_level] at heqb
+        simp [Level'.to_level] at heqc
+        simp [Level'.to_level, heqb.left, heqb.right, heqc.right.right]⟩⟩
   | (DCC ⟦β⟧⟨a, b⟩)           => sorry
   | (DCC ⟦β⟧(a, b))           => sorry
   | (DCC Coup(β))             => sorry

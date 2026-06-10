@@ -57,6 +57,25 @@ theorem Level'.inj {u₂ : Lean.Level} (h : Level'.to_level (Level'.succ u₁).s
   simp [Level'.to_level] at *
   exact h
 
+theorem Level'.inj' {u₂ : Lean.Level} (h : Level'.to_level u₁ =
+  u₂) : (Level'.succ u₁).to_level = u₂.succ := by
+  simp [Level'.to_level] at *
+  exact h
+
+-- (u_fst₁.to_level.succ.max u_snd₁.to_level.succ).max u_α₁.to_level = (u_α₁.max (u_fst₁.succ.max u_snd₁.succ)).to_level
+/-theorem Level'.comm : (Lean.Level.max (Lean.Level.max (Level'.to_level x) (Level'.to_level y)) (Level'.to_level z))
+  = (Level'.max z (Level'.max x y)).to_level := by
+  unfold Level'.to_level
+  split
+  case h_1 =>
+    split
+    case h_1 =>
+      split
+      case h_1 =>
+        unfold Level'.to_level
+        
+        sorry-/
+
 def Level'.to_level_expr (l : Level') : ((u : Lean.Level) × Q(Sort $u)) :=
   match l with
   | .zero => ⟨(Level'.succ .zero).to_level, q(Sort 0)⟩
@@ -374,9 +393,9 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
     let ⟨.imax (.succ _a) (.imax (.succ _b)  (.succ u_β₂))
       , .imax (.succ _a₂) (.imax (.succ _b₂) (.succ u_β₂'))
       , τ_f_β', f_β', ⟨heqc⟩⟩ ← to_lean β
-      | throwError m!"Π domain function {α} is not well-typed at {(DCC Π(α, β))}"
+      | throwError m!"Π domain function {β} is not well-typed at {(DCC Π(α, β))}"
     let some f_β'' ← checkTypeQ f_β' q(∀ (env : $δ) (α : $f_α' env), Sort u_β₂')
-      | throwError m!"Π domain function {α} is not well-typed at {(DCC Π(α, β))}"
+      | throwError m!"Π domain function {β} is not well-typed at {(DCC Π(α, β))}"
     pure ⟨.max (.succ u_δ₁) (.succ (.imax u_α₁ u_β₂))
       , _
       , q($δ → Sort (imax u_α₁' u_β₂'))
@@ -385,7 +404,32 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         simp [Level'.to_level] at heqb
         simp [Level'.to_level] at heqc
         simp [Level'.to_level, heqb.left, heqb.right, heqc.right.right]⟩⟩
-  | (DCC ⟦β⟧⟨a, b⟩)           => sorry
+  | (DCC ⟦β⟧⟨a, b⟩)           =>
+    let ⟨.imax u_α₁ (.max (.succ u_fst₁) (.succ u_snd₁))
+       , .imax u_α₁' (.max (.succ u_fst₁') (.succ u_snd₁'))
+       , τ_b', b', ⟨heqa⟩⟩ ← to_lean b
+       | throwError m!"pair snd function {b} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
+    let ⟨.imax u_α₂  u_fst₂
+       , .imax u_α₂' u_fst₂'
+       , τ_a', a', ⟨heqb⟩⟩ ← to_lean a
+       | throwError m!"pair snd function {a} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
+    let ⟨.imax u_α₃  u_β₃
+       , .imax u_α₃' u_β₃'
+       , τ_β', β', ⟨heqc⟩⟩ ← to_lean β
+       | throwError m!"pair couple-image function {β} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
+    match τ_b' with
+    | ~q(∀ (x : ($α : Sort u_α₁')) (y : (($f_β x) : Sort (u_fst₁' + 1))), (($γ x y) : Sort (u_snd₁' + 1))) =>
+      let some a' ← checkTypeQ a' q(∀ (x : $α), $f_β x)
+        | throwError m!"pair snd function {a} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
+      pure ⟨.max (.max (.succ u_fst₁) (.succ u_snd₁)) u_α₁
+          , _
+          , q(∀ (x : $α), Σ (a : ($f_β x)), $γ x a)
+          , q(fun (x : $α) => Sigma.mk ($a' x) ($b' x ($a' x)))
+          , ⟨by
+            simp [Level'.to_level] at heqa
+            simp [heqa.left, heqa.right]
+            rfl⟩⟩
+    | τ_β' => throwError m!"pair snd function {b} has type: {τ_β'}, but that was not expected at {(DCC ⟦β⟧⟨a, b⟩)}"
   | (DCC ⟦β⟧(a, b))           => sorry
   | (DCC Coup(β))             => sorry
   | (DCC Σ(α, β))             => sorry

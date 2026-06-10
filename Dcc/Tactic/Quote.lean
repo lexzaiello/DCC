@@ -1,8 +1,10 @@
 import Dcc.Ast
 import Dcc.Judge2
 import Lean
+import Lean.Meta.Basic
 import Qq
 import Mathlib.Util.Qq
+import Qq.MetaM
 
 open Qq
 open Lean.Meta
@@ -44,6 +46,16 @@ def Level'.to_level (l : Level') : Lean.Level :=
 theorem Level'.to_level_comm : (Level'.to_level u).succ = (Level'.to_level u.succ) := by
   induction u
   any_goals (simp [to_level])
+
+theorem Level'.inj₂ {u₂ : Lean.Level} (h : Level'.to_level (Level'.succ u₁) =
+  u₂.succ) : u₁.to_level = u₂ := by
+  simp [Level'.to_level] at *
+  exact h
+
+theorem Level'.inj {u₂ : Lean.Level} (h : Level'.to_level (Level'.succ u₁).succ =
+  u₂.succ.succ) : (Level'.succ u₁).to_level = u₂.succ := by
+  simp [Level'.to_level] at *
+  exact h
 
 def Level'.to_level_expr (l : Level') : ((u : Lean.Level) × Q(Sort $u)) :=
   match l with
@@ -286,21 +298,43 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
               --let u_β' := (Level'.succ u_β).to_level
               match β_cod with
               | ~q(Type u_β') =>
-                match ← e.to_lean with
-                | ⟨(.max (.succ (.max u_α₂ (.succ u₂))) (.succ u_x)),
-                -- expect this: (.max (.succ u_α) (.succ u_β))
-                  (.max (.succ (.max u_α₂' (.succ u₂'))) (.succ u_x')), τ_x, e', ⟨heq₃⟩⟩ =>
-                  match ← isLevelDefEqQ u' u_α₂' with
+                let ⟨.imax u_e₁ u_e₂, .imax u_e₁' u_e₂', τ_x, e', ⟨heq₃⟩⟩ ← e.to_lean
+                  | throwError m!"this should not be reachable (curry)"
+                let t_sigma : Q(Type (max u' u_β')) := q(Σ (a : $α'), $β' a)
+                let γ : Q((Σ (a : $α'), $β' a) → Sort u_e₂') ← mkFreshExprMVarQ q($t_sigma → Sort u_e₂')
+                let expected_τ_x : Q(Sort (imax (max (u_β' + 1) (u' + 1)) u_e₂')) :=
+                  q(∀ (x : (Σ (a : $α'), $β' a)), $γ x)
+                let lv_expected := (Level'.imax u_e₁ u_e₂).to_level
+                let some expected_τ_x ← checkTypeQ q(Sort lv_expected) expected_τ_x
+                  | throwError m!"this should not be reachable (curry)"
+                match h_def_eq₁ : ← isDefEqQ τ_x expected_τ_x with
+                | .defEq h_τ_eq =>
+                  let e'' : Q(∀ (x : (Σ (a : $α'), $β' a)), $γ x) := e'
+                  let u_all := Level'.imax (Level'.max u u_β) u_e₂
+                  let γ_inst ← instantiateMVarsQ γ
+                  pure ⟨Level'.imax (.succ u) (Level'.imax (Level'.succ u_β) u_e₂),
+                    Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
+                    q(∀ (x : $α') (y : $β' x), $γ (Sigma.mk x y)),
+                    q(fun (x : $α') (y : $β' x) => ($e'' (Sigma.mk x y))) , ⟨by
+                      simp [Level'.to_level]
+                      have ha := Level'.inj₂ (Level'.inj heq.symm)
+                      have hb := Level'.inj₂ (Level'.inj heqb.symm)
+                      simp [Level'.to_level] at heq₃
+                      have hc := heq₃.right
+                      exact ⟨ha.symm, hb.symm, hc⟩⟩⟩
+                | _ => throwError m!"this should not be reachable (curry)"
+                  --let expected_ty_e' := q(∀ (x : (Σ (a : $α'), $β'' a)),
+                  /-match ← isLevelDefEqQ u' u_α₂' with
                   | .defEq heq₃ =>
                     match ← isLevelDefEqQ u_β' u₂' with
                     | .defEq heq₄ =>
                       by
-                        simp_all
                         let α'' : Q(Type u') := α'
                         let β'' : Q($α'' → Type u_β') := β'
                         let t_sigma : Q(Type (max u_α₂' u₂')) := q((Σ (a : $α'), $β'' a))
+                        simp_all
                         match τ_x with
-                        | ~q(∀ (x : $(t_sigma)), (($γ (x : $t_sigma)) : Type u_x')) =>
+                        | ~q(∀ (x : $(t_sigma)), (($γ x) : Type u_x')) =>
                           --let x ← checkTypeQ e' q(∀ (x : (Σ (a : $α'), $β' a)), Type u_x')
                           exact pure ⟨_, _
                           , q(∀ (x : $α') (y : $β'' x), $γ (Sigma.mk x y))
@@ -308,8 +342,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
                           , by sorry⟩
                         | _ => sorry
                     | .notDefEq => throwError m!"Curry body {e} is not curryable in: {(DCC Λ(α, β, e))}"
-                  | .notDefEq => throwError m!"Curry body {e} is not curryable in: {(DCC Λ(α, β, e))}"
-                | _ => throwError m!"Curry body {e} is not curryable in: {(DCC Λ(α, β, e))}"
+                  | .notDefEq => throwError m!"Curry body {e} is not curryable in: {(DCC Λ(α, β, e))}"-/
                 /-match ← x.to_lean with
                 | ⟨.imax (.imax (.succ (.succ u₂)) (.succ (.succ u_β₂))) (.succ (.succ u'₂)),
                   .imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)), τ_x, x', ⟨heq₃⟩⟩ =>
@@ -352,3 +385,5 @@ end
 end Expr
 
 #check (Type 1 → Type 2 : Type ((max 1 2) + 1))
+
+#check ∀ (s : Sigma (fun (x : Sort 1) => x)), (fun _x => Sigma (fun (x : Sort 1) => x)) s

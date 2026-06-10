@@ -287,19 +287,20 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
               match β_cod with
               | ~q(Type u_β') =>
                 match ← e.to_lean with
-                | ⟨.succ (.max (.max (.succ u_α₂) (.succ u₂)) (.succ (.succ u_x))),
+                | ⟨(.max (.succ (.max u_α₂ (.succ u₂))) (.succ u_x)),
                 -- expect this: (.max (.succ u_α) (.succ u_β))
-                  .succ (.max (.max (.succ u_α₂') (.succ u₂')) (.succ (.succ u_x'))), τ_x, e', ⟨heq₃⟩⟩ =>
+                  (.max (.succ (.max u_α₂' (.succ u₂'))) (.succ u_x')), τ_x, e', ⟨heq₃⟩⟩ =>
                   match ← isLevelDefEqQ u' u_α₂' with
-                  | .defEq h =>
-                    match ← isLevelDefEqQ (.succ u_β') (.succ u₂') with
-                    | .defEq h =>
+                  | .defEq heq₃ =>
+                    match ← isLevelDefEqQ u_β' u₂' with
+                    | .defEq heq₄ =>
                       by
                         simp_all
-                        let α'' : Q(u_α₂) := α'
-                        let β'' : Q($α'' → Sort u_β') := β'
+                        let α'' : Q(Type u') := α'
+                        let β'' : Q($α'' → Type u_β') := β'
+                        let t_sigma : Q(Type (max u_α₂' u₂')) := q((Σ (a : $α'), $β'' a))
                         match τ_x with
-                        | ~q(∀ (x : (Σ (a : ($α' : Type u')), ($β'' a : Type u_β'))), (($γ x) : Type u_x')) =>
+                        | ~q(∀ (x : $(t_sigma)), (($γ (x : $t_sigma)) : Type u_x')) =>
                           --let x ← checkTypeQ e' q(∀ (x : (Σ (a : $α'), $β' a)), Type u_x')
                           exact pure ⟨_, _
                           , q(∀ (x : $α') (y : $β'' x), $γ (Sigma.mk x y))

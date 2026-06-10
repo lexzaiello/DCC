@@ -20,6 +20,7 @@ inductive Level' where
   | zero : Level'
   | succ : Level' → Level'
   | imax : Level' → Level' → Level'
+  | max  : Level' → Level' → Level'
 deriving DecidableEq
 
 @[inline]
@@ -38,6 +39,7 @@ def Level'.to_level (l : Level') : Lean.Level :=
   | .zero => .zero
   | .succ n => .succ n.to_level
   | .imax m n => .imax m.to_level n.to_level
+  | .max m n => .max m.to_level n.to_level
 
 theorem Level'.to_level_comm : (Level'.to_level u).succ = (Level'.to_level u.succ) := by
   induction u
@@ -48,6 +50,7 @@ def Level'.to_level_expr (l : Level') : ((u : Lean.Level) × Q(Sort $u)) :=
   | .zero => ⟨(Level'.succ .zero).to_level, q(Sort 0)⟩
   | .succ n => ⟨_, q(Sort $(n.to_level))⟩
   | .imax m n => ⟨_, q(Sort (imax $(m.to_level) $(n.to_level)))⟩
+  | .max m n => ⟨_, q(Sort (max $(m.to_level) $(n.to_level)))⟩
 
 /-def Level.imax (l₁ l₂ : Level) : Level :=
   match l₁, l₂ with
@@ -244,7 +247,16 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
     pure <| ⟨m₀.succ.succ, m'.succ.succ, s₁, s₂, ⟨by
       simp_all [Level'.to_level]
       rfl⟩⟩
-  | (DCC Fstc(β))             => sorry
+  | (DCC Fstc(β))             =>
+    match ← β.to_lean with
+    | ⟨.max (.succ u) u_α , .max (.succ u') u_α', τ_β, β', heq⟩ =>
+      match τ_β with
+      | ~q(∀ (x : ($α : Sort u_α')), Sort u') =>
+        
+        sorry
+      | _ => sorry
+    | _ =>
+      throwError m!"not a valid projection (Fst) index: {β}"
   | (DCC Sndc(β))             => sorry
   | (DCC Λ(α, β, e))          => sorry
   | (DCC !Λ(α, β, e))         => sorry

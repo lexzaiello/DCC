@@ -462,8 +462,25 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
             rfl
           simp [heqb, Level'.to_level_assoc]⟩⟩
     | .none => throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
-  | (DCC Coup(β))             => sorry
-  | (DCC Σ(α, β))             => sorry
+  | (DCC Coup(β))             =>
+    let ⟨.max (.succ u_fst₁)  (.succ u_snd₁)
+       , .max (.succ u_fst₁') (.succ u_snd₁')
+       , τ_β, β', ⟨heqa⟩⟩ ← to_lean β
+       | throwError m!"couple snd type {β} is not well-typed at {(DCC Coup(β))}"
+    match τ_β with
+    | ~q(∀ (x : ($α : Sort (u_fst₁' + 1))), Sort u_snd₁') =>
+      pure ⟨.max (.succ (.succ (.succ u_fst₁)))  (.succ (.succ (.succ u_snd₁)))
+        , _
+        , q(Type ((max u_fst₁' u_snd₁') + 1))
+        , q(Type (max u_fst₁' u_snd₁'))
+        , ⟨by
+          simp [Level'.to_level]
+          simp [Level'.to_level] at heqa
+          simp [heqa.left, heqa.right]⟩⟩
+    | _ =>  throwError m!"couple type type {β} is not well-typed at {(DCC Coup(β))}"
+  | (DCC Σ(α, β))             =>
+    
+    sorry
   | (DCC x = y)               => sorry
   | (DCC Eql(f_α))            => sorry
   | (DCC refl(f_α))           => sorry

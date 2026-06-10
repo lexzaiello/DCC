@@ -271,7 +271,67 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
             simp [Level'.to_level]⟩⟩
       | _ => throwError m!"not a well-typed projection (Fst) index: {β}"
     | _ => throwError m!"not a valid projection (Fst) index: {β}"
-  | (DCC Λ(α, β, e))          => sorry
+  | (DCC Λ(α, β, e))          =>
+    -- switch τ_α to Sort u'?
+    match ← α.to_lean with
+    | ⟨.succ (.succ u), .succ (.succ u'), τ_α, α', ⟨heq⟩⟩ =>
+      match τ_α with
+      | ~q(Type u') =>
+        match ← get_fn_ty_arrow β with
+        | ⟨.succ (.succ u_α), .succ (.succ u_β), .succ (.succ u_α'), .succ (.succ u_β'), α'', β_cod, β', ⟨heqa⟩, ⟨heqb⟩⟩  =>
+          if heq₁ : u_α = u then
+            match ← isDefEqQ α' α'' with
+            | .defEq heq₂ =>
+              --let u_β' := u_β.to_level
+              --let u_β' := (Level'.succ u_β).to_level
+              match β_cod with
+              | ~q(Type u_β') =>
+                match ← e.to_lean with
+                | ⟨.succ (.max (.max (.succ u_α₂) (.succ u₂)) (.succ (.succ u_x))),
+                -- expect this: (.max (.succ u_α) (.succ u_β))
+                  .succ (.max (.max (.succ u_α₂') (.succ u₂')) (.succ (.succ u_x'))), τ_x, e', ⟨heq₃⟩⟩ =>
+                  match ← isLevelDefEqQ u' u_α₂' with
+                  | .defEq h =>
+                    match ← isLevelDefEqQ (.succ u_β') (.succ u₂') with
+                    | .defEq h =>
+                      by
+                        simp_all
+                        let α'' : Q(u_α₂) := α'
+                        let β'' : Q($α'' → Sort u_β') := β'
+                        match τ_x with
+                        | ~q(∀ (x : (Σ (a : ($α' : Type u')), ($β'' a : Type u_β'))), (($γ x) : Type u_x')) =>
+                          --let x ← checkTypeQ e' q(∀ (x : (Σ (a : $α'), $β' a)), Type u_x')
+                          exact pure ⟨_, _
+                          , q(∀ (x : $α') (y : $β'' x), $γ (Sigma.mk x y))
+                          , q(fun (x : $α') (y : $β'' x) => $e' (Sigma.mk x y))
+                          , by sorry⟩
+                        | _ => sorry
+                    | .notDefEq => throwError m!"Curry body {e} is not curryable in: {(DCC Λ(α, β, e))}"
+                  | .notDefEq => throwError m!"Curry body {e} is not curryable in: {(DCC Λ(α, β, e))}"
+                | _ => throwError m!"Curry body {e} is not curryable in: {(DCC Λ(α, β, e))}"
+                /-match ← x.to_lean with
+                | ⟨.imax (.imax (.succ (.succ u₂)) (.succ (.succ u_β₂))) (.succ (.succ u'₂)),
+                  .imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)), τ_x, x', ⟨heq₃⟩⟩ =>
+                  if heq : u₂ = u then
+                    if heqa : u_β₂ = u_β then
+                      have α' : Q(Type u') := α'
+                      have β_cod' : Q(Type u_β') := β_cod
+                      have β' : Q($α' → Type u_β') := β'
+                      match τ_x with
+                      | ~q(∀ (x : ($α' : Type (u₂a + 1))) (y : ($β' : $α' → Type (u_β₂a + 1)) x),
+                        ($γ : ∀ (x : $α') (y : $β' x), Type (u'₂a + 1)) x y) =>
+                        .pure ⟨.imax (.imax (.succ (.succ u₂)) (.succ (.succ u_β₂))) (.succ (.succ u'₂)),
+                          .imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)),
+                          τ_x, q(fun (x : $α') (y : $β' x) => $x' x y), ⟨by simp_all⟩⟩
+                      | _ => throwError m!"Eval body {x} is not uncurryable in: {e}"
+                    else throwError m!"Eval body {x} is not uncurryable in: {e}"
+                  else throwError m!"Eval body {x} is not uncurryable in: {e}"
+                | _ => throwError m!"Eval body {β} is not uncurryable in: {e}"-/
+              | _ => throwError m!"Eval body {β} is not curryable in: {e}"
+            | _ => throwError m!"Eval body {α} is not curryable in: {e}"
+          else throwError m!"Eval body {α} is not curryable in: {e}"
+        | _ => throwError m!"Eval body {α} is not curryable in: {e}"
+    | _ => throwError m!"Eval param {α} is not curryable in: {e}"
   | (DCC !Λ(α, β, e))         => sorry
   | (DCC Π(α, β))             => sorry
   | (DCC ⟦β⟧⟨a, b⟩)           => sorry
@@ -290,3 +350,4 @@ end
 
 end Expr
 
+#check (Type 1 → Type 2 : Type ((max 1 2) + 1))

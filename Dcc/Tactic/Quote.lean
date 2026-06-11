@@ -2,6 +2,7 @@ import Dcc.Ast
 import Dcc.Tactic.Debug
 import Dcc.Judge2
 import Lean
+import Lean.ToExpr
 import Lean.Meta.Basic
 import Qq
 import Mathlib.Util.Qq
@@ -151,10 +152,10 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     | ⟨.succ (.succ u'), τ_α, α'⟩ =>
       match τ_α with
       | ~q(Type u') =>
-        let ⟨.max u_α' (.succ u_β'), τ_β, β'⟩ ← β.to_lean
+        let ⟨.succ (.max u_α' (.succ u_β')), τ_β, β'⟩ ← β.to_lean
           | throwError m!"Eval second arg {β} is not well-typed in: {(DCC Eval(α, β, x))}"
         match τ_β with
-        | ~q(∀ (x : ($α : (Sort u_α'))), Sort u_β') =>
+        | ~q(∀ (x : ($α : (Type u_α'))), Type u_β') =>
           match ← isDefEqQ α' α with
           | .defEq heq₂ =>
             match ← x.to_lean with
@@ -178,10 +179,10 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     | _, _ => throwError m!"Quotation points are not well-typed: `({β}, {x})"
   | (DCC Id(α))               =>
     match ← α.to_lean with
-    | ⟨.succ (.succ u'), τ_α, α'⟩ =>
+    | ⟨.succ u', τ_α, α'⟩ =>
       match τ_α with
-      | ~q(Type u') =>
-        pure ⟨.max (.succ u') (.succ u'), q($α' → $α'), q(fun (x : $α') => x)⟩
+      | ~q(Sort u') =>
+        pure ⟨.imax u' u', q($α' → $α'), q(fun (x : $α') => x)⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC Sort m)              =>
     let m₀  := (level'_from_nat m)
@@ -195,19 +196,19 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     pure <| ⟨m'.succ.succ, s₁, s₂⟩
   | (DCC Fstc(β))             =>
     match ← β.to_lean with
-    | ⟨.max (.succ (.succ u')) (.succ u_α'), τ_β, β'⟩ =>
+    | ⟨.imax (.succ u') (.succ (.succ u_α')), τ_β, β'⟩ =>
       match τ_β with
-      | ~q(∀ (x : ($α : Type u_α')), Type u') =>
-        pure ⟨(Lean.Level.max u'.succ u_α'.succ),
+      | ~q(∀ (x : ($α : Type u')), Type u_α') =>
+        pure ⟨Lean.Level.imax (.imax u'.succ u_α'.succ) u'.succ,
           q(∀ (x : Σ a : $α, $β' a), $α), q(fun (x : Σ a : $α, $β' a) => Sigma.fst x)⟩
-      | _ => throwError m!"not a well-typed projection (Fst) index: {β}"
+      | τ_β => throwError m!"not a well-typed projection (Fst : {τ_β}) index: {β}"
     | _ => throwError m!"not a valid projection (Fst) index: {β}"
   | (DCC Sndc(β))             =>
     match ← β.to_lean with
-    | ⟨.max (.succ (.succ u')) (.succ u_α'), τ_β, β'⟩ =>
+    | ⟨.imax (.succ u') (.succ (.succ u_α')), τ_β, β'⟩ =>
       match τ_β with
-      | ~q(∀ (x : ($α : Type u_α')), Type u') =>
-        pure ⟨(Lean.Level.max u'.succ u_α'.succ),
+      | ~q(∀ (x : ($α : Type u')), Type u_α') =>
+        pure ⟨(Lean.Level.imax (.imax u'.succ u_α'.succ) u_α'.succ),
           q(∀ (x : Σ a : $α, $β' a), $β' (Sigma.fst x)), q(fun (x : Σ a : $α, $β' a) => Sigma.snd x)⟩
       | _ => throwError m!"not a well-typed projection (Fst) index: {β}"
     | _ => throwError m!"not a valid projection (Fst) index: {β}"
@@ -313,7 +314,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
           , q(fun (x : (Shared $α)) => Sigma.mk ($a' x.deref) ($b' x.deref ($a' x.deref)))⟩
     | τ_β' => throwError m!"pair snd function {b} has type: {τ_β'}, but that was not expected at {(DCC ⟦β⟧⟨a, b⟩)}"
   | (DCC ⟦β⟧(a, b))           =>
-    let ⟨.max (.succ u_fst₁') (.succ u_snd₁')
+    let ⟨.imax u_fst₁' u_snd₁'
        , τ_β, β'⟩ ← to_lean β
        | throwError m!"couple snd type {β} is not well-typed at {(DCC ⟦β⟧(a, b))}"
     let ⟨.succ u_fst₂'
@@ -321,13 +322,12 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
         | throwError m!"couple fst {a} is not well-typed at {(DCC ⟦β⟧(a, b))}"
     let ⟨.succ u_snd₂', τ_b, b'⟩ ← to_lean b
       | throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
-    let some β' ← checkTypeQ β' q($τ_a → (Type u_snd₂'))
+    let some β' ← checkTypeQ β' q($τ_a → (Sort (u_snd₂' + 1)))
       | throwError m!"couple snd type {β} ({τ_β}) is not well-typed at with respect to fst type {τ_a} and snd type {τ_b} {(DCC ⟦β⟧(a, b))}"
     let b' ← checkTypeQ b' q($β' $a')
     match b' with
     | .some b' =>
-      pure ⟨(.max (.succ u_snd₂') (.succ u_fst₂')), q(Σ (a : $τ_a), $β' a)
-        , q(Sigma.mk $a' $b')⟩
+      pure ⟨(.imax (.succ u_fst₂') (.succ u_snd₂')), q(Σ (a : $τ_a), $β' a), q(Sigma.mk $a' $b')⟩
     | .none => throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
   | (DCC Coup(β))             =>
     let ⟨.max (.succ u_fst₁') (.succ u_snd₁')
@@ -408,44 +408,55 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       | _ => throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
     | _ => throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
   | (DCC f ∘' g)              =>
-    let ⟨.max (.succ u_α₁') (.succ u_β₁')
+    let ⟨.imax u_α₁' u_β₁'
        , τ_g', g'⟩ ← to_lean g
        | throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘' g)}"
-    let ⟨.max (.succ u_β₂') (.succ u_γ₂')
+    let ⟨.imax u_β₂' u_γ₂'
        , τ_f', f'⟩ ← to_lean f
-       | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
+       | throwError m!"[1] composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
     match τ_g' with
-    | ~q(∀ (x : ($α : (Type u_α₁'))), ($β : (Type u_β₁'))) =>
+    | ~q(∀ (x : ($α : (Sort u_α₁'))), ($β : (Sort u_β₁'))) =>
       match τ_f' with
-      | ~q(∀ (x : $β₂), (($γ x) : Type u_γ₂')) =>
+      | ~q(∀ (x : ($β₂ : Sort u_β₂')), (($γ x) : Sort u_γ₂')) =>
         match ← isLevelDefEqQ u_β₂' u_β₁' with
         | .defEq h =>
-          let some γ' ← checkTypeQ γ q(∀ (x : ($β : Type u_β₁')), Sort u_γ₂')
-            | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
-          let some f' ← checkTypeQ f' q(∀ (x : ($β : (Type u_β₁'))), (($γ' x) : Sort u_γ₂'))
-            | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
-          pure ⟨.imax (.succ u_α₁') u_γ₂'
-            , q(∀ (x : ($α : (Type u_α₁'))), $γ' ($g' x))
-            , q(fun (x : ($α : (Type u_α₁'))) => $f' ($g' x))⟩
-        | _ => throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
-      | _ => throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
-    | _ => throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘' g)}"
+          let some γ' ← checkTypeQ γ q(∀ (x : ($β : Sort u_β₁')), Sort u_γ₂')
+            | throwError m!"[2] composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
+          let some f' ← checkTypeQ f' q(∀ (x : ($β : (Sort u_β₁'))), (($γ' x) : Sort u_γ₂'))
+            | throwError m!"[3] composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
+          pure ⟨.imax u_α₁' u_γ₂'
+            , q(∀ (x : ($α : (Sort u_α₁'))), $γ' ($g' x))
+            , q(fun (x : ($α : (Sort u_α₁'))) => $f' ($g' x))⟩
+        | _ => throwError m!"[4] composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
+      | _ => throwError m!"[5] composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
+    | _ => throwError m!"[6] composition right hand {g} is not well-typed in {(DCC f ∘' g)}"
   | (DCC (f x)) =>
-    let ⟨.succ u_α₁', τ_x', x'⟩ ← to_lean x
-      | throwError m!"app arg {x} is not well-typed in {(DCC (f x))}"
-    let ⟨.max (.succ u_α₂') (.succ u_β₂'), τ_f', f'⟩ ← to_lean f
-      | throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
+    let ⟨u_α₁', τ_x', x'⟩ ← to_lean x
+    let ⟨.imax u_α₂' u_β₂', τ_f', f'⟩ ← to_lean f
+      | throwError m!"[1] app function {f} is not well-typed in {(DCC (f x))}"
     match ← isLevelDefEqQ u_α₂' u_α₁' with
     | .defEq h =>
+      if h : τ_f'.isForall then
+        dbg_trace τ_f'.forallDomain h
+      
       match τ_f' with
-      | ~q(∀ (x : ($τ_x'' : (Type u_α₁'))), (($β x) : Type u_β₂')) =>
-        let some β ← checkTypeQ β q(∀ (x : ($τ_x' : (Type u_α₁'))), Type u_β₂')
+      | ~q(∀ (x : ($τ_x'' : Sort u_α₁')), (($β x) : Sort u_β₂')) =>
+        let some β ← checkTypeQ β q(∀ (x : $τ_x'), Sort u_β₂')
           | throwError m!"app function {f} codomain is not well-typed in {(DCC (f x))}"
-        let some f' ← checkTypeQ f' q(∀ (x : ($τ_x' : (Type u_α₁'))), (($β x) : Type u_β₂'))
+        let some f' ← checkTypeQ f' q(∀ (x : $τ_x'), (($β x) : Sort u_β₂'))
           | throwError m!"app function {f} domain is not well-typed in {(DCC (f x))}"
-        pure ⟨.succ u_β₂', q($β $x'), q($f' $x')⟩
-      | τ => throwError m!"app function {f} is not well-typed in {(DCC (f x))}. found: {τ}"
-    | _ => throwError m!"application type mismatch in {(DCC (f x))}"
+        let some x' ← checkTypeQ x' τ_x'
+          | throwError m!"app arg {x} is not well-typed in {(DCC (f x))}"
+        pure ⟨u_β₂', q($β $x'), q($f' $x')⟩
+      | ~q((($τ_x') : Sort u_α₁') → ($β : Sort u_β₂')) =>
+        let some f' ← checkTypeQ f' q(∀ (x : ($τ_x' : (Sort u_α₁'))), ($β : Sort u_β₂'))
+          | throwError m!"app function {f} domain is not well-typed in {(DCC (f x))}"
+        let some x' ← checkTypeQ x' τ_x'
+          | throwError m!"app arg {x} is not well-typed in {(DCC (f x))}"
+        pure ⟨u_β₂', β, q($f' $x')⟩
+      | τ => throwError m!"[2] app function ({f} : {τ}) is not well-typed in {(DCC (f x))}"
+    | _ => throwError m!"application type mismatch in {(DCC (f x))}
+universe levels are not aligned: {u_α₂'} {u_α₁'}"
 
 end Expr
 
@@ -463,6 +474,21 @@ elab "dcc_decompile" e:gen_dcc : term => do
   let ⟨_u, _α, lean_e⟩ ← dcc_e.to_lean
   return lean_e
 
+open Qq in
+open Lean.Meta in
+open Lean.Elab in
+open Lean.Elab.Term in
+elab "dcc_show" e:gen_dcc : term => do
+  let tm ← elabTerm (← liftMacroM <| runDcc e) none
+  let dcc_e ← decode_dcc tm
+  let ⟨_u, _α, lean_e⟩ ← dcc_e.to_lean
+  let x := (← Lean.Meta.ppExpr lean_e).pretty
+  return Lean.instToExprString.toExpr x
+
 #check dcc_decompile (Id(Sort 0))
 #check dcc_decompile (Id(Sort 0) ⊤)
+#eval dcc_show (Id(Sort 0))
 #check dcc_decompile (⟦Id(Sort 1)⟧(Sort 0, ⊤))
+#eval dcc_show (⟦Id(Sort 1)⟧(Sort 0, ⊤))
+#eval dcc_show (⟦Id(Sort 1)⟧(Sort 0, ⊤))
+

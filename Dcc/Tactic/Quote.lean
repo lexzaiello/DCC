@@ -111,9 +111,8 @@ def get_codomain_arrow (e : Expr) : Option Expr :=
   | _ => .none
 
 set_option trace.Elab.definition true
-set_option pp.rawOnError true
-set_option linter.constructorNameAsVariable false in
-partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
+@[irreducible]
+def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
   (α : Q(Sort $u')) × Q($α) × (PLift (u' = u.to_level))):= do
   match e with
   | (DCC ⊤)                   => return ⟨.succ .zero, (Level'.succ .zero).to_level, q(Prop), q(True), ⟨rfl⟩⟩
@@ -156,7 +155,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         by
           cases heq
           rename_i match_eq
-          exact pure ⟨.succ u, _, q(Shared.{u'} $α' → $α'), q(fun (x : Shared $α') => Shared.deref.{u'} x), ⟨by
+          exact pure ⟨.succ u, .succ u', q(Shared.{u'} $α' → $α'), q(fun (x : Shared $α') => Shared.deref.{u'} x), ⟨by
             rename_i h
             simp [Level'.to_level] at h
             rw [h]⟩⟩
@@ -169,7 +168,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         by
           cases heq
           rename_i match_eq
-          exact pure ⟨.succ (.succ u), _, q(Type u'), q(Shared $α'), ⟨by
+          exact pure ⟨.succ (.succ u), .succ (.succ u'), q(Type u'), q(Shared $α'), ⟨by
             rename_i h
             simp [Level'.to_level] at h
             rw [h]⟩⟩
@@ -225,7 +224,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         by
           cases heq
           rename_i match_eq
-          exact pure ⟨.succ u, _, q($α' → $α'), q(fun (x : $α') => x), ⟨by
+          exact pure ⟨.succ u, .succ u', q($α' → $α'), q(fun (x : $α') => x), ⟨by
             rename_i h
             simp [Level'.to_level] at h
             rw [h]⟩⟩
@@ -363,7 +362,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
     let some f_β'' ← checkTypeQ f_β' q(∀ (env : $δ) (α : $f_α' env), Sort u_β₂')
       | throwError m!"Π domain function {β} is not well-typed at {(DCC Π(α, β))}"
     pure ⟨.max (.succ u_δ₁) (.succ (.imax u_α₁ u_β₂))
-      , _
+      , .max (.succ u_δ₁') (.succ (.imax u_α₁' u_β₂'))
       , q($δ → Sort (imax u_α₁' u_β₂'))
       , q(fun (env : $δ) => (∀ (x : $f_α' env), $f_β'' env x))
       , ⟨by
@@ -389,7 +388,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
       let some a' ← checkTypeQ a' q(∀ (x : $α), $f_β x)
         | throwError m!"pair snd function {a} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
       pure ⟨.max (.max (.succ u_fst₁) (.succ u_snd₁)) (.succ u_α₁)
-          , _
+          , .max (.max (.succ u_fst₁') (.succ u_snd₁')) (.succ u_α₁')
           , q(∀ (x : (Shared $α)), Σ (a : ($f_β x.deref)), $γ x.deref a)
           , q(fun (x : (Shared $α)) => Sigma.mk ($a' x.deref) ($b' x.deref ($a' x.deref)))
           , ⟨by
@@ -415,7 +414,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
     match b' with
     | .some b' =>
       pure ⟨(Level'.max (Level'.succ u_snd₂) (Level'.succ u_fst₂))
-        , _, q(Σ (a : $τ_a), $β' a)
+        , (.max (.succ u_snd₂') (.succ u_fst₂')), q(Σ (a : $τ_a), $β' a)
         , q(Sigma.mk $a' $b')
         , ⟨by
           simp [Level'.to_level] at heqa
@@ -430,7 +429,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
     match τ_β with
     | ~q(∀ (x : ($α : Sort (u_fst₁' + 1))), Sort u_snd₁') =>
       pure ⟨.max (.succ (.succ (.succ u_fst₁)))  (.succ (.succ (.succ u_snd₁)))
-        , _
+        , .max (.succ (.succ (.succ u_fst₁')))  (.succ (.succ (.succ u_snd₁')))
         , q(Type ((max u_fst₁' u_snd₁') + 1))
         , q(Type (max u_fst₁' u_snd₁'))
         , ⟨by
@@ -447,7 +446,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
     match τ_f_β' with
     | ~q(∀ (env : ($α : (Sort u_env₁'))) (x : (($β env) : (Sort u_α₁'))), ($cod : (Sort u_srt₁'))) =>
       pure ⟨(u_env₁.max u_srt₁.succ.succ).max u_α₁.succ.succ
-        , _
+        , (u_env₁'.max u_srt₁'.succ.succ).max u_α₁'.succ.succ
         , q($α → Sort ((max u_α₁' u_srt₁') + 1))
         , q(fun (env : $α) => Sort ((max u_α₁' u_srt₁')))
         , ⟨by
@@ -467,7 +466,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
       | throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
     match τ_f_α' with
     | ~q(∀ (env : ($α : (Type u_env₁'))), Type u_srt₁') =>
-      pure ⟨.max u_env₁.succ u_srt₁.succ, _
+      pure ⟨.max u_env₁.succ u_srt₁.succ, .max u_env₁'.succ u_srt₁'.succ
         , q(∀ (env : $α) (x : $f_α' env), Prop)
         , q(fun (env : $α) (x : $f_α' env) => x = x)
         , ⟨by
@@ -481,7 +480,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
       | throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
     match τ_f_α' with
     | ~q(∀ (env : ($α : (Type u_env₁'))), Type u_srt₁') =>
-      pure ⟨.zero, _
+      pure ⟨.zero, .zero
         , q(∀ (env : $α) (x : $f_α' env), x = x)
         , q(fun (env : $α) (x : $f_α' env) => _root_.refl x)
         , ⟨by simp [Level'.to_level]⟩⟩
@@ -514,7 +513,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
           let some f' ← checkTypeQ f' q(∀ (s : (Σ (a : $α), $β' a)), (($γ' s) : Sort u_γ_out'))
             | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
           pure ⟨.imax (.succ u_α₁) u_γ_out
-            , _
+            , .imax (.succ u_α₁') u_γ_out'
             , q(∀ (x : Shared $α), $γ' ($g' x))
             , q(fun (x : Shared $α) => $f' ($g' x))
             , ⟨by
@@ -543,7 +542,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
             | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
           let some f' ← checkTypeQ f' q(∀ (x : ($β : (Type u_β₁'))), (($γ' x) : Sort u_γ₂'))
             | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
-          pure ⟨.imax (.succ u_α₁) u_γ₂, _
+          pure ⟨.imax (.succ u_α₁) u_γ₂, .imax (.succ u_α₁') u_γ₂'
             , q(∀ (x : ($α : (Type u_α₁'))), $γ' ($g' x))
             , q(fun (x : ($α : (Type u_α₁'))) => $f' ($g' x))
             , ⟨by
@@ -565,7 +564,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
           | throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
         let some f' ← checkTypeQ f' q(∀ (x : ($τ_x' : (Sort u_α₁'))), (($β x) : Sort u_β₂'))
           | throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
-        pure ⟨u_β₂, _, q($β $x'), q($f' $x'), ⟨by
+        pure ⟨u_β₂, u_β₂', q($β $x'), q($f' $x'), ⟨by
           simp [Level'.to_level] at heqb
           exact heqb.right⟩⟩
       | _ => throwError m!"app function {f} is not well-typed in {(DCC (f x))}"

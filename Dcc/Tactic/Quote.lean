@@ -111,23 +111,6 @@ def get_codomain_arrow (e : Expr) : Option Expr :=
 
 mutual
 
-partial def get_fn_ty_arrow (e : Expr) : MetaM ((u v : Level') × (u' v' : Lean.Level)
-  × (α : Q(Sort u')) × (β : Q(Sort v')) × Q($α → $β) × (PLift (u' = u.to_level)) × (PLift (v' = v.to_level))) := do
-  match e.read_arrow with
-  | .some ⟨α, β, _m, _⟩ =>
-    match ← α.to_lean, ← β.to_lean with
-    | ⟨u, u', τ_α, α, heq⟩, ⟨v, v', τ_β, β, heq₂⟩ =>
-      match ← e.to_lean with
-      | ⟨uv, uv', τ_f, f, heq⟩ =>
-        let some α' ← checkTypeQ α q(Sort $(u.to_level))
-          | throwError m!"invalid domain: {e}"
-        let some β' ← checkTypeQ β q(Sort $(v.to_level))
-          | throwError m!"invalid codomain: {e}"
-        let some f' ← checkTypeQ f q($α' → $β')
-          | throwError m!"function is not well-typed: {e}"
-        return ⟨u, v, u.to_level, v.to_level, α', β', f', ⟨rfl⟩, ⟨rfl⟩⟩
-  | _ => throwError m!"function is not an arrow: {e}"
-
 partial def get_fn_ty (e : Expr) : MetaM ((u v : Level')
   × (α : Q(Sort $(u.to_level))) × (β : Q($α → Sort $(v.to_level))) × Q(∀ (x : $α), $β x)) := do
   match e.get_domain, e.get_codomain with
@@ -160,9 +143,15 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
   | (DCC ⊥)                   => return ⟨.succ .zero, (Level'.succ .zero).to_level, q(Prop), q(False), ⟨rfl⟩⟩
   | (DCC ∗)                   => return ⟨.zero, Level'.zero.to_level, q(True), q(True.intro), ⟨rfl⟩⟩
   | (DCC !<f>)                =>
-    match ← f.get_fn_ty with
-    | ⟨.succ u, .succ v, α, β, f'⟩ =>
-      return ⟨Level'.imax (.succ u) (.succ v), (Level'.imax (.succ u) (.succ v)).to_level, q(∀ (x : Shared $α), Bang ($β x.deref)), q(fun (x : Shared $α) => Shared.map $f' x), ⟨rfl⟩⟩
+    let ⟨.max (.succ u) (.succ v), .max (.succ u') (.succ v'), τ_f', f', ⟨heqa⟩⟩ ← f.to_lean
+      | throwError m!"Box function {f} is not well-typed at: {DCC !<f>}"
+    match τ_f' with
+    | ~q(∀ (x : ($α : (Type u'))), ($β x : Type v')) =>
+      return ⟨.max (.succ u) (.succ v), .max (.succ u') (.succ v')
+         , q(∀ (x : Shared $α), Bang ($β x.deref)),
+           q(fun (x : Shared $α) => Shared.map $f' x), ⟨by
+             simp [Level'.to_level] at heqa
+             simp [heqa.left, heqa.right, Level'.to_level]⟩⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC $<f>)                =>
     match ← f.get_fn_ty with
@@ -209,7 +198,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
     | ⟨.succ (.succ u), .succ (.succ u'), τ_α, α', ⟨heq⟩⟩ =>
       match τ_α with
       | ~q(Type u') =>
-        let ⟨.max (.succ u_α) (.succ u_β), .max u_α' (.succ u_β'), τ_β, β', heqa₀⟩ ← β.to_lean
+        let ⟨.max u_α (.succ u_β), .max u_α' (.succ u_β'), τ_β, β', heqa₀⟩ ← β.to_lean
           | throwError m!"Eval second arg {β} is not well-typed in: {(DCC Eval(α, β, x))}"
         match τ_β with
         | ~q(∀ (x : ($α : (Sort u_α'))), Sort u_β') =>

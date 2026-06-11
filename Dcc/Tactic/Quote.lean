@@ -218,17 +218,17 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     | ⟨.succ (.succ u'), τ_α, α'⟩ =>
       match τ_α with
       | ~q(Type u') =>
-        let ⟨.max (.succ u_α') (.succ u_β'), τ_β, β'⟩ ← β.to_lean
+        let ⟨.imax (.succ u_α') (.succ (.succ u_β')), τ_β, β'⟩ ← β.to_lean
           | throwError m!"Eval second arg {β} is not well-typed in: {(DCC Λ(α, β, e))}"
         match τ_β with
-        | ~q(∀ (x : ($α₂ : (Type u_α'))), Sort u_β') =>
+        | ~q(∀ (x : ($α₂ : (Type u_α'))), Type u_β') =>
           match ← isLevelDefEqQ u' u_α' with
           | .defEq h =>
             match ← isDefEqQ α' α₂ with
             | .defEq heq₂ =>
               --let u_β' := u_β.to_level
               --let u_β' := (Level'.succ u_β).to_level
-              let ⟨.imax (.max (.succ u_α₂') (.succ u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
+              let ⟨.imax (.imax (.succ u_α₂') (.succ u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
                 | throwError m!"this should not be reachable (curry)"
               have β' : Q($α' → Type u_β') := β'
               match ← isLevelDefEqQ u_α₂' u_α' with

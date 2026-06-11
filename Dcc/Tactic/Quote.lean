@@ -181,7 +181,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     | ⟨.succ (.succ u'), τ_α, α'⟩ =>
       match τ_α with
       | ~q(Type u') =>
-        pure ⟨.succ u', q($α' → $α'), q(fun (x : $α') => x)⟩
+        pure ⟨.max (.succ u') (.succ u'), q($α' → $α'), q(fun (x : $α') => x)⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC Sort m)              =>
     let m₀  := (level'_from_nat m)
@@ -432,19 +432,20 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       | _ => throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
     | _ => throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘' g)}"
   | (DCC (f x)) =>
-    let ⟨u_α₁', τ_x', x'⟩ ← to_lean x
-    let ⟨.imax u_α₂' u_β₂', τ_f', f'⟩ ← to_lean f
+    let ⟨.succ u_α₁', τ_x', x'⟩ ← to_lean x
+      | throwError m!"app arg {x} is not well-typed in {(DCC (f x))}"
+    let ⟨.max (.succ u_α₂') (.succ u_β₂'), τ_f', f'⟩ ← to_lean f
       | throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
     match ← isLevelDefEqQ u_α₂' u_α₁' with
     | .defEq h =>
       match τ_f' with
-      | ~q(∀ (x : ($τ_x'' : (Sort u_α₁'))), (($β x) : Sort u_β₂')) =>
-        let some β ← checkTypeQ β q(∀ (x : ($τ_x' : (Sort u_α₁'))), Sort u_β₂')
-          | throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
-        let some f' ← checkTypeQ f' q(∀ (x : ($τ_x' : (Sort u_α₁'))), (($β x) : Sort u_β₂'))
-          | throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
-        pure ⟨u_β₂', q($β $x'), q($f' $x')⟩
-      | _ => throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
+      | ~q(∀ (x : ($τ_x'' : (Type u_α₁'))), (($β x) : Type u_β₂')) =>
+        let some β ← checkTypeQ β q(∀ (x : ($τ_x' : (Type u_α₁'))), Type u_β₂')
+          | throwError m!"app function {f} codomain is not well-typed in {(DCC (f x))}"
+        let some f' ← checkTypeQ f' q(∀ (x : ($τ_x' : (Type u_α₁'))), (($β x) : Type u_β₂'))
+          | throwError m!"app function {f} domain is not well-typed in {(DCC (f x))}"
+        pure ⟨.succ u_β₂', q($β $x'), q($f' $x')⟩
+      | τ => throwError m!"app function {f} is not well-typed in {(DCC (f x))}. found: {τ}"
     | _ => throwError m!"application type mismatch in {(DCC (f x))}"
 
 end Expr
@@ -458,8 +459,10 @@ open Lean.Meta in
 open Lean.Elab in
 open Lean.Elab.Term in
 elab "dcc_decompile" e:gen_dcc : term => do
-  let tm ← elabTerm e none
+  let tm ← elabTerm (← liftMacroM <| runDcc e) none
   let dcc_e ← decode_dcc tm
   let ⟨_u, _α, lean_e⟩ ← dcc_e.to_lean
   return lean_e
 
+#check dcc_decompile (Id(Sort 0))
+#check dcc_decompile (Id(Sort 0) ⊤)

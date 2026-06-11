@@ -411,7 +411,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         | throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
     let some β' ← checkTypeQ τ_β q($τ_a → Sort (u_snd₂' + 1))
       | throwError m!"couple snd type {β} is not well-typed at {(DCC ⟦β⟧(a, b))}"
-    let b' ← checkTypeQ (u := u_snd₂'.succ) a' q($β' $a')
+    let b' ← checkTypeQ (u := u_snd₂'.succ) b' q($β' $a')
     match b' with
     | .some b' =>
       pure ⟨(Level'.max (Level'.succ u_snd₂) (Level'.succ u_fst₂))

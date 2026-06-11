@@ -152,20 +152,22 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     | ⟨.succ (.succ u'), τ_α, α'⟩ =>
       match τ_α with
       | ~q(Type u') =>
-        let ⟨.succ (.max u_α' (.succ u_β')), τ_β, β'⟩ ← β.to_lean
+        let ⟨(.imax (.succ u_α') (.succ (.succ u_β'))), τ_β, β'⟩ ← β.to_lean
           | throwError m!"Eval second arg {β} is not well-typed in: {(DCC Eval(α, β, x))}"
         match τ_β with
         | ~q(∀ (x : ($α : (Type u_α'))), Type u_β') =>
           match ← isDefEqQ α' α with
           | .defEq heq₂ =>
             match ← x.to_lean with
-            | ⟨.imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)), τ_x, x'⟩ =>
+            | ⟨.imax (.succ u₂a) (.imax (.succ u_β₂a) u'₂a), τ_x, x'⟩ =>
               have α' : Q(Type u') := α'
               have β' : Q($α' → Type u_β') := β'
               match τ_x with
-              | ~q(∀ (x : ($α' : Type (u₂a + 1))) (y : ($β' : $α' → Type (u_β₂a + 1)) x),
-                ($γ : ∀ (x : $α') (y : $β' x), Type (u'₂a + 1)) x y) =>
-                .pure ⟨.imax (.imax (.succ (.succ u₂a)) (.succ (.succ u_β₂a))) (.succ (.succ u'₂a)), τ_x, q(fun (x : $α') (y : $β' x) => $x' x y)⟩
+              | ~q(∀ (x : ($α' : Type u₂a)) (y : ($β' : $α' → Type u_β₂a) x),
+                ($γ : ∀ (x : $α') (y : $β' x), Sort u'₂a) x y) =>
+                .pure ⟨.imax (.succ (.max u₂a u_β₂a)) u'₂a,
+                  q(∀ (s : Shared (Σ (x : $α'), $β' x)), $γ s.deref.fst s.deref.snd)
+                  , q(fun (s : Shared (Σ (x : $α'),$β' x)) => $x' s.deref.fst s.deref.snd)⟩
               | _ => throwError m!"Eval body {x} is not uncurryable in: {e}"
             | _ => throwError m!"Eval body {β} is not uncurryable in: {e}"
           | _ => throwError m!"Eval body {α} is not uncurryable in: {e}"
@@ -397,24 +399,25 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       g : α → Σ (a : α) × β
       f : ∀ (s : Σ (a : α) × β), γ s
     -/
-    let ⟨.max (.succ u_α₁') (.max (.succ u_α₁b') (.succ u_snd₁'))
+    let ⟨.imax (.succ u_α₁') (.succ (.max u_α₁b' u_snd₁'))
       , τ_g', g'⟩ ← to_lean g
       | throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
-    let ⟨.max (.max (.succ u_α₂b') (.succ u_snd₂')) (.succ u_γ_out')
+    let ⟨.imax (.succ (.max u_α₂b' u_snd₂')) u_γ_out'
        , τ_f', f'⟩ ← to_lean f
        | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
     match τ_g' with
     | ~q(∀ (x : Shared ($α : (Type u_α₁'))), Σ (a : ($α' : Type u_α₁b')), (($β a) : (Type u_snd₁'))) =>
-      let some β' ← checkTypeQ β q($α → Type u_snd₁')
+      let some β' ← checkTypeQ β q($α' → Type u_snd₁')
         | throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
-      let g' ← checkTypeQ g' q(∀ (x : Shared ($α : (Type u_α₁'))), Σ (a : ($α : Type u_α₁')), (($β' a) : (Type u_snd₁')))
+      let g' ← checkTypeQ g' q(∀ (x : Shared ($α : (Type u_α₁'))), Σ (a : ($α' : Type u_α₁b')),
+        (($β' a) : (Type u_snd₁')))
       match g' with
       | .some g' =>
         match τ_f' with
-        | ~q(∀ (s : (Σ (a : ($α'' : Type u_α₂b')), ($β'' a :  Type u_snd₂'))), ($γ : Type u_γ_out')) =>
-          let some γ' ← checkTypeQ γ q(∀ (s : (Σ (a : $α), $β' a)), Sort u_γ_out')
+        | ~q(∀ (s : (Σ (a : ($α'' : Type u_α₂b')), ($β'' a :  Type u_snd₂'))), ($γ : Sort u_γ_out')) =>
+          let some γ' ← checkTypeQ γ q(∀ (s : (Σ (a : $α'), $β' a)), Sort u_γ_out')
             | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
-          let some f' ← checkTypeQ f' q(∀ (s : (Σ (a : $α), $β' a)), (($γ' s) : Sort u_γ_out'))
+          let some f' ← checkTypeQ f' q(∀ (s : (Σ (a : $α'), $β' a)), (($γ' s) : Sort u_γ_out'))
             | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
           pure ⟨.imax (.succ u_α₁') u_γ_out'
             , q(∀ (x : Shared $α), $γ' ($g' x))

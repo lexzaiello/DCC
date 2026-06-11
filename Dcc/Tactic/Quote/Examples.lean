@@ -53,3 +53,10 @@ def mk_test_pair : Expr :=
 #check dcc_decompile (refl(Id(Sort 2)) &(Sort 1) &(Sort 0))
 
 #check rfl (a := (Sort 0))
+
+/-
+TODO: tomorrow. Fix comp.
+
+normal comp works.
+Just need to fix dependent comp.
+-/

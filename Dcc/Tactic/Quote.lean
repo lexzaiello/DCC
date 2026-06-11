@@ -109,33 +109,6 @@ def get_codomain_arrow (e : Expr) : Option Expr :=
     | _ => .none
   | _ => .none
 
-mutual
-
-partial def get_fn_ty (e : Expr) : MetaM ((u v : Level')
-  × (α : Q(Sort $(u.to_level))) × (β : Q($α → Sort $(v.to_level))) × Q(∀ (x : $α), $β x)) := do
-  match e.get_domain, e.get_codomain with
-  | .some dom, .some cod =>
-    match ← dom.to_lean with
-    | ⟨u, u', τ_α, α, heq⟩ =>
-      match ← cod.get_fn_ty, ← e.to_lean with
-      | ⟨u₂, v, α₂, _β, β⟩, ⟨uv, uv', τ_f, f, heq⟩ =>
-        if heq : u₂ = u then
-          if heq₂ : uv = (u.imax v) then
-            match ← isDefEqQ α α₂ with
-            | .defEq heq =>
-              let some α' ← checkTypeQ α q(Sort $(u.to_level))
-                | throwError m!"invalid domain: {e}"
-              let some β' ← checkTypeQ β q($α' → Sort $(v.to_level))
-                | throwError m!"invalid codomain: {e}"
-              let some f' ← checkTypeQ f q(∀ (x : $α'), $β' x)
-                | throwError m!"couldn't quote function: {e}"
-              return ⟨u, v, α', β', f'⟩
-            | .notDefEq =>
-              throwError m!"not well-typed (domain and codomain domain mismatch): {e}"
-          else throwError m!"not well-typed (domain and codomain universe level mismatch): {e}"
-        else throwError m!"not well-typed (domain and codomain universe level mismatch): {e}"
-  | _, .none | .none, _ => throwError m!"not well-typed (no domain or codomain): {e}"
-
 partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
   (α : Q(Sort $u')) × Q($α) × (PLift (u' = u.to_level))):= do
   match heq₀ : e with
@@ -154,9 +127,15 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
              simp [heqa.left, heqa.right, Level'.to_level]⟩⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC $<f>)                =>
-    match ← f.get_fn_ty with
-    | ⟨.succ u, .succ v, α, β, f'⟩ =>
-      return ⟨Level'.imax (.succ u) (.succ v), (Level'.imax (.succ u) (.succ v)).to_level, q(∀ (x : Shared $α), Shared ($β x.deref)), q(fun (x : Shared $α) => Shared.fmap $f' x), ⟨rfl⟩⟩
+    let ⟨.max (.succ u) (.succ v), .max (.succ u') (.succ v'), τ_f', f', ⟨heqa⟩⟩ ← f.to_lean
+      | throwError m!"Box function {f} is not well-typed at: {DCC !<f>}"
+    match τ_f' with
+    | ~q(∀ (x : ($α : (Type u'))), ($β x : Type v')) =>
+      return ⟨.max (.succ u) (.succ v), .max (.succ u') (.succ v')
+         , q(∀ (x : Shared $α), Shared ($β x.deref)),
+           q(fun (x : Shared $α) => Shared.fmap $f' x), ⟨by
+             simp [Level'.to_level] at heqa
+             simp [heqa.left, heqa.right, Level'.to_level]⟩⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC &(x))                =>
     match ← x.to_lean with
@@ -597,8 +576,6 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
           exact heqb.right⟩⟩
       | _ => throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
     | _ => throwError m!"application type mismatch in {(DCC (f x))}"
-
-end
 
 end Expr
 

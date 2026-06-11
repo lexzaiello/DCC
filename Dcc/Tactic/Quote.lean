@@ -219,7 +219,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       match τ_α with
       | ~q(Type u') =>
         let ⟨.imax (.succ u_α') (.succ (.succ u_β')), τ_β, β'⟩ ← β.to_lean
-          | throwError m!"Eval second arg {β} is not well-typed in: {(DCC Λ(α, β, e))}"
+          | throwError m!"Curry second arg {β} is not well-typed in: {(DCC Λ(α, β, e))}"
         match τ_β with
         | ~q(∀ (x : ($α₂ : (Type u_α'))), Type u_β') =>
           match ← isLevelDefEqQ u' u_α' with
@@ -240,23 +240,23 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
                     pure ⟨Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
                       q(∀ (x : $α') (y : $β' x), $γ (Sigma.mk x y)),
                       q(fun (x : $α') (y : $β' x) => ($x' (Sigma.mk x y)))⟩
-                  | _ => throwError m!"Eval body {x} is not curryable in: {e}"
-                | _ => throwError m!"Eval body {β} is not curryable in: {e}"
-              | _ => throwError m!"Eval body {α} is not curryable in: {e}"
-            | _ => throwError m!"Eval body {α} is not curryable in: {e}"
-          | _ => throwError m!"Eval body {α} is not curryable in: {e}"
-        | _ => throwError m!"Eval body {α} is not curryable in: {e}"
-    | _ => throwError m!"Eval param {α} is not curryable in: {e}"
+                  | _ => throwError m!"Curry body {x} is not curryable in: {e}"
+                | _ => throwError m!"[5] Curry param {β} is not curryable in: {e}"
+              | _ => throwError m!"[4] Curry param {α} is not curryable in: {e}"
+            | _ => throwError m!"[3] Curry param {α} is not curryable in: {e}"
+          | _ => throwError m!"[2] Curry param {α} is not curryable in: {e}"
+        | _ => throwError m!"Curry param {β} is not curryable in: {e}"
+    | _ => throwError m!"Curry param {α} is not curryable in: {e}"
   | (DCC !Λ(α, β, x))          =>
     -- switch τ_α to Sort u'?
     match ← α.to_lean with
     | ⟨.succ (.succ u'), τ_α, α'⟩ =>
       match τ_α with
       | ~q(Type u') =>
-        let ⟨.max (.succ u_α') (.succ u_β'), τ_β, β'⟩ ← β.to_lean
-          | throwError m!"Eval second arg {β} is not well-typed in: {(DCC Λ(α, β, e))}"
+        let ⟨.imax (.succ u_α') (.succ (.succ u_β')), τ_β, β'⟩ ← β.to_lean
+          | throwError m!"!Curry second arg {β} is not well-typed in: {(DCC Λ(α, β, e))}"
         match τ_β with
-        | ~q(∀ (x : ($α₂ : (Type u_α'))), Sort u_β') =>
+        | ~q(∀ (x : ($α₂ : (Type u_α'))), Type u_β') =>
           match ← isLevelDefEqQ u' u_α' with
           | .defEq h =>
             match ← isDefEqQ α' α₂ with
@@ -275,13 +275,13 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
                     pure ⟨Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
                       q(∀ (x : Shared $α') (y : Shared ($β' x.deref)), $γ (Shared.share (Sigma.mk x.deref y.deref))),
                       q(fun (x : Shared $α') (y : Shared ($β' x.deref)) => ($x' (Shared.share (Sigma.mk x.deref y.deref))))⟩
-                  | _ => throwError m!"Eval body {x} is not curryable in: {e}"
-                | _ => throwError m!"Eval body {β} is not curryable in: {e}"
-              | _ => throwError m!"Eval body {α} is not curryable in: {e}"
-            | _ => throwError m!"Eval body {α} is not curryable in: {e}"
-          | _ => throwError m!"Eval body {α} is not curryable in: {e}"
-        | _ => throwError m!"Eval body {α} is not curryable in: {e}"
-    | _ => throwError m!"Eval param {α} is not curryable in: {e}"
+                  | _ => throwError m!"!Curry body {x} is not curryable in: {e}"
+                | _ => throwError m!"!Curry body {β} is not curryable in: {e}"
+              | _ => throwError m!"!Curry body {α} is not curryable in: {e}"
+            | _ => throwError m!"!Curry body {α} is not curryable in: {e}"
+          | _ => throwError m!"!Curry body {α} is not curryable in: {e}"
+        | _ => throwError m!"!Curry body {α} is not curryable in: {e}"
+    | _ => throwError m!"!Curry param {α} is not curryable in: {e}"
   | (DCC Π(α, β))             =>
     let ⟨.imax (.succ u_δ₁') (.succ u_α₁')
       , ~q($δ → Sort u_α₁'), f_α'⟩ ← to_lean α
@@ -330,12 +330,12 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       pure ⟨(.imax (.succ u_fst₂') (.succ u_snd₂')), q(Σ (a : $τ_a), $β' a), q(Sigma.mk $a' $b')⟩
     | .none => throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
   | (DCC Coup(β))             =>
-    let ⟨.max (.succ u_fst₁') (.succ u_snd₁')
+    let ⟨.imax (.succ u_fst₁') (.succ (.succ u_snd₁'))
        , τ_β, β'⟩ ← to_lean β
        | throwError m!"couple snd type {β} is not well-typed at {(DCC Coup(β))}"
     match τ_β with
-    | ~q(∀ (x : ($α : Sort (u_fst₁' + 1))), Sort u_snd₁') =>
-      pure ⟨.max (.succ (.succ (.succ u_fst₁')))  (.succ (.succ (.succ u_snd₁')))
+    | ~q(∀ (x : ($α : Type u_fst₁')), Type u_snd₁') =>
+      pure ⟨.imax (.succ (.succ (.succ u_fst₁')))  (.succ (.succ (.succ u_snd₁')))
         , q(Type ((max u_fst₁' u_snd₁') + 1))
         , q(Type (max u_fst₁' u_snd₁'))⟩
     | _ =>  throwError m!"couple type type {β} is not well-typed at {(DCC Coup(β))}"

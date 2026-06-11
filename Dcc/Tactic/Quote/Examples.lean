@@ -13,6 +13,6 @@ import Dcc.Tactic.Quote
 #eval dcc_show ⟦Id(Sort 2)⟧(Sort 1, Sort 0)
 #check dcc_decompile (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))
 #check dcc_decompile (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))
-
+#check dcc_decompile (Λ(Sort 1, Id(Sort 1), Fstc(Id(Sort 1))))
 #check dcc_decompile Fstc(Id(Sort 2))
 

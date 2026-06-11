@@ -231,7 +231,6 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
               --let u_β' := u_β.to_level
               --let u_β' := (Level'.succ u_β).to_level
               let ⟨u_a, _, _⟩ ← x.to_lean
-              dbg_trace u_a
               let ⟨.imax (.succ (.max u_α₂' u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
                 | throwError m!"this should not be reachable (curry)"
               have β' : Q($α' → Type u_β') := β'
@@ -268,7 +267,6 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
               --let u_β' := u_β.to_level
               --let u_β' := (Level'.succ u_β).to_level
               let ⟨u_a, _, _⟩ ← x.to_lean
-              dbg_trace u_a
               let ⟨.imax (.succ (.max u_α₂' u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
                 | throwError m!"this should not be reachable (curry)"
               have β' : Q($α' → Type u_β') := β'

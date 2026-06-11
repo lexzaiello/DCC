@@ -27,3 +27,6 @@ import Dcc.Tactic.Quote
 #check dcc_decompile (Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 2)))
 #check dcc_decompile (Σ(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 2))) (Sort 0))
 #check dcc_decompile `(Coup(`(Sort 1, Sort 1)), Sort 2)
+#check dcc_decompile (Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1)))
+#eval dcc_show (Σ(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 2))))
+#check dcc_decompile (Π(Id(Sort 1), Λ(Sort 1, Id(Sort 1), `(Coup(Id(Sort 1)), Sort 0))) (Sort 0))

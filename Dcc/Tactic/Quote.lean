@@ -287,15 +287,15 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
         | _ => throwError m!"!Curry body {α} is not curryable in: {e}"
     | _ => throwError m!"!Curry param {α} is not curryable in: {e}"
   | (DCC Π(α, β))             =>
-    let ⟨.imax (.succ u_δ₁') (.succ u_α₁')
+    let ⟨.imax u_δ₁' (.succ u_α₁')
       , ~q($δ → Sort u_α₁'), f_α'⟩ ← to_lean α
       | throwError m!"Π domain function {α} is not well-typed at {(DCC Π(α, β))}"
-    let ⟨.imax (.succ _a₂) (.imax (.succ _b₂) (.succ u_β₂'))
+    let ⟨.imax _a₂ (.imax _b₂ (.succ u_β₂'))
       , τ_f_β', f_β'⟩ ← to_lean β
       | throwError m!"Π domain function {β} is not well-typed at {(DCC Π(α, β))}"
     let some f_β'' ← checkTypeQ f_β' q(∀ (env : $δ) (α : $f_α' env), Sort u_β₂')
       | throwError m!"Π domain function {β} is not well-typed at {(DCC Π(α, β))}"
-    pure ⟨.max (.succ u_δ₁') (.succ (.imax u_α₁' u_β₂'))
+    pure ⟨.imax u_δ₁' (.succ (.imax u_α₁' u_β₂'))
       , q($δ → Sort (imax u_α₁' u_β₂'))
       , q(fun (env : $δ) => (∀ (x : $f_α' env), $f_β'' env x))⟩
   | (DCC ⟦β⟧⟨a, b⟩)           =>

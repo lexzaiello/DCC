@@ -115,7 +115,7 @@ set_option pp.rawOnError true
 set_option linter.constructorNameAsVariable false in
 partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
   (α : Q(Sort $u')) × Q($α) × (PLift (u' = u.to_level))):= do
-  match heq₀ : e with
+  match e with
   | (DCC ⊤)                   => return ⟨.succ .zero, (Level'.succ .zero).to_level, q(Prop), q(True), ⟨rfl⟩⟩
   | (DCC ⊥)                   => return ⟨.succ .zero, (Level'.succ .zero).to_level, q(Prop), q(False), ⟨rfl⟩⟩
   | (DCC ∗)                   => return ⟨.zero, Level'.zero.to_level, q(True), q(True.intro), ⟨rfl⟩⟩

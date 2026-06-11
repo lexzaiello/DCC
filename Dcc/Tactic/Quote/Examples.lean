@@ -20,4 +20,5 @@ import Dcc.Tactic.Quote
 #check dcc_decompile (Λ(Sort 1, Id(Sort 1), Id(Coup(Id(Sort 1)))))
 #check dcc_decompile (Λ(Sort 1, Id(Sort 1), Fstc(Id(Sort 1))))
 #check dcc_decompile Fstc(Id(Sort 2))
-
+#check dcc_decompile (!(Sort 1))
+#check dcc_decompile (!Λ(Sort 1, Id(Sort 1), Id(!(Coup(Id(Sort 1))))))

@@ -112,40 +112,39 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
   | (DCC ⊥)                   => return ⟨.succ .zero, q(Prop), q(False)⟩
   | (DCC ∗)                   => return ⟨.zero, q(True), q(True.intro)⟩
   | (DCC !<f>)                =>
-    let ⟨.max (.succ u') (.succ v'), τ_f', f'⟩ ← f.to_lean
+    let ⟨.imax u' v', τ_f', f'⟩ ← f.to_lean
       | throwError m!"Box function {f} is not well-typed at: {DCC !<f>}"
     match τ_f' with
-    | ~q(∀ (x : ($α : (Type u'))), ($β x : Type v')) =>
-      return ⟨.max (.succ u') (.succ v')
+    | ~q(∀ (x : ($α : (Sort u'))), ($β x : Sort v')) =>
+      return ⟨.imax (.succ u') (.succ v')
          , q(∀ (x : Shared $α), Bang ($β x.deref)),
            q(fun (x : Shared $α) => Shared.map $f' x)⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC $<f>)                =>
-    let ⟨.max (.succ u') (.succ v'), τ_f', f'⟩ ← f.to_lean
+    let ⟨.imax u' v', τ_f', f'⟩ ← f.to_lean
       | throwError m!"Box function {f} is not well-typed at: {DCC !<f>}"
     match τ_f' with
-    | ~q(∀ (x : ($α : (Type u'))), ($β x : Type v')) =>
-      return ⟨.max (.succ u') (.succ v')
+    | ~q(∀ (x : ($α : (Sort u'))), ($β x : Sort v')) =>
+      return ⟨.imax (.succ u') (.succ v')
          , q(∀ (x : Shared $α), Shared ($β x.deref)),
            q(fun (x : Shared $α) => Shared.fmap $f' x)⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC &(x))                =>
     match ← x.to_lean with
-    | ⟨.succ u', α, x'⟩ => pure ⟨u'.succ, q(Shared $α), q(Shared.share $x')⟩
-    | _ => throwError m!"Shared boxes can only live in Type: {e}"
+    | ⟨u', α, x'⟩ => pure ⟨.succ u', q(Shared $α), q(Shared.share $x')⟩
   | (DCC *(α))                =>
     match ← α.to_lean with
-    | ⟨.succ (.succ u'), τ_α, α'⟩ =>
+    | ⟨(.succ u'), τ_α, α'⟩ =>
       match τ_α with
-      | ~q(Type u') =>
-        pure ⟨.succ u', q(Shared.{u'} $α' → $α'), q(fun (x : Shared $α') => Shared.deref.{u'} x)⟩
+      | ~q(Sort u') =>
+        pure ⟨.imax (.succ u') u', q(Shared.{u'} $α' → $α'), q(fun (x : Shared $α') => Shared.deref.{u'} x)⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC !(α))                =>
     match ← α.to_lean with
-    | ⟨.succ (.succ u'), τ_α, α'⟩ =>
+    | ⟨(.succ u'), τ_α, α'⟩ =>
       match τ_α with
-      | ~q(Type u') =>
-        pure ⟨.succ (.succ u'), q(Type u'), q(Shared $α')⟩
+      | ~q(Sort u') =>
+        pure ⟨.succ (.succ u'), q(Sort (u' + 1)), q(Shared $α')⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC Eval(α, β, x))       =>
     match ← α.to_lean with
@@ -165,7 +164,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
               match τ_x with
               | ~q(∀ (x : ($α' : Type u₂a)) (y : ($β' : $α' → Type u_β₂a) x),
                 ($γ : ∀ (x : $α') (y : $β' x), Sort u'₂a) x y) =>
-                .pure ⟨.imax (.succ (.max u₂a u_β₂a)) u'₂a,
+                .pure ⟨.imax (.succ (.succ (.max u₂a u_β₂a))) u'₂a,
                   q(∀ (s : Shared (Σ (x : $α'), $β' x)), $γ s.deref.fst s.deref.snd)
                   , q(fun (s : Shared (Σ (x : $α'),$β' x)) => $x' s.deref.fst s.deref.snd)⟩
               | _ => throwError m!"Eval body {x} is not uncurryable in: {e}"
@@ -269,7 +268,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
               --let u_β' := u_β.to_level
               --let u_β' := (Level'.succ u_β).to_level
               let ⟨u_a, _, _⟩ ← x.to_lean
-              let ⟨.imax (.succ (.max u_α₂' u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
+              let ⟨.imax (.succ (.succ (.max u_α₂' u_β₂'))) u_e₂', τ_x, x'⟩ ← x.to_lean
                 | throwError m!"this should not be reachable (curry)"
               have β' : Q($α' → Type u_β') := β'
               match ← isLevelDefEqQ u_α₂' u_α' with
@@ -278,7 +277,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
                 | .defEq h₂ =>
                   match τ_x with
                   | ~q(∀ (s : Shared (Σ (a : ($α' : (Type u_α'))), (($β' a) : Type u_β'))), (($γ s) : Sort u_e₂')) =>
-                    pure ⟨Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
+                    pure ⟨Lean.Level.imax (.succ (.succ u')) (Lean.Level.imax (.succ (Lean.Level.succ u_β')) u_e₂'),
                       q(∀ (x : Shared $α') (y : Shared ($β' x.deref)), $γ (Shared.share (Sigma.mk x.deref y.deref))),
                       q(fun (x : Shared $α') (y : Shared ($β' x.deref)) => ($x' (Shared.share (Sigma.mk x.deref y.deref))))⟩
                   | _ => throwError m!"!Curry body {x} is not curryable in: {e}"
@@ -324,7 +323,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       (y : (($f_β x) : Sort (u_fst₁' + 1))), (($γ x y) : Sort (u_snd₁' + 1))) =>
       let some a' ← checkTypeQ a' q(∀ (x : $α), $f_β x)
         | throwError m!"pair snd function {a} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
-      pure ⟨.imax (.imax (.succ u_fst₁') (.succ u_snd₁')) (.succ u_α₁')
+      pure ⟨.imax (.succ (.succ u_α₁')) (.imax (.succ u_fst₁') (.succ u_snd₁'))
           , q(∀ (x : (Shared $α)), Σ (a : ($f_β x.deref)), $γ x.deref a)
           , q(fun (x : (Shared $α)) => Sigma.mk ($a' x.deref) ($b' x.deref ($a' x.deref)))⟩
     | τ_β' => throwError m!"pair snd function {b} has type: {τ_β'}, but that was not expected at {(DCC ⟦β⟧⟨a, b⟩)}"
@@ -379,19 +378,19 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       | throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
     match τ_f_α' with
     | ~q(∀ (env : ($α : (Type u_env₁'))), Type u_srt₁') =>
-      pure ⟨.imax u_env₁'.succ u_srt₁'.succ
+      pure ⟨.imax (.succ u_env₁'.succ) (.succ u_srt₁'.succ)
         , q(∀ (env : Shared $α) (x : Shared ($f_α' env.deref)), Prop)
         , q(fun (env : Shared $α) (x : Shared ($f_α' env.deref)) => x.deref = x.deref)⟩
     | _ => throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
   | (DCC refl(f_α))            =>
-    let ⟨.imax (.succ u_env₁') (.succ (.succ u_srt₁'))
+    let ⟨.imax u_env₁' (.succ u_srt₁')
       , τ_f_α', f_α'⟩ ← to_lean f_α
       | throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
     match τ_f_α' with
-    | ~q(∀ (env : ($α : (Type u_env₁'))), Type u_srt₁') =>
+    | ~q(∀ (env : ($α : (Sort u_env₁'))), Sort u_srt₁') =>
       pure ⟨.imax (.succ u_env₁') (.imax (.succ u_srt₁') .zero)
         , q(∀ (env : Shared $α) (x : Shared ($f_α' env.deref)), x.deref = x.deref)
-        , q(fun (env : Shared $α) (x : Shared ($f_α' env.deref)) => _root_.refl x.deref)⟩
+        , q(fun (env : Shared $α) (x : Shared ($f_α' env.deref)) => Eq.refl x.deref)⟩
     | _ => throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
   | (DCC f ∘∘ g)
   | (DCC f ∘ g)               =>
@@ -406,10 +405,10 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
        , τ_f', f'⟩ ← to_lean f
        | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
     match τ_g' with
-    | ~q(∀ (x : Shared ($α : (Type u_α₁'))), Σ (a : ($α' : Type u_α₁b')), (($β a) : (Type u_snd₁'))) =>
+    | ~q(∀ (x : Shared ($α : (Sort u_α₁'))), Σ (a : ($α' : Type u_α₁b')), (($β a) : (Type u_snd₁'))) =>
       let some β' ← checkTypeQ β q($α' → Type u_snd₁')
         | throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
-      let g' ← checkTypeQ g' q(∀ (x : Shared ($α : (Type u_α₁'))), Σ (a : ($α' : Type u_α₁b')),
+      let g' ← checkTypeQ g' q(∀ (x : Shared ($α : (Sort u_α₁'))), Σ (a : ($α' : Type u_α₁b')),
         (($β' a) : (Type u_snd₁')))
       match g' with
       | .some g' =>

@@ -1,15 +1,9 @@
 import Dcc.Judge
-import Dcc.Astn
+import Dcc.Ast
 import Dcc.Judge2
 import Dcc.Types
 import Dcc.Eta.Reduce
 import Dcc.Tactic.Debug
-
-/-
-BIG TODO:
-
-- need to add refl
--/
 
 open Lean.Meta (MetaM)
 
@@ -94,6 +88,8 @@ TODO: better logic for detecting duplication. Maybe some kind of user marker.
 
 -/
 
+#check Eq.refl
+
 def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) (reduce : Expr → Expr := Expr.reduce_all) : Lean.MacroM _root_.Expr := do
   match e with
   | .app (.app (.const ``Shared.deref _us) _α) (.app (.app (.const ``Shared.share _us₁) _α₁) x) => abstract' x ctx infer reduce
@@ -143,8 +139,9 @@ def abstract' (e : Lean.Expr) (ctx : Ctx) (infer : ParamInfer := ⟨Expr.Judge, 
   | .app (.const ``Shared _us) α => do
     let α' ← reduce <$> abstract' α ctx infer reduce
     return (DCC (!(α')))
-  | .app (.app (.app (.app (.app (.app (.const ``use _us) _α) _β) _γ) M) N) _
-  | .app (.app (.app (.app (.app (.const ``use _us) _α) _β) _γ) M) N
+  | (.app (.const ``Eq.refl _us) α) => do
+    let α' ← reduce <$> abstract' α ctx infer reduce
+    return (DCC refl(α'))
   | .app M N => do
     let ctx' := match ctx with
       | DCC !(Γ) => Γ
@@ -231,7 +228,7 @@ def cc (root : Lean.Expr) (infer : ParamInfer) (reduce : Expr → Expr) : Lean.M
       return (DCC (M' N'))
     | .some ⟨DCC (Π(!<_f>, _f_β) _b), _h⟩, _n =>
       return (DCC (M' &(N')))
-    | τ, _ =>
+    | _τ, _ =>
       return (DCC (M' N'))
     /-match M' with
     | DCC (f &(x)) => return (DCC (f &(x) &(N')))
@@ -344,7 +341,6 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
       try
         match ← Lean.Meta.inferType M' with
         | .forallE _ α _ _ =>
-          dbg_trace α
           let ⟨lvl, n_shared, α⟩ := n_times_shared α
           match lvl with
           | .some lv =>
@@ -392,7 +388,7 @@ def wrap_share_auto_trans (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
     let M' ← wrap_share_auto_trans M
     let N' ← wrap_share_auto_trans N
     match M', N' with
-    | .lam _ α _ _, (.app (.app (.const ``Shared.share _u) _α) x) =>
+    | .lam _ __α _ _, (.app (.app (.const ``Shared.share _u) _α) __x) =>
       return .app M' N'
     | .lam _ α _ _, N' =>
       let ⟨lvl, n_shared, α⟩ := n_times_shared α

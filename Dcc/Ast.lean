@@ -338,23 +338,21 @@ gen_dsl "DCC" for Expr
 def runDcc : Lean.Syntax → Lean.MacroM Lean.Syntax
   | `(gen_dcc| $e:gen_dcc) => `(DCC $e:gen_dcc)
 
-inductive Bang.{u} (α : Type u) where
+inductive Bang.{u} (α : Sort u) : Type u where
   | bang : α → Bang α
-deriving Lean.ToExpr
 
-inductive Shared.{u} (α : Type u) where
+inductive Shared.{u} (α : Sort u) : Type u where
   | share : α → Shared α
-deriving Lean.ToExpr
 
-def Shared.deref.{u} {α : Type u} (s : Shared α) : α :=
+def Shared.deref.{u} {α : Sort u} (s : Shared α) : α :=
   match s with
   | ⟨s⟩ => s
 
-def Shared.map.{u, v} {α : Type u} {β : α → Type v} (f : ∀ (x : α), β x) (s : Shared α) : Bang (β s.deref) :=
+def Shared.map.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β x) (s : Shared α) : Bang (β s.deref) :=
   match s with
   | ⟨s⟩ => ⟨f s⟩
 
-def Shared.fmap.{u, v} {α : Type u} {β : α → Type v} (f : ∀ (x : α), β x) (s : Shared α) : Shared (β s.deref) :=
+def Shared.fmap.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β x) (s : Shared α) : Shared (β s.deref) :=
   match s with
   | ⟨s⟩ => ⟨f s⟩
 

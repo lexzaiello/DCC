@@ -594,7 +594,23 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         | _ => throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
       | _ => throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
     | _ => throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘' g)}"
-  | (DCC (f x))               => sorry
+  | (DCC (f x)) =>
+    let ⟨u_α₁, u_α₁', τ_x', x', ⟨heqa⟩⟩ ← to_lean x
+    let ⟨.imax u_α₂ u_β₂, .imax u_α₂' u_β₂', τ_f', f', ⟨heqb⟩⟩ ← to_lean f
+      | throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
+    match ← isLevelDefEqQ u_α₂' u_α₁' with
+    | .defEq h =>
+      match τ_f' with
+      | ~q(∀ (x : ($τ_x'' : (Sort u_α₁'))), (($β x) : Sort u_β₂')) =>
+        let some β ← checkTypeQ β q(∀ (x : ($τ_x' : (Sort u_α₁'))), Sort u_β₂')
+          | throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
+        let some f' ← checkTypeQ f' q(∀ (x : ($τ_x' : (Sort u_α₁'))), (($β x) : Sort u_β₂'))
+          | throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
+        pure ⟨u_β₂, _, q($β $x'), q($f' $x'), ⟨by
+          simp [Level'.to_level] at heqb
+          exact heqb.right⟩⟩
+      | _ => throwError m!"app function {f} is not well-typed in {(DCC (f x))}"
+    | _ => throwError m!"application type mismatch in {(DCC (f x))}"
 
 end
 

@@ -527,6 +527,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         , q(fun (env : $α) (x : $f_α' env) => _root_.refl x)
         , ⟨by simp [Level'.to_level]⟩⟩
     | _ => throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
+  | (DCC f ∘∘ g)
   | (DCC f ∘ g)               =>
     /-
       g : α → Σ (a : α) × β
@@ -564,8 +565,35 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         | _ => throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
       | _ => throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
     | _ => throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
-  | (DCC f ∘∘ g)              => sorry
-  | (DCC f ∘' g)              => sorry
+  | (DCC f ∘' g)              =>
+    let ⟨.max (.succ u_α₁) (.succ u_β₁)
+       , .max (.succ u_α₁') (.succ u_β₁')
+       , τ_g', g', ⟨heqa⟩⟩ ← to_lean g
+       | throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘' g)}"
+    let ⟨.max (.succ u_β₂) (.succ u_γ₂)
+       , .max (.succ u_β₂') (.succ u_γ₂')
+       , τ_f', f', ⟨heqb⟩⟩ ← to_lean f
+       | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
+    match τ_g' with
+    | ~q(∀ (x : ($α : (Type u_α₁'))), ($β : (Type u_β₁'))) =>
+      match τ_f' with
+      | ~q(∀ (x : $β₂), (($γ x) : Type u_γ₂')) =>
+        match ← isLevelDefEqQ u_β₂' u_β₁' with
+        | .defEq h =>
+          let some γ' ← checkTypeQ γ q(∀ (x : ($β : Type u_β₁')), Sort u_γ₂')
+            | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
+          let some f' ← checkTypeQ f' q(∀ (x : ($β : (Type u_β₁'))), (($γ' x) : Sort u_γ₂'))
+            | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
+          pure ⟨.imax (.succ u_α₁) u_γ₂, _
+            , q(∀ (x : ($α : (Type u_α₁'))), $γ' ($g' x))
+            , q(fun (x : ($α : (Type u_α₁'))) => $f' ($g' x))
+            , ⟨by
+              simp [Level'.to_level] at heqa
+              simp [Level'.to_level] at heqb
+              simp [Level'.to_level, heqa.left, heqb.right]⟩⟩
+        | _ => throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
+      | _ => throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘' g)}"
+    | _ => throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘' g)}"
   | (DCC (f x))               => sorry
 
 end

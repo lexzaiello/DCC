@@ -382,14 +382,14 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
         , q(fun (env : $α) (x : $f_α' env) => x = x)⟩
     | _ => throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
   | (DCC refl(f_α))            =>
-    let ⟨.max (.succ u_env₁') (.succ (.succ u_srt₁'))
+    let ⟨.imax (.succ u_env₁') (.succ (.succ u_srt₁'))
       , τ_f_α', f_α'⟩ ← to_lean f_α
       | throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
     match τ_f_α' with
     | ~q(∀ (env : ($α : (Type u_env₁'))), Type u_srt₁') =>
-      pure ⟨.zero
-        , q(∀ (env : $α) (x : $f_α' env), x = x)
-        , q(fun (env : $α) (x : $f_α' env) => _root_.refl x)⟩
+      pure ⟨.imax (.succ u_env₁') (.imax (.succ u_srt₁') .zero)
+        , q(∀ (env : Shared $α) (x : Shared ($f_α' env.deref)), x.deref = x.deref)
+        , q(fun (env : Shared $α) (x : Shared ($f_α' env.deref)) => _root_.refl x.deref)⟩
     | _ => throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
   | (DCC f ∘∘ g)
   | (DCC f ∘ g)               =>

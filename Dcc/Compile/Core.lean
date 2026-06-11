@@ -1,9 +1,15 @@
 import Dcc.Judge
-import Dcc.Ast
+import Dcc.Astn
 import Dcc.Judge2
 import Dcc.Types
 import Dcc.Eta.Reduce
 import Dcc.Tactic.Debug
+
+/-
+BIG TODO:
+
+- need to add refl
+-/
 
 open Lean.Meta (MetaM)
 

@@ -54,6 +54,16 @@ def decode_dcc (e : Lean.Expr) : Lean.Elab.Term.TermElabM _root_.Expr := do
     let f ← decode_dcc f
     let g ← decode_dcc g
     return .pair β f g
+  | .app (.const ``_root_.Expr.refl []) f_α =>
+    let f_α' ← decode_dcc f_α
+    return .refl f_α'
+  | .app (.const ``_root_.Expr.eql []) f_α =>
+    let f_α' ← decode_dcc f_α
+    return .eql f_α'
+  | .app (.app (.const ``_root_.Expr.eq []) x) y =>
+    let x' ← decode_dcc x
+    let y' ← decode_dcc y
+    return .eq x' y'
   | .app (.const ``_root_.Expr.bang []) x =>
     let x ← decode_dcc x
     return .bang x

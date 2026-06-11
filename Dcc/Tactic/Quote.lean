@@ -292,12 +292,21 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       | throwError m!"Π domain function {α} is not well-typed at {(DCC Π(α, β))}"
     let ⟨.imax _a₂ (.imax _b₂ (.succ u_β₂'))
       , τ_f_β', f_β'⟩ ← to_lean β
-      | throwError m!"Π domain function {β} is not well-typed at {(DCC Π(α, β))}"
-    let some f_β'' ← checkTypeQ f_β' q(∀ (env : $δ) (α : $f_α' env), Sort u_β₂')
-      | throwError m!"Π domain function {β} is not well-typed at {(DCC Π(α, β))}"
-    pure ⟨.imax u_δ₁' (.succ (.imax u_α₁' u_β₂'))
-      , q($δ → Sort (imax u_α₁' u_β₂'))
-      , q(fun (env : $δ) => (∀ (x : $f_α' env), $f_β'' env x))⟩
+      | throwError m!"[1] Π codomain function {β} is not well-typed at {(DCC Π(α, β))}"
+    match τ_f_β' with
+    | ~q(∀ (env : ($δ' : Sort _a₂)) (α : (($f_α' env) : Sort _b₂)), Sort u_β₂') =>
+      let some f_β'' ← checkTypeQ f_β' q(∀ (env : $δ') (α : $f_α' env), Sort u_β₂')
+        | throwError m!"[2] Π codomain function {β} is not well-typed at {(DCC Π(α, β))}"
+      pure ⟨.imax _a₂ (.succ (.imax _b₂ u_β₂'))
+        , q($δ' → Sort (imax _b₂ u_β₂'))
+        , q(fun (env : $δ') => (∀ (x : $f_α' env), $f_β'' env x))⟩
+    | ~q(∀ (env : ($δ' : Sort _a₂)) (_x : ($α' : Sort _b₂)), Sort u_β₂') =>
+      let some f_β'' ← checkTypeQ f_β' q(∀ (env : $δ) (_x : $α'), Sort u_β₂')
+        | throwError m!"[3] Π codomain function {β} is not well-typed at {(DCC Π(α, β))}"
+      pure ⟨.imax u_δ₁' (.succ (.imax _b₂ u_β₂'))
+        , q($δ → Sort (imax _b₂ u_β₂'))
+        , q(fun (env : $δ) => (∀ (x : $α'), $f_β'' env x))⟩
+    | _ => throwError m!"[4] Π codomain function {β} is not well-typed at {(DCC Π(α, β))}"
   | (DCC ⟦β⟧⟨a, b⟩)           =>
     let ⟨.imax (.succ u_α₁') (.imax (.succ u_fst₁') (.succ u_snd₁'))
        , τ_b', b'⟩ ← to_lean b

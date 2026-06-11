@@ -45,3 +45,8 @@ def mk_test_pair : Expr :=
 #check dcc_decompile #(mk_test_pair)
 #check dcc_decompile #(mk_test_pair₀)
 #eval dcc_show #(mk_test_pair₀)
+
+#check dcc_decompile (Λ(Sort 2, Id(Sort 2), Fstc(Id(Sort 2))) (Sort 1) (Sort 0))
+#check dcc_decompile `(Sort 2, `(Sort 1, Sort 1))
+#check dcc_decompile (Π(Id(Sort 2), `(Sort 2, `(Sort 1, Sort 1))) Sort 1)
+#check dcc_decompile `(Sort 2, `(Sort 1, Sort 1))

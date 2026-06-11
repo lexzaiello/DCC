@@ -1,4 +1,5 @@
 import Dcc.Ast
+import Dcc.Tactic.Debug
 import Dcc.Judge2
 import Lean
 import Lean.Meta.Basic
@@ -451,3 +452,14 @@ end Expr
 #check (Type 1 → Type 2 : Type ((max 1 2) + 1))
 
 #check ∀ (s : Sigma (fun (x : Sort 1) => x)), (fun _x => Sigma (fun (x : Sort 1) => x)) s
+
+open Qq in
+open Lean.Meta in
+open Lean.Elab in
+open Lean.Elab.Term in
+elab "dcc_decompile" e:gen_dcc : term => do
+  let tm ← elabTerm e none
+  let dcc_e ← decode_dcc tm
+  let ⟨_u, _α, lean_e⟩ ← dcc_e.to_lean
+  return lean_e
+

@@ -13,6 +13,8 @@ open Lean.Meta
 
 /-
 Display DCC terms as lean expressions.
+
+TODO: Wrap sort types in PLift (e.g., propositions) so they can be used inside curry.
 -/
 
 def level_from_nat (n : ℕ) : Lean.Level :=
@@ -148,25 +150,25 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC Eval(α, β, x))       =>
     match ← α.to_lean with
-    | ⟨.succ (.succ u'), τ_α, α'⟩ =>
+    | ⟨.succ u', τ_α, α'⟩ =>
       match τ_α with
-      | ~q(Type u') =>
-        let ⟨(.imax (.succ u_α') (.succ (.succ u_β'))), τ_β, β'⟩ ← β.to_lean
+      | ~q(Sort u') =>
+        let ⟨(.imax u_α' (.succ u_β')), τ_β, β'⟩ ← β.to_lean
           | throwError m!"Eval second arg {β} is not well-typed in: {(DCC Eval(α, β, x))}"
         match τ_β with
-        | ~q(∀ (x : ($α : (Type u_α'))), Type u_β') =>
+        | ~q(∀ (x : ($α : (Sort u_α'))), Sort u_β') =>
           match ← isDefEqQ α' α with
           | .defEq heq₂ =>
             match ← x.to_lean with
-            | ⟨.imax (.succ u₂a) (.imax (.succ u_β₂a) u'₂a), τ_x, x'⟩ =>
-              have α' : Q(Type u') := α'
-              have β' : Q($α' → Type u_β') := β'
+            | ⟨.imax u₂a (.imax u_β₂a u'₂a), τ_x, x'⟩ =>
+              have α' : Q(Sort u') := α'
+              have β' : Q($α' → Sort u_β') := β'
               match τ_x with
-              | ~q(∀ (x : ($α' : Type u₂a)) (y : ($β' : $α' → Type u_β₂a) x),
+              | ~q(∀ (x : ($α' : Sort u₂a)) (y : ($β' : $α' → Sort u_β₂a) x),
                 ($γ : ∀ (x : $α') (y : $β' x), Sort u'₂a) x y) =>
-                .pure ⟨.imax (.succ (.succ (.max u₂a u_β₂a))) u'₂a,
-                  q(∀ (s : Shared (Σ (x : $α'), $β' x)), $γ s.deref.fst s.deref.snd)
-                  , q(fun (s : Shared (Σ (x : $α'),$β' x)) => $x' s.deref.fst s.deref.snd)⟩
+                .pure ⟨.imax (.succ (.max (.max 1 u₂a) u_β₂a)) u'₂a,
+                  q(∀ (s : Shared (Σ' (x : $α'), $β' x)), $γ s.deref.fst s.deref.snd)
+                  , q(fun (s : Shared (Σ' (x : $α'),$β' x)) => $x' s.deref.fst s.deref.snd)⟩
               | _ => throwError m!"Eval body {x} is not uncurryable in: {e}"
             | _ => throwError m!"Eval body {β} is not uncurryable in: {e}"
           | _ => throwError m!"Eval body {α} is not uncurryable in: {e}"
@@ -199,32 +201,32 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     pure <| ⟨m'.succ.succ, s₁, s₂⟩
   | (DCC Fstc(β))             =>
     match ← β.to_lean with
-    | ⟨.imax (.succ u') (.succ (.succ u_α')), τ_β, β'⟩ =>
+    | ⟨.imax u' (.succ u_α'), τ_β, β'⟩ =>
       match τ_β with
-      | ~q(∀ (x : ($α : Type u')), Type u_α') =>
-        pure ⟨Lean.Level.imax (.succ (.max u' u_α')) u'.succ,
-          q(∀ (x : Σ a : $α, $β' a), $α), q(fun (x : Σ a : $α, $β' a) => Sigma.fst x)⟩
+      | ~q(∀ (x : ($α : Sort u')), Sort u_α') =>
+        pure ⟨Lean.Level.imax (.max (.max 1 u') u_α') u',
+          q(∀ (x : Σ' a : $α, $β' a), $α), q(fun (x : Σ' a : $α, $β' a) => PSigma.fst x)⟩
       | τ_β => throwError m!"not a well-typed projection (Fst : {τ_β}) index: {β}"
     | _ => throwError m!"not a valid projection (Fst) index: {β}"
   | (DCC Sndc(β))             =>
     match ← β.to_lean with
-    | ⟨.imax (.succ u') (.succ (.succ u_α')), τ_β, β'⟩ =>
+    | ⟨.imax u' (.succ u_α'), τ_β, β'⟩ =>
       match τ_β with
-      | ~q(∀ (x : ($α : Type u')), Type u_α') =>
-        pure ⟨(Lean.Level.imax (.succ (.max u' u_α')) u_α'.succ),
-          q(∀ (x : Σ a : $α, $β' a), $β' (Sigma.fst x)), q(fun (x : Σ a : $α, $β' a) => Sigma.snd x)⟩
+      | ~q(∀ (x : ($α : Sort u')), Sort u_α') =>
+        pure ⟨(Lean.Level.imax (.max (.max 1 u') u_α') u_α'),
+          q(∀ (x : Σ' a : $α, $β' a), $β' (PSigma.fst x)), q(fun (x : Σ' a : $α, $β' a) => PSigma.snd x)⟩
       | _ => throwError m!"not a well-typed projection (Fst) index: {β}"
     | _ => throwError m!"not a valid projection (Fst) index: {β}"
   | (DCC Λ(α, β, x))          =>
     -- switch τ_α to Sort u'?
     match ← α.to_lean with
-    | ⟨.succ (.succ u'), τ_α, α'⟩ =>
+    | ⟨.succ u', τ_α, α'⟩ =>
       match τ_α with
-      | ~q(Type u') =>
-        let ⟨.imax (.succ u_α') (.succ (.succ u_β')), τ_β, β'⟩ ← β.to_lean
+      | ~q(Sort u') =>
+        let ⟨.imax u_α' (.succ u_β'), τ_β, β'⟩ ← β.to_lean
           | throwError m!"Curry second arg {β} is not well-typed in: {(DCC Λ(α, β, e))}"
         match τ_β with
-        | ~q(∀ (x : ($α₂ : (Type u_α'))), Type u_β') =>
+        | ~q(∀ (x : ($α₂ : (Sort u_α'))), Sort u_β') =>
           match ← isLevelDefEqQ u' u_α' with
           | .defEq h =>
             match ← isDefEqQ α' α₂ with
@@ -232,18 +234,18 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
               --let u_β' := u_β.to_level
               --let u_β' := (Level'.succ u_β).to_level
               let ⟨u_a, _, _⟩ ← x.to_lean
-              let ⟨.imax (.succ (.max u_α₂' u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
+              let ⟨.imax (.max (.max 1 u_α₂') u_β₂') u_e₂', τ_x, x'⟩ ← x.to_lean
                 | throwError m!"this should not be reachable (curry)"
-              have β' : Q($α' → Type u_β') := β'
+              have β' : Q($α' → Sort u_β') := β'
               match ← isLevelDefEqQ u_α₂' u_α' with
               | .defEq h =>
                 match ← isLevelDefEqQ u_β₂' u_β' with
                 | .defEq h₂ =>
                   match τ_x with
-                  | ~q(∀ (s : Σ (a : ($α' : (Type u_α'))), (($β' a) : Type u_β')), (($γ s) : Sort u_e₂')) =>
-                    pure ⟨Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
-                      q(∀ (x : $α') (y : $β' x), $γ (Sigma.mk x y)),
-                      q(fun (x : $α') (y : $β' x) => ($x' (Sigma.mk x y)))⟩
+                  | ~q(∀ (s : Σ' (a : ($α' : (Sort u_α'))), (($β' a) : Sort u_β')), (($γ s) : Sort u_e₂')) =>
+                    pure ⟨Lean.Level.imax u' (Lean.Level.imax u_β' u_e₂'),
+                      q(∀ (x : $α') (y : $β' x), $γ (PSigma.mk x y)),
+                      q(fun (x : $α') (y : $β' x) => ($x' (PSigma.mk x y)))⟩
                   | _ => throwError m!"Curry body {x} is not curryable in: {e}"
                 | _ => throwError m!"[5] Curry param {β} is not curryable in: {e}"
               | _ => throwError m!"[4] Curry param {α} is not curryable in: {e}"
@@ -254,13 +256,13 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
   | (DCC !Λ(α, β, x))          =>
     -- switch τ_α to Sort u'?
     match ← α.to_lean with
-    | ⟨.succ (.succ u'), τ_α, α'⟩ =>
+    | ⟨.succ u', τ_α, α'⟩ =>
       match τ_α with
-      | ~q(Type u') =>
-        let ⟨.imax (.succ u_α') (.succ (.succ u_β')), τ_β, β'⟩ ← β.to_lean
+      | ~q(Sort u') =>
+        let ⟨.imax u_α' (.succ u_β'), τ_β, β'⟩ ← β.to_lean
           | throwError m!"!Curry second arg {β} is not well-typed in: {(DCC Λ(α, β, e))}"
         match τ_β with
-        | ~q(∀ (x : ($α₂ : (Type u_α'))), Type u_β') =>
+        | ~q(∀ (x : ($α₂ : (Sort u_α'))), Sort u_β') =>
           match ← isLevelDefEqQ u' u_α' with
           | .defEq h =>
             match ← isDefEqQ α' α₂ with
@@ -268,18 +270,18 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
               --let u_β' := u_β.to_level
               --let u_β' := (Level'.succ u_β).to_level
               let ⟨u_a, _, _⟩ ← x.to_lean
-              let ⟨.imax (.succ (.succ (.max u_α₂' u_β₂'))) u_e₂', τ_x, x'⟩ ← x.to_lean
+              let ⟨.imax (.succ (.max (.max 1 u_α₂') u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
                 | throwError m!"this should not be reachable (curry)"
-              have β' : Q($α' → Type u_β') := β'
+              have β' : Q($α' → Sort u_β') := β'
               match ← isLevelDefEqQ u_α₂' u_α' with
               | .defEq h =>
                 match ← isLevelDefEqQ u_β₂' u_β' with
                 | .defEq h₂ =>
                   match τ_x with
-                  | ~q(∀ (s : Shared (Σ (a : ($α' : (Type u_α'))), (($β' a) : Type u_β'))), (($γ s) : Sort u_e₂')) =>
-                    pure ⟨Lean.Level.imax (.succ (.succ u')) (Lean.Level.imax (.succ (Lean.Level.succ u_β')) u_e₂'),
-                      q(∀ (x : Shared $α') (y : Shared ($β' x.deref)), $γ (Shared.share (Sigma.mk x.deref y.deref))),
-                      q(fun (x : Shared $α') (y : Shared ($β' x.deref)) => ($x' (Shared.share (Sigma.mk x.deref y.deref))))⟩
+                  | ~q(∀ (s : Shared (Σ' (a : ($α' : (Sort u_α'))), (($β' a) : Sort u_β'))), (($γ s) : Sort u_e₂')) =>
+                    pure ⟨Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
+                      q(∀ (x : Shared $α') (y : Shared ($β' x.deref)), $γ (Shared.share (PSigma.mk x.deref y.deref))),
+                      q(fun (x : Shared $α') (y : Shared ($β' x.deref)) => ($x' (Shared.share (PSigma.mk x.deref y.deref))))⟩
                   | _ => throwError m!"!Curry body {x} is not curryable in: {e}"
                 | _ => throwError m!"!Curry body {β} is not curryable in: {e}"
               | _ => throwError m!"!Curry body {α} is not curryable in: {e}"
@@ -309,7 +311,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
         , q(fun (env : $δ) => (∀ (x : $α'), $f_β'' env x))⟩
     | _ => throwError m!"[4] Π codomain function {β} is not well-typed at {(DCC Π(α, β))}"
   | (DCC ⟦β⟧⟨a, b⟩)           =>
-    let ⟨.imax (.succ u_α₁') (.imax (.succ u_fst₁') (.succ u_snd₁'))
+    let ⟨.imax u_α₁' (.imax u_fst₁' u_snd₁')
        , τ_b', b'⟩ ← to_lean b
        | throwError m!"pair snd function {b} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
     let ⟨.imax u_α₂' u_fst₂'
@@ -319,52 +321,50 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
        , τ_β', β'⟩ ← to_lean β
        | throwError m!"pair couple-image function {β} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
     match τ_b' with
-    | ~q(∀ (x : ($α : Sort (u_α₁' + 1)))
-      (y : (($f_β x) : Sort (u_fst₁' + 1))), (($γ x y) : Sort (u_snd₁' + 1))) =>
+    | ~q(∀ (x : ($α : Sort u_α₁'))
+      (y : (($f_β x) : Sort u_fst₁')), (($γ x y) : Sort u_snd₁')) =>
       let some a' ← checkTypeQ a' q(∀ (x : $α), $f_β x)
         | throwError m!"pair snd function {a} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
-      pure ⟨.imax (.succ (.succ u_α₁')) (.imax (.succ u_fst₁') (.succ u_snd₁'))
-          , q(∀ (x : (Shared $α)), Σ (a : ($f_β x.deref)), $γ x.deref a)
-          , q(fun (x : (Shared $α)) => Sigma.mk ($a' x.deref) ($b' x.deref ($a' x.deref)))⟩
+      pure ⟨.imax (.succ u_α₁') (.max (.max 1 u_fst₁') u_snd₁')
+          , q(∀ (x : (Shared $α)), Σ' (a : ($f_β x.deref)), $γ x.deref a)
+          , q(fun (x : (Shared $α)) => PSigma.mk ($a' x.deref) ($b' x.deref ($a' x.deref)))⟩
     | τ_β' => throwError m!"pair snd function {b} has type: {τ_β'}, but that was not expected at {(DCC ⟦β⟧⟨a, b⟩)}"
   | (DCC ⟦β⟧(a, b))           =>
-    let ⟨.imax u_fst₁' u_snd₁'
+    let ⟨.imax _u _v
        , τ_β, β'⟩ ← to_lean β
        | throwError m!"couple snd type {β} is not well-typed at {(DCC ⟦β⟧(a, b))}"
-    let ⟨.succ u_fst₂'
+    let ⟨u_fst₂'
         , τ_a, a'⟩ ← to_lean a
-        | throwError m!"couple fst {a} is not well-typed at {(DCC ⟦β⟧(a, b))}"
-    let ⟨.succ u_snd₂', τ_b, b'⟩ ← to_lean b
-      | throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
-    let some β' ← checkTypeQ β' q($τ_a → (Sort (u_snd₂' + 1)))
+    let ⟨u_snd₂', τ_b, b'⟩ ← to_lean b
+    let some β' ← checkTypeQ β' q($τ_a → (Sort u_snd₂'))
       | throwError m!"couple snd type {β} ({τ_β}) is not well-typed at with respect to fst type {τ_a} and snd type {τ_b} {(DCC ⟦β⟧(a, b))}"
     let b' ← checkTypeQ b' q($β' $a')
     match b' with
     | .some b' =>
-      pure ⟨.succ (.max u_fst₂' u_snd₂'),
-        q(Σ (a : $τ_a), $β' a), q(Sigma.mk $a' $b')⟩
+      pure ⟨(.max (.max 1 u_fst₂') u_snd₂'),
+        q(Σ' (a : $τ_a), $β' a), q(PSigma.mk $a' $b')⟩
     | .none => throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
   | (DCC Coup(β))             =>
-    let ⟨.imax (.succ u_fst₁') (.succ (.succ u_snd₁'))
+    let ⟨.imax u_fst₁' (.succ u_snd₁')
        , τ_β, β'⟩ ← to_lean β
        | throwError m!"couple snd type {β} is not well-typed at {(DCC Coup(β))}"
     match τ_β with
-    | ~q(∀ (x : ($α : Type u_fst₁')), Type u_snd₁') =>
-      let β' ← checkTypeQ β' q(∀ (x : ($α : Type u_fst₁')), Type u_snd₁')
-      pure ⟨(.succ (.succ (.max u_fst₁' u_snd₁')))
-        , q(Type (max u_fst₁' u_snd₁'))
-        , q(Σ (a : $α), $β' a)⟩
+    | ~q(∀ (x : ($α : Sort u_fst₁')), Sort u_snd₁') =>
+      let β' ← checkTypeQ β' q(∀ (x : ($α : Sort u_fst₁')), Sort u_snd₁')
+      pure ⟨(.succ (.max (.max 1 u_fst₁') u_snd₁'))
+        , q(Sort (max (max 1 u_fst₁') u_snd₁'))
+        , q(Σ' (a : $α), $β' a)⟩
     | _ =>  throwError m!"couple type type {β} is not well-typed at {(DCC Coup(β))}"
   | (DCC Σ(_f_α, f_β))             =>
-    let ⟨.imax u_env₁' (.imax (.succ u_α₁') (.succ (.succ u_srt₁')))
+    let ⟨.imax u_env₁' (.imax u_α₁' (.succ u_srt₁'))
       , τ_f_β', f_β'⟩ ← to_lean f_β
       | throwError m!"Σ domain function {f_β} is not well-typed at {(DCC Σ(_f_α, f_β))}"
     -- (u_env₁'.max u_srt₁'.succ.succ).max u_α₁'.succ.succ = ((u_env₁.max u_srt₁.succ.succ).imax u_α₁.succ.succ).to_level
     match τ_f_β' with
-    | ~q(∀ (env : ($α : (Sort u_env₁'))) (x : (($f_α env) : (Type u_α₁'))), Type u_srt₁') =>
-      pure ⟨.imax u_env₁' (.succ (.succ (.max u_α₁' u_srt₁')))
-        , q($α → Type (max u_α₁' u_srt₁'))
-        , q(fun (env : $α) => Σ (a : $f_α env), ($f_β' env a))⟩
+    | ~q(∀ (env : ($α : (Sort u_env₁'))) (x : (($f_α env) : (Sort u_α₁'))), Sort u_srt₁') =>
+      pure ⟨.imax u_env₁' (.succ (.max (.max 1 u_α₁') u_srt₁'))
+        , q($α → Sort (max (max 1 u_α₁') u_srt₁'))
+        , q(fun (env : $α) => Σ' (a : $f_α env), ($f_β' env a))⟩
     | _ => throwError m!"Σ domain function {f_β} is not well-typed at {(DCC Σ(_f_α, f_β))}"
   | (DCC x = y)               =>
     let ⟨srt_x', τ_x, x'⟩ ← to_lean x
@@ -398,25 +398,25 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       g : α → Σ (a : α) × β
       f : ∀ (s : Σ (a : α) × β), γ s
     -/
-    let ⟨.imax (.succ u_α₁') (.succ (.max u_α₁b' u_snd₁'))
+    let ⟨.imax (.succ u_α₁') (.max (.max 1 u_α₁b') u_snd₁')
       , τ_g', g'⟩ ← to_lean g
       | throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
-    let ⟨.imax (.succ (.max u_α₂b' u_snd₂')) u_γ_out'
+    let ⟨.imax (.max (.max 1 u_α₂b') u_snd₂') u_γ_out'
        , τ_f', f'⟩ ← to_lean f
        | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
     match τ_g' with
-    | ~q(∀ (x : Shared ($α : (Sort u_α₁'))), Σ (a : ($α' : Type u_α₁b')), (($β a) : (Type u_snd₁'))) =>
-      let some β' ← checkTypeQ β q($α' → Type u_snd₁')
+    | ~q(∀ (x : Shared ($α : (Sort u_α₁'))), Σ' (a : ($α' : Sort u_α₁b')), (($β a) : (Sort u_snd₁'))) =>
+      let some β' ← checkTypeQ β q($α' → Sort u_snd₁')
         | throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
-      let g' ← checkTypeQ g' q(∀ (x : Shared ($α : (Sort u_α₁'))), Σ (a : ($α' : Type u_α₁b')),
-        (($β' a) : (Type u_snd₁')))
+      let g' ← checkTypeQ g' q(∀ (x : Shared ($α : (Sort u_α₁'))), Σ' (a : ($α' : Sort u_α₁b')),
+        (($β' a) : (Sort u_snd₁')))
       match g' with
       | .some g' =>
         match τ_f' with
-        | ~q(∀ (s : (Σ (a : ($α'' : Type u_α₂b')), ($β'' a :  Type u_snd₂'))), ($γ : Sort u_γ_out')) =>
-          let some γ' ← checkTypeQ γ q(∀ (s : (Σ (a : $α'), $β' a)), Sort u_γ_out')
+        | ~q(∀ (s : (Σ' (a : ($α'' : Sort u_α₂b')), ($β'' a :  Sort u_snd₂'))), ($γ : Sort u_γ_out')) =>
+          let some γ' ← checkTypeQ γ q(∀ (s : (Σ' (a : $α'), $β' a)), Sort u_γ_out')
             | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
-          let some f' ← checkTypeQ f' q(∀ (s : (Σ (a : $α'), $β' a)), (($γ' s) : Sort u_γ_out'))
+          let some f' ← checkTypeQ f' q(∀ (s : (Σ' (a : $α'), $β' a)), (($γ' s) : Sort u_γ_out'))
             | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
           pure ⟨.imax (.succ u_α₁') u_γ_out'
             , q(∀ (x : Shared $α), $γ' ($g' x))

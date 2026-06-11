@@ -1,10 +1,18 @@
 import Dcc.Compile.Core
 import Dcc.Tactic.Quote
 
+/-
+TODO: tomorrow, need to add existential support for conversion to Lean.
+Either that or lift everything to TYpe. Not sure.
+-/
+
 #eval Std.format <| dcc_compile' {Expr.infer₂} ((fun (α : Sort 0) (x : α) => x) True True.intro)
 #eval Std.format <| dcc_compile' {Expr.infer₂} ((fun (α : Sort 0) (x : α) => x) True True.intro)
 #eval dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1) (Sort 0)))
-#check dcc_decompile #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1) (Sort 0)))
+#eval Std.format <| dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x))
+#eval dcc_show #(dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x)))
+#eval Std.format (dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1)))
+#eval dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1)))
 #eval Std.format <| dcc_infer' {Expr.infer₂} (fun (α : Sort 0) (x : α) => x) True True.intro
 
 #eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
@@ -19,6 +27,7 @@ import Dcc.Tactic.Quote
 #time #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro)
 
 #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x))
+#eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 2 → Sort 2) (x : f (Sort 1)) => x))
 
 def K_example : Expr :=
   dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 1) (β : α → Sort 1) (x : α) (_y : β x) => x) (Sort 0))

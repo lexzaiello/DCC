@@ -414,6 +414,15 @@ declare_syntax_cat infer_cmd_param
 
 syntax "{" term "}" : infer_cmd_param
 
+def do_dcc_compile (flags : Lean.TSyntaxArray `infer_cmd_param) (tm : Lean.Expr) : Lean.Elab.TermElabM Lean.Expr := do
+  match flags.toList with
+  | [_infer] =>
+    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc tm ⟨Expr.Judge₂, Expr.infer₂⟩ Expr.reduce_all)
+  | [_infer, _reduce] =>
+    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc tm ⟨Expr.Judge₂, Expr.infer₂⟩ Expr.reduce_all₂)
+  | _ =>
+    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc tm ⟨Expr.Judge, Expr.infer⟩ Expr.reduce_all)
+
 elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
   let e_tm ← Lean.instantiateMVars e_tm
@@ -427,6 +436,13 @@ elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
     return Lean.toExpr (← Lean.Elab.liftMacroM <| cc e_tm' ⟨Expr.Judge, Expr.infer⟩ Expr.reduce_all)
 
 #eval dcc_compile' {Expr.Judge₂} {Expr.infer₂} ((fun (x : Sort 0) => ((fun (x : Sort 0) => x) x)) True)
+
+elab "dcc_infer''" infer:infer_cmd_param* tm:term : term => do
+  let e_tm ← Lean.Elab.Term.elabTerm tm .none
+  let e_tm ← Lean.instantiateMVars e_tm
+  let e_tm' ← Lean.instantiateExprMVars (← wrap_share_auto_trans (← (wrap_share_auto e_tm)))
+  let dcc_e ← do_dcc_compile infer e_tm'
+  return dcc_e
 
 macro "dcc_infer'" infer:infer_cmd_param* tm:term : term =>
   match infer.toList with

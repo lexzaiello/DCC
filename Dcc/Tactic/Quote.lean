@@ -178,12 +178,12 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
         q($τ_β → $τ_x), q(fun (y : $τ_β) => $x')⟩
     | _, _ => throwError m!"Quotation points are not well-typed: `({β}, {x})"
   | (DCC Id(α))               =>
-    match ← α.to_lean with
-    | ⟨.succ u', τ_α, α'⟩ =>
-      match τ_α with
-      | ~q(Sort u') =>
-        pure ⟨.imax u' u', q($α' → $α'), q(fun (x : $α') => x)⟩
-    | _ => throwError m!"Shared boxes can only live in Type: {e}"
+    let ⟨.succ u_a, τ_α, α'⟩ ← α.to_lean
+      | throwError "not a valid type"
+    match τ_α with
+    | ~q(Sort u_a) =>
+      pure ⟨.imax u_a u_a, q($α' → $α'), q(fun (x : $α') => x)⟩
+    | _ => throwError "not a valid type"
   | (DCC Sort m)              =>
     let m₀  := (level'_from_nat m)
     let m'  := m₀.to_level
@@ -199,7 +199,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     | ⟨.imax (.succ u') (.succ (.succ u_α')), τ_β, β'⟩ =>
       match τ_β with
       | ~q(∀ (x : ($α : Type u')), Type u_α') =>
-        pure ⟨Lean.Level.imax (.imax u'.succ u_α'.succ) u'.succ,
+        pure ⟨Lean.Level.imax (.succ (.max u' u_α')) u'.succ,
           q(∀ (x : Σ a : $α, $β' a), $α), q(fun (x : Σ a : $α, $β' a) => Sigma.fst x)⟩
       | τ_β => throwError m!"not a well-typed projection (Fst : {τ_β}) index: {β}"
     | _ => throwError m!"not a valid projection (Fst) index: {β}"
@@ -208,7 +208,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     | ⟨.imax (.succ u') (.succ (.succ u_α')), τ_β, β'⟩ =>
       match τ_β with
       | ~q(∀ (x : ($α : Type u')), Type u_α') =>
-        pure ⟨(Lean.Level.imax (.imax u'.succ u_α'.succ) u_α'.succ),
+        pure ⟨(Lean.Level.imax (.succ (.max u' u_α')) u_α'.succ),
           q(∀ (x : Σ a : $α, $β' a), $β' (Sigma.fst x)), q(fun (x : Σ a : $α, $β' a) => Sigma.snd x)⟩
       | _ => throwError m!"not a well-typed projection (Fst) index: {β}"
     | _ => throwError m!"not a valid projection (Fst) index: {β}"
@@ -228,7 +228,9 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
             | .defEq heq₂ =>
               --let u_β' := u_β.to_level
               --let u_β' := (Level'.succ u_β).to_level
-              let ⟨.imax (.imax (.succ u_α₂') (.succ u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
+              let ⟨u_a, _, _⟩ ← x.to_lean
+              dbg_trace u_a
+              let ⟨.imax (.succ (.max u_α₂' u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
                 | throwError m!"this should not be reachable (curry)"
               have β' : Q($α' → Type u_β') := β'
               match ← isLevelDefEqQ u_α₂' u_α' with
@@ -263,7 +265,9 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
             | .defEq heq₂ =>
               --let u_β' := u_β.to_level
               --let u_β' := (Level'.succ u_β).to_level
-              let ⟨.imax (.max (.succ u_α₂') (.succ u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
+              let ⟨u_a, _, _⟩ ← x.to_lean
+              dbg_trace u_a
+              let ⟨.imax (.succ (.max u_α₂' u_β₂')) u_e₂', τ_x, x'⟩ ← x.to_lean
                 | throwError m!"this should not be reachable (curry)"
               have β' : Q($α' → Type u_β') := β'
               match ← isLevelDefEqQ u_α₂' u_α' with
@@ -327,7 +331,8 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     let b' ← checkTypeQ b' q($β' $a')
     match b' with
     | .some b' =>
-      pure ⟨(.imax (.succ u_fst₂') (.succ u_snd₂')), q(Σ (a : $τ_a), $β' a), q(Sigma.mk $a' $b')⟩
+      pure ⟨.succ (.max u_fst₂' u_snd₂'),
+        q(Σ (a : $τ_a), $β' a), q(Sigma.mk $a' $b')⟩
     | .none => throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
   | (DCC Coup(β))             =>
     let ⟨.imax (.succ u_fst₁') (.succ (.succ u_snd₁'))
@@ -335,9 +340,10 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
        | throwError m!"couple snd type {β} is not well-typed at {(DCC Coup(β))}"
     match τ_β with
     | ~q(∀ (x : ($α : Type u_fst₁')), Type u_snd₁') =>
-      pure ⟨.imax (.succ (.succ (.succ u_fst₁')))  (.succ (.succ (.succ u_snd₁')))
-        , q(Type ((max u_fst₁' u_snd₁') + 1))
-        , q(Type (max u_fst₁' u_snd₁'))⟩
+      let β' ← checkTypeQ β' q(∀ (x : ($α : Type u_fst₁')), Type u_snd₁')
+      pure ⟨(.succ (.succ (.max u_fst₁' u_snd₁')))
+        , q(Type (max u_fst₁' u_snd₁'))
+        , q(Σ (a : $α), $β' a)⟩
     | _ =>  throwError m!"couple type type {β} is not well-typed at {(DCC Coup(β))}"
   | (DCC Σ(_f_α, f_β))             =>
     let ⟨.imax u_env₁' (.imax u_α₁' u_srt₁')
@@ -491,4 +497,3 @@ elab "dcc_show" e:gen_dcc : term => do
 #check dcc_decompile (⟦Id(Sort 1)⟧(Sort 0, ⊤))
 #eval dcc_show (⟦Id(Sort 1)⟧(Sort 0, ⊤))
 #eval dcc_show (⟦Id(Sort 1)⟧(Sort 0, ⊤))
-

@@ -8,8 +8,12 @@ Either that or lift everything to TYpe. Not sure.
 
 #eval Std.format <| dcc_compile' {Expr.infer₂} ((fun (α : Sort 0) (x : α) => x) True True.intro)
 #eval Std.format <| dcc_compile' {Expr.infer₂} ((fun (α : Sort 0) (x : α) => x) True True.intro)
+#eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce₂} (fun (α : Sort 2) (x : α) => x) (Sort 1)
+#check dcc_decompile #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} (fun (α : Sort 2) (x : α) => x) (Sort 1))
 #eval dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1) (Sort 0)))
 #eval Std.format <| dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x))
+#eval dcc_show #(dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x)))
+#check dcc_decompile #(dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x)))3
 #eval dcc_show #(dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x)))
 #eval Std.format (dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1)))
 #eval dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1)))

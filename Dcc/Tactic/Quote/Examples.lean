@@ -23,3 +23,6 @@ import Dcc.Tactic.Quote
 #check dcc_decompile (!(Sort 1))
 #check dcc_decompile (!Λ(Sort 1, Id(Sort 1), Id(!(Coup(Id(Sort 1))))))
 #eval dcc_show (!Λ(Sort 1, Id(Sort 1), Id(!(Coup(Id(Sort 1))))))
+#check dcc_decompile ((Id(Sort 1) ∘' Id(Sort 1)) (Sort 0))
+#check dcc_decompile (Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 2)))
+#check dcc_decompile `(Coup(`(Sort 1, Sort 1)), Sort 2)

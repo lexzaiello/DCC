@@ -346,40 +346,41 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
     | ⟨.succ (.succ u), .succ (.succ u'), τ_α, α', ⟨heq⟩⟩ =>
       match τ_α with
       | ~q(Type u') =>
-        match ← get_fn_ty_arrow β with
-        | ⟨.succ (.succ u_α), .succ (.succ u_β), .succ (.succ u_α'), .succ (.succ u_β'), α'', β_cod, β', ⟨heqa⟩, ⟨heqb⟩⟩  =>
-          if heq₁ : u_α = u then
-            match ← isDefEqQ α' α'' with
+        let ⟨.max (.succ u_α) (.succ u_β), .max (.succ u_α') (.succ u_β'), τ_β, β', ⟨heqb⟩⟩ ← β.to_lean
+          | throwError m!"Eval second arg {β} is not well-typed in: {(DCC Λ(α, β, e))}"
+        match τ_β with
+        | ~q(∀ (x : ($α : (Type u_α'))), Sort u_β') =>
+          match ← isLevelDefEqQ u' u_α' with
+          | .defEq h =>
+            match ← isDefEqQ α' α with
             | .defEq heq₂ =>
               --let u_β' := u_β.to_level
               --let u_β' := (Level'.succ u_β).to_level
-              match β_cod with
-              | ~q(Type u_β') =>
-                let ⟨.imax u_e₁ u_e₂, .imax u_e₁' u_e₂', τ_x, e', ⟨heq₃⟩⟩ ← e.to_lean
-                  | throwError m!"this should not be reachable (curry)"
-                let t_sigma : Q(Type (max u' u_β')) := q(Σ (a : $α'), $β' a)
-                let γ : Q((Shared (Σ (a : $α'), $β' a)) → Sort u_e₂') ← mkFreshExprMVarQ q(Shared $t_sigma → Sort u_e₂')
-                let expected_τ_x : Q(Sort (imax (max (u_β' + 1) (u' + 1)) u_e₂')) :=
-                  q(∀ (x : (Shared (Σ (a : $α'), $β' a))), $γ x)
-                let lv_expected := (Level'.imax u_e₁ u_e₂).to_level
-                let some expected_τ_x ← checkTypeQ q(Sort lv_expected) expected_τ_x
-                  | throwError m!"this should not be reachable (curry)"
-                let e'' : Q(∀ (x : (Shared (Σ (a : $α'), $β' a))), $γ x) := e'
-                let u_all := Level'.imax (Level'.max u u_β) u_e₂
-                let γ_inst ← instantiateMVarsQ γ (α := q((Σ (a : $α'), $β' a) → Sort u_e₂'))
-                pure ⟨Level'.imax (.succ u) (Level'.imax (Level'.succ u_β) u_e₂),
-                  Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
-                  q(∀ (x : Shared $α') (y : Shared ($β' x.deref)), $γ (Shared.share (Sigma.mk (Shared.deref x) (Shared.deref y)))),
-                  q(fun (x : Shared $α') (y : Shared ($β' x.deref)) => ($e'' (Shared.share (Sigma.mk (Shared.deref x) (Shared.deref y))))) , ⟨by
-                    simp [Level'.to_level]
-                    have ha := Level'.inj₂ (Level'.inj heq.symm)
-                    have hb := Level'.inj₂ (Level'.inj heqb.symm)
-                    simp [Level'.to_level] at heq₃
-                    have hc := heq₃.right
-                    exact ⟨ha.symm, hb.symm, hc⟩⟩⟩
-              | _ => throwError m!"Eval body {β} is not curryable in: {e}"
+              let ⟨.imax u_e₁ u_e₂, .imax u_e₁' u_e₂', τ_x, e', ⟨heq₃⟩⟩ ← e.to_lean
+                | throwError m!"this should not be reachable (curry)"
+              have β' : Q($α' → Type u_β') := β'
+              let t_sigma : Q(Type (max u' u_β')) := q(Σ (a : $α), $β' a)
+              let γ : Q((Shared (Σ (a : $α'), $β' a)) → Sort u_e₂') ← mkFreshExprMVarQ q(Shared $t_sigma → Sort u_e₂')
+              let expected_τ_x : Q(Sort (imax (max (u_β' + 1) (u' + 1)) u_e₂')) :=
+                q(∀ (x : (Shared (Σ (a : $α'), $β' a))), $γ x)
+              let lv_expected := (Level'.imax u_e₁ u_e₂).to_level
+              let some expected_τ_x ← checkTypeQ q(Sort lv_expected) expected_τ_x
+                | throwError m!"this should not be reachable (curry)"
+              let e'' : Q(∀ (x : (Shared (Σ (a : $α'), $β' a))), $γ x) := e'
+              let u_all := Level'.imax (Level'.max u u_β) u_e₂
+              let γ_inst ← instantiateMVarsQ γ (α := q((Σ (a : $α'), $β' a) → Sort u_e₂'))
+              pure ⟨Level'.imax (.succ u) (Level'.imax (Level'.succ u_β) u_e₂),
+                Lean.Level.imax (.succ u') (Lean.Level.imax (Lean.Level.succ u_β') u_e₂'),
+                q(∀ (x : Shared $α') (y : Shared ($β' x.deref)), $γ (Shared.share (Sigma.mk (Shared.deref x) (Shared.deref y)))),
+                q(fun (x : Shared $α') (y : Shared ($β' x.deref)) => ($e'' (Shared.share (Sigma.mk (Shared.deref x) (Shared.deref y))))) , ⟨by
+                  simp [Level'.to_level]
+                  have ha := Level'.inj₂ (Level'.inj heq.symm)
+                  simp [Level'.to_level] at heqb
+                  simp [Level'.to_level] at heq₃
+                  have hc := heq₃.right
+                  simp [ha.symm, heqb.right, hc]⟩⟩
             | _ => throwError m!"Eval body {α} is not curryable in: {e}"
-          else throwError m!"Eval body {α} is not curryable in: {e}"
+          | _ => throwError m!"Eval body {α} is not curryable in: {e}"
         | _ => throwError m!"Eval body {α} is not curryable in: {e}"
     | _ => throwError m!"Eval param {α} is not curryable in: {e}"
   | (DCC Π(α, β))             =>

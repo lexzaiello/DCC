@@ -377,9 +377,9 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       | throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
     match τ_f_α' with
     | ~q(∀ (env : ($α : (Type u_env₁'))), Type u_srt₁') =>
-      pure ⟨.max u_env₁'.succ u_srt₁'.succ
-        , q(∀ (env : $α) (x : $f_α' env), Prop)
-        , q(fun (env : $α) (x : $f_α' env) => x = x)⟩
+      pure ⟨.imax u_env₁'.succ u_srt₁'.succ
+        , q(∀ (env : Shared $α) (x : Shared ($f_α' env.deref)), Prop)
+        , q(fun (env : Shared $α) (x : Shared ($f_α' env.deref)) => x.deref = x.deref)⟩
     | _ => throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
   | (DCC refl(f_α))            =>
     let ⟨.imax (.succ u_env₁') (.succ (.succ u_srt₁'))

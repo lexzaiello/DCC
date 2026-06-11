@@ -51,3 +51,5 @@ def mk_test_pair : Expr :=
 #check dcc_decompile (Π(Id(Sort 2), `(Sort 2, `(Sort 1, Sort 1))) Sort 1)
 #check dcc_decompile `(Sort 2, `(Sort 1, Sort 1))
 #check dcc_decompile (refl(Id(Sort 2)) &(Sort 1) &(Sort 0))
+
+#check rfl (a := (Sort 0))

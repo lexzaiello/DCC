@@ -299,7 +299,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       , q($δ → Sort (imax u_α₁' u_β₂'))
       , q(fun (env : $δ) => (∀ (x : $f_α' env), $f_β'' env x))⟩
   | (DCC ⟦β⟧⟨a, b⟩)           =>
-    let ⟨.max (.succ u_α₁') (.max (.succ u_fst₁') (.succ u_snd₁'))
+    let ⟨.imax (.succ u_α₁') (.imax (.succ u_fst₁') (.succ u_snd₁'))
        , τ_b', b'⟩ ← to_lean b
        | throwError m!"pair snd function {b} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
     let ⟨.imax u_α₂' u_fst₂'
@@ -313,7 +313,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       (y : (($f_β x) : Sort (u_fst₁' + 1))), (($γ x y) : Sort (u_snd₁' + 1))) =>
       let some a' ← checkTypeQ a' q(∀ (x : $α), $f_β x)
         | throwError m!"pair snd function {a} is not well-typed at {(DCC ⟦β⟧⟨a, b⟩)}"
-      pure ⟨.max (.max (.succ u_fst₁') (.succ u_snd₁')) (.succ u_α₁')
+      pure ⟨.imax (.imax (.succ u_fst₁') (.succ u_snd₁')) (.succ u_α₁')
           , q(∀ (x : (Shared $α)), Σ (a : ($f_β x.deref)), $γ x.deref a)
           , q(fun (x : (Shared $α)) => Sigma.mk ($a' x.deref) ($b' x.deref ($a' x.deref)))⟩
     | τ_β' => throwError m!"pair snd function {b} has type: {τ_β'}, but that was not expected at {(DCC ⟦β⟧⟨a, b⟩)}"
@@ -473,7 +473,7 @@ elab "dcc_decompile" e:gen_dcc : term => do
   let tm ← match e with
   | `(gen_dcc| #($tm:term)) =>
     let tm₀ ← elabTerm tm none
-    return ((← unfoldDefinition? tm₀ (ignoreTransparency := true)) <|> (← delta? tm₀)).getD (← whnf tm₀)
+    pure <| ((← unfoldDefinition? tm₀ (ignoreTransparency := true)) <|> (← delta? tm₀)).getD (← whnf tm₀)
   | _ =>
     elabTerm (← liftMacroM <| runDcc e) none
   let dcc_e ← decode_dcc tm
@@ -486,7 +486,7 @@ elab "dcc_show" e:gen_dcc : term => do
   let tm ← match e with
   | `(gen_dcc| #($tm:term)) =>
     let tm₀ ← elabTerm tm none
-    return ((← unfoldDefinition? tm₀ (ignoreTransparency := true)) <|> (← delta? tm₀)).getD (← whnf tm₀)
+    pure <| ((← unfoldDefinition? tm₀ (ignoreTransparency := true)) <|> (← delta? tm₀)).getD (← whnf tm₀)
   | _ =>
     elabTerm (← liftMacroM <| runDcc e) none
   let dcc_e ← decode_dcc tm

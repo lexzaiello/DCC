@@ -39,4 +39,4 @@ def mk_test_pair : Expr :=
   DCC (⟦`(Sort 1, `(Sort 1, Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩
     &(Sort 0))
 
-#eval dcc_decompile #(mk_test_pair)
+#check dcc_decompile #(mk_test_pair)

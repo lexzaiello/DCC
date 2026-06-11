@@ -36,6 +36,7 @@ def Level.to_level' (l : Level) : Level' :=
   | .zero => .zero
   | .succ n => .succ (Level.to_level' n)
 
+@[inline, reducible]
 def Level'.to_level (l : Level') : Lean.Level :=
   match l with
   | .zero => .zero
@@ -109,6 +110,8 @@ def get_codomain_arrow (e : Expr) : Option Expr :=
     | _ => .none
   | _ => .none
 
+set_option trace.Elab.definition true
+set_option pp.rawOnError true
 set_option linter.constructorNameAsVariable false in
 partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
   (α : Q(Sort $u')) × Q($α) × (PLift (u' = u.to_level))):= do
@@ -121,7 +124,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
       | throwError m!"Box function {f} is not well-typed at: {DCC !<f>}"
     match τ_f' with
     | ~q(∀ (x : ($α : (Type u'))), ($β x : Type v')) =>
-      return ⟨.max (.succ u) (.succ v), .max (.succ u') (.succ v')
+      return ⟨.max (.succ u) (.succ v), _
          , q(∀ (x : Shared $α), Bang ($β x.deref)),
            q(fun (x : Shared $α) => Shared.map $f' x), ⟨by
              simp [Level'.to_level] at heqa
@@ -156,8 +159,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
           exact pure ⟨.succ u, _, q(Shared.{u'} $α' → $α'), q(fun (x : Shared $α') => Shared.deref.{u'} x), ⟨by
             rename_i h
             simp [Level'.to_level] at h
-            rw [h]
-            simp [Level'.to_level_assoc]⟩⟩
+            rw [h]⟩⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC !(α))                =>
     match ← α.to_lean with
@@ -170,8 +172,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
           exact pure ⟨.succ (.succ u), _, q(Type u'), q(Shared $α'), ⟨by
             rename_i h
             simp [Level'.to_level] at h
-            rw [h]
-            simp [Level'.to_level_assoc]⟩⟩
+            rw [h]⟩⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC Eval(α, β, x))       =>
     match ← α.to_lean with
@@ -227,8 +228,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
           exact pure ⟨.succ u, _, q($α' → $α'), q(fun (x : $α') => x), ⟨by
             rename_i h
             simp [Level'.to_level] at h
-            rw [h]
-            simp [Level'.to_level_assoc]⟩⟩
+            rw [h]⟩⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC Sort m)              =>
     let m₀  := (level'_from_nat m)
@@ -394,8 +394,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
           , q(fun (x : (Shared $α)) => Sigma.mk ($a' x.deref) ($b' x.deref ($a' x.deref)))
           , ⟨by
             simp [Level'.to_level] at heqa
-            simp [heqa.left, heqa.right]
-            rfl⟩⟩
+            simp [heqa.left, heqa.right]⟩⟩
     | τ_β' => throwError m!"pair snd function {b} has type: {τ_β'}, but that was not expected at {(DCC ⟦β⟧⟨a, b⟩)}"
   | (DCC ⟦β⟧(a, b))           =>
     let ⟨.max (.succ u_fst₁)  (.succ u_snd₁)
@@ -421,12 +420,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         , ⟨by
           simp [Level'.to_level] at heqa
           simp [Level'.to_level] at heqb
-          simp [heqc]
-          conv =>
-            right
-            rw [Level'.to_level, Level'.to_level]
-            rfl
-          simp [heqb, Level'.to_level_assoc]⟩⟩
+          simp [heqc, heqb]⟩⟩
     | .none => throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
   | (DCC Coup(β))             =>
     let ⟨.max (.succ u_fst₁)  (.succ u_snd₁)
@@ -458,8 +452,7 @@ partial def to_lean (e : Expr) : MetaM ((u : Level') × (u' : Lean.Level) ×
         , q(fun (env : $α) => Sort ((max u_α₁' u_srt₁')))
         , ⟨by
           simp [Level'.to_level] at heqa
-          simp_all
-          simp [Level'.to_level]⟩⟩
+          simp_all⟩⟩
     | _ => throwError m!"Σ domain function {f_β} is not well-typed at {(DCC Σ(_f_α, f_β))}"
   | (DCC x = y)               =>
     let ⟨srt_x, srt_x', τ_x, x', ⟨heqa⟩⟩ ← to_lean x

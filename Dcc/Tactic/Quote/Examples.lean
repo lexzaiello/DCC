@@ -35,8 +35,13 @@ import Dcc.Tactic.Quote
 #check dcc_show (Π(Id(Sort 1), Λ(Sort 1, Id(Sort 1), `(Coup(Id(Sort 1)), Sort 0))) (Sort 0))
 #check dcc_decompile (Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1))))
 
+def mk_test_pair₀ : Expr :=
+  DCC (⟦`(Sort 1, `(Sort 1, Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩)
+
 def mk_test_pair : Expr :=
   DCC (⟦`(Sort 1, `(Sort 1, Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩
     &(Sort 0))
 
 #check dcc_decompile #(mk_test_pair)
+#check dcc_decompile #(mk_test_pair₀)
+#eval dcc_show #(mk_test_pair₀)

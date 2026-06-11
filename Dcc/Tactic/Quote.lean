@@ -467,22 +467,28 @@ end Expr
 
 #check ∀ (s : Sigma (fun (x : Sort 1) => x)), (fun _x => Sigma (fun (x : Sort 1) => x)) s
 
-open Qq in
-open Lean.Meta in
 open Lean.Elab in
 open Lean.Elab.Term in
 elab "dcc_decompile" e:gen_dcc : term => do
-  let tm ← elabTerm (← liftMacroM <| runDcc e) none
+  let tm ← match e with
+  | `(gen_dcc| #($tm:term)) =>
+    let tm₀ ← elabTerm tm none
+    return ((← unfoldDefinition? tm₀ (ignoreTransparency := true)) <|> (← delta? tm₀)).getD (← whnf tm₀)
+  | _ =>
+    elabTerm (← liftMacroM <| runDcc e) none
   let dcc_e ← decode_dcc tm
   let ⟨_u, _α, lean_e⟩ ← dcc_e.to_lean
   return lean_e
 
-open Qq in
-open Lean.Meta in
 open Lean.Elab in
 open Lean.Elab.Term in
 elab "dcc_show" e:gen_dcc : term => do
-  let tm ← elabTerm (← liftMacroM <| runDcc e) none
+  let tm ← match e with
+  | `(gen_dcc| #($tm:term)) =>
+    let tm₀ ← elabTerm tm none
+    return ((← unfoldDefinition? tm₀ (ignoreTransparency := true)) <|> (← delta? tm₀)).getD (← whnf tm₀)
+  | _ =>
+    elabTerm (← liftMacroM <| runDcc e) none
   let dcc_e ← decode_dcc tm
   let ⟨_u, _α, lean_e⟩ ← dcc_e.to_lean
   let x := (← Lean.Meta.ppExpr lean_e).pretty

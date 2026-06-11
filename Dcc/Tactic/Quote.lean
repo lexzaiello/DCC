@@ -442,9 +442,6 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
       | throwError m!"[1] app function {f} is not well-typed in {(DCC (f x))}"
     match ← isLevelDefEqQ u_α₂' u_α₁' with
     | .defEq h =>
-      if h : τ_f'.isForall then
-        dbg_trace τ_f'.forallDomain h
-      
       match τ_f' with
       | ~q(∀ (x : ($τ_x'' : Sort u_α₁')), (($β x) : Sort u_β₂')) =>
         let some β ← checkTypeQ β q(∀ (x : $τ_x'), Sort u_β₂')

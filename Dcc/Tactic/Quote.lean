@@ -319,12 +319,11 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     let ⟨.succ u_fst₂'
         , τ_a, a'⟩ ← to_lean a
         | throwError m!"couple fst {a} is not well-typed at {(DCC ⟦β⟧(a, b))}"
-    let ⟨.succ u_snd₂'
-        , τ_b, b'⟩ ← to_lean b
-        | throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
-    let some β' ← checkTypeQ τ_β q($τ_a → Sort (u_snd₂' + 1))
-      | throwError m!"couple snd type {β} is not well-typed at {(DCC ⟦β⟧(a, b))}"
-    let b' ← checkTypeQ (u := u_snd₂'.succ) b' q($β' $a')
+    let ⟨.succ u_snd₂', τ_b, b'⟩ ← to_lean b
+      | throwError m!"couple snd {b} is not well-typed at {(DCC ⟦β⟧(a, b))}"
+    let some β' ← checkTypeQ β' q($τ_a → (Type u_snd₂'))
+      | throwError m!"couple snd type {β} ({τ_β}) is not well-typed at with respect to fst type {τ_a} and snd type {τ_b} {(DCC ⟦β⟧(a, b))}"
+    let b' ← checkTypeQ b' q($β' $a')
     match b' with
     | .some b' =>
       pure ⟨(.max (.succ u_snd₂') (.succ u_fst₂')), q(Σ (a : $τ_a), $β' a)
@@ -466,3 +465,4 @@ elab "dcc_decompile" e:gen_dcc : term => do
 
 #check dcc_decompile (Id(Sort 0))
 #check dcc_decompile (Id(Sort 0) ⊤)
+#check dcc_decompile (⟦Id(Sort 1)⟧(Sort 0, ⊤))

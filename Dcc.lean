@@ -5,4 +5,4 @@ import Dcc.Metatheory.Decidability
 import Dcc.Metatheory.ReflCanon
 import Dcc.Compile
 import Dcc.Tactic.Debug
-import Dcc.Tactic.Reduce
+import Dcc.Tactic.Meta.Reduce

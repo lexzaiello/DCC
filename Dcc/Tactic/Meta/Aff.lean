@@ -1,4 +1,4 @@
-import Dcc.Tactic
+import Dcc.Tactic.Meta.Ast
 import Dcc.Aff.Red
 import Dcc.Relation
 import Lean

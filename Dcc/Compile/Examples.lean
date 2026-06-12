@@ -8,6 +8,7 @@ Either that or lift everything to TYpe. Not sure.
 
 #eval Std.format <| dcc_compile' {Expr.infer₂} ((fun (α : Sort 0) (x : α) => x) True True.intro)
 #eval Std.format <| dcc_compile' {Expr.infer₂} ((fun (α : Sort 0) (x : α) => x) True True.intro)
+#check dcc_decompile #(dcc_compile' {Expr.infer₂} ((fun (α : Sort 0) (x : α) => x) True True.intro))
 #eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce₂} (fun (α : Sort 2) (x : α) => x) (Sort 1)
 #check dcc_decompile #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} (fun (α : Sort 2) (x : α) => x) (Sort 1))
 #eval dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1) (Sort 0)))
@@ -28,6 +29,7 @@ Either that or lift everything to TYpe. Not sure.
 #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
 
 #eval Std.format <| (dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro))
+#check dcc_decompile #((dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro)))
 #time #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro)
 
 #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x))
@@ -49,6 +51,7 @@ def K_example₃'' : Option Expr :=
   dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1) (Sort 0))
 
 #eval Std.format <| K_example₃
+#check dcc_decompile #(K_example₃)
 
 #eval Std.format <| K_example₃'
 #eval Std.format <| K_example₃''

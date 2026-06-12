@@ -166,9 +166,9 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
               match τ_x with
               | ~q(∀ (x : ($α' : Sort u₂a)) (y : ($β' : $α' → Sort u_β₂a) x),
                 ($γ : ∀ (x : $α') (y : $β' x), Sort u'₂a) x y) =>
-                .pure ⟨.imax (.succ (.max (.max 1 u₂a) u_β₂a)) u'₂a,
-                  q(∀ (s : Shared (Σ' (x : $α'), $β' x)), $γ s.deref.fst s.deref.snd)
-                  , q(fun (s : Shared (Σ' (x : $α'),$β' x)) => $x' s.deref.fst s.deref.snd)⟩
+                .pure ⟨.imax (.max (.max 1 u₂a) u_β₂a) u'₂a,
+                  q(∀ (s : (Σ' (x : $α'), $β' x)), $γ s.fst s.snd)
+                  , q(fun (s : (Σ' (x : $α'),$β' x)) => $x' s.fst s.snd)⟩
               | _ => throwError m!"Eval body {x} is not uncurryable in: {e}"
             | _ => throwError m!"Eval body {β} is not uncurryable in: {e}"
           | _ => throwError m!"Eval body {α} is not uncurryable in: {e}"
@@ -400,14 +400,15 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     -/
     let ⟨.imax (.succ u_α₁') (.max (.max 1 u_α₁b') u_snd₁')
       , τ_g', g'⟩ ← to_lean g
-      | throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
+      | throwError m!"[1] composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
     let ⟨.imax (.max (.max 1 u_α₂b') u_snd₂') u_γ_out'
        , τ_f', f'⟩ ← to_lean f
        | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
+    let τ_g' : Q(Sort (imax (u_α₁' + 1) (max (max 1 u_α₁b') u_snd₁'))) ← Lean.Meta.reduceAll (← whnf τ_g')
     match τ_g' with
     | ~q(∀ (x : Shared ($α : (Sort u_α₁'))), Σ' (a : ($α' : Sort u_α₁b')), (($β a) : (Sort u_snd₁'))) =>
       let some β' ← checkTypeQ β q($α' → Sort u_snd₁')
-        | throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
+        | throwError m!"[2] composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
       let g' ← checkTypeQ g' q(∀ (x : Shared ($α : (Sort u_α₁'))), Σ' (a : ($α' : Sort u_α₁b')),
         (($β' a) : (Sort u_snd₁')))
       match g' with
@@ -422,8 +423,17 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
             , q(∀ (x : Shared $α), $γ' ($g' x))
             , q(fun (x : Shared $α) => $f' ($g' x))⟩
         | _ => throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
-      | _ => throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
-    | _ => throwError m!"composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
+      | _ => throwError m!"[3] composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
+    | _ =>
+      if h : τ_f'.isForall then
+        let dom := τ_f'.forallDomain h
+        let e' := Lean.Expr.lam .anonymous dom (.app f' (.app g' (.bvar 0))) .default
+        let ⟨u, τ, e'⟩ ← inferTypeQ e'
+        pure ⟨u, τ, e'⟩
+      else
+        throwError m!"composition left hand {f} is not a function in {(DCC (f ∘ g))}"
+    | _ => throwError m!"[4] composition right hand ({g} : {τ_g'}) is not well-typed in {(DCC f ∘ g)}
+where ({f} : {τ_f'})"
   | (DCC f ∘' g)              =>
     let ⟨.imax u_α₁' u_β₁'
        , τ_g', g'⟩ ← to_lean g

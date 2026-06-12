@@ -36,6 +36,9 @@ dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x 
 #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x))
 #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 2 → Sort 2) (x : f (Sort 1)) => x))
 
+def K_example₁ : Expr :=
+  dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 1) (β : α → Sort 1) (x : α) (_y : β x) => x))
+
 def K_example : Expr :=
   dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 1) (β : α → Sort 1) (x : α) (_y : β x) => x) (Sort 0))
 
@@ -61,6 +64,10 @@ def my_thingy := dcc_decompile #(K_example₃)
 
 #eval Std.format <| K_example₃'
 #eval Std.format <| K_example₃''
+
+def K_example₁_lean := dcc_decompile #(K_example₁)
+
+dcc_show #(K_example₁)
 
 def K_example' : Option Expr :=
   dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} (fun (α : Sort 1) (β : α → Sort 1) (x : α) (_y : β x) => x)

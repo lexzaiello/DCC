@@ -139,7 +139,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     | ⟨(.succ u'), τ_α, α'⟩ =>
       match τ_α with
       | ~q(Sort u') =>
-        pure ⟨_, q((Shared $α') → $α'), q(fun (x : Shared $α') => x.deref)⟩
+        pure ⟨.imax (.succ u') u', q((Shared $α') → $α'), q(fun (x : Shared $α') => x.deref)⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC !(α))                =>
     match ← α.to_lean with
@@ -392,19 +392,40 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
         , q(∀ (env : Shared $α) (x : Shared ($f_α' env.deref)), x.deref = x.deref)
         , q(fun (env : Shared $α) (x : Shared ($f_α' env.deref)) => Eq.refl x.deref)⟩
     | _ => throwError m!"environment index {f_α} is not well-typed in {(DCC (Eql(f_α)))}"
-  | (DCC f ∘∘ g)
+  | (DCC f ∘∘ g) =>
+    let ⟨u_g, τ_g, g'⟩ ← to_lean g
+    let ⟨u_f, τ_f, f'⟩ ← to_lean f
+    let some t_infer_g := infer₂' g
+      | throwError m!"DCC comp right hand {g} is not well-typed"
+    let some ⟨α, β, m, h⟩ := read_comp₂_g_type t_infer_g
+      | throwError m!"DCC comp right hand {g} is not well-typed"
+    /-let ⟨.succ m', ~q(Sort m'), τ_infer_g⟩ ← to_lean t_infer_g
+      | throwError m!"DCC comp right hand {g} is not well-typed"
+    let τ_infer_g : Q(Sort m') := τ_infer_g
+    let g' ← checkTypeQ (u := m') g' τ_infer_g
+    match g' with
+    | .some g' =>
+      dbg_trace g'
+      throwError "sus"
+    | _ => throwError m!"DCC comp right hand {g} is not well-typed"-/
+    dbg_trace α
+    dbg_trace β
+    dbg_trace m
+    throwError m!"DCC comp right hand {g} is not well-typed"
   | (DCC f ∘ g)               =>
     /-
       g : α → Σ (a : α) × β
       f : ∀ (s : Σ (a : α) × β), γ s
     -/
+    
     let ⟨.imax (.succ u_α₁') (.max (.max 1 u_α₁b') u_snd₁')
       , τ_g', g'⟩ ← to_lean g
       | throwError m!"[1] composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
     let ⟨.imax (.max (.max 1 u_α₂b') u_snd₂') u_γ_out'
        , τ_f', f'⟩ ← to_lean f
        | throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
-    let τ_g' : Q(Sort (imax (u_α₁' + 1) (max (max 1 u_α₁b') u_snd₁'))) ← Lean.Meta.reduceAll (← whnf τ_g')
+    let τ_g' : Q(Sort (imax (u_α₁' + 1) (max (max 1 u_α₁b') u_snd₁')))
+      ← Lean.Meta.reduceAll (← whnf τ_g')
     match τ_g' with
     | ~q(∀ (x : Shared ($α : (Sort u_α₁'))), Σ' (a : ($α' : Sort u_α₁b')), (($β a) : (Sort u_snd₁'))) =>
       let some β' ← checkTypeQ β q($α' → Sort u_snd₁')
@@ -424,14 +445,6 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
             , q(fun (x : Shared $α) => $f' ($g' x))⟩
         | _ => throwError m!"composition left hand {f} is not well-typed in {(DCC f ∘ g)}"
       | _ => throwError m!"[3] composition right hand {g} is not well-typed in {(DCC f ∘ g)}"
-    | _ =>
-      if h : τ_f'.isForall then
-        let dom := τ_f'.forallDomain h
-        let e' := Lean.Expr.lam .anonymous dom (.app f' (.app g' (.bvar 0))) .default
-        let ⟨u, τ, e'⟩ ← inferTypeQ e'
-        pure ⟨u, τ, e'⟩
-      else
-        throwError m!"composition left hand {f} is not a function in {(DCC (f ∘ g))}"
     | _ => throwError m!"[4] composition right hand ({g} : {τ_g'}) is not well-typed in {(DCC f ∘ g)}
 where ({f} : {τ_f'})"
   | (DCC f ∘' g)              =>

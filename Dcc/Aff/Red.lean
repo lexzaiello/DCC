@@ -3,150 +3,151 @@ import Dcc.Ast
 import Dcc.Relation
 import Dcc.Aff.Size
 
-namespace Expr
+namespace GenericExpr
 
 /-
 Preservation proof:
 - can make these more type-directed
 -/
 
-inductive RedAff : Expr → Expr → Prop
-  | pil      : RedAff f_α f_α' → RedAff (DCC Π(f_α, f_β)) (DCC Π(f_α', f_β))
-  | pir      : RedAff f_β f_β' → RedAff (DCC Π(f_α, f_β)) (DCC Π(f_α, f_β'))
-  | eql      : RedAff (DCC (Eql(f_α) env &(x))) (DCC x = x)
-  | eql'     : RedAff x x' → RedAff (DCC (x = y)) (DCC (x' = y))
-  | eqr'     : RedAff y y' → RedAff (DCC (x = y)) (DCC (x = y'))
-  | bang     : RedAff x x' → RedAff (DCC !(x)) (DCC !(x'))
-  | map      : RedAff (DCC (!<f> &(x))) (DCC !((f x)))
-  | fmap     : RedAff (DCC ($<f> &(x))) (DCC &((f x)))
-  | unbox    : RedAff (DCC (*(α) &(x))) x
-  | pair     : RedAff (DCC (⟦β⟧⟨M, N⟩ &(x))) (DCC ⟦β⟧((M x), (N x (M x))))
-  | evalc    : RedAff (DCC (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC (x y z))
-  | quot     : RedAff (DCC (`(β, x) y)) x
-  | id       : RedAff (DCC (Id(α) x)) x
-  | fstc     : RedAff (DCC (Fstc(_α) ⟦β⟧(a, b))) a
-  | sndc     : RedAff (DCC (Sndc(_α) ⟦β⟧(a, b))) b
-  | comp'    : RedAff (DCC ((x ∘' y) z)) (DCC (x (y z)))
-  | comp     : RedAff (DCC ((x ∘ y) z)) (DCC (x (y z)))
-  | comp₂    : RedAff (DCC ((x ∘∘ y) z)) (DCC (x (y z)))
-  | curr     : RedAff (DCC (Λ(α, β, x) y z)) (DCC (x ⟦β⟧(y, z)))
-  | curr'    : RedAff (DCC (!Λ(α, β, x) &(y) &(z))) (DCC (x &(⟦β⟧(y, z))))
-  | sigl     : RedAff x x' → RedAff (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x', y))
-  | sigr     : RedAff y y' → RedAff (DCC ⟦β⟧(x, y)) (DCC ⟦β⟧(x, y'))
-  | pairl    : RedAff x x' → RedAff (DCC ⟦β⟧⟨x, y⟩) (DCC ⟦β⟧⟨x', y⟩)
-  | pairr    : RedAff y y' → RedAff (DCC ⟦β⟧⟨x, y⟩) (DCC ⟦β⟧⟨x, y'⟩)
-  | sigma    : RedAff (DCC (Σ(f_α, f_β) env)) (DCC (Coup((f_β env))))
-  | coup     : RedAff β β' → RedAff (DCC (Coup(β))) (DCC (Coup(β')))
-  | congrFun : RedAff f f' → RedAff (DCC (f x)) (DCC (f' x))
-  | congrArg : RedAff x x' → RedAff (DCC (f x)) (DCC (f x'))
+inductive RedAff.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
+  | pil      : RedAff f_α f_α' → RedAff (DCC[τ] Π(f_α, f_β)) (DCC[τ] Π(f_α', f_β))
+  | pir      : RedAff f_β f_β' → RedAff (DCC[τ] Π(f_α, f_β)) (DCC[τ] Π(f_α, f_β'))
+  | eql      : RedAff (DCC[τ] (Eql(f_α) env &(x))) (DCC[τ] x = x)
+  | eql'     : RedAff x x' → RedAff (DCC[τ] (x = y)) (DCC[τ] (x' = y))
+  | eqr'     : RedAff y y' → RedAff (DCC[τ] (x = y)) (DCC[τ] (x = y'))
+  | bang     : RedAff x x' → RedAff (DCC[τ] !(x)) (DCC[τ] !(x'))
+  | map      : RedAff (DCC[τ] (!<f> &(x))) (DCC[τ] !((f x)))
+  | fmap     : RedAff (DCC[τ] ($<f> &(x))) (DCC[τ] &((f x)))
+  | unbox    : RedAff (DCC[τ] (*(α) &(x))) x
+  | pair     : RedAff (DCC[τ] (⟦β⟧⟨M, N⟩ &(x))) (DCC[τ] ⟦β⟧((M x), (N x (M x))))
+  | evalc    : RedAff (DCC[τ] (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC[τ] (x y z))
+  | quot     : RedAff (DCC[τ] (`(β, x) y)) x
+  | id       : RedAff (DCC[τ] (Id(α) x)) x
+  | fstc     : RedAff (DCC[τ] (Fstc(_α) ⟦β⟧(a, b))) a
+  | sndc     : RedAff (DCC[τ] (Sndc(_α) ⟦β⟧(a, b))) b
+  | comp'    : RedAff (DCC[τ] ((x ∘' y) z)) (DCC[τ] (x (y z)))
+  | comp     : RedAff (DCC[τ] ((x ∘ y) z)) (DCC[τ] (x (y z)))
+  | comp₂    : RedAff (DCC[τ] ((x ∘∘ y) z)) (DCC[τ] (x (y z)))
+  | curr     : RedAff (DCC[τ] (Λ(α, β, x) y z)) (DCC[τ] (x ⟦β⟧(y, z)))
+  | curr'    : RedAff (DCC[τ] (!Λ(α, β, x) &(y) &(z))) (DCC[τ] (x &(⟦β⟧(y, z))))
+  | sigl     : RedAff x x' → RedAff (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y))
+  | sigr     : RedAff y y' → RedAff (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y'))
+  | pairl    : RedAff x x' → RedAff (DCC[τ] ⟦β⟧⟨x, y⟩) (DCC[τ] ⟦β⟧⟨x', y⟩)
+  | pairr    : RedAff y y' → RedAff (DCC[τ] ⟦β⟧⟨x, y⟩) (DCC[τ] ⟦β⟧⟨x, y'⟩)
+  | sigma    : RedAff (DCC[τ] (Σ(f_α, f_β) env)) (DCC[τ] (Coup((f_β env))))
+  | coup     : RedAff β β' → RedAff (DCC[τ] (Coup(β))) (DCC[τ] (Coup(β')))
+  | congrFun : RedAff f f' → RedAff (DCC[τ] (f x)) (DCC[τ] (f' x))
+  | congrArg : RedAff x x' → RedAff (DCC[τ] (f x)) (DCC[τ] (f x'))
 
 @[dcc_force_reduce, dcc_force_aff]
-def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedAff e e'))) :=
+def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{1, 0} (RedAff (τ := τ) e e'))) :=
   match e with
-  | (DCC Π(f_α, f_β)) =>
+  | (DCC[?] Π(f_α, f_β)) =>
     match f_α.step?, f_β.step? with
     | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.pil h₁⟩⟩
     | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.pir h₁⟩⟩
     | _, _ => .none
-  | (DCC (Eql(_f_α) _env &(_x))) => .some ⟨_, ⟨.eql⟩⟩
-  | (DCC (x = y)) =>
+  | (DCC[?] (Eql(_f_α) _env &(_x))) => .some ⟨_, ⟨.eql⟩⟩
+  | (DCC[?] (x = y)) =>
     match x.step?, y.step? with
     | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.eql' h₁⟩⟩
     | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.eqr' h₁⟩⟩
     | _, _ => .none
-  | DCC !(x) =>
+  | DCC[?] !(x) =>
     match x.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.bang h⟩⟩
     | _ => .none
-  | DCC (!<_f> &(_x))                                 => .some ⟨_, ⟨.map⟩⟩
-  | DCC ($<_f> &(_x))                                 => .some ⟨_, ⟨.fmap⟩⟩
-  | DCC (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
-  | DCC ((⟦_β⟧⟨_M, _N⟩ &(_x)))                        => .some ⟨_, ⟨.pair⟩⟩
-  | (DCC (Eval(_α, _β, _x) ⟦__β⟧(_y, _z)))            => .some ⟨_, ⟨.evalc⟩⟩
-  | (DCC (`(_β, _x) _y))                              => .some ⟨_, ⟨.quot⟩⟩
-  | (DCC (Id(_α) _x))                                 => .some ⟨_, ⟨.id⟩⟩
-  | (DCC (Fstc(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
-  | (DCC (Sndc(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
-  | (DCC ((_x ∘' _y) _z))                             => .some ⟨_, ⟨.comp'⟩⟩
-  | (DCC ((_x ∘ _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
-  | (DCC ((_x ∘∘ _y) _z))                             => .some ⟨_, ⟨.comp₂⟩⟩
-  | (DCC (!Λ(_α, _β, _x) &(_y) &(_z)))                => .some ⟨_, ⟨.curr'⟩⟩
-  | (DCC (Λ(_α, _β, _x) _y _z))                       => .some ⟨_, ⟨.curr⟩⟩
-  | (DCC (Σ(_f_α, _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
-  | DCC ⟦β⟧(x, y) =>
+  | DCC[?] (!<_f> &(_x))                                 => .some ⟨_, ⟨.map⟩⟩
+  | DCC[?] ($<_f> &(_x))                                 => .some ⟨_, ⟨.fmap⟩⟩
+  | DCC[?] (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
+  | DCC[?] ((⟦_β⟧⟨_M, _N⟩ &(_x)))                        => .some ⟨_, ⟨.pair⟩⟩
+  | (DCC[?] (Eval(_α, _β, _x) ⟦__β⟧(_y, _z)))            => .some ⟨_, ⟨.evalc⟩⟩
+  | (DCC[?] (`(_β, _x) _y))                              => .some ⟨_, ⟨.quot⟩⟩
+  | (DCC[?] (Id(_α) _x))                                 => .some ⟨_, ⟨.id⟩⟩
+  | (DCC[?] (Fstc(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
+  | (DCC[?] (Sndc(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
+  | (DCC[?] ((_x ∘' _y) _z))                             => .some ⟨_, ⟨.comp'⟩⟩
+  | (DCC[?] ((_x ∘ _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
+  | (DCC[?] ((_x ∘∘ _y) _z))                             => .some ⟨_, ⟨.comp₂⟩⟩
+  | (DCC[?] (!Λ(_α, _β, _x) &(_y) &(_z)))                => .some ⟨_, ⟨.curr'⟩⟩
+  | (DCC[?] (Λ(_α, _β, _x) _y _z))                       => .some ⟨_, ⟨.curr⟩⟩
+  | (DCC[?] (Σ(_f_α, _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
+  | DCC[?] ⟦β⟧(x, y) =>
     match x.step?, y.step? with
-    | .some ⟨x', ⟨h₁⟩⟩, _ => .some ⟨(DCC ⟦β⟧(x', y)), ⟨.sigl h₁⟩⟩
-    | _, .some ⟨y', ⟨h₁⟩⟩ => .some ⟨(DCC ⟦β⟧(x, y')), ⟨.sigr h₁⟩⟩
+    | .some ⟨x', ⟨h₁⟩⟩, _ => .some ⟨(DCC[?] ⟦β⟧(x', y)), ⟨.sigl h₁⟩⟩
+    | _, .some ⟨y', ⟨h₁⟩⟩ => .some ⟨(DCC[?] ⟦β⟧(x, y')), ⟨.sigr h₁⟩⟩
     | _, _ => .none
-  | DCC ⟦_β⟧⟨x, y⟩ =>
+  | DCC[?] ⟦_β⟧⟨x, y⟩ =>
     match x.step?, y.step? with
     | .some ⟨_x', ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.pairl h₁⟩⟩
     | _, .some ⟨_y', ⟨h₁⟩⟩ => .some ⟨_, ⟨.pairr h₁⟩⟩
     | _, _ => .none
-  | (DCC (Coup(β))) =>
+  | (DCC[?] (Coup(β))) =>
     match β.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.coup h⟩⟩
     | _ => .none
-  | DCC (f x) =>
+  | DCC[?] (f x) =>
     match f.step?, x.step? with
-    | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC (f' x)), ⟨.congrFun h₁⟩⟩
-    | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC (f x')), ⟨.congrArg h₁⟩⟩
+    | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC[?] (f' x)), ⟨.congrFun h₁⟩⟩
+    | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC[?] (f x')), ⟨.congrArg h₁⟩⟩
     | _, _ => .none
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_aff]
-instance RedAff.instRedRel : RedRel RedAff size where
+instance RedAff.instRedRel.{u} {τ : Type u} : RedRel (α := GenericExpr τ) (RedAff (τ := τ)) size where
   run := step?
 
-theorem red_aff_sn : ∀ (e : Expr), Acc (fun b a => RedAff a b) e := RedAff.instRedRel.sn
+theorem red_aff_sn.{u} {τ : Type u} : ∀ (e : GenericExpr τ), Acc (fun b a => RedAff (τ := τ) a b) e := RedAff.instRedRel.sn
 
-theorem red_aff_trans_sn : ∀ (e : Expr), Acc (fun b a => Relation.TransGen RedAff a b) e := RedAff.instRedRel.to_trans.sn
+theorem red_aff_trans_sn.{u} {τ : Type u} [DecidableEq τ] : ∀ (e : GenericExpr τ), Acc (fun b a => Relation.TransGen RedAff a b) e := RedAff.instRedRel.to_trans.sn
 
-instance RedAff.instCongruent : Congruent RedAff where
+instance RedAff.instCongruent.{u} {τ : Type u} : Congruent (RedAff (τ := τ)) where
 
-theorem bang' (h : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC !(x)) (DCC !(x')) := by
+theorem bang'.{u} {α : Type u} {x x' : GenericExpr α} (h : Relation.ReflTransGen (RedAff (τ := α)) x x') : Relation.ReflTransGen RedAff (DCC[α] !(x)) (DCC[α] !(x')) := by
   induction h with
   | refl => exact .refl
   | tail ih h a_ih =>
     exact .trans a_ih (.single (.bang (by assumption)))
 
-theorem pairl' (h : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC ⟦β⟧⟨x, y⟩) (DCC ⟦β⟧⟨x', y⟩) := by
+theorem pairl'.{u} {α : Type u} {β x y x' : GenericExpr α} (h : Relation.ReflTransGen (RedAff (τ := α)) x x') : Relation.ReflTransGen RedAff (DCC[α] ⟦β⟧⟨x, y⟩) (DCC[α] ⟦β⟧⟨x', y⟩) := by
   induction h with
   | refl => exact .refl
   | tail ih h a_ih =>
     exact .trans a_ih (.single (.pairl (by assumption)))
 
-theorem pairr' (h : Relation.ReflTransGen RedAff y y') : Relation.ReflTransGen RedAff (DCC ⟦β⟧⟨x, y⟩) (DCC ⟦β⟧⟨x, y'⟩) := by
+theorem pairr'.{u} {α : Type u} {β x y y' : GenericExpr α} (h : Relation.ReflTransGen (RedAff (τ := α)) y y') : Relation.ReflTransGen RedAff (DCC[α] ⟦β⟧⟨x, y⟩) (DCC[α] ⟦β⟧⟨x, y'⟩) := by
   induction h with
   | refl => exact .refl
   | tail ih h a_ih =>
     exact .trans a_ih (.single (.pairr (by assumption)))
 
-theorem eql'' (h : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC (x = y)) (DCC (x' = y)) := by
+theorem eql''.{u} {α : Type u} {x y x' : GenericExpr α} (h : Relation.ReflTransGen (RedAff (τ := α)) x x') : Relation.ReflTransGen RedAff (DCC[α] (x = y)) (DCC[α] (x' = y)) := by
   induction h with
   | refl => exact .refl
   | tail ih h a_ih =>
     exact .trans a_ih (.single (.eql' (by assumption)))
 
-theorem eqr'' (h : Relation.ReflTransGen RedAff y y') : Relation.ReflTransGen RedAff (DCC (x = y)) (DCC (x = y')) := by
+theorem eqr''.{u} {α : Type u} {x y y' : GenericExpr α} (h : Relation.ReflTransGen (RedAff (τ := α)) y y') : Relation.ReflTransGen RedAff (DCC[α] (x = y)) (DCC[α] (x = y')) := by
   induction h with
   | refl => exact .refl
   | tail ih h a_ih =>
     exact .trans a_ih (.single (.eqr' (by assumption)))
 
-theorem pil' (h : Relation.ReflTransGen RedAff f_α f_α') : Relation.ReflTransGen RedAff (DCC Π(f_α, f_β)) (DCC Π(f_α', f_β)) := by
+theorem pil'.{u} {α : Type u} {f_α f_β f_α' : GenericExpr α} (h : Relation.ReflTransGen (RedAff (τ := α)) f_α f_α') : Relation.ReflTransGen RedAff (DCC[α] Π(f_α, f_β)) (DCC[α] Π(f_α', f_β)) := by
   induction h with
   | refl => exact .refl
   | tail ih h a_ih =>
     exact .trans a_ih (.single (.pil (by assumption)))
 
-theorem pir' (h : Relation.ReflTransGen RedAff f_β f_β') : Relation.ReflTransGen RedAff (DCC Π(f_α, f_β)) (DCC Π(f_α, f_β')) := by
+theorem pir'.{u} {α : Type u} {f_α f_β f_β' : GenericExpr α} (h : Relation.ReflTransGen (RedAff (τ := α)) f_β f_β') : Relation.ReflTransGen RedAff (DCC[α] Π(f_α, f_β)) (DCC[α] Π(f_α, f_β')) := by
   induction h with
   | refl => exact .refl
   | tail ih h a_ih =>
     exact .trans a_ih (.single (.pir (by assumption)))
 
-open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedAff.conf (h₁ : RedAff A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
+open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])]
+theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (τ := α)) A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
   induction h₁ generalizing C with
   | eql =>
     cases h₂ with
@@ -372,15 +373,16 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] the
       exact ⟨_, congrArg' h₁, congrArg' h₂⟩
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
-instance RedAff.instConf : Confluent RedAff := ⟨RedAff.conf⟩
+instance RedAff.instConf.{u} {τ : Type u} : Confluent (RedAff (τ := τ)) := ⟨RedAff.conf⟩
 
-theorem red_aff_globally_conf : Relation.ReflTransGen RedAff A B → Relation.ReflTransGen RedAff A C → ∃ D,
+theorem red_aff_globally_conf.{u} {τ : Type u} {A B C : GenericExpr τ} : Relation.ReflTransGen (RedAff (τ := τ)) A B → Relation.ReflTransGen RedAff A C → ∃ D,
   Relation.ReflTransGen RedAff B D ∧ Relation.ReflTransGen RedAff C D :=
   RedAff.instRedRel.globally_confluent.conf
 
-@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instConfRedAffTrans : Confluent RedAff (m := Relation.ReflTransGen) := RedAff.instRedRel.globally_confluent
+@[dcc_rel, aesop norm (rule_sets := [DccRel])]
+instance instConfRedAffTrans.{u} {τ : Type u} : Confluent (RedAff (τ := τ)) (m := Relation.ReflTransGen) := RedAff.instRedRel.globally_confluent
 
-def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
+def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
   change ∃ _, ∃ _, (step? _) = .some _
   unfold step?
   split
@@ -503,13 +505,15 @@ def semi_complete {A B : Expr} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B')
       | (exact (hbang _ rfl).elim)
       | (exact (heq _ _ rfl).elim))
 
-@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instSemicomplete : SemiComplete RedAff := ⟨semi_complete⟩
+@[dcc_rel, aesop norm (rule_sets := [DccRel])]
+instance RedAff.instSemicomplete.{u} {τ : Type u} : SemiComplete (RedAff (τ := τ)) := ⟨semi_complete⟩
 
 theorem aff_complete (h : Relation.ReflTransGen RedAff A B)
   (hn : IsNorm RedAff B) : reduce RedAff A = ⟨B, ⟨h⟩⟩ :=
   RedAff.instRedRel.instComplete.complete h hn
 
-@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instComplete : Complete (Relation.ReflTransGen RedAff) (P := IsNorm RedAff) := RedAff.instRedRel.instComplete
+@[dcc_rel, aesop norm (rule_sets := [DccRel])]
+instance instComplete.{u} {τ : Type u} : Complete (Relation.ReflTransGen (RedAff (τ := τ))) (P := IsNorm RedAff) := RedAff.instRedRel.instComplete
 
 -- RedRel.reduce Size RedAff.instRedRel : (e : Expr) → (e' : Expr) × PULift (Relation.ReflTransGen RedAff e e')
 #check reduce RedAff
@@ -521,7 +525,7 @@ Complete.complete
 #check instComplete.complete
 
 @[grind ., grind →]
-theorem red_aff_decreasing? (h : Relation.ReflTransGen RedAff A B) : (size B) ≤ (size A) := by
+theorem red_aff_decreasing?.{u} {τ : Type u} {A B : GenericExpr τ} [DecidableEq τ] (h : Relation.ReflTransGen (RedAff (τ := τ)) A B) : (size B) ≤ (size A) := by
   if hs : (size A) = (size B) then
     simp_all
   else
@@ -533,16 +537,17 @@ theorem red_aff_decreasing? (h : Relation.ReflTransGen RedAff A B) : (size B) �
       grind
 
 @[grind ., grind →]
-theorem red_aff_trans_decreasing : Relation.TransGen RedAff A B → (size B) < (size A) :=
+theorem red_aff_trans_decreasing.{u} {τ : Type u} {A B : GenericExpr τ} [DecidableEq τ] : Relation.TransGen (RedAff (τ := τ)) A B → (size B) < (size A) :=
   RedAff.instRedRel.to_trans.decreasing
 
 @[dcc_force_reduce, dcc_force_aff]
-abbrev RedAff.reduce := Expr.reduce RedAff
+abbrev RedAff.reduce.{u} {τ : Type u} := GenericExpr.reduce (RedAff (τ := τ))
 
 attribute [dcc_force_reduce, dcc_force_aff] RedAff.reduce.eq_def
 
-instance : Decidable (IsNorm RedAff A) :=
-  match heq₀ : reduce RedAff A with
+instance RedAff.instDecidableNorm.{u} {α : Type u} [DecidableEq α]
+{A : GenericExpr α}  : Decidable (IsNorm (RedAff (τ := α)) A) :=
+  match heq₀ : GenericExpr.reduce RedAff A with
   | ⟨A', ⟨h⟩⟩ =>
     if heq : A' = A then
       have h_norm := reduce_norm (h := heq ▸ h) (A := A) (B := A) (hR := RedAff.instRedRel) (heq ▸ heq₀)
@@ -553,4 +558,4 @@ instance : Decidable (IsNorm RedAff A) :=
         have h := RedAff.instRedRel.reduce_norm_fst h
         simp_all)
 
-end Expr
+end GenericExpr

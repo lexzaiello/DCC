@@ -211,12 +211,45 @@ end _test
 
 end GenAst
 
+inductive GenericExpr.{u} (τ : Type u) where
+  | top    : GenericExpr τ
+  | bot    : GenericExpr τ
+  | tintro : GenericExpr τ
+  | sort   : Level → GenericExpr τ
+  | map    : GenericExpr τ  → GenericExpr τ
+  | fmap   : GenericExpr τ  → GenericExpr τ
+  | bang   : GenericExpr τ  → GenericExpr τ
+  | box    : GenericExpr τ  → GenericExpr τ
+  | unbox  : GenericExpr τ  → GenericExpr τ
+  | eql    : GenericExpr τ  → GenericExpr τ
+  | refl   : GenericExpr τ  → GenericExpr τ
+  | fstc   : GenericExpr τ  → GenericExpr τ
+  | id     : GenericExpr τ  → GenericExpr τ
+  | sndc   : GenericExpr τ  → GenericExpr τ
+  | eval   : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
+  | curr   : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
+  | curr'  : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
+  | pair   : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
+  | mkc    : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
+  | eq     : GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | comp   : GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | comp₂  : GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | comp'  : GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | quot   : GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | pi     : GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | sigma  : GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | coup   : GenericExpr τ  → GenericExpr τ
+  | app    : GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | const  : τ              → GenericExpr τ
+deriving BEq, DecidableEq, Inhabited, Repr
+
 open GenAst in
+abbrev Expr := GenericExpr Unit
+
+/-open GenAst in
 open Lean (ToExpr) in
 gen_ast as Expr
-  deriving BEq, DecidableEq, Inhabited, Repr
-
-#check Expr.sort
+  deriving BEq, DecidableEq, Inhabited, Repr-/
 
 declare_syntax_cat gen_dcc
 
@@ -239,6 +272,7 @@ syntax:max "Fstc(" gen_dcc,* ")"                              : gen_dcc
 syntax:max "Sndc(" gen_dcc,* ")"                              : gen_dcc
 syntax "Σ(" gen_dcc,* ")"                                     : gen_dcc
 syntax "Coup(" gen_dcc ")"                                    : gen_dcc
+syntax "const(" term ")"                                      : gen_dcc
 syntax:max (priority := high) "Λ(" gen_dcc,* ")"              : gen_dcc
 syntax:max (priority := high) "!Λ(" gen_dcc,* ")"             : gen_dcc
 syntax:max (priority := high) "Π(" gen_dcc,* ")"              : gen_dcc
@@ -253,21 +287,28 @@ syntax (priority := high) "⟦" gen_dcc,* "⟧" "(" gen_dcc,* ")" : gen_dcc
 
 declare_syntax_cat gen_dcc_loc
 
+syntax "?"   : gen_dcc_loc
 syntax "."   : gen_dcc_loc
-syntax ident : gen_dcc_loc
+syntax term  : gen_dcc_loc
 
 syntax "DCC" "[" gen_dcc_loc "]"  gen_dcc : term
 
 def field (in_ty : Lean.TSyntax `gen_dcc_loc) (fld : String) : Lean.MacroM (Lean.TSyntax `term) := do
   match in_ty with
+  | `(gen_dcc_loc| ?) => return Lean.mkIdent (Lean.Name.str ``GenericExpr fld).eraseMacroScopes
   | `(gen_dcc_loc| .) => return Lean.mkIdent (Lean.Name.mkSimple fld).eraseMacroScopes
-  | `(gen_dcc_loc| $idt:ident) =>
+  /-| `(gen_dcc_loc| $idt:ident) =>
     let nm := (idt.getId ++ Lean.Name.mkSimple fld).eraseMacroScopes
-    return Lean.mkIdent nm
+    return Lean.mkIdent nm-/
+  | `(gen_dcc_loc| $tm:term) =>
+    let idt := Lean.mkIdent (Lean.Name.str ``GenericExpr fld).eraseMacroScopes
+    `(term| $idt (τ := $tm))
   | s => Lean.Macro.throwErrorAt in_ty s!"this is not a DCC-like: {s}"
 
 open Lean.Syntax in macro_rules
   | `(DCC[$ty:gen_dcc_loc] Eval($α:gen_dcc, $β:gen_dcc, $x:gen_dcc)) => return mkApp (← field ty "eval") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β), ← `(DCC[$ty:gen_dcc_loc] $x)]
+  | `(DCC[$ty:gen_dcc_loc] const($tm:term))                          =>
+    return mkApp (← field ty "const") #[← `($tm:term)]
   | `(DCC[$ty:gen_dcc_loc] ⊤)                                        => field ty "top"
   | `(DCC[$ty:gen_dcc_loc] ⊥)                                        => field ty "bot"
   | `(DCC[$ty:gen_dcc_loc] ∗)                                        => field ty "tintro"
@@ -325,13 +366,19 @@ open Lean.Syntax in macro_rules
   | `(DCC[$_ty:gen_dcc_loc] $idt:ident)                              => `($idt:term)
   | `(DCC[$ty:gen_dcc_loc] ($t:gen_dcc))                             => `(DCC[$ty:gen_dcc_loc] $t)
 
-syntax "gen_dsl" str "for" term : command
+syntax "gen_dsl" str "for" term  : command
+syntax "gen_dsl" str "for" "?"   : command
 
 macro_rules
+  | `(gen_dsl $pre:str for ?) =>
+    `(command| macro $pre:str exp:gen_dcc : term => `(DCC[?] $$exp))
   | `(gen_dsl $pre:str for $ty:ident) =>
     `(command| macro $pre:str exp:gen_dcc : term => `(DCC[$ty:ident] $$exp))
+  | `(gen_dsl $pre:str for $ty:term) =>
+    `(command| macro $pre:str exp:gen_dcc : term => `(DCC[$ty:term] $$exp))
 
-gen_dsl "DCC" for Expr
+gen_dsl "DCC" for Unit
+gen_dsl "DCC?" for ?
 
 #eval (DCC Sort 0)
 

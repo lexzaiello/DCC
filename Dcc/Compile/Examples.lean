@@ -1,5 +1,6 @@
 import Dcc.Compile.Core
 import Dcc.Tactic.Quote
+import Dcc.Judge2
 
 /-
 TODO: tomorrow, need to add existential support for conversion to Lean.
@@ -11,13 +12,13 @@ Either that or lift everything to TYpe. Not sure.
 #check dcc_decompile #(dcc_compile' {Expr.infer₂} ((fun (α : Sort 0) (x : α) => x) True True.intro))
 #eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce₂} (fun (α : Sort 2) (x : α) => x) (Sort 1)
 #check dcc_decompile #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} (fun (α : Sort 2) (x : α) => x) (Sort 1))
-#eval dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1) (Sort 0)))
+dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1) (Sort 0)))
 #eval Std.format <| dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x))
-#eval dcc_show #(dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x)))
-#check dcc_decompile #(dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x)))3
-#eval dcc_show #(dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x)))
+dcc_show #(dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x)))
+#check dcc_decompile #(dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x)))
+dcc_show #(dcc_infer'' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x)))
 #eval Std.format (dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1)))
-#eval dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1)))
+dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => x) (Sort 1)))
 #eval Std.format <| dcc_infer' {Expr.infer₂} (fun (α : Sort 0) (x : α) => x) True True.intro
 
 #eval Std.format <| dcc_compile' {Expr.infer₂} {Expr.reduce₂} (fun (x : Sort 0) => (fun (x : Sort 0) => x) x)
@@ -51,7 +52,12 @@ def K_example₃'' : Option Expr :=
   dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1) (Sort 0))
 
 #eval Std.format <| K_example₃
-#check dcc_decompile #(K_example₃)
+#eval Std.format <| K_example₃
+dcc_show #(K_example₃)
+
+def my_thingy := dcc_decompile #(K_example₃)
+
+--#check dcc_decompile #(K_example₃)
 
 #eval Std.format <| K_example₃'
 #eval Std.format <| K_example₃''

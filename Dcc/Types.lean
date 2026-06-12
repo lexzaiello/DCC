@@ -107,6 +107,16 @@ inductive Pi.f_β.type (f_α δ : Expr) (o : Level) : Level → Expr → Type
   | arrow : Pi.f_β.type f_α δ o n
     (DCC (Π(Id(Sort o), `(Sort o, `(δ, (Π(Id(Sort m), `(Sort m, `(α, Sort n))) α)))) δ))
 
+def read_pi_f_β_cod (τ : Expr) : Option Expr :=
+  match heq₁ : τ with
+  | (DCC (Π(Id(Sort o), `(_a, Π(__a, Λ(_b, _c, `(_d, Sort n))))) _e)) =>
+      .some (DCC (Sort n))
+  | (DCC (Π(_a, `(_b, `(_c, (Π(Id(Sort m), `(_d, `(_e, Sort n))) α)))) _f)) =>
+    .some (DCC (Sort n))
+  | (DCC (Π(_a, `(_b, Π(_c, `(_d, `(f_α₂, Sort n))))) _e)) =>
+    .some (DCC Sort n)
+  | _ => .none
+
 @[dcc_judge]
 def view_pi_f_β (τ f_α δ : Expr) (o : Level) : Option ((n : Level) × (Pi.f_β.type f_α δ o n τ)) :=
   match heq₁ : τ with

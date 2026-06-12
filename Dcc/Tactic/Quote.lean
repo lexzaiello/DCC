@@ -114,12 +114,12 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
   | (DCC ⊥)                   => return ⟨.succ .zero, q(Prop), q(False)⟩
   | (DCC ∗)                   => return ⟨.zero, q(True), q(True.intro)⟩
   | (DCC !<f>)                =>
-    let ⟨.imax u' v', τ_f', f'⟩ ← f.to_lean
+    let ⟨.imax u' (.succ v'), τ_f', f'⟩ ← f.to_lean
       | throwError m!"Box function {f} is not well-typed at: {DCC !<f>}"
     match τ_f' with
-    | ~q(∀ (x : ($α : (Sort u'))), ($β x : Sort v')) =>
-      return ⟨.imax (.succ u') (.succ v')
-         , q(∀ (x : Shared $α), Bang ($β x.deref)),
+    | ~q(∀ (x : ($α : (Sort u'))), Sort v') =>
+      return ⟨.imax (.succ u') (.succ (.succ v'))
+         , q(∀ (x : Shared $α), Type v'),
            q(fun (x : Shared $α) => Shared.map $f' x)⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC $<f>)                =>
@@ -133,13 +133,13 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC &(x))                =>
     match ← x.to_lean with
-    | ⟨u', α, x'⟩ => pure ⟨.succ u', q(Shared $α), q(Shared.share $x')⟩
+    | ⟨u', α, x'⟩ => pure ⟨.succ u', q(Shared $α), q(Shared.share.{u'} $x')⟩
   | (DCC *(α))                =>
     match ← α.to_lean with
     | ⟨(.succ u'), τ_α, α'⟩ =>
       match τ_α with
       | ~q(Sort u') =>
-        pure ⟨.imax (.succ u') u', q(Shared.{u'} $α' → $α'), q(fun (x : Shared $α') => Shared.deref.{u'} x)⟩
+        pure ⟨_, q((Shared $α') → $α'), q(fun (x : Shared $α') => x.deref)⟩
     | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC !(α))                =>
     match ← α.to_lean with
@@ -503,21 +503,22 @@ elab "dcc_decompile" e:gen_dcc : term => do
 
 open Lean.Elab in
 open Lean.Elab.Term in
-elab "dcc_show" e:gen_dcc : term => do
-  let tm ← match e with
-  | `(gen_dcc| #($tm:term)) =>
-    let tm₀ ← elabTerm tm none
-    pure <| ((← unfoldDefinition? tm₀ (ignoreTransparency := true)) <|> (← delta? tm₀)).getD (← whnf tm₀)
-  | _ =>
-    elabTerm (← liftMacroM <| runDcc e) none
-  let dcc_e ← decode_dcc tm
-  let ⟨_u, _α, lean_e⟩ ← dcc_e.to_lean
-  let x := (← Lean.Meta.ppExpr lean_e).pretty
-  return Lean.instToExprString.toExpr x
+open Lean.Elab.Command in
+elab "dcc_show" e:gen_dcc : command => do
+  liftTermElabM do
+    let tm ← match e with
+    | `(gen_dcc| #($tm:term)) =>
+      let tm₀ ← elabTerm tm none
+      pure <| ((← unfoldDefinition? tm₀ (ignoreTransparency := true)) <|> (← delta? tm₀)).getD (← whnf tm₀)
+    | _ =>
+      elabTerm (← liftMacroM <| runDcc e) none
+    let dcc_e ← decode_dcc tm
+    let ⟨_u, _α, lean_e⟩ ← dcc_e.to_lean
+    Lean.logInfo m!"{lean_e}"
 
 #check dcc_decompile (Id(Sort 0))
 #check dcc_decompile (Id(Sort 0) ⊤)
-#eval dcc_show (Id(Sort 0))
+dcc_show (Id(Sort 0))
 #check dcc_decompile (⟦Id(Sort 1)⟧(Sort 0, ⊤))
-#eval dcc_show (⟦Id(Sort 1)⟧(Sort 0, ⊤))
-#eval dcc_show (⟦Id(Sort 1)⟧(Sort 0, ⊤))
+dcc_show (⟦Id(Sort 1)⟧(Sort 0, ⊤))
+dcc_show (⟦Id(Sort 1)⟧(Sort 0, ⊤))

@@ -440,3 +440,4 @@ elab "dcc_infer" infer:infer_cmd_param* tm:term : term => do
     `(term| do Sigma.fst <$> (dcc_compile $tm:term).infer₂)-/
 
 #eval Std.format <| dcc_infer (fun (α : Type) (x : α) => x)
+#eval Std.format <| dcc_infer (fun (α : Type) (x : α → Type) => x)

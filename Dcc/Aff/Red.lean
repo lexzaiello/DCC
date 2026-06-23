@@ -348,7 +348,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | eql
     | fmap
     | map
-    | unbox
+      | unbox
     | pair => cases h_r
     | evalc => cases h_r with
       | sigl h => exact ⟨_, .single .evalc, .single (.congrFun (.congrArg h))⟩
@@ -559,3 +559,5 @@ instance RedAff.instDecidableNorm.{u} {α : Type u} [DecidableEq α]
         simp_all)
 
 end GenericExpr
+
+abbrev Expr.RedAff := GenericExpr.RedAff (τ := Unit)

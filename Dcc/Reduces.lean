@@ -8,6 +8,21 @@ import Mathlib.Data.ULift
 
 namespace Expr
 
+open GenericExpr
+
+/-abbrev IsNorm := GenericExpr.IsNorm (α := GenericExpr (τ := Unit))
+
+abbrev RedAff.instRedRel := GenericExpr.RedAff.instRedRel (τ := Unit)
+
+abbrev reduce? : ∀ {t : Expr → ℕ} (r : Expr → Expr → Prop) [_hR : GenericExpr.RedRel r t]
+  (e : Expr), Option ((e' : Expr) × (PULift.{1, 0} (Relation.TransGen r e e'))) := GenericExpr.reduce? (α := GenericExpr (τ := Unit))
+
+abbrev reduce' : ∀ {t : Expr → ℕ} (r : Expr → Expr → Prop) [_hR : GenericExpr.RedRel r t]
+  (e : Expr), Expr := GenericExpr.reduce'
+
+abbrev decreasing? : ∀ {t : Expr → ℕ}
+  (r : Expr → Expr → Prop) [_hR : GenericExpr.RedRel r t] {A B : Expr} (_hr : Relation.ReflTransGen r A B), t B ≤ t A := GenericExpr.decreasing? (α := GenericExpr (τ := Unit))-/
+
 @[dcc_judge]
 def RedAffReflTrans := Relation.ReflTransGen RedAff
 
@@ -72,23 +87,6 @@ inductive Reduced : Expr → Expr → Prop
     → RedEtaReflTrans B C
     → IsNorm RedEta C
     → Reduced A C
-
-@[grind ., grind →]
-theorem Reduced.decreasing (h : Reduced A B) : B.size < A.size :=
-  match h with
-  | ⟨hr₁, hn₁, hr₂, hn₂⟩ => by
-    have hb := decreasing? RedEta hr₂
-    rename_i B'
-    induction hr₁  using Relation.TransGen.head_induction_on generalizing B with
-    | single hr =>
-      have ha := RedAff.instRedRel.decreasing hr
-      grind
-    | head hr hrt h =>
-      rename_i ih
-      have h := RedAff.instRedRel.decreasing hr
-      have h := Reduced.mk hrt hn₁ hr₂ (by assumption)
-      have h := ih h hr₂ hn₂ (by assumption)
-      grind
 
 def reduce_all? (e : Expr) : Option ((e' : Expr) × PLift (Reduced e e')) :=
   if h_some : (reduce? RedAff e).isSome then

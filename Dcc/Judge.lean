@@ -1,15 +1,15 @@
 import Dcc.Reduces
+import Dcc.Ast
 import Dcc.Types
-import Dcc.Nbe
 import Mathlib.Logic.Relation
 
-namespace Expr
+namespace GenericExpr
 
 @[dcc_judge, inline] abbrev fst.f_β.type.matcher (t : Expr) : Option ((α δ : Expr) × (m n o : Level) × (PULift.{1, 0} (t = fst.f_β.type α δ m n o))) :=
   match arrow.matcher t with
   | .some ⟨δ, arr', o, ⟨h_arr⟩⟩ =>
     match arrow.matcher arr' with
-    | .some ⟨α, DCC Sort n, m, ⟨h_arr₂⟩⟩ =>
+    | .some ⟨α, DCC? Sort n, m, ⟨h_arr₂⟩⟩ =>
       .some ⟨α, δ, m, n, o, ⟨by rw [h_arr, h_arr₂]⟩⟩
     | _ => .none
   | _ => .none
@@ -20,7 +20,7 @@ namespace Expr
   match arrow.matcher t with
   | .some ⟨_srt, t', _mm,  ⟨_heq⟩⟩ =>
     match arrow.matcher t' with
-    | .some ⟨_α₂, DCC Sort n, _m, ⟨_heq₂⟩⟩ =>
+    | .some ⟨_α₂, DCC? Sort n, _m, ⟨_heq₂⟩⟩ =>
       if h : t = pair.β.type α m n then
         .some ⟨n, ⟨h⟩⟩
       else .none
@@ -30,12 +30,13 @@ namespace Expr
 @[dcc_judge, inline] abbrev curr.β.type.matcher (t : Expr) : Option
   ((f_α x_α : Expr) × (m n : Level) × (PULift.{1, 0} (t = curr.β.type f_α x_α m n))) :=
   match t with
-  | DCC (Π(f_α, Λ(Sort m, _a, `(_b, Sort n))) x_α) =>
-    if h : (DCC (Π(f_α, Λ(Sort m, _a, `(_b, Sort n))) x_α)) = curr.β.type f_α x_α m n then
+  | DCC? (Π(f_α, Λ(Sort m, _a, `(_b, Sort n))) x_α) =>
+    if h : (DCC? (Π(f_α, Λ(Sort m, _a, `(_b, Sort n))) x_α)) = curr.β.type f_α x_α m n then
       .some ⟨f_α, x_α, m, n, ⟨h⟩⟩
     else .none
   | _ => .none
 
+open Expr in
 inductive Judge : Expr → Expr → Prop where
   | eq     : Judge x α
     → Judge y α
@@ -176,6 +177,7 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (DCC (f_β x_α' x)) τ
     → Judge (DCC (f x)) τ
 
+open Expr in
 def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
   Option ((τ₁ τ₂ : Expr) × PULift.{1, 0} (Judge e τ₁) × PULift.{1, 0} (Reduces τ₁ τ₂)) :=
   match h with
@@ -214,75 +216,76 @@ def with_red (h : Option ((t : Expr) × PULift.{1, 0} (Judge e t))) :
     | _ => .none
   | _ => none
 
+open Expr in
 def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
   match e with
-  | DCC !<f> => match f.infer with
-    | .some ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
+  | DCC? !<f> => match f.infer with
+    | .some ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
       .some ⟨_, ⟨.map ht (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | _ => .none
-  | DCC $<f> => match f.infer with
-    | .some ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
+  | DCC? $<f> => match f.infer with
+    | .some ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
       .some ⟨_, ⟨.fmap ht (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | _ => .none
-  | DCC *(α) => match α.infer with
-    | .some ⟨DCC Sort m, ⟨ht⟩⟩ => .some ⟨_, ⟨.unbox ht (reduce_reduces rfl)⟩⟩
+  | DCC? *(α) => match α.infer with
+    | .some ⟨DCC? Sort m, ⟨ht⟩⟩ => .some ⟨_, ⟨.unbox ht (reduce_reduces rfl)⟩⟩
     | _ => .none
-  | DCC !(τ) => match τ.infer with
-    | .some ⟨DCC Sort m, ⟨ht⟩⟩ => .some ⟨_, ⟨.bang ht⟩⟩
+  | DCC? !(τ) => match τ.infer with
+    | .some ⟨DCC? Sort m, ⟨ht⟩⟩ => .some ⟨_, ⟨.bang ht⟩⟩
     | _ => .none
-  | DCC &(x) => match x.infer with
+  | DCC? &(x) => match x.infer with
     | .some ⟨τ, ⟨ht⟩⟩ => .some ⟨_, ⟨.box ht⟩⟩
     | _ => .none
-  | DCC ⊤ => .some ⟨_, ⟨.top⟩⟩
-  | DCC ⊥ => .some ⟨_, ⟨.bot⟩⟩
-  | DCC ∗ => .some ⟨_, ⟨.tintro⟩⟩
-  | DCC Sort _m => .some ⟨_, ⟨.sort⟩⟩
-  | DCC (Id(α)) =>
+  | DCC? ⊤ => .some ⟨_, ⟨.top⟩⟩
+  | DCC? ⊥ => .some ⟨_, ⟨.bot⟩⟩
+  | DCC? ∗ => .some ⟨_, ⟨.tintro⟩⟩
+  | DCC? Sort _m => .some ⟨_, ⟨.sort⟩⟩
+  | DCC? (Id(α)) =>
     match infer α with
-    | .some ⟨DCC Sort _m, ⟨ht⟩⟩ => .some ⟨_, ⟨.id ht (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
+    | .some ⟨DCC? Sort _m, ⟨ht⟩⟩ => .some ⟨_, ⟨.id ht (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | _ => .none
-  | DCC (f ∘ g) =>
+  | DCC? (f ∘ g) =>
     match infer g with
-    | .some ⟨DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, `(___a, β))) ∘' _a₂)) !(α)), ⟨ht₁⟩⟩ =>
-      if heq : (DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, `(___a, β))) ∘' _a₂)) !(α))) = comp.g.type α β m then
+    | .some ⟨DCC? (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, `(___a, β))) ∘' _a₂)) !(α)), ⟨ht₁⟩⟩ =>
+      if heq : (DCC? (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, `(___a, β))) ∘' _a₂)) !(α))) = comp.g.type α β m then
         match infer f with
-        | .some ⟨(DCC (Π(Id(Sort n), f_γ) Coup(f_β))), ⟨ht₂⟩⟩ =>
-          if heq₂ : (DCC (Π(Id(Sort n), f_γ) Coup(f_β))) = comp.f.type f_β f_γ n then
-            if heq₃ : f_β.reduce_all = (DCC `(α, β)) then
+        | .some ⟨(DCC? (Π(Id(Sort n), f_γ) Coup(f_β))), ⟨ht₂⟩⟩ =>
+          if heq₂ : (DCC? (Π(Id(Sort n), f_γ) Coup(f_β))) = comp.f.type f_β f_γ n then
+            if heq₃ : reduce_all f_β = (DCC? `(α, β)) then
               .some ⟨_, ⟨.comp (heq ▸ ht₁) ht₂ (reduce_reduces heq₃) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
             else .none
           else .none
         | _ => .none
       else .none
     | _ => .none
-  | DCC (f ∘∘ g) =>
+  | DCC? (f ∘∘ g) =>
     match infer g with
-    | .some ⟨DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fstc(___a))) ∘' _a₂)) !(α)), ⟨ht₁⟩⟩ =>
-      if heq : (DCC (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fstc(___a))) ∘' _a₂)) !(α))) = comp₂.g.type α β m then
+    | .some ⟨DCC? (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fstc(___a))) ∘' _a₂)) !(α)), ⟨ht₁⟩⟩ =>
+      if heq : (DCC? (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fstc(___a))) ∘' _a₂)) !(α))) = comp₂.g.type α β m then
         match infer f with
-        | .some ⟨(DCC (Π(Id(Sort n), f_γ) _a)), ⟨ht₂⟩⟩ =>
-          if heq₂ : (DCC (Π(Id(Sort n), f_γ) _a)) = comp₂.f.type β f_γ n then
+        | .some ⟨(DCC? (Π(Id(Sort n), f_γ) _a)), ⟨ht₂⟩⟩ =>
+          if heq₂ : (DCC? (Π(Id(Sort n), f_γ) _a)) = comp₂.f.type β f_γ n then
             .some ⟨_, ⟨.comp₂ (heq ▸ ht₁) (heq₂ ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
           else .none
         | _ => .none
       else .none
     | _ => .none
-  | DCC (f ∘' g) =>
+  | DCC? (f ∘' g) =>
     match infer g with
-    | .some ⟨(DCC (Π(Id(Sort m), f_β₀) α)), ⟨ht⟩⟩ =>
-      match (DCC (f_β₀ α)).reduce_all with
-      | DCC `(α₀', β) =>
-        if heq₀ : (DCC (f_β₀ α)).reduce_all = (DCC (`(α, β))) then
+    | .some ⟨(DCC? (Π(Id(Sort m), f_β₀) α)), ⟨ht⟩⟩ =>
+      match reduce_all (DCC? (f_β₀ α)) with
+      | DCC? `(α₀', β) =>
+        if heq₀ : reduce_all (DCC? (f_β₀ α)) = (DCC? (`(α, β))) then
           match (infer f) with
-          | .some ⟨(DCC (Π(f_β, _γ) x_β)), ⟨ht₂⟩⟩ =>
-            if heq : (DCC (f_β x_β)).reduce_all = β then
+          | .some ⟨(DCC? (Π(f_β, _γ) x_β)), ⟨ht₂⟩⟩ =>
+            if heq : reduce_all (DCC? (f_β x_β)) = β then
               .some ⟨_, ⟨.comp' ht (reduce_reduces heq₀) ht₂ (reduce_reduces heq) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
             else .none
           | _ => .none
         else .none
       | _ => .none
     | _ => .none
-  | DCC x = y =>
+  | DCC? x = y =>
     match infer x with
     | .some ⟨t_x, ⟨ht₁⟩⟩ =>
       match infer y with
@@ -292,35 +295,35 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  | DCC Eql(f_α) =>
+  | DCC? Eql(f_α) =>
     match with_arr (infer f_α) with
-    | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
+    | .some ⟨_τ₁, δ, DCC? Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       .some ⟨_, ⟨.eql (harr ▸ ht₁) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | _ => .none
-  | DCC refl(f_α) =>
+  | DCC? refl(f_α) =>
     match with_arr (infer f_α) with
-    | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
+    | .some ⟨_τ₁, δ, DCC? Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       .some ⟨_, ⟨.refl (harr ▸ ht₁) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | _ => .none
-  | DCC Σ(f_α, f_β) =>
+  | DCC? Σ(f_α, f_β) =>
     match with_arr (infer f_α) with
-    | .some ⟨_τ₁, δ, DCC Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
+    | .some ⟨_τ₁, δ, DCC? Sort m, o, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
-      | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type' f_α δ o n then
+      | .some ⟨DCC? (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g), ⟨ht₂⟩⟩ =>
+        if heq : (DCC? (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort n))))) _g)) = Pi.f_β.type' f_α δ o n then
           .some ⟨_, ⟨.sigma (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
     | _ => .none
-  | DCC ⟦β⟧(x, y) =>
+  | DCC? ⟦β⟧(x, y) =>
     match infer x with
     | .some ⟨α, ⟨ht₁⟩⟩ =>
       match infer y with
       | .some ⟨βxm, ⟨ht₂⟩⟩ =>
         match with_arr (infer β) with
-        | .some ⟨_, α₂, DCC Sort n, m, ⟨ht₃⟩, ⟨harr⟩⟩ =>
+        | .some ⟨_, α₂, DCC? Sort n, m, ⟨ht₃⟩, ⟨harr⟩⟩ =>
           let β' := (reduce_all β)
-          if heq : reduce_all (DCC (β' x)) = βxm then
+          if heq : reduce_all (DCC? (β' x)) = βxm then
             if heq₂ : α = α₂ then
               .some ⟨_, ⟨.mk ht₁ (heq₂.symm ▸ harr ▸ ht₃)
                 (reduce_reduces (B := β') rfl) (reduce_reduces rfl) (heq ▸ ht₂)⟩⟩
@@ -329,42 +332,42 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         | _ => .none
       | _ => .none
     | _ => .none
-  | DCC Coup(β) =>
+  | DCC? Coup(β) =>
     match infer β with
-    | .some ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
-      match (DCC (f_β α)).reduce_all with
-      | DCC `(α₂, Sort n) =>
-        if heq : (DCC (f_β α)).reduce_all = DCC `(α, Sort n) then
+    | .some ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
+      match reduce_all (DCC? (f_β α)) with
+      | DCC? `(α₂, Sort n) =>
+        if heq : reduce_all (DCC? (f_β α)) = DCC? `(α, Sort n) then
           .some ⟨_, ⟨.coup ht (reduce_reduces heq) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
     | _ => .none
-  | DCC Fstc(β) =>
+  | DCC? Fstc(β) =>
     match (infer β) with
-    | .some ⟨DCC (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩ =>
-      match heq : (DCC (f_β α)).reduce_all with
-      | DCC `(α₂, Sort n) =>
+    | .some ⟨DCC? (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩ =>
+      match heq : reduce_all (DCC? (f_β α)) with
+      | DCC? `(α₂, Sort n) =>
         if heq₂ : α₂ = α then
           .some ⟨_, ⟨.fstc ht₁ (reduce_reduces (heq₂ ▸ heq)) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
     | _ => .none
-  | DCC Sndc(β) =>
+  | DCC? Sndc(β) =>
     match (infer β) with
-    | .some ⟨DCC (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩ =>
-      match heq : (DCC (f_β α)).reduce_all with
-      | DCC `(α₂, Sort n) =>
+    | .some ⟨DCC? (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩ =>
+      match heq : reduce_all (DCC? (f_β α)) with
+      | DCC? `(α₂, Sort n) =>
         if heq₂ : α₂ = α then
           .some ⟨_, ⟨.sndc ht₁ (reduce_reduces (heq₂ ▸ heq)) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
     | _ => .none
-  | DCC Λ(α, β, x) =>
+  | DCC? Λ(α, β, x) =>
     match α.infer with
-    | .some ⟨DCC Sort m, ⟨ht⟩⟩ =>
+    | .some ⟨DCC? Sort m, ⟨ht⟩⟩ =>
       match infer x with
-      | .some ⟨DCC (Π(f_α, _γ) x_α), ⟨ht₂⟩⟩ =>
-        if heq : reduce_all (DCC (f_α x_α)) = reduce_all (DCC Coup(β)) then
+      | .some ⟨DCC? (Π(f_α, _γ) x_α), ⟨ht₂⟩⟩ =>
+        if heq : reduce_all (DCC? (f_α x_α)) = reduce_all (DCC? Coup(β)) then
           .some ⟨_, ⟨.curr
             ht
             ht₂
@@ -376,12 +379,12 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  | DCC !Λ(α, β, x) =>
+  | DCC? !Λ(α, β, x) =>
     match α.infer with
-    | .some ⟨DCC Sort m, ⟨ht⟩⟩ =>
+    | .some ⟨DCC? Sort m, ⟨ht⟩⟩ =>
       match infer x with
-      | .some ⟨DCC (Π(f_α, _γ) x_α), ⟨ht₂⟩⟩ =>
-        if heq : reduce_all (DCC (f_α x_α)) = reduce_all (DCC !(Coup(β))) then
+      | .some ⟨DCC? (Π(f_α, _γ) x_α), ⟨ht₂⟩⟩ =>
+        if heq : reduce_all (DCC? (f_α x_α)) = reduce_all (DCC? !(Coup(β))) then
           .some ⟨_, ⟨.curr'
             ht
             ht₂
@@ -393,20 +396,20 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  | DCC Eval(α, β, x) =>
+  | DCC? Eval(α, β, x) =>
     match infer x with
-    | .some ⟨DCC (Π(f_α, f_β) env), ⟨ht₁⟩⟩ =>
-      if heq : (DCC (f_α env)).reduce_all = α then
-        match heq₂ : (DCC (f_β env)).reduce_all with
-        | DCC Π(β₂, γ) =>
+    | .some ⟨DCC? (Π(f_α, f_β) env), ⟨ht₁⟩⟩ =>
+      if heq : reduce_all (DCC? (f_α env)) = α then
+        match heq₂ : reduce_all (DCC? (f_β env)) with
+        | DCC? Π(β₂, γ) =>
           if heq₃ : β₂ = β then
             match infer α with
-            | .some ⟨DCC Sort m, ⟨ht₂⟩⟩ =>
+            | .some ⟨DCC? Sort m, ⟨ht₂⟩⟩ =>
               match infer β with
-              | .some ⟨DCC (Π(f_α₂, f_β₂) env₂), ⟨ht₃⟩⟩ =>
-                if heq₄ : (DCC (f_α₂ env₂)).reduce_all = α then
-                  match heq₅ : (DCC (f_β₂ env₂)).reduce_all with
-                  | DCC `(α₃, Sort n) =>
+              | .some ⟨DCC? (Π(f_α₂, f_β₂) env₂), ⟨ht₃⟩⟩ =>
+                if heq₄ : reduce_all (DCC? (f_α₂ env₂)) = α then
+                  match heq₅ : reduce_all (DCC? (f_β₂ env₂)) with
+                  | DCC? `(α₃, Sort n) =>
                     if heq₆ : α₃ = α then
                       .some ⟨_, ⟨.eval ht₁ (reduce_reduces heq) (heq₃ ▸ (reduce_reduces heq₂))
                         ht₂ ht₃ (reduce_reduces heq₄) (reduce_reduces (heq₆ ▸ heq₅)) (reduce_reduces rfl)⟩⟩
@@ -419,20 +422,20 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         | _ => .none
       else .none
     | _ => .none
-  | DCC `(β, x) =>
+  | DCC? `(β, x) =>
     match infer x, infer β with
-    | .some ⟨_α, ⟨ht₁⟩⟩, .some ⟨DCC Sort _n, ⟨ht₂⟩⟩ =>
+    | .some ⟨_α, ⟨ht₁⟩⟩, .some ⟨DCC? Sort _n, ⟨ht₂⟩⟩ =>
       .some ⟨_, ⟨.quot ht₁ ht₂ (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | _, _ => .none
-  | DCC ⟦γ⟧⟨f, g⟩ =>
+  | DCC? ⟦γ⟧⟨f, g⟩ =>
     match infer f, infer g with
-    | .some ⟨DCC (Π(f_α, f_β) x_α), ⟨ht₁⟩⟩,
-      .some ⟨DCC (Π(Id(Sort m), f_β₂) α), ⟨ht₂⟩⟩ =>
-      let α₂ := (DCC (f_α x_α)).reduce_all
-      let β := (DCC (f_β x_α)).reduce_all
-      match heqm : (DCC (f_β₂ α)).reduce_all with
-      | DCC (Π(β₂, γ₂)) =>
-        if heq : α₂ = α ∧ β₂.reduce_all = β then
+    | .some ⟨DCC? (Π(f_α, f_β) x_α), ⟨ht₁⟩⟩,
+      .some ⟨DCC? (Π(Id(Sort m), f_β₂) α), ⟨ht₂⟩⟩ =>
+      let α₂ := reduce_all (DCC? (f_α x_α))
+      let β := reduce_all (DCC? (f_β x_α))
+      match heqm : reduce_all (DCC? (f_β₂ α)) with
+      | DCC? (Π(β₂, γ₂)) =>
+        if heq : α₂ = α ∧ reduce_all β₂ = β then
           if heq₂ : γ₂ = γ then
             have ⟨h₁, h₃⟩ := heq
             .some ⟨_, ⟨.pair
@@ -448,41 +451,32 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _, _ => .none
-  | DCC Π(f_α, f_β) =>
+  | DCC? Π(f_α, f_β) =>
     match with_arr (infer f_α) with
-    | .some ⟨_τ₁, α, DCC Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>
+    | .some ⟨_τ₁, α, DCC? Sort _n, m, ⟨ht₁⟩, ⟨harr⟩⟩ =>
       match infer f_β with
-      | .some ⟨DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩ =>
-        if heq : (DCC (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g)) = Pi.f_β.type' f_α α m o then
+      | .some ⟨DCC? (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g), ⟨ht₂⟩⟩ =>
+        if heq : (DCC? (Π(_a, `(_b, Π(_c, Λ(_d, _e, `(_f, Sort o))))) _g)) = Pi.f_β.type' f_α α m o then
           .some ⟨_, ⟨.pi (harr ▸ ht₁) (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
         else .none
       | _ => .none
     | _ => .none
-  | DCC (f x) =>
+  | DCC? (f x) =>
     match infer f, infer x with
-    | .some ⟨DCC (Π(f_α, f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
-      if heq : reduce_all (DCC (f_α x_α)) = τ₂' then
+    | .some ⟨DCC? (Π(f_α, f_β) x_α), ⟨ht₁⟩⟩, .some ⟨τ₂', ⟨ht₂⟩⟩ =>
+      if heq : reduce_all (DCC? (f_α x_α)) = τ₂' then
         .some ⟨_, ⟨.app ht₁ (reduce_reduces rfl) (by rw [heq]; exact ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
       else .none
     | _, _ => .none
+  | _ => .none
 
 def test_id_nested : Option Expr := do
   let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer
   Sigma.fst <$> (DCC (Id(t) Id(Sort 1) (Sort 0))).infer
 
-def infer_nbe_after (e : Expr) : Option ((τ τ' : Expr) × (PULift.{1, 0} (Judge e τ)) × Nbe τ τ') := do
-  let ⟨τ, h₁⟩  ← e.infer
-  let ⟨τ', h₂⟩ ← τ.nbe
-  return ⟨τ, τ', h₁, h₂⟩
-
 def infer' (e : Expr) : Option Expr :=
   match infer e with
   | .some ⟨τ, _⟩ => .some τ
-  | _ => .none
-
-def infer_nbe_after' (e : Expr) : Option Expr :=
-  match infer_nbe_after e with
-  | .some ⟨_, τ, _⟩ => τ
   | _ => .none
 
 --#eval (DCC (Π(Id(Sort 3), `(Sort 3, Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), (`(⊤, `(Coup(Id(Sort 2)), Sort 2)) ∗))))) Sort 2)).reduce_η
@@ -495,4 +489,4 @@ def infer_nbe_after' (e : Expr) : Option Expr :=
 instance Judge.instRel : Rel (fun x y => PULift.{1, 0} (Judge x y)) (m := Option) where
   run := infer
 
-end Expr
+end GenericExpr

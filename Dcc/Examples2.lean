@@ -182,4 +182,3 @@ Id(Sort 1)
 #eval (DCC (refl(Id(Sort 2)) &(Sort 1) &(Sort 0))).infer₂'
 #eval (DCC (refl(Id(Sort 2)))).infer₂'
 
-

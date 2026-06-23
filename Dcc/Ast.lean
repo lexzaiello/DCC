@@ -366,6 +366,15 @@ open Lean.Syntax in macro_rules
   | `(DCC[$_ty:gen_dcc_loc] $idt:ident)                              => `($idt:term)
   | `(DCC[$ty:gen_dcc_loc] ($t:gen_dcc))                             => `(DCC[$ty:gen_dcc_loc] $t)
 
+syntax "(" gen_dcc ":" gen_dcc ")" "→" gen_dcc : gen_dcc
+syntax "(" ":" gen_dcc ")" "→" gen_dcc : gen_dcc
+
+macro_rules
+  | `(DCC[$ty:gen_dcc_loc] ($α:gen_dcc : Sort $m) → $β:gen_dcc) =>
+    `(DCC[$ty:gen_dcc_loc] (Π(Id(Sort $m), Λ(Sort $m, Id(Sort $m), `(Coup(Id(Sort $m)), $β))) $α))
+  | `(DCC[$ty:gen_dcc_loc] (: Sort $m) → $β:gen_dcc) =>
+    `(DCC[$ty:gen_dcc_loc] Λ(Sort $m, Id(Sort $m), `(Coup(Id(Sort $m)), $β)))
+
 syntax "gen_dsl" str "for" term  : command
 syntax "gen_dsl" str "for" "?"   : command
 

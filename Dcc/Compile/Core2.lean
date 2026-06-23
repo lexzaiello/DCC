@@ -210,6 +210,15 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
     return (DCC? !Λ(ctx.deref, α'', inner))
   | .forallE _name α β _binfo => do
     -- ctx doesn't need to be deref'd here because Π does not slice off box
+    let n₁ := (n_occurrences 0 β)
+    let n₂ := (n_occurrences 0 β)
+    let α₁  ← (map_n_times n₁ ∘ reduce) <$> abstract' τ_c α ctx infer reduce fallback
+    let α₂  ← (map_n_times n₂ ∘ reduce) <$> abstract' τ_c α ctx infer reduce fallback
+    let β'  ← reduce <$> abstract' τ_c β (DCC? !(Coup(α₂))) infer reduce fallback
+
+    return (reduce (DCC? (Π(α₁, Λ(ctx, α₂, β')))))
+  /-| .forallE _name α β _binfo => do
+    -- ctx doesn't need to be deref'd here because Π does not slice off box
     let α'  ← reduce <$> abstract' τ_c α ctx infer reduce fallback
     let n₁ := (n_occurrences 0 β)
     let n₂ := (n_occurrences 0 β) - 1
@@ -217,7 +226,7 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
     let α₂  ← (map_n_times n₂ ∘ reduce) <$> abstract' τ_c α ctx.deref infer reduce fallback
     let β'  ← reduce <$> abstract' τ_c β (DCC? !(Coup(α₂))) infer reduce fallback
 
-    return (reduce (DCC? (Π(α₁, !Λ(ctx.deref, α₂, β')))))
+    return (reduce (DCC? (Π(α₁, !Λ(ctx.deref, α₂, β')))))-/
   | (.app (.const ``Eq.refl _us) α) => do
     let α' ← reduce <$> abstract' τ_c α ctx infer reduce fallback
     return (DCC? refl(α'))
@@ -441,3 +450,20 @@ elab "dcc_infer" infer:infer_cmd_param* tm:term : term => do
 
 #eval Std.format <| dcc_infer (fun (α : Type) (x : α) => x)
 #eval Std.format <| dcc_infer (fun (α : Type) (x : α → Type) => x)
+#eval Std.format <| dcc_infer (fun (x : Type) (y : x → Type) (z : x) => y z)
+
+#eval Std.format <| (DCC *(Sndc(`(⊤, Sort 1))) ∘'
+     Fstc(!<Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>)).infer₂'
+
+#eval (DCC Fstc(!<Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>)).infer₂'
+
+/-
+!Λ(x, y, z)
+
+affine dependent curry is extremely problematic because the argument &(a) becomes unboxed in y,
+when it really shouldn't.
+
+nope, this is correct.
+
+we should just dereference (or check context?) when we go under β
+-/

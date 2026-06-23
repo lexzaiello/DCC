@@ -238,9 +238,11 @@ inductive Judge₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericEx
   | bang   : Judge₂ τ (DCC? Sort m) → Judge₂ (DCC? !(τ)) (DCC? Sort m)
   | box    : Judge₂ x τ
     → Judge₂ (DCC? &(x)) (DCC? !(τ))
-  | unbox  : Judge₂ α (DCC? Sort m)
-    → Reduces₂ (DCC? (!(α) : Sort m) → α) τ
-    → Judge₂ (DCC? *(α)) τ
+  -- This should be dependent I think
+  | unbox  : Judge₂ f τ_f
+    → Arrow α β m τ_f
+    → Reduces₂ (DCC? ((!(α) : Sort m) → β)) τ
+    → Judge₂ (DCC? *(f)) τ
   | app    : Judge₂ f (DCC? (Π(f_α, f_β) x_α))
     → Reduces₂ (DCC? (f_α x_α)) α₁
     → Judge₂ x α₂
@@ -262,8 +264,11 @@ def infer₂.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Gen
     | .some ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
       .some ⟨_, ⟨.fmap ht (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
     | _ => .none
-  | DCC? *(α) => match α.infer₂ with
-    | .some ⟨DCC? Sort m, ⟨ht⟩⟩ => .some ⟨_, ⟨.unbox ht (reduce₂_reduces rfl)⟩⟩
+  | DCC? *(f) => match f.infer₂ with
+    | .some ⟨τ_f, ⟨ht₁⟩⟩ =>
+      match τ_f.read_arrow with
+      | .some ⟨_, _, _, harr⟩ => .some ⟨_, ⟨.unbox ht₁ harr (reduce₂_reduces rfl)⟩⟩
+      | _ => .none
     | _ => .none
   | DCC? !(τ) => match τ.infer₂ with
     | .some ⟨DCC? Sort m, ⟨ht⟩⟩ => .some ⟨_, ⟨.bang ht⟩⟩

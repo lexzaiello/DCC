@@ -51,6 +51,9 @@ def K_example₃ : Expr :=
 def K_example₃' : Option Expr :=
   dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1) (Sort 0))
 
+def K_examplea : Option Expr :=
+  dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1))
+
 def K_example₃'' : Option Expr :=
   dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1) (Sort 0))
 
@@ -60,6 +63,7 @@ def K_example₃'' : Option Expr :=
 --#check dcc_decompile #(K_example₃)
 
 #eval Std.format <| K_example₃'
+#eval Std.format <| K_examplea
 #eval Std.format <| K_example₃''
 
 def K_example' : Option Expr :=
@@ -85,6 +89,10 @@ def K_example' : Option Expr :=
 def S_example : Option Expr :=
   dcc_compile' {GenericExpr.infer₂} {GenericExpr.reduce_all₂}
     fun (α : Sort 1) (β : α → Sort 1) (γ : ∀ (x : α) (y : β x), Sort 1) (x : ∀ (x : α) (y : β x), γ x y) (y : ∀ (x : α), β x) (z : α) => x z (y z)
+
+/-
+Deref order may be reversed?
+-/
 
 /-
 ∀ argument is being marked shared, but it needs its context applied before it can be banged. otherwise, it is not a type.

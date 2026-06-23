@@ -401,6 +401,10 @@ def Shared.deref.{u} {α : Sort u} (s : Shared.{u} α) : α :=
   match s with
   | ⟨s⟩ => s
 
+def Shared.deref'.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β x) (s : Shared.{u} α) : β s.deref :=
+  match s with
+  | ⟨s⟩ => f s
+
 def Shared.map.{u, v} {α : Sort u} (f : α → Sort v) (s : Shared.{u} α) : Type v :=
   match s with
   | ⟨s⟩ => Shared (f s)

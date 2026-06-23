@@ -19,7 +19,7 @@ inductive RedAff.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
   | bang     : RedAff x x' → RedAff (DCC[τ] !(x)) (DCC[τ] !(x'))
   | map      : RedAff (DCC[τ] (!<f> &(x))) (DCC[τ] !((f x)))
   | fmap     : RedAff (DCC[τ] ($<f> &(x))) (DCC[τ] &((f x)))
-  | unbox    : RedAff (DCC[τ] (*(α) &(x))) x
+  | unbox    : RedAff (DCC[τ] (*(f) &(x))) (DCC[τ] (f x))
   | pair     : RedAff (DCC[τ] (⟦β⟧⟨M, N⟩ &(x))) (DCC[τ] ⟦β⟧((M x), (N x (M x))))
   | evalc    : RedAff (DCC[τ] (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC[τ] (x y z))
   | quot     : RedAff (DCC[τ] (`(β, x) y)) x

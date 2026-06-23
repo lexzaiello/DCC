@@ -213,6 +213,10 @@ x : ∀ (s : coup.type α β m), γ s
   DCC? (Π(Id(Sort m), `(Sort m, Π(!<β>, !Λ(α, β, γ)))) !(α)) -- weaken α, keep x
 
 /-
+*(f) &(x) = (f x)
+-/
+
+/-
 β : α → Sort n
 -/
 @[dcc_judge] abbrev curr.β.type.{u} {τ_c : Type u} (f_α x_α : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
@@ -235,7 +239,7 @@ g : ∀ (x : α) (y : β x), γ x y
 ⟨f, g⟩ : ∀ (x : α), Σ(Λ(α, β, γ)) x
 -/
 @[dcc_judge] abbrev pair.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
-  DCC? (Π(Id(Sort m), `(Sort m, Σ(β, γ) ∘' *(α))) !(α))
+  DCC? (Π(Id(Sort m), `(Sort m, *(Σ(β, γ)))) !(α))
 
 @[dcc_judge] abbrev comp'.type.{u} {τ_c : Type u} (α γ g : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
   DCC? (Π(Id(Sort m), `(Sort m, γ ∘' g)) α)
@@ -248,7 +252,7 @@ f ∘ g : ∀ (x : α), γ ∘ g
 -/
 
 @[dcc_judge] abbrev comp.g.type.{u} {τ_c : Type u} (α β : GenericExpr τ_c) (m : Level) :=
-  (DCC? (Π(Id(Sort m), `(Sort m, Σ(`(α, α), Λ(α, `(α, α), `(Coup(`(α, α)), β))) ∘' *(α))) !(α)))
+  (DCC? (Π(Id(Sort m), `(Sort m, *(Σ(`(α, α), Λ(α, `(α, α), `(Coup(`(α, α)), β)))))) !(α)))
 
 /-
 (some (Π(Id(Sort 1),
@@ -260,22 +264,22 @@ f ∘ g : ∀ (x : α), γ ∘ g
 -/
 
 @[dcc_judge] abbrev comp₂.g.type.{u} {τ_c : Type u} (α β : GenericExpr τ_c) (m : Level) :=
-  (DCC? (Π(Id(Sort m), `(Sort m, Σ(`(α, α), Λ(α, `(α, α), β ∘' Fstc(`(α, α)))) ∘' *(α))) !(α)))
+  (DCC? (Π(Id(Sort m), `(Sort m, *(Σ(`(α, α), Λ(α, `(α, α), β ∘' Fstc(`(α, α))))))) !(α)))
 
 inductive Comp₂.g.type.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c → Level → GenericExpr τ_c → Type u
   | dep    : Comp₂.g.type α β m (comp₂.g.type α β m)
-  | simple : Comp₂.g.type α β m (DCC? (Π(Id(Sort m), `(Sort m, Σ(`(α, α), `(α, β)) ∘' *(α))) !(α)))
+  | simple : Comp₂.g.type α β m (DCC? (Π(Id(Sort m), `(Sort m, *(Σ(`(α, α), `(α, β))))) !(α)))
 
 def read_comp₂_g_type.{u} {τ_c : Type u} [DecidableEq τ_c] (τ : GenericExpr τ_c) : Option ((α β : GenericExpr τ_c) × (m : Level) × (Comp₂.g.type α β m τ)) :=
   match τ with
-  | (DCC? (Π(Id(Sort m), `(_a, Σ(_b, Λ(_c, _d, β ∘' _e)) ∘' _f)) !(α))) =>
-    if heq : (DCC? (Π(Id(Sort m), `(_a, Σ(_b, Λ(_c, _d, β ∘' _e)) ∘' _f)) !(α))) = (comp₂.g.type α β m) then
+  | (DCC? (Π(Id(Sort m), `(_a, *(Σ(_b, Λ(_c, _d, β ∘' _e))))) !(α))) =>
+    if heq : (DCC? (Π(Id(Sort m), `(_a, *(Σ(_b, Λ(_c, _d, β ∘' _e))))) !(α))) = (comp₂.g.type α β m) then
       .some ⟨α, β, m, (by
         cases heq
         exact .dep )⟩
     else .none
-  | (DCC? (Π(Id(Sort m), `(_a, Σ(_b, `(_c, β)) ∘' _e)) !(α))) =>
-    if heq : (DCC? (Π(Id(Sort m), `(_a, Σ(_b, `(_c, β)) ∘' _e)) !(α))) = (DCC? (Π(Id(Sort m), `(Sort m, Σ(`(α, α), `(α, β)) ∘' *(α))) !(α))) then
+  | (DCC? (Π(Id(Sort m), `(_a, *(Σ(_b, `(_c, β))))) !(α))) =>
+    if heq : (DCC? (Π(Id(Sort m), `(_a, *(Σ(_b, `(_c, β))))) !(α))) = (DCC? (Π(Id(Sort m), `(Sort m, *(Σ(`(α, α), `(α, β))))) !(α))) then
       .some ⟨α, β, m, (by
         cases heq
         exact .simple )⟩

@@ -36,7 +36,7 @@ inductive Domain.{u} {τ_c : Type u} : GenericExpr (@EtaConst τ_c) → GenericE
   | refl₂    : ReflTransGen (RedAff (τ := @EtaConst τ_c)) (DCC? (f_α &(env))) τ
     → IsNorm (RedAff (τ := @EtaConst τ_c)) τ
     → Domain (DCC? (refl(f_α) &(env))) τ
-  | unbox    : Domain (DCC? *(α)) (DCC? !(α))
+  | unbox    : Domain f α → Domain (DCC? *(f)) (DCC? !(α))
   | id       : Domain (DCC? Id(α)) α
   | fstc     : Domain (DCC? Fstc(β)) (DCC? Coup(β))
   | sndc     : Domain (DCC? Sndc(β)) (DCC? Coup(β))
@@ -86,7 +86,11 @@ def domain?.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr (@EtaConst �
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.refl₁ h⟩⟩
     | _ => .none
   | (DCC? (refl(_f_α) &(_env))) => .some ⟨_, ⟨.refl₂ (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? *(_α)) => .some ⟨_, ⟨.unbox⟩⟩
+  | (DCC? *(f)) =>
+    match f.domain? with
+    | .some ⟨_, ⟨h⟩⟩ =>
+      .some ⟨_, ⟨.unbox h⟩⟩
+    | _ => .none
   | (DCC? Id(_α)) => .some ⟨_, ⟨.id⟩⟩
   | (DCC? Fstc(_β)) => .some ⟨_, ⟨.fstc⟩⟩
   | (DCC? Sndc(_β)) => .some ⟨_, ⟨.sndc⟩⟩

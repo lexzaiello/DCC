@@ -1,103 +1,9 @@
-/-
-Sharing is being super super annoying.
-
-unbox maps should solve some issues, theoretically.
-
-a better way to do the compilation
-
-instead of predicting, backtrack?
-
-Reach an app that consumes the context ->
-"infect" back up that this must be duplicatable.
-
-instead of calculating ahead of time, calculate after the fact.
-
-λ x => f x x
-
-(Λ(..., ..., f x x) ∗)
-
-build bottom up?
-
-every time the context is split, make a callback
-
-(M N)[ctx]
-
-M and N make folds:
-
-they give you what they're going to do later.
-
-we assume nothing needs sharing.
-
-no explicit share marker.
-
-split the program into leaves. nodes:
-
-- variable accesses
-- apps
-- binders
-
-variable accesses are assumed to work on the raw context.
-
-(fun (α : Type) (x : α) => x)
-
-this doesn't require any duplication.
-
-the only node that should cause duplication is application of the context.
-
-if a variable is used more than once, it must be duplicated.
-doesn't matter if it's an app or not.
-
-in fact, it's always the entire context that gets duplicated, not individual variables.
-
-we're just counting the depth of apps that use any bound variables.
-
-(fun (f : ⊤ → ⊤) (x : ⊤) => f x)
-
-context gets duplicated once here.
-
-use tail recursion?
-
-abstract:
-
--
-
-def abstract (...) (in_e : Expr)
-
-| .app M N =>
-
-pass down along a function for what to do with variable accesses?
-
-(fun (α : Type) (x : α) => x)
-
-abstract (fun
-
-variable accesses are functions of the environment but they do not
-care if it is boxed or not. but do they?
-
-we count boxes starting from variables.
-
-- just the number of times the bound variable occurrs under the lambda
-- box it that many times
-- box it inside Ctx as well
-- no need to edit the raw lean code
-
-- deref has no purpose because we can look this up in the context type information
-
-Variable accesses are just as usual, and we use the context to calculate derefs.
-
-- context should never be banged, I don't think. pairs should automatically deref.
-- just count number of occurrences of the variable under the lambda.
-- this should be the number of times it is copied in an app. box it that many times.
--/
-
 import Dcc.Judge
 import Dcc.Ast
 import Dcc.Judge2
 import Dcc.Types
 import Dcc.Eta.Reduce
 import Dcc.Tactic.Debug
-
-#eval (DCC *(Sndc(`(⊤, Sort 0)))).infer₂'
 
 open Lean.Meta (MetaM)
 
@@ -212,101 +118,9 @@ def fvar_expr_to_lean (e : GenericExpr Lean.FVarId) (τ : Lean.Name := ``Unit) :
 end GenericExpr
 
 /-
-Auto-detecting sharing?
-
-λ x => M N
-
-x should be shared in this scope.
-Just need a stack-like thing.
-
-every variable access under an app needs sharing.
-a tree. every split under the lambda where the variable is used must be accounted for.
-
-If a variable occurs in another element that is also shared, then it must also be shared.
-
-this becomes slightly more complicated because there may be a different depth
-in lambda ty vs lambda body
-
-so we will need to bang in the context type for book-keeping.
-
-box top-level arguments by
-
-lam:
-max (n_occurrences depth bty) (n_occurrences depth bdy)
-
-app:
-
-this shit so confusing.
-
-why can't we like invert the program and start out from the variable accesses?
-
-or instead make a graph..?
-
-start innermost from variable
-
-scan from top, find how many boxes it would have left with respect to this position..
-
-λ x => f x
-
-x -> 0
-
-go up one level λ x => f x
-
-can see
-
-a variable MUST be boxed if it occurs as the left or right of an app:
-
-n y
-x n
-
-+1 box every time it is mentioned in a side of an app
-
-with respect to x
-go up one level λ x => f x
-under the binder, it is boxed due to rule above once. therefore, it must be boxed once.
-
-
-backtracking
-I don't think dereferencing is ever necessary, except when there is a mismatch in box num
-between bty and bdy.
-
-however, we may also (?) be able to avoid this by splitting the context
-between bty and bdy?
-consider them seperately?
-
-λ x : (f x) => f x
-
-first:
-- compile body
-  - compile app
-  - compile f
-    - go up to => f x
-
-we need to box the INTIIAL f object the n (n + 1) number of times it occurs under a lambda.
-
-max (n_occurrences bty) (n_occurrences bdy)
-
-from there on out, we're just consuming it. destroying it.
-note:
-- it is impossible for !(...) or &(...) to show up EXCEPT for sharing injected by the
-compiler
-
-therefore, variable accesses can dereference eagerly
-
-we should ALWAYS box at least once.
-- subtract one from n_occurrences, but always box at least once.
-this way, we do not need to distinguish between Λ and !Λ
-
-still need to deref ctx under app.
-
-- we do not manually mark objects as shared
-it is all based on the context
--/
-
-/-
 > 1 means the value showed up in an app, not just any access
 -/
-def n_occurrences (depth : ℕ) (in_e : Lean.Expr) : ℕ :=
+def n_occurrences (depth : DebruijnIdx) (in_e : Lean.Expr) : ℕ :=
   match in_e with
   | .bvar n => if n == depth then 1 else 0
   | .lam _ bty bdy _ => max (n_occurrences depth bty) (n_occurrences depth.succ bdy)
@@ -352,33 +166,6 @@ termination_by (idx, GenericExpr.size ctx)
 def GenericExpr.deref : GenericExpr τ → GenericExpr τ
   | DCC? !(Γ) => Γ
   | Γ => Γ
-
-/-
-TODO: better logic for detecting duplication. Maybe some kind of user marker.
-
-deref needs to see environment, maybe?
-
-e.g.,
-
-deref (α := deref ...) ...
-
-f_α : δ → Sort m
-*(f_α) : ∀ (env : !(δ)) (x : !<f_α> env), f_α (*(
-
-this may not be necessary. think this through.
-
-deref (α is function of environment)
-
-is equivalent to just dereferencing environment, then mutating. I think.
-
-Shared.deref (fun (ctx : Γ) => α)
-
-however, the deref is a standalone function.
-
-deref is only really valid on a variable access.
-
-I think we just have the order flipped or something.
--/
 
 #check Eq.refl
 
@@ -446,8 +233,6 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
       let α : GenericExpr τ_c := (reduce (f_α.app x_α)).deref
       match reduce (f_β.app x_α) with
       | DCC? Π(β, _γ) =>
-        dbg_trace α
-        dbg_trace N'
         match (·.fst) <$> infer.snd (DCC? Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))) with
         | .some (DCC? (Π(_f_α, f_β₀) x_α₀)) =>
           match reduce (DCC? (f_β₀ x_α₀)) with
@@ -586,7 +371,7 @@ def do_dcc_compile_fvars (flags : Lean.TSyntaxArray `infer_cmd_param) (tm : Lean
   | _ =>
     return GenericExpr.fvar_expr_to_lean (← Lean.Elab.liftMacroM <| cc Lean.FVarId tm ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
 
-elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
+elab "dcc_compile" infer:infer_cmd_param* tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
   let e_tm' ← Lean.instantiateMVars e_tm
   match infer.toList with
@@ -597,7 +382,7 @@ elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
   | _ =>
     return Lean.toExpr (← Lean.Elab.liftMacroM <| cc Unit e_tm' ⟨GenericExpr.Judge, GenericExpr.infer⟩ GenericExpr.reduce_all₂)
 
-elab "dcc_compile''" infer:infer_cmd_param* tm:term : term => do
+elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
   let e_tm' ← Lean.instantiateMVars e_tm
 
@@ -614,57 +399,44 @@ elab "dcc_compile''" infer:infer_cmd_param* tm:term : term => do
   | _ =>
     return GenericExpr.fvar_expr_to_lean (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
 
-#eval dcc_compile' {Expr.Judge₂} {Expr.infer₂} ((fun (x : Sort 0) => ((fun (x : Sort 0) => x) x)) True)
+#eval dcc_compile {Expr.Judge₂} {Expr.infer₂} ((fun (x : Sort 0) => ((fun (x : Sort 0) => x) x)) True)
 
-elab "dcc_infer''" infer:infer_cmd_param* tm:term : term => do
+elab "dcc_infer" infer:infer_cmd_param* tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
   let e_tm' ← Lean.instantiateMVars e_tm
-  let dcc_e ← do_dcc_compile infer e_tm'
-  return dcc_e
 
-macro "dcc_infer'" infer:infer_cmd_param* tm:term : term =>
+  let cc_raw_expr (e : Lean.Expr) : Lean.MacroM (GenericExpr Lean.FVarId) :=
+    match e with
+    | .fvar fv => pure (.const fv)
+    | e => Lean.Macro.throwError s!"unrecognized expression: {e}"
+
+  let e' ← match infer.toList with
+  | [_infer] =>
+    Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr
+  | [_infer, _reduce] =>
+    Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr
+  | _ =>
+    Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr
+
+  let some τ ← (pure (GenericExpr.infer₂ e')) | throwError m!"does not type-check: {e'}"
+  return (GenericExpr.fvar_expr_to_lean τ.fst)
+
+/-macro "dcc_infer" infer:infer_cmd_param* tm:term : term =>
   match infer.toList with
   | [infer] =>
     match infer with
     | `(infer_cmd_param| { $infer:term }) =>
-      `(term| do Sigma.fst <$> ($infer:term (dcc_compile' {$infer:term} $tm:term)))
-    | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
+      `(term| do Sigma.fst <$> ($infer:term (dcc_compile {$infer:term} $tm:term)))
+    | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile $tm:term))
   | [infer, reduce] =>
     match infer with
     | `(infer_cmd_param| { $infer:term }) =>
       match reduce with
       | `(infer_cmd_param| { $reduce:term }) =>
-        `(term| do Sigma.fst <$> ($infer:term (dcc_compile' {$infer:term} {$reduce:term} $tm:term)))
-      | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
-    | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
+        `(term| do Sigma.fst <$> ($infer:term (dcc_compile {$infer:term} {$reduce:term} $tm:term)))
+      | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile $tm:term))
+    | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile $tm:term))
   | _ =>
-    `(term| do Sigma.fst <$> (dcc_compile' $tm:term).infer)
+    `(term| do Sigma.fst <$> (dcc_compile $tm:term).infer₂)-/
 
-syntax "dcc_compile" infer_cmd_param* term : term
-syntax "dcc_infer" infer_cmd_param* term   : term
-
-open Qq in
-macro_rules
-  | `(dcc_compile $infer:infer_cmd_param* $tm:term) =>
-    match infer.toList with
-    | [_infer] =>
-      `((Lean.Expr.cc' q($tm:term) ⟨Expr.Judge₂, Expr.infer₂⟩))
-    | _ => `((Lean.Expr.cc' q($tm:term)))
-  | `(dcc_infer $infer:infer_cmd_param* $tm:term) =>
-    match infer.toList with
-    | [infer] =>
-      match infer with
-      | `(infer_cmd_param| {$infer:term}) =>
-        `(do Sigma.fst <$> ($infer:term (← (Lean.Expr.cc' q($tm:term)))))
-      | _ => `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))
-    | _ =>
-      `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))
-
-/-
-seemingly need to make the compiler less reliant on the lean internal type-checker
-either we are producing a malformed expression, or our compilation requires type inference at some midway
-point that we should be doing syntactically anyway
-
-ideally, the compiler should not even use elabTerm.
-elabTerm does a lot of preprocessing, and it is not exactly compilation if we are using the lean type checker itself.
--/
+#eval Std.format <| dcc_infer (fun (x : Type) => x)

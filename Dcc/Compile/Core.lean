@@ -170,20 +170,28 @@ abbrev ParamInfer.{u} (τ_c : Type u) := (t_judge : (GenericExpr τ_c → Generi
 
 def cc_var (τ_c : Type) [Repr τ_c] [DecidableEq τ_c] (ctx : Ctx τ_c) (idx : DebruijnIdx) (infer : ParamInfer τ_c := ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩)
   (reduce : GenericExpr τ_c → GenericExpr τ_c := GenericExpr.reduce_all₂) : Lean.MacroM (GenericExpr τ_c) :=
-  match ctx, idx with
-  | DCC? Coup(β), .zero => pure <| DCC? Sndc(β)
-  | DCC? !(Coup(β)), .zero => pure <| DCC? Sndc(β) ∘' *(Coup(β))
-  | DCC? !(Coup(β)), .succ n => do
-    match (·.fst) <$> infer.snd β with
-    | .some (DCC? (Π(a, _b) x_α)) =>
-      (DCC? ((#(·) ∘' Fstc(β)) ∘' !(Coup(β)))) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
-    | _ => Lean.Macro.throwError s!"Couple β index is not valid: {β}"
-  | DCC? Coup(β), .succ n => do
-    match (·.fst) <$> infer.snd β with
-    | .some (DCC? (Π(a, _b) x_α)) =>
-      (·.comp' (DCC? (Fstc(β)))) <$> (cc_var τ_c (reduce (DCC? (a x_α))) n infer (reduce := reduce))
-    | _ => Lean.Macro.throwError s!"Couple β index is not valid: {β}"
-  | e, n => Lean.Macro.throwError s!"Cannot be indexed at {n} as a couple: {e}"
+  match ctx with
+  | DCC? !(α) => do
+    have h_dec : α.size < α.bang.size := by
+      grind
+    let x ← cc_var (τ_c := τ_c) (ctx := α) idx infer reduce
+    pure (DCC? x ∘' *(α))
+  | _ =>
+    match ctx, idx with
+    | DCC? Coup(β), .zero => pure <| DCC? Sndc(β)
+    | DCC? !(Coup(β)), .zero => pure <| DCC? Sndc(β) ∘' *(Coup(β))
+    | DCC? !(Coup(β)), .succ n => do
+      match (·.fst) <$> infer.snd β with
+      | .some (DCC? (Π(a, _b) x_α)) =>
+        (DCC? ((#(·) ∘' Fstc(β)) ∘' !(Coup(β)))) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
+      | τ => Lean.Macro.throwError s!"Couple β index is not valid: ({β} : {τ})"
+    | DCC? Coup(β), .succ n => do
+      match (·.fst) <$> infer.snd β with
+      | .some (DCC? (Π(a, _b) x_α)) =>
+        (·.comp' (DCC? (Fstc(β)))) <$> (cc_var τ_c (reduce (DCC? (a x_α))) n infer (reduce := reduce))
+      | τ => Lean.Macro.throwError s!"Couple β index is not valid: ({β} : {τ})"
+    | e, n => Lean.Macro.throwError s!"Cannot be indexed at {n} as a couple: {e}"
+termination_by (idx, GenericExpr.size ctx)
 
 def GenericExpr.deref : GenericExpr τ → GenericExpr τ
   | DCC? !(Γ) => Γ
@@ -249,7 +257,8 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
     return reduce (DCC? (Π(α', Λ(ctx, α', β'))))
   | .app (.const ``Shared _us) α => do
     let α' ← reduce <$> abstract' τ_c α ctx infer reduce fallback
-    return (DCC? (!(α')))
+    -- could be this one
+    return (DCC? (!<α'>))
   | (.app (.const ``Eq.refl _us) α) => do
     let α' ← reduce <$> abstract' τ_c α ctx infer reduce fallback
     return (DCC? refl(α'))
@@ -259,6 +268,11 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
       | Γ => Γ
     let M' ← abstract' τ_c M ctx' infer reduce fallback
     let N' ← abstract' τ_c N ctx' infer reduce fallback
+
+    dbg_trace M
+    dbg_trace N
+    dbg_trace M'
+    dbg_trace N'
 
     /-
       M : ∀ (x : α) (y : β x)
@@ -306,6 +320,8 @@ def cc (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (root : Lean.Expr) (infer : 
   match root with
   | .app (.const ``Shared _us) x => do
     let x' ← cc τ_c x infer reduce fallback
+    -- could also be this one
+    -- this one is top level though, so probably right
     return DCC? !(x')
   | .app (.app (.const ``Shared.share _us) _α) x => do
     let x' ← cc τ_c x infer reduce fallback
@@ -437,10 +453,20 @@ def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
     match n_used with
     | 0 => return .forallE a bty' (← wrap_share_auto bdy) b
     | k =>
-      let lv ← Lean.Meta.getLevel bty'
+      let lv ← Lean.Meta.getLevel bty <|> Lean.Meta.mkFreshLevelMVar
       let bty' := wrap_shares k lv bty'
       let bdy' := deref_vars k 0 lv bty (← wrap_share_auto bdy)
       return .forallE a bty' bdy' b
+  /-| .forallE a bty bdy b => do
+    let bty' ← wrap_share_auto bty
+    let n_used := shared_in 0 bdy
+    match n_used with
+    | 0 => return .forallE a bty' (← wrap_share_auto bdy) b
+    | k =>
+      let lv ← Lean.Meta.getLevel bty'
+      let bty' := wrap_shares k lv bty'
+      let bdy' := deref_vars k 0 lv bty (← wrap_share_auto bdy)
+      return .forallE a bty' bdy' b-/
   | .app M N => do
     let M' ← wrap_share_auto M
     let N' ← wrap_share_auto N
@@ -626,3 +652,12 @@ macro_rules
       | _ => `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))
     | _ =>
       `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))
+
+/-
+seemingly need to make the compiler less reliant on the lean internal type-checker
+either we are producing a malformed expression, or our compilation requires type inference at some midway
+point that we should be doing syntactically anyway
+
+ideally, the compiler should not even use elabTerm.
+elabTerm does a lot of preprocessing, and it is not exactly compilation if we are using the lean type checker itself.
+-/

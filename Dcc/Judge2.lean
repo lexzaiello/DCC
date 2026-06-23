@@ -187,9 +187,9 @@ inductive Judge₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericEx
     → Reduces₂ α α'
     → Reduces₂ (curr'.type α' β γ' m) τ
     → Judge₂ (DCC? !Λ(α, β, x)) τ
-  | map    : Judge₂ x (DCC? (Π(Id(Sort m), f_β) α))
-    → Reduces₂ (DCC? (f_β α)) β
-    → Reduces₂ (DCC? (Π(Id(Sort m), `(Sort m, !<β>)) !(α))) τ
+  | map    : Judge₂ x τ_x
+    → Arrow α (DCC? Sort n) m τ_x
+    → Reduces₂ (DCC? ((!(α) : Sort m) → Sort n)) τ
     → Judge₂ (DCC? !<x>) τ
   | fmap   : Judge₂ x (DCC? (Π(Id(Sort m), f_β) α))
     → Reduces₂ (DCC? (f_β α)) β
@@ -251,9 +251,12 @@ inductive Judge₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericEx
 
 def infer₂.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : GenericExpr τ_c) : Option ((t : GenericExpr τ_c) × PULift.{1, 0} (Judge₂ e t)) :=
   match e with
-  | DCC? !<f> => match f.infer₂ with
-    | .some ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
-      .some ⟨_, ⟨.map ht (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
+  | DCC? !<f> =>
+    match infer₂ f with
+    | .some ⟨τ_f, ⟨ht₁⟩⟩ =>
+      match τ_f.read_arrow with
+      | .some ⟨_α, DCC? Sort _n, _m, harr⟩ => .some ⟨_, ⟨.map ht₁ harr (reduce₂_reduces rfl)⟩⟩
+      | _ => .none
     | _ => .none
   | DCC? $<f> => match f.infer₂ with
     | .some ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>

@@ -8,7 +8,7 @@ namespace GenericExpr
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   match e with
-  | DCC[.] ∗ => 0
+  | DCC[.] ∗ => 1
   | DCC[.] ⊤ => 2
   | DCC[.] ⊥ => 2
   | DCC[.] x = y => x.size + y.size

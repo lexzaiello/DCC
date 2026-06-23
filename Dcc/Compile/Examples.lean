@@ -79,3 +79,30 @@ def K_example' : Option Expr :=
 
 #eval Std.format <| (DCC (Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))) ⟦`(⊤, Sort 1)⟧(∗, Sort 0))).reduce_all₂
 #eval (DCC (Sndc(`(⊤, Sort 1)) ⟦`(⊤, Sort 1)⟧(∗, Sort 0))).reduce_all₂
+
+#eval Std.format <| (DCC !<Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>).infer₂'
+
+def S_example : Option Expr :=
+  dcc_compile' {GenericExpr.infer₂} {GenericExpr.reduce_all₂}
+    fun (α : Sort 1) (β : α → Sort 1) (γ : ∀ (x : α) (y : β x), Sort 1) (x : ∀ (x : α) (y : β x), γ x y) (y : ∀ (x : α), β x) (z : α) => x z (y z)
+
+/-
+∀ argument is being marked shared, but it needs its context applied before it can be banged. otherwise, it is not a type.
+
+this is probably an issue with auto-sharing since this can only be explained by the number of calculations.
+K has the same first two params.
+
+this is happening before infer time, to be clear, which is even more sus. probably issue with auto wrap share.
+
+the number of times being shared is not the issue.
+the issue is when a share is itself shared.
+the other confusion is Π not receiving its context, even though it's being used like a type.
+
+unless we're at the top level, i.e., in CC, I think we can assume there is a context,
+in which case it should not be !(..), but actually !<...>? maybe.
+
+things under abstract are all functions of the context. so !(...) is wrong I think.
+-/
+
+#eval (DCC Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))).infer₂'
+#eval (DCC Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))).infer₂'

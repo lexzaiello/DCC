@@ -187,10 +187,15 @@ inductive Judge₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericEx
     → Reduces₂ α α'
     → Reduces₂ (curr'.type α' β γ' m) τ
     → Judge₂ (DCC? !Λ(α, β, x)) τ
-  | map    : Judge₂ x τ_x
-    → Arrow α (DCC? Sort n) m τ_x
+  -- !<f> &(x) = !(x)
+  | map    : Judge₂ x (DCC? (Π(Id(Sort m), f_β) α))
+    → Reduces₂ (DCC? (f_β α)) (DCC? `(α, Sort n))
     → Reduces₂ (DCC? ((!(α) : Sort m) → Sort n)) τ
     → Judge₂ (DCC? !<x>) τ
+  /-| map    : Judge₂ x τ_x
+    → Arrow α (DCC? Sort n) m τ_x
+    → Reduces₂ (DCC? ((!(α) : Sort m) → Sort n)) τ
+    → Judge₂ (DCC? !<x>) τ-/
   | fmap   : Judge₂ x (DCC? (Π(Id(Sort m), f_β) α))
     → Reduces₂ (DCC? (f_β α)) β
     → Reduces₂ (DCC? (Π(Id(Sort m), `(Sort m, !<β>)) !(α))) τ
@@ -239,10 +244,13 @@ inductive Judge₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericEx
   | box    : Judge₂ x τ
     → Judge₂ (DCC? &(x)) (DCC? !(τ))
   -- This should be dependent I think
-  | unbox  : Judge₂ f (DCC? (Π(Id(Sort m), f_β) α))
+  | unmap  : Judge₂ f (DCC? (Π(Id(Sort m), f_β) α))
     → Reduces₂ (DCC? (f_β α)) β
-    → Reduces₂ (DCC? ((Π(Id(Sort m), `(Sort m, *(β))) !(α)))) τ
-    → Judge₂ (DCC? *(f)) τ
+    → Reduces₂ (DCC? ((Π(Id(Sort m), `(Sort m, *<β>)) !(α)))) τ
+    → Judge₂ (DCC? *<f>) τ
+  | unbox  : Judge₂ α (DCC? Sort m)
+    → Reduces₂ (DCC? ((!(α) : Sort m) → α)) τ
+    → Judge₂ (DCC? *(α)) τ
   | app    : Judge₂ f (DCC? (Π(f_α, f_β) x_α))
     → Reduces₂ (DCC? (f_α x_α)) α₁
     → Judge₂ x α₂
@@ -255,18 +263,33 @@ def infer₂.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Gen
   match e with
   | DCC? !<f> =>
     match infer₂ f with
+    | .some ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht₁⟩⟩ =>
+      match (DCC? (f_β α)).reduce_all₂ with
+      | (DCC? `(α₂, Sort n)) =>
+        if heq : (DCC? (f_β α)).reduce_all₂ = (DCC? `(α, Sort n)) then
+          .some ⟨_, ⟨.map ht₁ (reduce₂_reduces heq) (reduce₂_reduces rfl)⟩⟩
+        else .none
+      | _ => .none
+    | _ => .none
+  /-| DCC? !<f> =>
+    match infer₂ f with
     | .some ⟨τ_f, ⟨ht₁⟩⟩ =>
       match τ_f.read_arrow with
       | .some ⟨_α, DCC? Sort _n, _m, harr⟩ => .some ⟨_, ⟨.map ht₁ harr (reduce₂_reduces rfl)⟩⟩
       | _ => .none
-    | _ => .none
+    | _ => .none-/
   | DCC? $<f> => match f.infer₂ with
     | .some ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
       .some ⟨_, ⟨.fmap ht (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
     | _ => .none
-  | DCC? *(f) => match f.infer₂ with
+  | DCC? *<f> => match f.infer₂ with
     | .some ⟨DCC? (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩ =>
-      .some ⟨_, ⟨.unbox ht₁ (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
+      .some ⟨_, ⟨.unmap ht₁ (reduce₂_reduces rfl) (reduce₂_reduces rfl)⟩⟩
+    | _ => .none
+  | DCC? *(α) =>
+    match α.infer₂ with
+    | .some ⟨DCC? Sort m, ⟨ht₁⟩⟩ =>
+      .some ⟨_, ⟨.unbox ht₁ (reduce₂_reduces rfl)⟩⟩
     | _ => .none
   | DCC? !(τ) => match τ.infer₂ with
     | .some ⟨DCC? Sort m, ⟨ht⟩⟩ => .some ⟨_, ⟨.bang ht⟩⟩

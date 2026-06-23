@@ -33,6 +33,9 @@ def fvar_expr_to_lean (e : GenericExpr Lean.FVarId) (τ : Lean.Name := ``Unit) :
   | (DCC? *(f))                =>
     let f' := f.fvar_expr_to_lean
     .app (exp ``_root_.GenericExpr.unbox) f'
+  | (DCC? *<f>)                =>
+    let f' := f.fvar_expr_to_lean
+    .app (exp ``_root_.GenericExpr.unmap) f'
   | (DCC? !(f))                =>
     let f' := f.fvar_expr_to_lean
     .app (exp ``_root_.GenericExpr.bang) f'
@@ -151,7 +154,7 @@ def cc_var (τ_c : Type) [Repr τ_c] [DecidableEq τ_c] (ctx : Ctx τ_c) (idx : 
     have h_dec : α.size < α.bang.size := by
       grind
     let x ← cc_var (τ_c := τ_c) (ctx := α) idx infer reduce
-    pure (DCC? *(x))
+    pure (DCC? x ∘' *(α))
   | _ =>
     match ctx, idx with
     | DCC? Coup(β), .zero => pure <| DCC? Sndc(β)
@@ -169,9 +172,6 @@ def GenericExpr.deref : GenericExpr τ → GenericExpr τ
 
 #check Eq.refl
 
-def map_n_times (n : ℕ) (f : GenericExpr τ_c) : GenericExpr τ_c :=
-  (List.replicate n GenericExpr.map).foldr id f
-
 def share_n_times (n : ℕ) (e : GenericExpr τ_c) : GenericExpr τ_c :=
   (List.replicate n GenericExpr.box).foldr id e
 
@@ -182,15 +182,33 @@ def bang_n_times (n : ℕ) (e : GenericExpr τ_c) : GenericExpr τ_c :=
 
 example : bang_n_times 5 (DCC Sort 0) = (DCC !(!(!(!(!(Sort 0)))))) := rfl
 
+def unmap_n_times (n : ℕ) (f : GenericExpr τ_c) : GenericExpr τ_c :=
+  (List.replicate n GenericExpr.unmap).foldr id f
+
+def map_n_times (n : ℕ) (f : GenericExpr τ_c) : GenericExpr τ_c :=
+  match f with
+  /-| DCC? (Π(f_α, f_β)) => DCC? (Π(#(map_n_times n f_α), #(map_n_times n f_β)))
+  | DCC? (Λ(α, β, x)) => DCC? (Λ(#(bang_n_times n α), #(map_n_times n β), #(map_n_times n x)))
+  | DCC? `(α, x) => DCC? `(#(bang_n_times n α), x)-/
+  /-| DCC? `(α, x) => DCC? `(#(bang_n_times n α), x)
+  | DCC? (Λ(α, β, x)) => DCC? (Λ(#(bang_n_times n α), #(map_n_times n β), #(map_n_times n x)))
+  | DCC? (Π(f_α, f_β)) => DCC? (Π(#(map_n_times n f_α), #(map_n_times n f_β)))-/
+  | _ => (List.replicate n GenericExpr.map).foldr id f
+
 abbrev fallback_expr_cc {τ_c : Type} : Lean.Expr →
   Lean.MacroM (GenericExpr τ_c) := fun e => Lean.Macro.throwError s!"not a recognized expression: {e}"
+
+def count_bangs (e : GenericExpr τ_c) : ℕ :=
+  match e with
+  | DCC? !(x) => (count_bangs x).succ
+  | _ => 0
 
 def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx : Ctx τ_c) (infer : ParamInfer τ_c := ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩) (reduce : GenericExpr τ_c → GenericExpr τ_c := GenericExpr.reduce_all₂)
   (fallback : Lean.Expr → Lean.MacroM (GenericExpr τ_c) := fallback_expr_cc) : Lean.MacroM (GenericExpr τ_c) := do
   match e with
   | .fvar v => fallback (.fvar v)
   --| .app (.app (.const ``Shared.deref _us) _α) (.app (.app (.const ``Shared.share _us₁) _α₁) x) => abstract' τ_c x ctx infer reduce fallback
-  | .bvar n => cc_var τ_c ctx n (infer := infer) (reduce := reduce)
+  | .bvar n => reduce <$> (cc_var τ_c ctx n (infer := infer) (reduce := reduce))
   | .app (.app (.const ``Sigma []) α) β => do
     let α' ← abstract' τ_c α ctx infer reduce fallback
     let β' ← abstract' τ_c β (DCC? Coup(α')) infer reduce fallback
@@ -199,7 +217,7 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
     -- α' maps &(ctx)
     -- α' receives deref'd context due to !Λ type
     let α' ← abstract' τ_c α ctx.deref infer reduce fallback
-    let n := (n_occurrences 0 bdy) - 1
+    let n := (n_occurrences 0 bdy) - 2
     let α'' := map_n_times n α'
     -- mark it as shared by mapping with !<α'> n - 1 times
     let inner ← abstract' τ_c bdy (DCC? !(Coup(α''))) infer reduce fallback
@@ -208,13 +226,20 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
     -- wrap α' in n !<...>
     -- bang ctx
     return (DCC? !Λ(ctx.deref, α'', inner))
+  /-| .forallE _name α β _binfo => do
+    let α₁  ← reduce <$> abstract' τ_c α ctx infer reduce fallback
+    let β'  ← reduce <$> abstract' τ_c β (DCC? Coup(α₁)) infer reduce fallback
+    return (reduce (DCC? (Π(α₁, Λ(ctx, α₁, β')))))-/
+  /-
+    TODO: calculate how many times to map / deref until you get a sort
+  -/
   | .forallE _name α β _binfo => do
     -- ctx doesn't need to be deref'd here because Π does not slice off box
-    let n₁ := (n_occurrences 0 β)
-    let n₂ := (n_occurrences 0 β)
+    let n₁ := count_bangs ctx
+    let n₂ := count_bangs ctx
     let α₁  ← (map_n_times n₁ ∘ reduce) <$> abstract' τ_c α ctx infer reduce fallback
     let α₂  ← (map_n_times n₂ ∘ reduce) <$> abstract' τ_c α ctx infer reduce fallback
-    let β'  ← reduce <$> abstract' τ_c β (DCC? !(Coup(α₂))) infer reduce fallback
+    let β'  ← reduce <$> abstract' τ_c β (DCC? (Coup(α₂))) infer reduce fallback
 
     return (reduce (DCC? (Π(α₁, Λ(ctx, α₂, β')))))
   /-| .forallE _name α β _binfo => do
@@ -261,7 +286,7 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
           (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ) ++ Std.Format.line ++
           "with (M): " ++ (Std.format M') ++ .line ++ "(N): " ++ (Std.format N')).pretty
       | τ => Lean.Macro.throwError ("app is not well-typed [2]:" ++ Std.Format.line ++
-        "found: " ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ)).pretty
+        "found: " ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format (DCC? (M' N'))) ++ .line ++ "with type: " ++ (Std.format τ)).pretty
     | x => Lean.Macro.throwError ("app is not well-typed [3]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "in: " ++ (Std.format (DCC? (M' N'))) ++ Std.Format.line ++ "found: " ++ Std.format x).pretty
   | .const ``True.intro [] => return DCC? (`(ctx, ∗))
   | .const ``True [] => return DCC? (`(ctx, ⊤))
@@ -272,11 +297,6 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
     | DCC? (`(ctx, Sort n)) => pure (DCC? (`(ctx, Sort (n + 1))))
     | m => Lean.Macro.throwError s!"not a valid sort: {m}"
   | e => fallback e
-
-def count_bangs (e : GenericExpr τ_c) : ℕ :=
-  match e with
-  | DCC? !(x) => (count_bangs x).succ
-  | _ => 0
 
 def cc (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (root : Lean.Expr) (infer : ParamInfer τ_c)
   (reduce : GenericExpr τ_c → GenericExpr τ_c)
@@ -408,7 +428,8 @@ elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
   | _ =>
     return GenericExpr.fvar_expr_to_lean (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
 
-#eval dcc_compile {Expr.Judge₂} {Expr.infer₂} ((fun (x : Sort 0) => ((fun (x : Sort 0) => x) x)) True)
+#eval Std.format <| dcc_compile
+  {Expr.Judge₂} {Expr.infer₂} ((fun (x : Sort 0) => ((fun (x : Sort 0) => x) x)) True)
 
 elab "dcc_infer" infer:infer_cmd_param* tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
@@ -433,7 +454,7 @@ elab "dcc_infer" infer:infer_cmd_param* tm:term : term => do
 /-macro "dcc_infer" infer:infer_cmd_param* tm:term : term =>
   match infer.toList with
   | [infer] =>
-    match infer with
+l    match infer with
     | `(infer_cmd_param| { $infer:term }) =>
       `(term| do Sigma.fst <$> ($infer:term (dcc_compile {$infer:term} $tm:term)))
     | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile $tm:term))
@@ -449,21 +470,39 @@ elab "dcc_infer" infer:infer_cmd_param* tm:term : term => do
     `(term| do Sigma.fst <$> (dcc_compile $tm:term).infer₂)-/
 
 #eval Std.format <| dcc_infer (fun (α : Type) (x : α) => x)
-#eval Std.format <| dcc_infer (fun (α : Type) (x : α → Type) => x)
+#eval Std.format <| dcc_infer (((fun (α : Type 1) (x : α → Type 1) => x) (Type 0)))
 #eval Std.format <| dcc_infer (fun (x : Type) (y : x → Type) (z : x) => y z)
-
-#eval Std.format <| (DCC *(Sndc(`(⊤, Sort 1))) ∘'
-     Fstc(!<Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>)).infer₂'
-
-#eval (DCC Fstc(!<Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>)).infer₂'
+#eval (DCC Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))).infer₂'
+#eval (DCC !<Sndc(`(⊤, Sort 1))>).infer₂'
 
 /-
-!Λ(x, y, z)
+(((!<Π(Sndc(`(⊤, Sort 1)),
+             Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))> ∘'
+         Fstc(!<Π(Sndc(`(⊤, Sort 1)),
+                  Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>)) ∘'
+      *(Coup(!<Π(Sndc(`(⊤, Sort 1)),
+                Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>))) ∘'
+   Fstc(!<((Sndc(`(⊤, Sort 1)) ∘' *(Coup(`(⊤, Sort 1)))) ∘'
+             Fstc(!<Π(Sndc(`(⊤, Sort 1)),
+                      Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>))>))
 
-affine dependent curry is extremely problematic because the argument &(a) becomes unboxed in y,
-when it really shouldn't.
+move map inside Π?
 
-nope, this is correct.
+!<Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))
 
-we should just dereference (or check context?) when we go under β
+map happens inside x
+
+!<Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))
+
+Λ(!(Coup(`(⊤, Sort 1))), *<Sndc(`(⊤, Sort 1))>, !<`(Coup(Sndc(`(⊤, Sort 1))), Sort 1)>)
+
+(Π(!<Sndc(`(⊤, Sort 1))>, Λ(!(Coup(`(⊤, Sort 1))), *<Sndc(`(⊤, Sort 1))>, !<`(Coup(Sndc(`(⊤, Sort 1))), Sort 1)>)) : none)
+
+(Π(!<Sndc(`(⊤, Sort 1))>, Λ(!(Coup(`(⊤, Sort 1))), !<Sndc(`(⊤, Sort 1))>,
+  !<`(Coup(Sndc(`(⊤, Sort 1))), Sort 1)>)) : none)
+
+(Π(!<Sndc(`(⊤, Sort 1))>, Λ(!(Coup(`(⊤, Sort 1))), !<Sndc(`(⊤, Sort 1))>,
+  `(!(Coup(Sndc(`(⊤, Sort 1)))), Sort 1))) : none)
+
+
 -/

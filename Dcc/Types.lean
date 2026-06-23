@@ -239,7 +239,7 @@ g : ∀ (x : α) (y : β x), γ x y
 ⟨f, g⟩ : ∀ (x : α), Σ(Λ(α, β, γ)) x
 -/
 @[dcc_judge] abbrev pair.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
-  DCC? (Π(Id(Sort m), `(Sort m, *(Σ(β, γ)))) !(α))
+  DCC? (Π(Id(Sort m), `(Sort m, *<Σ(β, γ)>)) !(α))
 
 @[dcc_judge] abbrev comp'.type.{u} {τ_c : Type u} (α γ g : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
   DCC? (Π(Id(Sort m), `(Sort m, γ ∘' g)) α)
@@ -252,7 +252,7 @@ f ∘ g : ∀ (x : α), γ ∘ g
 -/
 
 @[dcc_judge] abbrev comp.g.type.{u} {τ_c : Type u} (α β : GenericExpr τ_c) (m : Level) :=
-  (DCC? (Π(Id(Sort m), `(Sort m, *(Σ(`(α, α), Λ(α, `(α, α), `(Coup(`(α, α)), β)))))) !(α)))
+  (DCC? (Π(Id(Sort m), `(Sort m, *<Σ(`(α, α), Λ(α, `(α, α), `(Coup(`(α, α)), β)))>)) !(α)))
 
 /-
 (some (Π(Id(Sort 1),
@@ -264,22 +264,22 @@ f ∘ g : ∀ (x : α), γ ∘ g
 -/
 
 @[dcc_judge] abbrev comp₂.g.type.{u} {τ_c : Type u} (α β : GenericExpr τ_c) (m : Level) :=
-  (DCC? (Π(Id(Sort m), `(Sort m, *(Σ(`(α, α), Λ(α, `(α, α), β ∘' Fstc(`(α, α))))))) !(α)))
+  (DCC? (Π(Id(Sort m), `(Sort m, *<Σ(`(α, α), Λ(α, `(α, α), β ∘' Fstc(`(α, α))))>)) !(α)))
 
 inductive Comp₂.g.type.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c → Level → GenericExpr τ_c → Type u
   | dep    : Comp₂.g.type α β m (comp₂.g.type α β m)
-  | simple : Comp₂.g.type α β m (DCC? (Π(Id(Sort m), `(Sort m, *(Σ(`(α, α), `(α, β))))) !(α)))
+  | simple : Comp₂.g.type α β m (DCC? (Π(Id(Sort m), `(Sort m, *<Σ(`(α, α), `(α, β))>)) !(α)))
 
 def read_comp₂_g_type.{u} {τ_c : Type u} [DecidableEq τ_c] (τ : GenericExpr τ_c) : Option ((α β : GenericExpr τ_c) × (m : Level) × (Comp₂.g.type α β m τ)) :=
   match τ with
-  | (DCC? (Π(Id(Sort m), `(_a, *(Σ(_b, Λ(_c, _d, β ∘' _e))))) !(α))) =>
-    if heq : (DCC? (Π(Id(Sort m), `(_a, *(Σ(_b, Λ(_c, _d, β ∘' _e))))) !(α))) = (comp₂.g.type α β m) then
+  | (DCC? (Π(Id(Sort m), `(_a, *<Σ(_b, Λ(_c, _d, β ∘' _e))>)) !(α))) =>
+    if heq : (DCC? (Π(Id(Sort m), `(_a, *<Σ(_b, Λ(_c, _d, β ∘' _e))>)) !(α))) = (comp₂.g.type α β m) then
       .some ⟨α, β, m, (by
         cases heq
         exact .dep )⟩
     else .none
-  | (DCC? (Π(Id(Sort m), `(_a, *(Σ(_b, `(_c, β))))) !(α))) =>
-    if heq : (DCC? (Π(Id(Sort m), `(_a, *(Σ(_b, `(_c, β))))) !(α))) = (DCC? (Π(Id(Sort m), `(Sort m, *(Σ(`(α, α), `(α, β))))) !(α))) then
+  | (DCC? (Π(Id(Sort m), `(_a, *<Σ(_b, `(_c, β))>)) !(α))) =>
+    if heq : (DCC? (Π(Id(Sort m), `(_a, *<Σ(_b, `(_c, β))>)) !(α))) = (DCC? (Π(Id(Sort m), `(Sort m, *<Σ(`(α, α), `(α, β))>)) !(α))) then
       .some ⟨α, β, m, (by
         cases heq
         exact .simple )⟩
@@ -404,6 +404,7 @@ def toFormat.{u} {τ : Type u} [hFmt : Std.ToFormat τ]
   | (DCC? $<f>)                => comb "$" (paren := angle_hard) [f.toFormat pretty]
   | (DCC? &(x))                => "&" ++ (paren (x.toFormat pretty))
   | (DCC? *(x))                => "*" ++ (paren (x.toFormat pretty))
+  | (DCC? *<x>)                => comb "*" (paren := angle_hard) [x.toFormat pretty]
   | (DCC? !(x))                => "!" ++ (paren (x.toFormat pretty))
   | (DCC? Eval(α, β, x))       => comb "Eval" [α.toFormat pretty, β.toFormat pretty, x.toFormat pretty]
   | (DCC? `(β, x))             => comb "`" [β.toFormat pretty, x.toFormat pretty]

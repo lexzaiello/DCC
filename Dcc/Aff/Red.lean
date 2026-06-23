@@ -19,7 +19,8 @@ inductive RedAff.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
   | bang     : RedAff x x' → RedAff (DCC[τ] !(x)) (DCC[τ] !(x'))
   | map      : RedAff (DCC[τ] (!<f> &(x))) (DCC[τ] !((f x)))
   | fmap     : RedAff (DCC[τ] ($<f> &(x))) (DCC[τ] &((f x)))
-  | unbox    : RedAff (DCC[τ] (*(f) &(x))) (DCC[τ] (f x))
+  | unbox    : RedAff (DCC[τ] (*(α) &(x))) x
+  | unmap    : RedAff (DCC[τ] (*<f> &(x))) (DCC[τ] (f x))
   | pair     : RedAff (DCC[τ] (⟦β⟧⟨M, N⟩ &(x))) (DCC[τ] ⟦β⟧((M x), (N x (M x))))
   | evalc    : RedAff (DCC[τ] (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC[τ] (x y z))
   | quot     : RedAff (DCC[τ] (`(β, x) y)) x
@@ -61,6 +62,7 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
   | DCC[?] (!<_f> &(_x))                                 => .some ⟨_, ⟨.map⟩⟩
   | DCC[?] ($<_f> &(_x))                                 => .some ⟨_, ⟨.fmap⟩⟩
   | DCC[?] (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
+  | DCC[?] (*<_α> &(_x))                                 => .some ⟨_, ⟨.unmap⟩⟩
   | DCC[?] ((⟦_β⟧⟨_M, _N⟩ &(_x)))                        => .some ⟨_, ⟨.pair⟩⟩
   | (DCC[?] (Eval(_α, _β, _x) ⟦__β⟧(_y, _z)))            => .some ⟨_, ⟨.evalc⟩⟩
   | (DCC[?] (`(_β, _x) _y))                              => .some ⟨_, ⟨.quot⟩⟩
@@ -215,11 +217,11 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | fmap => exact ⟨_, .refl, .refl⟩
     | congrFun h => cases h
     | congrArg h => cases h
-  | unbox =>
+  | unbox | unmap =>
     cases h₂ with
-    | unbox => exact ⟨_, .refl, .refl⟩
     | congrArg h => cases h
     | congrFun h => cases h
+    | _ => exact ⟨_, .refl, .refl⟩
   | pair =>
     cases h₂ with
     | pair => exact ⟨_, .refl, .refl⟩
@@ -319,7 +321,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | congrArg h => cases h
   | congrFun h_r ih =>
     cases h₂
-    case comp₂ | fmap | map | unbox | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
+    case comp₂ | fmap | map | unmap | unbox | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
     case eql =>
       cases h_r with
       | congrFun h => cases h
@@ -347,8 +349,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     cases h₂ with
     | eql
     | fmap
-    | map
-      | unbox
+    | map | unbox | unmap
     | pair => cases h_r
     | evalc => cases h_r with
       | sigl h => exact ⟨_, .single .evalc, .single (.congrFun (.congrArg h))⟩
@@ -420,7 +421,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
       simp [heq]
       exact .bang h
   repeat exact ⟨_, (RedAff.instRedRel.sound rfl).down, rfl⟩
-  case h_20 =>
+  case h_21 =>
     cases hr with
     | sigl h_x =>
       have ⟨_, hrx', heq'⟩ := semi_complete h_x
@@ -433,7 +434,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
         exact ⟨_, .sigr (by assumption), by rw [heq']⟩
       | .some ⟨_, ⟨h_x'⟩⟩ =>
         exact ⟨_, .sigl (by assumption), by rw [heq']⟩
-  case h_21 =>
+  case h_22 =>
     cases hr with
     | pairl h =>
       have ⟨_, hrx', heq'⟩ := semi_complete h
@@ -446,18 +447,18 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
         exact ⟨_, .pairr (by assumption), by rw [heq']⟩
       | .some ⟨_, ⟨h_x'⟩⟩ =>
         exact ⟨_, .pairl (by assumption), by rw [heq']⟩
-  case h_22 =>
+  case h_23 =>
     cases hr with
     | coup h =>
       have ⟨_, hrx', heq'⟩ := semi_complete h
       exact ⟨_, .coup hrx', by simp_all⟩
-  case h_23 =>
+  case h_24 =>
     cases hr with
     | eql => simp_all
     | curr' =>
       rename_i h
       exact (h _ _ _ _ _ rfl rfl).elim
-    | unbox =>
+    | unmap | unbox =>
       simp_all
     | pair =>
       simp_all
@@ -482,7 +483,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
       exact ⟨_, .congrFun hrf, by rw [heqf]⟩
     | congrArg h =>
       have ⟨_, hrx, heqx⟩ := semi_complete h
-      rename_i f x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      rename_i f x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
       match f.step? with
       | .none => exact ⟨_, .congrArg hrx, by simp_all⟩
       | .some ⟨_, ⟨hrf⟩⟩ => exact ⟨_, .congrFun hrf, by simp⟩
@@ -490,7 +491,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
     | curr =>
       rename_i h _
       exact (h _ _ _ _ rfl).elim
-  case h_24 hpi heql heq hbang _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hmk hpair hcoup happ =>
+  case h_25 hpi heql heq hbang _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hmk hpair hcoup happ =>
     simp_all
     induction A <;> (
       first

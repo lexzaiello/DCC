@@ -32,6 +32,7 @@ def eta_size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   | DCC[.] Eval(_α, _β, x) => x.eta_size + 1
   | DCC[.] !(x)   => x.eta_size + 1
   | DCC[.] *(α)   => α.eta_size + 2
+  | DCC[.] *<α>   => α.eta_size + 2
   | DCC[.] &(x)   => x.eta_size + x.eta_size + x.eta_size + 2
   | DCC[.] !<x>   => x.eta_size + x.eta_size + x.eta_size + 2
   | DCC[.] $<x>   => x.eta_size + x.eta_size + x.eta_size + 2

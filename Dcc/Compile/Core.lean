@@ -5,7 +5,7 @@ import Dcc.Types
 import Dcc.Eta.Reduce
 import Dcc.Tactic.Debug
 
-#eval (DCC *(Sndc(`(⊤, Sort 0)))).infer₂'
+#eval (DCC *<Sndc(`(⊤, Sort 0))>).infer₂'
 
 open Lean.Meta (MetaM)
 
@@ -35,6 +35,9 @@ def fvar_expr_to_lean (e : GenericExpr Lean.FVarId) (τ : Lean.Name := ``Unit) :
   | (DCC? *(f))                =>
     let f' := f.fvar_expr_to_lean
     .app (exp ``_root_.GenericExpr.unbox) f'
+  | (DCC? *<f>)                =>
+    let f' := f.fvar_expr_to_lean
+    .app (exp ``_root_.GenericExpr.unmap) f'
   | (DCC? !(f))                =>
     let f' := f.fvar_expr_to_lean
     .app (exp ``_root_.GenericExpr.bang) f'
@@ -215,16 +218,17 @@ def cc_var (τ_c : Type) [Repr τ_c] [DecidableEq τ_c] (ctx : Ctx τ_c) (idx : 
     have h_dec : α.size < α.bang.size := by
       grind
     let x ← cc_var (τ_c := τ_c) (ctx := α) idx infer reduce
-    pure (DCC? *(x))
+    -- TODO: use *(x) instead
+    pure (DCC? *<x>)
   | _ =>
     match ctx, idx with
     | DCC? Coup(β), .zero => pure <| DCC? Sndc(β)
-    | DCC? !(Coup(β)), .zero => pure <| DCC? *(Sndc(β))
+    | DCC? !(Coup(β)), .zero => pure <| DCC? *<Sndc(β)>
     | DCC? !(Coup(β)), .succ n => do
       match (·.fst) <$> infer.snd β with
       | .some (DCC? (Π(a, _b) x_α)) =>
         --(DCC? ((#(·) ∘' Fstc(β)) ∘' !(Coup(β)))) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
-        (DCC? (*((#(·) ∘' Fstc(β))))) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
+        (DCC? (*<(#(·) ∘' Fstc(β))>)) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
       | τ => Lean.Macro.throwError s!"Couple β index is not valid: ({β} : {τ})"
     | DCC? Coup(β), .succ n => do
       match (·.fst) <$> infer.snd β with

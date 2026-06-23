@@ -36,7 +36,8 @@ inductive Domain.{u} {τ_c : Type u} : GenericExpr (@EtaConst τ_c) → GenericE
   | refl₂    : ReflTransGen (RedAff (τ := @EtaConst τ_c)) (DCC? (f_α &(env))) τ
     → IsNorm (RedAff (τ := @EtaConst τ_c)) τ
     → Domain (DCC? (refl(f_α) &(env))) τ
-  | unbox    : Domain f α → Domain (DCC? *(f)) (DCC? !(α))
+  | unmap    : Domain f α → Domain (DCC? *<f>) (DCC? !(α))
+  | unbox    : Domain (DCC? *(α)) (DCC? !(α))
   | id       : Domain (DCC? Id(α)) α
   | fstc     : Domain (DCC? Fstc(β)) (DCC? Coup(β))
   | sndc     : Domain (DCC? Sndc(β)) (DCC? Coup(β))
@@ -86,11 +87,12 @@ def domain?.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr (@EtaConst �
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.refl₁ h⟩⟩
     | _ => .none
   | (DCC? (refl(_f_α) &(_env))) => .some ⟨_, ⟨.refl₂ (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? *(f)) =>
+  | (DCC? *<f>) =>
     match f.domain? with
     | .some ⟨_, ⟨h⟩⟩ =>
-      .some ⟨_, ⟨.unbox h⟩⟩
+      .some ⟨_, ⟨.unmap h⟩⟩
     | _ => .none
+  | (DCC? *(_α)) => .some ⟨_, ⟨.unbox⟩⟩
   | (DCC? Id(_α)) => .some ⟨_, ⟨.id⟩⟩
   | (DCC? Fstc(_β)) => .some ⟨_, ⟨.fstc⟩⟩
   | (DCC? Sndc(_β)) => .some ⟨_, ⟨.sndc⟩⟩
@@ -225,7 +227,7 @@ def Domain.semi_complete.{u} {τ_c : Type u} [DecidableEq τ_c] {A B : GenericEx
       | exact hr
       | exact hr', by
         simp_all⟩)
-  case h_21 =>
+  case h_22 =>
     cases hr
     any_goals (focus
       try aesop
@@ -889,6 +891,10 @@ def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c
     match x.eta_to_expr with
     | .some x' => .some (DCC? *(x'))
     | _ => .none
+  | DCC? *<x>   =>
+    match x.eta_to_expr with
+    | .some x' => .some (DCC? *<x'>)
+    | _ => .none
   | DCC? &(x)   =>
     match x.eta_to_expr with
     | .some x' => .some (DCC? &(x'))
@@ -986,6 +992,9 @@ def expr_to_eta.{u} {τ_c : Type u} (e : GenericExpr (τ := τ_c)) : (GenericExp
   | DCC? *(x)   =>
     match x.expr_to_eta with
     | x' => (DCC? *(x'))
+  | DCC? *<x>   =>
+    match x.expr_to_eta with
+    | x' => (DCC? *<x'>)
   | DCC? &(x)   =>
     match x.expr_to_eta with
     | x' => (DCC? &(x'))

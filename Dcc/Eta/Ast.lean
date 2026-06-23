@@ -76,6 +76,7 @@ def contains.{u} {τ : Type u} [BEq τ] (e : GenericExpr (τ := τ))
     | DCC[.] $<α>
     | DCC[.] !(α)
     | DCC[.] *(α)
+    | DCC[.] *<α>
     | DCC[.] Id(α)
     | DCC[.] Eql(α)
     | DCC[.] refl(α) => α.contains to_find
@@ -149,6 +150,7 @@ def arity.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : ℕ :=
   | DCC[.] Eval(_α, _β, _x) => 1
   | DCC[.] !(_x)   => 1
   | DCC[.] *(_α)   => 1
+  | DCC[.] *<_α>   => 1
   | DCC[.] &(_x)   => 1
   | DCC[.] !<_x>   => 1
   | DCC[.] $<_x>   => 1

@@ -220,6 +220,7 @@ inductive GenericExpr.{u} (τ : Type u) where
   | fmap   : GenericExpr τ  → GenericExpr τ
   | bang   : GenericExpr τ  → GenericExpr τ
   | box    : GenericExpr τ  → GenericExpr τ
+  | unmap  : GenericExpr τ  → GenericExpr τ
   | unbox  : GenericExpr τ  → GenericExpr τ
   | eql    : GenericExpr τ  → GenericExpr τ
   | refl   : GenericExpr τ  → GenericExpr τ
@@ -255,6 +256,7 @@ declare_syntax_cat gen_dcc
 
 syntax "!<" gen_dcc ">"                                       : gen_dcc
 syntax "$<" gen_dcc ">"                                       : gen_dcc
+syntax "*<" gen_dcc ">"                                       : gen_dcc
 syntax "*(" gen_dcc ")"                                       : gen_dcc
 syntax "!(" gen_dcc ")"                                       : gen_dcc
 syntax "&(" gen_dcc ")"                                       : gen_dcc
@@ -320,6 +322,8 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "box") #[← `(DCC[$ty:gen_dcc_loc] $x)]
   | `(DCC[$ty:gen_dcc_loc] *($α:gen_dcc))                  => do
     return mkApp (← field ty "unbox") #[← `(DCC[$ty:gen_dcc_loc] $α)]
+  | `(DCC[$ty:gen_dcc_loc] *<$α:gen_dcc>)                  => do
+    return mkApp (← field ty "unmap") #[← `(DCC[$ty:gen_dcc_loc] $α)]
   | `(DCC[$ty:gen_dcc_loc] Eql($f_α:gen_dcc))                        => do
     return mkApp (← field ty "eql") #[← `(DCC[$ty:gen_dcc_loc] $f_α)]
   | `(DCC[$ty:gen_dcc_loc] refl($f_α:gen_dcc))                       => do

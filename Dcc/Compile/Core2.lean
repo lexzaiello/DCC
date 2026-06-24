@@ -120,6 +120,28 @@ def fvar_expr_to_lean (e : GenericExpr Lean.FVarId) (τ : Lean.Name := ``Unit) :
 
 end GenericExpr
 
+def occ_shared (depth : Nat) : Lean.Expr → Bool × Nat
+  | .bvar n => (n == depth, 0)
+  | .app M N =>
+    let (oM, sM) := occ_shared depth M
+    let (oN, sN) := occ_shared depth N
+    ((oM || oN),
+      if oM && oN then 1 + sM + sN
+      else if oM then 1 + sM
+      else if oN then 1 + sN
+      else 0)
+  | .lam _ t b _ | .forallE _ t b _ =>
+    let (ot, st) := occ_shared depth t
+    let (ob, sb) := occ_shared depth.succ b
+    (ot || ob, st + sb)
+  | .letE _ t v b _ =>
+    let (ot, st) := occ_shared depth t
+    let (ov, sv) := occ_shared depth v
+    let (ob, sb) := occ_shared depth.succ b
+    (ot || ov || ob, st + sv + sb)
+  | .proj _ _ s => occ_shared depth s
+  | _ => (false, 0)
+
 /-
 > 1 means the value showed up in an app, not just any access
 -/
@@ -169,6 +191,15 @@ termination_by (idx, GenericExpr.size ctx)
 def GenericExpr.deref : GenericExpr τ → GenericExpr τ
   | DCC? !(Γ) => Γ
   | Γ => Γ
+
+def GenericExpr.deref_map : GenericExpr τ → GenericExpr τ
+  | DCC? f ∘' *(_α)
+  | DCC? !<f>
+  | DCC? $<f>
+  | DCC? *<f> => f
+  | DCC? !Λ(α, β, x) => DCC? Λ(α, β, x.deref_map)
+  | DCC? f ∘' g => DCC? f ∘' g.deref_map
+  | f => f
 
 #check Eq.refl
 
@@ -265,8 +296,11 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
     | .some (DCC? (Π(f_α, f_β) x_α)) =>
       -- Deref this due to pair destructing box
       let α : GenericExpr τ_c := (reduce (f_α.app x_α)).deref
+      -- α is being dereferenced, so similarly β should probably be
+      -- downgraded to a regular map if it is a map over a box
       match reduce (f_β.app x_α) with
-      | DCC? Π(β, _γ) =>
+      | DCC? Π(β₀, _γ) =>
+        let β := β₀.deref_map
         match (·.fst) <$> infer.snd (DCC? Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))) with
         | .some (DCC? (Π(_f_α, f_β₀) x_α₀)) =>
           match reduce (DCC? (f_β₀ x_α₀)) with
@@ -275,10 +309,10 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
             match (·.fst) <$> infer.snd inner with
             | .some (DCC? (Π(_a₁, `(_a₂, Σ(_a₃, Λ(_a₄, _a₅, `(_α₆, _a₇))) ∘' _a₈)) _a₉)) =>
               -- NOTE: this used to be ∘, but not sure if necessary.
-              return (DCC? Eval(α, β, M') ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+              return (DCC? Eval(α, β, M'.deref_map) ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
             | .some (DCC? (Π(_a₁, `(_a₂, `(_a₃, _a₄))) _a₅)) =>
-              return (DCC? Eval(α, β, M') ∘' ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
-            | _ => return (DCC? Eval(α, β, M') ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+              return (DCC? Eval(α, β, M'.deref_map) ∘' ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+            | _ => return (DCC? Eval(α, β, M'.deref_map) ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
           | _ => Lean.Macro.throwError ("app is not well-typed:"
             ++ Std.Format.line ++ (.nestD (Std.format (Lean.Expr.app M N)))
             ++ ("couldn't detect codomain:" ++ Std.Format.line ++ (.nestD (Std.format (reduce (DCC? (f_β₀ x_α₀))))))).pretty
@@ -331,12 +365,15 @@ def cc (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (root : Lean.Expr) (infer : 
   | .app M N => do
     let M' ← cc τ_c M infer reduce fallback
     let N' ← cc τ_c N infer reduce fallback
-    match infer.snd M' with
+    let n := (n_occurrences 0 M)
+    let N'' := share_n_times n N'
+    return (DCC? (M' N''))
+    /-match infer.snd M' with
     | .some ⟨DCC? (Π(f_α, _f_β) x_α), _h⟩ =>
       let n := count_bangs (reduce (DCC? (f_α x_α)))
       let N'' := share_n_times n N'
       return (DCC? (M' N''))
-    | _ => return (DCC? (M' N'))
+    | _ => return (DCC? (M' N'))-/
   | .const ``True.intro [] => return DCC? (∗)
   | .const ``True [] => return DCC? (⊤)
   | .const ``False [] => return DCC? (⊥)
@@ -472,37 +509,53 @@ l    match infer with
 #eval Std.format <| dcc_infer (fun (α : Type) (x : α) => x)
 #eval Std.format <| dcc_infer (((fun (α : Type 1) (x : α → Type 1) => x) (Type 0)))
 #eval Std.format <| dcc_infer (fun (x : Type) (y : x → Type) (z : x) => y z)
-#eval (DCC Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))).infer₂'
-#eval (DCC !<Sndc(`(⊤, Sort 1))>).infer₂'
 
 /-
-(((!<Π(Sndc(`(⊤, Sort 1)),
-             Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))> ∘'
-         Fstc(!<Π(Sndc(`(⊤, Sort 1)),
-                  Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>)) ∘'
-      *(Coup(!<Π(Sndc(`(⊤, Sort 1)),
-                Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>))) ∘'
-   Fstc(!<((Sndc(`(⊤, Sort 1)) ∘' *(Coup(`(⊤, Sort 1)))) ∘'
-             Fstc(!<Π(Sndc(`(⊤, Sort 1)),
-                      Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>))>))
+(!Λ(!(⊤), `(!(⊤), Sort 0),
+    (Eval(Coup(`(!(⊤), Sort 0)), !<`(Coup(`(!(⊤), Sort 0)), Sort 0)>,
+            !Λ(Coup(`(!(⊤), Sort 0)), `(Coup(`(!(⊤), Sort 0)), Sort 0),
+               (Sndc(`(Coup(`(!(⊤), Sort 0)), Sort 0)) ∘' *(Coup(`(Coup(`(!(⊤), Sort 0)), Sort 0)))))) ∘∘
+       ⟦`(Coup(`(!(⊤), Sort 0)),
+            `(Coup(`(!(⊤), Sort 0)),
+              Sort 0))⟧⟨Id(Coup(`(!(⊤), Sort 0))),
+                                      Λ(Coup(`(!(⊤), Sort 0)), `(Coup(`(!(⊤), Sort 0)), Coup(`(!(⊤), Sort 0))),
+                                        (Sndc(`(!(⊤), Sort 0)) ∘'
+                                           Fstc(`(Coup(`(!(⊤), Sort 0)), Coup(`(!(⊤), Sort 0))))))⟩))
+   &(&(∗)))
 
-move map inside Π?
+- check bang_n_times
+- lam app and lam with no app should match (besides no arg just terminatl object)
+- probably prematurely exponentiating the context
+- or not deref'ing
+- terminal object boxed twice. is referenced accordingly correctly
+- maybe ∘∘ (still really don't like this primitive. super hacky)
 
-!<Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))
+- Eval(a, b, x) is not well-typed:
+                            ↓ this does not match α. suggests an extra map
+                               ↓ this does match α
+Eval(Coup(`(!(⊤), Sort 0)), !<`(Coup(`(!(⊤), Sort 0)), Sort 0)>,
+            !Λ(Coup(`(!(⊤), Sort 0)), `(Coup(`(!(⊤), Sort 0)), Sort 0),
+               (Sndc(`(Coup(`(!(⊤), Sort 0)), Sort 0)) ∘' *(Coup(`(Coup(`(!(⊤), Sort 0)), Sort 0))))))
 
-map happens inside x
+Eval consumes a pair, which is intrinsically NOT boxed. not &(a, b). a and b might be individually boxed, though.
+However `(!(⊤), Sort 0) suggests no.
 
-!<Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))
+However, again, Sort 0 should also be boxed.
 
-Λ(!(Coup(`(⊤, Sort 1))), *<Sndc(`(⊤, Sort 1))>, !<`(Coup(Sndc(`(⊤, Sort 1))), Sort 1)>)
+Things to check:
+1. Constants should be boxed similarly to top-level arguments (maybe don't handle this yet robustly in abstract)
+  - this is only issue
 
-(Π(!<Sndc(`(⊤, Sort 1))>, Λ(!(Coup(`(⊤, Sort 1))), *<Sndc(`(⊤, Sort 1))>, !<`(Coup(Sndc(`(⊤, Sort 1))), Sort 1)>)) : none)
+on 1., boxing:
+- we can't calculate number of boxes outside of a top-level app (might have to use context) or box later (? in usage later)
+  - Don't box sort directly, probably.
+  - n_occurrences dictates number of boxes, and this comes from usage in apps (maybe we don't handle this yet in abstract, since constants produced inside abstract (e.g., in an application) are injected with pair. calculate boxes here.
+    - how?
 
-(Π(!<Sndc(`(⊤, Sort 1))>, Λ(!(Coup(`(⊤, Sort 1))), !<Sndc(`(⊤, Sort 1))>,
-  !<`(Coup(Sndc(`(⊤, Sort 1))), Sort 1)>)) : none)
+base case:
+- app with a constant on either side inside abstract (const x) (x const)
 
-(Π(!<Sndc(`(⊤, Sort 1))>, Λ(!(Coup(`(⊤, Sort 1))), !<Sndc(`(⊤, Sort 1))>,
-  `(!(Coup(Sndc(`(⊤, Sort 1)))), Sort 1))) : none)
-
-
+Finding:
+- Eval α is being dereferenced, correclty, since pair consumes, but β is not. it is still
+potentially a map of a boxed value
 -/

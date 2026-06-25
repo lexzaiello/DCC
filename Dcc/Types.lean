@@ -5,9 +5,18 @@ namespace GenericExpr
 inductive Arrow.{u} {τ : Type u} : GenericExpr (τ := τ) → GenericExpr (τ := τ) → Level → GenericExpr (τ := τ) → Type u
   | simple : Arrow α β m (DCC? (Π(Id(Sort m), `(Sort m, `(α, β))) α))
   | dep    : Arrow α β m (DCC? (Π(Id(Sort m), Λ(Sort m, Id(Sort m), `(Coup(Id(Sort m)), β))) α))
+  | dep'   : Arrow α β m (DCC? (Π(Id(Sort m), !Λ(Sort m, Id(Sort m), `(!(Coup(Id(Sort m))), β))) α))
   | eval   : Arrow α β m (DCC? (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘∘ _g)) α))
   | eval'  : Arrow α β m (DCC? (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α))
   | curr   : Arrow α β m (DCC? (Π(Id(Sort m), `(Sort m, Eval(_a, _b, Λ(τ_x, τ_y, `(f_τ, β))) ∘∘ _g)) α))
+
+/-
+(Π(Id(Sort 2),
+             `(Sort 2,
+               Π(!<Sndc(`(⊤, Sort 1))>,
+                 !Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(!(Coup(Sndc(`(⊤, Sort 1)))), Sort 2)))))
+             !(Coup(`(⊤, Sort 1))))
+-/
 
 @[dcc_judge, inline]
 def read_arrow.{u} {τ_c : Type u} [DecidableEq τ_c]
@@ -16,6 +25,10 @@ def read_arrow.{u} {τ_c : Type u} [DecidableEq τ_c]
   | DCC? (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) α) =>
     if heq₁ : τ = (DCC? (α : Sort m) → β) then
       .some ⟨α, β, m, by rw [← heq, heq₁]; exact .dep⟩
+    else .none
+  | DCC? (Π(Id(Sort m), !Λ(_a, _b, `(_c, β))) α) =>
+    if heq₁ : τ = (DCC? (Π(Id(Sort m), !Λ(Sort m, Id(Sort m), `(!(Coup(Id(Sort m))), β))) α)) then
+      .some ⟨α, β, m, by rw [← heq, heq₁]; exact .dep'⟩
     else .none
   | (DCC? (Π(Id(Sort m), `(_a, `(_b, β))) α)) =>
     if heq₁ : τ = (DCC? (Π(Id(Sort m), `(Sort m, `(α, β))) α)) then
@@ -41,6 +54,10 @@ def read_arrow₁.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α : GenericExpr τ
   | DCC? (Π(Id(Sort m), Λ(_a, _b, `(_c, β))) _d) =>
     if heq₁ : τ = (DCC? (α : Sort m) → β) then
       .some ⟨β, m, by rw [← heq, heq₁]; exact .dep⟩
+    else .none
+  | DCC? (Π(Id(Sort m), !Λ(_a, _b, `(_c, β))) _d) =>
+    if heq₁ : τ = (DCC? (Π(Id(Sort m), !Λ(Sort m, Id(Sort m), `(!(Coup(Id(Sort m))), β))) α)) then
+      .some ⟨β, m, by rw [← heq, heq₁]; exact .dep'⟩
     else .none
   | (DCC? (Π(Id(Sort m), `(_a, `(_b, β))) _d)) =>
     if heq₁ : τ = (DCC? (Π(Id(Sort m), `(Sort m, `(α, β))) α)) then
@@ -71,6 +88,10 @@ def view_arrow.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α β : GenericExpr (�
   | DCC? (Π(__a, Λ(_a, _b, `(_c, _d))) _e) =>
     if heq₁ : τ = (DCC? (α : Sort m) → β) then
       .some <| by rw [← heq, heq₁]; exact .dep
+    else .none
+  | DCC? (Π(__a, !Λ(_a, _b, `(_c, _d))) _e) =>
+    if heq₁ : τ = (DCC? (Π(Id(Sort m), !Λ(Sort m, Id(Sort m), `(!(Coup(Id(Sort m))), β))) α)) then
+      .some <| by rw [← heq, heq₁]; exact .dep'
     else .none
   | (DCC? (Π(__a, `(_a, `(_b, _c))) _d)) =>
     if heq₁ : τ = (DCC? (Π(Id(Sort m), `(Sort m, `(α, β))) α)) then

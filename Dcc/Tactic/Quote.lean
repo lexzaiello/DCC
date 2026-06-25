@@ -89,19 +89,19 @@ namespace GenericExpr
 
 def get_domain (e : Expr) : Option Expr :=
   match e.infer₂ with
-  | .some ⟨DCC? (Π(f_α, _f_β) env), _⟩ =>
+  | .ok ⟨DCC? (Π(f_α, _f_β) env), _⟩ =>
     .some (reduce_all₂ (DCC (f_α env)))
   | _ => .none
 
 def get_codomain (e : Expr) : Option Expr :=
   match e.infer₂ with
-  | .some ⟨DCC? (Π(_f_α, f_β) env), _⟩ =>
+  | .ok ⟨DCC? (Π(_f_α, f_β) env), _⟩ =>
     .some (reduce_all₂ (DCC (f_β env)))
   | _ => .none
 
 def get_codomain_arrow (e : Expr) : Option Expr :=
   match e.infer₂ with
-  | .some ⟨DCC? (Π(_f_α, f_β) env), _⟩ =>
+  | .ok ⟨DCC? (Π(_f_α, f_β) env), _⟩ =>
     match (reduce_all₂ (DCC (f_β env))) with
     | (DCC? `(_a, β)) => .some β
     | _ => .none
@@ -111,6 +111,15 @@ set_option linter.constructorNameAsVariable false
 def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α)):= do
   match e with
   | .const ()                 => return ⟨_, q(Unit), q(())⟩
+  | (DCC? *<f>) =>
+    let ⟨.imax u' (.succ v'), τ_f', f'⟩ ← f.to_lean
+      | throwError m!"Box function {f} is not well-typed at: {DCC !<f>}"
+    match τ_f' with
+    | ~q(∀ (x : ($α : (Sort u'))), (($β x) : Type v')) =>
+      return ⟨.imax (.succ u') (.succ v')
+         , q(∀ (x : Shared $α), $β x.deref),
+           q(fun (x : Shared $α) => Shared.unmap $f' x)⟩
+    | _ => throwError m!"Shared boxes can only live in Type: {e}"
   | (DCC ⊤)                   => return ⟨(Lean.Level.succ .zero), q(Prop), q(True)⟩
   | (DCC ⊥)                   => return ⟨.succ .zero, q(Prop), q(False)⟩
   | (DCC ∗)                   => return ⟨.zero, q(True), q(True.intro)⟩
@@ -396,7 +405,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
   | (DCC? f ∘∘ g) =>
     let ⟨u_g, τ_g, g'⟩ ← to_lean g
     let ⟨u_f, τ_f, f'⟩ ← to_lean f
-    let some t_infer_g := infer₂' g
+    let some t_infer_g := (infer₂' g).toOption
       | throwError m!"DCC? comp right hand {g} is not well-typed"
     let some ⟨α, β, m, h⟩ := read_comp₂_g_type t_infer_g
       | throwError m!"DCC? comp right hand {g} is not well-typed"

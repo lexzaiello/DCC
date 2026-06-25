@@ -10,12 +10,12 @@ inductive DefEqError.{u} {τ_c : Type u} : (A B : GenericExpr τ_c) → Type u w
   | tm       (expected actual : GenericExpr τ_c) : DefEqError A B
 
 def DefEqError.toFormat [Repr τ_c] (err : DefEqError (τ_c := τ_c) A B) : Std.Format :=
-  "- " ++ (Std.format A) ++ " ≠ " ++ (.indentD (Std.format B)) ++ .line ++
+  "- " ++ (.nest 2 <| (Std.format A) ++ " ≠ " ++ (.indentD (Std.format B)) ++ .line ++
   (match err with
   | .pi_left expected actual => "because Π domains are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ "but found: " ++ (.indentD (Std.format actual))
   | .pi_right expected actual => "because Π codomains are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ "but found: " ++ (.indentD (Std.format actual))
   | .bang inner_err => "because bang types are not def-eq because: " ++ inner_err.toFormat
-  | .tm expected actual => "because terms are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ "but found: " ++ (.indentD (Std.format actual)))
+  | .tm expected actual => "because terms are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ .line ++ "but found: " ++ (.indentD (Std.format actual))))
 
 instance {A B : GenericExpr τ_c} [Repr τ_c] : Std.ToFormat (DefEqError A B) := ⟨DefEqError.toFormat⟩
 instance {A B : GenericExpr τ_c} [Repr τ_c] : ToString (DefEqError A B) := ⟨toString ∘ Std.format⟩
@@ -28,7 +28,7 @@ inductive TypeError.{u} {τ_c : Type u} : (e : GenericExpr τ_c) → Type u wher
   | mark (n : ℕ) (ε : TypeError e) : TypeError e
 
 def TypeError.toFormat [Repr τ_c] (err : TypeError (τ_c := τ_c) e) : Std.Format :=
-  "- Term is not well-typed:" ++ Std.Format.indentD
+  "- Term is not well-typed:" ++ (Std.Format.indentD
     (match err with
     | .mismatch expected actual at_e => (Std.Format.text "terms are mismatched at: ")
       ++ (Std.Format.indentD (Std.format at_e)) ++ Std.Format.line
@@ -37,12 +37,11 @@ def TypeError.toFormat [Repr τ_c] (err : TypeError (τ_c := τ_c) e) : Std.Form
       ++ (Std.Format.indentD (Std.format at_e)) ++ Std.Format.line
       ++ "found: " ++ (.indentD (Std.format found))
     | .sub at_e inner_err => "because of a sub-error at: "
-      ++ (Std.Format.indentD (Std.format at_e)) ++ Std.Format.line
-      ++ inner_err.toFormat
+      ++ (Std.Format.indentD (Std.format at_e)) ++ (.indentD inner_err.toFormat)
     | .def_eq inner_err => "because terms were not def-eq: " ++ (.indentD (Std.format inner_err))
     | .mark n ε => (Std.Format.text s!"[{n}] ") ++ ε.toFormat
   )
-  ++ .line ++ "at term: " ++ (Std.format e)
+  ++ .line ++ "at term: " ++ (Std.format e))
 
 instance {e : GenericExpr τ_c} [Repr τ_c] : Std.ToFormat (TypeError e) := ⟨TypeError.toFormat⟩
 instance {e : GenericExpr τ_c} [Repr τ_c] : ToString (TypeError e) := ⟨toString ∘ Std.format⟩
@@ -233,8 +232,12 @@ inductive Judge₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericEx
     → Reduces₂ (curr'.type α' β γ' m) τ
     → Judge₂ (DCC? !Λ(α, β, x)) τ
   -- !<f> &(x) = !(x)
-  | map    : Judge₂ x (DCC? (Π(Id(Sort m), f_β) α))
+  /-| map    : Judge₂ x (DCC? (Π(Id(Sort m), f_β) α))
     → Reduces₂ (DCC? (f_β α)) (DCC? `(α, Sort n))
+    → Reduces₂ (DCC? ((!(α) : Sort m) → Sort n)) τ
+    → Judge₂ (DCC? !<x>) τ-/
+  | map    : Judge₂ x τ_x
+    → Arrow α (DCC? Sort n) m τ_x
     → Reduces₂ (DCC? ((!(α) : Sort m) → Sort n)) τ
     → Judge₂ (DCC? !<x>) τ
   | fmap   : Judge₂ x (DCC? (Π(Id(Sort m), f_β) α))
@@ -307,6 +310,14 @@ def infer₂.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Gen
   match e with
   | DCC? !<f> =>
     match infer₂ f with
+    | .ok ⟨τ_f, ⟨ht₁⟩⟩ =>
+      match τ_f.read_arrow with
+      | .some ⟨α, DCC? Sort n, m, harr⟩ =>
+        .ok ⟨_, ⟨.map ht₁ harr (reduce₂_reduces rfl)⟩⟩
+      | _ => .error (.mark 3 (.unexpected τ_f f))
+    | .error e => .error (.sub f e)
+  /-| DCC? !<f> =>
+    match infer₂ f with
     | .ok ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht₁⟩⟩ =>
       match (DCC? (f_β α)).reduce_all₂ with
       | (DCC? `(α₂, Sort n)) =>
@@ -315,7 +326,7 @@ def infer₂.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Gen
         else .error (.mismatch (DCC? `(α, Sort n)) (DCC? (f_β α)).reduce_all₂ f)
       | x => .error (.mark 2 (.unexpected x f))
     | .ok ⟨t, _⟩ => .error (.mark 1 (.unexpected t f))
-    | .error ε => .error (.sub f ε)
+    | .error ε => .error (.sub f ε)-/
   /-| DCC? !<f> =>
     match infer₂ f with
     | .ok ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht₁⟩⟩ =>

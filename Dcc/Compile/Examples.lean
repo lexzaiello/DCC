@@ -30,7 +30,7 @@ dcc_show #(dcc_compile' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x 
 #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce₂} ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1) (Sort 0))
 
 #eval Std.format <| (dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro))
-#check dcc_decompile #((dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro)))
+--#check dcc_decompile #((dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro)))
 #time #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x) (fun x => x) True.intro)
 
 #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (f : Sort 0 → Sort 0) (x : f True) => x))
@@ -42,19 +42,19 @@ def K_example₁ : Expr :=
 def K_example : Expr :=
   dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 1) (β : α → Sort 1) (x : α) (_y : β x) => x) (Sort 0))
 
-def K_example₂ : Option Expr :=
+def K_example₂ : Expr :=
   dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 1) (β : α → Sort 1) (x : α) (_y : β x) => x) (Sort 0))
 
 def K_example₃ : Expr :=
   dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x))
 
-def K_example₃' : Option Expr :=
+def K_example₃' : Expr :=
   dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1) (Sort 0))
 
-def K_examplea : Option Expr :=
+def K_examplea : Expr :=
   dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1))
 
-def K_example₃'' : Option Expr :=
+def K_example₃'' : Expr :=
   dcc_compile' {Expr.infer₂} {Expr.reduce_all₂} ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1) (Sort 0))
 
 #eval Std.format <| K_example₃
@@ -66,7 +66,7 @@ def K_example₃'' : Option Expr :=
 #eval Std.format <| K_examplea
 #eval Std.format <| K_example₃''
 
-def K_example' : Option Expr :=
+def K_example' : Expr :=
   dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} (fun (α : Sort 1) (β : α → Sort 1) (x : α) (_y : β x) => x)
 
 #eval Std.format <| K_example'
@@ -86,7 +86,7 @@ def K_example' : Option Expr :=
 
 #eval Std.format <| (DCC !<Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>).infer₂'
 
-def S_example : Option Expr :=
+def S_example : Expr :=
   dcc_compile' {GenericExpr.infer₂} {GenericExpr.reduce_all₂}
     fun (α : Sort 1) (β : α → Sort 1) (γ : ∀ (x : α) (y : β x), Sort 1) (x : ∀ (x : α) (y : β x), γ x y) (y : ∀ (x : α), β x) (z : α) => x z (y z)
 

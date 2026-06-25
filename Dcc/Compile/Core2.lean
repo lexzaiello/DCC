@@ -230,7 +230,7 @@ def unmap_n_times (n : ℕ) (f : GenericExpr τ_c) : GenericExpr τ_c :=
 
 def map_n_times (n : ℕ) (f : GenericExpr τ_c) : GenericExpr τ_c :=
   match f with
-  | DCC? (Π(f_α, f_β)) => DCC? (Π(#(map_n_times n f_α), #(map_n_times n f_β)))
+  --| DCC? (Π(f_α, f_β)) => DCC? (Π(#(map_n_times n f_α), #(map_n_times n f_β)))
   /-| DCC? (Π(f_α, f_β)) => DCC? (Π(#(map_n_times n f_α), #(map_n_times n f_β)))
   | DCC? (Λ(α, β, x)) => DCC? (Λ(#(bang_n_times n α), #(map_n_times n β), #(map_n_times n x)))
   | DCC? `(α, x) => DCC? `(#(bang_n_times n α), x)-/

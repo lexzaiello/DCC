@@ -193,7 +193,7 @@ def Ctx.empty'.{u} (τ_c : Type u) := ((DCC? ⊤) : GenericExpr τ_c)
 instance [Std.ToFormat τ_c] : ToString (Ctx τ_c) := ⟨toString ∘ GenericExpr.toFormat⟩
 instance [Repr τ_c] : ToString (Ctx τ_c) := ⟨toString ∘ GenericExpr.toFormat (hFmt := ⟨repr⟩)⟩
 
-abbrev ParamInfer.{u} (τ_c : Type u) := (t_judge : (GenericExpr τ_c → GenericExpr τ_c → Prop)) × (∀ (e : GenericExpr τ_c), Option ((τ : GenericExpr τ_c) × PULift.{1, 0} (t_judge e τ)))
+abbrev ParamInfer.{u} (τ_c : Type u) := (t_judge : (GenericExpr τ_c → GenericExpr τ_c → Prop)) × (∀ (e : GenericExpr τ_c), Except (TypeError e) ((τ : GenericExpr τ_c) × PULift.{1, 0} (t_judge e τ)))
 
 /-def cc_var (ctx : Ctx) (idx : DebruijnIdx) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) (reduce : Expr → Expr := Expr.reduce_all) : Lean.MacroM Expr :=
   match ctx, idx with
@@ -226,13 +226,13 @@ def cc_var (τ_c : Type) [Repr τ_c] [DecidableEq τ_c] (ctx : Ctx τ_c) (idx : 
     | DCC? !(Coup(β)), .zero => pure <| DCC? *<Sndc(β)>
     | DCC? !(Coup(β)), .succ n => do
       match (·.fst) <$> infer.snd β with
-      | .some (DCC? (Π(a, _b) x_α)) =>
+      | .ok (DCC? (Π(a, _b) x_α)) =>
         --(DCC? ((#(·) ∘' Fstc(β)) ∘' !(Coup(β)))) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
         (DCC? (*<(#(·) ∘' Fstc(β))>)) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
       | τ => Lean.Macro.throwError s!"Couple β index is not valid: ({β} : {τ})"
     | DCC? Coup(β), .succ n => do
       match (·.fst) <$> infer.snd β with
-      | .some (DCC? (Π(a, _b) x_α)) =>
+      | .ok (DCC? (Π(a, _b) x_α)) =>
         (·.comp' (DCC? (Fstc(β)))) <$> (cc_var τ_c (reduce (DCC? (a x_α))) n infer (reduce := reduce))
       | τ => Lean.Macro.throwError s!"Couple β index is not valid: ({β} : {τ})"
     | e, n => Lean.Macro.throwError s!"Cannot be indexed at {n} as a couple: {e}"
@@ -352,7 +352,7 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
     --dbg_trace Sigma.fst <$> infer.snd M'
 
     match (·.fst) <$> infer.snd M' with
-    | .some (DCC? (Π(f_α, f_β) x_α)) =>
+    | .ok (DCC? (Π(f_α, f_β) x_α)) =>
       let α : GenericExpr τ_c := match reduce (f_α.app x_α) with
         | DCC? !(α) => α
         | α => α
@@ -361,15 +361,15 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
         dbg_trace α
         dbg_trace N'
         match (·.fst) <$> infer.snd (DCC? Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))) with
-        | .some (DCC? (Π(_f_α, f_β₀) x_α₀)) =>
+        | .ok (DCC? (Π(_f_α, f_β₀) x_α₀)) =>
           match reduce (DCC? (f_β₀ x_α₀)) with
           | DCC? Π(_β₂, x_γ') =>
             let inner := reduce (DCC? ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
             match (·.fst) <$> infer.snd inner with
-            | .some (DCC? (Π(_a₁, `(_a₂, Σ(_a₃, Λ(_a₄, _a₅, `(_α₆, _a₇))) ∘' _a₈)) _a₉)) =>
+            | .ok (DCC? (Π(_a₁, `(_a₂, Σ(_a₃, Λ(_a₄, _a₅, `(_α₆, _a₇))) ∘' _a₈)) _a₉)) =>
               -- NOTE: this used to be ∘, but not sure if necessary.
               return (DCC? Eval(α, β, M') ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
-            | .some (DCC? (Π(_a₁, `(_a₂, `(_a₃, _a₄))) _a₅)) =>
+            | .ok (DCC? (Π(_a₁, `(_a₂, `(_a₃, _a₄))) _a₅)) =>
               return (DCC? Eval(α, β, M') ∘' ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
             | _ => return (DCC? Eval(α, β, M') ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
           | _ => Lean.Macro.throwError ("app is not well-typed:"
@@ -429,12 +429,12 @@ def cc (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (root : Lean.Expr) (infer : 
     let M' ← cc τ_c M infer reduce fallback
     let N' ← cc τ_c N infer reduce fallback
     match infer.snd M', N' with
-    | .some ⟨DCC? (Π(_f_α, _f_β) !(_b)), _h⟩, _n =>
+    | .ok ⟨DCC? (Π(_f_α, _f_β) !(_b)), _h⟩, _n =>
       return (DCC? (M' &(N')))
     | _, (DCC? &(_n)) =>
       -- match infer M' to see if we need to wrap &(
       return (DCC? (M' N'))
-    | .some ⟨DCC? (Π(!<_f>, _f_β) _b), _h⟩, _n =>
+    | .ok ⟨DCC? (Π(!<_f>, _f_β) _b), _h⟩, _n =>
       return (DCC? (M' &(N')))
     | _τ, _ =>
       return (DCC? (M' N'))
@@ -663,7 +663,7 @@ elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
   | [_infer, _reduce] =>
     return Lean.toExpr (← Lean.Elab.liftMacroM <| cc Unit e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
   | _ =>
-    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc Unit e_tm' ⟨GenericExpr.Judge, GenericExpr.infer⟩ GenericExpr.reduce_all₂)
+    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc Unit e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
 
 elab "dcc_compile''" infer:infer_cmd_param* tm:term : term => do
   let e_tm ← Lean.Elab.Term.elabTerm tm .none
@@ -692,7 +692,29 @@ elab "dcc_infer''" infer:infer_cmd_param* tm:term : term => do
   let dcc_e ← do_dcc_compile infer e_tm'
   return dcc_e
 
-macro "dcc_infer'" infer:infer_cmd_param* tm:term : term =>
+elab "dcc_infer'" infer:infer_cmd_param* tm:term : term => do
+  let e_tm ← Lean.Elab.Term.elabTerm tm .none
+  let e_tm ← Lean.instantiateMVars e_tm
+  let e_tm' ← Lean.instantiateExprMVars (← wrap_share_auto_trans (← (wrap_share_auto e_tm)))
+
+  let cc_raw_expr (e : Lean.Expr) : Lean.MacroM (GenericExpr Lean.FVarId) :=
+    match e with
+    | .fvar fv => pure (.const fv)
+    | e => Lean.Macro.throwError s!"unrecognized expression: {e}"
+
+  let e' ← match infer.toList with
+  | [_infer] =>
+    pure <| (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
+  | [_infer, _reduce] =>
+    pure <| (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
+  | _ =>
+    pure <| (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
+
+  match e'.infer₂' with
+  | .ok τ => return GenericExpr.fvar_expr_to_lean τ
+  | .error err => throwError m!"not well-typed {e'}: {err}"
+
+/-macro "dcc_infer'" infer:infer_cmd_param* tm:term : term =>
   match infer.toList with
   | [infer] =>
     match infer with
@@ -708,7 +730,7 @@ macro "dcc_infer'" infer:infer_cmd_param* tm:term : term =>
       | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
     | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
   | _ =>
-    `(term| do Sigma.fst <$> (dcc_compile' $tm:term).infer)
+    `(term| do Sigma.fst <$> (dcc_compile' $tm:term).infer)-/
 
 syntax "dcc_compile" infer_cmd_param* term : term
 syntax "dcc_infer" infer_cmd_param* term   : term

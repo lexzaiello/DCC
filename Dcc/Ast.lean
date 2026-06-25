@@ -417,6 +417,10 @@ def Shared.fmap.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β 
   match s with
   | ⟨s⟩ => ⟨f s⟩
 
+def Shared.unmap.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β x) (s : Shared.{u} α) : (β s.deref) :=
+  match s with
+  | ⟨s⟩ => f s
+
 #check Shared.deref
 
 #check PSigma

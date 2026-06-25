@@ -91,17 +91,30 @@ def view_arrow.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α β : GenericExpr (�
     else .none
   | _ => .none
 
+/-
+(Π(Id(Sort 3),
+                     `(Sort 3,
+                       Π(!<Sndc(`(⊤, Sort 2))>,
+                         !Λ(Coup(`(⊤, Sort 2)), Sndc(`(⊤, Sort 2)), `(!(Coup(Sndc(`(⊤, Sort 2)))), Sort 3)))))
+                     !(Coup(`(⊤, Sort 2))))
+-/
+
 -- (Π(Id(Sort 0), `(Sort 0, Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 1))))) ⊤)
-inductive Pi.f_β.type.{u} {τ_c : Type u} (f_α δ : GenericExpr τ_c) (o : Level) : Level → (GenericExpr τ_c) → Type u
-  | canon : Pi.f_β.type f_α δ o n
+inductive Pi.f_β.type.{u} {τ_c : Type u} :
+  (GenericExpr τ_c) → (GenericExpr τ_c) → Level → Level → (GenericExpr τ_c) → Type u
+  | canon  : Pi.f_β.type f_α δ o n
     (DCC? (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, `(Coup(f_α), Sort n))))) δ))
-  | semi  : Pi.f_β.type f_α δ o n (DCC? (Π(Id(Sort o), `(Sort o, Π(f_α, `(δ, `(f_α₂, Sort n))))) δ))
-  | arrow : Pi.f_β.type f_α δ o n
+  | canon' : Pi.f_β.type (DCC? !<f_α>) (DCC? !(δ)) o n
+    (DCC? (Π(Id(Sort o), `(Sort o, Π(!<f_α>, !Λ(δ, f_α, `(!(Coup(f_α)), Sort n))))) !(δ)))
+  | semi   : Pi.f_β.type f_α δ o n (DCC? (Π(Id(Sort o), `(Sort o, Π(f_α, `(δ, `(f_α₂, Sort n))))) δ))
+  | arrow  : Pi.f_β.type f_α δ o n
     (DCC? (Π(Id(Sort o), `(Sort o, `(δ, (Π(Id(Sort m), `(Sort m, `(α, Sort n))) α)))) δ))
 
 def read_pi_f_β_cod.{u} {τ_c : Type u} (τ : GenericExpr τ_c) : Option (GenericExpr τ_c) :=
   match _heq₁ : τ with
   | (DCC? (Π(Id(Sort _o), `(_a, Π(__a, Λ(_b, _c, `(_d, Sort n))))) _e)) =>
+      .some (DCC? (Sort n))
+  | (DCC? (Π(Id(Sort _o), `(_a, Π(__a, !Λ(_b, _c, `(_d, Sort n))))) _e)) =>
       .some (DCC? (Sort n))
   | (DCC? (Π(_a, `(_b, `(_c, (Π(Id(Sort _m), `(_d, `(_e, Sort n))) _α)))) _f)) =>
     .some (DCC? (Sort n))
@@ -116,6 +129,13 @@ def view_pi_f_β.{u} {τ_c : Type u} [DecidableEq τ_c] (τ f_α δ : GenericExp
     if heq₂ : τ = (DCC? (Π(Id(Sort o), `(Sort o, Π(f_α, Λ(δ, f_α, `(Coup(f_α), Sort n))))) δ)) then
       .some ⟨n, by rw [← heq₁, heq₂]; exact .canon (f_α := f_α) (δ := δ) (o := o) (n := n)⟩
     else .none
+  | (DCC? (Π(__b, `(_a, Π(__a, !Λ(_b, _c, `(_d, Sort n))))) _e)) =>
+    match f_α, δ with
+    | DCC? !<f_α>, DCC? !(δ) =>
+      if heq₂ : τ = (DCC? (Π(Id(Sort o), `(Sort o, Π(!<f_α>, !Λ(δ, f_α, `(!(Coup(f_α)), Sort n))))) !(δ))) then
+        .some ⟨n, by rw [← heq₁, heq₂]; exact .canon' (f_α := f_α) (δ := δ) (o := o) (n := n)⟩
+      else .none
+    | _, _ => .none
   | (DCC? (Π(_a, `(_b, `(_c, (Π(Id(Sort m), `(_d, `(_e, Sort n))) α)))) _f)) =>
     if heq₂ : τ = (DCC? (Π(Id(Sort o), `(Sort o, `(δ, (Π(Id(Sort m), `(Sort m, `(α, Sort n))) α)))) δ)) then
       .some ⟨n, by rw [← heq₁, heq₂]; exact .arrow (f_α := f_α) (δ := δ) (o := o) (n := n)⟩

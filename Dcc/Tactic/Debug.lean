@@ -246,9 +246,9 @@ elab "dcc_trace'" err:"?"? e:gen_dcc : command => do
           <| Lean.Elab.Term.withoutErrToSorry
             (Lean.Elab.Term.elabTerm stx' .none >>= decode_dcc)
         match e.infer₂ with
-        | .some _ =>
+        | .ok _ =>
           if err.isNone then
-            let fmt := ((Std.format ∘ Sigma.fst) <$> e.infer₂).getD "?"
+            let fmt := ((Std.format ∘ Sigma.fst) <$> e.infer₂).toOption.getD "?"
             logs := logs.push (stx, m!"{stx}: {fmt}")
           else
             continue

@@ -3,17 +3,54 @@ import Dcc.Eta.Reduce
 
 namespace GenericExpr
 
+def to_from_eta_expr_some (e : GenericExpr τ) : ((e' : GenericExpr τ) × (PLift (e.expr_to_eta.eta_to_expr = .some e'))) := by
+  cases e
+  any_goals (exact ⟨_, ⟨rfl⟩⟩)
+  any_goals (
+    rename_i x
+    have ⟨_, ⟨h⟩⟩ := to_from_eta_expr_some x
+    simp [expr_to_eta, Functor.map]
+    dsimp [functor_map]
+    simp [expr_to_eta, Functor.map] at h
+    simp [eta_to_expr, h]
+    exact ⟨_, ⟨rfl⟩⟩)
+  any_goals (
+    rename_i x y z
+    have ⟨_, ⟨h₁⟩⟩ := to_from_eta_expr_some x
+    have ⟨_, ⟨h₂⟩⟩ := to_from_eta_expr_some y
+    have ⟨_, ⟨h₃⟩⟩ := to_from_eta_expr_some z
+    simp [expr_to_eta, Functor.map]
+    dsimp [functor_map]
+    simp [expr_to_eta, Functor.map] at h₁
+    simp [expr_to_eta, Functor.map] at h₂
+    simp [expr_to_eta, Functor.map] at h₃
+    simp [eta_to_expr, h₁, h₂, h₃]
+    exact ⟨_, ⟨rfl⟩⟩)
+  any_goals (
+    rename_i x y
+    have ⟨_, ⟨h₁⟩⟩ := to_from_eta_expr_some x
+    have ⟨_, ⟨h₂⟩⟩ := to_from_eta_expr_some y
+    simp [expr_to_eta, Functor.map]
+    dsimp [functor_map]
+    simp [expr_to_eta, Functor.map] at h₁
+    simp [expr_to_eta, Functor.map] at h₂
+    simp [eta_to_expr, h₁, h₂]
+    exact ⟨_, ⟨rfl⟩⟩)
+
 def to_from_eta_expr_comm (h : eta_to_expr (expr_to_eta e₁) = .some e₂) : e₁ = e₂ := by
+  simp [expr_to_eta, Functor.map] at h
   induction e₁ generalizing e₂
   any_goals (
     focus
-    simp [eta_to_expr, expr_to_eta] at h
+    dsimp [functor_map] at h
+    simp [eta_to_expr] at h
     exact h)
   any_goals (
     focus
     try (
       rename_i ih
-      simp [expr_to_eta, eta_to_expr] at h
+      dsimp [functor_map] at h
+      simp [eta_to_expr] at h
       split at h
       case h_1 heq => cases h; cases ih heq; rfl
       · simp_all)
@@ -22,7 +59,8 @@ def to_from_eta_expr_comm (h : eta_to_expr (expr_to_eta e₁) = .some e₂) : e�
     focus
     try (
       rename_i ih₁ ih₂ ih₃
-      simp [expr_to_eta, eta_to_expr] at h
+      dsimp [functor_map] at h
+      simp [eta_to_expr] at h
       split at h
       case h_1 heq₁ heq₂ heq₃ =>
         have ha := ih₁ heq₁
@@ -35,7 +73,8 @@ def to_from_eta_expr_comm (h : eta_to_expr (expr_to_eta e₁) = .some e₂) : e�
     focus
     try (
       rename_i ih₁ ih₂
-      simp [expr_to_eta, eta_to_expr] at h
+      dsimp [functor_map] at h
+      simp [eta_to_expr] at h
       split at h
       case h_1 heq₁ heq₂ =>
         have ha := ih₁ heq₁
@@ -43,7 +82,38 @@ def to_from_eta_expr_comm (h : eta_to_expr (expr_to_eta e₁) = .some e₂) : e�
         simp_all
       · simp_all))
 
---def to_from_eta_expr_comm' (h_some : eta_to_expr 
+def to_from_eta_expr_eq : (expr_to_eta e).eta_to_expr = e := by
+  have ⟨_, ⟨heq⟩⟩ := to_from_eta_expr_some e
+  have h' := to_from_eta_expr_comm heq
+  simp_all
+
+def from_to_eta_expr_eq (h : eta_to_expr e = .some e') : expr_to_eta e' = e := by
+  induction e generalizing e'
+  any_goals (
+    simp [eta_to_expr] at h
+    rw [← h]
+    dsimp [expr_to_eta, Functor.map, functor_map])
+  any_goals (
+    rename_i ih
+    simp [eta_to_expr] at h
+    split at h
+    case h_1 heq =>
+      have h₂ := ih heq
+      rw [← h₂]
+      simp at h
+      rw [← h]
+      simp [expr_to_eta, Functor.map]
+      dsimp [functor_map]
+    case h_2 => simp_all)
+  case const x =>
+    unfold eta_to_expr at h
+    split at h
+    any_goals (grind)
+    case h_31 heq =>
+      simp at h
+      rw [← h]
+      simp [heq]
+      dsimp [expr_to_eta, Functor.map, functor_map]
 
 def step_expr_steps_eta {e : GenericExpr (EtaConst (τ := τ))} {e' : GenericExpr τ}
   (heq : eta_to_expr e = .some e') (hr : RedAff e' e'') : ((e''' : GenericExpr (EtaConst (τ := τ))) × (PLift (RedAff e e'''))) :=
@@ -54,9 +124,47 @@ def step_expr_steps_eta {e : GenericExpr (EtaConst (τ := τ))} {e' : GenericExp
       have h_some : e.eta_to_expr.isSome := by simp_all
       have h_to_expr : (e.eta_to_expr.get h_some) = f_α.pi f_β := by
         simp_all
+      unfold eta_to_expr at heq
+      split at heq
+      any_goals (grind)
+      case h_15 e x y =>
+        split at heq
+        case h_1 heq₁ heq₂ =>
+          cases heq
+          have h := ih heq₁
+          simp_all
+          simp [expr_to_eta, Functor.map]
+          dsimp [functor_map]
+          change RedAff _ (.pi (expr_to_eta _) (expr_to_eta _))
+          have heq₃ := from_to_eta_expr_eq heq₁
+          simp [from_to_eta_expr_eq heq₂]
+          have heq₄ :=  heq₃.symm ▸ heq₁
+          simp [← heq₃]
+          exact RedAff.pil (ih heq₄)
+        · simp_all
+    case pir hr ih =>
+      rename_i f_β f_β' f_α
+      unfold eta_to_expr at heq
+      split at heq
+      any_goals (grind)
+      case h_15 e x y =>
+        split at heq
+        case h_1 heq₁ heq₂ =>
+          cases heq
+          have h := ih heq₂
+          simp_all
+          simp [expr_to_eta, Functor.map]
+          dsimp [functor_map]
+          change RedAff _ (.pi (expr_to_eta _) (expr_to_eta _))
+          have heq₃ := from_to_eta_expr_eq heq₂
+          simp [from_to_eta_expr_eq heq₁]
+          have heq₄ :=  heq₃.symm ▸ heq₂
+          simp [← heq₃]
+          exact RedAff.pir (ih heq₄)
+        · simp_all
+    case eql =>
       
-      sorry
-    sorry⟩⟩
+      sorry⟩⟩
 
 def expr_to_eta_norm (h : IsNorm RedAff e) : IsNorm RedAff e.expr_to_eta := by
   unfold expr_to_eta

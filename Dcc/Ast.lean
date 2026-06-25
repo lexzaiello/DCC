@@ -245,8 +245,6 @@ inductive GenericExpr.{u} (τ : Type u) where
   | const  : τ              → GenericExpr τ
 deriving BEq, DecidableEq, Inhabited, Repr
 
-def GenericExpr.pure.{u} {α : Type u} {m : Type u → Type u} [hM : AlternativeMonad m] (x : GenericExpr α) : m (GenericExpr α) := hM.pure x
-
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
 def GenericExpr.monad_map.{u, v} {α : Type u} {β : Type v}
   {m : Type v → Type v} [AlternativeMonad m] (f : α → β) (x : GenericExpr α) : m (GenericExpr β) := by

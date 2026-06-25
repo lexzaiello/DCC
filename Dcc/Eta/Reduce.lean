@@ -849,9 +849,6 @@ GenericExpr τ vs GenericExpr (EtaConst τ)
 -/
 
 def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c))) : Option (GenericExpr τ_c) :=
-  
-
-def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c))) : Option (GenericExpr τ_c) :=
   match e with
   | DCC? ∗ => .some <| DCC? ∗
   | DCC? ⊤ => .some <| DCC? ⊤

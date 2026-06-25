@@ -219,16 +219,16 @@ def cc_var (τ_c : Type) [Repr τ_c] [DecidableEq τ_c] (ctx : Ctx τ_c) (idx : 
       grind
     let x ← cc_var (τ_c := τ_c) (ctx := α) idx infer reduce
     -- TODO: use *(x) instead
-    pure (DCC? *<x>)
+    pure (DCC? x ∘' *(α))
   | _ =>
     match ctx, idx with
     | DCC? Coup(β), .zero => pure <| DCC? Sndc(β)
-    | DCC? !(Coup(β)), .zero => pure <| DCC? *<Sndc(β)>
+    | DCC? !(Coup(β)), .zero => pure <| DCC? Sndc(β) ∘' *(Coup(β))
     | DCC? !(Coup(β)), .succ n => do
       match (·.fst) <$> infer.snd β with
       | .ok (DCC? (Π(a, _b) x_α)) =>
         --(DCC? ((#(·) ∘' Fstc(β)) ∘' !(Coup(β)))) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
-        (DCC? (*<(#(·) ∘' Fstc(β))>)) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
+        (DCC? ((#(·) ∘' Fstc(β)) ∘' *(Coup(β)))) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
       | τ => Lean.Macro.throwError s!"Couple β index is not valid: ({β} : {τ})"
     | DCC? Coup(β), .succ n => do
       match (·.fst) <$> infer.snd β with
@@ -327,7 +327,7 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
 
     return reduce (DCC? (Π(α', Λ(ctx, α', β'))))
   | .app (.const ``Shared _us) α => do
-    let α' ← reduce <$> abstract' τ_c α ctx infer reduce fallback
+    let α' ← reduce <$> abstract' τ_c α ctx.deref infer reduce fallback
     -- could be this one
     return (DCC? (!<α'>))
   | (.app (.const ``Eq.refl _us) α) => do
@@ -356,10 +356,14 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
       let α : GenericExpr τ_c := match reduce (f_α.app x_α) with
         | DCC? !(α) => α
         | α => α
-      match reduce (f_β.app x_α) with
+      let β : GenericExpr τ_c ← match (·.fst) <$> infer.snd N' with
+      | .ok (DCC? (Π(_a, b) x)) => pure (reduce (b.app x))
+      | τ => Lean.Macro.throwError ("app is not well-typed [5]:" ++ Std.Format.line ++
+        "found: " ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ)).pretty
+      /-match reduce (f_β.app x_α) with
       | DCC? Π(β, _γ) =>
         dbg_trace α
-        dbg_trace N'
+        dbg_trace N'-/
         match (·.fst) <$> infer.snd (DCC? Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))) with
         | .ok (DCC? (Π(_f_α, f_β₀) x_α₀)) =>
           match reduce (DCC? (f_β₀ x_α₀)) with
@@ -378,8 +382,8 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
         | τ => Lean.Macro.throwError ("app is not well-typed [1]:" ++ Std.Format.line ++
           (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ) ++ Std.Format.line ++
           "with (M): " ++ (Std.format M') ++ .line ++ "(N): " ++ (Std.format N')).pretty
-      | τ => Lean.Macro.throwError ("app is not well-typed [2]:" ++ Std.Format.line ++
-        "found: " ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ)).pretty
+      /-| τ => Lean.Macro.throwError ("app is not well-typed [2]:" ++ Std.Format.line ++
+        "found: " ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ)).pretty-/
     | x => Lean.Macro.throwError ("app is not well-typed [3]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "in: " ++ (Std.format (DCC? (M' N'))) ++ Std.Format.line ++ "found: " ++ Std.format x).pretty
   | .const ``True.intro [] => return DCC? (`(ctx, ∗))
   | .const ``True [] => return DCC? (`(ctx, ⊤))

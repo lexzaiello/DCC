@@ -322,6 +322,8 @@ open Rel in class Congruent.{u} {τ : Type u} (r : GenericExpr τ → GenericExp
   congrArg_ (h : r x x') : r (DCC[τ] (f x)) (DCC[τ] (f x')) := by exact .congrArg
   sigl_     (h : r x x') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y)) := by exact .sigl
   sigr_     (h : r y y') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y')) := by exact .sigr
+  pil_      (h : r x x') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x', y)) := by exact .pil
+  pir_      (h : r y y') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x, y')) := by exact .pir
   coup_     (h : r β β') : r (DCC[τ] Coup(β)) (DCC[τ] Coup(β'))     := by exact .coup
 
 theorem Congruent.congrFun'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
@@ -337,6 +339,14 @@ theorem Congruent.congrArg'.{u} {τ : Type u} {r : GenericExpr τ → GenericExp
 theorem Congruent.sigl'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β x y x' : GenericExpr τ} [hR : Congruent r]
   (h : r x x') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y)) :=
   (hR.sigl_ h)
+
+theorem Congruent.pil'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {x x' y : GenericExpr τ} [hR : Congruent r]
+  (h : r x x') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x', y)) :=
+  (hR.pil_ h)
+
+theorem Congruent.pir'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {x y y' : GenericExpr τ} [hR : Congruent r]
+  (h : r y y') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x, y')) :=
+  (hR.pir_ h)
 
 theorem Congruent.sigr'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β x y y' : GenericExpr τ}
   [hR : Congruent r] (h : r y y') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y')) :=
@@ -366,6 +376,14 @@ instance Congruent.trans.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr �
     induction h with
     | single h => exact .single (hC.coup' h)
     | tail => exact .trans (by assumption) (.single (hC.coup' (by assumption)))
+  pil_ h := by
+    induction h with
+    | single h => exact .single (hC.pil' h)
+    | tail => exact .trans (by assumption) (.single (hC.pil' (by assumption)))
+  pir_ h := by
+    induction h with
+    | single h => exact .single (hC.pir' h)
+    | tail => exact .trans (by assumption) (.single (hC.pir' (by assumption)))
 
 instance Congruent.reflTrans.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r] : Congruent (Relation.ReflTransGen r) where
   congrFun_ h := by
@@ -387,6 +405,16 @@ instance Congruent.reflTrans.{u} {τ : Type u} {r : GenericExpr τ → GenericEx
     rw [← Relation.reflGen_transGen] at *
     cases h with
     | single h => exact .single (hC.trans.sigr' h)
+    | refl => exact .refl
+  pil_ h := by
+    rw [← Relation.reflGen_transGen] at *
+    cases h with
+    | single h => exact .single (hC.trans.pil' h)
+    | refl => exact .refl
+  pir_ h := by
+    rw [← Relation.reflGen_transGen] at *
+    cases h with
+    | single h => exact .single (hC.trans.pir' h)
     | refl => exact .refl
   coup_ h := by
     rw [← Relation.reflGen_transGen] at *
@@ -452,6 +480,16 @@ open Confluent in @[reducible] def RedRel.globally_confluent.{u} {α : Type u}
   {f x : GenericExpr τ}
   (hn : IsNorm r (DCC[τ] (f x))) : IsNorm r x := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.congrArg' h⟩).elim
+
+@[dcc_rel] def IsNorm.pil.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+  {f_α f_β : GenericExpr τ} [hC : Congruent r]
+  (hn : IsNorm r (DCC[τ] Π(f_α, f_β))) : IsNorm r f_α := fun ⟨_, h⟩ =>
+  (hn ⟨_, hC.pil' h⟩).elim
+
+@[dcc_rel] def IsNorm.pir.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+  {f_α f_β : GenericExpr τ} [hC : Congruent r]
+  (hn : IsNorm r (DCC[τ] Π(f_α, f_β))) : IsNorm r f_β := fun ⟨_, h⟩ =>
+  (hn ⟨_, hC.pir' h⟩).elim
 
 @[dcc_rel] def IsNorm.complete.{u}
   {α : Type u}
@@ -632,3 +670,13 @@ theorem decreasing?.{u} {α : Type u} {t : α → ℕ}
 termination_by t A
 
 end GenericExpr
+
+namespace Relation
+
+namespace ReflTransGen
+
+def conf.{u} {τ : Type u} {r : τ → τ → Prop} {t : τ → ℕ} [hR : GenericExpr.RedRel r t] [GenericExpr.Confluent r] {A B C : τ} (h₁ : ReflTransGen r A B) (h₂ : ReflTransGen r A C) : ∃ D, ReflTransGen r B D ∧ ReflTransGen r C D := hR.globally_confluent.conf h₁ h₂
+
+end ReflTransGen
+
+end Relation

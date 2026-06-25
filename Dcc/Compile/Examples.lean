@@ -90,6 +90,14 @@ def S_example : Expr :=
   dcc_compile' {GenericExpr.infer₂} {GenericExpr.reduce_all₂}
     fun (α : Sort 1) (β : α → Sort 1) (γ : ∀ (x : α) (y : β x), Sort 1) (x : ∀ (x : α) (y : β x), γ x y) (y : ∀ (x : α), β x) (z : α) => x z (y z)
 
+#eval Std.format <| (DCC (*<(*<(`(Coup(`(⊤, Sort 1)), Sort 1))>)> ∘'
+                Fstc(!<(!<(Π(Sndc(`(⊤, Sort 1)),
+                           Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))>)>))).reduce_all₂
+
+#eval Sigma.fst <$> (DCC? (*<(*<(`(Coup(`(⊤, Sort 1)), Sort 1))>)> ∘'
+                Fstc(!<(!<(Π(Sndc(`(⊤, Sort 1)),
+                           Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))>)>))).domain? (τ_c := Unit)
+
 /-
 Deref order may be reversed?
 -/

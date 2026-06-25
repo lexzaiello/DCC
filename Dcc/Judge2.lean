@@ -1,6 +1,7 @@
 import Dcc.Ast
 import Dcc.Aff.Red
 import Dcc.Types
+import Dcc.Reduces
 import Dcc.Eta.Reduce
 
 inductive DefEqError.{u} {τ_c : Type u} : (A B : GenericExpr τ_c) → Type u where
@@ -53,7 +54,7 @@ namespace GenericExpr
 #eval (reduce RedAff (DCCη (Λ(Sort 1, Id(Sort 1), `(Coup(Id(Sort 1)), Sort 2)) hole(1) hole(2)))).fst
 
 inductive Reduces₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr τ_c → GenericExpr τ_c → Prop
-  | mk : Relation.ReflTransGen RedAff A B
+  | mk : RedAffReflTrans A B
     → IsNorm RedAff B
     → B.RedEta₂ C
     → Reduces₂ A C

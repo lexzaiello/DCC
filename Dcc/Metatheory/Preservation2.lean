@@ -3,10 +3,120 @@ import Dcc.Eta.Reduce
 
 namespace GenericExpr
 
+def to_from_eta_expr_comm (h : eta_to_expr (expr_to_eta e₁) = .some e₂) : e₁ = e₂ := by
+  induction e₁ generalizing e₂
+  any_goals (
+    focus
+    simp [eta_to_expr, expr_to_eta] at h
+    exact h)
+  any_goals (
+    focus
+    try (
+      rename_i ih
+      simp [expr_to_eta, eta_to_expr] at h
+      split at h
+      case h_1 heq => cases h; cases ih heq; rfl
+      · simp_all)
+    done)
+  any_goals (
+    focus
+    try (
+      rename_i ih₁ ih₂ ih₃
+      simp [expr_to_eta, eta_to_expr] at h
+      split at h
+      case h_1 heq₁ heq₂ heq₃ =>
+        have ha := ih₁ heq₁
+        have hb := ih₂ heq₂
+        have hc := ih₃ heq₃
+        simp_all
+      · simp_all)
+    done)
+  any_goals (
+    focus
+    try (
+      rename_i ih₁ ih₂
+      simp [expr_to_eta, eta_to_expr] at h
+      split at h
+      case h_1 heq₁ heq₂ =>
+        have ha := ih₁ heq₁
+        have hb := ih₂ heq₂
+        simp_all
+      · simp_all))
+
+def eta_to_expr_norm (h : eta_to_expr e = .some e') (hn : IsNorm RedAff e) : IsNorm RedAff e' := by
+  induction e generalizing e'
+  any_goals (
+    focus
+    simp [eta_to_expr] at h
+    cases h
+    intro ⟨_, h⟩
+    cases h
+    done)
+  case map ih =>
+    have h := ih (by sorry)
+    sorry
+
+def eta_to_expr_norm (h : eta_to_expr e = .some e') (hn : IsNorm RedAff e) : IsNorm RedAff e' := by
+  unfold eta_to_expr at h
+  split at h
+  any_goals (
+    focus
+    cases h
+    intro ⟨_, h⟩
+    cases h
+    done)
+  case h_4 x y =>
+    split at h
+    case h_1 heq₁ heq₂ =>
+      have ha := eta_to_expr_norm heq₁ (fun ⟨_, h⟩ => hn ⟨_, .eql' h⟩)
+      have hb := eta_to_expr_norm heq₂ (fun ⟨_, h⟩ => hn ⟨_, .eqr' h⟩)
+      cases h
+      intro ⟨_, h⟩
+      cases h with
+      | eql' h => exact ha ⟨_, h⟩
+      | eqr' h => exact hb ⟨_, h⟩
+  case h_5 =>
+    split at h
+    case h_1 heq₁ =>
+      cases h
+      intro ⟨_, h⟩
+      cases h
+  
+
+namespace TmEtaReduces
+
+def norm.{u} {τ : Type u} [DecidableEq τ] {A B : GenericExpr (EtaConst (τ := τ))}
+  (h : TmEtaReduces level A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
+  sorry
+
+end TmEtaReduces
+
+namespace FnEtaReduces
+
+def norm.{u} {τ : Type u} [DecidableEq τ] {A B : GenericExpr (EtaConst (τ := τ))}
+  (h : FnEtaReduces level A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
+  induction h with
+  | pi hr₁ hr₂ ih₁ ih₂ =>
+    have ha := ih₁ hn.pil
+    have hb := ih₂ hn.pir
+    intro ⟨_, h⟩
+    cases h with
+    | pil h => exact ha ⟨_, h⟩
+    | pir h => exact hb ⟨_, h⟩
+  | tm₁ hneq harity hr => exact hr.norm hn
+
+end FnEtaReduces
+
 namespace RedEta?
 
 def norm.{u} {τ : Type u} [DecidableEq τ] {A B : GenericExpr τ} (h : RedEta? A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
-  sorry
+  induction h with
+  | mk₁ hr heq =>
+    have h := hr.norm hn
+    
+    sorry
+  | mk₂ =>
+    sorry
 
 end RedEta?
 

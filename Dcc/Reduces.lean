@@ -6,6 +6,28 @@ import Mathlib.Logic.Relation
 import Mathlib.Data.Option.Basic
 import Mathlib.Data.ULift
 
+namespace GenericExpr
+
+@[dcc_judge]
+def RedAffReflTrans.{u} {τ : Type u} := Relation.ReflTransGen (RedAff (τ := τ))
+
+namespace RedAffReflTrans
+
+def cases_head {a b : Expr} (r : RedAffReflTrans a b) :=
+  Relation.ReflTransGen.cases_head (a := a) (b := b) r
+
+def single.{u} {τ : Type u} {A B : GenericExpr τ}
+  (r : RedAff A B) : (RedAffReflTrans (τ := τ)) A B := Relation.ReflTransGen.single r
+
+def trans.{u} {τ : Type u} {A B C : GenericExpr τ} (r₁ : RedAffReflTrans A B)
+  (r₂ : RedAffReflTrans B C) : RedAffReflTrans A C := Relation.ReflTransGen.trans r₁ r₂
+
+def conf.{u} {τ : Type u} {A B C : GenericExpr τ} (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTrans A C) : ∃ D, RedAffReflTrans B D ∧ RedAffReflTrans C D := RedAff.instRedRel.globally_confluent.conf h₁ h₂
+
+end RedAffReflTrans
+
+end GenericExpr
+
 namespace Expr
 
 open GenericExpr
@@ -24,9 +46,6 @@ abbrev decreasing? : ∀ {t : Expr → ℕ}
   (r : Expr → Expr → Prop) [_hR : GenericExpr.RedRel r t] {A B : Expr} (_hr : Relation.ReflTransGen r A B), t B ≤ t A := GenericExpr.decreasing? (α := GenericExpr (τ := Unit))-/
 
 @[dcc_judge]
-def RedAffReflTrans := Relation.ReflTransGen RedAff
-
-@[dcc_judge]
 def RedAffTrans     := Relation.TransGen RedAff
 
 @[dcc_judge]
@@ -34,13 +53,6 @@ def RedEtaReflTrans := Relation.ReflTransGen RedEta
 
 @[dcc_judge]
 def RedEtaTrans     := Relation.TransGen RedEta
-
-namespace RedAffReflTrans
-
-def cases_head {a b : Expr} (r : RedAffReflTrans a b) :=
-  Relation.ReflTransGen.cases_head (a := a) (b := b) r
-
-end RedAffReflTrans
 
 namespace RedEtaReflTrans
 

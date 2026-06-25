@@ -252,8 +252,10 @@ theorem domain_complete.{u} {τ_c : Type u} [DecidableEq τ_c] {A B : GenericExp
 inductive EtaMap.{u} {τ_c : Type u} : (dom : GenericExpr (τ := EtaConst (τ := τ_c))) → (out : GenericExpr (τ := EtaConst (τ := τ_c))) → (hole_arg : GenericExpr (τ := EtaConst (τ := τ_c))) → (f' : GenericExpr (τ := EtaConst (τ := τ_c))) → Prop
   | id    : EtaMap dom hole_arg hole_arg (DCC? Id(dom))
   | par   : EtaMap dom (DCC? (f hole_arg)) hole_arg f
-  | fstc  : EtaMap dom (DCC? hole(a)) (DCC? ⟦β⟧(hole(a), hole(a + 1))) (DCC? Fstc(β))
-  | sndc  : EtaMap dom (DCC? hole(a + 1)) (DCC? ⟦β⟧(hole(a), hole(a + 1))) (DCC? Sndc(β))
+  | fstc  : EtaMap dom (DCC? &(hole(a))) (DCC? ⟦β⟧(&(hole(a)), &(hole(a + 1)))) (DCC? Fstc(β))
+  | sndc  : EtaMap dom (DCC? &(hole(a + 1))) (DCC? ⟦β⟧(&(hole(a)), &(hole(a + 1)))) (DCC? Sndc(β))
+  | fstc' : EtaMap dom (DCC? hole(a)) (DCC? ⟦β⟧(&(hole(a)), &(hole(a + 1)))) (DCC? *<Fstc(β)>)
+  | sndc' : EtaMap dom (DCC? hole(a + 1)) (DCC? ⟦β⟧(&(hole(a)), &(hole(a + 1)))) (DCC? *<Sndc(β)>)
 
 /-
 hole(a) hole(a + 1)
@@ -299,7 +301,7 @@ def map_eta.{u} {τ_c : Type u} [DecidableEq τ_c] (dom : GenericExpr (τ := Eta
       if heq : hole_arg₂ = hole_arg then
         heq ▸ .some ⟨_, ⟨.par⟩⟩
       else .none
-    | (DCC? hole(n)), (DCC? ⟦_β⟧(hole(a), hole(b))) =>
+    | (DCC? &(hole(n))), (DCC? ⟦_β⟧(&(hole(a)), &(hole(b)))) =>
       if h₁ : b = a + 1 then
         if h₂ : n = a then by
           cases h₁; cases h₂
@@ -307,6 +309,16 @@ def map_eta.{u} {τ_c : Type u} [DecidableEq τ_c] (dom : GenericExpr (τ := Eta
         else if h₂ : n = a + 1 then by
           cases h₁; cases h₂
           exact .some ⟨_, ⟨.sndc⟩⟩
+        else .none
+      else .none
+    | (DCC? hole(n)), (DCC? ⟦_β⟧(&(hole(a)), &(hole(b)))) =>
+      if h₁ : b = a + 1 then
+        if h₂ : n = a then by
+          cases h₁; cases h₂
+          exact .some ⟨_, ⟨.fstc'⟩⟩
+        else if h₂ : n = a + 1 then by
+          cases h₁; cases h₂
+          exact .some ⟨_, ⟨.sndc'⟩⟩
         else .none
       else .none
     | _, _ => .none
@@ -357,15 +369,21 @@ inductive EtaMap₂.{u} {τ_c : Type u} : (dom₁ : GenericExpr (τ := EtaConst 
 
 inductive TmEtaReduces.{u} {τ_c : Type u} [BEq τ_c] : (level : ℕ) → (f : GenericExpr (τ := EtaConst (τ := τ_c))) → (f' : GenericExpr (τ := EtaConst (τ := τ_c))) → Prop
   | coupl : Domain f (DCC? Coup(β))
-    → ReflTransGen RedAff (DCC? (f ⟦β⟧(hole(level + 1), hole(level + 2)))) e'
+    → ReflTransGen RedAff (DCC? (f ⟦β⟧(&(hole(level + 1)), &(hole(level + 2))))) e'
     → IsNorm RedAff e'
-    → EtaResult (DCC? Coup(β)) e' (DCC? ⟦β⟧(hole(level + 1), hole(level + 2))) f'
+    → EtaResult (DCC? Coup(β)) e' (DCC? ⟦β⟧(&(hole(level + 1)), &(hole(level + 2)))) f'
     → TmEtaReduces level f f'
   | tm    : Domain f τ
     → (¬ ∃ β, τ = (DCC? Coup(β)))
+    → (¬ ∃ β, τ = (DCC? !(Coup(β))))
     → ReflTransGen RedAff (DCC? (f hole(level + 1))) e'
     → IsNorm RedAff e'
     → EtaResult τ e' (DCC? hole(level + 1)) f'
+    → TmEtaReduces level f f'
+  | bang₁ : Domain f (DCC? !(Coup(β)))
+    → ReflTransGen RedAff (DCC? (f &(⟦β⟧(&(hole(level + 1)), &(hole(level + 2)))))) e'
+    → IsNorm RedAff e'
+    → EtaResult (DCC? !(Coup(β))) e' (DCC? &(⟦β⟧(&(hole(level + 1)), &(hole(level + 2))))) f'
     → TmEtaReduces level f f'
 
 def mk_eta_result.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] (dom : GenericExpr (τ := EtaConst (τ := τ_c)))
@@ -386,6 +404,21 @@ instance decExistsCoupE.{u} {τ : Type u} {f : GenericExpr (τ := τ)} : Decidab
       intro ⟨_, heq⟩
       simp_all))
 
+instance : Decidable (∃ (β : GenericExpr τ), f = (DCC? !(Coup(β)))) := by
+  cases f
+  case bang x =>
+    cases x
+    case coup =>
+      exact .isTrue (by aesop)
+    any_goals (
+      exact .isFalse (by
+        intro ⟨_, heq⟩
+        simp_all))
+  any_goals (
+    exact .isFalse (by
+      intro ⟨_, heq⟩
+      simp_all))
+
 def eta_reduce_tm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] (level : ℕ)
   (f : GenericExpr (τ := EtaConst (τ := τ_c))) : Option ((f' : GenericExpr (τ := EtaConst (τ := τ_c))) × (PLift (TmEtaReduces level f f'))) :=
   match f.domain? with
@@ -394,18 +427,31 @@ def eta_reduce_tm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] (level : ℕ
       cases τ
       case coup β =>
         match mk_eta_result (DCC? Coup(β))
-          (reduce RedAff (DCC? (f ⟦β⟧(hole(level + 1), hole(level + 2))))).fst
-          (DCC? ⟦β⟧(hole(level + 1), hole(level + 2))) with
+          (reduce RedAff (DCC? (f ⟦β⟧(&(hole(level + 1)), &(hole(level + 2)))))).fst
+          (DCC? ⟦β⟧(&(hole(level + 1)), &(hole(level + 2)))) with
         | .some ⟨_, ⟨h₂⟩⟩ =>
           exact .some ⟨_, ⟨.coupl h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
         | _ => exact .none
+      any_goals (simp_all)
+    else if heq₂ : ∃ β, τ = (DCC? !(Coup(β))) then by
+      cases τ
+      case bang β =>
+        cases β
+        case coup β =>
+          match mk_eta_result (DCC? !(Coup(β)))
+            (reduce RedAff (DCC? (f &(⟦β⟧(&(hole(level + 1)), &(hole(level + 2))))))).fst
+            (DCC? &(⟦β⟧(&(hole(level + 1)), &(hole(level + 2))))) with
+          | .some ⟨_, ⟨h₂⟩⟩ =>
+            exact .some ⟨_, ⟨.bang₁ h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
+          | _ => exact .none
+        any_goals (simp_all)
       any_goals (simp_all)
     else
       match mk_eta_result τ
         (reduce RedAff (DCC? (f hole(level + 1)))).fst
         (DCC? hole(level + 1)) with
       | .some ⟨_, ⟨h₂⟩⟩ =>
-        .some ⟨_, ⟨.tm h₁ (by simp_all) (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
+        .some ⟨_, ⟨.tm h₁ (by simp_all) (by simp_all) (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
       | _ => .none
   | _ => .none
 
@@ -570,9 +616,17 @@ theorem TmEtaReduces.complete.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] 
     simp_all
     cases ha
     simp_all
+  case bang₁ =>
+    rename_i f β level e' f' h_domain hr hn hmk
+    have hb := h_domain.complete
+    have ha := reduce_complete_fst hr hn
+    have hc := hmk.complete
+    simp_all
+    cases ha
+    simp_all
   any_goals (
     focus
-    rename_i f τ level e' f' h_domain heq hr hn hmk
+    rename_i f τ level e' f' h_domain heq heq₂ hr hn hmk
     have hb := h_domain.complete
     have ha := reduce_complete_fst hr hn
     have hc := hmk.complete
@@ -1131,8 +1185,12 @@ inductive RedEta??.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : (e : Gene
   | pi₂  : RedEta?? f_α f_α'
     → RedEta?? f_β f_β'
     → RedEta?? (DCC? Π(f_α, f_β)) (DCC? Π(f_α', f_β'))
-  | pi₃  : RedEta?? (DCC? (f_α ∘' g)) f_α'
-    → RedEta?? (DCC? (f_β ∘' g)) f_β'
+  | pi₃  : Relation.ReflTransGen RedAff (DCC? f_α) f_α₁
+    → IsNorm RedAff f_α₁
+    → RedEta?? (DCC? (f_α₁ ∘' g)) f_α'
+    → Relation.ReflTransGen RedAff (DCC? f_β) f_β₁
+    → IsNorm RedAff f_β₁
+    → RedEta?? (DCC? (f_β₁ ∘' g)) f_β'
     → RedEta?? (DCC? (Π(f_α, f_β) ∘' g)) (DCC? Π(f_α', f_β'))
   | tm₁  : (¬ ∃ f_α f_β env, e = (DCC? (Π(f_α, f_β) env)))
     → (¬ ∃ f_α f_β, e = (DCC? (Π(f_α, f_β))))
@@ -1220,13 +1278,18 @@ def red_eta??.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] (e : GenericExpr
       else
         match e with
         | (DCC? (Π(f_α, f_β) ∘' g)) =>
-          have h_dec₁ : (DCC? (f_α ∘' g)).size < (DCC? Π(f_α, f_β) ∘' g).size := by
+          have h_dec₁ : (reduce RedAff f_α).fst.size ≤ f_α.size :=
+            decreasing? _ (reduce RedAff f_α).snd.down
+          have h_dec₂ : (reduce RedAff f_β).fst.size ≤ f_β.size :=
+            decreasing? _ (reduce RedAff f_β).snd.down
+          have h_dec₃ : (DCC? (#((reduce RedAff f_α).fst) ∘' g)).size < (DCC? Π(f_α, f_β) ∘' g).size := by
             grind
-          have h_dec₂ : (DCC? (f_β ∘' g)).size < (DCC? Π(f_α, f_β) ∘' g).size := by
+          have h_dec₄ : (DCC? (#((reduce RedAff f_β).fst) ∘' g)).size < (DCC? Π(f_α, f_β) ∘' g).size := by
             grind
-          match (DCC? (f_α ∘' g)).red_eta??, (DCC? (f_β ∘' g)).red_eta?? with
+          match (DCC? (#((reduce RedAff f_α).fst) ∘' g)).red_eta??, (DCC? (#((reduce RedAff f_β).fst) ∘' g)).red_eta?? with
           | .some ⟨f_α', ⟨h₁⟩⟩, .some ⟨f_β', ⟨h₂⟩⟩ =>
-            .some ⟨_, ⟨.pi₃ h₁ h₂⟩⟩
+            .some ⟨_, ⟨.pi₃ (reduce_sound rfl) (reduce_norm rfl)
+              h₁ (reduce_sound rfl) (reduce_norm rfl)  h₂⟩⟩
           | _, _ => .none
         | _ => .none
 termination_by e.size
@@ -1263,9 +1326,14 @@ theorem RedEta??.complete.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {e e
     have h₁ := reduce_complete hr hnorm
     rw [red_eta??]
     simp [hn''', hn', hn'', hn₁, hn₂, hn₃]
-  case pi₃ hr₁ hr₂ heq₁ heq₂ =>
+  case pi₃ hrt₁ hn₁ hr₁ hrt₂ hn₂ hr₂ heq₁ heq₂ =>
+    have heq₃ := reduce_complete hrt₁ hn₁
+    have heq₄ := reduce_complete hrt₂ hn₂
+    have heq₅ := reduce_complete_fst hrt₁ hn₁
+    have heq₆ := reduce_complete_fst hrt₂ hn₂
+    cases heq₅; cases heq₆
     unfold red_eta??
-    simp [heq₁, heq₂]
+    simp_all
   case coup hr₁ heq₁ =>
     unfold red_eta??
     simp [heq₁]

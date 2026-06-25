@@ -43,7 +43,238 @@ def to_from_eta_expr_comm (h : eta_to_expr (expr_to_eta e₁) = .some e₂) : e�
         simp_all
       · simp_all))
 
+--def to_from_eta_expr_comm' (h_some : eta_to_expr 
+
+def step_expr_steps_eta {e : GenericExpr (EtaConst (τ := τ))} {e' : GenericExpr τ}
+  (heq : eta_to_expr e = .some e') (hr : RedAff e' e'') : ((e''' : GenericExpr (EtaConst (τ := τ))) × (PLift (RedAff e e'''))) :=
+  ⟨e''.expr_to_eta, ⟨by
+    induction hr generalizing e
+    case pil hr ih =>
+      rename_i f_α f_α' f_β
+      have h_some : e.eta_to_expr.isSome := by simp_all
+      have h_to_expr : (e.eta_to_expr.get h_some) = f_α.pi f_β := by
+        simp_all
+      
+      sorry
+    sorry⟩⟩
+
+def expr_to_eta_norm (h : IsNorm RedAff e) : IsNorm RedAff e.expr_to_eta := by
+  unfold expr_to_eta
+  split
+  
+
 def eta_to_expr_norm (h : eta_to_expr e = .some e') (hn : IsNorm RedAff e) : IsNorm RedAff e' := by
+  intro ⟨_, h⟩
+  induction h generalizing e
+  case congrFun hr ih =>
+    unfold eta_to_expr at h
+    split at h
+    any_goals (grind)
+    case h_29 =>
+      split at h
+      case h_1 heq₁ heq₂ =>
+        cases h
+        exact ih heq₁ hn.congrFun
+      · simp_all
+  case congrArg hr ih =>
+    unfold eta_to_expr at h
+    split at h
+    any_goals (grind)
+    case h_29 =>
+      split at h
+      case h_1 heq₁ heq₂ =>
+        cases h
+        exact ih heq₂ hn.congrArg
+      · simp_all
+  case pil hr ih =>
+    unfold eta_to_expr at h
+    split at h
+    any_goals (grind)
+    split at h
+    case h_1 heq₁ heq₂ =>
+      cases h
+      exact ih heq₁ hn.pil
+    · simp_all
+  case pir hr ih =>
+    unfold eta_to_expr at h
+    split at h
+    any_goals (grind)
+    split at h
+    case h_1 heq₁ heq₂ =>
+      cases h
+      exact ih heq₂ hn.pir
+    · simp_all
+  case eql =>
+    unfold eta_to_expr at h
+    split at h
+    any_goals (grind)
+    split at h
+    case h_1 heq₁ heq₂ =>
+      cases h
+      unfold eta_to_expr at *
+      split at heq₁
+      any_goals (grind)
+      split at heq₂
+      any_goals (grind)
+      
+
+/-def eta_to_expr_norm (h : eta_to_expr e = .some e') (hn : IsNorm RedAff e) : IsNorm RedAff e' := by
+  unfold eta_to_expr at h
+  split at h
+  any_goals (
+    focus
+    simp at h
+    cases h
+    intro ⟨_, h⟩
+    cases h
+    done)
+  case h_4 =>
+    split at h
+    case h_1 heq₁ heq₂ =>
+      have ha := eta_to_expr_norm heq₁ (fun ⟨_, h⟩ => hn ⟨_, .eql' h⟩)
+      have hb := eta_to_expr_norm heq₂ (fun ⟨_, h⟩ => hn ⟨_, .eqr' h⟩)
+      cases h
+      intro ⟨_, h⟩
+      cases h with
+      | eql' h => exact ha ⟨_, h⟩
+      | eqr' h => exact hb ⟨_, h⟩
+    · simp_all
+  case h_29 =>
+    
+    sorry
+  /-any_goals (
+    focus
+    try (
+      rename_i ih
+      simp at h
+      split at h
+      case h_1 heq =>
+        cases h
+        first
+        | intro ⟨_, h⟩
+          cases h
+        | have h := ih heq (fun ⟨_, h⟩ => hn ⟨_, by constructor; exact h⟩)
+          simp_all
+      · simp_all)
+    done)-/
+  sorry-/
+
+/-def eta_to_expr_norm (h : eta_to_expr e = .some e') (hn : IsNorm RedAff e) : IsNorm RedAff e' := by
+  let h₀  := h
+  let hn₀ := hn
+  induction e generalizing e'
+  any_goals (
+    focus
+    simp [eta_to_expr] at h
+    cases h
+    intro ⟨_, h⟩
+    cases h
+    done)
+  any_goals (
+    focus
+    try (
+      rename_i ih
+      simp [eta_to_expr] at h
+      split at h
+      case h_1 heq =>
+        cases h
+        first
+        | intro ⟨_, h⟩
+          cases h
+        | have h := ih heq (fun ⟨_, h⟩ => hn ⟨_, by constructor; exact h⟩)
+          simp_all
+      · simp_all)
+    done)
+  /-any_goals (
+    focus
+    try (
+      rename_i ih₁ ih₂ ih₃
+      simp [eta_to_expr] at h
+      split at h
+      case h_1 heq₁ heq₂ heq₃ =>
+        have ha := ih₁ heq₁ (
+      · simp_all)
+    done)-/
+  case bang ih =>
+    simp [eta_to_expr] at h
+    split at h
+    case h_1 heq =>
+      have hb := ih heq (fun ⟨_, h⟩ => hn ⟨_, .bang h⟩)
+      cases h
+      intro ⟨_, h⟩
+      cases h with
+      | bang h => exact hb ⟨_, h⟩
+    · simp_all
+  case pair ih₁ ih₂ ih₃ =>
+    simp [eta_to_expr] at h
+    split at h
+    case h_1 heq₁ heq₂ heq₃ =>
+      cases h
+      have ha := ih₂ heq₂ (fun ⟨_, h⟩ => hn ⟨_, .pairl h⟩)
+      have hb := ih₃ heq₃ (fun ⟨_, h⟩ => hn ⟨_, .pairr h⟩)
+      intro ⟨_, h⟩
+      cases h with
+      | pairl h => exact ha ⟨_, h⟩
+      | pairr h => exact hb ⟨_, h⟩
+    · simp_all
+  case mkc ih₁ ih₂ ih₃ =>
+    simp [eta_to_expr] at h
+    split at h
+    case h_1 heq₁ heq₂ heq₃ =>
+      cases h
+      have ha := ih₂ heq₂ (fun ⟨_, h⟩ => hn ⟨_, .sigl h⟩)
+      have hb := ih₃ heq₃ (fun ⟨_, h⟩ => hn ⟨_, .sigr h⟩)
+      intro ⟨_, h⟩
+      cases h with
+      | sigl h => exact ha ⟨_, h⟩
+      | sigr h => exact hb ⟨_, h⟩
+    · simp_all
+  case eq ih₁ ih₂ =>
+    simp [eta_to_expr] at h
+    split at h
+    case h_1 heq₁ heq₂ =>
+      have ha := ih₁ heq₁ (fun ⟨_, h⟩ => hn ⟨_, .eql' h⟩)
+      have hb := ih₂ heq₂ (fun ⟨_, h⟩ => hn ⟨_, .eqr' h⟩)
+      cases h
+      intro ⟨_, h⟩
+      cases h with
+      | eql' h => exact ha ⟨_, h⟩
+      | eqr' h => exact hb ⟨_, h⟩
+    · simp_all
+  case pi ih₁ ih₂ =>
+    simp [eta_to_expr] at h
+    split at h
+    case h_1 hpi₁ hpi₂ =>
+      have ha := ih₁ hpi₁ (fun ⟨_, h⟩ => hn ⟨_, .pil h⟩)
+      have hb := ih₂ hpi₂ (fun ⟨_, h⟩ => hn ⟨_, .pir h⟩)
+      cases h
+      intro ⟨_, h⟩
+      cases h with
+      | pil h => exact ha ⟨_, h⟩
+      | pir h => exact hb ⟨_, h⟩
+    · simp_all
+  case coup ih =>
+    simp [eta_to_expr] at h
+    split at h
+    case h_1 heq =>
+      have ha := ih heq (fun ⟨_, h⟩ => hn ⟨_, .coup h⟩)
+      cases h
+      intro ⟨_, h⟩
+      cases h with
+      | coup h => exact ha ⟨_, h⟩
+    · simp_all
+  case app ih₁ ih₂ =>
+    simp [eta_to_expr] at h
+    split at h
+    case h_1 heq₁ heq₂ =>
+      have ha := ih₁ heq₁ (fun ⟨_, h⟩ => hn ⟨_, .congrFun h⟩)
+      have hb := ih₂ heq₂ (fun ⟨_, h⟩ => hn ⟨_, .congrArg h⟩)
+      cases h
+      simp_all
+      
+      sorry-/
+
+/-def eta_to_expr_norm (h : eta_to_expr e = .some e') (hn : IsNorm RedAff e) : IsNorm RedAff e' := by
   induction e generalizing e'
   any_goals (
     focus
@@ -53,8 +284,12 @@ def eta_to_expr_norm (h : eta_to_expr e = .some e') (hn : IsNorm RedAff e) : IsN
     cases h
     done)
   case map ih =>
-    have h := ih (by sorry)
-    sorry
+    simp [eta_to_expr] at h
+    split at h
+    case h_1 heq =>
+      
+      sorry
+    · simp_all
 
 def eta_to_expr_norm (h : eta_to_expr e = .some e') (hn : IsNorm RedAff e) : IsNorm RedAff e' := by
   unfold eta_to_expr at h
@@ -81,7 +316,7 @@ def eta_to_expr_norm (h : eta_to_expr e = .some e') (hn : IsNorm RedAff e) : IsN
       cases h
       intro ⟨_, h⟩
       cases h
-  
+  -/
 
 namespace TmEtaReduces
 
@@ -112,6 +347,7 @@ namespace RedEta?
 def norm.{u} {τ : Type u} [DecidableEq τ] {A B : GenericExpr τ} (h : RedEta? A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
   induction h with
   | mk₁ hr heq =>
+    
     have h := hr.norm hn
     
     sorry

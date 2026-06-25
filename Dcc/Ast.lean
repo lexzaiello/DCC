@@ -244,6 +244,67 @@ inductive GenericExpr.{u} (τ : Type u) where
   | const  : τ              → GenericExpr τ
 deriving BEq, DecidableEq, Inhabited, Repr
 
+def GenericExpr.functor_map (f : α → β) (x : GenericExpr α) : GenericExpr β := by
+  cases x
+  · exact .top
+  · exact .bot
+  · exact .tintro
+  · exact .sort (by assumption)
+  case map x =>
+    exact .map (x.functor_map f)
+  case fmap x =>
+    exact .fmap (x.functor_map f)
+  case bang x =>
+    exact .bang (x.functor_map f)
+  case box x =>
+    exact .box (x.functor_map f)
+  case unmap x =>
+    exact .unmap (x.functor_map f)
+  case unbox x =>
+    exact .unbox (x.functor_map f)
+  case eql x =>
+    exact .eql (x.functor_map f)
+  case refl x =>
+    exact .refl (x.functor_map f)
+  case fstc x =>
+    exact .fstc (x.functor_map f)
+  case sndc x =>
+    exact .sndc (x.functor_map f)
+  case id x =>
+    exact .id (x.functor_map f)
+  case eval x y z =>
+    exact .eval (x.functor_map f) (y.functor_map f) (z.functor_map f)
+  case curr x y z =>
+    exact .curr (x.functor_map f) (y.functor_map f) (z.functor_map f)
+  case curr' x y z =>
+    exact .curr' (x.functor_map f) (y.functor_map f) (z.functor_map f)
+  case pair x y z =>
+    exact .pair (x.functor_map f) (y.functor_map f) (z.functor_map f)
+  case mkc x y z =>
+    exact .mkc (x.functor_map f) (y.functor_map f) (z.functor_map f)
+  case eq x y =>
+    exact .eq (x.functor_map f) (y.functor_map f)
+  case comp x y =>
+    exact .comp (x.functor_map f) (y.functor_map f)
+  case comp' x y =>
+    exact .comp' (x.functor_map f) (y.functor_map f)
+  case comp₂ x y =>
+    exact .comp₂ (x.functor_map f) (y.functor_map f)
+  case quot x y =>
+    exact .quot (x.functor_map f) (y.functor_map f)
+  case pi x y =>
+    exact .pi (x.functor_map f) (y.functor_map f)
+  case sigma x y =>
+    exact .sigma (x.functor_map f) (y.functor_map f)
+  case coup x =>
+    exact .coup (x.functor_map f)
+  case app x y =>
+    exact .app (x.functor_map f) (y.functor_map f)
+  case const x => exact .const (f x)
+
+instance : Functor GenericExpr where
+  map := GenericExpr.functor_map
+
 open GenAst in
 abbrev Expr := GenericExpr Unit
 
@@ -425,3 +486,99 @@ def Shared.unmap.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β
 
 #check PSigma
 #check Shared.share
+
+/-def GenericExpr.functor_map.{u, v}
+  {α : Type u} {β : Type v} (f : α → β) (e : GenericExpr (τ := α)) : (GenericExpr (τ := β)) :=
+  match e with
+  | DCC? ∗ => DCC? ∗
+  | DCC? ⊤ => DCC? ⊤
+  | DCC? ⊥ => DCC? ⊥
+  | DCC? x = y =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map with
+    | x', y' => (DCC? x' = y')
+  | DCC? Eql(x)  =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? Eql(x'))
+  | DCC? refl(x) =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? refl(x'))
+  | DCC? Sort _m => (DCC? Sort _m)
+  | DCC? Σ(x, y) =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map with
+    | x', y' =>
+      (DCC? Σ(x', y'))
+  | DCC? `(x, y) =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map with
+    | x', y' =>
+      (DCC? `(x', y'))
+  | DCC? ⟦x⟧(y, z) =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map, z.GenericExpr.functor_map with
+    | x', y', z' =>
+      (DCC? ⟦x'⟧(y', z'))
+  | DCC? Coup(x) =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? Coup(x'))
+  | DCC? Id(x)      =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? Id(x'))
+  | DCC? Fstc(x)    =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? Fstc(x'))
+  | DCC? Sndc(x)    =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? Sndc(x'))
+  | DCC? Π(x, y) =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map with
+    | x', y' =>
+      (DCC? Π(x', y'))
+  | DCC? (x ∘' y) =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map with
+    | x', y' =>
+      (DCC? x' ∘' y')
+  | DCC? (x ∘ y)  =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map with
+    | x', y' =>
+      (DCC? x' ∘ y')
+  | DCC? (x ∘∘ y)  =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map with
+    | x', y' =>
+      (DCC? x' ∘∘ y')
+  | DCC? ⟦x⟧⟨y, z⟩   =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map, z.GenericExpr.functor_map with
+    | x', y', z' =>
+      (DCC? ⟦x'⟧⟨y', z'⟩)
+  | DCC? Λ(x, y, z) =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map, z.GenericExpr.functor_map with
+    | x', y', z' =>
+      (DCC? Λ(x', y', z'))
+  | DCC? !Λ(x, y, z) =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map, z.GenericExpr.functor_map with
+    | x', y', z' =>
+      (DCC? !Λ(x', y', z'))
+  | DCC? Eval(x, y, z) =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map, z.GenericExpr.functor_map with
+    | x', y', z' =>
+      (DCC? Eval(x', y', z'))
+  | DCC? !(x)   =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? !(x'))
+  | DCC? *(x)   =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? *(x'))
+  | DCC? *<x>   =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? *<x'>)
+  | DCC? &(x)   =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? &(x'))
+  | DCC? !<x>   =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? !<x'>)
+  | DCC? $<x>   =>
+    match x.GenericExpr.functor_map with
+    | x' => (DCC? $<x'>)
+  | DCC? (x y) =>
+    match x.GenericExpr.functor_map, y.GenericExpr.functor_map with
+    | x', y' =>
+      (DCC? (x' y'))
+  | .const x => (.const (.const x))-/

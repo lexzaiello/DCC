@@ -969,6 +969,9 @@ def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c
   | .const (.hole _) => .none
   | .const (.const x) => .some (.const x)
 
+def expr_to_eta.{u} {τ_c : Type u} : ∀ (e : GenericExpr (τ := τ_c)), (GenericExpr (τ := EtaConst (τ := τ_c))) :=
+  Functor.map EtaConst.const
+
 def expr_to_eta.{u} {τ_c : Type u} (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (τ := τ_c))) :=
   match e with
   | DCC? ∗ => DCC? ∗

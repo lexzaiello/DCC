@@ -849,6 +849,9 @@ GenericExpr τ vs GenericExpr (EtaConst τ)
 -/
 
 def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c))) : Option (GenericExpr τ_c) :=
+  
+
+def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c))) : Option (GenericExpr τ_c) :=
   match e with
   | DCC? ∗ => .some <| DCC? ∗
   | DCC? ⊤ => .some <| DCC? ⊤
@@ -971,101 +974,6 @@ def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c
 
 def expr_to_eta.{u} {τ_c : Type u} : ∀ (e : GenericExpr (τ := τ_c)), (GenericExpr (τ := EtaConst (τ := τ_c))) :=
   Functor.map EtaConst.const
-
-def expr_to_eta.{u} {τ_c : Type u} (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (τ := τ_c))) :=
-  match e with
-  | DCC? ∗ => DCC? ∗
-  | DCC? ⊤ => DCC? ⊤
-  | DCC? ⊥ => DCC? ⊥
-  | DCC? x = y =>
-    match x.expr_to_eta, y.expr_to_eta with
-    | x', y' => (DCC? x' = y')
-  | DCC? Eql(x)  =>
-    match x.expr_to_eta with
-    | x' => (DCC? Eql(x'))
-  | DCC? refl(x) =>
-    match x.expr_to_eta with
-    | x' => (DCC? refl(x'))
-  | DCC? Sort _m => (DCC? Sort _m)
-  | DCC? Σ(x, y) =>
-    match x.expr_to_eta, y.expr_to_eta with
-    | x', y' =>
-      (DCC? Σ(x', y'))
-  | DCC? `(x, y) =>
-    match x.expr_to_eta, y.expr_to_eta with
-    | x', y' =>
-      (DCC? `(x', y'))
-  | DCC? ⟦x⟧(y, z) =>
-    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
-    | x', y', z' =>
-      (DCC? ⟦x'⟧(y', z'))
-  | DCC? Coup(x) =>
-    match x.expr_to_eta with
-    | x' => (DCC? Coup(x'))
-  | DCC? Id(x)      =>
-    match x.expr_to_eta with
-    | x' => (DCC? Id(x'))
-  | DCC? Fstc(x)    =>
-    match x.expr_to_eta with
-    | x' => (DCC? Fstc(x'))
-  | DCC? Sndc(x)    =>
-    match x.expr_to_eta with
-    | x' => (DCC? Sndc(x'))
-  | DCC? Π(x, y) =>
-    match x.expr_to_eta, y.expr_to_eta with
-    | x', y' =>
-      (DCC? Π(x', y'))
-  | DCC? (x ∘' y) =>
-    match x.expr_to_eta, y.expr_to_eta with
-    | x', y' =>
-      (DCC? x' ∘' y')
-  | DCC? (x ∘ y)  =>
-    match x.expr_to_eta, y.expr_to_eta with
-    | x', y' =>
-      (DCC? x' ∘ y')
-  | DCC? (x ∘∘ y)  =>
-    match x.expr_to_eta, y.expr_to_eta with
-    | x', y' =>
-      (DCC? x' ∘∘ y')
-  | DCC? ⟦x⟧⟨y, z⟩   =>
-    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
-    | x', y', z' =>
-      (DCC? ⟦x'⟧⟨y', z'⟩)
-  | DCC? Λ(x, y, z) =>
-    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
-    | x', y', z' =>
-      (DCC? Λ(x', y', z'))
-  | DCC? !Λ(x, y, z) =>
-    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
-    | x', y', z' =>
-      (DCC? !Λ(x', y', z'))
-  | DCC? Eval(x, y, z) =>
-    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
-    | x', y', z' =>
-      (DCC? Eval(x', y', z'))
-  | DCC? !(x)   =>
-    match x.expr_to_eta with
-    | x' => (DCC? !(x'))
-  | DCC? *(x)   =>
-    match x.expr_to_eta with
-    | x' => (DCC? *(x'))
-  | DCC? *<x>   =>
-    match x.expr_to_eta with
-    | x' => (DCC? *<x'>)
-  | DCC? &(x)   =>
-    match x.expr_to_eta with
-    | x' => (DCC? &(x'))
-  | DCC? !<x>   =>
-    match x.expr_to_eta with
-    | x' => (DCC? !<x'>)
-  | DCC? $<x>   =>
-    match x.expr_to_eta with
-    | x' => (DCC? $<x'>)
-  | DCC? (x y) =>
-    match x.expr_to_eta, y.expr_to_eta with
-    | x', y' =>
-      (DCC? (x' y'))
-  | .const x => (.const (.const x))
 
 inductive RedEta?.{u} {τ_c : Type u} [hdecEq : DecidableEq τ_c] [hBEq : BEq τ_c] : (e₁ : GenericExpr (τ := τ_c)) → (e₄ : GenericExpr (τ := τ_c)) → Prop
   | mk₁ : FnEtaReduces 0 (expr_to_eta e₁) e₃ → (eta_to_expr e₃ = .some e₄) → RedEta? e₁ e₄

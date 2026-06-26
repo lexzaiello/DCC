@@ -1216,8 +1216,6 @@ def to_eta_left_inv.{u} {τ : Type u}
     have hc := z.to_eta_left_inv
     simp [ha, hb, hc])
 
---def to_from_eta_eq_iff.{u} {τ : Type u} {e : GenericExpr τ} {e' : GenericExpr (@EtaConst τ)} : expr_to_eta e = e' ↔
-
 def to_eta_right_inv.{u} {τ : Type u} {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) :
   (expr_to_eta (eta_to_expr e hn)) = e := by
   induction e
@@ -1428,11 +1426,23 @@ abbrev red_eta'₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] (e : Generi
 #eval (DCC (Π(Id(Sort 3) ∘' Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2))))) !(Sort 2))).red_eta.fst
 #eval (DCC (Π(Id(Sort 3) ∘' Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2)))) ∘' Id(Sort 3)) !(Sort 2))).red_eta.fst
 
-/-def RedEta₂.transport.{u} {τ : Type u} [BEq τ] [DecidableEq τ] {e e' : GenericExpr τ}
-  (h : RedEta₂ e e') : RedEta₂ e.expr_to_eta e'.expr_to_eta := by
-  induction heq : h
-  
-  sorry-/
+namespace RedAff
+
+def tail_no_hole (hr : RedAff A B) (hn : ¬ A.contains_hole) : ¬ B.contains_hole := by
+  induction hr <;> grind
+
+def from_eta.{u} {τ_c : Type u} {A B : GenericExpr (@EtaConst τ_c)} (hr : RedAff A B)
+  (hn : ¬ A.contains_hole) : RedAff (A.eta_to_expr hn) (B.eta_to_expr (tail_no_hole hr hn)) := by
+  induction hr <;> (
+    focus
+    rename_i ih
+    simp [eta_to_expr]
+    first
+    | (constructor; exact (ih (by simp_all [contains_hole])))
+    | (constructor)
+    done)
+
+end RedAff
 
 end GenericExpr
 

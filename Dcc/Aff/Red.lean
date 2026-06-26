@@ -559,6 +559,24 @@ instance RedAff.instDecidableNorm.{u} {α : Type u} [DecidableEq α]
         have h := RedAff.instRedRel.reduce_norm_fst h
         simp_all)
 
+@[dcc_judge]
+def RedAffReflTrans.{u} {τ : Type u} := Relation.ReflTransGen (RedAff (τ := τ))
+
+namespace RedAffReflTrans
+
+def cases_head {a b : Expr} (r : RedAffReflTrans a b) :=
+  Relation.ReflTransGen.cases_head (a := a) (b := b) r
+
+def single.{u} {τ : Type u} {A B : GenericExpr τ}
+  (r : RedAff A B) : (RedAffReflTrans (τ := τ)) A B := Relation.ReflTransGen.single r
+
+def trans.{u} {τ : Type u} {A B C : GenericExpr τ} (r₁ : RedAffReflTrans A B)
+  (r₂ : RedAffReflTrans B C) : RedAffReflTrans A C := Relation.ReflTransGen.trans r₁ r₂
+
+def conf.{u} {τ : Type u} {A B C : GenericExpr τ} (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTrans A C) : ∃ D, RedAffReflTrans B D ∧ RedAffReflTrans C D := RedAff.instRedRel.globally_confluent.conf h₁ h₂
+
+end RedAffReflTrans
+
 end GenericExpr
 
 abbrev Expr.RedAff := GenericExpr.RedAff (τ := Unit)

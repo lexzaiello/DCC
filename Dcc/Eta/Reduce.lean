@@ -1666,8 +1666,9 @@ namespace RedEta₂
 def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr τ_c}
   (hr : RedEta₂ A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
   have hn' := hn.to_eta
-  
-  sorry
+  cases hr with
+  | refl hneq => exact hn
+  | step h    => exact h.is_norm hn
 
 end RedEta₂
 

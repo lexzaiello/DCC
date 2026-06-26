@@ -1431,7 +1431,7 @@ namespace RedAff
 def tail_no_hole (hr : RedAff A B) (hn : ¬ A.contains_hole) : ¬ B.contains_hole := by
   induction hr <;> grind
 
-def from_eta.{u} {τ_c : Type u} {A B : GenericExpr (@EtaConst τ_c)} (hr : RedAff A B)
+def eta_to_tm.{u} {τ_c : Type u} {A B : GenericExpr (@EtaConst τ_c)} (hr : RedAff A B)
   (hn : ¬ A.contains_hole) : RedAff (A.eta_to_expr hn) (B.eta_to_expr (tail_no_hole hr hn)) := by
   induction hr <;> (
     focus
@@ -1439,10 +1439,17 @@ def from_eta.{u} {τ_c : Type u} {A B : GenericExpr (@EtaConst τ_c)} (hr : RedA
     simp [eta_to_expr]
     first
     | (constructor; exact (ih (by simp_all [contains_hole])))
-    | (constructor)
-    done)
+    | (constructor))
 
 end RedAff
+
+namespace IsNorm
+
+def to_eta.{u} {τ_c : Type u} {e : GenericExpr τ_c} (hn : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff
+  (e.expr_to_eta (τ_c := τ_c)) := fun ⟨_, h⟩ =>
+  hn ⟨_, to_eta_left_inv ▸ (h.eta_to_tm GenericExpr.to_eta_no_hole)⟩
+
+end IsNorm
 
 end GenericExpr
 
@@ -1454,10 +1461,6 @@ instance : GenericExpr τ ≃ { x : GenericExpr (@EtaConst τ) // ¬ contains_ho
   right_inv x := by simp [to_eta_right_inv]
 
 namespace Expr
-
-theorem norm_eta {e : Expr} (h : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff (e.expr_to_eta (τ_c := Unit)) := by
-  
-  sorry
 
 theorem norm_eta {e : Expr} (h : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff (e.expr_to_eta (τ_c := Unit)) := by
   unfold GenericExpr.expr_to_eta

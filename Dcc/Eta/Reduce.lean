@@ -2,6 +2,7 @@ import Dcc.Eta.Ast
 import Dcc.Aff.Red
 import Dcc.Relation
 import Dcc.Types
+import Mathlib.Logic.Equiv.Defs
 
 /-
 Only η rule we probably also need is:
@@ -1180,6 +1181,12 @@ inductive RedEta??.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : (e : Gene
     → IsNorm RedAff e'
     → RedEta?? e e
 
+/-def RedEta??.transport {A B : GenericExpr Unit} (hr : RedEta?? A B) : RedEta?? A.expr_to_eta B.expr_to_eta := by
+  induction hr
+  · simp [expr_to_eta]
+    
+    sorry-/
+
 def to_eta_no_hole.{u} {τ : Type u} {e : GenericExpr τ} : ¬ (expr_to_eta e).contains_hole := by
   induction e <;> (simp_all [expr_to_eta, contains_hole])
 
@@ -1421,15 +1428,26 @@ abbrev red_eta'₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] (e : Generi
 #eval (DCC (Π(Id(Sort 3) ∘' Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2))))) !(Sort 2))).red_eta.fst
 #eval (DCC (Π(Id(Sort 3) ∘' Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2)))) ∘' Id(Sort 3)) !(Sort 2))).red_eta.fst
 
-def RedEta₂.transport.{u} {τ : Type u} [BEq τ] [DecidableEq τ] {e e' : GenericExpr τ}
+/-def RedEta₂.transport.{u} {τ : Type u} [BEq τ] [DecidableEq τ] {e e' : GenericExpr τ}
   (h : RedEta₂ e e') : RedEta₂ e.expr_to_eta e'.expr_to_eta := by
   induction heq : h
   
-  sorry
+  sorry-/
 
 end GenericExpr
 
+open GenericExpr in
+instance : GenericExpr τ ≃ { x : GenericExpr (@EtaConst τ) // ¬ contains_hole x} where
+  toFun       := (⟨·.expr_to_eta, to_eta_no_hole⟩)
+  invFun      := fun ⟨x, hn⟩ => eta_to_expr x hn
+  left_inv  x := by simp [to_eta_left_inv]
+  right_inv x := by simp [to_eta_right_inv]
+
 namespace Expr
+
+theorem norm_eta {e : Expr} (h : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff (e.expr_to_eta (τ_c := Unit)) := by
+  
+  sorry
 
 theorem norm_eta {e : Expr} (h : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff (e.expr_to_eta (τ_c := Unit)) := by
   unfold GenericExpr.expr_to_eta

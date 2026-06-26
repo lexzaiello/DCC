@@ -128,7 +128,7 @@ inductive Pi.f_β.type.{u} {τ_c : Type u} :
   | canon' : Pi.f_β.type (DCC? !<f_α>) (DCC? !(δ)) o n
     (DCC? (Π(Id(Sort o), `(Sort o, Π(!<f_α>, !Λ(δ, f_α, `(!(Coup(f_α)), Sort n))))) !(δ)))
   | semi   : Pi.f_β.type f_α δ o n (DCC? (Π(Id(Sort o), `(Sort o, Π(f_α, `(δ, `(f_α₂, Sort n))))) δ))
-  | arrow  : Pi.f_β.type f_α δ o n
+  | arrow  : Pi.f_β.type (DCC? Id(Sort m)) δ o n
     (DCC? (Π(Id(Sort o), `(Sort o, `(δ, (Π(Id(Sort m), `(Sort m, `(α, Sort n))) α)))) δ))
 
 def read_pi_f_β_cod.{u} {τ_c : Type u} (τ : GenericExpr τ_c) : Option (GenericExpr τ_c) :=
@@ -159,7 +159,9 @@ def view_pi_f_β.{u} {τ_c : Type u} [DecidableEq τ_c] (τ f_α δ : GenericExp
     | _, _ => .none
   | (DCC? (Π(_a, `(_b, `(_c, (Π(Id(Sort m), `(_d, `(_e, Sort n))) α)))) _f)) =>
     if heq₂ : τ = (DCC? (Π(Id(Sort o), `(Sort o, `(δ, (Π(Id(Sort m), `(Sort m, `(α, Sort n))) α)))) δ)) then
-      .some ⟨n, by rw [← heq₁, heq₂]; exact .arrow (f_α := f_α) (δ := δ) (o := o) (n := n)⟩
+      if heq₃ : f_α = (DCC? Id(Sort m)) then
+        .some ⟨n, by rw [← heq₁, heq₂, heq₃]; exact .arrow (δ := δ) (o := o) (n := n)⟩
+      else .none
     else .none
   | (DCC? (Π(_a, `(_b, Π(_c, `(_d, `(f_α₂, Sort n))))) _e)) =>
     if heq₂ : τ = (DCC? (Π(Id(Sort o), `(Sort o, Π(f_α, `(δ, `(f_α₂, Sort n))))) δ)) then

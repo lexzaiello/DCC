@@ -1445,32 +1445,6 @@ def cast_red_eta.{u} {τ_c : Type u} {A B : GenericExpr τ_c} (hr : RedAff A B)
   : RedAff A.expr_to_eta B.expr_to_eta := by
   induction hr <;> (simp_all [expr_to_eta]; constructor <;> simp_all)
 
-/-def reflect_eta_to_tm.{u} {τ_c : Type u}
-  {A : GenericExpr (@EtaConst τ_c)} {B : GenericExpr τ_c} (hn : ¬ A.contains_hole) (hr : RedAff (A.eta_to_expr hn) B)
-  : RedAff A (expr_to_eta B) := by
-  unfold eta_to_expr at hr
-  split at hr
-  any_goals (
-    focus
-    cases hr
-    done)
-  any_goals (
-    focus
-    rename_i hn_contains
-    cases hr <;> (
-      focus
-      rename_i hr
-      simp [contains_hole] at hn_contains
-      simp [expr_to_eta, to_eta_right_inv]
-      constructor
-      exact (hr.reflect_eta_to_tm (by aesop))
-      done)
-    done)
-  case h_29 =>
-    simp_all
-    
-    sorry-/
-
 end RedAff
 
 namespace IsNorm
@@ -1664,11 +1638,10 @@ end RedEta??
 namespace RedEta₂
 
 def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr τ_c}
-  (hr : RedEta₂ A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
-  have hn' := hn.to_eta
-  cases hr with
-  | refl hneq => exact hn
-  | step h    => exact h.is_norm hn
+  (hr : RedEta₂ A B) (hn : IsNorm RedAff A) : IsNorm RedAff B :=
+  match hr with
+  | .refl hneq => hn
+  | .step h    => h.is_norm hn
 
 end RedEta₂
 

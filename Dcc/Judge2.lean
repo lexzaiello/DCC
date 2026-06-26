@@ -59,6 +59,9 @@ inductive Reduces₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : Generic
     → B.RedEta₂ C
     → Reduces₂ A C
 
+def Reduces₂.is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr τ_c} : Reduces₂ A B → IsNorm RedAff B :=
+  fun ⟨_hr₁, hn₁, hr₂⟩ => hr₂.is_norm hn₁
+
 @[dcc_force_reduce]
 def reduce_all₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] := (red_eta'₂ (τ_c := τ_c)) ∘ reduce' RedAff
 
@@ -278,7 +281,8 @@ inductive Judge₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericEx
   | pi     : Judge₂ f_α τ_f_α
     → Arrow δ (DCC? Sort m) o τ_f_α
     → Judge₂ f_β τ_f_β
-    → Pi.f_β.type f_α δ o n τ_f_β
+    → Reduces₂ f_α f_α'
+    → Pi.f_β.type f_α' δ o n τ_f_β
     → Reduces₂ (Pi.type δ o n) τ
     → Judge₂ (DCC? Π(f_α, f_β)) τ
   | sort   : Judge₂ (DCC? Sort m) (DCC? Sort m.succ)
@@ -614,9 +618,9 @@ def infer₂.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Gen
       | .some ⟨δ, DCC? Sort m, o, harr⟩ =>
         match infer₂ f_β with
         | .ok ⟨τ_f_β, ⟨ht₂⟩⟩ =>
-          match τ_f_β.view_pi_f_β f_α δ o with
+          match τ_f_β.view_pi_f_β f_α.reduce_all₂ δ o with
           | .some ⟨n, h₂⟩ =>
-            .ok ⟨_, ⟨.pi ht₁ harr ht₂ h₂ (reduce₂_reduces rfl)⟩⟩
+            .ok ⟨_, ⟨.pi ht₁ harr ht₂ (reduce₂_reduces rfl) h₂ (reduce₂_reduces rfl)⟩⟩
           | _ => .error (.mark 4 (.unexpected τ_f_β f_β))
         | .error ε => .error (.mark 3 (.sub f_β ε))
       | _ => .error (.mark 2 (.unexpected τ_f_α f_α))

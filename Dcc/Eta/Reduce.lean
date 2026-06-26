@@ -1601,9 +1601,8 @@ def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr
   have hn' := hn.to_eta
   induction hr
   case mk₁ hr h_contains =>
-    have h := hr.is_norm to_eta_no_hole hn'
-    
-    sorry
+    exact (hr.is_norm to_eta_no_hole hn').from_eta h_contains
+  · assumption
 
 end RedEta?
 

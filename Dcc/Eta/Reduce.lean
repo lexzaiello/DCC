@@ -1431,7 +1431,7 @@ namespace RedAff
 def tail_no_hole (hr : RedAff A B) (hn : ¬ A.contains_hole) : ¬ B.contains_hole := by
   induction hr <;> grind
 
-def eta_to_tm.{u} {τ_c : Type u} {A B : GenericExpr (@EtaConst τ_c)} (hr : RedAff A B)
+def reflect_eta.{u} {τ_c : Type u} {A B : GenericExpr (@EtaConst τ_c)} (hr : RedAff A B)
   (hn : ¬ A.contains_hole) : RedAff (A.eta_to_expr hn) (B.eta_to_expr (tail_no_hole hr hn)) := by
   induction hr <;> (
     focus
@@ -1441,13 +1441,49 @@ def eta_to_tm.{u} {τ_c : Type u} {A B : GenericExpr (@EtaConst τ_c)} (hr : Red
     | (constructor; exact (ih (by simp_all [contains_hole])))
     | (constructor))
 
+def cast_red_eta.{u} {τ_c : Type u} {A B : GenericExpr τ_c} (hr : RedAff A B)
+  : RedAff A.expr_to_eta B.expr_to_eta := by
+  induction hr <;> (simp_all [expr_to_eta]; constructor <;> simp_all)
+
+/-def reflect_eta_to_tm.{u} {τ_c : Type u}
+  {A : GenericExpr (@EtaConst τ_c)} {B : GenericExpr τ_c} (hn : ¬ A.contains_hole) (hr : RedAff (A.eta_to_expr hn) B)
+  : RedAff A (expr_to_eta B) := by
+  unfold eta_to_expr at hr
+  split at hr
+  any_goals (
+    focus
+    cases hr
+    done)
+  any_goals (
+    focus
+    rename_i hn_contains
+    cases hr <;> (
+      focus
+      rename_i hr
+      simp [contains_hole] at hn_contains
+      simp [expr_to_eta, to_eta_right_inv]
+      constructor
+      exact (hr.reflect_eta_to_tm (by aesop))
+      done)
+    done)
+  case h_29 =>
+    simp_all
+    
+    sorry-/
+
 end RedAff
 
 namespace IsNorm
 
 def to_eta.{u} {τ_c : Type u} {e : GenericExpr τ_c} (hn : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff
   (e.expr_to_eta (τ_c := τ_c)) := fun ⟨_, h⟩ =>
-  hn ⟨_, to_eta_left_inv ▸ (h.eta_to_tm GenericExpr.to_eta_no_hole)⟩
+  hn ⟨_, to_eta_left_inv ▸ (h.reflect_eta GenericExpr.to_eta_no_hole)⟩
+
+--def from_eta₀
+
+def from_eta.{u} {τ_c : Type u} {e : GenericExpr (@EtaConst τ_c)} (hn₁ : GenericExpr.IsNorm RedAff e) (hn₂ : ¬ e.contains_hole) : GenericExpr.IsNorm GenericExpr.RedAff
+  (e.eta_to_expr hn₂) := fun ⟨_, h⟩ =>
+  hn₁ ⟨_, to_eta_right_inv hn₂ ▸ h.cast_red_eta⟩
 
 end IsNorm
 
@@ -1503,6 +1539,36 @@ def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
 
 end TmEtaReduces
 
+namespace EtaMap₂
+
+def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
+  {dom₁ dom₂ out hole₁ hole₂ f' : GenericExpr (@EtaConst τ_c)}
+  (hr : EtaMap₂ (τ_c := τ_c) dom₁ dom₂ out hole₁ hole₂ f') (hn : IsNorm RedAff out) : IsNorm RedAff f' := by
+  induction hr
+  any_goals (
+    focus
+    intro ⟨_, h⟩
+    cases h
+    done)
+  case par => exact hn.congrFun.congrFun
+
+end EtaMap₂
+
+namespace TmEtaReduces₂
+
+def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
+  {f f' : GenericExpr (@EtaConst τ_c)}
+  (hr₁ : TmEtaReduces₂ level f f') : IsNorm RedAff f' := by
+  cases hr₁
+  any_goals (
+    focus
+    intro ⟨_, h⟩; cases h
+    done)
+  case map hneq₁ hneq₂ hn₁ h_contains h_domain hrt₁ hr₂ =>
+    exact hr₂.is_norm hn₁
+
+end TmEtaReduces₂
+
 namespace FnEtaReduces
 
 def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
@@ -1522,9 +1588,9 @@ def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
     cases h with
     | pil hr => exact ha ⟨_, hr⟩
     | pir hr => exact hb ⟨_, hr⟩
-  case tm₁ heq harity hr =>
-    
-    sorry
+  case tm₁ heq harity hr => exact hr.is_norm
+  case tm₂ hneq harity hr => exact hr.is_norm
+  any_goals assumption
 
 end FnEtaReduces
 
@@ -1534,8 +1600,10 @@ def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr
   (hr : RedEta? A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
   have hn' := hn.to_eta
   induction hr
-  
-  sorry
+  case mk₁ hr h_contains =>
+    have h := hr.is_norm to_eta_no_hole hn'
+    
+    sorry
 
 end RedEta?
 

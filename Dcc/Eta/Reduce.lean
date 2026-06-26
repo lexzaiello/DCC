@@ -848,142 +848,206 @@ New ToExpr is quite simple, since eta expr and expr are just
 GenericExpr τ vs GenericExpr (EtaConst τ)
 -/
 
-def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c))) : Option (GenericExpr τ_c) :=
+def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c)))
+  (hn_contains : ¬ e.contains_hole) : GenericExpr τ_c :=
   match e with
-  | DCC? ∗ => .some <| DCC? ∗
-  | DCC? ⊤ => .some <| DCC? ⊤
-  | DCC? ⊥ => .some <| DCC? ⊥
+  | DCC? ∗ => DCC? ∗
+  | DCC? ⊤ => DCC? ⊤
+  | DCC? ⊥ => DCC? ⊥
   | DCC? x = y =>
-    match x.eta_to_expr, y.eta_to_expr with
-    | .some x', .some y' => .some (DCC? x' = y')
-    | _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' => (DCC? x' = y')
   | DCC? Eql(x)  =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? Eql(x'))
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? Eql(x'))
   | DCC? refl(x) =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? refl(x'))
-    | _ => .none
-  | DCC? Sort _m => .some (DCC? Sort _m)
+    match x.eta_to_expr (by simp_all [contains_hole])with
+    | x' => (DCC? refl(x'))
+  | DCC? Sort _m => (DCC? Sort _m)
   | DCC? Σ(x, y) =>
-    match x.eta_to_expr, y.eta_to_expr with
-    | .some x', .some y' =>
-      .some (DCC? Σ(x', y'))
-    | _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' => (DCC? Σ(x', y'))
   | DCC? `(x, y) =>
-    match x.eta_to_expr, y.eta_to_expr with
-    | .some x', .some y' =>
-      .some (DCC? `(x', y'))
-    | _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' => (DCC? `(x', y'))
   | DCC? ⟦x⟧(y, z) =>
-    match x.eta_to_expr, y.eta_to_expr, z.eta_to_expr with
-    | .some x', .some y', .some z' =>
-      .some (DCC? ⟦x'⟧(y', z'))
-    | _, _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]), z.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y', z' => (DCC? ⟦x'⟧(y', z'))
   | DCC? Coup(x) =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? Coup(x'))
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? Coup(x'))
   | DCC? Id(x)      =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? Id(x'))
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? Id(x'))
   | DCC? Fstc(x)    =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? Fstc(x'))
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole])with
+    | x' => (DCC? Fstc(x'))
   | DCC? Sndc(x)    =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? Sndc(x'))
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole])with
+    | x' => (DCC? Sndc(x'))
   | DCC? Π(x, y) =>
-    match x.eta_to_expr, y.eta_to_expr with
-    | .some x', .some y' =>
-      .some (DCC? Π(x', y'))
-    | _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' =>
+      (DCC? Π(x', y'))
   | DCC? (x ∘' y) =>
-    match x.eta_to_expr, y.eta_to_expr with
-    | .some x', .some y' =>
-      .some (DCC? x' ∘' y')
-    | _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' =>
+      (DCC? x' ∘' y')
   | DCC? (x ∘ y)  =>
-    match x.eta_to_expr, y.eta_to_expr with
-    | .some x', .some y' =>
-      .some (DCC? x' ∘ y')
-    | _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' =>
+      (DCC? x' ∘ y')
   | DCC? (x ∘∘ y)  =>
-    match x.eta_to_expr, y.eta_to_expr with
-    | .some x', .some y' =>
-      .some (DCC? x' ∘∘ y')
-    | _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' =>
+      (DCC? x' ∘∘ y')
   | DCC? ⟦x⟧⟨y, z⟩   =>
-    match x.eta_to_expr, y.eta_to_expr, z.eta_to_expr with
-    | .some x', .some y', .some z' =>
-      .some (DCC? ⟦x'⟧⟨y', z'⟩)
-    | _, _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]), z.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y', z' =>
+      (DCC? ⟦x'⟧⟨y', z'⟩)
   | DCC? Λ(x, y, z) =>
-    match x.eta_to_expr, y.eta_to_expr, z.eta_to_expr with
-    | .some x', .some y', .some z' =>
-      .some (DCC? Λ(x', y', z'))
-    | _, _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]), z.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y', z' =>
+      (DCC? Λ(x', y', z'))
   | DCC? !Λ(x, y, z) =>
-    match x.eta_to_expr, y.eta_to_expr, z.eta_to_expr with
-    | .some x', .some y', .some z' =>
-      .some (DCC? !Λ(x', y', z'))
-    | _, _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]), z.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y', z' =>
+      (DCC? !Λ(x', y', z'))
   | DCC? Eval(x, y, z) =>
-    match x.eta_to_expr, y.eta_to_expr, z.eta_to_expr with
-    | .some x', .some y', .some z' =>
-      .some (DCC? Eval(x', y', z'))
-    | _, _, _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]), z.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y', z' =>
+      (DCC? Eval(x', y', z'))
   | DCC? !(x)   =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? !(x'))
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? !(x'))
   | DCC? *(x)   =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? *(x'))
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? *(x'))
   | DCC? *<x>   =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? *<x'>)
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? *<x'>)
   | DCC? &(x)   =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? &(x'))
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? &(x'))
   | DCC? !<x>   =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? !<x'>)
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? !<x'>)
   | DCC? $<x>   =>
-    match x.eta_to_expr with
-    | .some x' => .some (DCC? $<x'>)
-    | _ => .none
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? $<x'>)
   | DCC? (x y) =>
-    match x.eta_to_expr, y.eta_to_expr with
-    | .some x', .some y' =>
-      .some (DCC? (x' y'))
-    | _, _ => .none
-  | .const (.hole _) => .none
-  | .const (.const x) => .some (.const x)
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' =>
+      (DCC? (x' y'))
+  | .const (.hole _) => by simp_all [contains_hole]
+  | .const (.const x) => (.const x)
 
-def expr_to_eta.{u} {τ_c : Type u} : ∀ (e : GenericExpr (τ := τ_c)), (GenericExpr (τ := EtaConst (τ := τ_c))) :=
-  Functor.map EtaConst.const
+def expr_to_eta.{u} {τ_c : Type u} (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (τ := τ_c))) :=
+  match e with
+  | DCC? ∗ => DCC? ∗
+  | DCC? ⊤ => DCC? ⊤
+  | DCC? ⊥ => DCC? ⊥
+  | DCC? x = y =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' => (DCC? x' = y')
+  | DCC? Eql(x)  =>
+    match x.expr_to_eta with
+    | x' => (DCC? Eql(x'))
+  | DCC? refl(x) =>
+    match x.expr_to_eta with
+    | x' => (DCC? refl(x'))
+  | DCC? Sort _m => (DCC? Sort _m)
+  | DCC? Σ(x, y) =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? Σ(x', y'))
+  | DCC? `(x, y) =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? `(x', y'))
+  | DCC? ⟦x⟧(y, z) =>
+    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
+    | x', y', z' =>
+      (DCC? ⟦x'⟧(y', z'))
+  | DCC? Coup(x) =>
+    match x.expr_to_eta with
+    | x' => (DCC? Coup(x'))
+  | DCC? Id(x)      =>
+    match x.expr_to_eta with
+    | x' => (DCC? Id(x'))
+  | DCC? Fstc(x)    =>
+    match x.expr_to_eta with
+    | x' => (DCC? Fstc(x'))
+  | DCC? Sndc(x)    =>
+    match x.expr_to_eta with
+    | x' => (DCC? Sndc(x'))
+  | DCC? Π(x, y) =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? Π(x', y'))
+  | DCC? (x ∘' y) =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? x' ∘' y')
+  | DCC? (x ∘ y)  =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? x' ∘ y')
+  | DCC? (x ∘∘ y)  =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? x' ∘∘ y')
+  | DCC? ⟦x⟧⟨y, z⟩   =>
+    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
+    | x', y', z' =>
+      (DCC? ⟦x'⟧⟨y', z'⟩)
+  | DCC? Λ(x, y, z) =>
+    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
+    | x', y', z' =>
+      (DCC? Λ(x', y', z'))
+  | DCC? !Λ(x, y, z) =>
+    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
+    | x', y', z' =>
+      (DCC? !Λ(x', y', z'))
+  | DCC? Eval(x, y, z) =>
+    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
+    | x', y', z' =>
+      (DCC? Eval(x', y', z'))
+  | DCC? !(x)   =>
+    match x.expr_to_eta with
+    | x' => (DCC? !(x'))
+  | DCC? *(x)   =>
+    match x.expr_to_eta with
+    | x' => (DCC? *(x'))
+  | DCC? *<x>   =>
+    match x.expr_to_eta with
+    | x' => (DCC? *<x'>)
+  | DCC? &(x)   =>
+    match x.expr_to_eta with
+    | x' => (DCC? &(x'))
+  | DCC? !<x>   =>
+    match x.expr_to_eta with
+    | x' => (DCC? !<x'>)
+  | DCC? $<x>   =>
+    match x.expr_to_eta with
+    | x' => (DCC? $<x'>)
+  | DCC? (x y) =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? (x' y'))
+  | .const x => (.const (.const x))
 
 inductive RedEta?.{u} {τ_c : Type u} [hdecEq : DecidableEq τ_c] [hBEq : BEq τ_c] : (e₁ : GenericExpr (τ := τ_c)) → (e₄ : GenericExpr (τ := τ_c)) → Prop
-  | mk₁ : FnEtaReduces 0 (expr_to_eta e₁) e₃ → (eta_to_expr e₃ = .some e₄) → RedEta? e₁ e₄
-  | mk₂ : FnEtaReduces 0 (expr_to_eta e₁) e₃ → (eta_to_expr e₃ = .none)    → RedEta? e₁ e₁
+  | mk₁ : FnEtaReduces 0 (expr_to_eta e₁) e₃ → (hn : ¬ e₃.contains_hole) → RedEta? e₁ (eta_to_expr e₃ hn)
+  | mk₂ : FnEtaReduces 0 (expr_to_eta e₁) e₃ → (hn : e₃.contains_hole)   → RedEta? e₁ e₁
 
 def red_eta?.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] (e₁ : GenericExpr τ_c) : Option ((e₄ : GenericExpr τ_c) × PLift (RedEta? e₁ e₄)) :=
   if ∃ e₃, FnEtaReduces 0 (expr_to_eta e₁) e₃ then
     match (expr_to_eta e₁).fn_reduces 0 with
     | .some ⟨e', ⟨h₂⟩⟩ =>
-      match h₃ : e'.eta_to_expr with
-      | .some _e'' =>
-        .some ⟨_, ⟨.mk₁ h₂ h₃⟩⟩
-      | .none => .some ⟨_, ⟨.mk₂ h₂ h₃⟩⟩
+      if h_contains : e'.contains_hole then
+        .some ⟨_, ⟨.mk₂ h₂ h_contains⟩⟩
+      else .some ⟨_, ⟨.mk₁ h₂ h_contains⟩⟩
     | .none => .none
   else
     .none
@@ -1072,18 +1136,18 @@ instance : Decidable (∃ (α : GenericExpr τ), e = (DCC? !(α))) := by
 inductive RedEta??.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : (e : GenericExpr (τ := τ_c)) → (e' : GenericExpr (τ := τ_c)) → Prop
   | pi₁  : RedEta?? f_α f_α'
     → Domain (expr_to_eta f_α) δ
-    → (eta_to_expr δ = .some δ')
+    → (hn : ¬ δ.contains_hole)
     → RedEta?? env env'
     → Relation.ReflTransGen RedAff (DCC? (f_β env)) f_β_env
     → IsNorm RedAff f_β_env
     → RedEta?? f_β_env f_β'
     → (f_β' ≠ (DCC? (f_β env)))
-    → RedEta?? (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α', `(δ', f_β')) env'))
+    → RedEta?? (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α', `(#(eta_to_expr δ hn), f_β')) env'))
   | coup  : RedEta?? β β' → RedEta?? (DCC? Coup(β)) (DCC? Coup(β'))
   | bang  : RedEta?? β β' → RedEta?? (DCC? !(β)) (DCC? !(β'))
   | pi₁'  : RedEta?? f_α f_α'
     → Domain (expr_to_eta f_α) δ
-    → (eta_to_expr δ = .some δ')
+    → (hn : ¬ δ.contains_hole)
     → RedEta?? env env'
     → Relation.ReflTransGen RedAff (DCC? (f_β env)) f_β_env
     → IsNorm RedAff f_β_env
@@ -1116,6 +1180,53 @@ inductive RedEta??.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : (e : Gene
     → IsNorm RedAff e'
     → RedEta?? e e
 
+def to_eta_no_hole.{u} {τ : Type u} {e : GenericExpr τ} : ¬ (expr_to_eta e).contains_hole := by
+  induction e <;> (simp_all [expr_to_eta, contains_hole])
+
+def to_eta_left_inv.{u} {τ : Type u}
+  {e : GenericExpr τ} : eta_to_expr (expr_to_eta e) to_eta_no_hole = e := by
+  unfold expr_to_eta
+  split
+  any_goals (simp [eta_to_expr])
+  any_goals (
+    focus
+    rename_i x
+    have ha := x.to_eta_left_inv
+    simp [ha]
+    done)
+  any_goals (
+    focus
+    rename_i x y
+    have ha := x.to_eta_left_inv
+    have hb := y.to_eta_left_inv
+    simp [ha, hb]
+    done)
+  any_goals (
+    focus
+    rename_i x y z
+    have ha := x.to_eta_left_inv
+    have hb := y.to_eta_left_inv
+    have hc := z.to_eta_left_inv
+    simp [ha, hb, hc])
+
+--def to_from_eta_eq_iff.{u} {τ : Type u} {e : GenericExpr τ} {e' : GenericExpr (@EtaConst τ)} : expr_to_eta e = e' ↔
+
+def to_eta_right_inv.{u} {τ : Type u} {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) :
+  (expr_to_eta (eta_to_expr e hn)) = e := by
+  induction e
+  any_goals (simp_all [eta_to_expr, expr_to_eta])
+  any_goals (
+    focus
+    aesop
+    done)
+  any_goals (grind)
+  case const x =>
+    unfold contains_hole at hn
+    simp at hn
+    cases x with
+    | hole => simp_all
+    | const => simp [eta_to_expr, expr_to_eta]
+
 def red_eta??.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] (e : GenericExpr τ_c) : Option ((e' : GenericExpr τ_c) × (PLift (RedEta?? e e'))) :=
   if heq : ∃ f_α f_β env, e = (DCC? (Π(f_α, f_β) env)) then
     match e with
@@ -1135,13 +1246,13 @@ def red_eta??.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] (e : GenericExpr
           grind
         match env.red_eta??, f_α.red_eta??, (reduce RedAff (DCC? (f_β env))).fst.red_eta?? with
         | .some ⟨_, ⟨h₄⟩⟩, .some ⟨f_α', ⟨h₅⟩⟩, .some ⟨f_β', ⟨h₆⟩⟩ =>
-          match h₃ : δ.eta_to_expr with
-          | .some δ' =>
+          if h₃ : δ.contains_hole then
+            .none
+          else
             if heq : f_β' = (DCC? (f_β env)) then
               .some ⟨_, ⟨.pi₁' h₅ h₂ h₃ h₄ (reduce_sound rfl) (reduce_norm rfl) h₆ heq⟩⟩
             else
               .some ⟨_, ⟨.pi₁ h₅ h₂ h₃ h₄ (reduce_sound rfl) (reduce_norm rfl) h₆ heq⟩⟩
-          | _ => .none
         | _, _, _ => .none
       | _ => .none
   else
@@ -1217,7 +1328,6 @@ theorem RedEta??.complete.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {e e
     cases heq₄
     simp [heq₃]
     simp_all
-    grind
   case pi₂ =>
     rename_i f_α f_α' f_β f_β' h₁ h₂ heq₁ heq₂
     unfold red_eta??
@@ -1311,4 +1421,76 @@ abbrev red_eta'₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] (e : Generi
 #eval (DCC (Π(Id(Sort 3) ∘' Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2))))) !(Sort 2))).red_eta.fst
 #eval (DCC (Π(Id(Sort 3) ∘' Id(Sort 3), `(Sort 3, Π(!<Id(Sort 2)>, Eql(Id(Sort 2)))) ∘' Id(Sort 3)) !(Sort 2))).red_eta.fst
 
+def RedEta₂.transport.{u} {τ : Type u} [BEq τ] [DecidableEq τ] {e e' : GenericExpr τ}
+  (h : RedEta₂ e e') : RedEta₂ e.expr_to_eta e'.expr_to_eta := by
+  induction heq : h
+  
+  sorry
+
 end GenericExpr
+
+namespace Expr
+
+theorem norm_eta {e : Expr} (h : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff (e.expr_to_eta (τ_c := Unit)) := by
+  unfold GenericExpr.expr_to_eta
+  split
+  any_goals (
+    intro ⟨_, h⟩
+    cases h)
+  case eql' x y x' hr =>
+    have h := norm_eta (e := x) (fun ⟨_, hr⟩ => h ⟨_, .eql' hr⟩)
+    exact h ⟨_, hr⟩
+  case eqr' x y y' hr =>
+    have h := norm_eta (e := y) (fun ⟨_, hr⟩ => h ⟨_, .eqr' hr⟩)
+    exact h ⟨_, hr⟩
+  case sigl x y z x' hr =>
+    have h := norm_eta (e := y) (fun ⟨_, hr⟩ => h ⟨_, .sigl hr⟩)
+    exact h ⟨_, hr⟩
+  case sigr x y z x' hr =>
+    have h := norm_eta (e := z) (fun ⟨_, hr⟩ => h ⟨_, .sigr hr⟩)
+    exact h ⟨_, hr⟩
+  case coup x β' hr =>
+    have h := norm_eta (e := x) (fun ⟨_, hr⟩ => h ⟨_, .coup hr⟩)
+    exact h ⟨_, hr⟩
+  case pil x y f_α' hr =>
+    have h := norm_eta (e := x) (fun ⟨_, hr⟩ => h ⟨_, .pil hr⟩)
+    exact h ⟨_,  hr⟩
+  case pir x y f_α' hr =>
+    have h := norm_eta (e := y) (fun ⟨_, hr⟩ => h ⟨_, .pir hr⟩)
+    exact h ⟨_,  hr⟩
+  case pairl x y f_α' hr =>
+    have h := norm_eta (e := x) (fun ⟨_, hr⟩ => h ⟨_, .pairl hr⟩)
+    exact h ⟨_,  hr⟩
+  case pairr x y f_α' hr =>
+    have h := norm_eta (e := y) (fun ⟨_, hr⟩ => h ⟨_, .pairr hr⟩)
+    exact h ⟨_,  hr⟩
+  case bang x x' hr =>
+    have h := norm_eta (e := x) (fun ⟨_, hr⟩ => h ⟨_, .bang hr⟩)
+    exact h ⟨_,  hr⟩
+  case h_29 x y =>
+    have ha := norm_eta h.congrFun
+    have hb := norm_eta h.congrArg
+    simp
+    induction x generalizing y
+    any_goals (
+      focus
+      intro ⟨_, h⟩
+      cases h
+      · rename_i hr
+        exact ha ⟨_, hr⟩
+      · rename_i hr
+        exact hb ⟨_, hr⟩
+      done
+    )
+    · induction y
+      any_goals (
+        focus
+        simp [GenericExpr.expr_to_eta]
+        intro ⟨_, h⟩
+        cases h with
+        | congrFun h => cases h
+        | congrArg h => cases h
+        done)
+      
+
+end Expr

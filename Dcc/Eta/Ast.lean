@@ -89,6 +89,41 @@ def contains.{u} {τ : Type u} [BEq τ] (e : GenericExpr (τ := τ))
     | DCC[.] ⟦β⟧(x, y) => β.contains to_find ∨ x.contains to_find ∨ y.contains to_find
     | .const _ => False
 
+@[aesop norm (rule_sets := [DccReduce]), dcc_reduce, grind]
+def contains_hole.{u} {τ : Type u} (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
+    match e with
+    | DCC[.] ∗ => False
+    | DCC[.] ⊤ => False
+    | DCC[.] Sort _n => False
+    | DCC[.] ⊥ => False
+    | DCC[.] Π(x, y)
+    | DCC[.] (x ∘' y)
+    | DCC[.] (x ∘ y)
+    | DCC[.] (x ∘∘ y)
+    | DCC[.] (x y)
+    | DCC[.] x = y => x.contains_hole ∨ y.contains_hole
+    | DCC[.] Fstc(α)
+    | DCC[.] Sndc(α)
+    | DCC[.] Coup(α)
+    | DCC[.] &(α)
+    | DCC[.] !<α>
+    | DCC[.] $<α>
+    | DCC[.] !(α)
+    | DCC[.] *(α)
+    | DCC[.] *<α>
+    | DCC[.] Id(α)
+    | DCC[.] Eql(α)
+    | DCC[.] refl(α) => α.contains_hole
+    | DCC[.] Σ(α, β) => α.contains_hole ∨ β.contains_hole
+    | DCC[.] `(β, x) => β.contains_hole ∨ x.contains_hole
+    | DCC[.] Eval(β, x, y)
+    | DCC[.] !Λ(β, x, y)
+    | DCC[.] Λ(β, x, y)
+    | DCC[.] ⟦β⟧⟨x, y⟩
+    | DCC[.] ⟦β⟧(x, y) => β.contains_hole ∨ x.contains_hole ∨ y.contains_hole
+    | .const (.hole _) => True
+    | .const _ => False
+
 /-@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def size.{u} {τ : Type u} (e : GenericExpr (EtaConst (τ := τ))) : ℕ :=
   match e with

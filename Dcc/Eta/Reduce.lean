@@ -1611,8 +1611,53 @@ namespace RedEta??
 def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr τ_c}
   (hr : RedEta?? A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
   have hn' := hn.to_eta
-  
-  sorry
+  induction hr
+  case pi₁ ih₁ ih₂ ih₃ =>
+    have ha := ih₁ hn.congrFun.pil hn.congrFun.pil.to_eta
+    have hb := ih₂ hn.congrArg hn.congrArg.to_eta
+    have hc := ih₃ (by assumption) (.to_eta (by assumption))
+    intro ⟨_, h⟩
+    cases h with
+    | congrFun h =>
+      cases h with
+      | pil h => exact ha ⟨_, h⟩
+      | pir h => cases h
+    | congrArg h => exact hb ⟨_, h⟩
+  case bang ih | coup ih =>
+    have ha := ih (fun ⟨_, h⟩ => hn ⟨_, by constructor; exact h⟩)
+      (IsNorm.to_eta (fun ⟨_, h⟩ => hn ⟨_, by constructor; exact h⟩))
+    intro ⟨_, h⟩
+    cases h
+    · rename_i h
+      exact ha ⟨_, h⟩
+  case pi₁' ih₁ ih₂ ih₃ =>
+    have ha := ih₁ hn.congrFun.pil hn.congrFun.pil.to_eta
+    have hb := ih₂ hn.congrArg hn.congrArg.to_eta
+    have hc := ih₃ (by assumption) (.to_eta (by assumption))
+    intro ⟨_, h⟩
+    cases h with
+    | congrFun h =>
+      cases h with
+      | pil h => exact ha ⟨_, h⟩
+      | pir h => exact hn.congrFun.pir ⟨_, h⟩
+    | congrArg h => exact hb ⟨_, h⟩
+  case pi₂ ih₁ ih₂ =>
+    have ha := ih₁ hn.pil hn.pil.to_eta
+    have hb := ih₂ hn.pir hn.pir.to_eta
+    intro ⟨_, h⟩
+    cases h with
+    | pil h => exact ha ⟨_, h⟩
+    | pir h => exact hb ⟨_, h⟩
+  case pi₃ ih₁ ih₂ =>
+    have ha := ih₁ (fun ⟨_, h⟩ => by cases h) (.to_eta (fun ⟨_, h⟩ => by cases h))
+    have hb := ih₂ (fun ⟨_, h⟩ => by cases h) (.to_eta (fun ⟨_, h⟩ => by cases h))
+    intro ⟨_, h⟩
+    cases h with
+    | pil h => exact ha ⟨_, h⟩
+    | pir h => exact hb ⟨_, h⟩
+  case tm₁ hneq₁ hneq₂ hneq₃ hneq₄ hneq₅ hr =>
+    exact hr.is_norm hn
+  · assumption
 
 end RedEta??
 

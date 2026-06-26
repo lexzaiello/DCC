@@ -564,7 +564,7 @@ def RedAffReflTrans.{u} {τ : Type u} := Relation.ReflTransGen (RedAff (τ := τ
 
 namespace RedAffReflTrans
 
-def cases_head {a b : Expr} (r : RedAffReflTrans a b) :=
+def cases_head.{u} {τ_c : Type u} {a b : GenericExpr τ_c} (r : RedAffReflTrans a b) :=
   Relation.ReflTransGen.cases_head (a := a) (b := b) r
 
 def single.{u} {τ : Type u} {A B : GenericExpr τ}

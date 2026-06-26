@@ -1460,68 +1460,103 @@ instance : GenericExpr τ ≃ { x : GenericExpr (@EtaConst τ) // ¬ contains_ho
   left_inv  x := by simp [to_eta_left_inv]
   right_inv x := by simp [to_eta_right_inv]
 
-namespace Expr
+namespace GenericExpr
 
-theorem norm_eta {e : Expr} (h : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff (e.expr_to_eta (τ_c := Unit)) := by
-  unfold GenericExpr.expr_to_eta
-  split
+namespace EtaMap
+
+def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
+  {dom out hole_arg f' : GenericExpr (@EtaConst τ_c)}
+  (hr : EtaMap (τ_c := τ_c) dom out hole_arg f') (hn : IsNorm RedAff out) : IsNorm RedAff f' := by
+  induction hr
   any_goals (
+    focus
     intro ⟨_, h⟩
-    cases h)
-  case eql' x y x' hr =>
-    have h := norm_eta (e := x) (fun ⟨_, hr⟩ => h ⟨_, .eql' hr⟩)
-    exact h ⟨_, hr⟩
-  case eqr' x y y' hr =>
-    have h := norm_eta (e := y) (fun ⟨_, hr⟩ => h ⟨_, .eqr' hr⟩)
-    exact h ⟨_, hr⟩
-  case sigl x y z x' hr =>
-    have h := norm_eta (e := y) (fun ⟨_, hr⟩ => h ⟨_, .sigl hr⟩)
-    exact h ⟨_, hr⟩
-  case sigr x y z x' hr =>
-    have h := norm_eta (e := z) (fun ⟨_, hr⟩ => h ⟨_, .sigr hr⟩)
-    exact h ⟨_, hr⟩
-  case coup x β' hr =>
-    have h := norm_eta (e := x) (fun ⟨_, hr⟩ => h ⟨_, .coup hr⟩)
-    exact h ⟨_, hr⟩
-  case pil x y f_α' hr =>
-    have h := norm_eta (e := x) (fun ⟨_, hr⟩ => h ⟨_, .pil hr⟩)
-    exact h ⟨_,  hr⟩
-  case pir x y f_α' hr =>
-    have h := norm_eta (e := y) (fun ⟨_, hr⟩ => h ⟨_, .pir hr⟩)
-    exact h ⟨_,  hr⟩
-  case pairl x y f_α' hr =>
-    have h := norm_eta (e := x) (fun ⟨_, hr⟩ => h ⟨_, .pairl hr⟩)
-    exact h ⟨_,  hr⟩
-  case pairr x y f_α' hr =>
-    have h := norm_eta (e := y) (fun ⟨_, hr⟩ => h ⟨_, .pairr hr⟩)
-    exact h ⟨_,  hr⟩
-  case bang x x' hr =>
-    have h := norm_eta (e := x) (fun ⟨_, hr⟩ => h ⟨_, .bang hr⟩)
-    exact h ⟨_,  hr⟩
-  case h_29 x y =>
-    have ha := norm_eta h.congrFun
-    have hb := norm_eta h.congrArg
-    simp
-    induction x generalizing y
-    any_goals (
-      focus
-      intro ⟨_, h⟩
-      cases h
-      · rename_i hr
-        exact ha ⟨_, hr⟩
-      · rename_i hr
-        exact hb ⟨_, hr⟩
-      done
-    )
-    · induction y
-      any_goals (
-        focus
-        simp [GenericExpr.expr_to_eta]
-        intro ⟨_, h⟩
-        cases h with
-        | congrFun h => cases h
-        | congrArg h => cases h
-        done)
-      
+    cases h
+    done)
+  · exact hn.congrFun
 
-end Expr
+end EtaMap
+
+namespace EtaResult
+
+def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
+  {dom out hole_arg f' : GenericExpr (@EtaConst τ_c)}
+  (hr : EtaResult (τ_c := τ_c) dom out hole_arg f') (hn : IsNorm RedAff out) : IsNorm RedAff f' :=
+  match hr with
+  | .map h_contains hr =>
+    hr.is_norm hn
+  | .quot h_contains => by
+    intro ⟨_, h⟩
+    cases h
+
+end EtaResult
+
+namespace TmEtaReduces
+
+def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
+  {f f' : GenericExpr (@EtaConst τ_c)}
+  (hr₁ : TmEtaReduces level f f') : IsNorm RedAff f' :=
+  match hr₁ with
+  | .coupl _h_domain _hrt₁ hn₁ hr₂
+  | .tm _h_domain _hneq₁ _hneq₂ _hrt₁ hn₁ hr₂
+  | .bang₁ _h_domain _hrt₁ hn₁ hr₂ => hr₂.is_norm hn₁
+
+end TmEtaReduces
+
+namespace FnEtaReduces
+
+def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
+  {f f' : GenericExpr (@EtaConst τ_c)}
+  (hn_contains : ¬ f.contains_hole)
+  (hr : FnEtaReduces level f f') (hn : IsNorm RedAff f) : IsNorm RedAff f' := by
+  have hn' := hn.to_eta
+  induction hr
+  case pi hr₁ hr₂ ih₁ ih₂ =>
+    have ha := ih₁ (by simp_all [contains_hole]) hn.pil (by
+      simp [expr_to_eta] at hn'
+      exact hn'.pil)
+    have hb := ih₂ (by simp_all [contains_hole]) hn.pir (by
+      simp [expr_to_eta] at hn'
+      exact hn'.pir)
+    intro ⟨_, h⟩
+    cases h with
+    | pil hr => exact ha ⟨_, hr⟩
+    | pir hr => exact hb ⟨_, hr⟩
+  case tm₁ heq harity hr =>
+    
+    sorry
+
+end FnEtaReduces
+
+namespace RedEta?
+
+def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr τ_c}
+  (hr : RedEta? A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
+  have hn' := hn.to_eta
+  induction hr
+  
+  sorry
+
+end RedEta?
+
+namespace RedEta??
+
+def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr τ_c}
+  (hr : RedEta?? A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
+  have hn' := hn.to_eta
+  
+  sorry
+
+end RedEta??
+
+namespace RedEta₂
+
+def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr τ_c}
+  (hr : RedEta₂ A B) (hn : IsNorm RedAff A) : IsNorm RedAff B := by
+  have hn' := hn.to_eta
+  
+  sorry
+
+end RedEta₂
+
+end GenericExpr

@@ -1643,6 +1643,13 @@ def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr
   | .refl hneq => hn
   | .step h    => h.is_norm hn
 
+@[aesop safe destruct (rule_sets := [DccReduce])]
+def unique.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B C : GenericExpr τ_c}
+  (hr₁ : RedEta₂ A B) (hr₂ : RedEta₂ A C) : B = C := by
+  have ha := hr₁.complete
+  have hb := hr₂.complete
+  simp_all
+
 end RedEta₂
 
 end GenericExpr

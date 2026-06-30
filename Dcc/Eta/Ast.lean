@@ -54,40 +54,40 @@ abbrev EtaExpr.{u} (τ : Type u) := GenericExpr (EtaConst (τ := τ))
 namespace GenericExpr
 
 @[aesop norm (rule_sets := [DccReduce]), dcc_reduce, grind]
-def contains.{u} {τ : Type u} [BEq τ] (e : GenericExpr (τ := τ))
+def contains.{u} {τ : Type u} [DecidableEq τ] (e : GenericExpr (τ := τ))
   (to_find : GenericExpr (τ := τ)) : Bool :=
-  e == to_find ||
-    match e with
-    | DCC[.] ∗ => False
-    | DCC[.] ⊤ => False
-    | DCC[.] Sort _n => False
-    | DCC[.] ⊥ => False
-    | DCC[.] Π(x, y)
-    | DCC[.] (x ∘' y)
-    | DCC[.] (x ∘ y)
-    | DCC[.] (x ∘∘ y)
-    | DCC[.] (x y)
-    | DCC[.] x = y => x.contains to_find ∨ y.contains to_find
-    | DCC[.] Fstc(α)
-    | DCC[.] Sndc(α)
-    | DCC[.] Coup(α)
-    | DCC[.] &(α)
-    | DCC[.] !<α>
-    | DCC[.] $<α>
-    | DCC[.] !(α)
-    | DCC[.] *(α)
-    | DCC[.] *<α>
-    | DCC[.] Id(α)
-    | DCC[.] Eql(α)
-    | DCC[.] refl(α) => α.contains to_find
-    | DCC[.] Σ(α, β) => α.contains to_find ∨ β.contains to_find
-    | DCC[.] `(β, x) => β.contains to_find ∨ x.contains to_find
-    | DCC[.] Eval(β, x, y)
-    | DCC[.] !Λ(β, x, y)
-    | DCC[.] Λ(β, x, y)
-    | DCC[.] ⟦β⟧⟨x, y⟩
-    | DCC[.] ⟦β⟧(x, y) => β.contains to_find ∨ x.contains to_find ∨ y.contains to_find
-    | .const _ => False
+  match e, to_find with
+  | DCC[.] ∗, DCC[.] ∗ => true
+  | DCC[.] ⊤, DCC[.] ⊤ => true
+  | DCC[.] Sort _n, DCC[.] Sort __n => true
+  | DCC[.] ⊥, DCC[.] ⊥ => true
+  | DCC[.] Π(x, y), to_find
+  | DCC[.] (x ∘' y), to_find
+  | DCC[.] (x ∘ y), to_find
+  | DCC[.] (x ∘∘ y), to_find
+  | DCC[.] (x y), to_find
+  | DCC[.] x = y, to_find => x.contains to_find || y.contains to_find
+  | DCC[.] Fstc(α), to_find
+  | DCC[.] Sndc(α), to_find
+  | DCC[.] Coup(α), to_find
+  | DCC[.] &(α), to_find
+  | DCC[.] !<α>, to_find
+  | DCC[.] $<α>, to_find
+  | DCC[.] !(α), to_find
+  | DCC[.] *(α), to_find
+  | DCC[.] *<α>, to_find
+  | DCC[.] Id(α), to_find
+  | DCC[.] Eql(α), to_find
+  | DCC[.] refl(α), to_find => α.contains to_find
+  | DCC[.] Σ(α, β), to_find => α.contains to_find || β.contains to_find
+  | DCC[.] `(β, x), to_find => β.contains to_find || x.contains to_find
+  | DCC[.] Eval(β, x, y), to_find
+  | DCC[.] !Λ(β, x, y), to_find
+  | DCC[.] Λ(β, x, y), to_find
+  | DCC[.] ⟦β⟧⟨x, y⟩, to_find
+  | DCC[.] ⟦β⟧(x, y), to_find => β.contains to_find || x.contains to_find || y.contains to_find
+  | .const x₁, .const x₂ => if x₁ = x₂ then true else false
+  | _, _ => false
 
 @[aesop norm (rule_sets := [DccReduce]), dcc_reduce, grind]
 def contains_hole.{u} {τ : Type u} (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
@@ -190,6 +190,40 @@ def arity.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : ℕ :=
   | DCC[.] !<_x>   => 1
   | DCC[.] $<_x>   => 1
   | DCC[.] (f _x) => f.arity - 1
+  | .const _n => 0
+
+@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
+def tm_arity.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : ℕ :=
+  match e with
+  | DCC[.] ∗ => 0
+  | DCC[.] ⊤ => 0
+  | DCC[.] ⊥ => 0
+  | DCC[.] _x = _y => 0
+  | DCC[.] Eql(_α)  => 2
+  | DCC[.] refl(_α) => 2
+  | DCC[.] Sort _m => 0
+  | DCC[.] Σ(_α, _β) => 1
+  | DCC[.] `(_β, _x) => 1
+  | DCC[.] ⟦__β⟧(_x, _y) => 0
+  | DCC[.] Coup(_β) => 0
+  | DCC[.] Id(_α)      => 1
+  | DCC[.] Fstc(_α)    => 1
+  | DCC[.] Sndc(_α)    => 1
+  | DCC[.] Π(_α, _β) => 0
+  | DCC[.] (f ∘' _g) => f.tm_arity
+  | DCC[.] (f ∘ _g)  => f.tm_arity
+  | DCC[.] (f ∘∘ _g)  => f.tm_arity
+  | DCC[.] ⟦_β⟧⟨_a, _b⟩   => 1
+  | DCC[.] Λ(_α, _β, _x) => 2
+  | DCC[.] !Λ(_α, _β, _x) => 2
+  | DCC[.] Eval(_α, _β, _x) => 1
+  | DCC[.] !(_x)   => 1
+  | DCC[.] *(_α)   => 1
+  | DCC[.] *<_α>   => 1
+  | DCC[.] &(_x)   => 1
+  | DCC[.] !<_x>   => 1
+  | DCC[.] $<_x>   => 1
+  | DCC[.] (f _x) => f.tm_arity - 1
   | .const _n => 0
 
 

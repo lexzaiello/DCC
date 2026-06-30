@@ -562,6 +562,23 @@ instance RedAff.instDecidableNorm.{u} {α : Type u} [DecidableEq α]
 @[dcc_judge]
 def RedAffReflTrans.{u} {τ : Type u} := Relation.ReflTransGen (RedAff (τ := τ))
 
+theorem RedAffReflTrans.reflGen_transGen.{u} {τ : Type u} : Relation.ReflGen (Relation.TransGen RedAff) = RedAffReflTrans (τ := τ) :=
+  Relation.reflGen_transGen
+
+@[dcc_judge]
+def RedAffTrans.{u} {τ : Type u} := Relation.TransGen (RedAff (τ := τ))
+
+namespace RedAffTrans
+
+def single (r : RedAff A B) : RedAffTrans A B := Relation.TransGen.single r
+
+def trans (r₁ : RedAffTrans A B) (r₂ : RedAffTrans B C) : RedAffTrans A C := Relation.TransGen.trans r₁ r₂
+
+def to_reflTrans {a b : Expr} (r : RedAffTrans a b) : RedAffReflTrans a b :=
+  Relation.TransGen.to_reflTransGen (a := a) (b := b) r
+
+end RedAffTrans
+
 namespace RedAffReflTrans
 
 def cases_head.{u} {τ_c : Type u} {a b : GenericExpr τ_c} (r : RedAffReflTrans a b) :=
@@ -578,7 +595,47 @@ def conf.{u} {τ : Type u} {A B C : GenericExpr τ} (h₁ : RedAffReflTrans A B)
 def elim_head_norm.{u} {τ : Type u} {A B : GenericExpr τ} (h : RedAffReflTrans A B) (hn : IsNorm RedAff A) : A = B :=
   hn.unique_refl h
 
+@[grind ., grind →]
+theorem red_aff_decreasing?.{u} {τ : Type u} {A B : GenericExpr τ} [DecidableEq τ] (h : (RedAffReflTrans (τ := τ)) A B) : (size B) ≤ (size A) := by
+  if hs : (size A) = (size B) then
+    simp_all
+  else
+    rw [← reflGen_transGen] at h
+    match h with
+    | .refl => grind
+    | .single h =>
+      have hn' : B.size < A.size := RedAff.instRedRel.to_trans.decreasing h
+      grind
+
+def elim_norm (hr : RedAffReflTrans A B) (hn : IsNorm RedAff A) : A = B := by
+  change Relation.ReflTransGen _ _ _ at hr
+  exact hn.unique_refl hr
+
+@[grind ., grind <=]
+theorem elim_norm' (hr : RedAffReflTrans A B) (hn : IsNorm RedAff A) : A = B := by
+  change Relation.ReflTransGen _ _ _ at hr
+  exact hn.unique_refl hr
+
+def push_head (hr₁ : RedAffReflTrans A C) (hn : IsNorm RedAff C) (hr₂ : RedAff A B) : RedAffReflTrans B C :=
+  have ⟨_, h₁, h₂⟩ := RedAff.instRedRel.globally_confluent.conf hr₁ (.single hr₂)
+  hn.unique_refl h₁ ▸ h₂
+
 end RedAffReflTrans
+
+namespace RedAffTrans
+
+@[grind ., grind →]
+theorem red_aff_trans_decreasing.{u} {τ : Type u} {A B : GenericExpr τ} [DecidableEq τ] : (RedAffTrans (τ := τ)) A B → (size B) < (size A) := by
+  change Relation.TransGen _ _ _ → _
+  exact (RedAff.instRedRel (τ := τ)).to_trans.decreasing
+
+end RedAffTrans
+
+namespace RedAff
+
+abbrev decreasing.{u} {τ_c : Type u} (x y : GenericExpr τ_c) := (RedAff.instRedRel (τ := τ_c)).decreasing (x := x) (y := y)
+
+end RedAff
 
 end GenericExpr
 

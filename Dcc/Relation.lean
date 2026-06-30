@@ -245,6 +245,9 @@ attribute [dcc_force_rel] RedRel.toRel.eq_def RedRel.toRel Rel.run Rel.run.eq_de
 def IsNorm.unique.{u} {α : Type u} {r : α → α → Prop} {A B : α} (hn : IsNorm r A) (hr : r A B) : A = B :=
   (hn ⟨_, hr⟩).elim
 
+def IsNorm.unique'.{u} {α : Type u} {r : α → α → Prop} {A B C : α} (hn : IsNorm r A) (hr₁ : r A B) (_hr₂ : r B C) : A = C :=
+  (hn ⟨_, hr₁⟩).elim
+
 def IsNorm.unique_trans.{u} {α : Type u} {r : α → α → Prop} {A B : α} (hn : IsNorm r A) (hr : (Relation.TransGen r) A B) : A = B :=
   match hr with
   | .single h => hn.unique h
@@ -668,6 +671,29 @@ theorem decreasing?.{u} {α : Type u} {t : α → ℕ}
     have h₂ := decreasing? r h₂
     grind
 termination_by t A
+
+theorem reduce'_complete.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ}
+  [hR : RedRel (α := α) r t (m := Option)] [hN : SemiComplete (α := α) r (hR := hR)] [hC : Confluent r]
+  {A B : α} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : (reduce' r A) = B := by
+  simp [reduce', reduce_complete hr hn]
+
+theorem reduce'_norm.{u} {τ : Type u} {t : τ → ℕ}
+  {r : τ → τ → Prop}
+  [hR : RedRel.{u} (α := τ) r t]
+  [hN : SemiComplete.{u} (α := τ) r (hR := hR)]
+  {A B : τ} (heq : reduce' r A = B) : IsNorm r B := by
+  simp [reduce'] at heq
+  cases heq
+  have heq : reduce r A = ⟨(reduce r A).fst, (reduce r A).snd⟩ := by
+    simp
+  exact reduce_norm heq
+
+theorem reduce'_norm'.{u} {τ : Type u} {t : τ → ℕ}
+  {r : τ → τ → Prop}
+  [hR : RedRel.{u} (α := τ) r t]
+  [hN : SemiComplete.{u} (α := τ) r (hR := hR)]
+  {A : τ} : IsNorm r (reduce' r A) :=
+  reduce'_norm rfl
 
 end GenericExpr
 

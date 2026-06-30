@@ -77,7 +77,7 @@ def Reduces₂.unique.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {A B C :
     exact ⟨hr₁, hn₁, by sorry⟩-/
 
 def Reduces₂.is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr τ_c} : Reduces₂ A B → IsNorm RedAff B :=
-  fun ⟨_hr₁, hn₁, hr₂⟩ => hr₂.is_norm hn₁
+  fun ⟨_hr₁, hn₁, hr₂⟩ => hr₂.is_norm_aff hn₁
 
 @[dcc_force_reduce]
 def reduce_all₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] := (red_eta'₂ (τ_c := τ_c)) ∘ reduce' RedAff

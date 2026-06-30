@@ -24,9 +24,6 @@ abbrev decreasing? : ∀ {t : Expr → ℕ}
   (r : Expr → Expr → Prop) [_hR : GenericExpr.RedRel r t] {A B : Expr} (_hr : Relation.ReflTransGen r A B), t B ≤ t A := GenericExpr.decreasing? (α := GenericExpr (τ := Unit))-/
 
 @[dcc_judge]
-def RedAffTrans     := Relation.TransGen RedAff
-
-@[dcc_judge]
 def RedEtaReflTrans := Relation.ReflTransGen RedEta
 
 @[dcc_judge]
@@ -38,17 +35,6 @@ def cases_head {a b : Expr} (r : RedEtaReflTrans a b) :=
   Relation.ReflTransGen.cases_head (a := a) (b := b) r
 
 end RedEtaReflTrans
-
-namespace RedAffTrans
-
-def single (r : RedAff A B) : RedAffTrans A B := Relation.TransGen.single r
-
-def trans (r₁ : RedAffTrans A B) (r₂ : RedAffTrans B C) : RedAffTrans A C := Relation.TransGen.trans r₁ r₂
-
-def to_reflTrans {a b : Expr} (r : RedAffTrans a b) : RedAffReflTrans a b :=
-  Relation.TransGen.to_reflTransGen (a := a) (b := b) r
-
-end RedAffTrans
 
 namespace RedEtaTrans
 

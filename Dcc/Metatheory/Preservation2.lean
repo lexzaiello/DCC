@@ -4,6 +4,80 @@ import Dcc.Eta.Reduce
 
 namespace GenericExpr
 
+namespace RedEta₂
+
+@[grind ., grind →, dcc_reduce]
+theorem no_op_sort.{u} {τ_c : Type u} [DecidableEq τ_c] {τ : GenericExpr τ_c} (h : RedEta₂ (τ_c := τ_c) (DCC? Sort m) τ) : τ = (DCC? Sort m) := by
+  have h := h.complete
+  simp [red_eta] at h
+  split at h
+  case h_1 heq =>
+    simp [red_eta??, red_eta?, expr_to_eta] at heq
+    split at heq
+    case h_1 heq₁ =>
+      simp [fn_reduces, arity] at heq₁
+    · simp_all
+  · simp_all
+
+end RedEta₂
+
+namespace Reduces₂
+
+def elim_head_norm.{u} {τ_c : Type u} [DecidableEq τ_c] {A B : GenericExpr τ_c} (hr₁ : Reduces₂ A B) (hn₁ : IsNorm RedAff A) : RedEta₂ A B :=
+  match hr₁ with
+  | ⟨hr₂, hn₂, hr₃⟩ => by
+    cases hn₁.unique_refl hr₂
+    exact hr₃
+
+end Reduces₂
+
+namespace RedEta₂
+
+theorem cases_head.{u} {τ_c : Type u} [DecidableEq τ_c] {A B : GenericExpr τ_c} (h : RedEta₂ A B) : A = B ∨ RedEta?? A B := by
+  cases h
+  · exact .inl rfl
+  · exact .inr (by assumption)
+
+end RedEta₂
+
+namespace RedAff
+
+theorem reduce_red.{u} {τ : Type u} {A B : GenericExpr τ} (hr : RedAff A B) : reduce' RedAff A = reduce' RedAff B := by
+  have h := (GenericExpr.reduce RedAff A).snd.down
+  have hb := RedAffReflTrans.push_head h (reduce_norm rfl) hr
+  have heq := reduce_complete hb (reduce_norm rfl)
+  simp [reduce', heq]
+
+end RedAff
+
+end GenericExpr
+
+namespace Relation
+
+namespace ReflTransGen
+
+theorem pi_shape (hr : ReflTransGen GenericExpr.RedAff (DCC? (Π(f_α, f_β) env)) B) : ∃ f_α' f_β' env', B = (DCC? (Π(f_α', f_β') env')) := by
+  match hr.cases_head with
+  | .inl h => exact ⟨_, _, _, by cases h; rfl⟩
+  | .inr ⟨_, h₁, h₂⟩ =>
+    match h₁ with
+    | .congrFun (.pil h) =>
+      have h_dec := h.decreasing
+      exact pi_shape h₂
+    | .congrFun (.pir h) =>
+      have h_dec := h.decreasing
+      exact pi_shape h₂
+    | .congrArg h =>
+      have h_dec := h.decreasing
+      exact pi_shape h₂
+termination_by (f_α.size + f_β.size + env.size)
+
+end ReflTransGen
+
+end Relation
+
+namespace GenericExpr
+
 def expr_to_eta_holds_red (hr : RedAff e e') : RedAff e.expr_to_eta e'.expr_to_eta := by
   induction hr
   any_goals (
@@ -22,6 +96,109 @@ def elim_head_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : Gene
     simp [hr₂.complete]
 
 end IsNorm
+
+namespace Arrow
+
+theorem α_norm [DecidableEq τ_c] [BEq τ_c] {α β : GenericExpr τ_c} (harr : Arrow α β m τ) (h_judge : Judge₂ e τ) : IsNorm RedAff α := by sorry
+
+--theorem α_norm_eta [DecidableEq τ_c] [BEq τ_c] {α β : GenericExpr τ_c} (harr : Arrow α β m τ) (h_judge : Judge₂ e τ
+
+end Arrow
+
+namespace RedEta??
+
+theorem mk_pi₁ [DecidableEq τ_c] [BEq τ_c] {f_α f_β env : GenericExpr τ_c} (hr₁ : RedEta?? f_α f_α') (h_dom : Domain (expr_to_eta f_α) δ)
+  (hn₁ : ¬ δ.contains_hole)
+  (hr₂ : RedEta?? env env')
+  (hr₃ : RedEta?? (reduce RedAff (DCC? (f_β env))).fst f_β')
+  (hn₂ : f_β' ≠ (DCC? (f_β env))) : RedEta?? (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α', `(#(eta_to_expr δ hn), f_β')) env')) :=
+  RedEta??.pi₁ hr₁ h_dom hn₁ hr₂ (reduce_sound rfl) (reduce_norm rfl) hr₃ hn₂
+
+theorem none_sound [DecidableEq τ_c] [BEq τ_c] {e : GenericExpr τ_c} (hneq : red_eta?? e = .none) : ¬ ∃ e', RedEta?? e e' := fun ⟨_, h⟩ => by
+  simp_all [h.complete]
+
+theorem pi_f_α_eq [DecidableEq τ_c] [BEq τ_c] {f_α f_β env : GenericExpr τ_c}
+  (hr : RedEta?? (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α', f_β) env))) : RedEta?? f_α f_α' := by
+  sorry
+
+theorem pi_env_eq [DecidableEq τ_c] [BEq τ_c] {f_α f_β env : GenericExpr τ_c}
+  (hr : RedEta?? (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α, f_β) env'))) : RedEta?? env env' := by
+  sorry
+
+end RedEta??
+
+namespace RedEta₂
+
+theorem pi_f_β (h : RedEta₂ (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α₂, f_β₂) env₂))) (hn : IsNorm RedAff f_β) : RedEta?? f_β f_β' := by
+  sorry
+
+end RedEta₂
+
+/-
+Plan of attack:
+
+Lining up Reduces₂ is super annoying. For example:
+
+Eql(f_α) &(env) &(x) --> (x = x)
+
+Type for this should be Prop
+
+This is essentially a constant operation.
+
+---- probably not necessary 1. No-op lemmas for RedEta₂. For each canonical-eta form, have that RedEta canon_val e' -> e' = canon_cal
+2. Congruence lemmas for Π under RedEta₂.
+  - Note: when an environment is supplied, f_β is η-reduced with env applied, then resulting η-val is quoted.
+
+  Congruence lemma with env:
+  - RedEta?? f_α
+    + RedEta?? (reduce RedAff (f_β env)) f_β_env' (+ IsNorm)
+      + ≠ (f_β env)
+    then use smaller congruence lemmas
+
+  Note: RedEta is unique. Hence, we can reverse by constructing RedEta on components, then rewriting
+
+3. Assume we have:
+  3a.
+    - congr_pi (hr₁ : RedEta?? f_α f_α') (hr₂ : RedEta?? (reduce RedAff (DCC? (f_β env))) f_β_env)
+      (hneq : f_β_env ≠ (DCC? (f_β env))) : RedEta?? (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α', `(#(eta_to_expr δ hn), f_β')) env'))
+
+    - none_sound (heq : red_eta? e = .none) : ¬ ∃ e', RedEta? e e'
+
+    then we are RedEta Π(!<f_α>, Λ(!(δ), !<f_α>, `(Coup(!<f_α>), Sort 0)))
+    - this is just recurse on α and β
+    - !<f_α>
+
+    η-reduction on this entire term collapses, I think, to just β-reduction, since !<f_α> is η-normal
+
+    then we have succesfully gotten that hypothesis out.
+    f_α := id
+    f_β := ((GenericExpr.sort o).quot (f_α.map.pi (δ.bang.curr f_α.map (f_α.map.coup.quot (GenericExpr.sort 0)))))
+    x_α := (reduce RedAff δ)
+
+    α₁ := (reduce RedAff δ)
+
+  BIG NOTE:
+  - f_α congruence on Π kills most of this and gets us x_α eq for free
+    theorem eta_pi_f_α (hr : RedEta₂ (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α₂, f_β₂) env₂))) : (red_eta₂ f_α) = f_α₂ := by sorry
+    theorem eta_pi_env (hr : RedEta₂ (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α₂, f_β₂) env₂))) : (red_eta₂ env) = env₂ := by sorry
+
+4. By eta_pi_env, since δ in Arrow is the α part of an Arrow, and it is in congrArg position, then it is Aff normal and since
+  τ is a Judged type, then it is a reduced expr, so δ is unique
+5. !(δ) is already normal and eta-reduced
+6. x_α' := !(δ)
+7. Need f_β as well, though. requires further congruences:
+
+  theorem eta_pi_f_β (hr₁ : RedEta₂ f_β₁ f_β₂) (hr₂ : RedEta₂ (DCC? (Π(f_α, f_β₁))) (DCC? (Π(f_α, f_β₃)))) : f_β₃ = f_β₂ := by sorry
+
+8. ((f_α¹.pi f_β¹).app x_α¹) := ((f_α.map.pi (δ.bang.curr f_α.map (f_α.map.coup.quot (GenericExpr.sort 0)))) &(x))
+  same process as above
+  f_α¹ is already η-reduced
+  theorem eta_pi_f_α_norm (hr₁ : RedEta?? f_α f_α') (hr₂ : RedEta₂ (DCC? (Π(f_α', f_β) env)) (DCC? (Π(f_α₂, f_β₂) env₂))) : f_α₂ = f_α' := by sorry
+
+9. with f_β¹ := (δ.bang.curr f_α.map (f_α.map.coup.quot (GenericExpr.sort 0)))
+
+  then push_head (DCC? (f_β¹ x_α'¹ &(x))), aff reduction gives just Sort 0. Boom. done.
+-/
 
 namespace Reduces₂
 
@@ -64,6 +241,34 @@ prove these invariants.
 
 end Pi.f_β.type
 
+namespace Reduces₂
+
+theorem pi.{u} {τ_c : Type u} [DecidableEq τ_c] {f_α f_β env f_α₂ f_β₂ env₂ : GenericExpr τ_c} (h : Reduces₂ (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α₂, f_β₂) env₂)))
+  (hn₁ : IsNorm RedAff f_α) (hn₂ : IsNorm RedAff f_β) : RedEta₂ (DCC? (Π(f_α, f_β) #(reduce' RedAff env))) (DCC? (Π(f_α₂, f_β₂) env₂)) :=
+  match h with
+  | ⟨hr₁, hn₃, hr₂⟩ =>
+    match hr₁.cases_head with
+    | .inl heq => by
+      cases heq
+      have heq₂ := reduce'_complete .refl hn₃.congrArg
+      simp [heq₂]
+      exact hr₂
+    | .inr ⟨_, h₁, h₂⟩ => by
+      cases h₁ with
+      | congrFun h =>
+        cases h with
+        | pil h => exact (hn₁ ⟨_, h⟩).elim
+        | pir h => exact (hn₂ ⟨_, h⟩).elim
+      | congrArg hr =>
+        have ⟨f_α', f_β', env', heq⟩ := h₂.pi_shape
+        cases heq
+        have h_dec := hr.decreasing
+        have h := pi ⟨h₂, hn₃, hr₂⟩ hn₁ hn₂
+        simp [hr.reduce_red, h]
+termination_by (size env)
+
+end Reduces₂
+
 namespace Judge₂
 
 theorem invert_app.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
@@ -73,6 +278,16 @@ theorem invert_app.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
   match ht with
   | .app (f_α := f_α) (f_β := f_β) (x_α := x_α) (α₂ := α₂) h_t_f hr₁ h_t_x h_deq hr₂ hr₃ =>
     ⟨f_α, f_β, x_α, α₂, h_t_f, h_t_x, hr₁.complete ▸ h_deq, hr₂.complete ▸ hr₃⟩
+
+/-
+TODO: invariant that Judge _ τ and Arrow _ _ _ τ means τ IsNorm
+-/
+
+/-inductive InvertEql
+
+theorem invert_eql.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c]
+  {f_α τ : GenericExpr τ_c} (ht : Judge₂ (DCC? (Eql(f_α))) τ) :
+  ∃ (τ_f_α δ : GenericExpr τ_c) (m o : Level), Judge₂ f_α τ_f_α ∧ Arrow δ (DCC? Sort m) o τ_f_α ∧ Reduces₂ (eql.type f_α δ o) τ -/
 
 def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {e τ : GenericExpr τ_c} (h : Judge₂ e τ) : IsNorm RedAff τ := by
   cases h
@@ -84,18 +299,61 @@ def is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {e τ : GenericExp
     intro ⟨_, h⟩; cases h
     exact (ht.is_norm) ⟨_, by assumption⟩
 
-end Judge₂
+theorem preservation_eql [DecidableEq τ_c] {f_α env x : GenericExpr τ_c} (h_t : Judge₂ (DCC? (Eql(f_α) env &(x))) τ) : Judge₂ (DCC? x = x) τ := by
+  cases h_t with
+  | app h_t_f =>
+    cases h_t_f with
+    | app h_t_f =>
+      cases h_t_f with
+      | eql =>
+        rename_i h_box h_r_τ _ _ _ _ _ _ hr₂ hdeq hr₃ _ hr₄ _ _ m o harr h_t_f_α h_r_τ_eql
+        simp [eql.type] at h_r_τ_eql
+        /-
+        f_β is the main component we we need to link.
+        It's a quotation, so it is already a normal value.
+        -/
+        --have h := RedEta₂.unique
+        cases h_box with
+        | box h_t_x =>
+          have h := h_r_τ_eql.pi (fun ⟨_, h⟩ => by cases h) (fun ⟨_, h⟩ => by cases h)
+          match h.cases_head with
+          | .inl h =>
+            simp_all
+            rw [← h.left.right] at hr₄
+            rw [← h.right] at hr₃
+            have hr₄' := (hr₄.push (.congrFun .quot)).pi (fun ⟨_, h⟩ => by cases h) (fun ⟨_, h⟩ => by cases h)
+            have h := hr₄'.complete
+            simp [red_eta] at h
+            
+            match hr₄'.cases_head with
+            | .inl h =>
+              simp_all
+              rw [← h.left.right] at h_r_τ
+              have h := (((h_r_τ.push .curr).push .quot).elim_head_norm (fun ⟨_, h⟩ => by cases h)).no_op_sort
+              exact h ▸ Judge₂.eq h_t_x h_t_x
+            | .inr h =>
+              -- Use more simps + completeness to destruct RedEta?? easier..
+              have heq := h.complete
+              rw [red_eta??] at heq
+              
+              sorry
+          | .inr h =>
+            sorry
 
-end GenericExpr
-
-namespace Expr
-
-namespace Judge2
-
-open GenericExpr
-
-theorem preservation {e : Expr} (ht : Judge₂ e τ) (hr : RedAff e e') : Judge₂ e' τ := by
+theorem preservation [DecidableEq τ_c] {e : GenericExpr τ_c} (ht : Judge₂ e τ) (hr : RedAff e e') : Judge₂ e' τ := by
   induction ht generalizing e' with
+  | app h_t_f h_r_α h_t_x h_deq h_r_α₂ h_r_τ ih₁ ih₂ =>
+    cases hr with
+    | eql =>
+      cases h_t_x with
+      | box h_t_x =>
+        cases h_t_f with
+        | app h_t_f_eql =>
+          cases h_t_f_eql with
+          | eql =>
+            rename_i h_r_τ_eql
+            simp [eql.type] at h_r_τ_eql
+            sorry
   | eq h_t_x h_t_y ih₁ ih₂ =>
      cases hr with
      | eql' hr => exact .eq (ih₁ hr) h_t_y
@@ -126,6 +384,6 @@ theorem preservation {e : Expr} (ht : Judge₂ e τ) (hr : RedAff e e') : Judge�
   | sigma | curr | curr' | map | fmap | unmap | eval | quot | top | bot
   | tintro | box | unbox => cases hr
 
-end Judge2
+end Judge₂
 
-end Expr
+end GenericExpr

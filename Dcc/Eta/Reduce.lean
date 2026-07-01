@@ -908,9 +908,9 @@ inductive FnEtaReduces.{u} {τ_c : Type u} [DecidableEq τ_c] : (level : ℕ) �
   | tm₂  : f.tm_arity = 2
     → TmEtaReduces₂ level f f'
     → FnEtaReduces level f f'
-  | tm'₁ : f.tm_arity = 1
+  /-| tm'₁ : f.tm_arity = 1
     → (¬ ∃ f', TmEtaReduces level f f')
-    → FnEtaReduces level f f
+    → FnEtaReduces level f f-/
   | tm'₂ : f.tm_arity = 2
     → (¬ ∃ f', TmEtaReduces₂ level f f')
     → FnEtaReduces level f f
@@ -953,7 +953,10 @@ def fn_reduces.{u} {τ_c : Type u} [DecidableEq τ_c] (level : ℕ) (f : Generic
     match _heq₃ : f.eta_reduce_tm level with
     | .some ⟨_f', ⟨h⟩⟩ =>
       .some ⟨_, ⟨.tm₁ harity h⟩⟩
-    | .none => .some ⟨_, ⟨.tm'₁ harity (eta_reduce_tm_none _heq₃)⟩⟩
+    | .none => .none
+    /-| .none =>
+      
+      .some ⟨_, ⟨.tm'₁ harity (eta_reduce_tm_none _heq₃)⟩⟩-/
   else if harity : f.tm_arity = 2 then
     match _heq₃ : f.eta_reduce_tm₂ level with
     | .some ⟨_f', ⟨h⟩⟩ =>
@@ -1022,10 +1025,10 @@ theorem FnEtaReduces.complete.{u} {τ_c : Type u} [DecidableEq τ_c]
     unfold fn_reduces
     simp [harity]
     aesop
-  case tm'₁ harity heq₂ =>
+  /-case tm'₁ harity heq₂ =>
     unfold fn_reduces
     simp [harity]
-    grind
+    grind-/
   case tm'₂ harity heq₂ =>
     unfold fn_reduces
     simp [harity]

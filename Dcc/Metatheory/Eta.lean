@@ -38,13 +38,51 @@ theorem reduce_self.{u} {τ_c : Type u} [DecidableEq τ_c] {f f' f'' : GenericEx
   (hr₂ : TmEtaReduces₂ level f' f'') : f' = f'' := by
   sorry
 
+theorem preservation_arity.{u} {τ_c : Type u} [DecidableEq τ_c] {f f' : GenericExpr (@EtaConst τ_c)} (hn : IsNorm RedAff f) (hr : TmEtaReduces₂ level f f') : tm_arity f = tm_arity f' := by
+  sorry
+
 end TmEtaReduces₂
+
+namespace TmEtaReduces
+
+theorem reduce_self.{u} {τ_c : Type u} [DecidableEq τ_c] {f f' f'' : GenericExpr (@EtaConst τ_c)} (hn : IsNorm RedAff f) (hr₁ : TmEtaReduces level f f')
+  (hr₂ : TmEtaReduces level f' f'') : f' = f'' := by
+  sorry
+
+theorem preservation_arity.{u} {τ_c : Type u} [DecidableEq τ_c] {f f' : GenericExpr (@EtaConst τ_c)} (hn : IsNorm RedAff f) (hr : TmEtaReduces level f f') : tm_arity f = tm_arity f' := by
+  sorry
+
+end TmEtaReduces
 
 namespace FnEtaReduces
 
 theorem reduce_self.{u} {τ_c : Type u} [DecidableEq τ_c] {f f' f'' : GenericExpr (@EtaConst τ_c)} (hn : IsNorm RedAff f) (hr₁ : FnEtaReduces level f f')
   (hr₂ : FnEtaReduces level f' f'') : f' = f'' := by
-  sorry
+  induction hr₁ generalizing f'' with
+  | pi hr₃ hr₄ ih₁ ih₂ =>
+    cases hr₂ with
+    | pi hr₅ hr₆ =>
+      have ha := ih₁ hn.pil (by assumption)
+      have hb := ih₂ hn.pir (by assumption)
+      simp_all
+    | tm₂ | tm₁ | tm'₂ => grind
+  | tm₁ h_arity hr₃ =>
+    rename_i f₀ f'₀
+    have h := hr₃.preservation_arity (by assumption)
+    induction heq₀ : hr₂ generalizing f f₀ with
+    | tm₂ | tm'₂ | pi hr₅ hr₆ ih₁ ih₂ => grind
+    | tm₁ h_arity₂ hr₅ => exact hr₃.reduce_self (by assumption) (by assumption)
+  | tm₂ h_arity hr₃ =>
+    rename_i f₀ f'₀
+    have h := hr₃.preservation_arity (by assumption)
+    induction heq₀ : hr₂ generalizing f f₀ with
+    | pi | tm'₂ | tm₁ => grind
+    | tm₂ => exact hr₃.reduce_self (by assumption) (by assumption)
+  | tm'₂ =>
+    rename_i level f₀ h_arity hn₂
+    induction hr₂ with
+    | tm₂ | tm₁ | pi => grind
+    | tm'₂ => rfl
 
 end FnEtaReduces
 
@@ -64,28 +102,6 @@ def preservation_is_tm.{u} {τ_c : Type u} [DecidableEq τ_c] {e e' : GenericExp
   sorry
 
 theorem preservation_domain.{u} {τ_c : Type u} [DecidableEq τ_c] {e e' : GenericExpr τ_c} {τ : GenericExpr (@EtaConst τ_c)} (h_dom : Domain e.expr_to_eta τ) (hr : RedEta?? e e') : Domain e'.expr_to_eta τ := by sorry
-
-/-theorem reduce_self.{u} {τ_c : Type u} [DecidableEq τ_c] {e e' e'' : GenericExpr τ_c} (hn : IsNorm RedAff e) (hr₁ : RedEta?? e e') (hr₂ : RedEta?? e' e'') : e' = e'' := by
-  induction hr₂ generalizing e with
-  | pi₁ =>
-    cases hr₁ with
-    | pi₁ =>
-      rename_i hr₁ h_dom₁ h_contains₁ hr₂ hn₁ hr₃ ih₁ ih₂ ih₃ f_α δ env f_β f_β_env f_β' h_dom₂ h_contains₂ hrt₁ hn₂ hr₄ hneq₁ hr₅ hrt₂ hneq₂ hr₆
-      have ha := ih₁ hn.congrFun.pil hr₅
-      have hb := ih₂ hn.congrArg hr₆
-      have hc := (hr₅.preservation_domain (by assumption)).unique h_dom₁
-      
-      simp [ha, hb, hc]
-      replace hrt₂ := hrt₂.push_head (by assumption) .quot
-      have hd := hrt₂.elim_head_norm (hr₄.is_norm_aff hn₂)
-      simp [hd, ih₃ hn₂ (hd ▸ hr₄)]
-    | tm₂ h_eta_tm  =>
-      have h := h_eta_tm.complete
-      simp [is_eta_tm?] at h
-    | tm₁ h_eta_tm =>
-      rename_i δ env env' f_β f_β_env f_β' hr₁ h_dom₁ h_contains₁ hr₂ hrt₁ hn₂ hr₃ h_neq₁ ih₁ ih₂ ih₃ hr₄
-      
-      sorry-/
 
 theorem reduce_self.{u} {τ_c : Type u} [DecidableEq τ_c] {e e' e'' : GenericExpr τ_c} (hn : IsNorm RedAff e) (hr₁ : RedEta?? e e') (hr₂ : RedEta?? e' e'') : e' = e'' := by
   induction hr₁ generalizing e'' with

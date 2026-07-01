@@ -464,37 +464,37 @@ open Confluent in @[reducible] def RedRel.globally_confluent.{u} {α : Type u}
         have ⟨_, h₁, h₂⟩ := ih _ hr₁ (hrt₁b.trans hrtt₁b) (hrt₁b.trans hrtt₂b)
         exact ⟨_, .trans hrtt₁ h₁, .trans hrtt₂ h₂⟩
 
-@[dcc_rel] def IsNorm.sigl.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.sigl.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
   {β x y : GenericExpr τ} [hC : Congruent r]
   (hn : IsNorm r (DCC[τ] ⟦β⟧(x, y))) : IsNorm r x := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.sigl' h⟩).elim
 
-@[dcc_rel] def IsNorm.sigr.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.sigr.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
   {β x y : GenericExpr τ} [hC : Congruent r]
   (hn : IsNorm r (DCC[τ] ⟦β⟧(x, y))) : IsNorm r y := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.sigr' h⟩).elim
 
-@[dcc_rel] def IsNorm.congrFun.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r]
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.congrFun.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r]
   {f x : GenericExpr τ}
   (hn : IsNorm r (DCC[τ] (f x))) : IsNorm r f := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.congrFun' h⟩).elim
 
-@[dcc_rel] def IsNorm.congrArg.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r]
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.congrArg.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r]
   {f x : GenericExpr τ}
   (hn : IsNorm r (DCC[τ] (f x))) : IsNorm r x := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.congrArg' h⟩).elim
 
-@[dcc_rel] def IsNorm.pil.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pil.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
   {f_α f_β : GenericExpr τ} [hC : Congruent r]
   (hn : IsNorm r (DCC[τ] Π(f_α, f_β))) : IsNorm r f_α := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.pil' h⟩).elim
 
-@[dcc_rel] def IsNorm.pir.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pir.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
   {f_α f_β : GenericExpr τ} [hC : Congruent r]
   (hn : IsNorm r (DCC[τ] Π(f_α, f_β))) : IsNorm r f_β := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.pir' h⟩).elim
 
-@[dcc_rel] def IsNorm.coup.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.coup.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
   {β : GenericExpr τ} [hC : Congruent r]
   (hn : IsNorm r (DCC? Coup(β))) : IsNorm r β := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.coup' h⟩).elim

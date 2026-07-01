@@ -8,6 +8,7 @@ inductive DefEqError.{u} {τ_c : Type u} : (A B : GenericExpr τ_c) → Type u w
   | pi_left  (expected actual : GenericExpr τ_c) : DefEqError A B
   | pi_right (expected actual : GenericExpr τ_c) : DefEqError A B
   | bang     (inner_errr      : DefEqError τ₁ τ₂) : DefEqError (DCC? !(τ₁)) (DCC? !(τ₂))
+  | coup     (inner_errr      : DefEqError τ₁ τ₂) : DefEqError (DCC? Coup(τ₁)) (DCC? Coup(τ₂))
   | tm       (expected actual : GenericExpr τ_c) : DefEqError A B
 
 def DefEqError.toFormat [Repr τ_c] (err : DefEqError (τ_c := τ_c) A B) : Std.Format :=
@@ -16,6 +17,7 @@ def DefEqError.toFormat [Repr τ_c] (err : DefEqError (τ_c := τ_c) A B) : Std.
   | .pi_left expected actual => "because Π domains are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ "but found: " ++ (.indentD (Std.format actual))
   | .pi_right expected actual => "because Π codomains are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ "but found: " ++ (.indentD (Std.format actual))
   | .bang inner_err => "because bang types are not def-eq because: " ++ inner_err.toFormat
+  | .coup inner_err => "because coup types are not def-eq because: " ++ inner_err.toFormat
   | .tm expected actual => "because terms are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ .line ++ "but found: " ++ (.indentD (Std.format actual))))
 
 instance {A B : GenericExpr τ_c} [Repr τ_c] : Std.ToFormat (DefEqError A B) := ⟨DefEqError.toFormat⟩
@@ -73,7 +75,7 @@ def Reduces₂.unique.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {A B C :
     have hb := hr₃
     have heq := hb.elim_head_norm ha
     cases heq
-    
+
     exact ⟨hr₁, hn₁, by sorry⟩-/
 
 def Reduces₂.is_norm.{u} {τ_c : Type u} [BEq τ_c] [DecidableEq τ_c] {A B : GenericExpr τ_c} : Reduces₂ A B → IsNorm RedAff B :=
@@ -101,46 +103,39 @@ theorem Reduces₂.complete.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {�
 
 -- For checking arguments under apps
 inductive DefEq.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr τ_c → GenericExpr τ_c → Prop
-  | pi   : Reduces₂ (DCC? (f_α₁ env₁)) f_α'
+  | pi      : Reduces₂ (DCC? (f_α₁ env₁)) f_α'
     → Reduces₂ (DCC? (f_α₂ env₂)) f_α'
     → Reduces₂ (DCC? (f_β₁ env₁)) f_β'
     → Reduces₂ (DCC? (f_β₂ env₂)) f_β'
     → DefEq (DCC? (Π(f_α₁, f_β₁) env₁)) (DCC? (Π(f_α₂, f_β₂) env₂))
-  | bang : DefEq τ₁ τ₂ → DefEq (DCC? !(τ₁)) (DCC? !(τ₂))
-  | tm : ((¬ ∃ f_α f_β env, τ₁ = (DCC? (Π(f_α, f_β) env)))
-    ∨ (¬ ∃ f_α f_β env, τ₂ = (DCC? (Π(f_α, f_β) env))))
-    → ((¬ ∃ τ, τ₁ = (DCC? !(τ))) ∨ (¬ ∃ τ, τ₂ = (DCC? !(τ))))
+  | bang    : DefEq τ₁ τ₂ → DefEq (DCC? !(τ₁)) (DCC? !(τ₂))
+  | coup    : DefEq τ₁ τ₂ → DefEq (DCC? Coup(τ₁)) (DCC? Coup(τ₂))
+  | pi_comp : Reduces₂ (DCC? (Π(f_α₁, f_β₁) ∘' g₁)) τ'
+    → Reduces₂ (DCC? (Π(f_α₂, f_β₂) ∘' g₂)) τ'
+    → DefEq (DCC? (Π(f_α₁, f_β₁) ∘' g₁)) (DCC? (Π(f_α₂, f_β₂) ∘' g₂))
+  | tm : (IsEtaTm τ₁ ⊕ IsEtaTm τ₂)
     → Reduces₂ τ₁ τ'
     → Reduces₂ τ₂ τ'
     → DefEq τ₁ τ₂
 
 -- Reduces₂ A B → DefEq A B
 
-instance {τ₁ : GenericExpr τ_c} : Decidable (∃ f_α₁ f_β₁ env₁, τ₁ = (DCC? (Π(f_α₁, f_β₁) env₁))
-    ∧ ∃ f_α₂ f_β₂ env₂, τ₂ = (DCC (Π(f_α₂, f_β₂) env₂))) :=
-  if h₁ : ∃ f_α₁ f_β₁ env₁, τ₁ = (DCC? (Π(f_α₁, f_β₁) env₁)) then
-    if h₂ : ∃ f_α₂ f_β₂ env₂, τ₂ = (DCC? (Π(f_α₂, f_β₂) env₂)) then
-      .isTrue (by simp_all)
-    else .isFalse (fun h => by simp_all)
-  else .isFalse (fun h => by simp_all)
-
-instance {τ₁ : GenericExpr τ_c} : Decidable ((∃ α, τ₁ = (DCC? !(α)))
-    ∧ ∃ α, τ₂ = (DCC !(α))) :=
-  if h₁ : (∃ τ, τ₁ = (DCC? !(τ))) then
-    if h₂ : (∃ τ, τ₂ = (DCC? !(τ))) then
-      .isTrue (by simp_all)
-    else .isFalse (fun h => by simp_all)
-  else .isFalse (fun h => by simp_all)
-
 def def_eq?.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] (τ₁ τ₂ : GenericExpr τ_c) : Except (DefEqError τ₁ τ₂) (PLift (DefEq τ₁ τ₂)) :=
-  if hn₁ : ((¬ ∃ f_α₁ f_β₁ env₁, τ₁ = (DCC? (Π(f_α₁, f_β₁) env₁)))
-    ∨ (¬ ∃ f_α₂ f_β₂ env₂, τ₂ = (DCC? (Π(f_α₂, f_β₂) env₂))))
-    ∧ ((¬ ∃ τ, τ₁ = (DCC? !(τ))) ∨ (¬ ∃ τ, τ₂ = (DCC? !(τ)))) then
+  match τ₁.is_eta_tm?, τ₂.is_eta_tm? with
+  | .some h₁, _ =>
     if heq : τ₁.reduce_all₂ = τ₂.reduce_all₂ then
-      .ok ⟨.tm (by simp_all) (by simp_all) (reduce₂_reduces rfl) (reduce₂_reduces heq.symm)⟩
+      .ok ⟨.tm (.inl h₁) (reduce₂_reduces rfl) (reduce₂_reduces heq.symm)⟩
     else .error (.tm τ₁.reduce_all₂ τ₂.reduce_all₂)
-  else
+  | _, .some h₁ =>
+    if heq : τ₁.reduce_all₂ = τ₂.reduce_all₂ then
+      .ok ⟨.tm (.inr h₁) (reduce₂_reduces rfl) (reduce₂_reduces heq.symm)⟩
+    else .error (.tm τ₁.reduce_all₂ τ₂.reduce_all₂)
+  | .none, .none =>
     match τ₁, τ₂ with
+    | (DCC? (Π(f_α₁, f_β₁) ∘' g₁)), (DCC? (Π(f_α₂, f_β₂) ∘' g₂)) =>
+      if heq : (DCC? (Π(f_α₁, f_β₁) ∘' g₁)).reduce_all₂ = (DCC? (Π(f_α₂, f_β₂) ∘' g₂)).reduce_all₂ then
+        .ok ⟨.pi_comp (reduce₂_reduces heq) (reduce₂_reduces rfl)⟩
+      else .error (.tm τ₁ τ₂)
     | (DCC? (Π(f_α₁, f_β₁) env₁)), (DCC? (Π(f_α₂, f_β₂) env₂)) =>
       if heq₁ : (DCC? (f_α₁ env₁)).reduce_all₂ = (DCC? (f_α₂ env₂)).reduce_all₂ then
         if heq₂ : (DCC? (f_β₁ env₁)).reduce_all₂ = (DCC? (f_β₂ env₂)).reduce_all₂ then
@@ -152,22 +147,31 @@ def def_eq?.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] (τ₁ τ₂ : Gen
       match def_eq? τ₁ τ₂ with
       | .ok ⟨h⟩ => .ok ⟨.bang h⟩
       | .error ε => .error (.bang ε)
+    | (DCC? Coup(τ₁)), (DCC? Coup(τ₂)) =>
+      match def_eq? τ₁ τ₂ with
+      | .ok ⟨h⟩ => .ok ⟨.coup h⟩
+      | .error ε => .error (.coup ε)
     | _, _ => .error (.tm τ₁ τ₂)
 
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
 def DefEq.complete.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {τ₁ τ₂ : GenericExpr τ_c} (h : DefEq (τ_c := τ_c) τ₁ τ₂) : def_eq? τ₁ τ₂ = .ok ⟨h⟩ := by
   induction h
-  · dsimp [def_eq?]
-    dcc_aesop
-  case bang h ih =>
-    dsimp [def_eq?]
-    simp [ih]
-  case tm hn₁ hn₂ hr₁ hr₂ =>
+  case pi hr₁ hr₂ hr₃ hr₄ =>
+    simp [def_eq?, is_eta_tm?, hr₁.complete, hr₂.complete, hr₃.complete, hr₄.complete]
+  case coup h_deq heq | bang h_deq heq =>
+    simp [def_eq?, is_eta_tm?, heq]
+  case pi_comp hr₁ hr₂ =>
+    simp [def_eq?, is_eta_tm?, hr₁.complete, hr₂.complete]
+  case tm hn₁ hr₁ hr₂ =>
     have ha := hr₁.complete
     have hb := hr₂.complete
     unfold def_eq?
-    simp only [hn₁, hn₂]
-    simp [ha, hb]
+    match hn₁ with
+    | .inl h =>
+      simp [h.complete, ha, hb]
+    | .inr h =>
+      simp [h.complete, ha, hb]
+      aesop
 
 inductive Judge₂.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr τ_c → GenericExpr τ_c → Prop where
   | eq     : Judge₂ x α

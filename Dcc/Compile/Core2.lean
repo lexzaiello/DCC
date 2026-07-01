@@ -155,13 +155,14 @@ def Ctx.empty'.{u} (τ_c : Type u) := ((DCC? ⊤) : GenericExpr τ_c)
 instance [Std.ToFormat τ_c] : ToString (Ctx τ_c) := ⟨toString ∘ GenericExpr.toFormat⟩
 instance [Repr τ_c] : ToString (Ctx τ_c) := ⟨toString ∘ GenericExpr.toFormat (hFmt := ⟨repr⟩)⟩
 
-abbrev ParamInfer.{u} (τ_c : Type u) := (t_judge : (GenericExpr τ_c → GenericExpr τ_c → Prop)) × (∀ (e : GenericExpr τ_c), Except (TypeError e) ((τ : GenericExpr τ_c) × PULift.{1, 0} (t_judge e τ)))
+abbrev ParamInfer.{u} (τ_c : Type u) :=
+  (t_judge : (GenericExpr τ_c → GenericExpr τ_c → Prop)) × (∀ (e : GenericExpr τ_c), Except (TypeError e) ((t : GenericExpr τ_c) × PLift (t_judge e t)))
 
 /-
 The only way for a ! or & to show up in the compiled DCC code is if the compiler injected it for sharing
 purposes. Therefore, all ! and & values should be dereferenced eagerly.
 -/
-def cc_var (τ_c : Type) [Repr τ_c] [DecidableEq τ_c] (ctx : Ctx τ_c) (idx : DebruijnIdx) (infer : ParamInfer τ_c := ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩)
+def cc_var (τ_c : Type) [Repr τ_c] [DecidableEq τ_c] (ctx : Ctx τ_c) (idx : DebruijnIdx) (infer : ParamInfer τ_c := ⟨GenericExpr.Judge₂ (τ_c := τ_c), GenericExpr.infer₂ (τ_c := τ_c)⟩)
   (reduce : GenericExpr τ_c → GenericExpr τ_c := GenericExpr.reduce_all₂) : Lean.MacroM (GenericExpr τ_c) :=
   match ctx with
   | DCC? !(α) => do

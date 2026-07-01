@@ -494,6 +494,11 @@ open Confluent in @[reducible] def RedRel.globally_confluent.{u} {α : Type u}
   (hn : IsNorm r (DCC[τ] Π(f_α, f_β))) : IsNorm r f_β := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.pir' h⟩).elim
 
+@[dcc_rel] def IsNorm.coup.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+  {β : GenericExpr τ} [hC : Congruent r]
+  (hn : IsNorm r (DCC? Coup(β))) : IsNorm r β := fun ⟨_, h⟩ =>
+  (hn ⟨_, hC.coup' h⟩).elim
+
 @[dcc_rel] def IsNorm.complete.{u}
   {α : Type u}
   {r : α → α → Prop}
@@ -661,6 +666,7 @@ theorem reduce_norm_fst.{u} {α : Type u} {t : α → ℕ}
 
 attribute [dcc_force_reduce] Rel.run.eq_def
 
+@[grind .]
 theorem decreasing?.{u} {α : Type u} {t : α → ℕ}
   (r : α → α → Prop) [hR : RedRel r t] {A B : α} (hr : Relation.ReflTransGen r A B) : t B ≤ t A := by
   match hr.cases_head with

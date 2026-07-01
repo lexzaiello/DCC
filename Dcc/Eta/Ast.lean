@@ -226,7 +226,6 @@ def tm_arity.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : ℕ :=
   | DCC[.] (f _x) => f.tm_arity - 1
   | .const _n => 0
 
-
 @[dcc_reduce]
 def is_boxed.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : Option (GenericExpr (τ := τ)) :=
   match e with

@@ -637,6 +637,18 @@ abbrev decreasing.{u} {τ_c : Type u} (x y : GenericExpr τ_c) := (RedAff.instRe
 
 end RedAff
 
+namespace RedAffReflTrans
+
+def push_head' (hr₁ : RedAffReflTrans A C) (hn : IsNorm RedAff C) (hr₂ : RedAffReflTrans A B) : RedAffReflTrans B C := by
+  have ⟨_, h₁, h₂⟩ := hr₁.conf hr₂
+  have heq := hn.unique_refl h₁
+  exact heq ▸ h₂
+
+@[grind ., grind →]
+theorem decreasing?.{u} {τ : Type u} {A B : GenericExpr τ} [DecidableEq τ] (h : (RedAffReflTrans (τ := τ)) A B) : (size B) ≤ (size A) := red_aff_decreasing? h
+
+end RedAffReflTrans
+
 end GenericExpr
 
 abbrev Expr.RedAff := GenericExpr.RedAff (τ := Unit)

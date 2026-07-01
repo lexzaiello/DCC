@@ -62,6 +62,112 @@ def view_coup? (e : GenericExpr τ_c) : Option (ViewCoup e) :=
   | (DCC? !(Coup(_β))) => .some .bang
   | _ => .none
 
+inductive IsEtaTm.{u} {τ_c : Type u} : GenericExpr τ_c → Type u
+  | eql    : IsEtaTm (DCC? Eql(f_α))
+  -- Id(α) x
+  | id     : IsEtaTm (DCC? Id(α))
+  -- (f ∘ g) x
+  | comp   : IsEtaTm f → IsEtaTm (DCC? (f ∘ g))
+  | comp'  : IsEtaTm f → IsEtaTm (DCC? (f ∘' g))
+  | comp₂  : IsEtaTm f → IsEtaTm (DCC? (f ∘∘ g))
+  -- Fstc(..) (x, y) -> x
+  | fstc   : IsEtaTm (DCC? Fstc(β))
+  | sndc   : IsEtaTm (DCC? Sndc(β))
+  -- Σ(f_α, f_β) env -> Coup(...)
+  | sigma  : IsEtaTm (DCC? Σ(f_α, f_β))
+  -- `(β, x) y
+  | quot   : IsEtaTm (DCC? `(β, x))
+  -- ⟨f, g⟩ x
+  | pair   : IsEtaTm (DCC? ⟦β⟧⟨f, g⟩)
+  -- Λ(α, β, x) y z
+  | curr   : IsEtaTm (DCC? Λ(α, β, x))
+  | curr'  : IsEtaTm (DCC? !Λ(α, β, x))
+  | eval   : IsEtaTm (DCC? Eval(α, β, x))
+  | map    : IsEtaTm (DCC? !<f>)
+  | fmap   : IsEtaTm (DCC? $<f>)
+  | unmap  : IsEtaTm (DCC? *<f>)
+  | deref  : IsEtaTm (DCC? *(x))
+  | top    : IsEtaTm (DCC? ⊤)
+  | bot    : IsEtaTm (DCC? ⊥)
+  | tintro : IsEtaTm (DCC? ∗)
+  | sort   : IsEtaTm (DCC? Sort m)
+  | box    : IsEtaTm (DCC? &(x))
+  | mk     : IsEtaTm (DCC? ⟦β⟧(x, y))
+  | eq     : IsEtaTm (DCC? x = y)
+  | refl   : IsEtaTm (DCC? refl(f_α))
+  | const  : IsEtaTm (.const _x)
+  | app    : IsEtaTm f → IsEtaTm (DCC? (f x))
+
+@[grind, aesop norm (rule_sets := [DccForceReduce])]
+def is_eta_tm? (e : GenericExpr τ_c) : Option (IsEtaTm e) :=
+  match e with
+  | (DCC? Eql(f_α)) => .some (by constructor)
+  | (DCC? Id(α)) => .some (by constructor)
+  | (DCC? f ∘ g) =>
+    match f.is_eta_tm? with
+    | .some h => .some (by constructor; exact h)
+    | .none => .none
+  | (DCC? f ∘' g) =>
+    match f.is_eta_tm? with
+    | .some h => .some (by constructor; exact h)
+    | .none => .none
+  | (DCC? f ∘∘ g) =>
+    match f.is_eta_tm? with
+    | .some h => .some (by constructor; exact h)
+    | .none => .none
+  | (DCC? Fstc(β)) => .some (by constructor)
+  | (DCC? Sndc(β)) => .some (by constructor)
+  | (DCC? Σ(f_α, f_β)) => .some (by constructor)
+  | (DCC? `(β, x)) => .some (by constructor)
+  | (DCC? ⟦β⟧⟨f, g⟩) => .some (by constructor)
+  | (DCC? ⟦β⟧(x, y)) => .some (by constructor)
+  | (DCC? Λ(α, β, x)) => .some (by constructor)
+  | (DCC? !Λ(α, β, x)) => .some (by constructor)
+  | (DCC? Eval(α, β, x)) => .some (by constructor)
+  | (DCC? !<f>) => .some (by constructor)
+  | (DCC? $<f>) => .some (by constructor)
+  | (DCC? *(f)) => .some (by constructor)
+  | (DCC? *<f>) => .some (by constructor)
+  | (DCC? &(f)) => .some (by constructor)
+  | (DCC? x = y) => .some (by constructor)
+  | (DCC? refl(f_α)) => .some (by constructor)
+  | (DCC? Sort m) => .some (by constructor)
+  | (DCC? ⊤) => .some (by constructor)
+  | (DCC? ⊥) => .some (by constructor)
+  | (DCC? ∗) => .some (by constructor)
+  | (DCC? (f x)) =>
+    match f.is_eta_tm? with
+    | .some h => .some (by constructor; exact h)
+    | .none => .none
+  | .const _x => .some (by constructor)
+  | .coup _
+  | .bang _
+  | .pi _ _ => .none
+
+@[grind ., grind =_, aesop safe forward (rule_sets := [DccRel])]
+theorem IsEtaTm.complete (h : IsEtaTm e) : is_eta_tm? e = .some h := by
+  induction h <;> simp_all [is_eta_tm?]
+
+@[grind =, grind =_]
+theorem IsEtaTm.complete_none (h : IsEtaTm e → False) : is_eta_tm? e = .none := by
+  induction e
+  any_goals (
+    focus
+    simp [is_eta_tm?]
+    try split
+    try (
+      apply False.elim
+      apply h
+      constructor
+      try assumption)
+    try rfl)
+
+@[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
+theorem is_eta_tm?_none_sound (h : is_eta_tm? e = .none) : IsEtaTm e → False := fun h => by
+  simp_all [h.complete]
+
+def is_eta_tm?_sound (_h : is_eta_tm? e = .some hr) : IsEtaTm e := hr
+
 inductive ViewEta.{u} {τ_c : Type u} : GenericExpr τ_c → Type u
   | pi_type : ViewEta (DCC? (Π(f_α, f_β) env))
   | pi      : ViewEta (DCC? Π(f_α, f_β))
@@ -94,6 +200,9 @@ theorem ViewEta.complete_none (h : ViewEta e → False) : view_eta? e = .none :=
 @[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
 theorem view_eta?_none_sound (h : view_eta? e = .none) : ViewEta e → False := fun h => by
   simp_all [h.complete]
+
+theorem IsEtaTm.complete_view_eta (h : IsEtaTm e) : view_eta? e = .none := by
+  induction h <;> (simp [view_eta?]; try grind)
 
 @[grind =_, grind .]
 theorem ViewCoup.complete (h : ViewCoup e) : view_coup? e = .some h := by
@@ -481,30 +590,6 @@ def mk_eta_result.{u} {τ_c : Type u} [DecidableEq τ_c] (dom : GenericExpr (τ 
   else
     .some ⟨_, ⟨.quot h₁⟩⟩
 
-instance decExistsCoupE.{u} {τ : Type u} {f : GenericExpr (τ := τ)} : Decidable (∃ (β : GenericExpr (τ := τ)), f = (DCC? Coup(β))) := by
-  cases f
-  case coup =>
-    exact .isTrue (by aesop)
-  any_goals (
-    exact .isFalse (by
-      intro ⟨_, heq⟩
-      simp_all))
-
-instance : Decidable (∃ (β : GenericExpr τ), f = (DCC? !(Coup(β)))) := by
-  cases f
-  case bang x =>
-    cases x
-    case coup =>
-      exact .isTrue (by aesop)
-    any_goals (
-      exact .isFalse (by
-        intro ⟨_, heq⟩
-        simp_all))
-  any_goals (
-    exact .isFalse (by
-      intro ⟨_, heq⟩
-      simp_all))
-
 def eta_reduce_tm.{u} {τ_c : Type u} [DecidableEq τ_c] (level : ℕ)
   (f : GenericExpr (τ := EtaConst (τ := τ_c))) : Option ((f' : GenericExpr (τ := EtaConst (τ := τ_c))) × (PLift (TmEtaReduces level f f'))) :=
   match f.domain? with
@@ -830,28 +915,6 @@ inductive FnEtaReduces.{u} {τ_c : Type u} [DecidableEq τ_c] : (level : ℕ) �
     → (¬ ∃ f', TmEtaReduces₂ level f f')
     → FnEtaReduces level f f
 
-instance instExistsPiDecidable : Decidable (∃ (f_α : GenericExpr τ) (f_β : GenericExpr τ), f = f_α.pi f_β) := by
-  cases f
-  case pi =>
-    exact .isTrue (by aesop)
-  any_goals (
-    exact .isFalse (by
-      intro ⟨_, _, heq⟩
-      simp_all))
-
-instance : Decidable (∃ (f_α : GenericExpr τ) (f_β : GenericExpr τ) (env : GenericExpr τ), f = (f_α.pi f_β).app env) := by
-  cases f
-  case app f x =>
-    if heq : ∃ f_α f_β, f = (DCC? Π(f_α, f_β)) then
-      exact .isTrue (by simp_all)
-    else
-      exact .isFalse (by
-        simp_all)
-  any_goals (
-    exact .isFalse (by
-      intro ⟨_, _, heq⟩
-      simp_all))
-
 /-def fn_reduces.{u} {τ_c : Type u} [DecidableEq τ_c] (level : ℕ) (f : GenericExpr (τ := EtaConst (τ := τ_c))) : Option
   ((f' : GenericExpr (τ := EtaConst (τ := τ_c))) × (PLift (FnEtaReduces level f f'))) := by
     cases heq : f
@@ -1078,6 +1141,7 @@ def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c
   | .const (.hole _) => by simp_all [contains_hole]
   | .const (.const x) => (.const x)
 
+@[grind]
 def expr_to_eta.{u} {τ_c : Type u} (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (τ := τ_c))) :=
   match e with
   | DCC? ∗ => DCC? ∗
@@ -1208,70 +1272,6 @@ instance RedEta?.instDecidable.{u} {τ_c : Type u} [hdecEq : DecidableEq τ_c] {
       have h := h.complete
       simp_all)
 
-instance : Decidable (∃ (f_α : GenericExpr τ) (f_β : GenericExpr τ), f = f_α.pi f_β) := by
-  cases f
-  case pi =>
-    exact .isTrue (by aesop)
-  any_goals (
-    exact .isFalse (by
-      intro ⟨_, _, heq⟩
-      simp_all))
-
-instance : Decidable (∃ (f_α : GenericExpr τ) (f_β : GenericExpr τ) (env : GenericExpr τ), f = (f_α.pi f_β).app env) := by
-  cases f
-  case app f x =>
-    if heq : ∃ f_α f_β, f = (DCC? Π(f_α, f_β)) then
-      exact .isTrue (by simp_all)
-    else
-      exact .isFalse (by
-        simp_all)
-  any_goals (
-    exact .isFalse (by
-      intro ⟨_, _, heq⟩
-      simp_all))
-
-instance : Decidable (∃ (g f_α f_β : GenericExpr τ), f = (f_α.pi f_β).comp' g) := by
-  cases f
-  case comp' f g =>
-    cases f
-    case pi =>
-      exact .isTrue (by aesop)
-    any_goals (
-      exact .isFalse (by
-        intro ⟨_, _, heq⟩
-        simp_all))
-  any_goals (
-    exact .isFalse (by
-      intro ⟨_, _, heq⟩
-      simp_all))
-
-instance : Decidable (∃ (β : GenericExpr τ), f = (DCC? Coup(β))) := by
-  cases f
-  case coup =>
-    exact .isTrue (by aesop)
-  any_goals (
-    exact .isFalse (by
-      intro ⟨_, heq⟩
-      simp_all))
-
-instance : Decidable (∃ (α : GenericExpr τ), e = (DCC? Id(α))) := by
-  cases e
-  case id =>
-    exact .isTrue (by aesop)
-  any_goals (
-    exact .isFalse (by
-      intro ⟨_, heq⟩
-      simp_all))
-
-instance : Decidable (∃ (α : GenericExpr τ), e = (DCC? !(α))) := by
-  cases e
-  case bang =>
-    exact .isTrue (by aesop)
-  any_goals (
-    exact .isFalse (by
-      intro ⟨_, heq⟩
-      simp_all))
-
 inductive RedEta??.{u} {τ_c : Type u} [DecidableEq τ_c] : (e : GenericExpr (τ := τ_c)) → (e' : GenericExpr (τ := τ_c)) → Prop
   | pi₁  : RedEta?? f_α f_α'
     → Domain (expr_to_eta f_α) δ
@@ -1280,19 +1280,9 @@ inductive RedEta??.{u} {τ_c : Type u} [DecidableEq τ_c] : (e : GenericExpr (τ
     → RedAffReflTrans (DCC? (f_β env)) f_β_env
     → IsNorm RedAff f_β_env
     → RedEta?? f_β_env f_β'
-    → (f_β' ≠ (DCC? (f_β env)))
     → RedEta?? (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α', `(#(eta_to_expr δ hn), f_β')) env'))
   | coup  : RedEta?? β β' → RedEta?? (DCC? Coup(β)) (DCC? Coup(β'))
   | bang  : RedEta?? β β' → RedEta?? (DCC? !(β)) (DCC? !(β'))
-  | pi₁'  : RedEta?? f_α f_α'
-    → Domain (expr_to_eta f_α) δ
-    → (hn : ¬ δ.contains_hole)
-    → RedEta?? env env'
-    → RedAffReflTrans (DCC? (f_β env)) f_β_env
-    → IsNorm RedAff f_β_env
-    → RedEta?? f_β_env f_β'
-    → (f_β' = (DCC? (f_β env)))
-    → RedEta?? (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α', f_β) env'))
   | pi₂  : RedEta?? f_α f_α'
     → RedEta?? f_β f_β'
     → RedEta?? (DCC? Π(f_α, f_β)) (DCC? Π(f_α', f_β'))
@@ -1303,9 +1293,9 @@ inductive RedEta??.{u} {τ_c : Type u} [DecidableEq τ_c] : (e : GenericExpr (τ
     → IsNorm RedAff f_β₁
     → RedEta?? (DCC? (f_β₁ ∘' g)) f_β'
     → RedEta?? (DCC? (Π(f_α, f_β) ∘' g)) (DCC? Π(f_α', f_β'))
-  | tm₁  : (ViewEta e → False)
+  | tm₁  : IsEtaTm e
     → RedEta? e e' → RedEta?? e e'
-  | tm₂  : (ViewEta e → False)
+  | tm₂  : IsEtaTm e
     → (¬ ∃ e', RedEta? e e')
     → RedAffReflTrans e e'
     → IsNorm RedAff e'
@@ -1367,8 +1357,9 @@ theorem red_eta?_none.{u} {τ_c : Type u} [DecidableEq τ_c] {e : GenericExpr τ
     have h := h.complete
     simp_all
 
+@[dcc_force_reduce]
 def red_eta??.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Option ((e' : GenericExpr τ_c) × (PLift (RedEta?? e e'))) :=
-  match h_view_eta_eq : e.view_eta? with
+  match e.view_eta? with
   | .some (.pi_type (f_α := f_α) (f_β := f_β) (env := env)) =>
     match f_α.expr_to_eta.domain? with
     | .some ⟨δ, ⟨h₂⟩⟩ =>
@@ -1387,11 +1378,7 @@ def red_eta??.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Op
       | .some ⟨_, ⟨h₄⟩⟩, .some ⟨f_α', ⟨h₅⟩⟩, .some ⟨f_β', ⟨h₆⟩⟩ =>
         if h₃ : δ.contains_hole then
           .none
-        else
-          if heq : f_β' = (DCC? (f_β env)) then
-            .some ⟨_, ⟨.pi₁' h₅ h₂ h₃ h₄ (reduce_sound rfl) (reduce_norm rfl) h₆ heq⟩⟩
-          else
-            .some ⟨_, ⟨.pi₁ h₅ h₂ h₃ h₄ (reduce_sound rfl) (reduce_norm rfl) h₆ heq⟩⟩
+        else .some ⟨_, ⟨.pi₁ h₅ h₂ h₃ h₄ (reduce_sound rfl) (reduce_norm rfl) h₆⟩⟩
       | _, _, _ => .none
     | _ => .none
   | .some (.pi (f_α := f_α) (f_β := f_β)) =>
@@ -1430,11 +1417,16 @@ def red_eta??.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Op
       .some ⟨_, ⟨.bang h⟩⟩
     | _ => .none
   | .none =>
-    match _heq₄ : e.red_eta? with
-    | .some ⟨_, ⟨h⟩⟩ =>
-      .some ⟨_, ⟨.tm₁ (by aesop (rule_sets := [DccRel])) h⟩⟩
-    | .none => .some ⟨_, ⟨.tm₂ (by aesop (rule_sets := [DccRel])) (red_eta?_none _heq₄) (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+    match e.is_eta_tm? with
+    | .some h_tm =>
+      match _heq₄ : e.red_eta? with
+      | .some ⟨_, ⟨h⟩⟩ =>
+        .some ⟨_, ⟨.tm₁ h_tm h⟩⟩
+      | .none => .some ⟨_, ⟨.tm₂ h_tm (red_eta?_none _heq₄) (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+    | .none => .none
 termination_by e.size
+
+theorem red_eta??_sound.{u} {τ_c : Type u} [DecidableEq τ_c] {e e' : GenericExpr τ_c} {h : RedEta?? e e'} (_hr : red_eta?? e = .some ⟨e', ⟨h⟩⟩) : RedEta?? e e' := h
 
 /-def red_eta??.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Option ((e' : GenericExpr τ_c) × (PLift (RedEta?? e e'))) :=
   if heq : ∃ f_α f_β env, e = (DCC? (Π(f_α, f_β) env)) then
@@ -1523,17 +1515,16 @@ termination_by e.size-/
 @[aesop safe forward (rule_sets := [DccReduce])]
 theorem RedEta??.complete.{u} {τ_c : Type u} [DecidableEq τ_c] {e e' : GenericExpr (τ := τ_c)} (h : RedEta?? e e') : e.red_eta?? = .some ⟨e', ⟨h⟩⟩ := by
   induction h
-  case pi₁ | pi₁' =>
-    rename_i f_α δ δ' env env' f_β f_β_env f_β' h₁ to_eta_expr h_domain h_to_expr h₃ hrenv hnenv h₄ hneq heq₁ heq₂ heq₃
+  case pi₁ =>
+    rename_i f_α δ δ' env env' f_β f_β_env f_β' h₁ to_eta_expr h_domain h_to_expr h₃ hrenv hnenv h₄ hneq heq₁ heq₂
     have heq₄ := reduce_complete hrenv hnenv
     have heq₅ : (reduce RedAff (f_β_env.app env')).fst = f_β' := by
       simp_all
     unfold red_eta??
     simp
-    simp [view_eta?, h_domain.complete, heq₁, heq₂]
+    simp [view_eta?, h_domain.complete, heq₁]
     cases heq₅
     cases heq₄
-    simp [heq₃]
     simp_all
   case pi₂ =>
     rename_i f_α f_α' f_β f_β' h₁ h₂ heq₁ heq₂
@@ -1541,18 +1532,23 @@ theorem RedEta??.complete.{u} {τ_c : Type u} [DecidableEq τ_c] {e e' : Generic
     simp
     simp [view_eta?, heq₁, heq₂]
   case tm₁ e₀ e'' hn h =>
-    have ha := ViewEta.complete_none hn
+    have ha := IsEtaTm.complete_view_eta hn
+    have hb := hn.complete
     have he : ∃ e', RedEta? e₀ e' := by
       exact ⟨_, h⟩
     have h₁ := h.complete
     unfold red_eta??
-    simp
+    rw [ha]
+    simp [hb]
     grind
   case tm₂ hn₁ hn₂ hr hnorm =>
-    have ha := ViewEta.complete_none hn₁
+    have ha := IsEtaTm.complete_view_eta hn₁
+    have hb := hn₁.complete
     have h₁ := reduce_complete hr hnorm
     rw [red_eta??]
     simp
+    rw [ha]
+    simp [hb]
     grind
   case pi₃ hrt₁ hn₁ hr₁ hrt₂ hn₂ hr₂ heq₁ heq₂ =>
     have heq₃ := reduce_complete hrt₁ hn₁
@@ -1835,17 +1831,6 @@ def is_norm_aff.{u} {τ_c : Type u} [DecidableEq τ_c] {A B : GenericExpr τ_c}
     cases h
     · rename_i h
       exact ha ⟨_, h⟩
-  case pi₁' ih₁ ih₂ ih₃ =>
-    have ha := ih₁ hn.congrFun.pil hn.congrFun.pil.to_eta
-    have hb := ih₂ hn.congrArg hn.congrArg.to_eta
-    have hc := ih₃ (by assumption) (.to_eta (by assumption))
-    intro ⟨_, h⟩
-    cases h with
-    | congrFun h =>
-      cases h with
-      | pil h => exact ha ⟨_, h⟩
-      | pir h => exact hn.congrFun.pir ⟨_, h⟩
-    | congrArg h => exact hb ⟨_, h⟩
   case pi₂ ih₁ ih₂ =>
     have ha := ih₁ hn.pil hn.pil.to_eta
     have hb := ih₂ hn.pir hn.pir.to_eta
@@ -1860,7 +1845,7 @@ def is_norm_aff.{u} {τ_c : Type u} [DecidableEq τ_c] {A B : GenericExpr τ_c}
     cases h with
     | pil h => exact ha ⟨_, h⟩
     | pir h => exact hb ⟨_, h⟩
-  case tm₁ hneq₁ hneq₂ hneq₃ hneq₄ hneq₅ hr =>
+  case tm₁ hneq₁ hr =>
     exact hr.is_norm_aff hn
   · assumption
 

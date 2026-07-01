@@ -193,7 +193,7 @@ def Ctx.empty'.{u} (τ_c : Type u) := ((DCC? ⊤) : GenericExpr τ_c)
 instance [Std.ToFormat τ_c] : ToString (Ctx τ_c) := ⟨toString ∘ GenericExpr.toFormat⟩
 instance [Repr τ_c] : ToString (Ctx τ_c) := ⟨toString ∘ GenericExpr.toFormat (hFmt := ⟨repr⟩)⟩
 
-abbrev ParamInfer.{u} (τ_c : Type u) := (t_judge : (GenericExpr τ_c → GenericExpr τ_c → Type)) × (∀ (e : GenericExpr τ_c), Except (TypeError e) ((τ : GenericExpr τ_c) × t_judge e τ))
+abbrev ParamInfer (τ_c : Type) := (t_judge : (GenericExpr τ_c → GenericExpr τ_c → Prop)) × (∀ (e : GenericExpr τ_c), Except (TypeError e) ((τ : GenericExpr τ_c) × (PLift (t_judge e τ))))
 
 /-def cc_var (ctx : Ctx) (idx : DebruijnIdx) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) (reduce : Expr → Expr := Expr.reduce_all) : Lean.MacroM Expr :=
   match ctx, idx with

@@ -607,7 +607,7 @@ def domain₂?.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr (@EtaCons
   | (DCC? !Λ(_α, _β, _x)) => .some ⟨_, _, ⟨.curr'⟩⟩
   | _ => none
 
-@[aesop safe forward (rule_sets := [DccReduce])]
+@[aesop safe forward (rule_sets := [DccReduce]), grind =_, grind ., grind! .]
 theorem Domain.complete.{u} {τ_c : Type u} [DecidableEq τ_c] {e τ : GenericExpr τ_c} (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, ⟨h⟩⟩ := by
   induction h
   any_goals (
@@ -1005,9 +1005,10 @@ class EtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
   sound         : (run A = pure ⟨B, ⟨h⟩⟩) → r A B := fun (_heq : run A = pure ⟨B, ⟨h⟩⟩) => h
   none_complete : (∀ {B : GenericExpr τ_c}, r A B → False)  → run A = failure
 
-attribute [grind ., grind! ., aesop safe apply (rule_sets := [DccRel])] EtaRel.complete
+attribute [grind =_, grind ., grind! ., aesop safe apply (rule_sets := [DccRel])] EtaRel.complete
 attribute [grind] EtaRel.run
 attribute [grind] EtaRel.sound
+attribute [dcc_rel] EtaRel.is_norm_aff
 
 open EtaRel in
 open Monad in
@@ -1028,6 +1029,14 @@ class OptionEtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
     have heq := complete h
     simp_all
     exact hn h
+  unique        : ∀ {A B C : GenericExpr τ_c} (_hr₁ : r A B) (_hr₂ : r A C), B = C := fun hr₁ hr₂ => by
+    have h₁ := complete hr₁
+    have h₂ := complete hr₂
+    simp_all
+  unique'       : ∀ {A B C : GenericExpr τ_c} (_hrt₁ : r A B) {_hr₂ : r A C}, B = C := unique
+
+attribute [dcc_rel] OptionEtaRel.unique
+attribute [dcc_rel, aesop safe forward (rule_sets := [DccRel])] OptionEtaRel.unique'
 
 end
 
@@ -1040,7 +1049,10 @@ theorem OptionEtaRel.none_complete'
   intro ⟨_, ⟨h⟩⟩
   exact (hn ⟨_, h⟩).elim
 
-instance Domain.instEtaRel [DecidableEq τ_c] : (EtaRel (τ_c := τ_c) Domain Option) where
+end GenericExpr
+
+open GenericExpr in
+instance Domain.instEtaRel.{u} {τ_c : Type u} [DecidableEq τ_c] : (EtaRel (τ_c := τ_c) Domain Option) where
   run := domain?
   is_norm_aff := fun h h_dom => by
     have heq := h_dom.complete
@@ -1062,4 +1074,5 @@ instance Domain.instEtaRel [DecidableEq τ_c] : (EtaRel (τ_c := τ_c) Domain Op
     intro ⟨_, ⟨hr⟩⟩
     exact (h hr).elim
 
-end GenericExpr
+open GenericExpr in
+instance Domain.instOptionEtaRel.{u} {τ_c : Type u} [DecidableEq τ_c] : OptionEtaRel (τ_c := τ_c) Domain where

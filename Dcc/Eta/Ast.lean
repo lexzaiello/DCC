@@ -524,7 +524,7 @@ inductive Domain.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c →
   | comp₂    : Domain g α   → RedAffReflTrans α α' → IsNorm RedAff α' → Domain (DCC? f ∘∘ g) α'
   | pi       : Domain f_α δ → Domain (DCC? Π(f_α, f_β)) δ
 
-inductive Domain₂.{u} {τ_c : Type u} : GenericExpr (@EtaConst τ_c) → GenericExpr (@EtaConst τ_c) → GenericExpr (@EtaConst τ_c) → Prop
+inductive Domain₂.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c → GenericExpr τ_c → Type u
   | comp'    : Domain g α → Domain₂ f β γ → Domain₂ (DCC? (f ∘' g)) α (DCC? γ ∘' g)
   | eql      : Domain f_α δ → (DCC? Eql(f_α)).Domain₂ δ f_α
   | refl     : Domain f_α δ → (DCC? refl(f_α)).Domain₂ δ f_α
@@ -588,7 +588,7 @@ def domain?.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Opti
     | _ => .none
   | _ => .none
 
-def domain₂?.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr (@EtaConst τ_c)) : Option ((α β : GenericExpr (@EtaConst τ_c)) × (PULift.{1, 0} (Domain₂ e α β))) :=
+def domain₂?.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Option ((α β : GenericExpr τ_c) × (PULift.{u + 2, u + 1} (Domain₂ e α β))) :=
   match e with
   | DCC? f ∘' g =>
     match g.domain?, f.domain₂? with
@@ -624,7 +624,7 @@ theorem Domain.complete.{u} {τ_c : Type u} [DecidableEq τ_c] {e τ : GenericEx
 
 @[aesop safe forward (rule_sets := [DccReduce])]
 theorem Domain₂.complete.{u} {τ_c : Type u} [DecidableEq τ_c]
-  {e α β : GenericExpr (@EtaConst τ_c)} (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, ⟨h⟩⟩ := by
+  {e α β : GenericExpr τ_c} (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, ⟨h⟩⟩ := by
   induction h with
   | comp' h₁ h₂ ih => simp [domain₂?, ih, h₁.complete]
   | refl h_domain | eql h_domain =>
@@ -716,7 +716,6 @@ theorem Domain.is_norm_aff (h : Domain e τ) : IsNorm RedAff τ := by
     cases h
     grind)
   any_goals (grind)
-  
 
 @[grind]
 def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c)))

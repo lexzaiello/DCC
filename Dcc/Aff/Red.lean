@@ -42,7 +42,7 @@ inductive RedAff.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
   | congrArg : RedAff x x' → RedAff (DCC[τ] (f x)) (DCC[τ] (f x'))
 
 @[dcc_force_reduce, dcc_force_aff]
-def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{1, 0} (RedAff (τ := τ) e e'))) :=
+def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
   match e with
   | (DCC[?] Π(f_α, f_β)) =>
     match f_α.step?, f_β.step? with
@@ -420,7 +420,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
       have ⟨B, h, heq⟩ := semi_complete hr
       simp [heq]
       exact .bang h
-  repeat exact ⟨_, (RedAff.instRedRel.sound rfl).down, rfl⟩
+  repeat exact ⟨_, (RedAff.instRedRel.sound rfl), rfl⟩
   case h_21 =>
     cases hr with
     | sigl h_x =>

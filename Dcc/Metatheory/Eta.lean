@@ -5,6 +5,89 @@ import Dcc.Value
 
 namespace GenericExpr
 
+/-
+Valid outs:
+- `(dom, out)
+
+-/
+
+inductive IsNormTmηReduces.{u} {τ_c : Type u} [DecidableEq τ_c] : (level : ℕ) → (f : GenericExpr (τ := EtaConst (τ := τ_c))) → (f' : GenericExpr (τ := EtaConst (τ := τ_c))) → Prop
+  | 
+
+namespace TmEtaReduces
+
+end TmEtaReduces
+
+namespace RedEta??
+
+/-
+- RedEta??IsNorm
+  - (Π(f_α, f_β) env)
+    - IsNormη (f_β env).reduce'
+    - IsNorm f_α
+  - Coup(β)
+    - IsNormη β
+  - !(β)
+    - IsNorm β
+  - Π(f_α, f_β)
+    - IsNorm f_α
+    - IsNorm f_β
+  - Π(f_α, f_β) ∘' g
+    - IsNorm (#(f_α.reduce') ∘' g)
+    - IsNorm (#(f_β.reduce') ∘' g)
+  - Doesn't match shapes above ^ (IsEtaTm e)
+    
+    
+-/
+
+end RedEta??
+
+namespace RedEta₂
+
+/-
+An η reduction is normal if:
+
+- there is no RedEta?? (RedEta₂.refl)
+- step
+  - IsNormη?? e
+-/
+
+end RedEta₂
+
+namespace IsNorm
+
+theorem mkc (h : IsNorm RedAff (DCC? (f ⟦β⟧(x, y)))) : IsNorm RedAff (DCC? (f ⟦β₂⟧(x, y))) :=
+  fun ⟨_, h⟩ => by
+    cases h
+    any_goals (
+      focus
+      apply h
+      constructor
+      constructor
+      done)
+    case congrFun hr =>
+      exact h.congrFun ⟨_, hr⟩
+    case congrArg hr =>
+      cases hr with
+      | sigl hr => exact h.congrArg.sigl ⟨_, hr⟩
+      | sigr hr => exact h.congrArg.sigr ⟨_, hr⟩
+
+theorem mkc' (h : IsNorm RedAff (DCC? ⟦β⟧(x, y))) : IsNorm RedAff (DCC? ⟦β₂⟧(x, y)) :=
+  fun ⟨_, h⟩ => by
+    cases h with
+    | sigl hr => exact h.sigl ⟨_, hr⟩
+    | sigr hr => exact h.sigr ⟨_, hr⟩
+
+end IsNorm
+
+namespace EtaMap₂
+
+/-theorem reduce_self.{u} {τ_c : Type u} [DecidableEq τ_c] {dom dom₂ out hole₁ hole₂ f f' f'' : GenericExpr (@EtaConst τ_c)} (hn : IsNorm RedAff f)
+  (hr₁ : EtaMap₂ dom dom₂ out hole₁ hole₂ f')
+  (hr₂ : TmEtaReduces level f' f'') : f' = f'' := by-/
+
+end EtaMap₂
+
 theorem transport_eq_eta (h_contains₁ : ¬ (contains_hole A)) (h_contains₂ : ¬ (contains_hole B)) (h : A = B) : (eta_to_expr A h_contains₁) = (eta_to_expr B h_contains₂) := by sorry
 
 namespace Domain
@@ -45,9 +128,189 @@ end TmEtaReduces₂
 
 namespace TmEtaReduces
 
-theorem reduce_self.{u} {τ_c : Type u} [DecidableEq τ_c] {f f' f'' : GenericExpr (@EtaConst τ_c)} (hn : IsNorm RedAff f) (hr₁ : TmEtaReduces level f f')
+/-theorem reduce_self.{u} {τ_c : Type u} [DecidableEq τ_c] {f f' f'' : GenericExpr (@EtaConst τ_c)} (hn : IsNorm RedAff f)
+  (hr₁ : TmEtaReduces level f f')
   (hr₂ : TmEtaReduces level f' f'') : f' = f'' := by
-  sorry
+  have ha := hr₁.is_norm_aff
+  have hb := hr₂.is_norm_aff
+  induction hr₂ generalizing f with
+  | coupl hrt₁ hn₂ h_dom hrt₂ hn₃ h_res =>
+    induction hr₁ generalizing f'' with
+    | coupl hrt₃ hn₄ h_dom₂ hrt₅ hn₆ h_res₂ =>
+      cases hrt₃.elim_head_norm hn
+      cases hrt₁.elim_head_norm ha
+      cases h_res₂ with
+      | map h_contains h_map =>
+        cases h_map with
+        | id =>
+          cases (hrt₂.push_head (by assumption) .id).elim_head_norm (fun ⟨_, h⟩ => by
+            cases h with
+            | sigl h => cases h
+            | sigr h => cases h)
+          cases h_dom with
+          | id =>
+            cases h_res with
+            | map h_contains h =>
+              cases h with
+              | id => rfl
+            | quot h_contains => grind
+        | sndc =>
+          cases (hrt₂.push_head (by assumption) .sndc).elim_head_norm (fun ⟨_, h⟩ => by
+            cases h)
+          cases h_dom with
+          | sndc =>
+            cases h_res with
+            | map h_contains h =>
+              cases h with
+              | sndc => rfl
+            | quot h_contains => grind
+        | fstc =>
+          cases (hrt₂.push_head (by assumption) .fstc).elim_head_norm (fun ⟨_, h⟩ => by
+            cases h)
+          cases h_dom with
+          | fstc =>
+            cases h_res with
+            | map h_contains h =>
+              cases h with
+              | fstc => rfl
+            | quot h_contains => grind
+        | par =>
+          cases hrt₂.elim_head_norm hn₆.mkc
+          cases h_res with
+          | map h_contains' =>
+            rename_i h_map
+            cases h_map with
+            | par =>
+              
+              sorry-/
+
+theorem reduce_self.{u} {τ_c : Type u} [DecidableEq τ_c] {f f' f'' : GenericExpr (@EtaConst τ_c)} (hn : IsNorm RedAff f)
+  (hr₁ : TmEtaReduces level f f')
+  (hr₂ : TmEtaReduces level f' f'') : f' = f'' := by
+  induction hr₁ generalizing f'' with
+  | coupl hrt₁ hn₂ h_dom hrt₂ hn₃ h_res =>
+    induction hr₂ generalizing f with
+    | coupl hrt₃ hn₄ h_dom₂ hrt₅ hn₆ h_res₂ =>
+      cases h_res with
+      | map h_contains h_res =>
+        cases h_res₂ with
+        | map h_contains₂ h_res₂ =>
+          cases h_res with
+          | id =>
+            have h := hrt₃.elim_head_norm (fun ⟨_, h⟩ => by cases h)
+            cases h
+            have h := (hrt₅.push_head hn₆ .id).elim_head_norm (fun ⟨_, h⟩ => by
+                cases h with
+                | sigl h => cases h
+                | sigr h => cases h)
+            cases h_dom₂
+            simp_all
+            cases h.symm
+            cases h_res₂ with
+            | id => rfl
+          | sndc =>
+            have h := hrt₃.elim_head_norm (fun ⟨_, h⟩ => by cases h)
+            cases h
+            have h := (hrt₅.push_head hn₆ .sndc).elim_head_norm (fun ⟨_, h⟩ => by cases h)
+            cases h_dom₂
+            simp_all
+            cases h.symm
+            cases h_res₂ with
+            | sndc => rfl
+          | fstc =>
+            have h := hrt₃.elim_head_norm (fun ⟨_, h⟩ => by cases h)
+            cases h
+            have h := (hrt₅.push_head hn₆ .fstc).elim_head_norm (fun ⟨_, h⟩ => by cases h)
+            cases h_dom₂
+            simp_all
+            cases h.symm
+            cases h_res₂ with
+            | fstc => rfl
+          | par =>
+            cases hrt₁.elim_head_norm hn
+            cases hrt₃.elim_head_norm (hn₃.congrFun)
+            cases hrt₅.elim_head_norm hn₃.mkc
+            cases h_res₂ with
+            | par => rfl
+        | quot h_contains' =>
+          cases h_res with
+          | id =>
+            cases hrt₃.elim_head_norm (fun ⟨_, h⟩ => by cases h)
+            cases (hrt₅.push_head hn₆ .id).elim_head_norm (fun ⟨_, h⟩ => by
+                cases h with
+                | sigl h => cases h
+                | sigr h => cases h)
+            cases h_dom₂ with
+            | id => grind
+          | sndc =>
+            cases hrt₃.elim_head_norm (fun ⟨_, h⟩ => by cases h)
+            cases (hrt₅.push_head hn₆ .sndc).elim_head_norm (fun ⟨_, h⟩ => by cases h)
+            cases h_dom₂ with
+            | sndc => grind
+          | fstc =>
+            cases hrt₃.elim_head_norm (fun ⟨_, h⟩ => by cases h)
+            cases (hrt₅.push_head hn₆ .fstc).elim_head_norm (fun ⟨_, h⟩ => by cases h)
+            cases h_dom₂ with
+            | fstc => grind
+          | par =>
+            cases hrt₃.elim_head_norm hn₃.congrFun
+            cases hrt₅.elim_head_norm hn₃.mkc
+            grind
+      | quot h_contains' =>
+        cases hrt₃.elim_head_norm (fun ⟨_, h⟩ => by cases h)
+        cases h_dom₂
+        cases (hrt₅.push_head (by assumption) .quot).elim_head_norm hn₃
+        cases h_res₂ with
+        | map h_contains'' h_map => cases h_map <;> grind
+        | quot => grind
+    | bang₁ =>
+      rename_i f f' β level e' f'' hrt' hn' h_dom' hrt'' hn'' h_res''
+      cases hrt'.elim_head_norm (h_res.is_norm_aff (by assumption))
+      cases hrt₁.elim_head_norm (by assumption)
+      cases h_res with
+      | map h_contains''' h =>
+        cases h with
+        | id =>
+          cases (hrt''.push_head (by assumption) .id).elim_head_norm (fun ⟨_, h⟩ => by cases h)
+          cases h_dom'
+        | fstc =>
+          cases hrt''.elim_head_norm (fun ⟨_, h⟩ => by
+            cases h with
+            | congrFun h => cases h
+            | congrArg h => cases h)
+          cases h_dom'
+        | sndc =>
+          cases hrt''.elim_head_norm (fun ⟨_, h⟩ => by
+            cases h with
+            | congrFun h => cases h
+            | congrArg h => cases h)
+          cases h_dom'
+        | par =>
+          cases h_res'' with
+          | map h_contains'' h_map'' =>
+            have h := h_map''.is_norm_aff (by assumption)
+            cases h_map'' with
+            | fstc' | sndc' =>
+              grind
+            | id =>
+              cases h_dom'
+              · match hrt''.cases_head with
+                | .inl h => grind
+                | .inr ⟨_, h₁, h₂⟩ =>
+                  cases h₁ with
+                  | congrFun h => cases h
+                  | congrArg h => cases h
+              · match hrt''.cases_head with
+                | .inl h => grind
+                | .inr ⟨_, h₁, h₂⟩ =>
+                  cases h₁ with
+                  | eql =>
+                    match h₂.cases_head with
+                    | .inl h => cases h
+                    | .inr ⟨_, h₁, h₂⟩ =>
+                      cases h₁ with
+                      | eql' h =>
+                        cases h
 
 theorem preservation_arity.{u} {τ_c : Type u} [DecidableEq τ_c] {f f' : GenericExpr (@EtaConst τ_c)} (hn : IsNorm RedAff f) (hr : TmEtaReduces level f f') : tm_arity f = tm_arity f' := by
   sorry

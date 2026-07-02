@@ -2,7 +2,6 @@ import Dcc.Eta.Ast
 import Dcc.Aff.Red
 import Dcc.Relation
 import Dcc.Types
-import Mathlib.Logic.Equiv.Defs
 
 /-
 Improvement to code structure in Reduce.lean
@@ -38,41 +37,21 @@ Improvement to code structure in Reduce.lean
 
 namespace GenericExpr
 
-open Monad in
-class EtaRel.{u, v} {τ_c : Type u} [DecidableEq τ_c] (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
-  (m : Type (max u v) → Type (max u v) := Option) [_hM : AlternativeMonad m] where
-  is_norm_aff   : r A B → IsNorm RedAff B
-  run           : ∀ (A : GenericExpr τ_c), m ((B : GenericExpr τ_c) × (PULift.{v + 1, v} (r A B)))
-  complete      : ∀ (h : r A B), run A = (pure ⟨B, ⟨h⟩⟩)
-  none          : ∀ (_h : run A = failure) (_hr : r A B), False
-  sound         : (run A = pure ⟨B, ⟨h⟩⟩) → r A B := fun (_heq : run A = pure ⟨B, ⟨h⟩⟩) => h
+section
 
-attribute [grind ., grind! .] EtaRel.complete
-attribute [grind] EtaRel.run
-attribute [grind] EtaRel.sound
+universe u
+variable {τ_c : Type u}
+variable [DecidableEq τ_c]
 
-open EtaRel in
-open Monad in
-class EtaRelProp {τ_c : Type u} [DecidableEq τ_c] (r : GenericExpr τ_c → GenericExpr τ_c → Prop)
-  (m : Type u → Type u := Option) [_hM : AlternativeMonad m] : Type max u u extends (EtaRel r m) where
-  none_complete : (¬ ∃ B, r A B)  → run A = failure
+inductive MkHole : (level : ℕ) → (f : GenericExpr (@EtaConst τ_c)) → (GenericExpr (@EtaConst τ_c)) → Type u
+  | coupl : Domain f (DCC? Coup(β)) → MkHole level f (DCC? ⟦β⟧(&(hole(level + 1)), &(hole(level + 2))))
+  | tm    : Domain f τ → (ViewCoup τ → False) → MkHole level f (DCC? hole(level + 1))
+  | bang  : Domain f (DCC? !(Coup(β))) → MkHole level f (DCC? ⟦β⟧(&(hole(level + 1)), &(hole(level + 2))))
 
-attribute [grind =] EtaRelProp.none_complete
+def mk_hole (level : ℕ) (e : GenericExpr (@EtaConst τ_c)) : Option ((hole : GenericExpr (@EtaConst τ_c)) × MkHole level f hole) :=
+  match domain? e with
+  | .some ⟨h, ⟨
 
-open Monad in
-class OptionEtaRel.{u, v} {τ_c : Type u} [DecidableEq τ_c] (r : GenericExpr τ_c → GenericExpr τ_c → Prop)
-  : Type max u v extends (EtaRelProp r Option) where
-  none          : ∀ {A B : GenericExpr τ_c} (_h : run A = failure) (_hr : r A B), False := fun heq hr => by
-    simp_all [complete hr, failure, pure]
-  none_complete := fun hn => by
-    apply Option.eq_none_iff_forall_ne_some.mpr
-    intro ⟨_, ⟨h⟩⟩
-    grind
-
-open OptionEtaRel in
-open Monad in
-@[grind =]
-theorem OptionEtaRel.none_complete'.{u} {τ_c : Type u} [DecidableEq τ_c]
-  (r : GenericExpr τ_c → GenericExpr τ_c → Prop) [hR : OptionEtaRel r] {A : GenericExpr τ_c} : (¬ ∃ B, r A B) → hR.run A = .none := hR.none_complete
+end
 
 end GenericExpr

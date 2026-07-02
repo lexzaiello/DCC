@@ -197,19 +197,23 @@ namespace GenericExpr
 @[simp]
 theorem id_pure_ext.{u} {α : Type u} (x : α) : (pure x : Id α) = x := rfl
 
+@[grind]
 def IsNorm.{u} {α : Type u} (r : α → α → Prop) (A : α) := ¬ ∃ B, r A B
 
-class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Type v) (m : Type (max v s) → Type (max v s) := Id) [hM : Monad m] where
-  run (x : α) : m ((y : β) × (r x y))
-  sound       : run x = pure ⟨y, h⟩ → r x y := fun _ => h
+@[grind]
+def IsNorm.elim.{u,v } {α : Type u} {C : Sort v} (r : α → α → Prop) {A B : α} (hn : IsNorm r A) (hr : r A B) : C := (hn ⟨_, hr⟩).elim
+
+class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Sort v) (m : Type (max (max u s) v) → Type (max u s v) := Id) [hM : Monad m] where
+  run (x : α) : m ((y : β) × (PULift.{(max (max u s) v) + 1, v} (r x y)))
+  sound       : run x = pure ⟨y, ⟨h⟩⟩ → r x y := fun _ => h
 
 def Rel.rel.{u, v, s} {α : Type u} {β : Type s}
-  {r : α → β → Type v} {m : Type (max v s) → Type (max v s)} [Monad m]
-  (_hR : Rel.{u, v, s} r (m := m)) : (α → β → Type v) := r
+  {r : α → β → Sort v} {m : Type (max (max u s) v) → Type (max (max u s) v)} [Monad m]
+  (_hR : Rel.{u, v, s} r (m := m)) : (α → β → Sort v) := r
 
 open Rel in class Complete.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Sort v) (P : β → Prop := fun _ => True)
-  (m : Type (max v s) → Type (max v s) := Id) [hm : Monad m]
-  [hR : Rel.{u, v, s} (fun (x : α) (y : β) => PULift.{v + 1, v} (r x y)) (m := m)] where
+  (m : Type (max (max u s) v) → Type (max (max u s) v) := Id) [hm : Monad m]
+  [hR : Rel.{u, v, s} r (m := m)] where
   complete : ∀ (h : r x y) (_p : P y), hR.run x = hm.pure ⟨y, PULift.up h⟩
 
 instance Complete.instDecidable.{u}
@@ -218,7 +222,7 @@ instance Complete.instDecidable.{u}
   (r : α → α → Prop)
   (P : α → Prop := fun _ => True)
   (hDec : outParam (∀ (a : α), Decidable (P a)) := by infer_instance)
-  (hR : outParam (Rel.{u, 0, u} (fun (x : α) (y : α) => PULift.{1, 0} (r x y)) (m := Id)))
+  (hR : outParam (Rel.{u, 0, u} r (m := Id)))
   (hC : outParam (Complete.{u, 0, u} r (P := P))) : ∀ (A B : α), Decidable (r A B ∧ P B) := fun A B =>
   if heq : (hR.run A).fst = B then
     if heq₂ : P B then
@@ -226,14 +230,15 @@ instance Complete.instDecidable.{u}
     else .isFalse (by simp_all)
   else .isFalse (fun ⟨h, hp⟩ => by simp [hC.complete h hp] at *)
 
-class RedRel.{u} {α : Type u} (r : α → α → Prop) (t : outParam (α → ℕ))
-  (m : Type u → Type u := Option) [_hM : Monad.{u, u} m] extends Rel.{u, 0, u} (fun (x : α) (y : α) => PULift.{1, 0} (r x y)) (m := m) where
+class RedRel.{u, v} {α : Type u} (r : α → α → Sort v) (t : outParam (α → ℕ))
+  (m : Sort ((max u v) + 1) → Sort ((max u v) + 1) := Option) [_hM : Monad m] extends Rel.{u, v, u} r (m := m) where
   decreasing : r x y → t y < t x := by
     intro x y h
     induction h
     any_goals (
       focus
       try dsimp
+      try grind
       try simp_all [dcc_rel, dcc_size, Rel.run]
       try grind
       try aesop (rule_sets := [DccRel, DccSize])
@@ -260,19 +265,19 @@ def IsNorm.unique_refl.{u} {α : Type u} {r : α → α → Prop} {A B : α} (hn
   | single h => exact hn.unique_trans h
 
 def RedRel.sn.{u} {α : Type u} {r : α → α → Prop} (t : outParam (α → ℕ))
-  {m : Type u → Type u} [Monad m]
+  {m : Sort ((max u 0) + 1) → Sort ((max u 0) + 1)} [Monad m]
   (hR : RedRel r t (m := m)) (e : α) : Acc (fun b a => r a b) e := Acc.intro e (fun e' hr => by
     have h := hR.decreasing hr
     exact sn t hR e')
 termination_by t e
 
 def RedRel.wellFounded.{u} {α : Type u} {r : α → α → Prop} (t : outParam (α → ℕ))
-  {m : Type u → Type u} [Monad m]
+  {m : Sort ((max u 0) + 1) → Sort ((max u 0) + 1)} [Monad m]
   (hR : RedRel (α := α) r t (m := m)) : WellFounded (fun a b => r b a) := ⟨hR.sn⟩
 
 @[dcc_force_reduce, aesop norm (rule_sets := [DccForceReduce])]
 def reduce.{u} {α : Type u} {t : α → ℕ} (r : α → α → Prop) [hR : RedRel r t]
-  (e : α) : ((e' : α) × (PULift.{1, 0} (Relation.ReflTransGen r e e'))) :=
+  (e : α) : ((e' : α) × (PULift.{u + 1, 0} (Relation.ReflTransGen r e e'))) :=
   match hR.run e with
   | .some ⟨e', ⟨h⟩⟩ =>
     have _size_ : t e' < t e := hR.decreasing h
@@ -285,7 +290,7 @@ termination_by t e
   (e : α) : α := (reduce r e).fst
 
 def reduce? [DecidableEq α] {t : α → ℕ} (r : α → α → Prop) [hR : RedRel r t]
-  (e : α) : Option ((e' : α) × (PULift.{1, 0} (Relation.TransGen r e e'))) :=
+  (e : α) : Option ((e' : α) × (PULift.{u + 1, 0} (Relation.TransGen r e e'))) :=
   let ⟨e', ⟨h⟩⟩ := reduce r e
   if heq : e = e' then
     .none
@@ -297,7 +302,7 @@ def reduce? [DecidableEq α] {t : α → ℕ} (r : α → α → Prop) [hR : Red
       | single h => exact h⟩⟩
 
 open RedRel in @[reducible]
-def RedRel.to_trans.{u} {α : Type u} [DecidableEq α] {r : α → α → Prop} (t : outParam (α → ℕ)) (hR : RedRel r t) : RedRel (Relation.TransGen r) t where
+def RedRel.to_trans.{u} {α : Type u} [DecidableEq α] {r : α → α → Prop} (t : outParam (α → ℕ)) (hR : RedRel.{u, 0} r t) : RedRel.{u, 0} (Relation.TransGen r) t where
   decreasing := fun h => by
     induction h with
     | single h =>
@@ -309,12 +314,12 @@ def RedRel.to_trans.{u} {α : Type u} [DecidableEq α] {r : α → α → Prop} 
   run := reduce? r
 
 @[reducible] def RedRel.to_reflTrans.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} (hR : RedRel (α := α) r t (m := Option)) : Rel.{u, 0, u}
-  (fun (x y : α) => PULift.{1, 0} (Relation.ReflTransGen r x y)) Id where
+  (Relation.ReflTransGen r) Id where
   run := reduce r
 
 instance RedRel.instReflTransRel.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ}
   [hR : RedRel r t (m := Option)] :
-  Rel.{u,0,u} (fun x y => PULift.{1,0} (Relation.ReflTransGen r x y)) Id :=
+  Rel.{u,0,u} (Relation.ReflTransGen r) Id :=
   hR.to_reflTrans
 
 abbrev RedRel.ReflTrans.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} {m : Type u → Type u} [Monad m] (_hR : RedRel (α := α) r t (m := m)) : α → α → Prop := Relation.ReflTransGen r
@@ -525,7 +530,7 @@ theorem run_none.{u} {τ : Type u} {t : τ → ℕ}
   have ⟨B, h₁, h₂⟩ := hC.complete h_red
   simp_all
 
-open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel])]
+open Confluent in @[dcc_rel, aesop safe destruct (rule_sets := [DccRel]), aesop safe apply (rule_sets := [DccForceReduce])]
 theorem norm_unique.{u} {α : Type u} {r : α → α → Prop} {m : (α → α → Prop) → α → α → Prop}
   [hC : Confluent r m] {A B C : α} (h₁ : m r A B) (hn₁ : IsNorm r B) (h₂ : m r A C) (hn₂ : IsNorm r C) : B = C := by
   have ⟨D, hr₁, hr₂⟩ := hC.conf h₁ h₂

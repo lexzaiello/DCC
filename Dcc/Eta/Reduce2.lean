@@ -449,299 +449,197 @@ instance TmEtaReduces.instEtaRel : EtaRel (TmEtaReduces (τ_c := τ_c) level) wh
     apply Option.eq_none_iff_forall_ne_some.mpr
     intro ⟨_, ⟨hr⟩⟩
     exact (h hr).elim
-/-
-Can apply holes. MkHole.
 
+instance TmEtaReduces.instOptionEtaRel : OptionEtaRel (TmEtaReduces (τ_c := τ_c) level) where
 
--/
+inductive RedEtaAtom : (e : GenericExpr (τ := τ_c)) → (e' : GenericExpr (τ := τ_c)) → Type u
+  | mk    : TmEtaReduces 0 (expr_to_eta e₁) e₃ → (hn : ¬ e₃.contains_hole) → RedEtaAtom e₁ (eta_to_expr e₃ hn)
+  | refl  : TmEtaReduces 0 (expr_to_eta e₁) e₃ → (hn : e₃.contains_hole) → RedEtaAtom e₁ e₁
+  | refl₂ : (∀ {e₃ : EtaExpr}, TmEtaReduces 0 (expr_to_eta e₁) e₃ → False) → RedEtaAtom e₁ e₁
 
-/-instance : EtaRel (τ_c := (@EtaConst τ_c)) (MkHole ar heq level) where
-  is_norm_aff := fun h hr => by
-    
-  run := mk_hole level
-  complete := MkHole.complete
-  none := fun h hr => by simp_all [hr.complete, failure]
-  none_complete := fun h => by
-    apply Option.eq_none_iff_forall_ne_some.mpr
-    intro ⟨_, ⟨hr⟩⟩
-    exact (h hr).elim-/
+def red_eta_atom (e : @GenericExpr τ_c) : ((e' : @GenericExpr τ_c) × (PULift.{u + 2, u + 1} (RedEtaAtom e e'))) :=
+  match heq : red_eta_tm 0 (expr_to_eta e) with
+  | .some ⟨e', ⟨h⟩⟩ =>
+    if heq₂ : e'.contains_hole then
+      ⟨_, ⟨.refl h heq₂⟩⟩
+    else⟨_, ⟨.mk h heq₂⟩⟩
+  | .none => ⟨_, ⟨.refl₂ (TmEtaReduces.instEtaRel.none heq)⟩⟩
 
+open OptionEtaRel in
+def RedEtaAtom.complete (hr : RedEtaAtom (τ_c := τ_c) e e') : red_eta_atom e = ⟨e', ⟨hr⟩⟩ := by
+  induction hr with
+  | refl h_red h_contains | mk h_red h_contains =>
+    have ha := h_red.complete
+    simp [red_eta_atom]
+    grind
+  | refl₂ hn =>
+    simp [red_eta_atom]
+    split
+    case h_1 hr heq =>
+      exact (hn hr).elim
+    rfl
 
+def MkHole.arity_pos (h : MkHole ar level f heq f') : 0 < ar := by
+  cases h <;> simp_all
 
-inductive EtaMap : (dom : GenericExpr (τ := EtaConst (τ := τ_c))) → (out : GenericExpr (τ := EtaConst (τ := τ_c))) → (hole_arg : GenericExpr (τ := EtaConst (τ := τ_c))) → (f : GenericExpr (τ := EtaConst (τ := τ_c))) → (f' : GenericExpr (τ := EtaConst (τ := τ_c))) → Type u
-  | id    : EtaMap dom hole_arg hole_arg f (DCC? Id(dom))
-  | par   : RedAffReflTrans f f' → IsNorm RedAff f' → EtaMap dom (DCC? (f hole_arg)) hole_arg f f'
-  | fstc  : EtaMap dom (DCC? &(hole(a + 1))) (DCC? ⟦β⟧(&(hole(a + 1)), &(hole(a + 2)))) f (DCC? Fstc(β))
-  | sndc  : EtaMap dom (DCC? &(hole(a + 2))) (DCC? ⟦β⟧(&(hole(a + 1)), &(hole(a + 2)))) f (DCC? Sndc(β))
-  | fstc' : EtaMap dom (DCC? hole(a + 1)) (DCC? &(⟦β⟧(&(hole(a + 1)), &(hole(a + 2))))) f (DCC? *<Fstc(β)>)
-  | sndc' : EtaMap dom (DCC? hole(a + 2)) (DCC? &(⟦β⟧(&(hole(a + 1)), &(hole(a + 2))))) f (DCC? *<Sndc(β)>)
-  --| quot  : (¬ GenericExpr.contains out (DCC? hole(level + 1))) → (¬ GenericExpr.contains out (DCC? hole(level + 2))) → EtaMap level dom out hole_arg f (DCC? `(dom, out))
+def TmEtaReduces.arity_pos {e e' : EtaExpr} (h : TmEtaReduces (τ_c := τ_c) level e e') : 0 < tm_arity e := by
+  induction h <;> exact MkHole.arity_pos (by assumption)
 
-def map_eta (dom out hole_arg f : GenericExpr (τ := EtaConst (τ := τ_c))) : Option ((f' : GenericExpr (τ := EtaConst (τ := τ_c))) × PULift.{u + 2, u + 1} (EtaMap dom out hole_arg f f')) :=
-  --if heq₀ : GenericExpr.contains out (DCC? hole(level + 1)) ∨ GenericExpr.contains out (DCC? hole(level + 2)) then
-    if heq : out = hole_arg then
-      heq ▸ .some ⟨_, ⟨.id⟩⟩
-    else
-      match out, hole_arg with
-      | DCC? (_f hole_arg₂), hole_arg =>
-        if heq : hole_arg₂ = hole_arg then
-          if heq₃ : _f = f then
-            heq₃ ▸ heq ▸ .some ⟨_, ⟨.par (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-          else .none
-        else .none
-      | (DCC? &(hole(n))), (DCC? ⟦_β⟧(&(hole(a + 1)), &(hole(b + 2)))) =>
-        if h₁ : b = a then
-          if h₂ : a + 1 = n then by
-            --if h₃ : n = level + 1 then by
-            --cases h₁; cases h₂ --; cases h₃
-            cases h₁.symm; cases h₂.symm
-            exact .some ⟨_, ⟨.fstc⟩⟩
-          else if h₃ : n = b + 2 then by
-            cases h₁; cases h₃; --cases h₂;
-            exact .some ⟨_, ⟨.sndc⟩⟩
-          else .none
-        else .none
-      | (DCC? hole(n)), (DCC? &(⟦_β⟧(&(hole(a + 1)), &(hole(b + 2))))) =>
-        if h₁ : b = a then
-          if h₂ : a + 1 = n then by
-            cases h₁; cases h₂
-            exact .some ⟨_, ⟨.fstc'⟩⟩
-          else if h₃ : n = b + 2 then by
-            cases h₁; cases h₃
-            exact .some ⟨_, ⟨.sndc'⟩⟩
-          else .none
-        else .none
-      | _, _ => .none
-  --else .some ⟨_, ⟨.quot (by simp_all) (by simp_all)⟩⟩
+def tm_arity_zero_no_tm_eta_red {e e' : EtaExpr} (h : tm_arity e = 0) (hr : TmEtaReduces (τ_c := τ_c) level e e') : False := by
+  have h := hr.arity_pos
+  grind
 
-@[aesop safe forward (rule_sets := [DccReduce])]
-def EtaMap.complete {dom out hole_arg f f' : GenericExpr (τ := EtaConst (τ := τ_c))}
-  (h : EtaMap (τ_c := τ_c) dom out hole_arg f f') : map_eta dom out hole_arg f = .some ⟨f', ⟨h⟩⟩ := by
-  dsimp [map_eta]
-  --split
-  --case isTrue =>
-  cases h
-  any_goals (
-    focus
-    simp
-    done)
-  case par hn₁ hrt₁ =>
-    have h := reduce_complete hrt₁ hn₁
-    have heq : (reduce RedAff f).fst = f' := by simp_all
-    cases heq
-    simp_all
-    intro heq
-    cases heq
-  /-case isFalse heq =>
-    cases h
-    · sorry
-    · unfold contains at heq
-      simp at heq
-      replace heq := heq.right.right
-      unfold contains at heq
-      simp at heq
-    · unfold contains at heq
-      simp at heq-/
+inductive RedEta₂ : (e : GenericExpr (τ := τ_c)) → (e' : GenericExpr (τ := τ_c)) → Type u
+  | pi₁  : RedEta₂ f_α f_α'
+    → Domain (expr_to_eta f_α) δ
+    → (hn : ¬ δ.contains_hole)
+    → RedEta₂ env env'
+    → RedAffReflTrans (DCC? (f_β env)) f_β_env
+    → IsNorm RedAff f_β_env
+    → RedEta₂ f_β_env f_β'
+    → RedEta₂ (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α', `(#(eta_to_expr δ hn), f_β')) env'))
+  | pi₂   : RedEta₂ f_α f_α'
+    → ((∀ {δ : EtaExpr}, Domain (expr_to_eta f_α) δ → PEmpty.{u + 1}) ⊕
+      ((δ : EtaExpr) × (Domain (expr_to_eta f_α) δ) × (PULift.{u + 1, 0} (δ.contains_hole = true))))
+    → RedEta₂ env env'
+    → RedEta₂ f_β f_β'
+    → RedEta₂ (DCC? (Π(f_α, f_β) env)) (DCC? (Π(f_α', f_β') env'))
+  | coup  : RedEta₂ β β' → RedEta₂ (DCC? Coup(β)) (DCC? Coup(β'))
+  | bang  : RedEta₂ β β' → RedEta₂ (DCC? !(β)) (DCC? !(β'))
+  | pi₃   : RedEta₂ f_α f_α'
+    → RedEta₂ f_β f_β'
+    → RedEta₂ (DCC? Π(f_α, f_β)) (DCC? Π(f_α', f_β'))
+  | pi₄   : RedAffReflTrans (DCC? f_α) f_α₁
+    → IsNorm RedAff f_α₁
+    → RedEta₂ (DCC? (f_α₁ ∘' g)) f_α'
+    → RedAffReflTrans (DCC? f_β) f_β₁
+    → IsNorm RedAff f_β₁
+    → RedEta₂ (DCC? (f_β₁ ∘' g)) f_β'
+    → RedEta₂ (DCC? (Π(f_α, f_β) ∘' g)) (DCC? Π(f_α', f_β'))
+  | tm    : (ViewEta e → False) → RedEtaAtom e e' → RedEta₂ e e'
 
-instance : EtaRel (EtaMap (τ_c := τ_c) dom out hole_arg) where
-  run := map_eta dom out hole_arg
-  is_norm_aff := fun hn hr => by
-    induction hr
-    any_goals (
-      focus
-      intro ⟨_, h⟩
-      cases h
-      done)
-    case par hrt₁ hn₂ => exact hn₂
-  complete := EtaMap.complete
-  none := fun heq₁ hr => by aesop (rule_sets := [DccReduce])
-  none_complete := fun hn => by
-    apply Option.eq_none_iff_forall_ne_some.mpr
-    intro ⟨_, ⟨hr⟩⟩
-    aesop (rule_sets := [DccReduce])
-
-inductive EtaMap₂ : (dom₁ : GenericExpr (τ := EtaConst (τ := τ_c)))
-  -- β hole₁
-  → (dom₂ : GenericExpr (τ := EtaConst (τ := τ_c)))
-  → (out : GenericExpr (τ := EtaConst (τ := τ_c)))
-  → (hole₁ : GenericExpr (τ := EtaConst (τ := τ_c)))
-  → (hole₂ : GenericExpr (τ := EtaConst (τ := τ_c)))
-  → (f : GenericExpr (τ := EtaConst (τ := τ_c)))
-  → (f' : GenericExpr (τ := EtaConst (τ := τ_c))) → Type u
-  | par      : RedAffReflTrans f f' → IsNorm RedAff f' → EtaMap₂ dom₁ dom₂ (DCC? (f hole₁ hole₂)) hole₁ hole₂ f f'
-  | id       : EtaMap₂ dom₁ dom₂ (DCC? (hole₁ hole₂)) (DCC? hole₁) (DCC? hole₂) f (DCC? Id(dom₁))
--- hole₁ hole₂ = ⟦dom₂⟧(hole₁, hole₂) means this is Λ(dom₁, dom₂, Id(Coup(dom₂)))
--- this is basically 2 arg version of id
-  | curr     : EtaMap₂ dom₁ dom₂ (DCC? ⟦dom₂⟧(hole₁, hole₂)) hole₁ hole₂ f (DCC? Λ(dom₁, dom₂, Id(Coup(dom₂))))
-  | curr'    : EtaMap₂ (DCC? !(α)) (DCC? !<β>)
-      (DCC? &(⟦β⟧(hole₁, hole₂)))
-      (DCC? &(hole₁)) (DCC? &(hole₂))
-      f
-      (DCC? !Λ(α, β, Id(!(Coup(β)))))
-  -- Exclusive with other two
-  -- this is couple quotation
-  -- if dom₂ is quotation i.e., `(dom₁, dom₂), then
-  -- this is just simple double quotation `(dom₁, `(dom₂, c))
-
-def map_eta₂ (dom₁ dom₂ out hole₁ hole₂ f : GenericExpr (τ := EtaConst (τ := τ_c))) : Option
-  ((f' : GenericExpr (τ := EtaConst (τ := τ_c))) × (PULift.{u + 2, u + 1}
-  (EtaMap₂ dom₁ dom₂ out hole₁ hole₂ f f'))) :=
-  if heqa : out = (DCC? (hole₁ hole₂)) then by
-    cases heqa
-    exact .some ⟨_, ⟨.id⟩⟩
+@[dcc_force_reduce]
+def red_eta (e : GenericExpr τ_c) : ((e' : GenericExpr τ_c) × (PULift.{u + 2, u + 1} (RedEta₂ e e'))) :=
+  if h_some : e.view_eta?.isSome then
+    match e.view_eta?.get h_some with
+    | (.pi_type (f_α := f_α) (f_β := f_β) (env := env)) =>
+      have h_dec₁ : env.size < (DCC? (Π(f_α, f_β) env)).size := by
+        grind
+      have h_dec₂ : f_α.size < (DCC? (Π(f_α, f_β) env)).size := by
+        grind
+      have h_dec₂ : (DCC? (f_α env)).size < (DCC? (Π(f_α, f_β) env)).size := by
+        grind
+      have h_dec' : f_β.size < (DCC? (Π(f_α, f_β) env)).size := by
+        grind
+      match h_dom_eq : f_α.expr_to_eta.domain? with
+      | .some ⟨δ, ⟨h₂⟩⟩ =>
+        have h_dec₃ : (reduce RedAff (DCC? (f_β env))).fst.size < (DCC? (Π(f_α, f_β) env)).size := by
+          have h := (reduce RedAff (DCC? (f_β env))).snd.down
+          have h_le : (reduce RedAff (DCC? (f_β env))).fst.size ≤ (DCC? (f_β env)).size :=
+            red_aff_decreasing? h
+          grind
+        if h₃ : δ.contains_hole then
+          ⟨_, ⟨.pi₂ f_α.red_eta.snd.down (.inr ⟨δ, h₂, ⟨h₃⟩⟩) env.red_eta.snd.down f_β.red_eta.snd.down⟩⟩
+        else
+          ⟨_, ⟨.pi₁ f_α.red_eta.snd.down h₂ h₃ env.red_eta.snd.down
+            (reduce_sound rfl) (reduce_norm rfl) (reduce RedAff (DCC? (f_β env))).fst.red_eta.snd.down⟩⟩
+      | .none =>
+        ⟨_, ⟨.pi₂ f_α.red_eta.snd.down (.inl (fun h_dom => by
+          have h := h_dom.complete
+          simp_all)) env.red_eta.snd.down f_β.red_eta.snd.down⟩⟩
+    | (.pi (f_α := f_α) (f_β := f_β)) =>
+      have h_dec₁ : f_α.size < (DCC? Π(f_α, f_β)).size := by
+        grind
+      have h_dec₂ : f_β.size < (DCC? Π(f_α, f_β)).size := by
+        grind
+      match f_α.red_eta, f_β.red_eta with
+      | ⟨_, ⟨h₁⟩⟩, ⟨_, ⟨h₂⟩⟩ => ⟨_, ⟨.pi₃ h₁ h₂⟩⟩
+    | (.pi_comp (f_α := f_α) (f_β := f_β) (g := g)) =>
+      have h_dec₁ : (reduce RedAff f_α).fst.size ≤ f_α.size :=
+        decreasing? _ (reduce RedAff f_α).snd.down
+      have h_dec₂ : (reduce RedAff f_β).fst.size ≤ f_β.size :=
+        decreasing? _ (reduce RedAff f_β).snd.down
+      have h_dec₃ : (DCC? (#((reduce RedAff f_α).fst) ∘' g)).size < (DCC? Π(f_α, f_β) ∘' g).size := by
+        grind
+      have h_dec₄ : (DCC? (#((reduce RedAff f_β).fst) ∘' g)).size < (DCC? Π(f_α, f_β) ∘' g).size := by
+        grind
+      ⟨_, ⟨.pi₄ (reduce_sound rfl) (reduce_norm rfl) (DCC? (#((reduce RedAff f_α).fst) ∘' g)).red_eta.snd.down (reduce_sound rfl) (reduce_norm rfl) (DCC? (#((reduce RedAff f_β).fst) ∘' g)).red_eta.snd.down⟩⟩
+    | (.coup (β := β)) =>
+      have h_dec : β.size < (DCC? Coup(β)).size := by
+        grind
+      match β.red_eta with
+      | ⟨_, ⟨h⟩⟩ => ⟨_, ⟨.coup h⟩⟩
+    | (.bang (β := β)) =>
+      have h_dec : β.size < (DCC? !(β)).size := by
+        grind
+      match β.red_eta with
+      | ⟨_, ⟨h⟩⟩ =>
+        ⟨_, ⟨.bang h⟩⟩
   else
-    match heq₁ : out with
-    | (DCC? (_f hole₃ hole₄)) =>
-      if heq₂ : (DCC? (_f hole₃ hole₄)) = (DCC? (f hole₁ hole₂)) then by
+    have h := view_eta?_none_sound (e := e) (by simp_all)
+    ⟨_, ⟨.tm h (red_eta_atom e).snd.down⟩⟩
+termination_by e.size
+
+def RedEta₂.complete {e e' : GenericExpr τ_c} (h : RedEta₂ e e') : red_eta e = ⟨e', ⟨h⟩⟩ := by
+  induction h
+  case pi₁ hr₁ h_dom₁ hn₁ hr₂ hrt₁ hn₂ hr₃ heq₁ heq₂ heq₃ =>
+    have hb := h_dom₁.complete
+    have hd := reduce_complete hrt₁ hn₂
+    rename_i f_α f_α' δ env env' f_β f_β_env f_β'
+    let red_env_eq : (reduce RedAff (f_β.app env)).fst = f_β_env := by simp_all
+    unfold red_eta
+    simp [view_eta?]
+    split
+    case h_1 h_dom₂ heq₄ =>
+      have heq₅ := h_dom₁.deterministic h_dom₂
+      cases heq₅.symm
+      simp_all
+      cases red_env_eq
+      grind
+    · simp_all
+  case pi₂ hr₁ ih hr₂ hr₃ heq₁ heq₂ heq₃ =>
+    simp [red_eta, view_eta?]
+    match h_ok_eq : ih with
+    | .inl h =>
+      split
+      case h_1 h_dom heq => cases h h_dom
+      simp_all
+      cases h_ok_eq.symm
+      congr
+      any_goals (first | grind | aesop)
+    | .inr ⟨δ', h₁, ⟨h₂⟩⟩ =>
+      split
+      case h_1 h_dom heq =>
+        have ha := h₁.deterministic h_dom
+        have hb := (ha ▸ h₁).eq h_dom
+        cases ha
+        simp [h₂]
         simp_all
-        exact .some ⟨_, ⟨.par (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-      else .none
-    | (DCC? ⟦dom₃⟧(hole₃, hole₄)) =>
-      if heq₂ : (DCC? ⟦dom₃⟧(hole₃, hole₄)) = (DCC? ⟦dom₂⟧(hole₁, hole₂)) then by
-        rw [heq₂]
-        exact .some ⟨_, ⟨.curr⟩⟩
-      else .none
-    | (DCC? &(⟦β⟧(hole₃, hole₄))) =>
-      match heq₂ : dom₁, heq₃ : dom₂, heq₄ : hole₁, heq₅ : hole₂ with
-      | (DCC? !(α)), (DCC? !<β₂>), (DCC? &(ha)), (DCC? &(hb)) =>
-        if heq₄ : (DCC? &(⟦β⟧(hole₃, hole₄))) = (DCC? &(⟦β₂⟧(ha, hb))) then by
-          rw [heq₄]
-          cases heq₄
-          exact .some ⟨_, ⟨.curr'⟩⟩
-        else .none
-      | _, _, _, _ => .none
-    | _ => .none
-
-@[aesop safe forward (rule_sets := [DccReduce])]
-def EtaMap₂.complete
-  {dom₁ dom₂ out hole₁ hole₂ f f' : GenericExpr (τ := EtaConst (τ := τ_c))} (h : GenericExpr.EtaMap₂ (τ_c := τ_c) dom₁ dom₂ out hole₁ hole₂ f f') : map_eta₂ dom₁ dom₂ out hole₁ hole₂ f = .some ⟨f', ⟨h⟩⟩ := by
-  dsimp [map_eta₂]
-  cases h
-  any_goals (
-    focus
-    simp
-    done)
-  case par hn₁ hrt₁ =>
-    have h := reduce_complete hrt₁ hn₁
-    have heq : (reduce RedAff f).fst = f' := by simp_all
-    cases heq
-    simp_all
-    intro heq
-    cases heq
-
-instance : EtaRel (EtaMap₂ (τ_c := τ_c) dom₁ dom₂ out hole_arg₁ hole_arg₂) where
-  run := map_eta₂ dom₁ dom₂ out hole_arg₁ hole_arg₂
-  is_norm_aff := fun hn hr => by
-    induction hr
-    any_goals (
-      focus
-      intro ⟨_, h⟩
-      cases h
-      done)
-    case par hrt₁ hn₂ => exact hn₂
-  complete := EtaMap₂.complete
-  none := fun heq₁ hr => by aesop (rule_sets := [DccReduce])
-  none_complete := fun hn => by
-    apply Option.eq_none_iff_forall_ne_some.mpr
-    intro ⟨_, ⟨hr⟩⟩
-    aesop (rule_sets := [DccReduce])
-
-inductive TmEtaReduces : (arity : ℕ) → (level : ℕ) → (f : @EtaExpr τ_C) → (hn : IsNorm RedAff f) → (f' : @EtaExpr τ_c) → Type u
-  | pure₁ : 
-
-/-
-When the resulting η-reduced function contains a hole
--/
-inductive TmEtaReduces : (level : ℕ) → (f : GenericExpr (τ := EtaConst (τ := τ_c))) → (f' : GenericExpr (τ := EtaConst (τ := τ_c))) → Type u
-  | arity₁  : RedAffReflTrans f f'
-    → IsNorm RedAff f'
-    → f'.tm_arity = 1
-    → Domain f' τ
-    → MkHole level f' hole
-    → RedAffReflTrans (DCC? (f' hole)) e'
-    → IsNorm RedAff e'
-    → (e'.contains (DCC? hole(level + 1)) ∨ e'.contains (DCC? hole(level + 2)))
-    → EtaMap τ e' hole f' f''
-    → TmEtaReduces level f f''
-  | arity₂  : RedAffReflTrans f f'
-    → IsNorm RedAff f'
-    → f'.tm_arity = 2
-    → Domain₂ α β f
-    → MkHole₂ level f' hole₁ hole₂
-    → RedAffReflTrans (DCC? (f' hole₁ hole₂)) e'
-    → IsNorm RedAff e'
-    → (e'.contains (DCC? hole(level + 1)) ∨ e'.contains (DCC? hole(level + 2)))
-    → EtaMap₂ α β e' hole₁ hole₂ f' f''
-    → TmEtaReduces level f f''
-  | quot₁   : RedAffReflTrans f f'
-    → IsNorm RedAff f'
-    → f'.tm_arity = 1
-    → Domain f' τ
-    → MkHole level f' hole
-    → RedAffReflTrans (DCC? (f' hole)) e'
-    → IsNorm RedAff e'
-    → (¬ e'.contains (DCC? hole(level + 1)))
-    → (¬ e'.contains (DCC? hole(level + 2)))
-    → TmEtaReduces level f (DCC? `(τ, e'))
-  | quot₂   : RedAffReflTrans f f'
-    → IsNorm RedAff f'
-    → f'.tm_arity = 2
-    → Domain₂ f' α f_β
-    → (GenericExpr.is_quote f_β = .none)
-    → (GenericExpr.is_bang α = .none)
-    → (GenericExpr.is_bang_map f_β = .none)
-    → MkHole₂ level f' hole₁ hole₂
-    → (¬ GenericExpr.contains e' (DCC? hole(level + 1)))
-    → (¬ GenericExpr.contains e' (DCC? hole(level + 2)))
-    → RedAffReflTrans (DCC? (f hole₁ hole₂)) e'
-    → IsNorm RedAff e'
-    → TmEtaReduces level f (DCC? Λ(α, f_β, `(Coup(f_β), e')))
-  | quot₂'  : RedAffReflTrans f f'
-    → IsNorm RedAff f'
-    → f'.tm_arity = 2
-    → Domain₂ f' α (DCC? `(α₂, β))
-    → (GenericExpr.is_bang α = .none)
-    → MkHole₂ level f' hole₁ hole₂
-    → (¬ GenericExpr.contains e' (DCC? hole(level + 1)))
-    → (¬ GenericExpr.contains e' (DCC? hole(level + 2)))
-    → RedAffReflTrans (DCC? (f hole₁ hole₂)) e'
-    → IsNorm RedAff e'
-    → TmEtaReduces level f (DCC? `(α, `(β, e')))
-  | quot₂'' : RedAffReflTrans f f'
-    → IsNorm RedAff f'
-    → f'.tm_arity = 2
-    → Domain₂ f' α₀ f_β
-    → (GenericExpr.is_bang α₀ = .some α)
-    → (GenericExpr.is_bang_map f_β = .some β)
-    → MkHole₂ level f' hole₁ hole₂
-    → (¬ GenericExpr.contains e' (DCC? hole(level + 1)))
-    → (¬ GenericExpr.contains e' (DCC? hole(level + 2)))
-    → RedAffReflTrans (DCC? (f hole₁ hole₂)) e'
-    → IsNorm RedAff e'
-    → TmEtaReduces level f (DCC? !Λ(α, β, `(!(Coup(β)), e')))
-  | pi      : TmEtaReduces level.succ f_α f_α'
-    → TmEtaReduces level.succ.succ f_β f_β'
-    → TmEtaReduces level (DCC? Π(f_α, f_β)) (DCC? Π(f_α', f_β'))
-
-def red_eta_tm (level : ℕ) (f : GenericExpr (@EtaConst τ_c)) : Option ((f' : GenericExpr (@EtaConst τ_c)) × (PULift.{u + 2, u + 1} (TmEtaReduces level f f'))) :=
-  let f₁ := (reduce RedAff f).fst
-  have h_dec : f₁.size ≤ f.size := decreasing? _ (reduce RedAff f).snd.down
-  match f₁.tm_arity with
-  | 2 =>
-    if h_contains₁ : f₁.contains (DCC? hole(level + 1)) ∨ f₁.contains (DCC? hole(level + 2)) then
-      
-      sorry
-    else
-      match f₁.domain₂? with
-      | .some ⟨α, DCC? `(α₂, β), ⟨h⟩⟩ =>
-        if h_bang : α.is_bang = .none then
-          sorry
-        else .none
-      | .some ⟨
-  | 1 =>
-    sorry
-  | _ =>
-    sorry
+        congr <;> grind
+      · have h := h₁.complete
+        grind
+  case pi₃ hr₁ hr₂ heq₁ heq₂ | bang hr ih | coup hr ih =>
+    rw [red_eta]
+    dsimp only [view_eta?]
+    dsimp
+    simp [*]
+    congr <;> grind
+  case pi₄ hrt₁ hn₁ hr₁ hrt₂ hn₂ hr₂ heq₁ heq₂ =>
+    have ha := reduce_complete hrt₁ hn₁
+    have hb := reduce_complete hrt₂ hn₂
+    rename_i f_α f_α₁ g f_α' f_β f_β₁ f_β'
+    have heqa : (reduce RedAff f_α).fst = f_α₁ := by simp_all
+    have heqb : (reduce RedAff f_β).fst = f_β₁ := by simp_all
+    rw [red_eta]
+    dsimp only [view_eta?]
+    dsimp
+    cases heqa; cases heqb
+    grind
+  case tm hn_view hr =>
+    have h := hr.complete
+    rw [red_eta]
+    simp [ViewEta.complete_none hn_view, h]
+    congr <;> grind
 
 end
 

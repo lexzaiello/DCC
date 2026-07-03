@@ -1012,13 +1012,15 @@ end IsNorm
 
 open Monad in
 class EtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
-  (m : Type (max u v) → Type (max u v) := Option) [_hM : AlternativeMonad m] where
+  (m : optParam (Type (max u v) → Type (max u v)) Option) [_hM : AlternativeMonad m] where
   is_norm_aff   : IsNorm RedAff A → r A B → IsNorm RedAff B
   run           : ∀ (A : GenericExpr τ_c), m ((B : GenericExpr τ_c) × (PULift.{v + 1, v} (r A B)))
   complete      : ∀ (h : r A B), run A = (pure ⟨B, ⟨h⟩⟩)
   none          : ∀ (_h : run A = failure) (_hr : r A B), False
   sound         : (run A = pure ⟨B, ⟨h⟩⟩) → r A B := fun (_heq : run A = pure ⟨B, ⟨h⟩⟩) => h
   none_complete : (∀ {B : GenericExpr τ_c}, r A B → False)  → run A = failure
+
+def is_norm_aff.{v} {r : GenericExpr τ_c → GenericExpr τ_c → Sort v} [EtaRel (τ_c := τ_c) r] : (IsNorm RedAff A) → (r A B) → IsNorm RedAff B := EtaRel.is_norm_aff
 
 attribute [grind =_, grind ., grind! ., aesop safe apply (rule_sets := [DccRel])] EtaRel.complete
 attribute [grind] EtaRel.run
@@ -1028,14 +1030,14 @@ attribute [dcc_rel] EtaRel.is_norm_aff
 open EtaRel in
 open Monad in
 class EtaRelProp (r : GenericExpr τ_c → GenericExpr τ_c → Prop)
-  (m : Type (max u 0) → Type (max u 0) := Option) [_hM : AlternativeMonad m] : Type max u v extends (EtaRel.{u, 0} r m) where
+  (m : optParam (Type (max u 0) → Type (max u 0)) Option) [_hM : AlternativeMonad m] : Type max u v extends (EtaRel.{u, 0} r (m := m)) where
   none_complete' : (¬ ∃ B, r A B)  → run A = failure
 
 attribute [grind =] EtaRelProp.none_complete'
 
 open Monad in
 class OptionEtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
-  : Type max u v extends (EtaRel r Option) where
+  : Type max u v extends (EtaRel r (m := Option)) where
   none          : ∀ {A B : GenericExpr τ_c} (_h : run A = failure) (_hr : r A B), False := fun heq hr => by
     simp_all [complete hr, failure, pure]
   none_complete := fun hn => by
@@ -1051,8 +1053,7 @@ class OptionEtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
   unique'       : ∀ {A B C : GenericExpr τ_c} (_hrt₁ : r A B) {_hr₂ : r A C}, B = C := unique
 
 class EtaNormRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
-  : Type max u v extends (EtaRel r Option) where
-  
+  : Type max u v extends (EtaRel r (m := Option)) where
 
 attribute [dcc_rel] OptionEtaRel.unique
 attribute [dcc_rel, aesop safe forward (rule_sets := [DccRel])] OptionEtaRel.unique'
@@ -1069,7 +1070,7 @@ theorem OptionEtaRel.none_complete'.{v} {τ_c : Type v}
 end GenericExpr
 
 open GenericExpr in
-instance Domain.instEtaRel : (EtaRel (τ_c := τ_c) Domain Option) where
+instance Domain.instEtaRel : (EtaRel (τ_c := τ_c) Domain (m := Option)) where
   run := domain?
   is_norm_aff := fun h h_dom => by
     have heq := h_dom.complete

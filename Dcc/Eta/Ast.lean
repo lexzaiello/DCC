@@ -245,7 +245,7 @@ def is_bang (e : GenericExpr (τ := τ_c)) : Option (GenericExpr (τ := τ_c)) :
   | DCC[.] !(x) => .some x
   | _ => .none
 
-@[dcc_reduce]
+@[dcc_reduce, grind]
 def is_bang_map (e : GenericExpr τ_c) : Option (GenericExpr (τ := τ_c)) :=
   match e with
   | DCC[.] !<f> => .some f
@@ -257,7 +257,7 @@ def is_box_map (e : GenericExpr τ_c) : Option (GenericExpr (τ := τ_c)) :=
   | DCC[.] $<f> => .some f
   | _  => .none
 
-@[dcc_reduce]
+@[dcc_reduce, grind]
 def is_quote (e : GenericExpr τ_c) : Option ((β x : GenericExpr τ_c) × PLift (e = (DCC? `(β, x)))) :=
   match e with
   | DCC[.] `(β, x) => .some ⟨β, x, ⟨rfl⟩⟩
@@ -1049,6 +1049,10 @@ class OptionEtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
     have h₂ := complete hr₂
     simp_all
   unique'       : ∀ {A B C : GenericExpr τ_c} (_hrt₁ : r A B) {_hr₂ : r A C}, B = C := unique
+
+class EtaNormRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
+  : Type max u v extends (EtaRel r Option) where
+  
 
 attribute [dcc_rel] OptionEtaRel.unique
 attribute [dcc_rel, aesop safe forward (rule_sets := [DccRel])] OptionEtaRel.unique'

@@ -34,28 +34,34 @@ If domain is:
 - will need extra cases for Π?
 -/
 
+section
+
+universe u
+variable {τ_c : Type u}
+variable [DecidableEq τ_c]
+
 inductive Hole where
   | mk   : ℕ → Hole
   | sort : ℕ → Hole
 deriving BEq, Repr, DecidableEq
 
-inductive EtaConst.{u} {τ : Type u} where
+inductive EtaConst where
   | hole  : Hole → EtaConst
-  | const : τ    → EtaConst
+  | const : τ_c  → EtaConst
 deriving BEq, DecidableEq, Repr
 
 gen_dsl "DCCη" for (EtaConst (τ := Unit))
 
 instance Hole.instToFormat : Std.ToFormat Hole := ⟨repr⟩
-instance EtaConst.instToFormat.{u} {τ : Type u} [Repr τ] : Std.ToFormat (EtaConst (τ := τ)) := ⟨repr⟩
+instance EtaConst.instToFormat [Repr τ_c] : Std.ToFormat (@EtaConst τ_c) := ⟨repr⟩
 
-abbrev EtaExpr.{u} (τ : Type u) := GenericExpr (EtaConst (τ := τ))
+abbrev EtaExpr := GenericExpr (EtaConst (τ_c := τ_c))
 
 namespace GenericExpr
 
-@[aesop norm (rule_sets := [DccReduce]), dcc_reduce, grind]
-def contains.{u} {τ : Type u} [DecidableEq τ] (e : GenericExpr (τ := τ))
-  (to_find : GenericExpr (τ := τ)) : Bool :=
+@[grind]
+def contains (e : GenericExpr (τ := τ_c))
+  (to_find : GenericExpr (τ := τ_c)) : Bool :=
   e = to_find ||
   match e, to_find with
   | .const x₁, x₂ => .const x₁ = x₂
@@ -90,8 +96,8 @@ def contains.{u} {τ : Type u} [DecidableEq τ] (e : GenericExpr (τ := τ))
   | DCC[.] ⟦β⟧(x, y), to_find => β.contains to_find || x.contains to_find || y.contains to_find
   | _, _ => false
 
-@[aesop norm (rule_sets := [DccReduce]), dcc_reduce, grind]
-def contains_hole.{u} {τ : Type u} (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
+@[grind]
+def contains_hole (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     match e with
     | DCC[.] ∗ => False
     | DCC[.] ⊤ => False
@@ -159,8 +165,8 @@ def size.{u} {τ : Type u} (e : GenericExpr (EtaConst (τ := τ))) : ℕ :=
   | .const _n => 0-/
 
 
-@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
-def arity.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : ℕ :=
+@[grind]
+def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
   | DCC[.] ∗ => 0
   | DCC[.] ⊤ => 0
@@ -193,8 +199,8 @@ def arity.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : ℕ :=
   | DCC[.] (f _x) => f.arity - 1
   | .const _n => 0
 
-@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
-def tm_arity.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : ℕ :=
+@[grind]
+def tm_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
   | DCC[.] ∗ => 0
   | DCC[.] ⊤ => 0
@@ -228,43 +234,43 @@ def tm_arity.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : ℕ :=
   | .const _n => 0
 
 @[dcc_reduce]
-def is_boxed.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : Option (GenericExpr (τ := τ)) :=
+def is_boxed (e : GenericExpr (τ := τ_c)) : Option (GenericExpr (τ := τ_c)) :=
   match e with
   | DCC[.] &(x) => .some x
   | _ => .none
 
-@[dcc_reduce]
-def is_bang.{u} {τ : Type u} (e : GenericExpr (τ := τ)) : Option (GenericExpr (τ := τ)) :=
+@[dcc_reduce, grind]
+def is_bang (e : GenericExpr (τ := τ_c)) : Option (GenericExpr (τ := τ_c)) :=
   match e with
   | DCC[.] !(x) => .some x
   | _ => .none
 
 @[dcc_reduce]
-def is_bang_map.{u} {τ : Type u} (e : GenericExpr τ) : Option (GenericExpr (τ := τ)) :=
+def is_bang_map (e : GenericExpr τ_c) : Option (GenericExpr (τ := τ_c)) :=
   match e with
   | DCC[.] !<f> => .some f
   | _ => .none
 
 @[dcc_reduce]
-def is_box_map.{u} {τ : Type u} (e : GenericExpr τ) : Option (GenericExpr (τ := τ)) :=
+def is_box_map (e : GenericExpr τ_c) : Option (GenericExpr (τ := τ_c)) :=
   match e with
   | DCC[.] $<f> => .some f
   | _  => .none
 
 @[dcc_reduce]
-def is_quote.{u} {τ : Type u} (e : GenericExpr τ) : Option ((β x : GenericExpr τ) × PLift (e = (DCC? `(β, x)))) :=
+def is_quote (e : GenericExpr τ_c) : Option ((β x : GenericExpr τ_c) × PLift (e = (DCC? `(β, x)))) :=
   match e with
   | DCC[.] `(β, x) => .some ⟨β, x, ⟨rfl⟩⟩
   | _ => .none
 
 @[dcc_reduce]
-def is_id.{u} {τ : Type u} (e : GenericExpr τ) : Option ((α : GenericExpr τ) × PLift (e = (DCC? Id(α)))) :=
+def is_id (e : GenericExpr τ_c) : Option ((α : GenericExpr τ_c) × PLift (e = (DCC? Id(α)))) :=
   match e with
   | DCC[.] Id(_α) => .some ⟨_, ⟨rfl⟩⟩
   | _ => .none
 
 @[dcc_reduce]
-def is_type.{u} {τ : Type u} (e : GenericExpr τ) : Option ((n : ℕ) × PLift (e = (DCC? Sort n + 1))) :=
+def is_type (e : GenericExpr τ_c) : Option ((n : ℕ) × PLift (e = (DCC? Sort n + 1))) :=
   match e with
   | DCC[.] Sort _n + 1 => .some ⟨_, ⟨rfl⟩⟩
   | _ => .none
@@ -279,14 +285,14 @@ macro_rules
   | `(DCC[$_ty:gen_dcc_loc] hole($tm:term)) => `(GenericExpr.const (EtaConst.hole (Hole.mk $tm:term)))
 
 @[grind =, grind! ., dcc_size]
-theorem hole_size_zero.{u} {τ : Type u} : (GenericExpr.const (τ := EtaConst (τ := τ)) (.hole _m)).size = 0 := by
+theorem hole_size_zero.{v} {τ_c : Type v} : (GenericExpr.const (τ := EtaConst) (.hole (τ_c := τ_c) _m)).size = 0 := by
   grind
 
 @[grind =, grind! ., dcc_size]
-theorem coup_hole_zero.{u} {τ : Type u} {β : GenericExpr (τ := EtaConst (τ := τ))} : (DCC? ⟦β⟧(hole(m), hole(n))).size = 0 := by
+theorem coup_hole_zero.{v} {τ : Type v} {β : GenericExpr (τ := EtaConst (τ_c := τ))} : (DCC? ⟦β⟧(hole(m), hole(n))).size = 0 := by
   grind
 
-inductive ViewPi.{u} {τ_c : Type u} : GenericExpr τ_c → Type u
+inductive ViewPi : GenericExpr τ_c → Type u
   | pi      : ViewPi (DCC? Π(f_α, f_β))
 
 @[grind, dcc_rel]
@@ -312,7 +318,7 @@ theorem ViewPi.complete_none (h : ViewPi e → False) : view_pi? e = .none := by
 theorem view_pi?_none_sound (h : view_pi? e = .none) : ViewPi e → False := fun h => by
   simp_all [h.complete]
 
-inductive ViewCoup.{u} {τ_c : Type u} : GenericExpr τ_c → Type u
+inductive ViewCoup : GenericExpr τ_c → Type u
   | coup    : ViewCoup (DCC? Coup(β))
   | bang    : ViewCoup (DCC? !(Coup(β)))
 
@@ -323,7 +329,7 @@ def view_coup? (e : GenericExpr τ_c) : Option (ViewCoup e) :=
   | (DCC? !(Coup(_β))) => .some .bang
   | _ => .none
 
-inductive IsEtaTm.{u} {τ_c : Type u} : GenericExpr τ_c → Type u
+inductive IsEtaTm : GenericExpr τ_c → Type u
   | eql    : IsEtaTm (DCC? Eql(f_α))
   -- Id(α) x
   | id     : IsEtaTm (DCC? Id(α))
@@ -359,7 +365,7 @@ inductive IsEtaTm.{u} {τ_c : Type u} : GenericExpr τ_c → Type u
   | const  : IsEtaTm (.const _x)
   | app    : IsEtaTm f → IsEtaTm (DCC? (f x))
 
-@[grind, aesop norm (rule_sets := [DccForceReduce])]
+@[grind]
 def is_eta_tm? (e : GenericExpr τ_c) : Option (IsEtaTm e) :=
   match e with
   | (DCC? Eql(f_α)) => .some (by constructor)
@@ -429,7 +435,7 @@ theorem is_eta_tm?_none_sound (h : is_eta_tm? e = .none) : IsEtaTm e → False :
 
 def is_eta_tm?_sound (_h : is_eta_tm? e = .some hr) : IsEtaTm e := hr
 
-inductive ViewEta.{u} {τ_c : Type u} : GenericExpr τ_c → Type u
+inductive ViewEta : GenericExpr τ_c → Type u
   | pi_type : ViewEta (DCC? (Π(f_α, f_β) env))
   | pi      : ViewEta (DCC? Π(f_α, f_β))
   | pi_comp : ViewEta (DCC? (Π(f_α, f_β) ∘' g))
@@ -484,7 +490,7 @@ theorem view_coup?_none_sound (h : view_coup? e = .none) : ViewCoup e → False 
 open Relation (ReflTransGen)
 open GenericExpr (IsNorm decreasing? reduce RedRel reduce_norm reduce_sound norm_unique Complete reduce_complete reduce_complete_fst)
 
-inductive Domain.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c → Type u
+inductive Domain : GenericExpr τ_c → GenericExpr τ_c → Type u
   | eql₁     : Domain f_α δ → RedAffReflTrans δ δ' → IsNorm RedAff δ' → (DCC? Eql(f_α)).Domain (DCC? !(δ'))
   | eql₂     : RedAffReflTrans (DCC? (f_α &(env))) τ
     → IsNorm RedAff τ
@@ -524,7 +530,7 @@ inductive Domain.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c →
   | comp₂    : Domain g α   → RedAffReflTrans α α' → IsNorm RedAff α' → Domain (DCC? f ∘∘ g) α'
   | pi       : Domain f_α δ → Domain (DCC? Π(f_α, f_β)) δ
 
-inductive Domain₂.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c → GenericExpr τ_c → Type u
+inductive Domain₂ : GenericExpr τ_c → GenericExpr τ_c → GenericExpr τ_c → Type u
   | comp'    : Domain g α → Domain₂ f β γ → Domain₂ (DCC? (f ∘' g)) α (DCC? γ ∘' g)
   | eql      : Domain f_α δ → (DCC? Eql(f_α)).Domain₂ δ f_α
   | refl     : Domain f_α δ → (DCC? refl(f_α)).Domain₂ δ f_α
@@ -532,7 +538,7 @@ inductive Domain₂.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c 
   | curr'    : Domain₂ (DCC? !Λ(α, β, x)) (DCC? !(α)) (DCC? !<β>)
 
 @[dcc_force_reduce, dcc_force_aff]
-def domain?.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Option ((τ : GenericExpr τ_c) × (PULift.{u + 2, u + 1} (Domain e τ))) :=
+def domain? [DecidableEq τ_c] (e : GenericExpr τ_c) : Option ((τ : GenericExpr τ_c) × (PULift.{u + 2, u + 1} (Domain e τ))) :=
   match e with
   | (DCC? Eql(f_α)) =>
     match f_α.domain? with
@@ -588,7 +594,7 @@ def domain?.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Opti
     | _ => .none
   | _ => .none
 
-def domain₂?.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Option ((α β : GenericExpr τ_c) × (PULift.{u + 2, u + 1} (Domain₂ e α β))) :=
+def domain₂? (e : GenericExpr τ_c) : Option ((α β : GenericExpr τ_c) × (PULift.{u + 2, u + 1} (Domain₂ e α β))) :=
   match e with
   | DCC? f ∘' g =>
     match g.domain?, f.domain₂? with
@@ -607,8 +613,8 @@ def domain₂?.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : O
   | (DCC? !Λ(_α, _β, _x)) => .some ⟨_, _, ⟨.curr'⟩⟩
   | _ => none
 
-@[aesop safe forward (rule_sets := [DccReduce]), grind =_, grind ., grind! .]
-theorem Domain.complete.{u} {τ_c : Type u} [DecidableEq τ_c] {e τ : GenericExpr τ_c} (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, ⟨h⟩⟩ := by
+@[aesop safe forward (rule_sets := [DccReduce]), grind =_, grind ., grind! ., dcc_rel]
+theorem Domain.complete {e τ : GenericExpr τ_c} (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, ⟨h⟩⟩ := by
   induction h
   any_goals (
     focus
@@ -622,8 +628,8 @@ theorem Domain.complete.{u} {τ_c : Type u} [DecidableEq τ_c] {e τ : GenericEx
     simp_all
     grind)
 
-@[aesop safe forward (rule_sets := [DccReduce])]
-theorem Domain₂.complete.{u} {τ_c : Type u} [DecidableEq τ_c]
+@[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
+theorem Domain₂.complete
   {e α β : GenericExpr τ_c} (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, ⟨h⟩⟩ := by
   induction h with
   | comp' h₁ h₂ ih => simp [domain₂?, ih, h₁.complete]
@@ -634,10 +640,11 @@ theorem Domain₂.complete.{u} {τ_c : Type u} [DecidableEq τ_c]
     simp [domain₂?]
 
 @[dcc_force_reduce, dcc_force_aff]
-instance Domain.instRedRel.{u} {τ_c : Type u} [DecidableEq τ_c] : GenericExpr.RedRel.{u, u + 1} (α := GenericExpr τ_c) (Domain (τ_c := τ_c)) size where
+instance Domain.instRedRel : GenericExpr.RedRel.{u, u + 1} (α := GenericExpr τ_c) (Domain (τ_c := τ_c)) size where
   run := domain? (τ_c := τ_c)
 
-theorem Domain.deterministic.{u} {τ_c : Type u} {x τ₁ τ₂ : GenericExpr τ_c} (h₁ : Domain (τ_c := τ_c) x τ₁) (h₂ : Domain (τ_c := τ_c) x τ₂) : τ₁ = τ₂ := by
+@[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]
+def Domain.deterministic {x τ₁ τ₂ : GenericExpr τ_c} (h₁ : Domain (τ_c := τ_c) x τ₁) (h₂ : Domain (τ_c := τ_c) x τ₂) : τ₁ = τ₂ := by
   induction h₁ generalizing τ₂
   any_goals (
     focus
@@ -717,8 +724,23 @@ theorem Domain.is_norm_aff (h : Domain e τ) : IsNorm RedAff τ := by
     grind)
   any_goals (grind)
 
+@[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]
+def Domain₂.deterministic (h₁ : Domain₂ f τ₁a τ₁b) (h₂ : Domain₂ f τ₂a τ₂b) : τ₁a = τ₂a ∧ τ₁b = τ₂b := by
+  induction h₁ generalizing τ₂a τ₂b with
+  | comp' h_dom₁ h_dom₂ ih =>
+    cases h₂
+    · rename_i h_dom₄ h_dom₃
+      have h := ih h_dom₄
+      dcc_aesop!
+  | refl h_dom₁ | eql h_dom₁ =>
+    cases h₂
+    · dcc_aesop!
+  | curr' | curr =>
+    cases h₂
+    · simp
+
 @[grind]
-def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c)))
+def eta_to_expr (e : GenericExpr (τ := EtaConst (τ_c := τ_c)))
   (hn_contains : ¬ e.contains_hole) : GenericExpr τ_c :=
   match e with
   | DCC? ∗ => DCC? ∗
@@ -813,7 +835,7 @@ def eta_to_expr.{u} {τ_c : Type u} (e : GenericExpr (τ := EtaConst (τ := τ_c
   | .const (.const x) => (.const x)
 
 @[grind]
-def expr_to_eta.{u} {τ_c : Type u} (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (τ := τ_c))) :=
+def expr_to_eta (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (τ_c := τ_c))) :=
   match e with
   | DCC? ∗ => DCC? ∗
   | DCC? ⊤ => DCC? ⊤
@@ -908,10 +930,10 @@ def expr_to_eta.{u} {τ_c : Type u} (e : GenericExpr (τ := τ_c)) : (GenericExp
       (DCC? (x' y'))
   | .const x => (.const (.const x))
 
-def to_eta_no_hole.{u} {τ : Type u} {e : GenericExpr τ} : ¬ (expr_to_eta e).contains_hole := by
+def to_eta_no_hole {e : GenericExpr τ} : ¬ (expr_to_eta e).contains_hole := by
   induction e <;> (simp_all [expr_to_eta, contains_hole])
 
-def to_eta_left_inv.{u} {τ : Type u}
+def to_eta_left_inv
   {e : GenericExpr τ} : eta_to_expr (expr_to_eta e) to_eta_no_hole = e := by
   unfold expr_to_eta
   split
@@ -937,7 +959,7 @@ def to_eta_left_inv.{u} {τ : Type u}
     have hc := z.to_eta_left_inv
     simp [ha, hb, hc])
 
-def to_eta_right_inv.{u} {τ : Type u} {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) :
+def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) :
   (expr_to_eta (eta_to_expr e hn)) = e := by
   induction e
   any_goals (simp_all [eta_to_expr, expr_to_eta])
@@ -955,14 +977,14 @@ def to_eta_right_inv.{u} {τ : Type u} {e : GenericExpr (@EtaConst τ)} (hn : ¬
 
 namespace RedAff
 
-def cast_red_eta.{u} {τ_c : Type u} {A B : GenericExpr τ_c} (hr : RedAff A B)
+def cast_red_eta {A B : GenericExpr τ_c} (hr : RedAff A B)
   : RedAff A.expr_to_eta B.expr_to_eta := by
   induction hr <;> (simp_all [expr_to_eta]; constructor <;> simp_all)
 
 def tail_no_hole (hr : RedAff A B) (hn : ¬ A.contains_hole) : ¬ B.contains_hole := by
   induction hr <;> grind
 
-def reflect_eta.{u} {τ_c : Type u} {A B : GenericExpr (@EtaConst τ_c)} (hr : RedAff A B)
+def reflect_eta {A B : GenericExpr (@EtaConst τ_c)} (hr : RedAff A B)
   (hn : ¬ A.contains_hole) : RedAff (A.eta_to_expr hn) (B.eta_to_expr (tail_no_hole hr hn)) := by
   induction hr <;> (
     focus
@@ -976,23 +998,17 @@ end RedAff
 
 namespace IsNorm
 
-def to_eta.{u} {τ_c : Type u} {e : GenericExpr τ_c} (hn : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff
+def to_eta {e : GenericExpr τ_c} (hn : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff
   (e.expr_to_eta (τ_c := τ_c)) := fun ⟨_, h⟩ =>
   hn ⟨_, to_eta_left_inv ▸ (h.reflect_eta GenericExpr.to_eta_no_hole)⟩
 
 --def from_eta₀
 
-def from_eta.{u} {τ_c : Type u} {e : GenericExpr (@EtaConst τ_c)} (hn₁ : GenericExpr.IsNorm RedAff e) (hn₂ : ¬ e.contains_hole) : GenericExpr.IsNorm GenericExpr.RedAff
+def from_eta {e : GenericExpr (@EtaConst τ_c)} (hn₁ : GenericExpr.IsNorm RedAff e) (hn₂ : ¬ e.contains_hole) : GenericExpr.IsNorm GenericExpr.RedAff
   (e.eta_to_expr hn₂) := fun ⟨_, h⟩ =>
   hn₁ ⟨_, to_eta_right_inv hn₂ ▸ h.cast_red_eta⟩
 
 end IsNorm
-
-section
-
-universe u
-variable {τ_c : Type u}
-variable [DecidableEq τ_c]
 
 open Monad in
 class EtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
@@ -1037,11 +1053,9 @@ class OptionEtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
 attribute [dcc_rel] OptionEtaRel.unique
 attribute [dcc_rel, aesop safe forward (rule_sets := [DccRel])] OptionEtaRel.unique'
 
-end
-
 open OptionEtaRel in
 @[grind =]
-theorem OptionEtaRel.none_complete'
+theorem OptionEtaRel.none_complete'.{v} {τ_c : Type v}
   (r : GenericExpr τ_c → GenericExpr τ_c → Prop) [hR : OptionEtaRel r] {A : GenericExpr τ_c} : (¬ ∃ B, r A B) → hR.run A = .none := by
   intro hn
   apply Option.eq_none_iff_forall_ne_some.mpr
@@ -1051,7 +1065,7 @@ theorem OptionEtaRel.none_complete'
 end GenericExpr
 
 open GenericExpr in
-instance Domain.instEtaRel.{u} {τ_c : Type u} [DecidableEq τ_c] : (EtaRel (τ_c := τ_c) Domain Option) where
+instance Domain.instEtaRel : (EtaRel (τ_c := τ_c) Domain Option) where
   run := domain?
   is_norm_aff := fun h h_dom => by
     have heq := h_dom.complete
@@ -1074,4 +1088,6 @@ instance Domain.instEtaRel.{u} {τ_c : Type u} [DecidableEq τ_c] : (EtaRel (τ_
     exact (h hr).elim
 
 open GenericExpr in
-instance Domain.instOptionEtaRel.{u} {τ_c : Type u} [DecidableEq τ_c] : OptionEtaRel (τ_c := τ_c) Domain where
+instance Domain.instOptionEtaRel : OptionEtaRel (τ_c := τ_c) Domain where
+
+end

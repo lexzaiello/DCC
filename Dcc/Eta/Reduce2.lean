@@ -43,36 +43,38 @@ universe u
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]
 
-inductive MkHole : (level : ℕ) → (f : GenericExpr (@EtaConst τ_c)) → (GenericExpr (@EtaConst τ_c)) → Type u
-  | coupl : Domain f (DCC? Coup(β)) → MkHole level f (DCC? ⟦β⟧(&(hole(level + 1)), &(hole(level + 2))))
-  | tm    : Domain f τ → (ViewCoup τ → False) → MkHole level f (DCC? hole(level + 1))
-  | bang  : Domain f (DCC? !(Coup(β))) → MkHole level f (DCC? ⟦β⟧(&(hole(level + 1)), &(hole(level + 2))))
+@[inline]
+abbrev EtaExpr := GenericExpr (@EtaConst τ_c)
 
-inductive MkHole₂ : (level : ℕ) → (f : GenericExpr (@EtaConst τ_c)) → (GenericExpr (@EtaConst τ_c)) → (GenericExpr (@EtaConst τ_c)) → Type u
-  | bang : Domain₂ f (DCC? !(α)) (DCC? !<β>) → MkHole₂ level f (DCC? &(hole(level + 1))) (DCC? &(hole(level + 2)))
-  | tm   : Domain₂ f α β → (GenericExpr.is_bang α = .none) → MkHole₂ level f (DCC? hole(level + 1)) (DCC? hole(level + 2))
-
-@[grind]
-def mk_hole (level : ℕ) (e : GenericExpr (@EtaConst τ_c)) : Option ((hole : GenericExpr (@EtaConst τ_c)) × (PULift.{u + 2, u + 1} (MkHole level e hole))) :=
-  match domain? e with
-  | .some ⟨τ, ⟨h⟩⟩ =>
-    match heq : τ.view_coup? with
-    | .some .coup => .some ⟨_, ⟨.coupl h⟩⟩
-    | .some .bang => .some ⟨_, ⟨.bang h⟩⟩
-    | .none => .some ⟨_, ⟨.tm h (fun h => by
-      have h := h.complete
-      grind)⟩⟩
-  | .none => .none
+inductive MkHole : (ar : ℕ) → (heq : arity f = ar) → (level : ℕ) → (f : GenericExpr (@EtaConst τ_c)) → (GenericExpr (@EtaConst τ_c)) → Type u
+  | coupl : Domain f (DCC? Coup(β)) → MkHole 1 heq level f (DCC? (f ⟦β⟧(&(hole(level + 1)), &(hole(level + 2)))))
+  | tm    : Domain f τ → (ViewCoup τ → False) → MkHole 1 heq level f (DCC? (f hole(level + 1)))
+  | bang  : Domain f (DCC? !(Coup(β))) → MkHole 1 heq level f (DCC? (f ⟦β⟧(&(hole(level + 1)), &(hole(level + 2)))))
+  | bang₂ : Domain₂ f (DCC? !(α)) (DCC? !<β>) → MkHole 2 heq level f (DCC? (f &(hole(level + 1)) &(hole(level + 2))))
+  | tm₂   : Domain₂ f α β → (GenericExpr.is_bang α = .none) → MkHole 2 heq level f (DCC? (f hole(level + 1) hole(level + 2)))
 
 @[grind]
-def mk_hole₂ (level : ℕ) (e : GenericExpr (@EtaConst τ_c)) : Option ((hole₁ hole₂ : GenericExpr (@EtaConst τ_c)) × (PULift.{u + 2, u + 1} (MkHole₂ level e hole₁ hole₂))) :=
-  match heq : domain₂? e with
-  | .some ⟨(DCC? !(α)), (DCC? !<β>), ⟨h⟩⟩ => .some ⟨(DCC? &(hole(level + 1))), (DCC? &(hole(level + 2))), ⟨.bang h⟩⟩
-  | .some ⟨α, β, ⟨h⟩⟩ =>
-    if heq₂ : α.is_bang.isNone then
-        .some ⟨_, _, ⟨.tm h (by simp_all)⟩⟩
-      else .none
-  | .none => .none
+def mk_hole (heq : arity e = n) (level : ℕ) (e : GenericExpr (@EtaConst τ_c)) : Option ((f' : GenericExpr (@EtaConst τ_c)) × (PULift.{u + 2, u + 1} (MkHole n heq level e f'))) :=
+  match n with
+  | 1 =>
+    match domain? e with
+    | .some ⟨τ, ⟨h⟩⟩ =>
+      match heq : τ.view_coup? with
+      | .some .coup => .some ⟨_, ⟨.coupl h⟩⟩
+      | .some .bang => .some ⟨_, ⟨.bang h⟩⟩
+      | .none => .some ⟨_, ⟨.tm h (fun h => by
+        have h := h.complete
+        grind)⟩⟩
+    | .none => .none
+  | 2 =>
+    match heq : domain₂? e with
+    | .some ⟨(DCC? !(α)), (DCC? !<β>), ⟨h⟩⟩ => .some ⟨_, ⟨.bang₂ h⟩⟩
+    | .some ⟨α, β, ⟨h⟩⟩ =>
+      if heq₂ : α.is_bang.isNone then
+          .some ⟨_, ⟨.tm₂ h (by simp_all)⟩⟩
+        else .none
+    | .none => .none
+  | _ => .none
 
 @[dcc_rel, aesop safe apply (rule_sets := [DccRel])]
 def Domain₂.eq {e α β : GenericExpr τ_c} (h₁ h₂ : Domain₂ e α β) : h₁ = h₂ := by
@@ -86,26 +88,9 @@ def Domain.eq {e τ : GenericExpr τ_c} (h₁ h₂ : Domain e τ) : h₁ = h₂ 
   have hb := h₂.complete
   simp_all
 
-@[dcc_rel, aesop safe forward (rule_sets := [DccRel])]
-def MkHole₂.complete {f hole₁ hole₂ : GenericExpr (@EtaConst τ_c)} (h : MkHole₂ level f hole₁ hole₂) : mk_hole₂ level f = .some ⟨hole₁, hole₂, ⟨h⟩⟩ := by
-  induction h with
-  | bang h_dom => rw [mk_hole₂, h_dom.complete]
-  | tm  h_dom h_bang =>
-    rw [mk_hole₂, h_dom.complete]
-    simp
-    split
-    case h_1 h_dom₂ heq =>
-      have ha := h_dom.complete
-      have hb := h_dom₂.complete
-      simp_all [h_dom₂.complete]
-      rw [heq.left] at h_bang
-      simp_all [is_bang]
-    · dcc_aesop
-    · simp_all
-
 open EtaRel in
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])]
-def MkHole.eq {f f' : GenericExpr (@EtaConst τ_c)} (h₁ h₂ : MkHole level f f') : h₁ = h₂ := by
+@[aesop safe destruct (rule_sets := [DccRel])]
+def MkHole.eq {f f' : GenericExpr (@EtaConst τ_c)} (h₁ h₂ : MkHole n heq level f f') : h₁ = h₂ := by
   induction h₁
   case bang | coupl =>
     cases h₂
@@ -124,81 +109,206 @@ def MkHole.eq {f f' : GenericExpr (@EtaConst τ_c)} (h₁ h₂ : MkHole level f 
     have heq₂ := Domain.instEtaRel.complete h_dom₂
     have h := h_dom₁.deterministic h_dom₂
     grind
+  · cases h₂
+    rename_i heq₂ level₂ h_dom₁ _ _ h_dom₂
+    simp_all [dcc_rel]
+    have ha := h_dom₁.deterministic h_dom₂
+    simp_all
+    cases ha.left; cases ha.right
+    simp [h_dom₁.eq h_dom₂]
+  · cases h₂
+    rename_i heq _ h_dom₁ heq₂ _ _ heq₃ h_dom₂
+    have ha := h_dom₁.deterministic h_dom₂
+    cases ha.left; cases ha.right
+    have hb := h_dom₁.eq h_dom₂
+    grind
 
 @[dcc_rel, aesop safe forward (rule_sets := [DccRel])]
-def MkHole.complete {A B : GenericExpr (@EtaConst τ_c)} (h : MkHole level A B) : mk_hole level A = .some ⟨B, ⟨h⟩⟩ := by
-  unfold mk_hole
-  split
-  · rename_i h_dom₁ h_dom₂
+def MkHole.complete {A B : GenericExpr (@EtaConst τ_c)} (h : MkHole ar heq level A B) : mk_hole heq level A = .some ⟨B, ⟨h⟩⟩ := by
+  induction h with
+  | bang h_dom | coupl h_dom =>
+    simp [mk_hole, h_dom.complete, view_coup?]
+  | tm h_dom hn =>
+    have h := ViewCoup.complete_none hn
+    simp [mk_hole, h_dom.complete]
     split
-    case h_1 =>
-      simp_all
-      cases h
-      · dcc_aesop
-      · simp_all [dcc_rel]
-        rename_i h_dom₁ h_dom₂ _ hn h_dom₃
-        cases OptionEtaRel.unique h_dom₃ h_dom₁
-        try (exact hn (by constructor))
-      · simp_all
-        rename_i h_dom₁ h_dom₂ heq h_dom₃
-        cases OptionEtaRel.unique h_dom₃ h_dom₁
-    case h_2 h_dom₁ h_dom₂ heq₁ heq₂ =>
-      simp_all [view_coup?]
-      have h := h_dom₁.complete
-      rename_i hr _ _ _
-      cases hr
-      · dcc_aesop
-      · simp_all [dcc_rel]
-        rename_i h_dom₁ h_dom₂ _ hn h_dom₃
-        cases OptionEtaRel.unique h_dom₃ h_dom₁
-        try (exact hn (by constructor))
-      · simp_all
-        rename_i h_dom₄
-        cases OptionEtaRel.unique h_dom₁ h_dom₄
-        simp_all
-        dcc_aesop
-    case h_3 =>
-      rename_i hr₂ _ _ h_dom₃ heq₁ heq₂
-      have heq := h.eq h_dom₃
-      cases hr₂
-      · rename_i h_dom'
-        have h := OptionEtaRel.unique h_dom₃ h_dom'
-        cases h
-        grind
-      · rename_i h_dom'
-        have h := OptionEtaRel.unique h_dom₃ h_dom'
-        cases h
-        simp_all
-        exact h_dom₃.eq h_dom'
-      · rename_i h_dom'
-        have h := OptionEtaRel.unique h_dom₃ h_dom'
-        cases h
-        grind
-  case h_2 hn =>
-    cases h <;> (
-      rename_i h_dom
-      have h := h_dom.complete
-      simp_all)
+    · simp_all
+    · simp_all
+    grind
+  | tm₂ h_dom heq =>
+    have h := h_dom.complete
+    simp [mk_hole]
+    split
+    · grind
+    · simp_all
+      cases h.left; cases h.right
+      grind
+    · simp_all
+  | bang₂ h_dom =>
+    simp [mk_hole]
+    rw [h_dom.complete]
 
-instance : EtaRel (τ_c := (@EtaConst τ_c)) (MkHole level) where
+/-
+Instead of trying to construct the eta-reduction backwards, compare the output
+against the core functions:
+
+at least for most except par.
+
+question again:
+shouldn't
+-/
+
+/-
+Since we have pre and post to compare,
+we can combine 2-arity and one arity.
+-/
+inductive EtaMap : (f : EtaExpr (τ_c := τ_c)) → (pre : EtaExpr (τ_c := τ_c)) → (out : EtaExpr (τ_c := τ_c)) → (f' : EtaExpr (τ_c := τ_c)) → Type u
+  | id₁    : (arity f = 1) → Domain f τ → EtaMap f (DCC? (f hole_arg)) hole_arg (DCC? Id(τ))
+  | par₁   : (arity f = 1) → Domain f τ
+    → (ViewCoup τ → False)
+    → Domain f' τ
+    → EtaMap f (DCC? (f hole_arg)) (DCC? (f' hole_arg)) f'
+  | fstc   : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → EtaMap f (DCC? (f ⟦β⟧(a, b))) a (DCC? Fstc(β))
+  | sndc   : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → EtaMap f (DCC? (f ⟦β⟧(a, b))) b (DCC? Sndc(β))
+  | fstc'  : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → EtaMap f (DCC? (f &(⟦β⟧(&(a), &(b))))) a (DCC? *<Fstc(β)>)
+  | sndc'  : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → EtaMap f (DCC? (f &(⟦β⟧(&(a), &(b))))) b (DCC? *<Sndc(β)>)
+  -- 2 arity
+  | id₂    : (arity f = 2) → Domain f τ → EtaMap f (DCC? (f a b)) (DCC? (a b)) (DCC? Id(τ))
+  | par₂   : (arity f = 2) → Domain₂ f α β → Domain₂ f' α β → EtaMap f (DCC? (f a b)) (DCC? (f' a b)) f'
+
+@[grind]
+def map_eta (f pre out : EtaExpr (τ_c := τ_c)) : Option ((f' : EtaExpr) × (PULift.{u + 2, u + 1} (EtaMap f pre out f'))) :=
+  if h_ar : arity f = 1 then
+    match pre with
+    | (DCC? (f₁ some_hole)) =>
+      if heq₀ : f₁ = f then
+         if heq₁ : out = some_hole then
+           match f.domain? with
+           | .some ⟨_, ⟨h⟩⟩ =>
+             heq₀.symm ▸ heq₁ ▸ .some ⟨_, ⟨.id₁ h_ar h⟩⟩
+           | _ => .none
+         else
+           match f.domain? with
+           | .some ⟨τ, ⟨h⟩⟩ =>
+             match h_coup_eq : τ.view_coup? with
+             | .some h_coup =>
+               match some_hole with
+               | (DCC? ⟦_β⟧(a, b)) =>
+                 if heqa : (a ≠ b) then
+                   if heq₂ : out = a then
+                     heq₀.symm ▸ heq₂ ▸ .some ⟨_, ⟨.fstc h_ar h h_coup (heq₂.symm ▸ heqa)⟩⟩
+                   else if heq₂ : out = b then
+                     heq₀.symm ▸ heq₂ ▸ .some ⟨_, ⟨.sndc h_ar h h_coup (heq₂.symm ▸ heqa)⟩⟩
+                   else .none
+                 else .none
+               | (DCC? &(⟦_β⟧(&(a), &(b)))) =>
+                 if heqa : a ≠ b then
+                   if heq₂ : out = a then
+                     heq₀.symm ▸ heq₂ ▸ .some ⟨_, ⟨.fstc' h_ar h h_coup (heq₂.symm ▸ heqa)⟩⟩
+                   else if heq₂ : out = b then
+                     heq₀.symm ▸ heq₂ ▸ .some ⟨_, ⟨.sndc' h_ar h h_coup (heq₂.symm ▸ heqa)⟩⟩
+                   else .none
+                 else .none
+               | _ => .none
+             | .none =>
+               match out with
+               | (DCC? (f' some_hole₂)) =>
+                 if heq₂ : some_hole₂ = some_hole then
+                   match f'.domain? with
+                   | .some ⟨τ', ⟨h'⟩⟩ =>
+                     if heq₃ : τ' = τ then
+                       heq₀.symm ▸ heq₂.symm ▸ .some ⟨_, ⟨.par₁ h_ar h
+                         (view_coup?_none_sound h_coup_eq) (heq₃ ▸ h')⟩⟩
+                     else .none
+                   | .none => .none
+                 else .none
+               | _ => .none
+           | .none => .none
+      else .none
+    | _ => .none
+  else if h_ar : arity f = 2 then
+    match pre with
+    | (DCC? (f₁ some_hole₁ some_hole₂)) =>
+      if heq₀ : f₁ = f then
+        if heq₁ : out = (DCC? (some_hole₁ some_hole₂)) then
+          match f.domain? with
+          | .some ⟨_, ⟨h⟩⟩ => heq₀.symm ▸ heq₁ ▸ .some ⟨_, ⟨.id₂ h_ar h⟩⟩
+          | .none => .none
+        else
+          match out with
+          | (DCC? (f₂ some_hole₁' some_hole₂')) =>
+            if heq₁ : (DCC? (f₂ some_hole₁' some_hole₂')) = (DCC? (f₂ some_hole₁ some_hole₂)) then
+              match f.domain₂?, f₂.domain₂? with
+              | .some ⟨α₁, β₁, ⟨h₁⟩⟩, .some ⟨α₂, β₂, ⟨h₂⟩⟩ =>
+                if heq₂ : α₂ = α₁ then
+                  if heq₃ : β₂ = β₁ then
+                    heq₀.symm ▸ heq₁.symm ▸ .some ⟨_, ⟨.par₂ h_ar h₁ (heq₂ ▸ heq₃ ▸ h₂)⟩⟩
+                  else .none
+                else .none
+              | _, _ => .none
+            else .none
+          | _ => .none
+      else .none
+    | _ => .none
+  else .none
+
+open EtaRel in
+theorem EtaMap.complete (h : EtaMap (τ_c := τ_c) f pre out f') : map_eta f pre out = .some ⟨f', ⟨h⟩⟩ := by
+  induction h with
+  | id₂ h_arity h_dom | id₁ h_arity h_dom => simp [map_eta, h_dom.complete, h_arity]
+  | par₁ h_arity h_dom₁ hn₁ h_dom₂ =>
+    dsimp [map_eta]
+    simp [h_arity, h_dom₁.complete, h_dom₂.complete]
+    split
+    case isTrue heq => cases heq
+    · grind
+  | fstc h_arity h_dom₁ h_coup hneq
+  | fstc' h_arity h_dom₁ h_coup hneq
+  | sndc h_arity h_dom₁ h_coup hneq
+  | sndc' h_arity h_dom₁ h_coup hneq =>
+    rename_i τ a b β
+    have hneq₁ : a ≠ β.mkc a b := fun heq => by cases heq
+    have hneq₂ : b ≠ β.mkc a b := fun heq => by cases heq
+    have hneq₃ : β ≠ β.mkc a b := fun heq => by cases heq
+    have hneq₄ : a ≠ (DCC? &(⟦β⟧(&(a), &(b)))) := fun heq => by cases heq
+    have hneq₅ : b ≠ (DCC? &(⟦β⟧(&(a), &(b)))) := fun heq => by cases heq
+    have hneq₆ : β ≠ (DCC? &(⟦β⟧(&(a), &(b)))) := fun heq => by cases heq
+    have h_coup := h_coup.complete
+    dsimp [map_eta]
+    simp [h_arity, h_dom₁.complete, hneq]
+    grind
+  | par₂ h_arity h_dom₁ h_dom₂ =>
+    rename_i α β f' a b
+    dsimp [map_eta]
+    have hneq : f'.app a ≠ a := fun heq => by cases heq
+    simp [h_arity, hneq, h_dom₁.complete, h_dom₂.complete]
+
+inductive TmEtaReduces : (level : ℕ) → (f : @EtaExpr τ_c) → (f' : @EtaExpr τ_c) → Type u
+  -- The reduction is not constant
+  | pure : MkHole _ rfl level f f_hole_app
+    -- This is decreasing in size because const / hole has size 0
+    → RedAffReflTrans f_hole_app e'
+    → IsNorm RedAff e'
+    → (e'.contains (DCC? hole(level + 1)) ∨ e'.contains (DCC? hole(level + 2)))
+
+/-
+Can apply holes. MkHole.
+
+
+-/
+
+/-instance : EtaRel (τ_c := (@EtaConst τ_c)) (MkHole ar heq level) where
   is_norm_aff := fun h hr => by
-    cases hr
-    any_goals (
-      focus
-      intro ⟨_, hr⟩
-      cases hr
-      try (
-        any_goals (
-        focus
-        rename_i hr
-        cases hr)))
+    
   run := mk_hole level
   complete := MkHole.complete
   none := fun h hr => by simp_all [hr.complete, failure]
   none_complete := fun h => by
     apply Option.eq_none_iff_forall_ne_some.mpr
     intro ⟨_, ⟨hr⟩⟩
-    exact (h hr).elim
+    exact (h hr).elim-/
+
+
 
 inductive EtaMap : (dom : GenericExpr (τ := EtaConst (τ := τ_c))) → (out : GenericExpr (τ := EtaConst (τ := τ_c))) → (hole_arg : GenericExpr (τ := EtaConst (τ := τ_c))) → (f : GenericExpr (τ := EtaConst (τ := τ_c))) → (f' : GenericExpr (τ := EtaConst (τ := τ_c))) → Type u
   | id    : EtaMap dom hole_arg hole_arg f (DCC? Id(dom))
@@ -378,11 +488,14 @@ instance : EtaRel (EtaMap₂ (τ_c := τ_c) dom₁ dom₂ out hole_arg₁ hole_a
     intro ⟨_, ⟨hr⟩⟩
     aesop (rule_sets := [DccReduce])
 
+inductive TmEtaReduces : (arity : ℕ) → (level : ℕ) → (f : @EtaExpr τ_C) → (hn : IsNorm RedAff f) → (f' : @EtaExpr τ_c) → Type u
+  | pure₁ : 
+
 /-
 When the resulting η-reduced function contains a hole
 -/
 inductive TmEtaReduces : (level : ℕ) → (f : GenericExpr (τ := EtaConst (τ := τ_c))) → (f' : GenericExpr (τ := EtaConst (τ := τ_c))) → Type u
-  | arity₁ : RedAffReflTrans f f'
+  | arity₁  : RedAffReflTrans f f'
     → IsNorm RedAff f'
     → f'.tm_arity = 1
     → Domain f' τ
@@ -392,7 +505,7 @@ inductive TmEtaReduces : (level : ℕ) → (f : GenericExpr (τ := EtaConst (τ 
     → (e'.contains (DCC? hole(level + 1)) ∨ e'.contains (DCC? hole(level + 2)))
     → EtaMap τ e' hole f' f''
     → TmEtaReduces level f f''
-  | arity₂ : RedAffReflTrans f f'
+  | arity₂  : RedAffReflTrans f f'
     → IsNorm RedAff f'
     → f'.tm_arity = 2
     → Domain₂ α β f
@@ -402,7 +515,7 @@ inductive TmEtaReduces : (level : ℕ) → (f : GenericExpr (τ := EtaConst (τ 
     → (e'.contains (DCC? hole(level + 1)) ∨ e'.contains (DCC? hole(level + 2)))
     → EtaMap₂ α β e' hole₁ hole₂ f' f''
     → TmEtaReduces level f f''
-  | quot₁  : RedAffReflTrans f f'
+  | quot₁   : RedAffReflTrans f f'
     → IsNorm RedAff f'
     → f'.tm_arity = 1
     → Domain f' τ
@@ -411,10 +524,66 @@ inductive TmEtaReduces : (level : ℕ) → (f : GenericExpr (τ := EtaConst (τ 
     → IsNorm RedAff e'
     → (¬ e'.contains (DCC? hole(level + 1)))
     → (¬ e'.contains (DCC? hole(level + 2)))
-    → TmEtaReduces level f (DCC? `(dom
-  | pi     : TmEtaReduces level.succ f_α f_α'
+    → TmEtaReduces level f (DCC? `(τ, e'))
+  | quot₂   : RedAffReflTrans f f'
+    → IsNorm RedAff f'
+    → f'.tm_arity = 2
+    → Domain₂ f' α f_β
+    → (GenericExpr.is_quote f_β = .none)
+    → (GenericExpr.is_bang α = .none)
+    → (GenericExpr.is_bang_map f_β = .none)
+    → MkHole₂ level f' hole₁ hole₂
+    → (¬ GenericExpr.contains e' (DCC? hole(level + 1)))
+    → (¬ GenericExpr.contains e' (DCC? hole(level + 2)))
+    → RedAffReflTrans (DCC? (f hole₁ hole₂)) e'
+    → IsNorm RedAff e'
+    → TmEtaReduces level f (DCC? Λ(α, f_β, `(Coup(f_β), e')))
+  | quot₂'  : RedAffReflTrans f f'
+    → IsNorm RedAff f'
+    → f'.tm_arity = 2
+    → Domain₂ f' α (DCC? `(α₂, β))
+    → (GenericExpr.is_bang α = .none)
+    → MkHole₂ level f' hole₁ hole₂
+    → (¬ GenericExpr.contains e' (DCC? hole(level + 1)))
+    → (¬ GenericExpr.contains e' (DCC? hole(level + 2)))
+    → RedAffReflTrans (DCC? (f hole₁ hole₂)) e'
+    → IsNorm RedAff e'
+    → TmEtaReduces level f (DCC? `(α, `(β, e')))
+  | quot₂'' : RedAffReflTrans f f'
+    → IsNorm RedAff f'
+    → f'.tm_arity = 2
+    → Domain₂ f' α₀ f_β
+    → (GenericExpr.is_bang α₀ = .some α)
+    → (GenericExpr.is_bang_map f_β = .some β)
+    → MkHole₂ level f' hole₁ hole₂
+    → (¬ GenericExpr.contains e' (DCC? hole(level + 1)))
+    → (¬ GenericExpr.contains e' (DCC? hole(level + 2)))
+    → RedAffReflTrans (DCC? (f hole₁ hole₂)) e'
+    → IsNorm RedAff e'
+    → TmEtaReduces level f (DCC? !Λ(α, β, `(!(Coup(β)), e')))
+  | pi      : TmEtaReduces level.succ f_α f_α'
     → TmEtaReduces level.succ.succ f_β f_β'
     → TmEtaReduces level (DCC? Π(f_α, f_β)) (DCC? Π(f_α', f_β'))
+
+def red_eta_tm (level : ℕ) (f : GenericExpr (@EtaConst τ_c)) : Option ((f' : GenericExpr (@EtaConst τ_c)) × (PULift.{u + 2, u + 1} (TmEtaReduces level f f'))) :=
+  let f₁ := (reduce RedAff f).fst
+  have h_dec : f₁.size ≤ f.size := decreasing? _ (reduce RedAff f).snd.down
+  match f₁.tm_arity with
+  | 2 =>
+    if h_contains₁ : f₁.contains (DCC? hole(level + 1)) ∨ f₁.contains (DCC? hole(level + 2)) then
+      
+      sorry
+    else
+      match f₁.domain₂? with
+      | .some ⟨α, DCC? `(α₂, β), ⟨h⟩⟩ =>
+        if h_bang : α.is_bang = .none then
+          sorry
+        else .none
+      | .some ⟨
+  | 1 =>
+    sorry
+  | _ =>
+    sorry
 
 end
 

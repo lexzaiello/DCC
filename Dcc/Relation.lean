@@ -708,6 +708,36 @@ theorem reduce'_norm'.{u} {τ : Type u} {t : τ → ℕ}
 
 end GenericExpr
 
+inductive NormExpr.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) : Type u
+  | mk : (e : GenericExpr τ) → GenericExpr.IsNorm r e → NormExpr r
+
+@[grind]
+def NormExpr.raw.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} (r : NormExpr r) : GenericExpr τ :=
+  match r with
+  | ⟨e, _⟩ => e
+
+def NormExpr.ext_iff.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+  {A B : NormExpr r} : A = B ↔ A.raw = B.raw :=
+  ⟨fun heq => by grind, fun h => by
+    match A, B with
+    | ⟨A, hn₁⟩, ⟨B, hn₂⟩ => grind⟩
+
+@[grind .]
+theorem NormExpr.ext.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+  {A B : NormExpr r} : A.raw = B.raw → A = B := ext_iff.mpr
+
+@[grind .]
+theorem NormExpr.ext'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+  {A B : NormExpr r} : A = B → A.raw = B.raw := ext_iff.mp
+
+abbrev NormExpr.is_norm.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} (hr : NormExpr r) : GenericExpr.IsNorm r hr.raw :=
+  match hr with
+  | ⟨_, hn⟩ => hn
+
+@[aesop safe apply (rule_sets := [DccRel])]
+def NormExpr.red.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} (hn : NormExpr r) {B : GenericExpr τ} (hr : r hn.raw B) : False :=
+  hn.is_norm ⟨_, hr⟩
+
 namespace Relation
 
 namespace ReflTransGen

@@ -649,6 +649,17 @@ theorem decreasing?.{u} {τ : Type u} {A B : GenericExpr τ} [DecidableEq τ] (h
 
 end RedAffReflTrans
 
+inductive RedAffNorm : GenericExpr τ_c → GenericExpr τ_c → Type u
+  | mk : RedAffReflTrans A B → IsNorm RedAff B → RedAffNorm A B
+
+def RedAffNorm.raw (r : RedAffNorm A B ) : RedAffReflTrans A B ∧ IsNorm RedAff B :=
+  match r with
+  | ⟨a, b⟩ => ⟨a, b⟩
+
+abbrev RedAffNorm.is_norm (hr : RedAffNorm A B) : IsNorm RedAff B :=
+  match hr with
+  | ⟨_, hn⟩ => hn
+
 end GenericExpr
 
 abbrev Expr.RedAff := GenericExpr.RedAff (τ := Unit)

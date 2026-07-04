@@ -1,6 +1,7 @@
 import Dcc.Ast
 import Dcc.Aff.Red
 import Dcc.Relation
+import Mathlib.Data.Option.Basic
 
 open Relation (ReflTransGen)
 
@@ -532,89 +533,89 @@ inductive Domain : GenericExpr τ_c → GenericExpr τ_c → Type u
 
 inductive Domain₂ : GenericExpr τ_c → GenericExpr τ_c → GenericExpr τ_c → Type u
   | comp'    : Domain g α → Domain₂ f β γ → Domain₂ (DCC? (f ∘' g)) α (DCC? γ ∘' g)
-  | eql      : Domain f_α δ → (DCC? Eql(f_α)).Domain₂ δ f_α
-  | refl     : Domain f_α δ → (DCC? refl(f_α)).Domain₂ δ f_α
-  | curr     : Domain₂ (DCC? Λ(α, β, x)) α β
-  | curr'    : Domain₂ (DCC? !Λ(α, β, x)) (DCC? !(α)) (DCC? !<β>)
+  | eql      : Domain f_α δ → RedAffReflTrans f_α f_α' → IsNorm RedAff f_α' → (DCC? Eql(f_α)).Domain₂ δ f_α'
+  | refl     : Domain f_α δ → RedAffReflTrans f_α f_α' → IsNorm RedAff f_α' → (DCC? refl(f_α)).Domain₂ δ f_α'
+  | curr     : RedAffReflTrans α α' → IsNorm RedAff α' → RedAffReflTrans β β' → IsNorm RedAff β' → Domain₂ (DCC? Λ(α, β, x)) α' β'
+  | curr'    : RedAffReflTrans α α' → IsNorm RedAff α' → Domain₂ (DCC? !Λ(α, β, x)) (DCC? !(α')) (DCC? !<β>)
 
 @[dcc_force_reduce, dcc_force_aff]
-def domain? [DecidableEq τ_c] (e : GenericExpr τ_c) : Option ((τ : GenericExpr τ_c) × (PULift.{u + 2, u + 1} (Domain e τ))) :=
+def domain? [DecidableEq τ_c] (e : GenericExpr τ_c) : Option ((τ : GenericExpr τ_c) × (Domain e τ)) :=
   match e with
   | (DCC? Eql(f_α)) =>
     match f_α.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.eql₁ h (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, .eql₁ h (reduce_sound rfl) (reduce_norm rfl)⟩
     | _ => .none
-  | (DCC? (Eql(_f_α) &(_env))) => .some ⟨_, ⟨.eql₂ (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+  | (DCC? (Eql(_f_α) &(_env))) => .some ⟨_, .eql₂ (reduce_sound rfl) (reduce_norm rfl)⟩
   | (DCC? refl(f_α)) =>
     match f_α.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.refl₁ h (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, .refl₁ h (reduce_sound rfl) (reduce_norm rfl)⟩
     | _ => .none
-  | (DCC? (refl(_f_α) &(_env))) => .some ⟨_, ⟨.refl₂ (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+  | (DCC? (refl(_f_α) &(_env))) => .some ⟨_, .refl₂ (reduce_sound rfl) (reduce_norm rfl)⟩
   | (DCC? *<f>) =>
     match f.domain? with
-    | .some ⟨_, ⟨h⟩⟩ =>
-      .some ⟨_, ⟨.unmap h (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+    | .some ⟨_, h⟩ =>
+      .some ⟨_, .unmap h (reduce_sound rfl) (reduce_norm rfl)⟩
     | _ => .none
-  | (DCC? *(_α)) => .some ⟨_, ⟨.unbox (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? Id(_α)) => .some ⟨_, ⟨.id (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? Fstc(_β)) => .some ⟨_, ⟨.fstc (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? Sndc(_β)) => .some ⟨_, ⟨.sndc (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? Λ(_α, _β, _x)) => .some ⟨_, ⟨.curr₁ (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? (Λ(_α, _β, _x) _y)) => .some ⟨_, ⟨.curr₂ (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? !Λ(_α, _β, _x)) => .some ⟨_, ⟨.curr₁' (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? (!Λ(_α, _β, _x) &(_y))) => .some ⟨_, ⟨.curr₂' (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+  | (DCC? *(_α)) => .some ⟨_, .unbox (reduce_sound rfl) (reduce_norm rfl)⟩
+  | (DCC? Id(_α)) => .some ⟨_, .id (reduce_sound rfl) (reduce_norm rfl)⟩
+  | (DCC? Fstc(_β)) => .some ⟨_, .fstc (reduce_sound rfl) (reduce_norm rfl)⟩
+  | (DCC? Sndc(_β)) => .some ⟨_, .sndc (reduce_sound rfl) (reduce_norm rfl)⟩
+  | (DCC? Λ(_α, _β, _x)) => .some ⟨_, .curr₁ (reduce_sound rfl) (reduce_norm rfl)⟩
+  | (DCC? (Λ(_α, _β, _x) _y)) => .some ⟨_, .curr₂ (reduce_sound rfl) (reduce_norm rfl)⟩
+  | (DCC? !Λ(_α, _β, _x)) => .some ⟨_, .curr₁' (reduce_sound rfl) (reduce_norm rfl)⟩
+  | (DCC? (!Λ(_α, _β, _x) &(_y))) => .some ⟨_, .curr₂' (reduce_sound rfl) (reduce_norm rfl)⟩
   | (DCC? !<f>) =>
     match f.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.map (reduce_sound rfl) (reduce_norm rfl) h⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, .map (reduce_sound rfl) (reduce_norm rfl) h⟩
     | _ => .none
   | (DCC? $<f>) =>
     match f.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.fmap (reduce_sound rfl) (reduce_norm rfl) h⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, .fmap (reduce_sound rfl) (reduce_norm rfl) h⟩
     | _ => .none
   | (DCC? ⟦_β⟧⟨M, _N⟩) =>
     match M.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pair (reduce_sound rfl) (reduce_norm rfl) h⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, .pair (reduce_sound rfl) (reduce_norm rfl) h⟩
     | _ => .none
-  | (DCC? `(_β, _x)) => .some ⟨_, ⟨.quot (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+  | (DCC? `(_β, _x)) => .some ⟨_, .quot (reduce_sound rfl) (reduce_norm rfl)⟩
   | (DCC? _f ∘' g) =>
     match g.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.comp' h (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, .comp' h (reduce_sound rfl) (reduce_norm rfl)⟩
     | _ => .none
   | (DCC? _f ∘ g) =>
     match g.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.comp h (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, .comp h (reduce_sound rfl) (reduce_norm rfl)⟩
     | _ => .none
   | (DCC? _f ∘∘ g) =>
     match g.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.comp₂ h (reduce_sound rfl) (reduce_norm rfl)⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, .comp₂ h (reduce_sound rfl) (reduce_norm rfl)⟩
     | _ => .none
   | (DCC? Π(f_α, _f_β)) =>
     match f_α.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pi h⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, .pi h⟩
     | _ => .none
   | _ => .none
 
-def domain₂? (e : GenericExpr τ_c) : Option ((α β : GenericExpr τ_c) × (PULift.{u + 2, u + 1} (Domain₂ e α β))) :=
+def domain₂? (e : GenericExpr τ_c) : Option ((α β : GenericExpr τ_c) × (Domain₂ e α β)) :=
   match e with
   | DCC? f ∘' g =>
     match g.domain?, f.domain₂? with
-    | .some ⟨_, ⟨h₁⟩⟩, .some ⟨_, _, ⟨h₂⟩⟩ =>
-      .some ⟨_, _, ⟨.comp' h₁ h₂⟩⟩
+    | .some ⟨_, h₁⟩, .some ⟨_, _, h₂⟩ =>
+      .some ⟨_, _, .comp' h₁ h₂⟩
     | _, _ => .none
   | (DCC? Eql(f_α)) =>
     match f_α.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, _, ⟨.eql h⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, _, .eql h (reduce_sound rfl) (reduce_norm rfl)⟩
     | _ => .none
   | (DCC? refl(f_α)) =>
     match f_α.domain? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, _, ⟨.refl h⟩⟩
+    | .some ⟨_, h⟩ => .some ⟨_, _, .refl h (reduce_sound rfl) (reduce_norm rfl)⟩
     | _ => .none
-  | (DCC? Λ(_α, _β, _x)) => .some ⟨_, _, ⟨.curr⟩⟩
-  | (DCC? !Λ(_α, _β, _x)) => .some ⟨_, _, ⟨.curr'⟩⟩
+  | (DCC? Λ(_α, _β, _x)) => .some ⟨_, _, .curr (reduce_sound rfl) (reduce_norm rfl) (reduce_sound rfl) (reduce_norm rfl)⟩
+  | (DCC? !Λ(_α, _β, _x)) => .some ⟨_, _, .curr' (reduce_sound rfl) (reduce_norm rfl)⟩
   | _ => none
 
 @[aesop safe forward (rule_sets := [DccReduce]), grind =_, grind ., grind! ., dcc_rel]
-theorem Domain.complete {e τ : GenericExpr τ_c} (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, ⟨h⟩⟩ := by
+theorem Domain.complete {e τ : GenericExpr τ_c} (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, h⟩ := by
   induction h
   any_goals (
     focus
@@ -630,18 +631,31 @@ theorem Domain.complete {e τ : GenericExpr τ_c} (h : Domain e τ) : (domain? (
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
 theorem Domain₂.complete
-  {e α β : GenericExpr τ_c} (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, ⟨h⟩⟩ := by
+  {e α β : GenericExpr τ_c} (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, h⟩ := by
   induction h with
   | comp' h₁ h₂ ih => simp [domain₂?, ih, h₁.complete]
   | refl h_domain | eql h_domain =>
     have h := h_domain.complete
-    simp [domain₂?, h]
-  | curr | curr' =>
+    have h_fst := reduce_complete_fst (by assumption) (by assumption)
+    simp [domain₂?, h, h_fst]
+    congr
+    · grind
+    · grind
+  | curr hrt₁ hn₁ hrt₂ hn₂ =>
+    have h_fst₁ := reduce_complete_fst hrt₁ hn₁
+    have h_fst₂ := reduce_complete_fst hrt₂ hn₂
     simp [domain₂?]
+    grind
+  | curr' hrt₁ hn₁ =>
+    have h_fst := reduce_complete_fst hrt₁ hn₁
+    simp [domain₂?]
+    grind
 
 @[dcc_force_reduce, dcc_force_aff]
 instance Domain.instRedRel : GenericExpr.RedRel.{u, u + 1} (α := GenericExpr τ_c) (Domain (τ_c := τ_c)) size where
-  run := domain? (τ_c := τ_c)
+  run := fun x => match domain? x with
+    | .some ⟨_, h⟩ => .some ⟨_, ⟨h⟩⟩
+    | .none => .none
 
 @[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]
 def Domain.deterministic {x τ₁ τ₂ : GenericExpr τ_c} (h₁ : Domain (τ_c := τ_c) x τ₁) (h₂ : Domain (τ_c := τ_c) x τ₂) : τ₁ = τ₂ := by
@@ -716,13 +730,31 @@ def Domain.deterministic {x τ₁ τ₂ : GenericExpr τ_c} (h₁ : Domain (τ_c
         simp_all
         exact norm_unique hrt₁ hn₁ hrt₂ hn₂))
 
-theorem Domain.is_norm_aff (h : Domain e τ) : IsNorm RedAff τ := by
+def Domain.is_norm_aff (h : Domain (τ_c := τ_c) e τ) : IsNorm RedAff τ := by
   induction h
   any_goals (
     intro ⟨_, h⟩
     cases h
     grind)
   any_goals (grind)
+
+def Domain₂.is_norm_aff (h : Domain₂ e α β) : IsNorm RedAff α ∧ IsNorm RedAff β := by
+  induction h
+  any_goals (
+    focus
+    try (have h := Domain.is_norm_aff (by assumption))
+    simp_all
+    try (
+      intro ⟨_, hr⟩
+      cases hr)
+    try grind)
+  case curr' hrt₁ hn₁ =>
+    constructor
+    · intro ⟨_, h⟩
+      cases h
+      exact hn₁ ⟨_, by assumption⟩
+    · intro ⟨_, h⟩
+      cases h
 
 @[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]
 def Domain₂.deterministic (h₁ : Domain₂ f τ₁a τ₁b) (h₂ : Domain₂ f τ₂a τ₂b) : τ₁a = τ₂a ∧ τ₁b = τ₂b := by
@@ -732,12 +764,23 @@ def Domain₂.deterministic (h₁ : Domain₂ f τ₁a τ₁b) (h₂ : Domain₂
     · rename_i h_dom₄ h_dom₃
       have h := ih h_dom₄
       dcc_aesop!
-  | refl h_dom₁ | eql h_dom₁ =>
+  | refl h_dom₁ hrt₁ hn₁ | eql h_dom₁ hrt₁ hn₁ =>
     cases h₂
-    · dcc_aesop!
-  | curr' | curr =>
+    · rename_i h_dom₂ hn₂ hrt₂
+      cases h_dom₁.deterministic h_dom₂
+      have h := norm_unique hrt₁ hn₁ hrt₂ hn₂
+      grind
+  | curr' hrt₁ hn₁ =>
     cases h₂
-    · simp
+    · rename_i hn₂ hrt₂
+      have h := norm_unique hrt₁ hn₁ hrt₂ hn₂
+      grind
+  | curr hrt₁ hn₁ hrt₂ hn₂ =>
+    cases h₂
+    · rename_i hn₃ hrt₃ hn₄ hrt₄
+      have ha := norm_unique hrt₁ hn₁ hrt₃ hn₃
+      have hb := norm_unique hrt₂ hn₂ hrt₄ hn₄
+      grind
 
 @[grind]
 def eta_to_expr (e : GenericExpr (τ := EtaConst (τ_c := τ_c)))
@@ -1010,39 +1053,65 @@ def from_eta {e : GenericExpr (@EtaConst τ_c)} (hn₁ : GenericExpr.IsNorm RedA
 
 end IsNorm
 
+class Pure.Injective.{v, s} (f : Type v → Type s) extends Pure f where
+  inj {α : Type v} : Function.Injective (toPure.pure (α := α))
+
+instance : Pure.Injective Option where
+  inj {α} := Option.some_injective α
+
+instance : Pure.Injective Id where
+  inj {α} := by simp [Id, pure, Function.Injective]
+
 open Monad in
-class EtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
-  (m : optParam (Type (max u v) → Type (max u v)) Option) [_hM : AlternativeMonad m] where
+class EtaRel.{v, s, t} {α : Type v} {β : Type s} (r : α → β → Type t)
+  {m : (Type (max s t) → Type (max s t))} [hM : Monad m]
+  [Pure.Injective m] where
+  run           : ∀ (A : α), m ((B : β) × (r A B))
+  complete      : ∀ (h : r A B), run A = (pure ⟨B, h⟩)
+  sound         : (run A = pure ⟨B, h⟩) → r A B := fun (_heq : run A = pure ⟨B, h⟩) => h
+  unique        : ∀ {A : α} {B C : β} (_hr₁ : r A B) (_hr₂ : r A C), B = C := fun hr₁ hr₂ => by
+    have h₁ := complete hr₁
+    have h₂ := complete hr₂
+    rw [h₁] at h₂
+    have h := Pure.Injective.inj h₂
+    simp_all
+  unique'       : ∀ {A : α} {B C : β} (_hrt₁ : r A B) {_hr₂ : r A C}, B = C := unique
+
+class NormEtaRel.{t} (r : GenericExpr τ_c → GenericExpr τ_c → Type t)
+  {m : Type (max u t) → Type (max u t)} [hM : Monad m] [Pure.Injective m]
+  extends EtaRel r (m := m) where
   is_norm_aff   : IsNorm RedAff A → r A B → IsNorm RedAff B
-  run           : ∀ (A : GenericExpr τ_c), m ((B : GenericExpr τ_c) × (PULift.{v + 1, v} (r A B)))
-  complete      : ∀ (h : r A B), run A = (pure ⟨B, ⟨h⟩⟩)
+
+open Monad in
+class FallibleEtaRel (r : GenericExpr τ_c → GenericExpr τ_c → Type u)
+  {m : Type u → Type u} [_hM : AlternativeMonad m] [Pure.Injective m] extends EtaRel r (m := m) where
   none          : ∀ (_h : run A = failure) (_hr : r A B), False
-  sound         : (run A = pure ⟨B, ⟨h⟩⟩) → r A B := fun (_heq : run A = pure ⟨B, ⟨h⟩⟩) => h
   none_complete : (∀ {B : GenericExpr τ_c}, r A B → False)  → run A = failure
 
-def is_norm_aff.{v} {r : GenericExpr τ_c → GenericExpr τ_c → Sort v} [EtaRel (τ_c := τ_c) r] : (IsNorm RedAff A) → (r A B) → IsNorm RedAff B := EtaRel.is_norm_aff
+def is_norm_aff {r : GenericExpr τ_c → GenericExpr τ_c → Type u}
+  {m : Type u → Type u} [Monad m ] [Pure.Injective m]
+  [NormEtaRel (τ_c := τ_c) r (m := m)] : (IsNorm RedAff A) → (r A B) → IsNorm RedAff B := NormEtaRel.is_norm_aff (m := m)
 
 attribute [grind =_, grind ., grind! ., aesop safe apply (rule_sets := [DccRel])] EtaRel.complete
-attribute [grind] EtaRel.run
-attribute [grind] EtaRel.sound
-attribute [dcc_rel] EtaRel.is_norm_aff
+attribute [grind, aesop norm (rule_sets := [DccRel])] EtaRel.run
+attribute [grind, aesop safe apply (rule_sets := [DccRel])] EtaRel.sound
+attribute [aesop safe apply (rule_sets := [DccRel])] FallibleEtaRel.none
+attribute [grind =, aesop safe apply (rule_sets := [DccRel])] FallibleEtaRel.none_complete
+attribute [dcc_rel] NormEtaRel.is_norm_aff
 
-open EtaRel in
+@[grind, aesop safe apply (rule_sets := [DccRel])]
+def eta_none_elim.{v} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} {m : Type u → Type u} [AlternativeMonad m]
+  [Pure.Injective m] [hE : FallibleEtaRel r (m := m)] (h : hE.run A =  failure) (hr : r A B) {C : Sort v} : C :=
+  False.elim (hE.none h hr)
+
 open Monad in
-class EtaRelProp (r : GenericExpr τ_c → GenericExpr τ_c → Prop)
-  (m : optParam (Type (max u 0) → Type (max u 0)) Option) [_hM : AlternativeMonad m] : Type max u v extends (EtaRel.{u, 0} r (m := m)) where
-  none_complete' : (¬ ∃ B, r A B)  → run A = failure
-
-attribute [grind =] EtaRelProp.none_complete'
-
-open Monad in
-class OptionEtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
-  : Type max u v extends (EtaRel r (m := Option)) where
+class OptionEtaRel (r : GenericExpr τ_c → GenericExpr τ_c → Type u)
+  : Type u extends (FallibleEtaRel r (m := Option)) where
   none          : ∀ {A B : GenericExpr τ_c} (_h : run A = failure) (_hr : r A B), False := fun heq hr => by
     simp_all [complete hr, failure, pure]
   none_complete := fun hn => by
     apply Option.eq_none_iff_forall_ne_some.mpr
-    intro ⟨_, ⟨h⟩⟩
+    intro ⟨_, h⟩
     have heq := complete h
     simp_all
     exact hn h
@@ -1052,26 +1121,23 @@ class OptionEtaRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
     simp_all
   unique'       : ∀ {A B C : GenericExpr τ_c} (_hrt₁ : r A B) {_hr₂ : r A C}, B = C := unique
 
-class EtaNormRel.{v} (r : GenericExpr τ_c → GenericExpr τ_c → Sort v)
-  : Type max u v extends (EtaRel r (m := Option)) where
+class EtaNormRel (r : GenericExpr τ_c → GenericExpr τ_c → Type u)
+  : Type u extends (EtaRel r (m := Option)) where
 
-attribute [dcc_rel] OptionEtaRel.unique
-attribute [dcc_rel, aesop safe forward (rule_sets := [DccRel])] OptionEtaRel.unique'
-
-open OptionEtaRel in
-@[grind =]
-theorem OptionEtaRel.none_complete'.{v} {τ_c : Type v}
-  (r : GenericExpr τ_c → GenericExpr τ_c → Prop) [hR : OptionEtaRel r] {A : GenericExpr τ_c} : (¬ ∃ B, r A B) → hR.run A = .none := by
-  intro hn
-  apply Option.eq_none_iff_forall_ne_some.mpr
-  intro ⟨_, ⟨h⟩⟩
-  exact (hn ⟨_, h⟩).elim
+attribute [dcc_rel] EtaRel.unique
+attribute [dcc_rel, aesop safe forward (rule_sets := [DccRel])] EtaRel.unique'
 
 end GenericExpr
 
 open GenericExpr in
-instance Domain.instEtaRel : (EtaRel (τ_c := τ_c) Domain (m := Option)) where
-  run := domain?
+instance Domain.instEtaRel : (EtaRel (β := GenericExpr τ_c) Domain (m := Option)) where
+  run      := domain?
+  complete := Domain.complete
+
+open GenericExpr in
+instance Domain.instNormRel : (NormEtaRel (τ_c := τ_c) Domain (m := Option)) where
+  run      := domain?
+  complete := Domain.complete
   is_norm_aff := fun h h_dom => by
     have heq := h_dom.complete
     induction h_dom
@@ -1084,12 +1150,17 @@ instance Domain.instEtaRel : (EtaRel (τ_c := τ_c) Domain (m := Option)) where
     any_goals (grind)
     · rename_i h_dom ih
       exact ih h.pil h_dom.complete
-  complete := Domain.complete
-  none     := fun heq hr => by dcc_aesop
+
+open GenericExpr in
+instance Domain.instFallibleEtaRel : (FallibleEtaRel (τ_c := τ_c) Domain (m := Option)) where
+  none     := fun heq hr => by
+    have h := hr.complete
+    simp_all
+    grind
   none_complete := fun h => by
     simp [failure]
     apply Option.eq_none_iff_forall_ne_some.mpr
-    intro ⟨_, ⟨hr⟩⟩
+    intro ⟨_, hr⟩
     exact (h hr).elim
 
 open GenericExpr in

@@ -47,22 +47,59 @@ universe u
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]
 
-@[inline]
-abbrev EtaExpr := GenericExpr (@EtaConst τ_c)
-
-@[inline, grind]
-abbrev EtaExpr.Norm := @NormExpr (@EtaConst τ_c) RedAff
-
 /-
 An η-reducible function is in normal form, has an arity of 1 or 2, and has known domain
 -/
 inductive EtaFn : (f : @EtaExpr.Norm τ_c) → (ar : ℕ) → Vector (@EtaExpr.Norm τ_c) ar → Type u
-  | tm₁ {f : @EtaExpr.Norm τ_c} : (heq : arity f.raw = 1)
-    → (h_dom : Domain f.raw α)
-    → EtaFn f 1 ⟨#[⟨α, h_dom.is_norm_aff⟩], (by grind)⟩
-  | tm₂ {f : @EtaExpr.Norm τ_c} : (heq : arity f.raw = 2)
-    → (h_dom : Domain₂ f.raw α β) → EtaFn f 2 ⟨#[⟨α, h_dom.is_norm_aff.left⟩,
+  | tm₁ {f : @EtaExpr τ_c} {hn : IsNorm RedAff f} : (heq : arity f = 1)
+    → (h_dom : Domain f α)
+    → EtaFn ⟨f, hn⟩ 1 ⟨#[⟨α, h_dom.is_norm_aff⟩], (by grind)⟩
+  | tm₂ {f : @EtaExpr τ_c} {hn : IsNorm RedAff f} : (heq : arity f = 2)
+    → (h_dom : Domain₂ f α β) → EtaFn ⟨f, hn⟩ 2 ⟨#[⟨α, h_dom.is_norm_aff.left⟩,
       ⟨β, h_dom.is_norm_aff.right⟩], (by grind)⟩
+
+@[aesop safe forward (rule_sets := [DccSize])]
+def EtaFn.decreasing {f τ : @EtaExpr.Norm τ_c} (h : EtaFn f 1 ⟨⟨[τ]⟩, by grind⟩) : size τ.raw < size f.raw :=
+  match h with
+  | .tm₁ _heq h_dom => Domain.instRedRel.decreasing h_dom
+
+@[aesop safe forward (rule_sets := [DccSize])]
+def EtaFn.dom_size_lt {f τ : @EtaExpr τ_c} {hn₁ : IsNorm RedAff f} {hn₂ : IsNorm RedAff τ} (h : EtaFn ⟨f, hn₁⟩ 1 ⟨⟨[⟨τ, hn₂⟩]⟩, by grind⟩) : size τ < size f :=
+  match h with
+  | .tm₁ _heq h_dom => Domain.instRedRel.decreasing h_dom
+
+def EtaFn.dom_size_lt' {f τ : @EtaExpr τ_c} {hn₁ : IsNorm RedAff f} {hn₂ : IsNorm RedAff τ} (h : EtaFn ⟨f, hn₁⟩ 1
+  ⟨⟨[⟨τ, hn₂⟩]⟩, by grind⟩) : size (DCC? Id(τ)) < size f :=
+  have h_lt := h.dom_size_lt
+  match h with
+  | .tm₁ _heq h_dom => by
+    induction h_dom
+    any_goals (grind)
+    case unmap h_dom₁ hrt₁ hn₁ ih =>
+      simp_all [size]
+      have ha := Domain.instRedRel.decreasing h_dom₁
+      have hb := decreasing? _ hrt₁
+      have h := ih (.tm₁ (by simp_all [arity]) h_dom₁) ha (by grind) (hn₁ := (by assumption))
+      --have h := ih (.tm₁ _heq (.unmap (by assumption) (by assumption) (by assumption)))
+      sorry
+
+/-@[aesop safe forward (rule_sets := [DccSize])]
+def EtaFn.dom_size_lt' {f τ : @EtaExpr τ_c} {hn₁ : IsNorm RedAff f} {hn₂ : IsNorm RedAff τ} (h : EtaFn ⟨f, hn₁⟩ 1
+  ⟨⟨[⟨τ, hn₂⟩]⟩, by grind⟩) : size (DCC? Id(τ)) < size f :=
+  have h₀ := h.dom_size_lt
+  match h with
+  | .tm₁ _heq h_dom => by
+    have h₁ := Domain.instRedRel.decreasing h_dom
+    induction h_dom
+    any_goals (grind)
+    case unmap h_dom₁ hrt₁ hn₁ ih =>
+      have h := ih (.tm₁ (by grind) h_dom₁) (Domain.instRedRel.decreasing h_dom₁) (by grind)
+      have h := ih (.tm₁ (by rw [arity] at _heq; exact _heq) h_dom₁) (by
+        have h_dec₁ := decreasing? _ hrt₁
+        simp_all [size]
+        grind
+        sorry)
+      sorry-/
 
 @[grind]
 def view_eta_fn (f : @EtaExpr.Norm τ_c) : Option ((ar : ℕ) × (doms : Vector (@EtaExpr.Norm τ_c) ar) × EtaFn f ar doms) :=
@@ -119,31 +156,6 @@ instance ArgTy.instEtaRel {e_f : EtaFn f ar doms} {idx : Fin ar} : EtaRel
   run := get_arg_ty (idx := idx) e_f
   complete := ArgTy.complete (idx := idx) (e_f := e_f) (ar := ar) (doms := doms)
 
-/-inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
-  → (idx : Fin ar) → (level : ℕ) → (holes : Vector EtaExpr (idx + 1)) → Type u
-  | nil {e_f : EtaFn f 1 ⟨#[α], by grind⟩} :
-    (ViewCoup α → False)
-    → Holes e_f 0 level ⟨#[DCC? hole(level)], by grind⟩
-  | cons {e_f : EtaFn f (ar + 2) doms} :
-    Holes e_f idx level pre
-    → Holes (
-  | pure {e_f : EtaFn f (ar + 1) doms} :
-    Holes e_f idx level pre
-    → (e_f.ArgTy pre τ)
-    → (ViewCoup τ → False)
-    → Holes e_f ⟨idx + 1, h⟩ (level + 1) (pre.push (DCC? hole(level + 1)))
-  | coup {e_f : EtaFn f (ar + 1) doms} :
-    Holes e_f idx level pre
-    → (e_f.ArgTy pre (DCC? Coup(β)))
-    → (f_β : EtaFn β 1 ⟨#[α], by grind⟩)
-    → Holes f_β 0 (level + 1) ⟨#[x], by grind⟩
-    → RedAffReflTrans (DCC? (β x)) τ_y
-    → IsNorm RedAff τ_y
-    → (f_y : EtaFn (DCC? Id(τ_y)) 1 ⟨#[τ_y], by grind⟩)
-    → Holes f_y 0 (level + 2) ⟨#[y], by grind⟩
-    → Holes e_f ⟨idx + 1, h⟩ (level + 3) ⟨#[DCC? ⟦β⟧(x, y)], by grind⟩-/
-    
-
 /-
 First hole of a function with arity 1
 -/
@@ -151,8 +163,9 @@ inductive Hole : (e_f : EtaFn (τ_c := τ_c) f 1 doms)
   → (level : ℕ) → (hole_e : @EtaExpr.Norm τ_c) → Type u
   | pure {e_f : EtaFn f 1 ⟨#[⟨α, _hn_α⟩], by grind⟩} :
     (ViewCoup α → False) → Hole e_f level ⟨(DCC? hole(level)), fun ⟨_, h⟩ => by cases h⟩
-  | coup {e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), _hn_coup⟩], by grind⟩} :
-    (f_β : EtaFn ⟨β, _h_β⟩ 1 ⟨#[α], by grind⟩)
+  | coup {e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β₀), _hn_coup⟩], by grind⟩} :
+      (hr_β : RedAffNorm β₀ β)
+    → (f_β  : EtaFn ⟨β, hr_β.is_norm⟩ 1 ⟨#[α], by grind⟩)
     → Hole f_β (level + 1) x
     → (hr : RedAffNorm (DCC? (β x.raw)) τ_y)
     → Hole (.tm₁ (f := ⟨(DCC? Id(τ_y)), fun ⟨_, hr⟩ => by cases hr⟩) (by grind) (.id .refl hr.raw.right)) (level + 2) y
@@ -162,10 +175,55 @@ inductive Hole : (e_f : EtaFn (τ_c := τ_c) f 1 doms)
       Hole (.tm₁ (f := ⟨(DCC? Id(α)), fun ⟨_, h⟩ => by cases h⟩) (by grind) (.id hrt hn)) (level + 1) x
     → Hole e_f level ⟨(DCC? &(x.raw)), fun ⟨_, h⟩ => by cases h⟩
 
+def Hole.size_zero {e_f : EtaFn (τ_c := τ_c) f 1 ⟨#[α], h⟩} (h : Hole e_f level hole_e) : size hole_e.raw = 0 :=
+  have h_dec₁ := e_f.dom_size_lt
+  match h with
+  | .pure _hn => by grind
+  | .coup hr_β h_fn_β h_hole₁ hrt h_hole₂ =>
+    
+    sorry
+  | .bang (α := α) h_hole₁ =>
+    have h_dec : (DCC? Id(α)).size 
+    sorry
+termination_by f.size + 2
+
+def Hole.size_zero {e_f : EtaFn (τ_c := τ_c) f 1 doms} (h : Hole e_f level hole_e) : size hole_e.raw = 0 := by
+  cases h
+  · grind
+  case coup h_fn₁ hrt h_fn₂ h_hole₁ h_hole₂ =>
+    have h_dec₁ := h_fn₁.dom_size_lt
+    have h_dec₂ := h_fn₂.dom_size_lt
+    /-have ha := h_hole₁.size_zero
+    have hb := h_hole₂.size_zero-/
+    simp_all [NormExpr.raw, size]
+    
+termination_by f.raw.size
+
+def hole (e_f : EtaFn (τ_c := τ_c) f 1 doms) (level : ℕ) : Option ((hole_e : @EtaExpr.Norm τ_c) × (Hole e_f level hole_e)) :=
+  match doms with
+  | ⟨⟨[⟨α, _⟩]⟩, _⟩ =>
+    if heq_view_coup : α.view_coup?.isSome then
+      match α, α.view_coup?.get heq_view_coup with
+      | (DCC? Coup(β₀)), .coup =>
+        let β := (reduce RedAff β₀).fst
+        have h_dec : β₀.size < f.raw.size := by
+          have h := e_f.dom_size_lt
+          change β₀.size < f.1.size
+          grind
+        let hr_β : RedAffNorm β₀ β := ⟨reduce_sound rfl, reduce_norm rfl⟩
+        
+        sorry
+      | (DCC? !(α₀)), .bang =>
+        let α := (reduce RedAff α₀).fst
+        sorry
+    else
+      .some ⟨_, .pure (view_coup?_none_sound (by simp_all))⟩
+termination_by f.raw.size
+
 inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
   → (take : Fin (ar + 1)) → (level : ℕ)
   → (holes : Vector (@EtaExpr.Norm τ_c) take) → Type u
-  | nil  {e_f : EtaFn f 1 doms} : Hole e_f level hole_e
+  | pure  {e_f : EtaFn f 1 doms} : Hole e_f level hole_e
     → Holes e_f 1 level ⟨#[hole_e], by grind⟩
   | cons {e_f  : EtaFn f (ar + 2) doms} {take : Fin (ar + 2)}
     {pre  : Vector EtaExpr.Norm take} :
@@ -177,7 +235,13 @@ inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
     → Holes (ar := ar + 2) e_fn ⟨take.val + 1, by grind⟩ level (pre.push hole')
 
 def holes (f : EtaFn f ar doms) : List (@EtaExpr τ_c) :=
-  sorry
+  match f with
+  | .tm₁ heq h_dom =>
+    
+    sorry
+  | .tm₂ heq h_dom =>
+    
+    sorry
 
 end EtaFn
 

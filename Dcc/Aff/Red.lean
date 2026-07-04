@@ -660,6 +660,17 @@ abbrev RedAffNorm.is_norm (hr : RedAffNorm A B) : IsNorm RedAff B :=
   match hr with
   | ⟨_, hn⟩ => hn
 
+@[grind]
+def aff_sound (heq : reduce RedAff A = ⟨B, ⟨h⟩⟩) : RedAffNorm A B := ⟨reduce_sound heq, reduce_norm heq⟩
+
+abbrev RedAffNorm.red (h : RedAffNorm A B) : RedAffReflTrans A B :=
+  match h with
+  | ⟨hr, _⟩ => hr
+
+def RedAffNorm.aff_complete (h : RedAffNorm A B) : reduce RedAff A = ⟨B, ⟨h.red⟩⟩ :=
+  match h with
+  | ⟨hr₁, hn₁⟩ => reduce_complete hr₁ hn₁
+
 end GenericExpr
 
 abbrev Expr.RedAff := GenericExpr.RedAff (τ := Unit)

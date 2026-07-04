@@ -245,6 +245,8 @@ class RedRel.{u, v} {α : Type u} (r : α → α → Sort v) (t : outParam (α �
       try rfl
       done)
 
+attribute [dcc_size] RedRel.decreasing
+
 attribute [dcc_force_rel] RedRel.toRel.eq_def RedRel.toRel Rel.run Rel.run.eq_def
 
 def IsNorm.unique.{u} {α : Type u} {r : α → α → Prop} {A B : α} (hn : IsNorm r A) (hr : r A B) : A = B :=
@@ -711,7 +713,7 @@ end GenericExpr
 inductive NormExpr.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) : Type u
   | mk : (e : GenericExpr τ) → GenericExpr.IsNorm r e → NormExpr r
 
-@[grind]
+@[inline, grind]
 def NormExpr.raw.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} (r : NormExpr r) : GenericExpr τ :=
   match r with
   | ⟨e, _⟩ => e

@@ -193,7 +193,7 @@ def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] Eval(_α, _β, _x) => 1
   | DCC[.] !(_x)   => 1
   | DCC[.] *(_α)   => 1
-  | DCC[.] *<_α>   => 1
+  | DCC[.] *<f>    => f.arity
   | DCC[.] &(_x)   => 1
   | DCC[.] !<_x>   => 1
   | DCC[.] $<_x>   => 1
@@ -227,7 +227,7 @@ def tm_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] Eval(_α, _β, _x) => 1
   | DCC[.] !(_x)   => 1
   | DCC[.] *(_α)   => 1
-  | DCC[.] *<_α>   => 1
+  | DCC[.] *<f>    => f.tm_arity
   | DCC[.] &(_x)   => 1
   | DCC[.] !<_x>   => 1
   | DCC[.] $<_x>   => 1
@@ -491,45 +491,86 @@ theorem view_coup?_none_sound (h : view_coup? e = .none) : ViewCoup e → False 
 open Relation (ReflTransGen)
 open GenericExpr (IsNorm decreasing? reduce RedRel reduce_norm reduce_sound norm_unique Complete reduce_complete reduce_complete_fst)
 
-inductive Domain : GenericExpr τ_c → GenericExpr τ_c → Type u
-  | eql₁     : Domain f_α δ → RedAffReflTrans δ δ' → IsNorm RedAff δ' → (DCC? Eql(f_α)).Domain (DCC? !(δ'))
-  | eql₂     : RedAffReflTrans (DCC? (f_α &(env))) τ
-    → IsNorm RedAff τ
-    → Domain (DCC? (Eql(f_α) &(env))) τ
-  | refl₁    : Domain f_α δ → RedAffReflTrans δ δ' → IsNorm RedAff δ' → (DCC? refl(f_α)).Domain (DCC? !(δ'))
-  | refl₂    : RedAffReflTrans (DCC? (f_α &(env))) τ
-    → IsNorm RedAff τ
-    → Domain (DCC? (refl(f_α) &(env))) τ
-  | unmap    : Domain f α → RedAffReflTrans α α' → IsNorm RedAff α' → Domain (DCC? *<f>) (DCC? !(α'))
-  | unbox    : RedAffReflTrans α α' → IsNorm RedAff α' → Domain (DCC? *(α)) (DCC? !(α'))
-  | id       : RedAffReflTrans α α' → IsNorm RedAff α' → Domain (DCC? Id(α)) α'
-  | fstc     : RedAffReflTrans β β' → IsNorm RedAff β' → Domain (DCC? Fstc(β)) (DCC? Coup(β'))
-  | sndc     : RedAffReflTrans β β' → IsNorm RedAff β' → Domain (DCC? Sndc(β)) (DCC? Coup(β'))
-  | curr₁    : RedAffReflTrans α α' → IsNorm RedAff α' → Domain (DCC? Λ(α, β, x)) α'
-  | curr₂    : RedAffReflTrans (DCC? (β y)) τ
-    → IsNorm RedAff τ
-    → Domain (DCC? (Λ(α, β, x) y)) τ
-  | curr₁'   : RedAffReflTrans α α' → IsNorm RedAff α' → Domain (DCC? !Λ(α, β, x)) (DCC? !(α'))
-  | curr₂'   : ReflTransGen RedAff (DCC? (β y)) τ
-  → IsNorm RedAff τ
-  → Domain (DCC? (!Λ(α, β, x) &(y))) (DCC? !(τ))
-  | map      : RedAffReflTrans α α' → IsNorm RedAff α' → Domain f α → Domain (DCC? !<f>) (DCC? !(α'))
-  | fmap     : RedAffReflTrans α α' → IsNorm RedAff α' → Domain f α → Domain (DCC? $<f>) (DCC? !(α'))
-  | pair     : RedAffReflTrans α α' → IsNorm RedAff α' → Domain M α → Domain (DCC? ⟦β⟧⟨M, N⟩) α'
+@[inline]
+abbrev EtaExpr := GenericExpr (@EtaConst τ_c)
+
+@[inline, grind]
+abbrev EtaExpr.Norm := @NormExpr (@EtaConst τ_c) RedAff
+
+inductive Domain : @EtaExpr.Norm τ_c → @EtaExpr.Norm τ_c → Type u
+  | eql₁     : (hrn : RedAffNorm f_α f_α')
+    → Domain ⟨f_α', hrn.is_norm⟩ δ
+    → Domain ⟨(DCC? Eql(f_α)), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(δ.raw)), fun ⟨_, h⟩ =>
+    match h with
+    | .bang h => δ.is_norm ⟨_, h⟩⟩
+  | eql₂     : (hrn : RedAffNorm (DCC? (f_α env)) τ)
+    → Domain ⟨(DCC? (Eql(f_α) &(env))), fun ⟨_, h⟩ => by cases h with
+      | congrFun h => cases h
+      | congrArg h => cases h⟩ ⟨(DCC? !(τ)), fun ⟨_, h⟩ => match h with | .bang h => hrn.is_norm ⟨_, h⟩⟩
+  | refl₁     : (hrn : RedAffNorm f_α f_α')
+    → Domain ⟨f_α', hrn.is_norm⟩ δ
+    → Domain ⟨(DCC? refl(f_α)), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(δ.raw)), fun ⟨_, h⟩ =>
+    match h with
+    | .bang h => δ.is_norm ⟨_, h⟩⟩
+  | refl₂     : (hrn : RedAffNorm (DCC? (f_α env)) τ)
+    → Domain ⟨(DCC? (refl(f_α) &(env))), fun ⟨_, h⟩ => by cases h with
+      | congrFun h => cases h
+      | congrArg h => cases h⟩ ⟨(DCC? !(τ)), fun ⟨_, h⟩ => match h with | .bang h => hrn.is_norm ⟨_, h⟩⟩
+  | unmap    : (hrn : RedAffNorm f f') → Domain ⟨f', hrn.is_norm⟩ α
+    → Domain ⟨(DCC? *<f>), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(α.raw)), fun ⟨_, h⟩ => by
+      cases h with
+      | bang h => exact α.is_norm ⟨_, h⟩⟩
+  | unbox    : (hrn : RedAffNorm α α')
+    → Domain ⟨(DCC? *(α)), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(α')), fun ⟨_, h⟩ => by
+      cases h with
+      | bang h => exact hrn.is_norm ⟨_, h⟩⟩
+  | id       : (hrn : RedAffNorm α α') → Domain ⟨(DCC? Id(α)), fun ⟨_, h⟩ => by cases h⟩ ⟨α', hrn.is_norm⟩
+  | fstc     : (hrn : RedAffNorm β β') → Domain ⟨(DCC? Fstc(β)), fun ⟨_, h⟩ => by cases h⟩
+    ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => by cases h with
+      | coup h => exact hrn.is_norm ⟨_, h⟩⟩
+  | sndc     : (hrn : RedAffNorm β β') → Domain ⟨(DCC? Sndc(β)), fun ⟨_, h⟩ => by cases h⟩
+    ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => by cases h with
+      | coup h => exact hrn.is_norm ⟨_, h⟩⟩
+  | curr₁    : (hrn : RedAffNorm α α') → Domain ⟨(DCC? Λ(α, β, x)), fun ⟨_, h⟩ => by cases h⟩ ⟨α', hrn.is_norm⟩
+  | curr₂    : {y : @EtaExpr.Norm τ_c}
+    → (hrn : RedAffNorm (DCC? (β y.raw)) τ)
+    → Domain ⟨(DCC? (Λ(α, β, x) y.raw)), fun ⟨_, h⟩ => by
+      cases h with
+      | congrFun h => cases h
+      | congrArg h => exact y.is_norm ⟨_, h⟩⟩ ⟨τ, hrn.is_norm⟩
+  | curr₁'   : (hrn : RedAffNorm α α') → Domain ⟨(DCC? !Λ(α, β, x)), fun ⟨_, h⟩ => by cases h⟩ ⟨DCC? !(α'), fun ⟨_, h⟩ => by
+    cases h with
+    | bang h => exact hrn.is_norm ⟨_, h⟩⟩
+  | curr₂'   : (hrn : RedAffNorm (DCC? (β y)) τ)
+    → Domain ⟨(DCC? (!Λ(α, β, x) &(y))), fun ⟨_, h⟩ => by
+      cases h with
+      | congrFun h => cases h
+      | congrArg h => cases h⟩ ⟨τ, hrn.is_norm⟩
+  | map      : (hrn : RedAffNorm f f') → Domain ⟨f', hrn.is_norm⟩ α → Domain ⟨(DCC? !<f>), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(α.raw)), fun ⟨_, h⟩ => by
+    cases h with
+    | bang h => exact α.is_norm ⟨_, h⟩⟩
+  | fmap     : (hrn : RedAffNorm f f') → Domain ⟨f', hrn.is_norm⟩ α
+    → Domain ⟨(DCC? $<f>), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(α.raw)), fun ⟨_, h⟩ => by
+    cases h with
+    | bang h => exact α.is_norm ⟨_, h⟩⟩
+  | pair     : {M N : @EtaExpr.Norm τ_c} → Domain M α → Domain ⟨(DCC? ⟦β⟧⟨M.raw, N.raw⟩), fun ⟨_, h⟩ => by
+    cases h with
+    | pairl h => exact M.is_norm ⟨_, h⟩
+    | pairr h => exact N.is_norm ⟨_, h⟩⟩ α
   /-
   TODO: Not sure how to fit Eval in here yet
   | eval     : Val.Domain Val(λ env 2 => f) α → Val.Domain Val(
   | eval     : Apply x y f'
     → Apply f' z e'
     → Apply Val(λ env 1 => Eval(_α, _β, x)) Val(neutral(⟦__β⟧(y, z))) e'-/
-  | quot     : RedAffReflTrans β β' → IsNorm RedAff β' → Domain (DCC? `(β, x)) β'
+  | quot     : (hrn : RedAffNorm β β') → Domain ⟨(DCC? `(β, x)), fun ⟨_, h⟩ => by cases h⟩ ⟨β', hrn.is_norm⟩
   -- f ∘ g x
   -- again, need to handle second round
   -- can use β-reducer for this.
-  | comp'    : Domain g α   → RedAffReflTrans α α' → IsNorm RedAff α' → Domain (DCC? f ∘' g) α'
-  | comp     : Domain g α   → RedAffReflTrans α α' → IsNorm RedAff α' → Domain (DCC? f ∘ g) α'
-  | comp₂    : Domain g α   → RedAffReflTrans α α' → IsNorm RedAff α' → Domain (DCC? f ∘∘ g) α'
-  | pi       : Domain f_α δ → Domain (DCC? Π(f_α, f_β)) δ
+  | comp'    : (hrn₁ : RedAffNorm g g') → Domain ⟨g', hrn₁.is_norm⟩ α → Domain ⟨(DCC? f ∘' g), fun ⟨_, h⟩ => by cases h⟩ α'
+  | comp     : (hrn₁ : RedAffNorm g g') → Domain ⟨g', hrn₁.is_norm⟩ α → Domain ⟨(DCC? f ∘ g), fun ⟨_, h⟩ => by cases h⟩ α'
+  | comp₂    : (hrn₁ : RedAffNorm g g') → Domain ⟨g', hrn₁.is_norm⟩ α → Domain ⟨(DCC? f ∘∘ g), fun ⟨_, h⟩ => by cases h⟩ α'
+  | pi       : {f_α f_β : @EtaExpr.Norm τ_c} → Domain f_α δ → Domain ⟨(DCC? Π(f_α.raw, f_β.raw)), fun ⟨_, h⟩ => by cases h⟩ δ
 
 inductive Domain₂ : GenericExpr τ_c → GenericExpr τ_c → GenericExpr τ_c → Type u
   | comp'    : Domain g α → Domain₂ f β γ → Domain₂ (DCC? (f ∘' g)) α (DCC? γ ∘' g)

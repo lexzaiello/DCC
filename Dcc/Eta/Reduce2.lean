@@ -94,18 +94,20 @@ namespace EtaFn
 def dom_norm (_e_f : EtaFn (τ_c := τ_c) f ar doms) (idx : Fin ar) : IsNorm RedAff doms[idx].raw := doms[idx].is_norm
 
 inductive ArgTy : (e_f : EtaFn (τ_c := τ_c) f ar doms) → {idx : Fin ar}
-  → (args : Vector (@EtaExpr τ_c) (↑ idx)) → @EtaExpr.Norm τ_c → Type u
-  | mk {e_f : EtaFn f ar doms} {idx : Fin ar} {args : Vector (@EtaExpr τ_c) (↑ idx)} :
-    (hr : RedAffNorm (args.foldl .app doms[↑ idx].raw) τ)
+  → (args : Vector (@EtaExpr.Norm τ_c) idx) → @EtaExpr.Norm τ_c → Type u
+  | mk {e_f : EtaFn f ar doms} {idx : Fin ar}
+    {args : Vector (@EtaExpr.Norm τ_c) idx} :
+    (hr : RedAffNorm ((args.map NormExpr.raw).foldl .app doms[↑ idx].raw) τ)
     → ArgTy e_f args ⟨τ, hr.is_norm⟩
 
 @[grind]
 def get_arg_ty {f : @EtaExpr.Norm τ_c} (e_f : EtaFn f ar doms) {idx : Fin ar}
-  (args : Vector (@EtaExpr τ_c) idx) : ((t : @EtaExpr.Norm τ_c) × ArgTy e_f args t) := by
+  (args : Vector (@EtaExpr.Norm τ_c) idx) : ((t : @EtaExpr.Norm τ_c) × ArgTy e_f args t) := by
   cases e_f <;> exact ⟨_, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
 
 def ArgTy.complete {e_f : EtaFn (τ_c := τ_c) f ar doms}
-  {idx : Fin ar} {args : Vector (@EtaExpr τ_c) (↑ idx)} (h : ArgTy (idx := idx) e_f args τ) : e_f.get_arg_ty args = ⟨τ, h⟩ :=
+  {idx : Fin ar} {args : Vector (@EtaExpr.Norm τ_c) (↑ idx)}
+  (h : ArgTy (idx := idx) e_f args τ) : e_f.get_arg_ty args = ⟨τ, h⟩ :=
   match h with
   | ⟨hrt, hn⟩ => by
     unfold get_arg_ty
@@ -113,7 +115,7 @@ def ArgTy.complete {e_f : EtaFn (τ_c := τ_c) f ar doms}
     cases e_f <;> (simp_all; grind)
 
 instance ArgTy.instEtaRel {e_f : EtaFn f ar doms} {idx : Fin ar} : EtaRel
-  (α := Vector (@EtaExpr τ_c) idx) (β := EtaExpr.Norm) (ArgTy e_f (idx := idx)) (m := Id)  where
+  (α := Vector (@EtaExpr.Norm τ_c) idx) (β := EtaExpr.Norm) (ArgTy e_f (idx := idx)) (m := Id)  where
   run := get_arg_ty (idx := idx) e_f
   complete := ArgTy.complete (idx := idx) (e_f := e_f) (ar := ar) (doms := doms)
 
@@ -151,13 +153,28 @@ inductive Hole : (e_f : EtaFn (τ_c := τ_c) f 1 doms)
     (ViewCoup α → False) → Hole e_f level ⟨(DCC? hole(level)), fun ⟨_, h⟩ => by cases h⟩
   | coup {e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), _hn_coup⟩], by grind⟩} :
     (f_β : EtaFn ⟨β, _h_β⟩ 1 ⟨#[α], by grind⟩)
-    → f_β.Hole (level + 1) x
+    → Hole f_β (level + 1) x
     → (hr : RedAffNorm (DCC? (β x.raw)) τ_y)
     → Hole (.tm₁ (f := ⟨(DCC? Id(τ_y)), fun ⟨_, hr⟩ => by cases hr⟩) (by grind) (.id .refl hr.raw.right)) (level + 2) y
-    → Hole e_f level ⟨(DCC? ⟦β⟧(x.raw, y.raw)), fun ⟨_, h⟩ => by cases h; exact NormExpr.red _ (by assumption); exact NormExpr.red _ (by assumption)⟩
+    → Hole e_f level ⟨(DCC? ⟦β⟧(x.raw, y.raw)),
+      fun ⟨_, h⟩ => by cases h; exact NormExpr.red _ (by assumption); exact NormExpr.red _ (by assumption)⟩
   | bang {e_f : EtaFn f 1 ⟨#[⟨DCC? !(α), _h_n_bang⟩], by grind⟩} :
       Hole (.tm₁ (f := ⟨(DCC? Id(α)), fun ⟨_, h⟩ => by cases h⟩) (by grind) (.id hrt hn)) (level + 1) x
     → Hole e_f level ⟨(DCC? &(x.raw)), fun ⟨_, h⟩ => by cases h⟩
+
+inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
+  → (take : Fin (ar + 1)) → (level : ℕ)
+  → (holes : Vector (@EtaExpr.Norm τ_c) take) → Type u
+  | nil  {e_f : EtaFn f 1 doms} : Hole e_f level hole_e
+    → Holes e_f 1 level ⟨#[hole_e], by grind⟩
+  | cons {e_f  : EtaFn f (ar + 2) doms} {take : Fin (ar + 2)}
+    {pre  : Vector EtaExpr.Norm take} :
+    Holes e_f ⟨take.val, by grind⟩ (level + 1) pre
+    → (hArg : ArgTy e_f pre (idx := take) τ)
+    → Hole (.tm₁ (f := ⟨DCC? Id(τ.raw), fun ⟨_, h⟩ => by cases h⟩)
+      (by grind) (.id .refl τ.is_norm)) (level + 2) hole'
+    --→ Hole e_f (.tm₁ (f := ⟨(DCC? Id(τ.raw)), by sorry⟩) (by grind) (.id .refl τ.is_norm)) (level + 2) hole'
+    → Holes (ar := ar + 2) e_fn ⟨take.val + 1, by grind⟩ level (pre.push hole')
 
 def holes (f : EtaFn f ar doms) : List (@EtaExpr τ_c) :=
   sorry

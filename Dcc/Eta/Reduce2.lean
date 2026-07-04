@@ -50,16 +50,75 @@ variable [DecidableEq τ_c]
 @[inline]
 abbrev EtaExpr := GenericExpr (@EtaConst τ_c)
 
-inductive MkHole : (ar : ℕ) → (level : ℕ) → (f : GenericExpr (@EtaConst τ_c)) → (heq : tm_arity f = ar) → (GenericExpr (@EtaConst τ_c)) → Type u
+/-
+Holes are either couples, or banged couples.
+
+Coup(β)
+
+a hole for β is the fst element
+-/
+inductive MkHole : (dom : @EtaExpr τ_c) → (level : ℕ) → (hole_e : @EtaExpr τ_c) → Type u
+  -- No more recursion. This is a terminal leaf
+  | pure : (ViewCoup dom → False) → MkHole dom level (DCC? hole(level))
+  | coup : Domain β α → MkHole α (level + 1) x
+    → RedAffReflTrans (DCC? (β x)) τ_y → IsNorm RedAff τ_y
+    → MkHole τ_y (level + 2) y
+    → MkHole (DCC? Coup(β)) level (DCC? ⟦β⟧(x, y))
+  | bang : MkHole α (level + 1) x → MkHole (DCC? !(α)) level (DCC? &(x))
+
+@[dcc_size]
+def MkHole.size_zero (h : MkHole dom level hole_e) : hole_e.size = 0 :=
+  match h with
+  | .pure hn => by grind
+  | .coup h_dom h_mk₁ hrt₁ hn₁ h_mk₂ =>
+    have ha := h_mk₁.size_zero
+    have hb := h_mk₂.size_zero
+    by grind
+  | .bang h_mk =>
+    have ha := h_mk.size_zero
+    by grind
+
+/-inductive MkHole : (ar : ℕ) → (level : ℕ) → (f : GenericExpr (@EtaConst τ_c)) → (heq : tm_arity f = ar) → (GenericExpr (@EtaConst τ_c)) → Type u
   | coupl : Domain f (DCC? Coup(β)) → MkHole 1 level f heq (DCC? (f ⟦β⟧(&(hole(level + 1)), &(hole(level + 2)))))
   | tm    : Domain f τ → (ViewCoup τ → False) → MkHole 1 level f heq (DCC? (f hole(level + 1)))
   | bang  : Domain f (DCC? !(Coup(β))) → MkHole 1 level f heq (DCC? (f ⟦β⟧(&(hole(level + 1)), &(hole(level + 2)))))
   | bang₂ : Domain₂ f (DCC? !(α)) (DCC? !<β>) → MkHole 2 level f heq (DCC? (f &(hole(level + 1)) &(hole(level + 2))))
-  | tm₂   : Domain₂ f α β → (GenericExpr.is_bang α = .none) → MkHole 2 level f heq (DCC? (f hole(level + 1) hole(level + 2)))
+  | tm₂   : Domain₂ f α β → (GenericExpr.is_bang α = .none) → MkHole 2 level f heq (DCC? (f hole(level + 1) hole(level + 2)))-/
 
 @[grind]
-def mk_hole (e : GenericExpr (@EtaConst τ_c)) (heq : tm_arity e = n) (level : ℕ) : Option ((f' : GenericExpr (@EtaConst τ_c)) × (PULift.{u + 2, u + 1} (MkHole n level e heq f'))) :=
-  match n with
+def mk_hole (dom : @EtaExpr τ_c) (level : ℕ) : Option ((f' : GenericExpr (@EtaConst τ_c)) × (PULift.{u + 2, u + 1} (MkHole dom level f'))) :=
+  if heq : dom.view_coup?.isSome then
+    match heq : dom.view_coup?.get heq with
+    | (.coup (β := β)) =>
+      match GenericExpr.domain? β with
+      | .some ⟨α, ⟨h_dom_β⟩⟩ =>
+        have h_dec : α.size < β.coup.size := by
+          have h := Domain.instRedRel.decreasing h_dom_β
+          grind
+        match mk_hole α (level + 1) with
+        | .some ⟨x, ⟨h₁⟩⟩ =>
+          have h_dec : (DCC? (β x)).size < (DCC? Coup(β)).size := by
+            have ha := h₁.size_zero
+            grind
+          have h_dec₂ : (reduce RedAff (DCC? (β x))).fst.size < (DCC? Coup(β)).size := by
+            have h := decreasing? RedAff (reduce_sound (A := (DCC? (β x))) rfl)
+            grind
+          match mk_hole (reduce RedAff (DCC? (β x))).fst (level + 2) with
+          | .some ⟨_, ⟨h₂⟩⟩ =>
+            .some ⟨_, ⟨.coup h_dom_β h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩⟩
+          | .none => .none
+        | .none => .none
+      | .none => .none
+    | (.bang (α := α)) =>
+      have h_dec : α.size < α.bang.size := by
+        grind
+      match mk_hole α (level + 1) with
+      | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.bang h⟩⟩
+      | .none => .none
+  else
+    .some ⟨_, ⟨.pure (view_coup?_none_sound (by simp_all))⟩⟩
+termination_by dom.size
+  /-match n with
   | 1 =>
     match domain? e with
     | .some ⟨τ, ⟨h⟩⟩ =>
@@ -78,7 +137,7 @@ def mk_hole (e : GenericExpr (@EtaConst τ_c)) (heq : tm_arity e = n) (level : �
           .some ⟨_, ⟨.tm₂ h (by simp_all)⟩⟩
         else .none
     | .none => .none
-  | _ => .none
+  | _ => .none-/
 
 @[dcc_rel, aesop safe apply (rule_sets := [DccRel])]
 def Domain₂.eq {e α β : GenericExpr τ_c} (h₁ h₂ : Domain₂ e α β) : h₁ = h₂ := by
@@ -605,8 +664,7 @@ def RedEta₂.complete {e e' : GenericExpr τ_c} (h : RedEta₂ e e') : red_eta 
       case h_1 h_dom heq => cases h h_dom
       simp_all
       cases h_ok_eq.symm
-      congr
-      any_goals (first | grind | aesop)
+      congr <;> grind
     | .inr ⟨δ', h₁, ⟨h₂⟩⟩ =>
       split
       case h_1 h_dom heq =>

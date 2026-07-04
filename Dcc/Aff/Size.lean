@@ -33,9 +33,9 @@ def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   | DCC[.] !(x)   => x.size + 1
   | DCC[.] *(α)   => α.size + 2
   | DCC[.] *<α>   => α.size + 2
-  | DCC[.] &(x)   => x.size + x.size + x.size + 2
+  | DCC[.] &(x)   => x.size + x.size + x.size + x.size
   | DCC[.] !<x>   => x.size + x.size + x.size + 2
-  | DCC[.] $<x>   => x.size + x.size + x.size + 2
+  | DCC[.] $<x>   => x.size + x.size + x.size + x.size + 2
   | DCC[.] (f x) => f.size + x.size
   | .const _ => 0
 

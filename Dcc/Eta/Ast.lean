@@ -320,13 +320,13 @@ theorem view_pi?_none_sound (h : view_pi? e = .none) : ViewPi e → False := fun
 
 inductive ViewCoup : GenericExpr τ_c → Type u
   | coup    : ViewCoup (DCC? Coup(β))
-  | bang    : ViewCoup (DCC? !(Coup(β)))
+  | bang    : ViewCoup (DCC? !(α))
 
 @[grind, dcc_rel]
 def view_coup? (e : GenericExpr τ_c) : Option (ViewCoup e) :=
   match e with
-  | (DCC? Coup(_β))    => .some .coup
-  | (DCC? !(Coup(_β))) => .some .bang
+  | (DCC? Coup(_β)) => .some .coup
+  | (DCC? !(_α))    => .some .bang
   | _ => .none
 
 inductive IsEtaTm : GenericExpr τ_c → Type u

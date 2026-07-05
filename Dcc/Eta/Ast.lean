@@ -804,6 +804,10 @@ def Domain₂.unique {f τ₁a τ₁b τ₂a τ₂b : @NormExpr τ_c RedAff} (h�
   have hb := h₂.complete
   grind
 
+@[dcc_size]
+def Domain.size_pos (h : Domain f τ) : 0 < f.size := by
+  induction h <;> grind
+
 end NormExpr
 
 open NormExpr in

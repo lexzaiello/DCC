@@ -127,6 +127,89 @@ instance EtaFn.instEtaRel : EtaRel
   complete := fun h => by
     simp [h.complete]
 
+open GenericExpr in
+inductive Hole : (α : @EtaExpr.Norm τ_c)
+  → (level : ℕ)
+  → (hole_e : @EtaExpr.Norm τ_c)
+  → Type u
+  | pure : (ViewCoup α → False)
+    → Hole ⟨α, hn⟩ level ⟨(DCC? hole(level)), fun ⟨_, h⟩ => by cases h⟩
+  | coup : Domain ⟨β, fun ⟨_, h⟩ => hn ⟨_, .coup h⟩⟩ α
+    → Hole α (level + 2) ⟨hole₁, hn_hole₁⟩
+    → RedAffNorm (DCC? (β hole₁)) τ_snd
+    → Hole τ_snd (level + 1) ⟨hole₂, hn_hole₂⟩
+    → Hole ⟨(DCC? Coup(β)), hn⟩ level ⟨DCC? ⟦β⟧(hole₁, hole₂), fun ⟨_, h⟩ =>
+      match h with
+      | .sigl h => hn_hole₁ ⟨_, h⟩
+      | .sigr h => hn_hole₂ ⟨_, h⟩⟩
+  | bang : Hole ⟨α, hn_α⟩ (level + 1) ⟨hole, hn_hole⟩ → Hole ⟨(DCC? !(α)), fun ⟨_, h⟩ =>
+    match h with
+    | .bang h => hn_α ⟨_, h⟩⟩ level ⟨(DCC? &(hole)), fun ⟨_, h⟩ => nomatch h⟩
+
+@[dcc_size]
+def Hole.size_zero (h : Hole α level hole_e) : hole_e.size = 0 := by
+  induction h <;> grind
+
+open GenericExpr in
+def mk_hole (α : @EtaExpr.Norm τ_c) (level : ℕ) : Option ((hole_e : @EtaExpr.Norm τ_c) × Hole α level hole_e) :=
+  match α with
+  | ⟨α, hn_α⟩ =>
+    if h_coup_some : α.view_coup?.isSome then
+      match α, α.view_coup?.get h_coup_some with
+      | DCC? Coup(β₀), .coup =>
+        let β := (NormExpr.mk β₀ (fun ⟨_, h⟩ => hn_α ⟨_, .coup h⟩))
+        match β.domain? with
+        | .some ⟨α, h_dom⟩ =>
+          have h_dec₁ : α.size < β.size := Domain.instRedRel.decreasing h_dom
+          have h_dec₂ : α.size < β₀.size := by
+            grind
+          have h_dec₃ : α.size < (NormExpr.mk β₀.coup hn_α).size := by
+            grind
+          match α.mk_hole (level + 2) with
+          | .some ⟨⟨hole₁, hn_hole₁⟩, h_hole₁⟩ =>
+            let τ_snd      := red_aff (A := (DCC? (β₀ hole₁)))
+            have h_size_eq := h_hole₁.size_zero
+            have h_dec₁ : (β₀.app hole₁).red_aff.size ≤ (β₀.app hole₁).size := by
+              grind
+            have h_dec₂ : (β₀.app hole₁).red_aff.size < (mk β₀.coup hn_α).size := by
+              grind
+            match τ_snd.mk_hole (level + 1) with
+            | .some ⟨⟨hole₂, hn_hole₂⟩, h_hole₂⟩ =>
+              .some ⟨_, .coup h_dom h_hole₁ (aff_sound rfl) h_hole₂⟩
+            | .none => .none
+          | .none => .none
+        | .none => .none
+      | DCC? !(α₀), .bang =>
+        let hn := (fun ⟨_, h⟩ => hn_α ⟨_, .bang h⟩)
+        let α  := NormExpr.mk α₀ hn
+        have h_dec : (NormExpr.mk α₀ hn).size < (mk α₀.bang hn_α).size := by
+          grind
+        match α.mk_hole (level + 1) with
+        | .some ⟨_, h_hole₁⟩ => .some ⟨_, .bang h_hole₁⟩
+        | .none => .none
+    else
+      .some ⟨_, .pure (α.view_coup?_none_sound (by simp_all))⟩
+termination_by α.size
+
+namespace Domain
+
+open GenericExpr
+
+inductive Hole : {f : @EtaExpr.Norm τ_c}
+  → (α : @EtaExpr.Norm τ_c)
+  → (h_dom : Domain f α)
+  → (level : ℕ)
+  → (hole_e : @EtaExpr.Norm τ_c)
+  → Type u
+  | pure {f : @EtaExpr.Norm τ_c} : (ViewCoup α → False)
+    → Hole ⟨α, hn⟩ h_dom level ⟨(DCC? hole(level)), fun ⟨_, h⟩ => by cases h⟩
+  | coup {f : @EtaExpr.Norm τ_c} : (h_dom : Domain ⟨β, hn_β⟩ α_β)
+    → Hole α_β h_dom (level + 1) hole₁
+    → RedAffNorm (DCC? (β hole₁)) τ_snd
+    → Hole τ_snd 
+
+end Domain
+
 namespace EtaFn
 
 /-
@@ -179,6 +262,7 @@ instance ArgTy.instEtaRel {e_f : EtaFn f ar doms} {idx : Fin ar} : EtaRel
 /-
 First hole of a function with arity 1
 -/
+
 inductive Hole : (e_f : EtaFn (τ_c := τ_c) f 1 doms)
   → (level : ℕ) → (hole_e : @EtaExpr.Norm τ_c) → Type u
   | pure {e_f : EtaFn f 1 ⟨#[⟨α, _hn_α⟩], by grind⟩} :

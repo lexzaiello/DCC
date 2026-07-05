@@ -491,184 +491,257 @@ theorem view_coup?_none_sound (h : view_coup? e = .none) : ViewCoup e → False 
 open Relation (ReflTransGen)
 open GenericExpr (IsNorm decreasing? reduce RedRel reduce_norm reduce_sound norm_unique Complete reduce_complete reduce_complete_fst)
 
-@[inline]
-abbrev EtaExpr := GenericExpr (@EtaConst τ_c)
+end GenericExpr
 
 @[inline, grind]
-abbrev EtaExpr.Norm := @NormExpr (@EtaConst τ_c) RedAff
+abbrev EtaExpr.Norm := @NormExpr (@EtaConst τ_c) GenericExpr.RedAff
 
-inductive Domain : @EtaExpr.Norm τ_c → @EtaExpr.Norm τ_c → Type u
+namespace NormExpr
+open GenericExpr
+
+inductive Domain : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
   | eql₁     : (hrn : RedAffNorm f_α f_α')
-    → Domain ⟨f_α', hrn.is_norm⟩ δ
-    → Domain ⟨(DCC? Eql(f_α)), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(δ.raw)), fun ⟨_, h⟩ =>
+    → Domain f_α' δ
+    → Domain ⟨(DCC? Eql(f_α)), fun ⟨_, h⟩ => nomatch h⟩ ⟨(DCC? !(δ.raw)), fun ⟨_, h⟩ =>
     match h with
     | .bang h => δ.is_norm ⟨_, h⟩⟩
-  | eql₂     : (hrn : RedAffNorm (DCC? (f_α env)) τ)
-    → Domain ⟨(DCC? (Eql(f_α) &(env))), fun ⟨_, h⟩ => by cases h with
-      | congrFun h => cases h
-      | congrArg h => cases h⟩ ⟨(DCC? !(τ)), fun ⟨_, h⟩ => match h with | .bang h => hrn.is_norm ⟨_, h⟩⟩
+  | eql₂     : (hrn : RedAffNorm (DCC? (f_α env)) ⟨τ, hn_τ⟩)
+    → Domain ⟨(DCC? (Eql(f_α) &(env))), fun ⟨_, h⟩ => match h with
+      | .congrFun h => nomatch h
+      | .congrArg h => nomatch h⟩ ⟨(DCC? !(τ)), fun ⟨_, h⟩ => match h with | .bang h => hn_τ ⟨_, h⟩⟩
   | refl₁     : (hrn : RedAffNorm f_α f_α')
-    → Domain ⟨f_α', hrn.is_norm⟩ δ
-    → Domain ⟨(DCC? refl(f_α)), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(δ.raw)), fun ⟨_, h⟩ =>
+    → Domain f_α' δ
+    → Domain ⟨(DCC? refl(f_α)), fun ⟨_, h⟩ => nomatch h⟩ ⟨(DCC? !(δ.raw)), fun ⟨_, h⟩ =>
     match h with
     | .bang h => δ.is_norm ⟨_, h⟩⟩
-  | refl₂     : (hrn : RedAffNorm (DCC? (f_α env)) τ)
-    → Domain ⟨(DCC? (refl(f_α) &(env))), fun ⟨_, h⟩ => by cases h with
-      | congrFun h => cases h
-      | congrArg h => cases h⟩ ⟨(DCC? !(τ)), fun ⟨_, h⟩ => match h with | .bang h => hrn.is_norm ⟨_, h⟩⟩
-  | unmap    : (hrn : RedAffNorm f f') → Domain ⟨f', hrn.is_norm⟩ α
-    → Domain ⟨(DCC? *<f>), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(α.raw)), fun ⟨_, h⟩ => by
-      cases h with
-      | bang h => exact α.is_norm ⟨_, h⟩⟩
-  | unbox    : (hrn : RedAffNorm α α')
-    → Domain ⟨(DCC? *(α)), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(α')), fun ⟨_, h⟩ => by
-      cases h with
-      | bang h => exact hrn.is_norm ⟨_, h⟩⟩
-  | id       : (hrn : RedAffNorm α α') → Domain ⟨(DCC? Id(α)), fun ⟨_, h⟩ => by cases h⟩ ⟨α', hrn.is_norm⟩
-  | fstc     : (hrn : RedAffNorm β β') → Domain ⟨(DCC? Fstc(β)), fun ⟨_, h⟩ => by cases h⟩
-    ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => by cases h with
-      | coup h => exact hrn.is_norm ⟨_, h⟩⟩
-  | sndc     : (hrn : RedAffNorm β β') → Domain ⟨(DCC? Sndc(β)), fun ⟨_, h⟩ => by cases h⟩
-    ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => by cases h with
-      | coup h => exact hrn.is_norm ⟨_, h⟩⟩
-  | curr₁    : (hrn : RedAffNorm α α') → Domain ⟨(DCC? Λ(α, β, x)), fun ⟨_, h⟩ => by cases h⟩ ⟨α', hrn.is_norm⟩
-  | curr₂    : {y : @EtaExpr.Norm τ_c}
+  | refl₂     : (hrn : RedAffNorm (DCC? (f_α env)) ⟨τ, hn_τ⟩)
+    → Domain ⟨(DCC? (refl(f_α) &(env))), fun ⟨_, h⟩ => match h with
+      | .congrFun h => nomatch h
+      | .congrArg h => nomatch h⟩ ⟨(DCC? !(τ)), fun ⟨_, h⟩ => match h with | .bang h => hn_τ ⟨_, h⟩⟩
+  | unmap    : (hrn : RedAffNorm f f') → Domain f' α
+    → Domain ⟨(DCC? *<f>), fun ⟨_, h⟩ => nomatch h⟩ ⟨(DCC? !(α.raw)), fun ⟨_, h⟩ =>
+      match h with
+      | .bang h => α.is_norm ⟨_, h⟩⟩
+  | unbox    : (hrn : RedAffNorm α ⟨α', hn_α'⟩)
+    → Domain ⟨(DCC? *(α)), fun ⟨_, h⟩ => nomatch h⟩ ⟨(DCC? !(α')), fun ⟨_, h⟩ =>
+      match h with
+      | .bang h => hn_α' ⟨_, h⟩⟩
+  | id       : (hrn : RedAffNorm α α') → Domain ⟨(DCC? Id(α)), fun ⟨_, h⟩ => nomatch h⟩ α'
+  | fstc     : (hrn : RedAffNorm β ⟨β', hn_β'⟩) → Domain ⟨(DCC? Fstc(β)), fun ⟨_, h⟩ => nomatch h⟩
+    ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => match h with
+      | .coup h => hn_β' ⟨_, h⟩⟩
+  | sndc     : (hrn : RedAffNorm β ⟨β', hn_β'⟩) → Domain ⟨(DCC? Sndc(β)), fun ⟨_, h⟩ => nomatch h⟩
+    ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => match h with
+      | .coup h => hn_β' ⟨_, h⟩⟩
+  | curr₁    : (hrn : RedAffNorm α α') → Domain ⟨(DCC? Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩ α'
+  | curr₂    : {y : @NormExpr τ_c RedAff}
     → (hrn : RedAffNorm (DCC? (β y.raw)) τ)
-    → Domain ⟨(DCC? (Λ(α, β, x) y.raw)), fun ⟨_, h⟩ => by
-      cases h with
-      | congrFun h => cases h
-      | congrArg h => exact y.is_norm ⟨_, h⟩⟩ ⟨τ, hrn.is_norm⟩
-  | curr₁'   : (hrn : RedAffNorm α α') → Domain ⟨(DCC? !Λ(α, β, x)), fun ⟨_, h⟩ => by cases h⟩ ⟨DCC? !(α'), fun ⟨_, h⟩ => by
-    cases h with
-    | bang h => exact hrn.is_norm ⟨_, h⟩⟩
+    → Domain ⟨(DCC? (Λ(α, β, x) y.raw)), fun ⟨_, h⟩ =>
+      match h with
+      | .congrFun h => nomatch h
+      | .congrArg h => y.is_norm ⟨_, h⟩⟩ τ
+  | curr₁'   : (hrn : RedAffNorm α ⟨α', hn_α'⟩) → Domain ⟨(DCC? !Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩ ⟨DCC? !(α'), fun ⟨_, h⟩ =>
+    match h with
+    | .bang h => hn_α' ⟨_, h⟩⟩
   | curr₂'   : (hrn : RedAffNorm (DCC? (β y)) τ)
-    → Domain ⟨(DCC? (!Λ(α, β, x) &(y))), fun ⟨_, h⟩ => by
-      cases h with
-      | congrFun h => cases h
-      | congrArg h => cases h⟩ ⟨τ, hrn.is_norm⟩
-  | map      : (hrn : RedAffNorm f f') → Domain ⟨f', hrn.is_norm⟩ α → Domain ⟨(DCC? !<f>), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(α.raw)), fun ⟨_, h⟩ => by
-    cases h with
-    | bang h => exact α.is_norm ⟨_, h⟩⟩
-  | fmap     : (hrn : RedAffNorm f f') → Domain ⟨f', hrn.is_norm⟩ α
-    → Domain ⟨(DCC? $<f>), fun ⟨_, h⟩ => by cases h⟩ ⟨(DCC? !(α.raw)), fun ⟨_, h⟩ => by
-    cases h with
-    | bang h => exact α.is_norm ⟨_, h⟩⟩
-  | pair     : {M N : @EtaExpr.Norm τ_c} → Domain M α → Domain ⟨(DCC? ⟦β⟧⟨M.raw, N.raw⟩), fun ⟨_, h⟩ => by
-    cases h with
-    | pairl h => exact M.is_norm ⟨_, h⟩
-    | pairr h => exact N.is_norm ⟨_, h⟩⟩ α
+    → Domain ⟨(DCC? (!Λ(α, β, x) &(y))), fun ⟨_, h⟩ =>
+      match h with
+      | .congrFun h => nomatch h
+      | .congrArg h => nomatch h⟩ τ
+  | map      : (hrn : RedAffNorm f f') → Domain f' α → Domain ⟨(DCC? !<f>), fun ⟨_, h⟩ => nomatch h⟩ ⟨(DCC? !(α.raw)), fun ⟨_, h⟩ =>
+    match h with
+    | .bang h => α.is_norm ⟨_, h⟩⟩
+  | fmap     : (hrn : RedAffNorm f f') → Domain f' α
+    → Domain ⟨(DCC? $<f>), fun ⟨_, h⟩ => nomatch h⟩ ⟨(DCC? !(α.raw)), fun ⟨_, h⟩ =>
+    match h with
+    | .bang h => α.is_norm ⟨_, h⟩⟩
+  | pair     : {M N : GenericExpr τ_c}
+    → (hn₁ : IsNorm RedAff M)
+    → (hn₂ : IsNorm RedAff N)
+    → Domain ⟨M, hn₁⟩ α
+    → Domain ⟨(DCC? ⟦β⟧⟨M, N⟩), fun ⟨_, h⟩ =>
+    match h with
+    | .pairl h => hn₁ ⟨_, h⟩
+    | .pairr h => hn₂ ⟨_, h⟩⟩ α
   /-
   TODO: Not sure how to fit Eval in here yet
   | eval     : Val.Domain Val(λ env 2 => f) α → Val.Domain Val(
   | eval     : Apply x y f'
     → Apply f' z e'
     → Apply Val(λ env 1 => Eval(_α, _β, x)) Val(neutral(⟦__β⟧(y, z))) e'-/
-  | quot     : (hrn : RedAffNorm β β') → Domain ⟨(DCC? `(β, x)), fun ⟨_, h⟩ => by cases h⟩ ⟨β', hrn.is_norm⟩
+  | quot     : (hrn : RedAffNorm β β') → Domain ⟨(DCC? `(β, x)), fun ⟨_, h⟩ => nomatch h⟩ β'
   -- f ∘ g x
   -- again, need to handle second round
   -- can use β-reducer for this.
-  | comp'    : (hrn₁ : RedAffNorm g g') → Domain ⟨g', hrn₁.is_norm⟩ α → Domain ⟨(DCC? f ∘' g), fun ⟨_, h⟩ => by cases h⟩ α'
-  | comp     : (hrn₁ : RedAffNorm g g') → Domain ⟨g', hrn₁.is_norm⟩ α → Domain ⟨(DCC? f ∘ g), fun ⟨_, h⟩ => by cases h⟩ α'
-  | comp₂    : (hrn₁ : RedAffNorm g g') → Domain ⟨g', hrn₁.is_norm⟩ α → Domain ⟨(DCC? f ∘∘ g), fun ⟨_, h⟩ => by cases h⟩ α'
-  | pi       : {f_α f_β : @EtaExpr.Norm τ_c} → Domain f_α δ → Domain ⟨(DCC? Π(f_α.raw, f_β.raw)), fun ⟨_, h⟩ => by cases h⟩ δ
+  | comp'    : (hrn₁ : RedAffNorm g g') → Domain g' α
+    → Domain ⟨(DCC? f ∘' g), fun ⟨_, h⟩ => nomatch h⟩ α
+  | comp     : (hrn₁ : RedAffNorm g g') → Domain g' α
+    → Domain ⟨(DCC? f ∘ g), fun ⟨_, h⟩ => nomatch h⟩ α
+  | comp₂    : (hrn₁ : RedAffNorm g g') → Domain g' α
+    → Domain ⟨(DCC? f ∘∘ g), fun ⟨_, h⟩ => nomatch h⟩ α
+  | pi       : (hn₁ : IsNorm RedAff f_α)
+    → (hn₂ : IsNorm RedAff f_β)
+    → Domain ⟨f_α, hn₁⟩ δ
+    → Domain ⟨(DCC? Π(f_α, f_β)), fun ⟨_, h⟩ => match h with
+      | .pil h => hn₁ ⟨_, h⟩
+      | .pir h => hn₂ ⟨_, h⟩⟩ δ
 
-inductive Domain₂ : GenericExpr τ_c → GenericExpr τ_c → GenericExpr τ_c → Type u
-  | comp'    : Domain g α → Domain₂ f β γ → Domain₂ (DCC? (f ∘' g)) α (DCC? γ ∘' g)
-  | eql      : Domain f_α δ → RedAffReflTrans f_α f_α' → IsNorm RedAff f_α' → (DCC? Eql(f_α)).Domain₂ δ f_α'
-  | refl     : Domain f_α δ → RedAffReflTrans f_α f_α' → IsNorm RedAff f_α' → (DCC? refl(f_α)).Domain₂ δ f_α'
-  | curr     : RedAffReflTrans α α' → IsNorm RedAff α' → RedAffReflTrans β β' → IsNorm RedAff β' → Domain₂ (DCC? Λ(α, β, x)) α' β'
-  | curr'    : RedAffReflTrans α α' → IsNorm RedAff α' → Domain₂ (DCC? !Λ(α, β, x)) (DCC? !(α')) (DCC? !<β>)
+inductive Domain₂ : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
+  | comp'    : (hrn₁ : RedAffNorm f f')
+    → (hrn₂ : RedAffNorm g ⟨g', hn_g'⟩)
+    → Domain ⟨g', hn_g'⟩ α
+    → Domain₂ f' β γ
+    → Domain₂ ⟨(DCC? (f ∘' g)), fun ⟨_, h⟩ => nomatch h⟩ α ⟨(DCC? γ.raw ∘' g'), fun ⟨_, h⟩ => nomatch h⟩
+  | eql      : (hrn₁ : RedAffNorm f_α ⟨f_α', hn_f_α'⟩) → Domain ⟨f_α', hn_f_α'⟩ δ
+    → Domain₂ ⟨(DCC? Eql(f_α)), fun ⟨_, h⟩ => nomatch h⟩ δ ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ => nomatch h⟩
+  | refl     : (hrn₁ : RedAffNorm f_α ⟨f_α', hn_f_α'⟩) → Domain ⟨f_α', hn_f_α'⟩ δ
+    → Domain₂ ⟨(DCC? refl(f_α)), fun ⟨_, h⟩ => nomatch h⟩ δ ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ => nomatch h⟩
+  | curr     : (hrn₁ : RedAffNorm α α') → (hrn₂ : RedAffNorm β β')
+    → Domain₂ ⟨(DCC? Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩ α' β'
+  | curr'    : (hrn₁ : RedAffNorm α ⟨α', hn_α'⟩) → (hrn₂ : RedAffNorm β ⟨β', hn_β'⟩)
+    → Domain₂ ⟨(DCC? !Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩
+    ⟨DCC? !(α'), fun ⟨_, h⟩ => match h with | .bang h => hn_α' ⟨_, h⟩⟩ ⟨DCC? !<β'>, fun ⟨_, h⟩ => nomatch h⟩
 
-@[dcc_force_reduce, dcc_force_aff]
-def domain? [DecidableEq τ_c] (e : GenericExpr τ_c) : Option ((τ : GenericExpr τ_c) × (Domain e τ)) :=
+set_option maxHeartbeats 20000000 in
+@[grind]
+def domain? [DecidableEq τ_c] (e : @NormExpr τ_c RedAff) : Option ((τ : @NormExpr τ_c RedAff) × (Domain e τ)) :=
   match e with
-  | (DCC? Eql(f_α)) =>
-    match f_α.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .eql₁ h (reduce_sound rfl) (reduce_norm rfl)⟩
-    | _ => .none
-  | (DCC? (Eql(_f_α) &(_env))) => .some ⟨_, .eql₂ (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? refl(f_α)) =>
-    match f_α.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .refl₁ h (reduce_sound rfl) (reduce_norm rfl)⟩
-    | _ => .none
-  | (DCC? (refl(_f_α) &(_env))) => .some ⟨_, .refl₂ (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? *<f>) =>
-    match f.domain? with
-    | .some ⟨_, h⟩ =>
-      .some ⟨_, .unmap h (reduce_sound rfl) (reduce_norm rfl)⟩
-    | _ => .none
-  | (DCC? *(_α)) => .some ⟨_, .unbox (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? Id(_α)) => .some ⟨_, .id (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? Fstc(_β)) => .some ⟨_, .fstc (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? Sndc(_β)) => .some ⟨_, .sndc (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? Λ(_α, _β, _x)) => .some ⟨_, .curr₁ (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? (Λ(_α, _β, _x) _y)) => .some ⟨_, .curr₂ (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? !Λ(_α, _β, _x)) => .some ⟨_, .curr₁' (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? (!Λ(_α, _β, _x) &(_y))) => .some ⟨_, .curr₂' (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? !<f>) =>
-    match f.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .map (reduce_sound rfl) (reduce_norm rfl) h⟩
-    | _ => .none
-  | (DCC? $<f>) =>
-    match f.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .fmap (reduce_sound rfl) (reduce_norm rfl) h⟩
-    | _ => .none
-  | (DCC? ⟦_β⟧⟨M, _N⟩) =>
-    match M.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .pair (reduce_sound rfl) (reduce_norm rfl) h⟩
-    | _ => .none
-  | (DCC? `(_β, _x)) => .some ⟨_, .quot (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? _f ∘' g) =>
-    match g.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .comp' h (reduce_sound rfl) (reduce_norm rfl)⟩
-    | _ => .none
-  | (DCC? _f ∘ g) =>
-    match g.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .comp h (reduce_sound rfl) (reduce_norm rfl)⟩
-    | _ => .none
-  | (DCC? _f ∘∘ g) =>
-    match g.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .comp₂ h (reduce_sound rfl) (reduce_norm rfl)⟩
-    | _ => .none
-  | (DCC? Π(f_α, _f_β)) =>
-    match f_α.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .pi h⟩
-    | _ => .none
-  | _ => .none
+  | ⟨e, hn⟩ =>
+    match e with
+    | (DCC? Eql(f_α)) =>
+      match f_α.red_aff.domain? with
+      | .some ⟨_, h⟩ => .some ⟨_, .eql₁ (aff_sound rfl) h⟩
+      | _ => .none
+    | (DCC? (Eql(_f_α) &(_env))) => .some ⟨_, .eql₂ (aff_sound rfl)⟩
+    | (DCC? refl(f_α)) =>
+      match f_α.red_aff.domain? with
+      | .some ⟨_, h⟩ => .some ⟨_, .refl₁ (aff_sound rfl) h⟩
+      | _ => .none
+    | (DCC? (refl(_f_α) &(_env))) => .some ⟨_, .refl₂ (aff_sound rfl)⟩
+    | (DCC? *<f>) =>
+      match f.red_aff.domain? with
+      | .some ⟨_, h⟩ =>
+        .some ⟨_, .unmap (aff_sound rfl) h⟩
+      | _ => .none
+    | (DCC? *(_α)) => .some ⟨_, .unbox (aff_sound rfl)⟩
+    | (DCC? Id(_α)) => .some ⟨_, .id (aff_sound rfl)⟩
+    | (DCC? Fstc(_β)) => .some ⟨_, .fstc (aff_sound rfl)⟩
+    | (DCC? Sndc(_β)) => .some ⟨_, .sndc (aff_sound rfl)⟩
+    | (DCC? Λ(_α, _β, _x)) => .some ⟨_, .curr₁ (aff_sound rfl)⟩
+    | (DCC? (Λ(_α, _β, _x) y)) => .some ⟨_, .curr₂
+      (y := ⟨y, fun ⟨_, h⟩ => hn ⟨_, .congrArg h⟩⟩) (aff_sound rfl)⟩
+    | (DCC? !Λ(_α, _β, _x)) => .some ⟨_, .curr₁' (aff_sound rfl)⟩
+    | (DCC? (!Λ(_α, _β, _x) &(_y))) => .some ⟨_, .curr₂' (aff_sound rfl)⟩
+    | (DCC? !<f>) =>
+      match f.red_aff.domain? with
+      | .some ⟨_, h⟩ => .some ⟨_, .map (aff_sound rfl) h⟩
+      | _ => .none
+    | (DCC? $<f>) =>
+      match f.red_aff.domain? with
+      | .some ⟨_, h⟩ => .some ⟨_, .fmap (aff_sound rfl) h⟩
+      | _ => .none
+    | (DCC? ⟦_β⟧⟨M, N⟩) =>
+      let M' : @NormExpr τ_c RedAff := ⟨M, (fun ⟨_, h⟩ => hn ⟨_, .pairl h⟩)⟩
+      --let N' : @NormExpr τ_c RedAff := ⟨N, (fun ⟨_, h⟩ => hn ⟨_, .pairr h⟩)⟩
 
-def domain₂? (e : GenericExpr τ_c) : Option ((α β : GenericExpr τ_c) × (Domain₂ e α β)) :=
+      match M'.domain? with
+      | .some ⟨α, h⟩ =>
+        have hn₁ : IsNorm RedAff M := (fun ⟨_, h⟩ => hn ⟨_, .pairl h⟩)
+        have hn₂ : IsNorm RedAff N := (fun ⟨_, h⟩ => hn ⟨_, .pairr h⟩)
+
+        .some ⟨α, .pair hn₁ hn₂ h⟩
+      | _ => .none
+    | (DCC? `(_β, _x)) => .some ⟨_, .quot (aff_sound rfl)⟩
+    | (DCC? _f ∘' g) =>
+      have h_dec₁ : g.size < (DCC? (_f ∘' g)).size := by
+        grind
+      have h_dec : g.red_aff.size < (NormExpr.mk (DCC? (_f ∘' g)) hn).size := by
+        have h_snd := (reduce RedAff g).snd.down
+        have dec := decreasing? _ h_snd
+        grind
+
+      match g.red_aff.domain? with
+      | .some ⟨_, h⟩ => .some ⟨_, .comp' (aff_sound rfl) h⟩
+      | _ => .none
+    | (DCC? _f ∘ g) =>
+      have h_dec₁ : g.size < (DCC? (_f ∘ g)).size := by
+        grind
+      have h_dec : g.red_aff.size < (NormExpr.mk (DCC? (_f ∘ g)) hn).size := by
+        have h_snd := (reduce RedAff g).snd.down
+        have dec := decreasing? _ h_snd
+        grind
+      match g.red_aff.domain? with
+      | .some ⟨_, h⟩ => .some ⟨_, .comp (aff_sound rfl) h⟩
+      | _ => .none
+    | (DCC? _f ∘∘ g) =>
+      have h_dec₁ : g.size < (DCC? (_f ∘∘ g)).size := by
+        grind
+      have h_dec : g.red_aff.size < (NormExpr.mk (DCC? (_f ∘∘ g)) hn).size := by
+        have h_snd := (reduce RedAff g).snd.down
+        have dec := decreasing? _ h_snd
+        grind
+      match g.red_aff.domain? with
+      | .some ⟨_, h⟩ => .some ⟨_, .comp₂ (aff_sound rfl) h⟩
+      | _ => .none
+    | (DCC? Π(f_α, f_β)) =>
+      let hn₁ : IsNorm RedAff f_α := fun ⟨_, h⟩ => hn ⟨_, .pil h⟩
+      let hn₂ : IsNorm RedAff f_β := fun ⟨_, h⟩ => hn ⟨_, .pir h⟩
+
+      let f_α' : @NormExpr τ_c RedAff := ⟨f_α, hn₁⟩
+      let f_β' : @NormExpr τ_c RedAff := ⟨f_β, hn₂⟩
+
+      match f_α'.domain? with
+      | .some ⟨_, h⟩ => .some ⟨_, .pi hn₁ hn₂ h⟩
+      | _ => .none
+    | _ => .none
+termination_by e.size
+decreasing_by
+  all_goals (grind)
+
+def domain₂? (e : @NormExpr τ_c RedAff) : Option ((α β : @NormExpr τ_c RedAff) × (Domain₂ e α β)) :=
   match e with
-  | DCC? f ∘' g =>
-    match g.domain?, f.domain₂? with
+  | ⟨(DCC? (f ∘' g)), hn⟩ =>
+    have h_dec₁ : f.size < (DCC? (f ∘' g)).size := by
+      grind
+    have h_dec₂ : f.red_aff.size < (NormExpr.mk (DCC? (f ∘' g)) hn).size := by
+      have h_snd := (reduce RedAff f).snd.down
+      have dec := decreasing? _ h_snd
+      grind
+    have h_dec₃ : g.size < (DCC? (f ∘' g)).size := by
+      grind
+    have h_dec₄ : g.red_aff.size < (NormExpr.mk (DCC? (f ∘' g)) hn).size := by
+      have h_snd := (reduce RedAff g).snd.down
+      have dec := decreasing? _ h_snd
+      grind
+    match g.red_aff.domain?, f.red_aff.domain₂? with
     | .some ⟨_, h₁⟩, .some ⟨_, _, h₂⟩ =>
-      .some ⟨_, _, .comp' h₁ h₂⟩
+      .some ⟨_, _, .comp' (aff_sound rfl) (aff_sound rfl) h₁ h₂⟩
     | _, _ => .none
-  | (DCC? Eql(f_α)) =>
-    match f_α.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, _, .eql h (reduce_sound rfl) (reduce_norm rfl)⟩
-    | _ => .none
-  | (DCC? refl(f_α)) =>
-    match f_α.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, _, .refl h (reduce_sound rfl) (reduce_norm rfl)⟩
-    | _ => .none
-  | (DCC? Λ(_α, _β, _x)) => .some ⟨_, _, .curr (reduce_sound rfl) (reduce_norm rfl) (reduce_sound rfl) (reduce_norm rfl)⟩
-  | (DCC? !Λ(_α, _β, _x)) => .some ⟨_, _, .curr' (reduce_sound rfl) (reduce_norm rfl)⟩
-  | _ => none
+  | ⟨(DCC? Eql(f_α)), hn⟩ =>
+    match f_α.red_aff.domain? with
+    | .some ⟨_, h₁⟩ =>
+      .some ⟨_, _, .eql (aff_sound rfl) h₁⟩
+    | .none => .none
+  | ⟨(DCC? refl(f_α)), hn⟩ =>
+    match f_α.red_aff.domain? with
+    | .some ⟨_, h₁⟩ =>
+      .some ⟨_, _, .refl (aff_sound rfl) h₁⟩
+    | .none => .none
+  | ⟨(DCC? Λ(α, β, x)), hn⟩ =>
+    .some ⟨_, _, .curr (aff_sound rfl) (aff_sound rfl)⟩
+  | ⟨(DCC? !Λ(α, β, x)), hn⟩ =>
+    .some ⟨_, _, .curr' (aff_sound rfl) (aff_sound rfl)⟩
+  | _ => .none
+termination_by e.size
 
 @[aesop safe forward (rule_sets := [DccReduce]), grind =_, grind ., grind! ., dcc_rel]
-theorem Domain.complete {e τ : GenericExpr τ_c} (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, h⟩ := by
-  induction h
-  any_goals (
-    focus
-    dsimp [domain?]
-    aesop
-    done)
-  any_goals (
-    rename_i h₁ h₂
-    dsimp [domain?]
-    have h := reduce_complete (by assumption) (by assumption)
-    simp_all
-    grind)
+theorem Domain.complete (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, h⟩ := by
+  induction h with
+  | eql₁ hr h_dom heq  =>
+    have ha := hr.complete
+    simp [domain?]
+    
+    sorry
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
 theorem Domain₂.complete
@@ -691,6 +764,8 @@ theorem Domain₂.complete
     have h_fst := reduce_complete_fst hrt₁ hn₁
     simp [domain₂?]
     grind
+
+end NormExpr
 
 @[dcc_force_reduce, dcc_force_aff]
 instance Domain.instRedRel : GenericExpr.RedRel.{u, u + 1} (α := GenericExpr τ_c) (Domain (τ_c := τ_c)) size where

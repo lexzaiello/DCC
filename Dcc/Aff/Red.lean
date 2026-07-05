@@ -649,25 +649,38 @@ theorem decreasing?.{u} {τ : Type u} {A B : GenericExpr τ} [DecidableEq τ] (h
 
 end RedAffReflTrans
 
-inductive RedAffNorm : GenericExpr τ_c → GenericExpr τ_c → Type u
-  | mk : RedAffReflTrans A B → IsNorm RedAff B → RedAffNorm A B
+inductive RedAffNorm : GenericExpr τ_c → NormExpr (RedAff (τ := τ_c)) → Type u
+  | mk : (hr : RedAffReflTrans A B) → (hn : IsNorm RedAff B) → RedAffNorm A ⟨B, hn⟩
 
-def RedAffNorm.raw (r : RedAffNorm A B ) : RedAffReflTrans A B ∧ IsNorm RedAff B :=
-  match r with
-  | ⟨a, b⟩ => ⟨a, b⟩
-
-abbrev RedAffNorm.is_norm (hr : RedAffNorm A B) : IsNorm RedAff B :=
-  match hr with
-  | ⟨_, hn⟩ => hn
+@[dcc_step]
+def RedAffNorm.decreasing? (h : RedAffNorm A B) : B.size ≤ A.size :=
+  match h with
+  | ⟨hr, _hn⟩ => GenericExpr.decreasing? _ hr
 
 @[grind]
-def aff_sound (heq : reduce RedAff A = ⟨B, ⟨h⟩⟩) : RedAffNorm A B := ⟨reduce_sound heq, reduce_norm heq⟩
+def RedAffNorm.raw (_r : RedAffNorm (τ_c := τ_c) A B) : NormExpr (RedAff (τ := τ_c)) := B
 
-abbrev RedAffNorm.red (h : RedAffNorm A B) : RedAffReflTrans A B :=
+@[grind]
+def aff_sound (heq : reduce RedAff A = ⟨B, ⟨h⟩⟩) : RedAffNorm A ⟨B, reduce_norm heq⟩ := ⟨reduce_sound heq, reduce_norm heq⟩
+
+@[grind]
+def aff_sound' (A : GenericExpr τ_c) : RedAffNorm A ⟨(reduce RedAff A).fst, reduce_norm rfl⟩ := ⟨reduce_sound rfl, reduce_norm rfl⟩
+
+@[grind, inline]
+def red_aff (A : GenericExpr τ_c) : NormExpr (RedAff (τ := τ_c)) := ⟨(reduce RedAff A).fst, reduce_norm (A := A) rfl⟩
+
+@[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
+def RedAffNorm.complete {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)} (h : RedAffNorm A B) : red_aff A = B :=
+  match h with
+  | ⟨hr, hn⟩ => by
+    have ha := reduce_complete_fst hr hn
+    simp [red_aff, ha]
+
+abbrev RedAffNorm.red (h : RedAffNorm A ⟨B, hn⟩) : RedAffReflTrans A B :=
   match h with
   | ⟨hr, _⟩ => hr
 
-def RedAffNorm.aff_complete (h : RedAffNorm A B) : reduce RedAff A = ⟨B, ⟨h.red⟩⟩ :=
+def RedAffNorm.aff_complete (h : RedAffNorm A ⟨B, hn⟩) : reduce RedAff A = ⟨B, ⟨h.red⟩⟩ :=
   match h with
   | ⟨hr₁, hn₁⟩ => reduce_complete hr₁ hn₁
 

@@ -713,6 +713,11 @@ end GenericExpr
 inductive NormExpr.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) : Type u
   | mk : (e : GenericExpr τ) → GenericExpr.IsNorm r e → NormExpr r
 
+@[grind]
+def NormExpr.size {t : GenericExpr τ_c → ℕ} {r : GenericExpr τ_c → GenericExpr τ_c → Prop} [GenericExpr.RedRel r t] (n : NormExpr r) : ℕ :=
+  match n with
+  | ⟨e, _⟩ => t e
+
 @[inline, grind]
 def NormExpr.raw.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} (r : NormExpr r) : GenericExpr τ :=
   match r with

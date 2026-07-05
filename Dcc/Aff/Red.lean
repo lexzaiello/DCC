@@ -666,7 +666,7 @@ def aff_sound (heq : reduce RedAff A = ⟨B, ⟨h⟩⟩) : RedAffNorm A ⟨B, re
 @[grind]
 def aff_sound' (A : GenericExpr τ_c) : RedAffNorm A ⟨(reduce RedAff A).fst, reduce_norm rfl⟩ := ⟨reduce_sound rfl, reduce_norm rfl⟩
 
-@[grind, inline]
+@[grind, inline, dcc_reduce]
 def red_aff (A : GenericExpr τ_c) : NormExpr (RedAff (τ := τ_c)) := ⟨(reduce RedAff A).fst, reduce_norm (A := A) rfl⟩
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
@@ -676,6 +676,13 @@ def RedAffNorm.complete {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)
     have ha := reduce_complete_fst hr hn
     simp [red_aff, ha]
 
+@[dcc_reduce]
+def RedAffNorm.eq (hr : RedAffNorm e (red_aff e)) : hr = aff_sound rfl :=
+  match hr with
+  | ⟨hr, hn⟩ => by
+    have heq := reduce_complete hr hn
+    grind
+
 abbrev RedAffNorm.red (h : RedAffNorm A ⟨B, hn⟩) : RedAffReflTrans A B :=
   match h with
   | ⟨hr, _⟩ => hr
@@ -683,6 +690,9 @@ abbrev RedAffNorm.red (h : RedAffNorm A ⟨B, hn⟩) : RedAffReflTrans A B :=
 def RedAffNorm.aff_complete (h : RedAffNorm A ⟨B, hn⟩) : reduce RedAff A = ⟨B, ⟨h.red⟩⟩ :=
   match h with
   | ⟨hr₁, hn₁⟩ => reduce_complete hr₁ hn₁
+
+/-def RedAffNorm.eq {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)} (h₁ : RedAffNorm A B) : h₁ = aff_sound (by sorry) := by
+  sorry-/
 
 end GenericExpr
 

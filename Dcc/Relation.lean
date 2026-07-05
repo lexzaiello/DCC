@@ -708,20 +708,31 @@ theorem reduce'_norm'.{u} {τ : Type u} {t : τ → ℕ}
   {A : τ} : IsNorm r (reduce' r A) :=
   reduce'_norm rfl
 
+@[grind ., grind! .]
+theorem decreasing?'.{u} {α : Type u} {t : α → ℕ}
+  (r : α → α → Prop) [hR : RedRel r t] {A : α} : (t (reduce r A).fst) ≤ t A :=
+  decreasing? _ (reduce_sound (r := r) (A := A) rfl)
+
 end GenericExpr
 
 inductive NormExpr.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) : Type u
   | mk : (e : GenericExpr τ) → GenericExpr.IsNorm r e → NormExpr r
 
-@[grind]
-def NormExpr.size {t : GenericExpr τ_c → ℕ} {r : GenericExpr τ_c → GenericExpr τ_c → Prop} [GenericExpr.RedRel r t] (n : NormExpr r) : ℕ :=
+@[grind, inline]
+def NormExpr.size {t : GenericExpr τ_c → ℕ} {r : GenericExpr τ_c → GenericExpr τ_c → Prop} [GenericExpr.RedRel r t]
+  (n : NormExpr r) : ℕ :=
   match n with
   | ⟨e, _⟩ => t e
 
-@[inline, grind]
+@[inline, grind, dcc_rel]
 def NormExpr.raw.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} (r : NormExpr r) : GenericExpr τ :=
   match r with
   | ⟨e, _⟩ => e
+
+@[grind =, grind →]
+theorem NormExpr.size_eq {t : GenericExpr τ_c → ℕ} {r : GenericExpr τ_c → GenericExpr τ_c → Prop} [GenericExpr.RedRel r t]
+  {e : GenericExpr τ_c} {hn : GenericExpr.IsNorm r e} : (NormExpr.mk e hn).size = t e := by
+  simp [size]
 
 def NormExpr.ext_iff.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
   {A B : NormExpr r} : A = B ↔ A.raw = B.raw :=

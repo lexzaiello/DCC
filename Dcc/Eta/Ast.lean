@@ -653,33 +653,14 @@ def domain? [DecidableEq τ_c] (e : @NormExpr τ_c RedAff) : Option ((τ : @Norm
       | _ => .none
     | (DCC? `(_β, _x)) => .some ⟨_, .quot (aff_sound rfl)⟩
     | (DCC? _f ∘' g) =>
-      have h_dec₁ : g.size < (DCC? (_f ∘' g)).size := by
-        grind
-      have h_dec : g.red_aff.size < (NormExpr.mk (DCC? (_f ∘' g)) hn).size := by
-        have h_snd := (reduce RedAff g).snd.down
-        have dec := decreasing? _ h_snd
-        grind
-
       match g.red_aff.domain? with
       | .some ⟨_, h⟩ => .some ⟨_, .comp' (aff_sound rfl) h⟩
       | _ => .none
     | (DCC? _f ∘ g) =>
-      have h_dec₁ : g.size < (DCC? (_f ∘ g)).size := by
-        grind
-      have h_dec : g.red_aff.size < (NormExpr.mk (DCC? (_f ∘ g)) hn).size := by
-        have h_snd := (reduce RedAff g).snd.down
-        have dec := decreasing? _ h_snd
-        grind
       match g.red_aff.domain? with
       | .some ⟨_, h⟩ => .some ⟨_, .comp (aff_sound rfl) h⟩
       | _ => .none
     | (DCC? _f ∘∘ g) =>
-      have h_dec₁ : g.size < (DCC? (_f ∘∘ g)).size := by
-        grind
-      have h_dec : g.red_aff.size < (NormExpr.mk (DCC? (_f ∘∘ g)) hn).size := by
-        have h_snd := (reduce RedAff g).snd.down
-        have dec := decreasing? _ h_snd
-        grind
       match g.red_aff.domain? with
       | .some ⟨_, h⟩ => .some ⟨_, .comp₂ (aff_sound rfl) h⟩
       | _ => .none
@@ -688,7 +669,6 @@ def domain? [DecidableEq τ_c] (e : @NormExpr τ_c RedAff) : Option ((τ : @Norm
       let hn₂ : IsNorm RedAff f_β := fun ⟨_, h⟩ => hn ⟨_, .pir h⟩
 
       let f_α' : @NormExpr τ_c RedAff := ⟨f_α, hn₁⟩
-      let f_β' : @NormExpr τ_c RedAff := ⟨f_β, hn₂⟩
 
       match f_α'.domain? with
       | .some ⟨_, h⟩ => .some ⟨_, .pi hn₁ hn₂ h⟩
@@ -700,70 +680,98 @@ decreasing_by
 
 def domain₂? (e : @NormExpr τ_c RedAff) : Option ((α β : @NormExpr τ_c RedAff) × (Domain₂ e α β)) :=
   match e with
-  | ⟨(DCC? (f ∘' g)), hn⟩ =>
-    have h_dec₁ : f.size < (DCC? (f ∘' g)).size := by
-      grind
-    have h_dec₂ : f.red_aff.size < (NormExpr.mk (DCC? (f ∘' g)) hn).size := by
-      have h_snd := (reduce RedAff f).snd.down
-      have dec := decreasing? _ h_snd
-      grind
-    have h_dec₃ : g.size < (DCC? (f ∘' g)).size := by
-      grind
-    have h_dec₄ : g.red_aff.size < (NormExpr.mk (DCC? (f ∘' g)) hn).size := by
-      have h_snd := (reduce RedAff g).snd.down
-      have dec := decreasing? _ h_snd
-      grind
-    match g.red_aff.domain?, f.red_aff.domain₂? with
-    | .some ⟨_, h₁⟩, .some ⟨_, _, h₂⟩ =>
-      .some ⟨_, _, .comp' (aff_sound rfl) (aff_sound rfl) h₁ h₂⟩
-    | _, _ => .none
-  | ⟨(DCC? Eql(f_α)), hn⟩ =>
-    match f_α.red_aff.domain? with
-    | .some ⟨_, h₁⟩ =>
-      .some ⟨_, _, .eql (aff_sound rfl) h₁⟩
-    | .none => .none
-  | ⟨(DCC? refl(f_α)), hn⟩ =>
-    match f_α.red_aff.domain? with
-    | .some ⟨_, h₁⟩ =>
-      .some ⟨_, _, .refl (aff_sound rfl) h₁⟩
-    | .none => .none
-  | ⟨(DCC? Λ(α, β, x)), hn⟩ =>
-    .some ⟨_, _, .curr (aff_sound rfl) (aff_sound rfl)⟩
-  | ⟨(DCC? !Λ(α, β, x)), hn⟩ =>
-    .some ⟨_, _, .curr' (aff_sound rfl) (aff_sound rfl)⟩
-  | _ => .none
+  | ⟨e, hn⟩ =>
+    match e with
+    | (DCC? (f ∘' g)) =>
+      match g.red_aff.domain?, f.red_aff.domain₂? with
+      | .some ⟨_, h₁⟩, .some ⟨_, _, h₂⟩ =>
+        .some ⟨_, _, .comp' (aff_sound rfl) (aff_sound rfl) h₁ h₂⟩
+      | _, _ => .none
+    | (DCC? Eql(f_α)) =>
+      match f_α.red_aff.domain? with
+      | .some ⟨_, h₁⟩ =>
+        .some ⟨_, _, .eql (aff_sound rfl) h₁⟩
+      | .none => .none
+    | (DCC? refl(f_α)) =>
+      match f_α.red_aff.domain? with
+      | .some ⟨_, h₁⟩ =>
+        .some ⟨_, _, .refl (aff_sound rfl) h₁⟩
+      | .none => .none
+    | (DCC? Λ(α, β, x)) =>
+      .some ⟨_, _, .curr (aff_sound rfl) (aff_sound rfl)⟩
+    | (DCC? !Λ(α, β, x)) =>
+      .some ⟨_, _, .curr' (aff_sound rfl) (aff_sound rfl)⟩
+    | _ => .none
 termination_by e.size
+decreasing_by
+  all_goals (grind)
 
 @[aesop safe forward (rule_sets := [DccReduce]), grind =_, grind ., grind! ., dcc_rel]
 theorem Domain.complete (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, h⟩ := by
-  induction h with
-  | eql₁ hr h_dom heq  =>
-    have ha := hr.complete
+  induction h
+  any_goals (
+    focus
+    try (
+      rename_i hr h_dom heq
+      have ha := hr.complete
+      simp [domain?]
+      cases ha
+      dcc_simp_all [heq])
+    done)
+  any_goals (
+    focus
+    try (
+      rename_i hr
+      have ha := hr.complete
+      simp [domain?]
+      cases ha
+      dcc_simp_all)
+    done)
+  all_goals (
     simp [domain?]
-    
-    sorry
+    dcc_simp_all)
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
 theorem Domain₂.complete
-  {e α β : GenericExpr τ_c} (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, h⟩ := by
+  {e α β : @NormExpr τ_c RedAff} (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, h⟩ := by
   induction h with
-  | comp' h₁ h₂ ih => simp [domain₂?, ih, h₁.complete]
-  | refl h_domain | eql h_domain =>
-    have h := h_domain.complete
-    have h_fst := reduce_complete_fst (by assumption) (by assumption)
-    simp [domain₂?, h, h_fst]
-    congr
-    · grind
-    · grind
-  | curr hrt₁ hn₁ hrt₂ hn₂ =>
-    have h_fst₁ := reduce_complete_fst hrt₁ hn₁
-    have h_fst₂ := reduce_complete_fst hrt₂ hn₂
+  | comp' hr₁ hr₂ h_dom h_dom₂ heq =>
+    have ha := hr₁.complete
+    have hb := hr₂.complete
     simp [domain₂?]
-    grind
-  | curr' hrt₁ hn₁ =>
-    have h_fst := reduce_complete_fst hrt₁ hn₁
+    have hc := h_dom.complete
+    --dcc_simp_all
+    cases ha; cases hb
+    dcc_simp_all
+  | refl hr h_domain | eql hr h_domain =>
+    have ha := h_domain.complete
+    have hb := hr.complete
     simp [domain₂?]
-    grind
+    dcc_simp_all
+    cases hb
+    dcc_simp_all [ha]
+  | curr hrt₁ hrt₂ =>
+    have ha := hrt₁.complete
+    have hb := hrt₂.complete
+    simp [domain₂?]
+    dcc_simp_all [ha, hb]
+    rw [← ha] at hrt₁
+    rw [← hb] at hrt₂
+    have hc := hrt₁.eq
+    have hd := hrt₂.eq
+    cases ha; cases hb
+    dcc_simp_all
+  | curr' hrt₁ hrt₂ =>
+    have ha := hrt₁.complete
+    have hb := hrt₂.complete
+    simp [domain₂?]
+    rw [← ha] at hrt₁
+    rw [← hb] at hrt₂
+    dcc_simp_all
+    have hc := hrt₁.eq
+    have hd := hrt₂.eq
+    cases ha; cases hb
+    dcc_simp_all
 
 end NormExpr
 

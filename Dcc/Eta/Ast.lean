@@ -773,6 +773,22 @@ theorem Domain₂.complete
     cases ha; cases hb
     dcc_simp_all
 
+@[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]
+def Domain.unique {x τ₁ τ₂ : @NormExpr τ_c RedAff} (h₁ : Domain x τ₁) (h₂ : Domain x τ₂) : τ₁ = τ₂ := by
+  have ha := h₁.complete
+  have hb := h₂.complete
+  simp_all
+
+def Domain.is_norm_aff {e τ : @NormExpr τ_c RedAff} (_h : Domain (τ_c := τ_c) e τ) : IsNorm RedAff τ.raw := τ.is_norm
+
+def Domain₂.is_norm_aff (_h : Domain₂ e α β) : IsNorm RedAff α.raw ∧ IsNorm RedAff β.raw := ⟨α.is_norm, β.is_norm⟩
+
+@[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]
+def Domain₂.unique {f τ₁a τ₁b τ₂a τ₂b : @NormExpr τ_c RedAff} (h₁ : Domain₂ f τ₁a τ₁b) (h₂ : Domain₂ f τ₂a τ₂b) : τ₁a = τ₂a ∧ τ₁b = τ₂b := by
+  have ha := h₁.complete
+  have hb := h₂.complete
+  grind
+
 end NormExpr
 
 open NormExpr in
@@ -812,130 +828,7 @@ instance Domain.instRedRel : GenericExpr.RedRel.{u, u + 1} (α := @NormExpr τ_c
       done)
     any_goals (grind)
 
-@[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]
-def Domain.deterministic {x τ₁ τ₂ : GenericExpr τ_c} (h₁ : Domain (τ_c := τ_c) x τ₁) (h₂ : Domain (τ_c := τ_c) x τ₂) : τ₁ = τ₂ := by
-  induction h₁ generalizing τ₂
-  any_goals (
-    focus
-    cases h₂
-    aesop
-    done)
-  any_goals (
-    focus
-    cases h₂
-    rename_i h₁ h₂ h₃ h₄
-    have h := norm_unique h₁ h₂ h₄ h₃
-    aesop)
-  case curr₂' =>
-    cases h₂
-    rename_i h₁ h₂ _ h₃ h₄
-    have h := norm_unique h₁ h₂ h₄ h₃
-    aesop
-  case eql₁ h_dom hrt₁ hn₁ ih h_dom₂ | refl₁ h_dom hrt₁ hn₁ ih h_dom₂ =>
-    cases h₂
-    have h := h_dom₂ (by assumption)
-    simp_all
-    have h := norm_unique hn₁ (by assumption) (by assumption) (by assumption)
-    simp_all
-  any_goals (
-    rename_i h_dom₁ hrt₁ hn₁ ih
-    focus
-    try (
-      cases h₂
-      · rename_i hrt₂ hn₂ h_dom₂
-        have h := ih (by assumption)
-        simp_all
-        have h := norm_unique hrt₁ hn₁ hrt₂ hn₂
-        simp_all)
-    done)
-  any_goals (
-    focus
-    try (
-      rename_i hrt₁ hn₁
-      cases h₂
-      · rename_i hn₂ hrt₂
-        have h := norm_unique hrt₁ hn₁ hrt₂ hn₂
-        simp_all)
-    done)
-  any_goals (
-    focus
-    try (
-      rename_i hrt₁ hn₁ h_dom₁ ih
-      cases h₂
-      rename_i hrt₂ hn₂ h_dom₂
-      have ha := ih h_dom₂
-      simp_all
-      have hb := norm_unique hrt₁ hn₁ hrt₂ hn₂
-      simp_all)
-    done)
-  case pair hrt₁ hn₁ h_dom₁ ih =>
-    cases h₂
-    case pair h_dom₂ hrt₂ hn₂ =>
-      have h := ih h_dom₂
-      simp_all
-      have h := norm_unique hrt₁ hn₁ hrt₂ hn₂
-      simp_all
-  any_goals (
-    focus
-    try(
-      rename_i h_dom₁ hrt₁ hn₁ ih
-      cases h₂
-      · rename_i h_dom₂ hrt₂ hn₂
-        have h := ih h_dom₂
-        simp_all
-        exact norm_unique hrt₁ hn₁ hrt₂ hn₂))
-
-def Domain.is_norm_aff (h : Domain (τ_c := τ_c) e τ) : IsNorm RedAff τ := by
-  induction h
-  any_goals (
-    intro ⟨_, h⟩
-    cases h
-    grind)
-  any_goals (grind)
-
-def Domain₂.is_norm_aff (h : Domain₂ e α β) : IsNorm RedAff α ∧ IsNorm RedAff β := by
-  induction h
-  any_goals (
-    focus
-    try (have h := Domain.is_norm_aff (by assumption))
-    simp_all
-    try (
-      intro ⟨_, hr⟩
-      cases hr)
-    try grind)
-  case curr' hrt₁ hn₁ =>
-    constructor
-    · intro ⟨_, h⟩
-      cases h
-      exact hn₁ ⟨_, by assumption⟩
-    · intro ⟨_, h⟩
-      cases h
-
-@[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]
-def Domain₂.deterministic (h₁ : Domain₂ f τ₁a τ₁b) (h₂ : Domain₂ f τ₂a τ₂b) : τ₁a = τ₂a ∧ τ₁b = τ₂b := by
-  induction h₁ generalizing τ₂a τ₂b with
-  | comp' h_dom₁ h_dom₂ ih =>
-    cases h₂
-    · rename_i h_dom₄ h_dom₃
-      have h := ih h_dom₄
-      dcc_aesop!
-  | refl h_dom₁ hrt₁ hn₁ | eql h_dom₁ hrt₁ hn₁ =>
-    cases h₂
-    · rename_i h_dom₂ hn₂ hrt₂
-      cases h_dom₁.deterministic h_dom₂
-      have h := norm_unique hrt₁ hn₁ hrt₂ hn₂
-      grind
-  | curr' hrt₁ hn₁ =>
-    cases h₂
-    · rename_i hn₂ hrt₂
-      have h := norm_unique hrt₁ hn₁ hrt₂ hn₂
-      grind
-  | curr hrt₁ hn₁ hrt₂ hn₂ =>
-    cases h₂
-    · rename_i hn₃ hrt₃ hn₄ hrt₄
-      have ha := norm_unique hrt₁ hn₁ hrt₃ hn₃
-      have hb := norm_unique hrt₂ hn₂ hrt₄ hn₄
-      grind
+namespace GenericExpr
 
 @[grind]
 def eta_to_expr (e : GenericExpr (τ := EtaConst (τ_c := τ_c)))
@@ -1208,6 +1101,8 @@ def from_eta {e : GenericExpr (@EtaConst τ_c)} (hn₁ : GenericExpr.IsNorm RedA
 
 end IsNorm
 
+end GenericExpr
+
 class Pure.Injective.{v, s} (f : Type v → Type s) extends Pure f where
   inj {α : Type v} : Function.Injective (toPure.pure (α := α))
 
@@ -1232,16 +1127,18 @@ class EtaRel.{v, s, t} {α : Type v} {β : Type s} (r : α → β → Type t)
     simp_all
   unique'       : ∀ {A : α} {B C : β} (_hrt₁ : r A B) {_hr₂ : r A C}, B = C := unique
 
+namespace GenericExpr
+
 class NormEtaRel.{t} (r : GenericExpr τ_c → GenericExpr τ_c → Type t)
   {m : Type (max u t) → Type (max u t)} [hM : Monad m] [Pure.Injective m]
   extends EtaRel r (m := m) where
   is_norm_aff   : IsNorm RedAff A → r A B → IsNorm RedAff B
 
 open Monad in
-class FallibleEtaRel (r : GenericExpr τ_c → GenericExpr τ_c → Type u)
-  {m : Type u → Type u} [_hM : AlternativeMonad m] [Pure.Injective m] extends EtaRel r (m := m) where
+class FallibleEtaRel.{v, t} {α : Type v} (r : α → α → Type t)
+  {m : Type (max v t) → Type (max v t)} [_hM : AlternativeMonad m] [Pure.Injective m] extends EtaRel r (m := m) where
   none          : ∀ (_h : run A = failure) (_hr : r A B), False
-  none_complete : (∀ {B : GenericExpr τ_c}, r A B → False)  → run A = failure
+  none_complete : (∀ {B : α}, r A B → False)  → run A = failure
 
 def is_norm_aff {r : GenericExpr τ_c → GenericExpr τ_c → Type u}
   {m : Type u → Type u} [Monad m ] [Pure.Injective m]
@@ -1260,9 +1157,9 @@ def eta_none_elim.{v} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} {m 
   False.elim (hE.none h hr)
 
 open Monad in
-class OptionEtaRel (r : GenericExpr τ_c → GenericExpr τ_c → Type u)
-  : Type u extends (FallibleEtaRel r (m := Option)) where
-  none          : ∀ {A B : GenericExpr τ_c} (_h : run A = failure) (_hr : r A B), False := fun heq hr => by
+class OptionEtaRel.{v, t} {α : Type v} (r : α → α → Type t)
+  : Type (max v t) extends (FallibleEtaRel r (m := Option)) where
+  none          : ∀ {A B : α} (_h : run A = failure) (_hr : r A B), False := fun heq hr => by
     simp_all [complete hr, failure, pure]
   none_complete := fun hn => by
     apply Option.eq_none_iff_forall_ne_some.mpr
@@ -1270,11 +1167,11 @@ class OptionEtaRel (r : GenericExpr τ_c → GenericExpr τ_c → Type u)
     have heq := complete h
     simp_all
     exact hn h
-  unique        : ∀ {A B C : GenericExpr τ_c} (_hr₁ : r A B) (_hr₂ : r A C), B = C := fun hr₁ hr₂ => by
+  unique        : ∀ {A B C : α} (_hr₁ : r A B) (_hr₂ : r A C), B = C := fun hr₁ hr₂ => by
     have h₁ := complete hr₁
     have h₂ := complete hr₂
     simp_all
-  unique'       : ∀ {A B C : GenericExpr τ_c} (_hrt₁ : r A B) {_hr₂ : r A C}, B = C := unique
+  unique'       : ∀ {A B C : α} (_hrt₁ : r A B) {_hr₂ : r A C}, B = C := unique
 
 class EtaNormRel (r : GenericExpr τ_c → GenericExpr τ_c → Type u)
   : Type u extends (EtaRel r (m := Option)) where
@@ -1285,29 +1182,14 @@ attribute [dcc_rel, aesop safe forward (rule_sets := [DccRel])] EtaRel.unique'
 end GenericExpr
 
 open GenericExpr in
-instance Domain.instEtaRel : (EtaRel (β := GenericExpr τ_c) Domain (m := Option)) where
+open NormExpr in
+instance Domain.instEtaRel : (EtaRel (β := @NormExpr τ_c RedAff) Domain (m := Option)) where
   run      := domain?
   complete := Domain.complete
 
 open GenericExpr in
-instance Domain.instNormRel : (NormEtaRel (τ_c := τ_c) Domain (m := Option)) where
-  run      := domain?
-  complete := Domain.complete
-  is_norm_aff := fun h h_dom => by
-    have heq := h_dom.complete
-    induction h_dom
-    any_goals (
-      focus
-      rename_i ih
-      intro ⟨_, h⟩
-      cases h
-      grind)
-    any_goals (grind)
-    · rename_i h_dom ih
-      exact ih h.pil h_dom.complete
-
-open GenericExpr in
-instance Domain.instFallibleEtaRel : (FallibleEtaRel (τ_c := τ_c) Domain (m := Option)) where
+open NormExpr in
+instance Domain.instFallibleEtaRel : (FallibleEtaRel (Domain (τ_c := τ_c)) (m := Option)) where
   none     := fun heq hr => by
     have h := hr.complete
     simp_all
@@ -1319,6 +1201,7 @@ instance Domain.instFallibleEtaRel : (FallibleEtaRel (τ_c := τ_c) Domain (m :=
     exact (h hr).elim
 
 open GenericExpr in
-instance Domain.instOptionEtaRel : OptionEtaRel (τ_c := τ_c) Domain where
+open NormExpr in
+instance Domain.instOptionEtaRel : OptionEtaRel (Domain (τ_c := τ_c)) where
 
 end

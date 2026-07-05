@@ -260,7 +260,7 @@ instance ArgTy.instEtaRel {e_f : EtaFn f ar doms} {idx : Fin ar} : EtaRel
 /-
 Calculate types of concatenated holes from telescope
 -/
-inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
+/-inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
   → (take : Fin (ar + 1))
   → (level : ℕ)
   → (holes : Vector (@EtaExpr.Norm τ_c) take) → Type u
@@ -274,8 +274,7 @@ inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
     → Hole τ (level + 2) hole'
     → Holes (ar := ar + 2) e_fn ⟨take.val + 1, by grind⟩ level (pre.push hole')
 
-@[grind]
-def holes (e_f : EtaFn (τ_c := τ_c) f ar doms) (take : Fin (ar + 1)) (level : ℕ) :
+def holes (take : Fin (ar + 1)) (e_f : EtaFn (τ_c := τ_c) f ar doms) (level : ℕ) :
   Option ((holes : Vector (@EtaExpr.Norm τ_c) take) × (Holes e_f take level holes)) :=
   match ar, doms, e_f, take with
   | 1, ⟨#[α], hn⟩, .tm₁ heq h_dom, 1 =>
@@ -284,7 +283,7 @@ def holes (e_f : EtaFn (τ_c := τ_c) f ar doms) (take : Fin (ar + 1)) (level : 
       .some ⟨⟨#[hole₁], by grind⟩, .pure h_hole⟩
     | .none => .none
   | 2, ⟨#[α, β], hn⟩, .tm₂ heq h_dom, (.mk (val + 1) is_lt) =>
-    match holes (.tm₂ heq h_dom) ⟨val, by grind⟩ (level + 1) with
+    match holes ⟨val, by grind⟩ (.tm₂ heq h_dom) (level + 1) with
     | .some ⟨pre, pre_h⟩ =>
       match (EtaFn.tm₂ heq h_dom).get_arg_ty (idx := ⟨val, by grind⟩) (by
         simp [Fin.toNat]
@@ -296,6 +295,38 @@ def holes (e_f : EtaFn (τ_c := τ_c) f ar doms) (take : Fin (ar + 1)) (level : 
         | .none => .none
     | .none => .none
   | _, _, _, _ => .none
+termination_by take-/
+
+inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
+  → (level : ℕ)
+  → (holes : Vector (@EtaExpr.Norm τ_c) ar) → Type u
+  | tm₁ : Hole α level hole_e
+    → Holes (ar := 1) e_f level ⟨#[hole_e], by grind⟩
+  | tm₂ : Hole α (level + 2) hole₁
+    → (EtaFn.ArgTy (idx := 1) e_f ⟨#[hole₁], by simp⟩ β)
+    → Hole β (level + 1) hole₂
+    → Holes (ar := 2) e_f level ⟨#[hole₁, hole₂], by grind⟩
+
+def holes (e_f : EtaFn (τ_c := τ_c) f ar doms) (level : ℕ)
+  : Option ((holes : Vector (@EtaExpr.Norm τ_c) ar) × Holes e_f level holes) :=
+  match ar, doms, e_f with
+  | 1, ⟨#[α], hn⟩, .tm₁ heq h_dom =>
+    match α.mk_hole level with
+    | .some ⟨hole_e, h_hole⟩ =>
+      .some ⟨_, .tm₁ h_hole⟩
+    | .none => .none
+  | 2, ⟨#[α, _], hn⟩, .tm₂ heq h_dom₂ =>
+    match α.mk_hole (level + 2) with
+    | .some ⟨hole₁, h_hole₁⟩ =>
+      match (EtaFn.tm₂ heq h_dom₂).get_arg_ty
+        (idx := ⟨1, by simp⟩) ⟨#[hole₁], by simp⟩ with
+      | ⟨τ₂, h_t_hole₂⟩ =>
+        match τ₂.mk_hole (level + 1) with
+        | .some ⟨hole₂, h_hole₂⟩ =>
+          .some ⟨_, .tm₂ h_hole₁ h_t_hole₂ h_hole₂⟩
+        | .none => .none
+    | .none => .none
+  | _, _, _ => .none
 
 end EtaFn
 

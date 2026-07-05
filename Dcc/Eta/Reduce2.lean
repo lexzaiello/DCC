@@ -151,6 +151,7 @@ def Hole.size_zero (h : Hole α level hole_e) : hole_e.size = 0 := by
   induction h <;> grind
 
 open GenericExpr in
+@[grind]
 def mk_hole (α : @EtaExpr.Norm τ_c) (level : ℕ) : Option ((hole_e : @EtaExpr.Norm τ_c) × Hole α level hole_e) :=
   match α with
   | ⟨α, hn_α⟩ =>
@@ -190,6 +191,22 @@ def mk_hole (α : @EtaExpr.Norm τ_c) (level : ℕ) : Option ((hole_e : @EtaExpr
     else
       .some ⟨_, .pure (α.view_coup?_none_sound (by simp_all))⟩
 termination_by α.size
+
+@[aesop safe apply (rule_sets := [DccSize])]
+def Hole.complete {α hole_e : @EtaExpr.Norm τ_c} (h : Hole α level hole_e) : mk_hole α level = .some ⟨hole_e, h⟩ := by
+  induction h with
+  | pure hn =>
+    unfold mk_hole
+    simp [GenericExpr.ViewCoup.complete_none hn]
+  | bang h_hole heq =>
+    unfold mk_hole
+    simp [GenericExpr.view_coup?, heq]
+  | coup h_dom h_hole₁ hr₁ h_hole₂ heq₁ heq₂ =>
+    unfold mk_hole
+    have ha := hr₁.complete
+    simp [GenericExpr.view_coup?, h_dom.complete, heq₁]
+    cases ha.symm
+    simp_all [GenericExpr.red_aff, hr₁.eq]
 
 namespace Domain
 

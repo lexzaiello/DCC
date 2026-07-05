@@ -118,6 +118,8 @@ def EtaFn.complete {f : @EtaExpr.Norm τ_c} (h : EtaFn f ar doms) : view_eta_fn 
   induction h with
   | tm₂ h_ar h_dom | tm₁ h_ar h_dom => simp [view_eta_fn, h_ar, h_dom.complete]
 
+--def EtaFn.eq (h₁ h₂ : EtaFn f ar doms)
+
 instance EtaFn.instEtaRel : EtaRel
   (α := @EtaExpr.Norm τ_c) (β := ((ar : ℕ) × Vector (@EtaExpr.Norm τ_c) ar))
     (fun f h => EtaFn f h.fst h.snd) (m := Option)  where
@@ -257,76 +259,50 @@ instance ArgTy.instEtaRel {e_f : EtaFn f ar doms} {idx : Fin ar} : EtaRel
   run := get_arg_ty (idx := idx) e_f
   complete := ArgTy.complete (idx := idx) (e_f := e_f) (ar := ar) (doms := doms)
 
-/-
-Calculate types of concatenated holes from telescope
--/
-/-inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
-  → (take : Fin (ar + 1))
-  → (level : ℕ)
-  → (holes : Vector (@EtaExpr.Norm τ_c) take) → Type u
-  | pure {e_f : EtaFn f 1 ⟨#[α], by grind⟩} : Hole α level hole_e
-    → Holes e_f 1 level ⟨#[hole_e], by grind⟩
-  | cons {e_f : EtaFn f (ar + 2) doms}
-    {take : Fin (ar + 2)}
-    {pre  : Vector EtaExpr.Norm take} :
-    Holes e_f ⟨take.val, by grind⟩ (level + 1) pre
-    → (hArg : ArgTy e_f pre (idx := take) τ)
-    → Hole τ (level + 2) hole'
-    → Holes (ar := ar + 2) e_fn ⟨take.val + 1, by grind⟩ level (pre.push hole')
-
-def holes (take : Fin (ar + 1)) (e_f : EtaFn (τ_c := τ_c) f ar doms) (level : ℕ) :
-  Option ((holes : Vector (@EtaExpr.Norm τ_c) take) × (Holes e_f take level holes)) :=
-  match ar, doms, e_f, take with
-  | 1, ⟨#[α], hn⟩, .tm₁ heq h_dom, 1 =>
-    match α.mk_hole level with
-    | .some ⟨hole₁, h_hole⟩ =>
-      .some ⟨⟨#[hole₁], by grind⟩, .pure h_hole⟩
-    | .none => .none
-  | 2, ⟨#[α, β], hn⟩, .tm₂ heq h_dom, (.mk (val + 1) is_lt) =>
-    match holes ⟨val, by grind⟩ (.tm₂ heq h_dom) (level + 1) with
-    | .some ⟨pre, pre_h⟩ =>
-      match (EtaFn.tm₂ heq h_dom).get_arg_ty (idx := ⟨val, by grind⟩) (by
-        simp [Fin.toNat]
-        exact pre) with
-      | ⟨τ, h_arg⟩ =>
-        match τ.mk_hole (level + 2) with
-        | .some ⟨_, h_hole₂⟩ =>
-          .some ⟨_, .cons pre_h h_arg h_hole₂⟩
-        | .none => .none
-    | .none => .none
-  | _, _, _, _ => .none
-termination_by take-/
-
 inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
   → (level : ℕ)
   → (holes : Vector (@EtaExpr.Norm τ_c) ar) → Type u
-  | tm₁ : Hole α level hole_e
-    → Holes (ar := 1) e_f level ⟨#[hole_e], by grind⟩
-  | tm₂ : Hole α (level + 2) hole₁
-    → (EtaFn.ArgTy (idx := 1) e_f ⟨#[hole₁], by simp⟩ β)
+  | tm₁ {e_f : EtaFn f 1 ⟨#[α], by grind⟩} : Hole α level hole_e
+    → Holes e_f level ⟨#[hole_e], by grind⟩
+  | tm₂ {e_f : EtaFn f 2 ⟨#[α, ⟨β₀, h_n_β⟩], by grind⟩} : Hole α (level + 2) ⟨hole₁, hn_hole₁⟩
+    → RedAffNorm (DCC? (β₀ hole₁)) β
     → Hole β (level + 1) hole₂
-    → Holes (ar := 2) e_f level ⟨#[hole₁, hole₂], by grind⟩
+    → Holes (ar := 2) e_f level ⟨#[⟨hole₁, hn_hole₁⟩, hole₂], by grind⟩
 
+@[grind]
 def holes (e_f : EtaFn (τ_c := τ_c) f ar doms) (level : ℕ)
-  : Option ((holes : Vector (@EtaExpr.Norm τ_c) ar) × Holes e_f level holes) :=
-  match ar, doms, e_f with
-  | 1, ⟨#[α], hn⟩, .tm₁ heq h_dom =>
+  : Option ((holes : Vector (@EtaExpr.Norm τ_c) ar) × Holes e_f level holes) := by
+  cases e_f with
+  | tm₁ heq h_dom =>
+    rename_i α
     match α.mk_hole level with
-    | .some ⟨hole_e, h_hole⟩ =>
-      .some ⟨_, .tm₁ h_hole⟩
-    | .none => .none
-  | 2, ⟨#[α, _], hn⟩, .tm₂ heq h_dom₂ =>
+    | .some ⟨_, h⟩ => exact .some ⟨_, .tm₁ h⟩
+    | .none => exact .none
+  | tm₂ heq h_dom₂ =>
+    rename_i α β₀
     match α.mk_hole (level + 2) with
-    | .some ⟨hole₁, h_hole₁⟩ =>
-      match (EtaFn.tm₂ heq h_dom₂).get_arg_ty
-        (idx := ⟨1, by simp⟩) ⟨#[hole₁], by simp⟩ with
-      | ⟨τ₂, h_t_hole₂⟩ =>
-        match τ₂.mk_hole (level + 1) with
-        | .some ⟨hole₂, h_hole₂⟩ =>
-          .some ⟨_, .tm₂ h_hole₁ h_t_hole₂ h_hole₂⟩
-        | .none => .none
-    | .none => .none
-  | _, _, _ => .none
+    | .some ⟨⟨hole₁, _hn_hole₁⟩, h₁⟩ =>
+      match (red_aff (DCC? (β₀.raw hole₁))).mk_hole (level + 1) with
+      | .some ⟨_hole₂, h₂⟩ =>
+        exact .some ⟨_, .tm₂ h₁ (aff_sound rfl) h₂⟩
+      | .none => exact .none
+    | .none => exact .none
+
+@[dcc_force_reduce, aesop safe apply (rule_sets := [DccForceReduce])]
+def Holes.complete (h : Holes (τ_c := τ_c) e_f level hole_elems) : holes e_f level = .some ⟨hole_elems, h⟩ := by
+  cases h with
+  | tm₁ h_hole =>
+    rename_i e_f
+    cases e_f with
+    | tm₁ heq dom => simp [holes, h_hole.complete]
+  | tm₂ hr₁ h_hole₁ h_hole₂ =>
+    rename_i e_f
+    cases e_f with
+    | tm₂ heq dom =>
+      simp [holes, hr₁.complete, raw, (h_hole₁.complete ▸ h_hole₂).complete, h_hole₁.aff_complete]
+      dcc_simp
+      have h := (h_hole₁.out_eq ▸ h_hole₁).eq
+      grind
 
 end EtaFn
 

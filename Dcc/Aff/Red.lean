@@ -691,6 +691,13 @@ def RedAffNorm.aff_complete (h : RedAffNorm A ⟨B, hn⟩) : reduce RedAff A = �
   match h with
   | ⟨hr₁, hn₁⟩ => reduce_complete hr₁ hn₁
 
+def RedAffNorm.out_eq (h : RedAffNorm A B) : B = (red_aff A) :=
+  match h with
+  | .mk hr hn => by
+    have heq := reduce_complete hr hn
+    rw [red_aff]
+    aesop
+
 /-def RedAffNorm.eq {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)} (h₁ : RedAffNorm A B) : h₁ = aff_sound (by sorry) := by
   sorry-/
 

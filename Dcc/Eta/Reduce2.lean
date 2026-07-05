@@ -39,38 +39,39 @@ TODO:
 - will need domain preservation
 -/
 
-namespace GenericExpr
-
 section
 
 universe u
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]
 
+abbrev EtaExpr.Norm := NormExpr (τ := @EtaConst τ_c) GenericExpr.RedAff
+
+namespace NormExpr
+
 /-
 An η-reducible function is in normal form, has an arity of 1 or 2, and has known domain
 -/
-inductive EtaFn : (f : @EtaExpr.Norm τ_c) → (ar : ℕ) → Vector (@EtaExpr.Norm τ_c) ar → Type u
-  | tm₁ {f : @EtaExpr τ_c} {hn : IsNorm RedAff f} : (heq : arity f = 1)
+inductive EtaFn : (f : @EtaExpr.Norm τ_c) → (ar : ℕ) → Vector EtaExpr.Norm ar → Type u
+  | tm₁ : (heq : arity f = 1)
     → (h_dom : Domain f α)
-    → EtaFn ⟨f, hn⟩ 1 ⟨#[⟨α, h_dom.is_norm_aff⟩], (by grind)⟩
-  | tm₂ {f : @EtaExpr τ_c} {hn : IsNorm RedAff f} : (heq : arity f = 2)
-    → (h_dom : Domain₂ f α β) → EtaFn ⟨f, hn⟩ 2 ⟨#[⟨α, h_dom.is_norm_aff.left⟩,
-      ⟨β, h_dom.is_norm_aff.right⟩], (by grind)⟩
+    → EtaFn f 1 (Vector.mk ⟨[α]⟩ (by grind))
+  | tm₂  : (heq : arity f = 2)
+    → (h_dom : Domain₂ f α β) → EtaFn f 2 (Vector.mk ⟨[α, β]⟩ (by grind))
 
 @[aesop safe forward (rule_sets := [DccSize])]
-def EtaFn.decreasing {f τ : @EtaExpr.Norm τ_c} (h : EtaFn f 1 ⟨⟨[τ]⟩, by grind⟩) : size τ.raw < size f.raw :=
+def EtaFn.decreasing {f τ : @EtaExpr.Norm τ_c} (h : EtaFn f 1 ⟨⟨[τ]⟩, by grind⟩) : τ.size < f.size :=
   match h with
   | .tm₁ _heq h_dom => Domain.instRedRel.decreasing h_dom
 
-@[aesop safe forward (rule_sets := [DccSize])]
-def EtaFn.dom_size_lt {f τ : @EtaExpr τ_c} {hn₁ : IsNorm RedAff f} {hn₂ : IsNorm RedAff τ} (h : EtaFn ⟨f, hn₁⟩ 1 ⟨⟨[⟨τ, hn₂⟩]⟩, by grind⟩) : size τ < size f :=
-  match h with
-  | .tm₁ _heq h_dom => Domain.instRedRel.decreasing h_dom
+@[grind]
+def EtaFn.head_dom (e_f : EtaFn f ar doms) : ((τ : @EtaExpr.Norm τ_c) × (Domain f τ)) :=
+  match e_f with
+  | .tm₁ _ h_dom => ⟨_, h_dom⟩
+  | .tm₂ _ h_dom => ⟨_, h_dom.to_domain⟩
 
-def EtaFn.dom_size_lt' {f τ : @EtaExpr τ_c} {hn₁ : IsNorm RedAff f} {hn₂ : IsNorm RedAff τ} (h : EtaFn ⟨f, hn₁⟩ 1
-  ⟨⟨[⟨τ, hn₂⟩]⟩, by grind⟩) : size (DCC? Id(τ)) < size f :=
-  have h_lt := h.dom_size_lt
+/-def EtaFn.dom_size_lt' {f τ : @EtaExpr.Norm τ_c} (h : EtaFn f 1 ⟨⟨[τ]⟩, by grind⟩) : (DCC? Id(τ.raw)).size < f.size :=
+  have h_lt := h.decreasing
   match h with
   | .tm₁ _heq h_dom => by
     induction h_dom
@@ -81,7 +82,7 @@ def EtaFn.dom_size_lt' {f τ : @EtaExpr τ_c} {hn₁ : IsNorm RedAff f} {hn₂ :
       have hb := decreasing? _ hrt₁
       have h := ih (.tm₁ (by simp_all [arity]) h_dom₁) ha (by grind) (hn₁ := (by assumption))
       --have h := ih (.tm₁ _heq (.unmap (by assumption) (by assumption) (by assumption)))
-      sorry
+      sorry-/
 
 /-@[aesop safe forward (rule_sets := [DccSize])]
 def EtaFn.dom_size_lt' {f τ : @EtaExpr τ_c} {hn₁ : IsNorm RedAff f} {hn₂ : IsNorm RedAff τ} (h : EtaFn ⟨f, hn₁⟩ 1
@@ -103,12 +104,12 @@ def EtaFn.dom_size_lt' {f τ : @EtaExpr τ_c} {hn₁ : IsNorm RedAff f} {hn₂ :
 
 @[grind]
 def view_eta_fn (f : @EtaExpr.Norm τ_c) : Option ((ar : ℕ) × (doms : Vector (@EtaExpr.Norm τ_c) ar) × EtaFn f ar doms) :=
-  if heq : f.raw.arity = 1 then
-    match f.raw.domain? with
+  if heq : f.arity = 1 then
+    match f.domain? with
     | .some ⟨_, h⟩ => .some ⟨_, _, .tm₁ heq h⟩
     | .none => .none
-  else if heq : f.raw.arity = 2 then
-    match f.raw.domain₂? with
+  else if heq : f.arity = 2 then
+    match f.domain₂? with
     | .some ⟨_, _, h⟩ => .some ⟨_, _, .tm₂ heq h⟩
     | .none => .none
   else .none
@@ -128,28 +129,47 @@ instance EtaFn.instEtaRel : EtaRel
 
 namespace EtaFn
 
+/-
+Need to recursively generate holes:
+
+e.g., &(hole)
+
+the problem is what to induct on.
+
+However, dom should decrease.
+we should make it over Dom first.
+
+Note: Dom₂ ⊆ Dom
+-/
+
+open GenericExpr
+
 def dom_norm (_e_f : EtaFn (τ_c := τ_c) f ar doms) (idx : Fin ar) : IsNorm RedAff doms[idx].raw := doms[idx].is_norm
 
 inductive ArgTy : (e_f : EtaFn (τ_c := τ_c) f ar doms) → {idx : Fin ar}
-  → (args : Vector (@EtaExpr.Norm τ_c) idx) → @EtaExpr.Norm τ_c → Type u
+  → (args : Vector (@EtaExpr.Norm τ_c) (Fin.toNat idx)) → @EtaExpr.Norm τ_c → Type u
   | mk {e_f : EtaFn f ar doms} {idx : Fin ar}
-    {args : Vector (@EtaExpr.Norm τ_c) idx} :
+    {args : Vector (@EtaExpr.Norm τ_c) (Fin.toNat idx)} :
     (hr : RedAffNorm ((args.map NormExpr.raw).foldl .app doms[↑ idx].raw) τ)
-    → ArgTy e_f args ⟨τ, hr.is_norm⟩
+    → ArgTy e_f args τ
 
 @[grind]
-def get_arg_ty {f : @EtaExpr.Norm τ_c} (e_f : EtaFn f ar doms) {idx : Fin ar}
-  (args : Vector (@EtaExpr.Norm τ_c) idx) : ((t : @EtaExpr.Norm τ_c) × ArgTy e_f args t) := by
-  cases e_f <;> exact ⟨_, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+def get_arg_ty (e_f : EtaFn f ar doms) {idx : Fin ar}
+  (args : Vector (@EtaExpr.Norm τ_c) (Fin.toNat idx)) : ((t : @EtaExpr.Norm τ_c) × ArgTy e_f args t) := by
+  cases e_f <;> exact ⟨_, .mk (aff_sound rfl)⟩
 
 def ArgTy.complete {e_f : EtaFn (τ_c := τ_c) f ar doms}
-  {idx : Fin ar} {args : Vector (@EtaExpr.Norm τ_c) (↑ idx)}
+  {idx : Fin ar} {args : Vector (@EtaExpr.Norm τ_c) idx}
   (h : ArgTy (idx := idx) e_f args τ) : e_f.get_arg_ty args = ⟨τ, h⟩ :=
   match h with
-  | ⟨hrt, hn⟩ => by
+  | .mk hrt => by
+    rename_i τ₁
     unfold get_arg_ty
-    have h := reduce_complete_fst hrt hn
-    cases e_f <;> (simp_all; grind)
+    cases e_f <;> (
+      dsimp
+      cases hrt.out_eq
+      dsimp [red_aff]
+      simp [hrt.eq])
 
 instance ArgTy.instEtaRel {e_f : EtaFn f ar doms} {idx : Fin ar} : EtaRel
   (α := Vector (@EtaExpr.Norm τ_c) idx) (β := EtaExpr.Norm) (ArgTy e_f (idx := idx)) (m := Id)  where
@@ -244,6 +264,10 @@ def holes (f : EtaFn f ar doms) : List (@EtaExpr τ_c) :=
     sorry
 
 end EtaFn
+
+end NormExpr
+
+namespace GenericExpr
 
 /-
 Holes are either couples, or banged couples.

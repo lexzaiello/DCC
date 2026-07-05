@@ -493,11 +493,14 @@ open GenericExpr (IsNorm decreasing? reduce RedRel reduce_norm reduce_sound norm
 
 end GenericExpr
 
-@[inline, grind]
-abbrev EtaExpr.Norm := @NormExpr (@EtaConst τ_c) GenericExpr.RedAff
-
 namespace NormExpr
 open GenericExpr
+
+@[grind, inline]
+abbrev arity (e : NormExpr r) : ℕ := e.raw.arity
+
+@[grind, inline]
+abbrev tm_arity (e : NormExpr r) : ℕ := e.raw.tm_arity
 
 inductive Domain : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
   | eql₁     : (hrn : RedAffNorm f_α f_α')
@@ -592,15 +595,27 @@ inductive Domain₂ : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → @NormE
     → Domain ⟨g', hn_g'⟩ α
     → Domain₂ f' β γ
     → Domain₂ ⟨(DCC? (f ∘' g)), fun ⟨_, h⟩ => nomatch h⟩ α ⟨(DCC? γ.raw ∘' g'), fun ⟨_, h⟩ => nomatch h⟩
-  | eql      : (hrn₁ : RedAffNorm f_α ⟨f_α', hn_f_α'⟩) → Domain ⟨f_α', hn_f_α'⟩ δ
-    → Domain₂ ⟨(DCC? Eql(f_α)), fun ⟨_, h⟩ => nomatch h⟩ δ ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ => nomatch h⟩
-  | refl     : (hrn₁ : RedAffNorm f_α ⟨f_α', hn_f_α'⟩) → Domain ⟨f_α', hn_f_α'⟩ δ
-    → Domain₂ ⟨(DCC? refl(f_α)), fun ⟨_, h⟩ => nomatch h⟩ δ ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ => nomatch h⟩
+  | eql      : (hrn₁ : RedAffNorm f_α ⟨f_α', hn_f_α'⟩) → Domain ⟨f_α', hn_f_α'⟩ ⟨δ, hn_δ⟩
+    → Domain₂ ⟨(DCC? Eql(f_α)), fun ⟨_, h⟩ => nomatch h⟩
+      ⟨(DCC? !(δ)), fun ⟨_, h⟩ => match h with | .bang h => hn_δ ⟨_, h⟩⟩
+      ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ => nomatch h⟩
+  | refl      : (hrn₁ : RedAffNorm f_α ⟨f_α', hn_f_α'⟩) → Domain ⟨f_α', hn_f_α'⟩ ⟨δ, hn_δ⟩
+    → Domain₂ ⟨(DCC? refl(f_α)), fun ⟨_, h⟩ => nomatch h⟩
+      ⟨(DCC? !(δ)), fun ⟨_, h⟩ => match h with | .bang h => hn_δ ⟨_, h⟩⟩
+      ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ => nomatch h⟩
   | curr     : (hrn₁ : RedAffNorm α α') → (hrn₂ : RedAffNorm β β')
     → Domain₂ ⟨(DCC? Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩ α' β'
   | curr'    : (hrn₁ : RedAffNorm α ⟨α', hn_α'⟩) → (hrn₂ : RedAffNorm β ⟨β', hn_β'⟩)
     → Domain₂ ⟨(DCC? !Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩
     ⟨DCC? !(α'), fun ⟨_, h⟩ => match h with | .bang h => hn_α' ⟨_, h⟩⟩ ⟨DCC? !<β'>, fun ⟨_, h⟩ => nomatch h⟩
+
+def Domain₂.to_domain (h : Domain₂ f α β) : Domain f α :=
+  match h with
+  | .comp' _hr₁ hr₂ h_dom₁ _ => .comp' hr₂ h_dom₁
+  | .eql hr₁ h_dom => .eql₁ hr₁ h_dom
+  | .refl hr₁ h_dom => .refl₁ hr₁ h_dom
+  | .curr hr₁ hr₂ => .curr₁ hr₁
+  | .curr' hr₁ hr₂ => .curr₁' hr₁
 
 set_option maxHeartbeats 20000000 in
 @[grind]

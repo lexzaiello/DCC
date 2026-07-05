@@ -775,11 +775,42 @@ theorem Domain₂.complete
 
 end NormExpr
 
+open NormExpr in
+open GenericExpr in
 @[dcc_force_reduce, dcc_force_aff]
-instance Domain.instRedRel : GenericExpr.RedRel.{u, u + 1} (α := GenericExpr τ_c) (Domain (τ_c := τ_c)) size where
+instance Domain.instRedRel : GenericExpr.RedRel.{u, u + 1} (α := @NormExpr τ_c RedAff) (Domain (τ_c := τ_c)) size where
   run := fun x => match domain? x with
     | .some ⟨_, h⟩ => .some ⟨_, ⟨h⟩⟩
     | .none => .none
+  decreasing := fun h => by
+    induction h
+    any_goals (
+      focus
+      try (
+        rename_i hr h_dom hlt
+        have ha := h_dom.complete
+        have hb := hr.decreasing?
+        grind)
+      done)
+    any_goals (
+      focus
+      try (
+        rename_i hr h_dom hlt
+        have ha := h_dom.complete
+        have hb := hr.decreasing?
+        dcc_simp_all [NormExpr.size]
+        omega)
+      done)
+    any_goals (
+      focus
+      try (
+        rename_i hn hr
+        have ha := hr.complete
+        have hb := hr.decreasing?
+        dcc_simp_all [NormExpr.size]
+        first | grind)
+      done)
+    any_goals (grind)
 
 @[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]
 def Domain.deterministic {x τ₁ τ₂ : GenericExpr τ_c} (h₁ : Domain (τ_c := τ_c) x τ₁) (h₂ : Domain (τ_c := τ_c) x τ₂) : τ₁ = τ₂ := by

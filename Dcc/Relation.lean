@@ -729,7 +729,7 @@ def NormExpr.raw.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Pr
   match r with
   | ⟨e, _⟩ => e
 
-@[grind =, grind →]
+@[grind =, grind →, dcc_size]
 theorem NormExpr.size_eq {t : GenericExpr τ_c → ℕ} {r : GenericExpr τ_c → GenericExpr τ_c → Prop} [GenericExpr.RedRel r t]
   {e : GenericExpr τ_c} {hn : GenericExpr.IsNorm r e} : (NormExpr.mk e hn).size = t e := by
   simp [size]

@@ -716,15 +716,26 @@ theorem ViewPi.complete_none (h : ViewPi e → False) : view_pi? e = .none := by
 theorem view_pi?_none_sound (h : view_pi? e = .none) : ViewPi e → False := fun h => by
   simp_all [h.complete]
 
-inductive ViewCoup : GenericExpr τ_c → Type u
-  | coup    : ViewCoup (DCC? Coup(β))
-  | bang    : ViewCoup (DCC? !(α))
+inductive ViewBangCoup : GenericExpr τ_c → Type u
+  | coup    : ViewBangCoup (DCC? Coup(β))
+  | bang    : ViewBangCoup (DCC? !(α))
+
+inductive ViewCoupBang : GenericExpr τ_c → Type u
+  | coup    : ViewCoupBang (DCC? Coup(β))
+  | bang    : ViewCoupBang (DCC? !(Coup(β)))
 
 @[grind, dcc_rel]
-def view_coup? (e : GenericExpr τ_c) : Option (ViewCoup e) :=
+def view_bang_coup? (e : GenericExpr τ_c) : Option (ViewBangCoup e) :=
   match e with
   | (DCC? Coup(_β)) => .some .coup
   | (DCC? !(_α))    => .some .bang
+  | _ => .none
+
+@[grind, dcc_rel]
+def view_coup_bang? (e : GenericExpr τ_c) : Option (ViewCoupBang e) :=
+  match e with
+  | (DCC? Coup(_β)) => .some .coup
+  | (DCC? !(Coup(_α)))    => .some .bang
   | _ => .none
 
 inductive IsEtaTm : GenericExpr τ_c → Type u
@@ -870,19 +881,35 @@ theorem IsEtaTm.complete_view_eta (h : IsEtaTm e) : view_eta? e = .none := by
   induction h <;> (simp [view_eta?]; try grind)
 
 @[grind =_, grind .]
-theorem ViewCoup.complete (h : ViewCoup e) : view_coup? e = .some h := by
-  cases h <;> simp [view_coup?]
+theorem ViewBangCoup.complete (h : ViewBangCoup e) : view_bang_coup? e = .some h := by
+  cases h <;> simp [view_bang_coup?]
 
 @[grind =, grind =_]
-theorem ViewCoup.complete_none (h : ViewCoup e → False) : view_coup? e = .none := by
-  unfold view_coup?
+theorem ViewBangCoup.complete_none (h : ViewBangCoup e → False) : view_bang_coup? e = .none := by
+  unfold view_bang_coup?
+  split <;> (
+    first
+    | exact (h (by constructor)).elim
+    | grind)
+
+@[grind =_, grind .]
+theorem ViewCoupBang.complete (h : ViewCoupBang e) : view_coup_bang? e = .some h := by
+  cases h <;> simp [view_coup_bang?]
+
+@[grind =, grind =_]
+theorem ViewCoupBang.complete_none (h : ViewCoupBang e → False) : view_coup_bang? e = .none := by
+  unfold view_coup_bang?
   split <;> (
     first
     | exact (h (by constructor)).elim
     | grind)
 
 @[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
-theorem view_coup?_none_sound (h : view_coup? e = .none) : ViewCoup e → False := fun h => by
+theorem view_bang_coup?_none_sound (h : view_bang_coup? e = .none) : ViewBangCoup e → False := fun h => by
+  simp_all [h.complete]
+
+@[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
+theorem view_coup_bang?_none_sound (h : view_coup_bang? e = .none) : ViewCoupBang e → False := fun h => by
   simp_all [h.complete]
 
 open Relation (ReflTransGen)

@@ -19,7 +19,8 @@ Improvement to code structure in Reduce.lean
   - pi case
   - arity 1 case
   - arity 2 case
-  - refl no TmEtaReduces₂ arity 2 case
+  - refl no TmEtaReduces₂ arity 2 case3
+
 - RedEta? same as before
   - (can we make ¬ contains_hole a theorem though??)
 - RedEta??
@@ -47,87 +48,78 @@ variable [DecidableEq τ_c]
 
 abbrev EtaExpr.Norm := NormExpr (τ := @EtaConst τ_c) GenericExpr.RedAff
 
+namespace Vector
+
+end Vector
+
 namespace NormExpr
 
 /-
 An η-reducible function is in normal form, has an arity of 1 or 2, and has known domain
 -/
 inductive EtaFn : (f : @EtaExpr.Norm τ_c) → (ar : ℕ) → Vector EtaExpr.Norm ar → Type u
-  | tm₁ : (heq : arity f = 1)
+  | tm₁ : {_heq : arity f = 1}
     → (h_dom : Domain f α)
     → EtaFn f 1 (Vector.mk ⟨[α]⟩ (by grind))
-  | tm₂  : (heq : arity f = 2)
+  | tm₂  : {_heq : arity f = 2}
     → (h_dom : Domain₂ f α β) → EtaFn f 2 (Vector.mk ⟨[α, β]⟩ (by grind))
 
-@[aesop safe forward (rule_sets := [DccSize])]
-def EtaFn.decreasing {f τ : @EtaExpr.Norm τ_c} (h : EtaFn f 1 ⟨⟨[τ]⟩, by grind⟩) : τ.size < f.size :=
+@[dcc_size]
+def EtaFn.arity_pos (e : EtaFn f ar doms) : 0 < ar :=
+  match e with
+  | .tm₁ h => by grind
+  | .tm₂ h => by grind
+
+@[grind]
+def EtaFn.points (_h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ ar doms) : Vector (EtaExpr.Norm (τ_c := τ_c)) (GenericExpr.point_arity f) :=
+  (GenericExpr.points f).map GenericExpr.red_aff
+
+/-def EtaFn.indices (h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ ar doms) : Vector ((f' : @EtaExpr.Norm τ_c) × (ar' : ℕ) × (doms' : Vector EtaExpr.Norm ar') × (EtaFn f' ar' doms')) f.n_indices :=
   match h with
-  | .tm₁ _heq h_dom => Domain.instRedRel.decreasing h_dom
+  | .tm₁ heq h_dom => by
+    cases h_dom
+    
+    sorry
+  | .tm₂ heq h_dom₂ =>
+    sorry-/
+
+@[aesop safe forward (rule_sets := [DccSize])]
+def EtaFn.decreasing {f τ : @EtaExpr.Norm τ_c} {hn} (h : EtaFn f 1 ⟨⟨[τ]⟩, hn⟩) : τ.size < f.size :=
+  match h with
+  | .tm₁ h_dom => Domain.instRedRel.decreasing h_dom
 
 @[grind]
 def EtaFn.head_dom (e_f : EtaFn f ar doms) : ((τ : @EtaExpr.Norm τ_c) × (Domain f τ)) :=
   match e_f with
-  | .tm₁ _ h_dom => ⟨_, h_dom⟩
-  | .tm₂ _ h_dom => ⟨_, h_dom.to_domain⟩
-
-/-def EtaFn.dom_size_lt' {f τ : @EtaExpr.Norm τ_c} (h : EtaFn f 1 ⟨⟨[τ]⟩, by grind⟩) : (DCC? Id(τ.raw)).size < f.size :=
-  have h_lt := h.decreasing
-  match h with
-  | .tm₁ _heq h_dom => by
-    induction h_dom
-    any_goals (grind)
-    case unmap h_dom₁ hrt₁ hn₁ ih =>
-      simp_all [size]
-      have ha := Domain.instRedRel.decreasing h_dom₁
-      have hb := decreasing? _ hrt₁
-      have h := ih (.tm₁ (by simp_all [arity]) h_dom₁) ha (by grind) (hn₁ := (by assumption))
-      --have h := ih (.tm₁ _heq (.unmap (by assumption) (by assumption) (by assumption)))
-      sorry-/
-
-/-@[aesop safe forward (rule_sets := [DccSize])]
-def EtaFn.dom_size_lt' {f τ : @EtaExpr τ_c} {hn₁ : IsNorm RedAff f} {hn₂ : IsNorm RedAff τ} (h : EtaFn ⟨f, hn₁⟩ 1
-  ⟨⟨[⟨τ, hn₂⟩]⟩, by grind⟩) : size (DCC? Id(τ)) < size f :=
-  have h₀ := h.dom_size_lt
-  match h with
-  | .tm₁ _heq h_dom => by
-    have h₁ := Domain.instRedRel.decreasing h_dom
-    induction h_dom
-    any_goals (grind)
-    case unmap h_dom₁ hrt₁ hn₁ ih =>
-      have h := ih (.tm₁ (by grind) h_dom₁) (Domain.instRedRel.decreasing h_dom₁) (by grind)
-      have h := ih (.tm₁ (by rw [arity] at _heq; exact _heq) h_dom₁) (by
-        have h_dec₁ := decreasing? _ hrt₁
-        simp_all [size]
-        grind
-        sorry)
-      sorry-/
+  | .tm₁ h_dom => ⟨_, h_dom⟩
+  | .tm₂ h_dom => ⟨_, h_dom.to_domain⟩
 
 @[grind]
 def view_eta_fn (f : @EtaExpr.Norm τ_c) : Option ((ar : ℕ) × (doms : Vector (@EtaExpr.Norm τ_c) ar) × EtaFn f ar doms) :=
   if heq : f.arity = 1 then
     match f.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, _, .tm₁ heq h⟩
+    | .some ⟨_, h⟩ => .some ⟨_, _, .tm₁ (_heq := heq) h⟩
     | .none => .none
   else if heq : f.arity = 2 then
     match f.domain₂? with
-    | .some ⟨_, _, h⟩ => .some ⟨_, _, .tm₂ heq h⟩
+    | .some ⟨_, _, h⟩ => .some ⟨_, _, .tm₂ (_heq := heq) h⟩
     | .none => .none
   else .none
 
-def EtaFn.complete {f : @EtaExpr.Norm τ_c} (h : EtaFn f ar doms) : view_eta_fn f = .some ⟨ar, doms, h⟩ := by
+def EtaFn.complete {f : @EtaExpr.Norm τ_c} {doms : Vector EtaExpr.Norm ar} (h : EtaFn f ar doms) : view_eta_fn f = .some ⟨ar, doms, h⟩ := by
   induction h with
-  | tm₂ h_ar h_dom | tm₁ h_ar h_dom => simp [view_eta_fn, h_ar, h_dom.complete]
+  | tm₂ h_dom | tm₁ h_dom => simp_all [view_eta_fn, h_dom.complete]
 
 --def EtaFn.eq (h₁ h₂ : EtaFn f ar doms)
 
-instance EtaFn.instEtaRel : EtaRel
+/-instance EtaFn.instEtaRel : EtaRel
   (α := @EtaExpr.Norm τ_c) (β := ((ar : ℕ) × Vector (@EtaExpr.Norm τ_c) ar))
     (fun f h => EtaFn f h.fst h.snd) (m := Option)  where
   run := fun e => match view_eta_fn e with
     | .some ⟨ar, doms, h⟩ => .some ⟨⟨ar, doms⟩, h⟩
     | .none => .none
   complete := fun h => by
-    simp [h.complete]
+    simp [h.complete]-/
 
 open GenericExpr in
 inductive Hole : (α : @EtaExpr.Norm τ_c)
@@ -257,29 +249,49 @@ def ArgTy.complete {e_f : EtaFn (τ_c := τ_c) f ar doms}
 instance ArgTy.instEtaRel {e_f : EtaFn f ar doms} {idx : Fin ar} : EtaRel
   (α := Vector (@EtaExpr.Norm τ_c) idx) (β := EtaExpr.Norm) (ArgTy e_f (idx := idx)) (m := Id)  where
   run := get_arg_ty (idx := idx) e_f
-  complete := ArgTy.complete (idx := idx) (e_f := e_f) (ar := ar) (doms := doms)
+  complete := ArgTy.complete (idx := idx) (e_f := e_f) (doms := doms)
 
 inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
   → (level : ℕ)
   → (holes : Vector (@EtaExpr.Norm τ_c) ar) → Type u
-  | tm₁ {e_f : EtaFn f 1 ⟨#[α], by grind⟩} : Hole α level hole_e
+  | tm₁ {e_f : EtaFn f 1 ⟨#[α], h⟩} : Hole α level hole_e
     → Holes e_f level ⟨#[hole_e], by grind⟩
-  | tm₂ {e_f : EtaFn f 2 ⟨#[α, ⟨β₀, h_n_β⟩], by grind⟩} : Hole α (level + 2) ⟨hole₁, hn_hole₁⟩
+  | tm₂ {e_f : EtaFn f 2 ⟨#[α, ⟨β₀, h_n_β⟩], h⟩} : Hole α (level + 2) ⟨hole₁, hn_hole₁⟩
     → RedAffNorm (DCC? (β₀ hole₁)) β
     → Hole β (level + 1) hole₂
-    → Holes (ar := 2) e_f level ⟨#[⟨hole₁, hn_hole₁⟩, hole₂], by grind⟩
+    → Holes e_f level ⟨#[⟨hole₁, hn_hole₁⟩, hole₂], by grind⟩
+
+@[grind]
+def Holes.app {f : @EtaExpr.Norm τ_c} {doms : Vector (@EtaExpr.Norm τ_c) ar}
+  {e_f : EtaFn f ar doms} {holes : Vector (@EtaExpr.Norm τ_c) ar}
+  (_h : Holes e_f level holes) : @EtaExpr τ_c :=
+  ((holes.map NormExpr.raw).foldl GenericExpr.app f.raw)
+
+@[grind]
+def Holes.app_reduce {e_f : EtaFn f ar doms} (_h : Holes e_f level holes) : ((e' : EtaExpr.Norm) ×
+  (RedAffNorm ((holes.map NormExpr.raw).foldl GenericExpr.app f.raw) e')) :=
+  ⟨_, aff_sound rfl⟩
+
+@[grind]
+def Holes.Reduces {e_f : EtaFn (τ_c := τ_c) f ar doms} (_h : Holes e_f level holes) (B : EtaExpr.Norm (τ_c := τ_c)) : Type u :=
+  (RedAffNorm ((holes.map NormExpr.raw).foldl GenericExpr.app f.raw) B)
+
+@[grind]
+def Holes.fold {e_f : EtaFn (τ_c := τ_c) f ar doms} (on_f : @EtaExpr.Norm τ_c) (_h : Holes e_f level holes) : @EtaExpr.Norm τ_c :=
+  let ⟨⟨τ₁, hn_τ⟩, h_arg⟩ := e_f.get_arg_ty (idx := ⟨0, e_f.arity_pos⟩) ⟨#[], by simp⟩
+  red_aff <| (holes.map NormExpr.raw).foldl GenericExpr.app on_f.raw
 
 @[grind]
 def holes (e_f : EtaFn (τ_c := τ_c) f ar doms) (level : ℕ)
   : Option ((holes : Vector (@EtaExpr.Norm τ_c) ar) × Holes e_f level holes) := by
   cases e_f with
-  | tm₁ heq h_dom =>
-    rename_i α
+  | tm₁ h_dom =>
+    rename_i α _
     match α.mk_hole level with
     | .some ⟨_, h⟩ => exact .some ⟨_, .tm₁ h⟩
     | .none => exact .none
-  | tm₂ heq h_dom₂ =>
-    rename_i α β₀
+  | tm₂ h_dom₂ =>
+    rename_i α β₀ _
     match α.mk_hole (level + 2) with
     | .some ⟨⟨hole₁, _hn_hole₁⟩, h₁⟩ =>
       match (red_aff (DCC? (β₀.raw hole₁))).mk_hole (level + 1) with
@@ -294,143 +306,232 @@ def Holes.complete (h : Holes (τ_c := τ_c) e_f level hole_elems) : holes e_f l
   | tm₁ h_hole =>
     rename_i e_f
     cases e_f with
-    | tm₁ heq dom => simp [holes, h_hole.complete]
+    | tm₁ dom => simp [holes, h_hole.complete]
   | tm₂ hr₁ h_hole₁ h_hole₂ =>
     rename_i e_f
     cases e_f with
-    | tm₂ heq dom =>
+    | tm₂ dom =>
       simp [holes, hr₁.complete, raw, (h_hole₁.complete ▸ h_hole₂).complete, h_hole₁.aff_complete]
       dcc_simp
       have h := (h_hole₁.out_eq ▸ h_hole₁).eq
       grind
 
+/-
+Expressions that index an environment like Π(f_α, f_β) may be composed:
+Π(f_α, f_β) ∘' g => Π(f_α ∘' g, f_β ∘' g)
+
+However, this should occur as a last step, so as not to complicate
+recursion.
+
+the resulting updated indices are supplied
+-/
+--inductive Inline : (EtaFn f ar doms) → (indices : Vector (@EtaExpr
+
+/-inductive Holes.Red : {e_f : EtaFn (τ_c := τ_c) f doms}
+  → {level : ℕ}
+  → (h : Holes (τ_c := τ_c) e_f level hole_tms)
+  → @EtaExpr.Norm τ_c
+  → Type u
+  | id : {f        : @EtaExpr.Norm τ_c}
+       → {doms     : Vector (@EtaExpr.Norm τ_c) (arity f)}
+       → {level    : ℕ}
+       → {e_f      : EtaFn f doms}
+       → {hole_tms : Vector (@EtaExpr.Norm τ_c) (arity f)}
+       → (e_h      : e_f.Holes level hole_tms)
+       → (hr       : e_h.Reduces (Holes.-/
+
+/-
+Holes apply function that makes a Holes.Red
+-/
+
+inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
+  → (e_f' : EtaFn (τ_c := τ_c) f' ar doms)
+  → Type u
+  | id₁   : (e_f : EtaFn f 1 ⟨#[α], hn⟩)
+    → (e_h : Holes e_f 0 ⟨#[hole₁], by grind⟩)
+    → RedAffNorm (DCC? (f.raw hole₁.raw)) hole₁
+    → Canonicalize e_f (.tm₁ (_heq := (by grind)) (.id ⟨.refl, α.is_norm⟩))
+
+/-
+The canonical head of a reduction spine
+-/
+set_option pp.rawOnError true
+inductive CanonFn : (e_f : EtaFn (τ_c := τ_c) f doms)
+  → {level : ℕ}
+  → (h_holes : e_f.Holes level hole_tms)
+  → (e_f' : EtaFn f' doms₂)
+  → Type (u + 1)
+  | eval   : {f     : @EtaExpr.Norm τ_c}
+           → {doms  : Vector (@EtaExpr.Norm τ_c) (arity f)}
+           → {h_ar₁ : arity f = 1}
+           → {level : ℕ}
+           → {β     : @EtaExpr τ_c}
+           → {hn₁   : IsNorm RedAff (DCC? Coup(β))}
+           → (e_f   : EtaFn (τ_c := τ_c) f ⟨#[⟨DCC? Coup(β), hn₁⟩], h_ar₁ ▸ rfl⟩)
+           → {ar    : β.arity = 1}
+           → {α     : @EtaExpr.Norm τ_c}
+           → (e_β       : EtaFn ⟨β, hn₁.coup⟩ ⟨#[α], (by grind)⟩)
+           → {a b       : @EtaExpr τ_c}
+           → {hn₃       : IsNorm RedAff (DCC? ⟦β⟧(a, b))}
+           → (e_holes   : e_f.Holes level ⟨#[⟨(DCC? ⟦β⟧(a, b)), hn₃⟩], h_ar₁ ▸ rfl⟩)
+           → {f'  : @EtaExpr τ_c}
+           → {hn₄ : IsNorm RedAff (DCC? (f' a b))}
+           → (hr        : e_holes.Reduces ⟨(DCC? (f' a b)), hn₄⟩)
+           → {f'        : @EtaExpr.Norm τ_c}
+           → {h_ar      : arity f' = 2}
+           → CanonFn e_f e_holes (EtaFn.tm₁ (.eval (α := α.raw) (β := β) (x := f'.raw) (aff_sound rfl)))
+  | id     : {f     : @EtaExpr.Norm τ_c}
+           → {doms  : Vector (@EtaExpr.Norm τ_c) (arity f)}
+           → {level : ℕ}
+           → (e_f       : EtaFn (τ_c := τ_c) f doms)
+           → (h_τ_hole₁ : e_f.ArgTy (idx := ⟨0, e_f.arity_pos⟩) ⟨#[], rfl⟩ α)
+           → {hole_tms  : Vector (@EtaExpr.Norm τ_c) (arity f)}
+           → (e_holes   : e_f.Holes level hole_tms)
+           → (hr₁       : e_holes.Reduces (e_holes.fold ⟨DCC? Id(α.raw), by grind⟩))
+           → CanonFn e_f e_holes (.tm₁ (.id ⟨.refl, α.is_norm⟩))
+  /-| eval   : CanonFn level (.tm₂ f (DCC? (f ⟦β⟧(a, b))) (DCC? (f' a b)) hn (DCC? Eval(α, β, f'))
+  | id₁    : (arity f = 1) → Domain f τ → CanonFn f (DCC? (f hole_arg)) hole_arg hn (DCC? Id(τ))
+  | par₁   : (arity f = 1) → Domain f τ
+    → (ViewCoup τ → False)
+    → Domain f' τ
+    → CanonFn f (DCC? (f hole_arg)) (DCC? (f' hole_arg)) hn f'
+  | fstc   : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → CanonFn f (DCC? (f ⟦β⟧(a, b))) a hn (DCC? Fstc(β))
+  | sndc   : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → CanonFn f (DCC? (f ⟦β⟧(a, b))) b hn (DCC? Sndc(β))
+  | fstc'  : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → CanonFn f (DCC? (f &(⟦β⟧(&(a), &(b))))) a hn (DCC? *<Fstc(β)>)
+  | sndc'  : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → CanonFn f (DCC? (f &(⟦β⟧(&(a), &(b))))) b hn (DCC? *<Sndc(β)>)
+  -- 2 arity
+  | id₂    : (arity f = 2) → Domain f τ → CanonFn f (DCC? (f a b)) (DCC? (a b)) hn (DCC? Id(τ))
+  | par₂   : (arity f = 2) → Domain₂ f α β → Domain₂ f' α β → CanonFn f (DCC? (f a b)) (DCC? (f' a b)) hn f'-/
+
+/-
+To η-reduce an expression:
+
+1. Apply holes
+2. Canonicalize (pi types are a case)
+  Notes:
+    - Potentially do it type directed.
+    - we already have the holes
+    - Going backwards?
+
+    inlining should handle Π comp case
+
+  Steps:
+  - par case where you just get (f holes)
+    - Inline resulting expression
+    - Wellfounded recursion: handle inner cases first? norm the points first
+  - constant case:
+
+- Reduce inductive only takes holes as parameter
+
+- always inline after canonicalizing
+- always fold if possible
+3. 
+-/
+/-inductive Reduce : {f f' : @EtaExpr.Norm τ_c} → (EtaFn f ar doms) → (EtaFn f' ar doms) → Type u
+  -/
+
 end EtaFn
 
 end NormExpr
 
-namespace GenericExpr
-
 /-
-Holes are either couples, or banged couples.
+We can generate a list of holes for our expressions. Good.
+We can also apply them with foldl.
 
-Coup(β)
+To do:
 
-a hole for β is the fst element
+- all the old reductions pretty much
+  - However, condense into one inductive with new FnEta stuff
+- + Eval
+- Π still needs to be special cased
+
+- Most ideal:
+  - single inductive handles the whole thing
+  - we are always reducing a function
+
+  - however, Π terms have a special case
+    - Can consider (Π(f_α, f_β) env) as being all points?
+    - Π composition is also a special case.
+      - Π(f_α, f_β) ∘' g -> Π(f_α ∘' g, f_β ∘' g)
+      - we are essentially condensing the points. I like this.
+      - any other examples of this behavior?
+        - Coup(β)
+
+We still still need to split up between term arity and point arity
+maybe?
+
+- FnEta also has a mapping from points to construct the pointed term.
+
+e.g.,
+
+FnEta : (points : ℕ) → 
+
+Points are filled in beforehand, but we should be able to map them.
+
+FnEta.apply (h : EtaFn n_points ar doms) (
+
+We absolutely should be mapping points.
+
+can do this in Ast.lean with a function:
+
+points (e : GenericExpr τ_c) {n : ℕ} : Vector (point_arity e) (GenericExpr τ_c)
+
+map_points (e : GenericExpr τ_c) (new_points : Vector (point_arity e) (GenericExpr τ_c → GenericExpr τ_c))
+
+this is super simple.
+
+^ necessary for handlinlg things like Coup(β)
+
+TODO: how does this solve Π special case?
+
+(Π(f_α, f_β) env)
+
+
+(Π(f_α, f_β) ∘' g) -> Π(f_α ∘' g, f_β ∘' g)
+^ this is folding / simplifying a point in
+
+Π might just be a special case.
+
+However, we might be able to generalize to apps in general with a fold function,
+defined on specific values, like Π. yes.
+
+GenericExpr.fold (f : GenericExpr τ_c)
+Note: there are other cases like Π
+!<β> ∘' ...
+
+- also a concept of indices, which index the environment, but to create a term,
+not just for typing information.
+
+- important note: inlining happens after all other steps
+
+these can all be folded.
+observation: folding is always done with composition.
+actually call this inlining.
+
+Note: Π env case is special because it should theoretically be handled by 2-argument
+app. e.g., curr
+so, scrap that.
+
+TODO:
+
+- point_arity e
+- map_points e, applied with Vector (point_arity e) (GenericExpr τ_c → GenericExpr τ_c)
+- points e : Vector (point_arity e) (GenericExpr τ_c)
+- Mem for hole list. Vector n (@EtaConst τ_c)
+  - holes ∈ e
+
+- inductive to actually do the η-reduction
+  - should always η-reduce points. But how do we know we're at a spine?
+    - points will not be defined, except at a spine. otherwise no-op
+  - Another note: inlining might be subsumed by jsut adding Π as a recognized
+    form in main η-reduction.
+
+    - same general cases, but for Π
+
+- tm_arity is useless. remove
 -/
-inductive MkHole : (dom : @EtaExpr τ_c) → (level : ℕ) → (hole_e : @EtaExpr τ_c) → Type u
-  -- No more recursion. This is a terminal leaf
-  | pure : (ViewCoup dom → False) → MkHole dom level (DCC? hole(level))
-  | coup : Domain β α → MkHole α (level + 1) x
-    → (RedAffNorm (DCC? (β x)) τ_y)
-    → MkHole τ_y (level + 2) y
-    → MkHole (DCC? Coup(β)) level (DCC? ⟦β⟧(x, y))
-  | bang : MkHole α (level + 1) x → MkHole (DCC? !(α)) level (DCC? &(x))
 
-inductive AppHoles : (ar : ℕ) → (level : ℕ) → (f : @EtaExpr τ_c) → (heq : arity f = ar) → (holes : List (@EtaExpr τ_c)) → Type u
-  | tm₁ : Domain f α
-    → MkHole α (level + 1) hole₁
-    → AppHoles 1 level f heq [hole₁]
-  | tm₂ : Domain₂ f α β → MkHole α (level + 1) hole₁
-    → RedAffNorm (DCC? (β hole₁)) β'
-    → MkHole β' (level + 2) hole₂
-    → AppHoles 2 level f heq [hole₁, hole₂]
-
-@[dcc_size]
-def MkHole.size_zero (h : MkHole dom level hole_e) : hole_e.size = 0 :=
-  match h with
-  | .pure hn => by grind
-  | .coup h_dom h_mk₁ ⟨hrt₁, hn₁⟩ h_mk₂ =>
-    have ha := h_mk₁.size_zero
-    have hb := h_mk₂.size_zero
-    by grind
-  | .bang h_mk =>
-    have ha := h_mk.size_zero
-    by grind
-
-/-inductive MkHole : (ar : ℕ) → (level : ℕ) → (f : GenericExpr (@EtaConst τ_c)) → (heq : tm_arity f = ar) → (GenericExpr (@EtaConst τ_c)) → Type u
-  | coupl : Domain f (DCC? Coup(β)) → MkHole 1 level f heq (DCC? (f ⟦β⟧(&(hole(level + 1)), &(hole(level + 2)))))
-  | tm    : Domain f τ → (ViewCoup τ → False) → MkHole 1 level f heq (DCC? (f hole(level + 1)))
-  | bang  : Domain f (DCC? !(Coup(β))) → MkHole 1 level f heq (DCC? (f ⟦β⟧(&(hole(level + 1)), &(hole(level + 2)))))
-  | bang₂ : Domain₂ f (DCC? !(α)) (DCC? !<β>) → MkHole 2 level f heq (DCC? (f &(hole(level + 1)) &(hole(level + 2))))
-  | tm₂   : Domain₂ f α β → (GenericExpr.is_bang α = .none) → MkHole 2 level f heq (DCC? (f hole(level + 1) hole(level + 2)))-/
-
-@[grind]
-def mk_hole (dom : @EtaExpr τ_c) (level : ℕ) : Option ((f' : GenericExpr (@EtaConst τ_c)) × (MkHole dom level f')) :=
-  if heq : dom.view_coup?.isSome then
-    match heq : dom.view_coup?.get heq with
-    | (.coup (β := β)) =>
-      match GenericExpr.domain? β with
-      | .some ⟨α, h_dom_β⟩ =>
-        have h_dec : α.size < β.coup.size := by
-          have h := Domain.instRedRel.decreasing h_dom_β
-          grind
-        match mk_hole α (level + 1) with
-        | .some ⟨x, h₁⟩ =>
-          have h_dec : (DCC? (β x)).size < (DCC? Coup(β)).size := by
-            have ha := h₁.size_zero
-            grind
-          have h_dec₂ : (reduce RedAff (DCC? (β x))).fst.size < (DCC? Coup(β)).size := by
-            have h := decreasing? RedAff (reduce_sound (A := (DCC? (β x))) rfl)
-            grind
-          match mk_hole (reduce RedAff (DCC? (β x))).fst (level + 2) with
-          | .some ⟨_, h₂⟩ =>
-            .some ⟨_, .coup h_dom_β h₁ (reduce_sound rfl) (reduce_norm rfl) h₂⟩
-          | .none => .none
-        | .none => .none
-      | .none => .none
-    | (.bang (α := α)) =>
-      have h_dec : α.size < α.bang.size := by
-        grind
-      match mk_hole α (level + 1) with
-      | .some ⟨_, h⟩ => .some ⟨_, .bang h⟩
-      | .none => .none
-  else
-    .some ⟨_, .pure (view_coup?_none_sound (by simp_all))⟩
-termination_by dom.size
-
-def app_holes (ar level : ℕ) (f : @EtaExpr τ_c) (heq : arity f = ar) : Option ((holes : List (@EtaExpr τ_c)) × (AppHoles ar level f heq holes)) :=
-  if heq : ar = 1 then
-    match f.domain? with
-    | .some ⟨_, h_dom⟩ =>
-      sorry
-    | .none => .none
-  else if heq : ar = 2 then
-    match f.domain₂? with
-    | .some ⟨_, _, h_dom⟩ =>
-      sorry
-  else .none
-
-def MkHole.complete {dom hole_e : @EtaExpr τ_c} (h : MkHole dom level hole_e) : mk_hole dom level = .some ⟨hole_e, h⟩ := by
-  induction h with
-  | pure hn => simp [mk_hole, ViewCoup.complete_none hn]
-  | coup h_dom h_mk₁ hrt₁ hn₁ h_mk₂ heq₁ heq₂ =>
-    have h := reduce_complete_fst hrt₁ hn₁
-    rw [mk_hole]
-    simp [view_coup?, h_dom.complete, heq₁]
-    cases h
-    simp [heq₂]
-  | bang h_mk heq =>
-    rw [mk_hole]
-    simp [view_coup?, heq]
-
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])]
-def Domain₂.eq {e α β : GenericExpr τ_c} (h₁ h₂ : Domain₂ e α β) : h₁ = h₂ := by
-  have ha := h₁.complete
-  have hb := h₂.complete
-  simp_all
-
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])]
-def Domain.eq {e τ : GenericExpr τ_c} (h₁ h₂ : Domain e τ) : h₁ = h₂ := by
-  have ha := h₁.complete
-  have hb := h₂.complete
-  simp_all
-
-open EtaRel in
-@[aesop safe destruct (rule_sets := [DccRel])]
-def MkHole.eq {dom hole_e : @EtaExpr τ_c} (h₁ h₂ : MkHole dom level hole_e) : h₁ = h₂ := by
-  have heq₁ := h₁.complete
-  have heq₂ := h₂.complete
-  grind
+namespace GenericExpr
 
 /-
 Instead of trying to construct the eta-reduction backwards, compare the output

@@ -701,6 +701,9 @@ def RedAffNorm.out_eq (h : RedAffNorm A B) : B = (red_aff A) :=
 /-def RedAffNorm.eq {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)} (h₁ : RedAffNorm A B) : h₁ = aff_sound (by sorry) := by
   sorry-/
 
+@[grind ., grind! .]
+theorem id_is_norm : IsNorm RedAff (DCC? Id(α)) := fun ⟨_, h⟩ => nomatch h
+
 end GenericExpr
 
 abbrev Expr.RedAff := GenericExpr.RedAff (τ := Unit)

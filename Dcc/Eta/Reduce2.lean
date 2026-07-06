@@ -427,11 +427,12 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
     → RedAffNorm (DCC? (f.raw hole₁)) ⟨(DCC? (f' hole₁)), hn₂⟩
     → (e_f' : EtaFn ⟨f', hn₂.congrFun⟩ 1 ⟨#[α], by grind⟩)
     → Canonicalize e_f e_f'
-  | eval  : (e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), hn_coup⟩], by grind⟩)
+  | eval  : (e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), hn₁⟩], by grind⟩)
     → (e_h : Holes e_f 0 ⟨#[⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩], by grind⟩)
     → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨DCC? (f' a b), hn'⟩
-    → (e_f' : EtaFn ⟨f', hn'.congrFun.congrFun⟩ 2 ⟨#[α, ⟨β, hn'⟩], by grind⟩)
-    → Canonicalize e_f (.tm₁ (.eval (α := α.raw) (β := β) (x := f') ⟨.refl, hn_coup.coup⟩))
+    → (e_f' : EtaFn ⟨f', hn'.congrFun.congrFun⟩ 2 ⟨#[α, ⟨β, hn₁.coup⟩], by grind⟩)
+    → Canonicalize e_f (.tm₁ (_heq := by grind) (.eval (α := α.raw) (β := β) (x := f') ⟨.refl, hn₁.coup⟩))
+  
 
 -- remember eval case
 /-

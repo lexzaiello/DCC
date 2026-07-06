@@ -1001,7 +1001,8 @@ inductive Domain : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
     → Apply f' z e'
     → Apply Val(λ env 1 => Eval(_α, _β, x)) Val(neutral(⟦__β⟧(y, z))) e'-/
   | eval     : (hrn : RedAffNorm β ⟨β', hn_β⟩)
-    → Domain ⟨(DCC? Eval(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩ ⟨DCC? Coup(β'), fun ⟨_, h⟩ => match h with | .coup h => hn_β ⟨_, h⟩⟩
+    → Domain ⟨(DCC? Eval(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩
+      ⟨DCC? Coup(β'), fun ⟨_, h⟩ => match h with | .coup h => hn_β ⟨_, h⟩⟩
   | quot     : (hrn : RedAffNorm β β') → Domain ⟨(DCC? `(β, x)), fun ⟨_, h⟩ => nomatch h⟩ β'
   -- f ∘ g x
   -- again, need to handle second round

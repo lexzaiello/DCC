@@ -383,6 +383,7 @@ the resulting updated indices are supplied
 Holes apply function that makes a Holes.Red
 -/
 
+set_option pp.rawOnError true
 inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
   → (e_f' : EtaFn (τ_c := τ_c) f' ar doms)
   → Type u
@@ -427,12 +428,11 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
     → (e_f' : EtaFn ⟨f', hn₂.congrFun⟩ 1 ⟨#[α], by grind⟩)
     → Canonicalize e_f e_f'
   | eval  : (e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), hn_coup⟩], by grind⟩)
-    → (e_β : EtaFn ⟨β, hn_coup.coup⟩ 1 ⟨#[α], by grind⟩)
     → (e_h : Holes e_f 0 ⟨#[⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩], by grind⟩)
-    → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨DCC? (f' a b), hn₂⟩
-    → (e_f' : EtaFn ⟨f', hn₂.congrFun.congrFun⟩ 2 ⟨#[α, ⟨β, hn_coup.coup⟩], by grind⟩)
-    → Canonicalize e_f
-      (.tm₁ (f := ⟨.eval α.raw β f', fun ⟨_, h⟩ => nomatch h⟩) (.eval ⟨.refl, hn_coup.coup⟩))
+    → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨DCC? (f' a b), hn'⟩
+    → (e_f' : EtaFn ⟨f', hn'.congrFun.congrFun⟩ 2 ⟨#[α, ⟨β, hn'⟩], by grind⟩)
+    → Canonicalize e_f (.tm₁ (.eval (α := α.raw) (β := β) (x := f') ⟨.refl, hn_coup.coup⟩))
+
 -- remember eval case
 /-
 The canonical head of a reduction spine

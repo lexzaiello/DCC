@@ -186,6 +186,31 @@ def mk_hole (α : @EtaExpr.Norm τ_c) (level : ℕ) : Option ((hole_e : @EtaExpr
       .some ⟨_, .pure (α.view_coup?_none_sound (by simp_all))⟩
 termination_by α.size
 
+open GenericExpr in
+def Hole.is_norm (_h : Hole α level ⟨tm_hole, hn_hole⟩) : IsNorm RedAff tm_hole := hn_hole
+
+open GenericExpr in
+def Hole.points_norm (h : Hole (τ_c := τ_c) α level ⟨tm_hole, hn_hole⟩) (point_idx : Fin (GenericExpr.point_arity tm_hole)) : IsNorm RedAff tm_hole.points[point_idx] := by
+  cases h with
+  | pure =>
+    simp [point_arity] at point_idx
+    nomatch point_idx
+  | bang h_inner =>
+    simp [point_arity] at point_idx
+    match point_idx with
+    | ⟨0, h_lt⟩ =>
+      rename_i α hn_α hole hn_hole
+      change IsNorm RedAff hole
+      assumption
+  | coup =>
+    simp [point_arity] at point_idx
+    match point_idx with
+    | ⟨0, h_lt⟩ =>
+      refine IsNorm.coup ?_
+      assumption
+    | ⟨1, h_lt⟩ => assumption
+    | ⟨2, h_lt⟩ => assumption
+
 @[aesop safe apply (rule_sets := [DccSize])]
 def Hole.complete {α hole_e : @EtaExpr.Norm τ_c} (h : Hole α level hole_e) : mk_hole α level = .some ⟨hole_e, h⟩ := by
   induction h with
@@ -316,6 +341,20 @@ def Holes.complete (h : Holes (τ_c := τ_c) e_f level hole_elems) : holes e_f l
       have h := (h_hole₁.out_eq ▸ h_hole₁).eq
       grind
 
+def Holes.points_norm {e_f : EtaFn f ar doms} {hole_elems : Vector (@EtaExpr.Norm τ_c) ar}
+  (h : Holes e_f level hole_elems)
+  (idx    : Fin ar)
+  (b_idx  : Fin hole_elems[idx].raw.point_arity) : IsNorm RedAff hole_elems[idx].raw.points[b_idx] := by
+  cases h with
+  | tm₁ h_hole =>
+    rename_i hole_e e_f
+    match idx with
+    | ⟨0, h_lt⟩ => exact h_hole.points_norm b_idx
+  | tm₂ h_hole₁ _ h_hole₂ =>
+    match idx with
+    | ⟨1, h_lt⟩ => exact h_hole₂.points_norm b_idx
+    | ⟨0, h_lt⟩ => exact h_hole₁.points_norm b_idx
+
 /-
 Expressions that index an environment like Π(f_α, f_β) may be composed:
 Π(f_α, f_β) ∘' g => Π(f_α ∘' g, f_β ∘' g)
@@ -347,10 +386,40 @@ Holes apply function that makes a Holes.Red
 inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
   → (e_f' : EtaFn (τ_c := τ_c) f' ar doms)
   → Type u
-  | id₁   : (e_f : EtaFn f 1 ⟨#[α], hn⟩)
+  | id₁   : (e_f : EtaFn f 1 ⟨#[α], by grind⟩)
     → (e_h : Holes e_f 0 ⟨#[hole₁], by grind⟩)
     → RedAffNorm (DCC? (f.raw hole₁.raw)) hole₁
     → Canonicalize e_f (.tm₁ (_heq := (by grind)) (.id ⟨.refl, α.is_norm⟩))
+  | fstc  : (e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), hn_coup⟩], by grind⟩)
+    → (e_h : Holes e_f 0 ⟨#[⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩], by grind⟩)
+    → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨a, hn_hole₁.sigl⟩
+    → Canonicalize e_f (.tm₁ (_heq := (by grind)) (.fstc ⟨.refl, hn_coup.coup⟩))
+  | sndc  : (e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), hn_coup⟩], by grind⟩)
+    → (e_h : Holes e_f 0 ⟨#[⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩], by grind⟩)
+    → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨a, hn_hole₁.sigl⟩
+    → Canonicalize e_f (.tm₁ (_heq := (by grind)) (.sndc ⟨.refl, hn_coup.coup⟩))
+  | fstc' : (e_f : EtaFn f 1 ⟨#[⟨DCC? !(Coup(β)), hn_coup⟩], by grind⟩)
+    → (e_h : Holes e_f 0 ⟨#[⟨DCC? &(⟦β⟧(a, b)), hn_hole₁⟩], by grind⟩)
+    → RedAffNorm (DCC? (f.raw &(⟦β⟧(a, b)))) ⟨a, (fun ⟨_, hr⟩ => by
+      have h := e_h.points_norm 0 ⟨0, by simp [dcc_size, raw, Vector.get]⟩
+      change IsNorm RedAff (β.mkc a b) at h
+      exact h ⟨_, .sigl hr⟩)⟩
+    → Canonicalize e_f
+      (.tm₁
+        (f := ⟨.unmap (.fstc β), fun ⟨_, h⟩ => nomatch h⟩)
+        (_heq := (by grind))
+        (.unmap ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩ (.fstc ⟨.refl, fun ⟨_, h⟩ => hn_coup ⟨_, .bang (.coup h)⟩⟩)))
+  | sndc' : (e_f : EtaFn f 1 ⟨#[⟨DCC? !(Coup(β)), hn_coup⟩], by grind⟩)
+    → (e_h : Holes e_f 0 ⟨#[⟨DCC? &(⟦β⟧(a, b)), hn_hole₁⟩], by grind⟩)
+    → RedAffNorm (DCC? (f.raw &(⟦β⟧(a, b)))) ⟨b, (fun ⟨_, hr⟩ => by
+      have h := e_h.points_norm 0 ⟨0, by simp [dcc_size, raw, Vector.get]⟩
+      change IsNorm RedAff (β.mkc a b) at h
+      exact h ⟨_, .sigr hr⟩)⟩
+    → Canonicalize e_f
+      (.tm₁
+        (f := ⟨.unmap (.sndc β), fun ⟨_, h⟩ => nomatch h⟩)
+        (_heq := (by grind))
+        (.unmap ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩ (.sndc ⟨.refl, fun ⟨_, h⟩ => hn_coup ⟨_, .bang (.coup h)⟩⟩)))
 
 /-
 The canonical head of a reduction spine

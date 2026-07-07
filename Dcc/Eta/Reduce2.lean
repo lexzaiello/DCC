@@ -406,14 +406,17 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
         cases f
         any_goals (grind)
         case pi =>
-          exact (n_pi_α .pi).elim)) (.id ⟨.refl, hn_α⟩))
+          cases e_f with
+          | tm₁ =>
+            
+            exact (n_pi_α .pi).elim)) (.id ⟨.refl, hn_α⟩))
   | fstc  : (e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), hn_coup⟩], by grind⟩)
     → (e_h : Holes e_f 0 ⟨#[⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩], by grind⟩)
     → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨a, hn_hole₁.sigl⟩
     → Canonicalize e_f (.tm₁ (_heq := (by grind)) (.fstc ⟨.refl, hn_coup.coup⟩))
   | sndc  : (e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), hn_coup⟩], by grind⟩)
     → (e_h : Holes e_f 0 ⟨#[⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩], by grind⟩)
-    → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨a, hn_hole₁.sigl⟩
+    → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨b, hn_hole₁.sigr⟩
     → Canonicalize e_f (.tm₁ (_heq := (by grind)) (.sndc ⟨.refl, hn_coup.coup⟩))
   | fstc' : (e_f : EtaFn f 1 ⟨#[⟨DCC? !(Coup(β)), hn_coup⟩], by grind⟩)
     → (e_h : Holes e_f 0 ⟨#[⟨DCC? &(⟦β⟧(a, b)), hn_hole₁⟩], by grind⟩)
@@ -521,18 +524,49 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) f ar doms) : Option ((f' : EtaExpr.
                   | .none => exact .none
                 else exact .none
               else exact .none
-          /-cases h_holes with
-          | tm₁ h_hole =>
-            match h_hole with
-            | .pure hn =>
+            | ⟨out, ⟨⟨hr, hn⟩⟩⟩ =>
+              if heqa : hole₁ = hole₂ then
+                if heqb : out = hole₁ then
+                  cases heqa.symm; cases heqb
+                  exact .some ⟨_, _, .fstc (.tm₁ h_dom) (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩⟩
+                else exact .none
+              else
+                if heqb : out = hole₁ then
+                  cases heqb
+                  exact .some ⟨_, _, .fstc (.tm₁ h_dom) (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩⟩
+                else if heqb : out = hole₂ then
+                  cases heqb
+                  exact .some ⟨_, _, .sndc (.tm₁ h_dom) (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩⟩
+              else exact .none
+        | .bang (.coup β) =>
+          cases h_hole with
+          | pure hn =>
+            exact (hn .bang).elim
+          | bang e_hole₁  =>
+            cases e_hole₁ with
+            | pure hn =>
               exact (hn .coup).elim
-            | .coup a b c d =>
-              
-              sorry
-            | .bang a =>
-              sorry-/
-        | _ => sorry
-  
+            | coup h_domβ e_hole₁ hrβ e_hole₂ =>
+              rename_i hole₁ hn_hole₁ _ hole₂ hn_hole₂ hn_coup hn_coup_hole
+              match (reduce_with_norm RedAff (DCC? (f.raw &(⟦β⟧(hole₁, hole₂))))) with
+              | ⟨out, ⟨⟨hr, hn⟩⟩⟩ =>
+                if heqa : hole₁ = hole₂ then
+                  if heqb : out = hole₁ then
+                    cases heqa.symm; cases heqb
+                    exact .some ⟨_, _, .fstc' (.tm₁ h_dom) (.tm₁ (.bang (.coup (hn := by assumption) h_domβ e_hole₁ hrβ e_hole₂))) ⟨hr, hn⟩⟩
+                  else exact .none
+                else
+                  if heqb : out = hole₁ then
+                    cases heqb
+                    exact .some ⟨_, _, .fstc' (.tm₁ h_dom) (.tm₁ (.bang (.coup (hn := by assumption) h_domβ e_hole₁ hrβ e_hole₂))) ⟨hr, hn⟩⟩
+                  else if heqb : out = hole₂ then
+                    cases heqb
+                    exact .some ⟨_, _, .sndc' (.tm₁ h_dom) (.tm₁ (.bang (.coup (hn := by assumption) h_domβ e_hole₁ hrβ e_hole₂))) ⟨hr, hn⟩⟩
+                else exact .none
+        | τ =>
+          
+          sorry
+  | .none => exact .none
 
 /-
 To η-reduce an expression:

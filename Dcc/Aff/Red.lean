@@ -651,6 +651,7 @@ end RedAffReflTrans
 
 inductive RedAffNorm : GenericExpr τ_c → NormExpr (RedAff (τ := τ_c)) → Type u
   | mk : (hr : RedAffReflTrans A B) → (hn : IsNorm RedAff B) → RedAffNorm A ⟨B, hn⟩
+deriving DecidableEq
 
 @[dcc_step]
 def RedAffNorm.decreasing? (h : RedAffNorm A B) : B.size ≤ A.size :=

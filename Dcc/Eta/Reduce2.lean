@@ -76,7 +76,7 @@ def EtaFn.points (_h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ ar doms) : Vector (EtaEx
   match h with
   | .tm₁ heq h_dom => by
     cases h_dom
-    
+
     sorry
   | .tm₂ heq h_dom₂ =>
     sorry-/
@@ -137,6 +137,7 @@ inductive Hole : (α : @EtaExpr.Norm τ_c)
   | bang : Hole ⟨α, hn_α⟩ (level + 1) ⟨hole, hn_hole⟩ → Hole ⟨(DCC? !(α)), fun ⟨_, h⟩ =>
     match h with
     | .bang h => hn_α ⟨_, h⟩⟩ level ⟨(DCC? &(hole)), fun ⟨_, h⟩ => nomatch h⟩
+deriving DecidableEq
 
 @[dcc_size]
 def Hole.size_zero (h : Hole α level hole_e) : hole_e.size = 0 := by
@@ -250,6 +251,7 @@ inductive ArgTy : (e_f : EtaFn (τ_c := τ_c) f ar doms) → {idx : Fin ar}
     {args : Vector (@EtaExpr.Norm τ_c) (Fin.toNat idx)} :
     (hr : RedAffNorm ((args.map NormExpr.raw).foldl .app doms[↑ idx].raw) τ)
     → ArgTy e_f args τ
+deriving DecidableEq
 
 @[grind]
 def get_arg_ty (e_f : EtaFn f ar doms) {idx : Fin ar}
@@ -283,6 +285,7 @@ inductive Holes : (e_f : EtaFn (τ_c := τ_c) f ar doms)
     → RedAffNorm (DCC? (β₀ hole₁)) β
     → Hole β (level + 1) hole₂
     → Holes e_f level ⟨#[⟨hole₁, hn_hole₁⟩, hole₂], by grind⟩
+deriving DecidableEq
 
 @[grind]
 def Holes.app {f : @EtaExpr.Norm τ_c} {doms : Vector (@EtaExpr.Norm τ_c) ar}
@@ -385,6 +388,9 @@ Holes apply function that makes a Holes.Red
 For quotation
 -/
 
+/-
+TODO: maybe refl case with Holes → False?
+-/
 inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
   → (e_f' : EtaFn (τ_c := τ_c) f' ar doms)
   → Type u
@@ -476,6 +482,57 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
       (β  := (DCC? !(Coup(β))))
       (β' := ⟨(DCC? !(Coup(β))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β₀ ⟨_, h⟩⟩)
       ⟨.refl, fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β₀ ⟨_, h⟩⟩)))
+
+def canonicalize (e_f : EtaFn (τ_c := τ_c) f ar doms) : Option ((f' : EtaExpr.Norm)
+  × (e_f' : EtaFn f' ar doms) × Canonicalize e_f e_f') := by
+  let e_f₀ := e_f
+  match e_f.holes 0 with
+  | .some ⟨hole_tms, h_holes⟩ =>
+    cases e_f with
+    | tm₁ h_dom =>
+      rename_i _heq
+      cases h_holes with
+      | tm₁ h_hole =>
+        rename_i α hole_e h_size_eq
+        have ⟨a, hn_coup⟩ := α
+        match a with
+        | .coup β =>
+          cases h_hole with
+          | pure hn =>
+            exact (hn .coup).elim
+          | coup h_domβ e_hole₁ hrβ e_hole₂ =>
+            rename_i hole₁ _ _ hole₂ _ _
+            match (reduce_with_norm RedAff (DCC? (f.raw ⟦β⟧(hole₁, hole₂)))) with
+            | ⟨DCC? (f' a b), ⟨⟨hr, hn⟩⟩⟩ =>
+              let f' : @EtaExpr.Norm τ_c := ⟨f', hn.congrFun.congrFun⟩
+              if heq₁ : a = hole₁ then
+                if heq₂ : b = hole₂ then
+                  cases heq₁; cases heq₂
+                  match f'.view_eta_fn with
+                  | .some ⟨ar', doms', e_f'⟩ =>
+                    if heq₃ : ar' = 2 then
+                      cases heq₃
+                      if heq₄ : doms' = ⟨#[α, ⟨β, hn_coup.coup⟩], by grind⟩ then
+                        cases heq₄
+                        exact .some ⟨_, _, (.eval (.tm₁ h_dom)
+                          (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩ e_f')⟩
+                      else exact .none
+                    else exact .none
+                  | .none => exact .none
+                else exact .none
+              else exact .none
+          /-cases h_holes with
+          | tm₁ h_hole =>
+            match h_hole with
+            | .pure hn =>
+              exact (hn .coup).elim
+            | .coup a b c d =>
+              
+              sorry
+            | .bang a =>
+              sorry-/
+        | _ => sorry
+  
 
 /-
 To η-reduce an expression:

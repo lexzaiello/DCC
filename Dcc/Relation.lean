@@ -713,10 +713,34 @@ theorem decreasing?'.{u} {α : Type u} {t : α → ℕ}
   (r : α → α → Prop) [hR : RedRel r t] {A : α} : (t (reduce r A).fst) ≤ t A :=
   decreasing? _ (reduce_sound (r := r) (A := A) rfl)
 
+instance IsNorm.decidableEq.{u} {τ : Type u} {t : τ → ℕ}
+  (r : outParam (τ → τ → Prop))
+  [hR : RedRel.{u} (α := τ) r t]
+  [Confluent r]
+  [DecidableEq τ]
+  [hN : SemiComplete.{u} (α := τ) r (hR := hR)]
+  {A: τ} : Decidable (IsNorm r A) :=
+  if heq : reduce' r A = A then
+    have h := reduce'_norm' (hN := hN) (A := A)
+    .isTrue (heq ▸ h)
+  else
+    .isFalse (fun h => heq (reduce'_complete .refl h))
+
+@[dcc_force_reduce, aesop norm (rule_sets := [DccForceReduce])]
+def reduce_with_norm.{u} {α : Type u} {t : α → ℕ} (r : α → α → Prop) [hR : RedRel r t]
+  [SemiComplete r]
+  (e : α) : ((e' : α) × (PULift.{u + 1, 0} (Relation.ReflTransGen r e e' ∧ IsNorm r e'))) :=
+  let h_reduce := reduce r e
+  ⟨h_reduce.fst, ⟨⟨h_reduce.snd.down, reduce_norm rfl⟩⟩⟩
+
 end GenericExpr
 
 inductive NormExpr.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) : Type u
   | mk : (e : GenericExpr τ) → GenericExpr.IsNorm r e → NormExpr r
+deriving DecidableEq
+
+def test_dec_eq_norm_expr.{u} {τ : Type u} [DecidableEq τ] {r : GenericExpr τ → GenericExpr τ → Prop}
+  (h₁ h₂ : NormExpr (τ := τ) r) : Bool := decide (h₁ = h₂)
 
 @[grind, inline]
 def NormExpr.size {t : GenericExpr τ_c → ℕ} {r : GenericExpr τ_c → GenericExpr τ_c → Prop} [GenericExpr.RedRel r t]

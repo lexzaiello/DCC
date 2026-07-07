@@ -385,7 +385,6 @@ Holes apply function that makes a Holes.Red
 For quotation
 -/
 
-set_option pp.rawOnError true
 inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
   → (e_f' : EtaFn (τ_c := τ_c) f' ar doms)
   → Type u
@@ -478,58 +477,6 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
       (β' := ⟨(DCC? !(Coup(β))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β₀ ⟨_, h⟩⟩)
       ⟨.refl, fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β₀ ⟨_, h⟩⟩)))
 
--- remember eval case
-/-
-The canonical head of a reduction spine
--/
-set_option pp.rawOnError true
-inductive CanonFn : (e_f : EtaFn (τ_c := τ_c) f doms)
-  → {level : ℕ}
-  → (h_holes : e_f.Holes level hole_tms)
-  → (e_f' : EtaFn f' doms₂)
-  → Type (u + 1)
-  | eval   : {f     : @EtaExpr.Norm τ_c}
-           → {doms  : Vector (@EtaExpr.Norm τ_c) (arity f)}
-           → {h_ar₁ : arity f = 1}
-           → {level : ℕ}
-           → {β     : @EtaExpr τ_c}
-           → {hn₁   : IsNorm RedAff (DCC? Coup(β))}
-           → (e_f   : EtaFn (τ_c := τ_c) f ⟨#[⟨DCC? Coup(β), hn₁⟩], h_ar₁ ▸ rfl⟩)
-           → {ar    : β.arity = 1}
-           → {α     : @EtaExpr.Norm τ_c}
-           → (e_β       : EtaFn ⟨β, hn₁.coup⟩ ⟨#[α], (by grind)⟩)
-           → {a b       : @EtaExpr τ_c}
-           → {hn₃       : IsNorm RedAff (DCC? ⟦β⟧(a, b))}
-           → (e_holes   : e_f.Holes level ⟨#[⟨(DCC? ⟦β⟧(a, b)), hn₃⟩], h_ar₁ ▸ rfl⟩)
-           → {f'  : @EtaExpr τ_c}
-           → {hn₄ : IsNorm RedAff (DCC? (f' a b))}
-           → (hr        : e_holes.Reduces ⟨(DCC? (f' a b)), hn₄⟩)
-           → {f'        : @EtaExpr.Norm τ_c}
-           → {h_ar      : arity f' = 2}
-           → CanonFn e_f e_holes (EtaFn.tm₁ (.eval (α := α.raw) (β := β) (x := f'.raw) (aff_sound rfl)))
-  | id     : {f     : @EtaExpr.Norm τ_c}
-           → {doms  : Vector (@EtaExpr.Norm τ_c) (arity f)}
-           → {level : ℕ}
-           → (e_f       : EtaFn (τ_c := τ_c) f doms)
-           → (h_τ_hole₁ : e_f.ArgTy (idx := ⟨0, e_f.arity_pos⟩) ⟨#[], rfl⟩ α)
-           → {hole_tms  : Vector (@EtaExpr.Norm τ_c) (arity f)}
-           → (e_holes   : e_f.Holes level hole_tms)
-           → (hr₁       : e_holes.Reduces (e_holes.fold ⟨DCC? Id(α.raw), by grind⟩))
-           → CanonFn e_f e_holes (.tm₁ (.id ⟨.refl, α.is_norm⟩))
-  /-| eval   : CanonFn level (.tm₂ f (DCC? (f ⟦β⟧(a, b))) (DCC? (f' a b)) hn (DCC? Eval(α, β, f'))
-  | id₁    : (arity f = 1) → Domain f τ → CanonFn f (DCC? (f hole_arg)) hole_arg hn (DCC? Id(τ))
-  | par₁   : (arity f = 1) → Domain f τ
-    → (ViewCoup τ → False)
-    → Domain f' τ
-    → CanonFn f (DCC? (f hole_arg)) (DCC? (f' hole_arg)) hn f'
-  | fstc   : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → CanonFn f (DCC? (f ⟦β⟧(a, b))) a hn (DCC? Fstc(β))
-  | sndc   : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → CanonFn f (DCC? (f ⟦β⟧(a, b))) b hn (DCC? Sndc(β))
-  | fstc'  : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → CanonFn f (DCC? (f &(⟦β⟧(&(a), &(b))))) a hn (DCC? *<Fstc(β)>)
-  | sndc'  : (arity f = 1) → Domain f τ → ViewCoup τ → (a ≠ b) → CanonFn f (DCC? (f &(⟦β⟧(&(a), &(b))))) b hn (DCC? *<Sndc(β)>)
-  -- 2 arity
-  | id₂    : (arity f = 2) → Domain f τ → CanonFn f (DCC? (f a b)) (DCC? (a b)) hn (DCC? Id(τ))
-  | par₂   : (arity f = 2) → Domain₂ f α β → Domain₂ f' α β → CanonFn f (DCC? (f a b)) (DCC? (f' a b)) hn f'-/
-
 /-
 To η-reduce an expression:
 
@@ -552,7 +499,7 @@ To η-reduce an expression:
 
 - always inline after canonicalizing
 - always fold if possible
-3. 
+3.
 -/
 /-inductive Reduce : {f f' : @EtaExpr.Norm τ_c} → (EtaFn f ar doms) → (EtaFn f' ar doms) → Type u
   -/

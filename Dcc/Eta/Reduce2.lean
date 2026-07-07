@@ -603,8 +603,39 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) f ar doms) : Option ((f' : EtaExpr.
               have h := h.complete
               simp_all) h⟩
     | tm₂ h_dom =>
-      
-      sorry
+      cases h_holes with
+      | tm₂ e_hole₁ hrβ e_hole₂ =>
+        rename_i hole₁ hn_hole₁ β hole₂ h_size
+        if h : (reduce RedAff (DCC? (f.raw hole₁ hole₂.raw))).fst.contains hole₁
+          ∨ (reduce RedAff (DCC? (f.raw hole₁ hole₂.raw))).fst.contains hole₂.raw then
+          rename_i e_α _heq β₀ h_n_β
+          let ⟨α, hn_α⟩ := e_α
+          cases α.view_fn_type? with
+          | some h_fn_ty =>
+            cases h_fn_ty with
+            | pi =>
+              rename_i f_α f_β x_α
+              match β₀ with
+              | (DCC? `((Π(f_α₂, f_β₂) x_α₂), τ)) =>
+                if h_fn_eq₁ : (DCC? (Π(f_α₂, f_β₂) x_α₂)) = (DCC? (Π(f_α, f_β) x_α)) then
+                  if h_τ_eq' : (reduce RedAff (DCC? (f_α x_α))).fst = τ then
+                    match (reduce_with_norm RedAff (DCC? (f.raw #((NormExpr.mk hole₁ hn_hole₁).raw) hole₂.raw))) with
+                    | ⟨out, ⟨hr, hn⟩⟩ =>
+                      cases h_τ_eq'.symm
+                      if heq : out = ((mk hole₁ hn_hole₁).raw.app (raw hole₂)) then
+                        cases h_fn_eq₁; cases heq
+                        exact .some ⟨_, _, .id₂ (.tm₂ h_dom) (aff_sound rfl) (.tm₂ e_hole₁
+                          hrβ e_hole₂) ⟨hr, hn⟩⟩
+                      else exact .none
+                  else exact .none
+                else exact .none
+              | _ => exact .none
+          | none =>
+            
+            sorry
+        else
+          
+          sorry
   | .none => exact .none
 
 /-

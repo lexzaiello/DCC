@@ -99,6 +99,11 @@ def contains (e : GenericExpr (τ := τ_c))
   | DCC[.] ⟦β⟧(x, y), to_find => β.contains to_find || x.contains to_find || y.contains to_find
   | _, _ => false
 
+@[grind =]
+theorem contains_refl {e : @GenericExpr τ_c} : contains e e = true := by
+  unfold contains
+  simp
+
 @[grind]
 def contains_hole (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     match e with

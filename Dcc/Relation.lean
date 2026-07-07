@@ -733,6 +733,18 @@ def reduce_with_norm.{u} {α : Type u} {t : α → ℕ} (r : α → α → Prop)
   let h_reduce := reduce r e
   ⟨h_reduce.fst, ⟨⟨h_reduce.snd.down, reduce_norm rfl⟩⟩⟩
 
+theorem reduce_sound_fst.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} [_hR : RedRel r t] {A B : α}
+  (_heq : (reduce r A).fst = B) : Relation.ReflTransGen r A B :=
+  have h := reduce_sound (r := r) (A := A) rfl
+  _heq ▸ h
+
+theorem reduce_sound_fst_norm.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} [_hR : RedRel r t] {A B : α}
+  [SemiComplete r]
+  (_heq : (reduce r A).fst = B) : Relation.ReflTransGen r A B ∧ IsNorm r B :=
+  have ha := reduce_sound (r := r) (A := A) rfl
+  have hb := reduce_norm (r := r) (A := A) rfl
+  ⟨_heq ▸ ha, _heq ▸ hb⟩
+
 end GenericExpr
 
 inductive NormExpr.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) : Type u

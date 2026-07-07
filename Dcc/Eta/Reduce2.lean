@@ -406,10 +406,7 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
         cases f
         any_goals (grind)
         case pi =>
-          cases e_f with
-          | tm₁ =>
-            
-            exact (n_pi_α .pi).elim)) (.id ⟨.refl, hn_α⟩))
+          exact (n_pi_α .pi).elim)) (.id ⟨.refl, hn_α⟩))
   | fstc  : (e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), hn_coup⟩], by grind⟩)
     → (e_h : Holes e_f 0 ⟨#[⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩], by grind⟩)
     → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨a, hn_hole₁.sigl⟩
@@ -440,11 +437,11 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
         (f := ⟨.unmap (.sndc β), fun ⟨_, h⟩ => nomatch h⟩)
         (_heq := (by grind))
         (.unmap ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩ (.sndc ⟨.refl, fun ⟨_, h⟩ => hn_coup ⟨_, .bang (.coup h)⟩⟩)))
-  | par   : (e_f : EtaFn f 1 ⟨#[α], by grind⟩)
-    → (α.raw.ViewCoupBang → False)
+  | par   : (e_f : EtaFn f 1 ⟨#[⟨α, hn_α⟩], by grind⟩)
+    → (α.ViewCoupBang → False)
     → (e_h : Holes e_f 0 ⟨#[⟨hole₁, hn_hole₁⟩], by grind⟩)
     → RedAffNorm (DCC? (f.raw hole₁)) ⟨(DCC? (f' hole₁)), hn₂⟩
-    → (e_f' : EtaFn ⟨f', hn₂.congrFun⟩ 1 ⟨#[α], by grind⟩)
+    → (e_f' : EtaFn ⟨f', hn₂.congrFun⟩ 1 ⟨#[⟨α, hn_α⟩], by grind⟩)
     → Canonicalize e_f e_f'
   | eval  : (e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), hn₁⟩], by grind⟩)
     → (e_h : Holes e_f 0 ⟨#[⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩], by grind⟩)
@@ -498,74 +495,105 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) f ar doms) : Option ((f' : EtaExpr.
       | tm₁ h_hole =>
         rename_i α hole_e h_size_eq
         have ⟨a, hn_coup⟩ := α
-        match a with
-        | .coup β =>
-          cases h_hole with
-          | pure hn =>
-            exact (hn .coup).elim
-          | coup h_domβ e_hole₁ hrβ e_hole₂ =>
-            rename_i hole₁ _ _ hole₂ _ _
-            match (reduce_with_norm RedAff (DCC? (f.raw ⟦β⟧(hole₁, hole₂)))) with
-            | ⟨DCC? (f' a b), ⟨⟨hr, hn⟩⟩⟩ =>
-              let f' : @EtaExpr.Norm τ_c := ⟨f', hn.congrFun.congrFun⟩
-              if heq₁ : a = hole₁ then
-                if heq₂ : b = hole₂ then
-                  cases heq₁; cases heq₂
-                  match f'.view_eta_fn with
-                  | .some ⟨ar', doms', e_f'⟩ =>
-                    if heq₃ : ar' = 2 then
-                      cases heq₃
-                      if heq₄ : doms' = ⟨#[α, ⟨β, hn_coup.coup⟩], by grind⟩ then
-                        cases heq₄
-                        exact .some ⟨_, _, (.eval (.tm₁ h_dom)
-                          (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩ e_f')⟩
-                      else exact .none
-                    else exact .none
-                  | .none => exact .none
-                else exact .none
-              else exact .none
-            | ⟨out, ⟨⟨hr, hn⟩⟩⟩ =>
-              if heqa : hole₁ = hole₂ then
-                if heqb : out = hole₁ then
-                  cases heqa.symm; cases heqb
-                  exact .some ⟨_, _, .fstc (.tm₁ h_dom) (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩⟩
-                else exact .none
-              else
-                if heqb : out = hole₁ then
-                  cases heqb
-                  exact .some ⟨_, _, .fstc (.tm₁ h_dom) (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩⟩
-                else if heqb : out = hole₂ then
-                  cases heqb
-                  exact .some ⟨_, _, .sndc (.tm₁ h_dom) (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩⟩
-              else exact .none
-        | .bang (.coup β) =>
-          cases h_hole with
-          | pure hn =>
-            exact (hn .bang).elim
-          | bang e_hole₁  =>
-            cases e_hole₁ with
+        if heq_coup_bang : a.view_coup_bang?.isSome then
+          cases a.view_coup_bang?.get heq_coup_bang with
+          | coup =>
+            rename_i β
+            cases h_hole with
             | pure hn =>
               exact (hn .coup).elim
             | coup h_domβ e_hole₁ hrβ e_hole₂ =>
-              rename_i hole₁ hn_hole₁ _ hole₂ hn_hole₂ hn_coup hn_coup_hole
-              match (reduce_with_norm RedAff (DCC? (f.raw &(⟦β⟧(hole₁, hole₂))))) with
+              rename_i hole₁ _ _ hole₂ _ _
+              match (reduce_with_norm RedAff (DCC? (f.raw ⟦β⟧(hole₁, hole₂)))) with
+              | ⟨DCC? (f' a b), ⟨⟨hr, hn⟩⟩⟩ =>
+                let f' : @EtaExpr.Norm τ_c := ⟨f', hn.congrFun.congrFun⟩
+                if heq₁ : a = hole₁ then
+                  if heq₂ : b = hole₂ then
+                    cases heq₁; cases heq₂
+                    match f'.view_eta_fn with
+                    | .some ⟨ar', doms', e_f'⟩ =>
+                      if heq₃ : ar' = 2 then
+                        cases heq₃
+                        if heq₄ : doms' = ⟨#[α, ⟨β, hn_coup.coup⟩], by grind⟩ then
+                          cases heq₄
+                          exact .some ⟨_, _, (.eval (.tm₁ h_dom)
+                            (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩ e_f')⟩
+                        else exact .none
+                      else exact .none
+                    | .none => exact .none
+                  else exact .none
+                else exact .none
               | ⟨out, ⟨⟨hr, hn⟩⟩⟩ =>
                 if heqa : hole₁ = hole₂ then
                   if heqb : out = hole₁ then
                     cases heqa.symm; cases heqb
-                    exact .some ⟨_, _, .fstc' (.tm₁ h_dom) (.tm₁ (.bang (.coup (hn := by assumption) h_domβ e_hole₁ hrβ e_hole₂))) ⟨hr, hn⟩⟩
+                    exact .some ⟨_, _, .fstc (.tm₁ h_dom) (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩⟩
                   else exact .none
                 else
                   if heqb : out = hole₁ then
                     cases heqb
-                    exact .some ⟨_, _, .fstc' (.tm₁ h_dom) (.tm₁ (.bang (.coup (hn := by assumption) h_domβ e_hole₁ hrβ e_hole₂))) ⟨hr, hn⟩⟩
+                    exact .some ⟨_, _, .fstc (.tm₁ h_dom) (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩⟩
                   else if heqb : out = hole₂ then
                     cases heqb
-                    exact .some ⟨_, _, .sndc' (.tm₁ h_dom) (.tm₁ (.bang (.coup (hn := by assumption) h_domβ e_hole₁ hrβ e_hole₂))) ⟨hr, hn⟩⟩
+                    exact .some ⟨_, _, .sndc (.tm₁ h_dom) (.tm₁ (.coup h_domβ e_hole₁ hrβ e_hole₂)) ⟨hr, hn⟩⟩
                 else exact .none
-        | τ =>
-          
-          sorry
+          | bang =>
+            rename_i β
+            cases h_hole with
+            | pure hn =>
+              exact (hn .bang).elim
+            | bang e_hole₁  =>
+              cases e_hole₁ with
+              | pure hn =>
+                exact (hn .coup).elim
+              | coup h_domβ e_hole₁ hrβ e_hole₂ =>
+                rename_i hole₁ hn_hole₁ _ hole₂ hn_hole₂ hn_coup hn_coup_hole
+                match (reduce_with_norm RedAff (DCC? (f.raw &(⟦β⟧(hole₁, hole₂))))) with
+                | ⟨out, ⟨⟨hr, hn⟩⟩⟩ =>
+                  if heqa : hole₁ = hole₂ then
+                    if heqb : out = hole₁ then
+                      cases heqa.symm; cases heqb
+                      exact .some ⟨_, _, .fstc' (.tm₁ h_dom) (.tm₁ (.bang (.coup (hn := by assumption) h_domβ e_hole₁ hrβ e_hole₂))) ⟨hr, hn⟩⟩
+                    else exact .none
+                  else
+                    if heqb : out = hole₁ then
+                      cases heqb
+                      exact .some ⟨_, _, .fstc' (.tm₁ h_dom) (.tm₁ (.bang (.coup (hn := by assumption) h_domβ e_hole₁ hrβ e_hole₂))) ⟨hr, hn⟩⟩
+                    else if heqb : out = hole₂ then
+                      cases heqb
+                      exact .some ⟨_, _, .sndc' (.tm₁ h_dom) (.tm₁ (.bang (.coup (hn := by assumption) h_domβ e_hole₁ hrβ e_hole₂))) ⟨hr, hn⟩⟩
+                  else exact .none
+        else
+          if heq_view_fn_type : (view_fn_type? a).isSome then
+            exact .none
+          else
+            have h := view_fn_type?_none_sound (e := a) (by simp_all)
+            match (reduce_with_norm RedAff (DCC? (f.raw hole_e.raw))) with
+            | ⟨DCC? (f'₀ hole₁'), ⟨⟨hr, hn⟩⟩⟩ =>
+              let f' : @EtaExpr.Norm τ_c := ⟨f'₀, hn.congrFun⟩
+              if heq_hole : hole₁' = hole_e.raw then
+                cases heq_hole
+                match f'.view_eta_fn with
+                | .some ⟨ar', doms', e_f'⟩ =>
+                  if heq_ar : ar' = 1 then
+                    cases heq_ar
+                    if heq_doms : doms' = ⟨#[mk a hn_coup], by grind⟩ then
+                      cases heq_doms
+                      exact .some ⟨_, _, .par
+                        (.tm₁ h_dom)
+                        (view_coup_bang?_none_sound (by simp_all))
+                        (.tm₁ h_hole)
+                        ⟨hr, hn⟩
+                        e_f'⟩
+                    else exact .none
+                  else exact .none
+                | .none => exact .none
+              else exact .none
+            | ⟨hole₁', ⟨⟨hr, hn⟩⟩⟩ =>
+              if heq_hole : hole₁' = hole_e.raw then
+                cases heq_hole
+                exact .some ⟨_, _, .id₁ (.tm₁ h_dom) h (.tm₁ h_hole) ⟨hr, hn⟩⟩
+              else exact .none
   | .none => exact .none
 
 /-

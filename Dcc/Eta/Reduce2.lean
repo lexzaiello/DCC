@@ -638,7 +638,11 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) f ar doms) : Option ((f' : EtaExpr.
               exact .some ⟨_, _, .quot_bang (.tm₂ h_dom) (.tm₂ e_hole₁ hrβ e_hole₂) (aff_sound rfl) h⟩
             | _ => exact .none
           | DCC? `(α', β₀) =>
-            sorry
+            let ⟨α, hn_α⟩ := α
+            if heq : α' = α then
+              cases heq
+              exact .some ⟨_, _, .quot₂ (.tm₂ h_dom) (.tm₂ e_hole₁ hrβ e_hole₂) (aff_sound rfl) h⟩
+            else exact .none
           | _ => exact .none
   | .none => exact .none
 

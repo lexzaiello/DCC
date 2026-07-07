@@ -1042,7 +1042,7 @@ inductive Domain : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
       | .congrFun h => nomatch h
       | .congrArg h => nomatch h⟩ τ
   | map      : (hrn : RedAffNorm f f') → Domain f' ⟨α, hn_α⟩
-    → Domain ⟨(DCC? !<f>), fun ⟨_, h⟩ => nomatch h⟩ ⟨(DCC? !(α)), fun ⟨_, h⟩ =>
+    → Domain ⟨(DCC? !<f>), hn_map⟩ ⟨(DCC? !(α)), fun ⟨_, h⟩ =>
     match h with
     | .bang h => hn_α ⟨_, h⟩⟩
   | fmap     : (hrn : RedAffNorm f f') → Domain f' ⟨α, hn_α⟩
@@ -1086,10 +1086,9 @@ deriving DecidableEq
 
 inductive Domain₂ : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
   | quot    : RedAffNorm α ⟨α', hn_α'⟩
-    → RedAffNorm β ⟨β', hn_β'⟩
     → Domain₂ ⟨DCC? `(α, `(β, x)), fun h => nomatch h⟩
       ⟨α', hn_α'⟩
-      ⟨DCC? `(α', β'), fun h => nomatch h⟩
+      ⟨DCC? `(α', β), fun h => nomatch h⟩
   | id      : RedAffNorm (DCC? (f_α x_α)) ⟨α, hn_α⟩
     → RedAffNorm (DCC? (Π(f_α, f_β) x_α)) ⟨τ, hn_τ⟩
     → Domain₂ ⟨(DCC? Id((Π(f_α, f_β) x_α))), fun ⟨_, h⟩ => nomatch h⟩
@@ -1103,11 +1102,15 @@ inductive Domain₂ : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → @NormE
   | eql      : (hrn₁ : RedAffNorm f_α ⟨f_α', hn_f_α'⟩) → Domain ⟨f_α', hn_f_α'⟩ ⟨δ, hn_δ⟩
     → Domain₂ ⟨(DCC? Eql(f_α)), fun ⟨_, h⟩ => nomatch h⟩
       ⟨(DCC? !(δ)), fun ⟨_, h⟩ => match h with | .bang h => hn_δ ⟨_, h⟩⟩
-      ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ => nomatch h⟩
+      ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ =>
+        match h with
+        | .map₀ h =>
+          hn_f_α' ⟨_, h⟩⟩
   | refl      : (hrn₁ : RedAffNorm f_α ⟨f_α', hn_f_α'⟩) → Domain ⟨f_α', hn_f_α'⟩ ⟨δ, hn_δ⟩
     → Domain₂ ⟨(DCC? refl(f_α)), fun ⟨_, h⟩ => nomatch h⟩
       ⟨(DCC? !(δ)), fun ⟨_, h⟩ => match h with | .bang h => hn_δ ⟨_, h⟩⟩
-      ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ => nomatch h⟩
+      ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ => match h with
+        | .map₀ h => hn_f_α' ⟨_, h⟩⟩
   | curr     : (hrn₁ : RedAffNorm α α')
     → (hrn₂ : RedAffNorm β ⟨β', hn_β⟩)
     → (hrx  : RedAffNorm x x')
@@ -1118,12 +1121,12 @@ inductive Domain₂ : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → @NormE
     → (hrx  : RedAffNorm x x')
     → Domain x' ⟨(DCC? !(Coup(β'))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β' ⟨_, h⟩⟩
     → Domain₂ ⟨(DCC? !Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩
-      ⟨DCC? !(α'), fun ⟨_, h⟩ => match h with | .bang h => hn_α' ⟨_, h⟩⟩ ⟨DCC? !<β'>, fun ⟨_, h⟩ => nomatch h⟩
+      ⟨DCC? !(α'), fun ⟨_, h⟩ => match h with | .bang h => hn_α' ⟨_, h⟩⟩ ⟨DCC? !<β'>, fun ⟨_, .map₀ h⟩ => hn_β' ⟨_, h⟩⟩
 deriving DecidableEq
 
 def Domain₂.to_domain (h : Domain₂ f α β) : Domain f α :=
   match h with
-  | .quot hr₁ hr₂ => .quot hr₁
+  | .quot hr₁ => .quot hr₁
   | .id _hr₁ hr => .id hr
   | .comp' _hr₁ hr₂ h_dom₁ _ => .comp' hr₂ h_dom₁
   | .eql hr₁ h_dom => .eql₁ hr₁ h_dom
@@ -1252,7 +1255,7 @@ def domain₂? (e : @NormExpr τ_c RedAff) : Option ((α β : @NormExpr τ_c Red
         else .none
       | _ => .none
     | (DCC? `(α, `(β, x))) =>
-      .some ⟨_, _, .quot (aff_sound rfl) (aff_sound rfl)⟩
+      .some ⟨_, _, .quot (aff_sound rfl)⟩
     | _ => .none
 termination_by e.size
 decreasing_by
@@ -1287,11 +1290,10 @@ theorem Domain.complete (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some �
 theorem Domain₂.complete
   {e α β : @NormExpr τ_c RedAff} (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, h⟩ := by
   induction h with
-  | quot hr₁ hr₂ =>
+  | quot hr₁ =>
     have ha := hr₁.complete
-    have hb := hr₂.complete
     simp [domain₂?]
-    cases ha; cases hb
+    cases ha
     dcc_simp_all
   | id hr₁ hr₂ =>
     have ha := hr₁.complete

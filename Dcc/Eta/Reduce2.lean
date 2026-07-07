@@ -465,23 +465,21 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
       any_goals (grind)
       case quot => exact (hn_e' .quot).elim) (.quot (x := e') ⟨.refl, hn_α⟩))
   | quot₂ : (e_f : EtaFn f 2 ⟨#[⟨α, hn_α⟩, ⟨DCC? `(α, β), hn_quot⟩], by grind⟩)
-    → (hn_β' : IsNorm RedAff β)
     → (e_h : Holes e_f 0 ⟨#[hole₁, hole₂], by grind⟩)
     → (hr_τ : RedAffNorm (DCC? (f.raw hole₁.raw hole₂.raw)) ⟨e', hn_e'⟩)
     → (¬ (e'.contains hole₁.raw ∨ e'.contains hole₂.raw))
-    → Canonicalize e_f (.tm₂ (_heq := by grind) (.quot (x := e') ⟨.refl, hn_α⟩ ⟨.refl, hn_β'⟩))
+    → Canonicalize e_f (.tm₂ (_heq := by grind) (.quot (x := e') ⟨.refl, hn_α⟩))
   | quot_bang : (e_f : EtaFn f 2 ⟨#[⟨DCC? !(α), hn_α⟩, ⟨(DCC? !<β>), hn_β⟩], h_size⟩)
-    → (hn_β₀ : IsNorm RedAff β)
     → (e_h : Holes e_f 0 ⟨#[hole₁, hole₂], by grind⟩)
     → (hr_τ : RedAffNorm (DCC? (f.raw hole₁.raw hole₂.raw)) ⟨e', hn_e'⟩)
     → (¬ (e'.contains hole₁.raw ∨ e'.contains hole₂.raw))
-    → Canonicalize e_f (.tm₂ (_heq := by grind) (.curr' ⟨.refl, fun ⟨_, h⟩ => hn_α ⟨_, .bang h⟩⟩ ⟨.refl, hn_β₀⟩
+    → Canonicalize e_f (.tm₂ (_heq := by grind) (.curr' ⟨.refl, fun ⟨_, h⟩ => hn_α ⟨_, .bang h⟩⟩ ⟨.refl, fun ⟨_, h⟩ => hn_β ⟨_, .map₀ h⟩⟩
       (x := (DCC? `(!(Coup(β)), e')))
       ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩ (.quot
       (x := e')
       (β  := (DCC? !(Coup(β))))
-      (β' := ⟨(DCC? !(Coup(β))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β₀ ⟨_, h⟩⟩)
-      ⟨.refl, fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β₀ ⟨_, h⟩⟩)))
+      (β' := ⟨(DCC? !(Coup(β))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β ⟨_, .map₀ h⟩⟩)
+      ⟨.refl, fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β ⟨_, .map₀ h⟩⟩)))
 
 def canonicalize (e_f : EtaFn (τ_c := τ_c) f ar doms) : Option ((f' : EtaExpr.Norm)
   × (e_f' : EtaFn f' ar doms) × Canonicalize e_f e_f') := by
@@ -606,8 +604,8 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) f ar doms) : Option ((f' : EtaExpr.
       cases h_holes with
       | tm₂ e_hole₁ hrβ e_hole₂ =>
         rename_i hole₁ hn_hole₁ β hole₂ h_size
-        if h : (reduce RedAff (DCC? (f.raw hole₁ hole₂.raw))).fst.contains hole₁
-          ∨ (reduce RedAff (DCC? (f.raw hole₁ hole₂.raw))).fst.contains hole₂.raw then
+        if h : (reduce RedAff (DCC? (f.raw #((mk hole₁ hn_hole₁).raw) hole₂.raw))).fst.contains ((mk hole₁ hn_hole₁).raw)
+          ∨ (reduce RedAff (DCC? (f.raw #((mk hole₁ hn_hole₁).raw) hole₂.raw))).fst.contains hole₂.raw then
           rename_i e_α _heq β₀ h_n_β
           let ⟨α, hn_α⟩ := e_α
           cases α.view_fn_type? with
@@ -630,12 +628,18 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) f ar doms) : Option ((f' : EtaExpr.
                   else exact .none
                 else exact .none
               | _ => exact .none
-          | none =>
-            
-            sorry
+          | none => exact .none
         else
-          
-          sorry
+          rename_i α _heq β₀ h_n_β
+          match β₀ with
+          | DCC? !<β> =>
+            match α with
+            | ⟨DCC? !(α), hn_α⟩ =>
+              exact .some ⟨_, _, .quot_bang (.tm₂ h_dom) (.tm₂ e_hole₁ hrβ e_hole₂) (aff_sound rfl) h⟩
+            | _ => exact .none
+          | DCC? `(α', β₀) =>
+            sorry
+          | _ => exact .none
   | .none => exact .none
 
 /-

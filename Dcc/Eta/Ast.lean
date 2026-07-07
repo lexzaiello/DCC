@@ -178,9 +178,11 @@ def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] refl(_α) => 2
   | DCC[.] Sort _m => 0
   | DCC[.] Σ(_α, _β) => 1
+  | DCC[.] `(_α, `(_β, _x)) => 2
   | DCC[.] `(_β, _x) => 1
   | DCC[.] ⟦__β⟧(_x, _y) => 0
   | DCC[.] Coup(_β) => 0
+  | DCC[.] Id((Π(_α, _β) _x_α)) => 2
   | DCC[.] Id(_α)      => 1
   | DCC[.] Fstc(_α)    => 1
   | DCC[.] Sndc(_α)    => 1
@@ -690,6 +692,58 @@ theorem hole_size_zero.{v} {τ_c : Type v} : (GenericExpr.const (τ := EtaConst)
 theorem coup_hole_zero.{v} {τ : Type v} {β : GenericExpr (τ := EtaConst (τ_c := τ))} : (DCC? ⟦β⟧(hole(m), hole(n))).size = 0 := by
   grind
 
+inductive ViewQuot : GenericExpr τ_c → Type u
+  | quot : ViewQuot (DCC? `(_β, x))
+
+@[grind, dcc_rel]
+def view_quot? (e : GenericExpr τ_c) : Option (ViewQuot e) :=
+  match e with
+  | (DCC? `(_β, _x)) => .some .quot
+  | _ => .none
+
+@[grind ., grind =_]
+theorem ViewQuot.complete (h : ViewQuot e) : view_quot? e = .some h := by
+  cases h
+  · simp [view_quot?]
+
+@[grind =, grind =_]
+theorem ViewQuot.complete_none (h : ViewQuot e → False) : view_quot? e = .none := by
+  unfold view_quot?
+  split <;> (
+    first
+    | exact (h (by constructor)).elim
+    | grind)
+
+@[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
+theorem view_quot?_none_sound (h : view_quot? e = .none) : ViewQuot e → False := fun h => by
+  simp_all [h.complete]
+
+inductive ViewFnType : GenericExpr τ_c → Type u
+  | pi      : ViewFnType (DCC? (Π(f_α, f_β) x_α))
+
+@[grind, dcc_rel]
+def view_fn_type? (e : GenericExpr τ_c) : Option (ViewFnType e) :=
+  match e with
+  | (DCC? (Π(_f_α, _f_β) _x_α)) => .some .pi
+  | _ => .none
+
+@[grind ., grind =_]
+theorem ViewFnType.complete (h : ViewFnType e) : view_fn_type? e = .some h := by
+  cases h
+  · simp [view_fn_type?]
+
+@[grind =, grind =_]
+theorem ViewFnType.complete_none (h : ViewFnType e → False) : view_fn_type? e = .none := by
+  unfold view_fn_type?
+  split <;> (
+    first
+    | exact (h (by constructor)).elim
+    | grind)
+
+@[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
+theorem view_fn_type?_none_sound (h : view_fn_type? e = .none) : ViewFnType e → False := fun h => by
+  simp_all [h.complete]
+
 inductive ViewPi : GenericExpr τ_c → Type u
   | pi      : ViewPi (DCC? Π(f_α, f_β))
 
@@ -1021,7 +1075,17 @@ inductive Domain : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
       | .pir h => hn₂ ⟨_, h⟩⟩ δ
 
 inductive Domain₂ : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
-  | comp'    : (hrn₁ : RedAffNorm f f')
+  | quot    : RedAffNorm α ⟨α', hn_α'⟩
+    → RedAffNorm β ⟨β', hn_β'⟩
+    → Domain₂ ⟨DCC? `(α, `(β, x)), fun h => nomatch h⟩
+      ⟨α', hn_α'⟩
+      ⟨DCC? `(α', β'), fun h => nomatch h⟩
+  | id      : RedAffNorm (DCC? (f_α x_α)) α
+    → RedAffNorm (DCC? (Π(f_α, f_β) x_α)) τ
+    → Domain₂ ⟨(DCC? Id((Π(f_α, f_β) x_α))), fun ⟨_, h⟩ => nomatch h⟩
+      τ
+      ⟨(DCC? `(τ.raw, α.raw)), fun ⟨_, h⟩ => nomatch h⟩
+  | comp'   : (hrn₁ : RedAffNorm f f')
     → (hrn₂ : RedAffNorm g ⟨g', hn_g'⟩)
     → Domain ⟨g', hn_g'⟩ α
     → Domain₂ f' β γ
@@ -1034,19 +1098,27 @@ inductive Domain₂ : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → @NormE
     → Domain₂ ⟨(DCC? refl(f_α)), fun ⟨_, h⟩ => nomatch h⟩
       ⟨(DCC? !(δ)), fun ⟨_, h⟩ => match h with | .bang h => hn_δ ⟨_, h⟩⟩
       ⟨(DCC? !<f_α'>), fun ⟨_, h⟩ => nomatch h⟩
-  | curr     : (hrn₁ : RedAffNorm α α') → (hrn₂ : RedAffNorm β β')
+  | curr     : (hrn₁ : RedAffNorm α α')
+    → (hrn₂ : RedAffNorm β β')
+    → (hrx  : RedAffNorm x x')
+    → Domain x' ⟨(DCC? Coup(β'.raw)), fun ⟨_, h⟩ => match h with | .coup h => β'.is_norm ⟨_, h⟩⟩
     → Domain₂ ⟨(DCC? Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩ α' β'
-  | curr'    : (hrn₁ : RedAffNorm α ⟨α', hn_α'⟩) → (hrn₂ : RedAffNorm β ⟨β', hn_β'⟩)
+  | curr'    : (hrn₁ : RedAffNorm α ⟨α', hn_α'⟩)
+    → (hrn₂ : RedAffNorm β ⟨β', hn_β'⟩)
+    → (hrx  : RedAffNorm x x')
+    → Domain x' ⟨(DCC? !(Coup(β'))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β' ⟨_, h⟩⟩
     → Domain₂ ⟨(DCC? !Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩
-    ⟨DCC? !(α'), fun ⟨_, h⟩ => match h with | .bang h => hn_α' ⟨_, h⟩⟩ ⟨DCC? !<β'>, fun ⟨_, h⟩ => nomatch h⟩
+      ⟨DCC? !(α'), fun ⟨_, h⟩ => match h with | .bang h => hn_α' ⟨_, h⟩⟩ ⟨DCC? !<β'>, fun ⟨_, h⟩ => nomatch h⟩
 
 def Domain₂.to_domain (h : Domain₂ f α β) : Domain f α :=
   match h with
+  | .quot hr₁ hr₂ => .quot hr₁
+  | .id _hr₁ hr => .id hr
   | .comp' _hr₁ hr₂ h_dom₁ _ => .comp' hr₂ h_dom₁
   | .eql hr₁ h_dom => .eql₁ hr₁ h_dom
   | .refl hr₁ h_dom => .refl₁ hr₁ h_dom
-  | .curr hr₁ hr₂ => .curr₁ hr₁
-  | .curr' hr₁ hr₂ => .curr₁' hr₁
+  | .curr hr₁ hr₂ hr_x h_dom => .curr₁ hr₁
+  | .curr' hr₁ hr₂ _ _ => .curr₁' hr₁
 
 set_option maxHeartbeats 20000000 in
 @[grind]
@@ -1129,6 +1201,8 @@ def domain₂? (e : @NormExpr τ_c RedAff) : Option ((α β : @NormExpr τ_c Red
   match e with
   | ⟨e, hn⟩ =>
     match e with
+    | (DCC? Id((Π(f_α, f_β) x_α))) =>
+      .some ⟨_, _, .id (aff_sound rfl) (aff_sound rfl)⟩
     | (DCC? (f ∘' g)) =>
       match g.red_aff.domain?, f.red_aff.domain₂? with
       | .some ⟨_, h₁⟩, .some ⟨_, _, h₂⟩ =>
@@ -1145,9 +1219,29 @@ def domain₂? (e : @NormExpr τ_c RedAff) : Option ((α β : @NormExpr τ_c Red
         .some ⟨_, _, .refl (aff_sound rfl) h₁⟩
       | .none => .none
     | (DCC? Λ(α, β, x)) =>
-      .some ⟨_, _, .curr (aff_sound rfl) (aff_sound rfl)⟩
+      match (red_aff x).domain? with
+      | .some ⟨⟨DCC? Coup(β₂), hn⟩, h_dom⟩ =>
+        if heq : (red_aff β).raw = β₂ then
+          .some ⟨_, _, .curr (aff_sound rfl) (aff_sound rfl) (aff_sound rfl) (by
+            simp_all [red_aff]
+            cases heq
+            simp [red_aff] at h_dom
+            exact h_dom)⟩
+        else .none
+      | _ => .none
     | (DCC? !Λ(α, β, x)) =>
-      .some ⟨_, _, .curr' (aff_sound rfl) (aff_sound rfl)⟩
+      match (red_aff x).domain? with
+      | .some ⟨⟨DCC? !(Coup(β₂)), hn⟩, h_dom⟩ =>
+        if heq : (red_aff β).raw = β₂ then
+          .some ⟨_, _, .curr' (aff_sound rfl) (aff_sound rfl) (aff_sound rfl) (by
+            simp_all [red_aff]
+            cases heq
+            simp [red_aff] at h_dom
+            exact h_dom)⟩
+        else .none
+      | _ => .none
+    | (DCC? `(α, `(β, x))) =>
+      .some ⟨_, _, .quot (aff_sound rfl) (aff_sound rfl)⟩
     | _ => .none
 termination_by e.size
 decreasing_by
@@ -1182,6 +1276,22 @@ theorem Domain.complete (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some �
 theorem Domain₂.complete
   {e α β : @NormExpr τ_c RedAff} (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, h⟩ := by
   induction h with
+  | quot hr₁ hr₂ =>
+    have ha := hr₁.complete
+    have hb := hr₂.complete
+    simp [domain₂?]
+    cases ha; cases hb
+    dcc_simp_all
+  | id hr₁ hr₂ =>
+    have ha := hr₁.complete
+    have hb := hr₂.complete
+    simp [domain₂?]
+    simp [red_aff] at hb
+    cases ha
+    dcc_simp_all
+    cases hb
+    cases hr₂.eq
+    rfl
   | comp' hr₁ hr₂ h_dom h_dom₂ heq =>
     have ha := hr₁.complete
     have hb := hr₂.complete
@@ -1197,27 +1307,31 @@ theorem Domain₂.complete
     dcc_simp_all
     cases hb
     dcc_simp_all [ha]
-  | curr hrt₁ hrt₂ =>
+  | curr hrt₁ hrt₂ hrt₃ h_dom =>
     have ha := hrt₁.complete
     have hb := hrt₂.complete
+    have hc := hrt₃.complete
+    have hd := h_dom.complete
     simp [domain₂?]
-    dcc_simp_all [ha, hb]
+    dcc_simp_all [ha, hb, hc, hd]
     rw [← ha] at hrt₁
     rw [← hb] at hrt₂
+    rw [← hc] at hrt₃
     have hc := hrt₁.eq
     have hd := hrt₂.eq
-    cases ha; cases hb
+    cases ha; cases hb; cases hc
+    cases hc
     dcc_simp_all
-  | curr' hrt₁ hrt₂ =>
+  | curr' hrt₁ hrt₂ hrt₃ h_dom =>
     have ha := hrt₁.complete
     have hb := hrt₂.complete
+    have hc := hrt₃.complete
+    have hd := h_dom.complete
     simp [domain₂?]
-    rw [← ha] at hrt₁
-    rw [← hb] at hrt₂
-    dcc_simp_all
-    have hc := hrt₁.eq
-    have hd := hrt₂.eq
-    cases ha; cases hb
+    dcc_simp_all [ha, hb, hc, hd]
+    cases hc
+    cases ha
+    cases hb
     dcc_simp_all
 
 @[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]

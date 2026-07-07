@@ -58,9 +58,7 @@ namespace NormExpr
 An η-reducible function is in normal form, has an arity of 1 or 2, and has known domain
 -/
 inductive EtaFn : (f : @EtaExpr.Norm τ_c) → (ar : ℕ) → Vector EtaExpr.Norm ar → Type u
-  | tm₁ : {_heq : arity f = 1}
-    → (h_dom : Domain f α)
-    → EtaFn f 1 (Vector.mk ⟨[α]⟩ (by grind))
+  | tm₁ : {_heq : arity f = 1} → (h_dom : Domain f α) → EtaFn f 1 (Vector.mk ⟨[α]⟩ (by grind))
   | tm₂  : {_heq : arity f = 2}
     → (h_dom : Domain₂ f α β) → EtaFn f 2 (Vector.mk ⟨[α, β]⟩ (by grind))
 
@@ -383,14 +381,27 @@ the resulting updated indices are supplied
 Holes apply function that makes a Holes.Red
 -/
 
+/-
+For quotation
+-/
+
 set_option pp.rawOnError true
 inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
   → (e_f' : EtaFn (τ_c := τ_c) f' ar doms)
   → Type u
-  | id₁   : (e_f : EtaFn f 1 ⟨#[α], by grind⟩)
+  | id₁   : (e_f : EtaFn f 1 ⟨#[⟨α, hn_α⟩], by grind⟩)
+    → (n_pi_α : ViewFnType α → False)
     → (e_h : Holes e_f 0 ⟨#[hole₁], by grind⟩)
     → RedAffNorm (DCC? (f.raw hole₁.raw)) hole₁
-    → Canonicalize e_f (.tm₁ (_heq := (by grind)) (.id ⟨.refl, α.is_norm⟩))
+    → Canonicalize e_f (.tm₁ (_heq := (by
+      simp [raw, arity]
+      cases α
+      any_goals (grind)
+      case app f x =>
+        cases f
+        any_goals (grind)
+        case pi =>
+          exact (n_pi_α .pi).elim)) (.id ⟨.refl, hn_α⟩))
   | fstc  : (e_f : EtaFn f 1 ⟨#[⟨DCC? Coup(β), hn_coup⟩], by grind⟩)
     → (e_h : Holes e_f 0 ⟨#[⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩], by grind⟩)
     → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨a, hn_hole₁.sigl⟩
@@ -432,7 +443,40 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
     → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨DCC? (f' a b), hn'⟩
     → (e_f' : EtaFn ⟨f', hn'.congrFun.congrFun⟩ 2 ⟨#[α, ⟨β, hn₁.coup⟩], by grind⟩)
     → Canonicalize e_f (.tm₁ (_heq := by grind) (.eval (α := α.raw) (β := β) (x := f') ⟨.refl, hn₁.coup⟩))
-  
+  | id₂   : (e_f : EtaFn f 2 ⟨#[⟨DCC? (Π(f_α, f_β) x_α), hnτ⟩,
+              ⟨DCC? `((Π(f_α, f_β) x_α), τ'), hn_x⟩], by grind⟩)
+    → (hr_τ : RedAffNorm (DCC? (f_α x_α)) ⟨τ', hn_τ'⟩)
+    → (e_h : Holes e_f 0 ⟨#[hole₁, hole₂], by grind⟩)
+    → RedAffNorm (DCC? (f.raw hole₁.raw hole₂.raw))
+      ⟨(DCC? (hole₁.raw hole₂.raw)), hn_nole'⟩
+    → Canonicalize e_f (.tm₂ (_heq := by grind) (.id hr_τ ⟨.refl, hnτ⟩))
+  | quot₁ : (e_f : EtaFn f 1 ⟨#[⟨α, hn_α⟩], by grind⟩)
+    → (e_h : Holes e_f 0 ⟨#[hole₁], by grind⟩)
+    → (hr_τ : RedAffNorm (DCC? (f.raw hole₁.raw)) ⟨e', hn_e'⟩)
+    → (hn_e' : ViewQuot e' → False)
+    → (¬ e'.contains hole₁.raw)
+    → Canonicalize e_f (.tm₁ (_heq := by
+      cases e'
+      any_goals (grind)
+      case quot => exact (hn_e' .quot).elim) (.quot (x := e') ⟨.refl, hn_α⟩))
+  | quot₂ : (e_f : EtaFn f 2 ⟨#[⟨α, hn_α⟩, ⟨DCC? `(α, β), hn_quot⟩], by grind⟩)
+    → (hn_β' : IsNorm RedAff β)
+    → (e_h : Holes e_f 0 ⟨#[hole₁, hole₂], by grind⟩)
+    → (hr_τ : RedAffNorm (DCC? (f.raw hole₁.raw hole₂.raw)) ⟨e', hn_e'⟩)
+    → (¬ (e'.contains hole₁.raw ∨ e'.contains hole₂.raw))
+    → Canonicalize e_f (.tm₂ (_heq := by grind) (.quot (x := e') ⟨.refl, hn_α⟩ ⟨.refl, hn_β'⟩))
+  | quot_bang : (e_f : EtaFn f 2 ⟨#[⟨DCC? !(α), hn_α⟩, ⟨(DCC? !<β>), hn_β⟩], h_size⟩)
+    → (hn_β₀ : IsNorm RedAff β)
+    → (e_h : Holes e_f 0 ⟨#[hole₁, hole₂], by grind⟩)
+    → (hr_τ : RedAffNorm (DCC? (f.raw hole₁.raw hole₂.raw)) ⟨e', hn_e'⟩)
+    → (¬ (e'.contains hole₁.raw ∨ e'.contains hole₂.raw))
+    → Canonicalize e_f (.tm₂ (_heq := by grind) (.curr' ⟨.refl, fun ⟨_, h⟩ => hn_α ⟨_, .bang h⟩⟩ ⟨.refl, hn_β₀⟩
+      (x := (DCC? `(!(Coup(β)), e')))
+      ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩ (.quot
+      (x := e')
+      (β  := (DCC? !(Coup(β))))
+      (β' := ⟨(DCC? !(Coup(β))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β₀ ⟨_, h⟩⟩)
+      ⟨.refl, fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β₀ ⟨_, h⟩⟩)))
 
 -- remember eval case
 /-

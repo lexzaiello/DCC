@@ -660,6 +660,11 @@ def RedAffNorm.decreasing? (h : RedAffNorm A B) : B.size ≤ A.size :=
 @[grind]
 def RedAffNorm.raw (_r : RedAffNorm (τ_c := τ_c) A B) : NormExpr (RedAff (τ := τ_c)) := B
 
+@[dcc_step]
+def RedAffNorm.is_norm (r : RedAffNorm (τ_c := τ_c) A B) : IsNorm RedAff B.raw :=
+  match r with
+  | ⟨_ha, hb⟩ => hb
+
 @[grind]
 def aff_sound (heq : reduce RedAff A = ⟨B, ⟨h⟩⟩) : RedAffNorm A ⟨B, reduce_norm heq⟩ := ⟨reduce_sound heq, reduce_norm heq⟩
 

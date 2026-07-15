@@ -712,6 +712,10 @@ theorem ViewQuot.complete (h : ViewQuot e) : view_quot? e = .some h := by
   cases h
   · simp [view_quot?]
 
+@[dcc_rel]
+def view_quot?_none_sound' (h : (view_quot? e).isNone) : (ViewQuot e → False) := fun h => by
+  simp_all [h.complete]
+
 @[grind =, grind =_]
 theorem ViewQuot.complete_none (h : ViewQuot e → False) : view_quot? e = .none := by
   unfold view_quot?
@@ -749,6 +753,10 @@ theorem ViewFnType.complete_none (h : ViewFnType e → False) : view_fn_type? e 
 
 @[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
 theorem view_fn_type?_none_sound (h : view_fn_type? e = .none) : ViewFnType e → False := fun h => by
+  simp_all [h.complete]
+
+@[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
+theorem view_fn_type?_none_sound' (h : (view_fn_type? e).isNone) : ViewFnType e → False := fun h => by
   simp_all [h.complete]
 
 inductive ViewPi : GenericExpr τ_c → Type u
@@ -976,6 +984,10 @@ theorem view_bang_coup?_none_sound (h : view_bang_coup? e = .none) : ViewBangCou
 
 @[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
 theorem view_coup_bang?_none_sound (h : view_coup_bang? e = .none) : ViewCoupBang e → False := fun h => by
+  simp_all [h.complete]
+
+@[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
+theorem view_coup_bang?_none_sound' (h : (view_coup_bang? e).isNone) : ViewCoupBang e → False := fun h => by
   simp_all [h.complete]
 
 open Relation (ReflTransGen)

@@ -510,14 +510,14 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f ar doms)
       cases e'
       any_goals (grind)
       case quot => exact (hn_e' .quot).elim) (.quot (x := e') ⟨.refl, hn_α⟩))
-  | quot₂ : (e_f : EtaFn f 2 ⟨#[⟨α, hn_α⟩, ⟨DCC? `(α, β), hn_quot⟩], by grind⟩)
+  | quot₂ : (e_f : EtaFn ⟨f, hn_f⟩ 2 ⟨#[⟨α, hn_α⟩, ⟨DCC? `(α, β), hn_quot⟩], by grind⟩)
     → (e_h : Holes e_f 0 ⟨#[⟨hole₁, hn_hole₁⟩, ⟨hole₂, hn_hole₂⟩], by grind⟩)
-    → (hr_τ : RedAffNorm (DCC? (f.raw hole₁ hole₂)) ⟨e', hn_e'⟩)
+    → (hr_τ : RedAffNorm (DCC? (f hole₁ hole₂)) ⟨e', hn_e'⟩)
     → (¬ (e'.contains hole₁ ∨ e'.contains hole₂))
     → Canonicalize e_f (.tm₂ (_heq := by grind) (.quot (x := e') ⟨.refl, hn_α⟩))
-  | quot_bang : (e_f : EtaFn f 2 ⟨#[⟨DCC? !(α), hn_α⟩, ⟨(DCC? !<β>), hn_β⟩], h_size⟩)
+  | quot_bang : (e_f : EtaFn ⟨f, hn_f⟩ 2 ⟨#[⟨DCC? !(α), hn_α⟩, ⟨(DCC? !<β>), hn_β⟩], h_size⟩)
     → (e_h : Holes e_f 0 ⟨#[⟨hole₁, hn_hole₁⟩, ⟨hole₂, hn_hole₂⟩], by grind⟩)
-    → (hr_τ : RedAffNorm (DCC? (f.raw hole₁ hole₂)) ⟨e', hn_e'⟩)
+    → (hr_τ : RedAffNorm (DCC? (f hole₁ hole₂)) ⟨e', hn_e'⟩)
     → (¬ (e'.contains hole₁ ∨ e'.contains hole₂))
     → Canonicalize e_f (.tm₂ (_heq := by grind) (.curr' ⟨.refl, fun ⟨_, h⟩ => hn_α ⟨_, .bang h⟩⟩ ⟨.refl, fun ⟨_, h⟩ => hn_β ⟨_, .map₀ h⟩⟩
       (x := (DCC? `(!(Coup(β)), e')))
@@ -653,7 +653,19 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ ar doms) : Option ((f' 
           else .none
         | _ => .none
       else
-        sorry
+        match α, β with
+        | α, DCC? `(α₂, β) =>
+          if heq_α : α₂ = α then by
+            simp at h_size
+            cases h_size
+            cases heq_α
+            exact .some ⟨_, _, .quot₂ e_f h_holes (aff_sound' _) h_contains⟩
+          else .none
+        | (DCC? !(α)), (DCC? !<β>) => by
+          simp at h_size
+          cases h_size
+          exact .some ⟨_, _, .quot_bang e_f h_holes (aff_sound' _) h_contains⟩
+        | _, _ => .none
     | _ => .none
   | _ => .none
 

@@ -139,6 +139,41 @@ def contains_hole (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     | .const (.hole _) => True
     | .const _ => False
 
+@[grind]
+def hole_mem_tm (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
+    match e with
+    | DCC[.] ∗ => False
+    | DCC[.] ⊤ => False
+    | DCC[.] Sort _n => False
+    | DCC[.] ⊥ => False
+    | DCC[.] Π(x, y)
+    | DCC[.] (x ∘' y)
+    | DCC[.] (x ∘ y)
+    | DCC[.] (x ∘∘ y)
+    | DCC[.] (x y)
+    | DCC[.] x = y => x.hole_mem_tm ∨ y.hole_mem_tm
+    | DCC[.] Fstc(α)
+    | DCC[.] Sndc(α)
+    | DCC[.] Coup(α)
+    | DCC[.] &(α)
+    | DCC[.] !<α>
+    | DCC[.] $<α>
+    | DCC[.] !(α)
+    | DCC[.] *(α)
+    | DCC[.] *<α>
+    | DCC[.] Id(α)
+    | DCC[.] Eql(α)
+    | DCC[.] refl(α) => α.hole_mem_tm
+    | DCC[.] Σ(α, β) => α.hole_mem_tm ∨ β.hole_mem_tm
+    | DCC[.] `(_β, x) => x.hole_mem_tm
+    | DCC[.] Eval(_β, x, y)
+    | DCC[.] !Λ(_β, x, y)
+    | DCC[.] Λ(_β, x, y)
+    | DCC[.] ⟦_β⟧⟨x, y⟩
+    | DCC[.] ⟦_β⟧(x, y) => x.hole_mem_tm ∨ y.hole_mem_tm
+    | .const (.hole _) => True
+    | .const _ => False
+
 /-@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def size.{u} {τ : Type u} (e : GenericExpr (EtaConst (τ := τ))) : ℕ :=
   match e with

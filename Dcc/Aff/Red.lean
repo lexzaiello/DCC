@@ -715,6 +715,13 @@ def RedAffNorm.complete {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)
     have ha := reduce_complete_fst hr hn
     simp [red_aff, ha]
 
+@[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
+def RedAffNorm.complete_fst {A : GenericExpr τ_c} (h : RedAffNorm A ⟨B, hn_B⟩) : (reduce RedAff A).fst = B :=
+  match h with
+  | ⟨hr, hn⟩ => by
+    have ha := reduce_complete_fst hr hn
+    simp [ha]
+
 @[dcc_reduce]
 def RedAffNorm.eq (hr : RedAffNorm e (red_aff e)) : hr = aff_sound rfl :=
   match hr with

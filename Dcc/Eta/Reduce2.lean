@@ -434,6 +434,23 @@ def Holes.unique (h₁ : Holes (τ_c := τ_c) e_f level hole_elems₁) (h₂ : H
   have hb := h₂.complete
   simp_all
 
+def Holes.hole_mem_tm {f : @EtaExpr.Norm τ_c} {doms : List (@EtaExpr.Norm τ_c)} {e_f : EtaFn f doms}
+  (h : Holes (τ_c := τ_c) e_f lv hole_tms) (i : Fin (arity f)) : h.v_elems[i].raw.hole_mem_tm := by
+  cases h with
+  | tm₁ =>
+    rename_i e_f hole h_hole
+    simp [v_elems, h_hole.hole_mem_tm]
+  | tm₂ =>
+    rename_i e_f _ h_hole₁ h_hole₂
+    cases e_f with
+    | tm₂ =>
+      simp [v_elems]
+      rename_i _heq _
+      match i with
+      | ⟨0, h⟩ => simp_all [h_hole₁.hole_mem_tm]
+      | ⟨1, h⟩ => simp_all [h_hole₂.hole_mem_tm]
+      | ⟨n + 2, h⟩ => grind
+
 def Holes.points_norm {e_f : EtaFn f doms} {hole_elems : List (@EtaExpr.Norm τ_c)}
   (h : Holes e_f level hole_elems)
   (idx    : Fin (arity f))
@@ -711,6 +728,7 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Option ((f' : E
       | mk β hn_β =>
         exact canonicalize₂ α hn_α β hn_β (.tm₂ dom)
 
+@[dcc_force_reduce]
 def Canonicalize.deterministic (h₁ : Canonicalize (τ_c := τ_c) e_f e_f₁)
   (h₂ : Canonicalize (τ_c := τ_c) e_f e_f₂) : e_f₁ = e_f₂ := by
   induction h₁
@@ -754,10 +772,9 @@ def Canonicalize.deterministic (h₁ : Canonicalize (τ_c := τ_c) e_f e_f₁)
       exact (hn ⟨_, .quot⟩).elim
   any_goals (
     focus
-    apply EtaFn.eq
-    done)
+    apply EtaFn.eq)
 
-/-def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
+def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
   {e_f : EtaFn f doms}
   {e_f' : EtaFn f' doms}
   (h : Canonicalize e_f e_f') : e_f.canonicalize = .some ⟨f', e_f', h⟩ := by
@@ -791,8 +808,22 @@ def Canonicalize.deterministic (h₁ : Canonicalize (τ_c := τ_c) e_f e_f₁)
             have hneqb : β.mkc a b ≠ b := fun h => by cases h
             simp_all [raw]
           | eval =>
-            
-            sorry
+            rename_i holes₁ _ holes₂
+            have h := holes₁.unique holes₂
+            simp_all
+            cases h
+            rename_i hrt₀ _ _ _ _ _ hrt' _
+            have h := hrt₀.complete_fst
+            simp_all
+          | quot₁ =>
+            rename_i hrt₀ _ _ _ hrt' h_dom _ hole₁ _ hole₂
+            have h := hole₁.unique hole₂
+            simp_all
+            cases h
+            have h := hrt₀.complete_fst
+            have h_mem := hole₁.hole_mem_tm ⟨0, by grind⟩
+            simp_all [raw, Holes.v_elems, Vector.get, raw]
+          
         case isFalse h_fn_type =>
           sorry
       case isFalse =>
@@ -812,7 +843,7 @@ def Canonicalize.deterministic (h₁ : Canonicalize (τ_c := τ_c) e_f e_f₁)
           have heq := e_h.complete
           exact (hn _ _ _ heq).elim))
   | tm₂ =>
-    sorry-/
+    sorry
 
 def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
   {e_f : EtaFn f doms}

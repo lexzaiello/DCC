@@ -823,9 +823,46 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
             have h := hrt₀.complete_fst
             have h_mem := hole₁.hole_mem_tm ⟨0, by grind⟩
             simp_all [raw, Holes.v_elems, Vector.get, raw]
-          
+          | sndc' | fstc' =>
+            rename_i hrt₀ _ _ _ _ _ hole₁ _ hole₂ hrt'
+            have h := hole₁.unique hole₂
+            simp_all
+            cases h
+            have h := hrt'.complete_fst
+            rename_i inst _heq β a b hn_hole₁ h_dom x hn_hole h heq
+            have hneqa : (β.mkc a b).box ≠ a := fun h => by cases h
+            have hneqb : (β.mkc a b).box ≠ b := fun h => by cases h
+            simp_all [raw]
+          | par =>
+            rename_i hrt₀ e_f' _heq hrt' h_dom _ hole₁ _ hole₂
+            have h := hole₁.unique hole₂
+            simp_all
+            cases h
+            have h := hrt₀.complete_fst
+            simp_all
+            cases h
         case isFalse h_fn_type =>
-          sorry
+          simp at h_fn_type
+          rename_i α _ehq h_dom x e_hole hn_hole h_holes heq h
+          have h := α.1.view_fn_type?.get (by grind)
+          rename_i h' _
+          cases h'
+          any_goals (grind)
+          · rename_i hrt₀ _ hrt' holes₂
+            have hrt'' := hrt₀.complete_fst
+            have hole_eq := h_holes.unique holes₂
+            simp at hole_eq
+            cases hole_eq
+            simp at hrt'
+            rw [hrt'] at hrt''
+            cases hrt''
+          · rename_i hrt₀ h_quot h_mem hrt' holes₂
+            have hrt'' := hrt₀.complete_fst
+            have hole_eq := h_holes.unique holes₂
+            simp at hole_eq
+            cases hole_eq
+            simp at hrt'
+            grind
       case isFalse =>
         sorry
     · cases h

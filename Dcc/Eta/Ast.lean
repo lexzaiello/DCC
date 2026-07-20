@@ -1419,6 +1419,18 @@ def Domain₂.unique {f τ₁a τ₁b τ₂a τ₂b : @NormExpr τ_c RedAff} (h�
 def Domain.size_pos (h : Domain f τ) : 0 < f.size := by
   induction h <;> grind
 
+@[dcc_force_reduce]
+def Domain.eq (h₁ h₂ : Domain (τ_c := τ_c) x τ₁) : h₁ = h₂ := by
+  have ha := h₁.complete
+  have hb := h₂.complete
+  simp_all
+
+@[dcc_force_reduce]
+def Domain₂.eq (h₁ h₂ : Domain₂ (τ_c := τ_c) x τ₁ τ₂) : h₁ = h₂ := by
+  have ha := h₁.complete
+  have hb := h₂.complete
+  simp_all
+
 end NormExpr
 
 open NormExpr in

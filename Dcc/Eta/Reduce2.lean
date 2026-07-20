@@ -116,7 +116,19 @@ def EtaFn.complete {f : @EtaExpr.Norm τ_c} {doms : List EtaExpr.Norm} (h : EtaF
   induction h with
   | tm₂ h_dom | tm₁ h_dom => simp_all [view_eta_fn, h_dom.complete]
 
---def EtaFn.eq (h₁ h₂ : EtaFn f ar doms)
+@[dcc_force_reduce]
+def EtaFn.eq (h₁ h₂ : EtaFn (τ_c := τ_c) f doms) : h₁ = h₂ := by
+  cases h₁ with
+  | tm₁ =>
+    cases h₂ with
+    | tm₁ =>
+      rename_i h_dom₁ _ h_dom₂
+      cases h_dom₁.eq h_dom₂; rfl
+  | tm₂ =>
+    cases h₂ with
+    | tm₂ =>
+      rename_i h_dom₁ _ h_dom₂
+      cases h_dom₁.eq h_dom₂; rfl
 
 /-instance EtaFn.instEtaRel : EtaRel
   (α := @EtaExpr.Norm τ_c) (β := ((ar : ℕ) × Vector (@EtaExpr.Norm τ_c) ar))
@@ -416,6 +428,12 @@ def Holes.complete (h : Holes (τ_c := τ_c) e_f level hole_elems) : holes e_f l
       have h := (h_hole₁.out_eq ▸ h_hole₁).eq
       grind
 
+@[dcc_force_reduce, aesop safe apply (rule_sets := [DccForceReduce])]
+def Holes.unique (h₁ : Holes (τ_c := τ_c) e_f level hole_elems₁) (h₂ : Holes e_f level hole_elems₂) : hole_elems₁ = hole_elems₂ := by
+  have ha := h₁.complete
+  have hb := h₂.complete
+  simp_all
+
 def Holes.points_norm {e_f : EtaFn f doms} {hole_elems : List (@EtaExpr.Norm τ_c)}
   (h : Holes e_f level hole_elems)
   (idx    : Fin (arity f))
@@ -693,6 +711,109 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Option ((f' : E
       | mk β hn_β =>
         exact canonicalize₂ α hn_α β hn_β (.tm₂ dom)
 
+def Canonicalize.deterministic (h₁ : Canonicalize (τ_c := τ_c) e_f e_f₁)
+  (h₂ : Canonicalize (τ_c := τ_c) e_f e_f₂) : e_f₁ = e_f₂ := by
+  induction h₁
+  any_goals (
+    focus
+    try (
+      cases h₂
+      · grind
+      · cases e_f₂
+        rename_i h_dom
+        cases h_dom
+        rename_i hrn
+        cases hrn
+        rfl)
+    done)
+  case fstc' | sndc' =>
+    cases h₂
+    · grind
+    · rename_i hn _ _ _
+      exact (hn (by constructor)).elim
+  · cases h₂
+    rename_i hn _ _ _
+    · exact (hn ⟨_, .id⟩).elim
+    any_goals (
+      focus
+      try (
+        rename_i h_hole₁ _ _ _ _ _ _ h_hole₂
+        have ha := h_hole₁.unique h_hole₂
+        simp_all
+        cases ha
+        rename_i hrt₁ _ _ _ _ hrt₂ _
+        have ha := hrt₁.complete
+        have hb := hrt₂.complete
+        simp [raw] at ha
+        rw [ha] at hb
+        cases hb)
+      done)
+    · rename_i e_f₀ _ _ _ _ _ _ _ _
+      exact e_f₀.eq (by assumption)
+    · rename_i hn _ _ _
+      exact (hn ⟨_, .quot⟩).elim
+  any_goals (
+    focus
+    apply EtaFn.eq
+    done)
+
+/-def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
+  {e_f : EtaFn f doms}
+  {e_f' : EtaFn f' doms}
+  (h : Canonicalize e_f e_f') : e_f.canonicalize = .some ⟨f', e_f', h⟩ := by
+  cases e_f with
+  | tm₁ =>
+    simp [canonicalize]
+    unfold canonicalize₁
+    split
+    · split
+      case isTrue =>
+        split
+        case isTrue h_fn_type =>
+          cases h with
+          | id₁ =>
+            rename_i hr _ _ _ _ h_holes _ e_h'
+            have hd := (hr.out_eq ▸ hr).eq
+            have heq₂ := h_holes.complete
+            have heq₃ := e_h'.complete
+            simp_all
+            congr <;> grind
+          | sndc | fstc =>
+            rename_i hr _ _ h_holes _ e_h'
+            have hd := (hr.out_eq ▸ hr).eq
+            have heq₂ := h_holes.complete
+            have heq₃ := e_h'.complete
+            simp_all
+            cases heq₂.left; cases heq₂.right
+            have hr' := hr.complete_fst
+            rename_i β hn_coup a b _ _ _ _ _
+            have hneqa : β.mkc a b ≠ a := fun h => by cases h
+            have hneqb : β.mkc a b ≠ b := fun h => by cases h
+            simp_all [raw]
+          | eval =>
+            
+            sorry
+        case isFalse h_fn_type =>
+          sorry
+      case isFalse =>
+        sorry
+    · cases h
+      any_goals (
+        focus
+        try (
+          rename_i hn e_h
+          have heq := e_h.complete
+          exact (hn _ _ _ heq).elim)
+        done)
+      any_goals (
+        focus
+        try (
+          rename_i hn e_h _
+          have heq := e_h.complete
+          exact (hn _ _ _ heq).elim))
+  | tm₂ =>
+    sorry-/
+
 def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
   {e_f : EtaFn f doms}
   {e_f' : EtaFn f' doms}
@@ -739,7 +860,22 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
               have h_mem := h.hole_mem_tm
               simp_all [raw, hole_mem_tm]
               grind
-          sorry
+          split
+          · dsimp
+            split
+            · have hneq₂ : (reduce RedAff (f.app (β.mkc a b))).fst ≠ a := by
+                simp_all
+                intro heq; cases heq
+              have hneq₃ : (reduce RedAff (f.app (β.mkc a b))).fst ≠ b := by
+                simp_all
+                intro heq; cases heq
+              split
+              · contradiction
+              case isFalse =>
+                
+                sorry
+            · contradiction
+          · contradiction
   | tm₂ =>
     sorry
 

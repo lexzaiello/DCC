@@ -169,9 +169,19 @@ def Hole.sigl_hole_mem_tm (h : Hole (τ_c := τ_c) α lv ⟨(DCC? (⟦β⟧(a, b
   cases h with
   | coup _ ha _ _ => exact ha.hole_mem_tm
 
+def Hole.sigl_hole_mem_tm_box (h : Hole (τ_c := τ_c) α lv ⟨(DCC? &(⟦β⟧(a, b))), hn⟩) : a.hole_mem_tm := by
+  cases h with
+  | bang h =>
+    exact h.sigl_hole_mem_tm
+
 def Hole.sigr_hole_mem_tm (h : Hole (τ_c := τ_c) α lv ⟨(DCC? (⟦β⟧(a, b))), hn⟩) : b.hole_mem_tm := by
   cases h with
   | coup _ _ _ ha => exact ha.hole_mem_tm
+
+def Hole.sigr_hole_mem_tm_box (h : Hole (τ_c := τ_c) α lv ⟨(DCC? &(⟦β⟧(a, b))), hn⟩) : b.hole_mem_tm := by
+  cases h with
+  | bang h =>
+    exact h.sigr_hole_mem_tm
 
 @[grind]
 def Hole.raw (_h : Hole (τ_c := τ_c) α lv hole_e) : @GenericExpr (@EtaConst τ_c) := hole_e.raw
@@ -953,8 +963,74 @@ def Canonicalize.some_complete {f f' : @EtaExpr.Norm τ_c}
           exact h
         subst h_fst
         exact (heq_catchall f' a₁ b hr h_red).elim
-    case h_2 =>
-      sorry
+    · grind
+  | fstc' =>
+    rename_i f β hn_coup a b hn_coup e_f e_h hrt
+    have heq := hrt.complete_fst
+    have h_heq := e_h.complete
+    cases e_f
+    simp [canonicalize]
+    unfold canonicalize₁
+    rw [h_heq]
+    split
+    case h_1 heq' =>
+      rename_i e_hole hn_hole h_holes
+      simp at heq'
+      cases heq'.left; cases heq'.right
+      have hneq : (reduce RedAff (f.1.app (β.mkc a b).box)).fst ≠ (β.mkc a b).box := by
+        intro h
+        simp_all
+        simp [raw] at heq
+        rw [heq] at h
+        cases h
+      simp [hneq]
+      have h : (reduce RedAff (f.1.app (β.mkc a b).box)).fst.hole_mem_tm := by
+        cases e_h
+        rename_i e_h
+        have h := e_h.sigl_hole_mem_tm_box
+        simp [raw] at heq
+        grind
+      simp [h]
+      simp [raw] at heq
+      simp [heq]
+      split
+      simp
+    · grind
+  | sndc' =>
+    rename_i f β hn_coup a b hn_coup e_f e_h hrt
+    have heq := hrt.complete_fst
+    have h_heq := e_h.complete
+    cases e_f
+    simp [canonicalize]
+    unfold canonicalize₁
+    rw [h_heq]
+    split
+    case h_1 heq' =>
+      rename_i e_hole hn_hole h_holes
+      simp at heq'
+      cases heq'.left; cases heq'.right
+      have hneq : (reduce RedAff (f.1.app (β.mkc a b).box)).fst ≠ (β.mkc a b).box := by
+        intro h
+        simp_all
+        simp [raw] at heq
+        rw [heq] at h
+        cases h
+      simp [hneq]
+      have h : (reduce RedAff (f.1.app (β.mkc a b).box)).fst.hole_mem_tm := by
+        cases e_h
+        rename_i e_h
+        have h := e_h.sigr_hole_mem_tm_box
+        simp [raw] at heq
+        grind
+      simp [h]
+      simp [raw] at heq
+      simp [heq]
+      split
+      · split
+        · simp
+      · split
+        · simp
+    · grind
 
 def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
   {e_f : EtaFn f doms}

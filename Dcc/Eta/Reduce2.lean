@@ -1031,6 +1031,42 @@ def Canonicalize.some_complete {f f' : @EtaExpr.Norm τ_c}
       · split
         · simp
     · grind
+  | par =>
+    rename_i f' hn₂ e_f h_view e_h hrt e_f'
+    have heq := hrt.complete_fst
+    have h_heq := e_h.complete
+    cases e_f
+    simp [canonicalize]
+    unfold canonicalize₁
+    rw [h_heq]
+    split
+    case h_1 heq' =>
+      rename_i e_hole hn_hole h_holes
+      simp at heq'
+      cases heq'.left; cases heq'.right
+      rename_i f _ _ _ hole₁ hn_hole₁ _heq h_dom x
+      have hneq : (reduce RedAff (f.app hole₁)).fst ≠ hole₁ := by
+        intro h
+        simp [raw] at heq
+        rw [heq] at h
+        cases h
+      subst hneq
+      /-simp only [hneq]
+      split
+      · rename_i h; exact h.elim
+      case isFalse =>
+        have h : hole_mem_tm hole₁ := by
+          cases e_h
+          rename_i e_h
+          exact e_h.hole_mem_tm
+        have h_mem : (reduce RedAff (f.app hole₁)).fst.hole_mem_tm := by
+          simp_all [heq, h, hole_mem_tm]
+        simp only [h_mem]
+        split
+        · split
+          
+          sorry
+        · simp_all-/
 
 def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
   {e_f : EtaFn f doms}

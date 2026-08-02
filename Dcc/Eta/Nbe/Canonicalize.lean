@@ -374,62 +374,6 @@ def Canonicalize.deterministic (h₁ : Canonicalize (τ_c := τ_c) e_f e_f₁)
     focus
     apply EtaFn.eq)
 
-/-set_option maxHeartbeats 100000000000 in
-def Canonicalize.some_complete {f f' : @EtaExpr.Norm τ_c}
-  {e_f : EtaFn f doms}
-  {e_f' : EtaFn f' doms}
-  (h : Canonicalize e_f e_f') : e_f.canonicalize.isSome := by
-  cases e_f with
-  | tm₁ =>
-    simp [canonicalize]
-    unfold canonicalize₁
-    split
-    case h_1 =>
-      split
-      case isTrue heq_id =>
-        cases h
-        case id₁ hn _ _ _ _ _ _ _ =>
-          have hneq := ViewFnType.complete_none hn
-          simp [hneq]
-        case fstc' hrt
-          | sndc' hrt
-          | par hrt _ _ _ _ _ _ _
-          | sndc hrt _ _ _ _ _
-          | eval hrt _ _ _ _ _ _ _
-          | fstc hrt _ _ _ _ _ =>
-          have heq := hrt.complete
-          rename_i holes₁ _ holes₂
-          have hole_eq := holes₁.unique holes₂
-          simp at hole_eq
-          cases hole_eq
-          simp_all [raw, red_aff]
-          try (cases heq)
-        case quot₁ hrt _ hn_mem_hole _ _ _ holes₁ _ holes₂ =>
-          have heq := hrt.complete
-          have hole_eq := holes₁.unique holes₂
-          simp at hole_eq
-          cases hole_eq
-          simp_all [red_aff]
-          cases heq
-          have h := holes₁.hole_mem_tm ⟨0, by grind⟩
-          grind
-      case isFalse =>
-        split
-        case isTrue =>
-          split
-          case h_1 hc _ =>
-            simp_all only
-            
-            sorry
-          case h_2 =>
-            sorry
-        case isFalse =>
-          sorry
-    case h_2 =>
-      sorry
-  | tm₂ =>
-    sorry-/
-
 set_option maxHeartbeats 100000000000 in
 def Canonicalize.some_complete {f f' : @EtaExpr.Norm τ_c}
   {e_f : EtaFn f doms}

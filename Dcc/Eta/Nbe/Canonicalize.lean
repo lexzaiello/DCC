@@ -671,7 +671,7 @@ def Canonicalize.some_complete {f f' : @EtaExpr.Norm τ_c}
       rename_i f _ _ _ hole₁ hn_hole₁ _heq h_dom x
       have hneq : (reduce RedAff (f.app hole₁)).fst ≠ hole₁ := by
         intro h
-        simp [raw] at heq
+        simp at heq
         rw [heq] at h
         cases h
       have hneq' : ((reduce RedAff (f.app hole₁)).fst ≠ e_hole) := by
@@ -795,7 +795,48 @@ def Canonicalize.some_complete {f f' : @EtaExpr.Norm τ_c}
       · grind
       · simp
     · grind
-  
+  | id₂ =>
+    rename_i e_f hrt₁ e_h hrt
+    have heq := hrt.complete_fst
+    have heqb := hrt₁.complete_fst
+    have heq_whole := hrt.complete
+    have heq_whole' := hrt₁.complete
+    have h_heq := e_h.complete
+    cases e_f
+    simp [canonicalize]
+    unfold canonicalize₂
+    rw [h_heq]
+    split
+    case h_1 heq' =>
+      simp at heq'
+      rename_i e_h'
+      have heq_hole := e_h.unique e_h'
+      cases heq_hole
+      simp at heq'
+      rename_i f₀ _ _ _ _ _ _ _ _ hole₁ _ hole₂ _ _ _ _ _ _ _
+      have h_mem₁ : hole₁.hole_mem_tm :=
+        match e_h with
+        | .tm₂ h _ _ => h.hole_mem_tm
+      have h_mem : (reduce RedAff ((f₀.app hole₁).app hole₂)).fst.hole_mem_tm = true := by
+        grind
+      split
+      case isTrue =>
+        split
+        case h_1 =>
+          simp_all
+          aesop
+        case h_2 x =>
+          generalize h_red : reduce RedAff ((f₀.app hole₁).app hole₂) = res
+          cases res
+          rename_i fst snd
+          cases snd
+          rename_i hr
+          have h_fst : fst = hole₁.app hole₂ := by
+            grind
+          subst h_fst
+          exact (x hole₁ hole₂ (match hrt with | ⟨a, _⟩ => a) h_red).elim
+      · grind
+    · grind
 
 end EtaFn
 

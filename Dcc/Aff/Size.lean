@@ -1,7 +1,16 @@
 import Dcc.Attrs
 import Dcc.Ast
-import Dcc.Relation
-import Mathlib.Data.Nat.Notation
+
+/-
+A measure of term size which decreases under the affine and eta reduction rules counted like such:
+
+- AST terms which are combinators count themselves as an operation + 1
+- Boxed terms are counted thrice, since pairs duplicate
+  - ⟦β⟧⟨M, N⟩ &(x) = (M x, N x (M x))
+- Computationally irrelevant points (e.g., type arguments) are also counted when
+  they have relevance to eta reduction
+- No terms have a size of zero, except injected constants (e.g., holes in eta reduction)
+-/
 
 namespace GenericExpr
 

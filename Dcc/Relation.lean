@@ -2,195 +2,22 @@ import Dcc.Attrs
 import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
 import Dcc.Ast
-import Lean
-import Qq
-import Init.Prelude
-
-namespace GenRel
-
-open GenAst Lean Elab Command Meta
-open Lean Parser Command
-
-open Lean Macro Parser.Command
-open Lean (Parser.Command.derivingClass)
-open Lean.Parser.Term
-
-namespace imp
 
 /-
-A relation Expr → Expr → Prop should be mirror-imaged, for
-metaprogramming purposes, to Expr → Expr → Type.
+Generalizations of normal forms and decision procedures for rewrite-rule relations
+on AST terms. e.g., affine reduction and the old eta (non-NBE) reduction algorithm
 
-Also, the inductive r should be extended to include lean
-hypotheses (.lean_e : Lean.Expr → r A B)
+Generalizations of confluence, and relations with point congruence
 
-This utility automates that codegen.
+Once RedRel and Complete are implemented, you inherit (reduce r <expr>), where r : Expr → Expr → Prop
+
+This notion of a relation assumes reduction makes a choice of path. That is, we assume call by value
+rather than a determinstic reduction like call by name.
+
+All of the classes here have been proven for the core β/ affine-reduction.
+Old η-reduction does as well, but new NBE is much smarter and doesn't require as much
+machinery, since it works in a single pass with recursion, rather than through rewrite rules.
 -/
-
-def name_contains (find in_nm : Name) : Bool :=
-  in_nm.components.contains find
-
-def name_last (nm : Name) : Name :=
-  nm.components.reverse.head?.getD nm
-
-def modify_first (new_nm nm : Name) : Name :=
-  match nm with
-  | .str .anonymous _ => new_nm
-  | .str pre post => .str (modify_first new_nm pre) post
-  | _ => nm
-
-def name_first (nm : Name) : Name :=
-  nm.components.head?.getD nm
-
-def all_names (old new here : Name) : Lean.Name :=
-  match name_last old,
-    name_last new with
-  | (.str _ old_str), (.str _ new_str) =>
-    match here with
-    | .str pre str =>
-      if str == old_str then
-        .str (all_names old new pre) new_str
-      else
-        .str (all_names old new pre) str
-    | _ => here
-  | _, _ => here
-
-def update_names (name' : Name → Name) (e : Lean.Expr) : Lean.Expr :=
-  match e with
-  | .const nm info => .const (name' nm) info
-  | .forallE bname bty bdy binfo =>
-    .forallE (name' bname)
-      (update_names name' bty)
-      (update_names name' bdy) binfo
-  | .app f x =>
-    .app (update_names name' f) (update_names name' x)
-  | .lam bname bty bdy binfo =>
-    .lam (name' bname)
-      (update_names name' bty)
-      (update_names name' bdy) binfo
-  | .proj tname idx struct =>
-    .proj (name' tname) idx (update_names name' struct)
-  | .sort m => .sort m
-  | .bvar v => .bvar v
-  | .mdata v bd => .mdata v (update_names name' bd)
-  | .mvar m => .mvar m
-  | .fvar v => .fvar v
-  | .lit l => .lit l
-  | .letE dname type value body nondep =>
-    .letE (name' dname) (update_names name' type)
-      (update_names name' value) (update_names name' body) nondep
-
-def literal_ctor (typ : Lean.Expr) : CommandElabM (Lean.TSyntax `term) :=
-  liftTermElabM <| Lean.PrettyPrinter.delab typ
-
-def update_ind (nm : Lean.Name)
-  (attrs : TSyntax ``attrInstance)
-  (new_name : TSyntax `ident)
-  -- new constructors. takes just one tau
-  (ext : Array AstField)
-  (derivs : Syntax.TSepArray ``derivingClass "," := ⟨#[]⟩)
-  (new_elim : TSyntax `term)
-  : CommandElabM (TSyntax `command) := do
-  --let ext_ctrs ← (liftMacroM <| ext.mapM (mk_ext new_name (elim :=
-    --(← `(term| $new_name:ident a b)))))
-
-  let old_nm := nm.eraseMacroScopes
-  let new_nm := new_name.getId.eraseMacroScopes
-
-  let info ← match (← getConstInfo nm) with
-    | .inductInfo info => pure info
-    | _ => throwError m!"this is not an inductive: {nm}"
-
-  let arrow! (e : Lean.Expr) : CommandElabM (Lean.Expr × Lean.Expr) :=
-    match e.arrow? with
-    | .some (a, b) => pure (a, b)
-    | _ => throwError m!"not an arrow: {e}"
-
-  let old_param ← match (← arrow! info.type).fst with
-    | .const nm _ => pure nm
-    | _ => throwError m!"not a relation: {info.type}"
-
-  let (new_param, new_param_idt) ← match new_elim with
-    | `(term| $new_param:ident → $_b → $_c) =>
-      pure (new_param.getId.eraseMacroScopes, new_param)
-    | exp => throwError m!"this is not a relation (new param): {exp}"
-
-  let ext_ctr ← (liftMacroM <| ext.mapM (fun (field : AstField) =>
-    let idt      := field.nm_short
-    let ctr_name := field.nm_camel
-    `(ctor| | $(idt):ident : ∀ {a b : $new_param_idt}, $ctr_name:ident → $new_name a b)
-    ))
-
-  let h : List (TSyntax ``ctor) ← info.ctors.mapM (fun cname => do
-    let cinfo ← match (← getConstInfo cname) with
-      | .ctorInfo info => pure info
-      | _ => throwError m!"this is not a constructor: {cname}"
-    let constr_idt := Lean.mkIdent
-      (.str .anonymous cinfo.name.eraseMacroScopes.lastComponentAsString)
-    /-
-      Expr.xyz -> New.xyz
-      xyz.Expr -> New
-    -/
-    let update_param (name : Name) : Name :=
-      if name_contains nm name
-        ∨ name_contains (name_last nm) name
-        ∨ name_contains old_nm name
-        ∨ name_contains (name_last old_nm) name then
-        new_nm
-      else if name_first name == name_last old_param then
-        modify_first new_param name
-      else if name_last name == name_last old_param then
-        new_param
-      else if name_first name == name_last old_param then
-        modify_first new_param name
-      else if name_last name == name_last old_param then
-        new_param
-      else name
-
-    let ty := update_names update_param cinfo.type
-
-    dbg_trace ty
-
-    let constr_bdy ← literal_ctor ty
-
-    `(ctor| | $constr_idt:ident : $constr_bdy))
-  let all_ctrs : Lean.TSyntaxArray _ := (Array.mk h) ++ ext_ctr
-  -- or try delab pretty α β
-  if derivs.getElems.isEmpty then
-    `(command|
-      @[$attrs]
-      inductive $new_name:ident : $new_elim:term
-        $all_ctrs:ctor*)
-  else
-    `(command|
-      @[$attrs]
-      inductive $new_name:ident : $new_elim:term
-        $all_ctrs:ctor*
-        deriving $derivs,*)
-
-def add_rel_clone (flags : Flag) : CommandElabM Unit := do
-  let my_name ← flags.get! Flag.from?
-  let my_name := my_name.getId
-  let attrs ← liftMacroM flags.attrs
-  -- Constructor to add
-  let with_ext    := flags.ext_fields
-  -- Deriv classes
-  let with_derive : Syntax.TSepArray ``derivingClass "," := flags.deriving?.getD #[]
-  -- New elim sort
-  let with_into ← (flags.get! Flag.into?)
-  let new_name ← (flags.get! Flag.as?)
-
-  let ind ← update_ind my_name attrs new_name with_ext with_derive with_into
-
-  elabCommand ind
-
-end imp
-
-open GenRel.imp Lean.Syntax in
-elab "mirror" flags:gen_flag_set : command =>
-  add_rel_clone (parse_flags flags)
-
-end GenRel
 
 namespace GenericExpr
 

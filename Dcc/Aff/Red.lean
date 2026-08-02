@@ -749,6 +749,11 @@ def RedAffNorm.out_eq (h : RedAffNorm A B) : B = (red_aff A) :=
     rw [red_aff]
     aesop
 
+@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
+def RedAffNorm.unique (h₁ : RedAffNorm A B) (h₂ : RedAffNorm A C) : B = C :=
+  match h₁, h₂ with
+  | ⟨ha, hb⟩, ⟨hc, hd⟩ => NormExpr.ext (norm_unique ha hb hc hd)
+
 /-def RedAffNorm.eq {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)} (h₁ : RedAffNorm A B) : h₁ = aff_sound (by sorry) := by
   sorry-/
 

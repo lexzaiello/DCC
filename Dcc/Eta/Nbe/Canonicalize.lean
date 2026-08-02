@@ -246,7 +246,7 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Option ((f' : E
         exact canonicalize₂ α hn_α β hn_β (.tm₂ dom)
 
 @[dcc_force_reduce]
-def Canonicalize.deterministic {f₁ f₂ : @EtaExpr.Norm τ_c} {e_f : EtaFn f₁ doms} {e_f₁ : EtaFn f₂ doms} {e_f₂ : EtaFn f₂ doms}
+def Canonicalize.unique {f₁ f₂ : @EtaExpr.Norm τ_c} {e_f : EtaFn f₁ doms} {e_f₁ : EtaFn f₂ doms} {e_f₂ : EtaFn f₂ doms}
   (h₁ : Canonicalize (τ_c := τ_c) e_f e_f₁)
   (h₂ : Canonicalize (τ_c := τ_c) e_f e_f₂) : e_f₁ = e_f₂ := by
   induction h₁

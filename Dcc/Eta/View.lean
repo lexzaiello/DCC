@@ -91,6 +91,10 @@ theorem ViewPi.complete_none (h : ViewPi e → False) : view_pi? e = .none := by
 theorem view_pi?_none_sound (h : view_pi? e = .none) : ViewPi e → False := fun h => by
   simp_all [h.complete]
 
+inductive ViewBang : GenericExpr τ_c → Type u
+  | bang    : ViewBang (DCC? !(α))
+deriving DecidableEq
+
 inductive ViewBangCoup : GenericExpr τ_c → Type u
   | coup    : ViewBangCoup (DCC? Coup(β))
   | bang    : ViewBangCoup (DCC? !(α))

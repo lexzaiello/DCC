@@ -298,14 +298,18 @@ def canonicalize₂ {f : GenericExpr (@EtaConst τ_c)}
         else .none
       | _ => .none
     else
-      match α, β with
-      | α, DCC? `(α₂, β) =>
+      match β with
+      | (DCC? !<β>) =>
+        match α with
+        | DCC? !(α) =>
+          .some ⟨_, _, .quot_bang e_f h_holes (aff_sound' _) h_contains⟩
+        | _ => .none
+      | DCC? `(α₂, β) =>
         if heq_α : α₂ = α then by
           cases heq_α
           exact .some ⟨_, _, .quot₂ e_f h_holes (aff_sound' _) h_contains⟩
         else .none
-      | (DCC? !(α)), (DCC? !<β>) => .some ⟨_, _, .quot_bang e_f h_holes (aff_sound' _) h_contains⟩
-      | _, _ => .none
+      | _ => .none
   | _ => .none
 
 def canonicalize (e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Option ((f' : EtaExpr.Norm)
@@ -743,6 +747,55 @@ def Canonicalize.some_complete {f f' : @EtaExpr.Norm τ_c}
         · grind
         · simp [heq.symm ▸ ViewQuot.complete_none h_view_quot]
     · grind
+  | quot_bang =>
+    rename_i e_f e_h hrt h_mem
+    have heq := hrt.complete_fst
+    have heq_whole := hrt.complete
+    have h_heq := e_h.complete
+    cases e_f
+    simp [canonicalize]
+    unfold canonicalize₂
+    rw [h_heq]
+    split
+    case h_1 heq' =>
+      simp at heq'
+      rename_i e_h'
+      have heq_hole := e_h.unique e_h'
+      cases heq_hole
+      simp at heq'
+      rename_i f₀ _ _ _ _ _ hole₁ _ hole₂ _ _ _ _ _ _ _ _
+      have h_contains : (reduce RedAff ((f₀.app hole₁).app hole₂)).fst.hole_mem_tm ≠ true := fun h => by
+        have h := heq ▸ h
+        grind
+      split
+      · grind
+      · simp
+    · grind
+  | quot₂ =>
+    rename_i e_f e_h hrt h_mem
+    have heq := hrt.complete_fst
+    have heq_whole := hrt.complete
+    have h_heq := e_h.complete
+    cases e_f
+    simp [canonicalize]
+    unfold canonicalize₂
+    rw [h_heq]
+    split
+    case h_1 heq' =>
+      simp at heq'
+      rename_i e_h'
+      have heq_hole := e_h.unique e_h'
+      cases heq_hole
+      simp at heq'
+      rename_i f₀ _ _ _ _ _ hole₁ _ hole₂ _ _ _ _ _ _ _ _
+      have h_contains : (reduce RedAff ((f₀.app hole₁).app hole₂)).fst.hole_mem_tm ≠ true := fun h => by
+        have h := heq ▸ h
+        grind
+      split
+      · grind
+      · simp
+    · grind
+  
 
 end EtaFn
 

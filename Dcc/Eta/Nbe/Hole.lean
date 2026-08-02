@@ -196,11 +196,18 @@ def Hole.level_neq (h₁ : Hole α m x) (h₂ : Hole β n y) (hneq : m ≠ n) : 
       rename_i ih₁ ih₂ _ _ _ _ h_hole₂
       exact ih₁ (by assumption) (by grind) rfl
 
+-- HERE: need to use this to prove False in previous file
 def Hole.coup_points_neq (h : Hole ⟨(DCC? Coup(β)), hn⟩ level ⟨(DCC? ⟦β⟧(a, b)), hn_hole⟩) : a ≠ b := fun heq => by
   cases h with
   | coup h_dom h_hole₁ hrt h_hole₂ =>
     cases heq
     exact h_hole₁.level_neq h_hole₂ (by grind) (by grind)
+
+def Hole.bang_coup_points_neq (h : Hole ⟨(DCC? !(Coup(β))), hn⟩ level ⟨(DCC? &(⟦β⟧(a, b))), hn_hole⟩) : a ≠ b := fun heq => by
+  cases h with
+  | bang h =>
+    have h := h.coup_points_neq
+    grind
 
 @[dcc_size]
 def Hole.size_zero (h : Hole α level hole_e) : hole_e.size = 0 := by

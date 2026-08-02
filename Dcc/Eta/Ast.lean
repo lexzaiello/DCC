@@ -1,4 +1,5 @@
 import Dcc.Ast
+import Dcc.Aff.Red
 import Dcc.Ast.Mem
 import Dcc.Aff.Size
 import Dcc.Relation
@@ -33,8 +34,6 @@ If domain is:
 - will need extra cases for Π?
 -/
 
-section
-
 universe u
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]
@@ -55,6 +54,8 @@ instance Hole.instToFormat : Std.ToFormat Hole := ⟨repr⟩
 instance EtaConst.instToFormat [Repr τ_c] : Std.ToFormat (@EtaConst τ_c) := ⟨repr⟩
 
 abbrev EtaExpr := GenericExpr (EtaConst (τ_c := τ_c))
+
+abbrev EtaExpr.Norm := NormExpr (τ := @EtaConst τ_c) GenericExpr.RedAff
 
 namespace GenericExpr
 
@@ -509,3 +510,4 @@ def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) 
     | const => simp [eta_to_expr, expr_to_eta]
 
 end GenericExpr
+

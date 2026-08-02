@@ -1,4 +1,5 @@
 import Dcc.Eta.Ast
+import Mathlib.Data.Option.Basic
 
 class Pure.Injective.{v, s} (f : Type v → Type s) extends Pure f where
   inj {α : Type v} : Function.Injective (toPure.pure (α := α))

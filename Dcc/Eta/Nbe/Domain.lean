@@ -1,13 +1,17 @@
 import Dcc.Eta.Ast
 import Dcc.Eta.Rel
+import Dcc.Aff.Red
 
-namespace GenericExpr
+variable {τ_c : Type u}
+variable [DecidableEq τ_c]
 
 /-
 Note: there will be no apps in the expression
 -/
 
 namespace NormExpr
+
+open GenericExpr
 
 inductive Domain : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
   | eql₁     : (hrn : RedAffNorm f_α f_α')
@@ -152,8 +156,6 @@ def Domain₂.to_domain (h : Domain₂ f α β) : Domain f α :=
   | .curr hr₁ hr₂ hr_x h_dom => .curr₁ hr₁
   | .curr' hr₁ hr₂ _ _ => .curr₁' hr₁
 
-set_option maxHeartbeats 20000000 in
-@[grind]
 def domain? [DecidableEq τ_c] (e : @NormExpr τ_c RedAff) : Option ((τ : @NormExpr τ_c RedAff) × (Domain e τ)) :=
   match e with
   | ⟨e, hn⟩ =>
@@ -279,8 +281,11 @@ termination_by e.size
 decreasing_by
   all_goals (grind)
 
-@[aesop safe forward (rule_sets := [DccReduce]), grind =_, grind ., grind! ., dcc_rel]
-theorem Domain.complete (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, h⟩ := by
+namespace Domain
+
+set_option maxHeartbeats 100000000000000000 in
+@[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
+theorem complete {e τ : @NormExpr τ_c RedAff} (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, h⟩ := by
   induction h
   any_goals (
     focus
@@ -301,9 +306,15 @@ theorem Domain.complete (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some �
       dcc_simp_all)
     done)
   all_goals (
-    simp [domain?]
-    dcc_simp_all)
+    focus
+    try (
+      simp [domain?]
+      dcc_simp_all
+      try grind))
 
+end Domain
+
+set_option maxHeartbeats 100000000000000000 in
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
 theorem Domain₂.complete
   {e α β : @NormExpr τ_c RedAff} (h : Domain₂ e α β) : e.domain₂? = .some ⟨α, β, h⟩ := by
@@ -399,8 +410,9 @@ def Domain₂.eq (h₁ h₂ : Domain₂ (τ_c := τ_c) x τ₁ τ₂) : h₁ = h
 
 end NormExpr
 
-open NormExpr in
+set_option maxHeartbeats 100000000000000000 in
 open GenericExpr in
+open NormExpr in
 @[dcc_force_reduce, dcc_force_aff]
 instance Domain.instRedRel : GenericExpr.RedRel.{u, u + 1} (α := @NormExpr τ_c RedAff) (Domain (τ_c := τ_c)) size where
   run := fun x => match domain? x with
@@ -426,8 +438,6 @@ instance Domain.instRedRel : GenericExpr.RedRel.{u, u + 1} (α := @NormExpr τ_c
         first | grind)
       done)
     any_goals (grind)
-
-end GenericExpr
 
 open GenericExpr in
 open NormExpr in

@@ -711,6 +711,38 @@ def Canonicalize.some_complete {f f' : @EtaExpr.Norm τ_c}
               exact (x f' hole₁ (match hrt with | ⟨a, _⟩ => a) h_red).elim
         · cases heq'.left
           grind
+    · grind
+  | quot₁ =>
+    rename_i e_f e_h hrt h_view_quot h_mem
+    have heq := hrt.complete_fst
+    have heq_whole := hrt.complete
+    have h_heq := e_h.complete
+    cases e_f
+    simp [canonicalize]
+    unfold canonicalize₁
+    rw [h_heq]
+    split
+    case h_1 heq' =>
+      rename_i e_hole hn_hole e_h'
+      have heq_hole := e_h.unique e_h'
+      cases heq_hole
+      simp at heq'
+      rename_i f hn_f α hn_α hole₁ hn_hole₁ e' hn_e' _heq h_dom x
+      have h_mem_hole : hole₁.hole_mem_tm := by
+        cases e_h
+        rename_i e_h
+        exact e_h.hole_mem_tm
+      have hn : (reduce RedAff (f.app hole₁)).fst ≠ hole₁ := fun h => by
+        grind
+      split
+      · grind
+      case isFalse =>
+        have h : (reduce RedAff (f.app hole₁)).fst.hole_mem_tm = false := by
+          grind
+        split
+        · grind
+        · simp [heq.symm ▸ ViewQuot.complete_none h_view_quot]
+    · grind
 
 end EtaFn
 

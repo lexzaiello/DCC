@@ -490,4 +490,36 @@ def to_from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn₂ : ¬ f.contains_hole}
 
 end EtaFn
 
+inductive EtaTm : (f : @EtaExpr.Norm τ_c) → List EtaExpr.Norm → Type u
+  | fn : EtaFn f doms → EtaTm f doms
+  | pi : EtaTm ⟨DCC? (Π(f_α, f_β) x_α), hn⟩ []
+
+@[grind]
+def view_eta_tm (f : @EtaExpr.Norm τ_c) : Option ((doms : List (@EtaExpr.Norm τ_c)) × EtaTm f doms) :=
+  match f.view_eta_fn with
+  | .some ⟨_, h⟩ => .some ⟨_, .fn h⟩
+  | .none =>
+    match f with
+    | ⟨DCC? (Π(_f_α, _f_β) _x_α), _hn⟩ => .some ⟨_, .pi⟩
+    | _ => .none
+
+def EtaTm.complete {f : @EtaExpr.Norm τ_c} (h : EtaTm f doms) : view_eta_tm f = .some ⟨doms, h⟩ := by
+  cases h with
+  | fn h => simp [view_eta_tm, h.complete]
+  | pi =>
+    expose_names
+    have h_ar : ((f_α.pi f_β).app x_α).arity = 0 := by
+      grind
+    simp [view_eta_tm, view_eta_fn, arity, raw, h_ar]
+
+def view_eta_tm_none_sound {f : @EtaExpr.Norm τ_c} (h : view_eta_tm f = .none) : ∀ {doms}, EtaTm f doms → False := by
+  intro _ h
+  have h := h.complete
+  grind
+
+def EtaTm.none_complete {f : @EtaExpr.Norm τ_c} (h : ∀ {doms}, EtaTm f doms → False) : view_eta_tm f = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨doms, e_f⟩
+  exact (h e_f).elim
+
 end NormExpr

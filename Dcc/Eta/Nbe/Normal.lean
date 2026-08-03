@@ -790,6 +790,25 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
 
 end Canonicalize
 
+namespace Canonicalize!
+
+set_option maxHeartbeats 100000000000 in
+def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c := τ_c) f₂ doms}
+  {e_f₃ : EtaFn (τ_c := τ_c) f₃ doms} (h₁ : Canonicalize! e_f₁ e_f₂) (h₂ : Canonicalize! e_f₂ e_f₃) : f₂ = f₃ := by
+  cases h₁ with
+  | step h₁ =>
+    cases h₂ with
+    | step h₂ => exact h₁.is_norm_fn h₂
+    | refl h₂ => rfl
+  | refl =>
+    cases h₂ with
+    | step h₂ =>
+      rename_i hn
+      exact (hn h₂).elim
+    | refl h₂ => rfl
+
+end Canonicalize!
+
 end EtaFn
 
 end NormExpr

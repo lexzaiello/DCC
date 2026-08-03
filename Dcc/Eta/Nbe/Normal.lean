@@ -314,8 +314,13 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
                       grind
                     | congrFun h => cases h
                     | congrArg h =>
-                      expose_names
-                      exact (hn_hole₁_2 ⟨_, h⟩).elim
+                      cases h with
+                      | sigl h =>
+                        expose_names
+                        exact (hn_hole₁_2 ⟨_, h⟩).elim
+                      | sigr h =>
+                        expose_names
+                        exact (hn_hole₂ ⟨_, h⟩).elim
   | sndc' =>
     cases h₂
     case sndc' => rfl
@@ -419,14 +424,16 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
                     cases h₁ with
                     | sndc =>
                       expose_names
-                      have heq := hn_hole₁_2.unique_refl (by assumption)
+                      have heq := hn_hole₂.unique_refl (by assumption)
                       cases heq
-                      have h := a_4.hole_mem_tm
+                      have h := a_5.hole_mem_tm
                       grind
                     | congrFun h => cases h
                     | congrArg h =>
                       expose_names
-                      exact (hn_hole₁_2 ⟨_, h⟩).elim
+                      cases h with
+                      | sigl h => exact (hn_hole₁_2 ⟨_, h⟩).elim
+                      | sigr h => exact (hn_hole₂ ⟨_, h⟩).elim
 
 end Canonicalize
 

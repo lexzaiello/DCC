@@ -778,6 +778,46 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
       · grind
     · grind
 
+inductive Canonicalize! : (e_f : EtaFn (τ_c := τ_c) f doms)
+  → (e_f' : EtaFn (τ_c := τ_c) f' doms)
+  → Type u
+  | step : Canonicalize e_f e_f'           → Canonicalize! e_f e_f'
+  | refl : (∀ {f' : @EtaExpr.Norm τ_c} {e_f' : EtaFn (τ_c := τ_c) f' doms}, Canonicalize e_f e_f' → False) → Canonicalize! e_f e_f
+
+def canonicalize_none_sound {e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms} (h : canonicalize e_f = .none) : ∀
+  {f' : @EtaExpr.Norm τ_c} {e_f' : EtaFn (τ_c := τ_c) f' doms}, Canonicalize e_f e_f' → False := by
+  intro _ _ h
+  have heq := h.complete
+  grind
+
+def Canonicalize.none_complete {e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms} (h : ∀ {f' : @EtaExpr.Norm τ_c}
+  {e_f' : EtaFn (τ_c := τ_c) f' doms}, Canonicalize e_f e_f' → False) : canonicalize e_f = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨f', e_f', h'⟩
+  exact (h h').elim
+
+def canonicalize! (e_f : EtaFn (τ_c := τ_c) f doms) : ((f' : EtaExpr.Norm)
+  × (e_f' : EtaFn f' doms) × Canonicalize! e_f e_f') :=
+  match heq : e_f.canonicalize with
+  | .some ⟨f', e_f', h⟩ => ⟨f', e_f', .step h⟩
+  | .none => ⟨f, e_f, .refl (canonicalize_none_sound heq)⟩
+
+def Canonicalize!.complete {e_f : EtaFn (τ_c := τ_c) f' doms}
+  (h : Canonicalize! e_f e_f') : canonicalize! e_f = ⟨f', e_f', h⟩ := by
+  cases h with
+  | step h =>
+    have h := h.complete
+    simp [canonicalize!]
+    split <;> grind
+  | refl h =>
+    rename_i e_f'
+    unfold canonicalize!
+    split
+    case h_1 h _ =>
+      expose_names
+      exact (h_1 h).elim
+    · rfl
+
 end EtaFn
 
 end NormExpr

@@ -187,10 +187,6 @@ def preservation₂ {e_f₁ : EtaFn (τ_c := τ_c) f [α, β]} {e_f₂ : EtaFn (
   · assumption
 
 set_option maxHeartbeats 100000000000 in
-set_option pp.deepTerms true in
-set_option pp.deepTerms.threshold 9999 in
-set_option pp.proofs true in
-set_option pp.proofs.threshold 9999 in
 def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c := τ_c) f₂ doms}
   {e_f₃ : EtaFn (τ_c := τ_c) f₃ doms} (h₁ : Canonicalize e_f₁ e_f₂) (h₂ : Canonicalize e_f₂ e_f₃) : f₂ = f₃ := by
   let h₁₀ := h₁

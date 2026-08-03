@@ -50,8 +50,8 @@ variable [DecidableEq τ_c]
 An η-reducible function is in normal form, has an arity of 1 or 2, and has known domain
 -/
 inductive EtaFn : (f : @EtaExpr.Norm τ_c) → List EtaExpr.Norm → Type u
-  | tm₁  : {_heq : arity f = 1} → (h_dom : Domain f α)    → EtaFn f [α]
-  | tm₂  : {_heq : arity f = 2} → (h_dom : Domain₂ f α β) → EtaFn f [α, β]
+  | tm₁  : {_heq : arity f = 1} → {_hn : ¬ f.raw.contains_hole} → (h_dom : Domain f α) → EtaFn f [α]
+  | tm₂  : {_heq : arity f = 2} → {_hn : ¬ f.raw.contains_hole} → (h_dom : Domain₂ f α β) → EtaFn f [α, β]
 
 @[dcc_size]
 def EtaFn.length (e : EtaFn f doms) : doms.length = arity f := by
@@ -96,11 +96,17 @@ def EtaFn.head_dom (e_f : EtaFn f doms) : ((τ : @EtaExpr.Norm τ_c) × (Domain 
 def view_eta_fn (f : @EtaExpr.Norm τ_c) : Option ((doms : List (@EtaExpr.Norm τ_c)) × EtaFn f doms) :=
   if heq : f.arity = 1 then
     match f.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .tm₁ (_heq := heq) h⟩
+    | .some ⟨_, h⟩ =>
+      if h_mem : ¬ f.raw.contains_hole then
+        .some ⟨_, .tm₁ (_heq := heq) (_hn := h_mem) h⟩
+      else .none
     | .none => .none
   else if heq : f.arity = 2 then
     match f.domain₂? with
-    | .some ⟨_, _, h⟩ => .some ⟨_, .tm₂ (_heq := heq) h⟩
+    | .some ⟨_, _, h⟩ =>
+      if h_mem : ¬ f.raw.contains_hole then
+        .some ⟨_, .tm₂ (_heq := heq) (_hn := h_mem) h⟩
+      else .none
     | .none => .none
   else .none
 
@@ -124,12 +130,12 @@ def EtaFn.eq (h₁ h₂ : EtaFn (τ_c := τ_c) f doms) : h₁ = h₂ := by
   | tm₁ =>
     cases h₂ with
     | tm₁ =>
-      rename_i h_dom₁ _ h_dom₂
+      rename_i h_dom₁ _ _ h_dom₂
       cases h_dom₁.eq h_dom₂; rfl
   | tm₂ =>
     cases h₂ with
     | tm₂ =>
-      rename_i h_dom₁ _ h_dom₂
+      rename_i h_dom₁ _ _ h_dom₂
       cases h_dom₁.eq h_dom₂; rfl
 
 open GenericExpr
@@ -394,12 +400,12 @@ def holes (e_f : EtaFn (τ_c := τ_c) f doms) (level : ℕ)
   : Option ((holes : List (@EtaExpr.Norm τ_c)) × Holes e_f level holes) := by
   cases e_f with
   | tm₁ h_dom =>
-    rename_i α _
+    rename_i α _ _
     match α.mk_hole level with
     | .some ⟨_, h⟩ => exact .some ⟨_, .tm₁ h⟩
     | .none => exact .none
   | tm₂ h_dom₂ =>
-    rename_i α β₀ _
+    rename_i α β₀ _ _
     match α.mk_hole (level + 2) with
     | .some ⟨⟨hole₁, _hn_hole₁⟩, h₁⟩ =>
       match (red_aff (DCC? (β₀.raw hole₁))).mk_hole (level + 1) with

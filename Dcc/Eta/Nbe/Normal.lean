@@ -788,13 +788,46 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
               have h_mem := e_h₁.hole_mem_tm
               grind
 
+open GenericExpr in
+def iso {e_f₁ : EtaFn (τ_c := τ_c) ⟨f₁, hn_f₁⟩ doms} {e_f₂ : EtaFn (τ_c := τ_c) ⟨f₂, hn_f₂⟩ doms}
+  (h₁ : Canonicalize e_f₁ e_f₂) (hrt₁ : RedAffNorm (DCC? (f₁ x)) B) (hrt₂ : RedAffNorm (DCC? (f₂ x)) C) : B = C := by
+  cases h₁ with
+  | id₁ =>
+    expose_names
+    
+    sorry
+
+
+end Canonicalize
+
+end EtaFn
+
+namespace EtaTm
+
+namespace Canonicalize
+
+set_option maxHeartbeats 100000000000 in
+def is_norm_tm {e_f₁ : EtaTm (τ_c := τ_c) f₁ doms} {e_f₂ : EtaTm (τ_c := τ_c) f₂ doms}
+  {e_f₃ : EtaTm (τ_c := τ_c) f₃ doms} (h₁ : Canonicalize e_f₁ e_f₂) (h₂ : Canonicalize e_f₂ e_f₃) : f₂ = f₃ := by
+  cases h₁ with
+  | fn h₁ =>
+    cases h₂ with
+    | fn h₂ => exact h₁.is_norm_fn h₂
+  | pi =>
+    cases h₂ with
+    | pi =>
+      expose_names
+      simp_all
+      
+      sorry
+
 end Canonicalize
 
 namespace Canonicalize!
 
 set_option maxHeartbeats 100000000000 in
-def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c := τ_c) f₂ doms}
-  {e_f₃ : EtaFn (τ_c := τ_c) f₃ doms} (h₁ : Canonicalize! e_f₁ e_f₂) (h₂ : Canonicalize! e_f₂ e_f₃) : f₂ = f₃ := by
+def is_norm_fn {e_f₁ : EtaTm (τ_c := τ_c) f₁ doms} {e_f₂ : EtaTm (τ_c := τ_c) f₂ doms}
+  {e_f₃ : EtaTm (τ_c := τ_c) f₃ doms} (h₁ : Canonicalize! e_f₁ e_f₂) (h₂ : Canonicalize! e_f₂ e_f₃) : f₂ = f₃ := by
   cases h₁ with
   | step h₁ =>
     cases h₂ with
@@ -809,7 +842,7 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
 
 end Canonicalize!
 
-end EtaFn
+end EtaTm
 
 end NormExpr
 

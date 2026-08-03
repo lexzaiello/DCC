@@ -657,7 +657,46 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
         simp [raw, Holes.v_elems, Vector.get] at h_mem
         try (grind))
       done)
-    
+    · expose_names
+      cases hn_coup.eq hn_α
+      cases e_h.hole_same e_h_1
+      cases a_1.unique ⟨.single .quot, hn_e'⟩
+      cases e_h with
+      | tm₁ h =>
+        have h_mem := h.sigl_hole_mem_tm
+        grind
+    · expose_names
+      cases hn_coup.eq hn_α
+      cases e_h.hole_same e_h_1
+      cases a_1.unique ⟨.single .quot, hn_e'⟩
+      cases e_h with
+      | tm₁ h =>
+        have h_mem := h.sigr_hole_mem_tm
+        grind
+    · expose_names
+      cases hn_coup.eq hn_α
+      cases e_h.hole_same e_h_1
+      cases a_1.unique ⟨.single .quot, hn_e'⟩
+      cases e_h with
+      | tm₁ h =>
+        have h_mem := h.sigl_hole_mem_tm_box
+        grind
+    · expose_names
+      cases hn_coup.eq hn_α
+      cases e_h.hole_same e_h_1
+      cases a_1.unique ⟨.single .quot, hn_e'⟩
+      cases e_h with
+      | tm₁ h =>
+        have h_mem := h.sigr_hole_mem_tm_box
+        grind
+    · expose_names
+      cases hn₁.eq hn_α_1
+      cases e_h.hole_same e_h_1
+      cases a_1.unique ⟨.single .quot, hn_e'⟩
+      cases e_h with
+      | tm₁ h =>
+        have h_mem := h.sigl_hole_mem_tm
+        grind
 
 end Canonicalize
 

@@ -39,40 +39,96 @@ def preservation₂ {e_f₁ : EtaFn (τ_c := τ_c) f [α, β]} {e_f₂ : EtaFn (
   cases e_f₂
   · assumption
 
+set_option maxHeartbeats 100000000000 in
 set_option pp.deepTerms true in
 set_option pp.deepTerms.threshold 9999 in
 set_option pp.proofs true in
 set_option pp.proofs.threshold 9999 in
 def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c := τ_c) f₂ doms}
   {e_f₃ : EtaFn (τ_c := τ_c) f₃ doms} (h₁ : Canonicalize e_f₁ e_f₂) (h₂ : Canonicalize e_f₂ e_f₃) : f₂ = f₃ := by
-  match h₁ with
-  | .id₁ _ _ _ _ =>
+  cases h₁ with
+  | id₁ =>
     match h₂ with
     | .id₁ _ _ _ _ => rfl
     | .quot₁ _ _ _ _ _ =>
       expose_names
       have hrt' : (α.id.app hole₁_1).RedAffNorm ⟨hole₁_1, hn_hole₁_1⟩ :=
         ⟨.single .id, hn_hole₁_1⟩
-      have h_mem := e_h.hole_mem_tm ⟨0, e_f₁.arity_pos⟩
-      have e_f_heq := e_f₁_2.unique e_f₁
+      have h_mem := e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩
+      have e_f_heq := e_f.unique x
       cases e_f_heq
       have heq := GenericExpr.RedAffNorm.unique hrt' hr_τ
       simp_all
       simp [raw, Holes.v_elems, Vector.get] at h_mem
-      have hole_eq := e_f₁_2.hole_same (.tm₁ (Domain.id ⟨.refl, by assumption⟩)) e_h e_h_1
+      have hole_eq := e_f.hole_same (.tm₁ (Domain.id ⟨.refl, by assumption⟩)) e_h e_h_1
       cases hole_eq
       cases heq
       grind
-    | .fstc _ _ _ =>
+    | .eval _ _ _ _ | .par _ _ _ _ _ | .sndc' _ _ _ | .fstc' _ _ _ | .sndc _ _ _ | .fstc _ _ _ =>
       expose_names
-      have hrt' : ((NormExpr.mk β.coup.id (fun x =>
-              match x with
-              | Exists.intro w h => nomatch h)).raw.app (β.mkc a_1 b)).RedAffNorm
-        (mk (β.mkc a_1 b) hn_hole₁_1) :=
-        ⟨.single .id, hn_hole₁_1⟩
-      dcc_aesop
-    | _ => sorry
-  | _ => sorry
+      exact a_2.absurd ⟨.single .id, by assumption⟩ (fun h => by cases h)
+  | fstc =>
+    cases h₂
+    case fstc => rfl
+    any_goals (
+      focus
+      try (
+        expose_names
+        cases e_h_1 with
+        | tm₁ h =>
+          cases h with
+          | pure h =>
+            match a_2 with
+            | ⟨hr, hn⟩ =>
+              match hr.cases_head with
+              | .inl h => cases h
+              | .inr ⟨_, h₁, h₂⟩ =>
+                cases h₁ with
+                | congrFun h => cases h
+                | congrArg h => cases h
+          | coup => exact a_2.absurd ⟨.single .fstc, by assumption⟩)
+      done)
+    · expose_names
+      cases e_h_1 with
+      | tm₁ h =>
+        have hn := h.coup_points_neq
+        cases h with
+        | coup => exact a_3.absurd ⟨.single .fstc, by assumption⟩ (fun h => by
+          cases h
+          grind)
+    · expose_names
+      exact (h .coup).elim
+    · expose_names
+      exact a_3.absurd ⟨.single .fstc, hn'.congrFun.congrArg⟩
+    · expose_names
+      cases e_h_1 with
+      | tm₁ h =>
+        cases h with
+        | pure h =>
+          match hr_τ with
+          | ⟨hr, hn⟩ =>
+            match hr.cases_head with
+            | .inl h =>
+              cases h
+              grind
+            | .inr ⟨_, h₁, h₂⟩ =>
+              cases h₁ with
+              | congrFun h => cases h
+              | congrArg h => cases h
+        | coup h =>
+          match hr_τ with
+          | ⟨hr, hn⟩ =>
+            match hr.cases_head with
+            | .inl h =>
+              cases h
+              simp [GenericExpr.hole_mem_tm] at h
+              expose_names
+              have h := a_3.hole_mem_tm ⟨0, by grind⟩
+              grind
+            | .inr ⟨_, h₁, h₂⟩ =>
+              cases h₁ with
+              | congrFun h => cases h
+              | congrArg h => cases h
 
 end Canonicalize
 

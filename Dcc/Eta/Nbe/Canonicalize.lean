@@ -850,24 +850,32 @@ def Canonicalize.complete {e_f : EtaTm (τ_c := τ_c) ⟨f, hn⟩ doms} {e_f' : 
     simp [GenericExpr.red_aff, heq₂, heq₃, hneq]
     dcc_simp
 
-end EtaTm
+def canonicalize_none_sound {e_f : EtaTm (τ_c := τ_c) ⟨f, hn⟩ doms} (h : canonicalize e_f = .none) : ∀
+  {f' : @EtaExpr.Norm τ_c} {e_f' : EtaTm (τ_c := τ_c) f' doms}, Canonicalize e_f e_f' → False := by
+  intro _ _ h
+  have heq := h.complete
+  grind
 
-namespace EtaFn
+def Canonicalize.none_complete {e_f : EtaTm (τ_c := τ_c) ⟨f, hn⟩ doms} (h : ∀ {f' : @EtaExpr.Norm τ_c}
+  {e_f' : EtaTm (τ_c := τ_c) f' doms}, Canonicalize e_f e_f' → False) : canonicalize e_f = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨f', e_f', h'⟩
+  exact (h h').elim
 
-inductive Canonicalize! : (e_f : EtaFn (τ_c := τ_c) f doms)
-  → (e_f' : EtaFn (τ_c := τ_c) f' doms)
+inductive Canonicalize! : (e_f : EtaTm (τ_c := τ_c) f doms)
+  → (e_f' : EtaTm (τ_c := τ_c) f' doms)
   → Type u
   | step : Canonicalize e_f e_f'           → Canonicalize! e_f e_f'
-  | refl : (∀ {f' : @EtaExpr.Norm τ_c} {e_f' : EtaFn (τ_c := τ_c) f' doms}, Canonicalize e_f e_f' → False) → Canonicalize! e_f e_f
+  | refl : (∀ {f' : @EtaExpr.Norm τ_c} {e_f' : EtaTm (τ_c := τ_c) f' doms}, Canonicalize e_f e_f' → False) → Canonicalize! e_f e_f
 
-def canonicalize! (e_f : EtaFn (τ_c := τ_c) f doms) : ((f' : EtaExpr.Norm)
-  × (e_f' : EtaFn f' doms) × Canonicalize! e_f e_f') :=
+def canonicalize! (e_f : EtaTm (τ_c := τ_c) f doms) : ((f' : EtaExpr.Norm)
+  × (e_f' : EtaTm f' doms) × Canonicalize! e_f e_f') :=
   match heq : e_f.canonicalize with
   | .some ⟨f', e_f', h⟩ => ⟨f', e_f', .step h⟩
   | .none => ⟨f, e_f, .refl (canonicalize_none_sound heq)⟩
 
-def Canonicalize!.complete {e_f : EtaFn (τ_c := τ_c) f doms}
-  {e_f' : EtaFn (τ_c := τ_c) f' doms}
+def Canonicalize!.complete {e_f : EtaTm (τ_c := τ_c) f doms}
+  {e_f' : EtaTm (τ_c := τ_c) f' doms}
   (h : Canonicalize! e_f e_f') : canonicalize! e_f = ⟨f', e_f', h⟩ := by
   cases h with
   | step h =>
@@ -883,7 +891,7 @@ def Canonicalize!.complete {e_f : EtaFn (τ_c := τ_c) f doms}
       exact (h_1 h).elim
     · rfl
 
-end EtaFn
+end EtaTm
 
 end NormExpr
 
@@ -896,25 +904,25 @@ open NormExpr
 inductive Canonicalize! : (f : @GenericExpr τ_c) → (f' : @GenericExpr τ_c) → Type (u + 1)
   | step  : {f₁ : @GenericExpr.{u} τ_c}
     → (hrt : RedAffNorm f₁ ⟨f₂, hn_f₂⟩)
-    → (e_f : EtaFn ⟨expr_to_eta f₂, hrt.is_norm.to_eta⟩ doms)
-    → {e_f' : EtaFn ⟨f₄, hn_f₄⟩ doms}
-    → EtaFn.Canonicalize! e_f e_f'
+    → (e_f : EtaTm ⟨expr_to_eta f₂, hrt.is_norm.to_eta⟩ doms)
+    → {e_f' : EtaTm ⟨f₄, hn_f₄⟩ doms}
+    → EtaTm.Canonicalize! e_f e_f'
     → (hn : ¬ f₄.contains_hole)
     → Canonicalize! f₁ (GenericExpr.eta_to_expr f₄ hn)
   | refl₁ : {f₁ : @GenericExpr.{u} τ_c}
     → (hrt : RedAffNorm f₁ ⟨f₂, hn_f₂⟩)
-    → (hn : ∀ {doms}, NormExpr.EtaFn ⟨expr_to_eta f₂, hrt.is_norm.to_eta⟩ doms → False)
+    → (hn : ∀ {doms}, NormExpr.EtaTm ⟨expr_to_eta f₂, hrt.is_norm.to_eta⟩ doms → False)
     → Canonicalize! f₁ f₁
   | refl₂ : {f₁ : @GenericExpr.{u} τ_c}
     → (hrt : RedAffNorm f₁ ⟨f₂, hn_f₂⟩)
-    → (e_f : EtaFn ⟨expr_to_eta f₂, hrt.is_norm.to_eta⟩ doms)
-    → {e_f' : EtaFn ⟨f₄, hn_f₄⟩ doms}
-    → EtaFn.Canonicalize! e_f e_f'
+    → (e_f : EtaTm ⟨expr_to_eta f₂, hrt.is_norm.to_eta⟩ doms)
+    → {e_f' : EtaTm ⟨f₄, hn_f₄⟩ doms}
+    → EtaTm.Canonicalize! e_f e_f'
     → (hn : f₄.contains_hole)
     → Canonicalize! f₁ f₁
 
 def canonicalize! (f : @GenericExpr τ_c) : ((f' : @GenericExpr τ_c) × Canonicalize! f f') :=
-  match heq₁ : NormExpr.view_eta_fn (red_aff f).to_eta with
+  match heq₁ : NormExpr.view_eta_tm (red_aff f).to_eta with
   | .some ⟨_, e_f⟩ =>
     match e_f.canonicalize! with
     | ⟨⟨f', _hn_f'⟩, _e_f', h⟩ =>
@@ -922,7 +930,7 @@ def canonicalize! (f : @GenericExpr τ_c) : ((f' : @GenericExpr τ_c) × Canonic
         ⟨_, .refl₂ (aff_sound' f) e_f h hn⟩
       else
         ⟨_, .step (aff_sound' f) e_f h hn⟩
-  | .none => ⟨_, .refl₁ (aff_sound' f) (view_eta_fn_none_sound heq₁)⟩
+  | .none => ⟨_, .refl₁ (aff_sound' f) (view_eta_tm_none_sound heq₁)⟩
 
 def Canonicalize!.complete {f f' : @GenericExpr τ_c} (h : Canonicalize! f f') : canonicalize! f = ⟨f', h⟩ := by
   cases h with
@@ -954,7 +962,7 @@ def Canonicalize!.complete {f f' : @GenericExpr τ_c} (h : Canonicalize! f f') :
       simp [to_eta, hb] at heq
   | refl₁ =>
     expose_names
-    have ha := EtaFn.none_complete hn
+    have ha := EtaTm.none_complete hn
     have he := hrt.complete
     unfold canonicalize!
     cases he

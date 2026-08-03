@@ -737,10 +737,57 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       cases e_h_1 with
       | tm₂ e_h₁ hrt e_h₂ =>
         cases e_h₁ with
+        | pure =>
+          expose_names
+          cases hr_τ_1.elim_norm (fun ⟨_, h⟩ => by
+            cases h with
+            | congrFun h =>
+              cases h with
+              | congrFun h => cases h
+              | congrArg h => cases h
+            | congrArg h => exact hn_hole₂_1 ⟨_, h⟩)
+          cases e_h with
+          | tm₂ e_h₁ hrt e_h₂ =>
+            have h_mem := e_h₁.hole_mem_tm
+            grind
         | bang e_h₁ =>
           cases e_h₂ with
           | bang e_h₂ =>
-            cases hr_τ_1.unique ⟨.trans (.single (.congrFun .curr')) (.single (by sorry)), by assumption⟩
+            cases hr_τ_1.unique ⟨.trans (.single .curr') (.single (by constructor))
+              , by assumption⟩
+            rfl
+          | pure =>
+            expose_names
+            cases hr_τ_1.elim_norm (fun ⟨_, h⟩ => by
+              cases h with
+              | congrFun h =>
+                cases h with
+                | congrFun h => cases h
+                | congrArg h => cases h
+              | congrArg h => cases h)
+            cases e_h with
+            | tm₂ e_h₁ hrt e_h₂ =>
+              have h_mem := e_h₁.hole_mem_tm
+              grind
+          | coup =>
+            expose_names
+            cases hr_τ_1.elim_norm (fun ⟨_, h⟩ => by
+              cases h with
+              | congrFun h =>
+                cases h with
+                | congrFun h => cases h
+                | congrArg h => cases h
+              | congrArg h =>
+                cases h with
+                | sigl h =>
+                  cases e_h with
+                  | tm₂ e_h₁ hrt e_h₂ =>
+                    exact e_h₂.is_norm.sigl ⟨_, h⟩
+                | sigr h =>
+                  cases e_h with
+                  | tm₂ e_h₁ hrt e_h₂ =>
+                    exact e_h₂.is_norm.sigr ⟨_, h⟩)
+            
             sorry
       /-cases hr_τ_1.unique ⟨.trans (.single (.congrFun .curr')) (.single (by sorry)), by assumption⟩
       cases e_h with

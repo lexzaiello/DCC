@@ -123,12 +123,19 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
               cases h
               simp [GenericExpr.hole_mem_tm] at h
               expose_names
-              have h := a_3.hole_mem_tm ⟨0, by grind⟩
+              have h := a_3.hole_mem_tm
               grind
             | .inr ⟨_, h₁, h₂⟩ =>
               cases h₁ with
               | congrFun h => cases h
-              | congrArg h => cases h
+              | congrArg h => exact (hn_hole₁_1 ⟨_, h⟩).elim
+              | fstc =>
+                have hn_hole₁ := hn_hole₁_1.sigl
+                have heq_e' := hn_hole₁.unique_refl h₂
+                cases heq_e'
+                expose_names
+                have h := a_4.hole_mem_tm
+                grind
 
 end Canonicalize
 

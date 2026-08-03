@@ -1,4 +1,5 @@
 import Dcc.Eta.Ast
+import Dcc.Eta.Reflect
 import Dcc.Eta.Rel
 import Dcc.Aff.Red
 
@@ -156,7 +157,7 @@ def Domain₂.to_domain (h : Domain₂ f α β) : Domain f α :=
   | .curr hr₁ hr₂ hr_x h_dom => .curr₁ hr₁
   | .curr' hr₁ hr₂ _ _ => .curr₁' hr₁
 
-def domain? [DecidableEq τ_c] (e : @NormExpr τ_c RedAff) : Option ((τ : @NormExpr τ_c RedAff) × (Domain e τ)) :=
+def domain? (e : @NormExpr τ_c' RedAff) : Option ((τ : @NormExpr τ_c' RedAff) × (Domain e τ)) :=
   match e with
   | ⟨e, hn⟩ =>
     match e with
@@ -194,7 +195,7 @@ def domain? [DecidableEq τ_c] (e : @NormExpr τ_c RedAff) : Option ((τ : @Norm
       | .some ⟨_, h⟩ => .some ⟨_, .fmap (aff_sound rfl) h⟩
       | _ => .none
     | (DCC? ⟦_β⟧⟨M, N⟩) =>
-      let M' : @NormExpr τ_c RedAff := ⟨M, (fun ⟨_, h⟩ => hn ⟨_, .pairl h⟩)⟩
+      let M' : @NormExpr τ_c' RedAff := ⟨M, (fun ⟨_, h⟩ => hn ⟨_, .pairl h⟩)⟩
       --let N' : @NormExpr τ_c RedAff := ⟨N, (fun ⟨_, h⟩ => hn ⟨_, .pairr h⟩)⟩
 
       match M'.domain? with
@@ -221,7 +222,7 @@ def domain? [DecidableEq τ_c] (e : @NormExpr τ_c RedAff) : Option ((τ : @Norm
       let hn₁ : IsNorm RedAff f_α := fun ⟨_, h⟩ => hn ⟨_, .pil h⟩
       let hn₂ : IsNorm RedAff f_β := fun ⟨_, h⟩ => hn ⟨_, .pir h⟩
 
-      let f_α' : @NormExpr τ_c RedAff := ⟨f_α, hn₁⟩
+      let f_α' : @NormExpr τ_c' RedAff := ⟨f_α, hn₁⟩
 
       match f_α'.domain? with
       | .some ⟨_, h⟩ => .some ⟨_, .pi hn₁ hn₂ h⟩
@@ -285,7 +286,7 @@ namespace Domain
 
 set_option maxHeartbeats 100000000000000000 in
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
-theorem complete {e τ : @NormExpr τ_c RedAff} (h : Domain e τ) : (domain? (τ_c := τ_c)) e = .some ⟨τ, h⟩ := by
+theorem complete {e τ : @NormExpr τ_c' RedAff} (h : Domain e τ) : (domain? (τ_c' := τ_c')) e = .some ⟨τ, h⟩ := by
   induction h
   any_goals (
     focus
@@ -408,6 +409,36 @@ def Domain₂.eq (h₁ h₂ : Domain₂ (τ_c := τ_c) x τ₁ τ₂) : h₁ = h
   have hb := h₂.complete
   simp_all
 
+set_option maxHeartbeats 100000000000000000 in
+open GenericExpr in
+open NormExpr in
+def Domain.decreasing {e α : @NormExpr τ_c' RedAff} (h : Domain e α) : NormExpr.size α < NormExpr.size e := by
+  induction h
+  any_goals (
+    focus
+    try (
+      rename_i hr h_dom hlt
+      have ha := h_dom.complete
+      have hb := hr.decreasing?
+      grind)
+    done)
+  any_goals (
+    focus
+    try (
+      rename_i hn hr
+      have ha := hr.complete
+      have hb := hr.decreasing?
+      dcc_simp_all [NormExpr.size]
+      first | grind)
+    done)
+  any_goals (grind)
+
+open GenericExpr in
+open NormExpr in
+def Domain.decreasing' {e α : @NormExpr τ_c RedAff} (h : Domain e α) : GenericExpr.size α.raw < GenericExpr.size e.raw := by
+  have h := h.decreasing
+  simp_all [NormExpr.size, raw]
+
 end NormExpr
 
 set_option maxHeartbeats 100000000000000000 in
@@ -418,26 +449,149 @@ instance Domain.instRedRel : GenericExpr.RedRel.{u, u + 1} (α := @NormExpr τ_c
   run := fun x => match domain? x with
     | .some ⟨_, h⟩ => .some ⟨_, ⟨h⟩⟩
     | .none => .none
-  decreasing := fun h => by
-    induction h
-    any_goals (
-      focus
-      try (
-        rename_i hr h_dom hlt
-        have ha := h_dom.complete
-        have hb := hr.decreasing?
-        grind)
-      done)
-    any_goals (
-      focus
-      try (
-        rename_i hn hr
-        have ha := hr.complete
-        have hb := hr.decreasing?
-        dcc_simp_all [NormExpr.size]
-        first | grind)
-      done)
-    any_goals (grind)
+  decreasing := Domain.decreasing
+
+set_option maxHeartbeats 100000000000000000 in
+open GenericExpr in
+open NormExpr in
+def NormExpr.Domain.to_eta {f α : @NormExpr τ_c RedAff} (h : Domain f α) : Domain f.to_eta α.to_eta :=
+  match h with
+  | .map _ _ | .unmap _ _ | .refl₁ _ _ | .eql₁ _ _
+    | .fmap _ _ => by
+    all_goals (
+      try expose_names)
+    · have h_dec₁ := a.decreasing
+      have h_dec₂ := hrn.decreasing?
+      have h := a.to_eta
+      constructor
+      · exact hrn.to_eta
+      · assumption
+  | .eval _ | .curr₁' _ => by
+    all_goals (
+      try (rename_i hn_β _ _ hrn))
+    · have ha := hrn.to_eta
+      have hb := hn_β.to_eta
+      constructor
+      assumption
+  | .eql₂ _ | .refl₂ _ => by
+    all_goals (try (expose_names))
+    · have ha := hrn.to_eta
+      have hb := hn_τ.to_eta
+      constructor
+      assumption
+  | .unbox _ => by
+    expose_names
+    have ha := hn_α'.to_eta
+    have hb := hrn.to_eta
+    constructor
+    assumption
+  | .fstc _ | .sndc _  => by
+    all_goals (try (expose_names))
+    · have ha := hrn.to_eta
+      have hb := hn_β'.to_eta
+      constructor
+      assumption
+  | .curr₂ _ => by
+    expose_names
+    have ha := hn_y.to_eta
+    have hb := hrn.to_eta
+    constructor
+    · assumption
+    · assumption
+  | .quot _ | .curr₂' _ | .curr₁ _ | .id _ => by
+    all_goals (try (expose_names))
+    · have ha := hrn.to_eta
+      constructor
+      assumption
+  | .pi _ _ _ => by
+    expose_names
+    have ha := hn₁.to_eta
+    have hb := hn₂.to_eta
+    have hc := a.to_eta
+    constructor <;> assumption
+  | .pair _ _ _ => by
+    expose_names
+    have ha := hn₁.to_eta
+    have hb := hn₂.to_eta
+    have hc := a.to_eta
+    constructor <;> assumption
+  | .comp₂ _ _ | .comp' _ _ | .comp _ _ => by
+    all_goals (try (
+      expose_names
+      have ha := hrn₁.to_eta
+      have hb := a.to_eta
+      have h_dec₁ := ha.decreasing?
+      have h_dec₂ := hrn₁.decreasing?))
+    constructor <;> assumption
+termination_by (size f)
+decreasing_by
+  any_goals (grind)
+  all_goals (
+    focus
+    try (
+      expose_names
+      have h_dec₁ := hrn₁.decreasing?
+      grind))
+
+set_option maxHeartbeats 100000000000000000 in
+open GenericExpr in
+open NormExpr in
+def NormExpr.Domain₂.to_eta {f α : @NormExpr τ_c RedAff} (h : Domain₂ f α β) : Domain₂ f.to_eta α.to_eta β.to_eta :=
+  match h with
+  | .quot _ => by
+    expose_names
+    have ha := hn_α'.to_eta
+    have hb := a.to_eta
+    constructor
+    assumption
+  | .id _ _ => by
+    expose_names
+    have ha := hn_α.to_eta
+    have hb := hn_τ.to_eta
+    have hc := a.to_eta
+    have hd := a_1.to_eta
+    constructor <;> assumption
+  | .comp' _ _ _ _ => by
+    expose_names
+    have ha := hn_g'.to_eta
+    have hb := hn_γ.to_eta
+    have hc := hrn₁.to_eta
+    have hd := hrn₂.to_eta
+    have he := a.to_eta
+    have hf := a_1.to_eta
+    constructor <;> assumption
+  | .eql _ _ => by
+    expose_names
+    have ha := hn_f_α'.to_eta
+    have hb := hn_δ.to_eta
+    have hc := hrn₁.to_eta
+    have hd := a.to_eta
+    constructor <;> assumption
+  | .refl _ _ => by
+    expose_names
+    have ha := hn_f_α'.to_eta
+    have hb := hn_δ.to_eta
+    have hc := hrn₁.to_eta
+    have hd := a.to_eta
+    constructor <;> assumption
+  | .curr _ _ _ _ => by
+    expose_names
+    have ha := hn_β.to_eta
+    have hb := hrn₁.to_eta
+    have hc := hrn₂.to_eta
+    have hd := hrx.to_eta
+    have he := a.to_eta
+    constructor <;> assumption
+  | .curr' _ _ _ _ => by
+    expose_names
+    have ha := hn_α'.to_eta
+    have hb := hn_β'.to_eta
+    have hc := x'.to_eta
+    have hd := hrx.to_eta
+    have he := hrn₁.to_eta
+    have hf := hrn₂.to_eta
+    have hg := a.to_eta
+    constructor <;> assumption
 
 open GenericExpr in
 open NormExpr in

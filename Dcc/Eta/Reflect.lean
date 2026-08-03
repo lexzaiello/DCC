@@ -42,6 +42,7 @@ end RedAffReflTrans
 
 namespace IsNorm
 
+@[aesop safe apply (rule_sets := [DccRel])]
 def to_eta {e : GenericExpr τ_c} (hn : GenericExpr.IsNorm RedAff e) : GenericExpr.IsNorm GenericExpr.RedAff
   (e.expr_to_eta (τ_c := τ_c)) := fun ⟨_, h⟩ =>
   hn ⟨_, to_eta_left_inv ▸ (h.reflect_eta GenericExpr.to_eta_no_hole)⟩
@@ -66,6 +67,7 @@ end NormExpr
 namespace GenericExpr
 
 open GenericExpr in
+@[aesop safe apply (rule_sets := [DccRel])]
 def RedAffNorm.to_eta (h : RedAffNorm A B) : RedAffNorm A.expr_to_eta ⟨B.raw.expr_to_eta, B.is_norm.to_eta⟩ :=
   match h with
   | ⟨hr, hn⟩ => ⟨hr.cast_eta, hn.to_eta⟩

@@ -49,17 +49,27 @@ variable [DecidableEq τ_c]
 /-
 An η-reducible function is in normal form, has an arity of 1 or 2, and has known domain
 -/
-inductive EtaFn : (f : @EtaExpr.Norm τ_c) → List EtaExpr.Norm → Type u
-  | tm₁  : {_heq : arity f = 1} → {_hn : ¬ f.raw.contains_hole} → (h_dom : Domain f α) → EtaFn f [α]
-  | tm₂  : {_heq : arity f = 2} → {_hn : ¬ f.raw.contains_hole} → (h_dom : Domain₂ f α β) → EtaFn f [α, β]
+open GenericExpr
+
+inductive EtaFn : (f : @NormExpr τ_c RedAff) → List (@NormExpr τ_c RedAff) → Type u
+  | tm₁  : {f : @NormExpr τ_c RedAff} → {_heq : arity f = 1} → (h_dom : Domain f α)    → EtaFn f [α]
+  | tm₂  : {f : @NormExpr τ_c RedAff} → {_heq : arity f = 2} → (h_dom : Domain₂ f α β) → EtaFn f [α, β]
+
+def EtaFn.to_eta {f : @GenericExpr τ_c} {hn : IsNorm RedAff f} (e : EtaFn ⟨f, hn⟩ doms) : EtaFn (mk f hn).to_eta (doms.map (·.to_eta)) := by
+  cases e with
+  | tm₁ =>
+    exact .tm₁ 
+    sorry
+  | tm₂ =>
+    sorry
 
 @[dcc_size]
 def EtaFn.length (e : EtaFn f doms) : doms.length = arity f := by
   cases e <;> grind
 
 @[grind]
-def EtaFn.vdoms {f : @EtaExpr.Norm τ_c} {doms : List (@EtaExpr.Norm τ_c)}
-  (e : EtaFn f doms) : Vector (@EtaExpr.Norm τ_c) (arity f) :=
+def EtaFn.vdoms {f : @NormExpr τ_c RedAff} {doms : List (@NormExpr τ_c RedAff)}
+  (e : EtaFn f doms) : Vector (@NormExpr τ_c RedAff) (arity f) :=
   ⟨⟨doms⟩, e.length⟩
 
 @[dcc_size]
@@ -69,7 +79,7 @@ def EtaFn.arity_pos (e : EtaFn f doms) : 0 < (arity f) :=
   | .tm₂ h => by grind
 
 @[grind]
-def EtaFn.points (_h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Vector (EtaExpr.Norm (τ_c := τ_c)) (GenericExpr.point_arity f) :=
+def EtaFn.points (_h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Vector (@NormExpr τ_c RedAff) (GenericExpr.point_arity f) :=
   (GenericExpr.points f).map GenericExpr.red_aff
 
 /-def EtaFn.indices (h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ ar doms) : Vector ((f' : @EtaExpr.Norm τ_c) × (ar' : ℕ) × (doms' : Vector EtaExpr.Norm ar') × (EtaFn f' ar' doms')) f.n_indices :=
@@ -82,44 +92,40 @@ def EtaFn.points (_h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Vector (EtaExpr.
     sorry-/
 
 @[aesop safe forward (rule_sets := [DccSize])]
-def EtaFn.decreasing {f τ : @EtaExpr.Norm τ_c} (h : EtaFn f [τ]) : τ.size < f.size :=
+def EtaFn.decreasing {f τ : @NormExpr τ_c RedAff} (h : EtaFn f [τ]) : τ.size < f.size :=
   match h with
   | .tm₁ h_dom => Domain.instRedRel.decreasing h_dom
 
 @[grind]
-def EtaFn.head_dom (e_f : EtaFn f doms) : ((τ : @EtaExpr.Norm τ_c) × (Domain f τ)) :=
+def EtaFn.head_dom (e_f : EtaFn f doms) : ((τ : @NormExpr τ_c RedAff) × (Domain f τ)) :=
   match e_f with
   | .tm₁ h_dom => ⟨_, h_dom⟩
   | .tm₂ h_dom => ⟨_, h_dom.to_domain⟩
 
 @[grind]
-def view_eta_fn (f : @EtaExpr.Norm τ_c) : Option ((doms : List (@EtaExpr.Norm τ_c)) × EtaFn f doms) :=
+def view_eta_fn (f : @NormExpr τ_c RedAff) : Option ((doms : List (@NormExpr τ_c RedAff)) × EtaFn f doms) :=
   if heq : f.arity = 1 then
     match f.domain? with
     | .some ⟨_, h⟩ =>
-      if h_mem : ¬ f.raw.contains_hole then
-        .some ⟨_, .tm₁ (_heq := heq) (_hn := h_mem) h⟩
-      else .none
+      .some ⟨_, .tm₁ (_heq := heq) h⟩
     | .none => .none
   else if heq : f.arity = 2 then
     match f.domain₂? with
     | .some ⟨_, _, h⟩ =>
-      if h_mem : ¬ f.raw.contains_hole then
-        .some ⟨_, .tm₂ (_heq := heq) (_hn := h_mem) h⟩
-      else .none
+      .some ⟨_, .tm₂ (_heq := heq) h⟩
     | .none => .none
   else .none
 
-def EtaFn.complete {f : @EtaExpr.Norm τ_c} {doms : List EtaExpr.Norm} (h : EtaFn f doms) : view_eta_fn f = .some ⟨doms, h⟩ := by
+def EtaFn.complete {f : @NormExpr τ_c RedAff} {doms : List (@NormExpr τ_c RedAff)} (h : EtaFn f doms) : view_eta_fn f = .some ⟨doms, h⟩ := by
   induction h with
   | tm₂ h_dom | tm₁ h_dom => simp_all [view_eta_fn, h_dom.complete]
 
-def view_eta_fn_none_sound {f : @EtaExpr.Norm τ_c} (h : view_eta_fn f = .none) : ∀ {doms}, EtaFn f doms → False := by
+def view_eta_fn_none_sound {f : @NormExpr τ_c RedAff} (h : view_eta_fn f = .none) : ∀ {doms}, EtaFn f doms → False := by
   intro _ h
   have h := h.complete
   grind
 
-def EtaFn.none_complete {f : @EtaExpr.Norm τ_c} (h : ∀ {doms}, EtaFn f doms → False) : view_eta_fn f = .none := by
+def EtaFn.none_complete {f : @NormExpr τ_c RedAff} (h : ∀ {doms}, EtaFn f doms → False) : view_eta_fn f = .none := by
   apply Option.eq_none_iff_forall_ne_some.mpr
   intro ⟨doms, e_f⟩
   exact (h e_f).elim

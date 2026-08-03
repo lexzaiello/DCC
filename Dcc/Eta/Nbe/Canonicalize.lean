@@ -7,6 +7,17 @@ variable [DecidableEq τ_c]
 
 namespace NormExpr
 
+open GenericExpr in
+def id_arity₁ (h_view : ViewFnType α → False) : (NormExpr.mk (DCC? Id(α)) hn).arity = 1 := by
+  simp [raw, arity]
+  cases α
+  any_goals (grind)
+  case app f x =>
+    cases f
+    any_goals (grind)
+    case pi =>
+      exact (h_view .pi).elim
+
 namespace EtaFn
 
 open GenericExpr
@@ -18,15 +29,7 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f doms)
     → (n_pi_α : ViewFnType α → False)
     → (e_h : Holes e_f 0 [⟨hole₁, hn_hole₁⟩])
     → RedAffNorm (DCC? (f hole₁)) ⟨hole₁, hn_hole₁⟩
-    → Canonicalize e_f (.tm₁ (_heq := (by
-      simp [raw, arity]
-      cases α
-      any_goals (grind)
-      case app f x =>
-        cases f
-        any_goals (grind)
-        case pi =>
-          exact (n_pi_α .pi).elim)) (.id ⟨.refl, hn_α⟩))
+    → Canonicalize e_f (.tm₁ (_heq := (id_arity₁ n_pi_α)) (.id ⟨.refl, hn_α⟩))
   | fstc  : (e_f : EtaFn f [⟨DCC? Coup(β), hn_coup⟩])
     → (e_h : Holes e_f 0 [⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩])
     → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨a, hn_hole₁.sigl⟩

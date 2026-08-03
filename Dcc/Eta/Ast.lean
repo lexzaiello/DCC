@@ -512,3 +512,4 @@ def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) 
     | const => simp [eta_to_expr, expr_to_eta]
 
 end GenericExpr
+

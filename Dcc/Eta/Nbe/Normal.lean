@@ -237,9 +237,12 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       | tm₁ h =>
         have hn := h.bang_coup_points_neq
         cases h with
-        | coup => exact a_3.absurd ⟨.single .fstc', by assumption⟩ (fun h => by
-          cases h
-          grind)
+        | bang =>
+          expose_names
+          cases a_4 with
+          | coup h =>
+            exact a_3.absurd ⟨.trans (.single .unmap) (.single .fstc), by assumption⟩ (by
+              grind)
     · expose_names
       exact (h .coup).elim
     · expose_names

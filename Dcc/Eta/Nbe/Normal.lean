@@ -244,9 +244,7 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
             exact a_3.absurd ⟨.trans (.single .unmap) (.single .fstc), by assumption⟩ (by
               grind)
     · expose_names
-      exact (h .coup).elim
-    · expose_names
-      exact a_3.absurd ⟨.single .fstc', hn'.congrFun.congrArg⟩
+      exact (h .bang).elim
     · expose_names
       cases e_h_1 with
       | tm₁ h =>
@@ -262,27 +260,62 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
               cases h₁ with
               | congrFun h => cases h
               | congrArg h => cases h
-        | coup h =>
-          match hr_τ with
-          | ⟨hr, hn⟩ =>
-            match hr.cases_head with
-            | .inl h =>
-              cases h
-              simp [GenericExpr.hole_mem_tm] at h
-              expose_names
-              have h := a_3.hole_mem_tm
-              grind
-            | .inr ⟨_, h₁, h₂⟩ =>
-              cases h₁ with
-              | congrFun h => cases h
-              | congrArg h => exact (hn_hole₁_1 ⟨_, h⟩).elim
-              | fstc' =>
-                have hn_hole₁ := hn_hole₁_1.sigl
-                have heq_e' := hn_hole₁.unique_refl h₂
-                cases heq_e'
+        | bang =>
+          expose_names
+          cases a_2 with
+          | pure =>
+            match hr_τ with
+            | ⟨hr, hn⟩ =>
+              match hr.cases_head with
+              | .inl h =>
+                cases h
+                simp [GenericExpr.hole_mem_tm] at h
+              | .inr ⟨_, h₁, h₂⟩ =>
+                cases h₁ with
+                | congrFun h => cases h
+                | congrArg h => exact (hn_hole₁_1 ⟨_, h⟩).elim
+                | unmap =>
+                  match h₂.cases_head with
+                  | .inl h =>
+                    cases h
+                    simp [GenericExpr.hole_mem_tm] at h
+                  | .inr ⟨_, h₁, h₂⟩ =>
+                    cases h₁ with
+                    | congrArg h => cases h
+                    | congrFun h => cases h
+          | coup =>
+            match hr_τ with
+            | ⟨hr, hn⟩ =>
+              match hr.cases_head with
+              | .inl h =>
+                cases h
+                simp [GenericExpr.hole_mem_tm] at h
                 expose_names
                 have h := a_4.hole_mem_tm
                 grind
+              | .inr ⟨_, h₁, h₂⟩ =>
+                cases h₁ with
+                | congrFun h => cases h
+                | congrArg h => exact (hn_hole₁_1 ⟨_, h⟩).elim
+                | unmap =>
+                  match h₂.cases_head with
+                  | .inl h =>
+                    expose_names
+                    cases h
+                    have h := a_4.hole_mem_tm
+                    grind
+                  | .inr ⟨_, h₁, h₂⟩ =>
+                    cases h₁ with
+                    | fstc =>
+                      expose_names
+                      have heq := hn_hole₁_2.unique_refl (by assumption)
+                      cases heq
+                      have h := a_4.hole_mem_tm
+                      grind
+                    | congrFun h => cases h
+                    | congrArg h =>
+                      expose_names
+                      exact (hn_hole₁_2 ⟨_, h⟩).elim
 
 end Canonicalize
 

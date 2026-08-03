@@ -697,6 +697,56 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       | tm₁ h =>
         have h_mem := h.sigl_hole_mem_tm
         grind
+  | id₂ =>
+    cases h₂
+    case id₂ => rfl
+    · expose_names
+      cases hnτ.eq hn_α
+      cases e_h.hole_same e_h_1
+      cases hr_τ_1.unique ⟨.single (.congrFun .id), by assumption⟩
+      cases e_h with
+      | tm₂ e_h₁ hrt e_h₂ =>
+        have h_mem := e_h₁.hole_mem_tm
+        grind
+  | quot₂ =>
+    cases h₂ <;> expose_names
+    case quot₂ =>
+      cases hn_quot.eq hn_quot_1
+      cases e_h.hole_same e_h_1
+      cases hr_τ_1.unique ⟨.trans (.single (.congrFun .quot)) (.single .quot), by assumption⟩
+      cases e_h with
+      | tm₂ e_h₁ hrt e_h₂ =>
+        have h_mem := e_h₁.hole_mem_tm
+        grind
+    any_goals (
+      focus
+      try (
+        cases hnτ.eq hn_α
+        cases e_h.hole_same e_h_1
+        cases a.unique ⟨.trans (.single (.congrFun .quot)) (.single .quot), by assumption⟩
+        cases e_h with
+        | tm₂ e_h₁ hrt e_h₂ =>
+          have h_mem := e_h₁.hole_mem_tm
+          grind))
+  | quot_bang =>
+    cases h₂
+    case quot_bang =>
+      expose_names
+      cases hn_α.eq hn_α_1
+      cases e_h.hole_same e_h_1
+      cases e_h_1 with
+      | tm₂ e_h₁ hrt e_h₂ =>
+        cases e_h₁ with
+        | bang e_h₁ =>
+          cases e_h₂ with
+          | bang e_h₂ =>
+            cases hr_τ_1.unique ⟨.trans (.single (.congrFun .curr')) (.single (by sorry)), by assumption⟩
+            sorry
+      /-cases hr_τ_1.unique ⟨.trans (.single (.congrFun .curr')) (.single (by sorry)), by assumption⟩
+      cases e_h with
+      | tm₂ e_h₁ hrt e_h₂ =>
+        have h_mem := e_h₁.hole_mem_tm
+        grind-/
 
 end Canonicalize
 

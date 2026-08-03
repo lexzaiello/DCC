@@ -112,7 +112,7 @@ def view_eta_fn_none_sound {f : @EtaExpr.Norm τ_c} (h : view_eta_fn f = .none) 
   have h := h.complete
   grind
 
-def ViewEtaFn.none_complete {f : @EtaExpr.Norm τ_c} (h : ∀ {doms}, EtaFn f doms → False) : view_eta_fn f = .none := by
+def EtaFn.none_complete {f : @EtaExpr.Norm τ_c} (h : ∀ {doms}, EtaFn f doms → False) : view_eta_fn f = .none := by
   apply Option.eq_none_iff_forall_ne_some.mpr
   intro ⟨doms, e_f⟩
   exact (h e_f).elim

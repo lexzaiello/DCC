@@ -804,7 +804,8 @@ def canonicalize! (e_f : EtaFn (τ_c := τ_c) f doms) : ((f' : EtaExpr.Norm)
   | .some ⟨f', e_f', h⟩ => ⟨f', e_f', .step h⟩
   | .none => ⟨f, e_f, .refl (canonicalize_none_sound heq)⟩
 
-def Canonicalize!.complete {e_f : EtaFn (τ_c := τ_c) f' doms}
+def Canonicalize!.complete {e_f : EtaFn (τ_c := τ_c) f doms}
+  {e_f' : EtaFn (τ_c := τ_c) f' doms}
   (h : Canonicalize! e_f e_f') : canonicalize! e_f = ⟨f', e_f', h⟩ := by
   cases h with
   | step h =>
@@ -864,5 +865,75 @@ def canonicalize! (f : @GenericExpr τ_c) : ((f' : @GenericExpr τ_c) × Canonic
       else
         ⟨_, .step rfl ⟨(reduce RedAff f.expr_to_eta).snd.down, reduce_norm rfl⟩ e_f h hn rfl⟩
   | .none => ⟨_, .refl₁ rfl ⟨(reduce RedAff f.expr_to_eta).snd.down, reduce_norm rfl⟩ (view_eta_fn_none_sound heq₁)⟩
+
+def Canonicalize!.complete {f f' : @GenericExpr τ_c} (h : Canonicalize! f f') : canonicalize! f = ⟨f', h⟩ := by
+  cases h with
+  | step =>
+    expose_names
+    have ha := a.complete
+    have hb := e_f.complete
+    have hc := e_f'.complete
+    have he := hrt.complete
+    cases he
+    unfold canonicalize!
+    split
+    case h_1 =>
+      expose_names
+      have hd := e_f_1.complete
+      cases h
+      cases h_conv
+      simp [red_aff] at heq
+      simp [hb] at heq
+      cases heq.left; cases heq.right
+      split
+      case h_1 =>
+        expose_names
+        have heq' := heq_1.symm.trans ha
+        cases heq'
+        simp [hn]
+        dcc_simp_all
+    case h_2 =>
+      expose_names
+      cases h
+      cases h_conv
+      simp [red_aff] at heq
+      simp [hb] at heq
+  | refl₁ =>
+    expose_names
+    have ha := EtaFn.none_complete hn
+    have he := hrt.complete
+    unfold canonicalize!
+    cases h_conv
+    cases he
+    simp [red_aff]
+    split <;> dcc_simp_all
+  | refl₂ =>
+    expose_names
+    have ha := a.complete
+    have hb := e_f.complete
+    have hc := e_f'.complete
+    have he := hrt.complete
+    cases he
+    unfold canonicalize!
+    split
+    case h_1 =>
+      expose_names
+      have hd := e_f_1.complete
+      cases h_conv
+      simp [red_aff] at heq
+      simp [hb] at heq
+      cases heq.left; cases heq.right
+      split
+      case h_1 =>
+        expose_names
+        have heq' := heq_1.symm.trans ha
+        cases heq'
+        simp [hn]
+        dcc_simp_all
+    case h_2 =>
+      expose_names
+      cases h_conv
+      simp [red_aff] at heq
+      simp [hb] at heq
 
 end GenericExpr

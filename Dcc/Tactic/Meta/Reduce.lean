@@ -8,7 +8,8 @@ import Dcc.Relation
 import Dcc.Attrs
 import Dcc.Aff.Red
 import Dcc.Eta.Red
-import Dcc.Tactic.Reflect
+import Dcc.Tactic.Meta.Ast
+--import Dcc.Tactic.Reflect
 import Lean
 import Lean.Elab.Command
 import Lean.Meta.Tactic.Cases

@@ -53,7 +53,7 @@ def mk_test_pair : Expr :=
   DCC (⟦`(Sort 1, `(Sort 1, Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩
     &(Sort 0))
 
-def test_pair : Option Expr := Sigma.fst <$> mk_test_pair.infer₂
+def test_pair : Except (TypeError mk_test_pair) Expr := Sigma.fst <$> mk_test_pair.infer₂
 
 #eval Expr.reduce_all₂ <$> test_pair
 
@@ -71,8 +71,8 @@ why does β need to receive a couple? something with duplication I recall.
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Λ(Sort 2, Id(Sort 2), Fstc(Id(Sort 2))) (Sort 1) (Sort 0))).infer₂
 
 def test_id_nested : Option Expr := do
-  let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer₂
-  Sigma.fst <$> (DCC (Id(t) Id(Sort 1) (Sort 0))).infer₂
+  let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer₂.toOption
+  Sigma.fst <$> (DCC (Id(t) Id(Sort 1) (Sort 0))).infer₂.toOption
 
 #eval test_id_nested
 
@@ -181,5 +181,4 @@ Id(Sort 1)
 #eval (DCC refl(Id(Sort 2))).infer₂'
 #eval (DCC (refl(Id(Sort 2)) &(Sort 1) &(Sort 0))).infer₂'
 #eval (DCC (refl(Id(Sort 2)))).infer₂'
-
 

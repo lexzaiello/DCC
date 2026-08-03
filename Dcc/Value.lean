@@ -3,52 +3,64 @@ import Dcc.Ast
 import Dcc.Aff.Size
 import Dcc.Relation
 
-namespace Expr
+namespace GenericExpr
 
 abbrev Arity := ℕ
 
 -- Combinators that can make a step with their well-typed arguments
 -- with a list of their points
-inductive IsRedComb : Expr → Arity → Type
+inductive IsRedComb.{u} {τ_c : Type u} : GenericExpr τ_c → Arity → Type u
   -- Eql(f_α) env x -> (x = x)
-  | eql   : IsRedComb (DCC Eql(f_α)) 2
+  | eql   : IsRedComb (DCC? Eql(f_α)) 2
   -- Id(α) x
-  | id    : IsRedComb (DCC Id(α)) 1
+  | id    : IsRedComb (DCC? Id(α)) 1
   -- (f ∘ g) x
-  | comp  : IsRedComb (DCC (f ∘ g)) 1
-  | comp' : IsRedComb (DCC (f ∘' g)) 1
+  | comp  : IsRedComb (DCC? (f ∘ g)) 1
+  | comp' : IsRedComb (DCC? (f ∘' g)) 1
+  | comp₂ : IsRedComb (DCC? (f ∘∘ g)) 1
   -- Fstc(..) (x, y) -> x
-  | fstc  : IsRedComb (DCC Fstc(β)) 1
-  | sndc  : IsRedComb (DCC Sndc(β)) 1
+  | fstc  : IsRedComb (DCC? Fstc(β)) 1
+  | sndc  : IsRedComb (DCC? Sndc(β)) 1
   -- Σ(f_α, f_β) env -> Coup(...)
-  | sigma : IsRedComb (DCC Σ(f_α, f_β)) 1
+  | sigma : IsRedComb (DCC? Σ(f_α, f_β)) 1
   -- `(β, x) y
-  | quot  : IsRedComb (DCC `(β, x)) 1
+  | quot  : IsRedComb (DCC? `(β, x)) 1
   -- ⟨f, g⟩ x
-  | pair  : IsRedComb (DCC ⟦β⟧⟨f, g⟩) 1
+  | pair  : IsRedComb (DCC? ⟦β⟧⟨f, g⟩) 1
   -- Λ(α, β, x) y z
-  | curr  : IsRedComb (DCC Λ(α, β, x)) 2
+  | curr  : IsRedComb (DCC? Λ(α, β, x)) 2
+  | curr' : IsRedComb (DCC? !Λ(α, β, x)) 2
+  | eval  : IsRedComb (DCC? Eval(α, β, x)) 2
+  | map   : IsRedComb (DCC? !<f>) 1
+  | fmap  : IsRedComb (DCC? $<f>) 1
+  | deref : IsRedComb (DCC? *(x)) 1
 
-inductive IsRedCombApp : Expr → Arity → Type
+inductive IsRedCombApp.{u} {τ_c : Type u} : GenericExpr τ_c → Arity → Type u
   -- Eql(f_α) env x -> (x = x)
-  | eql   : IsRedCombApp (DCC Eql(f_α)) 2
+  | eql   : IsRedCombApp (DCC? Eql(f_α)) 2
   -- Id(α) x
-  | id    : IsRedCombApp (DCC Id(α)) 1
+  | id    : IsRedCombApp (DCC? Id(α)) 1
   -- (f ∘ g) x
-  | comp  : IsRedCombApp (DCC (f ∘ g)) 1
-  | comp' : IsRedCombApp (DCC (f ∘' g)) 1
+  | comp  : IsRedCombApp (DCC? (f ∘ g)) 1
+  | comp' : IsRedCombApp (DCC? (f ∘' g)) 1
+  | comp₂ : IsRedCombApp (DCC? (f ∘∘ g)) 1
   -- Fstc(..) (x, y) -> x
-  | fstc  : IsRedCombApp (DCC Fstc(β)) 1
-  | sndc  : IsRedCombApp (DCC Sndc(β)) 1
+  | fstc  : IsRedCombApp (DCC? Fstc(β)) 1
+  | sndc  : IsRedCombApp (DCC? Sndc(β)) 1
   -- Σ(f_α, f_β) env -> Coup(...)
-  | sigma : IsRedCombApp (DCC Σ(f_α, f_β)) 1
+  | sigma : IsRedCombApp (DCC? Σ(f_α, f_β)) 1
   -- `(β, x) y
-  | quot  : IsRedCombApp (DCC `(β, x)) 1
+  | quot  : IsRedCombApp (DCC? `(β, x)) 1
   -- ⟨f, g⟩ x
-  | pair  : IsRedCombApp (DCC ⟦β⟧⟨f, g⟩) 1
+  | pair  : IsRedCombApp (DCC? ⟦β⟧⟨f, g⟩) 1
   -- Λ(α, β, x) y z
-  | curr  : IsRedCombApp (DCC Λ(α, β, x)) 2
-  | app   : IsRedCombApp f (m + 1) → IsRedCombApp (DCC (f x)) m
+  | curr  : IsRedCombApp (DCC? Λ(α, β, x)) 2
+  | curr' : IsRedCombApp (DCC? !Λ(α, β, x)) 2
+  | eval  : IsRedCombApp (DCC? Eval(α, β, x)) 2
+  | map   : IsRedCombApp (DCC? !<f>) 1
+  | fmap  : IsRedCombApp (DCC? $<f>) 1
+  | deref : IsRedCombApp (DCC? *(x)) 1
+  | app   : IsRedCombApp f (m + 1) → IsRedCombApp (DCC? (f x)) m
 
 /-
 A normal form is either:
@@ -75,42 +87,42 @@ A normal form is either:
 /-
 Sorts, ⊤, ⊥, ∗, and "combinators" that are no-op.
 -/
-inductive Atom : Expr → Prop
-  | refl₀  : Atom (DCC refl(f_α))
-  | refl₁  : Atom (DCC (refl(f_α) env))
-  | refl₂  : Atom (DCC (refl(f_α) env x))
-  | coup   : Atom (DCC Coup(f_β))
-  | eq     : Atom (DCC (x = y))
-  | top    : Atom (DCC ⊤)
-  | tintro : Atom (DCC ∗)
-  | bot    : Atom (DCC ⊥)
-  | sort   : Atom (DCC Sort m)
+inductive Atom.{u} {τ_c : Type u} : GenericExpr τ_c → Prop
+  | refl₀  : Atom (DCC? refl(f_α))
+  | refl₁  : Atom (DCC? (refl(f_α) env))
+  | refl₂  : Atom (DCC? (refl(f_α) env x))
+  | coup   : Atom (DCC? Coup(f_β))
+  | eq     : Atom (DCC? (x = y))
+  | top    : Atom (DCC? ⊤)
+  | tintro : Atom (DCC? ∗)
+  | bot    : Atom (DCC? ⊥)
+  | sort   : Atom (DCC? Sort m)
 
-inductive Value : Expr → Prop
-  | pi₁    : Value f_β → Value (DCC Π(f_α, f_β))
-  | pi₂    : Value f_β → Value env → Value (DCC (Π(f_α, f_β) env))
-  | refl₁  : Value env → Value (DCC (refl(f_α) env))
-  | refl₂  : Value env → Value x → Value (DCC (refl(f_α) env x))
-  | coup   : Value f_β → Value (DCC Coup(f_β))
-  | eq     : Value (DCC x = y)
+inductive Value.{u} {τ_c : Type u} : GenericExpr τ_c → Prop
+  | pi₁    : Value f_β → Value (DCC? Π(f_α, f_β))
+  | pi₂    : Value f_β → Value env → Value (DCC? (Π(f_α, f_β) env))
+  | refl₁  : Value env → Value (DCC? (refl(f_α) env))
+  | refl₂  : Value env → Value x → Value (DCC? (refl(f_α) env x))
+  | coup   : Value f_β → Value (DCC? Coup(f_β))
+  | eq     : Value (DCC? x = y)
   | comb   : IsRedComb c m → Value c
-  | c_app  : IsRedComb f 2 → Value f → Value x → Value (DCC (f x))
-  | top    : Value (DCC ⊤)
-  | bot    : Value (DCC ⊥)
-  | tintro : Value (DCC ∗)
-  | sort   : Value (DCC Sort m)
+  | c_app  : IsRedComb f 2 → Value f → Value x → Value (DCC? (f x))
+  | top    : Value (DCC? ⊤)
+  | bot    : Value (DCC? ⊥)
+  | tintro : Value (DCC? ∗)
+  | sort   : Value (DCC? Sort m)
 
-inductive TyValue (P_pi : Expr → Prop) : Expr → Prop
+inductive TyValue.{u} {τ_c : Type u} (P_pi : GenericExpr τ_c → Prop) : GenericExpr τ_c → Prop
   -- potentially sus IsNorm
   | pi     : P_pi f_β → Value env
-    → TyValue P_pi (DCC (Π(f_α, f_β) env))
-  | eq     : TyValue P_pi (DCC x = y)
-  | top    : TyValue P_pi (DCC ⊤)
-  | bot    : TyValue P_pi (DCC ⊥)
-  | tintro : TyValue P_pi (DCC ∗)
-  | sort   : TyValue P_pi (DCC Sort m)
+    → TyValue P_pi (DCC? (Π(f_α, f_β) env))
+  | eq     : TyValue P_pi (DCC? x = y)
+  | top    : TyValue P_pi (DCC? ⊤)
+  | bot    : TyValue P_pi (DCC? ⊥)
+  | tintro : TyValue P_pi (DCC? ∗)
+  | sort   : TyValue P_pi (DCC? Sort m)
 
-end Expr
+end GenericExpr
 
 /-
 For normalization by evaluation for η
@@ -144,7 +156,7 @@ apps have an environment. This is either a couple or a neutral value.
     -/
 
 /-@[aesop safe forward (rule_sets := [DccSize])]
-theorem EvalCompound.size_eq (h : EvalCompound env x x') : Val.composite_size x' = (Expr.composite_size x) + x.head_arity := by
+theorem EvalCompound.size_eq (h : EvalCompound env x x') : Val.composite_size x' = (GenericExpr.composite_size x) + x.head_arity := by
   cases h
   case boxed h =>
     dcc_simp_all
@@ -154,7 +166,7 @@ theorem EvalCompound.size_eq (h : EvalCompound env x x') : Val.composite_size x'
     sorry-/
 
 /-@[aesop safe forward (rule_sets := [DccSize])]
-theorem Eval.size_eq (h : Eval _env x x') : Val.composite_size x' = (Expr.composite_size x) + x.head_arity := by
+theorem Eval.size_eq (h : Eval _env x x') : Val.composite_size x' = (GenericExpr.composite_size x) + x.head_arity := by
   cases h with
   | compound =>
     sorry
@@ -205,12 +217,12 @@ theorem Eval.size_eq (h : Eval _env e v) : v.composite_size ≤ e.composite_size
     
     sorry-/
 
-mutual
+--mutual
 
 /-theorem Apply.decreasing (h : Apply f x e') : e'.size + e'.head_arity < f.size + x.size + f.head_arity := by
   cases h
   case fmap env h₁ h₂ =>
-    dsimp [Val.head_arity, Val.size, Neutral.size, Expr.size]
+    dsimp [Val.head_arity, Val.size, Neutral.size, GenericExpr.size]
     have h := h₁.size_eq
     have h₂ := h₂.decreasing
     
@@ -227,13 +239,13 @@ mutual
     have hc := h₃.decreasing
     have hd := h₄.decreasing
     have he := h₅.decreasing
-    dsimp [Val.size, Neutral.size, Expr.size]
+    dsimp [Val.size, Neutral.size, GenericExpr.size]
     grind
   case eval h₁ h₂ h₃ =>
     have ha := h₁.size_eq
     have hb := h₂.decreasing
     have hc := h₃.decreasing
-    dsimp [Val.size, Neutral.size, Expr.size]
+    dsimp [Val.size, Neutral.size, GenericExpr.size]
     grind
   case quot h =>
     have ha := h.size_eq
@@ -245,10 +257,10 @@ mutual
     have hb := h₂.size_eq
     have hc := h₃.decreasing
     have hd := h₄.decreasing
-    dsimp [Val.size, Expr.size]
+    dsimp [Val.size, GenericExpr.size]
     grind
   case curr₁ =>
-    dsimp [Val.size, Expr.size]
+    dsimp [Val.size, GenericExpr.size]
     -/
 
 /-theorem Eval.size_eq (h : Eval _env e v) : e.size = v.size := by
@@ -256,13 +268,13 @@ mutual
   any_goals (grind)
   case bang x x' h | boxed x x' h =>
     have h := h.size_eq
-    simp [Val.size, Neutral.size, Expr.size]
+    simp [Val.size, Neutral.size, GenericExpr.size]
     grind
   case coup h₁ h₂ h₃ =>
     
     sorry-/
 
-end
+--end
 
 /-@[aesop safe forward (rule_sets := [DccSize])]
 theorem Eval.neut_size_leq (h : Eval _env e Val(neutral(v))) : v.size ≤ e.size := by
@@ -273,11 +285,11 @@ theorem Eval.neut_size_leq (h : Eval _env e Val(neutral(v))) : v.size ≤ e.size
     grind
   case bang h =>
     have h := h.size_eq
-    dsimp [Neutral.size, Expr.size]
+    dsimp [Neutral.size, GenericExpr.size]
     grind
   case boxed h =>
     have h := h.size_eq
-    dsimp [Neutral.size, Expr.size]
+    dsimp [Neutral.size, GenericExpr.size]
     
     sorry
   case eq h₁ h₂ =>
@@ -295,25 +307,10 @@ theorem Eval.neut_size_leq (h : Eval _env e Val(neutral(v))) : v.size ≤ e.size
     simp [Val.size] at hc
     grind-/
 
-/-def quote (v : Val) : Expr :=
+/-def quote (v : Val) : GenericExpr :=
   match v with
   | -/
 
-end Val
+--end Val
 
-end Semantic
-
-namespace Expr
-
-open Semantic
-
-def eval (e : Expr) : Val :=
-
-
-end Expr
-
-/-
-NbE η-reduction:
-
-Check if 
--/
+--end Semantic

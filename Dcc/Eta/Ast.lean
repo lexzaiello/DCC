@@ -1,7 +1,8 @@
 import Dcc.Ast
+import Dcc.Aff.Red
+import Dcc.Ast.Mem
+import Dcc.Aff.Size
 import Dcc.Relation
-
-open Relation (ReflTransGen)
 
 /-
 An alternative η-reduction algorithm that does not appeal to semantics.
@@ -33,706 +34,480 @@ If domain is:
 - will need extra cases for Π?
 -/
 
+universe u
+variable {τ_c : Type u}
+variable [DecidableEq τ_c]
+
 inductive Hole where
   | mk   : ℕ → Hole
   | sort : ℕ → Hole
 deriving BEq, Repr, DecidableEq
 
-gen_ast as EtaExpr
-  with Hole *
-  deriving BEq, Repr, DecidableEq, Inhabited
-gen_dsl "DCCη" for EtaExpr
+inductive EtaConst where
+  | hole  : Hole → EtaConst
+  | const : τ_c  → EtaConst
+deriving BEq, DecidableEq, Repr
 
-namespace EtaExpr
+gen_dsl "DCCη" for (EtaConst (τ := Unit))
 
-inductive RedAffEta : EtaExpr → EtaExpr → Prop
-  | pil      : RedAffEta f_α f_α' → RedAffEta (DCCη Π(f_α, f_β)) (DCCη Π(f_α', f_β))
-  | pir      : RedAffEta f_β f_β' → RedAffEta (DCCη Π(f_α, f_β)) (DCCη Π(f_α, f_β'))
-  | eql      : RedAffEta (DCCη (Eql(f_α) env &(x))) (DCCη x = x)
-  | eql'     : RedAffEta x x' → RedAffEta (DCCη (x = y)) (DCCη (x' = y))
-  | eqr'     : RedAffEta y y' → RedAffEta (DCCη (x = y)) (DCCη (x = y'))
-  | bang     : RedAffEta x x' → RedAffEta (DCCη !(x)) (DCCη !(x'))
-  | map      : RedAffEta (DCCη (!<f> &(x))) (DCCη !((f x)))
-  | fmap     : RedAffEta (DCCη ($<f> &(x))) (DCCη &((f x)))
-  | unbox    : RedAffEta (DCCη (*(α) &(x))) x
-  | pair     : RedAffEta (DCCη (⟦β⟧⟨M, N⟩ &(x))) (DCCη ⟦β⟧((M x), (N x (M x))))
-  | evalc    : RedAffEta (DCCη (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCCη (x y z))
-  | quot     : RedAffEta (DCCη (`(β, x) y)) x
-  | id       : RedAffEta (DCCη (Id(α) x)) x
-  | fstc     : RedAffEta (DCCη (Fstc(_α) ⟦β⟧(a, b))) a
-  | sndc     : RedAffEta (DCCη (Sndc(_α) ⟦β⟧(a, b))) b
-  | comp'    : RedAffEta (DCCη ((x ∘' y) z)) (DCCη (x (y z)))
-  | comp     : RedAffEta (DCCη ((x ∘ y) z)) (DCCη (x (y z)))
-  | comp₂    : RedAffEta (DCCη ((x ∘∘ y) z)) (DCCη (x (y z)))
-  | curr     : RedAffEta (DCCη (Λ(α, β, x) y z)) (DCCη (x ⟦β⟧(y, z)))
-  | curr'    : RedAffEta (DCCη (!Λ(α, β, x) &(y) &(z))) (DCCη (x &(⟦β⟧(y, z))))
-  | sigl     : RedAffEta x x' → RedAffEta (DCCη ⟦β⟧(x, y)) (DCCη ⟦β⟧(x', y))
-  | sigr     : RedAffEta y y' → RedAffEta (DCCη ⟦β⟧(x, y)) (DCCη ⟦β⟧(x, y'))
-  | pairl    : RedAffEta x x' → RedAffEta (DCCη ⟦β⟧⟨x, y⟩) (DCCη ⟦β⟧⟨x', y⟩)
-  | pairr    : RedAffEta y y' → RedAffEta (DCCη ⟦β⟧⟨x, y⟩) (DCCη ⟦β⟧⟨x, y'⟩)
-  | sigma    : RedAffEta (DCCη (Σ(f_α, f_β) env)) (DCCη (Coup((f_β env))))
-  | coup     : RedAffEta β β' → RedAffEta (DCCη (Coup(β))) (DCCη (Coup(β')))
-  | congrFun : RedAffEta f f' → RedAffEta (DCCη (f x)) (DCCη (f' x))
-  | congrArg : RedAffEta x x' → RedAffEta (DCCη (f x)) (DCCη (f x'))
+instance Hole.instToFormat : Std.ToFormat Hole := ⟨repr⟩
+instance EtaConst.instToFormat [Repr τ_c] : Std.ToFormat (@EtaConst τ_c) := ⟨repr⟩
 
-@[dcc_force_reduce, dcc_force_aff]
-def step? (e : EtaExpr) : Option ((e' : EtaExpr) × (PULift.{1, 0} (RedAffEta e e'))) :=
-  match e with
-  | (DCCη Π(f_α, f_β)) =>
-    match f_α.step?, f_β.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.pil h₁⟩⟩
-    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.pir h₁⟩⟩
-    | _, _ => .none
-  | (DCCη (Eql(_f_α) _env &(_x))) => .some ⟨_, ⟨.eql⟩⟩
-  | (DCCη (x = y)) =>
-    match x.step?, y.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.eql' h₁⟩⟩
-    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.eqr' h₁⟩⟩
-    | _, _ => .none
-  | DCCη !(x) =>
-    match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.bang h⟩⟩
-    | _ => .none
-  | DCCη (!<_f> &(_x))                                 => .some ⟨_, ⟨.map⟩⟩
-  | DCCη ($<_f> &(_x))                                 => .some ⟨_, ⟨.fmap⟩⟩
-  | DCCη (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
-  | DCCη ((⟦_β⟧⟨_M, _N⟩ &(_x)))                        => .some ⟨_, ⟨.pair⟩⟩
-  | (DCCη (Eval(_α, _β, _x) ⟦__β⟧(_y, _z)))            => .some ⟨_, ⟨.evalc⟩⟩
-  | (DCCη (`(_β, _x) _y))                              => .some ⟨_, ⟨.quot⟩⟩
-  | (DCCη (Id(_α) _x))                                 => .some ⟨_, ⟨.id⟩⟩
-  | (DCCη (Fstc(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
-  | (DCCη (Sndc(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
-  | (DCCη ((_x ∘' _y) _z))                             => .some ⟨_, ⟨.comp'⟩⟩
-  | (DCCη ((_x ∘ _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
-  | (DCCη ((_x ∘∘ _y) _z))                             => .some ⟨_, ⟨.comp₂⟩⟩
-  | (DCCη (!Λ(_α, _β, _x) &(_y) &(_z)))                => .some ⟨_, ⟨.curr'⟩⟩
-  | (DCCη (Λ(_α, _β, _x) _y _z))                       => .some ⟨_, ⟨.curr⟩⟩
-  | (DCCη (Σ(_f_α, _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
-  | DCCη ⟦β⟧(x, y) =>
-    match x.step?, y.step? with
-    | .some ⟨x', ⟨h₁⟩⟩, _ => .some ⟨(DCCη ⟦β⟧(x', y)), ⟨.sigl h₁⟩⟩
-    | _, .some ⟨y', ⟨h₁⟩⟩ => .some ⟨(DCCη ⟦β⟧(x, y')), ⟨.sigr h₁⟩⟩
-    | _, _ => .none
-  | DCCη ⟦_β⟧⟨x, y⟩ =>
-    match x.step?, y.step? with
-    | .some ⟨_x', ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.pairl h₁⟩⟩
-    | _, .some ⟨_y', ⟨h₁⟩⟩ => .some ⟨_, ⟨.pairr h₁⟩⟩
-    | _, _ => .none
-  | (DCCη (Coup(β))) =>
-    match β.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.coup h⟩⟩
-    | _ => .none
-  | DCCη (f x) =>
-    match f.step?, x.step? with
-    | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCCη (f' x)), ⟨.congrFun h₁⟩⟩
-    | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCCη (f x')), ⟨.congrArg h₁⟩⟩
-    | _, _ => .none
-  | _ => .none
+abbrev EtaExpr := GenericExpr (EtaConst (τ_c := τ_c))
 
-@[aesop norm (rule_sets := [DccReduce]), dcc_reduce, grind]
-def contains (e : EtaExpr) (to_find : EtaExpr) : Bool :=
-  e = to_find ||
+abbrev EtaExpr.Norm := NormExpr (τ := @EtaConst τ_c) GenericExpr.RedAff
+
+namespace GenericExpr
+
+@[grind]
+def contains_hole (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     match e with
-    | DCCη ∗
-    | DCCη ⊤
-    | DCCη Sort _n
-    | DCCη ⊥ => False
-    | DCCη Π(x, y)
-    | DCCη (x ∘' y)
-    | DCCη (x ∘ y)
-    | DCCη (x ∘∘ y)
-    | DCCη (x y)
-    | DCCη x = y => x.contains to_find ∨ y.contains to_find
-    | DCCη Fstc(α)
-    | DCCη Sndc(α)
-    | DCCη Coup(α)
-    | DCCη &(α)
-    | DCCη !<α>
-    | DCCη $<α>
-    | DCCη !(α)
-    | DCCη *(α)
-    | DCCη Id(α)
-    | DCCη Eql(α)
-    | DCCη refl(α) => α.contains to_find
-    | DCCη Σ(α, β) => α.contains to_find ∨ β.contains to_find
-    | DCCη `(β, x) => β.contains to_find ∨ x.contains to_find
-    | DCCη Eval(β, x, y)
-    | DCCη !Λ(β, x, y)
-    | DCCη Λ(β, x, y)
-    | DCCη ⟦β⟧⟨x, y⟩
-    | DCCη ⟦β⟧(x, y) => β.contains to_find ∨ x.contains to_find ∨ y.contains to_find
-    | .hole _n => False
+    | DCC[.] ∗ => False
+    | DCC[.] ⊤ => False
+    | DCC[.] Sort _n => False
+    | DCC[.] ⊥ => False
+    | DCC[.] Π(x, y)
+    | DCC[.] (x ∘' y)
+    | DCC[.] (x ∘ y)
+    | DCC[.] (x ∘∘ y)
+    | DCC[.] (x y)
+    | DCC[.] x = y => x.contains_hole ∨ y.contains_hole
+    | DCC[.] Fstc(α)
+    | DCC[.] Sndc(α)
+    | DCC[.] Coup(α)
+    | DCC[.] &(α)
+    | DCC[.] !<α>
+    | DCC[.] $<α>
+    | DCC[.] !(α)
+    | DCC[.] *(α)
+    | DCC[.] *<α>
+    | DCC[.] Id(α)
+    | DCC[.] Eql(α)
+    | DCC[.] refl(α) => α.contains_hole
+    | DCC[.] Σ(α, β) => α.contains_hole ∨ β.contains_hole
+    | DCC[.] `(β, x) => β.contains_hole ∨ x.contains_hole
+    | DCC[.] Eval(β, x, y)
+    | DCC[.] !Λ(β, x, y)
+    | DCC[.] Λ(β, x, y)
+    | DCC[.] ⟦β⟧⟨x, y⟩
+    | DCC[.] ⟦β⟧(x, y) => β.contains_hole ∨ x.contains_hole ∨ y.contains_hole
+    | .const (.hole _) => True
+    | .const _ => False
 
-@[aesop norm (rule_sets := [DccSize]), dcc_size, grind] def size (e : EtaExpr) : ℕ :=
+@[grind]
+def hole_mem_tm (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
+    match e with
+    | DCC[.] ∗ => False
+    | DCC[.] ⊤ => False
+    | DCC[.] Sort _n => False
+    | DCC[.] ⊥ => False
+    | DCC[.] Π(x, y)
+    | DCC[.] (x ∘' y)
+    | DCC[.] (x ∘ y)
+    | DCC[.] (x ∘∘ y)
+    | DCC[.] (x y)
+    | DCC[.] x = y => x.hole_mem_tm ∨ y.hole_mem_tm
+    | DCC[.] Fstc(α)
+    | DCC[.] Sndc(α)
+    | DCC[.] Coup(α)
+    | DCC[.] &(α)
+    | DCC[.] !<α>
+    | DCC[.] $<α>
+    | DCC[.] !(α)
+    | DCC[.] *(α)
+    | DCC[.] *<α>
+    | DCC[.] Id(α)
+    | DCC[.] Eql(α)
+    | DCC[.] refl(α) => α.hole_mem_tm
+    | DCC[.] Σ(α, β) => α.hole_mem_tm ∨ β.hole_mem_tm
+    | DCC[.] `(_β, x) => x.hole_mem_tm
+    | DCC[.] Eval(_β, x, y)
+    | DCC[.] !Λ(_β, x, y)
+    | DCC[.] Λ(_β, x, y)
+    | DCC[.] ⟦_β⟧⟨x, y⟩
+    | DCC[.] ⟦_β⟧(x, y) => x.hole_mem_tm ∨ y.hole_mem_tm
+    | .const (.hole _) => True
+    | .const _ => False
+
+@[grind]
+def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
-  | DCCη ∗ => 0
-  | DCCη ⊤ => 2
-  | DCCη ⊥ => 2
-  | DCCη x = y => x.size + y.size
-  | DCCη Eql(α)  => α.size + 3
-  | DCCη refl(α) => α.size + 2
-  | DCCη Sort m => m
-  | DCCη Σ(α, β) => α.size + β.size + 2
-  | DCCη `(β, x) => β.size + x.size + 2
-  | DCCη ⟦_β⟧(x, y) => x.size + y.size
-  | DCCη Coup(β) => β.size
-  | DCCη Id(α)      => α.size + 2
-  | DCCη Fstc(α)    => α.size + 2
-  | DCCη Sndc(α)    => α.size + 2
-  | DCCη Π(α, β) => α.size + β.size + 1
-  | DCCη (f ∘' g) => f.size + f.size + g.size + 2
-  | DCCη (f ∘ g)  => f.size + f.size + g.size + 2
-  | DCCη (f ∘∘ g)  => f.size + f.size + g.size + 2
-  | DCCη ⟦_β⟧⟨a, b⟩   => a.size + a.size + b.size + 2
-  | DCCη Λ(α, β, x) => α.size + β.size + x.size + 2
-  | DCCη !Λ(α, β, x) => α.size + β.size + x.size + 2
-  | DCCη Eval(_α, _β, x) => x.size + 1
-  | DCCη !(x)   => x.size
-  | DCCη *(α)   => α.size + 1
-  | DCCη &(x)   => x.size + x.size + x.size + 2
-  | DCCη !<x>   => x.size + x.size + x.size + 2
-  | DCCη $<x>   => x.size + x.size + x.size + 2
-  | DCCη (f x) => f.size + x.size
-  | .hole _n => 0
+  | DCC[.] ∗ => 0
+  | DCC[.] ⊤ => 0
+  | DCC[.] ⊥ => 0
+  | DCC[.] _x = _y => 0
+  | DCC[.] Eql(_α)  => 2
+  | DCC[.] refl(_α) => 2
+  | DCC[.] Sort _m => 0
+  | DCC[.] Σ(_α, _β) => 1
+  | DCC[.] `(_α, `(_β, _x)) => 2
+  | DCC[.] `(_β, _x) => 1
+  | DCC[.] ⟦__β⟧(_x, _y) => 0
+  | DCC[.] Coup(_β) => 0
+  | DCC[.] Id((Π(_α, _β) _x_α)) => 2
+  | DCC[.] Id(_α)      => 1
+  | DCC[.] Fstc(_α)    => 1
+  | DCC[.] Sndc(_α)    => 1
+  | DCC[.] Π(_α, _β) => 1
+  | DCC[.] (f ∘' _g) => f.arity
+  | DCC[.] (f ∘ _g)  => f.arity
+  | DCC[.] (f ∘∘ _g)  => f.arity
+  | DCC[.] ⟦_β⟧⟨_a, _b⟩   => 1
+  | DCC[.] Λ(_α, _β, _x) => 2
+  | DCC[.] !Λ(_α, _β, _x) => 2
+  | DCC[.] Eval(_α, _β, _x) => 1
+  | DCC[.] !(_x)   => 1
+  | DCC[.] *(_α)   => 1
+  | DCC[.] *<f>    => f.arity
+  | DCC[.] &(_x)   => 1
+  | DCC[.] !<_x>   => 1
+  | DCC[.] $<_x>   => 1
+  | DCC[.] (f _x) => f.arity - 1
+  | .const _n => 0
 
-@[aesop norm (rule_sets := [DccSize]), dcc_size, grind] def arity (e : EtaExpr) : ℕ :=
+@[grind]
+def tm_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
-  | DCCη ∗ => 0
-  | DCCη ⊤ => 0
-  | DCCη ⊥ => 0
-  | DCCη _x = _y => 0
-  | DCCη Eql(_α)  => 2
-  | DCCη refl(_α) => 2
-  | DCCη Sort _m => 0
-  | DCCη Σ(_α, _β) => 1
-  | DCCη `(_β, _x) => 1
-  | DCCη ⟦__β⟧(_x, _y) => 0
-  | DCCη Coup(_β) => 0
-  | DCCη Id(_α)      => 1
-  | DCCη Fstc(_α)    => 1
-  | DCCη Sndc(_α)    => 1
-  | DCCη Π(_α, _β) => 1
-  | DCCη (f ∘' _g) => f.arity
-  | DCCη (f ∘ _g)  => f.arity
-  | DCCη (f ∘∘ _g)  => f.arity
-  | DCCη ⟦_β⟧⟨_a, _b⟩   => 1
-  | DCCη Λ(_α, _β, _x) => 2
-  | DCCη !Λ(_α, _β, _x) => 2
-  | DCCη Eval(_α, _β, _x) => 1
-  | DCCη !(_x)   => 1
-  | DCCη *(_α)   => 1
-  | DCCη &(_x)   => 1
-  | DCCη !<_x>   => 1
-  | DCCη $<_x>   => 1
-  | DCCη (f _x) => f.arity - 1
-  | .hole _n => 0
-
-theorem fun_contains : EtaExpr.contains (DCCη (f x)) f = true := by
-  simp [contains]
-  exact .inr (.inl (by
-    unfold contains
-    simp))
-
-theorem arg_contains : EtaExpr.contains (DCCη (f x)) x = true := by
-  simp [contains]
-  exact .inr (.inr (by
-    unfold contains
-    simp))
+  | DCC[.] ∗ => 0
+  | DCC[.] ⊤ => 0
+  | DCC[.] ⊥ => 0
+  | DCC[.] _x = _y => 0
+  | DCC[.] Eql(_α)  => 2
+  | DCC[.] refl(_α) => 2
+  | DCC[.] Sort _m => 0
+  | DCC[.] Σ(_α, _β) => 1
+  | DCC[.] `(_β, _x) => 1
+  | DCC[.] ⟦__β⟧(_x, _y) => 0
+  | DCC[.] Coup(_β) => 0
+  | DCC[.] Id(_α)      => 1
+  | DCC[.] Fstc(_α)    => 1
+  | DCC[.] Sndc(_α)    => 1
+  | DCC[.] Π(_α, _β) => 0
+  | DCC[.] (f ∘' _g) => f.tm_arity
+  | DCC[.] (f ∘ _g)  => f.tm_arity
+  | DCC[.] (f ∘∘ _g)  => f.tm_arity
+  | DCC[.] ⟦_β⟧⟨_a, _b⟩   => 1
+  | DCC[.] Λ(_α, _β, _x) => 2
+  | DCC[.] !Λ(_α, _β, _x) => 2
+  | DCC[.] Eval(_α, _β, _x) => 1
+  | DCC[.] !(_x)   => 1
+  | DCC[.] *(_α)   => 1
+  | DCC[.] *<f>    => f.tm_arity
+  | DCC[.] &(_x)   => 1
+  | DCC[.] !<_x>   => 1
+  | DCC[.] $<_x>   => 1
+  | DCC[.] (f _x) => f.tm_arity - 1
+  | .const _n => 0
 
 @[dcc_reduce]
-def is_boxed (e : EtaExpr) : Option EtaExpr :=
+def is_boxed (e : GenericExpr (τ := τ_c)) : Option (GenericExpr (τ := τ_c)) :=
   match e with
-  | DCCη &(x) => .some x
+  | DCC[.] &(x) => .some x
+  | _ => .none
+
+@[dcc_reduce, grind]
+def is_bang (e : GenericExpr (τ := τ_c)) : Option (GenericExpr (τ := τ_c)) :=
+  match e with
+  | DCC[.] !(x) => .some x
+  | _ => .none
+
+@[dcc_reduce, grind]
+def is_bang_map (e : GenericExpr τ_c) : Option (GenericExpr (τ := τ_c)) :=
+  match e with
+  | DCC[.] !<f> => .some f
   | _ => .none
 
 @[dcc_reduce]
-def is_bang (e : EtaExpr) : Option EtaExpr :=
+def is_box_map (e : GenericExpr τ_c) : Option (GenericExpr (τ := τ_c)) :=
   match e with
-  | DCCη !(x) => .some x
-  | _ => .none
-
-@[dcc_reduce]
-def is_bang_map (e : EtaExpr) : Option EtaExpr :=
-  match e with
-  | DCCη !<f> => .some f
-  | _ => .none
-
-@[dcc_reduce]
-def is_box_map (e : EtaExpr) : Option EtaExpr :=
-  match e with
-  | DCCη $<f> => .some f
+  | DCC[.] $<f> => .some f
   | _  => .none
 
-@[dcc_reduce]
-def is_quote (e : EtaExpr) : Option ((β x : EtaExpr) × PLift (e = (DCCη `(β, x)))) :=
+@[dcc_reduce, grind]
+def is_quote (e : GenericExpr τ_c) : Option ((β x : GenericExpr τ_c) × PLift (e = (DCC? `(β, x)))) :=
   match e with
-  | DCCη `(β, x) => .some ⟨β, x, ⟨rfl⟩⟩
+  | DCC[.] `(β, x) => .some ⟨β, x, ⟨rfl⟩⟩
   | _ => .none
 
 @[dcc_reduce]
-def is_id (e : EtaExpr) : Option ((α : EtaExpr) × PLift (e = (DCCη Id(α)))) :=
+def is_id (e : GenericExpr τ_c) : Option ((α : GenericExpr τ_c) × PLift (e = (DCC? Id(α)))) :=
   match e with
-  | DCCη Id(_α) => .some ⟨_, ⟨rfl⟩⟩
+  | DCC[.] Id(_α) => .some ⟨_, ⟨rfl⟩⟩
   | _ => .none
 
 @[dcc_reduce]
-def is_type (e : EtaExpr) : Option ((n : ℕ) × PLift (e = (DCCη Sort n + 1))) :=
+def is_type (e : GenericExpr τ_c) : Option ((n : ℕ) × PLift (e = (DCC? Sort n + 1))) :=
   match e with
-  | DCCη Sort _n + 1 => .some ⟨_, ⟨rfl⟩⟩
+  | DCC[.] Sort _n + 1 => .some ⟨_, ⟨rfl⟩⟩
   | _ => .none
-
-@[dcc_force_reduce, dcc_force_aff]
-instance RedAffEta.instRedRel : Expr.RedRel RedAffEta size where
-  run := step?
-
-theorem bang' (h : Relation.ReflTransGen RedAffEta x x') : Relation.ReflTransGen RedAffEta (DCCη !(x)) (DCCη !(x')) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.bang (by assumption)))
-
-theorem pairl' (h : Relation.ReflTransGen RedAffEta x x') : Relation.ReflTransGen RedAffEta (DCCη ⟦β⟧⟨x, y⟩) (DCCη ⟦β⟧⟨x', y⟩) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.pairl (by assumption)))
-
-theorem pairr' (h : Relation.ReflTransGen RedAffEta y y') : Relation.ReflTransGen RedAffEta (DCCη ⟦β⟧⟨x, y⟩) (DCCη ⟦β⟧⟨x, y'⟩) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.pairr (by assumption)))
-
-theorem eql'' (h : Relation.ReflTransGen RedAffEta x x') : Relation.ReflTransGen RedAffEta (DCCη (x = y)) (DCCη (x' = y)) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.eql' (by assumption)))
-
-theorem eqr'' (h : Relation.ReflTransGen RedAffEta y y') : Relation.ReflTransGen RedAffEta (DCCη (x = y)) (DCCη (x = y')) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.eqr' (by assumption)))
-
-theorem pil' (h : Relation.ReflTransGen RedAffEta f_α f_α') : Relation.ReflTransGen RedAffEta (DCCη Π(f_α, f_β)) (DCCη Π(f_α', f_β)) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.pil (by assumption)))
-
-theorem pir' (h : Relation.ReflTransGen RedAffEta f_β f_β') : Relation.ReflTransGen RedAffEta (DCCη Π(f_α, f_β)) (DCCη Π(f_α, f_β')) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.pir (by assumption)))
-
-theorem coup' (h : ReflTransGen RedAffEta β β') : ReflTransGen RedAffEta (DCCη Coup(β)) (DCCη Coup(β')) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.coup (by assumption)))
-
-theorem sigl' (h : ReflTransGen RedAffEta x x') : ReflTransGen RedAffEta (DCCη ⟦β⟧(x, y)) (DCCη ⟦β⟧(x', y)) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.sigl (by assumption)))
-
-theorem sigr' (h : ReflTransGen RedAffEta y y') : ReflTransGen RedAffEta (DCCη ⟦β⟧(x, y)) (DCCη ⟦β⟧(x, y')) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.sigr (by assumption)))
-
-theorem congrFun' (h : ReflTransGen RedAffEta f f') : ReflTransGen RedAffEta (DCCη (f x)) (DCCη (f' x)) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.congrFun (by assumption)))
-
-theorem congrArg' (h : ReflTransGen RedAffEta x x') : ReflTransGen RedAffEta (DCCη (f x)) (DCCη (f x')) := by
-  induction h with
-  | refl => exact .refl
-  | tail ih h a_ih =>
-    exact .trans a_ih (.single (.congrArg (by assumption)))
-
-@[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])] theorem RedAffEta.conf (h₁ : RedAffEta A B) (h₂ : RedAffEta A C) : ∃ D, RedAffEta.instRedRel.ReflTrans B D ∧ RedAffEta.instRedRel.ReflTrans C D := by
-  induction h₁ generalizing C with
-  | eql =>
-    cases h₂ with
-    | eql =>
-      exact ⟨_, .refl, .refl⟩
-    | congrFun h =>
-      cases h with
-      | congrFun h => cases h
-      | congrArg h => exact ⟨_, .refl, .single .eql⟩
-    | congrArg h => cases h
-  | eql' hr a_ih =>
-    cases h₂ with
-    | eql' hr₂ =>
-      have ⟨D, h₁, h₂⟩ := a_ih hr₂
-      exact ⟨_, eql'' h₁, eql'' h₂⟩
-    | eqr' hr₂ =>
-      exact ⟨_, .single (.eqr' (by assumption)), .single (.eql' (by assumption))⟩
-   | pil hr a_ih =>
-    cases h₂ with
-    | pil hr₂ =>
-      have ⟨D, h₁, h₂⟩ := a_ih hr₂
-      exact ⟨_, pil' h₁, pil' h₂⟩
-    | pir hr₂ =>
-      exact ⟨_, .single (.pir (by assumption)), .single (.pil (by assumption))⟩
-  | pir hr a_ih =>
-    cases h₂ with
-    | pir hr₂ =>
-      have ⟨D, h₁, h₂⟩ := a_ih hr₂
-      exact ⟨_, pir' h₁, pir' h₂⟩
-    | pil hr₂ =>
-      exact ⟨_, .single (.pil (by assumption)), .single (.pir (by assumption))⟩
-  | eqr' hr a_ih =>
-    cases h₂ with
-    | eqr' hr₂ =>
-      have ⟨D, h₁, h₂⟩ := a_ih hr₂
-      exact ⟨_, eqr'' h₁, eqr'' h₂⟩
-    | eql' hr₂ =>
-      exact ⟨_, .single (.eql' (by assumption)), .single (.eqr' (by assumption))⟩
-  | pairl hr₁ ih =>
-    cases h₂ with
-    | pairl hr₂ =>
-      have ⟨D, h₁, h₂⟩ := ih hr₂
-      exact ⟨_, pairl' (by assumption), pairl' (by assumption)⟩
-    | pairr =>
-      exact ⟨_, ⟨.single (.pairr (by assumption)), .single (.pairl (by assumption))⟩⟩
-  | pairr hr₁ ih =>
-    cases h₂ with
-    | pairr hr₂ =>
-      have ⟨D, h₁, h₂⟩ := ih hr₂
-      exact ⟨_, ⟨pairr' (by assumption), pairr' (by assumption)⟩⟩
-    | pairl =>
-      exact ⟨_, ⟨.single (.pairl (by assumption)), .single (.pairr (by assumption))⟩⟩
-  | bang hr₁ ih =>
-    cases h₂ with
-    | bang hr₂ =>
-      have ⟨D, h₁, h₂⟩ := ih hr₂
-      exact ⟨_, ⟨bang' (by assumption), bang' (by assumption)⟩⟩
-  | map =>
-    cases h₂ with
-    | map => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => cases h
-  | fmap =>
-    cases h₂ with
-    | fmap => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => cases h
-  | unbox =>
-    cases h₂ with
-    | unbox => exact ⟨_, .refl, .refl⟩
-    | congrArg h => cases h
-    | congrFun h => cases h
-  | pair =>
-    cases h₂ with
-    | pair => exact ⟨_, .refl, .refl⟩
-    | congrFun h =>
-      cases h with
-      | pairl =>
-        exact ⟨_, (.trans (.single (.sigl (.congrFun (by assumption)))) (.single (.sigr (.congrArg (.congrFun (by assumption)))))), .single .pair⟩
-      | pairr =>
-        exact ⟨_, .single (.sigr (.congrFun (.congrFun (by assumption)))), .single .pair⟩
-    | congrArg h => cases h
-  | evalc =>
-    cases h₂ with
-    | evalc => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h =>
-      cases h with
-      | sigl h => exact ⟨_, .single (.congrFun (.congrArg h)), .single .evalc⟩
-      | sigr h => exact ⟨_, .single (.congrArg h), .single .evalc⟩
-  | sigma =>
-    cases h₂ with
-    | sigma => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .single (.coup (.congrArg h)), .single .sigma⟩
-  | coup hr₁ ih =>
-    cases h₂ with
-    | coup hr₂ =>
-      have ⟨_, ha, hb⟩ := ih hr₂
-      exact ⟨_, coup' ha, coup' hb⟩
-  | quot =>
-    cases h₂ with
-    | quot => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .refl, .single .quot⟩
-  | id =>
-    cases h₂ with
-    | id => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .single h, .single .id⟩
-  | sigl h ih =>
-    cases h₂ with
-    | sigl h =>
-      have ⟨_, h₁, h₂⟩ := ih h
-      exact ⟨_, sigl' h₁, sigl' h₂⟩
-    | sigr h =>
-      exact ⟨_, .single (.sigr h), .single (.sigl (by assumption))⟩
-  | sigr h ih =>
-    cases h₂ with
-    | sigl h =>
-      exact ⟨_, .single (.sigl h), .single (.sigr (by assumption))⟩
-    | sigr h =>
-      have ⟨_, h₁, h₂⟩ := ih h
-      exact ⟨_, sigr' h₁, sigr' h₂⟩
-  | fstc =>
-    cases h₂ with
-    | fstc => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => cases h with
-      | sigl h => exact ⟨_, .single h, .single .fstc⟩
-      | sigr h => exact ⟨_, .refl, .single .fstc⟩
-  | sndc =>
-    cases h₂ with
-    | sndc => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => cases h with
-      | sigl h => exact ⟨_, .refl, .single .sndc⟩
-      | sigr h => exact ⟨_, .single h, .single .sndc⟩
-  | comp =>
-    cases h₂ with
-    | comp => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .single (.congrArg (.congrArg (by assumption))), .single .comp⟩
-  | comp₂ =>
-    cases h₂ with
-    | comp₂ => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .single (.congrArg (.congrArg (by assumption))), .single .comp₂⟩
-  | comp' =>
-    cases h₂ with
-    | comp' => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .single (.congrArg (.congrArg (by assumption))), .single .comp'⟩
-  | curr =>
-    cases h₂ with
-    | curr => exact ⟨_, .refl, .refl⟩
-    | congrFun h =>
-      cases h with
-      | congrFun h => cases h
-      | congrArg h => exact ⟨_, .single (.congrArg (.sigl h)), .single .curr⟩
-    | congrArg h => exact ⟨_, .single (.congrArg (.sigr (by assumption))), .single .curr⟩
-  | curr' =>
-    cases h₂ with
-    | curr' => exact ⟨_, .refl, .refl⟩
-    | congrFun h =>
-      cases h with
-      | congrFun h => cases h
-      | congrArg h => cases h
-    | congrArg h => cases h
-  | congrFun h_r ih =>
-    cases h₂
-    case comp₂ | fmap | map | unbox | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
-    case eql =>
-      cases h_r with
-      | congrFun h => cases h
-      | congrArg h => exact ⟨_, .single .eql, .refl⟩
-    case pair =>
-      cases h_r with
-      | pairl =>
-        exact ⟨_, .single .pair, .trans (.single (.sigl (.congrFun (by assumption)))) (.single (.sigr (.congrArg (.congrFun (by assumption)))))⟩
-      | pairr =>
-        exact ⟨_, .single .pair, .single (.sigr (.congrFun (.congrFun (by assumption))))⟩
-    case curr =>
-      cases h_r with
-      | congrFun h => cases h
-      | congrArg h => exact ⟨_, .single .curr, .single (.congrArg (.sigl (by assumption)))⟩
-    case curr' =>
-      cases h_r with
-      | congrFun h => cases h
-      | congrArg h => cases h
-    case congrFun f f' x f'' h =>
-      have ⟨_, h₁, h₂⟩ := ih h
-      exact ⟨_, congrFun' h₁, congrFun' h₂⟩
-    case congrArg f f' x x'' h_x =>
-      exact ⟨_, congrArg' (.single h_x), congrFun' (.single h_r)⟩
-  | congrArg h_r ih =>
-    cases h₂ with
-    | eql
-    | fmap
-    | map
-    | unbox
-    | pair => cases h_r
-    | evalc => cases h_r with
-      | sigl h => exact ⟨_, .single .evalc, .single (.congrFun (.congrArg h))⟩
-      | sigr h => exact ⟨_, .single .evalc, .single (.congrArg h)⟩
-    | fstc => cases h_r with
-      | sigl h => exact ⟨_, .single .fstc, .single h⟩
-      | sigr h => exact ⟨_, .single .fstc, .refl⟩
-    | sndc => cases h_r with
-      | sigl h => exact ⟨_, .single .sndc, .refl⟩
-      | sigr h => exact ⟨_, .single .sndc, .single h⟩
-    | quot => exact ⟨_, .single .quot, .refl⟩
-    | id => exact ⟨_, .single .id, .single h_r⟩
-    | comp₂  => exact ⟨_, .single .comp₂, congrArg' (congrArg' (.single (by assumption)))⟩
-    | comp  => exact ⟨_, .single .comp, congrArg' (congrArg' (.single (by assumption)))⟩
-    | comp' => exact ⟨_, .single .comp', congrArg' (congrArg' (.single (by assumption)))⟩
-    | curr  => exact ⟨_, .single .curr, congrArg' (sigr' (.single (by assumption)))⟩
-    | curr' => cases h_r
-    | sigma => exact ⟨_, .single .sigma, coup' (.single (.congrArg (by assumption)))⟩
-    | congrFun => exact ⟨_, congrFun' (.single (by assumption)), congrArg' (.single (by assumption))⟩
-    | congrArg h =>
-      have ⟨D, h₁, h₂⟩ := ih h
-      exact ⟨_, congrArg' h₁, congrArg' h₂⟩
-
-@[dcc_rel, aesop norm (rule_sets := [DccRel])]
-instance RedAff.instConf : Expr.Confluent RedAffEta := ⟨RedAffEta.conf⟩
-
-@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instConfRedAffTrans : Expr.Confluent RedAffEta (m := Relation.ReflTransGen) := RedAffEta.instRedRel.globally_confluent
-
-def semi_complete {A B : EtaExpr} (hr : A.RedAffEta B) : ∃ B', ∃ (h : A.RedAffEta B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
-  change ∃ _, ∃ _, (step? _) = .some _
-  unfold step?
-  split
-  case h_1 =>
-    rename_i e x y
-    cases hr with
-    | pil hr =>
-      have ⟨_, h, heq⟩ := semi_complete hr
-      exact ⟨_, .pil (by assumption), by rw [heq]⟩
-    | pir hr =>
-      split
-      case h_1 hr heq => exact ⟨_, .pil hr, rfl⟩
-      case h_2 hr heq ih => exact ⟨_, .pir hr, rfl⟩
-      case h_3 ih₁ ih₂ =>
-        have ⟨_, hr, heq⟩ := semi_complete hr
-        exact (ih₂ _ hr heq).elim
-  case h_2 => exact ⟨_, .eql, rfl⟩
-  case h_3 =>
-    rename_i e x y
-    cases hr with
-    | eql' hr =>
-      have ⟨_, h, heq⟩ := semi_complete hr
-      exact ⟨_, .eql' (by assumption), by rw [heq]⟩
-    | eqr' hr =>
-      split
-      case h_1 hr heq => exact ⟨_, .eql' hr, rfl⟩
-      case h_2 hr heq ih => exact ⟨_, .eqr' hr, rfl⟩
-      case h_3 ih₁ ih₂ =>
-        have ⟨_, hr, heq⟩ := semi_complete hr
-        exact (ih₂ _ hr heq).elim
-  case h_4 =>
-    cases hr with
-    | bang hr =>
-      have ⟨B, h, heq⟩ := semi_complete hr
-      simp [heq]
-      exact .bang h
-  repeat exact ⟨_, (RedAffEta.instRedRel.sound rfl).down, rfl⟩
-  case h_20 =>
-    cases hr with
-    | sigl h_x =>
-      have ⟨_, hrx', heq'⟩ := semi_complete h_x
-      exact ⟨_, .sigl (by assumption), by rw [heq']⟩
-    | sigr h_y =>
-      rename_i x y _
-      have ⟨_, hry', heq'⟩ := semi_complete h_y
-      match x.step? with
-      | .none =>
-        exact ⟨_, .sigr (by assumption), by rw [heq']⟩
-      | .some ⟨_, ⟨h_x'⟩⟩ =>
-        exact ⟨_, .sigl (by assumption), by rw [heq']⟩
-  case h_21 =>
-    cases hr with
-    | pairl h =>
-      have ⟨_, hrx', heq'⟩ := semi_complete h
-      exact ⟨_, .pairl hrx', by simp_all⟩
-    | pairr h =>
-      rename_i x y _
-      have ⟨_, hry', heq'⟩ := semi_complete h
-      match x.step? with
-      | .none =>
-        exact ⟨_, .pairr (by assumption), by rw [heq']⟩
-      | .some ⟨_, ⟨h_x'⟩⟩ =>
-        exact ⟨_, .pairl (by assumption), by rw [heq']⟩
-  case h_22 =>
-    cases hr with
-    | coup h =>
-      have ⟨_, hrx', heq'⟩ := semi_complete h
-      exact ⟨_, .coup hrx', by simp_all⟩
-  case h_23 =>
-    cases hr with
-    | eql => simp_all
-    | curr' =>
-      rename_i h
-      exact (h _ _ _ _ _ rfl rfl).elim
-    | unbox =>
-      simp_all
-    | pair =>
-      simp_all
-      rename_i h
-      exact (h _ _ _ _ rfl rfl rfl rfl).elim
-    | evalc =>
-      simp_all
-      rename_i h
-      exact (h _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl).elim
-    | sigma => simp_all
-    | fstc =>
-      simp_all
-      rename_i h
-      exact (h _ _ _ _ rfl rfl rfl rfl).elim
-    | sndc =>
-      simp_all
-      rename_i h
-      exact (h _ _ _ _ rfl rfl rfl rfl).elim
-    | fmap | map => simp_all
-    | congrFun h =>
-      have ⟨_, hrf, heqf⟩ := semi_complete h
-      exact ⟨_, .congrFun hrf, by rw [heqf]⟩
-    | congrArg h =>
-      have ⟨_, hrx, heqx⟩ := semi_complete h
-      rename_i f x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      match f.step? with
-      | .none => exact ⟨_, .congrArg hrx, by simp_all⟩
-      | .some ⟨_, ⟨hrf⟩⟩ => exact ⟨_, .congrFun hrf, by simp⟩
-    | comp₂ | comp' | quot | id | comp => simp_all
-    | curr =>
-      rename_i h _
-      exact (h _ _ _ _ rfl).elim
-  case h_24 hpi heql heq hbang _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hmk hpair hcoup happ =>
-    simp_all
-    induction A <;> (
-      first
-      | (focus
-        cases hr
-        done)
-      | (exact (hpi _ _ rfl).elim)
-      | (exact (hcoup _ rfl).elim)
-      | (exact (happ _ _ rfl).elim)
-      | (exact (hmk _ _ _ rfl).elim)
-      | (exact (hpair _ _ _ rfl).elim)
-      | (exact (hbang _ rfl).elim)
-      | (exact (heq _ _ rfl).elim))
-
-@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance RedAff.instSemicomplete : Expr.SemiComplete RedAffEta := ⟨semi_complete⟩
-
-theorem aff_complete (h : Relation.ReflTransGen RedAffEta A B)
-  (hn : Expr.IsNorm RedAffEta B) : Expr.reduce RedAffEta A = ⟨B, ⟨h⟩⟩ :=
-  RedAffEta.instRedRel.instComplete.complete h hn
-
-@[dcc_rel, aesop norm (rule_sets := [DccRel])] instance instComplete : Expr.Complete (Relation.ReflTransGen RedAffEta) (P := Expr.IsNorm RedAffEta) := RedAffEta.instRedRel.instComplete
 
 scoped syntax num                     : gen_dcc
 scoped syntax "hole(" term ")"        : gen_dcc
 scoped syntax "hole(" "Sort(" term ")" ")" : gen_dcc
 
 macro_rules
-  | `(DCC[$_ty:gen_dcc_loc] $n:num) => `(EtaExpr.hole (Hole.mk $n:term))
-  | `(DCC[$_ty:gen_dcc_loc] hole(Sort($tm:term))) => `(EtaExpr.hole (Hole.sort $tm:term))
-  | `(DCC[$_ty:gen_dcc_loc] hole($tm:term)) => `(EtaExpr.hole (Hole.mk $tm:term))
+  | `(DCC[$_ty:gen_dcc_loc] $n:num) => `(GenericExpr.const (EtaConst.hole (Hole.mk $n:term)))
+  | `(DCC[$_ty:gen_dcc_loc] hole(Sort($tm:term))) => `(GenericExpr.const (EtaConst.hole (Hole.sort $tm:term)))
+  | `(DCC[$_ty:gen_dcc_loc] hole($tm:term)) => `(GenericExpr.const (EtaConst.hole (Hole.mk $tm:term)))
 
 @[grind =, grind! ., dcc_size]
-theorem hole_size_zero : (DCCη hole(m)).size = 0 := by
+theorem hole_size_zero.{v} {τ_c : Type v} : (GenericExpr.const (τ := EtaConst) (.hole (τ_c := τ_c) _m)).size = 0 := by
   grind
 
 @[grind =, grind! ., dcc_size]
-theorem coup_hole_zero : (DCCη ⟦β⟧(hole(m), hole(n))).size = 0 := by
+theorem coup_hole_zero.{v} {τ : Type v} {β : GenericExpr (τ := EtaConst (τ_c := τ))} : (DCC? ⟦β⟧(hole(m), hole(n))).size = 0 := by
   grind
 
-end EtaExpr
+end GenericExpr
+
+namespace NormExpr
+open GenericExpr
+
+@[grind, inline]
+abbrev arity (e : NormExpr r) : ℕ := e.raw.arity
+
+@[grind, inline]
+abbrev tm_arity (e : NormExpr r) : ℕ := e.raw.tm_arity
+
+end NormExpr
+
+namespace GenericExpr
+
+@[grind]
+def eta_to_expr (e : GenericExpr (τ := EtaConst (τ_c := τ_c)))
+  (hn_contains : ¬ e.contains_hole) : GenericExpr τ_c :=
+  match e with
+  | DCC? ∗ => DCC? ∗
+  | DCC? ⊤ => DCC? ⊤
+  | DCC? ⊥ => DCC? ⊥
+  | DCC? x = y =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' => (DCC? x' = y')
+  | DCC? Eql(x)  =>
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? Eql(x'))
+  | DCC? refl(x) =>
+    match x.eta_to_expr (by simp_all [contains_hole])with
+    | x' => (DCC? refl(x'))
+  | DCC? Sort _m => (DCC? Sort _m)
+  | DCC? Σ(x, y) =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' => (DCC? Σ(x', y'))
+  | DCC? `(x, y) =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' => (DCC? `(x', y'))
+  | DCC? ⟦x⟧(y, z) =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]), z.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y', z' => (DCC? ⟦x'⟧(y', z'))
+  | DCC? Coup(x) =>
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? Coup(x'))
+  | DCC? Id(x)      =>
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? Id(x'))
+  | DCC? Fstc(x)    =>
+    match x.eta_to_expr (by simp_all [contains_hole])with
+    | x' => (DCC? Fstc(x'))
+  | DCC? Sndc(x)    =>
+    match x.eta_to_expr (by simp_all [contains_hole])with
+    | x' => (DCC? Sndc(x'))
+  | DCC? Π(x, y) =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' =>
+      (DCC? Π(x', y'))
+  | DCC? (x ∘' y) =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' =>
+      (DCC? x' ∘' y')
+  | DCC? (x ∘ y)  =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' =>
+      (DCC? x' ∘ y')
+  | DCC? (x ∘∘ y)  =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' =>
+      (DCC? x' ∘∘ y')
+  | DCC? ⟦x⟧⟨y, z⟩   =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]), z.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y', z' =>
+      (DCC? ⟦x'⟧⟨y', z'⟩)
+  | DCC? Λ(x, y, z) =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]), z.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y', z' =>
+      (DCC? Λ(x', y', z'))
+  | DCC? !Λ(x, y, z) =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]), z.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y', z' =>
+      (DCC? !Λ(x', y', z'))
+  | DCC? Eval(x, y, z) =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]), z.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y', z' =>
+      (DCC? Eval(x', y', z'))
+  | DCC? !(x)   =>
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? !(x'))
+  | DCC? *(x)   =>
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? *(x'))
+  | DCC? *<x>   =>
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? *<x'>)
+  | DCC? &(x)   =>
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? &(x'))
+  | DCC? !<x>   =>
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? !<x'>)
+  | DCC? $<x>   =>
+    match x.eta_to_expr (by simp_all [contains_hole]) with
+    | x' => (DCC? $<x'>)
+  | DCC? (x y) =>
+    match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
+    | x', y' =>
+      (DCC? (x' y'))
+  | .const (.hole _) => by simp_all [contains_hole]
+  | .const (.const x) => (.const x)
+
+@[grind]
+def expr_to_eta (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (τ_c := τ_c))) :=
+  match e with
+  | DCC? ∗ => DCC? ∗
+  | DCC? ⊤ => DCC? ⊤
+  | DCC? ⊥ => DCC? ⊥
+  | DCC? x = y =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' => (DCC? x' = y')
+  | DCC? Eql(x)  =>
+    match x.expr_to_eta with
+    | x' => (DCC? Eql(x'))
+  | DCC? refl(x) =>
+    match x.expr_to_eta with
+    | x' => (DCC? refl(x'))
+  | DCC? Sort _m => (DCC? Sort _m)
+  | DCC? Σ(x, y) =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? Σ(x', y'))
+  | DCC? `(x, y) =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? `(x', y'))
+  | DCC? ⟦x⟧(y, z) =>
+    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
+    | x', y', z' =>
+      (DCC? ⟦x'⟧(y', z'))
+  | DCC? Coup(x) =>
+    match x.expr_to_eta with
+    | x' => (DCC? Coup(x'))
+  | DCC? Id(x)      =>
+    match x.expr_to_eta with
+    | x' => (DCC? Id(x'))
+  | DCC? Fstc(x)    =>
+    match x.expr_to_eta with
+    | x' => (DCC? Fstc(x'))
+  | DCC? Sndc(x)    =>
+    match x.expr_to_eta with
+    | x' => (DCC? Sndc(x'))
+  | DCC? Π(x, y) =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? Π(x', y'))
+  | DCC? (x ∘' y) =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? x' ∘' y')
+  | DCC? (x ∘ y)  =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? x' ∘ y')
+  | DCC? (x ∘∘ y)  =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? x' ∘∘ y')
+  | DCC? ⟦x⟧⟨y, z⟩   =>
+    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
+    | x', y', z' =>
+      (DCC? ⟦x'⟧⟨y', z'⟩)
+  | DCC? Λ(x, y, z) =>
+    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
+    | x', y', z' =>
+      (DCC? Λ(x', y', z'))
+  | DCC? !Λ(x, y, z) =>
+    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
+    | x', y', z' =>
+      (DCC? !Λ(x', y', z'))
+  | DCC? Eval(x, y, z) =>
+    match x.expr_to_eta, y.expr_to_eta, z.expr_to_eta with
+    | x', y', z' =>
+      (DCC? Eval(x', y', z'))
+  | DCC? !(x)   =>
+    match x.expr_to_eta with
+    | x' => (DCC? !(x'))
+  | DCC? *(x)   =>
+    match x.expr_to_eta with
+    | x' => (DCC? *(x'))
+  | DCC? *<x>   =>
+    match x.expr_to_eta with
+    | x' => (DCC? *<x'>)
+  | DCC? &(x)   =>
+    match x.expr_to_eta with
+    | x' => (DCC? &(x'))
+  | DCC? !<x>   =>
+    match x.expr_to_eta with
+    | x' => (DCC? !<x'>)
+  | DCC? $<x>   =>
+    match x.expr_to_eta with
+    | x' => (DCC? $<x'>)
+  | DCC? (x y) =>
+    match x.expr_to_eta, y.expr_to_eta with
+    | x', y' =>
+      (DCC? (x' y'))
+  | .const x => (.const (.const x))
+
+def to_eta_no_hole {e : GenericExpr τ} : ¬ (expr_to_eta e).contains_hole := by
+  induction e <;> (simp_all [expr_to_eta, contains_hole])
+
+def to_eta_left_inv
+  {e : GenericExpr τ} : eta_to_expr (expr_to_eta e) to_eta_no_hole = e := by
+  unfold expr_to_eta
+  split
+  any_goals (simp [eta_to_expr])
+  any_goals (
+    focus
+    rename_i x
+    have ha := x.to_eta_left_inv
+    simp [ha]
+    done)
+  any_goals (
+    focus
+    rename_i x y
+    have ha := x.to_eta_left_inv
+    have hb := y.to_eta_left_inv
+    simp [ha, hb]
+    done)
+  any_goals (
+    focus
+    rename_i x y z
+    have ha := x.to_eta_left_inv
+    have hb := y.to_eta_left_inv
+    have hc := z.to_eta_left_inv
+    simp [ha, hb, hc])
+
+def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) :
+  (expr_to_eta (eta_to_expr e hn)) = e := by
+  induction e
+  any_goals (simp_all [eta_to_expr, expr_to_eta])
+  any_goals (
+    focus
+    aesop
+    done)
+  any_goals (grind)
+  case const x =>
+    unfold contains_hole at hn
+    simp at hn
+    cases x with
+    | hole => simp_all
+    | const => simp [eta_to_expr, expr_to_eta]
+
+end GenericExpr
+

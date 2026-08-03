@@ -1,8 +1,8 @@
 import Dcc.Ast
 import Dcc.Relation
-import Dcc.Tactic
-import Dcc.Tactic.Aff
-import Dcc.Tactic.Eta
+import Dcc.Tactic.Meta.Ast
+import Dcc.Tactic.Meta.Aff
+import Dcc.Tactic.Meta.Eta
 import Lean
 import Lean.Elab.Command
 import Lean.Parser.Term.Basic

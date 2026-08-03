@@ -467,6 +467,7 @@ def expr_to_eta (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (�
 def to_eta_no_hole {e : GenericExpr τ} : ¬ (expr_to_eta e).contains_hole := by
   induction e <;> (simp_all [expr_to_eta, contains_hole])
 
+@[dcc_reduce]
 def to_eta_left_inv
   {e : GenericExpr τ} : eta_to_expr (expr_to_eta e) to_eta_no_hole = e := by
   unfold expr_to_eta
@@ -493,6 +494,7 @@ def to_eta_left_inv
     have hc := z.to_eta_left_inv
     simp [ha, hb, hc])
 
+@[dcc_reduce]
 def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) :
   (expr_to_eta (eta_to_expr e hn)) = e := by
   induction e
@@ -510,4 +512,3 @@ def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) 
     | const => simp [eta_to_expr, expr_to_eta]
 
 end GenericExpr
-

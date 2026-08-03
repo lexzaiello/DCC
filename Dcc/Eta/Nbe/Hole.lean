@@ -1,5 +1,6 @@
 import Dcc.Eta.Ast
 import Dcc.Eta.View
+import Dcc.Eta.Reflect
 import Dcc.Ast.Points
 import Dcc.Eta.Nbe.Domain
 
@@ -463,6 +464,29 @@ def Holes.points_norm {e_f : EtaFn f doms} {hole_elems : List (@EtaExpr.Norm τ_
     | ⟨1, h_lt⟩ => exact h_hole₂.points_norm b_idx
     | ⟨0, h_lt⟩ => exact h_hole₁.points_norm b_idx
     | ⟨n + 2, _⟩ => grind
+
+/-set_option pp.deepTerms true in
+set_option pp.deepTerms.threshold 9999 in
+set_option pp.proofs true in
+set_option pp.proofs.threshold 9999 in
+def to_from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn₂ : ¬ f.contains_hole} {hn_f : IsNorm RedAff f} {hn₃ : IsNorm (@RedAff τ_c) (f.eta_to_expr hn₂)}
+  (h₁ : EtaFn ⟨f, hn_f⟩ doms₁) (h₂ : EtaFn ⟨(expr_to_eta (eta_to_expr f hn₂)), (IsNorm.to_eta hn₃)⟩ doms₂) : doms₂ = doms₁ := by
+  have h := to_eta_right_inv hn₂
+  have heq : h₁ ≍ h₂ := by
+    cases h₁ with
+    | tm₁ =>
+      cases h₂ with
+      | tm₁ =>
+        have h_expr : (mk f hn_f) = (mk (f.eta_to_expr hn₂).expr_to_eta (IsNorm.to_eta hn₃)) :=
+          NormExpr.ext (by
+            simp [raw, h])
+        expose_names
+        rw [← h_expr] at h_dom_1
+        have heq := h_dom.unique h_dom_1
+        expose_names
+        cases heq
+        simp [h_dom.eq h_dom_1]
+        sorry-/
 
 end EtaFn
 

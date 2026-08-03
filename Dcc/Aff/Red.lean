@@ -758,6 +758,13 @@ def RedAffNorm.unique (h₁ : RedAffNorm A B) (h₂ : RedAffNorm A C) : B = C :=
 def RedAffNorm.absurd {P : Sort v} (h₁ : RedAffNorm A B) (h₂ : RedAffNorm A C) (hneq : B ≠ C := by intro h; cases h) : P :=
   _root_.absurd (h₁.unique h₂) (by simp_all)
 
+def RedAffNorm.elim_norm (hr : RedAffNorm A B) (hn : IsNorm RedAff A) : B = ⟨A, hn⟩ :=
+  match hr with
+  | ⟨hr, _hn⟩ => by
+    have h := hn.unique_refl hr
+    cases h
+    grind
+
 /-def RedAffNorm.eq {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)} (h₁ : RedAffNorm A B) : h₁ = aff_sound (by sorry) := by
   sorry-/
 

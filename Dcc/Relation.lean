@@ -587,7 +587,7 @@ def NormExpr.size {t : GenericExpr τ_c → ℕ} {r : GenericExpr τ_c → Gener
   match n with
   | ⟨e, _⟩ => t e
 
-@[inline, grind, dcc_rel]
+@[macro_inline, grind, dcc_rel]
 def NormExpr.raw.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} (r : NormExpr r) : GenericExpr τ :=
   match r with
   | ⟨e, _⟩ => e

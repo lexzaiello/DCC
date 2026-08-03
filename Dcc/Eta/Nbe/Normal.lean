@@ -5,6 +5,115 @@ namespace NormExpr
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]
 
+namespace Hole
+
+def app_norm (h₁ : Hole α l₁ a) (h₂ : Hole β l₂ b) : GenericExpr.IsNorm GenericExpr.RedAff (DCC? (a.raw b.raw)) := by
+  induction h₁ with
+  | pure h_view₁ =>
+    induction h₂
+    any_goals (
+      focus
+      try(
+        intro ⟨_, hr⟩
+        cases hr with
+        | congrFun h => cases h
+        | congrArg h => cases h)
+      done)
+    case coup =>
+      intro ⟨_, h⟩
+      cases h with
+      | congrFun h => cases h
+      | congrArg h =>
+        cases h with
+        | sigl h =>
+          expose_names
+          exact hn_hole₁ ⟨_, h⟩
+        | sigr h =>
+          expose_names
+          exact hn_hole₂ ⟨_, h⟩
+  | bang h ih =>
+    intro ⟨_, h⟩
+    cases h with
+    | congrFun h => cases h
+    | congrArg h =>
+      have h := h₂.is_norm
+      exact h ⟨_, by assumption⟩
+  | coup h_dom h₁ hrt h₂ ih₁ ih₂ =>
+    intro ⟨_, h⟩
+    cases h with
+    | congrFun h =>
+      cases h with
+      | sigl h =>
+        exact h₁.is_norm ⟨_, h⟩
+      | sigr h =>
+        exact h₂.is_norm ⟨_, h⟩
+    | congrArg h =>
+      expose_names
+      exact h₂_1.is_norm ⟨_, h⟩
+
+def app_norm_arg (h₁ : Hole α l₁ a) (h₂ : Hole β l₂ b) (hn : GenericExpr.IsNorm GenericExpr.RedAff c) : GenericExpr.IsNorm GenericExpr.RedAff (DCC? (a.raw b.raw c)) := by
+  induction h₁ with
+  | pure h_view₁ =>
+    induction h₂
+    any_goals (
+      focus
+      try (
+        intro ⟨_, hr⟩
+        cases hr with
+        | congrFun h =>
+          cases h with
+          | congrFun h => cases h
+          | congrArg h => cases h
+        | congrArg h => exact hn ⟨_, h⟩)
+      done)
+    case coup =>
+      intro ⟨_, h⟩
+      cases h with
+      | congrFun h =>
+        cases h with
+        | congrFun h => cases h
+        | congrArg h =>
+          expose_names
+          cases h with
+          | sigl h =>
+            exact a_2.is_norm ⟨_, h⟩
+          | sigr h => exact a_4.is_norm ⟨_, h⟩
+      | congrArg h => exact hn ⟨_, h⟩
+  | bang h ih =>
+    intro ⟨_, h⟩
+    cases h with
+    | congrFun h =>
+      cases h with
+      | congrFun h => cases h
+      | congrArg h =>
+        exact h₂.is_norm ⟨_, h⟩
+    | congrArg h =>
+      have h := h₂.is_norm
+      exact hn ⟨_, by assumption⟩
+  | coup h_dom h₁ hrt h₂ ih₁ ih₂ =>
+    intro ⟨_, h⟩
+    cases h with
+    | congrFun h =>
+      cases h with
+      | congrFun h =>
+        cases h with
+        | sigl h =>
+          exact h₁.is_norm ⟨_, h⟩
+        | sigr h =>
+          exact h₂.is_norm ⟨_, h⟩
+      | congrArg h =>
+        expose_names
+        exact h₂_1.is_norm ⟨_, h⟩
+    | congrArg h =>
+      expose_names
+      exact hn ⟨_, h⟩
+
+@[grind]
+def app_norm' {a b : NormExpr GenericExpr.RedAff (τ := (@EtaConst τ_c))} (h₁ : Hole α l₁ a) (h₂ : Hole β l₂ b) : NormExpr (τ := (@EtaConst τ_c)) GenericExpr.RedAff :=
+  ⟨DCC? (a.raw b.raw), h₁.app_norm h₂⟩
+
+end Hole
+
 namespace EtaFn
 
 def unique (h₁ : EtaFn (τ_c := τ_c) f doms₁) (h₂ : EtaFn (τ_c := τ_c) f doms₂) : doms₁ = doms₂ := by
@@ -29,6 +138,27 @@ def hole_same (e_f₁ : EtaFn (τ_c := τ_c) f doms) (e_f₂ : EtaFn (τ_c := τ
       cases Hole.unique e_h₂ (ha.symm.trans hb ▸ e_h₃)
       rfl
 
+namespace Holes
+
+def app_coup_norm {e_f : EtaFn (τ_c := τ_c) f doms} (e_h : e_f.Holes level [⟨DCC? ⟦β⟧(a, b), hn⟩]) :
+  GenericExpr.IsNorm GenericExpr.RedAff (DCC? (a b)) := by
+  cases e_h with
+  | tm₁ h =>
+    cases h with
+    | coup h_dom h₁ hrt h₂ =>
+      exact h₁.app_norm h₂
+
+def app_norm_arg {e_f : EtaFn (τ_c := τ_c) f doms} (e_h : e_f.Holes level [⟨DCC? ⟦β⟧(a, b), hn⟩]) (hn : GenericExpr.IsNorm GenericExpr.RedAff c) :
+  GenericExpr.IsNorm GenericExpr.RedAff (DCC? (a b c)) := by
+  cases e_h with
+  | tm₁ h =>
+    cases h with
+    | coup h_dom h₁ hrt h₂ =>
+      have h := h₁.app_norm_arg h₂ hn
+      exact h
+
+end Holes
+
 namespace Canonicalize
 
 def preservation₁ {e_f₁ : EtaFn (τ_c := τ_c) f [α]} {e_f₂ : EtaFn (τ_c := τ_c) f' [α]} (h₁ : Canonicalize e_f₁ e_f₂) : Domain f' α := by
@@ -46,6 +176,8 @@ set_option pp.proofs true in
 set_option pp.proofs.threshold 9999 in
 def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c := τ_c) f₂ doms}
   {e_f₃ : EtaFn (τ_c := τ_c) f₃ doms} (h₁ : Canonicalize e_f₁ e_f₂) (h₂ : Canonicalize e_f₂ e_f₃) : f₂ = f₃ := by
+  let h₁₀ := h₁
+  let h₂₀ := h₂
   cases h₁ with
   | id₁ =>
     match h₂ with
@@ -434,6 +566,38 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
                       cases h with
                       | sigl h => exact (hn_hole₁_2 ⟨_, h⟩).elim
                       | sigr h => exact (hn_hole₂ ⟨_, h⟩).elim
+  | par =>
+    cases h₂
+    any_goals (
+      focus
+      try (
+        expose_names
+        cases e_f.hole_same e_f' (by assumption) (by assumption)
+        cases a_1.elim_norm hn₂
+        try (grind))
+      done)
+    any_goals (
+      focus
+      try (
+        expose_names
+        cases e_f.hole_same e_f_1 (by assumption) (by assumption)
+        cases a_2.elim_norm hn₂)
+      done)
+    · expose_names
+      cases e_f.hole_same e_f' (by assumption) (by assumption)
+      cases hr_τ.elim_norm hn₂
+      have h_mem := e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩
+      simp [raw, Holes.v_elems, Vector.get] at h_mem
+      grind
+  | eval =>
+    cases h₂
+    case eval =>
+      expose_names
+      have h := a_3.unique ⟨.single (.evalc (_α := α) (_β := β)
+        (__β := β) (x := a_2) (y := b_1)), e_h_1.app_norm_arg (by sorry)⟩
+      sorry
+    · expose_names
+      
 
 end Canonicalize
 

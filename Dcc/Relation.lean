@@ -28,7 +28,7 @@ theorem id_pure_ext.{u} {α : Type u} (x : α) : (pure x : Id α) = x := rfl
 def IsNorm.{u} {α : Type u} (r : α → α → Prop) (A : α) := ¬ ∃ B, r A B
 
 @[grind]
-def IsNorm.elim.{u,v } {α : Type u} {C : Sort v} (r : α → α → Prop) {A B : α} (hn : IsNorm r A) (hr : r A B) : C := (hn ⟨_, hr⟩).elim
+def IsNorm.elim.{u, v} {α : Type u} {C : Sort v} (r : α → α → Prop) {A B : α} (hn : IsNorm r A) (hr : r A B) : C := (hn ⟨_, hr⟩).elim
 
 class Rel.{u, v, s} {α : Type u} {β : Type s} (r : α → β → Sort v) (m : Type (max (max u s) v) → Type (max u s v) := Id) [hM : Monad m] where
   run (x : α) : m ((y : β) × (PULift.{(max (max u s) v) + 1, v} (r x y)))
@@ -78,6 +78,9 @@ attribute [dcc_force_rel] RedRel.toRel.eq_def RedRel.toRel Rel.run Rel.run.eq_de
 
 def IsNorm.unique.{u} {α : Type u} {r : α → α → Prop} {A B : α} (hn : IsNorm r A) (hr : r A B) : A = B :=
   (hn ⟨_, hr⟩).elim
+
+def IsNorm.eq.{u} {α : Type u} {r : α → α → Prop} {A : α} (hn₁ hn₂ : IsNorm r A) : hn₁ = hn₂ := by
+  aesop
 
 def IsNorm.unique'.{u} {α : Type u} {r : α → α → Prop} {A B C : α} (hn : IsNorm r A) (hr₁ : r A B) (_hr₂ : r B C) : A = C :=
   (hn ⟨_, hr₁⟩).elim

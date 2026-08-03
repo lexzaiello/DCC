@@ -140,6 +140,23 @@ def hole_same (e_f₁ : EtaFn (τ_c := τ_c) f doms) (e_f₂ : EtaFn (τ_c := τ
 
 namespace Holes
 
+def hole_same {e_f₁ : EtaFn (τ_c := τ_c) f doms} {e_f₂ : EtaFn (τ_c := τ_c) f' doms} (e_h₁ : e_f₁.Holes level h₁) (e_h₂ : e_f₂.Holes level h₂) : h₁ = h₂ := by
+  cases e_h₁ with
+  | tm₁ =>
+    cases e_h₂ with
+    | tm₁ =>
+      rename_i e_h₁ _ e_h₂
+      simp [Hole.unique e_h₁ e_h₂]
+  | tm₂ =>
+    cases e_h₂ with
+    | tm₂ =>
+      rename_i hrt₁ e_h₁ e_h₂ _ _ _ _ _ hrt₂ e_h₃ e_h₄
+      have ha := hrt₁.complete
+      have hb := hrt₂.complete
+      cases Hole.unique e_h₁ e_h₄
+      cases Hole.unique e_h₂ (ha.symm.trans hb ▸ e_h₃)
+      rfl
+
 def app_coup_norm {e_f : EtaFn (τ_c := τ_c) f doms} (e_h : e_f.Holes level [⟨DCC? ⟦β⟧(a, b), hn⟩]) :
   GenericExpr.IsNorm GenericExpr.RedAff (DCC? (a b)) := by
   cases e_h with
@@ -593,11 +610,34 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
     cases h₂
     case eval =>
       expose_names
-      have h := a_3.unique ⟨.single (.evalc (_α := α) (_β := β)
-        (__β := β) (x := a_2) (y := b_1)), e_h_1.app_norm_arg (by sorry)⟩
-      sorry
+      cases hn₁.eq hn₁_1
+      cases e_h.hole_same e_h_1
+      cases a_3.unique ⟨.single .evalc, hn'⟩
+      cases e_f'.unique e_f'_1
+      rfl
+    any_goals (
+      focus
+      try (
+        expose_names
+        cases hn₁.eq hn_α_1
+        cases e_h.hole_same e_h_1
+        cases a_2.unique ⟨.single .evalc, hn'⟩)
+      done)
+    any_goals (
+      focus
+      try (
+        expose_names
+        cases hn₁.eq hn_coup
+        cases e_h.hole_same e_h_1
+        cases a_3.unique ⟨.single .evalc, hn'⟩)
+      done)
     · expose_names
-      
+      cases hn₁.eq hn_α_1
+      cases e_h.hole_same e_h_1
+      cases hr_τ.unique ⟨.single .evalc, hn'⟩
+      have h_mem := e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩
+      simp [raw, Holes.v_elems, Vector.get] at h_mem
+      grind
 
 end Canonicalize
 

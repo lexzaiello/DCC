@@ -1,9 +1,11 @@
 import Dcc.Eta.Nbe.Hole
-
-namespace NormExpr
+import Dcc.Eta.Reflect
+import Dcc.Aff.Red
 
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]
+
+namespace NormExpr
 
 namespace EtaFn
 
@@ -821,3 +823,46 @@ def Canonicalize!.complete {e_f : EtaFn (τ_c := τ_c) f' doms}
 end EtaFn
 
 end NormExpr
+
+namespace GenericExpr
+
+open NormExpr
+
+#check False.rec
+
+inductive Canonicalize! : (f : @GenericExpr τ_c) → (f' : @GenericExpr τ_c) → Type (u + 1)
+  | step  : {f₁ : @GenericExpr.{u} τ_c}
+    → (h_conv : expr_to_eta f₁ = f₂)
+    → (hrt : RedAffNorm f₂ ⟨f₃, hn_f₃⟩)
+    → (e_f : EtaFn ⟨f₃, hn_f₃⟩ doms)
+    → {e_f' : EtaFn ⟨f₄, hn_f₄⟩ doms}
+    → EtaFn.Canonicalize! e_f e_f'
+    → (hn : ¬ f₄.contains_hole)
+    → (GenericExpr.eta_to_expr f₄ hn = f₅)
+    → Canonicalize! f₁ f₅
+  | refl₁ : {f₁ : @GenericExpr.{u} τ_c}
+    → (h_conv : expr_to_eta f₁ = f₂)
+    → (hrt : RedAffNorm f₂ ⟨f₃, hn_f₃⟩)
+    → (hn : ∀ {doms}, NormExpr.EtaFn ⟨f₃, hn_f₃⟩ doms → False)
+    → Canonicalize! f₁ f₁
+  | refl₂ : {f₁ : @GenericExpr.{u} τ_c}
+    → (h_conv : expr_to_eta f₁ = f₂)
+    → (hrt : RedAffNorm f₂ ⟨f₃, hn_f₃⟩)
+    → (e_f : EtaFn ⟨f₃, hn_f₃⟩ doms)
+    → {e_f' : EtaFn ⟨f₄, hn_f₄⟩ doms}
+    → EtaFn.Canonicalize! e_f e_f'
+    → (hn : f₄.contains_hole)
+    → Canonicalize! f₁ f₁
+
+def canonicalize! (f : @GenericExpr τ_c) : ((f' : @GenericExpr τ_c) × Canonicalize! f f') :=
+  match heq₁ : NormExpr.view_eta_fn (red_aff (expr_to_eta f)) with
+  | .some ⟨_, e_f⟩ =>
+    match e_f.canonicalize! with
+    | ⟨⟨f', _hn_f'⟩, _e_f', h⟩ =>
+      if hn : f'.contains_hole then
+        ⟨_, .refl₂ rfl ⟨(reduce RedAff f.expr_to_eta).snd.down, reduce_norm rfl⟩ e_f h hn⟩
+      else
+        ⟨_, .step rfl ⟨(reduce RedAff f.expr_to_eta).snd.down, reduce_norm rfl⟩ e_f h hn rfl⟩
+  | .none => ⟨_, .refl₁ rfl ⟨(reduce RedAff f.expr_to_eta).snd.down, reduce_norm rfl⟩ (view_eta_fn_none_sound heq₁)⟩
+
+end GenericExpr

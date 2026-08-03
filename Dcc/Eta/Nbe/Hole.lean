@@ -107,6 +107,16 @@ def EtaFn.complete {f : @EtaExpr.Norm τ_c} {doms : List EtaExpr.Norm} (h : EtaF
   induction h with
   | tm₂ h_dom | tm₁ h_dom => simp_all [view_eta_fn, h_dom.complete]
 
+def view_eta_fn_none_sound {f : @EtaExpr.Norm τ_c} (h : view_eta_fn f = .none) : ∀ {doms}, EtaFn f doms → False := by
+  intro _ h
+  have h := h.complete
+  grind
+
+def ViewEtaFn.none_complete {f : @EtaExpr.Norm τ_c} (h : ∀ {doms}, EtaFn f doms → False) : view_eta_fn f = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨doms, e_f⟩
+  exact (h e_f).elim
+
 @[dcc_force_reduce]
 def EtaFn.eq (h₁ h₂ : EtaFn (τ_c := τ_c) f doms) : h₁ = h₂ := by
   cases h₁ with

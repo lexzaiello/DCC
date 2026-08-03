@@ -351,7 +351,7 @@ def Holes.length {f : @EtaExpr.Norm τ_c} {doms : List (@EtaExpr.Norm τ_c)}
   have h_size := e_f.length
   cases h <;> grind
 
-@[grind]
+@[inline, grind]
 def Holes.v_elems {f : @EtaExpr.Norm τ_c} {doms : List (@EtaExpr.Norm τ_c)}
   {e_f : EtaFn f doms} {holes : List (@EtaExpr.Norm τ_c)}
   (h : Holes e_f level holes) : Vector (@EtaExpr.Norm τ_c) (arity f) :=

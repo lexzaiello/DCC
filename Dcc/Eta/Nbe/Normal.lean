@@ -638,6 +638,26 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       have h_mem := e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩
       simp [raw, Holes.v_elems, Vector.get] at h_mem
       grind
+  | quot₁ =>
+    cases h₂
+    case quot₁ =>
+      expose_names
+      cases hn_α.eq hn_α_1
+      cases e_h.hole_same e_h_1
+      cases hr_τ_1.unique ⟨.single .quot, hn_e'⟩
+      rfl
+    any_goals (
+      focus
+      try (
+        expose_names
+        cases hn_α.eq hn_α_1
+        cases e_h.hole_same e_h_1
+        cases a.unique ⟨.single .quot, hn_e'⟩
+        have h_mem := e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩
+        simp [raw, Holes.v_elems, Vector.get] at h_mem
+        try (grind))
+      done)
+    
 
 end Canonicalize
 

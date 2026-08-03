@@ -53,9 +53,120 @@ def from_eta {e : GenericExpr (@EtaConst τ_c)} (hn₁ : GenericExpr.IsNorm RedA
 
 end IsNorm
 
+def arity_from_eta (heq₁ : f₁ = expr_to_eta f₂) (heq₂ : arity f₁ = n) : arity f₂ = n := by
+  induction f₂ generalizing f₁ n
+  any_goals (
+    subst_vars
+    grind)
+  case id =>
+    subst_vars
+    expose_names
+    simp [expr_to_eta]
+    unfold arity
+    split
+    any_goals (grind)
+    · expose_names
+      cases heq
+      split
+      any_goals (grind)
+      expose_names
+      have heq : a.expr_to_eta = (_α.pi _β).app _x_α := by grind
+      have ha := a_ih heq.symm (by simp [arity]; rfl)
+      have hn := heq ▸ to_eta_no_hole (e := a)
+      unfold expr_to_eta at heq
+      simp at heq
+      split at heq
+      any_goals (grind)
+      have hb := h (eta_to_expr _α (by grind)) (eta_to_expr _β (by grind)) (eta_to_expr _x_α (by grind)) (by
+        unfold expr_to_eta at heq
+        simp at heq
+        split at heq
+        any_goals (grind))
+      exact hb.elim
+  case quot =>
+    subst_vars
+    expose_names
+    simp [expr_to_eta]
+    unfold arity
+    split
+    any_goals (grind)
+    · expose_names
+      cases heq
+      split
+      any_goals (grind)
+      expose_names
+      unfold expr_to_eta at heq
+      simp at heq
+      split at heq
+      any_goals (grind)
+
+def arity_from_eta' (heq : arity (expr_to_eta f) = n) : arity f = n :=
+  arity_from_eta (f₁ := (expr_to_eta f)) rfl heq
+
+def arity_eta {f₁ : @GenericExpr τ_c} (heq₁ : f₂ = GenericExpr.expr_to_eta f₁) (heq : arity f₁ = n) : arity f₂ = n := by
+  induction f₁ generalizing f₂ n
+  any_goals (simp_all [GenericExpr.expr_to_eta]; subst_vars; grind)
+  case id =>
+    expose_names
+    subst_vars
+    simp [expr_to_eta]
+    unfold arity
+    split
+    any_goals (grind)
+    · expose_names
+      split
+      any_goals (grind)
+      expose_names
+      have heq : a.expr_to_eta = (_α.pi _β).app _x_α := by grind
+      cases heq_1
+      have h := arity_from_eta heq.symm rfl
+      expose_names
+      have ha := a_ih heq.symm h
+      have hn := heq ▸ to_eta_no_hole (e := a)
+      unfold expr_to_eta at heq
+      simp at heq
+      split at heq
+      any_goals (grind)
+      expose_names
+      have hb := h_1 (eta_to_expr _α (by grind)) (eta_to_expr _β (by grind)) (eta_to_expr _x_α (by grind)) (by
+        unfold expr_to_eta at heq
+        simp at heq
+        split at heq
+        any_goals (grind))
+      exact hb.elim
+  case quot =>
+    subst_vars
+    expose_names
+    simp [expr_to_eta]
+    unfold arity
+    split
+    any_goals (grind)
+    · expose_names
+      split
+      any_goals (grind)
+      expose_names
+      unfold expr_to_eta at heq
+      simp at heq
+      split at heq
+      any_goals (grind)
+
+def arity_eta' {f₁ : @GenericExpr τ_c} (heq : arity f₁ = n) : arity (expr_to_eta f₁) = n :=
+  arity_eta (f₁ := f₁) rfl (n := n) heq
+
 end GenericExpr
 
 namespace NormExpr
+
+def arity_eta (heq : arity ⟨f, hn⟩ = n) : arity ⟨(GenericExpr.expr_to_eta f), hn.to_eta⟩ = n := by
+  induction f generalizing n
+  any_goals (grind)
+  any_goals (
+    focus
+    try (
+      expose_names
+      simp_all [GenericExpr.expr_to_eta, arity, raw]
+      have h := GenericExpr.arity_eta' heq
+      grind))
 
 open GenericExpr in
 def to_eta (e : @NormExpr τ_c RedAff) : (@NormExpr (@EtaConst τ_c) (RedAff (τ := (@EtaConst τ_c)))) :=

@@ -57,11 +57,8 @@ inductive EtaFn : (f : @NormExpr τ_c RedAff) → List (@NormExpr τ_c RedAff) �
 
 def EtaFn.to_eta {f : @GenericExpr τ_c} {hn : IsNorm RedAff f} (e : EtaFn ⟨f, hn⟩ doms) : EtaFn (mk f hn).to_eta (doms.map (·.to_eta)) := by
   cases e with
-  | tm₁ =>
-    exact .tm₁ 
-    sorry
-  | tm₂ =>
-    sorry
+  | tm₁ h_dom => exact .tm₁ h_dom.to_eta
+  | tm₂ h_dom => exact .tm₂ h_dom.to_eta
 
 @[dcc_size]
 def EtaFn.length (e : EtaFn f doms) : doms.length = arity f := by

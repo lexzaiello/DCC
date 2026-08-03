@@ -225,17 +225,13 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
           | bang =>
             match a_2 with
             | ⟨hr, hn⟩ =>
-              match hr.cases_head with
-              | .inl h => cases h
-              | .inr ⟨_, h₁, h₂⟩ =>
-                cases h₁ with
-                | unmap =>
-                  match h₂.cases_head with
-                  | .inl h =>
-                    
-                    sorry
-                  | .inr ⟨_, h₁, h₂⟩ =>
-                    sorry
+              expose_names
+              cases a_3 with
+              | pure => exact a_2.absurd ⟨.single .unmap, fun ⟨_, h⟩ => by
+                cases h with
+                | congrFun h => cases h
+                | congrArg h => cases h⟩
+              | coup h => exact a_2.absurd ⟨.trans (.single .unmap) (.single .fstc), by assumption⟩
     · expose_names
       cases e_h_1 with
       | tm₁ h =>

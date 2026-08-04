@@ -9,6 +9,14 @@ namespace NormExpr
 
 namespace EtaFn
 
+namespace Hole
+
+open GenericExpr
+
+--def cast_norm_app (e_h₁ : Hole α lv₁ hole₁) (e_h₂ : Hole β lv₂ hole₂) (h : IsNorm RedAff (DCC? (f hole₁.raw hole₂.raw))) (e_h₃ : Hole α' lv₃ hole₃)
+
+end Hole
+
 namespace Canonicalize
 
 set_option pp.deepTerms true in
@@ -426,7 +434,7 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
                       cases h with
                       | sigl h => exact (hn_hole₁_2 ⟨_, h⟩).elim
                       | sigr h => exact (hn_hole₂ ⟨_, h⟩).elim-/
-  | par =>
+  /-| par =>
     cases h₂
     any_goals (
       focus
@@ -477,43 +485,64 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       cases hr_τ.elim_norm hn₂
       have h_mem' := GenericExpr.mem_imp_contains_hole (e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩)
       simp [raw, Holes.v_elems, Vector.get] at h_mem'
-      grind
-  /-| eval =>
+      grind-/
+  | eval =>
+    expose_names
     cases h₂
     case eval =>
       expose_names
+      cases hn₁.eq hn₁_1
+      cases e_h.hole_same e_h_1
       cases heq
+      simp [GenericExpr.expr_to_eta] at a_3
+      cases a_3.unique ⟨.single .evalc, by
+        dcc_simp
+        assumption⟩
+      cases e_f'.unique (by
+        cases heq_1
+        dcc_simp
+        dcc_simp at e_f'_1
+        exact e_f'_1)
       cases heq_1
-      dcc_simp at a_1
-      dcc_simp at a_3
-      have hrt' := a_3.push_head .evalc
-      cases e_h_1
-      -- cases on doms same f f'
-      cases a_1.elim_norm (by assumption)
+      dcc_simp
     any_goals (
       focus
       try (
         expose_names
         cases hn₁.eq hn_α_1
         cases e_h.hole_same e_h_1
-        cases a_2.unique ⟨.single .evalc, hn'⟩)
+        cases a_2.unique ⟨.single .evalc, by
+          dcc_simp
+          cases heq.symm
+          have heq : f' = (f'.eta_to_expr hn).expr_to_eta := by
+            dcc_simp
+          exact heq ▸ hn'⟩)
       done)
-    any_goals (
-      focus
-      try (
-        expose_names
-        cases hn₁.eq hn_coup
-        cases e_h.hole_same e_h_1
-        cases a_3.unique ⟨.single .evalc, hn'⟩)
-      done)
-    · expose_names
+    case fstc | sndc =>
+      expose_names
+      cases hn₁.eq hn_coup
+      cases e_h.hole_same e_h_1
+      cases a_3.unique ⟨.single .evalc, by
+        dcc_simp
+        cases heq.symm
+        have heq : f' = (f'.eta_to_expr hn).expr_to_eta := by
+            dcc_simp
+        exact heq ▸ hn'⟩
+    case quot₁ =>
+      expose_names
       cases hn₁.eq hn_α_1
       cases e_h.hole_same e_h_1
-      cases hr_τ.unique ⟨.single .evalc, hn'⟩
-      have h_mem := e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩
-      simp [raw, Holes.v_elems, Vector.get] at h_mem
-      grind
-  | quot₁ =>
+      cases hr_τ.unique ⟨.single .evalc, by
+        dcc_simp
+        cases heq.symm
+        have heq : f' = (f'.eta_to_expr hn).expr_to_eta := by
+            dcc_simp
+        exact heq ▸ hn'⟩
+      cases e_h with
+      | tm₁ heq h =>
+        have h_mem := GenericExpr.mem_imp_contains_hole h.sigl_hole_mem_tm
+        grind
+  /-| quot₁ =>
     cases h₂
     case quot₁ =>
       expose_names

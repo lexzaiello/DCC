@@ -503,6 +503,34 @@ def to_eta_left_inv
     simp [ha, hb, hc])
 
 @[dcc_reduce]
+def to_eta_left_inv'
+  {e : GenericExpr τ} {hn : ¬e.expr_to_eta.contains_hole = true} : eta_to_expr (expr_to_eta e) hn = e := by
+  unfold expr_to_eta
+  split
+  any_goals (simp [eta_to_expr])
+  any_goals (
+    focus
+    rename_i x
+    have ha := x.to_eta_left_inv
+    simp [ha]
+    done)
+  any_goals (
+    focus
+    rename_i x y
+    have ha := x.to_eta_left_inv
+    have hb := y.to_eta_left_inv
+    simp [ha, hb]
+    done)
+  any_goals (
+    focus
+    rename_i x y z
+    have ha := x.to_eta_left_inv
+    have hb := y.to_eta_left_inv
+    have hc := z.to_eta_left_inv
+    simp [ha, hb, hc])
+
+
+@[dcc_reduce]
 def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) :
   (expr_to_eta (eta_to_expr e hn)) = e := by
   induction e
@@ -520,4 +548,3 @@ def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) 
     | const => simp [eta_to_expr, expr_to_eta]
 
 end GenericExpr
-

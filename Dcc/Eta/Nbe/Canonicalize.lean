@@ -27,22 +27,22 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f doms)
   → Type u
   | id₁   : (e_f : EtaFn ⟨f, hn_f⟩ [⟨α, hn_α⟩])
     → (n_pi_α : ViewFnType α → False)
-    → (e_h : Holes e_f 0 [⟨hole₁, hn_hole₁⟩])
-    → RedAffNorm (DCC? (f hole₁)) ⟨hole₁, hn_hole₁⟩
-    → Canonicalize e_f (.tm₁ (_heq := (id_arity₁ n_pi_α)) (.id ⟨.refl, hn_α⟩))
+    → (e_h : Holes e_f.to_eta 0 [⟨hole₁, hn_hole₁⟩])
+    → RedAffNorm (DCC? (#(expr_to_eta f) hole₁)) ⟨hole₁, hn_hole₁⟩
+    → Canonicalize e_f (.tm₁ (_heq := (id_arity₁ (by assumption))) (.id ⟨.refl, (by assumption)⟩))
   | fstc  : (e_f : EtaFn f [⟨DCC? Coup(β), hn_coup⟩])
-    → (e_h : Holes e_f 0 [⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩])
-    → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨a, hn_hole₁.sigl⟩
+    → (e_h : Holes e_f.to_eta 0 [⟨DCC? ⟦#(expr_to_eta β)⟧(a, b), hn_hole₁⟩])
+    → RedAffNorm (DCC? (f.to_eta.raw ⟦#(expr_to_eta β)⟧(a, b))) ⟨a, hn_hole₁.sigl⟩
     → Canonicalize e_f (.tm₁ (_heq := (by grind)) (.fstc ⟨.refl, hn_coup.coup⟩))
   | sndc  : (e_f : EtaFn f [⟨DCC? Coup(β), hn_coup⟩])
-    → (e_h : Holes e_f 0 [⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩])
-    → RedAffNorm (DCC? (f.raw ⟦β⟧(a, b))) ⟨b, hn_hole₁.sigr⟩
+    → (e_h : Holes e_f.to_eta 0 [⟨DCC? ⟦#(expr_to_eta β)⟧(a, b), hn_hole₁⟩])
+    → RedAffNorm (DCC? (f.to_eta.raw ⟦#(expr_to_eta β)⟧(a, b))) ⟨b, hn_hole₁.sigr⟩
     → Canonicalize e_f (.tm₁ (_heq := (by grind)) (.sndc ⟨.refl, hn_coup.coup⟩))
   | fstc' : (e_f : EtaFn f [⟨DCC? !(Coup(β)), hn_coup⟩])
-    → (e_h : Holes e_f 0 [⟨DCC? &(⟦β⟧(a, b)), hn_hole₁⟩])
-    → RedAffNorm (DCC? (f.raw &(⟦β⟧(a, b)))) ⟨a, (fun ⟨_, hr⟩ => by
-      have h := e_h.points_norm ⟨0, e_f.arity_pos⟩ ⟨0, by simp [dcc_size, raw, Holes.v_elems, Vector.get]⟩
-      change IsNorm RedAff (β.mkc a b) at h
+    → (e_h : Holes e_f.to_eta 0 [⟨DCC? &(⟦#(expr_to_eta β)⟧(a, b)), hn_hole₁⟩])
+    → RedAffNorm (DCC? (f.to_eta.raw &(⟦#(expr_to_eta β)⟧(a, b)))) ⟨a, (fun ⟨_, hr⟩ => by
+      have h := e_h.points_norm ⟨0, e_f.to_eta.arity_pos⟩ ⟨0, by simp [dcc_size, raw, Holes.v_elems, Vector.get]⟩
+      change IsNorm RedAff ((expr_to_eta β).mkc a b) at h
       exact h ⟨_, .sigl hr⟩)⟩
     → Canonicalize e_f
       (.tm₁
@@ -50,10 +50,10 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f doms)
         (_heq := (by grind))
         (.unmap ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩ (.fstc ⟨.refl, fun ⟨_, h⟩ => hn_coup ⟨_, .bang (.coup h)⟩⟩)))
   | sndc' : (e_f : EtaFn f [⟨DCC? !(Coup(β)), hn_coup⟩])
-    → (e_h : Holes e_f 0 [⟨DCC? &(⟦β⟧(a, b)), hn_hole₁⟩])
-    → RedAffNorm (DCC? (f.raw &(⟦β⟧(a, b)))) ⟨b, (fun ⟨_, hr⟩ => by
-      have h := e_h.points_norm ⟨0, e_f.arity_pos⟩ ⟨0, by simp [dcc_size, raw, Holes.v_elems, Vector.get]⟩
-      change IsNorm RedAff (β.mkc a b) at h
+    → (e_h : Holes e_f.to_eta 0 [⟨DCC? &(⟦#(expr_to_eta β)⟧(a, b)), hn_hole₁⟩])
+    → RedAffNorm (DCC? (f.to_eta.raw &(⟦#(expr_to_eta β)⟧(a, b)))) ⟨b, (fun ⟨_, hr⟩ => by
+      have h := e_h.points_norm ⟨0, e_f.to_eta.arity_pos⟩ ⟨0, by simp [dcc_size, raw, Holes.v_elems, Vector.get]⟩
+      change IsNorm RedAff ((expr_to_eta β).mkc a b) at h
       exact h ⟨_, .sigr hr⟩)⟩
     → Canonicalize e_f
       (.tm₁
@@ -62,61 +62,70 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f doms)
         (.unmap ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩ (.sndc ⟨.refl, fun ⟨_, h⟩ => hn_coup ⟨_, .bang (.coup h)⟩⟩)))
   | par   : (e_f : EtaFn ⟨f, hn_f⟩ [⟨α, hn_α⟩])
     → (α.ViewCoupBang → False)
-    → (e_h : Holes e_f 0 [⟨hole₁, hn_hole₁⟩])
-    → RedAffNorm (DCC? (f hole₁)) ⟨(DCC? (f' hole₁)), hn₂⟩
-    → (e_f' : EtaFn ⟨f', hn₂.congrFun⟩ [⟨α, hn_α⟩])
+    → (e_h : Holes e_f.to_eta 0 [⟨hole₁, hn_hole₁⟩])
+    → RedAffNorm (DCC? (#(expr_to_eta f) hole₁)) ⟨(DCC? (f' hole₁)), hn₂⟩
+    → (hn : ¬ f'.contains_hole)
+    → (e_f' : EtaFn ⟨(eta_to_expr f' hn), hn₂.congrFun.from_eta hn⟩ [⟨α, hn_α⟩])
     → Canonicalize e_f e_f'
   | eval  : (e_f : EtaFn ⟨f, hn_f⟩ [⟨DCC? Coup(β), hn₁⟩])
-    → (e_h : Holes e_f 0 [⟨DCC? ⟦β⟧(a, b), hn_hole₁⟩])
-    → RedAffNorm (DCC? (f ⟦β⟧(a, b))) ⟨DCC? (f' a b), hn'⟩
-    → (e_f' : EtaFn ⟨f', hn'.congrFun.congrFun⟩ [⟨α, hn_α⟩, ⟨β, hn₁.coup⟩])
-    → Canonicalize e_f (.tm₁ (_heq := by grind) (.eval (α := α) (β := β) (x := f') ⟨.refl, hn₁.coup⟩))
+    → (e_h : Holes e_f.to_eta 0 [⟨DCC? ⟦#(expr_to_eta β)⟧(a, b), hn_hole₁⟩])
+    → RedAffNorm (DCC? (#(expr_to_eta f) ⟦#(expr_to_eta β)⟧(a, b))) ⟨DCC? (f' a b), hn'⟩
+    → (hn : ¬ f'.contains_hole)
+    → (e_f' : EtaFn ⟨eta_to_expr f' hn, hn'.congrFun.congrFun.from_eta hn⟩ [⟨α, hn_α⟩, ⟨β, hn₁.coup⟩])
+    → Canonicalize e_f (.tm₁ (_heq := by grind) (.eval (α := α) (β := β) (x := eta_to_expr f' hn) ⟨.refl, hn₁.coup⟩))
   | id₂   : (e_f : EtaFn ⟨f, hn_f⟩ [⟨DCC? (Π(f_α, f_β) x_α), hnτ⟩,
               ⟨DCC? `((Π(f_α, f_β) x_α), τ'), hn_x⟩])
     → (hr_τ : RedAffNorm (DCC? (f_α x_α)) ⟨τ', hn_τ'⟩)
-    → (e_h : Holes e_f 0 [⟨hole₁, hn_hole₁⟩, ⟨hole₂, hn_hole₂⟩])
-    → RedAffNorm (DCC? (f hole₁ hole₂))
+    → (e_h : Holes e_f.to_eta 0 [⟨hole₁, hn_hole₁⟩, ⟨hole₂, hn_hole₂⟩])
+    → RedAffNorm (DCC? (#(expr_to_eta f) hole₁ hole₂))
       ⟨(DCC? (hole₁ hole₂)), hn_nole'⟩
     → Canonicalize e_f (.tm₂ (_heq := by grind) (.id hr_τ ⟨.refl, hnτ⟩))
   | quot₁ : (e_f : EtaFn ⟨f, hn_f⟩ [⟨α, hn_α⟩])
-    → (e_h : Holes e_f 0 [⟨hole₁, hn_hole₁⟩])
-    → (hr_τ : RedAffNorm (DCC? (f hole₁)) ⟨e', hn_e'⟩)
+    → (e_h : Holes e_f.to_eta 0 [⟨hole₁, hn_hole₁⟩])
+    → (hr_τ : RedAffNorm (DCC? (#(expr_to_eta f) hole₁)) ⟨e', hn_e'⟩)
     → (hn_e' : ViewQuot e' → False)
-    → (¬ e'.hole_mem_tm)
+    → (hn : ¬ e'.contains_hole)
     → Canonicalize e_f (.tm₁ (_heq := by
       cases e'
       any_goals (grind)
-      case quot => exact (hn_e' .quot).elim) (.quot (x := e') ⟨.refl, hn_α⟩))
+      case quot => exact (hn_e' .quot).elim
+      case const =>
+        simp [arity, raw]
+        unfold eta_to_expr
+        simp
+        split <;> grind) (.quot (x := (eta_to_expr e' hn)) ⟨.refl, hn_α⟩))
   | quot₂ : (e_f : EtaFn ⟨f, hn_f⟩ [⟨α, hn_α⟩, ⟨DCC? `(α, β), hn_quot⟩])
-    → (e_h : Holes e_f 0 [⟨hole₁, hn_hole₁⟩, ⟨hole₂, hn_hole₂⟩])
-    → (hr_τ : RedAffNorm (DCC? (f hole₁ hole₂)) ⟨e', hn_e'⟩)
+    → (e_h : Holes e_f.to_eta 0 [⟨hole₁, hn_hole₁⟩, ⟨hole₂, hn_hole₂⟩])
+    → (hr_τ : RedAffNorm (DCC? (#(expr_to_eta f) hole₁ hole₂)) ⟨e', hn_e'⟩)
     → (¬ e'.hole_mem_tm)
-    → Canonicalize e_f (.tm₂ (_heq := by grind) (.quot (x := e') ⟨.refl, hn_α⟩))
+    → (hn : ¬ e'.contains_hole)
+    → Canonicalize e_f (.tm₂ (_heq := by grind) (.quot (x := eta_to_expr e' hn) ⟨.refl, hn_α⟩))
   | quot_bang : (e_f : EtaFn ⟨f, hn_f⟩ [⟨DCC? !(α), hn_α⟩, ⟨(DCC? !<β>), hn_β⟩])
-    → (e_h : Holes e_f 0 [⟨hole₁, hn_hole₁⟩, ⟨hole₂, hn_hole₂⟩])
-    → (hr_τ : RedAffNorm (DCC? (f hole₁ hole₂)) ⟨e', hn_e'⟩)
+    → (e_h : Holes e_f.to_eta 0 [⟨hole₁, hn_hole₁⟩, ⟨hole₂, hn_hole₂⟩])
+    → (hr_τ : RedAffNorm (DCC? (#(expr_to_eta f) hole₁ hole₂)) ⟨e', hn_e'⟩)
     → (¬ e'.hole_mem_tm)
+    → (hn : ¬ e'.contains_hole)
     → Canonicalize e_f (.tm₂ (_heq := by grind) (.curr' ⟨.refl, fun ⟨_, h⟩ => hn_α ⟨_, .bang h⟩⟩ ⟨.refl, fun ⟨_, h⟩ => hn_β ⟨_, .map₀ h⟩⟩
-      (x := (DCC? `(!(Coup(β)), e')))
+      (x := (DCC? `(!(Coup(β)), #(eta_to_expr e' hn))))
       ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩ (.quot
-      (x := e')
+      (x := eta_to_expr e' hn)
       (β  := (DCC? !(Coup(β))))
       (β' := ⟨(DCC? !(Coup(β))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β ⟨_, .map₀ h⟩⟩)
       ⟨.refl, fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β ⟨_, .map₀ h⟩⟩)))
 
-def canonicalize₁ {f : GenericExpr (@EtaConst τ_c)}
+def canonicalize₁ {f : @GenericExpr τ_c}
   {hn : IsNorm RedAff f}
-  (α : GenericExpr EtaConst) (hn_α : IsNorm RedAff α) (e_f : EtaFn ⟨f, hn⟩ [mk α hn_α]) :
-  Option ((f' : @EtaExpr.Norm τ_c) × (e_f' : EtaFn f' [mk α hn_α]) × e_f.Canonicalize e_f') :=
-  match e_f.holes 0 with
+  (α : @GenericExpr τ_c) (hn_α : IsNorm RedAff α) (e_f : EtaFn ⟨f, hn⟩ [mk α hn_α]) :
+  Option ((f' : @NormExpr τ_c RedAff) × (e_f' : EtaFn f' [mk α hn_α]) × e_f.Canonicalize e_f') :=
+  match e_f.to_eta.holes 0 with
   | .some ⟨[⟨e_hole, hn_hole⟩], h_holes⟩ =>
-    if heq : (reduce RedAff (DCC? (f e_hole))).fst = e_hole then
+    if heq : (reduce RedAff (DCC? (#(expr_to_eta f) e_hole))).fst = e_hole then
       if heq₂ : (view_fn_type? α).isNone then by
-        have h := aff_sound' (DCC? (f e_hole))
+        have h := aff_sound' (DCC? (#(expr_to_eta f) e_hole))
         simp [heq] at h
         exact .some ⟨_, _, .id₁ e_f (view_fn_type?_none_sound' heq₂) h_holes h⟩
       else .none
-    else if h_contains : ((reduce RedAff (DCC? (f e_hole))).fst).hole_mem_tm then
+    else if h_contains : ((reduce RedAff (DCC? (#(expr_to_eta f) e_hole))).fst).hole_mem_tm then
       match heq_some : α.view_coup_bang? with
       | .some h => by
         cases h with
@@ -124,32 +133,36 @@ def canonicalize₁ {f : GenericExpr (@EtaConst τ_c)}
           rename_i β
           match e_hole with
           | DCC? ⟦β₂⟧(a, b) =>
-            if heqc : β₂ = β then
-              if heqa : (reduce RedAff (DCC? (f ⟦β⟧(a, b)))).fst = a then
+            if heqc : β₂ = expr_to_eta β then
+              if heqa : (reduce RedAff (DCC? (#(expr_to_eta f) ⟦#(expr_to_eta β)⟧(a, b)))).fst = a then
                 have ⟨hr, hn⟩ := reduce_sound_fst_norm heqa
                 cases heqc
                 exact .some ⟨_, _, .fstc e_f h_holes ⟨hr, hn⟩⟩
-              else if heqa : (reduce RedAff (DCC? (f ⟦β⟧(a, b)))).fst = b then
+              else if heqa : (reduce RedAff (DCC? (#(expr_to_eta f) ⟦#(expr_to_eta β)⟧(a, b)))).fst = b then
                 have ⟨hr, hn⟩ := reduce_sound_fst_norm heqa
                 cases heqc
                 exact .some ⟨_, _, .sndc e_f h_holes ⟨hr, hn⟩⟩
               else
-                match h_app_eq : (reduce RedAff (DCC? (f ⟦β⟧(a, b)))) with
+                match h_app_eq : (reduce RedAff (DCC? (#(expr_to_eta f) ⟦#(expr_to_eta β)⟧(a, b)))) with
                 | ⟨DCC? (f' a' b'), ⟨hr⟩⟩ =>
+                  change @EtaExpr τ_c at f'
                   have hn' := reduce_norm h_app_eq
                   if heqa : a' = a then
                     if heqb : b' = b then
-                      let f' : EtaExpr.Norm := ⟨f', hn'.congrFun.congrFun⟩
-                      match f'.view_eta_fn with
-                      | .some ⟨doms, e_f'⟩ =>
-                        match doms with
-                        | [α, ⟨β', hn⟩] =>
-                          if heq_β' : β' = β then
-                            cases heq_β'; cases heqc; cases heqa; cases heqb
-                            exact .some ⟨_, _, .eval e_f h_holes ⟨hr, hn'⟩ e_f'⟩
-                          else exact .none
-                        | _ => exact .none
-                      | .none => exact .none
+                      if hn'' : ¬ f'.contains_hole then
+                        let f'' := GenericExpr.eta_to_expr f' hn''
+                        let f' : @NormExpr τ_c RedAff := ⟨f'', hn'.congrFun.congrFun.from_eta hn''⟩
+                        match f'.view_eta_fn with
+                        | .some ⟨doms, e_f'⟩ =>
+                          match doms with
+                          | [α, ⟨β', hn⟩] =>
+                            if heq_β' : β' = β then
+                              cases heq_β'; cases heqc; cases heqa; cases heqb
+                              exact .some ⟨_, _, .eval e_f h_holes ⟨hr, hn'⟩ (e_f'.from_eta (by sorry))⟩
+                            else exact .none
+                          | _ => exact .none
+                        | .none => exact .none
+                      else exact .none
                     else exact .none
                   else exact .none
                 | _ => exact .none
@@ -160,7 +173,7 @@ def canonicalize₁ {f : GenericExpr (@EtaConst τ_c)}
           match e_hole with
           | DCC? &(⟦β₂⟧(a, b)) =>
             if heqc : β₂ = β then
-              if heqa : (reduce RedAff (DCC? (f &(⟦β⟧(a, b))))).fst = a then
+              if heqa : (reduce RedAff (DCC? (#(expr_to_eta f) &(⟦#(expr_to_eta β)⟧(a, b))))).fst = a then
                 have ⟨hr, hn⟩ := reduce_sound_fst_norm heqa
                 cases heqc
                 exact .some ⟨_, _, .fstc' e_f h_holes ⟨hr, hn⟩⟩

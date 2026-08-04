@@ -274,7 +274,7 @@ end NormExpr
 namespace GenericExpr
 
 @[grind]
-def eta_to_expr (e : GenericExpr (τ := EtaConst (τ_c := τ_c)))
+def eta_to_expr (e : @EtaExpr τ_c)
   (hn_contains : ¬ e.contains_hole) : GenericExpr τ_c :=
   match e with
   | DCC? ∗ => DCC? ∗

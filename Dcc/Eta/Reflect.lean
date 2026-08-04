@@ -173,6 +173,11 @@ def to_eta (e : @NormExpr τ_c RedAff) : (@NormExpr (@EtaConst τ_c) (RedAff (τ
   match e with
   | ⟨e, hn⟩ => ⟨e.expr_to_eta, hn.to_eta⟩
 
+open GenericExpr in
+def from_eta (e : @EtaExpr.Norm τ_c) (hn_mem : ¬ e.raw.contains_hole) : (@NormExpr τ_c (RedAff (τ := τ_c))) :=
+  match e with
+  | ⟨e, hn⟩ => ⟨e.eta_to_expr hn_mem, hn.from_eta hn_mem⟩
+
 end NormExpr
 
 namespace GenericExpr
@@ -182,5 +187,44 @@ open GenericExpr in
 def RedAffNorm.to_eta (h : RedAffNorm A B) : RedAffNorm A.expr_to_eta ⟨B.raw.expr_to_eta, B.is_norm.to_eta⟩ :=
   match h with
   | ⟨hr, hn⟩ => ⟨hr.cast_eta, hn.to_eta⟩
+
+namespace RedAffReflTrans
+
+def tail_no_hole (hr : RedAffReflTrans A B) (hn : ¬ A.contains_hole) : ¬ B.contains_hole := by
+  match hr.cases_head with
+  | .inl h => cases h; assumption
+  | .inr ⟨_, h₁, h₂⟩ =>
+    have ha := h₁.tail_no_hole hn
+    have h_dec := h₁.decreasing
+    exact tail_no_hole h₂ ha
+termination_by size A
+
+def from_eta (hr : RedAffReflTrans A B) (hn₁ : ¬ A.contains_hole) : RedAffReflTrans (eta_to_expr A hn₁) (eta_to_expr B (hr.tail_no_hole hn₁)) := by
+  match hr.cases_head with
+  | .inl h =>
+    cases h
+    exact .refl
+  | .inr ⟨_, h₁, h₂⟩ =>
+    have h := h₁.reflect_eta hn₁
+    have h_dec := h₁.decreasing
+    have h₃ := from_eta h₂ (h₁.tail_no_hole hn₁)
+    exact .trans (.single h) h₃
+termination_by size A
+
+end RedAffReflTrans
+
+namespace RedAffNorm
+
+def tail_no_hole (hr : RedAffNorm A B) (hn : ¬ A.contains_hole) : ¬ B.raw.contains_hole :=
+  match hr with
+  | ⟨hr, hn⟩ => hr.tail_no_hole (by assumption)
+
+end RedAffNorm
+
+open GenericExpr in
+@[aesop safe apply (rule_sets := [DccRel])]
+def RedAffNorm.from_eta (h : RedAffNorm A B) : RedAffNorm (eta_to_expr A hn₁) ⟨B.raw.eta_to_expr (h.tail_no_hole hn₁), B.is_norm.from_eta (h.tail_no_hole hn₁)⟩ :=
+  match h with
+  | ⟨hr, hn⟩ => ⟨hr.from_eta (by assumption), hn.from_eta (hr.tail_no_hole (by assumption))⟩
 
 end GenericExpr

@@ -533,6 +533,60 @@ decreasing_by
       have h_dec₁ := hrn₁.decreasing?
       grind))
 
+open GenericExpr in
+def NormExpr.Domain.from_eta {f α : @EtaExpr.Norm τ_c} (h : Domain f α)
+  (hn₁ : ¬ f.raw.contains_hole)
+  (hn₂ : ¬ α.raw.contains_hole) : Domain (f.from_eta hn₁) (α.from_eta hn₂) := by
+  cases h
+  any_goals (
+    focus
+    try (
+      expose_names
+      constructor
+      · exact hrn.from_eta (hn₁ := by grind)
+      · have h_dec := hrn.decreasing?
+        have hn := hrn.tail_no_hole (by grind)
+        exact a.from_eta hn (by grind))
+    done)
+  any_goals (
+    focus
+    try (
+      expose_names
+      have h_dec := hrn.decreasing?
+      have h := hrn.tail_no_hole (by grind)
+      constructor
+      · exact hrn.from_eta (hn₁ := by grind))
+    done)
+  · expose_names
+    have h := hrn.tail_no_hole (by grind)
+    have h_dec := hrn.decreasing?
+    constructor
+    · exact hn_y.from_eta (by grind)
+    · exact hrn.from_eta (hn₁ := by grind)
+  · expose_names
+    constructor
+    · exact hn₂_1.from_eta (by grind)
+    · exact a.from_eta (by grind) (by grind)
+  any_goals (
+    focus
+    try (
+      expose_names
+      have h_dec := hrn₁.decreasing?
+      have h   := hrn₁.from_eta (hn₁ := by grind)
+      have hn' := hrn₁.tail_no_hole (by grind)
+      constructor
+      · exact h
+      · exact a.from_eta (by grind) (by grind))
+    done)
+  · expose_names
+    have h₁ := a.from_eta (by grind) (by grind)
+    constructor
+    · exact hn₂_1.from_eta (by grind)
+    · exact h₁
+termination_by size f
+decreasing_by
+  any_goals (grind)
+
 set_option maxHeartbeats 100000000000000000 in
 open GenericExpr in
 open NormExpr in

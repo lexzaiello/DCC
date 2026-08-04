@@ -129,7 +129,7 @@ def hole_mem_tm (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     | .const (.hole _) => True
     | .const _ => False
 
-def mem_imp_contains_hole (h : hole_mem_tm (τ := (@EtaConst τ_c)) e) : contains_hole e := by
+def mem_imp_contains_hole (h : hole_mem_tm (τ := τ_c) e) : contains_hole e := by
   induction e
   any_goals (grind)
   case const x =>

@@ -440,7 +440,7 @@ set_option pp.deepTerms.threshold 9999 in
 set_option pp.proofs true in
 set_option pp.proofs.threshold 9999 in
 set_option maxHeartbeats 100000000000 in
-def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
+def Canonicalize.complete {f f' : @NormExpr τ_c RedAff}
   {e_f : EtaFn f doms}
   {e_f' : EtaFn f' doms}
   (h : Canonicalize e_f e_f') : canonicalize e_f = .some ⟨f', e_f', h⟩ := by
@@ -477,7 +477,7 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
       simp at heq'
       cases heq'.left; cases heq'.right
       have hneq : (reduce RedAff (f.1.expr_to_eta.app ((expr_to_eta β).mkc a b))).fst ≠ (expr_to_eta β).mkc a b := fun h => by
-        simp [raw, h] at heq
+        simp [raw] at heq
         unfold NormExpr.to_eta at heq
         simp at heq
         have heq := heq.symm.trans h
@@ -521,7 +521,7 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
       simp at heq'
       cases heq'.left; cases heq'.right
       have hneq : (reduce RedAff (f.1.expr_to_eta.app (β.expr_to_eta.mkc a b))).fst ≠ β.expr_to_eta.mkc a b := fun h => by
-        simp [raw, h] at heq
+        simp [raw] at heq
         unfold NormExpr.to_eta at heq
         simp at heq
         have heq := heq.symm.trans h
@@ -641,7 +641,7 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
       simp at heq'
       cases heq'.left; cases heq'.right
       have hneq : (reduce RedAff (f.1.expr_to_eta.app (β.expr_to_eta.mkc a b).box)).fst ≠ (β.expr_to_eta.mkc a b).box := fun h => by
-        simp [raw, h] at heq
+        simp [raw] at heq
         unfold NormExpr.to_eta at heq
         simp at heq
         have heq := heq.symm.trans h
@@ -686,7 +686,7 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
       simp at heq'
       cases heq'.left; cases heq'.right
       have hneq : (reduce RedAff (f.1.expr_to_eta.app (β.expr_to_eta.mkc a b).box)).fst ≠ (β.expr_to_eta.mkc a b).box := fun h => by
-        simp [raw, h] at heq
+        simp [raw] at heq
         unfold NormExpr.to_eta at heq
         simp at heq
         have heq := heq.symm.trans h
@@ -829,7 +829,9 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
       · grind
       case isFalse =>
         split
-        · have h := mem_imp_contains_hole (by assumption)
+        · rename_i h_mem
+          have h_mem' := heq ▸ h_mem
+          have h := mem_imp_contains_hole (τ_c := τ_c) (e := e') (heq ▸ h_mem)
           grind
         · simp [heq.symm ▸ ViewQuot.complete_none hn_e'_1]
           have h := (hr_τ.out_eq ▸ hr_τ).eq
@@ -951,12 +953,12 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
     · grind
 
 def canonicalize_none_sound {e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms} (h : canonicalize e_f = .none) : ∀
-  {f' : @EtaExpr.Norm τ_c} {e_f' : EtaFn (τ_c := τ_c) f' doms}, Canonicalize e_f e_f' → False := by
+  {f' : @NormExpr τ_c RedAff} {e_f' : EtaFn (τ_c := τ_c) f' doms}, Canonicalize (τ_c := τ_c) e_f e_f' → False := by
   intro _ _ h
-  have heq := h.complete
+  have heq := h.complete (τ_c := τ_c)
   grind
 
-def Canonicalize.none_complete {e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms} (h : ∀ {f' : @EtaExpr.Norm τ_c}
+def Canonicalize.none_complete {e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms} (h : ∀ {f' : @NormExpr τ_c RedAff}
   {e_f' : EtaFn (τ_c := τ_c) f' doms}, Canonicalize e_f e_f' → False) : canonicalize e_f = .none := by
   apply Option.eq_none_iff_forall_ne_some.mpr
   intro ⟨f', e_f', h'⟩

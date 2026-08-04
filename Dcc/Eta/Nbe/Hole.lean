@@ -69,18 +69,24 @@ def EtaFn.to_eta {f : @GenericExpr τ_c} {hn : IsNorm RedAff f} (e : EtaFn ⟨f,
   | tm₂ h_dom => expose_names; exact .tm₂ h_dom.to_eta (_heq := arity_eta _heq)
 
 def EtaFn.from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn : IsNorm RedAff f} (hn_mem : ¬ f.contains_hole) {doms : List (@EtaExpr.Norm τ_c)}
-  (e : EtaFn ⟨f, hn⟩ doms)
-  (hn_doms : List.Forall (¬ ·.raw.contains_hole) doms)
-  : EtaFn ⟨f.eta_to_expr hn_mem, hn.from_eta hn_mem⟩ (doms.attach.map (fun ⟨x, h⟩ => x.from_eta' (by
-    exact (List.forall_iff_forall_mem.mp hn_doms) x (by assumption)))) := by
+  (e : EtaFn ⟨f, hn⟩ doms) :
+    EtaFn ⟨f.eta_to_expr hn_mem, hn.from_eta hn_mem⟩ (by
+      cases e with
+      | tm₁ =>
+        expose_names
+        have h := h_dom.no_holes (by grind)
+        exact [α.from_eta h]
+      | tm₂ =>
+        expose_names
+        have h := h_dom.no_holes (by grind)
+        exact [α.from_eta h.left, β.from_eta h.right]) := by
   simp
   cases e with
   | tm₁ =>
     expose_names
-    simp at hn_doms
     exact .tm₁ (by
-      simp
-      have h := h_dom.from_eta (by grind) (by grind)
+      have hn := h_dom.no_holes (by grind)
+      have h  := h_dom.from_eta (by grind) (by grind)
       simp [NormExpr.from_eta] at h
       exact h) (_heq :=
       arity_from_eta' (by
@@ -88,13 +94,11 @@ def EtaFn.from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn : IsNorm RedAff f} (h
         exact _heq))
   | tm₂ =>
     expose_names
-    simp at hn_doms
     exact .tm₂ (by
-      simp
-      have h := h_dom.from_eta (by grind) (by grind)
+      have ha := h_dom.no_holes (by grind)
+      have h  := h_dom.from_eta (by grind) (by grind) (by grind)
       simp [NormExpr.from_eta] at h
-      exact h)
-    sorry
+      exact h) (_heq := by exact arity_from_eta' (by dcc_simp_all; grind))
 
 @[dcc_size]
 def EtaFn.length (e : EtaFn f doms) : doms.length = arity f := by

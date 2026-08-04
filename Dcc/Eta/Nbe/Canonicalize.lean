@@ -435,6 +435,10 @@ def Canonicalize.unique {f₁ f₂ : @NormExpr τ_c RedAff} {e_f : EtaFn f₁ do
     have heq₄ := hrn.ext ⟨.refl, mk_bang_norm (mk_coup_norm (by assumption))⟩
     grind
 
+set_option pp.deepTerms true in
+set_option pp.deepTerms.threshold 9999 in
+set_option pp.proofs true in
+set_option pp.proofs.threshold 9999 in
 set_option maxHeartbeats 100000000000 in
 def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
   {e_f : EtaFn f doms}
@@ -926,17 +930,15 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
           --subst heqb
           have h    := (hr_τ.out_eq ▸ hr_τ).eq
           have hrt' := RedAffNorm.mk hr' (by assumption)
-          have hh   := (hrt'.out_eq ▸ hrt').eq
-          have hf   := h.trans hh.symm
+          have hh   := (a.out_eq ▸ a).eq
           simp only
-          have hg := (hrt₁.out_eq ▸ hrt₁).eq
           simp_all
           constructor
           · simp [aff_sound, aff_sound']
             try grind
           · grind
         case h_2 x =>
-          generalize h_red : reduce RedAff ((f₀.app hole₁).app hole₂) = res
+          generalize h_red : reduce RedAff ((f_1.expr_to_eta.app hole₁).app hole₂) = res
           cases res
           rename_i fst snd
           cases snd
@@ -944,7 +946,7 @@ def Canonicalize.complete {f f' : @EtaExpr.Norm τ_c}
           have h_fst : fst = hole₁.app hole₂ := by
             grind
           subst h_fst
-          exact (x hole₁ hole₂ (match hrt with | ⟨a, _⟩ => a) h_red).elim
+          exact (x hole₁ hole₂ (match a with | ⟨a, _⟩ => a) h_red).elim
       · grind
     · grind
 

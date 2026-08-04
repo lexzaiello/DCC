@@ -1,6 +1,7 @@
 import Dcc.Eta.Nbe.Hole
 import Dcc.Eta.Reflect
 import Dcc.Aff.Red
+import Dcc.Eta.Inj
 
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]
@@ -10,210 +11,24 @@ namespace GenericExpr
 def IsNorm.bang (hn : IsNorm RedAff (.bang x)) : IsNorm RedAff x :=
   fun ⟨_, h⟩ => hn ⟨_, .bang h⟩
 
+def IsNorm.map (hn : IsNorm RedAff (.map x)) : IsNorm RedAff x :=
+  fun ⟨_, h⟩ => hn ⟨_, .map₀ h⟩
+
 def unmap_norm : IsNorm RedAff (.unmap x) := fun ⟨_, h⟩ => by cases h
 
 def fstc_norm  : IsNorm RedAff (.fstc x) := fun ⟨_, h⟩ => by cases h
 
-def sndc_norm  : IsNorm RedAff (.fstc x) := fun ⟨_, h⟩ => by cases h
+def sndc_norm  : IsNorm RedAff (.sndc x) := fun ⟨_, h⟩ => by cases h
 
-set_option pp.deepTerms true in
-set_option pp.deepTerms.threshold 9999 in
-set_option pp.proofs true in
-set_option pp.proofs.threshold 9999 in
-set_option maxHeartbeats 100000000000 in
-def eta_to_expr_inj {hn1 : ¬ f1.contains_hole} {hn2 : ¬ f2.contains_hole} :
-  eta_to_expr f1 hn1 = eta_to_expr f2 hn2 → f1 = f2 := by
-  intro h
-  unfold eta_to_expr at h
-  simp at h
-  split at h
-  any_goals (grind)
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_1 x y hn_contains_1) = x_1.eta_to_expr (eta_to_expr._proof_1 x_1 y_1 hn_contains_3) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_2 x y hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_2 x_1 y_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : (x.eta_to_expr (eta_to_expr._proof_3 x hn_contains_1)) = (x_1.eta_to_expr (eta_to_expr._proof_3 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : (x.eta_to_expr (eta_to_expr._proof_4 x hn_contains_1)) = (x_1.eta_to_expr (eta_to_expr._proof_4 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_1 x y hn_contains_1) = x_1.eta_to_expr (eta_to_expr._proof_1 x_1 y_1 hn_contains_3) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_2 x y hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_2 x_1 y_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_1 x y hn_contains_1) = x_1.eta_to_expr (eta_to_expr._proof_1 x_1 y_1 hn_contains_3) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_2 x y hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_2 x_1 y_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : (x.eta_to_expr (eta_to_expr._proof_9 x y z hn_contains_1)) = (x_1.eta_to_expr (eta_to_expr._proof_9 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_10 x y z hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_10 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have heq₃ : (z.eta_to_expr (eta_to_expr._proof_11 x y z hn_contains_1)) = (z_1.eta_to_expr (eta_to_expr._proof_11 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      have hc := eta_to_expr_inj heq₃
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_1 x y hn_contains_1) = x_1.eta_to_expr (eta_to_expr._proof_1 x_1 y_1 hn_contains_3) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_2 x y hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_2 x_1 y_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_1 x y hn_contains_1) = x_1.eta_to_expr (eta_to_expr._proof_1 x_1 y_1 hn_contains_3) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_2 x y hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_2 x_1 y_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_1 x y hn_contains_1) = x_1.eta_to_expr (eta_to_expr._proof_1 x_1 y_1 hn_contains_3) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_2 x y hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_2 x_1 y_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_1 x y hn_contains_1) = x_1.eta_to_expr (eta_to_expr._proof_1 x_1 y_1 hn_contains_3) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_2 x y hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_2 x_1 y_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : (x.eta_to_expr (eta_to_expr._proof_9 x y z hn_contains_1)) = (x_1.eta_to_expr (eta_to_expr._proof_9 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_10 x y z hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_10 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have heq₃ : (z.eta_to_expr (eta_to_expr._proof_11 x y z hn_contains_1)) = (z_1.eta_to_expr (eta_to_expr._proof_11 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      have hc := eta_to_expr_inj heq₃
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : (x.eta_to_expr (eta_to_expr._proof_9 x y z hn_contains_1)) = (x_1.eta_to_expr (eta_to_expr._proof_9 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_10 x y z hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_10 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have heq₃ : (z.eta_to_expr (eta_to_expr._proof_11 x y z hn_contains_1)) = (z_1.eta_to_expr (eta_to_expr._proof_11 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      have hc := eta_to_expr_inj heq₃
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : (x.eta_to_expr (eta_to_expr._proof_9 x y z hn_contains_1)) = (x_1.eta_to_expr (eta_to_expr._proof_9 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_10 x y z hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_10 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have heq₃ : (z.eta_to_expr (eta_to_expr._proof_11 x y z hn_contains_1)) = (z_1.eta_to_expr (eta_to_expr._proof_11 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      have hc := eta_to_expr_inj heq₃
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : (x.eta_to_expr (eta_to_expr._proof_9 x y z hn_contains_1)) = (x_1.eta_to_expr (eta_to_expr._proof_9 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_10 x y z hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_10 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have heq₃ : (z.eta_to_expr (eta_to_expr._proof_11 x y z hn_contains_1)) = (z_1.eta_to_expr (eta_to_expr._proof_11 x_1 y_1 z_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      have hc := eta_to_expr_inj heq₃
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : (x.eta_to_expr (eta_to_expr._proof_42 x y hn_contains_1)) = (x_1.eta_to_expr (eta_to_expr._proof_42 x_1 y_1 hn_contains_3)) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_43 x y hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_43 x_1 y_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      have hb := eta_to_expr_inj heq₂
-      grind
+def quot_norm  : IsNorm RedAff (.quot x y) := fun ⟨_, h⟩ => by cases h
+
+def mk_bang_norm (hn : IsNorm RedAff x) : IsNorm RedAff (.bang x) := fun ⟨_, h⟩ => by
+  cases h with
+  | bang h => exact hn ⟨_, h⟩
+
+def mk_coup_norm (hn : IsNorm RedAff x) : IsNorm RedAff (.coup x) := fun ⟨_, h⟩ => by
+  cases h with
+  | coup h => exact hn ⟨_, h⟩
 
 end GenericExpr
 
@@ -253,9 +68,9 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f doms)
   | fstc' : (e_f : EtaFn f [⟨DCC? !(Coup(β)), hn_coup⟩])
     → (e_h : Holes e_f 0 [⟨DCC? &(⟦#(expr_to_eta β)⟧(a, b)), hn_hole₁⟩])
     → RedAffNorm (DCC? (f.to_eta.raw &(⟦#(expr_to_eta β)⟧(a, b)))) ⟨a, (fun ⟨_, hr⟩ => by
-      have h := e_h.points_norm ⟨0, e_f.arity_pos⟩ ⟨0, by simp [dcc_size, raw, Holes.v_elems, Vector.get]⟩
-      change IsNorm RedAff ((expr_to_eta β).mkc a b) at h
-      exact h ⟨_, .sigl hr⟩)⟩
+        have h := e_h.points_norm ⟨0, e_f.arity_pos⟩ ⟨0, by simp [dcc_size, raw, Holes.v_elems, Vector.get]⟩
+        change IsNorm RedAff ((expr_to_eta β).mkc a b) at h
+        exact h ⟨_, .sigl hr⟩)⟩
     → Canonicalize e_f
       (.tm₁
         (f := ⟨.unmap (.fstc β), GenericExpr.unmap_norm⟩)
@@ -271,20 +86,22 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f doms)
       (.tm₁
         (f := ⟨.unmap (.sndc β), unmap_norm⟩)
         (_heq := (by grind))
-        (.unmap ⟨.refl, shdnc_norm⟩ (.sndc ⟨.refl, hn_coup.bang.coup⟩)))
+        (.unmap ⟨.refl, sndc_norm⟩ (.sndc ⟨.refl, hn_coup.bang.coup⟩)))
   | par   : (e_f : EtaFn ⟨f, hn_f⟩ [⟨α, hn_α⟩])
     → (α.ViewCoupBang → False)
     → (e_h : Holes e_f 0 [⟨hole₁, hn_hole₁⟩])
     → RedAffNorm (DCC? (#(expr_to_eta f) hole₁)) ⟨(DCC? (f' hole₁)), hn₂⟩
-    → (hn : ¬ f'.contains_hole)
-    → (e_f' : EtaFn ⟨(eta_to_expr f' hn), hn₂.congrFun.from_eta hn⟩ [⟨α, hn_α⟩])
+    → (hn  : ¬ f'.contains_hole)
+    → (heq : eta_to_expr f' hn = f'')
+    → (e_f' : EtaFn ⟨f'', heq ▸ hn₂.congrFun.from_eta hn⟩ [⟨α, hn_α⟩])
     → Canonicalize e_f e_f'
   | eval  : (e_f : EtaFn ⟨f, hn_f⟩ [⟨DCC? Coup(β), hn₁⟩])
     → (e_h : Holes e_f 0 [⟨DCC? ⟦#(expr_to_eta β)⟧(a, b), hn_hole₁⟩])
     → RedAffNorm (DCC? (#(expr_to_eta f) ⟦#(expr_to_eta β)⟧(a, b))) ⟨DCC? (f' a b), hn'⟩
-    → (hn : ¬ f'.contains_hole)
-    → (e_f' : EtaFn ⟨eta_to_expr f' hn, hn'.congrFun.congrFun.from_eta hn⟩ [⟨α, hn_α⟩, ⟨β, hn₁.coup⟩])
-    → Canonicalize e_f (.tm₁ (_heq := by grind) (.eval (α := α) (β := β) (x := eta_to_expr f' hn) ⟨.refl, hn₁.coup⟩))
+    → (hn  : ¬ f'.contains_hole)
+    → (heq : eta_to_expr f' hn = f'')
+    → (e_f' : EtaFn ⟨f'', heq ▸ hn'.congrFun.congrFun.from_eta hn⟩ [⟨α, hn_α⟩, ⟨β, hn₁.coup⟩])
+    → Canonicalize e_f (.tm₁ (_heq := by grind) (.eval (α := α) (β := β) (x := f'') ⟨.refl, hn₁.coup⟩))
   | id₂   : (e_f : EtaFn ⟨f, hn_f⟩ [⟨DCC? (Π(f_α, f_β) x_α), hnτ⟩,
               ⟨DCC? `((Π(f_α, f_β) x_α), τ'), hn_x⟩])
     → (hr_τ : RedAffNorm (DCC? (f_α x_α)) ⟨τ', hn_τ'⟩)
@@ -297,41 +114,60 @@ inductive Canonicalize : (e_f : EtaFn (τ_c := τ_c) f doms)
     → (hr_τ : RedAffNorm (DCC? (#(expr_to_eta f) hole₁)) ⟨e', hn_e'⟩)
     → (hn_e' : ViewQuot e' → False)
     → (hn : ¬ e'.contains_hole)
+    → (heq : eta_to_expr e' hn = e'')
     → Canonicalize e_f (.tm₁ (_heq := by
       cases e'
       any_goals (grind)
       case quot => exact (hn_e' .quot).elim
       case const =>
         simp [arity, raw]
+        cases heq
         unfold eta_to_expr
         simp
-        split <;> grind) (.quot (x := (eta_to_expr e' hn)) ⟨.refl, hn_α⟩))
+        split <;> grind) (.quot (x := e'') ⟨.refl, hn_α⟩))
   | quot₂ : (e_f : EtaFn ⟨f, hn_f⟩ [⟨α, hn_α⟩, ⟨DCC? `(α, β), hn_quot⟩])
     → (e_h : Holes e_f 0 [⟨hole₁, hn_hole₁⟩, ⟨hole₂, hn_hole₂⟩])
     → (hr_τ : RedAffNorm (DCC? (#(expr_to_eta f) hole₁ hole₂)) ⟨e', hn_e'⟩)
     → (¬ e'.hole_mem_tm)
     → (hn : ¬ e'.contains_hole)
-    → Canonicalize e_f (.tm₂ (_heq := by grind) (.quot (x := eta_to_expr e' hn) ⟨.refl, hn_α⟩))
+    → (heq : eta_to_expr e' hn = e'')
+    → Canonicalize e_f (.tm₂ (_heq := by grind) (.quot (x := e'') ⟨.refl, hn_α⟩))
   | quot_bang : (e_f : EtaFn ⟨f, hn_f⟩ [⟨DCC? !(α), hn_α⟩, ⟨(DCC? !<β>), hn_β⟩])
     → (e_h : Holes e_f 0 [⟨hole₁, hn_hole₁⟩, ⟨hole₂, hn_hole₂⟩])
     → (hr_τ : RedAffNorm (DCC? (#(expr_to_eta f) hole₁ hole₂)) ⟨e', hn_e'⟩)
     → (¬ e'.hole_mem_tm)
     → (hn : ¬ e'.contains_hole)
-    → Canonicalize e_f (.tm₂ (_heq := by grind) (.curr' ⟨.refl, fun ⟨_, h⟩ => hn_α ⟨_, .bang h⟩⟩ ⟨.refl, fun ⟨_, h⟩ => hn_β ⟨_, .map₀ h⟩⟩
-      (x := (DCC? `(!(Coup(β)), #(eta_to_expr e' hn))))
-      ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩ (.quot
-      (x := eta_to_expr e' hn)
+    → (heq : eta_to_expr e' hn = e'')
+    → Canonicalize e_f (.tm₂ (_heq := by grind) (.curr' ⟨.refl, hn_α.bang⟩ ⟨.refl, hn_β.map⟩
+      (x := (DCC? `(!(Coup(β)), e'')))
+      ⟨.refl, quot_norm⟩ (.quot
+      (x := e'')
       (β  := (DCC? !(Coup(β))))
-      (β' := ⟨(DCC? !(Coup(β))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β ⟨_, .map₀ h⟩⟩)
-      ⟨.refl, fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β ⟨_, .map₀ h⟩⟩)))
+      (β' := ⟨(DCC? !(Coup(β))), mk_bang_norm (mk_coup_norm hn_β.map)⟩)
+      ⟨.refl, mk_bang_norm (mk_coup_norm hn_β.map)⟩)))
 
+/-set_option pp.deepTerms true in
+set_option pp.deepTerms.threshold 9999 in
+set_option pp.proofs true in
+set_option pp.proofs.threshold 9999 in
 def Canonicalize.fstc'_inv {e_f : EtaFn f [⟨DCC? !(Coup(β)), hn_coup⟩]} (h : Canonicalize (τ_c := τ_c) e_f e_f2)
   : e_f2 = (.tm₁
         (f := ⟨.unmap (.fstc β), GenericExpr.unmap_norm⟩)
         (_heq := (by grind))
         (.unmap ⟨.refl, fstc_norm⟩ (.fstc ⟨.refl, hn_coup.bang.coup⟩))) := by
-  cases h
-  sorry
+  cases e_f with
+  | tm₁ h₁ =>
+    cases e_f2 with
+    | tm₁ h₂ =>
+      cases h₂ with
+      | unmap =>
+        expose_names
+        cases h with
+        | fstc' =>
+          grind
+        | par =>
+          
+          sorry-/
 
 def canonicalize₁ {f : @GenericExpr τ_c}
   {hn : IsNorm RedAff f}
@@ -380,7 +216,7 @@ def canonicalize₁ {f : @GenericExpr τ_c}
                           | [α, ⟨β', hn⟩] =>
                             if heq_β' : β' = β then
                               cases heq_β'; cases heqc; cases heqa; cases heqb
-                              exact .some ⟨_, _, .eval e_f h_holes ⟨hr, hn'⟩ hn'' e_f'⟩
+                              exact .some ⟨_, _, .eval e_f h_holes ⟨hr, hn'⟩ hn'' rfl e_f'⟩
                             else exact .none
                           | _ => exact .none
                         | .none => exact .none
@@ -419,7 +255,7 @@ def canonicalize₁ {f : @GenericExpr τ_c}
                 if heq_doms : doms' = [mk α hn_α] then
                   cases heq_doms
                   cases h_hole_eq
-                  exact .some ⟨_, _, .par e_f (view_coup_bang?_none_sound' (by grind)) h_holes ⟨hr, hn'⟩ (by grind) e_fn'⟩
+                  exact .some ⟨_, _, .par e_f (view_coup_bang?_none_sound' (by grind)) h_holes ⟨hr, hn'⟩ (by grind) rfl e_fn'⟩
                 else exact .none
               | _ => .none
           else .none
@@ -428,7 +264,7 @@ def canonicalize₁ {f : @GenericExpr τ_c}
       if h_some : (view_quot? ((reduce RedAff (DCC? (#(expr_to_eta f) e_hole))).fst)).isNone then
         if hn' : ((reduce RedAff (DCC? (#(expr_to_eta f) e_hole))).fst).contains_hole then
           .none
-        else .some ⟨_, _, .quot₁ e_f h_holes (aff_sound' _) (view_quot?_none_sound' h_some) hn'⟩
+        else .some ⟨_, _, .quot₁ e_f h_holes (aff_sound' _) (view_quot?_none_sound' h_some) hn' rfl⟩
       else .none
   | _ => .none
 
@@ -466,14 +302,14 @@ def canonicalize₂ {f : @GenericExpr τ_c}
         | DCC? !(α) =>
           if h : (reduce RedAff ((f.expr_to_eta.app e_hole₁).app e_hole₂)).fst.contains_hole then
             .none
-          else .some ⟨_, _, .quot_bang e_f h_holes (aff_sound' _) h_contains (by grind)⟩
+          else .some ⟨_, _, .quot_bang e_f h_holes (aff_sound' _) h_contains (by grind) rfl⟩
         | _ => .none
       | DCC? `(α₂, β) =>
         if heq_α : α₂ = α then by
           cases heq_α
           if h : (reduce RedAff ((f.expr_to_eta.app e_hole₁).app e_hole₂)).fst.contains_hole then
             exact .none
-          else exact .some ⟨_, _, .quot₂ e_f h_holes (aff_sound' _) h_contains (by grind)⟩
+          else exact .some ⟨_, _, .quot₂ e_f h_holes (aff_sound' _) h_contains (by grind) rfl⟩
         else .none
       | _ => .none
   | _ => .none
@@ -494,10 +330,6 @@ def canonicalize (e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Option ((f' : @
       | mk β hn_β =>
         exact canonicalize₂ α hn_α β hn_β (.tm₂ dom)
 
-set_option pp.deepTerms true in
-set_option pp.deepTerms.threshold 9999 in 
-set_option pp.proofs true in
-set_option pp.proofs.threshold 9999 in
 @[dcc_force_reduce]
 def Canonicalize.unique {f₁ f₂ : @NormExpr τ_c RedAff} {e_f : EtaFn f₁ doms} {e_f₁ : EtaFn f₂ doms} {e_f₂ : EtaFn f₂ doms}
   (h₁ : Canonicalize (τ_c := τ_c) e_f e_f₁)
@@ -513,7 +345,95 @@ def Canonicalize.unique {f₁ f₂ : @NormExpr τ_c RedAff} {e_f : EtaFn f₁ do
       cases hrn
       rfl)
     done)
-  
+  case fstc' | sndc' =>
+    cases h₂ with
+    | par =>
+      expose_names
+      exact (h .bang).elim
+    | _ => grind
+  case par =>
+    expose_names
+    cases h₂
+    any_goals (
+      focus
+      try (
+        cases e_f'
+        expose_names
+        cases h_dom
+        expose_names
+        have heq := hrn.ext ⟨.refl, hn_α_1⟩
+        grind)
+      done)
+    any_goals (
+      focus
+      try (
+        cases e_f'
+        expose_names
+        cases h_dom
+        expose_names
+        have heq := hrn.ext ⟨.refl, hn_coup.coup⟩
+        grind))
+    · cases e_f'
+      expose_names
+      cases h_dom
+      expose_names
+      cases hrn.elim_norm fstc_norm
+      have heq := hrn.ext ⟨.refl, fstc_norm⟩
+      cases a_3
+      expose_names
+      cases hrn_1.elim_norm hn_coup.bang.coup
+      have heq := hrn_1.ext ⟨.refl, hn_coup.bang.coup⟩
+      grind
+    · cases e_f'
+      expose_names
+      cases h_dom
+      expose_names
+      cases hrn.elim_norm sndc_norm
+      have heq := hrn.ext ⟨.refl, sndc_norm⟩
+      cases a_3
+      expose_names
+      cases hrn_1.elim_norm hn_coup.bang.coup
+      have heq := hrn_1.ext ⟨.refl, hn_coup.bang.coup⟩
+      grind
+    · cases e_f'
+      expose_names
+      cases e_f₂
+      expose_names
+      cases h_dom.eq h_dom_1
+      rfl
+    · cases e_f'
+      expose_names
+      cases h_dom
+      expose_names
+      cases hrn.elim_norm hn_α.coup
+      have heq := hrn.ext ⟨.refl, hn_α.coup⟩
+      grind
+  case id₂ =>
+    cases e_f₂
+    expose_names
+    cases h_dom
+    expose_names
+    cases a_1.elim_norm hn_τ
+    have heq := a_1.ext ⟨.refl, hn_τ⟩
+    have h := hr_τ.ext a_2
+    grind
+  case quot_bang =>
+    cases e_f₂
+    expose_names
+    cases h_dom
+    expose_names
+    cases hrx.elim_norm quot_norm
+    have heq  := hrx.ext ⟨.refl, quot_norm⟩
+    cases hrn₁.elim_norm hn_α.bang
+    have heq₂ := hrn₁.ext ⟨.refl, hn_α.bang⟩
+    cases hrn₂.elim_norm (by assumption)
+    have heq₃ := hrn₂.ext ⟨.refl, by assumption⟩
+    simp_all
+    cases a
+    expose_names
+    cases hrn.elim_norm (mk_bang_norm (mk_coup_norm (by assumption)))
+    have heq₄ := hrn.ext ⟨.refl, mk_bang_norm (mk_coup_norm (by assumption))⟩
+    grind
 
 set_option pp.deepTerms true in
 set_option pp.deepTerms.threshold 9999 in 

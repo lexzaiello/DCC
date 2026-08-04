@@ -169,6 +169,7 @@ def arity_eta (heq : arity ⟨f, hn⟩ = n) : arity ⟨(GenericExpr.expr_to_eta 
       grind))
 
 open GenericExpr in
+@[macro_inline]
 def to_eta (e : @NormExpr τ_c RedAff) : (@NormExpr (@EtaConst τ_c) (RedAff (τ := (@EtaConst τ_c)))) :=
   match e with
   | ⟨e, hn⟩ => ⟨e.expr_to_eta, hn.to_eta⟩

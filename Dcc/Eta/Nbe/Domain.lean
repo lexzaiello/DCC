@@ -587,6 +587,26 @@ termination_by size f
 decreasing_by
   any_goals (grind)
 
+def NormExpr.Domain.no_holes (h : Domain f α) (hn : ¬ f.raw.contains_hole) : ¬ α.raw.contains_hole := by
+  induction h
+  any_goals (
+    focus
+    try (
+      expose_names
+      have hrn := GenericExpr.RedAffNorm.tail_no_hole (by assumption) (by grind)
+      have h := a_ih (by grind)
+      grind)
+    done)
+  any_goals (
+    focus
+    try (
+      have hrn := GenericExpr.RedAffNorm.tail_no_hole (by assumption) (by grind)
+      grind)
+    done)
+  all_goals (
+    expose_names
+    exact a_ih (by grind))
+
 set_option maxHeartbeats 100000000000000000 in
 open GenericExpr in
 open NormExpr in
@@ -646,6 +666,94 @@ def NormExpr.Domain₂.to_eta {f α : @NormExpr τ_c RedAff} (h : Domain₂ f α
     have hf := hrn₂.to_eta
     have hg := a.to_eta
     constructor <;> assumption
+
+def NormExpr.Domain₂.no_holes (h : Domain₂ f α β) (hn : ¬ f.raw.contains_hole) : (¬ α.raw.contains_hole) ∧ (¬ β.raw.contains_hole) := by
+  induction h
+  · expose_names
+    have hrn := GenericExpr.RedAffNorm.tail_no_hole (by assumption) (by grind)
+    grind
+  · expose_names
+    have hrn := GenericExpr.RedAffNorm.tail_no_hole (by assumption) (by grind)
+    have hrn := GenericExpr.RedAffNorm.tail_no_hole a (by grind)
+    grind
+  · expose_names
+    have hrna := GenericExpr.RedAffNorm.tail_no_hole hrn₁ (by grind)
+    have hrnb := GenericExpr.RedAffNorm.tail_no_hole hrn₂ (by grind)
+    have ha := a_ih (by grind)
+    have hb := a.no_holes (by grind)
+    grind
+  any_goals (
+    focus
+    try (
+      expose_names
+      have hrna := GenericExpr.RedAffNorm.tail_no_hole hrn₁ (by grind)
+      have hb := a.no_holes (by grind)
+      grind)
+    done)
+  any_goals (
+    focus
+    try (
+      expose_names
+      have hrna := GenericExpr.RedAffNorm.tail_no_hole hrn₁ (by grind)
+      have hrnb := GenericExpr.RedAffNorm.tail_no_hole hrn₂ (by grind)
+      have hrnc := GenericExpr.RedAffNorm.tail_no_hole hrx (by grind)
+      have hb := a.no_holes (by grind)
+      grind))
+
+set_option pp.deepTerms true in
+set_option pp.deepTerms.threshold 9999 in
+set_option pp.proofs true in
+set_option pp.proofs.threshold 9999 in
+def NormExpr.Domain₂.from_eta {f α β : @EtaExpr.Norm τ_c} (h : Domain₂ f α β)
+  (hn₁ : ¬ f.raw.contains_hole)
+  (hn₂ : ¬ α.raw.contains_hole)
+  (hn₃ : ¬ β.raw.contains_hole)
+  : Domain₂ (f.from_eta (by grind)) (α.from_eta (by grind))
+  (β.from_eta (by grind)) := by
+  let hn₃₀ := hn₃
+  cases h
+  · expose_names
+    constructor
+    · exact a.from_eta
+  · expose_names
+    constructor
+    · exact a.from_eta (hn₁ := by grind)
+    · exact a_1.from_eta (hn₁ := by grind)
+  · expose_names
+    have ha := hn_g'.from_eta (by grind)
+    have hb := hn_γ.from_eta (by grind)
+    have hc := hrn₁.from_eta (hn₁ := by grind)
+    have hd := hrn₂.from_eta (hn₁ := by grind)
+    have he := hrn₁.tail_no_hole (by grind)
+    have hf := hrn₂.tail_no_hole (by grind)
+    have he := a.no_holes (by grind)
+    have he := a.from_eta (by grind) (by grind) (by grind)
+    constructor
+    · assumption
+    · assumption
+    · exact a_1.from_eta (by grind) (by grind)
+    · exact he
+  any_goals (
+    focus
+    try (
+      expose_names
+      have ha := hrn₁.from_eta (hn₁ := by grind)
+      have hb := hrn₁.tail_no_hole (by grind)
+      have hc := a.from_eta (by grind) (by grind)
+      constructor <;> assumption)
+    done)
+  any_goals (
+    focus
+    try (
+      expose_names
+      have ha := hrn₂.from_eta (hn₁ := by grind)
+      have ha := hrn₁.tail_no_hole (by grind)
+      have hc := hrn₁.tail_no_hole (by grind)
+      have hd := hrn₁.from_eta (hn₁ := by grind)
+      have he := hrx.tail_no_hole (by grind)
+      have hf := hrx.from_eta (hn₁ := by grind)
+      have hg := a.from_eta (by grind) (by grind)
+      constructor <;> assumption))
 
 open GenericExpr in
 open NormExpr in

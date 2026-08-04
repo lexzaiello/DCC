@@ -4,6 +4,7 @@ import Dcc.Eta.Reflect
 import Dcc.Ast.Points
 import Dcc.Eta.Nbe.Domain
 import Mathlib.Data.List.Defs
+import Mathlib.Data.List.Basic
 
 /-
 Improvement to code structure in Reduce.lean
@@ -47,11 +48,11 @@ variable [DecidableEq τ_c]
 
 namespace NormExpr
 
-def from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn : GenericExpr.IsNorm GenericExpr.RedAff f} (hn_hole : ¬ f.contains_hole) : @NormExpr τ_c GenericExpr.RedAff :=
-  ⟨f.eta_to_expr hn_hole, hn.from_eta hn_hole⟩
+/-def from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn : GenericExpr.IsNorm GenericExpr.RedAff f} (hn_hole : ¬ f.contains_hole) : @NormExpr τ_c GenericExpr.RedAff :=
+  ⟨f.eta_to_expr hn_hole, hn.from_eta hn_hole⟩-/
 
 def from_eta' (f : @NormExpr (@EtaConst τ_c) GenericExpr.RedAff) (hn : ¬ GenericExpr.contains_hole f.raw) : @NormExpr τ_c GenericExpr.RedAff :=
-  from_eta hn (hn := f.is_norm)
+  NormExpr.from_eta _ hn
 
 /-
 An η-reducible function is in normal form, has an arity of 1 or 2, and has known domain
@@ -70,7 +71,8 @@ def EtaFn.to_eta {f : @GenericExpr τ_c} {hn : IsNorm RedAff f} (e : EtaFn ⟨f,
 def EtaFn.from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn : IsNorm RedAff f} (hn_mem : ¬ f.contains_hole) {doms : List (@EtaExpr.Norm τ_c)}
   (e : EtaFn ⟨f, hn⟩ doms)
   (hn_doms : List.Forall (¬ ·.raw.contains_hole) doms)
-  : EtaFn ⟨f.eta_to_expr hn_mem, hn.from_eta hn_mem⟩ (doms.attach.map (fun ⟨x, h⟩ => x.from_eta' (by sorry))) := by
+  : EtaFn ⟨f.eta_to_expr hn_mem, hn.from_eta hn_mem⟩ (doms.attach.map (fun ⟨x, h⟩ => x.from_eta' (by
+    exact (List.forall_iff_forall_mem.mp hn_doms) x (by assumption)))) := by
   simp
   cases e with
   | tm₁ =>
@@ -78,14 +80,20 @@ def EtaFn.from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn : IsNorm RedAff f} (h
     simp at hn_doms
     exact .tm₁ (by
       simp
-      sorry) (_heq :=
+      have h := h_dom.from_eta (by grind) (by grind)
+      simp [NormExpr.from_eta] at h
+      exact h) (_heq :=
       arity_from_eta' (by
         dcc_simp
         exact _heq))
   | tm₂ =>
     expose_names
     simp at hn_doms
-    
+    exact .tm₂ (by
+      simp
+      have h := h_dom.from_eta (by grind) (by grind)
+      simp [NormExpr.from_eta] at h
+      exact h)
     sorry
 
 @[dcc_size]

@@ -561,6 +561,29 @@ def EtaTm.complete {f : @NormExpr τ_c RedAff} (h : EtaTm f doms) : view_eta_tm 
       grind
     simp [view_eta_tm, view_eta_fn, arity, raw, h_ar]
 
+def EtaTm.to_eta {f : @NormExpr τ_c RedAff} (h : EtaTm f doms) : EtaTm ⟨expr_to_eta f.raw, f.is_norm.to_eta⟩ (doms.map (·.to_eta)) := by
+  cases h with
+  | fn h => exact .fn h.to_eta
+  | pi => exact .pi
+
+def EtaTm.from_eta {f : @EtaExpr.Norm τ_c} (hn_mem : ¬ f.raw.contains_hole) {doms : List (@EtaExpr.Norm τ_c)}
+  (e : EtaTm f doms) : EtaTm (f.from_eta hn_mem) (by
+    cases e with
+    | fn h =>
+      cases h with
+      | tm₁ h =>
+        expose_names
+        have h := h.no_holes (by grind)
+        exact [α.from_eta h]
+      | tm₂ h =>
+        expose_names
+        have h := h.no_holes (by grind)
+        exact [α.from_eta (by grind), β.from_eta (by grind)]
+    | pi => exact []) := by
+  cases e with
+  | fn h => exact .fn (h.from_eta (by dcc_simp_all))
+  | pi => exact .pi
+
 def view_eta_tm_none_sound {f : @NormExpr τ_c RedAff} (h : view_eta_tm f = .none) : ∀ {doms}, EtaTm f doms → False := by
   intro _ h
   have h := h.complete

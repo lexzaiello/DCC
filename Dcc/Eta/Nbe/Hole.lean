@@ -514,6 +514,10 @@ def Holes.points_norm {e_f : EtaFn f doms} {hole_elems : List (@EtaExpr.Norm τ_
     | ⟨0, h_lt⟩ => exact h_hole₁.points_norm b_idx
     | ⟨n + 2, _⟩ => grind
 
+def Holes.contains_hole₁ (h : Holes (τ_c := τ_c) e_f lv [hole₁]) : contains_hole hole₁.raw := by
+  cases h with
+  | tm₁ h => exact h.contains_hole
+
 /-set_option pp.deepTerms true in
 set_option pp.deepTerms.threshold 9999 in
 set_option pp.proofs true in

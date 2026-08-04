@@ -773,6 +773,10 @@ def RedAffNorm.elim_norm (hr : RedAffNorm A B) (hn : IsNorm RedAff A) : B = ⟨A
     cases h
     grind
 
+def RedAffNorm.push_head (hrt : RedAffNorm A C) (hr : RedAff A B) : RedAffNorm B C :=
+  match hrt with
+  | ⟨hrt, hn⟩ => ⟨hrt.push_head hn hr, hn⟩
+
 /-def RedAffNorm.eq {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)} (h₁ : RedAffNorm A B) : h₁ = aff_sound (by sorry) := by
   sorry-/
 

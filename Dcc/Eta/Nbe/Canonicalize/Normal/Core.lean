@@ -542,7 +542,7 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       | tm₁ heq h =>
         have h_mem := GenericExpr.mem_imp_contains_hole h.sigl_hole_mem_tm
         grind-/
-  | quot₁ =>
+  /-| quot₁ =>
     cases h₂
     case quot₁ =>
       expose_names
@@ -639,7 +639,7 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
         dcc_simp at h_mem
         have h_mem := GenericExpr.mem_imp_contains_hole h_mem
         grind
-  /-| id₂ =>
+  | id₂ =>
     cases h₂
     case id₂ => rfl
     · expose_names
@@ -647,38 +647,57 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       cases e_h.hole_same e_h_1
       cases hr_τ_1.unique ⟨.single (.congrFun .id), by assumption⟩
       cases e_h with
-      | tm₂ e_h₁ hrt e_h₂ =>
+      | tm₂ heq e_h₁ hrt e_h₂ =>
         have h_mem := e_h₁.hole_mem_tm
-        grind
-  | quot₂ =>
+        grind-/
+  /-| quot₂ =>
     cases h₂ <;> expose_names
     case quot₂ =>
       cases hn_quot.eq hn_quot_1
+      cases heq
+      cases heq_1
       cases e_h.hole_same e_h_1
-      cases hr_τ_1.unique ⟨.trans (.single (.congrFun .quot)) (.single .quot), by assumption⟩
+      cases hr_τ_1.unique ⟨.trans (.single (.congrFun .quot)) (.single .quot), by
+        dcc_simp
+        assumption⟩
+      cases hr_τ_1.unique ⟨.trans (.single (.congrFun .quot)) (.single .quot), by
+        dcc_simp
+        assumption⟩
       cases e_h with
-      | tm₂ e_h₁ hrt e_h₂ =>
-        have h_mem := e_h₁.hole_mem_tm
-        grind
+      | tm₂ heq e_h₁ hrt e_h₂ =>
+        have h_mem := GenericExpr.mem_imp_contains_hole e_h₁.hole_mem_tm
+        dcc_simp at h_mem
+        dcc_simp
     any_goals (
       focus
       try (
         cases hnτ.eq hn_α
+        cases heq
         cases e_h.hole_same e_h_1
-        cases a.unique ⟨.trans (.single (.congrFun .quot)) (.single .quot), by assumption⟩
+        cases a.unique ⟨.trans (.single (.congrFun .quot)) (.single .quot), by
+          dcc_simp
+          assumption⟩
         cases e_h with
-        | tm₂ e_h₁ hrt e_h₂ =>
-          have h_mem := e_h₁.hole_mem_tm
-          grind))
+        | tm₂ heq e_h₁ hrt e_h₂ =>
+          have h_mem := GenericExpr.mem_imp_contains_hole e_h₁.hole_mem_tm
+          dcc_simp at h_mem
+          grind))-/
   | quot_bang =>
     cases h₂
     case quot_bang =>
       expose_names
       cases hn_α.eq hn_α_1
+      cases hn_β.eq hn_β_1
+      dcc_simp at heq
+      cases heq
+      cases heq_1
       cases e_h.hole_same e_h_1
       cases e_h_1 with
-      | tm₂ e_h₁ hrt e_h₂ =>
+      | tm₂ heq e_h₁ hrt e_h₂ =>
         cases e_h₁ with
+        | coup =>
+          expose_names
+          cases heq
         | pure =>
           expose_names
           cases hr_τ_1.elim_norm (fun ⟨_, h⟩ => by
@@ -689,15 +708,17 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
               | congrArg h => cases h
             | congrArg h => exact hn_hole₂_1 ⟨_, h⟩)
           cases e_h with
-          | tm₂ e_h₁ hrt e_h₂ =>
+          | tm₂ heq e_h₁ hrt e_h₂ =>
             have h_mem := e_h₁.hole_mem_tm
+            dsimp at h_mem
+            have h_mem := GenericExpr.mem_imp_contains_hole h_mem
             grind
         | bang e_h₁ =>
           cases e_h₂ with
           | bang e_h₂ =>
             cases hr_τ_1.unique ⟨.trans (.single .curr') (.single (by constructor))
-              , by assumption⟩
-            rfl
+              , by dcc_simp; assumption⟩
+            dcc_simp
           | pure =>
             expose_names
             cases hr_τ_1.elim_norm (fun ⟨_, h⟩ => by
@@ -708,8 +729,10 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
                 | congrArg h => cases h
               | congrArg h => cases h)
             cases e_h with
-            | tm₂ e_h₁ hrt e_h₂ =>
+            | tm₂ heq e_h₁ hrt e_h₂ =>
               have h_mem := e_h₁.hole_mem_tm
+              dsimp at h_mem
+              have h_mem := GenericExpr.mem_imp_contains_hole h_mem
               grind
           | coup =>
             expose_names
@@ -730,9 +753,11 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
                   | tm₂ e_h₁ hrt e_h₂ =>
                     exact e_h₂.is_norm.sigr ⟨_, h⟩)
             cases e_h with
-            | tm₂ e_h₁ hrt e_h₂ =>
+            | tm₂ heq e_h₁ hrt e_h₂ =>
               have h_mem := e_h₁.hole_mem_tm
-              grind-/
+              dsimp at h_mem
+              have h_mem := GenericExpr.mem_imp_contains_hole h_mem
+              grind
 
 end Canonicalize
 

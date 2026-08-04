@@ -486,7 +486,7 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       have h_mem' := GenericExpr.mem_imp_contains_hole (e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩)
       simp [raw, Holes.v_elems, Vector.get] at h_mem'
       grind-/
-  | eval =>
+  /-| eval =>
     expose_names
     cases h₂
     case eval =>
@@ -541,67 +541,105 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       cases e_h with
       | tm₁ heq h =>
         have h_mem := GenericExpr.mem_imp_contains_hole h.sigl_hole_mem_tm
-        grind
-  /-| quot₁ =>
+        grind-/
+  | quot₁ =>
     cases h₂
     case quot₁ =>
       expose_names
       cases hn_α.eq hn_α_1
       cases e_h.hole_same e_h_1
-      cases hr_τ_1.unique ⟨.single .quot, hn_e'⟩
-      rfl
-    any_goals (
-      focus
-      try (
-        expose_names
-        cases hn_α.eq hn_α_1
-        cases e_h.hole_same e_h_1
-        cases a.unique ⟨.single .quot, hn_e'⟩
-        have h_mem := e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩
-        simp [raw, Holes.v_elems, Vector.get] at h_mem
-        try (grind))
-      done)
+      cases heq
+      cases hr_τ_1.unique ⟨.single .quot, by
+        dcc_simp
+        assumption⟩
+      cases heq_1
+      dcc_simp
     · expose_names
-      cases hn_coup.eq hn_α
+      cases hn_α.eq hn_α_1
       cases e_h.hole_same e_h_1
-      cases a_1.unique ⟨.single .quot, hn_e'⟩
+      cases heq
+      cases a.unique ⟨.single .quot, by
+        dcc_simp
+        assumption⟩
+      have h_mem := e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩
+      simp [raw, Holes.v_elems, Vector.get] at h_mem
+      dcc_simp at h_mem
+      have h := GenericExpr.mem_imp_contains_hole h_mem
+      grind
+    case fstc | sndc =>
+      expose_names
+      cases hn_α.eq hn_coup
+      cases e_h.hole_same e_h_1
+      cases heq
+      cases a_1.unique ⟨.single .quot, by
+        dcc_simp
+        assumption⟩
+      have h_mem := e_h.hole_mem_tm ⟨0, e_f.arity_pos⟩
+      simp [raw, Holes.v_elems, Vector.get] at h_mem
+      dcc_simp at h_mem
       cases e_h with
-      | tm₁ h =>
-        have h_mem := h.sigl_hole_mem_tm
+      | tm₁ heq h =>
+        have h_mem₁ := GenericExpr.mem_imp_contains_hole h.sigl_hole_mem_tm
+        have h_mem₂ := GenericExpr.mem_imp_contains_hole h.sigr_hole_mem_tm
+        dcc_simp at h_mem₁
+        dcc_simp at h_mem₂
         grind
     · expose_names
       cases hn_coup.eq hn_α
       cases e_h.hole_same e_h_1
-      cases a_1.unique ⟨.single .quot, hn_e'⟩
+      cases heq
+      cases a_1.unique ⟨.single .quot, by
+        dcc_simp
+        assumption⟩
       cases e_h with
-      | tm₁ h =>
-        have h_mem := h.sigr_hole_mem_tm
-        grind
-    · expose_names
-      cases hn_coup.eq hn_α
-      cases e_h.hole_same e_h_1
-      cases a_1.unique ⟨.single .quot, hn_e'⟩
-      cases e_h with
-      | tm₁ h =>
+      | tm₁ heq h =>
         have h_mem := h.sigl_hole_mem_tm_box
+        dcc_simp at h_mem
+        have h_mem := GenericExpr.mem_imp_contains_hole h_mem
         grind
     · expose_names
       cases hn_coup.eq hn_α
       cases e_h.hole_same e_h_1
-      cases a_1.unique ⟨.single .quot, hn_e'⟩
+      cases heq
+      cases a_1.unique ⟨.single .quot, by
+        dcc_simp
+        assumption⟩
       cases e_h with
-      | tm₁ h =>
+      | tm₁ heq h =>
         have h_mem := h.sigr_hole_mem_tm_box
+        dcc_simp at h_mem
+        have h_mem := GenericExpr.mem_imp_contains_hole h_mem
         grind
     · expose_names
-      cases hn₁.eq hn_α_1
+      cases hn_α.eq hn_α_1
       cases e_h.hole_same e_h_1
-      cases a_1.unique ⟨.single .quot, hn_e'⟩
+      cases heq
+      dcc_simp at a
+      simp [GenericExpr.expr_to_eta] at a
+      simp [GenericExpr.to_eta_right_inv (e := e') hn] at a
+      cases a.unique ⟨.single .quot, by
+        dcc_simp
+        assumption⟩
       cases e_h with
-      | tm₁ h =>
-        have h_mem := h.sigl_hole_mem_tm
+      | tm₁ heq h =>
+        have h_mem := GenericExpr.mem_imp_contains_hole h.hole_mem_tm
+        dcc_simp at h_mem
         grind
-  | id₂ =>
+    · expose_names
+      cases heq
+      cases heq_1
+      cases hn₁.eq hn_α_1
+      dcc_simp at a_1
+      simp [GenericExpr.expr_to_eta] at a_1
+      simp [GenericExpr.to_eta_right_inv (e := e') hn] at a_1
+      cases a_1.unique ⟨.single .quot, hn_e'⟩
+      cases e_h_1 with
+      | tm₁ heq h =>
+        have h_mem := h.sigl_hole_mem_tm
+        dcc_simp at h_mem
+        have h_mem := GenericExpr.mem_imp_contains_hole h_mem
+        grind
+  /-| id₂ =>
     cases h₂
     case id₂ => rfl
     · expose_names

@@ -161,6 +161,7 @@ def app_coup_norm {e_f : EtaFn (τ_c := τ_c) f doms} (e_h : e_f.Holes level [�
   GenericExpr.IsNorm GenericExpr.RedAff (DCC? (a b)) := by
   cases e_h with
   | tm₁ h =>
+    
     cases h with
     | coup h_dom h₁ hrt h₂ =>
       exact h₁.app_norm h₂

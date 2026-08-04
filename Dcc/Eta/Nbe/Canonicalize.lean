@@ -552,7 +552,7 @@ def Canonicalize.complete {f f' : @NormExpr τ_c RedAff}
             have he := h.trans hh.symm
             have hnnn : a ≠ b :=
               match e_h with
-              | .tm₁ h => h.coup_points_neq
+              | .tm₁ heq h => by cases heq; exact h.coup_points_neq
             grind
           · split
             have h := (hrt.out_eq ▸ hrt).eq
@@ -714,7 +714,7 @@ def Canonicalize.complete {f f' : @NormExpr τ_c RedAff}
           have h := (hrt.out_eq ▸ hrt).eq
           have hnnn : a ≠ b :=
             match e_h with
-            | .tm₁ h => h.bang_coup_points_neq
+            | .tm₁ heq h => by cases heq; exact h.bang_coup_points_neq
           grind
       · split
         · simp
@@ -913,7 +913,7 @@ def Canonicalize.complete {f f' : @NormExpr τ_c RedAff}
       expose_names
       have h_mem₁ : hole₁.hole_mem_tm :=
         match e_h with
-        | .tm₂ h _ _ => h.hole_mem_tm
+        | .tm₂ heq h _ _ => by cases heq; exact h.hole_mem_tm
       have h_mem : (reduce RedAff ((f_1.expr_to_eta.app hole₁).app hole₂)).fst.hole_mem_tm = true := by
         grind
       split

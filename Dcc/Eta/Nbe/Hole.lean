@@ -396,9 +396,10 @@ instance ArgTy.instEtaRel {e_f : EtaFn f doms} {idx : Fin (arity f.to_eta)} : Et
 inductive Holes : (e_f : EtaFn (τ_c := τ_c) f doms)
   → (level : ℕ)
   → (holes : List (@EtaExpr.Norm τ_c)) → Type u
-  | tm₁ {e_f : EtaFn f [α]} : Hole α.to_eta level hole_e
+  | tm₁ {e_f : EtaFn f [α]} : (heq : NormExpr.to_eta α = α') → Hole α' level hole_e
     → Holes e_f level [hole_e]
-  | tm₂ {e_f : EtaFn f [α, ⟨β₀, h_n_β⟩]} : Hole α.to_eta (level + 2) ⟨hole₁, hn_hole₁⟩
+  | tm₂ {e_f : EtaFn f [α, ⟨β₀, h_n_β⟩]} : (heq₁ : NormExpr.to_eta α = α')
+    → Hole α' (level + 2) ⟨hole₁, hn_hole₁⟩
     → RedAffNorm (DCC? (#(expr_to_eta β₀) hole₁)) β
     → Hole β (level + 1) hole₂
     → Holes e_f level [⟨hole₁, hn_hole₁⟩, hole₂]
@@ -445,7 +446,7 @@ def holes (e_f : EtaFn (τ_c := τ_c) f doms) (level : ℕ)
   | tm₁ h_dom =>
     rename_i α _
     match α.to_eta.mk_hole level with
-    | .some ⟨_, h⟩ => exact .some ⟨_, .tm₁ h⟩
+    | .some ⟨_, h⟩ => exact .some ⟨_, .tm₁ rfl h⟩
     | .none => exact .none
   | tm₂ h_dom₂ =>
     rename_i α β₀ _
@@ -453,21 +454,24 @@ def holes (e_f : EtaFn (τ_c := τ_c) f doms) (level : ℕ)
     | .some ⟨⟨hole₁, _hn_hole₁⟩, h₁⟩ =>
       match (red_aff (DCC? (#(expr_to_eta β₀.raw) hole₁))).mk_hole (level + 1) with
       | .some ⟨_hole₂, h₂⟩ =>
-        exact .some ⟨_, .tm₂ h₁ (aff_sound rfl) h₂⟩
+        exact .some ⟨_, .tm₂ rfl h₁ (aff_sound rfl) h₂⟩
       | .none => exact .none
     | .none => exact .none
 
 @[dcc_force_reduce, aesop safe apply (rule_sets := [DccForceReduce])]
 def Holes.complete (h : Holes (τ_c := τ_c) e_f level hole_elems) : holes e_f level = .some ⟨hole_elems, h⟩ := by
   cases h with
-  | tm₁ h_hole =>
+  | tm₁ heq₁ h_hole =>
     rename_i e_f
     cases e_f with
-    | tm₁ dom => simp [holes, h_hole.complete]
-  | tm₂ hr₁ h_hole₁ h_hole₂ =>
+    | tm₁ dom =>
+      cases heq₁
+      simp [holes, h_hole.complete]
+  | tm₂ heq₁ hr₁ h_hole₁ h_hole₂ =>
     rename_i e_f
     cases e_f with
     | tm₂ dom =>
+      cases heq₁
       simp [holes, hr₁.complete, raw, (h_hole₁.complete ▸ h_hole₂).complete, h_hole₁.aff_complete]
       dcc_simp
       have h := (h_hole₁.out_eq ▸ h_hole₁).eq
@@ -482,10 +486,11 @@ def Holes.unique (h₁ : Holes (τ_c := τ_c) e_f level hole_elems₁) (h₂ : H
 def Holes.hole_mem_tm {f : @NormExpr τ_c RedAff} {doms : List (@NormExpr τ_c RedAff)} {e_f : EtaFn f doms}
   (h : Holes (τ_c := τ_c) e_f lv hole_tms) (i : Fin (arity f)) : h.v_elems[i].raw.hole_mem_tm := by
   cases h with
-  | tm₁ =>
+  | tm₁ heq =>
+    cases heq
     rename_i e_f hole h_hole
     simp [v_elems, h_hole.hole_mem_tm]
-  | tm₂ =>
+  | tm₂ heq =>
     rename_i e_f _ h_hole₁ h_hole₂
     cases e_f with
     | tm₂ =>
@@ -501,14 +506,14 @@ def Holes.points_norm {e_f : EtaFn f doms} {hole_elems : List (@EtaExpr.Norm τ_
   (idx    : Fin (arity f))
   (b_idx  : Fin h.v_elems[idx].raw.point_arity) : IsNorm RedAff h.v_elems[idx].raw.points[b_idx] := by
   cases h with
-  | tm₁ h_hole =>
+  | tm₁ heq h_hole =>
     rename_i hole_e e_f
     cases e_f with
     | tm₁ =>
       match idx with
       | ⟨0, h_lt⟩ => exact h_hole.points_norm b_idx
       | ⟨n + 1, _⟩ => grind
-  | tm₂ h_hole₁ _ h_hole₂ =>
+  | tm₂ heq h_hole₁ _ h_hole₂ =>
     match idx with
     | ⟨1, h_lt⟩ => exact h_hole₂.points_norm b_idx
     | ⟨0, h_lt⟩ => exact h_hole₁.points_norm b_idx
@@ -516,7 +521,7 @@ def Holes.points_norm {e_f : EtaFn f doms} {hole_elems : List (@EtaExpr.Norm τ_
 
 def Holes.contains_hole₁ (h : Holes (τ_c := τ_c) e_f lv [hole₁]) : contains_hole hole₁.raw := by
   cases h with
-  | tm₁ h => exact h.contains_hole
+  | tm₁ heq h => exact h.contains_hole
 
 /-set_option pp.deepTerms true in
 set_option pp.deepTerms.threshold 9999 in

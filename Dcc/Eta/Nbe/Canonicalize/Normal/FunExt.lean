@@ -182,9 +182,24 @@ def ext₁
   (hrt₂ : RedAffNorm (DCC? (f₄.to_eta.raw x.raw)) B)
   (hn_x : IsNorm RedAff x.raw) : f₂ = f₄ := by
   cases h₁ with
+  | fstc =>
+    expose_names
+    
+    sorry
   | id₁ =>
     expose_names
     cases h₂ with
+    | par =>
+      expose_names
+      cases e_f.hole_same e_f₃ e_h e_h_1
+      cases hn_α.eq hn_α_1
+      cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
+      cases hrt₁.unique ⟨.single .id, hn_x⟩
+      cases heq
+      cases e_f.hole_same e_f' e_h (.tm₁ rfl e_h₀)
+      simp [NormExpr.to_eta, NormExpr.raw] at hrt₂
+      simp [GenericExpr.to_eta_right_inv hn] at hrt₂
+      cases hrt₂.elim_norm (by assumption)
     | eval =>
       expose_names
       cases e_f.hole_same e_f_1 e_h e_h_1

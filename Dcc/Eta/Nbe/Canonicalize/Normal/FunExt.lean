@@ -210,6 +210,18 @@ def ext₁
       cases hrt'
       have h := e_h₀.contains_hole
       grind
+    | fstc | sndc | eval =>
+      expose_names
+      exact (h .coup).elim
+    | fstc' | sndc' => expose_names; exact (h .bang).elim
+    | par =>
+      expose_names
+      cases heq
+      cases e_f.hole_same e_f₃ e_h (by assumption)
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      simp [GenericExpr.to_eta_right_inv hn_1] at hrt₂
+      cases hrt₂.elim_norm hn₂_1
+      dcc_simp
   | quot₁ =>
     expose_names
     cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)

@@ -222,10 +222,10 @@ def ext₁
             grind
           | pure =>
             expose_names
-            cases hrt₂.elim_norm (fun ⟨_, h⟩ => by
+            cases hrt₂.unique ⟨.single .unmap, fun ⟨_, h⟩ => by
               cases h with
               | congrFun h => cases h
-              | congrArg h => cases h)
+              | congrArg h => cases h⟩
             grind
       /-cases hrt₂.unique ⟨.trans (.single .unmap) (.single .fstc), by assumption⟩
       cases e_f.hole_same e_f₃ (by assumption) (by assumption)

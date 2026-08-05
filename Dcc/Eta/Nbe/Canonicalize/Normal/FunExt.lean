@@ -174,6 +174,7 @@ set_option pp.deepTerms true in
 set_option pp.deepTerms.threshold 9999 in
 set_option pp.proofs true in
 set_option pp.proofs.threshold 9999 in
+set_option maxHeartbeats 2000000000000 in
 def ext₁
   {f₁ f₂ f₃ f₄ : @NormExpr τ_c RedAff}
   {e_f₁ : EtaFn f₁ [α]} {e_f₂ : EtaFn f₂ [α]} {e_f₃ : EtaFn f₃ [α]} {e_f₄ : EtaFn f₄ [α]}
@@ -182,6 +183,59 @@ def ext₁
   (hrt₂ : RedAffNorm (DCC? (f₄.to_eta.raw x.raw)) B)
   (hn_x : IsNorm RedAff x.raw) : f₂ = f₄ := by
   cases h₁ with
+  | sndc' =>
+    expose_names
+    cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
+    cases e_f.hole_same e_f₄ e_h (.tm₁ rfl e_h₀)
+    simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₁
+    cases hrt₁.unique ⟨.trans (.single .unmap) (.single .sndc), by
+      have h := e_h₀.points_norm ⟨0, by grind⟩
+      simp [GenericExpr.points] at h
+      exact h.sigr⟩
+    simp [NormExpr.to_eta, NormExpr.raw] at hrt₂
+    dcc_simp at hrt₂
+    cases h₂ with
+    | sndc' => rfl
+    | fstc'  =>
+      expose_names
+      cases hrt₂.unique ⟨.trans (.single .unmap) (.single .fstc), by
+        have h := e_h₀.points_norm ⟨0, by grind⟩
+        exact h.sigl⟩
+      cases e_f.hole_same e_f₃ (by assumption) (by assumption)
+      cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
+      have h := e_h₀.bang_coup_points_neq
+      grind
+    | par =>
+      expose_names
+      exact (h .bang).elim
+    | id₁ =>
+      expose_names
+      cases hrt₂.unique ⟨.single (by constructor), by assumption⟩
+      try (cases e_f.hole_same e_f₃ (by assumption) (by assumption))
+      try (have h := e_h₀.coup_points_neq)
+      try (grind)
+    | quot₁ =>
+      expose_names
+      cases heq
+      cases hrt₂.unique ⟨.single (by constructor), by
+        dcc_simp
+        assumption⟩
+      cases e_f.hole_same e_f₃ (by assumption) (by assumption)
+      simp [GenericExpr.expr_to_eta] at hrt₂
+      cases hrt₂.unique ⟨.single .quot, by
+        simp [GenericExpr.to_eta_right_inv hn]
+        assumption⟩
+      cases e_h with
+      | tm₁ heq h =>
+        cases heq
+        cases h with
+        | bang h =>
+          cases h with
+          | coup =>
+            expose_names
+            simp [GenericExpr.to_eta_right_inv hn] at a_5
+            have h := a_5.contains_hole
+            grind
   | sndc =>
     expose_names
     cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
@@ -226,10 +280,10 @@ def ext₁
         cases h with
         | coup =>
           expose_names
-          simp [GenericExpr.to_eta_right_inv hn] at a_3
-          have h := a_3.contains_hole
+          simp [GenericExpr.to_eta_right_inv hn] at a_5
+          have h := a_5.contains_hole
           grind
-  /-| fstc =>
+  | fstc =>
     expose_names
     cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
     cases e_f.hole_same e_f₄ e_h (.tm₁ rfl e_h₀)
@@ -275,8 +329,8 @@ def ext₁
           expose_names
           simp [GenericExpr.to_eta_right_inv hn] at a_3
           have h := a_3.contains_hole
-          grind-/
-  /-| id₁ =>
+          grind
+  | id₁ =>
     expose_names
     cases h₂ with
     | fstc' =>
@@ -371,7 +425,7 @@ def ext₁
         assumption) (by assumption)
       have h_mem := e_h₀.contains_hole
       simp [raw] at h_mem
-      exact (hn h_mem).elim-/
+      exact (hn h_mem).elim
 
 set_option pp.deepTerms true in
 set_option pp.deepTerms.threshold 9999 in

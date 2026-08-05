@@ -188,9 +188,57 @@ def ext₁
     cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
     cases e_f.hole_same e_f₄ e_h (.tm₁ rfl e_h₀)
     simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₁
+    cases heq
     cases hrt₁.unique ⟨.single .quot, by
-      
-      sorry⟩
+      simp [GenericExpr.to_eta_right_inv hn]
+      assumption⟩
+    simp [NormExpr.to_eta, NormExpr.raw] at hrt₂
+    dcc_simp at hrt₂
+    cases h₂ with
+    | fstc' =>
+      expose_names
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      cases hn_coup.eq hn_α
+      cases e_h with
+      | tm₁ heq h =>
+        cases heq
+        cases h with
+        | pure =>
+          cases hrt₂.elim_norm (fun ⟨_, h⟩ => by
+            cases h with
+            | congrFun h => cases h
+            | congrArg h => cases h)
+          grind
+        | bang h =>
+          cases h with
+          | coup =>
+            cases hrt₂.unique ⟨.trans (.single .unmap) (.single .fstc), by
+              have h := e_h₀.points_norm ⟨0, by grind⟩
+              simp [GenericExpr.points] at h
+              exact h.sigl⟩
+            expose_names
+            cases hn_e'.eq hn_hole₁_2
+            have h := a_5.contains_hole
+            grind
+          | pure =>
+            expose_names
+            cases hrt₂.elim_norm (fun ⟨_, h⟩ => by
+              cases h with
+              | congrFun h => cases h
+              | congrArg h => cases h)
+            grind
+      /-cases hrt₂.unique ⟨.trans (.single .unmap) (.single .fstc), by assumption⟩
+      cases e_f.hole_same e_f₃ (by assumption) (by assumption)
+      have ha := e_f.hole_same e_f₃ e_h e_h_1
+      have h  := e_h.contains_hole₁
+      grind-/
+    | id₁ =>
+      expose_names
+      cases hrt₂.unique ⟨.single (by constructor), by assumption⟩
+      cases e_f.hole_same e_f₃ (by assumption) (by assumption)
+      have ha := e_f.hole_same e_f₃ e_h e_h_1
+      have h  := e_h.contains_hole₁
+      grind
   | fstc' =>
     expose_names
     cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)

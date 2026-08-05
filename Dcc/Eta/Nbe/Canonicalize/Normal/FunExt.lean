@@ -167,7 +167,6 @@ lemma:
   RedAffNorm (DCC? (f'.raw x)) B := by
   induction x generalizing f f' with
   | top =>
-    
     sorry-/
 
 set_option pp.deepTerms true in
@@ -200,7 +199,6 @@ def ext₁
       cases e_f.hole_same e_f₃ e_h (by assumption)
       simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta, GenericExpr.to_eta_right_inv hn_1, GenericExpr.to_eta_right_inv hn] at hrt₂
       cases hrt₂.unique ⟨.single .evalc, by
-        dcc_simp
         assumption⟩
       cases e_f.hole_same e_f₃ e_h (by assumption)
       have ha := e_f'.complete
@@ -735,96 +733,6 @@ def ext₁
       have h_mem := e_h₀.contains_hole
       simp [raw] at h_mem
       exact (hn h_mem).elim
-
-set_option pp.deepTerms true in
-set_option pp.deepTerms.threshold 9999 in
-set_option pp.proofs true in
-set_option pp.proofs.threshold 9999 in
-def ext₁
-  {f₁ f₂ f₃ f₄ : @NormExpr τ_c RedAff}
-  {e_f₁ : EtaFn f₁ [α]} {e_f₂ : EtaFn f₂ [α]} {e_f₃ : EtaFn f₃ [α]} {e_f₄ : EtaFn f₄ [α]}
-  {e_h₀ : Hole α.to_eta level x}
-  {e_h₂ : e_f₃.Holes level hole_tms₂}
-  (h₁ : Canonicalize e_f₁ e_f₂) (h₂ : Canonicalize e_f₃ e_f₄) (hrt₁ : RedAffNorm (DCC? (f₂.to_eta.raw x.raw)) B)
-  (hrt₂ : RedAffNorm (DCC? (f₄.to_eta.raw x.raw)) B)
-  (hn_x : IsNorm RedAff x.raw) : f₂ = f₄ := by
-  cases h₁ with
-  | id₁ =>
-    cases h₂ with
-    | id₁ =>
-      expose_names
-      have ha := e_f.hole_same e_f₃ e_h e_h_1
-      simp_all
-    | sndc | fstc =>
-      expose_names
-      cases e_h with
-      | tm₁ heq h =>
-        cases heq
-        cases h with
-        | coup =>
-          expose_names
-          cases hrt₁.unique ⟨.single .id, x.is_norm⟩
-          try (exact hrt₂.no_fst_self.elim)
-          try (exact hrt₂.no_snd_self.elim)
-    | quot₁ =>
-      expose_names
-      cases hrt₁.unique ⟨.single .id, x.is_norm⟩
-      cases heq
-      have h := to_eta_no_hole (e := e')
-      dcc_simp at hrt₂
-      have h_eq_x₀ := hrt₂.quot_self (hn_e'.from_eta hn) (by assumption)
-      have h_e'_eq : (e'.eta_to_expr hn) = x.raw := h_eq_x₀.symm
-      simp [h_e'_eq] at hrt₂
-      have heq_x := hrt₂.unique ⟨.single .quot, by assumption⟩
-      rw [heq_x] at *
-      cases e_f.hole_same e_f₃ e_h e_h_1
-      have h := h_e'_eq.symm ▸ e_h₀.contains_hole
-      have h := h_e'_eq ▸ h
-      have heq' : x.1.expr_to_eta = e' := by
-        rw [h_eq_x₀]
-        dcc_simp
-      have heq'' : x.1 = e'.eta_to_expr (by assumption) := by grind
-      
-      expose_names
-      have h_mem : x.1.contains_hole := by grind
-      have h_mem' := h_eq_x₀ ▸ h_mem
-      
-      have hn : ¬ contains_hole x.raw := by
-        intro h
-        rw [h_eq_x₀] at heq'
-        have h := to_eta_no_hole (e := e')
-        rename_i h_mem
-        simp [raw] at h_mem
-        rw [h_eq_x₀] at h_mem
-        have h := h_eq_x₀ ▸ h_mem
-        /-rw [h_eq_x₀] at heq'
-        have h := to_eta_no_hole (e := e')
-        simp_all
-        have h := heq'.symm ▸ hn-/
-        sorry
-      cases e_h with
-      | tm₁ heq h =>
-        cases h with
-        | pure =>
-          expose_names
-          cases heq
-          /-cases hrt₁.unique ⟨.single .id, x.is_norm⟩
-          cases heq
-          have h := to_eta_no_hole (e := e')
-          dcc_simp at hrt₂
-          have h_eq_x₀ := hrt₂.quot_self (hn_e'.from_eta hn) (by assumption)
-          have h_e'_eq : (e'.eta_to_expr hn) = x.raw := h_eq_x₀.symm
-          simp [h_e'_eq] at hrt₂
-          have heq_x := hrt₂.unique ⟨.single .quot, by assumption⟩
-          rw [heq_x] at *
-          cases e_h_1 with
-          | tm₁ heq h =>
-            cases heq
-            generalize heq_α  : α.expr_to_eta = α'
-            generalize heq_α' : (mk α hn_α_1).to_eta = α''
-            cases heq_α' ▸ h with
-            | pure =>
-              sorry-/
 
 /-
 Since both EtaFn have same domain, we should get exactly the same canonical form,

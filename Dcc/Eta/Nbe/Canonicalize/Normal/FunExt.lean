@@ -192,7 +192,7 @@ def ext₁
     cases hrt₁.unique ⟨.single .evalc, by
       simp [GenericExpr.to_eta_right_inv hn]
       assumption⟩
-    cases e_h.hole_same (.tm₁ rfl e_h₀)
+    --cases e_f.hole_same
     cases h₂ with
     | eval =>
       expose_names
@@ -235,9 +235,7 @@ def ext₁
       cases e_f.hole_same e_f₃ e_h (by assumption)
       simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
       simp [GenericExpr.to_eta_right_inv hn_1] at hrt₂
-      --cases hrt₂.elim_norm hn₂_1
-      --dcc_simp
-      sorry
+      cases hrt₂.elim_norm (by assumption)
   | par =>
     expose_names
     cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
@@ -247,7 +245,7 @@ def ext₁
     cases hrt₁.elim_norm (by
       simp [GenericExpr.to_eta_right_inv hn]
       assumption)
-    cases e_h.hole_same (.tm₁ rfl e_h₀)
+    --cases e_h.hole_same (.tm₁ rfl e_h₀)
     cases e_f'.hole_same e_f (.tm₁ rfl (by assumption)) e_h
     cases h₂ with
     | id₁ =>

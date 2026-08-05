@@ -195,6 +195,17 @@ def ext₁
     simp [NormExpr.to_eta, NormExpr.raw] at hrt₂
     dcc_simp at hrt₂
     cases h₂ with
+    | eval =>
+      expose_names
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      cases hn₁.eq hn_α
+      cases heq
+      cases e_h.hole_same e_h_1
+      cases hrt₂.unique ⟨.single .evalc, by
+        dcc_simp
+        assumption⟩
+      have h := e_h_1.contains_hole₁
+      grind
     | par =>
       expose_names
       simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
@@ -204,6 +215,8 @@ def ext₁
       cases hrt₂.elim_norm (by
         simp [GenericExpr.to_eta_right_inv hn_1]
         assumption)
+      have h := e_h₀.contains_hole
+      grind
     | sndc =>
       expose_names
       simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂

@@ -189,6 +189,40 @@ def ext₁
   | id₁ =>
     expose_names
     cases h₂ with
+    | fstc' =>
+      expose_names
+      cases e_f.hole_same e_f_1 e_h e_h_1
+      cases hn_coup.eq hn_α
+      cases e_f.hole_same e_f_1 e_h (.tm₁ rfl e_h₀)
+      cases hrt₁.unique ⟨.single .id, hn_x⟩
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      cases hrt₂.unique ⟨.trans (.single .unmap) (.single .fstc), by
+        cases e_h_1 with
+        | tm₁ heq h =>
+          cases heq
+          cases h with
+          | bang h =>
+            cases h with
+            | coup =>
+              expose_names
+              exact hn_hole₁_2⟩
+    | sndc' =>
+      expose_names
+      cases e_f.hole_same e_f_1 e_h e_h_1
+      cases hn_coup.eq hn_α
+      cases e_f.hole_same e_f_1 e_h (.tm₁ rfl e_h₀)
+      cases hrt₁.unique ⟨.single .id, hn_x⟩
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      cases hrt₂.unique ⟨.trans (.single .unmap) (.single .sndc), by
+        cases e_h_1 with
+        | tm₁ heq h =>
+          cases heq
+          cases h with
+          | bang h =>
+            cases h with
+            | coup =>
+              expose_names
+              assumption⟩
     | par =>
       expose_names
       cases e_f.hole_same e_f₃ e_h e_h_1

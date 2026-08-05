@@ -195,6 +195,68 @@ def ext₁
     simp [NormExpr.to_eta, NormExpr.raw] at hrt₂
     dcc_simp at hrt₂
     cases h₂ with
+    | par =>
+      expose_names
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      cases hn_α.eq hn_α_1
+      cases heq
+      cases e_h.hole_same e_h_1
+      cases hrt₂.elim_norm (by
+        simp [GenericExpr.to_eta_right_inv hn_1]
+        assumption)
+    | sndc =>
+      expose_names
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      cases hn_coup.eq hn_α
+      cases e_h with
+      | tm₁ heq h =>
+        cases heq
+        cases h with
+        | pure =>
+          cases hrt₂.elim_norm (fun ⟨_, h⟩ => by
+            cases h with
+            | congrFun h => cases h
+            | congrArg h => cases h)
+          grind
+        | coup =>
+          cases hrt₂.unique ⟨.single .sndc, by
+            have h := e_h₀.points_norm ⟨0, by grind⟩
+            simp [GenericExpr.points] at h
+            assumption⟩
+          expose_names
+          --cases hn_e'.eq hn_hole₁_2
+          have h := a_5.contains_hole
+          grind
+    | fstc =>
+      expose_names
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      cases hn_coup.eq hn_α
+      cases e_h with
+      | tm₁ heq h =>
+        cases heq
+        cases h with
+        | pure =>
+          cases hrt₂.elim_norm (fun ⟨_, h⟩ => by
+            cases h with
+            | congrFun h => cases h
+            | congrArg h => cases h)
+          grind
+        | coup =>
+          cases hrt₂.unique ⟨.single .fstc, by
+            have h := e_h₀.points_norm ⟨0, by grind⟩
+            simp [GenericExpr.points] at h
+            assumption⟩
+          expose_names
+          cases hn_e'.eq hn_hole₁_2
+          have h := a_5.contains_hole
+          grind
+    | quot₁ =>
+      expose_names
+      cases heq
+      cases hrt₂.unique ⟨.single .quot, by
+        simp [GenericExpr.to_eta_right_inv hn_1]
+        assumption⟩
+      dcc_simp
     | fstc' =>
       expose_names
       simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
@@ -218,6 +280,38 @@ def ext₁
               exact h.sigl⟩
             expose_names
             cases hn_e'.eq hn_hole₁_2
+            have h := a_5.contains_hole
+            grind
+          | pure =>
+            expose_names
+            cases hrt₂.unique ⟨.single .unmap, fun ⟨_, h⟩ => by
+              cases h with
+              | congrFun h => cases h
+              | congrArg h => cases h⟩
+            grind
+    | sndc' =>
+      expose_names
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      cases hn_coup.eq hn_α
+      cases e_h with
+      | tm₁ heq h =>
+        cases heq
+        cases h with
+        | pure =>
+          cases hrt₂.elim_norm (fun ⟨_, h⟩ => by
+            cases h with
+            | congrFun h => cases h
+            | congrArg h => cases h)
+          grind
+        | bang h =>
+          cases h with
+          | coup =>
+            cases hrt₂.unique ⟨.trans (.single .unmap) (.single .sndc), by
+              have h := e_h₀.points_norm ⟨0, by grind⟩
+              simp [GenericExpr.points] at h
+              exact h.sigr⟩
+            expose_names
+            --ocases hn_e'.eq hn_hole₁_2
             have h := a_5.contains_hole
             grind
           | pure =>

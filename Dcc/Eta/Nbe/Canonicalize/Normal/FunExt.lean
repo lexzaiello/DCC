@@ -183,6 +183,33 @@ def ext₁
   (hrt₂ : RedAffNorm (DCC? (f₄.to_eta.raw x.raw)) B)
   (hn_x : IsNorm RedAff x.raw) : f₂ = f₄ := by
   cases h₁ with
+  | par =>
+    expose_names
+    cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
+    cases e_f.hole_same e_f₄ e_h (.tm₁ rfl e_h₀)
+    cases heq
+    simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₁
+    cases hrt₁.elim_norm (by
+      simp [GenericExpr.to_eta_right_inv hn]
+      assumption)
+    cases e_h.hole_same (.tm₁ rfl e_h₀)
+    cases e_f'.hole_same e_f (.tm₁ rfl (by assumption)) e_h
+    cases h₂ with
+    | id₁ =>
+      expose_names
+      cases hrt₂.unique ⟨.single .id, hn_hole₁⟩
+    | quot₁ =>
+      expose_names
+      cases heq
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      have hrt' := hrt₂.unique ⟨.single .quot, by
+        simp [GenericExpr.to_eta_right_inv hn_1]
+        assumption⟩
+      simp [GenericExpr.to_eta_right_inv hn] at hrt'
+      simp [GenericExpr.to_eta_right_inv hn_1] at hrt'
+      cases hrt'
+      have h := e_h₀.contains_hole
+      grind
   | quot₁ =>
     expose_names
     cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
@@ -205,6 +232,7 @@ def ext₁
         dcc_simp
         assumption⟩
       have h := e_h_1.contains_hole₁
+      have h := mem_imp_contains_hole e_h₀.sigl_hole_mem_tm
       grind
     | par =>
       expose_names

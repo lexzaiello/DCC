@@ -183,6 +183,61 @@ def ext₁
   (hrt₂ : RedAffNorm (DCC? (f₄.to_eta.raw x.raw)) B)
   (hn_x : IsNorm RedAff x.raw) : f₂ = f₄ := by
   cases h₁ with
+  | eval =>
+    expose_names
+    cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
+    cases e_f.hole_same e_f₄ e_h (.tm₁ rfl e_h₀)
+    cases heq
+    simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₁
+    cases hrt₁.unique ⟨.single .evalc, by
+      simp [GenericExpr.to_eta_right_inv hn]
+      assumption⟩
+    cases e_h.hole_same (.tm₁ rfl e_h₀)
+    cases h₂ with
+    | eval =>
+      expose_names
+      cases heq
+      cases e_f.hole_same e_f₃ e_h (by assumption)
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta, GenericExpr.to_eta_right_inv hn_1, GenericExpr.to_eta_right_inv hn] at hrt₂
+      cases hrt₂.unique ⟨.single .evalc, by
+        dcc_simp
+        assumption⟩
+      cases e_f.hole_same e_f₃ e_h (by assumption)
+      have ha := e_f'.complete
+      have hb := e_f'_1.complete
+      grind
+    | id₁ =>
+      expose_names
+      expose_names
+      cases hrt₂.unique ⟨.single .id, hn_hole₁⟩
+    | quot₁ =>
+      expose_names
+      cases heq
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      have hrt' := hrt₂.unique ⟨.single .quot, by
+        simp [GenericExpr.to_eta_right_inv hn_1]
+        assumption⟩
+      simp [GenericExpr.to_eta_right_inv hn] at hrt'
+      simp [GenericExpr.to_eta_right_inv hn_1] at hrt'
+      cases hrt'
+      have h := e_h₀.contains_hole
+      have h := mem_imp_contains_hole e_h₀.sigl_hole_mem_tm
+      grind
+    | sndc | fstc =>
+      expose_names
+      cases hrt₂.unique ⟨.single (by constructor), by
+        have ha := e_h₀.is_norm.sigl
+        have h := e_h₀.is_norm.sigr
+        grind⟩
+    | par =>
+      expose_names
+      cases heq
+      cases e_f.hole_same e_f₃ e_h (by assumption)
+      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      simp [GenericExpr.to_eta_right_inv hn_1] at hrt₂
+      --cases hrt₂.elim_norm hn₂_1
+      --dcc_simp
+      sorry
   | par =>
     expose_names
     cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)

@@ -184,9 +184,52 @@ def ext₁
   cases h₁ with
   | fstc =>
     expose_names
-    
-    sorry
-  | id₁ =>
+    cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
+    cases e_f.hole_same e_f₄ e_h (.tm₁ rfl e_h₀)
+    have hn_l := hn_hole₁.sigl
+    have hn_r := hn_hole₁.sigr
+    simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₁
+    cases hrt₁.unique ⟨.single .fstc, hn_hole₁.sigl⟩
+    simp [NormExpr.to_eta, NormExpr.raw] at hrt₂
+    dcc_simp at hrt₂
+    cases h₂ with
+    | par =>
+      expose_names
+      exact (h .coup).elim
+    | eval =>
+      expose_names
+      cases heq
+      simp [GenericExpr.expr_to_eta, GenericExpr.to_eta_right_inv hn] at hrt₂
+      cases e_f.hole_same e_f₃ (by assumption) (by assumption)
+      cases hrt₂.unique ⟨.single (by constructor), by assumption⟩
+    | fstc => rfl
+    | sndc | id₁ =>
+      expose_names
+      cases hrt₂.unique ⟨.single (by constructor), by assumption⟩
+      try (cases e_f.hole_same e_f₃ (by assumption) (by assumption))
+      try (have h := e_h₀.coup_points_neq)
+      try (grind)
+    | quot₁ =>
+      expose_names
+      cases heq
+      cases hrt₂.unique ⟨.single (by constructor), by
+        dcc_simp
+        assumption⟩
+      cases e_f.hole_same e_f₃ (by assumption) (by assumption)
+      simp [GenericExpr.expr_to_eta] at hrt₂
+      cases hrt₂.unique ⟨.single .quot, by
+        simp [GenericExpr.to_eta_right_inv hn]
+        assumption⟩
+      cases e_h with
+      | tm₁ heq h =>
+        cases heq
+        cases h with
+        | coup =>
+          expose_names
+          simp [GenericExpr.to_eta_right_inv hn] at a_3
+          have h := a_3.contains_hole
+          grind
+  /-| id₁ =>
     expose_names
     cases h₂ with
     | fstc' =>
@@ -281,7 +324,7 @@ def ext₁
         assumption) (by assumption)
       have h_mem := e_h₀.contains_hole
       simp [raw] at h_mem
-      exact (hn h_mem).elim
+      exact (hn h_mem).elim-/
 
 set_option pp.deepTerms true in
 set_option pp.deepTerms.threshold 9999 in

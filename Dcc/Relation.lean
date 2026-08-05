@@ -606,7 +606,7 @@ def NormExpr.ext_iff.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ �
     match A, B with
     | ⟨A, hn₁⟩, ⟨B, hn₂⟩ => grind⟩
 
-@[grind .]
+@[grind ., ext]
 theorem NormExpr.ext.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
   {A B : NormExpr r} : A.raw = B.raw → A = B := ext_iff.mpr
 

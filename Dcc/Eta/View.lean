@@ -275,6 +275,14 @@ theorem ViewBangCoup.complete_none (h : ViewBangCoup e → False) : view_bang_co
     | exact (h (by constructor)).elim
     | grind)
 
+def ViewBangCoup.none_to_eta (h : ViewBangCoup e → False) : (ViewBangCoup (expr_to_eta e) → False) := by
+  intro h_view
+  unfold expr_to_eta at h_view
+  split at h_view
+  any_goals (cases h_view)
+  · exact (h .coup).elim
+  · exact (h .bang).elim
+
 @[grind =_, grind .]
 theorem ViewCoupBang.complete (h : ViewCoupBang e) : view_coup_bang? e = .some h := by
   cases h <;> simp [view_coup_bang?]
@@ -286,6 +294,18 @@ theorem ViewCoupBang.complete_none (h : ViewCoupBang e → False) : view_coup_ba
     first
     | exact (h (by constructor)).elim
     | grind)
+
+def ViewCoupBang.none_to_eta (h : ViewCoupBang e → False) : (ViewCoupBang (expr_to_eta e) → False) := by
+  intro h_view
+  unfold expr_to_eta at h_view
+  split at h_view
+  any_goals (dcc_simp at h_view; cases h_view)
+  · exact (h .coup).elim
+  · dcc_simp at h_view
+    unfold expr_to_eta at h_view
+    split at h_view
+    any_goals (cases h_view)
+    exact h .bang
 
 @[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
 theorem view_bang_coup?_none_sound (h : view_bang_coup? e = .none) : ViewBangCoup e → False := fun h => by

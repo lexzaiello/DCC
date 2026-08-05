@@ -129,6 +129,14 @@ def hole_mem_tm (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     | .const (.hole _) => True
     | .const _ => False
 
+def mem_imp_contains_hole (h : hole_mem_tm (τ := τ_c) e) : contains_hole e := by
+  induction e
+  any_goals (grind)
+  case const x =>
+    cases x
+    · simp [contains_hole]
+    · simp_all [hole_mem_tm]
+
 @[grind]
 def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
@@ -274,7 +282,7 @@ end NormExpr
 namespace GenericExpr
 
 @[grind]
-def eta_to_expr (e : GenericExpr (τ := EtaConst (τ_c := τ_c)))
+def eta_to_expr (e : @EtaExpr τ_c)
   (hn_contains : ¬ e.contains_hole) : GenericExpr τ_c :=
   match e with
   | DCC? ∗ => DCC? ∗
@@ -467,6 +475,7 @@ def expr_to_eta (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (�
 def to_eta_no_hole {e : GenericExpr τ} : ¬ (expr_to_eta e).contains_hole := by
   induction e <;> (simp_all [expr_to_eta, contains_hole])
 
+@[dcc_reduce]
 def to_eta_left_inv
   {e : GenericExpr τ} : eta_to_expr (expr_to_eta e) to_eta_no_hole = e := by
   unfold expr_to_eta
@@ -493,6 +502,35 @@ def to_eta_left_inv
     have hc := z.to_eta_left_inv
     simp [ha, hb, hc])
 
+@[dcc_reduce]
+def to_eta_left_inv'
+  {e : GenericExpr τ} {hn : ¬e.expr_to_eta.contains_hole = true} : eta_to_expr (expr_to_eta e) hn = e := by
+  unfold expr_to_eta
+  split
+  any_goals (simp [eta_to_expr])
+  any_goals (
+    focus
+    rename_i x
+    have ha := x.to_eta_left_inv
+    simp [ha]
+    done)
+  any_goals (
+    focus
+    rename_i x y
+    have ha := x.to_eta_left_inv
+    have hb := y.to_eta_left_inv
+    simp [ha, hb]
+    done)
+  any_goals (
+    focus
+    rename_i x y z
+    have ha := x.to_eta_left_inv
+    have hb := y.to_eta_left_inv
+    have hc := z.to_eta_left_inv
+    simp [ha, hb, hc])
+
+
+@[dcc_reduce]
 def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) :
   (expr_to_eta (eta_to_expr e hn)) = e := by
   induction e
@@ -510,4 +548,3 @@ def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) 
     | const => simp [eta_to_expr, expr_to_eta]
 
 end GenericExpr
-

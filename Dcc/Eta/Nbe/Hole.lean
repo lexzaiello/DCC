@@ -1,7 +1,10 @@
 import Dcc.Eta.Ast
 import Dcc.Eta.View
+import Dcc.Eta.Reflect
 import Dcc.Ast.Points
 import Dcc.Eta.Nbe.Domain
+import Mathlib.Data.List.Defs
+import Mathlib.Data.List.Basic
 
 /-
 Improvement to code structure in Reduce.lean
@@ -40,25 +43,70 @@ TODO:
 - will need domain preservation
 -/
 
-namespace NormExpr
-
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]
+
+namespace NormExpr
+
+/-def from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn : GenericExpr.IsNorm GenericExpr.RedAff f} (hn_hole : ¬ f.contains_hole) : @NormExpr τ_c GenericExpr.RedAff :=
+  ⟨f.eta_to_expr hn_hole, hn.from_eta hn_hole⟩-/
+
+def from_eta' (f : @NormExpr (@EtaConst τ_c) GenericExpr.RedAff) (hn : ¬ GenericExpr.contains_hole f.raw) : @NormExpr τ_c GenericExpr.RedAff :=
+  NormExpr.from_eta _ hn
 
 /-
 An η-reducible function is in normal form, has an arity of 1 or 2, and has known domain
 -/
-inductive EtaFn : (f : @EtaExpr.Norm τ_c) → List EtaExpr.Norm → Type u
-  | tm₁  : {_heq : arity f = 1} → (h_dom : Domain f α)    → EtaFn f [α]
-  | tm₂  : {_heq : arity f = 2} → (h_dom : Domain₂ f α β) → EtaFn f [α, β]
+open GenericExpr
+
+inductive EtaFn : (f : @NormExpr τ_c RedAff) → List (@NormExpr τ_c RedAff) → Type u
+  | tm₁  : {f : @NormExpr τ_c RedAff} → {_heq : arity f = 1} → (h_dom : Domain f α)    → EtaFn f [α]
+  | tm₂  : {f : @NormExpr τ_c RedAff} → {_heq : arity f = 2} → (h_dom : Domain₂ f α β) → EtaFn f [α, β]
+
+def EtaFn.to_eta {f : @GenericExpr τ_c} {hn : IsNorm RedAff f} (e : EtaFn ⟨f, hn⟩ doms) : EtaFn (mk f hn).to_eta (doms.map (·.to_eta)) := by
+  cases e with
+  | tm₁ h_dom => expose_names; exact .tm₁ h_dom.to_eta (_heq := arity_eta _heq)
+  | tm₂ h_dom => expose_names; exact .tm₂ h_dom.to_eta (_heq := arity_eta _heq)
+
+def EtaFn.from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn : IsNorm RedAff f} (hn_mem : ¬ f.contains_hole) {doms : List (@EtaExpr.Norm τ_c)}
+  (e : EtaFn ⟨f, hn⟩ doms) :
+    EtaFn ⟨f.eta_to_expr hn_mem, hn.from_eta hn_mem⟩ (by
+      cases e with
+      | tm₁ =>
+        expose_names
+        have h := h_dom.no_holes (by grind)
+        exact [α.from_eta h]
+      | tm₂ =>
+        expose_names
+        have h := h_dom.no_holes (by grind)
+        exact [α.from_eta h.left, β.from_eta h.right]) := by
+  simp
+  cases e with
+  | tm₁ =>
+    expose_names
+    exact .tm₁ (by
+      have hn := h_dom.no_holes (by grind)
+      have h  := h_dom.from_eta (by grind) (by grind)
+      simp [NormExpr.from_eta] at h
+      exact h) (_heq :=
+      arity_from_eta' (by
+        dcc_simp
+        exact _heq))
+  | tm₂ =>
+    expose_names
+    exact .tm₂ (by
+      have ha := h_dom.no_holes (by grind)
+      have h  := h_dom.from_eta (by grind) (by grind) (by grind)
+      simp [NormExpr.from_eta] at h
+      exact h) (_heq := by exact arity_from_eta' (by dcc_simp_all; grind))
 
 @[dcc_size]
 def EtaFn.length (e : EtaFn f doms) : doms.length = arity f := by
   cases e <;> grind
 
 @[grind]
-def EtaFn.vdoms {f : @EtaExpr.Norm τ_c} {doms : List (@EtaExpr.Norm τ_c)}
-  (e : EtaFn f doms) : Vector (@EtaExpr.Norm τ_c) (arity f) :=
+def EtaFn.vdoms {f : @NormExpr τ_c RedAff} {doms : List (@NormExpr τ_c RedAff)}
+  (e : EtaFn f doms) : Vector (@NormExpr τ_c RedAff) (arity f) :=
   ⟨⟨doms⟩, e.length⟩
 
 @[dcc_size]
@@ -68,7 +116,7 @@ def EtaFn.arity_pos (e : EtaFn f doms) : 0 < (arity f) :=
   | .tm₂ h => by grind
 
 @[grind]
-def EtaFn.points (_h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Vector (EtaExpr.Norm (τ_c := τ_c)) (GenericExpr.point_arity f) :=
+def EtaFn.points (_h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Vector (@NormExpr τ_c RedAff) (GenericExpr.point_arity f) :=
   (GenericExpr.points f).map GenericExpr.red_aff
 
 /-def EtaFn.indices (h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ ar doms) : Vector ((f' : @EtaExpr.Norm τ_c) × (ar' : ℕ) × (doms' : Vector EtaExpr.Norm ar') × (EtaFn f' ar' doms')) f.n_indices :=
@@ -81,31 +129,43 @@ def EtaFn.points (_h : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms) : Vector (EtaExpr.
     sorry-/
 
 @[aesop safe forward (rule_sets := [DccSize])]
-def EtaFn.decreasing {f τ : @EtaExpr.Norm τ_c} (h : EtaFn f [τ]) : τ.size < f.size :=
+def EtaFn.decreasing {f τ : @NormExpr τ_c RedAff} (h : EtaFn f [τ]) : τ.size < f.size :=
   match h with
   | .tm₁ h_dom => Domain.instRedRel.decreasing h_dom
 
 @[grind]
-def EtaFn.head_dom (e_f : EtaFn f doms) : ((τ : @EtaExpr.Norm τ_c) × (Domain f τ)) :=
+def EtaFn.head_dom (e_f : EtaFn f doms) : ((τ : @NormExpr τ_c RedAff) × (Domain f τ)) :=
   match e_f with
   | .tm₁ h_dom => ⟨_, h_dom⟩
   | .tm₂ h_dom => ⟨_, h_dom.to_domain⟩
 
 @[grind]
-def view_eta_fn (f : @EtaExpr.Norm τ_c) : Option ((doms : List (@EtaExpr.Norm τ_c)) × EtaFn f doms) :=
+def view_eta_fn (f : @NormExpr τ_c RedAff) : Option ((doms : List (@NormExpr τ_c RedAff)) × EtaFn f doms) :=
   if heq : f.arity = 1 then
     match f.domain? with
-    | .some ⟨_, h⟩ => .some ⟨_, .tm₁ (_heq := heq) h⟩
+    | .some ⟨_, h⟩ =>
+      .some ⟨_, .tm₁ (_heq := heq) h⟩
     | .none => .none
   else if heq : f.arity = 2 then
     match f.domain₂? with
-    | .some ⟨_, _, h⟩ => .some ⟨_, .tm₂ (_heq := heq) h⟩
+    | .some ⟨_, _, h⟩ =>
+      .some ⟨_, .tm₂ (_heq := heq) h⟩
     | .none => .none
   else .none
 
-def EtaFn.complete {f : @EtaExpr.Norm τ_c} {doms : List EtaExpr.Norm} (h : EtaFn f doms) : view_eta_fn f = .some ⟨doms, h⟩ := by
+def EtaFn.complete {f : @NormExpr τ_c RedAff} {doms : List (@NormExpr τ_c RedAff)} (h : EtaFn f doms) : view_eta_fn f = .some ⟨doms, h⟩ := by
   induction h with
   | tm₂ h_dom | tm₁ h_dom => simp_all [view_eta_fn, h_dom.complete]
+
+def view_eta_fn_none_sound {f : @NormExpr τ_c RedAff} (h : view_eta_fn f = .none) : ∀ {doms}, EtaFn f doms → False := by
+  intro _ h
+  have h := h.complete
+  grind
+
+def EtaFn.none_complete {f : @NormExpr τ_c RedAff} (h : ∀ {doms}, EtaFn f doms → False) : view_eta_fn f = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨doms, e_f⟩
+  exact (h e_f).elim
 
 @[dcc_force_reduce]
 def EtaFn.eq (h₁ h₂ : EtaFn (τ_c := τ_c) f doms) : h₁ = h₂ := by
@@ -113,13 +173,13 @@ def EtaFn.eq (h₁ h₂ : EtaFn (τ_c := τ_c) f doms) : h₁ = h₂ := by
   | tm₁ =>
     cases h₂ with
     | tm₁ =>
-      rename_i h_dom₁ _ h_dom₂
-      cases h_dom₁.eq h_dom₂; rfl
+      expose_names
+      cases h_dom.eq h_dom_1; rfl
   | tm₂ =>
     cases h₂ with
     | tm₂ =>
-      rename_i h_dom₁ _ h_dom₂
-      cases h_dom₁.eq h_dom₂; rfl
+      expose_names
+      cases h_dom.eq h_dom_1; rfl
 
 open GenericExpr
 
@@ -302,21 +362,21 @@ def Hole.unique {e e₁ e₂ : @EtaExpr.Norm τ_c} (h₁ : Hole e level e₁) (h
 namespace EtaFn
 
 inductive ArgTy : (e_f : EtaFn (τ_c := τ_c) f doms)
-  → {idx : Fin (arity f)}
+  → {idx : Fin (arity f.to_eta)}
   → (args : Vector (@EtaExpr.Norm τ_c) (Fin.toNat idx)) → @EtaExpr.Norm τ_c → Type u
-  | mk {e_f : EtaFn f doms} {idx : Fin (arity f)}
+  | mk {e_f : EtaFn f doms} {idx : Fin (arity f.to_eta)}
     {args : Vector (@EtaExpr.Norm τ_c) (Fin.toNat idx)} :
-    (hr : RedAffNorm ((args.map NormExpr.raw).foldl .app e_f.vdoms[↑ idx].raw) τ)
+    (hr : RedAffNorm ((args.map NormExpr.raw).foldl .app e_f.to_eta.vdoms[↑ idx].raw) τ)
     → ArgTy e_f args τ
 deriving DecidableEq
 
 @[grind]
-def get_arg_ty (e_f : EtaFn f doms) {idx : Fin (arity f)}
+def get_arg_ty (e_f : EtaFn f doms) {idx : Fin (arity f.to_eta)}
   (args : Vector (@EtaExpr.Norm τ_c) (Fin.toNat idx)) : ((t : @EtaExpr.Norm τ_c) × ArgTy e_f args t) := by
   cases e_f <;> exact ⟨_, .mk (aff_sound rfl)⟩
 
 def ArgTy.complete {e_f : EtaFn (τ_c := τ_c) f doms}
-  {idx : Fin (arity f)} {args : Vector (@EtaExpr.Norm τ_c) idx}
+  {idx : Fin (arity f.to_eta)} {args : Vector (@EtaExpr.Norm τ_c) idx}
   (h : ArgTy (idx := idx) e_f args τ) : e_f.get_arg_ty args = ⟨τ, h⟩ :=
   match h with
   | .mk hrt => by
@@ -328,7 +388,7 @@ def ArgTy.complete {e_f : EtaFn (τ_c := τ_c) f doms}
       dsimp [red_aff]
       simp [hrt.eq])
 
-instance ArgTy.instEtaRel {e_f : EtaFn f doms} {idx : Fin (arity f)} : EtaRel
+instance ArgTy.instEtaRel {e_f : EtaFn f doms} {idx : Fin (arity f.to_eta)} : EtaRel
   (α := Vector (@EtaExpr.Norm τ_c) idx) (β := EtaExpr.Norm) (ArgTy e_f (idx := idx)) (m := Id)  where
   run := get_arg_ty (idx := idx) e_f
   complete := ArgTy.complete (idx := idx) (e_f := e_f) (doms := doms)
@@ -336,46 +396,47 @@ instance ArgTy.instEtaRel {e_f : EtaFn f doms} {idx : Fin (arity f)} : EtaRel
 inductive Holes : (e_f : EtaFn (τ_c := τ_c) f doms)
   → (level : ℕ)
   → (holes : List (@EtaExpr.Norm τ_c)) → Type u
-  | tm₁ {e_f : EtaFn f [α]} : Hole α level hole_e
+  | tm₁ {e_f : EtaFn f [α]} : (heq : NormExpr.to_eta α = α') → Hole α' level hole_e
     → Holes e_f level [hole_e]
-  | tm₂ {e_f : EtaFn f [α, ⟨β₀, h_n_β⟩]} : Hole α (level + 2) ⟨hole₁, hn_hole₁⟩
-    → RedAffNorm (DCC? (β₀ hole₁)) β
+  | tm₂ {e_f : EtaFn f [α, ⟨β₀, h_n_β⟩]} : (heq₁ : NormExpr.to_eta α = α')
+    → Hole α' (level + 2) ⟨hole₁, hn_hole₁⟩
+    → RedAffNorm (DCC? (#(expr_to_eta β₀) hole₁)) β
     → Hole β (level + 1) hole₂
     → Holes e_f level [⟨hole₁, hn_hole₁⟩, hole₂]
 deriving DecidableEq
 
 @[dcc_size]
-def Holes.length {f : @EtaExpr.Norm τ_c} {doms : List (@EtaExpr.Norm τ_c)}
+def Holes.length {f : @NormExpr τ_c RedAff} {doms : List (@NormExpr τ_c RedAff)}
   {e_f : EtaFn f doms} {holes : List (@EtaExpr.Norm τ_c)}
   (h : Holes e_f level holes) : holes.length = (arity f) := by
   have h_size := e_f.length
   cases h <;> grind
 
 @[inline, grind]
-def Holes.v_elems {f : @EtaExpr.Norm τ_c} {doms : List (@EtaExpr.Norm τ_c)}
+def Holes.v_elems {f : @NormExpr τ_c RedAff} {doms : List (@NormExpr τ_c RedAff)}
   {e_f : EtaFn f doms} {holes : List (@EtaExpr.Norm τ_c)}
   (h : Holes e_f level holes) : Vector (@EtaExpr.Norm τ_c) (arity f) :=
   ⟨⟨holes⟩, h.length⟩
 
 @[grind]
-def Holes.app {f : @EtaExpr.Norm τ_c} {doms : List (@EtaExpr.Norm τ_c)}
+def Holes.app {f : @NormExpr τ_c RedAff} {doms : List (@NormExpr τ_c RedAff)}
   {e_f : EtaFn f doms} {holes : List (@EtaExpr.Norm τ_c)}
   (_h : Holes e_f level holes) : @EtaExpr τ_c :=
-  ((holes.map NormExpr.raw).foldl GenericExpr.app f.raw)
+  ((holes.map NormExpr.raw).foldl GenericExpr.app f.to_eta.raw)
 
 @[grind]
 def Holes.app_reduce {e_f : EtaFn f doms} (_h : Holes e_f level holes) : ((e' : EtaExpr.Norm) ×
-  (RedAffNorm ((holes.map NormExpr.raw).foldl GenericExpr.app f.raw) e')) :=
+  (RedAffNorm ((holes.map NormExpr.raw).foldl GenericExpr.app f.to_eta.raw) e')) :=
   ⟨_, aff_sound rfl⟩
 
 
 @[grind]
 def Holes.Reduces {e_f : EtaFn (τ_c := τ_c) f doms} (_h : Holes e_f level holes) (B : EtaExpr.Norm (τ_c := τ_c)) : Type u :=
-  (RedAffNorm ((holes.map NormExpr.raw).foldl GenericExpr.app f.raw) B)
+  (RedAffNorm ((holes.map NormExpr.raw).foldl GenericExpr.app f.to_eta.raw) B)
 
 @[grind]
 def Holes.fold {e_f : EtaFn (τ_c := τ_c) f doms} (on_f : @EtaExpr.Norm τ_c) (_h : Holes e_f level holes) : @EtaExpr.Norm τ_c :=
-  let ⟨⟨τ₁, hn_τ⟩, h_arg⟩ := e_f.get_arg_ty (idx := ⟨0, e_f.arity_pos⟩) ⟨#[], by simp⟩
+  let ⟨⟨τ₁, hn_τ⟩, h_arg⟩ := e_f.get_arg_ty (idx := ⟨0, e_f.to_eta.arity_pos⟩) ⟨#[], by simp⟩
   red_aff <| (holes.map NormExpr.raw).foldl GenericExpr.app on_f.raw
 
 @[grind]
@@ -384,30 +445,33 @@ def holes (e_f : EtaFn (τ_c := τ_c) f doms) (level : ℕ)
   cases e_f with
   | tm₁ h_dom =>
     rename_i α _
-    match α.mk_hole level with
-    | .some ⟨_, h⟩ => exact .some ⟨_, .tm₁ h⟩
+    match α.to_eta.mk_hole level with
+    | .some ⟨_, h⟩ => exact .some ⟨_, .tm₁ rfl h⟩
     | .none => exact .none
   | tm₂ h_dom₂ =>
     rename_i α β₀ _
-    match α.mk_hole (level + 2) with
+    match α.to_eta.mk_hole (level + 2) with
     | .some ⟨⟨hole₁, _hn_hole₁⟩, h₁⟩ =>
-      match (red_aff (DCC? (β₀.raw hole₁))).mk_hole (level + 1) with
+      match (red_aff (DCC? (#(expr_to_eta β₀.raw) hole₁))).mk_hole (level + 1) with
       | .some ⟨_hole₂, h₂⟩ =>
-        exact .some ⟨_, .tm₂ h₁ (aff_sound rfl) h₂⟩
+        exact .some ⟨_, .tm₂ rfl h₁ (aff_sound rfl) h₂⟩
       | .none => exact .none
     | .none => exact .none
 
 @[dcc_force_reduce, aesop safe apply (rule_sets := [DccForceReduce])]
 def Holes.complete (h : Holes (τ_c := τ_c) e_f level hole_elems) : holes e_f level = .some ⟨hole_elems, h⟩ := by
   cases h with
-  | tm₁ h_hole =>
+  | tm₁ heq₁ h_hole =>
     rename_i e_f
     cases e_f with
-    | tm₁ dom => simp [holes, h_hole.complete]
-  | tm₂ hr₁ h_hole₁ h_hole₂ =>
+    | tm₁ dom =>
+      cases heq₁
+      simp [holes, h_hole.complete]
+  | tm₂ heq₁ hr₁ h_hole₁ h_hole₂ =>
     rename_i e_f
     cases e_f with
     | tm₂ dom =>
+      cases heq₁
       simp [holes, hr₁.complete, raw, (h_hole₁.complete ▸ h_hole₂).complete, h_hole₁.aff_complete]
       dcc_simp
       have h := (h_hole₁.out_eq ▸ h_hole₁).eq
@@ -419,13 +483,14 @@ def Holes.unique (h₁ : Holes (τ_c := τ_c) e_f level hole_elems₁) (h₂ : H
   have hb := h₂.complete
   simp_all
 
-def Holes.hole_mem_tm {f : @EtaExpr.Norm τ_c} {doms : List (@EtaExpr.Norm τ_c)} {e_f : EtaFn f doms}
+def Holes.hole_mem_tm {f : @NormExpr τ_c RedAff} {doms : List (@NormExpr τ_c RedAff)} {e_f : EtaFn f doms}
   (h : Holes (τ_c := τ_c) e_f lv hole_tms) (i : Fin (arity f)) : h.v_elems[i].raw.hole_mem_tm := by
   cases h with
-  | tm₁ =>
+  | tm₁ heq =>
+    cases heq
     rename_i e_f hole h_hole
     simp [v_elems, h_hole.hole_mem_tm]
-  | tm₂ =>
+  | tm₂ heq =>
     rename_i e_f _ h_hole₁ h_hole₂
     cases e_f with
     | tm₂ =>
@@ -441,19 +506,101 @@ def Holes.points_norm {e_f : EtaFn f doms} {hole_elems : List (@EtaExpr.Norm τ_
   (idx    : Fin (arity f))
   (b_idx  : Fin h.v_elems[idx].raw.point_arity) : IsNorm RedAff h.v_elems[idx].raw.points[b_idx] := by
   cases h with
-  | tm₁ h_hole =>
+  | tm₁ heq h_hole =>
     rename_i hole_e e_f
     cases e_f with
     | tm₁ =>
       match idx with
       | ⟨0, h_lt⟩ => exact h_hole.points_norm b_idx
       | ⟨n + 1, _⟩ => grind
-  | tm₂ h_hole₁ _ h_hole₂ =>
+  | tm₂ heq h_hole₁ _ h_hole₂ =>
     match idx with
     | ⟨1, h_lt⟩ => exact h_hole₂.points_norm b_idx
     | ⟨0, h_lt⟩ => exact h_hole₁.points_norm b_idx
     | ⟨n + 2, _⟩ => grind
 
+def Holes.contains_hole₁ (h : Holes (τ_c := τ_c) e_f lv [hole₁]) : contains_hole hole₁.raw := by
+  cases h with
+  | tm₁ heq h => exact h.contains_hole
+
+/-set_option pp.deepTerms true in
+set_option pp.deepTerms.threshold 9999 in
+set_option pp.proofs true in
+set_option pp.proofs.threshold 9999 in
+def to_from_eta {f : @GenericExpr (@EtaConst τ_c)} {hn₂ : ¬ f.contains_hole} {hn_f : IsNorm RedAff f} {hn₃ : IsNorm (@RedAff τ_c) (f.eta_to_expr hn₂)}
+  (h₁ : EtaFn ⟨f, hn_f⟩ doms₁) (h₂ : EtaFn ⟨(expr_to_eta (eta_to_expr f hn₂)), (IsNorm.to_eta hn₃)⟩ doms₂) : doms₂ = doms₁ := by
+  have h := to_eta_right_inv hn₂
+  have heq : h₁ ≍ h₂ := by
+    cases h₁ with
+    | tm₁ =>
+      cases h₂ with
+      | tm₁ =>
+        have h_expr : (mk f hn_f) = (mk (f.eta_to_expr hn₂).expr_to_eta (IsNorm.to_eta hn₃)) :=
+          NormExpr.ext (by
+            simp [raw, h])
+        expose_names
+        rw [← h_expr] at h_dom_1
+        have heq := h_dom.unique h_dom_1
+        expose_names
+        cases heq
+        simp [h_dom.eq h_dom_1]
+        sorry-/
+
 end EtaFn
+
+inductive EtaTm : (f : @NormExpr τ_c RedAff) → List (@NormExpr τ_c RedAff) → Type u
+  | fn : EtaFn f doms → EtaTm f doms
+  | pi : EtaTm ⟨DCC? (Π(f_α, f_β) x_α), hn⟩ []
+
+@[grind]
+def view_eta_tm (f : @NormExpr τ_c RedAff) : Option ((doms : List (@NormExpr τ_c RedAff)) × EtaTm f doms) :=
+  match f.view_eta_fn with
+  | .some ⟨_, h⟩ => .some ⟨_, .fn h⟩
+  | .none =>
+    match f with
+    | ⟨DCC? (Π(_f_α, _f_β) _x_α), _hn⟩ => .some ⟨_, .pi⟩
+    | _ => .none
+
+def EtaTm.complete {f : @NormExpr τ_c RedAff} (h : EtaTm f doms) : view_eta_tm f = .some ⟨doms, h⟩ := by
+  cases h with
+  | fn h => simp [view_eta_tm, h.complete]
+  | pi =>
+    expose_names
+    have h_ar : ((f_α.pi f_β).app x_α).arity = 0 := by
+      grind
+    simp [view_eta_tm, view_eta_fn, arity, raw, h_ar]
+
+def EtaTm.to_eta {f : @NormExpr τ_c RedAff} (h : EtaTm f doms) : EtaTm ⟨expr_to_eta f.raw, f.is_norm.to_eta⟩ (doms.map (·.to_eta)) := by
+  cases h with
+  | fn h => exact .fn h.to_eta
+  | pi => exact .pi
+
+def EtaTm.from_eta {f : @EtaExpr.Norm τ_c} (hn_mem : ¬ f.raw.contains_hole) {doms : List (@EtaExpr.Norm τ_c)}
+  (e : EtaTm f doms) : EtaTm (f.from_eta hn_mem) (by
+    cases e with
+    | fn h =>
+      cases h with
+      | tm₁ h =>
+        expose_names
+        have h := h.no_holes (by grind)
+        exact [α.from_eta h]
+      | tm₂ h =>
+        expose_names
+        have h := h.no_holes (by grind)
+        exact [α.from_eta (by grind), β.from_eta (by grind)]
+    | pi => exact []) := by
+  cases e with
+  | fn h => exact .fn (h.from_eta (by dcc_simp_all))
+  | pi => exact .pi
+
+def view_eta_tm_none_sound {f : @NormExpr τ_c RedAff} (h : view_eta_tm f = .none) : ∀ {doms}, EtaTm f doms → False := by
+  intro _ h
+  have h := h.complete
+  grind
+
+def EtaTm.none_complete {f : @NormExpr τ_c RedAff} (h : ∀ {doms}, EtaTm f doms → False) : view_eta_tm f = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro ⟨doms, e_f⟩
+  exact (h e_f).elim
 
 end NormExpr

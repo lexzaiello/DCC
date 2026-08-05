@@ -183,6 +183,67 @@ def ext₁
   (hrt₂ : RedAffNorm (DCC? (f₄.to_eta.raw x.raw)) B)
   (hn_x : IsNorm RedAff x.raw) : f₂ = f₄ := by
   cases h₁ with
+  | quot₁ =>
+    expose_names
+    cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
+    cases e_f.hole_same e_f₄ e_h (.tm₁ rfl e_h₀)
+    simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₁
+    cases hrt₁.unique ⟨.single .quot, by
+      
+      sorry⟩
+  | fstc' =>
+    expose_names
+    cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
+    cases e_f.hole_same e_f₄ e_h (.tm₁ rfl e_h₀)
+    simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₁
+    cases hrt₁.unique ⟨.trans (.single .unmap) (.single .fstc), by
+      have h := e_h₀.points_norm ⟨0, by grind⟩
+      simp [GenericExpr.points] at h
+      exact h.sigl⟩
+    simp [NormExpr.to_eta, NormExpr.raw] at hrt₂
+    dcc_simp at hrt₂
+    cases h₂ with
+    | fstc' => rfl
+    | sndc'  =>
+      expose_names
+      cases hrt₂.unique ⟨.trans (.single .unmap) (.single .sndc), by
+        have h := e_h₀.points_norm ⟨0, by grind⟩
+        exact h.sigr⟩
+      cases e_f.hole_same e_f₃ (by assumption) (by assumption)
+      cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
+      have h := e_h₀.bang_coup_points_neq
+      grind
+    | par =>
+      expose_names
+      exact (h .bang).elim
+    | id₁ =>
+      expose_names
+      cases hrt₂.unique ⟨.single (by constructor), by assumption⟩
+      try (cases e_f.hole_same e_f₃ (by assumption) (by assumption))
+      try (have h := e_h₀.coup_points_neq)
+      try (grind)
+    | quot₁ =>
+      expose_names
+      cases heq
+      cases hrt₂.unique ⟨.single (by constructor), by
+        dcc_simp
+        assumption⟩
+      cases e_f.hole_same e_f₃ (by assumption) (by assumption)
+      simp [GenericExpr.expr_to_eta] at hrt₂
+      cases hrt₂.unique ⟨.single .quot, by
+        simp [GenericExpr.to_eta_right_inv hn]
+        assumption⟩
+      cases e_h with
+      | tm₁ heq h =>
+        cases heq
+        cases h with
+        | bang h =>
+          cases h with
+          | coup =>
+            expose_names
+            simp [GenericExpr.to_eta_right_inv hn] at a_3
+            have h := a_3.contains_hole
+            grind
   | sndc' =>
     expose_names
     cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)

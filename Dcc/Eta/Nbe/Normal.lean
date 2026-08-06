@@ -191,6 +191,13 @@ def app_norm_arg {e_f : EtaFn (τ_c := τ_c) f doms} (e_h : e_f.Holes level [⟨
       have h := h₁.app_norm_arg h₂ hn
       exact h
 
+def app_norm {e_f : EtaFn (τ_c := τ_c) f doms} (e_h : e_f.Holes level [⟨a, hn_α⟩, ⟨b, hn_b⟩]) : GenericExpr.IsNorm GenericExpr.RedAff (DCC? (a b)) := by
+  cases e_h with
+  | tm₂ =>
+    expose_names
+    cases heq₁
+    exact a_2.app_norm a_3
+
 end Holes
 
 namespace Canonicalize

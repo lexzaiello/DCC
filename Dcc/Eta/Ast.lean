@@ -411,7 +411,7 @@ def eta_to_expr (e : @EtaExpr τ_c)
   | .const (.hole _) => by simp_all [contains_hole]
   | .const (.const x) => (.const x)
 
-@[grind]
+@[grind, dcc_rel]
 def expr_to_eta (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (τ_c := τ_c))) :=
   match e with
   | DCC? ∗ => DCC? ∗

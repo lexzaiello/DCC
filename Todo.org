@@ -1,0 +1,37 @@
+* Updated paper todo in order
+1. Finish funext. Should work with Judge, bare minimum
+2. Next paper draft:
+- draw out inference rules in latex
+  - Must have this as a reference. Also useful for Klavins
+- references for new paper structure:
+  - Most important: [[http://www.strictlypositive.org/ott.pdf][OG observational type theory paper (follow structure)]]
+- headline with funext
+- synopsis for bait:
+  "We present the dependent combinator calculus (DCC): an extensional dependent type theory based on affine categorical combinators with decidable type checking and computational function extensionality."
+    - Note: altenkirch doesn't do too much in his abstract
+    - Observation to insert: "We note that this property may not be enjoyed by lambda calcului due to the presence of open terms. Whereas \eta-reduction in the \lambda-calculus
+      - \eta-reduction paper: [[https://www.cambridge.org/core/services/aop-cambridge-core/content/view/FAAA27786A519A85C8DFB650AC8864AD/S0956796800001301a.pdf/the-virtues-of-eta-expansion.pdf][might be good to cite]]
+      - LAY OUT THE "CANONICAL FORMS" IN A TABLE
+
+- synopsis for design:
+  - Frame the benefits of it as being natural consequences of the design:
+    - Affine logic -> SN by default
+    - Categorical combinators -> eta reductions correspond to the canonical morpshisms of cartesian closed category.
+      - Our \eta-reductino is essentially normalization by evaluation
+  - Frame it as a result: funext is a metatheorm - this design could be useful to others.
+
+- Definitely want examples of extensional refl proving things automatically
+
+- Limitations:
+  - We do not have inductives yet. It is unclear whether this holds in this case
+
+Notes for funext proofs:
+- blackbox until as late as possible with sorry
+
+The main theorem:
+
+If (h : Judge e (\Pi(f_\alpha, f_\beta) x_\alpha)) and e -!> e', then there exists e'' such that (view_eta_prooetaf_fn h (expr_to_eta e')).Canonicalize e''
+
+Side theorems we might want:
+- All Judge f (\Pi(f_\alpha, f_\beta) x_\alpha) have a Domain
+- All Judge f (\Pi(f_\alpha, f_\beta) x_\alpha) have an EtaFn representation

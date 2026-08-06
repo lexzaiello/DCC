@@ -23,7 +23,8 @@ def ext₂
   {e_h₀ : Hole α.to_eta 2 x}
   (hrt  : RedAffNorm (DCC? (#(expr_to_eta β₀.raw) x.raw)) β)
   (e_h₁ : Hole β 1 y)
-  (h₁   : Canonicalize e_f₁ e_f₂) (h₂ : Canonicalize e_f₃ e_f₄)
+  (h₁   : Canonicalize e_f₁ e_f₂)
+  (h₂   : Canonicalize e_f₃ e_f₄)
   (hrt₁ : RedAffNorm (DCC? (f₂.to_eta.raw x.raw y.raw)) B)
   (hrt₂ : RedAffNorm (DCC? (f₄.to_eta.raw x.raw y.raw)) B)
   (hn_x : IsNorm RedAff x.raw) : f₂ = f₄ := by

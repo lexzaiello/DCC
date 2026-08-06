@@ -20,9 +20,9 @@ def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   | DCC[.] ∗ => 1
   | DCC[.] ⊤ => 2
   | DCC[.] ⊥ => 2
-  | DCC[.] x = y => x.size + y.size
-  | DCC[.] Eql(α)  => α.size + 4
-  | DCC[.] refl(α) => α.size + 3
+  | DCC[.] x = y => (x.size + y.size) + 1
+  | DCC[.] Eql(α)  => α.size + 5
+  | DCC[.] refl(α) => α.size + 5
   | DCC[.] Sort m => m
   | DCC[.] Σ(α, β) => α.size + β.size + 3
   | DCC[.] `(β, x) => β.size + x.size + 3

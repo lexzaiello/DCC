@@ -783,6 +783,13 @@ def RedAffNorm.push_head (hrt : RedAffNorm A C) (hr : RedAff A B) : RedAffNorm B
 @[grind ., grind! .]
 theorem id_is_norm : IsNorm RedAff (DCC? Id(α)) := fun ⟨_, h⟩ => nomatch h
 
+namespace IsNorm
+
+def map (h : IsNorm RedAff (.map f)) : IsNorm RedAff f :=
+  fun ⟨_, hr⟩ => h ⟨_, .map₀ hr⟩
+
+end IsNorm
+
 end GenericExpr
 
 abbrev Expr.RedAff := GenericExpr.RedAff (τ := Unit)

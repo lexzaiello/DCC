@@ -189,6 +189,12 @@ def RedAffNorm.to_eta (h : RedAffNorm A B) : RedAffNorm A.expr_to_eta ⟨B.raw.e
   match h with
   | ⟨hr, hn⟩ => ⟨hr.cast_eta, hn.to_eta⟩
 
+open GenericExpr in
+@[aesop safe apply (rule_sets := [DccRel])]
+def RedAffNorm.to_eta' (h : RedAffNorm A B) : RedAffNorm (expr_to_eta A) B.to_eta :=
+  match h with
+  | ⟨hr, hn⟩ => ⟨hr.cast_eta, hn.to_eta⟩
+
 namespace RedAffReflTrans
 
 def tail_no_hole (hr : RedAffReflTrans A B) (hn : ¬ A.contains_hole) : ¬ B.contains_hole := by

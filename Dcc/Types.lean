@@ -1,4 +1,5 @@
 import Dcc.Ast
+import Dcc.Attrs
 
 namespace GenericExpr
 

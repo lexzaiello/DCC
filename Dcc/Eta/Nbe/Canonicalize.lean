@@ -1075,7 +1075,7 @@ open NormExpr
 
 #check False.rec
 
-inductive Canonicalize! : (f : @GenericExpr τ_c) → (f' : @GenericExpr τ_c) → Type (u + 1)
+inductive Canonicalize! : (f : @GenericExpr τ_c) → (f' : @GenericExpr τ_c) → Type u
   | step  : {f₁ : @GenericExpr.{u} τ_c}
     → (hrt : RedAffNorm f₁ ⟨f₂, hn_f₂⟩)
     → (e_f : EtaTm ⟨expr_to_eta f₂, hrt.is_norm.to_eta⟩ doms)

@@ -12,7 +12,7 @@ open NormExpr
 eta-reduce all points, then canonicalize again
 -/
 
-inductive RedEta : (e : @GenericExpr τ_c) → (e' : @GenericExpr τ_c) → Type (u + 1)
+inductive RedEta : (e : @GenericExpr τ_c) → (e' : @GenericExpr τ_c) → Type u
   | pi₁  : (hrt₁ : RedAffNorm f_α f_α₁)
     → (h_dom : Domain (τ_c := τ_c) f_α₁ ⟨δ, hn_δ⟩)
     → (hr₁   : RedEta f_α f_α')
@@ -188,6 +188,10 @@ def red_eta_sound' (heq : red_eta' A = B) : RedEta (τ_c := τ_c) A B :=
   heq ▸ red_eta_sound (A := A)
 
 def RedEta.complete' (hr : RedEta (τ_c := τ_c) A B) : red_eta' A = B := by
+  have h := hr.complete
+  grind
+
+def RedEta.eq' (hr : RedEta (τ_c := τ_c) A B) : hr = (hr.eq ▸ (red_eta A).snd) := by
   have h := hr.complete
   grind
 

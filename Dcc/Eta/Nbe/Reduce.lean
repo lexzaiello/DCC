@@ -32,6 +32,7 @@ inductive RedEta : (e : @GenericExpr τ_c) → (e' : @GenericExpr τ_c) → Type
   | pi₄  : (hr₁ : RedEta f_α f_α') → (hr₂ : RedEta f_β f_β') → RedEta (DCC? Π(f_α, f_β)) (DCC? Π(f_α', f_β'))
   | coup : (hr₁ : RedEta β β') → RedEta (DCC? Coup(β)) (DCC? Coup(β'))
   | bang : (hr₁ : RedEta β β') → RedEta (DCC? !(β)) (DCC? !(β'))
+  | eqe  : (hr₁ : RedEta x x') → (hr₂ : RedEta y y') → RedEta (DCC? (x = y)) (DCC? (x' = y'))
   | tm   : (hn  : ViewEta f → False) → f.Canonicalize! f' → RedEta f f'
 
 def red_eta (e : @GenericExpr τ_c) : ((e' : @GenericExpr τ_c) × (RedEta e e')) :=
@@ -59,12 +60,18 @@ def red_eta (e : @GenericExpr τ_c) : ((e' : @GenericExpr τ_c) × (RedEta e e')
   | .some (.pi (f_α := f_α) (f_β := f_β)) => ⟨_, .pi₄ f_α.red_eta.snd f_β.red_eta.snd⟩
   | .some (.coup (β := β)) => ⟨.coup β.red_eta.fst, .coup β.red_eta.snd⟩
   | .some (.bang (β := β)) => ⟨.bang β.red_eta.fst, .bang β.red_eta.snd⟩
+  | .some (.eq (x := x) (y := y)) => ⟨_, .eqe x.red_eta.snd y.red_eta.snd⟩
   | .none => ⟨_, .tm (view_eta?_none_sound (by grind)) e.canonicalize!.snd⟩
 termination_by size e
-decreasing_by all_goals (grind)
+decreasing_by
+  any_goals (grind)
 
 def RedEta.complete (h : RedEta (τ_c := τ_c) e e') : red_eta e = ⟨e', h⟩ := by
   induction h with
+  | eqe =>
+    expose_names
+    simp [red_eta, view_eta?, hr₁_ih, hr₂_ih]
+    grind
   | pi₁ =>
     expose_names
     have heq₁ := hrt₁.complete
@@ -139,6 +146,12 @@ def RedEta.unique (hr₁ : RedEta (τ_c := τ_c) A B) (hr₂ : RedEta A C) : B =
 
 def RedEta.is_norm (hr₁ : RedEta A B) : IsNorm RedAff B := by
   induction hr₁ with
+  | eqe =>
+    expose_names
+    intro ⟨_, h⟩
+    cases h with
+    | eql' h => exact hr₁_ih ⟨_, h⟩
+    | eqr' h => exact hr₂_ih ⟨_, h⟩
   | pi₁ =>
     expose_names
     intro ⟨_, h⟩

@@ -105,6 +105,16 @@ def Reduces.out_eq [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) : B = red
     have hb := hr'.complete
     grind
 
+def Reduces.push_head [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A C) (hr : RedAff A B) : Reduces B C :=
+  match h with
+  | ⟨hrt, hn⟩ => ⟨hrt.push_head hr, hn⟩
+
+def Reduces.elim_norm [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) (hn : IsNorm RedAff A) : RedEta A B :=
+  match h with
+  | ⟨hrt, hn'⟩ => by
+    cases hrt.elim_norm hn
+    assumption
+
 def Reduces.eq [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) : h = reduce_reduces (A := A) (B := B) (h.out_eq ▸ rfl) :=
   match h with
   | ⟨hr, hr'⟩ => by
@@ -200,7 +210,7 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Judge (DCC? x = y) (DCC? Sort 0)
   | refl    : Judge f_α τ_f_α
     → Arrow δ (DCC? Sort m) o τ_f_α
-    → Reduces (eql.type f_α δ o) τ
+    → Reduces (refl.type f_α δ o) τ
     → Judge (DCC? refl(f_α)) τ
   | eql    : Judge f_α τ_f_α
     → Arrow δ (DCC? Sort m) o τ_f_α

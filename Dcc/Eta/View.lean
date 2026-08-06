@@ -232,6 +232,7 @@ inductive ViewEta : GenericExpr τ_c → Type u
   | pi_comp : ViewEta (DCC? (Π(f_α, f_β) ∘' g))
   | coup    : ViewEta (DCC? Coup(β))
   | bang    : ViewEta (DCC? !(β))
+  | eq      : ViewEta (DCC? x = y)
 deriving DecidableEq
 
 @[grind, dcc_rel]
@@ -242,6 +243,7 @@ def view_eta? (e : GenericExpr τ_c) : Option (ViewEta e) :=
   | (DCC? (Π(_f_α, _f_β) ∘' _g)) => .some .pi_comp
   | (DCC? Coup(_β))              => .some .coup
   | (DCC? !(_β))                 => .some .bang
+  | (DCC? _x = _y)               => .some .eq
   | _ => .none
 
 @[grind ., grind =_]
@@ -259,9 +261,6 @@ theorem ViewEta.complete_none (h : ViewEta e → False) : view_eta? e = .none :=
 @[aesop safe forward (rule_sets := [DccRel]), dcc_rel]
 theorem view_eta?_none_sound (h : view_eta? e = .none) : ViewEta e → False := fun h => by
   simp_all [h.complete]
-
-theorem IsEtaTm.complete_view_eta (h : IsEtaTm e) : view_eta? e = .none := by
-  induction h <;> (simp [view_eta?]; try grind)
 
 @[grind =_, grind .]
 theorem ViewBangCoup.complete (h : ViewBangCoup e) : view_bang_coup? e = .some h := by

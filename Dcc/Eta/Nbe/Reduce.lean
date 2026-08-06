@@ -130,5 +130,6 @@ def RedEta.complete (h : RedEta (τ_c := τ_c) e e') : red_eta e = ⟨e', h⟩ :
     grind
 
 #eval (red_eta (DCC (Id(Sort 0) ∘' Id(Sort 0)))).fst
+#eval (red_eta (DCC Π(Id(Sort 0) ∘' Id(Sort 0), `(Sort 0, `(Sort 0, Sort 0))))).fst
 
 end GenericExpr

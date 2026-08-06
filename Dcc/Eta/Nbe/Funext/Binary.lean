@@ -96,7 +96,6 @@ def ext₂
         cases e_f₃ with
         | tm₂ =>
           expose_names
-          simp [GenericExpr.expr_to_eta] at hrt
           cases e_h₀ with
           | pure =>
             expose_names

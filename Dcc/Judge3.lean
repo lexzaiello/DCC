@@ -55,6 +55,11 @@ inductive Reduces.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c �
     → B.raw.RedEta C
     → Reduces A C
 
+def Reduces.aff (h : Reduces A B) : RedAffNorm A (red_aff A) :=
+  match h with
+  | ⟨hr₁, _hn₂⟩ =>
+    hr₁.out_eq ▸ hr₁
+
 def Reduces.unique.{u} {τ_c : Type u} [DecidableEq τ_c] {A B C : GenericExpr τ_c}
   (h₁ : Reduces A B) (h₂ : Reduces A C) : B = C :=
   match h₁, h₂ with

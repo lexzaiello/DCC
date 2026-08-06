@@ -727,9 +727,7 @@ def ext₁
         assumption⟩
       dcc_simp at hrt'
       cases hrt'
-      have h_eq_x₀ := hrt₂.quot_self (by
-        simp [GenericExpr.to_eta_right_inv hn]
-        assumption) (by assumption)
+      have h_eq_x₀ := hrt₂.quot_self (by assumption) (by assumption)
       have h_mem := e_h₀.contains_hole
       simp [raw] at h_mem
       exact (hn h_mem).elim

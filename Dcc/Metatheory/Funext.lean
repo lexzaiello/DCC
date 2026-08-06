@@ -1,6 +1,5 @@
 import Dcc.Judge3
-import Dcc.Eta.Nbe.Funext.Binary
-import Dcc.Eta.Nbe.Funext.Unary
+import Dcc.Eta.Nbe.Funext
 
 open GenericExpr
 
@@ -12,7 +11,10 @@ namespace NormExpr
 
 namespace EtaFn
 
-def has_canonicalize (e_f : EtaFn f doms) : ((f' : NormExpr RedAff) × (e_f' : EtaFn f' doms) × Canonicalize e_f e_f') := by
+def has_canon (e_f : EtaFn f doms) : ((f' : NormExpr RedAff) × (e_f' : EtaFn f' doms) × Canonicalize e_f e_f') := by
+  sorry
+
+def has_holes (e_f : EtaFn f doms) (level : ℕ) : ((hole_tms : List EtaExpr.Norm) × e_f.Holes level hole_tms) := by
   sorry
 
 end EtaFn
@@ -71,6 +73,13 @@ def dom₁ (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α)))
   (hr₂    : RedAffNorm g g') : ((α : NormExpr RedAff) × (Domain f' α) × (Domain g' α)) := by
   sorry
 
+@[inline, dcc_judge]
+def dom₁' (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α)))
+  (h₂ : Judge g (DCC? (Π(f_α, f_β) x_α)))
+  {hr₁    : Reduces f f'}
+  {hr₂    : Reduces g g'} : ((α : NormExpr RedAff) × (Domain (red_aff f) α) × (Domain (red_aff g) α)) :=
+  h₁.dom₁ h₂ hr₁.aff hr₂.aff
+
 def dom₂ (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α)))
   (h₂     : Judge g (DCC? (Π(f_α, f_β) x_α)))
   (hr₁    : RedAffNorm f f')
@@ -96,21 +105,53 @@ def fn_arity_pos (h : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α))) : 0 <
 def all_eta_fn (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α))) (hrt : RedAffNorm f f') : ((doms : List (NormExpr RedAff)) × EtaFn f' doms) := by
   sorry
 
+open NormExpr
+open EtaFn
+
+/-def ext₁ (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α))) (h₂ : Judge g (DCC? (Π(f_α, f_β) x_α)))
+  (h_arr₁ : (red_aff f).arity = 1)
+  (h_arr₂ : (red_aff g).arity = 1)
+  (hr₁    : Reduces f f')
+  (hr₂    : Reduces g g')
+  (hr₃    : RedAffNorm ((has_canon (doms := [(h₁.dom₁' h₂).1]) (tm₁ (h₁.dom₁' h₂).2.1)).snd.fst.has_holes 0).snd.app B)
+  (hr₄    : RedAffNorm ((has_canon (doms := [(h₁.dom₁' h₂).1]) (tm₁ (h₁.dom₁' h₂).2.2)).snd.fst.has_holes 0).snd.app B) : f' = g' := by-/
+
+def ext₁ (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α))) (h₂ : Judge g (DCC? (Π(f_α, f_β) x_α)))
+  (h_arr₁ : (red_aff f).arity = 1)
+  (h_arr₂ : (red_aff g).arity = 1)
+  (hr₁    : Reduces f f')
+  (hr₂    : Reduces g g')
+  (hr₃    : RedAffNorm ((tm₁ (h₁.dom₁ h₂ hr₁.aff hr₂.aff).2.1 (_heq := by assumption)).has_canon.2.1.has_holes 0).2.app B)
+  (hr₄    : RedAffNorm ((tm₁ (h₁.dom₁ h₂ hr₁.aff hr₂.aff).2.2 (_heq := by assumption)).has_canon.2.1.has_holes 0).2.app B) : f' = g' := by
+  let h_dom := h₁.dom₁ h₂ hr₁.aff hr₂.aff
+  let h₃ : EtaFn _ _ := .tm₁ h_dom.snd.fst (_heq := by assumption)
+  let h₄ : EtaFn _ _ := .tm₁ h_dom.snd.snd (_heq := by assumption)
+  let h_canon₁ := h₃.has_canon
+  let h_canon₂ := h₄.has_canon
+  let h := h_canon₁.snd.snd.ext (h_canon₁.snd.fst.has_holes 0).snd h_canon₂.snd.snd (h_canon₂.snd.fst.has_holes 0).snd hr₃ hr₄
+  --change (tm₁ (h₁.dom₁ h₂ hr₁.aff hr₂.aff).snd.1).has_canon.fst = (tm₁ (h₁.dom₁ h₂ hr₁.aff hr₂.aff).snd.2).has_canon.fst at h
+  have hr'₁ : f.Reduces h_canon₁.1.raw :=
+    ⟨hr₁.aff, by sorry⟩
+  have hr'₂ : g.Reduces h_canon₁.1.raw := by
+    sorry
+
 def ext₁ (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α))) (h₂ : Judge g (DCC? (Π(f_α, f_β) x_α)))
   (h_arr₁ : f'.arity = 1)
   (h_arr₂ : g'.arity = 1)
   (hr₁    : RedAffNorm f f')
   (hr₂    : RedAffNorm g g')
-  (hr₃    : RedAffNorm (DCC? (f'.raw x)) B)
-  (hr₄    : RedAffNorm (DCC? (g'.raw x)) B) : f' = g' := by
+  (hr₃    : RedAffNorm ((tm₁ (h₁.dom₁ h₂ hr₁ hr₂).snd.fst (_heq := by assumption)).has_canonicalize.snd.fst.has_holes 0).snd.app B)
+  (hr₄    : RedAffNorm ((tm₁ (h₁.dom₁ h₂ hr₁ hr₂).snd.snd (_heq := by assumption)).has_canonicalize.snd.fst.has_holes 0).snd.app B) : f' = g' := by
   --have ⟨doms₁, h₃⟩ := h₁.all_eta_fn (aff_sound' _)
   --have ⟨doms₂, h₄⟩ := h₂.all_eta_fn (aff_sound' _)
-  have ⟨α, h_dom₁, h_dom₂⟩ := h₁.dom₁ h₂ hr₁ hr₂
-  have h₃ : EtaFn _ _ := .tm₁ h_dom₁ (_heq := by assumption)
-  have h₄ : EtaFn _ _ := .tm₁ h_dom₂ (_heq := by assumption)
-  have ⟨f'', h₅, h_canon₁⟩ := h₃.has_canonicalize
-  have ⟨g'', h₆, h_canon₂⟩ := h₄.has_canonicalize
-  have h := h_canon₁.ext (by sorry)
+  let h_dom := h₁.dom₁ h₂ hr₁ hr₂
+  --let ⟨α, h_dom₁, h_dom₂⟩ := h₁.dom₁ h₂ hr₁ hr₂
+  let h₃ : EtaFn _ _ := .tm₁ h_dom.snd.fst (_heq := by assumption)
+  let h₄ : EtaFn _ _ := .tm₁ h_dom.snd.snd (_heq := by assumption)
+  let h_canon₁ := h₃.has_canonicalize
+  let h_canon₂ := h₄.has_canonicalize
+  have h := h_canon₁.snd.snd.ext (h_canon₁.snd.fst.has_holes 0).snd h_canon₂.snd.snd (h_canon₂.snd.fst.has_holes 0).snd hr₃ hr₄
+  change (tm₁ (h₁.dom₁ h₂ hr₁ hr₂).snd.1).has_canonicalize.fst = (tm₁ (h₁.dom₁ h₂ hr₁ hr₂).snd.2).has_canonicalize.fst at h
   sorry
 
 def ext (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α))) (h₂ : Judge g (DCC? (Π(f_α, f_β) x_α)))

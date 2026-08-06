@@ -1,5 +1,6 @@
 * Updated paper todo in order
 1. Finish funext. Should work with Judge, bare minimum
+  - We need .ext for RedEta, not just canonicalize
 2. Next paper draft:
 - draw out inference rules in latex
   - Must have this as a reference. Also useful for Klavins
@@ -12,6 +13,7 @@
     - Observation to insert: "We note that this property may not be enjoyed by lambda calcului due to the presence of open terms. Whereas \eta-reduction in the \lambda-calculus
       - \eta-reduction paper: [[https://www.cambridge.org/core/services/aop-cambridge-core/content/view/FAAA27786A519A85C8DFB650AC8864AD/S0956796800001301a.pdf/the-virtues-of-eta-expansion.pdf][might be good to cite]]
       - LAY OUT THE "CANONICAL FORMS" IN A TABLE
+      - Also write out all type definitions in index
 
 - Make a "Results" section that lays it out very clearly
 - Altenkirch "advantages of intentional type theory:"

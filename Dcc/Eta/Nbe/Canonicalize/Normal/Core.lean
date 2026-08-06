@@ -663,20 +663,6 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
         have h_mem := GenericExpr.mem_imp_contains_hole e_h₁.hole_mem_tm
         dcc_simp at h_mem
         dcc_simp
-    any_goals (
-      focus
-      try (
-        cases hnτ.eq hn_α
-        cases heq
-        cases e_h.hole_same e_h_1
-        cases a.unique ⟨.trans (.single (.congrFun .quot)) (.single .quot), by
-          dcc_simp
-          assumption⟩
-        cases e_h with
-        | tm₂ heq e_h₁ hrt e_h₂ =>
-          have h_mem := GenericExpr.mem_imp_contains_hole e_h₁.hole_mem_tm
-          dcc_simp at h_mem
-          grind))
     · cases hn_quot.eq hn_x
       cases heq
       simp [GenericExpr.expr_to_eta] at a

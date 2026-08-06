@@ -137,7 +137,7 @@ def RedEta.unique (hr₁ : RedEta (τ_c := τ_c) A B) (hr₂ : RedEta A C) : B =
   have ha := hr₂.complete
   grind
 
-def RedEta.is_norm_aff (hr₁ : RedEta A B) : IsNorm RedAff B := by
+def RedEta.is_norm (hr₁ : RedEta A B) : IsNorm RedAff B := by
   induction hr₁ with
   | pi₁ =>
     expose_names
@@ -169,10 +169,27 @@ def RedEta.is_norm_aff (hr₁ : RedEta A B) : IsNorm RedAff B := by
     cases h
     rename_i h
     exact hr₁_ih ⟨_, h⟩
-  | tm =>
-    expose_names
-    intro ⟨_, h⟩
-    
+  | tm => exact Canonicalize!.is_norm (by assumption)
+
+@[grind, dcc_reduce]
+def red_eta' (A : @GenericExpr τ_c) : @GenericExpr τ_c := A.red_eta.fst
+
+def RedEta.eq (h : RedEta (τ_c := τ_c) A B) : B = red_eta' A := by
+  have h := h.complete
+  simp [red_eta', h]
+
+@[grind, dcc_reduce]
+def red_eta_sound : RedEta (τ_c := τ_c) A (red_eta' A) :=
+  have h := A.red_eta
+  (RedEta.eq h.snd).symm ▸ h.snd
+
+@[grind, dcc_reduce]
+def red_eta_sound' (heq : red_eta' A = B) : RedEta (τ_c := τ_c) A B :=
+  heq ▸ red_eta_sound (A := A)
+
+def RedEta.complete' (hr : RedEta (τ_c := τ_c) A B) : red_eta' A = B := by
+  have h := hr.complete
+  grind
 
 /-
 Note: rest of funext needs Judge to work

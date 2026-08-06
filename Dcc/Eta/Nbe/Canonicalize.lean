@@ -1176,4 +1176,9 @@ def Canonicalize!.complete {f f' : @GenericExpr τ_c} (h : Canonicalize! f f') :
       simp [red_aff] at heq
       simp [hb, to_eta] at heq
 
+def Canonicalize!.unique (h₁ : Canonicalize! (τ_c := τ_c) A B) (h₂ : Canonicalize! A C) : B = C := by
+  have ha := h₁.complete
+  have hb := h₂.complete
+  grind
+
 end GenericExpr

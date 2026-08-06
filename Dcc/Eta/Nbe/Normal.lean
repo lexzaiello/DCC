@@ -7,6 +7,11 @@ namespace NormExpr
 
 namespace Hole
 
+def hole_same (e_h₁ : Hole α level hole_tm₁) (e_h₂ : Hole α level hole_tm₂) : hole_tm₁ = hole_tm₂ := by
+  have ha := e_h₁.complete
+  have hb := e_h₂.complete
+  grind
+
 def app_norm (h₁ : Hole α l₁ a) (h₂ : Hole β l₂ b) : GenericExpr.IsNorm GenericExpr.RedAff (DCC? (a.raw b.raw)) := by
   induction h₁ with
   | pure h_view₁ =>

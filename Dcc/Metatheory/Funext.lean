@@ -6,6 +6,25 @@ variable [BEq τ_c]
 
 namespace GenericExpr
 
+namespace IsNorm
+
+def mk_map (h : IsNorm RedAff x) : IsNorm RedAff (.map x) := fun ⟨_, h⟩ => by
+  cases h with
+  | map₀ hr => exact h ⟨_, hr⟩
+
+end IsNorm
+
+namespace RedAffNorm
+
+/-theorem map_point (h : RedAffNorm (τ_c := τ_c) (.map x) B) : ∃ (x' : NormExpr RedAff) (hrn : RedAffNorm x x'), (B = ⟨(.map x'.raw), x'.is_norm.mk_map⟩) := by
+  match h with
+  | ⟨hr, hn⟩ =>
+    match hr.cases_head with
+    | .inl h =>
+      sorry-/
+
+end RedAffNorm
+
 def id_norm    : IsNorm RedAff (DCC? Id(α))       := fun ⟨_, h⟩ => by cases h
 def curr_norm  : IsNorm RedAff (DCC? Λ(α, β, x))  := fun ⟨_, h⟩ => by cases h
 def curr'_norm : IsNorm RedAff (DCC? !Λ(α, β, x)) := fun ⟨_, h⟩ => by cases h
@@ -31,23 +50,16 @@ namespace Judge
 
 open NormExpr
 
-def eta_fn (h : Judge f (DCC? (Π(f_α, f_β) x_α))) (hrt : RedAffNorm f f') : ((doms : List (@NormExpr τ_c RedAff))
-  × EtaFn (τ_c := τ_c) f' doms) := by
+/-def view_eta_some (h : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α))) (hrt : RedAffNorm f f') : f'.view_eta_fn.isSome := by
   cases h with
-  | id =>
-    expose_names
-    simp [id.type] at a_2
+  | refl =>
     cases hrt.elim_norm (fun ⟨_, h⟩ => by cases h)
-    cases heq : α.view_fn_type? with
-    | some h =>
-      cases h
-      exact ⟨_, .tm₂ (_heq := by grind) (.id (aff_sound rfl) (aff_sound rfl))⟩
-    | none =>
-      have h := view_fn_type?_none_sound heq
-      exact ⟨_, .tm₁ (_heq := by grind) (.id (aff_sound rfl))⟩
-  | _ => sorry
+    simp [view_eta_fn]
+    unfold arity
+    simp [raw]
+    sorry-/
 
-def canonicalize (h : Judge f (DCC? (Π(f_α, f_β) x_α))) (hrt : RedAffNorm f f') : ((e_f' : EtaFn
+--def canonicalize (h : Judge f (DCC? (Π(f_α, f_β) x_α))) (hrt : RedAffNorm f f') : ((e_f' : EtaFn
 
 end Judge
 

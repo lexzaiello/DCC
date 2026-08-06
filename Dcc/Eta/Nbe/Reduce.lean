@@ -132,4 +132,50 @@ def RedEta.complete (h : RedEta (τ_c := τ_c) e e') : red_eta e = ⟨e', h⟩ :
 #eval (red_eta (DCC (Id(Sort 0) ∘' Id(Sort 0)))).fst
 #eval (red_eta (DCC Π(Id(Sort 0) ∘' Id(Sort 0), `(Sort 0, `(Sort 0, Sort 0))))).fst
 
+def RedEta.unique (hr₁ : RedEta (τ_c := τ_c) A B) (hr₂ : RedEta A C) : B = C := by
+  have ha := hr₁.complete
+  have ha := hr₂.complete
+  grind
+
+def RedEta.is_norm_aff (hr₁ : RedEta A B) : IsNorm RedAff B := by
+  induction hr₁ with
+  | pi₁ =>
+    expose_names
+    intro ⟨_, h⟩
+    cases h with
+    | congrFun h =>
+      cases h with
+      | pil h => exact hr₁_ih ⟨_, h⟩
+      | pir h => cases h
+    | congrArg h => exact hr₂_ih ⟨_, h⟩
+  | pi₂ =>
+    expose_names
+    intro ⟨_, h⟩
+    cases h with
+    | congrFun h =>
+      cases h with
+      | pil h => exact hr₁_ih ⟨_, h⟩
+      | pir h => exact hr₄_ih ⟨_, h⟩
+    | congrArg h => exact hr₂_ih ⟨_, h⟩
+  | pi₄ | pi₃ =>
+    expose_names
+    intro ⟨_, h⟩
+    cases h with
+    | pil h => exact hr₁_ih ⟨_, h⟩
+    | pir h => exact hr₂_ih ⟨_, h⟩
+  | bang | coup =>
+    expose_names
+    intro ⟨_, h⟩
+    cases h
+    rename_i h
+    exact hr₁_ih ⟨_, h⟩
+  | tm =>
+    expose_names
+    intro ⟨_, h⟩
+    
+
+/-
+Note: rest of funext needs Judge to work
+-/
+
 end GenericExpr

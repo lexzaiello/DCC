@@ -1086,14 +1086,21 @@ inductive Canonicalize! : (f : @GenericExpr τ_c) → (f' : @GenericExpr τ_c) �
   | refl₁ : {f₁ : @GenericExpr.{u} τ_c}
     → (hrt : RedAffNorm f₁ ⟨f₂, hn_f₂⟩)
     → (hn : ∀ {doms}, NormExpr.EtaTm ⟨expr_to_eta f₂, hrt.is_norm.to_eta⟩ doms → False)
-    → Canonicalize! f₁ f₁
+    → Canonicalize! f₁ f₂
   | refl₂ : {f₁ : @GenericExpr.{u} τ_c}
     → (hrt : RedAffNorm f₁ ⟨f₂, hn_f₂⟩)
     → (e_f : EtaTm ⟨expr_to_eta f₂, hrt.is_norm.to_eta⟩ doms)
     → {e_f' : EtaTm ⟨f₄, hn_f₄⟩ doms}
     → EtaTm.Canonicalize! e_f e_f'
     → (hn : f₄.contains_hole)
-    → Canonicalize! f₁ f₁
+    → Canonicalize! f₁ f₂
+
+def Canonicalize!.is_norm (h : Canonicalize! f f') : IsNorm RedAff f' := by
+  cases h with
+  | step =>
+    expose_names
+    exact hn_f₄.from_eta (by assumption)
+  | refl₁ | refl₂ => assumption
 
 def canonicalize! (f : @GenericExpr τ_c) : ((f' : @GenericExpr τ_c) × Canonicalize! f f') :=
   match heq₁ : NormExpr.view_eta_tm (red_aff f).to_eta with

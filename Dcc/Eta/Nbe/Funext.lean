@@ -13,10 +13,6 @@ namespace EtaFn
 
 namespace Canonicalize
 
-set_option pp.deepTerms true in
-set_option pp.deepTerms.threshold 9999 in
-set_option pp.proofs true in
-set_option pp.proofs.threshold 9999 in
 def ext {e_f₁ : EtaFn f₁ doms}
   {e_f₂ : EtaFn f₂ doms}
   {e_f₃ : EtaFn f₃ doms}
@@ -32,7 +28,6 @@ def ext {e_f₁ : EtaFn f₁ doms}
     cases e_f₃ with
     | tm₁ hb =>
       expose_names
-      --cases (tm₁ ha).hole_same (tm₁ hb) (by assumption) (by assumption)
       cases e_h₁ with
       | tm₁ heq ha =>
         cases heq

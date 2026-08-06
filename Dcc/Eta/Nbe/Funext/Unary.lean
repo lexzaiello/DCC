@@ -743,63 +743,45 @@ set_option pp.deepTerms.threshold 9999 in
 set_option pp.proofs true in
 set_option pp.proofs.threshold 9999 in
 def ext {e_f₁ : EtaFn f₁ doms} {e_f₂ : EtaFn f₂ doms} {e_f₃ : EtaFn f₃ doms} {e_f₄ : EtaFn f₄ doms}
-  {x : @NormExpr τ_c RedAff}
-  (h₁ : Canonicalize e_f₁ e_f₂) (h₂ : Canonicalize e_f₃ e_f₄) (hrt₁ : RedAffNorm (DCC? (f₂.raw x.raw)) B)
-  (hrt₂ : RedAffNorm (DCC? (f₄.raw x.raw)) B)
-  (hn_x : IsNorm RedAff x.raw) : f₂ = f₄ := by
-  cases h₁ with
-  | id₁ =>
-    cases h₂ with
-    | id₁ =>
+  (h₁ : Canonicalize (τ_c := τ_c) e_f₁ e_f₂)
+  (e_h₁ : e_f₂.Holes 0 hole_tms₁)
+  (h₂ : Canonicalize (τ_c := τ_c) e_f₃ e_f₄)
+  (e_h₂ : e_f₄.Holes 0 hole_tms₂)
+  (hrt₁ : RedAffNorm e_h₁.app B)
+  (hrt₂ : RedAffNorm e_h₂.app B)
+  (hn_x : IsNorm RedAff B.raw) : f₂ = f₄ := by
+  cases e_f₁ with
+  | tm₁ ha =>
+    cases e_f₃ with
+    | tm₁ hb =>
       expose_names
-      have ha := e_f.hole_same e_f₃ e_h e_h_1
-      simp_all
-    | sndc | fstc =>
-      expose_names
-      cases e_h with
-      | tm₁ heq h =>
+      --cases (tm₁ ha).hole_same (tm₁ hb) (by assumption) (by assumption)
+      cases e_h₁ with
+      | tm₁ heq ha =>
         cases heq
-        cases h with
-        | coup =>
-          expose_names
-          cases hrt₁.unique ⟨.single .id, x.is_norm⟩
-          try (exact hrt₂.no_fst_self.elim)
-          try (exact hrt₂.no_snd_self.elim)
-    | quot₁ =>
-      expose_names
-      cases hrt₁.unique ⟨.single .id, x.is_norm⟩
-      cases heq
-      have h := to_eta_no_hole (e := e')
-      dcc_simp at hrt₂
-      have h_eq_x₀ := hrt₂.quot_self (hn_e'.from_eta hn) (by assumption)
-      have h_e'_eq : (e'.eta_to_expr hn) = x.raw := h_eq_x₀.symm
-      simp [h_e'_eq] at hrt₂
-      have heq_x := hrt₂.unique ⟨.single .quot, by assumption⟩
-      rw [heq_x] at *
-      cases e_f.hole_same e_f₃ e_h e_h_1
-      cases e_h with
-      | tm₁ heq h =>
-        cases h with
-        | pure =>
-          expose_names
+        rename_i hole_e₁
+        cases e_h₂ with
+        | tm₁ heq hb =>
           cases heq
-          /-cases hrt₁.unique ⟨.single .id, x.is_norm⟩
-          cases heq
-          have h := to_eta_no_hole (e := e')
-          dcc_simp at hrt₂
-          have h_eq_x₀ := hrt₂.quot_self (hn_e'.from_eta hn) (by assumption)
-          have h_e'_eq : (e'.eta_to_expr hn) = x.raw := h_eq_x₀.symm
-          simp [h_e'_eq] at hrt₂
-          have heq_x := hrt₂.unique ⟨.single .quot, by assumption⟩
-          rw [heq_x] at *
-          cases e_h_1 with
-          | tm₁ heq h =>
-            cases heq
-            generalize heq_α  : α.expr_to_eta = α'
-            generalize heq_α' : (mk α hn_α_1).to_eta = α''
-            cases heq_α' ▸ h with
-            | pure =>
-              sorry-/
+          expose_names
+          expose_names
+          cases ha.unique hb
+          exact h₁.ext₁ h₂ (x := hole_e₁) (B := B) (e_h₀ := (by assumption))
+            (by
+              simp [NormExpr.to_eta]
+              simp [Holes.app, NormExpr.raw, NormExpr.to_eta] at hrt₁
+              simp [NormExpr.raw]
+              assumption)
+            (by
+              simp [NormExpr.to_eta]
+              simp [Holes.app, NormExpr.raw, NormExpr.to_eta] at hrt₂
+              simp [NormExpr.raw]
+              assumption)
+            hb.is_norm
+  | tm₂ h₁ =>
+    cases e_f₃ with
+    | tm₂ h₂ =>
+      sorry
 
 end Canonicalize
 

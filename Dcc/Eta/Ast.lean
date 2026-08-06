@@ -174,6 +174,41 @@ def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | .const _n => 0
 
 @[grind]
+def is_fn (e : GenericExpr (τ := τ_c)) : Bool :=
+match e with
+  | DCC[.] ∗ => False
+  | DCC[.] ⊤ => False
+  | DCC[.] ⊥ => False
+  | DCC[.] _x = _y => False
+  | DCC[.] Eql(f_α)  => f_α.is_fn
+  | DCC[.] refl(f_α) => f_α.is_fn
+  | DCC[.] Sort _m => False
+  | DCC[.] Σ(f_α, f_β) => f_α.is_fn ∧ f_β.is_fn
+  | DCC[.] `(_β, _x) => True
+  | DCC[.] ⟦__β⟧(_x, _y) => False
+  | DCC[.] Coup(_β) => False
+  | DCC[.] Id(_α)      => True
+  | DCC[.] Fstc(_α)    => True
+  | DCC[.] Sndc(_α)    => True
+  | DCC[.] Π(f_α, f_β) => f_α.is_fn ∧ f_β.is_fn
+  | DCC[.] (f ∘' g) => f.is_fn ∧ g.is_fn
+  | DCC[.] (f ∘ g)  => f.is_fn ∧ g.is_fn
+  | DCC[.] (f ∘∘ g)  => f.is_fn ∧ g.is_fn
+  | DCC[.] ⟦_β⟧⟨a, b⟩   => a.is_fn ∧ b.is_fn
+  | DCC[.] Λ(_α, β, x) => β.is_fn ∧ x.is_fn
+  | DCC[.] !Λ(_α, β, x) => β.is_fn ∧ x.is_fn
+  | DCC[.] Eval(_α, β, x) => β.is_fn ∧ x.is_fn
+  | DCC[.] !(_x)   => False
+  | DCC[.] *(_α)   => True
+  | DCC[.] *<f>    => f.is_fn
+  | DCC[.] &(_x)   => False
+  | DCC[.] !<x>   => x.is_fn
+  | DCC[.] $<x>   => x.is_fn
+  | DCC[.] (f _x) =>
+    f.is_fn ∧ (0 < f.arity)
+  | .const _n => False
+
+@[grind]
 def tm_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
   | DCC[.] ∗ => 0

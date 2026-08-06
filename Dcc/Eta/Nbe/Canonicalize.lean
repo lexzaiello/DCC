@@ -11,9 +11,6 @@ namespace GenericExpr
 def IsNorm.bang (hn : IsNorm RedAff (.bang x)) : IsNorm RedAff x :=
   fun ⟨_, h⟩ => hn ⟨_, .bang h⟩
 
-def IsNorm.map (hn : IsNorm RedAff (.map x)) : IsNorm RedAff x :=
-  fun ⟨_, h⟩ => hn ⟨_, .map₀ h⟩
-
 def unmap_norm : IsNorm RedAff (.unmap x) := fun ⟨_, h⟩ => by cases h
 
 def fstc_norm  : IsNorm RedAff (.fstc x) := fun ⟨_, h⟩ => by cases h

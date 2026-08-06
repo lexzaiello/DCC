@@ -738,50 +738,6 @@ def ext₁
 Since both EtaFn have same domain, we should get exactly the same canonical form,
 though it will be annoying.
 -/
-set_option pp.deepTerms true in
-set_option pp.deepTerms.threshold 9999 in
-set_option pp.proofs true in
-set_option pp.proofs.threshold 9999 in
-def ext {e_f₁ : EtaFn f₁ doms} {e_f₂ : EtaFn f₂ doms} {e_f₃ : EtaFn f₃ doms} {e_f₄ : EtaFn f₄ doms}
-  (h₁ : Canonicalize (τ_c := τ_c) e_f₁ e_f₂)
-  (e_h₁ : e_f₂.Holes 0 hole_tms₁)
-  (h₂ : Canonicalize (τ_c := τ_c) e_f₃ e_f₄)
-  (e_h₂ : e_f₄.Holes 0 hole_tms₂)
-  (hrt₁ : RedAffNorm e_h₁.app B)
-  (hrt₂ : RedAffNorm e_h₂.app B)
-  (hn_x : IsNorm RedAff B.raw) : f₂ = f₄ := by
-  cases e_f₁ with
-  | tm₁ ha =>
-    cases e_f₃ with
-    | tm₁ hb =>
-      expose_names
-      --cases (tm₁ ha).hole_same (tm₁ hb) (by assumption) (by assumption)
-      cases e_h₁ with
-      | tm₁ heq ha =>
-        cases heq
-        rename_i hole_e₁
-        cases e_h₂ with
-        | tm₁ heq hb =>
-          cases heq
-          expose_names
-          expose_names
-          cases ha.unique hb
-          exact h₁.ext₁ h₂ (x := hole_e₁) (B := B) (e_h₀ := (by assumption))
-            (by
-              simp [NormExpr.to_eta]
-              simp [Holes.app, NormExpr.raw, NormExpr.to_eta] at hrt₁
-              simp [NormExpr.raw]
-              assumption)
-            (by
-              simp [NormExpr.to_eta]
-              simp [Holes.app, NormExpr.raw, NormExpr.to_eta] at hrt₂
-              simp [NormExpr.raw]
-              assumption)
-            hb.is_norm
-  | tm₂ h₁ =>
-    cases e_f₃ with
-    | tm₂ h₂ =>
-      sorry
 
 end Canonicalize
 

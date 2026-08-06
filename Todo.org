@@ -13,6 +13,10 @@
       - \eta-reduction paper: [[https://www.cambridge.org/core/services/aop-cambridge-core/content/view/FAAA27786A519A85C8DFB650AC8864AD/S0956796800001301a.pdf/the-virtues-of-eta-expansion.pdf][might be good to cite]]
       - LAY OUT THE "CANONICAL FORMS" IN A TABLE
 
+- Make a "Results" section that lays it out very clearly
+- Altenkirch "advantages of intentional type theory:"
+- Absolutely frame it as extensional
+
 - synopsis for design:
   - Frame the benefits of it as being natural consequences of the design:
     - Affine logic -> SN by default
@@ -21,9 +25,14 @@
   - Frame it as a result: funext is a metatheorm - this design could be useful to others.
 
 - Definitely want examples of extensional refl proving things automatically
+  - Want to see how powerful we can get
+    - Church numeral example???
 
 - Limitations:
   - We do not have inductives yet. It is unclear whether this holds in this case
+
+- Definitely cite observational type theory as related work
+  - important quote: altenkirch also struggle with inductives & observational stuff: page 8 last paragraph on left
 
 Notes for funext proofs:
 - blackbox until as late as possible with sorry

@@ -107,7 +107,6 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
             match hr.cases_head with
             | .inl h =>
               cases h
-              simp [GenericExpr.hole_mem_tm] at h
               expose_names
               have h  := a_3.hole_mem_tm
               have h' := GenericExpr.mem_imp_contains_hole h
@@ -615,8 +614,6 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       cases e_h.hole_same e_h_1
       cases heq
       dcc_simp at a
-      simp [GenericExpr.expr_to_eta] at a
-      simp [GenericExpr.to_eta_right_inv (e := e') hn] at a
       cases a.unique ⟨.single .quot, by
         dcc_simp
         assumption⟩
@@ -630,8 +627,6 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       cases heq_1
       cases hn₁.eq hn_α_1
       dcc_simp at a_1
-      simp [GenericExpr.expr_to_eta] at a_1
-      simp [GenericExpr.to_eta_right_inv (e := e') hn] at a_1
       cases a_1.unique ⟨.single .quot, hn_e'⟩
       cases e_h_1 with
       | tm₁ heq h =>

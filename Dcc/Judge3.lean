@@ -473,7 +473,7 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
         match infer f_β with
         | .ok ⟨τ_f_β, ⟨h₂⟩⟩ =>
           match τ_f_β.view_pi_f_β f_α δ o with
-          | .some ⟨n, h₃⟩ =>
+          | .some ⟨_n, h₃⟩ =>
             .ok ⟨_, ⟨.sigma h₁ harr h₂ h₃ (reduce_reduces rfl)⟩⟩
           | _ => .error (.unexpected τ_f_β f_β)
         | .error ε => .error (.sub f_β ε)
@@ -487,7 +487,7 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
         match β.infer with
         | .ok ⟨τ_β, ⟨h₃⟩⟩ =>
           match τ_β.read_arrow₁ α with
-          | .some ⟨DCC? Sort n, m, harr⟩ =>
+          | .some ⟨DCC? Sort _n, _m, harr⟩ =>
             if heq : reduce_all (DCC? (β x)) = βxm then
               .ok ⟨_, ⟨.mk ht₁ h₃ harr
                 (reduce_reduces (B := βxm) heq) (heq ▸ ht₂) (reduce_reduces rfl)⟩⟩
@@ -498,9 +498,9 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     | .error ε => .error (.sub x ε)
   | DCC? Coup(β) =>
     match infer β with
-    | .ok ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht⟩⟩ =>
+    | .ok ⟨(DCC? (Π(Id(Sort _m), f_β) α)), ⟨ht⟩⟩ =>
       match (DCC? (f_β α)).reduce_all with
-      | DCC? `(α₂, Sort n) =>
+      | DCC? `(_α₂, Sort n) =>
         if heq : (DCC? (f_β α)).reduce_all = DCC? `(α, Sort n) then
           .ok ⟨_, ⟨.coup ht (reduce_reduces heq) (reduce_reduces rfl)⟩⟩
         else .error (.mismatch (DCC? `(α, Sort n)) (DCC? (f_β α)).reduce_all β)
@@ -511,7 +511,7 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     match (infer β) with
     | .ok ⟨τ_β, ⟨ht₁⟩⟩ =>
       match τ_β.read_arrow with
-      | .some ⟨α, DCC? Sort n, m, harr⟩ =>
+      | .some ⟨_α, DCC? Sort _n, _m, harr⟩ =>
         .ok ⟨_, ⟨.fstc ht₁ harr (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
       | _ => .error (.unexpected τ_β β)
     | .error ε => .error (.sub β ε)
@@ -519,13 +519,13 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     match (infer β) with
     | .ok ⟨τ_β, ⟨ht₁⟩⟩ =>
       match τ_β.read_arrow with
-      | .some ⟨α, DCC? Sort n, m, harr⟩ =>
+      | .some ⟨_α, DCC? Sort _n, _m, harr⟩ =>
         .ok ⟨_, ⟨.sndc ht₁ harr (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
       | _ => .error (.unexpected τ_β β)
     | .error ε => .error (.sub β ε)
   | DCC? Λ(α, β, x) =>
     match α.infer with
-    | .ok ⟨DCC? Sort m, ⟨ht⟩⟩ =>
+    | .ok ⟨DCC? Sort _m, ⟨ht⟩⟩ =>
       match infer x with
       | .ok ⟨DCC? (Π(f_α, _γ) x_α), ⟨ht₂⟩⟩ =>
         if heq : reduce_all (DCC? (f_α x_α)) = reduce_all (DCC? Coup(β)) then
@@ -544,7 +544,7 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     | .error ε => .error (.sub α ε)
   | DCC? !Λ(α, β, x) =>
     match α.infer with
-    | .ok ⟨DCC? Sort m, ⟨ht⟩⟩ =>
+    | .ok ⟨DCC? Sort _m, ⟨ht⟩⟩ =>
       match infer x with
       | .ok ⟨DCC? (Π(f_α, _γ) x_α), ⟨ht₂⟩⟩ =>
         if heq : reduce_all (DCC? (f_α x_α)) = reduce_all (DCC? !(Coup(β))) then
@@ -566,15 +566,15 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     | .ok ⟨DCC? (Π(f_α, f_β) env), ⟨ht₁⟩⟩ =>
       if heq : (DCC? (f_α env)).reduce_all = α then
         match heq₂ : (DCC? (f_β env)).reduce_all with
-        | DCC? Π(β₂, γ) =>
+        | DCC? Π(β₂, _γ) =>
           if heq₃ : β₂ = β then
             match infer α with
-            | .ok ⟨DCC? Sort m, ⟨ht₂⟩⟩ =>
+            | .ok ⟨DCC? Sort _m, ⟨ht₂⟩⟩ =>
               match infer β with
               | .ok ⟨DCC? (Π(f_α₂, f_β₂) env₂), ⟨ht₃⟩⟩ =>
                 if heq₄ : (DCC? (f_α₂ env₂)).reduce_all = α then
                   match heq₅ : (DCC? (f_β₂ env₂)).reduce_all with
-                  | DCC? `(α₃, Sort n) =>
+                  | DCC? `(α₃, Sort _n) =>
                     if heq₆ : α₃ = α then
                       .ok ⟨_, ⟨.eval ht₁ (reduce_reduces heq) (heq₃ ▸ (reduce_reduces heq₂))
                         ht₂ ht₃ (reduce_reduces heq₄) (reduce_reduces (heq₆ ▸ heq₅)) (reduce_reduces rfl)⟩⟩
@@ -632,11 +632,11 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     match f_α.infer with
     | .ok ⟨τ_f_α, ⟨ht₁⟩⟩ =>
       match τ_f_α.read_arrow with
-      | .some ⟨δ, DCC? Sort m, o, harr⟩ =>
+      | .some ⟨δ, DCC? Sort _m, o, harr⟩ =>
         match infer f_β with
         | .ok ⟨τ_f_β, ⟨ht₂⟩⟩ =>
           match τ_f_β.view_pi_f_β f_α.reduce_all δ o with
-          | .some ⟨n, h₂⟩ =>
+          | .some ⟨_n, h₂⟩ =>
             .ok ⟨_, ⟨.pi ht₁ harr ht₂ (reduce_reduces rfl) h₂ (reduce_reduces rfl)⟩⟩
           | _ => .error (.mark 4 (.unexpected τ_f_β f_β))
         | .error ε => .error (.mark 3 (.sub f_β ε))

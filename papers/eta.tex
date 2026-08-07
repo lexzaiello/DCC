@@ -45,6 +45,7 @@
 \newcommand{\affetaarr}{\rightarrowtail_{\eta}}
 \newcommand{\etaarr}{\rightarrow_{\eta}}
 \newcommand{\dom}[1]{\text{dom}(#1)}
+\newcommand{\comb}[2]{\text{#1}(#2)}
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 
@@ -59,19 +60,19 @@
     \begin{tabularx}{\textwidth}{l c r}
       \inferrule[Eql]
       {\dom{B} = A}
-      {\dom{Eql(B)} \coloneq !(A)} &
+      {\dom{\comb{Eql}{B}} \coloneq !(A)} &
       \inferrule[Unbox]
       { }
       {\dom{*(A)} \coloneq !(A)}&
       \inferrule[Eql1]
       {B x \barrn A}
-      {\dom{Eql(B) \&(x) \coloneq !(A)}}\\\\
+      {\dom{\comb{Eql}{B} \&(x) \coloneq !(A)}}\\\\
       \inferrule[Refl]
       {\dom{B} = A}
-      {\dom{refl(B)} \coloneq !(A)} &
+      {\dom{\comb{refl}{B}} \coloneq !(A)} &
       \inferrule[Refl1]
       {B x \barrn A}
-      {\dom{refl(B) \&(x)} \coloneq !(A)}&
+      {\dom{\comb{refl}{B} \&(x)} \coloneq !(A)}&
       \inferrule[Unmap]
       {\dom{x} = A}
       {\dom{*\la x \ra} \coloneq !(A)}\\\\
@@ -83,13 +84,13 @@
       {\dom{! \la x \ra} \coloneq !(A)}&
       \inferrule[Id]
       { }
-      {\dom{Id(A)} \coloneq A}\\\\
+      {\dom{\comb{Id}{A}} \coloneq A}\\\\
       \inferrule[Fstc]
       { }
-      {\dom{Fstc(B)} \coloneq Coup(B)}&
+      {\dom{\comb{Fstc}{B}} \coloneq \comb{Coup}{B}}&
       \inferrule[Sndc]
       { }
-      {\dom{Sndc(B)} \coloneq Coup(B)}&
+      {\dom{\comb{Sndc}{B}} \coloneq \comb{Coup}{B}}&
       \inferrule[Curr]
       { }
       {\dom{\Lambda (A, B, x)} \coloneq A}\\\\
@@ -107,16 +108,17 @@
       {\dom{!\Lambda (A, B, x) y} \coloneq !(B')}&
       \inferrule[Pair]
       {\dom{x} = A}
-      {\dom{\llb B \rrb} \coloneq A}&
+      {\dom{\llb B \rrb \la x, y \ra} \coloneq A}&
       \inferrule[Pi]
       {\dom{B} = A}
       {\dom{\Pi(B, C)} \coloneq A}\\\\
       \inferrule[Eval]
       { }
-      {\dom{\text{Eval}(A, B, x)} \coloneq A}&
+      {\dom{\comb{Eval}{A, B, x}} \coloneq A}&
+      \multicolumn{1}{c}{
       \inferrule[Eval1]
       {B y \barrn B'}
-      {\dom{\text{Eval}(A, B, x) y} \coloneq B'}&
+      {\dom{\comb{Eval}{A, B, x} y} \coloneq B'}}&
       \inferrule[Comp']
       {\dom{g} = A}
       {\dom{f \circ' g} \coloneq A}\\\\
@@ -124,10 +126,11 @@
       \inferrule[Comp]
       {\dom{g} = !(A)}
       {\dom{f \circ g} \coloneq !(A)}}&
-      \multicolumn{2}{l}{
+      \multicolumn{1}{c}{
       \inferrule[Comp2]
       {\dom{g} = !(A)}
-      {\dom{f \circ\circ g} \coloneq !(A)}}
+      {\dom{f \circ\circ g} \coloneq !(A)}}&
+      \multicolumn{1}{r}{}
     \end{tabularx}
   }
   \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction and \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator from environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reductino aside from reducing its points.}

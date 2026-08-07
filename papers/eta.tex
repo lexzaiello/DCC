@@ -45,6 +45,7 @@
 \newcommand{\affetaarr}{\rightarrowtail_{\eta}}
 \newcommand{\etaarr}{\rightarrow_{\eta}}
 \newcommand{\dom}[1]{\text{dom}(#1)}
+\newcommand{\dom2}[1]{\text{dom}_{2}(#1)}
 \newcommand{\comb}[2]{\text{#1}(#2)}
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
@@ -134,6 +135,41 @@
     \end{tabularx}
   }
   \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction and \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator from environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reductino aside from reducing its points.}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \resizebox{\textwidth}{!}{
+    \begin{tabularx}{\textwidth}{l c r}
+      \inferrule[Quot]
+      { }
+      {\dom2{`(A, `(B, x))} \coloneq (A, B)}&
+      \multicolumn{1}{c}{
+      \inferrule[Id]
+      {B x \barrn A}
+      {\dom2{\comb{Id}{\Pi(B, C) x}} \coloneq (\Pi(B, C) x, A)}}&
+      \multicolumn{1}{r}{
+      \inferrule[Comp']
+      {\dom{g} = A, \dom2{f} = (B, C)}
+      {\dom2{f \circ' g} \coloneq (A, C \circ' f)}}\\\\
+      \inferrule[Eql]
+      {\dom{B} = A}
+      {\dom2{\comb{Eql}{B}} \coloneq (A, B)}&
+      \multicolumn{1}{c}{
+      \inferrule[Refl]
+      {\dom{B} = A}
+      {\dom2{\comb{refl}{B}} \coloneq (A, B)}}&
+      \multicolumn{1}{r}{
+      \inferrule[Curr]
+      {\comb{x} = \comb{Coup}{B}}
+      {\dom2{\Lambda(A, B, x)} \coloneq (A, B)}}\\\\
+      \multicolumn{1}{l}{
+      \inferrule[Curr']
+      {\comb{x} = !(\comb{Coup}{B})}
+      {\dom2{!\Lambda(A, B, x)} \coloneq (!(A), !\la B \ra)}}
+    \end{tabularx}
+  }
+  \caption{Arity 2 function domains. The second projection of \(\dom{2}{x}\) is a function of the first term argument. Double quotation is \(\eta\)-reducible and considered to have arity 2 when double quoted. Similarly, when \(Id\) accepts a function, it has arity 2.}
 \end{figure}
 
 \begin{comment}

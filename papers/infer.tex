@@ -32,8 +32,8 @@
 \newtheorem{theorem}{Theorem}
 \addbibresource{./refs.bib}
 
-\newcommand{\ll}{\llbracket}
-\newcommand{\rr}{\rrbracket}
+\newcommand{\llb}{\llbracket}
+\newcommand{\rrb}{\rrbracket}
 \newcommand{\la}{\langle}
 \newcommand{\ra}{\rangle}
 \newcommand{\arr}{\rightarrow}
@@ -52,6 +52,8 @@
 % Inference rules:
 % In actual paper, note implicit reduction of all types
 % also do reduction rules table
+% Syntax cheat sheet
+% do not destructure inside inference rules. use combinators.
 
 \begin{figure}[h]
   \centering
@@ -84,7 +86,7 @@
     {\text{eql}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr \sort{0}}} \\\\
     \multicolumn{2}{l}{
     \inferrule[Comp]
-    {g : (x : !(A)) \arr ((y : A) \times B y), f : (x : ((x : A) \times B x)) \arr C x}
+    {g : (x : !(A)) \arr ((y : A) \times B y), f : (x : (x : A) \times B x) \arr C x}
     {f \circ g : (x : !(A)) \arr (C \circ g) x}} &
     \multicolumn{1}{r}{
     \inferrule[Comp']
@@ -92,7 +94,7 @@
     {f \circ ' g : (x : A) \arr (C \circ ' g) x}} \\\\
     \multicolumn{2}{l}{
     \inferrule[Comp2]
-    {g : (x : !(A)) \arr ((y : A) \times B x), f : (x : ((y : A) \times B x)) \arr C x}
+    {g : (x : !(A)) \arr ((y : A) \times B x), f : (x : (y : A) \times B x) \arr C x}
     {f \circ \circ g : (x : !(A)) \arr (C \circ \circ g) x}} &
     \multicolumn{1}{r}{
     \inferrule[Coup]
@@ -101,12 +103,12 @@
     \multicolumn{1}{l}{
     \inferrule[Fstc]
     {B : A \arr \sort{v}}
-    {\text{Fstc}(B) : \text{Coup}(B) \arr A}
+    {\text{Fstc}(B) : (x : A) \times B x \arr A}
     } &
     \multicolumn{2}{r}{
     \inferrule[Sndc]
     {B : A \arr \sort{v}}
-    {\text{Sndc}(B) : (x : \text{Coup}(B)) \arr B (\text{Fstc}(B) x)}}\\\\
+    {\text{Sndc}(B) : (x : (x : A) \times B x) \arr B (\text{Fstc}(B) x)}}\\\\
     \multicolumn{2}{l}{
     \inferrule[Sigma]
     {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
@@ -114,8 +116,30 @@
     \multicolumn{1}{r}{
     \inferrule[Mkc]
     {x : A, y : B x}
-    {\ll B \rr (x, y) : \text{Coup}(B)}}
+    {\llb B \rrb (x, y) : (x : A) \times B x}} \\\\
+    \multicolumn{2}{l}{
+    \inferrule[Curr]
+    {B : A \arr \sort{u}, x : (x : (x : A) \times B x) \arr C x}
+    {\Lambda (A, B, x) : (x : A) \arr (y : B x) \arr C \llb B \rrb (x, y)}} &
+    \multicolumn{1}{r}{
+    \inferrule[Map]
+    {x : A \arr \sort{u}}
+    {!\la x \ra : !(A) \arr \sort{n}}
+    }\\\\
+    \multicolumn{2}{l}{
+    \inferrule[Curr']
+    {B : A \arr \sort{u}, x : !((x : A) \times B x) \arr \la C \ra x}
+    {!\Lambda (A, B, x) : (\&(x) : !(A)) \arr (\&(y) : \la B \ra x) \arr C \&(\llb B \rrb (x, y))}} &
+    \multicolumn{1}{r}{
+    \inferrule[Fmap]
+    {x : (x : A) \arr B x}
+    {\$\la x \ra : (\&(x) : !(A)) \arr !(B x)}}\\\\
+    \multicolumn{3}{l}{
+    \inferrule[Eval]
+    {A : \sort{u}, B : A \arr \sort{v}, x : (x : A) \arr (y : B x) \arr C x y}
+    {\text{Eval}(A, B, x) : (x : (x : A) \times B x) \arr \text{Eval}(A, B, C)}}
   \end{tabular}
+  \caption{\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).}
 \end{figure}
 
 %\begin{figure}[h]

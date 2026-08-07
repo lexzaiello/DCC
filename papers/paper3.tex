@@ -55,14 +55,40 @@
     - Mention features
     - Describe results, and how they achieve the features
     2a. Background yadda yadda, segue into
-  3. A recipe for computable function extensionality (overall description)
-    3a. Affine insight: strong normalization by default (see below)
-    3b. Cat. combinator insight
-  ?. The categorical combinator insight
-  
+  4. A recipe for dependent combinator calculus
+    4.i. Elaborate more on background (cat. combinators, SK)
+      - Explain how everything indexes an environment
+    The recipe:
+    4.a Categorical combinators [this hooks into types term environments]
+      4.a.a Mapping onto CCC's (will mention this again to justify eta)
+      4.a.b Explain how past versions used SK and failed
+      4.a.c Environments from cat. combinators directly model contexts
+        4.a.c.a Show code from the compiler
+    4.a Types as terms: contexts are environments
+      - Explain Curry example
+      - Explain lambda cube connection. Since types are terms, we can treat them like an environment in cat. combinators (e.g., Pi is analagous to Lambda)
+      - Example: Pi types and inference rule
+      - Lead into inference rules
+      4.a.a Advantages:
+        - resource efficiency. Show how Pi is typechecked and how argument threads through easily
+        - no sort arguments required
+        - good user experience with minimal type arguments, since the type-checker has enough information to recurse on and figure out sorts
+    4.b The inference rules
+      - Cheat sheet
+      - Explain app rule
+      - Explain curry
+      - Explain eval
+    
+  4. A recipe for computable function extensionality (overall description)
+    4a. [beta reduction] Affine insight: strong normalization by default (see below)
+      - No fallback conversion constructor
+    4b. [eta reduction] Cat. combinator insight (see below)
+      - Canonical eta-forms are well-behaved due to no open terms
+    4a + 3b = computable function extensionality with decidable type-checking
 
 
   Features list:
+  - Analagous to the calculus of constructions on the lambda cube. Types are terms.
   - Dependent types
   - Decidable type-checking
   - Computable function extensionality as a metatheorem

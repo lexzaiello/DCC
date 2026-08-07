@@ -95,7 +95,16 @@
     \multicolumn{1}{r}{
     \inferrule[Coup]
     {A : \sort{u}, B : A \arr \sort{v}}
-    {\text{Coup}(B) : \sort{max(u, v)}}}
+    {\text{Coup}(B) : \sort{max(u, v)}}} \\\\
+    \multicolumn{1}{l}{
+    \inferrule[Fstc]
+    {B : A \arr \sort{v}}
+    {\text{Fstc}(B) : \text{Coup}(B) \arr A}
+    } &
+    \multicolumn{2}{r}{
+    \inferrule[Sndc]
+    {B : A \arr \sort{v}}
+    {\text{Sndc}(B) : (x : \text{Coup}(B)) \arr B (\text{Fstc}(B) x)}}
   \end{tabular}
 \end{figure}
 

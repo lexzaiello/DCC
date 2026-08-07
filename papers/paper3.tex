@@ -153,7 +153,14 @@
               9.a.2. Eliminate any goals where the eta-reductions were different since (red (g''.app e_h)) \neq (red (f''.app e_h)) (contradiction by 7 and 8 since B is normal and unique (by UNF proven already)
               9.a.3. Only goals left are where the eta-reduction is the same. Hence, f'' = g''
               => Great success
-        
+        6.b.c.b Prove that forall f, if f is well-typed at (\Pi(f_a, f_b) env), then it must be eta-reducible
+          - This is pretty easy just induction on the judgment relation
+        6.b.c.c Assume f and g are well-typed at (\Pi(f_a, f_b) env), and that f and g are normal forms
+          - Assuming normal forms is justifiable, since we eagerly reduce in all constructors anyway, so unreduced f and g won't appear in our types and thus won't cause defeq mismatch
+        6.b.c.d By 6.b.c.b, f and g must eta-reduce to some f' and g'
+        6.b.c.f Assume (f'.app (mk_hole (dom f'))).red = (g'.app (mk_hole (dom g')))
+        6.b.c.d By 6.b.c.a, f' = g', and f' and g' are eta and beta normal, so they are exactly the form that will show up inside types, hence not causing and defeq mismatch
+        => Great success
     6.c We eagerly reduce terms using beta + eta and no fallback conversion constructor
       6.c.a [IMPORTANT] Consequence: there is only one valid judgment for a given term (canonical)
         6.c.a.a Consequence: extensional elimination rule for prop. eq. reflection

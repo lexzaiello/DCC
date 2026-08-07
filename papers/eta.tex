@@ -1,0 +1,62 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\newcommand{\comment}[1]{ }
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{textcomp}
+\usepackage[a4paper, margin={1in}]{geometry}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\setmonofont{FreeMono}
+\usepackage{minted}
+\setminted{breaklines=true}
+\newmintinline[lean]{lean4}{bgcolor=white}
+\newminted[leancode]{lean4}{fontsize=\footnotesize}
+\usemintedstyle{tango}
+
+\frenchspacing
+\usepackage{amsthm}
+\usepackage{authblk}
+\usepackage{biblatex}
+\usepackage{mathpartir}
+\usepackage{stmaryrd}
+\usepackage{amssymb}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\addbibresource{./refs.bib}
+
+\newcommand{\llb}{\llbracket}
+\newcommand{\rrb}{\rrbracket}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\newcommand{\arr}{\rightarrow}
+\newcommand{\sort}[1]{\text{Sort}\ #1}
+\newcommand{\barr}{\arr_{\beta}}
+\newcommand{\affarr}{\rightarrowtail}
+\newcommand{\affetaarr}{\rightarrowtail_{\eta}}
+\newcommand{\etaarr}{\rightarrow_{\eta}}
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+
+\title{DCC Beta Reduction Rules}
+\author[1]{Lexi Aiello}
+
+\begin{document}
+
+\begin{figure}[h]
+  \centering
+  \resizebox{\textwidth}{!}{
+    \begin{tabularx}{\textwidth}{l >{\centering\arraybackslash}X r}
+    \end{tabularx}
+  }
+  \caption{Where \(\arr_{\beta}\) represents beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code.}
+\end{figure}
+
+
+\end{document}

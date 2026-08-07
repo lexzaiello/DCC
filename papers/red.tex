@@ -94,7 +94,7 @@
       {`(B, x) y \barr x}&
       \multicolumn{1}{c}{\inferrule[Id]
       { }
-      {Id(A) x \barr x}}&
+      {\text{Id}(A) x \barr x}}&
       \inferrule[Fstc]
       { }
       {\text{Fstc}(B) \llb B \rrb (x, y) \barr x}\\\\
@@ -130,10 +130,10 @@
       {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x, y' \ra}&
       \multicolumn{1}{c}{\inferrule[Sigma]
       { }
-      {\Sigma(B, C) x \barr Coup(C x)}}&
+      {\Sigma(B, C) x \barr \text{Coup}(C x)}}&
       \inferrule[Coup]
       {x \barr x'}
-      {\text{Coup}(x) \barr Coup(x')}\\\\
+      {\text{Coup}(x) \barr \text{Coup}(x')}\\\\
       \multicolumn{1}{c}{\inferrule[CongrFun]
       {x \barr x'}
       {x y \barr x' y}}&&

@@ -68,7 +68,7 @@
     The recipe:
     3.a Categorical combinators [this hooks into types term environments]
       3.a.a Mapping onto CCC's (will mention this again to justify eta)
-      3.a.b Explain how past versions used SK and failed
+      3.a.b Explain how past versions used SK and failed (why cat. combinators better)
       3.a.c Environments from cat. combinators directly model contexts (telescopes) [leads into next]
         3.a.c.a Show code from the compiler
     3.b Types as terms: contexts are environments
@@ -109,9 +109,51 @@
       6.b.a Canonical forms under eta reduction correspond to morphisms in the CCC
         6.b.a.a Give examples
       6.b.b Approach is fully syntactic, but uses some NbE techniques
+        6.b.b.a Since combinator function types are determined by points in the AST, we can calculate the domain of each function by induction
+        6.b.b.b Each operation in the calculus is either
+          6.b.b.b.a Constant (reject argument)
+          6.b.b.b.b Identity (argument is spat back out)
+          6.b.b.b.c Projection (since we have Sigmas)
+          6.b.b.b.d Evaluation (applying a couple)
+          6.b.b.b.e Currying
+          6.b.b.b.f Any of the above, but with respect to an affine domain (e.g., !(A))
+          -- Note: these are operations in the CCC (+ affine)
+          => To observe the behavior of functions, look at how they reduce on generic arguments. Pick an argument not contained in the AST. Eta algorithm:
+            - Inject constant values called "holes", which are identified by a natural number "level" (hole 0) (hole 1)
+              - These cannot be projected, so generalize
+              - They also can't be unboxed *(A) hole = ???
+              - Or mapped *<f> hole = ???
+              - Or any of the above but for an affine value
+            - Generalize holes by plugging constant holes into terms with the desired shape
+            - For terms with domain Coup(B), look at domain of A to get hole for x, then apply that hole to B, create a couple and recurse:
+              〚B⟧(mk_hole A, mk_hole (reduce (B.app (mk_hole A))))
+            - For terms with domain !(A), recurse on A, then box: &(mk_hole A)
+            - Otherwise, increment level and create (hole (level + 1))
+            - Apply the hole to the function, and compare the output to the behavior of the canonical operations above, then select the appropriate function
+              - e.g., Fstc(B) ∘ Id(Coup(B)) ⟦B⟧(hole 0, hole 1) = hole 0, which mapps through 6.b.b.b.b to Fstc(B), regardless of comp with id
+              - Pi types are handled separately, since they are not functions
+                - Recurse on f_\a and f_\b for \Pi(f_\a, f_\b)
+                - Assume the environment is applied for (\Pi(f_\a, f_\b) env), recurse, then quote the env out
         6.b.b.a Holes have the expected shape of the function so that terms don't get stuck. Behavior is then observed -> map onto the morphism
-      6.b.c Funext proof
-        - Explain in depth in prose, minimal lean. Link to the proof though *ONCE REPO PUBLIC*
+      6.b.c Funext proof [already done just explain]
+        6.b.c.a Prove it first for eta
+          1. Normal funext assumption: f and g have same domain
+          2. Assume f beta reduces to f', and f' is normal
+          3. Assume g beta reduces to g', and g' is normal
+          4. Assume f' eta-reduces to f'' (single pass is normal so no worries about that, already proven (eta_reduce (eta_reduce f)) = eta_reduce f)
+          5. Assume g' eta-reduces to g''
+          6. Assume e_h is a hole matching f and g domain
+            - Have proved that this is preserved under the above reductions
+          7. Assume (f''.app e_h) beta-reduces to the normal form B
+          8. Assume (g''.app e_h) beta-reduces to the normal form B
+          9. Induct on the eta-reduction 4
+            9.a. Parallel case analysis on 5
+              9.a.1. If the eta-reductions were different, then the outputs of (g''.app e_h) wouldn't match output of (f''.app e_h)
+               since the operations in 6.b.b.b are all mutually exclusive with respect to holes and g'' cannot contain holes
+              9.a.2. Eliminate any goals where the eta-reductions were different since (red (g''.app e_h)) \neq (red (f''.app e_h)) (contradiction by 7 and 8 since B is normal and unique (by UNF proven already)
+              9.a.3. Only goals left are where the eta-reduction is the same. Hence, f'' = g''
+              => Great success
+        
     6.c We eagerly reduce terms using beta + eta and no fallback conversion constructor
       6.c.a [IMPORTANT] Consequence: there is only one valid judgment for a given term (canonical)
         6.c.a.a Consequence: extensional elimination rule for prop. eq. reflection

@@ -52,10 +52,12 @@
 % also do reduction rules table
 % Syntax cheat sheet
 % do not destructure inside inference rules. use combinators.
+% TODO: need to explain technical details as well, of how this translates to DCC
+% Use an example of app, eval, and curry
 
 \begin{figure}[h]
   \centering
-  \begin{tabular}{l c r}
+  \begin{tabular}{l c c r}
     \inferrule[Eq]
     {x : A, y : A}
     {(x = y) : \sort{0}} &
@@ -64,25 +66,26 @@
     {\text{Id}(A) : A \arr A}
     &\inferrule[Sort]
     { }
-    {\sort{u} : \sort{u + 1}}\\\\
+    {\sort{u} : \sort{u + 1}}
     \inferrule[Top]
     { }
-    {\top : \sort{0}}&
+    {\top : \sort{0}}\\\\
+    \multicolumn{2}{l}{
     \inferrule[Bot]
     { }
-    {\bot : \sort{0}}
+    {\bot : \sort{0}}}
     &\inferrule[Top Intro]
     { }
     {\ast : \top} \\\\
-    \multicolumn{1}{l}{
+    \multicolumn{2}{l}{
     \inferrule[refl]
     {B : A \arr \sort{u}}
     {\text{refl}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr (\text{Eql}(B) x y)}} &
     \multicolumn{2}{r}{
     \inferrule[eql]
     {B : A \arr \sort{u}}
-    {\text{eql}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr \sort{0}}} \\\\
-    \multicolumn{2}{l}{
+    {\text{eql}(B) : (x : !(A)) \arr (y : !\la B \ra x) \arr \sort{0}}} \\\\
+    \multicolumn{3}{l}{
     \inferrule[Comp]
     {g : (x : !(A)) \arr ((y : A) \times B y), f : (x : (x : A) \times B x) \arr C x}
     {f \circ g : (x : !(A)) \arr (C \circ g) x}} &
@@ -90,7 +93,7 @@
     \inferrule[Comp']
     {g : A \arr B, f : (x : B) \arr C x}
     {f \circ ' g : (x : A) \arr (C \circ ' g) x}} \\\\
-    \multicolumn{2}{l}{
+    \multicolumn{3}{l}{
     \inferrule[Comp2]
     {g : (x : !(A)) \arr ((y : A) \times B x), f : (x : (y : A) \times B x) \arr C x}
     {f \circ \circ g : (x : !(A)) \arr (C \circ \circ g) x}} &
@@ -98,7 +101,7 @@
     \inferrule[Coup]
     {A : \sort{u}, B : A \arr \sort{v}}
     {\text{Coup}(B) : \sort{max(u, v)}}} \\\\
-    \multicolumn{1}{l}{
+    \multicolumn{2}{l}{
     \inferrule[Fstc]
     {B : A \arr \sort{v}}
     {\text{Fstc}(B) : (x : A) \times B x \arr A}
@@ -107,7 +110,7 @@
     \inferrule[Sndc]
     {B : A \arr \sort{v}}
     {\text{Sndc}(B) : (x : (x : A) \times B x) \arr B (\text{Fstc}(B) x)}}\\\\
-    \multicolumn{2}{l}{
+    \multicolumn{3}{l}{
     \inferrule[Sigma]
     {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
     {\Sigma(B, C) : A \arr \sort{max(u, v)}}} &
@@ -115,7 +118,7 @@
     \inferrule[Mkc]
     {x : A, y : B x}
     {\llb B \rrb (x, y) : (x : A) \times B x}} \\\\
-    \multicolumn{2}{l}{
+    \multicolumn{3}{l}{
     \inferrule[Curr]
     {B : A \arr \sort{u}, x : (x : (x : A) \times B x) \arr C x}
     {\Lambda (A, B, x) : (x : A) \arr (y : B x) \arr C \llb B \rrb (x, y)}} &
@@ -124,7 +127,7 @@
     {x : A \arr \sort{u}}
     {!\la x \ra : !(A) \arr \sort{n}}
     }\\\\
-    \multicolumn{2}{l}{
+    \multicolumn{3}{l}{
     \inferrule[Curr']
     {B : A \arr \sort{u}, x : !((x : A) \times B x) \arr \la C \ra x}
     {!\Lambda (A, B, x) : (\&(x) : !(A)) \arr (\&(y) : \la B \ra x) \arr C \&(\llb B \rrb (x, y))}} &
@@ -132,7 +135,7 @@
     \inferrule[Fmap]
     {x : (x : A) \arr B x}
     {\$\la x \ra : (\&(x) : !(A)) \arr !(B x)}}\\\\
-    \multicolumn{2}{l}{
+    \multicolumn{3}{l}{
     \inferrule[Eval]
     {A : \sort{u}, B : A \arr \sort{v}, x : (x : A) \arr (y : B x) \arr C x y}
     {\text{Eval}(A, B, x) : (x : (x : A) \times B x) \arr \text{Eval}(A, B, C)}} &
@@ -140,7 +143,7 @@
     \inferrule[Quot]
     {x : A, B : \sort{u}}
     {`(B, x) : B \arr A}}\\\\
-    \multicolumn{1}{l}{
+    \multicolumn{2}{l}{
     \inferrule[Pair]
     {x : (x : A) \arr B x, y : (x : A) \arr (y : B x) \arr C x y}
     {\llb C \rrb \la x, y \ra : (x : A) \arr (y : B x) \times C x y}
@@ -157,10 +160,18 @@
     \inferrule[Box]
     {x : A}
     {\&(x) : !(A)}} &
-    \multicolumn{1}{r}{
+    \multicolumn{1}{c}{
     \inferrule[Unmap]
     {x : (x : A) \arr B x}
-    {*\la x \ra : (x : !(A)) \arr * \la B \ra}}
+    {*\la x \ra : (x : !(A)) \arr * \la B \ra}} &
+    \multicolumn{1}{r}{
+    \inferrule[Unbox]
+    {A : \sort{u}}
+    {*(A) : !(A) \arr A}}\\\\
+    \multicolumn{4}{c}{
+    \inferrule[App]
+    {f : (x : A) \arr B x, x : A}
+    {f x : B x}}
   \end{tabular}
   \caption{\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).}
 \end{figure}

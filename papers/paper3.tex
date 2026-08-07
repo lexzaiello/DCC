@@ -45,7 +45,71 @@
 \affil[1]{Department of Philosophy, University of Washington}
 \affil[2]{Electrical \& Computer Engineering Department, University of Washington}
 
+\section{Introduction}
+
 \begin{comment}
+
+  High level flow:
+  1. Abstract
+  2. Introduction
+    - Mention features
+    - Describe results, and how they achieve the features
+    2a. Background yadda yadda, segue into
+  3. A recipe for computable function extensionality (overall description)
+    3a. Affine insight: strong normalization by default (see below)
+    3b. Cat. combinator insight
+  ?. The categorical combinator insight
+  
+
+
+  Features list:
+  - Dependent types
+  - Decidable type-checking
+  - Computable function extensionality as a metatheorem
+  - Computable propositional equality reflection as a metatheorem
+  - Fully combinatory with no variables
+  - Strong normalization
+  - Based on affine logic and categorical combinators
+  - Compiler from a fragment of Lean to the calculus, supporting complex dependent Lean functions (e.g., the dependent K combinator written in Lean)
+
+  Results list:
+  - Decidable type-checking for the extensional, affine combinator calculus based on categorical combinators
+  - Strong normalization inherited by default
+  - Funext proven as a computable def metatheorem
+    - Due to lack of open terms in combinators and connection between cat. combinators and CCC's
+    - Equalities between functions can be proven with refl x
+    - Note: this is important, because these combination of things seems to produce decidable funext:
+      - Affine logic (SN and decidable beta-eq by default)
+        - Since SN by default, we can eagerly reduce all types
+          - No general conversion constructor -> only one canonical judgment exists -> extensionality is possible
+      - Combinatory basis (no open terms)
+  - The extensional elimination equality reflection rule also proven as a metatheorem
+  - Compiler from the calculus of constructions (i.e., Lean code) to DCC
+
+  - [ ] Results list
+  - Extension of categorical combinators to dependent types
+  - Affine insight: cat. combinators are strongly normalizing with modification to the pair rule
+    - Consequences of this:
+      - Size measure gives strong normalization
+        - Due to SN, we have UNF.
+        - We separately show confluence.
+        - We have global confluence due to wellfoundedness by size.
+        - Decidable beta-eq
+          - IMPORTANT: No need for a general fallback conversion constructor in the judgment relation
+            - This makes metatheory easier. Avoid hairy induction
+            - This means there is only one canonical judgment for a given term
+  - Cat. combinator insight: eta-reduction in the categorical combinators corresponds to the primitive morphisms of CCC's
+    - Unlike in lambda-calculus, there are no open terms
+      - Eta-canonical forms are well-behaved
+      - We use a syntactic eta-reduction approach to observe the behavior of functions on ``holes'', whose shapes are determined by the function's domain
+      - This is particularly fitting and feels quite natural to cat. combinators
+        - There only exist functions of arity 1 or 2. Curry is an example of a function of arity 1.
+          - Two holes is sufficient to test behavior, since Curry is the only non-unary function
+      - IMPORTANT: We have proven funext as a metatheorem for eta-reduction
+        - -> show some examples
+        - This is possible since:
+          - We already have SN, so we can reduce fully
+  
   - reference observational type theory for comparison, since we also have decidable funext
   - example of using extensionality in proof
   - 

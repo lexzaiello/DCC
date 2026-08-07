@@ -1,3 +1,5 @@
+* TODO Really want to try church-encoding Nats
+
 * Updated paper todo in order
 1. Finish funext. Should work with Judge, bare minimum
   - We need .ext for RedEta, not just canonicalize

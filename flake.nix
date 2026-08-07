@@ -109,18 +109,18 @@
               cp build/${builtins.baseNameOf pkg-name}.pdf $out/
             '';
           });
-        papers = [{
-          name = "paper";
-          path = "papers/paper";
-        }
+        papers = [#{
+          #name = "paper";
+          #path = "papers/paper";
+        #}
         {
           name = "infer";
           path = "papers/infer";
         }
-        {
-          name = "paper2";
-          path = "papers/paper2";
-        }
+        #{
+          #name = "paper2";
+          #path = "papers/paper2";
+        #}
         #{
         #  name = "adapting_equations";
         #  path = "papers/adapting_equations";

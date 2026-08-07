@@ -32,6 +32,9 @@
 \newtheorem{theorem}{Theorem}
 \addbibresource{./refs.bib}
 
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\newcommand{\arr}{\rightarrow}
 \newcommand{\sort}[1]{\text{Sort}\ #1}
 \newcommand{\affarr}{\rightarrowtail}
 \newcommand{\affetaarr}{\rightarrowtail_{\eta}}
@@ -45,28 +48,52 @@
 \maketitle
 
 % Inference rules:
-% 
+% In actual paper, note implicit reduction of all types
+% also do reduction rules table
 
 \begin{figure}[h]
   \centering
-  \begin{tabularx}{\textwidth}{X X X X X X}
-    \multicolumn{3}{c}{\inferrule[Eq]
+  \begin{tabular}{c c c}
+    \inferrule[Eq]
     {x : A, y : A}
-    {(x = y) : Sort 0}} &
-    \multicolumn{3}{c}{\inferrule[Snd]
-    {\alpha : \sort{m}, \delta : \sort{o}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
-    {Snd(\beta) : \Pi (\textit{env} : \delta) (s : \Sigma(f_\beta) \textit{env}), f_{\beta} \textit{env} (Fst(f_\beta) (\textit{env}) s))}} \\\\
-    \multicolumn{2}{c}{\inferrule[Snd']
-    {\alpha : \sort{m}, \beta : \sort{n}}
-    {Snd'(\alpha, \beta) : Coup(`(\alpha, \beta)) \rightarrow \beta}} &
-    \multicolumn{2}{c}{\inferrule
-    { }
-    {Sndc(\beta) \coloneq Snd(`(\top, \beta)) \ast}}&
-    \multicolumn{2}{c}{\inferrule
-    { }
-    {Fstc(\beta) \coloneq Fst(`(\top, \beta)) \ast}}
-  \end{tabularx}\\
+    {(x = y) : \sort{0}} &
+    \inferrule[refl]
+    {B : A \arr \sort{u}}
+    {\text{refl}(B) : (x : !(A)) \arr (y : (!<B> x)) \arr (\text{Eql}(B) x y)} &
+    \inferrule[eql]
+    {B : A \arr \sort{u}}
+    {\text{eql}(B) : (x : !(A)) \arr (y : (!<B> x)) \arr \sort{0}}  \\
+    \inferrule[Id]
+    {A : \sort{u}}
+    {Id(A) : A \arr A} &
+    \inferrule[Comp]
+    {g : (x : !(A)) \arr ((y : A) \times B y), f : (x : ((x : A) \times B x)) \arr C x}
+    {f \circ g : (x : !(A)) \arr C \circ g} &
+    \inferrule[Comp_2}
+    {g : (x : !(A)) \arr ((y : A) \times B x), f : (x : ((y : A) \times B x)) \arr C x}
+  \end{tabular}
 \end{figure}
+
+%\begin{figure}[h]
+%  \centering
+%  \begin{tabularx}{\textwidth}{X X X X X X}
+%    \multicolumn{3}{c}{\inferrule[Eq]
+%    {x : A, y : A}
+%    {(x = y) : Sort 0}} &
+%    \multicolumn{3}{c}{\inferrule[Snd]
+%    {\alpha : \sort{m}, \delta : \sort{o}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
+%    {Snd(\beta) : \Pi (\textit{env} : \delta) (s : \Sigma(f_\beta) \textit{env}), f_{\beta} \textit{env} (Fst(f_\beta) (\textit{env}) s))}} \\\\
+%    \multicolumn{2}{c}{\inferrule[Snd']
+%    {\alpha : \sort{m}, \beta : \sort{n}}
+%    {Snd'(\alpha, \beta) : Coup(`(\alpha, \beta)) \rightarrow \beta}} &
+%    \multicolumn{2}{c}{\inferrule
+%    { }
+%    {Sndc(\beta) \coloneq Snd(`(\top, \beta)) \ast}}&
+%    \multicolumn{2}{c}{\inferrule
+%    { }
+%    {Fstc(\beta) \coloneq Fst(`(\top, \beta)) \ast}}
+%  \end{tabularx}\\
+%\end{figure}
 
 \end{document}
 

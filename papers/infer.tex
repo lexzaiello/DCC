@@ -32,6 +32,8 @@
 \newtheorem{theorem}{Theorem}
 \addbibresource{./refs.bib}
 
+\newcommand{\ll}{\llbracket}
+\newcommand{\rr}{\rrbracket}
 \newcommand{\la}{\langle}
 \newcommand{\ra}{\rangle}
 \newcommand{\arr}{\rightarrow}
@@ -104,7 +106,15 @@
     \multicolumn{2}{r}{
     \inferrule[Sndc]
     {B : A \arr \sort{v}}
-    {\text{Sndc}(B) : (x : \text{Coup}(B)) \arr B (\text{Fstc}(B) x)}}
+    {\text{Sndc}(B) : (x : \text{Coup}(B)) \arr B (\text{Fstc}(B) x)}}\\\\
+    \multicolumn{2}{l}{
+    \inferrule[Sigma]
+    {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
+    {\Sigma(B, C) : A \arr \sort{max(u, v)}}} &
+    \multicolumn{1}{r}{
+    \inferrule[Mkc]
+    {x : A, y : B x}
+    {\ll B \rr (x, y) : \text{Coup}(B)}}
   \end{tabular}
 \end{figure}
 

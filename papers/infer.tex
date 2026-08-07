@@ -47,8 +47,6 @@
 
 \begin{document}
 
-\maketitle
-
 % Inference rules:
 % In actual paper, note implicit reduction of all types
 % also do reduction rules table
@@ -57,7 +55,7 @@
 
 \begin{figure}[h]
   \centering
-  \begin{tabular}{l >{\centering\arraybackslash}p{3cm} r}
+  \begin{tabular}{l c r}
     \inferrule[Eq]
     {x : A, y : A}
     {(x = y) : \sort{0}} &
@@ -134,10 +132,19 @@
     \inferrule[Fmap]
     {x : (x : A) \arr B x}
     {\$\la x \ra : (\&(x) : !(A)) \arr !(B x)}}\\\\
-    \multicolumn{3}{l}{
+    \multicolumn{2}{l}{
     \inferrule[Eval]
     {A : \sort{u}, B : A \arr \sort{v}, x : (x : A) \arr (y : B x) \arr C x y}
-    {\text{Eval}(A, B, x) : (x : (x : A) \times B x) \arr \text{Eval}(A, B, C)}}
+    {\text{Eval}(A, B, x) : (x : (x : A) \times B x) \arr \text{Eval}(A, B, C)}} &
+    \multicolumn{1}{r}{
+    \inferrule[Quot]
+    {x : A, B : \sort{u}}
+    {`(B, x) : B \arr A}}\\\\
+    \multicolumn{3}{c}{
+    \inferrule[Pair]
+    {f : (x : A) \arr B x, g : (x : A) \arr (y : B x) \arr C x y}
+    {\llb C \rrb \la x, y \ra : (x : A) \arr (y : B x) \times C x y}
+    }
   \end{tabular}
   \caption{\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).}
 \end{figure}

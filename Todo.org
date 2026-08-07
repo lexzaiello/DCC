@@ -4,7 +4,7 @@
 1. Finish funext. Should work with Judge, bare minimum
   - We need .ext for RedEta, not just canonicalize
 2. Next paper draft:
-- draw out inference rules in latex
+** DONE draw out inference rules in latex
   - Must have this as a reference. Also useful for Klavins
 - references for new paper structure:
   - Most important: [[http://www.strictlypositive.org/ott.pdf][OG observational type theory paper (follow structure)]]

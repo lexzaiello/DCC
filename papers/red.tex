@@ -1,0 +1,177 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\newcommand{\comment}[1]{}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{textcomp}
+\usepackage[a4paper, margin={1in}]{geometry}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\setmonofont{FreeMono}
+\usepackage{minted}
+\setminted{breaklines=true}
+\newmintinline[lean]{lean4}{bgcolor=white}
+\newminted[leancode]{lean4}{fontsize=\footnotesize}
+\usemintedstyle{tango}
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+\frenchspacing
+\usepackage{amsthm}
+\usepackage{authblk}
+\usepackage{biblatex}
+\usepackage{mathpartir}
+\usepackage{stmaryrd}
+\usepackage{amssymb}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\addbibresource{./refs.bib}
+
+\newcommand{\llb}{\llbracket}
+\newcommand{\rrb}{\rrbracket}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\newcommand{\arr}{\rightarrow}
+\newcommand{\sort}[1]{\text{Sort}\ #1}
+\newcommand{\barr}{\arr_{\beta}}
+\newcommand{\affarr}{\rightarrowtail}
+\newcommand{\affetaarr}{\rightarrowtail_{\eta}}
+\newcommand{\etaarr}{\rightarrow_{\eta}}
+
+\title{DCC Beta Reduction Rules}
+\author[1]{Lexi Aiello}
+
+\begin{document}
+
+\begin{figure}[h]
+  \centering
+  \resizebox{\textwidth}{!}{
+    \begin{tabular}{l c c c c r}
+      \multicolumn{1}{l}{
+      \inferrule[Pil]
+      {x \barr x'}
+      {\Pi(x, y) \barr \Pi(x', y)}} &
+      \multicolumn{1}{c}{
+      \inferrule[Pir]
+      {y \barr y'}
+      {\Pi(x, y) \barr \Pi(x, y')}} &
+      \multicolumn{1}{c}{
+      \inferrule[Eql']
+      {x \barr x'}
+      {x = y \barr x' = y}} &
+      \multicolumn{1}{c}{
+      \inferrule[Eqr']
+      {y \barr y'}
+      {x = y \barr x = y'}} &
+      \multicolumn{1}{c}{
+      \inferrule[Bang]
+      {x \barr x'}
+      {!(x) \barr !(x')}} &
+      \multicolumn{1}{r}{
+      \inferrule[Map0]
+      {x \barr x'}
+      {!\la x \ra \barr !\la x' \ra}}\\\\
+      \multicolumn{1}{l}{
+      \inferrule[Map]
+      {}
+      {!\la x \ra \&(y) \barr !(x y)}}&
+      \multicolumn{1}{c}{
+      \inferrule[Unmap]
+      {}
+      {\$\la x \ra \&(y) \barr \&(x y)}}&
+      \multicolumn{1}{c}{
+      \inferrule[Unbox]
+      {}
+      {*(A) \&(x) \barr x}}&
+      \multicolumn{1}{c}{
+      \inferrule[Unmap]
+      {}
+      {*\la x \ra \&(y) \barr f x}}&
+      \multicolumn{1}{c}{
+      \inferrule[Pair]
+      {}
+      {\llb B \rrb \la x, y \ra z \barr \llb B \rrb \la (M x, N x (M x))}}&
+      \multicolumn{1}{r}{
+      \inferrule[Eval]
+      {}
+      {Eval(A, B, x) \llb B \rrb (y, z) \barr x y z}} \\\\
+      \multicolumn{1}{l}{
+      \inferrule[Quot]
+      {}
+      {`(B, x) y \barr x}}&
+      \multicolumn{1}{c}{
+      \inferrule[Id]
+      {}
+      {Id(A) x \barr x}}&
+      \multicolumn{1}{c}{
+      \inferrule[Fstc]
+      {}
+      {Fstc(B) \llb B \rrb (x, y) \barr x}}&
+      \multicolumn{1}{c}{
+      \inferrule[Sndc]
+      {}
+      {Sndc(B) \llb B \rrb (x, y) \barr y}}&
+      \multicolumn{1}{c}{
+      \inferrule[Comp']
+      {}
+      {(x \circ' y) z \barr x (y z)}}&
+      \multicolumn{1}{r}{
+      \inferrule[Comp]
+      {}
+      {(x \circ y) z \barr x (y z)}}\\\\
+      \multicolumn{1}{l}{
+      \inferrule[Comp2]
+      {}
+      {(x \circ\circ y) z \barr x (y z)}}&
+      \multicolumn{1}{c}{
+      \inferrule[Curr]
+      {}
+      {\Lambda(A, B, x) y z \barr x \llb B \rrb (y, z)}}&
+      \multicolumn{1}{c}{
+      \inferrule[Curr']
+      {}
+      {!\Lambda(A, B, x) \&(y) \&(z) \barr x \&(\llb B \rrb (y, z))}}&
+      \multicolumn{1}{c}{
+      \inferrule[Sigl]
+      {x \barr x'}
+      {\llb B \rrb (x, y) \barr \llb B \rrb (x', y)}}&
+      \multicolumn{2}{r}{
+      \inferrule[Sigr]
+      {y \barr y'}
+      {\llb B \rrb (x, y) \barr \llb B \rrb (x, y')}}\\\\
+      \multicolumn{1}{l}{
+      \inferrule[Pairl]
+      {x \barr x'}
+      {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x', y \ra}}&
+      \multicolumn{1}{c}{
+      \inferrule[Pairr]
+      {y \barr y'}
+      {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x, y' \ra}}&
+      \multicolumn{1}{c}{
+      \inferrule[Sigma]
+      {}
+      {\Sigma(B, C) x \barr Coup(C x)}}&
+      \multicolumn{1}{c}{
+      \inferrule[Coup]
+      {x \barr x'}
+      {Coup(x) \barr Coup(x')}}&
+      \multicolumn{1}{c}{
+      \inferrule[CongrFun]
+      {x \barr x'}
+      {x y \barr x' y}}&
+      \multicolumn{1}{r}{
+      \inferrule[CongrArg]
+      {y \barr y'}
+      {x y \barr x y'}}
+    \end{tabular}
+  }
+  \caption{Where \(\arr_{\beta}\) represents beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code.}
+\end{figure}
+
+
+\end{document}

@@ -118,6 +118,10 @@
           path = "papers/infer";
         }
         {
+          name = "red";
+          path = "papers/red";
+        }
+        {
           name = "paper3";
           path = "papers/paper3";
         }

@@ -364,8 +364,8 @@ f_α : α → Sort m
 f_β : (x : α) (y : f_α x) → Sort n
 Π(m, f_α, f_β) : α → Sort n
 -/
-@[dcc_judge] abbrev Pi.type.{u} {τ_c : Type u} (α : GenericExpr τ_c) (o n : Level) : GenericExpr τ_c :=
-  DCC? (α : Sort o) → Sort n
+@[dcc_judge] abbrev Pi.type.{u} {τ_c : Type u} (α : GenericExpr τ_c) (o m n : Level) : GenericExpr τ_c :=
+  DCC? (α : Sort o) → Sort (max m n)
 
 /-abbrev Pi.f_β.type (f_α α : Expr) (m o : Level) :=
   (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(α, f_α, `(Coup(m, α, f_α), Sort o))))) α))-/

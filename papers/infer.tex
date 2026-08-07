@@ -140,11 +140,27 @@
     \inferrule[Quot]
     {x : A, B : \sort{u}}
     {`(B, x) : B \arr A}}\\\\
-    \multicolumn{3}{c}{
+    \multicolumn{1}{l}{
     \inferrule[Pair]
-    {f : (x : A) \arr B x, g : (x : A) \arr (y : B x) \arr C x y}
+    {x : (x : A) \arr B x, y : (x : A) \arr (y : B x) \arr C x y}
     {\llb C \rrb \la x, y \ra : (x : A) \arr (y : B x) \times C x y}
-    }
+    } &
+    \multicolumn{2}{r}{
+    \inferrule[Pi]
+    {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
+    {\Pi (B, C) : (x : A) \arr (y : B x) \arr \sort{max(u, v)}}}\\\\
+    \multicolumn{1}{l}{
+    \inferrule[Bang]
+    {A : \sort{u}}
+    {!(A) : \sort{u}}} &
+    \multicolumn{1}{c}{
+    \inferrule[Box]
+    {x : A}
+    {\&(x) : !(A)}} &
+    \multicolumn{1}{r}{
+    \inferrule[Unmap]
+    {x : (x : A) \arr B x}
+    {*\la x \ra : (x : !(A)) \arr * \la B \ra}}
   \end{tabular}
   \caption{\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).}
 \end{figure}

@@ -341,7 +341,7 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Judge f_β τ_f_β
     → Reduces f_α f_α'
     → Pi.f_β.type f_α' δ o n τ_f_β
-    → Reduces (Pi.type δ o n) τ
+    → Reduces (Pi.type δ o m n) τ
     → Judge (DCC? Π(f_α, f_β)) τ
   | sort   : Judge (DCC? Sort m) (DCC? Sort m.succ)
   | top    : Judge (DCC? ⊤) Top.type

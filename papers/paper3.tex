@@ -92,11 +92,33 @@
       - Canonical eta-forms are well-behaved due to no open terms
       - Canonical eta forms map onto morphisms in the category
       5a + 5b = computable function extensionality with decidable type-checking
-  6. A recipe for decidable type-checking *mostly engineering stuff and theorems, but maybe sprinkle theorems before?*
-    6.a Size measure for strong normalization
-    6.b Confluence proof
-      - Required due to call by value
-    6.c 
+  6. A recipe for extensional decidable type-checking *mostly engineering stuff and theorems, but maybe sprinkle theorems before?*
+    6.a Beta reduction
+      6.a.a Size measure for strong normalization
+      6.a.b Confluence proof
+        - Required due to call by value
+        - Size measure means global confluence is free due to wellfoundedness (Newmann's Lemma)
+      6.a.c Reduction rules, explain anything unclear
+      6.a.d Completeness proof (handwaved cuz boring af)
+    6.b Eta reduction
+      6.b.a Canonical forms under eta reduction correspond to morphisms in the CCC
+        6.b.a.a Give examples
+      6.b.b Approach is fully syntactic, but uses some NbE techniques
+        6.b.b.a Holes have the expected shape of the function so that terms don't get stuck. Behavior is then observed -> map onto the morphism
+      6.b.c Funext proof
+        - Explain in depth in prose, minimal lean. Link to the proof though *ONCE REPO PUBLIC*
+    6.c We eagerly reduce terms using beta + eta and no fallback conversion constructor
+      6.c.a [IMPORTANT] Consequence: there is only one valid judgment for a given term (canonical)
+        6.c.a.a Consequence: extensional elimination rule for prop. eq. reflection
+          6.c.a.a.a Explain proof
+        6.c.a.b Consequence: decidable type-checking NOT SEMI-DECIDABLE
+        6.c.a.c Consequence: metatheory is easier since no induction on conv
+  7. Notes / limitations
+    7.a Remarks on inductive types and NbE funext (probably not possible due to pattern matching?
+      TODO: determine this by adding Nat
+    7.b Foundational result. Stress this.
+  8. Conclusions
+    Idek dawg like I am astonished  
 
   Features list:
   - Analagous to the calculus of constructions on the lambda cube. Types are terms.

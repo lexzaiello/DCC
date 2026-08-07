@@ -85,10 +85,10 @@
       {*\la x \ra \&(y) \barr f x}&
       \multicolumn{1}{c}{\inferrule[Pair]
       { }
-      {\llb B \rrb \la x, y \ra z \barr \llb B \rrb \la M x, N x (M x)}}&
+      {\llb B \rrb \la x, y \ra z \barr \llb B \rrb (M x, N x (M x))}}&
       \inferrule[Eval]
       { }
-      {Eval(A, B, x) \llb B \rrb (y, z) \barr x y z}\\\\
+      {\text{Eval}(A, B, x) \llb B \rrb (y, z) \barr x y z}\\\\
       \inferrule[Quot]
       { }
       {`(B, x) y \barr x}&
@@ -97,10 +97,10 @@
       {Id(A) x \barr x}}&
       \inferrule[Fstc]
       { }
-      {Fstc(B) \llb B \rrb (x, y) \barr x}\\\\
+      {\text{Fstc}(B) \llb B \rrb (x, y) \barr x}\\\\
       \inferrule[Sndc]
       { }
-      {Sndc(B) \llb B \rrb (x, y) \barr y}&
+      {\text{Sndc}(B) \llb B \rrb (x, y) \barr y}&
       \multicolumn{1}{c}{\inferrule[Comp']
       { }
       {(x \circ' y) z \barr x (y z)}}&
@@ -133,11 +133,11 @@
       {\Sigma(B, C) x \barr Coup(C x)}}&
       \inferrule[Coup]
       {x \barr x'}
-      {Coup(x) \barr Coup(x')}\\\\
-      \multicolumn{1}{l}{\inferrule[CongrFun]
+      {\text{Coup}(x) \barr Coup(x')}\\\\
+      \multicolumn{1}{c}{\inferrule[CongrFun]
       {x \barr x'}
       {x y \barr x' y}}&&
-      \multicolumn{1}{r}{\inferrule[CongrArg]
+      \multicolumn{1}{c}{\inferrule[CongrArg]
       {y \barr y'}
       {x y \barr x y'}}
     \end{tabularx}

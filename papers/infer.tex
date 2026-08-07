@@ -58,24 +58,31 @@
 \begin{figure}[h]
   \centering
   \begin{tabular}{l c c c c r}
+    \multicolumn{1}{l}{
     \inferrule[Eq]
     {x : A, y : A}
-    {(x = y) : \sort{0}} &
+    {(x = y) : \sort{0}}} &
+    \multicolumn{1}{c}{
     \inferrule[Id]
     {A : \sort{u}}
-    {\text{Id}(A) : A \arr A}
-    &\inferrule[Sort]
+    {\text{Id}(A) : A \arr A}} &
+    \multicolumn{1}{c}{
+    \inferrule[Sort]
     { }
-    {\sort{u} : \sort{u + 1}}
+    {\sort{u} : \sort{u + 1}}} &
+    \multicolumn{1}{c}{
     \inferrule[Top]
     { }
-    {\top : \sort{0}} &
+    {\top : \sort{0}}} &
+    \multicolumn{1}{c}{
     \inferrule[Bot]
     { }
-    {\bot : \sort{0}} &
-    \inferrule[Top Intro]
-    { } \\\\
-    \multicolumn{3}{l}{
+    {\bot : \sort{0}}} &
+    \multicolumn{1}{l}{
+    \inferrule[Tt]
+    { }
+    {\ast : \top}} \\\\
+    \multicolumn{4}{l}{
     \inferrule[refl]
     {B : A \arr \sort{u}}
     {\text{refl}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr (\text{Eql}(B) x y)}} &
@@ -83,7 +90,7 @@
     \inferrule[eql]
     {B : A \arr \sort{u}}
     {\text{eql}(B) : (x : !(A)) \arr (y : !\la B \ra x) \arr \sort{0}}} \\\\
-    \multicolumn{4}{l}{
+    \multicolumn{5}{l}{
     \inferrule[Comp]
     {g : (x : !(A)) \arr ((y : A) \times B y), f : (x : (x : A) \times B x) \arr C x}
     {f \circ g : (x : !(A)) \arr (C \circ g) x}} &
@@ -91,7 +98,7 @@
     \inferrule[Comp']
     {g : A \arr B, f : (x : B) \arr C x}
     {f \circ ' g : (x : A) \arr (C \circ ' g) x}} \\\\
-    \multicolumn{4}{l}{
+    \multicolumn{5}{l}{
     \inferrule[Comp2]
     {g : (x : !(A)) \arr ((y : A) \times B x), f : (x : (y : A) \times B x) \arr C x}
     {f \circ \circ g : (x : !(A)) \arr (C \circ \circ g) x}} &
@@ -99,7 +106,7 @@
     \inferrule[Coup]
     {A : \sort{u}, B : A \arr \sort{v}}
     {\text{Coup}(B) : \sort{max(u, v)}}} \\\\
-    \multicolumn{3}{l}{
+    \multicolumn{4}{l}{
     \inferrule[Fstc]
     {B : A \arr \sort{v}}
     {\text{Fstc}(B) : (x : A) \times B x \arr A}
@@ -108,7 +115,7 @@
     \inferrule[Sndc]
     {B : A \arr \sort{v}}
     {\text{Sndc}(B) : (x : (x : A) \times B x) \arr B (\text{Fstc}(B) x)}}\\\\
-    \multicolumn{4}{l}{
+    \multicolumn{5}{l}{
     \inferrule[Sigma]
     {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
     {\Sigma(B, C) : A \arr \sort{max(u, v)}}} &
@@ -116,7 +123,7 @@
     \inferrule[Mkc]
     {x : A, y : B x}
     {\llb B \rrb (x, y) : (x : A) \times B x}} \\\\
-    \multicolumn{4}{l}{
+    \multicolumn{5}{l}{
     \inferrule[Curr]
     {B : A \arr \sort{u}, x : (x : (x : A) \times B x) \arr C x}
     {\Lambda (A, B, x) : (x : A) \arr (y : B x) \arr C \llb B \rrb (x, y)}} &
@@ -125,7 +132,7 @@
     {x : A \arr \sort{u}}
     {!\la x \ra : !(A) \arr \sort{n}}
     }\\\\
-    \multicolumn{4}{l}{
+    \multicolumn{5}{l}{
     \inferrule[Curr']
     {B : A \arr \sort{u}, x : !((x : A) \times B x) \arr \la C \ra x}
     {!\Lambda (A, B, x) : (\&(x) : !(A)) \arr (\&(y) : \la B \ra x) \arr C \&(\llb B \rrb (x, y))}} &
@@ -133,7 +140,7 @@
     \inferrule[Fmap]
     {x : (x : A) \arr B x}
     {\$\la x \ra : (\&(x) : !(A)) \arr !(B x)}}\\\\
-    \multicolumn{4}{l}{
+    \multicolumn{5}{l}{
     \inferrule[Eval]
     {A : \sort{u}, B : A \arr \sort{v}, x : (x : A) \arr (y : B x) \arr C x y}
     {\text{Eval}(A, B, x) : (x : (x : A) \times B x) \arr \text{Eval}(A, B, C)}} &
@@ -141,7 +148,7 @@
     \inferrule[Quot]
     {x : A, B : \sort{u}}
     {`(B, x) : B \arr A}}\\\\
-    \multicolumn{3}{l}{
+    \multicolumn{4}{l}{
     \inferrule[Pair]
     {x : (x : A) \arr B x, y : (x : A) \arr (y : B x) \arr C x y}
     {\llb C \rrb \la x, y \ra : (x : A) \arr (y : B x) \times C x y}
@@ -150,7 +157,7 @@
     \inferrule[Pi]
     {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
     {\Pi (B, C) : (x : A) \arr (y : B x) \arr \sort{max(u, v)}}}\\\\
-    \multicolumn{2}{l}{
+    \multicolumn{1}{l}{
     \inferrule[Bang]
     {A : \sort{u}}
     {!(A) : \sort{u}}} &
@@ -166,7 +173,7 @@
     \inferrule[Unbox]
     {A : \sort{u}}
     {*(A) : !(A) \arr A}} &
-    \multicolumn{1}{r}{
+    \multicolumn{2}{r}{
     \inferrule[App]
     {f : (x : A) \arr B x, x : A}
     {f x : B x}}

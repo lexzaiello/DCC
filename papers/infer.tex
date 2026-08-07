@@ -57,6 +57,7 @@
 
 \begin{figure}[h]
   \centering
+  \resizebox{\textwidth}{!}{
   \begin{tabular}{l c c c c r}
     \multicolumn{1}{l}{
     \inferrule[Eq]
@@ -177,7 +178,7 @@
     \inferrule[App]
     {f : (x : A) \arr B x, x : A}
     {f x : B x}}
-  \end{tabular}
+  \end{tabular}}
   \caption{\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\).}
 \end{figure}
 

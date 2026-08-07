@@ -117,6 +117,10 @@
           name = "infer";
           path = "papers/infer";
         }
+        {
+          name = "paper3";
+          path = "papers/paper3";
+        }
         #{
           #name = "paper2";
           #path = "papers/paper2";

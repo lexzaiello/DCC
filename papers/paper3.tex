@@ -1,0 +1,55 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\newcommand{\comment}[1]{}
+\usepackage{tabularx}
+\usepackage{verbatim}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{textcomp}
+\usepackage[a4paper, margin={1in}]{geometry}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\setmonofont{FreeMono}
+\usepackage{minted}
+\setminted{breaklines=true}
+\newmintinline[lean]{lean4}{bgcolor=white}
+\newminted[leancode]{lean4}{fontsize=\footnotesize}
+\usemintedstyle{tango}
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+
+\usepackage{amsthm}
+\usepackage{authblk}
+\usepackage{biblatex}
+\usepackage{mathpartir}
+\usepackage{stmaryrd}
+\usepackage{amssymb}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\addbibresource{./refs.bib}
+
+\newcommand{\set}{\mathrm{Set}}
+\newcommand{\sort}[1]{\mathrm{Sort}\ #1}
+\newcommand{\affarr}{\rightarrowtail}
+\newcommand{\affetaarr}{\rightarrowtail_{\eta}}
+\newcommand{\etaarr}{\rightarrow_{\eta}}
+
+\title{Decidable Type-Checking for Extensional Type Theory in Combinator Calculus}
+\author[1]{Lexi Aiello}
+\author[2]{Eric Klavins}
+\affil[1]{Department of Philosophy, University of Washington}
+\affil[2]{Electrical \& Computer Engineering Department, University of Washington}
+
+\begin{comment}
+  - reference observational type theory for comparison, since we also have decidable funext
+  - example of using extensionality in proof
+  - 
+
+Things I want to cover
+
+\end{comment}

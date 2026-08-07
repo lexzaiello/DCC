@@ -53,25 +53,45 @@
 
 \begin{figure}[h]
   \centering
-  \begin{tabular}{c c c}
+  \begin{tabular}{l r}
     \inferrule[Eq]
     {x : A, y : A}
     {(x = y) : \sort{0}} &
-    \inferrule[refl]
-    {B : A \arr \sort{u}}
-    {\text{refl}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr (\text{Eql}(B) x y)} &
-    \inferrule[eql]
-    {B : A \arr \sort{u}}
-    {\text{eql}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr \sort{0}}  \\
     \inferrule[Id]
     {A : \sort{u}}
-    {\text{Id}(A) : A \arr A} &
+    {\text{Id}(A) : A \arr A}\\\\
+    \inferrule[Top]
+    { }
+    {\top : \sort{0}}&
+    \inferrule[Bot]
+    { }
+    {\bot : \sort{0}}\\\\
+    \inferrule[Sort]
+    { }
+    {\sort{u} : \sort{u + 1}}&
+    \inferrule[Top Intro]
+    { }
+    {\ast : \top} \\\\
+    \multicolumn{2}{l}{
+    \inferrule[refl]
+    {B : A \arr \sort{u}}
+    {\text{refl}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr (\text{Eql}(B) x y)}} \\\\
+    \multicolumn{2}{l}{
+    \inferrule[eql]
+    {B : A \arr \sort{u}}
+    {\text{eql}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr \sort{0}}} \\\\
+    \multicolumn{2}{l}{
     \inferrule[Comp]
     {g : (x : !(A)) \arr ((y : A) \times B y), f : (x : ((x : A) \times B x)) \arr C x}
-    {f \circ g : (x : !(A)) \arr (C \circ g) x} &
+    {f \circ g : (x : !(A)) \arr (C \circ g) x}} \\\\
+    \multicolumn{2}{l}{
     \inferrule[Comp2]
     {g : (x : !(A)) \arr ((y : A) \times B x), f : (x : ((y : A) \times B x)) \arr C x}
-    {f \circ \circ g : (x : !(A)) \arr (C \circ \circ g) x}
+    {f \circ \circ g : (x : !(A)) \arr (C \circ \circ g) x}} \\\\
+    \multicolumn{2}{l}{
+    \inferrule[Comp']
+    {g : A \arr B, f : (x : B) \arr C x}
+    {f \circ ' g : (x : A) \arr (C \circ ' g) x}}
   \end{tabular}
 \end{figure}
 

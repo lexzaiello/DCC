@@ -47,6 +47,10 @@
 \newcommand{\dom}[1]{\text{dom}(#1)}
 \newcommand{\domtwo}[1]{\text{dom}_{2}(#1)}
 \newcommand{\comb}[2]{\text{#1}(#2)}
+\newcommand{\arity}[2]{\text{arity} #1 = #2}
+\newcommand{\efn}{\text{EtaFn}}
+\newcommand{\dom'}{\text{Domain}}
+\newcommand{\dom''}{\text{Domain}_{2}}
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 
@@ -54,6 +58,8 @@
 \author[1]{Lexi Aiello}
 
 \begin{document}
+
+\section{\(\eta\) Domain}
 
 \begin{figure}[h]
   \centering
@@ -134,7 +140,7 @@
       \multicolumn{1}{r}{ }
     \end{tabularx}
   }
-  \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction and \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator from environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reductino aside from reducing its points.}
+  \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction and \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator from environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reductino aside from reducing its points. We also model domains as a relation \(\dom' x A\) with completeness and soundness with respect to \(\dom{x}\).}
 \end{figure}
 
 \begin{figure}[h!]
@@ -171,6 +177,31 @@
   }
   \caption{Arity 2 function domains. The second projection of \(\dom{2}{x}\) is a function of the first term argument. Double quotation is \(\eta\)-reducible and considered to have arity 2 when double quoted. Similarly, when \(Id\) accepts a function, it has arity 2.}
 \end{figure}
+
+\section{\(\eta\) Holes}
+
+\begin{figure}[h!]
+  \centering
+  \resizebox{\textwidth}{!}{
+    \begin{tabularx}{\textwidth}{l c r}
+      \multicolumn{1}{r}{\inferrule[\(\eta\)-reducible unary functions]
+      {h_{arr} : \comb{arity}{x} = 1, h_{dom} : \dom' x A}
+      {tm_{1} h_{arr} h_{dom} : \efn x [A]}}&
+      \multicolumn{2}{l}{\inferrule[\(\eta\)-reducible binary functions]
+      {h_{arr} : \comb{arity}{x} = 2, h_{dom} : \dom'' x A B}
+      {tm_{2} h_{arr} h_{dom} : \efn x [A, B]}}\\\\
+      \inferrule[Constant holes]
+      {h : \not \exists B, A = \comb{Coup}{B} \land \not \exists B, A = !(B), \text{level} : \mathbb{N}}
+      {\text{pure} h : \text{Hole} A \text{level} (\text{const} (\text{Hole.mk} \text{level}))}&
+      \multicolumn{3}{c}{\inferrule[Couple holes]
+      {h_{dom} : \dom' B A, h_{1} : \text{Hole} A (\text{level} + 2) x, hr : (B eh_{1}) \barrn B', h_{2} : \text{Hole} B' (\text{level} + 1) y, \text{level} : \mathbb{N}}
+      {\text{coup} h_{dom} h_{1} hr h_{2} : \text{Hole} \comb{Coup}{B} \text{level} \llb B \rrb (x, y)}}\\\\
+      \multicolumn{3}{c}{\inferrule[Affine bang holes]
+      {h_{1} : \text{Hole} A (\text{level} + 1) x, \text{level} : \mathbb{N}}
+      {\text{bang} h_{1} : \text{Hole} !(A) \text{level} \&(x)}}
+    \end{tabularx}}
+\end{figure}
+
 
 \begin{comment}
 

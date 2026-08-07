@@ -54,6 +54,11 @@
   2. Introduction
     - Mention features
     - Describe results, and how they achieve the features (vaguely)
+      - Point out that funext is a natural consequence of the design
+      - Explicitly give the trifecta:
+        - combinators = no open terms
+        - categorical combinators = maps perfectly onto primitive operations on CCC which is great for eta reduction
+        - affine logic (strongly normalizing by default means there is no need for a general conversion constructor in the judgment relation, which means there is exactly one canonical judgment for a given type, which makes extensionality possible)     
     2a. Background yadda yadda, segue into
       2.a.a Explain categorical combinators and give the reduction rules
         2.a.a.a Mention the simply-typed version in passing

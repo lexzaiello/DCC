@@ -39,8 +39,6 @@
 \newcommand{\affetaarr}{\rightarrowtail_{\eta}}
 \newcommand{\etaarr}{\rightarrow_{\eta}}
 
-\twocolumn
-
 \title{Decidable Type-Checking and Computable Function Extensionality in Combinator Calculus}
 \author[1]{Lexi Aiello}
 \author[2]{Eric Klavins}
@@ -59,21 +57,108 @@
 
 \begin{itemize}
   \item In \textit{TODO insert here}, we present our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to dependent types. We have no variables, and no contexts. Our extension is analagous in expressivity to the Calculus of Constructions on the lambda cube \autocite{Barendregt_1991}. We formally present our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
-  \item In \textit{TODO insert here}, we compare our calculus to the SK combinator calculus \autocite{curry1958combinatory} and elucidate its limitations which practically precluded past attempts at dependent combinator calculus.
+  \item In \textit{TODO insert here}, we compare our calculus to the \(SK\) combinator calculus \autocite{curry1958combinatory} and elucidate its limitations which practically precluded past attempts at dependent combinator calculus.
   \item In \textit{TODO insert here}, we justify our key design decisions: we opted for categorical combinators, and adapted them to affine logic and dependent types.
   \item In \textit{TODO insert here}, we prove that strong normalization is a natural consequence of our choice of affine logic.
   \item In \textit{TODO insert here}, we prove that decidable type-checking is a natural consequence of our design, and describe our implementation of the type-checker in Lean 4.
-  \item In \textit{TODO insert here}, we prove that computable function extensionality is a natural consequence of our \(\eta\)-reduction algorithm. Our proof is formalized as a metatheorem in Lean 4. We show that \(\eta\)-canonical terms are well-behaved due to the natural correspondence betwee categorical combinators and the cartesian closed category.
+  \item In \textit{TODO insert here}, we prove that computable function extensionality is a natural consequence of \(\eta\)-reduction in the categorical combinators. Our proof is formalized as a metatheorem in Lean 4. We show that \(\eta\)-canonical terms are well-behaved due to the natural correspondence betwee categorical combinators and cartesian closed categories.
   \item In \textit{TODO insert here}, we prove that the extensional propositional equality elimination rule is a natural consequence of our design. Due to strong normalization, judgments are canonical, thus enabling equality reflection. Our proof is formalized as a metatheorem in Lean 4.
 \end{itemize}
 
-All of our results have been formalized in the Lean 4 proof assistant. To this date, we are not aware of any calculus where these features can coexist: extensional equality elimination; computable function extensionality; and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit them for ``free.'' We do not present a combinatory basis for inductive types, as they are out of scope for this paper.
+All of our results have been formalized in the Lean 4 proof assistant. To this date, we are not aware of any calculus where these features can coexist: extensional equality elimination; computable function extensionality; and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit them by construction. We do not present a combinatory basis for inductive types, as they are out of scope for this paper.
 
 We do not assume equality reflection or function extensionality as axioms. They are computable definitions, not theorems in Prop.
 
+
+\section{The \(SK\) Combinator Calculus: not quite enough}
+
+\begin{comment}
+  - Explain rewrite rules
+  - Link to altenkirch paper
+    - Show his SK types
+  - Meta combinator hierarchy: too many shapes are required to describe the types
+    - Raw SK type terms are prohibitively large
+    - Type-checker cannot see the structural similarity in types
+    - Nearly impossible to write the types as a user
+    - Cite the exact section of altenkirch paper where he says the types are too big
+  - Duplication is inherent and cannot be sandboxed, making SN very difficult to prove
+  - No primitive objects in SK that resemble \forall / \Pi
+\end{comment}
+
 \section{DCC: The Dependent Combinator Calculus}
 
-\subsection{The SK Combinator Calculus: not quite enough}
+We present DCC: the dependent combinator calculus. DCC is based on an adaptation of the categorical combinators to dependent types and affine logic. It is equal to the base Calculus of Constructions in expressivity, and makes use of a sort hierarchy.
+
+Our choice of combining categorical combinators with dependent types and affine logic induces strong normalization, computable function extensionality and equality reflection as metatheorems. We inherit decidable type-checking. To date, this calculus is the only one where these features coexist. Dependently-typed combinators have been deemed "highly nontrivial." Most importantly, decidable type-checking with function extensionality has thus far been thought to be impossible.
+
+Prior iterations of the calculus, and attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 17]{altenkirch}. 
+
+\textit{TODO: SK rewrite rules}
+
+However, past attempts posed severe limitations due to minimalism of SK and its lack of structures analagous to \(\Pi\) types. There are only two primitives objects: \(S\) and \(K\), neither of which correspond to universal or existential quantification. \(\Pi\) types are usually supported by a \(\Pi\) combinator. However, since \(SK\) are the only primitive objects, extra (``meta'') combinators are required to model dependent types, with no computational relevance.
+
+\textit{TODO: source altenkirch's solution and the standard depenedent types of S and K}
+
+However, SK's minimalism results in prohibitively large types, and a great burden on the user. Complex machinery is required to shuffle elements in the context around (through combinations of \(S\) and \(K\)). Universe levels must be provided explicitly, which are very difficult for a user to calculate. Types very difficult to reason about. There is a great burden on the user, since SK does not have any term points, meaning all type arguments must be supplied manually, making types almost impossible for a user to write \autocite[p. 17]{altenkirch}. Also, the kernel cannot reason about structural similarities between types, resulting in definitional equality type errors. Finally, non-termination is intrinsic to \(SK\), since \(S\) duplicates terms. Our past naive solution used the \(BCKI\) calculus, with the hope that types would be easier to write and normalization inherent. Still, \(BCKI\) does not use term points, resulting in the same limitations of \(SK\).
+
+By contrast, in DCC, all universe levels are inferred (except literal \(\sort{m}\) terms), and types arguments are internalized and often inferred altogether, making types much easier for the user to express. This is due to the isomoprhism between currying with \(\Lambda\) and \(\lambda\)-abstraction. Debruijn are modeled by nested tuples and projections \eqref{eq:project}, substitution by tuple currying \eqref{eq:curry}, and application by evaluation \eqref{eq:eval} \eqref{eq:evaltwo}.
+
+\begin{equation}\label{eq:curry}
+  \Lambda(x) y z \coloneq x (y, z)
+\end{equation}
+
+\begin{equation}\label{eq:project}
+  \Lambda(x) y z \coloneq x (y, z)
+\end{equation}
+
+\begin{equation}\label{eq:eval}
+  \Eval(x) (y, z) \coloneq x y z
+\end{equation}
+
+Or, sometimes:
+
+\begin{equation}\label{eq:evaltwo}
+  \Eval (y, z) \coloneq y z
+\end{equation}
+
+
+TODO: compilation to demonstrate
+
+To demonstrate, we give the usual compilation of the \(\lambda\)-calculus to untyped categorical combinators:
+
+TODO: simply typed version subsection
+
+Types are also much smaller due to this similarity, and the kernel can reason about structural similarity (even without \(\eta\)-reduction) much more robustly.
+
+TODO points, categorical combinators
+
+We do not assume uniqueness of identity proofs, nor do we give a presentation of inductive types.
+
+
+\begin{comment}
+  Elaborate more on results:
+
+  - Based on categorical combinators
+    - Much easier to write types as a user
+      - \Pi type design
+        - Threading values through \Pi to eliminate sources of duplication
+      - We determine the types of primitive objects from points, rather than applied arguments
+        - This allows the type-checker to infer sorts and most type arguments
+          - Eases burden on the user         
+  - Uses affine logic: weakening is permitted, but contraction is constrained
+    - Bang modality and boxes
+  - Strong normalization provable by simple decreasing syntactic size measure
+  - Since we have SN, there is no need for a catch-all conversion constructor in the Judge relation
+    - There is only one valid type for a given term
+      - -> refl is the only possible constructor of equality
+        - Extensional equality reflection provable as a metatheorm
+    - Metatheory is much easier
+  - \eta-reduction in the categorical combinators is very well-behaved, thus inducing function extensionality
+    - Equalities between functions (e.g., Id(A) = Id(A) \circ Id(A)) are provable with just refl
+
+Ending: our choice of combining categorical combinators with dependent types and affine logic induces strong normalization, computable function extensionality and equality reflection as metatheorems, and decidable type-checking. To date, this calculus is the only one where these features coexist. Dependently-typed combinators are "highly nontrivial." Most importantly, decidable type-checking with function extensionality has thus far been deemed impossible.
+  
+\end{comment}
 
 \subsection{Dependent types: a natural extension of categorical combinators}
 
@@ -91,7 +176,7 @@ We do not assume equality reflection or function extensionality as axioms. They 
 
 \section{A recipe for decidable type-checking}
 
-\subsection{Global confluence by Newmann's Lemma}
+\subsection{Global confluence}
 
 \subsection{Uniqueness of normal forms}
 
@@ -99,23 +184,23 @@ We do not assume equality reflection or function extensionality as axioms. They 
 
 \section{A recipe for decidable extensional type-theory}
 
-\subsection{Computable function extensionality is a natural consequence of \(\eta\)-reduction in the categorical combinators}
+\subsection{Computable function extensionality: a natural consequence of \(\eta\)-reduction}
 
-\subsection{Canonical judgments enable computable extensional equality reflection}
+\subsection{Canonical judgments: computable extensional equality reflection}
 
-\subsection{Lean 4 Implementation}
+\section{Lean 4 Implementation}
 
-\subsubsection{Compiling Lean to Dependent Combinators}
+\subsection{Compiling Lean to Dependent Combinators}
 
-\subsubsection{Decompiling Lean from Dependent Combinators}
+\subsection{Decompiling Lean from Dependent Combinators}
+
+\section{Conclusions \& Future Work}
 
 \section{Limitations}
 
 \begin{comment}
 - No inductives
 \end{comment}
-
-\section{Conclusions \& Future Work}
 
 \begin{comment}
 

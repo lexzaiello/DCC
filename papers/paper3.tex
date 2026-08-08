@@ -862,13 +862,13 @@ Our \(\eta\)-reduction procedure reduces functions to their canonical forms by o
   \item Constant functions \(`(B, c)\) which do not contain the argument \(x\) after \(\beta\)-reduction
   \item The identity \(Id(A)\), which gives \(x\) after \(\beta\)-reduction
   \item Couple projections, where \(x \llb B \rrb (y, z)\) \(\beta\)-reduces to \(x\) or \(y\) where \(x \neq y\)
-    \item Or in case \(x\) accepts a boxed couple, \(x &(\llb B \rrb (y, z))\) reduces to \(x\) or \(y\)
+    \item Or in case \(x\) accepts a boxed couple, \(x \&(\llb B \rrb (y, z))\) reduces to \(x\) or \(y\)
   \item Evaluation, where \(\llb B \rrb (y, z)\) \(\beta\)-reduces to \(f x y\)
   \item Partial application, where \(x y\) (in case \(x\) is unary) or \(x y z\) (in case \(x\) is 2-arity) \(\beta\)-reduces to \(x' y\) or \(x' y z\), respectively
   \item The higher-order identity, where \(Id(\Pi(B, C)\ \text{env}) x y\) \(\beta\)-reduces to an application \(x y\)
   \item Unary quotation, where \(x y\) \(\beta\)-reduces to \(c\) and \(c\) does not contain \(y\)
   \item 2-arity quotation, where \(x y z\) \(\beta\)-reduces to \(c\) and \(c\) contains neither \(x\) nor \(y\)
-  \item Boxed quotation, where \(x\) accepts boxed values and \(x &(y) &(z)\) contains neither \(&(y)\) nor \(&(z)\)
+  \item Boxed quotation, where \(x\) accepts boxed values and \(x \&(y) \&(z)\) contains neither \(\&(y)\) nor \(\&(z)\)
 \end{itemize}
 
 These canonical forms are mutually exclusive, and are complete with respect to all well-typed functions. For example, composition is handled by the partial application rule:
@@ -883,7 +883,7 @@ Our approach is fully syntactic, although it bears some resemblance to normaliza
 
 \subsection{Term points dictate function domains}
 
-We believe this approach is only possible due to our design pairing the categorical combinators with affine logic. In the \(SK\) calculus, for example, this approach is not possible in the \(SK\) calculus, since type arguments are given by application, not points. Function domains are encoded as a telescope context. For example, \(\Lambda(A, B, x)\) has domain \([A, B]\), where \(B : A \arr \sort{v}\).
+We believe this approach is only possible due to our design pairing the categorical combinators with affine logic. In the \(SK\) calculus, for example, this approach is not possible in the \(SK\) calculus, since type arguments are given by application, not points. Function domains are encoded as a telescope context. The constituent terms are \(\beta\)-normal values. For example, \(\Lambda(A, B, x)\) has domain \([A', B']\), where \(B : A \arr \sort{v}\) and \(A \barr^{!} A'\) and \(B \barr^{!} B'\).
 
 Function domains are inferred as such \label{domunary} \label{dombinary}.
 
@@ -976,8 +976,25 @@ Function domains are inferred as such \label{domunary} \label{dombinary}.
       \multicolumn{1}{r}{}
     \end{tabularx}
     \end{center}
-  \caption{\label{domunary}Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction. \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator given the environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reduction aside from reducing its points. We also model domains as a relation \(\text{Domain} x A\) with completeness and soundness with respect to \(\dom{x}\).}
+  \caption{\label{domunary}Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction. \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator given the environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reduction aside from reducing its points. We also model domains as a relation \(\text{Domain} x A\) with completeness and soundness with respect to \(\dom{x}\). \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L17}{Dcc.NormExpr.Domain}}
 \end{figure}
+
+\begin{theorem}
+  Forall \(x\) which is a term in \(\beta\)-normal form, if \lean{h : Domain x A}, then \lean{domain? x = some ⟨A, h⟩}.
+\end{theorem}
+
+\begin{proof}\label{completedom}
+  Omitted. Proceed by induction on \(h\).
+  \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L319}{Dcc.NormExpr.Domain.complete}
+\end{proof}
+
+\begin{theorem}
+  Forall \(x\) which is a term in \(\beta\)-normal form, if \lean{h₁ : Domain x A} and \lean{h₁ : Domain x B}, then \(A = B\).
+\end{theorem}
+
+\begin{proof}
+  Suppose \lean{h₁ : Domain x A} and \lean{h₁ : Domain x B}. Then, \lean{domain? x = some ⟨A, h₁⟩} and \lean{domain? x = some ⟨B, h₂⟩}. Hence, \(A = B\). This is due to completeness \ref{completedom}. 
+\end{proof}
 
 Domains for 2-ary functions are calculated by \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Hole.lean\#L396}{reducing \(B x\)}, where \(x\) is a hole.
 
@@ -1010,8 +1027,25 @@ Domains for 2-ary functions are calculated by \leanlink{https://github.com/lexza
       {\dom{x} = !(\comb{Coup}{B})}
       {\domtwo{!\Lambda(A, B, x)} \coloneq (!(A), !\la B \ra)}}
     \end{tabularx}
-  \caption{\label{dombinary}Arity 2 domains. The second projection of \(\dom{2}{x}\) is a function of the first term argument. Double quotation is \(\eta\)-reducible and considered to have arity 2 when double quoted. Similarly, when \(Id\) accepts a function, it has arity 2.}
+  \caption{\label{dombinary}Arity 2 domains. The second projection of \(\dom{2}{x}\) is a function of the first term argument. Double quotation is \(\eta\)-reducible and considered to have arity 2 when double quoted. Similarly, when \(Id\) accepts a function, it has arity 2. \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L110}{Dcc.NormExpr.Domain}}
 \end{figure}
+
+\begin{theorem}
+  Forall \(x\) which is a term in \(\beta\)-normal form, if \lean{h : Domain₂ x A B}, then \lean{domain₂? x = some ⟨A, B, h⟩}.
+\end{theorem}
+
+\begin{theorem}
+  Omitted. Proceed by induction on \(h\).
+  \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L319}{Dcc.NormExpr.Domain.complete}
+\end{theorem}
+
+\begin{theorem}
+  Forall \(x\) which is a term in \(\beta\)-normal form, if \lean{h₁ : Domain₂ x A B} and \lean{h₁ : Domain₂ x C D}, then \(A = C\) and \(B = D\).
+\end{theorem}
+
+\begin{proof}
+  Suppose \lean{h₁ : Domain₂ x A B} and \lean{h₁ : Domain₂ x C D}. Then, \lean{domain₂? x = some ⟨A, B, h₁⟩} and \lean{domain₂? x = some ⟨C, D, h₂⟩}. Hence, \(A = C\) and \(B = D\). This is due to completeness \ref{completedom}. 
+\end{proof}
 
 \subsection{Term points generate opaque holes}
 
@@ -1048,7 +1082,7 @@ Our approach relies on the assumption that extensional ``test values'' are not c
 
 \subsection{\(\eta\)-Canonicalization}
 
-Canonical \(\eta\)-normal values are mutually exclusive and deterministic. This fact is demonstrated by \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean#L440}{completeness and soundness} of our canonicalization implementation with respect to our relational rules. Repeated \(\eta\)-reduction is a no-op.
+Canonical \(\eta\)-normal values are mutually exclusive and deterministic. This fact is demonstrated by \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L440}{completeness and soundness} of our canonicalization implementation (including domain calculation and hole generation) with respect to our relational rules. We have omitted the proofs for brevity, as they are mostly repetitive case analysis and splitting on the respective definitions. Repeated \(\eta\)-reduction is a no-op.
 
 \begin{figure}[H]
   \begin{center}
@@ -1088,8 +1122,43 @@ Canonical \(\eta\)-normal values are mutually exclusive and deterministic. This 
       {x \earr !\Lambda(A, B, `(!(\comb{Coup}{B}), e'))}
     \end{tabularx}
     \end{center}
-  \caption{Where \(\earr\) represents function canonicalization. Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor.\hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L49}{Dcc.NormExpr.EtaFn.Canonicalize}}
+  \caption{Where \(\earr\) represents function canonicalization. Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L49}{Dcc.NormExpr.EtaFn.Canonicalize}}
 \end{figure}
+
+The preimages under \(\eta\)-reduction \(x : \text{@GenericExpr A}\) are mapped to identical terms in \(x : \text{@GenericExpr (@EtaConst A)}\). \(EtaConst\) is inhabited by constants \lean{EtaConst.const : A → (@EtaConst A)}, and \(\text{EtaHole}\) with constructors for sort holes and opaque holes: \(\text{hole} n\), where \(n\) is a unique level, or \(\text{sort} n\). The image under this mapping contains no holes, since existing constants are mapped to \lean{@GenericExpr.const (@EtaConst.const x)}.
+
+\begin{theorem}
+  Forall terms \lean{x : @GenericExpr A}, if \lean{x} is mapped to \lean{x' : @GenericExpr (@EtaConst A)}, then \(x'\) contains no holes.
+\end{theorem}
+
+\begin{proof}
+  Suppose \lean{x : @GenericExpr A}. By induction on \(x\), \(x\) is either a DCC term, or a constant value:
+  \begin{itemize}
+    \item Concrete term case: by the inductive hypothesis, all of the term's points do not contain holes, and a conrete terms are not holes
+    \item Constant case: if there exists some \(c : A\) such that \lean{x = const c}, then \lean{x' = const (EtaConst.const c)}. Since \lean{EtaConst.const} is not a hole, \(x'\) does not contain holes.
+    \end{itemize}
+  \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Reflect.lean\#L17}{Dcc.GenericExpr.RedAff.tail\_no\_hole}
+\end{proof}
+
+\begin{theorem}
+  Forall \(x\) which is a term in \(\beta\)-normal form, if \(x\) does not contain any holes, and if \lean{Domain x A}, then \(A\) does not contain any holes.
+\end{theorem}
+
+\begin{proof}
+  Suppose \(x\) is a term in \(\beta\)-normal form which is the preimage under \(\eta\)-reduction, and that \lean{h : Domain x A}. Proceed by induction on \(h\). Since all domains are derived from term points, and since \(\eta\)-reducible terms do not contain holes, then \(A\) does not contain holes.
+
+  \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L593}{Dcc.NormExpr.Domain.no\_holes}
+\end{proof}
+
+\begin{theorem}
+  Forall \(x\) which is a term in \(\beta\)-normal form, and if \lean{Domain₂ x A B}, then neither \(A\) nor \(B\) contain holes.
+\end{theorem}
+
+\begin{proof}
+  Suppose \(x\) is a term in \(\beta\)-normal form, and that \lean{h : Domain₂ x A B}. Proceed by induction on \(h\). Since all domains are derived from term points, and since \(\eta\)-reducible terms do not contain holes, then neither \(A\) nor \(B\) contain holes.
+
+  \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L673}{Dcc.NormExpr.Domain2.no\_holes}
+\end{proof}
 
 \section{Judgments are Canonical}
 

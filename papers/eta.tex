@@ -48,12 +48,15 @@
 \newcommand{\domtwo}[1]{\text{dom}_{2}(#1)}
 \newcommand{\comb}[2]{\text{#1}(#2)}
 \newcommand{\arity}[2]{\text{arity} #1 = #2}
-\newcommand{\efn}{\text{F}_{\eta}}
-\newcommand{\ddom}{\text{Domain}}
-\newcommand{\dddom}{\text{Domain}_{2}}
-\newcommand{\hole}{\text{Hole}}
+\newcommand{\efn}[2]{\text{F}_{\eta}\ #1\ #2}
+\newcommand{\ddom}{\text{Domain}\ }
+\newcommand{\dddom}{\text{Domain}_{2}\ }
+\newcommand{\hole}{\text{Hole}\ }
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
 
 \title{DCC \(\eta\)-Reduction Rules}
 \author[1]{Lexi Aiello}
@@ -65,7 +68,7 @@
 \begin{figure}[h!]
   \centering
   \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{l c r}
+    \begin{tabularx}{\textwidth}{@{} L C R @{}}
       \inferrule[Eql]
       {\dom{B} = A}
       {\dom{\comb{Eql}{B}} \coloneq !(A)} &
@@ -141,13 +144,13 @@
       \multicolumn{1}{r}{ }
     \end{tabularx}
   }
-  \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction and \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator from environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reductino aside from reducing its points. We also model domains as a relation \(\ddom x A\) with completeness and soundness with respect to \(\dom{x}\).}
+  \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction and \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator from environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reductino aside from reducing its points. We also model domains as a relation \(\dom{x} = A\) with completeness and soundness with respect to \(\dom{x}\).}
 \end{figure}
 
 \begin{figure}[H]
   \centering
   \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{l c r}
+    \begin{tabularx}{\textwidth}{@{} L C R @{}}
       \inferrule[Quot]
       { }
       {\domtwo{`(A, `(B, x))} \coloneq (A, B)}&
@@ -181,29 +184,34 @@
 
 \section{\(\eta\) Holes}
 
+\begin{center}
 \begin{figure}[H]
   \centering
   \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{l c r}
-      \multicolumn{1}{l}{\inferrule[\(\eta\)-unary functions]
-      {\comb{arity}{x} = 1, \ddom x A}
-      {\efn x [A]}}&
-      \multicolumn{2}{r}{\inferrule[\(\eta\)-binary functions]
-      {\comb{arity}{x} = 2, \dddom x A B}
-      {\efn x [A, B]}}\\\\
-      \multicolumn{3}{c}{
+    \begin{tabularx}{\textwidth}{@{} L C R @{}}
+      \inferrule[\(\eta\)-unary functions]
+      {\comb{arity}{x} = 1, \dom{x} = A}
+      {\efn{x}{[A]}}&
+      \multicolumn{2}{r}{
+      \inferrule[\(\eta\)-binary functions]
+      {\comb{arity}{x} = 2, \domtwo{x} = (A, B)}
+      {\efn{x}{[A, B]}}}\\\\
+      \multicolumn{1}{l}{
+      \inferrule[Affine bang holes]
+      {\hole A (\text{level} + 1) x, \mathbb{N}}
+      {\hole !(A) \text{level} \&(x)}}&
+      \multicolumn{2}{r}{
       \inferrule[Constant holes]
       {(\neg \exists B, A = \comb{Coup}{B}) \land (\neg \exists B, A = !(B)), \mathbb{N}}
-      {\hole A \text{level} (\text{const} (\text{Hole.mk} \text{level}))}}\\\\
-      \multicolumn{3}{c}{\inferrule[Couple holes]
-      {\ddom B A, \hole A (\text{level} + 2) x, (B eh_{1}) \barrn B', \hole B' (\text{level} + 1) y, \mathbb{N}}
-      {\hole \comb{Coup}{B} \text{level} \llb B \rrb (x, y)}}\\\\
-      \multicolumn{3}{c}{\inferrule[Affine bang holes]
-      {\hole A (\text{level} + 1) x, \mathbb{N}}
-      {\hole !(A) \text{level} \&(x)}}
+      {\hole A \text{level} (\text{const} (\text{hole} \text{level}))}}\\\\
+      \multicolumn{3}{c}{
+      \inferrule[Couple holes]
+      {\dom{B} = A, \hole A (\text{level} + 2) x, (B eh_{1}) \barrn B', \hole B' (\text{level} + 1) y, \mathbb{N}}
+      {\hole \comb{Coup}{B} \text{level} \llb B \rrb (x, y)}}
     \end{tabularx}}
-  \caption{Where \(\efn f \text{doms}\) represents a view of \(f\) as an \(\eta\)-reducible function with domain ``doms''.}
+  \caption{Where \(\efn{f}{\text{doms}}\) represents a view of \(f\) as an \(\eta\)-reducible function with domain ``doms''.}
 \end{figure}
+\end{center}
 
 We also make use of relations \(\text{Domain} x [A]\) and \(\text{Domain}_{2} x [A, B]\) as proofs of function domains. Domains are computed by \(\text{dom} x\) and \(\text{dom}_2 x\) respectively. \(B\) is a function of the term argument \(y : A\).
 
@@ -212,40 +220,40 @@ We also make use of relations \(\text{Domain} x [A]\) and \(\text{Domain}_{2} x 
 \begin{figure}[H]
   \centering
   \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{l}
+    \begin{tabularx}{\textwidth}{c}
       \inferrule[Id]
-      {\efn x [A], (\neg \exists B C y, x = \Pi(B, C) y), \hole A y, x y \barrn y}
-      {e_f \earr \comb{Id}{A}}\\\\
+      {\efn{x}{[A]}, (\neg \exists B C y, x = \Pi(B, C) y), \hole A y, x y \barrn y}
+      {x \earr \comb{Id}{A}}\\\\
       \inferrule[Fstc]
-      {\text{ddom} B A, \efn x [\comb{Coup}{B}], \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn y}
-      {e_f \earr \comb{Fstc}{B}}\\\\
+      {\dom{B} = A, \efn{x}{[[\comb{Coup}{B}]}, \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn y}
+      {x \earr \comb{Fstc}{B}}\\\\
       \inferrule[Sndc]
-      {\dom B A, \efn x [\comb{Coup}{B}], \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn z}
-      {e_f \earr \comb{Sndc}{B}}\\\\
+      {\dom B A, \efn{x}{[\comb{Coup}{B}]}, \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn z}
+      {x \earr \comb{Sndc}{B}}\\\\
       \inferrule[Fstc']
-      {\dom B A, \efn x [!(\comb{Coup}{B})], \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn y}
-      {e_f \earr *\la \comb{Fstc}{B} \ra}\\\\
+      {\dom B A, \efn{x}{[!(\comb{Coup}{B})]}, \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn y}
+      {x \earr *\la \comb{Fstc}{B} \ra}\\\\
       \inferrule[Sndc']
-      {\dom B A, \efn x [!(\comb{Coup}{B})], \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn z}
-      {e_f \earr *\la \comb{Sndc}{B} \ra}\\\\
+      {\dom B A, \efn{x}{[!(\comb{Coup}{B})]}, \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn z}
+      {x \earr *\la \comb{Sndc}{B} \ra}\\\\
       \inferrule[Par]
-      {\dom A y, ((\neg \exists A', A = \comb{Coup}{A'}) \land e_f (\neg \exists A', A = !(A'))), \efn x [A], \hole A y, x y \barrn x' y, \efn x' [A]}
-      {e_f \earr e_f'}\\\\
+      {\dom A y, ((\neg \exists A', A = \comb{Coup}{A'}) \land e_f (\neg \exists A', A = !(A'))), \efn{x}{[A]}, \hole A y, x y \barrn x' y, \efn{x'}{[A]}}
+      {x \earr e_f'}\\\\
       \inferrule[Eval]
-      {\dom B A, \efn x [\comb{Coup}{B}], \hole \comb{Coup}{B} \llb B \rrb (y, z), x \llb B \rrb (y, z) \barrn x' y z, \efn x' [A, B]}
-      {e_f \earr \comb{Eval}{A, B, x'}}\\\\
+      {\dom B A, \efn{x}{[\comb{Coup}{B}]}, \hole \comb{Coup}{B} \llb B \rrb (y, z), x \llb B \rrb (y, z) \barrn x' y z, \efn{x'}{[A, B]}}
+      {x \earr \comb{Eval}{A, B, x'}}\\\\
       \inferrule[Quot]
-      {\efn x [A], \hole A y, x y \barrn e', \neg \exists c, (\text{const} (\text{hole} c)) \in e'}
-      {e_f \earr `(A, e')}\\\\
+      {\efn{x}{[A]}, \hole A y, x y \barrn e', \neg \exists c, (\text{const} (\text{hole} c)) \in e'}
+      {x \earr `(A, e')}\\\\
       \inferrule[$\text{Id}_{2}$]
-      {\efn x [\Pi(f_A, f_B) \text{env}, `(\Pi(f_A, f_B) \text{env}, B)], \hole (\Pi(f_A, f_B) \text{env}) y, \hole B z, x y z \barrn y z}
-      {e_f \earr \comb{Id}{\Pi(f_A, f_B) \text{env}}}\\\\
+      {\efn{x}{[\Pi(f_A, f_B) \text{env}, `(\Pi(f_A, f_B) \text{env}, B)]}, \hole (\Pi(f_A, f_B) \text{env}) y, \hole B z, x y z \barrn y z}
+      {x \earr \comb{Id}{\Pi(f_A, f_B) \text{env}}}\\\\
       \inferrule[$\text{Quot}_{2}$]
-      {\efn x [A, `(A, B)], \hole A y, \hole B z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
-      {e_f \earr \comb{`(A, `(B, e'))}}\\\\
+      {\efn{x}{[A, `(A, B)]}, \hole A y, \hole B z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
+      {x \earr `(A, `(B, e'))}\\\\
       \inferrule[Bang Quot]
-      {\efn x [!(A), ! \la B \ra], \hole !(A) y, (e_h2 : \la B \ra y \barrn B'), \hole B' z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
-      {e_f \earr !\Lambda(A, B, `(!(\comb{Coup}{B}), e'))}
+      {\efn{x}{[!(A), ! \la B \ra]}, \hole !(A) y, (e_h2 : \la B \ra y \barrn B'), \hole B' z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
+      {x \earr !\Lambda(A, B, `(!(\comb{Coup}{B}), e'))}
     \end{tabularx}}
   \caption{Where \(\earr\) represents function canonicalization. Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor.}
 \end{figure}

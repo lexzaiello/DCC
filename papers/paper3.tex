@@ -12,6 +12,7 @@
 \usepackage[english]{babel}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{fontawesome5}
 \usepackage{amsfonts}
 \usepackage{fontspec}
 \setmonofont{FreeMono}
@@ -35,6 +36,9 @@
 
 \newcommand{\llb}{\llbracket}
 \newcommand{\rrb}{\rrbracket}
+\newcommand{\leanlink}[2]{
+  \hfill \href{#1}{\color{teal}\faCheckSquare~[Formalized: \texttt{#2}]}%
+}
 \newcommand{\la}{\langle}
 \newcommand{\ra}{\rangle}
 \newcommand{\arr}{\rightarrow}
@@ -62,17 +66,21 @@
 
 \begin{document}
 
-\section{Introduction}
+\maketitle
 
-\subsection{Background}
+\begin{abstract}
+  \textit{TODO}
+\end{abstract}
+
+\section{Introduction}
 
 \textit{TODO later after main sections done}
 
 \subsection{Results}
 
 \begin{itemize}
-  \item In \textit{TODO insert here}, we present our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to dependent types. We have no variables, and no contexts. Our extension is analagous in expressivity to the Calculus of Constructions on the lambda cube \autocite{Barendregt_1991}. We formally present our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
-  \item In \textit{TODO insert here}, we compare our calculus to the \(SK\) combinator calculus \autocite{curry1958combinatory} and elucidate its limitations which practically precluded past attempts at dependent combinator calculus.
+  \item In \ref{dccintro}, we present our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to dependent types. We have no variables, and no contexts. Our extension is analagous in expressivity to the Calculus of Constructions on the lambda cube \autocite{Barendregt_1991}. We formally present our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
+  \item In \textit{TODO insert here}, we compare our calculus to the \(SK\) combinator calculus \ref{skcomp} \autocite{curry1958combinatory} and elucidate its limitations which practically precluded past attempts at dependent combinator calculus.
   \item In \textit{TODO insert here}, we justify our key design decisions: we opted for categorical combinators, and adapted them to affine logic and dependent types.
   \item In \textit{TODO insert here}, we prove that strong normalization is a natural consequence of our choice of affine logic.
   \item In \textit{TODO insert here}, we prove that decidable type-checking is a natural consequence of our design, and describe our implementation of the type-checker in Lean 4.
@@ -84,6 +92,7 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 
 We do not assume equality reflection or function extensionality as axioms. They are computable definitions, not theorems in Prop.
 
+\subsection{Background}
 
 \begin{comment}
   - Explain rewrite rules
@@ -98,35 +107,35 @@ We do not assume equality reflection or function extensionality as axioms. They 
   - No primitive objects in SK that resemble \forall / \Pi
 \end{comment}
 
-\section{DCC: The Dependent Combinator Calculus}
-
-We present DCC: the dependent combinator calculus. DCC is based on an adaptation of the categorical combinators to dependent types and affine logic. It is equivalent to the base Calculus of Constructions in expressivity, and makes use of a sort hierarchy.
-
-Our choice of combining categorical combinators with dependent types and affine logic induces decidable type-checking, strong normalization, computable function extensionality and equality reflection as metatheorems. To date, this calculus is the only one where these features coexist. Dependently-typed combinators have been deemed "highly nontrivial." Most importantly, decidable type-checking with computable function extensionality has thus far been thought to be impossible.
-
-\subsection{The \(SK\) Combinator Calculus: not quite enough}
+\subsection{\label{skcomp}The \(SK\) Combinator Calculus: not quite enough}
 
 Prior iterations of the calculus, and attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 10:14]{altenkirch}. 
 
+\begin{figure}[H]
 \begin{align*}
   K x y &\coloneq x\\
   S x y z&\coloneq (x z) (y z)
 \end{align*}
+\caption{Rewrite rules of the \(SK\) combinator calculus}
+\end{figure}
 
 However, past attempts posed severe limitations due to minimalism of SK and its lack of structures analagous to \(\Pi\) types. There are only two primitives objects: \(S\) and \(K\), neither of which correspond to universal or existential quantification. \(\Pi\) types are usually supported by a \(\Pi\) combinator. However, since \(SK\) are the only primitive objects, extra (``meta'') combinators are required to model dependent types, with no computational relevance.
 
-The usual dependent types of \(S\) and \(K\) are as such:
+The usual dependent types of \(S\) and \(K\) are as such \autocite[p. 10:16]{altenkirch}:
 
+\begin{figure}
 \begin{align*}
   K &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (x : A) \arr  B x \arr A\\
   S x y z &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (C : (x : A) \arr B x \arr \sort{s}) \arr (x : A) \arr (y : B x) \arr (z : A) \arr C z (y z)
 \end{align*}
+\caption{Rewrite rules of the \(SK\) combinator calculus}
+\end{figure}
 
-Prior attempts \autocite{altenkirch} at dependent \(SK\) made use of helper combinators to perform the machinery of manipulating types.
+Prior attempts \autocite{altenkirch} at dependent \(SK\) made use of helper combinators to perform the machinery of manipulating types \autocite[10:17]{altenkirch}.
 
-However, SK's minimalism results in prohibitively large types, and a great burden on the user. Complex machinery is required to shuffle elements in the context around (through combinations of \(S\) and \(K\)). Universe levels must be provided explicitly, which are very difficult for a user to calculate. Types very difficult to reason about. There is a great burden on the user, since SK does not have any term points, meaning all type arguments must be supplied manually, making types almost impossible for a user to write \autocite[p. 10:17]{altenkirch}. Also, the kernel cannot reason about structural similarities between types, resulting in definitional equality type errors. Finally, non-termination is intrinsic to \(SK\), since \(S\) duplicates terms. Our past naive solution used the \(BCKI\) calculus, with the hope that types would be easier to write and normalization inherent. Still, \(BCKI\) does not use term points, resulting in the same limitations of \(SK\).
+However, SK's minimalism results in prohibitively large \autocite[10:17]{altenkirch} types, and a great burden on the prover. Complex machinery is required to shuffle elements in the context around (through combinations of \(S\) and \(K\)). Universe levels must be provided explicitly, which are very difficult for a user to calculate. Types very difficult to reason about. There is a great burden on the user, since SK does not have any term points, meaning all type arguments must be supplied manually, making types almost impossible for a user to write \autocite[p. 10:17]{altenkirch}. Also, the kernel cannot reason about structural similarities between types, resulting in definitional equality type errors. Finally, non-termination is intrinsic to \(SK\), since \(S\) duplicates terms. Our past naive solution used the \(BCKI\) calculus, with the hope that types would be easier to write and normalization inherent. Still, \(BCKI\) does not use term points, resulting in the same limitations of \(SK\).
 
-By contrast, DCC is based on the categorical combinator calculus. In DCC, all universe levels are inferred (except literal \(\sort{m}\) terms), and types arguments are internalized and often inferred altogether. This makes types much easier for the user to express. This is due to the isomoprhism between currying in the categorical combinators and \(\lambda\)-abstraction. Debruijn indices are modeled by nested tuples (an ``environment'') and projections \eqref{eq:project}, substitution by tuple currying \eqref{eq:curry}, and application by evaluation \eqref{eq:eval} \eqref{eq:evaltwo}. Types are also much smaller due to this similarity, and the kernel can reason about structural equivalence more often (even without \(\eta\)-reduction).
+By contrast, DCC is based on the categorical combinator calculus (CCC). In DCC, all universe levels are inferred (except literal \(\sort{m}\) terms), and types arguments are internalized and often inferred altogether. This makes types much easier for the user to express. This is due to the isomoprhism between currying in the categorical combinators and \(\lambda\)-abstraction. Debruijn indices are modeled by nested tuples (an ``environment'', or a ``couple'') and projections \eqref{eq:project}, substitution by tuple currying \eqref{eq:curry}, and application by evaluation \eqref{eq:eval} \eqref{eq:evaltwo}. Types are also much smaller due to this similarity, and the kernel can reason about structural equivalence more often (even without \(\eta\)-reduction).
 
 \subsection{Categorical Combinators}
 
@@ -176,11 +185,14 @@ For example:
                 &= c
 \end{align*}
 
+Compared to the \(SK\) combinator calculus, writing programs in the CCC feels quite natural. However, adapting it to dependent types has not been attempted thus far.
+
 \subsection{The Simply-Typed Categorical Combinators}
 
 A simply-typed variant of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points, rather than applied arguments as in dependently-typed \(SK\). Type arguments can be inferred altogether in \(\Lambda\), \(\text{App}\), and \(\text{Pair}\):
 
-\begin{tabular}{c c c}
+\begin{figure}
+\begin{tabular}{l c r}
   \inferrule[Fst]
   { }
   {\comb{Fst}{A, B} : A \times B \arr A}&
@@ -203,10 +215,364 @@ A simply-typed variant of the categorical combinators is presented in \autocite[
   {x : B \arr C, y : A \arr B}
   {x \circ y : A \arr C}&
 \end{tabular}
+\caption{Reduction rules of the categorical combinators}
+\end{figure}
+
+\section{\label{dccintro}DCC: The Dependent Combinator Calculus}
+
+We present DCC: the dependent combinator calculus. DCC is based on an adaptation of the categorical combinators to dependent types and affine logic. It is equivalent to the base Calculus of Constructions in expressivity, and makes use of a sort hierarchy.
+
+We believe our choice of combining categorical combinators with dependent types and affine logic is uniquely suitable for decidable type-checking, strong normalization, computable function extensionality and equality reflection as metatheorems. To date, this calculus is the only one where these features coexist. Dependently-typed combinators have been deemed "highly nontrivial." Most importantly, decidable type-checking with computable function extensionality has thus far been thought to be impossible.
+
+We achieve computable function extensionality through the observation that in combinatory logic, open terms do not exist, and canonical terms in \(\eta\)-reduction correspond to the primitive operations in cartesian closed categories. \(\eta\)-reductions are deterministic, unique, and mutually exclusive in behavior. Hence, the set of canonical functions is countable, small, and very well-behaved. Function extensionality is provable by demonstrating that if two \(\eta\)-reduced terms \(f\) and \(g\) are applied the same value, and the value is not contained in the respective functions, then \(f x \beta_{=} g x\) iff their \(\eta\)-reductions are the same. That is, \(f = g\). We elaborate more on this proof technique later.
+
+We achieve dependent typing in principle by making term points functions of the environment, rather than static values. To give an analogy, the categorical combinators correspond to cartesian closed categories, while DCC corresponds to locally cartesian closed categories. Locally cartesian closed categories are known to be a semantics for dependent type theory\autocite{Seely_1984}.
+
+\subsection{\(\beta\)-Reduction Rules}
+
+DCC has the same reduction rules as in the categorical combinator calculus, except \(\Pi\) types are added, products become \(\Sigma\)-types, the pair rule is restricted affinely, some basic operations on affine terms are supported, and a sort hierarchy is added. With minimal modifications, the categorical combinator calculus becomes a highly expressive type theory.
+
+Affine logic is supported through ``box'' terms, whose boxed values are points:
+
+\begin{gather*}
+  \inferrule[Box]
+  {x : A}
+  {\&(x) : !(A)}
+\end{gather*}
+
+Boxes are consumed by pairs, thus taming the sole source of duplication in the calculus and yielding strong normalization by a syntactic decreasing measure.:
+
+\begin{figure}[H]
+\begin{equation}
+\inferrule[Pair]
+{ }
+{\llb B \rrb \la x, y \ra z \barr \llb B \rrb (M x, N x (M x))}
+\end{equation}
+\caption{Pairs consume boxes, and decrease the size of the program while duplicating a value.}
+\end{figure}
+
+The full reduction rules are given in \eqref{redrules}.
+
+\begin{figure}[h]
+  \centering
+  \resizebox{\textwidth}{!}{
+    \begin{tabularx}{\textwidth}{l >{\centering\arraybackslash}X r}
+      \inferrule[Pil]
+      {x \barr x'}
+      {\Pi(x, y) \barr \Pi(x', y)} &
+      \multicolumn{1}{c}{\inferrule[Pir]
+      {y \barr y'}
+      {\Pi(x, y) \barr \Pi(x, y')}}&
+      \inferrule[Eql']
+      {x \barr x'}
+      {x = y \barr x' = y}\\\\
+      \inferrule[Eqr']
+      {y \barr y'}
+      {x = y \barr x = y'}&
+      \multicolumn{1}{c}{\inferrule[Bang]
+      {x \barr x'}
+      {!(x) \barr !(x')}}&
+      \inferrule[Map0]
+      {x \barr x'}
+      {!\la x \ra \barr !\la x' \ra}\\\\
+      \inferrule[Map]
+      { }
+      {!\la x \ra \&(y) \barr !(x y)}&
+      \multicolumn{1}{c}{\inferrule[Unmap]
+      { }
+      {\$\la x \ra \&(y) \barr \&(x y)}}&
+      \inferrule[Unbox]
+      { }
+      {*(A) \&(x) \barr x}\\\\
+      \inferrule[Unmap]
+      { }
+      {*\la x \ra \&(y) \barr f x}&
+      \multicolumn{1}{c}{\inferrule[Pair]
+      { }
+      {\llb B \rrb \la x, y \ra z \barr \llb B \rrb (M x, N x (M x))}}&
+      \inferrule[Eval]
+      { }
+      {\text{Eval}(A, B, x) \llb B \rrb (y, z) \barr x y z}\\\\
+      \inferrule[Quot]
+      { }
+      {`(B, x) y \barr x}&
+      \multicolumn{1}{c}{\inferrule[Id]
+      { }
+      {\text{Id}(A) x \barr x}}&
+      \inferrule[Fst]
+      { }
+      {\text{Fst}(B) \llb B \rrb (x, y) \barr x}\\\\
+      \inferrule[Snd]
+      { }
+      {\text{Snd}(B) \llb B \rrb (x, y) \barr y}&
+      \multicolumn{1}{c}{\inferrule[Comp']
+      { }
+      {(x \circ' y) z \barr x (y z)}}&
+      \inferrule[Comp]
+      { }
+      {(x \circ y) z \barr x (y z)}\\\\
+      \inferrule[Comp2]
+      { }
+      {(x \circ\circ y) z \barr x (y z)}&
+      \multicolumn{1}{c}{\inferrule[Curr]
+      { }
+      {\Lambda(A, B, x) y z \barr x \llb B \rrb (y, z)}}&
+      \inferrule[Curr']
+      { }
+      {!\Lambda(A, B, x) \&(y) \&(z) \barr x \&(\llb B \rrb (y, z))}\\\\
+      \inferrule[Sigl]
+      {x \barr x'}
+      {\llb B \rrb (x, y) \barr \llb B \rrb (x', y)}&
+      \multicolumn{1}{c}{\inferrule[Sigr]
+      {y \barr y'}
+      {\llb B \rrb (x, y) \barr \llb B \rrb (x, y')}}&
+      \inferrule[Pairl]
+      {x \barr x'}
+      {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x', y \ra}\\\\
+      \inferrule[Pairr]
+      {y \barr y'}
+      {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x, y' \ra}&
+      \multicolumn{1}{c}{\inferrule[Sigma]
+      { }
+      {\Sigma(B, C) x \barr \text{Coup}(C x)}}&
+      \inferrule[Coup]
+      {x \barr x'}
+      {\text{Coup}(x) \barr \text{Coup}(x')}\\\\
+      \multicolumn{1}{l}{\inferrule[CongrFun]
+      {x \barr x'}
+      {x y \barr x' y}}&
+      \multicolumn{1}{c}{\inferrule[CongrArg]
+      {y \barr y'}
+      {x y \barr x y'}}&\multicolumn{1}{l}{}
+    \end{tabularx}
+  }
+  \caption{\label{redrules}Where \(\barr\) represents single-step beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code.}
+\end{figure}
+
+Since DCC is strongly normalizing by default, conversion in the judgment relation is avoided altogether. Types are eagerly reduced in every inference rule, instead of being permitted by general catch-all conversion. As a consequence, there is exactly one valid judgment for a given term. This had wide, sweeping ramifications, enabling equality reflection, and computable function extensionality when paired with \(\eta\)-reduction, while retaining decidability. As in intensional type theory, \(\text{refl}\) is the only inhabitant of equality. Since conversion is avoided, \(x = x\) is the \textit{only} valid equality judgment. Induction on conversion is conveniently avoided in metatheorems due to eager type normalization.
 
 \subsection{Types as terms: Environments are contexts}
 
 In DCC, combinator types are determined by points which index an environment and eliminate into a \(\sort{u}\). This approach has the advantage of requiring no explicit universe levels (whereas dependent \(SK\) does), and type arguments can often be inferred, easing the burden on the user.
+
+This design decision is motivated by the realization that interpreting couple environments as \(\Sigma\)-types yields a telescope context:
+
+\begin{figure}[H]
+\begin{equation}
+  x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx
+  \llbracket \Sigma(A_1), A_2 \rrbracket (\llbracket A_1 \rrbracket (x_0, x_1), x_2)
+\end{equation}
+\caption{Couple environments are analogous to context substitutions}
+\end{figure}
+
+Dependent types are supported in principle by a \(\Pi\) combinator. Unlike in prior attempts with \(SK\), its domain is a function of an environment and its codomain of the environment and corresponding term argument:
+
+\begin{figure}[H]
+  \begin{tabular}{c c}
+  \inferrule[Pi]
+  {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
+  {\Pi (B, C) : (x : A) \arr (y : B x) \arr \sort{max(u, v)}} &
+  \inferrule[App]
+  {f : (x : A) \arr B x, x : A}
+  {f x : B x}
+  \end{tabular}
+\end{figure}
+
+\(\Pi\) types model move semantics by threading terms in the context through nested \(\Pi\) terms when type-checking an application. Duplication is avoided, unlike in approaches where substitution is recursive.
+
+Arrows are defined as \(\Pi\) terms where \(x : A\), and \(A : \sort{u}\), \(B \coloneq \comb{Id}{\sort{u}}\), and \(C \coloneq `(\sort{u}, `(A, C'))\). For example, the type of \(\comb{Id}{A}\) is written like such:
+
+\begin{equation}
+  \inferrule[Id]
+  {A : \sort{u}, B : \sort{v}}
+  {\text{Id}(A) : (\Pi(\comb{Id}{\sort{u}}, `(\sort{u}, `(A, B))) A)}
+\end{equation}
+
+\subsection{Inference Rules}
+
+We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in our illustration of our inference rules. However, the full types are available in the appendix. Our full inference rules are given as such:
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\textwidth}{!}{
+  \begin{tabular}{l c c c c r}
+    \multicolumn{1}{l}{
+    \inferrule[Eq]
+    {x : A, y : A}
+    {(x = y) : \sort{0}}} &
+    \multicolumn{1}{c}{
+    \inferrule[Id]
+    {A : \sort{u}}
+    {\text{Id}(A) : A \arr A}} &
+    \multicolumn{1}{c}{
+    \inferrule[Sort]
+    { }
+    {\sort{u} : \sort{u + 1}}} &
+    \multicolumn{1}{c}{
+    \inferrule[Top]
+    { }
+    {\top : \sort{0}}} &
+    \multicolumn{1}{c}{
+    \inferrule[Bot]
+    { }
+    {\bot : \sort{0}}} &
+    \multicolumn{1}{r}{
+    \inferrule[Tt]
+    { }
+    {\ast : \top}} \\\\
+    \multicolumn{3}{l}{
+    \inferrule[refl]
+    {B : A \arr \sort{u}}
+    {\text{refl}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr (\text{Eql}(B) x y)}} &
+    \multicolumn{3}{r}{
+    \inferrule[eql]
+    {B : A \arr \sort{u}}
+    {\text{eql}(B) : (x : !(A)) \arr (y : !\la B \ra x) \arr \sort{0}}} \\\\
+    \multicolumn{4}{l}{
+    \inferrule[Comp]
+    {g : (x : !(A)) \arr ((y : A) \times B y), f : (x : (x : A) \times B x) \arr C x}
+    {f \circ g : (x : !(A)) \arr (C \circ g) x}} &
+    \multicolumn{2}{r}{
+    \inferrule[Comp']
+    {g : A \arr B, f : (x : B) \arr C x}
+    {f \circ ' g : (x : A) \arr (C \circ ' g) x}} \\\\
+    \multicolumn{4}{l}{
+    \inferrule[Comp2]
+    {g : (x : !(A)) \arr ((y : A) \times B x), f : (x : (y : A) \times B x) \arr C x}
+    {f \circ \circ g : (x : !(A)) \arr (C \circ \circ g) x}} &
+    \multicolumn{2}{r}{
+    \inferrule[Coup]
+    {A : \sort{u}, B : A \arr \sort{v}}
+    {\text{Coup}(B) : \sort{max(u, v)}}} \\\\
+    \multicolumn{3}{l}{
+    \inferrule[Fstc]
+    {B : A \arr \sort{v}}
+    {\text{Fstc}(B) : (x : A) \times B x \arr A}
+    } &
+    \multicolumn{3}{r}{
+    \inferrule[Sndc]
+    {B : A \arr \sort{v}}
+    {\text{Sndc}(B) : (x : (x : A) \times B x) \arr B (\text{Fstc}(B) x)}}\\\\
+    \multicolumn{4}{l}{
+    \inferrule[Sigma]
+    {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
+    {\Sigma(B, C) : A \arr \sort{max(u, v)}}} &
+    \multicolumn{2}{r}{
+    \inferrule[Mkc]
+    {x : A, y : B x}
+    {\llb B \rrb (x, y) : (x : A) \times B x}} \\\\
+    \multicolumn{4}{l}{
+    \inferrule[Curr]
+    {B : A \arr \sort{u}, x : (x : (x : A) \times B x) \arr C x}
+    {\Lambda (A, B, x) : (x : A) \arr (y : B x) \arr C \llb B \rrb (x, y)}} &
+    \multicolumn{2}{r}{
+    \inferrule[Map]
+    {x : A \arr \sort{u}}
+    {!\la x \ra : !(A) \arr \sort{n}}
+    }\\\\
+    \multicolumn{4}{l}{
+    \inferrule[Curr']
+    {B : A \arr \sort{u}, x : !((x : A) \times B x) *\arr \la C \ra x}
+    {!\Lambda (A, B, x) : (\&(x) : !(A)) \arr (\&(y) : \la B \ra x) \arr C \&(\llb B \rrb (x, y))}} &
+    \multicolumn{2}{r}{
+    \inferrule[Fmap]
+    {x : (x : A) \arr B x}
+    {\$\la x \ra : (\&(x) : !(A)) \arr !(B x)}}\\\\
+    \multicolumn{4}{l}{
+    \inferrule[Eval]
+    {A : \sort{u}, B : A \arr \sort{v}, x : (x : A) \arr (y : B x) \arr C x y}
+    {\text{Eval}(A, B, x) : (x : (x : A) \times B x) \arr \text{Eval}(A, B, C)}} &
+    \multicolumn{2}{r}{
+    \inferrule[Quot]
+    {x : A, B : \sort{u}}
+    {`(B, x) : B \arr A}}\\\\
+    \multicolumn{3}{l}{
+    \inferrule[Pair]
+    {x : (x : A) \arr B x, y : (x : A) \arr (y : B x) \arr C x y}
+    {\llb C \rrb \la x, y \ra : (x : A) \arr (y : B x) \times C x y}
+    } &
+    \multicolumn{3}{r}{
+    \inferrule[Pi]
+    {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
+    {\Pi (B, C) : (x : A) \arr (y : B x) \arr \sort{max(u, v)}}}\\\\
+    \multicolumn{1}{l}{
+    \inferrule[Bang]
+    {A : \sort{u}}
+    {!(A) : \sort{u}}} &
+    \multicolumn{1}{c}{
+    \inferrule[Box]
+    {x : A}
+    {\&(x) : !(A)}} &
+    \multicolumn{1}{c}{
+    \inferrule[Unmap]
+    {x : (x : A) \arr B x}
+    {*\la x \ra : (x : !(A)) \arr * \la B \ra}} &
+    \multicolumn{1}{c}{
+    \inferrule[Unbox]
+    {A : \sort{u}}
+    {*(A) : !(A) \arr A}} &
+    \multicolumn{2}{r}{
+    \inferrule[App]
+    {f : (x : A) \arr B x, x : A}
+    {f x : B x}}
+  \end{tabular}}
+\caption{\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\).}
+\leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}{GenericExpr.Judge3}
+\end{figure}
+
+Our inference rules are intuitive. For example, curry and eval mirror \(\Sigma\) currying and uncurrying in Lean 4 \autocite{curry:mathlib}:
+
+\begin{leancode}
+def Sigma.curry {γ : ∀ a, β a → Type*} (f : ∀ x : Sigma β, γ x.1 x.2) (x : α) (y : β x) : γ x y :=
+  f ⟨x, y⟩
+\end{leancode}
+\begin{leancode}
+def Sigma.uncurry {γ : ∀ a, β a → Type*} (f : ∀ (x) (y : β x), γ x y) (x : Sigma β) : γ x.1 x.2 :=
+  f x.1 x.2
+\end{leancode}
+
+\section{Affine logic: strong normalization for free}
+
+Contraction is restricted in DCC, as in affine logic. Strong normalization is derived ``for free,'' and provable by a simple syntactic decreasing measure, The size measure sums the size of each combinators' points and performs simple arithmetic for an ordering matching combinator precedence. In boxes, the size of its point \(x\) is counted thrice so that consuming it with a pair decreases the program's size, rather than increasing it:
+
+\begin{figure}
+\begin{leancode}
+@[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
+def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
+  match e with
+  | DCC[.] ∗ => 1
+  | DCC[.] ⊤ => 2
+  | DCC[.] ⊥ => 2
+  | DCC[.] x = y => (x.size + y.size) + 1
+  | DCC[.] Eql(α)  => α.size + 5
+  | DCC[.] refl(α) => α.size + 5
+  | DCC[.] Sort m => m
+  | DCC[.] Σ(α, β) => α.size + β.size + 3
+  | DCC[.] `(β, x) => β.size + x.size + 3
+  | DCC[.] ⟦_β⟧(x, y) => x.size + y.size
+  | DCC[.] Coup(β) => β.size + 1
+  | DCC[.] Id(α)      => 1 + α.size
+  | DCC[.] Fstc(α)    => 3 + α.size
+  | DCC[.] Sndc(α)    => 3 + α.size
+  | DCC[.] Π(α, β) => α.size + β.size + 2
+  | DCC[.] (f ∘' g) => f.size + f.size + g.size + 3
+  | DCC[.] (f ∘ g)  => f.size + f.size + g.size + 3
+  | DCC[.] (f ∘∘ g)  => f.size + f.size + g.size + 3
+  | DCC[.] ⟦_β⟧⟨a, b⟩   => a.size + a.size + b.size + 3
+  | DCC[.] Λ(α, β, x) => α.size + β.size + x.size + 3
+  | DCC[.] !Λ(α, β, x) => α.size + β.size + x.size + 3
+  | DCC[.] Eval(α, β, x) => α.size + β.size + x.size + 2
+  | DCC[.] !(x)   => x.size + 1
+  | DCC[.] *(α)   => α.size + 3
+  | DCC[.] *<α>   => α.size + 1
+  | DCC[.] &(x)   => x.size + x.size + x.size + x.size
+  | DCC[.] !<x>   => x.size + x.size + x.size + 3
+  | DCC[.] $<x>   => x.size + x.size + x.size + x.size + 3
+  | DCC[.] (f x) => f.size + x.size
+  | .const _ => 0
+\end{leancode}
+\leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Aff/Size.lean}{GenericExpr.size}
+\end{figure}
 
 \begin{comment}
   Elaborate more on results:
@@ -233,17 +599,9 @@ Ending: our choice of combining categorical combinators with dependent types and
   
 \end{comment}
 
-
-
 \subsection{Types as terms: Environments are contexts}
 
-\subsubsection{\(\beta\)-Reduction Rules}
-
 \subsubsection{Inference Rules}
-
-\section{Affine logic: strong normalization for free}
-
-Contraction is restricted in DCC, as in affine logic. Strong normalization is induced as such by a simple syntactic decreasing measure.
 
 \subsection{Terminating \(\beta\)-reduction by syntactic size}
 

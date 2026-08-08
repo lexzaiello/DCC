@@ -20,7 +20,8 @@
 \usepackage{bbm}
 \setmonofont{FreeMono}
 \usepackage{minted}
-\setminted{breaklines=true}
+\setminted{breaklines=true, breakanywhere=true}
+\fvset{breaklines=true} 
 \newmintinline[lean]{lean4}{bgcolor=white}
 \newminted[leancode]{lean4}{fontsize=\footnotesize}
 \usemintedstyle{tango}
@@ -881,7 +882,7 @@ No-op \(\eta\)-reductions are similarly handled by the partial application case,
 
 Our approach is fully syntactic, although it bears some resemblance to normalization by evaluation (NbE) techniques.
 
-\subsection{Term points dictate function domains}
+\subsection{Term points dictate function domains}\label{etadom}
 
 We believe this approach is only possible due to our design pairing the categorical combinators with affine logic. In the \(SK\) calculus, for example, this approach is not possible in the \(SK\) calculus, since type arguments are given by application, not points. Function domains are encoded as a telescope context. The constituent terms are \(\beta\)-normal values. For example, \(\Lambda(A, B, x)\) has domain \([A', B']\), where \(B : A \arr \sort{v}\) and \(A \barr^{!} A'\) and \(B \barr^{!} B'\).
 
@@ -1086,6 +1087,7 @@ Canonical \(\eta\)-normal values are mutually exclusive and deterministic. This 
 
 \begin{figure}[H]
   \begin{center}
+    \setlength{\extrarowheight}{0pt}
     \begin{tabularx}{\textwidth}{c}
       \inferrule[Id]
       {\efn{x}{[A]}, (\neg \exists B C y, x = \Pi(B, C) y), \hole A y, x y \barrn y}
@@ -1125,7 +1127,8 @@ Canonical \(\eta\)-normal values are mutually exclusive and deterministic. This 
   \caption{Where \(\earr\) represents function canonicalization. Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L49}{Dcc.NormExpr.EtaFn.Canonicalize}}
 \end{figure}
 
-The preimages under \(\eta\)-reduction \(x : \text{@GenericExpr A}\) are mapped to identical terms in \(x : \text{@GenericExpr (@EtaConst A)}\). \(EtaConst\) is inhabited by constants \lean{EtaConst.const : A → (@EtaConst A)}, and \(\text{EtaHole}\) with constructors for sort holes and opaque holes: \(\text{hole} n\), where \(n\) is a unique level, or \(\text{sort} n\). The image under this mapping contains no holes, since existing constants are mapped to \lean{@GenericExpr.const (@EtaConst.const x)}.
+The preimages under \(\eta\)-reduction \lean{x : @GenericExpr A} are mapped to identical terms in
+\lean{@GenericExpr (@EtaConst A)}. \lean{EtaConst} is inhabited by constants \lean{EtaConst.const : A → (@EtaConst A)}, and \lean{EtaHole} with constructors for sort holes and opaque holes: \lean{hole n}, where \(n\) is a unique level, or \lean{sort n}. The image under this mapping contains no holes, since existing constants are mapped to \lean{@GenericExpr.const (@EtaConst.const x)}.
 
 \begin{theorem}
   Forall terms \lean{x : @GenericExpr A}, if \lean{x} is mapped to \lean{x' : @GenericExpr (@EtaConst A)}, then \(x'\) contains no holes.
@@ -1137,7 +1140,7 @@ The preimages under \(\eta\)-reduction \(x : \text{@GenericExpr A}\) are mapped 
     \item Concrete term case: by the inductive hypothesis, all of the term's points do not contain holes, and a conrete terms are not holes
     \item Constant case: if there exists some \(c : A\) such that \lean{x = const c}, then \lean{x' = const (EtaConst.const c)}. Since \lean{EtaConst.const} is not a hole, \(x'\) does not contain holes.
     \end{itemize}
-  \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Reflect.lean\#L17}{Dcc.GenericExpr.RedAff.tail\_no\_hole}
+  \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Reflect.lean\#L17}{Dcc.GenericExpr.RedAff.tail\_no\_hole}
 \end{proof}
 
 \begin{theorem}
@@ -1146,8 +1149,7 @@ The preimages under \(\eta\)-reduction \(x : \text{@GenericExpr A}\) are mapped 
 
 \begin{proof}
   Suppose \(x\) is a term in \(\beta\)-normal form which is the preimage under \(\eta\)-reduction, and that \lean{h : Domain x A}. Proceed by induction on \(h\). Since all domains are derived from term points, and since \(\eta\)-reducible terms do not contain holes, then \(A\) does not contain holes.
-
-  \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L593}{Dcc.NormExpr.Domain.no\_holes}
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L593}{Dcc.NormExpr.Domain.no\_holes}
 \end{proof}
 
 \begin{theorem}
@@ -1156,25 +1158,46 @@ The preimages under \(\eta\)-reduction \(x : \text{@GenericExpr A}\) are mapped 
 
 \begin{proof}
   Suppose \(x\) is a term in \(\beta\)-normal form, and that \lean{h : Domain₂ x A B}. Proceed by induction on \(h\). Since all domains are derived from term points, and since \(\eta\)-reducible terms do not contain holes, then neither \(A\) nor \(B\) contain holes.
-
-  \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L673}{Dcc.NormExpr.Domain2.no\_holes}
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L673}{Dcc.NormExpr.Domain2.no\_holes}
 \end{proof}
 
 \begin{theorem}\label{canoncomplete}
-  Forall \(x\) which is a term in \(\beta\)-normal form, where \lean{h₁ : Domain x A} or \lean{h₁ : Domain x A B}, and \lean{h₂ : Canonicalize x x'}, then \lean{canonicalize? x = some ⟨x, h₂⟩}.
+  Forall \(x\) which is a term in \(\beta\)-normal form, where \lean{h : Canonicalize x x'}, then \lean{canonicalize? x = some ⟨x, h⟩}.
 \end{theorem}
 
 \begin{proof}
   Omitted. Proceed by induction on \(h\) and case splitting on the conclusion with respect to the definition of \lean{canonicalize?}.
-  \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L319}{Dcc.NormExpr.Domain.complete}
+  \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L440}{Dcc.NormExpr.EtaFn.Canonicalize.complete}
 \end{proof}
 
-\begin{theorem}
-  Forall \(x\) which is a term in \(\beta\)-normal form, if \lean{h₁ : Canonicalize x x₁} and \lean{h₁ : Canonicalize x x₂}, then \lean{x₁ = x₂}.
+\begin{theorem}\label{uniqueeta}
+  Forall \(x\) which is a term in \(\beta\)-normal form, if \lean{Canonicalize x x₁} and \lean{Canonicalize x x₂}, then \lean{x₁ = x₂}.
 \end{theorem}
 
 \begin{proof}
   By completeness \ref{canoncomplete}: if \lean{h₁ : Canonicalize x x₁} and \lean{h₂ : Canonicalize x x₂}, then \lean{canonicalize? x = some ⟨x₁, h₁⟩} and \lean{canonicalize? x = some ⟨x₂, h₂⟩}. Hence, \lean{x₁ = x₂}.
+  \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L331}{Dcc.NormExpr.EtaFn.Canonicalize.unique}
+\end{proof}
+
+\subsubsection{\(\eta\)-reduction is well-behaved and canonical}
+
+We note that the set of possible canonical values is mutually exclusive in behavior, as in \ref{uniqueeta}. That is, no two constructors share the same reduction when applied their respective holes. That is, if \(f \neq g\), and \(f\) and \(g\) are in \(\beta\)-\(\eta\)-normal form, then \(\neg (f x =_{\beta} g x)\) for all \(x\), where \(x\) is the appropriate hole determined by the domain of \(f\) and \(g\) as described in \ref{etadom}. By the contrapositive, if \((f x) =_{\beta} (g x)\), then \(f = g\).
+
+\begin{theorem}
+  Forall \(x\), \(x₁\), and \(x₂\), where \lean{x}, \lean{x₁}, and \lean{x₂} are in normal form, if \lean{h₁ : Canonicalize x x₁} \lean{h₁ : Canonicalize x₁ x₂}, then \lean{x₁ = x₂}.
+\end{theorem}
+
+\begin{proof}
+  By parallel case analysis on \lean{h₁} and \lean{h₂}. If \lean{x₁ \neq x₂}, then \lean{h₂} implies that reduction of the applied holes does not match the behavior of the term \lean{x₁} in each case. Hence, cases where \lean{x₁ \neq x₂} are eliminated. Thus, \lean{x₁ = x₂}.
+  \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize/Normal/Core.lean\#L27}{Dcc.NormExpr.EtaFn.Canonicalize.is\_norm\_fn}
+\end{proof}
+
+\begin{theorem}
+  Forall \(f\) and \(g\), where \(f\) and \(g\) are in \(\eta\)-normal form, and if \(f x =_{\beta} g x\), where \(x\) is the appropriate hole, then \(f = g\).
+\end{theorem}
+
+\begin{proof}
+  
 \end{proof}
 
 \section{Judgments are Canonical}

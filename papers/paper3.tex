@@ -820,7 +820,7 @@ We also demonstrate soundness and completeness of a \(\beta\)-reduction procedur
 \end{theorem}
 
 \begin{proof}
-  The proof proceeds by splitting on \lean{step? A} with respect to the conclusion. The proof has been omitted for brevity. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L411}{Dcc.GenericExpr.semi\_complete}
+  The proof proceeds by splitting on \lean{step? A} with respect to the conclusion. The proof has been omitted for brevity. \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L411}{Dcc.GenericExpr.semi\_complete}
 \end{proof}
 
 \begin{theorem} \label{thm:complete}
@@ -834,10 +834,13 @@ We also demonstrate soundness and completeness of a \(\beta\)-reduction procedur
       Suppose \lean{step? A = none}. Then, \lean{reduce A = ⟨A, refl⟩}. Also, there does not exist \(B\) such that \(A \barr B\). Hence, \lean{hr = refl}.
     \item Case \lean{step? A = ⟨C, hr'⟩}:
       Suppose \lean{step? A = \lean{step? A = ⟨C, hr'⟩}}. By global confluence \ref{thm:confglobal}, there exists \(D\) such that \(B \barr^{*} D\) and \(hrt : C \barr^{*} D\). Proceed by case analysis on \(hrt\).
+      \begin{itemize}
       \item Refl case:
         By the hypothesis that \(C\) is \(\beta\)-normal, \(C = D\). And by proof irrelevance, \(hr = hr'\).
       \item Step case:
         By \ref{thm:decc} and \lean{hr}, \(\comb{size}(C} < \comb{size}{A}\). So, by well-founded induction with respect to size, \lean{reduce C = ⟨D, hrt⟩}. Hence, \lean{step? A = reduce C} and \(B \barr^{*} (\text{reduce} C)\). So, since \(B\) is a normal form, \(B = \text{reduce} C\). Therefore, \(C = B\), so \lean{reduce RedAff A = ⟨B, hr⟩}.
+    \end{itemize}
+  \end{itemize}
   \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L393}{Dcc.GenericExpr.reduce\_complete}
 \end{proof}
 

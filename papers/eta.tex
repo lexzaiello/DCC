@@ -154,7 +154,7 @@
       \multicolumn{1}{r}{}
     \end{tabularx}
     \end{center}
-  \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction and \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator from environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reductino aside from reducing its points. We also model domains as a relation \(\dom{x} = A\) with completeness and soundness with respect to \(\dom{x}\).}
+  \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction. \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator given the environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reduction aside from reducing its points. We also model domains as a relation \(\text{Domain} x A\) with completeness and soundness with respect to \(\dom{x}\).}
 \end{figure}
 
 \begin{figure}[H]
@@ -249,16 +249,16 @@ We also make use of relations \(\text{Domain} x [A]\) and \(\text{Domain}_{2} x 
       {\dom B A, \efn{x}{[\comb{Coup}{B}]}, \hole \comb{Coup}{B} \llb B \rrb (y, z), x \llb B \rrb (y, z) \barrn x' y z, \efn{x'}{[A, B]}}
       {x \earr \comb{Eval}{A, B, x'}}\\\\
       \inferrule[Quot]
-      {\efn{x}{[A]}, \hole A y, x y \barrn e', \neg \exists c, (\text{const} (\text{hole} c)) \in e'}
+      {\efn{x}{[A]}, \hole A y, x y \barrn e', \neg \exists l, \text{const} (\text{hole} l) \in e'}
       {x \earr `(A, e')}\\\\
       \inferrule[$\text{Id}_{2}$]
       {\efn{x}{[\Pi(f_A, f_B) \text{env}, `(\Pi(f_A, f_B) \text{env}, B)]}, \hole (\Pi(f_A, f_B) \text{env}) y, \hole B z, x y z \barrn y z}
       {x \earr \comb{Id}{\Pi(f_A, f_B) \text{env}}}\\\\
       \inferrule[$\text{Quot}_{2}$]
-      {\efn{x}{[A, `(A, B)]}, \hole A y, \hole B z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
+      {\efn{x}{[A, `(A, B)]}, \hole A y, \hole B z, x y z \barrn e', (\neg \exists l, \text{const} (\text{hole} l) \in e')}
       {x \earr `(A, `(B, e'))}\\\\
       \inferrule[Bang Quot]
-      {\efn{x}{[!(A), ! \la B \ra]}, \hole !(A) y, (e_h2 : \la B \ra y \barrn B'), \hole B' z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
+      {\efn{x}{[!(A), ! \la B \ra]}, \hole !(A) y, (e_h2 : \la B \ra y \barrn B'), \hole B' z, x y z \barrn e', (\neg \exists l, \text{const} (\text{hole} c) \in e')}
       {x \earr !\Lambda(A, B, `(!(\comb{Coup}{B}), e'))}
     \end{tabularx}
     \end{center}

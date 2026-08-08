@@ -39,6 +39,8 @@
 \newcommand{\affetaarr}{\rightarrowtail_{\eta}}
 \newcommand{\etaarr}{\rightarrow_{\eta}}
 
+\twocolumn
+
 \title{Decidable Type-Checking for Extensional Type Theory in Combinator Calculus}
 \author[1]{Lexi Aiello}
 \author[2]{Eric Klavins}
@@ -48,6 +50,74 @@
 \begin{document}
 
 \section{Introduction}
+
+\subsection{Background}
+
+\textit{TODO later after main sections done}
+
+\subsection{Results}
+
+\begin{itemize}
+  \item In \textit{TODO insert here}, we present our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to dependent types. We have no variables, and no contexts. Our extension is analagous in expressivity to the Calculus of Constructions on the lambda cube \autocite{Barendregt_1991}. We formally present our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
+  \item In \textit{TODO insert here}, we compare our calculus to the SK combinator calculus \autocite{curry1958combinatory} and elucidate its limitations which practically precluded past attempts at dependent combinator calculus.
+  \item In \textit{TODO insert here}, we justify our key design decisions: we opted for categorical combinators, and adapted them to affine logic and dependent types.
+  \item In \textit{TODO insert here}, we prove that strong normalization is a natural consequence of our choice of affine logic.
+  \item In \textit{TODO insert here}, we prove that decidable type-checking is a natural consequence of our design, and describe our implementation of the type-checker in Lean 4.
+  \item In \textit{TODO insert here}, we prove that computable function extensionality is a natural consequence of our \(\eta\)-reduction algorithm. Our proof is formalized as a metatheorem in Lean 4. We show that \(\eta\)-canonical terms are well-behaved due to the natural correspondence betwee categorical combinators and the cartesian closed category.
+  \item In \textit{TODO insert here}, we prove that the extensional propositional equality elimination rule is a natural consequence of our design. Due to strong normalization, judgments are canonical, thus enabling equality reflection. Our proof is formalized as a metatheorem in Lean 4.
+\end{itemize}
+
+All of our results have been formalized in the Lean 4 proof assistant. To this date, we are not aware of any calculus where these features can coexist: extensional equality elimination; computable function extensionality; and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit them for ``free.'' We do not present a combinatory basis for inductive types, as they are out of scope for this paper.
+
+We do not assume equality reflection or function extensionality as axioms. They are computable definitions, not theorems in Prop.
+
+\section{DCC: The Dependent Combinator Calculus}
+
+\subsection{The SK Combinator Calculus: not quite enough}
+
+\subsection{Dependent types: a natural extension of categorical combinators}
+
+\subsection{Categorical Combinators interpret cartesian closed categories literally}
+
+\subsection{Types as terms: Environments are contexts}
+
+\subsubsection{\(\beta\)-Reduction Rules}
+
+\subsubsection{Inference Rules}
+
+\section{Affine logic: strong normalization for free}
+
+\subsection{Terminating \(\beta\)-reduction by syntactic size}
+
+\section{A recipe for decidable type-checking}
+
+\subsection{Global confluence by Newmann's Lemma}
+
+\subsection{Uniqueness of normal forms}
+
+\subsection{Judgments are Canonical}
+
+\section{A recipe for decidable extensional type-theory}
+
+\subsection{Computable function extensionality is a natural consequence of \(\eta\)-reduction in the categorical combinators}
+
+\subsection{Canonical judgments enable computable extensional equality reflection}
+
+\subsection{Lean 4 Implementation}
+
+\subsubsection{Compiling Lean to Dependent Combinators}
+
+\subsubsection{Decompiling Lean from Dependent Combinators}
+
+\section{Limitations}
+
+\begin{comment}
+- No inductives
+\end{comment}
+
+\section{Conclusions \& Future Work}
+
+\printbibliography
 
 \begin{comment}
 

@@ -50,6 +50,7 @@
 \newcommand{\arity}[2]{\text{arity} #1 = #2}
 \newcommand{\efn}{\text{EtaFn}}
 \newcommand{\ddom}{\text{Domain}}
+\newcommand{\canon}{\text{Canonicalize}}
 \newcommand{\dddom}{\text{Domain}_{2}}
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
@@ -202,14 +203,49 @@
     \end{tabularx}}
 \end{figure}
 
+We also make use of relations \(\text{Domain} x [A]\) and \(\text{Domain}_{2} x [A, B]\) as proofs of function domains. Domains are computed by \(\text{dom} x\) and \(\text{dom}_2 x\) respectively. \(B\) is a function of the term argument \(y : A\).
+
 \section{\(eta\) Canonicalization}
 
 \begin{figure}[h!]
   \centering
   \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{l c r}
-      
+    \begin{tabularx}{\textwidth}{c}
+      \inferrule[Id]
+      {e_f : \efn x [A], (hn : \not \exists B C y, x = \Pi(B, C) y), e_h : \text{Hole} A y, hr : x y \barrn y}
+      {\text{Canonicalize.}\text{id}_1 e_f hn e_h hr : \canon e_f (\ddom.id (A \coloneq A))}\\\\
+      \inferrule[Fstc]
+      {h_1 : Domain B A, e_f : \efn x [\comb{Coup}{B}], e_h : \text{Hole} \comb{Coup}{B} (\llb B \rrb (y, z)), hr : x \llb B y \rrb (y, z) \barrn y}
+      {\text{Canonicalize.fstc} e_f e_h hr : \canon e_f (\ddom.fstc (B \coloneq B))}\\\\
+      \inferrule[Sndc]
+      {h_1 : Domain B A, e_f : \efn x [\comb{Coup}{B}], e_h : \text{Hole} \comb{Coup}{B} (\llb B \rrb (y, z)), hr : x \llb B y \rrb (y, z) \barrn z}
+      {\text{Canonicalize.sndc} e_f e_h hr : \canon e_f (\ddom.sndc (B \coloneq B))}\\\\
+      \inferrule[Fstc']
+      {h_1 : Domain B A, e_f : \efn x [!(\comb{Coup}{B})], e_h : \text{Hole} !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), hr : x \&(\llb B y \rrb (y, z)) \barrn y}
+      {\text{Canonicalize.fstc'} e_f e_h hr : \canon e_f (\ddom.unmap (\ddom.fstc (B \coloneq B)))}\\\\
+      \inferrule[Sndc']
+      {h_1 : Domain B A, e_f : \efn x [!(\comb{Coup}{B})], e_h : \text{Hole} !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), hr : x \&(\llb B y \rrb (y, z)) \barrn z}
+      {\text{Canonicalize.sndc'} e_f e_h hr : \canon e_f (\ddom.unmap (\ddom.sndc (B \coloneq B)))}\\\\
+      \inferrule[Par]
+      {h_1 : Domain A y, hn : ((\not \exists A', A = \comb{Coup}{A'}) \land e_f (\not \exists A', A = !(A'))), e_f : \efn x [A], e_h : \text{Hole} A y, hr : x y \barrn x' y, e_f' : \efn x' [A]}
+      {\text{Canonicalize.par}_1 e_f hn e_h hr e_f' : \canon e_f e_f'}\\\\
+      \inferrule[Eval]
+      {h_1 : Domain B A, e_f : \efn x [\comb{Coup}{B}], e_h : \text{Hole} \comb{Coup}{B} \llb B \rrb (y, z), hr : x \llb B \rrb (y, z) \barrn x' y z, e_f' : \efn x' [A, B]}
+      {\text{Canonicalize.eval}_1 e_f e_h hr e_f' : \canon e_f (\ddom.eval (A := A) (B := B) (x := x'))}\\\\
+      \inferrule[Quot]
+      {e_f : \efn x [A], e_h : \text{Hole} A y, hr : x y \barrn e', hn : \not \exists c, (\text{const} (\text{hole} c)) \in e'}
+      {\text{Canonicalize}.\text{const}_1 e_f hn e_h hr : \canon e_f (\ddom.quot (B \coloneq A) (x := e'))}\\\\
+      \inferrule[Id_{2}]
+      {e_f : \efn x [\Pi(f_A, f_B) \text{env}, `(\Pi(f_A, f_B) \text{env}, B)], e_h_{1} : \text{Hole} (\Pi(f_A, f_B) \text{env}) y, e_h_{2} : \text{Hole} B z, hr : x y z \barrn y z}
+      {\text{Canonicalize.}\text{id}_2 e_f e_h_{1} e_{h}_{2} hr : \canon e_f (\ddom.id (A \coloneq \Pi(f_A, f_B) \text{env}))}\\\\
+      \inferrule[Quot_{2}]
+      {e_f : \efn x [A, `(A, B)], e_h_{1} : \text{Hole} A y, e_h_{2} : \text{Hole} B z, hr_{2} : x y z \barrn e', hn : (\not \exists c, (\text{const} (\text{hole} c)) \in e')}
+      {\text{Canonicalize.}\text{quot}_2 e_f e_h_{1} e_h_{2} hn : \canon e_f (\ddom.quot (A \coloneq A) (B \coloneq B) (x \coloneq e'))}\\\\
+      \inferrule[Bang Quot]
+      {e_f : \efn x [!(A), ! \la B \ra], e_h_{1} : \text{Hole} !(A) y, hr_{1} : (e_h_{2} : \la B \ra y \barrn B'), e_h_2 : \text{Hole} B' z, hr_{2} : x y z \barrn e', hn : (\not \exists c, (\text{const} (\text{hole} c)) \in e')}
+      {\text{Canonicalize.}\text{quot_bang} e_f e_h_{1} e_h_{2} hn : \canon e_f (\ddom.curr' (A \coloneq A) (B \coloneq B) (\ddom.quot (B \coloneq !(\comb{Coup}{B})) (x \coloneq e')))}
     \end{tabularx}}
+  \caption{Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor.}
 \end{figure}
 
 \begin{comment}

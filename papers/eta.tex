@@ -67,59 +67,67 @@
 
 \begin{figure}[h!]
   \centering
-  \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{@{} L C R @{}}
+    \begin{center}
+    \begin{tabularx}{\linewidth}{l c r}
       \inferrule[Eql]
       {\dom{B} = A}
       {\dom{\comb{Eql}{B}} \coloneq !(A)} &
+      \multicolumn{1}{c}{
       \inferrule[Unbox]
       { }
-      {\dom{*(A)} \coloneq !(A)}&
-      \multicolumn{1}{r}{\inferrule[Eql1]
+      {\dom{*(A)} \coloneq !(A)}}&
+      \multicolumn{1}{r}{
+      \inferrule[Eql1]
       {B x \barrn A}
       {\dom{\comb{Eql}{B} \&(x) \coloneq !(A)}}}\\\\
       \inferrule[Refl]
       {\dom{B} = A}
       {\dom{\comb{refl}{B}} \coloneq !(A)} &
+      \multicolumn{1}{c}{
       \inferrule[Refl1]
       {B x \barrn A}
-      {\dom{\comb{refl}{B} \&(x)} \coloneq !(A)}&
+      {\dom{\comb{refl}{B} \&(x)} \coloneq !(A)}}&
       \multicolumn{1}{r}{\inferrule[Unmap]
       {\dom{x} = A}
       {\dom{*\la x \ra} \coloneq !(A)}}\\\\
       \inferrule[Fmap]
       {\dom{x} = A}
       {\dom{\$ \la x \ra} \coloneq !(A)}&
+      \multicolumn{1}{c}{
       \inferrule[Map]
       {\dom{x} = A}
-      {\dom{! \la x \ra} \coloneq !(A)}&
+      {\dom{! \la x \ra} \coloneq !(A)}}&
       \multicolumn{1}{r}{\inferrule[Id]
       { }
       {\dom{\comb{Id}{A}} \coloneq A}}\\\\
       \inferrule[Fstc]
       { }
       {\dom{\comb{Fstc}{B}} \coloneq \comb{Coup}{B}}&
+      \multicolumn{1}{c}{
       \inferrule[Sndc]
       { }
-      {\dom{\comb{Sndc}{B}} \coloneq \comb{Coup}{B}}&
+      {\dom{\comb{Sndc}{B}} \coloneq \comb{Coup}{B}}}&
       \multicolumn{1}{r}{\inferrule[Curr]
       { }
       {\dom{\Lambda (A, B, x)} \coloneq A}}\\\\
       \inferrule[Curr1]
       {B x \barrn B'}
       {\dom{\Lambda (A, B, x) y} \coloneq B'}&
+      \multicolumn{1}{c}{
       \inferrule[Quot]
       { }
-      {\dom{`(A, x)} \coloneq A}&
-      \multicolumn{1}{r}{\inferrule[Curr']
+      {\dom{`(A, x)} \coloneq A}}&
+      \multicolumn{1}{r}{
+      \inferrule[Curr']
       { }
       {\dom{!\Lambda (A, B, x)} \coloneq !(A)}}\\\\
       \inferrule[Curr'1]
       {B x \barrn B'}
       {\dom{!\Lambda (A, B, x) y} \coloneq !(B')}&
+      \multicolumn{1}{c}{
       \inferrule[Pair]
       {\dom{x} = A}
-      {\dom{\llb B \rrb \la x, y \ra} \coloneq A}&
+      {\dom{\llb B \rrb \la x, y \ra} \coloneq A}}&
       \multicolumn{1}{r}{\inferrule[Pi]
       {\dom{B} = A}
       {\dom{\Pi(B, C)} \coloneq A}}\\\\
@@ -143,14 +151,14 @@
       {\dom{f \circ\circ g} \coloneq !(A)}}&
       \multicolumn{1}{r}{ }
     \end{tabularx}
-  }
+    \end{center}
   \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction and \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator from environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reductino aside from reducing its points. We also model domains as a relation \(\dom{x} = A\) with completeness and soundness with respect to \(\dom{x}\).}
 \end{figure}
 
 \begin{figure}[H]
   \centering
   \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{@{} L C R @{}}
+    \begin{tabularx}{\linewidth}{l >{\centering\arraybackslash}X r}
       \inferrule[Quot]
       { }
       {\domtwo{`(A, `(B, x))} \coloneq (A, B)}&
@@ -187,20 +195,21 @@
 \begin{center}
 \begin{figure}[H]
   \centering
-  \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{@{} L C R @{}}
+  \begin{center}
+    \begin{tabularx}{\linewidth}{l >{\centering\arraybackslash}X r}
+      \multicolumn{1}{l}{
       \inferrule[\(\eta\)-unary functions]
       {\comb{arity}{x} = 1, \dom{x} = A}
-      {\efn{x}{[A]}}&
-      \multicolumn{2}{r}{
+      {\efn{x}{[A]}}}&
+      \multicolumn{1}{c}{
       \inferrule[\(\eta\)-binary functions]
       {\comb{arity}{x} = 2, \domtwo{x} = (A, B)}
-      {\efn{x}{[A, B]}}}\\\\
-      \multicolumn{1}{l}{
+      {\efn{x}{[A, B]}}}&
+      \multicolumn{1}{r}{
       \inferrule[Affine bang holes]
       {\hole A (\text{level} + 1) x, \mathbb{N}}
-      {\hole !(A) \text{level} \&(x)}}&
-      \multicolumn{2}{r}{
+      {\hole !(A) \text{level} \&(x)}}\\\\
+      \multicolumn{3}{c}{
       \inferrule[Constant holes]
       {(\neg \exists B, A = \comb{Coup}{B}) \land (\neg \exists B, A = !(B)), \mathbb{N}}
       {\hole A \text{level} (\text{const} (\text{hole} \text{level}))}}\\\\
@@ -208,7 +217,8 @@
       \inferrule[Couple holes]
       {\dom{B} = A, \hole A (\text{level} + 2) x, (B eh_{1}) \barrn B', \hole B' (\text{level} + 1) y, \mathbb{N}}
       {\hole \comb{Coup}{B} \text{level} \llb B \rrb (x, y)}}
-    \end{tabularx}}
+    \end{tabularx}
+    \end{center}
   \caption{Where \(\efn{f}{\text{doms}}\) represents a view of \(f\) as an \(\eta\)-reducible function with domain ``doms''.}
 \end{figure}
 \end{center}
@@ -220,7 +230,7 @@ We also make use of relations \(\text{Domain} x [A]\) and \(\text{Domain}_{2} x 
 \begin{figure}[H]
   \centering
   \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{c}
+    \begin{tabularx}{\linewidth}{c}
       \inferrule[Id]
       {\efn{x}{[A]}, (\neg \exists B C y, x = \Pi(B, C) y), \hole A y, x y \barrn y}
       {x \earr \comb{Id}{A}}\\\\

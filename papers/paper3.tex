@@ -241,7 +241,7 @@ We present DCC: the dependent combinator calculus. DCC is based an extensional t
 
 We believe our choice of combining categorical combinators with dependent types and affine logic is uniquely suitable for decidable type-checking, strong normalization, computable function extensionality and equality reflection as metatheorems. To date, this calculus is the only one where these features coexist. Dependently-typed combinators have been largely deemed highly nontrivial. Most importantly, decidable type-checking in extensional type theory has thus far been thought to be impossible.
 
-We achieve computable function extensionality through the observation that in combinatory logic, open terms do not exist, and canonical terms in \(\eta\)-reduction correspond to the primitive operations in cartesian closed categories. \(\eta\)-reductions are deterministic, unique, and mutually exclusive in behavior. Hence, the set of canonical functions is countable, small, and very well-behaved. Function extensionality is provable by demonstrating that if two \(\eta\)-reduced terms \(f\) and \(g\) are applied the same value, and the value is not contained in the respective functions, then \(f x \beta_{=} g x\) iff their \(\eta\)-reductions are the same. That is, \(f = g\). We elaborate more on this proof technique later.
+We achieve computable function extensionality through the observation that in combinatory logic, open terms do not exist, and canonical terms in \(\eta\)-reduction correspond to the primitive operations in cartesian closed categories. \(\eta\)-reductions are deterministic, unique, and mutually exclusive in behavior. Hence, the set of canonical functions is countable, small, and very well-behaved. Function extensionality is provable by demonstrating that if two \(\eta\)-reduced terms \(f\) and \(g\) are applied the same value, and the value is not contained in the respective functions, then \(f x =_{\beta} g x\) iff their \(\eta\)-reductions are the same. That is, \(f = g\). We elaborate more on this proof technique later.
 
 We achieve dependent typing in principle by making term points functions of the environment, rather than static values. To give an analogy, the categorical combinators correspond to cartesian closed categories, while DCC corresponds to locally cartesian closed categories. Locally cartesian closed categories are known to be a semantics for dependent type theory\autocite{Seely_1984}.
 
@@ -363,7 +363,7 @@ The full reduction rules are given in \ref{redrules}.
       {x y \barr x y'}}&\multicolumn{1}{l}{}
     \end{tabularx}
   }
-  \caption{\label{redrules}Where \(\barr\) represents single-step beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code. \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L13}{Dcc.GenericExpr.RedAff}}
+  \caption{\label{redrules}Where \(\barr\) represents single-step beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code. \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L13}{Dcc.GenericExpr.RedAff}}
   
 \end{figure}
 
@@ -616,11 +616,11 @@ true
 -/
 \end{leancode}
 
-Here, \lean{Id(Id(Sort 0) = Id(Sort 0) ∘' Id(Sort 0) ∘' Id(Sort 0))} expects a proof of equality between two functions which are not \(\beta_{=}\). However, \lean{refl} sufffices due to eager \(\beta\)-reduction, judgment canonicity, and well-behaved \(\eta\)-reduction. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Examples3.lean\#L192}{Dcc.Examples3}
+Here, \lean{Id(Id(Sort 0) = Id(Sort 0) ∘' Id(Sort 0) ∘' Id(Sort 0))} expects a proof of equality between two functions which are not \(=_{\beta}\). However, \lean{refl} sufffices due to eager \(\beta\)-reduction, judgment canonicity, and well-behaved \(\eta\)-reduction. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Examples3.lean\#L192}{Dcc.Examples3}
 
-\subsection{Affine logic: strong normalization for free}
+\section{Affine logic: strong normalization for free}
 
-Contraction is restricted in DCC, as in affine logic. Strong normalization is inherited as such and provable by a simple syntactic decreasing measure. The size measure sums the size of each combinator's points and performs simple arithmetic for an ordering matching combinator precedence. In boxes, the size of its point \(x\) is counted thrice so that consuming it with a pair decreases the program's size, rather than increasing it:
+Contraction is restricted in DCC, as in affine logic. Strong normalization is inherited as such and provable by a simple syntactic decreasing measure. Confluence holds in DCC, so we inherit global confluence (by Newmann's lemma), and decidability of \(=_{\beta}\). The size measure sums the size of each combinator's points and performs simple arithmetic for an ordering matching combinator precedence. In boxes, the size of its point \(x\) is counted thrice so that consuming it with a pair decreases the program's size, rather than increasing it:
 
 \begin{figure}
 \begin{leancode}
@@ -838,7 +838,7 @@ We also demonstrate soundness and completeness of a \(\beta\)-reduction procedur
       \item Refl case:
         By the hypothesis that \(C\) is \(\beta\)-normal, \(C = D\). And by proof irrelevance, \(hr = hr'\).
       \item Step case:
-        By \ref{thm:decc} and \lean{hr}, \(\comb{size}(C} < \comb{size}{A}\). So, by well-founded induction with respect to size, \lean{reduce C = ⟨D, hrt⟩}. Hence, \lean{step? A = reduce C} and \(B \barr^{*} (\text{reduce} C)\). So, since \(B\) is a normal form, \(B = \text{reduce} C\). Therefore, \(C = B\), so \lean{reduce RedAff A = ⟨B, hr⟩}.
+        By \ref{thm:dec} and \lean{hr}, \(\comb{size}{C} < \comb{size}{A}\). So, by well-founded induction with respect to size, \lean{reduce C = ⟨D, hrt⟩}. Hence, \lean{step? A = reduce C} and \(B \barr^{*} (\text{reduce} C)\). So, since \(B\) is a normal form, \(B = \text{reduce} C\). Therefore, \(C = B\), so \lean{reduce RedAff A = ⟨B, hr⟩}.
     \end{itemize}
   \end{itemize}
   \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L393}{Dcc.GenericExpr.reduce\_complete}
@@ -850,7 +850,7 @@ We also demonstrate soundness and completeness of a \(\beta\)-reduction procedur
 
 \begin{proof} \label{thm:reddecide}
   By completeness and soundness of \lean{reduce RedAff}. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L582}{Dcc.GenericExpr.reduce\_complete}
-\end{theorem}
+\end{proof}
 
 \subsection{Judgments are Canonical}
 

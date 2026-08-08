@@ -537,7 +537,7 @@ We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in o
     {f : (x : A) \arr B x, x : A}
     {f x : B x}}
   \end{tabular}}
-\caption{\label{inferrule}\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\). \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Judge3.lean\#L212}{Dcc.GenericExpr.Judge3}}
+\caption{\label{inferrule}\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\). \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Judge3.lean\#L212}{Dcc.GenericExpr.Judge3}}
 \end{figure}
 
 Our inference rules are intuitive. For example, curry and eval mirror \(\Sigma\) currying and uncurrying in Lean 4 \autocite{curry:mathlib}:
@@ -673,7 +673,7 @@ By induction on the reduction relation.
 theorem RedAff.decreasing' (h : RedAff A B) : size B < size A := by
   induction h <;> grind
 \end{leancode}
-\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Aff/Red.lean\#L561}{Dcc.GenericExpr.RedAff.decreasing'}
+\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Aff/Red.lean\#L561}{Dcc.GenericExpr.RedAff.decreasing'}
 \end{proof}
 
 \subsection{Strong Normalization}
@@ -699,7 +699,7 @@ def RedRel.sn.{u} {α : Type u} {r : α → α → Prop} (t : outParam (α → �
 termination_by t e
 \end{leancode}
 
-\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Relation.lean\#L99}{Dcc.GenericExpr.RedRel.sn}
+\hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Relation.lean\#L99}{Dcc.GenericExpr.RedRel.sn}
 \end{proof}
 
 \subsection{Confluence}
@@ -808,7 +808,7 @@ Suppose \(A\), \(B\), and \(C\) are terms, and \(hr_{1} : A \barr^{*} B\) and \(
   \item Step, step case:
     Suppose there exists \(hr_{A}\) and \(hr_{B}\) such that \(hr_{1} = \text{step} hr_{A}\) and \(hr_{2} = \text{step} hr_{B}\). Then, by the inductive hypothesis, \(B = C\).
   \end{itemize}
-  \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L366}{Dcc.GenericExpr.norm\_unique}
+  \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L366}{Dcc.GenericExpr.norm\_unique}
 \end{proof}
 
 \subsection{Decidability of \(\beta\)-reduction}
@@ -841,7 +841,7 @@ We also demonstrate soundness and completeness of a \(\beta\)-reduction procedur
         By \ref{thm:dec} and \lean{hr}, \(\comb{size}{C} < \comb{size}{A}\). So, by well-founded induction with respect to size, \lean{reduce C = ⟨D, hrt⟩}. Hence, \lean{step? A = reduce C} and \(B \barr^{*} (\text{reduce} C)\). So, since \(B\) is a normal form, \(B = \text{reduce} C\). Therefore, \(C = B\), so \lean{reduce RedAff A = ⟨B, hr⟩}.
     \end{itemize}
   \end{itemize}
-  \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L393}{Dcc.GenericExpr.reduce\_complete}
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L393}{Dcc.GenericExpr.reduce\_complete}
 \end{proof}
 
 \begin{theorem} \label{thm:reddecide}
@@ -852,7 +852,246 @@ We also demonstrate soundness and completeness of a \(\beta\)-reduction procedur
   By completeness and soundness of \lean{reduce RedAff}. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L582}{Dcc.GenericExpr.reduce\_complete}
 \end{proof}
 
-\subsection{Judgments are Canonical}
+\section{\(\eta\)-reduction in the categorical combinators is extensional}
+
+Computable function extensionality is the natural consequence of \(\eta\)-reduction in DCC: there are no open terms, \(\eta\)-normal forms are mutually exclusive in behavior, \(\eta\)-normal forms correspond to operations in the cartesian closed category and are as such ``well-behaved'', and all \(\eta\) preimages are already \(\beta\)-normal due to strong normalization as a consequence of our affine reduction rules, judgments are canonical (no catch-all conversion), and all well-typed functions are \(\eta\)-reducible to normal forms (even if \(\eta\)-reduction is a no-op). There is exactly one \(\eta\)-normal form which demonstrates a particular behavior on any argument.
+
+Our \(\eta\)-reduction procedure reduces functions to their canonical forms by observing their behavior on opaque ``holes'' whose shape matches the domain of the function given by term points. All function terms derive their domain from points. Type-checking is not required to calculate function domains. Our \(\eta\)-normal canonical forms are as such:
+
+\begin{itemize}
+  \item Constant functions \(`(B, c)\) which do not contain the argument \(x\) after \(\beta\)-reduction
+  \item The identity \(Id(A)\), which gives \(x\) after \(\beta\)-reduction
+  \item Couple projections, where \(x \llb B \rrb (y, z)\) \(\beta\)-reduces to \(x\) or \(y\) where \(x \neq y\)
+    \item Or in case \(x\) accepts a boxed couple, \(x &(\llb B \rrb (y, z))\) reduces to \(x\) or \(y\)
+  \item Evaluation, where \(\llb B \rrb (y, z)\) \(\beta\)-reduces to \(f x y\)
+  \item Partial application, where \(x y\) (in case \(x\) is unary) or \(x y z\) (in case \(x\) is 2-arity) \(\beta\)-reduces to \(x' y\) or \(x' y z\), respectively
+  \item The higher-order identity, where \(Id(\Pi(B, C)\ \text{env}) x y\) \(\beta\)-reduces to an application \(x y\)
+  \item Unary quotation, where \(x y\) \(\beta\)-reduces to \(c\) and \(c\) does not contain \(y\)
+  \item 2-arity quotation, where \(x y z\) \(\beta\)-reduces to \(c\) and \(c\) contains neither \(x\) nor \(y\)
+  \item Boxed quotation, where \(x\) accepts boxed values and \(x &(y) &(z)\) contains neither \(&(y)\) nor \(&(z)\)
+\end{itemize}
+
+These canonical forms are mutually exclusive, and are complete with respect to all well-typed functions. For example, composition is handled by the partial application rule:
+
+\begin{equation}
+  (Id(A) \circ' Id(A)) x \barr^{!} x \therefore Id(A) \circ' Id(A) \earr Id(A)
+\end{equation}
+
+No-op \(\eta\)-reductions are similarly handled by the partial application case, which is mutually exclusive in behavior with all other canonical forms. At a high level, since judgments are canonical due to avoiding catch-all conversion, and since we have proven all well-typed functions are \(\eta\)-reducible, and since all combinators have arity 2 or less, and since there are no open terms in combinator calculus, the \(\eta\)-normal forms of a given \(\beta\)-normal function are solely dictated by their behavior. Hence, function extensionality holds, and it is computable, not axiomatic.
+
+Our approach is fully syntactic, although it bears some resemblance to normalization by evaluation (NbE) techniques.
+
+\subsection{Term points dictate function domains}
+
+We believe this approach is only possible due to our design pairing the categorical combinators with affine logic. In the \(SK\) calculus, for example, this approach is not possible in the \(SK\) calculus, since type arguments are given by application, not points. Function domains are encoded as a telescope context. For example, \(\Lambda(A, B, x)\) has domain \([A, B]\), where \(B : A \arr \sort{v}\).
+
+Function domains are inferred as such \label{domunary} \label{dombinary}.
+
+\begin{figure}[H]
+  \begin{center}
+    \setlength{\extrarowheight}{0pt}
+    \begin{tabularx}{\textwidth}{@{\extracolsep{\fill}} l X r @{}}
+      \multicolumn{1}{l}{
+      \inferrule[Eql]
+      {\dom{B} = A}
+      {\dom{\comb{Eql}{B}} \coloneq !(A)}} &
+      \multicolumn{1}{c}{
+      \inferrule[Unbox]
+      { }
+      {\dom{*(A)} \coloneq !(A)}}&
+      \multicolumn{1}{r}{
+      \inferrule[Eql1]
+      {B x \barrn A}
+      {\dom{\comb{Eql}{B}} \&(x) \coloneq !(A)}}\\\\
+      \multicolumn{1}{l}{
+      \inferrule[Refl]
+      {\dom{B} = A}
+      {\dom{\comb{refl}{B}} \coloneq !(A)}} &
+      \multicolumn{1}{c}{
+      \inferrule[Refl1]
+      {B x \barrn A}
+      {\dom{\comb{refl}{B} \&(x)} \coloneq !(A)}}&
+      \multicolumn{1}{r}{\inferrule[Unmap]
+      {\dom{x} = A}
+      {\dom{*\la x \ra} \coloneq !(A)}}\\\\
+      \multicolumn{1}{l}{\inferrule[Fmap]
+      {\dom{x} = A}
+      {\dom{\$ \la x \ra} \coloneq !(A)}}&
+      \multicolumn{1}{c}{
+      \inferrule[Map]
+      {\dom{x} = A}
+      {\dom{! \la x \ra} \coloneq !(A)}}&
+      \multicolumn{1}{r}{\inferrule[Id]
+      { }
+      {\dom{\comb{Id}{A}} \coloneq A}}\\\\
+      \multicolumn{1}{l}{\inferrule[Fstc]
+      { }
+      {\dom{\comb{Fstc}{B}} \coloneq \comb{Coup}{B}}}&
+      \multicolumn{1}{c}{
+      \inferrule[Sndc]
+      { }
+      {\dom{\comb{Sndc}{B}} \coloneq \comb{Coup}{B}}}&
+      \multicolumn{1}{r}{\inferrule[Curr]
+      { }
+      {\dom{\Lambda (A, B, x)} \coloneq A}}\\\\
+      \multicolumn{1}{l}{\inferrule[Curr1]
+      {B x \barrn B'}
+      {\dom{\Lambda (A, B, x) y} \coloneq B'}}&
+      \multicolumn{1}{c}{
+      \inferrule[Quot]
+      { }
+      {\dom{`(A, x)} \coloneq A}}&
+      \multicolumn{1}{r}{
+      \inferrule[Curr']
+      { }
+      {\dom{!\Lambda (A, B, x)} \coloneq !(A)}}\\\\
+      \multicolumn{1}{l}{\inferrule[Curr'1]
+      {B x \barrn B'}
+      {\dom{!\Lambda (A, B, x) y} \coloneq !(B')}}&
+      \multicolumn{1}{c}{
+      \inferrule[Pair]
+      {\dom{x} = A}
+      {\dom{\llb B \rrb \la x, y \ra} \coloneq A}}&
+      \multicolumn{1}{r}{\inferrule[Pi]
+      {\dom{B} = A}
+      {\dom{\Pi(B, C)} \coloneq A}}\\\\
+      \multicolumn{1}{l}{\inferrule[Eval]
+      { }
+      {\dom{\comb{Eval}{A, B, x}} \coloneq A}}&
+      \multicolumn{1}{c}{
+      \inferrule[Eval1]
+      {B y \barrn B'}
+      {\dom{\comb{Eval}{A, B, x} y} \coloneq B'}}&
+      \multicolumn{1}{r}{\inferrule[Comp']
+      {\dom{g} = A}
+      {\dom{f \circ' g} \coloneq A}}\\\\
+      \multicolumn{1}{l}{
+      \inferrule[Comp]
+      {\dom{g} = !(A)}
+      {\dom{f \circ g} \coloneq !(A)}}&
+      \multicolumn{1}{c}{
+      \inferrule[Comp2]
+      {\dom{g} = !(A)}
+      {\dom{f \circ\circ g} \coloneq !(A)}}&
+      \multicolumn{1}{r}{}
+    \end{tabularx}
+    \end{center}
+  \caption{\label{domunary}Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction. \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator given the environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reduction aside from reducing its points. We also model domains as a relation \(\text{Domain} x A\) with completeness and soundness with respect to \(\dom{x}\).}
+\end{figure}
+
+Domains for 2-ary functions are calculated by \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Hole.lean\#L396}{reducing \(B x\)}, where \(x\) is a hole.
+
+\begin{figure}[H]
+    \begin{tabularx}{\linewidth}{l >{\centering\arraybackslash}X r}
+      \inferrule[Quot]
+      { }
+      {\domtwo{`(A, `(B, x))} \coloneq (A, B)}&
+      \multicolumn{1}{c}{
+      \inferrule[Id]
+      {B x \barrn A}
+      {\domtwo{\comb{Id}{\Pi(B, C) x}} \coloneq (\Pi(B, C) x, A)}}&
+      \multicolumn{1}{r}{
+      \inferrule[Comp']
+      {\dom{g} = A, \domtwo{f} = (B, C)}
+      {\domtwo{f \circ' g} \coloneq (A, C \circ' f)}}\\\\
+      \inferrule[Eql]
+      {\dom{B} = A}
+      {\domtwo{\comb{Eql}{B}} \coloneq (A, B)}&
+      \multicolumn{1}{c}{
+      \inferrule[Refl]
+      {\dom{B} = A}
+      {\domtwo{\comb{refl}{B}} \coloneq (A, B)}}&
+      \multicolumn{1}{r}{
+      \inferrule[Curr]
+      {\dom{x} = \comb{Coup}{B}}
+      {\domtwo{\Lambda(A, B, x)} \coloneq (A, B)}}\\\\
+      \multicolumn{3}{l}{
+      \inferrule[Curr']
+      {\dom{x} = !(\comb{Coup}{B})}
+      {\domtwo{!\Lambda(A, B, x)} \coloneq (!(A), !\la B \ra)}}
+    \end{tabularx}
+  \caption{\label{dombinary}Arity 2 domains. The second projection of \(\dom{2}{x}\) is a function of the first term argument. Double quotation is \(\eta\)-reducible and considered to have arity 2 when double quoted. Similarly, when \(Id\) accepts a function, it has arity 2.}
+\end{figure}
+
+\subsection{Term points generate opaque holes}
+
+Our approach relies on the assumption that extensional ``test values'' are not contained in the function being reduced. Hence, we extend terms to contain ``holes'' as constant values. Holes are identified by a level, so as \(x\) may be distinguished from \(y\) when normalizing a couple projection. Terminal holes are combined via coupling and boxing to match the domain of the given function. Holes are generated as such:
+
+\begin{figure}[H]
+  \begin{center}
+    \setlength{\extrarowheight}{0pt}
+    \begin{tabularx}{\linewidth}{@{\extracolsep{\fill}} l X r @{}}
+      \multicolumn{1}{l}{
+      \inferrule[\(\eta\)-unary functions]
+      {\comb{arity}{x} = 1, \dom{x} = A}
+      {\efn{x}{[A]}}}&
+      \multicolumn{1}{c}{
+      \inferrule[\(\eta\)-binary functions]
+      {\comb{arity}{x} = 2, \domtwo{x} = (A, B)}
+      {\efn{x}{[A, B]}}}&
+      \multicolumn{1}{r}{
+      \inferrule[Affine bang holes]
+      {\hole A (\text{level} + 1) x, \mathbb{N}}
+      {\hole !(A) \text{level} \&(x)}}\\\\
+      \multicolumn{3}{c}{
+      \inferrule[Constant holes]
+      {(\neg \exists B, A = \comb{Coup}{B}) \land (\neg \exists B, A = !(B)), \mathbb{N}}
+      {\hole A\ \text{level} (\text{const} (\text{hole} \text{level}))}}\\\\
+      \multicolumn{3}{c}{
+      \inferrule[Couple holes]
+      {\dom{B} = A, \hole A (\text{level} + 2) x, B x \barrn B', \hole B' (\text{level} + 1) y, \mathbb{N}}
+      {\hole \comb{Coup}{B}\ \text{level} \llb B \rrb (x, y)}}
+    \end{tabularx}
+    \end{center}
+  \caption{Where \(\efn{f}{\text{doms}}\) represents a view of \(f\) as an \(\eta\)-reducible function with domain ``doms''.\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Hole.lean\#L186}{Dcc.NormExpr.Hole}}
+\end{figure}
+
+\subsection{\(\eta\)-Canonicalization}
+
+Canonical \(\eta\)-normal values are mutually exclusive and deterministic. This fact is demonstrated by \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean#L440}{completeness and soundness} of our canonicalization implementation with respect to our relational rules. Repeated \(\eta\)-reduction is a no-op.
+
+\begin{figure}[H]
+  \begin{center}
+    \begin{tabularx}{\textwidth}{c}
+      \inferrule[Id]
+      {\efn{x}{[A]}, (\neg \exists B C y, x = \Pi(B, C) y), \hole A y, x y \barrn y}
+      {x \earr \comb{Id}{A}}\\\\
+      \inferrule[Fstc]
+      {\dom{B} = A, \efn{x}{[[\comb{Coup}{B}]}, \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn y}
+      {x \earr \comb{Fstc}{B}}\\\\
+      \inferrule[Sndc]
+      {\dom B A, \efn{x}{[\comb{Coup}{B}]}, \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn z}
+      {x \earr \comb{Sndc}{B}}\\\\
+      \inferrule[Fstc']
+      {\dom B A, \efn{x}{[!(\comb{Coup}{B})]}, \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn y}
+      {x \earr *\la \comb{Fstc}{B} \ra}\\\\
+      \inferrule[Sndc']
+      {\dom B A, \efn{x}{[!(\comb{Coup}{B})]}, \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn z}
+      {x \earr *\la \comb{Sndc}{B} \ra}\\\\
+      \inferrule[Par]
+      {\dom A y, ((\neg \exists A', A = \comb{Coup}{A'}) (\neg \exists A', A = !(A'))), \efn{x}{[A]}, \hole A y, x y \barrn x' y, \efn{x'}{[A]}}
+      {x \earr x'}\\\\
+      \inferrule[Eval]
+      {\dom B A, \efn{x}{[\comb{Coup}{B}]}, \hole \comb{Coup}{B} \llb B \rrb (y, z), x \llb B \rrb (y, z) \barrn x' y z, \efn{x'}{[A, B]}}
+      {x \earr \comb{Eval}{A, B, x'}}\\\\
+      \inferrule[Quot]
+      {\efn{x}{[A]}, \hole A y, x y \barrn e', \neg \exists l, \text{const} (\text{hole} l) \in e'}
+      {x \earr `(A, e')}\\\\
+      \inferrule[$\text{Id}_{2}$]
+      {\efn{x}{[\Pi(f_A, f_B) \text{env}, `(\Pi(f_A, f_B) \text{env}, B)]}, \hole (\Pi(f_A, f_B) \text{env}) y, \hole B z, x y z \barrn y z}
+      {x \earr \comb{Id}{\Pi(f_A, f_B) \text{env}}}\\\\
+      \inferrule[$\text{Quot}_{2}$]
+      {\efn{x}{[A, `(A, B)]}, \hole A y, \hole B z, x y z \barrn e', (\neg \exists l, \text{const} (\text{hole} l) \in e')}
+      {x \earr `(A, `(B, e'))}\\\\
+      \inferrule[Bang Quot]
+      {\efn{x}{[!(A), ! \la B \ra]}, \hole !(A) y, \la B \ra y \barrn B', \hole B' z, x y z \barrn e', (\neg \exists l, \text{const} (\text{hole} c) \in e')}
+      {x \earr !\Lambda(A, B, `(!(\comb{Coup}{B}), e'))}
+    \end{tabularx}
+    \end{center}
+  \caption{Where \(\earr\) represents function canonicalization. Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor.\hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L49}{Dcc.NormExpr.EtaFn.Canonicalize}}
+\end{figure}
+
+\section{Judgments are Canonical}
 
 \section{A recipe for decidable extensional type-theory}
 
@@ -883,15 +1122,8 @@ We also demonstrate soundness and completeness of a \(\beta\)-reduction procedur
     The recipe:
   5. A recipe for computable function extensionality (overall description)
     5b. [eta reduction] Cat. combinator insight (see below)
-      - Canonical eta-forms are well-behaved due to no open terms
-      - Canonical eta forms map onto morphisms in the category
-      5a + 5b = computable function extensionality with decidable type-checking
   6. A recipe for extensional decidable type-checking *mostly engineering stuff and theorems, but maybe sprinkle theorems before?*
-    6.a Beta reduction
-      6.a.d Completeness proof (handwaved cuz boring af)
     6.b Eta reduction
-      6.b.a Canonical forms under eta reduction correspond to morphisms in the CCC
-        6.b.a.a Give examples
       6.b.b Approach is fully syntactic, but uses some NbE techniques
         6.b.b.a Since combinator function types are determined by points in the AST, we can calculate the domain of each function by induction
         6.b.b.b Each operation in the calculus is either

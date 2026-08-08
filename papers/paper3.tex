@@ -33,11 +33,26 @@
 \newtheorem{theorem}{Theorem}
 \addbibresource{./refs.bib}
 
-\newcommand{\set}{\mathrm{Set}}
-\newcommand{\sort}[1]{\mathrm{Sort}\ #1}
+\newcommand{\llb}{\llbracket}
+\newcommand{\rrb}{\rrbracket}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\newcommand{\arr}{\rightarrow}
+\newcommand{\sort}[1]{\text{Sort}\ #1}
+\newcommand{\barr}{\arr_{\beta}}
+\newcommand{\barrn}{\arr_{\beta}^{!}}
+\newcommand{\earr}{\arr_{\eta}}
 \newcommand{\affarr}{\rightarrowtail}
 \newcommand{\affetaarr}{\rightarrowtail_{\eta}}
 \newcommand{\etaarr}{\rightarrow_{\eta}}
+\newcommand{\dom}[1]{\text{dom}(#1)}
+\newcommand{\domtwo}[1]{\text{dom}_{2}(#1)}
+\newcommand{\comb}[2]{\text{#1}(#2)}
+\newcommand{\arity}[2]{\text{arity} #1 = #2}
+\newcommand{\efn}[2]{\text{F}_{\eta}\ #1\ #2}
+\newcommand{\ddom}{\text{Domain}\ }
+\newcommand{\dddom}{\text{Domain}_{2}\ }
+\newcommand{\hole}{\text{Hole}\ }
 
 \title{Decidable Type-Checking and Computable Function Extensionality in Combinator Calculus}
 \author[1]{Lexi Aiello}
@@ -91,17 +106,27 @@ We present DCC: the dependent combinator calculus. DCC is based on an adaptation
 
 Our choice of combining categorical combinators with dependent types and affine logic induces strong normalization, computable function extensionality and equality reflection as metatheorems. We inherit decidable type-checking. To date, this calculus is the only one where these features coexist. Dependently-typed combinators have been deemed "highly nontrivial." Most importantly, decidable type-checking with function extensionality has thus far been thought to be impossible.
 
-Prior iterations of the calculus, and attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 17]{altenkirch}. 
+Prior iterations of the calculus, and attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 10:14]{altenkirch}. 
 
-\textit{TODO: SK rewrite rules}
+\begin{align}
+  K x y &\coloneq x\\
+  S x y z&\coloneq (x z) (y z)
+\end{align}
 
 However, past attempts posed severe limitations due to minimalism of SK and its lack of structures analagous to \(\Pi\) types. There are only two primitives objects: \(S\) and \(K\), neither of which correspond to universal or existential quantification. \(\Pi\) types are usually supported by a \(\Pi\) combinator. However, since \(SK\) are the only primitive objects, extra (``meta'') combinators are required to model dependent types, with no computational relevance.
 
-\textit{TODO: source altenkirch's solution and the standard depenedent types of S and K}
+The usual dependent types of \(S\) and \(K\) are as such:
 
-However, SK's minimalism results in prohibitively large types, and a great burden on the user. Complex machinery is required to shuffle elements in the context around (through combinations of \(S\) and \(K\)). Universe levels must be provided explicitly, which are very difficult for a user to calculate. Types very difficult to reason about. There is a great burden on the user, since SK does not have any term points, meaning all type arguments must be supplied manually, making types almost impossible for a user to write \autocite[p. 17]{altenkirch}. Also, the kernel cannot reason about structural similarities between types, resulting in definitional equality type errors. Finally, non-termination is intrinsic to \(SK\), since \(S\) duplicates terms. Our past naive solution used the \(BCKI\) calculus, with the hope that types would be easier to write and normalization inherent. Still, \(BCKI\) does not use term points, resulting in the same limitations of \(SK\).
+\begin{align}
+  K &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (x : A) \arr  B x \arr A
+  S x y z &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (C : (x : A) \arr B x \arr \sort{s}) \arr (x : A) \arr (y : B x) \arr (z : A) \arr C z (y z)
+\end{align}
 
-By contrast, in DCC, all universe levels are inferred (except literal \(\sort{m}\) terms), and types arguments are internalized and often inferred altogether, making types much easier for the user to express. This is due to the isomoprhism between currying with \(\Lambda\) and \(\lambda\)-abstraction. Debruijn are modeled by nested tuples and projections \eqref{eq:project}, substitution by tuple currying \eqref{eq:curry}, and application by evaluation \eqref{eq:eval} \eqref{eq:evaltwo}.
+Prior attempts \autocite{altenkirch} at dependent \(SK\) made use of helper combinators to perform the machinery of manipulating types.
+
+However, SK's minimalism results in prohibitively large types, and a great burden on the user. Complex machinery is required to shuffle elements in the context around (through combinations of \(S\) and \(K\)). Universe levels must be provided explicitly, which are very difficult for a user to calculate. Types very difficult to reason about. There is a great burden on the user, since SK does not have any term points, meaning all type arguments must be supplied manually, making types almost impossible for a user to write \autocite[p. 10:17]{altenkirch}. Also, the kernel cannot reason about structural similarities between types, resulting in definitional equality type errors. Finally, non-termination is intrinsic to \(SK\), since \(S\) duplicates terms. Our past naive solution used the \(BCKI\) calculus, with the hope that types would be easier to write and normalization inherent. Still, \(BCKI\) does not use term points, resulting in the same limitations of \(SK\).
+
+By contrast, in DCC, all universe levels are inferred (except literal \(\sort{m}\) terms), and types arguments are internalized and often inferred altogether, making types much easier for the user to express. This is due to the isomoprhism between currying in the categorical combinators and \(\lambda\)-abstraction. Debruijn are modeled by nested tuples and projections \eqref{eq:project}, substitution by tuple currying \eqref{eq:curry}, and application by evaluation \eqref{eq:eval} \eqref{eq:evaltwo}. Types are also much smaller due to this similarity, and the kernel can reason about structural equivalence more often (even without \(\eta\)-reduction). To illustrate:
 
 \begin{equation}\label{eq:curry}
   \Lambda(x) y z \coloneq x (y, z)
@@ -121,16 +146,83 @@ Or, sometimes:
   \Eval (y, z) \coloneq y z
 \end{equation}
 
+The categorical combinator calculus has the following rewrite rules (although sometimes \(App\) is replaced by \(Eval(x)\)):
 
-TODO: compilation to demonstrate
+\begin{align}
+  Fst (x, y) &\coloneq x \\
+  Sndc (x, y) &\coloneq x \\
+  (x \circ y) z &\coloneq x (y z) \\
+  Id x &\coloneq x \\
+  \la x, y \ra x &\coloneq (M x, N x) \\
+  App (x, y) &\coloneq x y \\
+  \Lambda(x) y z \coloneq x (y, z)
+\end{align}
 
-To demonstrate, we give the usual compilation of the \(\lambda\)-calculus to untyped categorical combinators:
+Notably, each combinator corresponds to an operation in the cartesian closed category. \(Id\) corresponds to the identity morphism, composition to morphism composition, \(App\) to evaluation, and \(\Lambda\) to currying.
 
-TODO: simply typed version subsection
+Constants can be encoded without a constant combinator (as in \(SK\)):
 
-Types are also much smaller due to this similarity, and the kernel can reason about structural similarity (even without \(\eta\)-reduction) much more robustly.
+\begin{align}
+  `(c) &\coloneq \Lambda(Fst) c\\
+  `(c) x &= \Lambda(Fst) c x\\
+  &= Fst (c, x)\\
+  &= c
+\end{align}
 
-TODO points, categorical combinators
+To further demonstrate the isomorphism between the categorical combinators and the \(\lambda\)-calculus, we give the usual compilation with Debruijn Indices to untyped categorical combinators \autocite[p. 4]{cmachine}:
+
+\begin{align}
+  \llb \lambda.M \rrb \coloneq \lambda(\llb M \rrb)
+  \llb 0 \rrb \coloneq \text{Snd}
+  \llb n + 1 \rrb \coloneq \llb n \rrb \circ \text{Fst}
+  \llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra
+\end{align}
+
+The first top-level application which is not under a binder is applied with the terminal object \(\mathbb{1}\):
+
+\begin{align}
+  \llb M N \rrb \coloneq \mathbb{1}
+\end{align}
+
+For example:
+
+\begin{align}
+  (\lambda 0) c &= \Lambda(Sndc) \mathbb{1} c\\
+                &= Sndc (\mathbb{1}, c)
+                &= c
+\end{align}
+
+\subsection{The Simply-Typed Categorical Combinators}
+
+A simply-typed variant of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Types are given as points:
+
+\begin{align}
+  \inferrule[Fst]
+  { }
+  {Fst(A, B) &: A \times B \arr A}\\
+  \inferrule[Snd]
+  { }
+  {Snd(A, B) &: A \times B \arr B}\\
+  \inferrule[Id]\\
+  { }
+  {Id(A) &: A \arrow A}\\
+  \inferrule[App]
+  { }
+  {App(A, B) &: (A \arr B) \times A \arr B}\\
+  \inferrule[Curry]
+  {x : A \times B \arr C}
+  {\Lambda(A, B, x) &: A \arr B \arr C}\\
+  \inferrule[Pair]
+  {x : A \arr B, y &: A \arr C}
+  {\la x, y \ra : A \arr B \times C}\\
+  \inferrule[Comp]
+  {x : B \arr C, y &: A \arr B}
+  {x \circ y : A \arr C}
+\end{align}
+
+Notably, type arguments are given as points, rather than applied arguments as in dependently-typed \(SK\), and can be inferred altogether in \(\Lambda\), \(\text{App}\), and \(\text{Pair}\).
+
+
 
 We do not assume uniqueness of identity proofs, nor do we give a presentation of inductive types.
 

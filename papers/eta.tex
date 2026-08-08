@@ -39,7 +39,7 @@
 \newcommand{\arr}{\rightarrow}
 \newcommand{\sort}[1]{\text{Sort}\ #1}
 \newcommand{\barr}{\arr_{\beta}}
-\newcommand{\barrn}{\arr_{\beta}^{+}}
+\newcommand{\barrn}{\arr_{\beta}^{!}}
 \newcommand{\earr}{\arr_{\eta}}
 \newcommand{\affarr}{\rightarrowtail}
 \newcommand{\affetaarr}{\rightarrowtail_{\eta}}
@@ -66,12 +66,13 @@
 \section{\(\eta\) Domain}
 
 \begin{figure}[h!]
-  \centering
-    \begin{center}
-    \begin{tabularx}{\linewidth}{l c r}
+  \begin{center}
+    \setlength{\extrarowheight}{0pt}
+    \begin{tabularx}{\textwidth}{@{\extracolsep{\fill}} l X r @{}}
+      \multicolumn{1}{l}{
       \inferrule[Eql]
       {\dom{B} = A}
-      {\dom{\comb{Eql}{B}} \coloneq !(A)} &
+      {\dom{\comb{Eql}{B}} \coloneq !(A)}} &
       \multicolumn{1}{c}{
       \inferrule[Unbox]
       { }
@@ -80,9 +81,10 @@
       \inferrule[Eql1]
       {B x \barrn A}
       {\dom{\comb{Eql}{B} \&(x) \coloneq !(A)}}}\\\\
+      \multicolumn{1}{l}{
       \inferrule[Refl]
       {\dom{B} = A}
-      {\dom{\comb{refl}{B}} \coloneq !(A)} &
+      {\dom{\comb{refl}{B}} \coloneq !(A)}} &
       \multicolumn{1}{c}{
       \inferrule[Refl1]
       {B x \barrn A}
@@ -90,9 +92,9 @@
       \multicolumn{1}{r}{\inferrule[Unmap]
       {\dom{x} = A}
       {\dom{*\la x \ra} \coloneq !(A)}}\\\\
-      \inferrule[Fmap]
+      \multicolumn{1}{l}{\inferrule[Fmap]
       {\dom{x} = A}
-      {\dom{\$ \la x \ra} \coloneq !(A)}&
+      {\dom{\$ \la x \ra} \coloneq !(A)}}&
       \multicolumn{1}{c}{
       \inferrule[Map]
       {\dom{x} = A}
@@ -100,9 +102,9 @@
       \multicolumn{1}{r}{\inferrule[Id]
       { }
       {\dom{\comb{Id}{A}} \coloneq A}}\\\\
-      \inferrule[Fstc]
+      \multicolumn{1}{l}{\inferrule[Fstc]
       { }
-      {\dom{\comb{Fstc}{B}} \coloneq \comb{Coup}{B}}&
+      {\dom{\comb{Fstc}{B}} \coloneq \comb{Coup}{B}}}&
       \multicolumn{1}{c}{
       \inferrule[Sndc]
       { }
@@ -110,9 +112,9 @@
       \multicolumn{1}{r}{\inferrule[Curr]
       { }
       {\dom{\Lambda (A, B, x)} \coloneq A}}\\\\
-      \inferrule[Curr1]
+      \multicolumn{1}{l}{\inferrule[Curr1]
       {B x \barrn B'}
-      {\dom{\Lambda (A, B, x) y} \coloneq B'}&
+      {\dom{\Lambda (A, B, x) y} \coloneq B'}}&
       \multicolumn{1}{c}{
       \inferrule[Quot]
       { }
@@ -121,9 +123,9 @@
       \inferrule[Curr']
       { }
       {\dom{!\Lambda (A, B, x)} \coloneq !(A)}}\\\\
-      \inferrule[Curr'1]
+      \multicolumn{1}{l}{\inferrule[Curr'1]
       {B x \barrn B'}
-      {\dom{!\Lambda (A, B, x) y} \coloneq !(B')}&
+      {\dom{!\Lambda (A, B, x) y} \coloneq !(B')}}&
       \multicolumn{1}{c}{
       \inferrule[Pair]
       {\dom{x} = A}
@@ -131,9 +133,9 @@
       \multicolumn{1}{r}{\inferrule[Pi]
       {\dom{B} = A}
       {\dom{\Pi(B, C)} \coloneq A}}\\\\
-      \inferrule[Eval]
+      \multicolumn{1}{l}{\inferrule[Eval]
       { }
-      {\dom{\comb{Eval}{A, B, x}} \coloneq A}&
+      {\dom{\comb{Eval}{A, B, x}} \coloneq A}}&
       \multicolumn{1}{c}{
       \inferrule[Eval1]
       {B y \barrn B'}
@@ -149,15 +151,13 @@
       \inferrule[Comp2]
       {\dom{g} = !(A)}
       {\dom{f \circ\circ g} \coloneq !(A)}}&
-      \multicolumn{1}{r}{ }
+      \multicolumn{1}{r}{}
     \end{tabularx}
     \end{center}
   \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction and \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator from environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reductino aside from reducing its points. We also model domains as a relation \(\dom{x} = A\) with completeness and soundness with respect to \(\dom{x}\).}
 \end{figure}
 
 \begin{figure}[H]
-  \centering
-  \resizebox{\textwidth}{!}{
     \begin{tabularx}{\linewidth}{l >{\centering\arraybackslash}X r}
       \inferrule[Quot]
       { }
@@ -186,17 +186,15 @@
       {\dom{x} = !(\comb{Coup}{B})}
       {\domtwo{!\Lambda(A, B, x)} \coloneq (!(A), !\la B \ra)}}
     \end{tabularx}
-  }
   \caption{Arity 2 function domains. The second projection of \(\dom{2}{x}\) is a function of the first term argument. Double quotation is \(\eta\)-reducible and considered to have arity 2 when double quoted. Similarly, when \(Id\) accepts a function, it has arity 2.}
 \end{figure}
 
 \section{\(\eta\) Holes}
 
-\begin{center}
 \begin{figure}[H]
-  \centering
   \begin{center}
-    \begin{tabularx}{\linewidth}{l >{\centering\arraybackslash}X r}
+    \setlength{\extrarowheight}{0pt}
+    \begin{tabularx}{\linewidth}{@{\extracolsep{\fill}} l X r @{}}
       \multicolumn{1}{l}{
       \inferrule[\(\eta\)-unary functions]
       {\comb{arity}{x} = 1, \dom{x} = A}
@@ -221,16 +219,14 @@
     \end{center}
   \caption{Where \(\efn{f}{\text{doms}}\) represents a view of \(f\) as an \(\eta\)-reducible function with domain ``doms''.}
 \end{figure}
-\end{center}
 
 We also make use of relations \(\text{Domain} x [A]\) and \(\text{Domain}_{2} x [A, B]\) as proofs of function domains. Domains are computed by \(\text{dom} x\) and \(\text{dom}_2 x\) respectively. \(B\) is a function of the term argument \(y : A\).
 
 \section{\(\eta\)-Canonicalization}
 
 \begin{figure}[H]
-  \centering
-  \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\linewidth}{c}
+  \begin{center}
+    \begin{tabularx}{\textwidth}{c}
       \inferrule[Id]
       {\efn{x}{[A]}, (\neg \exists B C y, x = \Pi(B, C) y), \hole A y, x y \barrn y}
       {x \earr \comb{Id}{A}}\\\\
@@ -264,7 +260,8 @@ We also make use of relations \(\text{Domain} x [A]\) and \(\text{Domain}_{2} x 
       \inferrule[Bang Quot]
       {\efn{x}{[!(A), ! \la B \ra]}, \hole !(A) y, (e_h2 : \la B \ra y \barrn B'), \hole B' z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
       {x \earr !\Lambda(A, B, `(!(\comb{Coup}{B}), e'))}
-    \end{tabularx}}
+    \end{tabularx}
+    \end{center}
   \caption{Where \(\earr\) represents function canonicalization. Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor.}
 \end{figure}
 

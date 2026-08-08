@@ -193,8 +193,13 @@ Id(Sort 1)
   (refl(`(Sort 0, (Π(Id(Sort 1), `(Sort 1, `(Sort 0, Sort 0))) Sort 0))) &(⊤) &(Id(Sort 0))))).infer'
 
 #eval (DCC (Id(Id(Sort 0) = Id(Sort 0) ∘' Id(Sort 0) ∘' Id(Sort 0))
-  (refl(`(Sort 0
-    , (Π(Id(Sort 1)
-      , `(Sort 1, `(Sort 0, Sort 0))) Sort 0)))
-    &(⊤)
-    &(Id(Sort 0))))).infer'
+  (refl(Id(Sort 1))
+    &((Π(Id(Sort 1)
+      , `(Sort 1, `(Sort 0, Sort 0))) Sort 0))
+    &(Id(Sort 0))))).infer.isOk
+
+/-
+
+-/
+#eval (DCC (Π(Id(Sort 1)
+      , `(Sort 1, `(Sort 0, Sort 0))) Sort 0)).infer'

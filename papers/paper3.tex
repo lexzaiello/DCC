@@ -760,7 +760,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
 We have omitted most of the proof for brevity.\hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Aff/Red.lean\#L163}{Dcc.GenericExpr.RedAff.conf}
 \end{proof}
 
-\begin{theorem} \begin{thm:confglobal}
+\begin{theorem} \label{thm:confglobal}
   If \(A\), \(B\), and \(C\) are terms and \(A \barr^{*} B\) and \(A \barr^{*} C\), then there exists \(D\) such that \(B \barr^{*} D\) and \(C \barr^{D}\).
 \end{theorem}
 
@@ -786,12 +786,12 @@ We have omitted most of the proof for brevity.\hfill \leanlink{https://github.co
             Suppose there exists \(hr_{2}\) such that \(hr_{2} : A \barr C\). Then, by local confluence, there exists \(D\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
         \end{itemize}
   \end{itemize}
-  \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L283}{Dcc.GenericExpr.Relation.RedRell.globally\_confluent}
+  \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L283}{Dcc.GenericExpr.Relation.RedRell.globally\_confluent}
 \end{proof}
 
 \subsection{Uniqueness of normal forms}
 
-\begin{theorem}
+\begin{theorem} \label{thm:unf}
   If \(A\) and \(B\) are terms, then, forall \(C\) where \(C\) is a term and \(A \barr^{*} B\) and \(A \barr^{*} C\) where \(B\) and \(C\) are normal forms, then \(B = C\).
 \end{theorem}
 
@@ -815,11 +815,39 @@ Suppose \(A\), \(B\), and \(C\) are terms, and \(hr_{1} : A \barr^{*} B\) and \(
 
 We also demonstrate soundness and completeness of a \(\beta\)-reduction procedure (\lean{reduce RedAff A} forall terms \(A\)) with respect to the step relation.
 
-\begin{theorem}
+\begin{theorem} \label{thm:semicomplete}
+  If \(A\) and \(B\) are terms such that \(hr : A \barr B\), then there exists \(C\) and \(hr' : A \barr C\) such that \lean{step? A = some ⟨C, hr'⟩}.
+\end{theorem}
+
+\begin{proof}
+  The proof proceeds by splitting on \lean{step? A} with respect to the conclusion. The proof has been omitted for brevity. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L411}{Dcc.GenericExpr.semi\_complete}
+\end{proof}
+
+\begin{theorem} \label{thm:complete}
   If \(A\) and \(B\) are terms such that \(hr : A \barr^{*} B\) and \(B\) is a normal form, then \lean{reduce RedAff A = ⟨B, hr⟩}.
 \end{theorem}
 
-The proof has been omitted for brevity. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L393}{Dcc.GenericExpr.reduce\_complete}
+\begin{proof}
+  Suppose \(A\) and \(B\) are terms such that \(hr : A \barr^{*} B\) and \(B\) is a normal form. The proof proceeds by splitting on the definition of \lean{reduce}.
+  \begin{itemize}
+    \item \lean{step? A = none} case:
+      Suppose \lean{step? A = none}. Then, \lean{reduce A = ⟨A, refl⟩}. Also, there does not exist \(B\) such that \(A \barr B\). Hence, \lean{hr = refl}.
+    \item Case \lean{step? A = ⟨C, hr'⟩}:
+      Suppose \lean{step? A = \lean{step? A = ⟨C, hr'⟩}}. By global confluence \ref{thm:confglobal}, there exists \(D\) such that \(B \barr^{*} D\) and \(hrt : C \barr^{*} D\). Proceed by case analysis on \(hrt\).
+      \item Refl case:
+        By the hypothesis that \(C\) is \(\beta\)-normal, \(C = D\). And by proof irrelevance, \(hr = hr'\).
+      \item Step case:
+        By \ref{thm:decc} and \lean{hr}, \(\comb{size}(C} < \comb{size}{A}\). So, by well-founded induction with respect to size, \lean{reduce C = ⟨D, hrt⟩}. Hence, \lean{step? A = reduce C} and \(B \barr^{*} (\text{reduce} C)\). So, since \(B\) is a normal form, \(B = \text{reduce} C\). Therefore, \(C = B\), so \lean{reduce RedAff A = ⟨B, hr⟩}.
+  \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L393}{Dcc.GenericExpr.reduce\_complete}
+\end{proof}
+
+\begin{theorem} \label{thm:reddecide}
+  Forall terms \(A\) and \(B\), \(hr : A \barr^{*} B\) or \(\neg A \barr^{*} B\).
+\end{theorem}
+
+\begin{proof} \label{thm:reddecide}
+  By completeness and soundness of \lean{reduce RedAff}. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L582}{Dcc.GenericExpr.reduce\_complete}
+\end{theorem}
 
 \subsection{Judgments are Canonical}
 
@@ -851,8 +879,6 @@ The proof has been omitted for brevity. \hfill \leanlink{https://github.com/lexz
   3. A recipe for dependent combinator calculus
     The recipe:
   5. A recipe for computable function extensionality (overall description)
-    5a. [beta reduction] Affine insight: strong normalization by default (see below)
-      - No fallback conversion constructor
     5b. [eta reduction] Cat. combinator insight (see below)
       - Canonical eta-forms are well-behaved due to no open terms
       - Canonical eta forms map onto morphisms in the category

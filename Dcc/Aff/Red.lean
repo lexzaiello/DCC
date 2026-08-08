@@ -558,6 +558,9 @@ Complete.complete
 -/
 #check instComplete.complete
 
+theorem RedAff.decreasing' (h : RedAff A B) : size B < size A := by
+  induction h <;> grind
+
 @[grind ., grind →]
 theorem red_aff_decreasing?.{u} {τ : Type u} {A B : GenericExpr τ} [DecidableEq τ] (h : Relation.ReflTransGen (RedAff (τ := τ)) A B) : (size B) ≤ (size A) := by
   if hs : (size A) = (size B) then

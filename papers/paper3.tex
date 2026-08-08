@@ -100,109 +100,113 @@ We do not assume equality reflection or function extensionality as axioms. They 
 
 \section{DCC: The Dependent Combinator Calculus}
 
-We present DCC: the dependent combinator calculus. DCC is based on an adaptation of the categorical combinators to dependent types and affine logic. It is equal to the base Calculus of Constructions in expressivity, and makes use of a sort hierarchy.
+We present DCC: the dependent combinator calculus. DCC is based on an adaptation of the categorical combinators to dependent types and affine logic. It is equivalent to the base Calculus of Constructions in expressivity, and makes use of a sort hierarchy.
 
-Our choice of combining categorical combinators with dependent types and affine logic induces strong normalization, computable function extensionality and equality reflection as metatheorems. We inherit decidable type-checking. To date, this calculus is the only one where these features coexist. Dependently-typed combinators have been deemed "highly nontrivial." Most importantly, decidable type-checking with function extensionality has thus far been thought to be impossible.
+Our choice of combining categorical combinators with dependent types and affine logic induces decidable type-checking, strong normalization, computable function extensionality and equality reflection as metatheorems. To date, this calculus is the only one where these features coexist. Dependently-typed combinators have been deemed "highly nontrivial." Most importantly, decidable type-checking with computable function extensionality has thus far been thought to be impossible.
 
 \subsection{The \(SK\) Combinator Calculus: not quite enough}
 
 Prior iterations of the calculus, and attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 10:14]{altenkirch}. 
 
-\begin{align}
+\begin{align*}
   K x y &\coloneq x\\
   S x y z&\coloneq (x z) (y z)
-\end{align}
+\end{align*}
 
 However, past attempts posed severe limitations due to minimalism of SK and its lack of structures analagous to \(\Pi\) types. There are only two primitives objects: \(S\) and \(K\), neither of which correspond to universal or existential quantification. \(\Pi\) types are usually supported by a \(\Pi\) combinator. However, since \(SK\) are the only primitive objects, extra (``meta'') combinators are required to model dependent types, with no computational relevance.
 
 The usual dependent types of \(S\) and \(K\) are as such:
 
-\begin{align}
-  K &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (x : A) \arr  B x \arr A
+\begin{align*}
+  K &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (x : A) \arr  B x \arr A\\
   S x y z &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (C : (x : A) \arr B x \arr \sort{s}) \arr (x : A) \arr (y : B x) \arr (z : A) \arr C z (y z)
-\end{align}
+\end{align*}
 
 Prior attempts \autocite{altenkirch} at dependent \(SK\) made use of helper combinators to perform the machinery of manipulating types.
 
 However, SK's minimalism results in prohibitively large types, and a great burden on the user. Complex machinery is required to shuffle elements in the context around (through combinations of \(S\) and \(K\)). Universe levels must be provided explicitly, which are very difficult for a user to calculate. Types very difficult to reason about. There is a great burden on the user, since SK does not have any term points, meaning all type arguments must be supplied manually, making types almost impossible for a user to write \autocite[p. 10:17]{altenkirch}. Also, the kernel cannot reason about structural similarities between types, resulting in definitional equality type errors. Finally, non-termination is intrinsic to \(SK\), since \(S\) duplicates terms. Our past naive solution used the \(BCKI\) calculus, with the hope that types would be easier to write and normalization inherent. Still, \(BCKI\) does not use term points, resulting in the same limitations of \(SK\).
 
-By contrast, DCC is based on the categorical combinator calculus. In DCC, all universe levels are inferred (except literal \(\sort{m}\) terms), and types arguments are internalized and often inferred altogether. This makes types much easier for the user to express. This is due to the isomoprhism between currying in the categorical combinators and \(\lambda\)-abstraction. Debruijn indices are modeled by nested tuples and projections \eqref{eq:project}, substitution by tuple currying \eqref{eq:curry}, and application by evaluation \eqref{eq:eval} \eqref{eq:evaltwo}. Types are also much smaller due to this similarity, and the kernel can reason about structural equivalence more often (even without \(\eta\)-reduction).
+By contrast, DCC is based on the categorical combinator calculus. In DCC, all universe levels are inferred (except literal \(\sort{m}\) terms), and types arguments are internalized and often inferred altogether. This makes types much easier for the user to express. This is due to the isomoprhism between currying in the categorical combinators and \(\lambda\)-abstraction. Debruijn indices are modeled by nested tuples (an ``environment'') and projections \eqref{eq:project}, substitution by tuple currying \eqref{eq:curry}, and application by evaluation \eqref{eq:eval} \eqref{eq:evaltwo}. Types are also much smaller due to this similarity, and the kernel can reason about structural equivalence more often (even without \(\eta\)-reduction).
 
-The categorical combinator calculus has the following rewrite rules (although sometimes \(App\) is replaced by \(Eval(x)\)):
+\subsection{Categorical Combinators}
 
-\begin{align}
-  Fst (x, y) &\coloneq x \\
-  Sndc (x, y) &\coloneq x \\
+The categorical combinator calculus has the following rewrite rules \autocite{cmachine} (although sometimes \(App\) is replaced by \(Eval(x)\)):
+
+\begin{align*}
+  \text{Fst} (x, y) &\coloneq x \\
+  \text{Sndc} (x, y) &\coloneq x \\
   (x \circ y) z &\coloneq x (y z) \\
-  Id x &\coloneq x \\
+  \text{Id} x &\coloneq x \\
   \la x, y \ra x &\coloneq (M x, N x) \\
-  App (x, y) &\coloneq x y \\
+  \text{App} (x, y) &\coloneq x y \\
   \Lambda(x) y z \coloneq x (y, z)
-\end{align}
+\end{align*}
 
-Notably, each combinator corresponds to an operation in the cartesian closed category. \(Id\) corresponds to the identity morphism, composition to morphism composition, \(App\) to evaluation, and \(\Lambda\) to currying.
+Each combinator corresponds to an operation in the cartesian closed category. \(Id\) corresponds to the identity morphism, composition to morphism composition, \(App\) to evaluation, and \(\Lambda\) to currying.
 
 Constants can be encoded without a constant combinator (as in \(SK\)):
 
-\begin{align}
-  `(c) &\coloneq \Lambda(Fst) c\\
-  `(c) x &= \Lambda(Fst) c x\\
-  &= Fst (c, x)\\
+\begin{align*}
+  `(c) &\coloneq \Lambda(\text{Fst}) c\\
+  `(c) x &= \Lambda(\text{Fst}) c x\\
+  &= \text{Fst} (c, x)\\
   &= c
-\end{align}
+\end{align*}
 
-To further demonstrate the isomorphism between the categorical combinators and the \(\lambda\)-calculus, we give the usual compilation with Debruijn Indices to untyped categorical combinators \autocite[p. 4]{cmachine}:
+An isomorphism exists between the categorical combinators and the \(\lambda\)-calculus. For example, the compilation of \(\lambda\)-calculus with Debruijn indices to categorical combinators is quite simple \autocite[p. 4]{cmachine}:
 
-\begin{align}
-  \llb \lambda.M \rrb \coloneq \lambda(\llb M \rrb)
-  \llb 0 \rrb \coloneq \text{Snd}
-  \llb n + 1 \rrb \coloneq \llb n \rrb \circ \text{Fst}
-  \llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra
-\end{align}
+\begin{align*}
+  \llb \lambda.M \rrb &\coloneq \lambda(\llb M \rrb)\\
+  \llb 0 \rrb &\coloneq \text{Snd}\\
+  \llb n + 1 \rrb &\coloneq \llb n \rrb \circ \text{Fst}\\
+  \llb M N \rrb &\coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra
+\end{align*}
 
 The first top-level application which is not under a binder is applied with the terminal object \(\mathbb{1}\):
 
-\begin{align}
+\begin{equation}
   \llb M N \rrb \coloneq \mathbb{1}
-\end{align}
+\end{equation}
 
 For example:
 
-\begin{align}
-  (\lambda 0) c &= \Lambda(Sndc) \mathbb{1} c\\
-                &= Sndc (\mathbb{1}, c)
+\begin{align*}
+  (\lambda 0) c &= \Lambda(\text{Sndc}) \mathbb{1} c\\
+                &= \text{Sndc} (\mathbb{1}, c)\\
                 &= c
-\end{align}
+\end{align*}
 
 \subsection{The Simply-Typed Categorical Combinators}
 
 A simply-typed variant of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points, rather than applied arguments as in dependently-typed \(SK\). Type arguments can be inferred altogether in \(\Lambda\), \(\text{App}\), and \(\text{Pair}\):
 
-\begin{align}
+\begin{tabular}{c c c}
   \inferrule[Fst]
   { }
-  {Fst(A, B) &: A \times B \arr A}\\
+  {\comb{Fst}{A, B} : A \times B \arr A}&
   \inferrule[Snd]
   { }
-  {Snd(A, B) &: A \times B \arr B}\\
-  \inferrule[Id]\\
+  {\comb{Snd}{A, B} : A \times B \arr B}&
+  \inferrule[Id]
   { }
-  {Id(A) &: A \arrow A}\\
+  {Id(A) : A \arr A}\\
   \inferrule[App]
   { }
-  {App(A, B) &: (A \arr B) \times A \arr B}\\
+  {\comb{App}{A, B} : (A \arr B) \times A \arr B}&
   \inferrule[Curry]
   {x : A \times B \arr C}
-  {\Lambda(A, B, x) &: A \arr B \arr C}\\
+  {\Lambda(A, B, x) : A \arr B \arr C}&
   \inferrule[Pair]
-  {x : A \arr B, y &: A \arr C}
+  {x : A \arr B, y : A \arr C}
   {\la x, y \ra : A \arr B \times C}\\
-  \inferrule[Comp]
-  {x : B \arr C, y &: A \arr B}
-  {x \circ y : A \arr C}
-\end{align}
+  &\inferrule[Comp]
+  {x : B \arr C, y : A \arr B}
+  {x \circ y : A \arr C}&
+\end{tabular}
 
-Similarly, in DCC, combinator types are given by points which index an environment and eliminate into a \(\sort{u}\). This approach has the advantage of requiring no explicit universe levels (whereas dependent \(SK\) does), and type arguments can often be inferred, easing the burden on the user.
+\subsection{Types as terms: Environments are contexts}
+
+In DCC, combinator types are determined by points which index an environment and eliminate into a \(\sort{u}\). This approach has the advantage of requiring no explicit universe levels (whereas dependent \(SK\) does), and type arguments can often be inferred, easing the burden on the user.
 
 \begin{comment}
   Elaborate more on results:
@@ -229,9 +233,7 @@ Ending: our choice of combining categorical combinators with dependent types and
   
 \end{comment}
 
-\subsection{Dependent types: a natural extension of categorical combinators}
 
-\subsection{Categorical Combinators interpret cartesian closed categories literally}
 
 \subsection{Types as terms: Environments are contexts}
 

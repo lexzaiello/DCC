@@ -52,10 +52,11 @@
 \newcommand{\ddom}{\text{Domain}}
 \newcommand{\canon}{\text{Canonicalize}}
 \newcommand{\dddom}{\text{Domain}_{2}}
+\newcommand{\hole}{\text{Hole}}
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 
-\title{DCC Beta Reduction Rules}
+\title{DCC \(\eta\)-Reduction Rules}
 \author[1]{Lexi Aiello}
 
 \begin{document}
@@ -185,65 +186,65 @@
   \centering
   \resizebox{\textwidth}{!}{
     \begin{tabularx}{\textwidth}{l c r}
-      \multicolumn{1}{r}{\inferrule[\(\eta\)-unary functions]
-      {h_{arr} : \comb{arity}{x} = 1, h_{dom} : \ddom x A}
-      {tm_{1} h_{arr} h_{dom} : \efn x [A]}}&
-      \multicolumn{2}{l}{\inferrule[\(\eta\)-binary functions]
-      {h_{arr} : \comb{arity}{x} = 2, h_{dom} : \dddom x A B}
-      {tm_{2} h_{arr} h_{dom} : \efn x [A, B]}}\\\\
+      \multicolumn{1}{l}{\inferrule[\(\eta\)-unary functions]
+      {\comb{arity}{x} = 1, \ddom x A}
+      {\efn x [A]}}&
+      \multicolumn{2}{r}{\inferrule[\(\eta\)-binary functions]
+      {\comb{arity}{x} = 2, \dddom x A B}
+      {\efn x [A, B]}}\\\\
       \multicolumn{3}{c}{
       \inferrule[Constant holes]
-      {h : (\neg \exists B, A = \comb{Coup}{B}) \land (\neg \exists B, A = !(B)), \text{level} : \mathbb{N}}
-      {\text{pure} h : \text{Hole} A \text{level} (\text{const} (\text{Hole.mk} \text{level}))}}\\\\
+      {(\neg \exists B, A = \comb{Coup}{B}) \land (\neg \exists B, A = !(B)), \mathbb{N}}
+      {\hole A \text{level} (\text{const} (\text{Hole.mk} \text{level}))}}\\\\
       \multicolumn{3}{c}{\inferrule[Couple holes]
-      {h_{dom} : \ddom B A, h_{1} : \text{Hole} A (\text{level} + 2) x, hr : (B eh_{1}) \barrn B', h_{2} : \text{Hole} B' (\text{level} + 1) y, \text{level} : \mathbb{N}}
-      {\text{coup} h_{dom} h_{1} hr h_{2} : \text{Hole} \comb{Coup}{B} \text{level} \llb B \rrb (x, y)}}\\\\
+      {\ddom B A, \hole A (\text{level} + 2) x, (B eh_{1}) \barrn B', \hole B' (\text{level} + 1) y, \mathbb{N}}
+      {\hole \comb{Coup}{B} \text{level} \llb B \rrb (x, y)}}\\\\
       \multicolumn{3}{c}{\inferrule[Affine bang holes]
-      {h_{1} : \text{Hole} A (\text{level} + 1) x, \text{level} : \mathbb{N}}
-      {\text{bang} h_{1} : \text{Hole} !(A) \text{level} \&(x)}}
+      {\hole A (\text{level} + 1) x, \mathbb{N}}
+      {\hole !(A) \text{level} \&(x)}}
     \end{tabularx}}
 \end{figure}
 
 We also make use of relations \(\text{Domain} x [A]\) and \(\text{Domain}_{2} x [A, B]\) as proofs of function domains. Domains are computed by \(\text{dom} x\) and \(\text{dom}_2 x\) respectively. \(B\) is a function of the term argument \(y : A\).
 
-\section{\(eta\) Canonicalization}
+\section{\(\eta\) Canonicalization}
 
 \begin{figure}[H]
   \centering
   \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{c}
+    \begin{tabularx}{\textwidth}{l}
       \inferrule[Id]
-      {\efn x [A], (\neg \exists B C y, x = \Pi(B, C) y), \text{Hole} A y, x y \barrn y}
+      {\efn x [A], (\neg \exists B C y, x = \Pi(B, C) y), \hole A y, x y \barrn y}
       {\canon e_f (\ddom.id (A \coloneq A))}\\\\
       \inferrule[Fstc]
-      {\text{ddom} B A, \efn x [\comb{Coup}{B}], \text{Hole} \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn y}
+      {\text{ddom} B A, \efn x [\comb{Coup}{B}], \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn y}
       {\canon e_f (\ddom.fstc (B \coloneq B))}\\\\
       \inferrule[Sndc]
-      {Domain B A, \efn x [\comb{Coup}{B}], \text{Hole} \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn z}
+      {\dom B A, \efn x [\comb{Coup}{B}], \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn z}
       {\canon e_f (\ddom.sndc (B \coloneq B))}\\\\
       \inferrule[Fstc']
-      {Domain B A, \efn x [!(\comb{Coup}{B})], \text{Hole} !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn y}
+      {\dom B A, \efn x [!(\comb{Coup}{B})], \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn y}
       {\canon e_f (\ddom.unmap (\ddom.fstc (B \coloneq B)))}\\\\
       \inferrule[Sndc']
-      {\dom B A, \efn x [!(\comb{Coup}{B})], \text{Hole} !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn z}
+      {\dom B A, \efn x [!(\comb{Coup}{B})], \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn z}
       {\canon e_f (\ddom.unmap (\ddom.sndc (B \coloneq B)))}\\\\
       \inferrule[Par]
-      {Domain A y, ((\neg \exists A', A = \comb{Coup}{A'}) \land e_f (\neg \exists A', A = !(A'))), \efn x [A], \text{Hole} A y, x y \barrn x' y, \efn x' [A]}
+      {\dom A y, ((\neg \exists A', A = \comb{Coup}{A'}) \land e_f (\neg \exists A', A = !(A'))), \efn x [A], \hole A y, x y \barrn x' y, \efn x' [A]}
       {\canon e_f e_f'}\\\\
       \inferrule[Eval]
-      {Domain B A, \efn x [\comb{Coup}{B}], \text{Hole} \comb{Coup}{B} \llb B \rrb (y, z), x \llb B \rrb (y, z) \barrn x' y z, \efn x' [A, B]}
+      {\dom B A, \efn x [\comb{Coup}{B}], \hole \comb{Coup}{B} \llb B \rrb (y, z), x \llb B \rrb (y, z) \barrn x' y z, \efn x' [A, B]}
       {\canon e_f (\ddom.eval (A \coloneq A) (B \coloneq B) (x \coloneq x'))}\\\\
       \inferrule[Quot]
-      {\efn x [A], \text{Hole} A y, x y \barrn e', \neg \exists c, (\text{const} (\text{hole} c)) \in e'}
+      {\efn x [A], \hole A y, x y \barrn e', \neg \exists c, (\text{const} (\text{hole} c)) \in e'}
       {\canon e_f (\ddom.quot (B \coloneq A) (x \coloneq e'))}\\\\
       \inferrule[$\text{Id}_{2}$]
-      {\efn x [\Pi(f_A, f_B) \text{env}, `(\Pi(f_A, f_B) \text{env}, B)], \text{Hole} (\Pi(f_A, f_B) \text{env}) y, \text{Hole} B z, x y z \barrn y z}
+      {\efn x [\Pi(f_A, f_B) \text{env}, `(\Pi(f_A, f_B) \text{env}, B)], \hole (\Pi(f_A, f_B) \text{env}) y, \hole B z, x y z \barrn y z}
       {\canon e_f (\ddom.id (A \coloneq \Pi(f_A, f_B) \text{env}))}\\\\
       \inferrule[$\text{Quot}_{2}$]
-      {\efn x [A, `(A, B)], \text{Hole} A y, \text{Hole} B z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
+      {\efn x [A, `(A, B)], \hole A y, \hole B z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
       {\canon e_f (\ddom.quot (A \coloneq A) (B \coloneq B) (x \coloneq e'))}\\\\
       \inferrule[Bang Quot]
-      {\efn x [!(A), ! \la B \ra], \text{Hole} !(A) y, (e_h2 : \la B \ra y \barrn B'), \text{Hole} B' z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
+      {\efn x [!(A), ! \la B \ra], \hole !(A) y, (e_h2 : \la B \ra y \barrn B'), \hole B' z, x y z \barrn e', (\neg \exists c, (\text{const} (\text{hole} c)) \in e')}
       {\canon e_f (\ddom.curr' (A \coloneq A) (B \coloneq B) (\ddom.quot (B \coloneq !(\comb{Coup}{B})) (x \coloneq e')))}
     \end{tabularx}}
   \caption{Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor.}

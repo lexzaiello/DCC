@@ -21,8 +21,9 @@
 \setmonofont{FreeMono}
 \usepackage{minted}
 \setminted{breaklines=true, breakanywhere=true}
-\fvset{breaklines=true} 
-\newmintinline[lean]{lean4}{bgcolor=white}
+\fvset{breaklines=true, breakanywhere=true}
+%\newmintinline[lean]{lean4}{bgcolor=white}
+\newcommand{\lean}[1]{\EscVerb{#1}}
 \newminted[leancode]{lean4}{fontsize=\footnotesize}
 \usemintedstyle{tango}
 
@@ -834,7 +835,7 @@ We also demonstrate soundness and completeness of a \(\beta\)-reduction procedur
     \item \lean{step? A = none} case:
       Suppose \lean{step? A = none}. Then, \lean{reduce A = ⟨A, refl⟩}. Also, there does not exist \(B\) such that \(A \barr B\). Hence, \lean{hr = refl}.
     \item Case \lean{step? A = ⟨C, hr'⟩}:
-      Suppose \lean{step? A = \lean{step? A = ⟨C, hr'⟩}}. By global confluence \ref{thm:confglobal}, there exists \(D\) such that \(B \barr^{*} D\) and \(hrt : C \barr^{*} D\). Proceed by case analysis on \(hrt\).
+      Suppose \lean{step? A = ⟨C, hr'⟩}. By global confluence \ref{thm:confglobal}, there exists \(D\) such that \(B \barr^{*} D\) and \(hrt : C \barr^{*} D\). Proceed by case analysis on \(hrt\).
       \begin{itemize}
       \item Refl case:
         By the hypothesis that \(C\) is \(\beta\)-normal, \(C = D\). And by proof irrelevance, \(hr = hr'\).
@@ -1188,7 +1189,7 @@ We note that the set of possible canonical values is mutually exclusive in behav
 \end{theorem}
 
 \begin{proof}
-  By parallel case analysis on \lean{h₁} and \lean{h₂}. If \lean{x₁ \neq x₂}, then \lean{h₂} implies that reduction of the applied holes does not match the behavior of the term \lean{x₁} in each case. Hence, cases where \lean{x₁ \neq x₂} are eliminated. Thus, \lean{x₁ = x₂}.
+  By parallel case analysis on \lean{h₁} and \lean{h₂}. If \lean{x₁ ≠ x₂}, then \lean{h₂} implies that reduction of the applied holes does not match the behavior of the term \lean{x₁} in each case. Hence, cases where \lean{x₁ ≠ x₂} are eliminated. Thus, \lean{x₁ = x₂}.
   \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize/Normal/Core.lean\#L27}{Dcc.NormExpr.EtaFn.Canonicalize.is\_norm\_fn}
 \end{proof}
 

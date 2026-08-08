@@ -138,7 +138,7 @@ Prior attempts \autocite{altenkirch} at dependent \(SK\) made use of helper comb
 
 However, SK's minimalism results in prohibitively large \autocite[10:17]{altenkirch} types, and a great burden on the prover. Complex machinery is required to shuffle elements in the context around (through combinations of \(S\) and \(K\)). Universe levels must be provided explicitly, which are very difficult for a user to calculate. Types very difficult to reason about. There is a great burden on the user, since SK does not have any term points, meaning all type arguments must be supplied manually, making types almost impossible for a user to write \autocite[p. 10:17]{altenkirch}. Also, the kernel cannot reason about structural similarities between types, resulting in definitional equality type errors. Finally, non-termination is intrinsic to \(SK\), since \(S\) duplicates terms. Our past naive solution used the \(BCKI\) calculus, with the hope that types would be easier to write and normalization inherent. Still, \(BCKI\) does not use term points, resulting in the same limitations of \(SK\).
 
-By contrast, DCC is based on the categorical combinator calculus (CCC). In DCC, all universe levels are inferred (except literal \(\sort{m}\) terms), and types arguments are internalized and often inferred altogether. This makes types much easier for the user to express. This is due to the isomoprhism between currying in the categorical combinators and \(\lambda\)-abstraction. Debruijn indices are modeled by nested tuples (an ``environment'', or a ``couple'') and projections, substitution by tuple currying, and application by evaluation \eqref{eq:catred}. Types are also much smaller due to this similarity, and the kernel can reason about structural equivalence more often (even without \(\eta\)-reduction).
+By contrast, DCC is based on the categorical combinator calculus. In DCC, all universe levels are inferred (except literal \(\sort{m}\) terms), and types arguments are internalized and often inferred altogether. This makes types much easier for the user to express. This is due to the isomoprhism between currying in the categorical combinators and \(\lambda\)-abstraction. Debruijn indices are modeled by nested tuples (an ``environment'', or a ``couple'') and projections, substitution by tuple currying, and application by evaluation \eqref{eq:catred}. Types are also much smaller due to this similarity, and the kernel can reason about structural equivalence more often (even without \(\eta\)-reduction).
 
 \subsection{Categorical Combinators}
 
@@ -194,7 +194,7 @@ For example:
                 &= c
 \end{align*}
 
-Compared to the \(SK\) combinator calculus, writing programs in the CCC feels quite natural. However, adapting it to dependent types has not been attempted thus far.
+Compared to the \(SK\) combinator calculus, writing programs with categorical combinators feels quite natural. However, adapting it to dependent types has not been attempted thus far.
 
 \subsection{The Simply-Typed Categorical Combinators}
 
@@ -237,9 +237,9 @@ A simply-typed variant of the categorical combinators is presented in \autocite[
 
 \section{\label{dccintro}DCC: The Dependent Combinator Calculus}
 
-We present DCC: the dependent combinator calculus. DCC is based an extensional type theory with computable function extensionality on an adaptation of the categorical combinators to dependent types and affine logic. It is equivalent to the base Calculus of Constructions in expressivity, and makes use of a sort hierarchy.
+We present DCC: the dependent combinator calculus. DCC is based an extensional type theory with computable function extensionality on an adaptation of the categorical combinators to dependent types and affine logic. It is equivalent to the base Calculus of Constructions in expressivity, and makes use of a sort hierarchy. As in the Calculus of Constructions, types are terms.
 
-We believe our choice of combining categorical combinators with dependent types and affine logic is uniquely suitable for decidable type-checking, strong normalization, computable function extensionality and equality reflection as metatheorems. To date, this calculus is the only one where these features coexist. Dependently-typed combinators have been deemed "highly nontrivial." Most importantly, decidable type-checking in extensional type theory has thus far been thought to be impossible.
+We believe our choice of combining categorical combinators with dependent types and affine logic is uniquely suitable for decidable type-checking, strong normalization, computable function extensionality and equality reflection as metatheorems. To date, this calculus is the only one where these features coexist. Dependently-typed combinators have been largely deemed highly nontrivial. Most importantly, decidable type-checking in extensional type theory has thus far been thought to be impossible.
 
 We achieve computable function extensionality through the observation that in combinatory logic, open terms do not exist, and canonical terms in \(\eta\)-reduction correspond to the primitive operations in cartesian closed categories. \(\eta\)-reductions are deterministic, unique, and mutually exclusive in behavior. Hence, the set of canonical functions is countable, small, and very well-behaved. Function extensionality is provable by demonstrating that if two \(\eta\)-reduced terms \(f\) and \(g\) are applied the same value, and the value is not contained in the respective functions, then \(f x \beta_{=} g x\) iff their \(\eta\)-reductions are the same. That is, \(f = g\). We elaborate more on this proof technique later.
 
@@ -268,9 +268,9 @@ Boxes are consumed by pairs, thus taming the sole source of duplication in the c
 \caption{Pairs consume boxes, and decrease the size of the program while duplicating a value.}
 \end{figure}
 
-The full reduction rules are given in \eqref{redrules}.
+The full reduction rules are given in \ref{redrules}.
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \resizebox{\textwidth}{!}{
     \begin{tabularx}{\textwidth}{l >{\centering\arraybackslash}X r}
@@ -385,20 +385,23 @@ This design decision is motivated by the realization that interpreting couple en
 
 Dependent types are supported in principle by a \(\Pi\) combinator. Unlike in prior attempts with \(SK\), its domain is a point and a function of an environment and its codomain of the environment and corresponding term argument:
 
-\begin{figure}[H]
-  \begin{tabularx}{\textwidth}{c c}
+\begin{center}
+  \begin{figure}[H]
+    \centering
+  \begin{gather*}
   \inferrule[Pi]
   {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
-  {\Pi (B, C) : (x : A) \arr (y : B x) \arr \sort{max(u, v)}} &
+  {\Pi (B, C) : (x : A) \arr (y : B x) \arr \sort{max(u, v)}}\qquad
   \inferrule[App]
-  {f : (x : A) \arr B x, x : A}
-  {f x : B x}
-  \end{tabularx}
+  {f : (\Pi(B, C) \text{env}), B\ \text{env} \barrn A, x : A}
+  {f x : C\ \text{env}\ x}
+  \end{gather*}
 \end{figure}
+\end{center}
 
 \(\Pi\) types model move semantics by threading terms in the context through nested \(\Pi\) terms when type-checking an application. Duplication is avoided, unlike in approaches where substitution is recursive.
 
-Arrows are defined as \(\Pi\) terms where \(x : A\), \(A : \sort{u}\), \(B \coloneq \comb{Id}{\sort{u}}\), and \(C \coloneq `(\sort{u}, `(A, C'))\). For example, the type of \(\comb{Id}{A}\) is written like such:
+Arrows are defined as \(\Pi\) terms where \(x : A\), \(A : \sort{u}\), \(B \coloneq \comb{Id}{\sort{u}}\), and \(C \coloneq `(\sort{u}, `(A, C'))\). For example, the type of \(\comb{Id}{A}\) is written literally like such:
 
 \begin{equation}
   \inferrule[Id]
@@ -408,7 +411,7 @@ Arrows are defined as \(\Pi\) terms where \(x : A\), \(A : \sort{u}\), \(B \colo
 
 \subsection{Inference Rules}
 
-We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in our illustration of our inference rules. However, the full types are available in the appendix. Our full inference rules are given as such:
+We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in our illustration of our inference rules. However, the full types are available in the appendix. Our full inference rules are given in \ref{inferrule}.
 
 \begin{figure}[H]
   \centering
@@ -534,7 +537,7 @@ We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in o
     {f : (x : A) \arr B x, x : A}
     {f x : B x}}
   \end{tabular}}
-\caption{\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\). \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}{GenericExpr.Judge3}}
+\caption{\label{inferrule}\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\). \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}{GenericExpr.Judge3}}
 \end{figure}
 
 Our inference rules are intuitive. For example, curry and eval mirror \(\Sigma\) currying and uncurrying in Lean 4 \autocite{curry:mathlib}:
@@ -543,14 +546,42 @@ Our inference rules are intuitive. For example, curry and eval mirror \(\Sigma\)
 def Sigma.curry {γ : ∀ a, β a → Type*} (f : ∀ x : Sigma β, γ x.1 x.2) (x : α) (y : β x) : γ x y :=
   f ⟨x, y⟩
 \end{leancode}
+
 \begin{leancode}
 def Sigma.uncurry {γ : ∀ a, β a → Type*} (f : ∀ (x) (y : β x), γ x y) (x : Sigma β) : γ x.1 x.2 :=
   f x.1 x.2
 \end{leancode}
 
+Our usage of points as indexes of the environment is appealing, since universe levels are never specified explicitly, thus avoiding universe arithmetic.
+
+\subsubsection{Examples of Type-Checking: Compiling the Dependent \(K\) Combinator}
+
+The dependent \(K\) combinator is written in Lean as:
+
+\begin{leancode}
+def K (u v : ℕ) (A : Sort u) (B : A → Sort v) (x : A) (y : B x) : A := x
+
+#check K 3 2 (Sort 2) (fun x => x) (Sort 1) (Sort 0)
+/-
+K 3 2 (Sort 2) (fun x => x) (Sort 1) (Sort 0) : Type 1
+-/
+\end{leancode}
+
+Its compiled DCC expression is available in the appendix \ref{kcomp}. It type-checks like such:
+
+\begin{leancode}
+def K_example₃' : Expr :=
+  dcc_infer' ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1) (Sort 0))
+/-
+Messages here:
+33:0:
+(some Sort 2)
+-/
+\end{leancode}
+
 \section{Affine logic: strong normalization for free}
 
-Contraction is restricted in DCC, as in affine logic. Strong normalization is derived ``for free,'' and provable by a simple syntactic decreasing measure, The size measure sums the size of each combinators' points and performs simple arithmetic for an ordering matching combinator precedence. In boxes, the size of its point \(x\) is counted thrice so that consuming it with a pair decreases the program's size, rather than increasing it:
+Contraction is restricted in DCC, as in affine logic. Strong normalization is inherited as such and provable by a simple syntactic decreasing measure. The size measure sums the size of each combinator's points and performs simple arithmetic for an ordering matching combinator precedence. In boxes, the size of its point \(x\) is counted thrice so that consuming it with a pair decreases the program's size, rather than increasing it:
 
 \begin{figure}
 \begin{leancode}
@@ -592,7 +623,7 @@ def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
 \end{figure}
 
 \begin{theorem}
-  If \(A\) and \(B\) are terms and \(A \barr B\), then \(\comb{size}{B} \lt \comb{size}{A}\).
+  If \(A\) and \(B\) are terms and \(A \barr B\), then \(\comb{\text{size}}{B} < \comb{\text{size}}{A}\).
 \end{theorem}
 
 \begin{proof}
@@ -600,14 +631,11 @@ By induction on the reduction relation.
 \begin{leancode}
 
 
-@[grind ., grind →]
-
+theorem RedAff.decreasing' (h : RedAff A B) : size B < size A := by
+  induction h <;> grind
 \end{leancode}
+\hfill \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Aff/Red.lean}{GenericExpr.RedAff}
 \end{proof}
-
-\begin{comment}
-  TODO: proof here
-\end{comment}
 
 \begin{comment}
   Elaborate more on results:
@@ -849,6 +877,50 @@ Things I want to cover
 \end{comment}
 
 \appendix
+
+\section{\label{kcomp}Dependent \(K\) Compilation}
+
+\begin{leancode}
+(((((!Λ(⊤, `(⊤, Sort 3), !Λ(Coup(`(⊤, Sort 3)), Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))), !Λ(Coup(Π(Sndc(`(⊤, Sort 3)),
+Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))), (Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))), Λ(!(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (Eval(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)),
+Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), ((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))) ∘'
+Fstc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (Sndc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
+`(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))) ∘' Fstc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))))) ∘∘ ⟦Λ(Coup((Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
+`(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (((Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))) ∘' Fstc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
+`(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))) ∘' Fstc(`(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))))))⟧⟨Id(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
+`(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), Λ(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
+`(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (Sndc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))) ∘'
+Fstc(`(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
+`(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)),
+Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))))))⟩),
+((Sndc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))) ∘' *(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)),
+Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))))) ∘' Fstc((Eval(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))),
+((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))) ∘' Fstc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)),
+Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (Sndc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))) ∘' Fstc((Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))))) ∘∘ ⟦Λ(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
+`(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
+`(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))) ∘' Fstc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))) ∘' Fstc(`(Coup((Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
+`(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))))))⟧⟨Id(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))),
+Sort 2))))))), Λ(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)),
+Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))),
+Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)),
+Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (Sndc((Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))),
+Sort 2)))))) ∘' Fstc(`(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)),
+Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘'
+Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))),
+Sort 2))))))))))⟩))))))) &(∗)) &(Sort 2)) &((Λ(⊤, `(⊤, Sort 2), Sndc(`(⊤, Sort 2))) ∗)))
+&(Sort 1)) Sort 0)
+\end{leancode}
+\leanlink{https://github.com/lexzaiello/DCC/blob/5f26a668b478157af00039c1b4248c6576ad1e46/Dcc/Compile/Examples.lean}{Tag k-lean-comp-type-check: Dcc.Compile.Examples}
 
 \section{Supplementary Materials}\label{appendix:sup}
 

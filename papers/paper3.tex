@@ -1034,10 +1034,10 @@ Domains for 2-ary functions are calculated by \leanlink{https://github.com/lexza
   Forall \(x\) which is a term in \(\beta\)-normal form, if \lean{h : Domain₂ x A B}, then \lean{domain₂? x = some ⟨A, B, h⟩}.
 \end{theorem}
 
-\begin{theorem}
+\begin{proof}
   Omitted. Proceed by induction on \(h\).
   \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L319}{Dcc.NormExpr.Domain.complete}
-\end{theorem}
+\end{proof}
 
 \begin{theorem}
   Forall \(x\) which is a term in \(\beta\)-normal form, if \lean{h₁ : Domain₂ x A B} and \lean{h₁ : Domain₂ x C D}, then \(A = C\) and \(B = D\).
@@ -1158,6 +1158,23 @@ The preimages under \(\eta\)-reduction \(x : \text{@GenericExpr A}\) are mapped 
   Suppose \(x\) is a term in \(\beta\)-normal form, and that \lean{h : Domain₂ x A B}. Proceed by induction on \(h\). Since all domains are derived from term points, and since \(\eta\)-reducible terms do not contain holes, then neither \(A\) nor \(B\) contain holes.
 
   \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L673}{Dcc.NormExpr.Domain2.no\_holes}
+\end{proof}
+
+\begin{theorem}\label{canoncomplete}
+  Forall \(x\) which is a term in \(\beta\)-normal form, where \lean{h₁ : Domain x A} or \lean{h₁ : Domain x A B}, and \lean{h₂ : Canonicalize x x'}, then \lean{canonicalize? x = some ⟨x, h₂⟩}.
+\end{theorem}
+
+\begin{proof}
+  Omitted. Proceed by induction on \(h\) and case splitting on the conclusion with respect to the definition of \lean{canonicalize?}.
+  \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Domain.lean\#L319}{Dcc.NormExpr.Domain.complete}
+\end{proof}
+
+\begin{theorem}
+  Forall \(x\) which is a term in \(\beta\)-normal form, if \lean{h₁ : Canonicalize x x₁} and \lean{h₁ : Canonicalize x x₂}, then \lean{x₁ = x₂}.
+\end{theorem}
+
+\begin{proof}
+  By completeness \ref{canoncomplete}: if \lean{h₁ : Canonicalize x x₁} and \lean{h₂ : Canonicalize x x₂}, then \lean{canonicalize? x = some ⟨x₁, h₁⟩} and \lean{canonicalize? x = some ⟨x₂, h₂⟩}. Hence, \lean{x₁ = x₂}.
 \end{proof}
 
 \section{Judgments are Canonical}

@@ -363,7 +363,7 @@ The full reduction rules are given in \ref{redrules}.
       {x y \barr x y'}}&\multicolumn{1}{l}{}
     \end{tabularx}
   }
-  \caption{\label{redrules}Where \(\barr\) represents single-step beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code. \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Aff/Red.lean}{GenericExpr.RedAff}}
+  \caption{\label{redrules}Where \(\barr\) represents single-step beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code. \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L13}{Dcc.GenericExpr.RedAff}}
   
 \end{figure}
 
@@ -537,24 +537,48 @@ We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in o
     {f : (x : A) \arr B x, x : A}
     {f x : B x}}
   \end{tabular}}
-\caption{\label{inferrule}\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\). \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}{GenericExpr.Judge3}}
+\caption{\label{inferrule}\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\). \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Judge3.lean\#L212}{Dcc.GenericExpr.Judge3}}
 \end{figure}
 
 Our inference rules are intuitive. For example, curry and eval mirror \(\Sigma\) currying and uncurrying in Lean 4 \autocite{curry:mathlib}:
 
+\begin{figure}
+  \begin{minipage}{0.45\textwidth}
 \begin{leancode}
 def Sigma.curry {γ : ∀ a, β a → Type*} (f : ∀ x : Sigma β, γ x.1 x.2) (x : α) (y : β x) : γ x y :=
   f ⟨x, y⟩
 \end{leancode}
+    \end{minipage}
+    \begin{minipage}{0.45\textwidth}
+      \begin{equation}
+        \inferrule[Curr]
+        {B : A \arr \sort{u}, x : (x : (x : A) \times B x) \arr C x}
+        {\Lambda (A, B, x) : (x : A) \arr (y : B x) \arr C \llb B \rrb (x, y)}
+      \end{equation}
+    \end{minipage}
+\caption{\label{isocurry}\(\Lambda\) behaves identically to dependent currying in Mathlib in Lean 4.}
+\end{figure}
 
+\begin{figure}
+  \begin{minipage}{0.45\textwidth}
 \begin{leancode}
 def Sigma.uncurry {γ : ∀ a, β a → Type*} (f : ∀ (x) (y : β x), γ x y) (x : Sigma β) : γ x.1 x.2 :=
   f x.1 x.2
 \end{leancode}
+    \end{minipage}
+    \begin{minipage}{0.45\textwidth}
+      \begin{equation}
+        \inferrule[Eval]
+        {A : \sort{u}, B : A \arr \sort{v}, x : (x : A) \arr (y : B x) \arr C x y}
+        {\text{Eval}(A, B, x) : (x : (x : A) \times B x) \arr \text{Eval}(A, B, C)}
+      \end{equation}
+    \end{minipage}
+\caption{\label{isoeval}\(\text{Eval}\) behaves identically to dependent uncurrying in Mathlib in Lean 4.}
+\end{figure}
 
 Our usage of points as indexes of the environment is appealing, since universe levels are never specified explicitly, thus avoiding universe arithmetic.
 
-\subsubsection{Examples of Type-Checking: Compiling the Dependent \(K\) Combinator}
+\subsubsection{Examples of Type-Checking}
 
 The dependent \(K\) combinator is written in Lean as:
 
@@ -579,7 +603,22 @@ Messages here:
 -/
 \end{leancode}
 
-\section{Affine logic: strong normalization for free}
+Notably, equalities between functions are provable with \lean{refl} in DCC due to computable function extensionality:
+
+\begin{leancode}
+#eval (DCC (Id(Id(Sort 0) = Id(Sort 0) ∘' Id(Sort 0) ∘' Id(Sort 0))
+  (refl(Id(Sort 1)) &((Π(Id(Sort 1), `(Sort 1, `(Sort 0, Sort 0))) Sort 0))
+                    &(Id(Sort 0))))).infer.isOk
+/-
+Messages here:
+195:0:
+true
+-/
+\end{leancode}
+
+Here, \lean{Id(Id(Sort 0) = Id(Sort 0) ∘' Id(Sort 0) ∘' Id(Sort 0))} expects a proof of equality between two functions which are not \(\beta_{=}\). However, \lean{refl} sufffices due to eager \(\beta\)-reduction, judgment canonicity, and well-behaved \(\eta\)-reduction. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Examples3.lean\#L192}{Dcc.Examples3}
+
+\subsection{Affine logic: strong normalization for free}
 
 Contraction is restricted in DCC, as in affine logic. Strong normalization is inherited as such and provable by a simple syntactic decreasing measure. The size measure sums the size of each combinator's points and performs simple arithmetic for an ordering matching combinator precedence. In boxes, the size of its point \(x\) is counted thrice so that consuming it with a pair decreases the program's size, rather than increasing it:
 
@@ -619,10 +658,10 @@ def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   | DCC[.] (f x) => f.size + x.size
   | .const _ => 0
 \end{leancode}
-\caption{Our basic syntactic term size measure: \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Aff/Size.lean}{GenericExpr.size}}
+\caption{Our basic syntactic term size measure: \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Aff/Size.lean}{Dcc.GenericExpr.size}}
 \end{figure}
 
-\begin{theorem}
+\begin{theorem} \label{thm:dec}
   If \(A\) and \(B\) are terms and \(A \barr B\), then \(\comb{\text{size}}{B} < \comb{\text{size}}{A}\).
 \end{theorem}
 
@@ -634,39 +673,153 @@ By induction on the reduction relation.
 theorem RedAff.decreasing' (h : RedAff A B) : size B < size A := by
   induction h <;> grind
 \end{leancode}
-\hfill \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Aff/Red.lean}{GenericExpr.RedAff}
+\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Aff/Red.lean\#L561}{Dcc.GenericExpr.RedAff.decreasing'}
 \end{proof}
 
-\begin{comment}
-  Elaborate more on results:
+\subsection{Strong Normalization}
 
-  - Based on categorical combinators
-    - Much easier to write types as a user
-      - \Pi type design
-        - Threading values through \Pi to eliminate sources of duplication
-      - We determine the types of primitive objects from points, rather than applied arguments
-        - This allows the type-checker to infer sorts and most type arguments
-          - Eases burden on the user         
-  - Uses affine logic: weakening is permitted, but contraction is constrained
-    - Bang modality and boxes
-  - Strong normalization provable by simple decreasing syntactic size measure
-  - Since we have SN, there is no need for a catch-all conversion constructor in the Judge relation
-    - There is only one valid type for a given term
-      - -> refl is the only possible constructor of equality
-        - Extensional equality reflection provable as a metatheorm
-    - Metatheory is much easier
-  - \eta-reduction in the categorical combinators is very well-behaved, thus inducing function extensionality
-    - Equalities between functions (e.g., Id(A) = Id(A) \circ Id(A)) are provable with just refl
+\begin{theorem} \label{thm:dec}
+  If \(A\) is a term, and if that \(A \barr B\) implies \(B\) is accessible forall terms \(B\), then  \(A\) is accessible.
+\end{theorem}
 
-Ending: our choice of combining categorical combinators with dependent types and affine logic induces strong normalization, computable function extensionality and equality reflection as metatheorems, and decidable type-checking. To date, this calculus is the only one where these features coexist. Dependently-typed combinators are "highly nontrivial." Most importantly, decidable type-checking with function extensionality has thus far been deemed impossible.
-  
-\end{comment}
+\begin{proof}
+  Suppose \(A\) and \(B\) are terms such that \(A \barr B\) and \(B\) is accessible. Then, by well-founded induction with respect to the size of \(A\) (by \label{thm:dec}), \(A\) is accessible.
 
-\section{A recipe for decidable type-checking}
+\begin{leancode}
+@[dcc_force_reduce, dcc_force_aff]
+instance RedAff.instRedRel.{u} {τ : Type u} : RedRel (α := GenericExpr τ) (RedAff (τ := τ)) size where
+  run := step?
+  decreasing := decreasing'
 
-\subsection{Global confluence}
+def RedRel.sn.{u} {α : Type u} {r : α → α → Prop} (t : outParam (α → ℕ))
+  {m : Sort ((max u 0) + 1) → Sort ((max u 0) + 1)} [Monad m]
+  (hR : RedRel r t (m := m)) (e : α) : Acc (fun b a => r a b) e := Acc.intro e (fun e' hr => by
+    have h := hR.decreasing hr
+    exact sn t hR e')
+termination_by t e
+\end{leancode}
+
+\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Relation.lean\#L99}{Dcc.GenericExpr.RedRel.sn}
+\end{proof}
+
+\subsection{Confluence}
+
+Local and global confluence hold in DCC. Our step relation uses a call-by-value semantics, so reduction paths are not deterministic. It is provable by parallel induction on \(A \barr B\) and case-splitting on \(A \barr C\).
+
+\begin{theorem} \label{thm:conf}
+  If \(A\), \(B\), and \(C\) are terms and \(A \barr B\) and \(A \barr C\), then there exists \(D\) such that \(B \barr^{*} D\) and \(C \barr^{D}\).
+\end{theorem}
+
+\begin{proof}
+By parallel induction on \(A \barr B\) and case-splitting on \(A \barr C\).
+\begin{leancode}
+
+theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (τ := α)) A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
+  induction h₁ generalizing C with
+  | evalc =>
+    cases h₂ with
+    | evalc => exact ⟨_, .refl, .refl⟩
+    | congrFun h => cases h
+    | congrArg h =>
+      cases h with
+      | sigl h => exact ⟨_, .single (.congrFun (.congrArg h)), .single .evalc⟩
+      | sigr h => exact ⟨_, .single (.congrArg h), .single .evalc⟩
+  | curr =>
+    cases h₂ with
+    | curr => exact ⟨_, .refl, .refl⟩
+    | congrFun h =>
+      cases h with
+      | congrFun h => cases h
+      | congrArg h => exact ⟨_, .single (.congrArg (.sigl h)), .single .curr⟩
+    | congrArg h => exact ⟨_, .single (.congrArg (.sigr (by assumption))), .single .curr⟩
+  | congrFun h_r ih =>
+    cases h₂
+    case comp₂ | fmap | unmap | unbox | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
+    case _ => sorry -- omitted for brevity
+    case congrFun f f' x f'' h =>
+      have ⟨_, h₁, h₂⟩ := ih h
+      exact ⟨_, congrFun' h₁, congrFun' h₂⟩
+    case congrArg f f' x x'' h_x =>
+      exact ⟨_, congrArg' (.single h_x), congrFun' (.single h_r)⟩
+  | congrArg h_r ih =>
+    cases h₂ with
+    | eql
+    | fmap
+    | map | unbox | unmap
+    | pair => cases h_r
+    | evalc => cases h_r with
+      | sigl h => exact ⟨_, .single .evalc, .single (.congrFun (.congrArg h))⟩
+      | sigr h => exact ⟨_, .single .evalc, .single (.congrArg h)⟩
+    | _ => sorry -- omitted for brevity
+    | congrFun => exact ⟨_, congrFun' (.single (by assumption)), congrArg' (.single (by assumption))⟩
+    | congrArg h =>
+      have ⟨D, h₁, h₂⟩ := ih h
+      exact ⟨_, congrArg' h₁, congrArg' h₂⟩
+  | _ => sorry -- omitted for brevity
+\end{leancode}
+We have omitted most of the proof for brevity.\hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Aff/Red.lean\#L163}{Dcc.GenericExpr.RedAff.conf}
+\end{proof}
+
+\begin{theorem} \begin{thm:confglobal}
+  If \(A\), \(B\), and \(C\) are terms and \(A \barr^{*} B\) and \(A \barr^{*} C\), then there exists \(D\) such that \(B \barr^{*} D\) and \(C \barr^{D}\).
+\end{theorem}
+
+\begin{proof}
+  By Newmann's lemma \autocite{newman1942theories} and \ref{thm:conf}:
+
+  Suppose \(A\), \(B\), and \(C\) are terms, and \(h_{1} : A \barr^{*} B\) and \(h_{2} : A \barr^{*} C\). We proceed by head induction on \(h_{1}\) with respect to the reduction relation.
+  \begin{itemize}
+    \item Refl case:
+      Suppose \(h_{1} = \text{refl}\). Then, \(A = B\). We continue by case-splitting on \(h_{2}\):
+      \begin{itemize}
+        \item Refl case:
+          Suppose \(h_{2} = \text{refl}\). Then, \(B = C\). So, \(A = B\) and \(A = C\). Therefore, \(\text{refl} : B \barr^{*} A\) and \(\text{refl} : C \barr^{*} A\), so there exists \(D\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
+        \item Step case:
+          Suppose there exists \(hr : A \barr C\) and \(h_{2} = \text{single} hr\). Then, \(B \barr C\) and \(C \barr^{*} C\). By the inductive hypothesis, there exists \(D\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
+      \end{itemize}
+    \item Step case:
+      Suppose there exists \(hr : A \barr B\). We continue by case-splitting on \(h_{2}\):
+        \begin{itemize}
+          \item Refl case:
+            Suppose \(h_{2} = \text{refl}\). Then, \(B = C\), so \(\text{refl} : B \barr^{*} C\) and \(\text{refl} : C \barr^{*} C\). Hence, there exists \(D\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
+          \item Step case:
+            Suppose there exists \(hr_{2}\) such that \(hr_{2} : A \barr C\). Then, by local confluence, there exists \(D\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
+        \end{itemize}
+  \end{itemize}
+  \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L283}{Dcc.GenericExpr.Relation.RedRell.globally\_confluent}
+\end{proof}
 
 \subsection{Uniqueness of normal forms}
+
+\begin{theorem}
+  If \(A\) and \(B\) are terms, then, forall \(C\) where \(C\) is a term and \(A \barr^{*} B\) and \(A \barr^{*} C\) where \(B\) and \(C\) are normal forms, then \(B = C\).
+\end{theorem}
+
+\begin{proof}
+Suppose \(A\), \(B\), and \(C\) are terms, and \(hr_{1} : A \barr^{*} B\) and \(hr_{2} : A \barr^{*} C\) such that \(B\) and \(C\) are normal forms. Then, by global confluence \ref{thm:confglobal}, there exists \(D\), \(hr_{3}\), and \(hr_{4}\) such that \(hr_{3} : B \barr^{*} D\) and \(hr_{4} : C \barr^{*} D\). We proceed by parallel case-splitting on \(hr_{3}\) and \(hr_{4}\) and well-founded induction with respect to term size \ref{thm:dec} on the step relation.
+
+\begin{itemize}
+  \item Refl, refl case:
+    Suppose \(hr_{1} = \text{refl}\) and \(hr_{2} = \text{refl}\). Then, \(A = B\) and \(A = C\), so \(B = C\).
+  \item Step, refl case:
+    Suppose there exists \(hr\) such that \(hr_{1} = \text{step} hr\) and \(hr_{2} = \text{refl}\). Then, \(A = C\), so \(C \barr B\). Recall forall \(x\) where \(x\) is a term, \(x\) is a normal for if \(\neg \exists y, x \barr y\). Hence, \(B = C\) by contradiction.
+  \item Refl, step case:
+    Suppose there exists \(hr\) such that \(hr_{2} = \text{step} hr\) and \(hr_{1} = \text{refl}\). Then, \(A = B\), so \(B \barr C\). Hence, \(B = C\) by contradiction.
+  \item Step, step case:
+    Suppose there exists \(hr_{A}\) and \(hr_{B}\) such that \(hr_{1} = \text{step} hr_{A}\) and \(hr_{2} = \text{step} hr_{B}\). Then, by the inductive hypothesis, \(B = C\).
+  \end{itemize}
+  \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L366}{Dcc.GenericExpr.norm\_unique}
+\end{proof}
+
+\subsection{Decidability of \(\beta\)-reduction}
+
+We also demonstrate soundness and completeness of a \(\beta\)-reduction procedure (\lean{reduce RedAff A} forall terms \(A\)) with respect to the step relation.
+
+\begin{theorem}
+  If \(A\) and \(B\) are terms such that \(hr : A \barr^{*} B\) and \(B\) is a normal form, then \lean{reduce RedAff A = ⟨B, hr⟩}.
+\end{theorem}
+
+The proof has been omitted for brevity. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L393}{Dcc.GenericExpr.reduce\_complete}
 
 \subsection{Judgments are Canonical}
 
@@ -688,6 +841,93 @@ Ending: our choice of combining categorical combinators with dependent types and
 
 \begin{comment}
 - No inductives
+\end{comment}
+
+\begin{comment}
+  High level flow:
+  1. Abstract
+  2. Introduction
+    2a. Background yadda yadda, segue into
+  3. A recipe for dependent combinator calculus
+    The recipe:
+  5. A recipe for computable function extensionality (overall description)
+    5a. [beta reduction] Affine insight: strong normalization by default (see below)
+      - No fallback conversion constructor
+    5b. [eta reduction] Cat. combinator insight (see below)
+      - Canonical eta-forms are well-behaved due to no open terms
+      - Canonical eta forms map onto morphisms in the category
+      5a + 5b = computable function extensionality with decidable type-checking
+  6. A recipe for extensional decidable type-checking *mostly engineering stuff and theorems, but maybe sprinkle theorems before?*
+    6.a Beta reduction
+      6.a.d Completeness proof (handwaved cuz boring af)
+    6.b Eta reduction
+      6.b.a Canonical forms under eta reduction correspond to morphisms in the CCC
+        6.b.a.a Give examples
+      6.b.b Approach is fully syntactic, but uses some NbE techniques
+        6.b.b.a Since combinator function types are determined by points in the AST, we can calculate the domain of each function by induction
+        6.b.b.b Each operation in the calculus is either
+          6.b.b.b.a Constant (reject argument)
+          6.b.b.b.b Identity (argument is spat back out)
+          6.b.b.b.c Projection (since we have Sigmas)
+          6.b.b.b.d Evaluation (applying a couple)
+          6.b.b.b.e Currying
+          6.b.b.b.f Any of the above, but with respect to an affine domain (e.g., !(A))
+          -- Note: these are operations in the CCC (+ affine)
+          => To observe the behavior of functions, look at how they reduce on generic arguments. Pick an argument not contained in the AST. Eta algorithm:
+            - Inject constant values called "holes", which are identified by a natural number "level" (hole 0) (hole 1)
+              - These cannot be projected, so generalize
+              - They also can't be unboxed *(A) hole = ???
+              - Or mapped *<f> hole = ???
+              - Or any of the above but for an affine value
+            - Generalize holes by plugging constant holes into terms with the desired shape
+            - For terms with domain Coup(B), look at domain of A to get hole for x, then apply that hole to B, create a couple and recurse:
+              〚B⟧(mk_hole A, mk_hole (reduce (B.app (mk_hole A))))
+            - For terms with domain !(A), recurse on A, then box: &(mk_hole A)
+            - Otherwise, increment level and create (hole (level + 1))
+            - Apply the hole to the function, and compare the output to the behavior of the canonical operations above, then select the appropriate function
+              - e.g., Fst(B) ∘ Id(Coup(B)) ⟦B⟧(hole 0, hole 1) = hole 0, which mapps through 6.b.b.b.b to Fst(B), regardless of comp with id
+              - Pi types are handled separately, since they are not functions
+                - Recurse on f_\a and f_\b for \Pi(f_\a, f_\b)
+                - Assume the environment is applied for (\Pi(f_\a, f_\b) env), recurse, then quote the env out
+        6.b.b.a Holes have the expected shape of the function so that terms don't get stuck. Behavior is then observed -> map onto the morphism
+      6.b.c Funext proof [already done just explain]
+        6.b.c.a Prove it first for eta
+          1. Normal funext assumption: f and g have same domain
+          2. Assume f beta reduces to f', and f' is normal
+          3. Assume g beta reduces to g', and g' is normal
+          4. Assume f' eta-reduces to f'' (single pass is normal so no worries about that, already proven (eta_reduce (eta_reduce f)) = eta_reduce f)
+          5. Assume g' eta-reduces to g''
+          6. Assume e_h is a hole matching f and g domain
+            - Have proved that this is preserved under the above reductions
+          7. Assume (f''.app e_h) beta-reduces to the normal form B
+          8. Assume (g''.app e_h) beta-reduces to the normal form B
+          9. Induct on the eta-reduction 4
+            9.a. Parallel case analysis on 5
+              9.a.1. If the eta-reductions were different, then the outputs of (g''.app e_h) wouldn't match output of (f''.app e_h)
+               since the operations in 6.b.b.b are all mutually exclusive with respect to holes and g'' cannot contain holes
+              9.a.2. Eliminate any goals where the eta-reductions were different since (red (g''.app e_h)) \neq (red (f''.app e_h)) (contradiction by 7 and 8 since B is normal and unique (by UNF proven already)
+              9.a.3. Only goals left are where the eta-reduction is the same. Hence, f'' = g''
+              => Great success
+        6.b.c.b Prove that forall f, if f is well-typed at (\Pi(f_a, f_b) env), then it must be eta-reducible
+          - This is pretty easy just induction on the judgment relation
+        6.b.c.c Assume f and g are well-typed at (\Pi(f_a, f_b) env), and that f and g are normal forms
+          - Assuming normal forms is justifiable, since we eagerly reduce in all constructors anyway, so unreduced f and g won't appear in our types and thus won't cause defeq mismatch
+        6.b.c.d By 6.b.c.b, f and g must eta-reduce to some f' and g'
+        6.b.c.f Assume (f'.app (mk_hole (dom f'))).red = (g'.app (mk_hole (dom g')))
+        6.b.c.d By 6.b.c.a, f' = g', and f' and g' are eta and beta normal, so they are exactly the form that will show up inside types, hence not causing and defeq mismatch
+        => Great success
+    6.c We eagerly reduce terms using beta + eta and no fallback conversion constructor
+      6.c.a [IMPORTANT] Consequence: there is only one valid judgment for a given term (canonical)
+        6.c.a.a Consequence: extensional elimination rule for prop. eq. reflection
+          6.c.a.a.a Explain proof
+        6.c.a.b Consequence: decidable type-checking NOT SEMI-DECIDABLE
+        6.c.a.c Consequence: metatheory is easier since no induction on conv
+  7. Notes / limitations
+    7.a Remarks on inductive types and NbE funext (probably not possible due to pattern matching?
+      TODO: determine this by adding Nat
+    7.b Foundational result. Stress this.
+  8. Conclusions
+    Idek dawg like I am astonished  
 \end{comment}
 
 \begin{comment}
@@ -877,8 +1117,11 @@ Things I want to cover
 \end{comment}
 
 \appendix
+\section{Supplementary Materials}\label{appendix:sup}
 
-\section{\label{kcomp}Dependent \(K\) Compilation}
+\textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}
+
+\subsection{\label{kcomp}Dependent \(K\) Compilation}
 
 \begin{leancode}
 (((((!Λ(⊤, `(⊤, Sort 3), !Λ(Coup(`(⊤, Sort 3)), Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))), !Λ(Coup(Π(Sndc(`(⊤, Sort 3)),
@@ -920,11 +1163,8 @@ Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(C
 Sort 2))))))))))⟩))))))) &(∗)) &(Sort 2)) &((Λ(⊤, `(⊤, Sort 2), Sndc(`(⊤, Sort 2))) ∗)))
 &(Sort 1)) Sort 0)
 \end{leancode}
-\leanlink{https://github.com/lexzaiello/DCC/blob/5f26a668b478157af00039c1b4248c6576ad1e46/Dcc/Compile/Examples.lean}{Tag k-lean-comp-type-check: Dcc.Compile.Examples}
+\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Compile/Examples.lean\#L51}{Tag k-lean-comp-type-check: Dcc.Compile.Examples}
 
-\section{Supplementary Materials}\label{appendix:sup}
-
-\textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}
 
 \printbibliography
 

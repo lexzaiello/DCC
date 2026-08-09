@@ -1262,13 +1262,9 @@ This proof is natural by the construction of \(\eta\)-normal forms, which are ob
   \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/dbb7769b538f7e9b4d6556ede98bcb5d4a8619b3/Dcc/Eta/Nbe/Funext/Binary.lean\#L20}{\lean{Dcc.NormExpr.EtaFn.Canonicalize.ext₁}}
 \end{proof}
 
-\section{Judgments are Canonical}
+\section{Decidable type-checking in extensional DTT}
 
-In DCC, there is exactly one valid judgment for a given term. Catch-all conversion is not permitted. Types are \(\beta\)-\(\beta\) reduced to normal forms eagerly in each inference rule. This is possible due to inheriting strong normalization as a consequence of the choice of affine logic.
-
-% TODO: canonical proof
-
-This fact has sweeping ramifications. In particular, the extensional equality reflection rule is possible.
+In DCC, there is exactly one valid judgment for a given term. Catch-all conversion is not permitted. Types are \(\beta\)-\(\beta\) reduced to normal forms eagerly in each inference rule. This is possible due to inheriting strong normalization as a consequence of the choice of affine logic. This fact has sweeping ramifications. In particular, the extensional equality reflection rule is possible.
 
 \subsection{Propositional equality reflection is a natural consequence of affine DTT}
 
@@ -1319,7 +1315,7 @@ Expr.tintro = Expr.tintro
 
 % TODO: ext elim proof
 
-\subsection{DCC has decidable type-checking}
+\subsection{A type-checker for DCC}
 
 We outline our implementation of a type-checker which has soundness and completeness with respect to the judgment relation at a high-level. The full implementation is available in the appendix \ref{checkerimpl}.
 
@@ -1441,58 +1437,6 @@ The type-checker is implemented as such (only the above cases are included for b
 \begin{leancode}
 def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : GenericExpr τ_c) : Except (TypeError e) ((t : GenericExpr τ_c) × Judge e t) :=
   match e with
-  | DCC? !<f> =>
-    match infer f with
-    | .ok ⟨τ_f, ht₁⟩ =>
-      match τ_f.read_arrow with
-      | .some ⟨_α, DCC? Sort _n, _m, harr⟩ =>
-        .ok ⟨_, .map ht₁ harr (reduce_reduces rfl)⟩
-      | _ => .error (.mark 3 (.unexpected τ_f f))
-    | .error e => .error (.sub f e)
-  /-| DCC? !<f> =>
-    match infer f with
-    | .ok ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht₁⟩⟩ =>
-      match (DCC? (f_β α)).reduce_all with
-      | (DCC? `(α₂, Sort n)) =>
-        if heq : (DCC? (f_β α)).reduce_all = (DCC? `(α, Sort n)) then
-          .ok ⟨_, ⟨.map ht₁ (reduce_reduces heq) (reduce_reduces rfl)⟩⟩
-        else .error (.mismatch (DCC? `(α, Sort n)) (DCC? (f_β α)).reduce_all f)
-      | x => .error (.mark 2 (.unexpected x f))
-    | .ok ⟨t, _⟩ => .error (.mark 1 (.unexpected t f))
-    | .error ε => .error (.sub f ε)-/
-  /-| DCC? !<f> =>
-    match infer f with
-    | .ok ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht₁⟩⟩ =>
-      .ok ⟨_, ⟨.map ht₁ (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
-    | .ok ⟨t, _⟩ => .error (.mark 1 (.unexpected t f))
-    | .error ε => .error (.sub f ε)-/
-  | DCC? $<f> =>
-    match f.infer with
-    | .ok ⟨(DCC? (Π(Id(Sort _m), _f_β) _α)), ht⟩ =>
-      .ok ⟨_, .fmap ht (reduce_reduces rfl) (reduce_reduces rfl)⟩
-    | .ok ⟨t, _⟩ => .error (.unexpected t f)
-    | .error ε => .error (.sub f ε)
-  | DCC? *<f> =>
-    match f.infer with
-    | .ok ⟨DCC? (Π(Id(Sort _m), _f_β) _α), ht₁⟩ =>
-      .ok ⟨_, .unmap ht₁ (reduce_reduces rfl) (reduce_reduces rfl)⟩
-    | .ok ⟨t, _⟩ => .error (.unexpected t f)
-    | .error ε => .error (.sub f ε)
-  | DCC? *(α) =>
-    match α.infer with
-    | .ok ⟨DCC? Sort _m, ht₁⟩ =>
-      .ok ⟨_, .unbox ht₁ (reduce_reduces rfl)⟩
-    | .ok ⟨t, _⟩ => .error (.unexpected t α)
-    | .error ε => .error (.sub α ε)
-  | DCC? !(τ) =>
-    match τ.infer with
-    | .ok ⟨DCC? Sort _m, ht⟩ => .ok ⟨_, .bang ht⟩
-    | .ok ⟨t, _⟩ => .error (.unexpected t τ)
-    | .error ε => .error (.sub τ ε)
-  | DCC? &(x) =>
-    match x.infer with
-    | .ok ⟨_τ, ht⟩ => .ok ⟨_, .box ht⟩
-    | .error ε => .error (.sub x ε)
   | DCC? ⊤ => .ok ⟨_, .top⟩
   | DCC? ⊥ => .ok ⟨_, .bot⟩
   | DCC? ∗ => .ok ⟨_, .tintro⟩
@@ -1502,53 +1446,6 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     | .ok ⟨DCC? Sort _m, ht⟩ => .ok ⟨_, .id ht (reduce_reduces rfl) (reduce_reduces rfl)⟩
     | .ok ⟨t, _⟩ => .error (.unexpected t α)
     | .error ε => .error (.sub α ε)
-  | DCC? (f ∘ g) =>
-    match infer g with
-    | .ok ⟨DCC? (Π(Id(Sort m), `(_m, *<Σ(__a, Λ(_a, _b, `(___a, β)))>)) !(α)), ht₁⟩ =>
-      if heq : (DCC? (Π(Id(Sort m), `(_m, *<Σ(__a, Λ(_a, _b, `(___a, β)))>)) !(α))) = comp.g.type α β m then
-        match infer f with
-        | .ok ⟨(DCC? (Π(Id(Sort n), f_γ) Coup(f_β))), ht₂⟩ =>
-          if _heq₂ : (DCC? (Π(Id(Sort n), f_γ) Coup(f_β))) = comp.f.type f_β f_γ n then
-            if heq₃ : f_β.reduce_all = (DCC? `(α, β)) then
-              .ok ⟨_, .comp (heq ▸ ht₁) ht₂ (reduce_reduces heq₃) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩
-            else .error (.mismatch (DCC? `(α, β)) f_β.reduce_all f)
-          else .error (.mismatch (comp.f.type f_β f_γ n) (DCC? (Π(Id(Sort n), f_γ) Coup(f_β))) f)
-        | .ok ⟨t, _⟩ => .error (.unexpected t f)
-        | .error ε => .error (.sub f ε)
-      else .error (.mismatch (comp.g.type α β m) (DCC? (Π(Id(Sort m), `(_m, *<Σ(__a, Λ(_a, _b, `(___a, β)))>)) !(α))) g)
-    | .ok ⟨t, _⟩ => .error (.unexpected t g)
-    | .error ε => .error (.sub g ε)
-  | DCC? (f ∘∘ g) =>
-    match infer g with
-    | .ok ⟨τ_g, ht₁⟩ =>
-      match τ_g.read_comp₂_g_type with
-      | .some ⟨_α, β, _m, hg⟩ =>
-        match infer f with
-        | .ok ⟨(DCC? (Π(Id(Sort n), f_γ) _a)), ht₂⟩ =>
-          if heq₂ : (DCC? (Π(Id(Sort n), f_γ) _a)) = comp₂.f.type β f_γ n then
-            .ok ⟨_, .comp₂ ht₁ hg (heq₂ ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩
-          else .error (.mismatch (comp₂.f.type β f_γ n) (DCC? (Π(Id(Sort n), f_γ) _a)) f)
-        | .ok ⟨t, _⟩ => .error (.unexpected t f)
-        | .error ε => .error (.sub f ε)
-      | _ => .error (.unexpected τ_g g)
-    | .error ε => .error (.sub g ε)
-  | DCC? (f ∘' g) =>
-    match infer g with
-    | .ok ⟨(DCC? (Π(Id(Sort _m), f_β₀) α)), ht⟩ =>
-      match (DCC? (f_β₀ α)).reduce_all with
-      | DCC? `(_α₀', β) =>
-        if heq₀ : (DCC? (f_β₀ α)).reduce_all = (DCC? (`(α, β))) then
-          match (infer f) with
-          | .ok ⟨(DCC? (Π(f_β, _γ) x_β)), ht₂⟩ =>
-            if heq : (DCC? (f_β x_β)).reduce_all = β then
-              .ok ⟨_, .comp' ht (reduce_reduces heq₀) ht₂ (reduce_reduces heq) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩
-            else .error (.mismatch β (DCC? (f_β x_β)).reduce_all f)
-          | .ok ⟨t, _⟩ => .error (.unexpected t f)
-          | .error ε => .error (.sub f ε)
-        else .error (.mismatch (DCC? (`(α, β))) (DCC? (f_β₀ α)).reduce_all g)
-      | other => .error (.unexpected other g)
-    | .ok ⟨t, _⟩ => .error (.unexpected t g)
-    | .error ε => .error (.sub g ε)
   | DCC? x = y =>
     match infer x with
     | .ok ⟨t_x, ht₁⟩ =>
@@ -1567,64 +1464,6 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
         .ok ⟨_, .refl ht₁ h (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ f_α)
     | .error ε => .error (.sub f_α ε)
-  | DCC? Σ(f_α, f_β) =>
-    match f_α.infer with
-    | .ok ⟨τ_f_α, h₁⟩ =>
-      match τ_f_α.read_arrow with
-      | .some ⟨δ, DCC? Sort _m, o, harr⟩ =>
-        match infer f_β with
-        | .ok ⟨τ_f_β, h₂⟩ =>
-          match τ_f_β.view_pi_f_β f_α δ o with
-          | .some ⟨_n, h₃⟩ =>
-            .ok ⟨_, .sigma h₁ harr h₂ h₃ (reduce_reduces rfl)⟩
-          | _ => .error (.unexpected τ_f_β f_β)
-        | .error ε => .error (.sub f_β ε)
-      | _ => .error (.unexpected τ_f_α f_α)
-    | .error ε => .error (.sub f_α ε)
-  | DCC? ⟦β⟧(x, y) =>
-    match infer x with
-    | .ok ⟨α, ht₁⟩ =>
-      match infer y with
-      | .ok ⟨βxm, ht₂⟩ =>
-        match β.infer with
-        | .ok ⟨τ_β, h₃⟩ =>
-          match τ_β.read_arrow₁ α with
-          | .some ⟨DCC? Sort _n, _m, harr⟩ =>
-            if heq : reduce_all (DCC? (β x)) = βxm then
-              .ok ⟨_, .mk ht₁ h₃ harr
-                (reduce_reduces (B := βxm) heq) (heq ▸ ht₂) (reduce_reduces rfl)⟩
-            else .error (.mismatch (reduce_all (DCC? (β x))) βxm y)
-          | _ => .error (.unexpected τ_β β)
-        | .error ε => .error (.sub β ε)
-      | .error ε => .error (.sub y ε)
-    | .error ε => .error (.sub x ε)
-  | DCC? Coup(β) =>
-    match infer β with
-    | .ok ⟨(DCC? (Π(Id(Sort _m), f_β) α)), ht⟩ =>
-      match (DCC? (f_β α)).reduce_all with
-      | DCC? `(_α₂, Sort n) =>
-        if heq : (DCC? (f_β α)).reduce_all = DCC? `(α, Sort n) then
-          .ok ⟨_, .coup ht (reduce_reduces heq) (reduce_reduces rfl)⟩
-        else .error (.mismatch (DCC? `(α, Sort n)) (DCC? (f_β α)).reduce_all β)
-      | other => .error (.unexpected other β)
-    | .ok ⟨t, _⟩ => .error (.unexpected t β)
-    | .error ε => .error (.sub β ε)
-  | DCC? Fst(β) =>
-    match (infer β) with
-    | .ok ⟨τ_β, ht₁⟩ =>
-      match τ_β.read_arrow with
-      | .some ⟨_α, DCC? Sort _n, _m, harr⟩ =>
-        .ok ⟨_, .fstc ht₁ harr (reduce_reduces rfl) (reduce_reduces rfl)⟩
-      | _ => .error (.unexpected τ_β β)
-    | .error ε => .error (.sub β ε)
-  | DCC? Snd(β) =>
-    match (infer β) with
-    | .ok ⟨τ_β, ht₁⟩ =>
-      match τ_β.read_arrow with
-      | .some ⟨_α, DCC? Sort _n, _m, harr⟩ =>
-        .ok ⟨_, .sndc ht₁ harr (reduce_reduces rfl) (reduce_reduces rfl)⟩
-      | _ => .error (.unexpected τ_β β)
-    | .error ε => .error (.sub β ε)
   | DCC? Λ(α, β, x) =>
     match α.infer with
     | .ok ⟨DCC? Sort _m, ht⟩ =>
@@ -1643,25 +1482,6 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
       | .ok ⟨t, _⟩ => .error (.unexpected t x)
       | .error ε => .error (.sub x ε)
     | .ok ⟨t, _⟩ => .error (.unexpected t α)
-    | .error ε => .error (.sub α ε)
-  | DCC? !Λ(α, β, x) =>
-    match α.infer with
-    | .ok ⟨DCC? Sort _m, ht⟩ =>
-      match infer x with
-      | .ok ⟨DCC? (Π(f_α, _γ) x_α), ht₂⟩ =>
-        if heq : reduce_all (DCC? (f_α x_α)) = reduce_all (DCC? !(Coup(β))) then
-          .ok ⟨_, .curr'
-            ht
-            ht₂
-            (reduce_reduces heq.symm)
-            (reduce_reduces rfl)
-            (reduce_reduces rfl)
-            (reduce_reduces rfl)
-            (reduce_reduces rfl)⟩
-        else .error (.mismatch (reduce_all (DCC? !(Coup(β)))) (reduce_all (DCC? (f_α x_α))) x)
-      | .ok ⟨t, _⟩ => .error (.mark 2 (.unexpected t x))
-      | .error ε => .error (.sub x ε)
-    | .ok ⟨t, _⟩ => .error (.mark 1 (.unexpected t α))
     | .error ε => .error (.sub α ε)
   | DCC? Eval(α, β, x) =>
     match infer x with
@@ -1692,44 +1512,6 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
       else .error (.mismatch α (DCC? (f_α env)).reduce_all x)
     | .ok ⟨t, _⟩ => .error (.unexpected t x)
     | .error ε => .error (.sub x ε)
-  | DCC? `(β, x) =>
-    match infer x with
-    | .ok ⟨_α, ht₁⟩ =>
-      match infer β with
-      | .ok ⟨DCC? Sort _n, ht₂⟩ =>
-        .ok ⟨_, .quot ht₁ ht₂ (reduce_reduces rfl) (reduce_reduces rfl)⟩
-      | .ok ⟨t, _⟩ => .error (.unexpected t β)
-      | .error ε => .error (.sub β ε)
-    | .error ε => .error (.sub x ε)
-  | DCC? ⟦γ⟧⟨f, g⟩ =>
-    match infer f with
-    | .ok ⟨DCC? (Π(Id(Sort m), f_β) x_α), ht₁⟩ =>
-      match infer g with
-      | .ok ⟨DCC? (Π(f_α₂, f_β₂) α), ht₂⟩ =>
-        let β := (DCC? (f_β x_α)).reduce_all
-        match heqm : (DCC? (f_β₂ α)).reduce_all with
-        | DCC? (Π(β₂, γ₂)) =>
-          if heqa : x_α = (DCC? (f_α₂ α)).reduce_all then
-            if heqb : β₂.reduce_all = β then
-              if heq₂ : γ₂.reduce_all = γ.reduce_all then
-                .ok ⟨_, .pair
-                  ht₁
-                  (reduce_reduces rfl)
-                  ht₂
-                  (reduce_reduces rfl)
-                  (reduce_reduces heqm)
-                  (reduce_reduces heq₂)
-                  (reduce_reduces heqb)
-                  (reduce_reduces heqa.symm)
-                  (reduce_reduces rfl)⟩
-              else .error (.mismatch γ.reduce_all γ₂.reduce_all g)
-            else .error (.mismatch β β₂.reduce_all g)
-          else .error (.mismatch (DCC? (f_α₂ α)).reduce_all (DCC? (Id(Sort m) x_α)).reduce_all f)
-        | other => .error (.unexpected other g)
-      | .ok ⟨t, _⟩ => .error (.unexpected t g)
-      | .error ε => .error (.sub g ε)
-    | .ok ⟨t, _⟩ => .error (.unexpected t f)
-    | .error ε => .error (.sub f ε)
   | DCC? Π(f_α, f_β) =>
     match f_α.infer with
     | .ok ⟨τ_f_α, ht₁⟩ =>
@@ -1759,28 +1541,79 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
   | .const c => .error (.unexpected (.const c) (.const c))
 \end{leancode}
 
-% TOOD:
-% - theorem: judgments are canonical
+\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/0c0d1e06e022b0f7d11b2182cd9ce027add2dc45/Dcc/Judge3.lean\#L372}{\lean{Dcc.GenericExpr.infer}}
+
+Due to lacking general conversion, completeness of \lean{infer} with respect to \lean{Judge} is easy to prove by induction on the judgment relation and case splitting on the definition of \lean{infer}.
+
+\begin{theorem}\label{judgecomplete}
+  Forall terms \(x\) and \(\tau\), if \lean{h : Judge e τ}, then \lean{infer e = ok ⟨τ, h⟩}.
+\end{theorem}
+
+\begin{proof}
+  By induction on the judgment relation and case splitting on the definition of \lean{infer}:
+
+\begin{leancode}
+def Judge.complete (h : Judge (τ_c := τ_c) e τ) : e.infer = .ok ⟨τ, h⟩ := by
+  induction h
+  case eq =>
+    dsimp only [infer]
+    dcc_aesop!
+  case refl =>
+    expose_names
+    dsimp only [infer]
+    simp only [a_ih, a_1.read_complete, a_2.eq]
+    grind
+  case id =>
+    expose_names
+    dsimp only [infer]
+    simp only [a_ih, a_1.eq, a_2.eq]
+    grind
+  case curr =>
+    expose_names
+    dsimp only [infer]
+    simp only [a_ih, a_ih_1, a_3.complete, a_3.eq, a_5.eq, a_2.complete, a_2.eq, a_4.eq, a_6.eq]
+    grind
+  case eval =>
+    expose_names
+    dsimp only [infer]
+    simp only [a_ih, a_ih_1, a_ih_2, a_1.eq, a_2.eq, a_5.eq, a_6.eq, a_7.eq]
+    grind
+  case pi =>
+    expose_names
+    dsimp only [infer]
+    simp only [a_ih, a_ih_1, a_1.read_complete, a_3.eq, a_5.eq]
+    cases a_3.complete
+    cases a_5.complete
+    simp only [a_4.complete]
+  case tintro | top | bot | sort => dsimp only [infer]
+  case app =>
+    expose_names
+    dsimp only [infer]
+    simp only [a_ih, a_ih_1, a_1.eq, a_3.eq, a_4.eq]
+    cases a_1.complete
+    cases a_3.complete
+    cases a_4.complete
+    simp only [h.complete]
+\end{leancode}
+  \textit{Cases omitted above are available on \href{https://github.com/lexzaiello/DCC/blob/0c0d1e06e022b0f7d11b2182cd9ce027add2dc45/Dcc/Metatheory/Decidability3.lean\#L11}{GitHub}.}
+\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/0c0d1e06e022b0f7d11b2182cd9ce027add2dc45/Dcc/Metatheory/Decidability3.lean\#L11}{\lean{Dcc.GenericExpr.Judge.complete}}
+\end{proof}
+
+\subsection{Judgments are Canonical}
+
+\begin{theorem}
+  Forall terms \(x\), \(\tau_{1}\), and \(\tau_{2}\), if \(x : \tau_{1}\) and \(x : \tau_{2}\), then \(\tau_{1} = \tau_{2}\).
+\end{theorem}
+
+\begin{proof}
+  Suppose \(x\), \(\tau_{1}\), and \(\tau_{2}\) are terms, such that \(h_1\) is a proof that \(x : \tau_{1}\) and \(h_2\) is a proof that \(x : \tau_{2}\). Then, by judgmental completeness \ref{judgecomplete}, \lean{infer x = ok ⟨τ₁, h₁⟩} and \lean{infer x = ok ⟨τ₂, h₂⟩}. Hence, \(\tau_1 = \tau_2\).
+\end{proof}
 
 \section{Examples of extensionality in DCC}
 
 \section{Comparison to observational type theory and cubical type theory}
 
-\section{A recipe for decidable extensional type-theory}
-
-\subsection{Computable function extensionality: a natural consequence of \(\eta\)-reduction}
-
-\subsection{Canonical judgments: computable extensional equality reflection}
-
-\section{Lean 4 Implementation}
-
-\subsection{Compiling Lean to Dependent Combinators}
-
-\subsection{Decompiling Lean from Dependent Combinators}
-
 \section{Conclusions \& Future Work}
-
-\section{Limitations}
 
 \begin{comment}
 - No inductives

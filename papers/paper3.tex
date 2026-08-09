@@ -129,8 +129,8 @@ The usual dependent types of \(S\) and \(K\) given by \ref{skty} \autocite[p. 10
 
 \begin{figure}
 \begin{align*}
-  K : (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (x : A) \arr  B x \arr A&\\
-  S x y z : (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (C : (x : A) \arr B x \arr \sort{s})\\
+  K &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (x : A) \arr  B x \arr A\\
+  S x y z &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (C : (x : A) \arr B x \arr \sort{s})\\
     &\arr (x : A) \arr (y : B x) \arr (z : A) \arr C z (y z)
 \end{align*}
 \caption{\label{skty}The usual dependent types of the \(S\) and \(K\) combinators}
@@ -736,7 +736,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | congrArg h => exact ⟨_, .single (.congrArg (.sigr (by assumption))), .single .curr⟩
   | congrFun h_r ih =>
     cases h₂
-    case comp₂ | fmap | unmap | unbox | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
+    case comp₂ | fmap | unmap | unbox | fst | snd | sigma | evalc | comp' | quot | id | comp => cases h_r
     case _ => sorry -- omitted for brevity
     case congrFun f f' x f'' h =>
       have ⟨_, h₁, h₂⟩ := ih h
@@ -926,13 +926,13 @@ Function domains are inferred as such \label{domunary} \label{dombinary}.
       \multicolumn{1}{r}{\inferrule[Id]
       { }
       {\dom{\comb{Id}{A}} \coloneq A}}\\\\
-      \multicolumn{1}{l}{\inferrule[Fstc]
+      \multicolumn{1}{l}{\inferrule[Fst]
       { }
-      {\dom{\comb{Fstc}{B}} \coloneq \comb{Coup}{B}}}&
+      {\dom{\comb{Fst}{B}} \coloneq \comb{Coup}{B}}}&
       \multicolumn{1}{c}{
-      \inferrule[Sndc]
+      \inferrule[Snd]
       { }
-      {\dom{\comb{Sndc}{B}} \coloneq \comb{Coup}{B}}}&
+      {\dom{\comb{Snd}{B}} \coloneq \comb{Coup}{B}}}&
       \multicolumn{1}{r}{\inferrule[Curr]
       { }
       {\dom{\Lambda (A, B, x)} \coloneq A}}\\\\
@@ -1093,18 +1093,18 @@ Canonical \(\eta\)-normal values are mutually exclusive and deterministic. This 
       \inferrule[Id]
       {\efn{x}{[A]}, (\neg \exists B C y, x = \Pi(B, C) y), \hole A y, x y \barrn y}
       {x \earr \comb{Id}{A}}\\\\
-      \inferrule[Fstc]
+      \inferrule[Fst]
       {\dom{B} = A, \efn{x}{[[\comb{Coup}{B}]}, \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn y}
-      {x \earr \comb{Fstc}{B}}\\\\
-      \inferrule[Sndc]
+      {x \earr \comb{Fst}{B}}\\\\
+      \inferrule[Snd]
       {\dom B A, \efn{x}{[\comb{Coup}{B}]}, \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn z}
-      {x \earr \comb{Sndc}{B}}\\\\
-      \inferrule[Fstc']
+      {x \earr \comb{Snd}{B}}\\\\
+      \inferrule[Fst']
       {\dom B A, \efn{x}{[!(\comb{Coup}{B})]}, \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn y}
-      {x \earr *\la \comb{Fstc}{B} \ra}\\\\
-      \inferrule[Sndc']
+      {x \earr *\la \comb{Fst}{B} \ra}\\\\
+      \inferrule[Snd']
       {\dom B A, \efn{x}{[!(\comb{Coup}{B})]}, \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn z}
-      {x \earr *\la \comb{Sndc}{B} \ra}\\\\
+      {x \earr *\la \comb{Snd}{B} \ra}\\\\
       \inferrule[Par]
       {\dom A y, ((\neg \exists A', A = \comb{Coup}{A'}) (\neg \exists A', A = !(A'))), \efn{x}{[A]}, \hole A y, x y \barrn x' y, \efn{x'}{[A]}}
       {x \earr x'}\\\\
@@ -1125,7 +1125,7 @@ Canonical \(\eta\)-normal values are mutually exclusive and deterministic. This 
       {x \earr !\Lambda(A, B, `(!(\comb{Coup}{B}), e'))}
     \end{tabularx}
     \end{center}
-  \caption{Where \(\earr\) represents function canonicalization. Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L49}{Dcc.NormExpr.EtaFn.Canonicalize}}
+  \caption{\label{canon}Where \(\earr\) represents function canonicalization. Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L49}{Dcc.NormExpr.EtaFn.Canonicalize}}
 \end{figure}
 
 The preimages under \(\eta\)-reduction \lean{x : @GenericExpr A} are mapped to identical terms in
@@ -1141,7 +1141,7 @@ The preimages under \(\eta\)-reduction \lean{x : @GenericExpr A} are mapped to i
     \item Concrete term case: by the inductive hypothesis, all of the term's points do not contain holes, and a conrete terms are not holes
     \item Constant case: if there exists some \(c : A\) such that \lean{x = const c}, then \lean{x' = const (EtaConst.const c)}. Since \lean{EtaConst.const} is not a hole, \(x'\) does not contain holes.
     \end{itemize}
-  \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Reflect.lean\#L17}{Dcc.GenericExpr.RedAff.tail\_no\_hole}
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Reflect.lean\#L17}{Dcc.GenericExpr.RedAff.tail\_no\_hole}
 \end{proof}
 
 \begin{theorem}
@@ -1177,28 +1177,77 @@ The preimages under \(\eta\)-reduction \lean{x : @GenericExpr A} are mapped to i
 
 \begin{proof}
   By completeness \ref{canoncomplete}: if \lean{h₁ : Canonicalize x x₁} and \lean{h₂ : Canonicalize x x₂}, then \lean{canonicalize? x = some ⟨x₁, h₁⟩} and \lean{canonicalize? x = some ⟨x₂, h₂⟩}. Hence, \lean{x₁ = x₂}.
-  \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L331}{Dcc.NormExpr.EtaFn.Canonicalize.unique}
+  \noindent\hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L331}{Dcc.NormExpr.EtaFn.Canonicalize.unique}
 \end{proof}
 
 \subsubsection{\(\eta\)-reduction is well-behaved and canonical}
 
-We note that the set of possible canonical values is mutually exclusive in behavior, as in \ref{uniqueeta}. That is, no two constructors share the same reduction when applied their respective holes. That is, if \(f \neq g\), and \(f\) and \(g\) are in \(\beta\)-\(\eta\)-normal form, then \(\neg (f x =_{\beta} g x)\) for all \(x\), where \(x\) is the appropriate hole determined by the domain of \(f\) and \(g\) as described in \ref{etadom}. By the contrapositive, if \((f x) =_{\beta} (g x)\), then \(f = g\).
+We note that the set of possible \(\eta\)-canonical values is mutually exclusive in behavior, as in \ref{uniqueeta}. That is, no two constructors share the same reduction when applied their respective holes. If \(f \neq g\), and \(f\) and \(g\) are in \(\beta\)-\(\eta\)-normal form, then \(\neg (f x =_{\beta} g x)\) for all \(x\), where \(x\) is the appropriate hole determined by the domain of \(f\) and \(g\) as described in \ref{etadom}. By the contrapositive, if \((f x) =_{\beta} (g x)\), then \(f = g\).
 
-\begin{theorem}
-  Forall \(x\), \(x₁\), and \(x₂\), where \lean{x}, \lean{x₁}, and \lean{x₂} are in normal form, if \lean{h₁ : Canonicalize x x₁} \lean{h₁ : Canonicalize x₁ x₂}, then \lean{x₁ = x₂}.
+\begin{theorem}\label{domsame}
+  Forall \lean{f₁} and \lean{f₂} where \lean{Canonicalize f₁ f₂}, \lean{dom(f₁) = dom(f₂)}.
 \end{theorem}
 
 \begin{proof}
-  By parallel case analysis on \lean{h₁} and \lean{h₂}. If \lean{x₁ ≠ x₂}, then \lean{h₂} implies that reduction of the applied holes does not match the behavior of the term \lean{x₁} in each case. Hence, cases where \lean{x₁ ≠ x₂} are eliminated. Thus, \lean{x₁ = x₂}.
+  Proceed by case analysis on the \(\eta\)-reduction relation. By construction, \lean{dom(f₁) = dom(f₂)}.
+\end{proof}
+
+\begin{theorem}\label{holesame}
+  Forall unary functions \lean{f₁} and \lean{f₂} where \lean{Canonicalize f₁ f₂} and \(\text{Hole} f_{1} x_{1}\) and \(\text{Hole} f_{2} x_{2}\), then \(x_{1} = x_{2}\).
+\end{theorem}
+
+\begin{proof}
+  Suppose \lean{f₁} and \lean{f₂} are unary \(\eta\)-reducible functions identified with domains \(A\) and \(B\), and are in \(\eta\)-normal form. Suppose \lean{h₁ : Hole A x₁} and \lean{h₂ : Hole B x₂}. Recall that by \ref{domsame}, \(A = B\). Hence, \lean{Hole A x₁ ∧ Hole A x₂}. By completeness of the hole-generation procedure with respect to the hole-generation relation, \lean{hole A = ⟨x₁, h₁⟩} and \lean{hole A = ⟨x₂, h₂⟩}. Hence, \lean{x₁ = x₂}.
+  \noindent\hfill\leanlink{https://github.com/lexzaiello/DCC/blob/dbb7769b538f7e9b4d6556ede98bcb5d4a8619b3/Dcc/Eta/Nbe/Hole.lean\#L341}{Dcc.NormExpr.Hole.complete}
+\end{proof}
+
+\begin{theorem}\label{canonapp}
+  Forall unary \(\eta\)-reducible terms \(f_{1}\) and \(f_{2}\) with domain \(A\) where \lean{h₁ : Canonicalize f₁ f₂}, and where \lean{Hole A x₁} and \lean{Hole A x₂}, then \(f_{1} x_{1} =_{\beta} f_{2} x_{2}\).
+\end{theorem}
+
+\begin{proof}
+  Suppose \(f_{1}\) and \(f_{2}\) are unary \(\eta\)-reducible terms identified by domain \(A\) and where \lean{h₁ : Canonicalize f₁ f₂}. Also, suppose \lean{Hole A x₁} and \lean{Hole A x₂}. Then, by \ref{holesame}, \(x_{1} = x_{2}\). Proceed by case analysis on \lean{h₁} \ref{canon}:
+  \begin{itemize}
+    \item \(\text{Id}\) case:
+      Suppose \(h₁\) is given by \(\text{Id}\). Then, \(f_{1} x_{1} =_{\beta} x_{1}\) and \(f_{2} = \comb{Id}{A}\). So, \(f_{2} x_{1} =_{\beta} x_{1}\). Hence \(f_{1} x_{1} =_{\beta} f_{2} x_{2}\).
+    \item \(\text{Fst}\) case:
+      Suppose \(h₁\) is given by \(\text{Fst}\). Then, there exists \(B\) such that \(A = \comb{Coup}{A}\) and \(x_{1a}\) and \(x_{1b}\) such that \(x_{1} = \llb B \rrb (x_{1a}, x_{1b})\). Then, \(f_{1} \llb B \rrb (x_{1a}, x_{1b}) =_{\beta} x_{1a}\) and \(f_{2} = \comb{Fst}{B}\). So, \(f_{2} \llb B \rrb (x_{1a}, x_{1b}) =_{\beta} x_{1a}\). Hence \(f_{1} x_{1} =_{\beta} f_{2} x_{2}\).
+    \item \(\text{Snd}\) case:
+      Suppose \(h₁\) is given by \(\text{Snd}\). Then, there exists \(B\) such that \(A = \comb{Coup}{A}\) and \(x_{1a}\) and \(x_{1b}\) such that \(x_{1} = \llb B \rrb (x_{1a}, x_{1b})\). Then, \(f_{1} \llb B \rrb (x_{1a}, x_{1b}) =_{\beta} x_{1b}\) and \(f_{2} = \comb{Snd}{B}\). So, \(f_{2} \llb B \rrb (x_{1a}, x_{1b}) =_{\beta} x_{1b}\). Hence \(f_{1} x_{1} =_{\beta} f_{2} x_{2}\).
+    \item \(\text{Fst'}\) case:
+      Suppose \(h₁\) is given by \(\text{Fst'}\). Then, there exists \(B\) such that \(A = !(\comb{Coup}{A})\) and \(x_{1a}\) and \(x_{1b}\) such that \(x_{1} = \&(\llb B \rrb (x_{1a}, x_{1b}))\). Then, \(f_{1} \&(\llb B \rrb (x_{1a}, x_{1b})) =_{\beta} x_{1a}\) and \(f_{2} = *\la\comb{Fst}{B}\ra\). So, \(f_{2} \&(\llb B \rrb (x_{1a}, x_{1b}) =_{\beta} x_{1a})\). Hence \(f_{1} x_{1} =_{\beta} f_{2} x_{2}\).
+    \item \(\text{Snd'}\) case:
+      Suppose \(h₁\) is given by \(\text{Snd'}\). Then, there exists \(B\) such that \(A = !(\comb{Coup}{A})\) and \(x_{1a}\) and \(x_{1b}\) such that \(x_{1} = \&(\llb B \rrb (x_{1a}, x_{1b}))\). Then, \(f_{1} \&(\llb B \rrb (x_{1a}, x_{1b})) =_{\beta} x_{1b}\) and \(f_{2} = *\la\comb{Snd}{B}\ra\). So, \(f_{2} \&(\llb B \rrb (x_{1a}, x_{1b}) =_{\beta} x_{1b})\). Hence \(f_{1} x_{1} =_{\beta} f_{2} x_{2}\).
+    \item \(\text{Quot}\) case:
+      Suppose \(h₁\) is given by \(\text{Snd'}\). Then, there exists \(c\) such that \(f_{1} x_{1} =_{\beta} c\), where \(x_{1} \notin c\). Hence, \(f_{2} = `(A, c)\) and \(f_{2} x_{1} = c\). Hence, \(f_1 x_1 =_{\beta} f_2 x_2\).
+  \end{itemize}
+\end{proof}
+
+\begin{theorem}
+  Forall \(f\), \f_1\), and \(f_2\), where \(f\), \(f_1\), and \(f_2\) are in normal form, and if \lean{h₁ : Canonicalize f f₁} \lean{h₂ : Canonicalize f₁ f₂}, then \(f_1 = f_2\).
+\end{theorem}
+
+\begin{proof}
+  Recall that \(\eta\)-normal forms are mutually exclusive in reduction with respect to their corresponding holes \ref{canon}. If \(f₁ \neq_{\beta} f₂\), then \(f_{1} x_{1} \neq_{\beta} f_{2} x_{1}\). However, by \ref{canonapp}, \(f_{1} x_{1} =_{\beta} f_2 x_1\). Therefore, by contradiction, \(f_1 = f_2\).
   \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize/Normal/Core.lean\#L27}{Dcc.NormExpr.EtaFn.Canonicalize.is\_norm\_fn}
 \end{proof}
 
 \begin{theorem}
-  Forall \(f\) and \(g\), where \(f\) and \(g\) are in \(\eta\)-normal form, and if \(f x =_{\beta} g x\), where \(x\) is the appropriate hole, then \(f = g\).
+  Suppose \(f\) and \(g\) are unary functions where \(f\) and \(g\) are in \(\eta\)-normal form by canonicalization. Then, if \(f x =_{\beta} g x\), where \(x\) is the appropriate hole, then \(f = g\).
 \end{theorem}
 
 \begin{proof}
-  
+  Suppose \(f\) and \(g\) are unary functions where \(f\) and \(g\) are in \(\eta\)-normal form. Recall by \ref{canonapp}, if \lean{Canonicalize f₁ f₂}, then \(f x_1 =_{\beta} g x_1\), where \(x_1\) is the appropriate hole identified by the domain of \(f\) and \(g\) \ref{domsame}. By the contrapositive, if \(f x_1 \neq_{\beta} g x_1\), then \(f \neq g\). Suppose \(f x_1 \neq_{\beta} g x_1\), then \(f \neq g\). However, since \lean{Canonicalize f₁ f₂}, \(f x_1 =_{\beta} g x_1\). Hence \(f = g\) by contradiction.
+  \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/dbb7769b538f7e9b4d6556ede98bcb5d4a8619b3/Dcc/Eta/Nbe/Funext/Unary.lean#L177}{\lean{Dcc.NormExpr.EtaFn.Canonicalize.ext₁}}
+\end{proof}
+
+\begin{theorem}
+  Suppose \(f\) and \(g\) are binary functions where \(f\) and \(g\) are in \(\eta\)-normal form by canonicalization. Then, if \(f x_1 x_2 =_{\beta} g x_1 x_2\), where \(x_1\) and \(x_2\) are the appropriate holes.
+\end{theorem}
+
+\begin{proof}
+  Suppose \(f\) and \(g\) are binary functions where \(f\) and \(g\) are in \(\eta\)-normal form. Suppose \lean{h : Canonicalize f₁ f₂} and that \(x_1\) and \(x_2\) are holes generated by the domain of \(f\) and \(g\). Similarly to in \ref{canonapp}, case analysis on \(h\) reveals that \(f x =_{\beta} g x\). By the contrapositive, if \(f x \neq_{\beta} g x\), then \(f \neq g\). Suppose \(f x_1 \neq_{\beta} g x_1\), then \(f \neq g\). However, since \lean{Canonicalize f₁ f₂}, \(f x_1 =_{\beta} g x_1\). Hence \(f = g\) by contradiction.
+  \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/dbb7769b538f7e9b4d6556ede98bcb5d4a8619b3/Dcc/Eta/Nbe/Funext/Binary.lean#L20}{\lean{Dcc.NormExpr.EtaFn.Canonicalize.ext₁}}
 \end{proof}
 
 \section{Judgments are Canonical}
@@ -1495,43 +1544,43 @@ Things I want to cover
 \subsection{\label{kcomp}Dependent \(K\) Compilation}
 
 \begin{leancode}
-(((((!Λ(⊤, `(⊤, Sort 3), !Λ(Coup(`(⊤, Sort 3)), Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))), !Λ(Coup(Π(Sndc(`(⊤, Sort 3)),
-Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))), (Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))), Λ(!(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (Eval(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)),
-Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), ((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))) ∘'
-Fstc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (Sndc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
-`(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))) ∘' Fstc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))))) ∘∘ ⟦Λ(Coup((Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
-`(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (((Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))) ∘' Fstc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
-`(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))) ∘' Fstc(`(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))))))⟧⟨Id(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
-`(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), Λ(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
-`(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (Sndc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))) ∘'
-Fstc(`(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
-`(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)),
-Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))))))⟩),
-((Sndc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))) ∘' *(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)),
-Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))))) ∘' Fstc((Eval(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))),
-((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))) ∘' Fstc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)),
-Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (Sndc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))) ∘' Fstc((Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))))) ∘∘ ⟦Λ(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
-`(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
-`(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))) ∘' Fstc((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))) ∘' Fstc(`(Coup((Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)),
-`(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))))))⟧⟨Id(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))),
-Sort 2))))))), Λ(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)),
-Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))),
-Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)),
-Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2))))))), (Sndc((Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))),
-Sort 2)))))) ∘' Fstc(`(Coup((Sndc(`(⊤, Sort 3)) ∘' Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)),
-Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))), Sort 2)))))), Coup((Sndc(`(⊤, Sort 3)) ∘'
-Fstc(Π(Sndc(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Sndc(`(⊤, Sort 3)), `(Coup(Sndc(`(⊤, Sort 3))),
-Sort 2))))))))))⟩))))))) &(∗)) &(Sort 2)) &((Λ(⊤, `(⊤, Sort 2), Sndc(`(⊤, Sort 2))) ∗)))
+(((((!Λ(⊤, `(⊤, Sort 3), !Λ(Coup(`(⊤, Sort 3)), Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))), !Λ(Coup(Π(Snd(`(⊤, Sort 3)),
+Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))), (Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))), Λ(!(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))), (Eval(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)),
+Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), ((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))) ∘'
+Fst((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))), (Snd(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)),
+`(Coup(Snd(`(⊤, Sort 3))), Sort 2)))) ∘' Fst((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))))) ∘∘ ⟦Λ(Coup((Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)),
+`(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))), (((Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))) ∘' Fst((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)),
+`(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))) ∘' Fst(`(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), Coup((Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))))))⟧⟨Id(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)),
+`(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))), Λ(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)),
+`(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))), (Snd((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))) ∘'
+Fst(`(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)),
+`(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)),
+Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))))))⟩),
+((Snd((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))) ∘' *(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)),
+Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))))) ∘' Fst((Eval(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))),
+((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))) ∘' Fst((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)),
+Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))), (Snd(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))) ∘' Fst((Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))))) ∘∘ ⟦Λ(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)),
+`(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), Coup((Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))), (((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)),
+`(Coup(Snd(`(⊤, Sort 3))), Sort 2))))) ∘' Fst((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))) ∘' Fst(`(Coup((Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)),
+`(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))))))⟧⟨Id(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))),
+Sort 2))))))), Λ(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)),
+Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), `(Coup((Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))),
+Sort 2)))))), Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)),
+Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2))))))), (Snd((Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))),
+Sort 2)))))) ∘' Fst(`(Coup((Snd(`(⊤, Sort 3)) ∘' Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)),
+Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))), Sort 2)))))), Coup((Snd(`(⊤, Sort 3)) ∘'
+Fst(Π(Snd(`(⊤, Sort 3)), Λ(Coup(`(⊤, Sort 3)), Snd(`(⊤, Sort 3)), `(Coup(Snd(`(⊤, Sort 3))),
+Sort 2))))))))))⟩))))))) &(∗)) &(Sort 2)) &((Λ(⊤, `(⊤, Sort 2), Snd(`(⊤, Sort 2))) ∗)))
 &(Sort 1)) Sort 0)
 \end{leancode}
 \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Compile/Examples.lean\#L51}{Tag k-lean-comp-type-check: Dcc.Compile.Examples}

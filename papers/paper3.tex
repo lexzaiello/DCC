@@ -534,12 +534,16 @@ We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in o
     \inferrule[Unbox]
     {A : \sort{u}}
     {*(A) : !(A) \arr A}} &
-    \multicolumn{2}{r}{
+    \multicolumn{1}{c}{
     \inferrule[App]
-    {f : (x : A) \arr B x, x : A}
-    {f x : B x}}
+    {f : (x : A_{1}) \arr B x, x : A_{2}, A_{1} \equiv A_{2}}
+    {f x : B x}}&
+    \multicolumn{1}{r}{
+    \inferrule[Def. Eq.]
+    {A_1 \barr^{!} B_1, B_1 \earr^{!} C\qquad A_2 \barr^{!} B_2, B_2 \earr^{!} C}
+    {A_1 \equiv A_2}}
   \end{tabular}}
-\caption{\label{inferrule}\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\). \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Judge3.lean\#L212}{Dcc.GenericExpr.Judge3}}
+\caption{\label{inferrule}\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\). The above inference rules implicitly \(\beta\)-\(\eta\) reduce the inferred type to normal form. This has been omitted for legibility. \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Judge3.lean\#L212}{Dcc.GenericExpr.Judge3}}
 \end{figure}
 
 Our inference rules are intuitive. For example, curry and eval mirror \(\Sigma\) currying and uncurrying in Lean 4 \autocite{curry:mathlib}:
@@ -1203,7 +1207,7 @@ We note that the set of possible \(\eta\)-canonical values is mutually exclusive
 
 \subsection{\(\eta\)-reduction induces computable function extensionality}
 
-This proof is natural by the construction of \(\eta\)-normal forms. \(f \earr g\) only if \(g\) observably mirrors \(f\) applied its respectives holes.
+This proof is natural by the construction of \(\eta\)-normal forms, which are observably mutually exclusive in behavior. \(f \earr g\) only if \(g\) observably mirrors \(f\) applied its respectives holes.
 
 \begin{theorem}\label{canonapp}
   Forall unary \(\eta\)-reducible terms \(f_{1}\) and \(f_{2}\) with domain \(A\) where \lean{h₁ : Canonicalize f₁ f₂}, and where \lean{Hole A x₁} and \lean{Hole A x₂}, then \(f_{1} x_{1} =_{\beta} f_{2} x_{2}\).
@@ -1255,6 +1259,22 @@ This proof is natural by the construction of \(\eta\)-normal forms. \(f \earr g\
 \end{proof}
 
 \section{Judgments are Canonical}
+
+In DCC, there is exactly one valid judgment for a given term. Catch-all conversion is not permitted. Types are \(\beta\)-\(\beta\) reduced to normal forms eagerly in each inference rule. This is possible due to inheriting strong normalization as a consequence of the choice of affine logic. This has sweeping ramifications. In particular, the extensional equality reflection rule is possible. Recall the extensional equality reflection rule:
+
+\begin{equation}
+  \inferrule[Eq. Reflect]
+  { h : x = y}
+  {x \equiv y}
+\end{equation}
+
+Note that our inference rules do not permit general conversion \ref{inferrule}. Instead, definitional equality is constrained to inference of application:
+
+\begin{equation}
+  \inferrule[App]
+  {f : (x : A) \arr B x, x : A}
+  {f x : B x}
+\end{equation}
 
 \section{A recipe for decidable extensional type-theory}
 

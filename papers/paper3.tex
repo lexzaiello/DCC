@@ -1180,7 +1180,7 @@ The preimages under \(\eta\)-reduction \lean{x : @GenericExpr A} are mapped to i
   \noindent\hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Eta/Nbe/Canonicalize.lean\#L331}{Dcc.NormExpr.EtaFn.Canonicalize.unique}
 \end{proof}
 
-\subsubsection{\(\eta\)-reduction is well-behaved and canonical}
+\subsection{\(\eta\)-reduction is well-behaved and canonical}
 
 We note that the set of possible \(\eta\)-canonical values is mutually exclusive in behavior, as in \ref{uniqueeta}. That is, no two constructors share the same reduction when applied their respective holes. If \(f \neq g\), and \(f\) and \(g\) are in \(\beta\)-\(\eta\)-normal form, then \(\neg (f x =_{\beta} g x)\) for all \(x\), where \(x\) is the appropriate hole determined by the domain of \(f\) and \(g\) as described in \ref{etadom}. By the contrapositive, if \((f x) =_{\beta} (g x)\), then \(f = g\).
 
@@ -1200,6 +1200,10 @@ We note that the set of possible \(\eta\)-canonical values is mutually exclusive
   Suppose \lean{f₁} and \lean{f₂} are unary \(\eta\)-reducible functions identified with domains \(A\) and \(B\), and are in \(\eta\)-normal form. Suppose \lean{h₁ : Hole A x₁} and \lean{h₂ : Hole B x₂}. Recall that by \ref{domsame}, \(A = B\). Hence, \lean{Hole A x₁ ∧ Hole A x₂}. By completeness of the hole-generation procedure with respect to the hole-generation relation, \lean{hole A = ⟨x₁, h₁⟩} and \lean{hole A = ⟨x₂, h₂⟩}. Hence, \lean{x₁ = x₂}.
   \noindent\hfill\leanlink{https://github.com/lexzaiello/DCC/blob/dbb7769b538f7e9b4d6556ede98bcb5d4a8619b3/Dcc/Eta/Nbe/Hole.lean\#L341}{Dcc.NormExpr.Hole.complete}
 \end{proof}
+
+\subsection{\(\eta\)-reduction induces computable function extensionality}
+
+This proof is natural by the construction of \(\eta)-normal forms. \(f \earr g\) only if \(g\) observably mirrors \(f\) applied its respectives holes.
 
 \begin{theorem}\label{canonapp}
   Forall unary \(\eta\)-reducible terms \(f_{1}\) and \(f_{2}\) with domain \(A\) where \lean{h₁ : Canonicalize f₁ f₂}, and where \lean{Hole A x₁} and \lean{Hole A x₂}, then \(f_{1} x_{1} =_{\beta} f_{2} x_{2}\).

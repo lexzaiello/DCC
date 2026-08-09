@@ -362,7 +362,10 @@ The full reduction rules are given in \ref{redrules}.
       {x y \barr x' y}}&
       \multicolumn{1}{c}{\inferrule[CongrArg]
       {y \barr y'}
-      {x y \barr x y'}}&\multicolumn{1}{l}{}
+      {x y \barr x y'}}&\multicolumn{1}{l}{}\\\\
+      \multicolumn{3}{c}{\inferrule[Eql]
+      { }
+      {Eql(B) x \&(y) \barr y = y}
     \end{tabularx}
   }
   \caption{\label{redrules}Where \(\barr\) represents single-step beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code. \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L13}{Dcc.GenericExpr.RedAff}}
@@ -446,7 +449,7 @@ We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in o
     \multicolumn{3}{l}{
     \inferrule[refl]
     {B : A \arr \sort{u}}
-    {\text{refl}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr (\text{Eql}(B) x y)}} &
+    {\text{refl}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr (\text{Eql}(B) x x)}} &
     \multicolumn{3}{r}{
     \inferrule[eql]
     {B : A \arr \sort{u}}
@@ -1272,9 +1275,20 @@ Note that our inference rules do not permit general conversion \ref{inferrule}. 
 
 \begin{equation}
   \inferrule[App]
-  {f : (x : A) \arr B x, x : A}
-  {f x : B x}
+  {f : (x : A_1) \arr B x, x : A_2, A_1 \equiv A_2, (B x) \barr^{!} C, C \earr^{!} D}
+  {f x : D}
 \end{equation}
+
+Also recall the inference rule for \(\text{ref}\):
+
+\begin{gather*}
+  \inferrule[refl]
+  {B : A \arr \sort{u}}
+  {\text{refl}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr (\text{Eql}(B) x x)}\qquad \therefore \qquad
+ \inferrule[refl app]
+  {B : A \arr \sort{u}, x : !(A), y : !(B x)}
+  {\text{refl}(B) \&(x) \&(y) : \arr ((\text{Eql}(B) \&(x) \&(y)) =_{\beta} x = x)}
+\end{gather*}
 
 \section{A recipe for decidable extensional type-theory}
 

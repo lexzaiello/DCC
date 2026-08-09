@@ -364,13 +364,14 @@ The full reduction rules are given in \ref{redrules}.
       \multicolumn{1}{c}{\inferrule[CongrArg]
       {y \barr y'}
       {x y \barr x y'}}&\multicolumn{1}{l}{}\\\\
-      \multicolumn{3}{c}{\inferrule[Eql]
+      \multicolumn{3}{c}{
+      \inferrule[Eql]
       { }
-      {Eql(B) x \&(y) \barr y = y}
+      {Eql(B) x \&(y) \barr y = y}}
     \end{tabularx}
   }
-  \caption{\label{redrules}Where \(\barr\) represents single-step beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code. \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L13}{Dcc.GenericExpr.RedAff}}
-  
+  \caption{\label{redrules}Where \(\barr\) represents single-step beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code.}
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L13}{Dcc.GenericExpr.RedAff}
 \end{figure}
 
 Since DCC is strongly normalizing by default, conversion in the judgment relation is avoided altogether. Types are eagerly reduced in every inference rule, instead of being permitted by general catch-all conversion. As a consequence, there is exactly one valid judgment for a given term. This had wide, sweeping ramifications, enabling equality reflection, and computable function extensionality when paired with \(\eta\)-reduction, while retaining decidability. As in intensional type theory, \(\text{refl}\) is the only inhabitant of equality. Since conversion is avoided, \(x = x\) is the \textit{only} valid equality judgment. Induction on conversion is also conveniently avoided in metatheorems due to eager type normalization.
@@ -547,7 +548,8 @@ We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in o
     {A_1 \barr^{!} B_1, B_1 \earr^{!} C\qquad A_2 \barr^{!} B_2, B_2 \earr^{!} C}
     {A_1 \equiv A_2}}
   \end{tabular}}
-\caption{\label{inferrule}\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\). The above inference rules implicitly \(\beta\)-\(\eta\) reduce the inferred type to normal form. This has been omitted for legibility. \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Judge3.lean\#L212}{Dcc.GenericExpr.Judge3}}
+  \caption{\label{inferrule}\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\). The above inference rules implicitly \(\beta\)-\(\eta\) reduce the inferred type to normal form. This has been omitted for legibility.}
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Judge3.lean\#L212}{Dcc.GenericExpr.Judge3}
 \end{figure}
 
 Our inference rules are intuitive. For example, curry and eval mirror \(\Sigma\) currying and uncurrying in Lean 4 \autocite{curry:mathlib}:
@@ -1343,7 +1345,7 @@ inductive DefEq.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Reduces τ₂ τ'
     → DefEq τ₁ τ₂
 \end{leancode}
-\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/891ac3750b8ed6d7ef7de14e01d4df5d8ed59129/Dcc/Judge3.lean#L141}{\lean{Dcc.GenericExpr.DefEq}}
+\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/891ac3750b8ed6d7ef7de14e01d4df5d8ed59129/Dcc/Judge3.lean\#L141}{\lean{Dcc.GenericExpr.DefEq}}
 
 The judgment relation is defined as such (some constructors have been omitted for brevity):
 
@@ -1428,7 +1430,7 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Reduces (DCC? (f_β x_α' x)) τ
     → Judge (DCC? (f x)) τ
 \end{leancode}
-\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/891ac3750b8ed6d7ef7de14e01d4df5d8ed59129/Dcc/Judge3.lean#L212}{\lean{Dcc.GenericExpr.Judge}}
+\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/891ac3750b8ed6d7ef7de14e01d4df5d8ed59129/Dcc/Judge3.lean\#L212}{Dcc.GenericExpr.Judge}
 
 Note that convesrion is restricted to type-checking applications, and we do not assume general catch-all conversion. Also, judgments live in \(\type{u}\), rather than \(Prop\), enabling extensional equality elimination as a computable definition.
 
@@ -1541,7 +1543,7 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
   | .const c => .error (.unexpected (.const c) (.const c))
 \end{leancode}
 
-\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/0c0d1e06e022b0f7d11b2182cd9ce027add2dc45/Dcc/Judge3.lean\#L372}{\lean{Dcc.GenericExpr.infer}}
+\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/0c0d1e06e022b0f7d11b2182cd9ce027add2dc45/Dcc/Judge3.lean\#L372}{Dcc.GenericExpr.infer}
 
 Due to lacking general conversion, completeness of \lean{infer} with respect to \lean{Judge} is easy to prove by induction on the judgment relation and case splitting on the definition of \lean{infer}.
 

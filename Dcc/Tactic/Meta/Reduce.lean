@@ -45,8 +45,8 @@ def step? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedAffMeta e e')
   match e with
   | (DCC[.] (`(_β, _x) _y))                             => return .some ⟨_, .quot⟩
   | (DCC[.] (Id(_α) _x))                                => return .some ⟨_, .id⟩
-  | (DCC[.] (Fstc(_α) ⟦_γ⟧(_a, _b)))                    => return .some ⟨_, .fstc⟩
-  | (DCC[.] (Sndc(_α) ⟦_γ⟧(_a, _b)))                    => return .some ⟨_, .sndc⟩
+  | (DCC[.] (Fst(_α) ⟦_γ⟧(_a, _b)))                    => return .some ⟨_, .fstc⟩
+  | (DCC[.] (Snd(_α) ⟦_γ⟧(_a, _b)))                    => return .some ⟨_, .sndc⟩
   | (DCC[.] ((x ∘' y) z))                               => return .some ⟨(DCC[.] (x (y z))), .comp'⟩
   | (DCC[.] ((x ∘ y) z))                                => return .some ⟨(DCC[.] (x (y z))), .comp⟩
   | (DCC[.] (Λ(_α, β, x) y z))                          => return .some ⟨(DCC[.] (x ⟦β⟧(y, z))), .curr⟩
@@ -85,8 +85,8 @@ def step_eta? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedEtaMeta e
       let e := q(RedEta.curr_quot (α := $raw_α) (x := $raw_x) (y := $raw_y))
       return .some ⟨DCC' `(y, x), .lean_expr e⟩
     else pure .none
-  | DCC[.] (Λ(_α, β, x ∘ Fstc(_β₂)) y) => return .some ⟨_, .curr_fst⟩
-  | DCC[.] (Λ(_α, β, x ∘' Fstc(_β₂)) y) => return .some ⟨_, .curr_fst'⟩
+  | DCC[.] (Λ(_α, β, x ∘ Fst(_β₂)) y) => return .some ⟨_, .curr_fst⟩
+  | DCC[.] (Λ(_α, β, x ∘' Fst(_β₂)) y) => return .some ⟨_, .curr_fst'⟩
   | DCC[.] Σ(α, f_β) => do
     match ← f_β.step_eta? with
     | .some ⟨_, h⟩ => return .some ⟨_, .sig' h⟩
@@ -109,14 +109,14 @@ def step_eta? (e : MetaExpr) : TacticM (Option ((e' : MetaExpr) × (RedEtaMeta e
       match ← x.step_eta? with
       | .some ⟨_, h⟩ => return .some ⟨_, .pi' h⟩
       | _ => return .none
-  | (DCC[.] `(α, x) ∘ Fstc(β)) => return .some ⟨_, .quot_fst⟩
-  | (DCC[.] `(α, x) ∘' Fstc(β)) => return .some ⟨_, .quot'_fst⟩
-  | (DCC[.] `(α, x) ∘ Sndc(β)) => return .some ⟨_, .quot_snd⟩
-  | (DCC[.] `(α, x) ∘' Sndc(β)) => return .some ⟨_, .quot'_snd⟩
-  | (DCC[.] (`(α, x) ∘ Fstc(β)) ∘ z) => return .some ⟨_, .quot_fst'⟩
-  | (DCC[.] (`(α, x) ∘' Fstc(β)) ∘' z) => return .some ⟨_, .quot'_fst'⟩
-  | (DCC[.] (`(α, x) ∘ Sndc(β)) ∘ z) => return .some ⟨_, .quot_snd'⟩
-  | (DCC[.] (`(α, x) ∘' Sndc(β)) ∘' z) => return .some ⟨_, .quot'_snd'⟩
+  | (DCC[.] `(α, x) ∘ Fst(β)) => return .some ⟨_, .quot_fst⟩
+  | (DCC[.] `(α, x) ∘' Fst(β)) => return .some ⟨_, .quot'_fst⟩
+  | (DCC[.] `(α, x) ∘ Snd(β)) => return .some ⟨_, .quot_snd⟩
+  | (DCC[.] `(α, x) ∘' Snd(β)) => return .some ⟨_, .quot'_snd⟩
+  | (DCC[.] (`(α, x) ∘ Fst(β)) ∘ z) => return .some ⟨_, .quot_fst'⟩
+  | (DCC[.] (`(α, x) ∘' Fst(β)) ∘' z) => return .some ⟨_, .quot'_fst'⟩
+  | (DCC[.] (`(α, x) ∘ Snd(β)) ∘ z) => return .some ⟨_, .quot_snd'⟩
+  | (DCC[.] (`(α, x) ∘' Snd(β)) ∘' z) => return .some ⟨_, .quot'_snd'⟩
   | .lean_expr e => do
     match ← lookup_local_hyp ``Expr.RedEta e with
     | .some (a, b) => return .some ⟨a, .lean_expr b⟩

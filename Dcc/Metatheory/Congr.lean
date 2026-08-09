@@ -5,8 +5,8 @@ import Dcc.Aff.Red
 namespace Expr
 
 inductive ProjectCurr : Expr → Expr → Prop
-  | fstc : ProjectCurr (DCC (Fstc(f_β) ⟦β⟧(x, b))) x
-  | sndc : ProjectCurr (DCC (Sndc(f_β) ⟦β⟧(a, x))) x
+  | fstc : ProjectCurr (DCC (Fst(f_β) ⟦β⟧(x, b))) x
+  | sndc : ProjectCurr (DCC (Snd(f_β) ⟦β⟧(a, x))) x
   | quot : ProjectCurr (DCC (`(β', x) y))  x
 
 namespace RedAff

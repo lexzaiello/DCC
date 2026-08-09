@@ -75,28 +75,28 @@ def K_example' : Expr :=
 
 #eval Std.format <| dcc_infer' {Expr.infer₂} {Expr.reduce_all₂} (fun (x : Sort 0) => x)
 
-#eval Std.format <| (DCC (!<Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))> &(⟦`(⊤, Sort 1)⟧(∗, Sort 0)))).reduce_all₂
+#eval Std.format <| (DCC (!<Π(Snd(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1)))> &(⟦`(⊤, Sort 1)⟧(∗, Sort 0)))).reduce_all₂
 
-#eval Std.format <| (DCC (Sndc(`(⊤, Sort 1)) (⟦`(⊤, Sort 1)⟧(∗, Sort 0)))).reduce_all₂
+#eval Std.format <| (DCC (Snd(`(⊤, Sort 1)) (⟦`(⊤, Sort 1)⟧(∗, Sort 0)))).reduce_all₂
 
 #eval Std.format <| K_example₂
 
-#eval Std.format <| (DCC (Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))) ⟦`(⊤, Sort 1)⟧(∗, Sort 0))).reduce_all₂
-#eval (DCC (Sndc(`(⊤, Sort 1)) ⟦`(⊤, Sort 1)⟧(∗, Sort 0))).reduce_all₂
+#eval Std.format <| (DCC (Π(Snd(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1))) ⟦`(⊤, Sort 1)⟧(∗, Sort 0))).reduce_all₂
+#eval (DCC (Snd(`(⊤, Sort 1)) ⟦`(⊤, Sort 1)⟧(∗, Sort 0))).reduce_all₂
 
-#eval Std.format <| (DCC !<Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))>).infer₂'
+#eval Std.format <| (DCC !<Π(Snd(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1)))>).infer₂'
 
 def S_example : Expr :=
   dcc_compile' {GenericExpr.infer₂} {GenericExpr.reduce_all₂}
     fun (α : Sort 1) (β : α → Sort 1) (γ : ∀ (x : α) (y : β x), Sort 1) (x : ∀ (x : α) (y : β x), γ x y) (y : ∀ (x : α), β x) (z : α) => x z (y z)
 
 #eval Std.format <| (DCC (*<(*<(`(Coup(`(⊤, Sort 1)), Sort 1))>)> ∘'
-                Fstc(!<(!<(Π(Sndc(`(⊤, Sort 1)),
-                           Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))>)>))).reduce_all₂
+                Fst(!<(!<(Π(Snd(`(⊤, Sort 1)),
+                           Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1))))>)>))).reduce_all₂
 
 #eval Sigma.fst <$> (DCC? (*<(*<(`(Coup(`(⊤, Sort 1)), Sort 1))>)> ∘'
-                Fstc(!<(!<(Π(Sndc(`(⊤, Sort 1)),
-                           Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))>)>))).domain? (τ_c := Unit)
+                Fst(!<(!<(Π(Snd(`(⊤, Sort 1)),
+                           Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1))))>)>))).domain? (τ_c := Unit)
 
 /-
 Deref order may be reversed?
@@ -120,5 +120,5 @@ in which case it should not be !(..), but actually !<...>? maybe.
 things under abstract are all functions of the context. so !(...) is wrong I think.
 -/
 
-#eval (DCC Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))).infer₂'
-#eval (DCC Π(Sndc(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))).infer₂'
+#eval (DCC Π(Snd(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1)))).infer₂'
+#eval (DCC Π(Snd(`(⊤, Sort 1)), Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1)))).infer₂'

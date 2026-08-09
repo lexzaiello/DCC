@@ -78,8 +78,8 @@ def Val.domain (f : Val) : Option ((α : Val) × f.Domain α) :=
     | _ => .none
   | Val(λ _env 1 => *(_α)) => .some ⟨_, .unbox⟩
   | Val(λ _env 1 => Id(_α)) => .some ⟨_, .id⟩
-  | Val(λ _env 1 => Fstc(_β)) => .some ⟨_, .fstc⟩
-  | Val(λ _env 1 => Sndc(_β)) => .some ⟨_, .sndc⟩
+  | Val(λ _env 1 => Fst(_β)) => .some ⟨_, .fstc⟩
+  | Val(λ _env 1 => Snd(_β)) => .some ⟨_, .sndc⟩
   | Val(λ _env 2 => Λ(_α, _β, _x)) => .some ⟨_, .curr₁⟩
   | Val(λ y::_env 1 => Λ(_α, β, _x)) =>
     match β.apply y with
@@ -236,14 +236,14 @@ def Neutral.quote (level : ℕ) (v : Neutral) : Option ((e : Expr) × v.Quote le
     match α.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .id h⟩
     | _ => .none
-  | Neutral(Fstc(α))    =>
-    have h_dec₁ : α.measure < Neutral(Fstc(α)).size := by
+  | Neutral(Fst(α))    =>
+    have h_dec₁ : α.measure < Neutral(Fst(α)).size := by
       grind
     match α.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .fstc h⟩
     | _ => .none
-  | Neutral(Sndc(α))    =>
-    have h_dec₁ : α.measure < Neutral(Sndc(α)).size := by
+  | Neutral(Snd(α))    =>
+    have h_dec₁ : α.measure < Neutral(Snd(α)).size := by
       grind
     match α.quote level with
     | .some ⟨_, h⟩ => .some ⟨_, .sndc h⟩

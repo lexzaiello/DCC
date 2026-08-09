@@ -102,13 +102,13 @@
       \multicolumn{1}{r}{\inferrule[Id]
       { }
       {\dom{\comb{Id}{A}} \coloneq A}}\\\\
-      \multicolumn{1}{l}{\inferrule[Fstc]
+      \multicolumn{1}{l}{\inferrule[Fst]
       { }
-      {\dom{\comb{Fstc}{B}} \coloneq \comb{Coup}{B}}}&
+      {\dom{\comb{Fst}{B}} \coloneq \comb{Coup}{B}}}&
       \multicolumn{1}{c}{
-      \inferrule[Sndc]
+      \inferrule[Snd]
       { }
-      {\dom{\comb{Sndc}{B}} \coloneq \comb{Coup}{B}}}&
+      {\dom{\comb{Snd}{B}} \coloneq \comb{Coup}{B}}}&
       \multicolumn{1}{r}{\inferrule[Curr]
       { }
       {\dom{\Lambda (A, B, x)} \coloneq A}}\\\\
@@ -230,18 +230,18 @@ We also make use of relations \(\text{Domain} x [A]\) and \(\text{Domain}_{2} x 
       \inferrule[Id]
       {\efn{x}{[A]}, (\neg \exists B C y, x = \Pi(B, C) y), \hole A y, x y \barrn y}
       {x \earr \comb{Id}{A}}\\\\
-      \inferrule[Fstc]
+      \inferrule[Fst]
       {\dom{B} = A, \efn{x}{[[\comb{Coup}{B}]}, \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn y}
-      {x \earr \comb{Fstc}{B}}\\\\
-      \inferrule[Sndc]
+      {x \earr \comb{Fst}{B}}\\\\
+      \inferrule[Snd]
       {\dom B A, \efn{x}{[\comb{Coup}{B}]}, \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn z}
-      {x \earr \comb{Sndc}{B}}\\\\
-      \inferrule[Fstc']
+      {x \earr \comb{Snd}{B}}\\\\
+      \inferrule[Fst']
       {\dom B A, \efn{x}{[!(\comb{Coup}{B})]}, \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn y}
-      {x \earr *\la \comb{Fstc}{B} \ra}\\\\
-      \inferrule[Sndc']
+      {x \earr *\la \comb{Fst}{B} \ra}\\\\
+      \inferrule[Snd']
       {\dom B A, \efn{x}{[!(\comb{Coup}{B})]}, \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn z}
-      {x \earr *\la \comb{Sndc}{B} \ra}\\\\
+      {x \earr *\la \comb{Snd}{B} \ra}\\\\
       \inferrule[Par]
       {\dom A y, ((\neg \exists A', A = \comb{Coup}{A'}) (\neg \exists A', A = !(A'))), \efn{x}{[A]}, \hole A y, x y \barrn x' y, \efn{x'}{[A]}}
       {x \earr x'}\\\\

@@ -107,8 +107,8 @@ syntax:max ident                                             : val_list
 
 syntax "val(" val_expr ")"                                   : neut_tm
 syntax "tm(" neut_tm ")"                                     : neut_tm
-syntax "Sndc(" val_expr,* ")"                                : neut_tm
-syntax "Fstc(" val_expr,* ")"                                : neut_tm
+syntax "Snd(" val_expr,* ")"                                : neut_tm
+syntax "Fst(" val_expr,* ")"                                : neut_tm
 syntax "*(" val_expr,* ")"                                   : neut_tm
 syntax "Id" val_expr,* ")"                                   : neut_tm
 syntax "Eql(" val_expr,* ")"                                 : neut_tm
@@ -150,8 +150,8 @@ syntax "NeutralAtom(" neut_atom ")" : term
 open Lean in
 macro_rules
   | `(NeutralTm(Id($α:val_expr))) => `((NeutralTm.id Val($α:val_expr)))
-  | `(NeutralTm(Fstc($α:val_expr))) => `((NeutralTm.fstc Val($α:val_expr)))
-  | `(NeutralTm(Sndc($α:val_expr))) => `((NeutralTm.sndc Val($α:val_expr)))
+  | `(NeutralTm(Fst($α:val_expr))) => `((NeutralTm.fstc Val($α:val_expr)))
+  | `(NeutralTm(Snd($α:val_expr))) => `((NeutralTm.sndc Val($α:val_expr)))
   | `(NeutralTm(Eql($α:val_expr))) => `((NeutralTm.eql Val($α:val_expr)))
   | `(NeutralTm(refl($α:val_expr))) => `((NeutralTm.refl Val($α:val_expr)))
   | `(NeutralTm(*($α:val_expr))) => `((NeutralTm.unbox Val($α:val_expr)))

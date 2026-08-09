@@ -22,11 +22,11 @@ inductive EqFn : Expr → Expr → Prop
     → Judge α (DCC Sort m)
     → EqFn (DCC (Eql(f_α) env)) (DCC ((α : Sort m) → Sort 0))
   | fstc  : Judge f_β (DCC ((x = y : Sort 0) → Sort n))
-    → EqFn (DCC (Fstc(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
+    → EqFn (DCC (Fst(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
   -- snd : x = y. snd component f_β fst. f_β is EqFn.
   | sndc  : Judge f_β (DCC ((α : Sort m) → Sort 0))
     → EqFn f_β (DCC ((α : Sort m) → Sort 0))
-    → EqFn (DCC (Sndc(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
+    → EqFn (DCC (Snd(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
   | quot  : Reduces x (DCC y = y)
     → Judge β (DCC Sort n)
     → EqFn (DCC `(β, x)) (DCC ((β : Sort n) → Sort 0))
@@ -80,8 +80,8 @@ Todo: mk_app?
 Operations that can occur under a Λ() that introduce a value (that is not the couple)
 -/
 inductive ProjectCurr : Expr → Expr → Prop
-  | fstc : ProjectCurr (DCC (Fstc(f_β) ⟦β⟧(x, b))) x
-  | sndc : ProjectCurr (DCC (Sndc(f_β) ⟦β⟧(a, x))) x
+  | fstc : ProjectCurr (DCC (Fst(f_β) ⟦β⟧(x, b))) x
+  | sndc : ProjectCurr (DCC (Snd(f_β) ⟦β⟧(a, x))) x
   | quot : ProjectCurr (DCC (`(β', x) y))  x
 
 inductive RedEql₃ : Expr → Expr → Prop
@@ -689,8 +689,8 @@ theorem Reduces.pi_shape (h : Reduces (DCC (Π(f_α, f_β) env)) τ) : ∃ f_β'
     sorry-/
 
 /-theorem RedAff.project_eq (hr : RedAff (DCC (f ⟦β⟧(a, b))) (DCC x = y)) :
-  (a = (DCC x = y) ∧ (∃ f_β, f = DCC (Fstc(f_β))))
-    ∨ (b = (DCC x = y) ∧ (∃ f_β, f = DCC (Sndc(f_β))))
+  (a = (DCC x = y) ∧ (∃ f_β, f = DCC (Fst(f_β))))
+    ∨ (b = (DCC x = y) ∧ (∃ f_β, f = DCC (Snd(f_β))))
     ∨ (∃ β', f = (DCC `(β', (x = y)))) := by
   cases hr with
   | quot =>
@@ -998,7 +998,7 @@ What can reduce to =(f_α) env x y?
 
 Id(_) (=(f_α) env x y)
 
-Fstc(_) (⟦_⟧((=(f_α) env x y), ...))
+Fst(_) (⟦_⟧((=(f_α) env x y), ...))
 
 What is well-typed at =(f_α) env x y?
 

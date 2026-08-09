@@ -209,7 +209,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
     let some s₂' ← checkTypeQ s₂ q(Type m')
       | throwError m!"not a valid sort: {e}"
     pure <| ⟨m'.succ.succ, s₁, s₂⟩
-  | (DCC? Fstc(β))             =>
+  | (DCC? Fst(β))             =>
     match ← β.to_lean with
     | ⟨.imax u' (.succ u_α'), τ_β, β'⟩ =>
       match τ_β with
@@ -218,7 +218,7 @@ def to_lean (e : Expr) : MetaM ((u' : Lean.Level) × (α : Q(Sort $u')) × Q($α
           q(∀ (x : Σ' a : $α, $β' a), $α), q(fun (x : Σ' a : $α, $β' a) => PSigma.fst x)⟩
       | τ_β => throwError m!"not a well-typed projection (Fst : {τ_β}) index: {β}"
     | _ => throwError m!"not a valid projection (Fst) index: {β}"
-  | (DCC? Sndc(β))             =>
+  | (DCC? Snd(β))             =>
     match ← β.to_lean with
     | ⟨.imax u' (.succ u_α'), τ_β, β'⟩ =>
       match τ_β with

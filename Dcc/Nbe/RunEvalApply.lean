@@ -37,11 +37,11 @@ def Expr.evaluate (env : List Semantic.Val) (e : Expr) : Option ((e' : Semantic.
     match α.evaluate env with
     | .some ⟨_, h_α⟩ => .some ⟨_, .id h_α⟩
     | _ => .none
-  | (DCC Fstc(β)) =>
+  | (DCC Fst(β)) =>
     match β.evaluate env with
     | .some ⟨_, h_β⟩ => .some ⟨_, .fstc h_β⟩
     | _ => .none
-  | (DCC Sndc(β)) =>
+  | (DCC Snd(β)) =>
     match β.evaluate env with
     | .some ⟨_, h_β⟩ => .some ⟨_, .sndc h_β⟩
     | _ => .none
@@ -120,8 +120,8 @@ def Semantic.Val.apply (f x : Semantic.Val) : Option ((e' : Semantic.Val) × Sem
   | Val(λ env 1 => Eql(f_α)), Val(neutral(&(x))) => .some ⟨_, .eql₂⟩
   | Val(λ env 1 => *(α)), Val(neutral(&(x))) => .some ⟨_, .unbox⟩
   | Val(λ env 1 => Id(α)), x => .some ⟨_, .id⟩
-  | Val(λ env 1 => Fstc(_α)), Val(neutral(⟦β⟧(a, b))) => .some ⟨_, .fstc⟩
-  | Val(λ env 1 => Sndc(_α)), Val(neutral(⟦β⟧(a, b))) => .some ⟨_, .sndc⟩
+  | Val(λ env 1 => Fst(_α)), Val(neutral(⟦β⟧(a, b))) => .some ⟨_, .fstc⟩
+  | Val(λ env 1 => Snd(_α)), Val(neutral(⟦β⟧(a, b))) => .some ⟨_, .sndc⟩
   | Val(λ env 2 => Λ(α, β, x)), Val(neutral(&(y))) => .some ⟨_, .curr₁⟩
   | Val(λ env 2 => !Λ(α, β, x)), Val(neutral(&(y))) => .some ⟨_, .curr'₁⟩
   | Val(λ env 1 => !<f>), Val(neutral(&(x))) =>

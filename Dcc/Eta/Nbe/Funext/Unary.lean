@@ -19,7 +19,7 @@ theorem elim' (h : RedAff x x) : False := by
   have h_dec := h.decreasing
   grind
 
-def no_fst_self (h : RedAff (DCC? (Fstc(β) x)) x) : False := by
+def no_fst_self (h : RedAff (DCC? (Fst(β) x)) x) : False := by
   cases h with
   | congrArg h =>
     have h_dec := h.decreasing
@@ -39,7 +39,7 @@ This property does not hold for quotation, however,
 since (`(β, x) x) = x
 
 -/
-def no_fst_self (h : RedAffNorm (DCC? (Fstc(β) x)) ⟨x, hn_x⟩) : False := by
+def no_fst_self (h : RedAffNorm (DCC? (Fst(β) x)) ⟨x, hn_x⟩) : False := by
   match h with
   | ⟨hrt, hn⟩ =>
     match hrt.cases_head with
@@ -66,7 +66,7 @@ def no_fst_self (h : RedAffNorm (DCC? (Fstc(β) x)) ⟨x, hn_x⟩) : False := by
         have h_dec := h.decreasing
         grind
 
-def no_snd_self (h : RedAffNorm (DCC? (Sndc(β) x)) ⟨x, hn_x⟩) : False := by
+def no_snd_self (h : RedAffNorm (DCC? (Snd(β) x)) ⟨x, hn_x⟩) : False := by
   match h with
   | ⟨hrt, hn⟩ =>
     match hrt.cases_head with

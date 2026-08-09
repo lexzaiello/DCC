@@ -11,12 +11,12 @@ Can quot be derived?
 #eval (Std.format ∘ Sigma.fst) <$> (DCC Id(Sort 1) ∘' Id(Sort 1)).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1) (Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Σ(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1)) )(Sort 0))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Fstc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Sndc(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Fst(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Snd(Id(Sort 2)) ⟦Id(Sort 2)⟧(Sort 1, Sort 0))).infer
 #eval (Std.format ∘ Sigma.fst) <$> (DCC ((Id(Sort 1) ∘' Id(Sort 1)) (Sort 0))).infer
 
 def mk_test_pair : Expr :=
-  DCC (⟦Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))⟩
+  DCC (⟦Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Sort 1))⟧⟨Id(Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), Fst(`(Sort 1, Sort 1)))⟩
     &(&(Sort 0)))
 
 def test_pair : Option Expr := Sigma.fst <$> mk_test_pair.infer
@@ -34,7 +34,7 @@ why does β need to receive a couple? something with duplication I recall.
 
 #eval (Std.format ∘ Sigma.fst) <$> (DCC (Id(Sort 1))).infer
 
-#eval (Std.format ∘ Sigma.fst) <$> (DCC (Λ(Sort 2, Id(Sort 2), Fstc(Id(Sort 2))) (Sort 1) (Sort 0))).infer
+#eval (Std.format ∘ Sigma.fst) <$> (DCC (Λ(Sort 2, Id(Sort 2), Fst(Id(Sort 2))) (Sort 1) (Sort 0))).infer
 
 def test_id_nested : Option Expr := do
   let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer
@@ -46,7 +46,7 @@ def test_id_nested : Option Expr := do
 (some (Coup(`(Sort 1,
        (Σ(Λ(Sort 1, `(Sort 1, Sort 1),
             Π(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Coup(`(Sort 1, Sort 1))))) ∘
-              Fstc(`(Sort 1, Sort 1))))
+              Fst(`(Sort 1, Sort 1))))
           Sort 0)))))
 
 this is exactly as expected, except the environment is discarded? Why?
@@ -60,7 +60,7 @@ Expected:
 
 Coup(Σ(Λ(Sort 1, `(Sort 1, Sort 1),
             Π(`(Sort 1, Sort 1), Λ(Sort 1, `(Sort 1, Sort 1), `(Coup(`(Sort 1, Sort 1)), Coup(`(Sort 1, Sort 1))))) ∘
-              Fstc(`(Sort 1, Sort 1)))))
+              Fst(`(Sort 1, Sort 1)))))
 -/
 
 /-
@@ -117,7 +117,7 @@ f_β := Λ(Sort 1, `(Sort 1, Sort 1),
          (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))
 -/
 
-#eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fstc(`(Sort 1, Sort 1)))).infer
+#eval Sigma.fst <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fst(`(Sort 1, Sort 1)))).infer
 
 #eval (DCC (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)).reduce_all
 

@@ -29,7 +29,7 @@ Both reduce to a common reduct?
 
 -/
 
-/-theorem coup_fst₂ (h : ⊢ (Fstc(β) ⟦β₂⟧(x, y)) : α) : ⊢ x : α := by
+/-theorem coup_fst₂ (h : ⊢ (Fst(β) ⟦β₂⟧(x, y)) : α) : ⊢ x : α := by
   match h with
   | .app h_t_f h_r_α h_t_x h_r_env h_r_τ =>
     match h_t_f with

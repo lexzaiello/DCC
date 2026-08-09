@@ -39,11 +39,11 @@ inductive EqFn : Expr → Expr → Prop
     → Judge α (DCC Sort m)
     → EqFn (DCC (Eql(f_α) env)) (DCC ((α : Sort m) → Sort 0))
   | fstc  : Judge f_β (DCC ((x = y : Sort 0) → Sort n))
-    → EqFn (DCC (Fstc(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
+    → EqFn (DCC (Fst(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
   -- snd : x = y. snd component f_β fst. f_β is EqFn.
   | sndc  : Judge f_β (DCC ((α : Sort m) → Sort 0))
     → EqFn f_β (DCC ((α : Sort m) → Sort 0))
-    → EqFn (DCC (Sndc(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
+    → EqFn (DCC (Snd(f_β))) (DCC ((Coup(f_β) : Sort n) → Sort 0))
   | quot  : Reduces x (DCC y = y)
     → Judge β (DCC Sort n)
     → EqFn (DCC `(β, x)) (DCC ((β : Sort n) → Sort 0))

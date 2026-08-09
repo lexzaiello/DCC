@@ -620,17 +620,17 @@ def Ctx.empty := DCC !(⊤)
 
 def cc_var (ctx : Ctx) (idx : ℕ) : Option Expr :=
   match ctx, idx with
-  | DCC Coup(β), .zero => pure <| DCC Sndc(β)
-  | DCC !(Coup(β)), .zero => pure <| DCC Sndc(β) ∘' *(Coup(β))
+  | DCC Coup(β), .zero => pure <| DCC Snd(β)
+  | DCC !(Coup(β)), .zero => pure <| DCC Snd(β) ∘' *(Coup(β))
   | DCC !(Coup(β)), .succ n => do
     match (← β.infer).fst with
     | DCC (Π(a, _b) x_α) =>
-      (·.comp' (DCC (Fstc(β)) ∘' !(Coup(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
+      (·.comp' (DCC (Fst(β)) ∘' !(Coup(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
     | _ => .none
   | DCC Coup(β), .succ n => do
     match (← β.infer).fst with
     | DCC (Π(a, _b) x_α) =>
-      (·.comp' (DCC (Fstc(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
+      (·.comp' (DCC (Fst(β)))) <$> cc_var (DCC (a x_α)).reduce_all n
     | _ => .none
   | _, _ => .none
 ```

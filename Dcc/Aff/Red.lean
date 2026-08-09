@@ -26,8 +26,8 @@ inductive RedAff.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
   | evalc    : RedAff (DCC[τ] (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC[τ] (x y z))
   | quot     : RedAff (DCC[τ] (`(β, x) y)) x
   | id       : RedAff (DCC[τ] (Id(α) x)) x
-  | fstc     : RedAff (DCC[τ] (Fstc(_α) ⟦β⟧(a, b))) a
-  | sndc     : RedAff (DCC[τ] (Sndc(_α) ⟦β⟧(a, b))) b
+  | fstc     : RedAff (DCC[τ] (Fst(_α) ⟦β⟧(a, b))) a
+  | sndc     : RedAff (DCC[τ] (Snd(_α) ⟦β⟧(a, b))) b
   | comp'    : RedAff (DCC[τ] ((x ∘' y) z)) (DCC[τ] (x (y z)))
   | comp     : RedAff (DCC[τ] ((x ∘ y) z)) (DCC[τ] (x (y z)))
   | comp₂    : RedAff (DCC[τ] ((x ∘∘ y) z)) (DCC[τ] (x (y z)))
@@ -72,8 +72,8 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
   | (DCC[?] (Eval(_α, _β, _x) ⟦__β⟧(_y, _z)))            => .some ⟨_, ⟨.evalc⟩⟩
   | (DCC[?] (`(_β, _x) _y))                              => .some ⟨_, ⟨.quot⟩⟩
   | (DCC[?] (Id(_α) _x))                                 => .some ⟨_, ⟨.id⟩⟩
-  | (DCC[?] (Fstc(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
-  | (DCC[?] (Sndc(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
+  | (DCC[?] (Fst(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
+  | (DCC[?] (Snd(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
   | (DCC[?] ((_x ∘' _y) _z))                             => .some ⟨_, ⟨.comp'⟩⟩
   | (DCC[?] ((_x ∘ _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
   | (DCC[?] ((_x ∘∘ _y) _z))                             => .some ⟨_, ⟨.comp₂⟩⟩

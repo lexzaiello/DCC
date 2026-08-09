@@ -28,10 +28,10 @@ namespace GenericExpr
 inductive EtaMap.{u} {τ_c : Type u} : (dom : GenericExpr (τ := EtaConst (τ := τ_c))) → (out : GenericExpr (τ := EtaConst (τ := τ_c))) → (hole_arg : GenericExpr (τ := EtaConst (τ := τ_c))) → (f' : GenericExpr (τ := EtaConst (τ := τ_c))) → Prop
   | id    : EtaMap dom hole_arg hole_arg (DCC? Id(dom))
   | par   : EtaMap dom (DCC? (f hole_arg)) hole_arg f
-  | fstc  : EtaMap dom (DCC? &(hole(a))) (DCC? ⟦β⟧(&(hole(a)), &(hole(a + 1)))) (DCC? Fstc(β))
-  | sndc  : EtaMap dom (DCC? &(hole(a + 1))) (DCC? ⟦β⟧(&(hole(a)), &(hole(a + 1)))) (DCC? Sndc(β))
-  | fstc' : EtaMap dom (DCC? hole(a)) (DCC? &(⟦β⟧(&(hole(a)), &(hole(a + 1))))) (DCC? *<Fstc(β)>)
-  | sndc' : EtaMap dom (DCC? hole(a + 1)) (DCC? &(⟦β⟧(&(hole(a)), &(hole(a + 1))))) (DCC? *<Sndc(β)>)
+  | fstc  : EtaMap dom (DCC? &(hole(a))) (DCC? ⟦β⟧(&(hole(a)), &(hole(a + 1)))) (DCC? Fst(β))
+  | sndc  : EtaMap dom (DCC? &(hole(a + 1))) (DCC? ⟦β⟧(&(hole(a)), &(hole(a + 1)))) (DCC? Snd(β))
+  | fstc' : EtaMap dom (DCC? hole(a)) (DCC? &(⟦β⟧(&(hole(a)), &(hole(a + 1))))) (DCC? *<Fst(β)>)
+  | sndc' : EtaMap dom (DCC? hole(a + 1)) (DCC? &(⟦β⟧(&(hole(a)), &(hole(a + 1))))) (DCC? *<Snd(β)>)
 
 /-
 hole(a) hole(a + 1)
@@ -331,21 +331,21 @@ def eta_reduce_tm₂.{u} {τ_c : Type u} [DecidableEq τ_c] (level : ℕ) (f : G
       else .none
   | .none => .none
 
-#eval (repr ∘ Sigma.fst) <$> (DCC? ((Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)) ∘'
-                         Fstc(Π(Sndc(`(⊤, Sort 1)),
-                                Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))) ∘'
-                      Fstc((Sndc(`(⊤, Sort 1)) ∘'
-                              Fstc(Π(Sndc(`(⊤, Sort 1)),
-                                     Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
-                                       `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))))).eta_reduce_tm₂ (τ_c := Unit) 0
+#eval (repr ∘ Sigma.fst) <$> (DCC? ((Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1)) ∘'
+                         Fst(Π(Snd(`(⊤, Sort 1)),
+                                Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1))))) ∘'
+                      Fst((Snd(`(⊤, Sort 1)) ∘'
+                              Fst(Π(Snd(`(⊤, Sort 1)),
+                                     Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)),
+                                       `(Coup(Snd(`(⊤, Sort 1))), Sort 1)))))))).eta_reduce_tm₂ (τ_c := Unit) 0
 
-#eval (repr ∘ Sigma.fst) <$> (DCC? ((Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)) ∘'
-                         Fstc(Π(Sndc(`(⊤, Sort 1)),
-                                Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(Coup(Sndc(`(⊤, Sort 1))), Sort 1))))) ∘'
-                      Fstc((Sndc(`(⊤, Sort 1)) ∘'
-                              Fstc(Π(Sndc(`(⊤, Sort 1)),
-                                     Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)),
-                                       `(Coup(Sndc(`(⊤, Sort 1))), Sort 1)))))))).domain₂? (τ_c := Unit)
+#eval (repr ∘ Sigma.fst) <$> (DCC? ((Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1)) ∘'
+                         Fst(Π(Snd(`(⊤, Sort 1)),
+                                Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(Coup(Snd(`(⊤, Sort 1))), Sort 1))))) ∘'
+                      Fst((Snd(`(⊤, Sort 1)) ∘'
+                              Fst(Π(Snd(`(⊤, Sort 1)),
+                                     Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)),
+                                       `(Coup(Snd(`(⊤, Sort 1))), Sort 1)))))))).domain₂? (τ_c := Unit)
 
 theorem EtaResult.complete.{u} {τ_c : Type u} [DecidableEq τ_c]
   {dom out hole_arg f' : GenericExpr (τ := EtaConst (τ := τ_c))} (h : EtaResult (τ_c := τ_c) dom out hole_arg f') : mk_eta_result dom out hole_arg = .some ⟨f', ⟨h⟩⟩ := by
@@ -973,7 +973,7 @@ abbrev red_eta'₂.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c)
 #eval (DCC `(Sort 1, Sort 1)).red_eta.fst
 #eval (DCC Id(Sort 1)).red_eta.fst
 #eval (DCC Λ(Sort 1, Id(Sort 1), Id(Coup(Id(Sort 1))) ∘' Id(Coup(Id(Sort 1))))).red_eta.fst
-#eval (DCC (Λ(Sort 1, Id(Sort 1), Sndc(Coup(Id(Sort 1)))) (Sort 0))).red_eta.fst
+#eval (DCC (Λ(Sort 1, Id(Sort 1), Snd(Coup(Id(Sort 1)))) (Sort 0))).red_eta.fst
 #eval (DCC Eql(Id(Sort 2))).red_eta.fst
 #eval (DCC Eql(Id(Sort 2))).red_eta.fst
 #eval (DCC ((Sort 0 : Sort 1) → Sort 2)).raw_repr

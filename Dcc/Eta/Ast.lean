@@ -24,9 +24,9 @@ If domain is:
   Projection eta:
     If application reduces to:
     1. Base eta (hole := 1), η-reduces to f₁
-      -> eta-reduces to f₁ ∘' Fstc(β)
+      -> eta-reduces to f₁ ∘' Fst(β)
     2. Base eta (hole := 2), η-reduces to f₁
-      -> eta-reduces to f₁ ∘' Sndc(β)
+      -> eta-reduces to f₁ ∘' Snd(β)
 
 - Sort | ⊤ | (Π(f_α, f_β) ...) | (f x)
   Use base
@@ -72,8 +72,8 @@ def contains_hole (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     | DCC[.] (x ∘∘ y)
     | DCC[.] (x y)
     | DCC[.] x = y => x.contains_hole ∨ y.contains_hole
-    | DCC[.] Fstc(α)
-    | DCC[.] Sndc(α)
+    | DCC[.] Fst(α)
+    | DCC[.] Snd(α)
     | DCC[.] Coup(α)
     | DCC[.] &(α)
     | DCC[.] !<α>
@@ -107,8 +107,8 @@ def hole_mem_tm (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     | DCC[.] (x ∘∘ y)
     | DCC[.] (x y)
     | DCC[.] x = y => x.hole_mem_tm ∨ y.hole_mem_tm
-    | DCC[.] Fstc(α)
-    | DCC[.] Sndc(α)
+    | DCC[.] Fst(α)
+    | DCC[.] Snd(α)
     | DCC[.] Coup(α)
     | DCC[.] &(α)
     | DCC[.] !<α>
@@ -154,8 +154,8 @@ def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] Coup(_β) => 0
   | DCC[.] Id((Π(_α, _β) _x_α)) => 2
   | DCC[.] Id(_α)      => 1
-  | DCC[.] Fstc(_α)    => 1
-  | DCC[.] Sndc(_α)    => 1
+  | DCC[.] Fst(_α)    => 1
+  | DCC[.] Snd(_α)    => 1
   | DCC[.] Π(_α, _β) => 1
   | DCC[.] (f ∘' _g) => f.arity
   | DCC[.] (f ∘ _g)  => f.arity
@@ -188,8 +188,8 @@ match e with
   | DCC[.] ⟦__β⟧(_x, _y) => False
   | DCC[.] Coup(_β) => False
   | DCC[.] Id(_α)      => True
-  | DCC[.] Fstc(_α)    => True
-  | DCC[.] Sndc(_α)    => True
+  | DCC[.] Fst(_α)    => True
+  | DCC[.] Snd(_α)    => True
   | DCC[.] Π(f_α, f_β) => f_α.is_fn ∧ f_β.is_fn
   | DCC[.] (f ∘' g) => f.is_fn ∧ g.is_fn
   | DCC[.] (f ∘ g)  => f.is_fn ∧ g.is_fn
@@ -223,8 +223,8 @@ def tm_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] ⟦__β⟧(_x, _y) => 0
   | DCC[.] Coup(_β) => 0
   | DCC[.] Id(_α)      => 1
-  | DCC[.] Fstc(_α)    => 1
-  | DCC[.] Sndc(_α)    => 1
+  | DCC[.] Fst(_α)    => 1
+  | DCC[.] Snd(_α)    => 1
   | DCC[.] Π(_α, _β) => 0
   | DCC[.] (f ∘' _g) => f.tm_arity
   | DCC[.] (f ∘ _g)  => f.tm_arity
@@ -348,12 +348,12 @@ def eta_to_expr (e : @EtaExpr τ_c)
   | DCC? Id(x)      =>
     match x.eta_to_expr (by simp_all [contains_hole]) with
     | x' => (DCC? Id(x'))
-  | DCC? Fstc(x)    =>
+  | DCC? Fst(x)    =>
     match x.eta_to_expr (by simp_all [contains_hole])with
-    | x' => (DCC? Fstc(x'))
-  | DCC? Sndc(x)    =>
+    | x' => (DCC? Fst(x'))
+  | DCC? Snd(x)    =>
     match x.eta_to_expr (by simp_all [contains_hole])with
-    | x' => (DCC? Sndc(x'))
+    | x' => (DCC? Snd(x'))
   | DCC? Π(x, y) =>
     match x.eta_to_expr (by simp_all [contains_hole]), y.eta_to_expr (by simp_all [contains_hole]) with
     | x', y' =>
@@ -445,12 +445,12 @@ def expr_to_eta (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (�
   | DCC? Id(x)      =>
     match x.expr_to_eta with
     | x' => (DCC? Id(x'))
-  | DCC? Fstc(x)    =>
+  | DCC? Fst(x)    =>
     match x.expr_to_eta with
-    | x' => (DCC? Fstc(x'))
-  | DCC? Sndc(x)    =>
+    | x' => (DCC? Fst(x'))
+  | DCC? Snd(x)    =>
     match x.expr_to_eta with
-    | x' => (DCC? Sndc(x'))
+    | x' => (DCC? Snd(x'))
   | DCC? Π(x, y) =>
     match x.expr_to_eta, y.expr_to_eta with
     | x', y' =>

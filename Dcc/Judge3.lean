@@ -254,12 +254,12 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Arrow α (DCC? Sort n) m τ_β
     → Reduces β β'
     → Reduces (fstc.type α β' m n) τ
-    → Judge (DCC? Fstc(β)) τ
+    → Judge (DCC? Fst(β)) τ
   | sndc    : Judge β τ_β
     → Arrow α (DCC? Sort n) m τ_β
     → Reduces β β'
     → Reduces (sndc.type β' m n) τ
-    → Judge (DCC? Sndc(β)) τ
+    → Judge (DCC? Snd(β)) τ
   | sigma   : Judge f_α τ_f_α
     → Arrow δ (DCC? Sort m) o τ_f_α
     → Judge f_β τ_f_β
@@ -547,7 +547,7 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
       | other => .error (.unexpected other β)
     | .ok ⟨t, _⟩ => .error (.unexpected t β)
     | .error ε => .error (.sub β ε)
-  | DCC? Fstc(β) =>
+  | DCC? Fst(β) =>
     match (infer β) with
     | .ok ⟨τ_β, ht₁⟩ =>
       match τ_β.read_arrow with
@@ -555,7 +555,7 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
         .ok ⟨_, .fstc ht₁ harr (reduce_reduces rfl) (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ_β β)
     | .error ε => .error (.sub β ε)
-  | DCC? Sndc(β) =>
+  | DCC? Snd(β) =>
     match (infer β) with
     | .ok ⟨τ_β, ht₁⟩ =>
       match τ_β.read_arrow with

@@ -127,9 +127,9 @@ inductive IsEtaTm : GenericExpr τ_c → Type u
   | comp   : IsEtaTm f → IsEtaTm (DCC? (f ∘ g))
   | comp'  : IsEtaTm f → IsEtaTm (DCC? (f ∘' g))
   | comp₂  : IsEtaTm f → IsEtaTm (DCC? (f ∘∘ g))
-  -- Fstc(..) (x, y) -> x
-  | fstc   : IsEtaTm (DCC? Fstc(β))
-  | sndc   : IsEtaTm (DCC? Sndc(β))
+  -- Fst(..) (x, y) -> x
+  | fstc   : IsEtaTm (DCC? Fst(β))
+  | sndc   : IsEtaTm (DCC? Snd(β))
   -- Σ(f_α, f_β) env -> Coup(...)
   | sigma  : IsEtaTm (DCC? Σ(f_α, f_β))
   -- `(β, x) y
@@ -173,8 +173,8 @@ def is_eta_tm? (e : GenericExpr τ_c) : Option (IsEtaTm e) :=
     match f.is_eta_tm? with
     | .some h => .some (by constructor; exact h)
     | .none => .none
-  | (DCC? Fstc(β)) => .some (by constructor)
-  | (DCC? Sndc(β)) => .some (by constructor)
+  | (DCC? Fst(β)) => .some (by constructor)
+  | (DCC? Snd(β)) => .some (by constructor)
   | (DCC? Σ(f_α, f_β)) => .some (by constructor)
   | (DCC? `(β, x)) => .some (by constructor)
   | (DCC? ⟦β⟧⟨f, g⟩) => .some (by constructor)

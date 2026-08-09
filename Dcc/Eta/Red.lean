@@ -10,7 +10,7 @@ namespace GenericExpr
 
 /-
 (Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0))) ∘'
-   Fstc(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))))
+   Fst(Π(`(⊤, Sort 0), Λ(⊤, `(⊤, Sort 0), `(Coup(`(⊤, Sort 0)), Sort 0)))))
 
 pi_comp may be safe.
 -/
@@ -26,12 +26,12 @@ we can use our type normal forms for this.
 inductive RedEta.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
   --| curr       : RedEta x x' → RedEta (DCC? (Λ(α, β, x))) (DCC? (Λ(α, β, x')))
   | comp_fstc    : RedEta (DCC? Λ(α, β, x)) f' → RedEta
-    (DCC? (Λ(α, β, x) ∘' Fstc(b))) (DCC? f' ∘' Fstc(b))
+    (DCC? (Λ(α, β, x) ∘' Fst(b))) (DCC? f' ∘' Fst(b))
   | curr_quot_c  : RedEta (DCC? Λ(α, `(α, β), `(Coup(`(α, β)), x))) (DCC? `(α, `(β, x)))
   | curr_quot'   : RedEta (DCC? (Λ(α, Id(α), `(Coup(Id(α)), x) ∘' Id(_a)) y)) (DCC? `(y, x))
   | curr_quot    : RedEta (DCC? (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC? `(y, x))
-  | curr_fst     : RedEta (DCC? (Λ(α, β, x ∘ Fstc(Coup(β))) y)) (DCC? `((β y), (x y)))
-  | curr_fst'    : RedEta (DCC? (Λ(α, β, x ∘' Fstc(Coup(β))) y)) (DCC? `((β y), (x y)))
+  | curr_fst     : RedEta (DCC? (Λ(α, β, x ∘ Fst(Coup(β))) y)) (DCC? `((β y), (x y)))
+  | curr_fst'    : RedEta (DCC? (Λ(α, β, x ∘' Fst(Coup(β))) y)) (DCC? `((β y), (x y)))
   | pi           : Relation.ReflTransGen RedAff env env'
     → IsNorm RedAff env'
     → RedEta (DCC? Π(α, β)) p' → RedEta (DCC? (Π(α, β) env)) (DCC? (p' env))
@@ -47,30 +47,30 @@ inductive RedEta.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
   --| quot'_unbox'  : RedEta (DCC? (`(α, x) ∘ *(α₂)) ∘ z) (DCC? `(!(α), x) ∘ z)
   --| quot'_unbox₂  : RedEta (DCC? `(α, x) ∘' *(α₂) ∘' z) (DCC? `(!(α), x) ∘' z)
   --| quot'_unbox'₂ : RedEta (DCC? `(α, x) ∘ *(α₂) ∘ z) (DCC? `(!(α), x) ∘ z)
-  | quot_fst      : RedEta (DCC? `(α, x) ∘ Fstc(β)) (DCC? `(Coup(β), x))
-  | quot'_fst     : RedEta (DCC? `(α, x) ∘' Fstc(β)) (DCC? `(Coup(β), x))
-  | quot_snd      : RedEta (DCC? `(α, x) ∘ Sndc(β)) (DCC? `(Coup(β), x))
-  | quot'_snd     : RedEta (DCC? `(α, x) ∘' Sndc(β)) (DCC? `(Coup(β), x))
-  --| quot_fst'     : RedEta (DCC? (`(α, x) ∘ Fstc(β)) ∘ z) (DCC? `(Coup(β), x) ∘ z)
-  --| quot'_fst'    : RedEta (DCC? (`(α, x) ∘' Fstc(β)) ∘' z) (DCC? `(Coup(β), x) ∘' z)
-  --| quot_snd'     : RedEta (DCC? (`(α, x) ∘ Sndc(β)) ∘ z) (DCC? `(Coup(β), x) ∘ z)
-  --| quot'_snd'    : RedEta (DCC? (`(α, x) ∘' Sndc(β)) ∘' z) (DCC? `(Coup(β), x) ∘' z)
-  --| quot_fst'₂     : RedEta (DCC? `(α, x) ∘ Fstc(β) ∘ z) (DCC? `(Coup(β), x) ∘ z)
-  --| quot'_fst'₂    : RedEta (DCC? `(α, x) ∘' Fstc(β) ∘' z) (DCC? `(Coup(β), x) ∘' z)
-  --| quot_snd'₂     : RedEta (DCC? `(α, x) ∘ Sndc(β) ∘ z) (DCC? `(Coup(β), x) ∘ z)
-  --| quot'_snd'₂    : RedEta (DCC? `(α, x) ∘' Sndc(β) ∘' z) (DCC? `(Coup(β), x) ∘' z)
+  | quot_fst      : RedEta (DCC? `(α, x) ∘ Fst(β)) (DCC? `(Coup(β), x))
+  | quot'_fst     : RedEta (DCC? `(α, x) ∘' Fst(β)) (DCC? `(Coup(β), x))
+  | quot_snd      : RedEta (DCC? `(α, x) ∘ Snd(β)) (DCC? `(Coup(β), x))
+  | quot'_snd     : RedEta (DCC? `(α, x) ∘' Snd(β)) (DCC? `(Coup(β), x))
+  --| quot_fst'     : RedEta (DCC? (`(α, x) ∘ Fst(β)) ∘ z) (DCC? `(Coup(β), x) ∘ z)
+  --| quot'_fst'    : RedEta (DCC? (`(α, x) ∘' Fst(β)) ∘' z) (DCC? `(Coup(β), x) ∘' z)
+  --| quot_snd'     : RedEta (DCC? (`(α, x) ∘ Snd(β)) ∘ z) (DCC? `(Coup(β), x) ∘ z)
+  --| quot'_snd'    : RedEta (DCC? (`(α, x) ∘' Snd(β)) ∘' z) (DCC? `(Coup(β), x) ∘' z)
+  --| quot_fst'₂     : RedEta (DCC? `(α, x) ∘ Fst(β) ∘ z) (DCC? `(Coup(β), x) ∘ z)
+  --| quot'_fst'₂    : RedEta (DCC? `(α, x) ∘' Fst(β) ∘' z) (DCC? `(Coup(β), x) ∘' z)
+  --| quot_snd'₂     : RedEta (DCC? `(α, x) ∘ Snd(β) ∘ z) (DCC? `(Coup(β), x) ∘ z)
+  --| quot'_snd'₂    : RedEta (DCC? `(α, x) ∘' Snd(β) ∘' z) (DCC? `(Coup(β), x) ∘' z)
   --| pi_comp    : RedEta (DCC? (Π(f_α, f_β) ∘ x)) (DCC? (Π(f_α ∘ x, f_β ∘ x))) TURBO SUS DELETED
   --| pi'_comp   : RedEta (DCC? (Π(f_α, f_β) ∘' x)) (DCC? (Π(f_α ∘' x, f_β ∘' x)))
   | compl      : RedEta (DCC? (a ∘ b)) a' → RedEta (DCC? ((a ∘ b) ∘ c)) (DCC? (a' ∘ c))
   | compl'     : RedEta (DCC? (a ∘' b)) a' → RedEta (DCC? ((a ∘' b) ∘' c)) (DCC? (a' ∘' c))
   /-| pair_snd   : Relation.ReflTransGen RedAff N N' → IsNorm RedAff N'
-    → RedEta (DCC? (Eval(_a, _b, Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩)) N'
+    → RedEta (DCC? (Eval(_a, _b, Snd(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fst(_h))⟩)) N'
   | pair_snd'  : Relation.ReflTransGen RedAff N N' → IsNorm RedAff N'
-    → RedEta (DCC? (Eval(_a, _b, f ∘' Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩)) (DCC? (f ∘' N'))
+    → RedEta (DCC? (Eval(_a, _b, f ∘' Snd(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fst(_h))⟩)) (DCC? (f ∘' N'))
   | pair_fst   : Relation.ReflTransGen RedAff M M'
-    → IsNorm RedAff M' → RedEta (DCC? (Eval(_a, _b, Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) M'
+    → IsNorm RedAff M' → RedEta (DCC? (Eval(_a, _b, Fst(_c)) ∘ ⟦_d⟧⟨M, N⟩)) M'
   | pair_fst'  : Relation.ReflTransGen RedAff M M'
-    → IsNorm RedAff M' → RedEta (DCC? (Eval(_a, _b, f ∘' Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) (DCC? (f ∘' M'))-/
+    → IsNorm RedAff M' → RedEta (DCC? (Eval(_a, _b, f ∘' Fst(_c)) ∘ ⟦_d⟧⟨M, N⟩)) (DCC? (f ∘' M'))-/
   | quot       : RedEta x x' → RedEta (DCC? `(β, x)) (DCC? `(β, x'))
   /-| quot_comp : RedEta (DCC? (`(α, x) ∘ y)) x'
     → RedEta (DCC (`(α, x) ∘ (y ∘ z))) (DCC (x' ∘ z))-/
@@ -139,7 +139,7 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
 @[dcc_force_eta, dcc_force_reduce, aesop norm (rule_sets := [DccStep])] def step_eta?.{u} {τ : Type u} [DecidableEq τ] (e : GenericExpr τ) :
   Option ((e' : GenericExpr τ) × (PULift.{1, 0} (RedEta e e'))) :=
   match e with
-  | (DCC? Λ(α, β, x) ∘' Fstc(b)) =>
+  | (DCC? Λ(α, β, x) ∘' Fst(b)) =>
     match (DCC? Λ(α, β, x)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.comp_fstc h⟩⟩
     | _ => .none
@@ -161,11 +161,11 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     if heq : (DCC? (Λ(α, _b, `(_c, x)) y)) = (DCC? (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
       heq ▸ .some ⟨_, ⟨.curr_quot⟩⟩
     else .none
-  | DCC? (Λ(_α, β, x ∘ Fstc(Coup(β₂))) y) =>
+  | DCC? (Λ(_α, β, x ∘ Fst(Coup(β₂))) y) =>
     if heq : β₂ = β then
       heq ▸ .some ⟨_, ⟨.curr_fst⟩⟩
     else .none
-  | DCC? (Λ(_α, β, x ∘' Fstc(Coup(β₂))) y) =>
+  | DCC? (Λ(_α, β, x ∘' Fst(Coup(β₂))) y) =>
     if heq : β₂ = β then
       heq ▸ .some ⟨_, ⟨.curr_fst'⟩⟩
     else .none
@@ -203,20 +203,20 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     match x.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr h⟩⟩
     | .none => .none-/
-  | (DCC? `(α, x) ∘ Fstc(β)) => .some ⟨_, ⟨.quot_fst⟩⟩
-  | (DCC? `(α, x) ∘' Fstc(β)) => .some ⟨_, ⟨.quot'_fst⟩⟩
-  | (DCC? `(α, x) ∘ Sndc(β)) => .some ⟨_, ⟨.quot_snd⟩⟩
-  | (DCC? `(α, x) ∘' Sndc(β)) => .some ⟨_, ⟨.quot'_snd⟩⟩
+  | (DCC? `(α, x) ∘ Fst(β)) => .some ⟨_, ⟨.quot_fst⟩⟩
+  | (DCC? `(α, x) ∘' Fst(β)) => .some ⟨_, ⟨.quot'_fst⟩⟩
+  | (DCC? `(α, x) ∘ Snd(β)) => .some ⟨_, ⟨.quot_snd⟩⟩
+  | (DCC? `(α, x) ∘' Snd(β)) => .some ⟨_, ⟨.quot'_snd⟩⟩
   /-| DCC? (Π(f_α, f_β) ∘ x) => .some ⟨_, ⟨.pi_comp⟩⟩
   | DCC? (Π(f_α, f_β) ∘' x) => .some ⟨_, ⟨.pi'_comp⟩⟩-/
-  --| (DCC? (`(α, x) ∘ Fstc(β)) ∘ z) => .some ⟨_, ⟨.quot_fst'⟩⟩
-  --| (DCC? (`(α, x) ∘' Fstc(β)) ∘' z) => .some ⟨_, ⟨.quot'_fst'⟩⟩
-  --| (DCC? (`(α, x) ∘ Sndc(β)) ∘ z) => .some ⟨_, ⟨.quot_snd'⟩⟩
-  --| (DCC? (`(α, x) ∘' Sndc(β)) ∘' z) => .some ⟨_, ⟨.quot'_snd'⟩⟩
-  --| (DCC? `(α, x) ∘ Fstc(β) ∘ z) => .some ⟨_, ⟨.quot_fst'₂⟩⟩
-  --| (DCC? `(α, x) ∘' Fstc(β) ∘' z) => .some ⟨_, ⟨.quot'_fst'₂⟩⟩
-  --| (DCC? `(α, x) ∘ Sndc(β) ∘ z) => .some ⟨_, ⟨.quot_snd'₂⟩⟩
-  --| (DCC? `(α, x) ∘' Sndc(β) ∘' z) => .some ⟨_, ⟨.quot'_snd'₂⟩⟩
+  --| (DCC? (`(α, x) ∘ Fst(β)) ∘ z) => .some ⟨_, ⟨.quot_fst'⟩⟩
+  --| (DCC? (`(α, x) ∘' Fst(β)) ∘' z) => .some ⟨_, ⟨.quot'_fst'⟩⟩
+  --| (DCC? (`(α, x) ∘ Snd(β)) ∘ z) => .some ⟨_, ⟨.quot_snd'⟩⟩
+  --| (DCC? (`(α, x) ∘' Snd(β)) ∘' z) => .some ⟨_, ⟨.quot'_snd'⟩⟩
+  --| (DCC? `(α, x) ∘ Fst(β) ∘ z) => .some ⟨_, ⟨.quot_fst'₂⟩⟩
+  --| (DCC? `(α, x) ∘' Fst(β) ∘' z) => .some ⟨_, ⟨.quot'_fst'₂⟩⟩
+  --| (DCC? `(α, x) ∘ Snd(β) ∘ z) => .some ⟨_, ⟨.quot_snd'₂⟩⟩
+  --| (DCC? `(α, x) ∘' Snd(β) ∘' z) => .some ⟨_, ⟨.quot'_snd'₂⟩⟩
   | DCC? (a ∘ b) ∘ c =>
     match (DCC? (a ∘ b)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.compl h⟩⟩
@@ -225,13 +225,13 @@ theorem RedEta.norm_aff (hn : IsNorm RedAff A) (h : RedEta A B) : IsNorm RedAff 
     match (DCC? (a ∘' b)).step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.compl' h⟩⟩
     | _ => none
-  /-| DCC? (Eval(_a, _b, Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩) =>
+  /-| DCC? (Eval(_a, _b, Snd(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fst(_h))⟩) =>
     .some ⟨_, ⟨.pair_snd (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | DCC? (Eval(_a, _b, f ∘' Sndc(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fstc(_h))⟩) =>
+  | DCC? (Eval(_a, _b, f ∘' Snd(_c)) ∘ ⟦_d⟧⟨Id(_e), Λ(_f, _g, N ∘' Fst(_h))⟩) =>
     .some ⟨_, ⟨.pair_snd' (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? (Eval(_a, _b, Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) =>
+  | (DCC? (Eval(_a, _b, Fst(_c)) ∘ ⟦_d⟧⟨M, N⟩)) =>
     .some ⟨_, ⟨.pair_fst (reduce_sound rfl) (reduce_norm rfl)⟩⟩
-  | (DCC? (Eval(_a, _b, f ∘' Fstc(_c)) ∘ ⟦_d⟧⟨M, N⟩)) =>
+  | (DCC? (Eval(_a, _b, f ∘' Fst(_c)) ∘ ⟦_d⟧⟨M, N⟩)) =>
     .some ⟨_, ⟨.pair_fst' (reduce_sound rfl) (reduce_norm rfl)⟩⟩-/
   | DCC? `(_β, x) =>
     match x.step_eta? with
@@ -328,7 +328,7 @@ instance instNormDec.{u} {τ : Type u} [DecidableEq τ] {A : GenericExpr τ} : D
 
 #check RedEta.reduce
 
-#eval Sigma.fst <| RedEta.reduce (DCC (Λ(Sort 1, Id(Sort 1), Sndc(Coup(Id(Sort 1)))) (Sort 0)))
+#eval Sigma.fst <| RedEta.reduce (DCC (Λ(Sort 1, Id(Sort 1), Snd(Coup(Id(Sort 1)))) (Sort 0)))
 
 end GenericExpr
 

@@ -108,14 +108,14 @@
     {A : \sort{u}, B : A \arr \sort{v}}
     {\text{Coup}(B) : \sort{max(u, v)}}} \\\\
     \multicolumn{3}{l}{
-    \inferrule[Fstc]
+    \inferrule[Fst]
     {B : A \arr \sort{v}}
-    {\text{Fstc}(B) : (x : A) \times B x \arr A}
+    {\text{Fst}(B) : (x : A) \times B x \arr A}
     } &
     \multicolumn{3}{r}{
-    \inferrule[Sndc]
+    \inferrule[Snd]
     {B : A \arr \sort{v}}
-    {\text{Sndc}(B) : (x : (x : A) \times B x) \arr B (\text{Fstc}(B) x)}}\\\\
+    {\text{Snd}(B) : (x : (x : A) \times B x) \arr B (\text{Fst}(B) x)}}\\\\
     \multicolumn{4}{l}{
     \inferrule[Sigma]
     {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
@@ -196,10 +196,10 @@
 %    {Snd'(\alpha, \beta) : Coup(`(\alpha, \beta)) \rightarrow \beta}} &
 %    \multicolumn{2}{c}{\inferrule
 %    { }
-%    {Sndc(\beta) \coloneq Snd(`(\top, \beta)) \ast}}&
+%    {Snd(\beta) \coloneq Snd(`(\top, \beta)) \ast}}&
 %    \multicolumn{2}{c}{\inferrule
 %    { }
-%    {Fstc(\beta) \coloneq Fst(`(\top, \beta)) \ast}}
+%    {Fst(\beta) \coloneq Fst(`(\top, \beta)) \ast}}
 %  \end{tabularx}\\
 %\end{figure}
 

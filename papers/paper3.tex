@@ -1263,7 +1263,15 @@ This proof is natural by the construction of \(\eta\)-normal forms, which are ob
 
 \section{Judgments are Canonical}
 
-In DCC, there is exactly one valid judgment for a given term. Catch-all conversion is not permitted. Types are \(\beta\)-\(\beta\) reduced to normal forms eagerly in each inference rule. This is possible due to inheriting strong normalization as a consequence of the choice of affine logic. This has sweeping ramifications. In particular, the extensional equality reflection rule is possible. Recall the extensional equality reflection rule:
+In DCC, there is exactly one valid judgment for a given term. Catch-all conversion is not permitted. Types are \(\beta\)-\(\beta\) reduced to normal forms eagerly in each inference rule. This is possible due to inheriting strong normalization as a consequence of the choice of affine logic.
+
+% TODO: canonical proof
+
+This fact has sweeping ramifications. In particular, the extensional equality reflection rule is possible.
+
+\subsection{Propositional equality reflection is a natural consequence of affine DTT}
+
+Recall the extensional equality reflection rule:
 
 \begin{equation}
   \inferrule[Eq. Reflect]
@@ -1289,6 +1297,36 @@ Also recall the inference rule for \(\text{ref}\):
   {B : A \arr \sort{u}, x : !(A), y : !(B x)}
   {\text{refl}(B) \&(x) \&(y) : \arr ((\text{Eql}(B) \&(x) \&(y)) =_{\beta} x = x)}
 \end{gather*}
+
+Intuitively, since \(\text{refl}\) is the only inference rule that generates a proof of equality, and since judgments are canonical in that exactly one judgment is valid for a given term, and since \(x = y\) iff , then \(x = y \iff x \equiv y\), where definitional equality is as defined in \ref{inferrule}. Furthermore, \(h : x = y\) induces a syntactic equality as a metatheorem in Lean 4, since \(x\) and \(y\) are eagerly reduced to \(\beta\)-\(\eta\) form forall \(x\) and \(y\). That is, propositional equality is equivalent to definitional and meta-level syntactic equality. A propositional equality in DCC induces a definitional equality on the AST itself.
+
+This property appears superficially restrictive. However, conversion is allowed in the inference rule for application, but not in general as a catch-all rule \ref{inferrule}. Hence, this type-checks:
+
+\begin{leancode}
+  #eval (DCC Id(Id(⊤) ∗ = ∗) (refl(Id(Sort 0)) ⊤ ∗)).infer'
+/-
+Messages here:
+∗ = ∗
+-/
+\end{leancode}
+
+where \lean{Id(Id(⊤) ∗ = ∗)} expects a proof that \lean{Id(⊤) ∗ = ∗}. That is, reflexivity is a valid proof of \lean{Id(⊤) ∗ = ∗} in argument position, but is ultimately reduced to \(\beta\)-\(\eta\) normal form, inducing the meta-level equality:
+
+\begin{leancode}
+Expr.tintro = Expr.tintro
+\end{leancode}
+
+% TODO: ext elim proof
+
+\subsection{DCC has decidable type-checking}
+
+We outline our implementation of a type-checker which has soundness and completeness with respect to the judgment relation at a high-level. The full implementation is available in the appendix 
+
+% TOOD: 
+
+\section{Examples of extensionality in DCC}
+
+\section{Comparison to observational type theory and cubical type theory}
 
 \section{A recipe for decidable extensional type-theory}
 
@@ -1578,6 +1616,8 @@ Things I want to cover
 \section{Supplementary Materials}\label{appendix:sup}
 
 \textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}
+
+\textbf{Type-checker implementation:} \href{https://github.com/lexzaiello/DCC/blob/6438e9e4960086082714e3498f59b737321c2ceb/Dcc/Judge3.lean}{https://github.com/lexzaiello/DCC/blob/6438e9e4960086082714e3498f59b737321c2ceb/Dcc/Judge3.lean}
 
 \subsection{\label{kcomp}Dependent \(K\) Compilation}
 

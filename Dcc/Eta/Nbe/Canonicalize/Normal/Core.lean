@@ -5,6 +5,13 @@ universe u
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]
 
+namespace GenericExpr
+
+def IsNorm.sigt (hn : IsNorm RedAff (DCC? ⟦B⟧(x, y))) : IsNorm RedAff B := fun ⟨_, h⟩ =>
+  hn ⟨_, .sigt h⟩
+
+end GenericExpr
+
 namespace NormExpr
 
 namespace EtaFn
@@ -311,6 +318,9 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
                     | congrFun h => cases h
                     | congrArg h =>
                       cases h with
+                      | sigt h =>
+                        expose_names
+                        exact (hn_hole₁_2 ⟨_, h⟩).elim
                       | sigl h =>
                         expose_names
                         exact (hn_hole₁_2 ⟨_, h⟩).elim
@@ -431,6 +441,7 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
                     | congrArg h =>
                       expose_names
                       cases h with
+                      | sigt h => exact (hn_hole₁_2 ⟨_, h⟩).elim
                       | sigl h => exact (hn_hole₁_2 ⟨_, h⟩).elim
                       | sigr h => exact (hn_hole₂ ⟨_, h⟩).elim
   | par =>
@@ -737,6 +748,10 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
                 | congrArg h => cases h
               | congrArg h =>
                 cases h with
+                | sigt h =>
+                  cases e_h with
+                  | tm₂ heq e_h₁ hrt e_h₂ =>
+                    exact e_h₂.is_norm.sigl ⟨_, h⟩
                 | sigl h =>
                   cases e_h with
                   | tm₂ heq e_h₁ hrt e_h₂ =>

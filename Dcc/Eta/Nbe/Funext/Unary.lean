@@ -484,6 +484,7 @@ def ext₁
         cases heq
         cases h with
         | bang h =>
+          simp [GenericExpr.to_eta_right_inv hn] at h
           cases h with
           | coup =>
             expose_names
@@ -540,8 +541,8 @@ def ext₁
           cases h with
           | coup =>
             expose_names
-            simp [GenericExpr.to_eta_right_inv hn] at a_5
-            have h := a_5.contains_hole
+            simp [GenericExpr.to_eta_right_inv hn] at a_4
+            have h := a_4.contains_hole
             grind
   | sndc =>
     expose_names
@@ -587,8 +588,8 @@ def ext₁
         cases h with
         | coup =>
           expose_names
-          simp [GenericExpr.to_eta_right_inv hn] at a_5
-          have h := a_5.contains_hole
+          simp [GenericExpr.to_eta_right_inv hn] at a_4
+          have h := a_4.contains_hole
           grind
   | fstc =>
     expose_names
@@ -631,6 +632,7 @@ def ext₁
       cases e_h with
       | tm₁ heq h =>
         cases heq
+        simp [GenericExpr.to_eta_right_inv hn] at h
         cases h with
         | coup =>
           expose_names

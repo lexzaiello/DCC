@@ -30,6 +30,9 @@ def app_norm (h₁ : Hole α l₁ a) (h₂ : Hole β l₂ b) : GenericExpr.IsNor
       | congrFun h => cases h
       | congrArg h =>
         cases h with
+        | sigt h =>
+          expose_names
+          exact hn_hole₁ ⟨_, h⟩
         | sigl h =>
           expose_names
           exact hn_hole₁ ⟨_, h⟩
@@ -48,6 +51,8 @@ def app_norm (h₁ : Hole α l₁ a) (h₂ : Hole β l₂ b) : GenericExpr.IsNor
     cases h with
     | congrFun h =>
       cases h with
+      | sigt h =>
+        exact h₁.is_norm ⟨_, h⟩
       | sigl h =>
         exact h₁.is_norm ⟨_, h⟩
       | sigr h =>
@@ -80,6 +85,7 @@ def app_norm_arg (h₁ : Hole α l₁ a) (h₂ : Hole β l₂ b) (hn : GenericEx
         | congrArg h =>
           expose_names
           cases h with
+          | sigt h => exact a_2.is_norm ⟨_, h⟩
           | sigl h =>
             exact a_2.is_norm ⟨_, h⟩
           | sigr h => exact a_4.is_norm ⟨_, h⟩
@@ -102,6 +108,8 @@ def app_norm_arg (h₁ : Hole α l₁ a) (h₂ : Hole β l₂ b) (hn : GenericEx
       cases h with
       | congrFun h =>
         cases h with
+        | sigt h =>
+          exact h₁.is_norm ⟨_, h⟩
         | sigl h =>
           exact h₁.is_norm ⟨_, h⟩
         | sigr h =>
@@ -182,14 +190,14 @@ def app_coup_norm {e_f : EtaFn (τ_c := τ_c) f doms} (e_h : e_f.Holes level [�
     | coup h_dom h₁ hrt h₂ =>
       exact h₁.app_norm h₂
 
-def app_norm_arg {e_f : EtaFn (τ_c := τ_c) f doms} (e_h : e_f.Holes level [⟨DCC? ⟦β⟧(a, b), hn⟩]) (hn : GenericExpr.IsNorm GenericExpr.RedAff c) :
+/-def app_norm_arg {e_f : EtaFn (τ_c := τ_c) f doms} (e_h : e_f.Holes level [⟨DCC? ⟦β⟧(a, b), hn⟩]) (hn : GenericExpr.IsNorm GenericExpr.RedAff c) :
   GenericExpr.IsNorm GenericExpr.RedAff (DCC? (a b c)) := by
   cases e_h with
   | tm₁ heq h =>
     cases h with
     | coup h_dom h₁ hrt h₂ =>
       have h := h₁.app_norm_arg h₂ hn
-      exact h
+      exact h-/
 
 def app_norm {e_f : EtaFn (τ_c := τ_c) f doms} (e_h : e_f.Holes level [⟨a, hn_α⟩, ⟨b, hn_b⟩]) : GenericExpr.IsNorm GenericExpr.RedAff (DCC? (a b)) := by
   cases e_h with

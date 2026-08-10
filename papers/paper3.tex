@@ -309,7 +309,7 @@ The full reduction rules are given in \ref{redrules}.
       {*\la x \ra \&(y) \barr f x}&
       \multicolumn{1}{c}{\inferrule[Pair]
       { }
-      {\llb B \rrb \la x, y \ra z \barr \llb B \rrb (M x, N x (M x))}}&
+      {\llb B \rrb \la x, y \ra z \barr \llb B x \rrb (M x, N x (M x))}}&
       \inferrule[Eval]
       { }
       {\text{Eval}(A, B, x) \llb B \rrb (y, z) \barr x y z}\\\\
@@ -664,7 +664,7 @@ def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   | DCC[.] !(x)   => x.size + 1
   | DCC[.] *(α)   => α.size + 3
   | DCC[.] *<α>   => α.size + 1
-  | DCC[.] &(x)   => x.size + x.size + x.size + x.size
+  | DCC[.] &(x)   => x.size + x.size + x.size + x.size + x.size
   | DCC[.] !<x>   => x.size + x.size + x.size + 3
   | DCC[.] $<x>   => x.size + x.size + x.size + x.size + 3
   | DCC[.] (f x) => f.size + x.size
@@ -1612,6 +1612,8 @@ def Judge.complete (h : Judge (τ_c := τ_c) e τ) : e.infer = .ok ⟨τ, h⟩ :
 \end{proof}
 
 \section{Examples of extensionality in DCC}
+
+
 
 \section{Comparison to observational type theory and cubical type theory}
 

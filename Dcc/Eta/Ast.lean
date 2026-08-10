@@ -297,8 +297,9 @@ macro_rules
 theorem hole_size_zero.{v} {τ_c : Type v} : (GenericExpr.const (τ := EtaConst) (.hole (τ_c := τ_c) _m)).size = 0 := by
   grind
 
+omit [DecidableEq τ_c] in
 @[grind =, grind! ., dcc_size]
-theorem coup_hole_zero.{v} {τ : Type v} {β : GenericExpr (τ := EtaConst (τ_c := τ))} : (DCC? ⟦β⟧(hole(m), hole(n))).size = 0 := by
+theorem coup_hole_zero : (DCC? ⟦hole(m)⟧(hole(n), hole(o))).size (τ := (@EtaConst τ_c)) = 0 := by
   grind
 
 end GenericExpr

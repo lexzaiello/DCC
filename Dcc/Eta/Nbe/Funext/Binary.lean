@@ -137,6 +137,8 @@ def ext₂
                     | congrFun h => cases h
                     | congrArg h => cases h
                   | congrArg h => cases h with
+                    | sigt h =>
+                      exact hn_hole₁_3 ⟨_, h⟩
                     | sigl h =>
                       exact hn_hole₁_3 ⟨_, h⟩
                     | sigr h => exact hn_hole₂_2 ⟨_, h⟩)
@@ -150,6 +152,7 @@ def ext₂
                     | congrFun h => cases h
                     | congrArg h => cases h
                   | congrArg h => cases h with
+                    | sigt h => exact hn_hole₁_3 ⟨_, h⟩
                     | sigl h => exact hn_hole₁_3 ⟨_, h⟩
                     | sigr h => exact hn_hole₂_2 ⟨_, h⟩)
                 dcc_simp

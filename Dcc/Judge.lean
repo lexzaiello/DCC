@@ -82,12 +82,12 @@ inductive Judge : Expr → Expr → Prop where
     → Reduces (DCC (f_β α)) (DCC `(α, Sort n))
     → Reduces β β'
     → Reduces (fstc.type α β' m n) τ
-    → Judge (DCC Fstc(β)) τ
+    → Judge (DCC Fst(β)) τ
   | sndc    : Judge β (DCC (Π(Id(Sort m), f_β) α))
     → Reduces (DCC (f_β α)) (DCC `(α, Sort n))
     → Reduces β β'
     → Reduces (sndc.type β' m n) τ
-    → Judge (DCC Sndc(β)) τ
+    → Judge (DCC Snd(β)) τ
   | sigma   : Judge f_α (DCC ((δ : Sort o) → Sort m))
     → Judge f_β (Pi.f_β.type' f_α δ o n)
     → Reduces δ δ'
@@ -260,8 +260,8 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
     | _ => .none
   | DCC? (f ∘∘ g) =>
     match infer g with
-    | .some ⟨DCC? (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fstc(___a))) ∘' _a₂)) !(α)), ⟨ht₁⟩⟩ =>
-      if heq : (DCC? (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fstc(___a))) ∘' _a₂)) !(α))) = comp₂.g.type α β m then
+    | .some ⟨DCC? (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fst(___a))) ∘' _a₂)) !(α)), ⟨ht₁⟩⟩ =>
+      if heq : (DCC? (Π(Id(Sort m), `(_m, Σ(__a, Λ(_a, _b, β ∘' Fst(___a))) ∘' _a₂)) !(α))) = comp₂.g.type α β m then
         match infer f with
         | .some ⟨(DCC? (Π(Id(Sort n), f_γ) _a)), ⟨ht₂⟩⟩ =>
           if heq₂ : (DCC? (Π(Id(Sort n), f_γ) _a)) = comp₂.f.type β f_γ n then
@@ -342,7 +342,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  | DCC? Fstc(β) =>
+  | DCC? Fst(β) =>
     match (infer β) with
     | .some ⟨DCC? (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩ =>
       match heq : reduce_all (DCC? (f_β α)) with
@@ -352,7 +352,7 @@ def infer (e : Expr) : Option ((t : Expr) × PULift.{1, 0} (Judge e t)) :=
         else .none
       | _ => .none
     | _ => .none
-  | DCC? Sndc(β) =>
+  | DCC? Snd(β) =>
     match (infer β) with
     | .some ⟨DCC? (Π(Id(Sort m), f_β) α), ⟨ht₁⟩⟩ =>
       match heq : reduce_all (DCC? (f_β α)) with

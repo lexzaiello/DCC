@@ -15,9 +15,9 @@ inductive IsRedComb : Expr → Arity → Type
   -- (f ∘ g) x
   | comp  : IsRedComb (DCC (f ∘ g)) 1
   | comp' : IsRedComb (DCC (f ∘' g)) 1
-  -- Fstc(..) (x, y) -> x
-  | fstc  : IsRedComb (DCC Fstc(β)) 1
-  | sndc  : IsRedComb (DCC Sndc(β)) 1
+  -- Fst(..) (x, y) -> x
+  | fstc  : IsRedComb (DCC Fst(β)) 1
+  | sndc  : IsRedComb (DCC Snd(β)) 1
   -- Σ(f_α, f_β) env -> Coup(...)
   | sigma : IsRedComb (DCC Σ(f_α, f_β)) 1
   -- `(β, x) y
@@ -35,9 +35,9 @@ inductive IsRedCombApp : Expr → Arity → Type
   -- (f ∘ g) x
   | comp  : IsRedCombApp (DCC (f ∘ g)) 1
   | comp' : IsRedCombApp (DCC (f ∘' g)) 1
-  -- Fstc(..) (x, y) -> x
-  | fstc  : IsRedCombApp (DCC Fstc(β)) 1
-  | sndc  : IsRedCombApp (DCC Sndc(β)) 1
+  -- Fst(..) (x, y) -> x
+  | fstc  : IsRedCombApp (DCC Fst(β)) 1
+  | sndc  : IsRedCombApp (DCC Snd(β)) 1
   -- Σ(f_α, f_β) env -> Coup(...)
   | sigma : IsRedCombApp (DCC Σ(f_α, f_β)) 1
   -- `(β, x) y

@@ -2,7 +2,7 @@
   description = "DCC";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=26.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -109,14 +109,30 @@
               cp build/${builtins.baseNameOf pkg-name}.pdf $out/
             '';
           });
-        papers = [{
-          name = "paper";
-          path = "papers/paper";
+        papers = [#{
+          #name = "paper";
+          #path = "papers/paper";
+        #}
+        {
+          name = "infer";
+          path = "papers/infer";
         }
         {
-          name = "paper2";
-          path = "papers/paper2";
+          name = "eta";
+          path = "papers/eta";
         }
+        {
+          name = "red";
+          path = "papers/red";
+        }
+        {
+          name = "paper3";
+          path = "papers/paper3";
+        }
+        #{
+          #name = "paper2";
+          #path = "papers/paper2";
+        #}
         #{
         #  name = "adapting_equations";
         #  path = "papers/adapting_equations";

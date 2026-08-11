@@ -1,0 +1,277 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\newcommand{\comment}[1]{ }
+\usepackage{tabularx}
+\usepackage{verbatim}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{textcomp}
+\usepackage[a4paper, margin={1in}]{geometry}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\setmonofont{FreeMono}
+\usepackage{minted}
+\setminted{breaklines=true}
+\newmintinline[lean]{lean4}{bgcolor=white}
+\newminted[leancode]{lean4}{fontsize=\footnotesize}
+\usemintedstyle{tango}
+
+\frenchspacing
+\usepackage{amsthm}
+\usepackage{authblk}
+\usepackage{biblatex}
+\usepackage{mathpartir}
+\usepackage{stmaryrd}
+\usepackage{amssymb}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\addbibresource{./refs.bib}
+
+\newcommand{\llb}{\llbracket}
+\newcommand{\rrb}{\rrbracket}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\newcommand{\arr}{\rightarrow}
+\newcommand{\sort}[1]{\text{Sort}\ #1}
+\newcommand{\barr}{\arr_{\beta}}
+\newcommand{\barrn}{\arr_{\beta}^{!}}
+\newcommand{\earr}{\arr_{\eta}}
+\newcommand{\affarr}{\rightarrowtail}
+\newcommand{\affetaarr}{\rightarrowtail_{\eta}}
+\newcommand{\etaarr}{\rightarrow_{\eta}}
+\newcommand{\dom}[1]{\text{dom}(#1)}
+\newcommand{\domtwo}[1]{\text{dom}_{2}(#1)}
+\newcommand{\comb}[2]{\text{#1}(#2)}
+\newcommand{\arity}[2]{\text{arity} #1 = #2}
+\newcommand{\efn}[2]{\text{F}_{\eta}\ #1\ #2}
+\newcommand{\ddom}{\text{Domain}\ }
+\newcommand{\dddom}{\text{Domain}_{2}\ }
+\newcommand{\hole}{\text{Hole}\ }
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+
+\title{DCC \(\eta\)-Reduction Rules}
+\author[1]{Lexi Aiello}
+
+\begin{document}
+
+\section{\(\eta\) Domain}
+
+\begin{figure}[h!]
+  \begin{center}
+    \setlength{\extrarowheight}{0pt}
+    \begin{tabularx}{\textwidth}{@{\extracolsep{\fill}} l X r @{}}
+      \multicolumn{1}{l}{
+      \inferrule[Eql]
+      {\dom{B} = A}
+      {\dom{\comb{Eql}{B}} \coloneq !(A)}} &
+      \multicolumn{1}{c}{
+      \inferrule[Unbox]
+      { }
+      {\dom{*(A)} \coloneq !(A)}}&
+      \multicolumn{1}{r}{
+      \inferrule[Eql1]
+      {B x \barrn A}
+      {\dom{\comb{Eql}{B}} \&(x) \coloneq !(A)}}\\\\
+      \multicolumn{1}{l}{
+      \inferrule[Refl]
+      {\dom{B} = A}
+      {\dom{\comb{refl}{B}} \coloneq !(A)}} &
+      \multicolumn{1}{c}{
+      \inferrule[Refl1]
+      {B x \barrn A}
+      {\dom{\comb{refl}{B} \&(x)} \coloneq !(A)}}&
+      \multicolumn{1}{r}{\inferrule[Unmap]
+      {\dom{x} = A}
+      {\dom{*\la x \ra} \coloneq !(A)}}\\\\
+      \multicolumn{1}{l}{\inferrule[Fmap]
+      {\dom{x} = A}
+      {\dom{\$ \la x \ra} \coloneq !(A)}}&
+      \multicolumn{1}{c}{
+      \inferrule[Map]
+      {\dom{x} = A}
+      {\dom{! \la x \ra} \coloneq !(A)}}&
+      \multicolumn{1}{r}{\inferrule[Id]
+      { }
+      {\dom{\comb{Id}{A}} \coloneq A}}\\\\
+      \multicolumn{1}{l}{\inferrule[Fst]
+      { }
+      {\dom{\comb{Fst}{B}} \coloneq \comb{Coup}{B}}}&
+      \multicolumn{1}{c}{
+      \inferrule[Snd]
+      { }
+      {\dom{\comb{Snd}{B}} \coloneq \comb{Coup}{B}}}&
+      \multicolumn{1}{r}{\inferrule[Curr]
+      { }
+      {\dom{\Lambda (A, B, x)} \coloneq A}}\\\\
+      \multicolumn{1}{l}{\inferrule[Curr1]
+      {B x \barrn B'}
+      {\dom{\Lambda (A, B, x) y} \coloneq B'}}&
+      \multicolumn{1}{c}{
+      \inferrule[Quot]
+      { }
+      {\dom{`(A, x)} \coloneq A}}&
+      \multicolumn{1}{r}{
+      \inferrule[Curr']
+      { }
+      {\dom{!\Lambda (A, B, x)} \coloneq !(A)}}\\\\
+      \multicolumn{1}{l}{\inferrule[Curr'1]
+      {B x \barrn B'}
+      {\dom{!\Lambda (A, B, x) y} \coloneq !(B')}}&
+      \multicolumn{1}{c}{
+      \inferrule[Pair]
+      {\dom{x} = A}
+      {\dom{\llb B \rrb \la x, y \ra} \coloneq A}}&
+      \multicolumn{1}{r}{\inferrule[Pi]
+      {\dom{B} = A}
+      {\dom{\Pi(B, C)} \coloneq A}}\\\\
+      \multicolumn{1}{l}{\inferrule[Eval]
+      { }
+      {\dom{\comb{Eval}{A, B, x}} \coloneq A}}&
+      \multicolumn{1}{c}{
+      \inferrule[Eval1]
+      {B y \barrn B'}
+      {\dom{\comb{Eval}{A, B, x} y} \coloneq B'}}&
+      \multicolumn{1}{r}{\inferrule[Comp']
+      {\dom{g} = A}
+      {\dom{f \circ' g} \coloneq A}}\\\\
+      \multicolumn{1}{l}{
+      \inferrule[Comp]
+      {\dom{g} = !(A)}
+      {\dom{f \circ g} \coloneq !(A)}}&
+      \multicolumn{1}{c}{
+      \inferrule[Comp2]
+      {\dom{g} = !(A)}
+      {\dom{f \circ\circ g} \coloneq !(A)}}&
+      \multicolumn{1}{r}{}
+    \end{tabularx}
+    \end{center}
+  \caption{Where \(\earr\) represents \(\eta\)-reduction and \(\barrn\) represents \(\beta\)-normal reduction. \text{dom} syntactically retrieves the \(\beta\)-reduced domain of a combinator given the environment. All domains are \(\beta\)-normal. \(\Sigma\) is omitted, since it has no \(\eta\)-reduction aside from reducing its points. We also model domains as a relation \(\text{Domain} x A\) with completeness and soundness with respect to \(\dom{x}\).}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{tabularx}{\linewidth}{l >{\centering\arraybackslash}X r}
+      \inferrule[Quot]
+      { }
+      {\domtwo{`(A, `(B, x))} \coloneq (A, B)}&
+      \multicolumn{1}{c}{
+      \inferrule[Id]
+      {B x \barrn A}
+      {\domtwo{\comb{Id}{\Pi(B, C) x}} \coloneq (\Pi(B, C) x, A)}}&
+      \multicolumn{1}{r}{
+      \inferrule[Comp']
+      {\dom{g} = A, \domtwo{f} = (B, C)}
+      {\domtwo{f \circ' g} \coloneq (A, C \circ' f)}}\\\\
+      \inferrule[Eql]
+      {\dom{B} = A}
+      {\domtwo{\comb{Eql}{B}} \coloneq (A, B)}&
+      \multicolumn{1}{c}{
+      \inferrule[Refl]
+      {\dom{B} = A}
+      {\domtwo{\comb{refl}{B}} \coloneq (A, B)}}&
+      \multicolumn{1}{r}{
+      \inferrule[Curr]
+      {\dom{x} = \comb{Coup}{B}}
+      {\domtwo{\Lambda(A, B, x)} \coloneq (A, B)}}\\\\
+      \multicolumn{3}{l}{
+      \inferrule[Curr']
+      {\dom{x} = !(\comb{Coup}{B})}
+      {\domtwo{!\Lambda(A, B, x)} \coloneq (!(A), !\la B \ra)}}
+    \end{tabularx}
+  \caption{Arity 2 function domains. The second projection of \(\dom{2}{x}\) is a function of the first term argument. Double quotation is \(\eta\)-reducible and considered to have arity 2 when double quoted. Similarly, when \(Id\) accepts a function, it has arity 2.}
+\end{figure}
+
+\section{\(\eta\) Holes}
+
+\begin{figure}[H]
+  \begin{center}
+    \setlength{\extrarowheight}{0pt}
+    \begin{tabularx}{\linewidth}{@{\extracolsep{\fill}} l X r @{}}
+      \multicolumn{1}{l}{
+      \inferrule[\(\eta\)-unary functions]
+      {\comb{arity}{x} = 1, \dom{x} = A}
+      {\efn{x}{[A]}}}&
+      \multicolumn{1}{c}{
+      \inferrule[\(\eta\)-binary functions]
+      {\comb{arity}{x} = 2, \domtwo{x} = (A, B)}
+      {\efn{x}{[A, B]}}}&
+      \multicolumn{1}{r}{
+      \inferrule[Affine bang holes]
+      {\hole A (\text{level} + 1) x, \mathbb{N}}
+      {\hole !(A) \text{level} \&(x)}}\\\\
+      \multicolumn{3}{c}{
+      \inferrule[Constant holes]
+      {(\neg \exists B, A = \comb{Coup}{B}) \land (\neg \exists B, A = !(B)), \mathbb{N}}
+      {\hole A\ \text{level} (\text{const} (\text{hole} \text{level}))}}\\\\
+      \multicolumn{3}{c}{
+      \inferrule[Couple holes]
+      {\dom{B} = A, \hole A (\text{level} + 2) x, B x \barrn B', \hole B' (\text{level} + 1) y, \mathbb{N}}
+      {\hole \comb{Coup}{B}\ \text{level} \llb B \rrb (x, y)}}
+    \end{tabularx}
+    \end{center}
+  \caption{Where \(\efn{f}{\text{doms}}\) represents a view of \(f\) as an \(\eta\)-reducible function with domain ``doms''.}
+\end{figure}
+
+We also make use of relations \(\text{Domain} x [A]\) and \(\text{Domain}_{2} x [A, B]\) as proofs of function domains. Domains are computed by \(\text{dom} x\) and \(\text{dom}_2 x\) respectively. \(B\) is a function of the term argument \(y : A\).
+
+\section{\(\eta\)-Canonicalization}
+
+\begin{figure}[H]
+  \begin{center}
+    \begin{tabularx}{\textwidth}{c}
+      \inferrule[Id]
+      {\efn{x}{[A]}, (\neg \exists B C y, x = \Pi(B, C) y), \hole A y, x y \barrn y}
+      {x \earr \comb{Id}{A}}\\\\
+      \inferrule[Fst]
+      {\dom{B} = A, \efn{x}{[[\comb{Coup}{B}]}, \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn y}
+      {x \earr \comb{Fst}{B}}\\\\
+      \inferrule[Snd]
+      {\dom B A, \efn{x}{[\comb{Coup}{B}]}, \hole \comb{Coup}{B} (\llb B \rrb (y, z)), x \llb B y \rrb (y, z) \barrn z}
+      {x \earr \comb{Snd}{B}}\\\\
+      \inferrule[Fst']
+      {\dom B A, \efn{x}{[!(\comb{Coup}{B})]}, \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn y}
+      {x \earr *\la \comb{Fst}{B} \ra}\\\\
+      \inferrule[Snd']
+      {\dom B A, \efn{x}{[!(\comb{Coup}{B})]}, \hole !(\comb{Coup}{B}) (\&(\llb B \rrb (y, z))), x \&(\llb B y \rrb (y, z)) \barrn z}
+      {x \earr *\la \comb{Snd}{B} \ra}\\\\
+      \inferrule[Par]
+      {\dom A y, ((\neg \exists A', A = \comb{Coup}{A'}) (\neg \exists A', A = !(A'))), \efn{x}{[A]}, \hole A y, x y \barrn x' y, \efn{x'}{[A]}}
+      {x \earr x'}\\\\
+      \inferrule[Eval]
+      {\dom B A, \efn{x}{[\comb{Coup}{B}]}, \hole \comb{Coup}{B} \llb B \rrb (y, z), x \llb B \rrb (y, z) \barrn x' y z, \efn{x'}{[A, B]}}
+      {x \earr \comb{Eval}{A, B, x'}}\\\\
+      \inferrule[Quot]
+      {\efn{x}{[A]}, \hole A y, x y \barrn e', \neg \exists l, \text{const} (\text{hole} l) \in e'}
+      {x \earr `(A, e')}\\\\
+      \inferrule[$\text{Id}_{2}$]
+      {\efn{x}{[\Pi(f_A, f_B) \text{env}, `(\Pi(f_A, f_B) \text{env}, B)]}, \hole (\Pi(f_A, f_B) \text{env}) y, \hole B z, x y z \barrn y z}
+      {x \earr \comb{Id}{\Pi(f_A, f_B) \text{env}}}\\\\
+      \inferrule[$\text{Quot}_{2}$]
+      {\efn{x}{[A, `(A, B)]}, \hole A y, \hole B z, x y z \barrn e', (\neg \exists l, \text{const} (\text{hole} l) \in e')}
+      {x \earr `(A, `(B, e'))}\\\\
+      \inferrule[Bang Quot]
+      {\efn{x}{[!(A), ! \la B \ra]}, \hole !(A) y, \la B \ra y \barrn B', \hole B' z, x y z \barrn e', (\neg \exists l, \text{const} (\text{hole} c) \in e')}
+      {x \earr !\Lambda(A, B, `(!(\comb{Coup}{B}), e'))}
+    \end{tabularx}
+    \end{center}
+  \caption{Where \(\earr\) represents function canonicalization. Hole-application observes function behavior. Functions are accordingly mapped to canonical operations which correspond to operations in the cartesian closed category. Holes are injected into the AST with a \text{const} constructor.}
+\end{figure}
+
+\begin{comment}
+
+  Eta reduction digram:
+  - Explain how to calculate holes
+    - Domain is fine, since domain just calculates the shape. Eta-reduction inside the domain is not necessary, just beta-reduction.
+
+\end{comment}
+
+\end{document}
+

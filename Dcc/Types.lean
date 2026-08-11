@@ -14,8 +14,8 @@ inductive Arrow.{u} {τ : Type u} : GenericExpr (τ := τ) → GenericExpr (τ :
 /-
 (Π(Id(Sort 2),
              `(Sort 2,
-               Π(!<Sndc(`(⊤, Sort 1))>,
-                 !Λ(Coup(`(⊤, Sort 1)), Sndc(`(⊤, Sort 1)), `(!(Coup(Sndc(`(⊤, Sort 1)))), Sort 2)))))
+               Π(!<Snd(`(⊤, Sort 1))>,
+                 !Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(!(Coup(Snd(`(⊤, Sort 1)))), Sort 2)))))
              !(Coup(`(⊤, Sort 1))))
 -/
 
@@ -116,8 +116,8 @@ def view_arrow.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α β : GenericExpr (�
 /-
 (Π(Id(Sort 3),
                      `(Sort 3,
-                       Π(!<Sndc(`(⊤, Sort 2))>,
-                         !Λ(Coup(`(⊤, Sort 2)), Sndc(`(⊤, Sort 2)), `(!(Coup(Sndc(`(⊤, Sort 2)))), Sort 3)))))
+                       Π(!<Snd(`(⊤, Sort 2))>,
+                         !Λ(Coup(`(⊤, Sort 2)), Snd(`(⊤, Sort 2)), `(!(Coup(Snd(`(⊤, Sort 2)))), Sort 3)))))
                      !(Coup(`(⊤, Sort 2))))
 -/
 
@@ -223,17 +223,17 @@ TODO: x needs to depend on (env : δ)
 
 /-
 β : ∀ (x : α), Sort n
-Fstc(β) : ∀ (s : Coup(β)), α
+Fst(β) : ∀ (s : Coup(β)), α
 -/
 @[dcc_judge] abbrev fstc.type.{u} {τ_c : Type u} (α β : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
   DCC? (Coup(β) : Sort (max m n)) → α
 
 /-
 β : ∀ (x : α), Sort n
-Sndc(β) : ∀ (s : Coup(β)), (β ∘ Fstc(β)) s
+Snd(β) : ∀ (s : Coup(β)), (β ∘ Fst(β)) s
 -/
 @[dcc_judge] abbrev sndc.type.{u} {τ_c : Type u} (β : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
-  DCC? (Π(Id(Sort (max m n)), `(Sort (max m n), β ∘' Fstc(β))) Coup(β))
+  DCC? (Π(Id(Sort (max m n)), `(Sort (max m n), β ∘' Fst(β))) Coup(β))
 
 /-
 f_β : δ → α → Sort n
@@ -289,7 +289,7 @@ g : ∀ (x : α) (y : β x), γ x y
   DCC? (Π(Id(Sort m), `(Sort m, γ ∘' g)) α)
 
 /-
-g : ∀ (x : α), Σ(Λ(α, `(α, α), f_β ∘ Fstc(`(α, α)))) x
+g : ∀ (x : α), Σ(Λ(α, `(α, α), f_β ∘ Fst(`(α, α)))) x
 f : ∀ (s : Coup(f_β)), `(Sort n, γ)
 
 f ∘ g : ∀ (x : α), γ ∘ g
@@ -308,7 +308,7 @@ f ∘ g : ∀ (x : α), γ ∘ g
 -/
 
 @[dcc_judge] abbrev comp₂.g.type.{u} {τ_c : Type u} (α β : GenericExpr τ_c) (m : Level) :=
-  (DCC? (Π(Id(Sort m), `(Sort m, *<Σ(`(α, α), Λ(α, `(α, α), β ∘' Fstc(`(α, α))))>)) !(α)))
+  (DCC? (Π(Id(Sort m), `(Sort m, *<Σ(`(α, α), Λ(α, `(α, α), β ∘' Fst(`(α, α))))>)) !(α)))
 
 inductive Comp₂.g.type.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c → Level → GenericExpr τ_c → Type u
   | dep    : Comp₂.g.type α β m (comp₂.g.type α β m)
@@ -364,8 +364,8 @@ f_α : α → Sort m
 f_β : (x : α) (y : f_α x) → Sort n
 Π(m, f_α, f_β) : α → Sort n
 -/
-@[dcc_judge] abbrev Pi.type.{u} {τ_c : Type u} (α : GenericExpr τ_c) (o n : Level) : GenericExpr τ_c :=
-  DCC? (α : Sort o) → Sort n
+@[dcc_judge] abbrev Pi.type.{u} {τ_c : Type u} (α : GenericExpr τ_c) (o m n : Level) : GenericExpr τ_c :=
+  DCC? (α : Sort o) → Sort (max m n)
 
 /-abbrev Pi.f_β.type (f_α α : Expr) (m o : Level) :=
   (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(α, f_α, `(Coup(m, α, f_α), Sort o))))) α))-/
@@ -396,14 +396,14 @@ f_β : δ → α → Sort n
 /-
 f_α : δ → Sort m
 Eval(f_α, f_β) : ∀ (s : ∀ (env : δ), (Σ(f_α, f_β) env)) (env : δ),
-  f_β env (Fstc(f_β env) (s env))
+  f_β env (Fst(f_β env) (s env))
 
-Fstc ({ f, g } x) = f x
+Fst ({ f, g } x) = f x
 
 Eval(f_α, f_β) f x = (Snd ∘ f) x
 
 Eval(f_α, f_β) : ∀ (s : ∀ (env : δ), (Σ(f_α, f_β) env)) (env : δ),
-  f_β env (Fstc(f_β env) (s env))
+  f_β env (Fst(f_β env) (s env))
 
 Eval takes M and N explicitly?
 
@@ -454,8 +454,8 @@ def toFormat.{u} {τ : Type u} [hFmt : Std.ToFormat τ]
   | (DCC? `(β, x))             => comb "`" [β.toFormat pretty, x.toFormat pretty]
   | (DCC? Id(α))               => comb "Id" [α.toFormat pretty]
   | (DCC? Sort m)              => "Sort " ++ (Std.format m)
-  | (DCC? Fstc(β))             => comb "Fstc" [β.toFormat pretty]
-  | (DCC? Sndc(β))             => comb "Sndc" [β.toFormat pretty]
+  | (DCC? Fst(β))             => comb "Fst" [β.toFormat pretty]
+  | (DCC? Snd(β))             => comb "Snd" [β.toFormat pretty]
   | (DCC? Λ(α, β, e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC? !Λ(α, β, e))         => comb "!Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC? Π(α, β))             =>

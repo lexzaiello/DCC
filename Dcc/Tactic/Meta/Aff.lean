@@ -10,8 +10,8 @@ namespace MetaExpr
 inductive RedAffMeta : MetaExpr → MetaExpr → Type
   | quot      : RedAffMeta (DCC[.] (`(β, x) y)) x
   | id        : RedAffMeta (DCC[.] (Id(α) x)) x
-  | fstc      : RedAffMeta (DCC[.] (Fstc(_α) ⟦β⟧(a, b))) a
-  | sndc      : RedAffMeta (DCC[.] (Sndc(_α) ⟦β⟧(a, b))) b
+  | fstc      : RedAffMeta (DCC[.] (Fst(_α) ⟦β⟧(a, b))) a
+  | sndc      : RedAffMeta (DCC[.] (Snd(_α) ⟦β⟧(a, b))) b
   | comp'     : RedAffMeta (DCC[.] ((x ∘' y) z)) (DCC[.] (x (y z)))
   | comp      : RedAffMeta (DCC[.] ((x ∘ y) z)) (DCC[.] (x (y z)))
   | curr      : RedAffMeta (DCC[.] (Λ(α, β, x) y z)) (DCC[.] (x ⟦β⟧(y, z)))

@@ -42,10 +42,10 @@ inductive Domain : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
       match h with
       | .bang h => hn_α' ⟨_, h⟩⟩
   | id       : (hrn : RedAffNorm α α') → Domain ⟨(DCC? Id(α)), fun ⟨_, h⟩ => nomatch h⟩ α'
-  | fstc     : (hrn : RedAffNorm β ⟨β', hn_β'⟩) → Domain ⟨(DCC? Fstc(β)), fun ⟨_, h⟩ => nomatch h⟩
+  | fstc     : (hrn : RedAffNorm β ⟨β', hn_β'⟩) → Domain ⟨(DCC? Fst(β)), fun ⟨_, h⟩ => nomatch h⟩
     ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => match h with
       | .coup h => hn_β' ⟨_, h⟩⟩
-  | sndc     : (hrn : RedAffNorm β ⟨β', hn_β'⟩) → Domain ⟨(DCC? Sndc(β)), fun ⟨_, h⟩ => nomatch h⟩
+  | sndc     : (hrn : RedAffNorm β ⟨β', hn_β'⟩) → Domain ⟨(DCC? Snd(β)), fun ⟨_, h⟩ => nomatch h⟩
     ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => match h with
       | .coup h => hn_β' ⟨_, h⟩⟩
   | curr₁    : (hrn : RedAffNorm α α') → Domain ⟨(DCC? Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩ α'
@@ -179,8 +179,8 @@ def domain? (e : @NormExpr τ_c' RedAff) : Option ((τ : @NormExpr τ_c' RedAff)
       | _ => .none
     | (DCC? *(_α)) => .some ⟨_, .unbox (aff_sound rfl)⟩
     | (DCC? Id(_α)) => .some ⟨_, .id (aff_sound rfl)⟩
-    | (DCC? Fstc(_β)) => .some ⟨_, .fstc (aff_sound rfl)⟩
-    | (DCC? Sndc(_β)) => .some ⟨_, .sndc (aff_sound rfl)⟩
+    | (DCC? Fst(_β)) => .some ⟨_, .fstc (aff_sound rfl)⟩
+    | (DCC? Snd(_β)) => .some ⟨_, .sndc (aff_sound rfl)⟩
     | (DCC? Λ(_α, _β, _x)) => .some ⟨_, .curr₁ (aff_sound rfl)⟩
     | (DCC? (Λ(_α, _β, _x) y)) => .some ⟨_, .curr₂
       (y := y) (hn_y := fun ⟨_, h⟩ => hn ⟨_, .congrArg h⟩) (aff_sound rfl)⟩

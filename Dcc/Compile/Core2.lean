@@ -63,10 +63,10 @@ def fvar_expr_to_lean (e : GenericExpr Lean.FVarId) (τ : Lean.Name := ``Unit) :
     .app (exp ``_root_.GenericExpr.id) f'
   | (DCC? Sort m)              =>
     .app (exp ``_root_.GenericExpr.sort) (toExpr m)
-  | (DCC? Fstc(f))                =>
+  | (DCC? Fst(f))                =>
     let f' := f.fvar_expr_to_lean
     .app (exp ``_root_.GenericExpr.fstc) f'
-  | (DCC? Sndc(f))                =>
+  | (DCC? Snd(f))                =>
     let f' := f.fvar_expr_to_lean
     .app (exp ``_root_.GenericExpr.sndc) f'
   | (DCC? Π(β, x)) =>
@@ -172,11 +172,11 @@ def cc_var (τ_c : Type) [Repr τ_c] [DecidableEq τ_c] (ctx : Ctx τ_c) (idx : 
     pure (DCC? x ∘' *(α))
   | _ =>
     match ctx, idx with
-    | DCC? Coup(β), .zero => pure <| DCC? Sndc(β)
+    | DCC? Coup(β), .zero => pure <| DCC? Snd(β)
     | DCC? Coup(β), .succ n => do
       match (·.fst) <$> infer.snd β with
       | .ok (DCC? (Π(a, _b) x_α)) =>
-        (·.comp' (DCC? (Fstc(β)))) <$> (cc_var τ_c (reduce (DCC? (a x_α))) n infer (reduce := reduce))
+        (·.comp' (DCC? (Fst(β)))) <$> (cc_var τ_c (reduce (DCC? (a x_α))) n infer (reduce := reduce))
       | τ => Lean.Macro.throwError s!"Couple β index is not valid: ({β} : {τ})"
     | e, n => Lean.Macro.throwError s!"Cannot be indexed at {n} as a couple: {e}"
 termination_by (idx, GenericExpr.size ctx)
@@ -310,18 +310,18 @@ def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx 
       match reduce (f_β.app x_α) with
       | DCC? Π(β₀, _γ) =>
         let β := β₀.deref_map
-        match (·.fst) <$> infer.snd (DCC? Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))) with
+        match (·.fst) <$> infer.snd (DCC? Λ(α, `(α, α), N' ∘' Fst(`(α, α)))) with
         | .ok (DCC? (Π(_f_α, f_β₀) x_α₀)) =>
           match reduce (DCC? (f_β₀ x_α₀)) with
           | DCC? Π(_β₂, x_γ') =>
-            let inner := reduce (DCC? ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+            let inner := reduce (DCC? ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fst(`(α, α)))⟩)
             match (·.fst) <$> infer.snd inner with
             | .ok (DCC? (Π(_a₁, `(_a₂, Σ(_a₃, Λ(_a₄, _a₅, `(_α₆, _a₇))) ∘' _a₈)) _a₉)) =>
               -- NOTE: this used to be ∘, but not sure if necessary.
-              return (DCC? Eval(α, β, M'.deref_map) ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+              return (DCC? Eval(α, β, M'.deref_map) ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fst(`(α, α)))⟩)
             | .ok (DCC? (Π(_a₁, `(_a₂, `(_a₃, _a₄))) _a₅)) =>
-              return (DCC? Eval(α, β, M'.deref_map) ∘' ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
-            | _ => return (DCC? Eval(α, β, M'.deref_map) ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fstc(`(α, α)))⟩)
+              return (DCC? Eval(α, β, M'.deref_map) ∘' ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fst(`(α, α)))⟩)
+            | _ => return (DCC? Eval(α, β, M'.deref_map) ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fst(`(α, α)))⟩)
           | _ => Lean.Macro.throwError ("app is not well-typed:"
             ++ Std.Format.line ++ (.nestD (Std.format (Lean.Expr.app M N)))
             ++ ("couldn't detect codomain:" ++ Std.Format.line ++ (.nestD (Std.format (reduce (DCC? (f_β₀ x_α₀))))))).pretty
@@ -536,13 +536,13 @@ then just deref to get coup type
 (!Λ(!(⊤), `(!(⊤), Sort 0),
     (Eval(Coup(`(!(⊤), Sort 0)), !<`(Coup(`(!(⊤), Sort 0)), Sort 0)>,
             !Λ(Coup(`(!(⊤), Sort 0)), `(Coup(`(!(⊤), Sort 0)), Sort 0),
-               (Sndc(`(Coup(`(!(⊤), Sort 0)), Sort 0)) ∘' *(Coup(`(Coup(`(!(⊤), Sort 0)), Sort 0)))))) ∘∘
+               (Snd(`(Coup(`(!(⊤), Sort 0)), Sort 0)) ∘' *(Coup(`(Coup(`(!(⊤), Sort 0)), Sort 0)))))) ∘∘
        ⟦`(Coup(`(!(⊤), Sort 0)),
             `(Coup(`(!(⊤), Sort 0)),
               Sort 0))⟧⟨Id(Coup(`(!(⊤), Sort 0))),
                                       Λ(Coup(`(!(⊤), Sort 0)), `(Coup(`(!(⊤), Sort 0)), Coup(`(!(⊤), Sort 0))),
-                                        (Sndc(`(!(⊤), Sort 0)) ∘'
-                                           Fstc(`(Coup(`(!(⊤), Sort 0)), Coup(`(!(⊤), Sort 0))))))⟩))
+                                        (Snd(`(!(⊤), Sort 0)) ∘'
+                                           Fst(`(Coup(`(!(⊤), Sort 0)), Coup(`(!(⊤), Sort 0))))))⟩))
    &(&(∗)))
 
 - check bang_n_times
@@ -557,7 +557,7 @@ then just deref to get coup type
                                ↓ this does match α
 Eval(Coup(`(!(⊤), Sort 0)), !<`(Coup(`(!(⊤), Sort 0)), Sort 0)>,
             !Λ(Coup(`(!(⊤), Sort 0)), `(Coup(`(!(⊤), Sort 0)), Sort 0),
-               (Sndc(`(Coup(`(!(⊤), Sort 0)), Sort 0)) ∘' *(Coup(`(Coup(`(!(⊤), Sort 0)), Sort 0))))))
+               (Snd(`(Coup(`(!(⊤), Sort 0)), Sort 0)) ∘' *(Coup(`(Coup(`(!(⊤), Sort 0)), Sort 0))))))
 
 Eval consumes a pair, which is intrinsically NOT boxed. not &(a, b). a and b might be individually boxed, though.
 However `(!(⊤), Sort 0) suggests no.

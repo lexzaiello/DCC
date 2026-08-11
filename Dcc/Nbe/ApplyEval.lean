@@ -28,8 +28,8 @@ inductive Apply : (f : Val) → (x : Val) → Val → Type
   | eql₂     : Apply Val(λ env 1 => Eql(f_α)) Val(neutral(&(x))) Val(neutral(x = x))
   | unbox    : Apply Val(λ env 1 => *(α)) Val(neutral(&(x))) Val(x)
   | id       : Apply Val(λ env 1 => Id(α)) x x
-  | fstc     : Apply Val(λ env 1 => Fstc(_α)) Val(neutral(⟦β⟧(a, b))) a
-  | sndc     : Apply Val(λ env 1 => Sndc(_α)) Val(neutral(⟦β⟧(a, b))) b
+  | fstc     : Apply Val(λ env 1 => Fst(_α)) Val(neutral(⟦β⟧(a, b))) a
+  | sndc     : Apply Val(λ env 1 => Snd(_α)) Val(neutral(⟦β⟧(a, b))) b
   | curr₁    : Apply Val(λ env 2 => Λ(α, β, x)) y Val(λ y::env 1 => Λ(α, β, x))
   | curr'₁   : Apply Val(λ env 2 => !Λ(α, β, x)) Val(neutral(&(y))) Val(λ neutral(&(y))::env 1 => !Λ(α, β, x))
   | map      : Apply f x e'
@@ -74,8 +74,8 @@ inductive Eval : List Val → Expr → Val → Type
   | eval      : Eval env α α' → Eval env β β' → Eval env x x' → Eval env (DCC Eval(α, β, x)) Val(λ env 1 => Eval(α', β', x'))
   | quot      : Eval env β β' → Eval env x x' → Eval env (DCC `(β, x)) Val(λ env 1 => `(β', x'))
   | id        : Eval env α α' → Eval env (DCC Id(α)) Val(λ env 1 => Id(α'))
-  | fstc      : Eval env β β' → Eval env (DCC Fstc(β)) Val(λ env 1 => Fstc(β'))
-  | sndc      : Eval env β β' → Eval env (DCC Sndc(β)) Val(λ env 1 => Sndc(β'))
+  | fstc      : Eval env β β' → Eval env (DCC Fst(β)) Val(λ env 1 => Fst(β'))
+  | sndc      : Eval env β β' → Eval env (DCC Snd(β)) Val(λ env 1 => Snd(β'))
   | curr      : Eval env α α' → Eval env β β' → Eval env x x' → Eval env (DCC Λ(α, β, x)) Val(λ env 2 => Λ(α', β', x'))
   | curr'     : Eval env α α' → Eval env β β' → Eval env x x' → Eval env (DCC !Λ(α, β, x)) Val(λ env 2 => Λ(α', β', x'))
   | pi        : Eval env f_α f_α' → Eval env f_β f_β' → Eval env (DCC Π(f_α, f_β)) Val(Π (f_α') env 1, f_β')

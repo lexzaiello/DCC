@@ -193,8 +193,9 @@ inductive Hole : (α : @EtaExpr.Norm τ_c)
     → Hole α (level + 2) ⟨hole₁, hn_hole₁⟩
     → RedAffNorm (DCC? (β hole₁)) τ_snd
     → Hole τ_snd (level + 1) ⟨hole₂, hn_hole₂⟩
-    → Hole ⟨(DCC? Coup(β)), hn⟩ level ⟨DCC? ⟦β⟧(hole₁, hole₂), fun ⟨_, h⟩ =>
+    → Hole ⟨(DCC? Coup(β)), hn⟩ level ⟨DCC? ⟦hole₁⟧(hole₁, hole₂), fun ⟨_, h⟩ =>
       match h with
+      | .sigt h => hn_hole₁ ⟨_, h⟩
       | .sigl h => hn_hole₁ ⟨_, h⟩
       | .sigr h => hn_hole₂ ⟨_, h⟩⟩
   | bang : Hole ⟨α, hn_α⟩ (level + 1) ⟨hole, hn_hole⟩ → Hole ⟨(DCC? !(α)), fun ⟨_, h⟩ =>
@@ -333,7 +334,13 @@ def Hole.points_norm (h : Hole (τ_c := τ_c) α level ⟨tm_hole, hn_hole⟩) (
     match point_idx with
     | ⟨0, h_lt⟩ =>
       refine IsNorm.coup ?_
-      assumption
+      simp [points]
+      expose_names
+      change IsNorm RedAff hole₁.coup
+      intro ⟨_, h⟩
+      cases h with
+      | coup h =>
+        exact hn_hole ⟨_, .sigt h⟩
     | ⟨1, h_lt⟩ => assumption
     | ⟨2, h_lt⟩ => assumption
 

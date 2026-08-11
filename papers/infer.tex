@@ -1,0 +1,206 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\newcommand{\comment}[1]{}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{textcomp}
+\usepackage[a4paper, margin={1in}]{geometry}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\setmonofont{FreeMono}
+\usepackage{minted}
+\setminted{breaklines=true}
+\newmintinline[lean]{lean4}{bgcolor=white}
+\newminted[leancode]{lean4}{fontsize=\footnotesize}
+\usemintedstyle{tango}
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+\frenchspacing
+\usepackage{amsthm}
+\usepackage{authblk}
+\usepackage{biblatex}
+\usepackage{mathpartir}
+\usepackage{stmaryrd}
+\usepackage{amssymb}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\addbibresource{./refs.bib}
+
+\newcommand{\llb}{\llbracket}
+\newcommand{\rrb}{\rrbracket}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\newcommand{\arr}{\rightarrow}
+\newcommand{\sort}[1]{\text{Sort}\ #1}
+\newcommand{\affarr}{\rightarrowtail}
+\newcommand{\affetaarr}{\rightarrowtail_{\eta}}
+\newcommand{\etaarr}{\rightarrow_{\eta}}
+
+\title{DCC Inference Rules}
+\author[1]{Lexi Aiello}
+
+\begin{document}
+
+% Inference rules:
+% In actual paper, note implicit reduction of all types
+% also do reduction rules table
+% Syntax cheat sheet
+% do not destructure inside inference rules. use combinators.
+% TODO: need to explain technical details as well, of how this translates to DCC
+% Use an example of app, eval, and curry
+
+\begin{figure}[h]
+  \centering
+  \resizebox{\textwidth}{!}{
+  \begin{tabular}{l c c c c r}
+    \multicolumn{1}{l}{
+    \inferrule[Eq]
+    {x : A, y : A}
+    {(x = y) : \sort{0}}} &
+    \multicolumn{1}{c}{
+    \inferrule[Id]
+    {A : \sort{u}}
+    {\text{Id}(A) : A \arr A}} &
+    \multicolumn{1}{c}{
+    \inferrule[Sort]
+    { }
+    {\sort{u} : \sort{u + 1}}} &
+    \multicolumn{1}{c}{
+    \inferrule[Top]
+    { }
+    {\top : \sort{0}}} &
+    \multicolumn{1}{c}{
+    \inferrule[Bot]
+    { }
+    {\bot : \sort{0}}} &
+    \multicolumn{1}{r}{
+    \inferrule[Tt]
+    { }
+    {\ast : \top}} \\\\
+    \multicolumn{3}{l}{
+    \inferrule[refl]
+    {B : A \arr \sort{u}}
+    {\text{refl}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr (\text{Eql}(B) x y)}} &
+    \multicolumn{3}{r}{
+    \inferrule[eql]
+    {B : A \arr \sort{u}}
+    {\text{eql}(B) : (x : !(A)) \arr (y : !\la B \ra x) \arr \sort{0}}} \\\\
+    \multicolumn{4}{l}{
+    \inferrule[Comp]
+    {g : (x : !(A)) \arr ((y : A) \times B y), f : (x : (x : A) \times B x) \arr C x}
+    {f \circ g : (x : !(A)) \arr (C \circ g) x}} &
+    \multicolumn{2}{r}{
+    \inferrule[Comp']
+    {g : A \arr B, f : (x : B) \arr C x}
+    {f \circ ' g : (x : A) \arr (C \circ ' g) x}} \\\\
+    \multicolumn{4}{l}{
+    \inferrule[Comp2]
+    {g : (x : !(A)) \arr ((y : A) \times B x), f : (x : (y : A) \times B x) \arr C x}
+    {f \circ \circ g : (x : !(A)) \arr (C \circ \circ g) x}} &
+    \multicolumn{2}{r}{
+    \inferrule[Coup]
+    {A : \sort{u}, B : A \arr \sort{v}}
+    {\text{Coup}(B) : \sort{max(u, v)}}} \\\\
+    \multicolumn{3}{l}{
+    \inferrule[Fst]
+    {B : A \arr \sort{v}}
+    {\text{Fst}(B) : (x : A) \times B x \arr A}
+    } &
+    \multicolumn{3}{r}{
+    \inferrule[Snd]
+    {B : A \arr \sort{v}}
+    {\text{Snd}(B) : (x : (x : A) \times B x) \arr B (\text{Fst}(B) x)}}\\\\
+    \multicolumn{4}{l}{
+    \inferrule[Sigma]
+    {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
+    {\Sigma(B, C) : A \arr \sort{max(u, v)}}} &
+    \multicolumn{2}{r}{
+    \inferrule[Mkc]
+    {x : A, y : B x}
+    {\llb B \rrb (x, y) : (x : A) \times B x}} \\\\
+    \multicolumn{4}{l}{
+    \inferrule[Curr]
+    {B : A \arr \sort{u}, x : (x : (x : A) \times B x) \arr C x}
+    {\Lambda (A, B, x) : (x : A) \arr (y : B x) \arr C \llb B \rrb (x, y)}} &
+    \multicolumn{2}{r}{
+    \inferrule[Map]
+    {x : A \arr \sort{u}}
+    {!\la x \ra : !(A) \arr \sort{n}}
+    }\\\\
+    \multicolumn{4}{l}{
+    \inferrule[Curr']
+    {B : A \arr \sort{u}, x : !((x : A) \times B x) *\arr \la C \ra x}
+    {!\Lambda (A, B, x) : (\&(x) : !(A)) \arr (\&(y) : \la B \ra x) \arr C \&(\llb B \rrb (x, y))}} &
+    \multicolumn{2}{r}{
+    \inferrule[Fmap]
+    {x : (x : A) \arr B x}
+    {\$\la x \ra : (\&(x) : !(A)) \arr !(B x)}}\\\\
+    \multicolumn{4}{l}{
+    \inferrule[Eval]
+    {A : \sort{u}, B : A \arr \sort{v}, x : (x : A) \arr (y : B x) \arr C x y}
+    {\text{Eval}(A, B, x) : (x : (x : A) \times B x) \arr \text{Eval}(A, B, C)}} &
+    \multicolumn{2}{r}{
+    \inferrule[Quot]
+    {x : A, B : \sort{u}}
+    {`(B, x) : B \arr A}}\\\\
+    \multicolumn{3}{l}{
+    \inferrule[Pair]
+    {x : (x : A) \arr B x, y : (x : A) \arr (y : B x) \arr C x y}
+    {\llb C \rrb \la x, y \ra : (x : A) \arr (y : B x) \times C x y}
+    } &
+    \multicolumn{3}{r}{
+    \inferrule[Pi]
+    {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
+    {\Pi (B, C) : (x : A) \arr (y : B x) \arr \sort{max(u, v)}}}\\\\
+    \multicolumn{1}{l}{
+    \inferrule[Bang]
+    {A : \sort{u}}
+    {!(A) : \sort{u}}} &
+    \multicolumn{1}{c}{
+    \inferrule[Box]
+    {x : A}
+    {\&(x) : !(A)}} &
+    \multicolumn{1}{c}{
+    \inferrule[Unmap]
+    {x : (x : A) \arr B x}
+    {*\la x \ra : (x : !(A)) \arr * \la B \ra}} &
+    \multicolumn{1}{c}{
+    \inferrule[Unbox]
+    {A : \sort{u}}
+    {*(A) : !(A) \arr A}} &
+    \multicolumn{2}{r}{
+    \inferrule[App]
+    {f : (x : A) \arr B x, x : A}
+    {f x : B x}}
+  \end{tabular}}
+  \caption{\((x : A) \times B x\) is notation for \(\text{Coup}(B)\).\ \((x : A) \arr B x\) is notation for \(\Pi(\text{Id}(\sort{m}), `(\sort{m}, B)) A\), where \(A : \sort{m}\).}
+\end{figure}
+
+%\begin{figure}[h]
+%  \centering
+%  \begin{tabularx}{\textwidth}{X X X X X X}
+%    \multicolumn{3}{c}{\inferrule[Eq]
+%    {x : A, y : A}
+%    {(x = y) : Sort 0}} &
+%    \multicolumn{3}{c}{\inferrule[Snd]
+%    {\alpha : \sort{m}, \delta : \sort{o}, f_\beta : \delta \rightarrow \alpha \rightarrow \sort{n}}
+%    {Snd(\beta) : \Pi (\textit{env} : \delta) (s : \Sigma(f_\beta) \textit{env}), f_{\beta} \textit{env} (Fst(f_\beta) (\textit{env}) s))}} \\\\
+%    \multicolumn{2}{c}{\inferrule[Snd']
+%    {\alpha : \sort{m}, \beta : \sort{n}}
+%    {Snd'(\alpha, \beta) : Coup(`(\alpha, \beta)) \rightarrow \beta}} &
+%    \multicolumn{2}{c}{\inferrule
+%    { }
+%    {Snd(\beta) \coloneq Snd(`(\top, \beta)) \ast}}&
+%    \multicolumn{2}{c}{\inferrule
+%    { }
+%    {Fst(\beta) \coloneq Fst(`(\top, \beta)) \ast}}
+%  \end{tabularx}\\
+%\end{figure}
+
+\end{document}

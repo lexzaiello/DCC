@@ -20,8 +20,8 @@ syntax "∗"                                                    : gen_dcc
 syntax "⊥"                                                    : gen_dcc
 syntax:max "`(" gen_dcc,* ")"                                 : gen_dcc
 syntax:max "Id(" gen_dcc,* ")"                                : gen_dcc
-syntax:max "Fstc(" gen_dcc,* ")"                              : gen_dcc
-syntax:max "Sndc(" gen_dcc,* ")"                              : gen_dcc
+syntax:max "Fst(" gen_dcc,* ")"                              : gen_dcc
+syntax:max "Snd(" gen_dcc,* ")"                              : gen_dcc
 syntax "Σ(" gen_dcc,* ")"                                     : gen_dcc
 syntax "Coup(" gen_dcc ")"                                    : gen_dcc
 syntax "const(" term ")"                                      : gen_dcc
@@ -104,9 +104,9 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "sigma") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β)]
   | `(DCC[$ty:gen_dcc_loc] Coup($β:gen_dcc))                         => do
     return mkApp (← field ty "coup") #[← `(DCC[$ty:gen_dcc_loc] $β)]
-  | `(DCC[$ty:gen_dcc_loc] Fstc($β:gen_dcc))                         => do
+  | `(DCC[$ty:gen_dcc_loc] Fst($β:gen_dcc))                         => do
     return mkApp (← field ty "fstc") #[← `(DCC[$ty:gen_dcc_loc] $β)]
-  | `(DCC[$ty:gen_dcc_loc] Sndc($β:gen_dcc))                         => do
+  | `(DCC[$ty:gen_dcc_loc] Snd($β:gen_dcc))                         => do
     return mkApp (← field ty "sndc") #[← `(DCC[$ty:gen_dcc_loc] $β)]
   | `(DCC[$ty:gen_dcc_loc] Id($α:gen_dcc))                           => do
     return mkApp (← field ty "id") #[← `(DCC[$ty:gen_dcc_loc] $α)]

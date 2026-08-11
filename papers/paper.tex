@@ -250,7 +250,7 @@ We make use of this isomorphism to represent contexts in our ongoing effort to c
 
 \subsection{Type Arguments Index the Environment}
 
-All combinator objects have type annotations specified as points (usually as families indexing the environment). For example, the projection \(Snd(f_\beta)\) is indexed by the term \(f_\beta\) which depends on an arbitrary environment (\(s : \delta\)) and the term \(fst : \alpha\). Couple projection can be derived, and we refer to it as \(Sndc(\beta)\).
+All combinator objects have type annotations specified as points (usually as families indexing the environment). For example, the projection \(Snd(f_\beta)\) is indexed by the term \(f_\beta\) which depends on an arbitrary environment (\(s : \delta\)) and the term \(fst : \alpha\). Couple projection can be derived, and we refer to it as \(Snd(\beta)\).
 
 \subsection{Inference Rules}\label{infer_rules}
 
@@ -285,7 +285,7 @@ We define arrows (\(A \rightarrow B\)) as \(\Pi\) objects quoting their codomain
 
 \subsubsection{Couple Projections}
 
-We define dependent and nondependent versions of the \(Snd\) projection to bootstrap several of the combinators' types. We also derive a \(Sndc\) combinator which accepts a \(Coup(\beta)\) not depending on an environment. \(Fst(\beta)\) depends on an environment, and \(Fstc\) is similarly derived. Composition (\(f \circ g\)) is nondependent with respect to \(g\), although \(f\) may depend on \(g x\). A form of semi-dependency can be derived if \(g\) carries its dependency in a couple (\(g x : \Sigma(\ldots) \ldots\)).
+We define dependent and nondependent versions of the \(Snd\) projection to bootstrap several of the combinators' types. We also derive a \(Snd\) combinator which accepts a \(Coup(\beta)\) not depending on an environment. \(Fst(\beta)\) depends on an environment, and \(Fst\) is similarly derived. Composition (\(f \circ g\)) is nondependent with respect to \(g\), although \(f\) may depend on \(g x\). A form of semi-dependency can be derived if \(g\) carries its dependency in a couple (\(g x : \Sigma(\ldots) \ldots\)).
 
 We use thunking to reduce pairs (\(\langle f, g \rangle x\)) lazily. That is, \(\langle f, g \rangle x\) is a normal form, and projections and evaluation are defined on it as if it were the reduced couple \((f x, g x)\). This approach enables some usage of the pair rule in our types, though we do not use it to define any of our core types.
 
@@ -305,10 +305,10 @@ The inference rules for projection on \(\Sigma\)-terms (couples and pairs) are a
     {Snd'(\alpha, \beta) : Coup(`(\alpha, \beta)) \rightarrow \beta}} &
     \multicolumn{2}{c}{\inferrule
     { }
-    {Sndc(\beta) \coloneq Snd(`(\top, \beta)) \ast}}&
+    {Snd(\beta) \coloneq Snd(`(\top, \beta)) \ast}}&
     \multicolumn{2}{c}{\inferrule
     { }
-    {Fstc(\beta) \coloneq Fst(`(\top, \beta)) \ast}}
+    {Fst(\beta) \coloneq Fst(`(\top, \beta)) \ast}}
   \end{tabularx}\\
 \end{figure}
 
@@ -349,7 +349,7 @@ Recall \(\langle f, g \rangle x = (f x, g x)\). We do not define reduction direc
   \begin{equation}\label{pair_infer}
     \inferrule[Pair]
     { f : \Pi(x : \alpha), \beta x\\ g : \Pi (x : \alpha), \gamma x}
-    { \langle f, g \rangle : \Pi (x : \alpha), \Sigma(\Lambda(\alpha, \beta, \gamma ∘ Fstc(\beta))) x}
+    { \langle f, g \rangle : \Pi (x : \alpha), \Sigma(\Lambda(\alpha, \beta, \gamma ∘ Fst(\beta))) x}
   \end{equation}
 \end{figure}
 
@@ -417,7 +417,7 @@ We define the \(App\) inference rule \eqref{infer_app} using our \(Subst\) combi
     \begin{gathered}
     \inferrule [Notation]
     { }
-    { t_{\beta x y} \coloneq \Lambda(\delta, f_\alpha, \Pi(f_\alpha, f_\beta) \circ Fstc(f_\alpha)) }\\
+    { t_{\beta x y} \coloneq \Lambda(\delta, f_\alpha, \Pi(f_\alpha, f_\beta) \circ Fst(f_\alpha)) }\\
     \inferrule [Appl]
     { \delta : \sort{m}, f_{\alpha} : \delta \rightarrow \sort{m}, f_{\beta} : \Pi(s : \delta) (x : f_\alpha s),\sort{o}}
     { App(f_\alpha, f_\beta) : \Pi(env : \delta) (s : \Sigma(t_{\beta x y}) env), Subst(f_\beta, Fst(t_{\beta x y}))}
@@ -949,7 +949,7 @@ To simplify type expressions, we employ Curien's \(\eta\)-reduction rules \autoc
 inductive RedEta : Expr → Expr → Prop
   | curr      : RedEta x x' → RedEta (DCC (Λ(α, β, x))) (DCC (Λ(α, β, x')))
   | curr_quot : RedEta (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) (DCC `(y, x))
-  | curr_fst  : RedEta (DCC (Λ(α, β, x ∘ Fstc(β₂)) y)) (DCC `(β, x))
+  | curr_fst  : RedEta (DCC (Λ(α, β, x ∘ Fst(β₂)) y)) (DCC `(β, x))
   | pi        : RedEta (DCC Π(α, β)) p' → RedEta (DCC (Π(α, β) env)) (DCC (p' env))
   | pi_quot   : RedEta x x' → RedEta (DCC (Π(α, `(β, x)))) (DCC (Π(α, `(β, x'))))
   | pi'       : RedEta β β' → RedEta (DCC (Π(α, β))) (DCC (Π(α, β')))
@@ -979,7 +979,7 @@ def step_eta? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (RedEta e e')))
     if heq : DCC (Λ(α, _b, `(_c, x)) y) = (DCC (Λ(α, Id(α), `(Coup(Id(α)), x)) y)) then
       heq ▸ .some ⟨_, ⟨.curr_quot⟩⟩
     else .none
-  | DCC (Λ(_α, _β, _x ∘ Fstc(_β₂)) _y) => .some ⟨_, ⟨.curr_fst⟩⟩
+  | DCC (Λ(_α, _β, _x ∘ Fst(_β₂)) _y) => .some ⟨_, ⟨.curr_fst⟩⟩
   | DCC Σ(f_β) =>
     match f_β.step_eta? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.sig' h⟩⟩
@@ -1297,7 +1297,7 @@ Our \mintinline{lean}{Judge} relation models the inference rules \eqref{infer_ru
   DCC (Π(Id(Sort m), `(Sort m, Π(β, Λ(α, β, γ)))) α) -- weaken α, keep x
 
 @[dcc_judge, grind →, grind .] abbrev App.type (f_α f_β δ : Expr) (o : Level) : Expr :=
-  let tβ_coup := DCC Λ(δ, f_α, Π(f_α, f_β) ∘ Fstc(f_α))
+  let tβ_coup := DCC Λ(δ, f_α, Π(f_α, f_β) ∘ Fst(f_α))
   DCC (Π(Id(Sort o), `(Sort o, Π(Σ(tβ_coup), Subst(f_β, Fst(tβ_coup))))) δ)
 
 @[dcc_judge] abbrev Pi.type (α : Expr) (m o : Level) : Expr :=

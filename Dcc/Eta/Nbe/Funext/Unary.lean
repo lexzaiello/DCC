@@ -19,7 +19,7 @@ theorem elim' (h : RedAff x x) : False := by
   have h_dec := h.decreasing
   grind
 
-def no_fst_self (h : RedAff (DCC? (Fstc(β) x)) x) : False := by
+def no_fst_self (h : RedAff (DCC? (Fst(β) x)) x) : False := by
   cases h with
   | congrArg h =>
     have h_dec := h.decreasing
@@ -39,7 +39,7 @@ This property does not hold for quotation, however,
 since (`(β, x) x) = x
 
 -/
-def no_fst_self (h : RedAffNorm (DCC? (Fstc(β) x)) ⟨x, hn_x⟩) : False := by
+def no_fst_self (h : RedAffNorm (DCC? (Fst(β) x)) ⟨x, hn_x⟩) : False := by
   match h with
   | ⟨hrt, hn⟩ =>
     match hrt.cases_head with
@@ -66,7 +66,7 @@ def no_fst_self (h : RedAffNorm (DCC? (Fstc(β) x)) ⟨x, hn_x⟩) : False := by
         have h_dec := h.decreasing
         grind
 
-def no_snd_self (h : RedAffNorm (DCC? (Sndc(β) x)) ⟨x, hn_x⟩) : False := by
+def no_snd_self (h : RedAffNorm (DCC? (Snd(β) x)) ⟨x, hn_x⟩) : False := by
   match h with
   | ⟨hrt, hn⟩ =>
     match hrt.cases_head with
@@ -484,6 +484,7 @@ def ext₁
         cases heq
         cases h with
         | bang h =>
+          simp [GenericExpr.to_eta_right_inv hn] at h
           cases h with
           | coup =>
             expose_names
@@ -540,8 +541,8 @@ def ext₁
           cases h with
           | coup =>
             expose_names
-            simp [GenericExpr.to_eta_right_inv hn] at a_5
-            have h := a_5.contains_hole
+            simp [GenericExpr.to_eta_right_inv hn] at a_4
+            have h := a_4.contains_hole
             grind
   | sndc =>
     expose_names
@@ -587,8 +588,8 @@ def ext₁
         cases h with
         | coup =>
           expose_names
-          simp [GenericExpr.to_eta_right_inv hn] at a_5
-          have h := a_5.contains_hole
+          simp [GenericExpr.to_eta_right_inv hn] at a_4
+          have h := a_4.contains_hole
           grind
   | fstc =>
     expose_names
@@ -631,6 +632,7 @@ def ext₁
       cases e_h with
       | tm₁ heq h =>
         cases heq
+        simp [GenericExpr.to_eta_right_inv hn] at h
         cases h with
         | coup =>
           expose_names
@@ -727,9 +729,7 @@ def ext₁
         assumption⟩
       dcc_simp at hrt'
       cases hrt'
-      have h_eq_x₀ := hrt₂.quot_self (by
-        simp [GenericExpr.to_eta_right_inv hn]
-        assumption) (by assumption)
+      have h_eq_x₀ := hrt₂.quot_self (by assumption) (by assumption)
       have h_mem := e_h₀.contains_hole
       simp [raw] at h_mem
       exact (hn h_mem).elim

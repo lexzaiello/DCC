@@ -64,7 +64,7 @@
 \newcommand{\dddom}{\text{Domain}_{2}\ }
 \newcommand{\hole}{\text{Hole}\ }
 
-\title{Combinator Calculus: Computable Function Extensionality and Decidable Type-Checking by Construction}
+\title{Combinator Calculus: Decidable Type Checking in Extensional Type Theory}
 \author[1]{Lexi Aiello}
 \author[2]{Eric Klavins}
 \affil[1]{Department of Philosophy, University of Washington}
@@ -85,17 +85,15 @@
 \subsection{Results}
 
 \begin{itemize}
-  \item In \ref{dccintro}, we present our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to dependent types. We have no variables, and no contexts. Our extension is analagous in expressivity to the Calculus of Constructions on the lambda cube \autocite{Barendregt_1991}. We formally present our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
-  \item In \ref{skcomp}, we compare our calculus to the \(SK\) combinator calculus \ref{skcomp} \autocite{curry1958combinatory} and elucidate its limitations which practically precluded past attempts at dependent combinator calculus.
-  \item In \textit{TODO insert here}, we prove that strong normalization is a natural consequence of our choice of affine logic.
-  \item In \textit{TODO insert here}, we prove that decidable type-checking is a natural consequence of our design, and describe our implementation of the type-checker in Lean 4.
-  \item In \textit{TODO insert here}, we prove that computable function extensionality is a natural consequence of \(\eta\)-reduction in the categorical combinators. Our proof is formalized as a metatheorem in Lean 4. We show that \(\eta\)-canonical terms are well-behaved due to the natural correspondence betwee categorical combinators and cartesian closed categories.
-  \item In \textit{TODO insert here}, we prove that the extensional propositional equality elimination rule is a natural consequence of our design. Due to strong normalization, judgments are canonical, thus enabling equality reflection. Our proof is formalized as a metatheorem in Lean 4.
+  \item In \ref{dccintro}, we present the dependent combinator calculus (DCC): our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to dependent types. We have no variables and no contexts. DCC is analagous in expressivity to the Calculus of Constructions on the lambda cube \autocite{Barendregt_1991}. We formally present our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
+  \item In \ref{funext}, we prove that computable function extensionality is a natural consequence of \(\eta\)-reduction in the calculus. Our proof is formalized as a metatheorem in Lean 4.
+  \item In \ref{eqreflect}, we prove that equality reflection is a natural consequence of our design.
+  \item In \ref{decidable}, we prove that type-checking is decidable.
+  \item In \textit{TODO insert here}, we present a procedure for compiling a small subset of Lean 4 (base Calculus of Constructions) to DCC.
+
 \end{itemize}
 
-All of our results have been formalized in the Lean 4 proof assistant. To this date, we are not aware of any calculus where these features can coexist: extensional equality elimination; computable function extensionality; and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit them by construction. We do not present a combinatory basis for inductive types, as they are out of scope for this paper.
-
-We do not assume equality reflection or function extensionality as axioms. They are computable definitions, not theorems in Prop.
+All of our results have been formalized in the Lean 4 proof assistant. To this date, we are not aware of any calculus where these features can coexist: extensional equality elimination; computable function extensionality; and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit them by construction. We do not present a combinatory basis for inductive types, as they are out of scope for this paper. We do not assume equality reflection or function extensionality as axioms. They are computable definitions, not theorems in Prop.
 
 \subsection{Background}
 
@@ -124,7 +122,7 @@ Prior iterations of the calculus, and attempts by others at combinatory dependen
 \caption{Rewrite rules of the \(SK\) combinator calculus}
 \end{figure}
 
-However, past attempts posed severe limitations due to minimalism of SK and its lack of structures analagous to \(\Pi\) types. There are only two primitives objects: \(S\) and \(K\), neither of which correspond to universal or existential quantification. \(\Pi\) types are usually supported by a \(\Pi\) combinator. However, since \(S\) and \(K\) are the only primitive objects, extra helper (``meta'') combinators are required to model dependent types, with no computational relevance.
+However, past attempts posed severe limitations due to minimalism of SK and its lack of structures analagous to \(\Pi\) types. \(S\) and \(K\) are the only primtive objects. \(\Pi\) types are usually supported by a \(\Pi\) combinator. Extra helper (``meta'') combinators are usually required to mechanically suffle terms in the context under \(\Pi\) binders \autocite[10:17]{altenkirch}.
 
 The usual dependent types of \(S\) and \(K\) given by \ref{skty} \autocite[p. 10:16]{altenkirch}.
 
@@ -137,15 +135,13 @@ The usual dependent types of \(S\) and \(K\) given by \ref{skty} \autocite[p. 10
 \caption{\label{skty}The usual dependent types of the \(S\) and \(K\) combinators}
 \end{figure}
 
-Prior attempts \autocite{altenkirch} at dependent \(SK\) made use of helper combinators to perform the machinery of manipulating types \autocite[10:17]{altenkirch}.
+SK's minimalism results in prohibitively large \autocite[10:17]{altenkirch} types, and a great burden on the prover. Complex machinery is required to shuffle elements in the context around (through combinations of \(S\) and \(K\)). Universe levels must be provided explicitly, which are very difficult for a user to calculate. In general, types are almost impossible for a user to write \autocite[p. 10:17]{altenkirch}. Also, the kernel cannot reason about structural similarities between types, resulting in definitional equality errors. Non-termination is intrinsic to \(SK\), since \(S\) duplicates terms. Our past naive solution used the \(BCKI\) calculus, with the hope that types would be easier to write and normalization inherent. Still, \(BCKI\) does not use term points, resulting in the same practical limitations of \(SK\).
 
-However, SK's minimalism results in prohibitively large \autocite[10:17]{altenkirch} types, and a great burden on the prover. Complex machinery is required to shuffle elements in the context around (through combinations of \(S\) and \(K\)). Universe levels must be provided explicitly, which are very difficult for a user to calculate. Types very difficult to reason about. There is a great burden on the user, since SK does not have any term points, meaning all type arguments must be supplied manually, making types almost impossible for a user to write \autocite[p. 10:17]{altenkirch}. Also, the kernel cannot reason about structural similarities between types, resulting in definitional equality type errors. Finally, non-termination is intrinsic to \(SK\), since \(S\) duplicates terms. Our past naive solution used the \(BCKI\) calculus, with the hope that types would be easier to write and normalization inherent. Still, \(BCKI\) does not use term points, resulting in the same limitations of \(SK\).
-
-By contrast, DCC is based on the categorical combinator calculus. In DCC, all universe levels are inferred (except literal \(\sort{m}\) terms), and types arguments are internalized and often inferred altogether. This makes types much easier for the user to express. This is due to the isomoprhism between currying in the categorical combinators and \(\lambda\)-abstraction. Debruijn indices are modeled by nested tuples (an ``environment'', or a ``couple'') and projections, substitution by tuple currying, and application by evaluation \eqref{eq:catred}. Types are also much smaller due to this similarity, and the kernel can reason about structural equivalence more often (even without \(\eta\)-reduction).
+DCC is based on the categorical combinator calculus. In DCC, all universe levels are inferred except in \(\sort{u}\) terms. Types arguments are internalized. Types are much easier for the user to express. This is due to the isomoprhism between currying in the categorical combinators and \(\lambda\)-abstraction. Debruijn indices are modeled by nested tuples (an ``environment'', or a ``couple'') and projections, substitution by tuple currying, and application by evaluation \eqref{eq:catred}. Types are also much smaller due to this similarity, and the kernel can reason about structural equivalence more often (even without \(\eta\)-reduction).
 
 \subsection{Categorical Combinators}
 
-The rewrite rules of the categorical combinator calculus are given by \ref{eq:catred} \autocite{cmachine} (although sometimes \(\text{App}\) is replaced by \(\text{Eval}(x)\)).
+The rewrite rules of the categorical combinator calculus are given by \ref{eq:catred} \autocite{cmachine}.
 
 \begin{figure}
 \begin{align*}
@@ -155,12 +151,12 @@ The rewrite rules of the categorical combinator calculus are given by \ref{eq:ca
   \text{Id} x &\coloneq x \\
   \la x, y \ra x &\coloneq (M x, N x) \\
   \text{App} (x, y) &\coloneq x y \\
-  \Lambda(x) y z \coloneq x (y, z)
+  \Lambda(x) y z &\coloneq x (y, z)
 \end{align*}
 \caption{\label{eq:catred}Reduction rules of the categorical combinators}
 \end{figure}
 
-Each combinator corresponds to an operation in the cartesian closed category. \(Id\) corresponds to the identity morphism, composition to morphism composition, \(\text{App}\) to evaluation, and \(\Lambda\) to currying.
+Each combinator corresponds to an operation in the cartesian closed category. \(\text{Id}\) corresponds to the identity morphism, composition to morphism composition, \(\text{App}\) to evaluation, and \(\Lambda\) to currying.
 
 Constants can be encoded without a constant combinator (as in \(SK\)) \ref{constderiv}.
 
@@ -240,13 +236,13 @@ A simply-typed variant of the categorical combinators is presented in \autocite[
 
 \section{\label{dccintro}DCC: The Dependent Combinator Calculus}
 
-We present DCC: the dependent combinator calculus. DCC is based an extensional type theory with computable function extensionality on an adaptation of the categorical combinators to dependent types and affine logic. It is equivalent to the base Calculus of Constructions in expressivity, and makes use of a sort hierarchy. As in the Calculus of Constructions, types are terms.
+We present DCC: the dependent combinator calculus. DCC is extensional with computable function extensionality and equality reflection as metatheorems. It is based on an adaptation of the categorical combinators to dependent types and affine logic. It is equivalent to the base Calculus of Constructions in expressivity with respect to the \(\lambda\)-cube.
 
-We believe our choice of combining categorical combinators with dependent types and affine logic is uniquely suitable for decidable type-checking, strong normalization, computable function extensionality and equality reflection as metatheorems. To date, this calculus is the only one where these features coexist. Dependently-typed combinators have been largely deemed highly nontrivial. Most importantly, decidable type-checking in extensional type theory has thus far been thought to be impossible.
+We believe our choice of combining categorical combinators with dependent types and affine logic is uniquely suitable for decidable type-checking in extensional type theory. To date, this calculus is the only one of its kind. Dependently-typed combinators have been largely deemed highly nontrivial. Decidable type-checking in extensional type theory has thus far been thought to be impossible \autocite[2]{hofmann1995extensional}.
 
-We achieve computable function extensionality through the observation that in combinatory logic, open terms do not exist, and canonical terms in \(\eta\)-reduction correspond to the primitive operations in cartesian closed categories. \(\eta\)-reductions are deterministic, unique, and mutually exclusive in behavior. Hence, the set of canonical functions is countable, small, and very well-behaved. Function extensionality is provable by demonstrating that if two \(\eta\)-reduced terms \(f\) and \(g\) are applied the same value, and the value is not contained in the respective functions, then \(f x =_{\beta} g x\) iff their \(\eta\)-reductions are the same. That is, \(f = g\). We elaborate more on this proof technique later.
+We achieve computable function extensionality through the observation that in combinatory logic, open terms do not exist, and canonical terms in \(\eta\)-reduction correspond to the primitive operations in cartesian closed categories. \(\eta\)-reductions are deterministic, unique, and mutually exclusive in behavior. Hence, the set of canonical functions is small and well-behaved. Function extensionality is provable by demonstrating that if two \(\eta\)-reduced terms \(f\) and \(g\) are applied the same value, and the value is not contained in the respective functions, then \(f x =_{\beta} g x\) iff their \(\eta\)-reductions are the same. That is, \(f = g\). We elaborate more on this proof technique later.
 
-We achieve dependent typing in principle by making term points functions of the environment, rather than static values. To give an analogy, the categorical combinators correspond to cartesian closed categories, while DCC corresponds to locally cartesian closed categories. Locally cartesian closed categories are known to be a semantics for dependent type theory\autocite{Seely_1984}.
+We achieve dependent typing by making type arguments functions of the environment as term points, rather than as arguments or as static values. To give an analogy, the categorical combinators correspond to cartesian closed categories, while DCC corresponds to locally cartesian closed categories. Locally cartesian closed categories are known to be a semantics for dependent type theory\autocite{Seely_1984}.
 
 \subsection{\(\beta\)-Reduction Rules}
 
@@ -266,7 +262,7 @@ Boxes are consumed by pairs, thus taming the sole source of duplication in the c
 \begin{equation}
 \inferrule[Pair]
 { }
-{\llb B \rrb \la x, y \ra z \barr \llb B \rrb (M x, N x (M x))}
+{\llb B \rrb \la x, y \ra \&(z) \barr \llb B \rrb (M x, N x (M x))}
 \end{equation}
 \caption{Pairs consume boxes, and decrease the size of the program while duplicating a value.}
 \end{figure}
@@ -363,8 +359,8 @@ The full reduction rules are given in \ref{redrules}.
       {x y \barr x' y}}&
       \multicolumn{1}{c}{\inferrule[CongrArg]
       {y \barr y'}
-      {x y \barr x y'}}&\multicolumn{1}{l}{}\\\\
-      \multicolumn{3}{c}{
+      {x y \barr x y'}}&
+      \multicolumn{1}{r}{
       \inferrule[Eql]
       { }
       {Eql(B) x \&(y) \barr y = y}}
@@ -380,7 +376,7 @@ Since DCC is strongly normalizing by default, conversion in the judgment relatio
 
 In DCC, combinator types are determined by points which index an environment and eliminate into a \(\sort{u}\). This approach has the advantage of requiring no explicit universe levels (whereas dependent \(SK\) does), and type arguments can often be inferred, easing the burden on the user.
 
-This design decision is motivated by the realization that interpreting couple environments as \(\Sigma\)-types yields a telescope context:
+This design decision enables a natural compilation from Lean 4 to DCC. Interpreting couple environments as \(\Sigma\)-types yields a telescope context:
 
 \begin{figure}[H]
 \begin{equation}
@@ -400,8 +396,8 @@ Dependent types are supported in principle by a \(\Pi\) combinator. Unlike in pr
   {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
   {\Pi (B, C) : (x : A) \arr (y : B x) \arr \sort{max(u, v)}}\qquad
   \inferrule[App]
-  {f : (\Pi(B, C) \text{env}), B\ \text{env} \barrn A, x : A}
-  {f x : C\ \text{env}\ x}
+  {f : (\Pi(B, C) \text{env}), B\ \text{env} \barrn A, x : A, C\ \text{env}\ x \barrn D}
+  {f x : D}
   \end{gather*}
 \end{figure}
 \end{center}
@@ -628,7 +624,7 @@ true
 -/
 \end{leancode}
 
-Here, \lean{Id(Id(Sort 0) = Id(Sort 0) ∘' Id(Sort 0) ∘' Id(Sort 0))} expects a proof of equality between two functions which are not \(=_{\beta}\). However, \lean{refl} sufffices due to eager \(\beta\)-reduction, judgment canonicity, and well-behaved \(\eta\)-reduction. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Examples3.lean\#L192}{Dcc.Examples3}
+Here, \lean{Id(Id(Sort 0) = Id(Sort 0) ∘' Id(Sort 0) ∘' Id(Sort 0))} expects a proof of an equality between two functions which are not \(=_{\beta}\). However, \lean{refl} sufffices due to eager \(\beta\)-\(\eta\)-reduction (specifically well-behaved \(\eta\)-reduction) and judgment canonicity. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Examples3.lean\#L192}{Dcc.Examples3}
 
 \section{Affine logic: strong normalization for free}
 
@@ -823,7 +819,7 @@ Suppose \(A\), \(B\), and \(C\) are terms, and \(hr_{1} : A \barr^{*} B\) and \(
   \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/7b316fc3eb8aac4736e30d5e9a58918d5215c334/Dcc/Relation.lean\#L366}{Dcc.GenericExpr.norm\_unique}
 \end{proof}
 
-\subsection{Decidability of \(\beta\)-reduction}
+\subsection{Decidability of \(=_{\beta}\)}
 
 We also demonstrate soundness and completeness of a \(\beta\)-reduction procedure (\lean{reduce RedAff A} forall terms \(A\)) with respect to the step relation.
 
@@ -1211,7 +1207,7 @@ We note that the set of possible \(\eta\)-canonical values is mutually exclusive
   \noindent\hfill\leanlink{https://github.com/lexzaiello/DCC/blob/dbb7769b538f7e9b4d6556ede98bcb5d4a8619b3/Dcc/Eta/Nbe/Hole.lean\#L341}{Dcc.NormExpr.Hole.complete}
 \end{proof}
 
-\subsection{\(\eta\)-reduction induces computable function extensionality}
+\subsection{\(\eta\)-reduction induces computable function extensionality}\label{funext}
 
 This proof is natural by the construction of \(\eta\)-normal forms, which are observably mutually exclusive in behavior. \(f \earr g\) only if \(g\) observably mirrors \(f\) applied its respectives holes.
 
@@ -1264,11 +1260,11 @@ This proof is natural by the construction of \(\eta\)-normal forms, which are ob
   \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/dbb7769b538f7e9b4d6556ede98bcb5d4a8619b3/Dcc/Eta/Nbe/Funext/Binary.lean\#L20}{\lean{Dcc.NormExpr.EtaFn.Canonicalize.ext₁}}
 \end{proof}
 
-\section{Decidable type-checking in extensional DTT}
+\section{Decidable type-checking in extensional DTT}\label{decidable}
 
-In DCC, there is exactly one valid judgment for a given term. Catch-all conversion is not permitted. Types are \(\beta\)-\(\beta\) reduced to normal forms eagerly in each inference rule. This is possible due to inheriting strong normalization as a consequence of the choice of affine logic. This fact has sweeping ramifications. In particular, the extensional equality reflection rule is possible.
+In DCC, there is exactly one valid judgment for a given term. Catch-all conversion is not permitted. Types are \(\beta\)-\(\eta\) reduced to normal forms eagerly in each inference rule. This is possible due to inheriting strong normalization as a consequence of the choice of affine logic. This fact has sweeping ramifications. In particular, the extensional equality reflection rule is possible.
 
-\subsection{Propositional equality reflection is a natural consequence of affine DTT}
+\subsection{Propositional equality reflection is a natural consequence of affine DTT}\label{eqreflect}
 
 Recall the extensional equality reflection rule:
 
@@ -1319,7 +1315,7 @@ Expr.tintro = Expr.tintro
 
 \subsection{A type-checker for DCC}
 
-We outline our implementation of a type-checker which has soundness and completeness with respect to the judgment relation at a high-level. The full implementation is available in the appendix \ref{checkerimpl}.
+We outline our implementation of a type-checker which has soundness and completeness with respect to the judgment relation at a high-level. The full implementation is available in the appendix \ref{appendix:sup}.
 
 Definitional equality is defined as such (as in the app inference rule):
 
@@ -1890,9 +1886,10 @@ Things I want to cover
 \appendix
 \section{Supplementary Materials}\label{appendix:sup}
 
-\textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}
-
-\phantomsection\label{checkerimpl}\textbf{Type-checker implementation:} \href{https://github.com/lexzaiello/DCC/blob/6438e9e4960086082714e3498f59b737321c2ceb/Dcc/Judge3.lean}{https://github.com/lexzaiello/DCC/blob/6438e9e4960086082714e3498f59b737321c2ceb/Dcc/Judge3.lean}
+\begin{itemize}
+\item \textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}
+  \item \textbf{Type-checker implementation:} \href{https://github.com/lexzaiello/DCC/blob/6438e9e4960086082714e3498f59b737321c2ceb/Dcc/Judge3.lean}{https://github.com/lexzaiello/DCC/blob/6438e9e4960086082714e3498f59b737321c2ceb/Dcc/Judge3.lean}
+\end{itemize}
 
 \subsection{\label{kcomp}Dependent \(K\) Compilation}
 

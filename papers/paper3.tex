@@ -343,10 +343,13 @@ Weakning is retained in affine logic. Most importantly, affine logic forms a dec
 \section{\label{dccintro}DCC: The Dependent Combinator Calculus}
 
 We present DCC: the dependent combinator calculus. DCC is extensional with computable function extensionality and equality reflection as metatheorems. It is based on an adaptation of the categorical combinators to dependent types and affine logic. It is equivalent to the base Calculus of Constructions in expressivity with respect to the \(\lambda\)-cube.
+% ^ this should be one sentence and repeat as little as possible
 
 We believe our choice of combining categorical combinators with dependent types and affine logic is uniquely suitable for decidable type-checking in extensional type theory. To date, this calculus is the only one of its kind. Dependently-typed combinators have been largely deemed highly nontrivial. Decidable type-checking in extensional type theory has thus far been thought to be impossible \autocite[2]{hofmann1995extensional}.
+% ^ remove "we believe" Do not repeat claims
 
 We achieve computable function extensionality through the observation that in combinatory logic, open terms do not exist, and canonical terms in \(\eta\)-reduction correspond to the primitive operations in cartesian closed categories. \(\eta\)-reductions are deterministic, unique, and mutually exclusive in behavior. Hence, the set of canonical functions is small and well-behaved. Function extensionality is provable by demonstrating that if two \(\eta\)-reduced terms \(f\) and \(g\) are applied the same value, and the value is not contained in the respective functions, then \(f x =_{\beta} g x\) iff their \(\eta\)-reductions are the same. That is, \(f = g\). We elaborate more on this proof technique later.
+% ^ this is good. check for good paragraph structure
 
 We achieve dependent typing by making type arguments functions of the environment as term points, rather than as arguments or as static values. To give an analogy, the categorical combinators correspond to cartesian closed categories, while DCC corresponds to locally cartesian closed categories. Locally cartesian closed categories are known to be a semantics for dependent type theory\autocite{Seely_1984}.
 

@@ -181,6 +181,19 @@ def EtaFn.eq (h₁ h₂ : EtaFn (τ_c := τ_c) f doms) : h₁ = h₂ := by
       expose_names
       cases h_dom.eq h_dom_1; rfl
 
+def EtaFn.arity₁ (h : EtaFn f [dom₁]) : arity f = 1 :=
+  match h with
+  | .tm₁ (_heq := heq) _ => heq
+
+def EtaFn.arity₂ (h : EtaFn f [dom₁, dom₂]) : arity f = 2 :=
+  match h with
+  | .tm₂ (_heq := heq) _ => heq
+
+def EtaFn.arity_eq (h : EtaFn f doms) : arity f = doms.length :=
+  match h with
+  | .tm₁ (_heq := heq) _ => heq
+  | .tm₂ (_heq := heq) _ => heq
+
 open GenericExpr
 
 inductive Hole : (α : @EtaExpr.Norm τ_c)
@@ -209,6 +222,10 @@ def Hole.contains_hole (h : Hole (τ_c := τ_c) α lv hole_e) : hole_e.raw.conta
 def Hole.hole_mem_tm (h : Hole (τ_c := τ_c) α lv hole_e) : hole_e.raw.hole_mem_tm := by
   induction h <;> grind
 
+def Hole.sigt_hole_mem_tm (h : Hole (τ_c := τ_c) α lv ⟨(DCC? (⟦β⟧(a, b))), hn⟩) : β.hole_mem_tm := by
+  cases h with
+  | coup _ ha _ _ => exact ha.hole_mem_tm
+
 def Hole.sigl_hole_mem_tm (h : Hole (τ_c := τ_c) α lv ⟨(DCC? (⟦β⟧(a, b))), hn⟩) : a.hole_mem_tm := by
   cases h with
   | coup _ ha _ _ => exact ha.hole_mem_tm
@@ -218,6 +235,10 @@ def Hole.sigl_hole_mem_tm_box (h : Hole (τ_c := τ_c) α lv ⟨(DCC? &(⟦β⟧
   | bang h =>
     exact h.sigl_hole_mem_tm
 
+def Hole.sigt_hole_mem_tm_box (h : Hole (τ_c := τ_c) α lv ⟨(DCC? &(⟦β⟧(a, b))), hn⟩) : β.hole_mem_tm := by
+  cases h with
+  | bang h => exact h.sigt_hole_mem_tm
+
 def Hole.sigr_hole_mem_tm (h : Hole (τ_c := τ_c) α lv ⟨(DCC? (⟦β⟧(a, b))), hn⟩) : b.hole_mem_tm := by
   cases h with
   | coup _ _ _ ha => exact ha.hole_mem_tm
@@ -226,6 +247,9 @@ def Hole.sigr_hole_mem_tm_box (h : Hole (τ_c := τ_c) α lv ⟨(DCC? &(⟦β⟧
   cases h with
   | bang h =>
     exact h.sigr_hole_mem_tm
+
+def Hole.is_not_app (h : Hole α lv ⟨a, hn⟩) (heq : a = (DCC? (x y))) : False := by
+  cases h <;> cases heq
 
 @[grind]
 def Hole.raw (_h : Hole (τ_c := τ_c) α lv hole_e) : @GenericExpr (@EtaConst τ_c) := hole_e.raw

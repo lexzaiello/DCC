@@ -511,6 +511,9 @@ def expr_to_eta (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (�
 def to_eta_no_hole {e : GenericExpr τ} : ¬ (expr_to_eta e).contains_hole := by
   induction e <;> (simp_all [expr_to_eta, contains_hole])
 
+def to_eta_no_mem_hole {e : GenericExpr τ} : ¬ (expr_to_eta e).hole_mem_tm := by
+  induction e <;> (simp_all [expr_to_eta, hole_mem_tm])
+
 @[dcc_reduce]
 def to_eta_left_inv
   {e : GenericExpr τ} : eta_to_expr (expr_to_eta e) to_eta_no_hole = e := by

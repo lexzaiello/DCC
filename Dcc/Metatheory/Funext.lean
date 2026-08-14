@@ -11,6 +11,16 @@ namespace NormExpr
 
 namespace EtaFn
 
+def all_funext (e_f : EtaFn f doms) (hn : ∀ {f'} {e_f' : EtaFn f' doms} (_h : Canonicalize e_f e_f'), False) : False := by
+  match e_f with
+  | .tm₁ h_dom =>
+    induction h_dom with
+    | eql₁ =>
+      expose_names
+      refine hn (e_f' := e_f) (Canonicalize.par e_f ?_ ?_ ?_ ?_ ?_ ?_)
+  | .tm₂ h_dom =>
+    sorry
+
 def has_canon (e_f : EtaFn f doms) : ((f' : NormExpr RedAff) × (e_f' : EtaFn f' doms) × Canonicalize e_f e_f') := by
   sorry
 

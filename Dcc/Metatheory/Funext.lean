@@ -154,7 +154,8 @@ def ext₁ (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α))) (h₂ : 
   change (tm₁ (h₁.dom₁ h₂ hr₁ hr₂).snd.1).has_canonicalize.fst = (tm₁ (h₁.dom₁ h₂ hr₁ hr₂).snd.2).has_canonicalize.fst at h
   sorry
 
-def ext (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α))) (h₂ : Judge g (DCC? (Π(f_α, f_β) x_α)))
+def ext (h₁ : Judge (τ_c := τ_c) f (DCC? (Π(f_α, f_β) x_α)))
+  (h₂ : Judge g (DCC? (Π(f_α, f_β) x_α)))
   (hr₁ : RedAffNorm f f')
   (hr₂ : RedAffNorm g g')
   (hr₃ : RedAffNorm (DCC? (f'.raw x)) B)

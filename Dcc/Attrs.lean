@@ -1,6 +1,7 @@
 import Lean
 import Lean.Elab
 import Aesop
+import Aesop.Frontend.Tactic
 
 initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_step ("Simplifies using single-step reduction theorems")
@@ -35,7 +36,7 @@ initialize do pure () <*
 initialize do pure () <*
   Lean.Meta.registerSimpAttr `dcc_force_infer ("Runs the type-checker")
 
-declare_aesop_rule_sets [DccStep, DccReduce, DccSize, DccJudge, DccRel, DccForceReduce]
+declare_aesop_rule_sets [DccStep, DccReduce, DccSize, DccJudge, DccRel, DccForceReduce, DccForceStep]
 
 namespace attrs
 
@@ -237,6 +238,28 @@ macro_rules
     `(tactic| aesop? (rule_sets := [DccStep, DccReduce, DccSize, DccJudge, DccRel, DccForceReduce]) $clauses*)
   | `(tactic| dcc_aesop! $clauses:Aesop.tactic_clause*) =>
     `(tactic| aesop (config := {terminal := false, warnOnNonterminal := false}) (rule_sets := [DccStep, DccReduce, DccSize, DccJudge, DccRel, DccForceReduce]) $clauses*)
+
+open Aesop.Frontend.Parser (ruleSetSpec)
+--Aesop.Frontend.Parser.ruleSetSpec
+
+syntax "dcc_aesop" "[" ruleSetSpec,+ "]" (Aesop.tactic_clause)* : tactic
+
+def ident_to_camel (idt : Lean.Syntax.Ident) : Lean.Syntax.Ident :=
+  idt.getId.eraseMacroScopes.toString.split "_"
+  |>.fold (fun x s => Lean.Name.str x ((.singleton s.front.toUpper) ++ (s.drop 1).toString)) (init := Lean.Name.anonymous)
+  |> Lean.mkIdent
+
+def rule_set_to_camel (idts : Lean.Syntax.TSepArray ``ruleSetSpec ",") : Lean.MacroM (Lean.Syntax.TSepArray ``ruleSetSpec ",") :=
+  (⟨·⟩) <$> idts.getElems.mapM (fun e =>
+    match e with
+    | `(ruleSetSpec| - $idt:ident) => `(ruleSetSpec| - $(ident_to_camel idt))
+    | `(ruleSetSpec| $idt:ident) =>   `(ruleSetSpec| $(ident_to_camel idt):ident)
+    | stx => Lean.Macro.throwErrorAt stx "unsupported")
+
+macro_rules
+  | `(tactic| dcc_aesop [$rules:ruleSetSpec,*] $clauses:Aesop.tactic_clause*) => do
+    let rules' ← rule_set_to_camel rules
+    `(tactic| aesop (rule_sets := [$rules':ruleSetSpec,*]) $clauses*)
 
 open Lean Macro Parser.Command
 open Lean (Parser.Command.derivingClass)

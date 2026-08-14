@@ -188,10 +188,10 @@ Cartesian-closed categories are known to be a categorical semantics for the \(\l
   \item Identity morphisms in \ccc{} correspond to the \(Id\) combinator in \ccl.
   \item Debruijn indices correspond to binary projection in \ccc{} (or ``couple'' projection in \ccl) where \(\llb 0 \rrb \coloneq Snd\) and \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\).
   \item Currying in \ccc{} corresponds to the \(\Lambda\) combinator in \ccl{} \autocite[p. 176][line 5]{cmachine}, such that \(\llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)\).
-  \item Evaluation in \ccc{} corresponds to the \(App\) combinator in \ccl, such that \(\llb M N \rrb \coloneq Apply \circ \la \llb M \rrb, \llb N \rrb \ra\).
+  \item Evaluation in \ccc{} corresponds to the \(App\) combinator in \ccl, such that \(\llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra\).
 \end{itemize}
 
-% MOVED THIS ABOVE: Due to this correspondence, \(\lambda\)-calculus can be compiled to \ccl. Debruijn index \(0\) corresponds to \(Snd\) projection where \(\llb 0 \rrb \coloneq Snd\). The Debruijn successor \(n + 1\) corresponds to composition with \(Fst\) projection such that \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\). \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine} where \(\llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)\). Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing where \(\llb M N \rrb \coloneq Apply \circ \la \llb M \rrb, \llb N \rrb \ra\).
+% MOVED THIS ABOVE: Due to this correspondence, \(\lambda\)-calculus can be compiled to \ccl. Debruijn index \(0\) corresponds to \(Snd\) projection where \(\llb 0 \rrb \coloneq Snd\). The Debruijn successor \(n + 1\) corresponds to composition with \(Fst\) projection such that \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\). \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine} where \(\llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)\). Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing where \(\llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra\).
 
 % inlnie or in block? \begin{gather*}
 % inlnie or in block?   \llb 0 \rrb \coloneq Snd \qquad
@@ -204,7 +204,7 @@ Cartesian-closed categories are known to be a categorical semantics for the \(\l
 % inline or in block? \end{equation*}
 % inline or in block? Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing:
 % inline or in block? \begin{equation*}
-% inline or in block?   \llb M N \rrb \coloneq Apply \circ \la \llb M \rrb, \llb N \rrb \ra
+% inline or in block?   \llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra
 % inline or in block? \end{equation*}
 
 The correspondence between \ccl{} and Debruijn indices in the \(\lambda\)-calculus make them a more intuitive compilation target compared to SK, yielding more legible terms. To illustrate, we contrast the compilation of church numerals zero and one from \(\lambda\)-calculus with Debruijn indices to \ccl{} and SK:
@@ -239,42 +239,75 @@ Despite their notable advantages in term legibility, adapting categorical combin
 
 \subsubsection{The Simply-Typed Categorical Combinators}
 
-A simply-typed variant of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points, rather than applied arguments as in dependently-typed \(SK\). Type arguments can be inferred altogether in \(\Lambda\), \(\text{App}\), and \(\text{Pair}\) \ref{cat:infer}.
+A simply-typed variant of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points, rather than applied as arguments as in dependently-typed \(SK\). Type arguments can be inferred altogether in Curry, Pair, Comp, and in couples. The inference rules are like such:
 
-\begin{figure}
-  \resizebox{\textwidth}{!}{
-\begin{tabularx}{\textwidth}{l c r}
+\begin{gather*}
   \inferrule[Fst]
   { }
-  {\comb{Fst}{A, B} : A \times B \arr A}&
-  \multicolumn{1}{c}{
+  {\comb{Fst}{A, B} : A \times B \arr A}\qquad
   \inferrule[Snd]
   { }
-  {\comb{Snd}{A, B} : A \times B \arr B}}&
-  \multicolumn{1}{r}{
+  {\comb{Snd}{A, B} : A \times B \arr B}\qquad
   \inferrule[Id]
   { }
-  {Id(A) : A \arr A}}\\\\
-  \multicolumn{1}{c}{
+  {Id(A) : A \arr A}\\
   \inferrule[App]
   { }
-  {\comb{App}{A, B} : ((A \arr B) \times A) \arr B}}&
-  \multicolumn{1}{c}{}&
-  \multicolumn{1}{c}{
+  {\comb{App}{A, B} : ((A \arr B) \times A) \arr B}\qquad
   \inferrule[Curry]
   {x : A \times B \arr C}
-  {\Lambda(A, B, x) : A \arr B \arr C}}\\\\
-  \multicolumn{1}{l}{
+  {\Lambda(x) : A \arr B \arr C}\qquad
   \inferrule[Pair]
   {x : A \arr B, y : A \arr C}
-  {\la x, y \ra : A \arr B \times C}}&
-  \multicolumn{1}{c}{}&
-  \multicolumn{1}{r}{\inferrule[Comp]
+  {\la x, y \ra : A \arr B \times C}\\
+  \inferrule[Comp]
   {x : B \arr C, y : A \arr B}
-  {x \circ y : A \arr C}}
-\end{tabularx}}
-\caption{\label{cat:infer}Inference rules of the simply-typed categorical combinators}
-\end{figure}
+  {x \circ y : A \arr C}\qquad
+  \inferrule[Coup]
+  {x : A, y : B}
+  {(x, y) : A \times B}
+\end{gather*}
+
+\subsection{Affine Logic}
+
+Affine logic refers to any logic where duplication (``contraction'') is restricted or prohibited, although such logics are usually related to linear logic \autocite[p. 173][sec. 1, par. 1]{kopylov2001decidability}. Linear logic is a constructive logic \cite{girard1987linear} wherein terms in context must be used exactly once, except in the ``exponential'' modalities (\(!\) and \(?\)) \autocite[p. 3]{girard1987linear}:
+
+\begin{gather*}
+  \inferrule[\(\otimes\)]
+  { \vdash A, C \qquad \vdash B, D}
+  { \vdash A \otimes B, C, D}\qquad
+  \inferrule[\(\bindnasrepma\)]
+  { \vdash A, B, C}
+  { \vdash A \bindnasrepma B, C}\qquad
+  \inferrule[\(1 \oplus\)]
+  { \vdash A, C}
+  { \vdash A \oplus B, C}\qquad
+  \inferrule[\(2 \oplus\)]
+  { \vdash B, C}
+  { \vdash A \oplus B, C}\qquad
+  \inferrule[\(\&\)]
+  { \vdash A, C \qquad \vdash B, C}
+  { \vdash A \& B, C}\\
+  \inferrule[\(W?\)]
+  { \vdash B}
+  { \vdash ?A; B}\qquad
+  \inferrule[\(C?\)]
+  { \vdash ?A, ?A, B}
+  { \vdash ?A, B}\qquad
+  \inferrule[\(D?\)]
+  { \vdash A, B}
+  { \vdash ?A, B}\qquad
+  \inferrule[\(!,\)]
+  { \vdash A, ?B}
+  { \vdash !A, ?B}
+\end{gather*}
+Weakning is retained in affine logic. Most importantly, affine logic forms a decidable fragment of first-order logic \cite{ketonen1984decidable}.
+
+\begin{comment}
+  \item How predicate affine logic is decidable
+  \item Weakening is permissible in affine logic
+  \item We make use of this fact.
+\end{comment}
 
 \section{\label{dccintro}DCC: The Dependent Combinator Calculus}
 

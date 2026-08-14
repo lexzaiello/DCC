@@ -239,7 +239,7 @@ def ext₁
     cases e_f.hole_same e_f₃ e_h (.tm₁ rfl e_h₀)
     cases e_f.hole_same e_f₄ e_h (.tm₁ rfl e_h₀)
     cases heq
-    simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₁
+    simp [NormExpr.to_eta, NormExpr.raw] at hrt₁
     cases hrt₁.elim_norm (by
       simp [GenericExpr.to_eta_right_inv hn]
       assumption)
@@ -261,15 +261,54 @@ def ext₁
       cases hrt'
       have h := e_h₀.contains_hole
       grind
-    | fstc | sndc | eval =>
+    | fstc =>
       expose_names
-      exact (h .coup).elim
-    | fstc' | sndc' => expose_names; exact (h .bang).elim
+      cases e_f.hole_same e_f_1 e_h (by assumption)
+      cases (hrt₂.push_head .fstc).elim_norm ((hrt₂.push_head .fstc).is_norm.congrArg.sigl)
+    | sndc =>
+      expose_names
+      cases e_f.hole_same e_f_1 e_h (by assumption)
+      cases (hrt₂.push_head .sndc).elim_norm ((hrt₂.push_head .sndc).is_norm.congrArg.sigr)
+    | eval =>
+      expose_names
+      cases e_f.hole_same e_f_1 e_h (by assumption)
+      have h := (hrt₂.push_head .evalc).elim_norm (by
+        rw [← heq]
+        simp [GenericExpr.to_eta_right_inv hn_1]
+        exact hn')
+      simp [GenericExpr.to_eta_right_inv hn] at h
+      cases h.right
+    | fstc' =>
+      expose_names
+      cases e_f.hole_same e_f_1 e_h (by assumption)
+      cases ((hrt₂.push_head .unmap).push_head .fstc).elim_norm (by
+        cases e_h with
+        | tm₁ heq h =>
+          cases heq
+          cases h with
+          | bang h =>
+            cases h with
+            | coup =>
+              expose_names
+              exact hn_hole.sigl)
+    | sndc' =>
+      expose_names
+      cases e_f.hole_same e_f_1 e_h (by assumption)
+      cases ((hrt₂.push_head .unmap).push_head .sndc).elim_norm (by
+        cases e_h with
+        | tm₁ heq h =>
+          cases heq
+          cases h with
+          | bang h =>
+            cases h with
+            | coup =>
+              expose_names
+              exact hn_hole.sigr)
     | par =>
       expose_names
       cases heq
       cases e_f.hole_same e_f₃ e_h (by assumption)
-      simp [NormExpr.to_eta, NormExpr.raw, GenericExpr.expr_to_eta] at hrt₂
+      simp [NormExpr.to_eta, NormExpr.raw] at hrt₂
       simp [GenericExpr.to_eta_right_inv hn_1] at hrt₂
       cases hrt₂.elim_norm hn₂_1
       dcc_simp
@@ -425,11 +464,6 @@ def ext₁
               | congrFun h => cases h
               | congrArg h => cases h⟩
             grind
-      /-cases hrt₂.unique ⟨.trans (.single .unmap) (.single .fstc), by assumption⟩
-      cases e_f.hole_same e_f₃ (by assumption) (by assumption)
-      have ha := e_f.hole_same e_f₃ e_h e_h_1
-      have h  := e_h.contains_hole₁
-      grind-/
     | id₁ =>
       expose_names
       cases hrt₂.unique ⟨.single (by constructor), by assumption⟩
@@ -461,7 +495,11 @@ def ext₁
       grind
     | par =>
       expose_names
-      exact (h .bang).elim
+      cases e_f.hole_same e_f₃ e_h e_h_1
+      cases hrt₂.elim_norm (by
+        cases heq
+        simp [GenericExpr.expr_to_eta, raw, GenericExpr.to_eta_right_inv hn]
+        assumption)
     | id₁ =>
       expose_names
       cases hrt₂.unique ⟨.single (by constructor), by assumption⟩
@@ -515,7 +553,11 @@ def ext₁
       grind
     | par =>
       expose_names
-      exact (h .bang).elim
+      cases e_f.hole_same e_f₃ e_h e_h_1
+      cases hrt₂.elim_norm (by
+        cases heq
+        simp [GenericExpr.expr_to_eta, raw, GenericExpr.to_eta_right_inv hn]
+        assumption)
     | id₁ =>
       expose_names
       cases hrt₂.unique ⟨.single (by constructor), by assumption⟩
@@ -557,7 +599,11 @@ def ext₁
     cases h₂ with
     | par =>
       expose_names
-      exact (h .coup).elim
+      cases e_f.hole_same e_f₃ e_h e_h_1
+      cases hrt₂.elim_norm (by
+        cases heq
+        simp [GenericExpr.expr_to_eta, raw, GenericExpr.to_eta_right_inv hn]
+        assumption)
     | eval =>
       expose_names
       cases heq
@@ -604,7 +650,11 @@ def ext₁
     cases h₂ with
     | par =>
       expose_names
-      exact (h .coup).elim
+      cases e_f.hole_same e_f₃ e_h e_h_1
+      cases hrt₂.elim_norm (by
+        cases heq
+        simp [GenericExpr.expr_to_eta, raw, GenericExpr.to_eta_right_inv hn]
+        assumption)
     | eval =>
       expose_names
       cases heq

@@ -201,7 +201,6 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
             match hr.cases_head with
             | .inl h =>
               cases h
-              simp [GenericExpr.hole_mem_tm] at h
               expose_names
               have h := a_3.hole_mem_tm
               have h' := GenericExpr.mem_imp_contains_hole h

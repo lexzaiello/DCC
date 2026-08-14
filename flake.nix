@@ -113,18 +113,18 @@
           #name = "paper";
           #path = "papers/paper";
         #}
-        {
-          name = "infer";
-          path = "papers/infer";
-        }
-        {
-          name = "eta";
-          path = "papers/eta";
-        }
-        {
-          name = "red";
-          path = "papers/red";
-        }
+        #{
+        #  name = "infer";
+        #  path = "papers/infer";
+        #}
+        #{
+        #  name = "eta";
+        #  path = "papers/eta";
+        #}
+        #{
+        #  name = "red";
+        #  path = "papers/red";
+        #}
         {
           name = "paper3";
           path = "papers/paper3";

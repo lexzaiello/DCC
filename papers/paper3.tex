@@ -5,7 +5,6 @@
 \newcommand{\comment}[1]{}
 \usepackage{tabularx}
 \usepackage{verbatim}
-\usepackage{csquotes}
 \usepackage{hyperref}
 \usepackage{mathtools}
 \usepackage{float}
@@ -15,6 +14,7 @@
 \usepackage[english]{babel}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{xparse}
 \usepackage{fontawesome5}
 \usepackage{amsfonts}
 \usepackage{fontspec}
@@ -40,10 +40,6 @@
 \newtheorem{theorem}{Theorem}
 \addbibresource{./refs.bib}
 
-\newcommand{\sk}{\(\text{SK}\)}
-\newcommand{\skbf}{\(\textbf{SK}\)}
-\newcommand{\ske}{\text{SK}}
-\newcommand{\skebf}{\textbf{SK}}
 \newcommand{\dcc}{\(\text{DCC}\)}
 \newcommand{\dccbf}{\(\textbf{DCC}\)}
 \newcommand{\dcce}{\text{DCC}}
@@ -57,6 +53,10 @@
 \newcommand{\cclk}{\(\text{CCL}_\text{K}\)} % Simply-typed categorical combinatory logic
 \newcommand{\cclkbf}{\(\textbf{CCL}_\textbf{K}\)} % Simply-typed categorical combinatory logic
 \newcommand{\cclke}{\text{CCL}_\text{K}}
+\newcommand{\sk}{\(\text{SK}\)}
+\newcommand{\skbf}{\(\textbf{SK}\)}
+\newcommand{\ske}{\text{SK}}
+\newcommand{\skebf}{\textbf{SK}}
 \newcommand{\cclkebf}{\textbf{CCL}_\textbf{K}}
 % Left and right bracket around B (Sigma.snd : B (Sigma.fst s)) in DCC couple notation (see reduction rules)
 % Also for compilation
@@ -68,6 +68,27 @@
 % Used for pairs and affine maps
 \newcommand{\la}{\langle}
 \newcommand{\ra}{\rangle}
+% Pairs and couples with optional B : A -> Sort v
+\NewDocumentCommand{\pair}{o m}{
+  \IfNoValueTF{#1}{\la #2 \ra}{\llb #1 \rrb \la #2 \ra}
+}
+\NewDocumentCommand{\comp}{o m m}{
+  \IfNoValueTF{#1}{#2 \circ #3}{
+    \Ifstr{#1}{'}{
+      #2 \circ' #3
+    }{%
+      \Ifstr{#1}{2}{#2 \circ \circ #3
+      }{#2 \circ' #3}
+    }
+  }
+}
+\NewDocumentCommand{\cc}{o m}{
+  \IfNoValueTF{#1}{\llb #2 \rrb}{\llb #2 \rrb_{#1}}
+}
+\NewDocumentCommand{\coup}{o m}{
+  \IfNoValueTF{#1}{(#2)
+  }{\llb #1 \rrb (#2)}
+}
 \newcommand{\arr}{\rightarrow}
 \newcommand{\sort}[1]{\text{Sort}\ #1}
 \newcommand{\type}[1]{\text{Type}\ #1}
@@ -156,11 +177,11 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 
 Previous attempts by others at combinatory dependent type theory have used the \skbf{} combinator calculus \autocite[p. 10:14]{altenkirch}. The \sk{} combinators are a Turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\). Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
 
-By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified, and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) is required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
+By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
 
 \subsection{Categorical Combinators (\ccl)}
 
-Categorical combinators \cite{cmachine} \cite{CURIEN1986188} (\cclbf) are a combinatory logic based on cartesian-closed categories (\cccbf) \cite{nlab:ccc}. They are equivalent to the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188}. \ccl{} has the following rewrite rules:
+Categorical combinators \cite{cmachine} \cite{CURIEN1986188} are a combinatory logic based on cartesian-closed categories (\cccbf) \cite{nlab:ccc}. They are equivalent to the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188}. \ccl{} has the following rewrite rules:
 
 \begin{gather*}
   \inferrule[Fst]
@@ -191,34 +212,35 @@ Cartesian-closed categories are known to be a categorical semantics for the \(\l
 \begin{itemize}
   \item Composition in \ccc{} corresponds to the composition combinator in \ccl.
   \item Identity morphisms in \ccc{} correspond to the \(Id\) combinator in \ccl.
-  \item De Bruijn indices correspond to binary projection in \ccc{} (or ``couple'' projection in \ccl) where \(\llb 0 \rrb \coloneq Snd\) and \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\).
-  \item Currying in \ccc{} corresponds to the \(\Lambda\) combinator in \ccl{} \autocite[p. 176][line 5]{cmachine}, such that \(\llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)\).
-  \item Evaluation in \ccc{} corresponds to the \(App\) combinator in \ccl, such that \(\llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra\).
+  \item De Bruijn indices correspond to binary projection in \ccc{} (or ``couple'' projection in \ccl) where \(\cc{0} \coloneq Snd\) and \(\cc{n + 1} \coloneq \cc{n} \circ Fst\).
+  \item Currying in \ccc{} corresponds to the \(\Lambda\) combinator in \ccl{} \autocite[p. 176][line 5]{cmachine}, such that \(\cc{\lambda . M} \coloneq \Lambda(\cc{M})\).
+  \item Evaluation in \ccc{} corresponds to the \(App\) combinator in \ccl, such that \(\cc{M N} \coloneq \comp{App}{\pair{\cc{M}, \cc{N}}}\).
+  %\item The terminal object \(\mathbbm{1}\) corresponds to an empty couple environment in \ccl{}, such that the first top-level application in a \(\lambda\)-expression is compiled as: \(\cc{(\lambda . M) x} \coloneq \cc{\lambda . M} () \cc{x}\).
 \end{itemize}
 
-% MOVED THIS ABOVE: Due to this correspondence, \(\lambda\)-calculus can be compiled to \ccl. De Bruijn index \(0\) corresponds to \(Snd\) projection where \(\llb 0 \rrb \coloneq Snd\). The De Bruijn successor \(n + 1\) corresponds to composition with \(Fst\) projection such that \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\). \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine} where \(\llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)\). Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing where \(\llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra\).
+% MOVED THIS ABOVE: Due to this correspondence, \(\lambda\)-calculus can be compiled to \ccl. De Bruijn index \(0\) corresponds to \(Snd\) projection where \(\cc{0} \coloneq Snd\). The De Bruijn successor \(n + 1\) corresponds to composition with \(Fst\) projection such that \(\cc{n + 1} \coloneq \cc{n} \circ Fst\). \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine} where \(\cc{\lambda . M} \coloneq \Lambda(\cc{M})\). Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing where \(\cc{M N} \coloneq App \circ \la \cc{M}, \cc{N} \ra\).
 
 % inlnie or in block? \begin{gather*}
-% inlnie or in block?   \llb 0 \rrb \coloneq Snd \qquad
-% inlnie or in block?   \llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst
+% inlnie or in block?   \cc{0} \coloneq Snd \qquad
+% inlnie or in block?   \cc{n + 1} \coloneq \cc{n} \circ Fst
 % inlnie or in block? \end{gather*}
 
 % inline or in block? \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine}:
 % inline or in block? \begin{equation*}
-% inline or in block?   \llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)
+% inline or in block?   \cc{\lambda . M} \coloneq \Lambda(\cc{M})
 % inline or in block? \end{equation*}
 % inline or in block? Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing:
 % inline or in block? \begin{equation*}
-% inline or in block?   \llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra
+% inline or in block?   \cc{M N} \coloneq \comp{App}{\pair{\cc{M}, \cc{N}}}
 % inline or in block? \end{equation*}
 
 The correspondence between \ccl{} and the De Bruijn-indexed \(\lambda\)-calculus makes them a more intuitive compilation target compared to \sk{}, producing more legible terms. To illustrate, we contrast the compilation of church numerals zero and one from \(\lambda\)-calculus with De Bruijn indices to \ccl{} and \sk{}:
 
 \begin{align*}
-  0_{\lambda} &\coloneq \lambda . \lambda . 0 & 0_{\ccle} &\coloneq \Lambda(Snd) & 0_{SK} &\coloneq K\\
-  1_{\lambda} &\coloneq \lambda . \lambda . 1 0 & 1_{\ccle} &\coloneq \Lambda(App \circ \la Fst, Snd \ra) & 1_{SK} &\coloneq S K K
+  0_{\lambda} &\coloneq \lambda . \lambda . 0 & \cc{0_{\lambda}} &= \Lambda(Snd) & \cc[\ske]{0_{\lambda}} &= K (S K K)\\
+  1_{\lambda} &\coloneq \lambda . \lambda . 1 0 & \cc{1_{\lambda}} &= \Lambda(App \circ \la Fst, Snd \ra) & \cc[\ske]{1_{\lambda}} &= S (S (K S) (S (K K) (S K K))) (K (S K K))
 \end{align*}
-The reductions of \(1_{\lambda} x y\), \(1_{\ccle} x y\), and \(1_{SK} x y\) are as such:
+The reductions of \(1_{\lambda} x y\), \(\cc{1_{\lambda}} x y\), and \(\cc[\ske]{1_{\lambda}} x y\) are as such:
 
 \begin{equation*}
   \begin{aligned}[t]
@@ -228,23 +250,27 @@ The reductions of \(1_{\lambda} x y\), \(1_{\ccle} x y\), and \(1_{SK} x y\) are
   \end{aligned}
   \qquad
   \begin{aligned}[t]
-    1_{\ccle} x y &= \Lambda(App \circ \la Fst, Snd \ra) x y\\
+    \cc{1_{\lambda}} x y &= \Lambda(App \circ \la Fst, Snd \ra) x y\\
     &= App \circ \la Fst, Snd \ra (x, y)\\
     &= App (x, y)\\
     &= x y
   \end{aligned}
-  \qquad
+\end{equation*}
+\begin{equation*}
   \begin{aligned}[t]
-    1_{SK} x y &= S K K x y\\
-    &= K x (K x) y\\
-    &= x y
+    \cc[\ske]{1_{\lambda}} x y &= S (S (K S) (S (K K) (S K K))) (K (S K K)) x y\\
+                               &= S (K S) (S (K K) (S K K)) x (K (S K K) x) y\\
+                               &= K S x (S (K K) (S K K) x) (K (S K K) x) y\\
+                               &= S (K K) (S K K) x y (K (S K K) x y)\\
+                               &= K (S K K x) y (S K K y)\\
+                               &= x y
   \end{aligned}
 \end{equation*}
 Despite their notable advantages in term legibility, more closely resembling De Bruijn-indexed \(\lambda\)-calculus, adapting categorical combinators to dependent types has not been attempted thus far.
 
 \subsubsection{The Simply-Typed Categorical Combinators}
 
-A simply-typed variant (\cclkbf) of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points, rather than applied as arguments as in dependently-typed \sk{}. Type arguments can be inferred altogether in Curry, Pair, Comp, and in couples. The inference rules are as such:
+A simply-typed variant (\cclkbf) of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points. Type arguments can be inferred altogether in Curry, Pair, Comp, and in couples. The inference rules are as such:
 
 \begin{gather*}
   \inferrule[Fst]
@@ -456,7 +482,7 @@ Since DCC is strongly normalizing by default, conversion in the judgment relatio
 
 \subsection{Types as terms: Environments are contexts}
 
-In DCC, combinator types are determined by points which index an environment and eliminate into a \(\sort{u}\). This approach has the advantage of requiring no explicit universe levels (whereas dependent \sk{} does), and type arguments can often be inferred, easing the burden on the user.
+In \dcc{}, combinator types are determined by points which index an environment and eliminate into a \(\sort{u}\). This approach has the advantage of requiring no explicit universe levels (whereas dependent \sk{} does), and type arguments can often be inferred, easing the burden on the user.
 
 This design decision enables a natural compilation from Lean 4 to DCC. Interpreting couple environments as \(\Sigma\)-types yields a telescope context:
 

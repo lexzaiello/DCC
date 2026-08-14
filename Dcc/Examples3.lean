@@ -200,36 +200,6 @@ Id(Sort 1)
     &(Id(Sort 0))))).infer.isOk
 
 /-
-
--/
-#eval (DCC (Π(Id(Sort 1), `(Sort 1, `(Sort 0, Sort 0))) Sort 0)).infer'
-
-def pair.{u} {τ_c : Type u} (u v : Level) (A B C : @GenericExpr τ_c) : @GenericExpr τ_c :=
-  let τ₁    := DCC? A
-  let τ₂    := DCC? `(A, B)
-  let τ₃    := DCC? Coup(`(A, B))
-  let τ_fn₀ := DCC? ((B : Sort v) → C)
-  let τ_fn  := DCC? (A : Sort u) → τ_fn₀
-  let τ₄    := DCC? `(Coup(`(A, B)), τ_fn)
-  let M     := DCC? Snd(`(A, τ_fn₀)) ∘' ⟦`(Coup(τ₄), `(A, τ_fn₀))⟧⟨Fst(τ₂) ∘' Fst(τ₄), Snd(τ₄)⟩
-
-
-  ---M
-  DCC? Snd(τ₄)
-
-  /-DCC? Λ(τ₁, τ₂,
-          Λ(τ₃, τ₄, Snd(`(B, C)) ∘' ⟦`(B, C)⟧⟨Fst(τ₂) ∘' Fst(τ₄), M⟩))-/
-
-  /-DCC? Λ(τ₁, τ₂,
-          Λ(τ₃, τ₄, Eval(τ_fn₀, `(τ_fn₀, B), Id(τ_fn₀)) ∘' ⟦`(τ_fn₀, B)⟧⟨M, Snd(τ₂) ∘' Fst(τ₄)⟩))-/
-
-#eval (pair 1 0 (DCC Sort 0) (DCC ⊤) (DCC ⊤)).infer'
-#eval (DCC ⟦`((Sort 0 : Sort 1) → (⊤ : Sort 0) → ⊤,
-                         Sort 0)⟧⟨Snd(`(Coup(`(Sort 0, ⊤)), (Sort 0 : Sort 1) → (⊤ : Sort 0) → ⊤)),
-                                                   (Fst(`(Sort 0, ⊤)) ∘'
-                                                      Fst(`(Coup(`(Sort 0, ⊤)), (Sort 0 : Sort 1) → (⊤ : Sort 0) → ⊤)))⟩).infer'
-
-/-
 Example of church isomorphism:
 
 pair vs boolean selector:

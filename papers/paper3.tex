@@ -39,24 +39,38 @@
 \newtheorem{theorem}{Theorem}
 \addbibresource{./refs.bib}
 
+\newcommand{\ccc}{\(\textbf{CCC}\)} % Cartesian-closed category
+\newcommand{\ccl}{\(\textbf{CCL}\)} % Categorical combinatory logic
+\newcommand{\ccle}{\textbf{CCL}}
+\newcommand{\cclk}{\(\textbf{CCL}_\textbf{K}\)} % Simply-typed categorical combinatory logic
+\newcommand{\cclke}{\textbf{CCL}_\textbf{K}}
+% Left and right bracket around B (Sigma.snd : B (Sigma.fst s)) in DCC couple notation (see reduction rules)
 \newcommand{\llb}{\llbracket}
 \newcommand{\rrb}{\rrbracket}
 \newcommand{\leanlink}[2]{
   \hfill \href{#1}{\textcolor{leanblue}\faCheckSquare~[Formalized: \texttt{#2}]}%
 }
+% Used for pairs and affine maps
 \newcommand{\la}{\langle}
 \newcommand{\ra}{\rangle}
 \newcommand{\arr}{\rightarrow}
 \newcommand{\sort}[1]{\text{Sort}\ #1}
 \newcommand{\type}[1]{\text{Type}\ #1}
+% Beta-reduction arrow
 \newcommand{\barr}{\arr_{\beta}}
+% Beta-reduction in a specific calculus
+\newcommand{\barrc}[1]{\arr_{\beta^{#1}}}
 \newcommand{\barrn}{\arr_{\beta}^{!}}
 \newcommand{\earr}{\arr_{\eta}}
+% Deprecated (reduction is just called beta-reduction not affine beta reduction now):
 \newcommand{\affarr}{\rightarrowtail}
 \newcommand{\affetaarr}{\rightarrowtail_{\eta}}
+% Eta-reduction:
 \newcommand{\etaarr}{\rightarrow_{\eta}}
+% Domain in NbE-based eta-reduction
 \newcommand{\dom}[1]{\text{dom}(#1)}
 \newcommand{\domtwo}[1]{\text{dom}_{2}(#1)}
+% For Comb(points)
 \newcommand{\comb}[2]{\text{#1}(#2)}
 \newcommand{\arity}[2]{\text{arity} #1 = #2}
 \newcommand{\efn}[2]{\text{F}_{\eta}\ #1\ #2}
@@ -85,17 +99,30 @@
 \subsection{Results}
 
 \begin{itemize}
-  \item In \ref{dccintro}, we present the dependent combinator calculus (DCC): our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to dependent types. We have no variables and no contexts. DCC is analagous in expressivity to the Calculus of Constructions on the lambda cube \autocite{Barendregt_1991}. We formally present our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
-  \item In \ref{funext}, we prove that computable function extensionality is a natural consequence of \(\eta\)-reduction in the calculus. Our proof is formalized as a metatheorem in Lean 4.
-  \item In \ref{eqreflect}, we prove that equality reflection is a natural consequence of our design.
-  \item In \ref{decidable}, we prove that type-checking is decidable.
-  \item In \textit{TODO insert here}, we present a procedure for compiling a small subset of Lean 4 (base Calculus of Constructions) to DCC.
-
+  \item In \ref{dccintro}, we present the dependent combinator calculus (DCC): our extension of categorical combinators (\ccl) \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
+  \item In \ref{funext}, we prove that computable function extensionality is a natural consequence of \(\eta\)-reduction in DCC, as opposed to being an axiom.
+  \item In \ref{eqreflect}, we prove that extensional equality reflection is a natural consequence of DCC's architecture based on affine logic.
+  \item In \ref{decidable}, we prove that type-checking is decidable in DCC.
+  \item In \ref{compilelean}, we present a procedure for compiling the subset of Lean 4 that maps to the base Calculus of Constructions to DCC.
 \end{itemize}
 
-All of our results have been formalized in the Lean 4 proof assistant. To this date, we are not aware of any calculus where these features can coexist: extensional equality elimination; computable function extensionality; and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit them by construction. We do not present a combinatory basis for inductive types, as they are out of scope for this paper. We do not assume equality reflection or function extensionality as axioms. They are computable definitions, not theorems in Prop.
+All of our results have been formalized in the Lean 4 proof assistant. To this date, DCC is the only calculus where these features coexist: extensional equality reflection; computable function extensionality; and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit these features by construction.
 
 \subsection{Background}
+
+\begin{comment}
+  \item TODO: summarize comparison between DCC and SK
+  \item TODO: summarize affine logic
+  \item TODO: embed inference rules and reductions nicer.
+\end{comment}
+
+\begin{comment}
+  \item Topic sentence
+  \item Supporting sentence #1
+  \item Supporting sentence #1
+  \item Supporting sentence #1
+  \item Concluding sentence
+\end{comment}
 
 \begin{comment}
   - Explain rewrite rules
@@ -110,65 +137,75 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
   - No primitive objects in SK that resemble \forall / \Pi
 \end{comment}
 
-\subsection{\label{skcomp}The \(SK\) Combinator Calculus: not quite enough}
+\subsection{\label{skcomp}The \(SK\) Combinator Calculus}
 
-Prior iterations of the calculus, and attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 10:14]{altenkirch}. 
+Prior attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 10:14]{altenkirch}. The \(SK\) combinators are a turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with only two primitive objects: \(S\) and \(K\). Dependent types are usually supported by a \(\Pi\) combinator and helper (``meta'' combinators) which encode the types of \(S\) and \(K\) (as in \autocite[10:17]{altenkirch}).
 
-\begin{figure}[H]
-\begin{align*}
-  K x y &\coloneq x\\
-  S x y z&\coloneq (x z) (y z)
-\end{align*}
-\caption{Rewrite rules of the \(SK\) combinator calculus}
-\end{figure}
+Good progress has been made, but past approaches were limited by the minimalism of \(SK\). Types become very large and difficult to work with \autocite[10:17][para. 2]{altenkirch}. Type parameters in \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
 
-However, past attempts posed severe limitations due to minimalism of SK and its lack of structures analagous to \(\Pi\) types. \(S\) and \(K\) are the only primtive objects. \(\Pi\) types are usually supported by a \(\Pi\) combinator. Extra helper (``meta'') combinators are usually required to mechanically suffle terms in the context under \(\Pi\) binders \autocite[10:17]{altenkirch}.
+By contrast, DCC is based on an extension of categorical combinators (\ccl) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in CC. Finally, all universe levels are inferred, easing the burden on the user.
 
-The usual dependent types of \(S\) and \(K\) given by \ref{skty} \autocite[p. 10:16]{altenkirch}.
+\subsection{Categorical Combinators (\ccl)}
 
-\begin{figure}
-\begin{align*}
-  K &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (x : A) \arr  B x \arr A\\
-  S x y z &: (A : \sort{u}) \arr (B : A \arr \sort{v}) \arr (C : (x : A) \arr B x \arr \sort{s})\\
-    &\arr (x : A) \arr (y : B x) \arr (z : A) \arr C z (y z)
-\end{align*}
-\caption{\label{skty}The usual dependent types of the \(S\) and \(K\) combinators}
-\end{figure}
+Categorical combinators \cite{cmachine} \cite{CURIEN1986188} (\ccl) are a combinatory logic based on cartesian closed categories (CCC). They are equivalent to the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188}. \ccl has the following rewrite rules:
 
-SK's minimalism results in prohibitively large \autocite[10:17]{altenkirch} types, and a great burden on the prover. Complex machinery is required to shuffle elements in the context around (through combinations of \(S\) and \(K\)). Universe levels must be provided explicitly, which are very difficult for a user to calculate. In general, types are almost impossible for a user to write \autocite[p. 10:17]{altenkirch}. Also, the kernel cannot reason about structural similarities between types, resulting in definitional equality errors. Non-termination is intrinsic to \(SK\), since \(S\) duplicates terms. Our past naive solution used the \(BCKI\) calculus, with the hope that types would be easier to write and normalization inherent. Still, \(BCKI\) does not use term points, resulting in the same practical limitations of \(SK\).
+\begin{gather*}
+  \inferrule[Fst]
+  { }
+  { \text{Fst} (x, y) \barrc{\ccle} x} \qquad
+  \inferrule[Snd]
+  { }
+  { \text{Snd} (x, y) \barrc{\ccle} x} \qquad
+  \inferrule[Ass]
+  { }
+  {(x \circ y) z \barrc{\ccle} x (y z)}\qquad
+  \inferrule[Id]
+  { }
+  {\text{Id} x \barrc{\ccle} x}\\
+  \inferrule[Pair]
+  { }
+  {\la x, y \ra x \barrc{\ccle} (M x, N x)}\qquad
+  \inferrule[App]
+  { }
+  { \text{App} (x, y) \barrc{\ccle} x y}\qquad
+  \inferrule[Curry]
+  { }
+  { \Lambda(x) y z \barrc{\ccle} x (y, z)}
+\end{gather*}
 
-DCC is based on the categorical combinator calculus. In DCC, all universe levels are inferred except in \(\sort{u}\) terms. Types arguments are internalized. Types are much easier for the user to express. This is due to the isomoprhism between currying in the categorical combinators and \(\lambda\)-abstraction. Debruijn indices are modeled by nested tuples (an ``environment'', or a ``couple'') and projections, substitution by tuple currying, and application by evaluation \eqref{eq:catred}. Types are also much smaller due to this similarity, and the kernel can reason about structural equivalence more often (even without \(\eta\)-reduction).
+The equivalence between CC and the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188} is due to the shared correspondence between \ccl, cartesian closed categories, and \(\lambda\)-calculus with Debruijn indices (\cite{de1972lambda}):
 
-\subsection{Categorical Combinators}
+\begin{itemize}
+  \item Debruijn indices correspond to binary projection in the cartesian closed category
+\end{itemize}
+
+\item Recall debruijn indices
+
+For example:
+
+\begin{gather*}
+  \lambda . 1 \approx \Lambda(
+\end{gather*}
+
+\item BIG NOTE: \cclk corresponds to free cartesian closed category
+
+\begin{comment}
+  \item Summarize \ccl:
+    \begin{itemize}
+      \item Based on cartesian closed categories
+      \item Equivalent to \(\lambda\)-calculus
+      \item Give rewrite rules
+      \item Maybe mention compilation
+      \item Mention simply-typed version second paragraph
+      \item Mention how the debruijn index thing makes it a good target for DCC
+    \end{itemize}
+\end{comment}
 
 The rewrite rules of the categorical combinator calculus are given by \ref{eq:catred} \autocite{cmachine}.
-
-\begin{figure}
-\begin{align*}
-  \text{Fst} (x, y) &\coloneq x \\
-  \text{Snd} (x, y) &\coloneq x \\
-  (x \circ y) z &\coloneq x (y z) \\
-  \text{Id} x &\coloneq x \\
-  \la x, y \ra x &\coloneq (M x, N x) \\
-  \text{App} (x, y) &\coloneq x y \\
-  \Lambda(x) y z &\coloneq x (y, z)
-\end{align*}
-\caption{\label{eq:catred}Reduction rules of the categorical combinators}
-\end{figure}
 
 Each combinator corresponds to an operation in the cartesian closed category. \(\text{Id}\) corresponds to the identity morphism, composition to morphism composition, \(\text{App}\) to evaluation, and \(\Lambda\) to currying.
 
 Constants can be encoded without a constant combinator (as in \(SK\)) \ref{constderiv}.
-
-\begin{figure}
-\begin{align*}
-  `(c) &\coloneq \Lambda(\text{Fst}) c\\
-  `(c) x &= \Lambda(\text{Fst}) c x\\
-  &= \text{Fst} (c, x)\\
-  &= c
-\end{align*}
-\caption{\label{constderiv}Constants are derived}
-\end{figure}
 
 An isomorphism exists between the categorical combinators and the \(\lambda\)-calculus. For example, the compilation of \(\lambda\)-calculus with Debruijn indices to categorical combinators is quite simple \autocite[p. 4]{cmachine}:
 
@@ -181,9 +218,9 @@ An isomorphism exists between the categorical combinators and the \(\lambda\)-ca
 
 The first top-level \(\lambda\)-application which is not under a binder is applied with the terminal object \(\mathbbm{1}\):
 
-\begin{equation}
+\begin{equation*}
   \llb (\lambda M) N \rrb \coloneq \llb M \rrb \mathbbm{1} \llb N \rrb
-\end{equation}
+\end{equation*}
 
 For example:
 
@@ -246,129 +283,131 @@ We achieve dependent typing by making type arguments functions of the environmen
 
 \subsection{\(\beta\)-Reduction Rules}
 
-DCC has the same reduction rules as in the categorical combinator calculus, except \(\Pi\) types are added, products become \(\Sigma\)-types, the pair rule is restricted affinely, some basic operations on affine terms are supported, and a sort hierarchy is added. With minimal modifications, the categorical combinator calculus becomes a highly expressive type theory.
-
-Affine logic is supported through ``box'' terms, whose boxed values are points:
+DCC has the same reduction rules as in categorical combinators (\ccl) \autocite{cmachine}, except \(\Pi\) types are added, products become \(\Sigma\)-types, the pair rule is restricted affinely, some basic operations on affine terms are supported, and a sort hierarchy is added. As in the simply-typed categorical combinators (\cclk), combinators and couples are annotated with points denoting type arguments. Identity, projection, and currying are exactly the same as in \cclk:
 
 \begin{gather*}
-  \inferrule[Box]
-  {x : A}
-  {\&(x) : !(A)}
+  \inferrule[Id]
+  { }
+  {\text{Id}(A) x \barr x}\qquad
+  \inferrule[Fst]
+  { }
+  {\text{Fst}(B) \llb B \rrb (x, y) \barr x}\qquad
+  \inferrule[Snd]
+  { }
+  {\text{Snd}(B) \llb B \rrb (x, y) \barr y}\qquad
+  \inferrule[Curr]
+  { }
+  {\Lambda(A, B, x) y z \barr x \llb B \rrb (y, z)}
 \end{gather*}
 
-Boxes are consumed by pairs, thus taming the sole source of duplication in the calculus and yielding strong normalization by a syntactic decreasing measure.:
+There are two variants of composition in DCC: \(\text{Comp'}\), which is  is simply-typed; and \(\text{Comp}\), which is dependent typed (as will be elucidated further in \ref{inferrule}, \textit{TODO NOTE: comp2 might not be necessary now that \(\eta\)-reduction is more powerful}):
 
-\begin{figure}[H]
-\begin{equation}
-\inferrule[Pair]
+\begin{gather*}
+\inferrule[Comp']
 { }
-{\llb B \rrb \la x, y \ra \&(z) \barr \llb B \rrb (M x, N x (M x))}
-\end{equation}
-\caption{Pairs consume boxes, and decrease the size of the program while duplicating a value.}
-\end{figure}
+{(x \circ' y) z \barr x (y z)}\qquad
+\inferrule[Comp]
+{ }
+{(x \circ y) z \barr x (y z)}\qquad
+\end{gather*}
 
-The full reduction rules are given in \ref{redrules}.
+\(\text{Eval}\) corresponds to evaluation or ``uncurrying'' in \ccl:
 
-\begin{figure}[H]
-  \centering
-  \resizebox{\textwidth}{!}{
-    \begin{tabularx}{\textwidth}{l >{\centering\arraybackslash}X r}
-      \inferrule[Pil]
-      {x \barr x'}
-      {\Pi(x, y) \barr \Pi(x', y)} &
-      \multicolumn{1}{c}{\inferrule[Pir]
-      {y \barr y'}
-      {\Pi(x, y) \barr \Pi(x, y')}}&
-      \inferrule[Eql']
-      {x \barr x'}
-      {x = y \barr x' = y}\\\\
-      \inferrule[Eqr']
-      {y \barr y'}
-      {x = y \barr x = y'}&
-      \multicolumn{1}{c}{\inferrule[Bang]
-      {x \barr x'}
-      {!(x) \barr !(x')}}&
-      \inferrule[Map0]
-      {x \barr x'}
-      {!\la x \ra \barr !\la x' \ra}\\\\
-      \inferrule[Map]
-      { }
-      {!\la x \ra \&(y) \barr !(x y)}&
-      \multicolumn{1}{c}{\inferrule[Unmap]
-      { }
-      {\$\la x \ra \&(y) \barr \&(x y)}}&
-      \inferrule[Unbox]
-      { }
-      {*(A) \&(x) \barr x}\\\\
-      \inferrule[Unmap]
-      { }
-      {*\la x \ra \&(y) \barr f x}&
-      \multicolumn{1}{c}{\inferrule[Pair]
-      { }
-      {\llb B \rrb \la x, y \ra z \barr \llb B x \rrb (M x, N x (M x))}}&
-      \inferrule[Eval]
-      { }
-      {\text{Eval}(A, B, x) \llb B \rrb (y, z) \barr x y z}\\\\
-      \inferrule[Quot]
-      { }
-      {`(B, x) y \barr x}&
-      \multicolumn{1}{c}{\inferrule[Id]
-      { }
-      {\text{Id}(A) x \barr x}}&
-      \inferrule[Fst]
-      { }
-      {\text{Fst}(B) \llb B \rrb (x, y) \barr x}\\\\
-      \inferrule[Snd]
-      { }
-      {\text{Snd}(B) \llb B \rrb (x, y) \barr y}&
-      \multicolumn{1}{c}{\inferrule[Comp']
-      { }
-      {(x \circ' y) z \barr x (y z)}}&
-      \inferrule[Comp]
-      { }
-      {(x \circ y) z \barr x (y z)}\\\\
-      \inferrule[Comp2]
-      { }
-      {(x \circ\circ y) z \barr x (y z)}&
-      \multicolumn{1}{c}{\inferrule[Curr]
-      { }
-      {\Lambda(A, B, x) y z \barr x \llb B \rrb (y, z)}}&
-      \inferrule[Curr']
-      { }
-      {!\Lambda(A, B, x) \&(y) \&(z) \barr x \&(\llb B \rrb (y, z))}\\\\
-      \inferrule[Sigl]
-      {x \barr x'}
-      {\llb B \rrb (x, y) \barr \llb B \rrb (x', y)}&
-      \multicolumn{1}{c}{\inferrule[Sigr]
-      {y \barr y'}
-      {\llb B \rrb (x, y) \barr \llb B \rrb (x, y')}}&
-      \inferrule[Pairl]
-      {x \barr x'}
-      {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x', y \ra}\\\\
-      \inferrule[Pairr]
-      {y \barr y'}
-      {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x, y' \ra}&
-      \multicolumn{1}{c}{\inferrule[Sigma]
-      { }
-      {\Sigma(B, C) x \barr \text{Coup}(C x)}}&
-      \inferrule[Coup]
-      {x \barr x'}
-      {\text{Coup}(x) \barr \text{Coup}(x')}\\\\
-      \multicolumn{1}{l}{\inferrule[CongrFun]
-      {x \barr x'}
-      {x y \barr x' y}}&
-      \multicolumn{1}{c}{\inferrule[CongrArg]
-      {y \barr y'}
-      {x y \barr x y'}}&
-      \multicolumn{1}{r}{
-      \inferrule[Eql]
-      { }
-      {Eql(B) x \&(y) \barr y = y}}
-    \end{tabularx}
-  }
-  \caption{\label{redrules}Where \(\barr\) represents single-step beta-reduction. Unmap is not strictly necessary, but is included for performance optimization purposes in compiled code.}
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L13}{Dcc.GenericExpr.RedAff}
-\end{figure}
+\begin{equation*}
+  \inferrule[Eval]
+  { }
+  {\text{Eval}(A, B, x) \llb B \rrb (y, z) \barr x y z}
+\end{equation*}
+
+Affine logic is supported through ``boxed'' terms. Boxes are joinable with affine currying, consumable by pairs, manually unboxable, and mappable:
+
+\begin{gather*}\label{pairrule}
+  \inferrule[Curr']
+  { }
+  {!\Lambda(A, B, x) \&(y) \&(z) \barr x \&(\llb B \rrb (y, z))}\qquad
+  \inferrule[Pair]
+  { }
+  {\llb B \rrb \la x, y \ra z \barr \llb B x \rrb (M x, N x (M x))}\\
+  \inferrule[Unbox]
+  { }
+  {*(A) \&(x) \barr x}\qquad
+  \inferrule[Map]
+  { }
+  {!\la x \ra \&(y) \barr !(x y)}\qquad
+  \inferrule[Fmap]
+  { }
+  {\$ \la x \ra \&(y) \barr \&(x y)}
+\end{gather*}
+
+Quotation is added as an optimization to avoid some usages of pair:
+
+\begin{equation*}
+\inferrule[Quot]
+{ }
+{`(B, x) y \barr x}
+\end{equation*}
+
+DCC uses call-by-value operational semantics. DCC also has congruences on computationally-relevant term points and all type-former points:
+
+\begin{gather*}
+  \inferrule[Pil]
+  {x \barr x'}
+  {\Pi(x, y) \barr \Pi(x', y)}\qquad
+  \inferrule[Pir]
+  {y \barr y'}
+  {\Pi(x, y) \barr \Pi(x, y')}\qquad
+  \inferrule[Eql']
+  {x \barr x'}
+  {x = y \barr x' = y}\qquad
+  \inferrule[Eqr']
+  {y \barr y'}
+  {x = y \barr x = y'}\\
+  \inferrule[Sigl]
+  {x \barr x'}
+  {\llb B \rrb (x, y) \barr \llb B \rrb (x', y)}\qquad
+  \inferrule[Sigr]
+  {y \barr y'}
+  {\llb B \rrb (x, y) \barr \llb B \rrb (x, y')}\qquad
+  \inferrule[Pairl]
+  {x \barr x'}
+  {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x', y \ra}\qquad
+  \inferrule[Pairr]
+  {y \barr y'}
+  {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x, y' \ra}\\
+  \inferrule[Coup]
+  {x \barr x'}
+  {\text{Coup}(x) \barr \text{Coup}(x')}\qquad
+  \inferrule[CongrFun]
+  {x \barr x'}
+  {x y \barr x' y}\qquad
+  \inferrule[CongrArg]
+  {y \barr y'}
+  {x y \barr x y'}
+\end{gather*}
+
+Finally, \(\text{Coup}\) type formers can dynamically index an environment with the \(\Sigma\) combinator:
+
+\begin{equation*}
+  \inferrule[Sigma]
+  { }
+  {\Sigma(B, C) x \barr \text{Coup}(C x)}
+\end{equation*}
+
+% TODO: SN section Boxes cannot be created at will. Size decreases
+
+% TODO: refl also uses box
+
+% TODO: affine variants are like such
+% TODO: pair tamed with affine boxes
+% TODO: type formers
+% TODO: congruences last
+  % x = y
+  % congFun, congrArg
+  % Pi
+
+The full reduction rules are given as a reference in \ref{redrules}.
+
+\section{Affine logic: strong normalization for free}
 
 Since DCC is strongly normalizing by default, conversion in the judgment relation is avoided altogether. Types are eagerly reduced in every inference rule, instead of being permitted by general catch-all conversion. As a consequence, there is exactly one valid judgment for a given term. This had wide, sweeping ramifications, enabling equality reflection, and computable function extensionality when paired with \(\eta\)-reduction, while retaining decidability. As in intensional type theory, \(\text{refl}\) is the only inhabitant of equality. Since conversion is avoided, \(x = x\) is the \textit{only} valid equality judgment. Induction on conversion is also conveniently avoided in metatheorems due to eager type normalization.
 
@@ -379,10 +418,10 @@ In DCC, combinator types are determined by points which index an environment and
 This design decision enables a natural compilation from Lean 4 to DCC. Interpreting couple environments as \(\Sigma\)-types yields a telescope context:
 
 \begin{figure}[H]
-\begin{equation}
+\begin{equation*}
   x_0 : A_0, x_1 : A_1(x_0), x_2 : A_2 (x_0, x_1) \approx
   \llbracket \Sigma(A_1), A_2 \rrbracket (\llbracket A_1 \rrbracket (x_0, x_1), x_2)
-\end{equation}
+\end{equation*}
 \caption{Couple environments are analogous to context substitutions}
 \end{figure}
 
@@ -419,7 +458,7 @@ We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in o
 \begin{figure}[H]
   \centering
   \resizebox{\textwidth}{!}{
-  \begin{tabular}{l c c c c r}
+  \begin{tabular}{l c r}
     \multicolumn{1}{l}{
     \inferrule[Eq]
     {x : A, y : A}
@@ -428,11 +467,11 @@ We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in o
     \inferrule[Id]
     {A : \sort{u}}
     {\text{Id}(A) : A \arr A}} &
-    \multicolumn{1}{c}{
+    \multicolumn{1}{r}{
     \inferrule[Sort]
     { }
-    {\sort{u} : \sort{u + 1}}} &
-    \multicolumn{1}{c}{
+    {\sort{u} : \sort{u + 1}}}\\
+    \multicolumn{1}{l}{
     \inferrule[Top]
     { }
     {\top : \sort{0}}} &
@@ -443,82 +482,82 @@ We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in o
     \multicolumn{1}{r}{
     \inferrule[Tt]
     { }
-    {\ast : \top}} \\\\
-    \multicolumn{3}{l}{
+    {\ast : \top}} \\
+    \multicolumn{1}{l}{
     \inferrule[refl]
     {B : A \arr \sort{u}}
     {\text{refl}(B) : (x : !(A)) \arr (y : (!\la B \ra x)) \arr (\text{Eql}(B) x x)}} &
-    \multicolumn{3}{r}{
+    \multicolumn{1}{c}{
     \inferrule[eql]
     {B : A \arr \sort{u}}
     {\text{eql}(B) : (x : !(A)) \arr (y : !\la B \ra x) \arr \sort{0}}} \\\\
-    \multicolumn{4}{l}{
+    \multicolumn{1}{r}{
     \inferrule[Comp]
     {g : (x : !(A)) \arr ((y : A) \times B y), f : (x : (x : A) \times B x) \arr C x}
-    {f \circ g : (x : !(A)) \arr (C \circ g) x}} &
-    \multicolumn{2}{r}{
+    {f \circ g : (x : !(A)) \arr (C \circ g) x}}\\
+    \multicolumn{1}{l}{
     \inferrule[Comp']
     {g : A \arr B, f : (x : B) \arr C x}
-    {f \circ ' g : (x : A) \arr (C \circ ' g) x}} \\\\
-    \multicolumn{4}{l}{
+    {f \circ ' g : (x : A) \arr (C \circ ' g) x}}&
+    \multicolumn{1}{c}{
     \inferrule[Comp2]
     {g : (x : !(A)) \arr ((y : A) \times B x), f : (x : (y : A) \times B x) \arr C x}
     {f \circ \circ g : (x : !(A)) \arr (C \circ \circ g) x}} &
-    \multicolumn{2}{r}{
+    \multicolumn{1}{r}{
     \inferrule[Coup]
     {A : \sort{u}, B : A \arr \sort{v}}
-    {\text{Coup}(B) : \sort{max(u, v)}}} \\\\
-    \multicolumn{3}{l}{
+    {\text{Coup}(B) : \sort{max(u, v)}}}\\
+    \multicolumn{1}{l}{
     \inferrule[Fst]
     {B : A \arr \sort{v}}
     {\text{Fst}(B) : (x : A) \times B x \arr A}
     } &
-    \multicolumn{3}{r}{
+    \multicolumn{1}{c}{
     \inferrule[Snd]
     {B : A \arr \sort{v}}
-    {\text{Snd}(B) : (x : (x : A) \times B x) \arr B (\text{Fst}(B) x)}}\\\\
-    \multicolumn{4}{l}{
+    {\text{Snd}(B) : (x : (x : A) \times B x) \arr B (\text{Fst}(B) x)}}&
+    \multicolumn{1}{r}{
     \inferrule[Sigma]
     {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
-    {\Sigma(B, C) : A \arr \sort{max(u, v)}}} &
-    \multicolumn{2}{r}{
+    {\Sigma(B, C) : A \arr \sort{max(u, v)}}}\\
+    \multicolumn{1}{l}{
     \inferrule[Mkc]
     {x : A, y : B x}
-    {\llb B \rrb (x, y) : (x : A) \times B x}} \\\\
-    \multicolumn{4}{l}{
+    {\llb B \rrb (x, y) : (x : A) \times B x}}&
+    \multicolumn{1}{c}{
     \inferrule[Curr]
     {B : A \arr \sort{u}, x : (x : (x : A) \times B x) \arr C x}
-    {\Lambda (A, B, x) : (x : A) \arr (y : B x) \arr C \llb B \rrb (x, y)}} &
-    \multicolumn{2}{r}{
+    {\Lambda (A, B, x) : (x : A) \arr (y : B x) \arr C \llb B \rrb (x, y)}}&
+    \multicolumn{1}{r}{
     \inferrule[Map]
     {x : A \arr \sort{u}}
     {!\la x \ra : !(A) \arr \sort{n}}
-    }\\\\
-    \multicolumn{4}{l}{
+    }\\
+    \multicolumn{1}{l}{
     \inferrule[Curr']
     {B : A \arr \sort{u}, x : !((x : A) \times B x) *\arr \la C \ra x}
     {!\Lambda (A, B, x) : (\&(x) : !(A)) \arr (\&(y) : \la B \ra x) \arr C \&(\llb B \rrb (x, y))}} &
-    \multicolumn{2}{r}{
+    \multicolumn{1}{c}{
     \inferrule[Fmap]
     {x : (x : A) \arr B x}
-    {\$\la x \ra : (\&(x) : !(A)) \arr !(B x)}}\\\\
-    \multicolumn{4}{l}{
+    {\$\la x \ra : (\&(x) : !(A)) \arr !(B x)}}&
+    \multicolumn{1}{r}{
     \inferrule[Eval]
     {A : \sort{u}, B : A \arr \sort{v}, x : (x : A) \arr (y : B x) \arr C x y}
-    {\text{Eval}(A, B, x) : (x : (x : A) \times B x) \arr \text{Eval}(A, B, C)}} &
-    \multicolumn{2}{r}{
+    {\text{Eval}(A, B, x) : (x : (x : A) \times B x) \arr \text{Eval}(A, B, C)}}\\
+    \multicolumn{1}{l}{
     \inferrule[Quot]
     {x : A, B : \sort{u}}
-    {`(B, x) : B \arr A}}\\\\
-    \multicolumn{3}{l}{
+    {`(B, x) : B \arr A}}&
+    \multicolumn{1}{c}{
     \inferrule[Pair]
     {x : (x : A) \arr B x, y : (x : A) \arr (y : B x) \arr C x y}
     {\llb C \rrb \la x, y \ra : (x : A) \arr (y : B x) \times C x y}
     } &
-    \multicolumn{3}{r}{
+    \multicolumn{1}{r}{
     \inferrule[Pi]
     {B : A \arr \sort{u}, C : (x : A) \arr (y : B x) \arr \sort{v}}
-    {\Pi (B, C) : (x : A) \arr (y : B x) \arr \sort{max(u, v)}}}\\\\
+    {\Pi (B, C) : (x : A) \arr (y : B x) \arr \sort{max(u, v)}}}\\
     \multicolumn{1}{l}{
     \inferrule[Bang]
     {A : \sort{u}}
@@ -527,11 +566,11 @@ We make use of the standard notation for \(\Pi\) types and \(\Sigma\) types in o
     \inferrule[Box]
     {x : A}
     {\&(x) : !(A)}} &
-    \multicolumn{1}{c}{
+    \multicolumn{1}{r}{
     \inferrule[Unmap]
     {x : (x : A) \arr B x}
-    {*\la x \ra : (x : !(A)) \arr * \la B \ra}} &
-    \multicolumn{1}{c}{
+    {*\la x \ra : (x : !(A)) \arr * \la B \ra}}\\
+    \multicolumn{1}{l}{
     \inferrule[Unbox]
     {A : \sort{u}}
     {*(A) : !(A) \arr A}} &
@@ -1260,7 +1299,7 @@ This proof is natural by the construction of \(\eta\)-normal forms, which are ob
   \noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/dbb7769b538f7e9b4d6556ede98bcb5d4a8619b3/Dcc/Eta/Nbe/Funext/Binary.lean\#L20}{\lean{Dcc.NormExpr.EtaFn.Canonicalize.ext₁}}
 \end{proof}
 
-\section{Decidable type-checking in extensional DTT}\label{decidable}
+\section{Decidable type-checking in extensional DTT}
 
 In DCC, there is exactly one valid judgment for a given term. Catch-all conversion is not permitted. Types are \(\beta\)-\(\eta\) reduced to normal forms eagerly in each inference rule. This is possible due to inheriting strong normalization as a consequence of the choice of affine logic. This fact has sweeping ramifications. In particular, the extensional equality reflection rule is possible.
 
@@ -1313,7 +1352,7 @@ Expr.tintro = Expr.tintro
 
 % TODO: ext elim proof
 
-\subsection{A type-checker for DCC}
+\subsection{A type-checker for DCC}\label{decidable}
 
 We outline our implementation of a type-checker which has soundness and completeness with respect to the judgment relation at a high-level. The full implementation is available in the appendix \ref{appendix:sup}.
 
@@ -1607,13 +1646,15 @@ def Judge.complete (h : Judge (τ_c := τ_c) e τ) : e.infer = .ok ⟨τ, h⟩ :
   Suppose \(x\), \(\tau_{1}\), and \(\tau_{2}\) are terms, such that \(h_1\) is a proof that \(x : \tau_{1}\) and \(h_2\) is a proof that \(x : \tau_{2}\). Then, by judgmental completeness \ref{judgecomplete}, \lean{infer x = ok ⟨τ₁, h₁⟩} and \lean{infer x = ok ⟨τ₂, h₂⟩}. Hence, \(\tau_1 = \tau_2\).
 \end{proof}
 
-\section{Examples of extensionality in DCC}
-
-
+\section{Compiling the Calculus of Constructions to DCC}\label{compilelean}
 
 \section{Comparison to observational type theory and cubical type theory}
 
 \section{Conclusions \& Future Work}
+
+\subsection{Limitations}
+
+We do not present a combinatory basis for inductive types, as they are out of scope for this paper.
 
 \begin{comment}
 - No inductives
@@ -1642,7 +1683,7 @@ def Judge.complete (h : Judge (τ_c := τ_c) e τ) : e.infer = .ok ⟨τ, h⟩ :
           -- Note: these are operations in the CCC (+ affine)
           => To observe the behavior of functions, look at how they reduce on generic arguments. Pick an argument not contained in the AST. Eta algorithm:
             - Inject constant values called "holes", which are identified by a natural number "level" (hole 0) (hole 1)
-              - These cannot be projected, so generalize
+              - These cannot be projected, so generalizeo
               - They also can't be unboxed *(A) hole = ???
               - Or mapped *<f> hole = ???
               - Or any of the above but for an affine value
@@ -1890,6 +1931,109 @@ Things I want to cover
 \item \textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}
   \item \textbf{Type-checker implementation:} \href{https://github.com/lexzaiello/DCC/blob/6438e9e4960086082714e3498f59b737321c2ceb/Dcc/Judge3.lean}{https://github.com/lexzaiello/DCC/blob/6438e9e4960086082714e3498f59b737321c2ceb/Dcc/Judge3.lean}
 \end{itemize}
+
+\subsection{Full \(\beta\)-Reduction Rules}
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\textwidth}{!}{
+    \begin{tabularx}{\textwidth}{l >{\centering\arraybackslash}X r}
+      \inferrule[Pil]
+      {x \barr x'}
+      {\Pi(x, y) \barr \Pi(x', y)} &
+      \multicolumn{1}{c}{\inferrule[Pir]
+      {y \barr y'}
+      {\Pi(x, y) \barr \Pi(x, y')}}&
+      \inferrule[Eql']
+      {x \barr x'}
+      {x = y \barr x' = y}\\\\
+      \inferrule[Eqr']
+      {y \barr y'}
+      {x = y \barr x = y'}&
+      \multicolumn{1}{c}{\inferrule[Bang]
+      {x \barr x'}
+      {!(x) \barr !(x')}}&
+      \inferrule[Map0]
+      {x \barr x'}
+      {!\la x \ra \barr !\la x' \ra}\\\\
+      \inferrule[Map]
+      { }
+      {!\la x \ra \&(y) \barr !(x y)}&
+      \multicolumn{1}{c}{\inferrule[Unmap]
+      { }
+      {\$\la x \ra \&(y) \barr \&(x y)}}&
+      \inferrule[Unbox]
+      { }
+      {*(A) \&(x) \barr x}\\\\
+      \inferrule[Unmap]
+      { }
+      {*\la x \ra \&(y) \barr f x}&
+      \multicolumn{1}{c}{\inferrule[Pair]
+      { }
+      {\llb B \rrb \la x, y \ra z \barr \llb B x \rrb (M x, N x (M x))}}&
+      \inferrule[Eval]
+      { }
+      {\text{Eval}(A, B, x) \llb B \rrb (y, z) \barr x y z}\\\\
+      \inferrule[Quot]
+      { }
+      {`(B, x) y \barr x}&
+      \multicolumn{1}{c}{\inferrule[Id]
+      { }
+      {\text{Id}(A) x \barr x}}&
+      \inferrule[Fst]
+      { }
+      {\text{Fst}(B) \llb B \rrb (x, y) \barr x}\\\\
+      \inferrule[Snd]
+      { }
+      {\text{Snd}(B) \llb B \rrb (x, y) \barr y}&
+      \multicolumn{1}{c}{\inferrule[Comp']
+      { }
+      {(x \circ' y) z \barr x (y z)}}&
+      \inferrule[Comp]
+      { }
+      {(x \circ y) z \barr x (y z)}\\\\
+      \inferrule[Comp2]
+      { }
+      {(x \circ\circ y) z \barr x (y z)}&
+      \multicolumn{1}{c}{\inferrule[Curr]
+      { }
+      {\Lambda(A, B, x) y z \barr x \llb B \rrb (y, z)}}&
+      \inferrule[Curr']
+      { }
+      {!\Lambda(A, B, x) \&(y) \&(z) \barr x \&(\llb B \rrb (y, z))}\\\\
+      \inferrule[Sigl]
+      {x \barr x'}
+      {\llb B \rrb (x, y) \barr \llb B \rrb (x', y)}&
+      \multicolumn{1}{c}{\inferrule[Sigr]
+      {y \barr y'}
+      {\llb B \rrb (x, y) \barr \llb B \rrb (x, y')}}&
+      \inferrule[Pairl]
+      {x \barr x'}
+      {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x', y \ra}\\\\
+      \inferrule[Pairr]
+      {y \barr y'}
+      {\llb B \rrb \la x, y \ra \barr \llb B \rrb \la x, y' \ra}&
+      \multicolumn{1}{c}{\inferrule[Sigma]
+      { }
+      {\Sigma(B, C) x \barr \text{Coup}(C x)}}&
+      \inferrule[Coup]
+      {x \barr x'}
+      {\text{Coup}(x) \barr \text{Coup}(x')}\\\\
+      \multicolumn{1}{l}{\inferrule[CongrFun]
+      {x \barr x'}
+      {x y \barr x' y}}&
+      \multicolumn{1}{c}{\inferrule[CongrArg]
+      {y \barr y'}
+      {x y \barr x y'}}&
+      \multicolumn{1}{r}{
+      \inferrule[Eql]
+      { }
+      {Eql(B) x \&(y) \barr y = y}}
+    \end{tabularx}
+  }
+  \caption{\label{redrules}Where \(\barr\) represents single-step beta-reduction.}
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L13}{Dcc.GenericExpr.RedAff}
+\end{figure}
 
 \subsection{\label{kcomp}Dependent \(K\) Compilation}
 

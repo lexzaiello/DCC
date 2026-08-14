@@ -52,7 +52,7 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
       cases GenericExpr.RedAffNorm.unique hrt' hr_τ
       cases e_f.hole_same (.tm₁ (Domain.id ⟨.refl, by assumption⟩)) e_h e_h_1
       simp_all
-    | .eval _ _ _ _ _ _ | .par _ _ _ _ _ _ _ | .sndc' _ _ _ | .fstc' _ _ _
+    | .eval _ _ _ _ _ _ | .par _ _ _ _ _ _ | .sndc' _ _ _ | .fstc' _ _ _
     | .sndc _ _ _ | .fstc _ _ _ =>
       expose_names
       exact a_2.absurd ⟨.single .id, by assumption⟩ (fun h => by cases h)
@@ -88,7 +88,14 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
           cases h
           grind)
     · expose_names
-      exact (h .coup).elim
+      cases e_h_1 with
+      | tm₁ heq h =>
+        cases heq
+        simp [NormExpr.to_eta, GenericExpr.expr_to_eta] at h
+        cases h with
+        | pure hn =>
+          exact (hn .coup).elim
+        | coup => cases (a_2.push_head .fstc).elim_norm ((a_2.push_head .fstc).is_norm.congrArg.sigl)
     · expose_names
       exact a_3.absurd ⟨.single .fstc, hn'.congrFun.congrArg⟩
     · expose_names
@@ -162,7 +169,14 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
           cases h
           grind)
     · expose_names
-      exact (h .coup).elim
+      cases e_h_1 with
+      | tm₁ heq h =>
+        cases heq
+        simp [NormExpr.to_eta, GenericExpr.expr_to_eta] at h
+        cases h with
+        | pure hn =>
+          exact (hn .coup).elim
+        | coup => cases (a_2.push_head .sndc).elim_norm ((a_2.push_head .sndc).is_norm.congrArg.sigr)
     · expose_names
       exact a_3.absurd ⟨.single .sndc, hn'.congrArg⟩
     · expose_names
@@ -245,7 +259,20 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
             exact a_3.absurd ⟨.trans (.single .unmap) (.single .fstc), by assumption⟩ (by
               grind)
     · expose_names
-      exact (h .bang).elim
+      cases e_h_1 with
+      | tm₁ heq h =>
+        cases heq
+        simp [NormExpr.to_eta, GenericExpr.expr_to_eta] at h
+        cases h with
+        | pure hn =>
+          exact (hn .bang).elim
+        | bang h =>
+          cases h with
+          | coup =>
+            expose_names
+            cases ((a_2.push_head .unmap).push_head .fstc).elim_norm a_5.is_norm
+          | pure hn =>
+            exact (hn .coup).elim
     · expose_names
       cases e_h_1 with
       | tm₁ heq h =>
@@ -280,7 +307,6 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
                 | unmap =>
                   match h₂.cases_head with
                   | .inl h =>
-                    simp [GenericExpr.hole_mem_tm] at h
                     cases h
                     grind
                   | .inr ⟨_, h₁, h₂⟩ =>
@@ -368,7 +394,20 @@ def is_norm_fn {e_f₁ : EtaFn (τ_c := τ_c) f₁ doms} {e_f₂ : EtaFn (τ_c :
             exact a_3.absurd ⟨.trans (.single .unmap) (.single .sndc), by assumption⟩ (by
               grind)
     · expose_names
-      exact (h .bang).elim
+      cases e_h_1 with
+      | tm₁ heq h =>
+        cases heq
+        simp [NormExpr.to_eta, GenericExpr.expr_to_eta] at h
+        cases h with
+        | pure hn =>
+          exact (hn .bang).elim
+        | bang h =>
+          cases h with
+          | coup =>
+            expose_names
+            cases ((a_2.push_head .unmap).push_head .sndc).elim_norm a_6.is_norm
+          | pure hn =>
+            exact (hn .coup).elim
     · expose_names
       cases e_h_1 with
       | tm₁ heq h =>

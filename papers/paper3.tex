@@ -5,6 +5,7 @@
 \newcommand{\comment}[1]{}
 \usepackage{tabularx}
 \usepackage{verbatim}
+\usepackage{csquotes}
 \usepackage{hyperref}
 \usepackage{mathtools}
 \usepackage{float}
@@ -39,6 +40,10 @@
 \newtheorem{theorem}{Theorem}
 \addbibresource{./refs.bib}
 
+\newcommand{\sk}{\(\text{SK}\)}
+\newcommand{\skbf}{\(\textbf{SK}\)}
+\newcommand{\ske}{\text{SK}}
+\newcommand{\skebf}{\textbf{SK}}
 \newcommand{\dcc}{\(\text{DCC}\)}
 \newcommand{\dccbf}{\(\textbf{DCC}\)}
 \newcommand{\dcce}{\text{DCC}}
@@ -110,9 +115,9 @@
 
 \begin{itemize}
   \item In \ref{dccintro}, we present the dependent combinator calculus (\dccbf): our extension of categorical combinators (\cclbf) \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
-  \item In \ref{funext}, we prove that computable function extensionality is a natural consequence of \(\eta\)-reduction in DCC, as opposed to being an axiom.
+  \item In \ref{funext}, we prove that computable function extensionality is a natural consequence of \(\eta\)-reduction in DCC, rather than being an axiom.
   \item In \ref{eqreflect}, we prove that extensional equality reflection is a natural consequence of DCC's architecture based on affine logic.
-  \item In \ref{decidable}, we prove that type-checking is decidable in DCC.
+  \item In \ref{decidable}, we prove that type checking is decidable in DCC.
   \item In \ref{compilelean}, we present a procedure for compiling the subset of Lean 4 that maps to the base Calculus of Constructions to DCC.
 \end{itemize}
 
@@ -147,11 +152,11 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
   - No primitive objects in SK that resemble \forall / \Pi
 \end{comment}
 
-\subsection{\label{skcomp}The \(SK\) Combinator Calculus}
+\subsection{\label{skcomp}The SK Combinator Calculus}
 
-Prior attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 10:14]{altenkirch}. The \(SK\) combinators are a turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\). Good progress has been made, but past approaches were limited by the minimalism of \(SK\). Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
+Previous attempts by others at combinatory dependent type theory have used the \skbf{} combinator calculus \autocite[p. 10:14]{altenkirch}. The \sk{} combinators are a Turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\). Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
 
-By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
+By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified, and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) is required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
 
 \subsection{Categorical Combinators (\ccl)}
 
@@ -181,17 +186,17 @@ Categorical combinators \cite{cmachine} \cite{CURIEN1986188} (\cclbf) are a comb
   { \Lambda(x) y z \barrc{\ccle} x (y, z)}
 \end{gather*}
 
-Cartesian-closed categories are known to be a categorical semantics for the \(\lambda\)-calculus \cite{lambek1988introduction}. The equivalence between \ccl{} and the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188} is due to the shared correspondence \autocite[p. 6]{cmachine} between \ccl, cartesian-closed categories, and \(\lambda\)-calculus with Debruijn indices (\cite{de1972lambda}):
+Cartesian-closed categories are known to be a categorical semantics for the \(\lambda\)-calculus \cite{lambek1988introduction}. The equivalence between \ccl{} and the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188} is due to the shared correspondence \autocite[p. 6]{cmachine} between \ccl, cartesian-closed categories, and the \(\lambda\)-calculus with De Bruijn indices (\cite{de1972lambda}):
 
 \begin{itemize}
   \item Composition in \ccc{} corresponds to the composition combinator in \ccl.
   \item Identity morphisms in \ccc{} correspond to the \(Id\) combinator in \ccl.
-  \item Debruijn indices correspond to binary projection in \ccc{} (or ``couple'' projection in \ccl) where \(\llb 0 \rrb \coloneq Snd\) and \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\).
+  \item De Bruijn indices correspond to binary projection in \ccc{} (or ``couple'' projection in \ccl) where \(\llb 0 \rrb \coloneq Snd\) and \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\).
   \item Currying in \ccc{} corresponds to the \(\Lambda\) combinator in \ccl{} \autocite[p. 176][line 5]{cmachine}, such that \(\llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)\).
   \item Evaluation in \ccc{} corresponds to the \(App\) combinator in \ccl, such that \(\llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra\).
 \end{itemize}
 
-% MOVED THIS ABOVE: Due to this correspondence, \(\lambda\)-calculus can be compiled to \ccl. Debruijn index \(0\) corresponds to \(Snd\) projection where \(\llb 0 \rrb \coloneq Snd\). The Debruijn successor \(n + 1\) corresponds to composition with \(Fst\) projection such that \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\). \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine} where \(\llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)\). Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing where \(\llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra\).
+% MOVED THIS ABOVE: Due to this correspondence, \(\lambda\)-calculus can be compiled to \ccl. De Bruijn index \(0\) corresponds to \(Snd\) projection where \(\llb 0 \rrb \coloneq Snd\). The De Bruijn successor \(n + 1\) corresponds to composition with \(Fst\) projection such that \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\). \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine} where \(\llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)\). Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing where \(\llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra\).
 
 % inlnie or in block? \begin{gather*}
 % inlnie or in block?   \llb 0 \rrb \coloneq Snd \qquad
@@ -207,7 +212,7 @@ Cartesian-closed categories are known to be a categorical semantics for the \(\l
 % inline or in block?   \llb M N \rrb \coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra
 % inline or in block? \end{equation*}
 
-The correspondence between \ccl{} and Debruijn indices in the \(\lambda\)-calculus make them a more intuitive compilation target compared to SK, yielding more legible terms. To illustrate, we contrast the compilation of church numerals zero and one from \(\lambda\)-calculus with Debruijn indices to \ccl{} and SK:
+The correspondence between \ccl{} and the De Bruijn-indexed \(\lambda\)-calculus makes them a more intuitive compilation target compared to \sk{}, producing more legible terms. To illustrate, we contrast the compilation of church numerals zero and one from \(\lambda\)-calculus with De Bruijn indices to \ccl{} and \sk{}:
 
 \begin{align*}
   0_{\lambda} &\coloneq \lambda . \lambda . 0 & 0_{\ccle} &\coloneq \Lambda(Snd) & 0_{SK} &\coloneq K\\
@@ -235,11 +240,11 @@ The reductions of \(1_{\lambda} x y\), \(1_{\ccle} x y\), and \(1_{SK} x y\) are
     &= x y
   \end{aligned}
 \end{equation*}
-Despite their notable advantages in term legibility, more closely resembling Debruijn-indexed \(\lambda\)-calculus, adapting categorical combinators to dependent types has not been attempted thus far.
+Despite their notable advantages in term legibility, more closely resembling De Bruijn-indexed \(\lambda\)-calculus, adapting categorical combinators to dependent types has not been attempted thus far.
 
 \subsubsection{The Simply-Typed Categorical Combinators}
 
-A simply-typed variant (\cclkbf) of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points, rather than applied as arguments as in dependently-typed \(SK\). Type arguments can be inferred altogether in Curry, Pair, Comp, and in couples. The inference rules are as such:
+A simply-typed variant (\cclkbf) of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points, rather than applied as arguments as in dependently-typed \sk{}. Type arguments can be inferred altogether in Curry, Pair, Comp, and in couples. The inference rules are as such:
 
 \begin{gather*}
   \inferrule[Fst]
@@ -451,7 +456,7 @@ Since DCC is strongly normalizing by default, conversion in the judgment relatio
 
 \subsection{Types as terms: Environments are contexts}
 
-In DCC, combinator types are determined by points which index an environment and eliminate into a \(\sort{u}\). This approach has the advantage of requiring no explicit universe levels (whereas dependent \(SK\) does), and type arguments can often be inferred, easing the burden on the user.
+In DCC, combinator types are determined by points which index an environment and eliminate into a \(\sort{u}\). This approach has the advantage of requiring no explicit universe levels (whereas dependent \sk{} does), and type arguments can often be inferred, easing the burden on the user.
 
 This design decision enables a natural compilation from Lean 4 to DCC. Interpreting couple environments as \(\Sigma\)-types yields a telescope context:
 
@@ -463,7 +468,7 @@ This design decision enables a natural compilation from Lean 4 to DCC. Interpret
 \caption{Couple environments are analogous to context substitutions}
 \end{figure}
 
-Dependent types are supported in principle by a \(\Pi\) combinator. Unlike in prior attempts with \(SK\), its domain is a point and a function of an environment and its codomain of the environment and corresponding term argument:
+Dependent types are supported in principle by a \(\Pi\) combinator. Unlike in prior attempts with \sk{}, its domain is a point and a function of an environment and its codomain of the environment and corresponding term argument:
 
 \begin{center}
   \begin{figure}[H]
@@ -763,7 +768,7 @@ theorem RedAff.decreasing' (h : RedAff A B) : size B < size A := by
 
 \subsection{Strong Normalization}
 
-\begin{theorem} \label{thm:dec}
+\begin{theorem}
   If \(A\) is a term, and if that \(A \barr B\) implies \(B\) is accessible forall terms \(B\), then  \(A\) is accessible.
 \end{theorem}
 
@@ -933,7 +938,7 @@ We also demonstrate soundness and completeness of a \(\beta\)-reduction procedur
   Forall terms \(A\) and \(B\), \(hr : A \barr^{*} B\) or \(\neg A \barr^{*} B\).
 \end{theorem}
 
-\begin{proof} \label{thm:reddecide}
+\begin{proof}
   By completeness and soundness of \lean{reduce RedAff}. \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/05b05784d7e7b2e9070a7edbd6b024f613c80448/Dcc/Aff/Red.lean\#L582}{Dcc.GenericExpr.reduce\_complete}
 \end{proof}
 
@@ -968,7 +973,7 @@ Our approach is fully syntactic, although it bears some resemblance to normaliza
 
 \subsection{Term points dictate function domains}\label{etadom}
 
-We believe this approach is only possible due to our design pairing the categorical combinators with affine logic. In the \(SK\) calculus, for example, this approach is not possible in the \(SK\) calculus, since type arguments are given by application, not points. Function domains are encoded as a telescope context. The constituent terms are \(\beta\)-normal values. For example, \(\Lambda(A, B, x)\) has domain \([A', B']\), where \(B : A \arr \sort{v}\) and \(A \barr^{!} A'\) and \(B \barr^{!} B'\).
+We believe this approach is only possible due to our design pairing the categorical combinators with affine logic. In the \sk{} calculus, for example, this approach is not possible in the \sk{} calculus, since type arguments are given by application, not points. Function domains are encoded as a telescope context. The constituent terms are \(\beta\)-normal values. For example, \(\Lambda(A, B, x)\) has domain \([A', B']\), where \(B : A \arr \sort{v}\) and \(A \barr^{!} A'\) and \(B \barr^{!} B'\).
 
 Function domains are inferred as such \label{domunary} \label{dombinary}.
 

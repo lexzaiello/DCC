@@ -151,7 +151,7 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 
 Prior attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 10:14]{altenkirch}. The \(SK\) combinators are a turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\). Good progress has been made, but past approaches were limited by the minimalism of \(SK\). Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
 
-By contrast, DCC is based on an extension of categorical combinators (\ccl) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
+By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
 
 \subsection{Categorical Combinators (\ccl)}
 
@@ -213,7 +213,7 @@ The correspondence between \ccl{} and Debruijn indices in the \(\lambda\)-calcul
   0_{\lambda} &\coloneq \lambda . \lambda . 0 & 0_{\ccle} &\coloneq \Lambda(Snd) & 0_{SK} &\coloneq K\\
   1_{\lambda} &\coloneq \lambda . \lambda . 1 0 & 1_{\ccle} &\coloneq \Lambda(App \circ \la Fst, Snd \ra) & 1_{SK} &\coloneq S K K
 \end{align*}
-The reductions of \(1_{\lambda} x y\), \(1_{\ccle} x y\), and \(1_{SK} x y\) are like such:
+The reductions of \(1_{\lambda} x y\), \(1_{\ccle} x y\), and \(1_{SK} x y\) are as such:
 
 \begin{equation*}
   \begin{aligned}[t]
@@ -235,11 +235,11 @@ The reductions of \(1_{\lambda} x y\), \(1_{\ccle} x y\), and \(1_{SK} x y\) are
     &= x y
   \end{aligned}
 \end{equation*}
-Despite their notable advantages in term legibility, adapting categorical combinators to dependent types has not been attempted thus far.
+Despite their notable advantages in term legibility, more closely resembling Debruijn-indexed \(\lambda\)-calculus, adapting categorical combinators to dependent types has not been attempted thus far.
 
 \subsubsection{The Simply-Typed Categorical Combinators}
 
-A simply-typed variant of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points, rather than applied as arguments as in dependently-typed \(SK\). Type arguments can be inferred altogether in Curry, Pair, Comp, and in couples. The inference rules are like such:
+A simply-typed variant (\cclkbf) of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points, rather than applied as arguments as in dependently-typed \(SK\). Type arguments can be inferred altogether in Curry, Pair, Comp, and in couples. The inference rules are as such:
 
 \begin{gather*}
   \inferrule[Fst]

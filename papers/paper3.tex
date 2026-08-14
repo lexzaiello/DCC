@@ -39,12 +39,22 @@
 \newtheorem{theorem}{Theorem}
 \addbibresource{./refs.bib}
 
-\newcommand{\ccc}{\(\textbf{CCC}\)} % Cartesian-closed category
-\newcommand{\ccl}{\(\textbf{CCL}\)} % Categorical combinatory logic
-\newcommand{\ccle}{\textbf{CCL}}
-\newcommand{\cclk}{\(\textbf{CCL}_\textbf{K}\)} % Simply-typed categorical combinatory logic
-\newcommand{\cclke}{\textbf{CCL}_\textbf{K}}
+\newcommand{\dcc}{\(\text{DCC}\)}
+\newcommand{\dccbf}{\(\textbf{DCC}\)}
+\newcommand{\dcce}{\text{DCC}}
+\newcommand{\dccebf}{\textbf{DCC}}
+\newcommand{\ccc}{\(\text{CCC}\)} % Cartesian-closed category
+\newcommand{\cccbf}{\(\textbf{CCC}\)} % Cartesian-closed category
+\newcommand{\ccl}{\(\text{CCL}\)} % Categorical combinatory logic
+\newcommand{\cclbf}{\(\textbf{CCL}\)} % Categorical combinatory logic
+\newcommand{\ccle}{\text{CCL}}
+\newcommand{\cclebf}{\textbf{CCL}}
+\newcommand{\cclk}{\(\text{CCL}_\text{K}\)} % Simply-typed categorical combinatory logic
+\newcommand{\cclkbf}{\(\textbf{CCL}_\textbf{K}\)} % Simply-typed categorical combinatory logic
+\newcommand{\cclke}{\text{CCL}_\text{K}}
+\newcommand{\cclkebf}{\textbf{CCL}_\textbf{K}}
 % Left and right bracket around B (Sigma.snd : B (Sigma.fst s)) in DCC couple notation (see reduction rules)
+% Also for compilation
 \newcommand{\llb}{\llbracket}
 \newcommand{\rrb}{\rrbracket}
 \newcommand{\leanlink}[2]{
@@ -71,7 +81,7 @@
 \newcommand{\dom}[1]{\text{dom}(#1)}
 \newcommand{\domtwo}[1]{\text{dom}_{2}(#1)}
 % For Comb(points)
-\newcommand{\comb}[2]{\text{#1}(#2)}
+\newcommand{\comb}[2]{#1(#2)}
 \newcommand{\arity}[2]{\text{arity} #1 = #2}
 \newcommand{\efn}[2]{\text{F}_{\eta}\ #1\ #2}
 \newcommand{\ddom}{\text{Domain}\ }
@@ -99,7 +109,7 @@
 \subsection{Results}
 
 \begin{itemize}
-  \item In \ref{dccintro}, we present the dependent combinator calculus (DCC): our extension of categorical combinators (\ccl) \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
+  \item In \ref{dccintro}, we present the dependent combinator calculus (\dccbf): our extension of categorical combinators (\cclbf) \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
   \item In \ref{funext}, we prove that computable function extensionality is a natural consequence of \(\eta\)-reduction in DCC, as opposed to being an axiom.
   \item In \ref{eqreflect}, we prove that extensional equality reflection is a natural consequence of DCC's architecture based on affine logic.
   \item In \ref{decidable}, we prove that type-checking is decidable in DCC.
@@ -119,8 +129,8 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 \begin{comment}
   \item Topic sentence
   \item Supporting sentence #1
-  \item Supporting sentence #1
-  \item Supporting sentence #1
+  \item Supporting sentence #2
+  \item Supporting sentence #3
   \item Concluding sentence
 \end{comment}
 
@@ -139,100 +149,95 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 
 \subsection{\label{skcomp}The \(SK\) Combinator Calculus}
 
-Prior attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 10:14]{altenkirch}. The \(SK\) combinators are a turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with only two primitive objects: \(S\) and \(K\). Dependent types are usually supported by a \(\Pi\) combinator and helper (``meta'' combinators) which encode the types of \(S\) and \(K\) (as in \autocite[10:17]{altenkirch}).
+Prior attempts by others at combinatory dependent type theory have used the \(SK\) combinator calculus \autocite[p. 10:14]{altenkirch}. The \(SK\) combinators are a turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\). Good progress has been made, but past approaches were limited by the minimalism of \(SK\). Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
 
-Good progress has been made, but past approaches were limited by the minimalism of \(SK\). Types become very large and difficult to work with \autocite[10:17][para. 2]{altenkirch}. Type parameters in \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
-
-By contrast, DCC is based on an extension of categorical combinators (\ccl) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in CC. Finally, all universe levels are inferred, easing the burden on the user.
+By contrast, DCC is based on an extension of categorical combinators (\ccl) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
 
 \subsection{Categorical Combinators (\ccl)}
 
-Categorical combinators \cite{cmachine} \cite{CURIEN1986188} (\ccl) are a combinatory logic based on cartesian closed categories (CCC). They are equivalent to the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188}. \ccl has the following rewrite rules:
+Categorical combinators \cite{cmachine} \cite{CURIEN1986188} (\cclbf) are a combinatory logic based on cartesian-closed categories (\cccbf) \cite{nlab:ccc}. They are equivalent to the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188}. \ccl{} has the following rewrite rules:
 
 \begin{gather*}
   \inferrule[Fst]
   { }
-  { \text{Fst} (x, y) \barrc{\ccle} x} \qquad
+  { Fst (x, y) \barrc{\ccle} x} \qquad
   \inferrule[Snd]
   { }
-  { \text{Snd} (x, y) \barrc{\ccle} x} \qquad
+  { Snd (x, y) \barrc{\ccle} x} \qquad
   \inferrule[Ass]
   { }
   {(x \circ y) z \barrc{\ccle} x (y z)}\qquad
   \inferrule[Id]
   { }
-  {\text{Id} x \barrc{\ccle} x}\\
+  {Id x \barrc{\ccle} x}\\
   \inferrule[Pair]
   { }
   {\la x, y \ra x \barrc{\ccle} (M x, N x)}\qquad
   \inferrule[App]
   { }
-  { \text{App} (x, y) \barrc{\ccle} x y}\qquad
+  { App (x, y) \barrc{\ccle} x y}\qquad
   \inferrule[Curry]
   { }
   { \Lambda(x) y z \barrc{\ccle} x (y, z)}
 \end{gather*}
 
-The equivalence between CC and the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188} is due to the shared correspondence between \ccl, cartesian closed categories, and \(\lambda\)-calculus with Debruijn indices (\cite{de1972lambda}):
+Cartesian-closed categories are known to be a categorical semantics for the \(\lambda\)-calculus \cite{lambek1988introduction}. The equivalence between \ccl{} and the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188} is due to the shared correspondence \autocite[p. 6]{cmachine} between \ccl, cartesian-closed categories, and \(\lambda\)-calculus with Debruijn indices (\cite{de1972lambda}):
 
 \begin{itemize}
-  \item Debruijn indices correspond to binary projection in the cartesian closed category
+  \item Composition in \ccc{} corresponds to the composition combinator in \ccl.
+  \item Identity morphisms in \ccc{} correspond to the \(Id\) combinator in \ccl.
+  \item Debruijn indices correspond to binary projection in \ccc{} (or ``couple'' projection in \ccl) where \(\llb 0 \rrb \coloneq Snd\) and \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\).
+  \item Currying in \ccc{} corresponds to the \(\Lambda\) combinator in \ccl{} \autocite[p. 176][line 5]{cmachine}, such that \(\llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)\).
+  \item Evaluation in \ccc{} corresponds to the \(App\) combinator in \ccl, such that \(\llb M N \rrb \coloneq Apply \circ \la \llb M \rrb, \llb N \rrb \ra\).
 \end{itemize}
 
-\item Recall debruijn indices
+% MOVED THIS ABOVE: Due to this correspondence, \(\lambda\)-calculus can be compiled to \ccl. Debruijn index \(0\) corresponds to \(Snd\) projection where \(\llb 0 \rrb \coloneq Snd\). The Debruijn successor \(n + 1\) corresponds to composition with \(Fst\) projection such that \(\llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst\). \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine} where \(\llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)\). Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing where \(\llb M N \rrb \coloneq Apply \circ \la \llb M \rrb, \llb N \rrb \ra\).
 
-For example:
+% inlnie or in block? \begin{gather*}
+% inlnie or in block?   \llb 0 \rrb \coloneq Snd \qquad
+% inlnie or in block?   \llb n + 1 \rrb \coloneq \llb n \rrb \circ Fst
+% inlnie or in block? \end{gather*}
 
-\begin{gather*}
-  \lambda . 1 \approx \Lambda(
-\end{gather*}
+% inline or in block? \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine}:
+% inline or in block? \begin{equation*}
+% inline or in block?   \llb \lambda . M \rrb \coloneq \Lambda(\llb M \rrb)
+% inline or in block? \end{equation*}
+% inline or in block? Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing:
+% inline or in block? \begin{equation*}
+% inline or in block?   \llb M N \rrb \coloneq Apply \circ \la \llb M \rrb, \llb N \rrb \ra
+% inline or in block? \end{equation*}
 
-\item BIG NOTE: \cclk corresponds to free cartesian closed category
-
-\begin{comment}
-  \item Summarize \ccl:
-    \begin{itemize}
-      \item Based on cartesian closed categories
-      \item Equivalent to \(\lambda\)-calculus
-      \item Give rewrite rules
-      \item Maybe mention compilation
-      \item Mention simply-typed version second paragraph
-      \item Mention how the debruijn index thing makes it a good target for DCC
-    \end{itemize}
-\end{comment}
-
-The rewrite rules of the categorical combinator calculus are given by \ref{eq:catred} \autocite{cmachine}.
-
-Each combinator corresponds to an operation in the cartesian closed category. \(\text{Id}\) corresponds to the identity morphism, composition to morphism composition, \(\text{App}\) to evaluation, and \(\Lambda\) to currying.
-
-Constants can be encoded without a constant combinator (as in \(SK\)) \ref{constderiv}.
-
-An isomorphism exists between the categorical combinators and the \(\lambda\)-calculus. For example, the compilation of \(\lambda\)-calculus with Debruijn indices to categorical combinators is quite simple \autocite[p. 4]{cmachine}:
+The correspondence between \ccl{} and Debruijn indices in the \(\lambda\)-calculus make them a more intuitive compilation target compared to SK, yielding more legible terms. To illustrate, we contrast the compilation of church numerals zero and one from \(\lambda\)-calculus with Debruijn indices to \ccl{} and SK:
 
 \begin{align*}
-  \llb \lambda.M \rrb &\coloneq \Lambda(\llb M \rrb)\\
-  \llb 0 \rrb &\coloneq \text{Snd}\\
-  \llb n + 1 \rrb &\coloneq \llb n \rrb \circ \text{Fst}\\
-  \llb M N \rrb &\coloneq App \circ \la \llb M \rrb, \llb N \rrb \ra
+  0_{\lambda} &\coloneq \lambda . \lambda . 0 & 0_{\ccle} &\coloneq \Lambda(Snd) & 0_{SK} &\coloneq K\\
+  1_{\lambda} &\coloneq \lambda . \lambda . 1 0 & 1_{\ccle} &\coloneq \Lambda(App \circ \la Fst, Snd \ra) & 1_{SK} &\coloneq S K K
 \end{align*}
-
-The first top-level \(\lambda\)-application which is not under a binder is applied with the terminal object \(\mathbbm{1}\):
+The reductions of \(1_{\lambda} x y\), \(1_{\ccle} x y\), and \(1_{SK} x y\) are like such:
 
 \begin{equation*}
-  \llb (\lambda M) N \rrb \coloneq \llb M \rrb \mathbbm{1} \llb N \rrb
+  \begin{aligned}[t]
+    1_{\lambda} x y &= (\lambda . \lambda . 1 0) x y\\
+    &= (\lambda . x 0) y\\
+    &= x y
+  \end{aligned}
+  \qquad
+  \begin{aligned}[t]
+    1_{\ccle} x y &= \Lambda(App \circ \la Fst, Snd \ra) x y\\
+    &= App \circ \la Fst, Snd \ra (x, y)\\
+    &= App (x, y)\\
+    &= x y
+  \end{aligned}
+  \qquad
+  \begin{aligned}[t]
+    1_{SK} x y &= S K K x y\\
+    &= K x (K x) y\\
+    &= x y
+  \end{aligned}
 \end{equation*}
+Despite their notable advantages in term legibility, adapting categorical combinators to dependent types has not been attempted thus far.
 
-For example:
-
-\begin{align*}
-  (\lambda 0) c &= \Lambda(\text{Snd}) \mathbbm{1} c\\
-                &= \text{Snd} (\mathbbm{1}, c)\\
-                &= c
-\end{align*}
-
-Compared to the \(SK\) combinator calculus, writing programs with categorical combinators feels quite natural. However, adapting it to dependent types has not been attempted thus far.
-
-\subsection{The Simply-Typed Categorical Combinators}
+\subsubsection{The Simply-Typed Categorical Combinators}
 
 A simply-typed variant of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points, rather than applied arguments as in dependently-typed \(SK\). Type arguments can be inferred altogether in \(\Lambda\), \(\text{App}\), and \(\text{Pair}\) \ref{cat:infer}.
 

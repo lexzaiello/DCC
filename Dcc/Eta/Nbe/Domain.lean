@@ -33,8 +33,7 @@ inductive Domain : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
     → Domain ⟨(DCC? (refl(f_α) &(env))), fun ⟨_, h⟩ => match h with
       | .congrFun h => nomatch h
       | .congrArg h => nomatch h⟩ ⟨(DCC? !(τ)), fun ⟨_, h⟩ => match h with | .bang h => hn_τ ⟨_, h⟩⟩
-  | unmap    : (hrn : RedAffNorm f f')
-    → Domain f' ⟨α, hn_α⟩
+  | unmap    : Domain ⟨f, hn_map.unmap⟩ ⟨α, hn_α⟩
     → Domain ⟨(DCC? *<f>), hn_map⟩ ⟨(DCC? !(α)), fun ⟨_, h⟩ =>
       match h with
       | .bang h => hn_α ⟨_, h⟩⟩
@@ -49,23 +48,17 @@ inductive Domain : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
   | sndc     : (hrn : RedAffNorm β ⟨β', hn_β'⟩) → Domain ⟨(DCC? Snd(β)), fun ⟨_, h⟩ => nomatch h⟩
     ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => match h with
       | .coup h => hn_β' ⟨_, h⟩⟩
-  | curr₁    : (hrn : RedAffNorm α α') → Domain ⟨(DCC? Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩ α'
+  | curr₁    : (hrn : RedAffNorm α α') → Domain ⟨(DCC? Λ(α, β, x)), hn⟩ α'
   | curr₂    : {y : GenericExpr τ_c}
-    → {hn_y : IsNorm RedAff y}
-    → (hrn : RedAffNorm (DCC? (β y)) τ)
-    → Domain ⟨(DCC? (Λ(α, β, x) y)), fun ⟨_, h⟩ =>
+    → (hrn  : RedAffNorm (DCC? (β y)) τ)
+    → {hn   : IsNorm RedAff (DCC? (Λ(α, β, x) y))}
+    → Domain ⟨(DCC? (Λ(α, β, x) y)), hn⟩ τ
+  | curr₁'   : (hrn : RedAffNorm α ⟨α', hn_α'⟩)
+    → Domain ⟨(DCC? !Λ(α, β, x)), hn⟩ ⟨DCC? !(α'), fun ⟨_, h⟩ =>
       match h with
-      | .congrFun h => nomatch h
-      | .congrArg h => hn_y ⟨_, h⟩⟩ τ
-  | curr₁'   : (hrn : RedAffNorm α ⟨α', hn_α'⟩) → Domain ⟨(DCC? !Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩ ⟨DCC? !(α'), fun ⟨_, h⟩ =>
-    match h with
-    | .bang h => hn_α' ⟨_, h⟩⟩
-  | curr₂'   : (hrn : RedAffNorm (DCC? (β y)) τ)
-    → Domain ⟨(DCC? (!Λ(α, β, x) &(y))), fun ⟨_, h⟩ =>
-      match h with
-      | .congrFun h => nomatch h
-      | .congrArg h => nomatch h⟩ τ
-  | map      : (hrn : RedAffNorm f f') → Domain f' ⟨α, hn_α⟩
+      | .bang h => hn_α' ⟨_, h⟩⟩
+  | curr₂'   : (hrn : RedAffNorm (DCC? (β y)) τ) → Domain ⟨(DCC? (!Λ(α, β, x) &(y))), hn⟩ τ
+  | map      : Domain ⟨f, hn_map.map⟩ ⟨α, hn_α⟩
     → Domain ⟨(DCC? !<f>), hn_map⟩ ⟨(DCC? !(α)), fun ⟨_, h⟩ =>
     match h with
     | .bang h => hn_α ⟨_, h⟩⟩
@@ -137,14 +130,12 @@ inductive Domain₂ : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → @NormE
         | .map₀ h => hn_f_α' ⟨_, h⟩⟩
   | curr     : (hrn₁ : RedAffNorm α α')
     → (hrn₂ : RedAffNorm β ⟨β', hn_β⟩)
-    → (hrx  : RedAffNorm x x')
-    → Domain x' ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => match h with | .coup h => hn_β ⟨_, h⟩⟩
-    → Domain₂ ⟨(DCC? Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩ α' ⟨β', hn_β⟩
+    → Domain ⟨x, hn.curr₀⟩ ⟨(DCC? Coup(β')), fun ⟨_, h⟩ => match h with | .coup h => hn_β ⟨_, h⟩⟩
+    → Domain₂ ⟨(DCC? Λ(α, β, x)), hn⟩ α' ⟨β', hn_β⟩
   | curr'    : (hrn₁ : RedAffNorm α ⟨α', hn_α'⟩)
     → (hrn₂ : RedAffNorm β ⟨β', hn_β'⟩)
-    → (hrx  : RedAffNorm x x')
-    → Domain x' ⟨(DCC? !(Coup(β'))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β' ⟨_, h⟩⟩
-    → Domain₂ ⟨(DCC? !Λ(α, β, x)), fun ⟨_, h⟩ => nomatch h⟩
+    → Domain ⟨x, hn.curr'₀⟩ ⟨(DCC? !(Coup(β'))), fun ⟨_, h⟩ => match h with | .bang (.coup h) => hn_β' ⟨_, h⟩⟩
+    → Domain₂ ⟨(DCC? !Λ(α, β, x)), hn⟩
       ⟨DCC? !(α'), fun ⟨_, h⟩ => match h with | .bang h => hn_α' ⟨_, h⟩⟩ ⟨DCC? !<β'>, fun ⟨_, .map₀ h⟩ => hn_β' ⟨_, h⟩⟩
 deriving DecidableEq
 
@@ -155,8 +146,8 @@ def Domain₂.to_domain (h : Domain₂ f α β) : Domain f α :=
   | .comp' _hr₁ hr₂ h_dom₁ _ => .comp' hr₂ h_dom₁
   | .eql hr₁ h_dom => .eql₁ hr₁ h_dom
   | .refl hr₁ h_dom => .refl₁ hr₁ h_dom
-  | .curr hr₁ hr₂ hr_x h_dom => .curr₁ hr₁
-  | .curr' hr₁ hr₂ _ _ => .curr₁' hr₁
+  | .curr hr₁ hr₂ h_dom => .curr₁ hr₁
+  | .curr' hr₁ hr₂ _ => .curr₁' hr₁
 
 def domain? (e : @NormExpr τ_c' RedAff) : Option ((τ : @NormExpr τ_c' RedAff) × (Domain e τ)) :=
   match e with
@@ -174,22 +165,21 @@ def domain? (e : @NormExpr τ_c' RedAff) : Option ((τ : @NormExpr τ_c' RedAff)
       | _ => .none
     | (DCC? (refl(_f_α) &(_env))) => .some ⟨_, .refl₂ (aff_sound rfl)⟩
     | (DCC? *<f>) =>
-      match f.red_aff.domain? with
+      match (mk f hn.unmap).domain? with
       | .some ⟨_, h⟩ =>
-        .some ⟨_, .unmap (aff_sound rfl) h⟩
+        .some ⟨_, .unmap h⟩
       | _ => .none
     | (DCC? *(_α)) => .some ⟨_, .unbox (aff_sound rfl)⟩
     | (DCC? Id(_α)) => .some ⟨_, .id (aff_sound rfl)⟩
     | (DCC? Fst(_β)) => .some ⟨_, .fstc (aff_sound rfl)⟩
     | (DCC? Snd(_β)) => .some ⟨_, .sndc (aff_sound rfl)⟩
     | (DCC? Λ(_α, _β, _x)) => .some ⟨_, .curr₁ (aff_sound rfl)⟩
-    | (DCC? (Λ(_α, _β, _x) y)) => .some ⟨_, .curr₂
-      (y := y) (hn_y := fun ⟨_, h⟩ => hn ⟨_, .congrArg h⟩) (aff_sound rfl)⟩
+    | (DCC? (Λ(_α, _β, _x) y)) => .some ⟨_, .curr₂ (y := y) (aff_sound rfl)⟩
     | (DCC? !Λ(_α, _β, _x)) => .some ⟨_, .curr₁' (aff_sound rfl)⟩
     | (DCC? (!Λ(_α, _β, _x) &(_y))) => .some ⟨_, .curr₂' (aff_sound rfl)⟩
     | (DCC? !<f>) =>
-      match f.red_aff.domain? with
-      | .some ⟨_, h⟩ => .some ⟨_, .map (aff_sound rfl) h⟩
+      match (mk f hn.map).domain? with
+      | .some ⟨_, h⟩ => .some ⟨_, .map h⟩
       | _ => .none
     | (DCC? $<f>) =>
       match f.red_aff.domain? with
@@ -255,24 +245,22 @@ def domain₂? (e : @NormExpr τ_c RedAff) : Option ((α β : @NormExpr τ_c Red
         .some ⟨_, _, .refl (aff_sound rfl) h₁⟩
       | .none => .none
     | (DCC? Λ(α, β, x)) =>
-      match (red_aff x).domain? with
+      match (mk x hn.curr₀).domain? with
       | .some ⟨⟨DCC? Coup(β₂), hn⟩, h_dom⟩ =>
         if heq : (red_aff β).raw = β₂ then
-          .some ⟨_, _, .curr (aff_sound rfl) (aff_sound rfl) (aff_sound rfl) (by
+          .some ⟨_, _, .curr (aff_sound rfl) (aff_sound rfl) (by
             simp_all [red_aff]
             cases heq
-            simp [red_aff] at h_dom
             exact h_dom)⟩
         else .none
       | _ => .none
     | (DCC? !Λ(α, β, x)) =>
-      match (red_aff x).domain? with
+      match (mk x hn.curr'₀).domain? with
       | .some ⟨⟨DCC? !(Coup(β₂)), hn⟩, h_dom⟩ =>
         if heq : (red_aff β).raw = β₂ then
-          .some ⟨_, _, .curr' (aff_sound rfl) (aff_sound rfl) (aff_sound rfl) (by
+          .some ⟨_, _, .curr' (aff_sound rfl) (aff_sound rfl) (by
             simp_all [red_aff]
             cases heq
-            simp [red_aff] at h_dom
             exact h_dom)⟩
         else .none
       | _ => .none
@@ -289,6 +277,12 @@ set_option maxHeartbeats 100000000000000000 in
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
 theorem complete {e τ : @NormExpr τ_c' RedAff} (h : Domain e τ) : (domain? (τ_c' := τ_c')) e = .some ⟨τ, h⟩ := by
   induction h
+  case curr₂ =>
+    expose_names
+    have ha := hrn.complete
+    simp [domain?]
+    cases ha
+    dcc_simp_all
   any_goals (
     focus
     try (
@@ -351,29 +345,24 @@ theorem Domain₂.complete
     dcc_simp_all
     cases hb
     dcc_simp_all [ha]
-  | curr hrt₁ hrt₂ hrt₃ h_dom =>
+  | curr hrt₁ hrt₂ h_dom =>
     have ha := hrt₁.complete
     have hb := hrt₂.complete
-    have hc := hrt₃.complete
     have hd := h_dom.complete
     simp [domain₂?]
     dcc_simp_all [ha, hb, hc, hd]
     rw [← ha] at hrt₁
     cases hb
-    rw [← hc] at hrt₃
     have hc := hrt₁.eq
     have hd := hrt₂.eq
-    cases ha; cases hb; cases hc
-    cases hc
+    cases ha; cases hc
     dcc_simp_all
-  | curr' hrt₁ hrt₂ hrt₃ h_dom =>
+  | curr' hrt₁ hrt₂ h_dom =>
     have ha := hrt₁.complete
     have hb := hrt₂.complete
-    have hc := hrt₃.complete
     have hd := h_dom.complete
     simp [domain₂?]
     dcc_simp_all [ha, hb, hc, hd]
-    cases hc
     cases ha
     cases hb
     dcc_simp_all
@@ -438,6 +427,12 @@ def Domain.decreasing {e α : @NormExpr τ_c' RedAff} (h : Domain e α) : NormEx
       first | grind)
     done)
   any_goals (grind)
+  case curr₂ =>
+    expose_names
+    have ha := hrn.complete
+    have hb := hrn.decreasing?
+    dcc_simp_all [NormExpr.size]
+    grind
 
 open GenericExpr in
 open NormExpr in
@@ -462,7 +457,13 @@ open GenericExpr in
 open NormExpr in
 def NormExpr.Domain.to_eta {f α : @NormExpr τ_c RedAff} (h : Domain f α) : Domain f.to_eta α.to_eta :=
   match h with
-  | .map _ _ | .unmap _ _ | .refl₁ _ _ | .eql₁ _ _
+  | .map _ | .unmap _  => by
+    expose_names
+    have h_dec₁ := a.decreasing
+    have h := a.to_eta
+    constructor
+    · assumption
+  | .refl₁ _ _ | .eql₁ _ _
     | .fmap _ _ => by
     all_goals (
       try expose_names)
@@ -476,7 +477,6 @@ def NormExpr.Domain.to_eta {f α : @NormExpr τ_c RedAff} (h : Domain f α) : Do
     all_goals (
       try (rename_i hn_β _ _ hrn))
     · have ha := hrn.to_eta
-      have hb := hn_β.to_eta
       constructor
       assumption
   | .eql₂ _ | .refl₂ _ => by
@@ -499,10 +499,8 @@ def NormExpr.Domain.to_eta {f α : @NormExpr τ_c RedAff} (h : Domain f α) : Do
       assumption
   | .curr₂ _ => by
     expose_names
-    have ha := hn_y.to_eta
     have hb := hrn.to_eta
     constructor
-    · assumption
     · assumption
   | .quot _ | .curr₂' _ | .curr₁ _ | .id _ => by
     all_goals (try (expose_names))
@@ -563,16 +561,10 @@ def NormExpr.Domain.from_eta {f α : @EtaExpr.Norm τ_c} (h : Domain f α)
       constructor
       · exact hrn.from_eta (hn₁ := by grind))
     done)
-  · expose_names
-    have h := hrn.tail_no_hole (by grind)
-    have h_dec := hrn.decreasing?
-    constructor
-    · exact hn_y.from_eta (by grind)
-    · exact hrn.from_eta (hn₁ := by grind)
-  · expose_names
-    constructor
-    · exact hn₂_1.from_eta (by grind)
-    · exact a.from_eta (by grind) (by grind)
+  case map | unmap =>
+    expose_names
+    have ha := a.from_eta (by grind) (by grind)
+    constructor; assumption
   any_goals (
     focus
     try (
@@ -589,6 +581,12 @@ def NormExpr.Domain.from_eta {f α : @EtaExpr.Norm τ_c} (h : Domain f α)
     constructor
     · exact hn₂_1.from_eta (by grind)
     · exact h₁
+  case pi =>
+    expose_names
+    have ha := a.from_eta (by grind) (by grind)
+    constructor
+    · exact hn₂_1.from_eta (by grind)
+    · assumption
 termination_by size f
 decreasing_by
   any_goals (grind)
@@ -654,20 +652,17 @@ def NormExpr.Domain₂.to_eta {f α : @NormExpr τ_c RedAff} (h : Domain₂ f α
     have hc := hrn₁.to_eta
     have hd := a.to_eta
     constructor <;> assumption
-  | .curr _ _ _ _ => by
+  | .curr _ _ _ => by
     expose_names
     have ha := hn_β.to_eta
     have hb := hrn₁.to_eta
     have hc := hrn₂.to_eta
-    have hd := hrx.to_eta
     have he := a.to_eta
     constructor <;> assumption
-  | .curr' _ _ _ _ => by
+  | .curr' _ _ _ => by
     expose_names
     have ha := hn_α'.to_eta
     have hb := hn_β'.to_eta
-    have hc := x'.to_eta
-    have hd := hrx.to_eta
     have he := hrn₁.to_eta
     have hf := hrn₂.to_eta
     have hg := a.to_eta
@@ -693,16 +688,6 @@ def NormExpr.Domain₂.no_holes (h : Domain₂ f α β) (hn : ¬ f.raw.contains_
     try (
       expose_names
       have hrna := GenericExpr.RedAffNorm.tail_no_hole hrn₁ (by grind)
-      have hb := a.no_holes (by grind)
-      grind)
-    done)
-  any_goals (
-    focus
-    try (
-      expose_names
-      have hrna := GenericExpr.RedAffNorm.tail_no_hole hrn₁ (by grind)
-      have hrnb := GenericExpr.RedAffNorm.tail_no_hole hrn₂ (by grind)
-      have hrnc := GenericExpr.RedAffNorm.tail_no_hole hrx (by grind)
       have hb := a.no_holes (by grind)
       grind))
 
@@ -748,18 +733,17 @@ def NormExpr.Domain₂.from_eta {f α β : @EtaExpr.Norm τ_c} (h : Domain₂ f 
       have hc := a.from_eta (by grind) (by grind)
       constructor <;> assumption)
     done)
-  any_goals (
-    focus
-    try (
-      expose_names
-      have ha := hrn₂.from_eta (hn₁ := by grind)
-      have ha := hrn₁.tail_no_hole (by grind)
-      have hc := hrn₁.tail_no_hole (by grind)
-      have hd := hrn₁.from_eta (hn₁ := by grind)
-      have he := hrx.tail_no_hole (by grind)
-      have hf := hrx.from_eta (hn₁ := by grind)
-      have hg := a.from_eta (by grind) (by grind)
-      constructor <;> assumption))
+  case curr' | curr =>
+    expose_names
+    have ha := a.no_holes (by grind)
+    have hb := hrn₁.tail_no_hole (by grind)
+    have hc := hrn₂.tail_no_hole (by grind)
+    have hd := hrn₁.to_eta
+    have he := hrn₁.from_eta (hn₁ := by grind)
+    have hf := a.from_eta (by grind) (by grind)
+    have hh := hn.from_eta (by grind)
+    have hj := hrn₂.from_eta (hn₁ := by grind)
+    constructor <;> assumption
 
 open GenericExpr in
 open NormExpr in

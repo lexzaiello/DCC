@@ -208,6 +208,12 @@ theorem sigt' (h : Relation.ReflTransGen RedAff  B B') : Relation.ReflTransGen R
 @[aesop safe apply (rule_sets := [DccForceReduce])]
 theorem refl_conf : ∃ B, Relation.ReflTransGen r A B ∧ Relation.ReflTransGen r A B := ⟨_, .refl, .refl⟩
 
+@[aesop safe apply (rule_sets := [DccReduce])]
+theorem congrFun_of_single (h : RedAff x x' := by assumption) : Relation.ReflTransGen RedAff (DCC? (x y)) (DCC? (x' y)) := .single (.congrFun h)
+
+@[aesop safe apply (rule_sets := [DccReduce])]
+theorem congrArg_of_single (h : RedAff y y' := by assumption) : Relation.ReflTransGen RedAff (DCC? (x y)) (DCC? (x y')) := .single (.congrArg h)
+
 attribute [aesop safe (rule_sets := [DccForceReduce]) [constructors]] Relation.ReflTransGen
 
 --set_option trace.aesop true in
@@ -300,12 +306,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       | map₀ hr =>
         exact ⟨_, .single (.bang (.congrFun hr)), .single (.map)⟩
     | congrArg h => cases h
-  | fmap =>
-    cases h₂ with
-    | fmap => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => cases h
-  | unbox => dcc_aesop' [force_reduce, force_step]
+  | fmap | unbox => dcc_aesop' [force_reduce, force_step]
   | unmap =>
     cases h₂ with
     | congrArg h => cases h
@@ -314,10 +315,10 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       | unmap₀ hr => exact ⟨_, .single (.congrFun hr), .single (.unmap)⟩
     | _ => exact ⟨_, .refl, .refl⟩
   | curr'₀ hr ih | curr₀ hr ih =>
-    cases h₂ with
-    | _ hr' =>
+    cases h₂
+    case _ hr' =>
       have ⟨_, h₁, h₂⟩ := ih hr'
-      exact ⟨_, by dcc_aesop' [force_step], by dcc_aesop' [force_step]⟩
+      constructor <;> dcc_aesop' [force_reduce, force_step]
   | pair =>
     cases h₂ with
     | pair => exact ⟨_, .refl, .refl⟩
@@ -411,7 +412,9 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | curr => exact ⟨_, .refl, .refl⟩
     | congrFun h =>
       cases h with
-      | congrFun h => cases h
+      | congrFun h =>
+        cases h with
+        | curr₀ hr => exact ⟨_, .single (.congrFun hr), by dcc_aesop' [force_reduce, reduce, force_step]⟩
       | congrArg h => exact ⟨_, .single (.congrArg (.sigl h)), .single .curr⟩
     | congrArg h => exact ⟨_, .single (.congrArg (.sigr (by assumption))), .single .curr⟩
   | curr' =>
@@ -419,7 +422,9 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | curr' => exact ⟨_, .refl, .refl⟩
     | congrFun h =>
       cases h with
-      | congrFun h => cases h
+      | congrFun h =>
+        cases h
+        case _ hr => exact ⟨_, .single (.congrFun hr), by dcc_aesop' [force_reduce, reduce, force_step]⟩
       | congrArg h => cases h
     | congrArg h => cases h
   | congrFun h_r ih =>
@@ -437,11 +442,15 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
         exact ⟨_, .single .pair, .single (.sigr (.congrFun (.congrFun (by assumption))))⟩
     case curr =>
       cases h_r with
-      | congrFun h => cases h
+      | congrFun h =>
+        cases h
+        case _ hr => exact ⟨_, by dcc_aesop' [force_reduce, reduce, force_step], .single (.congrFun hr)⟩
       | congrArg h => exact ⟨_, .single .curr, .single (.congrArg (.sigl (by assumption)))⟩
     case curr' =>
       cases h_r with
-      | congrFun h => cases h
+      | congrFun h =>
+        cases h
+        case _ hr => exact ⟨_, by dcc_aesop' [force_reduce, reduce, force_step], .single (.congrFun hr)⟩
       | congrArg h => cases h
     case map h_r =>
       cases h_r with
@@ -503,6 +512,7 @@ theorem red_aff_globally_conf.{u} {τ : Type u} {A B C : GenericExpr τ} : Relat
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
 instance instConfRedAffTrans.{u} {τ : Type u} : Confluent (RedAff (τ := τ)) (m := Relation.ReflTransGen) := RedAff.instRedRel.globally_confluent
 
+set_option maxHeartbeats 10000000000 in
 def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
   change ∃ _, ∃ _, (step? _) = .some _
   unfold step?
@@ -520,7 +530,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
       case h_3 ih₁ ih₂ =>
         have ⟨_, hr, heq⟩ := semi_complete hr
         exact (ih₂ _ hr heq).elim
-  case h_2 => exact ⟨_, .eql, rfl⟩
+  case h_2 | h_7 => exact ⟨_, by constructor, rfl⟩
   case h_3 =>
     rename_i e x y
     cases hr with
@@ -540,21 +550,13 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
       have ⟨B, h, heq⟩ := semi_complete hr
       simp [heq]
       exact .bang h
-  case h_7 => exact ⟨_, .fmap, rfl⟩
-  case h_5 =>
-    cases hr with
-    | map₀ hr =>
+  case h_5 | h_10 | h_21 | h_23 =>
+    cases hr
+    case _ hr =>
       have ⟨B, h, heq⟩ := semi_complete hr
-      simp [heq]
-      exact .map₀ h
-  case h_10 =>
-    cases hr with
-    | unmap₀ hr =>
-      have ⟨B, h, heq⟩ := semi_complete hr
-      simp [heq]
-      exact .unmap₀ h
+      dcc_aesop' [force_reduce, reduce, force_step]
   repeat exact ⟨_, (RedAff.instRedRel.sound rfl), rfl⟩
-  case h_23 =>
+  case h_25 =>
     cases hr with
     | sigt h_x =>
       have ⟨_, hrx', heq'⟩ := semi_complete h_x
@@ -579,7 +581,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
           exact ⟨_, .sigr (by assumption), by grind⟩
         · have ⟨_, hrx', heq'⟩ := semi_complete h_y
           grind
-  case h_24 =>
+  case h_26 =>
     cases hr with
     | pairl h =>
       have ⟨_, hrx', heq'⟩ := semi_complete h
@@ -592,12 +594,12 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
         exact ⟨_, .pairr (by assumption), by rw [heq']⟩
       | .some ⟨_, ⟨h_x'⟩⟩ =>
         exact ⟨_, .pairl (by assumption), by rw [heq']⟩
-  case h_25 =>
+  case h_27 =>
     cases hr with
     | coup h =>
       have ⟨_, hrx', heq'⟩ := semi_complete h
       exact ⟨_, .coup hrx', by simp_all⟩
-  case h_26 =>
+  case h_28 =>
     cases hr with
     | eql => simp_all
     | curr' =>
@@ -636,7 +638,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
     | curr =>
       rename_i h _
       exact (h _ _ _ _ rfl).elim
-  case h_27 hpi heql heq hbang hmap _ _ _ _ hunmap _ _ _ _ _ _ _ _ _ _ _ _ hmk hpair hcoup happ =>
+  case h_29 hpi heql heq hbang hmap _ _ _ _ hunmap _ _ _ _ _ _ _ _ _ _ hcurr' _ hcurr _ hmk hpair hcoup happ =>
     simp_all
     induction A <;> (
       first
@@ -651,7 +653,9 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
       | (exact (hmk _ _ _ rfl).elim)
       | (exact (hpair _ _ _ rfl).elim)
       | (exact (hbang _ rfl).elim)
-      | (exact (heq _ _ rfl).elim))
+      | (exact (heq _ _ rfl).elim)
+      | (exact (hcurr _ _ _ rfl).elim)
+      | (exact (hcurr' _ _ _ rfl).elim))
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
 instance RedAff.instSemicomplete.{u} {τ : Type u} : SemiComplete (RedAff (τ := τ)) := ⟨semi_complete⟩
@@ -923,6 +927,12 @@ def map (h : IsNorm RedAff (.map f)) : IsNorm RedAff f :=
 
 def unmap (h : IsNorm RedAff (.unmap f)) : IsNorm RedAff f :=
   fun ⟨_, hr⟩ => h ⟨_, .unmap₀ hr⟩
+
+def curr₀ (hn : IsNorm RedAff (DCC? (Λ(α, β, x)))) : IsNorm RedAff x :=
+  fun ⟨_, h⟩ => hn ⟨_, .curr₀ h⟩
+
+def curr'₀ (hn : IsNorm RedAff (DCC? (!Λ(α, β, x)))) : IsNorm RedAff x :=
+  fun ⟨_, h⟩ => hn ⟨_, .curr'₀ h⟩
 
 end IsNorm
 

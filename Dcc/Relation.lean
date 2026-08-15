@@ -166,33 +166,40 @@ open Rel in class Congruent.{u} {τ : Type u} (r : GenericExpr τ → GenericExp
   pir_      (h : r y y') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x, y')) := by exact .pir
   coup_     (h : r β β') : r (DCC[τ] Coup(β)) (DCC[τ] Coup(β'))     := by exact .coup
 
+@[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.congrFun'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
-  {f x f' : GenericExpr τ} [hR : Congruent (τ := τ) r] (h : r f f') : r
+  {f x f' : GenericExpr τ} [hR : Congruent (τ := τ) r] (h : r f f' := by assumption) : r
   (DCC[τ] (f x))
   (DCC[τ] (f' x)) :=
   (hR.congrFun_ h)
 
+@[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.congrArg'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {f x x' : GenericExpr τ}
-  [hR : Congruent r] (h : r x x') : r (DCC[τ] (f x)) (DCC[τ] (f x')) :=
+  [hR : Congruent r] (h : r x x' := by assumption) : r (DCC[τ] (f x)) (DCC[τ] (f x')) :=
   (hR.congrArg_ h)
 
+@[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.sigl'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β x y x' : GenericExpr τ} [hR : Congruent r]
-  (h : r x x') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y)) :=
+  (h : r x x' := by assumption) : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y)) :=
   (hR.sigl_ h)
 
+@[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.pil'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {x x' y : GenericExpr τ} [hR : Congruent r]
-  (h : r x x') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x', y)) :=
+  (h : r x x' := by assumption) : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x', y)) :=
   (hR.pil_ h)
 
+@[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.pir'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {x y y' : GenericExpr τ} [hR : Congruent r]
-  (h : r y y') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x, y')) :=
+  (h : r y y' := by assumption) : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x, y')) :=
   (hR.pir_ h)
 
+@[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.sigr'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β x y y' : GenericExpr τ}
-  [hR : Congruent r] (h : r y y') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y')) :=
+  [hR : Congruent r] (h : r y y' := by assumption) : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y')) :=
   (hR.sigr_ h)
 
-theorem Congruent.coup'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β β' : GenericExpr τ} [hR : Congruent r] (h : r β β') : r (DCC[τ] Coup(β)) (DCC[τ] Coup(β')) :=
+@[aesop (rule_sets := [DccForceStep]) safe apply]
+theorem Congruent.coup'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β β' : GenericExpr τ} [hR : Congruent r] (h : r β β' := by assumption) : r (DCC[τ] Coup(β)) (DCC[τ] Coup(β')) :=
   (hR.coup_ h)
 
 instance Congruent.trans.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r] : Congruent (Relation.TransGen r) where

@@ -10,6 +10,7 @@ Preservation proof:
 - can make these more type-directed
 -/
 
+@[aesop safe (rule_sets := [DccForceStep]) [constructors], aesop unsafe 50% (rule_sets := [DccForceStep]) [cases]]
 inductive RedAff.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
   | pil      : RedAff f_α f_α' → RedAff (DCC[τ] Π(f_α, f_β)) (DCC[τ] Π(f_α', f_β))
   | pir      : RedAff f_β f_β' → RedAff (DCC[τ] Π(f_α, f_β)) (DCC[τ] Π(f_α, f_β'))
@@ -22,6 +23,7 @@ inductive RedAff.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
   | fmap     : RedAff (DCC[τ] ($<f> &(x))) (DCC[τ] &((f x)))
   | unbox    : RedAff (DCC[τ] (*(α) &(x))) x
   | unmap    : RedAff (DCC[τ] (*<f> &(x))) (DCC[τ] (f x))
+  | unmap₀   : RedAff f f' → RedAff (DCC? *<f>) (DCC? *<f'>)
   | pair     : RedAff (DCC[τ] (⟦β⟧⟨M, N⟩ &(x))) (DCC[τ] ⟦(β x)⟧((M x), (N x (M x))))
   | evalc    : RedAff (DCC[τ] (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC[τ] (x y z))
   | quot     : RedAff (DCC[τ] (`(β, x) y)) x
@@ -32,7 +34,9 @@ inductive RedAff.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
   | comp     : RedAff (DCC[τ] ((x ∘ y) z)) (DCC[τ] (x (y z)))
   | comp₂    : RedAff (DCC[τ] ((x ∘∘ y) z)) (DCC[τ] (x (y z)))
   | curr     : RedAff (DCC[τ] (Λ(α, β, x) y z)) (DCC[τ] (x ⟦β⟧(y, z)))
+  | curr₀    : RedAff x x' → RedAff (DCC[τ] (Λ(α, β, x))) (DCC[τ] (Λ(α, β, x')))
   | curr'    : RedAff (DCC[τ] (!Λ(α, β, x) &(y) &(z))) (DCC[τ] (x &(⟦β⟧(y, z))))
+  | curr'₀   : RedAff x x' → RedAff (DCC[τ] (!Λ(α, β, x))) (DCC[τ] (!Λ(α, β, x')))
   | sigt     : RedAff β β' → RedAff (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β'⟧(x, y))
   | sigl     : RedAff x x' → RedAff (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y))
   | sigr     : RedAff y y' → RedAff (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y'))
@@ -69,6 +73,10 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
   | DCC[?] ($<_f> &(_x))                                 => .some ⟨_, ⟨.fmap⟩⟩
   | DCC[?] (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
   | DCC[?] (*<_α> &(_x))                                 => .some ⟨_, ⟨.unmap⟩⟩
+  | DCC[?] *<x> =>
+    match x.step? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.unmap₀ h⟩⟩
+    | _ => .none
   | DCC[?] ((⟦_β⟧⟨_M, _N⟩ &(_x)))                        => .some ⟨_, ⟨.pair⟩⟩
   | (DCC[?] (Eval(_α, _β, _x) ⟦__β⟧(_y, _z)))            => .some ⟨_, ⟨.evalc⟩⟩
   | (DCC[?] (`(_β, _x) _y))                              => .some ⟨_, ⟨.quot⟩⟩
@@ -79,7 +87,15 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
   | (DCC[?] ((_x ∘ _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
   | (DCC[?] ((_x ∘∘ _y) _z))                             => .some ⟨_, ⟨.comp₂⟩⟩
   | (DCC[?] (!Λ(_α, _β, _x) &(_y) &(_z)))                => .some ⟨_, ⟨.curr'⟩⟩
+  | DCC[?] !Λ(_α, _β, x) =>
+    match x.step? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr'₀ h⟩⟩
+    | _ => .none
   | (DCC[?] (Λ(_α, _β, _x) _y _z))                       => .some ⟨_, ⟨.curr⟩⟩
+  | DCC[?] Λ(_α, _β, x) =>
+    match x.step? with
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr₀ h⟩⟩
+    | _ => .none
   | (DCC[?] (Σ(_f_α, _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
   | DCC[?] ⟦β⟧(x, y) =>
     match β.step? with
@@ -127,6 +143,26 @@ theorem map'.{u} {α : Type u} {x x' : GenericExpr α} (h : Relation.ReflTransGe
   | tail ih h a_ih =>
     exact .trans a_ih (.single (.map₀ (by assumption)))
 
+@[aesop (rule_sets := [DccForceStep]) safe apply]
+theorem curr₀' (h : Relation.ReflTransGen RedAff x x' := by assumption) : Relation.ReflTransGen RedAff (DCC? Λ(α, β, x)) (DCC? Λ(α, β, x')) := by
+  induction h with
+  | refl => exact .refl
+  | tail ih h a_ih =>
+    exact .trans a_ih (.single (.curr₀ (by assumption)))
+
+@[aesop (rule_sets := [DccForceStep]) safe apply]
+theorem curr'₀' (h : Relation.ReflTransGen RedAff x x' := by assumption) : Relation.ReflTransGen RedAff (DCC? !Λ(α, β, x)) (DCC? !Λ(α, β, x')) := by
+  induction h with
+  | refl => exact .refl
+  | tail ih h a_ih =>
+    exact .trans a_ih (.single (.curr'₀ (by assumption)))
+
+theorem unmap'.{u} {α : Type u} {x x' : GenericExpr α} (h : Relation.ReflTransGen (RedAff (τ := α)) x x') : Relation.ReflTransGen RedAff (DCC[α] *<x>) (DCC[α] *<x'>) := by
+  induction h with
+  | refl => exact .refl
+  | tail ih h a_ih =>
+    exact .trans a_ih (.single (.unmap₀ (by assumption)))
+
 theorem pairl'.{u} {α : Type u} {β x y x' : GenericExpr α} (h : Relation.ReflTransGen (RedAff (τ := α)) x x') : Relation.ReflTransGen RedAff (DCC[α] ⟦β⟧⟨x, y⟩) (DCC[α] ⟦β⟧⟨x', y⟩) := by
   induction h with
   | refl => exact .refl
@@ -169,6 +205,12 @@ theorem sigt' (h : Relation.ReflTransGen RedAff  B B') : Relation.ReflTransGen R
   | tail ih h a_ih =>
     exact .trans a_ih (.single (.sigt (by assumption)))
 
+@[aesop safe apply (rule_sets := [DccForceReduce])]
+theorem refl_conf : ∃ B, Relation.ReflTransGen r A B ∧ Relation.ReflTransGen r A B := ⟨_, .refl, .refl⟩
+
+attribute [aesop safe (rule_sets := [DccForceReduce]) [constructors]] Relation.ReflTransGen
+
+--set_option trace.aesop true in
 open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])]
 theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (τ := α)) A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
   induction h₁ generalizing C with
@@ -245,6 +287,11 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | map₀ hr₂ =>
       have ⟨D, h₁, h₂⟩ := ih hr₂
       exact ⟨_, ⟨map' (by assumption), map' (by assumption)⟩⟩
+  | unmap₀ hr₁ ih =>
+    cases h₂ with
+    | unmap₀ hr₂ =>
+      have ⟨D, h₁, h₂⟩ := ih hr₂
+      exact ⟨_, ⟨unmap' (by assumption), unmap' (by assumption)⟩⟩
   | map =>
     cases h₂ with
     | map => exact ⟨_, .refl, .refl⟩
@@ -258,11 +305,19 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | fmap => exact ⟨_, .refl, .refl⟩
     | congrFun h => cases h
     | congrArg h => cases h
-  | unbox | unmap =>
+  | unbox => dcc_aesop' [force_reduce, force_step]
+  | unmap =>
     cases h₂ with
     | congrArg h => cases h
-    | congrFun h => cases h
+    | congrFun h =>
+      cases h with
+      | unmap₀ hr => exact ⟨_, .single (.congrFun hr), .single (.unmap)⟩
     | _ => exact ⟨_, .refl, .refl⟩
+  | curr'₀ hr ih | curr₀ hr ih =>
+    cases h₂ with
+    | _ hr' =>
+      have ⟨_, h₁, h₂⟩ := ih hr'
+      exact ⟨_, by dcc_aesop' [force_step], by dcc_aesop' [force_step]⟩
   | pair =>
     cases h₂ with
     | pair => exact ⟨_, .refl, .refl⟩
@@ -369,7 +424,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | congrArg h => cases h
   | congrFun h_r ih =>
     cases h₂
-    case comp₂ | fmap | unmap | unbox | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
+    case comp₂ | fmap | unbox | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
     case eql =>
       cases h_r with
       | congrFun h => cases h
@@ -394,6 +449,12 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
         have h := ih (.map₀ (by assumption))
         have ⟨_, h₁, h₂⟩ := h
         exact ⟨_, (.single .map), .single (.bang (.congrFun (by assumption)))⟩
+    case unmap h_r =>
+      cases h_r with
+      | unmap₀ =>
+        have h := ih (.unmap₀ (by assumption))
+        have ⟨_, h₁, h₂⟩ := h
+        exact ⟨_, (.single .unmap), .single (.congrFun (by assumption))⟩
     case congrFun f f' x f'' h =>
       have ⟨_, h₁, h₂⟩ := ih h
       exact ⟨_, congrFun' h₁, congrFun' h₂⟩
@@ -486,8 +547,14 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
       have ⟨B, h, heq⟩ := semi_complete hr
       simp [heq]
       exact .map₀ h
+  case h_10 =>
+    cases hr with
+    | unmap₀ hr =>
+      have ⟨B, h, heq⟩ := semi_complete hr
+      simp [heq]
+      exact .unmap₀ h
   repeat exact ⟨_, (RedAff.instRedRel.sound rfl), rfl⟩
-  case h_22 =>
+  case h_23 =>
     cases hr with
     | sigt h_x =>
       have ⟨_, hrx', heq'⟩ := semi_complete h_x
@@ -512,7 +579,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
           exact ⟨_, .sigr (by assumption), by grind⟩
         · have ⟨_, hrx', heq'⟩ := semi_complete h_y
           grind
-  case h_23 =>
+  case h_24 =>
     cases hr with
     | pairl h =>
       have ⟨_, hrx', heq'⟩ := semi_complete h
@@ -525,12 +592,12 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
         exact ⟨_, .pairr (by assumption), by rw [heq']⟩
       | .some ⟨_, ⟨h_x'⟩⟩ =>
         exact ⟨_, .pairl (by assumption), by rw [heq']⟩
-  case h_24 =>
+  case h_25 =>
     cases hr with
     | coup h =>
       have ⟨_, hrx', heq'⟩ := semi_complete h
       exact ⟨_, .coup hrx', by simp_all⟩
-  case h_25 =>
+  case h_26 =>
     cases hr with
     | eql => simp_all
     | curr' =>
@@ -569,7 +636,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
     | curr =>
       rename_i h _
       exact (h _ _ _ _ rfl).elim
-  case h_26 hpi heql heq hbang hmap _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hmk hpair hcoup happ =>
+  case h_27 hpi heql heq hbang hmap _ _ _ _ hunmap _ _ _ _ _ _ _ _ _ _ _ _ hmk hpair hcoup happ =>
     simp_all
     induction A <;> (
       first
@@ -577,6 +644,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
         cases hr
         done)
       | (exact (hmap _ rfl).elim)
+      | (exact (hunmap _ rfl).elim)
       | (exact (hpi _ _ rfl).elim)
       | (exact (hcoup _ rfl).elim)
       | (exact (happ _ _ rfl).elim)
@@ -826,6 +894,22 @@ def RedAffNorm.push_head (hrt : RedAffNorm A C) (hr : RedAff A B) : RedAffNorm B
   match hrt with
   | ⟨hrt, hn⟩ => ⟨hrt.push_head hn hr, hn⟩
 
+open Congruent in
+def RedAffNorm.congrFun (hrt : RedAffNorm (DCC? (f x)) C) (hrt_f : RedAffNorm f ⟨f', hn_f⟩) : RedAffNorm (DCC? (f' x)) C :=
+  match hrt, hrt_f with
+  | ⟨hr₁, hn₁⟩, ⟨hr₂, _hn₂⟩ =>
+    ⟨
+      have ⟨_, h₁, h₂⟩ := hr₁.conf (Congruent.congrFun' (hR := RedAff.instCongruent.reflTrans) hr₂)
+      hn₁.unique_refl h₁ ▸ h₂, hn₁⟩
+
+open Congruent in
+def RedAffNorm.congrArg (hrt : RedAffNorm (DCC? (f x)) C) (hrt_x : RedAffNorm x ⟨x', hn_f⟩) : RedAffNorm (DCC? (f x')) C :=
+  match hrt, hrt_x with
+  | ⟨hr₁, hn₁⟩, ⟨hr₂, _hn₂⟩ =>
+    ⟨
+      have ⟨_, h₁, h₂⟩ := hr₁.conf (Congruent.congrArg' (hR := RedAff.instCongruent.reflTrans) hr₂)
+      hn₁.unique_refl h₁ ▸ h₂, hn₁⟩
+
 /-def RedAffNorm.eq {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)} (h₁ : RedAffNorm A B) : h₁ = aff_sound (by sorry) := by
   sorry-/
 
@@ -836,6 +920,9 @@ namespace IsNorm
 
 def map (h : IsNorm RedAff (.map f)) : IsNorm RedAff f :=
   fun ⟨_, hr⟩ => h ⟨_, .map₀ hr⟩
+
+def unmap (h : IsNorm RedAff (.unmap f)) : IsNorm RedAff f :=
+  fun ⟨_, hr⟩ => h ⟨_, .unmap₀ hr⟩
 
 end IsNorm
 

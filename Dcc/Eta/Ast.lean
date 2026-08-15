@@ -161,13 +161,13 @@ def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] (f ∘ _g)  => f.arity
   | DCC[.] (f ∘∘ _g)  => f.arity
   | DCC[.] ⟦_β⟧⟨_a, _b⟩   => 1
-  | DCC[.] Λ(_α, _β, _x) => 2
-  | DCC[.] !Λ(_α, _β, _x) => 2
+  | DCC[.] Λ(_α, _β, x) => x.arity.succ
+  | DCC[.] !Λ(_α, _β, x) => x.arity.succ
   | DCC[.] Eval(_α, _β, _x) => 1
-  | DCC[.] !(_x)   => 1
+  | DCC[.] !(_x)   => 0
   | DCC[.] *(_α)   => 1
   | DCC[.] *<f>    => f.arity
-  | DCC[.] &(_x)   => 1
+  | DCC[.] &(_x)   => 0
   | DCC[.] !<_x>   => 1
   | DCC[.] $<_x>   => 1
   | DCC[.] (f _x) => f.arity - 1

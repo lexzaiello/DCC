@@ -33,8 +33,9 @@ inductive Domain : @NormExpr τ_c RedAff → @NormExpr τ_c RedAff → Type u
     → Domain ⟨(DCC? (refl(f_α) &(env))), fun ⟨_, h⟩ => match h with
       | .congrFun h => nomatch h
       | .congrArg h => nomatch h⟩ ⟨(DCC? !(τ)), fun ⟨_, h⟩ => match h with | .bang h => hn_τ ⟨_, h⟩⟩
-  | unmap    : (hrn : RedAffNorm f f') → Domain f' ⟨α, hn_α⟩
-    → Domain ⟨(DCC? *<f>), fun ⟨_, h⟩ => nomatch h⟩ ⟨(DCC? !(α)), fun ⟨_, h⟩ =>
+  | unmap    : (hrn : RedAffNorm f f')
+    → Domain f' ⟨α, hn_α⟩
+    → Domain ⟨(DCC? *<f>), hn_map⟩ ⟨(DCC? !(α)), fun ⟨_, h⟩ =>
       match h with
       | .bang h => hn_α ⟨_, h⟩⟩
   | unbox    : (hrn : RedAffNorm α ⟨α', hn_α'⟩)
@@ -389,6 +390,8 @@ def Domain₂.is_norm_aff (_h : Domain₂ e α β) : IsNorm RedAff α.raw ∧ Is
 
 def Domain.preservation {f α B : @GenericExpr τ_c} {hn_f : IsNorm RedAff f} {hn_α : IsNorm RedAff α} {hn_B : IsNorm RedAff B} (_h_dom : Domain ⟨f, hn_f⟩ ⟨α, hn_α⟩) (hr : RedAff f B) : Domain (τ_c := τ_c) ⟨B, hn_B⟩ ⟨α, hn_α⟩ :=
   hn_f.elim _ hr
+
+--def Domain.preservation' (_h_dom : Domain f' α) (hr : RedAffNorm 
 
 @[dcc_force_reduce, aesop safe destruct (rule_sets := [DccRel])]
 def Domain₂.unique {f τ₁a τ₁b τ₂a τ₂b : @NormExpr τ_c RedAff} (h₁ : Domain₂ f τ₁a τ₁b) (h₂ : Domain₂ f τ₂a τ₂b) : τ₁a = τ₂a ∧ τ₁b = τ₂b := by

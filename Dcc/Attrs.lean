@@ -242,24 +242,37 @@ macro_rules
 open Aesop.Frontend.Parser (ruleSetSpec)
 --Aesop.Frontend.Parser.ruleSetSpec
 
-syntax "dcc_aesop" "[" ruleSetSpec,+ "]" (Aesop.tactic_clause)* : tactic
-
 def ident_to_camel (idt : Lean.Syntax.Ident) : Lean.Syntax.Ident :=
   idt.getId.eraseMacroScopes.toString.split "_"
-  |>.fold (fun x s => Lean.Name.str x ((.singleton s.front.toUpper) ++ (s.drop 1).toString)) (init := Lean.Name.anonymous)
+  |>.fold (fun x s => x ++ ((String.singleton s.front.toUpper) ++ (s.drop 1).toString)) (init := "")
+  |> ("Dcc" ++ ·)
+  |> .str .anonymous
+  |> Lean.Name.eraseMacroScopes
   |> Lean.mkIdent
 
-def rule_set_to_camel (idts : Lean.Syntax.TSepArray ``ruleSetSpec ",") : Lean.MacroM (Lean.Syntax.TSepArray ``ruleSetSpec ",") :=
-  (⟨·⟩) <$> idts.getElems.mapM (fun e =>
-    match e with
-    | `(ruleSetSpec| - $idt:ident) => `(ruleSetSpec| - $(ident_to_camel idt))
-    | `(ruleSetSpec| $idt:ident) =>   `(ruleSetSpec| $(ident_to_camel idt):ident)
-    | stx => Lean.Macro.throwErrorAt stx "unsupported")
+def rule_set_to_camel (idts : Lean.Syntax.TSepArray `ident ",") : Lean.Syntax.TSepArray `ident "," :=
+  Lean.Syntax.TSepArray.ofElems <| idts.getElems.map ident_to_camel
 
-macro_rules
-  | `(tactic| dcc_aesop [$rules:ruleSetSpec,*] $clauses:Aesop.tactic_clause*) => do
-    let rules' ← rule_set_to_camel rules
-    `(tactic| aesop (rule_sets := [$rules':ruleSetSpec,*]) $clauses*)
+def show_rules (idts : Lean.Syntax.TSepArray `ident ",") : Lean.MacroM (Array String) :=
+  idts.getElems.mapM (fun idt => pure idt.getId.eraseMacroScopes.toString)
+
+def coe_rule_set (idts : Lean.Syntax.TSepArray `ident ",") : Lean.MacroM (Lean.Syntax.TSepArray ``ruleSetSpec ",") :=
+  Lean.Syntax.TSepArray.ofElems <$> idts.getElems.mapM (fun idt => `(ruleSetSpec| $idt:ident))
+
+open Lean (logInfoAt)
+
+elab "dcc_aesop'" "[" rules:ident,* "]" clauses:Aesop.tactic_clause* : tactic => do
+  let rules' : Lean.Syntax.TSepArray ``ruleSetSpec "," ← Lean.Elab.liftMacroM <| coe_rule_set <| rule_set_to_camel rules
+  Lean.Elab.Tactic.evalTactic <| (← `(tactic| aesop (rule_sets := [$rules',*]) $clauses*))
+
+elab "dcc_aesop'?" "[" rules:ident,* "]" clauses:Aesop.tactic_clause* : tactic => do
+  match rules.getElems with
+  | ⟨x :: _⟩ =>
+    let rules' := rule_set_to_camel rules
+    let rules'' : Lean.Syntax.TSepArray ``ruleSetSpec "," ← Lean.Elab.liftMacroM <| coe_rule_set <| rules'
+    logInfoAt x m!"attempted: {(← Lean.Elab.liftMacroM <| show_rules rules')}"
+    Lean.Elab.Tactic.evalTactic (← `(tactic| aesop? (rule_sets := [$rules'',*]) $clauses*))
+  | _ => Lean.throwError "dcc_aesop did nothing"
 
 open Lean Macro Parser.Command
 open Lean (Parser.Command.derivingClass)

@@ -298,6 +298,9 @@ def Hole.bang_coup_points_neq (h : Hole ⟨(DCC? !(Coup(β))), hn⟩ level ⟨(D
 def Hole.size_zero (h : Hole α level hole_e) : hole_e.size = 0 := by
   induction h <;> grind
 
+def Hole.arr_zero (h : Hole α level hole_e) : arity hole_e = 0 := by
+  induction h <;> grind
+
 @[grind]
 def mk_hole (α : @EtaExpr.Norm τ_c) (level : ℕ) : Option ((hole_e : @EtaExpr.Norm τ_c) × Hole α level hole_e) :=
   match α with
@@ -389,6 +392,79 @@ def Hole.unique {e e₁ e₂ : @EtaExpr.Norm τ_c} (h₁ : Hole e level e₁) (h
   have ha := h₁.complete
   have hb := h₂.complete
   grind
+
+def Hole.app_ar_dec
+  {f    : @GenericExpr τ_c}
+  {hn_f : IsNorm RedAff f}
+  {e_f  : EtaFn ⟨f, hn_f⟩ [⟨α, hn_α⟩]}
+  (h    : Hole ⟨α.expr_to_eta, hn_α.to_eta⟩ lv ⟨hole₁, hn_hole₁⟩)
+  (hrt  : RedAffNorm (DCC? (#(expr_to_eta f) hole₁)) ⟨e', hn_e'⟩) : GenericExpr.arity e' ≤ arity ⟨f, hn_f⟩ := by
+  have h_dec := e_f.decreasing
+  cases e_f with
+  | tm₁ h_dom =>
+    cases h_dom
+    any_goals (simp_all [arity, GenericExpr.arity, NormExpr.raw])
+    case curr₂ =>
+      expose_names
+      have hrt' := hrt.push_head .curr
+      
+      sorry
+    case sndc | fstc =>
+      expose_names
+      cases h with
+      | pure hn => exact (hn .coup).elim
+      | coup h_dom h₁ hrt' h₂ =>
+        have heq := ((hrt.push_head (by constructor)).elim_norm (by assumption))
+        have ha := h₁.arr_zero
+        have hb := h₂.arr_zero
+        grind
+    case refl₂ =>
+      simp [expr_to_eta] at hrt
+      cases hrt.elim_norm (fun ⟨_, h⟩ => by
+        cases h with
+        | congrFun h =>
+          cases h with
+          | congrFun h => cases h
+          | congrArg h => cases h
+        | congrArg h =>
+          exact hn_hole₁ ⟨_, h⟩)
+      simp [GenericExpr.arity]
+    case id =>
+      cases (hrt.push_head .id).elim_norm (by assumption)
+      have h := h.arr_zero
+      grind
+    case eql₂ =>
+      simp [expr_to_eta] at hrt
+      simp [expr_to_eta] at h
+      cases h with
+      | pure hn => exact (hn .bang).elim
+      | bang h =>
+        have h := (hrt.push_head .eql).elim_norm (fun ⟨_, h⟩ => by
+          cases h with
+          | eqr' h | eql' h =>
+            expose_names
+            exact hn_hole ⟨_, h⟩)
+        cases h
+        grind
+    case unmap =>
+      expose_names
+      simp [expr_to_eta] at h
+      cases h with
+      | pure hn => exact (hn .bang).elim
+      | bang h =>
+        cases hrn.elim_norm hn_f.unmap
+        have h := (hrt.push_head .unmap).congrFun hrn.to_eta
+        expose_names
+        have h := h_1.app_ar_dec h (e_f := .tm₁ a (_heq := by grind))
+        grind
+    case unbox =>
+      expose_names
+      cases h with
+      | pure hn => exact (hn .bang).elim
+      | bang h =>
+        have heq' := (hrt.push_head .unbox).elim_norm (by assumption)
+        have h := h.arr_zero
+        grind
 
 namespace EtaFn
 
@@ -553,6 +629,75 @@ def Holes.points_norm {e_f : EtaFn f doms} {hole_elems : List (@EtaExpr.Norm τ_
 def Holes.contains_hole₁ (h : Holes (τ_c := τ_c) e_f lv [hole₁]) : contains_hole hole₁.raw := by
   cases h with
   | tm₁ heq h => exact h.contains_hole
+
+def Holes.arr_zero (h : Holes e_f lv [hole₁]) : arity hole₁ = 0 := by
+  cases h with
+  | tm₁ heq h =>
+    induction h with
+    | pure =>
+      grind
+    | bang =>
+      grind
+    | coup => grind
+
+def Holes.app_ar_dec {e_f : EtaFn ⟨f, hn_f⟩ [⟨α, hn_α⟩]}
+  (h : Holes (τ_c := τ_c) e_f lv [⟨hole₁, hn_hole₁⟩])
+  (hrt : RedAffNorm (DCC? (#(expr_to_eta f) hole₁)) e') : arity e' ≤ arity ⟨f, hn_f⟩ := by
+  cases e_f with
+  | tm₁ h_dom =>
+    cases h_dom
+    case refl₁ | eql₁ =>
+      cases hrt.elim_norm (fun ⟨_, h⟩ => by
+        cases h with
+        | congrFun h => cases h
+        | congrArg h =>
+          exact hn_hole₁ ⟨_, h⟩)
+      simp [expr_to_eta, raw, arity, GenericExpr.arity]
+    case refl₂ =>
+      simp [expr_to_eta] at hrt
+      cases hrt.elim_norm (fun ⟨_, h⟩ => by
+        cases h with
+        | congrFun h =>
+          cases h with
+          | congrFun h => cases h
+          | congrArg h => cases h
+        | congrArg h =>
+          exact hn_hole₁ ⟨_, h⟩)
+      simp [raw, arity, GenericExpr.arity]
+    case id =>
+      cases (hrt.push_head .id).elim_norm (by assumption)
+      simp [raw, arity]
+      have h := h.arr_zero
+      grind
+    case eql₂ =>
+      simp [expr_to_eta] at hrt
+      cases h with
+      | tm₁ heq h =>
+        simp [NormExpr.to_eta, expr_to_eta] at heq
+        cases heq
+        cases h with
+        | pure hn => exact (hn .bang).elim
+        | bang h =>
+          have h := (hrt.push_head .eql).elim_norm (fun ⟨_, h⟩ => by
+            cases h with
+            | eqr' h | eql' h =>
+              expose_names
+              exact hn_hole ⟨_, h⟩)
+          cases h
+          grind
+    case unmap =>
+      expose_names
+      simp [arity, raw, GenericExpr.arity] at _heq
+      cases h with
+      | tm₁ heq h =>
+        simp [NormExpr.to_eta, expr_to_eta] at heq
+        cases heq
+        cases h with
+        | pure hn => exact (hn .bang).elim
+        | bang h =>
+          have h := (hrt.push_head .unmap).congrFun hrn
+          
+          sorry
 
 /-set_option pp.deepTerms true in
 set_option pp.deepTerms.threshold 9999 in

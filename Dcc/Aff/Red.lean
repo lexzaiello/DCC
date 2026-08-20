@@ -387,8 +387,10 @@ theorem red_aff_congr_point {e : GenericExpr τ_c} {p : Fin (point_arity e)} (h 
       grind)
 termination_by size e
 
-instance RedAff.instCongruent.{u} {τ : Type u} : Congruent' (RedAff (τ := τ)) where
+instance RedAff.instCongruent'.{u} {τ : Type u} : Congruent' (RedAff (τ := τ)) where
   congr_iff := ⟨RedAff.instCongruent'_mp, RedAff.instCongruent'_mpr⟩
+
+instance RedAff.instCongruent.{u} {τ : Type u} : Congruent (RedAff (τ := τ)) where
 
 theorem aff_mk_point' {x y e : GenericExpr τ_c} (hr : Relation.ReflTransGen RedAff x y) (hn : n < point_arity e := by grind) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := by
   cases heq
@@ -1173,12 +1175,6 @@ def RedAffNorm.congrArg (hrt : RedAffNorm (DCC? (f x)) C) (hrt_x : RedAffNorm x 
       have ⟨_, h₁, h₂⟩ := hr₁.conf (Congruent.congrArg' (hR := RedAff.instCongruent.reflTrans) hr₂)
       hn₁.unique_refl h₁ ▸ h₂, hn₁⟩
 
-/-def RedAffNorm.eq {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)} (h₁ : RedAffNorm A B) : h₁ = aff_sound (by sorry) := by
-  sorry-/
-
-@[grind ., grind! .]
-theorem id_is_norm : IsNorm RedAff (DCC? Id(α)) := fun ⟨_, h⟩ => nomatch h
-
 namespace IsNorm
 
 def map (h : IsNorm RedAff (.map f)) : IsNorm RedAff f :=
@@ -1186,12 +1182,6 @@ def map (h : IsNorm RedAff (.map f)) : IsNorm RedAff f :=
 
 def unmap (h : IsNorm RedAff (.unmap f)) : IsNorm RedAff f :=
   fun ⟨_, hr⟩ => h ⟨_, .unmap₀ hr⟩
-
-def curr₀ (hn : IsNorm RedAff (DCC? (Λ(α, β, x)))) : IsNorm RedAff x :=
-  fun ⟨_, h⟩ => hn ⟨_, .curr₀ h⟩
-
-def curr'₀ (hn : IsNorm RedAff (DCC? (!Λ(α, β, x)))) : IsNorm RedAff x :=
-  fun ⟨_, h⟩ => hn ⟨_, .curr'₀ h⟩
 
 end IsNorm
 

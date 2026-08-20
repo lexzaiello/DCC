@@ -171,11 +171,11 @@ theorem Congruent'.congr'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr 
 open Rel in class Congruent.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) where
   congrFun_ (h : r f f') : r (DCC[τ] (f x)) (DCC[τ] (f' x)) := by exact .congrFun
   congrArg_ (h : r x x') : r (DCC[τ] (f x)) (DCC[τ] (f x')) := by exact .congrArg
-  sigl_     (h : r x x') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y)) := by exact .sigl
-  sigr_     (h : r y y') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y')) := by exact .sigr
-  pil_      (h : r x x') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x', y)) := by exact .pil
-  pir_      (h : r y y') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x, y')) := by exact .pir
-  coup_     (h : r β β') : r (DCC[τ] Coup(β)) (DCC[τ] Coup(β'))     := by exact .coup
+  sigl_     (h : r x x') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y)) := by exact .sig₁
+  sigr_     (h : r y y') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y')) := by exact .sig₂
+  pil_      (h : r x x') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x', y)) := by exact .pi₀
+  pir_      (h : r y y') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x, y')) := by exact .pi₁
+  coup_     (h : r β β') : r (DCC[τ] Coup(β)) (DCC[τ] Coup(β'))     := by exact .coup₀
 
 @[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.congrFun'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}

@@ -747,8 +747,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       cases hr
       <;> (first
            | exact ⟨_, .single (by constructor), .refl⟩
-           | exact ⟨_, .single (by constructor), .single (by assumption)⟩
-           | exact ⟨_, .single (by constructor), .refl⟩)
+           | exact ⟨_, .single (by constructor), .single (by assumption)⟩)
     case comp' | comp | comp₂ =>
       exact ⟨_, .single (by constructor), .single hr.congrArg.congrArg⟩
     case curr => exact ⟨_, .single (by constructor), .single (.congrArg (.sig₂ (by assumption)))⟩
@@ -827,290 +826,6 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       exact ⟨_, congrFun' ha, congrFun' hb⟩
     case congrArg hr => exact ⟨_, .single (.congrArg (by assumption)), .single (.congrFun (by assumption))⟩
 
---set_option trace.aesop true in
-/-open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])]
-theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (τ := α)) A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
-  induction h₁ generalizing C with
-  | sigt =>
-    cases h₂ with
-    | sigt =>
-      expose_names
-      have ⟨_, h₁, h₂⟩ := a_ih h_1
-      exact ⟨_, sigt' (by assumption), sigt' (by assumption)⟩
-    | sigl =>
-      expose_names
-      exact ⟨_, .single (.sigl (by assumption)), .single (.sigt (by assumption))⟩
-    | sigr =>
-      expose_names
-      exact ⟨_, .single (.sigr (by assumption)), .single (.sigt (by assumption))⟩
-  | eql =>
-    cases h₂ with
-    | eql =>
-      exact ⟨_, .refl, .refl⟩
-    | congrFun h =>
-      cases h with
-      | congrFun h => cases h
-      | congrArg h => exact ⟨_, .refl, .single .eql⟩
-    | congrArg h => cases h
-  | eql' hr a_ih =>
-    cases h₂ with
-    | eql' hr₂ =>
-      have ⟨D, h₁, h₂⟩ := a_ih hr₂
-      exact ⟨_, eql'' h₁, eql'' h₂⟩
-    | eqr' hr₂ =>
-      exact ⟨_, .single (.eqr' (by assumption)), .single (.eql' (by assumption))⟩
-   | pil hr a_ih =>
-    cases h₂ with
-    | pil hr₂ =>
-      have ⟨D, h₁, h₂⟩ := a_ih hr₂
-      exact ⟨_, pil' h₁, pil' h₂⟩
-    | pir hr₂ =>
-      exact ⟨_, .single (.pir (by assumption)), .single (.pil (by assumption))⟩
-  | pir hr a_ih =>
-    cases h₂ with
-    | pir hr₂ =>
-      have ⟨D, h₁, h₂⟩ := a_ih hr₂
-      exact ⟨_, pir' h₁, pir' h₂⟩
-    | pil hr₂ =>
-      exact ⟨_, .single (.pil (by assumption)), .single (.pir (by assumption))⟩
-  | eqr' hr a_ih =>
-    cases h₂ with
-    | eqr' hr₂ =>
-      have ⟨D, h₁, h₂⟩ := a_ih hr₂
-      exact ⟨_, eqr'' h₁, eqr'' h₂⟩
-    | eql' hr₂ =>
-      exact ⟨_, .single (.eql' (by assumption)), .single (.eqr' (by assumption))⟩
-  | pairl hr₁ ih =>
-    cases h₂ with
-    | pairl hr₂ =>
-      have ⟨D, h₁, h₂⟩ := ih hr₂
-      exact ⟨_, pairl' (by assumption), pairl' (by assumption)⟩
-    | pairr =>
-      exact ⟨_, ⟨.single (.pairr (by assumption)), .single (.pairl (by assumption))⟩⟩
-  | pairr hr₁ ih =>
-    cases h₂ with
-    | pairr hr₂ =>
-      have ⟨D, h₁, h₂⟩ := ih hr₂
-      exact ⟨_, ⟨pairr' (by assumption), pairr' (by assumption)⟩⟩
-    | pairl =>
-      exact ⟨_, ⟨.single (.pairl (by assumption)), .single (.pairr (by assumption))⟩⟩
-  | bang hr₁ ih =>
-    cases h₂ with
-    | bang hr₂ =>
-      have ⟨D, h₁, h₂⟩ := ih hr₂
-      exact ⟨_, ⟨bang' (by assumption), bang' (by assumption)⟩⟩
-  | map₀ hr₁ ih =>
-    cases h₂ with
-    | map₀ hr₂ =>
-      have ⟨D, h₁, h₂⟩ := ih hr₂
-      exact ⟨_, ⟨map' (by assumption), map' (by assumption)⟩⟩
-  | unmap₀ hr₁ ih =>
-    cases h₂ with
-    | unmap₀ hr₂ =>
-      have ⟨D, h₁, h₂⟩ := ih hr₂
-      exact ⟨_, ⟨unmap' (by assumption), unmap' (by assumption)⟩⟩
-  | map =>
-    cases h₂ with
-    | map => exact ⟨_, .refl, .refl⟩
-    | congrFun h =>
-      cases h with
-      | map₀ hr =>
-        exact ⟨_, .single (.bang (.congrFun hr)), .single (.map)⟩
-    | congrArg h => cases h
-  | fmap | unbox => dcc_aesop' [force_reduce, force_step]
-  | unmap =>
-    cases h₂ with
-    | congrArg h => cases h
-    | congrFun h =>
-      cases h with
-      | unmap₀ hr => exact ⟨_, .single (.congrFun hr), .single (.unmap)⟩
-    | _ => exact ⟨_, .refl, .refl⟩
-  | curr'₀ hr ih | curr₀ hr ih =>
-    cases h₂
-    case _ hr' =>
-      have ⟨_, h₁, h₂⟩ := ih hr'
-      constructor <;> dcc_aesop' [force_reduce, force_step]
-  | pair =>
-    cases h₂ with
-    | pair => exact ⟨_, .refl, .refl⟩
-    | congrFun h =>
-      cases h with
-      | pairl =>
-        exact ⟨_, (.trans (.single (.sigl (.congrFun (by assumption)))) (.single (.sigr (.congrArg (.congrFun (by assumption)))))), .single .pair⟩
-      | pairr =>
-        exact ⟨_, .single (.sigr (.congrFun (.congrFun (by assumption)))), .single .pair⟩
-    | congrArg h => cases h
-  | evalc =>
-    cases h₂ with
-    | evalc => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h =>
-      cases h with
-      | sigt h => exact ⟨_, .refl, .single .evalc⟩
-      | sigl h => exact ⟨_, .single (.congrFun (.congrArg h)), .single .evalc⟩
-      | sigr h => exact ⟨_, .single (.congrArg h), .single .evalc⟩
-  | sigma =>
-    cases h₂ with
-    | sigma => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .single (.coup (.congrArg h)), .single .sigma⟩
-  | coup hr₁ ih =>
-    cases h₂ with
-    | coup hr₂ =>
-      have ⟨_, ha, hb⟩ := ih hr₂
-      exact ⟨_, coup' ha, coup' hb⟩
-  | quot =>
-    cases h₂ with
-    | quot => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .refl, .single .quot⟩
-  | id =>
-    cases h₂ with
-    | id => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .single h, .single .id⟩
-  | sigl h ih =>
-    cases h₂ with
-    | sigt h₂ =>
-      exact ⟨_, .single (.sigt h₂), .single (.sigl h)⟩
-    | sigl h =>
-      have ⟨_, h₁, h₂⟩ := ih h
-      exact ⟨_, sigl' h₁, sigl' h₂⟩
-    | sigr h =>
-      exact ⟨_, .single (.sigr h), .single (.sigl (by assumption))⟩
-  | sigr h ih =>
-    cases h₂ with
-    | sigt h₂ =>
-      exact ⟨_, .single (.sigt h₂), .single (.sigr h)⟩
-    | sigl h =>
-      exact ⟨_, .single (.sigl h), .single (.sigr (by assumption))⟩
-    | sigr h =>
-      have ⟨_, h₁, h₂⟩ := ih h
-      exact ⟨_, sigr' h₁, sigr' h₂⟩
-  | fstc =>
-    cases h₂ with
-    | fstc => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => cases h with
-      | sigt h => exact ⟨_, .refl, .single .fstc⟩
-      | sigl h => exact ⟨_, .single h, .single .fstc⟩
-      | sigr h => exact ⟨_, .refl, .single .fstc⟩
-  | sndc =>
-    cases h₂ with
-    | sndc => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => cases h with
-      | sigt h => exact ⟨_, .refl, .single .sndc⟩
-      | sigl h => exact ⟨_, .refl, .single .sndc⟩
-      | sigr h => exact ⟨_, .single h, .single .sndc⟩
-  | comp =>
-    cases h₂ with
-    | comp => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .single (.congrArg (.congrArg (by assumption))), .single .comp⟩
-  | comp₂ =>
-    cases h₂ with
-    | comp₂ => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .single (.congrArg (.congrArg (by assumption))), .single .comp₂⟩
-  | comp' =>
-    cases h₂ with
-    | comp' => exact ⟨_, .refl, .refl⟩
-    | congrFun h => cases h
-    | congrArg h => exact ⟨_, .single (.congrArg (.congrArg (by assumption))), .single .comp'⟩
-  | curr =>
-    cases h₂ with
-    | curr => exact ⟨_, .refl, .refl⟩
-    | congrFun h =>
-      cases h with
-      | congrFun h =>
-        cases h with
-        | curr₀ hr => exact ⟨_, .single (.congrFun hr), by dcc_aesop' [force_reduce, reduce, force_step]⟩
-      | congrArg h => exact ⟨_, .single (.congrArg (.sigl h)), .single .curr⟩
-    | congrArg h => exact ⟨_, .single (.congrArg (.sigr (by assumption))), .single .curr⟩
-  | curr' =>
-    cases h₂ with
-    | curr' => exact ⟨_, .refl, .refl⟩
-    | congrFun h =>
-      cases h with
-      | congrFun h =>
-        cases h
-        case _ hr => exact ⟨_, .single (.congrFun hr), by dcc_aesop' [force_reduce, reduce, force_step]⟩
-      | congrArg h => cases h
-    | congrArg h => cases h
-  | congrFun h_r ih =>
-    cases h₂
-    case comp₂ | fmap | unbox | fstc | sndc | sigma | evalc | comp' | quot | id | comp => cases h_r
-    case eql =>
-      cases h_r with
-      | congrFun h => cases h
-      | congrArg h => exact ⟨_, .single .eql, .refl⟩
-    case pair =>
-      cases h_r with
-      | pairl =>
-        exact ⟨_, .single .pair, .trans (.single (.sigl (.congrFun (by assumption)))) (.single (.sigr (.congrArg (.congrFun (by assumption)))))⟩
-      | pairr =>
-        exact ⟨_, .single .pair, .single (.sigr (.congrFun (.congrFun (by assumption))))⟩
-    case curr =>
-      cases h_r with
-      | congrFun h =>
-        cases h
-        case _ hr => exact ⟨_, by dcc_aesop' [force_reduce, reduce, force_step], .single (.congrFun hr)⟩
-      | congrArg h => exact ⟨_, .single .curr, .single (.congrArg (.sigl (by assumption)))⟩
-    case curr' =>
-      cases h_r with
-      | congrFun h =>
-        cases h
-        case _ hr => exact ⟨_, by dcc_aesop' [force_reduce, reduce, force_step], .single (.congrFun hr)⟩
-      | congrArg h => cases h
-    case map h_r =>
-      cases h_r with
-      | map₀ =>
-        have h := ih (.map₀ (by assumption))
-        have ⟨_, h₁, h₂⟩ := h
-        exact ⟨_, (.single .map), .single (.bang (.congrFun (by assumption)))⟩
-    case unmap h_r =>
-      cases h_r with
-      | unmap₀ =>
-        have h := ih (.unmap₀ (by assumption))
-        have ⟨_, h₁, h₂⟩ := h
-        exact ⟨_, (.single .unmap), .single (.congrFun (by assumption))⟩
-    case congrFun f f' x f'' h =>
-      have ⟨_, h₁, h₂⟩ := ih h
-      exact ⟨_, congrFun' h₁, congrFun' h₂⟩
-    case congrArg f f' x x'' h_x =>
-      exact ⟨_, congrArg' (.single h_x), congrFun' (.single h_r)⟩
-  | congrArg h_r ih =>
-    cases h₂ with
-    | eql
-    | fmap
-    | map | unbox | unmap
-    | pair => cases h_r
-    | evalc => cases h_r with
-      | sigt h => exact ⟨_, .single .evalc, .refl⟩
-      | sigl h => exact ⟨_, .single .evalc, .single (.congrFun (.congrArg h))⟩
-      | sigr h => exact ⟨_, .single .evalc, .single (.congrArg h)⟩
-    | fstc => cases h_r with
-      | sigt h => exact ⟨_, .single .fstc, .refl⟩
-      | sigl h => exact ⟨_, .single .fstc, .single h⟩
-      | sigr h => exact ⟨_, .single .fstc, .refl⟩
-    | sndc => cases h_r with
-      | sigt h => exact ⟨_, .single .sndc, .refl⟩
-      | sigl h => exact ⟨_, .single .sndc, .refl⟩
-      | sigr h => exact ⟨_, .single .sndc, .single h⟩
-    | quot => exact ⟨_, .single .quot, .refl⟩
-    | id => exact ⟨_, .single .id, .single h_r⟩
-    | comp₂  => exact ⟨_, .single .comp₂, congrArg' (congrArg' (.single (by assumption)))⟩
-    | comp  => exact ⟨_, .single .comp, congrArg' (congrArg' (.single (by assumption)))⟩
-    | comp' => exact ⟨_, .single .comp', congrArg' (congrArg' (.single (by assumption)))⟩
-    | curr  => exact ⟨_, .single .curr, congrArg' (sigr' (.single (by assumption)))⟩
-    | curr' => cases h_r
-    | sigma => exact ⟨_, .single .sigma, coup' (.single (.congrArg (by assumption)))⟩
-    | congrFun => exact ⟨_, congrFun' (.single (by assumption)), congrArg' (.single (by assumption))⟩
-    | congrArg h =>
-      have ⟨D, h₁, h₂⟩ := ih h
-      exact ⟨_, congrArg' h₁, congrArg' h₂⟩
-
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
 instance RedAff.instConf.{u} {τ : Type u} : Confluent (RedAff (τ := τ)) := ⟨RedAff.conf⟩
 
@@ -1128,145 +843,78 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
   change ∃ _, ∃ _, (step? _) = .some _
   unfold step?
   split
-  case h_1 =>
-    rename_i e x y
-    cases hr with
-    | pil hr =>
-      have ⟨_, h, heq⟩ := semi_complete hr
-      exact ⟨_, .pil (by assumption), by rw [heq]⟩
-    | pir hr =>
+  any_goals (
+    focus
+    try (
       split
-      case h_1 hr heq => exact ⟨_, .pil hr, rfl⟩
-      case h_2 hr heq ih => exact ⟨_, .pir hr, rfl⟩
-      case h_3 ih₁ ih₂ =>
-        have ⟨_, hr, heq⟩ := semi_complete hr
-        exact (ih₂ _ hr heq).elim
-  case h_2 | h_7 => exact ⟨_, by constructor, rfl⟩
-  case h_3 =>
-    rename_i e x y
-    cases hr with
-    | eql' hr =>
-      have ⟨_, h, heq⟩ := semi_complete hr
-      exact ⟨_, .eql' (by assumption), by rw [heq]⟩
-    | eqr' hr =>
+      case h_1 hr' heq => exact ⟨_, hr'.mk_point (n := ⟨0, by grind⟩), rfl⟩
+      case h_2 hr' heq _ => exact ⟨_, hr'.mk_point (n := ⟨1, by grind⟩), rfl⟩
+      case h_3 hn₁ hn₂ =>
+        cases hr <;> (
+          rename_i hr
+          have ⟨_, hr'', heq⟩ := semi_complete hr
+          grind))
+    done)
+  any_goals (exact ⟨_, by constructor, rfl⟩)
+  any_goals (
+    focus
+    try (
       split
-      case h_1 hr heq => exact ⟨_, .eql' hr, rfl⟩
-      case h_2 hr heq ih => exact ⟨_, .eqr' hr, rfl⟩
-      case h_3 ih₁ ih₂ =>
-        have ⟨_, hr, heq⟩ := semi_complete hr
-        exact (ih₂ _ hr heq).elim
-  case h_4 =>
-    cases hr with
-    | bang hr =>
-      have ⟨B, h, heq⟩ := semi_complete hr
-      simp [heq]
-      exact .bang h
-  case h_5 | h_10 | h_21 | h_23 =>
-    cases hr
-    case _ hr =>
-      have ⟨B, h, heq⟩ := semi_complete hr
-      dcc_aesop' [force_reduce, reduce, force_step]
-  repeat exact ⟨_, (RedAff.instRedRel.sound rfl), rfl⟩
-  case h_25 =>
-    cases hr with
-    | sigt h_x =>
-      have ⟨_, hrx', heq'⟩ := semi_complete h_x
-      exact ⟨_, .sigt (by assumption), by rw [heq']⟩
-    | sigl h_x =>
+      case h_1 hr' heq =>
+        exact ⟨_, hr'.mk_point (n := ⟨0, by grind⟩), rfl⟩
+      case h_2 hn₁ hn₂ =>
+        cases hr <;> (
+          rename_i hr
+          have ⟨_, hr'', heq⟩ := semi_complete hr
+          grind))
+    done)
+  any_goals (
+    focus
+    try (
       split
-      · expose_names
-        have ⟨_, hrx', heq'⟩ := semi_complete h
-        exact ⟨_, .sigt (by assumption), by grind⟩
-      · have ⟨_, hrx', heq'⟩ := semi_complete h_x
-        exact ⟨_, .sigl (by assumption), by rw [heq']⟩
-    | sigr h_y =>
-      split
-      · expose_names
-        have ⟨_, hrx', heq'⟩ := semi_complete h
-        exact ⟨_, .sigt (by assumption), by grind⟩
+      case h_1 hr' heq => exact ⟨_, hr'.mk_point (n := ⟨1, by grind⟩), rfl⟩
       · split
-        case h_1 h_x heq' =>
-          have ⟨_, hrx', heq'⟩ := semi_complete h_x
-          exact ⟨_, .sigl (by assumption), by grind⟩
-        · have ⟨_, hrx', heq'⟩ := semi_complete h_y
-          exact ⟨_, .sigr (by assumption), by grind⟩
-        · have ⟨_, hrx', heq'⟩ := semi_complete h_y
-          grind
-  case h_26 =>
-    cases hr with
-    | pairl h =>
-      have ⟨_, hrx', heq'⟩ := semi_complete h
-      exact ⟨_, .pairl hrx', by simp_all⟩
-    | pairr h =>
-      rename_i x y _
-      have ⟨_, hry', heq'⟩ := semi_complete h
-      match x.step? with
-      | .none =>
-        exact ⟨_, .pairr (by assumption), by rw [heq']⟩
-      | .some ⟨_, ⟨h_x'⟩⟩ =>
-        exact ⟨_, .pairl (by assumption), by rw [heq']⟩
-  case h_27 =>
-    cases hr with
-    | coup h =>
-      have ⟨_, hrx', heq'⟩ := semi_complete h
-      exact ⟨_, .coup hrx', by simp_all⟩
-  case h_28 =>
-    cases hr with
-    | eql => simp_all
-    | curr' =>
-      rename_i h
-      exact (h _ _ _ _ _ rfl rfl).elim
-    | unmap | unbox =>
-      simp_all
-    | pair =>
-      simp_all
-      rename_i h
-      exact (h _ _ _ _ rfl rfl rfl rfl).elim
-    | evalc =>
-      simp_all
-      rename_i h
-      exact (h _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl).elim
-    | sigma => simp_all
-    | fstc =>
-      simp_all
-      rename_i h
-      exact (h _ _ _ _ rfl rfl rfl rfl).elim
-    | sndc =>
-      simp_all
-      rename_i h
-      exact (h _ _ _ _ rfl rfl rfl rfl).elim
-    | fmap | map => simp_all
-    | congrFun h =>
-      have ⟨_, hrf, heqf⟩ := semi_complete h
-      exact ⟨_, .congrFun hrf, by rw [heqf]⟩
-    | congrArg h =>
-      have ⟨_, hrx, heqx⟩ := semi_complete h
-      rename_i f x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      match f.step? with
-      | .none => exact ⟨_, .congrArg hrx, by simp_all⟩
-      | .some ⟨_, ⟨hrf⟩⟩ => exact ⟨_, .congrFun hrf, by simp⟩
-    | comp₂ | comp' | quot | id | comp => simp_all
-    | curr =>
-      rename_i h _
-      exact (h _ _ _ _ rfl).elim
-  case h_29 hpi heql heq hbang hmap _ _ _ _ hunmap _ _ _ _ _ _ _ _ _ _ hcurr' _ hcurr _ hmk hpair hcoup happ =>
+        case h_1 hr' heq => exact ⟨_, hr'.mk_point (n := ⟨0, by grind⟩), rfl⟩
+        case h_2 hr' heq _ => exact ⟨_, hr'.mk_point (n := ⟨2, by grind⟩), rfl⟩
+        case h_3 hn₁ hn₂ =>
+          cases hr <;> (
+            rename_i hr
+            have ⟨_, hr'', heq⟩ := semi_complete hr
+            grind))
+    done)
+  any_goals (
+    focus
+    try (
+      split
+      case h_1 hr' heq => exact ⟨_, hr'.mk_point (n := ⟨0, by grind⟩), rfl⟩
+      · split
+        case h_1 hr' heq => exact ⟨_, hr'.mk_point (n := ⟨1, by grind⟩), rfl⟩
+        case h_2 hr' heq _ => exact ⟨_, hr'.mk_point (n := ⟨2, by grind⟩), rfl⟩
+        case h_3 hn₁ hn₂ =>
+          cases hr <;> (
+            rename_i hr
+            have ⟨_, hr'', heq⟩ := semi_complete hr
+            grind))
+    done)
+  case h_40 =>
+    cases hr
+    <;> simp_all
+    any_goals (grind)
+    case congrFun hr =>
+      have ⟨_, hr', heq⟩ := semi_complete hr
+      simp [heq]
+      exact hr'.congrFun
+    case congrArg hr =>
+      have ⟨_, hr', heq⟩ := semi_complete hr
+      simp [heq]
+      split
+      · exact ⟨_, .congrFun (by assumption), rfl⟩
+      · exact ⟨_, .congrArg (by assumption), rfl⟩
+      · grind
+  case h_41 =>
     simp_all
-    induction A <;> (
-      first
-      | (focus
-        cases hr
-        done)
-      | (exact (hmap _ rfl).elim)
-      | (exact (hunmap _ rfl).elim)
-      | (exact (hpi _ _ rfl).elim)
-      | (exact (hcoup _ rfl).elim)
-      | (exact (happ _ _ rfl).elim)
-      | (exact (hmk _ _ _ rfl).elim)
-      | (exact (hpair _ _ _ rfl).elim)
-      | (exact (hbang _ rfl).elim)
-      | (exact (heq _ _ rfl).elim)
-      | (exact (hcurr _ _ _ rfl).elim)
-      | (exact (hcurr' _ _ _ rfl).elim))-/
+    cases hr
+    any_goals (grind)
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
 instance RedAff.instSemicomplete.{u} {τ : Type u} : SemiComplete (RedAff (τ := τ)) := ⟨semi_complete⟩

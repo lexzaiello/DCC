@@ -7,7 +7,6 @@ declare_syntax_cat gen_dcc
 syntax "!<" gen_dcc ">"                                       : gen_dcc
 syntax "$<" gen_dcc ">"                                       : gen_dcc
 syntax "*<" gen_dcc ">"                                       : gen_dcc
-syntax "*(" gen_dcc ")"                                       : gen_dcc
 syntax "!(" gen_dcc ")"                                       : gen_dcc
 syntax "&(" gen_dcc ")"                                       : gen_dcc
 syntax  gen_dcc "=" gen_dcc                                   : gen_dcc
@@ -70,8 +69,6 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "bang") #[← `(DCC[$ty:gen_dcc_loc] $x)]
   | `(DCC[$ty:gen_dcc_loc] &($x:gen_dcc))                  => do
     return mkApp (← field ty "box") #[← `(DCC[$ty:gen_dcc_loc] $x)]
-  | `(DCC[$ty:gen_dcc_loc] *($α:gen_dcc))                  => do
-    return mkApp (← field ty "unbox") #[← `(DCC[$ty:gen_dcc_loc] $α)]
   | `(DCC[$ty:gen_dcc_loc] *<$α:gen_dcc>)                  => do
     return mkApp (← field ty "unmap") #[← `(DCC[$ty:gen_dcc_loc] $α)]
   | `(DCC[$ty:gen_dcc_loc] Eql($f_α:gen_dcc))                        => do

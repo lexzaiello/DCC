@@ -2,6 +2,7 @@ import Dcc.Attrs
 import Mathlib.Data.Nat.Notation
 import Mathlib.Logic.Relation
 import Dcc.Ast
+import Dcc.Ast.Points
 
 /-
 Generalizations of normal forms and decision procedures for rewrite-rule relations
@@ -156,6 +157,16 @@ instance RedRel.instReflTransRel.{u} {α : Type u} {r : α → α → Prop} {t :
 
 abbrev RedRel.ReflTrans.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} {m : Type u → Type u} [Monad m] (_hR : RedRel (α := α) r t (m := m)) : α → α → Prop := Relation.ReflTransGen r
 abbrev RedRel.Trans {r : α → α → Prop} {t : α → ℕ} {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m)) : α → α → Prop    := Relation.TransGen r
+
+open Rel in class Congruent'.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) where
+  congr_iff {p : Fin (point_arity e)} : r (points e)[p] p' ↔ r e (set_points e ((points e).set p p'))
+
+@[aesop (rule_sets := [DccForceStep]) safe apply]
+theorem Congruent'.congr'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+  {e : GenericExpr τ} {p : Fin (point_arity e)} {p' : GenericExpr τ} [hR : Congruent' (τ := τ) r]
+  (h : r (points e)[p] p' := by assumption) : r e
+  (set_points e ((points e).set p p')) :=
+  hR.congr_iff.mp h
 
 open Rel in class Congruent.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) where
   congrFun_ (h : r f f') : r (DCC[τ] (f x)) (DCC[τ] (f' x)) := by exact .congrFun

@@ -1,12 +1,14 @@
 import Dcc.Attrs
 import Dcc.Ast.Core
 import Dcc.Ast.Dsl
+import Mathlib.Tactic.FinCases
+import Mathlib.Data.Fintype.Basic
 import Mathlib.Logic.Function.OfArity
 import Mathlib.Data.Fin.Tuple.Curry
 
 namespace GenericExpr
 
-@[grind, dcc_size]
+@[inline, grind, dcc_size]
 def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
   | DCC[.] ∗ => 0
@@ -32,7 +34,6 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] !Λ(_α, _β, _x) => 3
   | DCC[.] Eval(_α, _β, _x) => 3
   | DCC[.] !(_x)   => 1
-  | DCC[.] *(_α)   => 1
   | DCC[.] *<_f>    => 1
   | DCC[.] &(_x)   => 1
   | DCC[.] !<_x>   => 1
@@ -66,7 +67,6 @@ def branch_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] !Λ(_α, _β, _x) => 3
   | DCC[.] Eval(_α, _β, _x) => 3
   | DCC[.] !(_x)   => 1
-  | DCC[.] *(_α)   => 1
   | DCC[.] *<_f>    => 1
   | DCC[.] &(_x)   => 1
   | DCC[.] !<_x>   => 1
@@ -100,7 +100,6 @@ def branches (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) 
   | DCC[.] !Λ(α, β, x) => ⟨#[α, β, x], by grind⟩
   | DCC[.] Eval(α, β, x) => ⟨#[α, β, x], by grind⟩
   | DCC[.] !(x)   => ⟨#[x], by grind⟩
-  | DCC[.] *(α)   => ⟨#[α], by grind⟩
   | DCC[.] *<f>    => ⟨#[f], by grind⟩
   | DCC[.] &(x)   => ⟨#[x], by grind⟩
   | DCC[.] !<x>   => ⟨#[x], by grind⟩
@@ -138,7 +137,6 @@ def n_indices (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] !Λ(_α, _β, _x) => 0
   | DCC[.] Eval(_α, _β, _x) => 0
   | DCC[.] !(_x)   => 0
-  | DCC[.] *(_α)   => 0
   | DCC[.] *<_f>    => 1
   | DCC[.] &(_x)   => 0
   | DCC[.] !<_x>   => 1
@@ -172,7 +170,6 @@ def indices (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (
   | DCC[.] !Λ(_α, _β, _x) => ⟨#[], by grind⟩
   | DCC[.] Eval(_α, _β, _x) => ⟨#[], by grind⟩
   | DCC[.] !(_x)   => ⟨#[], by grind⟩
-  | DCC[.] *(_α)   => ⟨#[], by grind⟩
   | DCC[.] *<f>    => ⟨#[f], by grind⟩
   | DCC[.] &(_x)   => ⟨#[], by grind⟩
   | DCC[.] !<x>   => ⟨#[x], by grind⟩
@@ -180,7 +177,7 @@ def indices (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (
   | DCC[.] (_f _x)
   | .const _n => ⟨#[], by grind⟩
 
-@[grind]
+@[aesop norm (rule_sets := [DccForceReduce]), grind, dcc_rel]
 def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (point_arity e) :=
   match e with
   | DCC[.] ∗ => ⟨#[], by grind⟩
@@ -206,7 +203,6 @@ def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (p
   | DCC[.] !Λ(α, β, x) => ⟨#[α, β, x], by grind⟩
   | DCC[.] Eval(α, β, x) => ⟨#[α, β, x], by grind⟩
   | DCC[.] !(x)   => ⟨#[x], by grind⟩
-  | DCC[.] *(α)   => ⟨#[α], by grind⟩
   | DCC[.] *<f>    => ⟨#[f], by grind⟩
   | DCC[.] &(x)   => ⟨#[x], by grind⟩
   | DCC[.] !<x>   => ⟨#[x], by grind⟩
@@ -247,13 +243,118 @@ def map_points (e : GenericExpr (τ := τ_c))
   | DCC? !Λ(_α, _β, _x) => .curr'
   | DCC? Eval(_α, _β, _x) => .eval
   | DCC? !(_x)   => .bang
-  | DCC? *(_α)   => .unbox
   | DCC? *<_f>    => .unmap
   | DCC? &(_x)   => .box
   | DCC? !<_x>   => .map
   | DCC? $<_x>   => .fmap
   | DCC? (f x) => .app f x
   | .const n => Function.OfArity.const _ (.const n) _) fn
+
+@[aesop norm (rule_sets := [DccForceReduce]), grind, dcc_reduce]
+def set_points (e : GenericExpr (τ := τ_c))
+  (points' : Vector (@GenericExpr τ_c) (point_arity e)) : GenericExpr τ_c :=
+  match e with
+  | DCC? ∗ => .tintro
+  | DCC? ⊤ => .top
+  | DCC? ⊥ => .bot
+  | DCC? x = y =>
+    have heq : point_arity (DCC? x = y) = 2 := by grind
+    .eq points'[0] points'[1]
+  | DCC? Eql(α)  =>
+    have heq : point_arity (DCC? Eql(α)) = 1 := by grind
+    .eql points'[0]
+  | DCC? refl(α) =>
+    have heq : point_arity (DCC? refl(α)) = 1 := by grind
+    .refl points'[0]
+  | DCC? Sort m => .sort m
+  | DCC? Σ(α, β) =>
+    have heq : point_arity (DCC? Σ(α, β)) = 2 := by grind
+    .sigma points'[0] points'[1]
+  | DCC? `(β, x) =>
+    have heq : point_arity (DCC? `(β, x)) = 2 := by grind
+    .quot points'[0] points'[1]
+  | DCC? ⟦β⟧(x, y) =>
+    have heq : point_arity (DCC? ⟦β⟧(x, y)) = 3 := by grind
+    .mkc points'[0] points'[1] points'[2]
+  | DCC? Coup(β) =>
+    have heq : point_arity (DCC? Coup(β)) = 1 := by grind
+    .coup points'[0]
+  | DCC? Id(α)      =>
+    have heq : point_arity (DCC? Id(α)) = 1 := by grind
+    .id points'[0]
+  | DCC? Fst(α)    =>
+    have heq : point_arity (DCC? Fst(α)) = 1 := by grind
+    .fstc points'[0]
+  | DCC? Snd(α)    =>
+    have heq : point_arity (DCC? Snd(α)) = 1 := by grind
+    .sndc points'[0]
+  | DCC? Π(α, β) =>
+    have heq : point_arity (DCC? Π(α, β)) = 2 := by grind
+    .pi points'[0] points'[1]
+  | DCC? (f ∘' g) =>
+    have heq : point_arity (DCC? f ∘' g) = 2 := by grind
+    .comp' points'[0] points'[1]
+  | DCC? (f ∘ g)  =>
+    have heq : point_arity (DCC? f ∘ g) = 2 := by grind
+    .comp points'[0] points'[1]
+  | DCC? (f ∘∘ g)  =>
+    have heq : point_arity (DCC? f ∘∘ g) = 2 := by grind
+    .comp₂ points'[0] points'[1]
+  | DCC? ⟦β⟧⟨a, b⟩   =>
+    have heq : point_arity (DCC? ⟦β⟧⟨a, b⟩) = 3 := by grind
+    .pair points'[0] points'[1] points'[2]
+  | DCC? Λ(α, β, x) =>
+    have heq : point_arity (DCC? Λ(α, β, x)) = 3 := by grind
+    .curr points'[0] points'[1] points'[2]
+  | DCC? !Λ(α, β, x) =>
+    have heq : point_arity (DCC? !Λ(α, β, x)) = 3 := by grind
+    .curr' points'[0] points'[1] points'[2]
+  | DCC? Eval(α, β, x) =>
+    have heq : point_arity (DCC? Eval(α, β, x)) = 3 := by grind
+    .eval points'[0] points'[1] points'[2]
+  | DCC? !(x)   =>
+    have heq : point_arity (DCC? !(x)) = 1 := by grind
+    .bang points'[0]
+  | DCC? *<f>    =>
+    have heq : point_arity (DCC? *<f>) = 1 := by grind
+    .unmap points'[0]
+  | DCC? &(x)   =>
+    have heq : point_arity (DCC? &(x)) = 1 := by grind
+    .box points'[0]
+  | DCC? !<x>   =>
+    have heq : point_arity (DCC? !<x>) = 1 := by grind
+    .map points'[0]
+  | DCC? $<x>   =>
+    have heq : point_arity (DCC? $<x>) = 1 := by grind
+    .fmap points'[0]
+  | DCC? (f x) => .app f x
+  | .const n => .const n
+
+-- congr_point_arr (h : r e (set_points e ((points e).set p p'))) : point_arity e = (set_points e ((points e).set p p'))
+
+@[grind =, grind! ., dcc_rel]
+theorem set_points_self_noop : set_points e e.points = e := by
+  induction e
+  any_goals (first | grind | aesop)
+
+@[grind =_, grind ., grind! ., dcc_rel]
+theorem congr_point_arr {e : GenericExpr τ_c} {p : Fin (point_arity e)} : point_arity e = point_arity (set_points e ((points e).set p p')) := by
+  induction e <;> grind
+
+@[grind =, grind ., dcc_rel]
+theorem get_set_point {e p' : GenericExpr τ_c} {p : Fin (point_arity e)} : (points (set_points e ((points e).set p p'))).get ⟨p, by rw [← congr_point_arr]; grind⟩ = p' := by
+  induction e
+  any_goals (grind)
+  any_goals (
+    focus
+    try (
+      rename_i a_ih
+      dcc_simp at p
+      fin_cases p <;> (dcc_simp; rfl)))
+
+@[grind =, grind! .]
+theorem set_same_point_comp {e x y : GenericExpr τ_c} {p : Fin (point_arity e)} : set_points (set_points e ((points e).set p x)) ((points (set_points e ((points e).set p x))).set (h := by rw [← congr_point_arr]; grind) p y) = set_points e ((points e).set p y) := by
+  induction e <;> grind
 
 @[grind, dcc_reduce]
 def uncurry' (pre : GenericExpr τ_c)
@@ -287,7 +388,6 @@ def map_branches (e : GenericExpr (τ := τ_c))
   | DCC? !Λ(_α, _β, _x) => .curr'
   | DCC? Eval(_α, _β, _x) => .eval
   | DCC? !(_x)   => .bang
-  | DCC? *(_α)   => .unbox
   | DCC? *<_f>    => .unmap
   | DCC? &(_x)   => .box
   | DCC? !<_x>   => .map
@@ -322,7 +422,6 @@ def map_indices (e : GenericExpr (τ := τ_c))
   | DCC? !Λ(_α, _β, _x) => .curr'
   | DCC? Eval(_α, _β, _x) => .eval
   | DCC? !(_x)   => .bang
-  | DCC? *(_α)   => .unbox
   | DCC? *<_f>    => .unmap
   | DCC? &(_x)   => .box
   | DCC? !<_x>   => .map

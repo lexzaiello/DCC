@@ -60,6 +60,41 @@ abbrev EtaExpr.Norm := NormExpr (τ := @EtaConst τ_c) GenericExpr.RedAff
 namespace GenericExpr
 
 @[grind]
+def mem_tm (e to_find : GenericExpr (τ := τ_c)) : Bool :=
+  (decide (e = to_find)) || (
+    match e with
+    | DCC? ∗ => False
+    | DCC? ⊤ => False
+    | DCC? Sort _n => False
+    | DCC? ⊥ => False
+    | DCC? Π(_x, _y) => False
+    | DCC? (x ∘' y)
+    | DCC? (x ∘ y)
+    | DCC? (x ∘∘ y)
+    | DCC? (x y) => x.mem_tm to_find ∨ y.mem_tm to_find
+    | DCC? _x = _y => False
+    | DCC? Fst(_α)
+    | DCC? Snd(_α)
+    | DCC? Coup(_α)
+    | DCC? Id(_α)
+    | DCC? Eql(_α)
+    | DCC? refl(_α)
+    | DCC? *(_α)
+    | DCC? !(_α)
+    | DCC? !<_α>
+    | DCC? Σ(_α, _β) => False
+    | DCC? &(α)
+    | DCC? $<α>
+    | DCC? *<α> => α.mem_tm to_find
+    | DCC? `(_β, x) => x.mem_tm to_find
+    | DCC? Eval(_β, _x, y)
+    | DCC? !Λ(_β, _x, y)
+    | DCC? Λ(_β, _x, y) => y.mem_tm to_find
+    | DCC? ⟦_β⟧(x, y)
+    | DCC? ⟦_β⟧⟨x, y⟩ => x.mem_tm to_find ∨ y.mem_tm to_find
+    | .const _ => False)
+
+@[grind]
 def contains_hole (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     match e with
     | DCC[.] ∗ => False
@@ -148,8 +183,7 @@ def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] refl(_α) => 2
   | DCC[.] Sort _m => 0
   | DCC[.] Σ(_α, _β) => 1
-  | DCC[.] `(_α, `(_β, _x)) => 2
-  | DCC[.] `(_β, _x) => 1
+  | DCC[.] `(_β, x) => x.arity.succ
   | DCC[.] ⟦__β⟧(_x, _y) => 0
   | DCC[.] Coup(_β) => 0
   | DCC[.] Id((Π(_α, _β) _x_α)) => 2
@@ -157,12 +191,12 @@ def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] Fst(_α)    => 1
   | DCC[.] Snd(_α)    => 1
   | DCC[.] Π(_α, _β) => 1
-  | DCC[.] (f ∘' _g) => f.arity
-  | DCC[.] (f ∘ _g)  => f.arity
-  | DCC[.] (f ∘∘ _g)  => f.arity
+  | DCC[.] (f ∘' g) => (f.arity - 1) + g.arity
+  | DCC[.] (f ∘ g)  => (f.arity - 1) + g.arity
+  | DCC[.] (f ∘∘ g)  => (f.arity - 1) + g.arity
   | DCC[.] ⟦_β⟧⟨_a, _b⟩   => 1
-  | DCC[.] Λ(_α, _β, x) => x.arity.succ
-  | DCC[.] !Λ(_α, _β, x) => x.arity.succ
+  | DCC[.] Λ(_α, _β, x) => (x.arity - 1) + 2
+  | DCC[.] !Λ(_α, _β, x) => (x.arity - 1) + 2
   | DCC[.] Eval(_α, _β, _x) => 1
   | DCC[.] !(_x)   => 0
   | DCC[.] *(_α)   => 1
@@ -317,7 +351,7 @@ end NormExpr
 
 namespace GenericExpr
 
-@[grind]
+@[grind, dcc_rel]
 def eta_to_expr (e : @EtaExpr τ_c)
   (hn_contains : ¬ e.contains_hole) : GenericExpr τ_c :=
   match e with
@@ -514,7 +548,7 @@ def to_eta_no_hole {e : GenericExpr τ} : ¬ (expr_to_eta e).contains_hole := by
 def to_eta_no_mem_hole {e : GenericExpr τ} : ¬ (expr_to_eta e).hole_mem_tm := by
   induction e <;> (simp_all [expr_to_eta, hole_mem_tm])
 
-@[dcc_reduce]
+@[dcc_reduce, dcc_rel]
 def to_eta_left_inv
   {e : GenericExpr τ} : eta_to_expr (expr_to_eta e) to_eta_no_hole = e := by
   unfold expr_to_eta
@@ -541,7 +575,7 @@ def to_eta_left_inv
     have hc := z.to_eta_left_inv
     simp [ha, hb, hc])
 
-@[dcc_reduce]
+@[dcc_reduce, dcc_rel]
 def to_eta_left_inv'
   {e : GenericExpr τ} {hn : ¬e.expr_to_eta.contains_hole = true} : eta_to_expr (expr_to_eta e) hn = e := by
   unfold expr_to_eta
@@ -569,7 +603,7 @@ def to_eta_left_inv'
     simp [ha, hb, hc])
 
 
-@[dcc_reduce]
+@[dcc_reduce, dcc_rel]
 def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) :
   (expr_to_eta (eta_to_expr e hn)) = e := by
   induction e
@@ -585,5 +619,81 @@ def to_eta_right_inv {e : GenericExpr (@EtaConst τ)} (hn : ¬ e.contains_hole) 
     cases x with
     | hole => simp_all
     | const => simp [eta_to_expr, expr_to_eta]
+
+theorem to_eta_arr_same (h : GenericExpr.arity e = n) : GenericExpr.arity e.expr_to_eta = n := by
+  induction e generalizing n
+  any_goals (grind)
+  case id =>
+    unfold expr_to_eta
+    simp
+    expose_names
+    unfold arity
+    unfold arity at h
+    simp_all
+    split at h
+    any_goals (grind)
+    case _ =>
+      expose_names
+      cases heq
+      split
+      any_goals (grind)
+      case _ =>
+        simp_all
+        expose_names
+        unfold expr_to_eta at heq
+        split at heq
+        any_goals (grind)
+        try (
+          case _ =>
+            expose_names
+            simp at heq
+            cases heq.right
+            have hl := heq.left
+            unfold expr_to_eta at hl
+            split at hl
+            any_goals (grind))
+
+@[grind =, grind =_]
+theorem to_eta_arr_same' : GenericExpr.arity e = GenericExpr.arity e.expr_to_eta := by
+  have h := to_eta_arr_same (e := e) (h := rfl)
+  grind
+
+@[grind =, grind =_, grind →, grind! .]
+theorem from_eta_arr_same : (GenericExpr.arity (eta_to_expr e hn_mem)) = (GenericExpr.arity e) := by
+  induction e
+  any_goals (unfold eta_to_expr; grind)
+  case id =>
+    unfold eta_to_expr
+    simp
+    expose_names
+    unfold arity
+    simp_all
+    split
+    any_goals (grind)
+    case _ =>
+      expose_names
+      simp at heq
+      split
+      any_goals (grind)
+      case _ =>
+        simp_all
+        expose_names
+        unfold eta_to_expr at heq
+        split at heq
+        any_goals (grind)
+        case _ =>
+          expose_names
+          simp at heq
+          cases heq.right
+          have hl := heq.left
+          unfold eta_to_expr at hl
+          split at hl
+          any_goals (grind)
+
+@[grind =, grind =_, grind →, grind! ., grind! →]
+theorem from_to_size_same : (eta_to_expr e hn).expr_to_eta.size = e.size := by
+  induction e
+  any_goals (grind)
+  · dcc_simp
 
 end GenericExpr

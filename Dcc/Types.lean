@@ -447,7 +447,6 @@ def toFormat.{u} {τ : Type u} [hFmt : Std.ToFormat τ]
   | (DCC? !<f>)                => comb "!" (paren := angle_hard) [f.toFormat pretty]
   | (DCC? $<f>)                => comb "$" (paren := angle_hard) [f.toFormat pretty]
   | (DCC? &(x))                => "&" ++ (paren (x.toFormat pretty))
-  | (DCC? *(x))                => "*" ++ (paren (x.toFormat pretty))
   | (DCC? *<x>)                => comb "*" (paren := angle_hard) [x.toFormat pretty]
   | (DCC? !(x))                => "!" ++ (paren (x.toFormat pretty))
   | (DCC? Eval(α, β, x))       => comb "Eval" [α.toFormat pretty, β.toFormat pretty, x.toFormat pretty]

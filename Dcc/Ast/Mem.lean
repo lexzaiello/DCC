@@ -26,7 +26,6 @@ def contains {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr (τ := τ_c))
   | DCC[.] !<α>, to_find
   | DCC[.] $<α>, to_find
   | DCC[.] !(α), to_find
-  | DCC[.] *(α), to_find
   | DCC[.] *<α>, to_find
   | DCC[.] Id(α), to_find
   | DCC[.] Eql(α), to_find

@@ -79,7 +79,6 @@ def mem_tm (e to_find : GenericExpr (τ := τ_c)) : Bool :=
     | DCC? Id(_α)
     | DCC? Eql(_α)
     | DCC? refl(_α)
-    | DCC? *(_α)
     | DCC? !(_α)
     | DCC? !<_α>
     | DCC? Σ(_α, _β) => False
@@ -114,7 +113,6 @@ def contains_hole (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     | DCC[.] !<α>
     | DCC[.] $<α>
     | DCC[.] !(α)
-    | DCC[.] *(α)
     | DCC[.] *<α>
     | DCC[.] Id(α)
     | DCC[.] Eql(α)
@@ -149,7 +147,6 @@ def hole_mem_tm (e : GenericExpr (τ := (@EtaConst τ))) : Bool :=
     | DCC[.] !<α>
     | DCC[.] $<α>
     | DCC[.] !(α)
-    | DCC[.] *(α)
     | DCC[.] *<α>
     | DCC[.] Id(α)
     | DCC[.] Eql(α)
@@ -199,7 +196,6 @@ def arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] !Λ(_α, _β, x) => (x.arity - 1) + 2
   | DCC[.] Eval(_α, _β, _x) => 1
   | DCC[.] !(_x)   => 0
-  | DCC[.] *(_α)   => 1
   | DCC[.] *<f>    => f.arity
   | DCC[.] &(_x)   => 0
   | DCC[.] !<_x>   => 1
@@ -233,7 +229,6 @@ match e with
   | DCC[.] !Λ(_α, β, x) => β.is_fn ∧ x.is_fn
   | DCC[.] Eval(_α, β, x) => β.is_fn ∧ x.is_fn
   | DCC[.] !(_x)   => False
-  | DCC[.] *(_α)   => True
   | DCC[.] *<f>    => f.is_fn
   | DCC[.] &(_x)   => False
   | DCC[.] !<x>   => x.is_fn
@@ -268,7 +263,6 @@ def tm_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] !Λ(_α, _β, _x) => 2
   | DCC[.] Eval(_α, _β, _x) => 1
   | DCC[.] !(_x)   => 1
-  | DCC[.] *(_α)   => 1
   | DCC[.] *<f>    => f.tm_arity
   | DCC[.] &(_x)   => 1
   | DCC[.] !<_x>   => 1
@@ -424,9 +418,6 @@ def eta_to_expr (e : @EtaExpr τ_c)
   | DCC? !(x)   =>
     match x.eta_to_expr (by simp_all [contains_hole]) with
     | x' => (DCC? !(x'))
-  | DCC? *(x)   =>
-    match x.eta_to_expr (by simp_all [contains_hole]) with
-    | x' => (DCC? *(x'))
   | DCC? *<x>   =>
     match x.eta_to_expr (by simp_all [contains_hole]) with
     | x' => (DCC? *<x'>)
@@ -521,9 +512,6 @@ def expr_to_eta (e : GenericExpr (τ := τ_c)) : (GenericExpr (τ := EtaConst (�
   | DCC? !(x)   =>
     match x.expr_to_eta with
     | x' => (DCC? !(x'))
-  | DCC? *(x)   =>
-    match x.expr_to_eta with
-    | x' => (DCC? *(x'))
   | DCC? *<x>   =>
     match x.expr_to_eta with
     | x' => (DCC? *<x'>)

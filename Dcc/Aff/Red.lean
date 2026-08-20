@@ -399,8 +399,8 @@ theorem aff_mk_point' {x y e : GenericExpr τ_c} (hr : Relation.ReflTransGen Red
 theorem aff_mk_point'' {x y e : GenericExpr τ_c} (n : ℕ) (hr : RedAff x y := by assumption) (hn : n < point_arity e := by grind) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := aff_mk_point' (.single hr)
 
 @[grind ., grind →, grind! →]
-theorem mk_inner_norm (h_points : 0 < point_arity e)
-  (hrn : List.Forall (IsNorm RedAff) (points e).toList) : IsNorm RedAff e := by
+theorem mk_inner_norm (h_points : 0 < point_arity e := by grind)
+  (hrn : List.Forall (IsNorm RedAff) (points e).toList := by intro h; grind) : IsNorm RedAff e := by
   unfold point_arity at h_points
   split at h_points <;> (
     first
@@ -410,6 +410,7 @@ theorem mk_inner_norm (h_points : 0 < point_arity e)
     simp [points, Vector.toList] at hrn
     cases h <;> grind))
 
+@[grind ., grind →, grind! .]
 theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
   (points e).toList := by
   unfold points
@@ -1182,6 +1183,24 @@ def map (h : IsNorm RedAff (.map f)) : IsNorm RedAff f :=
 
 def unmap (h : IsNorm RedAff (.unmap f)) : IsNorm RedAff f :=
   fun ⟨_, hr⟩ => h ⟨_, .unmap₀ hr⟩
+
+def point {e : GenericExpr τ_c} (hn : IsNorm RedAff e) (n : Fin (point_arity e)) : IsNorm RedAff (points e)[n] := by
+  unfold point_arity at n
+  split at n
+  any_goals (grind)
+  any_goals (
+    simp at n
+    fin_cases n <;> (
+      intro ⟨_, h⟩
+      exact hn ⟨_, h.mk_point⟩))
+
+def point' {e : GenericExpr τ_c} (hn : IsNorm RedAff e) (n : ℕ)
+  (h_arr : n < point_arity e := by grind) : IsNorm RedAff (points e)[(Fin.mk n h_arr)] :=
+  point hn ⟨n, h_arr⟩
+
+/-def point₀ (h : IsNorm RedAff e) (hn : 0 < point_arity e) : IsNorm RedAff (points e)[0] := by
+  intro ⟨_, hr⟩
+  exact h ⟨_, hr.mk_point (n := ⟨0, by grind⟩)⟩-/
 
 end IsNorm
 

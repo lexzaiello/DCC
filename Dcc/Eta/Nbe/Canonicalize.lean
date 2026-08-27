@@ -966,37 +966,77 @@ def Canonicalize.complete {f f' : @NormExpr τ_c RedAff}
       | .tm₁ _ h =>
         have ha := h.contains_hole
         grind
+    have hn_mem : ¬ e'.hole_mem_tm := by
+      intro h
+      have h := mem_imp_contains_hole h
+      grind
     simp only [h_heq, heq, hneq]
-    
-    split
-    case h_1 heq' =>
-      rename_i e_hole hn_hole e_h'
-      have heq_hole := e_h.unique e_h'
-      cases heq_hole
-      simp at heq'
-      expose_names
-      have h_mem_hole : hole₁.hole_mem_tm := by
-        cases e_h
-        rename_i e_h
-        exact e_h.hole_mem_tm
-      have hn : (reduce RedAff (f_1.expr_to_eta.app hole₁)).fst ≠ hole₁ := fun h => by
-        have h := heq.symm.trans h
-        cases h
-        have h := e_h.contains_hole₁
+    simp [hn_mem, hn, heq]
+    dcc_simp_all
+    congr!
+    have ha := hr_τ.out_eq
+    have hb := (hr_τ.out_eq ▸ hr_τ).eq
+    grind
+  case comp' =>
+    expose_names
+    have ha := a.complete_fst
+    have hb := a.aff_complete
+    cases e_f_1 with
+    | tm₁ h_dom' =>
+      simp [canonicalize]
+      unfold canonicalize₁
+      have hneq : f'_1.app (g'.app hole₁) ≠ hole₁ :=
+        fun h => by cases h
+      have h_mem : (f'_1.app (g'.app hole₁)).hole_mem_tm := by
+        have ha := match e_h with | .tm₁ _ h => h.hole_mem_tm
         grind
+      simp only [e_h.complete, ha, hneq, h_mem]
       split
       · grind
       case isFalse =>
+        unfold canonicalize₁_par?
         split
-        · rename_i h_mem
-          have h_mem' := heq ▸ h_mem
-          have h := mem_imp_contains_hole (τ_c := τ_c) (e := e') (heq ▸ h_mem)
-          grind
-        · simp [heq.symm]
-          have h := (hr_τ.out_eq ▸ hr_τ).eq
-          simp_all
-          aesop
-    · grind
+        case isTrue =>
+          split
+          case h_1 heq_1 =>
+            split at heq_1
+            case h_1 heq' =>
+              expose_names
+              have heq' : f'_2.app (g'_1.app e_hole') = (f'_1.app (g'.app hole₁)) := by grind
+              cases heq'
+              simp [hna, hnb] at heq_1
+              cases heq₂
+              cases heq₁
+              simp [h_dom.complete] at heq_1
+              cases heq_1.left; cases heq_1.right
+              dcc_simp_all
+              aesop
+            case h_2 heq' =>
+              expose_names
+              have heqa : f'_2.app e_hole' = (f'_1.app (g'.app hole₁)) := by grind
+              cases heqa
+              simp [hna] at heq_1
+              cases heq₁; cases heq₂
+              exact (h_3 g' hole₁ hr rfl (by grind)).elim
+            · grind
+          case h_2 heq' =>
+            split at heq'
+            case h_1 =>
+              expose_names
+              have heq'' : f'_2.app (g'_1.app e_hole') = f'_1.app (g'.app hole₁) := by grind
+              cases heq''
+              cases heq₁; cases heq₂
+              simp [hna, hnb, h_dom.complete] at heq'
+            case h_2 hn heq' =>
+              expose_names
+              have heq'' : (f'_1.app (g'.app hole₁)) = f'_2.app e_hole' := by grind
+              cases heq''
+              cases heq₁; cases heq₂
+              simp [hna] at heq'
+              exact (hn g' hole₁ hr rfl (by grind)).elim
+            case h_3 hna hnb =>
+              exact (hna f'_1 g' hole₁ (RedAffNorm.red a) hb).elim
+        · grind
 
 def canonicalize_none_sound {e_f : EtaFn (τ_c := τ_c) ⟨f, hn⟩ doms} (h : canonicalize e_f = .none) : ∀
   {f' : @NormExpr τ_c RedAff} {e_f' : EtaFn (τ_c := τ_c) f' doms}, Canonicalize (τ_c := τ_c) e_f e_f' → False := by

@@ -865,8 +865,9 @@ def Canonicalize.complete {f f' : @NormExpr τ_c RedAff}
         cases heq_6
         cases heq_4
         have hneq : g'.app e_hole' ≠ e_hole' := fun h => by cases h
-        simp [hn_mem, hneq]
-        
+        simp [hneq]
+        cases e_h with
+        | tm₁ heq h => cases h
       case h_2 =>
         expose_names
         have heq_3 : f'_2.app e_hole' = f'.app hole₁ := by
@@ -914,54 +915,39 @@ def Canonicalize.complete {f f' : @NormExpr τ_c RedAff}
     | tm₁ =>
       simp [canonicalize]
       unfold canonicalize₁
-      rw [h_heq]
+      have hneq : f'.app hole₁ ≠ hole₁ := fun h => by cases h
+      simp only [h_heq, heq, hneq]
       split
-      case h_1 heq' =>
-        simp at heq'
-        expose_names
-        have hneq : (reduce RedAff (f_1.expr_to_eta.app hole₁)).fst ≠ hole₁ := by
-          intro h
-          simp at heq
-          rw [heq] at h
-          cases h
-        have hneq' : ((reduce RedAff (f_1.expr_to_eta.app hole₁)).fst ≠ e_hole) := by
-          grind
-        split
-        · grind
-        case isFalse hn =>
-          have h_mem : (reduce RedAff (f_1.expr_to_eta.app e_hole)).fst.hole_mem_tm := by
-            cases heq'.left
-            rw [heq]
-            have h := match e_h with | .tm₁ _ h => h.hole_mem_tm
-            grind
-          split
-          case isTrue =>
-            split
-            · expose_names
-              simp [canonicalize₁_par?] at heq_1
-              split at heq_1
-              case h_1 f'' e_hole' _ heq'' =>
-                have heq_fst : f'.app hole₁ = f''.app e_hole' := by grind
-                cases heq'.left; cases heq'.right
-                have heq_hole : hole₁ = e_hole' := by grind
-                have heq_f : f' = f'' := by grind
-                cases heq_hole
-                cases heq_f
-                simp [hn_mem] at heq_1
-                have ha := e_f'.complete
-                split at heq_1
-                · expose_names
-                  have h := e_f'_2.complete
-                  aesop
-                · grind
-              · grind
-            · cases e_h.unique h_holes
-              have ha := e_h.complete
-              have hb := h_holes.complete
-              have heq'' : e_h = h_holes := by grind
-              aesop
-          · grind
       · grind
+      case isFalse =>
+        have h_mem : (f'.app hole₁).hole_mem_tm := by
+          match e_h with
+          | .tm₁ _ h =>
+            have ha := h.hole_mem_tm
+            grind
+        simp [h_mem]
+        split
+        case h_1 heq_1 =>
+          simp [canonicalize₁_par?] at heq_1
+          split at heq_1
+          case h_1 =>
+            expose_names
+            have heq_red : f'.app hole₁ = f'_2.app (g'.app e_hole') := by grind
+            cases heq_red
+            have hneq : g'.app e_hole' ≠ e_hole' := fun h => by cases h
+            simp [hneq] at heq_1
+          case h_2 =>
+            expose_names
+            have heq : f'.app hole₁ = f'_2.app e_hole' := by grind
+            cases heq
+            simp [hn_mem] at heq_1
+            cases heq_eta
+            simp [e_f'.complete] at heq_1
+            cases heq_1.left; cases heq_1.right
+            dcc_simp_all
+            aesop
+          · grind
+        · simp_all
   case quot₁ =>
     expose_names
     have heq := hr_τ.complete_fst
@@ -975,7 +961,13 @@ def Canonicalize.complete {f f' : @NormExpr τ_c RedAff}
     unfold canonicalize₁
     expose_names
     cases heq_1
-    rw [h_heq]
+    have hneq : e' ≠ hole₁ := fun h => by
+      match e_h with
+      | .tm₁ _ h =>
+        have ha := h.contains_hole
+        grind
+    simp only [h_heq, heq, hneq]
+    
     split
     case h_1 heq' =>
       rename_i e_hole hn_hole e_h'

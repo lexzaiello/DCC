@@ -189,14 +189,8 @@ def eta_to_expr_inj {hn1 : ¬ f1.contains_hole} {hn2 : ¬ f2.contains_hole} :
   · split at h
     any_goals (grind)
     · expose_names
-      have heq₁ : x.eta_to_expr (eta_to_expr._proof_12 x hn_contains_1) = (x_1.eta_to_expr (eta_to_expr._proof_12 x_1 hn_contains_3)) := by grind
-      have ha := eta_to_expr_inj heq₁
-      grind
-  · split at h
-    any_goals (grind)
-    · expose_names
-      have heq₁ : (x.eta_to_expr (eta_to_expr._proof_42 x y hn_contains_1)) = (x_1.eta_to_expr (eta_to_expr._proof_42 x_1 y_1 hn_contains_3)) := by grind
-      have heq₂ : (y.eta_to_expr (eta_to_expr._proof_43 x y hn_contains_1)) = (y_1.eta_to_expr (eta_to_expr._proof_43 x_1 y_1 hn_contains_3)) := by grind
+      have heq₁ : x.eta_to_expr (eta_to_expr._proof_41 x y hn_contains_1) = x_1.eta_to_expr (eta_to_expr._proof_41 x_1 y_1 hn_contains_3) := by grind
+      have heq₂ : y.eta_to_expr (eta_to_expr._proof_42 x y hn_contains_1) = y_1.eta_to_expr (eta_to_expr._proof_42 x_1 y_1 hn_contains_3) := by grind
       have ha := eta_to_expr_inj heq₁
       have hb := eta_to_expr_inj heq₂
       grind

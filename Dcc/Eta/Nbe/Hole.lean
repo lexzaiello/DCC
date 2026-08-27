@@ -143,9 +143,9 @@ def EtaFn.decreasing {f τ : @NormExpr τ_c RedAff} (h : EtaFn f [τ]) : τ.size
   | .tm₁ h_dom => Domain.instRedRel.decreasing h_dom
 
 @[grind]
-def EtaFn.head_dom (e_f : EtaFn f doms) : ((τ : @NormExpr τ_c RedAff) × (Domain f τ)) :=
+def EtaFn.head_dom (e_f : EtaFn f [α]) : Domain f α :=
   match e_f with
-  | .tm₁ h_dom => ⟨_, h_dom⟩
+  | .tm₁ h_dom => h_dom
 
 @[grind]
 def view_eta_fn (f : @NormExpr τ_c RedAff) : Option ((doms : List (@NormExpr τ_c RedAff)) × EtaFn f doms) :=
@@ -214,18 +214,17 @@ inductive Hole : (α : @EtaExpr.Norm τ_c)
   → Type u
   | pure : (ViewBangCoup α → False)
     → Hole ⟨α, hn⟩ level ⟨(DCC? hole(level)), fun ⟨_, h⟩ => by cases h⟩
-  | coup : Domain ⟨β, fun ⟨_, h⟩ => hn ⟨_, .coup h⟩⟩ α
+  | coup : Domain ⟨β, hn.point' 0⟩ α
     → Hole α (level + 2) ⟨hole₁, hn_hole₁⟩
     → RedAffNorm (DCC? (β hole₁)) τ_snd
     → Hole τ_snd (level + 1) ⟨hole₂, hn_hole₂⟩
     → Hole ⟨(DCC? Coup(β)), hn⟩ level ⟨DCC? ⟦hole₁⟧(hole₁, hole₂), fun ⟨_, h⟩ =>
       match h with
-      | .sigt h => hn_hole₁ ⟨_, h⟩
-      | .sigl h => hn_hole₁ ⟨_, h⟩
-      | .sigr h => hn_hole₂ ⟨_, h⟩⟩
-  | bang : Hole ⟨α, hn_α⟩ (level + 1) ⟨hole, hn_hole⟩ → Hole ⟨(DCC? !(α)), fun ⟨_, h⟩ =>
-    match h with
-    | .bang h => hn_α ⟨_, h⟩⟩ level ⟨(DCC? &(hole)), fun ⟨_, h⟩ => nomatch h⟩
+      | .sig₀ h => hn_hole₁ ⟨_, h⟩
+      | .sig₁ h => hn_hole₁ ⟨_, h⟩
+      | .sig₂ h => hn_hole₂ ⟨_, h⟩⟩
+  | bang : Hole ⟨α, hn_α⟩ (level + 1) ⟨hole, hn_hole⟩ → Hole ⟨(DCC? !(α)), mk_inner_norm⟩ level
+    ⟨(DCC? &(hole)), mk_inner_norm⟩
 deriving DecidableEq
 
 def Hole.contains_hole (h : Hole (τ_c := τ_c) α lv hole_e) : hole_e.raw.contains_hole := by
@@ -294,13 +293,13 @@ def Hole.level_neq (h₁ : Hole α m x) (h₂ : Hole β n y) (hneq : m ≠ n) : 
       exact ih₁ (by assumption) (by grind) rfl
 
 -- HERE: need to use this to prove False in previous file
-def Hole.coup_points_neq (h : Hole ⟨(DCC? Coup(β)), hn⟩ level ⟨(DCC? ⟦β⟧(a, b)), hn_hole⟩) : a ≠ b := fun heq => by
+def Hole.coup_points_neq (h : Hole _a level ⟨(DCC? ⟦β⟧(a, b)), hn_hole⟩) : a ≠ b := fun heq => by
   cases h with
   | coup h_dom h_hole₁ hrt h_hole₂ =>
     cases heq
     exact h_hole₁.level_neq h_hole₂ (by grind) (by grind)
 
-def Hole.bang_coup_points_neq (h : Hole ⟨(DCC? !(Coup(β))), hn⟩ level ⟨(DCC? &(⟦β⟧(a, b))), hn_hole⟩) : a ≠ b := fun heq => by
+def Hole.bang_coup_points_neq (h : Hole _a level ⟨(DCC? &(⟦β⟧(a, b))), hn_hole⟩) : a ≠ b := fun heq => by
   cases h with
   | bang h =>
     have h := h.coup_points_neq
@@ -320,7 +319,7 @@ def mk_hole (α : @EtaExpr.Norm τ_c) (level : ℕ) : Option ((hole_e : @EtaExpr
     if h_coup_some : α.view_bang_coup?.isSome then
       match α, α.view_bang_coup?.get h_coup_some with
       | DCC? Coup(β₀), .coup =>
-        let β := (NormExpr.mk β₀ (fun ⟨_, h⟩ => hn_α ⟨_, .coup h⟩))
+        let β := (NormExpr.mk β₀ (fun ⟨_, h⟩ => hn_α ⟨_, .coup₀ h⟩))
         match β.domain? with
         | .some ⟨α, h_dom⟩ =>
           have h_dec₁ : α.size < β.size := Domain.instRedRel.decreasing h_dom
@@ -343,7 +342,7 @@ def mk_hole (α : @EtaExpr.Norm τ_c) (level : ℕ) : Option ((hole_e : @EtaExpr
           | .none => .none
         | .none => .none
       | DCC? !(α₀), .bang =>
-        let hn := (fun ⟨_, h⟩ => hn_α ⟨_, .bang h⟩)
+        let hn := (fun ⟨_, h⟩ => hn_α ⟨_, .bang₀ h⟩)
         let α  := NormExpr.mk α₀ hn
         have h_dec : (NormExpr.mk α₀ hn).size < (mk α₀.bang hn_α).size := by
           grind
@@ -378,8 +377,7 @@ def Hole.points_norm (h : Hole (τ_c := τ_c) α level ⟨tm_hole, hn_hole⟩) (
       change IsNorm RedAff hole₁.coup
       intro ⟨_, h⟩
       cases h with
-      | coup h =>
-        exact hn_hole ⟨_, .sigt h⟩
+      | coup₀ h => exact hn_hole ⟨_, .sig₀ h⟩
     | ⟨1, h_lt⟩ => assumption
     | ⟨2, h_lt⟩ => assumption
 
@@ -405,7 +403,7 @@ def Hole.unique {e e₁ e₂ : @EtaExpr.Norm τ_c} (h₁ : Hole e level e₁) (h
   have hb := h₂.complete
   grind
 
-def Hole.hole_same (e_h₁ : Hole α level hole_tm₁) (e_h₂ : Hole α level hole_tm₂) : hole_tm₁ = hole_tm₂ := by
+def Hole.hole_same {α : @EtaExpr.Norm τ_c} (e_h₁ : Hole α level hole_tm₁) (e_h₂ : Hole α level hole_tm₂) : hole_tm₁ = hole_tm₂ := by
   have ha := e_h₁.complete
   have hb := e_h₂.complete
   grind
@@ -889,7 +887,7 @@ def EtaTm.none_complete {f : @NormExpr τ_c RedAff} (h : ∀ {doms}, EtaTm f dom
   intro ⟨doms, e_f⟩
   exact (h e_f).elim
 
-def EtaFn.holes_same (e_f₁ : EtaFn f doms) (e_f₂ : EtaFn g doms)
+def EtaFn.holes_same {f : @NormExpr τ_c RedAff} (e_f₁ : EtaFn f doms) (e_f₂ : EtaFn g doms)
   (e_h₁ : e_f₁.Holes level holes₁) (e_h₂ : e_f₂.Holes level holes₂) : holes₁ = holes₂ := by
   cases e_h₁ with
   | tm₁ heqa h₁ =>

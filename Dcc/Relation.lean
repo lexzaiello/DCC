@@ -25,7 +25,7 @@ namespace GenericExpr
 @[simp]
 theorem id_pure_ext.{u} {α : Type u} (x : α) : (pure x : Id α) = x := rfl
 
-@[grind]
+@[inline, grind]
 def IsNorm.{u} {α : Type u} (r : α → α → Prop) (A : α) := ¬ ∃ B, r A B
 
 @[grind]

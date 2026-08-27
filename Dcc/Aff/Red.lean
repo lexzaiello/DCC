@@ -1204,6 +1204,15 @@ def point' {e : GenericExpr τ_c} (hn : IsNorm RedAff e) (n : ℕ)
 
 end IsNorm
 
+def RedAff.elim_norm (hr : RedAff A B) (hn : IsNorm RedAff A) : False := by
+  have h := hn.unique hr
+  have h_dec := hr.decreasing
+  grind
+
+def RedAff.size_absurd (hr : RedAff A B) (h_size_eq : size A ≤ size B := by grind) : False := by
+  have h_dec := hr.decreasing
+  grind
+
 end GenericExpr
 
 abbrev Expr.RedAff := GenericExpr.RedAff (τ := Unit)

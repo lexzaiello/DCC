@@ -1074,9 +1074,9 @@ inductive Canonicalize : (e_f : EtaTm (τ_c := τ_c) f doms)
         cases h with
         | congrFun h =>
           cases h with
-          | pil h =>
-            exact hn.congrFun.pil ⟨_, h⟩
-          | pir h => exact hn_f_β' ⟨_, h⟩
+          | pi₀ h =>
+            exact hn.congrFun ⟨_, .pi₀ h⟩
+          | pi₁ h => exact hn_f_β' ⟨_, h⟩
         | congrArg h => exact hn.congrArg ⟨_, h⟩) (f_α := f_α) (f_β := f_β') (x_α := x_α))
 
 def canonicalize {f : @GenericExpr τ_c} {hn : IsNorm RedAff f} (e_f : EtaTm (τ_c := τ_c) ⟨f, hn⟩ doms) : Option ((f' : @NormExpr τ_c RedAff)

@@ -197,7 +197,7 @@ def preservation (ht : Judge (τ_c := τ_c) A τ) (hr : RedAff A B) : Judge B τ
       expose_names
       have ha := a_ih_1 (by assumption)
       constructor <;> assumption
-  | fmap | map =>
+  | unmap | box | bang | fmap | map =>
     cases hr
     expose_names
     have ha := a_ih h_1
@@ -224,6 +224,44 @@ def preservation (ht : Judge (τ_c := τ_c) A τ) (hr : RedAff A B) : Judge B τ
       unfold Eval.type at *
       have hc := a_ih h_3
       constructor <;> assumption
+  | quot =>
+    cases hr
+    case quot₀ =>
+      expose_names
+      have ha := a_ih_1 h_2
+      have hb := a.push_head h_2
+      constructor <;> assumption
+    case quot₁ =>
+      expose_names
+      have ha := a_ih h_2
+      constructor <;> assumption
+  | pair =>
+    cases hr
+    case pair₀ =>
+      expose_names
+      have ha := a_1.push_head h_2
+      constructor <;> assumption
+    case pair₁ =>
+      expose_names
+      have ha := a_ih h_2
+      constructor <;> assumption
+    case pair₂ =>
+      expose_names
+      have ha := a_ih_1 h_2
+      constructor <;> assumption
+  | pi =>
+    cases hr
+    case pi₀ =>
+      expose_names
+      have ha := a_ih h_2
+      have hb := a_1.push_head h_2
+      constructor <;> assumption
+    case pi₁ =>
+      expose_names
+      have ha := a_ih_1 h_2
+      constructor <;> assumption
+  | tintro | bot | top | sort => cases hr
+  
 
 end Judge
 

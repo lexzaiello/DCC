@@ -150,16 +150,19 @@ def RedEta.is_norm (hr₁ : RedEta A B) : IsNorm RedAff B := by
     expose_names
     intro ⟨_, h⟩
     cases h with
-    | eql' h => exact hr₁_ih ⟨_, h⟩
-    | eqr' h => exact hr₂_ih ⟨_, h⟩
+    | eq₀ h => exact hr₁_ih ⟨_, h⟩
+    | eq₁ h => exact hr₂_ih ⟨_, h⟩
   | pi₁ =>
     expose_names
     intro ⟨_, h⟩
     cases h with
     | congrFun h =>
       cases h with
-      | pil h => exact hr₁_ih ⟨_, h⟩
-      | pir h => cases h
+      | pi₀ h => exact hr₁_ih ⟨_, h⟩
+      | pi₁ h =>
+        cases h with
+        | quot₀ h => exact hn_δ ⟨_, h⟩
+        | quot₁ h => exact hr₄_ih ⟨_, h⟩
     | congrArg h => exact hr₂_ih ⟨_, h⟩
   | pi₂ =>
     expose_names
@@ -167,15 +170,15 @@ def RedEta.is_norm (hr₁ : RedEta A B) : IsNorm RedAff B := by
     cases h with
     | congrFun h =>
       cases h with
-      | pil h => exact hr₁_ih ⟨_, h⟩
-      | pir h => exact hr₄_ih ⟨_, h⟩
+      | pi₀ h => exact hr₁_ih ⟨_, h⟩
+      | pi₁ h => exact hr₄_ih ⟨_, h⟩
     | congrArg h => exact hr₂_ih ⟨_, h⟩
   | pi₄ | pi₃ =>
     expose_names
     intro ⟨_, h⟩
     cases h with
-    | pil h => exact hr₁_ih ⟨_, h⟩
-    | pir h => exact hr₂_ih ⟨_, h⟩
+    | pi₀ h => exact hr₁_ih ⟨_, h⟩
+    | pi₁ h => exact hr₂_ih ⟨_, h⟩
   | bang | coup =>
     expose_names
     intro ⟨_, h⟩

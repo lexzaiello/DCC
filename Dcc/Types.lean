@@ -78,10 +78,42 @@ def read_arrow₁.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α : GenericExpr τ
     else .none
   | _ => .none
 
+@[dcc_judge, inline]
+def read_arrow₂.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α : GenericExpr τ_c) (m : Level) : Option ((β : GenericExpr τ_c) × (Arrow α β m τ)) :=
+  match heq : τ with
+  | DCC? (Π(Id(Sort _m), Λ(_a, _b, `(_c, β))) _d) =>
+    if heq₁ : τ = (DCC? (α : Sort m) → β) then
+      .some ⟨β, by rw [← heq, heq₁]; exact .dep⟩
+    else .none
+  | DCC? (Π(Id(Sort _m), !Λ(_a, _b, `(_c, β))) _d) =>
+    if heq₁ : τ = (DCC? (Π(Id(Sort m), !Λ(Sort m, Id(Sort m), `(!(Coup(Id(Sort m))), β))) α)) then
+      .some ⟨β, by rw [← heq, heq₁]; exact .dep'⟩
+    else .none
+  | (DCC? (Π(Id(Sort _m), `(_a, `(_b, β))) _d)) =>
+    if heq₁ : τ = (DCC? (Π(Id(Sort m), `(Sort m, `(α, β))) α)) then
+      .some ⟨β, by rw [← heq, heq₁]; exact .simple⟩
+    else .none
+  | (DCC? (Π(Id(Sort _m), `(__m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘∘ _g)) _α)) =>
+    if heq₁ : τ = (DCC? (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘∘ _g)) α)) then
+      .some ⟨β, by rw [← heq, heq₁]; exact .eval⟩
+    else .none
+  | (DCC? (Π(Id(Sort _m), `(__m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) _α)) =>
+    if heq₁ : τ = (DCC? (Π(Id(Sort m), `(Sort m, Eval(_a, _b, `(τ_x, `(τ_y, β))) ∘' _g)) α)) then
+      .some ⟨β, by rw [← heq, heq₁]; exact .eval'⟩
+    else .none
+  | (DCC? (Π(Id(Sort _m), `(__m, Eval(_a, _b, Λ(τ_x, τ_y, `(f_τ, β))) ∘∘ _g)) _α)) =>
+    if heq₁ : τ = (DCC? (Π(Id(Sort m), `(Sort m, Eval(_a, _b, Λ(τ_x, τ_y, `(f_τ, β))) ∘∘ _g)) α)) then
+      .some ⟨β, by rw [← heq, heq₁]; exact .curr⟩
+    else .none
+  | _ => .none
+
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
 theorem Arrow.read₁_complete.{u} {τ_c : Type u} [DecidableEq τ_c] {α β τ : GenericExpr τ_c} (h : Arrow α β m τ) : τ.read_arrow₁ α = .some ⟨β, m, h⟩ := by
   cases h <;> simp [read_arrow₁]
 
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
+theorem Arrow.read₂_complete.{u} {τ_c : Type u} [DecidableEq τ_c] {α β τ : GenericExpr τ_c} {m : Level} (h : Arrow α β m τ) : τ.read_arrow₂ α m = .some ⟨β, h⟩ := by
+  cases h <;> simp [read_arrow₂]
 
 @[dcc_judge, inline]
 def view_arrow.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α β : GenericExpr (τ := τ_c)) (m : Level) : Option (Arrow α β m τ) :=

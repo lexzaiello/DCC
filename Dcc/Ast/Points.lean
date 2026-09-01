@@ -11,6 +11,7 @@ namespace GenericExpr
 @[inline, grind, dcc_size]
 def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
+  | DCC? Dom(_x) => 0
   | DCC[.] ∗ => 0
   | DCC[.] ⊤ => 0
   | DCC[.] ⊥ => 0
@@ -44,6 +45,7 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
 @[grind, dcc_size]
 def branch_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
+  | DCC? Dom(_x) => 0
   | DCC[.] ∗ => 0
   | DCC[.] ⊤ => 0
   | DCC[.] ⊥ => 0
@@ -77,6 +79,7 @@ def branch_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
 @[grind]
 def branches (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (branch_arity e) :=
   match e with
+  | DCC? Dom(x) => ⟨#[], by grind⟩
   | DCC[.] ∗ => ⟨#[], by grind⟩
   | DCC[.] ⊤ => ⟨#[], by grind⟩
   | DCC[.] ⊥ => ⟨#[], by grind⟩
@@ -114,6 +117,7 @@ determining a resulting term.
 @[grind, dcc_size]
 def n_indices (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
+  | DCC? Dom(_x) => 0
   | DCC[.] ∗ => 0
   | DCC[.] ⊤ => 0
   | DCC[.] ⊥ => 0
@@ -147,6 +151,7 @@ def n_indices (e : GenericExpr (τ := τ_c)) : ℕ :=
 @[grind, dcc_size]
 def indices (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (n_indices e) :=
   match e with
+  | DCC[.] Dom(_x) => ⟨#[], by grind⟩
   | DCC[.] ∗ => ⟨#[], by grind⟩
   | DCC[.] ⊤ => ⟨#[], by grind⟩
   | DCC[.] ⊥ => ⟨#[], by grind⟩
@@ -180,6 +185,7 @@ def indices (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (
 @[aesop norm (rule_sets := [DccForceReduce]), grind, dcc_rel]
 def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (point_arity e) :=
   match e with
+  | DCC[.] Dom(_x) => ⟨#[], by grind⟩
   | DCC[.] ∗ => ⟨#[], by grind⟩
   | DCC[.] ⊤ => ⟨#[], by grind⟩
   | DCC[.] ⊥ => ⟨#[], by grind⟩
@@ -220,6 +226,7 @@ def uncurry (pre : GenericExpr τ_c)
 def map_points (e : GenericExpr (τ := τ_c))
   (fn : GenericExpr τ_c → GenericExpr τ_c) : GenericExpr τ_c :=
   uncurry e (match e with
+  | DCC? Dom(x) => Function.OfArity.const _ (DCC? Dom(x)) _
   | DCC? ∗ => .tintro
   | DCC? ⊤ => .top
   | DCC? ⊥ => .bot
@@ -254,6 +261,7 @@ def map_points (e : GenericExpr (τ := τ_c))
 def set_points (e : GenericExpr (τ := τ_c))
   (points' : Vector (@GenericExpr τ_c) (point_arity e)) : GenericExpr τ_c :=
   match e with
+  | DCC? Dom(x) => DCC? Dom(x)
   | DCC? ∗ => .tintro
   | DCC? ⊤ => .top
   | DCC? ⊥ => .bot
@@ -365,6 +373,7 @@ def uncurry' (pre : GenericExpr τ_c)
 def map_branches (e : GenericExpr (τ := τ_c))
   (fn : (GenericExpr τ_c) → GenericExpr τ_c) : GenericExpr τ_c :=
   uncurry' e (match e with
+  | DCC? Dom(x) => Function.OfArity.const _ (DCC? Dom(x)) _
   | DCC? ∗ => .tintro
   | DCC? ⊤ => .top
   | DCC? ⊥ => .bot
@@ -399,6 +408,7 @@ def map_branches (e : GenericExpr (τ := τ_c))
 def map_indices (e : GenericExpr (τ := τ_c))
   (fn : GenericExpr τ_c → GenericExpr τ_c) : GenericExpr τ_c :=
   uncurry e (match e with
+  | DCC? Dom(x) => Function.OfArity.const _ (DCC? Dom(x)) _
   | DCC? ∗ => .tintro
   | DCC? ⊤ => .top
   | DCC? ⊥ => .bot

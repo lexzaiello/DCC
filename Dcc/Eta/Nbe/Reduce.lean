@@ -211,6 +211,38 @@ def RedEta.eq' (hr : RedEta (τ_c := τ_c) A B) : hr = (hr.eq ▸ (red_eta A).sn
   have h := hr.complete
   grind
 
+@[grind, aesop unsafe 50% destruct (rule_sets := [DccForceReduce]), dcc_force_reduce]
+def IsNormEta (A : GenericExpr τ_c) := ∀ ⦃B : GenericExpr τ_c⦄ (_hr : RedEta A B), A = B
+
+def RedEta.preservation (hrη : RedEta A C) (hrβ : RedAffNorm A B) (hd : Domain B τ) : Domain ⟨C, hrη.is_norm⟩ τ := by
+  cases hrη with
+  | pi₁ =>
+    expose_names
+    have ha := hr₁.preservation (by assumption) (by assumption)
+    
+    sorry
+
+def RedEta.is_norm_eta (hr : RedEta (τ_c := τ_c) A B) : IsNormEta B := by
+  cases hr with
+  | pi₁ =>
+    expose_names
+    have ha := hr₁.is_norm_eta
+    have hb := hr₂.is_norm_eta
+    have hc := hr₄.is_norm_eta
+    intro C hr
+    cases hr with
+    | pi₁ =>
+      have hc := hr₁.preservation (by assumption) (by assumption)
+      cases ha (by assumption)
+      cases hb (by assumption)
+      expose_names
+      cases hrt₁_1.elim_norm hr₁_1.is_norm
+      cases h_dom_1.unique hc
+      cases (hr₃_1.push_head .quot).elim_norm hr₄.is_norm
+      have hc := hr₄.preservation (by assumption) (by assumption)
+      sorry
+    
+
 /-
 Note: rest of funext needs Judge to work
 -/

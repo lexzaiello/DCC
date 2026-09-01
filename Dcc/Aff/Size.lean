@@ -17,6 +17,7 @@ namespace GenericExpr
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   match e with
+  | DCC[.] Dom(x) => x.size * 5 + 1
   | DCC[.] ∗ => 1
   | DCC[.] ⊤ => 2
   | DCC[.] ⊥ => 2
@@ -50,6 +51,7 @@ def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def head_arity.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   match e with
+  | DCC[.] Dom(_x) => 0
   | DCC[.] ∗
   | DCC[.] ⊤
   | DCC[.] ⊥

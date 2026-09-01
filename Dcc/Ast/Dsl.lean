@@ -4,6 +4,7 @@ abbrev Expr := GenericExpr Unit
 
 declare_syntax_cat gen_dcc
 
+syntax "Dom(" gen_dcc ")"                                     : gen_dcc
 syntax "!<" gen_dcc ">"                                       : gen_dcc
 syntax "$<" gen_dcc ">"                                       : gen_dcc
 syntax "*<" gen_dcc ">"                                       : gen_dcc
@@ -107,6 +108,8 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "sndc") #[← `(DCC[$ty:gen_dcc_loc] $β)]
   | `(DCC[$ty:gen_dcc_loc] Id($α:gen_dcc))                           => do
     return mkApp (← field ty "id") #[← `(DCC[$ty:gen_dcc_loc] $α)]
+  | `(DCC[$ty:gen_dcc_loc] Dom($α:gen_dcc))                           => do
+    return mkApp (← field ty "dom") #[← `(DCC[$ty:gen_dcc_loc] $α)]
   | `(DCC[$ty:gen_dcc_loc] $f:gen_dcc ∘' $g:gen_dcc)                 => do
     return mkApp (← field ty "comp'") #[← `(DCC[$ty:gen_dcc_loc] $f:gen_dcc), ← `(DCC[$ty:gen_dcc_loc] $g:gen_dcc)]
   | `(DCC[$ty:gen_dcc_loc] $f:gen_dcc ∘ $g:gen_dcc)                  => do

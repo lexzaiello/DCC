@@ -4,6 +4,11 @@ universe u
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]
 
+syntax "dcc_constr" : tactic
+
+macro_rules
+  | `(tactic| dcc_constr) => `(tactic| dcc_aesop' [force_step])
+
 namespace GenericExpr
 
 namespace Judge
@@ -166,36 +171,38 @@ def preservation (ht : Judge (τ_c := τ_c) A τ) (hr : RedAff A B) : Judge B τ
     case curr₀ =>
       expose_names
       have ha := a_ih (by assumption)
-      have hb := a_3.push_head h_2
+      have hb := a_4.push_head h_3
       constructor <;> assumption
     case curr₁ =>
       expose_names
-      have ha := a.push_head (.coup₀ (by assumption))
+      have ha := a_1.push_head (.coup₀ (by assumption))
       unfold curr.type at a_4
-      have hb := a_4.push_head (.congrFun (.pi₁ (.quot₁ (.pi₀ h_2))))
-        |>.push_head (.congrFun (.pi₁ (.quot₁ (.pi₁ (.curr₁ h_2)))))
+      have hb := a_5.push_head (.congrFun (.pi₁ (.quot₁ (.pi₀ h_3))))
+        |>.push_head (.congrFun (.pi₁ (.quot₁ (.pi₁ (.curr₁ h_3)))))
+      have hc := a_ih_1 h_3
       constructor <;> assumption
     case curr₂ =>
       expose_names
-      have ha := a_ih_1 (by assumption)
+      have ha := a_ih_2 (by assumption)
       constructor <;> assumption
   | curr' =>
     cases hr
     case curr'₀ =>
       expose_names
-      have ha := a_ih h_2
-      have hb := a_3.push_head h_2
+      have ha := a_ih h_3
+      have hb := a_4.push_head h_3
       constructor <;> assumption
     case curr'₁ =>
       expose_names
-      have ha := a.push_head (.bang₀ (.coup₀ (by assumption)))
+      have ha := a_1.push_head (.bang₀ (.coup₀ (by assumption)))
       unfold curr.type at a_4
-      have hb := a_4.push_head (.congrFun (.pi₁ (.quot₁ (.pi₀ (.map₀ h_2)))))
-        |>.push_head (.congrFun (.pi₁ (.quot₁ (.pi₁ (.curr'₁ h_2)))))
+      have hb := a_5.push_head (.congrFun (.pi₁ (.quot₁ (.pi₀ (.map₀ h_3)))))
+        |>.push_head (.congrFun (.pi₁ (.quot₁ (.pi₁ (.curr'₁ h_3)))))
+      have hc := a_ih_1 h_3
       constructor <;> assumption
     case curr'₂ =>
       expose_names
-      have ha := a_ih_1 (by assumption)
+      have ha := a_ih_2 (by assumption)
       constructor <;> assumption
   | unmap | box | bang | fmap | map =>
     cases hr
@@ -261,7 +268,20 @@ def preservation (ht : Judge (τ_c := τ_c) A τ) (hr : RedAff A B) : Judge B τ
       have ha := a_ih_1 h_2
       constructor <;> assumption
   | tintro | bot | top | sort => cases hr
-  
+  | app =>
+    cases hr with
+    | congrFun hr =>
+      expose_names
+      have ha := a_ih hr
+      constructor <;> assumption
+    | congrArg hr =>
+      expose_names
+      have ha := a_ih_1 hr
+      have hb := a_1.push_head (.congrArg hr)
+      constructor <;> assumption
+    | curr =>
+      expose_names
+      apply GenericExpr.Judge.preservation.extracted_1 <;> assumption
 
 end Judge
 

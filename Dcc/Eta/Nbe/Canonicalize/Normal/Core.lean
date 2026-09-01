@@ -8,7 +8,7 @@ variable [DecidableEq τ_c]
 namespace GenericExpr
 
 def IsNorm.sigt (hn : IsNorm RedAff (DCC? ⟦B⟧(x, y))) : IsNorm RedAff B := fun ⟨_, h⟩ =>
-  hn ⟨_, .sigt h⟩
+  hn ⟨_, .sig₀ h⟩
 
 end GenericExpr
 

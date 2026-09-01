@@ -104,6 +104,36 @@ App congruence:
 -/
   | congrFun : RedAff f f' → RedAff (DCC[τ] (f x)) (DCC[τ] (f' x))
   | congrArg : RedAff x x' → RedAff (DCC[τ] (f x)) (DCC[τ] (f x'))
+/-
+Base combinator function domains
+-/
+  | eqlτ₀    : RedAff (DCC? Dom(Eql(B))) (DCC? !(Dom(B)))
+  | reflτ₀   : RedAff (DCC? Dom(refl(B))) (DCC? !(Dom(B)))
+  | mapτ₀    : RedAff (DCC? Dom(!<x>)) (DCC? !(Dom(x)))
+  | fmapτ₀   : RedAff (DCC? Dom($<x>)) (DCC? !(Dom(x)))
+  | unmapτ₀  : RedAff (DCC? Dom(*<x>)) (DCC? !(Dom(x)))
+  | pairτ₀   : RedAff (DCC? Dom(⟦B⟧⟨x, y⟩)) (DCC? !(Dom(x)))
+  | evalcτ₀  : RedAff (DCC? Dom(Eval(A, B, x))) (DCC? Coup(B))
+  | quotτ₀   : RedAff (DCC? Dom(`(B, x))) B
+  | idτ₀     : RedAff (DCC? Dom(Id(A))) A
+  | fstcτ₀   : RedAff (DCC? Dom(Fst(B))) (DCC? Coup(B))
+  | sndcτ₀   : RedAff (DCC? Dom(Snd(B))) (DCC? Coup(B))
+  | comp'τ₀  : RedAff (DCC? Dom(x ∘' y)) (DCC? Dom(y))
+  | compτ₀   : RedAff (DCC? Dom(x ∘ y)) (DCC? Dom(y))
+  | comp₂τ₀  : RedAff (DCC? Dom(x ∘∘ y)) (DCC? Dom(y))
+  | currτ₀   : RedAff (DCC? Dom(Λ(A, B, x))) A
+  | curr'τ₀  : RedAff (DCC? Dom(!Λ(A, B, x))) (DCC? !(A))
+  | sigmaτ₀  : RedAff (DCC? Dom(Σ(B, C))) (DCC? Dom(C))
+  | piτ₀     : RedAff (DCC? Dom(Π(B, C))) (DCC? Dom(C))
+  | eqlτ₁    : RedAff (DCC? Dom((Eql(B) &(x)))) (DCC? !((B x)))
+  | reflτ₁   : RedAff (DCC? Dom((refl(B) &(x)))) (DCC? !((B x)))
+  | currτ₁   : RedAff (DCC? Dom((Λ(A, B, x) y))) (DCC? (B y))
+  | curr'τ₁  : RedAff (DCC? Dom((!Λ(A, B, x) &(y)))) (DCC? !((B y)))
+/-
+Dom congruence
+-/
+  | dom₀    : RedAff x x' → RedAff (DCC? Dom(x)) (DCC? Dom(x'))
+
 
 @[dcc_force_reduce, dcc_force_aff]
 def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
@@ -245,6 +275,28 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
     | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC[?] (f' x)), ⟨.congrFun h₁⟩⟩
     | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC[?] (f x')), ⟨.congrArg h₁⟩⟩
     | _, _ => .none
+  | DCC? Dom(Eql(_B)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(refl(_B)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(!<_x>) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom($<_x>) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(*<_x>) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(⟦_B⟧⟨_x, _y⟩) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(Eval(_A, _B, _x)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(`(_B, _x)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(Id(_A)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(Fst(_B)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(Snd(_B)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(_x ∘' _y) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(_x ∘ _y) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(_x ∘∘ _y) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(Λ(_A, _B, _x)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(!Λ(_A, _B, _x)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(Σ(B, C)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(Π(B, C)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom((Eql(_B) &(_x))) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom((refl(_B) &(_x))) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom((Λ(_A, _B, _x) _y)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom((!Λ(_A, _B, _x) &(_y))) => .some ⟨_, ⟨by constructor⟩⟩
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_aff]
@@ -270,6 +322,8 @@ theorem congrFun' (hr : Relation.ReflTransGen RedAff f f') : Relation.ReflTransG
     exact .trans (.single (.congrFun h₁)) (congrFun' h₂)
 termination_by size f
 
+theorem dom' (hr : Relation.ReflTransGen RedAff x x') : 
+
 theorem congrArg' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f x')) := by
   match hr.cases_head with
   | .inl h =>
@@ -292,7 +346,7 @@ theorem RedAff.elim_point₁ {A B : GenericExpr τ_c} (hr : RedAff A B) (h_arr :
       cases hr
       grind))
 
-theorem RedAff.mk_point {x y e : GenericExpr τ_c} {n : Fin (point_arity e)} (hr : RedAff x y := by assumption) (heq : (points e)[n] = x := by dcc_simp; rfl) : RedAff e (e.set_points ((points e).set n y)) := by
+theorem RedAff.mk_point {x y e : GenericExpr τ_c} (n : Fin (point_arity e) := by exact ⟨0, by grind⟩) (hr : RedAff x y := by assumption) (heq : (points e)[n] = x := by first | grind | (dcc_simp; rfl)) : RedAff e (e.set_points ((points e).set n y)) := by
   unfold points at heq
   split at heq <;> (
     first
@@ -416,7 +470,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
   unfold points
   split
   any_goals (simp)
-  case h_4 =>
+  case h_5 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -425,19 +479,19 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
   any_goals (
     intro ⟨_, h⟩
     exact hrn ⟨_, by constructor; assumption⟩)
-  case h_8 =>
-    constructor
-    · intro ⟨_, h⟩
-      exact hrn ⟨_, by constructor; assumption⟩
-    · intro ⟨_, h⟩
-      exact hrn ⟨_, .sigma₁ (by assumption)⟩
   case h_9 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
     · intro ⟨_, h⟩
-      exact hrn ⟨_, .quot₁ (by assumption)⟩
+      exact hrn ⟨_, .sigma₁ (by assumption)⟩
   case h_10 =>
+    constructor
+    · intro ⟨_, h⟩
+      exact hrn ⟨_, by constructor; assumption⟩
+    · intro ⟨_, h⟩
+      exact hrn ⟨_, .quot₁ (by assumption)⟩
+  case h_11 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -446,31 +500,31 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .sig₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .sig₂ (by assumption)⟩
-  case h_15 =>
-    constructor
-    · intro ⟨_, h⟩
-      exact hrn ⟨_, by constructor; assumption⟩
-    · intro ⟨_, h⟩
-      exact hrn ⟨_, .pi₁ (by assumption)⟩
   case h_16 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
     · intro ⟨_, h⟩
-      exact hrn ⟨_, .comp'₁ (by assumption)⟩
+      exact hrn ⟨_, .pi₁ (by assumption)⟩
   case h_17 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
     · intro ⟨_, h⟩
-      exact hrn ⟨_, .comp₁ (by assumption)⟩
+      exact hrn ⟨_, .comp'₁ (by assumption)⟩
   case h_18 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
     · intro ⟨_, h⟩
-      exact hrn ⟨_, .comp₂₁ (by assumption)⟩
+      exact hrn ⟨_, .comp₁ (by assumption)⟩
   case h_19 =>
+    constructor
+    · intro ⟨_, h⟩
+      exact hrn ⟨_, by constructor; assumption⟩
+    · intro ⟨_, h⟩
+      exact hrn ⟨_, .comp₂₁ (by assumption)⟩
+  case h_20 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -479,7 +533,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .pair₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .pair₂ (by assumption)⟩
-  case h_20 =>
+  case h_21 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -488,7 +542,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .curr₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .curr₂ (by assumption)⟩
-  case h_21 =>
+  case h_22 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -497,7 +551,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .curr'₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .curr'₂ (by assumption)⟩
-  case h_22 =>
+  case h_23 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -523,8 +577,179 @@ open Congruent' in
 open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])]
 theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (τ := α)) A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
   induction h₁ generalizing C
+  /-
+    Domain reductions
+  -/
+  case eqlτ₀ | reflτ₀ | mapτ₀ | fmapτ₀ | unmapτ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr
+      case _ hr =>
+        exact ⟨_, .single hr.dom₀.mk_point, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case pairτ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr
+      any_goals (
+        focus
+        try (exact ⟨_, .refl, .single (by constructor)⟩)
+        done)
+      case _ hr => exact ⟨_, .single hr.dom₀.mk_point, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case evalcτ₀  | curr'τ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr
+      any_goals (
+        focus
+        try (exact ⟨_, .refl, .single (by constructor)⟩)
+        done)
+      case _ hr =>
+        exact ⟨_, .single hr.mk_point, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case currτ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr
+      any_goals (
+        focus
+        try (exact ⟨_, .refl, .single (by constructor)⟩)
+        done)
+      case _ hr =>
+        exact ⟨_, .single (by assumption), .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case sndcτ₀ | fstcτ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr
+      case _ hr => exact ⟨_, .single hr.coup₀, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case idτ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr
+      case _ hr => exact ⟨_, .single hr, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case quotτ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr
+      · exact ⟨_, .single (by assumption), .single (by constructor)⟩
+      · exact ⟨_, .refl, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case comp'τ₀ | compτ₀ | comp₂τ₀ | sigmaτ₀ | piτ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr
+      · exact ⟨_, .refl, .single (by constructor)⟩
+      case _ hr => exact ⟨_, .single hr.dom₀, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case eqlτ₁ | reflτ₁ =>
+    cases h₂ with
+    | dom₀ hr =>
+      match hr with
+      | .congrArg (.box₀ h) => exact ⟨_, .single h.congrArg.mk_point, .single (by constructor)⟩
+      | .congrFun h =>
+        cases h
+        case _ h => exact ⟨_, .single h.congrFun.mk_point, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case currτ₁ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr with
+      | congrFun h =>
+        cases h with
+        | curr₂ h | curr₀ h => exact ⟨_, .refl, .single (by constructor)⟩
+        | curr₁ h => exact ⟨_, .single h.congrFun, .single (by constructor)⟩
+      | congrArg h => exact ⟨_, .single h.congrArg, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case curr'τ₁ =>
+    cases h₂ with
+    | dom₀ hr =>
+      match hr with
+      | .congrFun h =>
+        cases h with
+        | curr'₂ h | curr'₀ h => exact ⟨_, .refl, .single (by constructor)⟩
+        | curr'₁ h => exact ⟨_, .single h.congrFun.bang₀, .single (by constructor)⟩
+      | .congrArg (.box₀ h) => exact ⟨_, .single h.congrArg.bang₀, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case dom₀ ih =>
+    cases h₂
+    case eqlτ₀ | reflτ₀ | mapτ₀ | fmapτ₀ | unmapτ₀ =>
+      rename_i hr
+      cases hr
+      case _ hr =>
+        exact ⟨_, .single (by constructor), .single (by constructor; constructor; assumption)⟩
+    case pairτ₀ =>
+      rename_i hr
+      cases hr
+      any_goals (try (exact ⟨_, .single (by constructor), .refl⟩))
+      case _ hr =>
+        exact ⟨_, .single (by constructor), .single hr.dom₀.bang₀⟩
+    case evalcτ₀ =>
+      rename_i hr
+      cases hr
+      any_goals (try (exact ⟨_, .single (by constructor), .refl⟩))
+      case _ hr =>
+        exact ⟨_, .single (by constructor), .single (.coup₀ hr)⟩
+    case idτ₀ hr | quotτ₀ hr =>
+      cases hr
+      any_goals (try (exact ⟨_, .single (by constructor), .refl⟩))
+      case _ hr => exact ⟨_, .single (by constructor), .single hr⟩
+    case fstcτ₀ hr | sndcτ₀ hr =>
+      cases hr
+      case _ hr => exact ⟨_, .single (by constructor), .single hr.coup₀⟩
+    case comp'τ₀ hr | comp₂τ₀ hr | compτ₀ hr | sigmaτ₀ hr | piτ₀ hr =>
+      cases hr
+      · exact ⟨_, .single (by constructor), .refl⟩
+      case _ hr => exact ⟨_, .single (by constructor), .single hr.dom₀⟩
+    case currτ₀ =>
+      rename_i hr
+      cases hr
+      any_goals (try (exact ⟨_, .single (by constructor), .refl⟩))
+      case _ hr => exact ⟨_, .single (by constructor), .single hr⟩
+    case curr'τ₀ =>
+      rename_i hr
+      cases hr
+      any_goals (try (exact ⟨_, .single (by constructor), .refl⟩))
+      case _ hr => exact ⟨_, .single (by constructor), .single hr.bang₀⟩
+    case eqlτ₁ hr | reflτ₁ hr =>
+      cases hr with
+      | congrFun h =>
+        cases h
+        case _ hr => exact ⟨_, .single (by constructor), .single hr.congrFun.bang₀⟩
+      | congrArg h =>
+        cases h with
+        | box₀ hr =>
+          exact ⟨_, .single (by constructor), .single hr.congrArg.bang₀⟩
+    case currτ₁ hr =>
+      cases hr with
+      | congrFun hr =>
+        cases hr with
+        | curr₀ | curr₂ =>
+          exact ⟨_, .single (by constructor), .refl⟩
+        | curr₁ hr =>
+          exact ⟨_, .single (by constructor), .single hr.congrFun⟩
+      | congrArg hr =>
+        exact ⟨_, .single (by constructor), .single hr.congrArg⟩
+    case curr'τ₁ hr =>
+      cases hr with
+      | congrFun hr =>
+        cases hr with
+        | curr'₀ | curr'₂ =>
+          exact ⟨_, .single (by constructor), .refl⟩
+        | curr'₁ hr =>
+          exact ⟨_, .single (by constructor), .single hr.congrFun.bang₀⟩
+      | congrArg hr =>
+        cases hr with
+        | box₀ hr => exact ⟨_, .single (by constructor), .single hr.congrArg.bang₀⟩
+    case dom₀ hr =>
+      have ⟨_, h₁, h₂⟩ := ih hr
+      exact ⟨_, 
+      sorry
   -- Main reductions:
-  case eql =>
+  /-case eql =>
     cases h₂ with
     | congrFun hr =>
       cases hr with
@@ -827,8 +1052,8 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     case congrFun hr₂ =>
       have ⟨_, ha, hb⟩ := ih hr₂
       exact ⟨_, congrFun' ha, congrFun' hb⟩
-    case congrArg hr => exact ⟨_, .single (.congrArg (by assumption)), .single (.congrFun (by assumption))⟩
-
+    case congrArg hr => exact ⟨_, .single (.congrArg (by assumption)), .single (.congrFun (by assumption))⟩-/
+/-
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
 instance RedAff.instConf.{u} {τ : Type u} : Confluent (RedAff (τ := τ)) := ⟨RedAff.conf⟩
 
@@ -1216,3 +1441,4 @@ def RedAff.size_absurd (hr : RedAff A B) (h_size_eq : size A ≤ size B := by gr
 end GenericExpr
 
 abbrev Expr.RedAff := GenericExpr.RedAff (τ := Unit)
+-/

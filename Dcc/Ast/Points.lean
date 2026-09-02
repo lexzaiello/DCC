@@ -41,6 +41,7 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] $<_x>   => 1
   | DCC[.] (_f _x)
   | .const _n => 0
+  | .hole _n => 0
 
 @[grind, dcc_size]
 def branch_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
@@ -75,6 +76,7 @@ def branch_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] $<_x>   => 1
   | DCC[.] (_f _x) => 2
   | .const _n => 0
+  | .hole _n => 0
 
 @[grind]
 def branches (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (branch_arity e) :=
@@ -109,6 +111,7 @@ def branches (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) 
   | DCC[.] $<x>   => ⟨#[x], by grind⟩
   | DCC[.] (f x) => ⟨#[f, x], by grind⟩
   | .const _n => ⟨#[], by grind⟩
+  | .hole _n => ⟨#[], by grind⟩
 
 /-
 How many points there are that index the environment,
@@ -147,6 +150,7 @@ def n_indices (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] $<_x>   => 1
   | DCC[.] (_f _x)
   | .const _n => 0
+  | .hole _n => 0
 
 @[grind, dcc_size]
 def indices (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (n_indices e) :=
@@ -181,6 +185,7 @@ def indices (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (
   | DCC[.] $<x>   => ⟨#[x], by grind⟩
   | DCC[.] (_f _x)
   | .const _n => ⟨#[], by grind⟩
+  | .hole _n => ⟨#[], by grind⟩
 
 @[aesop norm (rule_sets := [DccForceReduce]), grind, dcc_rel]
 def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (point_arity e) :=
@@ -215,6 +220,7 @@ def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (p
   | DCC[.] $<x>   => ⟨#[x], by grind⟩
   | DCC[.] (_f _x) => ⟨#[], by grind⟩
   | .const _n => ⟨#[], by grind⟩
+  | .hole _n => ⟨#[], by grind⟩
 
 @[grind, dcc_reduce]
 def uncurry (pre : GenericExpr τ_c)
@@ -255,7 +261,8 @@ def map_points (e : GenericExpr (τ := τ_c))
   | DCC? !<_x>   => .map
   | DCC? $<_x>   => .fmap
   | DCC? (f x) => .app f x
-  | .const n => Function.OfArity.const _ (.const n) _) fn
+  | .const n => Function.OfArity.const _ (.const n) _
+  | .hole n => Function.OfArity.const _ (.hole n) _) fn
 
 @[aesop norm (rule_sets := [DccForceReduce]), grind, dcc_reduce]
 def set_points (e : GenericExpr (τ := τ_c))
@@ -337,6 +344,7 @@ def set_points (e : GenericExpr (τ := τ_c))
     .fmap points'[0]
   | DCC? (f x) => .app f x
   | .const n => .const n
+  | .hole n => .hole n
 
 -- congr_point_arr (h : r e (set_points e ((points e).set p p'))) : point_arity e = (set_points e ((points e).set p p'))
 
@@ -402,7 +410,8 @@ def map_branches (e : GenericExpr (τ := τ_c))
   | DCC? !<_x>   => .map
   | DCC? $<_x>   => .fmap
   | DCC? (_f _x) => GenericExpr.app
-  | .const n => Function.OfArity.const _ (.const n) _) fn
+  | .const n => Function.OfArity.const _ (.const n) _
+  | .hole n => Function.OfArity.const _ (.hole n) _) fn
 
 @[grind, dcc_reduce]
 def map_indices (e : GenericExpr (τ := τ_c))
@@ -437,7 +446,8 @@ def map_indices (e : GenericExpr (τ := τ_c))
   | DCC? !<_x>   => .map
   | DCC? $<_x>   => .fmap
   | DCC? (f x) => .app f x
-  | .const n => Function.OfArity.const _ (.const n) _) fn
+  | .const n => Function.OfArity.const _ (.const n) _
+  | .hole n => Function.OfArity.const _ (.hole n) _) fn
 
 @[grind =]
 theorem map_points_id (e : GenericExpr τ) : map_points e _root_.id = e := by
@@ -510,5 +520,110 @@ theorem map_branches_eq {e e' : GenericExpr τ} (heq : map_branches e fn = e') :
 @[grind ., grind =>, grind! .]
 theorem map_indices_eq {e e' : GenericExpr τ} (heq : map_indices e fn = e') : indices e' ≍ (indices e).map fn := by
   cases e <;> grind
+
+@[grind]
+def max_hole (e : GenericExpr τ_c) : ℕ :=
+  match e with
+  | DCC? Dom(x) => x.max_hole
+  | DCC? ∗ => 0
+  | DCC? ⊤ => 0
+  | DCC? ⊥ => 0
+  | DCC? x = y => max x.max_hole y.max_hole
+  | DCC? Eql(B)  => B.max_hole
+  | DCC? refl(B) => B.max_hole
+  | DCC? Sort _m => 0
+  | DCC? Σ(B, C) => max B.max_hole C.max_hole
+  | DCC? `(B, x) => max B.max_hole x.max_hole
+  | DCC? ⟦B⟧(x, y) => max B.max_hole (max x.max_hole y.max_hole)
+  | DCC? Coup(B) => B.max_hole
+  | DCC? Id(A)      => A.max_hole
+  | DCC? Fst(B)    => B.max_hole
+  | DCC? Snd(B)    => B.max_hole
+  | DCC? Π(B, C) => max B.max_hole C.max_hole
+  | DCC? (x ∘' y) => max x.max_hole y.max_hole
+  | DCC? (x ∘ y)  => max x.max_hole y.max_hole
+  | DCC? (x ∘∘ y)  => max x.max_hole y.max_hole
+  | DCC? ⟦B⟧⟨x, y⟩   => max B.max_hole (max x.max_hole y.max_hole)
+  | DCC? Λ(A, B, x) => max A.max_hole (max B.max_hole x.max_hole)
+  | DCC? !Λ(A, B, x) => max A.max_hole (max B.max_hole x.max_hole)
+  | DCC? Eval(A, B, x) => max A.max_hole (max B.max_hole x.max_hole)
+  | DCC? !(x)   => x.max_hole
+  | DCC? *<x>    => x.max_hole
+  | DCC? &(x)   => x.max_hole
+  | DCC? !<x>   => x.max_hole
+  | DCC? $<x>   => x.max_hole
+  | DCC? (f x) => max f.max_hole x.max_hole
+  | .const _n => 0
+  | .hole n => n
+
+@[grind]
+def min_hole (e : GenericExpr τ_c) : ℕ :=
+  match e with
+  | DCC? Dom(x) => x.min_hole
+  | DCC? ∗ => 0
+  | DCC? ⊤ => 0
+  | DCC? ⊥ => 0
+  | DCC? x = y => min x.min_hole y.min_hole
+  | DCC? Eql(B)  => B.min_hole
+  | DCC? refl(B) => B.min_hole
+  | DCC? Sort _m => 0
+  | DCC? Σ(B, C) => min B.min_hole C.min_hole
+  | DCC? `(B, x) => min B.min_hole x.min_hole
+  | DCC? ⟦B⟧(x, y) => min B.min_hole (min x.min_hole y.min_hole)
+  | DCC? Coup(B) => B.min_hole
+  | DCC? Id(A)      => A.min_hole
+  | DCC? Fst(B)    => B.min_hole
+  | DCC? Snd(B)    => B.min_hole
+  | DCC? Π(B, C) => min B.min_hole C.min_hole
+  | DCC? (x ∘' y) => min x.min_hole y.min_hole
+  | DCC? (x ∘ y)  => min x.min_hole y.min_hole
+  | DCC? (x ∘∘ y)  => min x.min_hole y.min_hole
+  | DCC? ⟦B⟧⟨x, y⟩   => min B.min_hole (min x.min_hole y.min_hole)
+  | DCC? Λ(A, B, x) => min A.min_hole (min B.min_hole x.min_hole)
+  | DCC? !Λ(A, B, x) => min A.min_hole (min B.min_hole x.min_hole)
+  | DCC? Eval(A, B, x) => min A.min_hole (min B.min_hole x.min_hole)
+  | DCC? !(x)   => x.min_hole
+  | DCC? *<x>    => x.min_hole
+  | DCC? &(x)   => x.min_hole
+  | DCC? !<x>   => x.min_hole
+  | DCC? $<x>   => x.min_hole
+  | DCC? (f x) => min f.min_hole x.min_hole
+  | .const _n => 0
+  | .hole n => n
+
+@[grind]
+def has_at_least_hole_level (lv : ℕ) (e : GenericExpr τ_c) : Bool :=
+  match e with
+  | DCC? Dom(x) => x.has_at_least_hole_level lv
+  | DCC? ∗ => False
+  | DCC? ⊤ => False
+  | DCC? ⊥ => False
+  | DCC? x = y => x.has_at_least_hole_level lv || y.has_at_least_hole_level lv
+  | DCC? Eql(B)  => B.has_at_least_hole_level lv
+  | DCC? refl(B) => B.has_at_least_hole_level lv
+  | DCC? Sort _m => false
+  | DCC? Σ(B, C) => B.has_at_least_hole_level lv || C.has_at_least_hole_level lv
+  | DCC? `(B, x) => B.has_at_least_hole_level lv || x.has_at_least_hole_level lv
+  | DCC? ⟦B⟧(x, y) => B.has_at_least_hole_level lv || x.has_at_least_hole_level lv || y.has_at_least_hole_level lv
+  | DCC? Coup(B) => B.has_at_least_hole_level lv
+  | DCC? Id(A)      => A.has_at_least_hole_level lv
+  | DCC? Fst(B)    => B.has_at_least_hole_level lv
+  | DCC? Snd(B)    => B.has_at_least_hole_level lv
+  | DCC? Π(B, C) => B.has_at_least_hole_level lv || C.has_at_least_hole_level lv
+  | DCC? (x ∘' y) => x.has_at_least_hole_level lv || y.has_at_least_hole_level lv
+  | DCC? (x ∘ y)  => x.has_at_least_hole_level lv || y.has_at_least_hole_level lv
+  | DCC? (x ∘∘ y)  => x.has_at_least_hole_level lv || y.has_at_least_hole_level lv
+  | DCC? ⟦B⟧⟨x, y⟩   => B.has_at_least_hole_level lv || x.has_at_least_hole_level lv || y.has_at_least_hole_level lv
+  | DCC? Λ(A, B, x) => A.has_at_least_hole_level lv || B.has_at_least_hole_level lv || x.has_at_least_hole_level lv
+  | DCC? !Λ(A, B, x) => A.has_at_least_hole_level lv || B.has_at_least_hole_level lv || x.has_at_least_hole_level lv
+  | DCC? Eval(A, B, x) => A.has_at_least_hole_level lv || B.has_at_least_hole_level lv || x.has_at_least_hole_level lv
+  | DCC? !(x)   => x.has_at_least_hole_level lv
+  | DCC? *<x>    => x.has_at_least_hole_level lv
+  | DCC? &(x)   => x.has_at_least_hole_level lv
+  | DCC? !<x>   => x.has_at_least_hole_level lv
+  | DCC? $<x>   => x.has_at_least_hole_level lv
+  | DCC? (f x) => f.has_at_least_hole_level lv || x.has_at_least_hole_level lv
+  | .const _n => false
+  | .hole n => n ≥ lv
 
 end GenericExpr

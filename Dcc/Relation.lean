@@ -581,6 +581,15 @@ def reduce_with_norm.{u} {α : Type u} {t : α → ℕ} (r : α → α → Prop)
   let h_reduce := reduce r e
   ⟨h_reduce.fst, ⟨⟨h_reduce.snd.down, reduce_norm rfl⟩⟩⟩
 
+@[dcc_force_reduce, aesop norm (rule_sets := [DccForceReduce])]
+theorem reduce_with_norm_complete.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ}
+  [hR : RedRel r t (m := Option)] [hN : SemiComplete (α := α) r (hR := hR)] [Confluent r]
+  {A B : α} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : reduce_with_norm _ A = ⟨B, ⟨hr, hn⟩⟩ := by
+  have h := reduce_complete_pointwise hr hn
+  simp [reduce_with_norm, h]
+  grind
+
+
 theorem reduce_sound_fst.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} [_hR : RedRel r t] {A B : α}
   (_heq : (reduce r A).fst = B) : Relation.ReflTransGen r A B :=
   have h := reduce_sound (r := r) (A := A) rfl

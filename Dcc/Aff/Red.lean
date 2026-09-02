@@ -133,6 +133,11 @@ Base combinator function domains
 Dom congruence
 -/
   | dom₀    : RedAff x x' → RedAff (DCC? Dom(x)) (DCC? Dom(x'))
+/-
+Hole generation:
+
+
+-/
 
 
 @[dcc_force_reduce, dcc_force_aff]
@@ -297,6 +302,10 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
   | DCC? Dom((refl(_B) &(_x))) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom((Λ(_A, _B, _x) _y)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom((!Λ(_A, _B, _x) &(_y))) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(x) =>
+    match x.step? with
+    | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.dom₀ hr⟩⟩
+    | .none => .none
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_aff]
@@ -322,7 +331,15 @@ theorem congrFun' (hr : Relation.ReflTransGen RedAff f f') : Relation.ReflTransG
     exact .trans (.single (.congrFun h₁)) (congrFun' h₂)
 termination_by size f
 
-theorem dom' (hr : Relation.ReflTransGen RedAff x x') : 
+theorem dom' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? Dom(x)) (DCC? Dom(x')) := by
+  match hr.cases_head with
+  | .inl h =>
+    cases h
+    exact .refl
+  | .inr ⟨_, h₁, h₂⟩ =>
+    have h_dec := RedAff.instRedRel.decreasing h₁
+    exact .trans (.single (.dom₀ h₁)) (dom' (by assumption))
+termination_by x.size
 
 theorem congrArg' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f x')) := by
   match hr.cases_head with
@@ -746,10 +763,9 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
         | box₀ hr => exact ⟨_, .single (by constructor), .single hr.congrArg.bang₀⟩
     case dom₀ hr =>
       have ⟨_, h₁, h₂⟩ := ih hr
-      exact ⟨_, 
-      sorry
+      exact ⟨_, dom' (by assumption), dom' (by assumption)⟩
   -- Main reductions:
-  /-case eql =>
+  case eql =>
     cases h₂ with
     | congrFun hr =>
       cases hr with
@@ -1052,8 +1068,8 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     case congrFun hr₂ =>
       have ⟨_, ha, hb⟩ := ih hr₂
       exact ⟨_, congrFun' ha, congrFun' hb⟩
-    case congrArg hr => exact ⟨_, .single (.congrArg (by assumption)), .single (.congrFun (by assumption))⟩-/
-/-
+    case congrArg hr => exact ⟨_, .single (.congrArg (by assumption)), .single (.congrFun (by assumption))⟩
+
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
 instance RedAff.instConf.{u} {τ : Type u} : Confluent (RedAff (τ := τ)) := ⟨RedAff.conf⟩
 
@@ -1139,7 +1155,14 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
       · exact ⟨_, .congrFun (by assumption), rfl⟩
       · exact ⟨_, .congrArg (by assumption), rfl⟩
       · grind
-  case h_41 =>
+  case h_63 =>
+    simp_all
+    cases hr
+    any_goals (grind)
+    case dom₀ hr =>
+      have ⟨_, hr', heq⟩ := semi_complete hr
+      exact ⟨_, hr'.dom₀, by simp [heq]⟩
+  case h_64 =>
     simp_all
     cases hr
     any_goals (grind)
@@ -1163,6 +1186,7 @@ Complete.complete
 -/
 #check instComplete.complete
 
+@[grind ., grind →]
 theorem RedAff.decreasing' (h : RedAff A B) : size B < size A := by
   induction h <;> grind
 
@@ -1409,19 +1433,8 @@ def map (h : IsNorm RedAff (.map f)) : IsNorm RedAff f :=
 def unmap (h : IsNorm RedAff (.unmap f)) : IsNorm RedAff f :=
   fun ⟨_, hr⟩ => h ⟨_, .unmap₀ hr⟩
 
-def point {e : GenericExpr τ_c} (hn : IsNorm RedAff e) (n : Fin (point_arity e)) : IsNorm RedAff (points e)[n] := by
-  unfold point_arity at n
-  split at n
-  any_goals (grind)
-  any_goals (
-    simp at n
-    fin_cases n <;> (
-      intro ⟨_, h⟩
-      exact hn ⟨_, h.mk_point⟩))
-
-def point' {e : GenericExpr τ_c} (hn : IsNorm RedAff e) (n : ℕ)
-  (h_arr : n < point_arity e := by grind) : IsNorm RedAff (points e)[(Fin.mk n h_arr)] :=
-  point hn ⟨n, h_arr⟩
+def box₀ (h : IsNorm RedAff (DCC? &(x))) : IsNorm RedAff x :=
+  fun ⟨_, hr⟩ => h ⟨_, .box₀ hr⟩
 
 /-def point₀ (h : IsNorm RedAff e) (hn : 0 < point_arity e) : IsNorm RedAff (points e)[0] := by
   intro ⟨_, hr⟩
@@ -1441,4 +1454,3 @@ def RedAff.size_absurd (hr : RedAff A B) (h_size_eq : size A ≤ size B := by gr
 end GenericExpr
 
 abbrev Expr.RedAff := GenericExpr.RedAff (τ := Unit)
--/

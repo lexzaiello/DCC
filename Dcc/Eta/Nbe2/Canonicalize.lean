@@ -27,6 +27,12 @@ inductive RedAff.IsHead : (hr : RedAff A B) → Type u
   | quot  {B x y}        : IsHead (.quot (β := B) (x := x) (y := y))
   | curr  {A B x y z}    : IsHead (.curr (α := A) (β := B) (x := x) (y := y) (z := z))
   | sigma {B C x}        : IsHead (.sigma (f_α := B) (f_β := C) (env := x))
+  /-
+    Cases like Id(A) ∘ Fst(Id(A)) ⟦Id(A)⟧(x, y) = Id(A) (Fst(Id(A)) ⟦Id(A)⟧(x, y)) will get stuck
+    due to lacking congruence, since we are specifically interested in head-reductions.
+
+    Maybe?: have two variants of each comp where one checks (y z).IsNorm and one checks that there is a h : y z -> z' such that h.IsHead?
+  -/
   | comp  {x y z}        : IsHead (.comp (x := x) (y := y) (z := z))
   | comp' {x y z}        : IsHead (.comp' (x := x) (y := y) (z := z))
   | comp₂ {x y z}        : IsHead (.comp₂ (x := x) (y := y) (z := z))
@@ -387,6 +393,14 @@ def RedSpineNorm.max_hole_preserved (h : RedSpineNorm A B) : max_hole B ≤ max_
   | ⟨hrt, _⟩ => hrt.max_hole_preserved
 
 /-
+Summary:
+
+Fst(B) ∘ Id(A) ∘ Id(A) x
+= Fst(B) ∘ (Id(A) ∘ Id(A)) x
+= Fst(B) (Id(A) ∘ Id(A) x)
+
+
+
 This essentially reverses a reduction to find a suitable combinator.
 It takes a multi-step reduction and finds a matching unary combiantor.
 
@@ -406,11 +420,13 @@ Canonicalize
 -/
 inductive ViewAppHole : (f : GenericExpr τ_c)
   → (hole₁ : GenericExpr τ_c)
-  → (hlt : f.max_hole < hole₁.min_hole) → Type u
+  → (lv    : ℕ)
+  → (hlt   : f.max_hole < lv)
+  → (hmem  : lv ≤ hole₁.max_hole)
+  → Type u
   | quot   : RedSpineNorm (DCC? (f hole₁)) x'
-    → (hlt : f.max_hole < hole₁.min_hole)
     → (hn  : x'.max_hole < hole₁.min_hole := by grind)
-    → ViewAppHole f hole₁ hlt
+    → ViewAppHole f hole₁ lv hlt hmem
   -- par is not actually a case. this is the fallback that should hit if no ViewAppHole is present
   /-| par    : RedAffNorm (DCC? (f hole₁)) ⟨(DCC? (f' hole₁)), hn'⟩
     → (hlt : f.max_hole < hole₁.min_hole)
@@ -419,23 +435,20 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
   -- we just need to know the hole is in there somewhere could be f (g (h hole))
   -- if this does not fire, just do quot
   | comp   : (hrt : RedSpineNorm (DCC? ((f ∘ g) x)) e')
-    → (hlt : (DCC? (f ∘ g)).max_hole < x.min_hole)
     → (hgt : e'.max_hole ≥ x.min_hole)
     → (hsp : hrt.head = ⟨DCC? (f (g x)), hrt', ⟨.comp⟩, .comp⟩)
-    → ViewAppHole g x (by grind)
-    → ViewAppHole (DCC? (f ∘ g)) x hlt
+    → ViewAppHole g x lv (by grind) (by grind)
+    → ViewAppHole (DCC? (f ∘ g)) x lv hlt hmem
   | comp'  : (hrt : RedSpineNorm (DCC? ((f ∘' g) x)) e')
-    → (hlt : (DCC? (f ∘' g)).max_hole < x.min_hole)
     → (hgt : e'.max_hole ≥ x.min_hole)
     → (hsp : hrt.head = ⟨DCC? (f (g x)), hrt', ⟨.comp'⟩, .comp'⟩)
-    → ViewAppHole g x (by grind)
-    → ViewAppHole (DCC? (f ∘' g)) x hlt
+    → ViewAppHole g x lv (by grind) (by grind)
+    → ViewAppHole (DCC? (f ∘' g)) x lv hlt hmem
   | comp₂  : (hrt : RedSpineNorm (DCC? ((f ∘∘ g) x)) e')
-    → (hlt : (DCC? (f ∘∘ g)).max_hole < x.min_hole)
     → (hgt : e'.max_hole ≥ x.min_hole)
     → (hsp : hrt.head = ⟨DCC? (f (g x)), hrt', ⟨.comp₂⟩, .comp₂⟩)
-    → ViewAppHole g x (by grind)
-    → ViewAppHole (DCC? (f ∘∘ g)) x hlt
+    → ViewAppHole g x lv (by grind) (by grind)
+    → ViewAppHole (DCC? (f ∘∘ g)) x lv hlt hmem
   /-
     Since we are weak-head reducing, and since
     the root expression should already be in normal form (NOTE TODO ENFORCE THIS),
@@ -443,62 +456,56 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
     just what the last step was
   -/
   | id     : (hrt : RedSpineNorm (DCC? (Id(A) x)) x)
-    → (hlt : (DCC? Id(A)).max_hole < x.min_hole)
     → (hsp : hrt.head = ⟨_, hrt', ⟨.id⟩, .id⟩)
-    → ViewAppHole (DCC? Id(A)) x hlt
+    → ViewAppHole (DCC? Id(A)) x lv hlt hmem
   | fst    : (hrt : RedSpineNorm (DCC? (Fst(B) ⟦_B⟧(x, y))) x)
-    → (hlt : (DCC? Fst(B)).max_hole < (DCC? ⟦_B⟧(x, y)).min_hole)
     → (hsp : hrt.head = ⟨x, hrt', ⟨.fstc⟩, .fstc⟩)
-    → ViewAppHole (DCC? Fst(B)) (DCC? ⟦_B⟧(x, y)) hlt
+    → ViewAppHole (DCC? Fst(B)) (DCC? ⟦_B⟧(x, y)) lv hlt hmem
   | snd    : (hrt : RedSpineNorm (DCC? (Snd(B) ⟦_B⟧(x, y))) y)
-    → (hlt : (DCC? Snd(B)).max_hole < (DCC? ⟦_B⟧(x, y)).min_hole)
     → (hsp : hrt.head = ⟨y, hrt', ⟨.sndc⟩, .sndc⟩)
-    → ViewAppHole (DCC? Snd(B)) (DCC? ⟦_B⟧(x, y)) hlt
+    → ViewAppHole (DCC? Snd(B)) (DCC? ⟦_B⟧(x, y)) lv hlt hmem
   -- Purpose of SpineNorm is to handle top-level weak head steps that produce further normal forms
   -- innere congruences, which are irrelevant, so we eliminate them by considering only WHNF reductions
   | eval   : (hrt : RedSpineNorm (DCC? (Eval(A, B, x) ⟦_B⟧(y, z))) e')
-    → (hlt : (DCC? Eval(A, B, x)).max_hole < (DCC? ⟦_B⟧(y, z)).min_hole)
     → (hsp : hrt.head = ⟨DCC? (x y z), hrt', ⟨.evalc⟩, .eval⟩)
-    → ViewAppHole x y (by grind)
-    → ViewAppHole (DCC? Eval(A, B, x)) (DCC? ⟦_B⟧(y, z)) hlt
+    → ViewAppHole (DCC? Eval(A, B, x)) (DCC? ⟦_B⟧(y, z)) lv hlt hmem
   | curr'  : (hrt : RedSpineNorm (DCC? (!Λ(A, B, x) &(y) &(z))) e')
-    → (hlt : (DCC? (!Λ(A, B, x) &(y))).max_hole < (DCC? &(z)).min_hole)
     → (hsp : hrt.head = ⟨DCC? (x &(⟦B⟧(y, z))), hrt', ⟨.curr'⟩, .curr'⟩)
-    → ViewAppHole x (DCC? &(⟦B⟧(y, z))) (by grind)
-    → ViewAppHole (DCC? (!Λ(A, B, x) &(y))) (DCC? &(z)) hlt
-  | curr   : (hrt : RedSpineNorm (DCC? (f y)) (DCC? (g ⟦B⟧(x, y))))
-    → (hlt : f.max_hole < (DCC? &(y)).min_hole)
-    → (hsp : hrt.tail = ⟨DCC? (Λ(A, B, g) x y), ⟨.curr⟩, .curr⟩)
-    → ViewAppHole f (DCC? y) hlt
-  | eql    : (hrt : RedSpineNorm (DCC? (f &(x))) (DCC? (x = x)))
-    → (hlt : f.max_hole < (DCC? &(y)).min_hole)
-    → (hsp : hrt.tail = ⟨DCC? (Eql(B) &(env) &(x)), ⟨.eql⟩, .eql⟩)
-    → ViewAppHole f (DCC? &(y)) hlt
+    → ViewAppHole x (DCC? &(⟦B⟧(y, z))) lv (by grind) (by grind)
+    → ViewAppHole (DCC? (!Λ(A, B, x) &(y))) (DCC? &(z)) lv hlt hmem
+  | curr   : (hrt : RedSpineNorm (DCC? (Λ(A, B, x) y z)) e')
+    → (hsp : hrt.head = ⟨DCC? (x ⟦B⟧(y, z)), hrt', ⟨.curr⟩, .curr⟩)
+    → ViewAppHole x (DCC? ⟦B⟧(y, z)) lv (by grind) (by grind)
+    → ViewAppHole (DCC? (Λ(A, B, x) y)) z lv hlt hmem
+  | eql    : (hrt : RedSpineNorm (DCC? (Eql(B) &(x) &(y))) e')
+    → (hsp : hrt.head = ⟨DCC? (y = y), hrt', ⟨.eql⟩, .eql⟩)
+    → ViewAppHole (DCC? (Eql(B) &(x))) (DCC? &(y)) lv hlt hmem
   -- Even though pair reduces to ⟦B⟧((M x), (N x (M x))), this is not a concern since we
   -- are only interested in WHNF
-  | pair   : (hrt : RedSpineNorm (DCC? (f &(z))) (DCC? ⟦(B z)⟧((x z), (y z (x z)))))
-    → (hlt : f.max_hole < (DCC? &(z)).min_hole)
-    → (hsp : hrt.tail = ⟨DCC? (⟦B⟧⟨x, y⟩ &(z)), ⟨.pair⟩, .pair⟩)
-    → ViewAppHole f (DCC? &(z)) htl
-  | unmap  : (hrt : RedSpineNorm (DCC? (f &(x))) (DCC? (g x)))
-    → (hlt : f.max_hole < (DCC? &(x)).min_hole)
-    → (hsp : hrt.tail = ⟨_, ⟨.unmap⟩, .unmap⟩)
-    → ViewAppHole f (DCC? &(x)) htl
-  | fmap  : (hrt : RedSpineNorm (DCC? (f &(x))) (DCC? &((g x))))
-    → (hlt : f.max_hole < (DCC? &(x)).min_hole)
-    → (hsp : hrt.tail = ⟨_, ⟨.fmap⟩, .fmap⟩)
-    → ViewAppHole f (DCC? &(x)) htl
-  | map   : (hrt : RedSpineNorm (DCC? (f &(x))) (DCC? !((g x))))
-    → (hlt : f.max_hole < (DCC? &(x)).min_hole)
-    → (hsp : hrt.tail = ⟨_, ⟨.map⟩, .map⟩)
-    → ViewAppHole f (DCC? &(x)) htl
+  | pair   : (hrt : RedSpineNorm (DCC? (⟦B⟧⟨x, y⟩ &(z))) e')
+    → (hsp : hrt.head = ⟨DCC? ⟦(B z)⟧((x z), (y z (x z))), hrt', ⟨.pair⟩, .pair⟩)
+    → ViewAppHole x z lv (by grind) (by grind)
+    → ViewAppHole y z lv (by grind) (by grind)
+    → ViewAppHole (DCC? ⟦B⟧⟨x, y⟩) (DCC? &(z)) lv hlt hmem
+  | unmap  : (hrt : RedSpineNorm (DCC? (*<x> &(y))) e')
+    → (hsp : hrt.head = ⟨DCC? (x y), hrt', ⟨.unmap⟩, .unmap⟩)
+    → ViewAppHole x y lv (by grind) (by grind)
+    → ViewAppHole (DCC? *<x>) (DCC? &(y)) lv hlt hmem
+  | fmap  : (hrt : RedSpineNorm (DCC? ($<x> &(y))) e')
+    → (hsp : hrt.head = ⟨DCC? &((x y)), hrt', ⟨.fmap⟩, .fmap⟩)
+    → ViewAppHole x y lv (by grind) (by grind)
+    → ViewAppHole (DCC? $<x>) (DCC? &(y)) lv hlt hmem
+  | map   : (hrt : RedSpineNorm (DCC? (!<x> &(y))) e')
+    → (hsp : hrt.head = ⟨DCC? !((x y)), hrt', ⟨.map⟩, .map⟩)
+    → ViewAppHole x y lv (by grind) (by grind)
+    → ViewAppHole (DCC? !<x>) (DCC? &(y)) lv hlt hmem
   -- if τ contains the hole, then this is Σ
   -- otherwise, the Coup does not depend on the hole
   -- in which case it is just `(
-  | sigma    : (hrt : RedSpineNorm (DCC? (f x)) (DCC? Coup((C x))))
-    → (hlt   : f.max_hole < x.min_hole)
-    → (hsp : hrt.tail = ⟨DCC? (Σ(B, C) x), ⟨.sigma⟩, .sigma⟩)
-    → ViewAppHole f x htl
+  | sigma    : (hrt : RedSpineNorm (DCC? (Σ(B, C) x)) e')
+    → (hsp : hrt.head = ⟨DCC? Coup((C x)), hrt', ⟨.sigma⟩, .sigma⟩)
+    → ViewAppHole C x lv (by grind) (by grind)
+    → ViewAppHole (DCC? Σ(B, C)) x lv hlt hmem
 deriving Repr
 
 @[grind]

@@ -10,6 +10,15 @@ namespace GenericExpr
 /-
 Preservation proof:
 - can make these more type-directed
+
+Id(A) ∘ Fst(Id(A))
+
+Fst(B) ∘ Id(Coup(Id(A)))
+-/
+
+/-
+Funext:
+
 -/
 
 @[aesop safe (rule_sets := [DccForceStep]) [constructors], aesop unsafe 50% (rule_sets := [DccForceStep]) [cases]]

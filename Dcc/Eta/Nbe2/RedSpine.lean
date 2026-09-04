@@ -47,6 +47,9 @@ def RedAff.IsHead.eq {hr₁ : RedAff A B} {hr₂ : RedAff A B} (hrt₁ : hr₁.I
 @[grind]
 def NormHead (A : GenericExpr τ_c) := ∀ ⦃B⦄ ⦃hr : RedAff A B⦄ (_hrt : hr.IsHead), False
 
+def NormHead.unique (h : NormHead A) (hr : RedAff A B) (hn : hr.IsHead) : A = B := by
+  cases hn <;> exact (h (by constructor)).elim
+
 def IsNorm.to_head (h : IsNorm RedAff x) : NormHead x := fun _ b _ => h ⟨_, b⟩
 
 @[aesop norm (rule_sets := [DccRel])]
@@ -118,6 +121,8 @@ def RedSpinePlus.elim_norm (hrt : RedSpinePlus A B) (hn : NormHead A) : A = B :=
   match hrt with
   | .single hr hn' => (hn hn').elim
   | .head hrt₁ hr₂ hrt₂ => (hn (by assumption)).elim
+
+def RedSpinePlus.elim_norm' (hrt : RedSpinePlus A B) (hn : IsNorm RedAff A) : A = B := hrt.elim_norm hn.to_head
 
 def red_spine! (A : GenericExpr τ_c) : Option ((B : GenericExpr τ_c) × RedSpinePlus A B) :=
   match A.red_spine? with
@@ -294,7 +299,14 @@ inductive RedSpineStar : GenericExpr τ_c → GenericExpr τ_c → Type u
   | refl : RedSpineStar A A
 deriving Repr
 
-@[grind]
+def RedSpineStar.elim_norm (h : RedSpineStar A B) (hn : NormHead A) : A = B :=
+  match h with
+  | .refl => rfl
+  | .mk₁ (.head ha _hb hc) => (hn.unique ha (by assumption) ▸ hc).elim_norm hn
+  | .mk₁ (.single ha hb) => hn.unique ha (by assumption)
+
+def RedSpineStar.elim_norm' (h : RedSpineStar A B) (hn : IsNorm RedAff A) : A = B := h.elim_norm hn.to_head
+
 def RedSpinePlus.tail {A C : GenericExpr τ_c} (h : RedSpinePlus A C) : ((B : GenericExpr τ_c) × (_hrt : RedSpineStar A B) × (hr : PLift (RedAff B C)) × hr.down.IsHead) :=
   match h with
   | .single hr hn =>
@@ -307,7 +319,7 @@ def RedSpinePlus.tail {A C : GenericExpr τ_c} (h : RedSpinePlus A C) : ((B : Ge
     | .refl =>
       ⟨_, .mk₁ (.single ha hb), hr, hn⟩
 
-@[inline, grind, aesop safe norm (rule_sets := [DccRel])]
+@[inline, aesop safe norm (rule_sets := [DccRel])]
 def RedSpinePlus.pop_head {A C : GenericExpr τ_c} (h : RedSpinePlus A C) : ((B : GenericExpr τ_c) × (_hrt : RedSpineStar B C) × (hr : PLift (RedAff A B)) × hr.down.IsHead) :=
   match h with
   | .single hr hn =>
@@ -328,6 +340,10 @@ termination_by A.size
 inductive RedSpineNorm : GenericExpr τ_c → GenericExpr τ_c → Type u
   | mk : (hr : RedSpinePlus A B) → (hn : B.NormHead) → RedSpineNorm A B
 deriving Repr
+
+def RedSpineNorm.decreasing (h : RedSpineNorm A B) : B.size < A.size :=
+  match h with
+  | ⟨hr, _hn⟩ => hr.decreasing
 
 @[grind]
 def red_spine!! (A : GenericExpr τ_c) : Option ((B : GenericExpr τ_c) × RedSpineNorm A B) :=
@@ -362,7 +378,7 @@ def RedSpineNorm.tail {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : ((B : Ge
     have ⟨B, _hrt, ⟨hr⟩, hn⟩ := hr.tail
     ⟨B, ⟨hr⟩, hn⟩
 
-@[inline, grind, aesop safe norm (rule_sets := [DccRel])]
+@[inline, aesop safe norm (rule_sets := [DccRel])]
 def RedSpineNorm.head {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : ((B : GenericExpr τ_c) × (hr : PLift (RedAff A B)) × hr.down.IsHead) :=
   match h with
   | ⟨.single ha hb, _hn⟩ =>
@@ -370,7 +386,7 @@ def RedSpineNorm.head {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : ((B : Ge
   | ⟨.head ha hb _hc, _hn⟩ =>
     ⟨_, ⟨ha⟩, hb⟩
 
-@[inline, grind]
+@[inline]
 def RedSpineNorm.head_rest {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : RedSpineStar h.head.fst C :=
   match h with
   | ⟨.single ha hb, _hn⟩ => .refl
@@ -387,5 +403,21 @@ def RedSpineStar.max_hole_preserved (h : RedSpineStar A B) : max_hole B ≤ max_
   match h with
   | .refl => by grind
   | .mk₁ h => h.max_hole_preserved
+
+def RedSpineNorm.push_head (h : RedSpineNorm A C) (hr : RedAff A B) (hn : hr.IsHead) : RedSpineStar B C × (PLift (C.NormHead)) :=
+  match h with
+  | ⟨.single ha hb, hn'⟩ => by
+    cases hn.unique hb
+    exact ⟨.refl, ⟨hn'⟩⟩
+  | ⟨.head ha hb hc, hn'⟩ => by
+    cases hn.unique hb
+    exact ⟨.mk₁ hc, ⟨hn'⟩⟩
+
+def RedSpineNorm.elim_norm_flse (h : RedSpineNorm A B) (hn : NormHead A) : False :=
+  match h with
+  | ⟨hr, _hn⟩ => by
+    have h_dec := h.decreasing
+    have h := hr.elim_norm hn
+    grind
 
 end GenericExpr

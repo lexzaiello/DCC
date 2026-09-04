@@ -12,7 +12,7 @@ namespace GenericExpr
 Possible unary head-level reductions. Otherwise,
 no head-level step is made.
 -/
-@[grind, aesop safe (rule_sets := [DccRel]) [constructors]]
+@[grind, aesop safe (rule_sets := [DccRel]) [constructors], aesop safe (rule_sets := [DccRel]) [cases]]
 inductive RedAff.IsHead : (hr : RedAff A B) → Type u
   | fstc  {B _B a b}     : IsHead (.fstc (_α := B) (β := _B) (a := a) (b := b))
   | sndc  {B _B a b}     : IsHead (.sndc (_α := B) (β := _B) (a := a) (b := b))
@@ -49,7 +49,9 @@ def RedAff.IsHead.eq {hr₁ : RedAff A B} {hr₂ : RedAff A B} (hrt₁ : hr₁.I
 @[grind]
 def NormHead (A : GenericExpr τ_c) := ∀ ⦃B⦄ ⦃hr : RedAff A B⦄ (_hrt : hr.IsHead), False
 
-@[grind, aesop norm (rule_sets := [DccRel])]
+def IsNorm.to_head (h : IsNorm RedAff x) : NormHead x := fun _ b _ => h ⟨_, b⟩
+
+@[aesop norm (rule_sets := [DccRel])]
 def red_spine? (A : GenericExpr τ_c) : Option ((B : GenericExpr τ_c) × (hr : PLift (RedAff A B)) × hr.down.IsHead) :=
   match A with
   | DCC? (Σ(_B, _C) _x) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
@@ -70,15 +72,17 @@ def red_spine? (A : GenericExpr τ_c) : Option ((B : GenericExpr τ_c) × (hr : 
   | DCC? (Snd(_B) ⟦__B⟧(_x, _y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | _ => .none
 
-@[grind =_, grind ., grind =>, grind! ., grind! =>]
+@[grind ., grind =>, aesop safe forward (rule_sets := [DccRel])]
 theorem RedAff.IsHead.complete {hr : RedAff A B} (hrt : hr.IsHead) : red_spine? A = .some ⟨B, ⟨hr⟩, hrt⟩ := by
   induction hr
-  any_goals (grind)
-  case congrFun hr ih =>
+  any_goals (
+    focus
+    try (simp [red_spine?])
     cases hrt
-    grind
+    try (rfl)
+    done)
   case congrArg hr ih =>
-    cases hrt <;> grind
+    cases hrt <;> simp [red_spine?]
 
 def RedAff.IsHead.decreasing {hr : RedAff A B} (_hrt : hr.IsHead) : B.size < A.size := hr.decreasing
 
@@ -117,7 +121,6 @@ def RedSpinePlus.elim_norm (hrt : RedSpinePlus A B) (hn : NormHead A) : A = B :=
   | .single hr hn' => (hn hn').elim
   | .head hrt₁ hr₂ hrt₂ => (hn (by assumption)).elim
 
-@[grind]
 def red_spine! (A : GenericExpr τ_c) : Option ((B : GenericExpr τ_c) × RedSpinePlus A B) :=
   match A.red_spine? with
   | .some ⟨B, ⟨hr⟩, hrt⟩ =>
@@ -208,6 +211,7 @@ def RedSpinePlus.eq (h₁ : RedSpinePlus A B) (h₂ : RedSpinePlus A B) : h₁ =
       simp [hrt.eq hrt_1]
       exact hrt₂.eq hrt₂_1
 
+@[aesop safe forward (rule_sets := [DccRel])]
 def RedSpinePlus.complete (h : RedSpinePlus A B) (hn : B.NormHead) : red_spine! A = .some ⟨B, h⟩ := by
   unfold red_spine!
   split
@@ -297,7 +301,6 @@ def Domain.is_norm (h : Domain α τ) : IsNorm RedAff τ :=
   match h with
   | ⟨_, hn⟩ => hn
 
-@[grind]
 def domain (e : GenericExpr τ_c) : ((τ : GenericExpr τ_c) × Domain e τ) :=
   ⟨_, ⟨aff_sound' (DCC? Dom(e))⟩⟩
 
@@ -305,6 +308,7 @@ def Domain.complete (h : Domain e τ) : domain e = ⟨τ, h⟩ :=
   match h with
   | ⟨hr⟩ => by
     have h := (hr.out_eq ▸ hr).eq
+    simp [domain]
     grind
 
 inductive RedSpineStar : GenericExpr τ_c → GenericExpr τ_c → Type u
@@ -325,7 +329,7 @@ def RedSpinePlus.tail {A C : GenericExpr τ_c} (h : RedSpinePlus A C) : ((B : Ge
     | .refl =>
       ⟨_, .mk₁ (.single ha hb), hr, hn⟩
 
-@[grind]
+@[inline, grind, aesop safe norm (rule_sets := [DccRel])]
 def RedSpinePlus.pop_head {A C : GenericExpr τ_c} (h : RedSpinePlus A C) : ((B : GenericExpr τ_c) × (_hrt : RedSpineStar B C) × (hr : PLift (RedAff A B)) × hr.down.IsHead) :=
   match h with
   | .single hr hn =>
@@ -353,7 +357,7 @@ def red_spine!! (A : GenericExpr τ_c) : Option ((B : GenericExpr τ_c) × RedSp
   | .some ⟨B, h⟩ => .some ⟨B, ⟨h, red_spine!_norm heq⟩⟩
   | .none => .none
 
-@[grind =_, grind ., grind! .]
+@[aesop safe forward (rule_sets := [DccRel])]
 theorem RedSpineNorm.complete (h : RedSpineNorm A B) : red_spine!! A = .some ⟨B, h⟩ := by
   cases h with
   | mk hr hn =>
@@ -373,34 +377,40 @@ def RedSpineNorm.eq (h₁ : RedSpineNorm A B) (h₂ : RedSpineNorm A B) : h₁ =
   expose_names
   simp [hr.eq hr_1]
 
-@[grind]
+@[inline]
 def RedSpineNorm.tail {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : ((B : GenericExpr τ_c) × (hr : PLift (RedAff B C)) × hr.down.IsHead) :=
   match h with
   | ⟨hr, _hn⟩ =>
     have ⟨B, _hrt, ⟨hr⟩, hn⟩ := hr.tail
     ⟨B, ⟨hr⟩, hn⟩
 
-@[grind]
-def RedSpineNorm.head {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : ((B : GenericExpr τ_c) × (_hrt : RedSpineStar B C) × (hr : PLift (RedAff A B)) × hr.down.IsHead) :=
+@[inline, grind, aesop safe norm (rule_sets := [DccRel])]
+def RedSpineNorm.head {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : ((B : GenericExpr τ_c) × (hr : PLift (RedAff A B)) × hr.down.IsHead) :=
   match h with
-  | ⟨hr, _hn⟩ =>
-    have ⟨B, hrt, ⟨hr⟩, hn⟩ := hr.pop_head
-    ⟨B, hrt, ⟨hr⟩, hn⟩
+  | ⟨.single ha hb, _hn⟩ =>
+    ⟨_, ⟨ha⟩, hb⟩
+  | ⟨.head ha hb _hc, _hn⟩ =>
+    ⟨_, ⟨ha⟩, hb⟩
+
+@[inline, grind]
+def RedSpineNorm.head_rest {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : RedSpineStar h.head.fst C :=
+  match h with
+  | ⟨.single ha hb, _hn⟩ => .refl
+  | ⟨.head ha hb _hc, _hn⟩ => by
+    simp [head]
+    constructor; assumption
 
 @[dcc_size]
 def RedSpineNorm.max_hole_preserved (h : RedSpineNorm A B) : max_hole B ≤ max_hole A :=
   match h with
   | ⟨hrt, _⟩ => hrt.max_hole_preserved
 
+def RedSpineStar.max_hole_preserved (h : RedSpineStar A B) : max_hole B ≤ max_hole A :=
+  match h with
+  | .refl => by grind
+  | .mk₁ h => h.max_hole_preserved
+
 /-
-Summary:
-
-Fst(B) ∘ Id(A) ∘ Id(A) x
-= Fst(B) ∘ (Id(A) ∘ Id(A)) x
-= Fst(B) (Id(A) ∘ Id(A) x)
-
-
-
 This essentially reverses a reduction to find a suitable combinator.
 It takes a multi-step reduction and finds a matching unary combiantor.
 
@@ -425,7 +435,7 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
   → (hmem  : lv ≤ hole₁.max_hole)
   → Type u
   | quot   : RedSpineNorm (DCC? (f hole₁)) x'
-    → (hn  : x'.max_hole < hole₁.min_hole := by grind)
+    → (hn  : x'.max_hole < lv)
     → ViewAppHole f hole₁ lv hlt hmem
   -- par is not actually a case. this is the fallback that should hit if no ViewAppHole is present
   /-| par    : RedAffNorm (DCC? (f hole₁)) ⟨(DCC? (f' hole₁)), hn'⟩
@@ -435,18 +445,18 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
   -- we just need to know the hole is in there somewhere could be f (g (h hole))
   -- if this does not fire, just do quot
   | comp   : (hrt : RedSpineNorm (DCC? ((f ∘ g) x)) e')
-    → (hgt : e'.max_hole ≥ x.min_hole)
-    → (hsp : hrt.head = ⟨DCC? (f (g x)), hrt', ⟨.comp⟩, .comp⟩)
+    → (hgt : e'.max_hole ≥ lv)
+    → (hsp : hrt.head = ⟨DCC? (f (g x)), ⟨.comp⟩, .comp⟩)
     → ViewAppHole g x lv (by grind) (by grind)
     → ViewAppHole (DCC? (f ∘ g)) x lv hlt hmem
   | comp'  : (hrt : RedSpineNorm (DCC? ((f ∘' g) x)) e')
-    → (hgt : e'.max_hole ≥ x.min_hole)
-    → (hsp : hrt.head = ⟨DCC? (f (g x)), hrt', ⟨.comp'⟩, .comp'⟩)
+    → (hgt : e'.max_hole ≥ lv)
+    → (hsp : hrt.head = ⟨DCC? (f (g x)), ⟨.comp'⟩, .comp'⟩)
     → ViewAppHole g x lv (by grind) (by grind)
     → ViewAppHole (DCC? (f ∘' g)) x lv hlt hmem
   | comp₂  : (hrt : RedSpineNorm (DCC? ((f ∘∘ g) x)) e')
-    → (hgt : e'.max_hole ≥ x.min_hole)
-    → (hsp : hrt.head = ⟨DCC? (f (g x)), hrt', ⟨.comp₂⟩, .comp₂⟩)
+    → (hgt : e'.max_hole ≥ lv)
+    → (hsp : hrt.head = ⟨DCC? (f (g x)), ⟨.comp₂⟩, .comp₂⟩)
     → ViewAppHole g x lv (by grind) (by grind)
     → ViewAppHole (DCC? (f ∘∘ g)) x lv hlt hmem
   /-
@@ -456,220 +466,306 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
     just what the last step was
   -/
   | id     : (hrt : RedSpineNorm (DCC? (Id(A) x)) x)
-    → (hsp : hrt.head = ⟨_, hrt', ⟨.id⟩, .id⟩)
+    → (hsp : hrt.head = ⟨x, ⟨.id⟩, .id⟩)
     → ViewAppHole (DCC? Id(A)) x lv hlt hmem
   | fst    : (hrt : RedSpineNorm (DCC? (Fst(B) ⟦_B⟧(x, y))) x)
-    → (hsp : hrt.head = ⟨x, hrt', ⟨.fstc⟩, .fstc⟩)
+    → (hsp : hrt.head = ⟨x, ⟨.fstc⟩, .fstc⟩)
     → ViewAppHole (DCC? Fst(B)) (DCC? ⟦_B⟧(x, y)) lv hlt hmem
   | snd    : (hrt : RedSpineNorm (DCC? (Snd(B) ⟦_B⟧(x, y))) y)
-    → (hsp : hrt.head = ⟨y, hrt', ⟨.sndc⟩, .sndc⟩)
+    → (hsp : hrt.head = ⟨y, ⟨.sndc⟩, .sndc⟩)
     → ViewAppHole (DCC? Snd(B)) (DCC? ⟦_B⟧(x, y)) lv hlt hmem
   -- Purpose of SpineNorm is to handle top-level weak head steps that produce further normal forms
   -- innere congruences, which are irrelevant, so we eliminate them by considering only WHNF reductions
   | eval   : (hrt : RedSpineNorm (DCC? (Eval(A, B, x) ⟦_B⟧(y, z))) e')
-    → (hsp : hrt.head = ⟨DCC? (x y z), hrt', ⟨.evalc⟩, .eval⟩)
+    → (hsp : hrt.head = ⟨DCC? (x y z), ⟨.evalc⟩, .eval⟩)
     → ViewAppHole (DCC? Eval(A, B, x)) (DCC? ⟦_B⟧(y, z)) lv hlt hmem
   | curr'  : (hrt : RedSpineNorm (DCC? (!Λ(A, B, x) &(y) &(z))) e')
-    → (hsp : hrt.head = ⟨DCC? (x &(⟦B⟧(y, z))), hrt', ⟨.curr'⟩, .curr'⟩)
+    → (hsp : hrt.head = ⟨DCC? (x &(⟦B⟧(y, z))), ⟨.curr'⟩, .curr'⟩)
     → ViewAppHole x (DCC? &(⟦B⟧(y, z))) lv (by grind) (by grind)
     → ViewAppHole (DCC? (!Λ(A, B, x) &(y))) (DCC? &(z)) lv hlt hmem
   | curr   : (hrt : RedSpineNorm (DCC? (Λ(A, B, x) y z)) e')
-    → (hsp : hrt.head = ⟨DCC? (x ⟦B⟧(y, z)), hrt', ⟨.curr⟩, .curr⟩)
+    → (hsp : hrt.head = ⟨DCC? (x ⟦B⟧(y, z)), ⟨.curr⟩, .curr⟩)
     → ViewAppHole x (DCC? ⟦B⟧(y, z)) lv (by grind) (by grind)
     → ViewAppHole (DCC? (Λ(A, B, x) y)) z lv hlt hmem
   | eql    : (hrt : RedSpineNorm (DCC? (Eql(B) &(x) &(y))) e')
-    → (hsp : hrt.head = ⟨DCC? (y = y), hrt', ⟨.eql⟩, .eql⟩)
+    → (hsp : hrt.head = ⟨DCC? (y = y), ⟨.eql⟩, .eql⟩)
     → ViewAppHole (DCC? (Eql(B) &(x))) (DCC? &(y)) lv hlt hmem
-  -- Even though pair reduces to ⟦B⟧((M x), (N x (M x))), this is not a concern since we
-  -- are only interested in WHNF
+  /-
+    Recursively canonicalize the points inside all combinators.
+    This handles the inner congruences.
+
+    BIG TODO
+  -/
   | pair   : (hrt : RedSpineNorm (DCC? (⟦B⟧⟨x, y⟩ &(z))) e')
-    → (hsp : hrt.head = ⟨DCC? ⟦(B z)⟧((x z), (y z (x z))), hrt', ⟨.pair⟩, .pair⟩)
-    → ViewAppHole x z lv (by grind) (by grind)
-    → ViewAppHole y z lv (by grind) (by grind)
+    → (hsp : hrt.head = ⟨DCC? ⟦(B z)⟧((x z), (y z (x z))), ⟨.pair⟩, .pair⟩)
     → ViewAppHole (DCC? ⟦B⟧⟨x, y⟩) (DCC? &(z)) lv hlt hmem
   | unmap  : (hrt : RedSpineNorm (DCC? (*<x> &(y))) e')
-    → (hsp : hrt.head = ⟨DCC? (x y), hrt', ⟨.unmap⟩, .unmap⟩)
-    → ViewAppHole x y lv (by grind) (by grind)
+    → (hsp : hrt.head = ⟨DCC? (x y), ⟨.unmap⟩, .unmap⟩)
     → ViewAppHole (DCC? *<x>) (DCC? &(y)) lv hlt hmem
   | fmap  : (hrt : RedSpineNorm (DCC? ($<x> &(y))) e')
-    → (hsp : hrt.head = ⟨DCC? &((x y)), hrt', ⟨.fmap⟩, .fmap⟩)
-    → ViewAppHole x y lv (by grind) (by grind)
+    → (hsp : hrt.head = ⟨DCC? &((x y)), ⟨.fmap⟩, .fmap⟩)
     → ViewAppHole (DCC? $<x>) (DCC? &(y)) lv hlt hmem
   | map   : (hrt : RedSpineNorm (DCC? (!<x> &(y))) e')
-    → (hsp : hrt.head = ⟨DCC? !((x y)), hrt', ⟨.map⟩, .map⟩)
-    → ViewAppHole x y lv (by grind) (by grind)
+    → (hsp : hrt.head = ⟨DCC? !((x y)), ⟨.map⟩, .map⟩)
     → ViewAppHole (DCC? !<x>) (DCC? &(y)) lv hlt hmem
   -- if τ contains the hole, then this is Σ
   -- otherwise, the Coup does not depend on the hole
   -- in which case it is just `(
   | sigma    : (hrt : RedSpineNorm (DCC? (Σ(B, C) x)) e')
-    → (hsp : hrt.head = ⟨DCC? Coup((C x)), hrt', ⟨.sigma⟩, .sigma⟩)
+    → (hsp : hrt.head = ⟨DCC? Coup((C x)), ⟨.sigma⟩, .sigma⟩)
     → ViewAppHole C x lv (by grind) (by grind)
     → ViewAppHole (DCC? Σ(B, C)) x lv hlt hmem
 deriving Repr
 
-@[grind]
-def view_app_hole? (f hole₁ : GenericExpr τ_c) (hlt : f.max_hole < hole₁.min_hole) : Option (ViewAppHole f hole₁ hlt) :=
-  match heq : (DCC? (f hole₁)).red_spine!! with
+set_option pp.deepTerms true in
+set_option pp.deepTerms.threshold 9999 in
+set_option pp.proofs true in
+set_option pp.proofs.threshold 9999 in
+def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole < lv) (hmem : lv ≤ hole₁.max_hole) : Option (ViewAppHole f hole₁ lv hlt hmem) :=
+  match (DCC? (f hole₁)).red_spine!! with
   | .some ⟨e', hrt⟩ =>
-    if hn' : e'.max_hole < hole₁.min_hole then
-      .some (.quot hrt hlt (by grind))
+    if hn' : e'.max_hole < lv then
+      .some (.quot hrt hn')
     else
-      match e', heq₂ : hrt.tail with
-      | e', ⟨_, _, .id (A := A)⟩ =>
+      -- In remaining cases, just show that no reduction is possible
+      match f with
+      | DCC? Id(A) =>
+        if heq : e' = hole₁ then by
+          subst heq
+          exact .some (.id hrt (
+            match heq₂ : hrt.head with
+            | ⟨_, _, .id⟩ => by simp_all only [not_lt]))
+        else .none
+      | DCC? `(B, x) =>
+        have hn'' : e'.max_hole < lv := by
+          match heq₂ : hrt.head with
+          | ⟨_, ⟨.quot⟩, .quot⟩ =>
+            have heq_fst : hrt.head.fst = x := by simp_all
+            let h := heq_fst ▸ hrt.head_rest
+            have h_dec  := RedAff.max_hole_preserved (.quot (β := B) (x := x) (y := hole₁))
+            have h_dec₂ := h.max_hole_preserved
+            have h_dec₃ : e'.max_hole ≥ lv := by simp_all
+            grind
+          | ⟨_, ⟨.congrFun h⟩, hn⟩ =>
+            cases hn
+            grind
+        (hn' hn'').elim
+      | DCC? f ∘ g =>
+        match g.view_app_hole? hole₁ lv (by grind) (by grind) with
+        | .some h =>
+          .some (.comp hrt (by grind) (
+            match heq₂ : hrt.head with
+            | ⟨_, _, .comp⟩ => by simp_all only [not_lt]) h)
+        | .none => .none
+      | DCC? f ∘' g =>
+        match g.view_app_hole? hole₁ lv (by grind) (by grind) with
+        | .some h =>
+          .some (.comp' hrt (by grind) (
+            match heq₂ : hrt.head with
+            | ⟨_, _, .comp'⟩ => by simp_all only [not_lt]) h)
+        | .none => .none
+      | DCC? f ∘∘ g =>
+        match g.view_app_hole? hole₁ lv (by grind) (by grind) with
+        | .some h =>
+          .some (.comp₂ hrt (by grind) (
+            match heq₂ : hrt.head with
+            | ⟨_, _, .comp₂⟩ => by simp_all only [not_lt]) h)
+        | .none => .none
+      | DCC? Fst(B) => by
+        cases hole₁
+        case mkc =>
+          rename_i B x y
+          if heq : e' = x then
+            subst heq
+            exact .some (.fst hrt (match heq₂ : hrt.head with
+              | ⟨_, _, .fstc⟩ => by simp_all only [not_lt]))
+          else exact .none
+        any_goals (
+          exact False.elim (by
+            match heq₂ : hrt.head with
+            | ⟨_, hr, hn⟩ => cases hn))
+      | DCC? Snd(B) => by
+        cases hole₁
+        case mkc =>
+          rename_i B x y
+          if heq : e' = y then
+            subst heq
+            exact .some (.snd hrt (match heq₂ : hrt.head with
+              | ⟨_, _, .sndc⟩ => by simp_all only [not_lt]))
+          else exact .none
+        any_goals (
+          exact False.elim (by
+            match heq₂ : hrt.head with
+            | ⟨_, hr, hn⟩ => cases hn))
+      | DCC? Eval(A, B, x) => by
+        cases hole₁
+        case mkc =>
+          exact .some (.eval hrt (match heq₂ : hrt.head with
+              | ⟨_, _, .eval⟩ => by simp_all only [not_lt]))
+        any_goals (
+          exact False.elim (by
+            match heq₂ : hrt.head with
+            | ⟨_, hr, hn⟩ => cases hn))
+      | DCC? ⟦B⟧⟨x, y⟩ => by
+        cases hole₁
+        case box =>
+          exact .some (.pair hrt (match heq₂ : hrt.head with
+              | ⟨_, _, .pair⟩ => by simp_all only [not_lt]))
+        any_goals (
+          exact False.elim (by
+            match heq₂ : hrt.head with
+            | ⟨_, hr, hn⟩ => cases hn))
+      | DCC? *<x> => by
+        cases hole₁
+        case box =>
+          exact .some (.unmap hrt (match heq₂ : hrt.head with
+              | ⟨_, _, .unmap⟩ => by simp_all only [not_lt]))
+        any_goals (
+          exact False.elim (by
+            match heq₂ : hrt.head with
+            | ⟨_, hr, hn⟩ => cases hn))
+      | DCC? $<x> => by
+        cases hole₁
+        case box =>
+          exact .some (.fmap hrt (match heq₂ : hrt.head with
+              | ⟨_, _, .fmap⟩ => by simp_all only [not_lt]))
+        any_goals (
+          exact False.elim (by
+            match heq₂ : hrt.head with
+            | ⟨_, hr, hn⟩ => cases hn))
+      | DCC? !<x> => by
+        cases hole₁
+        case box =>
+          exact .some (.map hrt (match heq₂ : hrt.head with
+              | ⟨_, _, .map⟩ => by simp_all only [not_lt]))
+        any_goals (
+          exact False.elim (by
+            match heq₂ : hrt.head with
+            | ⟨_, hr, hn⟩ => cases hn))
+      | DCC? Σ(B, C) => by
+        match C.view_app_hole? hole₁ lv (by grind) (by grind) with
+        | .some h =>
+          exact .some (.sigma hrt (match heq₂ : hrt.head with
+            | ⟨_, _, .sigma⟩ => by simp_all only [not_lt]) h)
+        | .none => exact .none
+      | DCC? Dom(_x) | DCC? Sort _m | DCC? ∗ | DCC? ⊤ | DCC? ⊥
+      | DCC? (_x = _y) | DCC? refl(_B) | DCC? ⟦_B⟧(_x, _y) | DCC? Coup(_B)
+      | DCC? Π(_B, _C) | DCC? !(_A) | .const _n | .hole _n =>
+        False.elim (by
+          match hrt.head with
+          | ⟨B, ⟨hr⟩, hn⟩ =>
+            cases hr <;> cases hn)
+      | DCC? (a b) => by
+        cases a
+        case curr =>
+          sorry
+        case curr' => sorry
+        case eql => sorry
+        any_goals (
+          exact False.elim (by
+          match hrt.head with
+          | ⟨B, ⟨hr⟩, hn⟩ =>
+            cases hr <;> cases hn))
+  | .none => .none
+/-
+set_option pp.deepTerms true in
+set_option pp.deepTerms.threshold 9999 in
+set_option pp.proofs true in
+set_option pp.proofs.threshold 9999 in
+def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole < lv) (hmem : lv ≤ hole₁.max_hole) : Option (ViewAppHole f hole₁ lv hlt hmem) :=
+  match (DCC? (f hole₁)).red_spine!! with
+  | .some ⟨e', hrt⟩ =>
+    if hn' : e'.max_hole < lv then
+      .some (.quot hrt hn')
+    else
+      match hole₁, e', f, heq₂ : hrt.head with
+      | hole₁, e', _, ⟨_, _, .id (A := A)⟩ =>
+        if heq₄ : e' = hole₁ then
+          .some (.id (A := A) (heq₄ ▸ hrt) (by dcc_aesop' [rel]))
+        else .none
+      | hole₁, e', _, ⟨_, _, .comp (y := g)⟩ =>
         if heq₃ : e' = hole₁ then
-          .some (.id (A := A) (heq₃ ▸ hrt) (by grind) (by dcc_aesop' [rel]))
+          have hnlv : hole₁.max_hole ≥ lv := by grind
+          match g.view_app_hole? hole₁ lv (by grind) (by grind) with
+          | .some h =>
+            .some (.comp (heq₃ ▸ hrt) hnlv (by dcc_aesop' [rel]) h)
+          | .none => .none
         else .none
-      | _, ⟨_, _, .comp (x := f') (y := g') (z := e')⟩ =>
+      | hole₁, e', _, ⟨_, _, .comp' (y := g)⟩ =>
         if heq₃ : e' = hole₁ then
-          .some (.comp (heq₃ ▸ hrt) (by grind) (by grind) (by dcc_aesop' [rel]))
+          match g.view_app_hole? hole₁ lv (by grind) (by grind) with
+          | .some h =>
+            .some (.comp' (heq₃ ▸ hrt) (by grind) (by dcc_aesop' [rel]) h)
+          | .none => .none
         else .none
-      | e', ⟨_, _, .fstc (b := b) (B := B) (_B := _B)⟩ =>
-        match hole₁ with
-        | DCC? ⟦__B⟧(x, y) =>
-          if heq₃ : e' = x then
-            if heq₄ : __B = _B then
-              if heq₅ : b = y then by
-                cases heq₄
-                cases heq₃
-                cases heq₅
-                exact .some (.fst (B := B) (_B := _B) hrt (by grind) (by dcc_aesop' [rel]))
-              else .none
-            else .none
-          else .none
-        | _ => .none
-      | e', ⟨_, _, .sndc (a := a) (B := B) (_B := _B)⟩ =>
-        match hole₁ with
-        | DCC? ⟦__B⟧(x, y) =>
-          if heq₃ : e' = y then
-            if heq₄ : __B = _B then
-              if heq₅ : a = x then by
-                cases heq₄
-                cases heq₃
-                cases heq₅
-                exact .some (.snd (B := B) (_B := _B) hrt (by grind) (by dcc_aesop' [rel]))
-              else .none
-            else .none
-          else .none
-        | _ => .none
-      | _, ⟨_, _, .eval (A := A) (B := B) (_B := _B) (x := g) (y := x) (z := y)⟩ =>
-        match hole₁ with
-        | DCC? ⟦__B⟧(a, b) =>
-          if heq : x = a ∧ y = b ∧ __B = _B then
-            .some (.eval (A := A) (B := B) (heq.left ▸ heq.right.left ▸ hrt) (by grind) (by dcc_aesop' [rel]))
-          else .none
-        | _ => .none
-      | _, ⟨_, _, .curr (A := A) (B := B) (x := g) (y := x) (z := y)⟩ =>
-        if heq : y = hole₁ then
-          .some (.curr (A := A) (B := B) (g := g) (heq ▸ hrt) (by grind) (by dcc_aesop' [rel]))
+      | hole₁, e', _, ⟨_, _, .comp₂ (y := g)⟩ =>
+        if heq₃ : e' = hole₁ then
+          match g.view_app_hole? hole₁ lv (by grind) (by grind) with
+          | .some h =>
+            .some (.comp₂ (heq₃ ▸ hrt) (by grind) (by dcc_aesop' [rel]) h)
+          | .none => .none
         else .none
-      | _, ⟨_, _, .curr' (A := A) (B := B) (x := g) (y := x) (z := y)⟩ =>
-        match hole₁ with
-        | DCC? &(hole₁) =>
-          if heq : y = hole₁ then
-            .some (.curr' (A := A) (B := B) (g := g) (heq ▸ hrt) (by grind) (by dcc_aesop' [rel]))
-          else .none
-        | _ => .none
-      | _, ⟨_, _, .eql (B := B) (env := env) (x := x)⟩ =>
-        match hole₁ with
-        | DCC? &(hole₁) =>
-          if heq : hole₁ = x then
-            .some (.eql (B := B) (env := env) (heq ▸ hrt) (by grind) (by dcc_aesop' [rel]))
-          else .none
-        | _ => .none
-      | _, ⟨_, _, .pair (B := B) (x := x) (y := y) (z := z)⟩ =>
-        match hole₁ with
-        | DCC? &(hole₁) =>
-          if heq : z = hole₁ then by
-            cases heq
-            exact .some (.pair (B := B) (x := x) (y := y) (z := z) hrt (by grind) (by dcc_aesop' [rel]))
-          else .none
-        | _ => .none
-      | _, ⟨_, _, .unmap (x := x) (y := y)⟩ =>
-        match hole₁ with
-        | DCC? &(hole₁) =>
-          if heq : hole₁ = y then by
-            cases heq
-            exact .some (.unmap (g := x) (x := y) hrt (by grind) (by dcc_aesop' [rel]))
-          else .none
-        | _ => .none
-      | _, ⟨_, _, .map (x := x) (y := y)⟩ =>
-        match hole₁ with
-        | DCC? &(hole₁) =>
-          if heq : hole₁ = y then by
-            cases heq
-            exact .some (.map (g := x) (x := y) hrt (by grind) (by dcc_aesop' [rel]))
-          else .none
-        | _ => .none
-      | _, ⟨_, _, .fmap (x := x) (y := y)⟩ =>
-        match hole₁ with
-        | DCC? &(hole₁) =>
-          if heq : hole₁ = y then by
-            cases heq
-            exact .some (.fmap (g := x) (x := y) hrt (by grind) (by dcc_aesop' [rel]))
-          else .none
-        | _ => .none
-      | _, ⟨_, _, .sigma (B := B) (C := C) (x := x)⟩ =>
-        if heq : x = hole₁ then
-          .some (.sigma (B := B) (C := C) (heq ▸ hrt) (by grind) (by dcc_aesop' [rel]))
+      | (DCC? ⟦B⟧(x, y)), e', _, ⟨_, _, .fstc⟩ =>
+        if heq₃ : e' = x then
+          .some (.fst (heq₃ ▸ hrt) (by dcc_aesop' [rel]))
         else .none
-      | e', ⟨_, _, .quot⟩ => .none
+      | (DCC? ⟦B⟧(x, y)), e', _, ⟨_, _, .sndc⟩ =>
+        if heq₃ : e' = y then
+          .some (.snd (heq₃ ▸ hrt) (by dcc_aesop' [rel]))
+        else .none
+      | (DCC? ⟦B⟧(x, y)), e', _, ⟨_, _, .eval⟩ =>
+        .some (.eval hrt (by dcc_aesop' [rel]))
+      | (DCC? &(x)), e', _, ⟨_, _, .pair⟩ =>
+        .some (.pair hrt (by dcc_aesop' [rel]))
+      | (DCC? &(y)), e', _, ⟨_, _, .map (x := x)⟩ =>
+        match x.view_app_hole? y lv (by grind) (by grind) with
+        | .some h => .some (.map hrt (by dcc_aesop' [rel]) h)
+        | .none => .none
+      | (DCC? &(y)), e', _, ⟨_, _, .fmap (x := x)⟩ =>
+        match x.view_app_hole? y lv (by grind) (by grind) with
+        | .some h => .some (.fmap hrt (by dcc_aesop' [rel]) h)
+        | .none => .none
+      | (DCC? &(y)), e', _, ⟨_, _, .unmap (x := x)⟩ =>
+        match x.view_app_hole? y lv (by grind) (by grind) with
+        | .some h => .some (.unmap hrt (by dcc_aesop' [rel]) h)
+        | .none => .none
+      | (DCC? &(z)), e', _, ⟨_, _, .curr' (x := x) (B := B) (y := y)⟩ =>
+        match x.view_app_hole? (DCC? &(⟦B⟧(y, z))) lv (by grind) (by grind) with
+        | .some h => .some (.curr' hrt (by dcc_aesop' [rel]) h)
+        | .none => .none
+      | (DCC? &(y)), e', _, ⟨_, _, .eql⟩ => .some (.eql hrt (by dcc_aesop' [rel]))
+      | z, e', _, ⟨_, _, .curr (x := x) (y := y) (B := B)⟩ =>
+        match x.view_app_hole? (DCC? ⟦B⟧(y, z)) lv (by grind) (by grind) with
+        | .some h => .some (.curr hrt (by dcc_aesop' [rel]) h)
+        | .none => .none
+      | x, e', _, ⟨_, _, .sigma (B := B) (C := C)⟩ =>
+        match C.view_app_hole? x lv (by grind) (by grind) with
+        | .some h => .some (.sigma hrt (by dcc_aesop' [rel]) h)
+        | .none => .none
+      | _, e', _, ⟨_, _, .quot⟩ =>
+        have h : e'.max_hole < lv := by
+          have h_dec₁ := hrt.max_hole_preserved
+          match heq_hr : hrt.head with
+          | ⟨e₁, ⟨hr⟩, ha⟩ =>
+            cases ha
+            have h_dec₂ := hr.max_hole_preserved
+            let hb := hrt.head_rest
+            expose_names
+            have heq_fst : hrt.head.fst = fst := by simp_all
+            replace hb : fst.RedSpineStar e' := heq_fst ▸ hb
+            have h_dec₂ := hb.max_hole_preserved
+            have h_dec₃ : fst.max_hole ≤ (a.quot fst).max_hole := by grind
+            have h_dec₄ := le_trans h_dec₂ h_dec₃
+            grind
+        (hn' (by assumption)).elim
   | .none => .none
 
-def view_app_hole? (f hole₁ : GenericExpr τ_c) (hlt : f.max_hole < hole₁.min_hole) : Option (ViewAppHole f hole₁ hlt) :=
-  if heq : (reduce RedAff (DCC? (f hole₁))).fst = hole₁ then
-    .some (.id ⟨reduce_sound_fst heq, reduce_norm_fst heq⟩ hlt)
-  else if hn' : (reduce RedAff (DCC? (f hole₁))).fst.max_hole < hole₁.min_hole then
-    .some (.quot ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ (by grind))
-  else match reduce_with_norm RedAff (DCC? (f hole₁)) with
-  | ⟨DCC? (g ⟦B⟧(x, y)), ⟨h⟩⟩ =>
-    if heq : y = hole₁ then
-      .some (.curr ⟨heq ▸ h.left, heq ▸ h.right⟩ hlt)
-    else .none
-  | _ =>
-    match hole₁ with
-    | DCC? ⟦B⟧(x, y) =>
-      sorry
-    | DCC? &(y) =>
-      match reduce_with_norm RedAff (DCC? (f &(y))) with
-      | ⟨DCC? (g &(⟦B⟧(x, y))), ⟨h⟩⟩ =>
-        sorry
-      | ⟨DCC? (x = y), ⟨h⟩⟩ =>
-        
-        sorry
-      | ⟨DCC? ⟦B⟧((M x), (N x₁ (M₂ x₂))), ⟨h⟩⟩ =>
-        if heq : (DCC? ⟦B⟧((M x), (N x₁ (M₂ x₂)))) = (DCC? ⟦B⟧((M y), (N y (M y)))) then
-          .some (.pair ⟨heq ▸ h.left, heq ▸ h.right⟩ hlt)
-        else .none
-      | ⟨DCC? (f' x), ⟨h⟩⟩ =>
-        if heq : x = y then
-          .some (.unmap ⟨heq ▸ h.left, heq ▸ h.right⟩ hlt)
-        else .none
-      | ⟨DCC? &((f' x)), ⟨h⟩⟩ =>
-        if heq : x = y then
-          .some (.fmap ⟨heq ▸ h.left, heq ▸ h.right⟩ hlt)
-        else .none
-      | ⟨DCC? !((f' x)), ⟨h⟩⟩ =>
-        if heq : x = y then
-          .some (.map ⟨heq ▸ h.left, heq ▸ h.right⟩ hlt)
-        else .none
-      | _ => sorry
-    | hole₁ =>
-      match reduce_with_norm RedAff (DCC? (f hole₁)) with
-      | ⟨DCC? (_f' (_g' hole₁')), ⟨h⟩⟩ =>
-        if heq₂ : hole₁' = hole₁ then
-          .some (.comp ⟨heq₂ ▸ h.left, heq₂ ▸ h.right⟩ hlt (by
-            have ha : (reduce RedAff (f.app hole₁)).fst.max_hole ≥ hole₁.min_hole := by grind
-            rw [reduce_complete_fst h.left h.right] at ha
-            grind))
-        else .none
-      | ⟨DCC? Coup(B), ⟨h⟩⟩ =>
-        .some (.sigma ⟨h.left, h.right⟩ hlt (by
-          have ha : (reduce RedAff (f.app hole₁)).fst.max_hole ≥ hole₁.min_hole := by grind
-          rw [reduce_complete_fst h.left h.right] at ha
-          grind))
-      | _ => .none
-
+def ViewAppHole.complete (h : ViewAppHole (τ_c := τ_c) f hole₁ lv hlt hmem) : f.view_app_hole? hole₁ lv hlt hmem = .some h := by
+  induction h
+  case id =>
+    
+    sorry
+-/
 inductive ViewPar : (f : GenericExpr τ_c) → (hole₁ : GenericExpr τ_c)
   → (hlt : f.max_hole < hole₁.min_hole) → Type u
   | quot  : RedAffNorm (DCC? (f hole₁)) ⟨x', hn_x⟩

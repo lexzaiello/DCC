@@ -521,7 +521,7 @@ theorem map_branches_eq {e e' : GenericExpr τ} (heq : map_branches e fn = e') :
 theorem map_indices_eq {e e' : GenericExpr τ} (heq : map_indices e fn = e') : indices e' ≍ (indices e).map fn := by
   cases e <;> grind
 
-@[grind]
+@[grind, dcc_size]
 def max_hole (e : GenericExpr τ_c) : ℕ :=
   match e with
   | DCC? Dom(x) => x.max_hole

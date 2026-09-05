@@ -85,8 +85,8 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
     → (hsp : hrt.head = ⟨DCC? (x ⟦B⟧(y, z)), ⟨.curr⟩, .curr⟩)
     → ViewAppHole x (DCC? ⟦B⟧(y, z)) lv (by simp_all [max_hole]) (by simp_all [max_hole])
     → ViewAppHole (DCC? (Λ(A, B, x) y)) z lv hlt hmem
-  | eql    : (hrt : RedSpineNorm (DCC? (Eql(B) &(x) &(y))) e')
-    → (hgt : ¬ e'.max_hole < lv)
+  | eql   : (hrt : RedSpineNorm (DCC? (Eql(B) &(x) &(y))) (DCC? y = y))
+    → (hgt : ¬ (DCC? y = y).max_hole < lv)
     → (hsp : hrt.head = ⟨DCC? (y = y), ⟨.eql⟩, .eql⟩)
     → ViewAppHole (DCC? (Eql(B) &(x))) (DCC? &(y)) lv hlt hmem
   /-
@@ -341,7 +341,8 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
           | ⟨b, c, ⟨heq₁⟩, ⟨heq₂⟩⟩ =>
             subst heq₁
             subst heq₂
-            exact .some (.eql hrt hn' hrt.head_eq)
+            let heq' := hrt.unique ⟨.single .eql .eql, fun _ _ h => nomatch h⟩
+            exact .some (.eql (heq' ▸ hrt) (heq' ▸ hn') (heq' ▸ hrt).head_eq)
   | .none => .none
 
 def ViewAppHole.complete_some (h : ViewAppHole (τ_c := τ_c) f hole₁ lv hlt mem) : (view_app_hole? f hole₁ lv hlt mem).isSome := by
@@ -628,10 +629,7 @@ def ReadbackHead.preservation_view {f f' A : GenericExpr τ_c} {h_dom : Domain f
   {hrt : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole}
   (h : ReadbackHead f h_dom e_h hrt f') : f'.ViewAppHole x f'.max_hole.succ
   (by grind)
-  (by
-    have ha := h.max_hole_preserved
-    have hb := e_h.max_hole
-    grind) := by
+  (by have ha := h.max_hole_preserved; have hb := e_h.max_hole; grind) := by
   have ha := h.max_hole_preserved
   have hb := e_h.max_hole
   have hc := e_h.min_hole
@@ -662,11 +660,13 @@ So reduce these to the canonical projection, quotation, or Id.
 Otherwise, the expression is "gluing" operations together in some way that does
 meaningful work.
 
-In this case, 
-
 Always reduce all the points of the expression.
 
-Decreasing argument goes by: f.domain.size + f.size
+Decreasing argument goes by the length of the reduction in ViewAppHole
+
+We do not assume f is in normal form. That is assumed in later proofs since defeq β-normalizes first.
+
+Simply continue running Canonicalize until the size doesn't decrease.
 -/
 inductive Canonicalize : (f : GenericExpr τ_c) → (f' : GenericExpr τ_c) → Type u
   /-
@@ -686,23 +686,76 @@ inductive Canonicalize : (f : GenericExpr τ_c) → (f' : GenericExpr τ_c) → 
     → (hrt  : ViewAppHole (DCC? f ∘ g) x (DCC? (f ∘ g)).max_hole.succ (by grind) e_h.max_hole)
     → (hc₁  : Canonicalize f f')
     → (hc₂  : Canonicalize g g')
-    → (hc'  : Canonicalize (DCC? (f
+    → Canonicalize (DCC? f ∘ g) (DCC? f' ∘ g')
   /-
     MASSIVE TODO: merge ∘ ∘' and ∘∘ in Judge because they all have the same domain
+    and are all of very similar shape.
+    Can merge the constructor in Judge. We are coercing them to the same for now,
+    but as long as Judge is changed this is legal.
   -/
   | comp'  : (h_dom : Domain (DCC? f ∘' g) A)
     → (e_h  : Hole A (DCC? f ∘' g).max_hole.succ x)
-    → (hrt  : ViewAppHole (DCC? f ∘' g) x (DCC? (f ∘' g)).max_hole.succ (by grind) e_h.max_hole)
-    → (hc₁  : Canonicalize f' f'')
-    → (hc₂  : Canonicalize g g')
-    → Canonicalize f (DCC? (f'' ∘ g'))
+    → (hrt  : ViewAppHole (DCC? f ∘' g) x (DCC? (f ∘ g)).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁  : Canonicalize f f')
+    → (hc₂  : Canonicalize g g') -- size of ∘' and ∘ is the same
+    → Canonicalize (DCC? f ∘' g) (DCC? f' ∘ g')
   | comp₂  : (h_dom : Domain (DCC? f ∘∘ g) A)
     → (e_h  : Hole A (DCC? f ∘∘ g).max_hole.succ x)
     → (hrt  : ViewAppHole (DCC? f ∘∘ g) x (DCC? (f ∘∘ g)).max_hole.succ (by grind) e_h.max_hole)
-    → (hc₁  : Canonicalize f' f'')
-    → (hc₂  : Canonicalize g g')
-    → Canonicalize f (DCC? (f'' ∘∘ g'))
-  
+    → (hc₁  : Canonicalize f f')
+    → (hc₂  : Canonicalize g g') -- size of ∘' and ∘ is the same
+    → Canonicalize (DCC? f ∘∘ g) (DCC? f' ∘ g')
+  | eval   : (h_dom : Domain (DCC? Eval(A, B, x)) τ)
+    → (e_h : Hole τ (DCC? Eval(A, B, x)).max_hole.succ y)
+    → (hrt : ViewAppHole (DCC? Eval(A, B, x)) y (DCC? Eval(A, B, x)).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁ : Canonicalize x x')
+    → (hc₂ : Canonicalize B B')
+    → Canonicalize (DCC? Eval(A, B, x)) (DCC? Eval(A, B', x'))
+  | curr   : (h_dom : Domain (DCC? (Λ(A, B, x) y)) τ)
+    → (e_h : Hole τ (DCC? (Λ(A, B, x) y)).max_hole.succ z)
+    → (hrt : ViewAppHole (DCC? (Λ(A, B, x) y)) z (DCC? (Λ(A, B, x) y)).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁ : Canonicalize x x')
+    → (hc₂ : Canonicalize B B')
+    → Canonicalize (DCC? (Λ(A, B, x) y)) (DCC? (Λ(A, B', x') y))
+  | curr'  : (h_dom : Domain (DCC? (!Λ(A, B, x) &(y))) τ)
+    → (e_h : Hole τ (DCC? (!Λ(A, B, x) &(y))).max_hole.succ z)
+    → (hrt : ViewAppHole (DCC? (!Λ(A, B, x) &(y))) z (DCC? (!Λ(A, B, x) &(y))).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁ : Canonicalize x x')
+    → (hc₂ : Canonicalize B B')
+    → Canonicalize (DCC? (!Λ(A, B, x) &(y))) (DCC? (!Λ(A, B', x') &(y)))
+  | eql    : (h_dom : Domain (DCC? (Eql(B) &(x))) τ)
+    → (e_h : Hole τ (DCC? (Eql(B) &(x))).max_hole.succ y)
+    → (hrt : ViewAppHole (DCC? (Eql(B) &(x))) y (DCC? (Eql(B) &(x))).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₂ : Canonicalize B B')
+    → Canonicalize (DCC? Eql(B)) (DCC? Eql(B'))
+  | pair   : (h_dom : Domain (DCC? ⟦B⟧⟨x, y⟩) τ)
+    → (e_h : Hole τ (DCC? ⟦B⟧⟨x, y⟩).max_hole.succ z)
+    → (hrt : ViewAppHole (DCC? ⟦B⟧⟨x, y⟩) z (DCC? ⟦B⟧⟨x, y⟩).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁ : Canonicalize B B')
+    → (hc₂ : Canonicalize x x')
+    → (hc₃ : Canonicalize y y')
+    → Canonicalize (DCC? ⟦B⟧⟨x, y⟩) (DCC? ⟦B'⟧⟨x', y'⟩)
+  | unmap  : (h_dom : Domain (DCC? *<x>) τ)
+    → (e_h : Hole τ (DCC? *<x>).max_hole.succ y)
+    → (hrt : ViewAppHole (DCC? *<x>) y (DCC? *<x>).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁ : Canonicalize x x')
+    → Canonicalize (DCC? *<x>) (DCC? *<x'>)
+  | fmap   : (h_dom : Domain (DCC? $<x>) τ)
+    → (e_h : Hole τ (DCC? $<x>).max_hole.succ y)
+    → (hrt : ViewAppHole (DCC? $<x>) y (DCC? $<x>).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁ : Canonicalize x x')
+    → Canonicalize (DCC? $<x>) (DCC? $<x'>)
+  | map    : (h_dom : Domain (DCC? !<x>) τ)
+    → (e_h : Hole τ (DCC? !<x>).max_hole.succ y)
+    → (hrt : ViewAppHole (DCC? !<x>) y (DCC? !<x>).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁ : Canonicalize x x')
+    → Canonicalize (DCC? !<x>) (DCC? !<x'>)
+  | sigma  : (h_dom : Domain (DCC? Σ(B, C)) τ)
+    → (e_h : Hole τ (DCC? Σ(B, C)).max_hole.succ x)
+    → (hrt : ViewAppHole (DCC? Σ(B, C)) x (DCC? Σ(B, C)).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁ : Canonicalize B B')
+    → (hc₂ : Canonicalize C C')
+    → Canonicalize (DCC? Σ(B, C)) (DCC? Σ(B', C'))
 
 /-
 TODO: comp' vs comp vs comp₂ can be condensed to the same judgment rule,

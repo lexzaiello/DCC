@@ -676,14 +676,10 @@ inductive Canonicalize : (f : GenericExpr τ_c) → (f' : GenericExpr τ_c) → 
     → (e_h : Hole A f.max_hole.succ x)
     → (hn  : ∀ ⦃hlt⦄ ⦃hmem⦄, ViewAppHole f x f.max_hole.succ hlt hmem → False)
     → Canonicalize f f-/
-  | single : (h_dom : Domain f A)
-    → (e_h  : Hole A f.max_hole.succ x)
-    → (hrt  : ViewAppHole f x f.max_hole.succ (by grind) e_h.max_hole)
-    → (hrb  : ReadbackHead f h_dom e_h hrt f')
-    → Canonicalize f f'
   | comp   : (h_dom : Domain (DCC? f ∘ g) A)
     → (e_h  : Hole A (DCC? f ∘ g).max_hole.succ x)
     → (hrt  : ViewAppHole (DCC? f ∘ g) x (DCC? (f ∘ g)).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? f ∘ g) h_dom e_h hrt f' → False)
     → (hc₁  : Canonicalize f f')
     → (hc₂  : Canonicalize g g')
     → Canonicalize (DCC? f ∘ g) (DCC? f' ∘ g')
@@ -696,41 +692,48 @@ inductive Canonicalize : (f : GenericExpr τ_c) → (f' : GenericExpr τ_c) → 
   | comp'  : (h_dom : Domain (DCC? f ∘' g) A)
     → (e_h  : Hole A (DCC? f ∘' g).max_hole.succ x)
     → (hrt  : ViewAppHole (DCC? f ∘' g) x (DCC? (f ∘ g)).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? f ∘' g) h_dom e_h hrt f' → False)
     → (hc₁  : Canonicalize f f')
     → (hc₂  : Canonicalize g g') -- size of ∘' and ∘ is the same
     → Canonicalize (DCC? f ∘' g) (DCC? f' ∘ g')
   | comp₂  : (h_dom : Domain (DCC? f ∘∘ g) A)
     → (e_h  : Hole A (DCC? f ∘∘ g).max_hole.succ x)
     → (hrt  : ViewAppHole (DCC? f ∘∘ g) x (DCC? (f ∘∘ g)).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? f ∘∘ g) h_dom e_h hrt f' → False)
     → (hc₁  : Canonicalize f f')
     → (hc₂  : Canonicalize g g') -- size of ∘' and ∘ is the same
     → Canonicalize (DCC? f ∘∘ g) (DCC? f' ∘ g')
   | eval   : (h_dom : Domain (DCC? Eval(A, B, x)) τ)
     → (e_h : Hole τ (DCC? Eval(A, B, x)).max_hole.succ y)
     → (hrt : ViewAppHole (DCC? Eval(A, B, x)) y (DCC? Eval(A, B, x)).max_hole.succ (by grind) e_h.max_hole)
-    → (hc₁ : Canonicalize x x')
-    → (hc₂ : Canonicalize B B')
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? Eval(A, B, x)) h_dom e_h hrt f' → False)
+    → (hc₁ : Canonicalize B B')
+    → (hc₂ : Canonicalize x x')
     → Canonicalize (DCC? Eval(A, B, x)) (DCC? Eval(A, B', x'))
   | curr   : (h_dom : Domain (DCC? (Λ(A, B, x) y)) τ)
     → (e_h : Hole τ (DCC? (Λ(A, B, x) y)).max_hole.succ z)
     → (hrt : ViewAppHole (DCC? (Λ(A, B, x) y)) z (DCC? (Λ(A, B, x) y)).max_hole.succ (by grind) e_h.max_hole)
-    → (hc₁ : Canonicalize x x')
-    → (hc₂ : Canonicalize B B')
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? (Λ(A, B, x) y)) h_dom e_h hrt f' → False)
+    → (hc₁ : Canonicalize B B')
+    → (hc₂ : Canonicalize x x')
     → Canonicalize (DCC? (Λ(A, B, x) y)) (DCC? (Λ(A, B', x') y))
   | curr'  : (h_dom : Domain (DCC? (!Λ(A, B, x) &(y))) τ)
     → (e_h : Hole τ (DCC? (!Λ(A, B, x) &(y))).max_hole.succ z)
     → (hrt : ViewAppHole (DCC? (!Λ(A, B, x) &(y))) z (DCC? (!Λ(A, B, x) &(y))).max_hole.succ (by grind) e_h.max_hole)
-    → (hc₁ : Canonicalize x x')
-    → (hc₂ : Canonicalize B B')
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? (!Λ(A, B, x) &(y))) h_dom e_h hrt f' → False)
+    → (hc₁ : Canonicalize B B')
+    → (hc₂ : Canonicalize x x')
     → Canonicalize (DCC? (!Λ(A, B, x) &(y))) (DCC? (!Λ(A, B', x') &(y)))
   | eql    : (h_dom : Domain (DCC? (Eql(B) &(x))) τ)
     → (e_h : Hole τ (DCC? (Eql(B) &(x))).max_hole.succ y)
     → (hrt : ViewAppHole (DCC? (Eql(B) &(x))) y (DCC? (Eql(B) &(x))).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? (Eql(B) &(x))) h_dom e_h hrt f' → False)
     → (hc₂ : Canonicalize B B')
-    → Canonicalize (DCC? Eql(B)) (DCC? Eql(B'))
+    → Canonicalize (DCC? (Eql(B) &(x))) (DCC? (Eql(B') &(x)))
   | pair   : (h_dom : Domain (DCC? ⟦B⟧⟨x, y⟩) τ)
     → (e_h : Hole τ (DCC? ⟦B⟧⟨x, y⟩).max_hole.succ z)
     → (hrt : ViewAppHole (DCC? ⟦B⟧⟨x, y⟩) z (DCC? ⟦B⟧⟨x, y⟩).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? ⟦B⟧⟨x, y⟩) h_dom e_h hrt f' → False)
     → (hc₁ : Canonicalize B B')
     → (hc₂ : Canonicalize x x')
     → (hc₃ : Canonicalize y y')
@@ -738,24 +741,123 @@ inductive Canonicalize : (f : GenericExpr τ_c) → (f' : GenericExpr τ_c) → 
   | unmap  : (h_dom : Domain (DCC? *<x>) τ)
     → (e_h : Hole τ (DCC? *<x>).max_hole.succ y)
     → (hrt : ViewAppHole (DCC? *<x>) y (DCC? *<x>).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? *<x>) h_dom e_h hrt f' → False)
     → (hc₁ : Canonicalize x x')
     → Canonicalize (DCC? *<x>) (DCC? *<x'>)
   | fmap   : (h_dom : Domain (DCC? $<x>) τ)
     → (e_h : Hole τ (DCC? $<x>).max_hole.succ y)
     → (hrt : ViewAppHole (DCC? $<x>) y (DCC? $<x>).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? $<x>) h_dom e_h hrt f' → False)
     → (hc₁ : Canonicalize x x')
     → Canonicalize (DCC? $<x>) (DCC? $<x'>)
   | map    : (h_dom : Domain (DCC? !<x>) τ)
     → (e_h : Hole τ (DCC? !<x>).max_hole.succ y)
     → (hrt : ViewAppHole (DCC? !<x>) y (DCC? !<x>).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? !<x>) h_dom e_h hrt f' → False)
     → (hc₁ : Canonicalize x x')
     → Canonicalize (DCC? !<x>) (DCC? !<x'>)
   | sigma  : (h_dom : Domain (DCC? Σ(B, C)) τ)
     → (e_h : Hole τ (DCC? Σ(B, C)).max_hole.succ x)
     → (hrt : ViewAppHole (DCC? Σ(B, C)) x (DCC? Σ(B, C)).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ∀ ⦃f'⦄, ReadbackHead (DCC? Σ(B, C)) h_dom e_h hrt f' → False)
     → (hc₁ : Canonicalize B B')
     → (hc₂ : Canonicalize C C')
     → Canonicalize (DCC? Σ(B, C)) (DCC? Σ(B', C'))
+  | single : (h_dom : Domain f A)
+    → (e_h  : Hole A f.max_hole.succ x)
+    → (hrt  : ViewAppHole f x f.max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ReadbackHead f h_dom e_h hrt f')
+    → Canonicalize f f'
+
+def canonicalize (f : GenericExpr τ_c) : Option ((f' : GenericExpr τ_c) × Canonicalize f f') :=
+  let ⟨A, h_dom⟩ := f.domain
+  let ⟨x, e_h⟩ := mk_hole A f.max_hole.succ
+  match f.view_app_hole? x f.max_hole.succ (by grind) e_h.max_hole with
+  | .some hrt =>
+    match heq : hrt.readback_head? h_dom e_h with
+    | .some ⟨f', hrb⟩ => .some ⟨_, .single h_dom e_h hrt hrb⟩
+    | .none =>
+      have hn_hrb : ∀ ⦃f'⦄, ReadbackHead f h_dom e_h hrt f' → False := by
+        intro f' h
+        simp_all [h.complete]
+      match heq₂ : f with
+      | (DCC? f ∘ g) =>
+        match f.canonicalize, g.canonicalize with
+        | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => by
+          subst heq₂
+          exact .some ⟨_, .comp h_dom e_h hrt hn_hrb h₁ h₂⟩
+        | _, _ => .none
+      | (DCC? f ∘' g) =>
+        match f.canonicalize, g.canonicalize with
+        | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => by
+          subst heq₂
+          exact .some ⟨_, .comp' h_dom e_h hrt hn_hrb h₁ h₂⟩
+        | _, _ => .none
+      | (DCC? f ∘∘ g) =>
+        match f.canonicalize, g.canonicalize with
+        | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => by
+          subst heq₂
+          exact .some ⟨_, .comp₂ h_dom e_h hrt hn_hrb h₁ h₂⟩
+        | _, _ => .none
+      | DCC? Eval(A, B, f) =>
+        match B.canonicalize, f.canonicalize with
+        | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => by
+          subst heq₂
+          exact .some ⟨_, .eval h_dom e_h hrt hn_hrb h₁ h₂⟩
+        | _, _ => .none
+      | DCC? (Λ(A, B, f) env) =>
+        match B.canonicalize, f.canonicalize with
+        | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => by
+          subst heq₂
+          exact .some ⟨_, .curr h_dom e_h hrt hn_hrb h₁ h₂⟩
+        | _, _ => .none
+      | DCC? (!Λ(A, B, f) &(env)) =>
+        match B.canonicalize, f.canonicalize with
+        | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => by
+          subst heq₂
+          exact .some ⟨_, .curr' h_dom e_h hrt hn_hrb h₁ h₂⟩
+        | _, _ => .none
+      | DCC? (Eql(B) &(env)) =>
+        match B.canonicalize with
+        | .some ⟨_, h₁⟩ => by
+          subst heq₂
+          exact .some ⟨_, .eql h_dom e_h hrt hn_hrb h₁⟩
+        | .none => .none
+      | DCC? ⟦B⟧⟨a, b⟩ =>
+        match B.canonicalize with
+        | .some ⟨_, h₁⟩ =>
+          match a.canonicalize, b.canonicalize with
+          | .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ => by
+            subst heq₂
+            exact .some ⟨_, .pair h_dom e_h hrt hn_hrb h₁ h₂ h₃⟩
+          | _, _ => .none
+        | .none => .none
+      | DCC? *<x> =>
+        match x.canonicalize with
+        | .some ⟨_, h₁⟩ => by
+          subst heq₂
+          exact .some ⟨_, .unmap h_dom e_h hrt hn_hrb h₁⟩
+        | .none => .none
+      | DCC? $<x> =>
+        match x.canonicalize with
+        | .some ⟨_, h₁⟩ => by
+          subst heq₂
+          exact .some ⟨_, .fmap h_dom e_h hrt hn_hrb h₁⟩
+        | .none => .none
+      | DCC? !<x> =>
+        match x.canonicalize with
+        | .some ⟨_, h₁⟩ => by
+          subst heq₂
+          exact .some ⟨_, .map h_dom e_h hrt hn_hrb h₁⟩
+        | .none => .none
+      | DCC? Σ(B, C) =>
+        match B.canonicalize, C.canonicalize with
+        | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => by
+          subst heq₂
+          exact .some ⟨_, .sigma h_dom e_h hrt hn_hrb h₁ h₂⟩
+        | _, _ => .none
+      | _ => .none
+  | .none => .none
 
 /-
 TODO: comp' vs comp vs comp₂ can be condensed to the same judgment rule,

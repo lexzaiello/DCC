@@ -451,6 +451,10 @@ def Domain.complete (h : Domain e τ) : domain e = ⟨τ, h⟩ :=
     simp [domain]
     grind
 
+def Domain.complete_fst (h : Domain e τ) : (domain e).fst = τ := by
+  have h := h.complete
+  grind
+
 @[dcc_rel]
 def ViewAppHole.reduction (h : ViewAppHole f x lv hlt hmem) : Σ B, RedSpineNorm (DCC? (f x)) B := by
   cases h <;> exact ⟨_, by assumption⟩
@@ -858,6 +862,23 @@ def canonicalize (f : GenericExpr τ_c) : Option ((f' : GenericExpr τ_c) × Can
         | _, _ => .none
       | _ => .none
   | .none => .none
+
+def readback_head_none_complete {f x : GenericExpr τ_c} {h_dom : Domain f A} {e_h : Hole A f.max_hole.succ x} {hrt : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole}
+  (hn : ∀ ⦃f'⦄, ReadbackHead f h_dom e_h hrt f' → False) : ViewAppHole.readback_head? h_dom e_h hrt = .none := by
+  apply Option.eq_none_iff_forall_ne_some.mpr
+  intro h
+  exact (hn h.snd).elim
+
+def Canonicalize.complete (h : Canonicalize (τ_c := τ_c) f f') : f.canonicalize = .some ⟨f', h⟩ := by
+  induction h <;> (
+    try (have ha := readback_head_none_complete (by assumption))
+    try (have haa := ReadbackHead.complete (by assumption))
+    have hb := Hole.complete (by assumption)
+    have hc := ViewAppHole.complete (by assumption)
+    have hd := Domain.complete (by assumption)
+    have he := Domain.complete_fst (by assumption)
+    unfold canonicalize
+    grind)
 
 /-
 TODO: comp' vs comp vs comp₂ can be condensed to the same judgment rule,

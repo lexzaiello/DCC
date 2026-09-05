@@ -406,6 +406,10 @@ def RedSpineNorm.head {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : ((B : Ge
   | ⟨.head ha hb _hc, _hn⟩ =>
     ⟨_, ⟨ha⟩, hb⟩
 
+def RedSpineNorm.is_norm (h : RedSpineNorm A B) : B.NormHead :=
+  match h with
+  | ⟨_hr, hn⟩ => hn
+
 @[inline]
 def RedSpineNorm.head_rest {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : RedSpineStar h.head.fst C :=
   match h with

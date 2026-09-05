@@ -592,7 +592,68 @@ def ReadbackHead.preservation {f x f' A : GenericExpr τ_c} {h_dom : Domain f A}
     cases e_h with
     | coup => exact ⟨⟨.single (by constructor), by assumption⟩⟩
 
-theorem ReadbackHead.decreasing {f f' A : GenericExpr τ_c} (h : ReadbackHead f h_dom e_h hrt f') : 
+@[grind ., grind →]
+theorem RedAff.domain_max_hole_preserved (h : RedAff (DCC? Dom(x)) τ) : τ.max_hole ≤ x.max_hole := by
+  cases h <;> grind
+
+theorem RedSpinePlus.domain_max_hole_preserved (h : RedSpinePlus (DCC? Dom(x)) τ) : τ.max_hole ≤ x.max_hole := by
+  cases h <;> grind
+
+theorem RedSpineNorm.domain_max_hole_preserved (h : RedSpineNorm (DCC? Dom(x)) τ) : τ.max_hole ≤ x.max_hole :=
+  match h with
+  | ⟨hr, _⟩ => hr.domain_max_hole_preserved
+
+@[grind ., grind →]
+theorem RedAffReflTrans.max_hole_preserved (h : RedAffReflTrans A B) : B.max_hole ≤ A.max_hole :=
+  match h.cases_head with
+  | .inl h => by grind
+  | .inr ⟨_, h₁, h₂⟩ => by
+    have h_dec := h₁.decreasing
+    have h_dec₂ := h₁.max_hole_preserved
+    have h_dec₃ := max_hole_preserved h₂
+    grind
+termination_by A.size
+
+theorem Domain.max_hole_preserved (h : Domain x A) : A.max_hole ≤ x.max_hole :=
+  match h with
+  | ⟨⟨hr, _hn⟩⟩ => hr.max_hole_preserved
+
+def ReadbackHead.max_hole_preserved {f f' A : GenericExpr τ_c} {h_dom : Domain f A} {e_h : Hole A f.max_hole.succ x}
+  {hrt : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole}
+  (h : ReadbackHead f h_dom e_h hrt f') : f'.max_hole ≤ f.max_hole := by
+  have h_dec := h_dom.max_hole_preserved
+  cases h <;> grind
+
+def ReadbackHead.preservation_view {f f' A : GenericExpr τ_c} {h_dom : Domain f A} {e_h : Hole A f.max_hole.succ x}
+  {hrt : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole}
+  (h : ReadbackHead f h_dom e_h hrt f') : f'.ViewAppHole x f'.max_hole.succ
+  (by grind)
+  (by
+    have ha := h.max_hole_preserved
+    have hb := e_h.max_hole
+    grind) := by
+  have ha := h.max_hole_preserved
+  have hb := e_h.max_hole
+  have hc := e_h.min_hole
+  cases h with
+  | id heq =>
+    have heq' : hrt.reduction = ⟨hrt.reduction.fst, hrt.reduction.snd⟩ := rfl
+    apply ViewAppHole.id (hrt := ⟨.single .id .id, e_h.is_norm.to_head⟩)
+    simp [RedSpineNorm.head]
+  | fst heq =>
+    have heq' : hrt.reduction = ⟨hrt.reduction.fst, hrt.reduction.snd⟩ := rfl
+    expose_names
+    apply ViewAppHole.fst (hrt := ⟨.single .fstc .fstc, e_h.is_norm.sigl.to_head⟩) (lv := B.fstc.max_hole.succ) (hgt := by grind)
+    simp [RedSpineNorm.head]
+  | snd heq =>
+    have heq' : hrt.reduction = ⟨hrt.reduction.fst, hrt.reduction.snd⟩ := rfl
+    expose_names
+    apply ViewAppHole.snd (hrt := ⟨.single .sndc .sndc, e_h.is_norm.sigr.to_head⟩) (lv := B.sndc.max_hole.succ) (hgt := by grind)
+    simp [RedSpineNorm.head]
+  | quot heq =>
+    have heq' : hrt.reduction = ⟨hrt.reduction.fst, hrt.reduction.snd⟩ := rfl
+    apply ViewAppHole.quot (hrt := ⟨.single .quot .quot, by rename_i hred; exact hred.is_norm⟩)
+    · grind
 
 /-
 When ViewAppHole reduces to part of the hole, we have reached a normal form.

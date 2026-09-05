@@ -36,6 +36,10 @@ inductive RedAff.IsHead : (hr : RedAff A B) → Type u
   | comp₂ {x y z}        : IsHead (.comp₂ (x := x) (y := y) (z := z))
 deriving Repr
 
+@[aesop norm (rule_sets := [DccRel])]
+def RedAff.IsHead.head {hr : RedAff A B} (hn : hr.IsHead) : Σ' f x, (hr' : PLift (RedAff (DCC? (f x)) B)) × (hn' : hr'.down.IsHead) × (PLift (hr ≍ hr'.down)) × (PLift (hn ≍ hn')) := by
+  cases heq : hn <;> exact ⟨_, _, ⟨by constructor⟩, hn, ⟨by grind⟩, ⟨by grind⟩⟩
+
 @[aesop safe destruct (rule_sets := [DccRel])]
 def RedAff.IsHead.unique {hr₁ : RedAff A B} {hr₂ : RedAff A C} (hrt₁ : hr₁.IsHead) (hrt₂ : hr₂.IsHead) : B = C := by
   cases hrt₁ <;> (cases hrt₂; rfl)
@@ -91,6 +95,16 @@ inductive RedSpinePlus : GenericExpr τ_c → GenericExpr τ_c → Type u
   | single : (hr : RedAff A B) → (hrt : hr.IsHead) → RedSpinePlus A B
   | head   : (hr : RedAff A B) → (hrt : hr.IsHead) → (hrt₂ : RedSpinePlus B C) → RedSpinePlus A C
 deriving Repr
+
+@[grind]
+def RedSpinePlus.length (h : RedSpinePlus A B) : ℕ :=
+  match h with
+  | .single _ _ => 1
+  | .head _ _ xs => xs.length.succ
+
+@[grind .]
+theorem RedSpinePlus.ar_pos (h : RedSpinePlus A B) : 0 < h.length := by
+  cases h <;> grind
 
 def RedSpinePlus.trans (hr₁ : RedSpinePlus A B) (hr₂ : RedSpinePlus B C) : RedSpinePlus A C :=
   match hr₁ with
@@ -299,6 +313,12 @@ inductive RedSpineStar : GenericExpr τ_c → GenericExpr τ_c → Type u
   | refl : RedSpineStar A A
 deriving Repr
 
+@[grind]
+def RedSpineStar.length (h : RedSpineStar A B) : ℕ :=
+  match h with
+  | .refl => 0
+  | .mk₁ h => h.length
+
 def RedSpineStar.elim_norm (h : RedSpineStar A B) (hn : NormHead A) : A = B :=
   match h with
   | .refl => rfl
@@ -419,5 +439,14 @@ def RedSpineNorm.elim_norm_flse (h : RedSpineNorm A B) (hn : NormHead A) : False
     have h_dec := h.decreasing
     have h := hr.elim_norm hn
     grind
+
+@[grind]
+def RedSpineNorm.length (h : RedSpineNorm A B) : ℕ :=
+  match h with
+  | ⟨hr, _⟩ => hr.length
+
+@[grind .]
+theorem RedSpineNorm.ar_pos (h : RedSpinePlus A B) : 0 < h.length := by
+  cases h <;> grind
 
 end GenericExpr

@@ -183,4 +183,39 @@ def Hole.complete (h : Hole α lv hole_e) : mk_hole α lv = ⟨hole_e, h⟩ := b
 def Hole.min_hole (h : Hole α lv hole₁) : GenericExpr.min_hole hole₁ = lv := by
   induction h <;> grind
 
+def Hole.max_hole (h : Hole α lv hole₁) : lv ≤ GenericExpr.max_hole hole₁ := by
+  induction h <;> grind
+
+def Hole.level_neq (h₁ : Hole α m x) (h₂ : Hole β n y) (hneq : m ≠ n) : x ≠ y := fun h => by
+  induction h₁ generalizing β n y with
+  | pure hn_coup =>
+    cases h₂ <;> grind
+  | bang h_hole ih =>
+    cases h₂ with
+    | pure =>
+      grind
+    | bang h_hole =>
+      simp_all
+      have h := ih (by assumption) (by grind)
+      grind
+    | coup hrt₂ h_hole₁ hrt h_hole₂ => exact ih h_hole (by grind) rfl
+  | coup =>
+    cases h₂ with
+    | pure =>
+      grind
+    | coup h_dom h_hole₂ hrt h_hole₁ =>
+      simp_all
+      rename_i ih₁ ih₂
+      cases h.left; cases h.right
+      exact ih₁ h_hole₂ (by grind) rfl
+    | bang =>
+      rename_i ih₁ ih₂ _ _ h_hole₂
+      exact ih₁ (by assumption) (by grind) rfl
+
+def Hole.coup_points_neq (h : Hole A level (DCC? ⟦β⟧(a, b))) : a ≠ b := fun heq => by
+  cases h with
+  | coup h_dom h_hole₁ hrt h_hole₂ =>
+    cases heq
+    exact h_hole₁.level_neq h_hole₂ (by grind) (by grind)
+
 end GenericExpr

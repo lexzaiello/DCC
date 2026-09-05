@@ -1,4 +1,5 @@
 import Dcc.Eta.Nbe2.RedSpine
+import Dcc.Eta.Nbe2.Hole
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
 
@@ -394,37 +395,262 @@ def view_app_hole_none_complete (hn : ViewAppHole (τ_c := τ_c) f hole₁ lv hl
   intro h heq
   exact hn h
 
-/-
-Show that if Hole hole₁ for the domain, then (ViewAppHole f hole₁ → False) implies there is no possible head step reduction.
-This will be useful for funext proof because then f = g by congrFun.
+inductive Domain : GenericExpr τ_c → GenericExpr τ_c → Type u
+  | mk : RedAffNorm (DCC? Dom(x)) ⟨τ, hn_τ⟩ → Domain x τ
+deriving Repr
 
-In the other cases, when we readback ViewAppHole, we condense each of the gluing steps and induct by canonicalizing all points.
-e.g., Id(A) ∘' Id(A).
+@[grind ., grind →]
+theorem RedAff.dom_decreasing (h : RedAff (DCC? Dom(x)) τ) (hneq : ∀ ⦃y⦄, τ ≠ (DCC? Dom(y))) : τ.size < x.size := by
+  cases h
+  any_goals (grind)
+
+theorem RedAff.IsHead.spine_dom_decreasing (hr : RedAff (DCC? (f x)) B) (hn : hr.IsHead) (h_dom : RedAff (DCC? Dom(f)) τ) : τ.size < f.size := by
+  cases hn <;> grind
+
+theorem RedAff.IsHead.spine_dom_decreasing' (hr : RedAff (DCC? (f x)) B) (hn : hr.IsHead) (h_dom : Domain f τ) : τ.size < f.size :=
+  match h_dom with
+  | ⟨⟨hr', hn'⟩⟩ =>
+    match hr'.cases_head with
+    | .inl h => by
+      cases h
+      cases hn
+      any_goals (exact (hn' ⟨_, (by constructor)⟩).elim)
+    | .inr ⟨_, h₁, h₂⟩ => by
+      have h := hn.spine_dom_decreasing hr h₁
+      have h_dec' := h₁.decreasing
+      grind
+
+theorem RedSpinePlus.dom_decreasing (hr : RedSpinePlus (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size :=
+  match hr with
+  | .single hr hn => hn.spine_dom_decreasing' hr h_dom
+  | .head hr hn _hrt => hn.spine_dom_decreasing' hr h_dom
+
+theorem RedSpineNorm.dom_decreasing (hr : RedSpineNorm (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size :=
+  match hr with
+  | ⟨hr, _⟩ => hr.dom_decreasing h_dom
+
+def Domain.decreasing_neq (h : Domain x τ) (hneq : ∀ ⦃y⦄, τ ≠ (DCC? Dom(y))) : τ.size < x.size :=
+  match h with
+  | ⟨⟨hr, hn⟩⟩ => by
+    match hr.cases_head with
+    | .inl h => grind
+    | .inr ⟨_, h₁, h₂⟩ => grind
+
+def Domain.is_norm (h : Domain α τ) : IsNorm RedAff τ :=
+  match h with
+  | ⟨_, hn⟩ => hn
+
+def domain (e : GenericExpr τ_c) : ((τ : GenericExpr τ_c) × Domain e τ) :=
+  ⟨_, ⟨aff_sound' (DCC? Dom(e))⟩⟩
+
+def Domain.complete (h : Domain e τ) : domain e = ⟨τ, h⟩ :=
+  match h with
+  | ⟨hr⟩ => by
+    have h := (hr.out_eq ▸ hr).eq
+    simp [domain]
+    grind
+
+@[dcc_rel]
+def ViewAppHole.reduction (h : ViewAppHole f x lv hlt hmem) : Σ B, RedSpineNorm (DCC? (f x)) B := by
+  cases h <;> exact ⟨_, by assumption⟩
+
+/-
+If a function is well-typed, it has some spine reduction on the hole
 -/
 
---#check ViewAppHole.complete
+def Domain.has_spine_hole_red (h_dom : Domain (τ_c := τ_c) f α) (hneq : α ≠ (DCC? Dom(τ))) (e_h : Hole α f.max_hole.succ x) : Σ' B, RedSpineNorm (DCC? (f x)) B := by
+  sorry
 
-/-def ViewAppHole.complete (h : ViewAppHole (τ_c := τ_c) f hole₁ lv hlt mem) : view_app_hole? f hole₁ lv hlt mem = .some h := by
-  unfold view_app_hole?
-  induction h
-  /-case quot =>
+/-
+If a function is not well-typed, it has no spine reduction.
+-/
+def no_dom_no_spine_red (h_dom : Domain (τ_c := τ_c) f (DCC? Dom(τ))) (e_h : Hole α f.max_hole.succ x) : NormHead (DCC? (f x)) := by sorry
+
+/-
+view_app_hole? always fires when there is a spine reduction and this is a hole for the function.
+-/
+def Domain.app_hole_some (h_dom : Domain (τ_c := τ_c) f α) (e_h : Hole α f.max_hole.succ x) (hr : RedSpineNorm (DCC? (f x)) B) : (f.view_app_hole? x f.max_hole.succ (by grind) e_h.max_hole).isSome := by
+  
+  sorry
+
+/-
+ViewAppHole cases that can be condensed to a single combinator
+
+ReadbackHead should always have size ≤ f since Domain.size <
+and x' <
+-/
+inductive ReadbackHead : (f : GenericExpr τ_c) → (h_dom : Domain f A) → (e_h : Hole A f.max_hole.succ x)
+  → (hrt : ViewAppHole f x f.max_hole.succ (by grind) e_h.max_hole)
+  → (f' : GenericExpr τ_c) → Type u
+  | id  {h_dom : Domain f A} {e_h : Hole A f.max_hole.succ x}
+    {hrt : ViewAppHole f x f.max_hole.succ (by grind) e_h.max_hole} :
+    (heq : hrt.reduction.fst = x) → ReadbackHead f h_dom e_h hrt (DCC? Id(A))
+  | fst {h_dom : Domain f (DCC? Coup(B))} {e_h : Hole (DCC? Coup(B)) f.max_hole.succ (DCC? ⟦_B⟧(x, y))}
+    {hrt : ViewAppHole f (DCC? ⟦_B⟧(x, y)) f.max_hole.succ (by grind) e_h.max_hole} :
+    (heq : hrt.reduction.fst = x) → ReadbackHead f h_dom e_h hrt (DCC? Fst(B))
+  | snd {h_dom : Domain f (DCC? Coup(B))} {e_h : Hole (DCC? Coup(B)) f.max_hole.succ (DCC? ⟦_B⟧(x, y))}
+    {hrt : ViewAppHole f (DCC? ⟦_B⟧(x, y)) f.max_hole.succ (by grind) e_h.max_hole} :
+    (heq : hrt.reduction.fst = y) → ReadbackHead f h_dom e_h hrt (DCC? Snd(B))
+  | quot {h_dom : Domain f A} {e_h : Hole A f.max_hole.succ x}
+    {hrt : ViewAppHole f x f.max_hole.succ (by grind) e_h.max_hole} :
+    (heq : hrt = .quot (x' := x') hred hlt) → ReadbackHead f h_dom e_h hrt (DCC? `(A, x'))
+
+/-
+Termination argument is straightforward in Canonicalize since we're only recursion on comp or curr
+-/
+
+theorem Domain.decreasing (h : ViewAppHole f x lv hlt hmem) (h_dom : Domain f A) : A.size < f.size := by
+  cases h <;> exact RedSpineNorm.dom_decreasing (by assumption) (by assumption)
+
+def ViewAppHole.readback_head? {f : GenericExpr τ_c} (h_dom : Domain f A) (e_h : Hole A f.max_hole.succ x) (hrt : ViewAppHole f x f.max_hole.succ (by grind) e_h.max_hole) : Option (Σ' f', ReadbackHead f h_dom e_h hrt f') :=
+  match hrt with
+  | .quot _ _ => .some ⟨_, .quot rfl⟩
+  | hrt =>
+    if heq : hrt.reduction.fst = x then
+      .some ⟨_, .id heq⟩
+    else
+      match A with
+      | DCC? Coup(_B) =>
+        match x with
+        | DCC? ⟦__B⟧(x, y) =>
+          have _hneq : x ≠ y := e_h.coup_points_neq
+          if heq : hrt.reduction.fst = x then
+            .some ⟨_, .fst heq⟩
+          else if heq : hrt.reduction.fst = y then
+            .some ⟨_, .snd heq⟩
+          else .none
+        | _ => .none
+      | _ => .none
+
+def ViewAppHole.quot_nmem {e_h : Hole A (max_hole f).succ x} (hv : ViewAppHole f x f.max_hole.succ (by grind) e_h.max_hole)
+  (hrt : RedSpineNorm (DCC? (f x)) e') (_heq : hv = .quot hrt hlt) : e'.max_hole < x.min_hole := by
+  have h := e_h.min_hole
+  grind
+
+/-
+Quot at least
+-/
+
+/-
+f contains the constant x in some way
+-/
+def RedSpineNorm.quot_size_at_least (hrt : RedSpineNorm (DCC? (f x)) x') (h_size_hole : x.size = 0) : Σ' m, f.size = x'.size + m := by
+  have h_dec := hrt.decreasing
+  exact ⟨f.size - x'.size, by grind⟩
+
+
+def ReadbackHead.complete {f : GenericExpr τ_c} {h_dom : Domain f A} {e_h : Hole A f.max_hole.succ x}
+  {hrt : ViewAppHole f x f.max_hole.succ (by grind) e_h.max_hole}
+  (h : ReadbackHead (τ_c := τ_c) f h_dom e_h hrt f') : hrt.readback_head? h_dom e_h = .some ⟨f', h⟩ := by
+  induction heq₀ : h
+  · unfold ViewAppHole.readback_head?
+    split
+    case h_1 heq =>
+      simp [ViewAppHole.reduction] at heq
+      grind
+    · aesop
+  · unfold ViewAppHole.readback_head?
     expose_names
     split
-    case h_1 hrt heq₁ =>
-      have heq₂ := a.complete.symm.trans heq₁
-      cases heq₂
-      simp [hn]
-    case h_2 heq =>
-      have h := a.complete.symm.trans heq
-      simp at h-/
-  case id | quot =>
+    case h_1 hrt' hn' =>
+      have h := ViewAppHole.quot_nmem (ViewAppHole.quot hrt' hn') hrt' (by rfl) (A := B.coup) (e_h := e_h_1)
+      have heq₁ := hrt'.complete
+      simp [ViewAppHole.reduction] at heq
+      cases heq
+      cases heq₀
+      grind
+    case h_2 =>
+      simp [heq]
+      intro h
+      cases h
+  · unfold ViewAppHole.readback_head?
     expose_names
-    have heqa := RedSpineNorm.complete (by assumption)
-    grind
-  case comp =>
+    split
+    case h_1 hrt' hn' =>
+      have h := ViewAppHole.quot_nmem (ViewAppHole.quot hrt' hn') hrt' (by rfl) (A := B.coup) (e_h := e_h_1)
+      have heq₁ := hrt'.complete
+      simp [ViewAppHole.reduction] at heq
+      cases heq
+      cases heq₀
+      grind
+    case h_2 =>
+      have hneq : y ≠ _B.mkc x_1 y := fun h => nomatch h
+      simp [heq, hneq]
+      exact e_h_1.coup_points_neq.symm
+  · unfold ViewAppHole.readback_head?
     expose_names
-    have heqa := RedSpineNorm.complete (by assumption)
-    grind-/
+    subst heq
+    simp
+
+def ReadbackHead.preservation {f x f' A : GenericExpr τ_c} {h_dom : Domain f A} {e_h : Hole A f.max_hole.succ x} {hrt : ViewAppHole f x f.max_hole.succ (by grind) e_h.max_hole}
+  (h : ReadbackHead f h_dom e_h hrt f') : Domain f' A := by
+  have hn := h_dom.is_norm
+  cases h with
+  | quot | id =>
+    exact ⟨⟨.single (by constructor), by assumption⟩⟩
+  | fst | snd =>
+    cases e_h with
+    | coup => exact ⟨⟨.single (by constructor), by assumption⟩⟩
+
+theorem ReadbackHead.decreasing {f f' A : GenericExpr τ_c} (h : ReadbackHead f h_dom e_h hrt f') : 
+
+/-
+When ViewAppHole reduces to part of the hole, we have reached a normal form.
+So reduce these to the canonical projection, quotation, or Id.
+
+Otherwise, the expression is "gluing" operations together in some way that does
+meaningful work.
+
+In this case, 
+
+Always reduce all the points of the expression.
+
+Decreasing argument goes by: f.domain.size + f.size
+-/
+inductive Canonicalize : (f : GenericExpr τ_c) → (f' : GenericExpr τ_c) → Type u
+  /-
+    Make this a global refl case so there is a decreasing argument for Canonicalize
+    Should be no issue with stopping halfway due to ViewAppHole
+    | par    : (h_dom : Domain f A)
+    → (e_h : Hole A f.max_hole.succ x)
+    → (hn  : ∀ ⦃hlt⦄ ⦃hmem⦄, ViewAppHole f x f.max_hole.succ hlt hmem → False)
+    → Canonicalize f f-/
+  | single : (h_dom : Domain f A)
+    → (e_h  : Hole A f.max_hole.succ x)
+    → (hrt  : ViewAppHole f x f.max_hole.succ (by grind) e_h.max_hole)
+    → (hrb  : ReadbackHead f h_dom e_h hrt f')
+    → Canonicalize f f'
+  | comp   : (h_dom : Domain (DCC? f ∘ g) A)
+    → (e_h  : Hole A (DCC? f ∘ g).max_hole.succ x)
+    → (hrt  : ViewAppHole (DCC? f ∘ g) x (DCC? (f ∘ g)).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁  : Canonicalize f f')
+    → (hc₂  : Canonicalize g g')
+    → (hc'  : Canonicalize (DCC? (f
+  /-
+    MASSIVE TODO: merge ∘ ∘' and ∘∘ in Judge because they all have the same domain
+  -/
+  | comp'  : (h_dom : Domain (DCC? f ∘' g) A)
+    → (e_h  : Hole A (DCC? f ∘' g).max_hole.succ x)
+    → (hrt  : ViewAppHole (DCC? f ∘' g) x (DCC? (f ∘' g)).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁  : Canonicalize f' f'')
+    → (hc₂  : Canonicalize g g')
+    → Canonicalize f (DCC? (f'' ∘ g'))
+  | comp₂  : (h_dom : Domain (DCC? f ∘∘ g) A)
+    → (e_h  : Hole A (DCC? f ∘∘ g).max_hole.succ x)
+    → (hrt  : ViewAppHole (DCC? f ∘∘ g) x (DCC? (f ∘∘ g)).max_hole.succ (by grind) e_h.max_hole)
+    → (hc₁  : Canonicalize f' f'')
+    → (hc₂  : Canonicalize g g')
+    → Canonicalize f (DCC? (f'' ∘∘ g'))
   
+
+/-
+TODO: comp' vs comp vs comp₂ can be condensed to the same judgment rule,
+so we assume η-reduce to ∘.
+
+Id(A) ∘ Id(A) handled by id
+So ∘ is doing some work here.
+
+For single-step cases, i.e., the normal form is reached in one-step, η-reduce to that.
+-/
 
 end GenericExpr

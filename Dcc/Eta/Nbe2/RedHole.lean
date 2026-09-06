@@ -440,26 +440,66 @@ ViewAppHole cases that can be condensed to a single combinator
 
 ReadbackHead should always have size ≤ f since Domain.size <
 and x' <
+
+These are all "shortcuts" in the reduction: steps that produce a
+normal form with no further spine reduction, and which can accept no further arguments.
+These are mutually exclusive.
 -/
 inductive ReadbackHead : (f : GenericExpr τ_c) → (h_dom : Domain f A)
   → (e_h : Hole A lv x)
   → (hlt : f.max_hole < lv)
   → (hrt : ViewAppHole f x lv hlt e_h.max_hole)
   → (f' : GenericExpr τ_c) → Type u
-  | id  {h_dom : Domain f A} {e_h : Hole A lv x}
+  | id    {h_dom : Domain f A} {e_h : Hole A lv x}
     {hrt : ViewAppHole f x lv hlt e_h.max_hole} :
     (heq : hrt.reduction.fst = x) → ReadbackHead f h_dom e_h hlt hrt (DCC? Id(A))
-  | fst {h_dom : Domain f (DCC? Coup(B))} {e_h : Hole (DCC? Coup(B)) lv (DCC? ⟦_B⟧(x, y))}
+  | fst   {h_dom : Domain f (DCC? Coup(B))} {e_h : Hole (DCC? Coup(B)) lv (DCC? ⟦_B⟧(x, y))}
     {hrt : ViewAppHole f (DCC? ⟦_B⟧(x, y)) lv hlt e_h.max_hole} :
     (heq : hrt.reduction.fst = x) → ReadbackHead f h_dom e_h hlt hrt (DCC? Fst(B))
-  | snd {h_dom : Domain f (DCC? Coup(B))} {e_h : Hole (DCC? Coup(B)) lv (DCC? ⟦_B⟧(x, y))}
+  | snd   {h_dom : Domain f (DCC? Coup(B))} {e_h : Hole (DCC? Coup(B)) lv (DCC? ⟦_B⟧(x, y))}
     {hrt : ViewAppHole f (DCC? ⟦_B⟧(x, y)) lv hlt e_h.max_hole} :
     (heq : hrt.reduction.fst = y) → ReadbackHead f h_dom e_h hlt hrt (DCC? Snd(B))
-  | quot {h_dom : Domain f A} {e_h : Hole A lv x}
+  | quot  {h_dom : Domain f A} {e_h : Hole A lv x}
     {hrt : ViewAppHole f x lv hlt e_h.max_hole} :
     (heq : hrt = .quot (x' := x') hred hgt)
     → ReadbackHead f h_dom e_h hlt hrt (DCC? `(A, x'))
-  --| map  {h_dom : Domain f (DCC? !(A))} {e_h : Hole A lv (DCC? &(x))}
+  | fmap  {h_dom : Domain f (DCC? !(A))} {e_h : Hole (DCC? !(A)) lv (DCC? &(x))}
+    {hrt : ViewAppHole f (DCC? &(x)) lv hlt e_h.max_hole} :
+    (heq : hrt.reduction.fst = (DCC? &((g x))))
+    → ReadbackHead f h_dom e_h hlt hrt (DCC? $<g>)
+  | map   {h_dom : Domain f (DCC? !(A))} {e_h : Hole (DCC? !(A)) lv (DCC? &(x))}
+    {hrt : ViewAppHole f (DCC? &(x)) lv hlt e_h.max_hole} :
+    (heq : hrt.reduction.fst = (DCC? !((g x))))
+    → ReadbackHead f h_dom e_h hlt hrt (DCC? !<g>)
+  | unbox {h_dom : Domain f (DCC? !(A))} {e_h : Hole (DCC? !(A)) lv (DCC? &(x))}
+    {hrt : ViewAppHole f (DCC? &(x)) lv hlt e_h.max_hole} :
+    (heq : hrt.reduction.fst = x)
+    → ReadbackHead f h_dom e_h hlt hrt (DCC? *(A))
+  | pair  {h_dom : Domain f (DCC? !(A))} {e_h : Hole (DCC? !(A)) lv (DCC? &(x))}
+    {hrt : ViewAppHole f (DCC? &(x)) lv hlt e_h.max_hole} :
+    (heq : hrt.reduction.fst = (DCC? ⟦(B x)⟧((M x), (N x (M x))))) -- Coup holes will not contain any apps. Prove this to elim
+    → ReadbackHead f h_dom e_h hlt hrt (DCC? ⟦B⟧⟨M, N⟩)
+  | eql   {h_dom : Domain f (DCC? !(A))} {e_h : Hole (DCC? !(A)) lv (DCC? &(x))}
+    {hrt : ViewAppHole f (DCC? &(x)) lv hlt e_h.max_hole} :
+    (heq : hrt.reduction.fst = (DCC? x = x))
+    → ReadbackHead f h_dom e_h hlt hrt (DCC? (Eql(`(⊤, A)) &(∗)))
+  /-| sigma {h_dom : Domain f A} {e_h : Hole f A lv x}
+    {hrt     : ViewAppHole f x lv hlt e_h.max_hole} :
+    (heq     : hrt.reduction.fst = (DCC? Coup((g x))))
+    (h_dom_g : Domain g 
+    → ReadbackHead f h_dom e_h hlt hrt (DCC? (-/
+
+/-
+Alternative to Σ(B, C) x -> Coup(C x)
+
+Just Σ(C) x
+
+x : A
+-------------------------------
+⟦B⟧(x, y) : Σ()
+
+TODO: leaving this alone for now
+-/
 
 /-
 Termination argument is straightforward in Canonicalize since we're only recursion on comp or curr
@@ -488,6 +528,32 @@ def ViewAppHole.readback_head? {f : GenericExpr τ_c} (h_dom : Domain f A)
             .some ⟨_, .snd heq⟩
           else .none
         | _ => .none
+      | DCC? !(A) =>
+        match x with
+        | DCC? &(x) =>
+          if heq₂ : hrt.reduction.fst = x then
+            .some ⟨_, .unbox heq₂⟩
+          else match heq₂ : hrt.reduction.fst with
+          | (DCC? !((g x'))) =>
+            if heq₃ : x' = x then by
+              subst heq₃
+              exact .some ⟨_, .map heq₂⟩
+            else .none
+          | (DCC? &((g x'))) =>
+            if heq₃ : x' = x then by
+              subst heq₃
+              exact .some ⟨_, .fmap heq₂⟩
+            else .none
+          | (DCC? ⟦(B x'₁)⟧((M₁ x'₂), (N₁ x'₃ (M₂ x'₄)))) =>
+            if heq₃ : (DCC? ⟦(B x)⟧((M₁ x), (N₁ x (M₁ x)))) = (DCC? ⟦(B x'₁)⟧((M₁ x'₂), (N₁ x'₃ (M₂ x'₄)))) then
+              .some ⟨_, .pair (heq₃ ▸ heq₂)⟩
+            else .none
+          | (DCC? y = z) =>
+            if heq₃ : (DCC? x = x) = (DCC? y = z) then
+              .some ⟨_, .eql (heq₃ ▸ heq₂)⟩
+            else .none
+          | _ => .none
+        | _ => .none
       | _ => .none
 
 def ViewAppHole.quot_nmem {e_h : Hole A lv x} (hv : ViewAppHole f x lv hlt e_h.max_hole)
@@ -514,13 +580,15 @@ def ReadbackHead.complete {f : GenericExpr τ_c}
   {hrt : ViewAppHole f x lv hlt e_h.max_hole}
   (h : ReadbackHead (τ_c := τ_c) f h_dom e_h hlt hrt f') : hrt.readback_head? h_dom e_h = .some ⟨f', h⟩ := by
   induction heq₀ : h
-  · unfold ViewAppHole.readback_head?
+  case id =>
+    unfold ViewAppHole.readback_head?
     split
     case h_1 heq =>
       simp [ViewAppHole.reduction] at heq
       grind
     · aesop
-  · unfold ViewAppHole.readback_head?
+  case fst =>
+    unfold ViewAppHole.readback_head?
     expose_names
     split
     case h_1 hrt' hn' =>
@@ -534,7 +602,8 @@ def ReadbackHead.complete {f : GenericExpr τ_c}
       simp [heq]
       intro h
       cases h
-  · unfold ViewAppHole.readback_head?
+  case snd =>
+    unfold ViewAppHole.readback_head?
     expose_names
     split
     case h_1 hrt' hn' =>
@@ -548,10 +617,49 @@ def ReadbackHead.complete {f : GenericExpr τ_c}
       have hneq : y ≠ _B.mkc x_1 y := fun h => nomatch h
       simp [heq, hneq]
       exact e_h_1.coup_points_neq.symm
-  · unfold ViewAppHole.readback_head?
+  case quot =>
+    unfold ViewAppHole.readback_head?
     expose_names
     subst heq
     simp
+  case fmap | map | eql | pair =>
+    unfold ViewAppHole.readback_head?
+    expose_names
+    cases heq₀.symm
+    split
+    case h_1 hrt' hn' =>
+      have heq' := hrt'.complete
+      simp [ViewAppHole.reduction] at heq
+      grind
+    case h_2 hrt' xn =>
+      simp [heq]
+      try (have hneq : g.app x_1 ≠ x_1 := fun h => nomatch h)
+      try (simp [hneq])
+      try (have hneq : (g.app x_1).box ≠ x_1 := fun h => nomatch h)
+      try (simp [hneq])
+      try (have hneq : (g.app x_1).bang ≠ x_1 := fun h => nomatch h)
+      try (simp [hneq])
+      try (have hneq : (B.app x_1).mkc (M.app x_1) ((N.app x_1).app (M.app x_1)) ≠ x_1 := fun h => nomatch h)
+      try (simp [hneq])
+      try (have hneq : x_1.eq x_1 ≠ x_1 := fun h => nomatch h)
+      try (simp [hneq])
+      split
+      any_goals (
+        first
+        | (rename_i heq''; cases heq.symm.trans heq''; try (simp))
+        | simp_all)
+      try (rename_i hn; exact (hn _ _ _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl rfl rfl).elim)
+  case unbox =>
+    unfold ViewAppHole.readback_head?
+    expose_names
+    cases heq₀.symm
+    split
+    case h_1 =>
+      simp [ViewAppHole.reduction] at heq
+      grind
+    case h_2 hrt' xn =>
+      simp [heq]
+      intro h; cases h
 
 def ReadbackHead.preservation {f x f' A : GenericExpr τ_c} {h_dom : Domain f A} {e_h : Hole A lv x} {hlt : f.max_hole < lv} {hrt : ViewAppHole f x lv hlt e_h.max_hole}
   (h : ReadbackHead f h_dom e_h hlt hrt f') : Domain f' A := by
@@ -563,6 +671,12 @@ def ReadbackHead.preservation {f x f' A : GenericExpr τ_c} {h_dom : Domain f A}
     expose_names
     cases e_h with
     | coup => exact ⟨⟨.single (by constructor), by assumption⟩⟩
+  | fmap =>
+    expose_names
+    cases e_h with
+    | bang => exact ⟨⟨by sorry, by sorry⟩⟩
+  | map =>
+    sorry
 
 @[grind ., grind →]
 theorem RedAff.domain_max_hole_preserved (h : RedAff (DCC? Dom(x)) τ) : τ.max_hole ≤ x.max_hole := by

@@ -36,9 +36,7 @@ Core reductions:
   | id       : RedAff (DCC[τ] (Id(α) x)) x
   | fstc     : RedAff (DCC[τ] (Fst(_α) ⟦β⟧(a, b))) a
   | sndc     : RedAff (DCC[τ] (Snd(_α) ⟦β⟧(a, b))) b
-  | comp'    : RedAff (DCC[τ] ((x ∘' y) z)) (DCC[τ] (x (y z)))
   | comp     : RedAff (DCC[τ] ((x ∘ y) z)) (DCC[τ] (x (y z)))
-  | comp₂    : RedAff (DCC[τ] ((x ∘∘ y) z)) (DCC[τ] (x (y z)))
   | curr     : RedAff (DCC[τ] (Λ(α, β, x) y z)) (DCC[τ] (x ⟦β⟧(y, z)))
   | curr'    : RedAff (DCC[τ] (!Λ(α, β, x) &(y) &(z))) (DCC[τ] (x &(⟦β⟧(y, z))))
   | sigma    : RedAff (DCC[τ] (Σ(f_α, f_β) env)) (DCC[τ] (Coup((f_β env))))
@@ -99,15 +97,9 @@ Inner congruences:
   | pair₂    : RedAff y y' → RedAff (DCC[τ] ⟦β⟧⟨x, y⟩) (DCC[τ] ⟦β⟧⟨x, y'⟩)
   -- Coup(B)
   | coup₀    : RedAff β β' → RedAff (DCC[τ] (Coup(β))) (DCC[τ] (Coup(β')))
-  -- x and y in x ∘' y
-  | comp'₀   : RedAff x x' → RedAff (DCC[τ] x ∘' y) (DCC[τ] x' ∘' y)
-  | comp'₁   : RedAff y y' → RedAff (DCC[τ] x ∘' y) (DCC[τ] x ∘' y')
   -- x and y in x ∘ y
   | comp₀    : RedAff x x' → RedAff (DCC[τ] x ∘ y) (DCC[τ] x' ∘ y)
   | comp₁    : RedAff y y' → RedAff (DCC[τ] x ∘ y) (DCC[τ] x ∘ y')
-  -- x and y in x ∘∘ y
-  | comp₂₀   : RedAff x x' → RedAff (DCC[τ] x ∘∘ y) (DCC[τ] x' ∘∘ y)
-  | comp₂₁   : RedAff y y' → RedAff (DCC[τ] x ∘∘ y) (DCC[τ] x ∘∘ y')
 /-
 App congruence:
 -/
@@ -127,9 +119,7 @@ Base combinator function domains
   | idτ₀     : RedAff (DCC? Dom(Id(A))) A
   | fstcτ₀   : RedAff (DCC? Dom(Fst(B))) (DCC? Coup(B))
   | sndcτ₀   : RedAff (DCC? Dom(Snd(B))) (DCC? Coup(B))
-  | comp'τ₀  : RedAff (DCC? Dom(x ∘' y)) (DCC? Dom(y))
   | compτ₀   : RedAff (DCC? Dom(x ∘ y)) (DCC? Dom(y))
-  | comp₂τ₀  : RedAff (DCC? Dom(x ∘∘ y)) (DCC? Dom(y))
   | currτ₀   : RedAff (DCC? Dom(Λ(A, B, x))) A
   | curr'τ₀  : RedAff (DCC? Dom(!Λ(A, B, x))) (DCC? !(A))
   | sigmaτ₀  : RedAff (DCC? Dom(Σ(B, C))) (DCC? Dom(C))
@@ -217,23 +207,11 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .refl₀ h⟩⟩
     | _ => .none
   | (DCC[?] (Snd(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
-  | (DCC[?] ((_x ∘' _y) _z))                             => .some ⟨_, ⟨.comp'⟩⟩
-  | DCC? x ∘' y =>
-    match x.step?, y.step? with
-    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.comp'₀ h⟩⟩
-    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.comp'₁ h⟩⟩
-    | _, _ => .none
   | (DCC[?] ((_x ∘ _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
   | DCC? x ∘ y =>
     match x.step?, y.step? with
     | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.comp₀ h⟩⟩
     | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.comp₁ h⟩⟩
-    | _, _ => .none
-  | (DCC[?] ((_x ∘∘ _y) _z))                             => .some ⟨_, ⟨.comp₂⟩⟩
-  | DCC? x ∘∘ y =>
-    match x.step?, y.step? with
-    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.comp₂₀ h⟩⟩
-    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.comp₂₁ h⟩⟩
     | _, _ => .none
   | (DCC[?] (!Λ(_α, _β, _x) &(_y) &(_z)))                => .some ⟨_, ⟨.curr'⟩⟩
   | DCC[?] !Λ(A, B, x) =>
@@ -300,9 +278,7 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
   | DCC? Dom(Id(_A)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(Fst(_B)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(Snd(_B)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? Dom(_x ∘' _y) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(_x ∘ _y) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? Dom(_x ∘∘ _y) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(Λ(_A, _B, _x)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(!Λ(_A, _B, _x)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(Σ(B, C)) => .some ⟨_, ⟨by constructor⟩⟩
@@ -537,20 +513,8 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
     · intro ⟨_, h⟩
-      exact hrn ⟨_, .comp'₁ (by assumption)⟩
-  case h_18 =>
-    constructor
-    · intro ⟨_, h⟩
-      exact hrn ⟨_, by constructor; assumption⟩
-    · intro ⟨_, h⟩
       exact hrn ⟨_, .comp₁ (by assumption)⟩
-  case h_19 =>
-    constructor
-    · intro ⟨_, h⟩
-      exact hrn ⟨_, by constructor; assumption⟩
-    · intro ⟨_, h⟩
-      exact hrn ⟨_, .comp₂₁ (by assumption)⟩
-  case h_20 =>
+  case h_18 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -559,7 +523,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .pair₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .pair₂ (by assumption)⟩
-  case h_21 =>
+  case h_19 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -568,7 +532,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .curr₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .curr₂ (by assumption)⟩
-  case h_22 =>
+  case h_20 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -577,7 +541,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .curr'₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .curr'₂ (by assumption)⟩
-  case h_23 =>
+  case h_21 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -664,7 +628,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       · exact ⟨_, .single (by assumption), .single (by constructor)⟩
       · exact ⟨_, .refl, .single (by constructor)⟩
     | _ => exact ⟨_, .refl, .refl⟩
-  case comp'τ₀ | compτ₀ | comp₂τ₀ | sigmaτ₀ | piτ₀ =>
+  case compτ₀ | sigmaτ₀ | piτ₀ =>
     cases h₂ with
     | dom₀ hr =>
       cases hr
@@ -726,7 +690,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     case fstcτ₀ hr | sndcτ₀ hr =>
       cases hr
       case _ hr => exact ⟨_, .single (by constructor), .single hr.coup₀⟩
-    case comp'τ₀ hr | comp₂τ₀ hr | compτ₀ hr | sigmaτ₀ hr | piτ₀ hr =>
+    case compτ₀ hr | sigmaτ₀ hr | piτ₀ hr =>
       cases hr
       · exact ⟨_, .single (by constructor), .refl⟩
       case _ hr => exact ⟨_, .single (by constructor), .single hr.dom₀⟩
@@ -881,7 +845,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
         | exact ⟨_, .refl, .single (by constructor)⟩
         | exact ⟨_, .single (by assumption), .single (by constructor)⟩)
     | _ => exact ⟨_, .refl, .refl⟩
-  case comp' | comp | comp₂ =>
+  case comp =>
     cases h₂ with
     | congrFun hr =>
       cases hr
@@ -948,8 +912,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       | (rename_i hr₂
          exact ⟨_, .single (mk_point (n := ⟨0, by grind⟩)), .single (mk_point (n := ⟨1, by grind⟩))⟩))
   case curr₀ hr ih | curr₁ hr ih | eval₀ hr ih | curr'₀ hr ih | pair₀ hr ih | sig₀ hr ih
-    | comp₂₁ hr ih | comp'₁ hr ih | pair₁ hr ih | sig₁ hr ih | curr'₁ hr ih | eval₁ hr ih
-    | comp₂₀ hr ih | comp'₀ hr ih =>
+    | pair₁ hr ih | sig₁ hr ih | curr'₁ hr ih | eval₁ hr ih =>
     cases h₂ <;> (
       first
       | (rename_i hr₂
@@ -1001,7 +964,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       <;> (first
            | exact ⟨_, .single (by constructor), .refl⟩
            | exact ⟨_, .single (by constructor), .single (by assumption)⟩)
-    case comp' | comp | comp₂ =>
+    case comp =>
       exact ⟨_, .single (by constructor), .single hr.congrArg.congrArg⟩
     case curr => exact ⟨_, .single (by constructor), .single (.congrArg (.sig₂ (by assumption)))⟩
     case curr' hr => exact ⟨_, .single (by constructor), .single (.congrArg (.box₀ (.sig₂ (by assumption))))⟩
@@ -1046,7 +1009,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     case id | fstc | sndc =>
       cases hr
       · exact ⟨_, .single (by constructor), .refl⟩
-    case comp | comp₂ | comp' =>
+    case comp =>
       cases hr
       · rename_i hr; exact ⟨_, .single (by constructor), .single hr.congrFun⟩
       · rename_i hr; exact ⟨_, .single (by constructor), .single hr.congrFun.congrArg⟩
@@ -1149,7 +1112,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
             have ⟨_, hr'', heq⟩ := semi_complete hr
             grind))
     done)
-  case h_40 =>
+  case h_36 =>
     cases hr
     <;> simp_all
     any_goals (grind)
@@ -1164,14 +1127,14 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
       · exact ⟨_, .congrFun (by assumption), rfl⟩
       · exact ⟨_, .congrArg (by assumption), rfl⟩
       · grind
-  case h_63 =>
+  case h_57 =>
     simp_all
     cases hr
     any_goals (grind)
     case dom₀ hr =>
       have ⟨_, hr', heq⟩ := semi_complete hr
       exact ⟨_, hr'.dom₀, by simp [heq]⟩
-  case h_64 =>
+  case h_58 =>
     simp_all
     cases hr
     any_goals (grind)

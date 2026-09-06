@@ -28,9 +28,7 @@ syntax "const(" term ")"                                      : gen_dcc
 syntax:max (priority := high) "Λ(" gen_dcc,* ")"              : gen_dcc
 syntax:max (priority := high) "!Λ(" gen_dcc,* ")"             : gen_dcc
 syntax:max (priority := high) "Π(" gen_dcc,* ")"              : gen_dcc
-syntax gen_dcc "∘'" gen_dcc                                   : gen_dcc
 syntax gen_dcc "∘" gen_dcc                                    : gen_dcc
-syntax gen_dcc "∘∘" gen_dcc                                   : gen_dcc
 syntax:30 ident                                               : gen_dcc
 syntax "(" gen_dcc+ ")"                                       : gen_dcc
 syntax:max "Sort" term                                        : gen_dcc
@@ -110,12 +108,8 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "id") #[← `(DCC[$ty:gen_dcc_loc] $α)]
   | `(DCC[$ty:gen_dcc_loc] Dom($α:gen_dcc))                           => do
     return mkApp (← field ty "dom") #[← `(DCC[$ty:gen_dcc_loc] $α)]
-  | `(DCC[$ty:gen_dcc_loc] $f:gen_dcc ∘' $g:gen_dcc)                 => do
-    return mkApp (← field ty "comp'") #[← `(DCC[$ty:gen_dcc_loc] $f:gen_dcc), ← `(DCC[$ty:gen_dcc_loc] $g:gen_dcc)]
   | `(DCC[$ty:gen_dcc_loc] $f:gen_dcc ∘ $g:gen_dcc)                  => do
     return mkApp (← field ty "comp") #[← `(DCC[$ty:gen_dcc_loc] $f:gen_dcc), ← `(DCC[$ty:gen_dcc_loc] $g:gen_dcc)]
-  | `(DCC[$ty:gen_dcc_loc] $f:gen_dcc ∘∘ $g:gen_dcc)                  => do
-    return mkApp (← field ty "comp₂") #[← `(DCC[$ty:gen_dcc_loc] $f:gen_dcc), ← `(DCC[$ty:gen_dcc_loc] $g:gen_dcc)]
   | `(DCC[$_ty:gen_dcc_loc] #($t:term))                              => `($t)
   | `(DCC[$_ty:gen_dcc_loc] $idt:ident)                              => `($idt:term)
   | `(DCC[$ty:gen_dcc_loc] ($t:gen_dcc))                             => `(DCC[$ty:gen_dcc_loc] $t)

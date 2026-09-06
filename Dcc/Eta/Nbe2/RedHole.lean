@@ -7,7 +7,6 @@ import Mathlib.Data.Fintype.Basic
 
 universe u
 variable {τ_c : Type u}
-variable [DecidableEq τ_c]
 
 /-
 To η-reduce a function, track movement of the hole through the function.
@@ -61,16 +60,6 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
     → (hsp : hrt.head = ⟨DCC? (f (g x)), ⟨.comp⟩, .comp⟩)
     → ViewAppHole g x lv (by simp_all [max_hole]) (by simp_all [max_hole])
     → ViewAppHole (DCC? (f ∘ g)) x lv hlt hmem
-  | comp'  : (hrt : RedSpineNorm (DCC? ((f ∘' g) x)) e')
-    → (hgt : ¬ e'.max_hole < lv)
-    → (hsp : hrt.head = ⟨DCC? (f (g x)), ⟨.comp'⟩, .comp'⟩)
-    → ViewAppHole g x lv (by simp_all [max_hole]) (by simp_all [max_hole])
-    → ViewAppHole (DCC? (f ∘' g)) x lv hlt hmem
-  | comp₂  : (hrt : RedSpineNorm (DCC? ((f ∘∘ g) x)) e')
-    → (hgt : ¬ e'.max_hole < lv)
-    → (hsp : hrt.head = ⟨DCC? (f (g x)), ⟨.comp₂⟩, .comp₂⟩)
-    → ViewAppHole g x lv (by simp_all [max_hole]) (by simp_all [max_hole])
-    → ViewAppHole (DCC? (f ∘∘ g)) x lv hlt hmem
   /-
     Since we are weak-head reducing, and since
     the root expression should already be in normal form (NOTE TODO ENFORCE THIS),
@@ -246,7 +235,7 @@ theorem RedSpineNorm.quot_no_mem (hrt : RedSpineNorm (DCC? (`(B, x) y)) e') (hlt
     cases hn
     grind
 
-theorem max_hole_points {e : GenericExpr τ} (n : ℕ) (hn : e.max_hole < lv) (hlt : n < e.point_arity := by grind) : (e.points.get ⟨n, hlt⟩).max_hole < lv := by
+theorem max_hole_points {e : GenericExpr τ} (n : ℕ) (hn : e.max_hole < lv) (hlt : n < e.point_arity := by first | grind | dcc_simp) : (e.points.get ⟨n, hlt⟩).max_hole < lv := by
   induction e
   any_goals (simp [point_arity] at hlt)
   any_goals (simp_all [points, Vector.get, max_hole])
@@ -276,16 +265,6 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
         match g.view_app_hole? hole₁ lv (max_hole_points 1 hlt) hmem with
         | .some h =>
           .some (.comp hrt hn' hrt.head_eq h)
-        | .none => .none
-      | DCC? f ∘' g =>
-        match g.view_app_hole? hole₁ lv (max_hole_points 1 hlt) hmem with
-        | .some h =>
-          .some (.comp' hrt hn' hrt.head_eq h)
-        | .none => .none
-      | DCC? f ∘∘ g =>
-        match g.view_app_hole? hole₁ lv (max_hole_points 1 hlt) hmem with
-        | .some h =>
-          .some (.comp₂ hrt hn' hrt.head_eq h)
         | .none => .none
       | DCC? Fst(B) =>
         match hrt.fst_hole with
@@ -366,7 +345,7 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
 
 def ViewAppHole.complete_some (h : ViewAppHole (τ_c := τ_c) f hole₁ lv hlt mem) : (view_app_hole? f hole₁ lv hlt mem).isSome := by
   induction h
-  case quot | id | comp | comp' | comp₂ =>
+  case quot | id | comp =>
     unfold view_app_hole?
     expose_names
     have heqa := RedSpineNorm.complete (by assumption)

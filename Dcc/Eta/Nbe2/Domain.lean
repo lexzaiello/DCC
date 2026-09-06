@@ -174,4 +174,12 @@ def Domain.pair : Domain (DCC? ⟦B⟧⟨x, y⟩) x.domain.fst.bang := by
 def Domain.sigma : Domain (DCC? Σ(B, C)) C.domain.fst :=
   ⟨.trans (.single (by constructor)) (reduce_sound rfl), reduce_norm rfl⟩
 
+def Domain.comp : Domain (DCC? f ∘ g) g.domain.fst :=
+  ⟨.trans (.single (by constructor)) (reduce_sound rfl), reduce_norm rfl⟩
+
+def Domain.elim_comp (h_dom : Domain (DCC? f ∘ g) A) : Domain g A := by
+  have h_dom' := Domain.comp (f := f) (g := g)
+  cases h_dom.unique h_dom'
+  exact g.domain.snd
+
 end GenericExpr

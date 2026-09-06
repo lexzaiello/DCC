@@ -8,7 +8,7 @@ namespace GenericExpr
 inductive ViewEta : GenericExpr τ_c → Type u
   | pi_type : ViewEta (DCC? (Π(f_α, f_β) env))
   | pi      : ViewEta (DCC? Π(f_α, f_β))
-  | pi_comp : ViewEta (DCC? (Π(f_α, f_β) ∘' g))
+  | pi_comp : ViewEta (DCC? (Π(f_α, f_β) ∘ g))
   | coup    : ViewEta (DCC? Coup(β))
   | bang    : ViewEta (DCC? !(β))
   | eq      : ViewEta (DCC? x = y)
@@ -19,7 +19,7 @@ def view_eta? (e : GenericExpr τ_c) : Option (ViewEta e) :=
   match e with
   | (DCC? (Π(_f_α, _f_β) _env))  => .some (.pi_type)
   | (DCC? Π(_f_α, _f_β))         => .some .pi
-  | (DCC? (Π(_f_α, _f_β) ∘' _g)) => .some .pi_comp
+  | (DCC? (Π(_f_α, _f_β) ∘ _g)) => .some .pi_comp
   | (DCC? Coup(_β))              => .some .coup
   | (DCC? !(_β))                 => .some .bang
   | (DCC? _x = _y)               => .some .eq

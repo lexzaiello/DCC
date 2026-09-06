@@ -33,8 +33,6 @@ inductive RedAff.IsHead : (hr : RedAff A B) → Type u
     Maybe?: have two variants of each comp where one checks (y z).IsNorm and one checks that there is a h : y z -> z' such that h.IsHead?
   -/
   | comp  {x y z}        : IsHead (.comp (x := x) (y := y) (z := z))
-  | comp' {x y z}        : IsHead (.comp' (x := x) (y := y) (z := z))
-  | comp₂ {x y z}        : IsHead (.comp₂ (x := x) (y := y) (z := z))
 deriving Repr
 
 @[aesop norm (rule_sets := [DccRel])]
@@ -67,8 +65,6 @@ def red_spine? (A : GenericExpr τ_c) : Option ((B : GenericExpr τ_c) × (hr : 
   | DCC? (`(_B, _x) _y) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? (⟦_B⟧⟨_x, _y⟩ &(_z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? ((_x ∘ _y) _z) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? ((_x ∘' _y) _z) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? ((_x ∘∘ _y) _z) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? (*<_x> &(_y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? ($<_x> &(_y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? (!<_x> &(_y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
@@ -430,5 +426,28 @@ def RedSpineNorm.length (h : RedSpineNorm A B) : ℕ :=
 @[grind .]
 theorem RedSpineNorm.ar_pos (h : RedSpinePlus A B) : 0 < h.length := by
   cases h <;> grind
+
+def red_spine!!_none_norm (heq : red_spine!! A = .none) : NormHead A := fun h => by
+  intro hr hrt
+  have h := hrt.complete
+  unfold red_spine!! at heq
+  split at heq
+  · grind
+  case h_2 heq' =>
+    have heq'' := red_spine!_none_norm heq'
+    exact heq'' hrt
+
+def red_spineD (A : GenericExpr τ_c) (hr : RedAff A B) (hn : hr.IsHead) : ((C : GenericExpr τ_c) × RedSpineNorm A C) :=
+  match heq : B.red_spine!! with
+  | .some ⟨_, ⟨hrt', hn'⟩⟩ => ⟨_, ⟨.head hr hn hrt', hn'⟩⟩
+  | .none => ⟨_, ⟨.single hr hn, fun _ h hn => by
+    have h := hn.complete
+    have h := red_spine!!_none_norm heq
+    exact h hn⟩⟩
+
+def RedSpineStar.cases_head (hrt : RedSpineStar A B) : (PLift (A = B)) ⊕ RedSpinePlus A B :=
+  match heq : hrt with
+  | .refl => .inl ⟨by rfl⟩
+  | .mk₁ h => .inr h
 
 end GenericExpr

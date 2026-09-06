@@ -191,6 +191,10 @@ def Hole.complete_snd (h : Hole α lv (mk_hole α lv).fst) : h = (mk_hole α lv)
   cases h.right
   rfl
 
+@[dcc_force_reduce]
+def Hole.unique (h₁ : Hole A lv hole₁) (h₂ : Hole A lv hole₂): hole₁ = hole₂ := by
+  dcc_aesop' [force_reduce]
+
 theorem Hole.min_hole (h : Hole α lv hole₁) : GenericExpr.min_hole hole₁ = lv := by
   induction h <;> grind
 

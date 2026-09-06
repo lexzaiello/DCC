@@ -108,10 +108,10 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
     → (hgt : ¬ e'.max_hole < lv)
     → (hsp : hrt.head = ⟨DCC? ⟦(B z)⟧((x z), (y z (x z))), ⟨.pair⟩, .pair⟩)
     → ViewAppHole (DCC? ⟦B⟧⟨x, y⟩) (DCC? &(z)) lv hlt hmem
-  | unmap  : (hrt : RedSpineNorm (DCC? (*<x> &(y))) e')
-    → (hgt : ¬ e'.max_hole < lv)
-    → (hsp : hrt.head = ⟨DCC? (x y), ⟨.unmap⟩, .unmap⟩)
-    → ViewAppHole (DCC? *<x>) (DCC? &(y)) lv hlt hmem
+  | unbox  : (hrt : RedSpineNorm (DCC? (*(A) &(y))) y)
+    → (hgt : ¬ y.max_hole < lv)
+    → (hsp : hrt.head = ⟨y, ⟨.unbox⟩, .unbox⟩)
+    → ViewAppHole (DCC? *(A)) (DCC? &(y)) lv hlt hmem
   | fmap  : (hrt : RedSpineNorm (DCC? ($<x> &(y))) e')
     → (hgt : ¬ e'.max_hole < lv)
     → (hsp : hrt.head = ⟨DCC? &((x y)), ⟨.fmap⟩, .fmap⟩)
@@ -179,7 +179,7 @@ def RedSpineNorm.map_hole (hrt : RedSpineNorm (DCC? (!<x> hole₁)) e') : Σ' y,
   all_goals (exact (hrt.elim_norm_flse (fun _ hr hn => nomatch hn)).elim)
 
 @[grind unfold, dcc_force_reduce]
-def RedSpineNorm.unmap_hole (hrt : RedSpineNorm (DCC? (*<x> hole₁)) e') : Σ' y, hole₁ = DCC? &(y) := by
+def RedSpineNorm.unbox_hole (hrt : RedSpineNorm (DCC? (*(A) hole₁)) e') : Σ' y, hole₁ = DCC? &(y) := by
   cases hole₁
   case box =>
     exact ⟨_, rfl⟩
@@ -293,11 +293,14 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
         | ⟨_, heq₀⟩ => by
           subst heq₀
           exact .some (.pair hrt hn' hrt.head_eq)
-      | DCC? *<x> =>
-        match hrt.unmap_hole with
-        | ⟨_, heq₀⟩ => by
-          subst heq₀
-          exact .some (.unmap hrt hn' hrt.head_eq)
+      | DCC? *(A) =>
+        match hrt.unbox_hole with
+        | ⟨y, heq₀⟩ => by
+          if heq : e' = y then
+            subst heq₀
+            subst heq
+            exact .some (.unbox hrt hn' hrt.head_eq)
+          else exact .none
       | DCC? $<x> =>
         match hrt.fmap_hole with
         | ⟨_, heq₀⟩ => by
@@ -362,7 +365,7 @@ def ViewAppHole.complete_some (h : ViewAppHole (τ_c := τ_c) f hole₁ lv hlt m
     split
     · simp
     · grind
-  case fst | snd | eval | eql | pair | unmap | fmap | map | sigma =>
+  case fst | snd | eval | eql | pair | unbox | fmap | map | sigma =>
     unfold view_app_hole?
     expose_names
     have heqa := RedSpineNorm.complete (by assumption)
@@ -717,7 +720,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
           have h : x.max_hole = x.min_hole := by grind
           grind)
         done)
-      case fst | snd =>
+      case fst | snd | unbox =>
         simp [ViewAppHole.reduction] at heq
         cases heq
       case eql =>
@@ -801,7 +804,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
           cases hrt.unique hr₂
           grind)
         done)
-      case fst | snd =>
+      case fst | snd | unbox =>
         simp [ViewAppHole.reduction] at heq'
         cases heq'
       case eql => simp [ViewAppHole.reduction] at heq'

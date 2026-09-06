@@ -33,7 +33,7 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] !Λ(_α, _β, _x) => 3
   | DCC[.] Eval(_α, _β, _x) => 3
   | DCC[.] !(_x)   => 1
-  | DCC[.] *<_f>    => 1
+  | DCC[.] *(_f)    => 1
   | DCC[.] &(_x)   => 1
   | DCC[.] !<_x>   => 1
   | DCC[.] $<_x>   => 1
@@ -66,7 +66,7 @@ def branch_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] !Λ(_α, _β, _x) => 3
   | DCC[.] Eval(_α, _β, _x) => 3
   | DCC[.] !(_x)   => 1
-  | DCC[.] *<_f>    => 1
+  | DCC[.] *(_f)    => 1
   | DCC[.] &(_x)   => 1
   | DCC[.] !<_x>   => 1
   | DCC[.] $<_x>   => 1
@@ -99,7 +99,7 @@ def branches (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) 
   | DCC[.] !Λ(α, β, x) => ⟨#[α, β, x], by grind⟩
   | DCC[.] Eval(α, β, x) => ⟨#[α, β, x], by grind⟩
   | DCC[.] !(x)   => ⟨#[x], by grind⟩
-  | DCC[.] *<f>    => ⟨#[f], by grind⟩
+  | DCC[.] *(f)    => ⟨#[f], by grind⟩
   | DCC[.] &(x)   => ⟨#[x], by grind⟩
   | DCC[.] !<x>   => ⟨#[x], by grind⟩
   | DCC[.] $<x>   => ⟨#[x], by grind⟩
@@ -136,7 +136,7 @@ def n_indices (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] !Λ(_α, _β, _x) => 0
   | DCC[.] Eval(_α, _β, _x) => 0
   | DCC[.] !(_x)   => 0
-  | DCC[.] *<_f>    => 1
+  | DCC[.] *(_f)    => 1
   | DCC[.] &(_x)   => 0
   | DCC[.] !<_x>   => 1
   | DCC[.] $<_x>   => 1
@@ -169,7 +169,7 @@ def indices (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (
   | DCC[.] !Λ(_α, _β, _x) => ⟨#[], by grind⟩
   | DCC[.] Eval(_α, _β, _x) => ⟨#[], by grind⟩
   | DCC[.] !(_x)   => ⟨#[], by grind⟩
-  | DCC[.] *<f>    => ⟨#[f], by grind⟩
+  | DCC[.] *(f)    => ⟨#[f], by grind⟩
   | DCC[.] &(_x)   => ⟨#[], by grind⟩
   | DCC[.] !<x>   => ⟨#[x], by grind⟩
   | DCC[.] $<x>   => ⟨#[x], by grind⟩
@@ -202,7 +202,7 @@ def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (p
   | DCC[.] !Λ(α, β, x) => ⟨#[α, β, x], by grind⟩
   | DCC[.] Eval(α, β, x) => ⟨#[α, β, x], by grind⟩
   | DCC[.] !(x)   => ⟨#[x], by grind⟩
-  | DCC[.] *<f>    => ⟨#[f], by grind⟩
+  | DCC[.] *(f)    => ⟨#[f], by grind⟩
   | DCC[.] &(x)   => ⟨#[x], by grind⟩
   | DCC[.] !<x>   => ⟨#[x], by grind⟩
   | DCC[.] $<x>   => ⟨#[x], by grind⟩
@@ -242,7 +242,7 @@ def map_points (e : GenericExpr (τ := τ_c))
   | DCC? !Λ(_α, _β, _x) => .curr'
   | DCC? Eval(_α, _β, _x) => .eval
   | DCC? !(_x)   => .bang
-  | DCC? *<_f>    => .unmap
+  | DCC? *(_f)    => .unbox
   | DCC? &(_x)   => .box
   | DCC? !<_x>   => .map
   | DCC? $<_x>   => .fmap
@@ -310,9 +310,9 @@ def set_points (e : GenericExpr (τ := τ_c))
   | DCC? !(x)   =>
     have heq : point_arity (DCC? !(x)) = 1 := by grind
     .bang points'[0]
-  | DCC? *<f>    =>
-    have heq : point_arity (DCC? *<f>) = 1 := by grind
-    .unmap points'[0]
+  | DCC? *(f)    =>
+    have heq : point_arity (DCC? *(f)) = 1 := by grind
+    .unbox points'[0]
   | DCC? &(x)   =>
     have heq : point_arity (DCC? &(x)) = 1 := by grind
     .box points'[0]
@@ -383,7 +383,7 @@ def map_branches (e : GenericExpr (τ := τ_c))
   | DCC? !Λ(_α, _β, _x) => .curr'
   | DCC? Eval(_α, _β, _x) => .eval
   | DCC? !(_x)   => .bang
-  | DCC? *<_f>    => .unmap
+  | DCC? *(_f)    => .unbox
   | DCC? &(_x)   => .box
   | DCC? !<_x>   => .map
   | DCC? $<_x>   => .fmap
@@ -417,7 +417,7 @@ def map_indices (e : GenericExpr (τ := τ_c))
   | DCC? !Λ(_α, _β, _x) => .curr'
   | DCC? Eval(_α, _β, _x) => .eval
   | DCC? !(_x)   => .bang
-  | DCC? *<_f>    => .unmap
+  | DCC? *(_f)    => .unbox
   | DCC? &(_x)   => .box
   | DCC? !<_x>   => .map
   | DCC? $<_x>   => .fmap
@@ -522,7 +522,7 @@ def max_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? !Λ(A, B, x) => max A.max_hole (max B.max_hole x.max_hole)
   | DCC? Eval(A, B, x) => max A.max_hole (max B.max_hole x.max_hole)
   | DCC? !(x)   => x.max_hole
-  | DCC? *<x>    => x.max_hole
+  | DCC? *(x)    => x.max_hole
   | DCC? &(x)   => x.max_hole
   | DCC? !<x>   => x.max_hole
   | DCC? $<x>   => x.max_hole
@@ -555,7 +555,7 @@ def min_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? !Λ(A, B, x) => min A.min_hole (min B.min_hole x.min_hole)
   | DCC? Eval(A, B, x) => min A.min_hole (min B.min_hole x.min_hole)
   | DCC? !(x)   => x.min_hole
-  | DCC? *<x>    => x.min_hole
+  | DCC? *(x)    => x.min_hole
   | DCC? &(x)   => x.min_hole
   | DCC? !<x>   => x.min_hole
   | DCC? $<x>   => x.min_hole
@@ -588,7 +588,7 @@ def has_at_least_hole_level (lv : ℕ) (e : GenericExpr τ_c) : Bool :=
   | DCC? !Λ(A, B, x) => A.has_at_least_hole_level lv || B.has_at_least_hole_level lv || x.has_at_least_hole_level lv
   | DCC? Eval(A, B, x) => A.has_at_least_hole_level lv || B.has_at_least_hole_level lv || x.has_at_least_hole_level lv
   | DCC? !(x)   => x.has_at_least_hole_level lv
-  | DCC? *<x>    => x.has_at_least_hole_level lv
+  | DCC? *(x)    => x.has_at_least_hole_level lv
   | DCC? &(x)   => x.has_at_least_hole_level lv
   | DCC? !<x>   => x.has_at_least_hole_level lv
   | DCC? $<x>   => x.has_at_least_hole_level lv

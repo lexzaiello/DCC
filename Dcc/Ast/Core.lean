@@ -12,7 +12,7 @@ inductive GenericExpr.{u} (τ : Type u) where
   | fmap    : GenericExpr τ  → GenericExpr τ
   | bang    : GenericExpr τ  → GenericExpr τ
   | box     : GenericExpr τ  → GenericExpr τ
-  | unmap   : GenericExpr τ  → GenericExpr τ
+  | unbox   : GenericExpr τ  → GenericExpr τ
   | eql     : GenericExpr τ  → GenericExpr τ
   | refl    : GenericExpr τ  → GenericExpr τ
   | fstc    : GenericExpr τ  → GenericExpr τ

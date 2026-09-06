@@ -19,7 +19,7 @@ inductive RedAff.IsHead : (hr : RedAff A B) → Type u
   | eql   {B env x}      : IsHead (.eql (f_α := B) (env := env) (x := x))
   | map   {x y}          : IsHead (.map (f := x) (x := y))
   | fmap  {x y}          : IsHead (.fmap (f := x) (x := y))
-  | unmap {x y}          : IsHead (.unmap (f := x) (x := y))
+  | unbox {A y}          : IsHead (.unbox (A := A) (x := y))
   | pair  {B x y z}      : IsHead (.pair (β := B) (M := x) (N := y) (x := z))
   | curr' {A B x y z}    : IsHead (.curr' (α := A) (β := B) (x := x) (y := y) (z := z))
   | id    {A x}          : IsHead (.id (α := A) (x := x))
@@ -65,7 +65,7 @@ def red_spine? (A : GenericExpr τ_c) : Option ((B : GenericExpr τ_c) × (hr : 
   | DCC? (`(_B, _x) _y) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? (⟦_B⟧⟨_x, _y⟩ &(_z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? ((_x ∘ _y) _z) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (*<_x> &(_y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? (*(_A) &(_y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? ($<_x> &(_y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? (!<_x> &(_y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? (Eval(_A, _B, _x) ⟦_C⟧(_y, _z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩

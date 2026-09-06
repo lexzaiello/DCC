@@ -113,10 +113,9 @@ def Domain.fmap : Domain (DCC? $<x>) x.domain.fst.bang :=
   have hn     := (domain_fst_sound (x := x) rfl).is_norm
   ⟨.trans (.single .fmapτ₀) (aff_mk_point' (n := 0) h_dom'), fun ⟨_, .bang₀ h⟩ => hn ⟨_, h⟩⟩
 
-def Domain.unmap : Domain (DCC? *<x>) x.domain.fst.bang :=
-  have h_dom' := (domain_fst_sound (x := x) rfl).red
-  have hn     := (domain_fst_sound (x := x) rfl).is_norm
-  ⟨.trans (.single .unmapτ₀) (aff_mk_point' (n := 0) h_dom'), fun ⟨_, .bang₀ h⟩ => hn ⟨_, h⟩⟩
+def Domain.unbox : Domain (DCC? *(A)) (reduce RedAff A).fst.bang :=
+  have hn := reduce_norm (A := A) rfl
+  ⟨.trans (.single .unboxτ₀) (aff_mk_point' (n := 0) (reduce RedAff A).snd.down), fun ⟨_, .bang₀ h⟩ => hn ⟨_, h⟩⟩
 
 set_option pp.deepTerms true in
 set_option pp.deepTerms.threshold 9999 in
@@ -150,9 +149,6 @@ def Domain.eval : Domain (DCC? Eval(A, B, x)) (DCC? Coup(#((reduce RedAff B).fst
 
 def Domain.curr₁ : Domain (DCC? (Λ(A, B, x) y)) (reduce RedAff (DCC? (B y))).fst :=
   ⟨.trans (.single .currτ₁) (reduce_sound rfl), reduce_norm rfl⟩
-
-def Domain.curr' : Domain (DCC? (!Λ(A, B, x))) B.domain.fst.bang :=
-  ⟨.trans (.single .curr'τ₀) (by sorry), by sorry⟩
 
 def Domain.curr'₁ : Domain (DCC? (!Λ(A, B, x) &(y))) (reduce RedAff (DCC? (B y))).fst.bang := by
   have h_dom : Domain (DCC? (!Λ(A, B, x) &(y))) _ := ⟨.trans (.single .curr'τ₁) (reduce_sound rfl), reduce_norm rfl⟩

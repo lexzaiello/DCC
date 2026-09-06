@@ -29,7 +29,7 @@ Core reductions:
   | eql      : RedAff (DCC[τ] (Eql(f_α) &(env) &(x))) (DCC[τ] x = x)
   | map      : RedAff (DCC[τ] (!<f> &(x))) (DCC[τ] !((f x)))
   | fmap     : RedAff (DCC[τ] ($<f> &(x))) (DCC[τ] &((f x)))
-  | unmap    : RedAff (DCC[τ] (*<f> &(x))) (DCC[τ] (f x))
+  | unbox    : RedAff (DCC[τ] (*(A) &(x))) x
   | pair     : RedAff (DCC[τ] (⟦β⟧⟨M, N⟩ &(x))) (DCC[τ] ⟦(β x)⟧((M x), (N x (M x))))
   | evalc    : RedAff (DCC[τ] (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC[τ] (x y z))
   | quot     : RedAff (DCC[τ] (`(β, x) y)) x
@@ -73,8 +73,8 @@ Inner congruences:
   | map₀     : RedAff f f' → RedAff (DCC? !<f>) (DCC? !<f'>)
   -- $<x>
   | fmap₀    : RedAff f f' → RedAff (DCC? $<f>) (DCC? $<f'>)
-  -- *<x>
-  | unmap₀   : RedAff f f' → RedAff (DCC? *<f>) (DCC? *<f'>)
+  -- *(x)
+  | unbox₀   : RedAff A A' → RedAff (DCC? *(A)) (DCC? *(A'))
   -- Λ(A, B, x)
   | curr₀    : RedAff A A' → RedAff (DCC[τ] (Λ(A, B, x))) (DCC[τ] (Λ(A', B, x)))
   | curr₁    : RedAff B B' → RedAff (DCC[τ] (Λ(A, B, x))) (DCC[τ] (Λ(A, B', x)))
@@ -112,7 +112,7 @@ Base combinator function domains
   | reflτ₀   : RedAff (DCC? Dom(refl(B))) (DCC? !(Dom(B)))
   | mapτ₀    : RedAff (DCC? Dom(!<x>)) (DCC? !(Dom(x)))
   | fmapτ₀   : RedAff (DCC? Dom($<x>)) (DCC? !(Dom(x)))
-  | unmapτ₀  : RedAff (DCC? Dom(*<x>)) (DCC? !(Dom(x)))
+  | unboxτ₀  : RedAff (DCC? Dom(*(A))) (DCC? !(A))
   | pairτ₀   : RedAff (DCC? Dom(⟦B⟧⟨x, y⟩)) (DCC? !(Dom(x)))
   | evalcτ₀  : RedAff (DCC? Dom(Eval(A, B, x))) (DCC? Coup(B))
   | quotτ₀   : RedAff (DCC? Dom(`(B, x))) B
@@ -168,10 +168,10 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
     | _ => .none
   | DCC[?] (!<_f> &(_x))                                 => .some ⟨_, ⟨.map⟩⟩
   | DCC[?] ($<_f> &(_x))                                 => .some ⟨_, ⟨.fmap⟩⟩
-  | DCC[?] (*<_α> &(_x))                                 => .some ⟨_, ⟨.unmap⟩⟩
-  | DCC[?] *<x> =>
+  | DCC[?] (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
+  | DCC[?] *(x) =>
     match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.unmap₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.unbox₀ h⟩⟩
     | _ => .none
   | DCC[?] $<x> =>
     match x.step? with
@@ -271,7 +271,7 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
   | DCC? Dom(refl(_B)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(!<_x>) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom($<_x>) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? Dom(*<_x>) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(*(_x)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(⟦_B⟧⟨_x, _y⟩) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(Eval(_A, _B, _x)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(`(_B, _x)) => .some ⟨_, ⟨by constructor⟩⟩
@@ -570,7 +570,13 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
   /-
     Domain reductions
   -/
-  case eqlτ₀ | reflτ₀ | mapτ₀ | fmapτ₀ | unmapτ₀ =>
+  case unboxτ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr
+      case _ hr => exact ⟨_, .single hr.bang₀, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case eqlτ₀ | reflτ₀ | mapτ₀ | fmapτ₀ =>
     cases h₂ with
     | dom₀ hr =>
       cases hr
@@ -666,7 +672,10 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | _ => exact ⟨_, .refl, .refl⟩
   case dom₀ ih =>
     cases h₂
-    case eqlτ₀ | reflτ₀ | mapτ₀ | fmapτ₀ | unmapτ₀ =>
+    case unboxτ₀ hr =>
+      cases hr
+      case _ hr => exact ⟨_, .single (by constructor), .single hr.bang₀⟩
+    case eqlτ₀ | reflτ₀ | mapτ₀ | fmapτ₀ =>
       rename_i hr
       cases hr
       case _ hr =>
@@ -772,18 +781,16 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       cases h.left
       exact ⟨_, .single ((RedAff.congrArg h.right).mk_point (n := ⟨0, by grind⟩)), .single (by constructor)⟩
     | _ => dcc_aesop' [force_reduce, force_step]
-  case unmap =>
+  case unbox =>
     cases h₂ with
     | congrFun hr =>
       have ⟨_, h⟩ := hr.elim_point₁
       dcc_simp at h
       cases h.left
-      exact ⟨_, .single (RedAff.congrFun h.right), .single (by constructor)⟩
+      exact ⟨_, .refl, .single (by constructor)⟩
     | congrArg hr =>
-      have ⟨_, h⟩ := hr.elim_point₁
-      dcc_simp at h
-      cases h.left
-      exact ⟨_, .single (RedAff.congrArg h.right), .single (by constructor)⟩
+      match hr with
+      | .box₀ hr => exact ⟨_, .single hr, .single (by constructor)⟩
     | _ => dcc_aesop' [force_reduce, force_step]
   case pair =>
     cases h₂ with
@@ -898,7 +905,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
   -- Inner congruences:
   case quot₀ hr ih | quot₁ hr ih | sigma₀ hr ih | sigma₁ hr ih | pi₀ hr ih | pi₁ hr ih
     | eq₀ hr ih | eq₁ hr ih | eql₀ hr ih | refl₀ hr ih | fstc₀ hr ih | sndc₀ hr ih | id₀ hr ih | bang₀ hr ih
-    | box₀ hr ih | map₀ hr ih | fmap₀ hr ih | unmap₀ hr ih | coup₀ hr ih | comp₀ hr ih | comp₁ hr ih =>
+    | box₀ hr ih | map₀ hr ih | fmap₀ hr ih | unbox₀ hr ih | coup₀ hr ih | comp₀ hr ih | comp₁ hr ih =>
     cases h₂ <;> (
       first
       | (rename_i hr₂
@@ -947,8 +954,8 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       exact ⟨_, .single (by constructor), .trans (aff_mk_point'' 0) (aff_mk_point'' 1)⟩
     case fmap | map =>
       exact ⟨_, .single (by constructor), aff_mk_point'' 0 hrp.congrArg⟩
-    case unmap =>
-      exact ⟨_, .single (by constructor), .single hrp.congrArg⟩
+    case unbox =>
+      exact ⟨_, .single (by constructor), .single hrp⟩
     case pair =>
       exact ⟨_, .single (by constructor), .trans (.trans (aff_mk_point'' 0 hrp.congrArg) (aff_mk_point'' 1 hrp.congrArg))
         ((aff_mk_point'' 2 hrp.congrArg.congrArg).trans (aff_mk_point'' 2 hrp.congrArg.congrFun))⟩
@@ -990,8 +997,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
         exact ⟨_, .single (by constructor), .refl⟩)
     case map | fmap =>
       exact ⟨_, .single (by constructor), aff_mk_point'' 0 hrp.congrFun⟩
-    case unmap =>
-      exact ⟨_, .single (by constructor), .single hrp.congrFun⟩
+    case unbox => exact ⟨_, .single (by constructor), .refl⟩
     case pair =>
       cases hr
       · rename_i hr; exact ⟨_, .single (by constructor), aff_mk_point'' 0 hr.congrFun⟩
@@ -1402,8 +1408,8 @@ namespace IsNorm
 def map (h : IsNorm RedAff (.map f)) : IsNorm RedAff f :=
   fun ⟨_, hr⟩ => h ⟨_, .map₀ hr⟩
 
-def unmap (h : IsNorm RedAff (.unmap f)) : IsNorm RedAff f :=
-  fun ⟨_, hr⟩ => h ⟨_, .unmap₀ hr⟩
+def unbox (h : IsNorm RedAff (.unbox f)) : IsNorm RedAff f :=
+  fun ⟨_, hr⟩ => h ⟨_, .unbox₀ hr⟩
 
 def box₀ (h : IsNorm RedAff (DCC? &(x))) : IsNorm RedAff x :=
   fun ⟨_, hr⟩ => h ⟨_, .box₀ hr⟩

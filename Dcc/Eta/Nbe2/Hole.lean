@@ -143,7 +143,7 @@ def mk_hole (τ : @GenericExpr τ_c) (lv : ℕ) : ((hole_e : @GenericExpr τ_c) 
     ⟨_, .pure (τ.view_bang_coup?_none_sound (by simp_all))⟩
 termination_by τ.size
 
-@[aesop safe apply (rule_sets := [DccSize])]
+@[aesop safe apply (rule_sets := [DccSize]), aesop safe destruct (rule_sets := [DccForceReduce])]
 def Hole.complete (h : Hole α lv hole_e) : mk_hole α lv = ⟨hole_e, h⟩ := by
   induction h with
   | pure hn =>
@@ -180,10 +180,21 @@ def Hole.complete (h : Hole α lv hole_e) : mk_hole α lv = ⟨hole_e, h⟩ := b
         grind
       · grind
 
-def Hole.min_hole (h : Hole α lv hole₁) : GenericExpr.min_hole hole₁ = lv := by
+@[dcc_force_reduce]
+def Hole.complete_fst (h : Hole α lv hole_e) : hole_e = (mk_hole α lv).fst := by
+  dcc_aesop' [force_reduce]
+
+@[dcc_force_reduce, aesop unsafe 50% destruct (rule_sets := [DccForceReduce])]
+def Hole.complete_snd (h : Hole α lv (mk_hole α lv).fst) : h = (mk_hole α lv).snd := by
+  have h := h.complete
+  have h := Sigma.ext_iff.mp h
+  cases h.right
+  rfl
+
+theorem Hole.min_hole (h : Hole α lv hole₁) : GenericExpr.min_hole hole₁ = lv := by
   induction h <;> grind
 
-def Hole.max_hole (h : Hole α lv hole₁) : lv ≤ GenericExpr.max_hole hole₁ := by
+theorem Hole.max_hole (h : Hole α lv hole₁) : lv ≤ GenericExpr.max_hole hole₁ := by
   induction h <;> grind
 
 def Hole.level_neq (h₁ : Hole α m x) (h₂ : Hole β n y) (hneq : m ≠ n) : x ≠ y := fun h => by

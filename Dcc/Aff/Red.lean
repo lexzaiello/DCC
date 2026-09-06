@@ -149,7 +149,7 @@ Hole generation:
 -/
 
 
-@[dcc_force_reduce, dcc_force_aff]
+@[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
   match e with
   | (DCC[?] Π(f_α, f_β)) =>
@@ -1343,7 +1343,7 @@ def RedAffNorm.is_norm (r : RedAffNorm (τ_c := τ_c) A B) : IsNorm RedAff B.raw
 @[grind]
 def aff_sound (heq : reduce RedAff A = ⟨B, ⟨h⟩⟩) : RedAffNorm A ⟨B, reduce_norm heq⟩ := ⟨reduce_sound heq, reduce_norm heq⟩
 
-@[grind]
+@[grind, dcc_force_reduce, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def aff_sound' (A : GenericExpr τ_c) : RedAffNorm A ⟨(reduce RedAff A).fst, reduce_norm rfl⟩ := ⟨reduce_sound rfl, reduce_norm rfl⟩
 
 @[grind, inline, dcc_reduce]

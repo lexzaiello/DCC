@@ -218,4 +218,38 @@ def Hole.coup_points_neq (h : Hole A level (DCC? ⟦β⟧(a, b))) : a ≠ b := f
     cases heq
     exact h_hole₁.level_neq h_hole₂ (by grind) (by grind)
 
+@[grind ., grind! .]
+theorem min_hole_le_max_hole : min_hole e ≤ max_hole e := by
+  induction e <;> grind
+
+@[grind ., grind →]
+theorem RedAff.max_hole_preserved (h : RedAff A B) : max_hole B ≤ max_hole A := by
+  induction h <;> grind
+
+@[grind ., grind →]
+theorem RedAffReflTrans.max_hole_preserved (h : RedAffReflTrans A B) : B.max_hole ≤ A.max_hole :=
+  match h.cases_head with
+  | .inl h => by grind
+  | .inr ⟨_, h₁, h₂⟩ => by
+    have h_dec := h₁.decreasing
+    have h_dec₂ := h₁.max_hole_preserved
+    have h_dec₃ := max_hole_preserved h₂
+    grind
+termination_by A.size
+
+@[aesop safe forward (rule_sets := [DccSize])]
+def RedAffNorm.max_hole_preserved (h : RedAffNorm A ⟨B, hn_B⟩) : max_hole B ≤ max_hole A := by
+  match h with
+  | ⟨hr, hn⟩ =>
+    match hr.cases_head with
+    | .inl h =>
+      cases h
+      grind
+    | .inr ⟨_, h₁, h₂⟩ =>
+      have h_dec := h₁.decreasing
+      have ha := h₁.max_hole_preserved
+      have hb := max_hole_preserved ⟨h₂, hn⟩
+      grind
+termination_by A.size
+
 end GenericExpr

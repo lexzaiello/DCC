@@ -73,6 +73,7 @@ class RedRel.{u, v} {α : Type u} (r : α → α → Sort v) (t : outParam (α �
       try rfl
       done)
 
+attribute [dcc_force_reduce] Rel.run
 attribute [dcc_size] RedRel.decreasing
 
 attribute [dcc_force_rel] RedRel.toRel.eq_def RedRel.toRel Rel.run Rel.run.eq_def
@@ -469,13 +470,13 @@ theorem reduce_complete_pointwise.{u} {α : Type u} {r : α → α → Prop} {t 
     (r := Relation.ReflTransGen r) (P := IsNorm r) (hR := hR.to_reflTrans (α := α) (r := r) (t := t)) :=
   ⟨fun hr hn => reduce_complete (α := α) (r := r) (t := t) hr hn⟩
 
-@[dcc_step, aesop safe apply (rule_sets := [DccStep])]
-theorem reduce_sound.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} [_hR : RedRel r t] {A B : α}
+@[dcc_force_reduce, dcc_step, aesop safe apply (rule_sets := [DccStep]), aesop unsafe norm (rule_sets := [DccForceReduce])]
+def reduce_sound.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} [_hR : RedRel r t] {A B : α}
   {h : Relation.ReflTransGen r A B}
   (_heq : reduce r A = ⟨B, ⟨h⟩⟩) : Relation.ReflTransGen r A B := h
 
-@[dcc_step, aesop safe apply (rule_sets := [DccStep])]
-theorem reduce_norm.{u} {τ : Type u} {t : τ → ℕ}
+@[dcc_force_reduce, dcc_step, aesop safe apply (rule_sets := [DccStep])]
+def reduce_norm.{u} {τ : Type u} {t : τ → ℕ}
   {r : τ → τ → Prop}
   [hR : RedRel.{u} (α := τ) r t]
   [hN : SemiComplete.{u} (α := τ) r (hR := hR)]

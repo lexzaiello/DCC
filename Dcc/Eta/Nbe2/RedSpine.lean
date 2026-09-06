@@ -1,4 +1,5 @@
 import Dcc.Aff.Red
+import Dcc.Eta.Nbe2.Hole
 import Dcc.Attrs
 
 universe u
@@ -284,29 +285,6 @@ The difference is really ugly anyway and it can be fixed by just merging the typ
 If Par fires, then there is no head reduction,
 which means (f x = g x) means by congrFun f = g
 -/
-
-@[grind ., grind! .]
-theorem min_hole_le_max_hole : min_hole e ≤ max_hole e := by
-  induction e <;> grind
-
-@[grind ., grind →]
-theorem RedAff.max_hole_preserved (h : RedAff A B) : max_hole B ≤ max_hole A := by
-  induction h <;> grind
-
-@[aesop safe forward (rule_sets := [DccSize])]
-def RedAffNorm.max_hole_preserved (h : RedAffNorm A ⟨B, hn_B⟩) : max_hole B ≤ max_hole A := by
-  match h with
-  | ⟨hr, hn⟩ =>
-    match hr.cases_head with
-    | .inl h =>
-      cases h
-      grind
-    | .inr ⟨_, h₁, h₂⟩ =>
-      have h_dec := h₁.decreasing
-      have ha := h₁.max_hole_preserved
-      have hb := max_hole_preserved ⟨h₂, hn⟩
-      grind
-termination_by A.size
 
 inductive RedSpineStar : GenericExpr τ_c → GenericExpr τ_c → Type u
   | mk₁  : RedSpinePlus A B → RedSpineStar A B

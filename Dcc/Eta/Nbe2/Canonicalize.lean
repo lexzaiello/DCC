@@ -151,6 +151,27 @@ theorem readback_head_none_sound
   intro f' h
   cases h.complete.symm.trans heq
 
+def Canonicalize.reducing_hole (hc : Canonicalize f lv hlt f') : Hole f.domain.fst lv (mk_hole f.domain.fst lv).fst := by
+  cases hc
+  <;> (
+    have heq₁ := Domain.complete_fst (by assumption)
+    have heq₂ := Hole.complete_fst (by assumption)
+    cases heq₁; cases heq₂
+    assumption)
+
+def Canonicalize.hole_reduction (hc : Canonicalize (τ_c := τ_c) f lv hlt f') : ViewAppHole f (mk_hole f.domain.fst lv).fst lv hlt (hc.reducing_hole.max_hole (α := f.domain.fst) (lv := lv)) := by
+  cases heq : hc <;> (
+    have heq₁ := Domain.complete_fst (by assumption)
+    have heq₂ := Hole.complete_fst (by assumption)
+    cases heq₁; cases heq₂
+    have heq₃ := Hole.complete (by assumption)
+    have heq₄ := hc.reducing_hole.complete
+    have heq' := heq₄.symm.trans heq₃
+    simp at heq'
+    rw [heq] at heq'
+    rw [heq']
+    assumption)
+
 def canonicalize (f : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole < lv) : Option ((f' : GenericExpr τ_c) × Canonicalize f lv hlt f') :=
   let ⟨A, h_dom⟩ := f.domain
   let ⟨x, e_h⟩   := mk_hole A lv

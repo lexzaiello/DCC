@@ -151,6 +151,9 @@ def Domain.eval : Domain (DCC? Eval(A, B, x)) (DCC? Coup(#((reduce RedAff B).fst
 def Domain.curr₁ : Domain (DCC? (Λ(A, B, x) y)) (reduce RedAff (DCC? (B y))).fst :=
   ⟨.trans (.single .currτ₁) (reduce_sound rfl), reduce_norm rfl⟩
 
+def Domain.curr' : Domain (DCC? (!Λ(A, B, x))) B.domain.fst.bang :=
+  ⟨.trans (.single .curr'τ₀) (by sorry), by sorry⟩
+
 def Domain.curr'₁ : Domain (DCC? (!Λ(A, B, x) &(y))) (reduce RedAff (DCC? (B y))).fst.bang := by
   have h_dom : Domain (DCC? (!Λ(A, B, x) &(y))) _ := ⟨.trans (.single .curr'τ₁) (reduce_sound rfl), reduce_norm rfl⟩
   have heq := reduce_congr_point (x := (B.app y).bang) ▸ h_dom

@@ -7,6 +7,7 @@ import Mathlib.Data.Fintype.Basic
 
 universe u
 variable {τ_c : Type u}
+variable [DecidableEq τ_c]
 
 /-
 To η-reduce a function, track movement of the hole through the function.
@@ -403,6 +404,11 @@ def view_app_hole_none_complete (hn : ViewAppHole (τ_c := τ_c) f hole₁ lv hl
   intro h heq
   exact hn h
 
+theorem view_app_hole_none_sound (h : view_app_hole? (τ_c := τ_c) f hole₁ lv hlt mem = .none) : ViewAppHole f hole₁ lv hlt mem → False := by
+  intro h
+  have heq := h.complete
+  grind
+
 @[dcc_rel]
 def ViewAppHole.reduction (h : ViewAppHole f x lv hlt hmem) : Σ B, RedSpineNorm (DCC? (f x)) B := by
   cases h <;> exact ⟨_, by assumption⟩
@@ -450,6 +456,7 @@ inductive ReadbackHead : (f : GenericExpr τ_c) → (h_dom : Domain f A)
     {hrt : ViewAppHole f x lv hlt e_h.max_hole} :
     (heq : hrt = .quot (x' := x') hred hgt)
     → ReadbackHead f h_dom e_h hlt hrt (DCC? `(A, x'))
+  --| map  {h_dom : Domain f (DCC? !(A))} {e_h : Hole A lv (DCC? &(x))}
 
 /-
 Termination argument is straightforward in Canonicalize since we're only recursion on comp or curr
@@ -577,8 +584,8 @@ def ReadbackHead.preservation_view {f f' A : GenericExpr τ_c} {h_dom : Domain f
   {hlt : f.max_hole < lv}
   {hrt : f.ViewAppHole x lv hlt e_h.max_hole}
   (h : ReadbackHead f h_dom e_h hlt hrt f') : f'.ViewAppHole x lv
-  (by have ha := h.max_hole_preserved; grind)
-  (by have hb := e_h.max_hole; grind) := by
+  h.max_hole_preserved
+  e_h.max_hole := by
   have ha := h.max_hole_preserved
   have hb := e_h.max_hole
   have hc := e_h.min_hole
@@ -798,5 +805,21 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
         simp [ViewAppHole.reduction] at heq'
         cases heq'
       case eql => simp [ViewAppHole.reduction] at heq'
+
+def ReadbackHead.self {f : GenericExpr τ_c} {h_dom : Domain f A}
+  {e_h : Hole A lv x} {hlt : f.max_hole < lv} {hrt : ViewAppHole f x lv hlt e_h.max_hole}
+  (h : ReadbackHead f h_dom e_h hlt hrt f') : ReadbackHead f' h.preservation e_h h.max_hole_preserved h.preservation_view f' := by
+  have heq₀ := h.complete
+  have heq₁ := hrt.complete
+  let h_pres := h.preservation_view
+  cases heq₂ : h
+  case quot =>
+    cases heq₂
+    exact ReadbackHead.quot rfl
+  all_goals (
+    constructor
+    simp [preservation_view]
+    cases heq₂
+    simp [ViewAppHole.reduction])
 
 end GenericExpr

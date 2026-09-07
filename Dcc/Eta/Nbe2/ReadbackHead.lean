@@ -737,8 +737,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
           let heqa := (heq₁ ▸ hr₃).unique hr₁
           let heqb := (heq₂ ▸ hr₄).unique hr₂
           have heq' := heqa.trans heqb.symm
-          cases heq')
-      done)
+          cases heq'))
   | curr' heq₁ =>
     cases hrb₂
     case curr' heq₂ =>
@@ -766,8 +765,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
           let heqa := (heq₁ ▸ hr₃).unique hr₁
           let heqb := (heq₂ ▸ hr₄).unique hr₂
           have heq' := heqa.trans heqb.symm
-          cases heq')
-      done)
+          cases heq'))
   | curr heq₁ =>
     cases hrb₂
     case curr heq₂ =>

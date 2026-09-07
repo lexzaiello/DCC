@@ -708,9 +708,104 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
   let hr₃  := hrt₁.reduction.snd
   let hr₄  := hrt₂.reduction.snd
   cases hrb₁ with
+  | eval _ heq₁ =>
+    cases hrb₂
+    case eval h_dom₂ heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heq'
+      expose_names
+      cases h_dom_B.unique h_dom₂
+      rfl
+    case quot heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      expose_names
+      have heq' := heqa.trans heqb.symm
+      cases heq₂
+      simp [ViewAppHole.reduction] at heq'
+      cases heq'
+      have ha := e_h.max_hole
+      have hb := e_h.min_hole
+      have hc := hr₁.max_hole_preserved
+      grind
+    any_goals (
+      focus
+      try (
+        case _ heq₂ =>
+          let heqa := (heq₁ ▸ hr₃).unique hr₁
+          let heqb := (heq₂ ▸ hr₄).unique hr₂
+          have heq' := heqa.trans heqb.symm
+          cases heq')
+      done)
+  | curr' heq₁ =>
+    cases hrb₂
+    case curr' heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heq'
+      rfl
+    case quot heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      expose_names
+      have heq' := heqa.trans heqb.symm
+      cases heq₂
+      simp [ViewAppHole.reduction] at heq'
+      cases heq'
+      have ha := e_h.max_hole
+      have hb := e_h.min_hole
+      have hc := hr₁.max_hole_preserved
+      grind
+    any_goals (
+      focus
+      try (
+        case _ heq₂ =>
+          let heqa := (heq₁ ▸ hr₃).unique hr₁
+          let heqb := (heq₂ ▸ hr₄).unique hr₂
+          have heq' := heqa.trans heqb.symm
+          cases heq')
+      done)
+  | curr heq₁ =>
+    cases hrb₂
+    case curr heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heq'
+      rfl
+    case quot heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      expose_names
+      have heq' := heqa.trans heqb.symm
+      cases heq₂
+      simp [ViewAppHole.reduction] at heq'
+      cases heq'
+      have ha := e_h.max_hole
+      have hb := e_h.min_hole
+      have hc := hr₁.max_hole_preserved
+      grind
+    any_goals (
+      focus
+      try (
+        case _ heq₂ =>
+          let heqa := (heq₁ ▸ hr₃).unique hr₁
+          let heqb := (heq₂ ▸ hr₄).unique hr₂
+          have heq' := heqa.trans heqb.symm
+          cases heq')
+      done)
+    /-case id heq₂ | fst heq₂ | snd heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heq'-/
+    
   | par heq₁ =>
     cases hrb₂
-    case comp heq₂ =>
+    case eval heq₂ | curr' heq₂ | curr heq₂ | comp heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -727,7 +822,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
           try (grind)))
   | comp heq₁ =>
     cases hrb₂
-    case par heq₂ =>
+    case eval heq₂ | par heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -744,6 +839,11 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
           try (grind)))
   | sigma heq₁ =>
     cases hrb₂ with
+    | curr' heq₂ | curr heq₂ | eval _ heq₂ | par heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heq'
     | sigma heq₂ =>
       expose_names
       let heqa := (heq₁ ▸ hr₃).unique hr₁
@@ -759,7 +859,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
       grind
-    | par heq₂ | comp heq₂ | fst heq₂ | snd heq₂ | quot heq₂ | eql heq₂ | unbox heq₂ | fmap heq₂ | map heq₂ | id heq₂ =>
+    | comp heq₂ | fst heq₂ | snd heq₂ | quot heq₂ | eql heq₂ | unbox heq₂ | fmap heq₂ | map heq₂ | id heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -768,7 +868,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       try (grind)
   | pair heq₁ =>
     cases hrb₂ with
-    | par heq₂ | comp heq₂ | sigma heq₂ | pair heq₂ =>
+    | curr' heq₂ | curr heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | pair heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -783,7 +883,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
   | unbox heq₁ =>
     cases hrb₂ with
     | unbox heq₂ => rfl
-    | par heq₂ | comp heq₂ | sigma heq₂ | quot heq₂ | eql heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | id heq₂ =>
+    | curr heq₂ | curr' heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | quot heq₂ | eql heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | id heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -793,7 +893,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
   | eql heq₁ =>
     cases hrb₂ with
     | eql heq₂ => rfl
-    | par heq₂ | comp heq₂ | sigma heq₂ | unbox heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | quot heq₂ | id heq₂ =>
+    | curr' heq₂ | curr heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | unbox heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | quot heq₂ | id heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -807,7 +907,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       have heq' := heqa.trans heqb.symm
       simp at heq'
       simp [heq']
-    | par heq₂ | comp heq₂ | sigma heq₂ | fmap heq₂ | pair heq₂ | eql heq₂ =>
+    | curr heq₂ | curr' heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | fmap heq₂ | pair heq₂ | eql heq₂ =>
       let heqa  := (heq₁ ▸ hr₃).unique hr₁
       let heqb  := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -842,7 +942,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       let heqb  := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
       grind
-    | id heq₂ =>
+    | curr' heq₂ | curr heq₂ | id heq₂ =>
       let heqa  := (heq₁ ▸ hr₃).unique hr₁
       let heqb  := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -861,7 +961,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       cases heq'
   | snd heq₁ =>
     cases hrb₂ with
-    | par heq₂ | comp heq₂ =>
+    | eval _ heq₂ | curr heq₂ | par heq₂ | comp heq₂ =>
       let heqa  := (heq₁ ▸ hr₃).unique hr₁
       let heqb  := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -901,7 +1001,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       grind
   | fst heq₁ =>
     cases hrb₂ with
-    | par heq₂ | comp heq₂ =>
+    | eval _ heq₂ | curr heq₂ | par heq₂ | comp heq₂ =>
       let heqa  := (heq₁ ▸ hr₃).unique hr₁
       let heqb  := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -939,16 +1039,9 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       cases hb
       simp_all
       grind
-  | id =>
+  | id heq₁ =>
     cases hrb₂ with
-    | par heq₂ =>
-      rename_i heq₁
-      let heqa  := (heq₁ ▸ hr₃).unique hr₁
-      let heqb  := (heq₂ ▸ hr₄).unique hr₂
-      have heq' := heqa.trans heqb.symm
-      cases heq'
-    | comp heq₂ =>
-      rename_i heq₁ _ _
+    | eval _ heq₂ | comp heq₂ | curr' heq₂ | curr heq₂ | par heq₂ =>
       let heqa  := (heq₁ ▸ hr₃).unique hr₁
       let heqb  := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -966,8 +1059,8 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       any_goals (
         focus
         try (
-          simp [ViewAppHole.reduction] at heq
-          cases heq
+          simp [ViewAppHole.reduction] at heq₁
+          cases heq₁
           expose_names
           cases hrt.unique hr₁
           cases hr₂.unique hred
@@ -976,29 +1069,39 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
           grind)
         done)
       case fst | snd | unbox =>
-        simp [ViewAppHole.reduction] at heq
-        cases heq
+        simp [ViewAppHole.reduction] at heq₁
+        cases heq₁
       case eql =>
-        simp [ViewAppHole.reduction] at heq
+        simp [ViewAppHole.reduction] at heq₁
     | sigma heq' | pair heq' | eql heq' | unbox heq' | fmap heq' | map heq' | snd heq' | fst heq' =>
       expose_names
       have ha := hr₁.max_hole_preserved
       have hb := hr₂.max_hole_preserved
       have hc := e_h.max_hole
       have hd := e_h.min_hole
-      let h := heq ▸ hrt₁.reduction.snd
+      let h := heq₁ ▸ hrt₁.reduction.snd
       cases h.unique hr₁
       let h' := heq' ▸ hrt₂.reduction.snd
       cases h'.unique hr₂
   | quot heq₁ =>
     cases hrb₂ with
-    | par heq₂ | comp heq₂ | sigma heq₂ | pair heq₂ | unbox heq₂ | eql heq₂ | map heq₂ | fmap heq₂ =>
+    | curr' heq₂ | curr heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | pair heq₂ | unbox heq₂ | eql heq₂ | map heq₂ | fmap heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
       try (simp [ViewAppHole.reduction] at heq')
       try (cases heq')
       try (grind)
+    | eval _ heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heq₁
+      simp [ViewAppHole.reduction] at heq'
+      cases heq'
+      have hn₁ := Hole.min_hole (by assumption)
+      have hn₂ := Hole.max_hole (by assumption)
+      grind
     | fst heq' | snd heq' =>
       expose_names
       have ha := hr₁.max_hole_preserved

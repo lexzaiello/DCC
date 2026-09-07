@@ -372,7 +372,7 @@ def RedSpineNorm.tail {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : ((B : Ge
     have ⟨B, _hrt, ⟨hr⟩, hn⟩ := hr.tail
     ⟨B, ⟨hr⟩, hn⟩
 
-@[inline, aesop safe norm (rule_sets := [DccRel])]
+@[inline, aesop safe norm (rule_sets := [DccRel]), aesop safe norm (rule_sets := [DccForceReduce])]
 def RedSpineNorm.head {A C : GenericExpr τ_c} (h : RedSpineNorm A C) : ((B : GenericExpr τ_c) × (hr : PLift (RedAff A B)) × hr.down.IsHead) :=
   match h with
   | ⟨.single ha hb, _hn⟩ =>
@@ -402,6 +402,7 @@ def RedSpineStar.max_hole_preserved (h : RedSpineStar A B) : max_hole B ≤ max_
   | .refl => by grind
   | .mk₁ h => h.max_hole_preserved
 
+@[inline, aesop safe norm (rule_sets := [DccForceReduce])]
 def RedSpineNorm.push_head (h : RedSpineNorm A C) (hr : RedAff A B) (hn : hr.IsHead) : RedSpineStar B C × (PLift (C.NormHead)) :=
   match h with
   | ⟨.single ha hb, hn'⟩ => by
@@ -410,6 +411,10 @@ def RedSpineNorm.push_head (h : RedSpineNorm A C) (hr : RedAff A B) (hn : hr.IsH
   | ⟨.head ha hb hc, hn'⟩ => by
     cases hn.unique hb
     exact ⟨.mk₁ hc, ⟨hn'⟩⟩
+
+def RedSpineNorm.push_head' (h : RedSpineNorm B C) (hr : RedAff A B) (hn : hr.IsHead) : RedSpineNorm A C :=
+  match h with
+  | ⟨hr', hn'⟩ => ⟨.head hr hn hr', hn'⟩
 
 def RedSpineNorm.elim_norm_flse (h : RedSpineNorm A B) (hn : NormHead A) : False :=
   match h with

@@ -1171,6 +1171,7 @@ This is a generalization of composition. The size of the reduction shrinks here
 whereas in the ReadbackHead case, the resulting reduction is of length 1.
 -/
 
+set_option maxHeartbeats 1000000000000 in
 def ReadbackHead.max_hole_preserved
   {f f'  : GenericExpr τ_c}
   {h_dom : Domain f A}
@@ -1179,17 +1180,204 @@ def ReadbackHead.max_hole_preserved
   {hrt   : ViewAppHole f x lv hlt hmem}
   (hrb   : ReadbackHead f h_dom e_h hlt hrt f') : f'.max_hole < lv := by
   cases hrb
-  any_goals (
-    focus
-    try (
-      cases hrt <;> (
-        rename_i heq
-        try (simp_all [ViewAppHole.reduction])
-        try (have h := h_dom.max_hole_preserved)
-        try (cases heq)
-        try (grind)))
-    done)
-  
+  case id | fst | snd | quot =>
+    cases hrt <;> (
+      rename_i heq
+      try (simp_all [ViewAppHole.reduction])
+      try (have h := h_dom.max_hole_preserved)
+      try (cases heq)
+      try (grind))
+  case map =>
+    cases hrt
+    any_goals (
+      rename_i heq
+      try (simp_all [ViewAppHole.reduction])
+      try (have h := h_dom.max_hole_preserved)
+      try (cases heq)
+      try (grind))
+    case comp =>
+      expose_names
+      match hrt.head_rest.cases_head with
+      | .inl ⟨h⟩ =>
+        have ⟨ha, hb⟩ := Sigma.ext_iff.mp hsp
+        simp at ha
+        simp at hb
+        cases h.symm.trans ha
+      | .inr h =>
+        rw [hsp] at h
+        simp at h
+        let red'  := RedSpineNorm.mk h (fun _ _ h => nomatch h)
+        let red'' := red'.push_head' .comp .comp
+        let hv' : (f.comp g_1).ViewAppHole _ _ _ _ := ViewAppHole.comp
+          (lv  := lv)
+          (hlt := by grind)
+          red''
+          (by grind)
+          (by dcc_aesop' [force_reduce])
+          a
+        have heq_hv' : hv'.reduction.fst = (g.app x).bang := by dcc_aesop' [force_reduce]
+        exact ReadbackHead.max_hole_preserved (ReadbackHead.map heq_hv') (A := A.bang) (h_dom := h_dom) (e_h := by assumption)
+    case curr' =>
+      expose_names
+      match hrt.head_rest.cases_head with
+      | .inl ⟨h⟩ =>
+        have ⟨ha, hb⟩ := Sigma.ext_iff.mp hsp
+        simp at ha
+        simp at hb
+        cases h.symm.trans ha
+      | .inr h =>
+        rw [hsp] at h
+        simp at h
+        let red'  := RedSpineNorm.mk h (fun _ _ h => nomatch h)
+        let red'' := red'.push_head' .curr' (.curr' (A := A_1) (B := B))
+        let hv' : ((A_1.curr' B x_1).app y.box).ViewAppHole _ _ _ _ := ViewAppHole.curr'
+          (lv   := lv)
+          (hlt  := by grind)
+          (hmem := by grind)
+          red''
+          (by grind)
+          (by dcc_aesop' [force_reduce])
+          a
+        have heq_hv' : hv'.reduction.fst = (g.app x).bang := by dcc_aesop' [force_reduce]
+        exact ReadbackHead.max_hole_preserved (ReadbackHead.map heq_hv')
+          (A := A.bang) (h_dom := h_dom) (e_h := by assumption)
+    case curr =>
+      expose_names
+      match hrt.head_rest.cases_head with
+      | .inl ⟨h⟩ =>
+        have ⟨ha, hb⟩ := Sigma.ext_iff.mp hsp
+        simp at ha
+        simp at hb
+        cases h.symm.trans ha
+      | .inr h =>
+        rw [hsp] at h
+        simp at h
+        let red'  := RedSpineNorm.mk h (fun _ _ h => nomatch h)
+        let red'' := red'.push_head' .curr (.curr (A := A_1) (B := B))
+        let hv' : ((A_1.curr B x_1).app y).ViewAppHole _ _ _ _ := ViewAppHole.curr
+          (lv   := lv)
+          (hlt  := by grind)
+          (hmem := by grind)
+          red''
+          (by grind)
+          (by dcc_aesop' [force_reduce])
+          a
+        have heq_hv' : hv'.reduction.fst = (g.app x).bang := by dcc_aesop' [force_reduce]
+        exact ReadbackHead.max_hole_preserved (ReadbackHead.map heq_hv')
+          (A := A.bang) (h_dom := h_dom) (e_h := by assumption)
+    case sigma | pair | fmap =>
+      expose_names
+      have h := hrt.push_head (by constructor) (by constructor)
+      obtain ⟨hrt', hn⟩ := h
+      have heq' := hrt'.elim_norm (fun _ _ h => nomatch h)
+      cases heq'
+    case map =>
+      expose_names
+      have h := hrt.push_head (by constructor) (by constructor)
+      obtain ⟨hrt', hn⟩ := h
+      have heq' := hrt'.elim_norm (fun _ _ h => nomatch h)
+      cases heq'
+      assumption
+  case fmap =>
+    cases hrt
+    any_goals (
+      rename_i heq
+      try (simp_all [ViewAppHole.reduction])
+      try (have h := h_dom.max_hole_preserved)
+      try (cases heq)
+      try (grind))
+    case comp =>
+      expose_names
+      match hrt.head_rest.cases_head with
+      | .inl ⟨h⟩ =>
+        have ⟨ha, hb⟩ := Sigma.ext_iff.mp hsp
+        simp at ha
+        simp at hb
+        cases h.symm.trans ha
+      | .inr h =>
+        rw [hsp] at h
+        simp at h
+        let red'  := RedSpineNorm.mk h (fun _ _ h => nomatch h)
+        let red'' := red'.push_head' .comp .comp
+        let hv' : (f.comp g_1).ViewAppHole _ _ _ _ := ViewAppHole.comp
+          (lv  := lv)
+          (hlt := by grind)
+          red''
+          (by grind)
+          (by dcc_aesop' [force_reduce])
+          a
+        have heq_hv' : hv'.reduction.fst = (g.app x).box := by dcc_aesop' [force_reduce]
+        exact ReadbackHead.max_hole_preserved (ReadbackHead.fmap heq_hv') (A := A.bang) (h_dom := h_dom) (e_h := by assumption)
+    case curr' =>
+      expose_names
+      match hrt.head_rest.cases_head with
+      | .inl ⟨h⟩ =>
+        have ⟨ha, hb⟩ := Sigma.ext_iff.mp hsp
+        simp at ha
+        simp at hb
+        cases h.symm.trans ha
+      | .inr h =>
+        rw [hsp] at h
+        simp at h
+        let red'  := RedSpineNorm.mk h (fun _ _ h => nomatch h)
+        let red'' := red'.push_head' .curr' (.curr' (A := A_1) (B := B))
+        let hv' : ((A_1.curr' B x_1).app y.box).ViewAppHole _ _ _ _ := ViewAppHole.curr'
+          (lv   := lv)
+          (hlt  := by grind)
+          (hmem := by grind)
+          red''
+          (by grind)
+          (by dcc_aesop' [force_reduce])
+          a
+        have heq_hv' : hv'.reduction.fst = (g.app x).box := by dcc_aesop' [force_reduce]
+        exact ReadbackHead.max_hole_preserved (ReadbackHead.fmap heq_hv')
+          (A := A.bang) (h_dom := h_dom) (e_h := by assumption)
+    case curr =>
+      expose_names
+      match hrt.head_rest.cases_head with
+      | .inl ⟨h⟩ =>
+        have ⟨ha, hb⟩ := Sigma.ext_iff.mp hsp
+        simp at ha
+        simp at hb
+        cases h.symm.trans ha
+      | .inr h =>
+        rw [hsp] at h
+        simp at h
+        let red'  := RedSpineNorm.mk h (fun _ _ h => nomatch h)
+        let red'' := red'.push_head' .curr (.curr (A := A_1) (B := B))
+        let hv' : ((A_1.curr B x_1).app y).ViewAppHole _ _ _ _ := ViewAppHole.curr
+          (lv   := lv)
+          (hlt  := by grind)
+          (hmem := by grind)
+          red''
+          (by grind)
+          (by dcc_aesop' [force_reduce])
+          a
+        have heq_hv' : hv'.reduction.fst = (g.app x).box := by dcc_aesop' [force_reduce]
+        exact ReadbackHead.max_hole_preserved (ReadbackHead.fmap heq_hv')
+          (A := A.bang) (h_dom := h_dom) (e_h := by assumption)
+    case sigma | pair | map =>
+      expose_names
+      have h := hrt.push_head (by constructor) (by constructor)
+      obtain ⟨hrt', hn⟩ := h
+      have heq' := hrt'.elim_norm (fun _ _ h => nomatch h)
+      cases heq'
+    case fmap =>
+      expose_names
+      have h := hrt.push_head (by constructor) (by constructor)
+      obtain ⟨hrt', hn⟩ := h
+      have heq' := hrt'.elim_norm (fun _ _ h => nomatch h)
+      cases heq'
+      assumption
+  case unbox =>
+    expose_names
+    have h₁ := h_dom.max_hole_preserved
+    have h₂ := e_h.min_hole
+    have h₃ := e_h.max_hole
+    grind
+  case pair =>
+    
+    sorry
 
 def ReadbackHead.preservation_view
   {f f'  : GenericExpr τ_c}

@@ -445,7 +445,8 @@ These are all "shortcuts" in the reduction: steps that produce a
 normal form with no further spine reduction, and which can accept no further arguments.
 These are mutually exclusive.
 -/
-inductive ReadbackHead : (f : GenericExpr τ_c) → (h_dom : Domain f A)
+inductive ReadbackHead : (f : GenericExpr τ_c)
+  → (h_dom : Domain f A)
   → (e_h : Hole A lv x)
   → (hlt : f.max_hole < lv)
   → (hrt : ViewAppHole f x lv hlt e_h.max_hole)
@@ -483,16 +484,14 @@ inductive ReadbackHead : (f : GenericExpr τ_c) → (h_dom : Domain f A)
     {hrt : ViewAppHole f (DCC? &(x)) lv hlt e_h.max_hole} :
     (heq : hrt.reduction.fst = (DCC? x = x))
     → ReadbackHead f h_dom e_h hlt hrt (DCC? (Eql(`(⊤, A)) &(∗)))
-  /-| sigma {h_dom : Domain f A} {e_h : Hole f A lv x}
+  | sigma {h_dom : Domain f A} {e_h : Hole A lv x}
     {hrt     : ViewAppHole f x lv hlt e_h.max_hole} :
     (heq     : hrt.reduction.fst = (DCC? Coup((g x))))
-    (h_dom_g : Domain g 
-    → ReadbackHead f h_dom e_h hlt hrt (DCC? (-/
+    → (h_dom_g : Domain (DCC? (g x)) τ_fst)
+    → ReadbackHead f h_dom e_h hlt hrt (DCC? (Σ(`(⊤, τ_fst), `(⊤, g)) ∗))
 
 /-
 Alternative to Σ(B, C) x -> Coup(C x)
-
-Just Σ(C) x
 
 x : A
 -------------------------------
@@ -508,7 +507,7 @@ Termination argument is straightforward in Canonicalize since we're only recursi
 theorem Domain.decreasing (h : ViewAppHole f x lv hlt hmem) (h_dom : Domain f A) : A.size < f.size := by
   cases h <;> exact RedSpineNorm.dom_decreasing (by assumption) (by assumption)
 
-def ViewAppHole.readback_head? {f : GenericExpr τ_c} (h_dom : Domain f A)
+def ViewAppHole.readback_head?₁ {f : GenericExpr τ_c} (h_dom : Domain f A)
   (e_h : Hole A lv x) (hlt : f.max_hole < lv)
   (hrt : ViewAppHole f x lv hlt e_h.max_hole) : Option (Σ' f', ReadbackHead f h_dom e_h hlt hrt f') :=
   match hrt with
@@ -556,6 +555,17 @@ def ViewAppHole.readback_head? {f : GenericExpr τ_c} (h_dom : Domain f A)
         | _ => .none
       | _ => .none
 
+def ViewAppHole.readback_head? {f : GenericExpr τ_c} (h_dom : Domain f A)
+  (e_h : Hole A lv x) (hlt : f.max_hole < lv)
+  (hrt : ViewAppHole f x lv hlt e_h.max_hole) : Option (Σ' f', ReadbackHead f h_dom e_h hlt hrt f') :=
+  match heq : hrt.reduction with
+  | ⟨DCC? Coup((g x')), h⟩ =>
+    if heq₂ : x = x' then
+      .some ⟨_, .sigma (heq₂ ▸ (Sigma.ext_iff.mp heq).left) (DCC? (g x)).domain.snd⟩
+    else
+      hrt.readback_head?₁ (by assumption)
+  | _ => hrt.readback_head?₁ (by assumption)
+
 def ViewAppHole.quot_nmem {e_h : Hole A lv x} (hv : ViewAppHole f x lv hlt e_h.max_hole)
   (hrt : RedSpineNorm (DCC? (f x)) e') (_heq : hv = .quot hrt hgt) : e'.max_hole < x.min_hole := by
   have h := e_h.min_hole
@@ -573,22 +583,24 @@ def RedSpineNorm.quot_size_at_least (hrt : RedSpineNorm (DCC? (f x)) x') (h_size
   exact ⟨f.size - x'.size, by grind⟩
 
 @[aesop unsafe 50% forward (rule_sets := [DccForceReduce])]
-def ReadbackHead.complete {f : GenericExpr τ_c}
+def ReadbackHead.complete₁ {f : GenericExpr τ_c}
   {h_dom : Domain f A}
-  {e_h : Hole A lv x}
-  {hlt : f.max_hole < lv}
-  {hrt : ViewAppHole f x lv hlt e_h.max_hole}
-  (h : ReadbackHead (τ_c := τ_c) f h_dom e_h hlt hrt f') : hrt.readback_head? h_dom e_h = .some ⟨f', h⟩ := by
+  {e_h   : Hole A lv x}
+  {hlt   : f.max_hole < lv}
+  {hrt   : ViewAppHole f x lv hlt e_h.max_hole}
+  (h     : ReadbackHead (τ_c := τ_c) f h_dom e_h hlt hrt f')
+  (hneq  : ∀ {g}, hrt.reduction.fst ≠ (DCC? Coup((g x)))) : hrt.readback_head?₁ h_dom e_h = .some ⟨f', h⟩ := by
   induction heq₀ : h
+  case sigma => grind
   case id =>
-    unfold ViewAppHole.readback_head?
+    unfold ViewAppHole.readback_head?₁
     split
     case h_1 heq =>
       simp [ViewAppHole.reduction] at heq
       grind
     · aesop
   case fst =>
-    unfold ViewAppHole.readback_head?
+    unfold ViewAppHole.readback_head?₁
     expose_names
     split
     case h_1 hrt' hn' =>
@@ -603,7 +615,7 @@ def ReadbackHead.complete {f : GenericExpr τ_c}
       intro h
       cases h
   case snd =>
-    unfold ViewAppHole.readback_head?
+    unfold ViewAppHole.readback_head?₁
     expose_names
     split
     case h_1 hrt' hn' =>
@@ -618,12 +630,12 @@ def ReadbackHead.complete {f : GenericExpr τ_c}
       simp [heq, hneq]
       exact e_h_1.coup_points_neq.symm
   case quot =>
-    unfold ViewAppHole.readback_head?
+    unfold ViewAppHole.readback_head?₁
     expose_names
     subst heq
     simp
   case fmap | map | eql | pair =>
-    unfold ViewAppHole.readback_head?
+    unfold ViewAppHole.readback_head?₁
     expose_names
     cases heq₀.symm
     split
@@ -650,7 +662,7 @@ def ReadbackHead.complete {f : GenericExpr τ_c}
         | simp_all)
       try (rename_i hn; exact (hn _ _ _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl rfl rfl).elim)
   case unbox =>
-    unfold ViewAppHole.readback_head?
+    unfold ViewAppHole.readback_head?₁
     expose_names
     cases heq₀.symm
     split
@@ -660,6 +672,49 @@ def ReadbackHead.complete {f : GenericExpr τ_c}
     case h_2 hrt' xn =>
       simp [heq]
       intro h; cases h
+
+@[aesop unsafe 50% forward (rule_sets := [DccForceReduce])]
+def ReadbackHead.complete {f : GenericExpr τ_c}
+  {h_dom : Domain f A}
+  {e_h : Hole A lv x}
+  {hlt : f.max_hole < lv}
+  {hrt : ViewAppHole f x lv hlt e_h.max_hole}
+  (h : ReadbackHead (τ_c := τ_c) f h_dom e_h hlt hrt f') : hrt.readback_head? h_dom e_h = .some ⟨f', h⟩ := by
+  unfold ViewAppHole.readback_head?
+  split
+  case h_1 =>
+    split
+    case isTrue heq_x =>
+      cases heq_x
+      expose_names
+      cases h
+      any_goals (grind)
+      case quot heq' =>
+        cases heq'
+        have ⟨ha, hb⟩ := Sigma.ext_iff.mp heq
+        simp_all [ViewAppHole.reduction]
+        cases ha; cases hb
+        have h := h_1.max_hole_preserved
+        grind
+      case sigma h_dom' heq' =>
+        have heq₁ := h_dom'.complete_fst
+        have heq₂ := h_dom'.complete_snd'
+        cases heq₁
+        cases heq₂
+        have h := (Sigma.ext_iff.mp heq).left
+        simp at h
+        cases h.symm.trans heq'
+        rfl
+    case isFalse hneq_x =>
+      have hneq : ∀ {g}, hrt.reduction.fst ≠ (DCC? Coup((g x))) := by
+        intro g heq
+        aesop
+      exact ReadbackHead.complete₁ (by assumption) (by assumption)
+  case h_2 hn =>
+    have hneq : ∀ {g}, hrt.reduction.fst ≠ (DCC? Coup((g x))) := by
+      intro g heq
+      exact hn _ _ (heq ▸ hrt.reduction.snd) (by grind)
+    exact ReadbackHead.complete₁ (by assumption) (by assumption)
 
 /-def ReadbackHead.preservation {f x f' A : GenericExpr τ_c} {h_dom : Domain f A} {e_h : Hole A lv x} {hlt : f.max_hole < lv}
   {hlt' : lv ≤ x.max_hole}
@@ -798,9 +853,33 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
   let hr₃  := hrt₁.reduction.snd
   let hr₄  := hrt₂.reduction.snd
   cases hrb₁ with
+  | sigma heq₁ =>
+    cases hrb₂ with
+    | sigma heq₂ =>
+      expose_names
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heqa
+      cases heqb
+      cases heq'
+      cases h_dom_g.unique h_dom_g_1
+      rfl
+    | pair heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      grind
+    | fst heq₂ | snd heq₂ | quot heq₂ | eql heq₂ | unbox heq₂ | fmap heq₂ | map heq₂ | id heq₂ =>
+      let heqa := (heq₁ ▸ hr₃).unique hr₁
+      let heqb := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      try (simp [ViewAppHole.reduction] at heq')
+      try (cases heq')
+      try (grind)
   | pair heq₁ =>
     cases hrb₂ with
-    | pair heq₂ =>
+    | sigma heq₂ | pair heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -815,7 +894,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
   | unbox heq₁ =>
     cases hrb₂ with
     | unbox heq₂ => rfl
-    | quot heq₂ | eql heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | id heq₂ =>
+    | sigma heq₂ | quot heq₂ | eql heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | id heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -825,7 +904,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
   | eql heq₁ =>
     cases hrb₂ with
     | eql heq₂ => rfl
-    | unbox heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | quot heq₂ | id heq₂ =>
+    | sigma heq₂ | unbox heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | quot heq₂ | id heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -839,7 +918,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       have heq' := heqa.trans heqb.symm
       simp at heq'
       simp [heq']
-    | fmap heq₂ | pair heq₂ | eql heq₂ =>
+    | sigma heq₂ | fmap heq₂ | pair heq₂ | eql heq₂ =>
       let heqa  := (heq₁ ▸ hr₃).unique hr₁
       let heqb  := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -869,7 +948,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       have heq' := heqa.trans heqb.symm
       simp at heq'
       simp [heq']
-    | map heq₂ | pair heq₂ | eql heq₂ =>
+    | sigma heq₂ | map heq₂ | pair heq₂ | eql heq₂ =>
       let heqa  := (heq₁ ▸ hr₃).unique hr₁
       let heqb  := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -893,6 +972,11 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       cases heq'
   | snd heq₁ =>
     cases hrb₂ with
+    | sigma heq₂ =>
+      let heqa  := (heq₁ ▸ hr₃).unique hr₁
+      let heqb  := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      grind
     | snd heq₂ => rfl
     | fst heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
@@ -923,6 +1007,11 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       grind
   | fst heq₁ =>
     cases hrb₂ with
+    | sigma heq₂ =>
+      let heqa  := (heq₁ ▸ hr₃).unique hr₁
+      let heqb  := (heq₂ ▸ hr₄).unique hr₂
+      have heq' := heqa.trans heqb.symm
+      grind
     | fst heq₂ => rfl
     | snd heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
@@ -980,7 +1069,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
         cases heq
       case eql =>
         simp [ViewAppHole.reduction] at heq
-    | pair heq' | eql heq' | unbox heq' | fmap heq' | map heq' | snd heq' | fst heq' =>
+    | sigma heq' | pair heq' | eql heq' | unbox heq' | fmap heq' | map heq' | snd heq' | fst heq' =>
       expose_names
       have ha := hr₁.max_hole_preserved
       have hb := hr₂.max_hole_preserved
@@ -992,7 +1081,7 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
       cases h'.unique hr₂
   | quot heq₁ =>
     cases hrb₂ with
-    | pair heq₂ | unbox heq₂ | eql heq₂ | map heq₂ | fmap heq₂ =>
+    | sigma heq₂ | pair heq₂ | unbox heq₂ | eql heq₂ | map heq₂ | fmap heq₂ =>
       let heqa := (heq₁ ▸ hr₃).unique hr₁
       let heqb := (heq₂ ▸ hr₄).unique hr₂
       have heq' := heqa.trans heqb.symm
@@ -1074,8 +1163,62 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
     cases heq₂
     simp [ViewAppHole.reduction])-/
 
+/-
+ReadbackHead recognizes obvious normal forms. However, there is also the case where
+f hole -> f' hole
+
+This is a generalization of composition. The size of the reduction shrinks here
+whereas in the ReadbackHead case, the resulting reduction is of length 1.
+-/
+
+def ReadbackHead.max_hole_preserved
+  {f f'  : GenericExpr τ_c}
+  {h_dom : Domain f A}
+  {e_h   : Hole A lv x}
+  {hlt   : f.max_hole < lv}
+  {hrt   : ViewAppHole f x lv hlt hmem}
+  (hrb   : ReadbackHead f h_dom e_h hlt hrt f') : f'.max_hole < lv := by
+  cases hrb
+  any_goals (
+    focus
+    try (
+      cases hrt <;> (
+        rename_i heq
+        try (simp_all [ViewAppHole.reduction])
+        try (have h := h_dom.max_hole_preserved)
+        try (cases heq)
+        try (grind)))
+    done)
+  
+
+def ReadbackHead.preservation_view
+  {f f'  : GenericExpr τ_c}
+  {h_dom : Domain f A}
+  {e_h   : Hole A lv x}
+  {hrt   : ViewAppHole f x lv hlt hmem}
+  (hrb   : ReadbackHead f h_dom e_h hlt hrt f') : ViewAppHole f' x lv hlt hmem := by
+  
+  sorry
+
+def ReadbackHead.preservation_reduct
+  {f f'  : GenericExpr τ_c}
+  {h_dom : Domain f A}
+  {e_h   : Hole A lv x}
+  {hrt   : ViewAppHole f x lv hlt hmem}
+  (hrb : ReadbackHead f h_dom e_h hlt hrt f') : 
+
+inductive ReadbackMulti :
+  (f : GenericExpr τ_c)
+  → (h_dom : Domain f A)
+  → (e_h : Hole A lv x)
+  → (hlt : f.max_hole < lv)
+  → (hrt : ViewAppHole f x lv hlt e_h.max_hole)
+  → (f' : GenericExpr τ_c) → Type u
+  | single : (ReadbackHead f h_dom e_h hlt hrt f') → ReadbackMulti f h_dom e_h hlt hrt f'
+  | 
+
 end GenericExpr
 
 /-
-TODO: 
+TODO:
 -/

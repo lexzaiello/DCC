@@ -73,6 +73,11 @@ def Domain.complete_fst (h : Domain e τ) : (domain e).fst = τ := by
 def Domain.complete_snd (h : Domain e e.domain.fst) : h = e.domain.snd := by
   dcc_aesop' [force_reduce]
 
+@[dcc_force_reduce, aesop safe apply (rule_sets := [DccForceReduce])]
+def Domain.complete_snd' (h : Domain e A) : h ≍ e.domain.snd := by
+  cases h.complete_fst
+  simp [h.complete_snd]
+
 theorem Domain.max_hole_preserved (h : Domain x A) : A.max_hole ≤ x.max_hole :=
   match h with
   | ⟨⟨hr, _hn⟩⟩ => hr.max_hole_preserved

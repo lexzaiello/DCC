@@ -120,23 +120,30 @@ Base combinator function domains
   | fstcτ₀   : RedAff (DCC? Dom(Fst(B))) (DCC? Coup(B))
   | sndcτ₀   : RedAff (DCC? Dom(Snd(B))) (DCC? Coup(B))
   | compτ₀   : RedAff (DCC? Dom(x ∘ y)) (DCC? Dom(y))
-  | currτ₀   : RedAff (DCC? Dom(Λ(A, B, x))) A
-  | curr'τ₀  : RedAff (DCC? Dom(!Λ(A, B, x))) (DCC? !(A))
+  -- x : (x : Coup(B)) -> ...., explicitly recurisng here is important since it
+  -- is the only partial app possible
+  | currτ₀   : RedAff (DCC? Dom(Λ(A, B, x))) (DCC? Dom(Uncoup(Dom(x))))
+  | curr'τ₀  : RedAff (DCC? Dom(!Λ(A, B, x))) (DCC? !(Dom(Uncoup(Unbang(Dom(x))))))
   | sigmaτ₀  : RedAff (DCC? Dom(Σ(B, C))) (DCC? Dom(C))
   | piτ₀     : RedAff (DCC? Dom(Π(B, C))) (DCC? Dom(C))
   | eqlτ₁    : RedAff (DCC? Dom((Eql(B) &(x)))) (DCC? !((B x)))
   | reflτ₁   : RedAff (DCC? Dom((refl(B) &(x)))) (DCC? !((B x)))
-  | currτ₁   : RedAff (DCC? Dom((Λ(A, B, x) y))) (DCC? (B y))
-  | curr'τ₁  : RedAff (DCC? Dom((!Λ(A, B, x) &(y)))) (DCC? !((B y)))
+  | currτ₁   : RedAff (DCC? Dom((Λ(A, B, x) y))) (DCC? ((Uncoup(Dom(x)) y)))
+  | curr'τ₁  : RedAff (DCC? Dom((!Λ(A, B, x) &(y)))) (DCC? !((Uncoup(Unbang(Dom(x))) y)))
 /-
 Dom congruence
 -/
   | dom₀    : RedAff x x' → RedAff (DCC? Dom(x)) (DCC? Dom(x'))
 /-
-Hole generation:
-
-
+Matching Coup for Dom
 -/
+  | uncoup  : RedAff (DCC? Uncoup(Coup(x))) x
+  | unbang  : RedAff (DCC? Unbang(!(x))) x
+/-
+Matchers congruence (matchers only used by the kernel in η-reduction
+-/
+  | uncoup₀ : RedAff x x' → RedAff (DCC? Uncoup(x)) (DCC? Uncoup(x'))
+  | unbang₀ : RedAff x x' → RedAff (DCC? Unbang(x)) (DCC? Unbang(x'))
 
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
@@ -291,6 +298,16 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
     match x.step? with
     | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.dom₀ hr⟩⟩
     | .none => .none
+  | DCC? Uncoup(Coup(x)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Unbang(!(x)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Uncoup(x) =>
+    match x.step? with
+    | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.uncoup₀ hr⟩⟩
+    | .none => .none
+  | DCC? Unbang(x) =>
+    match x.step? with
+    | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.unbang₀ hr⟩⟩
+    | .none => .none
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_aff]
@@ -324,6 +341,26 @@ theorem dom' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen Re
   | .inr ⟨_, h₁, h₂⟩ =>
     have h_dec := RedAff.instRedRel.decreasing h₁
     exact .trans (.single (.dom₀ h₁)) (dom' (by assumption))
+termination_by x.size
+
+theorem uncoup' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? Uncoup(x)) (DCC? Uncoup(x')) := by
+  match hr.cases_head with
+  | .inl h =>
+    cases h
+    exact .refl
+  | .inr ⟨_, h₁, h₂⟩ =>
+    have h_dec := RedAff.instRedRel.decreasing h₁
+    exact .trans (.single (.uncoup₀ h₁)) (uncoup' (by assumption))
+termination_by x.size
+
+theorem unbang' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? Unbang(x)) (DCC? Unbang(x')) := by
+  match hr.cases_head with
+  | .inl h =>
+    cases h
+    exact .refl
+  | .inr ⟨_, h₁, h₂⟩ =>
+    have h_dec := RedAff.instRedRel.decreasing h₁
+    exact .trans (.single (.unbang₀ h₁)) (unbang' (by assumption))
 termination_by x.size
 
 theorem congrArg' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f x')) := by
@@ -472,7 +509,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
   unfold points
   split
   any_goals (simp)
-  case h_5 =>
+  case h_7 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -481,19 +518,19 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
   any_goals (
     intro ⟨_, h⟩
     exact hrn ⟨_, by constructor; assumption⟩)
-  case h_9 =>
+  case h_11 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
     · intro ⟨_, h⟩
       exact hrn ⟨_, .sigma₁ (by assumption)⟩
-  case h_10 =>
+  case h_12 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
     · intro ⟨_, h⟩
       exact hrn ⟨_, .quot₁ (by assumption)⟩
-  case h_11 =>
+  case h_13 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -502,19 +539,19 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .sig₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .sig₂ (by assumption)⟩
-  case h_16 =>
+  case h_18 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
     · intro ⟨_, h⟩
       exact hrn ⟨_, .pi₁ (by assumption)⟩
-  case h_17 =>
+  case h_19 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
     · intro ⟨_, h⟩
       exact hrn ⟨_, .comp₁ (by assumption)⟩
-  case h_18 =>
+  case h_20 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -523,7 +560,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .pair₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .pair₂ (by assumption)⟩
-  case h_19 =>
+  case h_21 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -532,7 +569,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .curr₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .curr₂ (by assumption)⟩
-  case h_20 =>
+  case h_22 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -541,7 +578,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .curr'₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .curr'₂ (by assumption)⟩
-  case h_21 =>
+  case h_23 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -568,6 +605,39 @@ open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])]
 theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (τ := α)) A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
   induction h₁ generalizing C
   /-
+    Matching for the kernel in η-reduction on domains
+  -/
+  case uncoup =>
+    match h₂ with
+    | .uncoup₀ (.coup₀ h) => exact ⟨_, .single h, .single .uncoup⟩
+    | .uncoup => exact ⟨_, .refl, .refl⟩
+  case unbang =>
+    match h₂ with
+    | .unbang₀ (.bang₀ h) => exact ⟨_, .single h, .single .unbang⟩
+    | .unbang => exact ⟨_, .refl, .refl⟩
+  case uncoup₀ =>
+    match h₂ with
+    | .uncoup₀ h =>
+      rename_i h₀ ih
+      have ⟨_, h₁, h₂⟩ := ih h
+      exact ⟨_, uncoup' h₁, uncoup' h₂⟩
+    | .uncoup =>
+      rename_i h ih
+      cases h
+      case _ h =>
+        exact ⟨_, .single (by constructor), .single h⟩
+  case unbang₀ =>
+    match h₂ with
+    | .unbang₀ h =>
+      rename_i h₀ ih
+      have ⟨_, h₁, h₂⟩ := ih h
+      exact ⟨_, unbang' h₁, unbang' h₂⟩
+    | .unbang =>
+      rename_i h ih
+      cases h
+      case _ h =>
+        exact ⟨_, .single (by constructor), .single h⟩
+  /-
     Domain reductions
   -/
   case unboxτ₀ =>
@@ -593,7 +663,7 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
         done)
       case _ hr => exact ⟨_, .single hr.dom₀.mk_point, .single (by constructor)⟩
     | _ => exact ⟨_, .refl, .refl⟩
-  case evalcτ₀  | curr'τ₀ =>
+  case evalcτ₀ =>
     cases h₂ with
     | dom₀ hr =>
       cases hr
@@ -604,16 +674,21 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       case _ hr =>
         exact ⟨_, .single hr.mk_point, .single (by constructor)⟩
     | _ => exact ⟨_, .refl, .refl⟩
+  case curr'τ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr with
+      | curr'₀ => exact ⟨_, .refl, .single (by constructor)⟩
+      | curr'₁ => exact ⟨_, .refl, .single (by constructor)⟩
+      | curr'₂ h => exact ⟨_, .single h.dom₀.unbang₀.uncoup₀.dom₀.bang₀, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
   case currτ₀ =>
     cases h₂ with
     | dom₀ hr =>
-      cases hr
-      any_goals (
-        focus
-        try (exact ⟨_, .refl, .single (by constructor)⟩)
-        done)
-      case _ hr =>
-        exact ⟨_, .single (by assumption), .single (by constructor)⟩
+      cases hr with
+      | curr₀ => exact ⟨_, .refl, .single (by constructor)⟩
+      | curr₁ => exact ⟨_, .refl, .single (by constructor)⟩
+      | curr₂ h => exact ⟨_, .single h.dom₀.uncoup₀.dom₀, .single (by constructor)⟩
     | _ => exact ⟨_, .refl, .refl⟩
   case sndcτ₀ | fstcτ₀ =>
     cases h₂ with
@@ -656,8 +731,8 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       cases hr with
       | congrFun h =>
         cases h with
-        | curr₂ h | curr₀ h => exact ⟨_, .refl, .single (by constructor)⟩
-        | curr₁ h => exact ⟨_, .single h.congrFun, .single (by constructor)⟩
+        | curr₁ h | curr₀ h => exact ⟨_, .refl, .single (by constructor)⟩
+        | curr₂ h => exact ⟨_, .single h.dom₀.uncoup₀.congrFun, .single (by constructor)⟩
       | congrArg h => exact ⟨_, .single h.congrArg, .single (by constructor)⟩
     | _ => exact ⟨_, .refl, .refl⟩
   case curr'τ₁ =>
@@ -666,8 +741,9 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       match hr with
       | .congrFun h =>
         cases h with
-        | curr'₂ h | curr'₀ h => exact ⟨_, .refl, .single (by constructor)⟩
-        | curr'₁ h => exact ⟨_, .single h.congrFun.bang₀, .single (by constructor)⟩
+        | curr'₂ h =>
+          exact ⟨_, .single h.dom₀.unbang₀.uncoup₀.congrFun.bang₀, .single (by constructor)⟩
+        | curr'₁ h | curr'₀ h => exact ⟨_, .refl, .single (by constructor)⟩
       | .congrArg (.box₀ h) => exact ⟨_, .single h.congrArg.bang₀, .single (by constructor)⟩
     | _ => exact ⟨_, .refl, .refl⟩
   case dom₀ ih =>
@@ -705,14 +781,14 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       case _ hr => exact ⟨_, .single (by constructor), .single hr.dom₀⟩
     case currτ₀ =>
       rename_i hr
-      cases hr
-      any_goals (try (exact ⟨_, .single (by constructor), .refl⟩))
-      case _ hr => exact ⟨_, .single (by constructor), .single hr⟩
+      cases hr with
+      | curr₁ | curr₀ => exact ⟨_, .single (by constructor), .refl⟩
+      | curr₂ h => exact ⟨_, .single (by constructor), .single h.dom₀.uncoup₀.dom₀⟩
     case curr'τ₀ =>
       rename_i hr
-      cases hr
-      any_goals (try (exact ⟨_, .single (by constructor), .refl⟩))
-      case _ hr => exact ⟨_, .single (by constructor), .single hr.bang₀⟩
+      cases hr with
+      | curr'₁ | curr'₀ => exact ⟨_, .single (by constructor), .refl⟩
+      | curr'₂ h => exact ⟨_, .single (by constructor), .single h.dom₀.unbang₀.uncoup₀.dom₀.bang₀⟩
     case eqlτ₁ hr | reflτ₁ hr =>
       cases hr with
       | congrFun h =>
@@ -726,20 +802,19 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       cases hr with
       | congrFun hr =>
         cases hr with
-        | curr₀ | curr₂ =>
+        | curr₀ | curr₁ =>
           exact ⟨_, .single (by constructor), .refl⟩
-        | curr₁ hr =>
-          exact ⟨_, .single (by constructor), .single hr.congrFun⟩
+        | curr₂ hr =>
+          exact ⟨_, .single (by constructor), .single hr.dom₀.uncoup₀.congrFun⟩
       | congrArg hr =>
         exact ⟨_, .single (by constructor), .single hr.congrArg⟩
     case curr'τ₁ hr =>
       cases hr with
       | congrFun hr =>
         cases hr with
-        | curr'₀ | curr'₂ =>
+        | curr'₁ hr | curr'₀ =>
           exact ⟨_, .single (by constructor), .refl⟩
-        | curr'₁ hr =>
-          exact ⟨_, .single (by constructor), .single hr.congrFun.bang₀⟩
+        | curr'₂ hr => exact ⟨_, .single (by constructor), .single hr.dom₀.unbang₀.uncoup₀.congrFun.bang₀⟩
       | congrArg hr =>
         cases hr with
         | box₀ hr => exact ⟨_, .single (by constructor), .single hr.congrArg.bang₀⟩
@@ -1140,7 +1215,21 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
     case dom₀ hr =>
       have ⟨_, hr', heq⟩ := semi_complete hr
       exact ⟨_, hr'.dom₀, by simp [heq]⟩
-  case h_58 =>
+  case h_60 =>
+    simp_all
+    cases hr
+    any_goals (grind)
+    case uncoup₀ hr =>
+      have ⟨_, hr', heq⟩ := semi_complete hr
+      exact ⟨_, hr'.uncoup₀, by simp [heq]⟩
+  case h_61 =>
+    simp_all
+    cases hr
+    any_goals (grind)
+    case unbang₀ hr =>
+      have ⟨_, hr', heq⟩ := semi_complete hr
+      exact ⟨_, hr'.unbang₀, by simp [heq]⟩
+  case h_62 =>
     simp_all
     cases hr
     any_goals (grind)
@@ -1413,10 +1502,6 @@ def unbox (h : IsNorm RedAff (.unbox f)) : IsNorm RedAff f :=
 
 def box₀ (h : IsNorm RedAff (DCC? &(x))) : IsNorm RedAff x :=
   fun ⟨_, hr⟩ => h ⟨_, .box₀ hr⟩
-
-/-def point₀ (h : IsNorm RedAff e) (hn : 0 < point_arity e) : IsNorm RedAff (points e)[0] := by
-  intro ⟨_, hr⟩
-  exact h ⟨_, hr.mk_point (n := ⟨0, by grind⟩)⟩-/
 
 end IsNorm
 

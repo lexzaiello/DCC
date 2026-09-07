@@ -12,6 +12,8 @@ namespace GenericExpr
 def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
   | DCC? Dom(_x) => 0
+  | DCC? Uncoup(_x) => 0
+  | DCC? Unbang(_x) => 0
   | DCC[.] ∗ => 0
   | DCC[.] ⊤ => 0
   | DCC[.] ⊥ => 0
@@ -45,6 +47,8 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
 def branch_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
   | DCC? Dom(_x) => 0
+  | DCC? Uncoup(_x) => 0
+  | DCC? Unbang(_x) => 0
   | DCC[.] ∗ => 0
   | DCC[.] ⊤ => 0
   | DCC[.] ⊥ => 0
@@ -78,6 +82,8 @@ def branch_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
 def branches (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (branch_arity e) :=
   match e with
   | DCC? Dom(x) => ⟨#[], by grind⟩
+  | DCC? Uncoup(_x) => ⟨#[], by grind⟩
+  | DCC? Unbang(_x) => ⟨#[], by grind⟩
   | DCC[.] ∗ => ⟨#[], by grind⟩
   | DCC[.] ⊤ => ⟨#[], by grind⟩
   | DCC[.] ⊥ => ⟨#[], by grind⟩
@@ -115,6 +121,8 @@ determining a resulting term.
 def n_indices (e : GenericExpr (τ := τ_c)) : ℕ :=
   match e with
   | DCC? Dom(_x) => 0
+  | DCC? Uncoup(_x) => 0
+  | DCC? Unbang(_x) => 0
   | DCC[.] ∗ => 0
   | DCC[.] ⊤ => 0
   | DCC[.] ⊥ => 0
@@ -148,6 +156,8 @@ def n_indices (e : GenericExpr (τ := τ_c)) : ℕ :=
 def indices (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (n_indices e) :=
   match e with
   | DCC[.] Dom(_x) => ⟨#[], by grind⟩
+  | DCC? Uncoup(_x) => ⟨#[], by grind⟩
+  | DCC? Unbang(_x) => ⟨#[], by grind⟩
   | DCC[.] ∗ => ⟨#[], by grind⟩
   | DCC[.] ⊤ => ⟨#[], by grind⟩
   | DCC[.] ⊥ => ⟨#[], by grind⟩
@@ -181,6 +191,8 @@ def indices (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (
 def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (point_arity e) :=
   match e with
   | DCC[.] Dom(_x) => ⟨#[], by grind⟩
+  | DCC? Uncoup(_x) => ⟨#[], by grind⟩
+  | DCC? Unbang(_x) => ⟨#[], by grind⟩
   | DCC[.] ∗ => ⟨#[], by grind⟩
   | DCC[.] ⊤ => ⟨#[], by grind⟩
   | DCC[.] ⊥ => ⟨#[], by grind⟩
@@ -221,6 +233,8 @@ def map_points (e : GenericExpr (τ := τ_c))
   (fn : GenericExpr τ_c → GenericExpr τ_c) : GenericExpr τ_c :=
   uncurry e (match e with
   | DCC? Dom(x) => Function.OfArity.const _ (DCC? Dom(x)) _
+  | DCC? Uncoup(x) => Function.OfArity.const _ (DCC? Uncoup(x)) _
+  | DCC? Unbang(x) => Function.OfArity.const _ (DCC? Unbang(x)) _
   | DCC? ∗ => .tintro
   | DCC? ⊤ => .top
   | DCC? ⊥ => .bot
@@ -255,6 +269,8 @@ def set_points (e : GenericExpr (τ := τ_c))
   (points' : Vector (@GenericExpr τ_c) (point_arity e)) : GenericExpr τ_c :=
   match e with
   | DCC? Dom(x) => DCC? Dom(x)
+  | DCC? Uncoup(x) => DCC? Uncoup(x)
+  | DCC? Unbang(x) => DCC? Unbang(x)
   | DCC? ∗ => .tintro
   | DCC? ⊤ => .top
   | DCC? ⊥ => .bot
@@ -362,6 +378,8 @@ def map_branches (e : GenericExpr (τ := τ_c))
   (fn : (GenericExpr τ_c) → GenericExpr τ_c) : GenericExpr τ_c :=
   uncurry' e (match e with
   | DCC? Dom(x) => Function.OfArity.const _ (DCC? Dom(x)) _
+  | DCC? Uncoup(x) => Function.OfArity.const _ (DCC? Uncoup(x)) _
+  | DCC? Unbang(x) => Function.OfArity.const _ (DCC? Unbang(x)) _
   | DCC? ∗ => .tintro
   | DCC? ⊤ => .top
   | DCC? ⊥ => .bot
@@ -396,6 +414,8 @@ def map_indices (e : GenericExpr (τ := τ_c))
   (fn : GenericExpr τ_c → GenericExpr τ_c) : GenericExpr τ_c :=
   uncurry e (match e with
   | DCC? Dom(x) => Function.OfArity.const _ (DCC? Dom(x)) _
+  | DCC? Uncoup(x) => Function.OfArity.const _ (DCC? Uncoup(x)) _
+  | DCC? Unbang(x) => Function.OfArity.const _ (DCC? Unbang(x)) _
   | DCC? ∗ => .tintro
   | DCC? ⊤ => .top
   | DCC? ⊥ => .bot
@@ -501,6 +521,8 @@ theorem map_indices_eq {e e' : GenericExpr τ} (heq : map_indices e fn = e') : i
 def max_hole (e : GenericExpr τ_c) : ℕ :=
   match e with
   | DCC? Dom(x) => x.max_hole
+  | DCC? Uncoup(x) => x.max_hole
+  | DCC? Unbang(x) => x.max_hole
   | DCC? ∗ => 0
   | DCC? ⊤ => 0
   | DCC? ⊥ => 0
@@ -534,6 +556,8 @@ def max_hole (e : GenericExpr τ_c) : ℕ :=
 def min_hole (e : GenericExpr τ_c) : ℕ :=
   match e with
   | DCC? Dom(x) => x.min_hole
+  | DCC? Uncoup(x) => x.min_hole
+  | DCC? Unbang(x) => x.min_hole
   | DCC? ∗ => 0
   | DCC? ⊤ => 0
   | DCC? ⊥ => 0
@@ -567,6 +591,8 @@ def min_hole (e : GenericExpr τ_c) : ℕ :=
 def has_at_least_hole_level (lv : ℕ) (e : GenericExpr τ_c) : Bool :=
   match e with
   | DCC? Dom(x) => x.has_at_least_hole_level lv
+  | DCC? Uncoup(x) => x.has_at_least_hole_level lv
+  | DCC? Unbang(x) => x.has_at_least_hole_level lv
   | DCC? ∗ => False
   | DCC? ⊤ => False
   | DCC? ⊥ => False

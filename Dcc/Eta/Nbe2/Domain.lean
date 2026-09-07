@@ -186,4 +186,19 @@ def Domain.elim_comp (h_dom : Domain (DCC? f ∘ g) A) : Domain g A := by
   cases h_dom.unique h_dom'
   exact g.domain.snd
 
+def Domain.fst : Domain (DCC? Fst(B)) (DCC? Coup(#((reduce RedAff B).fst))) :=
+  ⟨.trans (.single .fstcτ₀) (aff_mk_point' (n := 0) (reduce_sound rfl)), fun ⟨_, .coup₀ h⟩ => (reduce_norm rfl) ⟨_, h⟩⟩
+
+def Domain.snd : Domain (DCC? Snd(B)) (DCC? Coup(#((reduce RedAff B).fst))) :=
+  ⟨.trans (.single .sndcτ₀) (aff_mk_point' (n := 0) (reduce_sound rfl)), fun ⟨_, .coup₀ h⟩ => (reduce_norm rfl) ⟨_, h⟩⟩
+
+def Domain.id : Domain (DCC? Id(A)) (reduce RedAff A).fst :=
+  ⟨.trans (.single .idτ₀) (reduce_sound rfl), reduce_norm rfl⟩
+
+def Domain.quot : Domain (DCC? `(B, x)) (reduce RedAff B).fst :=
+  ⟨.trans (.single .quotτ₀) (reduce_sound rfl), reduce_norm rfl⟩
+
+/-def Domain.unbox : Domain (DCC? *(A)) (DCC? !(#((reduce RedAff A).fst))) :=
+  ⟨.trans (.single .unboxτ₀) (aff_mk_point' (n := 0) (reduce_sound rfl)), fun ⟨_, .coup₀ h⟩ => (reduce_norm rfl) ⟨_, h⟩⟩-/
+
 end GenericExpr

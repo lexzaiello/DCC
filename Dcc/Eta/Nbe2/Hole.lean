@@ -272,4 +272,8 @@ def RedAffNorm.max_hole_preserved (h : RedAffNorm A ⟨B, hn_B⟩) : max_hole B 
       grind
 termination_by A.size
 
+def Hole.no_app (e_h : Hole A lv x) : ∀ ⦃a b⦄, x ≠ (DCC? (a b)) := by
+  intro a b heq
+  induction e_h <;> cases heq
+
 end GenericExpr

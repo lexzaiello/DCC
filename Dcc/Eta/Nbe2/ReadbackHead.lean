@@ -66,6 +66,81 @@ inductive ReadbackHead : (f : GenericExpr τ_c)
     → (h_dom_g : Domain (DCC? (g x)) τ_fst)
     → ReadbackHead f h_dom e_h hlt hrt (DCC? (Σ(`(⊤, τ_fst), `(⊤, g)) ∗))
 
+/-
+What are the possible par cases, assuming that h is a well-typed hole at Domain A?
+
+- Show that curries are the only possible par cases are where B is Λ(..., ..., ...) hole
+- Show that for all g where Domain g A and g does not contain the hole, then there is a ReadbackHead
+-/
+
+def RedSpineStar.no_self_app (h : RedSpineStar x (DCC? (f x))) : False :=
+  match h.cases_head with
+  | .inl ⟨h⟩ => nomatch h
+  | .inr h => by
+    have h_dec := h.decreasing
+    grind
+
+def RedSpineNorm.par_is_some_curr₁
+  (h_dom  : Domain f A)
+  (h_pure : A.ViewBangCoup → False)
+  (hmem   : lv ≤ max_hole x)
+  (hlt    : f.max_hole < lv)
+  (hrt    : RedSpineNorm (DCC? (f x)) (DCC? (g x))) : Σ' A B g', g = (DCC? Λ(A, B, g')) := by
+  match heq : hrt.head with
+  | ⟨e', hr, hn⟩ =>
+    cases hn
+    case fstc =>
+      cases h_dom.unique Domain.fst
+      exact (h_pure (by constructor)).elim
+    case sndc =>
+      cases h_dom.unique Domain.snd
+      exact (h_pure (by constructor)).elim
+    case eval =>
+      cases h_dom.unique Domain.eval
+      exact (h_pure (by constructor)).elim
+    case eql =>
+      cases h_dom.unique Domain.eql₁
+      exact (h_pure (by constructor)).elim
+    case map =>
+      cases h_dom.unique Domain.map
+      exact (h_pure (by constructor)).elim
+    case fmap =>
+      cases h_dom.unique Domain.fmap
+      exact (h_pure (by constructor)).elim
+    case unbox =>
+      cases h_dom.unique Domain.unbox
+      exact (h_pure (by constructor)).elim
+    case pair =>
+      cases h_dom.unique Domain.pair
+      exact (h_pure (by constructor)).elim
+    case curr' =>
+      cases h_dom.unique Domain.curr'₁
+      exact (h_pure (by constructor)).elim
+    case id =>
+      cases h_dom.unique Domain.id
+      have h := heq ▸ hrt.head_rest
+      simp at h
+      exact h.no_self_app.elim
+    case quot =>
+      cases h_dom.unique Domain.quot
+      have h := heq ▸ hrt.head_rest
+      simp at h
+      have h₁ := h.max_hole_preserved
+      grind
+    case curr =>
+      cases h_dom.unique Domain.curr₁
+      have h := heq ▸ hrt.head_rest
+      simp at h
+      match h.cases_head with
+      | .inl ⟨h⟩ => cases h
+      | .inr h =>
+        have h' := par_is_some_curr₁ (by sorry) (by sorry) (by sorry) (by sorry) ⟨h, by sorry⟩
+        sorry
+    case sigma =>
+      sorry
+    case comp =>
+      sorry
+
 def ViewAppHole.readback_head?₁ {f : GenericExpr τ_c} (h_dom : Domain f A)
   (e_h : Hole A lv x) (hlt : f.max_hole < lv)
   (hrt : ViewAppHole f x lv hlt e_h.max_hole) : Option (Σ' f', ReadbackHead f h_dom e_h hlt hrt f') :=
@@ -584,11 +659,14 @@ inductive ReadbackMulti :
 Domain preservation is quite important. Otherwise, we can't say the reduction length argument,
 I think.
 
-Solution:
-- Separate the problematic cases
-- We don't know that pair doesn't introduce holes as well.
-  - This is because we don't handle it in ViewAppHole
+Do we need reduction length 1?
+We can show ext for ReadbackMulti pretty easily.
 
-TODO:
-- separate out 
+Does par condense curry uncurry?
+
+Λ(Eval(x)) y (z)
+
+Concrete example:
+
+Λ(
 -/

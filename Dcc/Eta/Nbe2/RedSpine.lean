@@ -455,4 +455,16 @@ def RedSpineStar.cases_head (hrt : RedSpineStar A B) : (PLift (A = B)) ⊕ RedSp
   | .refl => .inl ⟨by rfl⟩
   | .mk₁ h => .inr h
 
+def red_spine_star (A : GenericExpr τ_c) : Σ' B, RedSpineStar A B × (PLift (NormHead B)) :=
+  match heq : red_spine! A with
+  | .some ⟨B, hrt⟩ => ⟨B, .mk₁ hrt, ⟨red_spine!_norm heq⟩⟩
+  | .none => ⟨A, .refl, ⟨red_spine!_none_norm heq⟩⟩
+
+def RedSpineStar.decreasing? (h : RedSpineStar A B) : B.size ≤ A.size :=
+  match h with
+  | .mk₁ h => by
+    have h := h.decreasing
+    grind
+  | .refl => by grind
+
 end GenericExpr

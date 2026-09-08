@@ -79,9 +79,9 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
     → ViewAppHole (DCC? Snd(B)) (DCC? ⟦_B⟧(x, y)) lv hlt hmem
   -- Purpose of SpineNorm is to handle top-level weak head steps that produce further normal forms
   -- innere congruences, which are irrelevant, so we eliminate them by considering only WHNF reductions
-  | eval   : (hrt : RedSpineNorm (DCC? (Eval(A, B, x) ⟦_B⟧(y, z))) e')
-    → (hgt : ¬ e'.max_hole < lv)
-    → (hsp : hrt.head = ⟨DCC? (x y z), ⟨.evalc⟩, .eval⟩)
+  | eval    : (hrt : RedSpineNorm (DCC? (Eval(A, B, x) ⟦_B⟧(y, z))) e')
+    → (hgt  : ¬ e'.max_hole < lv)
+    → (hsp  : hrt.head = ⟨DCC? (x y z), ⟨.evalc⟩, .eval⟩)
     → ViewAppHole (DCC? Eval(A, B, x)) (DCC? ⟦_B⟧(y, z)) lv hlt hmem
   | curr'  : (hrt : RedSpineNorm (DCC? (!Λ(A, B, x) &(y) &(z))) e')
     → (hgt : ¬ e'.max_hole < lv)

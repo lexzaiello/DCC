@@ -203,6 +203,7 @@ def Hole.eq (h₁ h₂ : Hole A lv hole₁) : h₁ = h₂ := by
 theorem Hole.min_hole (h : Hole α lv hole₁) : GenericExpr.min_hole hole₁ = lv := by
   induction h <;> grind
 
+@[aesop safe default (rule_sets := [DccRel])]
 theorem Hole.max_hole (h : Hole α lv hole₁) : lv ≤ GenericExpr.max_hole hole₁ := by
   induction h <;> grind
 

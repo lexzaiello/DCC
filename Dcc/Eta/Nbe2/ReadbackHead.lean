@@ -23,10 +23,10 @@ These are mutually exclusive.
 -/
 inductive ReadbackHead : (f : GenericExpr τ_c)
   → (h_dom : Domain f A)
-  → (e_h : Hole A lv x)
-  → (hlt : f.max_hole < lv)
-  → (hrt : ViewAppHole f x lv hlt e_h.max_hole)
-  → (f' : GenericExpr τ_c) → Type u
+  → (e_h   : Hole A lv x)
+  → (hlt   : f.max_hole < lv)
+  → (hrt   : ViewAppHole f x lv hlt e_h.max_hole)
+  → (f'    : GenericExpr τ_c) → Type u
   | id    {h_dom : Domain f A} {e_h : Hole A lv x}
     {hrt : ViewAppHole f x lv hlt e_h.max_hole} :
     (heq : hrt.reduction.fst = x) → ReadbackHead f h_dom e_h hlt hrt (DCC? Id(A))
@@ -1152,6 +1152,38 @@ def ReadbackHead.ext (hr₁ : RedSpineNorm (DCC? (f x)) B)
         cases heq'
       case eql => simp [ViewAppHole.reduction] at heq'
 
+@[inline]
+def ReadbackHead.result
+  {f A f' : GenericExpr τ_c}
+  {h_dom  : Domain f A}
+  {e_h    : Hole A lv x}
+  {hlt    : f.max_hole < lv}
+  {hrt    : ViewAppHole f x lv hlt e_h.max_hole}
+  (_hrb   : ReadbackHead f h_dom e_h hlt hrt f') : GenericExpr τ_c := f'
+
+@[aesop safe default (rule_sets := [DccRel])]
+def Hole.norm_head (h : Hole A lv x) : NormHead x :=
+  h.is_norm.to_head
+
+@[aesop safe default (rule_sets := [DccRel])]
+def mk_hole_is_hole : Hole A lv (mk_hole A lv).fst := (mk_hole A lv).snd
+
+@[aesop safe default (rule_sets := [DccRel])]
+theorem mk_hole_max_hole : lv ≤ GenericExpr.max_hole (mk_hole A lv).fst :=
+  (mk_hole A lv).snd.max_hole
+
+def mk_coup_hole (B : GenericExpr τ_c) (lv : ℕ) : Hole (DCC? Coup(B)) lv (DCC? ⟦#((mk_hole B.domain.fst (lv + 1)).fst)⟧(#((mk_hole B.domain.fst (lv + 1)).fst),
+  #((mk_hole (reduce RedAff (B.app (mk_hole B.domain.fst (lv + 1)).fst)).fst lv).fst))) :=
+  match B.domain.snd with
+  | ⟨hrt, hn⟩ =>
+    .coup (lv := lv) (hrt := ⟨hrt, hn⟩) (hn_τ_snd := reduce_norm rfl) (mk_hole _ _).snd ⟨reduce_sound rfl, reduce_norm rfl⟩
+      (mk_hole (reduce RedAff (B.app (mk_hole B.domain.fst (lv + 1)).fst)).fst lv).snd
+
+def mk_bang_hole (A : GenericExpr τ_c) (lv : ℕ) : Hole (DCC? !(A)) lv (DCC? &(#((mk_hole A lv).fst))) :=
+  .bang (lv := lv) (mk_hole A lv).snd
+
+def mk_pure_hole (lv : ℕ) (hn : ViewBangCoup A → False) : Hole A lv (.hole lv) := .pure hn
+
 end GenericExpr
 
 /-
@@ -1178,4 +1210,24 @@ Probably.
 
 We also haven't handled the eval case.
 Or curry, we may as well since it's mutually exclusive.
+
+So now, ReadbackHead is guaranteed to fire as long as there is a ViewAppHole.
+I think.
+^ WRONG.
+
+If ReadbackHead doesn't fire, then some meaningful composition is happening. I think?
+
+If ReadbackHead doesn't fire, then it must be a continuation. What are the possible continuations?
+
+- Eval
+- ∘
+- !Λ
+- Λ
+
+Each of these must have a terminal node where there IS a ReadbackHead
+
+I don't want to get stuck in the weeds. Domain preservation is extremely annoying. We can avoid it.
+We don't really need the length argument. we can just cases on it.
+
+We will get to termination argument later.
 -/

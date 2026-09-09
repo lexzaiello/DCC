@@ -86,6 +86,19 @@ def RedSpineNorm.cases_congr (x : GenericExpr τ_c) (h : RedSpineNorm A B) : (Σ
     all_goals (exact .inr ⟨fun g h heq => by cases heq⟩)
   all_goals (exact .inr ⟨fun g h heq => by cases heq⟩)
 
+def assert_domain (f τ : GenericExpr τ_c) : Option (Domain f τ) :=
+  match f.domain with
+  | ⟨τ', h⟩ =>
+    if heq : τ' = τ then by
+      subst heq
+      exact .some h
+    else .none
+
+def Domain.assert_complete (h : Domain (τ_c := τ_c) f τ) : assert_domain f τ = .some h := by
+  have h := h.complete
+  simp [assert_domain, h]
+  grind
+
 def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
   (e_h : Hole A lv x) (hlt : f.max_hole < lv)
   (hrt : ViewAppHole f x lv hlt e_h.max_hole) : Option (Σ' f', ReadbackFold f h_dom e_h hlt hrt f') :=
@@ -96,7 +109,8 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
       have h := hrt'.eq ((hrt'.unique hr₀) ▸ hr₀)
       grind
     have heq₁ : hrt.reduction.fst = (DCC? (g (h x))) := by grind
-    if heq_dom : h.domain.fst = A then
+    match h.assert_domain A with
+    | .some h_dom_h =>
       if hlt' : max_hole h < lv then
         match view_app_hole? h x lv hlt' e_h.max_hole with
         | .some hrt_h =>
@@ -104,23 +118,24 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
             have h_dec := hrt.reduction.snd.decreasing
             have h_size_zero := e_h.size_zero
             grind
-          match readback_fold (heq_dom ▸ h.domain.snd) e_h hlt' hrt_h with
+          match readback_fold h_dom_h e_h hlt' hrt_h with
           | .some ⟨g', hrbf⟩ =>
-            if heq_dom' : (DCC? (g ∘ g')).domain.fst = A then
+            match (DCC? (g ∘ g')).assert_domain A with
+            | .some hrt_comp =>
               if hlt'' : (DCC? (g ∘ g')).max_hole < lv then
                 match view_app_hole? (DCC? (g ∘ g')) x lv hlt'' e_h.max_hole with
                 | .some hrt_h' =>
-                  match hrt_h'.readback_head? (heq_dom' ▸ (DCC? (g ∘ g')).domain.snd) e_h hlt'' with
+                  match hrt_h'.readback_head? hrt_comp e_h hlt'' with
                   | .some ⟨_, hrb''⟩ =>
-                    .some ⟨_, .comp heq₁ (heq_dom ▸ h.domain.snd) (by assumption) (by assumption) hrbf (heq_dom' ▸ (DCC? (g ∘ g')).domain.snd) (by assumption) (by assumption) hrb''⟩
+                    .some ⟨_, .comp heq₁ (by assumption) (by assumption) (by assumption) hrbf (by assumption) (by assumption) (by assumption) hrb''⟩
                   | .none => .none
                 | .none => .none
               else .none
-            else .none
+            | .none => .none
           | .none => .none
         | .none => .none
       else .none
-    else .none
+    | .none => .none
   | _, .inl ⟨g, y, hrt'⟩ =>
     have heq' : hrt.reduction = ⟨DCC? (g y x), hrt'⟩ := by
       let hr₀ := hrt.reduction.snd
@@ -128,7 +143,8 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
       grind
     have heq₁ : hrt.reduction.fst = (DCC? (g y x)) := by grind
     let g₁ := (red_spine_star (DCC? (g y))).fst
-    if heq_dom : g₁.domain.fst = A then
+    match g₁.assert_domain A with
+    | .some h_dom_g₁ =>
       if hlt' : max_hole g₁ < lv then
         match view_app_hole? g₁ x lv hlt' e_h.max_hole with
         | .some hrt_h =>
@@ -137,28 +153,87 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
             have h_size_zero := e_h.size_zero
             have h_dec₂ := (red_spine_star (DCC? (g y))).snd.fst.decreasing?
             grind
-          match readback_fold (heq_dom ▸ g₁.domain.snd) e_h hlt' hrt_h with
+          match readback_fold h_dom_g₁ e_h hlt' hrt_h with
           | .some ⟨g', hrbf⟩ =>
-            if heq_dom' : g'.domain.fst = A then
+            match g'.assert_domain A with
+            | .some h_dom_g' =>
               if hlt'' : g'.max_hole < lv then
                 match view_app_hole? g' x lv hlt'' e_h.max_hole with
                 | .some hrt_h' =>
-                  match hrt_h'.readback_head? (heq_dom' ▸ g'.domain.snd) e_h hlt'' with
+                  match hrt_h'.readback_head? h_dom_g' e_h hlt'' with
                   | .some ⟨_, hrb''⟩ =>
-                    .some ⟨_, .congr heq₁ (red_spine_star (DCC? (g y))).snd.fst (red_spine_star (DCC? (g y))).snd.snd.down (heq_dom ▸ g₁.domain.snd) (by assumption) (by assumption) hrbf (heq_dom' ▸ g'.domain.snd) (by assumption) (by assumption) hrb''⟩
+                    .some ⟨_, .congr heq₁ (red_spine_star (DCC? (g y))).snd.fst (red_spine_star (DCC? (g y))).snd.snd.down (by assumption) (by assumption) (by assumption) hrbf (by assumption) (by assumption) (by assumption) hrb''⟩
                   | .none => .none
                 | .none => .none
               else .none
-            else .none
+            | .none => .none
           | .none => .none
         | .none => .none
       else .none
-    else .none
+    | .none => .none
   | .inr ⟨hn₁⟩, .inr ⟨hn₂⟩ =>
     match hrt.readback_head? h_dom e_h hlt with
     | .some ⟨_, hrb⟩ => .some ⟨_, .single (fun ⦃g₁⦄ ⦃h₁⦄ heq => hn₁ heq) (fun ⦃g₁⦄ ⦃h₁⦄ heq => hn₂ heq) hrb⟩
     | .none => .none
 termination_by f.size
+
+def ReadbackFold.complete (h : ReadbackFold (τ_c := τ_c) f h_dom e_h hlt hrt f') : readback_fold h_dom e_h hlt hrt = .some ⟨f', h⟩ := by
+  induction h with
+  | single hn₁ hn₂ =>
+    unfold readback_fold
+    simp
+    split
+    case h_1 hrt' heq =>
+      expose_names
+      have heq_hrt_fst : hrt_1.reduction.fst = g.app (h.app hole_e) :=
+        (hrt'.unique hrt_1.reduction.snd).symm
+      exact (hn₁ heq_hrt_fst).elim
+    case h_2 hrt' heq hn =>
+      expose_names
+      have heq_hrt_fst : hrt_1.reduction.fst = (g.app y).app hole_e :=
+        (hrt'.unique hrt_1.reduction.snd).symm
+      exact (hn₂ heq_hrt_fst).elim
+    case h_3 hn₁' hn₂' heq₁ heq₂ =>
+      expose_names
+      simp [hrb.complete]
+  | congr heq =>
+    unfold readback_fold
+    simp
+    split
+    case h_1 hrt' heq =>
+      expose_names
+      cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)
+    case h_2 hrt' heq hn =>
+      expose_names
+      cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)
+      have heq_star := red_spine_star_complete hr hn_1
+      have heq_star' : (g.app y).red_spine_star.fst = g₁ := by grind
+      have heq_dom₁ := hdg.complete
+      have heq_dom₂ := h_dom'.complete
+      have heq_dom_g' : g'.domain.fst = a := by grind
+      subst heq_dom_g'
+      subst heq_star'
+      simp [hdg.assert_complete, hlt₁, hrtg.complete, hrbg_ih, h_dom'.assert_complete, hlt₂, hrt'_1.complete, hrb'.complete]
+      exact hr.eq.symm
+    case h_3 hn₁ hn₂ heq₁ heq₂ =>
+      exact (hn₂ (by assumption)).elim
+  | comp heq =>
+    unfold readback_fold
+    simp
+    split
+    case h_2 hrt' heq hn =>
+      expose_names
+      cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)
+    case h_1 hrt' heq =>
+      expose_names
+      cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)
+      have heq_dom₁ := hdg.complete
+      have heq_dom₂ := h_dom'.complete
+      have heq_dom_g' : (g.comp g').domain.fst = a := by grind
+      subst heq_dom_g'
+      simp [hdg.assert_complete, hlt₁, hrtg.complete, hrbg_ih, h_dom'.assert_complete, hlt₂, hrt'_1.complete, hrb'.complete]
+    case h_3 hn₁ hn₂ heq₁ heq₂ =>
+      exact (hn₁ (by assumption)).elim
 
 def try_readback (f : GenericExpr τ_c) : Option (GenericExpr τ_c) :=
   let h_dom : Domain f f.domain.fst := f.domain.snd
@@ -174,14 +249,13 @@ def try_readback (f : GenericExpr τ_c) : Option (GenericExpr τ_c) :=
 
 --#eval try_readback (DCC (Λ(Sort 1, Id(Sort 1), Fst(Id(Sort 1))) (Sort 0)))
 #eval try_readback (DCC (Λ(Sort 1, `(Sort 1, Sort 1), Eval(Sort 1, `(Sort 1, Sort 1), `(Sort 1, `(Sort 1, ⊤)))) (Sort 0)))
--- ^ this is not reducing to `(Sort 1, `(Sort 1, ⊤)) due to left congruence. What is the left-congruence version of ∘? Idk.
--- ^ this left congruence can only be caused by combinators of arity 2, which are Curry
--- ^ actually, Eval is the only one that could introduce a left-congruence.
 
 /-
 Example:
 
 Λ(Sort 1, Id(Sort 1), Fst(Id(Sort 1))) (Sort 0)
+
+Have no refl case in η so that funext is forced.
 -/
 
 end GenericExpr

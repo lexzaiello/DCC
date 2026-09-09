@@ -467,4 +467,22 @@ def RedSpineStar.decreasing? (h : RedSpineStar A B) : B.size ≤ A.size :=
     grind
   | .refl => by grind
 
+def red_spine_star_complete (h : RedSpineStar A B) (hn : NormHead B) : red_spine_star A = ⟨B, h, ⟨hn⟩⟩ :=
+  match B, h with
+  | _, .refl => by
+    unfold red_spine_star
+    split
+    case h_1 hr _ =>
+      have h := hr.pop_head.snd.snd.snd
+      exact (hn h).elim
+    case h_2 => rfl
+  | _, .mk₁ h => by
+    have heq := h.complete hn
+    unfold red_spine_star
+    grind
+
+def RedSpineStar.eq (h : RedSpineStar x x.red_spine_star.fst) : h = x.red_spine_star.snd.fst := by
+  have heq := red_spine_star_complete h x.red_spine_star.snd.snd.down
+  grind
+
 end GenericExpr

@@ -23,11 +23,10 @@ inductive ReadbackFold : (f : GenericExpr τ_c)
     {hlt     : f.max_hole < lv}
     {hrt     : ViewAppHole f x lv hlt e_h.max_hole}
     {f'      : GenericExpr τ_c} :
-    (hneq₁   : ∀ ⦃g h⦄, hrt.reduction.fst ≠ (DCC? (g (h x))))
-    → (hneq₂ : ∀ ⦃g y⦄, hrt.reduction.fst ≠ (DCC? (g y x)))
+    (hneq₁ : ∀ ⦃g y⦄, hrt.reduction.fst ≠ (DCC? (g y x)))
     → (hrb   : Readback f h_dom e_h hlt hrt f')
     → ReadbackFold f h_dom e_h hlt hrt f'
-  | comp  {f  : GenericExpr τ_c}
+  /-| comp  {f  : GenericExpr τ_c}
     {h_dom    : Domain f A}
     {e_h      : Hole A lv x}
     {hlt      : f.max_hole < lv}
@@ -41,7 +40,7 @@ inductive ReadbackFold : (f : GenericExpr τ_c)
     → (hlt₂   : (DCC? (g ∘ g')).max_hole < lv)
     → (hrt'   : ViewAppHole (DCC? (g ∘ g')) x lv hlt₂ e_h.max_hole)
     → (hrb'   : Readback (DCC? (g ∘ g')) h_dom' e_h hlt₂ hrt' f')
-    → ReadbackFold f h_dom e_h hlt hrt f'
+    → ReadbackFold f h_dom e_h hlt hrt f'-/
   | congr {f  : GenericExpr τ_c}
     {h_dom    : Domain f A}
     {e_h      : Hole A lv x}
@@ -103,7 +102,7 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
   (e_h : Hole A lv x) (hlt : f.max_hole < lv)
   (hrt : ViewAppHole f x lv hlt e_h.max_hole) : Option (Σ' f', ReadbackFold f h_dom e_h hlt hrt f') :=
   match hrt.reduction.snd.cases_comp x,  hrt.reduction.snd.cases_congr x with
-  | .inl ⟨g, h, hrt'⟩, _ =>
+  /-| .inl ⟨g, h, hrt'⟩, _ =>
     have heq' : hrt.reduction = ⟨DCC? (g (h x)), hrt'⟩ := by
       let hr₀ := hrt.reduction.snd
       have h := hrt'.eq ((hrt'.unique hr₀) ▸ hr₀)
@@ -135,7 +134,7 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
           | .none => .none
         | .none => .none
       else .none
-    | .none => .none
+    | .none => .none-/
   | _, .inl ⟨g, y, hrt'⟩ =>
     have heq' : hrt.reduction = ⟨DCC? (g y x), hrt'⟩ := by
       let hr₀ := hrt.reduction.snd
@@ -171,42 +170,42 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
         | .none => .none
       else .none
     | .none => .none
-  | .inr ⟨hn₁⟩, .inr ⟨hn₂⟩ =>
+  | _, .inr ⟨hn₂⟩ =>
     match hrt.readback_head? h_dom e_h hlt with
-    | .some ⟨_, hrb⟩ => .some ⟨_, .single (fun ⦃g₁⦄ ⦃h₁⦄ heq => hn₁ heq) (fun ⦃g₁⦄ ⦃h₁⦄ heq => hn₂ heq) hrb⟩
+    | .some ⟨_, hrb⟩ => .some ⟨_, .single (fun ⦃g₁⦄ ⦃h₁⦄ heq => hn₂ heq) hrb⟩
     | .none => .none
 termination_by f.size
 
 def ReadbackFold.complete (h : ReadbackFold (τ_c := τ_c) f h_dom e_h hlt hrt f') : readback_fold h_dom e_h hlt hrt = .some ⟨f', h⟩ := by
   induction h with
-  | single hn₁ hn₂ =>
+  | single hn₁ =>
     unfold readback_fold
     simp
     split
-    case h_1 hrt' heq =>
+    /-case h_1 hrt' heq =>
       expose_names
       have heq_hrt_fst : hrt_1.reduction.fst = g.app (h.app hole_e) :=
         (hrt'.unique hrt_1.reduction.snd).symm
-      exact (hn₁ heq_hrt_fst).elim
-    case h_2 hrt' heq hn =>
+      exact (hn₁ heq_hrt_fst).elim-/
+    case h_1 hrt' heq =>
       expose_names
       have heq_hrt_fst : hrt_1.reduction.fst = (g.app y).app hole_e :=
         (hrt'.unique hrt_1.reduction.snd).symm
-      exact (hn₂ heq_hrt_fst).elim
-    case h_3 hn₁' hn₂' heq₁ heq₂ =>
+      exact (hn₁ heq_hrt_fst).elim
+    case h_2 hn₁' heq₁ heq₂ =>
       expose_names
       simp [hrb.complete]
   | congr heq =>
     unfold readback_fold
     simp
     split
+    /-case h_1 hrt' heq =>
+      expose_names
+      cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)-/
     case h_1 hrt' heq =>
       expose_names
       cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)
-    case h_2 hrt' heq hn =>
-      expose_names
-      cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)
-      have heq_star := red_spine_star_complete hr hn_1
+      have heq_star := red_spine_star_complete hr (by assumption)
       have heq_star' : (g.app y).red_spine_star.fst = g₁ := by grind
       have heq_dom₁ := hdg.complete
       have heq_dom₂ := h_dom'.complete
@@ -215,9 +214,9 @@ def ReadbackFold.complete (h : ReadbackFold (τ_c := τ_c) f h_dom e_h hlt hrt f
       subst heq_star'
       simp [hdg.assert_complete, hlt₁, hrtg.complete, hrbg_ih, h_dom'.assert_complete, hlt₂, hrt'_1.complete, hrb'.complete]
       exact hr.eq.symm
-    case h_3 hn₁ hn₂ heq₁ heq₂ =>
-      exact (hn₂ (by assumption)).elim
-  | comp heq =>
+    case h_2 hn₁ heq₁ =>
+      exact (hn₁ (by assumption)).elim
+  /-| comp heq =>
     unfold readback_fold
     simp
     split
@@ -233,7 +232,7 @@ def ReadbackFold.complete (h : ReadbackFold (τ_c := τ_c) f h_dom e_h hlt hrt f
       subst heq_dom_g'
       simp [hdg.assert_complete, hlt₁, hrtg.complete, hrbg_ih, h_dom'.assert_complete, hlt₂, hrt'_1.complete, hrb'.complete]
     case h_3 hn₁ hn₂ heq₁ heq₂ =>
-      exact (hn₁ (by assumption)).elim
+      exact (hn₁ (by assumption)).elim-/
 
 def try_readback (f : GenericExpr τ_c) : Option (GenericExpr τ_c) :=
   let h_dom : Domain f f.domain.fst := f.domain.snd
@@ -249,6 +248,7 @@ def try_readback (f : GenericExpr τ_c) : Option (GenericExpr τ_c) :=
 
 --#eval try_readback (DCC (Λ(Sort 1, Id(Sort 1), Fst(Id(Sort 1))) (Sort 0)))
 #eval try_readback (DCC (Λ(Sort 1, `(Sort 1, Sort 1), Eval(Sort 1, `(Sort 1, Sort 1), `(Sort 1, `(Sort 1, ⊤)))) (Sort 0)))
+#eval try_readback (DCC (Λ(Sort 1, `(Sort 1, Sort 1), `(Sort 1, ⊤) ∘ Fst(`(Sort 1, Sort 1))) (Sort 0)))
 
 /-
 Example:
@@ -257,5 +257,35 @@ Example:
 
 Have no refl case in η so that funext is forced.
 -/
+
+def ReadbackFold.unique (hrb₁ : ReadbackFold (τ_c := τ_c) f h_dom₁ e_h hlt₁ hrt₁ f')
+  (hrb₂ : ReadbackFold f h_dom₁ e_h hlt₁ hrt₁ g') : f' = g' := by
+  have ha := hrb₁.complete
+  have hb := hrb₂.complete
+  grind
+
+def ReadbackFold.eq (hrb₁ hrb₂ : ReadbackFold (τ_c := τ_c) f h_dom₁ e_h hlt₁ hrt₁ f') : hrb₁ = hrb₂ := by
+  have ha := hrb₁.complete
+  have hb := hrb₂.complete
+  grind
+
+def ReadbackFold.ext (hr₁ : RedSpineCongrNorm (DCC? (f x)) B)
+  (hr₂    : RedSpineCongrNorm (DCC? (g x)) B)
+  (h_dom₁ : Domain f A)
+  (h_dom₂ : Domain g A)
+  (e_h    : Hole A lv x)
+  (hlt₁   : f.max_hole < lv)
+  (hlt₂   : g.max_hole < lv)
+  (hrt₁   : f.ViewAppHole x lv hlt₁ e_h.max_hole)
+  (hrt₂   : g.ViewAppHole x lv hlt₂ e_h.max_hole)
+  (hrb₁   : ReadbackFold f h_dom₁ e_h hlt₁ hrt₁ f')
+  (hrb₂   : ReadbackFold g h_dom₂ e_h hlt₂ hrt₂ g') : f' = g' := by
+  induction hrb₁ with
+  | single =>
+    induction hrb₂ with
+    | single =>
+      expose_names
+      have h := hrb.ext (by sorry) hrb_1
+      sorry
 
 end GenericExpr

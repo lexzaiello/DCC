@@ -7,18 +7,18 @@ variable {τ_c : Type u}
 
 namespace GenericExpr
 
-class Decreasing? (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
+class Decreasing? (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
   decreasing?' : ∀ (_h : r A B), B.size ≤ A.size
 
-class MaxHolePreserved (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
+class MaxHolePreserved (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
   max_hole_preserved (h : r A B) : max_hole B ≤ max_hole A
 
 open MaxHolePreserved
 
-class ReflT (m : ∀ (_r : GenericExpr τ_c → GenericExpr τ_c → Type u) (_A _B : GenericExpr τ_c), Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
+class ReflT (m : ∀ (_r : GenericExpr τ_c → GenericExpr τ_c → Sort v) (_A _B : GenericExpr τ_c), Sort v) (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
   refl : m r A A
 
-class Decreasing (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
+class Decreasing (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
   decreasing : ∀ (_h : r A B), B.size < A.size
 
 def no_refl [hD : Decreasing r] (h : r A A := by assumption) : Faflse := by
@@ -28,13 +28,13 @@ def no_refl [hD : Decreasing r] (h : r A A := by assumption) : Faflse := by
 class Run (m : Type u → Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
   run : ∀ (A : GenericExpr τ_c), m (Σ' (B : GenericExpr τ_c), r A B)
 
-class Unique (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
+class Unique (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
   unique : ∀ ⦃B C⦄, r A B → r A C → B = C
 
-class ProofEq (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
+class ProofEq (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
   eq : ∀ (h₁ h₂ : r A B), h₁ = h₂
 
-class Single (m : ∀ (_r : GenericExpr τ_c → GenericExpr τ_c → Type u) (_A _B : GenericExpr τ_c), Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
+class Single (m : ∀ (_r : GenericExpr τ_c → GenericExpr τ_c → Sort v) (_A _B : GenericExpr τ_c), Sort v) (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
   single (h : r A B) : m r A B
 
 open Single
@@ -49,17 +49,17 @@ attribute [dcc_rel] Single.single Single.single.eq_def
 attribute [grind] Single.single
 attribute [grind =] Single.single.eq_def
 
-class PushHead (m : ∀ (_r : GenericExpr τ_c → GenericExpr τ_c → Type u) (_A _B : GenericExpr τ_c), Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
+class PushHead (m : ∀ (_r : GenericExpr τ_c → GenericExpr τ_c → Sort v) (_A _B : GenericExpr τ_c), Sort v) (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
   push_head (hrt : m r B C) (hr : r A B) : m r A C
 
 open CasesHead
 open PushHead
 
-def proof_eq {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [hP : ProofEq r] (h₁ h₂ : r A B) : h₁ = h₂ := hP.eq h₁ h₂
+def proof_eq {r : GenericExpr τ_c → GenericExpr τ_c → Sort v} [hP : ProofEq r] (h₁ h₂ : r A B) : h₁ = h₂ := hP.eq h₁ h₂
 
-def unique {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [hP : Unique r] (h₁ : r A B) (h₂ : r A C) : B = C := hP.unique h₁ h₂
+def unique {r : GenericExpr τ_c → GenericExpr τ_c → Sort v} [hP : Unique r] (h₁ : r A B) (h₂ : r A C) : B = C := hP.unique h₁ h₂
 
-def proof_heq {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [hP : ProofEq r] [hU : Unique r] (h₁ : r A B) (h₂ : r A C) : h₁ ≍ h₂ := by
+def proof_heq {r : GenericExpr τ_c → GenericExpr τ_c → Sort v} [hP : ProofEq r] [hU : Unique r] (h₁ : r A B) (h₂ : r A C) : h₁ ≍ h₂ := by
   let heq := unique h₁ h₂
   let hb := proof_eq (heq ▸ h₁) (heq ▸ h₂)
   grind
@@ -448,18 +448,6 @@ inductive RedAff.IsHead : (hr : RedAff A B) → Type u
   | comp  {x y z}        : IsHead (.comp (x := x) (y := y) (z := z))
 deriving Repr
 
-/-@[aesop norm (rule_sets := [DccRel])]
-def RedAff.IsHead.head {hr : RedAff A B} (hn : hr.IsHead) : Σ' f x, (hr' : PLift (RedAff (DCC? (f x)) B)) × (hn' : hr'.down.IsHead) × (PLift (hr ≍ hr'.down)) × (PLift (hn ≍ hn')) := by
-  cases heq : hn <;> exact ⟨_, _, ⟨by constructor⟩, hn, ⟨by grind⟩, ⟨by grind⟩⟩
-
-@[aesop safe destruct (rule_sets := [DccRel])]
-def RedAff.IsHead.unique {hr₁ : RedAff A B} {hr₂ : RedAff A C} (hrt₁ : hr₁.IsHead) (hrt₂ : hr₂.IsHead) : B = C := by
-  cases hrt₁ <;> (cases hrt₂; rfl)
-
-@[aesop safe destruct (rule_sets := [DccRel])]
-def RedAff.IsHead.eq {hr₁ : RedAff A B} {hr₂ : RedAff A B} (hrt₁ : hr₁.IsHead) (hrt₂ : hr₂.IsHead) : hrt₁ = hrt₂ := by
-  cases hrt₁ <;> (cases hrt₂; rfl)-/
-
 @[grind]
 def RedHead (A B : GenericExpr τ_c) := Σ' (hr : PLift (RedAff A B)), hr.down.IsHead
 
@@ -594,6 +582,58 @@ instance RedCongrFun.complete : Complete' (m := Option) (RedCongrFun (τ_c := τ
       simp [hn']
     simp [hn, a_ih]⟩
 
---inductive 
+instance : MaxHolePreserved (RedCongrFun (τ_c := τ_c)) := ⟨fun h => by
+  induction h
+  · rename_i hr; exact max_hole_preserved hr
+  · grind⟩
+
+declare_syntax_cat red_rel
+scoped syntax "h"  : red_rel
+scoped syntax "hᶠ" : red_rel
+scoped syntax "β"  : red_rel
+
+declare_syntax_cat step_count
+scoped syntax "⋆" : step_count
+scoped syntax "⁺" : step_count
+
+declare_syntax_cat arrow_kind
+scoped syntax "→!" : arrow_kind
+scoped syntax "→"  : arrow_kind
+
+scoped syntax gen_dcc ((arrow_kind noWs red_rel) noWs step_count) gen_dcc : term
+scoped syntax gen_dcc (arrow_kind noWs red_rel) gen_dcc : term
+
+scoped syntax term ((arrow_kind noWs red_rel) noWs step_count) term : term
+scoped syntax term (arrow_kind noWs red_rel) term : term
+
+scoped syntax "interpr" red_rel    : term
+scoped syntax "interpn" step_count : term
+scoped syntax "interp→" arrow_kind : term
+
+macro_rules
+  | `(interpr h) => `(term| RedHead)
+  | `(interpr hᶠ) => `(term| RedCongrFun)
+  | `(interpr β) => `(term| (fun a b => PLift (RedAff a b)))
+  | `(interpn ⋆) => `(term| RedChoiceStar)
+  | `(interpn ⁺) => `(term| RedChoicePlus)
+  | `(interp→ →!) => `(term| AndNorm)
+  | `(interp→ →) => `(term| _root_.id)
+  | `(term| $A:term $knd:arrow_kind$rel:red_rel$cnt:step_count $B:term) => do
+    let m ← `(interp→ $knd)
+    let r ← `(interpr $rel)
+    let cnt ← `(interpn $cnt)
+    `(term| $m $cnt $r $A $B)
+  | `(term| $A:term $knd:arrow_kind$rel:red_rel $B:term) => do
+    let m ← `(interp→ $knd)
+    let r ← `(interpr $rel)
+    `(term| $m $r $A $B)
+  | `(term| $A:gen_dcc $knd:arrow_kind$rel:red_rel$cnt:step_count $B:gen_dcc) =>
+    `(term| (DCC? $A) $knd:arrow_kind$rel:red_rel$cnt:step_count (DCC? $B))
+  | `(term| $A:gen_dcc $knd:arrow_kind$rel:red_rel $B:gen_dcc) =>
+    `(term| (DCC? $A) $knd:arrow_kind$rel:red_rel (DCC? $B))
+
+#check (DCC Id(Sort 1)) →h (DCC Id(Sort 1))
+#check (DCC Id(Sort 1)) →!h⁺ (DCC Id(Sort 1))
+#check (DCC Id(Sort 1)) →!β⋆ (DCC Id(Sort 1))
 
 end GenericExpr

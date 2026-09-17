@@ -32,10 +32,10 @@ theorem RedAff.IsHead.spine_dom_decreasing' (hr : RedAff (DCC? (f x)) B) (hn : h
       have h_dec' := h₁.decreasing
       grind
 
-theorem RedSpinePlus.dom_decreasing (hr : RedSpinePlus (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size :=
+theorem RedSpinePlus.dom_decreasing (hr : RedChoicePlus RedHead (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size :=
   match hr with
-  | .single hr hn => hn.spine_dom_decreasing' hr h_dom
-  | .head hr hn _hrt => hn.spine_dom_decreasing' hr h_dom
+  | .single ⟨⟨hr⟩, hn⟩ => hn.spine_dom_decreasing' hr h_dom
+  | .head ⟨⟨hr⟩, hn⟩ _hrt => hn.spine_dom_decreasing' hr h_dom
 
 theorem RedSpineNorm.dom_decreasing (hr : RedSpineNorm (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size :=
   match hr with

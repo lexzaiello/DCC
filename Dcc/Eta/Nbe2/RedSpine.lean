@@ -587,9 +587,21 @@ instance : MaxHolePreserved (RedCongrFun (τ_c := τ_c)) := ⟨fun h => by
   · rename_i hr; exact max_hole_preserved hr
   · grind⟩
 
+instance [MaxHolePreserved r] : MaxHolePreserved (RedChoicePlus r) := ⟨fun h => by
+  induction h with
+  | single h => exact max_hole_preserved h
+  | head hr hrt ih =>
+    have h := max_hole_preserved hr
+    grind⟩
+
+instance [MaxHolePreserved r] : MaxHolePreserved (RedChoiceStar r) := ⟨fun h => by
+  induction h with
+  | refl => grind
+  | plus p => exact max_hole_preserved p⟩
+
 declare_syntax_cat red_rel
-scoped syntax "h"  : red_rel
-scoped syntax "hᶠ" : red_rel
+scoped syntax "wh"  : red_rel
+scoped syntax "whᶠ" : red_rel
 scoped syntax "β"  : red_rel
 
 declare_syntax_cat step_count
@@ -600,40 +612,72 @@ declare_syntax_cat arrow_kind
 scoped syntax "→!" : arrow_kind
 scoped syntax "→"  : arrow_kind
 
-scoped syntax gen_dcc ((arrow_kind noWs red_rel) noWs step_count) gen_dcc : term
-scoped syntax gen_dcc (arrow_kind noWs red_rel) gen_dcc : term
-
-scoped syntax term ((arrow_kind noWs red_rel) noWs step_count) term : term
-scoped syntax term (arrow_kind noWs red_rel) term : term
-
 scoped syntax "interpr" red_rel    : term
 scoped syntax "interpn" step_count : term
 scoped syntax "interp→" arrow_kind : term
 
+declare_syntax_cat reduction
+
+scoped syntax gen_dcc ((arrow_kind noWs red_rel) noWs step_count) gen_dcc : reduction
+scoped syntax gen_dcc (arrow_kind noWs red_rel) gen_dcc : reduction
+
+/-scoped syntax ((arrow_kind noWs red_rel) noWs step_count) : reduction
+scoped syntax (arrow_kind noWs red_rel) : reduction-/
+
+syntax "DSL(" reduction ")" : term
+syntax "DSL(" noWs ((arrow_kind noWs red_rel) noWs step_count) noWs ")" : term
+syntax "DSL(" noWs (arrow_kind noWs red_rel) noWs ")" : term
+
 macro_rules
-  | `(interpr h) => `(term| RedHead)
-  | `(interpr hᶠ) => `(term| RedCongrFun)
+  | `(term| DSL(→β)) => `(term| RedAff)
+  | `(term| DSL(→!β)) => `(term| RedAffNorm)
+  | `(interpr wh) => `(term| RedHead)
+  | `(interpr whᶠ) => `(term| RedCongrFun)
   | `(interpr β) => `(term| (fun a b => PLift (RedAff a b)))
   | `(interpn ⋆) => `(term| RedChoiceStar)
   | `(interpn ⁺) => `(term| RedChoicePlus)
   | `(interp→ →!) => `(term| AndNorm)
   | `(interp→ →) => `(term| _root_.id)
-  | `(term| $A:term $knd:arrow_kind$rel:red_rel$cnt:step_count $B:term) => do
+  | `(term| DSL($knd:arrow_kind$rel:red_rel$cnt:step_count)) => do
     let m ← `(interp→ $knd)
     let r ← `(interpr $rel)
     let cnt ← `(interpn $cnt)
-    `(term| $m $cnt $r $A $B)
-  | `(term| $A:term $knd:arrow_kind$rel:red_rel $B:term) => do
+    `(term| $m $cnt $r)
+  | `(term| DSL($A:gen_dcc $knd:arrow_kind$rel:red_rel$cnt:step_count $B:gen_dcc)) => do
     let m ← `(interp→ $knd)
     let r ← `(interpr $rel)
-    `(term| $m $r $A $B)
-  | `(term| $A:gen_dcc $knd:arrow_kind$rel:red_rel$cnt:step_count $B:gen_dcc) =>
+    let cnt ← `(interpn $cnt)
+    `(term| $m $cnt $r (DCC? $A) (DCC? $B))
+  | `(term| DSL($A:gen_dcc $knd:arrow_kind$rel:red_rel $B:gen_dcc)) => do
+    let m ← `(interp→ $knd)
+    let r ← `(interpr $rel)
+    `(term| $m $r (DCC? $A) (DCC? $B))
+  | `(term| DSL($knd:arrow_kind$rel:red_rel)) => do
+    let m ← `(interp→ $knd)
+    let r ← `(interpr $rel)
+    `(term| $m $r)
+  /-| `(term| $A:gen_dcc $knd:arrow_kind$rel:red_rel$cnt:step_count $B:gen_dcc) =>
     `(term| (DCC? $A) $knd:arrow_kind$rel:red_rel$cnt:step_count (DCC? $B))
   | `(term| $A:gen_dcc $knd:arrow_kind$rel:red_rel $B:gen_dcc) =>
-    `(term| (DCC? $A) $knd:arrow_kind$rel:red_rel (DCC? $B))
+    `(term| (DCC? $A) $knd:arrow_kind$rel:red_rel (DCC? $B))-/
 
-#check (DCC Id(Sort 1)) →h (DCC Id(Sort 1))
-#check (DCC Id(Sort 1)) →!h⁺ (DCC Id(Sort 1))
-#check (DCC Id(Sort 1)) →!β⋆ (DCC Id(Sort 1))
+#check DSL(Id(Sort 1) →wh Id(Sort 1))
+#check DSL(Id(Sort 1) →!wh⁺ Id(Sort 1))
+#check DSL(Id(Sort 1) →!β⋆ Id(Sort 1))
+
+instance [ElimNorm m r] : ElimNorm (AndNorm m) r := ⟨fun hn hr => elim_norm hn hr.raw⟩
+
+instance [Decreasing (m r)] : Decreasing (AndNorm m r) := ⟨fun h => decreasing h.raw⟩
+
+def AndNorm.elim_norm_flse [Decreasing r] [ElimNorm m r] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (h : AndNorm m r A B) (hn : IsNorm' r A) : False :=
+  no_refl (elim_norm hn h ▸ h)
+
+instance [MaxHolePreserved (m r)] : MaxHolePreserved (AndNorm m r) := ⟨fun h => max_hole_preserved h.raw⟩
+
+/-
+227:8:
+failed to synthesize instance of type class
+  CasesHead (AndNorm RedChoicePlus) RedHead
+-/
 
 end GenericExpr

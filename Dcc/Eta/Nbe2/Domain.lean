@@ -11,35 +11,43 @@ inductive Domain : GenericExpr τ_c → GenericExpr τ_c → Type u
   | mk : RedAffNorm (DCC? Dom(x)) ⟨τ, hn_τ⟩ → Domain x τ
 deriving Repr
 
+class DomDecreasing (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
+  dom_decreasing (hr : r (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size
+
 @[grind ., grind →]
 theorem RedAff.dom_decreasing (h : RedAff (DCC? Dom(x)) τ) (hneq : ∀ ⦃y⦄, τ ≠ (DCC? Dom(y))) : τ.size < x.size := by
   cases h
   any_goals (grind)
 
-theorem RedAff.IsHead.spine_dom_decreasing (hr : RedAff (DCC? (f x)) B) (hn : hr.IsHead) (h_dom : RedAff (DCC? Dom(f)) τ) : τ.size < f.size := by
-  cases hn <;> grind
-
-theorem RedAff.IsHead.spine_dom_decreasing' (hr : RedAff (DCC? (f x)) B) (hn : hr.IsHead) (h_dom : Domain f τ) : τ.size < f.size :=
-  match h_dom with
-  | ⟨⟨hr', hn'⟩⟩ =>
-    match hr'.cases_head with
-    | .inl h => by
-      cases h
-      cases hn
-      any_goals (exact (hn' ⟨_, (by constructor)⟩).elim)
-    | .inr ⟨_, h₁, h₂⟩ => by
-      have h := hn.spine_dom_decreasing hr h₁
-      have h_dec' := h₁.decreasing
-      grind
-
-theorem RedSpinePlus.dom_decreasing (hr : RedChoicePlus RedHead (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size :=
+theorem RedHead.spine_dom_decreasing (hr : RedHead (DCC? (f x)) B) (h_dom : RedAff (DCC? Dom(f)) τ) : τ.size < f.size := by
   match hr with
-  | .single ⟨⟨hr⟩, hn⟩ => hn.spine_dom_decreasing' hr h_dom
-  | .head ⟨⟨hr⟩, hn⟩ _hrt => hn.spine_dom_decreasing' hr h_dom
+  | ⟨_, hn⟩ => cases hn <;> grind
 
-theorem RedSpineNorm.dom_decreasing (hr : RedSpineNorm (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size :=
+theorem RedHead.spine_dom_decreasing' (hr : RedHead (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size :=
   match hr with
-  | ⟨hr, _⟩ => hr.dom_decreasing h_dom
+  | ⟨hr₀, hn⟩ =>
+    match h_dom with
+    | ⟨⟨hr', hn'⟩⟩ =>
+      match hr'.cases_head with
+      | .inl h => by
+        cases h
+        cases hn
+        any_goals (exact (hn' ⟨_, (by constructor)⟩).elim)
+      | .inr ⟨_, h₁, h₂⟩ => by
+        have h := hr.spine_dom_decreasing h₁
+        have h_dec' := h₁.decreasing
+        grind
+
+instance : DomDecreasing (RedHead (τ_c := τ_c)) := ⟨RedHead.spine_dom_decreasing'⟩
+
+open DomDecreasing
+
+instance [DomDecreasing r] : DomDecreasing (RedChoicePlus r) := ⟨fun hr h_dom =>
+  match hr with
+  | .single hr => dom_decreasing hr h_dom
+  | .head hr _hrt => dom_decreasing hr h_dom⟩
+
+instance [DomDecreasing (m r)] : DomDecreasing (AndNorm m r) := ⟨fun h => dom_decreasing h.raw⟩
 
 def Domain.decreasing_neq (h : Domain x τ) (hneq : ∀ ⦃y⦄, τ ≠ (DCC? Dom(y))) : τ.size < x.size :=
   match h with

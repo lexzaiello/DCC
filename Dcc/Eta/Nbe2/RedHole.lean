@@ -486,11 +486,13 @@ In general, no spine reduction can mention a hole on the left,
 since this is unrestricted duplication.
 -/
 
-def RedAff.IsHead.max_hole_preserved_fun
+def RedHead.max_hole_preserved_fun
   {f x : GenericExpr τ_c}
   (hlt : f.max_hole < lv)
-  {hr  : RedAff (DCC? (f x)) (DCC? (g x))} (hn : hr.IsHead) : g.max_hole < lv := by
-  cases hr <;> grind
+  (hr  : RedHead (DCC? (f x)) (DCC? (g x))) : g.max_hole < lv :=
+  match hr with
+  | ⟨⟨hr⟩, hn⟩ => by
+    cases hr <;> grind
 
 end GenericExpr
 

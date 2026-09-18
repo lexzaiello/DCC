@@ -73,7 +73,7 @@ open Decreasing Run
 
 def run_sound {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [hD : Run m r] [Pure m] {h : r A B} (_heq : hD.run A = pure ⟨B, h⟩) : r A B := h
 
-class Complete' (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [Run m r] [Pure m] where
+class Complete' (m : outParam (Type u → Type u)) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [Run m r] [Pure m] where
   complete : ∀ (h : r A B), run (m := m) A = pure ⟨B, h⟩
 
 open Complete'
@@ -674,10 +674,45 @@ def AndNorm.elim_norm_flse [Decreasing r] [ElimNorm m r] [Single m r] [Trans (m 
 
 instance [MaxHolePreserved (m r)] : MaxHolePreserved (AndNorm m r) := ⟨fun h => max_hole_preserved h.raw⟩
 
+instance [Run Id (AndNorm m r)] [Complete' (m := Id) (AndNorm m r)] : ProofEq (AndNorm m r) := ⟨fun h₁ h₂ => by
+  have ha := Complete'.complete h₁
+  have hb := Complete'.complete h₂
+  cases ha.symm.trans hb
+  rfl⟩
+
+instance [Run Option (AndNorm m r)] [Complete' (m := Option) (AndNorm m r)] : ProofEq (AndNorm m r) := ⟨fun h₁ h₂ => by
+  have ha := Complete'.complete h₁
+  have hb := Complete'.complete h₂
+  cases ha.symm.trans hb
+  rfl⟩
+
+def IsNorm'.to_single (hn : IsNorm' RedCongrFun A) : IsNorm' RedHead A := fun _ h => hn (.single h)
+
 /-
 227:8:
 failed to synthesize instance of type class
   CasesHead (AndNorm RedChoicePlus) RedHead
 -/
+
+/-
+Destructure (A →!wh⁺ B) or from (A →!wh⁺ᶠ B)
+
+will need to recurse on the left component of hr₁
+CasesHead most appropriate.
+
+Because when we get to single case, we know the single case
+of readbackfold will fire.
+-/
+
+def cases_star (h : RedChoiceStar r A C) : (PLift (A = C))
+  ⊕ (Σ' (h' : r A C), h = RedChoiceStar.plus (.single h'))
+  ⊕ (Σ' (B : GenericExpr τ_c) (hr' : r A B) (hrt' : RedChoicePlus r B C), h = Trans.trans (RedChoiceStar.plus (.single hr')) (RedChoiceStar.plus hrt')) :=
+  match A, heq : h with
+  | _, .refl => .inl ⟨rfl⟩
+  | _, .plus (.single h) => .inr (.inl ⟨h, by grind⟩)
+  | _, .plus (.head h hrt) => .inr (.inr ⟨_, h, hrt, by dcc_simp (! !)⟩)
+
+def IsNorm'.congrFun (hn : IsNorm' RedCongrFun (DCC? (f x))) : IsNorm' RedCongrFun f := fun _ h =>
+  hn (.congrFun hn.to_single h)
 
 end GenericExpr

@@ -697,6 +697,27 @@ def Readback.complete {f : GenericExpr τ_c}
           have h := h.complete₁ (by assumption) (by assumption) (by assumption) (by assumption) (by assumption) (by assumption)
           simp [h]
 
+def readback_unique {f : GenericExpr τ_c}
+  {h_dom : Domain f A}
+  {e_h : Hole A lv x}
+  {hlt : f.max_hole < lv}
+  {hrt : ViewAppHole f x lv hlt e_h.max_hole}
+  (h₁ : Readback (τ_c := τ_c) f h_dom e_h hlt hrt f₁)
+  (h₂ : Readback (τ_c := τ_c) f h_dom e_h hlt hrt f₂) : f₁ = f₂ := by
+  have ha := h₁.complete
+  have hb := h₂.complete
+  grind
+
+def Readback.eq {f : GenericExpr τ_c}
+  {h_dom : Domain f A}
+  {e_h : Hole A lv x}
+  {hlt : f.max_hole < lv}
+  {hrt : ViewAppHole f x lv hlt e_h.max_hole}
+  (h₁ h₂ : Readback (τ_c := τ_c) f h_dom e_h hlt hrt f') : h₁ = h₂ := by
+  have ha := h₁.complete
+  have hb := h₂.complete
+  grind
+
 set_option maxHeartbeats 2000000000000 in
 def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
   (hr₂    : DSL((g x) →!wh⁺ B))

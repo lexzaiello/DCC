@@ -6,6 +6,10 @@ variable [DecidableEq τ_c]
 
 namespace GenericExpr
 
+open CasesHead
+open Single
+open ElimNorm
+
 /-
 Readback can halt at composition (f ∘ g) x = f (g x), since (g x) might not be a head reduction.
 Hence, we recurse down g. We stop when we hit something that is not a composition.
@@ -23,7 +27,7 @@ inductive ReadbackFold : (f : GenericExpr τ_c)
     {hlt     : f.max_hole < lv}
     {hrt     : ViewAppHole f x lv hlt e_h.max_hole}
     {f'      : GenericExpr τ_c} :
-    (hneq₁ : ∀ ⦃g y⦄, hrt.reduction.fst ≠ (DCC? (g y x)))
+    (hneq₁ : ∀ ⦃g⦄, hrt.reduction.fst ≠ (DCC? (g x)))
     → (hrb   : Readback f h_dom e_h hlt hrt f')
     → ReadbackFold f h_dom e_h hlt hrt f'
   /-| comp  {f  : GenericExpr τ_c}
@@ -46,9 +50,8 @@ inductive ReadbackFold : (f : GenericExpr τ_c)
     {e_h      : Hole A lv x}
     {hlt      : f.max_hole < lv}
     {hrt      : ViewAppHole f x lv hlt e_h.max_hole} :
-    (heq      : hrt.reduction.fst = (DCC? (g y x)))
-    → (hr     : RedSpineStar (DCC? (g y)) g₁)
-    → (hn     : NormHead g₁)
+    (heq      : hrt.reduction.fst = (DCC? (g x)))
+    → (hr     : DSL(g →!wh⋆ g₁))
     → (hdg    : Domain g₁ A)
     → (hlt₁   : max_hole g₁ < lv)
     → (hrtg   : ViewAppHole g₁ x lv hlt₁ e_h.max_hole)
@@ -59,7 +62,7 @@ inductive ReadbackFold : (f : GenericExpr τ_c)
     → (hrb'   : Readback g' h_dom' e_h hlt₂ hrt' f')
     → ReadbackFold f h_dom e_h hlt hrt f'
 
-def RedSpineNorm.cases_comp (x : GenericExpr τ_c) (h : RedSpineNorm A B) : (Σ g h, RedSpineNorm A (DCC? (g (h x)))) ⊕ (PLift (∀ ⦃g h⦄, B ≠ (DCC? (g (h x))))) := by
+def AndNorm.cases_comp (x : GenericExpr τ_c) (h : DSL(A →!wh⁺ B)) : (Σ g h, DSL(A →!wh⁺ (g (h x)))) ⊕ (PLift (∀ ⦃g h⦄, B ≠ (DCC? (g (h x))))) := by
   cases B
   case app f x =>
     cases x
@@ -72,18 +75,15 @@ def RedSpineNorm.cases_comp (x : GenericExpr τ_c) (h : RedSpineNorm A B) : (Σ 
     all_goals (exact .inr ⟨fun g h heq => by cases heq⟩)
   all_goals (exact .inr ⟨fun g h heq => by cases heq⟩)
 
-def RedSpineNorm.cases_congr (x : GenericExpr τ_c) (h : RedSpineNorm A B) : (Σ g y, RedSpineNorm A (DCC? (g y x))) ⊕ (PLift (∀ ⦃g y⦄, B ≠ (DCC? (g y x)))) := by
+def AndNorm.cases_congr (x : GenericExpr τ_c) (h : DSL(A →!wh⁺ B)) : (Σ g, DSL(A →!wh⁺ (g x))) ⊕ (PLift (∀ ⦃g⦄, B ≠ (DCC? (g x)))) := by
   cases B
   case app f y =>
-    cases f
-    case app =>
-      if heq : y = x then
-        subst heq
-        exact .inl ⟨_, _, h⟩
-      else
-        (exact .inr ⟨fun g h heq => by cases heq; grind⟩)
-    all_goals (exact .inr ⟨fun g h heq => by cases heq⟩)
-  all_goals (exact .inr ⟨fun g h heq => by cases heq⟩)
+    if heq : y = x then
+      subst heq
+      exact .inl ⟨_, h⟩
+    else
+      (exact .inr ⟨fun g heq => by cases heq; grind⟩)
+  all_goals (exact .inr ⟨fun g heq => by cases heq⟩)
 
 def assert_domain (f τ : GenericExpr τ_c) : Option (Domain f τ) :=
   match f.domain with
@@ -135,22 +135,22 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
         | .none => .none
       else .none
     | .none => .none-/
-  | _, .inl ⟨g, y, hrt'⟩ =>
-    have heq' : hrt.reduction = ⟨DCC? (g y x), hrt'⟩ := by
+  | _, .inl ⟨g, hrt'⟩ =>
+    have heq' : hrt.reduction = ⟨DCC? (g x), hrt'⟩ := by
       let hr₀ := hrt.reduction.snd
-      have h := hrt'.eq ((hrt'.unique hr₀) ▸ hr₀)
+      have h := proof_eq hrt' ((unique hrt' hr₀) ▸ hr₀)
       grind
-    have heq₁ : hrt.reduction.fst = (DCC? (g y x)) := by grind
-    let g₁ := (red_spine_star (DCC? (g y))).fst
+    have heq₁ : hrt.reduction.fst = (DCC? (g x)) := by grind
+    let g₁ := (run_norm RedHead g).fst
     match g₁.assert_domain A with
     | .some h_dom_g₁ =>
       if hlt' : max_hole g₁ < lv then
         match view_app_hole? g₁ x lv hlt' e_h.max_hole with
         | .some hrt_h =>
           have h_dec : g₁.size < f.size := by
-            have h_dec := hrt.reduction.snd.decreasing
+            have h_dec := decreasing hrt.reduction.snd
             have h_size_zero := e_h.size_zero
-            have h_dec₂ := (red_spine_star (DCC? (g y))).snd.fst.decreasing?
+            have h_dec₂ := Decreasing?.decreasing?' (run_norm RedHead g).snd.fst
             grind
           match readback_fold h_dom_g₁ e_h hlt' hrt_h with
           | .some ⟨g', hrbf⟩ =>
@@ -161,7 +161,7 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
                 | .some hrt_h' =>
                   match hrt_h'.readback_head? h_dom_g' e_h hlt'' with
                   | .some ⟨_, hrb''⟩ =>
-                    .some ⟨_, .congr heq₁ (red_spine_star (DCC? (g y))).snd.fst (red_spine_star (DCC? (g y))).snd.snd.down (by assumption) (by assumption) (by assumption) hrbf (by assumption) (by assumption) (by assumption) hrb''⟩
+                    .some ⟨_, .congr heq₁ (run_norm RedHead g).snd (by assumption) (by assumption) (by assumption) hrbf (by assumption) (by assumption) (by assumption) hrb''⟩
                   | .none => .none
                 | .none => .none
               else .none
@@ -172,7 +172,7 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
     | .none => .none
   | _, .inr ⟨hn₂⟩ =>
     match hrt.readback_head? h_dom e_h hlt with
-    | .some ⟨_, hrb⟩ => .some ⟨_, .single (fun ⦃g₁⦄ ⦃h₁⦄ heq => hn₂ heq) hrb⟩
+    | .some ⟨_, hrb⟩ => .some ⟨_, .single (fun ⦃g₁⦄ heq => hn₂ heq) hrb⟩
     | .none => .none
 termination_by f.size
 
@@ -189,8 +189,8 @@ def ReadbackFold.complete (h : ReadbackFold (τ_c := τ_c) f h_dom e_h hlt hrt f
       exact (hn₁ heq_hrt_fst).elim-/
     case h_1 hrt' heq =>
       expose_names
-      have heq_hrt_fst : hrt_1.reduction.fst = (g.app y).app hole_e :=
-        (hrt'.unique hrt_1.reduction.snd).symm
+      have heq_hrt_fst : hrt_1.reduction.fst = g.app hole_e :=
+        (unique hrt' hrt_1.reduction.snd).symm
       exact (hn₁ heq_hrt_fst).elim
     case h_2 hn₁' heq₁ heq₂ =>
       expose_names
@@ -204,16 +204,16 @@ def ReadbackFold.complete (h : ReadbackFold (τ_c := τ_c) f h_dom e_h hlt hrt f
       cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)-/
     case h_1 hrt' heq =>
       expose_names
-      cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)
-      have heq_star := red_spine_star_complete hr (by assumption)
-      have heq_star' : (g.app y).red_spine_star.fst = g₁ := by grind
+      cases unique hrt' (heq_1 ▸ hrt_1.reduction.snd)
+      have heq_star := RedChoiceStar.complete hr
+      have heq_star' : (run_norm RedHead g).fst = g₁ := by grind
       have heq_dom₁ := hdg.complete
       have heq_dom₂ := h_dom'.complete
       have heq_dom_g' : g'.domain.fst = a := by grind
       subst heq_dom_g'
       subst heq_star'
       simp [hdg.assert_complete, hlt₁, hrtg.complete, hrbg_ih, h_dom'.assert_complete, hlt₂, hrt'_1.complete, hrb'.complete]
-      exact hr.eq.symm
+      apply proof_eq
     case h_2 hn₁ heq₁ =>
       exact (hn₁ (by assumption)).elim
   /-| comp heq =>
@@ -269,8 +269,8 @@ def ReadbackFold.eq (hrb₁ hrb₂ : ReadbackFold (τ_c := τ_c) f h_dom₁ e_h 
   have hb := hrb₂.complete
   grind
 
-def ReadbackFold.ext (hr₁ : RedSpineCongrNorm (DCC? (f x)) B)
-  (hr₂    : RedSpineCongrNorm (DCC? (g x)) B)
+/-def ReadbackFold.ext (hr₁ : DSL((f x) →!whᶠ⁺ B))
+  (hr₂    : DSL((g x) →!whᶠ⁺ B))
   (h_dom₁ : Domain f A)
   (h_dom₂ : Domain g A)
   (e_h    : Hole A lv x)
@@ -280,12 +280,124 @@ def ReadbackFold.ext (hr₁ : RedSpineCongrNorm (DCC? (f x)) B)
   (hrt₂   : g.ViewAppHole x lv hlt₂ e_h.max_hole)
   (hrb₁   : ReadbackFold f h_dom₁ e_h hlt₁ hrt₁ f')
   (hrb₂   : ReadbackFold g h_dom₂ e_h hlt₂ hrt₂ g') : f' = g' := by
-  induction hrb₁ with
-  | single =>
-    induction hrb₂ with
-    | single =>
-      expose_names
-      have h := hrb.ext (by sorry) hrb_1
+  match cases_head hr₁.raw, cases_head hr₂.raw with
+  | .inl ⟨hr₁, heq₁⟩, .inl ⟨hr₂, heq₂⟩ =>
+    cases hr₁ with
+    | single hr₁ =>
+      cases hr₂ with
+      | single hr₂ =>
+        match hrb₁, hrb₂ with
+        | .single hneq₁ hrb₁, .single hneq₂ hrb₂ =>
+          sorry
+        | .congr heq₁ hrg₁ hdg₁ hlt₁ hrtg₁ hrbg₁ h_dom'₁ hlt₂₁ hrt'₁ hrb'₁, _
+        | _, .congr heq₁ hrg₁ hdg₁ hlt₁ hrtg₁ hrbg₁ h_dom'₁ hlt₂₁ hrt'₁ hrb'₁ =>
+          
+          sorry
+      | congrFun hr₂ hn₂ =>
+        sorry
+    | congrFun hr₁ hn₁ =>
+      cases hr₂ with
+      | single hr₂ =>
+        sorry
+      | congrFun hr₂ hn₂ =>
+        sorry
+  | .inl h₁, .inr h₂ =>
+    sorry
+  | .inr h₁, .inl h₂ =>
+    sorry
+  | .inr h₁, .inr h₂ =>
+    sorry-/
+
+def ReadbackFold.ext (hr₁ : DSL((f x) →!whᶠ⋆ B))
+  (hr₂    : DSL((g x) →!whᶠ⋆ B))
+  (h_dom₁ : Domain (τ_c := τ_c) f A)
+  (h_dom₂ : Domain g A)
+  (e_h    : Hole A lv x)
+  (hlt₁   : f.max_hole < lv)
+  (hlt₂   : g.max_hole < lv)
+  (hrt₁   : f.ViewAppHole x lv hlt₁ e_h.max_hole)
+  (hrt₂   : g.ViewAppHole x lv hlt₂ e_h.max_hole)
+  (hrb₁   : ReadbackFold f h_dom₁ e_h hlt₁ hrt₁ f')
+  (hrb₂   : ReadbackFold g h_dom₂ e_h hlt₂ hrt₂ g') : f' = g' := by
+  match cases_star hr₁.raw, cases_star hr₂.raw with
+  | .inl heq₁, _ =>
+    sorry
+  | _, .inl heq₂ =>
+    sorry
+  | .inr (.inl ⟨h₁, heq₁⟩), .inr (.inl ⟨h₂, heq₂⟩) =>
+    match h₁, h₂ with
+    | .single h₁, .single h₂ =>
+      have hrt'₁ : DSL((f x) →!wh⁺ B) := ⟨Single.single (by assumption), ⟨hr₁.is_norm.to_single⟩⟩
+      have hrt'₂ : DSL((g x) →!wh⁺ B) := ⟨Single.single (by assumption), ⟨hr₂.is_norm.to_single⟩⟩
+      have heq_points : hrt₁.reduction.fst = hrt₂.reduction.fst := by
+        have h₁ := Unique.unique hrt'₁ hrt₁.reduction.snd
+        have h₂ := Unique.unique hrt'₂ hrt₂.reduction.snd
+        grind
+      have heq_B₁ : B = hrt₁.reduction.fst := by
+        have h₁ := Unique.unique hrt'₁ hrt₁.reduction.snd
+        have h₂ := Unique.unique hrt'₂ hrt₂.reduction.snd
+        grind
+      have heq_B₂ : B = hrt₂.reduction.fst := by
+        have h₁ := Unique.unique hrt'₁ hrt₁.reduction.snd
+        have h₂ := Unique.unique hrt'₂ hrt₂.reduction.snd
+        grind
+      cases hrb₁ with
+      | single =>
+        cases hrb₂ with
+        | single =>
+          expose_names
+          exact Readback.ext
+            (hrb₁   := hrb)
+            (hrb₂   := hrb_1)
+            (h_dom₁ := h_dom₁)
+            (h_dom₂ := h_dom₂)
+            (e_h    := e_h)
+            (hlt₁   := hlt₁)
+            (hlt₂   := hlt₂)
+            (hrt₁   := by assumption)
+            (hrt₂   := by assumption)
+            (hr₁    := hrt'₁)
+            (hr₂    := hrt'₂)
+        | congr =>
+          expose_names
+          have heq_reduction : g_1.app x = B :=
+            heq.symm.trans (Unique.unique hrt₂.reduction.snd hrt'₂)
+          have heq_reduction₁ : hrt₁.reduction.fst = g_1.app x := by
+            have h := Unique.unique hrt₁.reduction.snd hrt'₁
+            grind
+          cases heq_reduction.symm
+          exact (hneq₁ heq_reduction₁).elim
+      | congr =>
+        expose_names
+        cases hrb₂ with
+        | single =>
+          expose_names
+          have heq_reduction : g_1.app x = B :=
+            heq.symm.trans (Unique.unique hrt₁.reduction.snd hrt'₁)
+          have heq_reduction₁ : hrt₂.reduction.fst = g_1.app x := by
+            have h := Unique.unique hrt₂.reduction.snd hrt'₂
+            grind
+          cases heq_reduction.symm
+          exact (hneq₁ heq_reduction₁).elim
+        | congr =>
+          expose_names
+          have heq_red_fst := (heq_1.symm.trans heq_points.symm).trans heq
+          cases heq_red_fst
+          cases heq_B₂.trans heq_1
+          have hna : IsNorm' RedCongrFun (g_1.app x) := hr₁.is_norm
+          cases elim_norm hna.congrFun.to_single hr
+          cases elim_norm hna.congrFun.to_single hr_1
+          have hn'₁ : DSL((g_1 x) →!whᶠ⋆ (g_1 x)) := ⟨.refl, ⟨hna⟩⟩
+          cases hdg.eq hdg_1
+          cases hrtg.eq hrtg_1
+          cases hrbg.unique hrbg_1
+          cases hrbg.eq hrbg_1
+          cases h_dom'_1.unique h_dom'
+          cases h_dom'_1.eq h_dom'
+          cases hrt'_1.eq hrt'
+          cases readback_unique hrb' hrb'_1
+          rfl
+    | .congrFun hn₁ hr₁, .single hr₂ =>
       sorry
 
 end GenericExpr

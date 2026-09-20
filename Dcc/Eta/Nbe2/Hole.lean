@@ -239,6 +239,14 @@ def Hole.coup_points_neq (h : Hole A level (DCC? ⟦β⟧(a, b))) : a ≠ b := f
     cases heq
     exact h_hole₁.level_neq h_hole₂ (by grind) (by grind)
 
+def Hole.box_coup_points_neq (h : Hole A level (DCC? &(⟦β⟧(a, b)))) : a ≠ b := fun heq => by
+  cases h with
+  | bang h =>
+    cases h with
+    | coup h_dom h_hole₁ hrt h_hole₂ =>
+      cases heq
+      exact h_hole₁.level_neq h_hole₂ (by grind) (by grind)
+
 @[grind ., grind! .]
 theorem min_hole_le_max_hole : min_hole e ≤ max_hole e := by
   induction e <;> grind

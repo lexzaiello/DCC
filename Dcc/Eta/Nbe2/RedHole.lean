@@ -81,6 +81,10 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
     → (hgt : ¬ y.max_hole < lv)
     → (hsp : get_head hrt.raw = ⟨y, ⟨.sndc⟩, .sndc⟩)
     → ViewAppHole (DCC? Snd(B)) (DCC? ⟦_B⟧(x, y)) lv hlt hmem
+  | swap   : (hrt : DSL((Swap(B, C) &(⟦_B⟧(x, y))) →!wh⁺ ⟦_B'⟧(y, x)))
+    → (hgt : ¬ (DCC? ⟦_B'⟧(y, x)).max_hole < lv)
+    → (hsp : get_head hrt.raw = ⟨DCC? ⟦(C x)⟧(y, x), ⟨.swap⟩, .swap⟩)
+    → ViewAppHole (DCC? Swap(B, C)) (DCC? &(⟦_B⟧(x, y))) lv hlt hmem
   -- Purpose of SpineNorm is to handle top-level weak head steps that produce further normal forms
   -- innere congruences, which are irrelevant, so we eliminate them by considering only WHNF reductions
   | eval    : (hrt : DSL((Eval(A, B, x) ⟦_B⟧(y, z)) →!wh⁺ e'))
@@ -193,6 +197,15 @@ def AndNorm.fmap_hole (hrt : DSL(($<x> hole₁) →!wh⁺ e')) : Σ' y, hole₁ 
     exact ⟨_, rfl⟩
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
+def AndNorm.swap_hole (hrt : DSL((Swap(B, C) hole₁) →!wh⁺ e')) : Σ' B₂ x y, hole₁ = DCC? &(⟦B₂⟧(x, y)) := by
+  cases hole₁
+  case box x =>
+    cases x
+    case mkc =>
+      exact ⟨_, _, _, rfl⟩
+    all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
+  all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
+
 @[grind unfold, dcc_force_reduce]
 def AndNorm.curr'_hole (hrt : DSL((!Λ(A, B, x) y hole₁) →!wh⁺ e')) : Σ y' z, (PLift (y = (DCC? &(y')))) × (PLift (hole₁ = DCC? &(z))) := by
   cases hole₁
@@ -284,6 +297,20 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
             subst heq
             exact .some (.snd hrt hn' hrt.head_eq)
           else exact .none
+      | DCC? Swap(B, C) =>
+        match hrt.swap_hole with
+        | ⟨B₂, x, y, heq₀⟩ => by
+          match e' with
+          | DCC? ⟦B'⟧(y', x') =>
+            if heq₁ : y = y' then
+              if heq₂ : x = x' then
+                subst heq₀
+                subst heq₁
+                subst heq₂
+                exact .some (.swap hrt hn' hrt.head_eq)
+              else exact .none
+            else exact .none
+          | _ => exact .none
       | DCC? Eval(A, B, x) =>
         match hrt.eval_hole with
         | ⟨B, x, y, heq₀⟩ => by
@@ -366,7 +393,7 @@ def ViewAppHole.complete_some (h : ViewAppHole (τ_c := τ_c) f hole₁ lv hlt m
     split
     · simp
     · grind
-  case fst | snd | eval | eql | pair | unbox | fmap | map | sigma =>
+  case swap | fst | snd | eval | eql | pair | unbox | fmap | map | sigma =>
     unfold view_app_hole?
     expose_names
     have heqa : run_norm_plus _ _ = _ := complete (M := Option) (by assumption)

@@ -446,6 +446,7 @@ inductive RedAff.IsHead : (hr : RedAff A B) → Type u
     Maybe?: have two variants of each comp where one checks (y z).IsNorm and one checks that there is a h : y z -> z' such that h.IsHead?
   -/
   | comp  {x y z}        : IsHead (.comp (x := x) (y := y) (z := z))
+  | swap                 : IsHead .swap
 deriving Repr
 
 @[grind]
@@ -470,6 +471,7 @@ def red_head? (A : GenericExpr τ_c) : Option (Σ' (B : GenericExpr τ_c), RedHe
   | DCC? (Id(_A) _x) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? (Fst(_B) ⟦__B⟧(_x, _y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | DCC? (Snd(_B) ⟦__B⟧(_x, _y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? (Swap(_B, _C) &(⟦__B⟧(_x, _y))) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | _ => .none
 
 @[grind ., grind =>, aesop safe forward (rule_sets := [DccRel])]

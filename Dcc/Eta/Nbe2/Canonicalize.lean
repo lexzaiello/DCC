@@ -308,7 +308,7 @@ def ReadbackFold.eq (hrb₁ hrb₂ : ReadbackFold (τ_c := τ_c) f h_dom₁ e_h 
   | .inr h₁, .inr h₂ =>
     sorry-/
 
-def ReadbackFold.ext (hr₁ : DSL((f x) →!whᶠ⋆ B))
+/-def ReadbackFold.ext (hr₁ : DSL((f x) →!whᶠ⋆ B))
   (hr₂    : DSL((g x) →!whᶠ⋆ B))
   (h_dom₁ : Domain (τ_c := τ_c) f A)
   (h_dom₂ : Domain g A)
@@ -325,6 +325,7 @@ def ReadbackFold.ext (hr₁ : DSL((f x) →!whᶠ⋆ B))
   | _, .inl heq₂ =>
     sorry
   | .inr (.inl ⟨h₁, heq₁⟩), .inr (.inl ⟨h₂, heq₂⟩) =>
+    
     match h₁, h₂ with
     | .single h₁, .single h₂ =>
       have hrt'₁ : DSL((f x) →!wh⁺ B) := ⟨Single.single (by assumption), ⟨hr₁.is_norm.to_single⟩⟩
@@ -398,8 +399,118 @@ def ReadbackFold.ext (hr₁ : DSL((f x) →!whᶠ⋆ B))
           cases readback_unique hrb' hrb'_1
           rfl
     | .congrFun hn₁ hr₁, .single hr₂ =>
+      expose_names
+      have h_dec := decreasing hr₁
+      have hr₁_1' : DSL((f'_1 x) →!whᶠ⋆ (f'_1 x)) := ⟨.refl, ⟨hr₁_1.is_norm⟩⟩
+      apply ReadbackFold.ext
+      exact hr₁_1'
+      any_goals (assumption)
+      
+      /-have hrt'₁ : DSL((f x) →!wh⁺ B) := ⟨Single.single (by assumption), ⟨hr₁.is_norm.to_single⟩⟩
+      have hrt'₂ : DSL((g x) →!wh⁺ B) := ⟨Single.single (by assumption), ⟨hr₂.is_norm.to_single⟩⟩-/
       sorry
   | .inr (.inr ⟨h₁, heq₁⟩), .inr (.inr ⟨h₂, heq₂⟩) =>
     sorry
+termination_by f.size + x.size-/
+
+inductive RedEta : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
+  | sort   : RedEta (DCC? Sort m) (DCC? Sort m)
+  | top    : RedEta (DCC? ⊤) (DCC? ⊤)
+  | bot    : RedEta (DCC? ⊥) (DCC? ⊥)
+  | tintro : RedEta (DCC? ∗) (DCC? ∗)
+  | eq     : RedEta x x' → RedEta y y' → RedEta (DCC? x = y) (DCC? x' = y')
+  | refl   : RedEta B B' → RedEta env env' → RedEta x x' → RedEta (DCC? (refl(B) env x)) (DCC? (refl(B') env' x'))
+  | mkc    : RedEta B B' → RedEta x x' → RedEta y y' → RedEta (DCC? ⟦B⟧(x, y)) (DCC? ⟦B'⟧(x', y'))
+  | bang   : RedEta A A' → RedEta (DCC? !(A)) (DCC? !(A'))
+  | box    : RedEta x x' → RedEta (DCC? &(x)) (DCC? &(x'))
+  | coup   : RedEta B B' → RedEta (DCC? Coup(B)) (DCC? Coup(B'))
+  | pi     : RedEta B B' → RedAffNorm (DCC? (C env)) ⟨C₁, hn⟩ → RedEta C₁ C' → RedEta env env' → RedEta (DCC? (Π(B, C) env)) (DCC? (Π(B', C') env'))
+  | fn     : (h_dom : Domain f A) → (e_h : Hole A f.max_hole.succ x)
+    → (hrt : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole)
+    → (hrb : ReadbackFold f h_dom e_h (by grind) hrt f')
+    → RedEta f f'
+
+def red_eta (e : GenericExpr τ_c) : Option (Σ (e' : GenericExpr τ_c), RedEta e e') :=
+  match e with
+  | DCC? ∗ | DCC? ⊥ | DCC? ⊤ | DCC? Sort _m => .some ⟨_, by constructor⟩
+  | DCC? x = y =>
+    match x.red_eta, y.red_eta with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => .some ⟨_, .eq h₁ h₂⟩
+    | _, _ => .none
+  | DCC? (refl(B) env x) =>
+    match B.red_eta with
+    | .some ⟨_, h₁⟩ =>
+      match env.red_eta, x.red_eta with
+      | .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ => .some ⟨_, .refl h₁ h₂ h₃⟩
+      | _, _ => .none
+    | .none => .none
+  | DCC? ⟦B⟧(x, y) =>
+    match B.red_eta with
+    | .some ⟨_, h₁⟩ =>
+      match x.red_eta, y.red_eta with
+      | .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ => .some ⟨_, .mkc h₁ h₂ h₃⟩
+      | _, _ => .none
+    | .none => .none
+  | DCC? !(A) =>
+    match A.red_eta with
+    | .some ⟨_, h⟩ => .some ⟨_, .bang h⟩
+    | .none => .none
+  | DCC? Coup(B) =>
+    match B.red_eta with
+    | .some ⟨_, h⟩ => .some ⟨_, .coup h⟩
+    | .none => .none
+  | DCC? &(x) =>
+    match x.red_eta with
+    | .some ⟨_, h⟩ => .some ⟨_, .box h⟩
+    | .none => .none
+  | DCC? (Π(B, C) x) =>
+    match B.red_eta with
+    | .some ⟨_, h₁⟩ =>
+      match (reduce RedAff (DCC? (C x))).fst.red_eta with
+      | .some ⟨_, h₂⟩ =>
+        match x.red_eta with
+        | .some ⟨_, h₃⟩ =>
+          .some ⟨_, .pi h₁ ⟨reduce_sound rfl, reduce_norm rfl⟩ h₂ h₃⟩
+        | .none => .none
+      | .none => .none
+    | .none => .none
+  | f =>
+    let h_dom := f.domain.snd
+    let ⟨x, e_h⟩ := mk_hole f.domain.fst f.max_hole.succ
+    match view_app_hole? f x f.max_hole.succ (by grind) e_h.max_hole with
+    | .some h =>
+      match readback_fold h_dom e_h (by grind) h with
+      | .some ⟨_, hrb⟩ => .some ⟨_, .fn h_dom e_h h hrb⟩
+      | .none => .none
+    | .none => .none
+termination_by (e.size, sizeOf e)
+decreasing_by any_goals (grind)
+
+def RedEta.complete (h : RedEta (τ_c := τ_c) e e') : red_eta e = .some ⟨e', h⟩ := by
+  induction h with
+  | coup | box | bang | mkc | refl | eq | top | bot | tintro | sort => simp_all [red_eta]
+  | pi hr_B hr_env_C hr_C hr_env =>
+    have heq := hr_env_C.complete_fst
+    cases heq.symm
+    simp_all [red_eta, hr_env_C.eq]
+    apply RedAffNorm.eq
+  | fn h_dom e_h hrt hrb =>
+    unfold red_eta
+    split
+    any_goals (
+      focus
+      try (
+        cases hrt
+        expose_names
+        cases elim_norm (fun _ ⟨_, h⟩ => by cases h) hrt
+        grind)
+      done)
+    case h_12 =>
+      expose_names
+      have h₁ := h_dom.complete
+      have h₂ := e_h.complete
+      have h₃ := hrt.complete
+      have h₄ := hrb.complete
+      grind
 
 end GenericExpr

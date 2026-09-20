@@ -758,7 +758,7 @@ def Readback.complete {f : GenericExpr τ_c}
         expose_names
         cases h
         case eval heq' | curr' heq' | eql heq' | pair heq' | unbox heq' | map heq' | fmap heq'
-          | id heq' | fst heq' | snd heq' | sigma heq' | comp heq' | par heq' => cases heq'.symm.trans heq
+          | id heq' | swap _ heq' | fst heq' | snd heq' | sigma heq' | comp heq' | par heq' => cases heq'.symm.trans heq
         case curr heq' =>
           cases heq'.symm.trans heq
           simp [ViewAppHole.readback_head_curr?, heq_whole'] at heq_3
@@ -851,6 +851,39 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
   let hr₃  := hrt₁.reduction.snd
   let hr₄  := hrt₂.reduction.snd
   cases hrb₁ with
+  | swap _ heq₁ =>
+    let heqa := unique (heq₁ ▸ hr₃) hr₁
+    cases hrb₂
+    any_goals (
+      focus
+      try (
+        rename_i heq₂
+        let heqb := unique (heq₂ ▸ hr₄) hr₂
+        have heq' := heqa.trans heqb.symm
+        cases heq')
+      done)
+    case unbox heq₂ =>
+      let heqb := unique (heq₂ ▸ hr₄) hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heq'
+      expose_names
+      cases e_h.box_coup_points_neq rfl
+    case quot heq₂ =>
+      let heqb := unique (heq₂ ▸ hr₄) hr₂
+      have heq' := heqa.trans heqb.symm
+      simp [ViewAppHole.reduction] at heq'
+      cases heq'
+      expose_names
+      have ha := e_h.max_hole
+      have ha := e_h.min_hole
+      grind
+    case swap heq₂ =>
+      let heqb := unique (heq₂ ▸ hr₄) hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heq'
+      expose_names
+      cases unique h_dom_B h_dom_B_1
+      rfl
   | eval _ heq₁ =>
     cases hrb₂
     case eval h_dom₂ heq₂ =>
@@ -993,7 +1026,7 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
       let heqb := unique (heq₂ ▸ hr₄) hr₂
       have heq' := heqa.trans heqb.symm
       grind
-    | comp heq₂ | fst heq₂ | snd heq₂ | quot heq₂ | eql heq₂ | unbox heq₂ | fmap heq₂ | map heq₂ | id heq₂ =>
+    | swap _ heq₂ | comp heq₂ | fst heq₂ | snd heq₂ | quot heq₂ | eql heq₂ | unbox heq₂ | fmap heq₂ | map heq₂ | id heq₂ =>
       let heqa := unique (heq₁ ▸ hr₃) hr₁
       let heqb := unique (heq₂ ▸ hr₄) hr₂
       have heq' := heqa.trans heqb.symm
@@ -1002,6 +1035,11 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
       try (grind)
   | pair heq₁ =>
     cases hrb₂ with
+    | swap _ heq₂ =>
+      let heqa := unique (heq₁ ▸ hr₃) hr₁
+      let heqb := unique (heq₂ ▸ hr₄) hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heq'
     | curr' heq₂ | curr heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | pair heq₂ =>
       let heqa := unique (heq₁ ▸ hr₃) hr₁
       let heqb := unique (heq₂ ▸ hr₄) hr₂
@@ -1017,6 +1055,13 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
   | unbox heq₁ =>
     cases hrb₂ with
     | unbox heq₂ => rfl
+    | swap _ heq₂ =>
+      let heqa := unique (heq₁ ▸ hr₃) hr₁
+      let heqb := unique (heq₂ ▸ hr₄) hr₂
+      have heq' := heqa.trans heqb.symm
+      cases heq'
+      expose_names
+      cases e_h.box_coup_points_neq rfl
     | curr heq₂ | curr' heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | quot heq₂ | eql heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | id heq₂ =>
       let heqa := unique (heq₁ ▸ hr₃) hr₁
       let heqb := unique (heq₂ ▸ hr₄) hr₂
@@ -1027,7 +1072,7 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
   | eql heq₁ =>
     cases hrb₂ with
     | eql heq₂ => rfl
-    | curr' heq₂ | curr heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | unbox heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | quot heq₂ | id heq₂ =>
+    | swap _ heq₂ | curr' heq₂ | curr heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | unbox heq₂ | pair heq₂ | fmap heq₂ | map heq₂ | quot heq₂ | id heq₂ =>
       let heqa := unique (heq₁ ▸ hr₃) hr₁
       let heqb := unique (heq₂ ▸ hr₄) hr₂
       have heq' := heqa.trans heqb.symm
@@ -1041,7 +1086,7 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
       have heq' := heqa.trans heqb.symm
       simp at heq'
       simp [heq']
-    | curr heq₂ | curr' heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | fmap heq₂ | pair heq₂ | eql heq₂ =>
+    | swap _ heq₂ | curr heq₂ | curr' heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | fmap heq₂ | pair heq₂ | eql heq₂ =>
       let heqa  := unique (heq₁ ▸ hr₃) hr₁
       let heqb  := unique (heq₂ ▸ hr₄) hr₂
       have heq' := heqa.trans heqb.symm
@@ -1071,7 +1116,7 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
       have heq' := heqa.trans heqb.symm
       simp at heq'
       simp [heq']
-    | par heq₂ | comp heq₂ | sigma heq₂ | map heq₂ | pair heq₂ | eql heq₂ =>
+    | swap _ heq₂ | par heq₂ | comp heq₂ | sigma heq₂ | map heq₂ | pair heq₂ | eql heq₂ =>
       let heqa  := unique (heq₁ ▸ hr₃) hr₁
       let heqb  := unique (heq₂ ▸ hr₄) hr₂
       have heq' := heqa.trans heqb.symm
@@ -1175,7 +1220,7 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
       grind
   | id heq₁ =>
     cases hrb₂ with
-    | eval _ heq₂ | comp heq₂ | curr' heq₂ | curr heq₂ | par heq₂ =>
+    | swap _ heq₂ | eval _ heq₂ | comp heq₂ | curr' heq₂ | curr heq₂ | par heq₂ =>
       let heqa  := unique (heq₁ ▸ hr₃) hr₁
       let heqb  := unique (heq₂ ▸ hr₄) hr₂
       have heq' := heqa.trans heqb.symm
@@ -1202,9 +1247,9 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
           have h : x.max_hole = x.min_hole := by grind
           grind)
         done)
-      case fst | snd | unbox =>
+      case swap | fst | snd | unbox =>
         simp [ViewAppHole.reduction] at heq₁
-        cases heq₁
+        try (cases heq₁)
       case eql =>
         simp [ViewAppHole.reduction] at heq₁
     | sigma heq' | pair heq' | eql heq' | unbox heq' | fmap heq' | map heq' | snd heq' | fst heq' =>
@@ -1236,7 +1281,7 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
       have hn₁ := Hole.min_hole (by assumption)
       have hn₂ := Hole.max_hole (by assumption)
       grind
-    | fst heq' | snd heq' =>
+    | swap _ heq' | fst heq' | snd heq' =>
       expose_names
       have ha := max_hole_preserved hr₁
       have hb := max_hole_preserved hr₂
@@ -1290,9 +1335,9 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
           cases unique hrt hr₂
           grind)
         done)
-      case fst | snd | unbox =>
+      case swap | fst | snd | unbox =>
         simp [ViewAppHole.reduction] at heq'
-        cases heq'
+        try (cases heq')
       case eql => simp [ViewAppHole.reduction] at heq'
 
 @[inline]

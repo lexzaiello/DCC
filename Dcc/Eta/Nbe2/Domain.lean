@@ -209,4 +209,7 @@ def Domain.quot : Domain (DCC? `(B, x)) (reduce RedAff B).fst :=
 /-def Domain.unbox : Domain (DCC? *(A)) (DCC? !(#((reduce RedAff A).fst))) :=
   ⟨.trans (.single .unboxτ₀) (aff_mk_point' (n := 0) (reduce_sound rfl)), fun ⟨_, .coup₀ h⟩ => (reduce_norm rfl) ⟨_, h⟩⟩-/
 
+instance : Unique (Domain (τ_c := τ_c)) := ⟨Domain.unique⟩
+instance : ProofEq (Domain (τ_c := τ_c)) := ⟨Domain.eq⟩
+
 end GenericExpr

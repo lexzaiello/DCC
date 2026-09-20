@@ -18,6 +18,7 @@ inductive GenericExpr.{u} (τ : Type u) where
   | fstc    : GenericExpr τ  → GenericExpr τ
   | id      : GenericExpr τ  → GenericExpr τ
   | sndc    : GenericExpr τ  → GenericExpr τ
+  | swap    : GenericExpr τ  → GenericExpr τ → GenericExpr τ
   | eval    : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
   | curr    : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
   | curr'   : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ

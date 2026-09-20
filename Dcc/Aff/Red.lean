@@ -26,49 +26,50 @@ inductive RedAff.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
 /-
 Core reductions:
 -/
-  | eql      : RedAff (DCC[τ] (Eql(f_α) &(env) &(x))) (DCC[τ] x = x)
-  | map      : RedAff (DCC[τ] (!<f> &(x))) (DCC[τ] !((f x)))
-  | fmap     : RedAff (DCC[τ] ($<f> &(x))) (DCC[τ] &((f x)))
-  | unbox    : RedAff (DCC[τ] (*(A) &(x))) x
-  | pair     : RedAff (DCC[τ] (⟦β⟧⟨M, N⟩ &(x))) (DCC[τ] ⟦(β x)⟧((M x), (N x (M x))))
-  | evalc    : RedAff (DCC[τ] (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC[τ] (x y z))
-  | quot     : RedAff (DCC[τ] (`(β, x) y)) x
-  | id       : RedAff (DCC[τ] (Id(α) x)) x
-  | fstc     : RedAff (DCC[τ] (Fst(_α) ⟦β⟧(a, b))) a
-  | sndc     : RedAff (DCC[τ] (Snd(_α) ⟦β⟧(a, b))) b
-  | comp     : RedAff (DCC[τ] ((x ∘ y) z)) (DCC[τ] (x (y z)))
-  | curr     : RedAff (DCC[τ] (Λ(α, β, x) y z)) (DCC[τ] (x ⟦β⟧(y, z)))
-  | curr'    : RedAff (DCC[τ] (!Λ(α, β, x) &(y) &(z))) (DCC[τ] (x &(⟦β⟧(y, z))))
-  | sigma    : RedAff (DCC[τ] (Σ(f_α, f_β) env)) (DCC[τ] (Coup((f_β env))))
+  | eql      : RedAff (DCC? (Eql(f_α) &(env) &(x))) (DCC? x = x)
+  | map      : RedAff (DCC? (!<f> &(x))) (DCC? !((f x)))
+  | fmap     : RedAff (DCC? ($<f> &(x))) (DCC? &((f x)))
+  | unbox    : RedAff (DCC? (*(A) &(x))) x
+  | pair     : RedAff (DCC? (⟦β⟧⟨M, N⟩ &(x))) (DCC? ⟦(β x)⟧((M x), (N x (M x))))
+  | evalc    : RedAff (DCC? (Eval(_α, _β, x) ⟦__β⟧(y, z))) (DCC? (x y z))
+  | quot     : RedAff (DCC? (`(β, x) y)) x
+  | id       : RedAff (DCC? (Id(α) x)) x
+  | fstc     : RedAff (DCC? (Fst(_α) ⟦β⟧(a, b))) a
+  | sndc     : RedAff (DCC? (Snd(_α) ⟦β⟧(a, b))) b
+  | comp     : RedAff (DCC? ((x ∘ y) z)) (DCC? (x (y z)))
+  | curr     : RedAff (DCC? (Λ(α, β, x) y z)) (DCC? (x ⟦β⟧(y, z)))
+  | curr'    : RedAff (DCC? (!Λ(α, β, x) &(y) &(z))) (DCC? (x &(⟦β⟧(y, z))))
+  | sigma    : RedAff (DCC? (Σ(f_α, f_β) env)) (DCC? (Coup((f_β env))))
+  | swap     : RedAff (DCC? (Swap(B, C) &(⟦B₂⟧(x, y)))) (DCC? ⟦(C x)⟧(y, x))
 /-
 Inner congruences:
 -/
 -- `(B, x)
-  | quot₀    : RedAff B B' → RedAff (DCC[τ] `(B, x)) (DCC[τ] `(B', x))
-  | quot₁    : RedAff x x' → RedAff (DCC[τ] `(B, x)) (DCC[τ] `(B, x'))
+  | quot₀    : RedAff B B' → RedAff (DCC? `(B, x)) (DCC? `(B', x))
+  | quot₁    : RedAff x x' → RedAff (DCC? `(B, x)) (DCC? `(B, x'))
 -- Σ(B, C)
-  | sigma₀   : RedAff B B' → RedAff (DCC[τ] Σ(B, C)) (DCC[τ] Σ(B', C))
-  | sigma₁   : RedAff C C' → RedAff (DCC[τ] Σ(B, C)) (DCC[τ] Σ(B, C'))
+  | sigma₀   : RedAff B B' → RedAff (DCC? Σ(B, C)) (DCC? Σ(B', C))
+  | sigma₁   : RedAff C C' → RedAff (DCC? Σ(B, C)) (DCC? Σ(B, C'))
 -- Π(B, C)
-  | pi₀      : RedAff B B' → RedAff (DCC[τ] Π(B, C)) (DCC[τ] Π(B', C))
-  | pi₁      : RedAff C C' → RedAff (DCC[τ] Π(B, C)) (DCC[τ] Π(B, C'))
+  | pi₀      : RedAff B B' → RedAff (DCC? Π(B, C)) (DCC? Π(B', C))
+  | pi₁      : RedAff C C' → RedAff (DCC? Π(B, C)) (DCC? Π(B, C'))
   -- x = y
-  | eq₀      : RedAff x x' → RedAff (DCC[τ] (x = y)) (DCC[τ] (x' = y))
-  | eq₁      : RedAff y y' → RedAff (DCC[τ] (x = y)) (DCC[τ] (x = y'))
+  | eq₀      : RedAff x x' → RedAff (DCC? (x = y)) (DCC? (x' = y))
+  | eq₁      : RedAff y y' → RedAff (DCC? (x = y)) (DCC? (x = y'))
   -- Eql(B)
-  | eql₀     : RedAff B B' → RedAff (DCC[τ] Eql(B)) (DCC[τ] Eql(B'))
+  | eql₀     : RedAff B B' → RedAff (DCC? Eql(B)) (DCC? Eql(B'))
   -- refl(B)
-  | refl₀    : RedAff B B' → RedAff (DCC[τ] refl(B)) (DCC[τ] refl(B'))
+  | refl₀    : RedAff B B' → RedAff (DCC? refl(B)) (DCC? refl(B'))
   -- Id(A)
-  | id₀      : RedAff A A' → RedAff (DCC[τ] Id(A)) (DCC[τ] Id(A'))
+  | id₀      : RedAff A A' → RedAff (DCC? Id(A)) (DCC? Id(A'))
   -- Fstc(B)
-  | fstc₀    : RedAff B B' → RedAff (DCC[τ] Fst(B)) (DCC[τ] Fst(B'))
+  | fstc₀    : RedAff B B' → RedAff (DCC? Fst(B)) (DCC? Fst(B'))
   -- Sndc(B)
-  | sndc₀    : RedAff B B' → RedAff (DCC[τ] Snd(B)) (DCC[τ] Snd(B'))
+  | sndc₀    : RedAff B B' → RedAff (DCC? Snd(B)) (DCC? Snd(B'))
   -- !(x)
-  | bang₀    : RedAff x x' → RedAff (DCC[τ] !(x)) (DCC[τ] !(x'))
+  | bang₀    : RedAff x x' → RedAff (DCC? !(x)) (DCC? !(x'))
   -- &(x)
-  | box₀     : RedAff x x' → RedAff (DCC[τ] &(x)) (DCC[τ] &(x'))
+  | box₀     : RedAff x x' → RedAff (DCC? &(x)) (DCC? &(x'))
   -- !<x>
   | map₀     : RedAff f f' → RedAff (DCC? !<f>) (DCC? !<f'>)
   -- $<x>
@@ -76,35 +77,37 @@ Inner congruences:
   -- *(x)
   | unbox₀   : RedAff A A' → RedAff (DCC? *(A)) (DCC? *(A'))
   -- Λ(A, B, x)
-  | curr₀    : RedAff A A' → RedAff (DCC[τ] (Λ(A, B, x))) (DCC[τ] (Λ(A', B, x)))
-  | curr₁    : RedAff B B' → RedAff (DCC[τ] (Λ(A, B, x))) (DCC[τ] (Λ(A, B', x)))
-  | curr₂    : RedAff x x' → RedAff (DCC[τ] (Λ(A, B, x))) (DCC[τ] (Λ(A, B, x')))
+  | curr₀    : RedAff A A' → RedAff (DCC? (Λ(A, B, x))) (DCC? (Λ(A', B, x)))
+  | curr₁    : RedAff B B' → RedAff (DCC? (Λ(A, B, x))) (DCC? (Λ(A, B', x)))
+  | curr₂    : RedAff x x' → RedAff (DCC? (Λ(A, B, x))) (DCC? (Λ(A, B, x')))
   -- Eval(A, B, x)
-  | eval₀    : RedAff A A' → RedAff (DCC[τ] (Eval(A, B, x))) (DCC[τ] (Eval(A', B, x)))
-  | eval₁    : RedAff B B' → RedAff (DCC[τ] (Eval(A, B, x))) (DCC[τ] (Eval(A, B', x)))
-  | eval₂    : RedAff x x' → RedAff (DCC[τ] (Eval(A, B, x))) (DCC[τ] (Eval(A, B, x')))
+  | eval₀    : RedAff A A' → RedAff (DCC? (Eval(A, B, x))) (DCC? (Eval(A', B, x)))
+  | eval₁    : RedAff B B' → RedAff (DCC? (Eval(A, B, x))) (DCC? (Eval(A, B', x)))
+  | eval₂    : RedAff x x' → RedAff (DCC? (Eval(A, B, x))) (DCC? (Eval(A, B, x')))
   -- !Λ(A, B, x)
-  | curr'₀   : RedAff A A' → RedAff (DCC[τ] (!Λ(A, B, x))) (DCC[τ] (!Λ(A', B, x)))
-  | curr'₁   : RedAff B B' → RedAff (DCC[τ] (!Λ(A, B, x))) (DCC[τ] (!Λ(A, B', x)))
-  | curr'₂   : RedAff x x' → RedAff (DCC[τ] (!Λ(A, B, x))) (DCC[τ] (!Λ(A, B, x')))
+  | curr'₀   : RedAff A A' → RedAff (DCC? (!Λ(A, B, x))) (DCC? (!Λ(A', B, x)))
+  | curr'₁   : RedAff B B' → RedAff (DCC? (!Λ(A, B, x))) (DCC? (!Λ(A, B', x)))
+  | curr'₂   : RedAff x x' → RedAff (DCC? (!Λ(A, B, x))) (DCC? (!Λ(A, B, x')))
   -- ⟦B⟧(x, y)
-  | sig₀     : RedAff B B' → RedAff (DCC[τ] ⟦B⟧(x, y)) (DCC[τ] ⟦B'⟧(x, y))
-  | sig₁     : RedAff x x' → RedAff (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y))
-  | sig₂     : RedAff y y' → RedAff (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y'))
+  | sig₀     : RedAff B B' → RedAff (DCC? ⟦B⟧(x, y)) (DCC? ⟦B'⟧(x, y))
+  | sig₁     : RedAff x x' → RedAff (DCC? ⟦β⟧(x, y)) (DCC? ⟦β⟧(x', y))
+  | sig₂     : RedAff y y' → RedAff (DCC? ⟦β⟧(x, y)) (DCC? ⟦β⟧(x, y'))
   -- ⟦B⟧⟨x, y⟩
-  | pair₀    : RedAff B B' → RedAff (DCC[τ] ⟦B⟧⟨x, y⟩) (DCC[τ] ⟦B'⟧⟨x, y⟩)
-  | pair₁    : RedAff x x' → RedAff (DCC[τ] ⟦β⟧⟨x, y⟩) (DCC[τ] ⟦β⟧⟨x', y⟩)
-  | pair₂    : RedAff y y' → RedAff (DCC[τ] ⟦β⟧⟨x, y⟩) (DCC[τ] ⟦β⟧⟨x, y'⟩)
+  | pair₀    : RedAff B B' → RedAff (DCC? ⟦B⟧⟨x, y⟩) (DCC? ⟦B'⟧⟨x, y⟩)
+  | pair₁    : RedAff x x' → RedAff (DCC? ⟦β⟧⟨x, y⟩) (DCC? ⟦β⟧⟨x', y⟩)
+  | pair₂    : RedAff y y' → RedAff (DCC? ⟦β⟧⟨x, y⟩) (DCC? ⟦β⟧⟨x, y'⟩)
   -- Coup(B)
-  | coup₀    : RedAff β β' → RedAff (DCC[τ] (Coup(β))) (DCC[τ] (Coup(β')))
+  | coup₀    : RedAff β β' → RedAff (DCC? (Coup(β))) (DCC? (Coup(β')))
   -- x and y in x ∘ y
-  | comp₀    : RedAff x x' → RedAff (DCC[τ] x ∘ y) (DCC[τ] x' ∘ y)
-  | comp₁    : RedAff y y' → RedAff (DCC[τ] x ∘ y) (DCC[τ] x ∘ y')
+  | comp₀    : RedAff x x' → RedAff (DCC? x ∘ y) (DCC? x' ∘ y)
+  | comp₁    : RedAff y y' → RedAff (DCC? x ∘ y) (DCC? x ∘ y')
+  | swap₀    : RedAff B B' → RedAff (DCC? Swap(B, C)) (DCC? Swap(B', C))
+  | swap₁    : RedAff C C' → RedAff (DCC? Swap(B, C)) (DCC? Swap(B, C'))
 /-
 App congruence:
 -/
-  | congrFun : RedAff f f' → RedAff (DCC[τ] (f x)) (DCC[τ] (f' x))
-  | congrArg : RedAff x x' → RedAff (DCC[τ] (f x)) (DCC[τ] (f x'))
+  | congrFun : RedAff f f' → RedAff (DCC? (f x)) (DCC? (f' x))
+  | congrArg : RedAff x x' → RedAff (DCC? (f x)) (DCC? (f x'))
 /-
 Base combinator function domains
 -/
@@ -130,6 +133,9 @@ Base combinator function domains
   | reflτ₁   : RedAff (DCC? Dom((refl(B) &(x)))) (DCC? !((B x)))
   | currτ₁   : RedAff (DCC? Dom((Λ(A, B, x) y))) (DCC? ((Uncoup(Dom(x)) y)))
   | curr'τ₁  : RedAff (DCC? Dom((!Λ(A, B, x) &(y)))) (DCC? !((Uncoup(Unbang(Dom(x))) y)))
+  -- C : (x : A) → (y : B x) → Sort v
+  -- where x is the second element such that Swap(C) ⟦...⟧(x, y) : Coup((C x)) and C x : y -> ...
+  | swapτ₀   : RedAff (DCC? Dom(Swap(B, C))) (DCC? !(Coup(B)))
 /-
 Dom congruence
 -/
@@ -145,54 +151,54 @@ Matchers congruence (matchers only used by the kernel in η-reduction
   | uncoup₀ : RedAff x x' → RedAff (DCC? Uncoup(x)) (DCC? Uncoup(x'))
   | unbang₀ : RedAff x x' → RedAff (DCC? Unbang(x)) (DCC? Unbang(x'))
 
-
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
   match e with
-  | (DCC[?] Π(f_α, f_β)) =>
+  | (DCC? Π(f_α, f_β)) =>
     match f_α.step?, f_β.step? with
     | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.pi₀ h₁⟩⟩
     | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.pi₁ h₁⟩⟩
     | _, _ => .none
-  | (DCC[?] Σ(f_α, f_β)) =>
+  | (DCC? Σ(f_α, f_β)) =>
     match f_α.step?, f_β.step? with
     | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.sigma₀ h₁⟩⟩
     | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.sigma₁ h₁⟩⟩
     | _, _ => .none
-  | (DCC[?] (Eql(_f_α) &(_env) &(_x))) => .some ⟨_, ⟨.eql⟩⟩
-  | (DCC[?] (x = y)) =>
+  | (DCC? (Eql(_f_α) &(_env) &(_x))) => .some ⟨_, ⟨.eql⟩⟩
+  | (DCC? (x = y)) =>
     match x.step?, y.step? with
     | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.eq₀ h₁⟩⟩
     | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.eq₁ h₁⟩⟩
     | _, _ => .none
-  | DCC[?] !(x) =>
+  | DCC? !(x) =>
     match x.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.bang₀ h⟩⟩
     | _ => .none
-  | DCC[?] !<x> =>
+  | DCC? !<x> =>
     match x.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.map₀ h⟩⟩
     | _ => .none
-  | DCC[?] (!<_f> &(_x))                                 => .some ⟨_, ⟨.map⟩⟩
-  | DCC[?] ($<_f> &(_x))                                 => .some ⟨_, ⟨.fmap⟩⟩
-  | DCC[?] (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
-  | DCC[?] *(x) =>
+  | DCC? (!<_f> &(_x))                                 => .some ⟨_, ⟨.map⟩⟩
+  | DCC? ($<_f> &(_x))                                 => .some ⟨_, ⟨.fmap⟩⟩
+  | DCC? (*(_α) &(_x))                                 => .some ⟨_, ⟨.unbox⟩⟩
+  | DCC? *(x) =>
     match x.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.unbox₀ h⟩⟩
     | _ => .none
-  | DCC[?] $<x> =>
+  | DCC? $<x> =>
     match x.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.fmap₀ h⟩⟩
     | _ => .none
-  | DCC[?] &(x) =>
+  | DCC? &(x) =>
     match x.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.box₀ h⟩⟩
     | _ => .none
-  | DCC[?] ((⟦_β⟧⟨_M, _N⟩ &(_x)))                        => .some ⟨_, ⟨.pair⟩⟩
-  | (DCC[?] (Eval(_α, _β, _x) ⟦__β⟧(_y, _z)))            => .some ⟨_, ⟨.evalc⟩⟩
-  | (DCC[?] (`(_β, _x) _y))                              => .some ⟨_, ⟨.quot⟩⟩
-  | (DCC[?] (Id(_α) _x))                                 => .some ⟨_, ⟨.id⟩⟩
-  | (DCC[?] (Fst(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
+  | DCC? ((⟦_β⟧⟨_M, _N⟩ &(_x)))                        => .some ⟨_, ⟨.pair⟩⟩
+  | (DCC? (Eval(_α, _β, _x) ⟦__β⟧(_y, _z)))            => .some ⟨_, ⟨.evalc⟩⟩
+  | (DCC? (`(_β, _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
+  | (DCC? (Id(_α) _x))                                => .some ⟨_, ⟨.id⟩⟩
+  | (DCC? (Fst(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
+  | (DCC? (Swap(_B, _C) &(⟦_B₂⟧(_a, _b))))                 => .some ⟨_, ⟨.swap⟩⟩
   | DCC? Fst(B) =>
     match B.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .fstc₀ h⟩⟩
@@ -201,6 +207,11 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
     match B.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .sndc₀ h⟩⟩
     | _ => .none
+  | DCC? Swap(B, C) =>
+    match B.step?, C.step? with
+    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.swap₀ h⟩⟩
+    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.swap₁ h⟩⟩
+    | _, _ => .none
   | DCC? Eql(B) =>
     match B.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .eql₀ h⟩⟩
@@ -213,46 +224,46 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
     match B.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .refl₀ h⟩⟩
     | _ => .none
-  | (DCC[?] (Snd(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
-  | (DCC[?] ((_x ∘ _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
+  | (DCC? (Snd(_α) ⟦_γ⟧(_a, _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
+  | (DCC? ((_x ∘ _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
   | DCC? x ∘ y =>
     match x.step?, y.step? with
     | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.comp₀ h⟩⟩
     | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.comp₁ h⟩⟩
     | _, _ => .none
-  | (DCC[?] (!Λ(_α, _β, _x) &(_y) &(_z)))                => .some ⟨_, ⟨.curr'⟩⟩
-  | DCC[?] !Λ(A, B, x) =>
+  | (DCC? (!Λ(_α, _β, _x) &(_y) &(_z)))                => .some ⟨_, ⟨.curr'⟩⟩
+  | DCC? !Λ(A, B, x) =>
     match B.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr'₁ h⟩⟩
     | .none => match A.step?, x.step? with
       | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.curr'₀ h⟩⟩
       | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr'₂ h⟩⟩
       | _, _ => .none
-  | (DCC[?] (Λ(_α, _β, _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
-  | DCC[?] Λ(A, B, x) =>
+  | (DCC? (Λ(_α, _β, _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
+  | DCC? Λ(A, B, x) =>
     match B.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr₁ h⟩⟩
     | .none => match A.step?, x.step? with
       | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.curr₀ h⟩⟩
       | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr₂ h⟩⟩
       | _, _ => .none
-  | DCC[?] Eval(A, B, x) =>
+  | DCC? Eval(A, B, x) =>
     match B.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.eval₁ h⟩⟩
     | .none => match A.step?, x.step? with
       | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.eval₀ h⟩⟩
       | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.eval₂ h⟩⟩
       | _, _ => .none
-  | (DCC[?] (Σ(_f_α, _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
-  | DCC[?] ⟦β⟧(x, y) =>
+  | (DCC? (Σ(_f_α, _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
+  | DCC? ⟦β⟧(x, y) =>
     match β.step? with
     | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.sig₀ h₁⟩⟩
     | _ =>
       match x.step?, y.step? with
-      | .some ⟨x', ⟨h₁⟩⟩, _ => .some ⟨(DCC[?] ⟦β⟧(x', y)), ⟨.sig₁ h₁⟩⟩
-      | _, .some ⟨y', ⟨h₁⟩⟩ => .some ⟨(DCC[?] ⟦β⟧(x, y')), ⟨.sig₂ h₁⟩⟩
+      | .some ⟨x', ⟨h₁⟩⟩, _ => .some ⟨(DCC? ⟦β⟧(x', y)), ⟨.sig₁ h₁⟩⟩
+      | _, .some ⟨y', ⟨h₁⟩⟩ => .some ⟨(DCC? ⟦β⟧(x, y')), ⟨.sig₂ h₁⟩⟩
       | _, _ => .none
-  | DCC[?] ⟦B⟧⟨x, y⟩ =>
+  | DCC? ⟦B⟧⟨x, y⟩ =>
     match B.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pair₀ h⟩⟩
     | _ =>
@@ -260,7 +271,7 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
       | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.pair₁ h⟩⟩
       | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pair₂ h⟩⟩
       | _, _ => .none
-  | (DCC[?] (Coup(β))) =>
+  | (DCC? (Coup(β))) =>
     match β.step? with
     | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.coup₀ h⟩⟩
     | _ => .none
@@ -269,10 +280,10 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
     | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.quot₀ h⟩⟩
     | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot₁ h⟩⟩
     | _, _ => .none
-  | DCC[?] (f x) =>
+  | DCC? (f x) =>
     match f.step?, x.step? with
-    | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC[?] (f' x)), ⟨.congrFun h₁⟩⟩
-    | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC[?] (f x')), ⟨.congrArg h₁⟩⟩
+    | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (f' x)), ⟨.congrFun h₁⟩⟩
+    | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC? (f x')), ⟨.congrArg h₁⟩⟩
     | _, _ => .none
   | DCC? Dom(Eql(_B)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(refl(_B)) => .some ⟨_, ⟨by constructor⟩⟩
@@ -285,6 +296,7 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
   | DCC? Dom(Id(_A)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(Fst(_B)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(Snd(_B)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? Dom(Swap(_B, _C)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(_x ∘ _y) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(Λ(_A, _B, _x)) => .some ⟨_, ⟨by constructor⟩⟩
   | DCC? Dom(!Λ(_A, _B, _x)) => .some ⟨_, ⟨by constructor⟩⟩
@@ -332,6 +344,26 @@ theorem congrFun' (hr : Relation.ReflTransGen RedAff f f') : Relation.ReflTransG
     have h_dec := RedAff.instRedRel.decreasing h₁
     exact .trans (.single (.congrFun h₁)) (congrFun' h₂)
 termination_by size f
+
+theorem swap₀' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? Swap(x, _y)) (DCC? Swap(x', _y)) := by
+  match hr.cases_head with
+  | .inl h =>
+    cases h
+    exact .refl
+  | .inr ⟨_, h₁, h₂⟩ =>
+    have h_dec := RedAff.instRedRel.decreasing h₁
+    exact .trans (.single (.swap₀ h₁)) (swap₀' (by assumption))
+termination_by x.size
+
+theorem swap₁' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? Swap(_x, x)) (DCC? Swap(_x, x')) := by
+  match hr.cases_head with
+  | .inl h =>
+    cases h
+    exact .refl
+  | .inr ⟨_, h₁, h₂⟩ =>
+    have h_dec := RedAff.instRedRel.decreasing h₁
+    exact .trans (.single (.swap₁ h₁)) (swap₁' (by assumption))
+termination_by x.size
 
 theorem dom' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? Dom(x)) (DCC? Dom(x')) := by
   match hr.cases_head with
@@ -509,6 +541,12 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
   unfold points
   split
   any_goals (simp)
+  case h_17 =>
+    constructor
+    · intro ⟨_, h⟩
+      exact hrn ⟨_, by constructor; assumption⟩
+    · intro ⟨_, h⟩
+      exact hrn ⟨_, .swap₁ (by assumption)⟩
   case h_7 =>
     constructor
     · intro ⟨_, h⟩
@@ -539,19 +577,19 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .sig₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .sig₂ (by assumption)⟩
-  case h_18 =>
-    constructor
-    · intro ⟨_, h⟩
-      exact hrn ⟨_, by constructor; assumption⟩
-    · intro ⟨_, h⟩
-      exact hrn ⟨_, .pi₁ (by assumption)⟩
   case h_19 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
     · intro ⟨_, h⟩
-      exact hrn ⟨_, .comp₁ (by assumption)⟩
+      exact hrn ⟨_, .pi₁ (by assumption)⟩
   case h_20 =>
+    constructor
+    · intro ⟨_, h⟩
+      exact hrn ⟨_, by constructor; assumption⟩
+    · intro ⟨_, h⟩
+      exact hrn ⟨_, .comp₁ (by assumption)⟩
+  case h_21 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -560,7 +598,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .pair₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .pair₂ (by assumption)⟩
-  case h_21 =>
+  case h_22 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -569,7 +607,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .curr₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .curr₂ (by assumption)⟩
-  case h_22 =>
+  case h_23 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -578,7 +616,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
         exact hrn ⟨_, .curr'₁ (by assumption)⟩
       · intro ⟨_, h⟩
         exact hrn ⟨_, .curr'₂ (by assumption)⟩
-  case h_23 =>
+  case h_24 =>
     constructor
     · intro ⟨_, h⟩
       exact hrn ⟨_, by constructor; assumption⟩
@@ -604,9 +642,30 @@ open Congruent' in
 open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])]
 theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (τ := α)) A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
   induction h₁ generalizing C
-  /-
-    Matching for the kernel in η-reduction on domains
-  -/
+  case swap₁ ih =>
+    match h₂ with
+    | .swap₀ h =>
+      exact ⟨_, .single (.swap₀ h), .single (.swap₁ (by assumption))⟩
+    | .swap₁ h =>
+      have ⟨_, h₁, h₂⟩ := ih h
+      exact ⟨_, swap₁' h₁, swap₁' h₂⟩
+  case swap₀ ih =>
+    match h₂ with
+    | .swap₁ h =>
+      exact ⟨_, .single (.swap₁ h), .single (.swap₀ (by assumption))⟩
+    | .swap₀ h =>
+      have ⟨_, h₁, h₂⟩ := ih h
+      exact ⟨_, swap₀' h₁, swap₀' h₂⟩
+  case swap =>
+    match h₂ with
+    | .swap => exact ⟨_, .refl, .refl⟩
+    | .congrFun (.swap₁ h) => exact ⟨_, .single (.sig₀ (.congrFun h)), .single .swap⟩
+    | .congrFun (.swap₀ h) => exact ⟨_, .refl, .single .swap⟩
+    | .congrArg (.box₀ h) =>
+      match h with
+      | .sig₀ h => exact ⟨_, .refl, .single .swap⟩
+      | .sig₁ h => exact ⟨_, .trans (.single (.sig₀ (.congrArg h))) (.single (.sig₂ h)), .single .swap⟩
+      | .sig₂ h => exact ⟨_, .single (.sig₁ h), .single .swap⟩
   case uncoup =>
     match h₂ with
     | .uncoup₀ (.coup₀ h) => exact ⟨_, .single h, .single .uncoup⟩
@@ -645,6 +704,13 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | dom₀ hr =>
       cases hr
       case _ hr => exact ⟨_, .single hr.bang₀, .single (by constructor)⟩
+    | _ => exact ⟨_, .refl, .refl⟩
+  case swapτ₀ =>
+    cases h₂ with
+    | dom₀ hr =>
+      cases hr
+      case _ hr => exact ⟨_, .single hr.coup₀.bang₀, .single (by constructor)⟩
+      case _ hr => exact ⟨_, .refl, .single (by constructor)⟩
     | _ => exact ⟨_, .refl, .refl⟩
   case eqlτ₀ | reflτ₀ | mapτ₀ | fmapτ₀ =>
     cases h₂ with
@@ -748,6 +814,12 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     | _ => exact ⟨_, .refl, .refl⟩
   case dom₀ ih =>
     cases h₂
+    case swapτ₀ hr =>
+      match hr with
+      | .swap₁ h =>
+        exact ⟨_, .single (by constructor), .refl⟩
+      | .swap₀ h =>
+        exact ⟨_, .single (by constructor), .single h.coup₀.bang₀⟩
     case unboxτ₀ hr =>
       cases hr
       case _ hr => exact ⟨_, .single (by constructor), .single hr.bang₀⟩
@@ -1025,6 +1097,14 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       have ⟨p', heq, hrp⟩ := hr.elim_point₁
       dcc_simp at heq; dcc_simp at hrp
       cases heq))
+    case swap =>
+      match hrp with
+      | .sig₀ h =>
+        exact ⟨_, .single (by constructor), .refl⟩
+      | .sig₁ h =>
+        exact ⟨_, .single (by constructor), .trans (.single (.sig₂ h)) (.single (.sig₀ (.congrArg h)))⟩
+      | .sig₂ h =>
+        exact ⟨_, .single (by constructor), .single (.sig₁ h)⟩
     case eql =>
       exact ⟨_, .single (by constructor), .trans (aff_mk_point'' 0) (aff_mk_point'' 1)⟩
     case fmap | map =>
@@ -1062,6 +1142,12 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       have ⟨p', heq, hrp⟩ := hr.elim_point₁
       dcc_simp at heq; dcc_simp at hrp
       cases heq))
+    case swap =>
+      match hr with
+      | .swap₀ h =>
+        exact ⟨_, .single .swap, .refl⟩
+      | .swap₁ h =>
+        exact ⟨_, .single .swap, .single (.sig₀ (.congrFun h))⟩
     case eql =>
       cases hr
       <;> (
@@ -1193,7 +1279,7 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
             have ⟨_, hr'', heq⟩ := semi_complete hr
             grind))
     done)
-  case h_36 =>
+  case h_38 =>
     cases hr
     <;> simp_all
     any_goals (grind)
@@ -1208,28 +1294,28 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
       · exact ⟨_, .congrFun (by assumption), rfl⟩
       · exact ⟨_, .congrArg (by assumption), rfl⟩
       · grind
-  case h_57 =>
+  case h_60 =>
     simp_all
     cases hr
     any_goals (grind)
     case dom₀ hr =>
       have ⟨_, hr', heq⟩ := semi_complete hr
       exact ⟨_, hr'.dom₀, by simp [heq]⟩
-  case h_60 =>
+  case h_63 =>
     simp_all
     cases hr
     any_goals (grind)
     case uncoup₀ hr =>
       have ⟨_, hr', heq⟩ := semi_complete hr
       exact ⟨_, hr'.uncoup₀, by simp [heq]⟩
-  case h_61 =>
+  case h_64 =>
     simp_all
     cases hr
     any_goals (grind)
     case unbang₀ hr =>
       have ⟨_, hr', heq⟩ := semi_complete hr
       exact ⟨_, hr'.unbang₀, by simp [heq]⟩
-  case h_62 =>
+  case h_65 =>
     simp_all
     cases hr
     any_goals (grind)

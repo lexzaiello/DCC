@@ -27,6 +27,7 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] Coup(_β) => 1
   | DCC[.] Id(_α)      => 1
   | DCC[.] Fst(_α)    => 1
+  | DCC[.] Swap(_B, _C) => 2
   | DCC[.] Snd(_α)    => 1
   | DCC[.] Π(_α, _β) => 2
   | DCC[.] (_f ∘ _g)  => 2
@@ -63,6 +64,7 @@ def branch_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] Id(_α)      => 1
   | DCC[.] Fst(_α)    => 1
   | DCC[.] Snd(_α)    => 1
+  | DCC[.] Swap(_B, _C) => 2
   | DCC[.] Π(_α, _β) => 2
   | DCC[.] (_f ∘ _g)  => 2
   | DCC[.] ⟦_β⟧⟨_a, _b⟩   => 3
@@ -98,6 +100,7 @@ def branches (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) 
   | DCC[.] Id(α)      => ⟨#[α], by grind⟩
   | DCC[.] Fst(α)    => ⟨#[α], by grind⟩
   | DCC[.] Snd(α)    => ⟨#[α], by grind⟩
+  | DCC[.] Swap(B, C)    => ⟨#[B, C], by grind⟩
   | DCC[.] Π(α, β) => ⟨#[α, β], by grind⟩
   | DCC[.] (f ∘ g)  => ⟨#[f, g], by grind⟩
   | DCC[.] ⟦β⟧⟨a, b⟩   => ⟨#[β, a, b], by grind⟩
@@ -136,6 +139,7 @@ def n_indices (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] Coup(_β) => 0
   | DCC[.] Id(_α)      => 0
   | DCC[.] Fst(_α)    => 0
+  | DCC[.] Swap(_B, _C)    => 0
   | DCC[.] Snd(_α)    => 0
   | DCC[.] Π(_α, _β) => 2
   | DCC[.] (_f ∘ _g)  => 0
@@ -171,6 +175,7 @@ def indices (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (
   | DCC[.] Coup(_β) => ⟨#[], by grind⟩
   | DCC[.] Id(_α)      => ⟨#[], by grind⟩
   | DCC[.] Fst(_α)    => ⟨#[], by grind⟩
+  | DCC[.] Swap(_B, _C)    => ⟨#[], by grind⟩
   | DCC[.] Snd(_α)    => ⟨#[], by grind⟩
   | DCC[.] Π(α, β) => ⟨#[α, β], by grind⟩
   | DCC[.] (_f ∘ _g)  => ⟨#[], by grind⟩
@@ -206,6 +211,7 @@ def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (p
   | DCC[.] Coup(β) => ⟨#[β], by grind⟩
   | DCC[.] Id(α)      => ⟨#[α], by grind⟩
   | DCC[.] Fst(α)    => ⟨#[α], by grind⟩
+  | DCC[.] Swap(B, C)    => ⟨#[B, C], by grind⟩
   | DCC[.] Snd(α)    => ⟨#[α], by grind⟩
   | DCC[.] Π(α, β) => ⟨#[α, β], by grind⟩
   | DCC[.] (f ∘ g)  => ⟨#[f, g], by grind⟩
@@ -248,6 +254,7 @@ def map_points (e : GenericExpr (τ := τ_c))
   | DCC? Coup(_β) => .coup
   | DCC? Id(_α)      => .id
   | DCC? Fst(_α)    => .fstc
+  | DCC? Swap(_B, _C)    => .swap
   | DCC? Snd(_α)    => .sndc
   | DCC? Π(_α, _β) => .pi
   | DCC? (_f ∘ _g)  => .comp
@@ -302,6 +309,9 @@ def set_points (e : GenericExpr (τ := τ_c))
   | DCC? Fst(α)    =>
     have heq : point_arity (DCC? Fst(α)) = 1 := by grind
     .fstc points'[0]
+  | DCC? Swap(B, C)    =>
+    have heq : point_arity (DCC? Swap(B, C)) = 2 := by grind
+    .swap points'[0] points'[1]
   | DCC? Snd(α)    =>
     have heq : point_arity (DCC? Snd(α)) = 1 := by grind
     .sndc points'[0]
@@ -394,6 +404,7 @@ def map_branches (e : GenericExpr (τ := τ_c))
   | DCC? Id(_α)      => .id
   | DCC? Fst(_α)    => .fstc
   | DCC? Snd(_α)    => .sndc
+  | DCC? Swap(_B, _C)    => .swap
   | DCC? Π(_α, _β) => .pi
   | DCC? (_f ∘ _g)  => .comp
   | DCC? ⟦_β⟧⟨_a, _b⟩   => .pair
@@ -430,6 +441,7 @@ def map_indices (e : GenericExpr (τ := τ_c))
   | DCC? Id(_α)      => .id
   | DCC? Fst(_α)    => .fstc
   | DCC? Snd(_α)    => .sndc
+  | DCC? Swap(_B, _C)    => .swap
   | DCC? Π(_α, _β) => .pi
   | DCC? (_f ∘ _g)  => .comp
   | DCC? ⟦_β⟧⟨_a, _b⟩   => .pair
@@ -537,6 +549,7 @@ def max_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? Id(A)      => A.max_hole
   | DCC? Fst(B)    => B.max_hole
   | DCC? Snd(B)    => B.max_hole
+  | DCC? Swap(B, C)    => max B.max_hole C.max_hole
   | DCC? Π(B, C) => max B.max_hole C.max_hole
   | DCC? (x ∘ y)  => max x.max_hole y.max_hole
   | DCC? ⟦B⟧⟨x, y⟩   => max B.max_hole (max x.max_hole y.max_hole)
@@ -572,6 +585,7 @@ def min_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? Id(A)      => A.min_hole
   | DCC? Fst(B)    => B.min_hole
   | DCC? Snd(B)    => B.min_hole
+  | DCC? Swap(B, C)    => min B.min_hole C.min_hole
   | DCC? Π(B, C) => min B.min_hole C.min_hole
   | DCC? (x ∘ y)  => min x.min_hole y.min_hole
   | DCC? ⟦B⟧⟨x, y⟩   => min B.min_hole (min x.min_hole y.min_hole)
@@ -607,6 +621,7 @@ def has_at_least_hole_level (lv : ℕ) (e : GenericExpr τ_c) : Bool :=
   | DCC? Id(A)      => A.has_at_least_hole_level lv
   | DCC? Fst(B)    => B.has_at_least_hole_level lv
   | DCC? Snd(B)    => B.has_at_least_hole_level lv
+  | DCC? Swap(B, C)    => B.has_at_least_hole_level lv || C.has_at_least_hole_level lv
   | DCC? Π(B, C) => B.has_at_least_hole_level lv || C.has_at_least_hole_level lv
   | DCC? (x ∘ y)  => x.has_at_least_hole_level lv || y.has_at_least_hole_level lv
   | DCC? ⟦B⟧⟨x, y⟩   => B.has_at_least_hole_level lv || x.has_at_least_hole_level lv || y.has_at_least_hole_level lv

@@ -399,5 +399,7 @@ def ReadbackFold.ext (hr₁ : DSL((f x) →!whᶠ⋆ B))
           rfl
     | .congrFun hn₁ hr₁, .single hr₂ =>
       sorry
+  | .inr (.inr ⟨h₁, heq₁⟩), .inr (.inr ⟨h₂, heq₂⟩) =>
+    sorry
 
 end GenericExpr

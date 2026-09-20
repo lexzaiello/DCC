@@ -424,13 +424,19 @@ inductive RedEta : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
   | bang   : RedEta A A' → RedEta (DCC? !(A)) (DCC? !(A'))
   | box    : RedEta x x' → RedEta (DCC? &(x)) (DCC? &(x'))
   | coup   : RedEta B B' → RedEta (DCC? Coup(B)) (DCC? Coup(B'))
-  | pi     : RedEta B B' → RedAffNorm (DCC? (C env)) ⟨C₁, hn⟩ → RedEta C₁ C' → RedEta env env' → RedEta (DCC? (Π(B, C) env)) (DCC? (Π(B', C') env'))
+  | pi     : RedEta B B'
+    → RedAffNorm (DCC? (C env)) ⟨C₁, hn⟩
+    → RedEta C₁ C'
+    → RedEta env env'
+    → Domain C τ
+    → RedAffNorm (DCC? (B' env')) ⟨A, hn_A⟩
+    → RedEta (DCC? (Π(B, C) env)) (DCC? (Π(Id(τ), `(τ, C')) A))
   | fn     : (h_dom : Domain f A) → (e_h : Hole A f.max_hole.succ x)
     → (hrt : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole)
     → (hrb : ReadbackFold f h_dom e_h (by grind) hrt f')
     → RedEta f f'
 
-def red_eta (e : GenericExpr τ_c) : Option (Σ (e' : GenericExpr τ_c), RedEta e e') :=
+def red_eta (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_c), RedEta e e') :=
   match e with
   | DCC? ∗ | DCC? ⊥ | DCC? ⊤ | DCC? Sort _m => .some ⟨_, by constructor⟩
   | DCC? x = y =>
@@ -470,7 +476,7 @@ def red_eta (e : GenericExpr τ_c) : Option (Σ (e' : GenericExpr τ_c), RedEta 
       | .some ⟨_, h₂⟩ =>
         match x.red_eta with
         | .some ⟨_, h₃⟩ =>
-          .some ⟨_, .pi h₁ ⟨reduce_sound rfl, reduce_norm rfl⟩ h₂ h₃⟩
+          .some ⟨_, .pi h₁ ⟨reduce_sound rfl, reduce_norm rfl⟩ h₂ h₃ C.domain.snd ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
         | .none => .none
       | .none => .none
     | .none => .none
@@ -489,11 +495,17 @@ decreasing_by any_goals (grind)
 def RedEta.complete (h : RedEta (τ_c := τ_c) e e') : red_eta e = .some ⟨e', h⟩ := by
   induction h with
   | coup | box | bang | mkc | refl | eq | top | bot | tintro | sort => simp_all [red_eta]
-  | pi hr_B hr_env_C hr_C hr_env =>
-    have heq := hr_env_C.complete_fst
+  | pi hr_B hr_env_C hr_C hr_env h_dom hrid =>
+    have heq  := hr_env_C.complete_fst
+    have heq₁ := hrid.complete_fst
+    have heq₂ := h_dom.complete
     cases heq.symm
-    simp_all [red_eta, hr_env_C.eq]
-    apply RedAffNorm.eq
+    cases heq₁.symm
+    expose_names
+    simp_all [red_eta, hr_env_C.eq, hrid.eq]
+    cases unique C.domain.snd h_dom
+    simp [proof_eq C.domain.snd h_dom]
+    constructor <;> apply RedAffNorm.eq
   | fn h_dom e_h hrt hrb =>
     unfold red_eta
     split
@@ -512,5 +524,8 @@ def RedEta.complete (h : RedEta (τ_c := τ_c) e e') : red_eta e = .some ⟨e', 
       have h₃ := hrt.complete
       have h₄ := hrb.complete
       grind
+
+instance : Run Option (RedEta (τ_c := τ_c)) := ⟨red_eta⟩
+instance : Complete' Option (RedEta (τ_c := τ_c)) := ⟨RedEta.complete⟩
 
 end GenericExpr

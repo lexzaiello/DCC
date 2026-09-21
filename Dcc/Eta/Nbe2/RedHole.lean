@@ -43,6 +43,7 @@ open CasesHead
 open MaxHolePreserved
 open DomDecreasing
 
+open Dsl in
 inductive ViewAppHole : (f : GenericExpr τ_c)
   → (hole₁ : GenericExpr τ_c)
   → (lv    : ℕ)
@@ -59,82 +60,82 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
   -- Note: this will need to recurse since we can't just blindly assume hole₁
   -- we just need to know the hole is in there somewhere could be f (g (h hole))
   -- if this does not fire, just do quot
-  | comp   : (hrt : DSL(((f ∘ g) x) →!wh⁺ e'))
+  | comp   : (hrt : DSL(((∘ f g) x) →!wh⁺ e'))
     → (hgt : ¬ e'.max_hole < lv)
     → (hsp : get_head hrt.raw = ⟨DCC? (f (g x)), ⟨.comp⟩, .comp⟩)
     → ViewAppHole g x lv (by simp_all [max_hole]) (by simp_all [max_hole])
-    → ViewAppHole (DCC? (f ∘ g)) x lv hlt hmem
+    → ViewAppHole (DCC? (∘ f g)) x lv hlt hmem
   /-
     Since we are weak-head reducing, and since
     the root expression should already be in normal form (NOTE TODO ENFORCE THIS),
     it doesn't matterh what RedSpineNorm reduces to
     just what the last step was
   -/
-  | id     : (hrt : DSL((Id(A) x) →!wh⁺ x))
+  | id     : (hrt : DSL(((Id A) x) →!wh⁺ x))
     → (hsp : get_head hrt.raw = ⟨x, ⟨.id⟩, .id⟩)
-    → ViewAppHole (DCC? Id(A)) x lv hlt hmem
-  | fst    : (hrt : DSL((Fst(B) ⟦_B⟧(x, y)) →!wh⁺ x))
+    → ViewAppHole (DCC? (Id A)) x lv hlt hmem
+  | fst    : (hrt : DSL(((Fst B) (,_B x y)) →!wh⁺ x))
     → (hgt : ¬ x.max_hole < lv)
     → (hsp : get_head hrt.raw = ⟨x, ⟨.fstc⟩, .fstc⟩)
-    → ViewAppHole (DCC? Fst(B)) (DCC? ⟦_B⟧(x, y)) lv hlt hmem
-  | snd    : (hrt : DSL((Snd(B) ⟦_B⟧(x, y)) →!wh⁺ y))
+    → ViewAppHole (DCC? (Fst B)) (DCC? (,_B x y)) lv hlt hmem
+  | snd    : (hrt : DSL(((Snd B) (,_B x y)) →!wh⁺ y))
     → (hgt : ¬ y.max_hole < lv)
     → (hsp : get_head hrt.raw = ⟨y, ⟨.sndc⟩, .sndc⟩)
-    → ViewAppHole (DCC? Snd(B)) (DCC? ⟦_B⟧(x, y)) lv hlt hmem
-  | swap   : (hrt : DSL((Swap(B, C) &(⟦_B⟧(x, y))) →!wh⁺ ⟦_B'⟧(y, x)))
-    → (hgt : ¬ (DCC? ⟦_B'⟧(y, x)).max_hole < lv)
-    → (hsp : get_head hrt.raw = ⟨DCC? ⟦(C x)⟧(y, x), ⟨.swap⟩, .swap⟩)
-    → ViewAppHole (DCC? Swap(B, C)) (DCC? &(⟦_B⟧(x, y))) lv hlt hmem
+    → ViewAppHole (DCC? (Snd B)) (DCC? (,_B x y)) lv hlt hmem
+  | swap   : (hrt : DSL(((Swap B C) (& (,_B x y))) →!wh⁺ (,_B₂ y x)))
+    → (hgt : ¬ (DCC? (,_B₂ y x)).max_hole < lv)
+    → (hsp : get_head hrt.raw = ⟨DCC? (,(C x) y x), ⟨.swap⟩, .swap⟩)
+    → ViewAppHole (DCC? (Swap B C)) (DCC? (& (,_B x y))) lv hlt hmem
   -- Purpose of SpineNorm is to handle top-level weak head steps that produce further normal forms
   -- innere congruences, which are irrelevant, so we eliminate them by considering only WHNF reductions
-  | eval    : (hrt : DSL((Eval(A, B, x) ⟦_B⟧(y, z)) →!wh⁺ e'))
+  | eval    : (hrt : DSL(((Eval A B x) (,_B y z)) →!wh⁺ e'))
     → (hgt  : ¬ e'.max_hole < lv)
     → (hsp  : get_head hrt.raw = ⟨DCC? (x y z), ⟨.evalc⟩, .eval⟩)
-    → ViewAppHole (DCC? Eval(A, B, x)) (DCC? ⟦_B⟧(y, z)) lv hlt hmem
-  | curr'  : (hrt : DSL((!Λ(A, B, x) &(y) &(z)) →!wh⁺ e'))
+    → ViewAppHole (DCC? (Eval A B x)) (DCC? (,_B y z)) lv hlt hmem
+  | curr'  : (hrt : DSL(((!Λ A B x) (& y) (& z)) →!wh⁺ e'))
     → (hgt : ¬ e'.max_hole < lv)
-    → (hsp : get_head hrt.raw = ⟨DCC? (x &(⟦B⟧(y, z))), ⟨.curr'⟩, .curr'⟩)
-    → ViewAppHole x (DCC? &(⟦B⟧(y, z))) lv (by simp_all [max_hole]) (by simp_all [max_hole])
-    → ViewAppHole (DCC? (!Λ(A, B, x) &(y))) (DCC? &(z)) lv hlt hmem
-  | curr   : (hrt : DSL((Λ(A, B, x) y z) →!wh⁺ e'))
+    → (hsp : get_head hrt.raw = ⟨DCC? (x (& (,B y z))), ⟨.curr'⟩, .curr'⟩)
+    → ViewAppHole x (DCC? (& (,B y z))) lv (by simp_all [max_hole]) (by simp_all [max_hole])
+    → ViewAppHole (DCC? ((!Λ A B x) (& y))) (DCC? (& z)) lv hlt hmem
+  | curr   : (hrt : DSL(((Λ A B x) y z) →!wh⁺ e'))
     → (hgt : ¬ e'.max_hole < lv)
-    → (hsp : get_head hrt.raw = ⟨DCC? (x ⟦B⟧(y, z)), ⟨.curr⟩, .curr⟩)
-    → ViewAppHole x (DCC? ⟦B⟧(y, z)) lv (by simp_all [max_hole]) (by simp_all [max_hole])
-    → ViewAppHole (DCC? (Λ(A, B, x) y)) z lv hlt hmem
-  | eql   : (hrt : DSL((Eql(B) &(x) &(y)) →!wh⁺ y = y))
+    → (hsp : get_head hrt.raw = ⟨DCC? (x (,B y z)), ⟨.curr⟩, .curr⟩)
+    → ViewAppHole x (DCC? (,B y z)) lv (by simp_all [max_hole]) (by simp_all [max_hole])
+    → ViewAppHole (DCC? ((Λ A B x) y)) z lv hlt hmem
+  | eql   : (hrt : DSL(((Eql B) (& x) (& y)) →!wh⁺ y = y))
     → (hgt : ¬ (DCC? y = y).max_hole < lv)
     → (hsp : get_head hrt.raw = ⟨DCC? (y = y), ⟨.eql⟩, .eql⟩)
-    → ViewAppHole (DCC? (Eql(B) &(x))) (DCC? &(y)) lv hlt hmem
+    → ViewAppHole (DCC? ((Eql B) (& x))) (DCC? (& y)) lv hlt hmem
   /-
     Recursively canonicalize the points inside all combinators.
     This handles the inner congruences.
 
     BIG TODO
   -/
-  | pair   : (hrt : DSL((⟦B⟧⟨x, y⟩ &(z)) →!wh⁺ e'))
+  | pair   : (hrt : DSL(((⟨,⟩B x y) (& z)) →!wh⁺ e'))
     → (hgt : ¬ e'.max_hole < lv)
-    → (hsp : get_head hrt.raw = ⟨DCC? ⟦(B z)⟧((x z), (y z (x z))), ⟨.pair⟩, .pair⟩)
-    → ViewAppHole (DCC? ⟦B⟧⟨x, y⟩) (DCC? &(z)) lv hlt hmem
-  | unbox  : (hrt : DSL((*(A) &(y)) →!wh⁺ y))
+    → (hsp : get_head hrt.raw = ⟨DCC? (,(B z) (x z) (y z (x z))), ⟨.pair⟩, .pair⟩)
+    → ViewAppHole (DCC? (⟨,⟩B x y)) (DCC? (& z)) lv hlt hmem
+  | unbox  : (hrt : DSL(((* A) (& y)) →!wh⁺ y))
     → (hgt : ¬ y.max_hole < lv)
     → (hsp : get_head hrt.raw = ⟨y, ⟨.unbox⟩, .unbox⟩)
-    → ViewAppHole (DCC? *(A)) (DCC? &(y)) lv hlt hmem
-  | fmap  : (hrt : DSL(($<x> &(y)) →!wh⁺ e'))
+    → ViewAppHole (DCC? (* A)) (DCC? (& y)) lv hlt hmem
+  | fmap  : (hrt : DSL((($<> x) (& y)) →!wh⁺ e'))
     → (hgt : ¬ e'.max_hole < lv)
-    → (hsp : get_head hrt.raw = ⟨DCC? &((x y)), ⟨.fmap⟩, .fmap⟩)
-    → ViewAppHole (DCC? $<x>) (DCC? &(y)) lv hlt hmem
-  | map   : (hrt : DSL((!<x> &(y)) →!wh⁺ e'))
+    → (hsp : get_head hrt.raw = ⟨DCC? (& (x y)), ⟨.fmap⟩, .fmap⟩)
+    → ViewAppHole (DCC? ($<> x)) (DCC? (& y)) lv hlt hmem
+  | map   : (hrt : DSL(((!<> x) (& y)) →!wh⁺ e'))
     → (hgt : ¬ e'.max_hole < lv)
-    → (hsp : get_head hrt.raw = ⟨DCC? !((x y)), ⟨.map⟩, .map⟩)
-    → ViewAppHole (DCC? !<x>) (DCC? &(y)) lv hlt hmem
+    → (hsp : get_head hrt.raw = ⟨DCC? (! (x y)), ⟨.map⟩, .map⟩)
+    → ViewAppHole (DCC? (!<> x)) (DCC? (& y)) lv hlt hmem
   -- if τ contains the hole, then this is Σ
   -- otherwise, the Coup does not depend on the hole
   -- in which case it is just `(
-  | sigma    : (hrt : DSL((Σ(B, C) x) →!wh⁺ e'))
+  | sigma    : (hrt : DSL(((Σ B C) x) →!wh⁺ e'))
     → (hgt : ¬ e'.max_hole < lv)
-    → (hsp : get_head hrt.raw = ⟨DCC? Coup((C x)), ⟨.sigma⟩, .sigma⟩)
+    → (hsp : get_head hrt.raw = ⟨DCC? (Σ (C x)), ⟨.sigma⟩, .sigma⟩)
     → ViewAppHole C x lv (by simp_all [max_hole]) (by simp_all [max_hole])
-    → ViewAppHole (DCC? Σ(B, C)) x lv hlt hmem
+    → ViewAppHole (DCC? (Σ B C)) x lv hlt hmem
 
 theorem AndNorm.head_eq (h : DSL(A →!wh⁺ C)) (hr : RedHead A B := by exact ⟨⟨by constructor⟩, by constructor⟩) : get_head h.raw = ⟨B, hr⟩ := by
   unfold get_head
@@ -149,55 +150,55 @@ theorem AndNorm.head_eq (h : DSL(A →!wh⁺ C)) (hr : RedHead A B := by exact �
     apply proof_eq
 
 @[grind unfold, dcc_force_reduce]
-def AndNorm.fst_hole (hrt : DSL((Fst(B) hole₁) →!wh⁺ e')) : Σ' B x y, hole₁ = DCC? ⟦B⟧(x, y) := by
+def AndNorm.fst_hole (hrt : DSL(((Fst B) hole₁) →!wh⁺ e')) : Σ' B x y, hole₁ = DCC? (,B x y) := by
   cases hole₁
   case mkc =>
     exact ⟨_, _, _, rfl⟩
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
 @[grind unfold, dcc_force_reduce]
-def AndNorm.snd_hole (hrt : DSL((Snd(B) hole₁) →!wh⁺ e')) : Σ' B x y, hole₁ = DCC? ⟦B⟧(x, y) := by
+def AndNorm.snd_hole (hrt : DSL(((Snd B) hole₁) →!wh⁺ e')) : Σ' B x y, hole₁ = DCC? (,B x y) := by
   cases hole₁
   case mkc =>
     exact ⟨_, _, _, rfl⟩
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
 @[grind unfold, dcc_force_reduce]
-def AndNorm.eval_hole (hrt : DSL((Eval(A, B, x) hole₁) →!wh⁺ e')) : Σ' B x y, hole₁ = DCC? ⟦B⟧(x, y) := by
+def AndNorm.eval_hole (hrt : DSL(((Eval A B x) hole₁) →!wh⁺ e')) : Σ' B x y, hole₁ = DCC? (,B x y) := by
   cases hole₁
   case mkc =>
     exact ⟨_, _, _, rfl⟩
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
 @[grind unfold, dcc_force_reduce]
-def AndNorm.pair_hole (hrt : DSL((⟦B⟧⟨x, y⟩ hole₁) →!wh⁺ e')) : Σ' y, hole₁ = DCC? &(y) := by
+def AndNorm.pair_hole (hrt : DSL(((⟨,⟩B x y) hole₁) →!wh⁺ e')) : Σ' y, hole₁ = DCC? (& y) := by
   cases hole₁
   case box =>
     exact ⟨_, rfl⟩
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
 @[grind unfold, dcc_force_reduce]
-def AndNorm.map_hole (hrt : DSL((!<x> hole₁) →!wh⁺ e')) : Σ' y, hole₁ = DCC? &(y) := by
+def AndNorm.map_hole (hrt : DSL(((!<> x) hole₁) →!wh⁺ e')) : Σ' y, hole₁ = DCC? (& y) := by
   cases hole₁
   case box =>
     exact ⟨_, rfl⟩
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
 @[grind unfold, dcc_force_reduce]
-def AndNorm.unbox_hole (hrt : DSL((*(A) hole₁) →!wh⁺ e')) : Σ' y, hole₁ = DCC? &(y) := by
+def AndNorm.unbox_hole (hrt : DSL(((* A) hole₁) →!wh⁺ e')) : Σ' y, hole₁ = DCC? (& y) := by
   cases hole₁
   case box =>
     exact ⟨_, rfl⟩
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
 @[grind unfold, dcc_force_reduce]
-def AndNorm.fmap_hole (hrt : DSL(($<x> hole₁) →!wh⁺ e')) : Σ' y, hole₁ = DCC? &(y) := by
+def AndNorm.fmap_hole (hrt : DSL((($<> x) hole₁) →!wh⁺ e')) : Σ' y, hole₁ = DCC? (& y) := by
   cases hole₁
   case box =>
     exact ⟨_, rfl⟩
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
-def AndNorm.swap_hole (hrt : DSL((Swap(B, C) hole₁) →!wh⁺ e')) : Σ' B₂ x y, hole₁ = DCC? &(⟦B₂⟧(x, y)) := by
+def AndNorm.swap_hole (hrt : DSL(((Swap B C) hole₁) →!wh⁺ e')) : Σ' B₂ x y, hole₁ = DCC? (& (,B₂ x y)) := by
   cases hole₁
   case box x =>
     cases x
@@ -207,7 +208,7 @@ def AndNorm.swap_hole (hrt : DSL((Swap(B, C) hole₁) →!wh⁺ e')) : Σ' B₂ 
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
 @[grind unfold, dcc_force_reduce]
-def AndNorm.curr'_hole (hrt : DSL((!Λ(A, B, x) y hole₁) →!wh⁺ e')) : Σ y' z, (PLift (y = (DCC? &(y')))) × (PLift (hole₁ = DCC? &(z))) := by
+def AndNorm.curr'_hole (hrt : DSL(((!Λ A B x) y hole₁) →!wh⁺ e')) : Σ y' z, (PLift (y = (DCC? (& y')))) × (PLift (hole₁ = DCC? (& z))) := by
   cases hole₁
   case box =>
     cases y
@@ -217,7 +218,7 @@ def AndNorm.curr'_hole (hrt : DSL((!Λ(A, B, x) y hole₁) →!wh⁺ e')) : Σ y
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
 @[grind unfold, dcc_force_reduce]
-def AndNorm.eql_hole (hrt : DSL((Eql(B) x hole₁) →!wh⁺ e')) : Σ' x' y, (PLift (x = (DCC? &(x')))) × (PLift (hole₁ = DCC? &(y))) := by
+def AndNorm.eql_hole (hrt : DSL(((Eql B) x hole₁) →!wh⁺ e')) : Σ' x' y, (PLift (x = (DCC? (& x')))) × (PLift (hole₁ = DCC? (& y))) := by
   cases hole₁
   case box =>
     cases x
@@ -227,7 +228,7 @@ def AndNorm.eql_hole (hrt : DSL((Eql(B) x hole₁) →!wh⁺ e')) : Σ' x' y, (P
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
 @[grind unfold, dcc_force_reduce]
-def AndNorm.parapp_elim (hrt : DSL((f y z) →!wh⁺ e')) : (Σ' A B x, f = (DCC? Λ(A, B, x))) ⊕ (Σ' A B x, f = (DCC? !Λ(A, B, x))) ⊕ (Σ' B, f = DCC? Eql(B)) := by
+def AndNorm.parapp_elim (hrt : DSL((f y z) →!wh⁺ e')) : (Σ' A B x, f = (DCC? (Λ A B x))) ⊕ (Σ' A B x, f = (DCC? (!Λ A B x))) ⊕ (Σ' B, f = DCC? (Eql B)) := by
   cases f
   case curr =>
     exact .inl ⟨_, _, _, rfl⟩
@@ -237,7 +238,8 @@ def AndNorm.parapp_elim (hrt : DSL((f y z) →!wh⁺ e')) : (Σ' A B x, f = (DCC
     exact .inr (.inr ⟨_, rfl⟩)
   all_goals (exact (hrt.elim_norm_flse (fun hr hn => nomatch hn)).elim)
 
-theorem AndNorm.quot_no_mem (hrt : DSL((`(B, x) y) →!wh⁺ e')) (hlt : (DCC? `(B, x)).max_hole < lv) (hn : ¬ e'.max_hole < lv) (_hmem : lv ≤ y.max_hole) : e'.max_hole < lv := by
+open Dsl in
+theorem AndNorm.quot_no_mem (hrt : DSL(((`B x) y) →!wh⁺ e')) (hlt : (DCC? (`B x)).max_hole < lv) (hn : ¬ e'.max_hole < lv) (_hmem : lv ≤ y.max_hole) : e'.max_hole < lv := by
   match cases_head hrt.raw with
   | .inl ⟨hrt@⟨⟨hr⟩, hn⟩, heq⟩ =>
     have h_dec := max_hole_preserved hrt
@@ -260,6 +262,7 @@ theorem max_hole_points_app (n : ℕ) (hn : (DCC? (f x)).max_hole < lv) (hlt : n
   simp [max_hole] at hn
   exact max_hole_points n hn.left
 
+open Dsl in
 def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole < lv) (hmem : lv ≤ hole₁.max_hole) : Option (ViewAppHole f hole₁ lv hlt hmem) :=
   match run_norm_plus RedHead (DCC? (f hole₁)) with
   | .some ⟨e', hrt⟩ =>
@@ -268,20 +271,20 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
     else
       -- In remaining cases, just show that no reduction is possible
       match f with
-      | DCC? Id(A) => by
+      | DCC? (Id A) => by
         if heq : e' = hole₁ then
           subst heq
           exact .some (.id hrt hrt.head_eq)
         else exact .none
-      | DCC? `(B, x) =>
+      | DCC? (`B x) =>
         have hn'' : e'.max_hole < lv := hrt.quot_no_mem hlt hn' hmem
         (hn' hn'').elim
-      | DCC? f ∘ g =>
+      | DCC? (∘ f g) =>
         match g.view_app_hole? hole₁ lv (max_hole_points 1 hlt) hmem with
         | .some h =>
           .some (.comp hrt hn' hrt.head_eq h)
         | .none => .none
-      | DCC? Fst(B) =>
+      | DCC? (Fst B) =>
         match hrt.fst_hole with
         | ⟨B, x, y, heq₀⟩ =>
           if heq : e' = x then by
@@ -289,7 +292,7 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
             subst heq
             exact .some (.fst hrt hn' hrt.head_eq)
           else .none
-      | DCC? Snd(B) =>
+      | DCC? (Snd B) =>
         match hrt.snd_hole with
         | ⟨B, x, y, heq₀⟩ => by
           if heq : e' = y then
@@ -297,11 +300,11 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
             subst heq
             exact .some (.snd hrt hn' hrt.head_eq)
           else exact .none
-      | DCC? Swap(B, C) =>
+      | DCC? (Swap B C) =>
         match hrt.swap_hole with
         | ⟨B₂, x, y, heq₀⟩ => by
           match e' with
-          | DCC? ⟦B'⟧(y', x') =>
+          | DCC? (,B' y' x') =>
             if heq₁ : y = y' then
               if heq₂ : x = x' then
                 subst heq₀
@@ -311,17 +314,17 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
               else exact .none
             else exact .none
           | _ => exact .none
-      | DCC? Eval(A, B, x) =>
+      | DCC? (Eval A B x) =>
         match hrt.eval_hole with
         | ⟨B, x, y, heq₀⟩ => by
           subst heq₀
           exact .some (.eval hrt hn' hrt.head_eq)
-      | DCC? ⟦B⟧⟨x, y⟩ =>
+      | DCC? (⟨,⟩B x y) =>
         match hrt.pair_hole with
         | ⟨_, heq₀⟩ => by
           subst heq₀
           exact .some (.pair hrt hn' hrt.head_eq)
-      | DCC? *(A) =>
+      | DCC? (* A) =>
         match hrt.unbox_hole with
         | ⟨y, heq₀⟩ => by
           if heq : e' = y then
@@ -329,29 +332,29 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
             subst heq
             exact .some (.unbox hrt hn' hrt.head_eq)
           else exact .none
-      | DCC? $<x> =>
+      | DCC? ($<> x) =>
         match hrt.fmap_hole with
         | ⟨_, heq₀⟩ => by
           subst heq₀
           exact .some (.fmap hrt hn' hrt.head_eq)
-      | DCC? !<x> =>
+      | DCC? (!<> x) =>
         match hrt.map_hole with
         | ⟨_, heq₀⟩ => by
           subst heq₀
           exact .some (.map hrt hn' hrt.head_eq)
-      | DCC? Σ(B, C) =>
+      | DCC? (Σ B C) =>
         match C.view_app_hole? hole₁ lv (max_hole_points 1 hlt) hmem with
         | .some h =>
           .some (.sigma hrt hn' hrt.head_eq h)
         | .none => .none
-      | DCC? &(_x) | DCC? Eql(_B) | DCC? !Λ(_A, _B, _x)  | DCC? Λ(_A, _B, _x) | DCC? Uncoup(_x) | DCC? Unbang(_x) | DCC? Dom(_x) | DCC? Sort _m | DCC? ∗ | DCC? ⊤ | DCC? ⊥
-      | DCC? (_x = _y) | DCC? refl(_B) | DCC? ⟦_B⟧(_x, _y) | DCC? Coup(_B)
-      | DCC? Π(_B, _C) | DCC? !(_A) | .const _n | .hole _n => False.elim (hrt.elim_norm_flse (fun hr hn => nomatch hn))
+      | DCC? (& _x) | DCC? (Eql _B) | DCC? (!Λ _A _B _x)  | DCC? (Λ _A _B _x) | DCC? (Uncoup _x) | DCC? (Unbang _x) | DCC? (Dom _x) | DCC? Sort _m | DCC? ∗ | DCC? ⊤ | DCC? ⊥
+      | DCC? (_x = _y) | DCC? (refl _B) | DCC? (,_B _x _y) | DCC? (Σ _B)
+      | DCC? (Π _B _C) | DCC? (! _A) | .const _n | .hole _n => False.elim (hrt.elim_norm_flse (fun hr hn => nomatch hn))
       | DCC? (a b) =>
         match hrt.parapp_elim with
         | .inl ⟨A, B, x, heq₀⟩ => by
           subst heq₀
-          match x.view_app_hole? (DCC? ⟦B⟧(b, hole₁)) lv (max_hole_points_app 2 hlt) (by simp_all [max_hole]) with
+          match x.view_app_hole? (DCC? (,B b hole₁)) lv (max_hole_points_app 2 hlt) (by simp_all [max_hole]) with
           | .some h =>
             exact .some (.curr hrt hn' hrt.head_eq h)
           | .none => exact .none
@@ -361,7 +364,7 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
           | ⟨b, c, ⟨heq₁⟩, ⟨heq₂⟩⟩ =>
             subst heq₁
             subst heq₂
-            match x.view_app_hole? (DCC? &(⟦B⟧(b, c))) lv (max_hole_points_app 2 hlt) (by grind only [max_hole, = max_def]) with
+            match x.view_app_hole? (DCC? (& (,B b c))) lv (max_hole_points_app 2 hlt) (by grind only [max_hole, = max_def]) with
             | .some h =>
               exact .some (.curr' hrt hn' hrt.head_eq h)
             | .none => exact .none
@@ -496,11 +499,13 @@ def AndNorm.quot_size_at_least (hrt : DSL((f x) →!wh⁺ x')) (h_size_hole : x.
   have h_dec := decreasing hrt
   exact ⟨f.size - x'.size, by grind⟩
 
+open Dsl in
 @[grind ., grind →]
-theorem RedAff.domain_max_hole_preserved (h : RedAff (DCC? Dom(x)) τ) : τ.max_hole ≤ x.max_hole := by
+theorem RedAff.domain_max_hole_preserved (h : RedAff (DCC? (Dom x)) τ) : τ.max_hole ≤ x.max_hole := by
   cases h <;> grind
 
-theorem AndNorm.domain_max_hole_preserved (h : DSL(Dom(x) →!wh⁺ τ)) : τ.max_hole ≤ x.max_hole :=
+open Dsl in
+theorem AndNorm.domain_max_hole_preserved (h : DSL((Dom x) →!wh⁺ τ)) : τ.max_hole ≤ x.max_hole :=
   match h.raw with
   | .single ⟨⟨h⟩, _⟩ => h.max_hole_preserved
   | .head ⟨⟨h⟩, _⟩ hrt => by

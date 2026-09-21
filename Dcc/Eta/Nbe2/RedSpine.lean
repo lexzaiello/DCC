@@ -456,22 +456,23 @@ def IsNorm.to_head (h : IsNorm RedAff x) : IsNorm' RedHead x := fun _ ⟨⟨h'�
 
 @[aesop norm (rule_sets := [DccRel])]
 def red_head? (A : GenericExpr τ_c) : Option (Σ' (B : GenericExpr τ_c), RedHead A B) :=
+  open Dsl in
   match A with
-  | DCC? (Σ(_B, _C) _x) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (Eql(_B) &(_y) &(_z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (!Λ(_A, _B, _x) &(_y) &(_z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (Λ(_A, _B, _x) _y _z) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (`(_B, _x) _y) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (⟦_B⟧⟨_x, _y⟩ &(_z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? ((_x ∘ _y) _z) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (*(_A) &(_y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? ($<_x> &(_y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (!<_x> &(_y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (Eval(_A, _B, _x) ⟦_C⟧(_y, _z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (Id(_A) _x) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (Fst(_B) ⟦__B⟧(_x, _y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (Snd(_B) ⟦__B⟧(_x, _y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
-  | DCC? (Swap(_B, _C) &(⟦__B⟧(_x, _y))) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((Σ _B _C) _x) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((Eql _B) (& _y) (& _z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((!Λ _A _B _x) (& _y) (& _z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((Λ _A _B _x) _y _z) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((`_B _x) _y) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((⟨,⟩_B _x _y) (& _z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((∘ _x _y) _z) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((* _A) (& _y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? (($<> _x) (& _y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((!<> _x) (& _y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((Eval _A _B _x) (,_C _y _z)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((Id _A) _x) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((Fst _B) (,__B _x _y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((Snd _B) (,__B _x _y)) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
+  | DCC? ((Swap _B _C) (& (,__B _x _y))) => .some ⟨_, ⟨by constructor⟩, by constructor⟩
   | _ => .none
 
 @[grind ., grind =>, aesop safe forward (rule_sets := [DccRel])]
@@ -506,6 +507,7 @@ instance : Complete' (m := Option) (RedHead (τ_c := τ_c)) := ⟨fun {A B} ⟨_
 instance : MaxHolePreserved (RedHead (τ_c := τ_c)) := ⟨fun ⟨_, h⟩ => by
   cases h <;> grind⟩
 
+open Dsl in
 inductive RedCongrFun : GenericExpr τ_c → GenericExpr τ_c → Type u
   | single   : (hr : RedHead A B) → RedCongrFun A B
   | congrFun : (hn : ∀ ⦃B⦄, (RedHead (DCC? (f x)) B) → False) → RedCongrFun f f' → RedCongrFun (DCC? (f x)) (DCC? (f' x))
@@ -663,9 +665,9 @@ macro_rules
   | `(term| $A:gen_dcc $knd:arrow_kind$rel:red_rel $B:gen_dcc) =>
     `(term| (DCC? $A) $knd:arrow_kind$rel:red_rel (DCC? $B))-/
 
-#check DSL(Id(Sort 1) →wh Id(Sort 1))
-#check DSL(Id(Sort 1) →!wh⁺ Id(Sort 1))
-#check DSL(Id(Sort 1) →!β⋆ Id(Sort 1))
+#check DSL((Id Sort 1) →wh (Id Sort 1))
+#check DSL((Id Sort 1) →!wh⁺ (Id Sort 1))
+#check DSL((Id Sort 1) →!β⋆ (Id Sort 1))
 
 instance [ElimNorm m r] : ElimNorm (AndNorm m) r := ⟨fun hn hr => elim_norm hn hr.raw⟩
 

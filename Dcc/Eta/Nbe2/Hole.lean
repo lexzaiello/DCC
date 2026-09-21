@@ -5,23 +5,25 @@ variable {τ_c : Type u}
 
 namespace GenericExpr
 
+open Dsl
+
 inductive ViewEta : GenericExpr τ_c → Type u
-  | pi_type : ViewEta (DCC? (Π(f_α, f_β) env))
-  | pi      : ViewEta (DCC? Π(f_α, f_β))
-  | pi_comp : ViewEta (DCC? (Π(f_α, f_β) ∘ g))
-  | coup    : ViewEta (DCC? Coup(β))
-  | bang    : ViewEta (DCC? !(β))
+  | pi_type : ViewEta (DCC? ((Π f_α f_β) env))
+  | pi      : ViewEta (DCC? (Π f_α f_β))
+  | pi_comp : ViewEta (DCC? (∘ (Π f_α f_β) g))
+  | coup    : ViewEta (DCC? (Σ β))
+  | bang    : ViewEta (DCC? (! β))
   | eq      : ViewEta (DCC? x = y)
 deriving DecidableEq
 
 @[grind, dcc_rel]
 def view_eta? (e : GenericExpr τ_c) : Option (ViewEta e) :=
   match e with
-  | (DCC? (Π(_f_α, _f_β) _env))  => .some (.pi_type)
-  | (DCC? Π(_f_α, _f_β))         => .some .pi
-  | (DCC? (Π(_f_α, _f_β) ∘ _g)) => .some .pi_comp
-  | (DCC? Coup(_β))              => .some .coup
-  | (DCC? !(_β))                 => .some .bang
+  | (DCC? ((Π _f_α _f_β) _env))  => .some (.pi_type)
+  | (DCC? (Π _f_α _f_β))         => .some .pi
+  | (DCC? (∘ (Π _f_α _f_β) _g)) => .some .pi_comp
+  | (DCC? (Σ _β))              => .some .coup
+  | (DCC? (! _β))                 => .some .bang
   | (DCC? _x = _y)               => .some .eq
   | _ => .none
 
@@ -42,15 +44,15 @@ theorem view_eta?_none_sound (h : view_eta? e = .none) : ViewEta e → False := 
   simp_all [h.complete]
 
 inductive ViewCoupBang : GenericExpr τ_c → Type u
-  | coup    : ViewCoupBang (DCC? Coup(β))
-  | bang    : ViewCoupBang (DCC? !(Coup(β)))
+  | coup    : ViewCoupBang (DCC? (Σ β))
+  | bang    : ViewCoupBang (DCC? (! (Σ β)))
 deriving DecidableEq
 
 @[grind, dcc_rel]
 def view_coup_bang? (e : GenericExpr τ_c) : Option (ViewCoupBang e) :=
   match e with
-  | (DCC? Coup(_β)) => .some .coup
-  | (DCC? !(Coup(_α)))    => .some .bang
+  | (DCC? (Σ _β)) => .some .coup
+  | (DCC? (! (Σ _α)))    => .some .bang
   | _ => .none
 
 @[grind =_, grind .]
@@ -70,15 +72,15 @@ theorem view_coup_bang?_none_sound (h : view_coup_bang? e = .none) : ViewCoupBan
   simp_all [h.complete]
 
 inductive ViewBangCoup : GenericExpr τ_c → Type u
-  | coup    : ViewBangCoup (DCC? Coup(β))
-  | bang    : ViewBangCoup (DCC? !(α))
+  | coup    : ViewBangCoup (DCC? (Σ β))
+  | bang    : ViewBangCoup (DCC? (! α))
 deriving DecidableEq
 
 @[grind, dcc_rel]
 def view_bang_coup? (e : GenericExpr τ_c) : Option (ViewBangCoup e) :=
   match e with
-  | (DCC? Coup(_β)) => .some .coup
-  | (DCC? !(_α))    => .some .bang
+  | (DCC? (Σ _β)) => .some .coup
+  | (DCC? (! _α))    => .some .bang
   | _ => .none
 
 @[grind =_, grind .]
@@ -100,12 +102,12 @@ theorem view_bang_coup?_none_sound (h : view_bang_coup? e = .none) : ViewBangCou
 inductive Hole : (α : GenericExpr τ_c) → (lv : ℕ) → (hole_e : GenericExpr τ_c) → Type u
   | pure : (ViewBangCoup α → False)
     → Hole α lv (.hole lv)
-  | coup : (hrt : RedAffNorm (DCC? Dom(β)) ⟨α, hn_α⟩)
+  | coup : (hrt : RedAffNorm (DCC? (Dom β)) ⟨α, hn_α⟩)
     → Hole α (lv + 1) hole₁
     → RedAffNorm (DCC? (β hole₁)) ⟨τ_snd, hn_τ_snd⟩
     → Hole τ_snd lv hole₂
-    → Hole (DCC? Coup(β)) lv (DCC? ⟦hole₁⟧(hole₁, hole₂))
-  | bang : Hole α lv hole₁ → Hole (DCC? !(α)) lv (DCC? &(hole₁))
+    → Hole (DCC? (Σ β)) lv (DCC? (,hole₁ hole₁ hole₂))
+  | bang : Hole α lv hole₁ → Hole (DCC? (! α)) lv (DCC? (& hole₁))
 deriving DecidableEq
 
 @[dcc_size]
@@ -126,18 +128,18 @@ Use this to initialize hole in Canonicalize.
 def mk_hole (τ : @GenericExpr τ_c) (lv : ℕ) : ((hole_e : @GenericExpr τ_c) × Hole τ lv hole_e) :=
   if h_coup_some : τ.view_bang_coup?.isSome then
     match τ, τ.view_bang_coup?.get h_coup_some with
-    | DCC? Coup(β), .coup =>
-      have h_dec₀ : size (DCC? Dom(β)) < size (DCC? Coup(β)) := by grind
-      have h_dec₁ := decreasing? _ (reduce RedAff (DCC? Dom(β))).snd.down
-      let ⟨hole₁, h_hole₁⟩ := (reduce RedAff (DCC? Dom(β))).fst.mk_hole (lv + 1)
+    | DCC? (Σ β), .coup =>
+      have h_dec₀ : size (DCC? (Dom β)) < size (DCC? (Σ β)) := by grind
+      have h_dec₁ := decreasing? _ (reduce RedAff (DCC? (Dom β))).snd.down
+      let ⟨hole₁, h_hole₁⟩ := (reduce RedAff (DCC? (Dom β))).fst.mk_hole (lv + 1)
       have h_size_eq := h_hole₁.size_zero
       have h_dec₁ : (β.app hole₁).red_aff.size ≤ (β.app hole₁).size := by
         grind
       have h_dec₂ : (reduce RedAff (β.app hole₁)).fst.size < β.coup.size := by grind
       let ⟨hole₂, h_hole₂⟩ := (reduce RedAff (DCC? (β hole₁))).fst.mk_hole lv
-      ⟨_, .coup ⟨(reduce RedAff (DCC? Dom(β))).snd.down, reduce_norm rfl⟩ h_hole₁ ⟨(reduce RedAff (DCC? (β hole₁))).snd.down, reduce_norm rfl⟩ h_hole₂⟩
-    | DCC? !(α), .bang =>
-      have h_dec₃ : α.size < (DCC? !(α)).size := by grind
+      ⟨_, .coup ⟨(reduce RedAff (DCC? (Dom β))).snd.down, reduce_norm rfl⟩ h_hole₁ ⟨(reduce RedAff (DCC? (β hole₁))).snd.down, reduce_norm rfl⟩ h_hole₂⟩
+    | DCC? (! α), .bang =>
+      have h_dec₃ : α.size < (DCC? (! α)).size := by grind
       ⟨_, .bang (α.mk_hole lv).snd⟩
   else
     ⟨_, .pure (τ.view_bang_coup?_none_sound (by simp_all))⟩
@@ -233,13 +235,13 @@ def Hole.level_neq (h₁ : Hole α m x) (h₂ : Hole β n y) (hneq : m ≠ n) : 
       rename_i ih₁ ih₂ _ _ h_hole₂
       exact ih₁ (by assumption) (by grind) rfl
 
-def Hole.coup_points_neq (h : Hole A level (DCC? ⟦β⟧(a, b))) : a ≠ b := fun heq => by
+def Hole.coup_points_neq (h : Hole A level (DCC? (,β a b))) : a ≠ b := fun heq => by
   cases h with
   | coup h_dom h_hole₁ hrt h_hole₂ =>
     cases heq
     exact h_hole₁.level_neq h_hole₂ (by grind) (by grind)
 
-def Hole.box_coup_points_neq (h : Hole A level (DCC? &(⟦β⟧(a, b)))) : a ≠ b := fun heq => by
+def Hole.box_coup_points_neq (h : Hole A level (DCC? (& (,β a b)))) : a ≠ b := fun heq => by
   cases h with
   | bang h =>
     cases h with

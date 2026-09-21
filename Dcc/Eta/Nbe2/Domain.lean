@@ -7,22 +7,27 @@ variable [DecidableEq τ_c]
 
 namespace GenericExpr
 
+open Dsl in
 inductive Domain : GenericExpr τ_c → GenericExpr τ_c → Type u
-  | mk : RedAffNorm (DCC? Dom(x)) ⟨τ, hn_τ⟩ → Domain x τ
+  | mk : RedAffNorm (DCC? (Dom x)) ⟨τ, hn_τ⟩ → Domain x τ
 deriving Repr
 
+open Dsl in
 class DomDecreasing (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
   dom_decreasing (hr : r (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size
 
+open Dsl in
 @[grind ., grind →]
-theorem RedAff.dom_decreasing (h : RedAff (DCC? Dom(x)) τ) (hneq : ∀ ⦃y⦄, τ ≠ (DCC? Dom(y))) : τ.size < x.size := by
+theorem RedAff.dom_decreasing (h : RedAff (DCC? (Dom x)) τ) (hneq : ∀ ⦃y⦄, τ ≠ (DCC? (Dom y))) : τ.size < x.size := by
   cases h
   any_goals (grind)
 
-theorem RedHead.spine_dom_decreasing (hr : RedHead (DCC? (f x)) B) (h_dom : RedAff (DCC? Dom(f)) τ) : τ.size < f.size := by
+open Dsl in
+theorem RedHead.spine_dom_decreasing (hr : RedHead (DCC? (f x)) B) (h_dom : RedAff (DCC? (Dom f)) τ) : τ.size < f.size := by
   match hr with
   | ⟨_, hn⟩ => cases hn <;> grind
 
+open Dsl in
 theorem RedHead.spine_dom_decreasing' (hr : RedHead (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size :=
   match hr with
   | ⟨hr₀, hn⟩ =>
@@ -49,7 +54,8 @@ instance [DomDecreasing r] : DomDecreasing (RedChoicePlus r) := ⟨fun hr h_dom 
 
 instance [DomDecreasing (m r)] : DomDecreasing (AndNorm m r) := ⟨fun h => dom_decreasing h.raw⟩
 
-def Domain.decreasing_neq (h : Domain x τ) (hneq : ∀ ⦃y⦄, τ ≠ (DCC? Dom(y))) : τ.size < x.size :=
+open Dsl in
+def Domain.decreasing_neq (h : Domain x τ) (hneq : ∀ ⦃y⦄, τ ≠ (DCC? (Dom y))) : τ.size < x.size :=
   match h with
   | ⟨⟨hr, hn⟩⟩ => by
     match hr.cases_head with
@@ -60,9 +66,10 @@ def Domain.is_norm (h : Domain α τ) : IsNorm RedAff τ :=
   match h with
   | ⟨_, hn⟩ => hn
 
+open Dsl in
 @[grind, dcc_force_reduce, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def domain (e : GenericExpr τ_c) : ((τ : GenericExpr τ_c) × Domain e τ) :=
-  ⟨_, ⟨aff_sound' (DCC? Dom(e))⟩⟩
+  ⟨_, ⟨aff_sound' (DCC? (Dom e))⟩⟩
 
 @[dcc_force_reduce, aesop unsafe 50% forward (rule_sets := [DccForceReduce])]
 def Domain.complete (h : Domain e τ) : domain e = ⟨τ, h⟩ :=
@@ -106,7 +113,8 @@ def Domain.eq (h₁ h₂ : Domain x A) : h₁ = h₂ :=
     | ⟨hrt₂, hn₂⟩ => by
       grind
 
-def Domain.red (h : Domain x A) : RedAffReflTrans (DCC? Dom(x)) A :=
+open Dsl in
+def Domain.red (h : Domain x A) : RedAffReflTrans (DCC? (Dom x)) A :=
   match h with
   | ⟨hr, _⟩ => hr
 
@@ -116,17 +124,17 @@ def Domain.eq' (h : Domain x A) : x.domain.fst = A := by
   have h := h.complete_fst
   grind
 
-def Domain.map : Domain (DCC? !<x>) x.domain.fst.bang :=
+def Domain.map : Domain (DCC? (!<> x)) x.domain.fst.bang :=
   have h_dom' := (domain_fst_sound (x := x) rfl).red
   have hn     := (domain_fst_sound (x := x) rfl).is_norm
   ⟨.trans (.single .mapτ₀) (aff_mk_point' (n := 0) h_dom'), fun ⟨_, .bang₀ h⟩ => hn ⟨_, h⟩⟩
 
-def Domain.fmap : Domain (DCC? $<x>) x.domain.fst.bang :=
+def Domain.fmap : Domain (DCC? ($<> x)) x.domain.fst.bang :=
   have h_dom' := (domain_fst_sound (x := x) rfl).red
   have hn     := (domain_fst_sound (x := x) rfl).is_norm
   ⟨.trans (.single .fmapτ₀) (aff_mk_point' (n := 0) h_dom'), fun ⟨_, .bang₀ h⟩ => hn ⟨_, h⟩⟩
 
-def Domain.unbox : Domain (DCC? *(A)) (reduce RedAff A).fst.bang :=
+def Domain.unbox : Domain (DCC? (* A)) (reduce RedAff A).fst.bang :=
   have hn := reduce_norm (A := A) rfl
   ⟨.trans (.single .unboxτ₀) (aff_mk_point' (n := 0) (reduce RedAff A).snd.down), fun ⟨_, .bang₀ h⟩ => hn ⟨_, h⟩⟩
 
@@ -154,56 +162,63 @@ def reduce_congr_point {x : GenericExpr τ} (h : point_arity x = 1 := by grind) 
   split at h
   any_goals (grind)
 
-def Domain.eval : Domain (DCC? Eval(A, B, x)) (DCC? Coup(#((reduce RedAff B).fst))) := by
-  have h_dom : Domain (DCC? Eval(A, B, x)) _ := ⟨.trans (.single .evalcτ₀) (reduce_sound rfl), reduce_norm rfl⟩
+open Dsl in
+def Domain.eval : Domain (DCC? (Eval A B x)) (DCC? (Σ #((reduce RedAff B).fst))) := by
+  have h_dom : Domain (DCC? (Eval A B x)) _ := ⟨.trans (.single .evalcτ₀) (reduce_sound rfl), reduce_norm rfl⟩
   have heq := reduce_congr_point (x := B.coup) ▸ h_dom
   dcc_simp at heq
   exact heq
 
-def Domain.curr₁ : Domain (DCC? (Λ(A, B, x) y)) (reduce RedAff (DCC? (Uncoup(Dom(x)) y))).fst :=
+open Dsl in
+def Domain.curr₁ : Domain (DCC? ((Λ A B x) y)) (reduce RedAff (DCC? ((Uncoup (Dom x)) y))).fst :=
   ⟨.trans (.single .currτ₁) (reduce_sound rfl), reduce_norm rfl⟩
 
-def Domain.curr'₁ : Domain (DCC? (!Λ(A, B, x) &(y))) (reduce RedAff (DCC? (Uncoup(Unbang(Dom(x))) y))).fst.bang := by
-  have h_dom : Domain (DCC? (!Λ(A, B, x) &(y))) _ := ⟨.trans (.single .curr'τ₁) (reduce_sound rfl), reduce_norm rfl⟩
+open Dsl in
+def Domain.curr'₁ : Domain (DCC? ((!Λ A B x) (& y))) (reduce RedAff (DCC? ((Uncoup (Unbang (Dom x))) y))).fst.bang := by
+  have h_dom : Domain (DCC? ((!Λ A B x) (& y))) _ := ⟨.trans (.single .curr'τ₁) (reduce_sound rfl), reduce_norm rfl⟩
   have heq := reduce_congr_point (x := (x.dom.unbang.uncoup.app y).bang) ▸ h_dom
   dcc_simp at heq
   exact heq
 
-def Domain.eql₁ : Domain (DCC? (Eql(B) &(y))) (reduce RedAff (DCC? (B y))).fst.bang := by
-  have h_dom : Domain (DCC? (Eql(B) &(y))) _ := ⟨.trans (.single (by constructor)) (reduce_sound rfl), reduce_norm rfl⟩
+def Domain.eql₁ : Domain (DCC? ((Eql B) (& y))) (reduce RedAff (DCC? (B y))).fst.bang := by
+  have h_dom : Domain (DCC? ((Eql B) (& y))) _ := ⟨.trans (.single (by constructor)) (reduce_sound rfl), reduce_norm rfl⟩
   have heq := reduce_congr_point (x := (B.app y).bang) ▸ h_dom
   dcc_simp at heq
   exact heq
 
-def Domain.pair : Domain (DCC? ⟦B⟧⟨x, y⟩) x.domain.fst.bang := by
-  have h_dom : Domain (DCC? (⟦B⟧⟨x, y⟩)) _ := ⟨.trans (.single (by constructor)) (reduce_sound rfl), reduce_norm rfl⟩
+def Domain.pair : Domain (DCC? (⟨,⟩B x y)) x.domain.fst.bang := by
+  have h_dom : Domain (DCC? (⟨,⟩B x y)) _ := ⟨.trans (.single (by constructor)) (reduce_sound rfl), reduce_norm rfl⟩
   have heq := reduce_congr_point (x := x.dom.bang) ▸ h_dom
   dcc_simp at heq
   change (B.pair x y).Domain (reduce RedAff x.dom).fst.bang at heq
   have h : Domain x (reduce RedAff x.dom).fst := x.domain.snd
   exact h.complete_fst.symm ▸ heq
 
-def Domain.sigma : Domain (DCC? Σ(B, C)) C.domain.fst :=
+open Dsl in
+def Domain.sigma : Domain (DCC? (Σ B C)) C.domain.fst :=
   ⟨.trans (.single (by constructor)) (reduce_sound rfl), reduce_norm rfl⟩
 
-def Domain.comp : Domain (DCC? f ∘ g) g.domain.fst :=
+def Domain.comp : Domain (DCC? (∘ f g)) g.domain.fst :=
   ⟨.trans (.single (by constructor)) (reduce_sound rfl), reduce_norm rfl⟩
 
-def Domain.elim_comp (h_dom : Domain (DCC? f ∘ g) A) : Domain g A := by
+def Domain.elim_comp (h_dom : Domain (DCC? (∘ f g)) A) : Domain g A := by
   have h_dom' := Domain.comp (f := f) (g := g)
   cases h_dom.unique h_dom'
   exact g.domain.snd
 
-def Domain.fst : Domain (DCC? Fst(B)) (DCC? Coup(#((reduce RedAff B).fst))) :=
+open Dsl in
+def Domain.fst : Domain (DCC? (Fst B)) (DCC? (Σ #((reduce RedAff B).fst))) :=
   ⟨.trans (.single .fstcτ₀) (aff_mk_point' (n := 0) (reduce_sound rfl)), fun ⟨_, .coup₀ h⟩ => (reduce_norm rfl) ⟨_, h⟩⟩
 
-def Domain.snd : Domain (DCC? Snd(B)) (DCC? Coup(#((reduce RedAff B).fst))) :=
+open Dsl in
+def Domain.snd : Domain (DCC? (Snd B)) (DCC? (Σ #((reduce RedAff B).fst))) :=
   ⟨.trans (.single .sndcτ₀) (aff_mk_point' (n := 0) (reduce_sound rfl)), fun ⟨_, .coup₀ h⟩ => (reduce_norm rfl) ⟨_, h⟩⟩
 
-def Domain.id : Domain (DCC? Id(A)) (reduce RedAff A).fst :=
+def Domain.id : Domain (DCC? (Id A)) (reduce RedAff A).fst :=
   ⟨.trans (.single .idτ₀) (reduce_sound rfl), reduce_norm rfl⟩
 
-def Domain.quot : Domain (DCC? `(B, x)) (reduce RedAff B).fst :=
+open Dsl in
+def Domain.quot : Domain (DCC? (`B x)) (reduce RedAff B).fst :=
   ⟨.trans (.single .quotτ₀) (reduce_sound rfl), reduce_norm rfl⟩
 
 /-def Domain.unbox : Domain (DCC? *(A)) (DCC? !(#((reduce RedAff A).fst))) :=

@@ -1,22 +1,29 @@
 import Dcc.Ast
 import Dcc.Aff.Red
 import Dcc.Types
-import Dcc.Eta.Nbe.Reduce
+import Dcc.Eta.Nbe2.Canonicalize
 
 inductive DefEqError.{u} {τ_c : Type u} : (A B : GenericExpr τ_c) → Type u where
-  | pi_left  (expected actual : GenericExpr τ_c)  : DefEqError A B
+  /-| pi_left  (expected actual : GenericExpr τ_c)  : DefEqError A B
   | pi_right (expected actual : GenericExpr τ_c)  : DefEqError A B
   | bang     (inner_errr      : DefEqError τ₁ τ₂) : DefEqError (DCC? !(τ₁)) (DCC? !(τ₂))
-  | coup     (inner_errr      : DefEqError τ₁ τ₂) : DefEqError (DCC? Coup(τ₁)) (DCC? Coup(τ₂))
+  | coup     (inner_errr      : DefEqError τ₁ τ₂) : DefEqError (DCC? Coup(τ₁)) (DCC? Coup(τ₂))-/
   | tm       (expected actual : GenericExpr τ_c)  : DefEqError A B
+  | not_eta_reducible (at_e : GenericExpr τ_c)    : DefEqError A B
+
+def DefEqError.flip (e : DefEqError A B) : DefEqError B A :=
+  match e with
+  | .tm expected actual => .tm expected actual
+  | .not_eta_reducible x => .not_eta_reducible x
 
 def DefEqError.toFormat [Repr τ_c] (err : DefEqError (τ_c := τ_c) A B) : Std.Format :=
   "- " ++ (.nest 2 <| (Std.format A) ++ " ≠ " ++ (.indentD (Std.format B)) ++ .line ++
   (match err with
-  | .pi_left expected actual => "because Π domains are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ "but found: " ++ (.indentD (Std.format actual))
+  /-| .pi_left expected actual => "because Π domains are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ "but found: " ++ (.indentD (Std.format actual))
   | .pi_right expected actual => "because Π codomains are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ "but found: " ++ (.indentD (Std.format actual))
   | .bang inner_err => "because bang types are not def-eq because: " ++ inner_err.toFormat
-  | .coup inner_err => "because coup types are not def-eq because: " ++ inner_err.toFormat
+  | .coup inner_err => "because coup types are not def-eq because: " ++ inner_err.toFormat-/
+  | .not_eta_reducible x => "because this term is not η-reducible: " ++ (.indentD (Std.format x))
   | .tm expected actual => "because terms are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ .line ++ "but found: " ++ (.indentD (Std.format actual))))
 
 instance {A B : GenericExpr τ_c} [Repr τ_c] : Std.ToFormat (DefEqError A B) := ⟨DefEqError.toFormat⟩
@@ -51,8 +58,8 @@ instance {e : GenericExpr τ_c} [Repr τ_c] : ToString (TypeError e) := ⟨toStr
 namespace GenericExpr
 
 inductive Reduces.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c → Type u
-  | mk : RedAffNorm A B
-    → B.raw.RedEta C
+  | mk : RedAffNorm A ⟨B, hn_B⟩
+    → RedEta B C
     → Reduces A C
 
 def Reduces.aff (h : Reduces A B) : RedAffNorm A (red_aff A) :=
@@ -65,7 +72,7 @@ def Reduces.unique.{u} {τ_c : Type u} [DecidableEq τ_c] {A B C : GenericExpr �
   match h₁, h₂ with
   | ⟨hr₁, hr₂⟩, ⟨hr₃, hr₄⟩ => by
     cases hr₁.unique hr₃
-    exact hr₂.unique hr₄
+    exact Unique.unique hr₂ hr₄
 
 /-def Reduces₂.trans.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {A B C : GenericExpr τ_c} (h₁ : Reduces₂ A B) (h₂ : Reduces₂ B C) : Reduces₂ A C :=
   match h₁, h₂ with
@@ -77,31 +84,36 @@ def Reduces.unique.{u} {τ_c : Type u} [DecidableEq τ_c] {A B C : GenericExpr �
 
     exact ⟨hr₁, hn₁, by sorry⟩-/
 
-def Reduces.is_norm.{u} {τ_c : Type u} {A B : GenericExpr τ_c} : Reduces A B → IsNorm RedAff B :=
-  fun ⟨_hr₁, hr₂⟩ => hr₂.is_norm
+/-def Reduces.is_norm.{u} {τ_c : Type u} {A B : GenericExpr τ_c} : Reduces A B → IsNorm RedAff B :=
+  fun ⟨_hr₁, hr₂⟩ => hr₂.is_norm-/
 
 @[dcc_force_reduce]
-def reduce_all.{u} {τ_c : Type u} [DecidableEq τ_c] := (red_eta' (τ_c := τ_c)) ∘ reduce' RedAff
+def reduce_all.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) (e₂ : GenericExpr τ_c := e) : Except (DefEqError e e₂) (GenericExpr τ_c) :=
+  match (red_eta (τ_c := τ_c)) (reduce' RedAff e) with
+  | .some ⟨e', _⟩ => .ok e'
+  | .none => .error (.not_eta_reducible e)
 
-def reduce_reduces.{u} {τ_c : Type u} [DecidableEq τ_c] {A B : GenericExpr τ_c} (h : reduce_all A = B) : Reduces A B := ⟨aff_sound rfl, by
+def reduce_reduces.{u} {τ_c : Type u} [DecidableEq τ_c] {A B : GenericExpr τ_c} {e₂ : GenericExpr τ_c} (h : reduce_all A (e₂ := e₂) = .ok B) : Reduces A B := ⟨aff_sound rfl, by
   simp [reduce_all, reduce'] at h
-  simp [← h]
-  exact red_eta_sound⟩
+  split at h
+  · cases h
+    assumption
+  · grind⟩
 
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
 def Reduces.complete.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {τ τ' : GenericExpr τ_c}
-  (h : Reduces (τ_c := τ_c) τ τ') : reduce_all τ = τ' := by
+  (h : Reduces (τ_c := τ_c) τ τ') {e₂ : GenericExpr τ_c} : reduce_all τ (e₂ := e₂) = .ok τ' := by
   match h with
   | ⟨hr, hr₂⟩ =>
     have ha := hr.complete
     have hb := hr₂.complete
-    have hc := hr₂.complete'
+    have hc := Complete'.complete hr₂
     simp [reduce_all, reduce']
-    have hc := red_eta_sound' hc
+    have hc := run_sound hc
     grind
 
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
-def Reduces.out_eq [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) : B = reduce_all A :=
+def Reduces.out_eq [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) : .ok B = reduce_all A (e₂ := B) :=
   match h with
   | ⟨hr, hr'⟩ => by
     cases hr.out_eq
@@ -120,43 +132,43 @@ def Reduces.elim_norm [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) (hn : 
     cases hrt.elim_norm hn
     assumption
 
-def Reduces.eq [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) : h = reduce_reduces (A := A) (B := B) (h.out_eq ▸ rfl) :=
+def Reduces.eq [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) : h = reduce_reduces (A := A) (B := B) (e₂ := B) (h.out_eq ▸ rfl) :=
   match h with
   | ⟨hr, hr'⟩ => by
     rw [hr.out_eq] at *
     expose_names
     cases hr_1.unique hr
     cases hr_1.eq
-    cases hr'_1.complete'
     simp only [reduce_reduces]
-    have h := hr'_1.complete
-    unfold red_eta_sound
-    have h := hr'_1.eq'
-    rw [h]
-    congr
+    congr!
+    apply proof_eq
 
 #eval Std.format <| pair.β.type (DCC (Sort 30)) 10 20
 
 -- For checking arguments under apps
 inductive DefEq.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr τ_c → GenericExpr τ_c → Prop
-  | tm : Reduces τ₁ τ'
-    → Reduces τ₂ τ'
-    → DefEq τ₁ τ₂
+  | tm : Reduces τ₁ τ' → Reduces τ₂ τ' → DefEq τ₁ τ₂
 
 -- Reduces A B → DefEq A B
 
 def def_eq?.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] (τ₁ τ₂ : GenericExpr τ_c) : Except (DefEqError τ₁ τ₂) (PLift (DefEq τ₁ τ₂)) :=
-  if heq : τ₁.reduce_all = τ₂.reduce_all then
-    .ok ⟨.tm (reduce_reduces rfl) (reduce_reduces heq.symm)⟩
-  else .error (.tm τ₁.reduce_all τ₂.reduce_all)
+  match heq₀ : τ₁.reduce_all (e₂ := τ₂), heq₂ : τ₂.reduce_all (e₂ := τ₁) with
+  | .ok hτ₁, .ok hτ₂ =>
+    if heq : hτ₁ = hτ₂ then
+      .ok ⟨.tm (reduce_reduces heq₀) (reduce_reduces (heq ▸ heq₂))⟩
+    else .error (.tm hτ₁ hτ₂)
+  | .error e, _ => .error e
+  | _, .error e => .error e.flip
 
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
 def DefEq.complete.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {τ₁ τ₂ : GenericExpr τ_c} (h : DefEq (τ_c := τ_c) τ₁ τ₂) : def_eq? τ₁ τ₂ = .ok ⟨h⟩ := by
   induction h
   case tm hr₁ hr₂ =>
-    have ha := hr₁.complete
-    have hb := hr₂.complete
-    simp [def_eq?, ha, hb]
+    expose_names
+    have ha := hr₁.complete (e₂ := τ₂_1)
+    have hb := hr₂.complete (e₂ := τ₁)
+    simp [def_eq?]
+    grind
 
 inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr τ_c → GenericExpr τ_c → Prop where
   | eq     : Judge x α
@@ -164,128 +176,109 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Judge (DCC? x = y) (DCC? Sort 0)
   | refl    : Judge f_α τ_f_α
     → Arrow δ (DCC? Sort m) o τ_f_α
-    → Reduces (refl.type f_α δ o) τ
-    → Judge (DCC? refl(f_α)) τ
+    → Reduces (GenericExpr.refl.type f_α δ o) τ
+    → Judge (DCC? (refl f_α)) τ
   | eql    : Judge f_α τ_f_α
     → Arrow δ (DCC? Sort m) o τ_f_α
     → Reduces (eql.type f_α δ o) τ
-    → Judge (DCC? Eql(f_α)) τ
+    → Judge (DCC? (Eql f_α)) τ
   | id     : Judge α (DCC? Sort m)
     → Reduces (id.type α m) τ
-    → Judge (DCC? Id(α)) τ
-  | comp   : Judge g (comp.g.type α β m)
-    → Judge f (comp.f.type f_β f_γ n)
-    → Reduces f_β (DCC? `(α, β))
-    → Reduces (DCC? (f_γ Coup(`(α, β)))) γ
-    → Reduces α α'
-    → Reduces (comp.type α' γ g m) τ
-    → Judge (DCC? (f ∘ g)) τ
-  | comp₂  : Judge g τ_g
-    → Comp₂.g.type α β m τ_g
-    → Judge f (comp₂.f.type β f_γ n)
-    → Reduces (DCC? (f_γ Coup(β))) γ
-    → Reduces (comp₂.type α γ g m) τ
-    → Judge (DCC? (f ∘∘ g)) τ
-  | comp'  : Judge g (DCC? (Π(Id(Sort m), f_β₀) α))
-    → Reduces (DCC? (f_β₀ α)) (DCC? (`(α, β)))
-    → Judge f (DCC? (Π(f_β, f_γ) x_β))
-    → Reduces (DCC? (f_β x_β)) β
-    → Reduces (DCC? (f_γ x_β)) γ
-    → Reduces α α'
-    → Reduces (comp'.type α' γ g m) τ
-    → Judge (DCC? f ∘' g) τ
-  | coup   : Judge β (DCC? (Π(Id(Sort m), f_β) α))
-    → Reduces (DCC? (f_β α)) (DCC? `(α, Sort n))
+    → Judge (DCC? (Id α)) τ
+  | comp   : Judge g τ_g
+    → comp.g.type A B m τ_g
+    → Judge f (comp.f.type B C n)
+    → Reduces (comp.type A C g m) τ
+    → Judge (DCC? (∘ f g)) τ
+  | coup   : Judge B τ_B
+    → Arrow A (DCC? Sort n) m τ_B
     → Reduces (Coup.type m n) τ
-    → Judge (DCC? Coup(β)) τ
-  | fstc   : Judge β τ_β
-    → Arrow α (DCC? Sort n) m τ_β
-    → Reduces (fstc.type α β m n) τ
-    → Judge (DCC? Fst(β)) τ
-  | sndc    : Judge β τ_β
-    → Arrow α (DCC? Sort n) m τ_β
-    → Reduces (sndc.type β m n) τ
-    → Judge (DCC? Snd(β)) τ
-  | sigma   : Judge f_α τ_f_α
-    → Arrow δ (DCC? Sort m) o τ_f_α
-    → Judge f_β τ_f_β
+    → Judge (open Dsl in (DCC? (Σ B))) τ
+  | fstc   : Judge B τ_β
+    → Arrow A (DCC? Sort n) m τ_B
+    → Reduces (fstc.type A B m n) τ
+    → Judge (DCC? (Fst B)) τ
+  | sndc    : Judge B τ_B
+    → Arrow A (DCC? Sort n) m τ_B
+    → Reduces (sndc.type B m n) τ
+    → Judge (DCC? (Snd B)) τ
+  | sigma   : Judge B τ_B
+    → Arrow δ (DCC? Sort m) o τ_B
+    → Judge C τ_C
     -- f_α is not necessarily a normal form here. we need to reduce
     -- since it is not captured by Reduces Sigma.type
-    → Reduces f_α f_α'
-    → Pi.f_β.type f_α' δ o n τ_f_β
+    → Reduces B B'
+    → Pi.C.type B' δ o n τ_C
     → Reduces (Sigma.type δ m n o) τ
-    → Judge (DCC? Σ(f_α, f_β)) τ
+    → Judge (open Dsl in (DCC? (Σ B C))) τ
   | mk     : Judge x α
-    → Judge β τ_β
-    → Arrow α (DCC? Sort n) m τ_β
-    → Reduces (DCC? (β x)) τ₂
+    → Judge B τ_B
+    → Arrow A (DCC? Sort n) m τ_B
+    → Reduces (DCC? (B x)) τ₂
     → Judge y τ₂
-    → Reduces (DCC? Coup(β)) τ
-    → Judge (DCC? ⟦β⟧(x, y)) τ
+    → Reduces (open Dsl in (DCC? (Σ B))) τ
+    → Judge (DCC? (,B x y)) τ
   /-
     Λ(β, x)
     β receives (α, x)
     β : Coup(Sort m, Id(Sort m)) → Sort n
   -/
-  | curr   : Judge α (DCC? Sort m)
-    → Judge β τ_β
-    → Arrow α' (DCC? Sort n) m τ_β
-    → Judge x (DCC? (Π(f_α, γ) x_α))
-    → Reduces (DCC? Coup(β)) τα
-    → Reduces (DCC? (f_α x_α)) τα
-    → Reduces (DCC? (γ x_α)) γ'
-    → Reduces α α'
-    → Reduces (curr.type α' β γ' m) τ
-    → Judge (DCC? Λ(α, β, x)) τ
-  | curr'  : Judge α (DCC? Sort m)
-    → Judge β τ_β
-    → Arrow α' (DCC? Sort n) m τ_β
-    → Judge x (DCC? (Π(f_α, γ) x_α))
-    → Reduces (DCC? !(Coup(β))) τα
-    → Reduces (DCC? (f_α x_α)) τα
-    → Reduces (DCC? (γ x_α)) γ'
-    → Reduces α α'
-    → Reduces (curr'.type α' β γ' m) τ
-    → Judge (DCC? !Λ(α, β, x)) τ
+  | curr   : Judge A (DCC? Sort m)
+    → Judge B τ_β
+    → Arrow A' (DCC? Sort n) m τ_β
+    → Judge x (open Dsl in (DCC? ((Π f_A γ) x_A)))
+    → Reduces (open Dsl in (DCC? (Σ B))) τA
+    → Reduces (DCC? (f_A x_A)) τA
+    → Reduces (DCC? (γ x_A)) γ'
+    → Reduces A A'
+    → Reduces (curr.type A' B γ' m) τ
+    → Judge (DCC? (Λ A B x)) τ
+  | curr'  : Judge A (DCC? Sort m)
+    → Judge B τ_B
+    → Arrow A' (DCC? Sort n) m τ_B
+    → Judge x (open Dsl in (DCC? ((Π f_A γ) x_A)))
+    → Reduces (open Dsl in (DCC? (! (Σ B)))) τA
+    → Reduces (DCC? (f_A x_A)) τA
+    → Reduces (DCC? (γ x_A)) γ'
+    → Reduces A A'
+    → Reduces (curr'.type A' B γ' m) τ
+    → Judge (DCC? (!Λ A B x)) τ
   -- !<f> &(x) = !(x)
   /-| map    : Judge x (DCC? (Π(Id(Sort m), f_β) α))
     → Reduces (DCC? (f_β α)) (DCC? `(α, Sort n))
     → Reduces (DCC? ((!(α) : Sort m) → Sort n)) τ
     → Judge (DCC? !<x>) τ-/
   | map    : Judge x τ_x
-    → Arrow α (DCC? Sort n) m τ_x
-    → Reduces (DCC? ((!(α) : Sort m) → Sort n)) τ
-    → Judge (DCC? !<x>) τ
-  | fmap   : Judge x (DCC? (Π(Id(Sort m), f_β) α))
-    → Reduces (DCC? (f_β α)) β
-    → Reduces (DCC? (Π(Id(Sort m), `(Sort m, !<β>)) !(α))) τ
-    → Judge (DCC? $<x>) τ
-  | eval   : Judge x (DCC? (Π(f_α, f_β) env))
+    → Arrow A (DCC? Sort n) m τ_x
+    → Reduces (open Dsl in (DCC? (((! A) : Sort m) → Sort n))) τ
+    → Judge (DCC? (!<> x)) τ
+  | unbox  : Judge A (DCC? Sort m) → Judge (DCC? (* A)) (open Dsl in (DCC? (((! A) : Sort m) → A)))
+  | eval   : Judge x (open Dsl in (DCC? ((Π f_α f_B) env)))
     → Reduces α α'
-    → Reduces β β'
+    → Reduces B B'
     → Reduces (DCC? (f_α env)) α'
-    → Reduces (DCC? (f_β env)) (DCC? (Π(β', γ)))
+    → Reduces (DCC? (f_B env)) (open Dsl in (DCC? ((Π B' γ))))
     → Judge α (DCC? Sort m)
-    → Judge β (DCC? (Π(f_α₂, f_β₂) env₂))
+    → Judge B (open Dsl in (DCC? ((Π f_α₂ f_B₂) env₂)))
     → Reduces (DCC? (f_α₂ env₂)) α'
-    → Reduces (DCC? (f_β₂ env₂)) (DCC? `(α', Sort n))
-    → Reduces (Eval.type α β γ m n) τ
-    → Judge (DCC? Eval(α, β, x)) τ
+    → Reduces (DCC? (f_B₂ env₂)) (open Dsl in (DCC? (`α' Sort n)))
+    → Reduces (GenericExpr.Eval.type α B γ m n) τ
+    → Judge (DCC? (Eval α B x)) τ
   | quot   : Judge x α
-    → Judge β (DCC? Sort n)
-    → Reduces β β'
-    → Reduces (quot.type α β' n) τ
-    → Judge (DCC? `(β, x)) τ
-  | pair   : Judge f (DCC? (Π(Id(Sort m), f_β) x_α))
-    → Reduces (DCC? (f_β x_α)) β
-    → Judge g (DCC? (Π(f_α₂, f_β₂) α))
+    → Judge B (DCC? Sort n)
+    → Reduces B B'
+    → Reduces (quot.type α B' n) τ
+    → Judge (open Dsl in (DCC? (`B x))) τ
+  | pair   : Judge f (open Dsl in (DCC? ((Π (Id Sort m) f_B) x_α)))
+    → Reduces (DCC? (f_B x_α)) B
+    → Judge g (open Dsl in (DCC? ((Π f_α₂ f_B₂) α)))
     → Reduces γ γ'
-    → Reduces (DCC? (f_β₂ α)) (DCC? (Π(β₂, γ₂)))
+    → Reduces (DCC? (f_B₂ α)) (open Dsl in (DCC? ((Π B₂ γ₂))))
     → Reduces γ₂ γ'
-    → Reduces β₂ β
+    → Reduces B₂ B
     → Reduces (DCC? (f_α₂ α)) x_α
-    → Reduces (pair.type x_α β γ' m) τ
-    → Judge (DCC? ⟦γ⟧⟨f, g⟩) τ
+    → Reduces (pair.type x_α B γ' m) τ
+    → Judge (DCC? (⟨,⟩γ f g)) τ
   /-
     ef_α : α → Sort m
     f_β : ∀ (x : α) (y : f_α x), Sort n
@@ -295,22 +288,17 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Arrow δ (DCC? Sort m) o τ_f_α
     → Judge f_β τ_f_β
     → Reduces f_α f_α'
-    → Pi.f_β.type f_α' δ o n τ_f_β
+    → Pi.C.type f_α' δ o n τ_f_β
     → Reduces (Pi.type δ o m n) τ
-    → Judge (DCC? Π(f_α, f_β)) τ
+    → Judge (open Dsl in (DCC? (Π f_α f_β))) τ
   | sort   : Judge (DCC? Sort m) (DCC? Sort m.succ)
   | top    : Judge (DCC? ⊤) Top.type
   | bot    : Judge (DCC? ⊥) Bot.type
   | tintro : Judge (DCC? ∗) Tintro.type
-  | bang   : Judge τ (DCC? Sort m) → Judge (DCC? !(τ)) (DCC? Sort m)
+  | bang   : Judge τ (DCC? Sort m) → Judge (open Dsl in (DCC? (! τ))) (DCC? Sort m)
   | box    : Judge x τ
-    → Judge (DCC? &(x)) (DCC? !(τ))
-  -- This should be dependent I think
-  | unmap  : Judge f (DCC? (Π(Id(Sort m), f_β) α))
-    → Reduces (DCC? (f_β α)) β
-    → Reduces (DCC? ((Π(Id(Sort m), `(Sort m, *<β>)) !(α)))) τ
-    → Judge (DCC? *<f>) τ
-  | app    : Judge f (DCC? (Π(f_α, f_β) x_α))
+    → Judge (open Dsl in (DCC? (& x))) (open Dsl in (DCC? (! τ)))
+  | app    : Judge f (open Dsl in (DCC? ((Π f_α f_β) x_α)))
     → Reduces (DCC? (f_α x_α)) α
     → Judge x α
     → Reduces (DCC? (f_β x_α x)) τ

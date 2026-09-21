@@ -141,7 +141,7 @@ syntax "(" ":" gen_dcc ")" "→" gen_dcc : gen_dcc
 open Dsl in
 macro_rules
   | `(DCC[$ty:gen_dcc_loc] ($α:gen_dcc : Sort $m) → $β:gen_dcc) =>
-    `(DCC[$ty:gen_dcc_loc] ((Π (Id Sort $m) (Λ Sort $m (Id Sort $m) (`(Σ (Id Sort $m)) $β))) $α))
+    `(DCC[$ty:gen_dcc_loc] ((Π (Id Sort $m) (`(Sort $m) (`$α $β))) $α))
   | `(DCC[$ty:gen_dcc_loc] (: Sort $m) → $β:gen_dcc) =>
     `(DCC[$ty:gen_dcc_loc] (Λ Sort $m (Id Sort $m) (`(Σ(Id Sort $m)) $β)))
 

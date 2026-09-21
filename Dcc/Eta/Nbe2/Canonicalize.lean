@@ -247,8 +247,22 @@ def try_readback (f : GenericExpr τ_c) : Option (GenericExpr τ_c) :=
   | .none => .none
 
 --#eval try_readback (DCC (Λ(Sort 1, Id(Sort 1), Fst(Id(Sort 1))) (Sort 0)))
-#eval try_readback (DCC (Λ(Sort 1, `(Sort 1, Sort 1), Eval(Sort 1, `(Sort 1, Sort 1), `(Sort 1, `(Sort 1, ⊤)))) (Sort 0)))
-#eval try_readback (DCC (Λ(Sort 1, `(Sort 1, Sort 1), `(Sort 1, ⊤) ∘ Fst(`(Sort 1, Sort 1))) (Sort 0)))
+open Dsl in
+#eval try_readback (DCC
+  ((Λ (Sort 1)
+      (` (Sort 1) Sort 1)
+      (Eval (Sort 1)
+            (` (Sort 1) Sort 1)
+            (` (Sort 1) (` (Sort 1) ⊤))))
+   (Sort 0)))
+
+open Dsl in
+#eval try_readback (DCC
+  ((Λ (Sort 1)
+      (` (Sort 1) Sort 1)
+      (∘ (` (Sort 1) ⊤)
+         (Fst (` (Sort 1) Sort 1))))
+   (Sort 0)))
 
 /-
 Example:
@@ -413,63 +427,64 @@ def ReadbackFold.eq (hrb₁ hrb₂ : ReadbackFold (τ_c := τ_c) f h_dom₁ e_h 
     sorry
 termination_by f.size + x.size-/
 
+open Dsl in
 inductive RedEta : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
   | sort   : RedEta (DCC? Sort m) (DCC? Sort m)
   | top    : RedEta (DCC? ⊤) (DCC? ⊤)
   | bot    : RedEta (DCC? ⊥) (DCC? ⊥)
   | tintro : RedEta (DCC? ∗) (DCC? ∗)
   | eq     : RedEta x x' → RedEta y y' → RedEta (DCC? x = y) (DCC? x' = y')
-  | refl   : RedEta B B' → RedEta env env' → RedEta x x' → RedEta (DCC? (refl(B) env x)) (DCC? (refl(B') env' x'))
-  | mkc    : RedEta B B' → RedEta x x' → RedEta y y' → RedEta (DCC? ⟦B⟧(x, y)) (DCC? ⟦B'⟧(x', y'))
-  | bang   : RedEta A A' → RedEta (DCC? !(A)) (DCC? !(A'))
-  | box    : RedEta x x' → RedEta (DCC? &(x)) (DCC? &(x'))
-  | coup   : RedEta B B' → RedEta (DCC? Coup(B)) (DCC? Coup(B'))
+  | refl   : RedEta B B' → RedEta env env' → RedEta x x' → RedEta (DCC? ((refl B) env x)) (DCC? ((refl B') env' x'))
+  | mkc    : RedEta B B' → RedEta x x' → RedEta y y' → RedEta (DCC? (,B x y)) (DCC? (,B' x' y'))
+  | bang   : RedEta A A' → RedEta (DCC? (! A)) (DCC? (! A'))
+  | box    : RedEta x x' → RedEta (DCC? (& x)) (DCC? (& x'))
+  | coup   : RedEta B B' → RedEta (DCC? (Σ B)) (DCC? (Σ B'))
   | pi     : RedEta B B'
     → RedAffNorm (DCC? (C env)) ⟨C₁, hn⟩
     → RedEta C₁ C'
     → RedEta env env'
     → Domain C τ
     → RedAffNorm (DCC? (B' env')) ⟨A, hn_A⟩
-    → RedEta (DCC? (Π(B, C) env)) (DCC? (Π(Id(τ), `(τ, C')) A))
+    → RedEta (DCC? ((Π B C) env)) (DCC? ((Π (Id τ) (`τ C')) A))
   | fn     : (h_dom : Domain f A) → (e_h : Hole A f.max_hole.succ x)
     → (hrt : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole)
     → (hrb : ReadbackFold f h_dom e_h (by grind) hrt f')
     → RedEta f f'
 
 def red_eta (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_c), RedEta e e') :=
-  match e with
+  open Dsl in match e with
   | DCC? ∗ | DCC? ⊥ | DCC? ⊤ | DCC? Sort _m => .some ⟨_, by constructor⟩
   | DCC? x = y =>
     match x.red_eta, y.red_eta with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => .some ⟨_, .eq h₁ h₂⟩
     | _, _ => .none
-  | DCC? (refl(B) env x) =>
+  | DCC? ((refl B) env x) =>
     match B.red_eta with
     | .some ⟨_, h₁⟩ =>
       match env.red_eta, x.red_eta with
       | .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ => .some ⟨_, .refl h₁ h₂ h₃⟩
       | _, _ => .none
     | .none => .none
-  | DCC? ⟦B⟧(x, y) =>
+  | DCC? (,B x y) =>
     match B.red_eta with
     | .some ⟨_, h₁⟩ =>
       match x.red_eta, y.red_eta with
       | .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ => .some ⟨_, .mkc h₁ h₂ h₃⟩
       | _, _ => .none
     | .none => .none
-  | DCC? !(A) =>
+  | DCC? (! A) =>
     match A.red_eta with
     | .some ⟨_, h⟩ => .some ⟨_, .bang h⟩
     | .none => .none
-  | DCC? Coup(B) =>
+  | DCC? (Σ B) =>
     match B.red_eta with
     | .some ⟨_, h⟩ => .some ⟨_, .coup h⟩
     | .none => .none
-  | DCC? &(x) =>
+  | DCC? (& x) =>
     match x.red_eta with
     | .some ⟨_, h⟩ => .some ⟨_, .box h⟩
     | .none => .none
-  | DCC? (Π(B, C) x) =>
+  | DCC? ((Π B C) x) =>
     match B.red_eta with
     | .some ⟨_, h₁⟩ =>
       match (reduce RedAff (DCC? (C x))).fst.red_eta with

@@ -156,7 +156,9 @@ macro_rules
   | `(gen_dsl $pre:str for $ty:term) =>
     `(command| macro $pre:str exp:gen_dcc : term => `(DCC[$ty:term] $$exp))
 
+open Dsl in
 gen_dsl "DCC" for Unit
+open Dsl in
 gen_dsl "DCC?" for ?
 
 #eval (DCC Sort 0)

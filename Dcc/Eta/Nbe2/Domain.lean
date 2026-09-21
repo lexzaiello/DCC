@@ -13,6 +13,11 @@ inductive Domain : GenericExpr τ_c → GenericExpr τ_c → Type u
 deriving Repr
 
 open Dsl in
+inductive Domain₂ : GenericExpr τ_c → GenericExpr τ_c → Type u
+  | mk : RedAffNorm (DCC? (Dom₂ x)) ⟨τ, hn_τ⟩ → Domain₂ x τ
+deriving Repr
+
+open Dsl in
 class DomDecreasing (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
   dom_decreasing (hr : r (DCC? (f x)) B) (h_dom : Domain f τ) : τ.size < f.size
 
@@ -47,12 +52,12 @@ instance : DomDecreasing (RedHead (τ_c := τ_c)) := ⟨RedHead.spine_dom_decrea
 
 open DomDecreasing
 
-instance [DomDecreasing r] : DomDecreasing (RedChoicePlus r) := ⟨fun hr h_dom =>
+instance [∀ x y, Repr (r x y)] [DomDecreasing r] : DomDecreasing (RedChoicePlus r) := ⟨fun hr h_dom =>
   match hr with
   | .single hr => dom_decreasing hr h_dom
   | .head hr _hrt => dom_decreasing hr h_dom⟩
 
-instance [DomDecreasing (m r)] : DomDecreasing (AndNorm m r) := ⟨fun h => dom_decreasing h.raw⟩
+instance [∀ x y, Repr (r x y)] [DomDecreasing (m r)] : DomDecreasing (AndNorm m r) := ⟨fun h => dom_decreasing h.raw⟩
 
 open Dsl in
 def Domain.decreasing_neq (h : Domain x τ) (hneq : ∀ ⦃y⦄, τ ≠ (DCC? (Dom y))) : τ.size < x.size :=
@@ -66,34 +71,53 @@ def Domain.is_norm (h : Domain α τ) : IsNorm RedAff τ :=
   match h with
   | ⟨_, hn⟩ => hn
 
-open Dsl in
-@[grind, dcc_force_reduce, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def domain (e : GenericExpr τ_c) : ((τ : GenericExpr τ_c) × Domain e τ) :=
-  ⟨_, ⟨aff_sound' (DCC? (Dom e))⟩⟩
+def Domain₂.is_norm (h : Domain₂ α τ) : IsNorm RedAff τ :=
+  match h with
+  | ⟨_, hn⟩ => hn
 
-@[dcc_force_reduce, aesop unsafe 50% forward (rule_sets := [DccForceReduce])]
-def Domain.complete (h : Domain e τ) : domain e = ⟨τ, h⟩ :=
+@[grind, dcc_force_reduce, aesop unsafe norm (rule_sets := [DccForceReduce])]
+def domain (e : GenericExpr τ_c) : (Σ' (τ : GenericExpr τ_c), Domain e τ) :=
+  open Dsl in ⟨_, ⟨aff_sound' (DCC? (Dom e))⟩⟩
+
+@[grind, dcc_force_reduce, aesop unsafe norm (rule_sets := [DccForceReduce])]
+def domain₂ (e : GenericExpr τ_c) : (Σ' (τ : GenericExpr τ_c), Domain₂ e τ) :=
+  open Dsl in ⟨_, ⟨aff_sound' (DCC? (Dom₂ e))⟩⟩
+
+instance : Run Id (Domain₂ (τ_c := τ_c)) := ⟨domain₂⟩
+instance : Complete' Id (Domain₂ (τ_c := τ_c)) := ⟨fun ⟨hr⟩ => by
+  have h := (hr.out_eq ▸ hr).eq
+  simp [Run.run, domain₂]
+  grind⟩
+
+instance : Run Id (Domain (τ_c := τ_c)) := ⟨domain⟩
+instance : Complete' Id (Domain (τ_c := τ_c)) := ⟨fun ⟨hr⟩ => by
+  have h := (hr.out_eq ▸ hr).eq
+  simp [Run.run, domain]
+  grind⟩
+
+/-@[dcc_force_reduce, aesop unsafe 50% forward (rule_sets := [DccForceReduce])]
+def Domain₂.complete (h : Domain₂ e τ) : domain₂ e = ⟨τ, h⟩ :=
   match h with
   | ⟨hr⟩ => by
     have h := (hr.out_eq ▸ hr).eq
-    simp [domain]
-    grind
+    simp [domain₂]
+    grind-/
 
 @[dcc_force_reduce, aesop unsafe 50% apply (rule_sets := [DccForceReduce])]
 def Domain.complete_fst (h : Domain e τ) : (domain e).fst = τ := by
-  have h := h.complete
+  let h := complete h
+  dcc_simp (! !) at h
   grind
 
-@[dcc_force_reduce, aesop unsafe 50% forward (rule_sets := [DccForceReduce])]
-def Domain.complete_snd (h : Domain e e.domain.fst) : h = e.domain.snd := by
-  dcc_aesop' [force_reduce]
-
-@[dcc_force_reduce, aesop safe apply (rule_sets := [DccForceReduce])]
-def Domain.complete_snd' (h : Domain e A) : h ≍ e.domain.snd := by
-  cases h.complete_fst
-  simp [h.complete_snd]
+instance : MaxHolePreserved (Domain (τ_c := τ_c)) := ⟨fun h =>
+  match h with
+  | ⟨⟨hr, _hn⟩⟩ => hr.max_hole_preserved⟩
 
 theorem Domain.max_hole_preserved (h : Domain x A) : A.max_hole ≤ x.max_hole :=
+  match h with
+  | ⟨⟨hr, _hn⟩⟩ => hr.max_hole_preserved
+
+theorem Domain₂.max_hole_preserved (h : Domain₂ x A) : A.max_hole ≤ x.max_hole :=
   match h with
   | ⟨⟨hr, _hn⟩⟩ => hr.max_hole_preserved
 
@@ -101,28 +125,20 @@ theorem Domain.max_hole_preserved (h : Domain x A) : A.max_hole ≤ x.max_hole :
 def domain_fst_sound (h : (domain x).fst = A) : Domain x A :=
   ⟨reduce_sound_fst h, reduce_norm_fst h⟩
 
-@[aesop unsafe 50% destruct (rule_sets := [DccForceReduce])]
-def Domain.unique (h₁ : Domain x A) (h₂ : Domain x B) : A = B := by
-  dcc_aesop' [force_reduce]
-
-@[aesop unsafe 50% destruct (rule_sets := [DccForceReduce])]
-def Domain.eq (h₁ h₂ : Domain x A) : h₁ = h₂ :=
-  match h₁ with
-  | ⟨hrt₁, hn₁⟩ =>
-    match h₂ with
-    | ⟨hrt₂, hn₂⟩ => by
-      grind
-
 open Dsl in
 def Domain.red (h : Domain x A) : RedAffReflTrans (DCC? (Dom x)) A :=
   match h with
   | ⟨hr, _⟩ => hr
 
-instance : Subsingleton (Domain x A) := ⟨fun x y => by dcc_aesop' [force_reduce]⟩
+open Dsl in
+def Domain.raw (h : Domain x A) : RedAffNorm (DCC? (Dom x)) ⟨A, h.is_norm⟩ :=
+  match h with
+  | ⟨hr⟩ => hr
 
-def Domain.eq' (h : Domain x A) : x.domain.fst = A := by
-  have h := h.complete_fst
-  grind
+open Dsl in
+def Domain₂.raw (h : Domain₂ x A) : RedAffNorm (DCC? (Dom₂ x)) ⟨A, h.is_norm⟩ :=
+  match h with
+  | ⟨hr⟩ => hr
 
 def Domain.map : Domain (DCC? (!<> x)) x.domain.fst.bang :=
   have h_dom' := (domain_fst_sound (x := x) rfl).red
@@ -203,7 +219,7 @@ def Domain.comp : Domain (DCC? (∘ f g)) g.domain.fst :=
 
 def Domain.elim_comp (h_dom : Domain (DCC? (∘ f g)) A) : Domain g A := by
   have h_dom' := Domain.comp (f := f) (g := g)
-  cases h_dom.unique h_dom'
+  cases unique h_dom h_dom'
   exact g.domain.snd
 
 open Dsl in
@@ -223,8 +239,5 @@ def Domain.quot : Domain (DCC? (`B x)) (reduce RedAff B).fst :=
 
 /-def Domain.unbox : Domain (DCC? *(A)) (DCC? !(#((reduce RedAff A).fst))) :=
   ⟨.trans (.single .unboxτ₀) (aff_mk_point' (n := 0) (reduce_sound rfl)), fun ⟨_, .coup₀ h⟩ => (reduce_norm rfl) ⟨_, h⟩⟩-/
-
-instance : Unique (Domain (τ_c := τ_c)) := ⟨Domain.unique⟩
-instance : ProofEq (Domain (τ_c := τ_c)) := ⟨Domain.eq⟩
 
 end GenericExpr

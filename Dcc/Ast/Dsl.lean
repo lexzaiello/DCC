@@ -7,6 +7,7 @@ namespace Dsl
 declare_syntax_cat gen_dcc
 
 scoped syntax "(Dom" gen_dcc ")"                              : gen_dcc
+scoped syntax "(Dom₂" gen_dcc ")"                             : gen_dcc
 syntax "(!<>" gen_dcc ")"                                     : gen_dcc
 syntax "($<>" gen_dcc ")"                                     : gen_dcc
 syntax "(*" gen_dcc ")"                                       : gen_dcc
@@ -124,6 +125,8 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "id") #[← `(DCC[$ty:gen_dcc_loc] $α)]
   | `(DCC[$ty:gen_dcc_loc] (Dom $α:gen_dcc))                           => do
     return mkApp (← field ty "dom") #[← `(DCC[$ty:gen_dcc_loc] $α)]
+  | `(DCC[$ty:gen_dcc_loc] (Dom₂ $α:gen_dcc))                           => do
+    return mkApp (← field ty "dom₂") #[← `(DCC[$ty:gen_dcc_loc] $α)]
   | `(DCC[$ty:gen_dcc_loc] (∘ $f:gen_dcc $g:gen_dcc))                  => do
     return mkApp (← field ty "comp") #[← `(DCC[$ty:gen_dcc_loc] $f:gen_dcc), ← `(DCC[$ty:gen_dcc_loc] $g:gen_dcc)]
   | `(DCC[$_ty:gen_dcc_loc] #($t:term))                              => `($t)

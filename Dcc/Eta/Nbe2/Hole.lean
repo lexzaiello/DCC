@@ -5,8 +5,7 @@ variable {τ_c : Type u}
 
 namespace GenericExpr
 
-open Dsl
-
+open Dsl in
 inductive ViewEta : GenericExpr τ_c → Type u
   | pi_type : ViewEta (DCC? ((Π f_α f_β) env))
   | pi      : ViewEta (DCC? (Π f_α f_β))
@@ -16,6 +15,7 @@ inductive ViewEta : GenericExpr τ_c → Type u
   | eq      : ViewEta (DCC? x = y)
 deriving DecidableEq
 
+open Dsl in
 @[grind, dcc_rel]
 def view_eta? (e : GenericExpr τ_c) : Option (ViewEta e) :=
   match e with
@@ -43,11 +43,13 @@ theorem ViewEta.complete_none (h : ViewEta e → False) : view_eta? e = .none :=
 theorem view_eta?_none_sound (h : view_eta? e = .none) : ViewEta e → False := fun h => by
   simp_all [h.complete]
 
+open Dsl in
 inductive ViewCoupBang : GenericExpr τ_c → Type u
   | coup    : ViewCoupBang (DCC? (Σ β))
   | bang    : ViewCoupBang (DCC? (! (Σ β)))
 deriving DecidableEq
 
+open Dsl in
 @[grind, dcc_rel]
 def view_coup_bang? (e : GenericExpr τ_c) : Option (ViewCoupBang e) :=
   match e with
@@ -71,11 +73,13 @@ theorem ViewCoupBang.complete_none (h : ViewCoupBang e → False) : view_coup_ba
 theorem view_coup_bang?_none_sound (h : view_coup_bang? e = .none) : ViewCoupBang e → False := fun h => by
   simp_all [h.complete]
 
+open Dsl in
 inductive ViewBangCoup : GenericExpr τ_c → Type u
   | coup    : ViewBangCoup (DCC? (Σ β))
   | bang    : ViewBangCoup (DCC? (! α))
 deriving DecidableEq
 
+open Dsl in
 @[grind, dcc_rel]
 def view_bang_coup? (e : GenericExpr τ_c) : Option (ViewBangCoup e) :=
   match e with
@@ -99,6 +103,7 @@ theorem ViewBangCoup.complete_none (h : ViewBangCoup e → False) : view_bang_co
 theorem view_bang_coup?_none_sound (h : view_bang_coup? e = .none) : ViewBangCoup e → False := fun h => by
   simp_all [h.complete]
 
+open Dsl in
 inductive Hole : (α : GenericExpr τ_c) → (lv : ℕ) → (hole_e : GenericExpr τ_c) → Type u
   | pure : (ViewBangCoup α → False)
     → Hole α lv (.hole lv)
@@ -108,7 +113,7 @@ inductive Hole : (α : GenericExpr τ_c) → (lv : ℕ) → (hole_e : GenericExp
     → Hole τ_snd lv hole₂
     → Hole (DCC? (Σ β)) lv (DCC? (,hole₁ hole₁ hole₂))
   | bang : Hole α lv hole₁ → Hole (DCC? (! α)) lv (DCC? (& hole₁))
-deriving DecidableEq
+deriving DecidableEq, Repr
 
 @[dcc_size]
 def Hole.size_zero (h : Hole α level hole_e) : hole_e.size = 0 := by
@@ -125,9 +130,9 @@ Use this to initialize hole in Canonicalize.
 -/
 
 @[grind]
-def mk_hole (τ : @GenericExpr τ_c) (lv : ℕ) : ((hole_e : @GenericExpr τ_c) × Hole τ lv hole_e) :=
+def mk_hole (τ : @GenericExpr τ_c) (lv : ℕ) : (Σ' (hole_e : @GenericExpr τ_c), Hole τ lv hole_e) :=
   if h_coup_some : τ.view_bang_coup?.isSome then
-    match τ, τ.view_bang_coup?.get h_coup_some with
+    open Dsl in match τ, τ.view_bang_coup?.get h_coup_some with
     | DCC? (Σ β), .coup =>
       have h_dec₀ : size (DCC? (Dom β)) < size (DCC? (Σ β)) := by grind
       have h_dec₁ := decreasing? _ (reduce RedAff (DCC? (Dom β))).snd.down
@@ -157,10 +162,10 @@ def Hole.complete (h : Hole α lv hole_e) : mk_hole α lv = ⟨hole_e, h⟩ := b
     grind
   | coup h_dom h_hole₁ hr₁ h_hole₂ heq₁ heq₂ =>
     unfold mk_hole
-    have heq₁a := (Sigma.ext_iff.mp heq₁).left
-    have heq₂a := (Sigma.ext_iff.mp heq₂).left
-    have heq₁b := (Sigma.ext_iff.mp heq₁).right
-    have heq₂b := (Sigma.ext_iff.mp heq₂).right
+    have heq₁a := (PSigma.ext_iff.mp heq₁).left
+    have heq₂a := (PSigma.ext_iff.mp heq₂).left
+    have heq₁b := (PSigma.ext_iff.mp heq₁).right
+    have heq₂b := (PSigma.ext_iff.mp heq₂).right
     simp at heq₁a
     simp at heq₂a
     simp at heq₁b
@@ -189,7 +194,7 @@ def Hole.complete_fst (h : Hole α lv hole_e) : hole_e = (mk_hole α lv).fst := 
 @[dcc_force_reduce, aesop unsafe 50% destruct (rule_sets := [DccForceReduce])]
 def Hole.complete_snd (h : Hole α lv (mk_hole α lv).fst) : h = (mk_hole α lv).snd := by
   have h := h.complete
-  have h := Sigma.ext_iff.mp h
+  have h := PSigma.ext_iff.mp h
   cases h.right
   rfl
 
@@ -235,12 +240,14 @@ def Hole.level_neq (h₁ : Hole α m x) (h₂ : Hole β n y) (hneq : m ≠ n) : 
       rename_i ih₁ ih₂ _ _ h_hole₂
       exact ih₁ (by assumption) (by grind) rfl
 
+open Dsl in
 def Hole.coup_points_neq (h : Hole A level (DCC? (,β a b))) : a ≠ b := fun heq => by
   cases h with
   | coup h_dom h_hole₁ hrt h_hole₂ =>
     cases heq
     exact h_hole₁.level_neq h_hole₂ (by grind) (by grind)
 
+open Dsl in
 def Hole.box_coup_points_neq (h : Hole A level (DCC? (& (,β a b)))) : a ≠ b := fun heq => by
   cases h with
   | bang h =>

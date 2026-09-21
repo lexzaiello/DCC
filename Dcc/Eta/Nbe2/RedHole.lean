@@ -5,8 +5,7 @@ import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
 
 universe u
-variable {τ_c : Type u}
-variable [DecidableEq τ_c]
+variable {τ_c : Type u} [DecidableEq τ_c]
 
 /-
 To η-reduce a function, track movement of the hole through the function.
@@ -136,6 +135,7 @@ inductive ViewAppHole : (f : GenericExpr τ_c)
     → (hsp : get_head hrt.raw = ⟨DCC? (Σ (C x)), ⟨.sigma⟩, .sigma⟩)
     → ViewAppHole C x lv (by simp_all [max_hole]) (by simp_all [max_hole])
     → ViewAppHole (DCC? (Σ B C)) x lv hlt hmem
+deriving Repr
 
 theorem AndNorm.head_eq (h : DSL(A →!wh⁺ C)) (hr : RedHead A B := by exact ⟨⟨by constructor⟩, by constructor⟩) : get_head h.raw = ⟨B, hr⟩ := by
   unfold get_head
@@ -347,7 +347,7 @@ def view_app_hole? (f hole₁ : GenericExpr τ_c) (lv : ℕ) (hlt : f.max_hole <
         | .some h =>
           .some (.sigma hrt hn' hrt.head_eq h)
         | .none => .none
-      | DCC? (& _x) | DCC? (Eql _B) | DCC? (!Λ _A _B _x)  | DCC? (Λ _A _B _x) | DCC? (Uncoup _x) | DCC? (Unbang _x) | DCC? (Dom _x) | DCC? Sort _m | DCC? ∗ | DCC? ⊤ | DCC? ⊥
+      | DCC? (& _x) | DCC? (Eql _B) | DCC? (!Λ _A _B _x)  | DCC? (Λ _A _B _x) | DCC? (Uncoup _x) | DCC? (Unbang _x) | DCC? (Dom₂ _x) | DCC? (Dom _x) | DCC? Sort _m | DCC? ∗ | DCC? ⊤ | DCC? ⊥
       | DCC? (_x = _y) | DCC? (refl _B) | DCC? (,_B _x _y) | DCC? (Σ _B)
       | DCC? (Π _B _C) | DCC? (! _A) | .const _n | .hole _n => False.elim (hrt.elim_norm_flse (fun hr hn => nomatch hn))
       | DCC? (a b) =>

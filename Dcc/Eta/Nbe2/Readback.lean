@@ -93,6 +93,7 @@ inductive Readback : (f : GenericExpr τ_c)
     (h_dom_B     : Domain B τ)
     → (heq       : hrt.reduction.fst = (DCC? (g x y)))
     → Readback f h_dom e_h hlt hrt (DCC? ((Eval τ B g)))
+deriving Repr
 -- TODO: ^ above curr' breaks preservation mildly will need to hook into Judge. should do this with Uncoup and match g domain
 
 /-
@@ -480,7 +481,8 @@ def Readback.complete₂ {f : GenericExpr τ_c}
       case sigma heq' =>
         expose_names
         cases (Sigma.ext_iff.mp heq'_1).left.symm.trans heq'
-        have h := h_dom_g.complete
+        have h := complete h_dom_g
+        dcc_simp (! !) at h
         grind
     case h_4 hn₁ hn₂ hn₃ =>
       exact (hn₃ _ _ (heq₀ ▸ hrt.reduction.snd) (by grind)).elim
@@ -724,8 +726,8 @@ def Readback.complete {f : GenericExpr τ_c}
         simp at heq
         cases heq.left; cases heq.right
         expose_names
-        cases fst.domain.snd.unique h_dom_B
-        cases fst.domain.snd.eq h_dom_B
+        cases unique fst.domain.snd h_dom_B
+        cases proof_eq fst.domain.snd h_dom_B
         rfl
       · grind
   case h_2 heq =>
@@ -746,14 +748,17 @@ def Readback.complete {f : GenericExpr τ_c}
         simp [ViewAppHole.reduction] at *
         grind
       case eval h_dom_B heq' =>
-        have heq_dom := h_dom_B.complete
-        have heq_dom₁ := h_dom_B.complete_fst
-        have heq_dom₂ := h_dom_B.complete_snd'
+        have heq_dom := Complete'.complete h_dom_B
+        simp [Run.run, pure] at heq_dom
+        have heq_dom₁ := complete_fst h_dom_B
+        have heq_dom₂ := complete_snd h_dom_B
         cases heq'.symm.trans h₃
         simp [ViewAppHole.readback_eval?, heq_whole', heq_dom] at heq
         cases heq_dom₁
         cases heq.left
-        simp_all [h_dom_B.complete_snd]
+        simp_all
+        rw [← heq]
+        congr!
     case h_2 heq =>
       have h₁ := readback_head_eval_none h_dom e_h hlt hrt heq
       split
@@ -900,7 +905,7 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
       have heq' := heqa.trans heqb.symm
       cases heq'
       expose_names
-      cases h_dom_B.unique h_dom₂
+      cases unique h_dom_B h_dom₂
       rfl
     case quot heq₂ =>
       let heqa := unique (heq₁ ▸ hr₃) hr₁
@@ -1027,7 +1032,7 @@ def Readback.ext (hr₁ : DSL((f x) →!wh⁺ B))
       cases heqa
       cases heqb
       cases heq'
-      cases h_dom_g.unique h_dom_g_1
+      cases unique h_dom_g h_dom_g_1
       rfl
     | pair heq₂ =>
       let heqa := unique (heq₁ ▸ hr₃) hr₁

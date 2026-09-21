@@ -33,7 +33,8 @@ inductive GenericExpr.{u} (τ : Type u) where
   | app     : GenericExpr τ  → GenericExpr τ → GenericExpr τ
   | const   : τ              → GenericExpr τ
   | dom     : GenericExpr τ  → GenericExpr τ
+  | dom₂    : GenericExpr τ  → GenericExpr τ
   | uncoup  : GenericExpr τ  → GenericExpr τ
   | unbang  : GenericExpr τ  → GenericExpr τ
   | hole    : ℕ              → GenericExpr τ
-deriving BEq, DecidableEq, Inhabited, Repr
+deriving BEq, DecidableEq, Inhabited

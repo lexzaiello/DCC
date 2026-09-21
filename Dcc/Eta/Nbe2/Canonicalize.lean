@@ -61,6 +61,7 @@ inductive ReadbackFold : (f : GenericExpr τ_c)
     → (hrt'   : ViewAppHole g' x lv hlt₂ e_h.max_hole)
     → (hrb'   : Readback g' h_dom' e_h hlt₂ hrt' f')
     → ReadbackFold f h_dom e_h hlt hrt f'
+deriving Repr
 
 def AndNorm.cases_comp (x : GenericExpr τ_c) (h : DSL(A →!wh⁺ B)) : (Σ g h, DSL(A →!wh⁺ (g (h x)))) ⊕ (PLift (∀ ⦃g h⦄, B ≠ (DCC? (g (h x))))) := by
   cases B
@@ -94,7 +95,8 @@ def assert_domain (f τ : GenericExpr τ_c) : Option (Domain f τ) :=
     else .none
 
 def Domain.assert_complete (h : Domain (τ_c := τ_c) f τ) : assert_domain f τ = .some h := by
-  have h := h.complete
+  have h := complete h
+  simp [Run.run, pure] at h
   simp [assert_domain, h]
   grind
 
@@ -207,8 +209,10 @@ def ReadbackFold.complete (h : ReadbackFold (τ_c := τ_c) f h_dom e_h hlt hrt f
       cases unique hrt' (heq_1 ▸ hrt_1.reduction.snd)
       have heq_star := RedChoiceStar.complete hr
       have heq_star' : (run_norm RedHead g).fst = g₁ := by grind
-      have heq_dom₁ := hdg.complete
-      have heq_dom₂ := h_dom'.complete
+      have heq_dom₁ := Complete'.complete hdg
+      have heq_dom₂ := Complete'.complete h_dom'
+      simp [Run.run, pure] at heq_dom₁
+      simp [Run.run, pure] at heq_dom₂
       have heq_dom_g' : g'.domain.fst = a := by grind
       subst heq_dom_g'
       subst heq_star'
@@ -428,68 +432,289 @@ def ReadbackFold.eq (hrb₁ hrb₂ : ReadbackFold (τ_c := τ_c) f h_dom₁ e_h 
 termination_by f.size + x.size-/
 
 open Dsl in
-inductive RedEta : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
-  | sort   : RedEta (DCC? Sort m) (DCC? Sort m)
-  | top    : RedEta (DCC? ⊤) (DCC? ⊤)
-  | bot    : RedEta (DCC? ⊥) (DCC? ⊥)
-  | tintro : RedEta (DCC? ∗) (DCC? ∗)
-  | eq     : RedEta x x' → RedEta y y' → RedEta (DCC? x = y) (DCC? x' = y')
-  | refl   : RedEta B B' → RedEta env env' → RedEta x x' → RedEta (DCC? ((refl B) env x)) (DCC? ((refl B') env' x'))
-  | mkc    : RedEta B B' → RedEta x x' → RedEta y y' → RedEta (DCC? (,B x y)) (DCC? (,B' x' y'))
-  | bang   : RedEta A A' → RedEta (DCC? (! A)) (DCC? (! A'))
-  | box    : RedEta x x' → RedEta (DCC? (& x)) (DCC? (& x'))
-  | coup   : RedEta B B' → RedEta (DCC? (Σ B)) (DCC? (Σ B'))
-  | pi     : RedEta B B'
+inductive Readback₂ : (f : GenericExpr τ_c) → (f' : GenericExpr τ_c) → Type u
+  -- Contains x and y
+  | curr  : (h_dom : Domain x τ₀)
+    → (e_h    : Hole τ₀ (DCC? (Λ A B x)).max_hole.succ (DCC? (,B₀ x₀ y₀)))
+    → (hrt    : ViewAppHole x (DCC? (,B₀ x₀ y₀)) (DCC? (Λ A B x)).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb    : ReadbackFold (lv := (DCC? (Λ A B x)).max_hole.succ) (f := x) (f' := f') h_dom' (x := (DCC? (,B₀ x₀ y₀))) e_h (by grind) hrt)
+    -- This is handled by Id instead of curry eval
+    → (hneq   : hrt.reduction.fst ≠ (DCC? (x₀ y₀)))
+    → (hrτ_y  : RedAffNorm (DCC? (B x₀)) ⟨τ_y, hn⟩)
+    -- This is handled by quotation
+    → (hgt    : (¬ hrt.reduction.fst.max_hole < (DCC? (Λ A B x)).max_hole.succ) ∨ (x₀.max_hole ≤ τ_y.max_hole))
+    → Readback₂ (DCC? (Λ A B x)) (DCC? (Λ A B f'))
+  -- Is exactly x y
+  | id    : (h_dom : Domain x τ₀)
+    → (e_h     : Hole τ₀ (DCC? (Λ A B x)).max_hole.succ (DCC? (,B₀ x₀ y₀)))
+    → (hrt     : ViewAppHole x (DCC? (,B₀ x₀ y₀)) (DCC? (Λ A B x)).max_hole.succ (by grind) e_h.max_hole)
+    → (heq     : hrt.reduction.fst = (DCC? (x₀ y₀)))
+    -- This is handled by quotation
+    → (h_dom_B : Domain B A')
+    → Readback₂ (DCC? (Λ A B x)) (DCC? (Id A'))
+  | quot  : (h_dom : Domain x τ₀)
+    → (e_h     : Hole τ₀ (DCC? (Λ A B x)).max_hole.succ (DCC? (,B₀ x₀ y₀)))
+    → (hrt     : ViewAppHole x (DCC? (,B₀ x₀ y₀)) (DCC? (Λ A B x)).max_hole.succ (by grind) e_h.max_hole)
+    → (hgt     : hrt.reduction.fst.max_hole < (DCC? (Λ A B x)).max_hole.succ)
+    → (hrτ_y   : RedAffNorm (DCC? (B x₀)) ⟨τ_y, hn⟩)
+    → (hmem_τy : ¬ x₀.max_hole ≤ τ_y.max_hole)
+    → (h_dom_B : Domain B A')
+    → Readback₂ (DCC? (Λ A B x)) (DCC? (`A (` τ_y hrt.reduction.fst)))
+  | curr' : (h_dom : Domain x τ₀)
+    → (e_h    : Hole τ₀ (DCC? (!Λ A B x)).max_hole.succ (DCC? (& (,B₀ x₀ y₀))))
+    → (hrt    : ViewAppHole x (DCC? (& (,B₀ x₀ y₀))) (DCC? (!Λ A B x)).max_hole.succ (by grind) e_h.max_hole)
+    → (hrb    : ReadbackFold (lv := (DCC? (!Λ A B x)).max_hole.succ) (f := x) (f' := f') h_dom' (x := (DCC? (& (,B₀ x₀ y₀)))) e_h (by grind) hrt)
+    -- This is handled by Id instead of curry eval
+    → (hrτ_y  : RedAffNorm (DCC? (B x₀)) ⟨τ_y, hn⟩)
+    -- This is handled by quotation
+    → (hgt    : (¬ hrt.reduction.fst.max_hole < (DCC? (!Λ A B x)).max_hole.succ) ∨ (x₀.max_hole ≤ τ_y.max_hole))
+    → Readback₂ (DCC? (!Λ A B x)) (DCC? (!Λ A B f'))
+  | quot' : (h_dom : Domain x τ₀)
+    → (e_h     : Hole τ₀ (DCC? (!Λ A B x)).max_hole.succ (DCC? (& (,B₀ x₀ y₀))))
+    → (hrt     : ViewAppHole x (DCC? (& (,B₀ x₀ y₀))) (DCC? (!Λ A B x)).max_hole.succ (by grind) e_h.max_hole)
+    → (hgt     : hrt.reduction.fst.max_hole < (DCC? (!Λ A B x)).max_hole.succ)
+    → (hrτ_y   : RedAffNorm (DCC? (B x₀)) ⟨τ_y, hn⟩)
+    → (hmem_τy : ¬ x₀.max_hole ≤ τ_y.max_hole)
+    → (h_dom_B : Domain B A')
+    → Readback₂ (DCC? (!Λ A B x)) (DCC? (`(! A) (` (! τ_y) hrt.reduction.fst)))
+deriving Repr
+
+def readback₂ (f : GenericExpr τ_c) : Option (Σ' (f' : GenericExpr τ_c), Readback₂ f f') :=
+  match f with
+  | DCC? (Λ A B x) =>
+    let A'    := x.domain.fst
+    let h_dom := x.domain.snd
+    match mk_hole A' (DCC? (Λ A B x)).max_hole.succ with
+    | ⟨DCC? (,B₀ x₀ y₀), e_h⟩ =>
+      match view_app_hole? x (DCC? (,B₀ x₀ y₀)) (DCC? (Λ A B x)).max_hole.succ (by grind) e_h.max_hole with
+      | .some hrt =>
+        if heq : hrt.reduction.fst = (DCC? (x₀ y₀)) then
+          .some ⟨_, .id h_dom e_h hrt heq B.domain.snd⟩
+        else if hgt : hrt.reduction.fst.max_hole < (DCC? (Λ A B x)).max_hole.succ ∧ (¬ x₀.max_hole ≤ (reduce RedAff (DCC? (B x₀))).fst.max_hole) then
+          .some ⟨_, .quot h_dom e_h hrt hgt.left ⟨reduce_sound rfl, reduce_norm rfl⟩ hgt.right B.domain.snd⟩
+        else
+          match readback_fold h_dom e_h (by grind) hrt with
+          | .some ⟨_, hrb⟩ => .some ⟨_, .curr h_dom e_h hrt hrb (by grind) ⟨reduce_sound rfl, reduce_norm rfl⟩ (by grind)⟩
+          | .none => .none
+      | .none => .none
+    | _ => .none
+  | DCC? (!Λ A B x) =>
+    let A'    := x.domain.fst
+    let h_dom := x.domain.snd
+    match mk_hole A' (DCC? (!Λ A B x)).max_hole.succ with
+    | ⟨DCC? (& (,B₀ x₀ y₀)), e_h⟩ =>
+      match view_app_hole? x (DCC? (& (,B₀ x₀ y₀))) (DCC? (!Λ A B x)).max_hole.succ (by grind) e_h.max_hole with
+      | .some hrt =>
+        if hgt : hrt.reduction.fst.max_hole < (DCC? (!Λ A B x)).max_hole.succ ∧ (¬ x₀.max_hole ≤ (reduce RedAff (DCC? (B x₀))).fst.max_hole) then
+          .some ⟨_, .quot' h_dom e_h hrt hgt.left ⟨reduce_sound rfl, reduce_norm rfl⟩ hgt.right B.domain.snd⟩
+        else
+          match readback_fold h_dom e_h (by grind) hrt with
+          | .some ⟨_, hrb⟩ => .some ⟨_, .curr' h_dom e_h hrt hrb ⟨reduce_sound rfl, reduce_norm rfl⟩ (by grind)⟩
+          | .none => .none
+      | .none => .none
+    | _ => .none
+  | _ => .none
+
+def Readback₂.complete (h : Readback₂ (τ_c := τ_c) f f') : readback₂ f = .some ⟨f', h⟩ := by
+  unfold readback₂
+  cases h with
+  | quot' h_dom e_h hrt hgt hrτ_y hmem_τy h_dom_B =>
+    have h₁ := Complete'.complete h_dom
+    have h₁_fst := complete_fst h_dom
+    have h₂ := e_h.complete
+    have h₃ := hrτ_y.complete
+    have h₄ := hrt.complete
+    have h₅ := Complete'.complete h_dom_B
+    simp [Run.run, pure] at h₁
+    simp [Run.run] at h₁_fst
+    simp [Run.run, pure] at h₅
+    cases h₁_fst
+    cases h₅
+    simp [h₂, h₄]
+    expose_names
+    simp [hgt]
+    simp [red_aff] at h₃
+    cases h₃
+    replace hmem_τy : (reduce RedAff (B.app x₀)).fst.max_hole < x₀.max_hole := by
+      grind
+    simp [hmem_τy]
+    unfold GenericExpr.domain
+    simp
+    cases hrτ_y.eq
+    exact ⟨by apply proof_eq, rfl⟩
+  | quot h_dom e_h hrt hgt hrτ_y hmem_τy h_dom_B =>
+    have h₁ := Complete'.complete h_dom
+    have h₁_fst := complete_fst h_dom
+    have h₂ := e_h.complete
+    have h₃ := hrτ_y.complete
+    have h₄ := hrt.complete
+    have h₅ := Complete'.complete h_dom_B
+    simp [Run.run, pure] at h₁
+    simp [Run.run] at h₁_fst
+    simp [Run.run, pure] at h₅
+    cases h₁_fst
+    cases h₅
+    simp [h₂, h₄]
+    expose_names
+    have hneq : hrt.reduction.fst ≠ x₀.app y₀ := fun h => by
+      have h := e_h.max_hole
+      grind
+    simp [hneq, hgt]
+    simp [red_aff] at h₃
+    cases h₃
+    replace hmem_τy : (reduce RedAff (B.app x₀)).fst.max_hole < x₀.max_hole := by
+      grind
+    simp [hmem_τy]
+    unfold GenericExpr.domain
+    simp
+    cases hrτ_y.eq
+    exact ⟨by apply proof_eq, rfl⟩
+  | id h_dom e_h hrt heq h_dom_B =>
+    have h₁ := Complete'.complete h_dom
+    have h₁_fst := complete_fst h_dom
+    have h₂ := e_h.complete
+    have h₃ := hrt.complete
+    have h₄ := Complete'.complete h_dom_B
+    simp [Run.run, pure] at h₁
+    simp [Run.run] at h₁_fst
+    simp [Run.run, pure] at h₄
+    cases h₁_fst
+    cases h₄
+    simp [h₂, h₃, heq]
+    unfold GenericExpr.domain
+    simp
+    apply proof_eq
+  | curr h_dom e_h hrt hrb hneq hrτ_y hgt =>
+    have h₁ := Complete'.complete h_dom
+    have h₁_fst := complete_fst h_dom
+    have h₂ := e_h.complete
+    have h₃ := hrt.complete
+    have h₄ := hrτ_y.complete_fst
+    have h₅ := hrb.complete
+    simp [Run.run, pure] at h₁
+    simp [Run.run] at h₁_fst
+    cases h₁_fst
+    cases h₄
+    simp [h₂, h₃, hneq]
+    expose_names
+    cases proof_eq h_dom' h_dom
+    cases hrτ_y.eq
+    cases proof_eq x.domain.snd h_dom'
+    match hgt with
+    | .inl h =>
+      simp [h, h₅]
+      rfl
+    | .inr h =>
+      split
+      · grind
+      case isFalse =>
+        simp [h₅]
+        rfl
+  | curr' h_dom e_h hrt hrb hrτ_y hgt =>
+    have h₁ := Complete'.complete h_dom
+    have h₁_fst := complete_fst h_dom
+    have h₂ := e_h.complete
+    have h₃ := hrt.complete
+    have h₄ := hrτ_y.complete_fst
+    have h₅ := hrb.complete
+    simp [Run.run, pure] at h₁
+    simp [Run.run] at h₁_fst
+    simp
+    cases h₁_fst
+    cases h₄
+    simp [h₂, h₃]
+    expose_names
+    cases proof_eq h_dom' h_dom
+    cases hrτ_y.eq
+    cases proof_eq x.domain.snd h_dom'
+    match hgt with
+    | .inl h =>
+      simp [h, h₅]
+      rfl
+    | .inr h =>
+      split
+      · grind
+      case isFalse =>
+        simp [h₅]
+        rfl
+
+open Dsl in
+inductive Canonicalize : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
+  | sort   : Canonicalize (DCC? Sort m) (DCC? Sort m)
+  | top    : Canonicalize (DCC? ⊤) (DCC? ⊤)
+  | bot    : Canonicalize (DCC? ⊥) (DCC? ⊥)
+  | tintro : Canonicalize (DCC? ∗) (DCC? ∗)
+  | eq     : Canonicalize x x' → Canonicalize y y' → Canonicalize (DCC? x = y) (DCC? x' = y')
+  | refl₂  : Canonicalize B B' → Canonicalize env env' → Canonicalize x x' → Canonicalize (DCC? ((refl B) env x)) (DCC? ((refl B') env' x'))
+  | refl   : Canonicalize B B' → Canonicalize (DCC? (refl B)) (DCC? (refl B'))
+  | eql    : Canonicalize B B' → Canonicalize (DCC? (Eql B)) (DCC? (Eql B'))
+  | mkc    : Canonicalize B B' → Canonicalize x x' → Canonicalize y y' → Canonicalize (DCC? (,B x y)) (DCC? (,B' x' y'))
+  | bang   : Canonicalize A A' → Canonicalize (DCC? (! A)) (DCC? (! A'))
+  | box    : Canonicalize x x' → Canonicalize (DCC? (& x)) (DCC? (& x'))
+  | coup   : Canonicalize B B' → Canonicalize (DCC? (Σ B)) (DCC? (Σ B'))
+  | pi     : Canonicalize B B'
     → RedAffNorm (DCC? (C env)) ⟨C₁, hn⟩
-    → RedEta C₁ C'
-    → RedEta env env'
+    → Canonicalize C₁ C'
+    → Canonicalize env env'
     → Domain C τ
     → RedAffNorm (DCC? (B' env')) ⟨A, hn_A⟩
-    → RedEta (DCC? ((Π B C) env)) (DCC? ((Π (Id τ) (`τ C')) A))
+    → Canonicalize (DCC? ((Π B C) env)) (DCC? ((Π (Id τ) (`τ C')) A))
+  | pi₀    : Canonicalize B B' → Canonicalize C C' → Canonicalize (DCC? (Π B C)) (DCC? (Π B' C'))
   | fn     : (h_dom : Domain f A) → (e_h : Hole A f.max_hole.succ x)
     → (hrt : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole)
     → (hrb : ReadbackFold f h_dom e_h (by grind) hrt f')
-    → RedEta f f'
+    → Canonicalize f f'
+  | fn₂    : (h_dom : Domain f A) → (e_h : Hole A f.max_hole.succ x)
+    → (hrt : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole → False)
+    → (hrb : Readback₂ f f')
+    → Canonicalize f f'
+  -- In this case, (f x) must be congruence
+deriving Repr
 
-def red_eta (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_c), RedEta e e') :=
+def canonicalize (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_c), Canonicalize e e') :=
   open Dsl in match e with
   | DCC? ∗ | DCC? ⊥ | DCC? ⊤ | DCC? Sort _m => .some ⟨_, by constructor⟩
   | DCC? x = y =>
-    match x.red_eta, y.red_eta with
+    match x.canonicalize, y.canonicalize with
     | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => .some ⟨_, .eq h₁ h₂⟩
     | _, _ => .none
   | DCC? ((refl B) env x) =>
-    match B.red_eta with
+    match B.canonicalize with
     | .some ⟨_, h₁⟩ =>
-      match env.red_eta, x.red_eta with
-      | .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ => .some ⟨_, .refl h₁ h₂ h₃⟩
+      match env.canonicalize, x.canonicalize with
+      | .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ => .some ⟨_, .refl₂ h₁ h₂ h₃⟩
       | _, _ => .none
     | .none => .none
   | DCC? (,B x y) =>
-    match B.red_eta with
+    match B.canonicalize with
     | .some ⟨_, h₁⟩ =>
-      match x.red_eta, y.red_eta with
+      match x.canonicalize, y.canonicalize with
       | .some ⟨_, h₂⟩, .some ⟨_, h₃⟩ => .some ⟨_, .mkc h₁ h₂ h₃⟩
       | _, _ => .none
     | .none => .none
   | DCC? (! A) =>
-    match A.red_eta with
+    match A.canonicalize with
     | .some ⟨_, h⟩ => .some ⟨_, .bang h⟩
     | .none => .none
   | DCC? (Σ B) =>
-    match B.red_eta with
+    match B.canonicalize with
     | .some ⟨_, h⟩ => .some ⟨_, .coup h⟩
     | .none => .none
   | DCC? (& x) =>
-    match x.red_eta with
+    match x.canonicalize with
     | .some ⟨_, h⟩ => .some ⟨_, .box h⟩
     | .none => .none
+  | DCC? (Π B C) =>
+    match B.canonicalize, C.canonicalize with
+    | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+      .some ⟨_, .pi₀ h₁ h₂⟩
+    | _, _ => .none
   | DCC? ((Π B C) x) =>
-    match B.red_eta with
+    match B.canonicalize with
     | .some ⟨_, h₁⟩ =>
-      match (reduce RedAff (DCC? (C x))).fst.red_eta with
+      match (reduce RedAff (DCC? (C x))).fst.canonicalize with
       | .some ⟨_, h₂⟩ =>
-        match x.red_eta with
+        match x.canonicalize with
         | .some ⟨_, h₃⟩ =>
           .some ⟨_, .pi h₁ ⟨reduce_sound rfl, reduce_norm rfl⟩ h₂ h₃ C.domain.snd ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
         | .none => .none
@@ -507,22 +732,22 @@ def red_eta (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_c), RedEta
 termination_by (e.size, sizeOf e)
 decreasing_by any_goals (grind)
 
-def RedEta.complete (h : RedEta (τ_c := τ_c) e e') : red_eta e = .some ⟨e', h⟩ := by
+def Canonicalize.complete (h : Canonicalize (τ_c := τ_c) e e') : canonicalize e = .some ⟨e', h⟩ := by
   induction h with
-  | coup | box | bang | mkc | refl | eq | top | bot | tintro | sort => simp_all [red_eta]
+  | pi₀ | coup | box | bang | mkc | refl₂ | eq | top | bot | tintro | sort => simp_all [canonicalize]
   | pi hr_B hr_env_C hr_C hr_env h_dom hrid =>
     have heq  := hr_env_C.complete_fst
     have heq₁ := hrid.complete_fst
-    have heq₂ := h_dom.complete
+    have heq₂ := Complete'.complete h_dom
     cases heq.symm
     cases heq₁.symm
     expose_names
-    simp_all [red_eta, hr_env_C.eq, hrid.eq]
+    simp_all [canonicalize, hr_env_C.eq, hrid.eq]
     cases unique C.domain.snd h_dom
     simp [proof_eq C.domain.snd h_dom]
     constructor <;> apply RedAffNorm.eq
   | fn h_dom e_h hrt hrb =>
-    unfold red_eta
+    unfold canonicalize
     split
     any_goals (
       focus
@@ -532,15 +757,23 @@ def RedEta.complete (h : RedEta (τ_c := τ_c) e e') : red_eta e = .some ⟨e', 
         cases elim_norm (fun _ ⟨_, h⟩ => by cases h) hrt
         grind)
       done)
-    case h_12 =>
+    case h_13 =>
       expose_names
-      have h₁ := h_dom.complete
+      have h₁ := Complete'.complete h_dom
+      simp [Run.run, pure] at h₁
       have h₂ := e_h.complete
       have h₃ := hrt.complete
       have h₄ := hrb.complete
       grind
 
-instance : Run Option (RedEta (τ_c := τ_c)) := ⟨red_eta⟩
-instance : Complete' Option (RedEta (τ_c := τ_c)) := ⟨RedEta.complete⟩
+instance [Repr τ_c] : Repr (Σ' (B : GenericExpr τ_c), Canonicalize A B) := ⟨fun ⟨B, x⟩ =>
+  Repr.addAppParen s!"PSigma.mk {repr B} {repr x}"⟩
+
+instance : Run Option (Canonicalize (τ_c := τ_c)) := ⟨canonicalize⟩
+instance : Complete' Option (Canonicalize (τ_c := τ_c)) := ⟨Canonicalize.complete⟩
+
+-- ((Π (Id Sort 0) (`Sort 0 (Π (Id ⊤) (Λ ⊤ (Id ⊤) (`(Σ (Id ⊤)) (Sort 2)))))) ⊤)
+open Dsl in
+#eval canonicalize (DCC ((Π (Id Sort 0) (`Sort 0 (Π (Id ⊤) (Λ ⊤ (Id ⊤) (`(Σ (Id ⊤)) (Sort 2)))))) ⊤))
 
 end GenericExpr

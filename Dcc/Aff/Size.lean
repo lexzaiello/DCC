@@ -20,6 +20,7 @@ namespace GenericExpr
 def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   match e with
   | DCC[.] (Dom x) => x.size
+  | DCC[.] (Dom₂ x) => x.size * 2
   | DCC[.] (Unbang x) => x.size
   | DCC[.] (Uncoup x) => x.size
   | DCC[.] ∗ => 1
@@ -56,6 +57,7 @@ def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
 def head_arity.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   match e with
   | DCC[.] (Dom _x) => 0
+  | DCC[.] (Dom₂ _x) => 0
   | DCC[.] (Uncoup _x) => 0
   | DCC[.] (Unbang _x) => 0
   | DCC[.] ∗

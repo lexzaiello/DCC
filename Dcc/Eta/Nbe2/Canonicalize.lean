@@ -822,25 +822,25 @@ instance : Complete' Option (Canonicalize (τ_c := τ_c)) := ⟨Canonicalize.com
 open Dsl in
 #eval canonicalize (DCC ((Π (Id Sort 0) (`Sort 0 (Π (Id ⊤) (Λ ⊤ (` ⊤ (Sort 1)) (`(Σ (` ⊤ (Sort 1))) (Sort 2)))))) ⊤))
 
-inductive CanonicalizeTree : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
-  | canon₀ : (h_ar : point_arity e = 0) → (hc  : Canonicalize e e') → CanonicalizeTree e e'
-  | canon₁ : (h_ar : point_arity e = 1) → (hc₁ : CanonicalizeTree (points e)[0] p')
+inductive RedEta : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
+  | canon₀ : (h_ar : point_arity e = 0) → (hc  : Canonicalize e e') → RedEta e e'
+  | canon₁ : (h_ar : point_arity e = 1) → (hc₁ : RedEta (points e)[0] p')
     → Canonicalize (set_points e ⟨#[p'], by grind⟩) e'
-    → CanonicalizeTree e e'
+    → RedEta e e'
   | canon₂ : (h_ar : point_arity e = 2)
-    → (hc₁ : CanonicalizeTree (points e)[0] p'₁)
-    → (hc₂ : CanonicalizeTree (points e)[1] p'₂)
+    → (hc₁ : RedEta (points e)[0] p'₁)
+    → (hc₂ : RedEta (points e)[1] p'₂)
     → Canonicalize (set_points e ⟨#[p'₁, p'₂], by grind⟩) e'
-    → CanonicalizeTree e e'
+    → RedEta e e'
   | canon₃ : (h_ar : point_arity e = 3)
-    → (hc₁ : CanonicalizeTree (points e)[0] p'₁)
-    → (hc₂ : CanonicalizeTree (points e)[1] p'₂)
-    → (hc₃ : CanonicalizeTree (points e)[2] p'₃)
+    → (hc₁ : RedEta (points e)[0] p'₁)
+    → (hc₂ : RedEta (points e)[1] p'₂)
+    → (hc₃ : RedEta (points e)[2] p'₃)
     → Canonicalize (set_points e ⟨#[p'₁, p'₂, p'₃], by grind⟩) e'
-    → CanonicalizeTree e e'
+    → RedEta e e'
 deriving Repr
 
-def canonicalize_tree (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_c), CanonicalizeTree e e') :=
+def red_eta (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_c), RedEta e e') :=
   if heq : point_arity e = 0 then
     match canonicalize e with
     | .some ⟨_, h⟩ => .some ⟨_, .canon₀ heq h⟩
@@ -849,7 +849,7 @@ def canonicalize_tree (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_
     have h_dec : sizeOf (points e)[0] < sizeOf e := by
       simp [points]
       split <;> grind
-    match canonicalize_tree (points e)[0] with
+    match red_eta (points e)[0] with
     | .some ⟨p', h₁⟩ =>
       match canonicalize (set_points e ⟨#[p'], by grind⟩) with
       | .some ⟨_, h₂⟩ =>
@@ -863,9 +863,9 @@ def canonicalize_tree (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_
     have h_dec₂ : sizeOf (points e)[1] < sizeOf e := by
       simp [points]
       split <;> grind
-    match canonicalize_tree (points e)[0] with
+    match red_eta (points e)[0] with
     | .some ⟨p'₁, h₁⟩ =>
-      match canonicalize_tree (points e)[1] with
+      match red_eta (points e)[1] with
       | .some ⟨p'₂, h₂⟩ =>
         match canonicalize (set_points e ⟨#[p'₁, p'₂], by grind⟩) with
         | .some ⟨_, h₃⟩ =>
@@ -883,11 +883,11 @@ def canonicalize_tree (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_
     have h_dec₃ : sizeOf (points e)[2] < sizeOf e := by
       simp [points]
       split <;> grind
-    match canonicalize_tree (points e)[0] with
+    match red_eta (points e)[0] with
     | .some ⟨p'₁, h₁⟩ =>
-      match canonicalize_tree (points e)[1] with
+      match red_eta (points e)[1] with
       | .some ⟨p'₂, h₂⟩ =>
-        match canonicalize_tree (points e)[2] with
+        match red_eta (points e)[2] with
         | .some ⟨p'₃, h₃⟩ =>
           match canonicalize (set_points e ⟨#[p'₁, p'₂, p'₃], by grind⟩) with
           | .some ⟨_, h₄⟩ =>
@@ -899,27 +899,33 @@ def canonicalize_tree (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_
   else .none
 termination_by sizeOf e
 
-def CanonicalizeTree.complete (h : CanonicalizeTree (τ_c := τ_c) e e') : canonicalize_tree e = .some ⟨e', h⟩ := by
+def RedEta.complete (h : RedEta (τ_c := τ_c) e e') : red_eta e = .some ⟨e', h⟩ := by
   induction h with
   | canon₀ h_ar hc =>
     have hc' := Complete'.complete hc
     simp [Run.run, pure] at hc'
-    simp [canonicalize_tree, h_ar, hc']
+    simp [red_eta, h_ar, hc']
   | canon₁ h_ar ih₁ hc ih_heq =>
     have hc' := Complete'.complete hc
     simp [Run.run, pure] at hc'
-    simp [canonicalize_tree, h_ar, hc', ih_heq]
+    simp [red_eta, h_ar, hc', ih_heq]
   | canon₂ h_ar ih₁ ih₂ hc ih_heq ih_heq₂ =>
     have hc' := Complete'.complete hc
     simp [Run.run, pure] at hc'
-    simp [canonicalize_tree, h_ar, hc', ih_heq, ih_heq₂]
+    simp [red_eta, h_ar, hc', ih_heq, ih_heq₂]
   | canon₃ h_ar ih₁ ih₂ ih₃ hc ih_heq ih_heq₂ ih_heq₃ =>
     have hc' := Complete'.complete hc
     simp [Run.run, pure] at hc'
-    simp [canonicalize_tree, h_ar, hc', ih_heq, ih_heq₂, ih_heq₃]
+    simp [red_eta, h_ar, hc', ih_heq, ih_heq₂, ih_heq₃]
 
-instance : Run Option (CanonicalizeTree (τ_c := τ_c)) := ⟨canonicalize_tree⟩
-instance : Complete' Option (CanonicalizeTree (τ_c := τ_c)) := ⟨CanonicalizeTree.complete⟩
+instance [Repr τ_c] : Repr (Σ' (B : GenericExpr τ_c), RedEta A B) := ⟨fun ⟨B, x⟩ =>
+  Repr.addAppParen s!"PSigma.mk {repr B} ({repr x})"⟩
+
+open Dsl in
+#eval red_eta (DCC ((Π (Id Sort 0) (`Sort 0 (Π (Id ⊤) (Λ ⊤ (` ⊤ (Sort 1)) (`(Σ (` ⊤ (Sort 1))) (Sort 2)))))) ⊤))
+
+instance : Run Option (RedEta (τ_c := τ_c)) := ⟨red_eta⟩
+instance : Complete' Option (RedEta (τ_c := τ_c)) := ⟨RedEta.complete⟩
 
 end GenericExpr
 

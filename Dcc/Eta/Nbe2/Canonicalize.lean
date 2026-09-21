@@ -813,13 +813,13 @@ def Canonicalize.complete (h : Canonicalize (τ_c := τ_c) e e') : canonicalize 
       grind
 
 instance [Repr τ_c] : Repr (Σ' (B : GenericExpr τ_c), Canonicalize A B) := ⟨fun ⟨B, x⟩ =>
-  Repr.addAppParen s!"PSigma.mk {repr B} {repr x}"⟩
+  Repr.addAppParen s!"PSigma.mk {repr B} ({repr x})"⟩
 
 instance : Run Option (Canonicalize (τ_c := τ_c)) := ⟨canonicalize⟩
 instance : Complete' Option (Canonicalize (τ_c := τ_c)) := ⟨Canonicalize.complete⟩
 
 -- ((Π (Id Sort 0) (`Sort 0 (Π (Id ⊤) (Λ ⊤ (Id ⊤) (`(Σ (Id ⊤)) (Sort 2)))))) ⊤)
 open Dsl in
-#eval canonicalize (DCC ((Π (Id Sort 0) (`Sort 0 (Π (Id ⊤) (Λ ⊤ (Id ⊤) (`(Σ (Id ⊤)) (Sort 2)))))) ⊤))
+#eval canonicalize (DCC ((Π (Id Sort 0) (`Sort 0 (Π (Id ⊤) (Λ ⊤ (` ⊤ (Sort 1)) (`(Σ (` ⊤ (Sort 1))) (Sort 2)))))) ⊤))
 
 end GenericExpr

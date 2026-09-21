@@ -638,6 +638,9 @@ def Readback₂.complete (h : Readback₂ (τ_c := τ_c) f f') : readback₂ f =
         simp [h₅]
         rfl
 
+instance : Run Option (Readback₂ (τ_c := τ_c)) := ⟨readback₂⟩
+instance : Complete' Option (Readback₂ (τ_c := τ_c)) := ⟨Readback₂.complete⟩
+
 open Dsl in
 inductive Canonicalize : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
   | sort   : Canonicalize (DCC? Sort m) (DCC? Sort m)
@@ -665,7 +668,7 @@ inductive Canonicalize : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → 
     → (hrb : ReadbackFold f h_dom e_h (by grind) hrt f')
     → Canonicalize f f'
   | fn₂    : (h_dom : Domain f A) → (e_h : Hole A f.max_hole.succ x)
-    → (hrt : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole → False)
+    → (hn  : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole → False)
     → (hrb : Readback₂ f f')
     → Canonicalize f f'
   -- In this case, (f x) must be congruence
@@ -720,21 +723,64 @@ def canonicalize (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_c), C
         | .none => .none
       | .none => .none
     | .none => .none
+  | DCC? (refl B) =>
+    match B.canonicalize with
+    | .some ⟨_, h⟩ => .some ⟨_, .refl h⟩
+    | .none => .none
+  | DCC? (Eql B) =>
+    match B.canonicalize with
+    | .some ⟨_, h⟩ => .some ⟨_, .eql h⟩
+    | .none => .none
   | f =>
     let h_dom := f.domain.snd
     let ⟨x, e_h⟩ := mk_hole f.domain.fst f.max_hole.succ
-    match view_app_hole? f x f.max_hole.succ (by grind) e_h.max_hole with
+    match heq : view_app_hole? f x f.max_hole.succ (by grind) e_h.max_hole with
     | .some h =>
       match readback_fold h_dom e_h (by grind) h with
       | .some ⟨_, hrb⟩ => .some ⟨_, .fn h_dom e_h h hrb⟩
       | .none => .none
-    | .none => .none
+    | .none =>
+      have hn : f.ViewAppHole x f.max_hole.succ (by grind) e_h.max_hole → False := by
+        intro h
+        simp_all [h.complete]
+      match readback₂ f with
+      | .some ⟨_, hrb⟩ =>
+        .some ⟨_, .fn₂ h_dom e_h hn hrb⟩
+      | .none => .none
 termination_by (e.size, sizeOf e)
 decreasing_by any_goals (grind)
 
 def Canonicalize.complete (h : Canonicalize (τ_c := τ_c) e e') : canonicalize e = .some ⟨e', h⟩ := by
   induction h with
-  | pi₀ | coup | box | bang | mkc | refl₂ | eq | top | bot | tintro | sort => simp_all [canonicalize]
+  | fn₂ h_dom e_h hn hrb =>
+    have h₁ := Complete'.complete h_dom
+    have h₂ := e_h.complete_fst
+    have h₀ := e_h.complete
+    expose_names
+    have h₃ : f.view_app_hole? x f.max_hole.succ (by grind) e_h.max_hole = .none := by
+      apply Option.eq_none_iff_forall_ne_some.mpr
+      intro h
+      cases hn h
+    have h₄ := Complete'.complete hrb
+    simp [Run.run, pure] at h₁
+    simp [Run.run, pure] at h₄
+    unfold canonicalize
+    split
+    any_goals (
+      focus
+      simp [readback₂] at h₄
+      done)
+    case h_15 =>
+      expose_names
+      cases h₁
+      simp [domain]
+      split
+      case h_1 =>
+        cases h₂
+        grind
+      · simp [h₄, h₂]
+        grind
+  | eql | refl | pi₀ | coup | box | bang | mkc | refl₂ | eq | top | bot | tintro | sort => simp_all [canonicalize]
   | pi hr_B hr_env_C hr_C hr_env h_dom hrid =>
     have heq  := hr_env_C.complete_fst
     have heq₁ := hrid.complete_fst
@@ -757,7 +803,7 @@ def Canonicalize.complete (h : Canonicalize (τ_c := τ_c) e e') : canonicalize 
         cases elim_norm (fun _ ⟨_, h⟩ => by cases h) hrt
         grind)
       done)
-    case h_13 =>
+    case h_15 =>
       expose_names
       have h₁ := Complete'.complete h_dom
       simp [Run.run, pure] at h₁

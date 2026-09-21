@@ -822,4 +822,113 @@ instance : Complete' Option (Canonicalize (τ_c := τ_c)) := ⟨Canonicalize.com
 open Dsl in
 #eval canonicalize (DCC ((Π (Id Sort 0) (`Sort 0 (Π (Id ⊤) (Λ ⊤ (` ⊤ (Sort 1)) (`(Σ (` ⊤ (Sort 1))) (Sort 2)))))) ⊤))
 
+inductive CanonicalizeTree : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
+  | canon₀ : (h_ar : point_arity e = 0) → (hc  : Canonicalize e e') → CanonicalizeTree e e'
+  | canon₁ : (h_ar : point_arity e = 1) → (hc₁ : CanonicalizeTree (points e)[0] p')
+    → Canonicalize (set_points e ⟨#[p'], by grind⟩) e'
+    → CanonicalizeTree e e'
+  | canon₂ : (h_ar : point_arity e = 2)
+    → (hc₁ : CanonicalizeTree (points e)[0] p'₁)
+    → (hc₂ : CanonicalizeTree (points e)[1] p'₂)
+    → Canonicalize (set_points e ⟨#[p'₁, p'₂], by grind⟩) e'
+    → CanonicalizeTree e e'
+  | canon₃ : (h_ar : point_arity e = 3)
+    → (hc₁ : CanonicalizeTree (points e)[0] p'₁)
+    → (hc₂ : CanonicalizeTree (points e)[1] p'₂)
+    → (hc₃ : CanonicalizeTree (points e)[2] p'₃)
+    → Canonicalize (set_points e ⟨#[p'₁, p'₂, p'₃], by grind⟩) e'
+    → CanonicalizeTree e e'
+deriving Repr
+
+def canonicalize_tree (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_c), CanonicalizeTree e e') :=
+  if heq : point_arity e = 0 then
+    match canonicalize e with
+    | .some ⟨_, h⟩ => .some ⟨_, .canon₀ heq h⟩
+    | .none => .none
+  else if heq : point_arity e = 1 then
+    have h_dec : sizeOf (points e)[0] < sizeOf e := by
+      simp [points]
+      split <;> grind
+    match canonicalize_tree (points e)[0] with
+    | .some ⟨p', h₁⟩ =>
+      match canonicalize (set_points e ⟨#[p'], by grind⟩) with
+      | .some ⟨_, h₂⟩ =>
+        .some ⟨_, .canon₁ heq h₁ h₂⟩
+      | .none => .none
+    | .none => .none
+  else if heq : point_arity e = 2 then
+    have h_dec₁ : sizeOf (points e)[0] < sizeOf e := by
+      simp [points]
+      split <;> grind
+    have h_dec₂ : sizeOf (points e)[1] < sizeOf e := by
+      simp [points]
+      split <;> grind
+    match canonicalize_tree (points e)[0] with
+    | .some ⟨p'₁, h₁⟩ =>
+      match canonicalize_tree (points e)[1] with
+      | .some ⟨p'₂, h₂⟩ =>
+        match canonicalize (set_points e ⟨#[p'₁, p'₂], by grind⟩) with
+        | .some ⟨_, h₃⟩ =>
+          .some ⟨_, .canon₂ heq h₁ h₂ h₃⟩
+        | .none => .none
+      | .none => .none
+    | .none => .none
+  else if heq : point_arity e = 3 then
+    have h_dec₁ : sizeOf (points e)[0] < sizeOf e := by
+      simp [points]
+      split <;> grind
+    have h_dec₂ : sizeOf (points e)[1] < sizeOf e := by
+      simp [points]
+      split <;> grind
+    have h_dec₃ : sizeOf (points e)[2] < sizeOf e := by
+      simp [points]
+      split <;> grind
+    match canonicalize_tree (points e)[0] with
+    | .some ⟨p'₁, h₁⟩ =>
+      match canonicalize_tree (points e)[1] with
+      | .some ⟨p'₂, h₂⟩ =>
+        match canonicalize_tree (points e)[2] with
+        | .some ⟨p'₃, h₃⟩ =>
+          match canonicalize (set_points e ⟨#[p'₁, p'₂, p'₃], by grind⟩) with
+          | .some ⟨_, h₄⟩ =>
+            .some ⟨_, .canon₃ heq h₁ h₂ h₃ h₄⟩
+          | .none => .none
+        | .none => .none
+      | .none => .none
+    | .none => .none
+  else .none
+termination_by sizeOf e
+
+def CanonicalizeTree.complete (h : CanonicalizeTree (τ_c := τ_c) e e') : canonicalize_tree e = .some ⟨e', h⟩ := by
+  induction h with
+  | canon₀ h_ar hc =>
+    have hc' := Complete'.complete hc
+    simp [Run.run, pure] at hc'
+    simp [canonicalize_tree, h_ar, hc']
+  | canon₁ h_ar ih₁ hc ih_heq =>
+    have hc' := Complete'.complete hc
+    simp [Run.run, pure] at hc'
+    simp [canonicalize_tree, h_ar, hc', ih_heq]
+  | canon₂ h_ar ih₁ ih₂ hc ih_heq ih_heq₂ =>
+    have hc' := Complete'.complete hc
+    simp [Run.run, pure] at hc'
+    simp [canonicalize_tree, h_ar, hc', ih_heq, ih_heq₂]
+  | canon₃ h_ar ih₁ ih₂ ih₃ hc ih_heq ih_heq₂ ih_heq₃ =>
+    have hc' := Complete'.complete hc
+    simp [Run.run, pure] at hc'
+    simp [canonicalize_tree, h_ar, hc', ih_heq, ih_heq₂, ih_heq₃]
+
+instance : Run Option (CanonicalizeTree (τ_c := τ_c)) := ⟨canonicalize_tree⟩
+instance : Complete' Option (CanonicalizeTree (τ_c := τ_c)) := ⟨CanonicalizeTree.complete⟩
+
 end GenericExpr
+
+/-
+Recursive canonicalize without size termination argument:
+
+Index by Canonicalize f f'
+
+| canon₁ : (h_ar : point_arity e = 1) → (hp : Canonicalize' ((points e).get 1) p')
+
+then stope when reach point_arity = 0
+-/

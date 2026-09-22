@@ -316,17 +316,6 @@ x : α
 @[dcc_judge] abbrev quot.type.{u} {τ_c : Type u} (α β : GenericExpr τ_c) (n : Level) : GenericExpr τ_c :=
   DCC? (β : Sort n) → α
 
-/-
-⟨f, g⟩ x = (f x, g x (f x))
-
-f : ∀ (x : α), β x
-g : ∀ (x : α) (y : β x), γ x y
-⟨f, g⟩ : ∀ (x : α), Σ(Λ(α, β, γ)) x
--/
-open Dsl in
-@[dcc_judge] abbrev pair.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort m) (`Sort m (∘ (Σ β γ) (* α)))) (! α))
-
 open Dsl in
 @[dcc_judge] abbrev comp.type.{u} {τ_c : Type u} (A C g : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
   DCC? ((Π (Id Sort m) (`Sort m (∘ C g))) A)
@@ -415,5 +404,24 @@ open Dsl in
 open Dsl in
 @[dcc_judge] abbrev Eval.x.type.{u} {τ_c : Type u} (A' B' C : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
   DCC? ((Π (Id Sort u) (`Sort u (Π B' C))) A')
+
+open Dsl in
+@[dcc_judge] abbrev Pair.f.type.{u} {τ_c : Type u} (A B : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
+  DCC? ((Π (Id Sort u) (`(Sort u) B)) A)
+
+open Dsl in
+@[dcc_judge] abbrev Pair.g.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
+  DCC? ((Π (Id Sort u) (`(Sort u) (Π B C))) A)
+
+/-
+⟨f, g⟩ x = (f x, g x (f x))
+
+f : ∀ (x : α), β x
+g : ∀ (x : α) (y : β x), γ x y
+⟨f, g⟩ : ∀ (x : α), Σ(Λ(α, β, γ)) x
+-/
+open Dsl in
+@[dcc_judge] abbrev Pair.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
+  DCC? ((Π (Id Sort u) (`Sort u (∘ (Σ B C) (* A)))) (! A))
 
 end GenericExpr

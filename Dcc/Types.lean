@@ -17,6 +17,18 @@ inductive Arrow.{u} {τ : Type u} : GenericExpr (τ := τ) → GenericExpr (τ :
              !(Coup(`(⊤, Sort 1))))
 -/
 
+/-
+(Swap B C) (& (,B₂ x y)) = (,(C x) y x)
+
+B : A → Sort u       C : (x : A) (y : B x) → Sort v
+---------------------------------------------------
+(Swap B C) : (x : (! (Σ B))) → ((∘ (Σ (∘ B (Fst B)) (∘ C (Fst B))) (* (Σ B))) x)
+-/
+
+open Dsl in
+def Swap.type (B C : GenericExpr τ) (u v : Level) : GenericExpr τ :=
+  DCC? ((Π (Id Sort (max u v)) (`Sort (max u v) (∘ (Σ (∘ B (Fst B)) (∘ C (Fst B))) (* (Σ B))))) (! (Σ B)))
+
 @[dcc_judge, inline]
 def read_arrow.{u} {τ_c : Type u} [DecidableEq τ_c]
   (τ : GenericExpr (τ := τ_c)) : Option ((α β : GenericExpr (τ := τ_c)) × (m : Level) × (Arrow (τ := τ_c) α β m τ)) :=
@@ -165,13 +177,13 @@ def view_pi_f_β.{u} {τ_c : Type u} [DecidableEq τ_c] (τ f_α δ : GenericExp
   open Dsl in match heq₁ : τ with
   | (DCC? ((Π __b (`_a (Π __a (Λ _b _c (`_d Sort n))))) _e)) =>
     if heq₂ : τ = (DCC? ((Π (Id Sort o) (`Sort o (Π f_α (Λ δ f_α (` (Σ f_α) Sort n))))) δ)) then
-      .some ⟨n, by rw [← heq₁, heq₂]; exact .canon (f_α := f_α) (δ := δ) (o := o) (n := n)⟩
+      .some ⟨n, by rw [← heq₁, heq₂]; exact .canon (B := f_α) (δ := δ) (o := o) (n := n)⟩
     else .none
   | (DCC? ((Π __b (` _a (Π __a (!Λ _b _c (`_d Sort n))))) _e)) =>
     match f_α, δ with
     | DCC? (!<> f_α), DCC? (! δ) =>
       if heq₂ : τ = (DCC? ((Π (Id Sort o) (`Sort o (Π (!<> f_α) (!Λ δ f_α (`(! (Σ f_α)) Sort n))))) (! δ))) then
-        .some ⟨n, by rw [← heq₁, heq₂]; exact .canon' (f_α := f_α) (δ := δ) (o := o) (n := n)⟩
+        .some ⟨n, by rw [← heq₁, heq₂]; exact .canon' (B := f_α) (δ := δ) (o := o) (n := n)⟩
       else .none
     | _, _ => .none
   | (DCC? ((Π _a (`_b (`_c ((Π (Id Sort m) (`_d (`_e Sort n))) α)))) _f)) =>
@@ -273,8 +285,16 @@ open Dsl in
   DCC? ((Π (Id Sort m) (`Sort m (Π β (Λ α β γ)))) α) -- weaken α, keep x
 
 open Dsl in
+@[dcc_judge] abbrev curr.x.type.{u} {τ_c : Type u} (B' C : GenericExpr τ_c) (u v : Level) : GenericExpr τ_c :=
+  DCC? ((Π (Id Sort (max u v)) (`(Sort max u v) C)) (Σ B'))
+
+open Dsl in
 @[dcc_judge] abbrev curr'.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
   DCC? ((Π (Id Sort m) (`Sort m (Π (!<> β) (!Λ α β γ)))) (! α)) -- weaken α, keep x
+
+open Dsl in
+@[dcc_judge] abbrev curr'.x.type.{u} {τ_c : Type u} (B' C : GenericExpr τ_c) (u v : Level) : GenericExpr τ_c :=
+  DCC? ((Π (Id Sort (max u v)) (`(Sort max u v) C)) (! (Σ B')))
 
 /-
 *(f) &(x) = (f x)
@@ -391,5 +411,9 @@ This is canonical.
 open Dsl in
 @[dcc_judge] abbrev Eval.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
   DCC? ((Π (Id Sort (max m n)) (`Sort (max m n) (Eval α β γ))) (Σ β))
+
+open Dsl in
+@[dcc_judge] abbrev Eval.x.type.{u} {τ_c : Type u} (A' B' C : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
+  DCC? ((Π (Id Sort u) (`Sort u (Π B' C))) A')
 
 end GenericExpr

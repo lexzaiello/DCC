@@ -161,6 +161,7 @@ open Dsl in inductive Pi.C.type.{u} {τ_c : Type u} :
     (DCC? ((Π(Id Sort o) (`Sort o (Π (!<> B) (!Λ δ B (` (! (Σ B)) Sort n))))) (! δ)))
   | arrow  : Pi.C.type (DCC? (Id Sort m)) δ o n
     (DCC? ((Π (Id Sort o) (`Sort o (`δ ((Π (Id Sort m) (`Sort m (`α Sort n))) α)))) δ))
+  | semi   : Pi.C.type B δ o n (DCC? ((Π (Id Sort o) (`Sort o (Π B (`δ₂ (`δ₃ Sort n))))) δ))
 deriving Repr
 
 open Dsl in
@@ -193,6 +194,10 @@ def view_pi_f_β.{u} {τ_c : Type u} [DecidableEq τ_c] (τ f_α δ : GenericExp
       if heq₃ : f_α = (DCC? (Id Sort m)) then
         .some ⟨n, by rw [← heq₁, heq₂, heq₃]; exact .arrow (δ := δ) (o := o) (n := n)⟩
       else .none
+    else .none
+  | (DCC? ((Π __a (`_a (Π _B (`δ₂ (`δ₃ Sort n))))) _δ)) =>
+    if heq : (DCC? ((Π __a (`_a (Π _B (`δ₂ (`δ₃ Sort n))))) _δ)) = (DCC? ((Π (Id Sort o) (`Sort o (Π f_α (`δ₂ (`δ₃ Sort n))))) δ)) then
+      .some ⟨n, heq ▸ .semi (B := f_α) (δ := δ) (δ₂ := δ₂) (δ₃ := δ₃)⟩
     else .none
   | _ => .none
 

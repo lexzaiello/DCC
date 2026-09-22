@@ -17,7 +17,7 @@ def DefEqError.flip (e : DefEqError A B) : DefEqError B A :=
   | .tm expected actual => .tm expected actual
   | .not_eta_reducible x => .not_eta_reducible x
 
-def DefEqError.toFormat [Repr τ_c] (err : DefEqError (τ_c := τ_c) A B) : Std.Format :=
+def DefEqError.toFormat (err : DefEqError (τ_c := τ_c) A B) : Std.Format :=
   "- " ++ (.nest 2 <| (Std.format A) ++ " ≠ " ++ (.indentD (Std.format B)) ++ .line ++
   (match err with
   /-| .pi_left expected actual => "because Π domains are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ "but found: " ++ (.indentD (Std.format actual))
@@ -27,8 +27,8 @@ def DefEqError.toFormat [Repr τ_c] (err : DefEqError (τ_c := τ_c) A B) : Std.
   | .not_eta_reducible x => "because this term is not η-reducible: " ++ (.indentD (Std.format x))
   | .tm expected actual => "because terms are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ .line ++ "but found: " ++ (.indentD (Std.format actual))))
 
-instance {A B : GenericExpr τ_c} [Repr τ_c] : Std.ToFormat (DefEqError A B) := ⟨DefEqError.toFormat⟩
-instance {A B : GenericExpr τ_c} [Repr τ_c] : ToString (DefEqError A B) := ⟨toString ∘ Std.format⟩
+instance {A B : GenericExpr τ_c} : Std.ToFormat (DefEqError A B) := ⟨DefEqError.toFormat⟩
+instance {A B : GenericExpr τ_c} : ToString (DefEqError A B) := ⟨toString ∘ Std.format⟩
 
 inductive TypeError.{u} {τ_c : Type u} : (e : GenericExpr τ_c) → Type u where
   | mismatch (expected actual at_e : GenericExpr τ_c) : TypeError e
@@ -37,7 +37,7 @@ inductive TypeError.{u} {τ_c : Type u} : (e : GenericExpr τ_c) → Type u wher
   | def_eq {τ₁ τ₂ : GenericExpr τ_c} (err : DefEqError τ₁ τ₂) : TypeError e
   | mark (n : ℕ) (ε : TypeError e) : TypeError e
 
-def TypeError.toFormat [Repr τ_c] (err : TypeError (τ_c := τ_c) e) : Std.Format :=
+def TypeError.toFormat (err : TypeError (τ_c := τ_c) e) : Std.Format :=
   "- Term is not well-typed:" ++ (Std.Format.indentD
     (match err with
     | .mismatch expected actual at_e => (Std.Format.text "terms are mismatched at: ")
@@ -53,8 +53,9 @@ def TypeError.toFormat [Repr τ_c] (err : TypeError (τ_c := τ_c) e) : Std.Form
   )
   ++ .line ++ "at term: " ++ (Std.format e))
 
-instance {e : GenericExpr τ_c} [Repr τ_c] : Std.ToFormat (TypeError e) := ⟨TypeError.toFormat⟩
-instance {e : GenericExpr τ_c} [Repr τ_c] : ToString (TypeError e) := ⟨toString ∘ Std.format⟩
+instance {e : GenericExpr τ_c} : Std.ToFormat (TypeError e) := ⟨TypeError.toFormat⟩
+instance {e : GenericExpr τ_c} : ToString (TypeError e) := ⟨toString ∘ Std.format⟩
+instance {e : GenericExpr τ_c} : Repr (TypeError e) := ⟨fun e _n => TypeError.toFormat e⟩
 
 namespace GenericExpr
 
@@ -62,6 +63,7 @@ inductive Reduces.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c �
   | mk : RedAffNorm A ⟨B, hn_B⟩
     → RedEta B C
     → Reduces A C
+deriving Repr
 
 def Reduces.aff (h : Reduces A B) : RedAffNorm A (red_aff A) :=
   match h with
@@ -144,10 +146,20 @@ def Reduces.eq [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) : h = reduce_
     congr!
     apply proof_eq
 
+def Reduces.eq' [DecidableEq τ_c] (h₁ : Reduces (τ_c := τ_c) A B) (h₂ : Reduces (τ_c := τ_c) A B) : h₁ = h₂ :=
+  match h₁, h₂ with
+  | ⟨hr₁, hr₂⟩, ⟨hr₃, hr₄⟩ => by
+    cases hr₁.unique hr₃
+    cases hr₁.out_eq
+    cases hr₁.eq
+    cases hr₃.eq
+    congr!
+    apply proof_eq
+
 #eval Std.format <| pair.β.type (DCC (Sort 30)) 10 20
 
 -- For checking arguments under apps
-inductive DefEq.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr τ_c → GenericExpr τ_c → Prop
+inductive DefEq.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr τ_c → GenericExpr τ_c → Type u
   | tm : Reduces τ₁ τ' → Reduces τ₂ τ' → DefEq τ₁ τ₂
 
 -- Reduces A B → DefEq A B
@@ -169,7 +181,19 @@ def DefEq.complete.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {τ₁ τ�
     have ha := hr₁.complete (e₂ := τ₂_1)
     have hb := hr₂.complete (e₂ := τ₁)
     simp [def_eq?]
-    grind
+    split
+    case h_1 =>
+      expose_names
+      cases heq.symm.trans ha
+      cases heq_1.symm.trans hb
+      simp
+      constructor
+      · apply Eq.symm
+        apply Reduces.eq'
+      · apply Eq.symm
+        apply Reduces.eq'
+    · grind
+    · grind
 
 inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr τ_c → GenericExpr τ_c → Type u where
   | eq     : Judge x α
@@ -311,6 +335,7 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Judge x α
     → Reduces (DCC? (f_β x_α x)) τ
     → Judge (DCC? (f x)) τ
+deriving Repr
 
 -- Replaces everything from `def infer₂` to end-of-file.
 -- Everything above (TypeError, Reduces, def_eq?, Judge, …) is unchanged.
@@ -702,7 +727,13 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
 
 abbrev infer' {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Except (TypeError e) (GenericExpr τ_c) := (·.fst) <$> e.infer
 
+instance [DecidableEq τ_c] [Repr τ_c] : Repr (Σ' (τ : GenericExpr τ_c), Judge A τ) := ⟨fun ⟨B, x⟩ =>
+  Repr.addAppParen s!"PSigma.mk {repr B} ({repr x})"⟩
+
 end GenericExpr
 
 abbrev Expr.infer' (e : Expr) : Except (TypeError e) Expr := (·.fst) <$> e.infer
 abbrev Expr.infer (e : Expr) : Except (TypeError e) (Σ' (t : GenericExpr Unit), (GenericExpr.Judge e t)) := GenericExpr.infer e
+
+#eval (DCC ((Id Sort 1) (Sort 0))).infer
+#eval (DCC ((Id ((Sort 1 : Sort 2) → Sort 1)) (Id Sort 1))).infer

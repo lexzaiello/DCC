@@ -6,6 +6,7 @@ namespace GenericExpr
 open Dsl in
 inductive Arrow.{u} {τ : Type u} : GenericExpr (τ := τ) → GenericExpr (τ := τ) → Level → GenericExpr (τ := τ) → Type u
   | simple : Arrow α β u (DCC? ((Π (Id Sort u) (`Sort u (`α β))) α))
+deriving Repr
   /-| dep    : Arrow α β u (DCC? ((Π (Id Sort u) (Λ Sort u (Id Sort u) (` (Σ (Id Sort u)) β))) α))
   | dep'   : Arrow α β u (DCC? ((Π (Id Sort u) (!Λ Sort u (Id Sort u) (` (! (Σ (Id Sort u))) β))) α))-/
 
@@ -160,6 +161,7 @@ open Dsl in inductive Pi.C.type.{u} {τ_c : Type u} :
     (DCC? ((Π(Id Sort o) (`Sort o (Π (!<> B) (!Λ δ B (` (! (Σ B)) Sort n))))) (! δ)))
   | arrow  : Pi.C.type (DCC? (Id Sort m)) δ o n
     (DCC? ((Π (Id Sort o) (`Sort o (`δ ((Π (Id Sort m) (`Sort m (`α Sort n))) α)))) δ))
+deriving Repr
 
 open Dsl in
 def read_pi_f_β_cod.{u} {τ_c : Type u} (τ : GenericExpr τ_c) : Option (GenericExpr τ_c) :=

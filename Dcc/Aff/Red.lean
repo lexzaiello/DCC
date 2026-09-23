@@ -1342,19 +1342,22 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
     cases h₂ with
     | congrFun hr =>
       cases hr with
+      | point =>
+        expose_names
+        simp [point_arity] at h
       | congrFun hr =>
         match hr with
         | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
-        | .point 1 hn hr => exact ⟨_, .single (.congrArg (.point 0 (by grind) (.point 0 (by simp [points, set_points, Vector.get, point_arity]) hr))), .single (by constructor)⟩
+        | .point 1 hn hr => exact ⟨_, .single (.congrArg (.point 0 (by grind) (.point 0 (by simp [points, Vector.get, point_arity]) hr))), .single (by constructor)⟩
         | .point 2 hn hr => exact ⟨_, .single hr.congrFun, .single (by constructor)⟩
       | congrArg hr =>
         have ⟨_, h⟩ := hr.elim_point₁
         cases h.left
-        exact ⟨_, .single h.right.sig₁.box₀.congrArg, .single (by constructor)⟩
+        exact ⟨_, .single (.congrArg (.point 0 (by grind) (.point 1 (by simp [points, Vector.get, point_arity]) h.right))), .single (by constructor)⟩
     | congrArg hr =>
       have ⟨_, h⟩ := hr.elim_point₁
       cases h.left
-      exact ⟨_, .single h.right.sig₂.box₀.congrArg, .single (by constructor)⟩
+      exact ⟨_, .single (.congrArg (.point 0 (by grind) (.point 2 (by simp [points, Vector.get, point_arity]) h.right))), .single (by constructor)⟩
     | point =>
       expose_names
       simp [point_arity] at h
@@ -1362,11 +1365,14 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
   case sigma =>
     cases h₂ with
     | congrFun hr =>
-      cases hr
-      · exact ⟨_, .refl, .single (by constructor)⟩
-      case _ hr => exact ⟨_, .single hr.congrFun.coup₀, .single (by constructor)⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+      | .point 1 hn hr => exact ⟨_, .single (.point 0 (by grind) hr.congrFun), .single (by constructor)⟩
     | congrArg hr =>
-      case _ hr => exact ⟨_, .single hr.congrArg.coup₀, .single (by constructor)⟩
+      case _ hr => exact ⟨_, .single (.point 0 (by grind) hr.congrArg), .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   -- Inner congruences:
   case quot₀ hr ih | quot₁ hr ih | sigma₀ hr ih | sigma₁ hr ih | pi₀ hr ih | pi₁ hr ih

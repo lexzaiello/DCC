@@ -28,9 +28,10 @@ inductive ReadbackFold : (f : GenericExpr τ_c)
     {hrt     : ViewAppHole f x lv hlt e_h.max_hole}
     {f'      : GenericExpr τ_c} :
     (hneq₁ : ∀ ⦃g⦄, hrt.reduction.fst ≠ (DCC? (g x)))
+    → (hneq₂ : ∀ ⦃g h⦄, hrt.reduction.fst ≠ (DCC? (g (h x))))
     → (hrb   : Readback f h_dom e_h hlt hrt f')
     → ReadbackFold f h_dom e_h hlt hrt f'
-  /-| comp  {f  : GenericExpr τ_c}
+  | comp  {f  : GenericExpr τ_c}
     {h_dom    : Domain f A}
     {e_h      : Hole A lv x}
     {hlt      : f.max_hole < lv}
@@ -40,11 +41,11 @@ inductive ReadbackFold : (f : GenericExpr τ_c)
     → (hlt₁   : max_hole h < lv)
     → (hrtg   : ViewAppHole h x lv hlt₁ e_h.max_hole)
     → (hrbg   : ReadbackFold h hdg e_h hlt₁ hrtg g')
-    → (h_dom' : Domain (DCC? (g ∘ g')) A)
-    → (hlt₂   : (DCC? (g ∘ g')).max_hole < lv)
-    → (hrt'   : ViewAppHole (DCC? (g ∘ g')) x lv hlt₂ e_h.max_hole)
-    → (hrb'   : Readback (DCC? (g ∘ g')) h_dom' e_h hlt₂ hrt' f')
-    → ReadbackFold f h_dom e_h hlt hrt f'-/
+    → (h_dom' : Domain (DCC? (∘ g g')) A)
+    → (hlt₂   : (DCC? (∘ g g')).max_hole < lv)
+    → (hrt'   : ViewAppHole (DCC? (∘ g g')) x lv hlt₂ e_h.max_hole)
+    → (hrb'   : Readback (DCC? (∘ g g')) h_dom' e_h hlt₂ hrt' f')
+    → ReadbackFold f h_dom e_h hlt hrt f'
   | congr {f  : GenericExpr τ_c}
     {h_dom    : Domain f A}
     {e_h      : Hole A lv x}
@@ -103,11 +104,12 @@ def Domain.assert_complete (h : Domain (τ_c := τ_c) f τ) : assert_domain f τ
 def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
   (e_h : Hole A lv x) (hlt : f.max_hole < lv)
   (hrt : ViewAppHole f x lv hlt e_h.max_hole) : Option (Σ' f', ReadbackFold f h_dom e_h hlt hrt f') :=
+  dbg_trace repr hrt.reduction.fst
   match hrt.reduction.snd.cases_comp x,  hrt.reduction.snd.cases_congr x with
-  /-| .inl ⟨g, h, hrt'⟩, _ =>
+  | .inl ⟨g, h, hrt'⟩, _ =>
     have heq' : hrt.reduction = ⟨DCC? (g (h x)), hrt'⟩ := by
       let hr₀ := hrt.reduction.snd
-      have h := hrt'.eq ((hrt'.unique hr₀) ▸ hr₀)
+      have h := proof_eq hrt' ((unique hrt' hr₀) ▸ hr₀)
       grind
     have heq₁ : hrt.reduction.fst = (DCC? (g (h x))) := by grind
     match h.assert_domain A with
@@ -116,15 +118,15 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
         match view_app_hole? h x lv hlt' e_h.max_hole with
         | .some hrt_h =>
           have h_dec : h.size < f.size := by
-            have h_dec := hrt.reduction.snd.decreasing
+            have h_dec := decreasing hrt.reduction.snd
             have h_size_zero := e_h.size_zero
             grind
           match readback_fold h_dom_h e_h hlt' hrt_h with
           | .some ⟨g', hrbf⟩ =>
-            match (DCC? (g ∘ g')).assert_domain A with
+            match (DCC? (∘ g g')).assert_domain A with
             | .some hrt_comp =>
-              if hlt'' : (DCC? (g ∘ g')).max_hole < lv then
-                match view_app_hole? (DCC? (g ∘ g')) x lv hlt'' e_h.max_hole with
+              if hlt'' : (DCC? (∘ g g')).max_hole < lv then
+                match view_app_hole? (DCC? (∘ g g')) x lv hlt'' e_h.max_hole with
                 | .some hrt_h' =>
                   match hrt_h'.readback_head? hrt_comp e_h hlt'' with
                   | .some ⟨_, hrb''⟩ =>
@@ -136,7 +138,7 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
           | .none => .none
         | .none => .none
       else .none
-    | .none => .none-/
+    | .none => .none
   | _, .inl ⟨g, hrt'⟩ =>
     have heq' : hrt.reduction = ⟨DCC? (g x), hrt'⟩ := by
       let hr₀ := hrt.reduction.snd
@@ -172,11 +174,23 @@ def readback_fold {f : GenericExpr τ_c} (h_dom : Domain f A)
         | .none => .none
       else .none
     | .none => .none
-  | _, .inr ⟨hn₂⟩ =>
+  | .inr ⟨hn₁⟩, .inr ⟨hn₂⟩ =>
     match hrt.readback_head? h_dom e_h hlt with
-    | .some ⟨_, hrb⟩ => .some ⟨_, .single (fun ⦃g₁⦄ heq => hn₂ heq) hrb⟩
+    | .some ⟨_, hrb⟩ => .some ⟨_, .single (fun ⦃g₁⦄ heq => hn₂ heq) (fun ⦃g₁ h₁⦄ heq => hn₁ heq) hrb⟩
     | .none => .none
 termination_by f.size
+
+def try_readback (f : GenericExpr τ_c) : Option (GenericExpr τ_c) :=
+  let h_dom : Domain f f.domain.fst := f.domain.snd
+  let lv := f.max_hole.succ
+  have hlt : f.max_hole < lv := by aesop
+  let ⟨x, e_h⟩ := mk_hole f.domain.fst lv
+  match view_app_hole? f x lv hlt e_h.max_hole with
+  | .some h =>
+    match readback_fold h_dom e_h hlt h with
+    | .some ⟨f', _⟩ => .some f'
+    | .none => .none
+  | .none => .none
 
 def ReadbackFold.complete (h : ReadbackFold (τ_c := τ_c) f h_dom e_h hlt hrt f') : readback_fold h_dom e_h hlt hrt = .some ⟨f', h⟩ := by
   induction h with
@@ -184,27 +198,27 @@ def ReadbackFold.complete (h : ReadbackFold (τ_c := τ_c) f h_dom e_h hlt hrt f
     unfold readback_fold
     simp
     split
-    /-case h_1 hrt' heq =>
+    case h_1 hn₁ hn₂ _ _ _ _ _ hrt' heq =>
       expose_names
       have heq_hrt_fst : hrt_1.reduction.fst = g.app (h.app hole_e) :=
-        (hrt'.unique hrt_1.reduction.snd).symm
-      exact (hn₁ heq_hrt_fst).elim-/
-    case h_1 hrt' heq =>
+        (unique hrt' hrt_1.reduction.snd).symm
+      exact (hn₂ heq_hrt_fst).elim
+    case h_2 hrt' _ heq =>
       expose_names
       have heq_hrt_fst : hrt_1.reduction.fst = g.app hole_e :=
         (unique hrt' hrt_1.reduction.snd).symm
       exact (hn₁ heq_hrt_fst).elim
-    case h_2 hn₁' heq₁ heq₂ =>
+    case h_3 hn₁' heq₁ heq₂ =>
       expose_names
       simp [hrb.complete]
   | congr heq =>
     unfold readback_fold
     simp
     split
-    /-case h_1 hrt' heq =>
-      expose_names
-      cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)-/
     case h_1 hrt' heq =>
+      expose_names
+      cases unique hrt' (heq_1 ▸ hrt_1.reduction.snd)
+    case h_2 hrt' _ heq =>
       expose_names
       cases unique hrt' (heq_1 ▸ hrt_1.reduction.snd)
       have heq_star := RedChoiceStar.complete hr
@@ -218,37 +232,27 @@ def ReadbackFold.complete (h : ReadbackFold (τ_c := τ_c) f h_dom e_h hlt hrt f
       subst heq_star'
       simp [hdg.assert_complete, hlt₁, hrtg.complete, hrbg_ih, h_dom'.assert_complete, hlt₂, hrt'_1.complete, hrb'.complete]
       apply proof_eq
-    case h_2 hn₁ heq₁ =>
+    case h_3 hn₁ _ heq₁ =>
       exact (hn₁ (by assumption)).elim
-  /-| comp heq =>
+  | comp heq =>
     unfold readback_fold
     simp
     split
     case h_2 hrt' heq hn =>
       expose_names
-      cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)
+      cases unique hrt' (heq_1 ▸ hrt_1.reduction.snd)
     case h_1 hrt' heq =>
       expose_names
-      cases hrt'.unique (heq_1 ▸ hrt_1.reduction.snd)
-      have heq_dom₁ := hdg.complete
-      have heq_dom₂ := h_dom'.complete
+      cases unique hrt' (heq_1 ▸ hrt_1.reduction.snd)
+      have heq_dom₁ := Complete'.complete hdg
+      have heq_dom₂ := Complete'.complete h_dom'
+      simp [Run.run, pure] at heq_dom₁
+      simp [Run.run, pure] at heq_dom₂
       have heq_dom_g' : (g.comp g').domain.fst = a := by grind
       subst heq_dom_g'
       simp [hdg.assert_complete, hlt₁, hrtg.complete, hrbg_ih, h_dom'.assert_complete, hlt₂, hrt'_1.complete, hrb'.complete]
     case h_3 hn₁ hn₂ heq₁ heq₂ =>
-      exact (hn₁ (by assumption)).elim-/
-
-def try_readback (f : GenericExpr τ_c) : Option (GenericExpr τ_c) :=
-  let h_dom : Domain f f.domain.fst := f.domain.snd
-  let lv := f.max_hole.succ
-  have hlt : f.max_hole < lv := by aesop
-  let ⟨x, e_h⟩ := mk_hole f.domain.fst lv
-  match view_app_hole? f x lv hlt e_h.max_hole with
-  | .some h =>
-    match readback_fold h_dom e_h hlt h with
-    | .some ⟨f', _⟩ => .some f'
-    | .none => .none
-  | .none => .none
+      exact (hn₁ (by assumption)).elim
 
 --#eval try_readback (DCC (Λ(Sort 1, Id(Sort 1), Fst(Id(Sort 1))) (Sort 0)))
 open Dsl in
@@ -822,8 +826,24 @@ instance : Complete' Option (Canonicalize (τ_c := τ_c)) := ⟨Canonicalize.com
 open Dsl in
 #eval canonicalize (DCC ((Π (Id Sort 0) (`Sort 0 (Π (Id ⊤) (Λ ⊤ (` ⊤ (Sort 1)) (`(Σ (` ⊤ (Sort 1))) (Sort 2)))))) ⊤))
 
+open Dsl in
+inductive ViewPi : GenericExpr τ_c → Type u
+  | mk : ViewPi (DCC? ((Π B C) x))
+
+open Dsl in
+def view_pi (e : GenericExpr τ_c) : Option (ViewPi e) :=
+  match e with
+  | DCC? ((Π _B _C) x) => .some .mk
+  | _ => .none
+
+def ViewPi.complete (h : ViewPi e) : view_pi e = .some h := by
+  cases h
+  simp [view_pi]
+
+open Dsl in
 inductive RedEta : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
-  | canon₀ : (h_ar : point_arity e = 0) → (hc  : Canonicalize e e') → RedEta e e'
+  | pi     : RedEta B B' → RedEta C C' → RedEta x x' → Canonicalize (DCC? ((Π B' C') x')) e' → RedEta (DCC? ((Π B C) x)) e'
+  | canon₀ : (h_ar : point_arity e = 0) → (ViewPi e → False) → (hc  : Canonicalize e e') → RedEta e e'
   | canon₁ : (h_ar : point_arity e = 1) → (hc₁ : RedEta (points e)[0] p')
     → Canonicalize (set_points e ⟨#[p'], by grind⟩) e'
     → RedEta e e'
@@ -841,10 +861,25 @@ inductive RedEta : (e : GenericExpr τ_c) → (e' : GenericExpr τ_c) → Type u
 deriving Repr
 
 def red_eta (e : GenericExpr τ_c) : Option (Σ' (e' : GenericExpr τ_c), RedEta e e') :=
-  if heq : point_arity e = 0 then
-    match canonicalize e with
-    | .some ⟨_, h⟩ => .some ⟨_, .canon₀ heq h⟩
-    | .none => .none
+  open Dsl in if heq : point_arity e = 0 then
+    if heq₂ : (view_pi e) = .none then
+      match canonicalize e with
+      | .some ⟨_, h⟩ => .some ⟨_, .canon₀ heq (fun h => by have heq' := h.complete; grind) h⟩
+      | .none => .none
+    else
+    match e with
+    | DCC? ((Π B C) x) =>
+      match red_eta B, red_eta C with
+      | .some ⟨B', h₁⟩, .some ⟨C', h₂⟩ =>
+        match red_eta x with
+        | .some ⟨x', h₃⟩ =>
+          match canonicalize (DCC? ((Π B' C') x')) with
+          | .some ⟨_, h₄⟩ =>
+            .some ⟨_, .pi h₁ h₂ h₃ h₄⟩
+          | .none => .none
+        | .none => .none
+      | _, _ => .none
+    | _ => .none
   else if heq : point_arity e = 1 then
     have h_dec : sizeOf (points e)[0] < sizeOf e := by
       simp [points]
@@ -901,10 +936,23 @@ termination_by sizeOf e
 
 def RedEta.complete (h : RedEta (τ_c := τ_c) e e') : red_eta e = .some ⟨e', h⟩ := by
   induction h with
-  | canon₀ h_ar hc =>
+  | pi =>
+    expose_names
+    unfold red_eta
+    have heq := Complete'.complete a_3
+    simp [point_arity, view_pi, a_ih_1, a_ih_2, a_ih]
+    simp [Run.run, pure] at heq
+    grind
+  | canon₀ h_ar hn_pi hc =>
+    expose_names
+    have heq : view_pi e_1 = .none := by
+      apply Option.eq_none_iff_forall_ne_some.mpr
+      intro h
+      exact (hn_pi h).elim
     have hc' := Complete'.complete hc
     simp [Run.run, pure] at hc'
-    simp [red_eta, h_ar, hc']
+    unfold red_eta
+    simp [h_ar, heq, hc']
   | canon₁ h_ar ih₁ hc ih_heq =>
     have hc' := Complete'.complete hc
     simp [Run.run, pure] at hc'
@@ -938,3 +986,4 @@ Index by Canonicalize f f'
 
 then stope when reach point_arity = 0
 -/
+

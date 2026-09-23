@@ -23,6 +23,14 @@ and x' <
 These are all "shortcuts" in the reduction: steps that produce a
 normal form with no further spine reduction, and which can accept no further arguments.
 These are mutually exclusive.
+
+Σ readback is wrong. In fact, most of the "continuations" are probably wrong.
+This issue is generalizable to composition, I feel like.
+
+(∘ (Σ B C) f) = Σ (C (f x))
+
+composition should work on the head, not reduction.fst, I think.
+Do this in ReadbackFold.
 -/
 open Dsl in
 inductive Readback : (f : GenericExpr τ_c)
@@ -73,7 +81,7 @@ inductive Readback : (f : GenericExpr τ_c)
     {hrt     : ViewAppHole f x lv hlt e_h.max_hole} :
     (heq     : hrt.reduction.fst = (DCC? (Σ (g x))))
     → (h_dom_g : Domain (DCC? (g x)) τ_fst)
-    → Readback f h_dom e_h hlt hrt (DCC? ((Σ (`⊤ τ_fst) (`⊤ g)) ∗))
+    → Readback f h_dom e_h hlt hrt (DCC? (Σ (`A τ_fst) g))
   | comp  {h_dom : Domain f A} {e_h : Hole A lv x}
     {hrt     : ViewAppHole f x lv hlt e_h.max_hole} :
     (heq     : hrt.reduction.fst = (DCC? (g (h x)))) -- can prove size decreases because hole size = 0

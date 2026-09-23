@@ -300,17 +300,14 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Judge (open Dsl in (DCC? (`B x))) τ
   | pair     : Judge M (Pair.f.type A B u)
     → Judge C τ_C
-    → Pi.C.type B A u s τ_C
     → Reduces C C'
     → Judge N (Pair.g.type A B C' u)
     → Reduces (Pair.type A B C u) τ'
     → Judge (DCC? (⟨,⟩C M N)) τ'
-  | swap   : Judge B τ_B
-    → Arrow A (DCC? Sort v) u τ_B
-    → Judge C τ_C
-    → Reduces B B'
-    → Pi.C.type B' A u s τ_C
-    → Judge (DCC? (Swap B C)) (GenericExpr.Swap.type B C u v)
+  | swap   : Judge A (DCC? Sort u)
+    → Judge B (DCC? Sort v)
+    → Reduces (GenericExpr.Swap.type A B u v) τ'
+    → Judge (DCC? (Swap B C)) τ'
   /-
     ef_α : α → Sort m
     f_β : ∀ (x : α) (y : f_α x), Sort n
@@ -663,24 +660,31 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
   | DCC? (⟨,⟩C M N) =>
     match infer M with
     | .ok ⟨DCC? ((Π (Id Sort u) (`(Sort u₂) B)) A), ht_M⟩ =>
+      dbg_trace "1"
       if heq : (DCC? ((Π (Id Sort u) (`(Sort u₂) B)) A)) = (Pair.f.type A B u) then
+        dbg_trace "2"
         match infer C with
         | .ok ⟨τ_C, ht_C⟩ =>
-          match τ_C.view_pi_f_β B A u with
-          | .some ⟨_s, h_pi_C⟩ =>
-            match heq_red_C : C.reduce_all with
-            | .ok C' =>
-              match infer N with
-              | .ok ⟨τ_N, ht_N⟩ =>
-                if heq₂ : τ_N = (Pair.g.type A B C' u) then
-                  match heq_τ' : (Pair.type A B C u).reduce_all with
-                  | .ok _τ' =>
-                    .ok ⟨_, .pair (heq ▸ ht_M) ht_C h_pi_C (reduce_reduces heq_red_C) (heq₂ ▸ ht_N) (reduce_reduces heq_τ')⟩
-                  | .error e => .error (.def_eq e)
-                else .error (.sub N (.unexpected N τ_N))
-              | .error e => .error (.sub N e)
-            | .error e => .error (.sub C (.def_eq e))
-          | .none => .error (.sub C (.unexpected C τ_C))
+          dbg_trace "3"
+          dbg_trace repr B
+          dbg_trace repr A
+          dbg_trace "4"
+          match heq_red_C : C.reduce_all with
+          | .ok C' =>
+            dbg_trace "5"
+            match infer N with
+            | .ok ⟨τ_N, ht_N⟩ =>
+              dbg_trace "6"
+              if heq₂ : τ_N = (Pair.g.type A B C' u) then
+                dbg_trace "7"
+                dbg_trace repr (Pair.type A B C u)
+                match heq_τ' : (Pair.type A B C u).reduce_all with
+                | .ok _τ' =>
+                  .ok ⟨_, .pair (heq ▸ ht_M) ht_C (reduce_reduces heq_red_C) (heq₂ ▸ ht_N) (reduce_reduces heq_τ')⟩
+                | .error e => .error (.def_eq e)
+              else .error (.sub N (.unexpected N τ_N))
+            | .error e => .error (.sub N e)
+          | .error e => .error (.sub C (.def_eq e))
         | .error e => .error (.sub C e)
       else
         .error (.sub M (.unexpected M (DCC? ((Π (Id Sort u) (`(Sort u₂) B)) A))))

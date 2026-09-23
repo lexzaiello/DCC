@@ -4,8 +4,6 @@ import Mathlib.Logic.Relation
 import Dcc.Ast
 import Dcc.Ast.Points
 
-open Dsl
-
 /-
 Generalizations of normal forms and decision procedures for rewrite-rule relations
 on AST terms. e.g., affine reduction and the old eta (non-NBE) reduction algorithm
@@ -171,14 +169,14 @@ theorem Congruent'.congr'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr 
   (set_points e ((points e).set p p')) :=
   hR.congr_iff.mp h
 
-open Rel in class Congruent.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) where
+open Dsl in open Rel in class Congruent.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) where
   congrFun_ (h : r f f') : r (DCC[τ] (f x)) (DCC[τ] (f' x)) := by exact .congrFun
   congrArg_ (h : r x x') : r (DCC[τ] (f x)) (DCC[τ] (f x')) := by exact .congrArg
-  sigl_     (h : r x x') : r (DCC[τ] (,β x y)) (DCC[τ] (,β x' y)) := by exact .sig₁
-  sigr_     (h : r y y') : r (DCC[τ] (,β x y)) (DCC[τ] (,β x y')) := by exact .sig₂
-  pil_      (h : r x x') : r (DCC[τ] (Π x y)) (DCC[τ] (Π x' y)) := by exact .pi₀
-  pir_      (h : r y y') : r (DCC[τ] (Π x y)) (DCC[τ] (Π x y')) := by exact .pi₁
-  coup_     (h : r β β') : r (DCC[τ] (Σ β)) (DCC[τ] (Σ β'))     := by exact .coup₀
+  sigl_     (h : r x x') : r (DCC[τ] (,β x y)) (DCC[τ] (,β x' y)) := by exact .point 1 (by grind)
+  sigr_     (h : r y y') : r (DCC[τ] (,β x y)) (DCC[τ] (,β x y')) := by exact .point 2 (by grind)
+  pil_      (h : r x x') : r (DCC[τ] (Π x y)) (DCC[τ] (Π x' y)) := by exact .point 0 (by grind)
+  pir_      (h : r y y') : r (DCC[τ] (Π x y)) (DCC[τ] (Π x y')) := by exact .point 1 (by grind)
+  coup_     (h : r β β') : r (DCC[τ] (Σ β)) (DCC[τ] (Σ β'))     := by exact .point 0 (by grind)
 
 @[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.congrFun'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
@@ -197,12 +195,12 @@ theorem Congruent.sigl'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ
   (h : r x x' := by assumption) : r (DCC[τ] (,β x y)) (DCC[τ] (,β x' y)) :=
   (hR.sigl_ h)
 
-@[aesop (rule_sets := [DccForceStep]) safe apply]
+open Dsl in @[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.pil'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {x x' y : GenericExpr τ} [hR : Congruent r]
   (h : r x x' := by assumption) : r (DCC[τ] (Π x y)) (DCC[τ] (Π x' y)) :=
   (hR.pil_ h)
 
-@[aesop (rule_sets := [DccForceStep]) safe apply]
+open Dsl in @[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.pir'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {x y y' : GenericExpr τ} [hR : Congruent r]
   (h : r y y' := by assumption) : r (DCC[τ] (Π x y)) (DCC[τ] (Π x y')) :=
   (hR.pir_ h)
@@ -212,7 +210,7 @@ theorem Congruent.sigr'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ
   [hR : Congruent r] (h : r y y' := by assumption) : r (DCC[τ] (,β x y)) (DCC[τ] (,β x y')) :=
   (hR.sigr_ h)
 
-@[aesop (rule_sets := [DccForceStep]) safe apply]
+open Dsl in @[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.coup'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β β' : GenericExpr τ} [hR : Congruent r] (h : r β β' := by assumption) : r (DCC[τ] (Σ β)) (DCC[τ] (Σ β')) :=
   (hR.coup_ h)
 
@@ -342,17 +340,17 @@ open Confluent in @[reducible] def RedRel.globally_confluent.{u} {α : Type u}
   (hn : IsNorm r (DCC[τ] (f x))) : IsNorm r x := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.congrArg' h⟩).elim
 
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pil.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+open Dsl in @[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pil.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
   {f_α f_β : GenericExpr τ} [hC : Congruent r]
   (hn : IsNorm r (DCC[τ] (Π f_α f_β))) : IsNorm r f_α := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.pil' h⟩).elim
 
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pir.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+open Dsl in @[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pir.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
   {f_α f_β : GenericExpr τ} [hC : Congruent r]
   (hn : IsNorm r (DCC[τ] (Π f_α f_β))) : IsNorm r f_β := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.pir' h⟩).elim
 
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.coup.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+open Dsl in @[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.coup.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
   {β : GenericExpr τ} [hC : Congruent r]
   (hn : IsNorm r (DCC? (Σ β))) : IsNorm r β := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.coup' h⟩).elim

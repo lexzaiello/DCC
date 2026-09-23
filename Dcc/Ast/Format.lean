@@ -3,7 +3,6 @@ import Dcc.Ast.Dsl
 
 namespace GenericExpr
 
-open Dsl in
 open Std (ToFormat Format format) in
 def toFormat.{u} {τ : Type u}
   (e : GenericExpr τ) (pretty : Bool := False) : Std.Format :=
@@ -15,8 +14,22 @@ def toFormat.{u} {τ : Type u}
   let comb (pre : Std.Format) (points : List Std.Format) (paren : Std.Format → Std.Format := paren) : Std.Format :=
     paren (pre ++ " " ++ (.group (sepD points (indent := min pre.pretty.length.succ 30))))
 
-  match e with
+  open Dsl in match e with
   | .const _ | .hole _ => "⋯"
+  | DCC? True => "True"
+  | DCC? False => "False"
+  | DCC? Bool => "Bool"
+  | DCC? (Bool.Ind motive x y) => comb "Bool.Ind" [motive.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
+  | DCC? (≃.Ind motive x) => comb "≃.Ind" [motive.toFormat pretty, x.toFormat pretty]
+  | DCC? (≃.1 x y) => comb "≃.1" [x.toFormat pretty, y.toFormat pretty]
+  | DCC? (≃.2 x y) => comb "≃.2" [x.toFormat pretty, y.toFormat pretty]
+  | DCC? (≃.3 x y) => comb "≃.3" [x.toFormat pretty, y.toFormat pretty]
+  | DCC? (≃.4 x y) => comb "≃.4" [x.toFormat pretty, y.toFormat pretty]
+  | DCC? (⊥.Ind motive) => comb "⊥.Ind" [motive.toFormat pretty]
+  | DCC? (≃.mk a b c d) => comb "≃.mk" [a.toFormat pretty, b.toFormat pretty, c.toFormat pretty, d.toFormat pretty]
+  | DCC? (Unify τ_A τ_B A B) => comb "Unify" [τ_A.toFormat pretty, τ_B.toFormat pretty, A.toFormat pretty, B.toFormat pretty]
+  | DCC? A ≃ B => sepD [A.toFormat pretty, B.toFormat pretty] " ="
+  | DCC? (? m) => comb "?" [format m]
   | (DCC? ⊤)                   => "⊤"
   | (DCC? ⊥)                   => "⊥"
   | (DCC? ∗)                   => "∗"

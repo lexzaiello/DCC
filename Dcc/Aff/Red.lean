@@ -9,6 +9,58 @@ namespace GenericExpr
 
 open Dsl
 
+universe u
+variable {τ : Type u} [DecidableEq τ]
+
+abbrev TUnif (u v : Level) (A B : GenericExpr τ) : GenericExpr τ := (DCC? (Σ ((Bool.Ind (`⊤ (`Bool (Sort (max u v)))) (`⊤ (`Bool (A ≃ B))) (`⊤ (`Bool ((A ≃ B) ≃ ⊥)))) ∗)))
+
+/-
+Easier rules before 
+-/
+
+--abbrev unif_fn (u v : Level) (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) : GenericExpr τ :=
+  /-let t_out            := (TUnif u v (DCC? ((Π B₁ C₁) x₁)) (DCC? ((Π B₂ C₂) x₂)))
+  let bool_ind_motive  := (DCC? (`⊤ (`Bool t_out)))
+  let t_cod_eq         := (DCC? (C₁ x₁) ≃ (C₂ x₂))
+  (DCC? (((Bool.Ind bool_ind_motive
+                    (≃.mk (Λ t_cod_eq
+                              (`t_cod_eq ((Π B₁ C₁) x₁))
+                              (-- (h₁ : (C₁ x₁) ≃ (C₂ x₂), f : ((Π B₁ c₁) x₁)), prove ((Π B₂ C₂) x₂), so also x : (B₂ x₂)
+                              (Λ (Σ (`t_cod_eq ((Π B₁ C₁) x₁)))
+                                 (`(Σ (`t_cod_eq ((Π B₁ C₁) x₁))) (B₂ x₂))
+                                 (-- ((h₁ : (C₁ x₁) ≃ (C₂ x₂), f : ((Π B₁ c₁) x₁)), x : (B₂ x₂)), so 
+                                 ))
+                              ))
+                           ()
+                           ()
+                           ())  -- (C₁ x₁) ≃ (C₂ x₂), prove ((Π B₁ C₁) x₁) ≃ ((Π B₂ C₂) x₂)
+                    ()
+                    ())
+           ∗
+           (Unify (? 1) (? 2) (C₁ x₁) (C₂ x₂))))-/
+/-abbrev unif_fn (u v : Level) (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) : GenericExpr τ :=
+  let t_out            := (TUnif u v (DCC? ((Π B₁ C₁) x₁)) (DCC? ((Π B₂ C₂) x₂)))
+  let t_out_false      := DCC? (((Π B₁ C₁) x₁) ≃ ((Π B₂ C₂) x₂)) ≃ ⊥
+  let t_out_false_fst  := DCC? (((Π B₁ C₁) x₁) ≃ ((Π B₂ C₂) x₂))
+  let bool_ind_motive  := (DCC? (`⊤ (`Bool t_out)))
+  let t_eq_fst_true    := (DCC? ((B₁ x₁) ≃ (B₂ x₂)))
+  let t_eq_fst_false   := (DCC? ((B₁ x₁) ≃ (B₂ x₂)) ≃ ⊥)
+  let with_B₁x₁_eq_B₂x₂ (e : GenericExpr τ) : GenericExpr τ :=
+    (DCC? (((Bool.Ind bool_ind_motive
+                     (`⊤ e) -- (B₁ x₁) ≃ (B₂ x₂), ((Π B₁ C₁) x₁), (B₂ x₂)
+                     (∘ ((Λ Bool (`Bool t_out_false) (Id (Σ (`Bool t_out_false)))) False)
+                        (≃.mk (`t_eq_fst_false t_out_false_fst)
+                               (`t_eq_fs_falset ⊥)
+                               (Λ t_eq_fst_false
+                                  (`t_eq_fst_false t_out_false_fst)
+                                  (∘ () (Fst (`t_eq_fst_false t_out_false_fst)))) -- (DCC? ((B₁ x₁) ≃ (B₂ x₂)) ≃ ⊥), (((Π B₁ C₁) x₁) ≃ ((Π B₂ C₂) x₂)), prove ⊥
+                               ())))) -- ((B₁ x₁) ≃ (B₂ x₂)) ≃ ⊥, prove (((Π B₁ C₁) x₁) ≃ ((Π B₂ C₂) x₂)) ≃ ⊥
+                     -- ^ this is equivalent to showing (B₁ x₁) is inhabited
+                     -- but since (((Π B₁ C₁) x₁) ≃ ((Π B₂ C₂) x₂)), then ((B₁ x₁) ≃ (B₂ x₂))
+                     -- which should be solvable with reflexivity
+           (Unify (Dom (C₁ x₁)) (Dom (C₂ x₂)) (B₁ x₁) (B₂ x₂))) ∗))
+  with_B₁x₁_eq_B₂x₂ (by sorry)-/
+
 /-
 Preservation proof:
 - can make these more type-directed
@@ -24,87 +76,36 @@ Funext:
 -/
 
 @[aesop safe (rule_sets := [DccForceStep]) [constructors], aesop unsafe 50% (rule_sets := [DccForceStep]) [cases]]
-inductive RedAff.{u} {τ : Type u} : GenericExpr τ → GenericExpr τ → Prop
+inductive RedAff : GenericExpr τ → GenericExpr τ → Prop
 /-
 Core reductions:
 -/
-  | eql      : RedAff (DCC? ((Eql f_α) (& env) (& x))) (DCC? x = x)
-  | map      : RedAff (DCC? ((!<> f) (& x))) (DCC? (!(f x)))
-  | fmap     : RedAff (DCC? (($<> f) (& x))) (DCC? (& (f x)))
-  | unbox    : RedAff (DCC? ((* A) (& x))) x
-  | pair     : RedAff (DCC? ((⟨,⟩β M N) (& x))) (DCC? (,(β x) (M x) (N x (M x))))
-  | evalc    : RedAff (DCC? ((Eval _α _β x) (,__β y z))) (DCC? (x y z))
-  | quot     : RedAff (DCC? ((`β x) y)) x
-  | id       : RedAff (DCC? ((Id α) x)) x
-  | fstc     : RedAff (DCC? ((Fst _α) (,β a b))) a
-  | sndc     : RedAff (DCC? ((Snd _α) (,β a b))) b
-  | comp     : RedAff (DCC? ((∘ x y) z)) (DCC? (x (y z)))
-  | curr     : RedAff (DCC? ((Λ α β x) y z)) (DCC? (x (,β y z)))
-  | curr'    : RedAff (DCC? ((!Λα β x) (& y) (& z))) (DCC? (x (& (,β y z))))
-  | sigma    : RedAff (DCC? ((Σ f_α f_β) env)) (DCC? ((Σ (f_β env))))
-  | swap     : RedAff (DCC? ((Swap B C) (& (,β₂ x y)))) (DCC? (,(C x) y x))
+  | eql            : RedAff (DCC? ((Eql f_α) (& env) (& x))) (DCC? x = x)
+  | map            : RedAff (DCC? ((!<> f) (& x))) (DCC? (!(f x)))
+  | fmap           : RedAff (DCC? (($<> f) (& x))) (DCC? (& (f x)))
+  | unbox          : RedAff (DCC? ((* A) (& x))) x
+  | pair           : RedAff (DCC? ((⟨,⟩β M N) (& x))) (DCC? (,(β x) (M x) (N x (M x))))
+  | evalc          : RedAff (DCC? ((Eval _α _β x) (,__β y z))) (DCC? (x y z))
+  | quot           : RedAff (DCC? ((`β x) y)) x
+  | id             : RedAff (DCC? ((Id α) x)) x
+  | fstc           : RedAff (DCC? ((Fst _α) (,β a b))) a
+  | sndc           : RedAff (DCC? ((Snd _α) (,β a b))) b
+  | comp           : RedAff (DCC? ((∘ x y) z)) (DCC? (x (y z)))
+  | curr           : RedAff (DCC? ((Λ α β x) y z)) (DCC? (x (,β y z)))
+  | curr'          : RedAff (DCC? ((!Λα β x) (& y) (& z))) (DCC? (x (& (,β y z))))
+  | sigma          : RedAff (DCC? ((Σ f_α f_β) env)) (DCC? ((Σ (f_β env))))
+  | swap           : RedAff (DCC? ((Swap A B) (,B₂ x y))) (DCC? (,(`B A) y x))
+  | ind_bool_true  : RedAff (DCC? ((Bool.Ind motive x y) env True)) (DCC? (x env True))
+  | ind_bool_false : RedAff (DCC? ((Bool.Ind motive x y) env False)) (DCC? (y env False))
+  | cong_1         : RedAff (DCC? (((≃.1 f_x B) env₁) ((≃.mk fX fY fidl fidr) env₂))) (DCC? ((fX env₂) (f_x env₁)))
+  | cong_2         : RedAff (DCC? (((≃.2 B f_x) env₁) ((≃.mk fX fY fidl fidr) env₂))) (DCC? ((fY env₂) (f_x env₁)))
+  | cong_3         : RedAff (DCC? (((≃.3 f_x B) env₁) ((≃.mk fX fY fidl fidr) env₂))) (DCC? ((fidl env₂) (f_x env₁)))
+  | cong_4         : RedAff (DCC? (((≃.4 B f_x) env₁) ((≃.mk fX fY fidl fidr) env₂))) (DCC? ((fidr env₂) (f_x env₁)))
 /-
 Inner congruences:
 -/
 -- `(B, x)
-  | quot₀    : RedAff B B' → RedAff (DCC? (`B x)) (DCC? (`B' x))
-  | quot₁    : RedAff x x' → RedAff (DCC? (`B x)) (DCC? (`B x'))
--- Σ(B, C)
-  | sigma₀   : RedAff B B' → RedAff (DCC? (Σ B C)) (DCC? (Σ B' C))
-  | sigma₁   : RedAff C C' → RedAff (DCC? (Σ B C)) (DCC? (Σ B C'))
--- Π(B, C)
-  | pi₀      : RedAff B B' → RedAff (DCC? (Π B C)) (DCC? (Π B' C))
-  | pi₁      : RedAff C C' → RedAff (DCC? (Π B C)) (DCC? (Π B C'))
-  -- x = y
-  | eq₀      : RedAff x x' → RedAff (DCC? (x = y)) (DCC? (x' = y))
-  | eq₁      : RedAff y y' → RedAff (DCC? (x = y)) (DCC? (x = y'))
-  -- Eql(B)
-  | eql₀     : RedAff B B' → RedAff (DCC? (Eql B)) (DCC? (Eql B'))
-  -- refl(B)
-  | refl₀    : RedAff B B' → RedAff (DCC? (refl B)) (DCC? (refl B'))
-  -- Id(A)
-  | id₀      : RedAff A A' → RedAff (DCC? (Id A)) (DCC? (Id A'))
-  -- Fstc(B)
-  | fstc₀    : RedAff B B' → RedAff (DCC? (Fst B)) (DCC? (Fst B'))
-  -- Sndc(B)
-  | sndc₀    : RedAff B B' → RedAff (DCC? (Snd B)) (DCC? (Snd B'))
-  -- !(x)
-  | bang₀    : RedAff x x' → RedAff (DCC? (! x)) (DCC? (! x'))
-  -- &(x)
-  | box₀     : RedAff x x' → RedAff (DCC? (& x)) (DCC? (& x'))
-  -- !<x>
-  | map₀     : RedAff f f' → RedAff (DCC? (!<> f)) (DCC? (!<> f'))
-  -- $<x>
-  | fmap₀    : RedAff f f' → RedAff (DCC? ($<> f)) (DCC? ($<> f'))
-  -- *(x)
-  | unbox₀   : RedAff A A' → RedAff (DCC? (* A)) (DCC? (* A'))
-  -- Λ(A, B, x)
-  | curr₀    : RedAff A A' → RedAff (DCC? ((Λ A B x))) (DCC? ((Λ A' B x)))
-  | curr₁    : RedAff B B' → RedAff (DCC? ((Λ A B x))) (DCC? ((Λ A B' x)))
-  | curr₂    : RedAff x x' → RedAff (DCC? ((Λ A B x))) (DCC? ((Λ A B x')))
-  -- Eval(A, B, x)
-  | eval₀    : RedAff A A' → RedAff (DCC? ((Eval A B x))) (DCC? ((Eval A' B x)))
-  | eval₁    : RedAff B B' → RedAff (DCC? ((Eval A B x))) (DCC? ((Eval A B' x)))
-  | eval₂    : RedAff x x' → RedAff (DCC? ((Eval A B x))) (DCC? ((Eval A B x')))
-  -- !Λ(A, B, x)
-  | curr'₀   : RedAff A A' → RedAff (DCC? ((!Λ A B x))) (DCC? ((!Λ A' B x)))
-  | curr'₁   : RedAff B B' → RedAff (DCC? ((!Λ A B x))) (DCC? ((!Λ A B' x)))
-  | curr'₂   : RedAff x x' → RedAff (DCC? ((!Λ A B x))) (DCC? ((!Λ A B x')))
-  -- ⟦B⟧(x, y)
-  | sig₀     : RedAff B B' → RedAff (DCC? (,B x y)) (DCC? (,B' x y))
-  | sig₁     : RedAff x x' → RedAff (DCC? (,B x y)) (DCC? (,B x' y))
-  | sig₂     : RedAff y y' → RedAff (DCC? (,B x y)) (DCC? (,B x y'))
-  -- ⟦B⟧⟨x, y⟩
-  | pair₀    : RedAff B B' → RedAff (DCC? (⟨,⟩B x y)) (DCC? (⟨,⟩B' x y))
-  | pair₁    : RedAff x x' → RedAff (DCC? (⟨,⟩B x y)) (DCC? (⟨,⟩B x' y))
-  | pair₂    : RedAff y y' → RedAff (DCC? (⟨,⟩B x y)) (DCC? (⟨,⟩B x y'))
-  -- Coup(B)
-  | coup₀    : RedAff β β' → RedAff (DCC? ((Σ β))) (DCC? ((Σ β')))
-  -- x and y in x ∘ y
-  | comp₀    : RedAff x x' → RedAff (DCC? (∘ x y)) (DCC? (∘ x'  y))
-  | comp₁    : RedAff y y' → RedAff (DCC? (∘ x  y)) (DCC? (∘ x  y'))
-  | swap₀    : RedAff B B' → RedAff (DCC? (Swap B C)) (DCC? (Swap B' C))
-  | swap₁    : RedAff C C' → RedAff (DCC? (Swap B C)) (DCC? (Swap B C'))
+  | point : (n : ℕ) → (h : n < point_arity e) → RedAff ((points e).get ⟨n, h⟩) p' → RedAff e (e.set_points ((points e).set n p'))
 /-
 App congruence:
 -/
@@ -156,175 +157,262 @@ Matchers congruence (matchers only used by the kernel in η-reduction
 Base combinator 2-argument function domains
 -/
   | eqlτ₃   : RedAff (DCC? (Dom₂ (Eql B))) (DCC? (!<> B))
-  | reflτ₃   : RedAff (DCC? (Dom₂ (refl B))) (DCC? (!<> B))
+  | reflτ₃  : RedAff (DCC? (Dom₂ (refl B))) (DCC? (!<> B))
   | currτ₃  : RedAff (DCC? (Dom₂ (Λ A B x))) B
   | curr'τ₃ : RedAff (DCC? (Dom₂ (!Λ A B x))) (DCC? (!<> B))
 -- Congruence for Dom₂
   | dom₂₀   : RedAff x x' → RedAff (DCC? (Dom₂ x)) (DCC? (Dom₂ x'))
+/-
+  Unifications:
+-/
+  -- A ≃ A = Id
+  | unif_refl : RedAff (DCC? (Unify τ_A₁ τ_A₂ A A)) (DCC? (,(`Bool (A ≃ A)) True ((≃.mk (`⊤ (Id A)) (`⊤ (Id A)) (`⊤ ((refl (Id τ_A₁)) (&A))) (`⊤ ((refl (Id τ_A₂)) (&A)))) ∗)))
+  /-
+    (X ≃ ⊥) ≃ ⊥:
+    - (Sort (m + 1) ≃ ⊥) ≃ ⊥
+    - (Sort 0 ≃ ⊥) ≃ ⊥, by ⊤
+    - 
+  -/
+  | unif_bot_sort : RedAff (DCC? (Unify τ_A τ_B (Sort (m + 1)) ⊥))
+    (DCC? (,(`Bool (((Sort (m + 1)) ≃ ⊥) ≃ ⊥)) False ((≃.mk (`⊤ ((≃.1 (`⊤ (Sort m)) (`⊤ ⊥)) ∗)) (`⊤ ((⊥.Ind (`⊤ (`⊥ ((Sort (m + 1)) ≃ ⊥)))) ∗)) (`⊤ ((refl (Id τ_A)) (& (Sort (m + 1))))) (`⊤ ((refl (Id τ_B)) (& ⊥)))) ∗)))
+  | unif_bot_prop : RedAff (DCC? (Unify τ_A τ_B (Sort 0) ⊥))
+    (DCC? (,(`Bool (((Sort 0) ≃ ⊥) ≃ ⊥)) False ((≃.mk (`⊤ ((≃.1 (`⊤ ⊤) (`⊤ ⊥)) ∗)) (`⊤ ((⊥.Ind (`⊤ (`⊥ ((Sort 0) ≃ ⊥)))) ∗)) (`⊤ ((refl (Id τ_A)) (& (Sort 0)))) (`⊤ ((refl (Id τ_B)) (& ⊥)))) ∗)))
+  /-
+    Function unification:
+    ((Π B₁ C₁) x₁) with ((Π B₂ C₂) x₂)
+    can we do with just h₁
+    (mk (fun f => f ∘ unify((B₁ x₁), (B₂ x₂)).2) (fun f => f ∘ unify((B₁ x₁), (B₂ x₂)).1) (? : ((unify((B₁ x₁), (B₂ x₂)).2) ·) ∘ ((unify((B₁ x₁), (B₂ x₂)).1 x) ·) = id)
+    we arleady know the two A's are equal
+    so we just want to send the codomain g' := (unify(C₁ x₁, C₂ x₂).1 ∘ f)
+    (unify(C₁ x₁, C₂ x₂).2 ∘ (unify(C₁ x₁, C₂ x₂).1 ∘ f)) = f. that's perfect. just a notational game.
+
+    comp_id is (to_fun ∘ inv_fun) f = (∘ unify(C₁ x₁, C₂ x₂).2) ∘ (∘ unify(C₁ x₁, C₂ x₂).1) f = (∘ unify(C₁ x₁, C₂ x₂).2) (unify(C₁ x₁, C₂ x₂).1 f) = f
+
+    maybe we just need an identity for composed unification?
+
+    we cannot unify (C₁ x₁) with (C₂ x₂) since we don't have a domain to plug them into.
+    we can unify with hole. this is super ugly though.
+  -/
+  /-| unif_fn : RedAff (DCC? (Unify (Sort u) (Sort v) ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))
+    (DCC? (((Bool.Ind (`⊤ (`Bool #(TUnif u v (DCC? ((Π B₁ C₁) x₁)) (DCC? ((Π B₂ C₂) x₂)))))
+                     (`⊤ (`(B₁ ≃ x₁)
+                           ((Bool.Ind (`⊤ (`Bool (#(TUnif u v (DCC? ((Π B₁ C₁) x₁)) (DCC? ((Π B₂ C₂) x₂))))))) ∗))) -- (B₁ x₁) ≃ (B₂ x₂), ((Π B₁ C₁) x₁), (B₂ x₂)
+                     ()) -- ((B₁ x₁) ≃ (B₂ x₂)) ≃ ⊥)
+           (Unify (Dom (C₁ x₁)) (Dom (C₂ x₂)) (B₁ x₁) (B₂ x₂))) ∗))-/
 
 instance (A B : GenericExpr τ) : Repr (PLift (RedAff A B)) := ⟨fun _ _ => "⋯"⟩
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
+def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
   match e with
+  | (DCC? ((Bool.Ind motive x y) env True)) =>
+    .some ⟨_, ⟨.ind_bool_true⟩⟩
+  | (DCC? ((Bool.Ind motive x y) env False)) =>
+    .some ⟨_, ⟨.ind_bool_false⟩⟩
+  | (DCC? (Unify τ_A τ_B (Sort (m + 1)) ⊥)) =>
+    .some ⟨_, ⟨.unif_bot_sort⟩⟩
+  | (DCC? (Unify τ_A τ_B (Sort 0) ⊥)) =>
+    .some ⟨_, ⟨.unif_bot_prop⟩⟩
+  | (DCC? (((≃.1 f_x B) env₁) ((≃.mk fX fY fidl fidr) env₂))) =>
+    .some ⟨_, ⟨.cong_1⟩⟩
+  | (DCC? (((≃.2 B f_x) env₁) ((≃.mk fX fY fidl fidr) env₂))) =>
+    .some ⟨_, ⟨.cong_2⟩⟩
+  | (DCC? (((≃.3 f_x B) env₁) ((≃.mk fX fY fidl fidr) env₂))) =>
+    .some ⟨_, ⟨.cong_3⟩⟩
+  | (DCC? (((≃.4 B f_x) env₁) ((≃.mk fX fY fidl fidr) env₂))) =>
+    .some ⟨_, ⟨.cong_4⟩⟩
+  | (DCC? (Unify τ_A₁ τ_A₂ A B)) =>
+    if heq : A = B then
+      heq ▸ .some ⟨_, ⟨RedAff.unif_refl⟩⟩
+    else
+      match τ_A₁.step?, τ_A₂.step? with
+      | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h₁⟩⟩
+      | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h₂⟩⟩
+      | _, _ =>
+        match A.step?, B.step? with
+        | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 2 (by grind) h₁⟩⟩
+        | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 3 (by grind) h₂⟩⟩
+        | _, _ => .none
+  | DCC? (Bool.Ind motive x y) =>
+    match motive.step?, x.step? with
+    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h₁⟩⟩
+    | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h₂⟩⟩
+    | _, _ =>
+      match y.step? with
+      | .some ⟨_, ⟨h₃⟩⟩ => .some ⟨_, ⟨.point 2 (by grind) h₃⟩⟩
+      | .none => .none
+  | DCC? (≃.Ind motive x) =>
+    match motive.step?, x.step? with
+    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h₁⟩⟩
+    | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h₂⟩⟩
+    | _, _ => .none
+  | DCC? (≃.mk to_fun inv_fun comp_id id_comp) =>
+    match to_fun.step?, inv_fun.step? with
+    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h₁⟩⟩
+    | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h₂⟩⟩
+    | _, _ =>
+      match comp_id.step?, id_comp.step? with
+      | .some ⟨_, ⟨h₃⟩⟩, _ => .some ⟨_, ⟨.point 2 (by grind) h₃⟩⟩
+      | _, .some ⟨_, ⟨h₄⟩⟩ => .some ⟨_, ⟨.point 3 (by grind) h₄⟩⟩
+      | _, _ => .none
   | (DCC? (Π f_α f_β)) =>
     match f_α.step?, f_β.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.pi₀ h₁⟩⟩
-    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.pi₁ h₁⟩⟩
+    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h₁⟩⟩
+    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h₁⟩⟩
     | _, _ => .none
   | (DCC? (Σ f_α f_β)) =>
     match f_α.step?, f_β.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.sigma₀ h₁⟩⟩
-    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.sigma₁ h₁⟩⟩
+    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h₁⟩⟩
+    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h₁⟩⟩
     | _, _ => .none
   | (DCC? ((Eql _f_α) (& _env) (& _x))) => .some ⟨_, ⟨.eql⟩⟩
   | (DCC? (x = y)) =>
     match x.step?, y.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.eq₀ h₁⟩⟩
-    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.eq₁ h₁⟩⟩
+    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h₁⟩⟩
+    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h₁⟩⟩
     | _, _ => .none
   | DCC? (! x) =>
     match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.bang₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
     | _ => .none
   | DCC? (!<> x) =>
     match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.map₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
     | _ => .none
   | DCC? ((!<> _f) (& _x))                                 => .some ⟨_, ⟨.map⟩⟩
   | DCC? (($<> _f) (& _x))                                 => .some ⟨_, ⟨.fmap⟩⟩
   | DCC? ((* _α) (& _x))                                 => .some ⟨_, ⟨.unbox⟩⟩
   | DCC? (* x) =>
     match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.unbox₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
     | _ => .none
   | DCC? ($<> x) =>
     match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.fmap₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
     | _ => .none
   | DCC? (& x) =>
     match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.box₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
     | _ => .none
   | DCC? ((⟨,⟩_β M N) (& _x))                        => .some ⟨_, ⟨.pair⟩⟩
   | (DCC? ((Eval _α _β _x) (,__β _y _z)))            => .some ⟨_, ⟨.evalc⟩⟩
   | (DCC? ((`_β _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
   | (DCC? ((Id _α) _x))                                => .some ⟨_, ⟨.id⟩⟩
   | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
-  | (DCC? ((Swap _B _C) (& (,_B₂ _a _b))))                 => .some ⟨_, ⟨.swap⟩⟩
+  | (DCC? ((Swap _B _C) (,_B₂ _a _b)))                 => .some ⟨_, ⟨.swap⟩⟩
   | DCC? (Fst B) =>
     match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .fstc₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
     | _ => .none
   | DCC? (Snd B) =>
     match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .sndc₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
     | _ => .none
   | DCC? (Swap B C) =>
     match B.step?, C.step? with
-    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.swap₀ h⟩⟩
-    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.swap₁ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
+    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h⟩⟩
     | _, _ => .none
   | DCC? (Eql B) =>
     match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .eql₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .point 0 (by grind) h⟩⟩
     | _ => .none
   | DCC? (Id A) =>
     match A.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .id₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .point 0 (by grind) h⟩⟩
     | _ => .none
   | DCC? (refl B) =>
     match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .refl₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .point 0 (by grind) h⟩⟩
     | _ => .none
   | (DCC? ((Snd _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
   | (DCC? ((∘ _x _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
   | DCC? (∘ x  y) =>
     match x.step?, y.step? with
-    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.comp₀ h⟩⟩
-    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.comp₁ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
+    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h⟩⟩
     | _, _ => .none
   | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, ⟨.curr'⟩⟩
   | DCC? (!Λ A B x) =>
     match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr'₁ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h⟩⟩
     | .none => match A.step?, x.step? with
-      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.curr'₀ h⟩⟩
-      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr'₂ h⟩⟩
+      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
+      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 2 (by grind) h⟩⟩
       | _, _ => .none
   | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
   | DCC? (Λ A B x) =>
     match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr₁ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h⟩⟩
     | .none => match A.step?, x.step? with
-      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.curr₀ h⟩⟩
-      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.curr₂ h⟩⟩
+      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
+      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 2 (by grind) h⟩⟩
       | _, _ => .none
   | DCC? (Eval A B x) =>
     match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.eval₁ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h⟩⟩
     | .none => match A.step?, x.step? with
-      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.eval₀ h⟩⟩
-      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.eval₂ h⟩⟩
+      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
+      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 2 (by grind) h⟩⟩
       | _, _ => .none
   | (DCC? ((Σ _f_α _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
   | DCC? (,β x y) =>
     match β.step? with
-    | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.sig₀ h₁⟩⟩
+    | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.point 0 (by grind) h₁⟩⟩
     | _ =>
       match x.step?, y.step? with
-      | .some ⟨x', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (,β x' y)), ⟨.sig₁ h₁⟩⟩
-      | _, .some ⟨y', ⟨h₁⟩⟩ => .some ⟨(DCC? (,β x y')), ⟨.sig₂ h₁⟩⟩
+      | .some ⟨x', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (,β x' y)), ⟨.point 1 (by grind) h₁⟩⟩
+      | _, .some ⟨y', ⟨h₁⟩⟩ => .some ⟨(DCC? (,β x y')), ⟨.point 2 (by grind) h₁⟩⟩
       | _, _ => .none
   | DCC? (⟨,⟩B x y) =>
     match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pair₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
     | _ =>
       match x.step?, y.step? with
-      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.pair₁ h⟩⟩
-      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.pair₂ h⟩⟩
+      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 1 (by grind) h⟩⟩
+      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 2 (by grind) h⟩⟩
       | _, _ => .none
   | (DCC? (Σ β)) =>
     match β.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.coup₀ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
     | _ => .none
   | DCC? (`B x) =>
     match B.step?, x.step? with
-    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.quot₀ h⟩⟩
-    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.quot₁ h⟩⟩
+    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by grind) h⟩⟩
+    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by grind) h⟩⟩
     | _, _ => .none
   | DCC? (f x) =>
     match f.step?, x.step? with
     | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (f' x)), ⟨.congrFun h₁⟩⟩
     | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC? (f x')), ⟨.congrArg h₁⟩⟩
     | _, _ => .none
-  | DCC? (Dom (Eql _B)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (refl _B)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (!<> _x)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom ($<> _x)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (* _x)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (⟨,⟩_B _x _y)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (Eval _A _B _x)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (`_B _x)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (Id _A)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (Fst _B)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (Snd _B)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (Swap _B _C)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (∘ _x _y)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (Λ _A _B _x)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (!Λ _A _B _x)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (Σ B C)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom (Π B C)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom ((Eql _B) (& _x))) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom ((refl _B) (& _x))) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom ((Λ _A _B _x) _y)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom ((!Λ _A _B _x) (& _y))) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? (Dom (Eql _B)) => .some ⟨_, ⟨.eqlτ₀⟩⟩
+  | DCC? (Dom (refl _B)) => .some ⟨_, ⟨.reflτ₀⟩⟩
+  | DCC? (Dom (!<> _x)) => .some ⟨_, ⟨.mapτ₀⟩⟩
+  | DCC? (Dom ($<> _x)) => .some ⟨_, ⟨.fmapτ₀⟩⟩
+  | DCC? (Dom (* _x)) => .some ⟨_, ⟨.unboxτ₀⟩⟩
+  | DCC? (Dom (⟨,⟩_B _x _y)) => .some ⟨_, ⟨.pairτ₀⟩⟩
+  | DCC? (Dom (Eval _A _B _x)) => .some ⟨_, ⟨.evalcτ₀⟩⟩
+  | DCC? (Dom (`_B _x)) => .some ⟨_, ⟨.quotτ₀⟩⟩
+  | DCC? (Dom (Id _A)) => .some ⟨_, ⟨.idτ₀⟩⟩
+  | DCC? (Dom (Fst _B)) => .some ⟨_, ⟨.fstcτ₀⟩⟩
+  | DCC? (Dom (Snd _B)) => .some ⟨_, ⟨.sndcτ₀⟩⟩
+  | DCC? (Dom (Swap _B _C)) => .some ⟨_, ⟨.swapτ₀⟩⟩
+  | DCC? (Dom (∘ _x _y)) => .some ⟨_, ⟨.compτ₀⟩⟩
+  | DCC? (Dom (Λ _A _B _x)) => .some ⟨_, ⟨.currτ₀⟩⟩
+  | DCC? (Dom (!Λ _A _B _x)) => .some ⟨_, ⟨.curr'τ₀⟩⟩
+  | DCC? (Dom (Σ B C)) => .some ⟨_, ⟨.sigmaτ₀⟩⟩
+  | DCC? (Dom (Π B C)) => .some ⟨_, ⟨.piτ₀⟩⟩
+  | DCC? (Dom ((Eql _B) (& _x))) => .some ⟨_, ⟨.eqlτ₁⟩⟩
+  | DCC? (Dom ((refl _B) (& _x))) => .some ⟨_, ⟨.reflτ₁⟩⟩
+  | DCC? (Dom ((Λ _A _B _x) _y)) => .some ⟨_, ⟨.currτ₁⟩⟩
+  | DCC? (Dom ((!Λ _A _B _x) (& _y))) => .some ⟨_, ⟨.curr'τ₁⟩⟩
   | DCC? (Dom x) =>
     match x.step? with
     | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.dom₀ hr⟩⟩
     | .none => .none
-  | DCC? (Uncoup (Σ x)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Unbang (! x)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? (Uncoup (Σ x)) => .some ⟨_, ⟨.uncoup⟩⟩
+  | DCC? (Unbang (! x)) => .some ⟨_, ⟨.unbang⟩⟩
   | DCC? (Uncoup x) =>
     match x.step? with
     | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.uncoup₀ hr⟩⟩
@@ -333,30 +421,48 @@ def step?.{u} {τ : Type u} (e : GenericExpr τ) : Option ((e' : GenericExpr τ)
     match x.step? with
     | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.unbang₀ hr⟩⟩
     | .none => .none
-  | DCC? (Dom₂ (Eql B)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom₂ (refl B)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom₂ (Λ A B x)) => .some ⟨_, ⟨by constructor⟩⟩
-  | DCC? (Dom₂ (!Λ A B x)) => .some ⟨_, ⟨by constructor⟩⟩
+  | DCC? (Dom₂ (Eql B)) => .some ⟨_, ⟨.eqlτ₃⟩⟩
+  | DCC? (Dom₂ (refl B)) => .some ⟨_, ⟨.reflτ₃⟩⟩
+  | DCC? (Dom₂ (Λ A B x)) => .some ⟨_, ⟨.currτ₃⟩⟩
+  | DCC? (Dom₂ (!Λ A B x)) => .some ⟨_, ⟨.curr'τ₃⟩⟩
   | DCC? (Dom₂ x) =>
     match x.step? with
     | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.dom₂₀ hr⟩⟩
     | .none => .none
   | _ => .none
 
+set_option maxHeartbeats 10000000 in
 @[dcc_force_reduce, dcc_force_aff]
-instance RedAff.instRedRel.{u} {τ : Type u} : RedRel (α := GenericExpr τ) (RedAff (τ := τ)) size where
+instance RedAff.instRedRel : RedRel (α := GenericExpr τ) (RedAff (τ := τ)) size where
   run := step?
+  decreasing := by
+    intro x y h
+    induction h
+    case point =>
+      expose_names
+      have h := point_size_lt' (n := n) (h := h)
+      have h' : p'.size < e.size := by grind
+      have h := set_point_size_lt (by assumption) rfl (by assumption)
+      simp_all
+    any_goals (
+      focus
+      try dsimp
+      try grind
+      try simp_all [dcc_rel, dcc_size, Rel.run]
+      try grind
+      try aesop (rule_sets := [DccRel, DccSize])
+      try rfl)
 
-theorem red_aff_sn.{u} {τ : Type u} : ∀ (e : GenericExpr τ), Acc (fun b a => RedAff (τ := τ) a b) e :=
+theorem red_aff_sn : ∀ (e : GenericExpr τ), Acc (fun b a => RedAff (τ := τ) a b) e :=
   RedAff.instRedRel.sn
 
-theorem red_aff_trans_sn.{u} {τ : Type u} [DecidableEq τ] : ∀ (e : GenericExpr τ), Acc (fun b a => Relation.TransGen RedAff a b) e :=
+theorem red_aff_trans_sn : ∀ (e : GenericExpr τ), Acc (fun b a => Relation.TransGen RedAff a b) e :=
   RedAff.instRedRel.to_trans.sn
 
 theorem RedAff.mkCongrFun (h : RedAff f f') : RedAff (DCC? (f x)) (DCC? (f' x)) := .congrFun h
 theorem RedAff.mkCongArg (h : RedAff x x') : RedAff (DCC? (f x)) (DCC? (f x')) := .congrArg h
 
-theorem congrFun' (hr : Relation.ReflTransGen RedAff f f') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f' x)) := by
+theorem congrFun' {f x f' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff f f') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f' x)) := by
   match hr.cases_head with
   | .inl h =>
     cases h
@@ -366,27 +472,27 @@ theorem congrFun' (hr : Relation.ReflTransGen RedAff f f') : Relation.ReflTransG
     exact .trans (.single (.congrFun h₁)) (congrFun' h₂)
 termination_by size f
 
-theorem swap₀' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Swap x _y)) (DCC? (Swap x' _y)) := by
+theorem swap₀' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Swap x _y)) (DCC? (Swap x' _y)) := by
   match hr.cases_head with
   | .inl h =>
     cases h
     exact .refl
   | .inr ⟨_, h₁, h₂⟩ =>
     have h_dec := RedAff.instRedRel.decreasing h₁
-    exact .trans (.single (.swap₀ h₁)) (swap₀' (by assumption))
+    exact .trans (.single (.point 0 (by grind) h₁)) (swap₀' (by assumption))
 termination_by x.size
 
-theorem swap₁' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Swap _x x)) (DCC? (Swap _x x')) := by
+theorem swap₁' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Swap _x x)) (DCC? (Swap _x x')) := by
   match hr.cases_head with
   | .inl h =>
     cases h
     exact .refl
   | .inr ⟨_, h₁, h₂⟩ =>
     have h_dec := RedAff.instRedRel.decreasing h₁
-    exact .trans (.single (.swap₁ h₁)) (swap₁' (by assumption))
+    exact .trans (.single (.point 1 (by grind) h₁)) (swap₁' (by assumption))
 termination_by x.size
 
-theorem dom' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Dom x)) (DCC? (Dom x')) := by
+theorem dom' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Dom x)) (DCC? (Dom x')) := by
   match hr.cases_head with
   | .inl h =>
     cases h
@@ -396,7 +502,7 @@ theorem dom' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen Re
     exact .trans (.single (.dom₀ h₁)) (dom' (by assumption))
 termination_by x.size
 
-theorem dom₂' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Dom₂ x)) (DCC? (Dom₂ x')) := by
+theorem dom₂' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Dom₂ x)) (DCC? (Dom₂ x')) := by
   match hr.cases_head with
   | .inl h =>
     cases h
@@ -406,7 +512,7 @@ theorem dom₂' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen
     exact .trans (.single (.dom₂₀ h₁)) (dom₂' (by assumption))
 termination_by x.size
 
-theorem uncoup' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Uncoup x)) (DCC? (Uncoup x')) := by
+theorem uncoup' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Uncoup x)) (DCC? (Uncoup x')) := by
   match hr.cases_head with
   | .inl h =>
     cases h
@@ -416,7 +522,7 @@ theorem uncoup' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen
     exact .trans (.single (.uncoup₀ h₁)) (uncoup' (by assumption))
 termination_by x.size
 
-theorem unbang' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Unbang x)) (DCC? (Unbang x')) := by
+theorem unbang' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Unbang x)) (DCC? (Unbang x')) := by
   match hr.cases_head with
   | .inl h =>
     cases h
@@ -426,7 +532,7 @@ theorem unbang' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen
     exact .trans (.single (.unbang₀ h₁)) (unbang' (by assumption))
 termination_by x.size
 
-theorem congrArg' (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f x')) := by
+theorem congrArg' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f x')) := by
   match hr.cases_head with
   | .inl h =>
     cases h
@@ -439,134 +545,171 @@ termination_by size x
 @[aesop safe forward (rule_sets := [DccForceReduce])]
 theorem RedAff.elim_point₁ {A B : GenericExpr τ_c} (hr : RedAff A B) (h_arr : point_arity A = 1 := by rfl) : ∃ p', B = (A.set_points (A.points.set 0 p')) ∧ RedAff A.points[0] p' := by
   unfold point_arity at h_arr
-  split at h_arr <;> (
-    first
-    | (grind)
-    | (
-      simp at h_arr
-      dcc_simp
-      cases hr
-      grind))
-
-theorem RedAff.mk_point {x y e : GenericExpr τ_c} (n : Fin (point_arity e) := by exact ⟨0, by grind⟩) (hr : RedAff x y := by assumption) (heq : (points e)[n] = x := by first | grind | (dcc_simp; rfl)) : RedAff e (e.set_points ((points e).set n y)) := by
-  unfold points at heq
-  split at heq <;> (
-    first
-    | (grind)
-    | (dcc_simp at n
-       fin_cases n <;> (
-       dcc_simp at *
-       cases heq
-       constructor
-       assumption)))
-
-theorem RedAff.elim_points {A B : GenericExpr τ_c} (hr : RedAff A B) (h_arr : 0 < point_arity A := by grind) : ∃ (p' : GenericExpr τ_c) (n : Fin (point_arity A)), B = (A.set_points (A.points.set n p')) ∧ RedAff A.points[n] p' := by
-  unfold point_arity at h_arr
   split at h_arr
-  any_goals (grind)
+  any_goals (simp at h_arr)
   any_goals (
-    focus
-    try (
-      have ⟨p', heq, hr⟩ := hr.elim_point₁
-      exact ⟨p', ⟨0, by grind⟩, heq, hr⟩)
-    done)
-  any_goals (
-    focus
-    try (
-      cases hr
-      · rename_i hr; exact ⟨_, ⟨0, by grind⟩, rfl, by assumption⟩
-      · rename_i hr; exact ⟨_, ⟨1, by grind⟩, rfl, by assumption⟩)
-    done)
-  any_goals (
-    focus
-    try (
-      cases hr
-      · rename_i hr; exact ⟨_, ⟨0, by grind⟩, rfl, by assumption⟩
-      · rename_i hr; exact ⟨_, ⟨1, by grind⟩, rfl, by assumption⟩
-      · rename_i hr; exact ⟨_, ⟨2, by grind⟩, rfl, by assumption⟩))
+    expose_names
+    dcc_simp
+    cases hr
+    simp at h_arr_1
+    expose_names
+    simp [point_arity] at h
+    cases h
+    dcc_simp
+    assumption)
 
-theorem RedAff.instCongruent'_mp {e : GenericExpr τ_c} {p : Fin (point_arity e)} (h : RedAff (points e)[p] p') : RedAff e (set_points e ((points e).set p p')) := by
-  simp [points] at h
-  split at h <;> (simp [point_arity] at p; simp at h)
-  any_goals (grind)
-  any_goals (fin_cases p <;> (
-      try (simp at h)
-      dcc_simp
-      constructor; assumption))
+theorem RedAff.mk_point {x y e : GenericExpr τ_c} (n : Fin (point_arity e) := by exact ⟨0, by grind⟩) (hr : RedAff x y := by assumption) (heq : (points e)[n] = x := by first | grind | (dcc_simp; rfl)) : RedAff e (e.set_points ((points e).set n y)) := .point n (by grind) (by
+  cases heq
+  exact hr)
 
-theorem RedAff.instCongruent'_mpr {e : GenericExpr τ_c} {p : Fin (point_arity e)} (h : RedAff e (set_points e ((points e).set p p'))) : RedAff (points e)[p] p' := by
-  simp [points] at h
-  split at h <;> (simp [point_arity] at p; simp at h)
-  any_goals (grind)
-  any_goals (
-    focus
-    try (
-      fin_cases p
-      any_goals (
-        dcc_simp at h
-        cases h
-        any_goals (assumption)
-        try (any_goals (
-          focus
-          try (
-            have h_dec := RedAff.instRedRel.decreasing (by assumption)
-            grind))))))
+theorem RedAff.instCongruent'_mp {e : GenericExpr τ_c} {p : Fin (point_arity e)} (h : RedAff (points e)[p] p') : RedAff e (set_points e ((points e).set p p')) :=
+  .point (↑ p) (by grind) h
 
-theorem red_aff_congr_point {e : GenericExpr τ_c} {p : Fin (point_arity e)} (h : Relation.ReflTransGen RedAff (points e)[p] p') : Relation.ReflTransGen RedAff e (set_points e ((points e).set p p')) := by
-  match h.cases_head with
+instance RedAff.instCongruent : Congruent (RedAff (τ := τ)) where
+  coup_ := fun h => .point 0 (by grind) h
+  pil_ := fun h => .point 0 (by grind) h
+  pir_ := fun h => .point 1 (by grind) h
+  sigl_ := fun h => .point 1 (by grind) h
+  sigr_ := fun h => .point 2 (by grind) h
+
+theorem point_trans (_hr : RedAff (τ := τ_c) ((points e).get ⟨n, h⟩) p') (hr' : RedAff p' w) : RedAff ((points ((e.set_points ((points e).set n p')))).get ⟨n, by
+  have h := congr_point_arr (e := e) (p := ⟨n, h⟩) (p' := p')
+  grind⟩) w := by
+  have h := get_set_point (e := e) (p := ⟨n, h⟩) (p' := p')
+  simp [h]
+  assumption
+
+theorem point_trans' (_hr : RedAff (τ := τ_c) ((points e).get ⟨n, h⟩) p') (hr' : Relation.ReflTransGen RedAff p' w) : Relation.ReflTransGen RedAff ((points ((e.set_points ((points e).set n p')))).get ⟨n, by
+  have h := congr_point_arr (e := e) (p := ⟨n, h⟩) (p' := p')
+  grind⟩) w := by
+  have h := get_set_point (e := e) (p := ⟨n, h⟩) (p' := p')
+  simp [h]
+  assumption
+
+theorem point' (hr : Relation.ReflTransGen (RedAff (τ := τ)) ((points e).get ⟨n, h⟩) p') : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n p')) :=
+  match hr.cases_head with
+  | .inl h => by
+    cases h
+    have heq := get_set_point (p := ⟨n, h⟩) (e := e) (p' := e.points.get ⟨n, h⟩)
+    have heq' := get_set_point' (p := ⟨n, h⟩) (e := e) rfl
+    simp [heq']
+    exact Relation.ReflTransGen.refl
+  | .inr ⟨_, h₁, h₂⟩ => by
+    expose_names
+    have h_dec := RedAff.instRedRel.decreasing h₁
+    have h_dec₂ := decreasing? _ h₂
+    have heq := set_same_point_comp (e := e) (x := w) (p := ⟨n, h⟩) (y := p')
+    have hr' := RedAff.point _ _ h₁
+    have hr'' := point_trans' h₁ h₂
+    have h_dec₃ := decreasing? _ hr''
+    have h_dec₂ : (e.set_points (e.points.set n w h)).size < e.size := by
+      have h_dec := RedAff.instRedRel.decreasing hr'
+      grind
+    have hrt' := point' hr''
+    have heq' := set_same_point_comp (e := e) (x := w) (p := ⟨n, h⟩) (y := p')
+    simp [heq'] at hrt'
+    exact Relation.ReflTransGen.trans (.single (.point n h h₁)) hrt'
+termination_by e.size
+
+theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x y) (hn : n < point_arity e := by grind) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := by
+  match hr.cases_head with
   | .inl h =>
     cases h
-    simp [set_points_self_noop]
-    exact .refl
+    unfold point_arity at hn
+    split at hn
+    any_goals (grind)
+    case h_1 | h_14 =>
+      simp at hn
+      match n with
+      | 0 | 1 | 2 | 3 =>
+        simp at heq
+        cases heq
+        simp [set_points_self_noop]
+        exact Relation.ReflTransGen.refl
   | .inr ⟨_, h₁, h₂⟩ =>
-    have h_dec₁ := RedAff.instRedRel.decreasing h₁
-    have ha := RedAff.instCongruent'_mp h₁
-    have h_dec₂ := RedAff.instRedRel.decreasing ha
-    have hb := RedAff.instCongruent'_mpr ha
-    rename_i w
-    have heq := congr_point_arr (e := e) (p := p) (p' := w)
-    have heq' : (points (e.set_points (e.points.set (↑ p) w))).get ⟨p, by rw [← congr_point_arr]; grind⟩ = w := by
-      grind
-    change (points _)[p] = w at heq'
-    rw [← heq'] at h₂
-    --exact .trans (.single ha) (by sorry)
-    have h := red_aff_congr_point (e := (e.set_points
-          (e.points.set p w)))
-          (p' := p')
-          (p := ⟨↑p,
-        Eq.mpr (_root_.id (_root_.congrArg (fun _a => ↑p < _a) (Eq.symm congr_point_arr)))
-          red_aff_congr_point._proof_1_4⟩) h₂
-    simp at h
-    expose_names
-    exact .trans (.single ha) (by
-      simp_all
-      grind)
-termination_by size e
+    cases heq
+    have h_dec := RedAff.instRedRel.decreasing h₁
+    have hr' := point' hr
+    exact hr'
 
-instance RedAff.instCongruent'.{u} {τ : Type u} : Congruent' (RedAff (τ := τ)) where
-  congr_iff := ⟨RedAff.instCongruent'_mp, RedAff.instCongruent'_mpr⟩
+theorem aff_mk_point'' {x y e : GenericExpr τ} (n : ℕ) (hr : RedAff x y := by assumption) (hn : n < point_arity e := by grind) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := aff_mk_point' (.single hr)
 
-instance RedAff.instCongruent.{u} {τ : Type u} : Congruent (RedAff (τ := τ)) where
-
-theorem aff_mk_point' {x y e : GenericExpr τ_c} (hr : Relation.ReflTransGen RedAff x y) (hn : n < point_arity e := by grind) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := by
-  cases heq
-  exact red_aff_congr_point hr
-
-theorem aff_mk_point'' {x y e : GenericExpr τ_c} (n : ℕ) (hr : RedAff x y := by assumption) (hn : n < point_arity e := by grind) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := aff_mk_point' (.single hr)
-
-@[grind ., grind →, grind! →]
+/-@[grind ., grind →, grind! →]
 theorem mk_inner_norm (h_points : 0 < point_arity e := by grind)
   (hrn : List.Forall (IsNorm RedAff) (points e).toList := by intro h; grind) : IsNorm RedAff e := by
   unfold point_arity at h_points
-  split at h_points <;> (
+  split at h_points
+  any_goals (grind)
+  any_goals (
+    focus
+    try (
+      intro ⟨_, h⟩
+      simp [points, Vector.toList] at hrn
+      cases h
+      expose_names
+      have ⟨h₁, h₂, h₃, h₄⟩ := hrn
+      match n with
+      | 0 | 1 | 2 | 3 =>
+        simp [Vector.get, points] at h_1
+        grind)
+    done)
+  any_goals (
+    focus
+    try (
+      intro ⟨_, h⟩
+      simp [points, Vector.toList] at hrn
+      cases h
+      expose_names
+      have ⟨h₁, h₂, h₃⟩ := hrn
+      match n with
+      | 0 | 1 | 2 =>
+        simp [Vector.get, points] at h_1
+        grind)
+    done)
+  any_goals (
+    focus
+    try (
+      intro ⟨_, h⟩
+      simp [points, Vector.toList] at hrn
+      cases h
+      expose_names
+      have ⟨h₁, h₂⟩ := hrn
+      match n with
+      | 0 | 1 =>
+        simp [Vector.get, points] at h_1
+        grind)
+    done)
+  any_goals (
+    focus
+    try (
+      intro ⟨_, h⟩
+      simp [points, Vector.toList] at hrn
+      cases h
+      expose_names
+      match n with
+      | 0 =>
+        simp [Vector.get, points] at h_1
+        grind)
+    done)
+  case h_9 =>
+    intro ⟨_, h⟩
+    simp [points, Vector.toList] at hrn
+    cases h
+    expose_names
+    have ⟨h₁, h₂, h₃, h₄⟩ := hrn
+    match n with
+    | 0 | 1 | 2 | 3 =>
+      simp [Vector.get, points] at h_1
+      grind-/
+  /-  <;> (
     first
     | (grind)
     | (
     intro ⟨_, h⟩
     simp [points, Vector.toList] at hrn
-    cases h <;> grind))
+    cases h <;> grind))-/
 
-@[grind ., grind →, grind! .]
+/-@[grind ., grind →, grind! .]
 theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
   (points e).toList := by
   unfold points
@@ -655,7 +798,7 @@ theorem elim_inner_norm (hrn : IsNorm RedAff e) : List.Forall (IsNorm RedAff)
       · intro ⟨_, h⟩
         exact hrn ⟨_, .eval₁ (by assumption)⟩
       · intro ⟨_, h⟩
-        exact hrn ⟨_, .eval₂ (by assumption)⟩
+        exact hrn ⟨_, .eval₂ (by assumption)⟩-/
 
 @[aesop safe apply (rule_sets := [DccForceReduce])]
 theorem refl_conf : ∃ B, Relation.ReflTransGen r A B ∧ Relation.ReflTransGen r A B := ⟨_, .refl, .refl⟩
@@ -671,62 +814,90 @@ attribute [aesop safe (rule_sets := [DccForceReduce]) [constructors]] Relation.R
 set_option maxHeartbeats 10000000000 in
 open Congruent' in
 open Congruent in @[dcc_reduce, aesop safe apply (rule_sets := [DccReduce])]
-theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (τ := α)) A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
+theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D, RedAff.instRedRel.ReflTrans B D ∧ RedAff.instRedRel.ReflTrans C D := by
   induction h₁ generalizing C
   case eqlτ₃ =>
     cases h₂ with
     | dom₂₀ h =>
       cases h
       case _ h => exact ⟨_, .single (by constructor; assumption), .single (by constructor)⟩
+    | point =>
+      dcc_simp_all
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case reflτ₃ =>
     cases h₂ with
     | dom₂₀ h =>
       cases h
       case _ h => exact ⟨_, .single (by constructor; assumption), .single (by constructor)⟩
+    | point =>
+      dcc_simp_all
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case currτ₃ =>
     cases h₂ with
     | dom₂₀ h =>
       cases h
-      case _ => exact ⟨_, .refl, .single (by constructor)⟩
-      case _ h => exact ⟨_, .single (by assumption), .single (by constructor)⟩
-      case _ => exact ⟨_, .refl, .single (by constructor)⟩
+      expose_names
+      match n with
+      | 0 => exact ⟨_, .refl, .single (by constructor)⟩
+      | 1 => exact ⟨_, .single (by assumption), .single (by constructor)⟩
+      | 2 => exact ⟨_, .refl, .single (by constructor)⟩
+    | point =>
+      dcc_simp_all
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case curr'τ₃ =>
     cases h₂ with
     | dom₂₀ h =>
       cases h
-      case _ => exact ⟨_, .refl, .single (by constructor)⟩
-      case _ h => exact ⟨_, .single (by constructor; assumption), .single (by constructor)⟩
-      case _ => exact ⟨_, .refl, .single (by constructor)⟩
+      expose_names
+      match n with
+      | 0 => exact ⟨_, .refl, .single (by constructor)⟩
+      | 1 => exact ⟨_, .single (.point 0 (by grind) (by assumption)), .single (by constructor)⟩
+      | 2 => exact ⟨_, .refl, .single (by constructor)⟩
+    | point =>
+      dcc_simp_all
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case dom₂₀ ih =>
     match h₂ with
     | .eqlτ₃ =>
       rename_i hr
-      match hr with
-      | .eql₀ h => exact ⟨_, .single (by constructor), .single (by constructor; assumption)⟩
+      cases hr
+      expose_names
+      match n with
+      | 0 => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) (by assumption))⟩
     | .reflτ₃ =>
       rename_i hr
-      match hr with
-      | .refl₀ h => exact ⟨_, .single (by constructor), .single (by constructor; assumption)⟩
+      cases hr
+      expose_names
+      match n with
+      | 0 => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) (by assumption))⟩
     | .dom₂₀ h =>
       have ⟨_, h₁, h₂⟩ := ih h
       exact ⟨_, dom₂' h₁, dom₂' h₂⟩
     | .currτ₃ =>
       rename_i hr
-      match hr with
-      | .curr₀ h => exact ⟨_, .single (by constructor), .refl⟩
-      | .curr₁ h => exact ⟨_, .single (by constructor), .single h⟩
-      | .curr₂ h => exact ⟨_, .single (by constructor), .refl⟩
+      cases hr
+      expose_names
+      match n with
+      | 0 => exact ⟨_, .single (by constructor), .refl⟩
+      | 1 => exact ⟨_, .single .currτ₃, .single (by assumption)⟩
+      | 2 => exact ⟨_, .single .currτ₃, .refl⟩
     | .curr'τ₃ =>
       rename_i hr
-      match hr with
-      | .curr'₀ h => exact ⟨_, .single (by constructor), .refl⟩
-      | .curr'₁ h => exact ⟨_, .single (by constructor), .single (by constructor; assumption)⟩
-      | .curr'₂ h => exact ⟨_, .single (by constructor), .refl⟩
-  case swap₁ ih =>
+      cases hr
+      expose_names
+      match n with
+      | 0 => exact ⟨_, .single (by constructor), .refl⟩
+      | 1 => exact ⟨_, .single .curr'τ₃, .single (.point 0 (by grind) (by assumption))⟩
+      | 2 => exact ⟨_, .single .curr'τ₃, .refl⟩
+  /-case swap₁ ih =>
     match h₂ with
     | .swap₀ h =>
       exact ⟨_, .single (.swap₀ h), .single (.swap₁ (by assumption))⟩
@@ -739,24 +910,24 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       exact ⟨_, .single (.swap₁ h), .single (.swap₀ (by assumption))⟩
     | .swap₀ h =>
       have ⟨_, h₁, h₂⟩ := ih h
-      exact ⟨_, swap₀' h₁, swap₀' h₂⟩
+      exact ⟨_, swap₀' h₁, swap₀' h₂⟩-/
   case swap =>
     match h₂ with
     | .swap => exact ⟨_, .refl, .refl⟩
-    | .congrFun (.swap₁ h) => exact ⟨_, .single (.sig₀ (.congrFun h)), .single .swap⟩
-    | .congrFun (.swap₀ h) => exact ⟨_, .refl, .single .swap⟩
-    | .congrArg (.box₀ h) =>
+    | .congrFun (.point 1 hn h) => exact ⟨_, .single (.point 0 (by grind) (.point 0 (by simp [point_arity, points, Vector.get]) h)), .single .swap⟩
+    | .congrFun (.point 0 hn h) => exact ⟨_, .single (.point 0 (by grind) (.point 1 (by simp [point_arity, points, Vector.get]) h)), .single .swap⟩
+    | .congrArg h =>
       match h with
-      | .sig₀ h => exact ⟨_, .refl, .single .swap⟩
-      | .sig₁ h => exact ⟨_, .trans (.single (.sig₀ (.congrArg h))) (.single (.sig₂ h)), .single .swap⟩
-      | .sig₂ h => exact ⟨_, .single (.sig₁ h), .single .swap⟩
+      | .point 0 hn h => exact ⟨_, .refl, .single .swap⟩
+      | .point 1 hn h => exact ⟨_, .single (.point 2 (by grind) h), .single .swap⟩
+      | .point 2 hn h => exact ⟨_, .single (.point 1 (by grind) h), .single .swap⟩
   case uncoup =>
     match h₂ with
-    | .uncoup₀ (.coup₀ h) => exact ⟨_, .single h, .single .uncoup⟩
+    | .uncoup₀ (.point 0 hn h) => exact ⟨_, .single h, .single .uncoup⟩
     | .uncoup => exact ⟨_, .refl, .refl⟩
   case unbang =>
     match h₂ with
-    | .unbang₀ (.bang₀ h) => exact ⟨_, .single h, .single .unbang⟩
+    | .unbang₀ (.point 0 hn h) => exact ⟨_, .single h, .single .unbang⟩
     | .unbang => exact ⟨_, .refl, .refl⟩
   case uncoup₀ =>
     match h₂ with
@@ -766,9 +937,8 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       exact ⟨_, uncoup' h₁, uncoup' h₂⟩
     | .uncoup =>
       rename_i h ih
-      cases h
-      case _ h =>
-        exact ⟨_, .single (by constructor), .single h⟩
+      match h with
+      | .point 0 hn h => exact ⟨_, .single (by constructor), .single h⟩
   case unbang₀ =>
     match h₂ with
     | .unbang₀ h =>
@@ -777,203 +947,246 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       exact ⟨_, unbang' h₁, unbang' h₂⟩
     | .unbang =>
       rename_i h ih
-      cases h
-      case _ h =>
-        exact ⟨_, .single (by constructor), .single h⟩
+      match h with
+      | .point 0 hn h => exact ⟨_, .single (by constructor), .single h⟩
   /-
     Domain reductions
   -/
   case unboxτ₀ =>
-    cases h₂ with
-    | dom₀ hr =>
-      cases hr
-      case _ hr => exact ⟨_, .single hr.bang₀, .single (by constructor)⟩
-    | _ => exact ⟨_, .refl, .refl⟩
+    match h₂ with
+    | .dom₀ hr =>
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .single (.point 0 (by grind) hr), .single (by constructor)⟩
+    | .unboxτ₀ => exact ⟨_, .refl, .refl⟩
   case swapτ₀ =>
-    cases h₂ with
-    | dom₀ hr =>
-      cases hr
-      case _ hr => exact ⟨_, .single hr.coup₀.bang₀, .single (by constructor)⟩
-      case _ hr => exact ⟨_, .refl, .single (by constructor)⟩
-    | _ => exact ⟨_, .refl, .refl⟩
+    match h₂ with
+    | .dom₀ (.point 0 hn hr) =>
+      exact ⟨_, .single (.point 0 (by grind) (.point 0 (by simp [point_arity, points, Vector.get]) hr)), .single (by constructor)⟩
+    | .dom₀ (.point 1 hn hr) =>
+      exact ⟨_, .refl, .single (by constructor)⟩
+    | .swapτ₀ => exact ⟨_, .refl, .refl⟩
   case eqlτ₀ | reflτ₀ | mapτ₀ | fmapτ₀ =>
     cases h₂ with
     | dom₀ hr =>
-      cases hr
-      case _ hr =>
-        exact ⟨_, .single hr.dom₀.mk_point, .single (by constructor)⟩
-    | _ => exact ⟨_, .refl, .refl⟩
+     match hr with
+     | (.point 0 hn hr) => exact ⟨_, .single (.point 0 (by grind) (.dom₀ hr)), .single (by constructor)⟩
+    | _ =>
+      expose_names
+      try (simp [point_arity] at h)
+      try (exact ⟨_, .refl, .refl⟩)
   case pairτ₀ =>
     cases h₂ with
     | dom₀ hr =>
-      cases hr
-      any_goals (
-        focus
-        try (exact ⟨_, .refl, .single (by constructor)⟩)
-        done)
-      case _ hr => exact ⟨_, .single hr.dom₀.mk_point, .single (by constructor)⟩
-    | _ => exact ⟨_, .refl, .refl⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+      | .point 1 hn hr => exact ⟨_, .single (.point 0 (by grind) hr.dom₀), .single (by constructor)⟩
+      | .point 2 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+    | pairτ₀ => exact ⟨_, .refl, .refl⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
   case evalcτ₀ =>
     cases h₂ with
     | dom₀ hr =>
-      cases hr
-      any_goals (
-        focus
-        try (exact ⟨_, .refl, .single (by constructor)⟩)
-        done)
-      case _ hr =>
-        exact ⟨_, .single hr.mk_point, .single (by constructor)⟩
-    | _ => exact ⟨_, .refl, .refl⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+      | .point 1 hn hr => exact ⟨_, .single (.point 0 (by grind) hr), .single (by constructor)⟩
+      | .point 2 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+    | evalcτ₀ => exact ⟨_, .refl, .refl⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
   case curr'τ₀ =>
     cases h₂ with
     | dom₀ hr =>
-      cases hr with
-      | curr'₀ => exact ⟨_, .refl, .single (by constructor)⟩
-      | curr'₁ => exact ⟨_, .refl, .single (by constructor)⟩
-      | curr'₂ h => exact ⟨_, .single h.dom₀.unbang₀.uncoup₀.dom₀.bang₀, .single (by constructor)⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+      | .point 1 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+      | .point 2 hn h => exact ⟨_, .single (.point 0 (by grind) (h.dom₀.unbang₀.uncoup₀.dom₀)), .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case currτ₀ =>
     cases h₂ with
     | dom₀ hr =>
-      cases hr with
-      | curr₀ => exact ⟨_, .refl, .single (by constructor)⟩
-      | curr₁ => exact ⟨_, .refl, .single (by constructor)⟩
-      | curr₂ h => exact ⟨_, .single h.dom₀.uncoup₀.dom₀, .single (by constructor)⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+      | .point 1 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+      | .point 2 hn h => exact ⟨_, .single h.dom₀.uncoup₀.dom₀, .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case sndcτ₀ | fstcτ₀ =>
     cases h₂ with
     | dom₀ hr =>
-      cases hr
-      case _ hr => exact ⟨_, .single hr.coup₀, .single (by constructor)⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .single (.point 0 (by grind) hr), .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case idτ₀ =>
     cases h₂ with
     | dom₀ hr =>
-      cases hr
-      case _ hr => exact ⟨_, .single hr, .single (by constructor)⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .single hr, .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case quotτ₀ =>
     cases h₂ with
     | dom₀ hr =>
-      cases hr
-      · exact ⟨_, .single (by assumption), .single (by constructor)⟩
-      · exact ⟨_, .refl, .single (by constructor)⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .single (by assumption), .single (by constructor)⟩
+      | .point 1 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case compτ₀ | sigmaτ₀ | piτ₀ =>
     cases h₂ with
     | dom₀ hr =>
-      cases hr
-      · exact ⟨_, .refl, .single (by constructor)⟩
-      case _ hr => exact ⟨_, .single hr.dom₀, .single (by constructor)⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+      | .point 1 hn hr => exact ⟨_, .single hr.dom₀, .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case eqlτ₁ | reflτ₁ =>
     cases h₂ with
     | dom₀ hr =>
       match hr with
-      | .congrArg (.box₀ h) => exact ⟨_, .single h.congrArg.mk_point, .single (by constructor)⟩
+      | .congrArg (.point 0 hn h) => exact ⟨_, .single (.point 0 (by grind) h.congrArg), .single (by constructor)⟩
       | .congrFun h =>
-        cases h
-        case _ h => exact ⟨_, .single h.congrFun.mk_point, .single (by constructor)⟩
+        match h with
+        | .point 0 hn h => exact ⟨_, .single (.point 0 (by grind) h.congrFun), .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case currτ₁ =>
     cases h₂ with
     | dom₀ hr =>
       cases hr with
       | congrFun h =>
-        cases h with
-        | curr₁ h | curr₀ h => exact ⟨_, .refl, .single (by constructor)⟩
-        | curr₂ h => exact ⟨_, .single h.dom₀.uncoup₀.congrFun, .single (by constructor)⟩
+        match h with
+        | .point 1 hn h | .point 0 hn h => exact ⟨_, .refl, .single (by constructor)⟩
+        | .point 2 hn h => exact ⟨_, .single h.dom₀.uncoup₀.congrFun, .single (by constructor)⟩
       | congrArg h => exact ⟨_, .single h.congrArg, .single (by constructor)⟩
+      | point =>
+        expose_names
+        simp [point_arity] at h
+    | point =>
+        expose_names
+        simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case curr'τ₁ =>
     cases h₂ with
     | dom₀ hr =>
       match hr with
       | .congrFun h =>
-        cases h with
-        | curr'₂ h =>
-          exact ⟨_, .single h.dom₀.unbang₀.uncoup₀.congrFun.bang₀, .single (by constructor)⟩
-        | curr'₁ h | curr'₀ h => exact ⟨_, .refl, .single (by constructor)⟩
-      | .congrArg (.box₀ h) => exact ⟨_, .single h.congrArg.bang₀, .single (by constructor)⟩
+        match h with
+        | .point 2 hn h =>
+          exact ⟨_, .single (.point 0 (by grind) (h.dom₀.unbang₀.uncoup₀.congrFun)), .single (by constructor)⟩
+        | .point 1 hn h | .point 0 hn h => exact ⟨_, .refl, .single (by constructor)⟩
+      | .congrArg (.point 0 hn h) => exact ⟨_, .single (.point 0 (by grind) h.congrArg), .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case dom₀ ih =>
     cases h₂
+    case point hn hr => simp [point_arity] at hn
     case swapτ₀ hr =>
       match hr with
-      | .swap₁ h =>
+      | .point 1 hn h =>
         exact ⟨_, .single (by constructor), .refl⟩
-      | .swap₀ h =>
-        exact ⟨_, .single (by constructor), .single h.coup₀.bang₀⟩
+      | .point 0 hn h =>
+        exact ⟨_, .single .swapτ₀, .single (.point 0 (by grind) (.point 0 (by simp [point_arity, points, Vector.get]) h))⟩
     case unboxτ₀ hr =>
-      cases hr
-      case _ hr => exact ⟨_, .single (by constructor), .single hr.bang₀⟩
+      match hr with
+      | .point 0 hn hr =>
+        exact ⟨_, .single (by constructor), .single (.point 0 (by grind) hr)⟩
     case eqlτ₀ | reflτ₀ | mapτ₀ | fmapτ₀ =>
       rename_i hr
-      cases hr
-      case _ hr =>
-        exact ⟨_, .single (by constructor), .single (by constructor; constructor; assumption)⟩
+      match hr with
+      | .point 0 hn hr =>
+        exact ⟨_, .single (by constructor), .single (.point 0 (by grind) (.dom₀ hr))⟩
     case pairτ₀ =>
       rename_i hr
-      cases hr
-      any_goals (try (exact ⟨_, .single (by constructor), .refl⟩))
-      case _ hr =>
-        exact ⟨_, .single (by constructor), .single hr.dom₀.bang₀⟩
+      match hr with
+      | .point 0 hn hr | .point 2 hn hr => exact ⟨_, .single (by constructor), .refl⟩
+      | .point 1 hn hr => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) hr.dom₀)⟩
     case evalcτ₀ =>
       rename_i hr
-      cases hr
-      any_goals (try (exact ⟨_, .single (by constructor), .refl⟩))
-      case _ hr =>
-        exact ⟨_, .single (by constructor), .single (.coup₀ hr)⟩
-    case idτ₀ hr | quotτ₀ hr =>
-      cases hr
-      any_goals (try (exact ⟨_, .single (by constructor), .refl⟩))
-      case _ hr => exact ⟨_, .single (by constructor), .single hr⟩
+      match hr with
+      | .point 0 hn hr | .point 2 hn hr => exact ⟨_, .single (by constructor), .refl⟩
+      | .point 1 hn hr => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) hr)⟩
+    case idτ₀ hr =>
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .single (by constructor), .single hr⟩
+    case quotτ₀ hr =>
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .single (by constructor), .single hr⟩
+      | .point 1 hn hr => exact ⟨_, .single (by constructor), .refl⟩
     case fstcτ₀ hr | sndcτ₀ hr =>
-      cases hr
-      case _ hr => exact ⟨_, .single (by constructor), .single hr.coup₀⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) hr)⟩
     case compτ₀ hr | sigmaτ₀ hr | piτ₀ hr =>
-      cases hr
-      · exact ⟨_, .single (by constructor), .refl⟩
-      case _ hr => exact ⟨_, .single (by constructor), .single hr.dom₀⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .single (by constructor), .refl⟩
+      | .point 1 hn hr => exact ⟨_, .single (by constructor), .single hr.dom₀⟩
     case currτ₀ =>
       rename_i hr
-      cases hr with
-      | curr₁ | curr₀ => exact ⟨_, .single (by constructor), .refl⟩
-      | curr₂ h => exact ⟨_, .single (by constructor), .single h.dom₀.uncoup₀.dom₀⟩
+      match hr with
+      | .point 1 hn hr | .point 0 hn hr => exact ⟨_, .single (by constructor), .refl⟩
+      | .point 2 hn h => exact ⟨_, .single (by constructor), .single h.dom₀.uncoup₀.dom₀⟩
     case curr'τ₀ =>
       rename_i hr
-      cases hr with
-      | curr'₁ | curr'₀ => exact ⟨_, .single (by constructor), .refl⟩
-      | curr'₂ h => exact ⟨_, .single (by constructor), .single h.dom₀.unbang₀.uncoup₀.dom₀.bang₀⟩
+      match hr with
+      | .point 1 hn hr | .point 0 hn hr => exact ⟨_, .single (by constructor), .refl⟩
+      | .point 2 hn h => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) h.dom₀.unbang₀.uncoup₀.dom₀)⟩
     case eqlτ₁ hr | reflτ₁ hr =>
       cases hr with
       | congrFun h =>
-        cases h
-        case _ hr => exact ⟨_, .single (by constructor), .single hr.congrFun.bang₀⟩
+        match h with
+        | .point 0 hn hr => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) hr.congrFun)⟩
       | congrArg h =>
-        cases h with
-        | box₀ hr =>
-          exact ⟨_, .single (by constructor), .single hr.congrArg.bang₀⟩
+        match h with
+        | .point 0 hn hr => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) hr.congrArg)⟩
+      | point =>
+        expose_names
+        simp [point_arity] at h
     case currτ₁ hr =>
       cases hr with
       | congrFun hr =>
-        cases hr with
-        | curr₀ | curr₁ =>
+        match hr with
+        | .point 0 hn hr | .point 1 hn hr =>
           exact ⟨_, .single (by constructor), .refl⟩
-        | curr₂ hr =>
+        | .point 2 hn hr =>
           exact ⟨_, .single (by constructor), .single hr.dom₀.uncoup₀.congrFun⟩
       | congrArg hr =>
         exact ⟨_, .single (by constructor), .single hr.congrArg⟩
+      | point =>
+        expose_names
+        simp [point_arity] at h
     case curr'τ₁ hr =>
       cases hr with
       | congrFun hr =>
-        cases hr with
-        | curr'₁ hr | curr'₀ =>
+        match hr with
+        | .point 1 hn hr | .point 0 hn hr =>
           exact ⟨_, .single (by constructor), .refl⟩
-        | curr'₂ hr => exact ⟨_, .single (by constructor), .single hr.dom₀.unbang₀.uncoup₀.congrFun.bang₀⟩
+        | .point 2 hn hr => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) hr.dom₀.unbang₀.uncoup₀.congrFun)⟩
       | congrArg hr =>
-        cases hr with
-        | box₀ hr => exact ⟨_, .single (by constructor), .single hr.congrArg.bang₀⟩
+        match hr with
+        | .point 0 hn hr => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) hr.congrArg)⟩
+      | point =>
+        expose_names
+        simp [point_arity] at h
     case dom₀ hr =>
       have ⟨_, h₁, h₂⟩ := ih hr
       exact ⟨_, dom' (by assumption), dom' (by assumption)⟩
@@ -982,6 +1195,9 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
     cases h₂ with
     | congrFun hr =>
       cases hr with
+      | point =>
+        expose_names
+        simp [point_arity] at h
       | congrFun hr =>
         have ⟨_, h⟩ := hr.elim_point₁
         dcc_simp at h
@@ -1021,17 +1237,17 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       exact ⟨_, .refl, .single (by constructor)⟩
     | congrArg hr =>
       match hr with
-      | .box₀ hr => exact ⟨_, .single hr, .single (by constructor)⟩
+      | .point 0 hn hr => exact ⟨_, .single hr, .single (by constructor)⟩
     | _ => dcc_aesop' [force_reduce, force_step]
   case pair =>
     cases h₂ with
     | congrFun hr =>
-      cases hr with
-      | pair₀ hr =>
+      match hr with
+      | .point 0 hn hr =>
         exact ⟨_, .single (hr.congrFun.mk_point (n := ⟨0, by grind⟩)), .single (by constructor)⟩
-      | pair₁ hr =>
+      | .point 1 hn hr =>
         exact ⟨_, .trans (.single (hr.congrFun.mk_point (n := ⟨1, by grind⟩))) (.single (hr.congrFun.congrArg.mk_point (n := ⟨2, by grind⟩))), .single (by constructor)⟩
-      | pair₂ hr =>
+      | .point 2 hn hr =>
         exact ⟨_, .single (hr.congrFun.congrFun.mk_point (n := ⟨2, by grind⟩)), .single (by constructor)⟩
     | congrArg hr =>
       have ⟨_, h⟩ := hr.elim_point₁
@@ -1045,22 +1261,24 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
   case evalc =>
     cases h₂ with
     | congrFun hr =>
-      cases hr
-      case eval₂ hr =>
+      match hr with
+      | .point 2 hn hr =>
         exact ⟨_, .single hr.congrFun.congrFun, .single .evalc⟩
-      case _ hr | _ hr => exact ⟨_, .refl, .single .evalc⟩
+      | .point 0 hn hr | .point 1 hn hr => exact ⟨_, .refl, .single .evalc⟩
     | congrArg hr =>
-      cases hr
-      case _ => exact ⟨_, .refl, .single .evalc⟩
-      case _ hr => exact ⟨_, .single hr.congrArg.congrFun, .single .evalc⟩
-      case _ hr => exact ⟨_, .single hr.congrArg, .single .evalc⟩
+      match hr with
+      | .point 0 hn hr =>
+        exact ⟨_, .refl, .single .evalc⟩
+      | .point 1 hn hr =>
+        exact ⟨_, .single hr.congrArg.congrFun, .single .evalc⟩
+      | .point 2 hn hr => exact ⟨_, .single hr.congrArg, .single .evalc⟩
     | _ => dcc_aesop' [force_reduce, force_step]
   case quot =>
     cases h₂ with
     | congrFun h =>
-      cases h
-      case _ => exact ⟨_, .refl, .single (by constructor)⟩
-      case _ hr => exact ⟨_, .single hr, .single (by constructor)⟩
+      match h with
+      | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+      | .point 1 hn hr => exact ⟨_, .single hr, .single (by constructor)⟩
     | congrArg h => exact ⟨_, .refl, .single (by constructor)⟩
     | _ => dcc_aesop' [force_reduce, force_step]
   case id =>
@@ -1070,6 +1288,9 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       cases h.left
       exact ⟨_, .refl, .single (by constructor)⟩
     | congrArg hr => exact ⟨_, .single hr, .single (by constructor)⟩
+    | point =>
+        expose_names
+        simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case fstc | sndc =>
     cases h₂ with
@@ -1078,43 +1299,54 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       cases h.left
       exact ⟨_, .refl, .single (by constructor)⟩
     | congrArg hr =>
-      cases hr <;> (
-        first
-        | exact ⟨_, .refl, .single (by constructor)⟩
-        | exact ⟨_, .single (by assumption), .single (by constructor)⟩)
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+      | .point 2 hn hr | .point 1 hn hr => first | exact ⟨_, .single hr, .single (by constructor)⟩ | exact ⟨_, .refl, .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case comp =>
     cases h₂ with
     | congrFun hr =>
-      cases hr
-      case _ hr => exact ⟨_, .single hr.congrFun, .single (by constructor)⟩
-      case _ hr => exact ⟨_, .single hr.congrFun.congrArg, .single (by constructor)⟩
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .single hr.congrFun, .single (by constructor)⟩
+      | .point 1 hn hr => exact ⟨_, .single hr.congrFun.congrArg, .single (by constructor)⟩
     | congrArg hr =>
       exact ⟨_, .single hr.congrArg.congrArg, .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case curr =>
     cases h₂ with
     | congrFun hr =>
       cases hr with
       | congrFun hr =>
-        cases hr
-        · exact ⟨_, .refl, .single (by constructor)⟩
-        case _ hr => exact ⟨_, .single hr.sig₀.congrArg, .single (by constructor)⟩
-        case _ hr => exact ⟨_, .single hr.congrFun, .single (by constructor)⟩
+        match hr with
+        | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+        | .point 1 hn hr => exact ⟨_, .single (RedAff.point 0 (by grind) hr).congrArg, .single (by constructor)⟩
+        | .point 2 hn hr => exact ⟨_, .single hr.congrFun, .single (by constructor)⟩
+      | point =>
+        expose_names
+        simp [point_arity] at h
       | congrArg hr =>
-        exact ⟨_, .single hr.sig₁.congrArg, .single (by constructor)⟩
+        exact ⟨_, .single (.congrArg (RedAff.point 1 (by grind) hr)), .single (by constructor)⟩
     | congrArg hr =>
-      exact ⟨_, .single hr.sig₂.congrArg, .single (by constructor)⟩
+      exact ⟨_, .single (.congrArg (RedAff.point 2 (by grind) hr)), .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case curr' =>
     cases h₂ with
     | congrFun hr =>
       cases hr with
       | congrFun hr =>
-        cases hr
-        · exact ⟨_, .refl, .single (by constructor)⟩
-        case _ hr => exact ⟨_, .single hr.sig₀.box₀.congrArg, .single (by constructor)⟩
-        case _ hr => exact ⟨_, .single hr.congrFun, .single (by constructor)⟩
+        match hr with
+        | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
+        | .point 1 hn hr => exact ⟨_, .single (.congrArg (.point 0 (by grind) (.point 0 (by simp [points, set_points, Vector.get, point_arity]) hr))), .single (by constructor)⟩
+        | .point 2 hn hr => exact ⟨_, .single hr.congrFun, .single (by constructor)⟩
       | congrArg hr =>
         have ⟨_, h⟩ := hr.elim_point₁
         cases h.left
@@ -1123,6 +1355,9 @@ theorem RedAff.conf.{u} {α : Type u} {A B C : GenericExpr α} (h₁ : (RedAff (
       have ⟨_, h⟩ := hr.elim_point₁
       cases h.left
       exact ⟨_, .single h.right.sig₂.box₀.congrArg, .single (by constructor)⟩
+    | point =>
+      expose_names
+      simp [point_arity] at h
     | _ => exact ⟨_, .refl, .refl⟩
   case sigma =>
     cases h₂ with
@@ -1490,7 +1725,7 @@ end RedAffTrans
 
 namespace RedAffReflTrans
 
-def cases_head.{u} {τ_c : Type u} {a b : GenericExpr τ_c} (r : RedAffReflTrans a b) :=
+def cases_head.{u} {τ : Type u} {a b : GenericExpr τ} (r : RedAffReflTrans a b) :=
   Relation.ReflTransGen.cases_head (a := a) (b := b) r
 
 def single.{u} {τ : Type u} {A B : GenericExpr τ}
@@ -1542,7 +1777,7 @@ end RedAffTrans
 
 namespace RedAff
 
-abbrev decreasing.{u} {τ_c : Type u} (x y : GenericExpr τ_c) := (RedAff.instRedRel (τ := τ_c)).decreasing (x := x) (y := y)
+abbrev decreasing.{u} {τ : Type u} (x y : GenericExpr τ) := (RedAff.instRedRel (τ := τ)).decreasing (x := x) (y := y)
 
 end RedAff
 
@@ -1558,7 +1793,7 @@ theorem decreasing?.{u} {τ : Type u} {A B : GenericExpr τ} [DecidableEq τ] (h
 
 end RedAffReflTrans
 
-inductive RedAffNorm : GenericExpr τ_c → NormExpr (RedAff (τ := τ_c)) → Type u
+inductive RedAffNorm : GenericExpr τ → NormExpr (RedAff (τ := τ)) → Type u
   | mk : (hr : RedAffReflTrans A B) → (hn : IsNorm RedAff B) → RedAffNorm A ⟨B, hn⟩
 deriving DecidableEq, Repr
 
@@ -1568,10 +1803,10 @@ def RedAffNorm.decreasing? (h : RedAffNorm A B) : B.size ≤ A.size :=
   | ⟨hr, _hn⟩ => GenericExpr.decreasing? _ hr
 
 @[grind]
-def RedAffNorm.raw (_r : RedAffNorm (τ_c := τ_c) A B) : NormExpr (RedAff (τ := τ_c)) := B
+def RedAffNorm.raw (_r : RedAffNorm (τ := τ) A B) : NormExpr (RedAff (τ := τ)) := B
 
 @[dcc_step]
-def RedAffNorm.is_norm (r : RedAffNorm (τ_c := τ_c) A B) : IsNorm RedAff B.raw :=
+def RedAffNorm.is_norm (r : RedAffNorm (τ := τ) A B) : IsNorm RedAff B.raw :=
   match r with
   | ⟨_ha, hb⟩ => hb
 
@@ -1579,27 +1814,27 @@ def RedAffNorm.is_norm (r : RedAffNorm (τ_c := τ_c) A B) : IsNorm RedAff B.raw
 def aff_sound (heq : reduce RedAff A = ⟨B, ⟨h⟩⟩) : RedAffNorm A ⟨B, reduce_norm heq⟩ := ⟨reduce_sound heq, reduce_norm heq⟩
 
 @[grind, dcc_force_reduce, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def aff_sound' (A : GenericExpr τ_c) : RedAffNorm A ⟨(reduce RedAff A).fst, reduce_norm rfl⟩ := ⟨reduce_sound rfl, reduce_norm rfl⟩
+def aff_sound' (A : GenericExpr τ) : RedAffNorm A ⟨(reduce RedAff A).fst, reduce_norm rfl⟩ := ⟨reduce_sound rfl, reduce_norm rfl⟩
 
 @[grind, inline, dcc_reduce]
-def red_aff (A : GenericExpr τ_c) : NormExpr (RedAff (τ := τ_c)) := ⟨(reduce RedAff A).fst, reduce_norm (A := A) rfl⟩
+def red_aff (A : GenericExpr τ) : NormExpr (RedAff (τ := τ)) := ⟨(reduce RedAff A).fst, reduce_norm (A := A) rfl⟩
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
-def RedAffNorm.complete {A : GenericExpr τ_c} {B : NormExpr RedAff (τ := τ_c)} (h : RedAffNorm A B) : red_aff A = B :=
+def RedAffNorm.complete {A : GenericExpr τ} {B : NormExpr RedAff (τ := τ)} (h : RedAffNorm A B) : red_aff A = B :=
   match h with
   | ⟨hr, hn⟩ => by
     have ha := reduce_complete_fst hr hn
     simp [red_aff, ha]
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
-def RedAffNorm.complete_fst {A : GenericExpr τ_c} (h : RedAffNorm A ⟨B, hn_B⟩) : (reduce RedAff A).fst = B :=
+def RedAffNorm.complete_fst {A : GenericExpr τ} (h : RedAffNorm A ⟨B, hn_B⟩) : (reduce RedAff A).fst = B :=
   match h with
   | ⟨hr, hn⟩ => by
     have ha := reduce_complete_fst hr hn
     simp [ha]
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
-def RedAffNorm.complete_snd {A : GenericExpr τ_c} (h : RedAffNorm A ⟨B, hn_B⟩) : (reduce RedAff A).snd = ⟨reduce_sound rfl⟩ :=
+def RedAffNorm.complete_snd {A : GenericExpr τ} (h : RedAffNorm A ⟨B, hn_B⟩) : (reduce RedAff A).snd = ⟨reduce_sound rfl⟩ :=
   match h with
   | ⟨hr, hn⟩ => by simp
 

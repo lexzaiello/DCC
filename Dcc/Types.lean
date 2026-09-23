@@ -27,8 +27,8 @@ B : A → Sort u       C : (x : A) (y : B x) → Sort v
 -/
 
 open Dsl in
-def Swap.type (B C : GenericExpr τ) (u v : Level) : GenericExpr τ :=
-  DCC? ((Π (Id Sort (max u v)) (`Sort (max u v) (∘ (Σ (∘ B (Fst B)) (∘ C (Fst B))) (* (Σ B))))) (! (Σ B)))
+def Swap.type (A B : GenericExpr τ) (u v : Level) : GenericExpr τ :=
+  DCC? (((Σ (`A B)): Sort (max u v)) → (Σ (`B A)))
 
 @[dcc_judge, inline]
 def read_arrow.{u} {τ_c : Type u} [DecidableEq τ_c]
@@ -159,8 +159,8 @@ open Dsl in inductive Pi.C.type.{u} {τ_c : Type u} :
     (DCC? ((Π (Id Sort o) (`Sort o (Π B (Λ δ B (` (Σ B) Sort n))))) δ))
   | canon' : Pi.C.type (DCC? (!<> B)) (DCC? (!δ)) o n
     (DCC? ((Π(Id Sort o) (`Sort o (Π (!<> B) (!Λ δ B (` (! (Σ B)) Sort n))))) (! δ)))
-  | arrow  : Pi.C.type (DCC? (Id Sort m)) δ o n
-    (DCC? ((Π (Id Sort o) (`Sort o (`δ ((Π (Id Sort m) (`Sort m (`α Sort n))) α)))) δ))
+  | arrow  : Pi.C.type B δ o n
+    (DCC? ((Π (Id Sort o) (`Sort o (`δ ((Π B (`x₂ (`α Sort n))) α)))) δ))
   | semi   : Pi.C.type B δ o n (DCC? ((Π (Id Sort o) (`Sort o (Π B (`δ₂ (`δ₃ Sort n))))) δ))
 deriving Repr
 
@@ -189,9 +189,9 @@ def view_pi_f_β.{u} {τ_c : Type u} [DecidableEq τ_c] (τ f_α δ : GenericExp
         .some ⟨n, by rw [← heq₁, heq₂]; exact .canon' (B := f_α) (δ := δ) (o := o) (n := n)⟩
       else .none
     | _, _ => .none
-  | (DCC? ((Π _a (`_b (`_c ((Π (Id Sort m) (`_d (`_e Sort n))) α)))) _f)) =>
-    if heq₂ : τ = (DCC? ((Π (Id Sort o) (`Sort o (`δ ((Π (Id Sort m) (`Sort m (`α Sort n))) α)))) δ)) then
-      if heq₃ : f_α = (DCC? (Id Sort m)) then
+  | (DCC? ((Π _a (`_b (`_c ((Π B (`_d (`_e Sort n))) α)))) _f)) =>
+    if heq₂ : τ = (DCC? ((Π (Id Sort o) (`Sort o (`δ ((Π B (`_d (`α Sort n))) α)))) δ)) then
+      if heq₃ : f_α = B then
         .some ⟨n, by rw [← heq₁, heq₂, heq₃]; exact .arrow (δ := δ) (o := o) (n := n)⟩
       else .none
     else .none

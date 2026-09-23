@@ -6,6 +6,20 @@ namespace Dsl
 
 declare_syntax_cat gen_dcc
 
+scoped syntax "(≃.mk" gen_dcc+ ")"                           : gen_dcc
+scoped syntax "(≃.Ind" gen_dcc+ ")"                          : gen_dcc
+scoped syntax "(≃.1" gen_dcc+ ")"                            : gen_dcc
+scoped syntax "(≃.2" gen_dcc+ ")"                            : gen_dcc
+scoped syntax "(≃.3" gen_dcc+ ")"                            : gen_dcc
+scoped syntax "(≃.4" gen_dcc+ ")"                            : gen_dcc
+scoped syntax "(⊥.Ind" gen_dcc+ ")"                          : gen_dcc
+scoped syntax "(Bool.Ind" gen_dcc+ ")"                        : gen_dcc
+scoped syntax "(hole" term ")"                                : gen_dcc
+scoped syntax "True"                                          : gen_dcc
+scoped syntax "False"                                         : gen_dcc
+scoped syntax "Bool"                                          : gen_dcc
+scoped syntax gen_dcc "≃" gen_dcc                            : gen_dcc
+scoped syntax "(Unify" gen_dcc+ ")"                           : gen_dcc
 scoped syntax "(Dom" gen_dcc ")"                              : gen_dcc
 scoped syntax "(Dom₂" gen_dcc ")"                             : gen_dcc
 syntax "(!<>" gen_dcc ")"                                     : gen_dcc
@@ -20,7 +34,7 @@ syntax "(refl" gen_dcc+ ")"                                   : gen_dcc
 syntax "#(" term ")"                                          : gen_dcc
 syntax "⊤"                                                    : gen_dcc
 syntax "∗"                                                    : gen_dcc
-syntax "⊥"                                                    : gen_dcc
+syntax "⊥"                                                   : gen_dcc
 scoped syntax:max "(`" gen_dcc+ ")"                           : gen_dcc
 syntax:max "(Id" gen_dcc+ ")"                                 : gen_dcc
 syntax:max "(Fst" gen_dcc+ ")"                                : gen_dcc
@@ -38,6 +52,7 @@ syntax "(∘" gen_dcc gen_dcc ")"                               : gen_dcc
 syntax:30 ident                                               : gen_dcc
 syntax "(" gen_dcc+ ")"                                       : gen_dcc
 syntax:max "Sort" term                                        : gen_dcc
+syntax:max "(?" term ")"                                      : gen_dcc
 syntax (priority := high) "(⟨,⟩" (noWs gen_dcc) gen_dcc* ")"  : gen_dcc
 syntax (priority := high) "(," (noWs gen_dcc) gen_dcc* ")"    : gen_dcc
 
@@ -71,10 +86,33 @@ open Lean.Syntax in macro_rules
   | `(DCC[$ty:gen_dcc_loc] const($tm:term))                          =>
     return mkApp (← field ty "const") #[← `($tm:term)]
   | `(DCC[$ty:gen_dcc_loc] ⊤)                                        => field ty "top"
+  | `(DCC[$ty:gen_dcc_loc] True)                                        => field ty "true"
+  | `(DCC[$ty:gen_dcc_loc] False)                                        => field ty "false"
+  | `(DCC[$ty:gen_dcc_loc] Bool)                                        => field ty "bool"
   | `(DCC[$ty:gen_dcc_loc] ⊥)                                        => field ty "bot"
   | `(DCC[$ty:gen_dcc_loc] ∗)                                        => field ty "tintro"
   | `(DCC[$ty:gen_dcc_loc] $x:gen_dcc = $y:gen_dcc)                  => do
     return mkApp (← field ty "eq") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
+  | `(DCC[$ty:gen_dcc_loc] $x:gen_dcc ≃ $y:gen_dcc)                  => do
+    return mkApp (← field ty "cong") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
+  | `(DCC[$ty:gen_dcc_loc] (Unify $τ_A:gen_dcc $τ_B:gen_dcc $A:gen_dcc $B:gen_dcc))                  => do
+    return mkApp (← field ty "unify") #[← `(DCC[$ty:gen_dcc_loc] $τ_A), ← `(DCC[$ty:gen_dcc_loc] $τ_B), ← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $B)]
+  | `(DCC[$ty:gen_dcc_loc] (Bool.Ind $motive:gen_dcc $case_true:gen_dcc $case_false:gen_dcc)) => do
+    return mkApp (← field ty "ind_bool") #[← `(DCC[$ty:gen_dcc_loc] $motive), ← `(DCC[$ty:gen_dcc_loc] $case_true),  ← `(DCC[$ty:gen_dcc_loc] $case_false)]
+  | `(DCC[$ty:gen_dcc_loc] (⊥.Ind $motive:gen_dcc)) => do
+    return mkApp (← field ty "ind_bot") #[← `(DCC[$ty:gen_dcc_loc] $motive)]
+  | `(DCC[$ty:gen_dcc_loc] (≃.Ind $motive:gen_dcc $x:gen_dcc)) => do
+    return mkApp (← field ty "ind_cong") #[← `(DCC[$ty:gen_dcc_loc] $motive), ← `(DCC[$ty:gen_dcc_loc] $x)]
+  | `(DCC[$ty:gen_dcc_loc] (≃.1 $x:gen_dcc $B:gen_dcc)) => do
+    return mkApp (← field ty "cong_1") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $B)]
+  | `(DCC[$ty:gen_dcc_loc] (≃.2 $A:gen_dcc $x:gen_dcc)) => do
+    return mkApp (← field ty "cong_2") #[← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $x)]
+  | `(DCC[$ty:gen_dcc_loc] (≃.3 $A:gen_dcc $x:gen_dcc)) => do
+    return mkApp (← field ty "cong_3") #[← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $x)]
+  | `(DCC[$ty:gen_dcc_loc] (≃.4 $A:gen_dcc $x:gen_dcc)) => do
+    return mkApp (← field ty "cong_4") #[← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $x)]
+  | `(DCC[$ty:gen_dcc_loc] (≃.mk $to_fun:gen_dcc $inv_fun:gen_dcc $id_comp:gen_dcc $comp_id:gen_dcc)) => do
+    return mkApp (← field ty "cong_mk") #[← `(DCC[$ty:gen_dcc_loc] $to_fun), ← `(DCC[$ty:gen_dcc_loc] $inv_fun), ← `(DCC[$ty:gen_dcc_loc] $id_comp), ← `(DCC[$ty:gen_dcc_loc] $comp_id)]
   | `(DCC[$ty:gen_dcc_loc] (!$x:gen_dcc))                  => do
     return mkApp (← field ty "bang") #[← `(DCC[$ty:gen_dcc_loc] $x)]
   | `(DCC[$ty:gen_dcc_loc] (&$x:gen_dcc))                  => do
@@ -107,6 +145,10 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "mkc") #[← `(DCC[$ty:gen_dcc_loc] $β), ← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
   | `(DCC[$ty:gen_dcc_loc] Sort $m:term)                             => do
     return mkApp (← field ty "sort") #[m]
+  | `(DCC[$ty:gen_dcc_loc] (? $m:term))                             => do
+    return mkApp (← field ty "hole_ty") #[m]
+  | `(DCC[$ty:gen_dcc_loc] (hole $m:term))                             => do
+    return mkApp (← field ty "hole") #[m]
   | `(DCC[$ty:gen_dcc_loc] (Σ$α:gen_dcc $β:gen_dcc))                => do
     return mkApp (← field ty "sigma") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β)]
   | `(DCC[$ty:gen_dcc_loc] (Σ$β:gen_dcc))                         => do

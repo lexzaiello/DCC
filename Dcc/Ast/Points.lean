@@ -482,49 +482,6 @@ def cases_point_arity' (e : GenericExpr τ_c) : (PLift (point_arity e = 0)) ⊕ 
     split at heq
     any_goals (grind)
 
-/-theorem set_points_assoc : set_points (τ_c := τ_c) (set_points e (e.points.set m (h := h₁) x)) ((set_points e (e.points.set m (h := h₁) x)).points.set n (h := h₂) y) = set_points e ((e.points.set m (h := h₁) x).set n (h := (by
-  have h := congr_point_arr (e := e) (p := ⟨m, h₁⟩) (p' := x)
-  grind)) y) := by
-  have h := congr_point_arr (e := e) (p := ⟨m, h₁⟩) (p' := x)
-  simp_all
-  rw [← h] at h₂
-  match cases_point_arity e with
-  | .inl h => grind
-  | .inr (.inl h) =>
-    rw [h] at h₁
-    rw [h] at h₂
-    match m, n with
-    | 0, 0 =>
-      expose_names
-      unfold point_arity at h_1
-      split at h_1
-      any_goals (grind)
-  | .inr (.inr (.inl h)) =>
-    rw [h] at h₁
-    rw [h] at h₂
-    unfold point_arity at h
-    split at h
-    any_goals (simp at h)
-    any_goals (
-      simp [set_points, points, Vector.set]
-      grind)
-  | .inr (.inr (.inr (.inl h))) =>
-    rw [h] at h₁
-    rw [h] at h₂
-    match m, n with
-    | 2, 2 | 2, 1 | 2, 0 | 1, 2 | 0, 2 | 1, 0 | 0, 1 | 1, 1 | 0, 0 =>
-      expose_names
-      unfold point_arity at h_1
-      split at h_1
-      any_goals (grind)
-  | .inr (.inr (.inr (.inr h))) =>
-    match m, n with
-    | 3, 3 | 3, 2 | 3, 1 | 2, 3 | 1, 3 | 2, 2 | 2, 1 | 2, 0 | 1, 2 | 0, 2 | 1, 0 | 0, 1 | 1, 1 | 0, 0 =>
-      expose_names
-      unfold point_arity at h_1
-      split at h_1
-      any_goals (grind)-/
-
 theorem get_unset_point (hneq : m ≠ n) : ((set_points (τ_c := τ_c) e (e.points.set m x' h₁)).points.get ⟨n, h₂⟩) = e.points.get ⟨n, by
   have h := congr_point_arr (e := e) (p := ⟨m, h₁⟩) (p' := x')
   grind⟩ := by

@@ -41,6 +41,7 @@ def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{
   | DCC? ((* _α) (& _x))                                 => .some ⟨_, ⟨.unbox⟩⟩
   | DCC? ((⟨,⟩_β _M _N) (& _x))                        => .some ⟨_, ⟨.pair⟩⟩
   | (DCC? ((Eval _α _β _x) (,__β _y _z)))            => .some ⟨_, ⟨.evalc⟩⟩
+  | (DCC? ((Eql _f_α) (& _env) (& _x)))              => .some ⟨_, ⟨.eql⟩⟩
   | (DCC? ((`_β _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
   | (DCC? ((Id _α) _x))                                => .some ⟨_, ⟨.id⟩⟩
   | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
@@ -92,6 +93,22 @@ def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1
         | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (f' x)), ⟨.congrFun h₁⟩⟩
         | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC? (f x')), ⟨.congrArg h₁⟩⟩
         | _, _ => .none
+      | DCC? (Dom x) =>
+        match x.step? with
+        | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.dom₀ h₁⟩⟩
+        | .none => .none
+      | DCC? (Dom₂ x) =>
+        match x.step? with
+        | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.dom₂₀ h₁⟩⟩
+        | .none => .none
+      | DCC? (Uncoup x) =>
+        match x.step? with
+        | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.uncoup₀ h₁⟩⟩
+        | .none => .none
+      | DCC? (Unbang x) =>
+        match x.step? with
+        | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.unbang₀ h₁⟩⟩
+        | .none => .none
       | _ => .none
     | .inr (.inl ⟨heq⟩) =>
       match (e.points.get ⟨0, by simp [heq]⟩).step? with

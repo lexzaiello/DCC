@@ -6,7 +6,198 @@ variable {τ : Type u} [DecidableEq τ]
 
 namespace GenericExpr
 
-set_option maxHeartbeats 10000000000 in
+set_option maxHeartbeats 2000000 in
+theorem semi_complete {A B : GenericExpr τ} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
+  unfold step?
+  split
+  case h_1 heq =>
+    unfold step_head? at heq
+    split at heq
+    any_goals (grind)
+    case h_9 =>
+      expose_names
+      split at heq
+      case isTrue heq_A =>
+        cases heq_A
+        grind
+      case isFalse =>
+        split at heq <;> grind
+  case h_2 heq_none =>
+    split
+    case h_1 =>
+      split
+      case h_1 =>
+        cases hr
+        any_goals (
+          focus
+          try (simp [step_head?] at heq_none)
+          done)
+        case point => grind
+        case congrFun hr =>
+          have ⟨B', hr', heq'⟩ := semi_complete hr
+          exact ⟨_, .congrFun hr', by simp [heq']⟩
+        case congrArg hr =>
+          split
+          case h_1 hr' heq' => exact ⟨_, .congrFun hr', rfl⟩
+          case h_2 hr' heq' hn =>
+            exact ⟨_, .congrArg hr', by simp⟩
+          case h_3 =>
+            have ⟨B', hr', heq'⟩ := semi_complete hr
+            grind
+      case h_2 heq_arr hn =>
+        cases hr
+        any_goals (grind)
+        any_goals (
+          focus
+          try (simp [step_head?] at heq_none)
+          done)
+        case dom₀ hr =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          exact ⟨_, .dom₀ hr', by simp [heq']⟩
+      case h_3 heq_ar =>
+        cases hr
+        any_goals (grind)
+        any_goals (
+          focus
+          try (simp [step_head?] at heq_none)
+          done)
+        case dom₂₀ hr =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          exact ⟨_, .dom₂₀ hr', by simp [heq']⟩
+      case h_4 heq_ar =>
+        cases hr
+        any_goals (grind)
+        any_goals (
+          focus
+          try (simp [step_head?] at heq_none)
+          done)
+        case uncoup₀ hr =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          exact ⟨_, .uncoup₀ hr', by simp [heq']⟩
+      case h_5 heq_ar =>
+        cases hr
+        any_goals (grind)
+        any_goals (
+          focus
+          try (simp [step_head?] at heq_none)
+          done)
+        case unbang₀ hr =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          exact ⟨_, .unbang₀ hr', by simp [heq']⟩
+      case h_6 =>
+        cases hr
+        any_goals (grind)
+    case h_2 =>
+      cases hr
+      any_goals (grind)
+      case point hn hr =>
+        expose_names
+        rw [heq] at hn
+        match n with
+        | 0 =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          exact ⟨_, .point 0 (by assumption) hr', by simp [heq']⟩
+    case h_3 =>
+      cases hr
+      any_goals (grind)
+      case point hn hr =>
+        expose_names
+        rw [heq] at hn
+        match n with
+        | 0 =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          exact ⟨_, .point 0 (by assumption) hr', by simp [heq']⟩
+        | 1 =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          split
+          case h_1 =>
+            exact ⟨_, .point 0 (by grind) (by assumption), by simp_all⟩
+          case h_2 =>
+            exact ⟨_, .point 1 (by grind) (by assumption), by simp_all⟩
+          · aesop
+    case h_4 =>
+      cases hr
+      any_goals (grind)
+      case point hn hr =>
+        expose_names
+        rw [heq] at hn
+        match n with
+        | 0 =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          exact ⟨_, .point 0 (by assumption) hr', by simp [heq']⟩
+        | 1 =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          split
+          case h_1 =>
+            exact ⟨_, .point 0 (by grind) (by assumption), by simp_all⟩
+          case h_2 =>
+            exact ⟨_, .point 1 (by grind) (by assumption), by simp_all⟩
+          case h_3 hn₁ hn₂ =>
+            simp_all
+            grind
+        | 2 =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          split
+          case h_1 => exact ⟨_, .point 0 (by grind) (by assumption), by simp_all⟩
+          case h_2 => exact ⟨_, .point 1 (by grind) (by assumption), by simp_all⟩
+          case h_3 => exact ⟨_, .point 2 (by grind) (by assumption), by simp_all⟩
+    case h_5 =>
+      cases hr
+      case point hn hr =>
+        expose_names
+        rw [heq] at hn
+        match n with
+        | 0 =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          exact ⟨_, .point 0 (by assumption) hr', by simp [heq']⟩
+        | 1 =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          split
+          case h_1 =>
+            exact ⟨_, .point 0 (by grind) (by assumption), by simp_all⟩
+          case h_2 =>
+            exact ⟨_, .point 1 (by grind) (by assumption), by simp_all⟩
+          case h_3 hn₁ hn₂ =>
+            simp_all
+            grind
+        | 2 =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          split
+          case h_1 => exact ⟨_, .point 0 (by grind) (by assumption), by simp_all⟩
+          case h_2 => exact ⟨_, .point 1 (by grind) (by assumption), by simp_all⟩
+          case h_3 => exact ⟨_, .point 2 (by grind) (by assumption), by simp_all⟩
+        | 3 =>
+          have ⟨x', hr', heq'⟩ := semi_complete hr
+          split
+          case h_1 =>
+            exact ⟨_, .point 0 (by grind) (by assumption), by simp_all⟩
+          case h_2 =>
+            exact ⟨_, .point 1 (by grind) (by assumption), by simp_all⟩
+          case h_3 =>
+            split
+            case h_1 => exact ⟨_, .point 2 (by grind) (by assumption), by simp_all⟩
+            case h_2 => exact ⟨_, .point 3 (by grind) (by assumption), by simp_all⟩
+            case h_3 => simp_all; grind
+      any_goals (
+        focus
+        try (
+          dsimp [step_head?] at heq_none
+          cases heq_none)
+        done)
+      any_goals (
+        focus
+        try (
+          expose_names
+          simp [point_arity] at heq)
+        done)
+      case unif_refl =>
+        unfold step_head? at heq_none
+        simp at heq_none
+termination_by (A.size, sizeOf A)
+decreasing_by
+  any_goals (grind)
+
+/-set_option maxHeartbeats 10000000000 in
 def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
   change ∃ _, ∃ _, (step? _) = .some _
   unfold step?
@@ -110,8 +301,8 @@ def semi_complete.{u} {τ : Type u} {A B : GenericExpr τ} (hr : A.RedAff B) : �
   case h_70 =>
     simp_all
     cases hr
-    any_goals (grind)
-
+    any_goals (grind)-/
+/-
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
 instance RedAff.instSemicomplete.{u} {τ : Type u} : SemiComplete (RedAff (τ := τ)) := ⟨semi_complete⟩
 
@@ -391,5 +582,5 @@ def RedAff.elim_norm (hr : RedAff A B) (hn : IsNorm RedAff A) : False := by
 def RedAff.size_absurd (hr : RedAff A B) (h_size_eq : size A ≤ size B := by grind) : False := by
   have h_dec := hr.decreasing
   grind
-
+-/
 end GenericExpr

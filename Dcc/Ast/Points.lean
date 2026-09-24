@@ -444,4 +444,8 @@ def min_hole (e : GenericExpr τ_c) : ℕ :=
   | .const _n => 0
   | .hole n => n
 
+def cases_point_arity (e : GenericExpr τ_c) : point_arity e = 0 ∨ point_arity e = 1 ∨ point_arity e = 2 ∨ point_arity e = 3 ∨ point_arity e = 4 := by
+  induction e
+  any_goals (simp [point_arity])
+
 end GenericExpr

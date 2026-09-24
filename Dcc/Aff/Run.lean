@@ -8,6 +8,132 @@ namespace GenericExpr
 open Dsl
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
+def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
+  match e with
+  | (DCC? ((Bool.Ind _motive _x _y) _env True)) =>
+    .some ⟨_, ⟨.ind_bool_true⟩⟩
+  | (DCC? ((Bool.Ind _motive _x _y) _env False)) =>
+    .some ⟨_, ⟨.ind_bool_false⟩⟩
+  | (DCC? (Unify _τ_A _τ_B (Sort (_m + 1)) ⊥)) =>
+    .some ⟨_, ⟨.unif_bot_sort⟩⟩
+  | (DCC? (Unify _τ_A _τ_B (Sort 0) ⊥)) =>
+    .some ⟨_, ⟨.unif_bot_prop⟩⟩
+  | (DCC? (((≃.1 _f_x _B) _env₁) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
+    .some ⟨_, ⟨.cong_1⟩⟩
+  | (DCC? (((≃.2 _B _f_x) _env₁) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
+    .some ⟨_, ⟨.cong_2⟩⟩
+  | (DCC? (((≃.3 _f_x _B) _env₁) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
+    .some ⟨_, ⟨.cong_3⟩⟩
+  | (DCC? (((≃.4 _B _f_x) _env₁) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
+    .some ⟨_, ⟨.cong_4⟩⟩
+  | (DCC? (Unify _τ_A₁ _τ_A₂ A B)) =>
+    if heq : A = B then
+      heq ▸ .some ⟨_, ⟨RedAff.unif_refl⟩⟩
+    else
+      match A, B with
+      | (DCC? Sort (_u + 1)), DCC? ⊥ =>
+        .some ⟨_, ⟨.unif_bot_sort⟩⟩
+      | (DCC? Sort 0), DCC? ⊥ =>
+        .some ⟨_, ⟨.unif_bot_prop⟩⟩
+      | _, _ => .none
+  | DCC? ((!<> _f) (& _x))                                 => .some ⟨_, ⟨.map⟩⟩
+  | DCC? (($<> _f) (& _x))                                 => .some ⟨_, ⟨.fmap⟩⟩
+  | DCC? ((* _α) (& _x))                                 => .some ⟨_, ⟨.unbox⟩⟩
+  | DCC? ((⟨,⟩_β _M _N) (& _x))                        => .some ⟨_, ⟨.pair⟩⟩
+  | (DCC? ((Eval _α _β _x) (,__β _y _z)))            => .some ⟨_, ⟨.evalc⟩⟩
+  | (DCC? ((`_β _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
+  | (DCC? ((Id _α) _x))                                => .some ⟨_, ⟨.id⟩⟩
+  | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
+  | (DCC? ((Swap _B _C) (,_B₂ _a _b)))                 => .some ⟨_, ⟨.swap⟩⟩
+  | (DCC? ((Snd _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
+  | (DCC? ((∘ _x _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
+  | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, ⟨.curr'⟩⟩
+  | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
+  | (DCC? ((Σ _f_α _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
+  | DCC? (Dom (Eql _B)) => .some ⟨_, ⟨.eqlτ₀⟩⟩
+  | DCC? (Dom (refl _B)) => .some ⟨_, ⟨.reflτ₀⟩⟩
+  | DCC? (Dom (!<> _x)) => .some ⟨_, ⟨.mapτ₀⟩⟩
+  | DCC? (Dom ($<> _x)) => .some ⟨_, ⟨.fmapτ₀⟩⟩
+  | DCC? (Dom (* _x)) => .some ⟨_, ⟨.unboxτ₀⟩⟩
+  | DCC? (Dom (⟨,⟩_B _x _y)) => .some ⟨_, ⟨.pairτ₀⟩⟩
+  | DCC? (Dom (Eval _A _B _x)) => .some ⟨_, ⟨.evalcτ₀⟩⟩
+  | DCC? (Dom (`_B _x)) => .some ⟨_, ⟨.quotτ₀⟩⟩
+  | DCC? (Dom (Id _A)) => .some ⟨_, ⟨.idτ₀⟩⟩
+  | DCC? (Dom (Fst _B)) => .some ⟨_, ⟨.fstcτ₀⟩⟩
+  | DCC? (Dom (Snd _B)) => .some ⟨_, ⟨.sndcτ₀⟩⟩
+  | DCC? (Dom (Swap _B _C)) => .some ⟨_, ⟨.swapτ₀⟩⟩
+  | DCC? (Dom (∘ _x _y)) => .some ⟨_, ⟨.compτ₀⟩⟩
+  | DCC? (Dom (Λ _A _B _x)) => .some ⟨_, ⟨.currτ₀⟩⟩
+  | DCC? (Dom (!Λ _A _B _x)) => .some ⟨_, ⟨.curr'τ₀⟩⟩
+  | DCC? (Dom (Σ _B _C)) => .some ⟨_, ⟨.sigmaτ₀⟩⟩
+  | DCC? (Dom (Π _B _C)) => .some ⟨_, ⟨.piτ₀⟩⟩
+  | DCC? (Dom ((Eql _B) (& _x))) => .some ⟨_, ⟨.eqlτ₁⟩⟩
+  | DCC? (Dom ((refl _B) (& _x))) => .some ⟨_, ⟨.reflτ₁⟩⟩
+  | DCC? (Dom ((Λ _A _B _x) _y)) => .some ⟨_, ⟨.currτ₁⟩⟩
+  | DCC? (Dom ((!Λ _A _B _x) (& _y))) => .some ⟨_, ⟨.curr'τ₁⟩⟩
+  | DCC? (Uncoup (Σ _x)) => .some ⟨_, ⟨.uncoup⟩⟩
+  | DCC? (Unbang (! _x)) => .some ⟨_, ⟨.unbang⟩⟩
+  | DCC? (Dom₂ (Eql _B)) => .some ⟨_, ⟨.eqlτ₃⟩⟩
+  | DCC? (Dom₂ (refl _B)) => .some ⟨_, ⟨.reflτ₃⟩⟩
+  | DCC? (Dom₂ (Λ _A _B _x)) => .some ⟨_, ⟨.currτ₃⟩⟩
+  | DCC? (Dom₂ (!Λ _A _B _x)) => .some ⟨_, ⟨.curr'τ₃⟩⟩
+  | _ => .none
+
+@[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
+def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
+  match step_head? e with
+  | .some h => .some h
+  | .none =>
+    match e.cases_point_arity' with
+    | .inl ⟨heq⟩ =>
+      match e with
+      | DCC? (f x) =>
+        match f.step?, x.step? with
+        | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (f' x)), ⟨.congrFun h₁⟩⟩
+        | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC? (f x')), ⟨.congrArg h₁⟩⟩
+        | _, _ => .none
+      | _ => .none
+    | .inr (.inl ⟨heq⟩) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step? with
+      | .some ⟨_, ⟨h₁⟩⟩ =>
+        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
+      | .none => .none
+    | .inr (.inr (.inl ⟨heq⟩)) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step?, (e.points.get ⟨1, by simp [heq]⟩).step? with
+      | .some ⟨_, ⟨h₁⟩⟩, _ =>
+        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
+      | _, .some ⟨_, ⟨h₂⟩⟩ =>
+        .some ⟨_, ⟨.point 1 (by simp [heq]) h₂⟩⟩
+      | _, _ => .none
+    | .inr (.inr (.inr (.inl ⟨heq⟩))) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step?, (e.points.get ⟨1, by simp [heq]⟩).step? with
+      | .some ⟨_, ⟨h₁⟩⟩, _ =>
+        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
+      | _, .some ⟨_, ⟨h₂⟩⟩ =>
+        .some ⟨_, ⟨.point 1 (by simp [heq]) h₂⟩⟩
+      | _, _ =>
+        match (e.points.get ⟨2, by simp [heq]⟩).step? with
+        | .some ⟨_, ⟨h₃⟩⟩ =>
+          .some ⟨_, ⟨.point 2 (by simp [heq]) h₃⟩⟩
+        | .none => .none
+    | .inr (.inr (.inr (.inr ⟨heq⟩))) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step?, (e.points.get ⟨1, by simp [heq]⟩).step? with
+      | .some ⟨_, ⟨h₁⟩⟩, _ =>
+        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
+      | _, .some ⟨_, ⟨h₂⟩⟩ =>
+        .some ⟨_, ⟨.point 1 (by simp [heq]) h₂⟩⟩
+      | _, _ =>
+        match (e.points.get ⟨2, by simp [heq]⟩).step?, (e.points.get ⟨3, by simp [heq]⟩).step? with
+        | .some ⟨_, ⟨h₃⟩⟩, _ =>
+          .some ⟨_, ⟨.point 2 (by simp [heq]) h₃⟩⟩
+        | _, .some ⟨_, ⟨h₄⟩⟩ =>
+          .some ⟨_, ⟨.point 3 (by simp [heq]) h₄⟩⟩
+        | _, _ => .none
+termination_by (e.size, sizeOf e)
+decreasing_by
+  any_goals (grind)
+
+/-@[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
   match e with
   | (DCC? ((Bool.Ind motive x y) env True)) =>
@@ -26,18 +152,31 @@ def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1
     .some ⟨_, ⟨.cong_3⟩⟩
   | (DCC? (((≃.4 B f_x) env₁) ((≃.mk fX fY fidl fidr) env₂))) =>
     .some ⟨_, ⟨.cong_4⟩⟩
+  | (DCC? (≃.1 f_x B)) =>
+    match f_x.step?, B.step? with
+    | .some ⟨_, ⟨h₁⟩⟩, _ =>
+      .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
+    | _, .some ⟨_, ⟨h₂⟩⟩ =>
+      .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₂⟩⟩
+    | _, _ => .none
   | (DCC? (Unify τ_A₁ τ_A₂ A B)) =>
     if heq : A = B then
       heq ▸ .some ⟨_, ⟨RedAff.unif_refl⟩⟩
     else
-      match τ_A₁.step?, τ_A₂.step? with
-      | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
-      | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₂⟩⟩
-      | _, _ =>
-        match A.step?, B.step? with
-        | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 2 (by simp [point_arity]) h₁⟩⟩
-        | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 3 (by simp [point_arity]) h₂⟩⟩
-        | _, _ => .none
+      match A, B with
+      | (DCC? Sort (u + 1)), DCC? ⊥ =>
+        .some ⟨_, ⟨.unif_bot_sort⟩⟩
+      | (DCC? Sort 0), DCC? ⊥ =>
+        .some ⟨_, ⟨.unif_bot_prop⟩⟩
+      | A, B =>
+        match τ_A₁.step?, τ_A₂.step? with
+        | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
+        | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₂⟩⟩
+        | _, _ =>
+          match A.step?, B.step? with
+          | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 2 (by simp [point_arity]) h₁⟩⟩
+          | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 3 (by simp [point_arity]) h₂⟩⟩
+          | _, _ => .none
   | DCC? (Bool.Ind motive x y) =>
     match motive.step?, x.step? with
     | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
@@ -234,7 +373,7 @@ def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1
     match x.step? with
     | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.dom₂₀ hr⟩⟩
     | .none => .none
-  | _ => .none
+  | _ => .none-/
 
 set_option maxHeartbeats 10000000 in
 @[dcc_force_reduce, dcc_force_aff]

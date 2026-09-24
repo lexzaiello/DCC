@@ -1507,8 +1507,6 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
       exact ⟨_, congrFun' ha, congrFun' hb⟩
     case congrArg hr => exact ⟨_, .single (.congrArg (by assumption)), .single (.congrFun (by assumption))⟩
 
-#check RedAff.conf
-
 /-@[dcc_rel, aesop norm (rule_sets := [DccRel])]
 instance RedAff.instConf : Confluent (RedAff (τ := τ)) := ⟨RedAff.conf⟩
 

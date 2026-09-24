@@ -470,6 +470,18 @@ def cases_point_arity (e : GenericExpr τ_c) : point_arity e = 0 ∨ point_arity
   induction e
   any_goals (simp [point_arity])
 
+def cases_point_arity' (e : GenericExpr τ_c) : (PLift (point_arity e = 0)) ⊕ (PLift (point_arity e = 1)) ⊕ (PLift (point_arity e = 2)) ⊕ (PLift (point_arity e = 3)) ⊕ (PLift (point_arity e = 4)) :=
+  match heq : point_arity e with
+  | 0 => .inl ⟨rfl⟩
+  | 1 => .inr (.inl ⟨rfl⟩)
+  | 2 => .inr (.inr (.inl ⟨rfl⟩))
+  | 3 => .inr (.inr (.inr (.inl ⟨rfl⟩)))
+  | 4 => .inr (.inr (.inr (.inr ⟨rfl⟩)))
+  | .succ (.succ (.succ (.succ (.succ n)))) => by
+    unfold point_arity at heq
+    split at heq
+    any_goals (grind)
+
 /-theorem set_points_assoc : set_points (τ_c := τ_c) (set_points e (e.points.set m (h := h₁) x)) ((set_points e (e.points.set m (h := h₁) x)).points.set n (h := h₂) y) = set_points e ((e.points.set m (h := h₁) x).set n (h := (by
   have h := congr_point_arr (e := e) (p := ⟨m, h₁⟩) (p' := x)
   grind)) y) := by

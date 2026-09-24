@@ -448,6 +448,106 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
   induction h₁ generalizing C
   -- Inner congruences:
   case point h => exact conf_point (by assumption) h₂ h
+  case cong_1 =>
+    match h₂ with
+    | .cong_1 => exact ⟨_, .refl, .refl⟩
+    | .congrFun (.congrArg h) =>
+      exact ⟨_, .single (.congrArg (.congrArg h)), .single .cong_1⟩
+    | .congrFun (.congrFun (.point 0 hn h)) =>
+      exact ⟨_, .single (.congrArg (.congrFun h)), .single .cong_1⟩
+    | .congrFun (.congrFun (.point 1 hn h)) =>
+      exact ⟨_, .refl, .single .cong_1⟩
+    | .congrArg (.congrFun (.point 0 hn hr)) =>
+      exact ⟨_, .single (.congrFun (.congrFun hr)), .single .cong_1⟩
+    | .congrArg (.congrFun (.point 1 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_1⟩
+    | .congrArg (.congrFun (.point 2 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_1⟩
+    | .congrArg (.congrFun (.point 3 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_1⟩
+    | .congrArg (.congrArg hr) =>
+      exact ⟨_, .single (.congrFun (.congrArg hr)), .single .cong_1⟩
+  case cong_3 =>
+    match h₂ with
+    | .cong_3 => exact ⟨_, .refl, .refl⟩
+    | .congrFun (.congrArg h) =>
+      exact ⟨_, .single (.congrArg (.congrArg h)), .single .cong_3⟩
+    | .congrFun (.congrFun (.point 0 hn h)) =>
+      exact ⟨_, .single (.congrArg (.congrFun h)), .single .cong_3⟩
+    | .congrFun (.congrFun (.point 1 hn h)) =>
+      exact ⟨_, .refl, .single .cong_3⟩
+    | .congrArg (.congrFun (.point 0 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_3⟩
+    | .congrArg (.congrFun (.point 1 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_3⟩
+    | .congrArg (.congrFun (.point 2 hn hr)) =>
+      exact ⟨_, .single (.congrFun (.congrFun hr)), .single .cong_3⟩
+    | .congrArg (.congrFun (.point 3 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_3⟩
+    | .congrArg (.congrArg hr) =>
+      exact ⟨_, .single (.congrFun (.congrArg hr)), .single .cong_3⟩
+  case cong_2 =>
+    match h₂ with
+    | .cong_2 => exact ⟨_, .refl, .refl⟩
+    | .congrFun (.congrArg h) =>
+      exact ⟨_, .single (.congrArg (.congrArg h)), .single .cong_2⟩
+    | .congrFun (.congrFun (.point 1 hn h)) =>
+      exact ⟨_, .single (.congrArg (.congrFun h)), .single .cong_2⟩
+    | .congrFun (.congrFun (.point 0 hn h)) =>
+      exact ⟨_, .refl, .single .cong_2⟩
+    | .congrArg (.congrFun (.point 0 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_2⟩
+    | .congrArg (.congrFun (.point 1 hn hr)) =>
+      exact ⟨_, .single (.congrFun (.congrFun hr)), .single .cong_2⟩
+    | .congrArg (.congrFun (.point 2 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_2⟩
+    | .congrArg (.congrFun (.point 3 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_2⟩
+    | .congrArg (.congrArg hr) =>
+      exact ⟨_, .single (.congrFun (.congrArg hr)), .single .cong_2⟩
+  case cong_4 =>
+    match h₂ with
+    | .cong_4 => exact ⟨_, .refl, .refl⟩
+    | .congrFun (.congrArg h) =>
+      exact ⟨_, .single (.congrArg (.congrArg h)), .single .cong_4⟩
+    | .congrFun (.congrFun (.point 1 hn h)) =>
+      exact ⟨_, .single (.congrArg (.congrFun h)), .single .cong_4⟩
+    | .congrFun (.congrFun (.point 0 hn h)) =>
+      exact ⟨_, .refl, .single .cong_4⟩
+    | .congrArg (.congrFun (.point 0 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_4⟩
+    | .congrArg (.congrFun (.point 1 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_4⟩
+    | .congrArg (.congrFun (.point 2 hn hr)) =>
+      exact ⟨_, .refl, .single .cong_4⟩
+    | .congrArg (.congrFun (.point 3 hn hr)) =>
+      exact ⟨_, (.single (.congrFun (.congrFun hr))), .single .cong_4⟩
+    | .congrArg (.congrArg hr) =>
+      exact ⟨_, .single (.congrFun (.congrArg hr)), .single .cong_4⟩
+  case ind_bool_true =>
+    match h₂ with
+    | .ind_bool_true => exact ⟨_, .refl, .refl⟩
+    | .congrFun (.congrFun (.point 0 hn h)) =>
+      exact ⟨_, .refl, .single (by constructor)⟩
+    | .congrFun (.congrFun (.point 1 hn h)) =>
+      exact ⟨_, .single (.congrFun (.congrFun h)), .single (by constructor)⟩
+    | .congrFun (.congrFun (.point 2 hn h)) =>
+      exact ⟨_, .refl, .single (by constructor)⟩
+    | .congrFun (.congrArg h) =>
+      exact ⟨_, .single (.congrFun (.congrArg h)), .single (by constructor)⟩
+    | .congrArg h => nomatch h
+  case ind_bool_false =>
+    match h₂ with
+    | .ind_bool_false => exact ⟨_, .refl, .refl⟩
+    | .congrFun (.congrFun (.point 0 hn h)) =>
+      exact ⟨_, .refl, .single (by constructor)⟩
+    | .congrFun (.congrFun (.point 1 hn h)) =>
+      exact ⟨_, .refl, .single (by constructor)⟩
+    | .congrFun (.congrFun (.point 2 hn h)) =>
+      exact ⟨_, .single (.congrFun (.congrFun h)), .single (by constructor)⟩
+    | .congrFun (.congrArg h) =>
+      exact ⟨_, .single (.congrFun (.congrArg h)), .single (by constructor)⟩
+    | .congrArg h => nomatch h
   case eqlτ₃ =>
     cases h₂ with
     | dom₂₀ h =>

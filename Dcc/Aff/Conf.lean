@@ -1507,16 +1507,16 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
       exact ⟨_, congrFun' ha, congrFun' hb⟩
     case congrArg hr => exact ⟨_, .single (.congrArg (by assumption)), .single (.congrFun (by assumption))⟩
 
-/-@[dcc_rel, aesop norm (rule_sets := [DccRel])]
+@[dcc_rel, aesop norm (rule_sets := [DccRel])]
 instance RedAff.instConf : Confluent (RedAff (τ := τ)) := ⟨RedAff.conf⟩
 
-theorem red_aff_globally_conf.{u} {τ : Type u} {A B C : GenericExpr τ} : Relation.ReflTransGen (RedAff (τ := τ)) A B → Relation.ReflTransGen RedAff A C → ∃ D,
+theorem red_aff_globally_conf {A B C : GenericExpr τ} : Relation.ReflTransGen (RedAff (τ := τ)) A B → Relation.ReflTransGen RedAff A C → ∃ D,
   Relation.ReflTransGen RedAff B D ∧ Relation.ReflTransGen RedAff C D :=
   RedAff.instRedRel.globally_confluent.conf
 
 #check Relation.ReflTransGen.head_induction_on
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
-instance instConfRedAffTrans.{u} {τ : Type u} : Confluent (RedAff (τ := τ)) (m := Relation.ReflTransGen) := RedAff.instRedRel.globally_confluent
--/
+instance instConfRedAffTrans : Confluent (RedAff (τ := τ)) (m := Relation.ReflTransGen) := RedAff.instRedRel.globally_confluent
+
 end GenericExpr

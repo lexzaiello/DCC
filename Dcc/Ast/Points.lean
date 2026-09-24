@@ -282,6 +282,26 @@ def set_points (e : GenericExpr (τ := τ_c))
   | .const n => .const n
   | .hole n => .hole n
 
+theorem set_points_eq_set_points₁ : set_points e ⟨#[x], h⟩ = (e.set_points (e.points.set 0 (h := by grind) x)) := by
+  induction e
+  any_goals (grind)
+  any_goals (simp [set_points, points])
+
+theorem set_points_eq_set_points₂ : set_points e ⟨#[x, y], h⟩ = (e.set_points ((e.points.set 0 (h := by grind) x).set 1 (h := by grind) y)) := by
+  induction e
+  any_goals (grind)
+  any_goals (simp [set_points, points])
+
+theorem set_points_eq_set_points₃ : set_points e ⟨#[x, y, z], h⟩ = (e.set_points (((e.points.set 0 (h := by grind) x).set 1 (h := by grind) y).set 2 (h := by grind) z)) := by
+  induction e
+  any_goals (grind)
+  any_goals (simp [set_points, points])
+
+theorem set_points_eq_set_points₄ : set_points e ⟨#[x, y, z, z'], h⟩ = (e.set_points ((((e.points.set 0 (h := by grind) x).set 1 (h := by grind) y).set 2 (h := by grind) z).set 3 (h := by grind) z')) := by
+  induction e
+  any_goals (grind)
+  any_goals (simp [set_points, points])
+
 -- congr_point_arr (h : r e (set_points e ((points e).set p p'))) : point_arity e = (set_points e ((points e).set p p'))
 
 @[grind =, grind! ., dcc_rel]
@@ -291,6 +311,9 @@ theorem set_points_self_noop : set_points e e.points = e := by
 
 @[grind =_, grind ., grind! ., dcc_rel]
 theorem congr_point_arr {e : GenericExpr τ_c} {p : Fin (point_arity e)} : point_arity e = point_arity (set_points e ((points e).set p p')) := by
+  induction e <;> grind
+
+theorem congr_point_lt (h : n < point_arity e := by assumption) : n < point_arity (set_points e (e.points.set n p' hn)) := by
   induction e <;> grind
 
 @[grind =, grind ., dcc_rel]
@@ -315,8 +338,7 @@ theorem get_set_point' {n : ℕ} {hn : n < point_arity e} {p : Fin (point_arity 
       any_goals (
         cases heq
         simp [set_points, points]
-        rfl))
-    done)
+        rfl)))
 
 @[grind =, grind! .]
 theorem set_same_point_comp {e x y : GenericExpr τ_c} {p : Fin (point_arity e)} : set_points (set_points e ((points e).set p x)) ((points (set_points e ((points e).set p x))).set (h := by rw [← congr_point_arr]; grind) p y) = set_points e ((points e).set p y) := by
@@ -447,5 +469,131 @@ def min_hole (e : GenericExpr τ_c) : ℕ :=
 def cases_point_arity (e : GenericExpr τ_c) : point_arity e = 0 ∨ point_arity e = 1 ∨ point_arity e = 2 ∨ point_arity e = 3 ∨ point_arity e = 4 := by
   induction e
   any_goals (simp [point_arity])
+
+/-theorem set_points_assoc : set_points (τ_c := τ_c) (set_points e (e.points.set m (h := h₁) x)) ((set_points e (e.points.set m (h := h₁) x)).points.set n (h := h₂) y) = set_points e ((e.points.set m (h := h₁) x).set n (h := (by
+  have h := congr_point_arr (e := e) (p := ⟨m, h₁⟩) (p' := x)
+  grind)) y) := by
+  have h := congr_point_arr (e := e) (p := ⟨m, h₁⟩) (p' := x)
+  simp_all
+  rw [← h] at h₂
+  match cases_point_arity e with
+  | .inl h => grind
+  | .inr (.inl h) =>
+    rw [h] at h₁
+    rw [h] at h₂
+    match m, n with
+    | 0, 0 =>
+      expose_names
+      unfold point_arity at h_1
+      split at h_1
+      any_goals (grind)
+  | .inr (.inr (.inl h)) =>
+    rw [h] at h₁
+    rw [h] at h₂
+    unfold point_arity at h
+    split at h
+    any_goals (simp at h)
+    any_goals (
+      simp [set_points, points, Vector.set]
+      grind)
+  | .inr (.inr (.inr (.inl h))) =>
+    rw [h] at h₁
+    rw [h] at h₂
+    match m, n with
+    | 2, 2 | 2, 1 | 2, 0 | 1, 2 | 0, 2 | 1, 0 | 0, 1 | 1, 1 | 0, 0 =>
+      expose_names
+      unfold point_arity at h_1
+      split at h_1
+      any_goals (grind)
+  | .inr (.inr (.inr (.inr h))) =>
+    match m, n with
+    | 3, 3 | 3, 2 | 3, 1 | 2, 3 | 1, 3 | 2, 2 | 2, 1 | 2, 0 | 1, 2 | 0, 2 | 1, 0 | 0, 1 | 1, 1 | 0, 0 =>
+      expose_names
+      unfold point_arity at h_1
+      split at h_1
+      any_goals (grind)-/
+
+theorem get_unset_point (hneq : m ≠ n) : ((set_points (τ_c := τ_c) e (e.points.set m x' h₁)).points.get ⟨n, h₂⟩) = e.points.get ⟨n, by
+  have h := congr_point_arr (e := e) (p := ⟨m, h₁⟩) (p' := x')
+  grind⟩ := by
+  have h₃ := congr_point_arr (e := e) (p := ⟨m, h₁⟩) (p' := x')
+  --cases e
+  match cases_point_arity e with
+  | .inr (.inr (.inr (.inr h))) =>
+    cases e
+    any_goals (grind)
+    all_goals (
+      simp [point_arity] at h₁
+      have hn_n : n < 4 := by grind
+      match m with
+      | 0 =>
+        match n with
+        | 0 => exact (hneq rfl).elim
+        | 3 | 2 | 1 => simp [set_points, points, Vector.get]
+      | 1 =>
+        match n with
+        | 3 | 2 | 0 =>
+          simp [set_points, points, Vector.get]
+        | 1 => exact (hneq rfl).elim
+      | 2 =>
+        match n with
+        | 1 | 3 | 0 =>
+          simp [set_points, points, Vector.get]
+        | 2 => exact (hneq rfl).elim
+      | 3 =>
+        match n with
+        | 2 | 1 | 0 =>
+          simp [set_points, points, Vector.get]
+        | 3 => exact (hneq rfl).elim)
+  | .inr (.inr (.inr (.inl h))) =>
+    cases e
+    any_goals (grind)
+    all_goals (
+      simp [point_arity] at h₁
+      have hn_n : n < 3 := by grind
+      match m with
+      | 0 =>
+        match n with
+        | 0 => exact (hneq rfl).elim
+        | 2 | 1 => simp [set_points, points, Vector.get]
+      | 1 =>
+        match n with
+        | 2 | 0 =>
+          simp [set_points, points, Vector.get]
+        | 1 => exact (hneq rfl).elim
+      | 2 =>
+        match n with
+        | 1 | 0 =>
+          simp [set_points, points, Vector.get]
+        | 2 => exact (hneq rfl).elim)
+  | .inr (.inr (.inl h)) =>
+    cases e
+    any_goals (
+      focus
+      simp [point_arity] at h
+      done)
+    all_goals (
+      simp [point_arity] at h₁
+      have hn_n : n < 2 := by grind
+      match m with
+      | 0 =>
+        match n with
+        | 0 => exact (hneq rfl).elim
+        | 1 => simp [set_points, points, Vector.get]
+      | 1 =>
+        match n with
+        | 0 =>
+          simp [set_points, points, Vector.get]
+        | 1 => exact (hneq rfl).elim)
+  | .inr (.inl h) =>
+    cases e
+    any_goals (grind)
+  | .inl h =>
+    cases e
+    any_goals (
+      focus
+      simp [point_arity] at h
+      done)
+    all_goals (simp [point_arity] at h₁)
 
 end GenericExpr

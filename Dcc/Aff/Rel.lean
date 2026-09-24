@@ -29,10 +29,25 @@ abbrev unif_refl (τ_A₁ τ_A₂ A : GenericExpr τ) : GenericExpr τ :=
 (Type u ≃ ⊥) ≃ ⊥
 -/
 abbrev unif_bot_type (u : Level) (τ_A τ_B : GenericExpr τ) : GenericExpr τ :=
-  (DCC? (,(`Bool (((Sort (u + 1)) ≃ ⊥) ≃ ⊥)) False ((≃.mk (`⊤ ((≃.1 (`⊤ (Sort u)) (`⊤ ⊥)) ∗)) (`⊤ ((⊥.Ind (`⊤ (`⊥ ((Sort (u + 1)) ≃ ⊥)))) ∗)) (`⊤ ((refl (Id τ_A)) (& (Sort (u + 1))))) (`⊤ ((refl (Id τ_B)) (& ⊥)))) ∗)))
+  (DCC? (,(`Bool (((Sort (u + 1)) ≃ ⊥) ≃ ⊥))
+          False
+          ((≃.mk (≃.1 (`⊤ (Sort u)) (`⊤ ⊥)) -- ⊤, (Type u ≃ ⊥), prove ⊥. Grab Type u → ⊥, plug in Sort u
+                 (⊥.Ind (`⊤ (`⊥ ((Sort (u + 1)) ≃ ⊥)))) -- ⊤, ⊥, prove (Type u ≃ ⊥). Use ⊥.Ind
+                 (`⊤ ((refl (Id τ_A)) (& (Sort (u + 1)))))
+                 (`⊤ ((refl (Id τ_B)) (& ⊥))))
+           ∗)))
 
+/-
+(Sort 0 ≃ ⊥) ≃ ⊥, this is provable because ⊤ inhabits Sort 0.
+-/
 abbrev unif_bot_prop (τ_A τ_B : GenericExpr τ) : GenericExpr τ :=
-  (DCC? (,(`Bool (((Sort 0) ≃ ⊥) ≃ ⊥)) False ((≃.mk (`⊤ ((≃.1 (`⊤ ⊤) (`⊤ ⊥)) ∗)) (`⊤ ((⊥.Ind (`⊤ (`⊥ ((Sort 0) ≃ ⊥)))) ∗)) (`⊤ ((refl (Id τ_A)) (& (Sort 0)))) (`⊤ ((refl (Id τ_B)) (& ⊥)))) ∗)))
+  (DCC? (,(`Bool (((Sort 0) ≃ ⊥) ≃ ⊥))
+          False
+          ((≃.mk (≃.1 (`⊤ ⊤) (`⊤ ⊥))
+                 (⊥.Ind (`⊤ (`⊥ ((Sort 0) ≃ ⊥))))
+                 (`⊤ ((refl (Id τ_A)) (& (Sort 0))))
+                 (`⊤ ((refl (Id τ_B)) (& ⊥))))
+           ∗)))
 
 --abbrev unif_fn (u v : Level) (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) : GenericExpr τ :=
   /-let t_out            := (TUnif u v (DCC? ((Π B₁ C₁) x₁)) (DCC? ((Π B₂ C₂) x₂)))
@@ -187,7 +202,7 @@ Base combinator 2-argument function domains
     (X ≃ ⊥) ≃ ⊥:
     - (Sort (m + 1) ≃ ⊥) ≃ ⊥
     - (Sort 0 ≃ ⊥) ≃ ⊥, by ⊤
-    - 
+    -
   -/
   | unif_bot_sort : RedAff (DCC? (Unify τ_A τ_B (Sort (u + 1)) ⊥)) (unif_bot_type u τ_A τ_B)
   | unif_bot_prop : RedAff (DCC? (Unify τ_A τ_B (Sort 0) ⊥)) (unif_bot_prop τ_A τ_B)
@@ -262,6 +277,18 @@ theorem point_trans' (_hr : RedAff (τ := τ_c) ((points e).get ⟨n, h⟩) p') 
   have h := get_set_point (e := e) (p := ⟨n, h⟩) (p' := p')
   simp [h]
   assumption
+
+/-theorem mk_point₂ (hr₁ : RedAff x x') (hr₂ : RedAff y y') (heq : points e = ⟨#[x, y], h_ar⟩) : Relation.ReflTransGen RedAff e (e.set_points ⟨#[x', y'], by grind⟩) := by
+  have h₁' := RedAff.point 0 (by grind) (e := e) (by
+    simp [heq, Vector.get]
+    exact hr₁)
+  have h := congr_point_arr (e := e) (p := ⟨0, by grind⟩) (p' := x')
+  have h₂' := RedAff.point 1 (by grind) (e := (e.set_points (e.points.set 0 x' (by grind)))) (by
+    simp [points, set_points, Vector.get]
+    exact hr₁)
+  refine Relation.ReflTransGen.trans (.single h₁') (.single ?_)
+  simp [heq]
+  rw [set_points_eq_set_points₂]-/
 
 @[aesop safe apply (rule_sets := [DccForceReduce])]
 theorem refl_conf : ∃ B, Relation.ReflTransGen r A B ∧ Relation.ReflTransGen r A B := ⟨_, .refl, .refl⟩

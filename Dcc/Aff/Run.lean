@@ -1,6 +1,11 @@
 import Dcc.Aff.Rel
 
+universe u
+variable {τ : Type u} [DecidableEq τ]
+
 namespace GenericExpr
+
+open Dsl
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
@@ -364,7 +369,16 @@ theorem point' (hr : Relation.ReflTransGen (RedAff (τ := τ)) ((points e).get �
     exact Relation.ReflTransGen.trans (.single (.point n h h₁)) hrt'
 termination_by e.size
 
-theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x y) (hn : n < point_arity e := by grind) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := by
+syntax "point_arity" : tactic
+
+macro_rules
+  | `(tactic| point_arity) => `(tactic|
+    first
+    | (grind only [points, point_arity])
+    | (simp [points, Vector.get, point_arity, set_points]; try (grind only [points, point_arity]); try rfl)
+    | (simp_all [points, Vector.get, point_arity, set_points]; try (grind only [points, point_arity]); try rfl))
+
+theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x y) (hn : n < point_arity e := by point_arity) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := by
   match hr.cases_head with
   | .inl h =>
     cases h
@@ -385,6 +399,6 @@ theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAf
     have hr' := point' hr
     exact hr'
 
-theorem aff_mk_point'' {x y e : GenericExpr τ} (n : ℕ) (hr : RedAff x y := by assumption) (hn : n < point_arity e := by grind) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := aff_mk_point' (.single hr)
+theorem aff_mk_point'' {x y e : GenericExpr τ} (n : ℕ) (hr : RedAff x y := by assumption) (hn : n < point_arity e := by point_arity) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := aff_mk_point' (.single hr)
 
 end GenericExpr

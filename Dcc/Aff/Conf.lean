@@ -509,14 +509,74 @@ theorem RedAff.conf_unif_refl (h₂ : (DCC? (Unify τ_A₁ τ_A₂ A A)).RedAff 
     exact ⟨_, h₂, h₁⟩
 
 open Dsl in
-theorem RedAff.conf_unif_bot_sort (h₂ : (DCC? (Unify τ_A τ_B (Sort (u + 1)) ⊥)).RedAff (τ := τ) C) : ∃ D, instRedRel.ReflTrans (unif_bot_type u τ_A τ_B) D ∧ instRedRel.ReflTrans C D := by
-  
-  sorry
+theorem RedAff.conf_unif_bot_sort (h₂ : (DCC? (Unify τ_A τ_B (Sort (u + 1)) ⊥)).RedAff (τ := τ) C) : ∃ D, instRedRel.ReflTrans (unif_bot_type u τ_A τ_B) D ∧ instRedRel.ReflTrans C D :=
+  match h₂ with
+  | .unif_bot_sort => ⟨_, .refl, .refl⟩
+  | .point 0 hn hr => by
+    simp [set_points, points]
+    simp [Vector.get, points] at hr
+    refine ⟨_, .single (.point 2 (by grind) (.congrFun (.point 2 (by grind) ?_))), .single .unif_bot_sort⟩
+    simp [points, Vector.get]
+    apply RedAff.point 1 ?_
+    · simp [points, Vector.get]
+      refine (.congrFun (.point 0 ?_ ?_))
+      · simp [point_arity]
+      · simp [points, Vector.get]
+        · exact .point 0 (by grind) (by assumption)
+    · grind
+  | .point 1 hn hr => by
+    simp [set_points, points]
+    simp [Vector.get, points] at hr
+    refine ⟨_, .single (.point 2 (by grind) (.congrFun (.point 3 (by grind) ?_))), .single .unif_bot_sort⟩
+    simp [points, Vector.get]
+    apply RedAff.point 1 ?_
+    · simp [points, Vector.get]
+      refine (.congrFun (.point 0 ?_ ?_))
+      · simp [point_arity]
+      · simp [points, Vector.get]
+        · exact .point 0 (by grind) (by assumption)
+    · grind
+  | .point 2 hn hr => by
+    simp [points, Vector.get] at hr
+    nomatch hr
+  | .point 3 hn hr => by
+    simp [points, Vector.get] at hr
+    nomatch hr
 
 open Dsl in
-theorem RedAff.conf_unif_bot_prop (h₂ : (DCC? (Unify τ_A τ_B (Sort 0) ⊥)).RedAff (τ := τ) C) : ∃ D, instRedRel.ReflTrans (GenericExpr.unif_bot_prop τ_A τ_B) D ∧ instRedRel.ReflTrans C D := by
-  
-  sorry
+theorem RedAff.conf_unif_bot_prop (h₂ : (DCC? (Unify τ_A τ_B (Sort 0) ⊥)).RedAff (τ := τ) C) : ∃ D, instRedRel.ReflTrans (GenericExpr.unif_bot_prop τ_A τ_B) D ∧ instRedRel.ReflTrans C D :=
+  match h₂ with
+  | .unif_bot_prop => ⟨_, .refl, .refl⟩
+  | .point 0 hn hr => by
+    simp [set_points, points]
+    simp [Vector.get, points] at hr
+    refine ⟨_, .single (.point 2 (by grind) (.congrFun (.point 2 (by grind) ?_))), .single .unif_bot_prop⟩
+    simp [points, Vector.get]
+    apply RedAff.point 1 ?_
+    · simp [points, Vector.get]
+      refine (.congrFun (.point 0 ?_ ?_))
+      · simp [point_arity]
+      · simp [points, Vector.get]
+        · exact .point 0 (by grind) (by assumption)
+    · grind
+  | .point 1 hn hr => by
+    simp [set_points, points]
+    simp [Vector.get, points] at hr
+    refine ⟨_, .single (.point 2 (by grind) (.congrFun (.point 3 (by grind) ?_))), .single .unif_bot_prop⟩
+    simp [points, Vector.get]
+    apply RedAff.point 1 ?_
+    · simp [points, Vector.get]
+      refine (.congrFun (.point 0 ?_ ?_))
+      · simp [point_arity]
+      · simp [points, Vector.get]
+        · exact .point 0 (by grind) (by assumption)
+    · grind
+  | .point 2 hn hr => by
+    simp [points, Vector.get] at hr
+    nomatch hr
+  | .point 3 hn hr => by
+    simp [points, Vector.get] at hr
+    nomatch hr
 
 set_option maxHeartbeats 10000000000 in
 open Congruent' in
@@ -525,6 +585,12 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
   induction h₁ generalizing C
   -- Inner congruences:
   case point h => exact conf_point (by assumption) h₂ h
+  case unif_refl =>
+    exact conf_unif_refl h₂
+  case unif_bot_sort =>
+    exact conf_unif_bot_sort h₂
+  case unif_bot_prop =>
+    exact conf_unif_bot_prop h₂
   case cong_1 =>
     match h₂ with
     | .cong_1 => exact ⟨_, .refl, .refl⟩

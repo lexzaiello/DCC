@@ -13,7 +13,7 @@ namespace GenericExpr
 @[inline, grind, dcc_size]
 def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   open Dsl in match e with
-  | DCC? (? _x) => 0
+  | DCC? (? _x) => 1
   | DCC? (≃.1.apply _a _b) => 0
   | DCC? (≃.dom _a _b) => 0
   | DCC? (≃.cod _a _b) => 0
@@ -30,7 +30,7 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC? True => 0
   | DCC? False => 0
   | DCC? Bool => 0
-  | DCC? (Unify _τ₁ _τ₂) => 2
+  | DCC? (Unify _τ₁ _τ₂ _A _B) => 2
   | DCC? (Dom _x) => 0
   | DCC? (Cod _x) => 0
   | DCC? (Dom₂ _x) => 0
@@ -81,7 +81,7 @@ def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (p
   | DCC? (≃.4 x y) => ⟨#[x, y], by grind⟩
   | DCC? (⊥.Ind motive) => ⟨#[motive], by grind⟩
   | DCC? (Bool.Ind motive x y) => ⟨#[motive, x, y], by grind⟩
-  | DCC? (Unify τ_A τ_B) => ⟨#[τ_A, τ_B], by simp [point_arity]⟩
+  | DCC? (Unify τ_A τ_B A B) => ⟨#[A, B], by simp [point_arity]⟩
   | DCC? (≃ A B) => ⟨#[A, B], by grind⟩
   | DCC[.] (Dom _x) => ⟨#[], by grind⟩
   | DCC[.] (Cod _x) => ⟨#[], by grind⟩
@@ -89,7 +89,8 @@ def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (p
   | DCC? (Uncoup _x) => ⟨#[], by grind⟩
   | DCC? (Unbang _x) => ⟨#[], by grind⟩
   | DCC[.] ∗ => ⟨#[], by grind⟩
-  | DCC? (? _m) | DCC? Bool | DCC? False | DCC? True | DCC[.] ⊤ => ⟨#[], by grind⟩
+  | DCC? (? m) => ⟨#[m], by grind⟩
+  | DCC? Bool | DCC? False | DCC? True | DCC[.] ⊤ => ⟨#[], by grind⟩
   | DCC[.] ⊥ => ⟨#[], by grind⟩
   | DCC[.] (= x y) => ⟨#[x, y], by grind⟩
   | DCC[.] (Eql α)  => ⟨#[α], by grind⟩
@@ -144,8 +145,8 @@ def map_points (e : GenericExpr (τ := τ_c))
   | DCC? False => .false
   | DCC? Bool => .bool
   | DCC? (≃ _A _B) => .cong
-  | DCC? (Unify _τ_A _τ_B) => .unify
-  | DCC? (? m) => .hole_ty m
+  | DCC? (Unify τ_A τ_B _A _B) => fun A B => .unify τ_A τ_B A B
+  | DCC? (? _m) => .hole_ty
   | DCC? (Dom x) => Function.OfArity.const _ (DCC? (Dom x)) _
   | DCC? (Cod x) => Function.OfArity.const _ (DCC? (Cod x)) _
   | DCC? (Dom₂ x) => Function.OfArity.const _ (DCC? (Dom₂ x)) _
@@ -229,7 +230,9 @@ def set_points (e : GenericExpr (τ := τ_c))
   | DCC? True => .true
   | DCC? False => .false
   | DCC? Bool => .bool
-  | DCC? (? _m) => DCC? (? _m)
+  | DCC? (? m) =>
+    have heq : point_arity (DCC? (? m)) = 1 := by grind
+    .hole_ty points'[0]
   | DCC? (Bool.Ind motive x y) =>
     have heq : point_arity (DCC? (Bool.Ind motive x y)) = 3 := by grind
     .ind_bool points'[0] points'[1] points'[2]
@@ -249,9 +252,9 @@ def set_points (e : GenericExpr (τ := τ_c))
   | DCC? (≃ A B) =>
     have heq : point_arity (DCC? (≃ A B)) = 2 := by grind
     .cong points'[0] points'[1]
-  | DCC? (Unify τ_A τ_B) =>
-    have heq : point_arity (DCC? (Unify τ_A τ_B)) = 2 := by dcc_simp
-    .unify points'[0] points'[1]
+  | DCC? (Unify τ_A τ_B A B) =>
+    have heq : point_arity (DCC? (Unify τ_A τ_B A B)) = 2 := by dcc_simp
+    .unify τ_A τ_B points'[0] points'[1]
   | DCC? (`β x) =>
     have heq : point_arity (DCC? (`β x)) = 2 := by grind
     .quot points'[0] points'[1]
@@ -412,8 +415,8 @@ def max_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? (≃.4 x y) => max x.max_hole y.max_hole
   | DCC? (⊥.Ind motive) => motive.max_hole
   | DCC? (≃ A B) => max A.max_hole B.max_hole
-  | DCC? (Unify τ_A τ_B) => max τ_A.max_hole τ_B.max_hole
-  | DCC? (? _m) => 0
+  | DCC? (Unify τ_A τ_B A B) => max τ_A.max_hole (max τ_B.max_hole (max A.max_hole B.max_hole))
+  | DCC? (? m) => m.max_hole
   | DCC? Bool | DCC? False | DCC? True => 0
   | DCC? (Dom x) => x.max_hole
   | DCC? (Cod x) => x.max_hole
@@ -466,9 +469,9 @@ def min_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? (≃.4 x y) => min x.min_hole y.min_hole
   | DCC? (⊥.Ind motive) => motive.min_hole
   | DCC? (≃ A B) => min A.min_hole B.min_hole
-  | DCC? (? _m) => 0
+  | DCC? (? m) => m.min_hole
   | DCC? True | DCC? False | DCC? Bool => 0
-  | DCC? (Unify τ_A τ_B) => min τ_A.min_hole τ_B.min_hole
+  | DCC? (Unify τ_A τ_B A B) => min τ_A.min_hole (min τ_B.min_hole (min A.min_hole B.min_hole))
   | DCC? (Dom x) => x.min_hole
   | DCC? (Cod x) => x.min_hole
   | DCC? (Dom₂ x) => x.min_hole
@@ -520,6 +523,7 @@ def cases_point_arity' (e : GenericExpr τ_c) : (PLift (point_arity e = 0)) ⊕ 
     split at heq
     any_goals (grind)
 
+set_option maxHeartbeats 100000000000 in
 theorem get_unset_point (hneq : m ≠ n) : ((set_points (τ_c := τ_c) e (e.points.set m x' h₁)).points.get ⟨n, h₂⟩) = e.points.get ⟨n, by
   have h := congr_point_arr (e := e) (p := ⟨m, h₁⟩) (p' := x')
   grind⟩ := by

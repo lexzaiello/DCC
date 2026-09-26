@@ -67,6 +67,9 @@ syntax "?"   : gen_dcc_loc
 syntax "."   : gen_dcc_loc
 syntax term  : gen_dcc_loc
 
+scoped syntax "(" gen_dcc ":" gen_dcc ")" "→" gen_dcc : gen_dcc
+scoped syntax "(" ":" gen_dcc ")" "→" gen_dcc : gen_dcc
+
 end Dsl
 
 open Dsl in
@@ -100,8 +103,8 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "eq") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
   | `(DCC[$ty:gen_dcc_loc] (≃ $x:gen_dcc $y:gen_dcc))                  => do
     return mkApp (← field ty "cong") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
-  | `(DCC[$ty:gen_dcc_loc] (Unify $τ_A:gen_dcc $τ_B:gen_dcc))                  => do
-    return mkApp (← field ty "unify") #[← `(DCC[$ty:gen_dcc_loc] $τ_A), ← `(DCC[$ty:gen_dcc_loc] $τ_B)]
+  | `(DCC[$ty:gen_dcc_loc] (Unify $τ_A:gen_dcc $τ_B:gen_dcc $A:gen_dcc $B:gen_dcc))                  => do
+    return mkApp (← field ty "unify") #[← `(DCC[$ty:gen_dcc_loc] $τ_A), ← `(DCC[$ty:gen_dcc_loc] $τ_B), ← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $B)]
   | `(DCC[$ty:gen_dcc_loc] (Bool.Ind $motive:gen_dcc $case_true:gen_dcc $case_false:gen_dcc)) => do
     return mkApp (← field ty "ind_bool") #[← `(DCC[$ty:gen_dcc_loc] $motive), ← `(DCC[$ty:gen_dcc_loc] $case_true),  ← `(DCC[$ty:gen_dcc_loc] $case_false)]
   | `(DCC[$ty:gen_dcc_loc] (⊥.Ind $motive:gen_dcc)) => do
@@ -189,11 +192,6 @@ open Lean.Syntax in macro_rules
   | `(DCC[$_ty:gen_dcc_loc] #($t:term))                              => `($t)
   | `(DCC[$_ty:gen_dcc_loc] $idt:ident)                              => `($idt:term)
   | `(DCC[$ty:gen_dcc_loc] ($t:gen_dcc))                             => `(DCC[$ty:gen_dcc_loc] $t)
-
-open Dsl in
-syntax "(" gen_dcc ":" gen_dcc ")" "→" gen_dcc : gen_dcc
-open Dsl in
-syntax "(" ":" gen_dcc ")" "→" gen_dcc : gen_dcc
 
 open Dsl in
 macro_rules

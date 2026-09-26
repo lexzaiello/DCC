@@ -60,5 +60,5 @@ inductive GenericExpr.{u} (τ : Type u) where
   | hole        : ℕ              → GenericExpr τ
   | hole_ty     : GenericExpr τ  → GenericExpr τ
   | cong        : GenericExpr τ  → GenericExpr τ → GenericExpr τ -- A ≃ B
-  | unify       : GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | unify       : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ → GenericExpr τ
 deriving BEq, DecidableEq, Inhabited

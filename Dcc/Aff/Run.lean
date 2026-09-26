@@ -535,7 +535,7 @@ theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAf
     unfold point_arity at hn
     split at hn
     any_goals (grind)
-    case _=>
+    case _ =>
       simp at hn
       match n with
       | 0 | 1 | 2 | 3 =>

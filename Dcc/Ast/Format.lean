@@ -31,7 +31,7 @@ def toFormat.{u} {τ : Type u}
   | DCC? (≃.cod x y) => comb "≃.cod" [x.toFormat pretty, y.toFormat pretty]
   | DCC? (⊥.Ind motive) => comb "⊥.Ind" [motive.toFormat pretty]
   | DCC? (≃.mk a b c d) => comb "≃.mk" [a.toFormat pretty, b.toFormat pretty, c.toFormat pretty, d.toFormat pretty]
-  | DCC? (Unify τ_A τ_B) => comb "Unify" [τ_A.toFormat pretty, τ_B.toFormat pretty]
+  | DCC? (Unify τ_A τ_B A B) => comb "Unify" [τ_A.toFormat pretty, τ_B.toFormat pretty, A.toFormat pretty, B.toFormat pretty]
   | DCC? (≃ A B) => comb "≃" [A.toFormat pretty, B.toFormat pretty]
   | DCC? (? m) => comb "?" [m.toFormat pretty]
   | (DCC? ⊤)                   => "⊤"

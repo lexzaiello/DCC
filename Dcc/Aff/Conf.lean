@@ -477,6 +477,12 @@ theorem RedAff.conf_point (h₁ : RedAff ((points e).get ⟨n, hn⟩) p') (h₂ 
         | 1 =>
           simp [points, set_points]
           exact ⟨_, .single (.point 0 (by simp [point_arity]) hr), .single (.point 1 (by simp [point_arity]) h₁)⟩
+        /-| 2 =>
+          simp [points, set_points]
+          exact ⟨_, .single (.point 0 (by simp [point_arity]) hr), .single (.point 2 (by simp [point_arity]) h₁)⟩
+        | 3 =>
+          simp [points, set_points]
+          exact ⟨_, .single (.point 0 (by simp [point_arity]) hr), .single (.point 3 (by simp [point_arity]) h₁)⟩-/
       | .point 1 hn hr =>
         match n with
         | 1 =>
@@ -489,6 +495,48 @@ theorem RedAff.conf_point (h₁ : RedAff ((points e).get ⟨n, hn⟩) p') (h₂ 
         | 0 =>
           simp [points, set_points]
           exact ⟨_, .single (.point 1 (by simp [point_arity]) hr), .single (.point 0 (by simp [point_arity]) h₁)⟩
+        /-| 2 =>
+          simp [points, set_points]
+          exact ⟨_, .single (.point 1 (by simp [point_arity]) hr), .single (.point 2 (by simp [point_arity]) h₁)⟩
+        | 3 =>
+          simp [points, set_points]
+          exact ⟨_, .single (.point 1 (by simp [point_arity]) hr), .single (.point 3 (by simp [point_arity]) h₁)⟩-/
+      /-| .point 2 hn hr =>
+        match n with
+        | 2 =>
+          have ⟨_, h₁, h₂⟩ := h hr
+          refine ⟨_, aff_mk_point' h₁ (n := 2) (hn := ?_) (heq := ?_), aff_mk_point' h₂ (n := 2) (hn := ?_) (heq := ?_)⟩
+          · simp [point_arity, set_points]
+          · simp [set_points, points]; rfl
+          · simp [point_arity, set_points]
+          · simp [set_points, points]; rfl
+        | 0 =>
+          simp [points, set_points]
+          exact ⟨_, .single (.point 2 (by simp [point_arity]) hr), .single (.point 0 (by simp [point_arity]) h₁)⟩
+        | 1 =>
+          simp [points, set_points]
+          exact ⟨_, .single (.point 2 (by simp [point_arity]) hr), .single (.point 1 (by simp [point_arity]) h₁)⟩
+        | 3 =>
+          simp [points, set_points]
+          exact ⟨_, .single (.point 2 (by simp [point_arity]) hr), .single (.point 3 (by simp [point_arity]) h₁)⟩
+      | .point 3 hn hr =>
+        match n with
+        | 3 =>
+          have ⟨_, h₁, h₂⟩ := h hr
+          refine ⟨_, aff_mk_point' h₁ (n := 3) (hn := ?_) (heq := ?_), aff_mk_point' h₂ (n := 3) (hn := ?_) (heq := ?_)⟩
+          · simp [point_arity, set_points]
+          · simp [set_points, points]; rfl
+          · simp [point_arity, set_points]
+          · simp [set_points, points]; rfl
+        | 0 =>
+          simp [points, set_points]
+          exact ⟨_, .single (.point 3 (by simp [point_arity]) hr), .single (.point 0 (by simp [point_arity]) h₁)⟩
+        | 1 =>
+          simp [points, set_points]
+          exact ⟨_, .single (.point 3 (by simp [point_arity]) hr), .single (.point 1 (by simp [point_arity]) h₁)⟩
+        | 2 =>
+          simp [points, set_points]
+          exact ⟨_, .single (.point 3 (by simp [point_arity]) hr), .single (.point 2 (by simp [point_arity]) h₁)⟩-/
     any_goals (grind only [points, point_arity])
     any_goals (
       match n with

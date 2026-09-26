@@ -13,6 +13,11 @@ namespace GenericExpr
 @[inline, grind, dcc_size]
 def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   open Dsl in match e with
+  | DCC? (? _x) => 0
+  | DCC? (≃.1.apply _a _b) => 0
+  | DCC? (≃.dom _a _b) => 0
+  | DCC? (≃.cod _a _b) => 0
+  | DCC? (≃.2.apply _a _b) => 0
   | DCC? (≃.mk _to_fun _inv_fun _comp_id _id_comp) => 4
   | DCC? (≃.Ind _motive _x) => 2
   | DCC? (≃.1 _x _y) => 2
@@ -21,20 +26,20 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC? (≃.4 _x _y) => 2
   | DCC? (⊥.Ind _motive) => 1
   | DCC? (Bool.Ind _motive _x _y) => 3
-  | DCC? (? _m) => 0
-  | DCC? _A ≃ _B => 2
+  | DCC? (≃ _A _B) => 2
   | DCC? True => 0
   | DCC? False => 0
   | DCC? Bool => 0
-  | DCC? (Unify _τ₁ _τ₂ _A _B) => 4
+  | DCC? (Unify _τ₁ _τ₂) => 2
   | DCC? (Dom _x) => 0
+  | DCC? (Cod _x) => 0
   | DCC? (Dom₂ _x) => 0
   | DCC? (Uncoup _x) => 0
   | DCC? (Unbang _x) => 0
   | DCC[.] ∗ => 0
   | DCC[.] ⊤ => 0
   | DCC[.] ⊥ => 0
-  | DCC[.] _x = _y => 2
+  | DCC[.] (= _x _y) => 2
   | DCC[.] (Eql _α)  => 1
   | DCC[.] (refl _α) => 1
   | DCC[.] Sort _m => 0
@@ -67,21 +72,26 @@ def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (p
   | DCC? (≃.mk to_fun inv_fun comp_id id_comp) => ⟨#[to_fun, inv_fun, comp_id, id_comp], by simp [point_arity]⟩
   | DCC? (≃.Ind motive x) => ⟨#[motive, x], by grind⟩
   | DCC? (≃.1 x y) => ⟨#[x, y], by grind⟩
+  | DCC? (≃.1.apply x y) => ⟨#[], by grind⟩
+  | DCC? (≃.dom x y) => ⟨#[], by grind⟩
+  | DCC? (≃.cod x y) => ⟨#[], by grind⟩
+  | DCC? (≃.2.apply x y) => ⟨#[], by grind⟩
   | DCC? (≃.2 x y) => ⟨#[x, y], by grind⟩
   | DCC? (≃.3 x y) => ⟨#[x, y], by grind⟩
   | DCC? (≃.4 x y) => ⟨#[x, y], by grind⟩
   | DCC? (⊥.Ind motive) => ⟨#[motive], by grind⟩
   | DCC? (Bool.Ind motive x y) => ⟨#[motive, x, y], by grind⟩
-  | DCC? (Unify τ_A τ_B A B) => ⟨#[τ_A, τ_B, A, B], by simp [point_arity]⟩
-  | DCC? A ≃ B => ⟨#[A, B], by grind⟩
+  | DCC? (Unify τ_A τ_B) => ⟨#[τ_A, τ_B], by simp [point_arity]⟩
+  | DCC? (≃ A B) => ⟨#[A, B], by grind⟩
   | DCC[.] (Dom _x) => ⟨#[], by grind⟩
+  | DCC[.] (Cod _x) => ⟨#[], by grind⟩
   | DCC[.] (Dom₂ _x) => ⟨#[], by grind⟩
   | DCC? (Uncoup _x) => ⟨#[], by grind⟩
   | DCC? (Unbang _x) => ⟨#[], by grind⟩
   | DCC[.] ∗ => ⟨#[], by grind⟩
   | DCC? (? _m) | DCC? Bool | DCC? False | DCC? True | DCC[.] ⊤ => ⟨#[], by grind⟩
   | DCC[.] ⊥ => ⟨#[], by grind⟩
-  | DCC[.] x = y => ⟨#[x, y], by grind⟩
+  | DCC[.] (= x y) => ⟨#[x, y], by grind⟩
   | DCC[.] (Eql α)  => ⟨#[α], by grind⟩
   | DCC[.] (refl α) => ⟨#[α], by grind⟩
   | DCC[.] Sort _m => ⟨#[], by grind⟩
@@ -121,6 +131,10 @@ def map_points (e : GenericExpr (τ := τ_c))
   | DCC? (≃.mk _a _b _c _d) => .cong_mk
   | DCC? (≃.Ind _motive _x) => .ind_cong
   | DCC? (≃.1 _x _y) => .cong_1
+  | DCC? (≃.1.apply x y) => .cong_appl x y
+  | DCC? (≃.dom x y) => .cong_fn_dom x y
+  | DCC? (≃.cod x y) => .cong_fn_cod x y
+  | DCC? (≃.2.apply x y) => .cong_appr x y
   | DCC? (≃.2 _x _y) => .cong_2
   | DCC? (≃.3 _x _y) => .cong_3
   | DCC? (≃.4 _x _y) => .cong_4
@@ -129,17 +143,18 @@ def map_points (e : GenericExpr (τ := τ_c))
   | DCC? True => .true
   | DCC? False => .false
   | DCC? Bool => .bool
-  | DCC? _A ≃ _B => .cong
-  | DCC? (Unify _τ_A _τ_B _A _B) => .unify
+  | DCC? (≃ _A _B) => .cong
+  | DCC? (Unify _τ_A _τ_B) => .unify
   | DCC? (? m) => .hole_ty m
   | DCC? (Dom x) => Function.OfArity.const _ (DCC? (Dom x)) _
+  | DCC? (Cod x) => Function.OfArity.const _ (DCC? (Cod x)) _
   | DCC? (Dom₂ x) => Function.OfArity.const _ (DCC? (Dom₂ x)) _
   | DCC? (Uncoup x) => Function.OfArity.const _ (DCC? (Uncoup x)) _
   | DCC? (Unbang x) => Function.OfArity.const _ (DCC? (Unbang x)) _
   | DCC? ∗ => .tintro
   | DCC? ⊤ => .top
   | DCC? ⊥ => .bot
-  | DCC? _x = _y => .eq
+  | DCC? (= _x _y) => .eq
   | DCC? (Eql _α)  => .eql
   | DCC? (refl _α) => .refl
   | DCC? Sort m => .sort m
@@ -173,6 +188,18 @@ def set_points (e : GenericExpr (τ := τ_c))
   | DCC? (≃.mk a b c d) =>
     have heq : point_arity (DCC? (≃.mk a b c d)) = 4 := by simp [point_arity]
     .cong_mk points'[0] points'[1] points'[2] points'[3]
+  | DCC? (≃.1.apply a b) =>
+    have heq : point_arity (DCC? (≃.1.apply a b)) = 0 := by simp [point_arity]
+    .cong_appl a b
+  | DCC? (≃.dom a b) =>
+    have heq : point_arity (DCC? (≃.dom a b)) = 0 := by simp [point_arity]
+    .cong_fn_dom a b
+  | DCC? (≃.cod a b) =>
+    have heq : point_arity (DCC? (≃.cod a b)) = 0 := by simp [point_arity]
+    .cong_fn_cod a b
+  | DCC? (≃.2.apply a b) =>
+    have heq : point_arity (DCC? (≃.2.apply a b)) = 0 := by simp [point_arity]
+    .cong_appr a b
   | DCC? (≃.Ind motive x) =>
     have heq : point_arity (DCC? (≃.Ind motive x)) = 2 := by grind
     .ind_cong points'[0] points'[1]
@@ -192,6 +219,7 @@ def set_points (e : GenericExpr (τ := τ_c))
     have heq : point_arity (DCC? (⊥.Ind motive)) = 1 := by grind
     .ind_bot points'[0]
   | DCC? (Dom x) => DCC? (Dom x)
+  | DCC? (Cod x) => DCC? (Cod x)
   | DCC? (Dom₂ x) => DCC? (Dom₂ x)
   | DCC? (Uncoup x) => DCC? (Uncoup x)
   | DCC? (Unbang x) => DCC? (Unbang x)
@@ -205,8 +233,8 @@ def set_points (e : GenericExpr (τ := τ_c))
   | DCC? (Bool.Ind motive x y) =>
     have heq : point_arity (DCC? (Bool.Ind motive x y)) = 3 := by grind
     .ind_bool points'[0] points'[1] points'[2]
-  | DCC? x = y =>
-    have heq : point_arity (DCC? x = y) = 2 := by grind
+  | DCC? (= x y) =>
+    have heq : point_arity (DCC? (= x y)) = 2 := by grind
     .eq points'[0] points'[1]
   | DCC? (Eql α)  =>
     have heq : point_arity (DCC? (Eql α)) = 1 := by grind
@@ -218,12 +246,12 @@ def set_points (e : GenericExpr (τ := τ_c))
   | DCC? (Σ α β) =>
     have heq : point_arity (DCC? (Σ α β)) = 2 := by grind
     .sigma points'[0] points'[1]
-  | DCC? (A ≃ B) =>
-    have heq : point_arity (DCC? (A ≃ B)) = 2 := by grind
+  | DCC? (≃ A B) =>
+    have heq : point_arity (DCC? (≃ A B)) = 2 := by grind
     .cong points'[0] points'[1]
-  | DCC? (Unify τ_A τ_B A B) =>
-    have heq : point_arity (DCC? (Unify τ_A τ_B A B)) = 4 := by dcc_simp
-    .unify points'[0] points'[1] points'[2] points'[3]
+  | DCC? (Unify τ_A τ_B) =>
+    have heq : point_arity (DCC? (Unify τ_A τ_B)) = 2 := by dcc_simp
+    .unify points'[0] points'[1]
   | DCC? (`β x) =>
     have heq : point_arity (DCC? (`β x)) = 2 := by grind
     .quot points'[0] points'[1]
@@ -372,6 +400,10 @@ theorem map_points_eq {e e' : GenericExpr τ} (heq : map_points e fn = e') : poi
 def max_hole (e : GenericExpr τ_c) : ℕ :=
   match e with
   | DCC? (≃.mk a b c d) => max a.max_hole (max b.max_hole (max c.max_hole d.max_hole))
+  | DCC? (≃.1.apply _a _b) => 0
+  | DCC? (≃.dom _a _b) => 0
+  | DCC? (≃.cod _a _b) => 0
+  | DCC? (≃.2.apply _a _b) => 0
   | DCC? (Bool.Ind motive x y) => max motive.max_hole (max x.max_hole y.max_hole)
   | DCC? (≃.Ind motive x) => max motive.max_hole x.max_hole
   | DCC? (≃.1 x y) => max x.max_hole y.max_hole
@@ -379,18 +411,19 @@ def max_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? (≃.3 x y) => max x.max_hole y.max_hole
   | DCC? (≃.4 x y) => max x.max_hole y.max_hole
   | DCC? (⊥.Ind motive) => motive.max_hole
-  | DCC? A ≃ B => max A.max_hole B.max_hole
-  | DCC? (Unify τ_A τ_B A B) => max τ_A.max_hole (max τ_B.max_hole (max A.max_hole B.max_hole))
+  | DCC? (≃ A B) => max A.max_hole B.max_hole
+  | DCC? (Unify τ_A τ_B) => max τ_A.max_hole τ_B.max_hole
   | DCC? (? _m) => 0
   | DCC? Bool | DCC? False | DCC? True => 0
   | DCC? (Dom x) => x.max_hole
+  | DCC? (Cod x) => x.max_hole
   | DCC? (Dom₂ x) => x.max_hole
   | DCC? (Uncoup x) => x.max_hole
   | DCC? (Unbang x) => x.max_hole
   | DCC? ∗ => 0
   | DCC? ⊤ => 0
   | DCC? ⊥ => 0
-  | DCC? x = y => max x.max_hole y.max_hole
+  | DCC? (= x y) => max x.max_hole y.max_hole
   | DCC? (Eql B)  => B.max_hole
   | DCC? (refl B) => B.max_hole
   | DCC? Sort _m => 0
@@ -421,6 +454,10 @@ def max_hole (e : GenericExpr τ_c) : ℕ :=
 def min_hole (e : GenericExpr τ_c) : ℕ :=
   match e with
   | DCC? (≃.mk a b c d) => min a.min_hole (min b.min_hole (min c.min_hole d.min_hole))
+  | DCC? (≃.1.apply _a _b) => 0
+  | DCC? (≃.dom _a _b) => 0
+  | DCC? (≃.cod _a _b) => 0
+  | DCC? (≃.2.apply _a _b) => 0
   | DCC? (Bool.Ind motive x y) => min motive.min_hole (min x.min_hole y.min_hole)
   | DCC? (≃.Ind motive x) => min motive.min_hole x.min_hole
   | DCC? (≃.1 x y) => min x.min_hole y.min_hole
@@ -428,18 +465,19 @@ def min_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? (≃.3 x y) => min x.min_hole y.min_hole
   | DCC? (≃.4 x y) => min x.min_hole y.min_hole
   | DCC? (⊥.Ind motive) => motive.min_hole
-  | DCC? A ≃ B => min A.min_hole B.min_hole
+  | DCC? (≃ A B) => min A.min_hole B.min_hole
   | DCC? (? _m) => 0
   | DCC? True | DCC? False | DCC? Bool => 0
-  | DCC? (Unify τ_A τ_B A B) => min τ_A.min_hole (min τ_B.min_hole (min A.min_hole B.min_hole))
+  | DCC? (Unify τ_A τ_B) => min τ_A.min_hole τ_B.min_hole
   | DCC? (Dom x) => x.min_hole
+  | DCC? (Cod x) => x.min_hole
   | DCC? (Dom₂ x) => x.min_hole
   | DCC? (Uncoup x) => x.min_hole
   | DCC? (Unbang x) => x.min_hole
   | DCC? ∗ => 0
   | DCC? ⊤ => 0
   | DCC? ⊥ => 0
-  | DCC? x = y => min x.min_hole y.min_hole
+  | DCC? (= x y) => min x.min_hole y.min_hole
   | DCC? (Eql B)  => B.min_hole
   | DCC? (refl B) => B.min_hole
   | DCC? Sort _m => 0

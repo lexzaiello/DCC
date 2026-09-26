@@ -25,16 +25,21 @@ def toFormat.{u} {τ : Type u}
   | DCC? (≃.2 x y) => comb "≃.2" [x.toFormat pretty, y.toFormat pretty]
   | DCC? (≃.3 x y) => comb "≃.3" [x.toFormat pretty, y.toFormat pretty]
   | DCC? (≃.4 x y) => comb "≃.4" [x.toFormat pretty, y.toFormat pretty]
+  | DCC? (≃.1.apply x y) => comb "≃.1.apply" [x.toFormat pretty, y.toFormat pretty]
+  | DCC? (≃.2.apply x y) => comb "≃.2.apply" [x.toFormat pretty, y.toFormat pretty]
+  | DCC? (≃.dom x y) => comb "≃.dom" [x.toFormat pretty, y.toFormat pretty]
+  | DCC? (≃.cod x y) => comb "≃.cod" [x.toFormat pretty, y.toFormat pretty]
   | DCC? (⊥.Ind motive) => comb "⊥.Ind" [motive.toFormat pretty]
   | DCC? (≃.mk a b c d) => comb "≃.mk" [a.toFormat pretty, b.toFormat pretty, c.toFormat pretty, d.toFormat pretty]
-  | DCC? (Unify τ_A τ_B A B) => comb "Unify" [τ_A.toFormat pretty, τ_B.toFormat pretty, A.toFormat pretty, B.toFormat pretty]
-  | DCC? A ≃ B => sepD [A.toFormat pretty, B.toFormat pretty] " ="
-  | DCC? (? m) => comb "?" [format m]
+  | DCC? (Unify τ_A τ_B) => comb "Unify" [τ_A.toFormat pretty, τ_B.toFormat pretty]
+  | DCC? (≃ A B) => comb "≃" [A.toFormat pretty, B.toFormat pretty]
+  | DCC? (? m) => comb "?" [m.toFormat pretty]
   | (DCC? ⊤)                   => "⊤"
   | (DCC? ⊥)                   => "⊥"
   | (DCC? ∗)                   => "∗"
   | DCC? (Unbang x) => comb "Unbang" [x.toFormat pretty]
   | DCC? (Dom x) => comb "Dom" [x.toFormat pretty]
+  | DCC? (Cod x) => comb "Cod" [x.toFormat pretty]
   | DCC? (Dom₂ x) => comb "Dom₂" [x.toFormat pretty]
   | DCC? (Uncoup x) => comb "Uncoup" [x.toFormat pretty]
   | DCC? (Swap B C) => comb "Swap" [B.toFormat pretty, C.toFormat pretty]
@@ -59,7 +64,7 @@ def toFormat.{u} {τ : Type u}
     comb s!",{B.toFormat pretty}" [a.toFormat pretty, b.toFormat pretty]
   | (DCC? (Σ β))             => comb "Σ" [β.toFormat pretty]
   | (DCC? (Σ α β))             => comb "Σ" [α.toFormat pretty, β.toFormat pretty]
-  | (DCC? x = y)               => sepD [x.toFormat pretty, y.toFormat pretty] " ="
+  | (DCC? (= x y))             => comb "=" [x.toFormat pretty, y.toFormat pretty]
   | (DCC? (Eql f_α))            => comb "Eql" [f_α.toFormat pretty]
   | (DCC? (refl f_α))           => comb "refl" [f_α.toFormat pretty]
   | (DCC? (∘ f g))               =>

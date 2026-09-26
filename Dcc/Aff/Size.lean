@@ -23,19 +23,24 @@ namespace GenericExpr
 def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   match e with
   | DCC[.] (Dom x) => x.size
+  | DCC[.] (Cod x) => x.size
   | DCC[.] (Dom₂ x) => x.size * 2
   | DCC[.] (Unbang x) => x.size
   | DCC[.] (Uncoup x) => x.size
   | DCC[.] ∗ => 1
   | DCC[.] ⊤ => 2
   | DCC[.] ⊥ => 2
-  | DCC[.] x = y => (x.size + y.size) + 1
-  | DCC[.] A ≃ B => (A.size + B.size) + 1
-  | DCC[.] (Unify τ_A τ_B X Y) => 5 * ((10 * (τ_A.size + 1)) + (10 * (τ_B.size + 1)) + (10 * (X.size + 1)) + (10 * (Y.size + 1)))
+  | DCC[.] (= x y) => (x.size + y.size) + 1
+  | DCC[.] (≃ A B) => (A.size + B.size) + 1
+  | DCC[.] (Unify τ_A τ_B) => 5 * ((10 * (τ_A.size + 1)) + (10 * (τ_B.size + 1)))
   | DCC? (? _m) => 1
   | DCC? True => 1
   | DCC? False => 1
   | DCC? Bool => 1
+  | DCC? (≃.1.apply _a _b) => 0
+  | DCC? (≃.dom _a _b) => 0
+  | DCC? (≃.cod _a _b) => 0
+  | DCC? (≃.2.apply _a _b) => 0
   | DCC? (≃.mk a b c d) => a.size + b.size + c.size + d.size + 1
   | DCC? (Bool.Ind motive x y) => motive.size + x.size + y.size + 1
   | DCC? (≃.Ind motive x) => motive.size + x.size + 1

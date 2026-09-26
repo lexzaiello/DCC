@@ -1,7 +1,7 @@
 import Dcc.Aff.Rel
 
 universe u
-variable {τ : Type u} [DecidableEq τ]
+variable {τ : Type u}
 
 namespace GenericExpr
 
@@ -14,28 +14,14 @@ def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{
     .some ⟨_, ⟨.ind_bool_true⟩⟩
   | (DCC? ((Bool.Ind _motive _x _y) _env False)) =>
     .some ⟨_, ⟨.ind_bool_false⟩⟩
-  | (DCC? (Unify _τ_A _τ_B (Sort (_m + 1)) ⊥)) =>
-    .some ⟨_, ⟨.unif_bot_sort⟩⟩
-  | (DCC? (Unify _τ_A _τ_B (Sort 0) ⊥)) =>
-    .some ⟨_, ⟨.unif_bot_prop⟩⟩
-  | (DCC? (((≃.1 _f_x _B) _env₁) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
+  | (DCC? ((≃.1 _A _B) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
     .some ⟨_, ⟨.cong_1⟩⟩
-  | (DCC? (((≃.2 _B _f_x) _env₁) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
+  | (DCC? ((≃.2 _A _B) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
     .some ⟨_, ⟨.cong_2⟩⟩
-  | (DCC? (((≃.3 _f_x _B) _env₁) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
+  | (DCC? ((≃.3 _A _B) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
     .some ⟨_, ⟨.cong_3⟩⟩
-  | (DCC? (((≃.4 _B _f_x) _env₁) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
+  | (DCC? ((≃.4 _A _B) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
     .some ⟨_, ⟨.cong_4⟩⟩
-  | (DCC? (Unify _τ_A₁ _τ_A₂ A B)) =>
-    if heq : A = B then
-      heq ▸ .some ⟨_, ⟨RedAff.unif_refl⟩⟩
-    else
-      match A, B with
-      | (DCC? Sort (_u + 1)), DCC? ⊥ =>
-        .some ⟨_, ⟨.unif_bot_sort⟩⟩
-      | (DCC? Sort 0), DCC? ⊥ =>
-        .some ⟨_, ⟨.unif_bot_prop⟩⟩
-      | _, _ => .none
   | DCC? ((!<> _f) (& _x))                                 => .some ⟨_, ⟨.map⟩⟩
   | DCC? (($<> _f) (& _x))                                 => .some ⟨_, ⟨.fmap⟩⟩
   | DCC? ((* _α) (& _x))                                 => .some ⟨_, ⟨.unbox⟩⟩
@@ -51,6 +37,14 @@ def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{
   | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, ⟨.curr'⟩⟩
   | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
   | (DCC? ((Σ _f_α _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
+  | (DCC? ((≃.1.apply ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) (,_B (,__B (,___B ((≃.mk _A₁_to_A₂ _A₂_to_A₁ _eq₁ _eq₂) _env)
+                                                                       ((≃.mk _cod₁_to_cod₂ _cod₂_to_cod₁ _eq₃ _eq₄) _env₂))
+                                                                _f)
+                                                          _x))) => .some ⟨_, ⟨.equiv_applyl⟩⟩
+  | (DCC? ((≃.2.apply ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) (,_B (,__B (,___B ((≃.mk _A₁_to_A₂ _A₂_to_A₁ _eq₁ _eq₂) _env)
+                                                                       ((≃.mk _cod₁_to_cod₂ _cod₂_to_cod₁ _eq₃ _eq₄) _env₂))
+                                                                _f)
+                                                          _x))) => .some ⟨_, ⟨.equiv_applyr⟩⟩
   | DCC? (Dom (Eql _B)) => .some ⟨_, ⟨.eqlτ₀⟩⟩
   | DCC? (Dom (refl _B)) => .some ⟨_, ⟨.reflτ₀⟩⟩
   | DCC? (Dom (!<> _x)) => .some ⟨_, ⟨.mapτ₀⟩⟩
@@ -409,7 +403,7 @@ instance RedAff.instRedRel : RedRel (α := GenericExpr τ) (RedAff (τ := τ)) s
       focus
       try dsimp
       try grind
-      try simp_all [dcc_rel, dcc_size, Rel.run]
+      try simp_all [dcc_rel, dcc_size]
       try grind
       try aesop (rule_sets := [DccRel, DccSize])
       try rfl)
@@ -417,7 +411,7 @@ instance RedAff.instRedRel : RedRel (α := GenericExpr τ) (RedAff (τ := τ)) s
 theorem red_aff_sn : ∀ (e : GenericExpr τ), Acc (fun b a => RedAff (τ := τ) a b) e :=
   RedAff.instRedRel.sn
 
-theorem red_aff_trans_sn : ∀ (e : GenericExpr τ), Acc (fun b a => Relation.TransGen RedAff a b) e :=
+theorem red_aff_trans_sn [DecidableEq τ] : ∀ (e : GenericExpr τ), Acc (fun b a => Relation.TransGen RedAff a b) e :=
   RedAff.instRedRel.to_trans.sn
 
 theorem congrFun' {f x f' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff f f') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f' x)) := by
@@ -541,7 +535,7 @@ theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAf
     unfold point_arity at hn
     split at hn
     any_goals (grind)
-    case h_1 | h_14 =>
+    case _=>
       simp at hn
       match n with
       | 0 | 1 | 2 | 3 =>

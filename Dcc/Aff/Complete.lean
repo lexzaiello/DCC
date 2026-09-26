@@ -2,7 +2,7 @@ import Dcc.Aff.Rel
 import Dcc.Aff.Conf
 
 universe u
-variable {τ : Type u} [DecidableEq τ]
+variable {τ : Type u}
 
 namespace GenericExpr
 
@@ -14,14 +14,6 @@ theorem semi_complete {A B : GenericExpr τ} (hr : A.RedAff B) : ∃ B', ∃ (h 
     unfold step_head? at heq
     split at heq
     any_goals (grind)
-    case h_9 =>
-      expose_names
-      split at heq
-      case isTrue heq_A =>
-        cases heq_A
-        grind
-      case isFalse =>
-        split at heq <;> grind
   case h_2 heq_none =>
     split
     case h_1 =>
@@ -188,11 +180,7 @@ theorem semi_complete {A B : GenericExpr τ} (hr : A.RedAff B) : ∃ B', ∃ (h 
         focus
         try (
           expose_names
-          simp [point_arity] at heq)
-        done)
-      case unif_refl =>
-        unfold step_head? at heq_none
-        simp at heq_none
+          simp [point_arity] at heq))
 termination_by (A.size, sizeOf A)
 decreasing_by
   any_goals (grind)
@@ -220,7 +208,7 @@ Complete.complete
 theorem RedAff.decreasing' {A B : GenericExpr τ} (h : RedAff A B) : size B < size A := RedAff.instRedRel.decreasing h
 
 @[grind ., grind →]
-theorem red_aff_decreasing? {A B : GenericExpr τ} (h : Relation.ReflTransGen (RedAff (τ := τ)) A B) : (size B) ≤ (size A) := by
+theorem red_aff_decreasing? [DecidableEq τ] {A B : GenericExpr τ} (h : Relation.ReflTransGen (RedAff (τ := τ)) A B) : (size B) ≤ (size A) := by
   if hs : (size A) = (size B) then
     simp_all
   else
@@ -232,7 +220,7 @@ theorem red_aff_decreasing? {A B : GenericExpr τ} (h : Relation.ReflTransGen (R
       grind
 
 @[grind ., grind →]
-theorem red_aff_trans_decreasing {A B : GenericExpr τ} : Relation.TransGen (RedAff (τ := τ)) A B → (size B) < (size A) :=
+theorem red_aff_trans_decreasing [DecidableEq τ] {A B : GenericExpr τ} : Relation.TransGen (RedAff (τ := τ)) A B → (size B) < (size A) :=
   RedAff.instRedRel.to_trans.decreasing
 
 @[dcc_force_reduce, dcc_force_aff]
@@ -290,7 +278,7 @@ def elim_head_norm {A B : GenericExpr τ} (h : RedAffReflTrans A B) (hn : IsNorm
   hn.unique_refl h
 
 @[grind ., grind →]
-theorem red_aff_decreasing? {A B : GenericExpr τ} (h : (RedAffReflTrans (τ := τ)) A B) : (size B) ≤ (size A) := by
+theorem red_aff_decreasing? [DecidableEq τ] {A B : GenericExpr τ} (h : (RedAffReflTrans (τ := τ)) A B) : (size B) ≤ (size A) := by
   if hs : (size A) = (size B) then
     simp_all
   else
@@ -319,7 +307,7 @@ end RedAffReflTrans
 namespace RedAffTrans
 
 @[grind ., grind →]
-theorem red_aff_trans_decreasing {A B : GenericExpr τ} : (RedAffTrans (τ := τ)) A B → (size B) < (size A) := by
+theorem red_aff_trans_decreasing [DecidableEq τ] {A B : GenericExpr τ} : (RedAffTrans (τ := τ)) A B → (size B) < (size A) := by
   change Relation.TransGen _ _ _ → _
   exact (RedAff.instRedRel (τ := τ)).to_trans.decreasing
 
@@ -339,7 +327,7 @@ def push_head' (hr₁ : RedAffReflTrans (τ := τ) A C) (hn : IsNorm RedAff C) (
   exact heq ▸ h₂
 
 @[grind ., grind →]
-theorem decreasing? {A B : GenericExpr τ} (h : (RedAffReflTrans (τ := τ)) A B) : (size B) ≤ (size A) := red_aff_decreasing? h
+theorem decreasing? [DecidableEq τ] {A B : GenericExpr τ} (h : (RedAffReflTrans (τ := τ)) A B) : (size B) ≤ (size A) := red_aff_decreasing? h
 
 end RedAffReflTrans
 

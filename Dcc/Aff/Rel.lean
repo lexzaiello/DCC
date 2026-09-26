@@ -13,41 +13,48 @@ universe u
 variable {τ : Type u} [DecidableEq τ]
 
 /-
-(Unify A B X Y) : (A ≃ B) ⊕ ((A ≃ B) ≃ ⊥), except ⊕ is encoded with Bool.Ind
+(Map τ₁ τ₂ M N) (,B x y) = (,(`τ₁ τ₂) (M x) (N y))
 
-This is the type of unifications between two types. They are either isomoprhic or their isomoprhism is isomoprhic to bot.
--/
-abbrev TUnif (u v : Level) (A B : GenericExpr τ) : GenericExpr τ := (DCC? (Σ ((Bool.Ind (`⊤ (`Bool (Sort (max u v)))) (`⊤ (`Bool (A ≃ B))) (`⊤ (`Bool ((A ≃ B) ≃ ⊥)))) ∗)))
 
-/-
-A ≃ A. This is due to Id.
--/
-abbrev unif_refl (τ_A₁ τ_A₂ A : GenericExpr τ) : GenericExpr τ :=
-  (DCC? (,(`Bool (A ≃ A)) True ((≃.mk (`⊤ (Id A)) (`⊤ (Id A)) (`⊤ ((refl (Id τ_A₁)) (&A))) (`⊤ ((refl (Id τ_A₂)) (&A)))) ∗)))
+------------------------------------------------------
+(Assoc A B C) →ᵦ (,_B (,_C x y) z) (,(`A (Σ (`B C))) x (,(`B C) y z))
 
-/-
-(Type u ≃ ⊥) ≃ ⊥
--/
-abbrev unif_bot_type (u : Level) (τ_A τ_B : GenericExpr τ) : GenericExpr τ :=
-  (DCC? (,(`Bool (((Sort (u + 1)) ≃ ⊥) ≃ ⊥))
-          False
-          ((≃.mk (≃.1 (`⊤ (Sort u)) (`⊤ ⊥)) -- ⊤, (Type u ≃ ⊥), prove ⊥. Grab Type u → ⊥, plug in Sort u
-                 (⊥.Ind (`⊤ (`⊥ ((Sort (u + 1)) ≃ ⊥)))) -- ⊤, ⊥, prove (Type u ≃ ⊥). Use ⊥.Ind
-                 (`⊤ ((refl (Id τ_A)) (& (Sort (u + 1)))))
-                 (`⊤ ((refl (Id τ_B)) (& ⊥))))
-           ∗)))
+(,_B (,__B (,___B ((≃.mk A₁_to_A₂ A₂_to_A₁ eq₁ eq₂) env)
+                  ((≃.mk cod₁_to_cod₂ cod₂_to_cod₁ eq₃ eq₄) env₂))
+            f)
+      x) →ᵦ
+(,_B (,___B ((≃.mk A₁_to_A₂ A₂_to_A₁ eq₁ eq₂) env)
+            ((≃.mk cod₁_to_cod₂ cod₂_to_cod₁ eq₃ eq₄) env₂))
+     (,? f x)) →ᵦ
+(, (, A₂_to_A₂ cod₁_to_cod₂)
+   (, f x)) →ᵦ should (, (, A₂_to_A₂ cod₁_to_cod₂) (, f x))
 
-/-
-(Sort 0 ≃ ⊥) ≃ ⊥, this is provable because ⊤ inhabits Sort 0.
+≃.1.apply = (∘ (∘ (∘ (Map (((C₁ x₁ hole) : (? (C₁ x₁ hole))) → (C₂ x₂ hole))
+                          ?
+                          (Id (((C₁ x₁ hole) : (? (C₁ x₁ hole))) → (C₂ x₂ hole)))
+                          (∘ (∘ (Map ((((Π B₁ C₁) x₁) : Sort u) → ((Π B₁ C₁) x₁))
+                                     (B₁ x₁ hole)
+                                     (Id ((Π B₁ C₁) x₁))
+                                     (∘ (Eval (((B₁ x₁) : (? (B₁ x₁))) → (B₂ x₂))
+                                              (`(((B₁ x₁) : (? (B₁ x₁))) → (B₂ x₂)) (B₁ x₁))
+                                              (Id (((B₁ x₁) : (? (B₁ x₁))) → (B₂ x₂))))
+                                        (Swap (B₁ x₁) (((B₁ x₁) : (? (B₁ x₁))) → (B₂ x₂))))) -- (, (, f x) A₂_to_A₂) →ᵦ f (A₂_to_A₂ x)
+                                (Assoc ((Π B₁ C₁) x₁) (B₂ x₂) (((B₁ x₁) : (? (B₁ x₁))) → (B₂ x₂)))) -- (, (, f x) A₂_to_A₂)) →ᵦ (, f (,x A₂_to_A₂))
+                             (Swap (((B₁ x₁) : (? (B₁ x₁))) → (B₂ x₂)) (B₂ x₂)))) -- (, cod₁_to_cod₂ (, A₂_to_A₂ (, f x)))
+                     (Assoc ? ? ?) -- (, (, cod₁_to_cod₂ A₂_to_A₂) (, f x))
+                  (Map ?
+                       ?
+                       (Swap (((B₁ x₁) : (? (B₁ x₁))) → (B₂ x₂)) (((C₁ x₁ hole) : (? (C₁ x₁ hole))) → (C₂ x₂ hole)))
+                       (Id (× ((Π B₁ C₁) x₁) (B₂ x₂)))) -- (, (, A₂_to_A₂ cod₁_to_cod₂) (, f x))
+               (∘ (Map ?
+                       ?
+                       (Map ?
+                            ?
+                            (≃.1 (B₁ x₁) (B₂ x₂))
+                            (≃.4 (C₁ x₁ hole) (C₂ x₂ hole)))
+                       (Id (× ((Π B₁ C₁) x₁) (B₂ x₁))))
+                  (Assoc ? ? ?))
 -/
-abbrev unif_bot_prop (τ_A τ_B : GenericExpr τ) : GenericExpr τ :=
-  (DCC? (,(`Bool (((Sort 0) ≃ ⊥) ≃ ⊥))
-          False
-          ((≃.mk (≃.1 (`⊤ ⊤) (`⊤ ⊥))
-                 (⊥.Ind (`⊤ (`⊥ ((Sort 0) ≃ ⊥))))
-                 (`⊤ ((refl (Id τ_A)) (& (Sort 0))))
-                 (`⊤ ((refl (Id τ_B)) (& ⊥))))
-           ∗)))
 
 --abbrev unif_fn (u v : Level) (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) : GenericExpr τ :=
   /-let t_out            := (TUnif u v (DCC? ((Π B₁ C₁) x₁)) (DCC? ((Π B₂ C₂) x₂)))
@@ -111,7 +118,7 @@ inductive RedAff : GenericExpr τ → GenericExpr τ → Prop
 /-
 Core reductions:
 -/
-  | eql            : RedAff (DCC? ((Eql f_α) (& env) (& x))) (DCC? x = x)
+  | eql            : RedAff (DCC? ((Eql f_α) (& env) (& x))) (DCC? (= x x))
   | map            : RedAff (DCC? ((!<> f) (& x))) (DCC? (!(f x)))
   | fmap           : RedAff (DCC? (($<> f) (& x))) (DCC? (& (f x)))
   | unbox          : RedAff (DCC? ((* A) (& x))) x
@@ -128,10 +135,20 @@ Core reductions:
   | swap           : RedAff (DCC? ((Swap A B) (,B₂ x y))) (DCC? (,(`B A) y x))
   | ind_bool_true  : RedAff (DCC? ((Bool.Ind motive x y) env True)) (DCC? (x env True))
   | ind_bool_false : RedAff (DCC? ((Bool.Ind motive x y) env False)) (DCC? (y env False))
-  | cong_1         : RedAff (DCC? (((≃.1 f_x B) env₁) ((≃.mk fX fY fidl fidr) env₂))) (DCC? ((fX env₂) (f_x env₁)))
-  | cong_2         : RedAff (DCC? (((≃.2 B f_x) env₁) ((≃.mk fX fY fidl fidr) env₂))) (DCC? ((fY env₂) (f_x env₁)))
-  | cong_3         : RedAff (DCC? (((≃.3 f_x B) env₁) ((≃.mk fX fY fidl fidr) env₂))) (DCC? ((fidl env₂) (f_x env₁)))
-  | cong_4         : RedAff (DCC? (((≃.4 B f_x) env₁) ((≃.mk fX fY fidl fidr) env₂))) (DCC? ((fidr env₂) (f_x env₁)))
+  | equiv_applyl   : RedAff (DCC? ((≃.1.apply ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) (,_B (,__B (,___B ((≃.mk A₁_to_A₂ A₂_to_A₁ eq₁ eq₂) env)
+                                                                                               ((≃.mk cod₁_to_cod₂ cod₂_to_cod₁ eq₃ eq₄) env₂))
+                                                                                        f)
+                                                                                  x)))
+                            (DCC? ((cod₁_to_cod₂ env₂) (f (A₂_to_A₁ env x))))
+  | equiv_applyr   : RedAff (DCC? ((≃.2.apply ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) (,_B (,__B (,___B ((≃.mk A₁_to_A₂ A₂_to_A₁ eq₁ eq₂) env)
+                                                                                               ((≃.mk cod₁_to_cod₂ cod₂_to_cod₁ eq₃ eq₄) env₂))
+                                                                                        f)
+                                                                                  x)))
+                            (DCC? ((cod₂_to_cod₁ env₂) (f (A₁_to_A₂ env x))))
+  | cong_1         : RedAff (DCC? ((≃.1 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fX env₂))
+  | cong_2         : RedAff (DCC? ((≃.2 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fY env₂))
+  | cong_3         : RedAff (DCC? ((≃.3 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fidl env₂))
+  | cong_4         : RedAff (DCC? ((≃.4 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fidr env₂))
 /-
 Inner congruences:
 -/
@@ -193,41 +210,6 @@ Base combinator 2-argument function domains
   | curr'τ₃ : RedAff (DCC? (Dom₂ (!Λ A B x))) (DCC? (!<> B))
 -- Congruence for Dom₂
   | dom₂₀   : RedAff x x' → RedAff (DCC? (Dom₂ x)) (DCC? (Dom₂ x'))
-/-
-  Unifications:
--/
-  -- A ≃ A = Id
-  | unif_refl : RedAff (DCC? (Unify τ_A₁ τ_A₂ A A)) (unif_refl τ_A₁ τ_A₂ A)
-  /-
-    (X ≃ ⊥) ≃ ⊥:
-    - (Sort (m + 1) ≃ ⊥) ≃ ⊥
-    - (Sort 0 ≃ ⊥) ≃ ⊥, by ⊤
-    -
-  -/
-  | unif_bot_sort : RedAff (DCC? (Unify τ_A τ_B (Sort (u + 1)) ⊥)) (unif_bot_type u τ_A τ_B)
-  | unif_bot_prop : RedAff (DCC? (Unify τ_A τ_B (Sort 0) ⊥)) (unif_bot_prop τ_A τ_B)
-  /-
-    Function unification:
-    ((Π B₁ C₁) x₁) with ((Π B₂ C₂) x₂)
-    can we do with just h₁
-    (mk (fun f => f ∘ unify((B₁ x₁), (B₂ x₂)).2) (fun f => f ∘ unify((B₁ x₁), (B₂ x₂)).1) (? : ((unify((B₁ x₁), (B₂ x₂)).2) ·) ∘ ((unify((B₁ x₁), (B₂ x₂)).1 x) ·) = id)
-    we arleady know the two A's are equal
-    so we just want to send the codomain g' := (unify(C₁ x₁, C₂ x₂).1 ∘ f)
-    (unify(C₁ x₁, C₂ x₂).2 ∘ (unify(C₁ x₁, C₂ x₂).1 ∘ f)) = f. that's perfect. just a notational game.
-
-    comp_id is (to_fun ∘ inv_fun) f = (∘ unify(C₁ x₁, C₂ x₂).2) ∘ (∘ unify(C₁ x₁, C₂ x₂).1) f = (∘ unify(C₁ x₁, C₂ x₂).2) (unify(C₁ x₁, C₂ x₂).1 f) = f
-
-    maybe we just need an identity for composed unification?
-
-    we cannot unify (C₁ x₁) with (C₂ x₂) since we don't have a domain to plug them into.
-    we can unify with hole. this is super ugly though.
-  -/
-  /-| unif_fn : RedAff (DCC? (Unify (Sort u) (Sort v) ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))
-    (DCC? (((Bool.Ind (`⊤ (`Bool #(TUnif u v (DCC? ((Π B₁ C₁) x₁)) (DCC? ((Π B₂ C₂) x₂)))))
-                     (`⊤ (`(B₁ ≃ x₁)
-                           ((Bool.Ind (`⊤ (`Bool (#(TUnif u v (DCC? ((Π B₁ C₁) x₁)) (DCC? ((Π B₂ C₂) x₂))))))) ∗))) -- (B₁ x₁) ≃ (B₂ x₂), ((Π B₁ C₁) x₁), (B₂ x₂)
-                     ()) -- ((B₁ x₁) ≃ (B₂ x₂)) ≃ ⊥)
-           (Unify (Dom (C₁ x₁)) (Dom (C₂ x₂)) (B₁ x₁) (B₂ x₂))) ∗))-/
 
 instance (A B : GenericExpr τ) : Repr (PLift (RedAff A B)) := ⟨fun _ _ => "⋯"⟩
 

@@ -31,6 +31,8 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC? False => 0
   | DCC? Bool => 0
   | DCC? (Unify _τ₁ _τ₂ _A _B) => 2
+  | DCC? (Map _A _B _f _g) => 4
+  | DCC? (Assoc _A _B _C) => 3
   | DCC? (Dom _x) => 0
   | DCC? (Cod _x) => 0
   | DCC? (Dom₂ _x) => 0
@@ -86,6 +88,8 @@ def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (p
   | DCC[.] (Dom _x) => ⟨#[], by grind⟩
   | DCC[.] (Cod _x) => ⟨#[], by grind⟩
   | DCC[.] (Dom₂ _x) => ⟨#[], by grind⟩
+  | DCC? (Map A B x y) => ⟨#[A, B, x, y], by simp [point_arity]⟩
+  | DCC? (Assoc A B C) => ⟨#[A, B, C], by simp [point_arity]⟩
   | DCC? (Uncoup _x) => ⟨#[], by grind⟩
   | DCC? (Unbang _x) => ⟨#[], by grind⟩
   | DCC[.] ∗ => ⟨#[], by grind⟩
@@ -147,6 +151,8 @@ def map_points (e : GenericExpr (τ := τ_c))
   | DCC? (≃ _A _B) => .cong
   | DCC? (Unify τ_A τ_B _A _B) => fun A B => .unify τ_A τ_B A B
   | DCC? (? _m) => .hole_ty
+  | DCC? (Map _A _B _x _y) => .bimap
+  | DCC? (Assoc _A _B _C) => .assoc
   | DCC? (Dom x) => Function.OfArity.const _ (DCC? (Dom x)) _
   | DCC? (Cod x) => Function.OfArity.const _ (DCC? (Cod x)) _
   | DCC? (Dom₂ x) => Function.OfArity.const _ (DCC? (Dom₂ x)) _
@@ -186,6 +192,12 @@ def map_points (e : GenericExpr (τ := τ_c))
 def set_points (e : GenericExpr (τ := τ_c))
   (points' : Vector (@GenericExpr τ_c) (point_arity e)) : GenericExpr τ_c :=
   match e with
+  | DCC? (Map A B x y) =>
+    have heq : point_arity (DCC? (Map A B x y)) = 4 := by simp [point_arity]
+    .bimap points'[0] points'[1] points'[2] points'[3]
+  | DCC? (Assoc A B C) =>
+    have heq : point_arity (DCC? (Assoc A B C)) = 3 := by simp [point_arity]
+    .assoc points'[0] points'[1] points'[2]
   | DCC? (≃.mk a b c d) =>
     have heq : point_arity (DCC? (≃.mk a b c d)) = 4 := by simp [point_arity]
     .cong_mk points'[0] points'[1] points'[2] points'[3]
@@ -371,6 +383,7 @@ theorem get_set_point' {n : ℕ} {hn : n < point_arity e} {p : Fin (point_arity 
         simp [set_points, points]
         rfl)))
 
+set_option maxHeartbeats 100000000000 in
 @[grind =, grind! .]
 theorem set_same_point_comp {e x y : GenericExpr τ_c} {p : Fin (point_arity e)} : set_points (set_points e ((points e).set p x)) ((points (set_points e ((points e).set p x))).set (h := by rw [← congr_point_arr]; grind) p y) = set_points e ((points e).set p y) := by
   induction e <;> grind
@@ -407,6 +420,8 @@ def max_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? (≃.dom _a _b) => 0
   | DCC? (≃.cod _a _b) => 0
   | DCC? (≃.2.apply _a _b) => 0
+  | DCC? (Map A B x y) => max A.max_hole (max B.max_hole (max x.max_hole y.max_hole))
+  | DCC? (Assoc A B C) => max A.max_hole (max B.max_hole C.max_hole)
   | DCC? (Bool.Ind motive x y) => max motive.max_hole (max x.max_hole y.max_hole)
   | DCC? (≃.Ind motive x) => max motive.max_hole x.max_hole
   | DCC? (≃.1 x y) => max x.max_hole y.max_hole
@@ -457,6 +472,8 @@ def max_hole (e : GenericExpr τ_c) : ℕ :=
 def min_hole (e : GenericExpr τ_c) : ℕ :=
   match e with
   | DCC? (≃.mk a b c d) => min a.min_hole (min b.min_hole (min c.min_hole d.min_hole))
+  | DCC? (Map A B x y) => min A.min_hole (min B.min_hole (min x.min_hole y.min_hole))
+  | DCC? (Assoc A B C) => min A.min_hole (min B.min_hole C.min_hole)
   | DCC? (≃.1.apply _a _b) => 0
   | DCC? (≃.dom _a _b) => 0
   | DCC? (≃.cod _a _b) => 0

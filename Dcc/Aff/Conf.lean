@@ -24,6 +24,100 @@ variable {τ : Type u}
 
 namespace GenericExpr
 
+open Dsl in
+theorem RedAff.conf_bimap_point₁ (h₁ : RedAff ((points (DCC? (Map A B f g))).get ⟨0, hn⟩) p') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (set_points (DCC? (Map A B f g)) ((points (DCC? (Map A B f g))).set 0 p' hn)) (DCC? (,_B x y))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A B) (f x) (g y))) D :=
+  ⟨_, .single .bimap, .single (.point 0 (by grind) (.point 0 (by point_arity) h₁))⟩
+
+open Dsl in
+theorem RedAff.conf_bimap_point₂ (h₁ : RedAff ((points (DCC? (Map A B f g))).get ⟨1, hn⟩) p') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (set_points (DCC? (Map A B f g)) ((points (DCC? (Map A B f g))).set 1 p' hn)) (DCC? (,_B x y))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A B) (f x) (g y))) D :=
+  ⟨_, .single .bimap, .single (.point 0 (by grind) (.point 1 (by point_arity) h₁))⟩
+
+open Dsl in
+theorem RedAff.conf_bimap_point₃ (h₁ : RedAff ((points (DCC? (Map A B f g))).get ⟨2, hn⟩) p') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (set_points (DCC? (Map A B f g)) ((points (DCC? (Map A B f g))).set 2 p' hn)) (DCC? (,_B x y))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A B) (f x) (g y))) D :=
+  ⟨_, .single .bimap, .single (.point 1 (by grind) (.congrFun h₁))⟩
+
+open Dsl in
+theorem RedAff.conf_bimap_point₄ (h₁ : RedAff ((points (DCC? (Map A B f g))).get ⟨3, hn⟩) p') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (set_points (DCC? (Map A B f g)) ((points (DCC? (Map A B f g))).set 3 p' hn)) (DCC? (,_B x y))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A B) (f x) (g y))) D :=
+  ⟨_, .single .bimap, .single (.point 2 (by grind) (.congrFun h₁))⟩
+
+open Dsl in
+theorem RedAff.conf_bimap_point₁_arg (_h₁ : RedAff ((points (DCC? (,_B x y))).get ⟨0, hn⟩) p') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (DCC? (Map A B f g)) (set_points (DCC? (,_B x y)) ((points (DCC? (,_B x y))).set 0 p' hn))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A B) (f x) (g y))) D :=
+  ⟨_, .single .bimap, .refl⟩
+
+open Dsl in
+theorem RedAff.conf_bimap_point₂_arg (h₁ : RedAff ((points (DCC? (,_B x y))).get ⟨1, hn⟩) p') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (DCC? (Map A B f g)) (set_points (DCC? (,_B x y)) ((points (DCC? (,_B x y))).set 1 p' hn))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A B) (f x) (g y))) D :=
+  ⟨_, .single .bimap, .single (.point 1 (by grind) (.congrArg h₁))⟩
+
+open Dsl in
+theorem RedAff.conf_bimap_point₃_arg (h₁ : RedAff ((points (DCC? (,_B x y))).get ⟨2, hn⟩) p') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (DCC? (Map A B f g)) (set_points (DCC? (,_B x y)) ((points (DCC? (,_B x y))).set 2 p' hn))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A B) (f x) (g y))) D :=
+  ⟨_, .single .bimap, .single (.point 2 (by grind) (.congrArg h₁))⟩
+
+open Dsl in
+theorem RedAff.conf_assoc_point₁ (h₁ : RedAff ((points (DCC? (Assoc A B C))).get ⟨0, hn⟩) p') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (set_points (DCC? (Assoc A B C)) ((points (DCC? (Assoc A B C))).set 0 p' hn)) (DCC? (,_B₁ (,_B₂ x y) z))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D :=
+  ⟨_, .single .assoc, .single (.point 0 (by grind) (.point 0 (by point_arity) h₁))⟩
+
+set_option maxHeartbeats 20000000000 in
+open Dsl in
+theorem RedAff.conf_assoc_point₂ (h₁ : RedAff ((points (DCC? (Assoc A B C))).get ⟨1, hn⟩) p') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (set_points (DCC? (Assoc A B C)) ((points (DCC? (Assoc A B C))).set 1 p' hn)) (DCC? (,_B₁ (,_B₂ x y) z))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D := by
+  refine ⟨_, .single .assoc, .trans (.single (.point 0 (by grind) (.point 1 (by point_arity) (.point 0 (by point_arity) (.point 0 ?_ h₁))))) (.single (.point 2 (by point_arity) (.point 0 (by point_arity) (.point 0 ?_ h₁))))⟩
+  · have heq₁ : ((A.quot (B.quot C).coup).mkc x ((B.quot C).mkc y z)).points.get ⟨0, by grind⟩ = (A.quot (B.quot C).coup) := by
+      simp [points, Vector.get]
+    have heq₂ : (((A.quot (B.quot C).coup).mkc x ((B.quot C).mkc y z)).points.get ⟨0, by grind⟩).points.get ⟨1, by point_arity⟩ = (B.quot C).coup := by
+      simp [points, Vector.get]
+    have heq₃ : ((((A.quot (B.quot C).coup).mkc x ((B.quot C).mkc y z)).points.get ⟨0, by grind⟩).points.get ⟨1, by point_arity⟩).points.get ⟨0, by point_arity⟩ = (B.quot C) := by
+      rfl
+    change 0 < point_arity (B.quot C)
+    grind
+  · change 0 < point_arity (B.quot C)
+    grind
+
+set_option maxHeartbeats 20000000000 in
+open Dsl in
+theorem RedAff.conf_assoc_point₃ (h₁ : RedAff ((points (DCC? (Assoc A B C))).get ⟨2, hn⟩) p') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (set_points (DCC? (Assoc A B C)) ((points (DCC? (Assoc A B C))).set 2 p' hn)) (DCC? (,_B₁ (,_B₂ x y) z))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D := by
+  refine ⟨_, .single .assoc, .trans (.single (.point 0 (by grind) (.point 1 (by point_arity) (.point 0 (by point_arity) (.point 1 ?_ h₁))))) (.single (.point 2 (by point_arity) (.point 0 (by point_arity) (.point 1 ?_ h₁))))⟩
+  · change 0 < point_arity (B.quot C)
+    grind
+  · change 0 < point_arity (B.quot C)
+    grind
+
+open Dsl in
+theorem RedAff.conf_assoc_point₁_arg (h₁ : RedAff x x') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (DCC? (Assoc A B C)) (DCC? (,_B₁ (,_B₂ x' y) z))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D :=
+  ⟨_, .single .assoc, .single (.point 1 (by grind) h₁)⟩
+
+open Dsl in
+theorem RedAff.conf_assoc_point₂_arg (h₁ : RedAff y y') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (DCC? (Assoc A B C)) (DCC? (,_B₁ (,_B₂ x y') z))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D :=
+  ⟨_, .single .assoc, .single (.point 2 (by grind) (.point 1 (by point_arity) h₁))⟩
+
+open Dsl in
+theorem RedAff.conf_assoc_point₃_arg (h₁ : RedAff z z') : ∃ D,
+  instRedRel.ReflTrans (GenericExpr.app (DCC? (Assoc A B C)) (DCC? (,_B₁ (,_B₂ x y) z'))) D ∧
+    instRedRel.ReflTrans (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D :=
+  ⟨_, .single .assoc, .single (.point 2 (by grind) (.point 2 (by point_arity) h₁))⟩
+
 /-set_option maxHeartbeats 20000000000 in
 theorem RedAff.conf_unif_refl_point₂
   {a₃ : GenericExpr τ}
@@ -161,6 +255,117 @@ theorem RedAff.conf_unif_refl_point₃
     · simp [set_points, points, Vector.get]
       grind
     · simp [point_arity]-/
+
+open Dsl in
+theorem RedAff.conf_bimap_congr_arg (h : RedAff (DCC? (,_B x y)) x') : ∃ D, Relation.ReflTransGen RedAff (DCC? (,(`A B) (f x) (g y))) D
+  ∧ Relation.ReflTransGen RedAff (DCC? ((Map A B f g) x')) D := by
+  match h with
+  | .point 0 hn h =>
+    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₁_arg (A := A) (B := B) (f := f) (g := g)
+    exact ⟨_, h₂, h₁⟩
+  | .point 1 hn h =>
+    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₂_arg (A := A) (B := B) (f := f) (g := g)
+    exact ⟨_, h₂, h₁⟩
+  | .point 2 hn h =>
+    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₃_arg (A := A) (B := B) (f := f) (g := g)
+    exact ⟨_, h₂, h₁⟩
+
+open Dsl in
+theorem RedAff.conf_bimap_congr_fun (h : RedAff (DCC? (Map A B f g)) f') : ∃ D, Relation.ReflTransGen RedAff (DCC? (,(`A B) (f x) (g y))) D
+  ∧ Relation.ReflTransGen RedAff (DCC? (f' (,_B x y))) D := by
+  match h with
+  | .point 0 hn h =>
+    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₁ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
+    exact ⟨_, h₂, h₁⟩
+  | .point 1 hn h =>
+    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₂ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
+    exact ⟨_, h₂, h₁⟩
+  | .point 2 hn h =>
+    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₃ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
+    exact ⟨_, h₂, h₁⟩
+  | .point 3 hn h =>
+    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₄ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
+    exact ⟨_, h₂, h₁⟩
+
+open Dsl in
+theorem RedAff.conf_bimap (h₂ : RedAff (DCC? ((Map A B f g) (,_B x y))) C) : ∃ D, Relation.ReflTransGen RedAff (DCC? (,(`A B) (f x) (g y))) D
+  ∧ Relation.ReflTransGen RedAff C D := by
+  cases h₂ with
+  | bimap => exact ⟨_, .refl, .refl⟩
+  | point => grind
+  | congrFun h =>
+    exact h.conf_bimap_congr_fun
+  | congrArg h =>
+    exact h.conf_bimap_congr_arg
+
+open Dsl in
+theorem RedAff.conf_assoc_congr_arg (h : RedAff (DCC? (,_B₁ (,_B₂ x y) z)) x') : ∃ D, Relation.ReflTransGen RedAff  (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D
+  ∧ Relation.ReflTransGen RedAff (DCC? ((Assoc A B C) x')) D := by
+  match h with
+  | .point 0 hn hr => exact ⟨_, .refl, .single .assoc⟩
+  | .point 1 hn hr =>
+    simp [points, Vector.get] at hr
+    match hr with
+    | .point 0 hn hr => exact ⟨_, .refl, .single .assoc⟩
+    | .point 1 hn hr =>
+      have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₁_arg (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+      exact ⟨_, h₂, h₁⟩
+    | .point 2 hn hr =>
+      have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₂_arg (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+      exact ⟨_, h₂, h₁⟩
+  | .point 2 hn hr =>
+    have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₃_arg (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+    exact ⟨_, h₂, h₁⟩
+
+open Dsl in
+theorem RedAff.conf_assoc_congr_fun (h : RedAff (DCC? (Assoc A B C)) f') : ∃ D, Relation.ReflTransGen RedAff  (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D
+  ∧ Relation.ReflTransGen RedAff (DCC? (f' (,_B₁ (,_B₂ x y) z))) D := by
+  match h with
+  | .point 0 hn hr =>
+    have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₁ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+    exact ⟨_, h₂, h₁⟩
+  | .point 1 hn hr =>
+    have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₂ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+    exact ⟨_, h₂, h₁⟩
+  | .point 2 hn hr =>
+    have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₃ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+    exact ⟨_, h₂, h₁⟩
+
+open Dsl in
+theorem RedAff.conf_assoc (h₂ : RedAff (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x y) z))) C') : ∃ D, Relation.ReflTransGen RedAff  (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D
+  ∧ Relation.ReflTransGen RedAff C' D := by
+  cases h₂ with
+  | point => grind
+  | assoc => exact ⟨_, .refl, .refl⟩
+  | congrFun h =>
+    exact h.conf_assoc_congr_fun
+    /-match h with
+    | .point 0 hn hr =>
+      have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₁ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+      exact ⟨_, h₂, h₁⟩
+    | .point 1 hn hr =>
+      have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₂ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+      exact ⟨_, h₂, h₁⟩
+    | .point 2 hn hr =>
+      have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₃ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+      exact ⟨_, h₂, h₁⟩-/
+  | congrArg h =>
+    exact h.conf_assoc_congr_arg
+    /-match h with
+    | .point 0 hn hr => exact ⟨_, .refl, .single .assoc⟩
+    | .point 1 hn hr =>
+      simp [points, Vector.get] at hr
+      match hr with
+      | .point 0 hn hr => exact ⟨_, .refl, .single .assoc⟩
+      | .point 1 hn hr =>
+        have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₁_arg
+        exact ⟨_, h₂, h₁⟩
+      | .point 2 hn hr =>
+        have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₂_arg
+        exact ⟨_, h₂, h₁⟩
+    | .point 2 hn hr =>
+      have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₃_arg
+      exact ⟨_, h₂, h₁⟩-/
 
 set_option maxHeartbeats 2000000 in
 open Dsl in
@@ -922,6 +1127,8 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
   case unif_bot_prop =>
     exact conf_unif_bot_prop h₂-/
   case equiv_applyl => exact h₂.conf_applyl
+  case assoc => exact h₂.conf_assoc
+  case bimap => exact h₂.conf_bimap
   case equiv_applyr => exact h₂.conf_applyr
   case cong_1 =>
     match h₂ with
@@ -1585,6 +1792,10 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
     case point h => grind only [point_arity]
     case equiv_applyl =>
       exact hr.conf_applyl_congr_arg
+    case assoc =>
+      exact hr.conf_assoc_congr_arg
+    case bimap =>
+      exact hr.conf_bimap_congr_arg
     case equiv_applyr =>
       exact hr.conf_applyr_congr_arg
     /-case unif_bot_sort => nomatch hr
@@ -1757,6 +1968,8 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
             nomatch h
       | point => grind only [point_arity]-/
     case equiv_applyl => exact RedAff.conf_applyl_congr_fun (by assumption)
+    case assoc => exact RedAff.conf_assoc_congr_fun (by assumption)
+    case bimap => exact RedAff.conf_bimap_congr_fun (by assumption)
     case equiv_applyr => exact RedAff.conf_applyr_congr_fun (by assumption)
     case cong_1 =>
       match hr with

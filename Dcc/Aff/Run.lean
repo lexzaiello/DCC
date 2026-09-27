@@ -10,6 +10,8 @@ open Dsl
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
   match e with
+  | (DCC? ((Map _A _B _f _g) (,__B _x _y))) => .some ⟨_, ⟨.bimap⟩⟩
+  | (DCC? ((Assoc _A _B _C) (,_B₁ (,_B₂ _x _y) _z))) => .some ⟨_, ⟨.assoc⟩⟩
   | (DCC? ((Bool.Ind _motive _x _y) _env True)) =>
     .some ⟨_, ⟨.ind_bool_true⟩⟩
   | (DCC? ((Bool.Ind _motive _x _y) _env False)) =>
@@ -528,6 +530,7 @@ macro_rules
     | (simp [points, Vector.get, point_arity, set_points]; try (grind only [points, point_arity]); try rfl)
     | (simp_all [points, Vector.get, point_arity, set_points]; try (grind only [points, point_arity]); try rfl))
 
+set_option maxHeartbeats 100000000000 in
 theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x y) (hn : n < point_arity e := by point_arity) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := by
   match hr.cases_head with
   | .inl h =>
@@ -535,14 +538,17 @@ theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAf
     unfold point_arity at hn
     split at hn
     any_goals (grind)
-    case _ =>
-      simp at hn
-      match n with
-      | 0 | 1 | 2 | 3 =>
-        simp at heq
-        cases heq
-        simp [set_points_self_noop]
-        exact Relation.ReflTransGen.refl
+    any_goals (
+      focus
+      try (
+        simp at hn
+        match n with
+        | 0 | 1 | 2 | 3 =>
+          simp at heq
+          cases heq
+          simp [set_points_self_noop]
+          exact Relation.ReflTransGen.refl)
+      done)
   | .inr ⟨_, h₁, h₂⟩ =>
     cases heq
     have h_dec := RedAff.instRedRel.decreasing h₁

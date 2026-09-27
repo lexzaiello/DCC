@@ -28,6 +28,8 @@ inductive GenericExpr.{u} (τ : Type u) where
   | bot         : GenericExpr τ
   | tintro      : GenericExpr τ
   | sort        : Level → GenericExpr τ
+  | bimap       : GenericExpr τ  → GenericExpr τ → GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | assoc       : GenericExpr τ  → GenericExpr τ → GenericExpr τ  → GenericExpr τ
   | map         : GenericExpr τ  → GenericExpr τ
   | fmap        : GenericExpr τ  → GenericExpr τ
   | bang        : GenericExpr τ  → GenericExpr τ

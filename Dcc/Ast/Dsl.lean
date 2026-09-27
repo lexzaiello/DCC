@@ -27,6 +27,8 @@ scoped syntax "(Unify" gen_dcc+ ")"                          : gen_dcc
 scoped syntax "(Dom" gen_dcc ")"                             : gen_dcc
 scoped syntax "(Cod" gen_dcc ")"                             : gen_dcc
 scoped syntax "(Dom₂" gen_dcc ")"                            : gen_dcc
+scoped syntax "(Map" gen_dcc+ ")"                            : gen_dcc
+scoped syntax "(Assoc" gen_dcc+ ")"                          : gen_dcc
 syntax "(!<>" gen_dcc ")"                                    : gen_dcc
 syntax "($<>" gen_dcc ")"                                    : gen_dcc
 syntax "(*" gen_dcc ")"                                      : gen_dcc
@@ -101,6 +103,10 @@ open Lean.Syntax in macro_rules
   | `(DCC[$ty:gen_dcc_loc] ∗)                                        => field ty "tintro"
   | `(DCC[$ty:gen_dcc_loc] (=$x:gen_dcc $y:gen_dcc))                 => do
     return mkApp (← field ty "eq") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
+  | `(DCC[$ty:gen_dcc_loc] (Map $A:gen_dcc $B:gen_dcc $x:gen_dcc $y:gen_dcc)) => do
+    return mkApp (← field ty "bimap") #[← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $B), ← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
+  | `(DCC[$ty:gen_dcc_loc] (Assoc $A:gen_dcc $B:gen_dcc $C:gen_dcc)) => do
+    return mkApp (← field ty "assoc") #[← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $B), ← `(DCC[$ty:gen_dcc_loc] $C)]
   | `(DCC[$ty:gen_dcc_loc] (≃ $x:gen_dcc $y:gen_dcc))                  => do
     return mkApp (← field ty "cong") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
   | `(DCC[$ty:gen_dcc_loc] (Unify $τ_A:gen_dcc $τ_B:gen_dcc $A:gen_dcc $B:gen_dcc))                  => do

@@ -6,10 +6,12 @@ namespace Dsl
 
 declare_syntax_cat gen_dcc
 
+scoped syntax "(≃.fst" gen_dcc+ ")"                          : gen_dcc
+scoped syntax "(≃.snd" gen_dcc+ ")"                          : gen_dcc
 scoped syntax "(≃.1.apply" gen_dcc+ ")"                      : gen_dcc
 scoped syntax "(≃.2.apply" gen_dcc+ ")"                      : gen_dcc
-scoped syntax "(≃.dom" gen_dcc+ ")"                          : gen_dcc
-scoped syntax "(≃.cod" gen_dcc+ ")"                          : gen_dcc
+scoped syntax "(≃.env.1" gen_dcc+ ")"                        : gen_dcc
+scoped syntax "(≃.env.2" gen_dcc+ ")"                        : gen_dcc
 scoped syntax "(≃.mk" gen_dcc+ ")"                           : gen_dcc
 scoped syntax "(≃.Ind" gen_dcc+ ")"                          : gen_dcc
 scoped syntax "(≃.1" gen_dcc+ ")"                            : gen_dcc
@@ -36,6 +38,7 @@ scoped syntax "(!" gen_dcc ")"                               : gen_dcc
 syntax "(&" gen_dcc ")"                                      : gen_dcc
 syntax "(="  gen_dcc gen_dcc ")"                             : gen_dcc
 syntax "(Eval" gen_dcc+ ")"                                  : gen_dcc
+syntax "(Eval'" gen_dcc+ ")"                                 : gen_dcc
 syntax "(Eql" gen_dcc+ ")"                                   : gen_dcc
 syntax "(refl" gen_dcc+ ")"                                  : gen_dcc
 syntax "#(" term ")"                                         : gen_dcc
@@ -53,6 +56,7 @@ syntax "(Uncoup" gen_dcc ")"                                 : gen_dcc
 syntax "(Unbang" gen_dcc ")"                                 : gen_dcc
 syntax "const(" term ")"                                     : gen_dcc
 syntax:max (priority := high) "(Λ" gen_dcc+ ")"              : gen_dcc
+syntax:max (priority := high) "(Λ'" gen_dcc+ ")"             : gen_dcc
 syntax:max (priority := high) "(!Λ" gen_dcc+ ")"             : gen_dcc
 scoped syntax:max (priority := high) "(Π" gen_dcc+ ")"       : gen_dcc
 syntax "(∘" gen_dcc gen_dcc ")"                              : gen_dcc
@@ -121,9 +125,9 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "cong_appl") #[← `(DCC[$ty:gen_dcc_loc] $to₁), ← `(DCC[$ty:gen_dcc_loc] $to₂)]
   | `(DCC[$ty:gen_dcc_loc] (≃.2.apply $to₁:gen_dcc $to₂:gen_dcc)) => do
     return mkApp (← field ty "cong_appr") #[← `(DCC[$ty:gen_dcc_loc] $to₁), ← `(DCC[$ty:gen_dcc_loc] $to₂)]
-  | `(DCC[$ty:gen_dcc_loc] (≃.dom $to₁:gen_dcc $to₂:gen_dcc)) => do
+  | `(DCC[$ty:gen_dcc_loc] (≃.env.1 $to₁:gen_dcc $to₂:gen_dcc)) => do
     return mkApp (← field ty "cong_fn_dom") #[← `(DCC[$ty:gen_dcc_loc] $to₁), ← `(DCC[$ty:gen_dcc_loc] $to₂)]
-  | `(DCC[$ty:gen_dcc_loc] (≃.cod $to₁:gen_dcc $to₂:gen_dcc)) => do
+  | `(DCC[$ty:gen_dcc_loc] (≃.env.2 $to₁:gen_dcc $to₂:gen_dcc)) => do
     return mkApp (← field ty "cong_fn_cod") #[← `(DCC[$ty:gen_dcc_loc] $to₁), ← `(DCC[$ty:gen_dcc_loc] $to₂)]
   | `(DCC[$ty:gen_dcc_loc] (≃.1 $x:gen_dcc $B:gen_dcc)) => do
     return mkApp (← field ty "cong_1") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $B)]
@@ -198,6 +202,8 @@ open Lean.Syntax in macro_rules
   | `(DCC[$_ty:gen_dcc_loc] #($t:term))                              => `($t)
   | `(DCC[$_ty:gen_dcc_loc] $idt:ident)                              => `($idt:term)
   | `(DCC[$ty:gen_dcc_loc] ($t:gen_dcc))                             => `(DCC[$ty:gen_dcc_loc] $t)
+  | `(DCC[$ty:gen_dcc_loc] (Λ' $A:gen_dcc $B:gen_dcc $x:gen_dcc)) => `(DCC[$ty:gen_dcc_loc] (Λ $A (`$A $B) $x))
+  | `(DCC[$ty:gen_dcc_loc] (Eval' $A:gen_dcc $B:gen_dcc $x:gen_dcc)) => `(DCC[$ty:gen_dcc_loc] (Eval $A (`$A $B) $x))
 
 open Dsl in
 macro_rules

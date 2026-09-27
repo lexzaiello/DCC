@@ -93,6 +93,10 @@ open Dsl in
 def mk_hole (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) : GenericExpr τ :=
   .hole ((DCC? ((Π B₁ C₁) x₁)).max_hole + (DCC? ((Π B₂ C₂) x₂)).max_hole)
 
+open Dsl in
+def mk_hole_sigma (B₁ B₂ : GenericExpr τ) : GenericExpr τ :=
+  .hole ((DCC? (Σ B₁)).max_hole + (DCC? (Σ B₂)).max_hole)
+
 /-
 (Unify _ _ (Σ B₁) (Σ B₂))
 - Unify (Dom B₁) (Dom B₂)
@@ -113,7 +117,122 @@ Jsut assoc?
 (, (, f g) (, x y))
 -/
 open Dsl in
-def unif_sigma (u v : Level) (B₁ B₂ : GenericExpr τ) (h_unif_dom : GenericExpr τ) (h_unif_cod : GenericExpr τ) : GenericExpr τ :=
+def unif_sigma (u v : Level) (B₁ B₂ : GenericExpr τ) (h_unif_fst : GenericExpr τ) (h_unif_snd : GenericExpr τ) : GenericExpr τ :=
+  let hole := (mk_hole_sigma B₁ B₂)
+
+  let goal := DCC? (⊕ (≃ (Σ B₁) (Σ B₂)) (≃ (≃ (Σ B₁) (Σ B₂)) ⊥))
+
+  let equiv_prod := (DCC? (× (≃ (Dom B₁) (Dom B₂)) (≃ (B₁ hole) (B₂ hole))))
+
+  let t_sig₁ := DCC? (Σ B₁)
+  let t_sig₂ := DCC? (Σ B₂)
+
+  DCC? (⊕.CasesAnd goal
+                   (≃ (Dom B₁) (Dom B₂))
+                   (≃ (≃ (Dom B₁) (Dom B₂)) ⊥)
+                   (≃ (B₁ hole) (B₂ hole))
+                   (≃ (≃ (B₂ hole) (B₂ hole)) ⊥)
+                   (∘ ((Λ Bool (`Bool (≃ (Σ B₁) (Σ B₂))) (Id goal)) True)
+                      (≃.mk (Λ equiv_prod
+                               (`equiv_prod t_sig₁)
+                               (∘ (∘ (∘ (∘ (∘ (∘ (∘ (Swap (B₂ hole) (Dom B₂))
+                                                    (Map (B₂ hole)
+                                                         (Dom B₂)
+                                                         (Id (B₂ hole))
+                                                         (Eval (((Dom B₁) : (? (Dom B₁))) → (Dom B₂))
+                                                               (`(((Dom B₁) : (? (Dom B₁))) → (Dom B₂)) (Dom B₁))
+                                                               (Id (((Dom B₁) : (? (Dom B₁))) → (Dom B₂))))))
+                                                 (Assoc (B₂ hole)
+                                                        (((Dom B₁) : (? (Dom B₁))) → (Dom B₂))
+                                                        (Dom B₁))) -- have (, (, y' ((Dom B₁) → (Dom B₂))) x)
+                                              (Swap (Dom B₁)
+                                                    (× (B₂ hole) (((Dom B₁) : (? (Dom B₁))) → (Dom B₂))))) -- have (, x (, y' ((Dom B₁) → (Dom B₂))))
+                                           (Assoc (Dom B₁) (B₂ hole) (((Dom B₁) : (? (Dom B₁))) → (Dom B₂)))) -- have (, (, x y') ((Dom B₁) → (Dom B₂)))
+                                        (Swap (((Dom B₁) : (? (Dom B₁))) → (Dom B₂)) (× (Dom B₁) (B₂ hole)))) -- have (, ((Dom B₁) → (Dom B₂)) (, x y'))
+                                     (Map (((Dom B₁) : (? (Dom B₁))) → (Dom B₂))
+                                          (× (Dom B₁) (B₂ hole))
+                                          (≃.1 (Dom B₁) (Dom B₂))
+                                          (∘ (∘ (Map (Dom B₁)
+                                                     (B₂ hole)
+                                                     (Id (Dom B₁))
+                                                     (∘ (Eval (((B₁ hole) : (? (B₁ hole))) → (B₂ hole))
+                                                              (`(((B₁ hole) : (? (B₁ hole))) → (B₂ hole)) (B₁ hole))
+                                                              (Id (((B₁ hole) : (? (B₁ hole))) → (B₂ hole))))
+                                                        (Swap (B₁ hole) (((B₁ hole) : (? (B₁ hole))) → (B₂ hole)))))-- have (, x (, y ((B₁ hole) → (B₂ hole))))
+                                                 (∘ (Map (Dom B₁)
+                                                        (Id (Dom B₁))
+                                                        (× (B₁ hole) (((B₁ hole) : (? (B₁ hole))) → (B₂ hole)))
+                                                        (Map (B₁ hole)
+                                                             (((B₁ hole) : (? (B₁ hole))) → (B₂ hole))
+                                                             (Id (B₁ hole))
+                                                             (≃.1 (B₁ hole) (B₂ hole)))) -- Have (x (, y (≃ (B₁ hole) (B₂ hole))))
+                                                   (Assoc (Dom B₁) (B₁ hole) (≃ (B₁ hole) (B₂ hole))))) -- Have ((, x y) (≃ (B₁ hole) (B₂ hole)))
+                                             (Swap (≃ (B₁ hole) (B₂ hole)) (Σ B₁))))) -- Have (,(≃ (Dom B₁) (Dom B₂)) (, (≃ (B₁ hole) (B₂ hole))) (, x y))
+                                  (Assoc (≃ (Dom B₁) (Dom B₂)) (≃ (B₁ hole) (B₂ hole)) (Σ B₁)))) -- Have (,(×.mk (≃ (Dom B₁) (Dom B₂)) (≃ (B₁ hole) (B₂ hole))) (, x y))
+                            (Λ equiv_prod
+                               (`equiv_prod t_sig₂)
+                               (∘ (∘ (∘ (∘ (∘ (∘ (∘ (Swap (B₁ hole) (Dom B₁))
+                                                    (Map (B₁ hole)
+                                                         (Dom B₁)
+                                                         (Id (B₁ hole))
+                                                         (Eval (((Dom B₂) : (? (Dom B₂))) → (Dom B₁))
+                                                               (`(((Dom B₂) : (? (Dom B₂))) → (Dom B₁)) (Dom B₂))
+                                                               (Id (((Dom B₂) : (? (Dom B₂))) → (Dom B₁))))))
+                                                 (Assoc (B₁ hole)
+                                                        (((Dom B₂) : (? (Dom B₂))) → (Dom B₁))
+                                                        (Dom B₂))) -- have (, (, y' ((Dom B₁) → (Dom B₂))) x)
+                                              (Swap (Dom B₂)
+                                                    (× (B₁ hole) (((Dom B₂) : (? (Dom B₂))) → (Dom B₁))))) -- have (, x (, y' ((Dom B₁) → (Dom B₂))))
+                                           (Assoc (Dom B₂) (B₁ hole) (((Dom B₂) : (? (Dom B₂))) → (Dom B₁)))) -- have (, (, x y') ((Dom B₁) → (Dom B₂)))
+                                        (Swap (((Dom B₂) : (? (Dom B₂))) → (Dom B₁)) (× (Dom B₂) (B₁ hole)))) -- have (, ((Dom B₁) → (Dom B₂)) (, x y'))
+                                     (Map (((Dom B₂) : (? (Dom B₂))) → (Dom B₁))
+                                          (× (Dom B₂) (B₁ hole))
+                                          (≃.2 (Dom B₁) (Dom B₂))
+                                          (∘ (∘ (Map (Dom B₂)
+                                                     (B₁ hole)
+                                                     (Id (Dom B₂))
+                                                     (∘ (Eval (((B₂ hole) : (? (B₂ hole))) → (B₁ hole))
+                                                              (`(((B₂ hole) : (? (B₂ hole))) → (B₁ hole)) (B₂ hole))
+                                                              (Id (((B₂ hole) : (? (B₂ hole))) → (B₁ hole))))
+                                                        (Swap (B₂ hole) (((B₂ hole) : (? (B₂ hole))) → (B₁ hole)))))-- have (, x (, y ((B₁ hole) → (B₂ hole))))
+                                                 (∘ (Map (Dom B₂)
+                                                        (Id (Dom B₂))
+                                                        (× (B₂ hole) (((B₂ hole) : (? (B₂ hole))) → (B₁ hole)))
+                                                        (Map (B₂ hole)
+                                                             (((B₂ hole) : (? (B₂ hole))) → (B₁ hole))
+                                                             (Id (B₂ hole))
+                                                             (≃.2 (B₁ hole) (B₂ hole)))) -- Have (x (, y (≃ (B₁ hole) (B₂ hole))))
+                                                   (Assoc (Dom B₂) (B₂ hole) (≃ (B₁ hole) (B₂ hole))))) -- Have ((, x y) (≃ (B₁ hole) (B₂ hole)))
+                                             (Swap (≃ (B₁ hole) (B₂ hole)) (Σ B₁))))) -- Have (,(≃ (Dom B₁) (Dom B₂)) (, (≃ (B₁ hole) (B₂ hole))) (, x y))
+                                  (Assoc (≃ (Dom B₁) (Dom B₂)) (≃ (B₁ hole) (B₂ hole)) (Σ B₁))))
+                            (`equiv_prod ((refl (Id Sort u)) (& (Σ B₁))))
+                            (`equiv_prod ((refl (Id Sort v)) (& (Σ B₂))))))
+                   (≃.mk (Λ' (≃ (≃ (Dom B₁) (Dom B₂)) ⊥)
+                             (≃ (Σ B₁) (Σ B₂))
+                             (∘ (Eval' (((≃ (Dom B₁) (Dom B₂)) : (? (≃ (Dom B₁) (Dom B₂)))) → ⊥)
+                                        (≃ (Dom B₁) (Dom B₂))
+                                        (Id (((≃ (Dom B₁) (Dom B₂)) : (? (≃ (Dom B₁) (Dom B₂)))) → ⊥)))
+                                (Map (((≃ (Dom B₁) (Dom B₂)) : (? (≃ (Dom B₁) (Dom B₂)))) → ⊥)
+                                     (≃ (Dom B₁) (Dom B₂))
+                                     (≃.1 (≃ (Dom B₁) (Dom B₂)) ⊥)
+                                     (≃.env.1 (Σ B₁) (Σ B₂))) /- (≃ (Dom B₁) (Dom B₂))-/))
+                         (⊥.Ind (`(≃ (Dom B₁) (Dom B₂)) (`⊥ (≃ (Σ B₁) (Σ B₂)))))
+                         (`(≃ (≃ (Dom B₁) (Dom B₂)) ⊥) ((refl (Id Sort 0)) (& ⊥)))
+                         (`(≃ (≃ (Dom B₁) (Dom B₂)) ⊥) ((refl (Id (? ((≃ (Σ B₁) (Σ B₂)))))) (& ((≃ (Σ B₁) (Σ B₂))))))) -- (≃ (Dom B₁) (Dom B₂)) ≃ ⊥ ⊢ (≃ (≃ (Σ B₁) (Σ B₂)) ⊥)
+                   (≃.mk (Λ' (≃ (≃ (B₁ hole) (B₂ hole)) ⊥)
+                             (≃ (Σ B₁) (Σ B₂))
+                             (∘ (Eval' (((≃ (B₁ hole) (B₂ hole)) : (? (≃ (B₁ hole) (B₂ hole)))) → ⊥)
+                                        (≃ (B₁ hole) (B₂ hole))
+                                        (Id (((≃ (B₁ hole) (B₂ hole)) : (? (≃ (B₁ hole) (B₂ hole)))) → ⊥)))
+                                (Map (((≃ (B₁ hole) (B₂ hole)) : (? (≃ (B₁ hole) (B₂ hole)))) → ⊥)
+                                     (≃ (B₁ hole) (B₂ hole))
+                                     (≃.1 (≃ (B₁ hole) (B₂ hole)) ⊥)
+                                     (≃.env.2 (Σ B₁) (Σ B₂))) /- (≃ (Dom B₁) (Dom B₂))-/))
+                         (⊥.Ind (`(≃ (Dom B₁) (Dom B₂)) (`⊥ (≃ (Σ B₁) (Σ B₂)))))
+                         (`(≃ (≃ (Dom B₁) (Dom B₂)) ⊥) ((refl (Id Sort 0)) (& ⊥)))
+                         (`(≃ (≃ (Dom B₁) (Dom B₂)) ⊥) ((refl (Id (? ((≃ (Σ B₁) (Σ B₂)))))) (& ((≃ (Σ B₁) (Σ B₂))))))) -- (≃ (B₁ hole) (B₂ hole)) ≃ ⊥ ⊢ (≃ (≃ (Σ B₁) (Σ B₂)) ⊥)
+                   h_unif_fst
+                   h_unif_snd)
 
 open Dsl in
 def unif_fn (u v : Level) (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_unif_dom : GenericExpr τ) (h_unif_cod : GenericExpr τ) : GenericExpr τ :=
@@ -121,7 +240,6 @@ def unif_fn (u v : Level) (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_un
 
   let goal := DCC? (⊕ (≃ ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) (≃ (≃ ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) ⊥))
 
-  let conv_prod  := DCC? (× ((((Π B₁ C₁) x₁) : Sort u) → ((Π B₂ C₂) x₂)) ((((Π B₂ C₂) x₂) : Sort u) → ((Π B₁ C₁) x₁)))
   let equiv_prod := (DCC? (× (≃ (B₁ x₁) (B₂ x₂)) (≃ (C₁ x₁ hole) (C₂ x₂ hole))))
 
   let t_fn₁ := DCC? ((Π B₁ C₁) x₁)
@@ -143,11 +261,11 @@ def unif_fn (u v : Level) (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_un
                                (Λ (× equiv_prod t_fn₂)
                                   (`(× equiv_prod t_fn₁) (B₁ x₁))
                                   (≃.2.apply ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂))))
-                            (`conv_prod ((refl (Id Sort u)) (& ((Π B₁ C₁) x₁))))
-                            (`conv_prod ((refl (Id Sort v)) (& ((Π B₂ C₂) x₂))))))
+                            (`equiv_prod ((refl (Id Sort u)) (& ((Π B₁ C₁) x₁))))
+                            (`equiv_prod ((refl (Id Sort v)) (& ((Π B₂ C₂) x₂))))))
                    (≃.mk (∘ (Λ (((≃ (B₁ x₁) (B₂ x₂)) : (? (≃ (B₁ x₁) (B₂ x₂)))) → ⊥)
                                (`(((≃ (B₁ x₁) (B₂ x₂)) : (? (≃ (B₁ x₁) (B₂ x₂)))) → ⊥) (≃ t_fn₁ t_fn₂))
-                               (∘ (∘ (≃.dom ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂))
+                               (∘ (∘ (≃.env.1 ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂))
                                      (Λ (≃ (B₁ x₁) (B₂ x₂))
                                         (`(≃ (B₁ x₁) (B₂ x₂)) (((≃ (B₁ x₁) (B₂ x₂)) : (? (≃ (B₁ x₁) (B₂ x₂)))) → ⊥))
                                         (∘ (Eval (((≃ (B₁ x₁) (B₂ x₂)) : (? (≃ (B₁ x₁) (B₂ x₂)))) → ⊥)
@@ -161,7 +279,7 @@ def unif_fn (u v : Level) (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_un
                          (`(≃ (≃ (B₁ x₁) (B₂ x₂)) ⊥) ((refl (Id (Sort 0))) (& ⊥)))) -- (≃ (B₁ x₁) (B₂ x₂)) ≃ ⊥ ⊢ (≃ (≃ ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) ⊥)
                    (≃.mk (∘ (Λ (((≃ (C₁ x₁ hole) (C₂ x₂ hole)) : (? (≃ (C₁ x₁ hole) (C₂ x₂ hole)))) → ⊥)
                                (`(((≃ (C₁ x₁ hole) (C₂ x₂ hole)) : (? (≃ (C₁ x₁ hole) (C₂ x₂ hole)))) → ⊥) (≃ t_fn₁ t_fn₂))
-                               (∘ (∘ (≃.cod ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂))
+                               (∘ (∘ (≃.env.2 ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂))
                                      (Λ (≃ (C₁ x₁ hole) (C₂ x₂ hole))
                                         (`(≃ (C₁ x₁ hole) (C₂ x₂ hole)) (((≃ (C₁ x₁ hole) (C₂ x₂ hole)) : (? (≃ (C₁ x₁ hole) (C₂ x₂ hole)))) → ⊥))
                                         (∘ (Eval (((≃ (C₁ x₁ hole) (C₂ x₂ hole)) : (? (≃ (C₁ x₁ hole) (C₂ x₂ hole)))) → ⊥)
@@ -261,8 +379,8 @@ inductive ViewUnify : (e : GenericExpr τ) → Type u
   | pi     : (hneq : (DCC? ((Π B₁ C₁) x₁)) ≠  (DCC? ((Π B₂ C₂) x₂))) → ViewUnify (DCC? (Unify (Sort u) (Sort v) ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))
   | prop   : ViewUnify (DCC? (Unify (Sort 1) (Sort 0) (Sort 0) ⊥))
   | type   : ViewUnify (DCC? (Unify (Sort (u + 2)) (Sort 0) (Sort (u + 1)) ⊥))
-  | fn_cod : ViewUnify (DCC? ((≃.cod ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) ((≃.mk f_to f_from h_id₁ h_id₂) (,B h₁ h₂))))
-  | fn_dom : ViewUnify (DCC? ((≃.dom ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) ((≃.mk f_to f_from h_id₁ h_id₂) (,B h₁ h₂))))
+  | env_2  : ViewUnify (DCC? ((≃.env.2 τ₁ τ₂) ((≃.mk f_to f_from h_id₁ h_id₂) (,B h₁ h₂))))
+  | env_1  : ViewUnify (DCC? ((≃.env.1 τ₁ τ₂) ((≃.mk f_to f_from h_id₁ h_id₂) (,B h₁ h₂))))
 deriving Repr
 
 open Dsl in
@@ -278,8 +396,8 @@ def IsUnify.complete (h : IsUnify e) : is_unif? e = .some h := by
 open Dsl in
 def view_unif? [DecidableEq τ] (e : GenericExpr τ) : Option (ViewUnify e) :=
   match e with
-  | DCC? ((≃.cod ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) ((≃.mk _f_to _f_from _h_id₁ _h_id₂) (,_B _h₁ _h₂))) => .some .fn_cod
-  | DCC? ((≃.dom ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) ((≃.mk _f_to _f_from _h_id₁ _h_id₂) (,_B _h₁ _h₂))) => .some .fn_dom
+  | DCC? ((≃.env.2 _τ₁ _τ₂) ((≃.mk _f_to _f_from _h_id₁ _h_id₂) (,_B _h₁ _h₂))) => .some .env_2
+  | DCC? ((≃.env.1 _τ₁ _τ₂) ((≃.mk _f_to _f_from _h_id₁ _h_id₂) (,_B _h₁ _h₂))) => .some .env_1
   | DCC? (Unify A B X Y) =>
     if heq : X = Y then
       heq ▸ .some .refl
@@ -311,8 +429,9 @@ inductive RedUnify : (e : GenericExpr τ) → (e' : GenericExpr τ) → Type u
     → RedAffNorm (unif_fn u v B₁ C₁ x₁ B₂ C₂ x₂ e₁ e₂) ⟨e', hn⟩
     → (hneq   : (open Dsl in (DCC? ((Π B₁ C₁) x₁))) ≠ (open Dsl in (DCC? ((Π B₂ C₂) x₂))))
     → RedUnify (open Dsl in (DCC? (Unify (Sort u) (Sort v) ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))) e'
-  | fn_dom    : RedAffNorm h₁ ⟨h₁', hn⟩ → RedUnify (open Dsl in (DCC? ((≃.dom ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) ((≃.mk f_to f_from h_id₁ h_id₂) (,B h₁ h₂))))) h₁'
-  | fn_cod    : RedAffNorm h₂ ⟨h₂', hn⟩ → RedUnify (open Dsl in (DCC? ((≃.cod ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) ((≃.mk f_to f_from h_id₁ h_id₂) (,B h₁ h₂))))) h₂'
+  -- ≃ is always formed by ≃.mk. fst and snd fetch the respective proof environment components
+  | env_1    : RedAffNorm h₁ ⟨h₁', hn⟩ → RedUnify (open Dsl in (DCC? ((≃.env.1 _τ₁ _τ₂) ((≃.mk f_to f_from h_id₁ h_id₂) (,B h₁ h₂))))) h₁'
+  | env_2    : RedAffNorm h₂ ⟨h₂', hn⟩ → RedUnify (open Dsl in (DCC? ((≃.env.2 _τ₁ _τ₂) ((≃.mk f_to f_from h_id₁ h_id₂) (,B h₁ h₂))))) h₂'
   | prop_bot  : RedAffNorm unif_bot_prop ⟨e', hn⟩ → RedUnify (open Dsl in (DCC? (Unify (Sort 1) (Sort 0) (Sort 0) ⊥))) e'
   | type_bot  : RedAffNorm (unif_bot_type u) ⟨e', hn⟩ → RedUnify (open Dsl in (DCC? (Unify (Sort (u + 2)) (Sort 0) (Sort (u + 1)) ⊥))) e'
   | congr     : (ViewUnify (DCC? (f x)) → False) → RedUnify f f' → RedUnify x x' → RedUnify (open Dsl in (DCC? (f x))) (open Dsl in (DCC? (f' x')))
@@ -336,10 +455,10 @@ def step_unify_view? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : Gener
   | .some ⟨_, h⟩ => .some ⟨_, h⟩
   | .none =>
     open Dsl in match e with
-    | (DCC? ((≃.dom ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) ((≃.mk _f_to _f_from _h_id₁ _h_id₂) (,_B _h₁ _h₂)))) =>
-      .some ⟨_, .fn_dom ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
-    | (DCC? ((≃.cod ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) ((≃.mk _f_to _f_from _h_id₁ _h_id₂) (,_B _h₁ _h₂)))) =>
-      .some ⟨_, .fn_cod ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+    | (DCC? ((≃.env.1 ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) ((≃.mk _f_to _f_from _h_id₁ _h_id₂) (,_B _h₁ _h₂)))) =>
+      .some ⟨_, .env_1 ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+    | (DCC? ((≃.env.2 ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) ((≃.mk _f_to _f_from _h_id₁ _h_id₂) (,_B _h₁ _h₂)))) =>
+      .some ⟨_, .env_2 ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
     | (DCC? (Unify (Sort 1) (Sort 0) (Sort 0) ⊥)) => .some ⟨_, .prop_bot ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
     | (DCC? (Unify (Sort (u + 2)) (Sort 0) (Sort (u₂ + 1)) ⊥)) =>
       if heq : u₂ = u then
@@ -365,8 +484,8 @@ def step_unify_view? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : Gener
   | DCC? False => 0
   | DCC? Bool => 0
   | DCC? (≃.1.apply _a _b) => 0
-  | DCC? (≃.dom _a _b) => 0
-  | DCC? (≃.cod _a _b) => 0
+  | DCC? (≃.env.1 _a _b) => 0
+  | DCC? (≃.env.2 _a _b) => 0
   | DCC? (≃.2.apply _a _b) => 0
   | DCC? (≃.mk a b c d) => a.size_unify + b.size_unify + c.size_unify + d.size_unify
   | DCC? (Bool.Ind motive x y) => motive.size_unify + x.size_unify + y.size_unify
@@ -579,7 +698,7 @@ def RedAffNorm.eq' {e : GenericExpr τ} (hr : RedAffNorm e (red_aff e)) : hr = �
 set_option maxHeartbeats 2000000000000 in
 def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e') : step_unify? e = .some ⟨e', h⟩ := by
   induction h with
-  | fn_cod hrt| fn_dom hrt| prop_bot hrt | type_bot hrt | refl hrt =>
+  | env_2 hrt| env_1 hrt| prop_bot hrt | type_bot hrt | refl hrt =>
     unfold step_unify?
     unfold step_unify_view?
     simp [unify_refl?, hrt.complete_fst]
@@ -632,7 +751,7 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
       case h_2 =>
         expose_names
         cases f
-        case cong_fn_cod | cong_fn_dom =>
+        case cong_env_2 | cong_env_1 =>
           cases x
           case app =>
             expose_names

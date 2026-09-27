@@ -95,9 +95,9 @@ theorem RedAff.conf_assoc_point₃ (h₁ : RedAff ((points (DCC? (Assoc A B C)))
   instRedRel.ReflTrans (GenericExpr.app (set_points (DCC? (Assoc A B C)) ((points (DCC? (Assoc A B C))).set 2 p' hn)) (DCC? (,_B₁ (,_B₂ x y) z))) D ∧
     instRedRel.ReflTrans (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D := by
   refine ⟨_, .single .assoc, .trans (.single (.point 0 (by grind) (.point 1 (by point_arity) (.point 0 (by point_arity) (.point 1 ?_ h₁))))) (.single (.point 2 (by point_arity) (.point 0 (by point_arity) (.point 1 ?_ h₁))))⟩
-  · change 0 < point_arity (B.quot C)
+  · change 1 < point_arity (B.quot C)
     grind
-  · change 0 < point_arity (B.quot C)
+  · change 1 < point_arity (B.quot C)
     grind
 
 open Dsl in
@@ -257,88 +257,78 @@ theorem RedAff.conf_unif_refl_point₃
     · simp [point_arity]-/
 
 open Dsl in
-theorem RedAff.conf_bimap_congr_arg (h : RedAff (DCC? (,_B x y)) x') : ∃ D, Relation.ReflTransGen RedAff (DCC? (,(`A B) (f x) (g y))) D
-  ∧ Relation.ReflTransGen RedAff (DCC? ((Map A B f g) x')) D := by
+theorem RedAff.conf_bimap_congr_arg (h : RedAff (DCC? (,_B x y)) x') : ∃ D, Relation.ReflTransGen RedAff (DCC? ((Map A B f g) x')) D
+  ∧ Relation.ReflTransGen RedAff (DCC? (,(`A B) (f x) (g y))) D := by
   match h with
   | .point 0 hn h =>
-    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₁_arg (A := A) (B := B) (f := f) (g := g)
-    exact ⟨_, h₂, h₁⟩
+    exact h.conf_bimap_point₁_arg (A := A) (B := B) (f := f) (g := g)
   | .point 1 hn h =>
-    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₂_arg (A := A) (B := B) (f := f) (g := g)
-    exact ⟨_, h₂, h₁⟩
+    exact h.conf_bimap_point₂_arg (A := A) (B := B) (f := f) (g := g)
   | .point 2 hn h =>
-    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₃_arg (A := A) (B := B) (f := f) (g := g)
-    exact ⟨_, h₂, h₁⟩
+    exact h.conf_bimap_point₃_arg (A := A) (B := B) (f := f) (g := g)
 
 open Dsl in
-theorem RedAff.conf_bimap_congr_fun (h : RedAff (DCC? (Map A B f g)) f') : ∃ D, Relation.ReflTransGen RedAff (DCC? (,(`A B) (f x) (g y))) D
-  ∧ Relation.ReflTransGen RedAff (DCC? (f' (,_B x y))) D := by
+theorem RedAff.conf_bimap_congr_fun (h : RedAff (DCC? (Map A B f g)) f') : ∃ D, Relation.ReflTransGen RedAff (DCC? (f' (,_B x y))) D
+  ∧ Relation.ReflTransGen RedAff (DCC? (,(`A B) (f x) (g y))) D := by
   match h with
   | .point 0 hn h =>
-    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₁ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
-    exact ⟨_, h₂, h₁⟩
+    exact h.conf_bimap_point₁ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
   | .point 1 hn h =>
-    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₂ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
-    exact ⟨_, h₂, h₁⟩
+    exact h.conf_bimap_point₂ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
   | .point 2 hn h =>
-    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₃ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
-    exact ⟨_, h₂, h₁⟩
+    exact h.conf_bimap_point₃ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
   | .point 3 hn h =>
-    have ⟨_, h₁, h₂⟩ := h.conf_bimap_point₄ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
-    exact ⟨_, h₂, h₁⟩
+    exact h.conf_bimap_point₄ (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
 
 open Dsl in
-theorem RedAff.conf_bimap (h₂ : RedAff (DCC? ((Map A B f g) (,_B x y))) C) : ∃ D, Relation.ReflTransGen RedAff (DCC? (,(`A B) (f x) (g y))) D
+theorem RedAff.conf_bimap (h₂ : RedAff (DCC? ((Map A B f g) (,_B x y))) C) : ∃ D, Relation.ReflTransGen RedAff (DCC? (,(`A B) (f x) (g y))) D 
   ∧ Relation.ReflTransGen RedAff C D := by
   cases h₂ with
   | bimap => exact ⟨_, .refl, .refl⟩
   | point => grind
   | congrFun h =>
-    exact h.conf_bimap_congr_fun
+    have ⟨_, h₁, h₂⟩ := h.conf_bimap_congr_fun (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
+    exact ⟨_, h₂, h₁⟩
   | congrArg h =>
-    exact h.conf_bimap_congr_arg
+    have ⟨_, h₁, h₂⟩ := h.conf_bimap_congr_arg (A := A) (B := B) (f := f) (g := g) (_B := _B) (x := x) (y := y)
+    exact ⟨_, h₂, h₁⟩
 
 open Dsl in
-theorem RedAff.conf_assoc_congr_arg (h : RedAff (DCC? (,_B₁ (,_B₂ x y) z)) x') : ∃ D, Relation.ReflTransGen RedAff  (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D
-  ∧ Relation.ReflTransGen RedAff (DCC? ((Assoc A B C) x')) D := by
+theorem RedAff.conf_assoc_congr_arg (h : RedAff (DCC? (,_B₁ (,_B₂ x y) z)) x') : ∃ D, Relation.ReflTransGen RedAff (DCC? ((Assoc A B C) x')) D
+  ∧ Relation.ReflTransGen RedAff  (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D := by
   match h with
-  | .point 0 hn hr => exact ⟨_, .refl, .single .assoc⟩
+  | .point 0 hn hr => exact ⟨_, .single .assoc, .refl⟩
   | .point 1 hn hr =>
     simp [points, Vector.get] at hr
     match hr with
-    | .point 0 hn hr => exact ⟨_, .refl, .single .assoc⟩
+    | .point 0 hn hr => exact ⟨_, .single .assoc, .refl⟩
     | .point 1 hn hr =>
-      have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₁_arg (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
-      exact ⟨_, h₂, h₁⟩
+      exact hr.conf_assoc_point₁_arg (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
     | .point 2 hn hr =>
-      have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₂_arg (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
-      exact ⟨_, h₂, h₁⟩
+      exact hr.conf_assoc_point₂_arg (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
   | .point 2 hn hr =>
-    have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₃_arg (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
-    exact ⟨_, h₂, h₁⟩
+    exact hr.conf_assoc_point₃_arg (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
 
 open Dsl in
-theorem RedAff.conf_assoc_congr_fun (h : RedAff (DCC? (Assoc A B C)) f') : ∃ D, Relation.ReflTransGen RedAff  (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D
-  ∧ Relation.ReflTransGen RedAff (DCC? (f' (,_B₁ (,_B₂ x y) z))) D := by
+theorem RedAff.conf_assoc_congr_fun (h : RedAff (DCC? (Assoc A B C)) f') : ∃ D, Relation.ReflTransGen RedAff (DCC? (f' (,_B₁ (,_B₂ x y) z))) D
+  ∧ Relation.ReflTransGen RedAff  (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D := by
   match h with
   | .point 0 hn hr =>
-    have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₁ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
-    exact ⟨_, h₂, h₁⟩
+    exact hr.conf_assoc_point₁ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
   | .point 1 hn hr =>
-    have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₂ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
-    exact ⟨_, h₂, h₁⟩
+    exact hr.conf_assoc_point₂ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
   | .point 2 hn hr =>
-    have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₃ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
-    exact ⟨_, h₂, h₁⟩
+    exact hr.conf_assoc_point₃ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
 
 open Dsl in
-theorem RedAff.conf_assoc (h₂ : RedAff (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x y) z))) C') : ∃ D, Relation.ReflTransGen RedAff  (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D
+theorem RedAff.conf_assoc (h₂ : RedAff (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x y) z))) C') : ∃ D, Relation.ReflTransGen RedAff (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z))) D
   ∧ Relation.ReflTransGen RedAff C' D := by
   cases h₂ with
   | point => grind
   | assoc => exact ⟨_, .refl, .refl⟩
   | congrFun h =>
-    exact h.conf_assoc_congr_fun
+    have ⟨_, h₁, h₂⟩ := h.conf_assoc_congr_fun (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+    exact ⟨_, h₂, h₁⟩
     /-match h with
     | .point 0 hn hr =>
       have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₁ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
@@ -350,7 +340,8 @@ theorem RedAff.conf_assoc (h₂ : RedAff (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x 
       have ⟨_, h₁, h₂⟩ := hr.conf_assoc_point₃ (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
       exact ⟨_, h₂, h₁⟩-/
   | congrArg h =>
-    exact h.conf_assoc_congr_arg
+    have ⟨_, h₁, h₂⟩ := h.conf_assoc_congr_arg (A := A) (B := B) (C := C) (x := x) (y := y) (z := z) (_B₁ := _B₁) (_B₂ := _B₂)
+    exact ⟨_, h₂, h₁⟩
     /-match h with
     | .point 0 hn hr => exact ⟨_, .refl, .single .assoc⟩
     | .point 1 hn hr =>

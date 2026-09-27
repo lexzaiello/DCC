@@ -478,18 +478,55 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Pi.C.type B' A u s τ_C
     → Reduces (Pi.type A u v s) τ
     → Judge (open Dsl in (DCC? (Π B C))) τ
-  | sort   : Judge (DCC? Sort m) (DCC? Sort m.succ)
-  | top    : Judge (DCC? ⊤) Top.type
-  | bot    : Judge (DCC? ⊥) Bot.type
-  | tintro : Judge (DCC? ∗) Tintro.type
-  | bang   : Judge τ (DCC? Sort m) → Judge (open Dsl in (DCC? (! τ))) (DCC? Sort m)
-  | box    : Judge x τ
+  | sort    : Judge (DCC? Sort m) (DCC? Sort m.succ)
+  | top     : Judge (DCC? ⊤) Top.type
+  | bot     : Judge (DCC? ⊥) Bot.type
+  | tintro  : Judge (DCC? ∗) Tintro.type
+  | bang    : Judge τ (DCC? Sort m) → Judge (open Dsl in (DCC? (! τ))) (DCC? Sort m)
+  | box     : Judge x τ
     → Judge (open Dsl in (DCC? (& x))) (open Dsl in (DCC? (! τ)))
-  | app    : Judge f (open Dsl in (DCC? ((Π f_α f_β) x_α)))
+  | false   : Judge (DCC? False) (DCC? Bool)
+  | true    : Judge (DCC? True) (DCC? Bool)
+  | bool    : Judge (DCC? Bool) (DCC? Sort 1)
+  | app     : Judge f (open Dsl in (DCC? ((Π f_α f_β) x_α)))
     → DefEq (DCC? (f_α x_α)) α
     → Judge x α
     → Reduces (DCC? (f_β x_α x)) τ
     → Judge (DCC? (f x)) τ
+  | hole_ty : Judge (DCC? (? x)) (DCC? (? (? x))) -- TODO: Sorts must be indexed by a hole constructor to do type inference here
+  | unify   : Judge A (DCC? Sort (u + 1))
+    → Judge B (DCC? Sort (v + 1))
+    → Judge X τ_X
+    → Judge Y τ_Y
+    → DefEq τ_X A
+    → DefEq τ_Y B
+    → Judge (DCC? (Unify A B X Y)) (DCC? (Σ ((Bool.Ind (`⊤ (`Bool (Sort (max u v)))) (`⊤ (`Bool (≃ A B))) (`⊤ (`Bool (≃ (≃ A B) ⊥)))) ∗)))
+  | cong    : Judge A (DCC? Sort u) → Judge B (DCC? Sort v) → Judge (DCC? (≃ A B)) (DCC? (Sort (max u v)))
+  | bimap   : Judge f τ_f
+    → Judge g τ_g
+    → Arrow A A' u₀ τ_f
+    → Arrow B B' v₀ τ_g
+    → Reduces (DCC? ((Σ (`A B)) : Sort (max u₀ v₀)) → (Σ (`A' B'))) τ'
+    → Judge (DCC? (Map A' B' f g)) τ'
+  | assoc    : Judge A (DCC? Sort u)
+    → Judge B (DCC? Sort v)
+    → Judge C (DCC? Sort s)
+    → Reduces (DCC? ((Σ (`(Σ (`A B)) C)) : Sort (max u (max v s))) → (Σ (`A (Σ (`B C))))) τ'
+    → Judge (DCC? (Assoc A B C)) τ'
+  | ind_bot  : Judge motive τ_motive
+    → Arrow A τ_motive₂ u τ_motive
+    → Arrow (DCC? ⊥) (DCC? Sort v) 0 τ_motive₂
+    → Reduces (DCC? ((Π (Id Sort u) (Π (`A ⊥) motive)) A)) τ'
+    → Judge (DCC? (⊥.Ind motive)) τ'
+  | ind_bool : Judge motive τ_motive
+    → Arrow A τ_motive₂ u τ_motive
+    → Arrow (DCC? Bool) (DCC? Sort v) 1 τ_motive₂
+    → Judge x τ_x
+    → DefEq τ_x (DCC? ((Π (Id (Sort u)) (`Sort u (Π (`A Bool) motive))) A))
+    → Judge y τ_y
+    → DefEq τ_y (DCC? ((Π (Id (Sort u)) (`Sort u (Π (`A Bool) motive))) A))
+    → Reduces (DCC? ((Π (Id Sort u) (Π (`A Bool) motive)) A)) τ'
+    → Judge (DCC? (Bool.Ind motive x y)) τ'
 deriving Repr
 
 -- Replaces everything from `def infer₂` to end-of-file.
@@ -497,6 +534,110 @@ deriving Repr
 
 def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : GenericExpr τ_c) : Except (TypeError e) (Σ' (t : GenericExpr τ_c), Judge e t) :=
   open Dsl in match e with
+  | DCC? (Bool.Ind motive x y) =>
+    match infer motive with
+    | .ok ⟨τ_motive, h₁⟩ =>
+      match read_arrow τ_motive with
+      | .ok ⟨A, τ_motive₂, u, h_arr₁⟩ =>
+        match read_arrow₂ τ_motive₂ (DCC? Bool) 1 with
+        | .ok ⟨DCC? Sort v, h_arr₂⟩ =>
+          match x.infer with
+          | .ok ⟨τ_x, h₂⟩ =>
+            match y.infer with
+            | .ok ⟨τ_y, h₃⟩ =>
+              match def_eq? τ_x (DCC? ((Π (Id (Sort u)) (`Sort u (Π (`A Bool) motive))) A)) with
+              | .ok h_defeq₁ =>
+                match def_eq? τ_y (DCC? ((Π (Id (Sort u)) (`Sort u (Π (`A Bool) motive))) A)) with
+                | .ok h_defeq₂ =>
+                  .ok ⟨_, .ind_bool h₁ h_arr₁ h_arr₂ h₂ h_defeq₁ h₃ h_defeq₂ (reduce_reduces rfl)⟩
+                | .error e => .error (.sub y (.def_eq e))
+              | .error e => .error (.sub x (.def_eq e))
+            | .error e => .error (.sub y e)
+          | .error e => .error (.sub x e)
+        | .ok ⟨τ_elim, _⟩ => .error (.sub τ_motive (.unexpected τ_elim τ_motive₂))
+        | .error e => .error (.sub motive (.sub τ_motive (.sub τ_motive₂ e)))
+      | .error e => .error (.sub motive (.sub τ_motive e))
+    | .error e => .error (.sub motive e)
+  | DCC? (⊥.Ind motive) =>
+    match infer motive with
+    | .ok ⟨τ_motive, h₁⟩ =>
+      match read_arrow τ_motive with
+      | .ok ⟨A, τ_motive₂, u, h_arr₁⟩ =>
+        match read_arrow₂ τ_motive₂ (DCC? ⊥) 0 with
+        | .ok ⟨DCC? Sort v, h_arr₂⟩ =>
+          .ok ⟨_, .ind_bot h₁ h_arr₁ h_arr₂ (reduce_reduces rfl)⟩
+        | .ok ⟨τ_elim, _⟩ => .error (.sub τ_motive (.unexpected τ_elim τ_motive₂))
+        | .error e => .error (.sub motive (.sub τ_motive (.sub τ_motive₂ e)))
+      | .error e => .error (.sub motive (.sub τ_motive e))
+    | .error e => .error (.sub motive e)
+  | DCC? (Assoc A B C) =>
+    match A.infer with
+    | .ok ⟨DCC? Sort u, h₁⟩ =>
+      match B.infer with
+      | .ok ⟨DCC? Sort v, h₂⟩ =>
+        match C.infer with
+        | .ok ⟨DCC? Sort s, h₃⟩ =>
+          .ok ⟨_, .assoc h₁ h₂ h₃ (reduce_reduces rfl)⟩
+        | .error e => .error (.sub C e)
+        | .ok ⟨τ_C, _⟩ => .error (.unexpected τ_C C)
+      | .error e => .error (.sub B e)
+      | .ok ⟨τ_B, _⟩ => .error (.unexpected τ_B B)
+    | .error e => .error (.sub A e)
+    | .ok ⟨τ_A, _⟩ => .error (.unexpected τ_A A)
+  | DCC? (Map A' B' f g) =>
+    match f.infer with
+    | .ok ⟨τ_f, h₁⟩ =>
+      match g.infer with
+      | .ok ⟨τ_g, h₂⟩ =>
+        match read_arrow τ_f with
+        | .ok ⟨A, A'', u₀, h_arr₁⟩ =>
+          match read_arrow τ_g with
+          | .ok ⟨B, B'', v₀, h_arr₂⟩ =>
+            if heq₁ : A'' = A' then
+              if heq₂ : B'' = B' then
+                .ok ⟨_, .bimap h₁ h₂ (heq₁ ▸ h_arr₁) (heq₂ ▸ h_arr₂) (reduce_reduces rfl)⟩
+              else .error (.sub g (.mismatch A'' A' g))
+            else .error (.sub f (.mismatch A'' A' f))
+          | .error e => .error (.sub g (.sub τ_g e))
+        | .error e => .error (.sub f (.sub τ_f e))
+      | .error e => .error (.sub g e)
+    | .error e => .error (.sub f e)
+  | DCC? (≃ A B) =>
+    match A.infer with
+    | .ok ⟨DCC? Sort u, h₁⟩ =>
+      match B.infer with
+      | .ok ⟨DCC? Sort v, h₂⟩ =>
+        .ok ⟨_, .cong h₁ h₂⟩
+      | .error e => .error (.sub B e)
+      | .ok ⟨τ_B, _⟩ => .error (.unexpected τ_B B)
+    | .error e => .error (.sub A e)
+    | .ok ⟨τ_A, _⟩ => .error (.unexpected τ_A A)
+  | DCC? (Unify τ₁ τ₂ A B) =>
+    match infer τ₁ with
+    | .ok ⟨DCC? Sort (u + 1), h₁⟩ =>
+      match infer τ₂ with
+      | .ok ⟨DCC? Sort (v + 1), h₂⟩ =>
+        match A.infer with
+        | .ok ⟨τ_A, h₃⟩ =>
+          match B.infer with
+          | .ok ⟨τ_B, h₄⟩ =>
+            match τ_A.def_eq? τ₁ with
+            | .ok h_defeq₁ =>
+              match τ_B.def_eq? τ₂ with
+              | .ok h_defeq₂ =>
+                .ok ⟨_, .unify h₁ h₂ h₃ h₄ h_defeq₁ h_defeq₂⟩
+              | .error e => .error (.sub B (.def_eq e))
+            | .error e => .error (.sub A (.def_eq e))
+          | .error e => .error (.sub B e)
+        | .error e => .error (.sub A e)
+      | .error e => .error (.sub τ₂ e)
+      | .ok ⟨τ_τ₂, _⟩ => .error (.unexpected τ_τ₂ τ₂)
+    | .error e => .error (.sub τ₁ e)
+    | .ok ⟨τ_τ₁, _⟩ => .error (.unexpected τ_τ₁ τ₁)
+  | DCC? (? x) => .ok ⟨_, .hole_ty⟩
+  | DCC? True => .ok ⟨_, .true⟩
+  | DCC? False => .ok ⟨_, .false⟩
+  | DCC? Bool => .ok ⟨_, .bool⟩
   | .dom₂ _x | .uncoup _x | .dom _x | .unbang _x | .hole _u => .error (.unexpected e e)
   | DCC? (Swap A B) =>
     match infer A with
@@ -807,4 +948,4 @@ abbrev Expr.infer' (e : Expr) : Except (TypeError e) Expr := (·.fst) <$> e.infe
 abbrev Expr.infer (e : Expr) : Except (TypeError e) (Σ' (t : GenericExpr Unit), (GenericExpr.Judge e t)) := GenericExpr.infer e
 
 #eval (DCC ((Id Sort 1) (Sort 0))).infer
-#eval (DCC ((Id ((Sort 1 : Sort 2) → Sort 1)) (Id Sort 1))).infer
+open Dsl in #eval (DCC ((Id ((Sort 1 : Sort 2) → Sort 1)) (Id Sort 1))).infer

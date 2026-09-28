@@ -10,8 +10,7 @@ scoped syntax "(≃.fst" gen_dcc+ ")"                          : gen_dcc
 scoped syntax "(≃.snd" gen_dcc+ ")"                          : gen_dcc
 scoped syntax "(≃.1.apply" gen_dcc+ ")"                      : gen_dcc
 scoped syntax "(≃.2.apply" gen_dcc+ ")"                      : gen_dcc
-scoped syntax "(≃.env.1" gen_dcc+ ")"                        : gen_dcc
-scoped syntax "(≃.env.2" gen_dcc+ ")"                        : gen_dcc
+scoped syntax "(≃.env" gen_dcc+ ")"                          : gen_dcc
 scoped syntax "(≃.mk" gen_dcc+ ")"                           : gen_dcc
 scoped syntax "(≃.Ind" gen_dcc+ ")"                          : gen_dcc
 scoped syntax "(≃.1" gen_dcc+ ")"                            : gen_dcc
@@ -128,10 +127,8 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "cong_appl") #[← `(DCC[$ty:gen_dcc_loc] $to₁), ← `(DCC[$ty:gen_dcc_loc] $to₂)]
   | `(DCC[$ty:gen_dcc_loc] (≃.2.apply $to₁:gen_dcc $to₂:gen_dcc)) => do
     return mkApp (← field ty "cong_appr") #[← `(DCC[$ty:gen_dcc_loc] $to₁), ← `(DCC[$ty:gen_dcc_loc] $to₂)]
-  | `(DCC[$ty:gen_dcc_loc] (≃.env.1 $to₁:gen_dcc $to₂:gen_dcc)) => do
-    return mkApp (← field ty "cong_fn_dom") #[← `(DCC[$ty:gen_dcc_loc] $to₁), ← `(DCC[$ty:gen_dcc_loc] $to₂)]
-  | `(DCC[$ty:gen_dcc_loc] (≃.env.2 $to₁:gen_dcc $to₂:gen_dcc)) => do
-    return mkApp (← field ty "cong_fn_cod") #[← `(DCC[$ty:gen_dcc_loc] $to₁), ← `(DCC[$ty:gen_dcc_loc] $to₂)]
+  | `(DCC[$ty:gen_dcc_loc] (≃.env $to₁:gen_dcc $to₂:gen_dcc)) => do
+    return mkApp (← field ty "cong_env") #[← `(DCC[$ty:gen_dcc_loc] $to₁), ← `(DCC[$ty:gen_dcc_loc] $to₂)]
   | `(DCC[$ty:gen_dcc_loc] (≃.1 $x:gen_dcc $B:gen_dcc)) => do
     return mkApp (← field ty "cong_1") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $B)]
   | `(DCC[$ty:gen_dcc_loc] (≃.2 $A:gen_dcc $x:gen_dcc)) => do

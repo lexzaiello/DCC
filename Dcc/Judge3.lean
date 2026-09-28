@@ -530,17 +530,19 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
   | cong_1  : Judge A (DCC? Sort u)
     → Judge B (DCC? Sort v)
     → Reduces (DCC? ((≃ A B) : Sort (max u v)) → ((A : Sort u) → B)) τ'
-    → Judge (DCC? (≃ A B)) τ'
+    → Judge (DCC? (≃.1 A B)) τ'
   | cong_2  : Judge A (DCC? Sort u)
     → Judge B (DCC? Sort v)
     → Reduces (DCC? ((≃ A B) : Sort (max u v)) → ((B : Sort u) → A)) τ'
-    → Judge (DCC? (≃ A B)) τ'
-  /-| conv_3  : Judge A (DCC? Sort u)
+    → Judge (DCC? (≃.2 A B)) τ'
+  | cong_3  : Judge A (DCC? Sort u)
     → Judge B (DCC? Sort v)
-    → Reduces (DCC? ((Π (Id (Sort (max u v)))
-                        (`(Sort (max u v))
-                          (`(≃ A B)
-                            ((Π (Id (Sort u)) ()) (! A))))) (≃ A B)))-/
+    → Reduces (Equiv_3.type A B u v) τ'
+    → Judge (DCC? (≃.3 A B)) τ'
+  | cong_4  : Judge A (DCC? Sort u)
+    → Judge B (DCC? Sort v)
+    → Reduces (Equiv_4.type A B u v) τ'
+    → Judge (DCC? (≃.4 A B)) τ'
 deriving Repr
 
 -- Replaces everything from `def infer₂` to end-of-file.
@@ -548,6 +550,46 @@ deriving Repr
 
 def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : GenericExpr τ_c) : Except (TypeError e) (Σ' (t : GenericExpr τ_c), Judge e t) :=
   open Dsl in match e with
+  | DCC? (≃.3 A B) =>
+    match A.infer with
+    | .ok ⟨DCC? Sort u, h₁⟩ =>
+      match B.infer with
+      | .ok ⟨DCC? Sort v, h₂⟩ =>
+        .ok ⟨_, .cong_3 h₁ h₂ (reduce_reduces rfl)⟩
+      | .error e => .error (.sub B e)
+      | .ok ⟨τ_B, _⟩ => .error (.sub A (.unexpected τ_B B))
+    | .error e => .error (.sub A e)
+    | .ok ⟨τ_A, _⟩ => .error (.sub A (.unexpected τ_A A))
+  | DCC? (≃.4 A B) =>
+    match A.infer with
+    | .ok ⟨DCC? Sort u, h₁⟩ =>
+      match B.infer with
+      | .ok ⟨DCC? Sort v, h₂⟩ =>
+        .ok ⟨_, .cong_4 h₁ h₂ (reduce_reduces rfl)⟩
+      | .error e => .error (.sub B e)
+      | .ok ⟨τ_B, _⟩ => .error (.sub A (.unexpected τ_B B))
+    | .error e => .error (.sub A e)
+    | .ok ⟨τ_A, _⟩ => .error (.sub A (.unexpected τ_A A))
+  | DCC? (≃.1 A B) =>
+    match A.infer with
+    | .ok ⟨DCC? Sort u, h₁⟩ =>
+      match B.infer with
+      | .ok ⟨DCC? Sort v, h₂⟩ =>
+        .ok ⟨_, .cong_1 h₁ h₂ (reduce_reduces rfl)⟩
+      | .error e => .error (.sub B e)
+      | .ok ⟨τ_B, _⟩ => .error (.sub A (.unexpected τ_B B))
+    | .error e => .error (.sub A e)
+    | .ok ⟨τ_A, _⟩ => .error (.sub A (.unexpected τ_A A))
+  | DCC? (≃.2 A B) =>
+    match A.infer with
+    | .ok ⟨DCC? Sort u, h₁⟩ =>
+      match B.infer with
+      | .ok ⟨DCC? Sort v, h₂⟩ =>
+        .ok ⟨_, .cong_2 h₁ h₂ (reduce_reduces rfl)⟩
+      | .error e => .error (.sub B e)
+      | .ok ⟨τ_B, _⟩ => .error (.sub A (.unexpected τ_B B))
+    | .error e => .error (.sub A e)
+    | .ok ⟨τ_A, _⟩ => .error (.sub A (.unexpected τ_A A))
   | DCC? (Bool.Ind motive x y) =>
     match infer motive with
     | .ok ⟨τ_motive, h₁⟩ =>

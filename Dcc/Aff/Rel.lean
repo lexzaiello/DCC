@@ -121,7 +121,7 @@ Core reductions:
   | dup            : RedAff (DCC? ((Dup B x) (& env) (& y))) (DCC? (x env (,(`(B env) (B env)) y y)))
   | bimap          : RedAff (DCC? ((Map A B f g) (,_B x y))) (DCC? (,(`A B) (f x) (g y)))
   | assoc          : RedAff (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x y) z))) (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z)))
-  | eql            : RedAff (DCC? ((Eql f_α) env (,B x y))) (DCC? (= x y))
+  | eql            : RedAff (DCC? ((Eql f_α) env (,B x y))) (DCC? (= (f_α env) x y))
   | map            : RedAff (DCC? ((!<> f) (& x))) (DCC? (!(f x)))
   | fmap           : RedAff (DCC? (($<> f) (& x))) (DCC? (& (f x)))
   | unbox          : RedAff (DCC? ((* A) (& x))) x

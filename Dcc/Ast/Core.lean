@@ -46,7 +46,7 @@ inductive GenericExpr.{u} (τ : Type u) where
   | curr'       : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
   | pair        : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
   | mkc         : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
-  | eq          : GenericExpr τ  → GenericExpr τ → GenericExpr τ
+  | eq          : GenericExpr τ  → GenericExpr τ → GenericExpr τ → GenericExpr τ
   | comp        : GenericExpr τ  → GenericExpr τ → GenericExpr τ
   | quot        : GenericExpr τ  → GenericExpr τ → GenericExpr τ
   | pi          : GenericExpr τ  → GenericExpr τ → GenericExpr τ

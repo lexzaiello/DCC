@@ -33,7 +33,7 @@ def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   | DCC[.] ∗ => 1
   | DCC[.] ⊤ => 2
   | DCC[.] ⊥ => 2
-  | DCC[.] (= x y) => (x.size + y.size) + 1
+  | DCC[.] (= A x y) => (A.size + x.size + y.size) + 1
   | DCC[.] (≃ A B) => (A.size + B.size) + 1
   | DCC[.] (Unify _τ_A _τ_B A B) => A.size + B.size + 1
   | DCC? (? m) => m.size.succ

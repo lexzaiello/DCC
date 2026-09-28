@@ -1701,14 +1701,14 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
         have ⟨_, h⟩ := hr.elim_point₁
         dcc_simp at h
         cases h.left
-        exact ⟨_, .refl, .single (by constructor)⟩
+        exact ⟨_, .single (.point 0 (by grind) (.congrFun h.right)), .single (by constructor)⟩
       | congrArg hr =>
-        exact ⟨_, .refl, .single (by constructor)⟩
+        exact ⟨_, .single (.point 0 (by grind) (.congrArg (by assumption))), .single (by constructor)⟩
     | congrArg hr =>
       match hr with
       | .point 0 hn hr => exact ⟨_, .refl, .single (by constructor)⟩
-      | .point 1 hn hr => exact ⟨_, .single (.point 0 (by grind) hr), .single (by constructor)⟩
-      | .point 2 hn hr => exact ⟨_, .single (.point 1 (by grind) hr), .single (by constructor)⟩
+      | .point 1 hn hr => exact ⟨_, .single (.point 1 (by grind) hr), .single (by constructor)⟩
+      | .point 2 hn hr => exact ⟨_, .single (.point 2 (by grind) hr), .single (by constructor)⟩
     | _ => dcc_aesop' [force_reduce, force_step]
   case fmap | map =>
     cases h₂ with
@@ -1980,8 +1980,8 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
     case eql =>
       match hr with
       | .point 0 hn hr => exact ⟨_, .single (by constructor), .refl⟩
-      | .point 1 hn hr => exact ⟨_, .single (by constructor), .single (.point 0 (by grind) hr)⟩
-      | .point 2 hn hr => exact ⟨_, .single (by constructor), .single (.point 1 (by grind) hr)⟩
+      | .point 1 hn hr => exact ⟨_, .single (by constructor), .single (.point 1 (by grind) hr)⟩
+      | .point 2 hn hr => exact ⟨_, .single (by constructor), .single (.point 2 (by grind) hr)⟩
     case fmap | map =>
       exact ⟨_, .single (by constructor), aff_mk_point'' 0 hrp.congrArg⟩
     case unbox =>
@@ -2126,8 +2126,8 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
       match hr with
       | .point n hn hr =>
         grind only [point_arity]
-      | .congrFun (.point 0 hn hr) => exact ⟨_, .single .eql, .refl⟩
-      | .congrArg hr => exact ⟨_, .single .eql, .refl⟩
+      | .congrFun (.point 0 hn hr) => exact ⟨_, .single .eql, .single (.point 0 (by grind) (.congrFun hr))⟩
+      | .congrArg hr => exact ⟨_, .single .eql, .single (.point 0 (by grind) (.congrArg hr))⟩
     case map | fmap =>
       exact ⟨_, .single (by constructor), aff_mk_point'' 0 hrp.congrFun⟩
     case unbox => exact ⟨_, .single (by constructor), .refl⟩

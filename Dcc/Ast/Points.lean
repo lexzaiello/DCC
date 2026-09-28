@@ -41,7 +41,7 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   | DCC[.] ∗ => 0
   | DCC[.] ⊤ => 0
   | DCC[.] ⊥ => 0
-  | DCC[.] (= _x _y) => 2
+  | DCC[.] (= _A _x _y) => 3
   | DCC[.] (Eql _α)  => 1
   | DCC[.] (refl _α) => 1
   | DCC[.] Sort _m => 0
@@ -96,7 +96,7 @@ def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (p
   | DCC? (? m) => ⟨#[m], by grind⟩
   | DCC? Bool | DCC? False | DCC? True | DCC[.] ⊤ => ⟨#[], by grind⟩
   | DCC[.] ⊥ => ⟨#[], by grind⟩
-  | DCC[.] (= x y) => ⟨#[x, y], by grind⟩
+  | DCC[.] (= A x y) => ⟨#[A, x, y], by grind⟩
   | DCC[.] (Eql α)  => ⟨#[α], by grind⟩
   | DCC[.] (refl α) => ⟨#[α], by grind⟩
   | DCC[.] Sort _m => ⟨#[], by grind⟩
@@ -161,7 +161,7 @@ def map_points (e : GenericExpr (τ := τ_c))
   | DCC? ∗ => .tintro
   | DCC? ⊤ => .top
   | DCC? ⊥ => .bot
-  | DCC? (= _x _y) => .eq
+  | DCC? (= _A _x _y) => .eq
   | DCC? (Eql _α)  => .eql
   | DCC? (refl _α) => .refl
   | DCC? Sort m => .sort m
@@ -248,9 +248,9 @@ def set_points (e : GenericExpr (τ := τ_c))
   | DCC? (Bool.Ind motive x y) =>
     have heq : point_arity (DCC? (Bool.Ind motive x y)) = 3 := by grind
     .ind_bool points'[0] points'[1] points'[2]
-  | DCC? (= x y) =>
-    have heq : point_arity (DCC? (= x y)) = 2 := by grind
-    .eq points'[0] points'[1]
+  | DCC? (= A x y) =>
+    have heq : point_arity (DCC? (= A x y)) = 3 := by grind
+    .eq points'[0] points'[1] points'[2]
   | DCC? (Eql α)  =>
     have heq : point_arity (DCC? (Eql α)) = 1 := by grind
     .eql points'[0]
@@ -441,7 +441,7 @@ def max_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? ∗ => 0
   | DCC? ⊤ => 0
   | DCC? ⊥ => 0
-  | DCC? (= x y) => max x.max_hole y.max_hole
+  | DCC? (= A x y) => max A.max_hole (max x.max_hole y.max_hole)
   | DCC? (Eql B)  => B.max_hole
   | DCC? (refl B) => B.max_hole
   | DCC? Sort _m => 0
@@ -497,7 +497,7 @@ def min_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? ∗ => 0
   | DCC? ⊤ => 0
   | DCC? ⊥ => 0
-  | DCC? (= x y) => min x.min_hole y.min_hole
+  | DCC? (= A x y) => min A.min_hole (min x.min_hole y.min_hole)
   | DCC? (Eql B)  => B.min_hole
   | DCC? (refl B) => B.min_hole
   | DCC? Sort _m => 0

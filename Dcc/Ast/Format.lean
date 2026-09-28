@@ -66,7 +66,7 @@ def toFormat.{u} {τ : Type u}
     comb s!",{B.toFormat pretty}" [a.toFormat pretty, b.toFormat pretty]
   | (DCC? (Σ β))             => comb "Σ" [β.toFormat pretty]
   | (DCC? (Σ α β))             => comb "Σ" [α.toFormat pretty, β.toFormat pretty]
-  | (DCC? (= x y))             => comb "=" [x.toFormat pretty, y.toFormat pretty]
+  | (DCC? (= A x y))             => comb "=" [A.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
   | (DCC? (Eql f_α))            => comb "Eql" [f_α.toFormat pretty]
   | (DCC? (refl f_α))           => comb "refl" [f_α.toFormat pretty]
   | (DCC? (∘ f g))               =>

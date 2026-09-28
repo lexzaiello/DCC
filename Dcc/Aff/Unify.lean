@@ -97,9 +97,45 @@ open Dsl in
 def mk_hole_sigma (B₁ B₂ : GenericExpr τ) : GenericExpr τ :=
   .hole ((DCC? (Σ B₁)).max_hole + (DCC? (Σ B₂)).max_hole)
 
--- Assume h_unif_A has its contents boxed (! (≃ A₁ A₂))
+/-
+Note: this is safe since unify is a decision procedure, and the only former of ≃, and coincides with refl, and since ≃ unification is baked into DefEq.
+
+
+(≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g))
+-/
 open Dsl in
-def unif_bang (u v : Level) (A₁ A₂ : GenericExpr τ) (h_unif_A : GenericExpr τ) : GenericExpr τ :=
+def unif_eq_fn (B C x f _f g _g h_unif : GenericExpr τ) : GenericExpr τ :=
+  let goal := DCC? (⊕ (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)) (≃ (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)) ⊥))
+  let hole := GenericExpr.hole (f.max_hole + _f.max_hole + g.max_hole + _g.max_hole)
+
+  let t_can_unify := DCC? (≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole)))
+  let t_cannot_unify := DCC? (≃ (≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole))) ⊥)
+
+  let to_fn_cannot_unify := DCC? (((≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole))) : (? ((Π B C) x))) → ⊥)
+
+  DCC? ((⊕.Ind (Bool.Cases t_can_unify t_cannot_unify)
+               (Bool.Cases (`t_can_unify goal) (`t_cannot_unify goal))
+               (≃.mk (`t_can_unify (`(= ((Π B C) x) f _f) (((refl (Id (? ((Π B C) x)))) (& ((Π B C) x)) (& g)))))
+                     (`t_can_unify (`(= ((Π B C) x) f _f) (((refl (Id (? ((Π B C) x)))) (& ((Π B C) x)) (& f)))))
+                     (`t_can_unify ((refl (Id Sort 0)) (& (! (= ((Π B C) x) f _f)))))
+                     (`t_can_unify ((refl (Id Sort 0)) (& (! (= ((Π B C) x) g _g))))))
+               (≃.mk (∘ (Λ to_fn_cannot_unify
+                           (`to_fn_cannot_unify (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)))
+                           (∘ (Eval to_fn_cannot_unify
+                                    (`to_fn_cannot_unify (≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole))))
+                                    (Id to_fn_cannot_unify))
+                              (Map to_fn_cannot_unify
+                                   (≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole)))
+                                   (Id to_fn_cannot_unify)
+                                   (≃.env (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)))))
+                        (≃.1 (≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole))) ⊥))
+                     (⊥.Ind (`t_cannot_unify (`⊥ (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)))))
+                     (`t_cannot_unify ((refl (Id (? (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g))))) (& (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)))))
+                     (`t_cannot_unify ((refl (Id (Sort 0))) (& ⊥)))))
+        h_unif)
+
+open Dsl in
+def unif_bang (A B A₁ A₂ : GenericExpr τ) (h_unif_A : GenericExpr τ) : GenericExpr τ :=
   let goal := DCC? (⊕ (≃ (! A₁) (! A₂)) (≃ (≃ (! A₁) (! A₂)) ⊥))
 
   DCC? ((⊕.Ind (Bool.Cases (! (≃ A₁ A₂)) (! (≃ (≃ A₁ A₂) ⊥)))
@@ -114,22 +150,35 @@ def unif_bang (u v : Level) (A₁ A₂ : GenericExpr τ) (h_unif_A : GenericExpr
                          ($<> (Eval (≃ A₁ A₂)
                                     (`(≃ A₁ A₂) A₂)
                                     (≃.2 A₁ A₂))))
-                     (`(≃ A₁ A₂) ((refl (Id (Sort u))) (& (! A₁))))
-                     (`(≃ A₁ A₂) ((refl (Id (Sort v))) (& (! A₂))))) -- have (≃ A₁ A₂)
+                     (`(≃ A₁ A₂) ((refl (Id A)) (& (! A₁))))
+                     (`(≃ A₁ A₂) ((refl (Id B)) (& (! A₂))))) -- have (≃ A₁ A₂)
                (≃.mk (Λ (! (≃ (≃ A₁ A₂) ⊥))
                         (`(! (≃ (≃ A₁ A₂) ⊥)) (≃ (! A₁) (! A₂)))
-                        (∘ (Eval (((≃ A₁ A₂) : Sort (max u v)) → ⊥)
-                                 (`(((≃ A₁ A₂) : Sort (max u v)) → ⊥) (≃ A₁ A₂))
-                                 (Id (((≃ A₁ A₂) : Sort (max u v)) → ⊥)))
-                           (Map (((≃ A₁ A₂) : Sort (max u v)) → ⊥)
+                        (∘ (Eval (((≃ A₁ A₂) : (? (≃ A₁ A₂))) → ⊥)
+                                 (`(((≃ A₁ A₂) : (? (≃ A₁ A₂))) → ⊥) (≃ A₁ A₂))
+                                 (Id (((≃ A₁ A₂) : (? (≃ A₁ A₂))) → ⊥)))
+                           (Map (((≃ A₁ A₂) : (? (≃ A₁ A₂))) → ⊥)
                                 (≃ A₁ A₂)
                                 (∘ (≃.1 (≃ A₁ A₂) ⊥) (* (≃ (≃ A₁ A₂) ⊥)))
                                 (∘ (* (! (≃ A₁ A₂)))
                                    (≃.env (! A₁) (! A₂))))))
                      (⊥.Ind (`(! (≃ (≃ A₁ A₂) ⊥)) (`⊥ (≃ (! A₁) (! A₂)))))
-                     (`(! (≃ (≃ A₁ A₂) ⊥)) ((refl (Id (Sort (max u v)))) (& (≃ (! A₁) (A₂)))))
+                     (`(! (≃ (≃ A₁ A₂) ⊥)) ((refl (Id (? (≃ (! A₁) (! A₂))))) (& (≃ (! A₁) (! A₂)))))
                      (`⊥ ((refl (Id (Sort 0))) (& ⊥)))) /- Have (! (≃ (≃ A₁ A₂) ⊥)) -/)
-        h_unif_A)
+        ((⟨,⟩(`(⊕ (≃ A₁ A₂) (≃ (≃ A₁ A₂) ⊥))
+               ((Bool.Ind (`⊤ (`Bool (? (! (≃ A₁ A₂)))))
+                          (`⊤ (`Bool (! (≃ A₁ A₂))))
+                          (`⊤ (`Bool (! (≃ (≃ A₁ A₂) ⊥)))))
+                ∗)) (∘ (Fst ((Bool.Ind (`⊤ (`Bool (? (≃ A₁ A₂))))
+                                       (`⊤ (`Bool (≃ A₁ A₂)))
+                                       (`⊤ (`Bool (≃ (≃ A₁ A₂) ⊥)))) ∗))
+                  (* (! (⊕ (≃ A₁ A₂) ((≃ A₁ A₂) ⊥)))))
+               (Λ (! (⊕ (≃ A₁ A₂) ((≃ A₁ A₂) ⊥)))
+                  (`(! (⊕ (≃ A₁ A₂) ((≃ A₁ A₂) ⊥))) Bool)
+                  (∘ ($<> (Snd ((Bool.Ind (`⊤ (`Bool (? (≃ A₁ A₂))))
+                                  (`⊤ (`Bool (≃ A₁ A₂)))
+                                  (`⊤ (`Bool (≃ (≃ A₁ A₂) ⊥)))) ∗)))
+                     (Fst (`(! (⊕ (≃ A₁ A₂) ((≃ A₁ A₂) ⊥))) Bool))))) (& (& h_unif_A))))
 
 /-
 (Unify _ _ (Σ B₁) (Σ B₂))
@@ -151,7 +200,7 @@ Jsut assoc?
 (, (, f g) (, x y))
 -/
 open Dsl in
-def unif_sigma (u v : Level) (B₁ B₂ : GenericExpr τ) (h_unif_fst : GenericExpr τ) (h_unif_snd : GenericExpr τ) : GenericExpr τ :=
+def unif_sigma (A B B₁ B₂ : GenericExpr τ) (h_unif_fst : GenericExpr τ) (h_unif_snd : GenericExpr τ) : GenericExpr τ :=
   let hole := (mk_hole_sigma B₁ B₂)
 
   let goal := DCC? (⊕ (≃ (Σ B₁) (Σ B₂)) (≃ (≃ (Σ B₁) (Σ B₂)) ⊥))
@@ -239,8 +288,8 @@ def unif_sigma (u v : Level) (B₁ B₂ : GenericExpr τ) (h_unif_fst : GenericE
                                                    (Assoc (Dom B₂) (B₂ hole) (≃ (B₁ hole) (B₂ hole))))) -- Have ((, x y) (≃ (B₁ hole) (B₂ hole)))
                                              (Swap (≃ (B₁ hole) (B₂ hole)) (Σ B₁))))) -- Have (,(≃ (Dom B₁) (Dom B₂)) (, (≃ (B₁ hole) (B₂ hole))) (, x y))
                                   (Assoc (≃ (Dom B₁) (Dom B₂)) (≃ (B₁ hole) (B₂ hole)) (Σ B₁))))
-                            (`equiv_prod ((refl (Id Sort u)) (& (Σ B₁))))
-                            (`equiv_prod ((refl (Id Sort v)) (& (Σ B₂))))))
+                            (`equiv_prod ((refl (Id A)) (& (Σ B₁))))
+                            (`equiv_prod ((refl (Id B)) (& (Σ B₂))))))
                    (≃.mk (Λ' (≃ (≃ (Dom B₁) (Dom B₂)) ⊥)
                              (≃ (Σ B₁) (Σ B₂))
                              (∘ (Eval' (((≃ (Dom B₁) (Dom B₂)) : (? (≃ (Dom B₁) (Dom B₂)))) → ⊥)
@@ -271,7 +320,7 @@ def unif_sigma (u v : Level) (B₁ B₂ : GenericExpr τ) (h_unif_fst : GenericE
                    h_unif_snd)
 
 open Dsl in
-def unif_fn (u v : Level) (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_unif_dom : GenericExpr τ) (h_unif_cod : GenericExpr τ) : GenericExpr τ :=
+def unif_fn (τ₁ τ₂ B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_unif_dom : GenericExpr τ) (h_unif_cod : GenericExpr τ) : GenericExpr τ :=
   let hole := (mk_hole B₁ C₁ x₁ B₂ C₂ x₂)
 
   let goal := DCC? (⊕ (≃ ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) (≃ (≃ ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) ⊥))
@@ -297,8 +346,8 @@ def unif_fn (u v : Level) (B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_un
                                (Λ (× equiv_prod t_fn₂)
                                   (`(× equiv_prod t_fn₁) (B₁ x₁))
                                   (≃.2.apply ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂))))
-                            (`equiv_prod ((refl (Id Sort u)) (& ((Π B₁ C₁) x₁))))
-                            (`equiv_prod ((refl (Id Sort v)) (& ((Π B₂ C₂) x₂))))))
+                            (`equiv_prod ((refl (Id τ₁)) (& ((Π B₁ C₁) x₁))))
+                            (`equiv_prod ((refl (Id τ₂)) (& ((Π B₂ C₂) x₂))))))
                    (≃.mk (∘ (Λ (((≃ (B₁ x₁) (B₂ x₂)) : (? (≃ (B₁ x₁) (B₂ x₂)))) → ⊥)
                                (`(((≃ (B₁ x₁) (B₂ x₂)) : (? (≃ (B₁ x₁) (B₂ x₂)))) → ⊥) (≃ t_fn₁ t_fn₂))
                                (∘ (∘ (∘ (Fst (`(≃ (B₁ x₁) (B₂ x₂)) ((C₁ x₁ hole) (C₂ x₂ hole)))) (≃.env ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))
@@ -335,7 +384,7 @@ A ≃ A. This is due to Id.
 -/
 open Dsl in
 abbrev unif_refl (τ_A₁ τ_A₂ A : GenericExpr τ) : GenericExpr τ :=
-  (DCC? (,(`(Bool) (≃ A A)) (≃.mk (`⊤ (Id A)) (`⊤ (Id A)) (`⊤ ((refl (Id τ_A₁)) (&A))) (`⊤ ((refl (Id τ_A₂)) (&A)))) ∗))
+  (DCC? (,(`(Bool) (≃ A A)) True ((≃.mk (`⊤ (Id A)) (`⊤ (Id A)) (`⊤ ((refl (Id τ_A₁)) (&A))) (`⊤ ((refl (Id τ_A₂)) (&A)))) ∗)))
 
 /-
 (Type u ≃ ⊥) ≃ ⊥
@@ -412,8 +461,8 @@ def ViewApp.complete (h : ViewApp e) : view_app? e = .some h := by
 open Dsl in
 inductive ViewUnify : (e : GenericExpr τ) → Type u
   | refl   : ViewUnify (DCC? (Unify A B X X))
-  | pi     : (hneq : (DCC? ((Π B₁ C₁) x₁)) ≠  (DCC? ((Π B₂ C₂) x₂))) → ViewUnify (DCC? (Unify (Sort u) (Sort v) ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))
-  | sigma  : (hneq : (DCC? (Σ B₁)) ≠ (DCC? (Σ B₂))) → ViewUnify (DCC? (Unify (Sort u) (Sort v) (Σ B₁) (Σ B₂)))
+  | pi     : (hneq : (DCC? ((Π B₁ C₁) x₁)) ≠  (DCC? ((Π B₂ C₂) x₂))) → ViewUnify (DCC? (Unify A B ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))
+  | sigma  : (hneq : (DCC? (Σ B₁)) ≠ (DCC? (Σ B₂))) → ViewUnify (DCC? (Unify _A _B (Σ B₁) (Σ B₂)))
   | prop   : ViewUnify (DCC? (Unify (Sort 1) (Sort 0) (Sort 0) ⊥))
   | type   : ViewUnify (DCC? (Unify (Sort (u + 2)) (Sort 0) (Sort (u + 1)) ⊥))
   | env    : ViewUnify (DCC? ((≃.env τ₁ τ₂) ((≃.mk f_to f_from h_id₁ h_id₂) x)))
@@ -438,8 +487,8 @@ def view_unif? [DecidableEq τ] (e : GenericExpr τ) : Option (ViewUnify e) :=
       heq ▸ .some .refl
     else
       match heq₂ : DCC? (Unify A B X Y) with
-      | DCC? (Unify (Sort _u) (Sort _v) ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) => .some (.pi (by grind))
-      | DCC? (Unify (Sort _u) (Sort _v) (Σ _B₁) (Σ _B₂)) => .some (.sigma (by grind))
+      | DCC? (Unify _A _B ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) => .some (.pi (by grind))
+      | DCC? (Unify _A _B (Σ _B₁) (Σ _B₂)) => .some (.sigma (by grind))
       | DCC? (Unify (Sort 1) (Sort 0) (Sort 0) ⊥) => .some .prop
       | DCC? (Unify (Sort (u + 2)) (Sort 0) (Sort v) ⊥) =>
         if heq : v = u + 1 then
@@ -456,24 +505,36 @@ def ViewUnify.complete {e : GenericExpr τ} [DecidableEq τ] (h : ViewUnify e) :
 inductive RedUnify : (e : GenericExpr τ) → (e' : GenericExpr τ) → Type u
   | refl      : RedAffNorm (unif_refl A B X) ⟨e', hn⟩
     → RedUnify (open Dsl in (DCC? (Unify A B X X))) e'
+  | bang      : (hr₁ : RedAffNorm A₁ ⟨τ₁, hn_τ₁⟩)
+    → (hr₂    : RedAffNorm A₂ ⟨τ₂, hn_τ₂⟩)
+    → (h_unif : RedUnify (open Dsl in (DCC? (Unify (? τ₁) (? τ₂) τ₁ τ₂))) e₁)
+    → RedAffNorm A ⟨A', hn_A⟩
+    → RedAffNorm B ⟨B', hn_B⟩
+    → RedAffNorm (unif_bang A' B' τ₁ τ₂ e₁) ⟨e', hn⟩
+    → (hneq : (open Dsl in (DCC? (! A₁))) ≠ (open Dsl in (DCC? (! A₂))))
+    → RedUnify (open Dsl in (DCC? (Unify A B (! A₁) (! A₂)))) e'
   | fn        : (hr₁ : RedAffNorm (B₁.app x₁) ⟨τ₁, hn_τ₁⟩)
     → (hr₂ : RedAffNorm (B₂.app x₂) ⟨τ₂, hn_τ₂⟩)
     → (hr₃ : RedAffNorm (DCC? (C₁ x₁ #(mk_hole B₁ C₁ x₁ B₂ C₂ x₂))) ⟨τ₃, hn_τ₃⟩)
     → (hr₄ : RedAffNorm (DCC? (C₂ x₂ #(mk_hole B₁ C₁ x₁ B₂ C₂ x₂))) ⟨τ₄, hn_τ₄⟩)
     → (h_unif_dom : RedUnify (open Dsl in (DCC? (Unify (? τ₁) (? τ₂) τ₁ τ₂))) e₁)
     → (h_unif_cod : RedUnify (open Dsl in (DCC? (Unify (? τ₃) (? τ₄) τ₃ τ₄))) e₂)
-    → RedAffNorm (unif_fn u v B₁ C₁ x₁ B₂ C₂ x₂ e₁ e₂) ⟨e', hn⟩
+    → RedAffNorm A ⟨A', hn_A⟩
+    → RedAffNorm B ⟨B', hn_B⟩
+    → RedAffNorm (unif_fn A' B' B₁ C₁ x₁ B₂ C₂ x₂ e₁ e₂) ⟨e', hn⟩
     → (hneq   : (open Dsl in (DCC? ((Π B₁ C₁) x₁))) ≠ (open Dsl in (DCC? ((Π B₂ C₂) x₂))))
-    → RedUnify (open Dsl in (DCC? (Unify (Sort u) (Sort v) ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))) e'
+    → RedUnify (open Dsl in (DCC? (Unify A B ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))) e'
   | sigma     : (hr₁ : RedAffNorm B₁ ⟨τ₁, hn_τ₁⟩)
     → (hr₂ : RedAffNorm B₂ ⟨τ₂, hn_τ₂⟩)
     → (hr₃ : RedAffNorm (DCC? (B₁ #(mk_hole_sigma B₁ B₂))) ⟨τ₃, hn_τ₃⟩)
     → (hr₄ : RedAffNorm (DCC? (B₂ #(mk_hole_sigma B₁ B₂))) ⟨τ₄, hn_τ₄⟩)
     → (h_unif_fst : RedUnify (open Dsl in (DCC? (Unify (? τ₁) (? τ₂) τ₁ τ₂))) e₁)
     → (h_unif_snd : RedUnify (open Dsl in (DCC? (Unify (? τ₃) (? τ₄) τ₃ τ₄))) e₂)
-    → RedAffNorm (unif_sigma u v B₁ B₂ e₁ e₂) ⟨e', hn⟩
+    → RedAffNorm A ⟨A', hn_A⟩
+    → RedAffNorm B ⟨B', hn_B⟩
+    → RedAffNorm (unif_sigma A' B' B₁ B₂ e₁ e₂) ⟨e', hn⟩
     → (hneq   : (open Dsl in (DCC? (Σ B₁))) ≠ (open Dsl in (DCC? (Σ B₂))))
-    → RedUnify (open Dsl in (DCC? (Unify (Sort u) (Sort v) (Σ B₁) (Σ B₂)))) e'
+    → RedUnify (open Dsl in (DCC? (Unify A B (Σ B₁) (Σ B₂)))) e'
   -- ≃ is always formed by ≃.mk. fst and snd fetch the respective proof environment components
   | env       : RedAffNorm x ⟨x', hn⟩ → RedUnify (open Dsl in (DCC? ((≃.env _τ₁ _τ₂) ((≃.mk f_to f_from h_id₁ h_id₂) x)))) x'
   | prop_bot  : RedAffNorm unif_bot_prop ⟨e', hn⟩ → RedUnify (open Dsl in (DCC? (Unify (Sort 1) (Sort 0) (Sort 0) ⊥))) e'
@@ -578,7 +639,25 @@ def step_unify? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : GenericExp
         | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => .some ⟨_, .congr (fun h => by simp_all [h.complete]) h₁ h₂⟩
         | _, _ => .none
       else .none
-    | (DCC? (Unify (Sort u) (Sort v) ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂))) =>
+    | DCC? (Unify A B (! A₁) (! A₂)) =>
+      if heq : (DCC? (! A₁)) = (DCC? (! A₂)) then
+        heq ▸ .some ⟨_, .refl ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+      else
+        let τ₁ := (reduce RedAff A₁).fst
+        let τ₂ := (reduce RedAff A₂).fst
+        have h_dec₁ := decreasing? _ (reduce RedAff A₁).snd.down
+        have h_dec₂ := decreasing? _ (reduce RedAff A₂).snd.down
+        match step_unify? (DCC? (Unify (? τ₁) (? τ₂) τ₁ τ₂)) with
+        | .some ⟨_, h₁⟩ =>
+          .some ⟨_, .bang ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          h₁
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          (by grind)⟩
+        | .none => .none
+    | (DCC? (Unify A B ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂))) =>
       if heq : (DCC? ((Π B₁ C₁) x₁)) = (DCC? ((Π B₂ C₂) x₂)) then
         heq ▸ .some ⟨_, .refl ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
       else
@@ -605,9 +684,11 @@ def step_unify? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : GenericExp
                          h₁
                          h₂
                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                         ⟨reduce_sound rfl, reduce_norm rfl⟩
+                         ⟨reduce_sound rfl, reduce_norm rfl⟩
                          (by grind)⟩
         | _, _ => .none
-    | (DCC? (Unify (Sort u) (Sort v) (Σ B₁) (Σ B₂))) =>
+    | (DCC? (Unify A B (Σ B₁) (Σ B₂))) =>
       if heq : (DCC? (Σ B₁)) = (DCC? (Σ B₂)) then
         heq ▸ .some ⟨_, .refl ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
       else
@@ -633,6 +714,8 @@ def step_unify? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : GenericExp
                          ⟨reduce_sound rfl, reduce_norm rfl⟩
                          h₁
                          h₂
+                         ⟨reduce_sound rfl, reduce_norm rfl⟩
+                         ⟨reduce_sound rfl, reduce_norm rfl⟩
                          ⟨reduce_sound rfl, reduce_norm rfl⟩
                          (by grind)⟩
         | _, _ => .none
@@ -776,7 +859,26 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
     congr!
     any_goals (exact RedAffNorm.complete_fst (by assumption))
     apply RedAffNorm.heq
-  | fn hrt₁ hrt₂ hrt₃ hrt₄ hr₁ hr₂ hrt hneq ih =>
+  | bang hrt₁ hrt₂ hr₁ hrt₃ hrt₄ hrt₅ hneq ih =>
+    unfold step_unify?
+    unfold step_unify_view?
+    simp [unify_refl?]
+    expose_names
+    have hneq₁ : A₂ ≠ A₁ := fun h => by
+      cases h
+      exact (hneq rfl).elim
+    have hneq₂ : A₁ ≠ A₂ := fun h => by
+      cases h
+      exact (hneq rfl).elim
+    simp [hneq₁, hneq₂]
+    cases hrt₁.complete_fst
+    cases hrt₂.complete_fst
+    cases hrt₃.complete_fst
+    cases hrt₄.complete_fst
+    cases hrt₅.complete_fst
+    simp [ih]
+    simp [hrt₁.eq', hrt₂.eq', hrt₃.eq', hrt₄.eq', hrt₅.eq']
+  | fn hrt₁ hrt₂ hrt₃ hrt₄ hr₁ hr₂ hrta hrtb hrt hneq ih =>
     unfold step_unify?
     unfold step_unify_view?
     simp [unify_refl?]
@@ -806,11 +908,13 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
     cases heq_fst₂
     cases heq_fst₃
     cases heq_fst₄
+    cases hrta.complete_fst
+    cases hrtb.complete_fst
     simp [h_unif_cod_ih, ih, heq_fst]
     cases hrt.out_eq
     congr!
     any_goals (apply Eq.symm; apply RedAffNorm.eq')
-  | sigma hrt₁ hrt₂ hrt₃ hrt₄ hr₁ hr₂ hrt hneq ih =>
+  | sigma hrt₁ hrt₂ hrt₃ hrt₄ hr₁ hr₂ hrt hrta hrtb hneq ih =>
     unfold step_unify?
     unfold step_unify_view?
     simp [unify_refl?]
@@ -838,10 +942,11 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
     cases heq_fst₂
     cases heq_fst₃
     cases heq_fst₄
-    simp [h_unif_snd_ih, ih, heq_fst]
-    cases hrt.out_eq
-    congr!
-    any_goals (apply Eq.symm; apply RedAffNorm.eq')
+    cases hrta.complete_fst
+    cases hrtb.complete_fst
+    cases heq_fst
+    simp [h_unif_snd_ih, ih]
+    simp [hrt₁.eq', hrt₂.eq', hrt₃.eq', hrt₄.eq', hrt.eq', hrta.eq', hrtb.eq']
   | congr =>
     unfold step_unify?
     split
@@ -904,6 +1009,8 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
       case h_3 =>
         exact (h .mk).elim
       case h_4 =>
+        exact (h .mk).elim
+      case h_5 =>
         have heq : e_1.is_unif? = none := by
           apply Option.eq_none_iff_forall_ne_some.mpr
           intro h'
@@ -947,6 +1054,8 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
       case h_3 =>
         exact (h .mk).elim
       case h_4 =>
+        exact (h .mk).elim
+      case h_5 =>
         have heq : e_1.is_unif? = none := by
           apply Option.eq_none_iff_forall_ne_some.mpr
           intro h'
@@ -984,9 +1093,9 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
     case h_2 heq' =>
       split
       case h_1 => grind only [point_arity]
-      case h_2 | h_3 =>
+      case h_2 | h_3 | h_4 =>
         exact (h .mk).elim
-      case h_4 =>
+      case h_5 =>
         have heq : e_1.is_unif? = none := by
           apply Option.eq_none_iff_forall_ne_some.mpr
           intro h'

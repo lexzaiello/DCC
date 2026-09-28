@@ -527,6 +527,20 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → DefEq τ_y (DCC? ((Π (Id (Sort u)) (`Sort u (Π (`A Bool) motive))) A))
     → Reduces (DCC? ((Π (Id Sort u) (Π (`A Bool) motive)) A)) τ'
     → Judge (DCC? (Bool.Ind motive x y)) τ'
+  | cong_1  : Judge A (DCC? Sort u)
+    → Judge B (DCC? Sort v)
+    → Reduces (DCC? ((≃ A B) : Sort (max u v)) → ((A : Sort u) → B)) τ'
+    → Judge (DCC? (≃ A B)) τ'
+  | cong_2  : Judge A (DCC? Sort u)
+    → Judge B (DCC? Sort v)
+    → Reduces (DCC? ((≃ A B) : Sort (max u v)) → ((B : Sort u) → A)) τ'
+    → Judge (DCC? (≃ A B)) τ'
+  /-| conv_3  : Judge A (DCC? Sort u)
+    → Judge B (DCC? Sort v)
+    → Reduces (DCC? ((Π (Id (Sort (max u v)))
+                        (`(Sort (max u v))
+                          (`(≃ A B)
+                            ((Π (Id (Sort u)) ()) (! A))))) (≃ A B)))-/
 deriving Repr
 
 -- Replaces everything from `def infer₂` to end-of-file.

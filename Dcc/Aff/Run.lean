@@ -10,7 +10,8 @@ open Dsl
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
   match e with
-  | (DCC? ((Map _A _B _f _g) (,__B _x _y))) => .some ⟨_, ⟨.bimap⟩⟩
+  | (DCC? ((Dup _B _x) (& _env) (& _y))) => .some ⟨_, ⟨.dup⟩⟩
+  | (DCC? ((Map _B _C _f _g) (,__B _x _y))) => .some ⟨_, ⟨.bimap⟩⟩
   | (DCC? ((Assoc _A _B _C) (,_B₁ (,_B₂ _x _y) _z))) => .some ⟨_, ⟨.assoc⟩⟩
   | (DCC? ((Bool.Ind _motive _x _y) _env True)) =>
     .some ⟨_, ⟨.ind_bool_true⟩⟩
@@ -20,16 +21,16 @@ def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{
     .some ⟨_, ⟨.cong_1⟩⟩
   | (DCC? ((≃.2 _A _B) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
     .some ⟨_, ⟨.cong_2⟩⟩
-  | (DCC? ((≃.3 _A _B) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
+  | (DCC? ((≃.3 _A _B) (& ((≃.mk _fX _fY _fidl _fidr) _env₂)))) =>
     .some ⟨_, ⟨.cong_3⟩⟩
-  | (DCC? ((≃.4 _A _B) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
+  | (DCC? ((≃.4 _A _B) (& ((≃.mk _fX _fY _fidl _fidr) _env₂)))) =>
     .some ⟨_, ⟨.cong_4⟩⟩
   | DCC? ((!<> _f) (& _x))                                 => .some ⟨_, ⟨.map⟩⟩
   | DCC? (($<> _f) (& _x))                                 => .some ⟨_, ⟨.fmap⟩⟩
   | DCC? ((* _α) (& _x))                                 => .some ⟨_, ⟨.unbox⟩⟩
   | DCC? ((⟨,⟩_β _M _N) (& _x))                        => .some ⟨_, ⟨.pair⟩⟩
   | (DCC? ((Eval _α _β _x) (,__β _y _z)))            => .some ⟨_, ⟨.evalc⟩⟩
-  | (DCC? ((Eql _f_α) (& _env) (& _x)))              => .some ⟨_, ⟨.eql⟩⟩
+  | (DCC? ((Eql _f_α) _env (,_B _x _y)))              => .some ⟨_, ⟨.eql⟩⟩
   | (DCC? ((`_β _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
   | (DCC? ((Id _α) _x))                                => .some ⟨_, ⟨.id⟩⟩
   | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
@@ -64,7 +65,7 @@ def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{
   | DCC? (Dom (!Λ _A _B _x)) => .some ⟨_, ⟨.curr'τ₀⟩⟩
   | DCC? (Dom (Σ _B _C)) => .some ⟨_, ⟨.sigmaτ₀⟩⟩
   | DCC? (Dom (Π _B _C)) => .some ⟨_, ⟨.piτ₀⟩⟩
-  | DCC? (Dom ((Eql _B) (& _x))) => .some ⟨_, ⟨.eqlτ₁⟩⟩
+  | DCC? (Dom ((Eql _B) _x)) => .some ⟨_, ⟨.eqlτ₁⟩⟩
   | DCC? (Dom ((refl _B) (& _x))) => .some ⟨_, ⟨.reflτ₁⟩⟩
   | DCC? (Dom ((Λ _A _B _x) _y)) => .some ⟨_, ⟨.currτ₁⟩⟩
   | DCC? (Dom ((!Λ _A _B _x) (& _y))) => .some ⟨_, ⟨.curr'τ₁⟩⟩

@@ -20,6 +20,7 @@ def toFormat.{u} {τ : Type u}
   | DCC? False => "False"
   | DCC? Bool => "Bool"
   | DCC? (Bool.Ind motive x y) => comb "Bool.Ind" [motive.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
+  | DCC? (Dup B x) => comb "Dup" [B.toFormat pretty, x.toFormat pretty]
   | DCC? (Map A B x y) => comb "Map" [A.toFormat pretty, B.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
   | DCC? (Assoc A B C) => comb "Assoc" [A.toFormat pretty, B.toFormat pretty, C.toFormat pretty]
   | DCC? (≃.Ind motive x) => comb "≃.Ind" [motive.toFormat pretty, x.toFormat pretty]

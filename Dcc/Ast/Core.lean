@@ -9,6 +9,7 @@ inductive GenericExpr.{u} (τ : Type u) where
   /-
   (≃.Ind motive x) (Cong.Mk toFun invFun h_comp_id h_id_comp) = x toFun invFun h_comp_id h_id_comp
   -/
+  | dup         : GenericExpr τ → GenericExpr τ → GenericExpr τ
   | cong_mk     : GenericExpr τ → GenericExpr τ → GenericExpr τ → GenericExpr τ → GenericExpr τ
   | ind_cong    : GenericExpr τ → GenericExpr τ → GenericExpr τ
   | cong_fn_dom : GenericExpr τ → GenericExpr τ → GenericExpr τ

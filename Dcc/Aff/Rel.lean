@@ -118,9 +118,10 @@ inductive RedAff : GenericExpr τ → GenericExpr τ → Prop
 /-
 Core reductions:
 -/
+  | dup            : RedAff (DCC? ((Dup B x) (& env) (& y))) (DCC? (x env (,(`(B env) (B env)) y y)))
   | bimap          : RedAff (DCC? ((Map A B f g) (,_B x y))) (DCC? (,(`A B) (f x) (g y)))
   | assoc          : RedAff (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x y) z))) (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z)))
-  | eql            : RedAff (DCC? ((Eql f_α) (& env) (& x))) (DCC? (= x x))
+  | eql            : RedAff (DCC? ((Eql f_α) env (,B x y))) (DCC? (= x y))
   | map            : RedAff (DCC? ((!<> f) (& x))) (DCC? (!(f x)))
   | fmap           : RedAff (DCC? (($<> f) (& x))) (DCC? (& (f x)))
   | unbox          : RedAff (DCC? ((* A) (& x))) x
@@ -149,8 +150,8 @@ Core reductions:
                             (DCC? ((cod₂_to_cod₁ env₂) (f (A₁_to_A₂ env x))))
   | cong_1         : RedAff (DCC? ((≃.1 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fX env₂))
   | cong_2         : RedAff (DCC? ((≃.2 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fY env₂))
-  | cong_3         : RedAff (DCC? ((≃.3 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fidl env₂))
-  | cong_4         : RedAff (DCC? ((≃.4 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fidr env₂))
+  | cong_3         : RedAff (DCC? ((≃.3 A B) (& ((≃.mk fX fY fidl fidr) env₂)))) (DCC? (fidl env₂))
+  | cong_4         : RedAff (DCC? ((≃.4 A B) (& ((≃.mk fX fY fidl fidr) env₂)))) (DCC? (fidr env₂))
 /-
 Inner congruences:
 -/
@@ -164,7 +165,7 @@ App congruence:
 /-
 Base combinator function domains
 -/
-  | eqlτ₀    : RedAff (DCC? (Dom (Eql B))) (DCC? (! (Dom B)))
+  | eqlτ₀    : RedAff (DCC? (Dom (Eql B))) (DCC? (Dom B))
   | reflτ₀   : RedAff (DCC? (Dom (refl B))) (DCC? (! (Dom B)))
   | mapτ₀    : RedAff (DCC? (Dom (!<> x))) (DCC? (! (Dom x)))
   | fmapτ₀   : RedAff (DCC? (Dom ($<> x))) (DCC? (! (Dom x)))
@@ -182,7 +183,7 @@ Base combinator function domains
   | curr'τ₀  : RedAff (DCC? (Dom (!Λ A B x))) (DCC? (! (Dom (Uncoup (Unbang (Dom x))))))
   | sigmaτ₀  : RedAff (DCC? (Dom (Σ B C))) (DCC? (Dom C))
   | piτ₀     : RedAff (DCC? (Dom (Π B C))) (DCC? (Dom C))
-  | eqlτ₁    : RedAff (DCC? (Dom ((Eql B) (& x)))) (DCC? (! (B x)))
+  | eqlτ₁    : RedAff (DCC? (Dom ((Eql B) x))) (DCC? (Σ(`(B x) (B x))))
   | reflτ₁   : RedAff (DCC? (Dom ((refl B) (& x)))) (DCC? (! (B x)))
   | currτ₁   : RedAff (DCC? (Dom ((Λ A B x) y))) (DCC? (((Uncoup (Dom x)) y)))
   | curr'τ₁  : RedAff (DCC? (Dom ((!Λ A B x) (& y)))) (DCC? ((! ((Uncoup (Unbang (Dom x))) y))))
@@ -206,12 +207,13 @@ Matchers congruence (matchers only used by the kernel in η-reduction
 /-
 Base combinator 2-argument function domains
 -/
-  | eqlτ₃   : RedAff (DCC? (Dom₂ (Eql B))) (DCC? (!<> B))
+  | eqlτ₃   : RedAff (DCC? (Dom₂ (Eql B))) B
   | reflτ₃  : RedAff (DCC? (Dom₂ (refl B))) (DCC? (!<> B))
   | currτ₃  : RedAff (DCC? (Dom₂ (Λ A B x))) B
   | curr'τ₃ : RedAff (DCC? (Dom₂ (!Λ A B x))) (DCC? (!<> B))
 -- Congruence for Dom₂
   | dom₂₀   : RedAff x x' → RedAff (DCC? (Dom₂ x)) (DCC? (Dom₂ x'))
+
 
 instance (A B : GenericExpr τ) : Repr (PLift (RedAff A B)) := ⟨fun _ _ => "⋯"⟩
 

@@ -26,6 +26,7 @@ scoped syntax "False"                                        : gen_dcc
 scoped syntax "Bool"                                         : gen_dcc
 scoped syntax "(≃" gen_dcc+ ")"                              : gen_dcc
 scoped syntax "(Unify" gen_dcc+ ")"                          : gen_dcc
+scoped syntax "(Dup" gen_dcc+ ")"                            : gen_dcc
 scoped syntax "(Dom" gen_dcc ")"                             : gen_dcc
 scoped syntax "(Cod" gen_dcc ")"                             : gen_dcc
 scoped syntax "(Dom₂" gen_dcc ")"                            : gen_dcc
@@ -105,6 +106,8 @@ open Lean.Syntax in macro_rules
   | `(DCC[$ty:gen_dcc_loc] Bool)                                        => field ty "bool"
   | `(DCC[$ty:gen_dcc_loc] ⊥)                                        => field ty "bot"
   | `(DCC[$ty:gen_dcc_loc] ∗)                                        => field ty "tintro"
+  | `(DCC[$ty:gen_dcc_loc] (Dup $B:gen_dcc $x:gen_dcc))                 => do
+    return mkApp (← field ty "dup") #[← `(DCC[$ty:gen_dcc_loc] $B), ← `(DCC[$ty:gen_dcc_loc] $x)]
   | `(DCC[$ty:gen_dcc_loc] (=$x:gen_dcc $y:gen_dcc))                 => do
     return mkApp (← field ty "eq") #[← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
   | `(DCC[$ty:gen_dcc_loc] (Map $A:gen_dcc $B:gen_dcc $x:gen_dcc $y:gen_dcc)) => do

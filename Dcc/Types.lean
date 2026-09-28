@@ -144,9 +144,71 @@ open Dsl in
   (DCC? ((Π (Id Sort o)
       (`Sort o (Π (!<> f_α) (Λ (! δ) (!<> f_α) (`(Σ (!<> f_α)) Sort 0))))) (! δ)))
 
+/-
+have (, (& env) (& x))
+
+⟨?, ?₂⟩ (& (, env x)) = ( (, env x), ?₂ (, env x) (? (, env x)))
+
+(⟨,⟩ (Id (Σ f_α))
+     (Λ (Σ f_α)
+        (`(Σ f_α) (Σ f_α)))
+        ()))
+
+must make (Eql f_α) env (, x x)
+
+pair shouldn't actually be required. we should be able to do this with Map.
+
+we can duplicate Eql, actually.
+
+duplicate both.
+
+Assume we have
+
+? (, env env) (& x)
+(∘ (Eval ?) (Map Id ?₂)) (, env env) (& x)
+= ? env (? env) (& x)
+
+want (,x x)
+
+λenv&.λx&. ((Eql f_α)
+
+Can we derive Dup? Don't think so.
+We can with curry? No we can't because we can't change what's inside B.
+
+But B is a function
+
+? (& env) (& x)
+
+(& (, env x))
+
+(, (, env x) (, env x))
+(Map' B C f g) (& (, env x)) = (, (f env) (g x))
+this one is dependent.
+
+(⟨,⟩ (Id δ) (Λ ? env ((Λ ? ? ?) env (& x))
+
+But pair is analagous to S, so it should be able to do everything we need.
+
+This is like W combinator:
+(Dup A) (& x) = (,(`A A) x x)
+
+(Dup (Σ f_α)) (& (, env x)) = (,(, env x) (, env x))
+
+(Dup f_α f) (& env) (& x) = f env (,(`(f_α env) (f_α env)) x x)
+-/
+
 open Dsl in
 @[dcc_judge] abbrev refl.type.{u} {τ_c : Type u} (f_α δ : GenericExpr τ_c) (o : Level) : GenericExpr τ_c :=
-  (DCC? ((Π (Id Sort o) (`Sort o (Π (!<> f_α) (Eql f_α)))) (! δ)))
+  (DCC? ((Π (Id Sort o) (`Sort o (Π (!<> f_α) (Dup f_α (Eql f_α))))) (! δ)))
+
+/-
+B : A → Sort u      f : (x : A) → (y : (Σ B (Λ A B (∘ B (Fst B)))) x) → C x y
+-------------------------------
+(Dup B f) : (x : (! A)) → (y : (!<> B) x) → ((Dup B c) x y)
+-/
+open Dsl in
+@[dcc_judge] abbrev Dup.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
+  (DCC? ((Π (Id Sort u) (Π (!<> B) (Dup B C))) (! A)))
 
 /-
 f_α : α → Sort m
@@ -239,5 +301,87 @@ g : ∀ (x : α) (y : β x), γ x y
 open Dsl in
 @[dcc_judge] abbrev Pair.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
   DCC? ((Π (Id Sort u) (`Sort u (∘ (Σ B C) (* A)))) (! A))
+
+/-
+(≃.3 A B) : (eq : (! (≃ A B))) → (x : (! A)) → (= ((≃.2 A B) ((≃.1 A B) x.raw)) x.raw)
+
+have (, (& (_ : (≃ A B))) (& x))
+
+want
+
+(, (, (_ : (≃ A B)) (_ : (≃ A B))) (, x x))
+
+can do this with dup
+
+Swap (, (, (_ : (≃ A B)) (_ : (≃ A B))) (, x x)) = (, (,x x)  (, (_ : (≃ A B)) (_ : (≃ A B))))
+Assoc (, (,x x)  (, (_ : (≃ A B)) (_ : (≃ A B)))) = (, x (, x (, (_ : (≃ A B)) (_ : (≃ A B)))))
+
+-/
+
+open Dsl in
+abbrev Dup' (A : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
+  DCC? ((Dup (Id (Sort u)) (`(Sort u) (Id (Σ (`A A))))) (& A))
+
+open Dsl in
+@[dcc_judge] abbrev Equiv_3.type.{u} {τ_c : Type u} (A B : GenericExpr τ_c) (u v : Level) : GenericExpr τ_c :=
+  let t_to_fun   := DCC? ((A : Sort u) → B)
+  let t_from_fun := DCC? ((B : Sort v) → A)
+  (DCC? ((Π (Id (Sort (max u v)))
+            (`(Sort (max u v))
+               (Π (`(! (≃ A B)) (! A))
+                  (Λ (! (≃ A B))
+                     (! A)
+                     (∘ ((Eql (Id Sort u)) A)
+                        (∘ (Swap A A)
+                           (∘ (∘ (Map A
+                                      A
+                                      (Id A)
+                                      (∘ (∘ (∘ (Eval t_from_fun (`t_from_fun B) (Id (t_from_fun)))
+                                               (Map t_from_fun
+                                                    B
+                                                    (Id t_from_fun)
+                                                    (Eval t_to_fun (`t_to_fun A) (Id t_to_fun))))
+                                            (Assoc t_from_fun t_to_fun A))
+                                         (Swap A (Σ (`t_from_fun t_to_fun))) /- Have (, x (, from_fun to_fun)) -/)) -- have (, x (, x (, from_fun to_fun)))
+                                 (Assoc A A (Σ (`t_from_fun t_to_fun)))) -- have (, (, x x) (, from_fun to_fun))
+                              (Map (Σ (`A A))
+                                   (Σ (`t_from_fun t_to_fun))
+                                   #(Dup' A u)
+                                   (∘ (Map (t_from_fun)
+                                           (t_to_fun)
+                                           (≃.2 A B)
+                                           (≃.1 A B))
+                                      #(Dup' (DCC? (≃ A B)) (max u v))))))))))) (! (≃ A B))))
+
+open Dsl in
+@[dcc_judge] abbrev Equiv_4.type.{u} {τ_c : Type u} (A B : GenericExpr τ_c) (u v : Level) : GenericExpr τ_c :=
+  let t_to_fun   := DCC? ((A : Sort u) → B)
+  let t_from_fun := DCC? ((B : Sort v) → A)
+  (DCC? ((Π (Id (Sort (max u v)))
+            (`(Sort (max u v))
+               (Π (`(! (≃ A B)) (! B))
+                  (Λ (! (≃ A B))
+                     (! B)
+                     (∘ ((Eql (Id Sort u)) B)
+                        (∘ (Swap B B)
+                           (∘ (∘ (Map B
+                                      B
+                                      (Id B)
+                                      (∘ (∘ (∘ (Eval t_to_fun (`t_to_fun A) (Id (t_to_fun)))
+                                               (Map t_to_fun
+                                                    A
+                                                    (Id t_to_fun)
+                                                    (Eval t_from_fun (`t_from_fun B) (Id t_from_fun))))
+                                            (Assoc t_to_fun t_from_fun A))
+                                         (Swap B (Σ (`t_to_fun t_from_fun))) /- Have (, x (, from_fun to_fun)) -/)) -- have (, x (, x (, from_fun to_fun)))
+                                 (Assoc B B (Σ (`t_to_fun t_from_fun)))) -- have (, (, x x) (, from_fun to_fun))
+                              (Map (Σ (`B B))
+                                   (Σ (`t_to_fun t_from_fun))
+                                   #(Dup' B u)
+                                   (∘ (Map (t_to_fun)
+                                           (t_from_fun)
+                                           (≃.1 A B)
+                                           (≃.2 A B))
+                                      #(Dup' (DCC? (≃ A B)) (max u v))))))))))) (! (≃ A B))))
 
 end GenericExpr

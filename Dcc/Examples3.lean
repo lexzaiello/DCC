@@ -44,9 +44,14 @@ Pretty sure this is just because we need the top-level env rule.
 #eval (DCC (Id Sort 1)).infer'
 #eval (DCC (Λ (Sort 1) (` (Sort 1) Sort 1) (Fst (` (Sort 1) Sort 1)))).infer'
 
+open Dsl in
+#eval (GenericExpr.reduce_all (DCC (Unify (Sort 0) (Sort 0) (= ((Π (Id (Sort 2)) (`(Sort 2) (`(Sort 1) (Sort 1)))) (Sort 1)) (Id (Sort 1))
+            (∘ (Id (Sort 1))
+               (Id (Sort 1)))) (= ((Π (Id (Sort 2)) (`(Sort 2) (`(Sort 1) (Sort 1)))) (Sort 1)) (Id (Sort 1)) (Id (Sort 1))))))
+
 #eval (DCC (∘ (Id (Sort 1)) (Id (Sort 1)))).infer'
 open Dsl in
-#eval (DCC ((Id ((= (Id (Sort 1)) (∘ (Id (Sort 1)) (Id (Sort 1)))))) ((refl (Id (Sort 2))) (& ((Sort 1 : Sort 2) → Sort 1)) (& (Id (Sort 1)))))).infer'
+#eval (DCC ((Id ((= ((Π (Id (Sort 2)) (`(Sort 2) (`(Sort 1) (Sort 1)))) (Sort 1)) (Id (Sort 1)) (∘ (Id (Sort 1)) (Id (Sort 1)))))) ((refl (Id (Sort 2))) (& ((Sort 1 : Sort 2) → Sort 1)) (& (Id (Sort 1)))))).infer'
 
 def mk_test_pair : Expr :=
   DCC ((⟨,⟩(`(Sort 1) (`(Sort 1) Sort 1)) (Id Sort 1) (Λ Sort 1 (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1)))))

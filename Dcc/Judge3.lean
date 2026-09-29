@@ -800,9 +800,9 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
       | .ok ⟨t_y, ht₂⟩ =>
         match t_x.def_eq? t_y with
         | .ok h =>
-          match τ₂.def_eq A with
-          | .ok ⟨_, h₃⟩ =>
-            .ok ⟨_, .eq ht₁ ht₂ h₃ h⟩
+          match def_eq? t_y A with
+          | .ok h₃ =>
+            .ok ⟨_, .eq ht₁ ht₂ h h₃⟩
           | .error e => .error (.def_eq e)
         | .error e => .error (.def_eq e)
       | .error ε => .error (.sub y ε)

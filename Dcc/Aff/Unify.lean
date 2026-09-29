@@ -103,35 +103,45 @@ Note: this is safe since unify is a decision procedure, and the only former of �
 
 (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g))
 -/
+
 open Dsl in
-def unif_eq_fn (B C x f _f g _g h_unif : GenericExpr τ) : GenericExpr τ :=
-  let goal := DCC? (⊕ (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)) (≃ (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)) ⊥))
-  let hole := GenericExpr.hole (f.max_hole + _f.max_hole + g.max_hole + _g.max_hole)
+def unif_eq_fn_hole (B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g : GenericExpr τ) : GenericExpr τ :=
+  GenericExpr.hole ((DCC? (= ((Π B₁ C₁) x₁) f _f)).max_hole + (DCC? (= ((Π B₂ C₂) x₂) g _g)).max_hole)
 
-  let t_can_unify := DCC? (≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole)))
-  let t_cannot_unify := DCC? (≃ (≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole))) ⊥)
+open Dsl in
+def unif_eq_fn_preimage (C₁ x₁ C₂ x₂ f _f g _g hole : GenericExpr τ) : GenericExpr τ :=
+  DCC? (Unify (Sort 0) (Sort 0) (= (C₁ x₁ hole) (f hole) (_f hole)) (= (C₂ x₂ hole) (g hole) (_g hole)))
 
-  let to_fn_cannot_unify := DCC? (((≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole))) : (? ((Π B C) x))) → ⊥)
+open Dsl in
+def unif_eq_fn (B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g hole h_unif : GenericExpr τ) : GenericExpr τ :=
+  let goal := DCC? (⊕ (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)) (≃ (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)) ⊥))
+
+  let t_can_unify := DCC? (≃ (= (C₁ x₁ hole) (f hole) (f hole)) (= (C₂ x₂ hole) (g hole) (g hole)))
+  let t_cannot_unify := DCC? (≃ (≃ (= (C₁ x₁ hole) (f hole) (f hole)) (= (C₂ x₂ hole) (g hole) (g hole))) ⊥)
+
+  let to_fn_cannot_unify := DCC? (((≃ (= (C₁ x₁ hole) (f hole) (f hole)) (= (C₂ x₂ hole) (g hole) (g hole))) : (? ((Π B₁ C₁) x₁))) → ⊥)
 
   DCC? ((⊕.Ind (Bool.Cases t_can_unify t_cannot_unify)
                (Bool.Cases (`t_can_unify goal) (`t_cannot_unify goal))
-               (≃.mk (`t_can_unify (`(= ((Π B C) x) f _f) (((refl (Id (? ((Π B C) x)))) (& ((Π B C) x)) (& g)))))
-                     (`t_can_unify (`(= ((Π B C) x) f _f) (((refl (Id (? ((Π B C) x)))) (& ((Π B C) x)) (& f)))))
-                     (`t_can_unify ((refl (Id Sort 0)) (& (! (= ((Π B C) x) f _f)))))
-                     (`t_can_unify ((refl (Id Sort 0)) (& (! (= ((Π B C) x) g _g))))))
-               (≃.mk (∘ (Λ to_fn_cannot_unify
-                           (`to_fn_cannot_unify (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)))
+               (∘ ((Λ Bool (`Bool (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g))) (Id (Σ (`Bool (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)))))) True)
+                  (≃.mk (`t_can_unify (`(= ((Π B₁ C₁) x₁) f _f) (((refl (Id (? ((Π B₂ C₂) x₂)))) (& ((Π B₂ C₂) x₂)) (& g)))))
+                     (`t_can_unify (`(= ((Π B₁ C₁) x₁) g _g) (((refl (Id (? ((Π B₁ C₁) x₁)))) (& ((Π B₁ C₁) x₁)) (& f)))))
+                     (`t_can_unify ((refl (Id Sort 0)) (& (! (= ((Π B₁ C₁) x₁) f _f)))))
+                     (`t_can_unify ((refl (Id Sort 0)) (& (! (= ((Π B₂ C₂) x₂) g _g)))))))
+               (∘ ((Λ Bool (`Bool (≃ (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)) ⊥)) (Id (Σ (`Bool (≃ (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)) ⊥))))) False)
+                  (≃.mk (∘ (Λ to_fn_cannot_unify
+                           (`to_fn_cannot_unify (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)))
                            (∘ (Eval to_fn_cannot_unify
-                                    (`to_fn_cannot_unify (≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole))))
+                                    (`to_fn_cannot_unify (≃ (= (C₁ x₁ hole) (f hole) (f hole)) (= (C₂ x₂ hole) (g hole) (g hole))))
                                     (Id to_fn_cannot_unify))
                               (Map to_fn_cannot_unify
-                                   (≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole)))
+                                   (≃ (= (C₁ x₁ hole) (f hole) (f hole)) (= (C₂ x₂ hole) (g hole) (g hole)))
                                    (Id to_fn_cannot_unify)
-                                   (≃.env (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)))))
-                        (≃.1 (≃ (= (C x hole) (f hole) (f hole)) (= (C x hole) (g hole) (g hole))) ⊥))
-                     (⊥.Ind (`t_cannot_unify (`⊥ (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)))))
-                     (`t_cannot_unify ((refl (Id (? (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g))))) (& (≃ (= ((Π B C) x) f _f) (= ((Π B C) x) g _g)))))
-                     (`t_cannot_unify ((refl (Id (Sort 0))) (& ⊥)))))
+                                   (≃.env (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)))))
+                        (≃.1 (≃ (= (C₁ x₁ hole) (f hole) (f hole)) (= (C₂ x₂ hole) (g hole) (g hole))) ⊥))
+                     (⊥.Ind (`t_cannot_unify (`⊥ (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)))))
+                     (`t_cannot_unify ((refl (Id (? (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g))))) (& (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)))))
+                     (`t_cannot_unify ((refl (Id (Sort 0))) (& ⊥))))))
         h_unif)
 
 open Dsl in
@@ -463,6 +473,7 @@ inductive ViewUnify : (e : GenericExpr τ) → Type u
   | refl   : ViewUnify (DCC? (Unify A B X X))
   | pi     : (hneq : (DCC? ((Π B₁ C₁) x₁)) ≠  (DCC? ((Π B₂ C₂) x₂))) → ViewUnify (DCC? (Unify A B ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))
   | sigma  : (hneq : (DCC? (Σ B₁)) ≠ (DCC? (Σ B₂))) → ViewUnify (DCC? (Unify _A _B (Σ B₁) (Σ B₂)))
+  | eq     : (DCC? (= A X₁ Y₁)) ≠ (DCC? (= B X₂ Y₂)) → ViewUnify (DCC? (Unify τ₁ τ₂ (= A X₁ Y₁) (= B X₂ Y₂)))
   | prop   : ViewUnify (DCC? (Unify (Sort 1) (Sort 0) (Sort 0) ⊥))
   | type   : ViewUnify (DCC? (Unify (Sort (u + 2)) (Sort 0) (Sort (u + 1)) ⊥))
   | env    : ViewUnify (DCC? ((≃.env τ₁ τ₂) ((≃.mk f_to f_from h_id₁ h_id₂) x)))
@@ -488,6 +499,7 @@ def view_unif? [DecidableEq τ] (e : GenericExpr τ) : Option (ViewUnify e) :=
     else
       match heq₂ : DCC? (Unify A B X Y) with
       | DCC? (Unify _A _B ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) => .some (.pi (by grind))
+      | DCC? (Unify τ₁ τ₂ (= A X₁ Y₁) (= B X₂ Y₂)) => .some (.eq (by grind))
       | DCC? (Unify _A _B (Σ _B₁) (Σ _B₂)) => .some (.sigma (by grind))
       | DCC? (Unify (Sort 1) (Sort 0) (Sort 0) ⊥) => .some .prop
       | DCC? (Unify (Sort (u + 2)) (Sort 0) (Sort v) ⊥) =>
@@ -500,20 +512,32 @@ def view_unif? [DecidableEq τ] (e : GenericExpr τ) : Option (ViewUnify e) :=
 def ViewUnify.complete {e : GenericExpr τ} [DecidableEq τ] (h : ViewUnify e) : view_unif? e = .some h := by
   cases h
   any_goals simp [view_unif?]
-  case pi | sigma => grind
+  case pi | sigma | eq => grind
 
 inductive RedUnify : (e : GenericExpr τ) → (e' : GenericExpr τ) → Type u
-  | refl      : RedAffNorm (unif_refl A B X) ⟨e', hn⟩
-    → RedUnify (open Dsl in (DCC? (Unify A B X X))) e'
-  | bang      : (hr₁ : RedAffNorm A₁ ⟨τ₁, hn_τ₁⟩)
+  | refl      : RedAffNorm X₁ ⟨X, hn_x₁⟩
+    → RedAffNorm X₂ ⟨X, hn_x₂⟩
+    → RedAffNorm (unif_refl A B X) ⟨e', hn⟩
+    → RedUnify (open Dsl in (DCC? (Unify A B X₁ X₂))) e'
+  | fn_eq     : RedAffNorm X₁ ⟨(open Dsl in (DCC? (= ((Π B₁ C₁) x₁) f _f))), hn_x₁⟩
+    → RedAffNorm X₂ ⟨(open Dsl in (DCC? (= ((Π B₂ C₂) x₂) g _g))), hn_x₂⟩
+    → (h_unify : RedUnify (unif_eq_fn_preimage C₁ x₁ C₂ x₂ f _f g _g (unif_eq_fn_hole B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g)) e₁)
+    → RedAffNorm (unif_eq_fn B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g (unif_eq_fn_hole B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g) e₁) ⟨e', hn⟩
+    → (hneq : (open Dsl in (DCC? (= ((Π B₁ C₁) x₁) f _f))) ≠ (open Dsl in (DCC? (= ((Π B₂ C₂) x₂) g _g))))
+    → RedUnify (open Dsl in (DCC? (Unify τ₁ τ₂ X₁ X₂))) e'
+  | bang      : RedAffNorm X₁ ⟨(open Dsl in (DCC? (! A₁))), hn_x₁⟩
+    → RedAffNorm X₂ ⟨(open Dsl in (DCC? (! A₂))), hn_x₂⟩
+    → (hr₁ : RedAffNorm A₁ ⟨τ₁, hn_τ₁⟩)
     → (hr₂    : RedAffNorm A₂ ⟨τ₂, hn_τ₂⟩)
     → (h_unif : RedUnify (open Dsl in (DCC? (Unify (? τ₁) (? τ₂) τ₁ τ₂))) e₁)
     → RedAffNorm A ⟨A', hn_A⟩
     → RedAffNorm B ⟨B', hn_B⟩
     → RedAffNorm (unif_bang A' B' τ₁ τ₂ e₁) ⟨e', hn⟩
     → (hneq : (open Dsl in (DCC? (! A₁))) ≠ (open Dsl in (DCC? (! A₂))))
-    → RedUnify (open Dsl in (DCC? (Unify A B (! A₁) (! A₂)))) e'
-  | fn        : (hr₁ : RedAffNorm (B₁.app x₁) ⟨τ₁, hn_τ₁⟩)
+    → RedUnify (open Dsl in (DCC? (Unify A B X₁ X₂))) e'
+  | fn        : RedAffNorm X₁ ⟨(open Dsl in (DCC? ((Π B₁ C₁) x₁))), hn_x₁⟩
+    → RedAffNorm X₂ ⟨(open Dsl in (DCC? ((Π B₂ C₂) x₂))), hn_x₂⟩
+    → (hr₁ : RedAffNorm (B₁.app x₁) ⟨τ₁, hn_τ₁⟩)
     → (hr₂ : RedAffNorm (B₂.app x₂) ⟨τ₂, hn_τ₂⟩)
     → (hr₃ : RedAffNorm (DCC? (C₁ x₁ #(mk_hole B₁ C₁ x₁ B₂ C₂ x₂))) ⟨τ₃, hn_τ₃⟩)
     → (hr₄ : RedAffNorm (DCC? (C₂ x₂ #(mk_hole B₁ C₁ x₁ B₂ C₂ x₂))) ⟨τ₄, hn_τ₄⟩)
@@ -523,8 +547,10 @@ inductive RedUnify : (e : GenericExpr τ) → (e' : GenericExpr τ) → Type u
     → RedAffNorm B ⟨B', hn_B⟩
     → RedAffNorm (unif_fn A' B' B₁ C₁ x₁ B₂ C₂ x₂ e₁ e₂) ⟨e', hn⟩
     → (hneq   : (open Dsl in (DCC? ((Π B₁ C₁) x₁))) ≠ (open Dsl in (DCC? ((Π B₂ C₂) x₂))))
-    → RedUnify (open Dsl in (DCC? (Unify A B ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))) e'
-  | sigma     : (hr₁ : RedAffNorm B₁ ⟨τ₁, hn_τ₁⟩)
+    → RedUnify (open Dsl in (DCC? (Unify A B X₁ X₂))) e'
+  | sigma     : RedAffNorm X₁ ⟨(open Dsl in (DCC? (Σ B₁))), hn_x₁⟩
+    → RedAffNorm X₂ ⟨(open Dsl in (DCC? (Σ B₂))), hn_x₂⟩
+    → (hr₁ : RedAffNorm B₁ ⟨τ₁, hn_τ₁⟩)
     → (hr₂ : RedAffNorm B₂ ⟨τ₂, hn_τ₂⟩)
     → (hr₃ : RedAffNorm (DCC? (B₁ #(mk_hole_sigma B₁ B₂))) ⟨τ₃, hn_τ₃⟩)
     → (hr₄ : RedAffNorm (DCC? (B₂ #(mk_hole_sigma B₁ B₂))) ⟨τ₄, hn_τ₄⟩)
@@ -534,11 +560,15 @@ inductive RedUnify : (e : GenericExpr τ) → (e' : GenericExpr τ) → Type u
     → RedAffNorm B ⟨B', hn_B⟩
     → RedAffNorm (unif_sigma A' B' B₁ B₂ e₁ e₂) ⟨e', hn⟩
     → (hneq   : (open Dsl in (DCC? (Σ B₁))) ≠ (open Dsl in (DCC? (Σ B₂))))
-    → RedUnify (open Dsl in (DCC? (Unify A B (Σ B₁) (Σ B₂)))) e'
+    → RedUnify (open Dsl in (DCC? (Unify A B X₁ X₂))) e'
   -- ≃ is always formed by ≃.mk. fst and snd fetch the respective proof environment components
   | env       : RedAffNorm x ⟨x', hn⟩ → RedUnify (open Dsl in (DCC? ((≃.env _τ₁ _τ₂) ((≃.mk f_to f_from h_id₁ h_id₂) x)))) x'
-  | prop_bot  : RedAffNorm unif_bot_prop ⟨e', hn⟩ → RedUnify (open Dsl in (DCC? (Unify (Sort 1) (Sort 0) (Sort 0) ⊥))) e'
-  | type_bot  : RedAffNorm (unif_bot_type u) ⟨e', hn⟩ → RedUnify (open Dsl in (DCC? (Unify (Sort (u + 2)) (Sort 0) (Sort (u + 1)) ⊥))) e'
+  | prop_bot  : RedAffNorm X₁ ⟨DCC? Sort 0, hn_x₁⟩
+    → RedAffNorm X₂ ⟨DCC? ⊥, hn_x₂⟩
+    → RedAffNorm unif_bot_prop ⟨e', hn⟩ → RedUnify (open Dsl in (DCC? (Unify τ₁ τ₂ X₁ X₂))) e'
+  | type_bot  : RedAffNorm X₁ ⟨DCC? Sort (u + 1), hn_x₁⟩
+    → RedAffNorm X₂ ⟨DCC? ⊥, hn_x₂⟩
+    → RedAffNorm (unif_bot_type u) ⟨e', hn⟩ → RedUnify (open Dsl in (DCC? (Unify τ₁ τ₂ X₁ X₂))) e'
   | congr     : (ViewUnify (DCC? (f x)) → False) → RedUnify f f' → RedUnify x x' → RedUnify (open Dsl in (DCC? (f x))) (open Dsl in (DCC? (f' x')))
   | no_step   : (IsUnify e → False) → (heq_ar : point_arity e = 0) → (hn_app : ViewApp e → False) → RedUnify e e
   | point₁    : (IsUnify e → False) → (h : point_arity e = 1) → RedUnify (points e)[0] p' → RedUnify e (e.set_points ⟨#[p'], by grind⟩)
@@ -550,8 +580,8 @@ deriving Repr
 def unify_refl? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × RedUnify e e') :=
   open Dsl in match e with
   | (DCC? (Unify _A _B X X₂)) =>
-    if heq : X₂ = X then
-      heq ▸ .some ⟨_, .refl ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+    if heq : (reduce RedAff X₂).fst = (reduce RedAff X).fst then
+      .some ⟨_, .refl ⟨reduce_sound rfl, reduce_norm rfl⟩ (RedAffNorm.mk (reduce_sound_fst heq) (reduce_norm_fst heq)) ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
     else .none
   | _ => .none
 
@@ -561,11 +591,19 @@ def step_unify_view? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : Gener
   | .none =>
     open Dsl in match e with
     | (DCC? ((≃.env _τ₁ _τ₂) ((≃.mk _f_to _f_from _h_id₁ _h_id₂) _x))) => .some ⟨_, .env ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
-    | (DCC? (Unify (Sort 1) (Sort 0) (Sort 0) ⊥)) => .some ⟨_, .prop_bot ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
-    | (DCC? (Unify (Sort (u + 2)) (Sort 0) (Sort (u₂ + 1)) ⊥)) =>
-      if heq : u₂ = u then
-        heq ▸ .some ⟨_, .type_bot ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
-      else .none
+    | DCC? (Unify _τ₁ _τ₂ A B) =>
+      match heq₁ : (reduce RedAff A).fst with
+      | DCC? (Sort 0) =>
+        match heq₂ : (reduce RedAff B).fst with
+        | DCC? ⊥ =>
+          .some ⟨_, .prop_bot ⟨reduce_sound_fst heq₁, reduce_norm_fst heq₁⟩ ⟨reduce_sound_fst heq₂, reduce_norm_fst heq₂⟩ ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+        | _ => .none
+      | DCC? (Sort (_u + 1)) =>
+        match heq₂ : (reduce RedAff B).fst with
+        | DCC? ⊥ =>
+          .some ⟨_, .type_bot ⟨reduce_sound_fst heq₁, reduce_norm_fst heq₁⟩ ⟨reduce_sound_fst heq₂, reduce_norm_fst heq₂⟩ ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+        | _ => .none
+      | _ => .none
     | _ => .none
 
 /-def size_unify (e : GenericExpr τ) : ℕ :=
@@ -639,9 +677,134 @@ def step_unify? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : GenericExp
         | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ => .some ⟨_, .congr (fun h => by simp_all [h.complete]) h₁ h₂⟩
         | _, _ => .none
       else .none
+    | DCC? (Unify τ₁ τ₂ A B) =>
+      if heq_refl : (reduce RedAff A).fst = (reduce RedAff B).fst then
+        .some ⟨_, .refl (RedAffNorm.mk (reduce_sound_fst heq_refl) (reduce_norm_fst heq_refl)) ⟨reduce_sound rfl, reduce_norm rfl⟩ ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+      else match heq₁ : (reduce RedAff A).fst with
+      | DCC? (= ((Π B₁ C₁) x₁) f _f) =>
+        match heq₂ : (reduce RedAff B).fst with
+        | DCC? (= ((Π B₂ C₂) x₂) g _g) =>
+          have h_size_eq₁ : (unif_eq_fn_hole B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g).size = 0 := by
+            unfold unif_eq_fn_hole
+            grind
+          have h_dec₁ : (unif_eq_fn_preimage C₁ x₁ C₂ x₂ f _f g _g (unif_eq_fn_hole B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g)).size < (DCC? (Unify τ₁ τ₂ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g))).size := by
+            unfold unif_eq_fn_preimage
+            simp [size, h_size_eq₁]
+            grind
+          match step_unify? (unif_eq_fn_preimage C₁ x₁ C₂ x₂ f _f g _g (unif_eq_fn_hole B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g)) with
+          | .some ⟨_, h₁⟩ =>
+            .some ⟨_, .fn_eq ⟨reduce_sound_fst heq₁, reduce_norm_fst heq₁⟩
+                             ⟨reduce_sound_fst heq₂, reduce_norm_fst heq₂⟩
+                             h₁
+                             ⟨reduce_sound rfl, reduce_norm rfl⟩
+                             (by grind)⟩
+          | .none => .none
+        | _ => .none
+      | DCC? (! A₁) =>
+        match heq₂ : (reduce RedAff B).fst with
+        | DCC? (! A₂) =>
+          let τ₁ := (reduce RedAff A₁).fst
+          let τ₂ := (reduce RedAff A₂).fst
+          have h_dec₁ := decreasing? _ (reduce RedAff A₁).snd.down
+          have h_dec₂ := decreasing? _ (reduce RedAff A₂).snd.down
+          match step_unify? (DCC? (Unify (? τ₁) (? τ₂) τ₁ τ₂)) with
+          | .some ⟨_, h₁⟩ =>
+            .some ⟨_, .bang ⟨reduce_sound_fst heq₁, reduce_norm_fst heq₁⟩
+                            ⟨reduce_sound_fst heq₂, reduce_norm_fst heq₂⟩
+                            ⟨reduce_sound rfl, reduce_norm rfl⟩
+                            ⟨reduce_sound rfl, reduce_norm rfl⟩
+                            h₁
+                            ⟨reduce_sound rfl, reduce_norm rfl⟩
+                            ⟨reduce_sound rfl, reduce_norm rfl⟩
+                            ⟨reduce_sound rfl, reduce_norm rfl⟩
+                            (by grind)⟩
+          | .none => .none
+        | _ => .none
+      | DCC? ((Π B₁ C₁) x₁) =>
+        match heq₂ : (reduce RedAff B).fst with
+        | DCC? ((Π B₂ C₂) x₂) =>
+          let hole := (mk_hole B₁ C₁ x₁ B₂ C₂ x₂)
+          let τ₁   := (reduce RedAff (DCC? (B₁ x₁))).fst
+          let τ₂   := (reduce RedAff (DCC? (B₂ x₂))).fst
+          let τ₃   := (reduce RedAff (DCC? (C₁ x₁ hole))).fst
+          let τ₄   := (reduce RedAff (DCC? (C₂ x₂ hole))).fst
+
+          have h_dec₁ := decreasing? _ (reduce RedAff (DCC? (B₁ x₁))).snd.down
+          have h_dec₂ := decreasing? _ (reduce RedAff (DCC? (B₂ x₂))).snd.down
+          have h_dec₃ := decreasing? _ (reduce RedAff (DCC? (C₁ x₁ hole))).snd.down
+          have h_dec₄ := decreasing? _ (reduce RedAff (DCC? (C₂ x₂ hole))).snd.down
+
+          match step_unify? (DCC? (Unify (? τ₁) (? τ₂) τ₁ τ₂)), step_unify? (DCC? (Unify (? τ₃)
+                                                           (? τ₄)
+                                                           τ₃
+                                                           τ₄)) with
+          | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+            .some ⟨_, .fn ⟨reduce_sound_fst heq₁, reduce_norm_fst heq₁⟩
+                          ⟨reduce_sound_fst heq₂, reduce_norm_fst heq₂⟩
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          h₁
+                          h₂
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          ⟨reduce_sound rfl, reduce_norm rfl⟩
+                          (by grind)⟩
+          | _, _ => .none
+        | _ => .none
+      | DCC? (Σ B₁) =>
+        match heq₂ : (reduce RedAff B).fst with
+        | DCC? (Σ B₂) =>
+          let hole := (mk_hole_sigma B₁ B₂)
+          let τ₁   := (reduce RedAff B₁).fst
+          let τ₂   := (reduce RedAff B₂).fst
+          let τ₃   := (reduce RedAff (DCC? (B₁ hole))).fst
+          let τ₄   := (reduce RedAff (DCC? (B₂ hole))).fst
+
+          have h_dec₁ := decreasing? _ (reduce RedAff B₁).snd.down
+          have h_dec₂ := decreasing? _ (reduce RedAff B₂).snd.down
+          have h_dec₃ := decreasing? _ (reduce RedAff (DCC? (B₁ hole))).snd.down
+          have h_dec₄ := decreasing? _ (reduce RedAff (DCC? (B₂ hole))).snd.down
+
+          match step_unify? (DCC? (Unify (? τ₁) (? τ₂) τ₁ τ₂)), step_unify? (DCC? (Unify (? τ₃)
+                                                           (? τ₄)
+                                                           τ₃
+                                                           τ₄)) with
+          | .some ⟨_, h₁⟩, .some ⟨_, h₂⟩ =>
+            .some ⟨_, .sigma ⟨reduce_sound_fst heq₁, reduce_norm_fst heq₁⟩
+                             ⟨reduce_sound_fst heq₂, reduce_norm_fst heq₂⟩
+                             ⟨reduce_sound rfl, reduce_norm rfl⟩
+                             ⟨reduce_sound rfl, reduce_norm rfl⟩
+                             ⟨reduce_sound rfl, reduce_norm rfl⟩
+                             ⟨reduce_sound rfl, reduce_norm rfl⟩
+                             h₁
+                             h₂
+                             ⟨reduce_sound rfl, reduce_norm rfl⟩
+                             ⟨reduce_sound rfl, reduce_norm rfl⟩
+                             ⟨reduce_sound rfl, reduce_norm rfl⟩
+                             (by grind)⟩
+          | _, _ => .none
+        | _ => .none
+      | _ => .none
+    /-| DCC? (Unify τ₁ τ₂ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)) =>
+      if heq : (reduce RedAff (DCC? (= ((Π B₁ C₁) x₁) f _f))).fst = (reduce RedAff (DCC? (= ((Π B₂ C₂) x₂) g _g))).fst then
+        .some ⟨_, .refl (RedAffNorm.mk (reduce_sound_fst heq) (reduce_norm_fst heq)) ⟨reduce_sound rfl, reduce_norm rfl⟩ ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+      else
+        have h_size_eq₁ : (unif_eq_fn_hole B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g).size = 0 := by
+          unfold unif_eq_fn_hole
+          grind
+        have h_dec₁ : (unif_eq_fn_preimage C₁ x₁ C₂ x₂ f _f g _g (unif_eq_fn_hole B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g)).size < (DCC? (Unify τ₁ τ₂ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g))).size := by
+          unfold unif_eq_fn_preimage
+          simp [size, h_size_eq₁]
+          grind
+        match step_unify? (unif_eq_fn_preimage C₁ x₁ C₂ x₂ f _f g _g (unif_eq_fn_hole B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g)) with
+        | .some ⟨_, h₁⟩ =>
+          .some ⟨_, .fn_eq h₁ ⟨reduce_sound rfl, reduce_norm rfl⟩ (by grind)⟩
+        | .none => .none
     | DCC? (Unify A B (! A₁) (! A₂)) =>
-      if heq : (DCC? (! A₁)) = (DCC? (! A₂)) then
-        heq ▸ .some ⟨_, .refl ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+      if heq : (reduce RedAff (DCC? (! A₁))).fst = (reduce RedAff (DCC? (! A₂))).fst then
+        .some ⟨_, .refl (RedAffNorm.mk (reduce_sound_fst heq) (reduce_norm_fst heq)) ⟨reduce_sound rfl, reduce_norm rfl⟩ ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
       else
         let τ₁ := (reduce RedAff A₁).fst
         let τ₂ := (reduce RedAff A₂).fst
@@ -658,8 +821,8 @@ def step_unify? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : GenericExp
                           (by grind)⟩
         | .none => .none
     | (DCC? (Unify A B ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂))) =>
-      if heq : (DCC? ((Π B₁ C₁) x₁)) = (DCC? ((Π B₂ C₂) x₂)) then
-        heq ▸ .some ⟨_, .refl ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+      if heq : (reduce RedAff (DCC? ((Π B₁ C₁) x₁))).fst = (reduce RedAff (DCC? ((Π B₂ C₂) x₂))).fst then
+        .some ⟨_, .refl (RedAffNorm.mk (reduce_sound_fst heq) (reduce_norm_fst heq)) ⟨reduce_sound rfl, reduce_norm rfl⟩ ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
       else
         let hole := (mk_hole B₁ C₁ x₁ B₂ C₂ x₂)
         let τ₁   := (reduce RedAff (DCC? (B₁ x₁))).fst
@@ -689,8 +852,8 @@ def step_unify? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : GenericExp
                          (by grind)⟩
         | _, _ => .none
     | (DCC? (Unify A B (Σ B₁) (Σ B₂))) =>
-      if heq : (DCC? (Σ B₁)) = (DCC? (Σ B₂)) then
-        heq ▸ .some ⟨_, .refl ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+      if heq : (reduce RedAff (DCC? (Σ B₁))).fst = (reduce RedAff (DCC? (Σ B₂))).fst then
+        .some ⟨_, .refl (RedAffNorm.mk (reduce_sound_fst heq) (reduce_norm_fst heq)) ⟨reduce_sound rfl, reduce_norm rfl⟩ ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
       else
         let hole := (mk_hole_sigma B₁ B₂)
         let τ₁   := (reduce RedAff B₁).fst
@@ -718,7 +881,7 @@ def step_unify? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : GenericExp
                          ⟨reduce_sound rfl, reduce_norm rfl⟩
                          ⟨reduce_sound rfl, reduce_norm rfl⟩
                          (by grind)⟩
-        | _, _ => .none
+        | _, _ => .none-/
     | e =>
       if heq₀ : is_unif? e = .none then
         match cases_point_arity' e with
@@ -849,104 +1012,362 @@ def RedAffNorm.eq' {e : GenericExpr τ} (hr : RedAffNorm e (red_aff e)) : hr = �
     have heq := reduce_complete hr hn
     grind
 
+/-def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e') : step_unify? e = .some ⟨e', h⟩ := by
+  unfold step_unify?
+  split
+  case h_1 heq =>
+    simp [step_unify_view?] at heq
+    split at heq
+    case h_1 =>
+      sorry
+    case h_2 =>
+      split at heq
+      case h_1 =>
+        cases heq
+        cases h
+        · expose_names
+          cases a.complete_fst
+          simp
+          apply RedAffNorm.ext
+        any_goals (
+          focus
+          try (
+            rename_i hn
+            exact (hn (by constructor)).elim)
+          done)
+        any_goals (grind)
+      case h_2 =>
+        split at heq
+        case h_1 | h_2 =>
+          split at heq
+          case h_1 =>
+            cases h
+            any_goals (
+              focus
+              try (
+                expose_names
+                cases a.complete_fst.symm.trans heq_2
+                try (cases a_1.complete_fst.symm.trans heq_3)))
+            any_goals (
+              focus
+              try (
+                expose_names
+                cases a_2.complete_fst.symm.trans heq_2)
+              done)
+            any_goals(
+              focus
+              try (
+                cases heq
+                cases a_2.complete_fst
+                congr! <;> apply RedAffNorm.ext)
+              done)
+            any_goals (
+              focus
+              try (
+                expose_names
+                exact (h_1 (by constructor)).elim))
+          · grind
+        · grind
+      · grind
+  case h_2 heq' =>
+    
+    split
+    case h_1 =>
+      
+      sorry
+    · split
+      case isTrue heq' =>
+        
+        sorry
+      case isFalse hneq =>
+        sorry -/
+
 set_option maxHeartbeats 2000000000000 in
 def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e') : step_unify? e = .some ⟨e', h⟩ := by
   induction h with
-  | env hrt | prop_bot hrt | type_bot hrt | refl hrt =>
+  | refl =>
+    expose_names
+    unfold step_unify?
+    unfold step_unify_view?
+    simp [unify_refl?, a.complete_fst, a_1.complete_fst]
+    cases a.complete_fst
+    cases a_2.complete_fst
+    simp
+    simp [a.eq', a_2.eq']
+    apply RedAffNorm.ext
+  | env hrt  =>
     unfold step_unify?
     unfold step_unify_view?
     simp [unify_refl?, hrt.complete_fst]
+    cases hrt.complete_fst
     congr!
-    any_goals (exact RedAffNorm.complete_fst (by assumption))
-    apply RedAffNorm.heq
+    apply RedAffNorm.ext
+  | prop_bot hrta hrtb hrt =>
+    unfold step_unify?
+    unfold step_unify_view?
+    have h₁ := hrta.complete_fst
+    have h₂ := hrtb.complete_fst
+    have h₃ := hrt.complete_fst
+    simp [unify_refl?, hrta.complete_fst, hrtb.complete_fst]
+    split
+    case h_1 heq' =>
+      split at heq'
+      · split at heq'
+        case h_1 =>
+          cases heq'
+          simp [h₃]
+          congr!
+          · apply RedAffNorm.ext
+          · apply RedAffNorm.ext
+          · apply RedAffNorm.heq
+        · grind
+      · grind
+      · grind
+    case h_2 heq' =>
+      split at heq'
+      case h_1 =>
+        split at heq'
+        · grind
+        · grind
+      · grind
+      · grind
+  | type_bot hrta hrtb hrt =>
+    unfold step_unify?
+    unfold step_unify_view?
+    have h₁ := hrta.complete_fst
+    have h₂ := hrtb.complete_fst
+    have h₃ := hrt.complete_fst
+    simp [unify_refl?, hrt.complete_fst, hrta.complete_fst, hrtb.complete_fst]
+    split
+    case h_1 heq' =>
+      split at heq'
+      · grind
+      · split at heq'
+        case h_1 heq₁ heq₂ =>
+          cases heq'
+          cases heq₁.symm.trans h₁
+          simp [h₃]
+          congr!
+          · apply RedAffNorm.ext
+          · apply RedAffNorm.ext
+          · apply RedAffNorm.heq
+        · grind
+      · grind
+    case h_2 heq' =>
+      split at heq'
+      case h_1 =>
+        split at heq'
+        · grind
+        · grind
+      · grind
+      · grind
+  | fn_eq hr₁ hrt ih =>
+    unfold step_unify?
+    unfold step_unify_view?
+    simp [unify_refl?]
+    expose_names
+    have hneq : ¬ ((reduce RedAff X₂).fst = (reduce RedAff X₁).fst) := fun h => by
+      have h₁ := hr₁.complete_fst
+      have h₂ := hrt.complete_fst
+      grind
+    simp [hneq]
+    have hneq₂ : ¬ ((reduce RedAff X₁).fst = (reduce RedAff X₂).fst) := fun h => by
+      grind
+    simp [hneq₂]
+    cases a.complete_fst
+    simp [a.eq']
+    have h₁ := hr₁.complete_fst
+    have h₂ := hrt.complete_fst
+    have h₃ := hr₁.complete
+    have h₃ := hrt.complete
+    simp [h₁, h₂]
+    split
+    case h_1 heq' =>
+      cases heq'.symm.trans h₁
+      split
+      case h_1 heq' =>
+        cases heq'.symm.trans h₂
+        · simp [h_unify_ih]
+          constructor <;> apply RedAffNorm.ext
+      grind
+    any_goals (grind)
   | bang hrt₁ hrt₂ hr₁ hrt₃ hrt₄ hrt₅ hneq ih =>
     unfold step_unify?
     unfold step_unify_view?
     simp [unify_refl?]
     expose_names
-    have hneq₁ : A₂ ≠ A₁ := fun h => by
-      cases h
-      exact (hneq rfl).elim
-    have hneq₂ : A₁ ≠ A₂ := fun h => by
-      cases h
-      exact (hneq rfl).elim
+    have hneq₁ : (reduce RedAff X₂).fst ≠ (reduce RedAff X₁).fst := fun h => by
+      have h₁ := hrt₁.complete_fst
+      have h₂ := hrt₂.complete_fst
+      grind
+    have hneq₂ : (reduce RedAff X₁).fst ≠ (reduce RedAff X₂).fst := fun h => by
+      grind
     simp [hneq₁, hneq₂]
-    cases hrt₁.complete_fst
-    cases hrt₂.complete_fst
-    cases hrt₃.complete_fst
-    cases hrt₄.complete_fst
-    cases hrt₅.complete_fst
+    split
+    case h_1 heq' =>
+      split at heq'
+      · cases hrt₁.complete_fst.symm.trans (by assumption)
+      · cases hrt₁.complete_fst.symm.trans (by assumption)
+      · grind
+    case h_2 =>
+      split
+      case h_1 => cases hrt₁.complete_fst.symm.trans (by assumption)
+      case h_2 =>
+        cases hrt₁.complete_fst.symm.trans (by assumption)
+        split
+        · cases hrt₂.complete_fst.symm.trans (by assumption)
+          have heq₁ : τ₁ = (reduce RedAff A₁).fst := by
+            have h := hr₁.complete
+            grind
+          have heq₂ : τ₂ = (reduce RedAff A₂).fst := by
+            have h := hrt₃.complete
+            grind
+          have heq₃ : A' = (reduce RedAff A).fst := by
+            have h := hrt₅.complete
+            grind
+          have heq₄ : B' = (reduce RedAff B).fst := by
+            have h := hneq.complete
+            grind
+          subst heq₁
+          subst heq₂
+          subst heq₃
+          subst heq₄
+          simp [h_unif_ih, ih.complete_fst]
+          congr!
+          · exact ih.complete_fst
+          any_goals (apply RedAffNorm.ext)
+          · cases ih.out_eq
+            simp [ih.eq]
+            apply RedAffNorm.ext
+        case h_2 hn =>
+          exact (hn _ (RedAffNorm.complete_fst (by assumption))).elim
+      case h_3 | h_4 =>
+        cases hrt₁.complete_fst.symm.trans (by assumption)
+      case h_5 hn₁ hn₂ hn₃ => exact (hn₁ _ (RedAffNorm.complete_fst (by assumption))).elim
+    /-
     simp [ih]
-    simp [hrt₁.eq', hrt₂.eq', hrt₃.eq', hrt₄.eq', hrt₅.eq']
+    simp [hrt₁.eq', hrt₂.eq', hrt₃.eq', hrt₄.eq', hrt₅.eq']-/
   | fn hrt₁ hrt₂ hrt₃ hrt₄ hr₁ hr₂ hrta hrtb hrt hneq ih =>
     unfold step_unify?
     unfold step_unify_view?
     simp [unify_refl?]
     expose_names
-    have hneq₁ : ¬ ((B₂ = B₁ ∧ C₂ = C₁) ∧ x₂ = x₁) := fun ⟨⟨h₁, h₂⟩, h₃⟩ => by
-      cases h₁
-      cases h₂
-      cases h₃
-      exact (hneq rfl).elim
-    have heq_fst := hrt.complete_fst
-    have heq := hrt.complete
-    have heq_fst₁ := hrt₁.complete_fst
-    have heq_fst₁' := (hrt₁.out_eq ▸ hrt₁).eq'
-    have heq₁ := hrt₁.complete
-    have heq_fst₂ := hrt₂.complete_fst
-    have heq_fst₂' := (hrt₂.out_eq ▸ hrt₂).eq'
-    have heq₂ := hrt₂.complete
-    have heq_fst₃ := hrt₃.complete_fst
-    have heq_fst₃' := (hrt₃.out_eq ▸ hrt₃).eq'
-    have heq₃ := hrt₃.complete
-    have heq_fst₄ := hrt₄.complete_fst
-    have heq_fst₄' := (hrt₄.out_eq ▸ hrt₄).eq'
-    have heq₄ := hrt₄.complete
-    have hneq₂ : ¬ ((B₁ = B₂ ∧ C₁ = C₂) ∧ x₁ = x₂) := by grind
+    have hneq₁ : (reduce RedAff X₂).fst ≠ (reduce RedAff X₁).fst := fun h => by
+      have h₁ := hrt₁.complete_fst
+      have h₂ := hrt₂.complete_fst
+      grind
+    have hneq₂ : (reduce RedAff X₁).fst ≠ (reduce RedAff X₂).fst := fun h => by
+      grind
     simp [hneq₁, hneq₂]
-    cases heq_fst₁
-    cases heq_fst₂
-    cases heq_fst₃
-    cases heq_fst₄
-    cases hrta.complete_fst
-    cases hrtb.complete_fst
-    simp [h_unif_cod_ih, ih, heq_fst]
-    cases hrt.out_eq
-    congr!
-    any_goals (apply Eq.symm; apply RedAffNorm.eq')
+    split
+    case h_1 heq' =>
+      split at heq'
+      · cases hrt₁.complete_fst.symm.trans (by assumption)
+      · cases hrt₁.complete_fst.symm.trans (by assumption)
+      · grind
+    case h_2 =>
+      split
+      case h_1 => cases hrt₁.complete_fst.symm.trans (by assumption)
+      case h_2 => cases hrt₁.complete_fst.symm.trans (by assumption)
+      case h_3 =>
+        cases hrt₁.complete_fst.symm.trans (by assumption)
+        split
+        · cases hrt₂.complete_fst.symm.trans (by assumption)
+          have heq₁ : τ₁ = (reduce RedAff (B₁.app x₁)).fst := by
+            have h := hrt₃.complete
+            grind
+          have heq₂ : τ₂ = (reduce RedAff (B₂.app x₂)).fst := by
+            have h := hrt₄.complete
+            grind
+          have heq₃ : A' = (reduce RedAff A).fst := by
+            have h := hrt.complete
+            grind
+          have heq₄ : B' = (reduce RedAff B).fst := by
+            have h := hneq.complete
+            grind
+          have heq₅ : τ₃ = (reduce RedAff ((C₁.app x₁).app (B₁.mk_hole C₁ x₁ B₂ C₂ x₂))).fst := by
+            have h := hr₁.complete
+            grind
+          have heq₆ : τ₄ = (reduce RedAff ((C₂.app x₂).app (B₁.mk_hole C₁ x₁ B₂ C₂ x₂))).fst := by
+            have h := hr₂.complete
+            grind
+          subst heq₁
+          subst heq₂
+          subst heq₃
+          subst heq₄
+          subst heq₅
+          subst heq₆
+          simp [h_unif_dom_ih, h_unif_cod_ih, ih.complete_fst]
+          congr!
+          · exact ih.complete_fst
+          any_goals (apply RedAffNorm.ext)
+          · cases ih.out_eq
+            simp [ih.eq]
+            apply RedAffNorm.ext
+        case h_2 hn =>
+          exact (hn _ _ _ (RedAffNorm.complete_fst (by assumption))).elim
+      case h_4 =>
+        cases hrt₁.complete_fst.symm.trans (by assumption)
+      case h_5 hn₁ hn₂ hn₃ => exact (hn₂ _ _ _ (RedAffNorm.complete_fst (by assumption))).elim
   | sigma hrt₁ hrt₂ hrt₃ hrt₄ hr₁ hr₂ hrt hrta hrtb hneq ih =>
     unfold step_unify?
     unfold step_unify_view?
     simp [unify_refl?]
     expose_names
-    have hneq₁ : ¬ B₂ = B₁ := fun h => by
-      cases h
-      exact (hneq rfl).elim
-    have heq_fst := hrt.complete_fst
-    have heq := hrt.complete
-    have heq_fst₁ := hrt₁.complete_fst
-    have heq_fst₁' := (hrt₁.out_eq ▸ hrt₁).eq'
-    have heq₁ := hrt₁.complete
-    have heq_fst₂ := hrt₂.complete_fst
-    have heq_fst₂' := (hrt₂.out_eq ▸ hrt₂).eq'
-    have heq₂ := hrt₂.complete
-    have heq_fst₃ := hrt₃.complete_fst
-    have heq_fst₃' := (hrt₃.out_eq ▸ hrt₃).eq'
-    have heq₃ := hrt₃.complete
-    have heq_fst₄ := hrt₄.complete_fst
-    have heq_fst₄' := (hrt₄.out_eq ▸ hrt₄).eq'
-    have heq₄ := hrt₄.complete
-    have hneq₂ : ¬ B₁ = B₂ := by grind
+    have hneq₁ : (reduce RedAff X₂).fst ≠ (reduce RedAff X₁).fst := fun h => by
+      have h₁ := hrt₁.complete_fst
+      have h₂ := hrt₂.complete_fst
+      grind
+    have hneq₂ : (reduce RedAff X₁).fst ≠ (reduce RedAff X₂).fst := fun h => by
+      grind
     simp [hneq₁, hneq₂]
-    cases heq_fst₁
-    cases heq_fst₂
-    cases heq_fst₃
-    cases heq_fst₄
-    cases hrta.complete_fst
-    cases hrtb.complete_fst
-    cases heq_fst
-    simp [h_unif_snd_ih, ih]
-    simp [hrt₁.eq', hrt₂.eq', hrt₃.eq', hrt₄.eq', hrt.eq', hrta.eq', hrtb.eq']
+    split
+    case h_1 heq' =>
+      split at heq'
+      · cases hrt₁.complete_fst.symm.trans (by assumption)
+      · cases hrt₁.complete_fst.symm.trans (by assumption)
+      · grind
+    case h_2 =>
+      split
+      case h_1 | h_2 | h_3 => cases hrt₁.complete_fst.symm.trans (by assumption)
+      case h_4 =>
+        cases hrt₁.complete_fst.symm.trans (by assumption)
+        split
+        · cases hrt₂.complete_fst.symm.trans (by assumption)
+          have heq₁ : τ₁ = (reduce RedAff B₁).fst := by
+            have h := hrt₃.complete
+            grind
+          have heq₂ : τ₂ = (reduce RedAff B₂).fst := by
+            have h := hrt₄.complete
+            grind
+          have heq₃ : A' = (reduce RedAff A).fst := by
+            have h := hrtb.complete
+            grind
+          have heq₄ : B' = (reduce RedAff B).fst := by
+            have h := hneq.complete
+            grind
+          have heq₅ : τ₃ = (reduce RedAff (B₁.app (B₁.mk_hole_sigma B₂))).fst := by
+            have h := hr₁.complete
+            grind
+          have heq₆ : τ₄ = (reduce RedAff (B₂.app (B₁.mk_hole_sigma B₂))).fst := by
+            have h := hr₂.complete
+            grind
+          subst heq₁
+          subst heq₂
+          subst heq₃
+          subst heq₄
+          subst heq₅
+          subst heq₆
+          simp [h_unif_fst_ih, h_unif_snd_ih, ih.complete_fst]
+          congr!
+          · exact ih.complete_fst
+          any_goals (apply RedAffNorm.ext)
+          · cases ih.out_eq
+            simp [ih.eq]
+            apply RedAffNorm.ext
+        case h_2 hn =>
+          exact (hn _ (RedAffNorm.complete_fst (by assumption))).elim
+      case h_5 hn₁ hn₂ hn₃ => exact (hn₃ _ (RedAffNorm.complete_fst (by assumption))).elim
   | congr =>
     unfold step_unify?
     split
@@ -990,7 +1411,6 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
         case h_1 =>
           split at heq''
           case isTrue heq_X =>
-            cases heq_X
             exact (h .mk).elim
           · grind
         · grind
@@ -1007,10 +1427,6 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
       case h_2 =>
         exact (h .mk).elim
       case h_3 =>
-        exact (h .mk).elim
-      case h_4 =>
-        exact (h .mk).elim
-      case h_5 =>
         have heq : e_1.is_unif? = none := by
           apply Option.eq_none_iff_forall_ne_some.mpr
           intro h'
@@ -1037,7 +1453,6 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
         case h_1 =>
           split at heq''
           case isTrue heq_X =>
-            cases heq_X
             exact (h .mk).elim
           · grind
         · grind
@@ -1049,13 +1464,8 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
     case h_2 heq' =>
       split
       case h_1 => grind only [point_arity]
-      case h_2 =>
-        exact (h .mk).elim
+      case h_2 => exact (h .mk).elim
       case h_3 =>
-        exact (h .mk).elim
-      case h_4 =>
-        exact (h .mk).elim
-      case h_5 =>
         have heq : e_1.is_unif? = none := by
           apply Option.eq_none_iff_forall_ne_some.mpr
           intro h'
@@ -1082,7 +1492,6 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
         case h_1 =>
           split at heq''
           case isTrue heq_X =>
-            cases heq_X
             exact (h .mk).elim
           · grind
         · grind
@@ -1093,9 +1502,9 @@ def RedUnify.complete {e e' : GenericExpr τ} [DecidableEq τ] (h : RedUnify e e
     case h_2 heq' =>
       split
       case h_1 => grind only [point_arity]
-      case h_2 | h_3 | h_4 =>
+      case h_2 =>
         exact (h .mk).elim
-      case h_5 =>
+      case h_3 =>
         have heq : e_1.is_unif? = none := by
           apply Option.eq_none_iff_forall_ne_some.mpr
           intro h'

@@ -12,7 +12,7 @@ def toFormat.{u} {τ : Type u}
     .bracket "(" (.fill s) ")"
 
   let comb (pre : Std.Format) (points : List Std.Format) (paren : Std.Format → Std.Format := paren) : Std.Format :=
-    paren (pre ++ " " ++ (.group (sepD points (indent := min pre.pretty.length.succ 30))))
+    paren ((.align Bool.false) ++ (pre ++ " " ++ (.group (sepD points (indent := min pre.pretty.length.succ 30)))))
 
   open Dsl in match e with
   | .const _ | .hole _ => "⋯"

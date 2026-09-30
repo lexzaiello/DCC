@@ -463,8 +463,8 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Judge (open Dsl in (DCC? (`B x))) τ
   | pair     : Judge M (Pair.f.type A B u)
     → Judge C τ_C
-    → Reduces C C'
-    → Judge N (Pair.g.type A B C' u)
+    → Judge N τ_N
+    → DefEq τ_N (Pair.g.type A B C' u)
     → Reduces (Pair.type A B C u) τ'
     → Judge (DCC? (⟨,⟩C M N)) τ'
   | swap   : Judge A (DCC? Sort u)
@@ -962,12 +962,11 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
           dbg_trace "5"
           match infer N with
           | .ok ⟨τ_N, ht_N⟩ =>
+            match def_eq? τ_N (Pair.g.type A B (reduce_all C) u) with
+            | .ok h =>
             dbg_trace "6"
-            if heq₂ : τ_N = (Pair.g.type A B (reduce_all C) u) then
-              dbg_trace "7"
-              dbg_trace repr (Pair.type A B C u)
-              .ok ⟨_, .pair (heq ▸ ht_M) ht_C (reduce_reduces rfl) (heq₂ ▸ ht_N) (reduce_reduces rfl)⟩
-            else .error (.sub N (.unexpected N τ_N))
+              .ok ⟨_, .pair (heq ▸ ht_M) ht_C ht_N h (reduce_reduces rfl)⟩
+            | .error e => .error (.sub N (.def_eq e))
           | .error e => .error (.sub N e)
         | .error e => .error (.sub C e)
       else

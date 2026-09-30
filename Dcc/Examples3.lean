@@ -51,21 +51,18 @@ open Dsl in
 
 #eval (DCC (∘ (Id (Sort 1)) (Id (Sort 1)))).infer'
 open Dsl in
-#eval (DCC ((Id ((= ((Π (Id (Sort 2)) (`(Sort 2) (`(Sort 1) (Sort 1)))) (Sort 1)) (Id (Sort 1)) (∘ (Id (Sort 1)) (Id (Sort 1)))))) ((refl (Id (Sort 2))) (& ((Sort 1 : Sort 2) → Sort 1)) (& (Id (Sort 1)))))).infer'
+#eval (DCC ((Id ((= ((Π (Id (Sort 2)) (`(Sort 2) (`(Sort 1) (Sort 1)))) (Sort 1))
+                    (Id (Sort 1))
+                    (∘ (Id (Sort 1)) (Id (Sort 1))))))
+            ((refl (Id (Sort 2))) (& ((Sort 1 : Sort 2) → Sort 1)) (& (Id (Sort 1)))))).infer'
 
 def mk_test_pair : Expr :=
-  DCC ((⟨,⟩(`(Sort 1) (`(Sort 1) Sort 1)) (Id Sort 1) (Λ Sort 1 (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1)))))
+  DCC ((⟨,⟩(`(Sort 1) (`(Sort 1) Sort 1)) (Id Sort 1) (Λ Sort 1 (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1)))) (& Sort 0))
 
 def test_pair : Except (TypeError mk_test_pair) Expr := (·.fst) <$> mk_test_pair.infer
 #eval GenericExpr.red_aff (DCC (((`(Sort 2) (∘ (Σ (`(Sort 1) (`(Sort 1) (Sort 1)))) (* (Sort 1)))) (! (Sort 1))) (& (Sort 0))))
 --#eval GenericExpr.canonicalize
-#eval GenericExpr.red_eta (DCC (∘ (Σ (`(Sort 1) (Sort 1)) (`(Sort 1) (`(Sort 1) (Sort 1)))) (* (Sort 1))))
 #eval test_pair
-#eval GenericExpr.red_eta (DCC (`(Sort 2) (∘ (Σ (`(Sort 1) (Sort 1)) (`(Sort 1) (`(Sort 1) (Sort 1)))) (* (Sort 1)))))
-#eval GenericExpr.red_eta (DCC (Id (Sort 2)))
-#eval Expr.reduce_all mk_test_pair
-
-#eval Std.format test_pair
 
 /-
 Want to change pair type so that it aligns with the environment pattern.
@@ -79,8 +76,8 @@ why does β need to receive a couple? something with duplication I recall.
 #eval (Std.format ∘ (·.fst)) <$> (DCC (Λ(Sort 2, Id(Sort 2), Fst(Id(Sort 2))) (Sort 1) (Sort 0))).infer
 
 def test_id_nested : Option Expr := do
-  let ⟨t, _⟩ ← (DCC Id(Sort 1)).infer.toOption
-  (·.fst) <$> (DCC (Id(t) Id(Sort 1) (Sort 0))).infer.toOption
+  let ⟨t, _⟩ ← (DCC (Id Sort 1)).infer.toOption
+  (·.fst) <$> (DCC ((Id t) (Id Sort 1) (Sort 0))).infer.toOption
 
 #eval test_id_nested
 
@@ -124,8 +121,8 @@ This should eta reduce
 
 -- (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)
 
-#eval (DCC Id(Sort 1)).infer'
-#eval ((· == (DCC (Π(Id(Sort 2), `(Sort 2, `(Sort 1, Sort 1))) Sort 1)))∘ (·.fst)) <$> (DCC Id(Sort 1)).infer
+#eval (DCC (Id Sort 1)).infer'
+#eval ((· == (DCC ((Π (Id Sort 2) (`(Sort 2) (`(Sort 1) Sort 1))) Sort 1)))∘ (·.fst)) <$> (DCC (Id Sort 1)).infer
 
 /-
 (Σ(`(⊤, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))) ∗)
@@ -141,7 +138,7 @@ Coup(`((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), So
 (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1)
 -/
 
-#eval (Std.format ∘ (·.fst)) <$> (DCC Id(Sort 1)).infer
+#eval (Std.format ∘ (·.fst)) <$> (DCC (Id Sort 1)).infer
 
 /-
 (Π(Id(Sort 2), `(Sort 2, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1))) Sort 1)
@@ -160,9 +157,9 @@ f_β := Λ(Sort 1, `(Sort 1, Sort 1),
          (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))
 -/
 
-#eval (·.fst) <$> (DCC Λ(Sort 1, `(Sort 1, Sort 1), Fst(`(Sort 1, Sort 1)))).infer
+#eval (·.fst) <$> (DCC (Λ (Sort 1) (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1)))).infer
 
-#eval (DCC (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)).reduce_all
+#eval (DCC ((Π (Id Sort 2) (Λ (Sort 2) (Id Sort 2) (`(Σ (Id Sort 2)) Sort 1))) Sort 1)).reduce_all
 
 
 /-
@@ -180,14 +177,14 @@ fn type:
 Id(Sort 1)
 -/
 
-#eval (Std.format ∘ (·.fst)) <$> (DCC Id(Sort 1)).infer
-#eval (DCC Id(Sort 1)).infer'
+#eval (Std.format ∘ (·.fst)) <$> (DCC (Id Sort 1)).infer
+#eval (DCC (Id Sort 1)).infer'
 
 #eval (DCC ((Sort 1 : Sort 2) → ((Sort 3 : Sort 4) → Sort 5))).reduce_all
 
-#eval (DCC Id(Sort 2)).infer'
-#eval (DCC refl(Id(Sort 2))).infer'
-#eval (DCC (refl(Id(Sort 2)) &(Sort 1) &(Sort 0))).infer'
+#eval (DCC (Id Sort 2)).infer'
+#eval (DCC (refl (Id Sort 2))).infer'
+#eval (DCC ((refl (Id Sort 2)) (& Sort 1) (& Sort 0))).infer'
 #eval (DCC (refl(Id(Sort 2)))).infer'
 
 --#eval (DCC Id(Sort 0)).infer'
@@ -196,43 +193,4 @@ Id(Sort 1)
 
 -/
 
-#eval (DCC (refl(`(Sort 0, (Sort 0 : Sort 1) → Sort 0)) &(⊤) &(Id(Sort 0)))).infer'
-#eval (DCC (Id(Id(Sort 0) = Id(Sort 0) ∘' Id(Sort 0))
-  (refl(`(Sort 0, (Sort 0 : Sort 1) → Sort 0)) &(⊤) &(Id(Sort 0))))).infer'
-
-#eval (DCC (Id(Id(Sort 0) = Id(Sort 0) ∘' Id(Sort 0) ∘' Id(Sort 0))
-  (refl(Id(Sort 1))
-    &((Π(Id(Sort 1)
-      , `(Sort 1, `(Sort 0, Sort 0))) Sort 0))
-    &(Id(Sort 0))))).infer.isOk
-
-/-
-Example of church isomorphism:
-
-pair vs boolean selector:
-
-pair := λ x y f => f x y
-fst := λ p => p (λ a b => a)
-snd := λ p => p (λ a b => a)
-
-let τ₁ := A
-let τ₂ := `(A, B)
-let τ₃ := Coup(`(A, B))
-let τ_fn₀ := ((B : Sort v) → C)
-let τ_fn := (A : Sort u) → τ_fn₀
-let τ₄ := `(Coup(`(A, B)), τ_fn)
-
-? := Snd(τ₄)
-
-M := Eval(τ_fn, `(τ_fn, B), Id(τ_fn)) ∘' ⟦`(τ_fn, B)⟧⟨Snd(τ₄), Fst(τ₂) ∘' Fst(τ₄)⟩
-
-pair := Λ(τ₁, τ₂,
-          Λ(τ₃, τ₄, Eval(τ_fn₀, B, Id(τ_fn₀)) ∘' ⟦`(τ_fn₀, B)⟧⟨M, Snd(τ₂) ∘' Fst(τ₄)⟩))
-
-true := λ x y => x
-false := λ x y => y
-
-pair₂ := λ x y b => b x y
-fst₂  := λ p => p true
-snd₂  := λ p => false
--/
+#eval (DCC ((refl (`(Sort 0) ((Sort 0 : Sort 1) → Sort 0))) (& ⊤) (& (Id Sort 0)))).infer'

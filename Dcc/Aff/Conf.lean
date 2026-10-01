@@ -820,7 +820,7 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
       | (.congrFun (.point 3 hn hr)) =>
         exact ⟨_, .refl, .single .cong_3⟩
       | (.congrArg hr) =>
-        exact ⟨_, .single (.congrArg hr), .single .cong_3⟩
+        exact ⟨_, .single (.congrArg (.point 0 (by grind) hr)), .single .cong_3⟩
   case cong_2 =>
     match h₂ with
     | .cong_2 => exact ⟨_, .refl, .refl⟩
@@ -858,7 +858,7 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
       | (.congrFun (.point 2 hn hr)) =>
         exact ⟨_, .refl, .single .cong_4⟩
       | (.congrArg hr) =>
-        exact ⟨_, .single (.congrArg hr), .single .cong_4⟩
+        exact ⟨_, .single (.congrArg (.point 0 (by grind) hr)), .single .cong_4⟩
   case ind_bool_true =>
     match h₂ with
     | .ind_bool_true => exact ⟨_, .refl, .refl⟩
@@ -1624,7 +1624,7 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
           exact ⟨_, .single .cong_3, .refl⟩
         | .congrFun (.point 3 hn h) =>
           exact ⟨_, .single .cong_3, .refl⟩
-        | .congrArg h => exact ⟨_, .single .cong_3, .single (.congrArg h)⟩
+        | .congrArg h => exact ⟨_, .single .cong_3, .single (.congrArg (.point 0 (by grind) h))⟩
         | .point 0 hn hr =>
           exact ⟨_, .single .cong_3, .refl⟩
         | .point 1 hn hr =>
@@ -1645,7 +1645,7 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
           exact ⟨_, .single .cong_4, .refl⟩
         | .congrFun (.point 2 hn h) =>
           exact ⟨_, .single .cong_4, .refl⟩
-        | .congrArg h => exact ⟨_, .single .cong_4, .single (.congrArg h)⟩
+        | .congrArg h => exact ⟨_, .single .cong_4, .single (.congrArg (.point 0 (by grind) h))⟩
         | .point 0 hn hr =>
           exact ⟨_, .single .cong_4, .refl⟩
         | .point 1 hn hr =>

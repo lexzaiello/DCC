@@ -49,6 +49,7 @@ scoped syntax:max "(`" gen_dcc+ ")"                          : gen_dcc
 syntax:max "(Id" gen_dcc+ ")"                                : gen_dcc
 syntax:max "(Fst" gen_dcc+ ")"                               : gen_dcc
 syntax:max "(Swap" gen_dcc+ ")"                              : gen_dcc
+syntax:max "(Reassoc" gen_dcc+ ")"                           : gen_dcc
 syntax:max "(Snd" gen_dcc+ ")"                               : gen_dcc
 scoped syntax "(Σ" gen_dcc ")"                               : gen_dcc
 scoped syntax "(Σ" gen_dcc gen_dcc ")"                       : gen_dcc
@@ -66,6 +67,7 @@ syntax:max "Sort" term                                       : gen_dcc
 syntax:max "(?" gen_dcc ")"                                  : gen_dcc
 syntax (priority := high) "(⟨,⟩" (noWs gen_dcc) gen_dcc* ")" : gen_dcc
 syntax (priority := high) "(," (noWs gen_dcc) gen_dcc* ")"   : gen_dcc
+scoped syntax "(:" gen_dcc+ ")"                              : gen_dcc
 
 declare_syntax_cat gen_dcc_loc
 
@@ -73,8 +75,12 @@ syntax "?"   : gen_dcc_loc
 syntax "."   : gen_dcc_loc
 syntax term  : gen_dcc_loc
 
-scoped syntax "(" gen_dcc ":" gen_dcc ")" "→" gen_dcc : gen_dcc
-scoped syntax "(" ":" gen_dcc ")" "→" gen_dcc : gen_dcc
+scoped syntax "(→" gen_dcc+ ")" : gen_dcc
+
+scoped syntax "(×" gen_dcc+ ")"           : gen_dcc
+scoped syntax "(Copy" gen_dcc+ ")"        : gen_dcc
+-- (→.apply A B) (, f x) = f x, where f is an arrow
+scoped syntax "(→.apply" gen_dcc+ ")"       : gen_dcc
 
 end Dsl
 
@@ -207,9 +213,9 @@ open Lean.Syntax in macro_rules
 
 open Dsl in
 macro_rules
-  | `(DCC[$ty:gen_dcc_loc] ($α:gen_dcc : $A) → $β:gen_dcc) =>
+  | `(DCC[$ty:gen_dcc_loc] (→ (:$α:gen_dcc $A) $β:gen_dcc)) =>
     `(DCC[$ty:gen_dcc_loc] ((Π (Id $A) (`$A (`$α $β))) $α))
-  | `(DCC[$ty:gen_dcc_loc] (: Sort $m) → $β:gen_dcc) =>
+  | `(DCC[$ty:gen_dcc_loc] (→ (: Sort $m) $β:gen_dcc)) =>
     `(DCC[$ty:gen_dcc_loc] (Λ Sort $m (Id Sort $m) (`(Σ(Id Sort $m)) $β)))
 
 open Dsl in
@@ -235,3 +241,23 @@ gen_dsl "DCC?" for ?
 
 def runDcc : Lean.Syntax → Lean.MacroM Lean.Syntax
   | `(gen_dcc| $e:gen_dcc) => `(DCC $e:gen_dcc)
+
+/-
+(× A B) := (Σ (`A B))
+-/
+open Dsl in
+abbrev GenericExpr.Prod (A B : GenericExpr τ) : GenericExpr τ :=
+  (DCC? (Σ (`A B)))
+
+open Dsl in
+macro_rules
+  | `(DCC[$loc] (× $A:gen_dcc $B:gen_dcc)) => `(GenericExpr.Prod (DCC[$loc] $A) (DCC[$loc] $B))
+  | `(DCC[$ty] (Copy $A:gen_dcc)) => `(DCC[$ty] ((Dup (`⊤ $A) (`⊤ (Id (Σ (`$A $A))))) (& ∗)))
+  -- (Reassoc A B C) (, x (, y z)) = (, y (, z x))
+  | `(DCC[$ty] (Reassoc $A:gen_dcc $B:gen_dcc $C:gen_dcc)) => `(DCC[$ty]
+    (∘ (Assoc $B $C $A)
+       (Swap $A (× $B $C))))
+  | `(DCC[$ty] (→.apply (: $A:gen_dcc $τ_A:gen_dcc) $B:gen_dcc)) => `(DCC[$ty]
+    (Eval (→ (: $A $τ_A) $B)
+          (`(→ (: $A $τ_A) $B) $A)
+          (Id (→ (: $A $τ_A) $B))))

@@ -140,8 +140,8 @@ Core reductions:
   | ind_bool_false : RedAff (DCC? ((Bool.Ind motive x y) env False)) (DCC? (y env False))
   | cong_1         : RedAff (DCC? ((≃.1 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fX env₂))
   | cong_2         : RedAff (DCC? ((≃.2 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fY env₂))
-  | cong_3         : RedAff (DCC? ((≃.3 A B) (& ((≃.mk fX fY fidl fidr) env₂)))) (DCC? (fidl env₂))
-  | cong_4         : RedAff (DCC? ((≃.4 A B) (& ((≃.mk fX fY fidl fidr) env₂)))) (DCC? (fidr env₂))
+  | cong_3         : RedAff (DCC? ((≃.3 A B) (& ((≃.mk fX fY fidl fidr) env₂)))) (DCC? (fidl (& env₂)))
+  | cong_4         : RedAff (DCC? ((≃.4 A B) (& ((≃.mk fX fY fidl fidr) env₂)))) (DCC? (fidr (& env₂)))
 /-
 Inner congruences:
 -/

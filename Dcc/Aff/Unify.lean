@@ -329,6 +329,78 @@ def unif_sigma (A B B₁ B₂ : GenericExpr τ) (h_unif_fst : GenericExpr τ) (h
                    h_unif_fst
                    h_unif_snd)
 
+/-
+(≃.1.apply ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) (, (, (, (a : (≃ (B₁ x₁) (B₂ x₂))) (b : (≃ (C₁ x₁ hole) (C₂ x₂ hole)))) f) x) = b.1 (f (a.2 x))
+-/
+open Dsl in
+def equiv_apply₁ (B₁ C₁ x₁ B₂ C₂ x₂ hole : GenericExpr τ) : GenericExpr τ :=
+  let t_to_fun   := DCC? (((B₂ x₂) : (? (B₂ x₂))) → (B₁ x₁))
+  let t_from_fun := DCC? (((C₁ x₁ hole) : (? (C₁ x₁ hole))) → (C₂ x₂ hole))
+
+  let t_f        := (DCC? ((Π B₁ C₁) x₁))
+
+  (DCC? (∘ (∘ (∘ (∘ (∘ (∘ (Eval t_from_fun (`t_from_fun (C₁ x₁ hole)) (Id t_from_fun))
+                          (Map t_from_fun
+                               (B₁ x₁ hole)
+                               (Id t_from_fun)
+                               (Eval t_f (`t_f (B₁ x₁)) (Id t_f))))
+                       (Assoc t_from_fun t_f (B₁ x₁)))
+                    (Map (× t_from_fun t_f)
+                         (B₁ x₁)
+                         (Id (× t_from_fun t_f))
+                         (Eval t_to_fun (`t_to_fun (B₂ x₂)) (Id t_to_fun))))
+                 (Assoc (× t_from_fun t_f)
+                        t_to_fun
+                        (B₂ x₂))) -- have (, (, (, b.1 f) a.2) x), make (, (, b.1 f) (, a.2 x))
+              (Map (× (× t_from_fun t_f) t_to_fun)
+                      (B₂ x₂)
+                      (∘ (Swap (t_from_fun) (× t_to_fun t_f))
+                         (Assoc t_from_fun t_to_fun t_f))
+                      (Id (B₂ x₂)))) -- have (, (, (, a.2 b.1) f) x), make (, (, a.2 (, b.1 f)) x), make (, (, (, b.1 f) a.2) x), assoc make (, (, b.1 f) (Eval ∘ (, a.2 x)))
+           (Map (× (× t_to_fun t_from_fun) t_f)
+                (B₂ x₂)
+                (Map t_to_fun
+                     t_from_fun
+                     (≃.2 (B₁ x₁) (B₂ x₂))
+                     (≃.1 (C₁ x₁ hole) (C₂ x₂ hole)))
+                (Id (B₂ x₂)))))
+
+/-
+(≃.2.apply ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) (, (, (, (a : (≃ (B₁ x₁) (B₂ x₂))) (b : (≃ (C₁ x₁ hole) (C₂ x₂ hole)))) f) x) = b.2 (f (a.1 x))
+-/
+open Dsl in
+def equiv_apply₂ (B₁ C₁ x₁ B₂ C₂ x₂ hole : GenericExpr τ) : GenericExpr τ :=
+  let t_to_fun   := DCC? (((B₁ x₁) : (? (B₁ x₁))) → (B₂ x₂))
+  let t_from_fun := DCC? (((C₂ x₂ hole) : (? (C₂ x₂ hole))) → (C₁ x₁ hole))
+
+  let t_f        := (DCC? ((Π B₂ C₂) x₂))
+
+  (DCC? (∘ (∘ (∘ (∘ (∘ (∘ (Eval t_from_fun (`t_from_fun (C₂ x₂ hole)) (Id t_from_fun))
+                          (Map t_from_fun
+                               (B₂ x₂ hole)
+                               (Id t_from_fun)
+                               (Eval t_f (`t_f (B₂ x₂)) (Id t_f))))
+                       (Assoc t_from_fun t_f (B₂ x₂)))
+                    (Map (× t_from_fun t_f)
+                         (B₂ x₂)
+                         (Id (× t_from_fun t_f))
+                         (Eval t_to_fun (`t_to_fun (B₁ x₁)) (Id t_to_fun))))
+                 (Assoc (× t_from_fun t_f)
+                        t_to_fun
+                        (B₁ x₁))) -- have (, (, (, b.1 f) a.2) x), make (, (, b.1 f) (, a.2 x))
+              (Map (× (× t_from_fun t_f) t_to_fun)
+                      (B₁ x₁)
+                      (∘ (Swap (t_from_fun) (× t_to_fun t_f))
+                         (Assoc t_from_fun t_to_fun t_f))
+                      (Id (B₁ x₁)))) -- have (, (, (, a.2 b.1) f) x), make (, (, a.2 (, b.1 f)) x), make (, (, (, b.1 f) a.2) x), assoc make (, (, b.1 f) (Eval ∘ (, a.2 x)))
+           (Map (× (× t_to_fun t_from_fun) t_f)
+                (B₁ x₁)
+                (Map t_to_fun
+                     t_from_fun
+                     (≃.1 (B₁ x₁) (B₂ x₂))
+                     (≃.2 (C₁ x₁ hole) (C₂ x₂ hole)))
+                (Id (B₁ x₁)))))
+
 open Dsl in
 def unif_fn (τ₁ τ₂ B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_unif_dom : GenericExpr τ) (h_unif_cod : GenericExpr τ) : GenericExpr τ :=
   let hole := (mk_hole B₁ C₁ x₁ B₂ C₂ x₂)
@@ -350,12 +422,12 @@ def unif_fn (τ₁ τ₂ B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_unif
                                (`equiv_prod t_fn₁)
                                (Λ (× equiv_prod t_fn₁)
                                   (`(× equiv_prod t_fn₁) (B₂ x₂))
-                                  (≃.1.apply ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)))) -- Have ((×.mk (≃ (B₁ x₁) (B₂ x₂)) (≃ (C₁ x₁ hole) (C₂ x₂ hole)), f), x)
+                                  #(equiv_apply₁ B₁ C₁ x₁ B₂ C₂ x₂ hole))) -- Have ((×.mk (≃ (B₁ x₁) (B₂ x₂)) (≃ (C₁ x₁ hole) (C₂ x₂ hole)), f), x)
                             (Λ equiv_prod
                                (`equiv_prod t_fn₂)
                                (Λ (× equiv_prod t_fn₂)
                                   (`(× equiv_prod t_fn₁) (B₁ x₁))
-                                  (≃.2.apply ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂))))
+                                  #(equiv_apply₂ B₁ C₁ x₁ B₂ C₂ x₂ hole)))
                             (`equiv_prod ((refl (Id τ₁)) (& ((Π B₁ C₁) x₁))))
                             (`equiv_prod ((refl (Id τ₂)) (& ((Π B₂ C₂) x₂))))))
                    (≃.mk (∘ (Λ (((≃ (B₁ x₁) (B₂ x₂)) : (? (≃ (B₁ x₁) (B₂ x₂)))) → ⊥)

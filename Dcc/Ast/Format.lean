@@ -28,8 +28,6 @@ def toFormat.{u} {τ : Type u}
   | DCC? (≃.2 x y) => comb "≃.2" [x.toFormat pretty, y.toFormat pretty]
   | DCC? (≃.3 x y) => comb "≃.3" [x.toFormat pretty, y.toFormat pretty]
   | DCC? (≃.4 x y) => comb "≃.4" [x.toFormat pretty, y.toFormat pretty]
-  | DCC? (≃.1.apply x y) => comb "≃.1.apply" [x.toFormat pretty, y.toFormat pretty]
-  | DCC? (≃.2.apply x y) => comb "≃.2.apply" [x.toFormat pretty, y.toFormat pretty]
   | DCC? (≃.env x y) => comb "≃.env" [x.toFormat pretty, y.toFormat pretty]
   | DCC? (⊥.Ind motive) => comb "⊥.Ind" [motive.toFormat pretty]
   | DCC? (≃.mk a b c d) => comb "≃.mk" [a.toFormat pretty, b.toFormat pretty, c.toFormat pretty, d.toFormat pretty]

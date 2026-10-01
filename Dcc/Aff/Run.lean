@@ -41,14 +41,13 @@ def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{
   | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, ⟨.curr'⟩⟩
   | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
   | (DCC? ((Σ _f_α _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
-  | (DCC? ((≃.1.apply ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) (,_B (,__B (,___B ((≃.mk _A₁_to_A₂ _A₂_to_A₁ _eq₁ _eq₂) _env)
-                                                                       ((≃.mk _cod₁_to_cod₂ _cod₂_to_cod₁ _eq₃ _eq₄) _env₂))
-                                                                _f)
-                                                          _x))) => .some ⟨_, ⟨.equiv_applyl⟩⟩
-  | (DCC? ((≃.2.apply ((Π _B₁ _C₁) _x₁) ((Π _B₂ _C₂) _x₂)) (,_B (,__B (,___B ((≃.mk _A₁_to_A₂ _A₂_to_A₁ _eq₁ _eq₂) _env)
-                                                                       ((≃.mk _cod₁_to_cod₂ _cod₂_to_cod₁ _eq₃ _eq₄) _env₂))
-                                                                _f)
-                                                          _x))) => .some ⟨_, ⟨.equiv_applyr⟩⟩
+  | (DCC? (Dom (≃.1 _A _B))) => .some ⟨_, ⟨.cong_1τ₀⟩⟩
+  | (DCC? (Dom (≃.2 _A _B))) => .some ⟨_, ⟨.cong_2τ₀⟩⟩
+  | (DCC? (Dom (≃.3 _A _B))) => .some ⟨_, ⟨.cong_3τ₀⟩⟩
+  | (DCC? (Dom (≃.4 _A _B))) => .some ⟨_, ⟨.cong_4τ₀⟩⟩
+  | DCC? (Dom (Bool.Ind _motive _x _y)) => .some ⟨_, ⟨.bool_indτ₀⟩⟩
+  | DCC? (Dom (Map _A _B _f _g)) => .some ⟨_, ⟨.bimapτ₀⟩⟩
+  | DCC? (Dom (Assoc _A _B _C)) => .some ⟨_, ⟨.assocτ₀⟩⟩
   | DCC? (Dom (Eql _B)) => .some ⟨_, ⟨.eqlτ₀⟩⟩
   | DCC? (Dom (refl _B)) => .some ⟨_, ⟨.reflτ₀⟩⟩
   | DCC? (Dom (!<> _x)) => .some ⟨_, ⟨.mapτ₀⟩⟩
@@ -549,8 +548,7 @@ theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAf
           simp at heq
           cases heq
           simp [set_points_self_noop]
-          exact Relation.ReflTransGen.refl)
-      done)
+          exact Relation.ReflTransGen.refl))
   | .inr ⟨_, h₁, h₂⟩ =>
     cases heq
     have h_dec := RedAff.instRedRel.decreasing h₁

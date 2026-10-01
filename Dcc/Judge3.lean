@@ -506,7 +506,10 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → DefEq τ_X A
     → DefEq τ_Y B
     → Judge (DCC? (Unify A B X Y)) (DCC? (Σ ((Bool.Ind (`⊤ (`Bool (Sort (max u v)))) (`⊤ (`Bool (≃ A B))) (`⊤ (`Bool (≃ (≃ A B) ⊥)))) ∗)))
-  | cong    : Judge A (DCC? Sort u) → Judge B (DCC? Sort v) → Judge (DCC? (≃ A B)) (DCC? (Sort (max u v)))
+  | cong    : Judge A (DCC? Sort u)
+    → Judge B (DCC? Sort v)
+    → DefEq A B
+    → Judge (DCC? (≃ A B)) (DCC? (Sort (max u v)))
   | bimap   : Judge f τ_f
     → Judge g τ_g
     → Arrow A A' u₀ τ_f
@@ -534,18 +537,22 @@ inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] : GenericExpr 
     → Judge (DCC? (Bool.Ind motive x y)) τ'
   | cong_1  : Judge A (DCC? Sort u)
     → Judge B (DCC? Sort v)
+    → DefEq A B
     → Reduces (DCC? ((≃ A B) : Sort (max u v)) → ((A : Sort u) → B)) τ'
     → Judge (DCC? (≃.1 A B)) τ'
   | cong_2  : Judge A (DCC? Sort u)
     → Judge B (DCC? Sort v)
+    → DefEq A B
     → Reduces (DCC? ((≃ A B) : Sort (max u v)) → ((B : Sort u) → A)) τ'
     → Judge (DCC? (≃.2 A B)) τ'
   | cong_3  : Judge A (DCC? Sort u)
     → Judge B (DCC? Sort v)
+    → DefEq A B
     → Reduces (Equiv_3.type A B u v) τ'
     → Judge (DCC? (≃.3 A B)) τ'
   | cong_4  : Judge A (DCC? Sort u)
     → Judge B (DCC? Sort v)
+    → DefEq A B
     → Reduces (Equiv_4.type A B u v) τ'
     → Judge (DCC? (≃.4 A B)) τ'
 deriving Repr
@@ -560,7 +567,10 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     | .ok ⟨DCC? Sort _u, h₁⟩ =>
       match B.infer with
       | .ok ⟨DCC? Sort _v, h₂⟩ =>
-        .ok ⟨_, .cong_3 h₁ h₂ (reduce_reduces rfl)⟩
+        match def_eq? A B with
+        | .ok h =>
+          .ok ⟨_, .cong_3 h₁ h₂ h (reduce_reduces rfl)⟩
+        | .error e => .error (.def_eq e)
       | .error e => .error (.sub B e)
       | .ok ⟨τ_B, _⟩ => .error (.sub A (.unexpected τ_B B))
     | .error e => .error (.sub A e)
@@ -570,7 +580,10 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     | .ok ⟨DCC? Sort _u, h₁⟩ =>
       match B.infer with
       | .ok ⟨DCC? Sort _v, h₂⟩ =>
-        .ok ⟨_, .cong_4 h₁ h₂ (reduce_reduces rfl)⟩
+        match def_eq? A B with
+        | .ok h =>
+          .ok ⟨_, .cong_4 h₁ h₂ h (reduce_reduces rfl)⟩
+        | .error e => .error (.def_eq e)
       | .error e => .error (.sub B e)
       | .ok ⟨τ_B, _⟩ => .error (.sub A (.unexpected τ_B B))
     | .error e => .error (.sub A e)
@@ -580,7 +593,10 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     | .ok ⟨DCC? Sort _u, h₁⟩ =>
       match B.infer with
       | .ok ⟨DCC? Sort _v, h₂⟩ =>
-        .ok ⟨_, .cong_1 h₁ h₂ (reduce_reduces rfl)⟩
+        match def_eq? A B with
+        | .ok h =>
+          .ok ⟨_, .cong_1 h₁ h₂ h (reduce_reduces rfl)⟩
+        | .error e => .error (.def_eq e)
       | .error e => .error (.sub B e)
       | .ok ⟨τ_B, _⟩ => .error (.sub A (.unexpected τ_B B))
     | .error e => .error (.sub A e)
@@ -590,7 +606,10 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     | .ok ⟨DCC? Sort _u, h₁⟩ =>
       match B.infer with
       | .ok ⟨DCC? Sort _v, h₂⟩ =>
-        .ok ⟨_, .cong_2 h₁ h₂ (reduce_reduces rfl)⟩
+        match def_eq? A B with
+        | .ok h =>
+          .ok ⟨_, .cong_2 h₁ h₂ h (reduce_reduces rfl)⟩
+        | .error e => .error (.def_eq e)
       | .error e => .error (.sub B e)
       | .ok ⟨τ_B, _⟩ => .error (.sub A (.unexpected τ_B B))
     | .error e => .error (.sub A e)
@@ -668,7 +687,10 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
     | .ok ⟨DCC? Sort _u, h₁⟩ =>
       match B.infer with
       | .ok ⟨DCC? Sort _v, h₂⟩ =>
-        .ok ⟨_, .cong h₁ h₂⟩
+        match def_eq? A B with
+        | .ok h =>
+          .ok ⟨_, .cong h₁ h₂ h⟩
+        | .error e => .error (.def_eq e)
       | .error e => .error (.sub B e)
       | .ok ⟨τ_B, _⟩ => .error (.unexpected τ_B B)
     | .error e => .error (.sub A e)

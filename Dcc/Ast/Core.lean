@@ -13,8 +13,6 @@ inductive GenericExpr.{u} (τ : Type u) where
   | cong_mk     : GenericExpr τ → GenericExpr τ → GenericExpr τ → GenericExpr τ → GenericExpr τ
   | ind_cong    : GenericExpr τ → GenericExpr τ → GenericExpr τ
   | cong_env    : GenericExpr τ → GenericExpr τ → GenericExpr τ
-  | cong_appl   : GenericExpr τ → GenericExpr τ → GenericExpr τ
-  | cong_appr   : GenericExpr τ → GenericExpr τ → GenericExpr τ
   | cong_1      : GenericExpr τ → GenericExpr τ → GenericExpr τ
   | cong_2      : GenericExpr τ → GenericExpr τ → GenericExpr τ
   | cong_3      : GenericExpr τ → GenericExpr τ → GenericExpr τ

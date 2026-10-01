@@ -15,9 +15,7 @@ def point_arity (e : GenericExpr (τ := τ_c)) : ℕ :=
   open Dsl in match e with
   | DCC? (? _x) => 1
   | DCC? (Dup _B _x) => 2
-  | DCC? (≃.1.apply _a _b) => 0
   | DCC? (≃.env _a _b) => 0
-  | DCC? (≃.2.apply _a _b) => 0
   | DCC? (≃.mk _to_fun _inv_fun _comp_id _id_comp) => 4
   | DCC? (≃.Ind _motive _x) => 2
   | DCC? (≃.1 _x _y) => 2
@@ -75,9 +73,7 @@ def points (e : GenericExpr (τ := τ_c)) : Vector (GenericExpr (τ := τ_c)) (p
   | DCC? (≃.mk to_fun inv_fun comp_id id_comp) => ⟨#[to_fun, inv_fun, comp_id, id_comp], by simp [point_arity]⟩
   | DCC? (≃.Ind motive x) => ⟨#[motive, x], by grind⟩
   | DCC? (≃.1 x y) => ⟨#[x, y], by grind⟩
-  | DCC? (≃.1.apply x y) => ⟨#[], by grind⟩
   | DCC? (≃.env x y) => ⟨#[], by grind⟩
-  | DCC? (≃.2.apply x y) => ⟨#[], by grind⟩
   | DCC? (≃.2 x y) => ⟨#[x, y], by grind⟩
   | DCC? (≃.3 x y) => ⟨#[x, y], by grind⟩
   | DCC? (≃.4 x y) => ⟨#[x, y], by grind⟩
@@ -137,9 +133,7 @@ def map_points (e : GenericExpr (τ := τ_c))
   | DCC? (≃.mk _a _b _c _d) => .cong_mk
   | DCC? (≃.Ind _motive _x) => .ind_cong
   | DCC? (≃.1 _x _y) => .cong_1
-  | DCC? (≃.1.apply x y) => .cong_appl x y
   | DCC? (≃.env x y) => .cong_env x y
-  | DCC? (≃.2.apply x y) => .cong_appr x y
   | DCC? (≃.2 _x _y) => .cong_2
   | DCC? (≃.3 _x _y) => .cong_3
   | DCC? (≃.4 _x _y) => .cong_4
@@ -204,15 +198,9 @@ def set_points (e : GenericExpr (τ := τ_c))
   | DCC? (≃.mk a b c d) =>
     have heq : point_arity (DCC? (≃.mk a b c d)) = 4 := by simp [point_arity]
     .cong_mk points'[0] points'[1] points'[2] points'[3]
-  | DCC? (≃.1.apply a b) =>
-    have heq : point_arity (DCC? (≃.1.apply a b)) = 0 := by simp [point_arity]
-    .cong_appl a b
   | DCC? (≃.env a b) =>
     have heq : point_arity (DCC? (≃.env a b)) = 0 := by simp [point_arity]
     .cong_env a b
-  | DCC? (≃.2.apply a b) =>
-    have heq : point_arity (DCC? (≃.2.apply a b)) = 0 := by simp [point_arity]
-    .cong_appr a b
   | DCC? (≃.Ind motive x) =>
     have heq : point_arity (DCC? (≃.Ind motive x)) = 2 := by grind
     .ind_cong points'[0] points'[1]
@@ -417,9 +405,7 @@ def max_hole (e : GenericExpr τ_c) : ℕ :=
   match e with
   | DCC? (Dup B x) => max B.max_hole x.max_hole
   | DCC? (≃.mk a b c d) => max a.max_hole (max b.max_hole (max c.max_hole d.max_hole))
-  | DCC? (≃.1.apply _a _b) => 0
   | DCC? (≃.env _a _b) => 0
-  | DCC? (≃.2.apply _a _b) => 0
   | DCC? (Map A B x y) => max A.max_hole (max B.max_hole (max x.max_hole y.max_hole))
   | DCC? (Assoc A B C) => max A.max_hole (max B.max_hole C.max_hole)
   | DCC? (Bool.Ind motive x y) => max motive.max_hole (max x.max_hole y.max_hole)
@@ -475,9 +461,7 @@ def min_hole (e : GenericExpr τ_c) : ℕ :=
   | DCC? (≃.mk a b c d) => min a.min_hole (min b.min_hole (min c.min_hole d.min_hole))
   | DCC? (Map A B x y) => min A.min_hole (min B.min_hole (min x.min_hole y.min_hole))
   | DCC? (Assoc A B C) => min A.min_hole (min B.min_hole C.min_hole)
-  | DCC? (≃.1.apply _a _b) => 0
   | DCC? (≃.env _a _b) => 0
-  | DCC? (≃.2.apply _a _b) => 0
   | DCC? (Bool.Ind motive x y) => min motive.min_hole (min x.min_hole y.min_hole)
   | DCC? (≃.Ind motive x) => min motive.min_hole x.min_hole
   | DCC? (≃.1 x y) => min x.min_hole y.min_hole

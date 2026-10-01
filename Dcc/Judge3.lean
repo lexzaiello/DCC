@@ -972,21 +972,13 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] [BEq τ_c] (e : Generi
   | DCC? (⟨,⟩C M N) =>
     match infer M with
     | .ok ⟨DCC? ((Π (Id Sort u) (`(Sort u₂) B)) A), ht_M⟩ =>
-      dbg_trace "1"
       if heq : (DCC? ((Π (Id Sort u) (`(Sort u₂) B)) A)) = (Pair.f.type A B u) then
-        dbg_trace "2"
         match infer C with
         | .ok ⟨_τ_C, ht_C⟩ =>
-          dbg_trace "3"
-          dbg_trace repr B
-          dbg_trace repr A
-          dbg_trace "4"
-          dbg_trace "5"
           match infer N with
           | .ok ⟨τ_N, ht_N⟩ =>
             match def_eq? τ_N (Pair.g.type A B (reduce_all C) u) with
             | .ok h =>
-            dbg_trace "6"
               .ok ⟨_, .pair (heq ▸ ht_M) ht_C ht_N h (reduce_reduces rfl)⟩
             | .error e => .error (.sub N (.def_eq e))
           | .error e => .error (.sub N e)

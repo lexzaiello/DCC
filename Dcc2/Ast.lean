@@ -15,7 +15,7 @@ Improvements to DCC:
   - Congruence is represented through nested Comb.reduct
     - This way we might be able to even avoid congrFun and congrArg altogether and only have head reductions
       - Comb.type gives the list that is applied to Π
-      - $ : Σ (c : (Σ (n : ℕ) (c : Comb (.succ n)), (Γ : Comb.sig (.succ n) c))) (x : (Snd Sort) Comb.dom c) → Comb.cod c x
+      - $ : Σ (c : (Σ (n : ℕ) (c : Comb (.succ n)), (Γ : Comb.sig (.succ n) c))) (x : Comb.dom c) → Comb.cod (, c x)
         - This subsumes Comb.mk
     - Comb.cod is only necessary if the combinator returns a Value.
     - e.g., (Id 𝟙) ∗, or (Fst <sigma containing values>)
@@ -36,8 +36,10 @@ Improvements to DCC:
   - Comb : Type 0
   - A combinator has a signature, which is the context it expects
     - The signature also contains the universe levels
-  - Comb.dom     : (Σ (n : ℕ) (c : Comb (.succ n)), (Γ : Comb.sig (.succ n) c)) → (Σ (u : Level), Sort u)
-  - Comb.cod     : (Σ (n : ℕ) (c : Comb (.succ n)), (Γ : Comb.sig (.succ n) c)) → (x : Fst (Comb.dom n c Γ)) → (Σ (u : Level), Sort u)
+  - Comb.u_dom   : (Σ (n : ℕ) (c : Comb (.succ n)), (Γ : Comb.sig (.succ n) c)) → Sort u
+  - Comb.dom     : (Σ (n : ℕ) (c : Comb (.succ n)), (Γ : Comb.sig (.succ n) c)) → (Sort (Comb.u_dom c))
+  - Comb.u_cod   : (Σ (n : ℕ) (c : Comb (.succ n)), (Γ : Comb.sig (.succ n) c)) → Level
+  - Comb.cod     : (Σ (Σ (n : ℕ) (c : Comb (.succ n)), (Γ : Comb.sig (.succ n) c)) (x : Fst (Comb.dom n c Γ))) → (Sort (Comb.u_cod c))
 
   - Comb.arity   : (n : ℕ) → (c : Comb n)      → ℕ := n
 
@@ -45,7 +47,7 @@ Improvements to DCC:
 - Level is a base type
   - zero : Level
   - succ : Level → Level
-  - max  : Level → Level → Level
+  - max  : (A → Level) → (A → Level) → A → Level
 - Sort : (lv : Level) → (∘ Sort Level.succ)
 - (Σ B C) is the default now instead of just (Σ B)
 - Nothing needs to index the environment anymore, since all combinators are curryable via lists.
@@ -72,7 +74,7 @@ u : (env : Γ) → Level     A : (env : Γ) → Sort (u env)
 v : (env : Γ) → Level     B : (env : Γ) → (x : A env) → Sort (v env)
                       env : Γ
 ----------------------------------------------------------------------
-             (Π u A v B env) : Sort (max (u env) (v env))
+             (Π u A v B env) : Sort (max u v env)
 
 ---------------------------------------------------------
 Comb.sig 1 Id := (Σ (Id (Sort 0)) (`(Sort 0) Sort) Level)
@@ -82,16 +84,27 @@ Comb.sig 1 Id := (Σ (Id (Sort 0)) (`(Sort 0) Sort) Level)
 Id : ℕ → Comb
 
 
-----------------------------------------------------------------
-Comb.dom (, 1 (,(Comb.sig 1) (Id 1) (,Sort u A))) := (,Sort u A)
+-------------------------------------------------------
+Comb.dom (, 1 (,(Comb.sig 1) (Id 1) (,Sort u A))) := A
 
-------------------------------------------------------------------
-Comb.cod (, 1 (,(Comb.sig 1) (Id 1) (,Sort u A))) _x := (,Sort u A)
+--------------------------------------------------------
+Comb.u_dom (, 1 (,(Comb.sig 1) (Id 1) (,Sort u A))) := u
+
+-------------------------------------------------------
+Comb.u_cod (, 1 (,(Comb.sig 1) (Id 1) (,Sort u A))) := u
+
+-------------------------------------------------------------
+Comb.cod (, (, 1 (,(Comb.sig 1) (Id 1) (,Sort u A))) _x) := A
 
 VERY IMPORTANT: CONGRFUN is avoided due to nested ($ indicating congrFun explicitly
 
 general CongrFun is avoided easily since we just match nested $.
 Combinators that make no "step" should not use $. e.g., Π.
 
-
+Comb.type : (c : (Σ (n : ℕ) (c : Comb (.succ n)), (Γ : Comb.sig (.succ n) c))) → ((∘ Sort (max Cod.u_dom Comb.u_cod)) c)
+               := (Π (∘ (Fst Sort) Comb.dom)
+                    (∘ (Snd Sort) Comb.dom)
+                    Comb.elim
+                    (Λ _ _ Comb.cod)
+                    c)
 -/

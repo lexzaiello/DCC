@@ -14,18 +14,10 @@ def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{
   | (DCC? ((Dup _B _x) (& _env) (& _y))) => .some ⟨_, ⟨.dup⟩⟩
   | (DCC? ((Map _B _C _f _g) (,__B _x _y))) => .some ⟨_, ⟨.bimap⟩⟩
   | (DCC? ((Assoc _A _B _C) (,_B₁ (,_B₂ _x _y) _z))) => .some ⟨_, ⟨.assoc⟩⟩
-  | (DCC? ((Bool.Ind _motive _x _y) _env True)) =>
+  | (DCC? ((Bool.Rec _motive _x _y) _env True)) =>
     .some ⟨_, ⟨.ind_bool_true⟩⟩
-  | (DCC? ((Bool.Ind _motive _x _y) _env False)) =>
+  | (DCC? ((Bool.Rec _motive _x _y) _env False)) =>
     .some ⟨_, ⟨.ind_bool_false⟩⟩
-  | (DCC? ((≃.1 _A _B) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
-    .some ⟨_, ⟨.cong_1⟩⟩
-  | (DCC? ((≃.2 _A _B) ((≃.mk _fX _fY _fidl _fidr) _env₂))) =>
-    .some ⟨_, ⟨.cong_2⟩⟩
-  | (DCC? ((≃.3 _A _B) (& ((≃.mk _fX _fY _fidl _fidr) _env₂)))) =>
-    .some ⟨_, ⟨.cong_3⟩⟩
-  | (DCC? ((≃.4 _A _B) (& ((≃.mk _fX _fY _fidl _fidr) _env₂)))) =>
-    .some ⟨_, ⟨.cong_4⟩⟩
   | DCC? ((!<> _f) (& _x))                                 => .some ⟨_, ⟨.map⟩⟩
   | DCC? (($<> _f) (& _x))                                 => .some ⟨_, ⟨.fmap⟩⟩
   | DCC? ((* _α) (& _x))                                 => .some ⟨_, ⟨.unbox⟩⟩
@@ -34,47 +26,12 @@ def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{
   | (DCC? ((Eql _f_α) _env (,_B _x _y)))              => .some ⟨_, ⟨.eql⟩⟩
   | (DCC? ((`_β _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
   | (DCC? ((Id _α) _x))                                => .some ⟨_, ⟨.id⟩⟩
-  | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
+  | (DCC? ((Fst _α _β) _env (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
   | (DCC? ((Swap _B _C) (,_B₂ _a _b)))                 => .some ⟨_, ⟨.swap⟩⟩
-  | (DCC? ((Snd _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
+  | (DCC? ((Snd _α _β) _env (,_γ _a _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
   | (DCC? ((∘ _x _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
   | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, ⟨.curr'⟩⟩
   | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
-  | (DCC? ((Σ _f_α _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
-  | (DCC? (Dom (≃.1 _A _B))) => .some ⟨_, ⟨.cong_1τ₀⟩⟩
-  | (DCC? (Dom (≃.2 _A _B))) => .some ⟨_, ⟨.cong_2τ₀⟩⟩
-  | (DCC? (Dom (≃.3 _A _B))) => .some ⟨_, ⟨.cong_3τ₀⟩⟩
-  | (DCC? (Dom (≃.4 _A _B))) => .some ⟨_, ⟨.cong_4τ₀⟩⟩
-  | DCC? (Dom (Bool.Ind _motive _x _y)) => .some ⟨_, ⟨.bool_indτ₀⟩⟩
-  | DCC? (Dom (Map _A _B _f _g)) => .some ⟨_, ⟨.bimapτ₀⟩⟩
-  | DCC? (Dom (Assoc _A _B _C)) => .some ⟨_, ⟨.assocτ₀⟩⟩
-  | DCC? (Dom (Eql _B)) => .some ⟨_, ⟨.eqlτ₀⟩⟩
-  | DCC? (Dom (refl _B)) => .some ⟨_, ⟨.reflτ₀⟩⟩
-  | DCC? (Dom (!<> _x)) => .some ⟨_, ⟨.mapτ₀⟩⟩
-  | DCC? (Dom ($<> _x)) => .some ⟨_, ⟨.fmapτ₀⟩⟩
-  | DCC? (Dom (* _x)) => .some ⟨_, ⟨.unboxτ₀⟩⟩
-  | DCC? (Dom (⟨,⟩_B _x _y)) => .some ⟨_, ⟨.pairτ₀⟩⟩
-  | DCC? (Dom (Eval _A _B _x)) => .some ⟨_, ⟨.evalcτ₀⟩⟩
-  | DCC? (Dom (`_B _x)) => .some ⟨_, ⟨.quotτ₀⟩⟩
-  | DCC? (Dom (Id _A)) => .some ⟨_, ⟨.idτ₀⟩⟩
-  | DCC? (Dom (Fst _B)) => .some ⟨_, ⟨.fstcτ₀⟩⟩
-  | DCC? (Dom (Snd _B)) => .some ⟨_, ⟨.sndcτ₀⟩⟩
-  | DCC? (Dom (Swap _B _C)) => .some ⟨_, ⟨.swapτ₀⟩⟩
-  | DCC? (Dom (∘ _x _y)) => .some ⟨_, ⟨.compτ₀⟩⟩
-  | DCC? (Dom (Λ _A _B _x)) => .some ⟨_, ⟨.currτ₀⟩⟩
-  | DCC? (Dom (!Λ _A _B _x)) => .some ⟨_, ⟨.curr'τ₀⟩⟩
-  | DCC? (Dom (Σ _B _C)) => .some ⟨_, ⟨.sigmaτ₀⟩⟩
-  | DCC? (Dom (Π _B _C)) => .some ⟨_, ⟨.piτ₀⟩⟩
-  | DCC? (Dom ((Eql _B) _x)) => .some ⟨_, ⟨.eqlτ₁⟩⟩
-  | DCC? (Dom ((refl _B) (& _x))) => .some ⟨_, ⟨.reflτ₁⟩⟩
-  | DCC? (Dom ((Λ _A _B _x) _y)) => .some ⟨_, ⟨.currτ₁⟩⟩
-  | DCC? (Dom ((!Λ _A _B _x) (& _y))) => .some ⟨_, ⟨.curr'τ₁⟩⟩
-  | DCC? (Uncoup (Σ _x)) => .some ⟨_, ⟨.uncoup⟩⟩
-  | DCC? (Unbang (! _x)) => .some ⟨_, ⟨.unbang⟩⟩
-  | DCC? (Dom₂ (Eql _B)) => .some ⟨_, ⟨.eqlτ₃⟩⟩
-  | DCC? (Dom₂ (refl _B)) => .some ⟨_, ⟨.reflτ₃⟩⟩
-  | DCC? (Dom₂ (Λ _A _B _x)) => .some ⟨_, ⟨.currτ₃⟩⟩
-  | DCC? (Dom₂ (!Λ _A _B _x)) => .some ⟨_, ⟨.curr'τ₃⟩⟩
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
@@ -90,22 +47,6 @@ def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1
         | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (f' x)), ⟨.congrFun h₁⟩⟩
         | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC? (f x')), ⟨.congrArg h₁⟩⟩
         | _, _ => .none
-      | DCC? (Dom x) =>
-        match x.step? with
-        | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.dom₀ h₁⟩⟩
-        | .none => .none
-      | DCC? (Dom₂ x) =>
-        match x.step? with
-        | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.dom₂₀ h₁⟩⟩
-        | .none => .none
-      | DCC? (Uncoup x) =>
-        match x.step? with
-        | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.uncoup₀ h₁⟩⟩
-        | .none => .none
-      | DCC? (Unbang x) =>
-        match x.step? with
-        | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.unbang₀ h₁⟩⟩
-        | .none => .none
       | _ => .none
     | .inr (.inl ⟨heq⟩) =>
       match (e.points.get ⟨0, by simp [heq]⟩).step? with
@@ -445,46 +386,6 @@ theorem swap₁' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x'
   | .inr ⟨_, h₁, h₂⟩ =>
     have h_dec := RedAff.instRedRel.decreasing h₁
     exact .trans (.single (.point 1 (by grind) h₁)) (swap₁' (by assumption))
-termination_by x.size
-
-theorem dom' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Dom x)) (DCC? (Dom x')) := by
-  match hr.cases_head with
-  | .inl h =>
-    cases h
-    exact .refl
-  | .inr ⟨_, h₁, h₂⟩ =>
-    have h_dec := RedAff.instRedRel.decreasing h₁
-    exact .trans (.single (.dom₀ h₁)) (dom' (by assumption))
-termination_by x.size
-
-theorem dom₂' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Dom₂ x)) (DCC? (Dom₂ x')) := by
-  match hr.cases_head with
-  | .inl h =>
-    cases h
-    exact .refl
-  | .inr ⟨_, h₁, h₂⟩ =>
-    have h_dec := RedAff.instRedRel.decreasing h₁
-    exact .trans (.single (.dom₂₀ h₁)) (dom₂' (by assumption))
-termination_by x.size
-
-theorem uncoup' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Uncoup x)) (DCC? (Uncoup x')) := by
-  match hr.cases_head with
-  | .inl h =>
-    cases h
-    exact .refl
-  | .inr ⟨_, h₁, h₂⟩ =>
-    have h_dec := RedAff.instRedRel.decreasing h₁
-    exact .trans (.single (.uncoup₀ h₁)) (uncoup' (by assumption))
-termination_by x.size
-
-theorem unbang' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Unbang x)) (DCC? (Unbang x')) := by
-  match hr.cases_head with
-  | .inl h =>
-    cases h
-    exact .refl
-  | .inr ⟨_, h₁, h₂⟩ =>
-    have h_dec := RedAff.instRedRel.decreasing h₁
-    exact .trans (.single (.unbang₀ h₁)) (unbang' (by assumption))
 termination_by x.size
 
 theorem congrArg' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f x')) := by

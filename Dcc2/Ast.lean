@@ -5,6 +5,27 @@ import Mathlib.Tactic
 /-
 Improvements to DCC:
 
+Base Ob(C(DCC)) := { ℕ, 𝟙, 𝟘, 𝟚, Hom,
+
+Hom ×
+
+turning A → B into Π A.B
+
+this is a substitution?
+
+I want to keep it pure.
+
+Σ and Π, no less.
+
+I do like the idea of working in Pos.
+
+terminal object in C / A for all types A is Id.
+
+so we define an ordering on Hom.
+
+Fst ∈ Hom(A × B, A)
+Snd ∈ Hom(A × B, B)
+
 - Holes / metavariables are not well-typed expressions, but they are unifiable
 - Bool is renamed to 𝟚
 - ⊤ is renamed to 𝟙
@@ -128,48 +149,91 @@ We do congruences individually with $ on the right hand side of the rules that n
 -/
 
 inductive CombName where
-  | mk : String → CombName
-deriving Repr
+  | snd        : CombName
+  | quot       : CombName
+  | sigma      : CombName
+  | sort       : CombName
+  | comb_sig   : CombName
+  | comb_u_dom : CombName
+  | comb_u_cod : CombName
+  | comb_dom   : CombName
+  | comb_cod   : CombName
+  | comb_type  : CombName
+  | id         : CombName
+deriving Repr, DecidableEq
 
 inductive Expr where
-  | zero_nat : Expr
-  | succ_nat : Expr → Expr
-  | comb_tm  : CombName → Expr -- "Λ" : Comb
-  | comb_ty  : Expr -- Comb
-  | zero_lv  : Expr -- 0ᵤ
-  | succ_lv  : Expr → Expr -- Level.succ
-  | max_lv   : Expr → Expr → Expr → Expr -- max f g env : Level
-  | sort     : Expr → Expr -- Sort : (u : Level) → (∘ Sort Level.succ)
-  | bot      : Expr -- 𝟘
-  | top      : Expr → Expr -- 𝟙 lv : Sort lv
-  | tintro   : Expr → Expr -- ∗
-  | nat_ty   : Expr -- ℕ
-  | true     : Expr
-  | false    : Expr
-  | bool     : Expr -- 𝟚
+  | hole_ty   : Expr
+  | zero_nat  : Expr
+  | succ_nat  : Expr → Expr
+  | comb_tm   : CombName → Expr -- "Λ" : Comb
+  | comb_ty   : Expr -- Comb
+  | zero_lv   : Expr -- 0ᵤ
+  | succ_lv   : Expr → Expr -- Level.succ
+  | max_lv    : Expr → Expr → Expr → Expr -- max f g env : Level
+  | sort      : Expr → Expr -- Sort : (u : Level) → (∘ Sort Level.succ)
+  | bot       : Expr -- 𝟘
+  | top       : Expr → Expr -- 𝟙 lv : Sort lv
+  | tintro    : Expr → Expr -- ∗
+  | nat_ty    : Expr -- ℕ
+  | true      : Expr
+  | false     : Expr
+  | bool      : Expr -- 𝟚
   /-
     Λ : (c : (Σ 2 (c : Comb 2), (Γ : Comb.sig 2 c)))
         (x : Comb.dom c)
         (y : Comb.dom ($ c x)) → (Λ Comb.cod ($ c x) y)
   -/
-  | curr_tm  : Expr
-  | sigma    : Expr → Expr -- (Σ u A v B env)
-  | pi       : Expr → Expr → Expr → Expr → Expr → Expr -- (Π u A v B env)
-  | app_tm   : Expr
+  | curr_tm   : Expr
+  | sigma     : Expr → Expr -- (Σ u A v B env)
+  | sigma_inv : Expr → Expr
+  | pi        : Expr → Expr → Expr → Expr → Expr -- (Π u A v B env)
+  | app_tm    : Expr
     -- $ : (c : (Σ (n : ℕ) (c : Comb (.succ n)), (Γ : Comb.sig (.succ n) c))) (x : Comb.dom c) → Comb.cod (, c x)
-  | mk       : Expr → Expr → Expr -- (, x y) : (`( ... quotation to make it a product by default, but unification joins it with any given Σ ≡
-  | lv_ty    : Expr -- Level : Sort 0
-  | hole     : Expr -- _ : ? n
-  | mvar     : Expr → Expr -- ? : ℕ → Sort _
-  | app      : Expr → Expr → Expr
-deriving Repr
+  | mk        : Expr → Expr → Expr → Expr
+  | lv_ty     : Expr -- Level : Sort 0
+  | hole      : Expr -- _ : ? n
+  | mvar      : Expr → Expr -- ? : ℕ → Sort _
+  | app       : Expr → Expr → Expr
+deriving Repr, DecidableEq
 
 declare_syntax_cat expr
+declare_syntax_cat comb
 
 namespace Dsl
 
-scoped syntax "('" "Sort" ")"                           : expr
-scoped syntax "('" expr ")"                             : expr
+scoped syntax "Snd"        : comb
+scoped syntax "Comb.sig"   : comb
+scoped syntax "Sort"       : comb
+scoped syntax "Π"          : comb
+scoped syntax "Σ"          : comb
+scoped syntax "Comb.u_dom" : comb
+scoped syntax "Comb.u_cod" : comb
+scoped syntax "Comb.dom"   : comb
+scoped syntax "Comb.cod"   : comb
+scoped syntax "Comb.type"  : comb
+scoped syntax "Id"         : comb
+scoped syntax "Quot"       : comb
+
+syntax "DCC_COMB" comb : term
+
+macro_rules
+  | `(DCC_COMB Snd) => `(CombName.snd)
+  | `(DCC_COMB Quot) => `(CombName.quot)
+  | `(DCC_COMB Comb.sig) => `(CombName.comb_sig)
+  | `(DCC_COMB Σ) => `(CombName.sigma)
+  | `(DCC_COMB Sort) => `(CombName.sort)
+  | `(DCC_COMB Comb.u_dom) => `(CombName.comb_u_dom)
+  | `(DCC_COMB Comb.u_cod) => `(CombName.comb_u_cod)
+  | `(DCC_COMB Comb.dom) => `(CombName.comb_dom)
+  | `(DCC_COMB Comb.cod) => `(CombName.comb_cod)
+  | `(DCC_COMB Comb.type) => `(CombName.comb_type)
+  | `(DCC_COMB Id) => `(CombName.id)
+
+scoped syntax "Comb.sig"                                : expr
+scoped syntax "Hole"                                    : expr
+scoped syntax:max "('" comb ")"                         : expr
+scoped syntax "('" "#(" term ")" ")"                    : expr
 scoped syntax "(:" expr expr ")"                        : expr
 scoped syntax "(Level.max" expr+ ")"                    : expr
 scoped syntax "(Level.succ" expr+ ")"                   : expr
@@ -181,16 +245,17 @@ scoped syntax "𝟙₂"                                      : expr
 scoped syntax "𝟘"                                       : expr
 scoped syntax "(𝟙" expr+ ")"                            : expr
 scoped syntax "𝟚"                                       : expr
-scoped syntax:max "Combinator"                          : expr
+scoped syntax:max "Comb"                                : expr
 scoped syntax:max "ℕ"                                   : expr
 scoped syntax num                                       : expr
 scoped syntax "(∗" expr+ ")"                            : expr
 scoped syntax "(Σ" expr+ ")"                            : expr
+scoped syntax "(Σ⁻¹" expr+ ")"                          : expr
 scoped syntax "Λ"                                       : expr
 scoped syntax "(Π" expr+ ")"                            : expr
 scoped syntax "$"                                       : expr
 scoped syntax "($*" expr+ ")"                           : expr
-scoped syntax "(," expr+ ")"                            : expr
+scoped syntax ("(," noWs expr) expr+ ")"                : expr
 scoped syntax "Level"                                   : expr
 scoped syntax "_"                                       : expr
 scoped syntax "(?" expr+")"                             : expr
@@ -218,12 +283,10 @@ macro_rules
       (fun (a : Lean.TSyntax `term) (b : Lean.TSyntax `term) => `(term| $a $b))
       (← `(term| Expr.zero_nat))
     pure n
-  | `(DCC' Combinator) => `(Expr.comb_ty)
-  | `(DCC' (' Sort)) => `(Expr.comb_tm (CombName.mk "Sort"))
-  | `(DCC' (' $f:ident)) =>
-    let raw_name := Lean.Syntax.mkStrLit f.getId.eraseMacroScopes.toString
-    `(Expr.comb_tm (CombName.mk $raw_name:term))
-  | `(DCC' (' #($x:term))) =>
+  | `(DCC' Comb) => `(Expr.comb_ty)
+  | `(DCC' ('$f:comb)) =>
+    `(Expr.comb_tm (DCC_COMB $f))
+  | `(DCC' ('#($x:term))) =>
     `(Expr.comb_tm $x)
   | `(DCC' (: $n:num Level)) => do
     let n ← (List.replicate n.getNat (← `(term| Expr.succ_lv))).foldrM
@@ -238,12 +301,14 @@ macro_rules
   | `(DCC' 𝟙₂) => `(Expr.true)
   | `(DCC' (𝟙 $lv:expr)) => `(Expr.top (DCC' $lv:expr))
   | `(DCC' 𝟚) => `(Expr.bool)
+  | `(DCC' Hole) => `(Expr.hole_ty)
   | `(DCC' (∗ $lv:expr)) => `(Expr.tintro (DCC' $lv:expr))
   | `(DCC' (Σ $B:expr)) => `(Expr.sigma (DCC' $B))
-  | `(DCC' (Π $u:expr $A:expr $v:expr $B:expr $env:expr)) => `(Expr.pi (DCC' $u) (DCC' $A) (DCC' $v) (DCC' $B) (DCC' $env))
+  | `(DCC' (Σ⁻¹ $B:expr)) => `(Expr.sigma_inv (DCC' $B))
+  | `(DCC' (Π $u:expr $A:expr $v:expr $B:expr)) => `(Expr.pi (DCC' $u) (DCC' $A) (DCC' $v) (DCC' $B))
   | `(DCC' Λ) => `(Expr.curr_tm)
   | `(DCC' $) => `(Expr.app_tm)
-  | `(DCC' (, $x:expr $y:expr)) => `(Expr.mk (DCC' $x) (DCC' $y))
+  | `(DCC' (,$β:expr $x:expr $y:expr)) => `(Expr.mk (DCC' $β) (DCC' $x) (DCC' $y))
   | `(DCC' Level) => `(Expr.lv_ty)
   | `(DCC' _) => `(Expr.hole)
   | `(DCC' (? $e:expr)) => `(Expr.mvar (DCC' $e))
@@ -261,7 +326,27 @@ macro_rules
 
 open Dsl in
 macro_rules
-  | `(DCC $e:expr) => `(open Dsl in (DCC' $e:expr))
+  | `(DCC $e:expr) => `(DCC' $e:expr)
+
+namespace CombName
+
+def to_format (f : CombName) : Std.Format :=
+  match f with
+  | .snd => "Snd"
+  | .quot => "Quot"
+  | .comb_sig => "Comb.sig"
+  | .sigma => "Σ"
+  | .sort => "Sort"
+  | .comb_u_dom => "Comb.u_dom"
+  | .comb_u_cod => "Comb.u_cod"
+  | .comb_type => "Comb.type"
+  | .comb_dom => "Comb.dom"
+  | .comb_cod => "Comb.cod"
+  | .id => "Id"
+
+end CombName
+
+instance : Std.ToFormat CombName := ⟨CombName.to_format⟩
 
 namespace Expr
 
@@ -273,38 +358,6 @@ def nat_to_nat (e : Expr) : ℕ :=
 
 def of_spine (f : Expr) (args : List Expr) : Expr :=
   args.foldl Expr.app f
-
-@[grind]
-def size (e : Expr) : ℕ :=
-  open Dsl in match e with
-  | DCC' (Π _a _b _c _d _e)
-  | DCC' (Σ _a) => 1
-  | DCC' (∗ x)
-  | DCC' (𝟙 x)
-  | DCC' (ℕ.succ x) | DCC' (Level.succ x) => x.size.succ
-  | DCC' (Level.max f g x) => f.size + g.size + x.size
-  | DCC' (Sort u) => u.size
-  | DCC' Λ => 2
-  | DCC' $
-  | DCC' Combinator
-  | DCC' (' #(_c))
-  | DCC' (: 0 Level)
-  | DCC' (: 0 ℕ)
-  | DCC' 𝟘
-  | DCC' 𝟘₂
-  | DCC' 𝟙₂
-  | DCC' 𝟚
-  | DCC' Level
-  | DCC' _
-  | DCC' (? _x)
-  | DCC' ℕ => 1
-  | DCC' (, x y) => x.size + y.size
-  | .app f x => f.size + x.size
-
-@[aesop safe forward, aesop safe apply]
-theorem size_pos : 0 < size e := by
-  induction e
-  any_goals (grind only [size])
 
 def spine (f x : Expr) :
   Σ' (_h : Σ' (f₀ : Expr), sizeOf f₀ < sizeOf (Expr.app f x)), (List.{0} (Σ' (e : Expr), sizeOf e < sizeOf (Expr.app f x))) :=
@@ -325,7 +378,8 @@ def to_format (e : Expr) : Format :=
     paren ((.align Bool.false) ++ (pre ++ " " ++ (.group (sepD points (indent := min pre.pretty.length.succ 30)))))
 
   open Dsl in match e with
-  | DCC' (Π a b c d e) => comb "Π" [a.to_format, b.to_format, c.to_format, d.to_format, e.to_format]
+  | DCC' (Σ⁻¹ x) => comb "Σ⁻¹" [x.to_format]
+  | DCC' (Π u A v B) => comb "Π" [u.to_format, A.to_format, v.to_format, B.to_format]
   | DCC' (Σ a) => comb "Σ" [a.to_format]
   | DCC' (∗ x) => comb "∗" [x.to_format]
   | DCC' (𝟙 x) => comb "𝟙" [x.to_format]
@@ -335,8 +389,8 @@ def to_format (e : Expr) : Format :=
   | DCC' (Sort u) => comb "Sort" [u.to_format]
   | DCC' Λ => "Λ"
   | DCC' $ => "$"
-  | DCC' Combinator => "Combinator"
-  | DCC' (' #(f)) => comb "'" [f.1.toFormat]
+  | DCC' Comb => "Comb"
+  | DCC' ('#(f)) => comb "'" [f.to_format]
   | DCC' (: 0 Level) => comb ":" [s!"{0}", "Level"]
   | DCC' (: 0 ℕ) => "0"
   | DCC' 𝟘 => "𝟘"
@@ -345,9 +399,10 @@ def to_format (e : Expr) : Format :=
   | DCC' 𝟚 => "𝟚"
   | DCC' Level => "Level"
   | DCC' _ => "_"
+  | DCC' Hole => "Hole"
   | DCC' (? x) => comb "?" [x.to_format]
   | DCC' ℕ => "ℕ"
-  | DCC' (, x y) => comb "," [x.to_format, y.to_format]
+  | DCC' (,β x y) => comb ("," ++ β.to_format) [x.to_format, y.to_format]
   | DCC' (f x) =>
     let ⟨⟨f₀, _hlt⟩, args⟩ := spine f x
     let fmt_args := args.map (fun ⟨arg, _hlt⟩ => to_format arg)
@@ -359,3 +414,10 @@ end Expr
 
 instance : Std.ToFormat Expr := ⟨Expr.to_format⟩
 instance : Repr Expr := ⟨fun e _ => .paren ("DCC" ++ .line ++ (.nest 2 e.to_format))⟩
+
+namespace Dsl
+
+syntax expr "→ᵦ" expr : term
+syntax expr "≡" expr  : term
+
+end Dsl

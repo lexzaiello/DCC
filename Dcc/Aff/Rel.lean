@@ -120,7 +120,7 @@ Core reductions:
 -/
   | dup            : RedAff (DCC? ((Dup B x) (& env) (& y))) (DCC? (x env (,(`(B env) (B env)) y y)))
   | bimap          : RedAff (DCC? ((Map A B f g) (,_B x y))) (DCC? (,(`A B) (f x) (g y)))
-  | assoc          : RedAff (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x y) z))) (DCC? (,(`A (Σ (`B C))) x (,(`B C) y z)))
+  | assoc          : RedAff (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x y) z))) (DCC? (,(`A ((Σ (`⊤ B) (`⊤ (`B C))) ∗)) x (,(`B C) y z)))
   | eql            : RedAff (DCC? ((Eql f_α) env (,B x y))) (DCC? (= (f_α env) x y))
   | map            : RedAff (DCC? ((!<> f) (& x))) (DCC? (!(f x)))
   | fmap           : RedAff (DCC? (($<> f) (& x))) (DCC? (& (f x)))
@@ -129,19 +129,14 @@ Core reductions:
   | evalc          : RedAff (DCC? ((Eval _α _β x) (,__β y z))) (DCC? (x y z))
   | quot           : RedAff (DCC? ((`β x) y)) x
   | id             : RedAff (DCC? ((Id α) x)) x
-  | fstc           : RedAff (DCC? ((Fst _α) (,β a b))) a
-  | sndc           : RedAff (DCC? ((Snd _α) (,β a b))) b
+  | fstc           : RedAff (DCC? ((Fst _α _β) env (,β a b))) a
+  | sndc           : RedAff (DCC? ((Snd _α _β) env (,β a b))) b
   | comp           : RedAff (DCC? ((∘ x y) z)) (DCC? (x (y z)))
   | curr           : RedAff (DCC? ((Λ α β x) y z)) (DCC? (x (,β y z)))
   | curr'          : RedAff (DCC? ((!Λα β x) (& y) (& z))) (DCC? (x (& (,β y z))))
-  | sigma          : RedAff (DCC? ((Σ f_α f_β) env)) (DCC? ((Σ (f_β env))))
   | swap           : RedAff (DCC? ((Swap A B) (,B₂ x y))) (DCC? (,(`B A) y x))
-  | ind_bool_true  : RedAff (DCC? ((Bool.Ind motive x y) env True)) (DCC? (x env True))
-  | ind_bool_false : RedAff (DCC? ((Bool.Ind motive x y) env False)) (DCC? (y env False))
-  | cong_1         : RedAff (DCC? ((≃.1 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fX env₂))
-  | cong_2         : RedAff (DCC? ((≃.2 A B) ((≃.mk fX fY fidl fidr) env₂))) (DCC? (fY env₂))
-  | cong_3         : RedAff (DCC? ((≃.3 A B) (& ((≃.mk fX fY fidl fidr) env₂)))) (DCC? (fidl (& env₂)))
-  | cong_4         : RedAff (DCC? ((≃.4 A B) (& ((≃.mk fX fY fidl fidr) env₂)))) (DCC? (fidr (& env₂)))
+  | ind_bool_true  : RedAff (DCC? ((Bool.Rec motive x y) env True)) (DCC? (x env True))
+  | ind_bool_false : RedAff (DCC? ((Bool.Rec motive x y) env False)) (DCC? (y env False))
 /-
 Inner congruences:
 -/
@@ -152,64 +147,6 @@ App congruence:
 -/
   | congrFun : RedAff f f' → RedAff (DCC? (f x)) (DCC? (f' x))
   | congrArg : RedAff x x' → RedAff (DCC? (f x)) (DCC? (f x'))
-/-
-Base combinator function domains
--/
-  | cong_1τ₀    : RedAff (DCC? (Dom (≃.1 A B))) (DCC? (≃ A B))
-  | cong_2τ₀    : RedAff (DCC? (Dom (≃.2 A B))) (DCC? (≃ A B))
-  | cong_3τ₀    : RedAff (DCC? (Dom (≃.3 A B))) (DCC? (! (≃ A B)))
-  | cong_4τ₀    : RedAff (DCC? (Dom (≃.4 A B))) (DCC? (! (≃ A B)))
-  | bool_indτ₀  : RedAff (DCC? (Dom (Bool.Ind motive x y))) (DCC? (Dom motive))
-  | bimapτ₀     : RedAff (DCC? (Dom (Map A B f g))) (DCC? (Σ (`(Dom f) (Dom g))))
-  | assocτ₀     : RedAff (DCC? (Dom (Assoc A B C))) (DCC? (Σ (`(Σ (`A B)) C)))
-  | eqlτ₀       : RedAff (DCC? (Dom (Eql B))) (DCC? (Dom B))
-  | reflτ₀      : RedAff (DCC? (Dom (refl B))) (DCC? (! (Dom B)))
-  | mapτ₀       : RedAff (DCC? (Dom (!<> x))) (DCC? (! (Dom x)))
-  | fmapτ₀      : RedAff (DCC? (Dom ($<> x))) (DCC? (! (Dom x)))
-  | unboxτ₀     : RedAff (DCC? (Dom (* A))) (DCC? (! A))
-  | pairτ₀      : RedAff (DCC? (Dom (⟨,⟩B x y))) (DCC? (! (Dom x)))
-  | evalcτ₀     : RedAff (DCC? (Dom (Eval A B x))) (DCC? (Σ B))
-  | quotτ₀      : RedAff (DCC? (Dom (`B x))) B
-  | idτ₀        : RedAff (DCC? (Dom (Id A))) A
-  | fstcτ₀      : RedAff (DCC? (Dom (Fst B))) (DCC? (Σ B))
-  | sndcτ₀      : RedAff (DCC? (Dom (Snd B))) (DCC? (Σ B))
-  | compτ₀      : RedAff (DCC? (Dom (∘ x y))) (DCC? (Dom y))
-  -- x : (x : Coup(B)) -> ...., explicitly recurisng here is important since it
-  -- is the only partial app possible
-  | currτ₀      : RedAff (DCC? (Dom (Λ A B x))) (DCC? (Dom (Uncoup (Dom x))))
-  | curr'τ₀     : RedAff (DCC? (Dom (!Λ A B x))) (DCC? (! (Dom (Uncoup (Unbang (Dom x))))))
-  | sigmaτ₀     : RedAff (DCC? (Dom (Σ B C))) (DCC? (Dom C))
-  | piτ₀        : RedAff (DCC? (Dom (Π B C))) (DCC? (Dom C))
-  | eqlτ₁       : RedAff (DCC? (Dom ((Eql B) x))) (DCC? (Σ(`(B x) (B x))))
-  | reflτ₁      : RedAff (DCC? (Dom ((refl B) (& x)))) (DCC? (! (B x)))
-  | currτ₁      : RedAff (DCC? (Dom ((Λ A B x) y))) (DCC? (((Uncoup (Dom x)) y)))
-  | curr'τ₁     : RedAff (DCC? (Dom ((!Λ A B x) (& y)))) (DCC? ((! ((Uncoup (Unbang (Dom x))) y))))
-  -- C : (x : A) → (y : B x) → Sort v
-  -- where x is the second element such that Swap(C) ⟦...⟧(x, y) : Coup((C x)) and C x : y -> ...
-  | swapτ₀      : RedAff (DCC? (Dom (Swap A B))) (DCC? (Σ (`A B)))
-/-
-Dom congruence
--/
-  | dom₀      : RedAff x x' → RedAff (DCC? (Dom x)) (DCC? (Dom x'))
-/-
-Matching Coup for Dom
--/
-  | uncoup    : RedAff (DCC? (Uncoup (Σ x))) x
-  | unbang    : RedAff (DCC? (Unbang (! x))) x
-/-
-Matchers congruence (matchers only used by the kernel in η-reduction
--/
-  | uncoup₀   : RedAff x x' → RedAff (DCC? (Uncoup x)) (DCC? (Uncoup x'))
-  | unbang₀   : RedAff x x' → RedAff (DCC? (Unbang x)) (DCC? (Unbang x'))
-/-
-Base combinator 2-argument function domains
--/
-  | eqlτ₃     : RedAff (DCC? (Dom₂ (Eql B))) B
-  | reflτ₃    : RedAff (DCC? (Dom₂ (refl B))) (DCC? (!<> B))
-  | currτ₃    : RedAff (DCC? (Dom₂ (Λ A B x))) B
-  | curr'τ₃   : RedAff (DCC? (Dom₂ (!Λ A B x))) (DCC? (!<> B))
--- Congruence for Dom₂
-  | dom₂₀     : RedAff x x' → RedAff (DCC? (Dom₂ x)) (DCC? (Dom₂ x'))
 
 
 instance (A B : GenericExpr τ) : Repr (PLift (RedAff A B)) := ⟨fun _ _ => "⋯"⟩
@@ -241,7 +178,6 @@ theorem RedAff.instCongruent'_mp {e : GenericExpr τ_c} {p : Fin (point_arity e)
   .point (↑ p) (by grind) h
 
 instance RedAff.instCongruent : Congruent (RedAff (τ := τ)) where
-  coup_ := fun h => .point 0 (by simp [point_arity]) h
   pil_ := fun h => .point 0 (by simp [point_arity]) h
   pir_ := fun h => .point 1 (by simp [point_arity]) h
   sigl_ := fun h => .point 1 (by simp [point_arity]) h

@@ -503,81 +503,6 @@ theorem RedAff.conf_point (h₁ : RedAff ((points e).get ⟨n, hn⟩) p') (h₂ 
           exact ⟨_, .single (.point 1 (by simp [point_arity]) hr), .single (.point 2 (by simp [point_arity]) h₁)⟩)
   | .inr (.inr (.inr (.inr heq))) =>
     cases e
-    case unify =>
-      simp [point_arity] at hn
-      match h₂ with
-      | .point 0 hn hr =>
-        match n with
-        | 0 =>
-          have ⟨_, h₁, h₂⟩ := h hr
-          refine ⟨_, aff_mk_point' h₁ (n := 0) (hn := ?_) (heq := ?_), aff_mk_point' h₂ (n := 0) (hn := ?_) (heq := ?_)⟩
-          · simp [point_arity, set_points]
-          · simp [set_points, points]; rfl
-          · simp [point_arity, set_points]
-          · simp [set_points, points]; rfl
-        | 1 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 0 (by simp [point_arity]) hr), .single (.point 1 (by simp [point_arity]) h₁)⟩
-        /-| 2 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 0 (by simp [point_arity]) hr), .single (.point 2 (by simp [point_arity]) h₁)⟩
-        | 3 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 0 (by simp [point_arity]) hr), .single (.point 3 (by simp [point_arity]) h₁)⟩-/
-      | .point 1 hn hr =>
-        match n with
-        | 1 =>
-          have ⟨_, h₁, h₂⟩ := h hr
-          refine ⟨_, aff_mk_point' h₁ (n := 1) (hn := ?_) (heq := ?_), aff_mk_point' h₂ (n := 1) (hn := ?_) (heq := ?_)⟩
-          · simp [point_arity, set_points]
-          · simp [set_points, points]; rfl
-          · simp [point_arity, set_points]
-          · simp [set_points, points]; rfl
-        | 0 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 1 (by simp [point_arity]) hr), .single (.point 0 (by simp [point_arity]) h₁)⟩
-        /-| 2 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 1 (by simp [point_arity]) hr), .single (.point 2 (by simp [point_arity]) h₁)⟩
-        | 3 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 1 (by simp [point_arity]) hr), .single (.point 3 (by simp [point_arity]) h₁)⟩-/
-      /-| .point 2 hn hr =>
-        match n with
-        | 2 =>
-          have ⟨_, h₁, h₂⟩ := h hr
-          refine ⟨_, aff_mk_point' h₁ (n := 2) (hn := ?_) (heq := ?_), aff_mk_point' h₂ (n := 2) (hn := ?_) (heq := ?_)⟩
-          · simp [point_arity, set_points]
-          · simp [set_points, points]; rfl
-          · simp [point_arity, set_points]
-          · simp [set_points, points]; rfl
-        | 0 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 2 (by simp [point_arity]) hr), .single (.point 0 (by simp [point_arity]) h₁)⟩
-        | 1 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 2 (by simp [point_arity]) hr), .single (.point 1 (by simp [point_arity]) h₁)⟩
-        | 3 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 2 (by simp [point_arity]) hr), .single (.point 3 (by simp [point_arity]) h₁)⟩
-      | .point 3 hn hr =>
-        match n with
-        | 3 =>
-          have ⟨_, h₁, h₂⟩ := h hr
-          refine ⟨_, aff_mk_point' h₁ (n := 3) (hn := ?_) (heq := ?_), aff_mk_point' h₂ (n := 3) (hn := ?_) (heq := ?_)⟩
-          · simp [point_arity, set_points]
-          · simp [set_points, points]; rfl
-          · simp [point_arity, set_points]
-          · simp [set_points, points]; rfl
-        | 0 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 3 (by simp [point_arity]) hr), .single (.point 0 (by simp [point_arity]) h₁)⟩
-        | 1 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 3 (by simp [point_arity]) hr), .single (.point 1 (by simp [point_arity]) h₁)⟩
-        | 2 =>
-          simp [points, set_points]
-          exact ⟨_, .single (.point 3 (by simp [point_arity]) hr), .single (.point 2 (by simp [point_arity]) h₁)⟩-/
     any_goals (grind only [points, point_arity])
     any_goals (
       match n with
@@ -783,82 +708,6 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
   case assoc => exact h₂.conf_assoc
   case bimap => exact h₂.conf_bimap
   case dup => exact h₂.conf_dup
-  case cong_1 =>
-    match h₂ with
-    | .cong_1 => exact ⟨_, .refl, .refl⟩
-    | .congrFun (.point 0 hn h) =>
-      exact ⟨_, .refl, .single .cong_1⟩
-    | .congrFun (.point 1 hn h) =>
-      exact ⟨_, .refl, .single .cong_1⟩
-    | .congrArg (.congrFun (.point 0 hn hr)) =>
-      exact ⟨_, .single (.congrFun hr), .single .cong_1⟩
-    | .congrArg (.congrFun (.point 1 hn hr)) =>
-      exact ⟨_, .refl, .single .cong_1⟩
-    | .congrArg (.congrFun (.point 2 hn hr)) =>
-      exact ⟨_, .refl, .single .cong_1⟩
-    | .congrArg (.congrFun (.point 3 hn hr)) =>
-      exact ⟨_, .refl, .single .cong_1⟩
-    | .congrArg (.congrArg hr) =>
-      exact ⟨_, .single (.congrArg hr), .single .cong_1⟩
-  case cong_3 =>
-    match h₂ with
-    | .cong_3 => exact ⟨_, .refl, .refl⟩
-    | .congrFun (.point 0 hn h) =>
-      exact ⟨_, .refl, .single .cong_3⟩
-    | .congrFun (.point 1 hn h) =>
-      exact ⟨_, .refl, .single .cong_3⟩
-    | .congrArg (.point 0 hn₀ hr) =>
-      simp [point_arity] at hn₀
-      simp [points, Vector.get] at hr
-      match hr with
-      | (.congrFun (.point 0 hn hr)) =>
-        exact ⟨_, .refl, .single .cong_3⟩
-      | (.congrFun (.point 1 hn hr)) =>
-        exact ⟨_, .refl, .single .cong_3⟩
-      | (.congrFun (.point 2 hn hr)) =>
-        exact ⟨_, .single (.congrFun hr), .single .cong_3⟩
-      | (.congrFun (.point 3 hn hr)) =>
-        exact ⟨_, .refl, .single .cong_3⟩
-      | (.congrArg hr) =>
-        exact ⟨_, .single (.congrArg (.point 0 (by grind) hr)), .single .cong_3⟩
-  case cong_2 =>
-    match h₂ with
-    | .cong_2 => exact ⟨_, .refl, .refl⟩
-    | .congrFun (.point 1 hn h) =>
-      exact ⟨_, .refl, .single .cong_2⟩
-    | .congrFun (.point 0 hn h) =>
-      exact ⟨_, .refl, .single .cong_2⟩
-    | .congrArg (.congrFun (.point 0 hn hr)) =>
-      exact ⟨_, .refl, .single .cong_2⟩
-    | .congrArg (.congrFun (.point 1 hn hr)) =>
-      exact ⟨_, .single (.congrFun hr), .single .cong_2⟩
-    | .congrArg (.congrFun (.point 2 hn hr)) =>
-      exact ⟨_, .refl, .single .cong_2⟩
-    | .congrArg (.congrFun (.point 3 hn hr)) =>
-      exact ⟨_, .refl, .single .cong_2⟩
-    | .congrArg (.congrArg hr) =>
-      exact ⟨_, .single (.congrArg hr), .single .cong_2⟩
-  case cong_4 =>
-    match h₂ with
-    | .cong_4 => exact ⟨_, .refl, .refl⟩
-    | .congrFun (.point 1 hn h) =>
-      exact ⟨_, .refl, .single .cong_4⟩
-    | .congrFun (.point 0 hn h) =>
-      exact ⟨_, .refl, .single .cong_4⟩
-    | .congrArg (.point 0 hn₀ hr) =>
-      simp [point_arity] at hn₀
-      simp [points, Vector.get] at hr
-      match hr with
-      | (.congrFun (.point 0 hn hr)) =>
-        exact ⟨_, .refl, .single .cong_4⟩
-      | (.congrFun (.point 1 hn hr)) =>
-        exact ⟨_, .refl, .single .cong_4⟩
-      | (.congrFun (.point 3 hn hr)) =>
-        exact ⟨_, .single (.congrFun hr), .single .cong_4⟩
-      | (.congrFun (.point 2 hn hr)) =>
-        exact ⟨_, .refl, .single .cong_4⟩
-      | (.congrArg hr) =>
-        exact ⟨_, .single (.congrArg (.point 0 (by grind) hr)), .single .cong_4⟩
   case ind_bool_true =>
     match h₂ with
     | .ind_bool_true => exact ⟨_, .refl, .refl⟩
@@ -1044,26 +893,6 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
     | .dom₀ (.point 0 hn hr) => exact ⟨_, .single (.dom₀ hr), .single (by constructor)⟩
     | .dom₀ (.point 1 hn hr) => exact ⟨_, .refl, .single (by constructor)⟩
     | .dom₀ (.point 2 hn hr) => exact ⟨_, .refl, .single (by constructor)⟩
-  case cong_2τ₀ | cong_1τ₀ =>
-    cases h₂
-    case dom₀ hr =>
-      match hr with
-      | .point 0 hn hr =>
-        exact ⟨_, .single (.point 0 (by grind) hr), .single (by constructor)⟩
-      | .point 1 hn hr =>
-        exact ⟨_, .single (.point 1 (by grind) hr), .single (by constructor)⟩
-    case _ => grind only [point_arity]
-    case _ => exact ⟨_, .refl, .refl⟩
-  case cong_3τ₀ | cong_4τ₀ =>
-    cases h₂
-    case dom₀ hr =>
-      match hr with
-      | .point 0 hn hr =>
-        exact ⟨_, .single (.point 0 (by grind) (.point 0 (by point_arity) hr)), .single (by constructor)⟩
-      | .point 1 hn hr =>
-        exact ⟨_, .single (.point 0 (by grind) (.point 1 (by point_arity) hr)), .single (by constructor)⟩
-    case _ => grind only [point_arity]
-    case _ => exact ⟨_, .refl, .refl⟩
   case unboxτ₀ =>
     match h₂ with
     | .dom₀ hr =>
@@ -1250,18 +1079,6 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
       | (.point 0 hn hr) => exact ⟨_, .single (by constructor), .single (.dom₀ hr)⟩
       | (.point 1 hn hr) => exact ⟨_, .single (by constructor), .refl⟩
       | (.point 2 hn hr) => exact ⟨_, .single (by constructor), .refl⟩
-    case cong_2τ₀ hr | cong_1τ₀ hr =>
-      match hr with
-      | .point 0 hn hr =>
-        exact ⟨_, .single (by constructor), .single (.point 0 (by grind) hr)⟩
-      | .point 1 hn hr =>
-        exact ⟨_, .single (by constructor), .single (.point 1 (by grind) hr)⟩
-    case cong_3τ₀ hr | cong_4τ₀ hr =>
-      match hr with
-      | .point 0 hn hr =>
-        exact ⟨_, .single (by constructor), .single (.point 0 (by grind) (.point 0 (by point_arity) hr))⟩
-      | .point 1 hn hr =>
-        exact ⟨_, .single (by constructor), .single (.point 0 (by grind) (.point 1 (by point_arity) hr))⟩
     case assocτ₀ hr =>
       match hr with
       | .point 0 hn hr =>
@@ -1576,84 +1393,6 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
       exact hr.conf_dup_congr_arg
     /-case unif_bot_sort => nomatch hr
     case unif_bot_prop => nomatch hr-/
-    case cong_1 =>
-      match hr with
-      | .congrFun (.point 0 hn h) =>
-        exact ⟨_, .single .cong_1, .single (.congrFun h)⟩
-      | .congrFun (.point 1 hn h) =>
-        exact ⟨_, .single .cong_1, .refl⟩
-      | .congrFun (.point 2 hn h) =>
-        exact ⟨_, .single .cong_1, .refl⟩
-      | .congrFun (.point 3 hn h) =>
-        exact ⟨_, .single .cong_1, .refl⟩
-      | .congrArg h => exact ⟨_, .single .cong_1, .single (.congrArg h)⟩
-      | .point 0 hn hr =>
-        exact ⟨_, .single .cong_1, .refl⟩
-      | .point 1 hn hr => grind
-      | .point 2 hn hr =>
-        exact ⟨_, .single .cong_1, .refl⟩
-      | .point 3 hn hr =>
-        exact ⟨_, .single .cong_1, .refl⟩
-    case cong_2 =>
-      match hr with
-      | .congrFun (.point 1 hn h) =>
-        exact ⟨_, .single .cong_2, .single (.congrFun h)⟩
-      | .congrFun (.point 0 hn h) =>
-        exact ⟨_, .single .cong_2, .refl⟩
-      | .congrFun (.point 2 hn h) =>
-        exact ⟨_, .single .cong_2, .refl⟩
-      | .congrFun (.point 3 hn h) =>
-        exact ⟨_, .single .cong_2, .refl⟩
-      | .congrArg h => exact ⟨_, .single .cong_2, .single (.congrArg h)⟩
-      | .point 0 hn hr =>
-        exact ⟨_, .single .cong_2, .refl⟩
-      | .point 1 hn hr => grind
-      | .point 2 hn hr =>
-        exact ⟨_, .single .cong_2, .refl⟩
-      | .point 3 hn hr =>
-        exact ⟨_, .single .cong_2, .refl⟩
-    case cong_3 =>
-      match hr with
-      | .point 0 hn hr =>
-        match hr with
-        | .congrFun (.point 2 hn h) =>
-          exact ⟨_, .single .cong_3, .single (.congrFun h)⟩
-        | .congrFun (.point 0 hn h) =>
-          exact ⟨_, .single .cong_3, .refl⟩
-        | .congrFun (.point 1 hn h) =>
-          exact ⟨_, .single .cong_3, .refl⟩
-        | .congrFun (.point 3 hn h) =>
-          exact ⟨_, .single .cong_3, .refl⟩
-        | .congrArg h => exact ⟨_, .single .cong_3, .single (.congrArg (.point 0 (by grind) h))⟩
-        | .point 0 hn hr =>
-          exact ⟨_, .single .cong_3, .refl⟩
-        | .point 1 hn hr =>
-          simp [point_arity, points, Vector.get] at hn
-        | .point 2 hn hr =>
-          exact ⟨_, .single .cong_3, .refl⟩
-        | .point 3 hn hr =>
-          exact ⟨_, .single .cong_3, .refl⟩
-    case cong_4 =>
-      match hr with
-      | .point 0 hn hr =>
-        match hr with
-        | .congrFun (.point 3 hn h) =>
-          exact ⟨_, .single .cong_4, .single (.congrFun h)⟩
-        | .congrFun (.point 0 hn h) =>
-          exact ⟨_, .single .cong_4, .refl⟩
-        | .congrFun (.point 1 hn h) =>
-          exact ⟨_, .single .cong_4, .refl⟩
-        | .congrFun (.point 2 hn h) =>
-          exact ⟨_, .single .cong_4, .refl⟩
-        | .congrArg h => exact ⟨_, .single .cong_4, .single (.congrArg (.point 0 (by grind) h))⟩
-        | .point 0 hn hr =>
-          exact ⟨_, .single .cong_4, .refl⟩
-        | .point 1 hn hr =>
-          simp [point_arity, points, Vector.get] at hn
-        | .point 2 hn hr =>
-          exact ⟨_, .single .cong_4, .refl⟩
-        | .point 3 hn hr =>
-          exact ⟨_, .single .cong_4, .refl⟩
     case swap =>
       match hr with
       | .point 0 hn h =>
@@ -1755,30 +1494,6 @@ theorem RedAff.conf (h₁ : (RedAff (τ := τ)) A B) (h₂ : RedAff A C) : ∃ D
     case assoc => exact RedAff.conf_assoc_congr_fun (by assumption)
     case bimap => exact RedAff.conf_bimap_congr_fun (by assumption)
     case dup => exact RedAff.conf_dup_congr_fun (by assumption)
-    case cong_1 =>
-      match hr with
-      | (.point 0 hn hr) =>
-        exact ⟨_, .single .cong_1, .refl⟩
-      | (.point 1 hn hr) =>
-        exact ⟨_, .single .cong_1, .refl⟩
-    case cong_2 =>
-      match hr with
-      | (.point 1 hn hr) =>
-        exact ⟨_, .single .cong_2, .refl⟩
-      | (.point 0 hn hr) =>
-        exact ⟨_, .single .cong_2, .refl⟩
-    case cong_3 =>
-      match hr with
-      | (.point 0 hn hr) =>
-        exact ⟨_, .single .cong_3, .refl⟩
-      | (.point 1 hn hr) =>
-        exact ⟨_, .single .cong_3, .refl⟩
-    case cong_4 =>
-      match hr with
-      | (.point 1 hn hr) =>
-        exact ⟨_, .single .cong_4, .refl⟩
-      | (.point 0 hn hr) =>
-        exact ⟨_, .single .cong_4, .refl⟩
     case ind_bool_true =>
       match hr with
       | .congrArg hr =>

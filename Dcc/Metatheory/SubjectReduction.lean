@@ -1,4 +1,5 @@
 import Dcc.Judge3
+import Dcc.Metatheory.Decidability3
 
 universe u
 variable {τ_c : Type u} [DecidableEq τ_c]
@@ -315,54 +316,7 @@ def Reduces.norm_env {B C : GenericExpr τ_c} (hn₁ : IsNorm RedAff B) (hn₂ :
     assumption
   ⟨(reduce RedAff env).fst, ⟨reduce_sound rfl, reduce_norm rfl⟩, heq₁ ▸ heq₂ ▸ Reduces.pi_eq hr⟩
 
-open Dsl in
-def arr_is_norm (hn₁ : IsNorm RedAff A) (hn₂ : IsNorm RedAff B) (m : Level) : IsNorm RedAff (DCC? (→ (: A (Sort m)) B)) := fun ⟨_, h⟩ =>
-  match h with
-  | .congrFun (.point n hlt h) => by
-    simp [point_arity] at hlt
-    match n with
-    | 0 =>
-      simp [points, Vector.get] at h
-      match h with
-      | .point 0 hn h =>
-        nomatch h
-    | 1 =>
-      simp [points, Vector.get] at h
-      match h with
-      | .point 0 hn h =>
-        simp [points, Vector.get] at h
-        nomatch h
-      | .point 1 hn h =>
-        simp [points, Vector.get] at h
-        match h with
-        | .point 0 hn h => exact hn₁ ⟨_, h⟩
-        | .point 1 hn h => exact hn₂ ⟨_, h⟩
-  | .congrArg h => hn₁ ⟨_, h⟩
-
---def Arrow.mk_is_norm (h : Arrow 
-
 namespace Judge
-
-def unique (h₁ : Judge (τ_c := τ_c) e τ₁) (h₂ : Judge e τ₂) : τ₁ = τ₂ := by sorry
-
-def is_norm {e τ : GenericExpr τ_c} (h : Judge e τ) : IsNorm RedAff τ := by
-  induction h
-  any_goals (
-    focus
-    try (
-      intro ⟨_, h⟩
-      cases h
-      grind)
-    done)
-  any_goals (
-    focus
-    apply Reduces.is_norm
-    assumption)
-  case id =>
-    exact arr_is_norm (Reduces.is_norm (by assumption)) (Reduces.is_norm (by assumption)) _
-  case unbox =>
-    exact arr_is_norm (fun ⟨_, .point 0 hn h⟩ => (Reduces.is_norm (by assumption)) ⟨_, h⟩) (Reduces.is_norm (by assumption)) _
-  case box => exact (fun ⟨_, .point 0 hn h⟩ => by dcc_aesop' [force_reduce])
 
 def id_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Id A) x)) τ) : Judge x τ := by
   cases h with
@@ -376,6 +330,46 @@ def id_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Id A) x)) τ) : Judge
       cases a_3.elim_norm a_4.is_norm
       cases (a.elim_norml a_4.is_norm).elim_norm a_2.is_norm
       assumption
+
+def comp_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((∘ f g) x)) τ) : Judge (DCC? (f (g x))) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | comp =>
+      expose_names
+      cases a_6.pi_eq
+      have heq₁ : (reduce (RedAff (τ := τ_c)) (GenericExpr.sort m).id).fst = (GenericExpr.sort m).id :=
+        elim_reduce_norm_fst (A := (GenericExpr.sort m).id) (fun ⟨_, .point 0 hn h⟩ => nomatch h)
+      have heq₂ : (reduce RedAff ((GenericExpr.sort m).quot (C.comp g))).fst = ((GenericExpr.sort m).quot ((reduce RedAff C).fst.comp (reduce RedAff g).fst)) := by
+        apply congr_reduce₂ (heq := by rfl)
+        simp [points, reduce_sort, set_points]
+        · symm
+          apply congr_reduce₂ (heq := by rfl)
+          simp [set_points, points]
+      rw [heq₁] at a
+      rw [heq₂] at a_3
+      have a_3' := (a_3.push_head (.congrFun .quot)).push_head .comp
+      unfold comp.f.type at a_4
+      replace a := a.push_head .id
+      have heq : (reduce RedAff A).fst = A := elim_reduce_norm_fst (a_1.is_norm a_5.is_norm).fst
+      have hn_B : IsNorm RedAff B := (a_1.is_norm a_5.is_norm).snd
+      have ar := a.elim_norml (reduce_norm_fst rfl)
+      cases a_1 with
+      | simple =>
+        apply Judge.app
+        · assumption
+        · exact ⟨⟨.single .id, hn_B⟩, ⟨.refl, hn_B⟩⟩
+        · apply Judge.app
+          · exact a_5
+          · exact (DefEq.trans ⟨⟨.single .id, (reduce_norm_fst heq)⟩, ⟨.refl, reduce_norm_fst heq⟩⟩ (heq ▸ a))
+          · exact a_2
+          · exact ⟨.trans (.single (.congrFun .quot)) (.single .quot), hn_B⟩
+        · refine Reduces.pop_head (.congrFun .quot) ?_
+          · have a_3'' :  ((reduce RedAff C).fst.app ((reduce RedAff ((reduce RedAff g).fst.app x)).fst)).Reduces τ :=
+              a_3'.congrArg ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩
+            exact Reduces.congrFun' ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ (Reduces.congrArg' (Reduces.congrFun'
+                                    ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩) a_3'')
 
 mutual
 
@@ -465,47 +459,47 @@ def snd_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Snd B) (,B₂ x y)))
         cases h.unique a_3
         exact a_9
 
-def comp_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((∘ f g) x)) τ) : Judge (DCC? (f (g x))) τ := by
+def preservation_sigma_head (h : Judge (τ_c := τ_c) (open Dsl in (DCC? ((Σ B C) x))) τ) : Judge (open Dsl in (DCC? (Σ (C x)))) τ := by
   cases h with
   | app =>
     expose_names
     cases a_1 with
-    | comp =>
+    | sigma =>
       expose_names
-      cases a_6.pi_eq
-      have heq₁ : (reduce (RedAff (τ := τ_c)) (GenericExpr.sort m).id).fst = (GenericExpr.sort m).id :=
-        elim_reduce_norm_fst (A := (GenericExpr.sort m).id) (fun ⟨_, .point 0 hn h⟩ => nomatch h)
-      have heq₂ : (reduce RedAff ((GenericExpr.sort m).quot (C.comp g))).fst = ((GenericExpr.sort m).quot ((reduce RedAff C).fst.comp (reduce RedAff g).fst)) := by
-        apply congr_reduce₂ (heq := by rfl)
-        simp [points, reduce_sort, set_points]
-        · symm
-          apply congr_reduce₂ (heq := by rfl)
-          simp [set_points, points]
-      rw [heq₁] at a
-      rw [heq₂] at a_3
-      have a_3' := (a_3.push_head (.congrFun .quot)).push_head .comp
-      unfold comp.f.type at a_4
-      replace a := a.push_head .id
-      have heq : (reduce RedAff A).fst = A := elim_reduce_norm_fst (a_1.is_norm a_5.is_norm).fst
-      have hn_B : IsNorm RedAff B := (a_1.is_norm a_5.is_norm).snd
-      have ar := a.elim_norml (reduce_norm_fst rfl)
-      cases a_1 with
-      | simple =>
-        apply Judge.app
-        · assumption
-        · exact ⟨⟨.single .id, hn_B⟩, ⟨.refl, hn_B⟩⟩
-        · apply Judge.app
-          · exact a_5
-          · exact (DefEq.trans ⟨⟨.single .id, (reduce_norm_fst heq)⟩, ⟨.refl, reduce_norm_fst heq⟩⟩ (heq ▸ a))
-          · exact a_2
-          · exact ⟨.trans (.single (.congrFun .quot)) (.single .quot), hn_B⟩
-        · refine Reduces.pop_head (.congrFun .quot) ?_
-          · have a_3'' :  ((reduce RedAff C).fst.app ((reduce RedAff ((reduce RedAff g).fst.app x)).fst)).Reduces τ :=
-              a_3'.congrArg ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩
-            exact Reduces.congrFun' ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ (Reduces.congrArg' (Reduces.congrFun'
-                                    ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩) a_3'')
+      have ⟨hn_δ, hn_sort⟩ := a_1.is_norm a_5.is_norm
+      cases a_8.elim_norm (arr_is_norm hn_δ (fun ⟨_, h⟩ => nomatch h) o)
+      cases ((a_3.push_head (.congrFun .quot)).push_head .quot).elim_norm (fun ⟨_, h⟩ => nomatch h)
+      cases a_4 with
+      | canon =>
+        cases ((a.push_head .id).elim_normr a_2.is_norm).elim_norm hn_δ
+        have h_B' := preservation_star a_5 a_6
+        have hn : IsNorm RedAff ((B'.pi (x_α.curr B' (B'.coup.quot (GenericExpr.sort n))))) :=
+          mk_norm₂ rfl a_6.is_norm (mk_norm₃ rfl
+            (by
+              simp [points]
+              exact hn_δ)
+            (by
+              simp [points]
+              exact a_6.is_norm)
+            (by
+              simp [points]
+              refine mk_norm₂ rfl ?_ ?_
+              · simp [points]
+                refine mk_norm₁ rfl ?_
+                simp [points]
+                exact a_6.is_norm
+              · simp [points]
+                intro ⟨_, h⟩
+                nomatch h))
+        match heq_τ : τ_B, heq : a_1 with
+        | _, .simple =>
+          apply Judge.coup (.app (by assumption) ⟨⟨.single .id, hn_δ⟩, ⟨.refl, hn_δ⟩⟩ a_2 (Reduces.pop_head (.congrFun .quot) ⟨GenericExpr.congrArg' (f := ((B'.pi (x_α.curr B' (B'.coup.quot (GenericExpr.sort n)))))) (reduce_sound rfl), fun ⟨_, h⟩ =>
+            match h with
+            | .congrFun h => hn ⟨_, h⟩
+            | .congrArg h => (reduce_norm rfl) ⟨_, h⟩⟩)) (by sorry) sorry
 
 def preservation (h : Judge (τ_c := τ_c) e τ) (hr : RedAff e e') : Judge e' τ := by
+  
   sorry
 
 def preservation_star (h : Judge (τ_c := τ_c) e τ) (hr : Reduces e e') : Judge e' τ := by

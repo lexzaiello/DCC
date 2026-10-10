@@ -7,7 +7,7 @@ open Std (ToFormat Format format) in
 def toFormat.{u} {τ : Type u}
   (e : GenericExpr τ) (pretty : Bool := False) : Std.Format :=
   let sepD (l : List Std.Format) (sep : Std.Format := .line) (indent : ℕ := 2) : Std.Format :=
-    .nest indent (.fill (.joinSep l sep))
+    .nest indent (.joinSep l sep)
   let paren (s : Std.Format) : Std.Format :=
     .bracket "(" (.fill s) ")"
 
@@ -19,29 +19,15 @@ def toFormat.{u} {τ : Type u}
   | DCC? True => "True"
   | DCC? False => "False"
   | DCC? Bool => "Bool"
-  | DCC? (Bool.Ind motive x y) => comb "Bool.Ind" [motive.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
+  | DCC? (Bool.Rec motive x y) => comb "Bool.Rec" [motive.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
   | DCC? (Dup B x) => comb "Dup" [B.toFormat pretty, x.toFormat pretty]
   | DCC? (Map A B x y) => comb "Map" [A.toFormat pretty, B.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
   | DCC? (Assoc A B C) => comb "Assoc" [A.toFormat pretty, B.toFormat pretty, C.toFormat pretty]
-  | DCC? (≃.Ind motive x) => comb "≃.Ind" [motive.toFormat pretty, x.toFormat pretty]
-  | DCC? (≃.1 x y) => comb "≃.1" [x.toFormat pretty, y.toFormat pretty]
-  | DCC? (≃.2 x y) => comb "≃.2" [x.toFormat pretty, y.toFormat pretty]
-  | DCC? (≃.3 x y) => comb "≃.3" [x.toFormat pretty, y.toFormat pretty]
-  | DCC? (≃.4 x y) => comb "≃.4" [x.toFormat pretty, y.toFormat pretty]
-  | DCC? (≃.env x y) => comb "≃.env" [x.toFormat pretty, y.toFormat pretty]
-  | DCC? (⊥.Ind motive) => comb "⊥.Ind" [motive.toFormat pretty]
-  | DCC? (≃.mk a b c d) => comb "≃.mk" [a.toFormat pretty, b.toFormat pretty, c.toFormat pretty, d.toFormat pretty]
-  | DCC? (Unify τ_A τ_B A B) => comb "Unify" [τ_A.toFormat pretty, τ_B.toFormat pretty, A.toFormat pretty, B.toFormat pretty]
-  | DCC? (≃ A B) => comb "≃" [A.toFormat pretty, B.toFormat pretty]
+  | DCC? (⊥.Rec motive) => comb "⊥.Rec" [motive.toFormat pretty]
   | DCC? (? m) => comb "?" [m.toFormat pretty]
   | (DCC? ⊤)                   => "⊤"
   | (DCC? ⊥)                   => "⊥"
   | (DCC? ∗)                   => "∗"
-  | DCC? (Unbang x) => comb "Unbang" [x.toFormat pretty]
-  | DCC? (Dom x) => comb "Dom" [x.toFormat pretty]
-  | DCC? (Cod x) => comb "Cod" [x.toFormat pretty]
-  | DCC? (Dom₂ x) => comb "Dom₂" [x.toFormat pretty]
-  | DCC? (Uncoup x) => comb "Uncoup" [x.toFormat pretty]
   | DCC? (Swap B C) => comb "Swap" [B.toFormat pretty, C.toFormat pretty]
   | (DCC? (!<> f))             => comb "!<>" [f.toFormat pretty]
   | (DCC? ($<> f))                => comb "$<>" [f.toFormat pretty]
@@ -52,8 +38,8 @@ def toFormat.{u} {τ : Type u}
   | (DCC? (`β x))             => comb s!"`{β.toFormat pretty}" [x.toFormat pretty]
   | (DCC? (Id α))               => comb "Id" [α.toFormat pretty]
   | (DCC? Sort m)              => .paren ("Sort " ++ (Std.format m))
-  | (DCC? (Fst β))             => comb "Fst" [β.toFormat pretty]
-  | (DCC? (Snd β))             => comb "Snd" [β.toFormat pretty]
+  | (DCC? (Fst β γ))             => comb "Fst" [β.toFormat pretty, γ.toFormat pretty]
+  | (DCC? (Snd β γ))             => comb "Snd" [β.toFormat pretty, γ.toFormat pretty]
   | (DCC? (Λ α β e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC? (!Λ α β e))         => comb "!Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC? (Π α β))             =>
@@ -62,7 +48,6 @@ def toFormat.{u} {τ : Type u}
     comb s!"⟨,⟩{B.toFormat pretty}" [a.toFormat pretty, b.toFormat pretty]
   | (DCC? (,B a b))           =>
     comb s!",{B.toFormat pretty}" [a.toFormat pretty, b.toFormat pretty]
-  | (DCC? (Σ β))             => comb "Σ" [β.toFormat pretty]
   | (DCC? (Σ α β))             => comb "Σ" [α.toFormat pretty, β.toFormat pretty]
   | (DCC? (= A x y))             => comb "=" [A.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
   | (DCC? (Eql f_α))            => comb "Eql" [f_α.toFormat pretty]
@@ -82,5 +67,5 @@ instance GenericExpr.instFormat : Std.ToFormat (GenericExpr τ) := ⟨GenericExp
 instance GenericExpr.instRepr   : Repr (GenericExpr τ) := ⟨fun e _ => Std.Format.paren ("DCC?" ++ .line ++ (.group (GenericExpr.toFormat e)))⟩
 
 open Dsl in
-#eval (DCC ((Π (Id ((Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1))) (`Sort 1 (`⊤ Sort 2))) ⊤))
+#eval (DCC ((Π (= ((Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1)) ((Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1)) ((Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1))) (`Sort 1 (`⊤ Sort 2))) ⊤))
 

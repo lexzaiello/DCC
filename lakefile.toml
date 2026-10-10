@@ -1,9 +1,12 @@
 name = "Dcc"
 version = "0.1.0"
-defaultTargets = ["Dcc"]
+defaultTargets = ["Dcc", "Dcc2"]
 
 [[lean_lib]]
 name = "Dcc"
+
+[[lean_lib]]
+name = "Dcc2"
 
 [[require]]
 name = "verso-slides"

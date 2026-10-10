@@ -23,42 +23,27 @@ namespace GenericExpr
 def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   match e with
   | DCC[.] (Dup B x) => ((B.size + 1) * 3) + x.size + 1
-  | DCC[.] (Dom x) => x.size * 2 + 1
-  | DCC[.] (Cod x) => x.size * 2 + 1
-  | DCC[.] (Dom₂ x) => x.size * 2 + 1
-  | DCC[.] (Unbang x) => x.size
-  | DCC[.] (Uncoup x) => x.size
   | DCC[.] (Map A B x y) => A.size + B.size + x.size + y.size + 3
-  | DCC[.] (Assoc A B C) => 2 * (A.size + B.size + C.size + 7)
+  | DCC[.] (Assoc A B C) => 2 * (2 * (A.size + 1) + 2 * (B.size + 1)+ 2 * (C.size + 1) + 7)
   | DCC[.] ∗ => 1
   | DCC[.] ⊤ => 2
   | DCC[.] ⊥ => 2
   | DCC[.] (= A x y) => (A.size + x.size + y.size) + 1
-  | DCC[.] (≃ A B) => (A.size + B.size) + 1
-  | DCC[.] (Unify _τ_A _τ_B A B) => A.size + B.size + 1
   | DCC? (? m) => m.size.succ
   | DCC? True => 1
   | DCC? False => 1
   | DCC? Bool => 1
-  | DCC? (≃.env a b) => a.size + b.size + 1
-  | DCC? (≃.mk a b c d) => a.size + b.size + c.size + d.size + 1
-  | DCC? (Bool.Ind motive x y) => motive.size + x.size + y.size + 1
-  | DCC? (≃.Ind motive x) => motive.size + x.size + 1
-  | DCC? (≃.1 x y) => x.size + y.size + 2
-  | DCC? (≃.2 x y) => x.size + y.size + 2
-  | DCC? (≃.3 x y) => x.size + y.size + 2
-  | DCC? (≃.4 x y) => x.size + y.size + 2
-  | DCC? (⊥.Ind motive) => motive.size + 1
+  | DCC? (Bool.Rec motive x y) => motive.size + x.size + y.size + 1
+  | DCC? (⊥.Rec motive) => motive.size + 1
   | DCC[.] (Eql α)  => α.size * 80 + 17
   | DCC[.] (refl α) => α.size * 2 + 5
   | DCC[.] Sort _m => 3
-  | DCC[.] (Σ α β) => α.size + (β.size + 1) * 6 + 5
+  | DCC[.] (Σ α β) => α.size + β.size + 1
   | DCC[.] (`β x) => β.size + x.size + 1
   | DCC[.] (,β x y) => β.size + x.size + y.size + 1
-  | DCC[.] (Σ β) => β.size + 1
   | DCC[.] (Id α)      => α.size + 1
-  | DCC[.] (Fst α)    => α.size + 2
-  | DCC[.] (Snd α)    => α.size + 2
+  | DCC[.] (Fst α β)    => α.size + β.size + 2
+  | DCC[.] (Snd α β)    => α.size + β.size + 2
   | DCC[.] (Swap B C)    => (B.size + 1) + (C.size + 1) * 5
   | DCC[.] (Π α β) => 10 * ((100 * (α.size + 5)) + (100 * (β.size + 5)))
   | DCC[.] (∘ f g)  => f.size + f.size + g.size + 3
@@ -75,6 +60,10 @@ def size.{u} {τ : Type u} (e : GenericExpr τ) : ℕ :=
   | .const _ => 0
   | .hole _ => 0
 
+theorem point_size_lt (h : Points e l) : (l.get n).size < e.size := by
+  cases h <;> grind
+
+/-
 @[grind .]
 theorem point_size_lt : size ((GenericExpr.points e).get n) < size e := by
   induction e
@@ -97,5 +86,6 @@ theorem set_point_size_lt (h : n < point_arity e) (heq : Fin.mk n h = n₀) (hlt
   any_goals (
     cases heq
     simp [point_arity] at h)
+-/
 
 end GenericExpr

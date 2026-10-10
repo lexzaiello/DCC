@@ -176,7 +176,6 @@ open Dsl in open Rel in class Congruent.{u} {τ : Type u} (r : GenericExpr τ �
   sigr_     (h : r y y') : r (DCC[τ] (,β x y)) (DCC[τ] (,β x y')) := by exact .point 2 (by grind)
   pil_      (h : r x x') : r (DCC[τ] (Π x y)) (DCC[τ] (Π x' y)) := by exact .point 0 (by grind)
   pir_      (h : r y y') : r (DCC[τ] (Π x y)) (DCC[τ] (Π x y')) := by exact .point 1 (by grind)
-  coup_     (h : r β β') : r (DCC[τ] (Σ β)) (DCC[τ] (Σ β'))     := by exact .point 0 (by grind)
 
 @[aesop (rule_sets := [DccForceStep]) safe apply]
 theorem Congruent.congrFun'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
@@ -210,10 +209,6 @@ theorem Congruent.sigr'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ
   [hR : Congruent r] (h : r y y' := by assumption) : r (DCC[τ] (,β x y)) (DCC[τ] (,β x y')) :=
   (hR.sigr_ h)
 
-open Dsl in @[aesop (rule_sets := [DccForceStep]) safe apply]
-theorem Congruent.coup'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β β' : GenericExpr τ} [hR : Congruent r] (h : r β β' := by assumption) : r (DCC[τ] (Σ β)) (DCC[τ] (Σ β')) :=
-  (hR.coup_ h)
-
 instance Congruent.trans.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r] : Congruent (Relation.TransGen r) where
   congrFun_ h := by
     induction h with
@@ -231,10 +226,6 @@ instance Congruent.trans.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr �
     induction h with
     | single h => exact .single (hC.sigr' h)
     | tail => exact .trans (by assumption) (.single (hC.sigr' (by assumption)))
-  coup_ h := by
-    induction h with
-    | single h => exact .single (hC.coup' h)
-    | tail => exact .trans (by assumption) (.single (hC.coup' (by assumption)))
   pil_ h := by
     induction h with
     | single h => exact .single (hC.pil' h)
@@ -274,11 +265,6 @@ instance Congruent.reflTrans.{u} {τ : Type u} {r : GenericExpr τ → GenericEx
     rw [← Relation.reflGen_transGen] at *
     cases h with
     | single h => exact .single (hC.trans.pir' h)
-    | refl => exact .refl
-  coup_ h := by
-    rw [← Relation.reflGen_transGen] at *
-    cases h with
-    | single h => exact .single (hC.trans.coup' h)
     | refl => exact .refl
 
 syntax "some_congr" : tactic
@@ -349,11 +335,6 @@ open Dsl in @[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pir.
   {f_α f_β : GenericExpr τ} [hC : Congruent r]
   (hn : IsNorm r (DCC[τ] (Π f_α f_β))) : IsNorm r f_β := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.pir' h⟩).elim
-
-open Dsl in @[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.coup.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
-  {β : GenericExpr τ} [hC : Congruent r]
-  (hn : IsNorm r (DCC? (Σ β))) : IsNorm r β := fun ⟨_, h⟩ =>
-  (hn ⟨_, hC.coup' h⟩).elim
 
 @[dcc_rel] def IsNorm.complete.{u}
   {α : Type u}

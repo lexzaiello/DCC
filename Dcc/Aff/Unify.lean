@@ -20,12 +20,12 @@ namespace GenericExpr
 --def unif_hole
 
 /-
-(Sum.Ind motive case_true case_false) (,... True x) = ((case_true x) : motive True x)
-(Sum.Ind motive case_true case_false) (,... False x) = ((case_false x) : motive False x)
+(Sum.Rec motive case_true case_false) (,... True x) = ((case_true x) : motive True x)
+(Sum.Rec motive case_true case_false) (,... False x) = ((case_false x) : motive False x)
 -/
 open Dsl in
-abbrev Sum.Ind (B motive case_true case_false : GenericExpr τ) : GenericExpr τ :=
-  (DCC? (Eval Bool B ((Bool.Ind (`⊤ (Π B motive)) (`⊤ (`Bool case_true)) (`⊤ (`Bool case_false))) ∗)))
+abbrev Sum.Rec (B motive case_true case_false : GenericExpr τ) : GenericExpr τ :=
+  (DCC? (Eval Bool B ((Bool.Rec (`⊤ (Π B motive)) (`⊤ (`Bool case_true)) (`⊤ (`Bool case_false))) ∗)))
 
 open Dsl in
 abbrev Prod.mk (x y : GenericExpr τ) : GenericExpr τ :=
@@ -33,7 +33,7 @@ abbrev Prod.mk (x y : GenericExpr τ) : GenericExpr τ :=
 
 open Dsl in
 abbrev Sum (A B : GenericExpr τ) : GenericExpr τ :=
-  (DCC? (Σ ((Bool.Ind (`⊤ (`Bool (? A))) (`⊤ (`Bool A)) (`⊤ (`Bool B))) ∗)))
+  (DCC? (Σ ((Bool.Rec (`⊤ (`Bool (? A))) (`⊤ (`Bool A)) (`⊤ (`Bool B))) ∗)))
 
 /-
 (Bool.Cases case₁ case₂) True  = (case₁ : motive₁)
@@ -41,7 +41,7 @@ abbrev Sum (A B : GenericExpr τ) : GenericExpr τ :=
 -/
 open Dsl in
 abbrev Bool.Cases (case₁ case₂ : GenericExpr τ) : GenericExpr τ :=
-  (DCC? ((Bool.Ind (Bool.Ind (`⊤ (`Bool (? (? case₁))))
+  (DCC? ((Bool.Rec (Bool.Rec (`⊤ (`Bool (? (? case₁))))
                              (`⊤ (`Bool (? case₁)))
                              (`⊤ (`Bool (? case₂))))
                    (`⊤ (`Bool case₁))
@@ -50,7 +50,7 @@ abbrev Bool.Cases (case₁ case₂ : GenericExpr τ) : GenericExpr τ :=
 
 syntax "(⊕" gen_dcc+ ")"           : gen_dcc
 syntax "(×.mk" gen_dcc+ ")"        : gen_dcc
-syntax "(⊕.Ind" gen_dcc+ ")"       : gen_dcc
+syntax "(⊕.Rec" gen_dcc+ ")"       : gen_dcc
 syntax "(⊕.CasesAnd" gen_dcc+ ")"  : gen_dcc
 syntax "(Bool.Cases" gen_dcc+ ")"  : gen_dcc
 
@@ -58,7 +58,7 @@ macro_rules
   | `(DCC[$loc] (⊕ $A:gen_dcc $B:gen_dcc)) => `(Sum (DCC[$loc] $A) (DCC[$loc] $B))
   | `(DCC[$loc] (×.mk $x:gen_dcc $y:gen_dcc)) => `(Prod.mk (DCC[$loc] $x) (DCC[$loc] $y))
   | `(DCC[$loc] (Bool.Cases $case_x:gen_dcc $case_y:gen_dcc)) => `(Bool.Cases (DCC[$loc] $case_x) (DCC[$loc] $case_y))
-  | `(DCC[$loc] (⊕.Ind $B:gen_dcc $motive:gen_dcc $case_true:gen_dcc $case_false:gen_dcc)) => `(Sum.Ind (DCC[$loc] $B) (DCC[$loc] $motive) (DCC[$loc] $case_true) (DCC[$loc] $case_false))
+  | `(DCC[$loc] (⊕.Rec $B:gen_dcc $motive:gen_dcc $case_true:gen_dcc $case_false:gen_dcc)) => `(Sum.Rec (DCC[$loc] $B) (DCC[$loc] $motive) (DCC[$loc] $case_true) (DCC[$loc] $case_false))
 
 /-
 (⊕.CasesAnd (,... True x) (,... True y) both_true inl_false inl_false) = both_true (×.mk x y)
@@ -67,9 +67,9 @@ macro_rules
 -/
 open Dsl in
 abbrev Sum.CasesAnd (const_motive τ₁ τ₂ τ₃ τ₄ both_true inl_false inr_false x y : GenericExpr τ) : GenericExpr τ :=
-  (DCC? ((⊕.Ind (Bool.Cases τ₁ τ₂)
+  (DCC? ((⊕.Rec (Bool.Cases τ₁ τ₂)
                 (Bool.Cases (`τ₁ const_motive) (`τ₂ const_motive))
-                ((⊕.Ind (Bool.Cases τ₃ τ₄)
+                ((⊕.Rec (Bool.Cases τ₃ τ₄)
                         (Bool.Cases (`τ₃ const_motive) (`τ₄ const_motive))
                         (Λ τ₂ (`τ₄ τ₁) (∘ both_true (Swap τ₂ τ₂)))
                         (Λ τ₄ (`τ₄ τ₁) (∘ inr_false (Fst (`τ₄ τ₁)))))
@@ -112,7 +112,7 @@ def unif_eq_fn (B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g hole h_unif : GenericExp
 
   let to_fn_cannot_unify := DCC? (→ (: (≃ (= (C₁ x₁ hole) (f hole) (f hole)) (= (C₂ x₂ hole) (g hole) (g hole))) (? ((Π B₁ C₁) x₁))) ⊥)
 
-  DCC? ((⊕.Ind (Bool.Cases t_can_unify t_cannot_unify)
+  DCC? ((⊕.Rec (Bool.Cases t_can_unify t_cannot_unify)
                (Bool.Cases (`t_can_unify goal) (`t_cannot_unify goal))
                (∘ ((Λ Bool (`Bool (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g))) (Id (Σ (`Bool (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)))))) True)
                   (≃.mk (`t_can_unify (`(= ((Π B₁ C₁) x₁) f _f) (((refl (Id (? ((Π B₂ C₂) x₂)))) (& ((Π B₂ C₂) x₂)) (& g)))))
@@ -130,7 +130,7 @@ def unif_eq_fn (B₁ C₁ x₁ B₂ C₂ x₂ f _f g _g hole h_unif : GenericExp
                                    (Id to_fn_cannot_unify)
                                    (≃.env (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)))))
                         (≃.1 (≃ (= (C₁ x₁ hole) (f hole) (f hole)) (= (C₂ x₂ hole) (g hole) (g hole))) ⊥))
-                     (⊥.Ind (`t_cannot_unify (`⊥ (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)))))
+                     (⊥.Rec (`t_cannot_unify (`⊥ (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)))))
                      (`(! t_cannot_unify) ((refl (Id (? (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g))))) (& (≃ (= ((Π B₁ C₁) x₁) f _f) (= ((Π B₂ C₂) x₂) g _g)))))
                      (`(! t_cannot_unify) ((refl (Id (Sort 0))) (& ⊥))))))
         h_unif)
@@ -139,7 +139,7 @@ open Dsl in
 def unif_bang (A B A₁ A₂ : GenericExpr τ) (h_unif_A : GenericExpr τ) : GenericExpr τ :=
   let goal := DCC? (⊕ (≃ (! A₁) (! A₂)) (≃ (≃ (! A₁) (! A₂)) ⊥))
 
-  DCC? ((⊕.Ind (Bool.Cases (! (≃ A₁ A₂)) (! (≃ (≃ A₁ A₂) ⊥)))
+  DCC? ((⊕.Rec (Bool.Cases (! (≃ A₁ A₂)) (! (≃ (≃ A₁ A₂) ⊥)))
                (Bool.Cases (`(! (≃ A₁ A₂)) goal) (`(! (≃ (≃ A₁ A₂) ⊥)) goal))
                (≃.mk (Λ' (≃ A₁ A₂)
                          (`(≃ A₁ A₂) A₁)
@@ -163,20 +163,20 @@ def unif_bang (A B A₁ A₂ : GenericExpr τ) (h_unif_A : GenericExpr τ) : Gen
                                 (∘ (≃.1 (≃ A₁ A₂) ⊥) (* (≃ (≃ A₁ A₂) ⊥)))
                                 (∘ (* (! (≃ A₁ A₂)))
                                    (≃.env (! A₁) (! A₂))))))
-                     (⊥.Ind (`(! (≃ (≃ A₁ A₂) ⊥)) (`⊥ (≃ (! A₁) (! A₂)))))
+                     (⊥.Rec (`(! (≃ (≃ A₁ A₂) ⊥)) (`⊥ (≃ (! A₁) (! A₂)))))
                      (`(! (! (≃ (≃ A₁ A₂) ⊥))) ((refl (Id (? (≃ (! A₁) (! A₂))))) (& (≃ (! A₁) (! A₂)))))
                      (`(! ⊥) ((refl (Id (Sort 0))) (& ⊥)))) /- Have (! (≃ (≃ A₁ A₂) ⊥)) -/)
         ((⟨,⟩(`(⊕ (≃ A₁ A₂) (≃ (≃ A₁ A₂) ⊥))
-               ((Bool.Ind (`⊤ (`Bool (? (! (≃ A₁ A₂)))))
+               ((Bool.Rec (`⊤ (`Bool (? (! (≃ A₁ A₂)))))
                           (`⊤ (`Bool (! (≃ A₁ A₂))))
                           (`⊤ (`Bool (! (≃ (≃ A₁ A₂) ⊥)))))
-                ∗)) (∘ (Fst ((Bool.Ind (`⊤ (`Bool (? (≃ A₁ A₂))))
+                ∗)) (∘ (Fst ((Bool.Rec (`⊤ (`Bool (? (≃ A₁ A₂))))
                                        (`⊤ (`Bool (≃ A₁ A₂)))
                                        (`⊤ (`Bool (≃ (≃ A₁ A₂) ⊥)))) ∗))
                   (* (! (⊕ (≃ A₁ A₂) ((≃ A₁ A₂) ⊥)))))
                (Λ (! (⊕ (≃ A₁ A₂) ((≃ A₁ A₂) ⊥)))
                   (`(! (⊕ (≃ A₁ A₂) ((≃ A₁ A₂) ⊥))) Bool)
-                  (∘ ($<> (Snd ((Bool.Ind (`⊤ (`Bool (? (≃ A₁ A₂))))
+                  (∘ ($<> (Snd ((Bool.Rec (`⊤ (`Bool (? (≃ A₁ A₂))))
                                   (`⊤ (`Bool (≃ A₁ A₂)))
                                   (`⊤ (`Bool (≃ (≃ A₁ A₂) ⊥)))) ∗)))
                      (Fst (`(! (⊕ (≃ A₁ A₂) ((≃ A₁ A₂) ⊥))) Bool))))) (& (& h_unif_A))))
@@ -301,7 +301,7 @@ def unif_sigma (A B B₁ B₂ : GenericExpr τ) (h_unif_fst : GenericExpr τ) (h
                                      (≃.1 (≃ (Dom B₁) (Dom B₂)) ⊥)
                                      (∘ (Fst (`(≃ (Dom B₁) (Dom B₂)) (≃ (B₁ hole) (B₂ hole))))
                                         (≃.env (Σ B₁) (Σ B₂)))) /- (≃ (Dom B₁) (Dom B₂))-/))
-                         (⊥.Ind (`(≃ (Dom B₁) (Dom B₂)) (`⊥ (≃ (Σ B₁) (Σ B₂)))))
+                         (⊥.Rec (`(≃ (Dom B₁) (Dom B₂)) (`⊥ (≃ (Σ B₁) (Σ B₂)))))
                          (`(! (≃ (≃ (Dom B₁) (Dom B₂)) ⊥)) ((refl (Id Sort 0)) (& ⊥)))
                          (`(! (≃ (≃ (Dom B₁) (Dom B₂)) ⊥)) ((refl (Id (? ((≃ (Σ B₁) (Σ B₂)))))) (& ((≃ (Σ B₁) (Σ B₂))))))) -- (≃ (Dom B₁) (Dom B₂)) ≃ ⊥ ⊢ (≃ (≃ (Σ B₁) (Σ B₂)) ⊥)
                    (≃.mk (Λ' (≃ (≃ (B₁ hole) (B₂ hole)) ⊥)
@@ -314,7 +314,7 @@ def unif_sigma (A B B₁ B₂ : GenericExpr τ) (h_unif_fst : GenericExpr τ) (h
                                      (≃.1 (≃ (B₁ hole) (B₂ hole)) ⊥)
                                      (∘ (Snd (`(≃ (Dom B₁) (Dom B₂)) (≃ (B₁ hole) (B₂ hole))))
                                         (≃.env (Σ B₁) (Σ B₂)))) /- (≃ (Dom B₁) (Dom B₂))-/))
-                         (⊥.Ind (`(≃ (Dom B₁) (Dom B₂)) (`⊥ (≃ (Σ B₁) (Σ B₂)))))
+                         (⊥.Rec (`(≃ (Dom B₁) (Dom B₂)) (`⊥ (≃ (Σ B₁) (Σ B₂)))))
                          (`(! (≃ (≃ (Dom B₁) (Dom B₂)) ⊥)) ((refl (Id Sort 0)) (& ⊥)))
                          (`(! (≃ (≃ (Dom B₁) (Dom B₂)) ⊥)) ((refl (Id (? ((≃ (Σ B₁) (Σ B₂)))))) (& ((≃ (Σ B₁) (Σ B₂))))))) -- (≃ (B₁ hole) (B₂ hole)) ≃ ⊥ ⊢ (≃ (≃ (Σ B₁) (Σ B₂)) ⊥)
                    h_unif_fst
@@ -432,7 +432,7 @@ def unif_fn (τ₁ τ₂ B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_unif
                                            (Swap (≃ (B₁ x₁) (B₂ x₂)) (`(≃ (B₁ x₁) (B₂ x₂)) (→ (: (≃ (B₁ x₁) (B₂ x₂)) (? (≃ (B₁ x₁) (B₂ x₂)))) ⊥))))))
                                   (Swap (→ (: (≃ (B₁ x₁) (B₂ x₂)) (? (≃ (B₁ x₁) (B₂ x₂)))) ⊥) (≃ t_fn₁ t_fn₂))))
                             (≃.1 (≃ (B₁ x₁) (B₂ x₂)) ⊥))
-                         (⊥.Ind (`(≃ (≃ (B₁ x₁) (B₂ x₂)) ⊥) (`⊥ ⊥)))
+                         (⊥.Rec (`(≃ (≃ (B₁ x₁) (B₂ x₂)) ⊥) (`⊥ ⊥)))
                          (`(! (≃ (≃ (B₁ x₁) (B₂ x₂)) ⊥)) ((refl (Id (? (≃ ((Π B₁ C₁) x₁) ((Π B₁ C₂) x₂))))) (& (≃ ((Π B₁ C₁) x₁) ((Π B₁ C₂) x₂)))))
                          (`(! (≃ (≃ (B₁ x₁) (B₂ x₂)) ⊥)) ((refl (Id (Sort 0))) (& ⊥)))) -- (≃ (B₁ x₁) (B₂ x₂)) ≃ ⊥ ⊢ (≃ (≃ ((Π B₁ C₁) x₁) ((Π B₂ C₂) x₂)) ⊥)
                    (≃.mk (∘ (Λ (→ (: (≃ (C₁ x₁ hole) (C₂ x₂ hole)) (? (≃ (C₁ x₁ hole) (C₂ x₂ hole)))) ⊥)
@@ -446,7 +446,7 @@ def unif_fn (τ₁ τ₂ B₁ C₁ x₁ B₂ C₂ x₂ : GenericExpr τ) (h_unif
                                            (Swap (≃ (C₁ x₁ hole) (C₂ x₂ hole)) (`(≃ (C₁ x₁ hole) (C₂ x₂ hole)) (→ (: (≃ (C₁ x₁ hole) (C₂ x₂ hole)) (? (≃ (C₁ x₁ hole) (C₂ x₂ hole)))) ⊥))))))
                                   (Swap (→ (: (≃ (C₁ x₁ hole) (C₂ x₂ hole)) (? (≃ (C₁ x₁ hole) (C₂ x₂ hole)))) ⊥) (≃ t_fn₁ t_fn₂))))
                             (≃.1 (≃ (B₁ x₁) (B₂ x₂)) ⊥))
-                         (⊥.Ind (`(≃ (≃ (C₁ x₁ hole) (C₂ x₂ hole)) ⊥) (`⊥ ⊥)))
+                         (⊥.Rec (`(≃ (≃ (C₁ x₁ hole) (C₂ x₂ hole)) ⊥) (`⊥ ⊥)))
                          (`(! (≃ (≃ (C₁ x₁ hole) (C₂ x₂ hole)) ⊥)) ((refl (Id (? (≃ ((Π B₁ C₁) x₁) ((Π B₁ C₂) x₂))))) (& (≃ ((Π B₁ C₁) x₁) ((Π B₁ C₂) x₂)))))
                          (`(! (≃ (≃ (C₁ x₁ hole) (C₂ x₂ hole)) ⊥)) ((refl (Id (Sort 0))) (& ⊥)))) -- ((C₁ x₁ hole) ≃ (C₂ x₂ hole)) ≃ ⊥
                    h_unif_dom
@@ -473,7 +473,7 @@ abbrev unif_bot_type (u : Level) : GenericExpr τ :=
                                   (Id (→ (: (Sort (u + 1)) Sort u + 2) ⊥)))
                             (Swap (Sort u + 1) (→ (: (Sort u) Sort u + 1) ⊥)))) (Sort u))
                       (≃.1 (Sort (u + 1)) ⊥))) -- (Type u ≃ ⊥), prove ⊥. Grab Type u → ⊥, plug in Sort u
-              (⊥.Ind (`⊤ (`⊥ (≃ (Sort (u + 1)) ⊥)))) -- ⊤, ⊥, prove (Type u ≃ ⊥). Use ⊥.Ind
+              (⊥.Rec (`⊤ (`⊥ (≃ (Sort (u + 1)) ⊥)))) -- ⊤, ⊥, prove (Type u ≃ ⊥). Use ⊥.Rec
               (`(! ⊤) ((refl (Id (Sort (u + 2)))) (& (Sort (u + 1)))))
               (`(! ⊤) ((refl (Id (Sort 0))) (& ⊥))))
          ∗)))
@@ -492,7 +492,7 @@ abbrev unif_bot_prop : GenericExpr τ :=
                                      (Id (→ (: (Sort 0) Sort 1) ⊥)))
                                (Swap (Sort 0) (→ (: (Sort 0) Sort 1) ⊥)))) ⊤)
                          (≃.1 (Sort 0) ⊥)))
-                 (⊥.Ind (`⊤ (`⊥ (≃ (Sort 0) ⊥))))
+                 (⊥.Rec (`⊤ (`⊥ (≃ (Sort 0) ⊥))))
                  (`(! ⊤) ((refl (Id (Sort 1))) (& (Sort 0))))
                  (`(! ⊤) ((refl (Id (Sort 0))) (& ⊥))))
           ∗)))
@@ -691,13 +691,13 @@ def step_unify_view? [DecidableEq τ] (e : GenericExpr τ) : Option ((e' : Gener
   | DCC? (≃.env.2 _a _b) => 0
   | DCC? (≃.2.apply _a _b) => 0
   | DCC? (≃.mk a b c d) => a.size_unify + b.size_unify + c.size_unify + d.size_unify
-  | DCC? (Bool.Ind motive x y) => motive.size_unify + x.size_unify + y.size_unify
-  | DCC? (≃.Ind motive x) => motive.size_unify + x.size_unify
+  | DCC? (Bool.Rec motive x y) => motive.size_unify + x.size_unify + y.size_unify
+  | DCC? (≃.Rec motive x) => motive.size_unify + x.size_unify
   | DCC? (≃.1 x y) => x.size_unify + y.size_unify
   | DCC? (≃.2 x y) => x.size_unify + y.size_unify
   | DCC? (≃.3 x y) => x.size_unify + y.size_unify
   | DCC? (≃.4 x y) => x.size_unify + y.size_unify
-  | DCC? (⊥.Ind motive) => motive.size_unify
+  | DCC? (⊥.Rec motive) => motive.size_unify
   | DCC[.] (Eql α)  => α.size_unify
   | DCC[.] (refl α) => α.size_unify
   | DCC[.] Sort _m => 0

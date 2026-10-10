@@ -45,19 +45,10 @@ Pretty sure this is just because we need the top-level env rule.
 #eval (DCC (Λ (Sort 1) (` (Sort 1) Sort 1) (Fst (` (Sort 1) Sort 1)))).infer'
 
 open Dsl in
-#eval (GenericExpr.reduce_all (DCC (Unify (Sort 0) (Sort 0) (= ((Π (Id (Sort 2)) (`(Sort 2) (`(Sort 1) (Sort 1)))) (Sort 1)) (Id (Sort 1))
-            (∘ (Id (Sort 1))
-               (Id (Sort 1)))) (= ((Π (Id (Sort 2)) (`(Sort 2) (`(Sort 1) (Sort 1)))) (Sort 1)) (Id (Sort 1)) (Id (Sort 1))))))
-
 #eval (DCC (∘ (Id (Sort 1)) (Id (Sort 1)))).infer'
 open Dsl in
-#eval (DCC ((Id ((= ((Π (Id (Sort 2)) (`(Sort 2) (`(Sort 1) (Sort 1)))) (Sort 1))
-                    (Id (Sort 1))
-                    (∘ (Id (Sort 1)) (Id (Sort 1))))))
-            ((refl (Id (Sort 2))) (& ((Sort 1 : Sort 2) → Sort 1)) (& (Id (Sort 1)))))).infer'
-
 def mk_test_pair : Expr :=
-  DCC ((⟨,⟩(`(Sort 1) (`(Sort 1) Sort 1)) (Id Sort 1) (Λ Sort 1 (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1)))) (& Sort 0))
+  DCC ((⟨,⟩(Λ (Sort 1) (`(Sort 1) (Sort 1)) (`(Σ (`(Sort 1) (Sort 1))) (Sort 1))) (Id Sort 1) (Λ Sort 1 (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1)))) (& Sort 0))
 
 def test_pair : Except (TypeError mk_test_pair) Expr := (·.fst) <$> mk_test_pair.infer
 #eval GenericExpr.red_aff (DCC (((`(Sort 2) (∘ (Σ (`(Sort 1) (`(Sort 1) (Sort 1)))) (* (Sort 1)))) (! (Sort 1))) (& (Sort 0))))
@@ -72,8 +63,6 @@ why does β need to receive a couple? something with duplication I recall.
 -/
 
 #eval (Std.format ∘ (·.fst)) <$> (DCC (Id(Sort 1))).infer
-
-#eval (Std.format ∘ (·.fst)) <$> (DCC (Λ(Sort 2, Id(Sort 2), Fst(Id(Sort 2))) (Sort 1) (Sort 0))).infer
 
 def test_id_nested : Option Expr := do
   let ⟨t, _⟩ ← (DCC (Id Sort 1)).infer.toOption
@@ -180,8 +169,6 @@ Id(Sort 1)
 #eval (Std.format ∘ (·.fst)) <$> (DCC (Id Sort 1)).infer
 #eval (DCC (Id Sort 1)).infer'
 
-#eval (DCC ((Sort 1 : Sort 2) → ((Sort 3 : Sort 4) → Sort 5))).reduce_all
-
 #eval (DCC (Id Sort 2)).infer'
 #eval (DCC (refl (Id Sort 2))).infer'
 #eval (DCC ((refl (Id Sort 2)) (& Sort 1) (& Sort 0))).infer'
@@ -193,4 +180,3 @@ Id(Sort 1)
 
 -/
 
-#eval (DCC ((refl (`(Sort 0) ((Sort 0 : Sort 1) → Sort 0))) (& ⊤) (& (Id Sort 0)))).infer'

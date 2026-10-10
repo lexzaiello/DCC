@@ -23,8 +23,8 @@ B : A → Sort u       C : (x : A) (y : B x) → Sort v
 -/
 
 open Dsl in
-def Swap.type (A B : GenericExpr τ) (u v : Level) : GenericExpr τ :=
-  DCC? (→ (: (Σ (`A B)) Sort (max u v)) (Σ (`B A)))
+def Swap.type (A B : GenericExpr τ) : GenericExpr τ :=
+  DCC? (→ (Σ' A (`A B)) (Σ (`⊤ A) (`⊤ (`B A))))
 
 /-
 (Π(Id(Sort 3),
@@ -50,42 +50,34 @@ open Dsl in
 TODO: x needs to depend on (env : δ)
 -/
 open Dsl in
-@[dcc_judge] abbrev fst.f_β.type.{u} {τ_c : Type u} (α δ : GenericExpr τ_c) (m n o : Level) : GenericExpr τ_c :=
-  (DCC? (→ (: δ Sort o) (→ (: α Sort m) Sort n)))
+@[dcc_judge] abbrev fst.f_β.type.{u} {τ_c : Type u} (α δ : GenericExpr τ_c) (n : Level) : GenericExpr τ_c :=
+  (DCC? (→ δ (→ α Sort n)))
 
 open Dsl in
-open Dsl in
-@[dcc_judge] abbrev snd.f_β.type.{u} {τ_c : Type u} (δ _β : GenericExpr τ_c) (o : Level) : GenericExpr τ_c :=
-  (DCC? ((Π (Id Sort o) _β) δ))
-
-open Dsl in
-@[dcc_judge] abbrev id.type.{u} {τ_c : Type u} (α : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
-  DCC? (→ (: α Sort m) α)
+@[dcc_judge] abbrev id.type.{u} {τ_c : Type u} (α : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? (→ α α)
 
 /-
-β : ∀ (x : α), Sort n
-Fst(β) : ∀ (s : Coup(β)), α
+B : A → Sort u
+--------------------------------
+(Fst B) : (x : ((Σ (`⊤ A) (`⊤ B)) ∗)) → A
 -/
 open Dsl in
-@[dcc_judge] abbrev fstc.type.{u} {τ_c : Type u} (α β : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
-  DCC? (→ (: (Σ β) Sort (max m n)) α)
+@[dcc_judge] abbrev fstc.type.{u} {τ_c : Type u} (A B : GenericExpr τ_c) : GenericExpr τ_c :=
+  (DCC? ((Π (Σ (`⊤ A) (`⊤ B)) (`⊤ (`((Σ (`⊤ A) (`⊤ B)) ∗) A))) ∗))
 
 /-
-β : ∀ (x : α), Sort n
-Snd(β) : ∀ (s : Coup(β)), (β ∘ Fst(β)) s
+B : A → Sort u
+C : (x : A) → (y : B x) → Sort v
+--------------------------------
+(Fst B C) : (x : A) → (y : (Σ B C) x) → C x ((Fst B C) x)
+
+I think we can leave (Fst B) and (Snd B).
+They were expressive enough before.
 -/
 open Dsl in
-@[dcc_judge] abbrev sndc.type.{u} {τ_c : Type u} (β : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort (max m n)) (`Sort (max m n) (∘ β (Fst β)))) (Σ β))
-
-/-
-f_β : δ → α → Sort n
-Fst(f_β) : ∀ (env : δ) (s : Σ(f_β) env), α
--/
-
-open Dsl in
-@[dcc_judge] def fst.type.{u} {τ_c : Type u} (α f_β δ : GenericExpr τ_c) (n o : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort o) (`Sort o (∘ (Π (Id Sort n) (Λ Sort n (Id Sort n) (` (Σ (Id Sort n)) α))) (Σ α f_β)))) δ)
+@[dcc_judge] abbrev sndc.type.{u} {τ_c : Type u} (A B : GenericExpr τ_c) : GenericExpr τ_c :=
+  (DCC? ((Π (Σ (`⊤ A) (`⊤ B)) (`⊤ (∘ B (Fst B)))) ∗))
 
 /-
 Λ(β, x) y z → x ⟦β⟧(y, z)
@@ -95,31 +87,24 @@ open Dsl in
 x : ∀ (s : coup.type α β m), γ s
 -/
 open Dsl in
-@[dcc_judge] def curr.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort m) (`Sort m (Π β (Λ α β γ)))) α) -- weaken α, keep x
+@[dcc_judge] def curr.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ α) (`⊤ (Π β (Λ α β γ)))) ∗) -- weaken α, keep x
 
 open Dsl in
-@[dcc_judge] abbrev curr.x.type.{u} {τ_c : Type u} (B' C : GenericExpr τ_c) (u v : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort (max u v)) (`(Sort max u v) C)) (Σ B'))
+@[dcc_judge] abbrev curr.x.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ (Σ' A B)) (`⊤ C)) ∗)
 
 open Dsl in
-@[dcc_judge] abbrev curr'.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort m) (`Sort m (Π (!<> β) (!Λ α β γ)))) (! α)) -- weaken α, keep x
+@[dcc_judge] abbrev curr'.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ (! α)) (`⊤ (Π (!<> β) (!Λ α β γ)))) ∗) -- weaken α, keep x
 
 open Dsl in
-@[dcc_judge] abbrev curr'.x.type.{u} {τ_c : Type u} (B' C : GenericExpr τ_c) (u v : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort (max u v)) (`(Sort max u v) C)) (! (Σ B')))
+@[dcc_judge] abbrev curr'.x.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ (Σ' A B)) (`⊤ C)) (! (Σ A B)))
 
 /-
 *(f) &(x) = (f x)
 -/
-
-/-
-β : α → Sort n
--/
-open Dsl in
-@[dcc_judge] abbrev curr.β.type.{u} {τ_c : Type u} (f_α x_α : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
-  (DCC? ((Π f_α (→ (: Sort m) Sort n)) x_α))
 
 /-
 Nondependent quotation.
@@ -128,23 +113,23 @@ x : α
 `(β, x) : β → α
 -/
 open Dsl in
-@[dcc_judge] abbrev quot.type.{u} {τ_c : Type u} (α β : GenericExpr τ_c) (n : Level) : GenericExpr τ_c :=
-  DCC? (→ (: β Sort n) α)
+@[dcc_judge] abbrev quot.type.{u} {τ_c : Type u} (α β : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? (→ β α)
 
 open Dsl in
-@[dcc_judge] abbrev comp.type.{u} {τ_c : Type u} (A C g : GenericExpr τ_c) (m : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort m) (`Sort m (∘ C g))) A)
+@[dcc_judge] abbrev comp.type.{u} {τ_c : Type u} (A C g : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ A) (`⊤ (∘ C g))) ∗)
 
 open Dsl in
-@[dcc_judge] abbrev comp.f.type.{u} {τ_c : Type u} (B C : GenericExpr τ_c) (n : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort n) (`(Sort n) C)) B)
+@[dcc_judge] abbrev comp.f.type.{u} {τ_c : Type u} (B C : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ B) (`⊤ C)) ∗)
 
 /-
 ((Eql B) env (,B x y)) →ᵦ (= (B env) x y)
 -/
 open Dsl in
-@[dcc_judge] def eql.type.{u} {τ_c : Type u} (B A : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
-  (DCC? ((Π (Id (Sort u)) (`(Sort u) (Π (Σ B (Λ A B (∘ B (Fst B)))) (Λ A (Σ B (Λ A B (∘ B (Fst B)))) (`(Σ B (Λ A B (∘ B (Fst B)))) (Sort u)))))) A))
+@[dcc_judge] def eql.type.{u} {τ_c : Type u} (B A : GenericExpr τ_c) : GenericExpr τ_c :=
+  (DCC? ((Π (`⊤ A) (`⊤ (Π (Σ B (Λ A B (∘ B (Fst B)))) (Λ A (Σ B (Λ A B (∘ B (Fst B)))) (`(Σ B (Λ A B (∘ B (Fst B)))) (Sort 0)))))) ∗))
 
 /-
 have (, (& env) (& x))
@@ -200,8 +185,8 @@ This is like W combinator:
 -/
 
 open Dsl in
-@[dcc_judge] def refl.type.{u} {τ_c : Type u} (f_α δ : GenericExpr τ_c) (o : Level) : GenericExpr τ_c :=
-  (DCC? ((Π (Id Sort o) (`Sort o (Π (!<> f_α) (Dup f_α (Eql f_α))))) (! δ)))
+@[dcc_judge] def refl.type.{u} {τ_c : Type u} (f_α δ : GenericExpr τ_c) : GenericExpr τ_c :=
+  (DCC? ((Π (`⊤ (! δ)) (`⊤ (Π (!<> f_α) (Dup f_α (Eql f_α))))) ∗))
 
 /-
 B : A → Sort u      f : (x : A) → (y : (Σ B (Λ A B (∘ B (Fst B)))) x) → C x y
@@ -209,8 +194,8 @@ B : A → Sort u      f : (x : A) → (y : (Σ B (Λ A B (∘ B (Fst B)))) x) �
 (Dup B f) : (x : (! A)) → (y : (!<> B) x) → ((Dup B c) x y)
 -/
 open Dsl in
-@[dcc_judge] def Dup.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
-  (DCC? ((Π (Id Sort u) (Π (!<> B) (Dup B C))) (! A)))
+@[dcc_judge] def Dup.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) : GenericExpr τ_c :=
+  (DCC? ((Π (`⊤ (! A)) (`⊤ (Π (!<> B) (Dup B C)))) ∗))
 
 /-
 f_α : α → Sort m
@@ -218,15 +203,15 @@ f_β : (x : α) (y : f_α x) → Sort n
 Π(m, f_α, f_β) : α → Sort n
 -/
 open Dsl in
-@[dcc_judge] def Pi.type.{u} {τ_c : Type u} (α : GenericExpr τ_c) (o m n : Level) : GenericExpr τ_c :=
-  DCC? (→ (: α Sort o) Sort (max m n))
+@[dcc_judge] def Pi.type.{u} {τ_c : Type u} (α : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
+  DCC? (→ α Sort (max m n))
 
 /-abbrev Pi.C.type (f_α α : Expr) (m o : Level) :=
   (DCC (Π(Id(Sort m), `(Sort m, Π(f_α, Λ(α, f_α, `(Coup(m, α, f_α), Sort o))))) α))-/
 
 open Dsl in
 @[dcc_judge] def pair.β.type.{u} {τ_c : Type u} (α : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
-  DCC? (→ (: (Sort m) Sort m.succ) (→ (: α Sort m) Sort n))
+  DCC? (→ (Sort m) (→ α Sort n))
 
 /-
 f_β : ∀ (env : δ) (x : α), Sort n
@@ -243,8 +228,8 @@ f_β : δ → α → Sort n
 Σ(f_β) : δ → Sort n
 -/
 open Dsl in
-@[dcc_judge] abbrev Sigma.type.{u} {τ_c : Type u} (δ : GenericExpr τ_c) (m n o : Level) : GenericExpr τ_c :=
-  DCC? (→ (: δ Sort o) Sort max m n)
+@[dcc_judge] abbrev Sigma.type.{u} {τ_c : Type u} (δ : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
+  DCC? (→ δ Sort max m n)
 
 open Dsl in
 @[dcc_judge] abbrev Coup.type.{u} {τ_c : Type u} (m n : Level) : GenericExpr τ_c :=
@@ -278,20 +263,20 @@ This is canonical.
 -/
 
 open Dsl in
-@[dcc_judge] abbrev Eval.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) (m n : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort (max m n)) (`Sort (max m n) (Eval α β γ))) (Σ β))
+@[dcc_judge] abbrev Eval.type.{u} {τ_c : Type u} (α β γ : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ (Σ' α β)) (`⊤ (Eval α β γ))) ∗)
 
 open Dsl in
-@[dcc_judge] abbrev Eval.x.type.{u} {τ_c : Type u} (A' B' C : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort u) (`Sort u (Π B' C))) A')
+@[dcc_judge] abbrev Eval.x.type.{u} {τ_c : Type u} (A' B' C : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ A') (`⊤ (Π B' C))) ∗)
 
 open Dsl in
-@[dcc_judge] abbrev Pair.f.type.{u} {τ_c : Type u} (A B : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort u) (`(Sort u) B)) A)
+@[dcc_judge] abbrev Pair.f.type.{u} {τ_c : Type u} (A B : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ A) (`⊤ B)) ∗)
 
 open Dsl in
-@[dcc_judge] abbrev Pair.g.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort u) (`(Sort u) (Π B C))) A)
+@[dcc_judge] abbrev Pair.g.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ A) (`⊤ (Π B C))) ∗)
 
 /-
 ⟨f, g⟩ x = (f x, g x (f x))
@@ -301,8 +286,8 @@ g : ∀ (x : α) (y : β x), γ x y
 ⟨f, g⟩ : ∀ (x : α), Σ(Λ(α, β, γ)) x
 -/
 open Dsl in
-@[dcc_judge] abbrev Pair.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
-  DCC? ((Π (Id Sort u) (`Sort u (∘ (Σ B C) (* A)))) (! A))
+@[dcc_judge] abbrev Pair.type.{u} {τ_c : Type u} (A B C : GenericExpr τ_c) : GenericExpr τ_c :=
+  DCC? ((Π (`⊤ (! A)) (`⊤ (∘ (Σ B C) (* A)))) ∗)
 
 /-
 (≃.3 A B) : (eq : (! (≃ A B))) → (x : (! A)) → (= ((≃.2 A B) ((≃.1 A B) x.raw)) x.raw)
@@ -322,7 +307,7 @@ Assoc (, (,x x)  (, (_ : (≃ A B)) (_ : (≃ A B)))) = (, x (, x (, (_ : (≃ A
 
 open Dsl in
 abbrev Dup' (A : GenericExpr τ_c) (u : Level) : GenericExpr τ_c :=
-  DCC? ((Dup (Id (Sort u)) (`(Sort u) (Id (Σ (`A A))))) (& A))
+  DCC? ((Dup (Id (Sort u)) (`(Sort u) (Id (Σ' A (`A A))))) (& A))
 
 /-open Dsl in
 @[dcc_judge] def Equiv_3.type.{u} {τ_c : Type u} (A B : GenericExpr τ_c) (u v : Level) : GenericExpr τ_c :=
@@ -386,88 +371,5 @@ open Dsl in
                                            (≃.2 A B))
                                       #(Dup' (DCC? (≃ A B)) (max u v))))))))))) (! (≃ A B))))
 -/
-/-
-to_fun_env : (env : A) → B → C          inv_fun_env : (env : A) → C → B
-heq_1_env  : (env : (! A)) → (x : (! B)) → ((from_fun_env env (to_fun_env env ((* B) x))) = x)
-heq_2_env  : (env : (! A)) → (x : (! C)) → ((to_fun_env env (from_fun_env env ((* C) x))) = x)
-------------------------------------------------------------------------------------------------------------------------
-(≃.mk to_fun_env inv_fun_env heq_1_env heq_2_env)
--/
-open Dsl in
-def equiv_mk_heq_1_type (τ_env A B to_fun_env from_fun_env : GenericExpr τ) (u v s : Level) : GenericExpr τ :=
-  let to_fun_ty   := DCC? (→ (: A Sort v) B)
-  let from_fun_ty := DCC? (→ (: B Sort s) A)
-
-  DCC? ((Π (Id Sort u)
-           (`(Sort u)
-             (Π (`(! τ_env) (! A))
-                (Λ (! τ_env)
-                   (`(! τ_env) (! A))
-                   (∘ (∘ (∘ (∘ (∘ ((Eql (Id Sort v)) A) (Swap A A))
-                               (Map A
-                                    A
-                                    (Id A)
-                                    (∘ (→.apply (: B Sort s) A)
-                                       (∘ (Map from_fun_ty
-                                                B
-                                                (Id from_fun_ty)
-                                                (→.apply (: A Sort v) B))
-                                          (Reassoc A from_fun_ty to_fun_ty)))))
-                                          /- Have (, x (, (from_fun_env env) (to_fun_env env))), make (, (from_fun_env env) (, (to_fun_env env) x))-/
-                            (Assoc A
-                                   A
-                                   (× from_fun_ty to_fun_ty)))
-                         (Swap (× from_fun_ty to_fun_ty)
-                               (× A A))) -- have (, (, env env) (, x x)). Make (, (, (from_fun_env env) (to_fun_env env)) (, x x))
-                      (Map (× from_fun_ty to_fun_ty)
-                           (× A A)
-                           (∘ (Map from_fun_ty
-                                   to_fun_ty
-                                   from_fun_env
-                                   to_fun_env)
-                              (Copy τ_env))
-                           (Copy A))))))) (! τ_env))
-
-/-
-to_fun_env : (env : A) → B → C          inv_fun_env : (env : A) → C → B
-heq_1_env  : (env : (! A)) → (x : (! B)) → ((from_fun_env env (to_fun_env env ((* B) x))) = x)
-heq_2_env  : (env : (! A)) → (x : (! C)) → ((to_fun_env env (from_fun_env env ((* C) x))) = x)
-------------------------------------------------------------------------------------------------------------------------
-(≃.mk to_fun_env inv_fun_env heq_1_env heq_2_env)
--/
-open Dsl in
-def equiv_mk_heq_2_type (τ_env A B to_fun_env from_fun_env : GenericExpr τ) (u v s : Level) : GenericExpr τ :=
-  let to_fun_ty   := DCC? (→ (: A Sort v) B)
-  let from_fun_ty := DCC? (→ (: B Sort s) A)
-
-  DCC? ((Π (Id Sort u)
-           (`(Sort u)
-             (Π (`(! τ_env) (! B))
-                (Λ (! τ_env)
-                   (`(! τ_env) (! B))
-                   (∘ (∘ (∘ (∘ (∘ ((Eql (Id Sort s)) B) (Swap B B))
-                               (Map B
-                                    B
-                                    (Id B)
-                                    (∘ (→.apply (: A Sort v) B)
-                                       (∘ (Map to_fun_ty
-                                                A
-                                                (Id to_fun_ty)
-                                                (→.apply (: B Sort s) A))
-                                          (Reassoc B to_fun_ty from_fun_ty)))))
-                                          /- Have (, x (, (from_fun_env env) (to_fun_env env))), make (, (from_fun_env env) (, (to_fun_env env) x))-/
-                            (Assoc B
-                                   B
-                                   (× to_fun_ty from_fun_ty)))
-                         (Swap (× to_fun_ty from_fun_ty)
-                               (× B B))) -- have (, (, env env) (, x x)). Make (, (, (from_fun_env env) (to_fun_env env)) (, x x))
-                      (Map (× to_fun_ty from_fun_ty)
-                           (× B B)
-                           (∘ (Map to_fun_ty
-                                   from_fun_ty
-                                   to_fun_env
-                                   from_fun_env)
-                              (Copy τ_env))
-                           (Copy B))))))) (! τ_env))
 
 end GenericExpr

@@ -17,8 +17,8 @@ inductive Red.Head : GenericExpr τ → GenericExpr τ → Type u
   | evalc          : Red.Head (DCC? ((Eval _α _β x) (,__β y z))) (DCC? (x y z))
   | quot           : Red.Head (DCC? ((`β x) y)) x
   | id             : Red.Head (DCC? ((Id α) x)) x
-  | fstc           : Red.Head (DCC? ((Fst _α _β) env (,β a b))) a
-  | sndc           : Red.Head (DCC? ((Snd _α _β) env (,β a b))) b
+  | fstc           : Red.Head (DCC? ((Fst _β) (,β a b))) a
+  | sndc           : Red.Head (DCC? ((Snd _β) (,β a b))) b
   | comp           : Red.Head (DCC? ((∘ x y) z)) (DCC? (x (y z)))
   | curr           : Red.Head (DCC? ((Λ α β x) y z)) (DCC? (x (,β y z)))
   | curr'          : Red.Head (DCC? ((!Λα β x) (& y) (& z))) (DCC? (x (& (,β y z))))
@@ -49,9 +49,9 @@ def step_head? (e : GenericExpr τ) : Option (Σ' e', (Red.Head (τ := τ) e e')
   | (DCC? ((Eql _f_α) _env (,_B _x _y)))              => .some ⟨_, .eql⟩
   | (DCC? ((`_β _x) _y))                             => .some ⟨_, .quot⟩
   | (DCC? ((Id _α) _x))                                => .some ⟨_, .id⟩
-  | (DCC? ((Fst _α _β) _env (,_γ _a _b)))                     => .some ⟨_, .fstc⟩
+  | (DCC? ((Fst _β) (,_γ _a _b)))                     => .some ⟨_, .fstc⟩
   | (DCC? ((Swap _B _C) (,_B₂ _a _b)))                 => .some ⟨_, .swap⟩
-  | (DCC? ((Snd _α _β) _env (,_γ _a _b)))                     => .some ⟨_, .sndc⟩
+  | (DCC? ((Snd _β) (,_γ _a _b)))                     => .some ⟨_, .sndc⟩
   | (DCC? ((∘ _x _y) _z))                              => .some ⟨_, .comp⟩
   | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, .curr'⟩
   | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, .curr⟩

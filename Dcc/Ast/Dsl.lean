@@ -62,6 +62,7 @@ scoped syntax "(×" gen_dcc+ ")"           : gen_dcc
 scoped syntax "(Copy" gen_dcc+ ")"        : gen_dcc
 -- (→.apply A B) (, f x) = f x, where f is an arrow
 scoped syntax "(→.apply" gen_dcc+ ")"       : gen_dcc
+scoped syntax "(Σ'" gen_dcc gen_dcc ")" : gen_dcc
 
 end Dsl
 
@@ -142,12 +143,12 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "hole") #[m]
   | `(DCC[$ty:gen_dcc_loc] (Σ$α:gen_dcc $β:gen_dcc))                => do
     return mkApp (← field ty "sigma") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β)]
-  | `(DCC[$ty:gen_dcc_loc] (Fst $A:gen_dcc $β:gen_dcc))                         => do
-    return mkApp (← field ty "fstc") #[← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $β)]
+  | `(DCC[$ty:gen_dcc_loc] (Fst $β:gen_dcc))                         => do
+    return mkApp (← field ty "fstc") #[← `(DCC[$ty:gen_dcc_loc] $β)]
   | `(DCC[$ty:gen_dcc_loc] (Swap $B:gen_dcc $C:gen_dcc)) => do
     return mkApp (← field ty "swap") #[← `(DCC[$ty:gen_dcc_loc] $B), ← `(DCC[$ty:gen_dcc_loc] $C)]
-  | `(DCC[$ty:gen_dcc_loc] (Snd $A:gen_dcc $β:gen_dcc))                         => do
-    return mkApp (← field ty "sndc") #[← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $β)]
+  | `(DCC[$ty:gen_dcc_loc] (Snd $β:gen_dcc))                         => do
+    return mkApp (← field ty "sndc") #[← `(DCC[$ty:gen_dcc_loc] $β)]
   | `(DCC[$ty:gen_dcc_loc] (Id $α:gen_dcc))                           => do
     return mkApp (← field ty "id") #[← `(DCC[$ty:gen_dcc_loc] $α)]
   | `(DCC[$ty:gen_dcc_loc] (∘ $f:gen_dcc $g:gen_dcc))                  => do
@@ -160,10 +161,12 @@ open Lean.Syntax in macro_rules
 
 open Dsl in
 macro_rules
+  | `(DCC[$ty:gen_dcc_loc] (Σ' $A:gen_dcc $B:gen_dcc)) => `(DCC[$ty:gen_dcc_loc] ((Σ (`⊤ $A) (`⊤ $B)) ∗))
   | `(DCC[$ty:gen_dcc_loc] (→ (:$α:gen_dcc $A) $β:gen_dcc)) =>
     `(DCC[$ty:gen_dcc_loc] ((Π (Id $A) (`$A (`$α $β))) $α))
   | `(DCC[$ty:gen_dcc_loc] (→ (: Sort $m) $β:gen_dcc)) =>
     `(DCC[$ty:gen_dcc_loc] (Λ Sort $m (Id Sort $m) (`((Σ (Id (Sort $m + 1)) (`(Sort $m + 1) (Id Sort $m))) Sort $m) $β)))
+  | `(DCC[$ty:gen_dcc_loc] (→ $A:gen_dcc $B:gen_dcc)) => `(DCC[$ty] ((Π (`⊤ $A) (`⊤ (`$A $B))) ∗))
 
 open Dsl in
 syntax "gen_dsl" str "for" term  : command
@@ -193,13 +196,13 @@ def runDcc : Lean.Syntax → Lean.MacroM Lean.Syntax
 (× A B) := (Σ (`A B))
 -/
 open Dsl in
-abbrev GenericExpr.Prod (u : Level) (A B : GenericExpr τ) : GenericExpr τ :=
-  (DCC? ((Σ (Id (Sort u)) (`Sort u (`A B))) A))
+abbrev GenericExpr.Prod (A B : GenericExpr τ) : GenericExpr τ :=
+  (DCC? (Σ' A (`A B)))
 
 open Dsl in
 macro_rules
   | `(DCC[$loc] (× $A:gen_dcc $B:gen_dcc)) => `(GenericExpr.Prod (DCC[$loc] $A) (DCC[$loc] $B))
-  | `(DCC[$ty] (Copy $A:gen_dcc)) => `(DCC[$ty] ((Dup (`⊤ $A) (`⊤ (Id ((Σ (`⊤ $A) (`⊤ (`$A $A))) ∗)))) (& ∗)))
+  | `(DCC[$ty] (Copy $A:gen_dcc)) => `(DCC[$ty] ((Dup (`⊤ $A) (`⊤ (Id (Σ' $A (`$A A))))) (& ∗)))
   -- (Reassoc A B C) (, x (, y z)) = (, y (, z x))
   | `(DCC[$ty] (Reassoc $A:gen_dcc $B:gen_dcc $C:gen_dcc)) => `(DCC[$ty]
     (∘ (Assoc $B $C $A)

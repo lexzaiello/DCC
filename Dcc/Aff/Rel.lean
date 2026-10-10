@@ -129,8 +129,8 @@ Core reductions:
   | evalc          : RedAff (DCC? ((Eval _α _β x) (,__β y z))) (DCC? (x y z))
   | quot           : RedAff (DCC? ((`β x) y)) x
   | id             : RedAff (DCC? ((Id α) x)) x
-  | fstc           : RedAff (DCC? ((Fst _α _β) env (,β a b))) a
-  | sndc           : RedAff (DCC? ((Snd _α _β) env (,β a b))) b
+  | fstc           : RedAff (DCC? ((Fst _β) (,β a b))) a
+  | sndc           : RedAff (DCC? ((Snd _β) (,β a b))) b
   | comp           : RedAff (DCC? ((∘ x y) z)) (DCC? (x (y z)))
   | curr           : RedAff (DCC? ((Λ α β x) y z)) (DCC? (x (,β y z)))
   | curr'          : RedAff (DCC? ((!Λα β x) (& y) (& z))) (DCC? (x (& (,β y z))))

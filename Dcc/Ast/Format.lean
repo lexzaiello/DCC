@@ -38,8 +38,8 @@ def toFormat.{u} {τ : Type u}
   | (DCC? (`β x))             => comb s!"`{β.toFormat pretty}" [x.toFormat pretty]
   | (DCC? (Id α))               => comb "Id" [α.toFormat pretty]
   | (DCC? Sort m)              => .paren ("Sort " ++ (Std.format m))
-  | (DCC? (Fst β γ))             => comb "Fst" [β.toFormat pretty, γ.toFormat pretty]
-  | (DCC? (Snd β γ))             => comb "Snd" [β.toFormat pretty, γ.toFormat pretty]
+  | (DCC? (Fst β))             => comb "Fst" [β.toFormat pretty]
+  | (DCC? (Snd β))             => comb "Snd" [β.toFormat pretty]
   | (DCC? (Λ α β e))          => comb "Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC? (!Λ α β e))         => comb "!Λ" [α.toFormat pretty, β.toFormat pretty, e.toFormat pretty]
   | (DCC? (Π α β))             =>

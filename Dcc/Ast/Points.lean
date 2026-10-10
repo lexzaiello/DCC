@@ -31,8 +31,8 @@ inductive Points : (e : GenericExpr τ) → List (GenericExpr τ) → Type u
   | quot     : Points (DCC? (`B x)) [B, x]
   | mkc      : Points (DCC? (,B x y)) [B, x, y]
   | id       : Points (DCC? (Id A)) [A]
-  | fst      : Points (DCC? (Fst B C)) [B, C]
-  | snd      : Points (DCC? (Snd B C)) [B, C]
+  | fst      : Points (DCC? (Fst B)) [B]
+  | snd      : Points (DCC? (Snd B)) [B]
   | swap     : Points (DCC? (Swap B C)) [B, C]
   | pi       : Points (DCC? (Π B C)) [B, C]
   | comp     : Points (DCC? (∘ f g)) [f, g]
@@ -77,8 +77,8 @@ inductive WithPoints : (e : GenericExpr τ) → (points₀ : List (GenericExpr �
   | quot     : WithPoints (DCC? (`B x)) [B, x] .quot [B', x'] rfl (DCC? (`B' x'))
   | mkc      : WithPoints (DCC? (,B x y)) [B, x, y] .mkc [B', x', y'] rfl (DCC? (,B' x' y'))
   | id       : WithPoints (DCC? (Id A)) [A] .id [A'] rfl (DCC? (Id A'))
-  | fst      : WithPoints (DCC? (Fst B C)) [B, C] .fst [B', C'] rfl (DCC? (Fst B' C'))
-  | snd      : WithPoints (DCC? (Snd B C)) [B, C] .snd [B', C'] rfl (DCC? (Snd B' C'))
+  | fst      : WithPoints (DCC? (Fst B)) [B] .fst [B'] rfl (DCC? (Fst B'))
+  | snd      : WithPoints (DCC? (Snd B)) [B] .snd [B'] rfl (DCC? (Snd B'))
   | swap     : WithPoints (DCC? (Swap B C)) [B, C] .swap [B', C'] rfl (DCC? (Swap B' C'))
   | pi       : WithPoints (DCC? (Π B C)) [B, C] .pi [B', C'] rfl (DCC? (Π B' C'))
   | comp     : WithPoints (DCC? (∘ f g)) [f, g] .comp [f', g'] rfl (DCC? (∘ f' g'))

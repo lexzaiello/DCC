@@ -1,7 +1,5 @@
 import Dcc.Ast.Core
 
-abbrev Expr := GenericExpr Unit
-
 namespace Dsl
 
 declare_syntax_cat gen_dcc
@@ -72,14 +70,14 @@ syntax "DCC" "[" gen_dcc_loc "]"  gen_dcc : term
 open Dsl in
 def field (in_ty : Lean.TSyntax `gen_dcc_loc) (fld : String) : Lean.MacroM (Lean.TSyntax `term) := do
   match in_ty with
-  | `(gen_dcc_loc| ?) => return Lean.mkIdent (Lean.Name.str ``GenericExpr fld).eraseMacroScopes
+  | `(gen_dcc_loc| ?) => return Lean.mkIdent (Lean.Name.str ``Expr fld).eraseMacroScopes
   | `(gen_dcc_loc| .) => return Lean.mkIdent (Lean.Name.mkSimple fld).eraseMacroScopes
   /-| `(gen_dcc_loc| $idt:ident) =>
     let nm := (idt.getId ++ Lean.Name.mkSimple fld).eraseMacroScopes
     return Lean.mkIdent nm-/
-  | `(gen_dcc_loc| $tm:term) =>
-    let idt := Lean.mkIdent (Lean.Name.str ``GenericExpr fld).eraseMacroScopes
-    `(term| $idt (τ := $tm))
+  | `(gen_dcc_loc| $_tm:term) =>
+    let idt := Lean.mkIdent (Lean.Name.str ``Expr fld).eraseMacroScopes
+    `(term| $idt)
   | s => Lean.Macro.throwErrorAt in_ty s!"this is not a DCC-like: {s}"
 
 open Dsl in
@@ -196,12 +194,12 @@ def runDcc : Lean.Syntax → Lean.MacroM Lean.Syntax
 (× A B) := (Σ (`A B))
 -/
 open Dsl in
-abbrev GenericExpr.Prod (A B : GenericExpr τ) : GenericExpr τ :=
+abbrev Expr.Prod (A B : Expr) : Expr :=
   (DCC? (Σ' A (`A B)))
 
 open Dsl in
 macro_rules
-  | `(DCC[$loc] (× $A:gen_dcc $B:gen_dcc)) => `(GenericExpr.Prod (DCC[$loc] $A) (DCC[$loc] $B))
+  | `(DCC[$loc] (× $A:gen_dcc $B:gen_dcc)) => `(Expr.Prod (DCC[$loc] $A) (DCC[$loc] $B))
   | `(DCC[$ty] (Copy $A:gen_dcc)) => `(DCC[$ty] ((Dup (`⊤ $A) (`⊤ (Id (Σ' $A (`$A A))))) (& ∗)))
   -- (Reassoc A B C) (, x (, y z)) = (, y (, z x))
   | `(DCC[$ty] (Reassoc $A:gen_dcc $B:gen_dcc $C:gen_dcc)) => `(DCC[$ty]

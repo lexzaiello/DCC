@@ -2,59 +2,59 @@ import Dcc.Ast.Format
 import Dcc.Aff.Size
 import Dcc.Attrs
 
-universe u
-variable {τ_c : Type u} [DecidableEq τ_c]
+namespace Expr
 
-namespace GenericExpr
-
-class Decreasing? (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
+class Decreasing? (r : Expr → Expr → Sort v) where
   decreasing?' : ∀ (_h : r A B), B.size ≤ A.size
 
-class ReflT (m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] where
+class ReflT (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u) (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] where
   refl : m r A A
 
-class Decreasing (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
+class Decreasing (r : Expr → Expr → Sort v) where
   decreasing : ∀ (_h : r A B), B.size < A.size
 
 def no_refl [hD : Decreasing r] (h : r A A := by assumption) : Faflse := by
   have h := hD.decreasing h
   grind
 
-class Run (m : Type u → Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) where
-  run : ∀ (A : GenericExpr τ_c), m (Σ' (B : GenericExpr τ_c), r A B)
+class Run (m : Type u → Type u) (r : Expr → Expr → Type u) where
+  run : ∀ (A : Expr), m (Σ' (B : Expr), r A B)
 
-class Unique (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
+class Unique (r : Expr → Expr → Sort v) where
   unique : ∀ ⦃B C⦄, r A B → r A C → B = C
 
-class ProofEq (r : GenericExpr τ_c → GenericExpr τ_c → Sort v) where
+class ProofEq (r : Expr → Expr → Sort v) where
   eq : ∀ (h₁ h₂ : r A B), h₁ = h₂
 
-class Single (m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] where
+class Single (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u) (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] where
   single (h : r A B) : m r A B
 
 open Single
 
 open Trans in
-class CasesHead (m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u)
+class CasesHead (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u) (r : Expr → Expr → Type u)
   [∀ x y, Repr (r x y)] [hP : Single m r] [Trans (m r) (m r) (m r)] where
-  cases_head (h : m r A C) : (Σ' (h' : r A C), h = single h') ⊕ (Σ' (B : GenericExpr τ_c) (hr' : r A B) (hrt' : m r B C), h = Trans.trans (hP.single hr') hrt')
+  cases_head (h : m r A C) : (Σ' (h' : r A C), h = single h') ⊕ (Σ' (B : Expr) (hr' : r A B) (hrt' : m r B C), h = Trans.trans (hP.single hr') hrt')
 
 attribute [dcc_force_rel] CasesHead.cases_head
 attribute [dcc_rel] Single.single Single.single.eq_def
 attribute [grind] Single.single
 attribute [grind =] Single.single.eq_def
 
-class PushHead (m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] where
-  push_head (hrt : m r B C) (hr : r A B) : m r A C
+class PushHead (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u) (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] where
+  push_head (hrt : m r A C) (hr : r A B) : m r B C
+
+class PopHead (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u) (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] where
+  pop_head (hr : r A B) (hrt : m r B C) : m r A C
 
 open CasesHead
 open PushHead
 
-def proof_eq {r : GenericExpr τ_c → GenericExpr τ_c → Sort v} [hP : ProofEq r] (h₁ h₂ : r A B) : h₁ = h₂ := hP.eq h₁ h₂
+def proof_eq {r : Expr → Expr → Sort v} [hP : ProofEq r] (h₁ h₂ : r A B) : h₁ = h₂ := hP.eq h₁ h₂
 
-def unique {r : GenericExpr τ_c → GenericExpr τ_c → Sort v} [hP : Unique r] (h₁ : r A B) (h₂ : r A C) : B = C := hP.unique h₁ h₂
+def unique {r : Expr → Expr → Sort v} [hP : Unique r] (h₁ : r A B) (h₂ : r A C) : B = C := hP.unique h₁ h₂
 
-def proof_heq {r : GenericExpr τ_c → GenericExpr τ_c → Sort v} [hP : ProofEq r] [hU : Unique r] (h₁ : r A B) (h₂ : r A C) : h₁ ≍ h₂ := by
+def proof_heq {r : Expr → Expr → Sort v} [hP : ProofEq r] [hU : Unique r] (h₁ : r A B) (h₂ : r A C) : h₁ ≍ h₂ := by
   let heq := unique h₁ h₂
   let hb := proof_eq (heq ▸ h₁) (heq ▸ h₂)
   grind
@@ -68,43 +68,44 @@ attribute [dcc_force_rel] Run.run Run.run.eq_def Single.single
 
 open Decreasing Run
 
-def run_sound {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [hD : Run m r] [Pure m] {h : r A B} (_heq : hD.run A = pure ⟨B, h⟩) : r A B := h
+def run_sound {r : Expr → Expr → Type u} [hD : Run m r] [Pure m] {h : r A B} (_heq : hD.run A = Pure.pure ⟨B, h⟩) : r A B := h
 
-class Complete' (m : outParam (Type u → Type u)) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [Run m r] [Pure m] where
-  complete : ∀ (h : r A B), run (m := m) A = pure ⟨B, h⟩
+class Complete' (m : outParam (Type u → Type u)) (r : Expr → Expr → Type u) [Run m r] [Pure m] where
+  complete : ∀ (h : r A B), run (m := m) A = Pure.pure ⟨B, h⟩
 
 open Complete'
 
-def none_complete {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [Run Option r] [Complete' (m := Option) r] {A : GenericExpr τ_c} (hn : ∀ ⦃B⦄, r A B → False) : run (m := Option) (r := r) A = .none := by
+def none_complete {r : Expr → Expr → Type u} [Run Option r] [Complete' (m := Option) r] {A : Expr} (hn : ∀ ⦃B⦄, r A B → False) : run (m := Option) (r := r) A = .none := by
   apply Option.eq_none_iff_forall_ne_some.mpr
   intro ⟨B, hr⟩
   exact (hn hr).elim
 
-def none_sound {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [Run Option r] [Complete' (m := Option) r] {A : GenericExpr τ_c} (heq : run (m := Option) (r := r) A = .none) : ∀ ⦃B⦄, r A B → False := fun ⦃B⦄ h => by
+def none_sound {r : Expr → Expr → Type u} [Run Option r] [Complete' (m := Option) r] {A : Expr} (heq : run (m := Option) (r := r) A = .none) : ∀ ⦃B⦄, r A B → False := fun ⦃B⦄ h => by
   have heq := complete (m := Option) h
   grind
 
-def complete {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [Run M r] [Pure M] [hD : Complete' (m := M) r] (h : r A B) : run (m := M) A = pure ⟨B, h⟩ := hD.complete h
+@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
+def complete {r : Expr → Expr → Type u} [Run M r] [Pure M] [hD : Complete' (m := M) r] (h : r A B) : run (m := M) A = Pure.pure ⟨B, h⟩ := hD.complete h
 
 theorem decreasing [hD : Decreasing r] (h : r A B := by assumption) : size B < size A := hD.decreasing h
 
 /-
 Deterministic path version of Relation.TransGen.
 -/
-inductive RedChoicePlus (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ A B, Repr (r A B)] : GenericExpr τ_c → GenericExpr τ_c → Type u
+inductive RedChoicePlus (r : Expr → Expr → Type u) [∀ A B, Repr (r A B)] : Expr → Expr → Type u
   | single : (hr : r A B) → RedChoicePlus r A B
   | head   : (hr : r A B) → (hrt₂ : RedChoicePlus r B C) → RedChoicePlus r A C
 deriving Repr
 
-inductive RedChoiceStar (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ A B, Repr (r A B)] : GenericExpr τ_c → GenericExpr τ_c → Type u
+inductive RedChoiceStar (r : Expr → Expr → Type u) [∀ A B, Repr (r A B)] : Expr → Expr → Type u
   | plus : RedChoicePlus r A B → RedChoiceStar r A B
   | refl : RedChoiceStar r A A
 deriving Repr
 
 instance [∀ x y, Repr (r x y)] : ReflT RedChoiceStar r := ⟨.refl⟩
 
-instance RedChoicePlus.instSingle {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] : Single RedChoicePlus r := ⟨.single⟩
-instance RedChoiceStar.instSingle {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] : Single RedChoiceStar r := ⟨.plus ∘ .single⟩
+instance RedChoicePlus.instSingle {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] : Single RedChoicePlus r := ⟨.single⟩
+instance RedChoiceStar.instSingle {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] : Single RedChoiceStar r := ⟨.plus ∘ .single⟩
 
 @[dcc_force_rel]
 def RedChoicePlus.trans [∀ x y, Repr (r x y)] (hr₁ : RedChoicePlus r A B) (hr₂ : RedChoicePlus r B C) : RedChoicePlus r A C :=
@@ -128,43 +129,43 @@ instance RedChoiceStar.instTrans' [∀ x y, Repr (r x y)] : Trans r (RedChoiceSt
 
 attribute [dcc_force_rel] Trans.trans Trans.trans.eq_def
 
-instance RedChoicePlus.instCasesHead {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] : CasesHead (r := r) (m := RedChoicePlus) := ⟨fun hrt => match heq : hrt with
+instance RedChoicePlus.instCasesHead {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] : CasesHead (r := r) (m := RedChoicePlus) := ⟨fun hrt => match heq : hrt with
   | .single h => .inl ⟨h, rfl⟩
   | .head hr hrt => .inr ⟨_, hr, hrt, by dcc_simp_all (! !)⟩⟩
 
 @[grind]
-def IsNorm' (r : GenericExpr τ_c → GenericExpr τ_c → Type u) (A : GenericExpr τ_c) := ∀ ⦃B⦄, r A B → False
+def IsNorm (r : Expr → Expr → Type u) (A : Expr) := ∀ ⦃B⦄, r A B → False
 
-def IsNorm'.elim (hn : IsNorm' r A) (hr : r A B) : A = B := (hn hr).elim
+def IsNorm.elim (hn : IsNorm r A) (hr : r A B) : A = B := (hn hr).elim
 
-class ElimNorm (m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] where
-  elim_norm (hn : IsNorm' r A) (h : m r A B) : A = B
+class ElimNorm (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u) (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] where
+  elim_norm (hn : IsNorm r A) (h : m r A B) : A = B
 
 open ElimNorm
 
 @[grind]
-def AndNorm (m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u) (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (A B : GenericExpr τ_c) :=
-  m r A B × (PLift (IsNorm' r B))
+def AndNorm (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u) (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (A B : Expr) :=
+  m r A B × (PLift (IsNorm r B))
 
 @[grind]
-def AndNorm.mk {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] (h : m r A B) (hn : IsNorm' r B) : AndNorm m r A B := ⟨h, ⟨hn⟩⟩
+def AndNorm.mk {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] (h : m r A B) (hn : IsNorm r B) : AndNorm m r A B := ⟨h, ⟨hn⟩⟩
 
 instance [∀ x y, Repr (r x y)] [∀ x y, Repr (m r x y)] : Repr (AndNorm m r A B) := ⟨fun ⟨x, _y⟩ prec => Repr.addAppParen s!"AndNorm.mk {reprPrec x prec} ⋯" prec⟩
 
 @[grind]
 def AndNorm.raw [∀ x y, Repr (r x y)] (h : AndNorm m r A B) : m r A B := match h with | ⟨hr, _⟩ => hr
 
-def AndNorm.is_norm [∀ x y, Repr (r x y)] (h : AndNorm m r A B) : IsNorm' r B := match h with | ⟨_, ⟨hn⟩⟩ => hn
+def AndNorm.is_norm [∀ x y, Repr (r x y)] (h : AndNorm m r A B) : IsNorm r B := match h with | ⟨_, ⟨hn⟩⟩ => hn
 
-def AndNorm.ext {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)]
-  {A B : GenericExpr τ_c} {h₁ : AndNorm m r A B} {h₂ : m r A B} {hn : IsNorm' r B} (heq₁ : h₁.raw = h₂) (heq₂ : h₁.is_norm = hn) : h₁ = (AndNorm.mk h₂ hn) :=
+def AndNorm.ext {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)]
+  {A B : Expr} {h₁ : AndNorm m r A B} {h₂ : m r A B} {hn : IsNorm r B} (heq₁ : h₁.raw = h₂) (heq₂ : h₁.is_norm = hn) : h₁ = (AndNorm.mk h₂ hn) :=
   match h₁ with
   | ⟨hr, hn⟩ => by
     cases heq₁; cases heq₂
     simp [mk, raw]
 
-def AndNorm.ext_mpr {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)]
-  {A B : GenericExpr τ_c} {h₁ h₂ : AndNorm m r A B} (heq : h₁ = h₂) : h₁.raw = h₂.raw ∧ h₁.is_norm = h₂.is_norm := by
+def AndNorm.ext_mpr {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)]
+  {A B : Expr} {h₁ h₂ : AndNorm m r A B} (heq : h₁ = h₂) : h₁.raw = h₂.raw ∧ h₁.is_norm = h₂.is_norm := by
   constructor <;> grind
 
 @[grind, dcc_size]
@@ -183,23 +184,20 @@ def RedChoiceStar.length [∀ x y, Repr (r x y)] (h : RedChoiceStar r A B) : ℕ
 theorem RedChoicePlus.length_pos [∀ x y, Repr (r x y)] (h : RedChoicePlus r A B) : 0 < h.length := by
   cases h <;> grind
 
-instance RedChoicePlus.push_head [∀ x y, Repr (r x y)] : PushHead RedChoicePlus r := ⟨fun hrt hr => .trans (.single hr) hrt⟩
-instance RedChoiceStar.push_head [∀ x y, Repr (r x y)] : PushHead RedChoiceStar r := ⟨fun hrt hr => .trans (.plus (.single hr)) hrt⟩
-
 def RedChoicePlus.decreasing_impl [∀ x y, Repr (r x y)] [Decreasing r] (hrt : RedChoicePlus r A B) : size B < size A :=
   match hrt with
-  | .single h => GenericExpr.decreasing h
+  | .single h => Expr.decreasing h
   | .head hr hrt => by
-    have h_dec₁ := GenericExpr.decreasing hr
+    have h_dec₁ := Expr.decreasing hr
     have h_dec₂ := decreasing_impl hrt
     grind
 
-instance {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [Decreasing r] [∀ x y, Repr (r x y)] : Decreasing (RedChoicePlus r) := ⟨RedChoicePlus.decreasing_impl⟩
-instance {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [Decreasing r] [∀ x y, Repr (r x y)] : Decreasing? (RedChoiceStar r) := ⟨fun h => match h with
+instance {r : Expr → Expr → Type u} [Decreasing r] [∀ x y, Repr (r x y)] : Decreasing (RedChoicePlus r) := ⟨RedChoicePlus.decreasing_impl⟩
+instance {r : Expr → Expr → Type u} [Decreasing r] [∀ x y, Repr (r x y)] : Decreasing? (RedChoiceStar r) := ⟨fun h => match h with
   | .refl => by grind
   | .plus p => by have h := p.decreasing_impl; grind⟩
 
-def RedChoicePlus.length_same {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [Decreasing r] [Unique r] [ProofEq r] [∀ x y, Repr (r x y)] (h₁ h₂ : RedChoicePlus r A B) : h₁.length = h₂.length := by
+def RedChoicePlus.length_same {r : Expr → Expr → Type u} [Decreasing r] [Unique r] [ProofEq r] [∀ x y, Repr (r x y)] (h₁ h₂ : RedChoicePlus r A B) : h₁.length = h₂.length := by
   match cases_head h₁, cases_head h₂ with
   | .inl ⟨hr₁, heq₁⟩, .inl ⟨hr₂, heq₂⟩ =>
     cases heq₁; cases heq₂
@@ -220,7 +218,7 @@ def RedChoicePlus.length_same {r : GenericExpr τ_c → GenericExpr τ_c → Typ
 termination_by A.size
 
 open Run in
-def run_trans {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] [Run Option r] [Decreasing r] [Single m r] [Trans (m r) (m r) (m r)] (A : GenericExpr τ_c) : Option (Σ' B, m r A B) :=
+def run_trans {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] [Run Option r] [Decreasing r] [Single m r] [Trans (m r) (m r) (m r)] (A : Expr) : Option (Σ' B, m r A B) :=
   match run (m := Option) (r := r) A with
   | .some ⟨B, hr⟩ =>
     have h_dec := decreasing hr
@@ -230,25 +228,25 @@ def run_trans {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [�
   | .none => .none
 termination_by A.size
 
-instance {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [Decreasing r] [Run Option r] [∀ x y, Repr (r x y)] : Run Option (RedChoicePlus r) := ⟨run_trans r⟩
-instance {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] [Decreasing r] [Run Option r] [Single m r] [Trans (m r) (m r) (m r)] : Run Option (m r) := ⟨run_trans r⟩
+instance {r : Expr → Expr → Type u} [Decreasing r] [Run Option r] [∀ x y, Repr (r x y)] : Run Option (RedChoicePlus r) := ⟨run_trans r⟩
+instance {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Decreasing r] [Run Option r] [Single m r] [Trans (m r) (m r) (m r)] : Run Option (m r) := ⟨run_trans r⟩
 
 instance CasesHead.elim_cast_higher [∀ x y, Repr (r x y)] [Trans (m r) (m r) (m r)] [Decreasing r] [Single m r] [CasesHead m r] : ElimNorm m r := ⟨fun {A B} hn h => by
   match cases_head h with
   | .inl ⟨h', heq⟩ => exact hn.elim h'
   | .inr ⟨_, h₁, h₂, heq'⟩ => cases hn.elim h₁; exact no_refl h₁⟩
 
-def IsNorm'.down {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] [Single m r] (hn : IsNorm' (m r) A) : IsNorm' r A := fun _ h =>
+def IsNorm.down {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Single m r] (hn : IsNorm (m r) A) : IsNorm r A := fun _ h =>
   hn (single h)
 
-def IsNorm'.up {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (hn : IsNorm' r A) : IsNorm' (m r) A := fun _ h =>
+def IsNorm.up {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (hn : IsNorm r A) : IsNorm (m r) A := fun _ h =>
   match cases_head h with
   | .inl ⟨h, _⟩ => hn h
   | .inr ⟨_, h, _, _⟩ => hn h
 
 open Unique
 
-def normal_form_unique {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] [Decreasing r] [Unique r] [ProofEq r] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (h₁ : AndNorm m r A B) (h₂ : AndNorm m r A C) : B = C := by
+def normal_form_unique {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Decreasing r] [Unique r] [ProofEq r] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (h₁ : AndNorm m r A B) (h₂ : AndNorm m r A C) : B = C := by
   match cases_head h₁.raw, cases_head h₂.raw with
   | .inl ⟨hr₁, heq₁⟩, .inl ⟨hr₂, heq₂⟩ =>
     exact unique hr₁ hr₂
@@ -271,9 +269,9 @@ def normal_form_unique {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → T
     exact normal_form_unique ⟨hrt₁, ⟨hn₁⟩⟩ ⟨hrt₂, ⟨hn₂⟩⟩
 termination_by A.size
 
-instance instUniqueNorm {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] [Decreasing r] [Unique r] [ProofEq r] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] : Unique (AndNorm m r) := ⟨normal_form_unique⟩
+instance instUniqueNorm {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Decreasing r] [Unique r] [ProofEq r] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] : Unique (AndNorm m r) := ⟨normal_form_unique⟩
 
-def normal_proof_unique {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] [Decreasing r] [Decreasing (m r)] [Unique r] [ProofEq r] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (h₁ h₂ : AndNorm m r A B) : h₁ = h₂ := by
+def normal_proof_unique {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Decreasing r] [Decreasing (m r)] [Unique r] [ProofEq r] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (h₁ h₂ : AndNorm m r A B) : h₁ = h₂ := by
   match cases_head h₁.raw, cases_head h₂.raw with
   | .inl ⟨hr₁, heq₁⟩, .inl ⟨hr₂, heq₂⟩ =>
     refine (AndNorm.ext (h₁ := h₁) ?_ (by grind)).trans (AndNorm.ext (h₁ := h₂) ?_ (by grind))
@@ -304,9 +302,9 @@ def normal_proof_unique {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → 
       grind)
 termination_by A.size
 
-instance instProofEqNorm {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] [Decreasing r] [Unique r] [ProofEq r] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] [Decreasing (m r)] : ProofEq (AndNorm m r) := ⟨normal_proof_unique⟩
+instance instProofEqNorm {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Decreasing r] [Unique r] [ProofEq r] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] [Decreasing (m r)] : ProofEq (AndNorm m r) := ⟨normal_proof_unique⟩
 
-def cast_decreasing_up {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} [Decreasing r] [∀ x y, Repr (r x y)] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (h : m r A B) : B.size < A.size :=
+def cast_decreasing_up {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} [Decreasing r] [∀ x y, Repr (r x y)] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (h : m r A B) : B.size < A.size :=
   match cases_head h with
   | .inl ⟨hr, _heq⟩ => decreasing hr
   | .inr ⟨B, hr', hrt', heq'⟩ => by
@@ -315,22 +313,22 @@ def cast_decreasing_up {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → T
     grind
 termination_by A.size
 
-instance Decreasing.instUp {m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u} [Decreasing r] [∀ x y, Repr (r x y)] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] : Decreasing (m r) := ⟨cast_decreasing_up⟩
+instance Decreasing.instUp {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} [Decreasing r] [∀ x y, Repr (r x y)] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] : Decreasing (m r) := ⟨cast_decreasing_up⟩
 
 open Run in
-def reduce (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] [Run Option r] [Decreasing r] [Complete' (m := Option) r] (A : GenericExpr τ_c) : Σ' B, AndNorm RedChoiceStar r A B :=
+def reduce (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] [Run Option r] [Decreasing r] [Complete' (m := Option) r] (A : Expr) : Σ' B, AndNorm RedChoiceStar r A B :=
   match heq : run (m := Option) (r := r) A with
   | .some ⟨B, hr⟩ =>
     have _h_dec := decreasing hr
     match B.reduce (r := r) with
     |  ⟨C, ⟨hr', ⟨hn⟩⟩⟩ => ⟨_, ⟨trans (single (m := RedChoiceStar) hr) hr', ⟨hn⟩⟩⟩
   | .none =>
-    have hn : IsNorm' r A := none_sound heq
+    have hn : IsNorm r A := none_sound heq
     ⟨_, ⟨.refl, ⟨hn⟩⟩⟩
 termination_by A.size
 
 open Run in
-def reduce_plus (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] [Run Option r] [Decreasing r] [Complete' (m := Option) r] (A : GenericExpr τ_c) : Option (Σ' B, AndNorm RedChoicePlus r A B) :=
+def reduce_plus (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] [Run Option r] [Decreasing r] [Complete' (m := Option) r] (A : Expr) : Option (Σ' B, AndNorm RedChoicePlus r A B) :=
   match reduce r A with
   | ⟨_, ⟨hr, ⟨hn⟩⟩⟩ =>
     match hr with
@@ -351,7 +349,7 @@ instance [∀ x y, Repr (r x y)] : ElimNorm RedChoiceStar r := ⟨fun {_A B} hn 
   | .refl => rfl
   | .plus h => elim_norm hn h⟩
 
-def RedChoiceStar.complete {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] [ProofEq r] [Unique r] [Decreasing r] [Run Option r] [Complete' (m := Option) r] (hr : AndNorm RedChoiceStar r A B) : reduce _ A = ⟨B, hr⟩ := by
+def RedChoiceStar.complete {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [ProofEq r] [Unique r] [Decreasing r] [Run Option r] [Complete' (m := Option) r] (hr : AndNorm RedChoiceStar r A B) : reduce _ A = ⟨B, hr⟩ := by
   unfold reduce
   split
   case h_1 B' hr' heq =>
@@ -384,16 +382,16 @@ def RedChoiceStar.complete {r : GenericExpr τ_c → GenericExpr τ_c → Type u
           cases heql; cases heqr
           rfl
   case h_2 heq_none =>
-    have hnorm : IsNorm' _ _ := none_sound heq_none
+    have hnorm : IsNorm _ _ := none_sound heq_none
     cases elim_norm hnorm hr.raw
     dcc_simp (! !)
     match hr with
     | ⟨.refl, _⟩ => rfl
     | ⟨.plus h, ⟨hn⟩⟩ => exact (hn.up h).elim
 
-instance RedChoiceStar.instComplete {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] [ProofEq r] [Unique r] [Decreasing r] [Run Option r] [Complete' (m := Option) r] : Complete' (m := Id) (AndNorm RedChoiceStar r) := ⟨RedChoiceStar.complete⟩
+instance RedChoiceStar.instComplete {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [ProofEq r] [Unique r] [Decreasing r] [Run Option r] [Complete' (m := Option) r] : Complete' (m := Id) (AndNorm RedChoiceStar r) := ⟨RedChoiceStar.complete⟩
 
-instance RedChoicePlus.instComplete {r : GenericExpr τ_c → GenericExpr τ_c → Type u} [∀ x y, Repr (r x y)] [ProofEq r] [Unique r] [Decreasing r] [Run Option r] [Complete' (m := Option) r] : Complete' (m := Option) (AndNorm RedChoicePlus r) := ⟨by
+instance RedChoicePlus.instComplete {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [ProofEq r] [Unique r] [Decreasing r] [Run Option r] [Complete' (m := Option) r] : Complete' (m := Option) (AndNorm RedChoicePlus r) := ⟨by
   intro A B ⟨h, ⟨hn⟩⟩
   dcc_simp (! !)
   unfold reduce_plus
@@ -426,9 +424,9 @@ instance RedChoicePlus.elim_norm [∀ x y, Repr (r x y)] : ElimNorm RedChoicePlu
 open Unique in
 open ReflT in
 def conf
-  {r : GenericExpr τ_c → GenericExpr τ_c → Type u}
+  {r : Expr → Expr → Type u}
   [∀ x y, Repr (r x y)]
-  (m : ∀ (r : GenericExpr τ_c → GenericExpr τ_c → Type u) [∀ x y, Repr (r x y)] (_A _B : GenericExpr τ_c), Type u)
+  (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u)
   [ReflT m r]
   [Unique r]
   (h₁ : r A B) (h₂ : r A C) : Σ' D, m r B D × m r C D :=
@@ -437,7 +435,7 @@ def conf
 open Unique in
 open ReflT in
 def conf_global
-  {r : GenericExpr τ_c → GenericExpr τ_c → Type u}
+  {r : Expr → Expr → Type u}
   [∀ x y, Repr (r x y)]
   [Unique r]
   [Decreasing r]
@@ -466,4 +464,61 @@ def conf_global
       exact conf_global (.plus hrt'₁) (.plus hrt'₂)
 termination_by A.size
 
-end GenericExpr
+instance AndNorm.instPushHead [∀ x y, Repr (r x y)] [Unique r] : PushHead (AndNorm RedChoiceStar) r := ⟨fun ⟨hrt, ⟨hn⟩⟩ hr => by
+  cases hrt with
+  | refl =>
+    cases hn.elim hr
+    exact ⟨.refl, ⟨hn⟩⟩
+  | plus h =>
+    cases h with
+    | single hr' =>
+      cases unique hr hr'
+      exact ⟨.refl, ⟨hn⟩⟩
+    | head hr' hrt =>
+      cases unique hr hr'
+      exact ⟨.plus hrt, ⟨hn⟩⟩⟩
+
+open Trans in
+instance AndNorm.instPopHead [∀ x y, Repr (r x y)] [Unique r] : PopHead (AndNorm RedChoiceStar) r := ⟨fun hr ⟨hrt, ⟨hn⟩⟩ =>
+  match hrt with
+  | .refl => ⟨.plus (.single hr), ⟨hn⟩⟩
+  | .plus (.single hr') => ⟨.plus (.head hr (.single hr')), ⟨hn⟩⟩
+  | .plus (.head hr' hrt) => ⟨.plus (.head hr (.head (by assumption) hrt)), ⟨hn⟩⟩⟩
+
+instance AndNorm.instElim₁ [∀ x y, Repr (r x y)] : ElimNorm (AndNorm RedChoiceStar) r := ⟨fun hn ⟨hrt, hn⟩ => elim_norm (by assumption) hrt⟩
+instance AndNorm.instElim₂ [∀ x y, Repr (r x y)] : ElimNorm (AndNorm RedChoicePlus) r := ⟨fun hn ⟨hrt, hn⟩ => elim_norm (by assumption) hrt⟩
+
+instance [Run Option r] [Complete' Option r] : Unique r := ⟨fun h₁ h₂ => by
+  have heq₁ := complete h₁
+  have heq₂ := complete h₂
+  have heq₃ := heq₂.symm.trans heq₁
+  grind⟩
+
+instance [Run Id r] [Complete' Id r] : Unique r := ⟨fun h₁ h₂ => by
+  have heq₁ := complete h₁
+  have heq₂ := complete h₂
+  have heq₃ := heq₂.symm.trans heq₁
+  simp [Pure.pure] at heq₃
+  grind⟩
+
+instance [Run Option r] [Complete' Option r] : ProofEq r := ⟨fun h₁ h₂ => by
+  have heq₁ := complete h₁
+  have heq₂ := complete h₂
+  have heq₃ := heq₂.symm.trans heq₁
+  grind⟩
+
+instance [Run Id r] [Complete' Id r] : ProofEq r := ⟨fun h₁ h₂ => by
+  have heq₁ := complete h₁
+  have heq₂ := complete h₂
+  have heq₃ := heq₂.symm.trans heq₁
+  simp [Pure.pure] at heq₃
+  grind⟩
+
+@[dcc_force_reduce]
+theorem complete_fst [hR : Run Id r] [Complete' Id r] (h : r A B) (heqr : hR.run = run_def := by simp [Run.run]; try rfl) : (run_def A).fst = B := by
+  cases heqr
+  have h := complete h
+  simp [Pure.pure] at h
+  grind
+
+end Expr

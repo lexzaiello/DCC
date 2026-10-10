@@ -2,15 +2,15 @@ import Dcc.Ast
 import Dcc.Aff.Red
 import Dcc.Types
 
-inductive DefEqError.{u} {τ_c : Type u} where
-  /-| pi_left  (expected actual : GenericExpr τ_c)  : DefEqError A B
-  | pi_right (expected actual : GenericExpr τ_c)  : DefEqError A B
-  | bang     (inner_errr      : DefEqError τ₁ τ₂) : DefEqError (DCC? !(τ₁)) (DCC? !(τ₂))
-  | coup     (inner_errr      : DefEqError τ₁ τ₂) : DefEqError (DCC? Coup(τ₁)) (DCC? Coup(τ₂))-/
-  | tm       (expected actual : GenericExpr τ_c)  : DefEqError
+inductive DefEqError where
+  /-| pi_left  (expected actual : Expr)  : DefEqError A B
+  | pi_right (expected actual : Expr)  : DefEqError A B
+  | bang     (inner_errr      : DefEqError τ₁ τ₂) : DefEqError (DCC !(τ₁)) (DCC !(τ₂))
+  | coup     (inner_errr      : DefEqError τ₁ τ₂) : DefEqError (DCC Coup(τ₁)) (DCC Coup(τ₂))-/
+  | tm       (expected actual : Expr)  : DefEqError
 deriving DecidableEq, Repr
 
-def DefEqError.toFormat (err : DefEqError (τ_c := τ_c)) : Std.Format :=
+def DefEqError.toFormat (err : DefEqError) : Std.Format :=
   match err with
   | .tm A B => A.toFormat ++ " ≠ " ++ (.nest 2 <| B.toFormat)
   /-"- " ++ (.nest 2 <| (Std.format A) ++ " ≠ " ++ (.indentD (Std.format B)) ++ .line ++
@@ -21,18 +21,18 @@ def DefEqError.toFormat (err : DefEqError (τ_c := τ_c)) : Std.Format :=
   | .coup inner_err => "because coup types are not def-eq because: " ++ inner_err.toFormat-/
   | .tm expected actual => "because terms are not def-eq. Expected: " ++ (.indentD (Std.format expected)) ++ .line ++ "but found: " ++ (.indentD (Std.format actual))))-/
 
-instance : Std.ToFormat (DefEqError (τ_c := τ_c)) := ⟨DefEqError.toFormat⟩
-instance : ToString (DefEqError (τ_c := τ_c)) := ⟨toString ∘ Std.format⟩
+instance : Std.ToFormat (DefEqError) := ⟨DefEqError.toFormat⟩
+instance : ToString (DefEqError) := ⟨toString ∘ Std.format⟩
 
-inductive TypeError.{u} {τ_c : Type u} : (e : GenericExpr τ_c) → Type u where
-  | mismatch (expected actual at_e : GenericExpr τ_c) : TypeError e
-  | unexpected (found at_e : GenericExpr τ_c) : TypeError e
-  | sub (at_e : GenericExpr τ_c) (err : TypeError at_e) : TypeError e
-  | def_eq (err : DefEqError (τ_c := τ_c)) : TypeError e
+inductive TypeError : (e : Expr) → Type where
+  | mismatch (expected actual at_e : Expr) : TypeError e
+  | unexpected (found at_e : Expr) : TypeError e
+  | sub (at_e : Expr) (err : TypeError at_e) : TypeError e
+  | def_eq (err : DefEqError) : TypeError e
   | mark (n : ℕ) (ε : TypeError e) : TypeError e
 deriving Repr
 
-def TypeError.toFormat (err : TypeError (τ_c := τ_c) e) : Std.Format :=
+def TypeError.toFormat (err : TypeError e) : Std.Format :=
   "- Term is not well-typed:" ++ (Std.Format.indentD
     (match err with
     | .mismatch expected actual at_e => (Std.Format.text "terms are mismatched at: ")
@@ -48,535 +48,471 @@ def TypeError.toFormat (err : TypeError (τ_c := τ_c) e) : Std.Format :=
   )
   ++ .line ++ "at term: " ++ (Std.format e))
 
-instance {e : GenericExpr τ_c} : Std.ToFormat (TypeError e) := ⟨TypeError.toFormat⟩
-instance {e : GenericExpr τ_c} : ToString (TypeError e) := ⟨toString ∘ Std.format⟩
-instance {e : GenericExpr τ_c} : Repr (TypeError e) := ⟨fun e _n => TypeError.toFormat e⟩
+instance {e : Expr} : Std.ToFormat (TypeError e) := ⟨TypeError.toFormat⟩
+instance {e : Expr} : ToString (TypeError e) := ⟨toString ∘ Std.format⟩
+instance {e : Expr} : Repr (TypeError e) := ⟨fun e _n => TypeError.toFormat e⟩
 
-namespace GenericExpr
+namespace Expr
 
-inductive Reduces.{u} {τ_c : Type u} : GenericExpr τ_c → GenericExpr τ_c → Type u
-  | mk : RedAffNorm A ⟨B, hn_B⟩ → Reduces A B
-deriving Repr
+open ElimNorm
+open Complete'
 
-def Reduces.is_norm (h : Reduces A B) : IsNorm RedAff B :=
-  match h with
-  | ⟨_, h⟩ => h
+@[inline, dcc_force_reduce]
+abbrev reduce_all (e : Expr) : Expr :=
+  (reduce Red e).fst
 
-def Reduces.aff {A B : GenericExpr τ_c} (h : Reduces A B) : RedAffNorm A ⟨B, h.is_norm⟩ :=
-  match h with
-  | ⟨hr₁⟩ => hr₁
-
-def Reduces.unique.{u} {τ_c : Type u} [DecidableEq τ_c] {A B C : GenericExpr τ_c}
-  (h₁ : Reduces A B) (h₂ : Reduces A C) : B = C :=
-  match h₁, h₂ with
-  | ⟨hr₁⟩, ⟨hr₃⟩ => by
-    cases hr₁.unique hr₃
-    rfl
-
-/-def Reduces₂.trans.{u} {τ_c : Type u} [DecidableEq τ_c] [BEq τ_c] {A B C : GenericExpr τ_c} (h₁ : Reduces₂ A B) (h₂ : Reduces₂ B C) : Reduces₂ A C :=
-  match h₁, h₂ with
-  | ⟨hr₁, hn₁, hr₂⟩, ⟨hr₃, hn₃, hr₄⟩ => by
-    have ha := hr₂.is_norm hn₁
-    have hb := hr₃
-    have heq := hb.elim_head_norm ha
-    cases heq
-
-    exact ⟨hr₁, hn₁, by sorry⟩-/
-
-/-def Reduces.is_norm.{u} {τ_c : Type u} {A B : GenericExpr τ_c} : Reduces A B → IsNorm RedAff B :=
-  fun ⟨_hr₁, hr₂⟩ => hr₂.is_norm-/
-
-@[dcc_force_reduce]
-def reduce_all.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : (GenericExpr τ_c) :=
-  match (reduce RedAff e) with
-  | ⟨B, _⟩ => B
-
-def reduce_reduces.{u} {τ_c : Type u} [DecidableEq τ_c] {A B : GenericExpr τ_c} (h : reduce_all A = B) : Reduces A B := by
+def reduce_reduces {A B : Expr} (h : reduce_all A = B) : A →ᵦ B := by
   simp [reduce_all] at h
-  exact ⟨⟨reduce_sound_fst h, reduce_norm_fst h⟩⟩
-
-@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
-def Reduces.complete.{u} {τ_c : Type u} [DecidableEq τ_c] {τ τ' : GenericExpr τ_c}
-  (h : Reduces (τ_c := τ_c) τ τ') : reduce_all τ = τ' := by
-  match h with
-  | ⟨h₁⟩ =>
-    have ha := h₁.complete_fst
-    simp [reduce_all]
-    grind
-
-@[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
-def Reduces.out_eq [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) : B = reduce_all A :=
-  match h with
-  | ⟨h₁⟩ => by
-    cases h₁.out_eq
-    have heq₁ := h₁.complete
-    simp [reduce_all]
-
-def Reduces.push_head [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A C) (hr : RedAff A B) : Reduces B C :=
-  match h with
-  | ⟨hrt⟩ => ⟨hrt.push_head hr⟩
-
-def Reduces.pop_head [DecidableEq τ_c] (hr : RedAff A B) (h : Reduces (τ_c := τ_c) B C) : Reduces A C :=
-  match h with
-  | ⟨hrt, hn⟩ => ⟨.trans (.single hr) hrt, hn⟩
-
-def Reduces.elim_norm [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) (hn : IsNorm RedAff A) : A = B :=
-  match h with
-  | ⟨hrt, _⟩ => by
-    cases hrt.elim_norm hn
-    rfl
-
-@[aesop safe destruct (rule_sets := [DccReduce])]
-def Reduces.eq [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) : h = reduce_reduces (A := A) (B := B) (h.out_eq ▸ rfl) :=
-  match h with
-  | ⟨hr⟩ => by
-    rw [hr.out_eq] at *
-    expose_names
-    cases hr_1.unique hr
-    cases hr_1.eq
-    simp only [reduce_reduces]
-    grind
-
-@[aesop safe apply (rule_sets := [DccReduce])]
-def Reduces.heq [DecidableEq τ_c] (h : Reduces (τ_c := τ_c) A B) : h ≍ (reduce_reduces (A := A) (τ_c := τ_c) rfl) := by
-  cases h.out_eq
-  have heq := h.eq
-  grind
-
-def Reduces.eq' [DecidableEq τ_c] (h₁ : Reduces (τ_c := τ_c) A B) (h₂ : Reduces (τ_c := τ_c) A B) : h₁ = h₂ :=
-  match h₁, h₂ with
-  | ⟨hr₁⟩, ⟨hr₃⟩ => by
-    cases hr₁.unique hr₃
-    cases hr₁.out_eq
-    cases hr₁.eq
-    cases hr₃.eq
-    grind
+  exact h ▸ (reduce Red A).snd
 
 #eval Std.format <| pair.β.type (DCC (Sort 30)) 10 20
 
 -- For checking arguments under apps
-open Dsl in inductive DefEq.{u} {τ_c : Type u} [DecidableEq τ_c] : GenericExpr τ_c → GenericExpr τ_c → Type u
-  | tm : Reduces τ₁ τ₃ → Reduces τ₂ τ₃ → DefEq τ₁ τ₂
+open Dsl in inductive DefEq : Expr → Expr → Type
+  | tm : (τ₁ →ᵦ τ₃) → (τ₂ →ᵦ τ₃) → DefEq τ₁ τ₂
 deriving Repr
 
 syntax gen_dcc "≡" gen_dcc : term
 macro_rules
-  | `(term| $A:gen_dcc ≡ $B:gen_dcc) => `(DefEq (DCC? $A) (DCC? $B))
+  | `(term| $A:gen_dcc ≡ $B:gen_dcc) => `(DefEq (DCC $A) (DCC $B))
 
-def DefEq.push_head {A B : GenericExpr τ_c} [DecidableEq τ_c] (h : A ≡ C) (hr : RedAff A B) : B ≡ C :=
+def DefEq.push_head {A B : Expr} (h : A ≡ C) (hr : Red A B) : B ≡ C :=
   match h with
   | ⟨hr₁, hr₂⟩ =>
-    ⟨hr₁.push_head hr, hr₂⟩
+    ⟨PushHead.push_head hr₁ hr, hr₂⟩
 
-def DefEq.trans {A B C : GenericExpr τ_c} [DecidableEq τ_c] (h₁ : A ≡ B) (h₂ : B ≡ C) : A ≡ C :=
+def DefEq.trans {A B C : Expr} (h₁ : A ≡ B) (h₂ : B ≡ C) : A ≡ C :=
   match h₁, h₂ with
-  | ⟨hr₁, hr₂⟩, ⟨hr₃, hr₄⟩ => ⟨hr₁, hr₂.unique hr₃ ▸ hr₄⟩
+  | ⟨hr₁, hr₂⟩, ⟨hr₃, hr₄⟩ => ⟨hr₁, unique hr₂ hr₃ ▸ hr₄⟩
 
 -- Reduces A B → DefEq A B
 
-def def_eq?.{u} {τ_c : Type u} [DecidableEq τ_c] (τ₁ τ₂ : GenericExpr τ_c) : Except (DefEqError (τ_c := τ_c)) (DefEq τ₁ τ₂) :=
+def def_eq? (τ₁ τ₂ : Expr) : Except (DefEqError) (DefEq τ₁ τ₂) :=
   if heq : reduce_all τ₁ = reduce_all τ₂ then
     .ok ⟨reduce_reduces heq, reduce_reduces rfl⟩
   else .error (.tm τ₁ τ₂)
 
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
-def DefEq.complete.{u} {τ_c : Type u} [DecidableEq τ_c] {τ₁ τ₂ : GenericExpr τ_c} (h : DefEq (τ_c := τ_c) τ₁ τ₂) : def_eq? τ₁ τ₂ = .ok h := by
+def DefEq.complete {τ₁ τ₂ : Expr} (h : DefEq τ₁ τ₂) : def_eq? τ₁ τ₂ = .ok h := by
   induction h
   case tm hr₁ hr₂ =>
     expose_names
-    cases hr₁.out_eq
-    have heq₁ := hr₁.complete
-    have heq₂ := hr₂.complete
-    simp [def_eq?, heq₂, hr₁.eq, hr₂.eq]
-    grind
+    have heq₁ := Complete'.complete hr₁
+    have heq₂ := Complete'.complete hr₂
+    simp [def_eq?]
+    dcc_simp_all (! !) [Pure.pure]
+    constructor <;> apply proof_heq
 
-/-
-Arrow needs to be able to detect the universe level as well.
-We can fix (Id Sort u)
--/
 open Dsl in
-inductive Arrow.{u} {τ : Type u} [DecidableEq τ] : GenericExpr (τ := τ) → GenericExpr (τ := τ) → Level → GenericExpr (τ := τ) → Type u
-  | simple : Arrow A B u (DCC? ((Π (Id Sort u) (`Sort u (`A B))) A))
+inductive Arrow : Expr → Expr → Expr → Type
+  | simple : ((fB x) →ᵦ A)
+    → ((fC x (& (hole 1))) →ᵦ B) -- TODO: this might be sus. for example, if we use (!Λ)
+    → Arrow A B (DCC ((Π fB fC) x))
 deriving Repr
 
-def Arrow.is_norm [DecidableEq τ_c] (h : Arrow (τ := τ_c) A B u τ) (hn : IsNorm RedAff τ) : (IsNorm RedAff A) ×' (IsNorm RedAff B) :=
+def Arrow.is_norm (h : Arrow A B τ) (hn : IsNorm Red τ) : (IsNorm Red A) ×' (IsNorm Red B) :=
   match h with
-  | .simple => ⟨fun ⟨_, h⟩ => hn ⟨_, .congrArg h⟩, fun ⟨_, h⟩ => hn ⟨_, .congrFun (.point 1 (by grind) (by
-    simp [points, Vector.get]
-    exact RedAff.point 1 (by grind) (.point 1 (by point_arity) h)))⟩⟩
+  | .simple h₁ h₂ => ⟨h₁.is_norm, h₂.is_norm⟩
 
 open Dsl in
 @[dcc_judge, inline]
-def read_arrow.{u} {τ_c : Type u} [DecidableEq τ_c]
-  (τ : GenericExpr (τ := τ_c)) : Except (TypeError τ) ((α β : GenericExpr (τ := τ_c)) × (m : Level) × (Arrow (τ := τ_c) α β m τ)) :=
+def read_arrow (τ : Expr) : Except (TypeError τ) ((A B : Expr) × (Arrow A B τ)) :=
   open Dsl in match τ with
-  | (DCC? ((Π (Id Sort u) (`Sort _u (`_A B))) A)) =>
-    if heq : (DCC? ((Π (Id Sort u) (`Sort _u (`_A B))) A)) = (DCC? ((Π (Id Sort u) (`Sort u (`A B))) A)) then
-      heq ▸ .ok ⟨_, _, _, .simple⟩
-    else .error (.unexpected (DCC? ((Π (Id Sort u) (`Sort _u (`_A B))) A)) (DCC? ((Π (Id Sort u) (`Sort _u (`_A B))) A)))
-  | τ₀ => .error (.unexpected τ₀ τ₀)
+  | DCC? ((Π _B _C) _x) =>
+    .ok ⟨_, _, .simple (reduce_reduces rfl) (reduce_reduces rfl)⟩
+  | _ => .error (.unexpected τ τ)
 
 open Dsl in
 @[dcc_judge, inline]
-def read_arrow₁.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α : GenericExpr τ_c) : Except (TypeError τ) ((β : GenericExpr τ_c) × (m : Level) × (Arrow α β m τ)) :=
+def read_arrow₁ (τ A : Expr) : Except (TypeError τ) ((B : Expr) × (Arrow A B τ)) :=
   match read_arrow τ with
-  | .ok ⟨α', _β, _m, h⟩ =>
-    if heq : α' = α then
-      .ok ⟨_, _, heq ▸ h⟩
+  | .ok ⟨A', _B', h⟩ =>
+    if heq : A' = A then
+      .ok ⟨_, heq ▸ h⟩
     else
-      .error (.mismatch α α' τ)
+      .error (.mismatch A A' τ)
   | .error e => .error e
 
-def DefEq.elim_norml {A B : GenericExpr τ_c} [DecidableEq τ_c] (h : A ≡ B) (hn : IsNorm RedAff A) : Reduces B A :=
+def DefEq.elim_norml {A B : Expr} (h : A ≡ B) (hn : IsNorm Red A) : B →ᵦ A :=
   match h with
-  | ⟨hr₁, hr₂⟩ => hr₁.elim_norm hn ▸ hr₂
+  | ⟨hr₁, hr₂⟩ => elim_norm hn hr₁ ▸ hr₂
 
-def DefEq.elim_normr {A B : GenericExpr τ_c} [DecidableEq τ_c] (h : A ≡ B) (hn : IsNorm RedAff B) : Reduces A B :=
+def DefEq.elim_normr {A B : Expr} (h : A ≡ B) (hn : IsNorm Red B) : A →ᵦ B :=
   match h with
-  | ⟨hr₁, hr₂⟩ => hr₂.elim_norm hn ▸ hr₁
+  | ⟨hr₁, hr₂⟩ => elim_norm hn hr₂ ▸ hr₁
 
-open Dsl in
-@[dcc_judge, inline]
-def read_arrow₂.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α : GenericExpr τ_c) (m : Level) : Except (TypeError τ) ((β : GenericExpr τ_c) × (Arrow α β m τ)) :=
+def read_arrow₃ (τ A B : Expr) : Except (TypeError τ) (Arrow A B τ) :=
   match read_arrow τ with
-  | .ok ⟨α', _β, m', h⟩ =>
-    if heq₁ : α' = α then
-      if heq₂ : m' = m then
-        .ok ⟨_, heq₁ ▸ heq₂ ▸ h⟩
-      else .error (.unexpected (DCC? (Sort m')) τ)
-    else
-      .error (.mismatch α α' τ)
-  | .error e => .error e
-
-def read_arrow₃.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α β : GenericExpr (τ := τ_c)) : Except (TypeError τ) ((m : Level) × Arrow α β m τ) :=
-  match read_arrow τ with
-  | .ok ⟨α', β', _m', h⟩ =>
-    if heq₁ : α' = α then
-      if heq₂ : β' = β then
-          .ok ⟨_, heq₁ ▸ heq₂ ▸ h⟩
+  | .ok ⟨A', B', h⟩ =>
+    if heq₁ : A' = A then
+      if heq₂ : B' = B then
+          .ok <| heq₁ ▸ heq₂ ▸ h
       else
-        .error (.mismatch α α' τ)
+        .error (.mismatch A A' τ)
     else
-      .error (.mismatch β β' τ)
+      .error (.mismatch B B' τ)
   | .error e => .error e
 
 open Dsl in
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
-theorem Arrow.read₁_complete.{u} {τ_c : Type u} [DecidableEq τ_c] {α β τ : GenericExpr τ_c} (h : Arrow α β m τ) : τ.read_arrow₁ α = .ok ⟨β, m, h⟩ := by
+theorem Arrow.read₁_complete {A B τ : Expr} (h : Arrow A B τ) : τ.read_arrow₁ A = .ok ⟨B, h⟩ := by
   cases h
   · expose_names
-    simp [read_arrow₁, read_arrow]
-
-open Dsl in
-@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
-theorem Arrow.read₂_complete.{u} {τ_c : Type u} [DecidableEq τ_c] {α β τ : GenericExpr τ_c} {m : Level} (h : Arrow α β m τ) : τ.read_arrow₂ α m = .ok ⟨β, h⟩ := by
-  cases h
-  · expose_names
-    simp [read_arrow₂, read_arrow]
+    simp [read_arrow₁, read_arrow, reduce_all, complete_fst a, complete_fst a_1]
+    congr
+    · simp [complete_fst a]
+    · simp [complete_fst a_1]
+    · apply proof_heq
+    · apply proof_heq
 
 open Dsl in
 @[dcc_judge, inline]
-def view_arrow.{u} {τ_c : Type u} [DecidableEq τ_c] (τ α β : GenericExpr (τ := τ_c)) (m : Level) : Except (TypeError τ) (Arrow α β m τ) :=
+def view_arrow (τ A B : Expr) : Except (TypeError τ) (Arrow A B τ) :=
   match read_arrow τ with
-  | .ok ⟨α', β', m', h⟩ =>
-    if heq₁ : α' = α then
-      if heq₂ : β' = β then
-        if heq₃ : m' = m then
-          .ok (heq₁ ▸ heq₂ ▸ heq₃ ▸ h)
-        else
-          .error (.unexpected (DCC? Sort m') τ)
+  | .ok ⟨A', B', h⟩ =>
+    if heq₁ : A' = A then
+      if heq₂ : B' = B then
+        .ok (heq₁ ▸ heq₂ ▸ h)
       else
-        .error (.mismatch α α' τ)
+        .error (.mismatch A A' τ)
     else
-      .error (.mismatch β β' τ)
+      .error (.mismatch B B' τ)
   | .error e => .error e
 
 -- (Π(Id(Sort 0), `(Sort 0, Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 1))))) ⊤)
-open Dsl in inductive Pi.C.type.{u} {τ_c : Type u} :
-  (GenericExpr τ_c) → (GenericExpr τ_c) → Level → Level → (GenericExpr τ_c) → Type u
-  | canon  : Pi.C.type B δ o n
-    (DCC? ((Π (Id Sort o) (`Sort o (Π B (Λ δ B (` (Σ B) Sort n))))) δ))
-  | canon' : Pi.C.type (DCC? (!<> B)) (DCC? (!δ)) o n
-    (DCC? ((Π(Id Sort o) (`Sort o (Π (!<> B) (!Λ δ B (` (! (Σ B)) Sort n))))) (! δ)))
-  | arrow  : Pi.C.type B δ o n
-    (DCC? ((Π (Id Sort o) (`Sort o (`δ ((Π B (`x₂ (`α Sort n))) α)))) δ))
-  | semi   : Pi.C.type B δ o n (DCC? ((Π (Id Sort o) (`Sort o (Π B (`δ₂ (`δ₃ Sort n))))) δ))
+open Dsl in inductive Pi.C.type :
+  Expr → Expr → Level → Expr → Type
+  | canon  : (fB x) →ᵦ A
+    → (fC x) →ᵦ (Π B (Λ A B (`(Σ' A B) Sort v)))
+    → Pi.C.type B A v (DCC ((Π fB fC) x))
+  | canon' : (fB x) →ᵦ (! A)
+    → (fC x) →ᵦ (Π (!<> B) (!Λ A B (`(! (Σ' A B)) Sort v)))
+    → Pi.C.type B (DCC (! A)) v (DCC ((Π fB fC) x))
+  | arrow  : (fB x) →ᵦ A
+    → (fB₂ x₂) →ᵦ A₂
+    → (fC₂ x₂) →ᵦ (`A₂ Sort v)
+    → (fC x) →ᵦ (`A ((Π fB₂ fC₂) x₂))
+    → Pi.C.type (DCC (`A A₂)) A v (DCC ((Π fB fC) x))
+  | semi  : (fB x) →ᵦ A
+    → (fC x) →ᵦ (Π B (`δ₂ (`δ₃ Sort v)))
+    → Pi.C.type B A v (DCC ((Π fB fC) x))
 deriving Repr
 
 open Dsl in
-def read_pi_f_β_cod.{u} {τ_c : Type u} (τ : GenericExpr τ_c) : Option (GenericExpr τ_c) :=
-  match _heq₁ : τ with
-  | (DCC? ((Π (Id Sort _o) (`_a (Π __a (Λ _b _c (`_d Sort n))))) _e)) =>
-      .some (DCC? (Sort n))
-  | (DCC? ((Π (Id Sort _o) (`_a (Π __a (!Λ _b _c (`_d Sort n))))) _e)) =>
-      .some (DCC? (Sort n))
-  | (DCC? ((Π _a (`_b (`_c ((Π (Id Sort _m) (`_d (`_e Sort n))) _α)))) _f)) =>
-    .some (DCC? (Sort n))
-  | _ => .none
-
-open Dsl in
 @[dcc_judge]
-def view_pi_f_β.{u} {τ_c : Type u} [DecidableEq τ_c] (τ f_α δ : GenericExpr τ_c) (o : Level) : Option ((n : Level) × (Pi.C.type f_α δ o n τ)) :=
-  open Dsl in match heq₁ : τ with
-  | (DCC? ((Π __b (`_a (Π __a (Λ _b _c (`_d Sort n))))) _e)) =>
-    if heq₂ : τ = (DCC? ((Π (Id Sort o) (`Sort o (Π f_α (Λ δ f_α (` (Σ f_α) Sort n))))) δ)) then
-      .some ⟨n, by rw [← heq₁, heq₂]; exact .canon (B := f_α) (δ := δ) (o := o) (n := n)⟩
-    else .none
-  | (DCC? ((Π __b (` _a (Π __a (!Λ _b _c (`_d Sort n))))) _e)) =>
-    match f_α, δ with
-    | DCC? (!<> f_α), DCC? (! δ) =>
-      if heq₂ : τ = (DCC? ((Π (Id Sort o) (`Sort o (Π (!<> f_α) (!Λ δ f_α (`(! (Σ f_α)) Sort n))))) (! δ))) then
-        .some ⟨n, by rw [← heq₁, heq₂]; exact .canon' (B := f_α) (δ := δ) (o := o) (n := n)⟩
-      else .none
-    | _, _ => .none
-  | (DCC? ((Π _a (`_b (`_c ((Π B (`_d (`_e Sort n))) α)))) _f)) =>
-    if heq₂ : τ = (DCC? ((Π (Id Sort o) (`Sort o (`δ ((Π B (`_d (`α Sort n))) α)))) δ)) then
-      if heq₃ : f_α = B then
-        .some ⟨n, by rw [← heq₁, heq₂, heq₃]; exact .arrow (δ := δ) (o := o) (n := n)⟩
-      else .none
-    else .none
-  | (DCC? ((Π __a (`_a (Π _B (`δ₂ (`δ₃ Sort n))))) _δ)) =>
-    if heq : (DCC? ((Π __a (`_a (Π _B (`δ₂ (`δ₃ Sort n))))) _δ)) = (DCC? ((Π (Id Sort o) (`Sort o (Π f_α (`δ₂ (`δ₃ Sort n))))) δ)) then
-      .some ⟨n, heq ▸ .semi (B := f_α) (δ := δ) (δ₂ := δ₂) (δ₃ := δ₃)⟩
-    else .none
-  | _ => .none
+def view_pi_f_β (τ B A : Expr) : Except (TypeError τ) ((v : Level) × (Pi.C.type B A v τ)) :=
+  match τ with
+  | DCC ((Π fB fC) x) =>
+    match heq₁ : (reduce_all (DCC (fB x))), heq₂ : (reduce_all (DCC (fC x))) with
+    | A₁, DCC (`_A ((Π fB₂ fC₂) x₂)) =>
+      if heq₁' : A₁ = A then
+        match heq₃ : reduce_all (DCC (fC₂ x₂)) with
+        | DCC (`A₂ Sort _v) =>
+          if heq₄ : _A = A₁ then
+            if heq₅ : A₂ = (reduce_all (DCC (fB₂ x₂))) then
+              have heq₂ := heq₄ ▸ heq₂
+              if heq₆ : B = (DCC (`A A₂)) then
+                heq₆ ▸ heq₁' ▸ .ok ⟨_, .arrow (reduce_reduces heq₁) (reduce_reduces heq₅.symm) (reduce_reduces heq₃) (reduce_reduces heq₂)⟩
+              else .error (.mismatch (DCC (`A A₂)) B τ)
+            else .error (.mismatch (reduce_all (DCC (fB₂ x₂))) A₂ τ)
+          else .error (.mismatch A _A τ)
+        | τ₀ => .error (.unexpected τ τ₀)
+      else .error (.mismatch A₁ A τ)
+    | A₁, DCC (Π B₂ (`_δ₂ (`_δ₃ Sort _v))) =>
+      if heq₁' : A₁ = A then
+        if heq₂' : B₂ = B then
+           .ok ⟨_, .semi (reduce_reduces (heq₁' ▸ heq₁)) (reduce_reduces (heq₂' ▸ heq₂))⟩
+        else .error (.mismatch B B₂ τ)
+      else .error (.mismatch A A₁ τ)
+    | A₁, DCC (Π B₂ (Λ _A _B (`(Σ' __A __B) Sort v))) =>
+      if heq₁' : A₁ = A then
+        if heq₂' : DCC (Π B₂ (Λ _A _B (`(Σ' __A __B) Sort v))) = DCC (Π B (Λ A B (`(Σ' A B) Sort v))) then
+          .ok ⟨_, .canon (reduce_reduces (heq₁' ▸ heq₁)) (reduce_reduces (heq₂' ▸ heq₂))⟩
+        else .error (.mismatch (DCC (Π B (Λ A B (`(Σ' A B) Sort v)))) (DCC (Π B₂ (Λ _A _B (`(Σ' __A __B) Sort v)))) τ)
+      else .error (.mismatch A A₁ τ)
+    | DCC (! A₁), DCC (Π (!<> B₂) (!Λ _A __B (`(! (Σ' __A ___B)) Sort v))) =>
+      if heq₁' : A = (DCC (! A₁)) then
+        if heq₂' : (DCC (Π (!<> B₂) (!Λ _A __B (`(! (Σ' __A ___B)) Sort v)))) = (DCC (Π (!<> B) (!Λ A₁ B (`(! (Σ' A₁ B)) Sort v)))) then
+          heq₁' ▸ .ok ⟨_, .canon' (reduce_reduces heq₁) (reduce_reduces (heq₂' ▸ heq₂))⟩
+        else .error (.mismatch (DCC (Π (!<> B) (!Λ A₁ B (`(! (Σ' A₁ B)) Sort v)))) (DCC (Π (!<> B₂) (!Λ _A __B (`(! (Σ' __A ___B)) Sort v)))) τ)
+      else .error (.mismatch A (DCC (! A₁)) τ)
+    | _, _ => .error (.unexpected τ τ)
+  | _ => .error (.unexpected τ τ)
 
 open Dsl in
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
-theorem Pi.C.type.complete.{u} {τ_c : Type u} [DecidableEq τ_c] {f_α δ τ : GenericExpr τ_c}
-  (h : Pi.C.type f_α δ o n τ) : view_pi_f_β τ f_α δ o = .some ⟨n, h⟩ := by
-  cases h <;> simp [view_pi_f_β]
-
-open Dsl in
-@[dcc_judge] abbrev Pi.C.type'.{u} {τ_c : Type u} (f_α α : GenericExpr τ_c) (m o : Level) :=
-  (DCC? ((Π (Id Sort m) (`Sort m (Π f_α (Λ α f_α (`(Σ f_α) Sort o))))) α))
-
-open Dsl in
-@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
-theorem Arrow.view_complete.{u} {τ_c : Type u} [DecidableEq τ_c] {α β τ : GenericExpr τ_c} (h : Arrow α β m τ) : view_arrow τ α β m = .ok h := by
+theorem Pi.C.type.complete {τ : Expr}
+  (h : Pi.C.type B A v τ) : view_pi_f_β τ B A = .ok ⟨v, h⟩ := by
   cases h with
-  | simple =>
+  | arrow h₁ h₂ h₃ h₄ =>
+    have heq₁ := complete_fst h₁
+    have heq₂ := complete_fst h₂
+    have heq₃ := complete_fst h₃
+    have heq₄ := complete_fst h₄
+    simp [view_pi_f_β]
+    split
+    any_goals (grind)
+    case h_1 heq' =>
+      cases heq'.symm.trans heq₄
+      simp [heq₁, heq₂]
+      split
+      case h_1 heq' =>
+        cases heq'.symm.trans heq₃
+        simp
+        subst heq₁
+        subst heq₂
+        simp
+        refine ⟨?_, ?_, ?_, ?_⟩ <;> apply proof_eq
+      · grind
+  | semi h₁ h₂ =>
+    have heq₁ := complete_fst h₁
+    have heq₂ := complete_fst h₂
+    simp [view_pi_f_β]
+    split
+    any_goals (grind)
+    case h_2 heq' =>
+      cases heq'.symm.trans heq₂
+      simp [heq₁]
+      constructor <;> apply proof_eq
+  | canon h₁ h₂ =>
+    have heq₁ := complete_fst h₁
+    have heq₂ := complete_fst h₂
+    simp [view_pi_f_β]
+    split
+    any_goals (grind)
+    case h_3 heq' =>
+      cases heq'.symm.trans heq₂
+      simp [heq₁]
+      constructor <;> apply proof_eq
+  | canon' h₁ h₂ =>
+    have heq₁ := complete_fst h₁
+    have heq₂ := complete_fst h₂
+    simp [view_pi_f_β]
+    split
+    any_goals (grind)
+    case h_4 heq₁' heq₂' =>
+      cases heq₁'.symm.trans heq₁
+      cases heq₂'.symm.trans heq₂
+      simp
+      constructor <;> apply proof_eq
+
+open Dsl in
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
+theorem Arrow.view_complete {A B τ : Expr} (h : Arrow A B τ) : view_arrow τ A B = .ok h := by
+  cases h with
+  | simple h₁ h₂ =>
+    have heq₁ := complete_fst h₁
+    have heq₂ := complete_fst h₂
     simp [view_arrow, read_arrow]
+    subst heq₁
+    subst heq₂
+    simp
+    constructor <;> apply proof_eq
 
 open Dsl in
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce]), aesop safe forward (rule_sets := [DccReduce])]
-theorem Arrow.read_complete.{u} {τ_c : Type u} [DecidableEq τ_c] {α β τ : GenericExpr τ_c}
-  (h : Arrow α β m τ) : τ.read_arrow = .ok ⟨α, β, m, h⟩ := by
+theorem Arrow.read_complete {A B τ : Expr}
+  (h : Arrow A B τ) : τ.read_arrow = .ok ⟨A, B, h⟩ := by
   cases h with
-  | simple =>
+  | simple h₁ h₂ =>
+    have heq₁ := complete_fst h₁
+    have heq₂ := complete_fst h₂
     simp [read_arrow]
+    subst heq₁
+    subst heq₂
+    simp
+    constructor <;> apply proof_eq
 
 open Dsl in
 @[dcc_judge, inline]
-abbrev arrow.matcher.{u} {τ_c : Type u} [DecidableEq τ_c] (t : GenericExpr τ_c) : Option ((α β : GenericExpr τ_c) × (m : Level) × PULift.{1, 0} (t = (DCC? (→ (: α Sort m) β)))) :=
-  match heq₀ : t with
-  | DCC? ((Π (Id Sort m) (Λ _a _b (` _c β))) α) =>
-    if heq₁ : t = (DCC? (→ (: α Sort m) β)) then
-      .some ⟨α, β, m, ⟨by rw [← heq₀, heq₁]⟩⟩
-    else
-      .none
-  | _ => .none
-
-def is_arrow.{u} {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Bool :=
-  (arrow.matcher e).isSome
+abbrev comp.g.type := Arrow
 
 open Dsl in
-@[dcc_judge, inline]
-abbrev comp.g.type.{u} {τ : Type u} [DecidableEq τ] := Arrow (τ := τ)
-
-open Dsl in
-inductive Judge.{u} {τ_c : Type u} [DecidableEq τ_c] : GenericExpr τ_c → GenericExpr τ_c → Type u where
+inductive Judge : Expr → Expr → Type where
   | eq     : Judge x τ₁
     → Judge y τ₂
     → τ₁ ≡ τ₂
     → τ₂ ≡ A
-    → Judge (DCC? (= A x y)) (DCC? Sort 0)
+    → Judge (DCC (= A x y)) (DCC Sort 0)
   | refl    : Judge f_α τ_f_α
-    → Arrow δ (DCC? Sort m) o τ_f_α
-    → Reduces (GenericExpr.refl.type f_α δ o) τ
-    → Judge (DCC? (refl f_α)) τ
+    → Arrow δ (DCC Sort m) τ_f_α
+    → #(Expr.refl.type f_α δ) →ᵦ τ
+    → Judge (DCC (refl f_α)) τ
   | eql    : Judge f_α τ_f_α
-    → Arrow δ (DCC? Sort m) o τ_f_α
-    → Reduces (eql.type f_α δ o) τ'
-    → Judge (DCC? (Eql f_α)) τ'
-  | id     : Judge α (DCC? Sort m)
-    → Reduces α α'
-    → Judge (DCC? (Id α)) (id.type α' m)
+    → Arrow δ (DCC Sort m) τ_f_α
+    → #(eql.type f_α δ) →ᵦ τ'
+    → Judge (DCC (Eql f_α)) τ'
+  | id     : Judge α (DCC Sort m)
+    → α →ᵦ α'
+    → Judge (DCC (Id α)) (id.type α')
   | comp   : Judge g τ_g
-    → comp.g.type A B m τ_g
-    → Judge f (comp.f.type B C n)
-    → Reduces (comp.type A C g m) τ
-    → Judge (DCC? (∘ f g)) τ
-  | coup   : Judge B τ_B
-    → Arrow A (DCC? Sort n) m τ_B
-    → Reduces (Coup.type m n) τ
-    → Judge (open Dsl in (DCC? (Σ B))) τ
-  | fstc   : Judge B τ_B
-    → Arrow A (DCC? Sort n) m τ_B
-    → Reduces (fstc.type A B m n) τ
-    → Judge (DCC? (Fst B)) τ
-  | sndc    : Judge B τ_B
-    → Arrow A (DCC? Sort n) m τ_B
-    → Reduces (sndc.type B m n) τ
-    → Judge (DCC? (Snd B)) τ
-  | sigma   : Judge B τ_B
-    → Arrow δ (DCC? Sort m) o τ_B
+    → comp.g.type A B τ_g
+    → Judge f (comp.f.type B C)
+    → #(comp.type A C g) →ᵦ τ
+    → Judge (DCC (∘ f g)) τ
+  | sigma  : Judge B τ_B
+    → Arrow A (DCC (Sort v)) τ_B
     → Judge C τ_C
-    -- f_α is not necessarily a normal form here. we need to reduce
-    -- since it is not captured by Reduces Sigma.type
-    → Reduces B B'
-    → Pi.C.type B' δ o n τ_C
-    → Reduces (Sigma.type δ m n o) τ
-    → Judge (open Dsl in (DCC? (Σ B C))) τ
+    → B →ᵦ B'
+    → Pi.C.type B' A s τ_C
+    → Judge (DCC (Σ B C)) (DCC (→ A (Sort (max v s))))
+  | fstc   : Judge B τ_B
+    → Arrow A (DCC Sort n) τ_B
+    → #(fstc.type A B) →ᵦ τ
+    → Judge (DCC (Fst B)) τ
+  | sndc    : Judge B τ_B
+    → Arrow A (DCC Sort n) τ_B
+    → #(sndc.type A B) →ᵦ τ
+    → Judge (DCC (Snd B)) τ
   | mk     : Judge x A
     → Judge B τ_B
-    → Arrow A (DCC? Sort n) m τ_B
-    → Reduces (DCC? (B x)) τ₂
+    → Arrow A (DCC Sort n) τ_B
+    → #(DCC (B x)) →ᵦ τ₂
     → Judge y τ₂
-    → Reduces (open Dsl in (DCC? (Σ B))) τ
-    → Judge (DCC? (,B x y)) τ
+    → (Σ' A B) →ᵦ τ
+    → Judge (DCC (,B x y)) τ
   /-
     Λ(β, x)
     β receives (α, x)
     β : Coup(Sort m, Id(Sort m)) → Sort n
   -/
-  | curr   : Judge A (DCC? Sort u)
+  | curr   : Judge A (DCC Sort u)
     → Judge B τ_β
-    → Reduces A A'
-    → Arrow A' (DCC? Sort v) u τ_β
-    → Judge x (curr.x.type B' C u v)
-    → Reduces B B'
-    → Reduces (curr.type A B C u) τ
-    → Judge (DCC? (Λ A B x)) τ
-  | curr'  : Judge A (DCC? Sort u)
+    → A →ᵦ A'
+    → Arrow A' (DCC Sort v) τ_β
+    → Judge x (curr.x.type A' B' C)
+    → B →ᵦ B'
+    → #(curr.type A B C) →ᵦ τ
+    → Judge (DCC (Λ A B x)) τ
+  | curr'  : Judge A (DCC Sort u)
     → Judge B τ_B
-    → Reduces A A'
-    → Arrow A' (DCC? Sort v) u τ_B
-    → Judge x (curr'.x.type B' C u v)
-    → Reduces B B'
-    → Reduces (curr'.type A B C u) τ
-    → Judge (DCC? (!Λ A B x)) τ
+    → A →ᵦ A'
+    → Arrow A' (DCC Sort v) τ_B
+    → Judge x (curr'.x.type A' B' C)
+    → B →ᵦ B'
+    →  #(curr'.type A B C) →ᵦ τ
+    → Judge (DCC (!Λ A B x)) τ
   -- !<f> &(x) = !(x)
-  /-| map    : Judge x (DCC? (Π(Id(Sort m), f_β) α))
-    → Reduces (DCC? (f_β α)) (DCC? `(α, Sort n))
-    → Reduces (DCC? ((!(α) : Sort m) → Sort n)) τ
-    → Judge (DCC? !<x>) τ-/
+  /-| map    : Judge x (DCC (Π(Id(Sort m), f_β) α))
+    → Reduces (DCC (f_β α)) (DCC `(α, Sort n))
+    → Reduces (DCC ((!(α) : Sort m) → Sort n)) τ
+    → Judge (DCC !<x>) τ-/
   | map    : Judge x τ_x
-    → Arrow A (DCC? Sort n) m τ_x
-    → Reduces (open Dsl in (DCC? (→ (: (! A) Sort m) Sort n))) τ
-    → Judge (DCC? (!<> x)) τ
-  | fmap   : Judge x (open Dsl in (DCC? ((Π (Id Sort m) f_B) α)))
-    → Reduces (open Dsl in (DCC? ((Π (Id Sort m) (`Sort m (!<> (f_B α)))) (! α)))) τ
-    → Judge (DCC? ($<> x)) τ
-  | unbox  : Judge A (DCC? Sort m)
-    → Reduces A A'
-    → Judge (DCC? (* A)) (open Dsl in (DCC? (→ (: (! A') Sort m) A')))
-  | eval   : Judge A (DCC? Sort u)
+    → Arrow A (DCC Sort n) τ_x
+    → (→ (! A) Sort n) →ᵦ τ
+    → Judge (DCC (!<> x)) τ
+  | fmap   : Judge x (open Dsl in (DCC ((Π f_A f_B) x_A)))
+    → ((Π (`⊤ (! (f_A x_A))) (`⊤ (!<> (f_B x_A)))) ∗) →ᵦ τ
+    → Judge (DCC ($<> x)) τ
+  | unbox  : Judge A (DCC Sort m)
+    → A →ᵦ A'
+    → Judge (DCC (* A)) (open Dsl in (DCC (→ (! A') A')))
+  | eval   : Judge A (DCC Sort u)
     → Judge B τ_β
-    → Arrow A' (DCC? Sort v) u τ_β
-    → Judge x (GenericExpr.Eval.x.type A' B' C u)
-    → Reduces A A'
-    → Reduces B B'
-    → Reduces (GenericExpr.Eval.type A B C u v) τ
-    → Judge (DCC? (Eval A B x)) τ
-  /-| eval   : Judge x (open Dsl in (DCC? ((Π f_α f_B) env)))
+    → Arrow A' (DCC Sort v) τ_β
+    → Judge x (Expr.Eval.x.type A' B' C)
+    → A →ᵦ A'
+    → B →ᵦ B'
+    → #(Expr.Eval.type A B C) →ᵦ τ
+    → Judge (DCC (Eval A B x)) τ
+  /-| eval   : Judge x (open Dsl in (DCC ((Π f_α f_B) env)))
     → Reduces α α'
     → Reduces B B'
-    → Reduces (DCC? (f_α env)) α'
-    → Reduces (DCC? (f_B env)) (open Dsl in (DCC? ((Π B' γ))))
-    → Judge α (DCC? Sort m)
-    → Judge B (open Dsl in (DCC? ((Π f_α₂ f_B₂) env₂)))
-    → Reduces (DCC? (f_α₂ env₂)) α'
-    → Reduces (DCC? (f_B₂ env₂)) (open Dsl in (DCC? (`α' Sort n)))
-    → Reduces (GenericExpr.Eval.type α B γ m n) τ
-    → Judge (DCC? (Eval α B x)) τ-/
+    → Reduces (DCC (f_α env)) α'
+    → Reduces (DCC (f_B env)) (open Dsl in (DCC ((Π B' γ))))
+    → Judge α (DCC Sort m)
+    → Judge B (open Dsl in (DCC ((Π f_α₂ f_B₂) env₂)))
+    → Reduces (DCC (f_α₂ env₂)) α'
+    → Reduces (DCC (f_B₂ env₂)) (open Dsl in (DCC (`α' Sort n)))
+    → Reduces (Expr.Eval.type α B γ m n) τ
+    → Judge (DCC (Eval α B x)) τ-/
   | quot   : Judge x α
-    → Judge B (DCC? Sort n)
-    → Reduces (quot.type α B n) τ
-    → Judge (open Dsl in (DCC? (`B x))) τ
-  | pair     : Judge M (Pair.f.type A B u)
+    → Judge B (DCC Sort n)
+    → #(quot.type α B) →ᵦ τ
+    → Judge (open Dsl in (DCC (`B x))) τ
+  | pair     : Judge M (Pair.f.type A B)
     → Judge C τ_C
     → Judge N τ_N
-    → τ_N ≡ #(Pair.g.type A B C u)
-    → Reduces (Pair.type A B C u) τ'
-    → Judge (DCC? (⟨,⟩C M N)) τ'
-  | swap   : Judge A (DCC? Sort u)
-    → Judge B (DCC? Sort v)
-    → Reduces (GenericExpr.Swap.type A B u v) τ'
-    → Judge (DCC? (Swap A B)) τ'
+    → τ_N ≡ #(Pair.g.type A B C)
+    → #(Pair.type A B C) →ᵦ τ'
+    → Judge (DCC (⟨,⟩C M N)) τ'
+  | swap   : Judge A (DCC Sort u)
+    → Judge B (DCC Sort v)
+    → #(Expr.Swap.type A B) →ᵦ τ'
+    → Judge (DCC (Swap A B)) τ'
   /-
     ef_α : α → Sort m
     f_β : ∀ (x : α) (y : f_α x), Sort n
     Π(f_α, f_β)
   -/
   | pi     : Judge B τ_B
-    → Arrow A (DCC? Sort v) u τ_B
+    → Arrow A (DCC Sort v) τ_B
     → Judge C τ_C
-    → Reduces B B'
-    → Pi.C.type B' A u s τ_C
-    → Reduces (Pi.type A u v s) τ
-    → Judge (open Dsl in (DCC? (Π B C))) τ
-  | sort    : Judge (DCC? Sort m) (DCC? Sort m.succ)
-  | top     : Judge (DCC? ⊤) Top.type
-  | bot     : Judge (DCC? ⊥) Bot.type
-  | tintro  : Judge (DCC? ∗) Tintro.type
-  | bang    : Judge τ (DCC? Sort m) → Judge (open Dsl in (DCC? (! τ))) (DCC? Sort m)
+    → B →ᵦ B'
+    → Pi.C.type B' A s τ_C
+    → #(Pi.type A v s) →ᵦ τ
+    → Judge (open Dsl in (DCC (Π B C))) τ
+  | sort    : Judge (DCC Sort m) (DCC Sort m.succ)
+  | top     : Judge (DCC ⊤) Top.type
+  | bot     : Judge (DCC ⊥) Bot.type
+  | tintro  : Judge (DCC ∗) Tintro.type
+  | bang    : Judge τ (DCC Sort m) → Judge (open Dsl in (DCC (! τ))) (DCC Sort m)
   | box     : Judge x τ
-    → Judge (open Dsl in (DCC? (& x))) (open Dsl in (DCC? (! τ)))
-  | false   : Judge (DCC? False) (DCC? Bool)
-  | true    : Judge (DCC? True) (DCC? Bool)
-  | bool    : Judge (DCC? Bool) (DCC? Sort 1)
-  | app     : Judge f (open Dsl in (DCC? ((Π f_α f_β) x_α)))
+    → Judge (open Dsl in (DCC (& x))) (open Dsl in (DCC (! τ)))
+  | false   : Judge (DCC False) (DCC Bool)
+  | true    : Judge (DCC True) (DCC Bool)
+  | bool    : Judge (DCC Bool) (DCC Sort 1)
+  | app     : Judge f (open Dsl in (DCC ((Π f_α f_β) x_α)))
     → (f_α x_α) ≡ α
     → Judge x α
-    → Reduces (DCC? (f_β x_α x)) τ
-    → Judge (DCC? (f x)) τ
+    → (f_β x_α x) →ᵦ τ
+    → Judge (DCC (f x)) τ
   | bimap   : Judge f τ_f
     → Judge g τ_g
-    → Arrow A A' u₀ τ_f
-    → Arrow B B' v₀ τ_g
-    → Reduces (DCC? (→ (: (Σ (`A B)) Sort (max u₀ v₀)) (Σ (`A' B')))) τ'
-    → Judge (DCC? (Map A' B' f g)) τ'
-  | assoc    : Judge A (DCC? Sort u)
-    → Judge B (DCC? Sort v)
-    → Judge C (DCC? Sort s)
-    → Reduces (DCC? (→ (: (Σ (`(Σ (`A B)) C)) Sort (max u (max v s))) (Σ (`A (Σ (`B C)))))) τ'
-    → Judge (DCC? (Assoc A B C)) τ'
+    → Arrow A A' τ_f
+    → Arrow B B' τ_g
+    → (→ (Σ' A (`A B)) (Σ' B' (`A' B'))) →ᵦ τ'
+    → Judge (DCC (Map A' B' f g)) τ'
+  | assoc    : Judge A (DCC Sort u)
+    → Judge B (DCC Sort v)
+    → Judge C (DCC Sort s)
+    → (→ (Σ' (Σ' A (`A B)) (`(Σ' A (`A B)) C)) (Σ' A (`A (Σ' B (`B C))))) →ᵦ τ'
+    → Judge (DCC (Assoc A B C)) τ'
   | ind_bot  : Judge motive τ_motive
-    → Arrow A τ_motive₂ u τ_motive
-    → Arrow (DCC? ⊥) (DCC? Sort v) 0 τ_motive₂
-    → Reduces (DCC? ((Π (Id Sort u) (Π (`A ⊥) motive)) A)) τ'
-    → Judge (DCC? (⊥.Rec motive)) τ'
+    → Arrow A τ_motive₂ τ_motive
+    → Arrow (DCC ⊥) (DCC Sort v) τ_motive₂
+    → ((Π (`⊤ A) (`⊤ (Π (`A ⊥) motive))) ∗) →ᵦ τ'
+    → Judge (DCC (⊥.Rec motive)) τ'
   | ind_bool : Judge motive τ_motive
-    → Arrow A τ_motive₂ u τ_motive
-    → Arrow (DCC? Bool) (DCC? Sort v) 1 τ_motive₂
+    → Arrow A τ_motive₂ τ_motive
+    → Arrow (DCC Bool) (DCC Sort v) τ_motive₂
     → Judge x τ_x
-    → τ_x ≡ ((Π (Id (Sort u)) (`Sort u (Π (`A Bool) motive))) A)
+    → τ_x ≡ ((Π (`⊤ A) (`⊤ (Π (`A Bool) motive))) ∗)
     → Judge y τ_y
-    → τ_y ≡ ((Π (Id (Sort u)) (`Sort u (Π (`A Bool) motive))) A)
-    → Reduces (DCC? ((Π (Id Sort u) (Π (`A Bool) motive)) A)) τ'
-    → Judge (DCC? (Bool.Rec motive x y)) τ'
+    → τ_y ≡ ((Π (`⊤ A) (`⊤ (Π (`A Bool) motive))) ∗)
+    → ((Π (`⊤ A) (`⊤ (Π (`A Bool) motive))) ∗) →ᵦ τ'
+    → Judge (DCC (Bool.Rec motive x y)) τ'
 deriving Repr
 
 -- Replaces everything from `def infer₂` to end-of-file.
 -- Everything above (TypeError, Reduces, def_eq?, Judge, …) is unchanged.
 
-def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] (e : GenericExpr τ_c) : Except (TypeError e) (Σ' (t : GenericExpr τ_c), Judge e t) :=
+def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
   open Dsl in match e with
-  | DCC? (Bool.Rec motive x y) =>
+  | DCC (Bool.Rec motive x y) =>
     match infer motive with
     | .ok ⟨τ_motive, h₁⟩ =>
       match read_arrow τ_motive with
-      | .ok ⟨A, τ_motive₂, u, h_arr₁⟩ =>
-        match read_arrow₂ τ_motive₂ (DCC? Bool) 1 with
-        | .ok ⟨DCC? Sort _v, h_arr₂⟩ =>
+      | .ok ⟨A, τ_motive₂, h_arr₁⟩ =>
+        match read_arrow₁ τ_motive₂ (DCC Bool) with
+        | .ok ⟨DCC Sort _v, h_arr₂⟩ =>
           match x.infer with
           | .ok ⟨τ_x, h₂⟩ =>
             match y.infer with
             | .ok ⟨τ_y, h₃⟩ =>
-              match def_eq? τ_x (DCC? ((Π (Id (Sort u)) (`Sort u (Π (`A Bool) motive))) A)) with
+              match def_eq? τ_x (DCC ((Π (`⊤ A) (`⊤ (Π (`A Bool) motive))) ∗)) with
               | .ok h_defeq₁ =>
-                match def_eq? τ_y (DCC? ((Π (Id (Sort u)) (`Sort u (Π (`A Bool) motive))) A)) with
+                match def_eq? τ_y (DCC ((Π (`⊤ A) (`⊤ (Π (`A Bool) motive))) ∗)) with
                 | .ok h_defeq₂ =>
                   .ok ⟨_, .ind_bool h₁ h_arr₁ h_arr₂ h₂ h_defeq₁ h₃ h_defeq₂ (reduce_reduces rfl)⟩
                 | .error e => .error (.sub y (.def_eq e))
@@ -587,25 +523,25 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] (e : GenericExpr τ_c)
         | .error e => .error (.sub motive (.sub τ_motive (.sub τ_motive₂ e)))
       | .error e => .error (.sub motive (.sub τ_motive e))
     | .error e => .error (.sub motive e)
-  | DCC? (⊥.Rec motive) =>
+  | DCC (⊥.Rec motive) =>
     match infer motive with
     | .ok ⟨τ_motive, h₁⟩ =>
       match read_arrow τ_motive with
-      | .ok ⟨_A, τ_motive₂, _u, h_arr₁⟩ =>
-        match read_arrow₂ τ_motive₂ (DCC? ⊥) 0 with
-        | .ok ⟨DCC? Sort _v, h_arr₂⟩ =>
+      | .ok ⟨_A, τ_motive₂, h_arr₁⟩ =>
+        match read_arrow₁ τ_motive₂ (DCC ⊥) with
+        | .ok ⟨DCC Sort _v, h_arr₂⟩ =>
           .ok ⟨_, .ind_bot h₁ h_arr₁ h_arr₂ (reduce_reduces rfl)⟩
         | .ok ⟨τ_elim, _⟩ => .error (.sub τ_motive (.unexpected τ_elim τ_motive₂))
         | .error e => .error (.sub motive (.sub τ_motive (.sub τ_motive₂ e)))
       | .error e => .error (.sub motive (.sub τ_motive e))
     | .error e => .error (.sub motive e)
-  | DCC? (Assoc A B C) =>
+  | DCC (Assoc A B C) =>
     match A.infer with
-    | .ok ⟨DCC? Sort _u, h₁⟩ =>
+    | .ok ⟨DCC Sort _u, h₁⟩ =>
       match B.infer with
-      | .ok ⟨DCC? Sort _v, h₂⟩ =>
+      | .ok ⟨DCC Sort _v, h₂⟩ =>
         match C.infer with
-        | .ok ⟨DCC? Sort _s, h₃⟩ =>
+        | .ok ⟨DCC Sort _s, h₃⟩ =>
           .ok ⟨_, .assoc h₁ h₂ h₃ (reduce_reduces rfl)⟩
         | .error e => .error (.sub C e)
         | .ok ⟨τ_C, _⟩ => .error (.unexpected τ_C C)
@@ -613,15 +549,15 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] (e : GenericExpr τ_c)
       | .ok ⟨τ_B, _⟩ => .error (.unexpected τ_B B)
     | .error e => .error (.sub A e)
     | .ok ⟨τ_A, _⟩ => .error (.unexpected τ_A A)
-  | DCC? (Map A' B' f g) =>
+  | DCC (Map A' B' f g) =>
     match f.infer with
     | .ok ⟨τ_f, h₁⟩ =>
       match g.infer with
       | .ok ⟨τ_g, h₂⟩ =>
         match read_arrow τ_f with
-        | .ok ⟨_A, A'', _u₀, h_arr₁⟩ =>
+        | .ok ⟨_A, A'', h_arr₁⟩ =>
           match read_arrow τ_g with
-          | .ok ⟨_B, B'', _v₀, h_arr₂⟩ =>
+          | .ok ⟨_B, B'', h_arr₂⟩ =>
             if heq₁ : A'' = A' then
               if heq₂ : B'' = B' then
                 .ok ⟨_, .bimap h₁ h₂ (heq₁ ▸ h_arr₁) (heq₂ ▸ h_arr₂) (reduce_reduces rfl)⟩
@@ -631,104 +567,102 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] (e : GenericExpr τ_c)
         | .error e => .error (.sub f (.sub τ_f e))
       | .error e => .error (.sub g e)
     | .error e => .error (.sub f e)
-  | DCC? True => .ok ⟨_, .true⟩
-  | DCC? False => .ok ⟨_, .false⟩
-  | DCC? Bool => .ok ⟨_, .bool⟩
-  | .dom₂ _x | .uncoup _x | .dom _x | .unbang _x | .hole _u => .error (.unexpected e e)
-  | DCC? (Swap A B) =>
+  | DCC True => .ok ⟨_, .true⟩
+  | DCC False => .ok ⟨_, .false⟩
+  | DCC Bool => .ok ⟨_, .bool⟩
+  | .hole _u => .error (.unexpected e e)
+  | DCC (Swap A B) =>
     match infer A with
-    | .ok ⟨DCC? Sort _u, h₁⟩ =>
+    | .ok ⟨DCC Sort _u, h₁⟩ =>
       match infer B with
-      | .ok ⟨DCC? Sort _v, h₂⟩ =>
+      | .ok ⟨DCC Sort _v, h₂⟩ =>
         .ok ⟨_, .swap h₁ h₂ (reduce_reduces rfl)⟩
       | .error e => .error (.sub B e)
       | .ok ⟨τ', _⟩ => .error (.sub B (.unexpected τ' B))
     | .error e => .error (.sub A e)
     | .ok ⟨τ', _⟩ => .error (.sub A (.unexpected τ' A))
-  | DCC? (!<> f) =>
+  | DCC (!<> f) =>
     match infer f with
     | .ok ⟨τ_f, ht₁⟩ =>
       match τ_f.read_arrow with
-      | .ok ⟨_A, DCC? Sort _n, _m, harr⟩ =>
+      | .ok ⟨_A, DCC Sort _n, harr⟩ =>
         .ok ⟨_, .map ht₁ harr (reduce_reduces rfl)⟩
       | _ => .error (.mark 3 (.unexpected τ_f f))
     | .error e => .error (.sub f e)
-  /-| DCC? !<f> =>
+  /-| DCC !<f> =>
     match infer f with
-    | .ok ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht₁⟩⟩ =>
-      match (DCC? (f_β α)).reduce_all with
-      | (DCC? `(α₂, Sort n)) =>
-        if heq : (DCC? (f_β α)).reduce_all = (DCC? `(α, Sort n)) then
+    | .ok ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht₁⟩⟩ =>
+      match (DCC (f_β α)).reduce_all with
+      | (DCC `(α₂, Sort n)) =>
+        if heq : (DCC (f_β α)).reduce_all = (DCC `(α, Sort n)) then
           .ok ⟨_, ⟨.map ht₁ (reduce_reduces heq) (reduce_reduces rfl)⟩⟩
-        else .error (.mismatch (DCC? `(α, Sort n)) (DCC? (f_β α)).reduce_all f)
+        else .error (.mismatch (DCC `(α, Sort n)) (DCC (f_β α)).reduce_all f)
       | x => .error (.mark 2 (.unexpected x f))
     | .ok ⟨t, _⟩ => .error (.mark 1 (.unexpected t f))
     | .error ε => .error (.sub f ε)-/
-  /-| DCC? !<f> =>
+  /-| DCC !<f> =>
     match infer f with
-    | .ok ⟨(DCC? (Π(Id(Sort m), f_β) α)), ⟨ht₁⟩⟩ =>
+    | .ok ⟨(DCC (Π(Id(Sort m), f_β) α)), ⟨ht₁⟩⟩ =>
       .ok ⟨_, ⟨.map ht₁ (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
     | .ok ⟨t, _⟩ => .error (.mark 1 (.unexpected t f))
     | .error ε => .error (.sub f ε)-/
-  | DCC? ($<> f) =>
+  | DCC ($<> f) =>
     match f.infer with
-    | .ok ⟨(DCC? ((Π (Id Sort _m) _B) _α)), ht⟩ =>
+    | .ok ⟨(DCC ((Π (Id Sort _m) _B) _α)), ht⟩ =>
       .ok ⟨_, .fmap ht (reduce_reduces rfl)⟩
     | .ok ⟨t, _⟩ => .error (.unexpected t f)
     | .error ε => .error (.sub f ε)
-  | DCC? (* A) =>
+  | DCC (* A) =>
     match A.infer with
-    | .ok ⟨DCC? Sort _m, ht⟩ =>
+    | .ok ⟨DCC Sort _m, ht⟩ =>
       .ok ⟨_, .unbox ht (reduce_reduces rfl)⟩
     | .error ε => .error (.sub A ε)
     | .ok ⟨τ, _⟩ => .error (.unexpected τ A)
-  | DCC? (! τ) =>
+  | DCC (! τ) =>
     match τ.infer with
-    | .ok ⟨DCC? Sort _m, ht⟩ => .ok ⟨_, .bang ht⟩
+    | .ok ⟨DCC Sort _m, ht⟩ => .ok ⟨_, .bang ht⟩
     | .ok ⟨t, _⟩ => .error (.unexpected t τ)
     | .error ε => .error (.sub τ ε)
-  | DCC? (& x) =>
+  | DCC (& x) =>
     match x.infer with
     | .ok ⟨_τ, ht⟩ => .ok ⟨_, .box ht⟩
     | .error ε => .error (.sub x ε)
-  | DCC? ⊤ => .ok ⟨_, .top⟩
-  | DCC? ⊥ => .ok ⟨_, .bot⟩
-  | DCC? ∗ => .ok ⟨_, .tintro⟩
-  | DCC? Sort _m => .ok ⟨_, .sort⟩
-  | DCC? (Id α) =>
+  | DCC ⊤ => .ok ⟨_, .top⟩
+  | DCC ⊥ => .ok ⟨_, .bot⟩
+  | DCC ∗ => .ok ⟨_, .tintro⟩
+  | DCC Sort _m => .ok ⟨_, .sort⟩
+  | DCC (Id α) =>
     match infer α with
-    | .ok ⟨DCC? Sort _m, ht⟩ =>
+    | .ok ⟨DCC Sort _m, ht⟩ =>
       .ok ⟨_, .id ht (reduce_reduces rfl)⟩
     | .ok ⟨t, _⟩ => .error (.unexpected t α)
     | .error ε => .error (.sub α ε)
-  | DCC? (∘ f g) =>
+  | DCC (∘ f g) =>
     match infer g with
     | .ok ⟨τ_g, ht₁⟩ =>
       match τ_g.read_arrow with
-      | .ok ⟨_A, B, _m, harr_g⟩ =>
+      | .ok ⟨_A, B, harr_g⟩ =>
         match infer f with
-        | .ok ⟨DCC? ((Π (Id Sort n) (`(Sort n₂) _C)) B₂), ht₂⟩ =>
-          if heq₁ : n = n₂ then
-            if heq₂ : B₂ = B then
-              .ok ⟨_, .comp ht₁ harr_g (heq₁ ▸ heq₂ ▸ ht₂) (reduce_reduces rfl)⟩
-            else .error (.unexpected τ_g f)
+        | .ok ⟨DCC ((Π (`⊤ B₂) (`⊤ _C)) ∗), ht₂⟩ =>
+          if heq₂ : B₂ = B then
+            .ok ⟨_, .comp ht₁ harr_g (heq₂ ▸ ht₂) (reduce_reduces rfl)⟩
           else .error (.unexpected τ_g f)
         | .ok ⟨τ, _⟩ => .error (.unexpected τ g)
         | .error ε => .error (.sub f ε)
       | .error e => .error (.sub τ_g e)
-      /-if heq : (DCC? (Π(Id(Sort m), `(_m, *<Σ(__a, Λ(_a, _b, `(___a, β)))>)) !(α))) = comp.g.type α β m then
+      /-if heq : (DCC (Π(Id(Sort m), `(_m, *<Σ(__a, Λ(_a, _b, `(___a, β)))>)) !(α))) = comp.g.type α β m then
         match infer f with
-        | .ok ⟨(DCC? (Π(Id(Sort n), f_γ) Coup(f_β))), ⟨ht₂⟩⟩ =>
-          if _heq₂ : (DCC? (Π(Id(Sort n), f_γ) Coup(f_β))) = comp.f.type f_β f_γ n then
-            if heq₃ : f_β.reduce_all = (DCC? `(α, β)) then
+        | .ok ⟨(DCC (Π(Id(Sort n), f_γ) Coup(f_β))), ⟨ht₂⟩⟩ =>
+          if _heq₂ : (DCC (Π(Id(Sort n), f_γ) Coup(f_β))) = comp.f.type f_β f_γ n then
+            if heq₃ : f_β.reduce_all = (DCC `(α, β)) then
               .ok ⟨_, ⟨.comp (heq ▸ ht₁) ht₂ (reduce_reduces heq₃) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩⟩
-            else .error (.mismatch (DCC? `(α, β)) f_β.reduce_all f)
-          else .error (.mismatch (comp.f.type f_β f_γ n) (DCC? (Π(Id(Sort n), f_γ) Coup(f_β))) f)
+            else .error (.mismatch (DCC `(α, β)) f_β.reduce_all f)
+          else .error (.mismatch (comp.f.type f_β f_γ n) (DCC (Π(Id(Sort n), f_γ) Coup(f_β))) f)
         | .ok ⟨t, _⟩ => .error (.unexpected t f)
         | .error ε => .error (.sub f ε)
-      else .error (.mismatch (comp.g.type α β m) (DCC? (Π(Id(Sort m), `(_m, *<Σ(__a, Λ(_a, _b, `(___a, β)))>)) !(α))) g)-/
+      else .error (.mismatch (comp.g.type α β m) (DCC (Π(Id(Sort m), `(_m, *<Σ(__a, Λ(_a, _b, `(___a, β)))>)) !(α))) g)-/
     | .error ε => .error (.sub g ε)
-  | DCC? (= A x y) =>
+  | DCC (= A x y) =>
     match infer x with
     | .ok ⟨t_x, ht₁⟩ =>
       match infer y with
@@ -742,37 +676,39 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] (e : GenericExpr τ_c)
         | .error e => .error (.def_eq e)
       | .error ε => .error (.sub y ε)
     | .error ε => .error (.sub x ε)
-  | DCC? (Eql f_α) =>
+  | DCC (Eql f_α) =>
     match infer f_α with
     | .ok ⟨τ, ht₁⟩ =>
       match τ.read_arrow with
-      | .ok ⟨_δ, DCC? Sort _m, _o, h⟩ =>
+      | .ok ⟨_δ, DCC Sort _m, h⟩ =>
         .ok ⟨_, .eql ht₁ h (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ f_α)
     | .error ε => .error (.sub f_α ε)
-  | DCC? (refl f_α) =>
+  | DCC (refl f_α) =>
     match infer f_α with
     | .ok ⟨τ, ht₁⟩ =>
       match τ.read_arrow with
-      | .ok ⟨_δ, DCC? Sort _m, _o, h⟩ =>
+      | .ok ⟨_δ, DCC Sort _m, h⟩ =>
         .ok ⟨_, .refl ht₁ h (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ f_α)
     | .error ε => .error (.sub f_α ε)
-  | DCC? (Σ f_α f_β) =>
-    match f_α.infer with
-    | .ok ⟨τ_f_α, h₁⟩ =>
-      match τ_f_α.read_arrow with
-      | .ok ⟨δ, DCC? Sort _m, o, harr⟩ =>
-        match infer f_β with
-        | .ok ⟨τ_f_β, h₂⟩ =>
-          match τ_f_β.view_pi_f_β (reduce_all f_α) δ o with
-          | .some ⟨_n, h₃⟩ =>
-            .ok ⟨_, .sigma h₁ harr h₂ (reduce_reduces rfl) h₃ (reduce_reduces rfl)⟩
-          | _ => .error (.unexpected τ_f_β f_β)
-        | .error ε => .error (.sub f_β ε)
-      | _ => .error (.unexpected τ_f_α f_α)
-    | .error ε => .error (.sub f_α ε)
-  | DCC? (,B x y) =>
+  | DCC (Σ B C) =>
+    match B.infer with
+    | .ok ⟨τ_B, h₁⟩ =>
+      match read_arrow τ_B with
+      | .ok ⟨A, DCC Sort _v, harr₁⟩ =>
+        match C.infer with
+        | .ok ⟨τ_C, h₂⟩ =>
+          match τ_C.view_pi_f_β (reduce_all B) A with
+          | .ok ⟨_, h⟩ =>
+            .ok ⟨_, .sigma h₁ harr₁ h₂ (reduce_reduces rfl) h⟩
+          | .error e => .error (.sub C (.sub τ_C e))
+        | .error e => .error (.sub C e)
+      | .ok ⟨_A, τ₂, _h⟩ =>
+        .error (.sub B (.unexpected τ₂ τ_B))
+      | .error e => .error (.sub B (.sub τ_B e))
+    | .error e => .error (.sub B e)
+  | DCC (,B x y) =>
     match infer x with
     | .ok ⟨α, ht₁⟩ =>
       match infer y with
@@ -780,164 +716,146 @@ def infer.{u} {τ_c : Type u} [hDecEq : DecidableEq τ_c] (e : GenericExpr τ_c)
         match B.infer with
         | .ok ⟨τ_B, h₃⟩ =>
           match τ_B.read_arrow₁ α with
-          | .ok ⟨DCC? Sort _n, _m, harr⟩ =>
-            if heq₂ : reduce_all (DCC? (B x)) = Bxm then
+          | .ok ⟨DCC Sort _n, harr⟩ =>
+            if heq₂ : reduce_all (DCC (B x)) = Bxm then
               .ok ⟨_, .mk ht₁ h₃ harr
                 (reduce_reduces (B := Bxm) (heq₂ ▸ rfl)) ht₂ (reduce_reduces rfl)⟩
-            else .error (.mismatch (reduce_all (DCC? (B x))) Bxm y)
+            else .error (.mismatch (reduce_all (DCC (B x))) Bxm y)
           | _ => .error (.unexpected τ_B B)
         | .error ε => .error (.sub B ε)
       | .error ε => .error (.sub y ε)
     | .error ε => .error (.sub x ε)
-  | DCC? (Σ B) =>
-    match infer B with
-    | .ok ⟨τ_B, ht⟩ =>
-      match read_arrow τ_B with
-      | .ok ⟨_A, DCC? Sort _v, _u, harr⟩ =>
-        .ok ⟨_, .coup ht harr (reduce_reduces rfl)⟩
-      | _ => .error (.unexpected τ_B B)
-      /-match (DCC? (f_B α)).reduce_all with
-      | DCC? `(_α₂, Sort n) =>
-        if heq : (DCC? (f_B α)).reduce_all = DCC? `(α, Sort n) then
-          .ok ⟨_, ⟨.coup ht (reduce_reduces heq) (reduce_reduces rfl)⟩⟩
-        else .error (.mismatch (DCC? `(α, Sort n)) (DCC? (f_B α)).reduce_all B)
-      | other => .error (.unexpected other B)-/
-    | .error ε => .error (.sub B ε)
-  | DCC? (Fst B) =>
+  | DCC (Fst B) =>
     match (infer B) with
     | .ok ⟨τ_β, ht₁⟩ =>
       match τ_β.read_arrow with
-      | .ok ⟨_α, DCC? Sort _n, _m, harr⟩ =>
+      | .ok ⟨_α, DCC Sort _n, harr⟩ =>
         .ok ⟨_, .fstc ht₁ harr (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ_β B)
     | .error ε => .error (.sub B ε)
-  | DCC? (Snd B) =>
+  | DCC (Snd B) =>
     match (infer B) with
     | .ok ⟨τ_β, ht₁⟩ =>
       match τ_β.read_arrow with
-      | .ok ⟨_α, DCC? Sort _n, _m, harr⟩ =>
+      | .ok ⟨_α, DCC Sort _n, harr⟩ =>
         .ok ⟨_, .sndc ht₁ harr (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ_β B)
     | .error ε => .error (.sub B ε)
-  | DCC? (Λ A B x) =>
+  | DCC (Λ A B x) =>
     match A.infer with
-    | .ok ⟨DCC? Sort m, ht⟩ =>
+    | .ok ⟨DCC Sort _m, ht⟩ =>
       match B.infer with
       | .ok ⟨τ_β, ht_β⟩ =>
-        match τ_β.read_arrow₂ (reduce_all A) m with
-        | .ok ⟨DCC? Sort n, h⟩ =>
+        match τ_β.read_arrow₁ (reduce_all A) with
+        | .ok ⟨DCC Sort _n, h⟩ =>
           match infer x with
-          | .ok ⟨DCC? ((Π _A (`_B C)) _D), ht₂⟩ =>
-            if heq : (DCC? ((Π _A (`_B C)) _D)) = (curr.x.type (reduce_all B) C m n) then
+          | .ok ⟨DCC ((Π _A (`_B C)) _D), ht₂⟩ =>
+            if heq : (DCC ((Π _A (`_B C)) _D)) = (curr.x.type (reduce_all A) (reduce_all B) C) then
               .ok ⟨_, .curr ht ht_β (reduce_reduces rfl) h (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩
-            else .error (.sub x (.unexpected (DCC? ((Π _A (`_B C)) _D)) e))
+            else .error (.sub x (.unexpected (DCC ((Π _A (`_B C)) _D)) e))
           | .error e => .error (.sub x e)
           | .ok ⟨τ, _⟩ => .error (.sub x (.unexpected τ e))
         | _ => .error (.unexpected τ_β B)
       | .error ε => .error (.sub B ε)
     | .ok ⟨t, _⟩ => .error (.unexpected t A)
     | .error ε => .error (.sub A ε)
-  | DCC? (!Λ A B x) =>
+  | DCC (!Λ A B x) =>
     match A.infer with
-    | .ok ⟨DCC? Sort m, ht⟩ =>
+    | .ok ⟨DCC Sort _m, ht⟩ =>
       match B.infer with
       | .ok ⟨τ_β, ht_β⟩ =>
-        match τ_β.read_arrow₂ (reduce_all A) m with
-        | .ok ⟨DCC? Sort n, h⟩ =>
+        match τ_β.read_arrow₁ (reduce_all A) with
+        | .ok ⟨DCC Sort _n, h⟩ =>
           match infer x with
-          | .ok ⟨DCC? ((Π _A (`_B C)) _D), ht₂⟩ =>
-            if heq : (DCC? ((Π _A (`_B C)) _D)) = (curr'.x.type (reduce_all B) C m n) then
+          | .ok ⟨DCC ((Π _A (`_B C)) _D), ht₂⟩ =>
+            if heq : (DCC ((Π _A (`_B C)) _D)) = (curr'.x.type (reduce_all A) (reduce_all B) C) then
               .ok ⟨_, .curr' ht ht_β (reduce_reduces rfl) h (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩
-            else .error (.sub x (.unexpected (DCC? ((Π _A (`_B C)) _D)) e))
+            else .error (.sub x (.unexpected (DCC ((Π _A (`_B C)) _D)) e))
           | .error e => .error (.sub x e)
           | .ok ⟨τ, _⟩ => .error (.sub x (.unexpected τ e))
         | _ => .error (.unexpected τ_β B)
       | .error ε => .error (.sub B ε)
     | .ok ⟨t, _⟩ => .error (.unexpected t A)
     | .error ε => .error (.sub A ε)
-  | DCC? (Eval A B x) =>
+  | DCC (Eval A B x) =>
     match A.infer with
-    | .ok ⟨DCC? Sort u, ht⟩ =>
+    | .ok ⟨DCC Sort _u, ht⟩ =>
       match B.infer with
       | .ok ⟨τ_β, ht_β⟩ =>
-        match τ_β.read_arrow₂ (reduce_all A) u with
-        | .ok ⟨DCC? Sort _v, h⟩ =>
+        match τ_β.read_arrow₁ (reduce_all A) with
+        | .ok ⟨DCC Sort _v, h⟩ =>
             match infer x with
-            | .ok ⟨DCC? ((Π _A (`_B (Π _C C))) _D), ht₂⟩ =>
-              if heq : (DCC? ((Π _A (`_B (Π _C C))) _D)) = (GenericExpr.Eval.x.type (reduce_all A) (reduce_all B) C u) then
+            | .ok ⟨DCC ((Π _A (`_B (Π _C C))) _D), ht₂⟩ =>
+              if heq : (DCC ((Π _A (`_B (Π _C C))) _D)) = (Expr.Eval.x.type (reduce_all A) (reduce_all B) C) then
                 .ok ⟨_, .eval ht ht_β h (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩
-              else .error (.sub x (.unexpected (DCC? ((Π _A (`_B C)) _D)) e))
+              else .error (.sub x (.unexpected (DCC ((Π _A (`_B C)) _D)) e))
             | .error e => .error (.sub x e)
             | .ok ⟨τ, _⟩ => .error (.sub x (.unexpected τ e))
         | _ => .error (.unexpected τ_β B)
       | .error e => .error (.sub B e)
     | .ok ⟨t, _⟩ => .error (.unexpected t A)
     | .error ε => .error (.sub A ε)
-  | DCC? (`B x) =>
+  | DCC (`B x) =>
     match infer x with
     | .ok ⟨_A, ht₁⟩ =>
       match infer B with
-      | .ok ⟨DCC? Sort _v, ht₂⟩ =>
+      | .ok ⟨DCC Sort _v, ht₂⟩ =>
         .ok ⟨_, .quot ht₁ ht₂ (reduce_reduces rfl)⟩
       | .ok ⟨t, _⟩ => .error (.unexpected t B)
       | .error ε => .error (.sub B ε)
     | .error ε => .error (.sub x ε)
-  | DCC? (⟨,⟩C M N) =>
+  | DCC (⟨,⟩C M N) =>
     match infer M with
-    | .ok ⟨DCC? ((Π (Id Sort u) (`(Sort u₂) B)) A), ht_M⟩ =>
-      if heq : (DCC? ((Π (Id Sort u) (`(Sort u₂) B)) A)) = (Pair.f.type A B u) then
+    | .ok ⟨DCC ((Π (`⊤ A) (`⊤ B)) ∗), ht_M⟩ =>
+      if heq : DCC ((Π (`⊤ A) (`⊤ B)) ∗) = (Pair.f.type A B) then
         match infer C with
         | .ok ⟨_τ_C, ht_C⟩ =>
           match infer N with
           | .ok ⟨τ_N, ht_N⟩ =>
-            match def_eq? τ_N (Pair.g.type A B C u) with
+            match def_eq? τ_N (Pair.g.type A B C) with
             | .ok h =>
               .ok ⟨_, .pair (heq ▸ ht_M) ht_C ht_N h (reduce_reduces rfl)⟩
             | .error e => .error (.sub N (.def_eq e))
           | .error e => .error (.sub N e)
         | .error e => .error (.sub C e)
       else
-        .error (.sub M (.unexpected M (DCC? ((Π (Id Sort u) (`(Sort u₂) B)) A))))
+        .error (.sub M (.unexpected M (DCC ((Π (`⊤ A) (`⊤ B)) ∗))))
     | .error e => .error (.sub M e)
     | .ok ⟨τ_M, _⟩ => .error (.sub M (.unexpected M τ_M))
-  | DCC? (Π B C) =>
+  | DCC (Π B C) =>
     match B.infer with
     | .ok ⟨τ_B, ht₁⟩ =>
       match τ_B.read_arrow with
-      | .ok ⟨A, DCC? Sort _v, u, harr⟩ =>
+      | .ok ⟨A, DCC Sort _v, harr⟩ =>
         match infer C with
         | .ok ⟨τ_C, ht₂⟩ =>
-          match τ_C.view_pi_f_β (reduce_all B) A u with
-          | .some ⟨_s, h₂⟩ =>
+          match τ_C.view_pi_f_β (reduce_all B) A with
+          | .ok ⟨_s, h₂⟩ =>
             .ok ⟨_, .pi ht₁ harr ht₂ (reduce_reduces rfl) h₂ (reduce_reduces rfl)⟩
           | _ => .error (.mark 4 (.unexpected τ_C C))
         | .error ε => .error (.mark 3 (.sub C ε))
       | _ => .error (.mark 2 (.unexpected τ_B B))
     | .error ε => .error (.mark 1 (.sub B ε))
-  | DCC? (f x) =>
+  | DCC (f x) =>
     match infer f with
-    | .ok ⟨DCC? ((Π f_α _f_β) x_α), ht₁⟩ =>
+    | .ok ⟨DCC ((Π f_α _f_β) x_α), ht₁⟩ =>
       match infer x with
       | .ok ⟨τ₂', ht₂⟩ =>
-        match def_eq? (DCC? (f_α x_α)) τ₂' with
+        match def_eq? (DCC (f_α x_α)) τ₂' with
         | .ok h =>
            .ok ⟨_, .app ht₁ h ht₂ (reduce_reduces rfl)⟩
-        | .error e => .error (.sub (DCC? (f_α x_α)) (.def_eq e))
+        | .error e => .error (.sub (DCC (f_α x_α)) (.def_eq e))
       | .error ε => .error (.sub x ε)
     | .ok ⟨t, _⟩ => .error (.unexpected t f)
     | .error ε => .error (.sub f ε)
-  | .const c => .error (.unexpected (.const c) (.const c))
   | e => .error (.unexpected e e)
 
-abbrev infer' {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr τ_c) : Except (TypeError e) (GenericExpr τ_c) := (·.fst) <$> e.infer
+abbrev infer' (e : Expr) : Except (TypeError e) Expr := (·.fst) <$> e.infer
 
-instance [DecidableEq τ_c] [Repr τ_c] : Repr (Σ' (τ : GenericExpr τ_c), Judge A τ) := ⟨fun ⟨B, x⟩ =>
+instance : Repr (Σ' (τ : Expr), Judge A τ) := ⟨fun ⟨B, x⟩ =>
   Repr.addAppParen s!"PSigma.mk {repr B} ({repr x})"⟩
 
-end GenericExpr
-
-abbrev Expr.infer' (e : Expr) : Except (TypeError e) Expr := (·.fst) <$> e.infer
-abbrev Expr.infer (e : Expr) : Except (TypeError e) (Σ' (t : GenericExpr Unit), (GenericExpr.Judge e t)) := GenericExpr.infer e
+end Expr
 
 /-
 Unifying two different kinds of arrows:
@@ -947,4 +865,4 @@ Unifying two different kinds of arrows:
 -/
 
 #eval (DCC ((Id Sort 1) (Sort 0))).infer
-open Dsl in #eval (DCC ((Id (→ (: (Sort 1) Sort 2) Sort 1)) (Id Sort 1))).infer
+open Dsl in #eval (DCC ((Id (→ (Sort 1) Sort 1)) (Id Sort 1))).infer

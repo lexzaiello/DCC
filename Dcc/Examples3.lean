@@ -13,12 +13,11 @@ open Dsl
 #eval (Std.format ∘ (·.fst)) <$> (DCC (∘ (Id Sort 1) (Id Sort 1))).infer
 #eval (Std.format ∘ (·.fst)) <$> (DCC ((Id Sort 1) (Sort 0))).infer
 #eval (DCC (`(Sort 1) Sort 1)).infer'
-#eval (DCC (Λ (Sort 1) (` (Sort 1) Sort 1) (`(Σ (`(Sort 1) Sort 1)) Sort 1))).infer'
-#eval (DCC (Id (Σ (Id Sort 2)))).infer'
-#eval (DCC (Λ (Sort 2) (Id Sort 2) (Id (Σ (Id Sort 2))))).infer'
+#eval (DCC (Λ (Sort 1) (`(Sort 1) Sort 1) (`(Σ' (Sort 1) (`(Sort 1) Sort 1)) Sort 1))).infer'
+#eval (DCC (Id (Σ' (Sort 2) (Id Sort 2)))).infer'
+#eval (DCC (Λ (Sort 2) (Id Sort 2) (Id (Σ' (Sort 2) (Id Sort 2))))).infer'
 #eval (DCC (`(Sort 1) Sort 1)).infer'
-#eval (DCC (Λ (Sort 1) (`(Sort 1) Sort 1) (`(Σ (`(Sort 1) Sort 1)) Sort 1))).infer'
-#eval (DCC ((Σ (`(Sort 1) Sort 1) (Λ (Sort 1) (`(Sort 1) Sort 1) (`(Σ (`(Sort 1) Sort 1)) Sort 2))) (Sort 0))).infer
+#eval (DCC (Λ (Sort 1) (`(Sort 1) Sort 1) (`(Σ' (Sort 1) (`(Sort 1) Sort 1)) Sort 1))).infer'
 #eval (Std.format ∘ (·.fst)) <$> (DCC ((Fst (Id Sort 2)) (,(Id Sort 2) (Sort 1) (Sort 0)))).infer
 #eval (Std.format ∘ (·.fst)) <$> (DCC ((Snd (Id Sort 2)) (,(Id Sort 2) (Sort 1) (Sort 0)))).infer
 #eval (Std.format ∘ (·.fst)) <$> (DCC ((∘ (Id Sort 1) (Id Sort 1)) (Sort 0))).infer
@@ -35,6 +34,7 @@ Pretty sure this is just because we need the top-level env rule.
 
 
 #eval Expr.infer' (DCC (Id Sort 1))
+#eval (Expr.infer' (DCC (Fst (`(Sort 1) Sort 1))))
 #eval Expr.infer' (DCC (Λ (Sort 1) (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1))))
 
 -- B := `Sort 1 Sort
@@ -48,10 +48,10 @@ open Dsl in
 #eval (DCC (∘ (Id (Sort 1)) (Id (Sort 1)))).infer'
 open Dsl in
 def mk_test_pair : Expr :=
-  DCC ((⟨,⟩(Λ (Sort 1) (`(Sort 1) (Sort 1)) (`(Σ (`(Sort 1) (Sort 1))) (Sort 1))) (Id Sort 1) (Λ Sort 1 (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1)))) (& Sort 0))
+  DCC ((⟨,⟩(Λ (Sort 1) (`(Sort 1) (Sort 1)) (`(Σ' (Sort 1) (`(Sort 1) (Sort 1))) (Sort 1))) (Id Sort 1) (Λ Sort 1 (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1)))) (& Sort 0))
 
 def test_pair : Except (TypeError mk_test_pair) Expr := (·.fst) <$> mk_test_pair.infer
-#eval GenericExpr.red_aff (DCC (((`(Sort 2) (∘ (Σ (`(Sort 1) (`(Sort 1) (Sort 1)))) (* (Sort 1)))) (! (Sort 1))) (& (Sort 0))))
+#eval Expr.reduce_all (DCC (((`(Sort 2) (∘ (Σ' (Sort 1) (`(Sort 1) (`(Sort 1) (Sort 1)))) (* (Sort 1)))) (! (Sort 1))) (& (Sort 0))))
 --#eval GenericExpr.canonicalize
 #eval test_pair
 
@@ -111,7 +111,7 @@ This should eta reduce
 -- (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)
 
 #eval (DCC (Id Sort 1)).infer'
-#eval ((· == (DCC ((Π (Id Sort 2) (`(Sort 2) (`(Sort 1) Sort 1))) Sort 1)))∘ (·.fst)) <$> (DCC (Id Sort 1)).infer
+#eval ((· == (DCC ((Π (`⊤ (Sort 1)) (`⊤ (`(Sort 1) (Sort 1)))) ∗)))∘ (·.fst)) <$> (DCC (Id Sort 1)).infer
 
 /-
 (Σ(`(⊤, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))) ∗)
@@ -148,7 +148,7 @@ f_β := Λ(Sort 1, `(Sort 1, Sort 1),
 
 #eval (·.fst) <$> (DCC (Λ (Sort 1) (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1)))).infer
 
-#eval (DCC ((Π (Id Sort 2) (Λ (Sort 2) (Id Sort 2) (`(Σ (Id Sort 2)) Sort 1))) Sort 1)).reduce_all
+#eval (DCC ((Π (Id Sort 2) (Λ (Sort 2) (Id Sort 2) (`(Σ' (Sort 2) (Id Sort 2)) Sort 1))) Sort 1)).reduce_all
 
 
 /-

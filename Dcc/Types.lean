@@ -64,7 +64,7 @@ B : A → Sort u
 -/
 open Dsl in
 @[dcc_judge] abbrev fstc.type (A B : Expr) : Expr :=
-  (DCC ((Π (Σ (`⊤ A) (`⊤ B)) (`⊤ (`((Σ (`⊤ A) (`⊤ B)) ∗) A))) ∗))
+  (DCC (→ (Σ' A B) A))
 
 /-
 B : A → Sort u
@@ -77,7 +77,7 @@ They were expressive enough before.
 -/
 open Dsl in
 @[dcc_judge] abbrev sndc.type (A B : Expr) : Expr :=
-  (DCC ((Π (Σ (`⊤ A) (`⊤ B)) (`⊤ (∘ B (Fst B)))) ∗))
+  (DCC ((Π (`⊤ (Σ' A B)) (`⊤ (∘ B (Fst B)))) ∗))
 
 /-
 Λ(β, x) y z → x ⟦β⟧(y, z)

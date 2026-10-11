@@ -1,53 +1,47 @@
 import Dcc.Judge3
 import Dcc.Metatheory.Decidability3
 
-universe u
-variable {τ_c : Type u} [DecidableEq τ_c]
+namespace Expr
 
-namespace GenericExpr
-
-def Arrow.unique (h₁ : Arrow (τ := τ_c) A₁ B₁ u₁ τ) (h₂ : Arrow A₂ B₂ u₂ τ) : (A₁ = A₂) ×' (B₁ = B₂) ×' (u₁ = u₂) := by
+def Arrow.unique (h₁ : Arrow A₁ B₁ τ) (h₂ : Arrow A₂ B₂ τ) : (A₁ = A₂) ×' (B₁ = B₂) := by
   have heq₁ := h₁.read_complete
   have heq₂ := h₂.read_complete
   have heq' := heq₁.symm.trans heq₂
-  exact ⟨by grind, by aesop, by aesop⟩
+  exact ⟨by grind, by aesop⟩
 
-theorem set_points_eq_iff : e = set_points e p' ↔ p' = e.points := ⟨fun heq => by
-  cases e <;> grind, fun h => by rw [h]; symm; exact set_points_self_noop⟩
+def sort_norm (m : Level) : IsNorm Red (DCC (Sort m)) := fun _ h => nomatch h
 
-def sort_norm (m : Level) : IsNorm (RedAff (τ := τ_c)) (DCC? (Sort m)) := fun ⟨_, h⟩ => nomatch h
-
-def Reduces.congrFun' (h : Reduces f f') (hr : Reduces (DCC? (f' x)) B) : Reduces (DCC? (f x)) B :=
+def Reduces.congrFun' (h : f →ᵦ f') (hr : (f' x) →ᵦ B) : (f x) →ᵦ B :=
   match h, hr with
   | ⟨hr₁, hn₁⟩, ⟨hr₂, hn₂⟩ => by
-    exact ⟨.trans (GenericExpr.congrFun' hr₁) hr₂, hn₂⟩
+    exact ⟨.trans (Expr.congrFun' hr₁) hr₂, hn₂⟩
 
-def Reduces.congrArg' (h : Reduces x x') (hr : Reduces (DCC? (f x')) B) : Reduces (DCC? (f x)) B :=
+def Reduces.congrArg' (h : Reduces x x') (hr : Reduces (DCC (f x')) B) : Reduces (DCC (f x)) B :=
   match h, hr with
   | ⟨hr₁, hn₁⟩, ⟨hr₂, hn₂⟩ => by
-    exact ⟨.trans (GenericExpr.congrArg' hr₁) hr₂, hn₂⟩
+    exact ⟨.trans (Expr.congrArg' hr₁) hr₂, hn₂⟩
 
-def Reduces.congrFun (hr : Reduces (DCC? (f x)) B) (h : Reduces f f') : Reduces (DCC? (f' x)) B :=
+def Reduces.congrFun (hr : Reduces (DCC (f x)) B) (h : Reduces f f') : Reduces (DCC (f' x)) B :=
   match h, hr with
   | ⟨hr₁, hn₁⟩, ⟨hr₂, hn₂⟩ => by
-    have heq  : (reduce RedAff (DCC? (f x))).fst = B  := reduce_complete_fst hr₂ hn₂
-    have heq₂ : (reduce RedAff (DCC? (f' x))).fst = B := by
-      have ⟨_, h₁, h₂⟩ := hr₂.conf (GenericExpr.congrFun' hr₁)
+    have heq  : (reduce RedAff (DCC (f x))).fst = B  := reduce_complete_fst hr₂ hn₂
+    have heq₂ : (reduce RedAff (DCC (f' x))).fst = B := by
+      have ⟨_, h₁, h₂⟩ := hr₂.conf (Expr.congrFun' hr₁)
       cases hn₂.unique_refl h₁
       exact reduce_complete_fst (by assumption) (by assumption)
-    exact ⟨heq₂ ▸ (reduce RedAff (DCC? (f' x))).snd.down, by assumption⟩
+    exact ⟨heq₂ ▸ (reduce RedAff (DCC (f' x))).snd.down, by assumption⟩
 
-def Reduces.congrArg (hr : Reduces (DCC? (f x)) B) (h : Reduces x x') : Reduces (DCC? (f x')) B :=
+def Reduces.congrArg (hr : Reduces (DCC (f x)) B) (h : Reduces x x') : Reduces (DCC (f x')) B :=
   match h, hr with
   | ⟨hr₁, hn₁⟩, ⟨hr₂, hn₂⟩ => by
-    have heq  : (reduce RedAff (DCC? (f x))).fst = B  := reduce_complete_fst hr₂ hn₂
-    have heq₂ : (reduce RedAff (DCC? (f x'))).fst = B := by
-      have ⟨_, h₁, h₂⟩ := hr₂.conf (GenericExpr.congrArg' hr₁)
+    have heq  : (reduce RedAff (DCC (f x))).fst = B  := reduce_complete_fst hr₂ hn₂
+    have heq₂ : (reduce RedAff (DCC (f x'))).fst = B := by
+      have ⟨_, h₁, h₂⟩ := hr₂.conf (Expr.congrArg' hr₁)
       cases hn₂.unique_refl h₁
       exact reduce_complete_fst (by assumption) (by assumption)
-    exact ⟨heq₂ ▸ (reduce RedAff (DCC? (f x'))).snd.down, by assumption⟩
+    exact ⟨heq₂ ▸ (reduce RedAff (DCC (f x'))).snd.down, by assumption⟩
 
-def Reduces.decreasing {A B : GenericExpr τ_c} (hr : Reduces A B) (hneq : A ≠ B) : B.size < A.size :=
+def Reduces.decreasing {A B : Expr τ_c} (hr : Reduces A B) (hneq : A ≠ B) : B.size < A.size :=
   match hr with
   | ⟨hr, hn⟩ => by
     match hr.cases_head with
@@ -71,7 +65,7 @@ def elim_reduce_norm_fst (h : IsNorm RedAff A) : (reduce RedAff A).fst = A := by
 def elim_reduce_norm (h : IsNorm RedAff A) : (reduce RedAff A) = ⟨A, ⟨.refl⟩⟩ := by
   exact reduce_complete (A := A) (B := A) .refl h
 
-def reduce_sort : (reduce (RedAff (τ := τ_c)) (DCC? (Sort u))).fst = (DCC? (Sort u)) := elim_reduce_norm_fst (fun ⟨_, h⟩ => nomatch h)
+def reduce_sort : (reduce (RedAff (τ := τ_c)) (DCC (Sort u))).fst = (DCC (Sort u)) := elim_reduce_norm_fst (fun ⟨_, h⟩ => nomatch h)
 
 def mk_norm₁ (heq : point_arity (τ_c := τ_c) e = 1) (hn : IsNorm RedAff (points e)[0]) : IsNorm RedAff e := by
   intro ⟨_, h⟩
@@ -241,7 +235,7 @@ theorem set_points_inj : set_points e p₁ = set_points e p₂ ↔ p₁ = p₂ :
   , fun heq => by
     cases e <;> grind⟩
 
-def Reduces.get_point {e : GenericExpr τ_c} (hr : Reduces e B) {p' : Vector (GenericExpr τ_c) (point_arity e)} (m : ℕ) (heq : B = e.set_points p') (hlt : m < point_arity e) : Reduces (e.points.get ⟨m, hlt⟩) p'[m] := by
+def Reduces.get_point {e : Expr τ_c} (hr : Reduces e B) {p' : Vector (Expr τ_c) (point_arity e)} (m : ℕ) (heq : B = e.set_points p') (hlt : m < point_arity e) : Reduces (e.points.get ⟨m, hlt⟩) p'[m] := by
   rw [heq] at hr
   match cases_point_arity' e with
   | .inl ⟨h⟩ => grind
@@ -297,17 +291,17 @@ def Reduces.point₁ (h : Reduces (τ_c := τ_c) e e'') (heq : point_arity e = 1
   sorry-/
 
 open Dsl in
-def mk_norm_pi (hn₁ : IsNorm RedAff B) (hn₂ : IsNorm RedAff C) (hn₃ : IsNorm RedAff env) : IsNorm RedAff (DCC? ((Π B C) env)) := fun ⟨_, h⟩ =>
+def mk_norm_pi (hn₁ : IsNorm RedAff B) (hn₂ : IsNorm RedAff C) (hn₃ : IsNorm RedAff env) : IsNorm RedAff (DCC ((Π B C) env)) := fun ⟨_, h⟩ =>
   match h with
   | .congrFun h =>
     mk_norm₂ rfl hn₁ hn₂ ⟨_, h⟩
   | .congrArg h => hn₃ ⟨_, h⟩
 
-def Reduces.pi_eq (hr : Reduces (τ_c := τ_c) (open Dsl in (DCC? ((Π B C) env))) e') : e' = (open Dsl in (DCC? ((Π #((reduce RedAff B).fst) #((reduce RedAff C).fst)) #((reduce RedAff env).fst)))) :=
-  hr.unique ⟨.trans (.trans (GenericExpr.congrFun' (aff_mk_point' (n := 0) (reduce_sound rfl))) (GenericExpr.congrFun' (aff_mk_point' (n := 1) (reduce_sound rfl)))) (GenericExpr.congrArg' (reduce_sound rfl)), mk_norm_pi (reduce_norm rfl) (reduce_norm rfl) (reduce_norm rfl)⟩
+def Reduces.pi_eq (hr : Reduces (τ_c := τ_c) (open Dsl in (DCC ((Π B C) env))) e') : e' = (open Dsl in (DCC ((Π #((reduce RedAff B).fst) #((reduce RedAff C).fst)) #((reduce RedAff env).fst)))) :=
+  hr.unique ⟨.trans (.trans (Expr.congrFun' (aff_mk_point' (n := 0) (reduce_sound rfl))) (Expr.congrFun' (aff_mk_point' (n := 1) (reduce_sound rfl)))) (Expr.congrArg' (reduce_sound rfl)), mk_norm_pi (reduce_norm rfl) (reduce_norm rfl) (reduce_norm rfl)⟩
 
-def Reduces.norm_env {B C : GenericExpr τ_c} (hn₁ : IsNorm RedAff B) (hn₂ : IsNorm RedAff C) (hr : Reduces (open Dsl in (DCC? ((Π B C) env))) e') :
-  Σ' (env' : GenericExpr τ_c) (_hr : Reduces env env'), e' = (open Dsl in (DCC? ((Π B C) env'))) :=
+def Reduces.norm_env {B C : Expr τ_c} (hn₁ : IsNorm RedAff B) (hn₂ : IsNorm RedAff C) (hr : Reduces (open Dsl in (DCC ((Π B C) env))) e') :
+  Σ' (env' : Expr τ_c) (_hr : Reduces env env'), e' = (open Dsl in (DCC ((Π B C) env'))) :=
   have heq₁ : (reduce RedAff B).fst = B := by
     apply norm_unique (r := RedAff) (m := Relation.ReflTransGen) (reduce_sound rfl) (reduce_norm rfl) .refl
     assumption
@@ -318,7 +312,7 @@ def Reduces.norm_env {B C : GenericExpr τ_c} (hn₁ : IsNorm RedAff B) (hn₂ :
 
 namespace Judge
 
-def id_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Id A) x)) τ) : Judge x τ := by
+def id_preservation_head (h : Judge (τ_c := τ_c) (DCC ((Id A) x)) τ) : Judge x τ := by
   cases h with
   | app =>
     expose_names
@@ -331,7 +325,7 @@ def id_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Id A) x)) τ) : Judge
       cases (a.elim_norml a_4.is_norm).elim_norm a_2.is_norm
       assumption
 
-def comp_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((∘ f g) x)) τ) : Judge (DCC? (f (g x))) τ := by
+def comp_preservation_head (h : Judge (τ_c := τ_c) (DCC ((∘ f g) x)) τ) : Judge (DCC (f (g x))) τ := by
   cases h with
   | app =>
     expose_names
@@ -339,9 +333,9 @@ def comp_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((∘ f g) x)) τ) : 
     | comp =>
       expose_names
       cases a_6.pi_eq
-      have heq₁ : (reduce (RedAff (τ := τ_c)) (GenericExpr.sort m).id).fst = (GenericExpr.sort m).id :=
-        elim_reduce_norm_fst (A := (GenericExpr.sort m).id) (fun ⟨_, .point 0 hn h⟩ => nomatch h)
-      have heq₂ : (reduce RedAff ((GenericExpr.sort m).quot (C.comp g))).fst = ((GenericExpr.sort m).quot ((reduce RedAff C).fst.comp (reduce RedAff g).fst)) := by
+      have heq₁ : (reduce (RedAff (τ := τ_c)) (Expr.sort m).id).fst = (Expr.sort m).id :=
+        elim_reduce_norm_fst (A := (Expr.sort m).id) (fun ⟨_, .point 0 hn h⟩ => nomatch h)
+      have heq₂ : (reduce RedAff ((Expr.sort m).quot (C.comp g))).fst = ((Expr.sort m).quot ((reduce RedAff C).fst.comp (reduce RedAff g).fst)) := by
         apply congr_reduce₂ (heq := by rfl)
         simp [points, reduce_sort, set_points]
         · symm
@@ -373,7 +367,7 @@ def comp_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((∘ f g) x)) τ) : 
 
 mutual
 
-def fst_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Fst B) (,B₂ x y))) τ) : Judge x τ := by
+def fst_preservation_head (h : Judge (τ_c := τ_c) (DCC ((Fst B) (,B₂ x y))) τ) : Judge x τ := by
   cases h with
   | app =>
     expose_names
@@ -381,10 +375,10 @@ def fst_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Fst B) (,B₂ x y)))
     | fstc =>
       expose_names
       have heq₁ : (reduce RedAff B.coup).fst = (reduce RedAff B).fst.coup := congr_reduce₁ (e := B.coup) rfl
-      have heq₂ : (reduce (RedAff (τ := τ_c)) (GenericExpr.sort (max m n)).id).fst = (GenericExpr.sort (max m n)).id :=
+      have heq₂ : (reduce (RedAff (τ := τ_c)) (Expr.sort (max m n)).id).fst = (Expr.sort (max m n)).id :=
         elim_reduce_norm_fst (fun ⟨_, .point 0 hn h⟩ => nomatch h)
       have heq₃ : (reduce RedAff A).fst = A := elim_reduce_norm_fst (a_1.is_norm a_4.is_norm).fst
-      have heq₄ : (reduce RedAff ((GenericExpr.sort (max m n)).quot (B.coup.quot A))).fst = ((GenericExpr.sort (max m n)).quot ((reduce RedAff B).fst.coup.quot A)) := by
+      have heq₄ : (reduce RedAff ((Expr.sort (max m n)).quot (B.coup.quot A))).fst = ((Expr.sort (max m n)).quot ((reduce RedAff B).fst.coup.quot A)) := by
         apply congr_reduce₂ (heq := by rfl)
         simp [points, reduce_sort, set_points]
         · symm
@@ -418,7 +412,7 @@ def fst_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Fst B) (,B₂ x y)))
         cases (a_1.unique a_2).snd.snd
         exact a_7
 
-def snd_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Snd B) (,B₂ x y))) τ) : Judge y τ := by
+def snd_preservation_head (h : Judge (τ_c := τ_c) (DCC ((Snd B) (,B₂ x y))) τ) : Judge y τ := by
   cases h with
   | app =>
     expose_names
@@ -426,7 +420,7 @@ def snd_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Snd B) (,B₂ x y)))
     | sndc =>
       expose_names
       have heq₁ : (reduce RedAff B.coup).fst = (reduce RedAff B).fst.coup := congr_reduce₁ (e := B.coup) rfl
-      have heq₂ : (reduce (RedAff (τ := τ_c)) (GenericExpr.sort (max m n)).id).fst = (GenericExpr.sort (max m n)).id :=
+      have heq₂ : (reduce (RedAff (τ := τ_c)) (Expr.sort (max m n)).id).fst = (Expr.sort (max m n)).id :=
         elim_reduce_norm_fst (fun ⟨_, .point 0 hn h⟩ => nomatch h)
       have heq₃ : (reduce RedAff A).fst = A := elim_reduce_norm_fst (a_1.is_norm a_4.is_norm).fst
       cases heq₁ ▸ heq₂ ▸ a_5.pi_eq
@@ -446,7 +440,7 @@ def snd_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Snd B) (,B₂ x y)))
         cases (a_1.unique a_2).fst
         cases (a_1.unique a_2).snd.fst
         cases (a_1.unique a_2).snd.snd
-        have heq_fst : (reduce RedAff ((GenericExpr.sort (max m n)).quot (B.comp B.fstc))).fst = ((GenericExpr.sort (max m n)).quot ((reduce RedAff B).fst.comp (reduce RedAff B).fst.fstc)) := by
+        have heq_fst : (reduce RedAff ((Expr.sort (max m n)).quot (B.comp B.fstc))).fst = ((Expr.sort (max m n)).quot ((reduce RedAff B).fst.comp (reduce RedAff B).fst.fstc)) := by
           apply congr_reduce₂ (heq := by rfl)
           simp [points, reduce_sort, set_points]
           · symm
@@ -459,7 +453,7 @@ def snd_preservation_head (h : Judge (τ_c := τ_c) (DCC? ((Snd B) (,B₂ x y)))
         cases h.unique a_3
         exact a_9
 
-def preservation_sigma_head (h : Judge (τ_c := τ_c) (open Dsl in (DCC? ((Σ B C) x))) τ) : Judge (open Dsl in (DCC? (Σ (C x)))) τ := by
+def preservation_sigma_head (h : Judge (τ_c := τ_c) (open Dsl in (DCC ((Σ B C) x))) τ) : Judge (open Dsl in (DCC (Σ (C x)))) τ := by
   cases h with
   | app =>
     expose_names
@@ -473,7 +467,7 @@ def preservation_sigma_head (h : Judge (τ_c := τ_c) (open Dsl in (DCC? ((Σ B 
       | canon =>
         cases ((a.push_head .id).elim_normr a_2.is_norm).elim_norm hn_δ
         have h_B' := preservation_star a_5 a_6
-        have hn : IsNorm RedAff ((B'.pi (x_α.curr B' (B'.coup.quot (GenericExpr.sort n))))) :=
+        have hn : IsNorm RedAff ((B'.pi (x_α.curr B' (B'.coup.quot (Expr.sort n))))) :=
           mk_norm₂ rfl a_6.is_norm (mk_norm₃ rfl
             (by
               simp [points]
@@ -493,7 +487,7 @@ def preservation_sigma_head (h : Judge (τ_c := τ_c) (open Dsl in (DCC? ((Σ B 
                 nomatch h))
         match heq_τ : τ_B, heq : a_1 with
         | _, .simple =>
-          apply Judge.coup (.app (by assumption) ⟨⟨.single .id, hn_δ⟩, ⟨.refl, hn_δ⟩⟩ a_2 (Reduces.pop_head (.congrFun .quot) ⟨GenericExpr.congrArg' (f := ((B'.pi (x_α.curr B' (B'.coup.quot (GenericExpr.sort n)))))) (reduce_sound rfl), fun ⟨_, h⟩ =>
+          apply Judge.coup (.app (by assumption) ⟨⟨.single .id, hn_δ⟩, ⟨.refl, hn_δ⟩⟩ a_2 (Reduces.pop_head (.congrFun .quot) ⟨Expr.congrArg' (f := ((B'.pi (x_α.curr B' (B'.coup.quot (Expr.sort n)))))) (reduce_sound rfl), fun ⟨_, h⟩ =>
             match h with
             | .congrFun h => hn ⟨_, h⟩
             | .congrArg h => (reduce_norm rfl) ⟨_, h⟩⟩)) (by sorry) sorry
@@ -509,4 +503,4 @@ end
 
 end Judge
 
-end GenericExpr
+end Expr

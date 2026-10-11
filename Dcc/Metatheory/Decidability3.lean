@@ -1,64 +1,121 @@
 import Dcc.Judge3
 
-variable {τ_c : Type u}
-variable [DecidableEq τ_c]
-
-namespace GenericExpr
+namespace Expr
 
 open Dsl in
-def arr_is_norm (hn₁ : IsNorm RedAff A) (hn₂ : IsNorm RedAff B) (m : Level) : IsNorm RedAff (DCC? (→ (: A (Sort m)) B)) := fun ⟨_, h⟩ =>
-  match h with
-  | .congrFun (.point n hlt h) => by
-    simp [point_arity] at hlt
-    match n with
-    | 0 =>
-      simp [points, Vector.get] at h
-      match h with
-      | .point 0 hn h =>
-        nomatch h
-    | 1 =>
-      simp [points, Vector.get] at h
-      match h with
-      | .point 0 hn h =>
-        simp [points, Vector.get] at h
-        nomatch h
-      | .point 1 hn h =>
-        simp [points, Vector.get] at h
-        match h with
-        | .point 0 hn h => exact hn₁ ⟨_, h⟩
-        | .point 1 hn h => exact hn₂ ⟨_, h⟩
-  | .congrArg h => hn₁ ⟨_, h⟩
+def arr_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) : IsNorm Red (DCC (→ A B)) := fun _ h => by
+  cases h
+  case head h => nomatch h
+  any_goals (
+    focus
+    try (
+      expose_names
+      nomatch hp)
+    done)
+  case congr_fun =>
+    expose_names
+    cases a
+    case head h => nomatch h
+    any_goals (
+      focus
+      try (
+        expose_names
+        cases hp)
+      done)
+    case point₂₁ =>
+      expose_names
+      cases hp
+      cases a
+      case head h => nomatch h
+      any_goals (
+        focus
+        try (
+          expose_names
+          cases hp)
+        done)
+      case point₂₁ =>
+        expose_names
+        cases hp
+        nomatch a
+      case point₂₂ =>
+        expose_names
+        cases hp
+        exact hn₁ a
+    case point₂₂ =>
+      expose_names
+      cases hp
+      cases a
+      case head h => nomatch h
+      any_goals (
+        focus
+        try (
+          expose_names
+          cases hp)
+        done)
+      case point₂₁ =>
+        expose_names
+        cases hp
+        nomatch a
+      case point₂₂ =>
+        expose_names
+        cases hp
+        cases a
+        case head h => nomatch h
+        any_goals (
+          focus
+          try (
+            expose_names
+            cases hp)
+          done)
+        case point₂₁ =>
+          expose_names
+          cases hp
+          exact hn₁ a
+        case point₂₂ =>
+          expose_names
+          cases hp
+          exact hn₂ a
+  case congr_arg =>
+    expose_names
+    nomatch a
 
 namespace Judge
 
 set_option maxHeartbeats 20000000000 in
-def complete (h : Judge (τ_c := τ_c) e τ) : e.infer = .ok ⟨τ, h⟩ := by
+def complete (h : Judge e τ) : e.infer = .ok ⟨τ, h⟩ := by
   induction h <;> (dsimp [infer]; try (dcc_aesop' [reduce]))
 
-def unique (h₁ : Judge (τ_c := τ_c) e τ₁) (h₂ : Judge e τ₂) : τ₁ = τ₂ := by
+def unique (h₁ : Judge e τ₁) (h₂ : Judge e τ₂) : τ₁ = τ₂ := by
   have heq₁ := h₁.complete
   have heq₂ := h₂.complete
   grind
 
-def is_norm {e τ : GenericExpr τ_c} (h : Judge e τ) : IsNorm RedAff τ := by
+def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
   induction h
+  · intro _ h
+    cases h
+    case head h => nomatch h
+    any_goals (
+      focus
+      try (
+        expose_names
+        cases hp))
   any_goals (
     focus
-    try (
-      intro ⟨_, h⟩
-      cases h
-      grind)
-    done)
-  any_goals (
-    focus
-    apply Reduces.is_norm
+    apply AndNorm.is_norm
     assumption)
   case id =>
-    exact arr_is_norm (Reduces.is_norm (by assumption)) (Reduces.is_norm (by assumption)) _
+    exact arr_is_norm (AndNorm.is_norm (by assumption)) (AndNorm.is_norm (by assumption))
   case unbox =>
-    exact arr_is_norm (fun ⟨_, .point 0 hn h⟩ => (Reduces.is_norm (by assumption)) ⟨_, h⟩) (Reduces.is_norm (by assumption)) _
-  case box => exact (fun ⟨_, .point 0 hn h⟩ => by dcc_aesop' [force_reduce])
+    exact arr_is_norm (mk_norm₁ (AndNorm.is_norm (by assumption))) (AndNorm.is_norm (by assumption))
+  case box => exact mk_norm₁ (by assumption)
+  case sigma =>
+    expose_names
+    exact arr_is_norm a_4.is_norm.snd (fun _ h => nomatch h)
+  case sort | top | bot | tintro | false | true | bool | bang =>
+    intro _ h
+    nomatch h
 
 end Judge
 
-end GenericExpr
+end Expr

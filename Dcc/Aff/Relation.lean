@@ -514,7 +514,7 @@ instance [Run Id r] [Complete' Id r] : ProofEq r := ⟨fun h₁ h₂ => by
   simp [Pure.pure] at heq₃
   grind⟩
 
-@[dcc_force_reduce]
+@[dcc_force_reduce, aesop safe forward (rule_sets := [DccReduce])]
 theorem complete_fst [hR : Run Id r] [Complete' Id r] (h : r A B) (heqr : hR.run = run_def := by simp [Run.run]; try rfl) : (run_def A).fst = B := by
   cases heqr
   have h := complete h

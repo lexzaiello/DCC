@@ -498,7 +498,7 @@ def IsNorm.congr_fun (hn : IsNorm Red (DCC? (f x))) : IsNorm Red f := fun _f' hr
 def IsNorm.congr_arg (hn : IsNorm Red (DCC? (f x))) : IsNorm Red x := fun _ hr =>
   hn (.congr_arg hn.head hr)
 
-def IsNorm.point (hn : IsNorm Red e) (hp : Points e ps) (heq : p = ps.get n := by simp; try rfl) : IsNorm Red p := fun _ hr => by
+def IsNorm.point (hn : IsNorm Red e) (hp : Points e ps := by constructor) (heq : p = ps.get n := by simp; try rfl) : IsNorm Red p := fun _ hr => by
   cases heq
   cases hp
   all_goals (fin_cases n)
@@ -575,5 +575,59 @@ def IsNorm.point (hn : IsNorm Red e) (hp : Points e ps) (heq : p = ps.get n := b
               have ⟨_, hr, heq⟩ := h.get
               exact (hn (.point₄₁ (by constructor) hr (by constructor))))
         (by constructor)))
+
+def mk_norm₁ (hn₁ : IsNorm Red x) (hp : Points e [x] := by constructor) : IsNorm Red e := fun _ h => by
+  cases h
+  case head h => cases hp <;> cases h
+  case point₁ =>
+    expose_names
+    cases hp <;> (cases hp_1; exact hn₁ (by assumption))
+  any_goals (expose_names; cases hp_1.complete.symm.trans hp.complete)
+  case congr_fun | congr_arg => cases hp
+
+def mk_norm₂ (hn₁ : IsNorm Red x) (hn₂ : IsNorm Red y) (hp : Points e [x, y] := by constructor) : IsNorm Red e := fun _ h => by
+  cases h
+  case head h => cases hp <;> cases h
+  case point₂₁ =>
+    expose_names
+    cases hp <;> (cases hp_1; exact hn₁ (by assumption))
+  case point₂₂ =>
+    expose_names
+    cases hp <;> (cases hp_1; exact hn₂ (by assumption))
+  any_goals (expose_names; cases hp_1.complete.symm.trans hp.complete)
+  case congr_fun | congr_arg => cases hp
+
+def mk_norm₃ (hn₁ : IsNorm Red x) (hn₂ : IsNorm Red y) (hn₃ : IsNorm Red z) (hp : Points e [x, y, z] := by constructor) : IsNorm Red e := fun _ h => by
+  cases h
+  case head h => cases hp <;> cases h
+  case point₃₁ =>
+    expose_names
+    cases hp <;> (cases hp_1; exact hn₁ (by assumption))
+  case point₃₂ =>
+    expose_names
+    cases hp <;> (cases hp_1; exact hn₂ (by assumption))
+  case point₃₃ =>
+    expose_names
+    cases hp <;> (cases hp_1; exact hn₃ (by assumption))
+  any_goals (expose_names; cases hp_1.complete.symm.trans hp.complete)
+  case congr_fun | congr_arg => cases hp
+
+def mk_norm₄ (hn₁ : IsNorm Red x) (hn₂ : IsNorm Red y) (hn₃ : IsNorm Red z) (hn₄ : IsNorm Red d) (hp : Points e [x, y, z, d] := by constructor) : IsNorm Red e := fun _ h => by
+  cases h
+  case head h => cases hp; cases h
+  case point₄₁ =>
+    expose_names
+    cases hp; (cases hp_1; exact hn₁ (by assumption))
+  case point₄₂ =>
+    expose_names
+    cases hp; (cases hp_1; exact hn₂ (by assumption))
+  case point₄₃ =>
+    expose_names
+    cases hp; (cases hp_1; exact hn₃ (by assumption))
+  case point₄₄ =>
+    expose_names
+    cases hp; (cases hp_1; exact hn₄ (by assumption))
+  any_goals (expose_names; cases hp_1.complete.symm.trans hp.complete)
+  case congr_fun | congr_arg => cases hp
 
 end Expr

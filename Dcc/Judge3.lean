@@ -323,6 +323,15 @@ theorem Arrow.read_complete {A B τ : Expr}
     simp
     constructor <;> apply proof_eq
 
+@[dcc_force_reduce, aesop safe forward (rule_sets := [DccReduce])]
+theorem reduce_all_complete (h : A →ᵦ B) : reduce_all A = B := by
+  have h := complete_fst h
+  grind
+
+@[dcc_force_reduce, aesop safe apply (rule_sets := [DccReduce])]
+theorem reduce_all_complete_eq (h : A →ᵦ B) : reduce_reduces heq = h := by
+  apply proof_eq
+
 open Dsl in
 @[dcc_judge, inline]
 abbrev comp.g.type := Arrow
@@ -497,6 +506,12 @@ deriving Repr
 -- Replaces everything from `def infer₂` to end-of-file.
 -- Everything above (TypeError, Reduces, def_eq?, Judge, …) is unchanged.
 
+def Pi.C.type.is_norm (h : Pi.C.type B A v τ) : IsNorm Red B ×' IsNorm Red A := by
+  cases h with
+  | semi h₁ h₂ | canon h₁ h₂ => exact ⟨h₂.is_norm.point (n := 0), AndNorm.is_norm (by assumption)⟩
+  | canon' h₁ h₂ => exact ⟨(h₂.is_norm.point (n := 0)).point (n := 0), AndNorm.is_norm (by assumption)⟩
+  | arrow h₁ h₂ h₃ => exact ⟨mk_norm₂ h₁.is_norm h₂.is_norm, h₁.is_norm⟩
+
 def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
   open Dsl in match e with
   | DCC (Bool.Rec motive x y) =>
@@ -608,7 +623,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     | .error ε => .error (.sub f ε)-/
   | DCC ($<> f) =>
     match f.infer with
-    | .ok ⟨(DCC ((Π (Id Sort _m) _B) _α)), ht⟩ =>
+    | .ok ⟨(DCC ((Π _f_A _f_B) _x_A)), ht⟩ =>
       .ok ⟨_, .fmap ht (reduce_reduces rfl)⟩
     | .ok ⟨t, _⟩ => .error (.unexpected t f)
     | .error ε => .error (.sub f ε)

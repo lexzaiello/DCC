@@ -1,6 +1,7 @@
 import Dcc.Aff.Relation
 import Dcc.Aff.Size
 import Dcc.Attrs
+import Mathlib.Tactic.IntervalCases
 
 namespace Expr
 
@@ -576,6 +577,24 @@ def IsNorm.point (hn : IsNorm Red e) (hp : Points e ps := by constructor) (heq :
               exact (hn (.point₄₁ (by constructor) hr (by constructor))))
         (by constructor)))
 
+def mk_norm_congr (hn_head : ∀ e', Red.Head (DCC (f x)) e' → False) (hn_f : IsNorm Red f) (hn_x : IsNorm Red x) : IsNorm Red (DCC (f x)) := by
+  intro _ h
+  cases h
+  case head h =>
+    exact hn_head _ h
+  any_goals (
+    focus
+    try (
+      expose_names
+      cases hp)
+    done)
+  case congr_fun =>
+    expose_names
+    exact hn_f (by assumption)
+  case congr_arg =>
+    expose_names
+    exact hn_x (by assumption)
+
 def mk_norm₁ (hn₁ : IsNorm Red x) (hp : Points e [x] := by constructor) : IsNorm Red e := fun _ h => by
   cases h
   case head h => cases hp <;> cases h
@@ -629,5 +648,220 @@ def mk_norm₄ (hn₁ : IsNorm Red x) (hn₂ : IsNorm Red y) (hn₃ : IsNorm Red
     cases hp; (cases hp_1; exact hn₄ (by assumption))
   any_goals (expose_names; cases hp_1.complete.symm.trans hp.complete)
   case congr_fun | congr_arg => cases hp
+
+theorem step_none_no_red (h : step? e = .none) : ¬ e.HasRed := fun h => by
+  have ⟨_, _, heq⟩ := h.get
+  grind
+
+theorem no_red_norm (hn : ¬ e.HasRed) : IsNorm Red e := fun _ h => by
+  have heq := Complete'.complete h
+  have h := HasRed.none_complete hn
+  simp [Run.run, pure] at heq
+  grind
+
+def mk_norm_top : IsNorm Red (DCC ⊤) := fun _ h => by
+  cases h
+  case head h => nomatch h
+  any_goals (
+    focus
+    expose_names
+    cases hp)
+
+def mk_norm_tintro : IsNorm Red (DCC ∗) := fun _ h => by
+  cases h
+  case head h => nomatch h
+  any_goals (
+    focus
+    expose_names
+    cases hp)
+
+def mk_norm_bot : IsNorm Red (DCC ⊥) := fun _ h => by
+  cases h
+  case head h => nomatch h
+  any_goals (
+    focus
+    expose_names
+    cases hp)
+
+def mk_norm_sort : IsNorm Red (DCC Sort m) := fun _ h => by
+  cases h
+  case head h => nomatch h
+  any_goals (
+    focus
+    expose_names
+    cases hp)
+
+/-
+Congruences for points and value semantics must be recovered with metatheorems,
+since we do not assume them and reduction order is deterministic.
+
+Reduction always proceeds in the following order:
+
+If the expression is an application:
+1. Head reduction (e.g., ((Id A) x) = x)
+2. Argument reduction (e.g., x →ᵦ x' in (f x) →ᵦ (f x'))
+3. Function reduction (e.g., f →ᵦ f' in (f x) →ᵦ (f' x))
+
+If the expression is not an application, reduce the points of the term
+from leftmost to rightmost.
+
+The most important congruence to recover is congrArg, since this is common in subject
+reduction and other metatheorems related to judgments.
+
+However, this requires deriving all of them.
+This is probably possible with mutual recursion.
+-/
+
+def RedChoiceStar.point₁
+  (hr₁ : RedChoiceStar Red e e')
+  (hp : Points e [x])
+  (hr₂ : RedChoiceStar Red x x')
+  (hp' : WithPoints e [x] hp [x'] rfl C) : Σ (D : Expr), RedChoiceStar Red e D × RedChoiceStar Red C D := by
+  sorry
+
+def RedChoiceStar.point
+  (hr₁ : RedChoiceStar Red e e')
+  (hp : Points e ps)
+  (n : ℕ)
+  (hlt : n < ps.length)
+  (hr₂ : RedChoiceStar Red (ps.get ⟨n, hlt⟩) x')
+  (hp' : WithPoints e ps hp (ps.set n x') (by grind) C) : Σ (D : Expr), RedChoiceStar Red e D × RedChoiceStar Red C D := by
+  sorry
+
+def Red.argD (h : Red x x') : Σ e', Red (DCC (f x)) e' :=
+  match heq : step_head? (DCC (f x)) with
+  | .some ⟨e', h⟩ => ⟨_, .head h⟩
+  | .none => ⟨_, .congr_arg (fun _ h => by simp_all [complete' h]) h⟩
+
+def Red.next_point (hr : Red y y') (h : Points e (x::y::xs) := by constructor) : Σ e', Red e e' :=
+  match heq : step? x with
+  | .some ⟨x', hr⟩ => by
+    cases h <;> (
+      first
+      | exact ⟨_, .point₂₁ (by constructor) (by assumption) (by constructor)⟩
+      | exact ⟨_, .point₃₁ (by constructor) (by assumption) (by constructor)⟩
+      | exact ⟨_, .point₄₁ (by constructor) (by assumption) (by constructor)⟩)
+  | .none => by
+    have hn : ¬ x.HasRed := step_none_no_red (by assumption)
+    cases h <;> (
+      first
+      | exact ⟨_, .point₂₂ (by constructor) hr hn (by constructor)⟩
+      | exact ⟨_, .point₃₂ (by constructor) hr hn (by constructor)⟩
+      | exact ⟨_, .point₄₂ (by constructor) hr hn (by constructor)⟩)
+
+set_option linter.unusedTactic false in
+set_option linter.unreachableTactic false in
+def Red.nth_point (n : ℕ) (hr : Red x₀ x') (h : Points e (x::xs) := by constructor) (hlt : n < (x::xs).length := by grind) (heq : ((x::xs).get ⟨n, hlt⟩) = x₀ := by rfl) : Σ e', Red e e' := by
+  cases heq
+  cases h
+  all_goals (simp at hlt; simp at hr)
+  any_goals (
+    focus
+    try (
+      interval_cases n
+      <;> (
+        first
+        | exact ⟨_, .point₁ (by constructor) (by assumption) (by constructor)⟩
+        | exact ⟨_, .point₂₁ (by constructor) (by assumption) (by constructor)⟩
+        | exact ⟨_, .point₃₁ (by constructor) (by assumption) (by constructor)⟩
+        | exact ⟨_, .point₄₁ (by constructor) (by assumption) (by constructor)⟩
+        | exact hr.next_point))
+    done)
+  any_goals (exact ⟨_, .point₁ (by constructor) hr (by constructor)⟩)
+  any_goals (
+    focus
+    try (
+      interval_cases n
+      · first
+        | exact ⟨_, .point₁ (by constructor) (by assumption) (by constructor)⟩
+        | exact ⟨_, .point₂₁ (by constructor) (by assumption) (by constructor)⟩
+        | exact ⟨_, .point₃₁ (by constructor) (by assumption) (by constructor)⟩
+        | exact ⟨_, .point₄₁ (by constructor) (by assumption) (by constructor)⟩
+      · exact hr.next_point
+      · expose_names
+        match heq₁ : step? x with
+        | .some ⟨x', hr₀⟩ =>
+          first
+          | exact ⟨_, .point₁ (by constructor) (by assumption) (by constructor)⟩
+          | exact ⟨_, .point₂₁ (by constructor) (by assumption) (by constructor)⟩
+          | exact ⟨_, .point₃₁ (by constructor) (by assumption) (by constructor)⟩
+          | exact ⟨_, .point₄₁ (by constructor) (by assumption) (by constructor)⟩
+        | .none =>
+          have hn : ¬ x.HasRed := step_none_no_red (by assumption)
+          match heq₂ : step? x_1 with
+          | .some ⟨x', hr₀⟩ => exact hr₀.next_point
+          | .none =>
+            have hn : ¬ x_1.HasRed := step_none_no_red (by assumption)
+            first
+            | exact ⟨_, .point₃₃ (by constructor) hr (by assumption) (by assumption) (by constructor)⟩
+            | exact ⟨_, .point₄₃ (by constructor) hr (by assumption) (by assumption) (by constructor)⟩
+      try (
+        case _ =>
+          expose_names
+          match heq₁ : step? x with
+          | .some ⟨x', hr₀⟩ =>
+            first
+            | exact ⟨_, .point₁ (by constructor) (by assumption) (by constructor)⟩
+            | exact ⟨_, .point₂₁ (by constructor) (by assumption) (by constructor)⟩
+            | exact ⟨_, .point₃₁ (by constructor) (by assumption) (by constructor)⟩
+            | exact ⟨_, .point₄₁ (by constructor) (by assumption) (by constructor)⟩
+          | .none =>
+            have hn : ¬ x.HasRed := step_none_no_red (by assumption)
+            match heq₂ : step? x_1 with
+            | .some ⟨x', hr₀⟩ => exact hr₀.next_point
+            | .none =>
+              have hn : ¬ x_1.HasRed := step_none_no_red (by assumption)
+              match heq₃ : step? x_2 with
+              | .some ⟨x', hr₀⟩ =>
+                first
+                | exact ⟨_, .point₃₃ (by constructor) (by assumption) (by assumption) (by assumption) (by constructor)⟩
+                | exact ⟨_, .point₄₃ (by constructor) (by assumption) (by assumption) (by assumption) (by constructor)⟩
+              | .none =>
+                have hn : ¬ x_2.HasRed := step_none_no_red (by assumption)
+                first
+                | exact ⟨_, .point₄₄ (by constructor) (by assumption) (by assumption) (by assumption) (by assumption) (by constructor)⟩
+      )))
+
+def Red.nth_point_fst (n : ℕ) (hr : Red x₀ x') (h : Points e (x::xs) := by constructor) (hlt : n < (x::xs).length := by grind) (heq : ((x::xs).get ⟨n, hlt⟩) = x₀ := by rfl) : Red e (Red.nth_point n hr h hlt heq).fst := (Red.nth_point n hr h hlt heq).snd
+
+def Red.funD (h : Red f f') : Σ e', Red (DCC (f x)) e' :=
+  match heq : step_head? (DCC (f x)) with
+  | .some ⟨e', h⟩ => ⟨_, .head h⟩
+  | .none =>
+    match heq₂ : step? x with
+    | .some ⟨x', h⟩ => ⟨_, .congr_arg (fun _ h => by simp_all [complete' h]) h⟩
+    | .none => ⟨_, .congr_fun (fun _ h => by simp_all [complete' h]) (step_none_no_red heq₂) h⟩
+
+theorem Red.step_some (h : Red e e') : (step? e).isSome := by
+  have h := complete' h
+  grind
+
+def Red.get_point₁ (hr : Red e e') (hp : Points e [x] := by constructor) : Σ (x' : Expr) (_hp' : Points e' [x']), Red x x' := by
+  cases hp <;> (
+    cases hr
+    any_goals (grind [Points])
+    case head h => nomatch h
+    expose_names
+    cases hp
+    cases a_1
+    exact ⟨_, by constructor, by assumption⟩)
+
+def Red.get_point (hr : Red e e') (hp : Points e (x::xs) := by constructor) : Σ' (n : ℕ) (hlt : n < (x::xs).length) (x' : Expr)
+  (_hp' : WithPoints e (x::xs) hp ((x::xs).set n x') (by grind) e'), Red ((x::xs).get ⟨n, hlt⟩) x' := by
+  cases hp <;> (
+    cases hr
+    any_goals (grind [Points])
+    case head h => nomatch h
+    any_goals (
+      expose_names
+      cases hp
+      cases a_1
+      first
+      | exact ⟨0, by grind, _, by constructor, a⟩
+      | exact ⟨1, by grind, _, by constructor, a⟩
+      | exact ⟨2, by grind, _, by constructor, a⟩
+      | exact ⟨3, by grind, _, by constructor, a⟩))
+
+def Red.get_point₁_fst (hr : Red e e') (hp : Points e [x] := by constructor) : Red x (Red.get_point₁ hr hp).fst := (Red.get_point₁ hr hp).snd.snd
 
 end Expr

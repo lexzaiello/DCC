@@ -3,15 +3,217 @@ import Dcc.Metatheory.Decidability3
 
 namespace Expr
 
+open ElimNorm
+open PushHead
+open PopHead
+
 def Arrow.unique (h₁ : Arrow A₁ B₁ τ) (h₂ : Arrow A₂ B₂ τ) : (A₁ = A₂) ×' (B₁ = B₂) := by
   have heq₁ := h₁.read_complete
   have heq₂ := h₂.read_complete
   have heq' := heq₁.symm.trans heq₂
   exact ⟨by grind, by aesop⟩
 
+def elim_reduce_norm_fst (hn : IsNorm Red A) : (reduce Red A).fst = A := complete_fst ⟨.refl, ⟨hn⟩⟩
+
+/-def reduce₁ (hp : Points e [x]) (hp' : WithPoints e [x] hp [(reduce Red x).fst] rfl e') : (reduce Red e).fst = (reduce Red e').fst :=
+  match heq : step? x with
+  | .some ⟨x', h⟩ =>
+    reduce_self (.point₁ hp h (by sorry))
+  | .none => by
+    have hn_red₁ : ¬ x.HasRed := step_none_no_red (by assumption)
+    have hp' := (elim_reduce_norm_fst (no_red_norm (by assumption))) ▸ hp'
+    cases with_points_id hp'
+    rfl
+termination_by x.size
+
+def reduce_congr : (reduce Red (DCC (f x))).fst = (reduce Red (((reduce Red f).fst).app ((reduce Red x).fst))).fst :=
+  match heq₀ : (DCC (f x)).step_head? with
+  | .some ⟨e', h⟩ => by
+    cases h
+    case id =>
+      expose_names
+      have hrt_point₁ := (reduce Red α.id).snd.raw
+      have hrt_point₂ := (reduce Red x).snd.raw
+      
+  | .none =>
+    have hn : ∀ (e' : Expr) (a : Red.Head (f.app x) e'), False := fun _ h => by
+      have heq := complete h
+      simp [Run.run, pure] at heq
+      grind
+    match heq₂ : step? x with
+    | .some ⟨x', h⟩ =>
+      have heq_x := reduce_self h
+      have h_dec := decreasing h
+      have heq' := reduce_congr (f := f) (x := x')
+      complete_fst ⟨.trans (.single (.congr_arg (by assumption) h)) (heq_x ▸ (heq' ▸ (reduce Red (f.app x')).snd.raw)), ⟨heq_x ▸ heq' ▸ (reduce Red (f.app x')).snd.is_norm⟩⟩
+    | .none =>
+      have hn_red₁ : ¬ x.HasRed := step_none_no_red (by assumption)
+      have heq_hn₁ : (reduce Red x).fst = x := elim_reduce_norm_fst (no_red_norm (by assumption))
+      match heq₃ : step? f with
+      | .some ⟨f', h⟩ =>
+        have heq_f := reduce_self h
+        have h_dec := decreasing h
+        have heq' := reduce_congr (f := f') (x := x)
+        complete_fst ⟨.trans (.single (.congr_fun (by assumption) hn_red₁ h)) (heq_f ▸ (heq' ▸ (reduce Red (f'.app x)).snd.raw)), ⟨heq_f ▸ heq' ▸ (reduce Red (f'.app x)).snd.is_norm⟩⟩
+      | .none =>
+        have hn_red₁ : ¬ f.HasRed := step_none_no_red (by assumption)
+        have heq_hn₂ : (reduce Red f).fst = f := elim_reduce_norm_fst (no_red_norm (by assumption))
+        heq_hn₁.symm ▸ heq_hn₂.symm ▸ complete_fst (reduce Red (f.app x)).snd
+termination_by f.size + x.size-/
+
+open Dsl in
+def quot₂ : (reduce Red (DCC ((`B₁ (`B₂ x)) y z))).fst = (reduce Red x).fst :=
+  match heq₁ : z.step? with
+  | .some ⟨z', h⟩ =>
+    have h_dec := decreasing h
+    have heq_inner := quot₂ (B₁ := B₁) (B₂ := B₂) (x := x) (y := y) (z := z')
+    complete_fst ⟨.trans (.plus (.single (Red.congr_arg (fun _ h => nomatch h) h))) (heq_inner ▸ (reduce Red _).snd.raw), ⟨(reduce Red x).snd.is_norm⟩⟩
+  | .none =>
+    have hn_red₁ : ¬ z.HasRed := step_none_no_red (by assumption)
+    complete_fst ⟨.trans (.plus (.single (Red.congr_fun (fun _ h => nomatch h) hn_red₁ (.head .quot)))) (.trans (.plus (.single (.head .quot))) (reduce Red x).snd.raw), ⟨(reduce Red x).snd.is_norm⟩⟩
+  termination_by y.size + z.size
+
+open Dsl in
+def reduce_quot : (reduce Red (DCC (`B x))).fst = (DCC (`#((reduce Red B).fst) #((reduce Red x).fst))) :=
+  match heq₁ : B.step? with
+  | .some ⟨B', h⟩ =>
+    have h_dec := decreasing h
+    have heq := reduce_quot (B := B') (x := x)
+    have heq₁ : (reduce Red B).fst = (reduce Red B').fst := complete_fst (pop_head h (reduce Red B').snd)
+    have hrt' := (reduce Red (B'.quot x)).snd
+    heq₁ ▸ complete_fst (pop_head (Red.point₂₁ .quot h .quot) (by
+      rw [heq] at hrt'
+      exact hrt'))
+  | .none =>
+    have hn_red₁ : ¬ B.HasRed := step_none_no_red (by assumption)
+    have heq₁ : (reduce Red B).fst = B := elim_reduce_norm_fst (no_red_norm (by assumption))
+    match heq₂ : x.step? with
+    | .some ⟨x', h⟩ =>
+      have h_dec := decreasing h
+      have heq := heq₁ ▸ reduce_quot (B := B) (x := x')
+      have heq₂ : (reduce Red x).fst = (reduce Red x').fst := complete_fst (pop_head h (reduce Red x').snd)
+      have hrt' := (reduce Red (B.quot x')).snd
+      heq₂ ▸ heq₁.symm ▸ (complete_fst (pop_head (.point₂₂ .quot h hn_red₁ .quot) (by
+        rw [heq] at hrt'
+        exact hrt')))
+    | .none =>
+      have hn_red₂ : ¬ x.HasRed := step_none_no_red (by assumption)
+      have heq₂ : (reduce Red x).fst = x := elim_reduce_norm_fst (no_red_norm (by assumption))
+      heq₁.symm ▸ heq₂.symm ▸ complete_fst ⟨.refl, ⟨mk_norm₂ (hp := .quot) (no_red_norm (by assumption)) (no_red_norm (by assumption))⟩⟩
+termination_by B.size + x.size
+
+open Dsl in
+def reduce_sigma : (reduce Red (DCC ((Σ B C) x))).fst = (DCC ((Σ #((reduce Red B).fst) #((reduce Red C).fst)) #((reduce Red x).fst))) :=
+  match heq₁ : x.step? with
+  | .some ⟨x', h⟩ =>
+    have h_dec := decreasing h
+    have heq := reduce_sigma (B := B) (C := C) (x := x')
+    have hrt := heq ▸ (reduce Red (DCC ((Σ B C) x'))).snd
+    have heq_C : (reduce Red x).fst = (reduce Red x').fst := complete_fst (pop_head h (reduce Red x').snd)
+    complete_fst ⟨.trans (.plus (.single (.congr_arg (fun _ h => nomatch h) h))) (heq_C ▸ hrt.raw), ⟨heq_C ▸ hrt.is_norm⟩⟩
+  | .none =>
+    have hn_red₁ : ¬ x.HasRed := step_none_no_red (by assumption)
+    match heq₂ : B.step? with
+    | .some ⟨B', h₂⟩ =>
+      have h_dec := decreasing h₂
+      have heq := reduce_sigma (B := B') (C := C) (x := x)
+      have hrt := heq ▸ (reduce Red (DCC ((Σ B' C) x))).snd
+      have heq_C : (reduce Red B).fst = (reduce Red B').fst := complete_fst (pop_head h₂ (reduce Red B').snd)
+      complete_fst ⟨.trans (.plus (.single (.congr_fun (fun _ h => nomatch h) (by assumption) (.point₂₁ .sigma h₂ .sigma)))) (heq_C ▸ hrt.raw), ⟨heq_C ▸ hrt.is_norm⟩⟩
+    | .none =>
+      have hn_red₂ : ¬ B.HasRed := step_none_no_red (by assumption)
+      match heq₃ : C.step? with
+      | .some ⟨C', h₃⟩ =>
+        have h_dec := decreasing h₃
+        have heq := reduce_sigma (B := B) (C := C') (x := x)
+        have hrt := heq ▸ (reduce Red (DCC ((Σ B C') x))).snd
+        have heq_C : (reduce Red C).fst = (reduce Red C').fst := complete_fst (pop_head h₃ (reduce Red C').snd)
+        complete_fst ⟨.trans (.plus (.single (.congr_fun (fun _ h => nomatch h) (by assumption) (.point₂₂ .sigma h₃ (by assumption) .sigma)))) (heq_C ▸ hrt.raw), ⟨heq_C ▸ hrt.is_norm⟩⟩
+      | .none =>
+        have hn_red₃ : ¬ C.HasRed := step_none_no_red (by assumption)
+        have heq₁ : (reduce Red B).fst = B := complete_fst ⟨.refl, ⟨no_red_norm (by assumption)⟩⟩
+        have heq₂ : (reduce Red C).fst = C := complete_fst ⟨.refl, ⟨no_red_norm (by assumption)⟩⟩
+        have heq₃ : (reduce Red x).fst = x := complete_fst ⟨.refl, ⟨no_red_norm (by assumption)⟩⟩
+        heq₁.symm ▸ heq₂.symm ▸ heq₃.symm ▸ complete_fst ⟨.refl,
+          ⟨mk_norm_congr (fun _ h => nomatch h) (mk_norm₂ (hp := .sigma) (no_red_norm (by assumption)) (no_red_norm (by assumption))) (no_red_norm (by assumption))⟩⟩
+termination_by B.size + C.size + x.size
+
 def sort_norm (m : Level) : IsNorm Red (DCC (Sort m)) := fun _ h => nomatch h
 
-def Reduces.congrFun' (h : f →ᵦ f') (hr : (f' x) →ᵦ B) : (f x) →ᵦ B :=
+def id_preservation_head (h : Judge (DCC ((Id A) x)) τ) : Judge x τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | id =>
+      expose_names
+      cases elim_norm a_2.is_norm ((a.push_head (.head .quot)).elim_norml a_4.is_norm)
+      cases elim_norm a_4.is_norm ((quot₂ ▸ complete_fst a_3) ▸ (reduce Red α).snd)
+      exact a_2
+
+def fst_preservation_head (h : Judge (DCC ((Fst B) (,B₂ x y))) τ) : Judge x τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | fstc =>
+      expose_names
+      have ⟨hn₁, hn₂⟩ := a_1.is_norm a_4.is_norm
+      cases elim_norm a_2.is_norm <| (a.push_head (.head .quot)).elim_norml (mk_norm_congr (fun _ h => nomatch h)
+        (mk_norm₂ (hp := .sigma) (mk_norm₂ (hp := .quot) mk_norm_top hn₁) (mk_norm₂ mk_norm_top a_5.is_norm))
+        mk_norm_tintro)
+      cases elim_norm hn₁ ((quot₂ ▸ complete_fst a_3) ▸ (reduce Red A).snd)
+      cases a_2 with
+      | mk =>
+        expose_names
+        have heq₁ : (reduce Red (top.quot A)).fst = top.quot A := elim_reduce_norm_fst (mk_norm₂ mk_norm_top a_8.is_norm)
+        have heq_top : (reduce Red .top).fst = .top := elim_reduce_norm_fst mk_norm_top
+        have heq₂ := reduce_quot (B := .top) (x := B₂)
+        have heq₂ : (reduce Red (top.quot B₂)).fst = top.quot (reduce Red B₂).fst := by
+          rw [heq_top] at heq₂
+          exact heq₂
+        have heq := (elim_reduce_norm_fst mk_norm_tintro) ▸ heq₂ ▸ heq₁ ▸ reduce_sigma ▸ complete_fst a_11
+        cases heq
+        exact a_7
+
+def snd_preservation_head (h : Judge (DCC ((Snd B) (,B₂ x y))) τ) : Judge y τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | sndc =>
+      expose_names
+      have ⟨hn₁, hn₂⟩ := a_1.is_norm a_4.is_norm
+      cases elim_reduce_norm_fst mk_norm_tintro ▸ elim_reduce_norm_fst mk_norm_top ▸ reduce_quot ▸ elim_reduce_norm_fst (mk_norm₂ (hp := .quot) mk_norm_top hn₁) ▸ reduce_sigma ▸ complete_fst ((a.push_head (.head .quot)).elim_normr a_2.is_norm)
+      cases complete_fst a_5
+      cases a_2 with
+      | mk =>
+        expose_names
+        have ⟨hn₃, hn₄⟩ := a_2.is_norm a_6.is_norm
+        have heq_top : (reduce Red .top).fst = .top := elim_reduce_norm_fst mk_norm_top
+        have heq₂ := reduce_quot (B := .top) (x := B₂)
+        have heq₂ : (reduce Red (top.quot B₂)).fst = top.quot (reduce Red B₂).fst := by
+          rw [heq_top] at heq₂
+          exact heq₂
+        have heq := elim_reduce_norm_fst hn₃ ▸ elim_reduce_norm_fst mk_norm_top ▸ reduce_quot ▸ (elim_reduce_norm_fst mk_norm_tintro) ▸ heq₂ ▸ reduce_sigma ▸ complete_fst a_10
+        simp at heq
+        obtain ⟨heql, heqr⟩ := heq
+        cases heql
+        have h := push_head a_3 (by sorry)
+        sorry
+
+mutual
+
+def preservation (h : Judge e τ) (hr : Red e e') : Judge e' τ := by
+  
+  sorry
+
+def preservation_star (h : Judge e τ) (hr : e →ᵦ e') : Judge e' τ := by
+  sorry
+
+end
+
+/-def Reduces.congrFun' (h : f →ᵦ f') (hr : (f' x) →ᵦ B) : (f x) →ᵦ B :=
   match h, hr with
   | ⟨hr₁, hn₁⟩, ⟨hr₂, hn₂⟩ => by
     exact ⟨.trans (Expr.congrFun' hr₁) hr₂, hn₂⟩
@@ -39,44 +241,11 @@ def Reduces.congrArg (hr : Reduces (DCC (f x)) B) (h : Reduces x x') : Reduces (
       have ⟨_, h₁, h₂⟩ := hr₂.conf (Expr.congrArg' hr₁)
       cases hn₂.unique_refl h₁
       exact reduce_complete_fst (by assumption) (by assumption)
-    exact ⟨heq₂ ▸ (reduce RedAff (DCC (f x'))).snd.down, by assumption⟩
+    exact ⟨heq₂ ▸ (reduce RedAff (DCC (f x'))).snd.down, by assumption⟩-/
 
-def Reduces.decreasing {A B : Expr τ_c} (hr : Reduces A B) (hneq : A ≠ B) : B.size < A.size :=
-  match hr with
-  | ⟨hr, hn⟩ => by
-    match hr.cases_head with
-    | .inl h => grind
-    | .inr ⟨_, hr₁, hrt₁⟩ =>
-      have h_dec₁ := hr.decreasing?
-      have h_dec₂ := hr₁.decreasing
-      grind
-
-def Reduces.trans (hr₁ : Reduces (τ_c := τ_c) A B) (hr₂ : Reduces B C) : Reduces A C := by
-  cases hr₂.elim_norm hr₁.is_norm
-  assumption
-
-def elim_reduce_norm_fst (h : IsNorm RedAff A) : (reduce RedAff A).fst = A := by
-  apply norm_unique (r := RedAff) (m := Relation.ReflTransGen)
-  · exact reduce_sound rfl
-  · exact reduce_norm rfl
-  · exact .refl
-  · assumption
-
-def elim_reduce_norm (h : IsNorm RedAff A) : (reduce RedAff A) = ⟨A, ⟨.refl⟩⟩ := by
-  exact reduce_complete (A := A) (B := A) .refl h
-
-def reduce_sort : (reduce (RedAff (τ := τ_c)) (DCC (Sort u))).fst = (DCC (Sort u)) := elim_reduce_norm_fst (fun ⟨_, h⟩ => nomatch h)
-
-def mk_norm₁ (heq : point_arity (τ_c := τ_c) e = 1) (hn : IsNorm RedAff (points e)[0]) : IsNorm RedAff e := by
-  intro ⟨_, h⟩
-  induction h
-  any_goals (grind only [point_arity])
-  case point =>
-    expose_names
-    rw [heq] at h
-    match n with
-    | 0 =>
-      exact hn ⟨_, h_1⟩
+def reduce_sort : (reduce Red (DCC (Sort u))).fst = (DCC (Sort u)) :=
+  have h := (reduce Red (DCC (Sort u))).snd
+  (elim_norm (fun _ h => by nomatch h) h).symm
 
 def congr_reduce₁ (heq : point_arity (τ_c := τ_c) e = 1) (heq₂ : B = e.set_points (e.points.set 0 (reduce RedAff e.points[0]).fst) := by rfl) : (reduce RedAff e).fst = B := by
   rw [heq₂]

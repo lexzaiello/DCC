@@ -104,6 +104,12 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
     focus
     apply AndNorm.is_norm
     assumption)
+  case fstc =>
+    expose_names
+    have ⟨hn₁, hn₂⟩ := a_1.is_norm a_ih
+    exact arr_is_norm (mk_norm_congr (fun _ h => nomatch h) (mk_norm₂ (hp := .sigma) (mk_norm₂ (hp := .quot) mk_norm_top hn₁) (mk_norm₂ (hp := .quot) mk_norm_top a_2.is_norm)) mk_norm_tintro) (by sorry)
+  case sndc =>
+    sorry
   case id =>
     exact arr_is_norm (AndNorm.is_norm (by assumption)) (AndNorm.is_norm (by assumption))
   case unbox =>

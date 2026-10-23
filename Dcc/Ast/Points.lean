@@ -11,12 +11,12 @@ open Dsl
 namespace Expr
 
 inductive Points : (e : Expr) → List (Expr) → Type
-  | dup      : Points (DCC (Dup B x)) [B, x]
-  | bot_rec  : Points (DCC (⊥.Rec motive)) [motive]
-  | bool_rec : Points (DCC (Bool.Rec motive x y)) [motive, x, y]
-  | bimap    : Points (DCC (Map A B x y)) [A, B, x, y]
-  | assoc    : Points (DCC (Assoc A B C)) [A, B, C]
-  | ty_hole  : Points (DCC (? m)) [m]
+  | dup      : Points (DCC (Dup x x_1)) [x, x_1]
+  | bot_rec  : Points (DCC (⊥.Rec x)) [x]
+  | bool_rec : Points (DCC (Bool.Rec x x_1 x_2)) [x, x_1, x_2]
+  | bimap    : Points (DCC (Map x x_1 x_2 x_3)) [x, x_1, x_2, x_3]
+  | assoc    : Points (DCC (Assoc x x_1 x_2)) [x, x_1, x_2]
+  | ty_hole  : Points (DCC (? x)) [x]
   | tintro   : Points (DCC ∗) []
   | bool     : Points (DCC Bool) []
   | false    : Points (DCC False) []
@@ -24,25 +24,25 @@ inductive Points : (e : Expr) → List (Expr) → Type
   | top      : Points (DCC ⊤) []
   | bot      : Points (DCC ⊥) []
   | sort     : Points (DCC Sort m) []
-  | eq       : Points (DCC (= A x y)) [A, x, y]
-  | eql      : Points (DCC (Eql B)) [B]
-  | refl     : Points (DCC (refl B)) [B]
-  | sigma    : Points (DCC (Σ B C )) [B, C]
-  | quot     : Points (DCC (`B x)) [B, x]
-  | mkc      : Points (DCC (,B x y)) [B, x, y]
-  | id       : Points (DCC (Id A)) [A]
-  | fst      : Points (DCC (Fst B)) [B]
-  | snd      : Points (DCC (Snd B)) [B]
-  | swap     : Points (DCC (Swap B C)) [B, C]
-  | pi       : Points (DCC (Π B C)) [B, C]
-  | comp     : Points (DCC (∘ f g)) [f, g]
-  | pair     : Points (DCC (⟨,⟩B x y)) [B, x, y]
-  | curr     : Points (DCC (Λ A B x)) [A, B, x]
-  | curr'    : Points (DCC (!Λ A B x)) [A, B, x]
-  | eval     : Points (DCC (Eval A B x)) [A, B, x]
-  | bang     : Points (DCC (! A)) [A]
+  | eq       : Points (DCC (= x x_1 x_2)) [x, x_1, x_2]
+  | eql      : Points (DCC (Eql x)) [x]
+  | refl     : Points (DCC (refl x)) [x]
+  | sigma    : Points (DCC (Σ x x_1)) [x, x_1]
+  | quot     : Points (DCC (`x x_1)) [x, x_1]
+  | mkc      : Points (DCC (,x x_1 x_2)) [x, x_1, x_2]
+  | id       : Points (DCC (Id x)) [x]
+  | fst      : Points (DCC (Fst x)) [x]
+  | snd      : Points (DCC (Snd x)) [x]
+  | swap     : Points (DCC (Swap x x_1)) [x, x_1]
+  | pi       : Points (DCC (Π x x_1)) [x, x_1]
+  | comp     : Points (DCC (∘ x x_1)) [x, x_1]
+  | pair     : Points (DCC (⟨,⟩x x_1 x_2)) [x, x_1, x_2]
+  | curr     : Points (DCC (Λ x x_1 x_2)) [x, x_1, x_2]
+  | curr'    : Points (DCC (!Λ x x_1 x_2)) [x, x_1, x_2]
+  | eval     : Points (DCC (Eval x x_1 x_2)) [x, x_1, x_2]
+  | bang     : Points (DCC (! x)) [x]
   | box      : Points (DCC (& x)) [x]
-  | unbox    : Points (DCC (* A)) [A]
+  | unbox    : Points (DCC (* x)) [x]
   | map      : Points (DCC (!<> x)) [x]
   | fmap     : Points (DCC ($<> x)) [x]
   | app      : Points (DCC (f x)) []
@@ -94,8 +94,14 @@ inductive WithPoints : (e : Expr) → (points₀ : List (Expr)) → (Points e po
   | hole     : WithPoints (.hole x) [] .hole [] rfl (.hole x)
 deriving Repr
 
+def Points.mk_with_points (hp : Points e ps) : WithPoints e ps hp ps rfl e := by
+  cases hp <;> constructor
+
 theorem with_points_id (h : WithPoints e points₀ hp points₀ heq e') : e = e' := by
   cases h <;> rfl
+
+def WithPoints.points' (h : WithPoints e points₀ hp points₁ heq e') : Points e' points₁ := by
+  cases h <;> constructor
 
 def with_points (e : Expr) (points₀ : List (Expr)) (hp : Points e points₀) (points₁ : List (Expr)) (heq : points₀.length = points₁.length) : Σ e', WithPoints e points₀ hp points₁ heq e' := by
   cases hp
@@ -141,6 +147,10 @@ def with_points (e : Expr) (points₀ : List (Expr)) (hp : Points e points₀) (
 @[aesop default safe forward (rule_sets := [DccSize])]
 theorem Points.sizeOf {e : Expr} (h : Points e l) (heq : x = l.get n) : sizeOf x < sizeOf e := by
   cases h <;> grind
+
+def Points.eq_def (hp : Points e points₀) (heq : (with_points e points₀ hp points₀ rfl).fst = e₀ := by cases hp; simp [with_points]; try rfl) : e = e₀ :=
+  heq ▸ with_points_id (with_points e points₀ hp points₀ rfl).snd
+
 /-
 @[inline, grind, dcc_size]
 def point_arity (e : Expr (τ := τ_c)) : ℕ :=

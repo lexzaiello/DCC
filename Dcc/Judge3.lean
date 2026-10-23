@@ -367,18 +367,19 @@ inductive Judge : Expr → Expr → Type where
     → Judge (DCC (Σ B C)) (DCC (→ A (Sort (max v s))))
   | fstc   : Judge B τ_B
     → Arrow A (DCC Sort n) τ_B
-    → #(fstc.type A B) →ᵦ τ
-    → Judge (DCC (Fst B)) τ
+    → B →ᵦ B'
+    → Judge (DCC (Fst B)) (fstc.type A B')
   | sndc    : Judge B τ_B
     → Arrow A (DCC Sort n) τ_B
-    → #(sndc.type A B) →ᵦ τ
-    → Judge (DCC (Snd B)) τ
+    → B →ᵦ B'
+    → Judge (DCC (Snd B)) (sndc.type A B)
   | mk     : Judge x A
     → Judge B τ_B
     → Arrow A (DCC Sort n) τ_B
-    → #(DCC (B x)) →ᵦ τ₂
+    → B →ᵦ B'
+    → #(DCC (B' x)) →ᵦ τ₂
     → Judge y τ₂
-    → (Σ' A B) →ᵦ τ
+    → (Σ' A B') →ᵦ τ
     → Judge (DCC (,B x y)) τ
   /-
     Λ(β, x)
@@ -732,9 +733,9 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         | .ok ⟨τ_B, h₃⟩ =>
           match τ_B.read_arrow₁ α with
           | .ok ⟨DCC Sort _n, harr⟩ =>
-            if heq₂ : reduce_all (DCC (B x)) = Bxm then
+            if heq₂ : reduce_all (DCC (#(reduce_all B) x)) = Bxm then
               .ok ⟨_, .mk ht₁ h₃ harr
-                (reduce_reduces (B := Bxm) (heq₂ ▸ rfl)) ht₂ (reduce_reduces rfl)⟩
+                (reduce_reduces rfl) (reduce_reduces (B := Bxm) (heq₂ ▸ rfl)) ht₂ (reduce_reduces rfl)⟩
             else .error (.mismatch (reduce_all (DCC (B x))) Bxm y)
           | _ => .error (.unexpected τ_B B)
         | .error ε => .error (.sub B ε)

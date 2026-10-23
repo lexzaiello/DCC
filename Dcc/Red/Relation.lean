@@ -13,7 +13,7 @@ class ReflT (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A 
 class Decreasing (r : Expr → Expr → Sort v) where
   decreasing : ∀ (_h : r A B), B.size < A.size
 
-def no_refl [hD : Decreasing r] (h : r A A := by assumption) : Faflse := by
+def no_refl [hD : Decreasing r] (h : r A A := by assumption) : False := by
   have h := hD.decreasing h
   grind
 
@@ -70,8 +70,8 @@ open Decreasing Run
 
 def run_sound {r : Expr → Expr → Type u} [hD : Run m r] [Pure m] {h : r A B} (_heq : hD.run A = Pure.pure ⟨B, h⟩) : r A B := h
 
-class Complete' (m : outParam (Type u → Type u)) (r : Expr → Expr → Type u) [Run m r] [Pure m] where
-  complete : ∀ (h : r A B), run (m := m) A = Pure.pure ⟨B, h⟩
+class Complete' (m : outParam (Type u → Type u)) (r : Expr → Expr → Type u) [Run m r] [hp : Pure m] where
+  complete : ∀ (h : r A B), Run.run (m := m) A = pure ⟨B, h⟩
 
 open Complete'
 
@@ -98,14 +98,14 @@ inductive RedChoicePlus (r : Expr → Expr → Type u) [∀ A B, Repr (r A B)] :
 deriving Repr
 
 inductive RedChoiceStar (r : Expr → Expr → Type u) [∀ A B, Repr (r A B)] : Expr → Expr → Type u
-  | plus : RedChoicePlus r A B → RedChoiceStar r A B
+  | head : (hr : r A B) → (hrt₂ : RedChoiceStar r B C) → RedChoiceStar r A C
   | refl : RedChoiceStar r A A
 deriving Repr
 
 instance [∀ x y, Repr (r x y)] : ReflT RedChoiceStar r := ⟨.refl⟩
 
 instance RedChoicePlus.instSingle {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] : Single RedChoicePlus r := ⟨.single⟩
-instance RedChoiceStar.instSingle {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] : Single RedChoiceStar r := ⟨.plus ∘ .single⟩
+instance RedChoiceStar.instSingle {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] : Single RedChoiceStar r := ⟨(.head · .refl)⟩
 
 @[dcc_force_rel]
 def RedChoicePlus.trans [∀ x y, Repr (r x y)] (hr₁ : RedChoicePlus r A B) (hr₂ : RedChoicePlus r B C) : RedChoicePlus r A C :=
@@ -118,14 +118,12 @@ instance RedChoicePlus.instTrans' [∀ x y, Repr (r x y)] : Trans r (RedChoicePl
 
 @[dcc_force_rel]
 def RedChoiceStar.trans [∀ x y, Repr (r x y)] (hr₁ : RedChoiceStar r A B) (hr₂ : RedChoiceStar r B C) : RedChoiceStar r A C :=
-  match hr₁, hr₂ with
-  | h, .refl | .refl, h => h
-  | .plus h₁, .plus h₂ => .plus (h₁.trans h₂)
+  match hr₁ with
+  | .refl => hr₂
+  | .head hr hrt => .head hr (hrt.trans hr₂)
 
 instance RedChoiceStar.instTrans [∀ x y, Repr (r x y)] : Trans (RedChoiceStar r) (RedChoiceStar r) (RedChoiceStar r) := ⟨RedChoiceStar.trans⟩
-instance RedChoiceStar.instTrans' [∀ x y, Repr (r x y)] : Trans r (RedChoiceStar r) (RedChoiceStar r) := ⟨fun h₁ h₂ => match h₂ with
-  | .refl => .plus (.single h₁)
-  | .plus p => .plus (RedChoicePlus.head h₁ p)⟩
+instance RedChoiceStar.instTrans' [∀ x y, Repr (r x y)] : Trans r (RedChoiceStar r) (RedChoiceStar r) := ⟨RedChoiceStar.head⟩
 
 attribute [dcc_force_rel] Trans.trans Trans.trans.eq_def
 
@@ -174,11 +172,13 @@ def RedChoicePlus.length [∀ x y, Repr (r x y)] (h : RedChoicePlus r A B) : ℕ
   | .single _ => 1
   | .head _ xs => xs.length.succ
 
+def RedChoiceStar.single [∀ x y, Repr (r x y)] (hr : r A B) : RedChoiceStar r A B := .head hr .refl
+
 @[grind, dcc_size]
 def RedChoiceStar.length [∀ x y, Repr (r x y)] (h : RedChoiceStar r A B) : ℕ :=
   match h with
   | .refl => 0
-  | .plus h => h.length
+  | .head _h hrt => hrt.length.succ
 
 @[grind .]
 theorem RedChoicePlus.length_pos [∀ x y, Repr (r x y)] (h : RedChoicePlus r A B) : 0 < h.length := by
@@ -193,9 +193,12 @@ def RedChoicePlus.decreasing_impl [∀ x y, Repr (r x y)] [Decreasing r] (hrt : 
     grind
 
 instance {r : Expr → Expr → Type u} [Decreasing r] [∀ x y, Repr (r x y)] : Decreasing (RedChoicePlus r) := ⟨RedChoicePlus.decreasing_impl⟩
-instance {r : Expr → Expr → Type u} [Decreasing r] [∀ x y, Repr (r x y)] : Decreasing? (RedChoiceStar r) := ⟨fun h => match h with
-  | .refl => by grind
-  | .plus p => by have h := p.decreasing_impl; grind⟩
+instance {r : Expr → Expr → Type u} [Decreasing r] [∀ x y, Repr (r x y)] : Decreasing? (RedChoiceStar r) := ⟨fun h => by
+  induction h with
+  | refl => grind
+  | head h hrt =>
+    have h_dec := decreasing h
+    grind⟩
 
 def RedChoicePlus.length_same {r : Expr → Expr → Type u} [Decreasing r] [Unique r] [ProofEq r] [∀ x y, Repr (r x y)] (h₁ h₂ : RedChoicePlus r A B) : h₁.length = h₂.length := by
   match cases_head h₁, cases_head h₂ with
@@ -234,7 +237,7 @@ instance {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B 
 instance CasesHead.elim_cast_higher [∀ x y, Repr (r x y)] [Trans (m r) (m r) (m r)] [Decreasing r] [Single m r] [CasesHead m r] : ElimNorm m r := ⟨fun {A B} hn h => by
   match cases_head h with
   | .inl ⟨h', heq⟩ => exact hn.elim h'
-  | .inr ⟨_, h₁, h₂, heq'⟩ => cases hn.elim h₁; exact no_refl h₁⟩
+  | .inr ⟨_, h₁, h₂, heq'⟩ => cases hn.elim h₁; exact (no_refl h₁).elim⟩
 
 def IsNorm.down {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Single m r] (hn : IsNorm (m r) A) : IsNorm r A := fun _ h =>
   hn (single h)
@@ -283,12 +286,12 @@ def normal_proof_unique {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (
     have hn₁ := h₁.is_norm
     have hn₂ := h₂.is_norm
     cases unique hr₁ hr₂
-    exact no_refl hrt₁
+    exact (no_refl hrt₁).elim
   | .inl ⟨hr₁, heq₁⟩, .inr ⟨_, hr₂, hrt₂, heq₂⟩ =>
     have hn₁ := h₁.is_norm
     have hn₂ := h₂.is_norm
     cases unique hr₁ hr₂
-    exact no_refl hrt₂
+    exact (no_refl hrt₂).elim
   | .inr ⟨_, hr₁, hrt₁, heq₁⟩, .inr ⟨_, hr₂, hrt₂, heq₂⟩ =>
     have hn₁ := h₁.is_norm
     have hn₂ := h₂.is_norm
@@ -327,16 +330,16 @@ def reduce (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] [Run Option r]
     ⟨_, ⟨.refl, ⟨hn⟩⟩⟩
 termination_by A.size
 
-open Run in
+/-open Run in
 def reduce_plus (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] [Run Option r] [Decreasing r] [Complete' (m := Option) r] (A : Expr) : Option (Σ' B, AndNorm RedChoicePlus r A B) :=
   match reduce r A with
   | ⟨_, ⟨hr, ⟨hn⟩⟩⟩ =>
     match hr with
     | .refl => .none
-    | .plus hr => .some ⟨_, ⟨hr, ⟨hn⟩⟩⟩
+    | .plus hr => .some ⟨_, ⟨hr, ⟨hn⟩⟩⟩-/
 
 instance [∀ x y, Repr (r x y)] [Run Option r] [Decreasing r] [Complete' (m := Option) r] : Run Id (AndNorm RedChoiceStar r) := ⟨reduce _⟩
-instance [∀ x y, Repr (r x y)] [Run Option r] [Decreasing r] [Complete' (m := Option) r] : Run Option (AndNorm RedChoicePlus r) := ⟨reduce_plus _⟩
+--instance [∀ x y, Repr (r x y)] [Run Option r] [Decreasing r] [Complete' (m := Option) r] : Run Option (AndNorm RedChoicePlus r) := ⟨reduce_plus _⟩
 
 def get_head [∀ x y, Repr (r x y)] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (hr : m r A B) : Σ' B', r A B' :=
   match cases_head hr with
@@ -345,53 +348,52 @@ def get_head [∀ x y, Repr (r x y)] [Single m r] [Trans (m r) (m r) (m r)] [Cas
 
 instance [∀ x y, Repr (r x y)] : ElimNorm RedChoicePlus r := ⟨fun hn hr => (hn (get_head hr).snd).elim⟩
 
-instance [∀ x y, Repr (r x y)] : ElimNorm RedChoiceStar r := ⟨fun {_A B} hn hr => match hr with
-  | .refl => rfl
-  | .plus h => elim_norm hn h⟩
+instance [∀ x y, Repr (r x y)] : ElimNorm RedChoiceStar r := ⟨fun {_A B} hn hr => by
+  induction hr with
+  | head =>
+    expose_names
+    cases hn.elim hr
+    exact hrt₂_ih hn
+  | refl => rfl⟩
 
 def RedChoiceStar.complete {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [ProofEq r] [Unique r] [Decreasing r] [Run Option r] [Complete' (m := Option) r] (hr : AndNorm RedChoiceStar r A B) : reduce _ A = ⟨B, hr⟩ := by
-  unfold reduce
-  split
-  case h_1 B' hr' heq =>
-    simp
-    split
-    case h_1 =>
+  match hr with
+  | ⟨hr, ⟨hn⟩⟩ =>
+    induction hr with
+    | head =>
+      unfold reduce
       expose_names
-      match hr with
-      | ⟨.refl, ⟨hn⟩⟩ =>
-        cases hn.elim hr'
-        exact no_refl hr'
-      | ⟨.plus hr, ⟨hn⟩⟩ =>
-        cases hr'_1 with
-        | refl =>
-          cases unique (AndNorm.mk hr (by assumption)) (AndNorm.mk (.single hr') (by assumption))
-          congr!
-          dcc_simp (! !)
-          have heq : (AndNorm.mk (RedChoicePlus.single hr') (by assumption)) = (AndNorm.mk hr (by assumption)) := by
-            apply proof_eq
-          have ⟨heql, heqr⟩ := AndNorm.ext_mpr heq
-          cases heql; cases heqr
+      have h := Complete'.complete hr_1
+      split
+      case h_1 =>
+        expose_names
+        cases unique hr_1 hr_2
+        simp
+        have heq' := hrt₂_ih (AndNorm.mk hrt₂ hn) hn
+        split
+        case h_1 heq'' =>
+          cases heq''.symm.trans heq'
+          simp [Trans.trans, trans]
+          cases proof_eq hr_1 hr_2
           rfl
-        | plus hrp =>
-          cases unique (AndNorm.mk hr (by assumption)) (AndNorm.mk (Trans.trans (RedChoicePlus.single hr') hrp) (by assumption))
-          congr!
-          dcc_simp (! !)
-          have heq : (AndNorm.mk (RedChoicePlus.head hr' hrp) (by assumption)) = (AndNorm.mk hr (by assumption)) := by
-            apply proof_eq
-          have ⟨heql, heqr⟩ := AndNorm.ext_mpr heq
-          cases heql; cases heqr
-          rfl
-  case h_2 heq_none =>
-    have hnorm : IsNorm _ _ := none_sound heq_none
-    cases elim_norm hnorm hr.raw
-    dcc_simp (! !)
-    match hr with
-    | ⟨.refl, _⟩ => rfl
-    | ⟨.plus h, ⟨hn⟩⟩ => exact (hn.up h).elim
+      case h_2 =>
+        expose_names
+        have heq' := hrt₂_ih (AndNorm.mk hrt₂ hn) hn
+        simp_all
+    | refl =>
+      expose_names
+      unfold reduce
+      split
+      case h_1 =>
+        expose_names
+        cases hn.elim hr_1
+        simp
+        exact (Expr.no_refl hr_1).elim
+      simp
 
 instance RedChoiceStar.instComplete {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [ProofEq r] [Unique r] [Decreasing r] [Run Option r] [Complete' (m := Option) r] : Complete' (m := Id) (AndNorm RedChoiceStar r) := ⟨RedChoiceStar.complete⟩
 
-instance RedChoicePlus.instComplete {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [ProofEq r] [Unique r] [Decreasing r] [Run Option r] [Complete' (m := Option) r] : Complete' (m := Option) (AndNorm RedChoicePlus r) := ⟨by
+/-instance RedChoicePlus.instComplete {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [ProofEq r] [Unique r] [Decreasing r] [Run Option r] [Complete' (m := Option) r] : Complete' (m := Option) (AndNorm RedChoicePlus r) := ⟨by
   intro A B ⟨h, ⟨hn⟩⟩
   dcc_simp (! !)
   unfold reduce_plus
@@ -414,7 +416,7 @@ instance RedChoicePlus.instComplete {r : Expr → Expr → Type u} [∀ x y, Rep
       have heq'' := unique (AndNorm.mk h (by assumption)) (AndNorm.mk hr_1 (by assumption))
       dcc_simp_all (! !)
       change AndNorm.mk _ _ ≍ AndNorm.mk _ _
-      apply proof_heq⟩
+      apply proof_heq⟩-/
 
 instance RedChoicePlus.elim_norm [∀ x y, Repr (r x y)] : ElimNorm RedChoicePlus r := ⟨fun hn hrt =>
   match hrt with
@@ -442,48 +444,34 @@ def conf_global
   (h₁ : RedChoiceStar r A B) (h₂ : RedChoiceStar r A C) : Σ' D, RedChoiceStar r B D × RedChoiceStar r C D :=
   match h₁, h₂ with
   | .refl, .refl => ⟨_, .refl, .refl⟩
-  | .plus h₁, .refl =>
-    ⟨_, .refl, .plus h₁⟩
-  | .refl, .plus h₁ =>
-    ⟨_, .plus h₁, .refl⟩
-  | .plus h₁, .plus h₂ =>
+  | .head h₁ hrt, .refl =>
+    ⟨_, .refl, .head h₁ (by assumption)⟩
+  | .refl, .head h₁ hrt =>
+    ⟨_, .head h₁ (by assumption), .refl⟩
+  | .head h₁ hrt₁, .head h₂ hrt₂ => by
     have h_dec₁ := decreasing h₁
     have h_dec₂ := decreasing h₂
-    match cases_head h₁, cases_head h₂ with
-    | .inl ⟨hr₁, heq₁⟩, .inl ⟨hr₂, heq₂⟩ =>
-      ⟨_, unique hr₁ hr₂ ▸ .refl, .refl⟩
-    | .inr ⟨_, hr₁, hrt'₁, heq₁⟩, .inl ⟨hr₂, heq₂⟩ => by
-      cases unique hr₁ hr₂
-      exact ⟨_,  .refl, .plus hrt'₁⟩
-    | .inl ⟨hr₂, heq₂⟩, .inr ⟨_, hr₁, hrt'₁, heq₁⟩ => by
-      cases unique hr₁ hr₂
-      exact ⟨_,  .plus hrt'₁, .refl⟩
-    | .inr ⟨_, hr₁, hrt'₁, heq₁⟩, .inr ⟨_, hr₂, hrt'₂, heq₂⟩ => by
-      cases unique hr₁ hr₂
-      have h_dec := decreasing hr₁
-      exact conf_global (.plus hrt'₁) (.plus hrt'₂)
-termination_by A.size
+    cases unique h₁ h₂
+    have ⟨C, h₁, h₂⟩ := conf_global hrt₁ hrt₂
+    exact ⟨_, h₁, h₂⟩
 
 instance AndNorm.instPushHead [∀ x y, Repr (r x y)] [Unique r] : PushHead (AndNorm RedChoiceStar) r := ⟨fun ⟨hrt, ⟨hn⟩⟩ hr => by
   cases hrt with
   | refl =>
     cases hn.elim hr
     exact ⟨.refl, ⟨hn⟩⟩
-  | plus h =>
-    cases h with
-    | single hr' =>
-      cases unique hr hr'
-      exact ⟨.refl, ⟨hn⟩⟩
-    | head hr' hrt =>
-      cases unique hr hr'
-      exact ⟨.plus hrt, ⟨hn⟩⟩⟩
+  | head hr hrt =>
+    expose_names
+    cases unique hr_1 hr
+    apply AndNorm.mk <;> assumption⟩
 
 open Trans in
 instance AndNorm.instPopHead [∀ x y, Repr (r x y)] [Unique r] : PopHead (AndNorm RedChoiceStar) r := ⟨fun hr ⟨hrt, ⟨hn⟩⟩ =>
   match hrt with
-  | .refl => ⟨.plus (.single hr), ⟨hn⟩⟩
-  | .plus (.single hr') => ⟨.plus (.head hr (.single hr')), ⟨hn⟩⟩
-  | .plus (.head hr' hrt) => ⟨.plus (.head hr (.head (by assumption) hrt)), ⟨hn⟩⟩⟩
+  | .refl => ⟨.single hr, ⟨hn⟩⟩
+  | .head hr₀ hrt => ⟨.trans (.single (by assumption)) (by
+    expose_names
+    exact x_1.raw), ⟨by assumption⟩⟩⟩
 
 instance AndNorm.instElim₁ [∀ x y, Repr (r x y)] : ElimNorm (AndNorm RedChoiceStar) r := ⟨fun hn ⟨hrt, hn⟩ => elim_norm (by assumption) hrt⟩
 instance AndNorm.instElim₂ [∀ x y, Repr (r x y)] : ElimNorm (AndNorm RedChoicePlus) r := ⟨fun hn ⟨hrt, hn⟩ => elim_norm (by assumption) hrt⟩
@@ -515,10 +503,20 @@ instance [Run Id r] [Complete' Id r] : ProofEq r := ⟨fun h₁ h₂ => by
   grind⟩
 
 @[dcc_force_reduce, aesop safe forward (rule_sets := [DccReduce])]
-theorem complete_fst [hR : Run Id r] [Complete' Id r] (h : r A B) (heqr : hR.run = run_def := by simp [Run.run]; try rfl) : (run_def A).fst = B := by
+def complete_fst [hR : Run Id r] [Complete' Id r] (h : r A B) (heqr : hR.run = run_def := by simp [Run.run]; try rfl) : (run_def A).fst = B := by
   cases heqr
   have h := complete h
   simp [Pure.pure] at h
   grind
+
+def reduce_norm_fst [Run Option r] [Decreasing r] [Complete' Option r] [∀ x y, Repr (r x y)] : IsNorm r (reduce r x).fst := (reduce r x).snd.is_norm
+
+open PopHead in
+def reduce_self [Run Option r] [Decreasing r] [Complete' Option r] [∀ x y, Repr (r x y)] (h : r A B) : (reduce r A).fst = (reduce r B).fst := complete_fst (pop_head h (reduce r B).snd)
+
+def complete' [hR : Run m r] [hP : Pure m] [Complete' m r] (h : r A B)
+  (heqr : hR.run = run_def := by simp [Run.run]; try rfl) (heqp : hP.pure = pure_def := by simp [Pure.pure]; try rfl) : (run_def A) = pure_def ⟨B, h⟩ := by
+  cases heqr; cases heqp
+  exact complete (by assumption)
 
 end Expr

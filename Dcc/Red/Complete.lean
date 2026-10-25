@@ -287,8 +287,8 @@ theorem decreasing? {A B : Expr} (h : (RedReflTrans) A B) : (size B) ≤ (size A
 
 end RedReflTrans
 
-inductive RedNorm : Expr → NormExpr (Red) → Type u
-  | mk : (hr : RedReflTrans A B) → (hn : IsNorm Red B) → RedNorm A ⟨B, hn⟩
+inductive RedNorm : Expr → Expr → Type u
+  | mk : (hr : RedReflTrans A B) → (hn : IsNorm Red B) → RedNorm A B
 deriving DecidableEq, Repr
 
 @[dcc_step]
@@ -297,61 +297,57 @@ def RedNorm.decreasing? (h : RedNorm A B) : B.size ≤ A.size :=
   | ⟨hr, _hn⟩ => Expr.decreasing? _ hr
 
 @[grind]
-def RedNorm.raw (_r : RedNorm A B) : NormExpr (Red) := B
+def RedNorm.raw (r : RedNorm A B) : NormExpr Red := ⟨B, r.2⟩
 
 @[dcc_step]
-def RedNorm.is_norm (r : RedNorm A B) : IsNorm Red B.raw :=
+def RedNorm.is_norm (r : RedNorm A B) : IsNorm Red B :=
   match r with
   | ⟨_ha, hb⟩ => hb
 
 @[grind]
-def aff_sound {A B : Expr} {h : Relation.ReflTransGen Red A B} (heq : reduce Red A = ⟨B, ⟨h⟩⟩) : RedNorm A ⟨B, reduce_norm heq⟩ := ⟨reduce_sound heq, reduce_norm heq⟩
+def aff_sound {A B : Expr} {h : Relation.ReflTransGen Red A B} (heq : reduce Red A = ⟨B, ⟨h⟩⟩) : RedNorm A B := ⟨reduce_sound heq, reduce_norm heq⟩
 
 @[grind, dcc_force_reduce, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def aff_sound' (A : Expr) : RedNorm A ⟨(reduce Red A).fst, reduce_norm rfl⟩ := ⟨reduce_sound rfl, reduce_norm rfl⟩
-
-@[grind, inline, dcc_reduce]
-def red_aff (A : Expr) : NormExpr (Red) := ⟨(reduce Red A).fst, reduce_norm (A := A) rfl⟩
+def aff_sound' (A : Expr) : RedNorm A (reduce Red A).fst := ⟨reduce_sound rfl, reduce_norm rfl⟩
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
-def RedNorm.complete {A : Expr} {B : NormExpr Red} (h : RedNorm A B) : red_aff A = B :=
-  match h with
-  | ⟨hr, hn⟩ => by
-    have ha := reduce_complete_fst hr hn
-    simp [red_aff, ha]
-
-@[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
-def RedNorm.complete_fst {A : Expr} (h : RedNorm A ⟨B, hn_B⟩) : (reduce Red A).fst = B :=
+def RedNorm.complete {A B : Expr} (h : RedNorm A B) : (reduce Red A).fst = B :=
   match h with
   | ⟨hr, hn⟩ => by
     have ha := reduce_complete_fst hr hn
     simp [ha]
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
-def RedNorm.complete_snd {A : Expr} (h : RedNorm A ⟨B, hn_B⟩) : (reduce Red A).snd = ⟨reduce_sound rfl⟩ :=
+def RedNorm.complete_fst {A : Expr} (h : RedNorm A B) : (reduce Red A).fst = B :=
+  match h with
+  | ⟨hr, hn⟩ => by
+    have ha := reduce_complete_fst hr hn
+    simp [ha]
+
+@[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
+def RedNorm.complete_snd {A : Expr} (h : RedNorm A B) : (reduce Red A).snd = ⟨reduce_sound rfl⟩ :=
   match h with
   | ⟨hr, hn⟩ => by simp
 
 @[dcc_reduce]
-def RedNorm.eq {e : Expr} (hr : RedNorm e (red_aff e)) : hr = aff_sound rfl :=
+def RedNorm.eq {e : Expr} (hr : RedNorm e (reduce Red e).fst) : hr = aff_sound rfl :=
   match hr with
   | ⟨hr, hn⟩ => by
     have heq := reduce_complete hr hn
     grind
 
-abbrev RedNorm.red (h : RedNorm A ⟨B, hn⟩) : RedReflTrans A B :=
+abbrev RedNorm.red (h : RedNorm A B) : RedReflTrans A B :=
   match h with
   | ⟨hr, _⟩ => hr
 
-def RedNorm.aff_complete {A B : Expr} {hn : IsNorm Red B} (h : RedNorm A ⟨B, hn⟩) : reduce Red A = ⟨B, ⟨h.red⟩⟩ :=
+def RedNorm.aff_complete {A B : Expr} (h : RedNorm A B) : reduce Red A = ⟨B, ⟨h.red⟩⟩ :=
   match h with
   | ⟨hr₁, hn₁⟩ => reduce_complete hr₁ hn₁
 
-def RedNorm.out_eq {A : Expr} (h : RedNorm A B) : B = (red_aff A) :=
+def RedNorm.out_eq {A B : Expr} (h : RedNorm A B) : B = (reduce Red A).fst :=
   match h with
   | .mk hr hn => by
     have heq := reduce_complete hr hn
-    rw [red_aff]
     aesop
 
 @[ext]
@@ -365,13 +361,19 @@ def RedNorm.ext (h₁ h₂ : RedNorm A B) : h₁ = h₂ := by
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
 def RedNorm.unique {A : Expr} (h₁ : RedNorm A B) (h₂ : RedNorm A C) : B = C :=
   match h₁, h₂ with
-  | ⟨ha, hb⟩, ⟨hc, hd⟩ => NormExpr.ext (norm_unique ha hb hc hd)
+  | ⟨ha, hb⟩, ⟨hc, hd⟩ => norm_unique ha hb hc hd
+
+def RedNorm.heq (h₁ : RedNorm A B) (h₂ : RedNorm A C) : h₁ ≍ h₂ := by
+  have heq := h₁.unique h₂
+  cases h₁
+  cases h₂
+  congr!
 
 @[macro_inline, dcc_size, aesop safe apply (rule_sets := [DccSize]) ]
 def RedNorm.absurd {P : Sort v} {A : Expr} (h₁ : RedNorm A B) (h₂ : RedNorm A C) (hneq : B ≠ C := by intro h; cases h) : P :=
   _root_.absurd (h₁.unique h₂) (by simp_all)
 
-def RedNorm.elim_norm (hr : RedNorm A B) (hn : IsNorm Red A) : B = ⟨A, hn⟩ :=
+def RedNorm.elim_norm (hr : RedNorm A B) (hn : IsNorm Red A) : B = A :=
   match hr with
   | ⟨hr, _hn⟩ => by
     have h := hn.unique_refl hr
@@ -383,7 +385,7 @@ def RedNorm.push_head {A : Expr} (hrt : RedNorm A C) (hr : Red A B) : RedNorm B 
   | ⟨hrt, hn⟩ => ⟨hrt.push_head hn hr, hn⟩
 
 open Congruent in
-def RedNorm.congrFun (hrt : RedNorm (DCC? (f x)) C) (hrt_f : RedNorm f ⟨f', hn_f⟩) : RedNorm (DCC? (f' x)) C :=
+def RedNorm.congrFun (hrt : RedNorm (DCC? (f x)) C) (hrt_f : RedNorm f f') : RedNorm (DCC? (f' x)) C :=
   match hrt, hrt_f with
   | ⟨hr₁, hn₁⟩, ⟨hr₂, _hn₂⟩ =>
     ⟨
@@ -391,7 +393,7 @@ def RedNorm.congrFun (hrt : RedNorm (DCC? (f x)) C) (hrt_f : RedNorm f ⟨f', hn
       hn₁.unique_refl h₁ ▸ h₂, hn₁⟩
 
 open Congruent in
-def RedNorm.congrArg (hrt : RedNorm (DCC? (f x)) C) (hrt_x : RedNorm x ⟨x', hn_f⟩) : RedNorm (DCC? (f x')) C :=
+def RedNorm.congrArg (hrt : RedNorm (DCC? (f x)) C) (hrt_x : RedNorm x x') : RedNorm (DCC? (f x')) C :=
   match hrt, hrt_x with
   | ⟨hr₁, hn₁⟩, ⟨hr₂, _hn₂⟩ =>
     ⟨

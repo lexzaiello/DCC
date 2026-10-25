@@ -99,7 +99,7 @@ Coup(Σ(Λ(Sort 1, `(Sort 1, Sort 1),
 
 /-
 This should eta reduce
-(Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `(Coup(Σ(`(⊤, `(Sort 1, Sort 1)))), Sort 1)) ∗)
+(Λ(𝟙, Σ(`(𝟙, `(Sort 1, Sort 1))), `(Coup(Σ(`(𝟙, `(Sort 1, Sort 1)))), Sort 1)) ∗)
 
 
 -/
@@ -111,26 +111,26 @@ This should eta reduce
 -- (Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `(Coup(Id(Sort 2)), Sort 1))) Sort 1)
 
 #eval (DCC (Id Sort 1)).infer'
-#eval ((· == (DCC ((Π (`⊤ (Sort 1)) (`⊤ (`(Sort 1) (Sort 1)))) ∗)))∘ (·.fst)) <$> (DCC (Id Sort 1)).infer
+#eval ((· == (DCC ((Π (`𝟙 (Sort 1)) (`𝟙 (`(Sort 1) (Sort 1)))) ∗)))∘ (·.fst)) <$> (DCC (Id Sort 1)).infer
 
 /-
-(Σ(`(⊤, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))) ∗)
-(Σ(`(⊤, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), Sort 1))) ∗)
+(Σ(`(𝟙, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(𝟙, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))) ∗)
+(Σ(`(𝟙, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(𝟙, Id(Sort 2))) ∗), Sort 1))) Sort 1), Sort 1))) ∗)
 -/
 
 /-
-(Σ(`(⊤, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))) ∗)
+(Σ(`(𝟙, `((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(𝟙, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))) ∗)
 
-Coup(`((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))
+Coup(`((Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(𝟙, Id(Sort 2))) ∗), Sort 1))) Sort 1), (Id(Sort 2) Sort 1)))
 
-(Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1)
-(Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1))) Sort 1)
+(Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(𝟙, Id(Sort 2))) ∗), Sort 1))) Sort 1)
+(Π(Id(Sort 2), Λ(Sort 2, Id(Sort 2), `((Σ(`(𝟙, Id(Sort 2))) ∗), Sort 1))) Sort 1)
 -/
 
 #eval (Std.format ∘ (·.fst)) <$> (DCC (Id Sort 1)).infer
 
 /-
-(Π(Id(Sort 2), `(Sort 2, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1))) Sort 1)
+(Π(Id(Sort 2), `(Sort 2, (Λ(Sort 2, Id(Sort 2), `((Σ(`(𝟙, Id(Sort 2))) ∗), Sort 1)) Sort 1))) Sort 1)
 ^ this has a partially applied curr
 
 we should not be applying env to f_β OR f_α.
@@ -143,7 +143,7 @@ what is actual Id type?
 -- f_α := `(Sort 1, Sort 1)
 /-
 f_β := Λ(Sort 1, `(Sort 1, Sort 1),
-         (Λ(⊤, Σ(`(⊤, `(Sort 1, Sort 1))), `((Σ(`(⊤, Σ(`(⊤, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))
+         (Λ(𝟙, Σ(`(𝟙, `(Sort 1, Sort 1))), `((Σ(`(𝟙, Σ(`(𝟙, `(Sort 1, Sort 1))))) ∗), Sort 1)) ∗))
 -/
 
 #eval (·.fst) <$> (DCC (Λ (Sort 1) (`(Sort 1) Sort 1) (Fst (`(Sort 1) Sort 1)))).infer
@@ -156,7 +156,7 @@ Maybe my example is wrong? We should try it with the couple example from before.
 -/
 
 /-
-(Σ(`(⊤, `(Π(Id(Sort 2), `(Sort 2, (Λ(Sort 2, Id(Sort 2), `((Σ(`(⊤, Id(Sort 2))) ∗), Sort 1)) Sort 1))), Sort 1))) ∗)
+(Σ(`(𝟙, `(Π(Id(Sort 2), `(Sort 2, (Λ(Sort 2, Id(Sort 2), `((Σ(`(𝟙, Id(Sort 2))) ∗), Sort 1)) Sort 1))), Sort 1))) ∗)
 
 expected
 

@@ -1,5 +1,5 @@
 import Dcc.Ast
-import Dcc.Red.RelTakashi
+import Dcc.Red
 import Dcc.Types
 
 inductive DefEqError where
@@ -52,10 +52,18 @@ instance {e : Expr} : Std.ToFormat (TypeError e) := ⟨TypeError.toFormat⟩
 instance {e : Expr} : ToString (TypeError e) := ⟨toString ∘ Std.format⟩
 instance {e : Expr} : Repr (TypeError e) := ⟨fun e _n => TypeError.toFormat e⟩
 
-namespace Expr
+namespace Dsl
 
-open ElimNorm
-open Complete'
+open Expr
+
+syntax gen_dcc "→ᵦ" gen_dcc : term
+
+macro_rules
+  | `($A:gen_dcc →ᵦ $B:gen_dcc) => `(RedNorm (DCC $A) (DCC $B))
+
+end Dsl
+
+namespace Expr
 
 @[inline, dcc_force_reduce]
 abbrev reduce_all (e : Expr) : Expr :=
@@ -63,7 +71,10 @@ abbrev reduce_all (e : Expr) : Expr :=
 
 def reduce_reduces {A B : Expr} (h : reduce_all A = B) : A →ᵦ B := by
   simp [reduce_all] at h
-  exact h ▸ (reduce Red A).snd
+  exact ⟨h ▸ reduce_sound rfl, h ▸ reduce_norm rfl⟩
+
+def RedNorm.eq' (h : RedNorm A (reduce Red A).fst) : reduce_reduces heq₀ = h := by
+  simp [reduce_reduces]
 
 #eval Std.format <| pair.β.type (DCC (Sort 30)) 10 20
 
@@ -79,11 +90,11 @@ macro_rules
 def DefEq.push_head {A B : Expr} (h : A ≡ C) (hr : Red A B) : B ≡ C :=
   match h with
   | ⟨hr₁, hr₂⟩ =>
-    ⟨PushHead.push_head hr₁ hr, hr₂⟩
+    ⟨.push_head hr₁ hr, hr₂⟩
 
 def DefEq.trans {A B C : Expr} (h₁ : A ≡ B) (h₂ : B ≡ C) : A ≡ C :=
   match h₁, h₂ with
-  | ⟨hr₁, hr₂⟩, ⟨hr₃, hr₄⟩ => ⟨hr₁, unique hr₂ hr₃ ▸ hr₄⟩
+  | ⟨hr₁, hr₂⟩, ⟨hr₃, hr₄⟩ => ⟨hr₁, RedNorm.unique hr₂ hr₃ ▸ hr₄⟩
 
 -- Reduces A B → DefEq A B
 
@@ -97,11 +108,10 @@ def DefEq.complete {τ₁ τ₂ : Expr} (h : DefEq τ₁ τ₂) : def_eq? τ₁ 
   induction h
   case tm hr₁ hr₂ =>
     expose_names
-    have heq₁ := Complete'.complete hr₁
-    have heq₂ := Complete'.complete hr₂
-    simp [def_eq?]
-    dcc_simp_all (! !) [Pure.pure]
-    constructor <;> apply proof_heq
+    have heq₁ := RedNorm.complete hr₁
+    have heq₂ := RedNorm.complete hr₂
+    simp [def_eq?, reduce_all, heq₁, heq₂]
+    constructor <;> apply RedNorm.heq
 
 open Dsl in
 inductive Arrow : Expr → Expr → Expr → Type
@@ -135,11 +145,11 @@ def read_arrow₁ (τ A : Expr) : Except (TypeError τ) ((B : Expr) × (Arrow A 
 
 def DefEq.elim_norml {A B : Expr} (h : A ≡ B) (hn : IsNorm Red A) : B →ᵦ A :=
   match h with
-  | ⟨hr₁, hr₂⟩ => elim_norm hn hr₁ ▸ hr₂
+  | ⟨hr₁, hr₂⟩ => RedNorm.elim_norm hr₁ hn ▸ hr₂
 
 def DefEq.elim_normr {A B : Expr} (h : A ≡ B) (hn : IsNorm Red B) : A →ᵦ B :=
   match h with
-  | ⟨hr₁, hr₂⟩ => elim_norm hn hr₂ ▸ hr₁
+  | ⟨hr₁, hr₂⟩ => RedNorm.elim_norm hr₂ hn ▸ hr₁
 
 def read_arrow₃ (τ A B : Expr) : Except (TypeError τ) (Arrow A B τ) :=
   match read_arrow τ with
@@ -158,12 +168,10 @@ open Dsl in
 theorem Arrow.read₁_complete {A B τ : Expr} (h : Arrow A B τ) : τ.read_arrow₁ A = .ok ⟨B, h⟩ := by
   cases h
   · expose_names
-    simp [read_arrow₁, read_arrow, reduce_all, complete_fst a, complete_fst a_1]
-    congr
-    · simp [complete_fst a]
-    · simp [complete_fst a_1]
-    · apply proof_heq
-    · apply proof_heq
+    simp [read_arrow₁, read_arrow, reduce_all, RedNorm.complete_fst a, RedNorm.complete_fst a_1, reduce_reduces]
+    congr!
+    · simp [RedNorm.complete_fst a]
+    · simp [RedNorm.complete_fst a_1]
 
 open Dsl in
 @[dcc_judge, inline]
@@ -179,7 +187,7 @@ def view_arrow (τ A B : Expr) : Except (TypeError τ) (Arrow A B τ) :=
       .error (.mismatch B B' τ)
   | .error e => .error e
 
--- (Π(Id(Sort 0), `(Sort 0, Π(`(⊤, Sort 0), `(⊤, `(Sort 0, Sort 1))))) ⊤)
+-- (Π(Id(Sort 0), `(Sort 0, Π(`(𝟙, Sort 0), `(𝟙, `(Sort 0, Sort 1))))) 𝟙)
 open Dsl in inductive Pi.C.type :
   Expr → Expr → Level → Expr → Type
   | canon  : (fB x) →ᵦ A
@@ -245,10 +253,10 @@ theorem Pi.C.type.complete {τ : Expr}
   (h : Pi.C.type B A v τ) : view_pi_f_β τ B A = .ok ⟨v, h⟩ := by
   cases h with
   | arrow h₁ h₂ h₃ h₄ =>
-    have heq₁ := complete_fst h₁
-    have heq₂ := complete_fst h₂
-    have heq₃ := complete_fst h₃
-    have heq₄ := complete_fst h₄
+    have heq₁ := RedNorm.complete_fst h₁
+    have heq₂ := RedNorm.complete_fst h₂
+    have heq₃ := RedNorm.complete_fst h₃
+    have heq₄ := RedNorm.complete_fst h₄
     simp [view_pi_f_β]
     split
     any_goals (grind)
@@ -262,31 +270,31 @@ theorem Pi.C.type.complete {τ : Expr}
         subst heq₁
         subst heq₂
         simp
-        refine ⟨?_, ?_, ?_, ?_⟩ <;> apply proof_eq
+        refine ⟨?_, ?_, ?_, ?_⟩ <;> simp [reduce_reduces]
       · grind
   | semi h₁ h₂ =>
-    have heq₁ := complete_fst h₁
-    have heq₂ := complete_fst h₂
+    have heq₁ := RedNorm.complete_fst h₁
+    have heq₂ := RedNorm.complete_fst h₂
     simp [view_pi_f_β]
     split
     any_goals (grind)
     case h_2 heq' =>
       cases heq'.symm.trans heq₂
       simp [heq₁]
-      constructor <;> apply proof_eq
+      constructor <;> simp [reduce_reduces]
   | canon h₁ h₂ =>
-    have heq₁ := complete_fst h₁
-    have heq₂ := complete_fst h₂
+    have heq₁ := RedNorm.complete_fst h₁
+    have heq₂ := RedNorm.complete_fst h₂
     simp [view_pi_f_β]
     split
     any_goals (grind)
     case h_3 heq' =>
       cases heq'.symm.trans heq₂
       simp [heq₁]
-      constructor <;> apply proof_eq
+      constructor <;> simp [reduce_reduces]
   | canon' h₁ h₂ =>
-    have heq₁ := complete_fst h₁
-    have heq₂ := complete_fst h₂
+    have heq₁ := RedNorm.complete_fst h₁
+    have heq₂ := RedNorm.complete_fst h₂
     simp [view_pi_f_β]
     split
     any_goals (grind)
@@ -294,20 +302,20 @@ theorem Pi.C.type.complete {τ : Expr}
       cases heq₁'.symm.trans heq₁
       cases heq₂'.symm.trans heq₂
       simp
-      constructor <;> apply proof_eq
+      constructor <;> simp [reduce_reduces]
 
 open Dsl in
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
 theorem Arrow.view_complete {A B τ : Expr} (h : Arrow A B τ) : view_arrow τ A B = .ok h := by
   cases h with
   | simple h₁ h₂ =>
-    have heq₁ := complete_fst h₁
-    have heq₂ := complete_fst h₂
+    have heq₁ := RedNorm.complete_fst h₁
+    have heq₂ := RedNorm.complete_fst h₂
     simp [view_arrow, read_arrow]
     subst heq₁
     subst heq₂
     simp
-    constructor <;> apply proof_eq
+    constructor <;> simp [reduce_reduces]
 
 open Dsl in
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce]), aesop safe forward (rule_sets := [DccReduce])]
@@ -315,22 +323,22 @@ theorem Arrow.read_complete {A B τ : Expr}
   (h : Arrow A B τ) : τ.read_arrow = .ok ⟨A, B, h⟩ := by
   cases h with
   | simple h₁ h₂ =>
-    have heq₁ := complete_fst h₁
-    have heq₂ := complete_fst h₂
+    have heq₁ := RedNorm.complete_fst h₁
+    have heq₂ := RedNorm.complete_fst h₂
     simp [read_arrow]
     subst heq₁
     subst heq₂
     simp
-    constructor <;> apply proof_eq
+    constructor <;> simp [reduce_reduces]
 
 @[dcc_force_reduce, aesop safe forward (rule_sets := [DccReduce])]
 theorem reduce_all_complete (h : A →ᵦ B) : reduce_all A = B := by
-  have h := complete_fst h
+  have h := RedNorm.complete_fst h
   grind
 
 @[dcc_force_reduce, aesop safe apply (rule_sets := [DccReduce])]
 theorem reduce_all_complete_eq (h : A →ᵦ B) : reduce_reduces heq = h := by
-  apply proof_eq
+  simp [reduce_reduces]
 
 open Dsl in
 @[dcc_judge, inline]
@@ -412,7 +420,7 @@ inductive Judge : Expr → Expr → Type where
     → (→ (! A) Sort n) →ᵦ τ
     → Judge (DCC (!<> x)) τ
   | fmap   : Judge x (open Dsl in (DCC ((Π f_A f_B) x_A)))
-    → ((Π (`⊤ (! (f_A x_A))) (`⊤ (!<> (f_B x_A)))) ∗) →ᵦ τ
+    → ((Π (`𝟙 (! (f_A x_A))) (`𝟙 (!<> (f_B x_A)))) ∗) →ᵦ τ
     → Judge (DCC ($<> x)) τ
   | unbox  : Judge A (DCC Sort m)
     → A →ᵦ A'
@@ -463,15 +471,15 @@ inductive Judge : Expr → Expr → Type where
     → #(Pi.type A v s) →ᵦ τ
     → Judge (open Dsl in (DCC (Π B C))) τ
   | sort    : Judge (DCC Sort m) (DCC Sort m.succ)
-  | top     : Judge (DCC ⊤) Top.type
-  | bot     : Judge (DCC ⊥) Bot.type
+  | top     : Judge (DCC 𝟙) Top.type
+  | bot     : Judge (DCC 𝟘) Bot.type
   | tintro  : Judge (DCC ∗) Tintro.type
   | bang    : Judge τ (DCC Sort m) → Judge (open Dsl in (DCC (! τ))) (DCC Sort m)
   | box     : Judge x τ
     → Judge (open Dsl in (DCC (& x))) (open Dsl in (DCC (! τ)))
-  | false   : Judge (DCC False) (DCC Bool)
-  | true    : Judge (DCC True) (DCC Bool)
-  | bool    : Judge (DCC Bool) (DCC Sort 1)
+  | false   : Judge (DCC 𝟘₂) (DCC 𝟚)
+  | true    : Judge (DCC 𝟙₂) (DCC 𝟚)
+  | bool    : Judge (DCC 𝟚) (DCC Sort 1)
   | app     : Judge f (open Dsl in (DCC ((Π f_α f_β) x_α)))
     → (f_α x_α) ≡ α
     → Judge x α
@@ -490,18 +498,18 @@ inductive Judge : Expr → Expr → Type where
     → Judge (DCC (Assoc A B C)) τ'
   | ind_bot  : Judge motive τ_motive
     → Arrow A τ_motive₂ τ_motive
-    → Arrow (DCC ⊥) (DCC Sort v) τ_motive₂
-    → ((Π (`⊤ A) (`⊤ (Π (`A ⊥) motive))) ∗) →ᵦ τ'
-    → Judge (DCC (⊥.Rec motive)) τ'
+    → Arrow (DCC 𝟘) (DCC Sort v) τ_motive₂
+    → ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟘) motive))) ∗) →ᵦ τ'
+    → Judge (DCC (𝟘.Rec motive)) τ'
   | ind_bool : Judge motive τ_motive
     → Arrow A τ_motive₂ τ_motive
-    → Arrow (DCC Bool) (DCC Sort v) τ_motive₂
+    → Arrow (DCC 𝟚) (DCC Sort v) τ_motive₂
     → Judge x τ_x
-    → τ_x ≡ ((Π (`⊤ A) (`⊤ (Π (`A Bool) motive))) ∗)
+    → τ_x ≡ ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)
     → Judge y τ_y
-    → τ_y ≡ ((Π (`⊤ A) (`⊤ (Π (`A Bool) motive))) ∗)
-    → ((Π (`⊤ A) (`⊤ (Π (`A Bool) motive))) ∗) →ᵦ τ'
-    → Judge (DCC (Bool.Rec motive x y)) τ'
+    → τ_y ≡ ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)
+    → ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗) →ᵦ τ'
+    → Judge (DCC (𝟚.Rec motive x y)) τ'
 deriving Repr
 
 -- Replaces everything from `def infer₂` to end-of-file.
@@ -509,26 +517,26 @@ deriving Repr
 
 def Pi.C.type.is_norm (h : Pi.C.type B A v τ) : IsNorm Red B ×' IsNorm Red A := by
   cases h with
-  | semi h₁ h₂ | canon h₁ h₂ => exact ⟨h₂.is_norm.point (n := 0), AndNorm.is_norm (by assumption)⟩
-  | canon' h₁ h₂ => exact ⟨(h₂.is_norm.point (n := 0)).point (n := 0), AndNorm.is_norm (by assumption)⟩
-  | arrow h₁ h₂ h₃ => exact ⟨mk_norm₂ h₁.is_norm h₂.is_norm, h₁.is_norm⟩
+  | semi h₁ h₂ | canon h₁ h₂ => exact ⟨fun ⟨_, h⟩ => h₂.is_norm ⟨_, Red.point 0 (by grind) h⟩, RedNorm.is_norm (by assumption)⟩
+  | canon' h₁ h₂ => exact ⟨fun ⟨_, h⟩ => h₂.is_norm ⟨_, Red.point 0 (by grind) (Red.point 0 (by point_arity) h)⟩, RedNorm.is_norm (by assumption)⟩
+  | arrow h₁ h₂ h₃ => exact ⟨fun ⟨_, h⟩ => match h with | .point 0 hn h => h₁.is_norm ⟨_, h⟩ | .point 1 hn h => h₂.is_norm ⟨_, h⟩, h₁.is_norm⟩
 
 def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
   open Dsl in match e with
-  | DCC (Bool.Rec motive x y) =>
+  | DCC (𝟚.Rec motive x y) =>
     match infer motive with
     | .ok ⟨τ_motive, h₁⟩ =>
       match read_arrow τ_motive with
       | .ok ⟨A, τ_motive₂, h_arr₁⟩ =>
-        match read_arrow₁ τ_motive₂ (DCC Bool) with
+        match read_arrow₁ τ_motive₂ (DCC 𝟚) with
         | .ok ⟨DCC Sort _v, h_arr₂⟩ =>
           match x.infer with
           | .ok ⟨τ_x, h₂⟩ =>
             match y.infer with
             | .ok ⟨τ_y, h₃⟩ =>
-              match def_eq? τ_x (DCC ((Π (`⊤ A) (`⊤ (Π (`A Bool) motive))) ∗)) with
+              match def_eq? τ_x (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)) with
               | .ok h_defeq₁ =>
-                match def_eq? τ_y (DCC ((Π (`⊤ A) (`⊤ (Π (`A Bool) motive))) ∗)) with
+                match def_eq? τ_y (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)) with
                 | .ok h_defeq₂ =>
                   .ok ⟨_, .ind_bool h₁ h_arr₁ h_arr₂ h₂ h_defeq₁ h₃ h_defeq₂ (reduce_reduces rfl)⟩
                 | .error e => .error (.sub y (.def_eq e))
@@ -539,12 +547,12 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         | .error e => .error (.sub motive (.sub τ_motive (.sub τ_motive₂ e)))
       | .error e => .error (.sub motive (.sub τ_motive e))
     | .error e => .error (.sub motive e)
-  | DCC (⊥.Rec motive) =>
+  | DCC (𝟘.Rec motive) =>
     match infer motive with
     | .ok ⟨τ_motive, h₁⟩ =>
       match read_arrow τ_motive with
       | .ok ⟨_A, τ_motive₂, h_arr₁⟩ =>
-        match read_arrow₁ τ_motive₂ (DCC ⊥) with
+        match read_arrow₁ τ_motive₂ (DCC 𝟘) with
         | .ok ⟨DCC Sort _v, h_arr₂⟩ =>
           .ok ⟨_, .ind_bot h₁ h_arr₁ h_arr₂ (reduce_reduces rfl)⟩
         | .ok ⟨τ_elim, _⟩ => .error (.sub τ_motive (.unexpected τ_elim τ_motive₂))
@@ -583,9 +591,9 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         | .error e => .error (.sub f (.sub τ_f e))
       | .error e => .error (.sub g e)
     | .error e => .error (.sub f e)
-  | DCC True => .ok ⟨_, .true⟩
-  | DCC False => .ok ⟨_, .false⟩
-  | DCC Bool => .ok ⟨_, .bool⟩
+  | DCC 𝟙₂ => .ok ⟨_, .true⟩
+  | DCC 𝟘₂ => .ok ⟨_, .false⟩
+  | DCC 𝟚 => .ok ⟨_, .bool⟩
   | .hole _u => .error (.unexpected e e)
   | DCC (Swap A B) =>
     match infer A with
@@ -643,8 +651,8 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     match x.infer with
     | .ok ⟨_τ, ht⟩ => .ok ⟨_, .box ht⟩
     | .error ε => .error (.sub x ε)
-  | DCC ⊤ => .ok ⟨_, .top⟩
-  | DCC ⊥ => .ok ⟨_, .bot⟩
+  | DCC 𝟙 => .ok ⟨_, .top⟩
+  | DCC 𝟘 => .ok ⟨_, .bot⟩
   | DCC ∗ => .ok ⟨_, .tintro⟩
   | DCC Sort _m => .ok ⟨_, .sort⟩
   | DCC (Id α) =>
@@ -659,7 +667,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
       match τ_g.read_arrow with
       | .ok ⟨_A, B, harr_g⟩ =>
         match infer f with
-        | .ok ⟨DCC ((Π (`⊤ B₂) (`⊤ _C)) ∗), ht₂⟩ =>
+        | .ok ⟨DCC ((Π (`𝟙 B₂) (`𝟙 _C)) ∗), ht₂⟩ =>
           if heq₂ : B₂ = B then
             .ok ⟨_, .comp ht₁ harr_g (heq₂ ▸ ht₂) (reduce_reduces rfl)⟩
           else .error (.unexpected τ_g f)
@@ -822,8 +830,8 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     | .error ε => .error (.sub x ε)
   | DCC (⟨,⟩C M N) =>
     match infer M with
-    | .ok ⟨DCC ((Π (`⊤ A) (`⊤ B)) ∗), ht_M⟩ =>
-      if heq : DCC ((Π (`⊤ A) (`⊤ B)) ∗) = (Pair.f.type A B) then
+    | .ok ⟨DCC ((Π (`𝟙 A) (`𝟙 B)) ∗), ht_M⟩ =>
+      if heq : DCC ((Π (`𝟙 A) (`𝟙 B)) ∗) = (Pair.f.type A B) then
         match infer C with
         | .ok ⟨_τ_C, ht_C⟩ =>
           match infer N with
@@ -835,7 +843,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
           | .error e => .error (.sub N e)
         | .error e => .error (.sub C e)
       else
-        .error (.sub M (.unexpected M (DCC ((Π (`⊤ A) (`⊤ B)) ∗))))
+        .error (.sub M (.unexpected M (DCC ((Π (`𝟙 A) (`𝟙 B)) ∗))))
     | .error e => .error (.sub M e)
     | .ok ⟨τ_M, _⟩ => .error (.sub M (.unexpected M τ_M))
   | DCC (Π B C) =>
@@ -876,8 +884,8 @@ end Expr
 /-
 Unifying two different kinds of arrows:
 
-((Π (Id (Sort 0)) (`Sort 0 (`⊤ (Sort 1)))) ⊤)
-((Π (Id (Sort 0)) (Λ (Sort 0) (Id (Sort 0)) (`(Σ (Id (Sort 0))) (Sort 1)))) ⊤)
+((Π (Id (Sort 0)) (`Sort 0 (`𝟙 (Sort 1)))) 𝟙)
+((Π (Id (Sort 0)) (Λ (Sort 0) (Id (Sort 0)) (`(Σ (Id (Sort 0))) (Sort 1)))) 𝟙)
 -/
 
 #eval (DCC ((Id Sort 1) (Sort 0))).infer

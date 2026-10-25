@@ -1,13 +1,10 @@
-import Dcc.Aff.Rel
-import Dcc.Aff.Conf
+import Dcc.Red.Rel
+import Dcc.Red.Conf
 
-universe u
-variable {τ : Type u}
-
-namespace GenericExpr
+namespace Expr
 
 set_option maxHeartbeats 2000000 in
-theorem semi_complete {A B : GenericExpr τ} (hr : A.RedAff B) : ∃ B', ∃ (h : A.RedAff B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
+theorem semi_complete {A B : Expr} (hr : A.Red B) : ∃ B', ∃ (h : A.Red B'), (step? A) = .some ⟨B', ⟨h⟩⟩ := by
   unfold step?
   split
   case h_1 heq =>
@@ -36,47 +33,7 @@ theorem semi_complete {A B : GenericExpr τ} (hr : A.RedAff B) : ∃ B', ∃ (h 
           case h_3 =>
             have ⟨B', hr', heq'⟩ := semi_complete hr
             grind
-      case h_2 heq_arr hn =>
-        cases hr
-        any_goals (grind)
-        any_goals (
-          focus
-          try (simp [step_head?] at heq_none)
-          done)
-        case dom₀ hr =>
-          have ⟨x', hr', heq'⟩ := semi_complete hr
-          exact ⟨_, .dom₀ hr', by simp [heq']⟩
-      case h_3 heq_ar =>
-        cases hr
-        any_goals (grind)
-        any_goals (
-          focus
-          try (simp [step_head?] at heq_none)
-          done)
-        case dom₂₀ hr =>
-          have ⟨x', hr', heq'⟩ := semi_complete hr
-          exact ⟨_, .dom₂₀ hr', by simp [heq']⟩
-      case h_4 heq_ar =>
-        cases hr
-        any_goals (grind)
-        any_goals (
-          focus
-          try (simp [step_head?] at heq_none)
-          done)
-        case uncoup₀ hr =>
-          have ⟨x', hr', heq'⟩ := semi_complete hr
-          exact ⟨_, .uncoup₀ hr', by simp [heq']⟩
-      case h_5 heq_ar =>
-        cases hr
-        any_goals (grind)
-        any_goals (
-          focus
-          try (simp [step_head?] at heq_none)
-          done)
-        case unbang₀ hr =>
-          have ⟨x', hr', heq'⟩ := semi_complete hr
-          exact ⟨_, .unbang₀ hr', by simp [heq']⟩
-      case h_6 =>
+      case h_2 =>
         cases hr
         any_goals (grind)
     case h_2 =>
@@ -186,29 +143,29 @@ decreasing_by
   any_goals (grind)
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
-instance RedAff.instSemicomplete : SemiComplete (RedAff (τ := τ)) := ⟨semi_complete⟩
+instance Red.instSemicomplete : SemiComplete (Red) := ⟨semi_complete⟩
 
-theorem aff_complete (h : Relation.ReflTransGen (RedAff (τ := τ)) A B)
-  (hn : IsNorm RedAff B) : reduce RedAff A = ⟨B, ⟨h⟩⟩ :=
-  RedAff.instRedRel.instComplete.complete h hn
+theorem aff_complete (h : Relation.ReflTransGen (Red) A B)
+  (hn : IsNorm Red B) : reduce Red A = ⟨B, ⟨h⟩⟩ :=
+  Red.instRedRel.instComplete.complete h hn
 
 @[dcc_rel, aesop norm (rule_sets := [DccRel])]
-instance instComplete : Complete (Relation.ReflTransGen (RedAff (τ := τ))) (P := IsNorm RedAff) := RedAff.instRedRel.instComplete
+instance instComplete : Complete (Relation.ReflTransGen (Red)) (P := IsNorm Red) := Red.instRedRel.instComplete
 
--- RedRel.reduce Size RedAff.instRedRel : (e : Expr) → (e' : Expr) × PULift (Relation.ReflTransGen RedAff e e')
-#check reduce RedAff
+-- RedRel.reduce Size Red.instRedRel : (e : Expr) → (e' : Expr) × PULift (Relation.ReflTransGen Red e e')
+#check reduce Red
 
 /-
 Complete.complete
-  Id : ∀ (h : Relation.ReflTransGen RedAff ?m.8 ?m.9), IsNorm RedAff ?m.9 → Rel.run Id ?m.8 = pure ⟨?m.9, { down := h }⟩
+  Id : ∀ (h : Relation.ReflTransGen Red ?m.8 ?m.9), IsNorm Red ?m.9 → Rel.run Id ?m.8 = pure ⟨?m.9, { down := h }⟩
 -/
 #check instComplete.complete
 
 @[grind ., grind →]
-theorem RedAff.decreasing' {A B : GenericExpr τ} (h : RedAff A B) : size B < size A := RedAff.instRedRel.decreasing h
+theorem Red.decreasing' {A B : Expr} (h : Red A B) : size B < size A := Red.instRedRel.decreasing h
 
 @[grind ., grind →]
-theorem red_aff_decreasing? [DecidableEq τ] {A B : GenericExpr τ} (h : Relation.ReflTransGen (RedAff (τ := τ)) A B) : (size B) ≤ (size A) := by
+theorem red_aff_decreasing? {A B : Expr} (h : Relation.ReflTransGen (Red) A B) : (size B) ≤ (size A) := by
   if hs : (size A) = (size B) then
     simp_all
   else
@@ -216,69 +173,68 @@ theorem red_aff_decreasing? [DecidableEq τ] {A B : GenericExpr τ} (h : Relatio
     match h with
     | .refl => grind
     | .single h =>
-      have hn' : B.size < A.size := RedAff.instRedRel.to_trans.decreasing h
+      have hn' : B.size < A.size := Red.instRedRel.to_trans.decreasing h
       grind
 
 @[grind ., grind →]
-theorem red_aff_trans_decreasing [DecidableEq τ] {A B : GenericExpr τ} : Relation.TransGen (RedAff (τ := τ)) A B → (size B) < (size A) :=
-  RedAff.instRedRel.to_trans.decreasing
+theorem red_aff_trans_decreasing {A B : Expr} : Relation.TransGen (Red) A B → (size B) < (size A) :=
+  Red.instRedRel.to_trans.decreasing
 
 @[dcc_force_reduce, dcc_force_aff]
-abbrev RedAff.reduce := GenericExpr.reduce (RedAff (τ := τ))
+abbrev Red.reduce := Expr.reduce (Red)
 
-attribute [dcc_force_reduce, dcc_force_aff] RedAff.reduce.eq_def
+attribute [dcc_force_reduce, dcc_force_aff] Red.reduce.eq_def
 
-instance RedAff.instDecidableNorm [DecidableEq α]
-{A : GenericExpr α}  : Decidable (IsNorm (RedAff (τ := α)) A) :=
-  match heq₀ : GenericExpr.reduce RedAff A with
+instance Red.instDecidableNorm {A : Expr}  : Decidable (IsNorm Red A) :=
+  match heq₀ : Expr.reduce Red A with
   | ⟨A', ⟨h⟩⟩ =>
     if heq : A' = A then
-      have h_norm := reduce_norm (h := heq ▸ h) (A := A) (B := A) (hR := RedAff.instRedRel) (heq ▸ heq₀)
+      have h_norm := reduce_norm (h := heq ▸ h) (A := A) (B := A) (hR := Red.instRedRel) (heq ▸ heq₀)
       .isTrue (fun ⟨a, b⟩ => by
         exact h_norm ⟨_, b⟩)
     else
       .isFalse (fun h => by
-        have h := RedAff.instRedRel.reduce_norm_fst h
+        have h := Red.instRedRel.reduce_norm_fst h
         simp_all)
 
 @[dcc_judge]
-def RedAffReflTrans := Relation.ReflTransGen (RedAff (τ := τ))
+def RedReflTrans := Relation.ReflTransGen (Red)
 
-theorem RedAffReflTrans.reflGen_transGen : Relation.ReflGen (Relation.TransGen (RedAff (τ := τ_c))) = RedAffReflTrans (τ := τ_c) :=
+theorem RedReflTrans.reflGen_transGen : Relation.ReflGen (Relation.TransGen Red) = RedReflTrans :=
   Relation.reflGen_transGen
 
 @[dcc_judge]
-def RedAffTrans := Relation.TransGen (RedAff (τ := τ))
+def RedTrans := Relation.TransGen (Red)
 
-namespace RedAffTrans
+namespace RedTrans
 
-def single (r : RedAff A B) : RedAffTrans A B := Relation.TransGen.single r
+def single (r : Red A B) : RedTrans A B := Relation.TransGen.single r
 
-def trans (r₁ : RedAffTrans A B) (r₂ : RedAffTrans B C) : RedAffTrans A C := Relation.TransGen.trans r₁ r₂
+def trans (r₁ : RedTrans A B) (r₂ : RedTrans B C) : RedTrans A C := Relation.TransGen.trans r₁ r₂
 
-def to_reflTrans {a b : Expr} (r : RedAffTrans a b) : RedAffReflTrans a b :=
+def to_reflTrans {a b : Expr} (r : RedTrans a b) : RedReflTrans a b :=
   Relation.TransGen.to_reflTransGen (a := a) (b := b) r
 
-end RedAffTrans
+end RedTrans
 
-namespace RedAffReflTrans
+namespace RedReflTrans
 
-def cases_head {a b : GenericExpr τ} (r : RedAffReflTrans a b) :=
+def cases_head {a b : Expr} (r : RedReflTrans a b) :=
   Relation.ReflTransGen.cases_head (a := a) (b := b) r
 
-def single {A B : GenericExpr τ}
-  (r : RedAff A B) : (RedAffReflTrans (τ := τ)) A B := Relation.ReflTransGen.single r
+def single {A B : Expr}
+  (r : Red A B) : (RedReflTrans) A B := Relation.ReflTransGen.single r
 
-def trans {A B C : GenericExpr τ} (r₁ : RedAffReflTrans A B)
-  (r₂ : RedAffReflTrans B C) : RedAffReflTrans A C := Relation.ReflTransGen.trans r₁ r₂
+def trans {A B C : Expr} (r₁ : RedReflTrans A B)
+  (r₂ : RedReflTrans B C) : RedReflTrans A C := Relation.ReflTransGen.trans r₁ r₂
 
-def conf {A B C : GenericExpr τ} (h₁ : RedAffReflTrans A B) (h₂ : RedAffReflTrans A C) : ∃ D, RedAffReflTrans B D ∧ RedAffReflTrans C D := RedAff.instRedRel.globally_confluent.conf h₁ h₂
+def conf {A B C : Expr} (h₁ : RedReflTrans A B) (h₂ : RedReflTrans A C) : ∃ D, RedReflTrans B D ∧ RedReflTrans C D := Red.instRedRel.globally_confluent.conf h₁ h₂
 
-def elim_head_norm {A B : GenericExpr τ} (h : RedAffReflTrans A B) (hn : IsNorm RedAff A) : A = B :=
+def elim_head_norm {A B : Expr} (h : RedReflTrans A B) (hn : IsNorm Red A) : A = B :=
   hn.unique_refl h
 
 @[grind ., grind →]
-theorem red_aff_decreasing? [DecidableEq τ] {A B : GenericExpr τ} (h : (RedAffReflTrans (τ := τ)) A B) : (size B) ≤ (size A) := by
+theorem red_aff_decreasing? {A B : Expr} (h : (RedReflTrans) A B) : (size B) ≤ (size A) := by
   if hs : (size A) = (size B) then
     simp_all
   else
@@ -286,112 +242,112 @@ theorem red_aff_decreasing? [DecidableEq τ] {A B : GenericExpr τ} (h : (RedAff
     match h with
     | .refl => grind
     | .single h =>
-      have hn' : B.size < A.size := RedAff.instRedRel.to_trans.decreasing h
+      have hn' : B.size < A.size := Red.instRedRel.to_trans.decreasing h
       grind
 
-def elim_norm (hr : RedAffReflTrans A B) (hn : IsNorm RedAff A) : A = B := by
+def elim_norm (hr : RedReflTrans A B) (hn : IsNorm Red A) : A = B := by
   change Relation.ReflTransGen _ _ _ at hr
   exact hn.unique_refl hr
 
 @[grind ., grind <=]
-theorem elim_norm' (hr : RedAffReflTrans A B) (hn : IsNorm RedAff A) : A = B := by
+theorem elim_norm' (hr : RedReflTrans A B) (hn : IsNorm Red A) : A = B := by
   change Relation.ReflTransGen _ _ _ at hr
   exact hn.unique_refl hr
 
-def push_head (hr₁ : RedAffReflTrans (τ := τ) A C) (hn : IsNorm RedAff C) (hr₂ : RedAff A B) : RedAffReflTrans B C :=
-  have ⟨_, h₁, h₂⟩ := RedAff.instRedRel.globally_confluent.conf hr₁ (.single hr₂)
+def push_head (hr₁ : RedReflTrans A C) (hn : IsNorm Red C) (hr₂ : Red A B) : RedReflTrans B C :=
+  have ⟨_, h₁, h₂⟩ := Red.instRedRel.globally_confluent.conf hr₁ (.single hr₂)
   hn.unique_refl h₁ ▸ h₂
 
-end RedAffReflTrans
+end RedReflTrans
 
-namespace RedAffTrans
+namespace RedTrans
 
 @[grind ., grind →]
-theorem red_aff_trans_decreasing [DecidableEq τ] {A B : GenericExpr τ} : (RedAffTrans (τ := τ)) A B → (size B) < (size A) := by
+theorem red_aff_trans_decreasing {A B : Expr} : (RedTrans) A B → (size B) < (size A) := by
   change Relation.TransGen _ _ _ → _
-  exact (RedAff.instRedRel (τ := τ)).to_trans.decreasing
+  exact (Red.instRedRel).to_trans.decreasing
 
-end RedAffTrans
+end RedTrans
 
-namespace RedAff
+namespace Red
 
-abbrev decreasing (x y : GenericExpr τ) := (RedAff.instRedRel (τ := τ)).decreasing (x := x) (y := y)
+abbrev decreasing (x y : Expr) := (Red.instRedRel).decreasing (x := x) (y := y)
 
-end RedAff
+end Red
 
-namespace RedAffReflTrans
+namespace RedReflTrans
 
-def push_head' (hr₁ : RedAffReflTrans (τ := τ) A C) (hn : IsNorm RedAff C) (hr₂ : RedAffReflTrans A B) : RedAffReflTrans B C := by
+def push_head' (hr₁ : RedReflTrans A C) (hn : IsNorm Red C) (hr₂ : RedReflTrans A B) : RedReflTrans B C := by
   have ⟨_, h₁, h₂⟩ := hr₁.conf hr₂
   have heq := hn.unique_refl h₁
   exact heq ▸ h₂
 
 @[grind ., grind →]
-theorem decreasing? [DecidableEq τ] {A B : GenericExpr τ} (h : (RedAffReflTrans (τ := τ)) A B) : (size B) ≤ (size A) := red_aff_decreasing? h
+theorem decreasing? {A B : Expr} (h : (RedReflTrans) A B) : (size B) ≤ (size A) := red_aff_decreasing? h
 
-end RedAffReflTrans
+end RedReflTrans
 
-inductive RedAffNorm : GenericExpr τ → NormExpr (RedAff (τ := τ)) → Type u
-  | mk : (hr : RedAffReflTrans A B) → (hn : IsNorm RedAff B) → RedAffNorm A ⟨B, hn⟩
+inductive RedNorm : Expr → NormExpr (Red) → Type u
+  | mk : (hr : RedReflTrans A B) → (hn : IsNorm Red B) → RedNorm A ⟨B, hn⟩
 deriving DecidableEq, Repr
 
 @[dcc_step]
-def RedAffNorm.decreasing? (h : RedAffNorm (τ := τ) A B) : B.size ≤ A.size :=
+def RedNorm.decreasing? (h : RedNorm A B) : B.size ≤ A.size :=
   match h with
-  | ⟨hr, _hn⟩ => GenericExpr.decreasing? _ hr
+  | ⟨hr, _hn⟩ => Expr.decreasing? _ hr
 
 @[grind]
-def RedAffNorm.raw (_r : RedAffNorm (τ := τ) A B) : NormExpr (RedAff (τ := τ)) := B
+def RedNorm.raw (_r : RedNorm A B) : NormExpr (Red) := B
 
 @[dcc_step]
-def RedAffNorm.is_norm (r : RedAffNorm (τ := τ) A B) : IsNorm RedAff B.raw :=
+def RedNorm.is_norm (r : RedNorm A B) : IsNorm Red B.raw :=
   match r with
   | ⟨_ha, hb⟩ => hb
 
 @[grind]
-def aff_sound {A B : GenericExpr τ} {h : Relation.ReflTransGen RedAff A B} (heq : reduce RedAff A = ⟨B, ⟨h⟩⟩) : RedAffNorm A ⟨B, reduce_norm heq⟩ := ⟨reduce_sound heq, reduce_norm heq⟩
+def aff_sound {A B : Expr} {h : Relation.ReflTransGen Red A B} (heq : reduce Red A = ⟨B, ⟨h⟩⟩) : RedNorm A ⟨B, reduce_norm heq⟩ := ⟨reduce_sound heq, reduce_norm heq⟩
 
 @[grind, dcc_force_reduce, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def aff_sound' (A : GenericExpr τ) : RedAffNorm A ⟨(reduce RedAff A).fst, reduce_norm rfl⟩ := ⟨reduce_sound rfl, reduce_norm rfl⟩
+def aff_sound' (A : Expr) : RedNorm A ⟨(reduce Red A).fst, reduce_norm rfl⟩ := ⟨reduce_sound rfl, reduce_norm rfl⟩
 
 @[grind, inline, dcc_reduce]
-def red_aff (A : GenericExpr τ) : NormExpr (RedAff (τ := τ)) := ⟨(reduce RedAff A).fst, reduce_norm (A := A) rfl⟩
+def red_aff (A : Expr) : NormExpr (Red) := ⟨(reduce Red A).fst, reduce_norm (A := A) rfl⟩
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
-def RedAffNorm.complete {A : GenericExpr τ} {B : NormExpr RedAff (τ := τ)} (h : RedAffNorm A B) : red_aff A = B :=
+def RedNorm.complete {A : Expr} {B : NormExpr Red} (h : RedNorm A B) : red_aff A = B :=
   match h with
   | ⟨hr, hn⟩ => by
     have ha := reduce_complete_fst hr hn
     simp [red_aff, ha]
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
-def RedAffNorm.complete_fst {A : GenericExpr τ} (h : RedAffNorm A ⟨B, hn_B⟩) : (reduce RedAff A).fst = B :=
+def RedNorm.complete_fst {A : Expr} (h : RedNorm A ⟨B, hn_B⟩) : (reduce Red A).fst = B :=
   match h with
   | ⟨hr, hn⟩ => by
     have ha := reduce_complete_fst hr hn
     simp [ha]
 
 @[aesop safe forward (rule_sets := [DccReduce]), dcc_rel]
-def RedAffNorm.complete_snd {A : GenericExpr τ} (h : RedAffNorm A ⟨B, hn_B⟩) : (reduce RedAff A).snd = ⟨reduce_sound rfl⟩ :=
+def RedNorm.complete_snd {A : Expr} (h : RedNorm A ⟨B, hn_B⟩) : (reduce Red A).snd = ⟨reduce_sound rfl⟩ :=
   match h with
   | ⟨hr, hn⟩ => by simp
 
 @[dcc_reduce]
-def RedAffNorm.eq {e : GenericExpr τ} (hr : RedAffNorm e (red_aff e)) : hr = aff_sound rfl :=
+def RedNorm.eq {e : Expr} (hr : RedNorm e (red_aff e)) : hr = aff_sound rfl :=
   match hr with
   | ⟨hr, hn⟩ => by
     have heq := reduce_complete hr hn
     grind
 
-abbrev RedAffNorm.red (h : RedAffNorm A ⟨B, hn⟩) : RedAffReflTrans A B :=
+abbrev RedNorm.red (h : RedNorm A ⟨B, hn⟩) : RedReflTrans A B :=
   match h with
   | ⟨hr, _⟩ => hr
 
-def RedAffNorm.aff_complete {A B : GenericExpr τ} {hn : IsNorm RedAff B} (h : RedAffNorm A ⟨B, hn⟩) : reduce RedAff A = ⟨B, ⟨h.red⟩⟩ :=
+def RedNorm.aff_complete {A B : Expr} {hn : IsNorm Red B} (h : RedNorm A ⟨B, hn⟩) : reduce Red A = ⟨B, ⟨h.red⟩⟩ :=
   match h with
   | ⟨hr₁, hn₁⟩ => reduce_complete hr₁ hn₁
 
-def RedAffNorm.out_eq {A : GenericExpr τ} (h : RedAffNorm A B) : B = (red_aff A) :=
+def RedNorm.out_eq {A : Expr} (h : RedNorm A B) : B = (red_aff A) :=
   match h with
   | .mk hr hn => by
     have heq := reduce_complete hr hn
@@ -399,7 +355,7 @@ def RedAffNorm.out_eq {A : GenericExpr τ} (h : RedAffNorm A B) : B = (red_aff A
     aesop
 
 @[ext]
-def RedAffNorm.ext (h₁ h₂ : RedAffNorm A B) : h₁ = h₂ := by
+def RedNorm.ext (h₁ h₂ : RedNorm A B) : h₁ = h₂ := by
   match h₁ with
   | ⟨hr₁, hn₁⟩ =>
     match h₂ with
@@ -407,61 +363,61 @@ def RedAffNorm.ext (h₁ h₂ : RedAffNorm A B) : h₁ = h₂ := by
       dcc_simp_all
 
 @[dcc_reduce, aesop safe destruct (rule_sets := [DccReduce])]
-def RedAffNorm.unique {A : GenericExpr τ} (h₁ : RedAffNorm A B) (h₂ : RedAffNorm A C) : B = C :=
+def RedNorm.unique {A : Expr} (h₁ : RedNorm A B) (h₂ : RedNorm A C) : B = C :=
   match h₁, h₂ with
   | ⟨ha, hb⟩, ⟨hc, hd⟩ => NormExpr.ext (norm_unique ha hb hc hd)
 
 @[macro_inline, dcc_size, aesop safe apply (rule_sets := [DccSize]) ]
-def RedAffNorm.absurd {P : Sort v} {A : GenericExpr τ} (h₁ : RedAffNorm A B) (h₂ : RedAffNorm A C) (hneq : B ≠ C := by intro h; cases h) : P :=
+def RedNorm.absurd {P : Sort v} {A : Expr} (h₁ : RedNorm A B) (h₂ : RedNorm A C) (hneq : B ≠ C := by intro h; cases h) : P :=
   _root_.absurd (h₁.unique h₂) (by simp_all)
 
-def RedAffNorm.elim_norm (hr : RedAffNorm A B) (hn : IsNorm RedAff A) : B = ⟨A, hn⟩ :=
+def RedNorm.elim_norm (hr : RedNorm A B) (hn : IsNorm Red A) : B = ⟨A, hn⟩ :=
   match hr with
   | ⟨hr, _hn⟩ => by
     have h := hn.unique_refl hr
     cases h
     grind
 
-def RedAffNorm.push_head {A : GenericExpr τ} (hrt : RedAffNorm A C) (hr : RedAff A B) : RedAffNorm B C :=
+def RedNorm.push_head {A : Expr} (hrt : RedNorm A C) (hr : Red A B) : RedNorm B C :=
   match hrt with
   | ⟨hrt, hn⟩ => ⟨hrt.push_head hn hr, hn⟩
 
 open Congruent in
-def RedAffNorm.congrFun (hrt : RedAffNorm (τ := τ) (DCC? (f x)) C) (hrt_f : RedAffNorm f ⟨f', hn_f⟩) : RedAffNorm (DCC? (f' x)) C :=
+def RedNorm.congrFun (hrt : RedNorm (DCC? (f x)) C) (hrt_f : RedNorm f ⟨f', hn_f⟩) : RedNorm (DCC? (f' x)) C :=
   match hrt, hrt_f with
   | ⟨hr₁, hn₁⟩, ⟨hr₂, _hn₂⟩ =>
     ⟨
-      have ⟨_, h₁, h₂⟩ := hr₁.conf (Congruent.congrFun' (hR := RedAff.instCongruent.reflTrans) hr₂)
+      have ⟨_, h₁, h₂⟩ := hr₁.conf (Congruent.congrFun' (hR := Red.instCongruent.reflTrans) hr₂)
       hn₁.unique_refl h₁ ▸ h₂, hn₁⟩
 
 open Congruent in
-def RedAffNorm.congrArg (hrt : RedAffNorm (τ := τ) (DCC? (f x)) C) (hrt_x : RedAffNorm x ⟨x', hn_f⟩) : RedAffNorm (DCC? (f x')) C :=
+def RedNorm.congrArg (hrt : RedNorm (DCC? (f x)) C) (hrt_x : RedNorm x ⟨x', hn_f⟩) : RedNorm (DCC? (f x')) C :=
   match hrt, hrt_x with
   | ⟨hr₁, hn₁⟩, ⟨hr₂, _hn₂⟩ =>
     ⟨
-      have ⟨_, h₁, h₂⟩ := hr₁.conf (Congruent.congrArg' (hR := RedAff.instCongruent.reflTrans) hr₂)
+      have ⟨_, h₁, h₂⟩ := hr₁.conf (Congruent.congrArg' (hR := Red.instCongruent.reflTrans) hr₂)
       hn₁.unique_refl h₁ ▸ h₂, hn₁⟩
 
 namespace IsNorm
 
-def map (h : IsNorm (RedAff (τ := τ)) (.map f)) : IsNorm RedAff f :=
+def map (h : IsNorm (Red) (.map f)) : IsNorm Red f :=
   fun ⟨_, hr⟩ => h ⟨_, .point 0 (by grind) hr⟩
 
-def unbox (h : IsNorm (RedAff (τ := τ)) (.unbox f)) : IsNorm RedAff f :=
+def unbox (h : IsNorm (Red) (.unbox f)) : IsNorm Red f :=
   fun ⟨_, hr⟩ => h ⟨_, .point 0 (by grind) hr⟩
 
-def box₀ (h : IsNorm RedAff (DCC? (& x))) : IsNorm RedAff x :=
+def box₀ (h : IsNorm Red (DCC? (& x))) : IsNorm Red x :=
   fun ⟨_, hr⟩ => h ⟨_, .point 0 (by grind) hr⟩
 
 end IsNorm
 
-def RedAff.elim_norm (hr : RedAff (τ := τ) A B) (hn : IsNorm RedAff A) : False := by
+def Red.elim_norm (hr : Red A B) (hn : IsNorm Red A) : False := by
   have h := hn.unique hr
   have h_dec := hr.decreasing
   grind
 
-def RedAff.size_absurd (hr : RedAff (τ := τ) A B) (h_size_eq : size A ≤ size B := by grind) : False := by
+def Red.size_absurd (hr : Red A B) (h_size_eq : size A ≤ size B := by grind) : False := by
   have h_dec := hr.decreasing
   grind
 
-end GenericExpr
+end Expr

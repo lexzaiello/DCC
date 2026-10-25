@@ -416,8 +416,7 @@ inductive Judge : Expr → Expr → Type where
     → Judge (DCC !<x>) τ-/
   | map    : Judge x τ_x
     → Arrow A (DCC Sort n) τ_x
-    → (→ (! A) Sort n) →ᵦ τ
-    → Judge (DCC (!<> x)) τ
+    → Judge (DCC (!<> x)) (DCC (→ (! A) Sort n))
   | fmap   : Judge x (open Dsl in (DCC ((Π f_A f_B) x_A)))
     → (f_A x_A) →ᵦ A
     → (f_B x_A) →ᵦ f_B'
@@ -610,7 +609,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     | .ok ⟨τ_f, ht₁⟩ =>
       match τ_f.read_arrow with
       | .ok ⟨_A, DCC Sort _n, harr⟩ =>
-        .ok ⟨_, .map ht₁ harr (reduce_reduces rfl)⟩
+        .ok ⟨_, .map ht₁ harr⟩
       | _ => .error (.mark 3 (.unexpected τ_f f))
     | .error e => .error (.sub f e)
   /-| DCC !<f> =>

@@ -136,6 +136,10 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
     have hn₂ : IsNorm Red f_B := fun ⟨_, h⟩ => a_ih ⟨_, .congrFun (.point 1 (by grind) h)⟩
     have hn₃ : IsNorm Red x_A := fun ⟨_, h⟩ => a_ih ⟨_, .congrArg h⟩
     exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (bang_is_norm a_1.is_norm)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (map_is_norm a_2.is_norm)) (fun ⟨_, h⟩ => nomatch h)
+  case map =>
+    expose_names
+    have ⟨hn_A, _⟩ := a_1.is_norm a_ih
+    exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (bang_is_norm hn_A)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (quot_is_norm (bang_is_norm hn_A) (fun ⟨_, h⟩ => nomatch h))) (fun ⟨_, h⟩ => nomatch h)
 
 end Judge
 

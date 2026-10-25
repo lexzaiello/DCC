@@ -452,6 +452,28 @@ def fmap_preservation_head (h : Judge (DCC (($<> x) (& y))) τ) : Judge (DCC (& 
           · exact h
           · exact ⟨.trans (congrFun' a_4.1) (reduce_sound rfl), reduce_norm rfl⟩
 
+open Dsl in
+def map_preservation_head (h : Judge (DCC ((!<> x) (& y))) τ) : Judge (DCC (! (x y))) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | map =>
+      expose_names
+      have ⟨hn_A, _⟩ := a_1.is_norm a_4.is_norm
+      cases ((a.push_head .quot).elim_norml (bang_is_norm hn_A)).elim_norm a_2.is_norm
+      cases ((a_3.push_head (.congrFun .quot)).push_head .quot).elim_norm (fun ⟨_, h⟩ => nomatch h)
+      cases a_1 with
+      | simple =>
+        expose_names
+        apply Judge.bang
+        · apply Judge.app
+          · exact a_4
+          · exact ⟨⟨.trans (.single .quot) a_1.1, a_1.2⟩, ⟨.refl, a_1.2⟩⟩
+          · cases a_2 with
+            | box h => exact h
+          · exact ⟨.trans (.single (.congrFun .quot)) (.trans (.single .quot) a_5.1), a_5.2⟩
+
 mutual
 
 def preservation (h : Judge e τ) (hr : Red e e') : Judge e' τ := by

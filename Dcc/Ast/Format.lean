@@ -15,17 +15,17 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
 
   open Dsl in match e with
   | .hole _ => "⋯"
-  | DCC True => "True"
-  | DCC False => "False"
-  | DCC Bool => "Bool"
-  | DCC (Bool.Rec motive x y) => comb "Bool.Rec" [motive.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
+  | DCC 𝟙₂ => "𝟙₂"
+  | DCC 𝟘₂ => "𝟘₂"
+  | DCC 𝟚 => "𝟚"
+  | DCC (𝟚.Rec motive x y) => comb "𝟚.Rec" [motive.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
   | DCC (Dup B x) => comb "Dup" [B.toFormat pretty, x.toFormat pretty]
   | DCC (Map A B x y) => comb "Map" [A.toFormat pretty, B.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
   | DCC (Assoc A B C) => comb "Assoc" [A.toFormat pretty, B.toFormat pretty, C.toFormat pretty]
-  | DCC (⊥.Rec motive) => comb "⊥.Rec" [motive.toFormat pretty]
+  | DCC (𝟘.Rec motive) => comb "𝟘.Rec" [motive.toFormat pretty]
   | DCC (? m) => comb "?" [m.toFormat pretty]
-  | (DCC ⊤)                   => "⊤"
-  | (DCC ⊥)                   => "⊥"
+  | (DCC 𝟙)                   => "𝟙"
+  | (DCC 𝟘)                   => "𝟘"
   | (DCC ∗)                   => "∗"
   | DCC (Swap B C) => comb "Swap" [B.toFormat pretty, C.toFormat pretty]
   | (DCC (!<> f))             => comb "!<>" [f.toFormat pretty]
@@ -66,5 +66,5 @@ instance Expr.instFormat : Std.ToFormat (Expr) := ⟨Expr.toFormat⟩
 instance Expr.instRepr   : Repr (Expr) := ⟨fun e _ => Std.Format.paren ("DCC" ++ .line ++ (.group (Expr.toFormat e)))⟩
 
 open Dsl in
-#eval (DCC ((Π (= ((Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1)) ((Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1)) ((Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1))) (`Sort 1 (`⊤ Sort 2))) ⊤))
+#eval (DCC ((Π (= ((Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1)) ((Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1)) ((Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1) (Sort 1))) (`Sort 1 (`𝟙 Sort 2))) 𝟙))
 

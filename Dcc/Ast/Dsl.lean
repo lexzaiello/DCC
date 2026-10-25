@@ -4,12 +4,12 @@ namespace Dsl
 
 declare_syntax_cat gen_dcc
 
-scoped syntax "(⊥.Rec" gen_dcc+ ")"                          : gen_dcc
-scoped syntax "(Bool.Rec" gen_dcc+ ")"                       : gen_dcc
+scoped syntax "(𝟘.Rec" gen_dcc+ ")"                          : gen_dcc
+scoped syntax "(𝟚.Rec" gen_dcc+ ")"                          : gen_dcc
 scoped syntax "(hole" term ")"                               : gen_dcc
-scoped syntax "True"                                         : gen_dcc
-scoped syntax "False"                                        : gen_dcc
-scoped syntax "Bool"                                         : gen_dcc
+scoped syntax "𝟙₂"                                           : gen_dcc
+scoped syntax "𝟘₂"                                           : gen_dcc
+scoped syntax "𝟚"                                            : gen_dcc
 scoped syntax "(Dup" gen_dcc+ ")"                            : gen_dcc
 scoped syntax "(Map" gen_dcc+ ")"                            : gen_dcc
 scoped syntax "(Assoc" gen_dcc+ ")"                          : gen_dcc
@@ -24,9 +24,9 @@ syntax "(Eval'" gen_dcc+ ")"                                 : gen_dcc
 syntax "(Eql" gen_dcc+ ")"                                   : gen_dcc
 syntax "(refl" gen_dcc+ ")"                                  : gen_dcc
 syntax "#(" term ")"                                         : gen_dcc
-syntax "⊤"                                                   : gen_dcc
+syntax "𝟙"                                                   : gen_dcc
 syntax "∗"                                                   : gen_dcc
-syntax "⊥"                                                   : gen_dcc
+syntax "𝟘"                                                   : gen_dcc
 scoped syntax:max "(`" gen_dcc+ ")"                          : gen_dcc
 syntax:max "(Id" gen_dcc+ ")"                                : gen_dcc
 syntax:max "(Fst" gen_dcc+ ")"                               : gen_dcc
@@ -85,11 +85,11 @@ open Lean.Syntax in macro_rules
   | `(DCC[$ty:gen_dcc_loc] (Eval $α:gen_dcc $β:gen_dcc $x:gen_dcc)) => return mkApp (← field ty "eval") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β), ← `(DCC[$ty:gen_dcc_loc] $x)]
   | `(DCC[$ty:gen_dcc_loc] const($tm:term))                          =>
     return mkApp (← field ty "const") #[← `($tm:term)]
-  | `(DCC[$ty:gen_dcc_loc] ⊤)                                        => field ty "top"
-  | `(DCC[$ty:gen_dcc_loc] True)                                        => field ty "true"
-  | `(DCC[$ty:gen_dcc_loc] False)                                        => field ty "false"
-  | `(DCC[$ty:gen_dcc_loc] Bool)                                        => field ty "bool"
-  | `(DCC[$ty:gen_dcc_loc] ⊥)                                        => field ty "bot"
+  | `(DCC[$ty:gen_dcc_loc] 𝟙)                                        => field ty "top"
+  | `(DCC[$ty:gen_dcc_loc] 𝟙₂)                                        => field ty "true"
+  | `(DCC[$ty:gen_dcc_loc] 𝟘₂)                                        => field ty "false"
+  | `(DCC[$ty:gen_dcc_loc] 𝟚)                                        => field ty "bool"
+  | `(DCC[$ty:gen_dcc_loc] 𝟘)                                        => field ty "bot"
   | `(DCC[$ty:gen_dcc_loc] ∗)                                        => field ty "tintro"
   | `(DCC[$ty:gen_dcc_loc] (Dup $B:gen_dcc $x:gen_dcc))                 => do
     return mkApp (← field ty "dup") #[← `(DCC[$ty:gen_dcc_loc] $B), ← `(DCC[$ty:gen_dcc_loc] $x)]
@@ -99,9 +99,9 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "bimap") #[← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $B), ← `(DCC[$ty:gen_dcc_loc] $x), ← `(DCC[$ty:gen_dcc_loc] $y)]
   | `(DCC[$ty:gen_dcc_loc] (Assoc $A:gen_dcc $B:gen_dcc $C:gen_dcc)) => do
     return mkApp (← field ty "assoc") #[← `(DCC[$ty:gen_dcc_loc] $A), ← `(DCC[$ty:gen_dcc_loc] $B), ← `(DCC[$ty:gen_dcc_loc] $C)]
-  | `(DCC[$ty:gen_dcc_loc] (Bool.Rec $motive:gen_dcc $case_true:gen_dcc $case_false:gen_dcc)) => do
+  | `(DCC[$ty:gen_dcc_loc] (𝟚.Rec $motive:gen_dcc $case_true:gen_dcc $case_false:gen_dcc)) => do
     return mkApp (← field ty "ind_bool") #[← `(DCC[$ty:gen_dcc_loc] $motive), ← `(DCC[$ty:gen_dcc_loc] $case_true),  ← `(DCC[$ty:gen_dcc_loc] $case_false)]
-  | `(DCC[$ty:gen_dcc_loc] (⊥.Rec $motive:gen_dcc)) => do
+  | `(DCC[$ty:gen_dcc_loc] (𝟘.Rec $motive:gen_dcc)) => do
     return mkApp (← field ty "ind_bot") #[← `(DCC[$ty:gen_dcc_loc] $motive)]
   | `(DCC[$ty:gen_dcc_loc] (!$x:gen_dcc))                  => do
     return mkApp (← field ty "bang") #[← `(DCC[$ty:gen_dcc_loc] $x)]
@@ -159,12 +159,12 @@ open Lean.Syntax in macro_rules
 
 open Dsl in
 macro_rules
-  | `(DCC[$ty:gen_dcc_loc] (Σ' $A:gen_dcc $B:gen_dcc)) => `(DCC[$ty:gen_dcc_loc] ((Σ (`⊤ $A) (`⊤ $B)) ∗))
+  | `(DCC[$ty:gen_dcc_loc] (Σ' $A:gen_dcc $B:gen_dcc)) => `(DCC[$ty:gen_dcc_loc] ((Σ (`𝟙 $A) (`𝟙 $B)) ∗))
   | `(DCC[$ty:gen_dcc_loc] (→ (:$α:gen_dcc $A) $β:gen_dcc)) =>
     `(DCC[$ty:gen_dcc_loc] ((Π (Id $A) (`$A (`$α $β))) $α))
   | `(DCC[$ty:gen_dcc_loc] (→ (: Sort $m) $β:gen_dcc)) =>
     `(DCC[$ty:gen_dcc_loc] (Λ Sort $m (Id Sort $m) (`((Σ (Id (Sort $m + 1)) (`(Sort $m + 1) (Id Sort $m))) Sort $m) $β)))
-  | `(DCC[$ty:gen_dcc_loc] (→ $A:gen_dcc $B:gen_dcc)) => `(DCC[$ty] ((Π (`⊤ $A) (`⊤ (`$A $B))) ∗))
+  | `(DCC[$ty:gen_dcc_loc] (→ $A:gen_dcc $B:gen_dcc)) => `(DCC[$ty] ((Π (`𝟙 $A) (`𝟙 (`$A $B))) ∗))
 
 open Dsl in
 syntax "gen_dsl" str "for" term  : command
@@ -200,7 +200,7 @@ abbrev Expr.Prod (A B : Expr) : Expr :=
 open Dsl in
 macro_rules
   | `(DCC[$loc] (× $A:gen_dcc $B:gen_dcc)) => `(Expr.Prod (DCC[$loc] $A) (DCC[$loc] $B))
-  | `(DCC[$ty] (Copy $A:gen_dcc)) => `(DCC[$ty] ((Dup (`⊤ $A) (`⊤ (Id (Σ' $A (`$A A))))) (& ∗)))
+  | `(DCC[$ty] (Copy $A:gen_dcc)) => `(DCC[$ty] ((Dup (`𝟙 $A) (`𝟙 (Id (Σ' $A (`$A A))))) (& ∗)))
   -- (Reassoc A B C) (, x (, y z)) = (, y (, z x))
   | `(DCC[$ty] (Reassoc $A:gen_dcc $B:gen_dcc $C:gen_dcc)) => `(DCC[$ty]
     (∘ (Assoc $B $C $A)

@@ -26,15 +26,15 @@ def size (e : Expr) : ℕ :=
   | DCC (Map A B x y) => A.size + B.size + x.size + y.size + 3
   | DCC (Assoc A B C) => 2 * (2 * (A.size + 1) + 2 * (B.size + 1)+ 2 * (C.size + 1) + 7)
   | DCC ∗ => 1
-  | DCC ⊤ => 2
-  | DCC ⊥ => 2
+  | DCC 𝟙 => 2
+  | DCC 𝟘 => 2
   | DCC (= A x y) => (A.size + x.size + y.size) + 1
   | DCC (? m) => m.size.succ
-  | DCC True => 1
-  | DCC False => 1
-  | DCC Bool => 1
-  | DCC (Bool.Rec motive x y) => motive.size + x.size + y.size + 1
-  | DCC (⊥.Rec motive) => motive.size + 1
+  | DCC 𝟙₂ => 1
+  | DCC 𝟘₂ => 1
+  | DCC 𝟚 => 1
+  | DCC (𝟚.Rec motive x y) => motive.size + x.size + y.size + 1
+  | DCC (𝟘.Rec motive) => motive.size + 1
   | DCC (Eql α)  => α.size * 80 + 17
   | DCC (refl α) => α.size * 2 + 5
   | DCC Sort _m => 3
@@ -57,10 +57,34 @@ def size (e : Expr) : ℕ :=
   | DCC (!<> x)   => x.size + x.size + x.size + 4
   | DCC ($<> x)   => 5 * x.size + 4
   | DCC (f x) => f.size + x.size
-  | .hole _ => 0
+  | .hole _ => 1
 
-theorem point_size_lt (h : Points e l) : (l.get n).size < e.size := by
-  cases h <;> grind
+@[grind .]
+theorem size_pos : 0 < size e := by
+  induction e <;> grind
+
+@[grind .]
+theorem point_size_lt : size ((Expr.points e).get n) < size e := by
+  induction e
+  any_goals (
+    fin_cases n <;>(simp [points, Vector.get, size]; grind))
+  any_goals (simp [points, Vector.get, size])
+
+@[grind .]
+theorem point_size_lt' : size ((Expr.points e).get ⟨n, h⟩) < size e := point_size_lt (n := ⟨n, h⟩)
+
+theorem set_point_size_lt (h : n < point_arity e) (heq : Fin.mk n h = n₀) (hlt : p'.size < (e.points.get (Fin.mk n h)).size) : size (set_points e ((Expr.points e).set n p' h)) < e.size := by
+  induction e
+  any_goals (
+    simp [point_arity] at h
+    fin_cases n₀ <;> (
+      cases heq
+      simp [points, set_points, size]
+      simp [points, Vector.get] at hlt
+      grind))
+  any_goals (
+    cases heq
+    simp [point_arity] at h)
 
 /-
 @[grind .]

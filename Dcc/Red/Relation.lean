@@ -1,5 +1,5 @@
 import Dcc.Ast.Format
-import Dcc.Aff.Size
+import Dcc.Red.Size
 import Dcc.Attrs
 
 namespace Expr
@@ -132,31 +132,31 @@ instance RedChoicePlus.instCasesHead {r : Expr → Expr → Type u} [∀ x y, Re
   | .head hr hrt => .inr ⟨_, hr, hrt, by dcc_simp_all (! !)⟩⟩
 
 @[grind]
-def IsNorm (r : Expr → Expr → Type u) (A : Expr) := ∀ ⦃B⦄, r A B → False
+def IsNorm' (r : Expr → Expr → Type u) (A : Expr) := ∀ ⦃B⦄, r A B → False
 
-def IsNorm.elim (hn : IsNorm r A) (hr : r A B) : A = B := (hn hr).elim
+def IsNorm'.elim (hn : IsNorm' r A) (hr : r A B) : A = B := (hn hr).elim
 
 class ElimNorm (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u) (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] where
-  elim_norm (hn : IsNorm r A) (h : m r A B) : A = B
+  elim_norm (hn : IsNorm' r A) (h : m r A B) : A = B
 
 open ElimNorm
 
 @[grind]
 def AndNorm (m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u) (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (A B : Expr) :=
-  m r A B × (PLift (IsNorm r B))
+  m r A B × (PLift (IsNorm' r B))
 
 @[grind]
-def AndNorm.mk {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] (h : m r A B) (hn : IsNorm r B) : AndNorm m r A B := ⟨h, ⟨hn⟩⟩
+def AndNorm.mk {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] (h : m r A B) (hn : IsNorm' r B) : AndNorm m r A B := ⟨h, ⟨hn⟩⟩
 
 instance [∀ x y, Repr (r x y)] [∀ x y, Repr (m r x y)] : Repr (AndNorm m r A B) := ⟨fun ⟨x, _y⟩ prec => Repr.addAppParen s!"AndNorm.mk {reprPrec x prec} ⋯" prec⟩
 
 @[grind]
 def AndNorm.raw [∀ x y, Repr (r x y)] (h : AndNorm m r A B) : m r A B := match h with | ⟨hr, _⟩ => hr
 
-def AndNorm.is_norm [∀ x y, Repr (r x y)] (h : AndNorm m r A B) : IsNorm r B := match h with | ⟨_, ⟨hn⟩⟩ => hn
+def AndNorm.is_norm [∀ x y, Repr (r x y)] (h : AndNorm m r A B) : IsNorm' r B := match h with | ⟨_, ⟨hn⟩⟩ => hn
 
 def AndNorm.ext {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)]
-  {A B : Expr} {h₁ : AndNorm m r A B} {h₂ : m r A B} {hn : IsNorm r B} (heq₁ : h₁.raw = h₂) (heq₂ : h₁.is_norm = hn) : h₁ = (AndNorm.mk h₂ hn) :=
+  {A B : Expr} {h₁ : AndNorm m r A B} {h₂ : m r A B} {hn : IsNorm' r B} (heq₁ : h₁.raw = h₂) (heq₂ : h₁.is_norm = hn) : h₁ = (AndNorm.mk h₂ hn) :=
   match h₁ with
   | ⟨hr, hn⟩ => by
     cases heq₁; cases heq₂
@@ -239,10 +239,10 @@ instance CasesHead.elim_cast_higher [∀ x y, Repr (r x y)] [Trans (m r) (m r) (
   | .inl ⟨h', heq⟩ => exact hn.elim h'
   | .inr ⟨_, h₁, h₂, heq'⟩ => cases hn.elim h₁; exact (no_refl h₁).elim⟩
 
-def IsNorm.down {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Single m r] (hn : IsNorm (m r) A) : IsNorm r A := fun _ h =>
+def IsNorm'.down {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Single m r] (hn : IsNorm' (m r) A) : IsNorm' r A := fun _ h =>
   hn (single h)
 
-def IsNorm.up {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (hn : IsNorm r A) : IsNorm (m r) A := fun _ h =>
+def IsNorm'.up {m : ∀ (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] (_A _B : Expr), Type u} {r : Expr → Expr → Type u} [∀ x y, Repr (r x y)] [Single m r] [Trans (m r) (m r) (m r)] [CasesHead m r] (hn : IsNorm' r A) : IsNorm' (m r) A := fun _ h =>
   match cases_head h with
   | .inl ⟨h, _⟩ => hn h
   | .inr ⟨_, h, _, _⟩ => hn h
@@ -326,7 +326,7 @@ def reduce (r : Expr → Expr → Type u) [∀ x y, Repr (r x y)] [Run Option r]
     match B.reduce (r := r) with
     |  ⟨C, ⟨hr', ⟨hn⟩⟩⟩ => ⟨_, ⟨trans (single (m := RedChoiceStar) hr) hr', ⟨hn⟩⟩⟩
   | .none =>
-    have hn : IsNorm r A := none_sound heq
+    have hn : IsNorm' r A := none_sound heq
     ⟨_, ⟨.refl, ⟨hn⟩⟩⟩
 termination_by A.size
 
@@ -509,7 +509,7 @@ def complete_fst [hR : Run Id r] [Complete' Id r] (h : r A B) (heqr : hR.run = r
   simp [Pure.pure] at h
   grind
 
-def reduce_norm_fst [Run Option r] [Decreasing r] [Complete' Option r] [∀ x y, Repr (r x y)] : IsNorm r (reduce r x).fst := (reduce r x).snd.is_norm
+def reduce_norm_fst [Run Option r] [Decreasing r] [Complete' Option r] [∀ x y, Repr (r x y)] : IsNorm' r (reduce r x).fst := (reduce r x).snd.is_norm
 
 open PopHead in
 def reduce_self [Run Option r] [Decreasing r] [Complete' Option r] [∀ x y, Repr (r x y)] (h : r A B) : (reduce r A).fst = (reduce r B).fst := complete_fst (pop_head h (reduce r B).snd)

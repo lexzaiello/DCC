@@ -9,9 +9,9 @@ namespace Expr
 /-
 (Π(Id(Sort 2),
              `(Sort 2,
-               Π(!<Snd(`(⊤, Sort 1))>,
-                 !Λ(Coup(`(⊤, Sort 1)), Snd(`(⊤, Sort 1)), `(!(Coup(Snd(`(⊤, Sort 1)))), Sort 2)))))
-             !(Coup(`(⊤, Sort 1))))
+               Π(!<Snd(`(𝟙, Sort 1))>,
+                 !Λ(Coup(`(𝟙, Sort 1)), Snd(`(𝟙, Sort 1)), `(!(Coup(Snd(`(𝟙, Sort 1)))), Sort 2)))))
+             !(Coup(`(𝟙, Sort 1))))
 -/
 
 /-
@@ -24,14 +24,14 @@ B : A → Sort u       C : (x : A) (y : B x) → Sort v
 
 open Dsl in
 def Swap.type (A B : Expr) : Expr :=
-  DCC (→ (Σ' A (`A B)) (Σ (`⊤ A) (`⊤ (`B A))))
+  DCC (→ (Σ' A (`A B)) (Σ (`𝟙 A) (`𝟙 (`B A))))
 
 /-
 (Π(Id(Sort 3),
                      `(Sort 3,
-                       Π(!<Snd(`(⊤, Sort 2))>,
-                         !Λ(Coup(`(⊤, Sort 2)), Snd(`(⊤, Sort 2)), `(!(Coup(Snd(`(⊤, Sort 2)))), Sort 3)))))
-                     !(Coup(`(⊤, Sort 2))))
+                       Π(!<Snd(`(𝟙, Sort 2))>,
+                         !Λ(Coup(`(𝟙, Sort 2)), Snd(`(𝟙, Sort 2)), `(!(Coup(Snd(`(𝟙, Sort 2)))), Sort 3)))))
+                     !(Coup(`(𝟙, Sort 2))))
 -/
 
 open Dsl in
@@ -40,7 +40,7 @@ open Dsl in
 
 open Dsl in
 @[dcc_judge] abbrev Tintro.type : Expr :=
-  DCC ⊤
+  DCC 𝟙
 
 open Dsl in
 @[dcc_judge] abbrev Bot.type : Expr :=
@@ -60,7 +60,7 @@ open Dsl in
 /-
 B : A → Sort u
 --------------------------------
-(Fst B) : (x : ((Σ (`⊤ A) (`⊤ B)) ∗)) → A
+(Fst B) : (x : ((Σ (`𝟙 A) (`𝟙 B)) ∗)) → A
 -/
 open Dsl in
 @[dcc_judge] abbrev fstc.type (A B : Expr) : Expr :=
@@ -77,7 +77,7 @@ They were expressive enough before.
 -/
 open Dsl in
 @[dcc_judge] abbrev sndc.type (A B : Expr) : Expr :=
-  (DCC ((Π (`⊤ (Σ' A B)) (`⊤ (∘ B (Fst B)))) ∗))
+  (DCC ((Π (`𝟙 (Σ' A B)) (`𝟙 (∘ B (Fst B)))) ∗))
 
 /-
 Λ(β, x) y z → x ⟦β⟧(y, z)
@@ -88,19 +88,19 @@ x : ∀ (s : coup.type α β m), γ s
 -/
 open Dsl in
 @[dcc_judge] def curr.type (α β γ : Expr) : Expr :=
-  DCC ((Π (`⊤ α) (`⊤ (Π β (Λ α β γ)))) ∗) -- weaken α, keep x
+  DCC ((Π (`𝟙 α) (`𝟙 (Π β (Λ α β γ)))) ∗) -- weaken α, keep x
 
 open Dsl in
 @[dcc_judge] abbrev curr.x.type (A B C : Expr) : Expr :=
-  DCC ((Π (`⊤ (Σ' A B)) (`⊤ C)) ∗)
+  DCC ((Π (`𝟙 (Σ' A B)) (`𝟙 C)) ∗)
 
 open Dsl in
 @[dcc_judge] abbrev curr'.type (α β γ : Expr) : Expr :=
-  DCC ((Π (`⊤ (! α)) (`⊤ (Π (!<> β) (!Λ α β γ)))) ∗) -- weaken α, keep x
+  DCC ((Π (`𝟙 (! α)) (`𝟙 (Π (!<> β) (!Λ α β γ)))) ∗) -- weaken α, keep x
 
 open Dsl in
 @[dcc_judge] abbrev curr'.x.type (A B C : Expr) : Expr :=
-  DCC ((Π (`⊤ (Σ' A B)) (`⊤ C)) (! (Σ A B)))
+  DCC ((Π (`𝟙 (Σ' A B)) (`𝟙 C)) (! (Σ A B)))
 
 /-
 *(f) &(x) = (f x)
@@ -118,18 +118,18 @@ open Dsl in
 
 open Dsl in
 @[dcc_judge] abbrev comp.type (A C g : Expr) : Expr :=
-  DCC ((Π (`⊤ A) (`⊤ (∘ C g))) ∗)
+  DCC ((Π (`𝟙 A) (`𝟙 (∘ C g))) ∗)
 
 open Dsl in
 @[dcc_judge] abbrev comp.f.type (B C : Expr) : Expr :=
-  DCC ((Π (`⊤ B) (`⊤ C)) ∗)
+  DCC ((Π (`𝟙 B) (`𝟙 C)) ∗)
 
 /-
 ((Eql B) env (,B x y)) →ᵦ (= (B env) x y)
 -/
 open Dsl in
 @[dcc_judge] def eql.type (B A : Expr) : Expr :=
-  (DCC ((Π (`⊤ A) (`⊤ (Π (Σ B (Λ A B (∘ B (Fst B)))) (Λ A (Σ B (Λ A B (∘ B (Fst B)))) (`(Σ B (Λ A B (∘ B (Fst B)))) (Sort 0)))))) ∗))
+  (DCC ((Π (`𝟙 A) (`𝟙 (Π (Σ B (Λ A B (∘ B (Fst B)))) (Λ A (Σ B (Λ A B (∘ B (Fst B)))) (`(Σ B (Λ A B (∘ B (Fst B)))) (Sort 0)))))) ∗))
 
 /-
 have (, (& env) (& x))
@@ -186,7 +186,7 @@ This is like W combinator:
 
 open Dsl in
 @[dcc_judge] def refl.type (f_α δ : Expr) : Expr :=
-  (DCC ((Π (`⊤ (! δ)) (`⊤ (Π (!<> f_α) (Dup f_α (Eql f_α))))) ∗))
+  (DCC ((Π (`𝟙 (! δ)) (`𝟙 (Π (!<> f_α) (Dup f_α (Eql f_α))))) ∗))
 
 /-
 B : A → Sort u      f : (x : A) → (y : (Σ B (Λ A B (∘ B (Fst B)))) x) → C x y
@@ -195,7 +195,7 @@ B : A → Sort u      f : (x : A) → (y : (Σ B (Λ A B (∘ B (Fst B)))) x) �
 -/
 open Dsl in
 @[dcc_judge] def Dup.type (A B C : Expr) : Expr :=
-  (DCC ((Π (`⊤ (! A)) (`⊤ (Π (!<> B) (Dup B C)))) ∗))
+  (DCC ((Π (`𝟙 (! A)) (`𝟙 (Π (!<> B) (Dup B C)))) ∗))
 
 /-
 f_α : α → Sort m
@@ -264,19 +264,19 @@ This is canonical.
 
 open Dsl in
 @[dcc_judge] abbrev Eval.type (α β γ : Expr) : Expr :=
-  DCC ((Π (`⊤ (Σ' α β)) (`⊤ (Eval α β γ))) ∗)
+  DCC ((Π (`𝟙 (Σ' α β)) (`𝟙 (Eval α β γ))) ∗)
 
 open Dsl in
 @[dcc_judge] abbrev Eval.x.type (A' B' C : Expr) : Expr :=
-  DCC ((Π (`⊤ A') (`⊤ (Π B' C))) ∗)
+  DCC ((Π (`𝟙 A') (`𝟙 (Π B' C))) ∗)
 
 open Dsl in
 @[dcc_judge] abbrev Pair.f.type (A B : Expr) : Expr :=
-  DCC ((Π (`⊤ A) (`⊤ B)) ∗)
+  DCC ((Π (`𝟙 A) (`𝟙 B)) ∗)
 
 open Dsl in
 @[dcc_judge] abbrev Pair.g.type (A B C : Expr) : Expr :=
-  DCC ((Π (`⊤ A) (`⊤ (Π B C))) ∗)
+  DCC ((Π (`𝟙 A) (`𝟙 (Π B C))) ∗)
 
 /-
 ⟨f, g⟩ x = (f x, g x (f x))
@@ -287,7 +287,7 @@ g : ∀ (x : α) (y : β x), γ x y
 -/
 open Dsl in
 @[dcc_judge] abbrev Pair.type (A B C : Expr) : Expr :=
-  DCC ((Π (`⊤ (! A)) (`⊤ (∘ (Σ B C) (* A)))) ∗)
+  DCC ((Π (`𝟙 (! A)) (`𝟙 (∘ (Σ B C) (* A)))) ∗)
 
 /-
 (≃.3 A B) : (eq : (! (≃ A B))) → (x : (! A)) → (= ((≃.2 A B) ((≃.1 A B) x.raw)) x.raw)

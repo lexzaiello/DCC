@@ -1,5 +1,5 @@
 import Dcc.Ast
-import Dcc.Aff.Red
+import Dcc.Red.RelTakashi
 import Dcc.Types
 
 inductive DefEqError where

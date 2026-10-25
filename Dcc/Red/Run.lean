@@ -1,22 +1,20 @@
-import Dcc.Aff.Rel
+import Dcc.Red.Rel
+import Dcc.Red.RelationProp
 import Mathlib.Tactic
 
-universe u
-variable {τ : Type u}
-
-namespace GenericExpr
+namespace Expr
 
 open Dsl
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
+def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{u + 1, 0} (Red e e'))) :=
   match e with
   | (DCC? ((Dup _B _x) (& _env) (& _y))) => .some ⟨_, ⟨.dup⟩⟩
   | (DCC? ((Map _B _C _f _g) (,__B _x _y))) => .some ⟨_, ⟨.bimap⟩⟩
   | (DCC? ((Assoc _A _B _C) (,_B₁ (,_B₂ _x _y) _z))) => .some ⟨_, ⟨.assoc⟩⟩
-  | (DCC? ((Bool.Rec _motive _x _y) _env True)) =>
+  | (DCC? ((𝟚.Rec _motive _x _y) _env 𝟙₂)) =>
     .some ⟨_, ⟨.ind_bool_true⟩⟩
-  | (DCC? ((Bool.Rec _motive _x _y) _env False)) =>
+  | (DCC? ((𝟚.Rec _motive _x _y) _env 𝟘₂)) =>
     .some ⟨_, ⟨.ind_bool_false⟩⟩
   | DCC? ((!<> _f) (& _x))                                 => .some ⟨_, ⟨.map⟩⟩
   | DCC? (($<> _f) (& _x))                                 => .some ⟨_, ⟨.fmap⟩⟩
@@ -26,16 +24,16 @@ def step_head? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{
   | (DCC? ((Eql _f_α) _env (,_B _x _y)))              => .some ⟨_, ⟨.eql⟩⟩
   | (DCC? ((`_β _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
   | (DCC? ((Id _α) _x))                                => .some ⟨_, ⟨.id⟩⟩
-  | (DCC? ((Fst _α _β) _env (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
+  | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
   | (DCC? ((Swap _B _C) (,_B₂ _a _b)))                 => .some ⟨_, ⟨.swap⟩⟩
-  | (DCC? ((Snd _α _β) _env (,_γ _a _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
+  | (DCC? ((Snd _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
   | (DCC? ((∘ _x _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
   | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, ⟨.curr'⟩⟩
   | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
+def step? (e : Expr) : Option ((e' : Expr) × (PULift.{u + 1, 0} (Red e e'))) :=
   match step_head? e with
   | .some h => .some h
   | .none =>
@@ -332,7 +330,7 @@ def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1
 
 set_option maxHeartbeats 10000000 in
 @[dcc_force_reduce, dcc_force_aff]
-instance RedAff.instRedRel : RedRel (α := GenericExpr τ) (RedAff (τ := τ)) size where
+instance Red.instRedRel : RedRel (α := Expr) Red size where
   run := step?
   decreasing := by
     intro x y h
@@ -352,53 +350,53 @@ instance RedAff.instRedRel : RedRel (α := GenericExpr τ) (RedAff (τ := τ)) s
       try aesop (rule_sets := [DccRel, DccSize])
       try rfl)
 
-theorem red_aff_sn : ∀ (e : GenericExpr τ), Acc (fun b a => RedAff (τ := τ) a b) e :=
-  RedAff.instRedRel.sn
+theorem red_aff_sn : ∀ (e : Expr), Acc (fun b a => Red a b) e :=
+  Red.instRedRel.sn
 
-theorem red_aff_trans_sn [DecidableEq τ] : ∀ (e : GenericExpr τ), Acc (fun b a => Relation.TransGen RedAff a b) e :=
-  RedAff.instRedRel.to_trans.sn
+theorem red_aff_trans_sn [DecidableEq τ] : ∀ (e : Expr), Acc (fun b a => Relation.TransGen Red a b) e :=
+  Red.instRedRel.to_trans.sn
 
-theorem congrFun' {f x f' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff f f') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f' x)) := by
+theorem congrFun' {f x f' : Expr} (hr : Relation.ReflTransGen Red f f') : Relation.ReflTransGen Red (DCC? (f x)) (DCC? (f' x)) := by
   match hr.cases_head with
   | .inl h =>
     cases h
     exact .refl
   | .inr ⟨_, h₁, h₂⟩ =>
-    have h_dec := RedAff.instRedRel.decreasing h₁
+    have h_dec := Red.instRedRel.decreasing h₁
     exact .trans (.single (.congrFun h₁)) (congrFun' h₂)
 termination_by size f
 
-theorem swap₀' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Swap x _y)) (DCC? (Swap x' _y)) := by
+theorem swap₀' {x x' : Expr} (hr : Relation.ReflTransGen Red x x') : Relation.ReflTransGen Red (DCC? (Swap x _y)) (DCC? (Swap x' _y)) := by
   match hr.cases_head with
   | .inl h =>
     cases h
     exact .refl
   | .inr ⟨_, h₁, h₂⟩ =>
-    have h_dec := RedAff.instRedRel.decreasing h₁
+    have h_dec := Red.instRedRel.decreasing h₁
     exact .trans (.single (.point 0 (by grind) h₁)) (swap₀' (by assumption))
 termination_by x.size
 
-theorem swap₁' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (Swap _x x)) (DCC? (Swap _x x')) := by
+theorem swap₁' {x x' : Expr} (hr : Relation.ReflTransGen Red x x') : Relation.ReflTransGen Red (DCC? (Swap _x x)) (DCC? (Swap _x x')) := by
   match hr.cases_head with
   | .inl h =>
     cases h
     exact .refl
   | .inr ⟨_, h₁, h₂⟩ =>
-    have h_dec := RedAff.instRedRel.decreasing h₁
+    have h_dec := Red.instRedRel.decreasing h₁
     exact .trans (.single (.point 1 (by grind) h₁)) (swap₁' (by assumption))
 termination_by x.size
 
-theorem congrArg' {x x' : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x x') : Relation.ReflTransGen RedAff (DCC? (f x)) (DCC? (f x')) := by
+theorem congrArg' {x x' : Expr} (hr : Relation.ReflTransGen Red x x') : Relation.ReflTransGen Red (DCC? (f x)) (DCC? (f x')) := by
   match hr.cases_head with
   | .inl h =>
     cases h
     exact .refl
   | .inr ⟨_, h₁, h₂⟩ =>
-    have h_dec := RedAff.instRedRel.decreasing h₁
+    have h_dec := Red.instRedRel.decreasing h₁
     exact .trans (.single (.congrArg h₁)) (congrArg' h₂)
 termination_by size x
 
-theorem point' (hr : Relation.ReflTransGen (RedAff (τ := τ)) ((points e).get ⟨n, h⟩) p') : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n p')) :=
+theorem point' (hr : Relation.ReflTransGen Red ((points e).get ⟨n, h⟩) p') : Relation.ReflTransGen Red e (e.set_points ((points e).set n p')) :=
   match hr.cases_head with
   | .inl h => by
     cases h
@@ -408,14 +406,14 @@ theorem point' (hr : Relation.ReflTransGen (RedAff (τ := τ)) ((points e).get �
     exact Relation.ReflTransGen.refl
   | .inr ⟨_, h₁, h₂⟩ => by
     expose_names
-    have h_dec := RedAff.instRedRel.decreasing h₁
+    have h_dec := Red.instRedRel.decreasing h₁
     have h_dec₂ := decreasing? _ h₂
     have heq := set_same_point_comp (e := e) (x := w) (p := ⟨n, h⟩) (y := p')
-    have hr' := RedAff.point _ _ h₁
+    have hr' := Red.point _ _ h₁
     have hr'' := point_trans' h₁ h₂
     have h_dec₃ := decreasing? _ hr''
     have h_dec₂ : (e.set_points (e.points.set n w h)).size < e.size := by
-      have h_dec := RedAff.instRedRel.decreasing hr'
+      have h_dec := Red.instRedRel.decreasing hr'
       grind
     have hrt' := point' hr''
     have heq' := set_same_point_comp (e := e) (x := w) (p := ⟨n, h⟩) (y := p')
@@ -433,7 +431,7 @@ macro_rules
     | (simp_all [points, Vector.get, point_arity, set_points]; try (grind only [points, point_arity]); try rfl))
 
 set_option maxHeartbeats 100000000000 in
-theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAff x y) (hn : n < point_arity e := by point_arity) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := by
+theorem aff_mk_point' {x y e : Expr} (hr : Relation.ReflTransGen Red x y) (hn : n < point_arity e := by point_arity) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen Red e (e.set_points ((points e).set n y)) := by
   match hr.cases_head with
   | .inl h =>
     cases h
@@ -452,10 +450,10 @@ theorem aff_mk_point' {x y e : GenericExpr τ} (hr : Relation.ReflTransGen RedAf
           exact Relation.ReflTransGen.refl))
   | .inr ⟨_, h₁, h₂⟩ =>
     cases heq
-    have h_dec := RedAff.instRedRel.decreasing h₁
+    have h_dec := Red.instRedRel.decreasing h₁
     have hr' := point' hr
     exact hr'
 
-theorem aff_mk_point'' {x y e : GenericExpr τ} (n : ℕ) (hr : RedAff x y := by assumption) (hn : n < point_arity e := by point_arity) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen RedAff e (e.set_points ((points e).set n y)) := aff_mk_point' (.single hr)
+theorem aff_mk_point'' {x y e : Expr} (n : ℕ) (hr : Red x y := by assumption) (hn : n < point_arity e := by point_arity) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen Red e (e.set_points ((points e).set n y)) := aff_mk_point' (.single hr)
 
-end GenericExpr
+end Expr

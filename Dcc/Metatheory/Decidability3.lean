@@ -89,6 +89,12 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
     expose_names
     have ⟨hn₁, hn₂⟩ := a_1.is_norm (by assumption)
     exact arr_is_norm hn₁ (fun ⟨_, h⟩ => nomatch h)
+  case comp =>
+    expose_names
+    exact pi_is_norm
+      (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (Arrow.is_norm a_1 a_ih).1)
+      (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (comp_is_norm (fun ⟨_, h⟩ => a_ih_1 ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) h))⟩) a_3.is_norm))
+      (fun ⟨_, h⟩ => nomatch h)
   case fstc =>
     expose_names
     have ⟨hn₁, hn₂⟩ := a_1.is_norm (by assumption)

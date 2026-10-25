@@ -115,9 +115,7 @@ def DefEq.complete {τ₁ τ₂ : Expr} (h : DefEq τ₁ τ₂) : def_eq? τ₁ 
 
 open Dsl in
 inductive Arrow : Expr → Expr → Expr → Type
-  | simple : ((fB x) →ᵦ A)
-    → ((fC x (& (hole 1))) →ᵦ B) -- TODO: this might be sus. for example, if we use (!Λ)
-    → Arrow A B (DCC ((Π fB fC) x))
+  | simple : A →ᵦ A' → B →ᵦ B' → Arrow A' B' (DCC (→ A B))
 deriving Repr
 
 def Arrow.is_norm (h : Arrow A B τ) (hn : IsNorm Red τ) : (IsNorm Red A) ×' (IsNorm Red B) :=
@@ -128,8 +126,10 @@ open Dsl in
 @[dcc_judge, inline]
 def read_arrow (τ : Expr) : Except (TypeError τ) ((A B : Expr) × (Arrow A B τ)) :=
   open Dsl in match τ with
-  | DCC? ((Π _B _C) _x) =>
-    .ok ⟨_, _, .simple (reduce_reduces rfl) (reduce_reduces rfl)⟩
+  | DCC ((Π (`𝟙 A) (`𝟙 (`_A B))) ∗) =>
+    if heq : (DCC ((Π (`𝟙 A) (`𝟙 (`_A B))) ∗)) = (DCC (→ A B)) then
+      heq ▸ .ok ⟨_, _, reduce_reduces rfl, reduce_reduces rfl⟩
+    else .error (.unexpected τ τ)
   | _ => .error (.unexpected τ τ)
 
 open Dsl in
@@ -365,8 +365,8 @@ inductive Judge : Expr → Expr → Type where
   | comp   : Judge g τ_g
     → comp.g.type A B τ_g
     → Judge f (comp.f.type B C)
-    → #(comp.type A C g) →ᵦ τ
-    → Judge (DCC (∘ f g)) τ
+    → (g →ᵦ g')
+    → Judge (DCC (∘ f g)) (comp.type A C g')
   | sigma  : Judge B τ_B
     → Arrow A (DCC (Sort v)) τ_B
     → Judge C τ_C

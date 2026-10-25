@@ -7,7 +7,7 @@ namespace Expr
 open Dsl
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{u + 1, 0} (Red e e'))) :=
+def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :=
   match e with
   | (DCC? ((Dup _B _x) (& _env) (& _y))) => .some ⟨_, ⟨.dup⟩⟩
   | (DCC? ((Map _B _C _f _g) (,__B _x _y))) => .some ⟨_, ⟨.bimap⟩⟩
@@ -33,7 +33,7 @@ def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{u + 1, 0} (Red e e')
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def step? (e : Expr) : Option ((e' : Expr) × (PULift.{u + 1, 0} (Red e e'))) :=
+def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :=
   match step_head? e with
   | .some h => .some h
   | .none =>

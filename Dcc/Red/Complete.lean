@@ -287,7 +287,7 @@ theorem decreasing? {A B : Expr} (h : (RedReflTrans) A B) : (size B) ≤ (size A
 
 end RedReflTrans
 
-inductive RedNorm : Expr → Expr → Type u
+inductive RedNorm : Expr → Expr → Type
   | mk : (hr : RedReflTrans A B) → (hn : IsNorm Red B) → RedNorm A B
 deriving DecidableEq, Repr
 

@@ -201,19 +201,26 @@ theorem set_points_eq_set_points₄ : set_points e ⟨#[x, y, z, z'], h⟩ = (e.
   any_goals (grind)
   any_goals (simp [set_points, points])
 
--- congr_point_arr (h : r e (set_points e ((points e).set p p'))) : point_arity e = (set_points e ((points e).set p p'))
-
-@[grind =, grind! ., dcc_rel]
-theorem set_points_self_noop : set_points e e.points = e := by
-  induction e
-  any_goals (first | grind | aesop)
-
 @[grind =_, grind ., grind! ., dcc_rel]
 theorem congr_point_arr {e : Expr} {p : Fin (point_arity e)} : point_arity e = point_arity (set_points e ((points e).set p p')) := by
   induction e <;> grind
 
 theorem congr_point_lt (h : n < point_arity e := by assumption) : n < point_arity (set_points e (e.points.set n p' hn)) := by
   induction e <;> grind
+
+theorem set_points_eq_set_points₂' : set_points e ⟨#[x, y], h⟩ = (set_points (e.set_points (e.points.set 0 (h := by grind) x)) ((points (e.set_points (e.points.set 0 (h := by grind) x))).set 1 (h := by
+  have h := congr_point_arr (e := e) (p := ⟨0, by grind⟩) (p' := x)
+  grind) y)) := by
+  induction e
+  any_goals (grind)
+  any_goals (simp [set_points, points])
+
+-- congr_point_arr (h : r e (set_points e ((points e).set p p'))) : point_arity e = (set_points e ((points e).set p p'))
+
+@[grind =, grind! ., dcc_rel]
+theorem set_points_self_noop : set_points e e.points = e := by
+  induction e
+  any_goals (first | grind | aesop)
 
 @[grind =, grind ., dcc_rel]
 theorem get_set_point {e p' : Expr} {p : Fin (point_arity e)} : (points (set_points e ((points e).set p p'))).get ⟨p, by rw [← congr_point_arr]; grind⟩ = p' := by

@@ -389,6 +389,51 @@ def unbox_preservation_head (h : Judge (DCC ((* A) (& x))) τ) : Judge x τ := b
       cases a_2 with
       | box h => exact h
 
+def curr_preservation_head (h : Judge (DCC ((Λ A B x) y z)) τ) : Judge (DCC (x (,B y z))) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | app =>
+      expose_names
+      cases a_4 with
+      | curr =>
+        expose_names
+        replace a_6 := a_6.push_head (.congrFun .quot)
+        have h := a_6.pi_eq
+        have heq₁ := elim_reduce_norm_fst a_10.is_norm
+        unfold curr.x.type at a_11
+        have hn_x_type := a_11.is_norm
+        have hn_curr : IsNorm Red (DCC (Λ A' B' C)) := curr_is_norm a_8.is_norm a_10.is_norm
+          (fun ⟨_, h⟩ => hn_x_type ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) h))⟩)
+        have heq₂ := elim_reduce_norm_fst hn_curr
+        simp [heq₁, heq₂] at h
+        cases h.left.left
+        cases h.left.right
+        cases h.right
+        clear h
+        replace a := a.elim_normr a_2.is_norm
+        cases ((a_1.push_head .quot).elim_norml a_8.is_norm).elim_norm a_5.is_norm
+        replace a_3 := a_3.push_head .curr
+        apply Judge.app
+        · exact a_11
+        · exact ⟨⟨.single .quot, sigma_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) a_8.is_norm) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) a_10.is_norm) (fun ⟨_, h⟩ => nomatch h)⟩, .refl, sigma_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) a_8.is_norm) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) a_10.is_norm) (fun ⟨_, h⟩ => nomatch h)⟩
+        · apply Judge.mk
+          · exact a_5
+          · exact a_9
+          · exact a_4
+          · exact a_10
+          · exact ⟨.trans (congrArg' (reduce_sound rfl)) a.1, a.2⟩
+          · exact a_2
+          · exact ⟨.refl, sigma_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) a_8.is_norm) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) a_10.is_norm) (fun ⟨_, h⟩ => nomatch h)⟩
+        · exact ⟨.trans (.single (.congrFun .quot)) (.trans (congrArg' (aff_mk_point' (n := 0) a_10.1)) (.trans
+            (by
+              simp [set_points, points]
+              have h := aff_mk_point' (n := 1) (reduce_sound rfl) (e := (f_α.mkc y z)) (x := y)
+              simp [set_points, points] at h
+              exact congrArg' h)
+            a_3.1)), a_3.2⟩
+
 mutual
 
 def preservation (h : Judge e τ) (hr : Red e e') : Judge e' τ := by

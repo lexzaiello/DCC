@@ -380,7 +380,7 @@ inductive Judge : Expr → Expr → Type where
   | sndc    : Judge B τ_B
     → Arrow A (DCC Sort n) τ_B
     → B →ᵦ B'
-    → Judge (DCC (Snd B)) (sndc.type A B)
+    → Judge (DCC (Snd B)) (sndc.type A B')
   | mk     : Judge x A
     → Judge B τ_B
     → Arrow A (DCC Sort n) τ_B

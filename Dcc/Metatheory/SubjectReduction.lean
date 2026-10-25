@@ -3,6 +3,9 @@ import Dcc.Metatheory.Decidability3
 
 namespace Expr
 
+open Dsl in
+def bang_is_norm (hn : IsNorm Red A) : IsNorm Red (DCC (! A)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+
 def Arrow.unique (h₁ : Arrow A₁ B₁ τ) (h₂ : Arrow A₂ B₂ τ) : (A₁ = A₂) ×' (B₁ = B₂) := by
   have heq₁ := h₁.read_complete
   have heq₂ := h₂.read_complete
@@ -317,8 +320,6 @@ def id_preservation_head (h : Judge (DCC? ((Id A) x)) τ) : Judge x τ := by
       cases (a.elim_norml a_4.is_norm).elim_norm a_2.is_norm
       assumption
 
-mutual
-
 def fst_preservation_head (h : Judge (DCC? ((Fst B) (,B₂ x y))) τ) : Judge x τ := by
   cases h with
   | app =>
@@ -375,6 +376,20 @@ def comp_preservation_head (h : Judge (DCC? ((∘ f g) x)) τ) : Judge (DCC? (f 
           · exact ⟨⟨.trans (.single .quot) a_1.1, a_1.2⟩, ⟨.refl, a_1.is_norm⟩⟩
           · exact a_2
           · exact ⟨.trans (.single (.congrFun .quot)) (.trans (.single .quot) a_7.1), a_7.2⟩
+
+def unbox_preservation_head (h : Judge (DCC ((* A) (& x))) τ) : Judge x τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | unbox =>
+      expose_names
+      cases ((a_3.push_head (.congrFun .quot)).push_head .quot).elim_norm a_4.is_norm
+      cases ((a.push_head .quot).elim_norml (bang_is_norm a_4.is_norm)).elim_norm a_2.is_norm
+      cases a_2 with
+      | box h => exact h
+
+mutual
 
 def preservation (h : Judge e τ) (hr : Red e e') : Judge e' τ := by
   sorry

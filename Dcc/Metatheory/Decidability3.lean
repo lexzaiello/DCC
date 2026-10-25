@@ -2,6 +2,15 @@ import Dcc.Judge3
 
 namespace Expr
 
+open Dsl in
+def map_is_norm (hn : IsNorm Red B) : IsNorm Red (DCC (!<> B)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+
+open Dsl in
+def bang_is_norm (hn : IsNorm Red A) : IsNorm Red (DCC (! A)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+
+open Dsl in
+def box_is_norm (hn : IsNorm Red x) : IsNorm Red (DCC (& x)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+
 def curr_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) (hn₃ : IsNorm Red x) : IsNorm Red (DCC (Λ A B x)) := fun ⟨_, h⟩ =>
   match h with
   | .point 0 hn h => hn₁ ⟨_, h⟩
@@ -121,6 +130,12 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
     have ⟨hn₁, hn₂⟩ := a_1.is_norm (by assumption)
     have hn₃ := a_2.is_norm
     exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (sigma_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (by assumption)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (by assumption)) (fun ⟨_, h⟩ => nomatch h))) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (comp_is_norm (by assumption) (fun ⟨_, .point 0 hn h⟩ => hn₃ ⟨_, h⟩))) (fun ⟨_, h⟩ => nomatch h)
+  case fmap =>
+    expose_names
+    have hn₁ : IsNorm Red f_A := fun ⟨_, h⟩ => a_ih ⟨_, .congrFun (.point 0 (by grind) h)⟩
+    have hn₂ : IsNorm Red f_B := fun ⟨_, h⟩ => a_ih ⟨_, .congrFun (.point 1 (by grind) h)⟩
+    have hn₃ : IsNorm Red x_A := fun ⟨_, h⟩ => a_ih ⟨_, .congrArg h⟩
+    exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (bang_is_norm a_1.is_norm)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (map_is_norm a_2.is_norm)) (fun ⟨_, h⟩ => nomatch h)
 
 end Judge
 

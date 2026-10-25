@@ -3,9 +3,6 @@ import Dcc.Metatheory.Decidability3
 
 namespace Expr
 
-open Dsl in
-def bang_is_norm (hn : IsNorm Red A) : IsNorm Red (DCC (! A)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
-
 def Arrow.unique (h₁ : Arrow A₁ B₁ τ) (h₂ : Arrow A₂ B₂ τ) : (A₁ = A₂) ×' (B₁ = B₂) := by
   have heq₁ := h₁.read_complete
   have heq₂ := h₂.read_complete
@@ -426,13 +423,34 @@ def curr_preservation_head (h : Judge (DCC ((Λ A B x) y z)) τ) : Judge (DCC (x
           · exact ⟨.trans (congrArg' (reduce_sound rfl)) a.1, a.2⟩
           · exact a_2
           · exact ⟨.refl, sigma_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) a_8.is_norm) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) a_10.is_norm) (fun ⟨_, h⟩ => nomatch h)⟩
-        · exact ⟨.trans (.single (.congrFun .quot)) (.trans (congrArg' (aff_mk_point' (n := 0) a_10.1)) (.trans
+        · exact ⟨.trans (.single (.congrFun .quot)) (.trans (congrArg' (aff_mk_point' (n := 0) a_10.1 (by simp [point_arity]))) (.trans
             (by
               simp [set_points, points]
-              have h := aff_mk_point' (n := 1) (reduce_sound rfl) (e := (f_α.mkc y z)) (x := y)
+              have h := aff_mk_point' (n := 1) (reduce_sound rfl) (e := (f_α.mkc y z)) (x := y) (by simp [point_arity])
               simp [set_points, points] at h
               exact congrArg' h)
             a_3.1)), a_3.2⟩
+
+def fmap_preservation_head (h : Judge (DCC (($<> x) (& y))) τ) : Judge (DCC (& (x y))) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | fmap =>
+      expose_names
+      cases ((a.push_head .quot).elim_norml (bang_is_norm a_1.is_norm)).elim_norm a_2.is_norm
+      replace a_3 := (a_3.push_head (.congrFun .quot)).push_head .map
+      cases a_2 with
+      | box h =>
+        have heq_red_bang := a_3.complete_fst
+        have heq' := heq_red_bang.symm.trans (congr_reduce₁ (e := (f_B'.app y).bang) (by simp [point_arity]))
+        cases heq'
+        apply Judge.box
+        · apply Judge.app
+          · assumption
+          · exact ⟨a_1, ⟨.refl, a_1.2⟩⟩
+          · exact h
+          · exact ⟨.trans (congrFun' a_4.1) (reduce_sound rfl), reduce_norm rfl⟩
 
 mutual
 

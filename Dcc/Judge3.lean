@@ -419,8 +419,9 @@ inductive Judge : Expr → Expr → Type where
     → (→ (! A) Sort n) →ᵦ τ
     → Judge (DCC (!<> x)) τ
   | fmap   : Judge x (open Dsl in (DCC ((Π f_A f_B) x_A)))
-    → ((Π (`𝟙 (! (f_A x_A))) (`𝟙 (!<> (f_B x_A)))) ∗) →ᵦ τ
-    → Judge (DCC ($<> x)) τ
+    → (f_A x_A) →ᵦ A
+    → (f_B x_A) →ᵦ f_B'
+    → Judge (DCC ($<> x)) (open Dsl in (DCC ((Π (`𝟙 (! A)) (`𝟙 (!<> f_B'))) ∗)))
   | unbox  : Judge A (DCC Sort m)
     → A →ᵦ A'
     → Judge (DCC (* A)) (open Dsl in (DCC (→ (! A') A')))
@@ -632,7 +633,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
   | DCC ($<> f) =>
     match f.infer with
     | .ok ⟨(DCC ((Π _f_A _f_B) _x_A)), ht⟩ =>
-      .ok ⟨_, .fmap ht (reduce_reduces rfl)⟩
+      .ok ⟨_, .fmap ht (reduce_reduces rfl) (reduce_reduces rfl)⟩
     | .ok ⟨t, _⟩ => .error (.unexpected t f)
     | .error ε => .error (.sub f ε)
   | DCC (* A) =>

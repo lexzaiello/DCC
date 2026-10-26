@@ -353,12 +353,16 @@ inductive Judge : Expr → Expr → Type where
     → Judge (DCC (= A x y)) (DCC Sort 0)
   | refl    : Judge f_α τ_f_α
     → Arrow δ (DCC Sort m) τ_f_α
-    → #(Expr.refl.type f_α δ) →ᵦ τ
-    → Judge (DCC (refl f_α)) τ
+    → f_α →ᵦ f_α'
+    → Judge (DCC (refl f_α)) (Expr.refl.type f_α' δ)
   | eql    : Judge f_α τ_f_α
     → Arrow δ (DCC Sort m) τ_f_α
-    → #(eql.type f_α δ) →ᵦ τ'
-    → Judge (DCC (Eql f_α)) τ'
+    → f_α →ᵦ f_α'
+    → Judge (DCC (Eql f_α)) (eql.type f_α' δ)
+  | eq_mk  : Judge f_α τ_f_α
+    → Arrow δ (DCC Sort m) τ_f_α
+    → f_α →ᵦ f_α'
+    → Judge (DCC (=' f_α)) (eq_mk.type f_α' δ)
   | id     : Judge α (DCC Sort m)
     → α →ᵦ α'
     → Judge (DCC (Id α)) (id.type α')
@@ -367,12 +371,17 @@ inductive Judge : Expr → Expr → Type where
     → Judge f (comp.f.type B C)
     → (g →ᵦ g')
     → Judge (DCC (∘ f g)) (comp.type A C g')
-  | sigma  : Judge B τ_B
+  | sigma' : Judge B τ_B
     → Arrow A (DCC (Sort v)) τ_B
     → Judge C τ_C
     → B →ᵦ B'
     → Pi.C.type B' A s τ_C
-    → Judge (DCC (Σ B C)) (DCC (→ A (Sort (max v s))))
+    → Judge (DCC (Σ' B C)) (DCC (→ A (Sort (max v s))))
+  | sigma  : Judge A (DCC (Sort u))
+    → Judge B τ_B
+    → Arrow A' (DCC (Sort v)) τ_B
+    → A →ᵦ A'
+    → Judge (DCC (Σ A B)) (DCC (Sort (max u v)))
   | fstc   : Judge B τ_B
     → Arrow A (DCC Sort n) τ_B
     → B →ᵦ B'
@@ -387,8 +396,7 @@ inductive Judge : Expr → Expr → Type where
     → B →ᵦ B'
     → #(DCC (B' x)) →ᵦ τ₂
     → Judge y τ₂
-    → (Σ' A B') →ᵦ τ
-    → Judge (DCC (,B x y)) τ
+    → Judge (DCC (,B x y)) (DCC (Σ A B'))
   /-
     Λ(β, x)
     β receives (α, x)
@@ -488,12 +496,12 @@ inductive Judge : Expr → Expr → Type where
     → Judge g τ_g
     → Arrow A A' τ_f
     → Arrow B B' τ_g
-    → (→ (Σ' A (`A B)) (Σ' B' (`A' B'))) →ᵦ τ'
+    → (→ (Σ A (`A B)) (Σ B' (`A' B'))) →ᵦ τ'
     → Judge (DCC (Map A' B' f g)) τ'
   | assoc    : Judge A (DCC Sort u)
     → Judge B (DCC Sort v)
     → Judge C (DCC Sort s)
-    → (→ (Σ' (Σ' A (`A B)) (`(Σ' A (`A B)) C)) (Σ' A (`A (Σ' B (`B C))))) →ᵦ τ'
+    → (→ (Σ (Σ A (`A B)) (`(Σ A (`A B)) C)) (Σ A (`A (Σ B (`B C))))) →ᵦ τ'
     → Judge (DCC (Assoc A B C)) τ'
   | ind_bot  : Judge motive τ_motive
     → Arrow A τ_motive₂ τ_motive
@@ -707,6 +715,14 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         .ok ⟨_, .eql ht₁ h (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ f_α)
     | .error ε => .error (.sub f_α ε)
+  | DCC (=' f_α) =>
+    match infer f_α with
+    | .ok ⟨τ, ht₁⟩ =>
+      match τ.read_arrow with
+      | .ok ⟨_δ, DCC Sort _m, h⟩ =>
+        .ok ⟨_, .eq_mk ht₁ h (reduce_reduces rfl)⟩
+      | _ => .error (.unexpected τ f_α)
+    | .error ε => .error (.sub f_α ε)
   | DCC (refl f_α) =>
     match infer f_α with
     | .ok ⟨τ, ht₁⟩ =>
@@ -715,7 +731,22 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         .ok ⟨_, .refl ht₁ h (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ f_α)
     | .error ε => .error (.sub f_α ε)
-  | DCC (Σ B C) =>
+  | DCC (Σ A B) =>
+    match A.infer with
+    | .ok ⟨DCC Sort u, h₁⟩ =>
+      match B.infer with
+      | .ok ⟨τ_B, h₂⟩ =>
+        match τ_B.read_arrow with
+        | .ok ⟨A', DCC Sort v, h_arr⟩ =>
+          if heq : A' = reduce_all A then
+            .ok ⟨_, .sigma h₁ h₂ h_arr (reduce_reduces (by grind))⟩
+          else .error (.unexpected A' τ_B)
+        | .ok ⟨_, u_τ_B, _⟩ => .error (.unexpected u_τ_B τ_B)
+        | .error e => .error (.sub B (.sub τ_B e))
+      | .error e => .error (.sub B e)
+    | .ok ⟨τ_A, _⟩ => .error (.unexpected τ_A A)
+    | .error e => .error (.sub A e)
+  | DCC (Σ' B C) =>
     match B.infer with
     | .ok ⟨τ_B, h₁⟩ =>
       match read_arrow τ_B with
@@ -724,7 +755,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         | .ok ⟨τ_C, h₂⟩ =>
           match τ_C.view_pi_f_β (reduce_all B) A with
           | .ok ⟨_, h⟩ =>
-            .ok ⟨_, .sigma h₁ harr₁ h₂ (reduce_reduces rfl) h⟩
+            .ok ⟨_, .sigma' h₁ harr₁ h₂ (reduce_reduces rfl) h⟩
           | .error e => .error (.sub C (.sub τ_C e))
         | .error e => .error (.sub C e)
       | .ok ⟨_A, τ₂, _h⟩ =>
@@ -742,7 +773,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
           | .ok ⟨DCC Sort _n, harr⟩ =>
             if heq₂ : reduce_all (DCC (#(reduce_all B) x)) = Bxm then
               .ok ⟨_, .mk ht₁ h₃ harr
-                (reduce_reduces rfl) (reduce_reduces (B := Bxm) (heq₂ ▸ rfl)) ht₂ (reduce_reduces rfl)⟩
+                (reduce_reduces rfl) (reduce_reduces (B := Bxm) (heq₂ ▸ rfl)) ht₂⟩
             else .error (.mismatch (reduce_all (DCC (B x))) Bxm y)
           | _ => .error (.unexpected τ_B B)
         | .error ε => .error (.sub B ε)

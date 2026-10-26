@@ -9,6 +9,7 @@ open Dsl
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :=
   match e with
+  | (DCC? ((Σ' _B _C) (& _x))) => .some ⟨_, ⟨.sigma⟩⟩
   | (DCC? ((Dup _B _x) (& _env) (& _y))) => .some ⟨_, ⟨.dup⟩⟩
   | (DCC? ((Map _B _C _f _g) (,__B _x _y))) => .some ⟨_, ⟨.bimap⟩⟩
   | (DCC? ((Assoc _A _B _C) (,_B₁ (,_B₂ _x _y) _z))) => .some ⟨_, ⟨.assoc⟩⟩
@@ -21,7 +22,8 @@ def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :
   | DCC? ((* _α) (& _x))                                 => .some ⟨_, ⟨.unbox⟩⟩
   | DCC? ((⟨,⟩_β _M _N) (& _x))                        => .some ⟨_, ⟨.pair⟩⟩
   | (DCC? ((Eval _α _β _x) (,__β _y _z)))            => .some ⟨_, ⟨.evalc⟩⟩
-  | (DCC? ((Eql _f_α) _env (,_B _x _y)))              => .some ⟨_, ⟨.eql⟩⟩
+  | (DCC? ((Eql _f_α) (& _env) (& _y)))              => .some ⟨_, ⟨.eql⟩⟩
+  | (DCC? ((=' _f_α) _x _y _z))              => .some ⟨_, ⟨.eq_mk⟩⟩
   | (DCC? ((`_β _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
   | (DCC? ((Id _α) _x))                                => .some ⟨_, ⟨.id⟩⟩
   | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
@@ -34,7 +36,7 @@ def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :=
-  match step_head? e with
+  open Dsl in match step_head? e with
   | .some h => .some h
   | .none =>
     match e.cases_point_arity' with

@@ -35,11 +35,13 @@ inductive Expr where
   | curr'       : Expr  → Expr → Expr → Expr
   | pair        : Expr  → Expr → Expr → Expr
   | mkc         : Expr  → Expr → Expr → Expr
+  | eq_mk       : Expr  → Expr
   | eq          : Expr  → Expr → Expr → Expr
   | comp        : Expr  → Expr → Expr
   | quot        : Expr  → Expr → Expr
   | pi          : Expr  → Expr → Expr
   | sigma       : Expr  → Expr → Expr
+  | sigma'      : Expr  → Expr → Expr
   | app         : Expr  → Expr → Expr
   | hole        : ℕ              → Expr
   | hole_ty     : Expr  → Expr

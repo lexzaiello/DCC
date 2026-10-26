@@ -22,6 +22,7 @@ syntax "(="  gen_dcc gen_dcc gen_dcc ")"                     : gen_dcc
 syntax "(Eval" gen_dcc+ ")"                                  : gen_dcc
 syntax "(Eval'" gen_dcc+ ")"                                 : gen_dcc
 syntax "(Eql" gen_dcc+ ")"                                   : gen_dcc
+syntax "(='" gen_dcc+ ")"                                    : gen_dcc
 syntax "(refl" gen_dcc+ ")"                                  : gen_dcc
 syntax "#(" term ")"                                         : gen_dcc
 syntax "𝟙"                                                   : gen_dcc
@@ -34,6 +35,7 @@ syntax:max "(Swap" gen_dcc+ ")"                              : gen_dcc
 syntax:max "(Reassoc" gen_dcc+ ")"                           : gen_dcc
 syntax:max "(Snd" gen_dcc+ ")"                               : gen_dcc
 scoped syntax "(Σ" gen_dcc gen_dcc ")"                       : gen_dcc
+scoped syntax "(Σ'" gen_dcc gen_dcc ")"                      : gen_dcc
 syntax "const(" term ")"                                     : gen_dcc
 syntax:max (priority := high) "(Λ" gen_dcc+ ")"              : gen_dcc
 syntax:max (priority := high) "(Λ'" gen_dcc+ ")"             : gen_dcc
@@ -60,7 +62,6 @@ scoped syntax "(×" gen_dcc+ ")"           : gen_dcc
 scoped syntax "(Copy" gen_dcc+ ")"        : gen_dcc
 -- (→.apply A B) (, f x) = f x, where f is an arrow
 scoped syntax "(→.apply" gen_dcc+ ")"       : gen_dcc
-scoped syntax "(Σ'" gen_dcc gen_dcc ")" : gen_dcc
 
 end Dsl
 
@@ -111,6 +112,8 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "unbox") #[← `(DCC[$ty:gen_dcc_loc] $α)]
   | `(DCC[$ty:gen_dcc_loc] (Eql$f_α:gen_dcc))                        => do
     return mkApp (← field ty "eql") #[← `(DCC[$ty:gen_dcc_loc] $f_α)]
+  | `(DCC[$ty:gen_dcc_loc] (=' $f_α:gen_dcc))                        => do
+    return mkApp (← field ty "eq_mk") #[← `(DCC[$ty:gen_dcc_loc] $f_α)]
   | `(DCC[$ty:gen_dcc_loc] (refl$f_α:gen_dcc))                       => do
     return mkApp (← field ty "refl") #[← `(DCC[$ty:gen_dcc_loc] $f_α)]
   | `(DCC[$ty:gen_dcc_loc] ($f:gen_dcc $x:gen_dcc))                  => do
@@ -141,6 +144,8 @@ open Lean.Syntax in macro_rules
     return mkApp (← field ty "hole") #[m]
   | `(DCC[$ty:gen_dcc_loc] (Σ$α:gen_dcc $β:gen_dcc))                => do
     return mkApp (← field ty "sigma") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $β)]
+  | `(DCC[$ty:gen_dcc_loc] (Σ' $α:gen_dcc $b:gen_dcc))                => do
+    return mkApp (← field ty "sigma'") #[← `(DCC[$ty:gen_dcc_loc] $α), ← `(DCC[$ty:gen_dcc_loc] $b)]
   | `(DCC[$ty:gen_dcc_loc] (Fst $β:gen_dcc))                         => do
     return mkApp (← field ty "fstc") #[← `(DCC[$ty:gen_dcc_loc] $β)]
   | `(DCC[$ty:gen_dcc_loc] (Swap $B:gen_dcc $C:gen_dcc)) => do
@@ -159,11 +164,10 @@ open Lean.Syntax in macro_rules
 
 open Dsl in
 macro_rules
-  | `(DCC[$ty:gen_dcc_loc] (Σ' $A:gen_dcc $B:gen_dcc)) => `(DCC[$ty:gen_dcc_loc] ((Σ (`𝟙 $A) (`𝟙 $B)) ∗))
   | `(DCC[$ty:gen_dcc_loc] (→ (:$α:gen_dcc $A) $β:gen_dcc)) =>
     `(DCC[$ty:gen_dcc_loc] ((Π (Id $A) (`$A (`$α $β))) $α))
   | `(DCC[$ty:gen_dcc_loc] (→ (: Sort $m) $β:gen_dcc)) =>
-    `(DCC[$ty:gen_dcc_loc] (Λ Sort $m (Id Sort $m) (`((Σ (Id (Sort $m + 1)) (`(Sort $m + 1) (Id Sort $m))) Sort $m) $β)))
+    `(DCC[$ty:gen_dcc_loc] (Λ Sort $m (Id Sort $m) (`(Σ (Sort $m) (Id Sort $m)) $β)))
   | `(DCC[$ty:gen_dcc_loc] (→ $A:gen_dcc $B:gen_dcc)) => `(DCC[$ty] ((Π (`𝟙 $A) (`𝟙 (`$A $B))) ∗))
 
 open Dsl in
@@ -195,12 +199,12 @@ def runDcc : Lean.Syntax → Lean.MacroM Lean.Syntax
 -/
 open Dsl in
 abbrev Expr.Prod (A B : Expr) : Expr :=
-  (DCC? (Σ' A (`A B)))
+  (DCC? (Σ A (`A B)))
 
 open Dsl in
 macro_rules
   | `(DCC[$loc] (× $A:gen_dcc $B:gen_dcc)) => `(Expr.Prod (DCC[$loc] $A) (DCC[$loc] $B))
-  | `(DCC[$ty] (Copy $A:gen_dcc)) => `(DCC[$ty] ((Dup (`𝟙 $A) (`𝟙 (Id (Σ' $A (`$A A))))) (& ∗)))
+  | `(DCC[$ty] (Copy $A:gen_dcc)) => `(DCC[$ty] ((Dup (`𝟙 $A) (`𝟙 (Id (Σ $A (`$A A))))) (& ∗)))
   -- (Reassoc A B C) (, x (, y z)) = (, y (, z x))
   | `(DCC[$ty] (Reassoc $A:gen_dcc $B:gen_dcc $C:gen_dcc)) => `(DCC[$ty]
     (∘ (Assoc $B $C $A)

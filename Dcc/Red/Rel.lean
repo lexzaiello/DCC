@@ -17,8 +17,9 @@ Core reductions:
 -/
   | dup            : Red (DCC? ((Dup B x) (& env) (& y))) (DCC? (x env (,(`(B env) (B env)) y y)))
   | bimap          : Red (DCC? ((Map A B f g) (,_B x y))) (DCC? (,(`A B) (f x) (g y)))
-  | assoc          : Red (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x y) z))) (DCC? (,(`A ((Σ (`𝟙 B) (`𝟙 (`B C))) ∗)) x (,(`B C) y z)))
-  | eql            : Red (DCC? ((Eql f_α) env (,B x y))) (DCC? (= (f_α env) x y))
+  | assoc          : Red (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x y) z))) (DCC? (,(`A (Σ B (`B C))) x (,(`B C) y z)))
+  | eql            : Red (DCC ((Eql B) (& x) (& y))) (DCC (= (B x) y y))
+  | eq_mk          : Red (DCC ((=' B) x y z)) (DCC (= (B x) y z))
   | map            : Red (DCC? ((!<> f) (& x))) (DCC? (!(f x)))
   | fmap           : Red (DCC? (($<> f) (& x))) (DCC? (& (f x)))
   | unbox          : Red (DCC? ((* A) (& x))) x
@@ -34,6 +35,7 @@ Core reductions:
   | swap           : Red (DCC? ((Swap A B) (,B₂ x y))) (DCC? (,(`B A) y x))
   | ind_bool_true  : Red (DCC? ((𝟚.Rec motive x y) env 𝟙₂)) (DCC? (x env 𝟙₂))
   | ind_bool_false : Red (DCC? ((𝟚.Rec motive x y) env 𝟘₂)) (DCC? (y env 𝟘₂))
+  | sigma          : Red (DCC? ((Σ' B C) (& x))) (DCC (Σ (B x) (C x)))
 /-
 Inner congruences:
 -/

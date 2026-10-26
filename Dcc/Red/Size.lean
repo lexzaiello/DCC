@@ -36,9 +36,11 @@ def size (e : Expr) : ℕ :=
   | DCC (𝟚.Rec motive x y) => motive.size + x.size + y.size + 1
   | DCC (𝟘.Rec motive) => motive.size + 1
   | DCC (Eql α)  => α.size * 80 + 17
+  | DCC (=' α)  => α.size * 80 + 17
   | DCC (refl α) => α.size * 2 + 5
   | DCC Sort _m => 3
   | DCC (Σ α β) => α.size + β.size + 1
+  | DCC (Σ' α β) => α.size + β.size + 1
   | DCC (`β x) => β.size + x.size + 1
   | DCC (,β x y) => β.size + x.size + y.size + 1
   | DCC (Id α)      => α.size + 1

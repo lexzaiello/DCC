@@ -24,7 +24,7 @@ B : A → Sort u       C : (x : A) (y : B x) → Sort v
 
 open Dsl in
 def Swap.type (A B : Expr) : Expr :=
-  DCC (→ (Σ' A (`A B)) (Σ (`𝟙 A) (`𝟙 (`B A))))
+  DCC (→ (Σ A (`A B)) (Σ A (`B A)))
 
 /-
 (Π(Id(Sort 3),
@@ -64,7 +64,7 @@ B : A → Sort u
 -/
 open Dsl in
 @[dcc_judge] abbrev fstc.type (A B : Expr) : Expr :=
-  (DCC (→ (Σ' A B) A))
+  (DCC (→ (Σ A B) A))
 
 /-
 B : A → Sort u
@@ -77,7 +77,7 @@ They were expressive enough before.
 -/
 open Dsl in
 @[dcc_judge] abbrev sndc.type (A B : Expr) : Expr :=
-  (DCC ((Π (`𝟙 (Σ' A B)) (`𝟙 (∘ B (Fst B)))) ∗))
+  (DCC ((Π (`𝟙 (Σ A B)) (`𝟙 (∘ B (Fst B)))) ∗))
 
 /-
 Λ(β, x) y z → x ⟦β⟧(y, z)
@@ -92,7 +92,7 @@ open Dsl in
 
 open Dsl in
 @[dcc_judge] abbrev curr.x.type (A B C : Expr) : Expr :=
-  DCC ((Π (`𝟙 (Σ' A B)) (`𝟙 C)) ∗)
+  DCC ((Π (`𝟙 (Σ A B)) (`𝟙 C)) ∗)
 
 open Dsl in
 @[dcc_judge] abbrev curr'.type (α β γ : Expr) : Expr :=
@@ -100,7 +100,7 @@ open Dsl in
 
 open Dsl in
 @[dcc_judge] abbrev curr'.x.type (A B C : Expr) : Expr :=
-  DCC ((Π (`𝟙 (Σ' A B)) (`𝟙 C)) (! (Σ A B)))
+  DCC ((Π (`𝟙 (Σ A B)) (`𝟙 C)) (! (Σ A B)))
 
 /-
 *(f) &(x) = (f x)
@@ -125,11 +125,18 @@ open Dsl in
   DCC ((Π (`𝟙 B) (`𝟙 C)) ∗)
 
 /-
-((Eql B) env (,B x y)) →ᵦ (= (B env) x y)
+((Eql B) (& env) (& y)) →ᵦ (= (B env) y y)
 -/
 open Dsl in
 @[dcc_judge] def eql.type (B A : Expr) : Expr :=
-  (DCC ((Π (`𝟙 A) (`𝟙 (Π (Σ B (Λ A B (∘ B (Fst B)))) (Λ A (Σ B (Λ A B (∘ B (Fst B)))) (`(Σ B (Λ A B (∘ B (Fst B)))) (Sort 0)))))) ∗))
+  (DCC ((Π (`𝟙 (! A)) (`𝟙 (Π (!<> B) (!Λ A B (`(! (Σ A B)) (Sort 0)))))) ∗))
+
+/-
+(=' B) x y z = (= (B x) y z)
+-/
+open Dsl in
+@[dcc_judge] def eq_mk.type (B A : Expr) : Expr :=
+  (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ A B (Π (∘ B (Fst B)) (Λ (Σ A B) (∘ B (Fst B)) (`(Σ (Σ A B) (∘ B (Fst B))) (Sort 0)))))))) ∗))
 
 /-
 have (, (& env) (& x))
@@ -264,7 +271,7 @@ This is canonical.
 
 open Dsl in
 @[dcc_judge] abbrev Eval.type (α β γ : Expr) : Expr :=
-  DCC ((Π (`𝟙 (Σ' α β)) (`𝟙 (Eval α β γ))) ∗)
+  DCC ((Π (`𝟙 (Σ α β)) (`𝟙 (Eval α β γ))) ∗)
 
 open Dsl in
 @[dcc_judge] abbrev Eval.x.type (A' B' C : Expr) : Expr :=
@@ -287,7 +294,7 @@ g : ∀ (x : α) (y : β x), γ x y
 -/
 open Dsl in
 @[dcc_judge] abbrev Pair.type (A B C : Expr) : Expr :=
-  DCC ((Π (`𝟙 (! A)) (`𝟙 (∘ (Σ B C) (* A)))) ∗)
+  DCC (((Π (`𝟙 (! A)) (`𝟙 (Σ' B C)))) ∗)
 
 /-
 (≃.3 A B) : (eq : (! (≃ A B))) → (x : (! A)) → (= ((≃.2 A B) ((≃.1 A B) x.raw)) x.raw)

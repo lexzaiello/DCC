@@ -27,9 +27,11 @@ def point_arity (e : Expr) : ℕ :=
   | DCC[.] 𝟘 => 0
   | DCC[.] (= _A _x _y) => 3
   | DCC[.] (Eql _α)  => 1
+  | DCC[.] (=' _α)  => 1
   | DCC[.] (refl _α) => 1
   | DCC[.] Sort _m => 0
   | DCC[.] (Σ_α _β) => 2
+  | DCC[.] (Σ'_α _β) => 2
   | DCC[.] (`_β _x) => 2
   | DCC[.] (,__β _x _y) => 3
   | DCC[.] (Id _α)      => 1
@@ -64,9 +66,11 @@ def points (e : Expr) : Vector Expr (point_arity e) :=
   | DCC[.] 𝟘 => ⟨#[], by grind⟩
   | DCC[.] (= A x y) => ⟨#[A, x, y], by grind⟩
   | DCC[.] (Eql α)  => ⟨#[α], by grind⟩
+  | DCC[.] (=' α)  => ⟨#[α], by grind⟩
   | DCC[.] (refl α) => ⟨#[α], by grind⟩
   | DCC[.] Sort _m => ⟨#[], by grind⟩
   | DCC[.] (Σ α β) => ⟨#[α, β], by grind⟩
+  | DCC[.] (Σ' α β) => ⟨#[α, β], by grind⟩
   | DCC[.] (`β x) => ⟨#[β, x], by grind⟩
   | DCC[.] (,β x y) => ⟨#[β, x, y], by grind⟩
   | DCC[.] (Id α)      => ⟨#[α], by grind⟩
@@ -120,6 +124,9 @@ def set_points (e : Expr) (points' : Vector Expr (point_arity e)) : Expr :=
   | DCC? (Eql α)  =>
     have heq : point_arity (DCC? (Eql α)) = 1 := by grind
     .eql points'[0]
+  | DCC? (=' α)  =>
+    have heq : point_arity (DCC? (=' α)) = 1 := by grind
+    .eq_mk points'[0]
   | DCC? (refl α) =>
     have heq : point_arity (DCC? (refl α)) = 1 := by grind
     .refl points'[0]
@@ -127,6 +134,9 @@ def set_points (e : Expr) (points' : Vector Expr (point_arity e)) : Expr :=
   | DCC? (Σ α β) =>
     have heq : point_arity (DCC? (Σ α β)) = 2 := by grind
     .sigma points'[0] points'[1]
+  | DCC? (Σ' α β) =>
+    have heq : point_arity (DCC? (Σ' α β)) = 2 := by grind
+    .sigma' points'[0] points'[1]
   | DCC? (`β x) =>
     have heq : point_arity (DCC? (`β x)) = 2 := by grind
     .quot points'[0] points'[1]
@@ -265,10 +275,12 @@ def max_hole (e : Expr) : ℕ :=
   | DCC? 𝟙 => 0
   | DCC? 𝟘 => 0
   | DCC? (= A x y) => max A.max_hole (max x.max_hole y.max_hole)
+  | DCC? (=' B)  => B.max_hole
   | DCC? (Eql B)  => B.max_hole
   | DCC? (refl B) => B.max_hole
   | DCC? Sort _m => 0
   | DCC? (Σ B C) => max B.max_hole C.max_hole
+  | DCC? (Σ' B C) => max B.max_hole C.max_hole
   | DCC? (`B x) => max B.max_hole x.max_hole
   | DCC? (,B x y) => max B.max_hole (max x.max_hole y.max_hole)
   | DCC? (Id A)      => A.max_hole
@@ -303,10 +315,12 @@ def min_hole (e : Expr) : ℕ :=
   | DCC? 𝟙 => 0
   | DCC? 𝟘 => 0
   | DCC? (= A x y) => min A.min_hole (min x.min_hole y.min_hole)
+  | DCC? (=' B)  => B.min_hole
   | DCC? (Eql B)  => B.min_hole
   | DCC? (refl B) => B.min_hole
   | DCC? Sort _m => 0
   | DCC? (Σ B C) => min B.min_hole C.min_hole
+  | DCC? (Σ' B C) => min B.min_hole C.min_hole
   | DCC? (`B x) => min B.min_hole x.min_hole
   | DCC? (,B x y) => min B.min_hole (min x.min_hole y.min_hole)
   | DCC? (Id A)      => A.min_hole

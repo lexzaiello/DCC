@@ -100,7 +100,7 @@ open Dsl in
 
 open Dsl in
 @[dcc_judge] abbrev curr'.x.type (A B C : Expr) : Expr :=
-  DCC ((Π (`𝟙 (Σ A B)) (`𝟙 C)) (! (Σ A B)))
+  DCC ((Π (`𝟙 (! (Σ A B))) (`𝟙 C)) ∗)
 
 /-
 *(f) &(x) = (f x)

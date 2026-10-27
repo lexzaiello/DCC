@@ -419,8 +419,7 @@ inductive Judge : Expr → Expr → Type where
     → Arrow A' (DCC Sort v) τ_B
     → Judge x (curr'.x.type A' B' C)
     → B →ᵦ B'
-    →  #(curr'.type A B C) →ᵦ τ
-    → Judge (DCC (!Λ A B x)) τ
+    → Judge (DCC (!Λ A B x)) (curr'.type A' B' C)
   -- !<f> &(x) = !(x)
   /-| map    : Judge x (DCC (Π(Id(Sort m), f_β) α))
     → Reduces (DCC (f_β α)) (DCC `(α, Sort n))
@@ -826,7 +825,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
           match infer x with
           | .ok ⟨DCC ((Π _A (`_B C)) _D), ht₂⟩ =>
             if heq : (DCC ((Π _A (`_B C)) _D)) = (curr'.x.type (reduce_all A) (reduce_all B) C) then
-              .ok ⟨_, .curr' ht ht_β (reduce_reduces rfl) h (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩
+              .ok ⟨_, .curr' ht ht_β (reduce_reduces rfl) h (heq ▸ ht₂) (reduce_reduces rfl)⟩
             else .error (.sub x (.unexpected (DCC ((Π _A (`_B C)) _D)) e))
           | .error e => .error (.sub x e)
           | .ok ⟨τ, _⟩ => .error (.sub x (.unexpected τ e))

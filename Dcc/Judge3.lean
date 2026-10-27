@@ -581,10 +581,8 @@ inductive Judge : Expr → Expr → Type where
   | ind_bool : Judge motive τ_motive
     → Arrow A τ_motive₂ τ_motive
     → Arrow (DCC 𝟚) (DCC Sort v) τ_motive₂
-    → Judge x τ_x
-    → τ_x ≡ ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)
-    → Judge y τ_y
-    → τ_y ≡ ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)
+    → Judge x (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive'))) ∗))
+    → Judge y (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive'))) ∗))
     → motive →ᵦ motive'
     → Judge (DCC (𝟚.Rec motive x y)) (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive'))) ∗))
 deriving Repr
@@ -611,13 +609,18 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
           | .ok ⟨τ_x, h₂⟩ =>
             match y.infer with
             | .ok ⟨τ_y, h₃⟩ =>
-              match def_eq? τ_x (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)) with
+              if heq₁ : τ_x = (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) #(reduce_all motive)))) ∗)) then
+                if heq₂ : τ_y = (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) #(reduce_all motive)))) ∗)) then
+                  .ok ⟨_, .ind_bool h₁ h_arr₁ h_arr₂ (heq₁ ▸ h₂) (heq₂ ▸ h₃) (reduce_reduces rfl)⟩
+                else .error (.sub y (.unexpected y τ_y))
+              else .error (.sub x (.unexpected x τ_x))
+              /-match def_eq? τ_x (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) #(reduce_all motive)))) ∗)) with
               | .ok h_defeq₁ =>
                 match def_eq? τ_y (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)) with
                 | .ok h_defeq₂ =>
                   .ok ⟨_, .ind_bool h₁ h_arr₁ h_arr₂ h₂ h_defeq₁ h₃ h_defeq₂ (reduce_reduces rfl)⟩
                 | .error e => .error (.sub y (.def_eq e))
-              | .error e => .error (.sub x (.def_eq e))
+              | .error e => .error (.sub x (.def_eq e))-/
             | .error e => .error (.sub y e)
           | .error e => .error (.sub x e)
         | .ok ⟨τ_elim, _⟩ => .error (.sub τ_motive (.unexpected τ_elim τ_motive₂))

@@ -44,6 +44,61 @@ App congruence:
   | congrFun : Red f f' → Red (DCC? (f x)) (DCC? (f' x))
   | congrArg : Red x x' → Red (DCC? (f x)) (DCC? (f x'))
 
+open Dsl in
+@[aesop safe (rule_sets := [DccForceStep]) [constructors], aesop unsafe 50% (rule_sets := [DccForceStep]) [cases]]
+inductive Red' : Expr → Expr → Type
+/-
+Core reductions:
+-/
+  | eql            : Red' (DCC ((Eql B) (& x) (& y))) (DCC (= (B x) y y))
+  | eq_mk          : Red' (DCC ((=' B) x y z)) (DCC (= (B x) y z))
+  | map            : Red' (DCC? ((!<> f) (& x))) (DCC? (!(f x)))
+  | fmap           : Red' (DCC? (($<> f) (& x))) (DCC? (& (f x)))
+  | unbox          : Red' (DCC? ((* A) (& x))) x
+  | pair           : Red' (DCC? ((⟨,⟩β M N) (& x))) (DCC? (,(β x) (M x) (N x (M x))))
+  | evalc          : Red' (DCC? ((Eval _α _β x) (,__β y z))) (DCC? (x y z))
+  | quot           : Red' (DCC? ((`β x) y)) x
+  | id             : Red' (DCC? ((Id α) x)) x
+  | fstc           : Red' (DCC? ((Fst _β) (,β a b))) a
+  | sndc           : Red' (DCC? ((Snd _β) (,β a b))) b
+  | comp           : Red' (DCC? ((∘ x y) z)) (DCC? (x (y z)))
+  | curr           : Red' (DCC? ((Λ α β x) y z)) (DCC? (x (,β y z)))
+  | curr'          : Red' (DCC? ((!Λα β x) (& y) (& z))) (DCC? (x (& (,β y z))))
+  | swap           : Red' (DCC? ((Swap A B) (,B₂ x y))) (DCC? (,(`B A) y x))
+  | ind_bool_true  : Red' (DCC? ((𝟚.Rec motive x y) env 𝟙₂)) (DCC? (x env 𝟙₂))
+  | ind_bool_false : Red' (DCC? ((𝟚.Rec motive x y) env 𝟘₂)) (DCC? (y env 𝟘₂))
+  | sigma          : Red' (DCC? ((Σ' B C) (& x))) (DCC (Σ (B x) (C x)))
+/-
+Inner congruences:
+-/
+-- `(B, x)
+  | point : (n : ℕ) → (h : n < point_arity e) → Red' ((points e).get ⟨n, h⟩) p' → Red' e (e.set_points ((points e).set n p'))
+/-
+App congruence:
+-/
+  | congrFun : Red' f f' → Red' (DCC? (f x)) (DCC? (f' x))
+  | congrArg : Red' x x' → Red' (DCC? (f x)) (DCC? (f x'))
+
+inductive Red'.IsHead : (h : Red' A B) → Type
+  | eql            : Red'.IsHead .eql
+  | eq_mk          : Red'.IsHead .eq_mk
+  | map            : Red'.IsHead .map
+  | fmap           : Red'.IsHead .fmap
+  | unbox          : Red'.IsHead .unbox
+  | pair           : Red'.IsHead .pair
+  | evalc          : Red'.IsHead .evalc
+  | quot           : Red'.IsHead .quot
+  | id             : Red'.IsHead .id
+  | fstc           : Red'.IsHead .fstc
+  | sndc           : Red'.IsHead .sndc
+  | comp           : Red'.IsHead .comp
+  | curr           : Red'.IsHead .curr
+  | curr'          : Red'.IsHead .curr'
+  | swap           : Red'.IsHead .swap
+  | ind_bool_true  : Red'.IsHead .ind_bool_true
+  | ind_bool_false : Red'.IsHead .ind_bool_false
+  | sigma          : Red'.IsHead .sigma
+
 instance (A B : Expr) : Repr (PLift (Red A B)) := ⟨fun _ _ => "⋯"⟩
 
 theorem Red.mkCongrFun (h : Red f f') : Red (DCC? (f x)) (DCC? (f' x)) := .congrFun h

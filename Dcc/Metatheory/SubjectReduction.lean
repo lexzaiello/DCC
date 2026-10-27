@@ -302,6 +302,7 @@ def RedNorm.norm_env {B C : Expr} (hn₁ : IsNorm Red B) (hn₂ : IsNorm Red C) 
 
 namespace Judge
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def id_preservation_head (h : Judge (DCC? ((Id A) x)) τ) : Judge x τ := by
   cases h with
   | app =>
@@ -315,6 +316,7 @@ def id_preservation_head (h : Judge (DCC? ((Id A) x)) τ) : Judge x τ := by
       cases (a.elim_norml a_4.is_norm).elim_norm a_2.is_norm
       assumption
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def fst_preservation_head (h : Judge (DCC? ((Fst B) (,B₂ x y))) τ) : Judge x τ := by
   cases h with
   | app =>
@@ -332,6 +334,7 @@ def fst_preservation_head (h : Judge (DCC? ((Fst B) (,B₂ x y))) τ) : Judge x 
         cases (a.elim_norml (sigma_is_norm hn_A a_5.is_norm)).elim_norm (sigma_is_norm a_8.is_norm a_7.is_norm)
         exact a_8
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def snd_preservation_head (h : Judge (DCC? ((Snd B) (,B₂ x y))) τ) : Judge y τ := by
   cases h with
   | app =>
@@ -348,6 +351,7 @@ def snd_preservation_head (h : Judge (DCC? ((Snd B) (,B₂ x y))) τ) : Judge y 
         cases a_3.unique a_9
         exact a_10
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def comp_preservation_head (h : Judge (DCC? ((∘ f g) x)) τ) : Judge (DCC? (f (g x))) τ := by
   cases h with
   | app =>
@@ -368,6 +372,7 @@ def comp_preservation_head (h : Judge (DCC? ((∘ f g) x)) τ) : Judge (DCC? (f 
           · exact a_2
           · exact ⟨.trans (.single (.congrFun .quot)) (.trans (.single .quot) a_7.1), a_7.2⟩
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def unbox_preservation_head (h : Judge (DCC ((* A) (& x))) τ) : Judge x τ := by
   cases h with
   | app =>
@@ -380,6 +385,7 @@ def unbox_preservation_head (h : Judge (DCC ((* A) (& x))) τ) : Judge x τ := b
       cases a_2 with
       | box h => exact h
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def curr_preservation_head (h : Judge (DCC ((Λ A B x) y z)) τ) : Judge (DCC (x (,B y z))) τ := by
   cases h with
   | app =>
@@ -425,6 +431,7 @@ def curr_preservation_head (h : Judge (DCC ((Λ A B x) y z)) τ) : Judge (DCC (x
               exact congrArg' h)
             a_3.1)), a_3.2⟩
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def curr'_preservation_head (h : Judge (DCC ((!Λ A B x) (& y) (& z))) τ) : Judge (DCC (x (& (,B y z)))) τ := by
   cases h with
   | app =>
@@ -485,6 +492,7 @@ def curr'_preservation_head (h : Judge (DCC ((!Λ A B x) (& y) (& z))) τ) : Jud
                 (congrArg' (aff_mk_point' (n := 0) (aff_mk_point' (e := (B.mkc y z)) (x := B) (n := 0) a_10.1) (by grind)))
                 (.trans (congrArg' (aff_mk_point' (n := 0) (aff_mk_point' (e := (B'.mkc y z)) (n := 1) (reduce_sound rfl)))) a_3.1)), a_3.is_norm⟩
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def fmap_preservation_head (h : Judge (DCC (($<> x) (& y))) τ) : Judge (DCC (& (x y))) τ := by
   cases h with
   | app =>
@@ -507,6 +515,7 @@ def fmap_preservation_head (h : Judge (DCC (($<> x) (& y))) τ) : Judge (DCC (& 
           · exact ⟨.trans (congrFun' a_4.1) (reduce_sound rfl), reduce_norm rfl⟩
 
 open Dsl in
+@[aesop safe forward (rule_sets := [DccJudge])]
 def map_preservation_head (h : Judge (DCC ((!<> x) (& y))) τ) : Judge (DCC (! (x y))) τ := by
   cases h with
   | app =>
@@ -528,6 +537,7 @@ def map_preservation_head (h : Judge (DCC ((!<> x) (& y))) τ) : Judge (DCC (! (
             | box h => exact h
           · exact ⟨.trans (.single (.congrFun .quot)) (.trans (.single .quot) a_5.1), a_5.2⟩
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def eql_preservation_head (h : Judge (DCC ((Eql B) (& x) (& y))) τ) : Judge (DCC (= (B x) y y)) τ := by
   cases h with
   | app =>
@@ -581,6 +591,7 @@ def eql_preservation_head (h : Judge (DCC ((Eql B) (& x) (& y))) τ) : Judge (DC
             · exact ⟨⟨.refl, h_t_y.is_norm⟩, ⟨.refl, h_t_y.is_norm⟩⟩
             · exact ⟨⟨.refl, h_t_y.is_norm⟩, ⟨.trans (congrFun' a_8.1) (.trans (congrArg' (reduce_sound rfl)) (a'.elim_normr h_t_y.is_norm).1), (a'.elim_normr h_t_y.is_norm).2⟩⟩
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def eval_preservation_head (h : Judge (DCC ((Eval A B x) (,_B y z))) τ) : Judge (DCC (x y z)) τ := by
   cases h with
   | app =>
@@ -618,6 +629,7 @@ def eval_preservation_head (h : Judge (DCC ((Eval A B x) (,_B y z))) τ) : Judge
         · exact hr_τ'
 
 open Dsl in
+@[aesop safe forward (rule_sets := [DccJudge])]
 def quot_preservation_head (h : Judge (DCC ((`B x) y)) τ) : Judge x τ := by
   cases h with
   | app =>
@@ -633,6 +645,7 @@ def quot_preservation_head (h : Judge (DCC ((`B x) y)) τ) : Judge x τ := by
       exact a_5
 
 open Dsl in
+@[aesop safe forward (rule_sets := [DccJudge])]
 def preservation_eq_mk (h : Judge (DCC ((=' B) x y z)) τ) : Judge (DCC (= (B x) y z)) τ := by
   cases h with
   | app =>
@@ -705,6 +718,7 @@ def preservation_eq_mk (h : Judge (DCC ((=' B) x y z)) τ) : Judge (DCC (= (B x)
               exact ⟨⟨.refl, a_2.is_norm⟩, ⟨.trans (congrFun' a_11.1) (.trans (congrArg' (reduce_sound rfl)) hr₁), a_2.is_norm⟩⟩
 
 open Dsl in
+@[aesop safe forward (rule_sets := [DccJudge])]
 def swap_preservation_head (h : Judge (DCC ((Swap A B) (,B₂ x y))) τ) : Judge (DCC (,(`B A) y x)) τ := by
   cases h with
   | app =>
@@ -736,6 +750,7 @@ def swap_preservation_head (h : Judge (DCC ((Swap A B) (,B₂ x y))) τ) : Judge
         · assumption
 
 open Dsl in
+@[aesop safe forward (rule_sets := [DccJudge])]
 def sigma'_preservation_head (h : Judge (DCC ((Σ' B C) (& x))) τ) : Judge (DCC (Σ (B x) (C x))) τ := by
   cases h with
   | app =>
@@ -774,6 +789,7 @@ def sigma'_preservation_head (h : Judge (DCC ((Σ' B C) (& x))) τ) : Judge (DCC
             · exact ⟨⟨.trans (.trans (congrFun' a_5.1) (congrArg' (reduce_sound rfl))) (reduce_sound rfl), reduce_norm rfl⟩, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
             · exact ⟨.trans (.single .curr) (.single .quot), fun ⟨_, h⟩ => nomatch h⟩
 
+@[aesop safe forward (rule_sets := [DccJudge])]
 def preservation_pair_head (h : Judge (DCC ((⟨,⟩B x y) (& z))) τ) : Judge (DCC? (,(B z) (x z) (y z (x z)))) τ := by
   cases h with
   | app =>
@@ -832,6 +848,97 @@ def preservation_pair_head (h : Judge (DCC ((⟨,⟩B x y) (& z))) τ) : Judge (
               have ⟨D, h₁, h₂⟩ := (reduce Red (C'.app z)).snd.down.conf (.trans (congrArg' (reduce_sound rfl)) (reduce_sound rfl))
               cases (reduce_norm (A := (C'.app z)) rfl).unique_refl h₁
               exact .trans (congrFun' (.trans (reduce_sound rfl) h₂)) (reduce_sound rfl), reduce_norm rfl⟩
+
+open Dsl in
+@[aesop safe forward (rule_sets := [DccJudge])]
+def ind_bool_true_preservation_head (h : Judge (DCC ((𝟚.Rec motive x y) env 𝟙₂)) τ) : Judge (DCC? (x env 𝟙₂)) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_2 with
+    | true =>
+      cases a_1 with
+      | app =>
+        expose_names
+        cases a_2 with
+        | ind_bool =>
+          expose_names
+          replace a_1 := a_1.push_head .quot
+          have hn_A : IsNorm Red A := fun ⟨_, h⟩ => a_10.is_norm
+            ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩
+          cases (a_1.elim_norml hn_A).elim_norm a_4.is_norm
+          clear a_1
+          replace a_5 := (a_5.push_head (.congrFun .quot))
+          have pi_eq₁ := a_5.pi_eq
+          have hn₁ : IsNorm Red (DCC (`α 𝟚)) := quot_is_norm a_4.is_norm (by grind)
+          have hn₂ : IsNorm Red motive' := a_8.is_norm
+          have heq₁ := elim_reduce_norm_fst hn₁
+          have heq₂ := elim_reduce_norm_fst hn₂
+          simp [heq₁, heq₂] at pi_eq₁
+          cases pi_eq₁.1.1; cases pi_eq₁.1.2; cases pi_eq₁.2
+          clear heq₁
+          clear heq₂
+          clear pi_eq₁
+          clear a_5
+          replace a := a.push_head .quot
+          cases (a.elim_norml (by grind)).elim_norm (by grind)
+          clear a
+          apply Judge.app
+          · apply Judge.app
+            · assumption
+            · exact ⟨⟨.single .quot, a_4.is_norm⟩, ⟨.refl, a_4.is_norm⟩⟩
+            · assumption
+            · exact ⟨.trans (.single (.congrFun .quot)) (congrArg' (reduce_sound rfl)), pi_is_norm hn₁ hn₂ (reduce_norm rfl)⟩
+          · exact ⟨⟨.single .quot, by grind⟩, ⟨.refl, by grind⟩⟩
+          · constructor
+          · assumption
+
+open Dsl in
+@[aesop safe forward (rule_sets := [DccJudge])]
+def ind_bool_false_preservation_head (h : Judge (DCC ((𝟚.Rec motive x y) env 𝟘₂)) τ) : Judge (DCC? (y env 𝟘₂)) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_2 with
+    | false =>
+      cases a_1 with
+      | app =>
+        expose_names
+        cases a_2 with
+        | ind_bool =>
+          expose_names
+          replace a_1 := a_1.push_head .quot
+          have hn_A : IsNorm Red A := fun ⟨_, h⟩ => a_10.is_norm
+            ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩
+          cases (a_1.elim_norml hn_A).elim_norm a_4.is_norm
+          clear a_1
+          replace a_5 := (a_5.push_head (.congrFun .quot))
+          have pi_eq₁ := a_5.pi_eq
+          have hn₁ : IsNorm Red (DCC (`α 𝟚)) := quot_is_norm a_4.is_norm (by grind)
+          have hn₂ : IsNorm Red motive' := a_8.is_norm
+          have heq₁ := elim_reduce_norm_fst hn₁
+          have heq₂ := elim_reduce_norm_fst hn₂
+          simp [heq₁, heq₂] at pi_eq₁
+          cases pi_eq₁.1.1; cases pi_eq₁.1.2; cases pi_eq₁.2
+          clear heq₁
+          clear heq₂
+          clear pi_eq₁
+          clear a_5
+          replace a := a.push_head .quot
+          cases (a.elim_norml (by grind)).elim_norm (by grind)
+          clear a
+          apply Judge.app
+          · apply Judge.app
+            · assumption
+            · exact ⟨⟨.single .quot, a_4.is_norm⟩, ⟨.refl, a_4.is_norm⟩⟩
+            · assumption
+            · exact ⟨.trans (.single (.congrFun .quot)) (congrArg' (reduce_sound rfl)), pi_is_norm hn₁ hn₂ (reduce_norm rfl)⟩
+          · exact ⟨⟨.single .quot, by grind⟩, ⟨.refl, by grind⟩⟩
+          · constructor
+          · assumption
+
+def preservation_head (ht : Judge e τ) (hr : Red' e e') (h_head : hr.IsHead) : Judge e' τ := by
+  cases h_head <;> dcc_aesop' [judge]
 
 mutual
 

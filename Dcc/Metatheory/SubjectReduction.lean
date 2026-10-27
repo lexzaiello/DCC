@@ -292,8 +292,8 @@ def RedNorm.point₁ (h : RedNorm e e'') (heq : point_arity e = 1 := by rfl) (he
 def RedNorm.pi_eq (hr : RedNorm (open Dsl in (DCC? ((Π B C) env))) e') : e' = (open Dsl in (DCC? ((Π #((reduce Red B).fst) #((reduce Red C).fst)) #((reduce Red env).fst)))) :=
   hr.unique ⟨.trans (.trans (Expr.congrFun' (aff_mk_point' (n := 0) (reduce_sound rfl))) (Expr.congrFun' (aff_mk_point' (n := 1) (reduce_sound rfl)))) (Expr.congrArg' (reduce_sound rfl)), pi_is_norm (reduce_norm rfl) (reduce_norm rfl) (reduce_norm rfl)⟩
 
-def RedNorm.sigma_eq (hr : RedNorm (open Dsl in (DCC? ((Σ B C) env))) e') : e' = (open Dsl in (DCC? ((Σ #((reduce Red B).fst) #((reduce Red C).fst)) #((reduce Red env).fst)))) :=
-  hr.unique ⟨.trans (.trans (Expr.congrFun' (aff_mk_point' (n := 0) (reduce_sound rfl))) (Expr.congrFun' (aff_mk_point' (n := 1) (reduce_sound rfl)))) (Expr.congrArg' (reduce_sound rfl)), sigma_is_norm (reduce_norm rfl) (reduce_norm rfl) (reduce_norm rfl)⟩
+/-def RedNorm.sigma_eq (hr : RedNorm (open Dsl in (DCC? ((Σ B C) env))) e') : e' = (open Dsl in (DCC? ((Σ #((reduce Red B).fst) #((reduce Red C).fst)) #((reduce Red env).fst)))) :=
+  hr.unique ⟨.trans (.trans (Expr.congrFun' (aff_mk_point' (n := 0) (reduce_sound rfl))) (Expr.congrFun' (aff_mk_point' (n := 1) (reduce_sound rfl)))) (Expr.congrArg' (reduce_sound rfl)), sigma_is_norm (reduce_norm rfl) (reduce_norm rfl) (reduce_norm rfl)⟩-/
 
 def RedNorm.norm_env {B C : Expr} (hn₁ : IsNorm Red B) (hn₂ : IsNorm Red C) (hr : RedNorm (open Dsl in (DCC? ((Π B C) env))) e') :
   Σ' (env' : Expr) (_hr : RedNorm env env'), e' = (open Dsl in (DCC? ((Π B C) env'))) :=
@@ -473,7 +473,7 @@ def map_preservation_head (h : Judge (DCC ((!<> x) (& y))) τ) : Judge (DCC (! (
             | box h => exact h
           · exact ⟨.trans (.single (.congrFun .quot)) (.trans (.single .quot) a_5.1), a_5.2⟩
 
-def eql_preservation_head (h : Judge (DCC ((Eql B) env (,B₂ x y))) τ) : Judge (DCC (= (B env) x y)) τ := by
+def eql_preservation_head (h : Judge (DCC ((Eql B) (& x) (& y))) τ) : Judge (DCC (= (B x) y y)) τ := by
   cases h with
   | app =>
     expose_names
@@ -484,41 +484,47 @@ def eql_preservation_head (h : Judge (DCC ((Eql B) env (,B₂ x y))) τ) : Judge
       | eql =>
         expose_names
         have ⟨hn_δ, _⟩ := a_4.is_norm a_7.is_norm
-        cases ((a_1.push_head .quot).elim_norml hn_δ).elim_norm a_5.is_norm
+        replace a_1 := a_1.push_head .quot
+        cases (a_1.elim_norml (bang_is_norm hn_δ)).elim_norm a_5.is_norm
         replace a_6 := a_6.push_head (.congrFun .quot)
-        have pi_eq := a_6.pi_eq
-        have hn₁ : IsNorm Red (f_α'.sigma (α_1.curr f_α' (f_α'.comp f_α'.fstc))) := sigma_is_norm₀ a_8.is_norm (curr_is_norm a_5.is_norm a_8.is_norm (comp_is_norm a_8.is_norm (fst_is_norm a_8.is_norm)))
-        have hn₂ : IsNorm Red  (α_1.curr (f_α'.sigma (α_1.curr f_α' (f_α'.comp f_α'.fstc)))
-                ((((Expr.top.quot α_1).sigma (Expr.top.quot (f_α'.sigma (α_1.curr f_α' (f_α'.comp f_α'.fstc))))).app
-                      Expr.tintro).quot
-                  (Expr.sort 0))) := curr_is_norm
-          a_5.is_norm
-          hn₁
-          (quot_is_norm (sigma_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) hn_δ) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) hn₁) (fun ⟨_, h⟩ => nomatch h)) (fun ⟨_, h⟩ => nomatch h))
-        have heq_red₁ := elim_reduce_norm_fst hn₁
-        have heq_red₂ := elim_reduce_norm_fst hn₂
-        simp [heq_red₁, heq_red₂] at pi_eq
-        cases pi_eq.left.left
-        cases pi_eq.left.right
-        cases pi_eq.right
-        clear pi_eq
-        cases ((a_3.push_head .curr).push_head .quot).elim_norm (fun ⟨_, h⟩ => nomatch h)
-        cases (a.elim_norml (sigma_is_norm a_8.is_norm (curr_is_norm hn_δ a_8.is_norm (comp_is_norm a_8.is_norm (fst_is_norm a_8.is_norm))) (reduce_norm rfl))).elim_norm a_2.is_norm
-        cases a_2 with
-        | mk =>
-          expose_names
-          have heq_sigma := a_14.sigma_eq
-          have hn₃ : IsNorm Red (Expr.top.quot A) := quot_is_norm (fun ⟨_, h⟩ => nomatch h) (a_2.is_norm a_9.is_norm).1
-          have hn₄ : IsNorm Red (Expr.top.quot B') := quot_is_norm (fun ⟨_, h⟩ => nomatch h) a_10.is_norm
-          have heq_red₃ := elim_reduce_norm_fst hn₃
-          have heq_red₄ := elim_reduce_norm_fst hn₄
-          simp? [heq_red₃, heq_red₄] at heq_sigma
-          
-          apply Judge.eq
-          · assumption
-          · assumption
-          · sorry
-          · sorry
+        have heq_pi := a_6.pi_eq
+        have hn₁  : IsNorm Red f_α'.map := map_is_norm a_8.is_norm
+        have hn₂  : IsNorm Red (δ.curr' f_α' ((δ.sigma f_α').bang.quot (Expr.sort 0))) := curr'_is_norm hn_δ a_8.is_norm (quot_is_norm (bang_is_norm (sigma_is_norm hn_δ a_8.is_norm)) (fun ⟨_, h⟩ => nomatch h))
+        have heq₁ : (reduce Red f_α'.map).fst = f_α'.map := elim_reduce_norm_fst hn₁
+        have heq₂ : (reduce Red (δ.curr' f_α' ((δ.sigma f_α').bang.quot (Expr.sort 0)))).fst = (δ.curr' f_α' ((δ.sigma f_α').bang.quot (Expr.sort 0))) := elim_reduce_norm_fst hn₂
+        have heq₃ : (reduce Red x.box).fst = (reduce Red x).fst.box := congr_reduce₁ (by grind) (by point_arity; rfl)
+        simp [heq₁, heq₂, heq₃] at heq_pi
+        cases heq_pi.left.left; cases heq_pi.left.right; cases heq_pi.right
+        clear heq_pi
+        clear a_6
+        clear a_1
+        replace a_3 := (a_3.push_head .curr').push_head .quot
+        cases a_3.elim_norm (fun ⟨_, h⟩ => nomatch h)
+        clear a_3
+        replace a := a.push_head .map
+        cases a_5 with
+        | box h_t_x =>
+          cases a_2 with
+          | box h_t_y =>
+            expose_names
+            have a' : (f_α'.app (reduce Red x).fst).DefEq τ :=
+              match a with
+              | ⟨hr₁, hr₂⟩ => by
+                have h₁ := hr₁.complete_fst ▸ congr_reduce₁
+                  (e := (f_α'.app (reduce Red x).fst).bang)
+                  (by grind)
+                have h₂ := hr₂.complete_fst ▸ congr_reduce₁ (e := τ.bang)
+                  (by grind)
+                simp [set_points, points] at h₁
+                simp [set_points, points] at h₂
+                have heq₂ := h₁.symm.trans h₂
+                simp at heq₂
+                exact ⟨⟨reduce_sound_fst heq₂, reduce_norm_fst heq₂⟩, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+            apply Judge.eq
+            · exact h_t_y
+            · exact h_t_y
+            · exact ⟨⟨.refl, h_t_y.is_norm⟩, ⟨.refl, h_t_y.is_norm⟩⟩
+            · exact ⟨⟨.refl, h_t_y.is_norm⟩, ⟨.trans (congrFun' a_8.1) (.trans (congrArg' (reduce_sound rfl)) (a'.elim_normr h_t_y.is_norm).1), (a'.elim_normr h_t_y.is_norm).2⟩⟩
 
 mutual
 

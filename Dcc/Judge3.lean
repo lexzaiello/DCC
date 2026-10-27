@@ -92,6 +92,10 @@ def DefEq.push_head {A B : Expr} (h : A ≡ C) (hr : Red A B) : B ≡ C :=
   | ⟨hr₁, hr₂⟩ =>
     ⟨.push_head hr₁ hr, hr₂⟩
 
+def DefEq.symm {A B : Expr} (h₁ : A ≡ B) : B ≡ A :=
+  match h₁ with
+  | ⟨hr₁, hr₂⟩ => ⟨hr₂, hr₁⟩
+
 def DefEq.trans {A B C : Expr} (h₁ : A ≡ B) (h₂ : B ≡ C) : A ≡ C :=
   match h₁, h₂ with
   | ⟨hr₁, hr₂⟩, ⟨hr₃, hr₄⟩ => ⟨hr₁, RedNorm.unique hr₂ hr₃ ▸ hr₄⟩

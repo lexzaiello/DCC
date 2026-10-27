@@ -940,15 +940,63 @@ def ind_bool_false_preservation_head (h : Judge (DCC ((𝟚.Rec motive x y) env 
 def preservation_head (ht : Judge e τ) (hr : Red' e e') (h_head : hr.IsHead) : Judge e' τ := by
   cases h_head <;> dcc_aesop' [judge]
 
-mutual
+def Red.def_eq (h : Red A B) : DefEq A B :=
+  ⟨⟨.trans (.single h) (reduce_sound rfl), reduce_norm rfl⟩, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
 
-def preservation (h : Judge e τ) (hr : Red e e') : Judge e' τ := by
-  sorry
-
-def preservation_star (h : Judge e τ) (hr : RedNorm e e') : Judge e' τ := by
-  sorry
-
-end
+set_option maxHeartbeats 2000000 in
+def preservation (ht : Judge e τ) (hr : Red' e e') : Judge e' τ := by
+  cases hr
+  any_goals (dcc_aesop' [judge])
+  case congrFun =>
+    expose_names
+    cases ht with
+    | app =>
+      expose_names
+      have h_t_f' := a_2.preservation a
+      apply Judge.app <;> assumption
+  case congrArg =>
+    expose_names
+    cases ht with
+    | app =>
+      expose_names
+      have h_t_x' := a_3.preservation a
+      apply Judge.app
+      · assumption
+      · assumption
+      · assumption
+      · exact a_4.push_head (.congrArg a.to_red)
+  case point =>
+    cases ht
+    any_goals (grind [point_arity])
+    all_goals (
+      expose_names
+      simp only [point_arity] at h
+      interval_cases n
+      <;> constructor)
+    any_goals (
+      try (have h₁ := preservation (by assumption) a_1)
+      try (have h₁ := preservation (by assumption) a_2)
+      try (have h₁ := preservation (by assumption) a_3)
+      try (have h₁ := preservation (by assumption) a_4)
+      try (have h₁ := preservation (by assumption) a_5)
+      try (have h₁ := preservation (by assumption) a_6)
+      assumption)
+    any_goals (
+      focus
+      try (
+        exact RedNorm.push_head (by assumption) (Red'.to_red (by assumption)))
+      done)
+    · exact DefEq.trans (by assumption) (Red.def_eq (Red'.to_red (by assumption)))
+    · exact DefEq.symm (DefEq.trans (DefEq.symm (by assumption)) (Red.def_eq (Red'.to_red (by assumption))))
+    · exact RedNorm.push_head (by assumption) (.congrArg (Red'.to_red (by assumption)))
+    · simp [points]
+      exact a_4.push_head (.congrFun (.point 1 (by grind) (.point 1 (by point_arity) (.point 1 (by change 1 < ((A.quot Expr.bot).pi motive).point_arity; point_arity) (by
+        change motive.Red p'
+        exact a_3.to_red)))))
+termination_by (sizeOf e)
+decreasing_by
+  any_goals (simp_all)
+  any_goals (grind [points, Vector.get])
 
 end Judge
 

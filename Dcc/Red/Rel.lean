@@ -99,6 +99,9 @@ inductive Red'.IsHead : (h : Red' A B) → Type
   | ind_bool_false : Red'.IsHead .ind_bool_false
   | sigma          : Red'.IsHead .sigma
 
+def Red'.to_red (h : Red' A B) : Red A B := by
+  induction h <;> (constructor; try assumption)
+
 instance (A B : Expr) : Repr (PLift (Red A B)) := ⟨fun _ _ => "⋯"⟩
 
 theorem Red.mkCongrFun (h : Red f f') : Red (DCC? (f x)) (DCC? (f' x)) := .congrFun h

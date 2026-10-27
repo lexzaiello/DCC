@@ -14,9 +14,7 @@ def contains {τ_c : Type u} [DecidableEq τ_c] (e : GenericExpr (τ := τ_c))
   | DCC[.] Sort _n, DCC[.] Sort __n => true
   | DCC[.] ⊥, DCC[.] ⊥ => true
   | DCC[.] Π(x, y), to_find
-  | DCC[.] (x ∘' y), to_find
   | DCC[.] (x ∘ y), to_find
-  | DCC[.] (x ∘∘ y), to_find
   | DCC[.] (x y), to_find
   | DCC[.] x = y, to_find => x.contains to_find || y.contains to_find
   | DCC[.] Fst(α), to_find

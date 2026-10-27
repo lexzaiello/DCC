@@ -20,7 +20,7 @@ Old η-reduction does as well, but new NBE is much smarter and doesn't require a
 machinery, since it works in a single pass with recursion, rather than through rewrite rules.
 -/
 
-namespace GenericExpr
+namespace Expr
 
 @[simp]
 theorem id_pure_ext.{u} {α : Type u} (x : α) : (pure x : Id α) = x := rfl
@@ -73,6 +73,7 @@ class RedRel.{u, v} {α : Type u} (r : α → α → Sort v) (t : outParam (α �
       try rfl
       done)
 
+attribute [dcc_force_reduce] Rel.run
 attribute [dcc_size] RedRel.decreasing
 
 attribute [dcc_force_rel] RedRel.toRel.eq_def RedRel.toRel Rel.run Rel.run.eq_def
@@ -158,62 +159,57 @@ instance RedRel.instReflTransRel.{u} {α : Type u} {r : α → α → Prop} {t :
 abbrev RedRel.ReflTrans.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} {m : Type u → Type u} [Monad m] (_hR : RedRel (α := α) r t (m := m)) : α → α → Prop := Relation.ReflTransGen r
 abbrev RedRel.Trans {r : α → α → Prop} {t : α → ℕ} {m : Type → Type} [Monad m] (_hR : RedRel r t (m := m)) : α → α → Prop    := Relation.TransGen r
 
-open Rel in class Congruent'.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) where
+open Rel in class Congruent'.{u} {τ : Type u} (r : Expr → Expr → Prop) where
   congr_iff {p : Fin (point_arity e)} : r (points e)[p] p' ↔ r e (set_points e ((points e).set p p'))
 
 @[aesop (rule_sets := [DccForceStep]) safe apply]
-theorem Congruent'.congr'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
-  {e : GenericExpr τ} {p : Fin (point_arity e)} {p' : GenericExpr τ} [hR : Congruent' (τ := τ) r]
+theorem Congruent'.congr'.{u} {τ : Type u} {r : Expr → Expr → Prop}
+  {e : Expr} {p : Fin (point_arity e)} {p' : Expr} [hR : Congruent' (τ := τ) r]
   (h : r (points e)[p] p' := by assumption) : r e
   (set_points e ((points e).set p p')) :=
   hR.congr_iff.mp h
 
-open Rel in class Congruent.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) where
+open Dsl in open Rel in class Congruent (r : Expr → Expr → Prop) where
   congrFun_ (h : r f f') : r (DCC[τ] (f x)) (DCC[τ] (f' x)) := by exact .congrFun
   congrArg_ (h : r x x') : r (DCC[τ] (f x)) (DCC[τ] (f x')) := by exact .congrArg
-  sigl_     (h : r x x') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y)) := by exact .sig₁
-  sigr_     (h : r y y') : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y')) := by exact .sig₂
-  pil_      (h : r x x') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x', y)) := by exact .pi₀
-  pir_      (h : r y y') : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x, y')) := by exact .pi₁
-  coup_     (h : r β β') : r (DCC[τ] Coup(β)) (DCC[τ] Coup(β'))     := by exact .coup₀
+  sigl_     (h : r x x') : r (DCC[τ] (,β x y)) (DCC[τ] (,β x' y)) := by exact .point 1 (by grind)
+  sigr_     (h : r y y') : r (DCC[τ] (,β x y)) (DCC[τ] (,β x y')) := by exact .point 2 (by grind)
+  pil_      (h : r x x') : r (DCC[τ] (Π x y)) (DCC[τ] (Π x' y)) := by exact .point 0 (by grind)
+  pir_      (h : r y y') : r (DCC[τ] (Π x y)) (DCC[τ] (Π x y')) := by exact .point 1 (by grind)
 
 @[aesop (rule_sets := [DccForceStep]) safe apply]
-theorem Congruent.congrFun'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
-  {f x f' : GenericExpr τ} [hR : Congruent (τ := τ) r] (h : r f f' := by assumption) : r
+theorem Congruent.congrFun' {r : Expr → Expr → Prop}
+  {f x f' : Expr} [hR : Congruent r] (h : r f f' := by assumption) : r
   (DCC[τ] (f x))
   (DCC[τ] (f' x)) :=
   (hR.congrFun_ h)
 
 @[aesop (rule_sets := [DccForceStep]) safe apply]
-theorem Congruent.congrArg'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {f x x' : GenericExpr τ}
+theorem Congruent.congrArg' {r : Expr → Expr → Prop} {f x x' : Expr}
   [hR : Congruent r] (h : r x x' := by assumption) : r (DCC[τ] (f x)) (DCC[τ] (f x')) :=
   (hR.congrArg_ h)
 
 @[aesop (rule_sets := [DccForceStep]) safe apply]
-theorem Congruent.sigl'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β x y x' : GenericExpr τ} [hR : Congruent r]
-  (h : r x x' := by assumption) : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x', y)) :=
+theorem Congruent.sigl' {r : Expr → Expr → Prop} {β x y x' : Expr} [hR : Congruent r]
+  (h : r x x' := by assumption) : r (DCC[τ] (,β x y)) (DCC[τ] (,β x' y)) :=
   (hR.sigl_ h)
 
-@[aesop (rule_sets := [DccForceStep]) safe apply]
-theorem Congruent.pil'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {x x' y : GenericExpr τ} [hR : Congruent r]
-  (h : r x x' := by assumption) : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x', y)) :=
+open Dsl in @[aesop (rule_sets := [DccForceStep]) safe apply]
+theorem Congruent.pil' {r : Expr → Expr → Prop} {x x' y : Expr} [hR : Congruent r]
+  (h : r x x' := by assumption) : r (DCC[τ] (Π x y)) (DCC[τ] (Π x' y)) :=
   (hR.pil_ h)
 
-@[aesop (rule_sets := [DccForceStep]) safe apply]
-theorem Congruent.pir'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {x y y' : GenericExpr τ} [hR : Congruent r]
-  (h : r y y' := by assumption) : r (DCC[τ] Π(x, y)) (DCC[τ] Π(x, y')) :=
+open Dsl in @[aesop (rule_sets := [DccForceStep]) safe apply]
+theorem Congruent.pir' {r : Expr → Expr → Prop} {x y y' : Expr} [hR : Congruent r]
+  (h : r y y' := by assumption) : r (DCC[τ] (Π x y)) (DCC[τ] (Π x y')) :=
   (hR.pir_ h)
 
 @[aesop (rule_sets := [DccForceStep]) safe apply]
-theorem Congruent.sigr'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β x y y' : GenericExpr τ}
-  [hR : Congruent r] (h : r y y' := by assumption) : r (DCC[τ] ⟦β⟧(x, y)) (DCC[τ] ⟦β⟧(x, y')) :=
+theorem Congruent.sigr' {r : Expr → Expr → Prop} {β x y y' : Expr}
+  [hR : Congruent r] (h : r y y' := by assumption) : r (DCC[τ] (,β x y)) (DCC[τ] (,β x y')) :=
   (hR.sigr_ h)
 
-@[aesop (rule_sets := [DccForceStep]) safe apply]
-theorem Congruent.coup'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} {β β' : GenericExpr τ} [hR : Congruent r] (h : r β β' := by assumption) : r (DCC[τ] Coup(β)) (DCC[τ] Coup(β')) :=
-  (hR.coup_ h)
-
-instance Congruent.trans.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r] : Congruent (Relation.TransGen r) where
+instance Congruent.trans {r : Expr → Expr → Prop} [hC : Congruent r] : Congruent (Relation.TransGen r) where
   congrFun_ h := by
     induction h with
     | single h => exact .single (hC.congrFun' h)
@@ -230,10 +226,6 @@ instance Congruent.trans.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr �
     induction h with
     | single h => exact .single (hC.sigr' h)
     | tail => exact .trans (by assumption) (.single (hC.sigr' (by assumption)))
-  coup_ h := by
-    induction h with
-    | single h => exact .single (hC.coup' h)
-    | tail => exact .trans (by assumption) (.single (hC.coup' (by assumption)))
   pil_ h := by
     induction h with
     | single h => exact .single (hC.pil' h)
@@ -243,7 +235,7 @@ instance Congruent.trans.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr �
     | single h => exact .single (hC.pir' h)
     | tail => exact .trans (by assumption) (.single (hC.pir' (by assumption)))
 
-instance Congruent.reflTrans.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r] : Congruent (Relation.ReflTransGen r) where
+instance Congruent.reflTrans {r : Expr → Expr → Prop} [hC : Congruent r] : Congruent (Relation.ReflTransGen r) where
   congrFun_ h := by
     rw [← Relation.reflGen_transGen] at *
     cases h with
@@ -273,11 +265,6 @@ instance Congruent.reflTrans.{u} {τ : Type u} {r : GenericExpr τ → GenericEx
     rw [← Relation.reflGen_transGen] at *
     cases h with
     | single h => exact .single (hC.trans.pir' h)
-    | refl => exact .refl
-  coup_ h := by
-    rw [← Relation.reflGen_transGen] at *
-    cases h with
-    | single h => exact .single (hC.trans.coup' h)
     | refl => exact .refl
 
 syntax "some_congr" : tactic
@@ -319,40 +306,35 @@ open Confluent in @[reducible] def RedRel.globally_confluent.{u} {α : Type u}
         have ⟨_, h₁, h₂⟩ := ih _ hr₁ (hrt₁b.trans hrtt₁b) (hrt₁b.trans hrtt₂b)
         exact ⟨_, .trans hrtt₁ h₁, .trans hrtt₂ h₂⟩
 
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.sigl.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
-  {β x y : GenericExpr τ} [hC : Congruent r]
-  (hn : IsNorm r (DCC[τ] ⟦β⟧(x, y))) : IsNorm r x := fun ⟨_, h⟩ =>
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.sigl {r : Expr → Expr → Prop}
+  {β x y : Expr} [hC : Congruent r]
+  (hn : IsNorm r (DCC[τ] (,β x y))) : IsNorm r x := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.sigl' h⟩).elim
 
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.sigr.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
-  {β x y : GenericExpr τ} [hC : Congruent r]
-  (hn : IsNorm r (DCC[τ] ⟦β⟧(x, y))) : IsNorm r y := fun ⟨_, h⟩ =>
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.sigr {r : Expr → Expr → Prop}
+  {β x y : Expr} [hC : Congruent r]
+  (hn : IsNorm r (DCC[τ] (,β x y))) : IsNorm r y := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.sigr' h⟩).elim
 
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.congrFun.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r]
-  {f x : GenericExpr τ}
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.congrFun {r : Expr → Expr → Prop} [hC : Congruent r]
+  {f x : Expr}
   (hn : IsNorm r (DCC[τ] (f x))) : IsNorm r f := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.congrFun' h⟩).elim
 
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.congrArg.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} [hC : Congruent r]
-  {f x : GenericExpr τ}
+@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.congrArg {r : Expr → Expr → Prop} [hC : Congruent r]
+  {f x : Expr}
   (hn : IsNorm r (DCC[τ] (f x))) : IsNorm r x := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.congrArg' h⟩).elim
 
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pil.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
-  {f_α f_β : GenericExpr τ} [hC : Congruent r]
-  (hn : IsNorm r (DCC[τ] Π(f_α, f_β))) : IsNorm r f_α := fun ⟨_, h⟩ =>
+open Dsl in @[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pil {r : Expr → Expr → Prop}
+  {f_α f_β : Expr} [hC : Congruent r]
+  (hn : IsNorm r (DCC[τ] (Π f_α f_β))) : IsNorm r f_α := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.pil' h⟩).elim
 
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pir.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
-  {f_α f_β : GenericExpr τ} [hC : Congruent r]
-  (hn : IsNorm r (DCC[τ] Π(f_α, f_β))) : IsNorm r f_β := fun ⟨_, h⟩ =>
+open Dsl in @[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.pir {r : Expr → Expr → Prop}
+  {f_α f_β : Expr} [hC : Congruent r]
+  (hn : IsNorm r (DCC[τ] (Π f_α f_β))) : IsNorm r f_β := fun ⟨_, h⟩ =>
   (hn ⟨_, hC.pir' h⟩).elim
-
-@[dcc_rel, aesop safe apply (rule_sets := [DccRel])] def IsNorm.coup.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
-  {β : GenericExpr τ} [hC : Congruent r]
-  (hn : IsNorm r (DCC? Coup(β))) : IsNorm r β := fun ⟨_, h⟩ =>
-  (hn ⟨_, hC.coup' h⟩).elim
 
 @[dcc_rel] def IsNorm.complete.{u}
   {α : Type u}
@@ -469,13 +451,13 @@ theorem reduce_complete_pointwise.{u} {α : Type u} {r : α → α → Prop} {t 
     (r := Relation.ReflTransGen r) (P := IsNorm r) (hR := hR.to_reflTrans (α := α) (r := r) (t := t)) :=
   ⟨fun hr hn => reduce_complete (α := α) (r := r) (t := t) hr hn⟩
 
-@[dcc_step, aesop safe apply (rule_sets := [DccStep])]
-theorem reduce_sound.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} [_hR : RedRel r t] {A B : α}
+@[dcc_force_reduce, dcc_step, aesop safe apply (rule_sets := [DccStep]), aesop unsafe norm (rule_sets := [DccForceReduce])]
+def reduce_sound.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} [_hR : RedRel r t] {A B : α}
   {h : Relation.ReflTransGen r A B}
   (_heq : reduce r A = ⟨B, ⟨h⟩⟩) : Relation.ReflTransGen r A B := h
 
-@[dcc_step, aesop safe apply (rule_sets := [DccStep])]
-theorem reduce_norm.{u} {τ : Type u} {t : τ → ℕ}
+@[dcc_force_reduce, dcc_step, aesop safe apply (rule_sets := [DccStep])]
+def reduce_norm.{u} {τ : Type u} {t : τ → ℕ}
   {r : τ → τ → Prop}
   [hR : RedRel.{u} (α := τ) r t]
   [hN : SemiComplete.{u} (α := τ) r (hR := hR)]
@@ -581,6 +563,15 @@ def reduce_with_norm.{u} {α : Type u} {t : α → ℕ} (r : α → α → Prop)
   let h_reduce := reduce r e
   ⟨h_reduce.fst, ⟨⟨h_reduce.snd.down, reduce_norm rfl⟩⟩⟩
 
+@[dcc_force_reduce, aesop norm (rule_sets := [DccForceReduce])]
+theorem reduce_with_norm_complete.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ}
+  [hR : RedRel r t (m := Option)] [hN : SemiComplete (α := α) r (hR := hR)] [Confluent r]
+  {A B : α} (hr : Relation.ReflTransGen r A B) (hn : IsNorm r B) : reduce_with_norm _ A = ⟨B, ⟨hr, hn⟩⟩ := by
+  have h := reduce_complete_pointwise hr hn
+  simp [reduce_with_norm, h]
+  grind
+
+
 theorem reduce_sound_fst.{u} {α : Type u} {r : α → α → Prop} {t : α → ℕ} [_hR : RedRel r t] {A B : α}
   (_heq : (reduce r A).fst = B) : Relation.ReflTransGen r A B :=
   have h := reduce_sound (r := r) (A := A) rfl
@@ -593,58 +584,58 @@ theorem reduce_sound_fst_norm.{u} {α : Type u} {r : α → α → Prop} {t : α
   have hb := reduce_norm (r := r) (A := A) rfl
   ⟨_heq ▸ ha, _heq ▸ hb⟩
 
-end GenericExpr
+end Expr
 
-inductive NormExpr.{u} {τ : Type u} (r : GenericExpr τ → GenericExpr τ → Prop) : Type u
-  | mk : (e : GenericExpr τ) → GenericExpr.IsNorm r e → NormExpr r
+inductive NormExpr (r : Expr → Expr → Prop) : Type u
+  | mk : (e : Expr) → Expr.IsNorm r e → NormExpr r
 deriving DecidableEq
 
-def test_dec_eq_norm_expr.{u} {τ : Type u} [DecidableEq τ] {r : GenericExpr τ → GenericExpr τ → Prop}
-  (h₁ h₂ : NormExpr (τ := τ) r) : Bool := decide (h₁ = h₂)
+def test_dec_eq_norm_expr [DecidableEq τ] {r : Expr → Expr → Prop}
+  (h₁ h₂ : NormExpr r) : Bool := decide (h₁ = h₂)
 
 @[grind, inline]
-def NormExpr.size {t : GenericExpr τ_c → ℕ} {r : GenericExpr τ_c → GenericExpr τ_c → Prop} [GenericExpr.RedRel r t]
+def NormExpr.size {t : Expr → ℕ} {r : Expr → Expr → Prop} [Expr.RedRel r t]
   (n : NormExpr r) : ℕ :=
   match n with
   | ⟨e, _⟩ => t e
 
 @[macro_inline, grind, dcc_rel]
-def NormExpr.raw.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} (r : NormExpr r) : GenericExpr τ :=
+def NormExpr.raw {r : Expr → Expr → Prop} (r : NormExpr r) : Expr :=
   match r with
   | ⟨e, _⟩ => e
 
 @[grind =, grind →, dcc_size]
-theorem NormExpr.size_eq {t : GenericExpr τ_c → ℕ} {r : GenericExpr τ_c → GenericExpr τ_c → Prop} [GenericExpr.RedRel r t]
-  {e : GenericExpr τ_c} {hn : GenericExpr.IsNorm r e} : (NormExpr.mk e hn).size = t e := by
+theorem NormExpr.size_eq {t : Expr → ℕ} {r : Expr → Expr → Prop} [Expr.RedRel r t]
+  {e : Expr} {hn : Expr.IsNorm r e} : (NormExpr.mk e hn).size = t e := by
   simp [size]
 
-def NormExpr.ext_iff.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+def NormExpr.ext_iff {r : Expr → Expr → Prop}
   {A B : NormExpr r} : A = B ↔ A.raw = B.raw :=
   ⟨fun heq => by grind, fun h => by
     match A, B with
     | ⟨A, hn₁⟩, ⟨B, hn₂⟩ => grind⟩
 
 @[grind ., ext]
-theorem NormExpr.ext.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+theorem NormExpr.ext {r : Expr → Expr → Prop}
   {A B : NormExpr r} : A.raw = B.raw → A = B := ext_iff.mpr
 
 @[grind .]
-theorem NormExpr.ext'.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop}
+theorem NormExpr.ext' {r : Expr → Expr → Prop}
   {A B : NormExpr r} : A = B → A.raw = B.raw := ext_iff.mp
 
-abbrev NormExpr.is_norm.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} (hr : NormExpr r) : GenericExpr.IsNorm r hr.raw :=
+abbrev NormExpr.is_norm {r : Expr → Expr → Prop} (hr : NormExpr r) : Expr.IsNorm r hr.raw :=
   match hr with
   | ⟨_, hn⟩ => hn
 
 @[aesop safe apply (rule_sets := [DccRel])]
-def NormExpr.red.{u} {τ : Type u} {r : GenericExpr τ → GenericExpr τ → Prop} (hn : NormExpr r) {B : GenericExpr τ} (hr : r hn.raw B) : False :=
+def NormExpr.red {r : Expr → Expr → Prop} (hn : NormExpr r) {B : Expr} (hr : r hn.raw B) : False :=
   hn.is_norm ⟨_, hr⟩
 
 namespace Relation
 
 namespace ReflTransGen
 
-def conf.{u} {τ : Type u} {r : τ → τ → Prop} {t : τ → ℕ} [hR : GenericExpr.RedRel r t] [GenericExpr.Confluent r] {A B C : τ} (h₁ : ReflTransGen r A B) (h₂ : ReflTransGen r A C) : ∃ D, ReflTransGen r B D ∧ ReflTransGen r C D := hR.globally_confluent.conf h₁ h₂
+def conf {r : τ → τ → Prop} {t : τ → ℕ} [hR : Expr.RedRel r t] [Expr.Confluent r] {A B C : τ} (h₁ : ReflTransGen r A B) (h₂ : ReflTransGen r A C) : ∃ D, ReflTransGen r B D ∧ ReflTransGen r C D := hR.globally_confluent.conf h₁ h₂
 
 end ReflTransGen
 

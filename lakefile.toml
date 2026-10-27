@@ -5,6 +5,9 @@ defaultTargets = ["Dcc"]
 [[lean_lib]]
 name = "Dcc"
 
+[[lean_lib]]
+name = "Dcc2"
+
 [[require]]
 name = "verso-slides"
 git = "https://github.com/leanprover/verso-slides"

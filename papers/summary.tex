@@ -1,0 +1,481 @@
+\documentclass{article}
+\newcommand{\comment}[1]{}
+\usepackage{tabularx}
+\usepackage{bbm}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{textcomp}
+\usepackage[a4paper, margin={1in}]{geometry}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{bbold}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{authblk}
+\usepackage{biblatex}
+\usepackage{mathpartir}
+\usepackage{stmaryrd}
+\usepackage{amssymb}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+\addbibresource{./refs.bib}
+
+\newcommand{\arr}{\rightarrow}
+\newcommand{\sort}[1]{\text{Sort}_{#1}}
+\newcommand{\barr}{\arr_{\beta}}
+\newcommand{\earr}{\arr_{\eta}}
+\newcommand{\barrh}{\arr_{\beta_{wh}}}
+\newcommand{\llb}{\llbracket}
+\newcommand{\rrb}{\rrbracket}
+
+\title{DCC Summary}
+\author{Lexi Aiello}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+  \begin{itemize}
+  \item The dependent combinator calculus (DCC) is a dependent type theory based on categorical combinators \cite{CURIEN1986188} and affine logic.
+    \begin{itemize}
+      \item DCC is similar to the base calculus of constructions in that types are terms and that there is an infinite sort hierarchy (but no universe-level polymorphism).
+      \item Propositional equality is inductively generated from \(refl\) as in intuitionistic type theory.
+      \item DCC has decidable type-checking, global confluence, and strong normalization.
+      \item DCC is implemented via a deep embedding in Lean 4. We have soundness and completeness of the type-checker with respect to \(Judge : Expr \rightarrow Expr \rightarrow Type\).
+      \item A subset of Lean 4 can be compiled to DCC.
+      \item \(\beta\)-reduction always terminates in DCC due to affine logic. We eagerly \(\beta\) and \(\eta\)-reduce all types in each constructor, rather than assuming a general conversion axiom. This enables extensional equality reflection, but the proof has a \(sorry\) for subject-reduction.
+      \item \(\eta\)-reduction is based on observing the behavior of a function on typed ``holes'' which are generated from the domain of the function, then reducing to the ``canonical'' combinator producing the hole output (similarly to in NbE). Since we do not assume inductive types and since we do not have recursors on \(\mathbb{2}\), we believe we may have computable function extensionality, but this fact is very hard to formalize.
+      \end{itemize}
+  \end{itemize}
+\end{abstract}
+
+\section{Base Types}\label{infer:base}
+
+Our base types are the usual as in MLTT.
+
+\begin{definition}
+  We have an infinite sort hierarchy:
+
+  \begin{equation}
+  \inferrule
+  { }
+  { \sort{u} : \sort{u + 1}}
+  \end{equation}
+\end{definition}
+
+\begin{definition}
+  We have a bottom type:
+
+  \begin{equation}
+  \inferrule
+  { }
+  { \mathbb{0} : \sort{0}}
+  \end{equation}
+\end{definition}
+
+\begin{definition}
+  We have a top type with one inhabitant:
+
+  \begin{equation}
+  \inferrule
+  { }
+  { \mathbb{1} : \sort{0}}
+\end{equation}
+\begin{equation}
+  \inferrule
+  { }
+  { \ast : \mathbb{1}}
+  \end{equation}
+\end{definition}
+
+\begin{definition}
+  We have a type \(\mathbb{2}\):
+
+  \begin{equation}
+  \inferrule
+  { }
+  { \mathbb{2} : \sort{1}}
+\end{equation}
+It has two inhabitants:
+\begin{equation}
+  \inferrule
+  { }
+  { \mathbb{0}_\mathbb{2} : \mathbb{2}}
+\end{equation}
+\begin{equation}
+  \inferrule
+  { }
+  { \mathbb{1}_\mathbb{2} : \mathbb{2}}
+  \end{equation}
+\end{definition}
+
+\section{Syntax}
+
+The syntax is given in S-expressions for clarity.
+
+\begin{definition}\label{def:syntax}
+
+  An expression is either:
+
+  \begin{itemize}
+    \item A base term inhabiting a base type
+    \item A base type
+    \item A parenthesized expression beginning with a combinator \(C\) and containing its points \(p_1 \ldots p_n\) separated by whitespace: \((C\ p_1\ldots\ p_n)\).
+    \item A juxtaposed list of expressions separated by whitespace, denoting an application.
+    \item A parenthesized expression
+    \end{itemize}
+
+\begin{example}
+  \((Id\ A)\) is an expression.
+\end{example}
+
+\begin{proof}
+  See \ref{def:syntax}. \(A\) is a point of \(Id\).
+\end{proof}
+
+\begin{example}
+  \(((Id\ A) x)\) is an expression.
+\end{example}
+
+\begin{proof}
+  See \ref{def:syntax}.
+\end{proof}
+
+\end{definition}
+
+\section{Core Combinators}
+
+DCC is an extension of the simply-typed categorical combinators \autocite[p. 220]{CURIEN1986188} to dependent types and affine logic. Our choice of the categorical combinators is due to their close correspondence with cartesian closed categories. We support affine logic by ``box'' and ``bang'' terms:
+
+\begin{definition}
+  A bang type \((! A)\) is inhabited by a boxed term \((\& x) : (! A)\):
+  \begin{equation}
+  \inferrule[Box]
+  { x : A }
+  { (\& x) : (! A)}
+\end{equation}
+\begin{equation}
+\inferrule[Bang]
+{ A : \sort{u}}
+{(!A) : \sort{u}}
+\end{equation}
+\end{definition}
+
+Combinators' type arguments are given as points of the combinators, but we assume the existence of \(\Sigma\)-types, so expressivity as if type arguments were given by application is recovered since \(\Sigma\)-pairs can encode telescope contexts.
+
+\begin{definition}
+
+  The head-reduction rules on combinators are as follows:
+
+\begin{gather*}
+  \inferrule[Id]
+  { }
+  {(Id\ A) x \barrh x}\qquad
+  \inferrule[Fst]
+  { }
+  {(Fst\ B) (,B_2\ x\ y) \barrh x}\qquad
+  \inferrule[Snd]
+  { }
+  {(Snd\ B) (,B_2\ x\ y) \barrh y}\\
+  \inferrule[Curr]
+  { }
+  {(\Lambda\ A\ B\ x) y z \barrh (x (,B\ y\ z))}\qquad
+  \inferrule[Comp]
+  { }
+  {(\circ\ x\ y) z \barrh (x (y z))}\qquad
+  \inferrule[Quot]
+  { }
+  {(`B\ x) y \barrh x}\\\\
+  \inferrule[Curr']
+  { }
+  { (!\Lambda\ A\ B\ x) (\&\ x) (\&\ y) \barrh (x (\&\ (,B\ y\ z)))}\qquad
+  \inferrule[Pair]
+  { }
+  { (\langle , \rangle B\ x\ y) (\&\ x) \barrh (,(B x)\ (M x)\ (N x (M x)))}\\
+  \inferrule[Eval]
+  { }
+  { (Eval\ A\ B\ x) (,B_2\ y\ z) \barrh x y z}\\
+  \inferrule[Unbox]
+  { }
+  { (*\ A) (\&\ x) \barrh x}\qquad
+  \inferrule[Bang map]
+  { }
+  { (!<>\ f) (\& x) \barrh (! (f x))}\qquad
+  \inferrule[Box map]
+  { }
+  { (\$<>\ f) (\& x) \barrh (\& (f x)) }\\
+  \inferrule[Eql]
+  { }
+  { (Eql\ B) x (,B_2\ y\ z) \barrh (=\ (B x)\ y\ z)}\qquad
+  \inferrule[Sigma]
+  { }
+  { (\Sigma\ B\ C) x \barrh (\Sigma (C x))}
+\end{gather*}
+
+\begin{gather*}
+\inferrule[Dup]
+  { }
+  { (Dup\ B\ x) (\& y) (\& z) \barrh (x y (,(`(B y)\ (B y))\ z\ z))}
+\end{gather*}
+
+There are also some basic operations on un-boxed \(\Sigma\)-pairs added as optimizations to avoid boxing the term and using the pair rule:
+
+\begin{gather*}
+  \inferrule[Bimap]
+  { }
+  { (Map\ A\ B\ f\ g) (,B_2\ x\ y) \barrh (,(`A\ B)\ (f x)\ (g y))}\\
+  \inferrule[Assoc]
+  { }
+  { (Assoc\ A\ B\ C) (,B_2\ (,B_3\ x\ y)\ z) \barrh (,(`A\ (\Sigma (`B C)))\ x\ (,(`B\ C)\ y\ z))}\\
+  \inferrule[Swap]
+  { }
+  { (Swap\ A\ B) (,B_2 x y) \barrh (,(`B\ A)\ y x)}
+\end{gather*}
+
+\end{definition}
+
+DCC uses call-by-value semantics, so a term is reduced by either its head-reduction, reducing the points of the term if it is a combinator, or the usual congruences on functions and arguments.
+
+\begin{definition}
+  The full \(\beta\)-reduction rules are as such:
+  \begin{gather*}
+  \inferrule[Congr Fun.]
+  { f \barr f'}
+  { (f x) \barr (f' x)}\qquad
+  \inferrule[Congr App.]
+  { x \barr x'}
+  { (f x) \barr (f x')}\qquad
+  \inferrule[Head]
+  { (f x) \barrh B}
+  { (f x) \barr B}\\
+  \inferrule[Congr Point]
+  { points(f, n) \barr p'}
+  { f \barr points.set(f, n, p')}
+  \end{gather*}
+\end{definition}
+
+\begin{example}
+  \((,B\ ((Id\ A) x)\ y) \barr (,B\ x\ y)\)
+\end{example}
+
+\begin{proof}
+  By the congr. point rule since ``,'' is a combinator with point arity 3, and since \((Id\ A) x \barrh x\).
+\end{proof}
+
+\subsection{Strong Normalization by Syntactic Size Measure}
+
+DCC is provably strongly normalizing by a syntactic size measure on expressions, since the rules that duplicate a term expect that term to be boxed (e.g., the \(Pair\) rule). We simply count the size of a boxed term four times so that the offending rule decreases the size of the term (\(size(\& x) \coloneq size(x) * 4 + 1\)). The size measure is relatively obtuse and arbitrary, but strong normalization is a trivial result of affine logic, so the details have been omitted. We separately show that DCC is locally confluent, and thus inherit global confluence by Newmann's Lemma.
+
+Since strong normalization under \(\beta\)-reduction is always provable by our measure, \(\beta\)-equality is decidable. We have a \(\beta\)-reduction function with soundness, and completeness up to normal forms.
+
+\section{\(\eta\)-reduction}
+
+DCC is a minimal calculus, and we do not have inductives or recursors for \(\mathbb{2}\). So, a function \(f\) is \(\eta\)-reduced by characterizing its behavior on a ``hole'' matching the shape of its domain. A hole is either an opaque term indexed by a unique level (\(hole(n)\)), a \(\Sigma\)-pair containing two holes, or a boxed hole. The \(\eta\)-reduct of \(f\) is defined to be the canonical combinator yielding the \(\beta\)-normal form of \((f mkhole(Dom(f)))\) with its domain substituted back to the domain of \(f\).
+
+\begin{example}
+  \((\circ (Fst\ B) (Id\ (\Sigma B))) \earr (Fst\ B)\)
+\end{example}
+
+\begin{proof}
+  This is since \(mkhole(Dom(\circ (Fst\ B) (Id\ (\Sigma B)))) = mkhole(\Sigma B) = (mkhole(Dom(B)), mkhole((Dom(B) mkhole(Dom(B)))))\) and \((\circ (Fst\ B) (Id\ (\Sigma B))) \barr hole(1)\). So, the \(\eta\)-reduct is defined to be \((Fst\ B)\).
+\end{proof}
+
+We have omitted the full details of \(\eta\)-reduction for brevity in this summary.
+
+\section{Inference Rules}
+
+Since DCC is strongly normalizing, we eagerly reduce (\(\eta \circ \beta\)) each type in the consequent of each inference rule, rather than allowing a catch-all conversion rule. This theoretically permits equality reflection, since \(h : (=\ B\ x\ y)\) iff \(x \equiv y\), but we have a ``sorry'' in the proof for subject-reduction.
+
+\subsection{Definitional Equality}
+
+\begin{definition}
+  We define definitional equality as such:
+  \begin{equation}
+    \inferrule[Reduction to Normal Form]
+    { A \arr_{\beta}^* B \qquad \text{\(B\) is a \(\beta\)-normal form} \qquad B \arr_{\eta}^* C}
+    { A \equiv_{\arr} C}
+  \end{equation}
+  \begin{equation}
+    \inferrule[Definitional Equality]
+    { A \equiv_{\arr} C \qquad B \equiv_{\arr} C}
+    { A \equiv B}
+  \end{equation}
+\end{definition}
+
+\subsection{Application and \(\Pi\)}
+
+DCC is a pure calculus, so there is no distinction between arrows and \(\Pi\)-types, nor between \(\Sigma\) and products.
+
+\begin{definition}
+  The inference rule for \(\Pi\) is as such:
+  \begin{equation}
+  \inferrule
+  { B : (env : A) \arr \sort{u} \qquad C : (env : A) \arr (x : B\ env) \arr \sort{v} \qquad ((env : A) \arr \sort{\max(u, v)}) \equiv_{\arr} \tau}
+  { (\Pi\ B\ C) : \tau}
+\end{equation}
+\((env : A) \arr (x : B\ env) \arr \sort{v}\) is written in pure DCC notation as:
+\begin{equation}
+  ((\Pi\ (Id (Sort\ o)) (`(Sort\ o) (\Pi\ B\ (\Lambda\ A\ B\ (`(\Sigma\ B)\ (Sort\ n)))))) A)
+\end{equation}
+\end{definition}
+
+Notably, \(\Pi\) is a function of an arbitrary environment. This allows passing prior terms in the ``context'' down a combinators' type via the environment.
+
+\begin{definition}
+  The inference rule for application is as such:
+  \begin{equation}
+    \inferrule[App]
+    { f : ((\Pi\ B\ C)\ env) \qquad x : A \qquad (B\ env) \equiv A \qquad (C\ env\ x) \equiv_{\arr} \tau}
+    { (f x) : \tau}
+  \end{equation}
+\end{definition}
+
+\subsection{Other Inference Rules}
+
+Refer to \ref{infer:base} for the base types. I will keep this summary brief, so I have listed some of the most important inference rules and their expansion as pure DCC syntax here. I implicitly reduce the consequent type in each inference rule with \(\equiv_{\arr}\) for brevity.
+
+\begin{definition}\label{def:arr}
+  Arrows are defined via a DSL as \(\Pi\) types that discard their domain with quotation:
+  \begin{equation}
+    (\rightarrow\ (:\ A\ \tau_A)\ B) \coloneq ((\Pi\ (Id\ \tau_A)\ (` \tau_A\ (`A\ B)))\ A)
+  \end{equation}
+\end{definition}
+
+\begin{definition}
+  The inference rule for \(\Sigma\) is as such:
+  \begin{equation}
+    \inferrule
+    { A : \sort{u} \qquad B : A \arr \sort{v}}
+    { (\Sigma\ B) : \sort{\max(u, v)}}
+  \end{equation}
+
+  The sort level of \(A\) is inferred by pattern matching on the structure of the arrow \(A \arr \sort{v}\), which contains an \((Id \sort{u})\) \ref{def:arr}.
+\end{definition}
+
+\begin{definition}
+  Product are defined as \(\Sigma\) types that discard their \(Fst\) component:
+  \begin{equation}
+    (\times A B) \coloneq (\Sigma\ (`A\ B))
+  \end{equation}
+\end{definition}
+
+\begin{definition}
+  The inference rule for \(\Lambda\) is as such:
+  \begin{equation}
+    \inferrule
+    { A : \sort{u} \qquad B : A' \arr \sort{v} \qquad A \equiv A' \qquad x : (x : (\Sigma B')) \arr C x \qquad B \equiv B'}
+    { (\Lambda\ A\ B\ x) : (x : A) \arr (y : B x) \arr ((\Lambda\ A\ B\ C) x y)}
+  \end{equation}
+
+  In pure DCC syntax, \((x : A) \arr (y : B x) \arr (\Lambda\ A\ B\ C) x y\) is written as:
+  \begin{equation}
+    ((\Pi (Id\ (Sort\ u)) (`(Sort\ u) (\Pi B (\Lambda A B C)))) A)
+  \end{equation}
+\end{definition}
+
+\begin{definition}
+  The inference rule for \(!\Lambda\) is as such:
+
+  \begin{equation}
+    \inferrule
+    { A : \sort{u} \qquad B : A' \arr \sort{v} \qquad A \equiv A' \qquad x : (x : (! (\Sigma B'))) \arr C x \qquad B \equiv B'}
+    { (!\Lambda\ A\ B\ x) : (x : (! A)) \arr (y : (!<>\ B) x) \arr ((!\Lambda\ A\ B\ C) x y)}
+  \end{equation}
+
+  In pure DCC syntax, \((x : (! A)) \arr (y : (!<>\ B) x) \arr ((!\Lambda\ A\ B\ C) x y)\) is written as:
+  \begin{equation}
+    ((\Pi (Id (Sort\ u)) (`(Sort\ u) (\Pi (!<>\ B) (!\Lambda A B C)))) (! A))
+  \end{equation}
+\end{definition}
+
+\subsubsection{Propositional Equality}
+
+Propositional equality is inductively defined by reflexivity. Since we eagerly reduce types in every constructor (rather than permitting a catch-all conversion constructor), we believe equality reflection is provable as a computable metatheorem, but there is a ``sorry'' for subject-reduction. Subject-reduction is technically challenging to formalize due to call-by-value semantics, which requires reducing the points of all combinators.
+
+\begin{definition}
+  The inference rule for \((refl\ B)\) is as such:
+
+  \begin{equation}
+    \inferrule
+    { A : \sort{u} \qquad B : A \arr \sort{v} }
+    { (refl\ B) : (env : (! A)) \arr (x : ((!<>\ B) env)) \arr ((Dup\ B\ (Eql\ B))\ env\ x)}
+  \end{equation}
+
+  \((env : (! A)) \arr (x : ((!<>\ B) env)) \arr ((Dup\ B\ (Eql\ B))\ env\ x)\) is written in pure DCC notation as:
+  \begin{equation}
+    ((\Pi (Id (Sort\ u)) (`(Sort\ u) (\Pi (!<>\ B) ((Dup\ B\ (Eql\ B)))))) (! A))
+  \end{equation}
+\end{definition}
+
+Due to our \(\eta\)-reduction procedure based on the behavior of a function on its holes, we can prove equalities between some functions with reflexivity:
+
+\begin{example}
+  That reflexivity on \((\& (Id\ (\sort{1})))\) is a proof that \((= \ldots (Id\ (\sort{1})) (\circ (Id\ (\sort{1})) (Id\ (\sort{1}))))\), in raw DCC:
+\begin{verbatim}
+  ((Id (= ((\Pi (Id (Sort 2))
+                (`(Sort 2) (`(Sort 1) (Sort 1))))
+           (Sort 1))
+          (Id (Sort 1))
+          (\circ (Id (Sort 1)) (Id (Sort 1)))))
+   ((refl (Id (Sort 2)))
+    (& (\rightarrow (: (Sort 1) (Sort 2))
+                    (Sort 1)))
+    (& (Id (Sort 1))))) : (= ((\Pi (Id (Sort 2))
+                                   (`(Sort 2)
+                                     (`(Sort 1) (Sort 1))))
+                              (Sort 1))
+                             (Id (Sort 1))
+                             (Id (Sort 1)))
+\end{verbatim}
+\end{example}
+\begin{proof}
+  This example type-checks via the DCC type-checker. We are happy to supply the GitHub repository, although it is private currently.
+\end{proof}
+
+\section{Compiling Lean 4 to DCC}
+
+It is relatively straightforward to compile the subset of Lean 4 that corresponds to the base CoC to DCC (i.e., minus inductive types, quotients, and some syntactic sugar), due to the close correspondence between categorical combinators and cartesian closed categories. There is significantly less bookkeeping required to track contexts than in other calculi (e.g., dependent SK), since contexts are expressed as telescopes via \(\Sigma\). The main bookkeeping required is reference counting for boxes. This is done with a preprocessing step annotating the Lean 4 term with bangs and boxes, depending on usage count.
+
+At a high level, application \(M N\) under a binder corresponds to:
+\begin{equation}
+  (\circ (Eval\ \ldots\ \ldots\ \llb M \rrb)\ (\langle , \rangle \ldots\ (Id \ldots)\ (\Lambda \ldots\ \ldots\ (\circ \llb N \rrb (Fst \ldots)))))
+\end{equation}
+
+Debruijn indexing under a binder corresponds to \(\Sigma\)-projection composition. Contexts correspond to the index \(B\) in \((Fst\ B)\) and \((Snd\ B)\), and they are always initialized at the top-level of a program with the firstmost element being the unit \(\ast\) to represent an empty context. Lambda binders correspond to the Curry combinator \(\Lambda\), or \(!\Lambda\) when the context is shared in the body of the binder. Pi binders correspond to the \(\Pi\) combinator. I have omitted the details for brevity, but we have been able to compile the point-free dependent \(K\) combinator using this approach.
+
+\section{In Summary}
+
+To summarize, DCC in its present form is a minimal calculus with decidable type-checking, strong normalization, and global confluence extending the simply-typed categorical combinators to dependent types and affine logic. It aims to be similar to the base Calculus of Constructions. As of present, we have the following formalized in Lean 4:
+
+\begin{itemize}
+  \item A \(\beta\)-reducer with completeness up to normal forms
+  \item An \(\eta\)-reduction algorithm which observes the behavior of functions based on typed holes to canonicalize functions
+  \item A judgment relation living in \(Type\), which eagerly reduces types of all combinators in the respective rules, rather than allowing permissible catch-all conversion
+  \item A proof of global confluence
+  \item A proof of strong normalization using a syntactic size measure
+  \item A type-checker with completeness and soundness with respect to judgments
+  \item An equality reflection metatheorem with a ``sorry'' for subject-reduction
+  \item Examples of reflexivity type-checking some basic equalities between functions with the DCC type-checker
+  \item A procedure for compiling the subset of Lean 4 that corresponds to the base CoC to DCC with some examples
+    \begin{itemize}
+      \item We can compile the dependent K combinator written as Lean 4 code to DCC
+    \end{itemize}
+\end{itemize}
+
+\section{Limitations}
+
+\begin{itemize}
+  \item It appear that \(W\)-types cannot be easily recovered due to our choice of affine logic. Specifically, the usual recursor on \(W\) does not obviously decrease in size.
+  \item Subject-reduction is quite technically challenging to prove, since \(\beta\)-reduction reduces the points of each combinator, resulting in many cases to prove.
+  \item There is no unification algorithm. Definitional equality is defined by mere \(\beta\) and \(\eta\)-reduction to a common normal form. This makes definitional equality somewhat coarse.
+  \item Both our function extensionality and equality reflection proofs are incomplete. Equality reflection is certainly possible, but there is a ``sorry'' for subject-reduction. Function extensionality may be provable, but this is only a result due to not having W-types, nor recursors on \(\mathbb{2}\), and it is also difficult to formalize.
+\end{itemize}
+
+\printbibliography{}
+
+\end{document}

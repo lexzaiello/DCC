@@ -1,8 +1,5 @@
 import Dcc.Ast
-import Dcc.Judge
-import Dcc.Examples
-import Dcc.Metatheory.Decidability
-import Dcc.Metatheory.ReflCanon
-import Dcc.Compile
-import Dcc.Tactic.Debug
-import Dcc.Tactic.Meta.Reduce
+import Dcc.Judge3
+import Dcc.Metatheory.Decidability3
+import Dcc.Metatheory.SubjectReduction
+

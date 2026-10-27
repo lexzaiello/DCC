@@ -138,7 +138,7 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
   case sigma' =>
     expose_names
     have ⟨hn₁, hn₂⟩ := a_1.is_norm (by assumption)
-    exact arr_is_norm hn₁ (fun ⟨_, h⟩ => nomatch h)
+    exact arr_is_norm (bang_is_norm hn₁) (fun ⟨_, h⟩ => nomatch h)
   case comp =>
     expose_names
     exact pi_is_norm

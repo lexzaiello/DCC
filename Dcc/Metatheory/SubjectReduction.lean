@@ -721,6 +721,45 @@ def swap_preservation_head (h : Judge (DCC ((Swap A B) (,B₂ x y))) τ) : Judge
         · exact ⟨.single .quot, a_4.is_norm⟩
         · assumption
 
+open Dsl in
+def sigma'_preservation_head (h : Judge (DCC ((Σ' B C) (& x))) τ) : Judge (DCC (Σ (B x) (C x))) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | sigma' =>
+      cases a_2 with
+      | box ht_x =>
+        expose_names
+        replace a := a.push_head .quot
+        have ⟨hn_A, _⟩ := a_1.is_norm a_4.is_norm
+        cases (a.elim_norml (bang_is_norm hn_A)).elim_norm (bang_is_norm ht_x.is_norm)
+        clear a
+        replace a_3 := (a_3.push_head (.congrFun .quot)).push_head .quot
+        cases a_3.elim_norm (fun ⟨_, h⟩ => nomatch h)
+        clear a_3
+        match a_1 with
+        | ⟨h₁, h₂, h₃⟩ =>
+          expose_names
+          have hn_B_1 : IsNorm Red B_1 := fun ⟨_, h⟩ => a_4.is_norm ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) (.point 1 (by change 1 < (A_1.quot B_1).point_arity; grind) h)))⟩
+          cases h₂.elim_norm hn_B_1
+          cases a_2 with
+          | mk =>
+            apply Judge.sigma
+            · apply Judge.app
+              · assumption
+              · exact ⟨⟨.trans (.single .quot) h₁.1, h₁.2⟩, ⟨.refl, h₁.2⟩⟩
+              · assumption
+              · exact ⟨.trans (.single (.congrFun .quot)) (.single .quot), fun ⟨_, h⟩ => nomatch h⟩
+            · apply Judge.app
+              · assumption
+              · exact ⟨⟨.single .quot, hn_A⟩, ⟨.refl, RedNorm.is_norm (by assumption)⟩⟩
+              · assumption
+              · exact ⟨.trans (.single (.congrFun .quot)) (congrArg' (reduce_sound rfl)),
+                pi_is_norm a_5.is_norm (curr_is_norm hn_A a_5.is_norm (quot_is_norm (sigma_is_norm hn_A a_5.is_norm) (fun ⟨_, h⟩ => nomatch h))) (reduce_norm rfl)⟩
+            · exact ⟨⟨.trans (.trans (congrFun' a_5.1) (congrArg' (reduce_sound rfl))) (reduce_sound rfl), reduce_norm rfl⟩, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+            · exact ⟨.trans (.single .curr) (.single .quot), fun ⟨_, h⟩ => nomatch h⟩
+
 mutual
 
 def preservation (h : Judge e τ) (hr : Red e e') : Judge e' τ := by

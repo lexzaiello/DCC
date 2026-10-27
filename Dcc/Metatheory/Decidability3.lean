@@ -28,6 +28,12 @@ def curr_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) (hn₃ : IsNorm R
   | .point 1 hn h => hn₂ ⟨_, h⟩
   | .point 2 hn h => hn₃ ⟨_, h⟩
 
+def eval_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) (hn₃ : IsNorm Red x) : IsNorm Red (DCC (Eval A B x)) := fun ⟨_, h⟩ =>
+  match h with
+  | .point 0 hn h => hn₁ ⟨_, h⟩
+  | .point 1 hn h => hn₂ ⟨_, h⟩
+  | .point 2 hn h => hn₃ ⟨_, h⟩
+
 def curr'_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) (hn₃ : IsNorm Red x) : IsNorm Red (DCC (!Λ A B x)) := fun ⟨_, h⟩ =>
   match h with
   | .point 0 hn h => hn₁ ⟨_, h⟩
@@ -119,6 +125,12 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
     focus
     apply RedNorm.is_norm
     assumption)
+  case eval =>
+    expose_names
+    have hn_A := a_4.is_norm
+    have hn_B := a_5.is_norm
+    have hn_C : IsNorm Red C := fun ⟨_, h⟩ => a_ih_2 ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) (.point 1 (by change 1 < (B'.pi C).point_arity; point_arity) h)))⟩
+    exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (sigma_is_norm hn_A hn_B)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (eval_is_norm hn_A hn_B hn_C)) (fun ⟨_, h⟩ => nomatch h)
   case id =>
     exact arr_is_norm (RedNorm.is_norm (by assumption)) (RedNorm.is_norm (by assumption))
   case unbox =>

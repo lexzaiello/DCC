@@ -442,8 +442,7 @@ inductive Judge : Expr → Expr → Type where
     → Judge x (Expr.Eval.x.type A' B' C)
     → A →ᵦ A'
     → B →ᵦ B'
-    → #(Expr.Eval.type A B C) →ᵦ τ
-    → Judge (DCC (Eval A B x)) τ
+    → Judge (DCC (Eval A B x)) (Expr.Eval.type A' B' C)
   /-| eval   : Judge x (open Dsl in (DCC ((Π f_α f_B) env)))
     → Reduces α α'
     → Reduces B B'
@@ -845,7 +844,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
             match infer x with
             | .ok ⟨DCC ((Π _A (`_B (Π _C C))) _D), ht₂⟩ =>
               if heq : (DCC ((Π _A (`_B (Π _C C))) _D)) = (Expr.Eval.x.type (reduce_all A) (reduce_all B) C) then
-                .ok ⟨_, .eval ht ht_β h (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl) (reduce_reduces rfl)⟩
+                .ok ⟨_, .eval ht ht_β h (heq ▸ ht₂) (reduce_reduces rfl) (reduce_reduces rfl)⟩
               else .error (.sub x (.unexpected (DCC ((Π _A (`_B C)) _D)) e))
             | .error e => .error (.sub x e)
             | .ok ⟨τ, _⟩ => .error (.sub x (.unexpected τ e))

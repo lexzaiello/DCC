@@ -526,6 +526,35 @@ def eql_preservation_head (h : Judge (DCC ((Eql B) (& x) (& y))) τ) : Judge (DC
             · exact ⟨⟨.refl, h_t_y.is_norm⟩, ⟨.refl, h_t_y.is_norm⟩⟩
             · exact ⟨⟨.refl, h_t_y.is_norm⟩, ⟨.trans (congrFun' a_8.1) (.trans (congrArg' (reduce_sound rfl)) (a'.elim_normr h_t_y.is_norm).1), (a'.elim_normr h_t_y.is_norm).2⟩⟩
 
+def eval_preservation_head (h : Judge (DCC ((Eval A B x) (,_B y z))) τ) : Judge (DCC (x y z)) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | eval =>
+      expose_names
+      cases ((a.push_head .quot).elim_norml (sigma_is_norm a_5.is_norm a_7.is_norm)).elim_norm a_2.is_norm
+      clear a
+      replace a_3 := (a_3.push_head (.congrFun .quot)).push_head .evalc
+      have hn_C : IsNorm Red C := fun ⟨_, h⟩ => a_8.is_norm ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) (.point 1 (by change 1 < (B'.pi C).point_arity; point_arity) h)))⟩
+      cases a_2 with
+      | mk =>
+        expose_names
+        have hr_pi : (open Dsl in (((Π B' C) y) →ᵦ ((Π B' C) #((reduce Red y).fst)))) :=
+          ⟨congrArg' (reduce_sound rfl), pi_is_norm a_11.is_norm hn_C (reduce_norm rfl)⟩
+        have hr_B'_app : (B'.app (reduce Red y).fst).RedNorm τ₂ :=
+          have h := a_12.1.conf (congrArg' (reduce_sound rfl))
+          ⟨by
+            have ⟨D, h₁, h₂⟩ := h
+            exact h₁.elim_norm a_2.is_norm ▸ h₂, a_12.is_norm⟩
+        apply Judge.app
+        · apply Judge.app
+          · exact a_8
+          · exact ⟨⟨.single .quot, a_5.is_norm⟩, ⟨.refl, a_5.is_norm⟩⟩
+          · exact a_10
+          · exact ⟨.trans (.single (.congrFun .quot)) hr_pi.1, hr_pi.2⟩
+        · exact ⟨hr_B'_app, ⟨.refl, a_12.is_norm⟩⟩
+
 mutual
 
 def preservation (h : Judge e τ) (hr : Red e e') : Judge e' τ := by

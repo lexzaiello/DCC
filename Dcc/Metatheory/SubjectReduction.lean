@@ -3,6 +3,9 @@ import Dcc.Metatheory.Decidability3
 
 namespace Expr
 
+def Red.def_eq (h : Red A B) : DefEq A B :=
+  ⟨⟨.trans (.single h) (reduce_sound rfl), reduce_norm rfl⟩, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+
 def congr_app_arg : RedNorm (DCC (f #((reduce Red x).fst))) (reduce Red (DCC (f x))).fst := by
   have h := (reduce Red (DCC (f x))).snd.down
   exact ⟨by
@@ -939,9 +942,6 @@ def ind_bool_false_preservation_head (h : Judge (DCC ((𝟚.Rec motive x y) env 
 
 def preservation_head (ht : Judge e τ) (hr : Red' e e') (h_head : hr.IsHead) : Judge e' τ := by
   cases h_head <;> dcc_aesop' [judge]
-
-def Red.def_eq (h : Red A B) : DefEq A B :=
-  ⟨⟨.trans (.single h) (reduce_sound rfl), reduce_norm rfl⟩, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
 
 set_option maxHeartbeats 2000000 in
 def preservation (ht : Judge e τ) (hr : Red' e e') : Judge e' τ := by

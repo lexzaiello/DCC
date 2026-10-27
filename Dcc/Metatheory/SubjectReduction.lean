@@ -577,6 +577,78 @@ def quot_preservation_head (h : Judge (DCC ((`B x) y)) τ) : Judge x τ := by
       cases a_3.elim_norm a_5.is_norm
       exact a_5
 
+open Dsl in
+def preservation_eq_mk (h : Judge (DCC ((=' B) x y z)) τ) : Judge (DCC (= (B x) y z)) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | app =>
+      expose_names
+      cases a_4 with
+      | app =>
+        expose_names
+        cases a_7 with
+        | eq_mk =>
+          expose_names
+          have ⟨hn_δ, _⟩ := a_7.is_norm a_10.is_norm
+          cases ((a_4.push_head .quot).elim_norml hn_δ).elim_norm a_8.is_norm
+          clear a_4
+          replace a_9 := a_9.push_head (.congrFun .quot)
+          have pi_eq := a_9.pi_eq
+          have hn₁ : IsNorm Red f_α' := a_11.is_norm
+          have hn₂ : IsNorm Red (α_2.curr f_α'
+                ((f_α'.comp f_α'.fstc).pi
+                  ((α_2.sigma f_α').curr (f_α'.comp f_α'.fstc)
+                    (((α_2.sigma f_α').sigma (f_α'.comp f_α'.fstc)).quot (Expr.sort 0))))) :=
+            curr_is_norm a_8.is_norm hn₁ (pi_is_norm₀ (comp_is_norm hn₁ (fst_is_norm hn₁)) (curr_is_norm (sigma_is_norm hn_δ hn₁) (comp_is_norm hn₁ (fst_is_norm hn₁)) (quot_is_norm (sigma_is_norm (sigma_is_norm hn_δ hn₁) (comp_is_norm hn₁ (fst_is_norm hn₁))) (fun ⟨_, h⟩ => nomatch h))))
+          have heq₁ := elim_reduce_norm_fst hn₁
+          have heq₂ := elim_reduce_norm_fst hn₂
+          simp [heq₁, heq₂] at pi_eq
+          clear heq₁
+          clear heq₂
+          clear hn₁
+          clear hn₂
+          cases pi_eq.1.1; cases pi_eq.1.2; cases pi_eq.2
+          clear pi_eq
+          clear a_9
+          replace a_6 := a_6.push_head .curr
+          have pi_eq_a_6 := a_6.pi_eq
+          have hn₁ : IsNorm Red (f_α_1.comp f_α_1.fstc) := comp_is_norm a_11.is_norm (fst_is_norm a_11.is_norm)
+          have hn₂ : IsNorm Red ((α_2.sigma f_α_1).curr (f_α_1.comp f_α_1.fstc)
+                (((α_2.sigma f_α_1).sigma (f_α_1.comp f_α_1.fstc)).quot (Expr.sort 0))) :=
+            curr_is_norm
+              (sigma_is_norm hn_δ a_11.is_norm)
+              (comp_is_norm a_11.is_norm (fst_is_norm a_11.is_norm))
+              (quot_is_norm (sigma_is_norm (sigma_is_norm hn_δ a_11.is_norm) (comp_is_norm a_11.is_norm (fst_is_norm a_11.is_norm))) (fun ⟨_, h⟩ => nomatch h))
+          have heq₁ := elim_reduce_norm_fst hn₁
+          have heq₂ := elim_reduce_norm_fst hn₂
+          simp [heq₁, heq₂] at pi_eq_a_6
+          cases pi_eq_a_6.1.1; cases pi_eq_a_6.1.2; cases pi_eq_a_6.2
+          clear heq₁; clear heq₂; clear hn₁; clear hn₂; clear pi_eq_a_6; clear a_6
+          cases ((a_3.push_head .curr).push_head .quot).elim_norm (fun ⟨_, h⟩ => nomatch h)
+          clear a_3
+          have heq : (f_α_1.mkc (reduce Red x).fst y).RedNorm (f_α_1.mkc (reduce Red x).fst (reduce Red y).fst) := by
+            have heq := congr_reduce₃
+              (e := (f_α_1.mkc (reduce Red x).fst y)) (by point_arity)
+              (B := ((reduce Red f_α_1).fst.mkc (reduce Red (reduce Red x).fst).fst (reduce Red y).fst))
+              (by simp [set_points, points])
+            simp [reduce_self Red, elim_reduce_norm_fst a_11.is_norm] at heq
+            exact ⟨reduce_sound_fst heq, reduce_norm_fst heq⟩
+          replace a := (a.push_head .comp)
+          simp [heq.complete_fst] at a
+          replace a := a.push_head (.congrArg .fstc)
+          have a' := a.symm.trans a_1
+          cases (a'.elim_norml a_2.is_norm).elim_norm a_5.is_norm
+          apply Judge.eq
+          · assumption
+          · assumption
+          · exact ⟨⟨.refl, a_2.is_norm⟩, ⟨.refl, a_2.is_norm⟩⟩
+          · match a_1 with
+            | ⟨⟨hr₁, hn₁⟩, ⟨hr₂, hn₂⟩⟩ =>
+              cases hr₂.elim_norm a_2.is_norm
+              exact ⟨⟨.refl, a_2.is_norm⟩, ⟨.trans (congrFun' a_11.1) (.trans (congrArg' (reduce_sound rfl)) hr₁), a_2.is_norm⟩⟩
+
 mutual
 
 def preservation (h : Judge e τ) (hr : Red e e') : Judge e' τ := by

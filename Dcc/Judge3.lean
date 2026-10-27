@@ -456,8 +456,8 @@ inductive Judge : Expr → Expr → Type where
     → Judge (DCC (Eval α B x)) τ-/
   | quot   : Judge x α
     → Judge B (DCC Sort n)
-    → #(quot.type α B) →ᵦ τ
-    → Judge (open Dsl in (DCC (`B x))) τ
+    → B →ᵦ B'
+    → Judge (open Dsl in (DCC (`B x))) (quot.type α B')
   | pair     : Judge M (Pair.f.type A B)
     → Judge C τ_C
     → Judge N τ_N

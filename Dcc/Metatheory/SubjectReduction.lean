@@ -562,6 +562,21 @@ def eval_preservation_head (h : Judge (DCC ((Eval A B x) (,_B y z))) τ) : Judge
         · exact a_2
         · exact hr_τ'
 
+open Dsl in
+def quot_preservation_head (h : Judge (DCC ((`B x) y)) τ) : Judge x τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | quot =>
+      expose_names
+      replace a := a.push_head .quot
+      cases (a.elim_norml a_4.is_norm).elim_norm a_2.is_norm
+      clear a
+      replace a_3 := (a_3.push_head (.congrFun .quot)).push_head .quot
+      cases a_3.elim_norm a_5.is_norm
+      exact a_5
+
 mutual
 
 def preservation (h : Judge e τ) (hr : Red e e') : Judge e' τ := by

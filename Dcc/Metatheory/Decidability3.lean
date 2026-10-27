@@ -125,6 +125,7 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
     focus
     apply RedNorm.is_norm
     assumption)
+  case quot => exact arr_is_norm (RedNorm.is_norm (by assumption)) (by assumption)
   case eval =>
     expose_names
     have hn_A := a_4.is_norm

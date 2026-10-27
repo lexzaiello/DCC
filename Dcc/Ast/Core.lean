@@ -7,7 +7,6 @@ inductive Expr where
   /-
   (≃.Ind motive x) (Cong.Mk toFun invFun h_comp_id h_id_comp) = x toFun invFun h_comp_id h_id_comp
   -/
-  | dup         : Expr → Expr → Expr
   | ind_bool    : Expr → Expr → Expr → Expr -- Bool.Ind motive case_true case_false : (x : Bool) → ...
   | ind_bot     : Expr → Expr -- (⊥.Ind motive) (<not possible> : ⊥) : motive ⊥
   | bool        : Expr
@@ -17,8 +16,6 @@ inductive Expr where
   | bot         : Expr
   | tintro      : Expr
   | sort        : Level → Expr
-  | bimap       : Expr  → Expr → Expr  → Expr → Expr
-  | assoc       : Expr  → Expr → Expr  → Expr
   | map         : Expr  → Expr
   | fmap        : Expr  → Expr
   | bang        : Expr  → Expr

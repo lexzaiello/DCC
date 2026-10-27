@@ -24,7 +24,7 @@ B : A → Sort u       C : (x : A) (y : B x) → Sort v
 
 open Dsl in
 def Swap.type (A B : Expr) : Expr :=
-  DCC (→ (Σ A (`A B)) (Σ A (`B A)))
+  DCC (→ (Σ A (`A B)) (Σ B (`B A)))
 
 /-
 (Π(Id(Sort 3),
@@ -193,16 +193,7 @@ This is like W combinator:
 
 open Dsl in
 @[dcc_judge] def refl.type (f_α δ : Expr) : Expr :=
-  (DCC ((Π (`𝟙 (! δ)) (`𝟙 (Π (!<> f_α) (Dup f_α (Eql f_α))))) ∗))
-
-/-
-B : A → Sort u      f : (x : A) → (y : (Σ B (Λ A B (∘ B (Fst B)))) x) → C x y
--------------------------------
-(Dup B f) : (x : (! A)) → (y : (!<> B) x) → ((Dup B c) x y)
--/
-open Dsl in
-@[dcc_judge] def Dup.type (A B C : Expr) : Expr :=
-  (DCC ((Π (`𝟙 (! A)) (`𝟙 (Π (!<> B) (Dup B C)))) ∗))
+  (DCC ((Π (`𝟙 (! δ)) (`𝟙 (Π (!<> f_α) (Eql f_α)))) ∗))
 
 /-
 f_α : α → Sort m
@@ -311,10 +302,6 @@ Swap (, (, (_ : (≃ A B)) (_ : (≃ A B))) (, x x)) = (, (,x x)  (, (_ : (≃ A
 Assoc (, (,x x)  (, (_ : (≃ A B)) (_ : (≃ A B)))) = (, x (, x (, (_ : (≃ A B)) (_ : (≃ A B)))))
 
 -/
-
-open Dsl in
-abbrev Dup' (A : Expr) (u : Level) : Expr :=
-  DCC ((Dup (Id (Sort u)) (`(Sort u) (Id (Σ' A (`A A))))) (& A))
 
 /-open Dsl in
 @[dcc_judge] def Equiv_3.type (A B : Expr) (u v : Level) : Expr :=

@@ -14,14 +14,11 @@ namespace Expr
 def point_arity (e : Expr) : ℕ :=
   open Dsl in match e with
   | DCC? (? _x) => 1
-  | DCC? (Dup _B _x) => 2
   | DCC? (𝟘.Rec _motive) => 1
   | DCC? (𝟚.Rec _motive _x _y) => 3
   | DCC? 𝟙₂ => 0
   | DCC? 𝟘₂ => 0
   | DCC? 𝟚 => 0
-  | DCC? (Map _A _B _f _g) => 4
-  | DCC? (Assoc _A _B _C) => 3
   | DCC[.] ∗ => 0
   | DCC[.] 𝟙 => 0
   | DCC[.] 𝟘 => 0
@@ -55,11 +52,8 @@ def point_arity (e : Expr) : ℕ :=
 @[aesop norm (rule_sets := [DccForceReduce]), grind, dcc_rel]
 def points (e : Expr) : Vector Expr (point_arity e) :=
   match e with
-  | DCC? (Dup B x) => ⟨#[B, x], by simp [point_arity]⟩
   | DCC? (𝟘.Rec motive) => ⟨#[motive], by grind⟩
   | DCC? (𝟚.Rec motive x y) => ⟨#[motive, x, y], by grind⟩
-  | DCC? (Map A B x y) => ⟨#[A, B, x, y], by simp [point_arity]⟩
-  | DCC? (Assoc A B C) => ⟨#[A, B, C], by simp [point_arity]⟩
   | DCC[.] ∗ => ⟨#[], by grind⟩
   | DCC? (? m) => ⟨#[m], by grind⟩
   | DCC? 𝟚 | DCC? 𝟘₂ | DCC? 𝟙₂ | DCC[.] 𝟙 => ⟨#[], by grind⟩
@@ -94,15 +88,6 @@ def points (e : Expr) : Vector Expr (point_arity e) :=
 @[aesop norm (rule_sets := [DccForceReduce]), grind, dcc_reduce]
 def set_points (e : Expr) (points' : Vector Expr (point_arity e)) : Expr :=
   match e with
-  | DCC? (Dup B x) =>
-    have heq : point_arity (DCC? (Dup B x)) = 2 := by grind
-    .dup points'[0] points'[1]
-  | DCC? (Map A B x y) =>
-    have heq : point_arity (DCC? (Map A B x y)) = 4 := by simp [point_arity]
-    .bimap points'[0] points'[1] points'[2] points'[3]
-  | DCC? (Assoc A B C) =>
-    have heq : point_arity (DCC? (Assoc A B C)) = 3 := by simp [point_arity]
-    .assoc points'[0] points'[1] points'[2]
   | DCC? (𝟘.Rec motive) =>
     have heq : point_arity (DCC? (𝟘.Rec motive)) = 1 := by grind
     .ind_bot points'[0]
@@ -209,7 +194,6 @@ theorem set_points_eq_set_points₃ : set_points e ⟨#[x, y, z], h⟩ = (e.set_
 theorem set_points_eq_set_points₄ : set_points e ⟨#[x, y, z, z'], h⟩ = (e.set_points ((((e.points.set 0 (h := by grind) x).set 1 (h := by grind) y).set 2 (h := by grind) z).set 3 (h := by grind) z')) := by
   induction e
   any_goals (grind)
-  any_goals (simp [set_points, points])
 
 @[grind =_, grind ., grind! ., dcc_rel]
 theorem congr_point_arr {e : Expr} {p : Fin (point_arity e)} : point_arity e = point_arity (set_points e ((points e).set p p')) := by
@@ -264,9 +248,6 @@ theorem set_same_point_comp {e x y : Expr} {p : Fin (point_arity e)} : set_point
 @[grind, dcc_size, aesop safe norm (rule_sets := [DccSize])]
 def max_hole (e : Expr) : ℕ :=
   match e with
-  | DCC? (Dup B x) => max B.max_hole x.max_hole
-  | DCC? (Map A B x y) => max A.max_hole (max B.max_hole (max x.max_hole y.max_hole))
-  | DCC? (Assoc A B C) => max A.max_hole (max B.max_hole C.max_hole)
   | DCC? (𝟚.Rec motive x y) => max motive.max_hole (max x.max_hole y.max_hole)
   | DCC? (𝟘.Rec motive) => motive.max_hole
   | DCC? (? m) => m.max_hole
@@ -304,9 +285,6 @@ def max_hole (e : Expr) : ℕ :=
 @[grind, dcc_size, aesop safe norm (rule_sets := [DccSize])]
 def min_hole (e : Expr) : ℕ :=
   match e with
-  | DCC? (Dup B x) => min B.min_hole x.min_hole
-  | DCC? (Map A B x y) => min A.min_hole (min B.min_hole (min x.min_hole y.min_hole))
-  | DCC? (Assoc A B C) => min A.min_hole (min B.min_hole C.min_hole)
   | DCC? (𝟚.Rec motive x y) => min motive.min_hole (min x.min_hole y.min_hole)
   | DCC? (𝟘.Rec motive) => motive.min_hole
   | DCC? (? m) => m.min_hole
@@ -367,29 +345,6 @@ theorem get_unset_point (hneq : m ≠ n) : ((set_points e (e.points.set m x' h�
   | .inr (.inr (.inr (.inr h))) =>
     cases e
     any_goals (grind)
-    all_goals (
-      simp [point_arity] at h₁
-      have hn_n : n < 4 := by grind
-      match m with
-      | 0 =>
-        match n with
-        | 0 => exact (hneq rfl).elim
-        | 3 | 2 | 1 => simp [set_points, points, Vector.get]
-      | 1 =>
-        match n with
-        | 3 | 2 | 0 =>
-          simp [set_points, points, Vector.get]
-        | 1 => exact (hneq rfl).elim
-      | 2 =>
-        match n with
-        | 1 | 3 | 0 =>
-          simp [set_points, points, Vector.get]
-        | 2 => exact (hneq rfl).elim
-      | 3 =>
-        match n with
-        | 2 | 1 | 0 =>
-          simp [set_points, points, Vector.get]
-        | 3 => exact (hneq rfl).elim)
   | .inr (.inr (.inr (.inl h))) =>
     cases e
     any_goals (grind)

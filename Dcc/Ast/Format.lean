@@ -19,9 +19,6 @@ def toFormat (e : Expr) (pretty : Bool := False) : Std.Format :=
   | DCC 𝟘₂ => "𝟘₂"
   | DCC 𝟚 => "𝟚"
   | DCC (𝟚.Rec motive x y) => comb "𝟚.Rec" [motive.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
-  | DCC (Dup B x) => comb "Dup" [B.toFormat pretty, x.toFormat pretty]
-  | DCC (Map A B x y) => comb "Map" [A.toFormat pretty, B.toFormat pretty, x.toFormat pretty, y.toFormat pretty]
-  | DCC (Assoc A B C) => comb "Assoc" [A.toFormat pretty, B.toFormat pretty, C.toFormat pretty]
   | DCC (𝟘.Rec motive) => comb "𝟘.Rec" [motive.toFormat pretty]
   | DCC (? m) => comb "?" [m.toFormat pretty]
   | (DCC 𝟙)                   => "𝟙"

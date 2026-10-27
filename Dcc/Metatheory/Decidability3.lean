@@ -8,12 +8,6 @@ def fst_is_norm (hn : IsNorm Red B) : IsNorm Red (DCC (Fst B)) := fun ⟨_, .poi
 def eql_is_norm (hn₁ : IsNorm Red x) : IsNorm Red (DCC (Eql x)) := fun ⟨_, .point 0 _ h⟩ => hn₁ ⟨_, h⟩
 
 open Dsl in
-def dup_is_norm (hn₁ : IsNorm Red x) (hn₂ : IsNorm Red y) : IsNorm Red (DCC (Dup x y)) := fun ⟨_, h⟩ =>
-  match h with
-  | .point 0 hn h => hn₁ ⟨_, h⟩
-  | .point 1 hn h => hn₂ ⟨_, h⟩
-
-open Dsl in
 def map_is_norm (hn : IsNorm Red B) : IsNorm Red (DCC (!<> B)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
 
 open Dsl in
@@ -161,10 +155,13 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
     expose_names
     have ⟨hn_A, _⟩ := a_1.is_norm a_ih
     exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (bang_is_norm hn_A)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (quot_is_norm (bang_is_norm hn_A) (fun ⟨_, h⟩ => nomatch h))) (fun ⟨_, h⟩ => nomatch h)
+  case swap =>
+    expose_names
+    exact arr_is_norm (sigma_is_norm a_2.is_norm (quot_is_norm a_2.is_norm a_3.is_norm)) (sigma_is_norm a_3.is_norm (quot_is_norm a_3.is_norm a_2.is_norm))
   case refl =>
     expose_names
     have ⟨hn_δ, _⟩ := a_1.is_norm a_ih
-    exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (bang_is_norm hn_δ)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (pi_is_norm₀ (map_is_norm a_2.is_norm) (dup_is_norm a_2.is_norm (eql_is_norm a_2.is_norm)))) (fun ⟨_, h⟩ => nomatch h)
+    exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (bang_is_norm hn_δ)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (pi_is_norm₀ (map_is_norm a_2.is_norm) (eql_is_norm a_2.is_norm))) (fun ⟨_, h⟩ => nomatch h)
   case eql =>
     unfold eql.type
     have h := Arrow.is_norm (by assumption) (by assumption)

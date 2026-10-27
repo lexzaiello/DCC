@@ -465,8 +465,9 @@ inductive Judge : Expr → Expr → Type where
     → Judge (DCC (⟨,⟩C M N)) τ'
   | swap   : Judge A (DCC Sort u)
     → Judge B (DCC Sort v)
-    → #(Expr.Swap.type A B) →ᵦ τ'
-    → Judge (DCC (Swap A B)) τ'
+    → A →ᵦ A'
+    → B →ᵦ B'
+    → Judge (DCC (Swap A B)) (Expr.Swap.type A' B')
   /-
     ef_α : α → Sort m
     f_β : ∀ (x : α) (y : f_α x), Sort n
@@ -494,17 +495,6 @@ inductive Judge : Expr → Expr → Type where
     → Judge x α
     → (f_β x_α x) →ᵦ τ
     → Judge (DCC (f x)) τ
-  | bimap   : Judge f τ_f
-    → Judge g τ_g
-    → Arrow A A' τ_f
-    → Arrow B B' τ_g
-    → (→ (Σ A (`A B)) (Σ B' (`A' B'))) →ᵦ τ'
-    → Judge (DCC (Map A' B' f g)) τ'
-  | assoc    : Judge A (DCC Sort u)
-    → Judge B (DCC Sort v)
-    → Judge C (DCC Sort s)
-    → (→ (Σ (Σ A (`A B)) (`(Σ A (`A B)) C)) (Σ A (`A (Σ B (`B C))))) →ᵦ τ'
-    → Judge (DCC (Assoc A B C)) τ'
   | ind_bot  : Judge motive τ_motive
     → Arrow A τ_motive₂ τ_motive
     → Arrow (DCC 𝟘) (DCC Sort v) τ_motive₂
@@ -568,38 +558,6 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         | .error e => .error (.sub motive (.sub τ_motive (.sub τ_motive₂ e)))
       | .error e => .error (.sub motive (.sub τ_motive e))
     | .error e => .error (.sub motive e)
-  | DCC (Assoc A B C) =>
-    match A.infer with
-    | .ok ⟨DCC Sort _u, h₁⟩ =>
-      match B.infer with
-      | .ok ⟨DCC Sort _v, h₂⟩ =>
-        match C.infer with
-        | .ok ⟨DCC Sort _s, h₃⟩ =>
-          .ok ⟨_, .assoc h₁ h₂ h₃ (reduce_reduces rfl)⟩
-        | .error e => .error (.sub C e)
-        | .ok ⟨τ_C, _⟩ => .error (.unexpected τ_C C)
-      | .error e => .error (.sub B e)
-      | .ok ⟨τ_B, _⟩ => .error (.unexpected τ_B B)
-    | .error e => .error (.sub A e)
-    | .ok ⟨τ_A, _⟩ => .error (.unexpected τ_A A)
-  | DCC (Map A' B' f g) =>
-    match f.infer with
-    | .ok ⟨τ_f, h₁⟩ =>
-      match g.infer with
-      | .ok ⟨τ_g, h₂⟩ =>
-        match read_arrow τ_f with
-        | .ok ⟨_A, A'', h_arr₁⟩ =>
-          match read_arrow τ_g with
-          | .ok ⟨_B, B'', h_arr₂⟩ =>
-            if heq₁ : A'' = A' then
-              if heq₂ : B'' = B' then
-                .ok ⟨_, .bimap h₁ h₂ (heq₁ ▸ h_arr₁) (heq₂ ▸ h_arr₂) (reduce_reduces rfl)⟩
-              else .error (.sub g (.mismatch A'' A' g))
-            else .error (.sub f (.mismatch A'' A' f))
-          | .error e => .error (.sub g (.sub τ_g e))
-        | .error e => .error (.sub f (.sub τ_f e))
-      | .error e => .error (.sub g e)
-    | .error e => .error (.sub f e)
   | DCC 𝟙₂ => .ok ⟨_, .true⟩
   | DCC 𝟘₂ => .ok ⟨_, .false⟩
   | DCC 𝟚 => .ok ⟨_, .bool⟩
@@ -609,7 +567,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     | .ok ⟨DCC Sort _u, h₁⟩ =>
       match infer B with
       | .ok ⟨DCC Sort _v, h₂⟩ =>
-        .ok ⟨_, .swap h₁ h₂ (reduce_reduces rfl)⟩
+        .ok ⟨_, .swap h₁ h₂ (reduce_reduces rfl) (reduce_reduces rfl)⟩
       | .error e => .error (.sub B e)
       | .ok ⟨τ', _⟩ => .error (.sub B (.unexpected τ' B))
     | .error e => .error (.sub A e)

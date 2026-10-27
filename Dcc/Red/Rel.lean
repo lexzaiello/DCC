@@ -15,9 +15,6 @@ inductive Red : Expr → Expr → Prop
 /-
 Core reductions:
 -/
-  | dup            : Red (DCC? ((Dup B x) (& env) (& y))) (DCC? (x env (,(`(B env) (B env)) y y)))
-  | bimap          : Red (DCC? ((Map A B f g) (,_B x y))) (DCC? (,(`A B) (f x) (g y)))
-  | assoc          : Red (DCC? ((Assoc A B C) (,_B₁ (,_B₂ x y) z))) (DCC? (,(`A (Σ B (`B C))) x (,(`B C) y z)))
   | eql            : Red (DCC ((Eql B) (& x) (& y))) (DCC (= (B x) y y))
   | eq_mk          : Red (DCC ((=' B) x y z)) (DCC (= (B x) y z))
   | map            : Red (DCC? ((!<> f) (& x))) (DCC? (!(f x)))

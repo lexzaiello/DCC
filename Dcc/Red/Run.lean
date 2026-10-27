@@ -10,9 +10,6 @@ open Dsl
 def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :=
   match e with
   | (DCC? ((Σ' _B _C) (& _x))) => .some ⟨_, ⟨.sigma⟩⟩
-  | (DCC? ((Dup _B _x) (& _env) (& _y))) => .some ⟨_, ⟨.dup⟩⟩
-  | (DCC? ((Map _B _C _f _g) (,__B _x _y))) => .some ⟨_, ⟨.bimap⟩⟩
-  | (DCC? ((Assoc _A _B _C) (,_B₁ (,_B₂ _x _y) _z))) => .some ⟨_, ⟨.assoc⟩⟩
   | (DCC? ((𝟚.Rec _motive _x _y) _env 𝟙₂)) =>
     .some ⟨_, ⟨.ind_bool_true⟩⟩
   | (DCC? ((𝟚.Rec _motive _x _y) _env 𝟘₂)) =>
@@ -440,16 +437,6 @@ theorem aff_mk_point' {x y e : Expr} (hr : Relation.ReflTransGen Red x y) (hn : 
     unfold point_arity at hn
     split at hn
     any_goals (grind)
-    any_goals (
-      focus
-      try (
-        simp at hn
-        match n with
-        | 0 | 1 | 2 | 3 =>
-          simp at heq
-          cases heq
-          simp [set_points_self_noop]
-          exact Relation.ReflTransGen.refl))
   | .inr ⟨_, h₁, h₂⟩ =>
     cases heq
     have h_dec := Red.instRedRel.decreasing h₁

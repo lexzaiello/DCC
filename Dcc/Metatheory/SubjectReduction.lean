@@ -191,25 +191,6 @@ theorem congr_reduce₄ (heq : point_arity e = 4) (heq₂ : B = e.set_points ⟨
   any_goals (
     cases heq
     grind [point_arity])
-  any_goals (
-    apply norm_unique (r := Red) (m := Relation.ReflTransGen) (reduce_sound rfl) (reduce_norm rfl)
-    · have h := congr_point_lt (n := 1) (e := e) (h := by grind) (p' := (reduce Red e.points[0]).fst) (hn := by grind)
-      apply Relation.ReflTransGen.trans (aff_mk_point' (n := 0) (reduce_sound rfl))
-      conv =>
-         left
-         simp [set_points, points]
-         rfl
-      cases heq
-      exact .trans (.trans (aff_mk_point' (n := 1) (reduce_sound rfl)) (aff_mk_point' (n := 2) (reduce_sound rfl)))
-        (aff_mk_point' (n := 3) (reduce_sound rfl))
-    · cases heq
-      simp [set_points, points]
-      apply mk_norm₄
-      · exact reduce_norm rfl
-      · exact reduce_norm rfl
-      · exact reduce_norm rfl
-      · exact reduce_norm rfl
-      · simp [point_arity])
 
 /-theorem congr_reduce_app (hn : step_head? (DCC (f x)) = .none) : (reduce Red (DCC (f x))).fst = ((reduce Red f).fst.app (reduce Red x).fst) := by
   conv =>
@@ -708,6 +689,37 @@ def preservation_eq_mk (h : Judge (DCC ((=' B) x y z)) τ) : Judge (DCC (= (B x)
             | ⟨⟨hr₁, hn₁⟩, ⟨hr₂, hn₂⟩⟩ =>
               cases hr₂.elim_norm a_2.is_norm
               exact ⟨⟨.refl, a_2.is_norm⟩, ⟨.trans (congrFun' a_11.1) (.trans (congrArg' (reduce_sound rfl)) hr₁), a_2.is_norm⟩⟩
+
+open Dsl in
+def swap_preservation_head (h : Judge (DCC ((Swap A B) (,B₂ x y))) τ) : Judge (DCC (,(`B A) y x)) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | swap =>
+      expose_names
+      replace a := a.push_head .quot
+      cases (a.elim_norml (sigma_is_norm a_4.is_norm (quot_is_norm a_4.is_norm a_6.is_norm))).elim_norm a_2.is_norm
+      clear a
+      replace a_3 := (a_3.push_head (.congrFun .quot)).push_head .quot
+      cases a_3.elim_norm (sigma_is_norm a_6.is_norm (quot_is_norm a_6.is_norm a_4.is_norm))
+      cases a_2 with
+      | mk =>
+        expose_names
+        replace a_10 := a_10.push_head .quot
+        cases a_10.elim_norm a_6.is_norm
+        apply Judge.mk
+        · assumption
+        · apply Judge.quot
+          · assumption
+          · assumption
+          · assumption
+        · constructor
+          · exact ⟨.refl, a_6.is_norm⟩
+          · exact ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩
+        · exact ⟨.trans (aff_mk_point' (n := 0) a_6.1) (aff_mk_point' (n := 1) a_4.1), quot_is_norm a_6.is_norm a_4.is_norm⟩
+        · exact ⟨.single .quot, a_4.is_norm⟩
+        · assumption
 
 mutual
 

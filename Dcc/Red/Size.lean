@@ -22,9 +22,6 @@ namespace Expr
 @[aesop norm (rule_sets := [DccSize]), dcc_size, grind]
 def size (e : Expr) : ℕ :=
   match e with
-  | DCC (Dup B x) => ((B.size + 1) * 3) + x.size + 1
-  | DCC (Map A B x y) => A.size + B.size + x.size + y.size + 3
-  | DCC (Assoc A B C) => 2 * (2 * (A.size + 1) + 2 * (B.size + 1)+ 2 * (C.size + 1) + 7)
   | DCC ∗ => 1
   | DCC 𝟙 => 2
   | DCC 𝟘 => 2

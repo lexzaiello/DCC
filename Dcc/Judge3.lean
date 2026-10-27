@@ -480,8 +480,9 @@ inductive Judge : Expr → Expr → Type where
     → Judge C τ_C
     → Judge N τ_N
     → τ_N ≡ #(Pair.g.type A B C)
-    → #(Pair.type A B C) →ᵦ τ'
-    → Judge (DCC (⟨,⟩C M N)) τ'
+    → C →ᵦ C'
+    → Sigma'.C.type A B _v τ_C
+    → Judge (DCC (⟨,⟩C M N)) (Pair.type A B C')
   | swap   : Judge A (DCC Sort u)
     → Judge B (DCC Sort v)
     → A →ᵦ A'
@@ -526,8 +527,8 @@ inductive Judge : Expr → Expr → Type where
     → τ_x ≡ ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)
     → Judge y τ_y
     → τ_y ≡ ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)
-    → ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗) →ᵦ τ'
-    → Judge (DCC (𝟚.Rec motive x y)) τ'
+    → motive →ᵦ motive'
+    → Judge (DCC (𝟚.Rec motive x y)) (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive'))) ∗))
 deriving Repr
 
 -- Replaces everything from `def infer₂` to end-of-file.
@@ -850,12 +851,15 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     | .ok ⟨DCC ((Π (`𝟙 A) (`𝟙 B)) ∗), ht_M⟩ =>
       if heq : DCC ((Π (`𝟙 A) (`𝟙 B)) ∗) = (Pair.f.type A B) then
         match infer C with
-        | .ok ⟨_τ_C, ht_C⟩ =>
+        | .ok ⟨τ_C, ht_C⟩ =>
           match infer N with
           | .ok ⟨τ_N, ht_N⟩ =>
             match def_eq? τ_N (Pair.g.type A B C) with
             | .ok h =>
-              .ok ⟨_, .pair (heq ▸ ht_M) ht_C ht_N h (reduce_reduces rfl)⟩
+              match τ_C.read_sigma'_C_type A B with
+              | .ok ⟨_, h_τ_C⟩ =>
+                .ok ⟨_, .pair (heq ▸ ht_M) ht_C ht_N h (reduce_reduces rfl) h_τ_C⟩
+              | .error e => .error (.sub τ_C e)
             | .error e => .error (.sub N (.def_eq e))
           | .error e => .error (.sub N e)
         | .error e => .error (.sub C e)

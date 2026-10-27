@@ -760,6 +760,45 @@ def sigma'_preservation_head (h : Judge (DCC ((Σ' B C) (& x))) τ) : Judge (DCC
             · exact ⟨⟨.trans (.trans (congrFun' a_5.1) (congrArg' (reduce_sound rfl))) (reduce_sound rfl), reduce_norm rfl⟩, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
             · exact ⟨.trans (.single .curr) (.single .quot), fun ⟨_, h⟩ => nomatch h⟩
 
+def preservation_pair_head (h : Judge (DCC ((⟨,⟩B x y) (& z))) τ) : Judge (DCC? (,(B z) (x z) (y z (x z)))) τ := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | pair =>
+      expose_names
+      have hn_A : IsNorm Red A := fun ⟨_, h⟩ => a_7.is_norm ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩
+      have hn_B_1 : IsNorm Red B_1 := fun ⟨_, h⟩ => a_7.is_norm ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) h))⟩
+      replace a := a.push_head .quot
+      cases (a.elim_norml (bang_is_norm hn_A)).elim_norm a_2.is_norm
+      clear a
+      replace a_3 := (a_3.push_head (.congrFun .quot)).push_head .sigma
+      have h : ((B_1.app z).sigma (C'.app z)).RedNorm ((reduce Red (B_1.app z)).fst.sigma (reduce Red (C'.app z)).fst) :=
+        ⟨.trans (aff_mk_point' (n := 0) (reduce_sound rfl)) (aff_mk_point' (n := 1) (reduce_sound rfl)),
+          sigma_is_norm (reduce_norm rfl) (reduce_norm rfl)⟩
+      cases h.unique a_3
+      cases a_2 with
+      | box h_t_z =>
+        cases a_1 with
+        | mk =>
+          have hr_pi : ((B_1.pi (A.curr B_1 ((A.sigma B_1).quot (Expr.sort _v)))).app z).RedNorm ((B_1.pi (A.curr B_1 ((A.sigma B_1).quot (Expr.sort _v)))).app (reduce Red z).fst) :=
+            ⟨congrArg' (reduce_sound rfl), pi_is_norm hn_B_1 (curr_is_norm hn_A hn_B_1 (quot_is_norm (sigma_is_norm hn_A hn_B_1) (by grind))) (reduce_norm rfl)⟩
+          have heq_pi := hr_pi.complete_fst
+          apply Judge.mk
+          · apply Judge.app
+            · assumption
+            · exact ⟨⟨.single .quot, hn_A⟩, ⟨.refl, hn_A⟩⟩
+            · assumption
+            · exact ⟨.trans (.single (.congrFun .quot)) (reduce_sound rfl), reduce_norm rfl⟩
+          · apply Judge.app
+            · assumption
+            · exact ⟨⟨.single .quot, hn_A⟩, ⟨.refl, hn_A⟩⟩
+            · assumption
+            · exact ⟨.trans (.single (.congrFun .quot)) (reduce_sound rfl), reduce_norm rfl⟩
+          · simp [heq_pi]
+            
+            sorry
+
 mutual
 
 def preservation (h : Judge e τ) (hr : Red e e') : Judge e' τ := by

@@ -2,21 +2,43 @@ import Dcc.Judge3
 
 namespace Expr
 
-def fst_is_norm (hn : IsNorm Red B) : IsNorm Red (DCC (Fst B)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
- def snd_is_norm (hn : IsNorm Red B) : IsNorm Red (DCC (Snd B)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
-
-def eql_is_norm (hn₁ : IsNorm Red x) : IsNorm Red (DCC (Eql x)) := fun ⟨_, .point 0 _ h⟩ => hn₁ ⟨_, h⟩
+open Dsl in
+@[grind .] theorem top_is_norm : IsNorm Red (DCC 𝟙) := fun ⟨_, h⟩ => nomatch h
 
 open Dsl in
-def map_is_norm (hn : IsNorm Red B) : IsNorm Red (DCC (!<> B)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+@[grind .] theorem bot_is_norm : IsNorm Red (DCC 𝟘) := fun ⟨_, h⟩ => nomatch h
 
 open Dsl in
-def bang_is_norm (hn : IsNorm Red A) : IsNorm Red (DCC (! A)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+@[grind .] theorem bool_is_norm : IsNorm Red (DCC 𝟚) := fun ⟨_, h⟩ => nomatch h
 
 open Dsl in
-def box_is_norm (hn : IsNorm Red x) : IsNorm Red (DCC (& x)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+@[grind .] theorem true_is_norm : IsNorm Red (DCC 𝟙₂) := fun ⟨_, h⟩ => nomatch h
 
-def curr_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) (hn₃ : IsNorm Red x) : IsNorm Red (DCC (Λ A B x)) := fun ⟨_, h⟩ =>
+open Dsl in
+@[grind .] theorem false_is_norm : IsNorm Red (DCC 𝟘₂) := fun ⟨_, h⟩ => nomatch h
+
+open Dsl in
+@[grind. ] theorem tintro_is_norm : IsNorm Red (DCC ∗) := fun ⟨_, h⟩ => nomatch h
+
+@[grind .]
+theorem sort_is_norm : IsNorm Red (DCC (Sort s)) := fun ⟨_, h⟩ => nomatch h
+
+@[grind .] theorem fst_is_norm (hn : IsNorm Red B) : IsNorm Red (DCC (Fst B)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+@[grind .] theorem snd_is_norm (hn : IsNorm Red B) : IsNorm Red (DCC (Snd B)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+
+@[grind .]
+theorem eql_is_norm (hn₁ : IsNorm Red x) : IsNorm Red (DCC (Eql x)) := fun ⟨_, .point 0 _ h⟩ => hn₁ ⟨_, h⟩
+
+open Dsl in
+@[grind .] theorem map_is_norm (hn : IsNorm Red B) : IsNorm Red (DCC (!<> B)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+
+open Dsl in
+@[grind .] theorem bang_is_norm (hn : IsNorm Red A) : IsNorm Red (DCC (! A)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+
+open Dsl in
+@[grind .] theorem box_is_norm (hn : IsNorm Red x) : IsNorm Red (DCC (& x)) := fun ⟨_, .point 0 _ h⟩ => hn ⟨_, h⟩
+
+@[grind .] theorem curr_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) (hn₃ : IsNorm Red x) : IsNorm Red (DCC (Λ A B x)) := fun ⟨_, h⟩ =>
   match h with
   | .point 0 hn h => hn₁ ⟨_, h⟩
   | .point 1 hn h => hn₂ ⟨_, h⟩
@@ -59,19 +81,19 @@ def quot_is_norm (hn₁ : IsNorm Red B) (hn₂ : IsNorm Red x) : IsNorm Red (DCC
   | .point 1 hn h => hn₂ ⟨_, h⟩
 
 open Dsl in
-def sigma_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) : IsNorm Red (DCC (Σ A B)) := fun ⟨_, h⟩ =>
+@[grind .] theorem sigma_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) : IsNorm Red (DCC (Σ A B)) := fun ⟨_, h⟩ =>
   match h with
   | (.point 0 hn h) => hn₁ ⟨_, h⟩
   | (.point 1 hn h) => hn₂ ⟨_, h⟩
 
 open Dsl in
-def sigma'_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) : IsNorm Red (DCC (Σ' A B)) := fun ⟨_, h⟩ =>
+@[grind .] theorem sigma'_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) : IsNorm Red (DCC (Σ' A B)) := fun ⟨_, h⟩ =>
   match h with
   | (.point 0 hn h) => hn₁ ⟨_, h⟩
   | (.point 1 hn h) => hn₂ ⟨_, h⟩
 
 open Dsl in
-def arr_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) : IsNorm Red (DCC (→ A B)) := fun ⟨_, h⟩ =>
+@[grind .] theorem arr_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red B) : IsNorm Red (DCC (→ A B)) := fun ⟨_, h⟩ =>
   match h with
   | .congrFun (.point n hlt h) => by
     simp [point_arity] at hlt
@@ -184,10 +206,22 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
   case mk =>
     expose_names
     exact sigma_is_norm a_ih (RedNorm.is_norm (by assumption))
+  case pair =>
+    expose_names
+    exact pi_is_norm
+      (quot_is_norm
+        (by grind)
+        (bang_is_norm (fun ⟨_, h⟩ => a_ih ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩)))
+      (quot_is_norm (by grind) (sigma'_is_norm (fun ⟨_, h⟩ => a_ih ⟨_, .congrFun (.point 1 (by point_arity) (.point 1 (by point_arity) h))⟩) a_4.is_norm))
+      (by grind)
   case curr =>
     expose_names
     unfold curr.type
     exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) a_2.is_norm) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (pi_is_norm₀ (fun ⟨_, h⟩ => a_ih_2 ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) (.point 1 (by point_arity) h)))⟩) (curr_is_norm a_2.is_norm a_5.is_norm (fun ⟨_, h⟩ => a_ih_2 ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) h))⟩)))) (fun ⟨_, h⟩ => nomatch h)
+  case ind_bool =>
+    expose_names
+    have ⟨hn_A, _⟩ := a_1.is_norm (by assumption)
+    exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) hn_A) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (pi_is_norm₀ (quot_is_norm hn_A (fun ⟨_, h⟩ => nomatch h)) a_7.is_norm)) (fun ⟨_, h⟩ => nomatch h)
   case curr' =>
     expose_names
     unfold curr'.type

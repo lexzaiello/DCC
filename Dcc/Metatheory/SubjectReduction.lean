@@ -547,6 +547,11 @@ def eval_preservation_head (h : Judge (DCC ((Eval A B x) (,_B y z))) τ) : Judge
           ⟨by
             have ⟨D, h₁, h₂⟩ := h
             exact h₁.elim_norm a_2.is_norm ▸ h₂, a_12.is_norm⟩
+        have hr_τ' : ((C.app (reduce Red y).fst).app z).RedNorm τ :=
+          have h := a_3.1.conf (congrFun' (congrArg' (reduce_sound rfl)))
+          ⟨by
+            have ⟨D, h₁, h₂⟩ := h
+            exact h₁.elim_norm a_3.is_norm ▸ h₂, a_3.is_norm⟩
         apply Judge.app
         · apply Judge.app
           · exact a_8
@@ -554,6 +559,8 @@ def eval_preservation_head (h : Judge (DCC ((Eval A B x) (,_B y z))) τ) : Judge
           · exact a_10
           · exact ⟨.trans (.single (.congrFun .quot)) hr_pi.1, hr_pi.2⟩
         · exact ⟨hr_B'_app, ⟨.refl, a_12.is_norm⟩⟩
+        · exact a_2
+        · exact hr_τ'
 
 mutual
 

@@ -123,6 +123,12 @@ inductive Arrow : Expr → Expr → Expr → Type
 deriving Repr
 
 open Dsl in
+inductive Arrow' : Expr → Expr → Expr → Type
+  | simple : A →ᵦ A' → B →ᵦ B' → Arrow' A' B' (DCC (→ A B))
+  | curr   : (fB xA) →ᵦ A' → B →ᵦ B' → Arrow' A' B' (DCC ((Π fB (Λ τA fB (`(Σ τA fB) B))) xA))
+deriving Repr
+
+open Dsl in
 inductive Sigma'.C.type : Expr → Expr → Level → Expr → Type
   | mk : Sigma'.C.type A B s (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ A B (`(Σ A B) (Sort s)))))) ∗))
 deriving Repr
@@ -145,6 +151,15 @@ def Arrow.is_norm (h : Arrow A B τ) (hn : IsNorm Red τ) : (IsNorm Red A) ×' (
   match h with
   | .simple h₁ h₂ => ⟨h₁.is_norm, h₂.is_norm⟩
 
+def Arrow'.is_norm (h : Arrow' A B τ) (hn : IsNorm Red τ) : (IsNorm Red A) ×' (IsNorm Red B) :=
+  match h with
+  | .simple h₁ h₂ => ⟨h₁.is_norm, h₂.is_norm⟩
+  | .curr h₁ h₂ => ⟨h₁.is_norm, h₂.is_norm⟩
+
+def Arrow.to_arrow' (h : Arrow A B τ) : Arrow' A B τ :=
+  match h with
+  | ⟨h₁, h₂⟩ => .simple h₁ h₂
+
 open Dsl in
 @[dcc_judge, inline]
 def read_arrow (τ : Expr) : Except (TypeError τ) ((A B : Expr) × (Arrow A B τ)) :=
@@ -157,8 +172,33 @@ def read_arrow (τ : Expr) : Except (TypeError τ) ((A B : Expr) × (Arrow A B �
 
 open Dsl in
 @[dcc_judge, inline]
+def read_arrow' (τ : Expr) : Except (TypeError τ) ((A B : Expr) × (Arrow' A B τ)) :=
+  open Dsl in match τ with
+  | DCC ((Π (`𝟙 A) (`𝟙 (`_A B))) ∗) =>
+    if heq : (DCC ((Π (`𝟙 A) (`𝟙 (`_A B))) ∗)) = (DCC (→ A B)) then
+      heq ▸ .ok ⟨_, _, .simple (reduce_reduces rfl) (reduce_reduces rfl)⟩
+    else .error (.unexpected τ τ)
+  | (DCC ((Π fB (Λ τA _fB (`(Σ _τA __fB) B))) xA)) =>
+    if heq : (DCC ((Π fB (Λ τA _fB (`(Σ _τA __fB) B))) xA)) = (DCC ((Π fB (Λ τA fB (`(Σ τA fB) B))) xA)) then
+      heq ▸ .ok ⟨_, _, .curr (reduce_reduces rfl) (reduce_reduces rfl)⟩
+    else .error (.unexpected τ (DCC ((Π fB (Λ τA _fB (`(Σ _τA __fB) B))) xA)))
+  | _ => .error (.unexpected τ τ)
+
+open Dsl in
+@[dcc_judge, inline]
 def read_arrow₁ (τ A : Expr) : Except (TypeError τ) ((B : Expr) × (Arrow A B τ)) :=
   match read_arrow τ with
+  | .ok ⟨A', _B', h⟩ =>
+    if heq : A' = A then
+      .ok ⟨_, heq ▸ h⟩
+    else
+      .error (.mismatch A A' τ)
+  | .error e => .error e
+
+open Dsl in
+@[dcc_judge, inline]
+def read_arrow'₁ (τ A : Expr) : Except (TypeError τ) ((B : Expr) × (Arrow' A B τ)) :=
+  match read_arrow' τ with
   | .ok ⟨A', _B', h⟩ =>
     if heq : A' = A then
       .ok ⟨_, heq ▸ h⟩
@@ -186,6 +226,17 @@ def read_arrow₃ (τ A B : Expr) : Except (TypeError τ) (Arrow A B τ) :=
       .error (.mismatch B B' τ)
   | .error e => .error e
 
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
+theorem Arrow'.complete (h : Arrow' A B τ) : τ.read_arrow' = .ok ⟨A, B, h⟩ := by
+  cases h
+  <;> (
+    expose_names
+    simp only [read_arrow']
+    have heq₁ := a.complete_fst
+    have heq₂ := a_1.complete_fst
+    unfold reduce_all
+    aesop)
+
 open Dsl in
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
 theorem Arrow.read₁_complete {A B τ : Expr} (h : Arrow A B τ) : τ.read_arrow₁ A = .ok ⟨B, h⟩ := by
@@ -195,6 +246,14 @@ theorem Arrow.read₁_complete {A B τ : Expr} (h : Arrow A B τ) : τ.read_arro
     congr!
     · simp [RedNorm.complete_fst a]
     · simp [RedNorm.complete_fst a_1]
+
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
+theorem Arrow'.read₁_complete (h : Arrow' A B τ) : τ.read_arrow'₁ A = .ok ⟨B, h⟩ := by
+  have heq := h.complete
+  cases h
+  <;> (
+    simp [read_arrow'₁]
+    grind)
 
 open Dsl in
 @[dcc_judge, inline]
@@ -415,7 +474,7 @@ inductive Judge : Expr → Expr → Type where
     → Judge (DCC (Snd B)) (sndc.type A B')
   | mk     : Judge x A
     → Judge B τ_B
-    → Arrow A (DCC Sort n) τ_B
+    → Arrow' A (DCC Sort n) τ_B
     → B →ᵦ B'
     → #(DCC (B' x)) →ᵦ τ₂
     → Judge y τ₂
@@ -478,9 +537,8 @@ inductive Judge : Expr → Expr → Type where
     → Judge (open Dsl in (DCC (`B x))) (quot.type α B')
   | pair     : Judge M (Pair.f.type A B)
     → Judge C τ_C
-    → Judge N τ_N
-    → τ_N ≡ #(Pair.g.type A B C)
     → C →ᵦ C'
+    → Judge N (Pair.g.type A B C')
     → Sigma'.C.type A B _v τ_C
     → Judge (DCC (⟨,⟩C M N)) (Pair.type A B C')
   | swap   : Judge A (DCC Sort u)
@@ -757,7 +815,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
       | .ok ⟨Bxm, ht₂⟩ =>
         match B.infer with
         | .ok ⟨τ_B, h₃⟩ =>
-          match τ_B.read_arrow₁ α with
+          match τ_B.read_arrow'₁ α with
           | .ok ⟨DCC Sort _n, harr⟩ =>
             if heq₂ : reduce_all (DCC (#(reduce_all B) x)) = Bxm then
               .ok ⟨_, .mk ht₁ h₃ harr
@@ -854,13 +912,12 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         | .ok ⟨τ_C, ht_C⟩ =>
           match infer N with
           | .ok ⟨τ_N, ht_N⟩ =>
-            match def_eq? τ_N (Pair.g.type A B C) with
-            | .ok h =>
+            if heq₂ : τ_N = (Pair.g.type A B (reduce_all C)) then
               match τ_C.read_sigma'_C_type A B with
               | .ok ⟨_, h_τ_C⟩ =>
-                .ok ⟨_, .pair (heq ▸ ht_M) ht_C ht_N h (reduce_reduces rfl) h_τ_C⟩
+                .ok ⟨_, .pair (heq ▸ ht_M) ht_C (reduce_reduces rfl) (heq₂ ▸ ht_N) h_τ_C⟩
               | .error e => .error (.sub τ_C e)
-            | .error e => .error (.sub N (.def_eq e))
+            else .error (.sub N (.unexpected τ_N N))
           | .error e => .error (.sub N e)
         | .error e => .error (.sub C e)
       else

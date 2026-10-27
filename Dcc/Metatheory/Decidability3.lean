@@ -212,7 +212,7 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
       (quot_is_norm
         (by grind)
         (bang_is_norm (fun ⟨_, h⟩ => a_ih ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩)))
-      (quot_is_norm (by grind) (sigma'_is_norm (fun ⟨_, h⟩ => a_ih ⟨_, .congrFun (.point 1 (by point_arity) (.point 1 (by point_arity) h))⟩) a_4.is_norm))
+      (quot_is_norm (by grind) (sigma'_is_norm (fun ⟨_, h⟩ => a_ih ⟨_, .congrFun (.point 1 (by point_arity) (.point 1 (by point_arity) h))⟩) a_2.is_norm))
       (by grind)
   case curr =>
     expose_names

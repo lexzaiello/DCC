@@ -3,6 +3,20 @@ import Dcc.Metatheory.Decidability3
 
 namespace Expr
 
+def congr_app_arg : RedNorm (DCC (f #((reduce Red x).fst))) (reduce Red (DCC (f x))).fst := by
+  have h := (reduce Red (DCC (f x))).snd.down
+  exact ⟨by
+    have ⟨_, h₁, h₂⟩ := h.conf (congrArg' (reduce_sound rfl))
+    cases (reduce_norm (r := Red) (A := (f.app x)) rfl).unique_refl h₁
+    assumption, reduce_norm rfl⟩
+
+def congr_fun_arg : RedNorm (DCC (#((reduce Red f).fst) x)) (reduce Red (DCC (f x))).fst := by
+  have h := (reduce Red (DCC (f x))).snd.down
+  exact ⟨by
+    have ⟨_, h₁, h₂⟩ := h.conf (congrFun' (reduce_sound rfl))
+    cases (reduce_norm (r := Red) (A := (f.app x)) rfl).unique_refl h₁
+    assumption, reduce_norm rfl⟩
+
 def Arrow.unique (h₁ : Arrow A₁ B₁ τ) (h₂ : Arrow A₂ B₂ τ) : (A₁ = A₂) ×' (B₁ = B₂) := by
   have heq₁ := h₁.read_complete
   have heq₂ := h₂.read_complete
@@ -399,7 +413,7 @@ def curr_preservation_head (h : Judge (DCC ((Λ A B x) y z)) τ) : Judge (DCC (x
         · apply Judge.mk
           · exact a_5
           · exact a_9
-          · exact a_4
+          · exact a_4.to_arrow'
           · exact a_10
           · exact ⟨.trans (congrArg' (reduce_sound rfl)) a.1, a.2⟩
           · exact a_2
@@ -462,7 +476,7 @@ def curr'_preservation_head (h : Judge (DCC ((!Λ A B x) (& y) (& z))) τ) : Jud
               · apply Judge.mk
                 · exact ht_y
                 · exact a_9
-                · exact a_4
+                · exact a_4.to_arrow'
                 · exact a_10
                 · exact ⟨.trans (congrArg' (reduce_sound rfl)) a'.1, a'.2⟩
                 · exact ht_z
@@ -768,7 +782,7 @@ def preservation_pair_head (h : Judge (DCC ((⟨,⟩B x y) (& z))) τ) : Judge (
     | pair =>
       expose_names
       have hn_A : IsNorm Red A := fun ⟨_, h⟩ => a_7.is_norm ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩
-      have hn_B_1 : IsNorm Red B_1 := fun ⟨_, h⟩ => a_7.is_norm ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) h))⟩
+      have hn_B_1 : IsNorm Red B_1 := fun ⟨_, h⟩ => a_6.is_norm ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) h))⟩
       replace a := a.push_head .quot
       cases (a.elim_norml (bang_is_norm hn_A)).elim_norm a_2.is_norm
       clear a
@@ -796,8 +810,28 @@ def preservation_pair_head (h : Judge (DCC ((⟨,⟩B x y) (& z))) τ) : Judge (
             · assumption
             · exact ⟨.trans (.single (.congrFun .quot)) (reduce_sound rfl), reduce_norm rfl⟩
           · simp [heq_pi]
-            
-            sorry
+            constructor
+            · exact congr_app_arg
+            · exact ⟨.refl, by grind⟩
+          · exact ⟨.trans (congrFun' a_5.1) (reduce_sound rfl), reduce_norm rfl⟩
+          · exact ⟨reduce_sound rfl, reduce_norm rfl⟩
+          · apply Judge.app
+            · apply Judge.app
+              · assumption
+              · exact ⟨⟨.single .quot, hn_A⟩, ⟨.refl, hn_A⟩⟩
+              · assumption
+              · exact ⟨.trans (.single (.congrFun .quot)) (congrArg' (reduce_sound rfl)),
+                      pi_is_norm hn_B_1 a_5.is_norm (reduce_norm rfl)⟩
+            · exact ⟨⟨reduce_sound rfl, reduce_norm rfl⟩, ⟨.refl, reduce_norm rfl⟩⟩
+            · apply Judge.app
+              · assumption
+              · exact ⟨⟨.single .quot, hn_A⟩, ⟨.refl, hn_A⟩⟩
+              · assumption
+              · exact ⟨.trans (.single (.congrFun .quot)) (.trans (congrArg' (reduce_sound rfl)) (reduce_sound rfl)), reduce_norm rfl⟩
+            · exact ⟨by
+              have ⟨D, h₁, h₂⟩ := (reduce Red (C'.app z)).snd.down.conf (.trans (congrArg' (reduce_sound rfl)) (reduce_sound rfl))
+              cases (reduce_norm (A := (C'.app z)) rfl).unique_refl h₁
+              exact .trans (congrFun' (.trans (reduce_sound rfl) h₂)) (reduce_sound rfl), reduce_norm rfl⟩
 
 mutual
 

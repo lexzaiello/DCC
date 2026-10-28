@@ -129,6 +129,8 @@ def elim_eq (ht : Judge e (DCC (= A x y))) : x ≡ y := by
     exact elim_eq ht'
 termination_by e.size
 
+#check elim_eq
+
 end Judge
 
 end Expr

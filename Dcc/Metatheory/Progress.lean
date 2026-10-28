@@ -612,6 +612,54 @@ def Value.inv_sigma (hv : Value x) (ht : Judge x (open Dsl in (DCC (Σ A B)))) :
       cases a_7.elim_norm (fun ⟨_, h⟩ => (Value.is_norm (by assumption)) ⟨_, h⟩)
       exact ⟨_, _, rfl⟩
 
+open Dsl in
+def Value.inv_bool (hv : Value x) (ht : Judge x (DCC 𝟚)) : (PLift (x = (DCC (𝟙₂)))) ⊕ (PLift (x = (DCC (𝟘₂)))) := by
+  cases hv
+  any_goals (
+    focus
+    try (cases ht)
+    done)
+  case true => exact .inl ⟨rfl⟩
+  case false => exact .inr ⟨rfl⟩
+  case refl₁ | eql₁ | eq'₁ | curr₁ | curr'₁ | ind_bool₁ | ind_bot₁ =>
+    cases ht with
+    | app ht =>
+      cases ht with
+      | _ =>
+        expose_names
+        cases (RedNorm.push_head (by assumption) (.congrFun .quot)).pi_eq
+  case pi => cases (Judge.inv_pi ht).2
+  case eq'₂ =>
+    cases ht with
+    | app a_3 b c d  =>
+      expose_names
+      cases a_3 with
+      | app a_4 =>
+        cases a_4 with
+        | _ =>
+          expose_names
+          have heq := (RedNorm.push_head (by assumption) (.congrFun .quot)).pi_eq
+          simp [congr_reduce₃ (e := (δ.curr f_α'
+                    ((f_α'.comp f_α'.fstc).pi
+                      ((δ.sigma f_α').curr (f_α'.comp f_α'.fstc)
+                        (((δ.sigma f_α').sigma (f_α'.comp f_α'.fstc)).quot (Expr.sort 0)))))) (by grind), points, set_points] at heq
+          cases heq.1.1; cases heq.1.2; cases heq.2
+          clear heq
+          replace d := d.push_head .curr
+          simp [congr_reduce₂ (e := ((f_α'.comp f_α'.fstc).pi
+                ((δ.sigma f_α').curr (f_α'.comp f_α'.fstc)
+                  (((δ.sigma f_α').sigma (f_α'.comp f_α'.fstc)).quot (Expr.sort 0))))) (by grind), points, set_points] at d
+          have h := d.congrArg ⟨reduce_sound rfl, reduce_norm rfl⟩
+          cases h.elim_norm (pi_is_norm (reduce_norm rfl) (reduce_norm rfl) (reduce_norm rfl))
+  case refl₂ => cases Judge.inv_refl ht
+  case points₁ | points₂ | points₄ =>
+    expose_names
+    cases ht
+    any_goals (grind [point_arity])
+  case points₃ =>
+    cases ht
+    any_goals (grind [point_arity])
+
 namespace Judge
 
 def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
@@ -631,6 +679,30 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
         focus
         cases a
         done)
+      case eq'₁ => exact .inr ⟨_, by constructor⟩
+      case eql₁ =>
+        cases a with
+        | app ht =>
+          cases ht
+          case eql =>
+            expose_names
+            have h := Arrow.is_norm (by assumption) (Judge.is_norm (by assumption))
+            have ⟨hn_δ, _⟩ := h
+            cases ((DefEq.push_head (by assumption) .quot).elim_norml (bang_is_norm (by assumption))).elim_norm (Judge.is_norm (by assumption))
+            have a_3' := RedNorm.push_head (by assumption) (.congrFun .quot)
+            have heq := a_3'.pi_eq
+            cases heq
+            simp [congr_reduce₁ (e := f_α'.map) (by grind),
+              congr_reduce₁ (e := x_1.box) (by grind),
+              points,
+              set_points] at a_1
+            replace a_1 := ((a_1.push_head .map).elim_normr a_2.is_norm)
+            have a_1' : ((reduce Red f_α').fst.app (reduce Red x_1).fst).bang.RedNorm ((reduce Red ((reduce Red f_α').fst.app (reduce Red x_1).fst)).fst).bang :=
+              ⟨aff_mk_point' (n := 0) (reduce_sound rfl), bang_is_norm (reduce_norm rfl)⟩
+            cases a_1'.unique a_1
+            have ⟨x₀, heq⟩ := Value.inv_box h₂ (by assumption)
+            cases heq
+            exact .inr ⟨_, by constructor⟩
       case refl₁ =>
         cases a with
         | app =>
@@ -716,17 +788,93 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
             | exact .eql₁ (by assumption) (by assumption)
             | exact .refl₁ (by assumption) (by assumption)
             any_goals (grind [point_arity])
-        case fstc =>
+        case fstc | sndc =>
           cases a
           case _ =>
             expose_names
             have h := Arrow.is_norm (by assumption) (Judge.is_norm (by assumption))
             have ⟨hn_δ, _⟩ := h
             cases ((DefEq.push_head (by assumption) .quot).elim_norml (sigma_is_norm hn_δ a_7.is_norm)).elim_norm (Judge.is_norm (by assumption))
-            have a_3' := (RedNorm.push_head (by assumption) (.congrFun .quot)).push_head .quot
-            cases a_3'.elim_norm hn_δ
-            
-            sorry
+            have ⟨x, y, heq⟩ := Value.inv_sigma h₂ a_2
+            cases heq
+            exact .inr ⟨_, by constructor⟩
+        case id => exact .inr ⟨_, by constructor⟩
+        case eq_mk =>
+          exact .inl (.eq'₁ (by assumption) (by assumption))
+      case points₂ =>
+        cases f
+        any_goals (grind [point_arity, points])
+        case swap =>
+          expose_names
+          cases a
+          case swap =>
+            expose_names
+            cases ((DefEq.push_head (by assumption) .quot).elim_norml (sigma_is_norm
+              (RedNorm.is_norm (by assumption))
+              (quot_is_norm (RedNorm.is_norm (by assumption)) (RedNorm.is_norm (by assumption))))).elim_norm (Judge.is_norm (by assumption))
+            have ⟨x, y, heq⟩ := Value.inv_sigma h₂ a_2
+            cases heq
+            exact .inr ⟨_, by constructor⟩
+        case comp | quot => exact .inr ⟨_, by constructor⟩
+        case pi => exact .inl (.pi (by assumption) (by assumption) (by assumption))
+        case sigma => cases a
+        case sigma' =>
+          expose_names
+          cases a with
+          | sigma' =>
+            expose_names
+            have h := Arrow.is_norm (by assumption) (Judge.is_norm (by assumption))
+            have ⟨hn_δ, _⟩ := h
+            cases ((DefEq.push_head (by assumption) .quot).elim_norml (bang_is_norm (by assumption))).elim_norm (Judge.is_norm (by assumption))
+            have ⟨x₀, heq⟩ := h₂.inv_box a_2
+            cases heq
+            exact .inr ⟨_, by constructor⟩
+      case points₃ =>
+        cases f
+        any_goals (grind [point_arity, points])
+        case ind_bool =>
+          exact .inl (.ind_bool₁ (by assumption) (by assumption) (by assumption) (by assumption))
+        case eval =>
+          expose_names
+          cases a
+          case _ =>
+            expose_names
+            cases ((DefEq.push_head (by assumption) .quot).elim_norml (sigma_is_norm
+              (RedNorm.is_norm (by assumption))
+              (RedNorm.is_norm (by assumption)))).elim_norm (Judge.is_norm (by assumption))
+            have ⟨x, y, heq⟩ := Value.inv_sigma h₂ a_2
+            cases heq
+            exact .inr ⟨_, by constructor⟩
+        case curr =>
+          expose_names
+          exact .inl (.curr₁ (by assumption) (by assumption) (by assumption) (by assumption))
+        case curr' =>
+          expose_names
+          cases a
+          case _ =>
+            expose_names
+            have h := Arrow.is_norm (by assumption) (Judge.is_norm (by assumption))
+            have ⟨hn_δ, _⟩ := h
+            cases ((DefEq.push_head (by assumption) .quot).elim_norml (bang_is_norm (by assumption))).elim_norm (Judge.is_norm (by assumption))
+            have ⟨x₀, heq⟩ := h₂.inv_box a_2
+            cases heq
+            cases h₂
+            · exact .inl (.curr'₁ (by assumption) (by assumption) (by assumption) (by assumption))
+            any_goals (grind [point_arity])
+        case pair =>
+          expose_names
+          cases a
+          case _ =>
+            expose_names
+            have hn_A : IsNorm Red A := fun ⟨_, h⟩ => a_12.is_norm ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩
+            cases ((DefEq.push_head (by assumption) .quot).elim_norml (bang_is_norm hn_A)).elim_norm (Judge.is_norm (by assumption))
+            have ⟨x₀, heq⟩ := h₂.inv_box a_2
+            cases heq
+            exact .inr ⟨_, by constructor⟩
+        case mkc | eq => cases a
+      case points₄ =>
+        cases f
+        any_goals (grind [point_arity, points])
     | .inr ⟨_, h₂⟩ => exact .inr ⟨_, .congrArg h₂⟩
   | .inr ⟨_, h₁⟩ => exact .inr ⟨_, .congrFun h₁⟩
 

@@ -79,6 +79,16 @@ App congruence:
   | congrFun : Red' f f' → Red' (DCC? (f x)) (DCC? (f' x))
   | congrArg : Red' x x' → Red' (DCC? (f x)) (DCC? (f x'))
 
+theorem Red'.decreasing (hr : Red' A B) : B.size < A.size := by
+  induction hr
+  any_goals (grind)
+  case point =>
+    expose_names
+    have h := point_size_lt' (n := n) (h := h)
+    have h' : p'.size < e.size := by grind
+    have h := set_point_size_lt (by assumption) rfl (by assumption)
+    simp_all
+
 inductive Red'.IsHead : (h : Red' A B) → Type
   | eql            : Red'.IsHead .eql
   | eq_mk          : Red'.IsHead .eq_mk

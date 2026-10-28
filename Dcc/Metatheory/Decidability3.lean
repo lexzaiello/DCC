@@ -2,6 +2,18 @@ import Dcc.Judge3
 
 namespace Expr
 
+theorem eq_is_norm (hn₁ : IsNorm Red A) (hn₂ : IsNorm Red x) (hn₃ : IsNorm Red y) : IsNorm Red (DCC (= A x y)) := fun ⟨_, h⟩ =>
+  match h with
+  | .point 0 hn h => hn₁ ⟨_, h⟩
+  | .point 1 hn h => hn₂ ⟨_, h⟩
+  | .point 2 hn h => hn₃ ⟨_, h⟩
+
+theorem mk_is_norm (hn₁ : IsNorm Red B) (hn₂ : IsNorm Red x) (hn₃ : IsNorm Red y) : IsNorm Red (DCC (,B x y)) := fun ⟨_, h⟩ =>
+  match h with
+  | .point 0 hn h => hn₁ ⟨_, h⟩
+  | .point 1 hn h => hn₂ ⟨_, h⟩
+  | .point 2 hn h => hn₃ ⟨_, h⟩
+
 open Dsl in
 @[grind .] theorem top_is_norm : IsNorm Red (DCC 𝟙) := fun ⟨_, h⟩ => nomatch h
 

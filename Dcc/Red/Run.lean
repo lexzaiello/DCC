@@ -32,6 +32,31 @@ def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :
   | _ => .none
 
 @[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
+def step_head?' (e : Expr) : Option ((e' : Expr) × Red' e e') :=
+  match e with
+  | (DCC? ((Σ' _B _C) (& _x))) => .some ⟨_, .sigma⟩
+  | (DCC? ((𝟚.Rec _motive _x _y) _env 𝟙₂)) =>
+    .some ⟨_, .ind_bool_true⟩
+  | (DCC? ((𝟚.Rec _motive _x _y) _env 𝟘₂)) =>
+    .some ⟨_, .ind_bool_false⟩
+  | DCC? ((!<> _f) (& _x))                                 => .some ⟨_, .map⟩
+  | DCC? (($<> _f) (& _x))                                 => .some ⟨_, .fmap⟩
+  | DCC? ((* _α) (& _x))                                 => .some ⟨_, .unbox⟩
+  | DCC? ((⟨,⟩_β _M _N) (& _x))                        => .some ⟨_, .pair⟩
+  | (DCC? ((Eval _α _β _x) (,__β _y _z)))            => .some ⟨_, .evalc⟩
+  | (DCC? ((Eql _f_α) (& _env) (& _y)))              => .some ⟨_, .eql⟩
+  | (DCC? ((=' _f_α) _x _y _z))              => .some ⟨_, .eq_mk⟩
+  | (DCC? ((`_β _x) _y))                             => .some ⟨_, .quot⟩
+  | (DCC? ((Id _α) _x))                                => .some ⟨_, .id⟩
+  | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, .fstc⟩
+  | (DCC? ((Swap _B _C) (,_B₂ _a _b)))                 => .some ⟨_, .swap⟩
+  | (DCC? ((Snd _α) (,_γ _a _b)))                     => .some ⟨_, .sndc⟩
+  | (DCC? ((∘ _x _y) _z))                              => .some ⟨_, .comp⟩
+  | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, .curr'⟩
+  | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, .curr⟩
+  | _ => .none
+
+@[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
 def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :=
   open Dsl in match step_head? e with
   | .some h => .some h
@@ -85,247 +110,96 @@ termination_by (e.size, sizeOf e)
 decreasing_by
   any_goals (grind)
 
-/-@[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def step? (e : GenericExpr τ) : Option ((e' : GenericExpr τ) × (PULift.{u + 1, 0} (RedAff (τ := τ) e e'))) :=
-  match e with
-  | (DCC? ((Bool.Ind motive x y) env True)) =>
-    .some ⟨_, ⟨.ind_bool_true⟩⟩
-  | (DCC? ((Bool.Ind motive x y) env False)) =>
-    .some ⟨_, ⟨.ind_bool_false⟩⟩
-  | (DCC? (Unify τ_A τ_B (Sort (m + 1)) ⊥)) =>
-    .some ⟨_, ⟨.unif_bot_sort⟩⟩
-  | (DCC? (Unify τ_A τ_B (Sort 0) ⊥)) =>
-    .some ⟨_, ⟨.unif_bot_prop⟩⟩
-  | (DCC? (((≃.1 f_x B) env₁) ((≃.mk fX fY fidl fidr) env₂))) =>
-    .some ⟨_, ⟨.cong_1⟩⟩
-  | (DCC? (((≃.2 B f_x) env₁) ((≃.mk fX fY fidl fidr) env₂))) =>
-    .some ⟨_, ⟨.cong_2⟩⟩
-  | (DCC? (((≃.3 f_x B) env₁) ((≃.mk fX fY fidl fidr) env₂))) =>
-    .some ⟨_, ⟨.cong_3⟩⟩
-  | (DCC? (((≃.4 B f_x) env₁) ((≃.mk fX fY fidl fidr) env₂))) =>
-    .some ⟨_, ⟨.cong_4⟩⟩
-  | (DCC? (≃.1 f_x B)) =>
-    match f_x.step?, B.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ =>
-      .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
-    | _, .some ⟨_, ⟨h₂⟩⟩ =>
-      .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₂⟩⟩
-    | _, _ => .none
-  | (DCC? (Unify τ_A₁ τ_A₂ A B)) =>
-    if heq : A = B then
-      heq ▸ .some ⟨_, ⟨RedAff.unif_refl⟩⟩
-    else
-      match A, B with
-      | (DCC? Sort (u + 1)), DCC? ⊥ =>
-        .some ⟨_, ⟨.unif_bot_sort⟩⟩
-      | (DCC? Sort 0), DCC? ⊥ =>
-        .some ⟨_, ⟨.unif_bot_prop⟩⟩
-      | A, B =>
-        match τ_A₁.step?, τ_A₂.step? with
-        | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
-        | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₂⟩⟩
-        | _, _ =>
-          match A.step?, B.step? with
-          | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 2 (by simp [point_arity]) h₁⟩⟩
-          | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 3 (by simp [point_arity]) h₂⟩⟩
-          | _, _ => .none
-  | DCC? (Bool.Ind motive x y) =>
-    match motive.step?, x.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
-    | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₂⟩⟩
-    | _, _ =>
-      match y.step? with
-      | .some ⟨_, ⟨h₃⟩⟩ => .some ⟨_, ⟨.point 2 (by simp [point_arity]) h₃⟩⟩
+@[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
+def step?' (e : Expr) : Option ((e' : Expr) × (Red' e e')) :=
+  open Dsl in match step_head?' e with
+  | .some h => .some h
+  | .none =>
+    match e.cases_point_arity' with
+    | .inl ⟨heq⟩ =>
+      match e with
+      | DCC? (f x) =>
+        match f.step?', x.step?' with
+        | .some ⟨f', h₁⟩, _ => .some ⟨(DCC? (f' x)), .congrFun h₁⟩
+        | _, .some ⟨x', h₁⟩ => .some ⟨(DCC? (f x')), .congrArg h₁⟩
+        | _, _ => .none
+      | _ => .none
+    | .inr (.inl ⟨heq⟩) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step?' with
+      | .some ⟨_, h₁⟩ =>
+        .some ⟨_, .point 0 (by simp [heq]) h₁⟩
       | .none => .none
-  | DCC? (≃.Ind motive x) =>
-    match motive.step?, x.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
-    | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₂⟩⟩
-    | _, _ => .none
-  | DCC? (≃.mk to_fun inv_fun comp_id id_comp) =>
-    match to_fun.step?, inv_fun.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
-    | _, .some ⟨_, ⟨h₂⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₂⟩⟩
-    | _, _ =>
-      match comp_id.step?, id_comp.step? with
-      | .some ⟨_, ⟨h₃⟩⟩, _ => .some ⟨_, ⟨.point 2 (by simp [point_arity]) h₃⟩⟩
-      | _, .some ⟨_, ⟨h₄⟩⟩ => .some ⟨_, ⟨.point 3 (by simp [point_arity]) h₄⟩⟩
+    | .inr (.inr (.inl ⟨heq⟩)) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step?', (e.points.get ⟨1, by simp [heq]⟩).step?' with
+      | .some ⟨_, h₁⟩, _ =>
+        .some ⟨_, .point 0 (by simp [heq]) h₁⟩
+      | _, .some ⟨_, h₂⟩ =>
+        .some ⟨_, .point 1 (by simp [heq]) h₂⟩
       | _, _ => .none
-  | (DCC? (Π f_α f_β)) =>
-    match f_α.step?, f_β.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
-    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₁⟩⟩
-    | _, _ => .none
-  | (DCC? (Σ f_α f_β)) =>
-    match f_α.step?, f_β.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
-    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₁⟩⟩
-    | _, _ => .none
-  | (DCC? ((Eql _f_α) (& _env) (& _x))) => .some ⟨_, ⟨.eql⟩⟩
-  | (DCC? (x = y)) =>
-    match x.step?, y.step? with
-    | .some ⟨_, ⟨h₁⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
-    | _, .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h₁⟩⟩
-    | _, _ => .none
-  | DCC? (! x) =>
-    match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | DCC? (!<> x) =>
-    match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | DCC? ((!<> _f) (& _x))                                 => .some ⟨_, ⟨.map⟩⟩
-  | DCC? (($<> _f) (& _x))                                 => .some ⟨_, ⟨.fmap⟩⟩
-  | DCC? ((* _α) (& _x))                                 => .some ⟨_, ⟨.unbox⟩⟩
-  | DCC? (* x) =>
-    match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | DCC? ($<> x) =>
-    match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | DCC? (& x) =>
-    match x.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | DCC? ((⟨,⟩_β M N) (& _x))                        => .some ⟨_, ⟨.pair⟩⟩
-  | (DCC? ((Eval _α _β _x) (,__β _y _z)))            => .some ⟨_, ⟨.evalc⟩⟩
-  | (DCC? ((`_β _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
-  | (DCC? ((Id _α) _x))                                => .some ⟨_, ⟨.id⟩⟩
-  | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
-  | (DCC? ((Swap _B _C) (,_B₂ _a _b)))                 => .some ⟨_, ⟨.swap⟩⟩
-  | DCC? (Fst B) =>
-    match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | DCC? (Snd B) =>
-    match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | DCC? (Swap B C) =>
-    match B.step?, C.step? with
-    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h⟩⟩
-    | _, _ => .none
-  | DCC? (Eql B) =>
-    match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | DCC? (Id A) =>
-    match A.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | DCC? (refl B) =>
-    match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨ .point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | (DCC? ((Snd _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
-  | (DCC? ((∘ _x _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
-  | DCC? (∘ x  y) =>
-    match x.step?, y.step? with
-    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h⟩⟩
-    | _, _ => .none
-  | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, ⟨.curr'⟩⟩
-  | DCC? (!Λ A B x) =>
-    match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h⟩⟩
-    | .none => match A.step?, x.step? with
-      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 2 (by simp [point_arity]) h⟩⟩
-      | _, _ => .none
-  | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
-  | DCC? (Λ A B x) =>
-    match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h⟩⟩
-    | .none => match A.step?, x.step? with
-      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 2 (by simp [point_arity]) h⟩⟩
-      | _, _ => .none
-  | DCC? (Eval A B x) =>
-    match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h⟩⟩
-    | .none => match A.step?, x.step? with
-      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 2 (by simp [point_arity]) h⟩⟩
-      | _, _ => .none
-  | (DCC? ((Σ _f_α _f_β) _env))                        => .some ⟨_, ⟨.sigma⟩⟩
-  | DCC? (,β x y) =>
-    match β.step? with
-    | .some ⟨_, ⟨h₁⟩⟩ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h₁⟩⟩
-    | _ =>
-      match x.step?, y.step? with
-      | .some ⟨x', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (,β x' y)), ⟨.point 1 (by simp [point_arity]) h₁⟩⟩
-      | _, .some ⟨y', ⟨h₁⟩⟩ => .some ⟨(DCC? (,β x y')), ⟨.point 2 (by simp [point_arity]) h₁⟩⟩
-      | _, _ => .none
-  | DCC? (⟨,⟩B x y) =>
-    match B.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _ =>
-      match x.step?, y.step? with
-      | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h⟩⟩
-      | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 2 (by simp [point_arity]) h⟩⟩
-      | _, _ => .none
-  | (DCC? (Σ β)) =>
-    match β.step? with
-    | .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _ => .none
-  | DCC? (`B x) =>
-    match B.step?, x.step? with
-    | .some ⟨_, ⟨h⟩⟩, _ => .some ⟨_, ⟨.point 0 (by simp [point_arity]) h⟩⟩
-    | _, .some ⟨_, ⟨h⟩⟩ => .some ⟨_, ⟨.point 1 (by simp [point_arity]) h⟩⟩
-    | _, _ => .none
-  | DCC? (f x) =>
-    match f.step?, x.step? with
-    | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (f' x)), ⟨.congrFun h₁⟩⟩
-    | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC? (f x')), ⟨.congrArg h₁⟩⟩
-    | _, _ => .none
-  | DCC? (Dom (Eql _B)) => .some ⟨_, ⟨.eqlτ₀⟩⟩
-  | DCC? (Dom (refl _B)) => .some ⟨_, ⟨.reflτ₀⟩⟩
-  | DCC? (Dom (!<> _x)) => .some ⟨_, ⟨.mapτ₀⟩⟩
-  | DCC? (Dom ($<> _x)) => .some ⟨_, ⟨.fmapτ₀⟩⟩
-  | DCC? (Dom (* _x)) => .some ⟨_, ⟨.unboxτ₀⟩⟩
-  | DCC? (Dom (⟨,⟩_B _x _y)) => .some ⟨_, ⟨.pairτ₀⟩⟩
-  | DCC? (Dom (Eval _A _B _x)) => .some ⟨_, ⟨.evalcτ₀⟩⟩
-  | DCC? (Dom (`_B _x)) => .some ⟨_, ⟨.quotτ₀⟩⟩
-  | DCC? (Dom (Id _A)) => .some ⟨_, ⟨.idτ₀⟩⟩
-  | DCC? (Dom (Fst _B)) => .some ⟨_, ⟨.fstcτ₀⟩⟩
-  | DCC? (Dom (Snd _B)) => .some ⟨_, ⟨.sndcτ₀⟩⟩
-  | DCC? (Dom (Swap _B _C)) => .some ⟨_, ⟨.swapτ₀⟩⟩
-  | DCC? (Dom (∘ _x _y)) => .some ⟨_, ⟨.compτ₀⟩⟩
-  | DCC? (Dom (Λ _A _B _x)) => .some ⟨_, ⟨.currτ₀⟩⟩
-  | DCC? (Dom (!Λ _A _B _x)) => .some ⟨_, ⟨.curr'τ₀⟩⟩
-  | DCC? (Dom (Σ B C)) => .some ⟨_, ⟨.sigmaτ₀⟩⟩
-  | DCC? (Dom (Π B C)) => .some ⟨_, ⟨.piτ₀⟩⟩
-  | DCC? (Dom ((Eql _B) (& _x))) => .some ⟨_, ⟨.eqlτ₁⟩⟩
-  | DCC? (Dom ((refl _B) (& _x))) => .some ⟨_, ⟨.reflτ₁⟩⟩
-  | DCC? (Dom ((Λ _A _B _x) _y)) => .some ⟨_, ⟨.currτ₁⟩⟩
-  | DCC? (Dom ((!Λ _A _B _x) (& _y))) => .some ⟨_, ⟨.curr'τ₁⟩⟩
-  | DCC? (Dom x) =>
-    match x.step? with
-    | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.dom₀ hr⟩⟩
-    | .none => .none
-  | DCC? (Uncoup (Σ x)) => .some ⟨_, ⟨.uncoup⟩⟩
-  | DCC? (Unbang (! x)) => .some ⟨_, ⟨.unbang⟩⟩
-  | DCC? (Uncoup x) =>
-    match x.step? with
-    | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.uncoup₀ hr⟩⟩
-    | .none => .none
-  | DCC? (Unbang x) =>
-    match x.step? with
-    | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.unbang₀ hr⟩⟩
-    | .none => .none
-  | DCC? (Dom₂ (Eql B)) => .some ⟨_, ⟨.eqlτ₃⟩⟩
-  | DCC? (Dom₂ (refl B)) => .some ⟨_, ⟨.reflτ₃⟩⟩
-  | DCC? (Dom₂ (Λ A B x)) => .some ⟨_, ⟨.currτ₃⟩⟩
-  | DCC? (Dom₂ (!Λ A B x)) => .some ⟨_, ⟨.curr'τ₃⟩⟩
-  | DCC? (Dom₂ x) =>
-    match x.step? with
-    | .some ⟨_, ⟨hr⟩⟩ => .some ⟨_, ⟨.dom₂₀ hr⟩⟩
-    | .none => .none
-  | _ => .none-/
+    | .inr (.inr (.inr (.inl ⟨heq⟩))) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step?', (e.points.get ⟨1, by simp [heq]⟩).step?', (e.points.get ⟨2, by simp [heq]⟩).step?' with
+      | .some ⟨_, h₁⟩, _, _ =>
+        .some ⟨_, .point 0 (by simp [heq]) h₁⟩
+      | _, .some ⟨_, h₂⟩, _ =>
+        .some ⟨_, .point 1 (by simp [heq]) h₂⟩
+      | _, _, .some ⟨_, h₃⟩ =>
+          .some ⟨_, .point 2 (by simp [heq]) h₃⟩
+      | _, _, _ => .none
+    | .inr (.inr (.inr (.inr ⟨heq⟩))) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step?', (e.points.get ⟨1, by simp [heq]⟩).step?', (e.points.get ⟨2, by simp [heq]⟩).step?', (e.points.get ⟨3, by simp [heq]⟩).step?' with
+      | .some ⟨_, h₁⟩, _, _, _ =>
+        .some ⟨_, .point 0 (by simp [heq]) h₁⟩
+      | _, .some ⟨_, h₂⟩, _, _ =>
+        .some ⟨_, .point 1 (by simp [heq]) h₂⟩
+      | _, _, .some ⟨_, h₃⟩, _ =>
+        .some ⟨_, .point 2 (by simp [heq]) h₃⟩
+      | _, _, _, .some ⟨_, h₄⟩ =>
+          .some ⟨_, .point 3 (by simp [heq]) h₄⟩
+      | _, _, _, _ => .none
+termination_by (e.size, sizeOf e)
+decreasing_by
+  any_goals (grind)
+
+set_option maxHeartbeats 10000000 in
+theorem Red.has_step?' (h : Red A B) : ∃ C h, step?' A = .some ⟨C, h⟩ := by
+  induction h
+  case congrFun =>
+    unfold step?'
+    split
+    · grind
+    · expose_names
+      simp [cases_point_arity', point_arity]
+      have ⟨C, h, heq⟩ := a_ih
+      simp [heq]
+  case congrArg =>
+    unfold step?'
+    split
+    · grind
+    · expose_names
+      simp [cases_point_arity', point_arity]
+      have ⟨C, h, heq⟩ := a_ih
+      simp [heq]
+      split <;> grind
+  case point =>
+    expose_names
+    cases e
+    all_goals (
+      dsimp [point_arity] at h
+      interval_cases n)
+    any_goals (
+      have ⟨C, h, heq⟩ := a_ih
+      unfold step?'
+      simp [step_head?', cases_point_arity', point_arity]
+      split
+      any_goals (grind)
+      any_goals (
+        simp_all [points, Vector.get]
+        try (grind)))
+  any_goals (simp [step?', step_head?'])
+
+theorem Red.step?'_some (h : Red A B) : (step?' A).isSome := by
+  have ⟨C, h, heq⟩ := h.has_step?'
+  grind
 
 set_option maxHeartbeats 10000000 in
 @[dcc_force_reduce, dcc_force_aff]

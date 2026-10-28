@@ -588,7 +588,16 @@ def eql_preservation_head (h : Judge (DCC ((Eql B) (& x) (& y))) τ) : Judge (DC
                 have heq₂ := h₁.symm.trans h₂
                 simp at heq₂
                 exact ⟨⟨reduce_sound_fst heq₂, reduce_norm_fst heq₂⟩, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
+            cases a_4
+            expose_names
+            have hn_A : IsNorm Red A := fun ⟨_, h⟩ => a_7.is_norm ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩
+            cases a_1.elim_norm hn_A
             apply Judge.eq
+            · apply Judge.app
+              · assumption
+              · exact ⟨⟨.single .quot, hn_A⟩, ⟨.refl, hn_A⟩⟩
+              · assumption
+              · exact ⟨.trans (.single (.congrFun .quot)) (.trans (.single .quot) a_2.1), a_2.2⟩
             · exact h_t_y
             · exact h_t_y
             · exact ⟨⟨.refl, h_t_y.is_norm⟩, ⟨.refl, h_t_y.is_norm⟩⟩
@@ -711,7 +720,16 @@ def preservation_eq_mk (h : Judge (DCC ((=' B) x y z)) τ) : Judge (DCC (= (B x)
           replace a := a.push_head (.congrArg .fstc)
           have a' := a.symm.trans a_1
           cases (a'.elim_norml a_2.is_norm).elim_norm a_5.is_norm
+          cases a_7
+          expose_names
+          have hn_A : IsNorm Red A := fun ⟨_, h⟩ => a_10.is_norm ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩
+          cases a_3.elim_norm hn_A
           apply Judge.eq
+          · apply Judge.app
+            · assumption
+            · exact ⟨⟨.single .quot, hn_A⟩, ⟨.refl, hn_A⟩⟩
+            · assumption
+            · exact ⟨.trans (.single (.congrFun .quot)) (.trans (.single .quot) a_4.1), a_4.2⟩
           · assumption
           · assumption
           · exact ⟨⟨.refl, a_2.is_norm⟩, ⟨.refl, a_2.is_norm⟩⟩
@@ -989,10 +1007,6 @@ def preservation (ht : Judge e τ) (hr : Red' e e') : Judge e' τ := by
     · exact DefEq.trans (by assumption) (Red.def_eq (Red'.to_red (by assumption)))
     · exact DefEq.symm (DefEq.trans (DefEq.symm (by assumption)) (Red.def_eq (Red'.to_red (by assumption))))
     · exact RedNorm.push_head (by assumption) (.congrArg (Red'.to_red (by assumption)))
-    · simp [points]
-      exact a_4.push_head (.congrFun (.point 1 (by grind) (.point 1 (by point_arity) (.point 1 (by change 1 < ((A.quot Expr.bot).pi motive).point_arity; point_arity) (by
-        change motive.Red p'
-        exact a_3.to_red)))))
 termination_by (sizeOf e)
 decreasing_by
   any_goals (simp_all)

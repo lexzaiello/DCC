@@ -37,8 +37,84 @@ inductive Value : Expr → Type
   | ind_bool₁   : Value motive → Value x → Value y → Value z → Value (DCC ((𝟚.Rec motive x y) z))
   | pi          : Value B → Value C → Value x → Value (DCC ((Π B C) x))
 
+def Value.congrFun (hv : Value (DCC (f x))) : Value f := by
+  cases hv
+  any_goals (
+    focus
+    try (
+      constructor
+      any_goals (assumption)
+      try (grind))
+    done)
+  any_goals (grind [point_arity])
+  · exact eq'₁ (by assumption) (by assumption)
+  any_goals (
+    apply points₃
+    any_goals (assumption)
+    grind)
+  any_goals (
+    apply points₂
+    any_goals (assumption)
+    grind)
+
+def Value.congrArg (hv : Value (DCC (f x))) : Value x := by
+  cases hv
+  any_goals (
+    apply points₁
+    any_goals (assumption)
+    grind)
+  any_goals (grind [point_arity])
+  any_goals (assumption)
+
 set_option maxHeartbeats 10000000 in
-def Value.is_norm' (h : Value e) : (Σ e', Red' e e') → False := by
+theorem Value.is_norm (h : Value e) : (Σ' e', Red e e') → False := by
+  induction h
+  any_goals (
+    focus
+    try (
+      intro ⟨_, h⟩
+      cases h
+      grind [point_arity])
+    done)
+  all_goals (
+    intro ⟨_, h⟩
+    cases h)
+  any_goals (grind [point_arity])
+  case curr'₁.congrArg | eq'₁.congrFun | eql₁.congrFun | eql₁.congrArg | refl₁.congrFun | refl₁.congrArg | refl₂.congrArg =>
+    rename_i h
+    match h with
+    | .point 0 hn h =>
+      aesop
+  case refl₂.congrFun h =>
+    match h with
+    | .congrFun (.point 0 hn h) => aesop
+    | .congrArg (.point 0 hn h) => aesop
+  case points₁.point | points₂.point | points₃.point | points₄.point =>
+    expose_names
+    rw [h_ar] at h
+    interval_cases n
+    <;> aesop
+  case eq'₁.congrArg | eq'₂.congrArg | curr₁.congrArg | pi.congrArg | ind_bool₁.congrArg =>
+    aesop
+  case pi.congrFun =>
+    rename_i h
+    match h with
+    | .point 0 hn h => aesop
+    | .point 1 hn h => aesop
+  case eq'₂.congrFun =>
+    rename_i h
+    match h with
+    | .congrFun (.point 0 hn h) => aesop
+    | .congrArg h => aesop
+  case ind_bool₁.congrFun | curr₁.congrFun | curr'₁.congrFun =>
+    rename_i h
+    match h with
+    | .point 0 hn h => aesop
+    | .point 1 hn h => aesop
+    | .point 2 hn h => aesop
+
+set_option maxHeartbeats 10000000 in
+theorem Value.is_norm' (h : Value e) : (Σ e', Red' e e') → False := by
   induction h
   any_goals (
     focus
@@ -284,6 +360,31 @@ def Value.inv_box (hv : Value x) (ht : Judge x (open Dsl in (DCC (! A)))) : Σ' 
 
 namespace Judge
 
+def inv_eql (h : Judge (DCC ((Eql B) (& x) (& y))) τ) : τ = (DCC (Sort 0)) := by
+  cases h with
+  | app =>
+    expose_names
+    cases a_1 with
+    | app =>
+      expose_names
+      cases a_4 with
+      | eql =>
+        expose_names
+        have ⟨hn_δ, _⟩ := a_4.is_norm a_7.is_norm
+        cases ((a_1.push_head .quot).elim_norml (bang_is_norm hn_δ)).elim_norm a_5.is_norm
+        clear a_1
+        replace a_6 := a_6.push_head (.congrFun .quot)
+        have heq_pi := a_6.pi_eq
+        simp [congr_reduce₁ (e := f_α'.map) (by grind), congr_reduce₃ (e := (δ.curr' f_α' ((δ.sigma f_α').bang.quot (Expr.sort 0)))) (by grind), congr_reduce₁ (e := x.box) (by grind), points, set_points] at heq_pi
+        cases heq_pi.1.1; cases heq_pi.1.2; cases heq_pi.2
+        clear heq_pi
+        clear a_6
+        simp [congr_reduce₂ (e := ((δ.sigma f_α').bang.quot (Expr.sort 0))) (by grind), points, set_points] at a_3
+        replace a_3 := (a_3.push_head .curr').push_head .quot
+        simp [elim_reduce_norm_fst (sort_is_norm)] at a_3
+        cases a_3.elim_norm (by grind)
+        rfl
+
 def inv_refl (h : Judge (DCC ((refl B) (& x) (& y))) τ) : τ = (DCC (= #((reduce Red (B.app x)).fst) #((reduce Red y).fst) #((reduce Red y).fst))) := by
   cases h with
   | app =>
@@ -318,6 +419,118 @@ def inv_refl (h : Judge (DCC ((refl B) (& x) (& y))) τ) : τ = (DCC (= #((reduc
         · refine .trans ?_ (reduce_sound rfl)
           exact .trans (congrFun' (reduce_sound rfl)) (congrArg' (reduce_sound rfl))
         · exact reduce_norm rfl
+
+def elim_bot (ht : Judge e (DCC 𝟘)) (hv : Value e) : False := by
+  cases ht with
+  | app =>
+    expose_names
+    have hv_f := hv.congrFun
+    have hv_x := hv.congrArg
+    cases hv_f
+    any_goals (
+      focus
+      try (cases a)
+      done)
+    case refl₁ =>
+      expose_names
+      cases a with
+      | app =>
+        expose_names
+        cases a_6 with
+        | refl =>
+          expose_names
+          replace a := a.push_head .quot
+          have ⟨hn_δ, _⟩ := a_6.is_norm a_9.is_norm
+          cases (a.elim_norml (bang_is_norm hn_δ)).elim_norm a_7.is_norm
+          clear a
+          replace a_8 := a_8.push_head (.congrFun .quot)
+          have pi_eq := a_8.pi_eq
+          simp [congr_reduce₁ (e := f_α'.map) (by grind),  congr_reduce₁ (e := f_α'.eql) (by grind), congr_reduce₁ (e := x_1.box) (by grind), points, set_points] at pi_eq
+          cases pi_eq.1.1; cases pi_eq.1.2; cases pi_eq.2
+          clear pi_eq
+          clear a_8
+          replace a_1 := ((a_1.push_head .map)).elim_normr a_2.is_norm
+          have a_1' : ((reduce Red f_α').fst.app (reduce Red x_1).fst).bang.RedNorm (reduce Red ((reduce Red f_α').fst.app (reduce Red x_1).fst)).fst.bang := ⟨aff_mk_point' (n := 0) (reduce_sound rfl), bang_is_norm (reduce_norm rfl)⟩
+          cases a_1'.unique a_1
+          have ⟨x₀, heq⟩ := hv_x.inv_box (by assumption)
+          cases heq
+          replace a_3 := a_3.push_head .eql
+          have a_3' : RedNorm (((reduce Red f_α').fst.app (reduce Red x_1).fst).eq x₀ x₀) ((reduce Red ((reduce Red f_α').fst.app (reduce Red x_1).fst)).fst.eq x₀ x₀) :=
+            ⟨aff_mk_point' (n := 0) (reduce_sound rfl), eq_is_norm (reduce_norm rfl)
+              (fun ⟨_, h⟩ => hv_x.is_norm ⟨_, .point 0 (by grind) h⟩) (fun ⟨_, h⟩ => hv_x.is_norm ⟨_, .point 0 (by grind) h⟩)⟩
+          cases a_3'.unique a_3
+    case refl₂ => cases inv_refl a
+    any_goals (
+      focus
+      try (
+        cases hv
+        any_goals (grind [point_arity]))
+      done)
+    case points₁ =>
+      expose_names
+      cases hv
+      case refl₁ | eql₁ =>
+        cases a with
+        | _ =>
+          expose_names
+          replace a_1 := a_1.push_head .quot
+          have ⟨hn_δ, _⟩ := a_6.is_norm a_7.is_norm
+          cases (a_1.elim_norml (bang_is_norm hn_δ)).elim_norm a_2.is_norm
+          clear a
+          replace a_8 := a_3.push_head (.congrFun .quot)
+          have pi_eq := a_8.pi_eq
+          simp [congr_reduce₁ (e := f_α'.map) (by grind),  congr_reduce₁ (e := f_α'.eql) (by grind), congr_reduce₁ (e := x.box) (by grind), points, set_points] at pi_eq
+      any_goals (grind [point_arity])
+      case eq'₁ =>
+        cases a with
+        | _ =>
+          expose_names
+          replace a_3 := a_3.push_head (.congrFun .quot)
+          have pi_eq := a_3.pi_eq
+          cases pi_eq
+    case points₂ =>
+      expose_names
+      cases hv
+      any_goals (grind [point_arity])
+      case pi =>
+        expose_names
+        cases a
+        case _ =>
+          expose_names
+          replace a_3 := (a_3.push_head (.congrFun .quot)).push_head .quot
+          cases a_3.elim_norm (by grind)
+    case points₃ =>
+      expose_names
+      cases hv
+      any_goals (grind [point_arity])
+      case curr₁ | curr'₁ | ind_bool₁ =>
+        cases a with
+        | _ =>
+          expose_names
+          replace a_3 := a_3.push_head (.congrFun .quot)
+          have pi_eq := a_3.pi_eq
+          cases pi_eq
+    case eq'₁ =>
+      cases hv
+      any_goals (grind [point_arity])
+      · expose_names
+        cases a with
+        | app =>
+          expose_names
+          cases a_9 with
+          | eq_mk =>
+            expose_names
+            replace a_11 := a_11.push_head (.congrFun .quot)
+            have ⟨hn_δ, _⟩ := a_9.is_norm a_12.is_norm
+            cases a_11.elim_norm (pi_is_norm a_13.is_norm
+              (curr_is_norm hn_δ a_13.is_norm
+                (pi_is_norm₀ (comp_is_norm a_13.is_norm (fst_is_norm a_13.is_norm))
+                             (curr_is_norm (sigma_is_norm hn_δ a_13.is_norm) (comp_is_norm a_13.is_norm (fst_is_norm a_13.is_norm)) (quot_is_norm (sigma_is_norm (sigma_is_norm hn_δ a_13.is_norm) (comp_is_norm a_13.is_norm (fst_is_norm a_13.is_norm))) (by grind)))))
+              (fun ⟨_, h⟩ => a_5.is_norm ⟨_, h⟩))
+            clear a_11
+            replace a_3 := (a_3.push_head .curr)
+            have heq := a_3.pi_eq
+            cases heq
 
 def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
                  (h₁ : f.Value ⊕ (e' : Expr) × f.Red' e')
@@ -363,17 +576,22 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
               ⟨aff_mk_point' (n := 0) (reduce_sound rfl), bang_is_norm (reduce_norm rfl)⟩
             cases a_1''.unique a_1'
             clear a_1''
+            have ⟨_, heq⟩ := h₂.inv_box (by assumption)
+            cases heq
             cases h₂
-            any_goals (
-              focus
-              try (cases a_2)
-              done)
-            case refl₁ =>
-              
-              sorry
+            any_goals (grind [point_arity])
+            refine .inl ?_
+            constructor <;> assumption
       case refl₂ =>
         expose_names
         cases a.inv_refl
+      case points₁ =>
+        cases f
+        any_goals (grind [point_arity, points])
+        case ind_bot =>
+          expose_names
+          
+      
     | .inr ⟨_, h₂⟩ => exact .inr ⟨_, .congrArg h₂⟩
   | .inr ⟨_, h₁⟩ => exact .inr ⟨_, .congrFun h₁⟩
 

@@ -1,5 +1,6 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
+\usepackage[normalem]{ulem} 
 \usepackage[dvipsnames]{xcolor}
 \definecolor{leanblue}{RGB}{28, 54, 86}
 \newcommand{\comment}[1]{}
@@ -121,9 +122,9 @@
 Should be structured around building up to the fundamental theorem: extensional equality reflection.
 
 \begin{itemize}
-  \item Update results section
+  \item \sout{Update results section}
    \begin{itemize}
-      \item It should be emphasized that equality reflection and other metatheorems (e.g., subject-reduction, progress) are computable definitions, rather than theorems in \(\textbf{Prop}\).
+      \item \sout{It should be emphasized that equality reflection and other metatheorems (e.g., subject-reduction, progress) are computable definitions, rather than theorems in \(\textbf{Prop}\).}
   \end{itemize}
   \item Syntax
     \begin{itemize}
@@ -132,14 +133,21 @@ Should be structured around building up to the fundamental theorem: extensional 
   \item Conversion rules
   \begin{itemize}
     \item Emphasize that we use call by value operational semantics as usual
-    \item \textbf{Proof}: Confluence by newmann's lemma
-  \end{itemize}
-  \item \textbf{Proof}: Termination by decreasing syntactic size
+    \item Explain how \(Eval\) is essentially the recursor for \(\Sigma\)
+    \item Congruences
+    \begin{itemize}
+      \item Explain combinator points, maybe do this in syntax section though
+    \end{itemize}
+    \item \textbf{Proof}: Termination by decreasing syntactic size
     \begin{itemize}
       \item Sizes should be somewhat justified, rather than the random values found in the formalization
     \end{itemize}
+    \item \textbf{Proof}: Local confluence
+    \item \textbf{Proof}: Confluence by newmann's lemma
+  \end{itemize}
   \item Inference rules
     \begin{itemize}
+      \item Explain how \(\Pi\) indexes an environment, similarly to \(\Lambda\) among others
       \item Must explain arrows, different kinds of arrows, inductives used for representing arrow types. \textit{This can be done through a rule in the main inference rules diagram}.
       \item Inference rules should be given first as a full page diagram, and then justified for some in particular (\textit{which ones?})
     \end{itemize}
@@ -153,8 +161,15 @@ Should be structured around building up to the fundamental theorem: extensional 
         \item Emphasize that the rule for \(\bot{}.Rec\) is not for \(\bot\), but partial application of its recursor
         \item \textbf{Proof}: Inversion lemmas
         \item \textbf{Proof}: \(\bot\) is not inhabited by any values
-      \end{itemize}
+       \end{itemize}
+     \item \textbf{Proof}: Equality reflection for values
+     \item \textbf{Proof}: Equality reflection by progress + preservation
   \end{itemize}
+  \item Justification of affine combinator rules
+  \item Some examples
+  \item Compilation from Lean 4 (calculus of constructions subset) to DCC
+  \item Comparison to SK combinators and prior approaches
+  \item \textit{Last}: conclusion, somewhere in there - In this paper, we present DCC: a dependent combinatory type theory based on affine logic. We demonstrate that it is provably a counter-example to the well-known fact that type-checking is undecidable in extensional type theory (\textit{how well-known?}).
 \end{itemize}
 
 \section{Introduction}
@@ -164,10 +179,11 @@ Should be structured around building up to the fundamental theorem: extensional 
 \subsection{Results}
 
 \begin{itemize}
-  \item In \ref{dccintro}, we present the dependent combinator calculus (\dccbf): our extension of categorical combinators (\cclbf) \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
-  \item In \ref{funext}, we prove that computable function extensionality is a natural consequence of \(\eta\)-reduction in DCC, rather than being an axiom.
-  \item In \ref{eqreflect}, we prove that extensional equality reflection is a natural consequence of DCC's architecture based on affine logic.
+  \item In \ref{dccintro}, we present the dependent combinator calculus (\dccbf): our extension of the categorical combinators (\cclbf, as in the categorical abstract machine) \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules for conversion and inference rules.
+  \item In \(\ldots\) (\textit{todo}), we prove some basic properties of conversion in DCC: strong normalization, confluence, and uniqueness of normal forms.
   \item In \ref{decidable}, we prove that type checking is decidable in DCC.
+  \item In \(\ldots\) (\textit{todo}), we prove some properties of judgments in DCC which are computable definitions, rather than theorems in \(\textbf{Prop}\): subject-reduction, progress, and that the bottom type is not inhabited by any values.
+  \item In \ref{eqreflect}, we prove that extensional equality reflection is a natural consequence of DCC's architecture based on affine logic. We do so as a computable definition, rather than a theorem in \(\textbf{Prop}\).
   \item In \ref{compilelean}, we present a procedure for compiling the subset of Lean 4 that maps to the base Calculus of Constructions to DCC.
 \end{itemize}
 
@@ -176,5 +192,7 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 \subsection{Background}
 
 \textit{TODO later after main sections done}
+
+\printbibliography
 
 \end{document}

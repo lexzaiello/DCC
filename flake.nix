@@ -125,12 +125,16 @@
         #  name = "red";
         #  path = "papers/red";
         #}
+        #{
+        #  name = "paper3";
+        #  path = "papers/paper3";
+        #}
         {
-          name = "paper3";
-          path = "papers/paper3";
+          name = "paper4";
+          path = "papers/paper4";
         }
-        { name = "summary";
-          path = "papers/summary"; }
+        #{ name = "summary";
+        #  path = "papers/summary"; }
         #{
           #name = "paper2";
           #path = "papers/paper2";

@@ -679,7 +679,83 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
         focus
         cases a
         done)
-      case eq'₁ => exact .inr ⟨_, by constructor⟩
+      case pi =>
+        cases a with
+        | app ht =>
+          cases ht
+          expose_names
+          cases ((a_13.push_head (.congrFun .quot)).push_head .quot).elim_norm (by grind)
+      case ind_bot₁ =>
+        cases a with
+        | app ht =>
+          cases ht
+          case _ =>
+            expose_names
+            have h := Arrow.is_norm a_6 (Judge.is_norm (by assumption))
+            have ⟨hn_δ, _⟩ := h
+            cases ((DefEq.push_head (by assumption) .quot).elim_norml hn_δ).elim_norm (Judge.is_norm (by assumption))
+            have heq := (RedNorm.push_head (by assumption) (.congrFun .quot)).pi_eq
+            simp [congr_reduce₂ (e := (α_1.quot Expr.bot)) (by grind),
+              points,
+              set_points] at heq
+            cases heq.1.1; cases heq.1.2; cases heq.2
+            clear heq
+            replace a_1 := (elim_reduce_norm_fst bot_is_norm) ▸ ((a_1.push_head .quot).elim_norml (reduce_norm rfl)).elim_norm
+              (Judge.is_norm (by assumption))
+            cases a_1
+            cases a_2.elim_bot h₂
+      case ind_bool₁ =>
+        expose_names
+        cases a with
+        | app ht =>
+          cases ht
+          case _ =>
+            expose_names
+            have h := Arrow.is_norm a_8 (Judge.is_norm (by assumption))
+            have ⟨hn_δ, _⟩ := h
+            cases ((DefEq.push_head (by assumption) .quot).elim_norml hn_δ).elim_norm (Judge.is_norm (by assumption))
+            have heq := (RedNorm.push_head (by assumption) (.congrFun .quot)).pi_eq
+            simp [congr_reduce₂ (e := (α_1.quot Expr.bool)) (by grind),
+              points,
+              set_points] at heq
+            cases heq.1.1; cases heq.1.2; cases heq.2
+            clear heq
+            replace a_1 := (elim_reduce_norm_fst bool_is_norm) ▸ ((a_1.push_head .quot).elim_norml (reduce_norm rfl)).elim_norm
+              (Judge.is_norm (by assumption))
+            cases a_1
+            have h := h₂.inv_bool a_2
+            match h with
+            | .inl ⟨heq⟩ =>
+              cases heq
+              exact .inr ⟨_, by constructor⟩
+            | .inr ⟨heq⟩ =>
+              cases heq
+              exact .inr ⟨_, by constructor⟩
+      case curr'₁ =>
+        expose_names
+        cases a with
+        | app ht =>
+          cases ht
+          case _ =>
+            expose_names
+            have h := Arrow.is_norm (by assumption) (Judge.is_norm (by assumption))
+            have ⟨hn_δ, _⟩ := h
+            cases ((DefEq.push_head (by assumption) .quot).elim_norml (bang_is_norm (by assumption))).elim_norm (Judge.is_norm (by assumption))
+            have heq := (RedNorm.push_head (by assumption) (.congrFun .quot)).pi_eq
+            simp [congr_reduce₁ (e := B'.map) (by grind),
+              congr_reduce₁ (e := y.box) (by grind),
+              points,
+              set_points] at heq
+            cases heq.1.1; cases heq.1.2; cases heq.2
+            replace a_1 := (a_1.push_head .map).elim_normr (Judge.is_norm (by assumption))
+            cases a_1.unique ⟨aff_mk_point' (n := 0) (reduce_sound rfl), bang_is_norm (reduce_norm rfl)⟩
+            have ⟨x₀, heq⟩ := h₂.inv_box a_2
+            cases heq
+            exact .inr ⟨_, by constructor⟩
+      case curr₁ => exact .inr ⟨_, by constructor⟩
+      case eq'₁ =>
+        exact .inl (.eq'₂ (by assumption) (by assumption) (by assumption))
+      case eq'₂ => exact .inr ⟨_, by constructor⟩
       case eql₁ =>
         cases a with
         | app ht =>

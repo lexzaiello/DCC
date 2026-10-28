@@ -1,0 +1,180 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[dvipsnames]{xcolor}
+\definecolor{leanblue}{RGB}{28, 54, 86}
+\newcommand{\comment}[1]{}
+\usepackage{tabularx}
+\usepackage{verbatim}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{textcomp}
+\usepackage[a4paper, margin={1in}]{geometry}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{xparse}
+\usepackage{fontawesome5}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\usepackage{bbm}
+\setmonofont{FreeMono}
+\usepackage{minted}
+\setminted{breaklines=true, breakanywhere=true}
+\fvset{breaklines=true, breakanywhere=true}
+\newminted[leancode]{lean4}{fontsize=\footnotesize}
+\usemintedstyle{tango}
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+
+\usepackage{amsthm}
+\usepackage{authblk}
+\usepackage{biblatex}
+\usepackage{mathpartir}
+\usepackage{stmaryrd}
+\usepackage{amssymb}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\addbibresource{./refs.bib}
+
+\newcommand{\dcc}{\(\text{DCC}\)}
+\newcommand{\dccbf}{\(\textbf{DCC}\)}
+\newcommand{\dcce}{\text{DCC}}
+\newcommand{\dccebf}{\textbf{DCC}}
+\newcommand{\ccc}{\(\text{CCC}\)} % Cartesian-closed category
+\newcommand{\cccbf}{\(\textbf{CCC}\)} % Cartesian-closed category
+\newcommand{\ccl}{\(\text{CCL}\)} % Categorical combinatory logic
+\newcommand{\cclbf}{\(\textbf{CCL}\)} % Categorical combinatory logic
+\newcommand{\ccle}{\text{CCL}}
+\newcommand{\cclebf}{\textbf{CCL}}
+\newcommand{\cclk}{\(\text{CCL}_\text{K}\)} % Simply-typed categorical combinatory logic
+\newcommand{\cclkbf}{\(\textbf{CCL}_\textbf{K}\)} % Simply-typed categorical combinatory logic
+\newcommand{\cclke}{\text{CCL}_\text{K}}
+\newcommand{\sk}{\(\text{SK}\)}
+\newcommand{\skbf}{\(\textbf{SK}\)}
+\newcommand{\ske}{\text{SK}}
+\newcommand{\skebf}{\textbf{SK}}
+\newcommand{\cclkebf}{\textbf{CCL}_\textbf{K}}
+\newcommand{\llb}{\llbracket}
+\newcommand{\rrb}{\rrbracket}
+\newcommand{\leanlink}[2]{
+  \hfill \href{#1}{\textcolor{leanblue}\faCheckSquare~[Formalized: \texttt{#2}]}%
+}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\NewDocumentCommand{\pair}{o m}{
+  \IfNoValueTF{#1}{\la #2 \ra}{\llb #1 \rrb \la #2 \ra}
+}
+\NewDocumentCommand{\comp}{o m m}{
+  \IfNoValueTF{#1}{#2 \circ #3}{
+    \Ifstr{#1}{'}{
+      #2 \circ' #3
+    }{%
+      \Ifstr{#1}{2}{#2 \circ \circ #3
+      }{#2 \circ' #3}
+    }
+  }
+}
+\NewDocumentCommand{\cc}{o m}{
+  \IfNoValueTF{#1}{\llb #2 \rrb}{\llb #2 \rrb_{#1}}
+}
+\NewDocumentCommand{\coup}{o m}{
+  \IfNoValueTF{#1}{(#2)
+  }{\llb #1 \rrb (#2)}
+}
+\newcommand{\arr}{\rightarrow}
+\newcommand{\sort}[1]{\text{Sort}_{#1}}
+\newcommand{\type}[1]{\text{Type}_{#1}}
+\newcommand{\barr}{\arr_{\beta}}
+\newcommand{\barrc}[1]{\arr_{\beta^{#1}}}
+\newcommand{\barrn}{\arr_{\beta}^{!}}
+\newcommand{\earr}{\arr_{\eta}}
+\newcommand{\affarr}{\rightarrowtail}
+\newcommand{\affetaarr}{\rightarrowtail_{\eta}}
+\newcommand{\etaarr}{\rightarrow_{\eta}}
+\newcommand{\dom}[1]{\text{dom}(#1)}
+\newcommand{\domtwo}[1]{\text{dom}_{2}(#1)}
+\newcommand{\comb}[2]{#1(#2)}
+\newcommand{\arity}[2]{\text{arity} #1 = #2}
+\newcommand{\efn}[2]{\text{F}_{\eta}\ #1\ #2}
+\newcommand{\ddom}{\text{Domain}\ }
+\newcommand{\dddom}{\text{Domain}_{2}\ }
+\newcommand{\hole}{\text{Hole}\ }
+
+\title{Combinator Calculus: Decidable Type Checking in Extensional Type Theory}
+\author[1]{Lexi Aiello}
+\author[2]{Eric Klavins}
+\affil[1]{Department of Philosophy, University of Washington}
+\affil[2]{Electrical \& Computer Engineering Department, University of Washington}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  \textit{TODO}
+\end{abstract}
+
+\section{TODO}
+
+Should be structured around building up to the fundamental theorem: extensional equality reflection.
+
+\begin{itemize}
+  \item Update results section
+   \begin{itemize}
+      \item It should be emphasized that equality reflection and other metatheorems (e.g., subject-reduction, progress) are computable definitions, rather than theorems in \(\textbf{Prop}\).
+  \end{itemize}
+  \item Syntax
+    \begin{itemize}
+      \item Give a presentation in BNF notation
+    \end{itemize}
+  \item Conversion rules
+  \begin{itemize}
+    \item Emphasize that we use call by value operational semantics as usual
+    \item \textbf{Proof}: Confluence by newmann's lemma
+  \end{itemize}
+  \item \textbf{Proof}: Termination by decreasing syntactic size
+    \begin{itemize}
+      \item Sizes should be somewhat justified, rather than the random values found in the formalization
+    \end{itemize}
+  \item Inference rules
+    \begin{itemize}
+      \item Must explain arrows, different kinds of arrows, inductives used for representing arrow types. \textit{This can be done through a rule in the main inference rules diagram}.
+      \item Inference rules should be given first as a full page diagram, and then justified for some in particular (\textit{which ones?})
+    \end{itemize}
+  \item Extensional equality reflection proof - \textit{note: this requires subject reduction and progress}
+  \begin{itemize}
+    \item \textbf{Proof}: Decidability
+    \item \textbf{Proof}: Subject-reduction lemma
+    \item \textbf{Proof}: Progress theorem
+      \begin{itemize}
+        \item Canonical values should be justified
+        \item Emphasize that the rule for \(\bot{}.Rec\) is not for \(\bot\), but partial application of its recursor
+        \item \textbf{Proof}: Inversion lemmas
+        \item \textbf{Proof}: \(\bot\) is not inhabited by any values
+      \end{itemize}
+  \end{itemize}
+\end{itemize}
+
+\section{Introduction}
+
+\textit{TODO later after main sections done}
+
+\subsection{Results}
+
+\begin{itemize}
+  \item In \ref{dccintro}, we present the dependent combinator calculus (\dccbf): our extension of categorical combinators (\cclbf) \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules, inference rules, and \(\eta\)-reduction rules.
+  \item In \ref{funext}, we prove that computable function extensionality is a natural consequence of \(\eta\)-reduction in DCC, rather than being an axiom.
+  \item In \ref{eqreflect}, we prove that extensional equality reflection is a natural consequence of DCC's architecture based on affine logic.
+  \item In \ref{decidable}, we prove that type checking is decidable in DCC.
+  \item In \ref{compilelean}, we present a procedure for compiling the subset of Lean 4 that maps to the base Calculus of Constructions to DCC.
+\end{itemize}
+
+All of our results have been formalized in the Lean 4 proof assistant. To this date, DCC is the only calculus where these features coexist: extensional equality reflection; computable function extensionality; and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit these features by construction.
+
+\subsection{Background}
+
+\textit{TODO later after main sections done}
+
+\end{document}

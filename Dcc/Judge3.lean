@@ -428,7 +428,8 @@ abbrev comp.g.type := Arrow
 
 open Dsl in
 inductive Judge : Expr → Expr → Type where
-  | eq     : Judge x τ₁
+  | eq     : Judge A (DCC (Sort u))
+    → Judge x τ₁
     → Judge y τ₂
     → τ₁ ≡ τ₂
     → τ₂ ≡ A
@@ -556,8 +557,7 @@ inductive Judge : Expr → Expr → Type where
     → Judge C τ_C
     → B →ᵦ B'
     → Pi.C.type B' A s τ_C
-    → #(Pi.type A v s) →ᵦ τ
-    → Judge (open Dsl in (DCC (Π B C))) τ
+    → Judge (open Dsl in (DCC (Π B C))) (Pi.type A v s)
   | sort    : Judge (DCC Sort m) (DCC Sort m.succ)
   | top     : Judge (DCC 𝟙) Top.type
   | bot     : Judge (DCC 𝟘) Bot.type
@@ -576,8 +576,8 @@ inductive Judge : Expr → Expr → Type where
   | ind_bot  : Judge motive τ_motive
     → Arrow A τ_motive₂ τ_motive
     → Arrow (DCC 𝟘) (DCC Sort v) τ_motive₂
-    → ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟘) motive))) ∗) →ᵦ τ'
-    → Judge (DCC (𝟘.Rec motive)) τ'
+    → motive →ᵦ motive'
+    → Judge (DCC (𝟘.Rec motive)) (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟘) motive'))) ∗))
   | ind_bool : Judge motive τ_motive
     → Arrow A τ_motive₂ τ_motive
     → Arrow (DCC 𝟚) (DCC Sort v) τ_motive₂
@@ -735,19 +735,23 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
       else .error (.mismatch (comp.g.type α β m) (DCC (Π(Id(Sort m), `(_m, *<Σ(__a, Λ(_a, _b, `(___a, β)))>)) !(α))) g)-/
     | .error ε => .error (.sub g ε)
   | DCC (= A x y) =>
-    match infer x with
-    | .ok ⟨t_x, ht₁⟩ =>
-      match infer y with
-      | .ok ⟨t_y, ht₂⟩ =>
-        match t_x.def_eq? t_y with
-        | .ok h =>
-          match def_eq? t_y A with
-          | .ok h₃ =>
-            .ok ⟨_, .eq ht₁ ht₂ h h₃⟩
+    match infer A with
+    | .ok ⟨DCC Sort u, ht₀⟩ =>
+      match infer x with
+      | .ok ⟨t_x, ht₁⟩ =>
+        match infer y with
+        | .ok ⟨t_y, ht₂⟩ =>
+          match t_x.def_eq? t_y with
+          | .ok h =>
+            match def_eq? t_y A with
+            | .ok h₃ =>
+              .ok ⟨_, .eq ht₀ ht₁ ht₂ h h₃⟩
+            | .error e => .error (.def_eq e)
           | .error e => .error (.def_eq e)
-        | .error e => .error (.def_eq e)
-      | .error ε => .error (.sub y ε)
-    | .error ε => .error (.sub x ε)
+        | .error ε => .error (.sub y ε)
+      | .error ε => .error (.sub x ε)
+    | .ok ⟨τ_A, _⟩ => .error (.sub A (.unexpected A τ_A))
+    | .error ε => .error (.sub A ε)
   | DCC (Eql f_α) =>
     match infer f_α with
     | .ok ⟨τ, ht₁⟩ =>
@@ -936,7 +940,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         | .ok ⟨τ_C, ht₂⟩ =>
           match τ_C.view_pi_f_β (reduce_all B) A with
           | .ok ⟨_s, h₂⟩ =>
-            .ok ⟨_, .pi ht₁ harr ht₂ (reduce_reduces rfl) h₂ (reduce_reduces rfl)⟩
+            .ok ⟨_, .pi ht₁ harr ht₂ (reduce_reduces rfl) h₂⟩
           | _ => .error (.mark 4 (.unexpected τ_C C))
         | .error ε => .error (.mark 3 (.sub C ε))
       | _ => .error (.mark 2 (.unexpected τ_B B))

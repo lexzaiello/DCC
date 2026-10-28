@@ -222,6 +222,14 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
     expose_names
     have ⟨hn_A, _⟩ := a_1.is_norm (by assumption)
     exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) hn_A) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (pi_is_norm₀ (quot_is_norm hn_A (fun ⟨_, h⟩ => nomatch h)) (RedNorm.is_norm (by assumption)))) (fun ⟨_, h⟩ => nomatch h)
+  case ind_bot =>
+    expose_names
+    have ⟨hn_A, _⟩ := a_1.is_norm a_ih
+    exact pi_is_norm (quot_is_norm (by grind) hn_A) (quot_is_norm (by grind) (pi_is_norm₀ (quot_is_norm hn_A (by grind)) a_3.is_norm)) (by grind)
+  case pi =>
+    expose_names
+    have ⟨hn_A, _⟩ := a_1.is_norm a_ih
+    exact arr_is_norm hn_A (by grind)
   case curr' =>
     expose_names
     unfold curr'.type

@@ -248,7 +248,7 @@ The base objects are a modified superset of the base terms in \cclk{}. Products 
 
 \section{Conversion Rules}
 
-Conversion uses call-by-value operational semantics and is a modified superset of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms.
+Conversion uses call-by-value operational semantics and is a modified superset of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms. We do not have a recursor for equality, since DCC is extensional (\textit{TODO: reference later section}) and propositional equality coincides with definitional equality, so it is not necessary.
 
 \begin{definition}
   The identity, quotation, and composition are the same as in \cclk{}:
@@ -384,7 +384,13 @@ Conversion uses call-by-value operational semantics and is a modified superset o
   \]
 \end{definition}
 
-Operations are added to curry and transform affine boxed terms. The pair rule is restricted affinely.
+\subsection{Some Properties of Conversion}
+
+DCC is provably strongly normalizing due to our choice of affine logic. DCC is also locally confluent, and thus globally confluent by Newmann's lemma. As such, normal forms are unique and \(\beta\)-equality is decidable. We use this fact to establish judgmental decidability.
+
+\subsubsection{Strong Normalization by Decreasing Measure}
+
+
 
 \section{Inference Rules}
 

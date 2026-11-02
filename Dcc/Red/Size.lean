@@ -23,8 +23,8 @@ namespace Expr
 def size (e : Expr) : ℕ :=
   match e with
   | DCC ∗ => 1
-  | DCC 𝟙 => 2
-  | DCC 𝟘 => 2
+  | DCC 𝟙 => 1
+  | DCC 𝟘 => 1
   | DCC (= A x y) => (A.size + x.size + y.size) + 1
   | DCC (? m) => m.size.succ
   | DCC 𝟙₂ => 1
@@ -32,29 +32,29 @@ def size (e : Expr) : ℕ :=
   | DCC 𝟚 => 1
   | DCC (𝟚.Rec motive x y) => motive.size + x.size + y.size + 1
   | DCC (𝟘.Rec motive) => motive.size + 1
-  | DCC (Eql α)  => α.size * 80 + 17
-  | DCC (=' α)  => α.size * 80 + 17
-  | DCC (refl α) => α.size * 2 + 5
-  | DCC Sort _m => 3
+  | DCC (Eql α)  => α.size + 2
+  | DCC (=' α)  => α.size + 2
+  | DCC (refl α) => α.size + 1
+  | DCC Sort _m => 1
   | DCC (Σ α β) => α.size + β.size + 1
   | DCC (Σ' α β) => α.size + β.size + 1
   | DCC (`β x) => β.size + x.size + 1
   | DCC (,β x y) => β.size + x.size + y.size + 1
   | DCC (Id α)      => α.size + 1
-  | DCC (Fst β)    => β.size + 2
-  | DCC (Snd β)    => β.size + 2
-  | DCC (Swap B C)    => (B.size + 1) + (C.size + 1) * 5
-  | DCC (Π α β) => 10 * ((100 * (α.size + 5)) + (100 * (β.size + 5)))
-  | DCC (∘ f g)  => f.size + f.size + g.size + 3
+  | DCC (Fst β)    => β.size + 1
+  | DCC (Snd β)    => β.size + 1
+  | DCC (Swap B C)    => B.size + C.size + 2
+  | DCC (Π α β) => α.size + β.size + 1
+  | DCC (∘ f g)  => f.size + g.size + 1
   | DCC (⟨,⟩β a b)   => 3 * (β.size + a.size + a.size + b.size + 3)
-  | DCC (Λ α β x) => (α.size * 2) + β.size * 2 + (x.size * 2) + 3
   | DCC (!Λ α β x) => (α.size * 2) + (6 * (β.size + 1)) + (x.size * 2) + 5
-  | DCC (Eval α β x) => α.size + β.size + x.size + 4
+  | DCC (Λ α β x) => α.size + β.size + x.size + 2
+  | DCC (Eval α β x) => α.size + β.size + x.size + 1
   | DCC (!x)   => x.size + 1
-  | DCC (*x)   => 10 * x.size + 4
-  | DCC (&x)   => (5 * x.size) + 1
-  | DCC (!<> x)   => x.size + x.size + x.size + 4
-  | DCC ($<> x)   => 5 * x.size + 4
+  | DCC (*x)   => x.size + 1
+  | DCC (&x)   => (x.size * 5) + 1
+  | DCC (!<> x)   => x.size + 2
+  | DCC ($<> x)   => (x.size * 5) + 1
   | DCC (f x) => f.size + x.size
   | .hole _ => 1
 

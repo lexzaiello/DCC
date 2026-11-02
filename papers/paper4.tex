@@ -62,6 +62,10 @@
 \newcommand{\skebf}{\textbf{SK}}
 \newcommand{\cclkebf}{\textbf{CCL}_\textbf{K}}
 \newcommand{\llb}{\llbracket}
+\NewDocumentCommand{\comb}{o o o o o}{
+  \IfNoValueTF{#5}{
+    \IfNoValueTF{#4}{
+      \IfNoValueTF{#3}{(#1\ #2)}{(#1\ #2\ #3)}}{(#1\ #2\ #3\ #4)}}{(#1\ #2\ #3\ #4\ #5)}}
 \newcommand{\rrb}{\rrbracket}
 \newcommand{\leanlink}[2]{
   \hfill \href{#1}{\textcolor{leanblue}\faCheckSquare~[Formalized: \texttt{#2}]}%
@@ -100,7 +104,6 @@
 \newcommand{\etaarr}{\rightarrow_{\eta}}
 \newcommand{\dom}[1]{\text{dom}(#1)}
 \newcommand{\domtwo}[1]{\text{dom}_{2}(#1)}
-\newcommand{\comb}[2]{#1(#2)}
 \newcommand{\arity}[2]{\text{arity} #1 = #2}
 \newcommand{\efn}[2]{\text{F}_{\eta}\ #1\ #2}
 \newcommand{\ddom}{\text{Domain}\ }
@@ -130,17 +133,17 @@ Should be structured around building up to the fundamental theorem: extensional 
    \begin{itemize}
       \item \sout{It should be emphasized that equality reflection and other metatheorems (e.g., subject-reduction, progress) are computable definitions, rather than theorems in \(\textbf{Prop}\).}
   \end{itemize}
-  \item Syntax
+  \item \sout{Syntax}
     \begin{itemize}
-      \item Give a presentation in BNF notation
+      \item \sout{Give a presentation in BNF notation}
     \end{itemize}
   \item Conversion rules
   \begin{itemize}
-    \item Emphasize that we use call by value operational semantics as usual
-    \item Explain how \(Eval\) is essentially the recursor for \(\Sigma\)
-    \item Congruences
+    \item \sout{Emphasize that we use call by value operational semantics as usual}
+    \item \sout{Explain how \(Eval\) is essentially the recursor for \(\Sigma\)}
+    \item \sout{Congruences}
     \begin{itemize}
-      \item Explain combinator points, maybe do this in syntax section though
+      \item \sout{Explain combinator points, maybe do this in syntax section though}
     \end{itemize}
     \item \textbf{Proof}: Termination by decreasing syntactic size
     \begin{itemize}
@@ -186,7 +189,7 @@ Should be structured around building up to the fundamental theorem: extensional 
   \item In \ref{dccintro}, we present the dependent combinator calculus (\dccbf): our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules and inference rules.
   \item In \(\ldots\) (\textit{todo}), we prove some basic properties of conversion in DCC: strong normalization, confluence, and uniqueness of normal forms.
   \item In \ref{decidable}, we prove that type checking is decidable in DCC.
-  \item In \(\ldots\) (\textit{todo}), we prove that subject-reduction and progress hold in DCC, and that the bottom type is not uninhabited.
+  \item In \(\ldots\) (\textit{todo}), we prove that subject-reduction and progress hold in DCC, and that DCC is consistent.
   \item In \ref{eqreflect}, we prove that extensional equality reflection holds in DCC. The proof is a computable definition, rather than a theorem in \(\textbf{Prop}\).
   \item In \ref{compilelean}, we present a procedure for compiling the subset of Lean 4 that maps to the base Calculus of Constructions to DCC.
 \end{itemize}
@@ -197,54 +200,191 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 
 \section{Term Syntax}
 
-The base objects are a modified superset of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), sorts are added, and bottom, top, boolean types are added with the corresponding introducing terms.
-
-The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
+The base objects are a modified superset of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), sorts are added, and bottom, top, and boolean types are added with the corresponding introducing terms. The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
 
 \begin{definition}\label{def:constants}
-  Constants (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)), and boolean type (\(\mathbb{2}\)) along with their inhabitants \(\ast\), \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\):
-  \begin{equation}
+  Constants (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)) type and its inhabitant (\(\ast\)), and the boolean type (\(\mathbb{2}\)) along with its inhabitants \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\):
+  \[
     \begin{gathered}
       E_c \coloneq \{\sort{u}, \mathbb{0}, \mathbb{1}, \mathbb{2}, \ast, \mathbb{1}_{\mathbb{2}}, \mathbb{0}_{\mathbb{2}}\}
     \end{gathered}
-  \end{equation}
+  \]
+  where \(u \in \mathbb{N}\).
 \end{definition}\label{def:constants}
 
 \begin{definition}\label{def:combinator}
-  Combinators are identified by a name being one of:
-  \begin{equation}
+  Combinators are identified by the set of names \(C\):
+  \[
     \begin{gathered}
-      C \coloneq \{\mathbb{0}.Rec, \mathbb{2}.Rec, !<>, \$<>, *, !, \&, =, Eval, Eql, =', refl, `, Id, Fst, Snd, Swap, \Sigma, \Sigma', \Lambda, !\Lambda, \Pi, \circ, \langle \, \rangle, \,\}
+      C \coloneq \{\mathbb{0}.Rec, \mathbb{2}.Rec, !<>, \$<>, *, !, \&, =, Eval, Eql, =', refl, `, Id, Fst, Snd, Swap, \Sigma, \Sigma', \Lambda, !\Lambda, \Pi, \circ, \langle \, \rangle, ,\}
       \end{gathered}
-  \end{equation}
+  \]
 \end{definition}
 
 \begin{definition}\label{def:syntax}
   A term (\(E\)) is either a constant \(E_c\):
   \[E_c \subset E\]
   or a parenthesized combinator \(C\) juxtaposed by its points which are also terms:
-  \[\{ (c\ x_1 \ldots x_n) | c \in C, x \subseteq E \}\ \subseteq E\]
-  or a parenthesized application of two juxtaposed terms:
-  \[\{(f x) | f \in E, x \in E\} \subseteq E\]
+  \[\{ (c x_1 \ldots x_n) | c \in C, \{ x | x \in x_0 \ldots x_n\} \subset E \}\ \subset E\]
+  or a parenthesized application of a list of juxtaposed terms:
+  \[\{(f x_1 \ldots x_n) | f \in E, \{x | x \in x_0 \ldots x_n\} \subset E\} \subset E\]
 \end{definition}
 
 \begin{example}
-  \((Id\ A)\) is an expression.
+  If \(A \in E\), then \(\comb[Id][A] \in E\).
 \end{example}
-
-\begin{proof}
-  See \ref{def:syntax}. \(A\) is a point of \(Id\).
-\end{proof}
 
 \begin{example}
-  \(((Id\ A) x)\) is an expression.
+  If \(A, x \in E\), then \((\comb[Id][A] x) \in E\).
 \end{example}
 
-\begin{proof}
-  See \ref{def:syntax}.
-\end{proof}
+\begin{example}
+  If \(u \in \mathbb{N}\), then \(\sort{u} \in E\).
+\end{example}
+
+\begin{example}
+  If \(B, x, y \in E\), then \(\comb[,B][x][y] \in E\).
+\end{example}
 
 \section{Conversion Rules}
+
+Conversion uses call-by-value operational semantics and is a modified superset of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms.
+
+\begin{definition}
+  The identity, quotation, and composition are the same as in \cclk{}:
+  
+  \[
+    \begin{gathered}
+  \inferrule
+  { }
+  { (\comb[Id][A] x) \barr x} \qquad
+  \inferrule
+  { }
+  { (\comb[`B][x] y) \barr x}\qquad
+  \inferrule
+  { }
+  { (\comb[\circ][x][y] z) \barr (x (y z))}
+  \end{gathered}
+  \]
+\end{definition}
+
+\begin{definition}
+  Projection over couples and currying are the same as in \ccl{}, but with type arguments added:
+
+  \[
+  \inferrule
+  { }
+  { (\comb[Fst][B] \comb[,B_2][x][y]) \barr x}\qquad
+  \inferrule
+  { }
+  { (\comb[Snd][B] \comb[,B_2][x][y]) \barr y}\qquad
+  \inferrule
+  { }
+  { (\comb[\Lambda][A][B][x] y z) \barr x \comb[,B][y][z]}
+  \]
+\end{definition}
+
+\begin{definition}
+  Evaluation of couples is given as the usual recursor for \(\Sigma\):
+
+  \[
+    \inferrule
+    { }
+    { (\comb[Eval][A][B][x] \comb[,B_2][y][z]) \barr (x y z)}
+  \]
+\end{definition}
+
+\begin{definition}
+  Exchange is permitted on nondependent couples as an optimization, yielding a couple quoting the first component:
+  \[
+    \inferrule
+    { }
+    { (\comb[Swap][A][B] \comb[,B_2][x][y]) \barr \comb[\comb[`B][A]][y][x]}
+  \]
+\end{definition}
+
+\begin{definition}
+  Boxed terms may be unboxed, mapped into banged types, and mapped over into other boxed terms:
+  \[
+    \inferrule
+    { }
+    { (\comb[*][A] \comb[\&][x]) \barr x}\qquad
+    \inferrule
+    { }
+    { (\comb[!<>][x] \comb[\&][y]) \barr \comb[!][(x y)]}\qquad
+    \inferrule
+    { }
+    { (\comb[\$<>][x] \comb[\&][y]) \barr \comb[\&][(x y)]}
+  \]
+\end{definition}
+
+\begin{definition}
+  Boxed terms can also be curried:
+  \[
+    \inferrule
+    { }
+    { (\comb[!\Lambda][A][B][x] \comb[\&][y] \comb[\&][z]) \barr (x \comb[\&][\comb[,B][y][z]])}
+  \]
+\end{definition}
+
+\begin{definition}
+  As opposed to its usual behavior in \ccl{}, the pair rule consumes boxed terms and duplicates its argument so as to be fully dependent:
+  \[
+    \inferrule
+    { }
+    { (\comb[\langle , \rangle B][x][y] \comb[\&][x]) \barr \comb[,(B x)][(M x)][(N x (M x))]}
+  \]
+\end{definition}
+
+\begin{definition}
+  Equality types can also be formed by the combinators \(='\) and \(Eql\), which index an environment determining the arguments' types:
+  \[
+    \inferrule
+    { }
+    {(\comb[='][B] x y z) \barr \comb[=(B x)][y][z]}\qquad
+    \inferrule
+    { }
+    {(\comb[Eql][B] \comb[\&][x] \comb[\&][y]) \barr \comb[=(B x)][y][y]}
+  \]
+\end{definition}
+
+\begin{definition}
+  \(\Sigma\)-types can be formed from boxes:
+  \[
+    \inferrule
+    { }
+    {(\comb[\Sigma'][B][C] \comb[\&][x]) \barr \comb[\Sigma][(B x)][(C x)]}
+  \]
+\end{definition}
+
+\begin{definition}
+  We have a recursor for \(\mathbb{2}\):
+  \[
+    \inferrule
+    { }
+    { (\comb[\mathbb{2}.Rec][motive][x][y] z \mathbb{1}_\mathbb{2}) \barr (x z \mathbb{1}_\mathbb{2})}\qquad
+    \inferrule
+    { }
+    { (\comb[\mathbb{2}.Rec][motive][x][y] z \mathbb{0}_\mathbb{2}) \barr (y z \mathbb{0}_\mathbb{2})}
+  \]
+\end{definition}
+
+\begin{definition}
+  Finally, there are pointwise congruences for combinators and congruences for application:
+  \[
+    \inferrule
+    { c \in C \qquad i < n \qquad x_i \barr x'_i }
+    { (c x_0 \ldots x_n) \barr (c x'_0 \ldots x'_n)}\qquad
+    \inferrule
+    { f \barr f'}
+    { (f x) \barr (f' x)}\qquad
+    \inferrule
+    { x \barr x'}
+    { (f x) \barr (f x')}
+  \]
+\end{definition}
+
+Operations are added to curry and transform affine boxed terms. The pair rule is restricted affinely.
 
 \section{Inference Rules}
 

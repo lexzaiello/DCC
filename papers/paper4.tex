@@ -15,6 +15,8 @@
 \usepackage[english]{babel}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[bb=boondox]{mathalfa}
 \usepackage{xparse}
 \usepackage{fontawesome5}
 \usepackage{amsfonts}
@@ -37,6 +39,8 @@
 \usepackage{amssymb}
 \newtheorem{lemma}{Lemma}
 \newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
 \addbibresource{./refs.bib}
 
 \newcommand{\dcc}{\(\text{DCC}\)}
@@ -85,7 +89,7 @@
   }{\llb #1 \rrb (#2)}
 }
 \newcommand{\arr}{\rightarrow}
-\newcommand{\sort}[1]{\text{Sort}_{#1}}
+\newcommand{\sort}[1]{\text{Sort}\ #1}
 \newcommand{\type}[1]{\text{Type}_{#1}}
 \newcommand{\barr}{\arr_{\beta}}
 \newcommand{\barrc}[1]{\arr_{\beta^{#1}}}
@@ -179,17 +183,84 @@ Should be structured around building up to the fundamental theorem: extensional 
 \subsection{Results}
 
 \begin{itemize}
-  \item In \ref{dccintro}, we present the dependent combinator calculus (\dccbf): our extension of the categorical combinators (\cclbf, as in the categorical abstract machine) \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules for conversion and inference rules.
+  \item In \ref{dccintro}, we present the dependent combinator calculus (\dccbf): our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules and inference rules.
   \item In \(\ldots\) (\textit{todo}), we prove some basic properties of conversion in DCC: strong normalization, confluence, and uniqueness of normal forms.
   \item In \ref{decidable}, we prove that type checking is decidable in DCC.
-  \item In \(\ldots\) (\textit{todo}), we prove some properties of judgments in DCC which are computable definitions, rather than theorems in \(\textbf{Prop}\): subject-reduction, progress, and that the bottom type is not inhabited by any values.
-  \item In \ref{eqreflect}, we prove that extensional equality reflection is a natural consequence of DCC's architecture based on affine logic. We do so as a computable definition, rather than a theorem in \(\textbf{Prop}\).
+  \item In \(\ldots\) (\textit{todo}), we prove that subject-reduction and progress hold in DCC, and that the bottom type is not uninhabited.
+  \item In \ref{eqreflect}, we prove that extensional equality reflection holds in DCC. The proof is a computable definition, rather than a theorem in \(\textbf{Prop}\).
   \item In \ref{compilelean}, we present a procedure for compiling the subset of Lean 4 that maps to the base Calculus of Constructions to DCC.
 \end{itemize}
 
-All of our results have been formalized in the Lean 4 proof assistant. To this date, DCC is the only calculus where these features coexist: extensional equality reflection; computable function extensionality; and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit these features by construction.
+All of our results have been formalized in the Lean 4 proof assistant. To this date, DCC is the only calculus with extensional equality reflection and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit these features by construction.
 
 \subsection{Background}
+
+\section{Term Syntax}
+
+The base objects are a modified superset of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), sorts are added, and bottom, top, boolean types are added with the corresponding introducing terms.
+
+The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
+
+\begin{definition}\label{def:constants}
+  Constants (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)), and boolean type (\(\mathbb{2}\)) along with their inhabitants \(\ast\), \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\):
+  \begin{equation}
+    \begin{gathered}
+      E_c \coloneq \{\sort{u}, \mathbb{0}, \mathbb{1}, \mathbb{2}, \ast, \mathbb{1}_{\mathbb{2}}, \mathbb{0}_{\mathbb{2}}\}
+    \end{gathered}
+  \end{equation}
+\end{definition}\label{def:constants}
+
+\begin{definition}\label{def:combinator}
+  Combinators are identified by a name being one of:
+  \begin{equation}
+    \begin{gathered}
+      C \coloneq \{\mathbb{0}.Rec, \mathbb{2}.Rec, !<>, \$<>, *, !, \&, =, Eval, Eql, =', refl, `, Id, Fst, Snd, Swap, \Sigma, \Sigma', \Lambda, !\Lambda, \Pi, \circ, \langle \, \rangle, \,\}
+      \end{gathered}
+  \end{equation}
+\end{definition}
+
+\begin{definition}\label{def:syntax}
+  A term (\(E\)) is either a constant \(E_c\):
+  \[E_c \subset E\]
+  or a parenthesized combinator \(C\) juxtaposed by its points which are also terms:
+  \[\{ (c\ x_1 \ldots x_n) | c \in C, x \subseteq E \}\ \subseteq E\]
+  or a parenthesized application of two juxtaposed terms:
+  \[\{(f x) | f \in E, x \in E\} \subseteq E\]
+\end{definition}
+
+\begin{example}
+  \((Id\ A)\) is an expression.
+\end{example}
+
+\begin{proof}
+  See \ref{def:syntax}. \(A\) is a point of \(Id\).
+\end{proof}
+
+\begin{example}
+  \(((Id\ A) x)\) is an expression.
+\end{example}
+
+\begin{proof}
+  See \ref{def:syntax}.
+\end{proof}
+
+\section{Conversion Rules}
+
+\section{Inference Rules}
+
+\subsection{Type-Checking is Decidable}
+
+\section{Computable Equality Reflection}
+
+\section{Examples}
+
+\section{Compiling Lean 4 to DCC}
+
+\section{Comparison to SK Combinators}
+
+\section{Limitations}
+
+\section{Conclusion}
 
 \textit{TODO later after main sections done}
 

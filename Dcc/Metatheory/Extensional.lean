@@ -131,6 +131,11 @@ termination_by e.size
 
 #check elim_eq
 
+def eq_of_eq (ht : Judge e (DCC (= A x y))) : x = y :=
+  have hn₁ : IsNorm Red x := fun ⟨_, h⟩ => ht.is_norm ⟨_, .point 1 (by grind) h⟩
+  have hn₂ : IsNorm Red y := fun ⟨_, h⟩ => ht.is_norm ⟨_, .point 2 (by grind) h⟩
+  (ht.elim_eq.elim_norml hn₁).elim_norm hn₂
+
 end Judge
 
 end Expr

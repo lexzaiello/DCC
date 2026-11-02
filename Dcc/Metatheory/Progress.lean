@@ -441,7 +441,7 @@ def inv_refl (h : Judge (DCC ((refl B) (& x) (& y))) τ) : τ = (DCC (= #((reduc
           exact .trans (congrFun' (reduce_sound rfl)) (congrArg' (reduce_sound rfl))
         · exact reduce_norm rfl
 
-def elim_bot (ht : Judge e (DCC 𝟘)) (hv : Value e) : False := by
+def elim_bot_value (ht : Judge e (DCC 𝟘)) (hv : Value e) : False := by
   cases ht with
   | app =>
     expose_names
@@ -703,7 +703,7 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
             replace a_1 := (elim_reduce_norm_fst bot_is_norm) ▸ ((a_1.push_head .quot).elim_norml (reduce_norm rfl)).elim_norm
               (Judge.is_norm (by assumption))
             cases a_1
-            cases a_2.elim_bot h₂
+            cases a_2.elim_bot_value h₂
       case ind_bool₁ =>
         expose_names
         cases a with

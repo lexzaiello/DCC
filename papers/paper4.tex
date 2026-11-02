@@ -255,13 +255,13 @@ Conversion uses call-by-value operational semantics and is a modified superset o
   
   \[
     \begin{gathered}
-  \inferrule
+  \inferrule[Id]
   { }
   { (\comb[Id][A] x) \barr x} \qquad
-  \inferrule
+  \inferrule[Quot]
   { }
   { (\comb[`B][x] y) \barr x}\qquad
-  \inferrule
+  \inferrule[Comp]
   { }
   { (\comb[\circ][x][y] z) \barr (x (y z))}
   \end{gathered}
@@ -272,13 +272,13 @@ Conversion uses call-by-value operational semantics and is a modified superset o
   Projection over couples and currying are the same as in \ccl{}, but with type arguments added:
 
   \[
-  \inferrule
+  \inferrule[Fst]
   { }
   { (\comb[Fst][B] \comb[,B_2][x][y]) \barr x}\qquad
-  \inferrule
+  \inferrule[Snd]
   { }
   { (\comb[Snd][B] \comb[,B_2][x][y]) \barr y}\qquad
-  \inferrule
+  \inferrule[Curry]
   { }
   { (\comb[\Lambda][A][B][x] y z) \barr x \comb[,B][y][z]}
   \]
@@ -288,7 +288,7 @@ Conversion uses call-by-value operational semantics and is a modified superset o
   Evaluation of couples is given as the usual recursor for \(\Sigma\):
 
   \[
-    \inferrule
+    \inferrule[Eval]
     { }
     { (\comb[Eval][A][B][x] \comb[,B_2][y][z]) \barr (x y z)}
   \]
@@ -297,7 +297,7 @@ Conversion uses call-by-value operational semantics and is a modified superset o
 \begin{definition}
   Exchange is permitted on nondependent couples as an optimization, yielding a couple quoting the first component:
   \[
-    \inferrule
+    \inferrule[Swap]
     { }
     { (\comb[Swap][A][B] \comb[,B_2][x][y]) \barr \comb[\comb[`B][A]][y][x]}
   \]
@@ -306,13 +306,13 @@ Conversion uses call-by-value operational semantics and is a modified superset o
 \begin{definition}
   Boxed terms may be unboxed, mapped into banged types, and mapped over into other boxed terms:
   \[
-    \inferrule
+    \inferrule[Unbox]
     { }
     { (\comb[*][A] \comb[\&][x]) \barr x}\qquad
-    \inferrule
+    \inferrule[Map]
     { }
     { (\comb[!<>][x] \comb[\&][y]) \barr \comb[!][(x y)]}\qquad
-    \inferrule
+    \inferrule[Fmap]
     { }
     { (\comb[\$<>][x] \comb[\&][y]) \barr \comb[\&][(x y)]}
   \]
@@ -321,7 +321,7 @@ Conversion uses call-by-value operational semantics and is a modified superset o
 \begin{definition}
   Boxed terms can also be curried:
   \[
-    \inferrule
+    \inferrule[Curry']
     { }
     { (\comb[!\Lambda][A][B][x] \comb[\&][y] \comb[\&][z]) \barr (x \comb[\&][\comb[,B][y][z]])}
   \]
@@ -330,19 +330,19 @@ Conversion uses call-by-value operational semantics and is a modified superset o
 \begin{definition}
   As opposed to its usual behavior in \ccl{}, the pair rule consumes boxed terms and duplicates its argument so as to be fully dependent:
   \[
-    \inferrule
+    \inferrule[Pair]
     { }
-    { (\comb[\langle , \rangle B][x][y] \comb[\&][x]) \barr \comb[,(B x)][(M x)][(N x (M x))]}
+    { (\comb[\langle , \rangle B][x][y] \comb[\&][z]) \barr \comb[,(B z)][(x z)][(y z (x z))]}
   \]
 \end{definition}
 
 \begin{definition}
   Equality types can also be formed by the combinators \(='\) and \(Eql\), which index an environment determining the arguments' types:
   \[
-    \inferrule
+    \inferrule[Eq']
     { }
     {(\comb[='][B] x y z) \barr \comb[=(B x)][y][z]}\qquad
-    \inferrule
+    \inferrule[Eql]
     { }
     {(\comb[Eql][B] \comb[\&][x] \comb[\&][y]) \barr \comb[=(B x)][y][y]}
   \]
@@ -351,7 +351,7 @@ Conversion uses call-by-value operational semantics and is a modified superset o
 \begin{definition}
   \(\Sigma\)-types can be formed from boxes:
   \[
-    \inferrule
+    \inferrule[Sigma']
     { }
     {(\comb[\Sigma'][B][C] \comb[\&][x]) \barr \comb[\Sigma][(B x)][(C x)]}
   \]
@@ -360,25 +360,25 @@ Conversion uses call-by-value operational semantics and is a modified superset o
 \begin{definition}
   We have a recursor for \(\mathbb{2}\):
   \[
-    \inferrule
+    \inferrule[Bool Recl.]
     { }
-    { (\comb[\mathbb{2}.Rec][motive][x][y] z \mathbb{1}_\mathbb{2}) \barr (x z \mathbb{1}_\mathbb{2})}\qquad
-    \inferrule
+    { (\comb[\mathbb{2}.Rec][B][x][y] z \mathbb{1}_\mathbb{2}) \barr (x z \mathbb{1}_\mathbb{2})}\qquad
+    \inferrule[Bool Recr.]
     { }
-    { (\comb[\mathbb{2}.Rec][motive][x][y] z \mathbb{0}_\mathbb{2}) \barr (y z \mathbb{0}_\mathbb{2})}
+    { (\comb[\mathbb{2}.Rec][B][x][y] z \mathbb{0}_\mathbb{2}) \barr (y z \mathbb{0}_\mathbb{2})}
   \]
 \end{definition}
 
 \begin{definition}
   Finally, there are pointwise congruences for combinators and congruences for application:
   \[
-    \inferrule
+    \inferrule[Point]
     { c \in C \qquad i < n \qquad x_i \barr x'_i }
     { (c x_0 \ldots x_n) \barr (c x'_0 \ldots x'_n)}\qquad
-    \inferrule
+    \inferrule[Congr. Fun.]
     { f \barr f'}
     { (f x) \barr (f' x)}\qquad
-    \inferrule
+    \inferrule[Congr. Arg.]
     { x \barr x'}
     { (f x) \barr (f x')}
   \]
@@ -394,29 +394,95 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 
 \begin{definition}
   If \(e \in E_c\), then \(size(e) = 1\), and if \((f x) \in E\) and \((f x)\) is an application, then \(size((f x)) = size(f) + size(x)\). Otherwise, combinator sizes are defined as:
-  \begin{equation*}
-    \begin{array}{r l}
-      size(\comb[Eql][A]) = size(A) + 2 & size(\comb[='][A]) = size(A) + 2\\
-      size(\comb[Id][A]) = size(A) + 1 & size(\comb[refl][A]) = size(A) + 1\\
-      size(\comb[\Sigma][A][B]) = size(A) + size(B) + 1 & size(\comb[\Sigma'][A][B]) = size(A) + size(B) + 1 \\
-      size(\comb[`B][x]) = size(B) + size(x) + 1 & size(\comb[,B][x][y]) = size(B) + size(x) + size(y) + 1\\
-      size(\comb[Fst][B]) = B.size + 1 & size(\comb[Snd][B]) = B.size + 1\\
-      size(\comb[Swap][B][C]) = size(B) + size(C) + 2 & size(\comb[\circ][x][y]) = size(x) + size(y) + 1\\
-      size(\comb[!][x]) = size(x) + 1 & size(\comb[*][x]) = size(x) + 1\\
-      size(\comb[\&][x]) = size(x) * 5 + 1 & size(\comb[!<>][x]) = size(x) + 2 \\
-      size(\comb[\Pi][B][C]) = size(B) + size(C) + 1 & size(\comb[\$<>][x]) = size(x) * 5 + 1
-    \end{array}
-  \end{equation*}
-    \begin{align*}
+  \begin{align*}
+    size(\comb[Eql][B]) &= size(B) + 2 & size(\comb[='][B]) &= size(B) + 2\\
+    size(\comb[Id][A]) &= size(A) + 1 & size(\comb[refl][B]) &= size(B) + 1\\
+    size(\comb[\Sigma][A][B]) &= size(A) + size(B) + 1 & size(\comb[\Sigma'][B][C]) &= size(B) + size(C) + 1 \\
+    size(\comb[`B][x]) &= size(B) + size(x) + 1 & size(\comb[,B][x][y]) &= size(B) + size(x) + size(y) + 1\\
+    size(\comb[Fst][B]) &= size(B) + 1 & size(\comb[Snd][B]) &= size(B) + 1\\
+    size(\comb[Swap][B][C]) &= size(B) + size(C) + 2 & size(\comb[\circ][x][y]) &= size(x) + size(y) + 1\\
+    size(\comb[!][x]) &= size(x) + 1 & size(\comb[*][A]) &= size(A) + 1\\
+    size(\comb[\&][x]) &= size(x) * 5 + 1 & size(\comb[!<>][x]) &= size(x) + 2 \\
+    size(\comb[\Pi][B][C]) &= size(B) + size(C) + 1 & size(\comb[\$<>][x]) &= size(x) * 5 + 1
+  \end{align*}
+  \begin{align*}
     size(\comb[=][A][x][y]) &= size(A) + size(x) + size(y) + 1\\
-    size(\comb[\mathbb{2}.Rec][motive][x][y]) &= size(motive) + size(x) + size(y) + 1\\
-    size(\comb[\mathbb{0}.Rec][motive]) &= size(motive) + 1\\
+    size(\comb[\mathbb{2}.Rec][x][y][z]) &= size(x) + size(y) + size(z) + 1\\
+    size(\comb[\mathbb{0}.Rec][x]) &= size(x) + 1\\
     size(\comb[\langle , \rangle B][x][y]) &= 3 * (size(B) + (2 + size(x)) + size(y) + 3)\\
     size(\comb[!\Lambda][A][B][x]) &= 2 * size(A) + 6 * (size(B) + 1) + 2 * size(x) + 5\\
     size(\comb[\Lambda][A][B][x]) &= size(A) + size(B) + size(x) + 2\\
     size(\comb[Eval][A][B][x]) &= size(A) + size(B) + size(x) + 1
-    \end{align*}
+  \end{align*}
 \end{definition}
+
+\begin{lemma}\label{lem:pointsize}
+  If \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(size(x_i) < size((c x_0 \ldots x_n))\) for all \(i < n\).
+\end{lemma}
+
+\begin{proof}
+  By induction on the form of expressions.
+\end{proof}
+
+\begin{theorem}
+  If \(A, B \in E\) and \(A \barr B\), then \(size(B) < size(A)\).
+\end{theorem}
+
+\begin{proof}
+  We proceed by induction on the reduction relation:
+  \textbf{Case Id:} \(size((\comb[Id][A] x)) = size(A) + 1 + size(x) > size(x)\)\\
+  \textbf{Case Quot:} \(size((\comb[`B][x] y)) = size(B) + size(x) + 1 + size(y) > size(x)\)\\
+  \textbf{Case Comp:} \(size((\comb[\circ][x][y] z)) = size(x) + size(y) + 1 + size(z) > size(x) + size(y) + size(z)\)\\
+  \textbf{Case Fst:} \(size((\comb[Fst][B] \comb[,B_2][x][y])) = size(B) + 1 + size(B_2) + size(x) + size(y) + 1 > size(x)\)\\
+  \textbf{Case Snd:} \(size((\comb[Snd][B] \comb[,B_2][x][y])) = size(B) + 1 + size(B_2) + size(x) + size(y) + 1 > size(y)\)\\
+  \textbf{Case Curry:} \(size((\comb[\Lambda][A][B][x] y z)) = size(A) + size(B) + size(x) + 2 + size(y) + size(z) > size(x) + size(B) + size(y) + size(z)\)\\
+  \textbf{Case Eval:} \(size((\comb[Eval][A][B][x] \comb[,B_2][y][z])) = size(A) + size(B) + size(x) + 1 + size(B_2) + size(y) + size(z) + 1 > size(x) + size(y) + size(z)\)\\
+  \textbf{Case Swap:} \(size((\comb[Swap][A][B] \comb[,B_2][x][y])) = size(B) + size(C) + 2 + size(B_2) + size(x) + size(y) + 1 > size(B) + size(A) + size(y) + size(x) + 1\)\\
+  \textbf{Case Unbox:} \(size((\comb[*][A] \comb[\&][x])) = size(A) + 1 + (size(x) * 5 + 1) > size(x)\)\\
+  \textbf{Case Map:} \(size((\comb[!<>][x] \comb[\&][y])) = size(x) + 2 + (size(y) * 5 + 1) > size((x y)) + 1\)\\
+  \textbf{Case Fmap:} \(size((\comb[\$<>][x] \comb[\&][y])) = (size(x) * 5 + 1) + (size(y) * 5 + 1) > size((x y) * 5 + 1)\)\\
+  \textbf{Case Curry':}
+    \begin{align*}
+      size((\comb[!\Lambda][A][B][x] \comb[\&][y] \comb[\&][z])) &= 2 * size(A) + 6 * (size(B) + 1) + 2*size(x) + 5 + (size(y) * 5 + 1) (size(y) * z + 1)\\
+      & > size(x) + ((5 * (size(B) + size(y) + size(z))) + 1)\\
+    \end{align*}
+  \textbf{Case Pair:}
+      \begin{align*}
+        size((\comb[\langle , \rangle B][x][y] \comb[\&][z])) = 3 * (size(B) + (size(x) + 2) + size(y) + 3) + (5 * size(z) + 1)\\
+        & > (5 * ((size(B) + size(z)) + (size(x) + size(z)) + (size(y) + size(z) + (size(x) + size(z)))) + 1)\\
+      \end{align*}
+  \textbf{Case Eq':}
+  \begin{align*}
+    size((\comb[='][B] x y z)) &= size(A) + 2 + size(x) + size(y) + size(z)\\
+    & > (size(B) + size(x)) + size(y) + size(z) + 1\\
+  \end{align*}
+  \textbf{Case Eql:}
+  \begin{align*}
+    size((\comb[Eql][B] \comb[\&][x] \comb[\&][y])) &= size(B) + 2 + (size(x) * 5 + 1) (size(y) * 5 + 1)\\
+    & > (size(B) + size(x)) + size(y) + size(y) + 1\\
+  \end{align*}
+  \textbf{Case Sigma':}
+  \begin{align*}
+    size((\comb[\Sigma'][B][C] \comb[\&][x])) &= size(B) + size(C) + 1 + (size(x) * 5 + 1)\\
+    &> (size(B) + size(x)) + (size(C) + size(x)) + 1\\
+  \end{align*}
+  \textbf{Case Bool Recl.:}
+  \begin{align*}
+    size((\comb[\mathbb{2}.Rec][B][x][y] z \mathbb{1}_\mathbb{2})) &= size(B) + size(x) + size(y) + 1 + size(z)\\
+    &> size(x) + size(z) + size(\mathbb{1}_\mathbb{2})\\
+  \end{align*}
+  \textbf{Case Bool Recr.:}
+  \begin{align*}
+    size((\comb[\mathbb{2}.Rec][B][x][y] z \mathbb{1}_\mathbb{2})) &= size(B) + size(x) + size(y) + 1 + size(z)\\
+    &> size(y) + size(z) + size(\mathbb{0}_\mathbb{2})\\
+  \end{align*}
+  \textbf{Case Point:}
+    If \((c x_0 \ldots x_n) \in E\) and \(i < n\), then \(size(x_i) < size((c x_0 \ldots x_n))\) \eqref{lem:pointsize}. And if \(x_i \barr x'_i\), then by the inductive hypothesis, \(size(x'_i) < size(x_i)\), so \((c x_0 \ldots x_n) \barr (c x'_0 \ldots x'_n)\).\\
+  \textbf{Case Congr. Fun.:}
+    If \((f x) \in E\) and \(f \barr f'\), then by the inductive hypothesis, \(size(f') < size(f)\), and \(size((f x)) = size(f) + size(x) > (size((f' x)) = size(f') + size(x))\).\\
+  \textbf{Case Congr. Arg.:}
+    If \((f x) \in E\) and \(x \barr x'\), then by the inductive hypothesis, \(size(x') < size(x)\), and \(size((f x)) = size(f) + size(x) > (size((f x')) = size(f) + size(x'))\).
+\end{proof}
 
 \section{Inference Rules}
 

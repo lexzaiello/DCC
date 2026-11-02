@@ -390,7 +390,33 @@ DCC is provably strongly normalizing due to our choice of affine logic. DCC is a
 
 \subsubsection{Strong Normalization by Decreasing Measure}
 
+We show strong normalization by defining a function \(size : E \rightarrow \mathbb{N}\) such that \(A \barr B\) implies \(size(B) < size(A)\).
 
+\begin{definition}
+  If \(e \in E_c\), then \(size(e) = 1\), and if \((f x) \in E\) and \((f x)\) is an application, then \(size((f x)) = size(f) + size(x)\). Otherwise, combinator sizes are defined as:
+  \begin{equation*}
+    \begin{array}{r l}
+      size(\comb[Eql][A]) = size(A) + 2 & size(\comb[='][A]) = size(A) + 2\\
+      size(\comb[Id][A]) = size(A) + 1 & size(\comb[refl][A]) = size(A) + 1\\
+      size(\comb[\Sigma][A][B]) = size(A) + size(B) + 1 & size(\comb[\Sigma'][A][B]) = size(A) + size(B) + 1 \\
+      size(\comb[`B][x]) = size(B) + size(x) + 1 & size(\comb[,B][x][y]) = size(B) + size(x) + size(y) + 1\\
+      size(\comb[Fst][B]) = B.size + 1 & size(\comb[Snd][B]) = B.size + 1\\
+      size(\comb[Swap][B][C]) = size(B) + size(C) + 2 & size(\comb[\circ][x][y]) = size(x) + size(y) + 1\\
+      size(\comb[!][x]) = size(x) + 1 & size(\comb[*][x]) = size(x) + 1\\
+      size(\comb[\&][x]) = size(x) * 5 + 1 & size(\comb[!<>][x]) = size(x) + 2 \\
+      size(\comb[\Pi][B][C]) = size(B) + size(C) + 1 & size(\comb[\$<>][x]) = size(x) * 5 + 1
+    \end{array}
+  \end{equation*}
+    \begin{align*}
+    size(\comb[=][A][x][y]) &= size(A) + size(x) + size(y) + 1\\
+    size(\comb[\mathbb{2}.Rec][motive][x][y]) &= size(motive) + size(x) + size(y) + 1\\
+    size(\comb[\mathbb{0}.Rec][motive]) &= size(motive) + 1\\
+    size(\comb[\langle , \rangle B][x][y]) &= 3 * (size(B) + (2 + size(x)) + size(y) + 3)\\
+    size(\comb[!\Lambda][A][B][x]) &= 2 * size(A) + 6 * (size(B) + 1) + 2 * size(x) + 5\\
+    size(\comb[\Lambda][A][B][x]) &= size(A) + size(B) + size(x) + 2\\
+    size(\comb[Eval][A][B][x]) &= size(A) + size(B) + size(x) + 1
+    \end{align*}
+\end{definition}
 
 \section{Inference Rules}
 

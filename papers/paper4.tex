@@ -1201,7 +1201,7 @@ We note that the following theorems are proven as computable definitions, rather
 
 The extensional equality reflection theorem holds in DCC. This is a result of decidable type-checking and strong normalization avoiding a generalized conversion constructor. Since inferred types are always in \(\beta\)-normal form, and since \(refl\) is the canonical inhabitant of equality, \(e : \comb[= A][x][y]\) iff \(x \equiv y\). This fact is provable from progress, preservation, and well-founded recursion by strong normalization.
 
-\begin{lemma}
+\begin{lemma}\label{lem:ext}
   If \(ht \vdash e : \comb[= A][x][y]\) and \(hv \vdash e \in Val\), then \(x \equiv y\).
 \end{lemma}
 
@@ -1210,11 +1210,17 @@ The extensional equality reflection theorem holds in DCC. This is a result of de
 
   So, if \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\) for some \(B, x, y \in E\), then by inversion on reflexivity values \label{inv:refl}, \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\) must be typed at \(\tau\) where \((B x) \barr^{!} B'\) and \(y \barr^{!} y'\), and \(\tau = (\comb[=][B'] y' y')\). But by uniqueness of judgments \label{inv:judgeunique}, \((\comb[=][B'] y' y') = (\comb[=][A][x][y]\), so \(y' = x\) and \(y' = y\). Hence, \(x \equiv y\) by reflexivity.
 
-  \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L122}{Expr.Judge.elim\_eq}
+  \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L9}{Expr.Value.elim\_eq}
 \end{proof}
 
+\begin{theorem}
+  If \(e : \comb[= A][x][y]\), then \(x \equiv y\).
+\end{theorem}
+
 \begin{proof}
+  This fact is provable by progress, preservation, well-founded recursion with respect to the reduct of \(e\), in case it is not a value. By progress \ref{thm:progress}, \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in Val\), then by the above~\ref{lem:ext}, \(x \equiv y\). If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation~\ref{thm:preservation}, \(e' : \comb[= A][x][y]\). So, by well-founded recursion, \(x \equiv y\).
   
+  \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L122}{Expr.Judge.elim\_eq}
 \end{proof}
 
 \section{Examples}

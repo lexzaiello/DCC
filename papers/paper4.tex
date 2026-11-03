@@ -97,6 +97,7 @@
 }
 \newcommand{\arr}{\rightarrow}
 \newcommand{\sort}[1]{\text{Sort}\ #1}
+\newcommand{\hole}[1]{\text{hole}(#1)}
 \newcommand{\type}[1]{\text{Type}_{#1}}
 \newcommand{\barr}{\arr_{\beta}}
 \newcommand{\barrc}[1]{\arr_{\beta^{#1}}}
@@ -111,7 +112,6 @@
 \newcommand{\efn}[2]{\text{F}_{\eta}\ #1\ #2}
 \newcommand{\ddom}{\text{Domain}\ }
 \newcommand{\dddom}{\text{Domain}_{2}\ }
-\newcommand{\hole}{\text{Hole}\ }
 
 \title{Combinator Calculus: Decidable Type Checking in Extensional Type Theory}
 \author[1]{Lexi Aiello}
@@ -162,8 +162,10 @@ Should be structured around building up to the fundamental theorem: extensional 
   \end{itemize}
   \item Inference rules
     \begin{itemize}
-      \item Explain how \(\Pi\) indexes an environment, similarly to \(\Lambda\) among others
-      \item Must explain arrows, different kinds of arrows, inductives used for representing arrow types. \textit{This can be done through a rule in the main inference rules diagram}.
+      \item \sout{Explain how \(\Pi\) indexes an environment, similarly to \(\Lambda\) among others}
+      \item \sout{Must explain arrows, different kinds of arrows, inductives used for representing arrow types. \textit{This can be done through a rule in the main inference rules diagram}.}
+      \item Constant inference rules
+      \item \sout{Example of type-checking derivation}
       \item Inference rules should be given first as a full page diagram, and then justified for some in particular (\textit{which ones?})
     \end{itemize}
   \item Extensional equality reflection proof --- \textit{note: this requires subject reduction and progress}
@@ -212,13 +214,13 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 The base objects are a modified superset of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), sorts are added, and bottom, top, and boolean types are added with the corresponding introducing terms. The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
 
 \begin{definition}\label{def:constants}
-  Constants (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)) type and its inhabitant (\(\ast\)), and the boolean type (\(\mathbb{2}\)) along with its inhabitants \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\):
+  Constants (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)) type and its inhabitant (\(\ast\)), the boolean type (\(\mathbb{2}\)) along with its inhabitants \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\), and an opaque ``hole'' term used internally in type-checking:
   \[
     \begin{gathered}
-      E_c \coloneq \{\sort{u}, \mathbb{0}, \mathbb{1}, \mathbb{2}, \ast, \mathbb{1}_{\mathbb{2}}, \mathbb{0}_{\mathbb{2}}\}
+      E_c \coloneq \{\sort{u}, \mathbb{0}, \mathbb{1}, \mathbb{2}, \ast, \mathbb{1}_{\mathbb{2}}, \mathbb{0}_{\mathbb{2}}, \hole{n}\}
     \end{gathered}
   \]
-  where \(u \in \mathbb{N}\).
+  where \(u, n \in \mathbb{N}\).
 \end{definition}\label{def:constants}
 
 \begin{definition}\label{def:combinator}
@@ -788,17 +790,46 @@ DCC has decidable type-checking, dependent types, and uses affine logic. Every p
   We use \(\comb[\rightarrow][A][B]\) to explicitly denote the DCC expansion of \(A \rightarrow B\).
 \end{definition}
 
+\begin{definition}
+  We always use the notation \(\comb[\Sigma][A][B]\) to refer to the \(DCC\) object denoting a \(\Sigma\)-type having a first component \(x\) of type \(A\) and a second component of type \((B x)\):  
+  We make use of a function \(h_{\max} : E \rightarrow \mathbb{N}\) which calculates the maximum hole value contained in a term tree to determine that \(B\) is an arrow from \(A\) to some sort, rather than the syntactic expansion, but only in this particular case.
+  \[
+    \inferrule[Sigma]
+    { A : \sort{u} \quad B : (\comb[\Pi][B][C] env) \quad A \equiv (B env) \quad (C\ env\ \hole{h_{\max}((\comb[\Pi][B][C]\ env)) + 1}) \barr^{!} \sort{v}}
+    { \comb[\Sigma][A][B] : \sort{\max(u, v)}}
+  \]
+\end{definition}
+
 \begin{definition}\label{def:inferapp}
   Application is type-checked as such:
   \[
     \inferrule[App]
-    { f : (\comb[\Pi][B][C] env) \qquad x : A \qquad (B env) \equiv A \qquad (C env x) \barr^{!} \tau}
+    { f : (\comb[\Pi][B][C]\ env) \qquad x : A \qquad (B\ env) \equiv A \qquad (C\ env\ x) \barr^{!} \tau}
     { (f x) : \tau }
   \]
   Note that the inferred type of \((f x)\) is in normal form.
 \end{definition}
 
 To see an example of how application type-checks, we shall enumerate the inference rules, in the order that their reduction rules are defined.
+\begin{definition}\label{infer:const}
+  Constant terms are inferred like such:
+  \[
+    \begin{gathered}
+      \inferrule[Sort]
+      { }
+      { \sort{u} : \sort{u + 1}}\qquad
+      \inferrule[Top]
+      { }
+      { \mathbb{1} : \sort{0}} \qquad
+      \inferrule[Bot]
+      { }
+      { \mathbb{0} : \sort{0}} \qquad
+      \inferrule[Top intro]
+      { }
+      { \ast : \mathbb{0}}
+    \end{gathered}
+  \]
+\end{definition}
 
 \begin{definition}
   The identity, quotation, and composition are as such:
@@ -809,10 +840,108 @@ To see an example of how application type-checks, we shall enumerate the inferen
       { \comb[Id][A] : \comb[\rightarrow][A'][A']} \qquad
       \inferrule[Quot]
       { x : A \qquad B : \sort{v} \qquad B \barr^{!} B'}
-      { \comb[`B][x] : \comb[\rightarrow][B'][A]} \qquad
+      { \comb[`B][x] : \comb[\rightarrow][B'][A]}\\
       \inferrule[Comp]
       { g : A \rightarrow B \qquad f : (\comb[\Pi][\comb[`\mathbb{1}][B]][\comb[`\mathbb{1}][C]] \ast) \qquad g \barr^{!} g'}
       { \comb[\circ][f][g] : (\comb[\Pi][\comb[`\mathbb{1}][A]][\comb[`\mathbb{1}][\comb[\circ][C][g]]] \ast)}
+    \end{gathered}
+  \]
+  In the familiar \((x : A) \rightarrow B x\) notation, the inference rule for composition is written as:
+  \[
+    \inferrule[Comp]
+    { g : A \rightarrow B \qquad f : (x : B) \rightarrow C x \qquad g \barr^{!} g'}
+    { \comb[\circ][f][g] : (x : A) \rightarrow C (g x)}
+  \]
+\end{definition}
+
+\begin{example}
+  \((\comb[Id][\mathbb{1}] \ast) : \mathbb{1}\).\\
+
+  This is since \(\mathbb{1} : \sort{0}\) implies \(\comb[Id][\mathbb{1}] : \comb[\rightarrow][\mathbb{1}][\mathbb{1}]\), and \(\comb[\rightarrow][\mathbb{1}][\mathbb{1}] = (\comb[\Pi][\comb[`\mathbb{1}][\mathbb{1}]][\comb[`\mathbb{1}][\comb[`\mathbb{1}][\mathbb{1}]]] \ast)\) and \(\ast : \mathbb{1}\) and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \equiv \mathbb{1}\), and \((\comb[`\mathbb{1}][\mathbb{1}] \ast \ast) \barr^{!} \mathbb{1}\).
+\end{example}
+
+From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote dependent products for clarity. Consult the Appendix~\ref{appendix:sup} for the expanded inference rules.
+
+\begin{definition}
+  Projections and currying are as such:
+  \[
+    \begin{gathered}
+      \inferrule[Fst]
+      { B : A \rightarrow \sort{v} \qquad B \barr^{!} B'}
+      { \comb[Fst][B] : \comb[\Sigma][A][B'] \rightarrow A} \qquad
+      \inferrule[Snd]
+      { B : A \rightarrow \sort{v} \qquad B \barr^{!} B'}
+      { \comb[Snd][B] : (x : \comb[\Sigma][A][B']) \rightarrow B' (\comb[Fst][B'] x)}\\
+      \inferrule[Curry]
+      { A : \sort{u} \quad A \barr^{!} A' \quad B : A' \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : \comb[\Sigma][A'][B']) \rightarrow C x}
+      { \comb[\Lambda][A][B][x] : (x : A') \rightarrow (y : B' x) \rightarrow (\comb[\Lambda][A'][B'][C] x y)}
+    \end{gathered}
+  \]
+\end{definition}
+
+\begin{definition}
+  Evaluation is as such:
+  \[
+    \inferrule[Eval]
+    { A : \sort{u} \quad A \barr^{!} A' \quad B : A' \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : A') \rightarrow (y : B' x) \rightarrow C x y}
+    { \comb[Eval][A][B][x] : (x : \comb[\Sigma][A][B]) \rightarrow (\comb[Eval][A][B][C] x)}
+  \]
+\end{definition}
+
+\begin{definition}
+  Exchange is as such:
+  \[
+    \inferrule[Swap]
+    { A : \sort{u} \quad B : \sort{v} \quad A \barr^{!} A' \quad B \barr^{!} B' }
+    { \comb[Swap][A][B] : \comb[\Sigma][A'][\comb[`A'][B']] \rightarrow \comb[\Sigma][B'][\comb[`B'][A']]}
+  \]
+\end{definition}
+
+\begin{definition}
+  The basic operations on boxed terms are as such:
+  \[
+    \begin{gathered}
+      \inferrule[Unbox]
+      {A : \sort{u} \quad A \barr^{!} A'}
+      { \comb[*][A] : \comb[!][A'] \rightarrow A'} \qquad
+      \inferrule[Map]
+      { x : A \rightarrow \sort{v}}
+      { \comb[!<>][x] : \comb[!][A'] \rightarrow \sort{v}}\qquad
+      \inferrule[Fmap]
+      { x : (x : A) \rightarrow B x}
+      { \comb[\$<>][x] : (x : \comb[!][A]) \rightarrow (\comb[!<>][B] x)}
+    \end{gathered}
+  \]
+\end{definition}
+
+\begin{definition}
+  Currying on boxes is as such:
+  \[
+    \inferrule[Curry']
+    { A : \sort{u} \quad A \barr^{!} A' \quad B : A' \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : \comb[!][\comb[\Sigma][A'][B']]) \rightarrow C x}
+    { \comb[!\Lambda][A][B][x] : (x : \comb[!][A']) \rightarrow (y : (\comb[!<>][B'] x)) \rightarrow (\comb[!\Lambda][A][B][C] x y)}
+  \]
+\end{definition}
+
+\begin{definition}
+  Pairs are as such:
+  \[
+    \inferrule[Pair]
+    { C \barr^{!} C' \quad x : (x : A) \rightarrow B x \quad y : (x : A) \rightarrow (y : B x) \rightarrow C' x y \quad c : (x : A) \rightarrow (y : B x) \rightarrow \sort{s}}
+    { \comb[\langle , \rangle C][x][y] : (x : \comb[!][A]) \rightarrow (\comb[\Sigma'][B][C] x)}
+  \]
+\end{definition}
+
+\begin{definition}
+  Equality formers are as such:
+  \[
+    \begin{gathered}
+      \inferrule[Eq']
+      { B : A \rightarrow \sort{v} \quad B \barr^{!} B'}
+      { \comb[='][B] : (x : A) \rightarrow (y : B' x) \rightarrow (z : B' x) \rightarrow \sort{0}} \qquad
+      \inferrule[Eql]
+      { B : A \rightarrow \sort{v} \quad B \barr^{!} B'}
+      { \comb[Eql][B] : (x : \comb[!][A]) \rightarrow (y : (\comb[!<>][B'] x)) \rightarrow \sort{0}}
     \end{gathered}
   \]
 \end{definition}

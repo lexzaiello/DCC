@@ -1048,8 +1048,8 @@ The source code of the type-checker is available in the Appendix~\ref{appendix:s
 
 The subject-reduction and progress theorems hold in DCC. We show that if \(A : \tau\) and \(A \barr B\), then \(B : \tau\). We define a set of canonical values \(Val \subset E\) syntactically and show that if \(A : \tau\), then there must exist \(B\) such that \(A \barr B\) or \(A \in Val\). Using these results, we show that \(\mathbb{0}\) is uninhabited.
 
-\begin{theorem}
-  If \(A, B, \tau \in E\), \(ht \vdash A : \tau\), and \(hr \vdash A \barr B\), then \(B : \tau\).
+\begin{theorem}\label{thm:preservation}
+  Preservation: If \(A, B, \tau \in E\), \(ht \vdash A : \tau\), and \(hr \vdash A \barr B\), then \(B : \tau\).
 \end{theorem}
 
 \begin{proof}
@@ -1153,7 +1153,7 @@ Progress may be established by noticing that a partially applied combinator is a
 
 \begin{proof}
   We proceed by case analysis on \(ht\). The proof can be reduced to checking that no partial application of a combinator can inhabit \(\mathbb{0}\), since no inference rule could yield \(\mathbb{0}\) in the consequent besides application. In case \(e = (f x)\) where \(f, x \in E\), we observe that \((f x)\) is a value, so it must be a partial application of a function, or a full application of \(refl\). In case \(f\) is a function value whose arity is greater than one, inversion shows that there must exist \(B, C, env \in E\) such that \((f x) : (\comb[\Pi][B][C]\ env)\), but \((\comb[\Pi][B][C]\ env) \neq \mathbb{0}\) for all \(B, C, env \in E\). In case \((f x)\) is a full application of \(refl\), we know by \ref{inv:refl} that there must exist \(B, y \in E\) such that \((f x) : (\comb[=][B] y y)\), but \((\comb[=][B] y y) \neq \mathbb{0}\) for all \(B, y \in E\), so \(\not e : \mathbb{0}\) and thus a contradiction is derived.
-  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L444}{Expr.Judge.elim\_bot}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L444}{Expr.Judge.elim\_bot\_value}
 \end{proof}
 
 \begin{lemma}\label{inv:sigma}
@@ -1176,13 +1176,23 @@ Progress may be established by noticing that a partially applied combinator is a
 
 Using these facts about inversion, we prove progress.
 
-\begin{theorem}
+\begin{theorem}\label{thm:progress}
   If \(h \vdash e : \tau\), then \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\).
 \end{theorem}
 
 \begin{proof}
   The proof proceeds by induction on \(h\). If \(e \in E_c\), then \(e \in Val\). If \(e = (c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(h\) demonstrates that there exist \(\tau_i\) such that \(x_i : \tau_i\) for all \(i < n\), and so each point of \(e\) is either a value, or can make a step. In case all points of \(e\) are values, \(e \in Val\). If any point can make a step, then so can \(e\) by the point rule. If \(e\) is of the form \((f x)\) where \(f, x \in E\), then \(h\) gives that \(f : (\comb[\Pi][B][C]\ env)\) for some \(B, C, env \in E\), and \(x : A\) and \((B env) \equiv A\). Furthermore, by the inductive hypothesis, both \(f\) and \(x\) must be values or able to make a step. In case either \(f\) or \(x\) can make a step, function congruence and argument congruent respectively give that \(e\) can make a step. In case both \(f\) and \(x\) are values, we perform case analysis on \(f\), and show that \((f x)\) is either a partial application of a combinator, a full application of \(refl\), or, by the established inversion lemmas, \(x\) is of the right shape such that \((f x)\) can make a head-step reduction.
   \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L957}{Expr.Judge.progress}
+\end{proof}
+
+\begin{theorem}
+  Consistency: There does not exist \(e \in E\) such that \(e : \mathbb{0}\).
+\end{theorem}
+
+\begin{proof}
+  This fact is due to the inversion lemma on values inhabiting \(\mathbb{0}\), well-founded recursion by decreasing size under \(\barr\), progress, and preservation. Suppose \(e \in E\) such that \(h \vdash e : \mathbb{0}\). Then, by progress \ref{thm:progress}, \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in Val\), then by the value bottom inhabitance inversion lemma~\eqref{inv:bot}, a contradiction is derived. If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation \ref{thm:preservation}, \(e' : \mathbb{0}\). So, by well-founded recursion, a contradiction is derived.
+
+  \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Consistent.lean\#L7}{Expr.Judge.elim\_bot}
 \end{proof}
 
 % Note about how these are definitions, not theorems, and the reduct is choosable

@@ -68,7 +68,7 @@
       \IfNoValueTF{#3}{(#1\ #2)}{(#1\ #2\ #3)}}{(#1\ #2\ #3\ #4)}}{(#1\ #2\ #3\ #4\ #5)}}
 \newcommand{\rrb}{\rrbracket}
 \newcommand{\leanlink}[2]{
-  \hfill \href{#1}{\textcolor{leanblue}\faCheckSquare~[Formalized: \texttt{#2}]}%
+  \hfill \href{#1}{\textcolor{black}\faCheck~[Formalized: \texttt{#2}]}%
 }
 \newcommand{\la}{\langle}
 \newcommand{\ra}{\rangle}
@@ -145,9 +145,9 @@ Should be structured around building up to the fundamental theorem: extensional 
     \begin{itemize}
       \item \sout{Explain combinator points, maybe do this in syntax section though}
     \end{itemize}
-    \item \textbf{Proof}: Termination by decreasing syntactic size
+    \item \sout{\textbf{Proof}: Termination by decreasing syntactic size}
     \begin{itemize}
-      \item Sizes should be somewhat justified, rather than the random values found in the formalization
+      \item \sout{Sizes should be somewhat justified, rather than the random values found in the formalization}
     \end{itemize}
     \item \textbf{Proof}: Local confluence
     \item \textbf{Proof}: Confluence by newmann's lemma
@@ -168,7 +168,8 @@ Should be structured around building up to the fundamental theorem: extensional 
         \item Emphasize that the rule for \(\bot{}.Rec\) is not for \(\bot\), but partial application of its recursor
         \item \textbf{Proof}: Inversion lemmas
         \item \textbf{Proof}: \(\bot\) is not inhabited by any values
-       \end{itemize}
+        \end{itemize}
+     \item \textbf{Proof}: Bonus - consistency proof
      \item \textbf{Proof}: Equality reflection for values
      \item \textbf{Proof}: Equality reflection by progress + preservation
   \end{itemize}
@@ -225,9 +226,9 @@ The base objects are a modified superset of the base terms in \cclk{}. Products 
   A term (\(E\)) is either a constant \(E_c\):
   \[E_c \subset E\]
   or a parenthesized combinator \(C\) juxtaposed by its points which are also terms:
-  \[\{ (c x_1 \ldots x_n) | c \in C, \{ x | x \in x_0 \ldots x_n\} \subset E \}\ \subset E\]
+  \[\{ (c x_0 \ldots x_n) | c \in C, \{ x | x \in x_0 \ldots x_n\} \subset E \}\ \subset E\]
   or a parenthesized application of a list of juxtaposed terms:
-  \[\{(f x_1 \ldots x_n) | f \in E, \{x | x \in x_0 \ldots x_n\} \subset E\} \subset E\]
+  \[\{(f x_0 \ldots x_n) | f \in E, \{x | x \in x_0 \ldots x_n\} \subset E\} \subset E\]
 \end{definition}
 
 \begin{example}
@@ -248,9 +249,9 @@ The base objects are a modified superset of the base terms in \cclk{}. Products 
 
 \section{Conversion Rules}
 
-Conversion uses call-by-value operational semantics and is a modified superset of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms. We do not have a recursor for equality, since DCC is extensional (\textit{TODO: reference later section}) and propositional equality coincides with definitional equality, so it is not necessary.
+Conversion uses call-by-value operational semantics and is a modified superset of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms. We do not have a recursor for equality, since DCC is extensional (\textit{TODO: reference later section}) and propositional equality coincides with definitional equality, so it is not necessary. When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduction, \(A \barr^{*} B\) to denote star-step \(\beta\)-reduction, and \(A \barr^{!} B\) to denote \(\beta\)-reduction to a normal form.
 
-\begin{definition}
+\begin{definition}\label{conv:idquotcomp}
   The identity, quotation, and composition are the same as in \cclk{}:
   
   \[
@@ -369,7 +370,7 @@ Conversion uses call-by-value operational semantics and is a modified superset o
   \]
 \end{definition}
 
-\begin{definition}
+\begin{definition}\label{red:congr}
   Finally, there are pointwise congruences for combinators and congruences for application:
   \[
     \inferrule[Point]
@@ -417,71 +418,145 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 \end{definition}
 
 \begin{lemma}\label{lem:pointsize}
-  If \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(size(x_i) < size((c x_0 \ldots x_n))\) for all \(i < n\).
+  If \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(size(x_i) < size((c\ x_0 \ldots x_n))\) for all \(i < n\).
 \end{lemma}
 
 \begin{proof}
-  By induction on the form of expressions.
+  By induction on the structure of expressions.\\
 \end{proof}
 
-\begin{theorem}
-  If \(A, B \in E\) and \(A \barr B\), then \(size(B) < size(A)\).
+\begin{theorem}\label{thm:sn}
+  Strong-normalization: If \(A, B \in E\) and \(A \barr B\), then \(size(B) < size(A)\).
 \end{theorem}
 
 \begin{proof}
-  We proceed by induction on the reduction relation:
-  \textbf{Case Id:} \(size((\comb[Id][A] x)) = size(A) + 1 + size(x) > size(x)\)\\
-  \textbf{Case Quot:} \(size((\comb[`B][x] y)) = size(B) + size(x) + 1 + size(y) > size(x)\)\\
-  \textbf{Case Comp:} \(size((\comb[\circ][x][y] z)) = size(x) + size(y) + 1 + size(z) > size(x) + size(y) + size(z)\)\\
-  \textbf{Case Fst:} \(size((\comb[Fst][B] \comb[,B_2][x][y])) = size(B) + 1 + size(B_2) + size(x) + size(y) + 1 > size(x)\)\\
-  \textbf{Case Snd:} \(size((\comb[Snd][B] \comb[,B_2][x][y])) = size(B) + 1 + size(B_2) + size(x) + size(y) + 1 > size(y)\)\\
-  \textbf{Case Curry:} \(size((\comb[\Lambda][A][B][x] y z)) = size(A) + size(B) + size(x) + 2 + size(y) + size(z) > size(x) + size(B) + size(y) + size(z)\)\\
-  \textbf{Case Eval:} \(size((\comb[Eval][A][B][x] \comb[,B_2][y][z])) = size(A) + size(B) + size(x) + 1 + size(B_2) + size(y) + size(z) + 1 > size(x) + size(y) + size(z)\)\\
-  \textbf{Case Swap:} \(size((\comb[Swap][A][B] \comb[,B_2][x][y])) = size(B) + size(C) + 2 + size(B_2) + size(x) + size(y) + 1 > size(B) + size(A) + size(y) + size(x) + 1\)\\
-  \textbf{Case Unbox:} \(size((\comb[*][A] \comb[\&][x])) = size(A) + 1 + (size(x) * 5 + 1) > size(x)\)\\
-  \textbf{Case Map:} \(size((\comb[!<>][x] \comb[\&][y])) = size(x) + 2 + (size(y) * 5 + 1) > size((x y)) + 1\)\\
-  \textbf{Case Fmap:} \(size((\comb[\$<>][x] \comb[\&][y])) = (size(x) * 5 + 1) + (size(y) * 5 + 1) > size((x y) * 5 + 1)\)\\
-  \textbf{Case Curry':}
+  We proceed by induction on the reduction relation.\\
+
+  \begin{description}
+  \item[Id:] \(size((\comb[Id][A] x)) = size(A) + 1 + size(x) > size(x)\)
+  \item[Quot:] \(size((\comb[`B][x] y)) = size(B) + size(x) + 1 + size(y) > size(x)\)\\
+  \item[Comp:] \(size((\comb[\circ][x][y] z)) = size(x) + size(y) + 1 + size(z) > size(x) + size(y) + size(z)\)\\
+  \item[Fst:] \(size((\comb[Fst][B] \comb[,B_2][x][y])) = size(B) + 1 + size(B_2) + size(x) + size(y) + 1 > size(x)\)\\
+  \item[Snd:] \(size((\comb[Snd][B] \comb[,B_2][x][y])) = size(B) + 1 + size(B_2) + size(x) + size(y) + 1 > size(y)\)\\
+  \item[Curry:]
+  \begin{align*}
+    size((\comb[\Lambda][A][B][x] y z)) &= size(A) + size(B) + size(x) + 2 + size(y) + size(z)\\
+                                        & > size(x) + size(B) + size(y) + size(z)
+  \end{align*}
+  \item[Eval:]
+  \begin{align*}
+    size((\comb[Eval][A][B][x] \comb[,B_2][y][z])) &= size(A) + size(B) + size(x) + 1 + size(B_2) + size(y) + size(z) + 1\\
+    & > size(x) + size(y) + size(z)\\
+  \end{align*}
+  \item[Swap:] \begin{align*}
+    size((\comb[Swap][A][B] \comb[,B_2][x][y])) &= size(B) + size(C) + 2 + size(B_2) + size(x) + size(y) + 1\\
+    & > size(B) + size(A) + size(y) + size(x) + 1
+    \end{align*}
+  \item[Unbox:] \(size((\comb[*][A] \comb[\&][x])) = size(A) + 1 + (size(x) * 5 + 1) > size(x)\)\\
+  \item[Map:] \(size((\comb[!<>][x] \comb[\&][y])) = size(x) + 2 + (size(y) * 5 + 1) > size((x y)) + 1\)\\
+  \item[Fmap:] \(size((\comb[\$<>][x] \comb[\&][y])) = (size(x) * 5 + 1) + (size(y) * 5 + 1) > size((x y) * 5 + 1)\)\\
+  \item[Curry':]
     \begin{align*}
-      size((\comb[!\Lambda][A][B][x] \comb[\&][y] \comb[\&][z])) &= 2 * size(A) + 6 * (size(B) + 1) + 2*size(x) + 5 + (size(y) * 5 + 1) (size(y) * z + 1)\\
+      size((\comb[!\Lambda][A][B][x] \comb[\&][y] \comb[\&][z])) &= 2 * size(A) + 6 * (size(B) + 1) &\\
+      + 2*size(x) + 5 + size(y) * 5 + 1 + size(y) * z + 1\\
       & > size(x) + ((5 * (size(B) + size(y) + size(z))) + 1)\\
     \end{align*}
-  \textbf{Case Pair:}
+  \item[Pair:]
       \begin{align*}
-        size((\comb[\langle , \rangle B][x][y] \comb[\&][z])) = 3 * (size(B) + (size(x) + 2) + size(y) + 3) + (5 * size(z) + 1)\\
-        & > (5 * ((size(B) + size(z)) + (size(x) + size(z)) + (size(y) + size(z) + (size(x) + size(z)))) + 1)\\
+        size((\comb[\langle , \rangle B][x][y] \comb[\&][z])) &= 3 * (size(B) + (size(x) + 2) + size(y) + 3) + (5 * size(z) + 1)\\
+        & > 5 * (size(B) + 4 * size(z) + 2 * size(x) + size(y)) + 1\\
       \end{align*}
-  \textbf{Case Eq':}
+  \item[Eq':]
   \begin{align*}
     size((\comb[='][B] x y z)) &= size(A) + 2 + size(x) + size(y) + size(z)\\
     & > (size(B) + size(x)) + size(y) + size(z) + 1\\
   \end{align*}
-  \textbf{Case Eql:}
+  \item[Eql:]
   \begin{align*}
     size((\comb[Eql][B] \comb[\&][x] \comb[\&][y])) &= size(B) + 2 + (size(x) * 5 + 1) (size(y) * 5 + 1)\\
     & > (size(B) + size(x)) + size(y) + size(y) + 1\\
   \end{align*}
-  \textbf{Case Sigma':}
+  \item[Sigma':]
   \begin{align*}
     size((\comb[\Sigma'][B][C] \comb[\&][x])) &= size(B) + size(C) + 1 + (size(x) * 5 + 1)\\
     &> (size(B) + size(x)) + (size(C) + size(x)) + 1\\
   \end{align*}
-  \textbf{Case Bool Recl.:}
+  \item[Bool Recl.:]
   \begin{align*}
     size((\comb[\mathbb{2}.Rec][B][x][y] z \mathbb{1}_\mathbb{2})) &= size(B) + size(x) + size(y) + 1 + size(z)\\
     &> size(x) + size(z) + size(\mathbb{1}_\mathbb{2})\\
   \end{align*}
-  \textbf{Case Bool Recr.:}
+  \item[Bool Recr.:]
   \begin{align*}
     size((\comb[\mathbb{2}.Rec][B][x][y] z \mathbb{1}_\mathbb{2})) &= size(B) + size(x) + size(y) + 1 + size(z)\\
     &> size(y) + size(z) + size(\mathbb{0}_\mathbb{2})\\
   \end{align*}
-  \textbf{Case Point:}
-    If \((c x_0 \ldots x_n) \in E\) and \(i < n\), then \(size(x_i) < size((c x_0 \ldots x_n))\) \eqref{lem:pointsize}. And if \(x_i \barr x'_i\), then by the inductive hypothesis, \(size(x'_i) < size(x_i)\), so \((c x_0 \ldots x_n) \barr (c x'_0 \ldots x'_n)\).\\
-  \textbf{Case Congr. Fun.:}
-    If \((f x) \in E\) and \(f \barr f'\), then by the inductive hypothesis, \(size(f') < size(f)\), and \(size((f x)) = size(f) + size(x) > (size((f' x)) = size(f') + size(x))\).\\
-  \textbf{Case Congr. Arg.:}
-    If \((f x) \in E\) and \(x \barr x'\), then by the inductive hypothesis, \(size(x') < size(x)\), and \(size((f x)) = size(f) + size(x) > (size((f x')) = size(f) + size(x'))\).
+  \item[Point:]
+  If \((c\ x_0 \ldots x_n) \in E\) and \(i < n\), then \(size(x_i) < size((c\ x_0 \ldots x_n))\) \eqref{lem:pointsize}. And if \(x_i \barr x'_i\), then, by the inductive hypothesis, \(size(x'_i) < size(x_i)\), so \(size((c\ x_0 \ldots x_n)) > size((c\ x'_0 \ldots x'_n))\).\\\\
+  \item[Congr. Fun.:]
+  If \((f x) \in E\) and \(f \barr f'\), then, by the inductive hypothesis, \(size(f') < size(f)\), and \(size((f x)) = size(f) + size(x) > (size((f' x)) = size(f') + size(x))\).\\\\
+  \item[Congr. Arg.:]
+  If \((f x) \in E\) and \(x \barr x'\), then, by the inductive hypothesis, \(size(x') < size(x)\), and \(size((f x)) = size(f) + size(x) > (size((f x')) = size(f) + size(x'))\).\\
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Rel.lean\#L82}{Expr.Red.decreasing}
+  \end{description}
+\end{proof}
+
+\begin{lemma}\label{lem:pointstar}
+  Point congruences are closed under star-step reduction: If \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\) and \(i < n\) and \(x_i \barr^{*} x'_i\), then \((c x_0 \ldots x_n) \barr^{*} (c x'_0 \ldots x'_n)\).
+\end{lemma}
+
+\begin{proof}
+  Suppose \(h \vdash x_i \barr^{*} x'_i\). Then, if \(x_i = x'_i\), then \((c x_0 \ldots x_n) \barr^{*} (c x'_0 \ldots x'_n)\) by reflexivity. If \(x_i \neq x'_i\), then there must exist \(x'_{0}_{i}\) such that \(h_0 \vdash x_i \barr x'_{0}_{i}\) and \(h_1 \vdash x'_{0}_{i} \barr^{*} x'_{i}\). And, by \ref{thm:sn}, \(size(x'_{0}_{i}) < size(x_i)\). So, by induction, \((c x_{0}_{0} \ldots x_{0}_{n}) \barr^{*} (c x'_0 \ldots x'_n)\). Hence, \((c x_0 \ldots x_n) \barr^{*} (c x'_0 \ldots x'_n)\) by transitivity of single-step application of the point rule with respect to \(h_0\) and \(h_1\).
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L307}{Expr.aff_mk_point'}
+\end{proof}
+
+\begin{lemma}\label{lem:congrfunstar}
+  Function congruence is closed under star-step reduction: If \((f x) \in E\) and \(f \barr^{*} f'\), then \((f x) \barr^{*} (f' x)\).
+\end{lemma}
+
+\begin{proof}
+  The proof proceeds similarly as in \ref{lem:pointstar}, but with the function congruence single-step rule.
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L232}{Expr.congrFun'}
+\end{proof}
+
+\begin{lemma}\label{lem:congrargstar}
+  Argument congruence is closed under star-step reduction: If \((f x) \in E\) and \(x \barr^{*} x'\), then \((f x) \barr^{*} (f x')\).
+\end{lemma}
+
+\begin{proof}
+  The proof proceeds similarly as in \ref{lem:pointstar}, but with the argument congruence single-step rule.
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean#L262}{Expr.congrArg'}
+\end{proof}
+
+\begin{theorem}
+  If \(A, B, C \in E\) and \(A \barr B\) and \(A \barr C\), then there exists \(D \in E\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
+\end{theorem}
+
+\begin{proof}
+  The proof proceeds by induction on \(A \barr B\) and parallel case analysis on \(A \barr C\). We handle three possible cases: head-reduction where \(B\) and \(C\) are the head-reducts of \(A\); point-reduction where \(A\) is not an application but a combinator with points; congruences where \(A\) is of the form \((f x) \in E\) and where either \(B\) or \(C\) are of the form \((f' x)\) where \(f \barr f'\) or \((f x')\) where \(x \barr x'\).
+
+  In the head step cases \(A = (f x) \in E\) where \(f, x \in E\), the step \(A \barr C\) is destructed until atomic terms which are not combinators with points or are applications are met. Then, a step is reconstructed for some \(D \in E\) such that \(B \barr D\) and \(C \barr D\). In the case where \(A = (c x_0 \ldots x_n) \in E\) (i.e., where \(A\) is a term with points), the step \(A \barr C\) is destructed into the atomic points and a step is reconstructed similarly. In the case where \(A = (f x) \in E\) and \(f\) is not obviously a combinator, we case split on \(f\) and perform the same steps as in the head reduction case until an atomic \(f\) is reached, such that, by the inductive hypothesis and the function congruence rule, we may reconstruct a step. We do similarly for \(x\) and handle all point-term cases until an atomic \(x\) is reached, in which case the inductive hypothesis applies.
+
+  To illustrate, suppose \((\comb[Id][A] x) \in E\) and \(h_1 \vdash (\comb[Id][A] x) \barr B\) and \(h_2 \vdash (\comb[Id][A] x) \barr C\):\\
+  \begin{description}
+  \item[Function congruence in $h_1$ on $(Id\ A)$:]\\
+    Suppose \(B\) is of the form \((f' x)\) where \(\comb[Id][A] \barr f'\). Then, \(f'\) must be constructed by the point rule \eqref{red:congr}, so there exists \(A'\) such that \(A \barr A'\). We proceed by case-splitting on \(h_2\):
+    \begin{description}
+      \item[Function congruence in $h_2$ on $(Id\ A)$:]\\
+        Suppose \(C\) is of the form \((f'_2 x)\) where \(\comb[Id][A] \barr f'_2\). Then, \(f'_2\) must be constructed by the point rule \eqref{red:congr}, so there exists \(A'_2\) such that \(A \barr A'_2\). So, by the inductive hypothesis, there exists \(A'' \in E\) such that \(A' \barr^{*} A''\) and \(A'_2 \barr^{*} A''\). And, by \ref{lem:pointstar}, \(\comb[Id][A'] \barr^{*} \comb[Id][A'']\) and \(\comb[Id][A'_2] \barr^{*} \comb[Id][A'']\). So, by \ref{lem:congrfunstar}, \((\comb[Id][A'] x) \barr^{*} (\comb[Id][A''] x)\) and \((\comb[Id][A'_2] x) \barr^{*} (\comb[Id][A''] x)\).
+      \item[Argument congruence in $h_2$ on $x$:]\\
+        Suppose \(C\) is of the form \((\comb[Id][A] x')\) where \(x \barr x'\). Then, by the single-step rule \(Id\) \ref{conv:idquotcomp}, \((\comb[Id][A'] x) \barr x\) and \((\comb[Id][A] x) \barr x\).
+    \end{description}
+  \item[Argument congruence in $h_1$ on $x$:]\\
+    Suppose \(B\) is of the form \((\comb[Id][A] x')\) where \(x \barr x'\). Then, the proof is as above, except \(h_1\) and \(h_2\) are inverted.
+  \item[Head reduction in $h_1$ on $((Id\ A) x)$:]\\
+    Suppose \(B = x\). Then, if \(h_2\) is a function congruence such that \(\comb[Id][A] \barr f'\), \(f'\) must be of the form \(\comb[Id][A']\) where \(A \barr A'\), so \(B \barr x\) and \(C \barr x\). If \(h_2\) is an argument congruence such that \(h \vdash x \barr x'\) where \(x' \in E\), then \(B \barr x'\) by \(h\) and \(C \barr x'\) by reflexivity.
+  \end{description}
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Conf.lean\#L131}{Expr.Red.conf}
+\end{proof}
+
+\begin{proof}
+  
 \end{proof}
 
 \section{Inference Rules}
@@ -501,6 +576,15 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 \section{Conclusion}
 
 \textit{TODO later after main sections done}
+
+\appendix
+\section{Supplementary Materials}\label{appendix:sup}
+
+\begin{itemize}
+  \item \textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}
+  \item \textbf{Formalized Reduction rules:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Rel.lean#L14}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Rel.lean\#L14}
+  \item \textbf{Type-checker implementation:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}
+\end{itemize}
 
 \printbibliography
 

@@ -826,7 +826,13 @@ To see an example of how application type-checks, we shall enumerate the inferen
       { \mathbb{0} : \sort{0}} \qquad
       \inferrule[Top intro]
       { }
-      { \ast : \mathbb{0}}
+      { \ast : \mathbb{0}} \qquad
+      \inferrule[True]
+      { }
+      { \mathbb{1}_\mathbb{2} : \mathbb{2}} \qquad
+      \inferrule[False]
+      { }
+      { \mathbb{0}_\mathbb{2} : \mathbb{2}}
     \end{gathered}
   \]
 \end{definition}
@@ -942,6 +948,43 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
       \inferrule[Eql]
       { B : A \rightarrow \sort{v} \quad B \barr^{!} B'}
       { \comb[Eql][B] : (x : \comb[!][A]) \rightarrow (y : (\comb[!<>][B'] x)) \rightarrow \sort{0}}
+    \end{gathered}
+  \]
+\end{definition}
+
+\begin{definition}
+  The affine \(\Sigma\)-former is as such:
+  \[
+    \inferrule[Sigma']
+    { B : A \rightarrow \sort{v} \quad B \barr^{!} B' \quad C : (x : A) \rightarrow (y : B' x) \rightarrow \sort{s} \quad C \barr^{!} C'}
+    { \comb[\Sigma'][B][C] : (x : \comb[!][A]) \rightarrow \sort{\max(v, s)}}
+  \]
+\end{definition}
+
+\begin{definition}
+  The recursors for \(\mathbb{2}\) and \(\mathbb{0}\) are as such:
+  \[
+    \begin{gathered}
+      \inferrule[Bool Rec]
+      { B : A \rightarrow \mathbb{2} \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : A) \rightarrow (y : \mathbb{2}) \rightarrow B' x y \quad y : (x : A) \rightarrow (y : \mathbb{2}) \rightarrow B' x y}
+      { \comb[\mathbb{2}.Rec][x][y] : (x : A) \rightarrow (y : \mathbb{2}) \rightarrow B' x y}\\
+      \inferrule[Bot Rec]
+      { B : A \rightarrow \mathbb{0} \rightarrow \sort{v} \quad B \barr^{!} B'}
+      { \comb[\mathbb{0}.Rec][B] : (x : A) \rightarrow (y : \mathbb{0}) \rightarrow B' x y}
+    \end{gathered}
+  \]
+\end{definition}
+
+\begin{definition}
+  Finally, affine terms are as such:
+  \[
+    \begin{gathered}
+      \inferrule[Bang]
+      { A : \sort{u}}
+      { \comb[!][A] : \sort{u}} \qquad
+      \inferrule[Box]
+      { x : A}
+      { \comb[\&][x] : \comb[!][A]}
     \end{gathered}
   \]
 \end{definition}

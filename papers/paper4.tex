@@ -2,6 +2,9 @@
 \usepackage[utf8]{inputenc}
 \usepackage[normalem]{ulem} 
 \usepackage[dvipsnames]{xcolor}
+\usepackage{dsfont}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \definecolor{leanblue}{RGB}{28, 54, 86}
 \newcommand{\comment}[1]{}
 \usepackage{tabularx}
@@ -149,8 +152,8 @@ Should be structured around building up to the fundamental theorem: extensional 
     \begin{itemize}
       \item \sout{Sizes should be somewhat justified, rather than the random values found in the formalization}
     \end{itemize}
-    \item \textbf{Proof}: Local confluence
-    \item \textbf{Proof}: Confluence by newmann's lemma
+    \item \sout{\textbf{Proof}: Local confluence}
+    \item \sout{\textbf{Proof}: Confluence by newmann's lemma}
   \end{itemize}
   \item Inference rules
     \begin{itemize}
@@ -188,7 +191,7 @@ Should be structured around building up to the fundamental theorem: extensional 
 
 \begin{itemize}
   \item In~\ref{dccintro}, we present the dependent combinator calculus (\dccbf): our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules and inference rules.
-  \item In \(\ldots\) (\textit{todo}), we prove some basic properties of conversion in DCC:\@strong normalization, confluence, and uniqueness of normal forms.
+  \item In \ref{sec:thmsconv}, we prove some basic properties of conversion in DCC:~strong normalization, confluence, uniqueness of normal forms, and decidability of \(\beta\)-equality.
   \item In~\ref{decidable}, we prove that type checking is decidable in DCC.\@
   \item In \(\ldots\) (\textit{todo}), we prove that subject-reduction and progress hold in DCC, and that DCC is consistent.
   \item In~\ref{eqreflect}, we prove that extensional equality reflection holds in DCC.\@The proof is a computable definition, rather than a theorem in \(\textbf{Prop}\).
@@ -226,9 +229,9 @@ The base objects are a modified superset of the base terms in \cclk{}. Products 
   A term (\(E\)) is either a constant \(E_c\):
   \[E_c \subset E\]
   or a parenthesized combinator \(C\) juxtaposed by its points which are also terms:
-  \[\{ (c x_0 \ldots x_n) | c \in C, \{ x | x \in x_0 \ldots x_n\} \subset E \}\ \subset E\]
+  \[\{ (c\ x_0 \ldots x_n) | c \in C, \{ x | x \in x_0 \ldots x_n\} \subset E \}\ \subset E\]
   or a parenthesized application of a list of juxtaposed terms:
-  \[\{(f x_0 \ldots x_n) | f \in E, \{x | x \in x_0 \ldots x_n\} \subset E\} \subset E\]
+  \[\{(f\ x_0 \ldots x_n) | f \in E, \{x | x \in x_0 \ldots x_n\} \subset E\} \subset E\]
 \end{definition}
 
 \begin{example}
@@ -247,7 +250,7 @@ The base objects are a modified superset of the base terms in \cclk{}. Products 
   If \(B, x, y \in E\), then \(\comb[,B][x][y] \in E\).
 \end{example}
 
-\section{Conversion Rules}
+\section{Conversion Rules}\label{sec:convrules}
 
 Conversion uses call-by-value operational semantics and is a modified superset of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms. We do not have a recursor for equality, since DCC is extensional (\textit{TODO:\@reference later section}) and propositional equality coincides with definitional equality, so it is not necessary. When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduction, \(A \barr^{*} B\) to denote star-step \(\beta\)-reduction, and \(A \barr^{!} B\) to denote \(\beta\)-reduction to a normal form.
 
@@ -375,7 +378,7 @@ Conversion uses call-by-value operational semantics and is a modified superset o
   \[
     \inferrule[Point]
     { c \in C \qquad i < n \qquad x_i \barr x'_i }
-    { (c x_0 \ldots x_n) \barr (c x'_0 \ldots x'_n)}\qquad
+    { (c\ x_0 \ldots x_n) \barr (c\ x'_0 \ldots x'_n)}\qquad
     \inferrule[Congr. Fun.]
     { f \barr f'}
     { (f x) \barr (f' x)}\qquad
@@ -385,7 +388,7 @@ Conversion uses call-by-value operational semantics and is a modified superset o
   \]
 \end{definition}
 
-\subsection{Some Properties of Conversion}
+\subsection{Some Properties of Conversion}\label{sec:thmsconv}
 
 DCC is provably strongly normalizing due to our choice of affine logic. DCC is also locally confluent, and thus globally confluent by Newmann's lemma. As such, normal forms are unique and \(\beta\)-equality is decidable. We use this fact to establish judgmental decidability.
 
@@ -492,7 +495,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
     &> size(y) + size(z) + size(\mathbb{0}_\mathbb{2})\\
   \end{align*}
   \item[Point:]
-  If \((c\ x_0 \ldots x_n) \in E\) and \(i < n\), then \(size(x_i) < size((c\ x_0 \ldots x_n))\)~\eqref{lem:pointsize}. And if \(x_i \barr x'_i\), then, by the inductive hypothesis, \(size(x'_i) < size(x_i)\), so \(size((c\ x_0 \ldots x_n)) > size((c\ x'_0 \ldots x'_n))\).\\\\
+  If \((c\ x_0 \ldots x_n) \in E\) and \(i < n\), then \(size(x_i) < size((c\ x_0 \ldots x_n))\)~\ref{lem:pointsize}. And if \(x_i \barr x'_i\), then, by the inductive hypothesis, \(size(x'_i) < size(x_i)\), so \(size((c\ x_0 \ldots x_n)) > size((c\ x'_0 \ldots x'_n))\).\\\\
   \item[Congr. Fun.:]
   If \((f x) \in E\) and \(f \barr f'\), then, by the inductive hypothesis, \(size(f') < size(f)\), and \(size((f x)) = size(f) + size(x) > (size((f' x)) = size(f') + size(x))\).\\\\
   \item[Congr. Arg.:]
@@ -506,16 +509,16 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 \end{lemma}
 
 \begin{proof}
-  Suppose \(A = B\). Then, \(size(A) = size(B)\), so \(size(B) \le size(A)\). If \(A \neq B\), then there exists \(B_0 \in E\) such that \(A \barr B_0\) and \(B_0 \barr^{*} B\). So, by~\ref{thm:sn}, \(size(B_0) < size(A)\), and by the inductive hypothesis, \(size(B) \le size(B_0)\), so \(size(B) \le size(A)\).
+  Suppose \(A = B\). Then, \(size(A) = size(B)\), so \(size(B) \le size(A)\). If \(A \neq B\), then there exists \(B_0 \in E\) such that \(A \barr B_0\) and \(B_0 \barr^{*} B\). So, by~\ref{thm:sn}, \(size(B_0) < size(A)\), and by the inductive hypothesis, \(size(B) \le size(B_0)\), so \(size(B) \le size(A)\).\\
   \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L507}{Expr.decreasing?}
 \end{proof}
 
 \begin{lemma}\label{lem:pointstar}
-  Point congruences are closed under star-step reduction: If \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\) and \(i < n\) and \(x_i \barr^{*} x'_i\), then \((c x_0 \ldots x_n) \barr^{*} (c x'_0 \ldots x'_n)\).
+  Point congruences are closed under star-step reduction: If \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\) and \(i < n\) and \(x_i \barr^{*} x'_i\), then \((c\ x_0 \ldots x_n) \barr^{*} (c\ x'_0 \ldots x'_n)\).
 \end{lemma}
 
 \begin{proof}
-  Suppose \(h \vdash x_i \barr^{*} x'_i\). Then, if \(x_i = x'_i\), then \((c x_0 \ldots x_n) \barr^{*} (c x'_0 \ldots x'_n)\) by reflexivity. If \(x_i \neq x'_i\), then there must exist \(x'_{0,i}\) such that \(h_0 \vdash x_i \barr x'_{0,i}\) and \(h_1 \vdash x'_{0,i} \barr^{*} x'_{i}\). And, by~\ref{thm:sn}, \(size(x'_{0,i}) < size(x_i)\). So, by induction, \((c x_{0,0} \ldots x_{0,n}) \barr^{*} (c x'_0 \ldots x'_n)\). Hence, \((c x_0 \ldots x_n) \barr^{*} (c x'_0 \ldots x'_n)\) by transitivity of single-step application of the point rule with respect to \(h_0\) and \(h_1\).
+  Suppose \(h \vdash x_i \barr^{*} x'_i\). Then, if \(x_i = x'_i\), then \((c\ x_0 \ldots x_n) \barr^{*} (c\ x'_0 \ldots x'_n)\) by reflexivity. If \(x_i \neq x'_i\), then there must exist \(x'_{0,i}\) such that \(h_0 \vdash x_i \barr x'_{0,i}\) and \(h_1 \vdash x'_{0,i} \barr^{*} x'_{i}\). And, by~\ref{thm:sn}, \(size(x'_{0,i}) < size(x_i)\). So, by induction, \((c\ x_{0,0} \ldots x_{0,n}) \barr^{*} (c\ x'_0 \ldots x'_n)\). Hence, \((c\ x_0 \ldots x_n) \barr^{*} (c\ x'_0 \ldots x'_n)\) by transitivity of single-step application of the point rule with respect to \(h_0\) and \(h_1\).\\
   \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L307}{Expr.aff\_mk\_point'}
 \end{proof}
 
@@ -524,7 +527,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 \end{lemma}
 
 \begin{proof}
-  The proof proceeds similarly as in~\ref{lem:pointstar}, but with the function congruence single-step rule.
+  The proof proceeds similarly as in~\ref{lem:pointstar}, but with the function congruence single-step rule.\\
   \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L232}{Expr.congrFun'}
 \end{proof}
 
@@ -533,7 +536,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 \end{lemma}
 
 \begin{proof}
-  The proof proceeds similarly as in~\ref{lem:pointstar}, but with the argument congruence single-step rule.
+  The proof proceeds similarly as in~\ref{lem:pointstar}, but with the argument congruence single-step rule.\\
   \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L262}{Expr.congrArg'}
 \end{proof}
 
@@ -544,7 +547,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 \begin{proof}
   The proof proceeds by induction on \(A \barr B\) and parallel case analysis on \(A \barr C\). We handle three possible cases: head-reduction where \(B\) and \(C\) are the head-reducts of \(A\); point-reduction where \(A\) is not an application but a combinator with points; congruences where \(A\) is of the form \((f x) \in E\) and where either \(B\) or \(C\) are of the form \((f' x)\) where \(f \barr f'\) or \((f x')\) where \(x \barr x'\).
 
-  In the head step cases \(A = (f x) \in E\) where \(f, x \in E\), the step \(A \barr C\) is destructed until atomic terms which are not combinators with points or are applications are met. Then, a step is reconstructed for some \(D \in E\) such that \(B \barr D\) and \(C \barr D\). In the case where \(A = (c x_0 \ldots x_n) \in E\) (i.e., where \(A\) is a term with points), the step \(A \barr C\) is destructed into the atomic points and a step is reconstructed similarly. In the case where \(A = (f x) \in E\) and \(f\) is not obviously a combinator, we case split on \(f\) and perform the same steps as in the head reduction case until an atomic \(f\) is reached, such that, by the inductive hypothesis and the function congruence rule, we may reconstruct a step. We do similarly for \(x\) and handle all point-term cases until an atomic \(x\) is reached, in which case the inductive hypothesis applies.
+  In the head step cases where \(f, x \in E\) and \(A = (f x) \in E\), the step \(A \barr B\) or \(A \barr C\), respectively, is destructed until atomic terms which are not combinators with points or further applications are met. Then, a step is reconstructed for some \(D \in E\) such that \(B \barr D\) and \(C \barr D\). In the case where \(A = (c\ x_0 \ldots x_n) \in E\) (i.e., where \(A\) is a term with points), the step \(A \barr B\) or \(A \barr C\) is destructed, respectively, into its atomic point steps and a step is reconstructed similarly. In the case where \(A = (f x) \in E\) and \(f\) is not obviously a combinator, we case split on \(f\) and perform the same steps as in the head reduction case until an atomic \(f\) is reached, such that, by the inductive hypothesis and the function congruence rule, we may reconstruct a step. We do similarly for \(x\) and handle all point-term cases until an atomic \(x\) is reached, in which case the inductive hypothesis applies.
 
   To illustrate, suppose \((\comb[Id][A] x) \in E\) and \(h_1 \vdash (\comb[Id][A] x) \barr B\) and \(h_2 \vdash (\comb[Id][A] x) \barr C\):
   \begin{description}
@@ -554,17 +557,17 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
       \item[Function congruence in $h_2$ on $(Id\ A)$:]
         Suppose \(C\) is of the form \((f'_2 x)\) where \(\comb[Id][A] \barr f'_2\). Then, \(f'_2\) must be constructed by the point rule~\eqref{red:congr}, so there exists \(A'_2\) such that \(A \barr A'_2\). So, by the inductive hypothesis, there exists \(A'' \in E\) such that \(A' \barr^{*} A''\) and \(A'_2 \barr^{*} A''\). And, by~\ref{lem:pointstar}, \(\comb[Id][A'] \barr^{*} \comb[Id][A'']\) and \(\comb[Id][A'_2] \barr^{*} \comb[Id][A'']\). So, by~\ref{lem:congrfunstar}, \((\comb[Id][A'] x) \barr^{*} (\comb[Id][A''] x)\) and \((\comb[Id][A'_2] x) \barr^{*} (\comb[Id][A''] x)\).
       \item[Argument congruence in $h_2$ on $x$:]
-        Suppose \(C\) is of the form \((\comb[Id][A] x')\) where \(x \barr x'\). Then, by the single-step rule \(Id\)~\ref{conv:idquotcomp}, \((\comb[Id][A'] x) \barr x\) and \((\comb[Id][A] x) \barr x\).
+        Suppose \(C\) is of the form \((\comb[Id][A] x')\) where \(x \barr x'\). Then, by the single-step rule \(Id\)~\ref{conv:idquotcomp}, \((\comb[Id][A'] x) \barr x \barr x'\) and \((\comb[Id][A] x) \barr (\comb[Id][A] x') \barr x'\), so \(B \barr^{*} x'\) and \(C \barr^{*} x'\).
     \end{description}
   \item[Argument congruence in $h_1$ on $x$:]
     Suppose \(B\) is of the form \((\comb[Id][A] x')\) where \(x \barr x'\). Then, the proof is as above, except \(h_1\) and \(h_2\) are inverted.
   \item[Head reduction in $h_1$ on $((Id\ A) x)$:]
-    Suppose \(B = x\). Then, if \(h_2\) is a function congruence such that \(\comb[Id][A] \barr f'\), \(f'\) must be of the form \(\comb[Id][A']\) where \(A \barr A'\), so \(B \barr x\) and \(C \barr x\). If \(h_2\) is an argument congruence such that \(h \vdash x \barr x'\) where \(x' \in E\), then \(B \barr x'\) by \(h\) and \(C \barr x'\) by reflexivity.
+    Suppose \(B = x\). Then, if \(h_2\) is a function congruence such that \(\comb[Id][A] \barr f'\), \(f'\) must be of the form \(\comb[Id][A']\) where \(A \barr A'\), so \(B \barr x\) and \(C \barr x\). If \(h_2\) is an argument congruence such that \(h \vdash x \barr x'\), then \(B \barr x'\) by \(h\) and \(C \barr x'\) by reflexivity.\\
   \end{description}
   \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Conf.lean\#L131}{Expr.Red.conf}
 \end{proof}
 
-\begin{theorem}
+\begin{theorem}\label{thm:confglobal}
   Global confluence: If \(A, B, C \in E\) and \(A \barr^{*} B\) and \(A \barr^{*} C\), then there exists \(D \in E\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
 \end{theorem}
 
@@ -574,9 +577,154 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
     \item[$A = B$ and $A = C$:] By reflexivity, \(B \barr^{*} B\) and \(C \barr^{*} B\).
     \item[$h \vdash A = B$ but $A \neq C$:] By \(h\), \(B \barr^{*} C\), and by reflexivity, \(C \barr^{*} C\).
     \item[$A \neq B$ and $h \vdash A = C$:] By \(h\), \(C \barr^{*} B\), and by reflexivity, \(B \barr^{*} B\).
-    \item[$A \neq B$ and $A \neq C$:] Then, there exist \(B_0, C_0 \in E\) such that \(A \barr B_0\) and \(A \barr C_0\) and \(B_0 \barr^{*} B\) and \(C_0 \barr^{*} C\), so, by~\ref{thm:conflocal}, there exists \(D \in E\) such that \(B_0 \barr^{*} D\) and \(C_0 \barr^{*} D\). And, due to~\ref{thm:sn} and~\ref{thm:decstar}, \(size(B_0) < size(A)\) and \(size(C_0) < size(A)\). So, by well-founded induction given \(B_0 \barr^{*} B\), \(B_0 \barr^{*} D\), \(C_0 \barr^{*} C\), and \(C_0 \barr^{*} D\), there exist \(B_2, C_2 \in E\) such that \(B \barr^{*} B_2\) and \(D \barr^{*} B_2\) and \(C \barr^{*} C_2\) and \(D \barr^{*} C_2\). And, similarly, since \(B \barr^{*} B_2\) and \(B \barr^{*} C_2\) (via \(D\)), there exists \(E \in E\) such that \(B_2 \barr^{*} E\) and \(C_2 \barr^{*} E\), so \(B \barr^{*} E\) and \(C \barr^{*} E\).
+    \item[$A \neq B$ and $A \neq C$:] Then, there exist \(B_0, C_0 \in E\) such that \(A \barr B_0\) and \(A \barr C_0\) and \(B_0 \barr^{*} B\) and \(C_0 \barr^{*} C\), so, by~\ref{thm:conflocal}, there exists \(D \in E\) such that \(B_0 \barr^{*} D\) and \(C_0 \barr^{*} D\). And, due to~\ref{thm:sn} and~\ref{lem:decstar}, \(size(B_0) < size(A)\) and \(size(C_0) < size(A)\). So, by well-founded induction given \(B_0 \barr^{*} B\), \(B_0 \barr^{*} D\), \(C_0 \barr^{*} C\), and \(C_0 \barr^{*} D\), there exist \(B_2, C_2 \in E\) such that \(B \barr^{*} B_2\) and \(D \barr^{*} B_2\) and \(C \barr^{*} C_2\) and \(D \barr^{*} C_2\). And, similarly, since \(B \barr^{*} B_2\) and \(B \barr^{*} C_2\) (via \(D\)), there exists \(D' \in E\) such that \(B_2 \barr^{*} D'\) and \(C_2 \barr^{*} D'\), so \(B \barr^{*} D'\) and \(C \barr^{*} D'\).\\
   \end{description} 
   \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L288}{Expr.RedRel.globally\_confluent}
+\end{proof}
+
+\subsection{Decision Procedure for \(\beta\)-Equality}
+
+Our \(\beta\)-reduction rules are implemented as a total, terminating \(\beta\)-reduction engine. Reduction proceeds by repeated single-step reduction via a function \(step? : (A : E) \rightarrow Option (\Sigma' (B : E), A \barr B)\) and well-founded recursion by decreasing syntactic size~\ref{thm:sn}. The reducer has has soundness and completeness with respect to \(\beta^{!}\). The reducer is used to decide \(\beta\)-equality and is central to decidable type-checking.
+
+In applications \((f x) \in E\), the \(step\) attempts a head single-step, if it is available:
+
+\begin{leancode}
+@[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
+def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :=
+  match e with
+  | (DCC? ((Σ' _B _C) (& _x))) => .some ⟨_, ⟨.sigma⟩⟩
+  | (DCC? ((𝟚.Rec _motive _x _y) _env 𝟙₂)) =>
+    .some ⟨_, ⟨.ind_bool_true⟩⟩
+  | (DCC? ((𝟚.Rec _motive _x _y) _env 𝟘₂)) =>
+    .some ⟨_, ⟨.ind_bool_false⟩⟩
+  | DCC? ((!<> _f) (& _x))                                 => .some ⟨_, ⟨.map⟩⟩
+  | DCC? (($<> _f) (& _x))                                 => .some ⟨_, ⟨.fmap⟩⟩
+  | DCC? ((* _α) (& _x))                                 => .some ⟨_, ⟨.unbox⟩⟩
+  | DCC? ((⟨,⟩_β _M _N) (& _x))                        => .some ⟨_, ⟨.pair⟩⟩
+  | (DCC? ((Eval _α _β _x) (,__β _y _z)))            => .some ⟨_, ⟨.evalc⟩⟩
+  | (DCC? ((Eql _f_α) (& _env) (& _y)))              => .some ⟨_, ⟨.eql⟩⟩
+  | (DCC? ((=' _f_α) _x _y _z))              => .some ⟨_, ⟨.eq_mk⟩⟩
+  | (DCC? ((`_β _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
+  | (DCC? ((Id _α) _x))                                => .some ⟨_, ⟨.id⟩⟩
+  | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
+  | (DCC? ((Swap _B _C) (,_B₂ _a _b)))                 => .some ⟨_, ⟨.swap⟩⟩
+  | (DCC? ((Snd _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
+  | (DCC? ((∘ _x _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
+  | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, ⟨.curr'⟩⟩
+  | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
+  | _ => .none
+\end{leancode}
+\noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L10}{Expr.step\_head?}
+
+If no head step is available, it attempts to step \(f\), then if \(f\) cannot be stepped, it attempts to step \(x\). If \(e\) is a combinator of the form \((c\ x_0 \ldots x_n)\) such that \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), the first point \(x_i\) where \(i < n\) which can make a step is used:
+
+\begin{leancode}
+@[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
+def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :=
+  open Dsl in match step_head? e with
+  | .some h => .some h
+  | .none =>
+    match e.cases_point_arity' with
+    | .inl ⟨heq⟩ =>
+      match e with
+      | DCC? (f x) =>
+        match f.step?, x.step? with
+        | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (f' x)), ⟨.congrFun h₁⟩⟩
+        | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC? (f x')), ⟨.congrArg h₁⟩⟩
+        | _, _ => .none
+      | _ => .none
+    | .inr (.inl ⟨heq⟩) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step? with
+      | .some ⟨_, ⟨h₁⟩⟩ =>
+        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
+      | .none => .none
+    | .inr (.inr (.inl ⟨heq⟩)) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step?, (e.points.get ⟨1, by simp [heq]⟩).step? with
+      | .some ⟨_, ⟨h₁⟩⟩, _ =>
+        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
+      | _, .some ⟨_, ⟨h₂⟩⟩ =>
+        .some ⟨_, ⟨.point 1 (by simp [heq]) h₂⟩⟩
+      | _, _ => .none
+    | .inr (.inr (.inr (.inl ⟨heq⟩))) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step?, (e.points.get ⟨1, by simp [heq]⟩).step? with
+      | .some ⟨_, ⟨h₁⟩⟩, _ =>
+        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
+      | _, .some ⟨_, ⟨h₂⟩⟩ =>
+        .some ⟨_, ⟨.point 1 (by simp [heq]) h₂⟩⟩
+      | _, _ =>
+        match (e.points.get ⟨2, by simp [heq]⟩).step? with
+        | .some ⟨_, ⟨h₃⟩⟩ =>
+          .some ⟨_, ⟨.point 2 (by simp [heq]) h₃⟩⟩
+        | .none => .none
+    | .inr (.inr (.inr (.inr ⟨heq⟩))) =>
+      match (e.points.get ⟨0, by simp [heq]⟩).step?, (e.points.get ⟨1, by simp [heq]⟩).step? with
+      | .some ⟨_, ⟨h₁⟩⟩, _ =>
+        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
+      | _, .some ⟨_, ⟨h₂⟩⟩ =>
+        .some ⟨_, ⟨.point 1 (by simp [heq]) h₂⟩⟩
+      | _, _ =>
+        match (e.points.get ⟨2, by simp [heq]⟩).step?, (e.points.get ⟨3, by simp [heq]⟩).step? with
+        | .some ⟨_, ⟨h₃⟩⟩, _ =>
+          .some ⟨_, ⟨.point 2 (by simp [heq]) h₃⟩⟩
+        | _, .some ⟨_, ⟨h₄⟩⟩ =>
+          .some ⟨_, ⟨.point 3 (by simp [heq]) h₄⟩⟩
+        | _, _ => .none
+termination_by (e.size, sizeOf e)
+decreasing_by
+  any_goals (grind)
+\end{leancode}
+\noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L59}{Expr.step?}
+
+Reduction to a normal form proceeds by repeated single-step reduction and well-founded recursion given \(h \vdash A \barr B\) implies \(size(B) < size(A)\) until no step is available:
+
+\begin{leancode}
+@[dcc_force_reduce, aesop norm (rule_sets := [DccForceReduce])]
+def reduce.{u} {α : Type u} {t : α → ℕ} (r : α → α → Prop) [hR : RedRel r t]
+  (e : α) : ((e' : α) × (PULift.{u + 1, 0} (Relation.ReflTransGen r e e'))) :=
+  match hR.run e with
+  | .some ⟨e', ⟨h⟩⟩ =>
+    have _size_ : t e' < t e := hR.decreasing h
+    let ⟨e'', ⟨h₂⟩⟩ := reduce r (t := t) e'
+    ⟨e'', ⟨.trans (.single h) h₂⟩⟩
+  | .none => ⟨e, ⟨.refl⟩⟩
+termination_by t e
+\end{leancode}
+\noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L113}{Expr.reduce}
+
+\begin{theorem}\label{thm:semicomplete}
+  If \(A, B \in E\) and \(h \vdash A \barr B\), then there exists \(B' \in E\) and \(h' \vdash A \barr B'\) such that \(step? A = some \langle B, h' \rangle\).
+\end{theorem}
+
+\begin{proof}
+  Suppose \(h \vdash A \barr B\). The proof proceeds by case-splitting on the definition of \(step?\):
+  \begin{description}
+    \item[\(A\) can make a head step:] If \(A\) can make a head step, then there exists some \(B' \in E\) such that \(step? A = some \langle B, h \rangle\) and where \(h\) is the corresponding single-step rule~\ref{sec:convrules}.
+    \item[\(A\) is of the form \((f x)\) where \(f, x \in E\) and \(A\) cannot make a head step:] If \(A\) cannot make a head step and if \(f\) cannot make a head step, then \(x\) must make a head step, and there exists \(x' \in E\) where \(h_x \vdash x \barr x'\) and \(step? (f x) = \langle (f x'), congrArg h_x \rangle\). This is demonstrated by case-splitting on \(h\) and by the fact that \(A\) can make neither a head step nor a step on \(f\). If \(f\) can make a head step, then there exists \(f' \in E\) such that \(h_f \vdash f \barr f'\) and \(step? (f x) = \langle (f' x), congrFun h_f \rangle\).
+    \item[\(A\) is of the form \((c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\):] We repeatedly case-split on each \(i < n\) which can or cannot make a step. In each case, we apply the point~\ref{red:congr} rule, and if none can make a step, we show a contradiction by case-splitting on \(h\).
+    \end{description}
+    \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Complete.lean\#L7}{Expr.semi\_complete}
+\end{proof}
+
+\begin{theorem}\label{thm:reducenorm}
+  If \(A, B \in E\) and \(h \vdash A \barr^{*} B\) and \(reduce A = \langle B, h \rangle\), then \(B\) is a normal form.
+\end{theorem}
+
+\begin{proof}
+  The proof proceeds by case-splitting on the definition of \(reduce\). If \(step? A = none\), then \(A\) is a normal form, since otherwise, \(step? A \neq none\) by~\ref{thm:semicomplete}. If \(step? A = some \langle B_0, h_0 \rangle\) such that \(h_0 : A \barr B_0\), then \(size(B_0) < size(A)\) by~\ref{thm:sn}. So, by well-founded induction, \(B_0\) is a normal form.
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L374}{Expr.reduce\_norm}
+\end{proof}
+
+\begin{theorem}
+  If \(A, B \in E\) and \(h \vdash A \barr^{*} B\) and \(B\) is a normal form (that is, there does not exist \(C \in E\) such that \(B \barr C\)), then \(reduce Red A = \langle B, h \rangle\).
+\end{theorem}
+
+\begin{proof}
+  This fact is shown by case-splitting on the definition of \(reduce\):
+  \begin{description}
+    \item[\(step? A = none\):] If no step can be made, then \(h\) must be proven by reflexivity (that is, \(A = B\)). Otherwise, a step would be possible, in which case, by~\ref{thm:semicomplete}, \(step? A \neq none\). By the definition of \(reduce\), \(reduce A = \langle B, refl \rangle\).
+    \item[\(step? A = \langle B', h' \rangle\), where \(h' \vdash A \barr B'\):] If a step can be made, then by confluence \ref{thm:confglobal}, there exists \(D \in E\) such that \(B' \barr^{*} D\) and \(B \barr^{*} D\). In case \(A\) reaches \(B\) in a single step, then \(B = D\), since \(B\) is a normal form. And, since \(size(B') < size(A)\) and \(B' \barr B\), well-founded induction applies. That is, there exists \(h'\) such that \(reduce B' = \langle B, h' \rangle\). So, there exists \(h''\) such that \(reduce A = \langle B, h'' \rangle\), and by propositional extensionality, \(h = h''\).
+    \end{description}
+    \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L393}{Expr.reduce\_complete}
 \end{proof}
 
 \section{Inference Rules}

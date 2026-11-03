@@ -976,6 +976,15 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
 \end{definition}
 
 \begin{definition}
+  \(\Sigma\)-couples are as such:
+  \[
+    \inferrule[Couple]
+    { x : A \quad B : A \rightarrow \sort{v} \quad B \barr^{!} B' \quad (B' x) \barr^!{!} \tau_2 \quad y : \tau_2}
+    { \comb[,B][x][y] : \comb[\Sigma][A][B']}
+  \]
+\end{definition}
+
+\begin{definition}
   Finally, affine terms are as such:
   \[
     \begin{gathered}
@@ -988,12 +997,6 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
     \end{gathered}
   \]
 \end{definition}
-
-% Explain the inference rule for application
-
-% Give the rest of the inference rules
-
-% Explain idiosyncracies and ad-hoc inductives along the way
 
 % Explain mk rule uses other arrow
 

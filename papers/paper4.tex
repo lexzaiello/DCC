@@ -135,7 +135,8 @@ Should be structured around building up to the fundamental theorem: extensional 
   \item \sout{Update results section}
    \begin{itemize}
       \item \sout{It should be emphasized that equality reflection and other metatheorems (e.g., subject-reduction, progress) are computable definitions, rather than theorems in \(\textbf{Prop}\).}
-  \end{itemize}
+   \end{itemize}
+  \item DCC broad overview for introduction section
   \item \sout{Syntax}
     \begin{itemize}
       \item \sout{Give a presentation in BNF notation}
@@ -154,6 +155,10 @@ Should be structured around building up to the fundamental theorem: extensional 
     \end{itemize}
     \item \sout{\textbf{Proof}: Local confluence}
     \item \sout{\textbf{Proof}: Confluence by newmann's lemma}
+    \item \sout{\textbf{Algorithm}: Reduction}
+    \item \sout{\textbf{Proof}: Completeness of reduction}
+    \item \sout{\textbf{Definition}: Definitional equality}
+    \item \sout{\textbf{Proof}: Decidability of \(\beta\)-equality}
   \end{itemize}
   \item Inference rules
     \begin{itemize}
@@ -692,7 +697,7 @@ termination_by t e
 \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L113}{Expr.reduce}
 
 \begin{theorem}\label{thm:semicomplete}
-  If \(A, B \in E\) and \(h \vdash A \barr B\), then there exists \(B' \in E\) and \(h' \vdash A \barr B'\) such that \(step? A = some \langle B, h' \rangle\).
+  Semi-completeness of single-step reduction: If \(A, B \in E\) and \(h \vdash A \barr B\), then there exists \(B' \in E\) and \(h' \vdash A \barr B'\) such that \(step? A = some \langle B, h' \rangle\).
 \end{theorem}
 
 \begin{proof}
@@ -706,7 +711,7 @@ termination_by t e
 \end{proof}
 
 \begin{theorem}\label{thm:reducenorm}
-  If \(A, B \in E\) and \(h \vdash A \barr^{*} B\) and \(reduce A = \langle B, h \rangle\), then \(B\) is a normal form.
+  Reducts under \(reduce\) are normal forms: If \(A, B \in E\) and \(h \vdash A \barr^{*} B\) and \(reduce A = \langle B, h \rangle\), then \(B\) is a normal form.
 \end{theorem}
 
 \begin{proof}
@@ -714,8 +719,8 @@ termination_by t e
   \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L374}{Expr.reduce\_norm}
 \end{proof}
 
-\begin{theorem}
-  If \(A, B \in E\) and \(h \vdash A \barr^{*} B\) and \(B\) is a normal form (that is, there does not exist \(C \in E\) such that \(B \barr C\)), then \(reduce Red A = \langle B, h \rangle\).
+\begin{theorem}\label{thm:reducecomplete}
+  Completeness of \(\beta\)-reduction with respect to normal forms: If \(A, B \in E\) and \(h \vdash A \barr^{*} B\) and \(B\) is a normal form (that is, there does not exist \(C \in E\) such that \(B \barr C\)), then \(reduce Red A = \langle B, h \rangle\).
 \end{theorem}
 
 \begin{proof}
@@ -727,7 +732,98 @@ termination_by t e
     \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L393}{Expr.reduce\_complete}
 \end{proof}
 
+\begin{theorem}\label{thm:normunique}
+  Uniqueness of normal forms: if \(A, B, C \in E\) and \(h_1 \vdash A \barr^{!} B\) and \(h_2 \vdash A \barr^{!} C\), then \(B = C\).
+\end{theorem}
+
+\begin{proof}
+  By completeness of \(\beta\)-reduction~\ref{thm:reducecomplete}, \(reduce A = \langle B, h_1 \rangle\) and \(reduce A = \langle C, h_2 \rangle\), so \(B = C\).
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L366}{Expr.norm\_unique}
+\end{proof}
+
+Using our reduction function with soundness and completeness, we decide \(\beta\)-equality.
+
+\begin{definition}\label{def:betaeq}
+  If \(A, B \in E\), then \(A =_\beta B\) iff there exists \(C \in E\) such that \(A \barr^{!} C\) and \(B \barr^{!} C\).
+\end{definition}
+
+\begin{theorem}\label{thm:decidebetaeq}
+  If \(A, B \in E\), then \(A =_\beta B\) or \(A \neq_\beta B\).
+\end{theorem}
+
+\begin{proof}
+  Let \(\langle A_1, h_1 \rangle \coloneq reduce A\) and \(\langle B_1, h_2 \rangle \coloneq reduce B\). Then, \(A_1\) and \(B_1\) are normal forms by~\ref{thm:reducenorm}. We proceed by cases:
+  \begin{description}
+    \item[$A_1 = B_1$:]
+      If \(A_1 = B_1\), then \(A \barr^{!} A_1\) and \(B \barr^{!} A_1\), so \(A =_\beta B\).
+    \item[\(A_{1} \neq B_{1}\):]
+      If \(A_1 \neq B_1\), then \(A \neq_\beta B\), since \(A =_\beta B\) implies that there exists \(C \in E\) such that \(h_3 \vdash A \barr^{!} C\) and \(h_4 \vdash B \barr^{!} C\). But, then \(reduce A = \langle C, h_3 \rangle = \langle C, h_4 \rangle = reduce B\). Hence, a contradiction is derived.
+  \end{description}
+\end{proof}
+
 \section{Inference Rules}
+
+DCC has decidable type-checking, dependent types, and uses affine logic. Every primitive object is well-typed, and function types are quite legible. DCC achieves decidable type-checking by eagerly \(\beta\)-reducing all inferred types to canonical, normal form, and by definining definitional equality as \(\beta\)-equality (\(A \equiv B \coloneq A =_\beta B\)). DCC achieves legible types by encoding \(\Pi\)-types as a first-class combinator which indexes an arbitrary environment denoting a context, which is shuffled down a nested \(\Pi\) chain during application.
+
+\begin{definition}\label{def:defeq}
+  If \(A, B \in E\), then \(A \equiv B \coloneq A =_\beta B\) \ref{def:betaeq}.
+\end{definition}
+
+\begin{definition}\label{def:inferpi}
+  The inference rule for \(\Pi\) is as such:
+  \[
+    \inferrule[Pi]
+    { B : A \rightarrow \sort{u} \qquad C : (x : A) \rightarrow (y : B x) \rightarrow \sort{v}}
+    { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}
+  \]
+\end{definition}
+
+\begin{definition}\label{def:arrowsimple}
+  Arrows, written in the meta-level as \(A \rightarrow B\) are identified by the rule:
+  \[
+    \inferrule[Arrow Def.]
+    { A \barr^{!} A' \qquad B \barr^{!} B'}
+    { A' \rightarrow B' \coloneq (\comb[\Pi][\comb[`\mathbb{1}][A]][\comb[`\mathbb{1}][\comb[`A][B]]] \ast)}
+  \]
+  We use \(\comb[\rightarrow][A][B]\) to explicitly denote the DCC expansion of \(A \rightarrow B\).
+\end{definition}
+
+\begin{definition}\label{def:inferapp}
+  Application is type-checked as such:
+  \[
+    \inferrule[App]
+    { f : (\comb[\Pi][B][C] env) \qquad x : A \qquad (B env) \equiv A \qquad (C env x) \barr^{!} \tau}
+    { (f x) : \tau }
+  \]
+  Note that the inferred type of \((f x)\) is in normal form.
+\end{definition}
+
+To see an example of how application type-checks, we shall enumerate the inference rules, in the order that their reduction rules are defined.
+
+\begin{definition}
+  The identity, quotation, and composition are as such:
+  \[
+    \begin{gathered}
+      \inferrule[Id]
+      { A : \sort{u} \qquad A \barr^{!} A'}
+      { \comb[Id][A] : \comb[\rightarrow][A'][A']} \qquad
+      \inferrule[Quot]
+      { x : A \qquad B : \sort{v} \qquad B \barr^{!} B'}
+      { \comb[`B][x] : \comb[\rightarrow][B'][A]} \qquad
+      \inferrule[Comp]
+      { g : A \rightarrow B \qquad f : (\comb[\Pi][\comb[`\mathbb{1}][B]][\comb[`\mathbb{1}][C]] \ast) \qquad g \barr^{!} g'}
+      { \comb[\circ][f][g] : (\comb[\Pi][\comb[`\mathbb{1}][A]][\comb[`\mathbb{1}][\comb[\circ][C][g]]] \ast)}
+    \end{gathered}
+  \]
+\end{definition}
+
+% Explain the inference rule for application
+
+% Give the rest of the inference rules
+
+% Explain idiosyncracies and ad-hoc inductives along the way
+
+% Explain mk rule uses other arrow
 
 \subsection{Type-Checking is Decidable}
 

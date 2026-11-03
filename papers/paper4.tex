@@ -71,7 +71,7 @@
       \IfNoValueTF{#3}{(#1\ #2)}{(#1\ #2\ #3)}}{(#1\ #2\ #3\ #4)}}{(#1\ #2\ #3\ #4\ #5)}}
 \newcommand{\rrb}{\rrbracket}
 \newcommand{\leanlink}[2]{
-  \hfill \href{#1}{\textcolor{black}\faCheck~[Formalized: \texttt{#2}]}%
+  \href{#1}{\textcolor{black}\faCheck~[Formalized: \texttt{#2}]}%
 }
 \newcommand{\la}{\langle}
 \newcommand{\ra}{\rangle}
@@ -160,17 +160,18 @@ Should be structured around building up to the fundamental theorem: extensional 
     \item \sout{\textbf{Definition}: Definitional equality}
     \item \sout{\textbf{Proof}: Decidability of \(\beta\)-equality}
   \end{itemize}
-  \item Inference rules
+  \item \sout{Inference rules}
     \begin{itemize}
       \item \sout{Explain how \(\Pi\) indexes an environment, similarly to \(\Lambda\) among others}
       \item \sout{Must explain arrows, different kinds of arrows, inductives used for representing arrow types. \textit{This can be done through a rule in the main inference rules diagram}.}
-      \item Constant inference rules
+      \item \sout{Constant inference rules}
       \item \sout{Example of type-checking derivation}
-      \item Inference rules should be given first as a full page diagram, and then justified for some in particular (\textit{which ones?})
+      \item \sout{Inference rules should be given first as a full page diagram, and then justified for some in particular (\textit{which ones?})}
+      \item \sout{Judgmental completeness and related theorems}
     \end{itemize}
   \item Extensional equality reflection proof --- \textit{note: this requires subject reduction and progress}
   \begin{itemize}
-    \item \textbf{Proof}: Decidability
+    \item \sout{\textbf{Proof}: Decidability}
     \item \textbf{Proof}: Subject-reduction lemma
     \item \textbf{Proof}: Progress theorem
       \begin{itemize}
@@ -236,9 +237,9 @@ The base objects are a modified superset of the base terms in \cclk{}. Products 
   A term (\(E\)) is either a constant \(E_c\):
   \[E_c \subset E\]
   or a parenthesized combinator \(C\) juxtaposed by its points which are also terms:
-  \[\{ (c\ x_0 \ldots x_n) | c \in C, \{ x | x \in x_0 \ldots x_n\} \subset E \}\ \subset E\]
+  \[\{ (c\ x_0 \ldots x_n) \mid c \in C, \{ x \mid x \in x_0 \ldots x_n\} \subset E \}\ \subset E\]
   or a parenthesized application of a list of juxtaposed terms:
-  \[\{(f\ x_0 \ldots x_n) | f \in E, \{x | x \in x_0 \ldots x_n\} \subset E\} \subset E\]
+  \[\{(f\ x_0 \ldots x_n) \mid f \in E, \{x \mid x \in x_0 \ldots x_n\} \subset E\} \subset E\]
 \end{definition}
 
 \begin{example}
@@ -507,8 +508,8 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
   If \((f x) \in E\) and \(f \barr f'\), then, by the inductive hypothesis, \(size(f') < size(f)\), and \(size((f x)) = size(f) + size(x) > (size((f' x)) = size(f') + size(x))\).\\\\
   \item[Congr. Arg.:]
   If \((f x) \in E\) and \(x \barr x'\), then, by the inductive hypothesis, \(size(x') < size(x)\), and \(size((f x)) = size(f) + size(x) > (size((f x')) = size(f) + size(x'))\).\\
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Rel.lean\#L82}{Expr.Red.decreasing}
-  \end{description}
+\end{description}
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Rel.lean\#L82}{Expr.Red.decreasing}
 \end{proof}
 
 \begin{lemma}\label{lem:decstar}
@@ -517,7 +518,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 
 \begin{proof}
   Suppose \(A = B\). Then, \(size(A) = size(B)\), so \(size(B) \le size(A)\). If \(A \neq B\), then there exists \(B_0 \in E\) such that \(A \barr B_0\) and \(B_0 \barr^{*} B\). So, by~\ref{thm:sn}, \(size(B_0) < size(A)\), and by the inductive hypothesis, \(size(B) \le size(B_0)\), so \(size(B) \le size(A)\).\\
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L507}{Expr.decreasing?}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L507}{Expr.decreasing?}
 \end{proof}
 
 \begin{lemma}\label{lem:pointstar}
@@ -526,7 +527,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 
 \begin{proof}
   Suppose \(h \vdash x_i \barr^{*} x'_i\). Then, if \(x_i = x'_i\), then \((c\ x_0 \ldots x_n) \barr^{*} (c\ x'_0 \ldots x'_n)\) by reflexivity. If \(x_i \neq x'_i\), then there must exist \(x'_{0,i}\) such that \(h_0 \vdash x_i \barr x'_{0,i}\) and \(h_1 \vdash x'_{0,i} \barr^{*} x'_{i}\). And, by~\ref{thm:sn}, \(size(x'_{0,i}) < size(x_i)\). So, by induction, \((c\ x_{0,0} \ldots x_{0,n}) \barr^{*} (c\ x'_0 \ldots x'_n)\). Hence, \((c\ x_0 \ldots x_n) \barr^{*} (c\ x'_0 \ldots x'_n)\) by transitivity of single-step application of the point rule with respect to \(h_0\) and \(h_1\).\\
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L307}{Expr.aff\_mk\_point'}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L307}{Expr.aff\_mk\_point'}
 \end{proof}
 
 \begin{lemma}\label{lem:congrfunstar}
@@ -535,7 +536,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 
 \begin{proof}
   The proof proceeds similarly as in~\ref{lem:pointstar}, but with the function congruence single-step rule.\\
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L232}{Expr.congrFun'}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L232}{Expr.congrFun'}
 \end{proof}
 
 \begin{lemma}\label{lem:congrargstar}
@@ -544,7 +545,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 
 \begin{proof}
   The proof proceeds similarly as in~\ref{lem:pointstar}, but with the argument congruence single-step rule.\\
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L262}{Expr.congrArg'}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L262}{Expr.congrArg'}
 \end{proof}
 
 \begin{theorem}\label{thm:conflocal}
@@ -571,7 +572,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
   \item[Head reduction in $h_1$ on $((Id\ A) x)$:]
     Suppose \(B = x\). Then, if \(h_2\) is a function congruence such that \(\comb[Id][A] \barr f'\), \(f'\) must be of the form \(\comb[Id][A']\) where \(A \barr A'\), so \(B \barr x\) and \(C \barr x\). If \(h_2\) is an argument congruence such that \(h \vdash x \barr x'\), then \(B \barr x'\) by \(h\) and \(C \barr x'\) by reflexivity.\\
   \end{description}
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Conf.lean\#L131}{Expr.Red.conf}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Conf.lean\#L131}{Expr.Red.conf}
 \end{proof}
 
 \begin{theorem}\label{thm:confglobal}
@@ -586,7 +587,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
     \item[$A \neq B$ and $h \vdash A = C$:] By \(h\), \(C \barr^{*} B\), and by reflexivity, \(B \barr^{*} B\).
     \item[$A \neq B$ and $A \neq C$:] Then, there exist \(B_0, C_0 \in E\) such that \(A \barr B_0\) and \(A \barr C_0\) and \(B_0 \barr^{*} B\) and \(C_0 \barr^{*} C\), so, by~\ref{thm:conflocal}, there exists \(D \in E\) such that \(B_0 \barr^{*} D\) and \(C_0 \barr^{*} D\). And, due to~\ref{thm:sn} and~\ref{lem:decstar}, \(size(B_0) < size(A)\) and \(size(C_0) < size(A)\). So, by well-founded induction given \(B_0 \barr^{*} B\), \(B_0 \barr^{*} D\), \(C_0 \barr^{*} C\), and \(C_0 \barr^{*} D\), there exist \(B_2, C_2 \in E\) such that \(B \barr^{*} B_2\) and \(D \barr^{*} B_2\) and \(C \barr^{*} C_2\) and \(D \barr^{*} C_2\). And, similarly, since \(B \barr^{*} B_2\) and \(B \barr^{*} C_2\) (via \(D\)), there exists \(D' \in E\) such that \(B_2 \barr^{*} D'\) and \(C_2 \barr^{*} D'\), so \(B \barr^{*} D'\) and \(C \barr^{*} D'\).\\
   \end{description} 
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L288}{Expr.RedRel.globally\_confluent}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L288}{Expr.RedRel.globally\_confluent}
 \end{proof}
 
 \subsection{Decision Procedure for \(\beta\)-Equality}
@@ -621,7 +622,7 @@ def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :
   | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
   | _ => .none
 \end{leancode}
-\noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L10}{Expr.step\_head?}
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L10}{Expr.step\_head?}
 
 If no head step is available, it attempts to step \(f\), then if \(f\) cannot be stepped, it attempts to step \(x\). If \(e\) is a combinator of the form \((c\ x_0 \ldots x_n)\) such that \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), the first point \(x_i\) where \(i < n\) which can make a step is used:
 
@@ -680,7 +681,7 @@ termination_by (e.size, sizeOf e)
 decreasing_by
   any_goals (grind)
 \end{leancode}
-\noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L59}{Expr.step?}
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L59}{Expr.step?}
 
 Reduction to a normal form proceeds by repeated single-step reduction and well-founded recursion given \(h \vdash A \barr B\) implies \(size(B) < size(A)\) until no step is available:
 
@@ -696,7 +697,7 @@ def reduce.{u} {α : Type u} {t : α → ℕ} (r : α → α → Prop) [hR : Red
   | .none => ⟨e, ⟨.refl⟩⟩
 termination_by t e
 \end{leancode}
-\noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L113}{Expr.reduce}
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L113}{Expr.reduce}
 
 \begin{theorem}\label{thm:semicomplete}
   Semi-completeness of single-step reduction: If \(A, B \in E\) and \(h \vdash A \barr B\), then there exists \(B' \in E\) and \(h' \vdash A \barr B'\) such that \(step? A = some \langle B, h' \rangle\).
@@ -709,7 +710,7 @@ termination_by t e
     \item[\(A\) is of the form \((f x)\) where \(f, x \in E\) and \(A\) cannot make a head step:] If \(A\) cannot make a head step and if \(f\) cannot make a head step, then \(x\) must make a head step, and there exists \(x' \in E\) where \(h_x \vdash x \barr x'\) and \(step? (f x) = \langle (f x'), congrArg h_x \rangle\). This is demonstrated by case-splitting on \(h\) and by the fact that \(A\) can make neither a head step nor a step on \(f\). If \(f\) can make a head step, then there exists \(f' \in E\) such that \(h_f \vdash f \barr f'\) and \(step? (f x) = \langle (f' x), congrFun h_f \rangle\).
     \item[\(A\) is of the form \((c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\):] We repeatedly case-split on each \(i < n\) which can or cannot make a step. In each case, we apply the point~\ref{red:congr} rule, and if none can make a step, we show a contradiction by case-splitting on \(h\).
     \end{description}
-    \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Complete.lean\#L7}{Expr.semi\_complete}
+    \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Complete.lean\#L7}{Expr.semi\_complete}
 \end{proof}
 
 \begin{theorem}\label{thm:reducenorm}
@@ -718,7 +719,7 @@ termination_by t e
 
 \begin{proof}
   The proof proceeds by case-splitting on the definition of \(reduce\). If \(step? A = none\), then \(A\) is a normal form, since otherwise, \(step? A \neq none\) by~\ref{thm:semicomplete}. If \(step? A = some \langle B_0, h_0 \rangle\) such that \(h_0 : A \barr B_0\), then \(size(B_0) < size(A)\) by~\ref{thm:sn}. So, by well-founded induction, \(B_0\) is a normal form.
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L374}{Expr.reduce\_norm}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L374}{Expr.reduce\_norm}
 \end{proof}
 
 \begin{theorem}\label{thm:reducecomplete}
@@ -731,7 +732,7 @@ termination_by t e
     \item[\(step? A = none\):] If no step can be made, then \(h\) must be proven by reflexivity (that is, \(A = B\)). Otherwise, a step would be possible, in which case, by~\ref{thm:semicomplete}, \(step? A \neq none\). By the definition of \(reduce\), \(reduce A = \langle B, refl \rangle\).
     \item[\(step? A = \langle B', h' \rangle\), where \(h' \vdash A \barr B'\):] If a step can be made, then by confluence \ref{thm:confglobal}, there exists \(D \in E\) such that \(B' \barr^{*} D\) and \(B \barr^{*} D\). In case \(A\) reaches \(B\) in a single step, then \(B = D\), since \(B\) is a normal form. And, since \(size(B') < size(A)\) and \(B' \barr B\), well-founded induction applies. That is, there exists \(h'\) such that \(reduce B' = \langle B, h' \rangle\). So, there exists \(h''\) such that \(reduce A = \langle B, h'' \rangle\), and by propositional extensionality, \(h = h''\).
     \end{description}
-    \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L393}{Expr.reduce\_complete}
+    \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L393}{Expr.reduce\_complete}
 \end{proof}
 
 \begin{theorem}\label{thm:normunique}
@@ -739,8 +740,8 @@ termination_by t e
 \end{theorem}
 
 \begin{proof}
-  By completeness of \(\beta\)-reduction~\ref{thm:reducecomplete}, \(reduce A = \langle B, h_1 \rangle\) and \(reduce A = \langle C, h_2 \rangle\), so \(B = C\).
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L366}{Expr.norm\_unique}
+  By completeness of \(\beta\)-reduction~\ref{thm:reducecomplete}, \(reduce A = \langle B, h_1 \rangle\) and \(reduce A = \langle C, h_2 \rangle\), so \(B = C\).\\
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L366}{Expr.norm\_unique}
 \end{proof}
 
 Using our reduction function with soundness and completeness, we decide \(\beta\)-equality.
@@ -763,7 +764,7 @@ Using our reduction function with soundness and completeness, we decide \(\beta\
   \end{description}
 \end{proof}
 
-\section{Inference Rules}
+\section{Inference Rules}\label{sec:inferrules}
 
 DCC has decidable type-checking, dependent types, and uses affine logic. Every primitive object is well-typed, and function types are quite legible. DCC achieves decidable type-checking by eagerly \(\beta\)-reducing all inferred types to canonical, normal form, and by definining definitional equality as \(\beta\)-equality (\(A \equiv B \coloneq A =_\beta B\)). DCC achieves legible types by encoding \(\Pi\)-types as a first-class combinator which indexes an arbitrary environment denoting a context, which is shuffled down a nested \(\Pi\) chain during application.
 
@@ -826,7 +827,7 @@ To see an example of how application type-checks, we shall enumerate the inferen
       { \mathbb{0} : \sort{0}} \qquad
       \inferrule[Top intro]
       { }
-      { \ast : \mathbb{0}} \qquad
+      { \ast : \mathbb{1}} \qquad
       \inferrule[True]
       { }
       { \mathbb{1}_\mathbb{2} : \mathbb{2}} \qquad
@@ -863,7 +864,7 @@ To see an example of how application type-checks, we shall enumerate the inferen
 \begin{example}
   \((\comb[Id][\mathbb{1}] \ast) : \mathbb{1}\).\\
 
-  This is since \(\mathbb{1} : \sort{0}\) implies \(\comb[Id][\mathbb{1}] : \comb[\rightarrow][\mathbb{1}][\mathbb{1}]\), and \(\comb[\rightarrow][\mathbb{1}][\mathbb{1}] = (\comb[\Pi][\comb[`\mathbb{1}][\mathbb{1}]][\comb[`\mathbb{1}][\comb[`\mathbb{1}][\mathbb{1}]]] \ast)\) and \(\ast : \mathbb{1}\) and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \equiv \mathbb{1}\), and \((\comb[`\mathbb{1}][\mathbb{1}] \ast \ast) \barr^{!} \mathbb{1}\).
+  This is since \(\mathbb{1} : \sort{0}\) implies \(\comb[Id][\mathbb{1}] : \comb[\rightarrow][\mathbb{1}][\mathbb{1}]\), and \(\comb[\rightarrow][\mathbb{1}][\mathbb{1}] = (\comb[\Pi][\comb[`\mathbb{1}][\mathbb{1}]][\comb[`\mathbb{1}][\comb[`\mathbb{1}][\mathbb{1}]]] \ast)\) and \(\ast : \mathbb{1}\) and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \equiv \mathbb{1}\), and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \barr^{!} \mathbb{1}\).
 \end{example}
 
 From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote dependent products for clarity. Consult the Appendix~\ref{appendix:sup} for the expanded inference rules.
@@ -890,7 +891,7 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
   \[
     \inferrule[Eval]
     { A : \sort{u} \quad A \barr^{!} A' \quad B : A' \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : A') \rightarrow (y : B' x) \rightarrow C x y}
-    { \comb[Eval][A][B][x] : (x : \comb[\Sigma][A][B]) \rightarrow (\comb[Eval][A][B][C] x)}
+    { \comb[Eval][A][B][x] : (x : \comb[\Sigma][A][B]) \rightarrow (\comb[Eval][A'][B'][C] x)}
   \]
 \end{definition}
 
@@ -998,9 +999,193 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
   \]
 \end{definition}
 
-% Explain mk rule uses other arrow
-
 \subsection{Type-Checking is Decidable}
+
+Our inference rules do not assume the existence of a catch-all conversion rule. Instead, inferred types are reduced to normal form in each rule individually, and definitional equality of terms \(A, B \in E\) is checked by comparing the normal-form reducts given by \(reduce\). This enables decidable type-checking. We have implemented a type-checker on a deep embedding of DCC in Lean 4, and have shown that it is judgmentally complete, making type-checking decidable.
+
+The source code of the type-checker is available in the Appendix~\ref{appendix:sup}. Of note, judgments carry computational content and live in \(\textbf{Type}\), rather than \(\textbf{Prop}\): \(\text{Judge} : E \rightarrow E \rightarrow Type\). The \href{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Judge3.lean#L599}{type-checker} is total and equipped with soundness: \(\text{infer} : (e : E) \rightarrow \text{Except}\ (\text{TypeError}\ e) (\Sigma' (t : E), \text{Judge}\ e\ t)\). Judgmental completeness is provable from the fact that all the inference rules are mutually exclusive, and there is no catch-all conversion.
+
+\begin{theorem}\label{thm:judgecomplete}
+  Judgmental completeness: If \(e, \tau \in E\) and \(h \vdash e : \tau\), then \(\text{infer} e = ok \langle \tau, h \rangle\).
+\end{theorem}
+
+\begin{proof}
+  By induction on the typing derivation \(h\). Cases are mutually exclusive, so the proof is reduced to checking that each branch implies that its corresponding branch in \(\text{infer}\) is \(ok\). In each case, if a definitional equality is supposed by \(h\), such that \(h_{eq} \vdash A \equiv B\) where \(A, B \in E\), then there exists \(C \in E\) and \(h_{eq,1} \vdash A \barr^{!} C\) and \(h_{eq,2} \vdash B \barr^{!} C\). So, by completeness of \(\beta\)-reduction with respect to normal forms \ref{thm:reducecomplete}, \(reduce A = \langle C, h_{eq,1} \rangle = \langle C, h_{eq,2} \rangle = reduce B\). Hence, \(A \equiv B\) in \(infer A\) as well, in each case.
+
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L135}{Expr.Judge.complete}
+\end{proof}
+
+\begin{theorem}\label{thm:judgeunique}
+  If \(A, \tau_1, \tau_2 \in E\) and \(e : \tau_1\) and \(e : \tau_2\), then \(\tau_1 = \tau_2\).
+\end{theorem}
+
+\begin{proof}
+  If \(h_1 \vdash e : \tau_1\) and \(h_2 \vdash e : \tau_2\), then by judgmental completeness \ref{thm:judgecomplete}, \(infer e = ok \langle \tau_1, h_1 \rangle = infer e = ok \langle \tau_2, h_2 \rangle\), so \(\tau_1 = \tau_2\).
+
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L138}{Expr.Judge.unique}
+\end{proof}
+
+\begin{theorem}\label{thm:judgenorm}
+  Inferred types are normal: If \(e, \tau \in E\) and \(h \vdash e : \tau\), then \(\tau\) is a \(\beta\)-normal form.
+\end{theorem}
+
+\begin{proof}
+  We proceed by induction on the typing derivation \(h\):
+  \begin{description}
+    \item[\(e \in E_c\):] If \(e\) is a constant, then \(\tau\) is one of \(\{\sort{u + 1}, \sort{0}, \mathbb{0}, \mathbb{1}, \mathbb{2}\}\), in which case \(\tau\) is \(\beta\)-normal.
+    \item[\(e = (c\ x_0 \ldots x_n)\), where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\):] If \(e\) is a combinator, then any point mentioned in its type \(\tau\) has been reduced to \(\beta\)-normal form, or was inferred from the type of a point, in which case it is in \(\beta\)-normal form by the inductive hypothesis. And, if \(e\) is a combinator, it is either a function, a type former, or a boxed term:
+      \begin{description}
+        \item[\(e\) is a function:] Then \(\tau\) is of the form \((\comb[\Pi][B][C] x)\), where \(B\), \(C\), and \(x\) are in \(\beta\)-normal form due to the above reasoning.
+        \item[\(e\) is a type former:] Then \(\tau\) is of the form \(\sort{u}\), in which case it is in \(\beta\)-normal form.
+        \item[\(e\) is a boxed term:] Then \(\tau\) is of the form \(\comb[!][A]\), where \(A\) is inferred by a point of \(e\), in which case \(A\) is in \(\beta\)-normal form by the inductive hypothesis. Hence, \(\tau\) is in \(\beta\)-normal form.
+        \end{description}
+    \item[\(e = (f x)\), where \(f \in E\) and \(x \in E\):] If \(e\) is an application, then \(f : (\comb[\Pi][B][C]\ env\) and \(x : A\). So, \(\tau\) is the \(\beta\)-normal reduct of \(C\ env\ x\) (per~\ref{def:inferapp}), and it is in \(\beta\)-normal form.
+  \end{description}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L143}{Expr.Judge.is\_norm}
+\end{proof}
+
+\subsection{Subject-Reduction, Progress, and Consistency}
+
+The subject-reduction and progress theorems hold in DCC. We show that if \(A : \tau\) and \(A \barr B\), then \(B : \tau\). We define a set of canonical values \(Val \subset E\) syntactically and show that if \(A : \tau\), then there must exist \(B\) such that \(A \barr B\) or \(A \in Val\). Using these results, we show that \(\mathbb{0}\) is uninhabited.
+
+\begin{theorem}
+  If \(A, B, \tau \in E\), \(ht \vdash A : \tau\), and \(hr \vdash A \barr B\), then \(B : \tau\).
+\end{theorem}
+
+\begin{proof}
+  We proceed by induction on the reduction relation \(hr\):
+  \begin{description}
+    \item[\(A\) is of the form \((f x)\) and \(B\) is of the form \((f' x)\) where \(hr_f \vdash f \barr f'\):] Suppose \(f : (\comb[\Pi][B][C]\ env)\) and \(x : A\) and \((B env) \equiv A\). Then, the inductive hypothesis gives by \(hr_f\) that \(f' : (\comb[\Pi][B][C]\ env)\). Then, by the application rule, \((f' x) : \tau\).
+    \item[\(A\) is of the form \((f x)\) and \(B\) is of the form \((f x')\) where \(hr_x \vdash x \barr x'\):] Suppose \(f : (\comb[\Pi][B][C]\ env)\) and \(x : A\) and \((B env) \equiv A\) and \(C\ env\ x \barr^{!} \tau\). Then, the inductive hypothesis gives by \(hr_x\) that \(x' : A\), and by confluence and argument congruence, \((C\ env\ x') \barr^{!} \tau\), so \((f x') : \tau\).
+    \item[\(A\) is of the form \((c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\):]  If \((c\ x_0 \ldots x_n) : \tau\), then each point \(x_i\) for all \(i < n\) is asserted by \(ht\) to have a type \(\tau_{i}\) and / or may be treated as a value in \(\tau\). In case \(x_i \barr x'_i\), then its corresponding value in \(\tau\) is already in \(\beta\)-normal form by \ref{thm:judgenorm}. And if \(x_i : \tau_i\), then by the inductive hypothesis, \(x'_i : \tau_i\), so \((c\ x'_0 \ldots x'_n) : \tau\) by the applicable inference rule.
+    \item[\(A\) is of the form \((f x)\) and \(hr\) is given by a head step:] In case \(hr\) is given by a head reduction step, we proceed by cases. In each head-reduction case, the typing relation is inverted, and the innermost definitional equalities yielding \(\tau\) are destructed given \(\tau\) is \(\beta\)-normal and unique. Then, the judgment \(B : \tau\) is constructed from the available assumptions.
+    \end{description}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/SubjectReduction.lean\#L965}{Expr.Judge.preservation}
+\end{proof}
+
+\begin{definition}
+  The set of canonical values is defined to be the union of the set of constant terms \(E_c\), the set of combinators whose points are values \(\{(c\ x_0 \ldots x_n) \mid c \in C, \{x_0 \ldots x_n\} \subset Val\}\), application of the reflexivity combinator, and all possible partially applied terms:
+  \begin{align*}
+    E_c &\subset Val & \{(c\ x_0 \ldots x_n) &\mid c \in C, \{x_0 \ldots x_n\} \subset Val\} \subset Val\\
+    \{(\comb[refl][B] \comb[\&][x]) &\mid B, x \in Val\} \subset Val & \{(\comb[Eql][B] \comb[\&][x]) &\mid B, x \in Val\} \subset Val\\
+    \{(\comb[refl][B] \comb[\&][x] \comb[\&][y]) &\mid B, x, y \in Val\} \subset Val & \{(\comb[='][B] x) &\mid B, x \in Val\} \subset Val\\
+    \{(\comb[='][B] x y) &\mid B, x, y \in Val\} \subset Val & \{(\comb[\Pi][B][C] x) &\mid B, C, x \in Val\} \subset Val\\
+    \{(\comb[\Lambda][A][B][x] y) &\mid A, B, x, y \in Val\} \subset Val & \{(\comb[!\Lambda][A][B][x] \comb[\&][y]) &\mid A, B, x, y \in Val\} \subset Val\\
+    \{(\comb[\mathbb{2}.Rec][B][x][y] z) &\mid B, x, y, z \in Val\} \subset Val & \{(\comb[\mathbb{0}.Rec][B] x) &\mid B, x \in Val\} \subset Val
+  \end{align*}
+
+  Note that \((\comb[\mathbb{0}.Rec][B] x)\) denotes partial application of the recursor for \(\mathbb{0}\) with an environment, not an inhabitant of \(\mathbb{0}\).
+\end{definition}
+
+\begin{lemma}\label{lem:congrFunVal}
+  If \(h \vdash (f x) \in Val\), then \(f \in Val\).
+\end{lemma}
+
+\begin{proof}
+  By case analysis on \(h\).
+
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L42}{Expr.Value.congrFun}
+\end{proof}
+
+\begin{lemma}\label{lem:congrArgVal}
+  If \(h \vdash (f x) \in Val\), then \(x \in Val\).
+\end{lemma}
+
+\begin{proof}
+  By case analysis on \(h\).
+
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L62}{Expr.Value.congrArg}
+\end{proof}
+
+\begin{lemma}\label{lem:valnorm}
+  If \(h \vdash e \in Val\), then \(e\) is a \(\beta\)-normal form.
+\end{lemma}
+
+\begin{proof}
+  By induction on \(h\).
+
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L72}{Expr.Value.is\_norm}
+\end{proof}
+
+Progress may be established by noticing that a partially applied combinator is always a value, unless it expects a boxed argument of the form \(\comb[\&][x]\), a coupled term of the form \(\comb[,B][x][y]\), or an inhabitant of \(\mathbb{2}\). The only circumstance where a reduction gets ``stuck'' is a function is applied the appropriate number of arguments, but they are all in \(\beta\)-normal form and are not the appropriate shape. By inductive reasoning, an argument \(x\) to a function must either be a value, or must make a step. Hence, it suffices to prove inversion lemmas relating functions over bang arguments, \(\Sigma\)-arguments, and booleans to their respective value arguments in case \(x\) cannot make a step to show that \(f x_0 \ldots x_n \in Val\).
+
+\begin{lemma}\label{inv:box}
+  If \(x \in Val\) and \(h \vdash x : \comb[!][A]\), then there exists \(x_0 \in A\) such that \(x = \comb[\&][x_0]\).
+\end{lemma}
+
+\begin{proof}
+  We proceed by case analysis on the value \(x\). In any case where \(x\) is not of the form \(\comb[\&][x_0]\), the judgment \(h\) may be inverted to show that \(x : \tau\) and \(\tau\) is not of the form \(\comb[!][A]\). For example, combinators which are functions never have a type of the form \(\comb[!][A]\). For the type-formers, \(x : \sort{u}\) for some \(u \in \mathbb{N}\), but \(\sort{u} \neq \comb[\!][A]\) for all \(A \in E\). In the case of the canonical partially applied combinators, \(h\) is similarly inverted to show that \(x : \tau\) and \(\tau\) is of the form \((\comb[\Pi][B][C]\ env)\), but \((\comb[\Pi][B][C]\ env) \neq \comb[!][A]\) for all \(A \in E\).
+
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L188}{Expr.Value.inv\_box}
+\end{proof}
+
+\begin{lemma}\label{inv:pi}
+  If \(h \vdash (\comb[\Pi][B][C] x) : \tau\), then there exists \(u \in \mathbb{N}\) such that \(\tau = \sort{u}\).
+\end{lemma}
+
+\begin{proof}
+  By inversion on \(h\).
+
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L375}{Expr.Judge.inv\_pi}
+\end{proof}
+
+\begin{lemma}\label{inv:eq}
+  If \(h \vdash (\comb[Eql][B] \comb[\&][x] \comb[\&][y]) : \tau\), then \(\tau = \sort{0}\).
+\end{lemma}
+
+\begin{proof}
+  By inversion on \(h\).
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L384}{Expr.Judge.inv\_eql}
+\end{proof}
+
+\begin{lemma}\label{inv:refl}
+  If \(h \vdash (\comb[refl][B] \comb[\&][x] \comb[\&][y]) : \tau\), and \((B x) \barr^{!} B'\) and \(y \barr^{!} y'\), then \(\tau = (\comb[=][B'] y' y')\).
+\end{lemma}
+
+\begin{proof}
+  By inversion on \(h\).
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L409}{Expr.Judge.inv\_refl}
+\end{proof}
+
+\begin{lemma}\label{inv:bot}
+  If \(ht \vdash e : \mathbb{0}\) and \(hv \vdash e \in Val\), then \(\bot\).
+\end{lemma}
+
+\begin{proof}
+  We proceed by case analysis on \(ht\). The proof can be reduced to checking that no partial application of a combinator can inhabit \(\mathbb{0}\), since no inference rule could yield \(\mathbb{0}\) in the consequent besides application. In case \(e = (f x)\) where \(f, x \in E\), we observe that \((f x)\) is a value, so it must be a partial application of a function, or a full application of \(refl\). In case \(f\) is a function value whose arity is greater than one, inversion shows that there must exist \(B, C, env \in E\) such that \((f x) : (\comb[\Pi][B][C]\ env)\), but \((\comb[\Pi][B][C]\ env) \neq \mathbb{0}\) for all \(B, C, env \in E\). In case \((f x)\) is a full application of \(refl\), we know by \ref{inv:refl} that there must exist \(B, y \in E\) such that \((f x) : (\comb[=][B] y y)\), but \((\comb[=][B] y y) \neq \mathbb{0}\) for all \(B, y \in E\), so \(\not e : \mathbb{0}\) and thus a contradiction is derived.
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L444}{Expr.Judge.elim\_bot}
+\end{proof}
+
+\begin{lemma}\label{inv:sigma}
+  If \(ht \vdash e : \comb[A][B]\) and \(hv \vdash e \in Val\), then there exist \(x_0, y_0 \in E\) such that \(e = \comb[,B][x][y]\).
+\end{lemma}
+
+\begin{proof}
+  By case analysis on \(hv\) and parallel inversion on \(ht\).
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L565}{Expr.Value.inv\_sigma}
+\end{proof}
+
+\begin{lemma}\label{inv:bool}
+  If \(ht \vdash e : \mathbb{2}\) and \(hv \vdash e \in Val\), then \(e = \mathbb{1}_\mathbb{2}\) or \(e = \mathbb{0}_\mathbb{2}\).
+\end{lemma}
+
+\begin{proof}
+  By case analysis on \(hv\) and parallel inversion on \(ht\).
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L616}{Expr.Value.inv\_bool}
+\end{proof}
+
+Using these facts about inversion, we prove progress.
+
+\begin{theorem}
+  If \(h \vdash e : \tau\), then \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\).
+\end{theorem}
+
+\begin{proof}
+  The proof proceeds by induction on \(h\). If \(e \in E_c\), then \(e \in Val\). If \(e = (c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(h\) demonstrates that there exist \(\tau_i\) such that \(x_i : \tau_i\) for all \(i < n\), and so each point of \(e\) is either a value, or can make a step. In case all points of \(e\) are values, \(e \in Val\). If any point can make a step, then so can \(e\) by the point rule. If \(e\) is of the form \((f x)\) where \(f, x \in E\), then \(h\) gives that \(f : (\comb[\Pi][B][C]\ env)\) for some \(B, C, env \in E\), and \(x : A\) and \((B env) \equiv A\). Furthermore, by the inductive hypothesis, both \(f\) and \(x\) must be values or able to make a step. In case either \(f\) or \(x\) can make a step, function congruence and argument congruent respectively give that \(e\) can make a step. In case both \(f\) and \(x\) are values, we perform case analysis on \(f\), and show that \((f x)\) is either a partial application of a combinator, a full application of \(refl\), or, by the established inversion lemmas, \(x\) is of the right shape such that \((f x)\) can make a head-step reduction.
+  \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L957}{Expr.Judge.progress}
+\end{proof}
+
+% Note about how these are definitions, not theorems, and the reduct is choosable
 
 \section{Computable Equality Reflection}
 

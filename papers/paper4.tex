@@ -501,6 +501,15 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
   \end{description}
 \end{proof}
 
+\begin{lemma}\label{lem:decstar}
+  If \(A, B \in E\) and \(A \barr^{*} B\), then \(size(B) \le size(A)\).
+\end{lemma}
+
+\begin{proof}
+  Suppose \(A = B\). Then, \(size(A) = size(B)\), so \(size(B) \le size(A)\). If \(A \neq B\), then there exists \(B_0 \in E\) such that \(A \barr B_0\) and \(B_0 \barr^{*} B\). So, by \ref{thm:sn}, \(size(B_0) < size(A)\), and by the inductive hypothesis, \(size(B) \le size(B_0)\), so \(size(B) \le size(A)\).
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L507}{Expr.decreasing?}
+\end{proof}
+
 \begin{lemma}\label{lem:pointstar}
   Point congruences are closed under star-step reduction: If \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\) and \(i < n\) and \(x_i \barr^{*} x'_i\), then \((c x_0 \ldots x_n) \barr^{*} (c x'_0 \ldots x'_n)\).
 \end{lemma}
@@ -525,11 +534,11 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 
 \begin{proof}
   The proof proceeds similarly as in \ref{lem:pointstar}, but with the argument congruence single-step rule.
-  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean#L262}{Expr.congrArg'}
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L262}{Expr.congrArg'}
 \end{proof}
 
-\begin{theorem}
-  If \(A, B, C \in E\) and \(A \barr B\) and \(A \barr C\), then there exists \(D \in E\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
+\begin{theorem}\label{thm:conflocal}
+  Local confluence: If \(A, B, C \in E\) and \(A \barr B\) and \(A \barr C\), then there exists \(D \in E\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
 \end{theorem}
 
 \begin{proof}
@@ -555,8 +564,19 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
   \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Conf.lean\#L131}{Expr.Red.conf}
 \end{proof}
 
+\begin{theorem}
+  Global confluence: If \(A, B, C \in E\) and \(A \barr^{*} B\) and \(A \barr^{*} C\), then there exists \(D \in E\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
+\end{theorem}
+
 \begin{proof}
-  
+  The proof proceeds by Newmann's lemma:
+  \begin{description}
+    \item[$A = B$ and $A = C$:] By reflexivity, \(B \barr^{*} B\) and \(C \barr^{*} B\).
+    \item[$h \vdash A = B$ but $A \neq C$:] By \(h\), \(B \barr^{*} C\), and by reflexivity, \(C \barr^{*} C\).
+    \item[$A \neq B$ and $h \vdash A = C$:] By \(h\), \(C \barr^{*} B\), and by reflexivity, \(B \barr^{*} B\).
+    \item[$A \neq B$ and $A \neq C$:] Then, there exist \(B_0, C_0 \in E\) such that \(A \barr B_0\) and \(A \barr C_0\) and \(B_0 \barr^{*} B\) and \(C_0 \barr^{*} C\), so, by \ref{thm:conflocal}, there exists \(D \in E\) such that \(B_0 \barr^{*} D\) and \(C_0 \barr^{*} D\). And, due to \ref{thm:sn} and \ref{thm:decstar}, \(size(B_0) < size(A)\) and \(size(C_0) < size(A)\). So, by well-founded induction given \(B_0 \barr^{*} B\), \(B_0 \barr^{*} D\), \(C_0 \barr^{*} C\), and \(C_0 \barr^{*} D\), there exist \(B_2, C_2 \in E\) such that \(B \barr^{*} B_2\) and \(D \barr^{*} B_2\) and \(C \barr^{*} C_2\) and \(D \barr^{*} C_2\). And, similarly, since \(B \barr^{*} B_2\) and \(B \barr^{*} C_2\) (via \(D\)), there exists \(E \in E\) such that \(B_2 \barr^{*} E\) and \(C_2 \barr^{*} E\), so \(B \barr^{*} E\) and \(C \barr^{*} E\).
+  \end{description} 
+  \noindent \hfill \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L288}{Expr.RedRel.globally_confluent}
 \end{proof}
 
 \section{Inference Rules}

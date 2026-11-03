@@ -172,19 +172,19 @@ Should be structured around building up to the fundamental theorem: extensional 
   \item Extensional equality reflection proof --- \textit{note: this requires subject reduction and progress}
   \begin{itemize}
     \item \sout{\textbf{Proof}: Decidability}
-    \item \textbf{Proof}: Subject-reduction lemma
-    \item \textbf{Proof}: Progress theorem
+    \item \sout{\textbf{Proof}: Subject-reduction lemma}
+    \item \sout{\textbf{Proof}: Progress theorem}
       \begin{itemize}
-        \item Canonical values should be justified
-        \item Emphasize that the rule for \(\bot{}.Rec\) is not for \(\bot\), but partial application of its recursor
-        \item \textbf{Proof}: Inversion lemmas
-        \item \textbf{Proof}: \(\bot\) is not inhabited by any values
+        \item \sout{Canonical values should be justified}
+        \item \sout{Emphasize that the rule for \(\bot{}.Rec\) is not for \(\bot\), but partial application of its recursor}
+        \item \sout{\textbf{Proof}: Inversion lemmas}
+        \item \sout{\textbf{Proof}: \(\bot\) is not inhabited by any values}
         \end{itemize}
-     \item \textbf{Proof}: Bonus --- consistency proof
-     \item \textbf{Proof}: Equality reflection for values
-     \item \textbf{Proof}: Equality reflection by progress + preservation
+     \item \sout{\textbf{Proof}: Bonus --- consistency proof}
+     \item \sout{\textbf{Proof}: Equality reflection for values}
+     \item \sout{\textbf{Proof}: Equality reflection by progress + preservation}
   \end{itemize}
-  \item Justification of affine combinator rules
+  \item \sout{Justification of affine combinator rules}
   \item Some examples
   \item Compilation from Lean 4 (calculus of constructions subset) to DCC
   \item Comparison to SK combinators and prior approaches
@@ -193,22 +193,185 @@ Should be structured around building up to the fundamental theorem: extensional 
 
 \section{Introduction}
 
-\textit{TODO later after main sections done}
-
 \subsection{Results}
 
 \begin{itemize}
-  \item In~\ref{dccintro}, we present the dependent combinator calculus (\dccbf): our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules and inference rules.
+  \item In~\ref{intro:dcc}, we present the dependent combinator calculus (\dccbf): our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules and inference rules.
   \item In \ref{sec:thmsconv}, we prove some basic properties of conversion in DCC:~strong normalization, confluence, uniqueness of normal forms, and decidability of \(\beta\)-equality.
   \item In~\ref{decidable}, we prove that type checking is decidable in DCC.\@
-  \item In \(\ldots\) (\textit{todo}), we prove that subject-reduction and progress hold in DCC, and that DCC is consistent.
-  \item In~\ref{eqreflect}, we prove that extensional equality reflection holds in DCC.\@The proof is a computable definition, rather than a theorem in \(\textbf{Prop}\).
+  \item In \ref{otherthmsjudge}, we prove that subject-reduction and progress hold in DCC, and that DCC is consistent.
+  \item In~\ref{extensional}, we prove that extensional equality reflection holds in DCC.\@The proof is a computable definition, rather than a theorem in \(\textbf{Prop}\).
   \item In~\ref{compilelean}, we present a procedure for compiling the subset of Lean 4 that maps to the base Calculus of Constructions to DCC.\@
 \end{itemize}
 
 All of our results have been formalized in the Lean 4 proof assistant. To this date, DCC is the only calculus with extensional equality reflection and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit these features by construction.
 
 \subsection{Background}
+
+\subsection{\label{skcomp}The SK Combinator Calculus}
+
+Previous attempts by others at combinatory dependent type theory have used the \skbf{} combinator calculus \autocite[p. 10:14]{altenkirch}. The \sk{} combinators are a Turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\). Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
+
+By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
+
+\subsection{Categorical Combinators (\ccl)}
+
+Categorical combinators \cite{cmachine} \cite{CURIEN1986188} are a combinatory logic based on cartesian-closed categories (\cccbf) \cite{nlab:ccc}. They are equivalent to the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188}. \ccl{} has the following rewrite rules:
+
+\begin{gather*}
+  \inferrule[Fst]
+  { }
+  { Fst (x, y) \barrc{\ccle} x} \qquad
+  \inferrule[Snd]
+  { }
+  { Snd (x, y) \barrc{\ccle} x} \qquad
+  \inferrule[Ass]
+  { }
+  {(x \circ y) z \barrc{\ccle} x (y z)}\qquad
+  \inferrule[Id]
+  { }
+  {Id x \barrc{\ccle} x}\\
+  \inferrule[Pair]
+  { }
+  {\la x, y \ra x \barrc{\ccle} (M x, N x)}\qquad
+  \inferrule[App]
+  { }
+  { App (x, y) \barrc{\ccle} x y}\qquad
+  \inferrule[Curry]
+  { }
+  { \Lambda(x) y z \barrc{\ccle} x (y, z)}
+\end{gather*}
+
+Cartesian-closed categories are known to be a categorical semantics for the \(\lambda\)-calculus \cite{lambek1988introduction}. The equivalence between \ccl{} and the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188} is due to the shared correspondence \autocite[p. 6]{cmachine} between \ccl, cartesian-closed categories, and the \(\lambda\)-calculus with De Bruijn indices (\cite{de1972lambda}):
+
+\begin{itemize}
+  \item Composition in \ccc{} corresponds to the composition combinator in \ccl.
+  \item Identity morphisms in \ccc{} correspond to the \(Id\) combinator in \ccl.
+  \item De Bruijn indices correspond to binary projection in \ccc{} (or ``couple'' projection in \ccl) where \(\cc{0} \coloneq Snd\) and \(\cc{n + 1} \coloneq \cc{n} \circ Fst\).
+  \item Currying in \ccc{} corresponds to the \(\Lambda\) combinator in \ccl{} \autocite[p. 176][line 5]{cmachine}, such that \(\cc{\lambda . M} \coloneq \Lambda(\cc{M})\).
+  \item Evaluation in \ccc{} corresponds to the \(App\) combinator in \ccl, such that \(\cc{M N} \coloneq \comp{App}{\pair{\cc{M}, \cc{N}}}\).
+  %\item The terminal object \(\mathbbm{1}\) corresponds to an empty couple environment in \ccl{}, such that the first top-level application in a \(\lambda\)-expression is compiled as: \(\cc{(\lambda . M) x} \coloneq \cc{\lambda . M} () \cc{x}\).
+\end{itemize}
+
+% MOVED THIS ABOVE: Due to this correspondence, \(\lambda\)-calculus can be compiled to \ccl. De Bruijn index \(0\) corresponds to \(Snd\) projection where \(\cc{0} \coloneq Snd\). The De Bruijn successor \(n + 1\) corresponds to composition with \(Fst\) projection such that \(\cc{n + 1} \coloneq \cc{n} \circ Fst\). \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine} where \(\cc{\lambda . M} \coloneq \Lambda(\cc{M})\). Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing where \(\cc{M N} \coloneq App \circ \la \cc{M}, \cc{N} \ra\).
+
+% inlnie or in block? \begin{gather*}
+% inlnie or in block?   \cc{0} \coloneq Snd \qquad
+% inlnie or in block?   \cc{n + 1} \coloneq \cc{n} \circ Fst
+% inlnie or in block? \end{gather*}
+
+% inline or in block? \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine}:
+% inline or in block? \begin{equation*}
+% inline or in block?   \cc{\lambda . M} \coloneq \Lambda(\cc{M})
+% inline or in block? \end{equation*}
+% inline or in block? Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing:
+% inline or in block? \begin{equation*}
+% inline or in block?   \cc{M N} \coloneq \comp{App}{\pair{\cc{M}, \cc{N}}}
+% inline or in block? \end{equation*}
+
+The correspondence between \ccl{} and the De Bruijn-indexed \(\lambda\)-calculus makes them a more intuitive compilation target compared to \sk{}, producing more legible terms. To illustrate, we contrast the compilation of church numerals zero and one from \(\lambda\)-calculus with De Bruijn indices to \ccl{} and \sk{}:
+
+\begin{align*}
+  0_{\lambda} &\coloneq \lambda . \lambda . 0 & \cc{0_{\lambda}} &= \Lambda(Snd) & \cc[\ske]{0_{\lambda}} &= K (S K K)\\
+  1_{\lambda} &\coloneq \lambda . \lambda . 1 0 & \cc{1_{\lambda}} &= \Lambda(App \circ \la Fst, Snd \ra) & \cc[\ske]{1_{\lambda}} &= S (S (K S) (S (K K) (S K K))) (K (S K K))
+\end{align*}
+The reductions of \(1_{\lambda} x y\), \(\cc{1_{\lambda}} x y\), and \(\cc[\ske]{1_{\lambda}} x y\) are as such:
+
+\begin{equation*}
+  \begin{aligned}[t]
+    1_{\lambda} x y &= (\lambda . \lambda . 1 0) x y\\
+    &= (\lambda . x 0) y\\
+    &= x y
+  \end{aligned}
+  \qquad
+  \begin{aligned}[t]
+    \cc{1_{\lambda}} x y &= \Lambda(App \circ \la Fst, Snd \ra) x y\\
+    &= App \circ \la Fst, Snd \ra (x, y)\\
+    &= App (x, y)\\
+    &= x y
+  \end{aligned}
+\end{equation*}
+\begin{equation*}
+  \begin{aligned}[t]
+    \cc[\ske]{1_{\lambda}} x y &= S (S (K S) (S (K K) (S K K))) (K (S K K)) x y\\
+                               &= S (K S) (S (K K) (S K K)) x (K (S K K) x) y\\
+                               &= K S x (S (K K) (S K K) x) (K (S K K) x) y\\
+                               &= S (K K) (S K K) x y (K (S K K) x y)\\
+                               &= K (S K K x) y (S K K y)\\
+                               &= x y
+  \end{aligned}
+\end{equation*}
+Despite their notable advantages in term legibility, more closely resembling De Bruijn-indexed \(\lambda\)-calculus, adapting categorical combinators to dependent types has not been attempted thus far.
+
+\subsubsection{The Simply-Typed Categorical Combinators}
+
+A simply-typed variant (\cclkbf) of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points. Type arguments can be inferred altogether in Curry, Pair, Comp, and in couples. The inference rules are as such:
+
+\begin{gather*}
+  \inferrule[Fst]
+  { }
+  {Fst(A, B) : A \times B \arr A}\qquad
+  \inferrule[Snd]
+  { }
+  {Snd(A, B) : A \times B \arr B}\qquad
+  \inferrule[Id]
+  { }
+  {Id(A) : A \arr A}\\
+  \inferrule[App]
+  { }
+  {App(A, B) : ((A \arr B) \times A) \arr B}\qquad
+  \inferrule[Curry]
+  {x : A \times B \arr C}
+  {\Lambda(x) : A \arr B \arr C}\qquad
+  \inferrule[Pair]
+  {x : A \arr B, y : A \arr C}
+  {\la x, y \ra : A \arr B \times C}\\
+  \inferrule[Comp]
+  {x : B \arr C, y : A \arr B}
+  {x \circ y : A \arr C}\qquad
+  \inferrule[Coup]
+  {x : A, y : B}
+  {(x, y) : A \times B}
+\end{gather*}
+
+\subsection{Affine Logic}
+
+Affine logic refers to any logic where duplication (``contraction'') is restricted or prohibited, although such logics are usually related to linear logic \autocite[p. 173][sec. 1, par. 1]{kopylov2001decidability}. Linear logic is a constructive logic \cite{girard1987linear} wherein terms in context must be used exactly once, except in the ``exponential'' modalities (\(!\) and \(?\)) \autocite[p. 3]{girard1987linear}:
+
+\begin{gather*}
+  \inferrule[\(\otimes\)]
+  { \vdash A, C \qquad \vdash B, D}
+  { \vdash A \otimes B, C, D}\qquad
+  \inferrule[\(\bindnasrepma\)]
+  { \vdash A, B, C}
+  { \vdash A \bindnasrepma B, C}\qquad
+  \inferrule[\(1 \oplus\)]
+  { \vdash A, C}
+  { \vdash A \oplus B, C}\qquad
+  \inferrule[\(2 \oplus\)]
+  { \vdash B, C}
+  { \vdash A \oplus B, C}\qquad
+  \inferrule[\(\&\)]
+  { \vdash A, C \qquad \vdash B, C}
+  { \vdash A \& B, C}\\
+  \inferrule[\(W?\)]
+  { \vdash B}
+  { \vdash ?A; B}\qquad
+  \inferrule[\(C?\)]
+  { \vdash ?A, ?A, B}
+  { \vdash ?A, B}\qquad
+  \inferrule[\(D?\)]
+  { \vdash A, B}
+  { \vdash ?A, B}\qquad
+  \inferrule[\(!,\)]
+  { \vdash A, ?B}
+  { \vdash !A, ?B}
+\end{gather*}
+Weakning is retained in affine logic. Most importantly, affine logic forms a decidable fragment of first-order logic \cite{ketonen1984decidable}.
+
+\subsection{The Dependent Combinator Calculus}\label{intro:dcc}
+
+\textit{TODO later after main sections done}
 
 \section{Term Syntax}
 
@@ -714,11 +877,11 @@ termination_by t e
 \end{proof}
 
 \begin{theorem}\label{thm:reducenorm}
-  Reducts under \(reduce\) are normal forms: If \(A, B \in E\) and \(h \vdash A \barr^{*} B\) and \(reduce A = \langle B, h \rangle\), then \(B\) is a normal form.
+  Reducts given by \(reduce\) are normal forms: If \(A, B \in E\) and \(h \vdash A \barr^{*} B\) and \(reduce A = \langle B, h \rangle\), then \(B\) is a normal form.
 \end{theorem}
 
 \begin{proof}
-  The proof proceeds by case-splitting on the definition of \(reduce\). If \(step? A = none\), then \(A\) is a normal form, since otherwise, \(step? A \neq none\) by~\ref{thm:semicomplete}. If \(step? A = some \langle B_0, h_0 \rangle\) such that \(h_0 : A \barr B_0\), then \(size(B_0) < size(A)\) by~\ref{thm:sn}. So, by well-founded induction, \(B_0\) is a normal form.
+  The proof proceeds by case-splitting on the definition of \(reduce\). If \(step? A = none\), then \(A\) is a normal form, since otherwise, \(step? A \neq none\) by~\ref{thm:semicomplete}. If \(step? A = some \langle B_0, h_0 \rangle\) such that \(h_0 : A \barr B_0\), then \(size(B_0) < size(A)\) by~\ref{thm:sn}. So, by well-founded induction, \(B_0\) is a normal form.\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L374}{Expr.reduce\_norm}
 \end{proof}
 
@@ -999,7 +1162,7 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
   \]
 \end{definition}
 
-\subsection{Type-Checking is Decidable}
+\subsection{Type-Checking is Decidable}\label{decidable}
 
 Our inference rules do not assume the existence of a catch-all conversion rule. Instead, inferred types are reduced to normal form in each rule individually, and definitional equality of terms \(A, B \in E\) is checked by comparing the normal-form reducts given by \(reduce\). This enables decidable type-checking. We have implemented a type-checker on a deep embedding of DCC in Lean 4, and have shown that it is judgmentally complete, making type-checking decidable.
 
@@ -1044,7 +1207,7 @@ The source code of the type-checker is available in the Appendix~\ref{appendix:s
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L143}{Expr.Judge.is\_norm}
 \end{proof}
 
-\subsection{Subject-Reduction, Progress, and Consistency}
+\subsection{Subject-Reduction, Progress, and Consistency}\label{otherthmsjudge}
 
 The subject-reduction and progress theorems hold in DCC. We show that if \(A : \tau\) and \(A \barr B\), then \(B : \tau\). We define a set of canonical values \(Val \subset E\) syntactically and show that if \(A : \tau\), then there must exist \(B\) such that \(A \barr B\) or \(A \in Val\). Using these results, we show that \(\mathbb{0}\) is uninhabited.
 
@@ -1124,7 +1287,7 @@ Progress may be established by noticing that a partially applied combinator is a
 \end{lemma}
 
 \begin{proof}
-  By inversion on \(h\).
+  By inversion on \(h\).\\
 
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L375}{Expr.Judge.inv\_pi}
 \end{proof}
@@ -1134,7 +1297,7 @@ Progress may be established by noticing that a partially applied combinator is a
 \end{lemma}
 
 \begin{proof}
-  By inversion on \(h\).
+  By inversion on \(h\).\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L384}{Expr.Judge.inv\_eql}
 \end{proof}
 
@@ -1143,7 +1306,7 @@ Progress may be established by noticing that a partially applied combinator is a
 \end{lemma}
 
 \begin{proof}
-  By inversion on \(h\).
+  By inversion on \(h\).\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L409}{Expr.Judge.inv\_refl}
 \end{proof}
 
@@ -1152,7 +1315,7 @@ Progress may be established by noticing that a partially applied combinator is a
 \end{lemma}
 
 \begin{proof}
-  We proceed by case analysis on \(ht\). The proof can be reduced to checking that no partial application of a combinator can inhabit \(\mathbb{0}\), since no inference rule could yield \(\mathbb{0}\) in the consequent besides application. In case \(e = (f x)\) where \(f, x \in E\), we observe that \((f x)\) is a value, so it must be a partial application of a function, or a full application of \(refl\). In case \(f\) is a function value whose arity is greater than one, inversion shows that there must exist \(B, C, env \in E\) such that \((f x) : (\comb[\Pi][B][C]\ env)\), but \((\comb[\Pi][B][C]\ env) \neq \mathbb{0}\) for all \(B, C, env \in E\). In case \((f x)\) is a full application of \(refl\), we know by \ref{inv:refl} that there must exist \(B, y \in E\) such that \((f x) : (\comb[=][B] y y)\), but \((\comb[=][B] y y) \neq \mathbb{0}\) for all \(B, y \in E\), so \(\not e : \mathbb{0}\) and thus a contradiction is derived.
+  We proceed by case analysis on \(ht\). The proof can be reduced to checking that no partial application of a combinator can inhabit \(\mathbb{0}\), since no inference rule could yield \(\mathbb{0}\) in the consequent besides application. In case \(e = (f x)\) where \(f, x \in E\), we observe that \((f x)\) is a value, so it must be a partial application of a function, or a full application of \(refl\). In case \(f\) is a function value whose arity is greater than one, inversion shows that there must exist \(B, C, env \in E\) such that \((f x) : (\comb[\Pi][B][C]\ env)\), but \((\comb[\Pi][B][C]\ env) \neq \mathbb{0}\) for all \(B, C, env \in E\). In case \((f x)\) is a full application of \(refl\), we know by \ref{inv:refl} that there must exist \(B, y \in E\) such that \((f x) : (\comb[=][B] y y)\), but \((\comb[=][B] y y) \neq \mathbb{0}\) for all \(B, y \in E\), so \(\not e : \mathbb{0}\) and thus a contradiction is derived.\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L444}{Expr.Judge.elim\_bot\_value}
 \end{proof}
 
@@ -1161,7 +1324,7 @@ Progress may be established by noticing that a partially applied combinator is a
 \end{lemma}
 
 \begin{proof}
-  By case analysis on \(hv\) and parallel inversion on \(ht\).
+  By case analysis on \(hv\) and parallel inversion on \(ht\).\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L565}{Expr.Value.inv\_sigma}
 \end{proof}
 
@@ -1170,7 +1333,7 @@ Progress may be established by noticing that a partially applied combinator is a
 \end{lemma}
 
 \begin{proof}
-  By case analysis on \(hv\) and parallel inversion on \(ht\).
+  By case analysis on \(hv\) and parallel inversion on \(ht\).\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L616}{Expr.Value.inv\_bool}
 \end{proof}
 
@@ -1181,8 +1344,8 @@ Using these facts about inversion, we prove progress.
 \end{theorem}
 
 \begin{proof}
-  The proof proceeds by induction on \(h\). If \(e \in E_c\), then \(e \in Val\). If \(e = (c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(h\) demonstrates that there exist \(\tau_i\) such that \(x_i : \tau_i\) for all \(i < n\), and so each point of \(e\) is either a value, or can make a step. In case all points of \(e\) are values, \(e \in Val\). If any point can make a step, then so can \(e\) by the point rule. If \(e\) is of the form \((f x)\) where \(f, x \in E\), then \(h\) gives that \(f : (\comb[\Pi][B][C]\ env)\) for some \(B, C, env \in E\), and \(x : A\) and \((B env) \equiv A\). Furthermore, by the inductive hypothesis, both \(f\) and \(x\) must be values or able to make a step. In case either \(f\) or \(x\) can make a step, function congruence and argument congruent respectively give that \(e\) can make a step. In case both \(f\) and \(x\) are values, we perform case analysis on \(f\), and show that \((f x)\) is either a partial application of a combinator, a full application of \(refl\), or, by the established inversion lemmas, \(x\) is of the right shape such that \((f x)\) can make a head-step reduction.
-  \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L957}{Expr.Judge.progress}
+  The proof proceeds by induction on \(h\). If \(e \in E_c\), then \(e \in Val\). If \(e = (c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(h\) demonstrates that there exist \(\tau_i\) such that \(x_i : \tau_i\) for all \(i < n\), and so each point of \(e\) is either a value, or can make a step. In case all points of \(e\) are values, \(e \in Val\). If any point can make a step, then so can \(e\) by the point rule. If \(e\) is of the form \((f x)\) where \(f, x \in E\), then \(h\) gives that \(f : (\comb[\Pi][B][C]\ env)\) for some \(B, C, env \in E\), and \(x : A\) and \((B env) \equiv A\). Furthermore, by the inductive hypothesis, both \(f\) and \(x\) must be values or able to make a step. In case either \(f\) or \(x\) can make a step, function congruence and argument congruent respectively give that \(e\) can make a step. In case both \(f\) and \(x\) are values, we perform case analysis on \(f\), and show that \((f x)\) is either a partial application of a combinator, a full application of \(refl\), or, by the established inversion lemmas, \(x\) is of the right shape such that \((f x)\) can make a head-step reduction.\\
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L957}{Expr.Judge.progress}
 \end{proof}
 
 \begin{theorem}
@@ -1190,14 +1353,13 @@ Using these facts about inversion, we prove progress.
 \end{theorem}
 
 \begin{proof}
-  This fact is due to the inversion lemma on values inhabiting \(\mathbb{0}\), well-founded recursion by decreasing size under \(\barr\), progress, and preservation. Suppose \(e \in E\) such that \(h \vdash e : \mathbb{0}\). Then, by progress \ref{thm:progress}, \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in Val\), then by the value bottom inhabitance inversion lemma~\eqref{inv:bot}, a contradiction is derived. If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation \ref{thm:preservation}, \(e' : \mathbb{0}\). So, by well-founded recursion, a contradiction is derived.
-
-  \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Consistent.lean\#L7}{Expr.Judge.elim\_bot}
+  This fact is due to the inversion lemma on values inhabiting \(\mathbb{0}\), well-founded recursion by decreasing size under \(\barr\), progress, and preservation. Suppose \(e \in E\) such that \(h \vdash e : \mathbb{0}\). Then, by progress \ref{thm:progress}, \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in Val\), then by the value bottom inhabitance inversion lemma~\eqref{inv:bot}, a contradiction is derived. If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation \ref{thm:preservation}, \(e' : \mathbb{0}\). So, by well-founded recursion, a contradiction is derived.\\
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Consistent.lean\#L7}{Expr.Judge.elim\_bot}
 \end{proof}
 
 We note that the following theorems are proven as computable definitions, rather tham theorems in \(\textbf{Prop}\): subject-reduction, progress, and consistency. Furthermore, the progress theorem gives a computable choice of \(e' \in E\) such that \(e \barr e'\) in case \(e\)) is not a value, rather than proving its existence existentially.
 
-\section{Computable Equality Reflection}
+\section{Computable Equality Reflection}\label{extensional}
 
 The extensional equality reflection theorem holds in DCC. This is a result of decidable type-checking and strong normalization avoiding a generalized conversion constructor. Since inferred types are always in \(\beta\)-normal form, and since \(refl\) is the canonical inhabitant of equality, \(e : \comb[= A][x][y]\) iff \(x \equiv y\). This fact is provable from progress, preservation, and well-founded recursion by strong normalization.
 
@@ -1208,9 +1370,8 @@ The extensional equality reflection theorem holds in DCC. This is a result of de
 \begin{proof}
   The proof proceeds by case analysis on the typing derivation \(ht\). No inference rule can yield \(\comb[= A][x][y]\) in the consequent aside from in application. Hence, \(e\) must be of the form \((f x)\) where \(f, x \in E\) and \(f, x \in Val\). We note that \(\comb[= A][x][y]\) is not a function type. Hence, \((f x)\) cannot be a partial application of a function, but \((f x)\) is not a term with points, nor is it a constant value. So, \((f x)\) must be of the form \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\). We demonstrate this fact by inverting the typing derivation \(ht\) in each case where \(f\) is a value. We demonstrate that in every case except where \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\), \(f\) is a function whose arity is greater than one, and so \((f x)\) must be typed at \(\tau\) where \(\tau\) is of the form \((\comb[\Pi][B][C]\ env)\) where \(B, C, env \in E\), but \((\comb[\Pi][B][C]\ env) \neq \comb[= A][x][y]\) for all \(B, C, env, A, x, y \in E\).
 
-  So, if \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\) for some \(B, x, y \in E\), then by inversion on reflexivity values \label{inv:refl}, \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\) must be typed at \(\tau\) where \((B x) \barr^{!} B'\) and \(y \barr^{!} y'\), and \(\tau = (\comb[=][B'] y' y')\). But by uniqueness of judgments \label{inv:judgeunique}, \((\comb[=][B'] y' y') = (\comb[=][A][x][y]\), so \(y' = x\) and \(y' = y\). Hence, \(x \equiv y\) by reflexivity.
-
-  \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L9}{Expr.Value.elim\_eq}
+  So, if \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\) for some \(B, x, y \in E\), then by inversion on reflexivity values \label{inv:refl}, \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\) must be typed at \(\tau\) where \((B x) \barr^{!} B'\) and \(y \barr^{!} y'\), and \(\tau = (\comb[=][B'] y' y')\). But by uniqueness of judgments \label{inv:judgeunique}, \((\comb[=][B'] y' y') = (\comb[=][A][x][y]\), so \(y' = x\) and \(y' = y\). Hence, \(x \equiv y\) by reflexivity.\\
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L9}{Expr.Value.elim\_eq}
 \end{proof}
 
 \begin{theorem}
@@ -1218,14 +1379,17 @@ The extensional equality reflection theorem holds in DCC. This is a result of de
 \end{theorem}
 
 \begin{proof}
-  This fact is provable by progress, preservation, well-founded recursion with respect to the reduct of \(e\), in case it is not a value. By progress \ref{thm:progress}, \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in Val\), then by the above~\ref{lem:ext}, \(x \equiv y\). If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation~\ref{thm:preservation}, \(e' : \comb[= A][x][y]\). So, by well-founded recursion, \(x \equiv y\).
-  
-  \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L122}{Expr.Judge.elim\_eq}
+  This fact is provable by progress, preservation, well-founded recursion with respect to the reduct of \(e\), in case it is not a value. By progress \ref{thm:progress}, \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in Val\), then by the above~\ref{lem:ext}, \(x \equiv y\). If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation~\ref{thm:preservation}, \(e' : \comb[= A][x][y]\). So, by well-founded recursion, \(x \equiv y\).\\
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L122}{Expr.Judge.elim\_eq}
 \end{proof}
 
-\section{Examples}
+We note that equality reflection is a computable definition in DCC, rather than a theorem in \(\textbf{Prop}\). That is, it has computational content and can be used outside of proofs.
 
 \section{Compiling Lean 4 to DCC}
+
+
+
+\section{Examples}
 
 \section{Comparison to SK Combinators}
 

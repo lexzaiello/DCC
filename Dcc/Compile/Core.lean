@@ -833,14 +833,14 @@ def LExpr.share_all_n_abstr (n : ℕ) (e : LExpr) : LExpr :=
   | .zero => e
   | .succ n =>
     match e with
-    | .lam bty bdy => .lam (bty.shared_n n) (bdy.shared_n (.succ n))
+    | .lam bty bdy => .lam (bty.shared_n n.succ) (bdy.shared_n (.succ n))
     | .forallE bty bdy => .forallE (bty.share_all_n_abstr (n + 1))
       (if (Lean.Expr.hasLooseBVar bty.to_expr 0 = true ∨ Lean.Expr.hasLooseBVar bdy.to_expr 1 = true) then
-        (bdy.share_all_n_abstr n)
+        (bdy.share_all_n_abstr n.succ)
       else (bdy.share_all_n_abstr (n + 1)))
-    | .app x y => .app (x.share_all_n_abstr n) (y.share_all_n_abstr n)
-    | .sigma u v A B => .sigma u v (A.share_all_n_abstr n) (B.share_all_n_abstr n)
-    | .sigma_mk u v A B x y => .sigma_mk u v (A.share_all_n_abstr n) (B.share_all_n_abstr n) (x.share_all_n_abstr n) (y.share_all_n_abstr n)
+    | .app x y => .app (x.share_all_n_abstr n.succ) (y.share_all_n_abstr n.succ)
+    | .sigma u v A B => .sigma u v (A.share_all_n_abstr n.succ) (B.share_all_n_abstr n.succ)
+    | .sigma_mk u v A B x y => .sigma_mk u v (A.share_all_n_abstr n.succ) (B.share_all_n_abstr n.succ) (x.share_all_n_abstr n.succ) (y.share_all_n_abstr n.succ)
     | e => e
 
 def LExpr.share_all_n (n : ℕ) (e : LExpr) : LExpr :=
@@ -849,10 +849,10 @@ def LExpr.share_all_n (n : ℕ) (e : LExpr) : LExpr :=
   | .succ n =>
     match e with
     | .app x y => .app (x.share_all_n n.succ) (.share 0 (.const .true) (y.share_all_n n))
-    | .lam bty bdy => .lam (bty.shared_n n.succ) (bdy.share_all_n_abstr n)
-    | .forallE bty bdy => .forallE (bty.share_all_n n.succ) (bdy.share_all_n_abstr n)
-    | .sigma u v A B => .sigma u v (A.share_all_n n) (B.share_all_n_abstr n)
-    | .sigma_mk u v A B  x y => .sigma_mk u v (A.share_all_n n) (B.share_all_n_abstr n) (x.share_all_n_abstr n) (y.share_all_n_abstr n)
+    | .lam bty bdy => .lam (bty.shared_n n.succ) (bdy.share_all_n_abstr n.succ)
+    | .forallE bty bdy => .forallE (bty.share_all_n n.succ) (bdy.share_all_n_abstr n.succ)
+    | .sigma u v A B => .sigma u v (A.share_all_n n.succ) (B.share_all_n_abstr n.succ)
+    | .sigma_mk u v A B  x y => .sigma_mk u v (A.share_all_n n.succ) (B.share_all_n_abstr n.succ) (x.share_all_n_abstr n.succ) (y.share_all_n_abstr n.succ)
     | e => e
 
 def share_lean (e : Lean.Expr) : Except CompileError LExpr :=

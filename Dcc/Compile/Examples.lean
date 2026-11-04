@@ -21,4 +21,6 @@ example : Cc (.lam (.share_ty 1 (.const (.sort 0))) (.lam (.share_ty 1 (.const (
 
 #eval (dcc_share (fun (x : Sort 0) => x))
 #eval (LExpr.lam (.share_ty 1 (.const (.sort 0))) (.bvar 0))
-#eval (dcc_compile (fun (x : Sort 0) => x))
+#eval Std.format (dcc_compile (fun (x : Sort 0) => x))
+#eval dcc_share (fun (α : Type) (x : α) => x)
+#eval Std.format (dcc_compile (fun (α : Type) (x : α) => x))

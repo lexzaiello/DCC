@@ -18,3 +18,7 @@ example : Cc (.lam (.share_ty 1 (.const (.sort 0))) (.lam (.share_ty 1 (.const (
                                  (Fst (`(Σ ⊤ (`⊤ (Sort 0))) (Sort 0))))
                               (* (Σ (Σ ⊤ (`⊤ (Sort 0))) (`(Σ ⊤ (`⊤ (Sort 0))) (Sort 0))))))) (& ∗)))) :=
   .lam (.const (.sort)) (.lam (.const .sort) (.var (.bang (.succ .zero))))
+
+#eval (dcc_share (fun (x : Sort 0) => x))
+#eval (LExpr.lam (.share_ty 1 (.const (.sort 0))) (.bvar 0))
+#eval (dcc_compile (fun (x : Sort 0) => x))

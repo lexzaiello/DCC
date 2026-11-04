@@ -228,31 +228,40 @@ inductive RawCompileError (α δ : Type) : Type
   | not_a_value     : (at_e : α) → (v    : Expr)       → (Γ : δ)             → RawCompileError α δ
   | invalid_level   : (at_e : α) → (u    : Lean.Level) → (Γ : δ)             → RawCompileError α δ
   | unsupported     : (at_e : Lean.Expr) → (Γ : δ)             → RawCompileError α δ
+  | unexpected      : (at_e : α) → (Γ : δ)             → RawCompileError α δ
   | type_error      : (at_e : α) → (at_e_tm : Expr)    → TypeError at_e_tm → (Γ : δ) → RawCompileError α δ
-  | expected_binder : (at_e : α) → RawCompileError α δ
+  | expected_binder : (at_e : α) → (found_e : LExpr)   → RawCompileError α δ
+  | expected_app    : (at_e : α) → (found_e : LExpr)   → RawCompileError α δ
+  | expected_bang   : (at_e : α) → (found_e : Expr)    → (Γ : δ) → RawCompileError α δ
 deriving Repr
 
 def RawCompileError.with_ctx (e : RawCompileError α Δ) (x : Γ) : RawCompileError α Γ :=
   match e with
+  | .expected_bang at_e found_e _Γ => .expected_bang at_e found_e x
   | .not_a_context at_e Δ _ => .not_a_context at_e Δ x
   | .not_a_value at_e v _ => .not_a_context at_e v x
   | .sub x₀ _ x₁ => .sub x₀ x (x₁.with_ctx x)
   | .and at_e _ x₁ y₂ => .and at_e x (x₁.with_ctx x) (y₂.with_ctx x)
   | .invalid_level at_e u _ => .invalid_level at_e u x
   | .unsupported e _ => .unsupported e x
+  | .unexpected e _ => .unexpected e x
   | .type_error at_e₀ at_e ε _Γ => .type_error at_e₀ at_e ε x
-  | .expected_binder at_e => .expected_binder at_e
+  | .expected_binder at_e found => .expected_binder at_e found
+  | .expected_app at_e found => .expected_app at_e found
 
 def RawCompileError.with_source (e : RawCompileError α δ) (x : β) : RawCompileError β δ :=
   match e with
+  | .expected_bang _at_e found_e Γ => .expected_bang x found_e Γ
   | .not_a_context _ Δ y => .not_a_context x Δ y
   | .not_a_value _ v y => .not_a_context x v y
   | .sub _ x₀ x₁ => .sub x x₀ (x₁.with_source x)
   | .and _ x₀ x₁ y₂ => .and x x₀ (x₁.with_source x) (y₂.with_source x)
   | .invalid_level _ u y => .invalid_level x u y
   | .unsupported x e => .unsupported x e
+  | .unexpected _x e => .unexpected x e
   | .type_error _ at_e ε Γ  => .type_error x at_e ε Γ
-  | .expected_binder _at_e => .expected_binder x
+  | .expected_binder _at_e found => .expected_binder x found
+  | .expected_app _at_e found => .expected_app x found
 
 abbrev SimpleError  := RawCompileError Unit Unit
 abbrev CompileError := RawCompileError LExpr Ctx
@@ -448,6 +457,7 @@ deriving Repr
 
 open Dsl in
 inductive AbstractConst : (Γ : Ctx) → (c : LConst) → (e' : Expr) → (Value e') → Type
+  | bool       : AbstractConst Γ .bool (DCC (`#(Γ.1) 𝟚)) (.points₂ (by point_arity) Γ.2.is_value .bool)
   | bool_true  : AbstractConst Γ .bool_true (DCC (`#(Γ.1) 𝟙₂)) (.points₂ (by point_arity) Γ.2.is_value .true)
   | bool_false : AbstractConst Γ .bool_false (DCC (`#(Γ.1) 𝟘₂)) (.points₂ (by point_arity) Γ.2.is_value .false)
   | true       : AbstractConst Γ .true (DCC (`#(Γ.1) 𝟙)) (.points₂ (by point_arity) Γ.2.is_value .top)
@@ -458,12 +468,28 @@ deriving Repr
 
 open Dsl in
 inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') → Type
-  | share    : Abstract ⟨Γ, hn_Γ₁⟩ x x' hv₁ → Abstract ⟨DCC (! Γ), .bang hn_Γ₁⟩ (.share u A x) (DCC ($<> x')) (.points₁ (by point_arity) hv₁)
+  | sigma_mk : Abstract ⟨Γ, hn_Γ₁⟩ x x' hv₁
+    → Abstract ⟨Γ, hn_Γ₁⟩ y y' hv₂
+    → Judge x' (DCC ((Π B₁ C₁) x₁))
+    → Judge y' (DCC ((Π B₂ C₂) x₂))
+    → (B₁ x₁) →ᵦ A
+    → (C₁ x₁) →ᵦ B
+    → (hv₃ : Value A)
+    → (hv₄ : Value B)
+    → Judge (DCC (∘ y' (Fst B))) (DCC ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗))
+    → (hv₅ : Value C₃)
+    → Abstract ⟨DCC (! Γ), .bang hn_Γ₁⟩ (.sigma_mk u v _A _B x y) (DCC (⟨,⟩C₃ x' (Λ A B (∘ y' (Fst B)))))
+      (.points₃ (by point_arity) hv₅ hv₁
+        (.points₃ (by point_arity) hv₃ hv₄
+          (.points₂ (by change point_arity (DCC (∘ y' (Fst B))) = _; grind) hv₂
+            (.points₁ (by change point_arity (DCC (Fst B)) = _; grind) hv₄))))
+  | share    : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ x x' hv₁ → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.share u A x) (DCC ($<> x')) (.points₁ (by point_arity) hv₁)
+  | share_ty : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ x x' hv₁ → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.share_ty u A) (DCC (!<> x')) (.points₁ (by point_arity) hv₁)
   | const    : AbstractConst Γ c e hv → Abstract Γ (.const c) e hv
   | var      : AbstractVar Γ n e hv   → Abstract Γ (.bvar n) e hv
-  | sigma    : Abstract ⟨Γ, h_Γ₁⟩ B B' hv₁
-    → Abstract ⟨DCC (Σ Γ B'), .sigma h_Γ₁ hv₁⟩ C C' hv₂
-    → Abstract ⟨DCC (! Γ), .bang h_Γ₁⟩ (.sigma u v A B) (DCC (Σ' B' C')) (.points₂ (by point_arity) hv₁ hv₂)
+  | sigma    : Abstract ⟨Γ, hn_Γ.bang₀⟩ A B' hv₁
+    → Abstract ⟨DCC (Σ Γ B'), .sigma hn_Γ.bang₀ hv₁⟩ B C' hv₂
+    → Abstract ⟨DCC (! Γ), hn_Γ⟩ (.sigma u v A B) (DCC (Σ' B' C')) (.points₂ (by point_arity) hv₁ hv₂)
   | lam      : Abstract ⟨Γ, h_Γ₁⟩ A A' hv₁
     → Abstract ⟨(DCC (! (Σ Γ A'))), .bang (.sigma h_Γ₁ hv₁)⟩ M M' hv₂
     → Abstract ⟨DCC (! Γ), .bang h_Γ₁⟩ (.lam A M) (DCC (!Λ Γ A' M')) (.points₃ (by point_arity) h_Γ₁.is_value hv₁ hv₂)
@@ -541,25 +567,91 @@ def mk_var (n : VarIdx) : SeekM (Σ (Γ : Ctx) (e : Expr) (hv : Value e), Abstra
 Inspect the body of a ∀, λ, or Σ binder and update
 the context internally as such
 -/
-def binder_body : SeekM (LExpr × Ctx) := do
-  match (← read).1, (← read).2 with
-  | .lam _bty bdy, _ => pure ⟨bdy, by sorry⟩
-  | .forallE _bty bdy, _ => pure bdy
-  | .sigma _bty bdy, _ => pure bdy
-  | _e, _ => raise_error (.expected_binder ())
 
-def binder_ty : SeekM (LExpr × Ctx) := do
-  match (← read).1 with
+def LExpr.binder_ty (e : LExpr) : SeekM LExpr := do
+  match e with
   | .lam bty _bdy => pure bty
   | .forallE bty _bdy => pure bty
-  | .sigma bty _bdy => pure bty
-  | _e => raise_error (.expected_binder ())
+  | .sigma _ _ bty _bdy => pure bty
+  | found => raise_error (.expected_binder () found)
 
-/-open Dsl in
-inductive Ty : Expr → Type
-  | sort : Ty (DCC Sort u)
-  | eq   : Ty (DCC (= A x y))
-  | top  : Ty (DCC 𝟙)
-  | bot  : Ty (DCC 𝟘)
-  | -/
+def LExpr.binder_body (e : LExpr) : SeekM LExpr := do
+  match e with
+  | .lam _bty bdy => pure bdy
+  | .forallE _bty bdy => pure bdy
+  | .sigma _ _ _bty bdy => pure bdy
+  | found => raise_error (.expected_binder () found)
+
+def LExpr.congr_fun (e : LExpr) : SeekM LExpr := do
+  match e with
+  | .app x _y => pure x
+  | found => raise_error (.expected_app () found)
+
+def LExpr.congr_arg (e : LExpr) : SeekM LExpr := do
+  match e with
+  | .app _x y => pure y
+  | found => raise_error (.expected_app () found)
+
+/-
+Replace the context and jump to a position in a lean term.
+e.g.,
+
+λ x : A => M
+
+seek_to binder_ty does nothing, since the context is the same in A, but we get out the lean term A
+seek_to binder_body changes the context to (Σ Γ A) and gives us M
+
+Note that seek_to is only a mechanism for logging and reporting error messages,
+and is not meant to be trusted fully.
+-/
+def seek_to (f : LExpr → SeekM LExpr) (Γ' : Ctx) : SeekM (Ctx × LExpr) := fun Γ =>
+  let ⟨x, _y⟩ := f Γ.1 Γ
+  ⟨x.map (⟨Γ', ·⟩), x.toOption.getD Γ.1, Γ'⟩
+
+def binder_ty : SeekM LExpr := do
+  (← read).1.binder_ty
+
+def Ctx.mk_const (Γ : Ctx) (c : LConst) : Σ (e : Expr) (hv : Value e), AbstractConst Γ c e hv :=
+  match c with
+  | .true
+  | .false
+  | .true_intro
+  | .sort u
+  | .bool_true
+  | .bool_false
+  | .bool => ⟨_, _, by constructor⟩
+
+def mk_const (c : LConst) : SeekM (Σ (Γ : Ctx) (e : Expr) (hv : Value e), AbstractConst Γ c e hv) :=
+  (fun x => ⟨x.2, Ctx.mk_const x.2 c⟩) <$> read
+
+def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'), Abstract Γ e e' hv) := open Dsl in do
+  match e with
+  | .sigma_mk u v A B x y => by sorry
+  | .share u A x =>
+    match Γ with
+    | ⟨DCC (! Γ), hn_Γ⟩ =>
+      return ⟨_, _, .share (← Ctx.abstract ⟨Γ, hn_Γ.bang₀⟩ x).2.2⟩
+    | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
+  | .share_ty u A =>
+    match Γ with
+    | ⟨DCC (! Γ), hn_Γ⟩ =>
+      return ⟨_, _, .share_ty (← Ctx.abstract ⟨Γ, hn_Γ.bang₀⟩ A).2.2⟩
+    | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
+  | .const c =>
+    let ⟨e, hv, h⟩ := Γ.mk_const c
+    return ⟨e, hv, .const h⟩
+  | .bvar n =>
+    let ⟨e', hv, h⟩ := Γ.mk_var n
+    return ⟨e', hv, .var h⟩
+  | (.sigma u v A B) =>
+    match Γ with
+    | ⟨DCC (! Γ), hn_Γ⟩ => do
+      let ⟨B', hv₁, h₁⟩ ← Ctx.abstract ⟨Γ, hn_Γ.bang₀⟩ A
+      let ⟨C', hv₂, h₂⟩ ← Ctx.abstract ⟨(DCC (Σ Γ B')), .sigma hn_Γ.bang₀ hv₁⟩ B
+      return ⟨DCC (Σ' B' C'), .points₂ (by point_arity) hv₁ hv₂, .sigma h₁ h₂⟩
+    | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
+  | (.lam A M) => sorry
+  | (.forallE A B) => sorry
+  | .app x y => sorry
+  | e => raise_error (by sorry)
 

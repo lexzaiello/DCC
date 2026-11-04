@@ -833,7 +833,7 @@ def LExpr.share_all_n_abstr (n : ℕ) (e : LExpr) : LExpr :=
   | .zero => e
   | .succ n =>
     match e with
-    | .lam bty bdy => .lam (bty.shared_n n.succ) (bdy.shared_n (.succ n))
+    | .lam bty bdy => .lam (bty.shared_n n.succ) (bdy.share_all_n_abstr (.succ n))
     | .forallE bty bdy => .forallE (bty.share_all_n_abstr (n + 1))
       (if (Lean.Expr.hasLooseBVar bty.to_expr 0 = true ∨ Lean.Expr.hasLooseBVar bdy.to_expr 1 = true) then
         (bdy.share_all_n_abstr n.succ)

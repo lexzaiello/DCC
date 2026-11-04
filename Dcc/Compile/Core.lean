@@ -24,7 +24,7 @@ where Γ and Δ are a DCC terms.
 
 Variable lookup should never occur on a banged context.
 Rather, a context is dereferenced first.
-A context is either 𝟙 or (Σ Γ Δ).
+A context is either ⊤ or (Σ Γ Δ).
 
 Nested Σ binders:
 
@@ -32,7 +32,7 @@ Nested Σ binders:
 ⟦Σ A B⟧_(! Γ) := (Σ' ⟦A⟧_Γ ⟦B⟧_(Σ Γ ⟦A⟧_Γ))
 
 -----------------------
-⟦A × B⟧_(! Γ) := (Σ' ⟦A⟧_Γ (Λ Γ ⟦A⟧_Γ (∘ ⟦B⟧_(! 𝟙) (`(Σ Γ ⟦A⟧_Γ) (& ∗)))))
+⟦A × B⟧_(! Γ) := (Σ' ⟦A⟧_Γ (Λ Γ ⟦A⟧_Γ (∘ ⟦B⟧_(! ⊤) (`(Σ Γ ⟦A⟧_Γ) (& ∗)))))
 
 Nested lambda binders:
 
@@ -48,14 +48,14 @@ Nested Π binders:
 If A does not depend on the context
 and if M depends only on x, but not the context
 ----------------------------------
-⟦(∀ x : A, M)⟧_(! Γ) := ((Π (`𝟙 (⟦A⟧_(! 𝟙) (& ∗))) (`𝟙 (⟦M⟧_(! (Σ 𝟙 ⟦A⟧_𝟙)) (& ∗)))) ∗)
+⟦(∀ x : A, M)⟧_(! Γ) := ((Π (`⊤ (⟦A⟧_(! ⊤) (& ∗))) (`⊤ (⟦M⟧_(! (Σ ⊤ ⟦A⟧_⊤)) (& ∗)))) ∗)
 
 How do we know if A in A → B depends on the context?
 If there are free variables in the lean expression A.
 
 If A does not depend on the context and M does not depend on the context
 ----------------------------------
-⟦(∀ x : A, M)⟧_(! Γ) := ((Π (`𝟙 (⟦A⟧_(! 𝟙) (& ∗))) (`𝟙 (`(⟦A⟧_(! 𝟙) (& ∗)) (⟦M⟧_(! 𝟙) (& ∗))))) ∗)
+⟦(∀ x : A, M)⟧_(! Γ) := ((Π (`⊤ (⟦A⟧_(! ⊤) (& ∗))) (`⊤ (`(⟦A⟧_(! ⊤) (& ∗)) (⟦M⟧_(! ⊤) (& ∗))))) ∗)
 
 If either A or M depend on the context
 ------------------------------------- TODO: this should be split up for if M does not as well
@@ -69,23 +69,23 @@ Nested application:
 ⟦M⟧_Γ : ((Π B₁ C₁) x₁)    ⟦N⟧_Γ : ((Π B₂ C₂) x₂)
 (B₁ x₁) →ᵦ A              (C₂ x) →ᵦ B
 
-(∘ N (Fst (`Γ Γ))) : ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗)
+(∘ N (Fst (`Γ Γ))) : ((Π (`⊤ A₃) (`⊤ (Π B₃ C₃))) ∗)
 ---------------------------------------------
 ⟦M N⟧_(! Γ) := (∘ (Eval A B ⟦M⟧_Γ) (⟨,⟩C₃ (Id Γ) (Λ Γ (`Γ Γ) (∘ ⟦N⟧_Γ (Fst (`Γ Γ)))))
 
 Constants:
 
 --------------------
-⟦Bool.True⟧_Γ := (`Γ 𝟙₂)
+⟦Bool.True⟧_Γ := (`Γ True)
 
 --------------------
-⟦Bool.False⟧_Γ := (`Γ 𝟘₂)
+⟦Bool.False⟧_Γ := (`Γ False)
 
 --------------------
-⟦True⟧_Γ := (`Γ 𝟙)
+⟦True⟧_Γ := (`Γ ⊤)
 
 --------------------
-⟦False⟧_Γ := (`Γ 𝟘)
+⟦False⟧_Γ := (`Γ ⊥)
 
 --------------------
 ⟦True.intro⟧_Γ := (`Γ ∗)
@@ -99,13 +99,13 @@ x is not also shared, and x is a constant
 -----------------------------------------
 ⟦Share.share x⟧_(! Γ) := ($<> ⟦x⟧_Γ)
 
-⟦A⟧_𝟙 is not a bang
+⟦A⟧_⊤ is not a bang
 -----------------------------------------
-⟦λ x : A => M⟧ := ((Λ 𝟙 ⟦A⟧_𝟙 ⟦M⟧_(Σ 𝟙 ⟦A⟧_𝟙)) ∗)
+⟦λ x : A => M⟧ := ((Λ ⊤ ⟦A⟧_⊤ ⟦M⟧_(Σ ⊤ ⟦A⟧_⊤)) ∗)
 
-⟦A⟧_𝟙 is a bang
+⟦A⟧_⊤ is a bang
 -----------------------------------------
-⟦λ x : A => M⟧ := ((!Λ 𝟙 ⟦A⟧_(! 𝟙) ⟦M⟧_(! (Σ 𝟙 ⟦A⟧_(! 𝟙)))) (& ∗))
+⟦λ x : A => M⟧ := ((!Λ ⊤ ⟦A⟧_(! ⊤) ⟦M⟧_(! (Σ ⊤ ⟦A⟧_(! ⊤)))) (& ∗))
 
 --------------------
 ⟦(M N)⟧ := (⟦M⟧ ⟦N⟧)
@@ -113,16 +113,16 @@ x is not also shared, and x is a constant
 Constants:
 
 --------------------
-⟦Bool.True⟧ := 𝟙₂
+⟦Bool.True⟧ := True
 
 --------------------
-⟦Bool.False⟧ := 𝟘₂
+⟦Bool.False⟧ := False
 
 --------------------
-⟦True⟧ := 𝟙
+⟦True⟧ := ⊤
 
 --------------------
-⟦False⟧ := 𝟘
+⟦False⟧ := ⊥
 
 --------------------
 ⟦True.intro⟧ := ∗
@@ -136,13 +136,13 @@ x is not also shared, and x is a constant
 -----------------------------------------
 ⟦Share.share x⟧ := (& ⟦x⟧)
 
-⟦A⟧_𝟙 is not a bang
+⟦A⟧_⊤ is not a bang
 -----------------------------------------
-⟦λ x : A => M⟧ := ((Λ 𝟙 ⟦A⟧_𝟙 ⟦M⟧_(Σ 𝟙 ⟦A⟧_𝟙)) ∗)
+⟦λ x : A => M⟧ := ((Λ ⊤ ⟦A⟧_⊤ ⟦M⟧_(Σ ⊤ ⟦A⟧_⊤)) ∗)
 
-⟦A⟧_𝟙 is a bang
+⟦A⟧_⊤ is a bang
 -----------------------------------------
-⟦λ x : A => M⟧ := ((!Λ 𝟙 ⟦A⟧_(! 𝟙) ⟦M⟧_(! (Σ 𝟙 ⟦A⟧_(! 𝟙)))) (& ∗))
+⟦λ x : A => M⟧ := ((!Λ ⊤ ⟦A⟧_(! ⊤) ⟦M⟧_(! (Σ ⊤ ⟦A⟧_(! ⊤)))) (& ∗))
 
 --------------------
 ⟦(M N)⟧ := (⟦M⟧ ⟦N⟧)
@@ -150,7 +150,7 @@ x is not also shared, and x is a constant
 Σ binders:
 
 -------------------
-⟦Σ A B⟧ := ((Σ' ⟦A⟧_𝟙 (Λ 𝟙 ⟦A⟧_𝟙 ⟦B⟧_(Σ 𝟙 ⟦A⟧_𝟙))) (& ∗))
+⟦Σ A B⟧ := ((Σ' ⟦A⟧_⊤ (Λ ⊤ ⟦A⟧_⊤ ⟦B⟧_(Σ ⊤ ⟦A⟧_⊤))) (& ∗))
 
 -------------------
 ⟦A × B⟧ := (Σ ⟦A⟧ (`⟦A⟧ ⟦B⟧))
@@ -191,7 +191,7 @@ inductive TypedExpr : Type
 
 open Dsl in
 inductive IsCtx : Expr → Type
-  | unit  : IsCtx (DCC 𝟙)
+  | unit  : IsCtx (DCC ⊤)
   | sigma : IsCtx A → Value B → IsCtx (DCC (Σ A B))
   | bang  : IsCtx A → IsCtx (DCC (! A))
 deriving Repr
@@ -337,11 +337,11 @@ def Expr.as_value? (e : Expr) : SeekM (Value e) := do
   | .inl ⟨_heq⟩ =>
     match e with
     | DCC ∗      => return .tintro
-    | DCC 𝟙₂     => return .true
-    | DCC 𝟘₂     => return .false
-    | DCC 𝟚      => return .bool
-    | DCC 𝟘      => return .bot
-    | DCC 𝟙      => return .top
+    | DCC True     => return .true
+    | DCC False     => return .false
+    | DCC Bool      => return .bool
+    | DCC ⊥      => return .bot
+    | DCC ⊤      => return .top
     | DCC Sort u => return .sort
     | DCC ((refl B) (& x)) => Value.refl₁ <$> B.as_value? <*> x.as_value?
     | DCC ((refl B) (& x) (& y)) => Value.refl₂ <$> B.as_value? <*> x.as_value? <*> y.as_value?
@@ -350,8 +350,8 @@ def Expr.as_value? (e : Expr) : SeekM (Value e) := do
     | DCC ((=' B) x y) => Value.eq'₂ <$> B.as_value? <*> x.as_value? <*> y.as_value?
     | DCC ((Λ A B x) y) => Value.curr₁ <$> A.as_value? <*> B.as_value? <*> x.as_value? <*> y.as_value?
     | DCC ((!Λ A B x) (& y)) => Value.curr'₁ <$> A.as_value? <*> B.as_value? <*> x.as_value? <*> y.as_value?
-    | DCC ((𝟚.Rec motive x y) z) => Value.ind_bool₁ <$> motive.as_value? <*> x.as_value? <*> y.as_value? <*> z.as_value?
-    | DCC ((𝟘.Rec motive) x) => Value.ind_bot₁ <$> motive.as_value? <*> x.as_value?
+    | DCC ((Bool.Rec motive x y) z) => Value.ind_bool₁ <$> motive.as_value? <*> x.as_value? <*> y.as_value? <*> z.as_value?
+    | DCC ((⊥.Rec motive) x) => Value.ind_bot₁ <$> motive.as_value? <*> x.as_value?
     | DCC ((Π B C) x) => Value.pi <$> B.as_value? <*> C.as_value? <*> x.as_value?
     | e => raise_error (.not_a_value () e ())
   | .inr (.inl ⟨heq⟩) => do
@@ -386,7 +386,7 @@ termination_by sizeOf e
 
 def Expr.is_ctx? (Γ : Expr) : SeekM (IsCtx Γ) :=
   open Dsl in match Γ with
-  | DCC 𝟙 => return .unit
+  | DCC ⊤ => return .unit
   | DCC (Σ A B) => IsCtx.sigma <$> A.is_ctx? <*> B.as_value?
   | DCC (! A) => .bang <$> A.is_ctx?
   | e => raise_error (.not_a_context () e ())
@@ -455,23 +455,28 @@ def LExpr.to_expr (e : LExpr) : Lean.Expr :=
 
 open Dsl in
 inductive AbstractVar : (Γ : Ctx) → (n : VarIdx) → (e' : Expr) → (Value e') → Type
-  | init  : AbstractVar ⟨.top, .unit⟩ _n (DCC (Id 𝟙)) (.points₁ (by point_arity) .top)
+  | init  : AbstractVar ⟨.top, .unit⟩ _n (DCC (Id ⊤)) (.points₁ (by point_arity) .top)
   | succ  : AbstractVar ⟨A, hΓ₀⟩ n f hv₁
     → AbstractVar ⟨.sigma A B, .sigma hΓ₀ hv₂⟩ (n + 1) (DCC (∘ f (Fst B))) (.points₂ (by point_arity) hv₁ (.points₁ (by point_arity) hv₂))
   | zero  : AbstractVar ⟨.sigma A B, .sigma hΓ₀ hv₁⟩ 0 (DCC (Snd B)) (.points₁ (by point_arity) hv₁)
-  | bang  : AbstractVar ⟨A, hΓ₀⟩ n f hv₁ → AbstractVar ⟨.bang A, .bang hΓ₀⟩ n (DCC (∘ f (* A))) (.points₂ (by point_arity) hv₁ (.points₁ (by point_arity) hΓ₀.is_value))
+  | bang  : AbstractVar ⟨A, hΓ₀⟩ n f hv₁
+    → AbstractVar ⟨.bang A, .bang hΓ₀⟩ n (DCC (∘ f (* A))) (.points₂ (by point_arity) hv₁ (.points₁ (by point_arity) hΓ₀.is_value))
 deriving Repr
 
 open Dsl in
 inductive AbstractConst : (Γ : Ctx) → (c : LConst) → (e' : Expr) → (Value e') → Type
-  | bool       : AbstractConst Γ .bool (DCC (`#(Γ.1) 𝟚)) (.points₂ (by point_arity) Γ.2.is_value .bool)
-  | bool_true  : AbstractConst Γ .bool_true (DCC (`#(Γ.1) 𝟙₂)) (.points₂ (by point_arity) Γ.2.is_value .true)
-  | bool_false : AbstractConst Γ .bool_false (DCC (`#(Γ.1) 𝟘₂)) (.points₂ (by point_arity) Γ.2.is_value .false)
-  | true       : AbstractConst Γ .true (DCC (`#(Γ.1) 𝟙)) (.points₂ (by point_arity) Γ.2.is_value .top)
-  | false      : AbstractConst Γ .false (DCC (`#(Γ.1) 𝟘)) (.points₂ (by point_arity) Γ.2.is_value .bot)
+  | bool       : AbstractConst Γ .bool (DCC (`#(Γ.1) Bool)) (.points₂ (by point_arity) Γ.2.is_value .bool)
+  | bool_true  : AbstractConst Γ .bool_true (DCC (`#(Γ.1) True)) (.points₂ (by point_arity) Γ.2.is_value .true)
+  | bool_false : AbstractConst Γ .bool_false (DCC (`#(Γ.1) False)) (.points₂ (by point_arity) Γ.2.is_value .false)
+  | true       : AbstractConst Γ .true (DCC (`#(Γ.1) ⊤)) (.points₂ (by point_arity) Γ.2.is_value .top)
+  | false      : AbstractConst Γ .false (DCC (`#(Γ.1) ⊥)) (.points₂ (by point_arity) Γ.2.is_value .bot)
   | true_intro : AbstractConst Γ .true_intro (DCC (`#(Γ.1) ∗)) (.points₂ (by point_arity) Γ.2.is_value .tintro)
   | sort       : AbstractConst Γ (.sort u) (DCC (`#(Γ.1) (Sort u))) (.points₂ (by point_arity) Γ.2.is_value .sort)
 deriving Repr
+
+open Dsl in
+def app_is_value (hn_Γ₁ : IsCtx (DCC (! Γ))) (hv₁ : Value M') (hv₂ : Value N') (hv₃ : Value A) (hv₄ : Value B) (hv₅ : Value C₃) : Value (DCC (∘ (Eval A B M') (⟨,⟩C₃ (Id Γ) (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))))) :=
+  (.points₂ (by point_arity) (.points₃ (by point_arity) hv₃ hv₄ hv₁) (.points₃ (by point_arity) hv₅ (.points₁ (by change point_arity (DCC (Id Γ)) = _; point_arity) hn_Γ₁.bang₀.is_value) (.points₃ (by change point_arity (DCC (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))) = _; grind) hn_Γ₁.bang₀.is_value (.points₂ (by change (DCC (`Γ Γ)).point_arity = _; grind) hn_Γ₁.bang₀.is_value hn_Γ₁.bang₀.is_value) (.points₂ (by change point_arity (DCC (∘ N' (Fst (`Γ Γ)))) =_; grind) hv₂ (.points₁ (by change (DCC (Fst (`Γ Γ))).point_arity = _; grind) (.points₂ (by change (DCC (`Γ Γ)).point_arity = _; grind) hn_Γ₁.bang₀.is_value hn_Γ₁.bang₀.is_value))))))
 
 open Dsl in
 inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') → Type
@@ -483,7 +488,7 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → (C₁ x₁) →ᵦ B
     → (hv₃ : Value A)
     → (hv₄ : Value B)
-    → Judge (DCC (∘ y' (Fst B))) (DCC ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗))
+    → Judge (DCC (∘ y' (Fst B))) (DCC ((Π (`⊤ A₃) (`⊤ (Π B₃ C₃))) ∗))
     → (hv₅ : Value C₃)
     → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.sigma_mk u v _A _B x y) (DCC (⟨,⟩C₃ x' (Λ A B (∘ y' (Fst B)))))
       (.points₃ (by point_arity) hv₅ hv₁
@@ -499,7 +504,7 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → Abstract ⟨DCC (! Γ), hn_Γ⟩ (.sigma u v A B) (DCC (Σ' B' C')) (.points₂ (by point_arity) hv₁ hv₂)
   | lam      : Abstract ⟨Γ, h_Γ₁.bang₀⟩ A A' hv₁
     → Abstract ⟨(DCC (! (Σ Γ A'))), .bang (.sigma h_Γ₁.bang₀ hv₁)⟩ M M' hv₂
-    → Abstract ⟨DCC (! Γ), h_Γ₁⟩ (.lam A M) (DCC (!Λ Γ A' M')) (.points₃ (by point_arity) h_Γ₁.bang₀.is_value hv₁ hv₂)
+    → Abstract ⟨DCC (! Γ), h_Γ₁⟩ (.lam (.share_ty _u A) M) (DCC (!Λ Γ A' M')) (.points₃ (by point_arity) h_Γ₁.bang₀.is_value hv₁ hv₂)
   -- If both the domain and codomain of a function type depend on the context,
   -- we should be a nested Π such that we can capture the context ((Π A' B') Γ)
   | forallE  : (Lean.Expr.hasLooseBVar A.to_expr 0 = true ∨ Lean.Expr.hasLooseBVar B.to_expr 1 = true)
@@ -508,8 +513,8 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.forallE A B) (DCC (Π A' (!Λ Γ A' B'))) (.points₂ (by point_arity) hv₁ (.points₃ (by point_arity) hn_Γ₁.bang₀.is_value hv₁ hv₂))
   -- For arrows. Dom and cod don't depend, so make an arrow
   | forallE' : (Lean.Expr.hasLooseBVar A.to_expr 0 = false ∧ Lean.Expr.hasLooseBVar B.to_expr 1 = false)
-    → Abstract ⟨(DCC (! 𝟙)), (.bang .unit)⟩ A A' hv₁
-    → Abstract ⟨(DCC (! 𝟙)), (.bang .unit)⟩ B B' hv₂
+    → Abstract ⟨(DCC (! ⊤)), (.bang .unit)⟩ A A' hv₁
+    → Abstract ⟨(DCC (! ⊤)), (.bang .unit)⟩ B B' hv₂
     → (A' (& ∗)) →ᵦ A''
     → (B' (& ∗)) →ᵦ B''
     → (hv₃ : Value A'')
@@ -523,19 +528,18 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → (C₂ x₂) →ᵦ B
     → (hv₃ : Value A)
     → (hv₄ : Value B)
-    → Judge (DCC (∘ N' (Fst (`Γ Γ)))) (DCC ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗))
+    → Judge (DCC (∘ N' (Fst (`Γ Γ)))) (DCC ((Π (`⊤ A₃) (`⊤ (Π B₃ C₃))) ∗))
     → (hv₅ : Value C₃)
-    → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.app M N) (DCC (∘ (Eval A B M') (⟨,⟩C₃ (Id Γ) (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ)))))))
-      (.points₂ (by point_arity) (.points₃ (by point_arity) hv₃ hv₄ hv₁) (.points₃ (by point_arity) hv₅ (.points₁ (by change point_arity (DCC (Id Γ)) = _; point_arity) hn_Γ₁.bang₀.is_value) (.points₃ (by change point_arity (DCC (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))) = _; grind) hn_Γ₁.bang₀.is_value (.points₂ (by change (DCC (`Γ Γ)).point_arity = _; grind) hn_Γ₁.bang₀.is_value hn_Γ₁.bang₀.is_value) (.points₂ (by change point_arity (DCC (∘ N' (Fst (`Γ Γ)))) =_; grind) hv₂ (.points₁ (by change (DCC (Fst (`Γ Γ))).point_arity = _; grind) (.points₂ (by change (DCC (`Γ Γ)).point_arity = _; grind) hn_Γ₁.bang₀.is_value hn_Γ₁.bang₀.is_value))))))
+    → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.app M N) (DCC (∘ (Eval A B M') (⟨,⟩C₃ (Id Γ) (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))))) (app_is_value hn_Γ₁ hv₁ hv₂ hv₃ hv₄ hv₅)
 deriving Repr
 
 open Dsl in
 inductive CcConst : (e : LConst) → (e' : Expr) → (hv : Value e') → Type
-  | bool       : CcConst .bool (DCC 𝟚) .bool
-  | bool_true  : CcConst .bool_true (DCC 𝟙₂) .true
-  | bool_false : CcConst .bool_false (DCC 𝟘₂) .false
-  | true       : CcConst .true (DCC 𝟙) .top
-  | false      : CcConst .false (DCC 𝟘) .bot
+  | bool       : CcConst .bool (DCC Bool) .bool
+  | bool_true  : CcConst .bool_true (DCC True) .true
+  | bool_false : CcConst .bool_false (DCC False) .false
+  | true       : CcConst .true (DCC ⊤) .top
+  | false      : CcConst .false (DCC ⊥) .bot
   | true_intro : CcConst .true_intro (DCC ∗) .tintro
   | sort       : CcConst (.sort u) (DCC (Sort u)) .sort
 deriving Repr
@@ -546,29 +550,29 @@ inductive Cc : (e : LExpr) → (e' : Expr) → Type
   | share_ty : Cc A A' → Cc (.share_ty _u A) (DCC (! A'))
   | share    : Cc x x' → Cc (.share _u _A x) (DCC (& x'))
   | lam      : Abstract ⟨.top, .unit⟩ A A' hv₁
-    → Abstract ⟨DCC (! (Σ 𝟙 A')), .bang (.sigma .unit hv₁)⟩ M M' hv₂
-    → Cc (.lam (.share_ty u A) M) (DCC ((!Λ 𝟙 A' M') (& ∗)))
+    → Abstract ⟨DCC (! (Σ ⊤ A')), .bang (.sigma .unit hv₁)⟩ M M' hv₂
+    → Cc (.lam (.share_ty u A) M) (DCC ((!Λ ⊤ A' M') (& ∗)))
   | sigma    : Cc A A'
     → A' →ᵦ A''
     → (hv : Value A'')
-    → Abstract ⟨DCC (! (Σ 𝟙 A'')), .bang (.sigma .unit hv)⟩ B B' hv₂
-    → Cc (.sigma u v (.share_ty u₂ A) B) (DCC (Σ A'' ((!Λ 𝟙 A'' B') (& ∗))))
+    → Abstract ⟨DCC (! (Σ ⊤ A'')), .bang (.sigma .unit hv)⟩ B B' hv₂
+    → Cc (.sigma u v (.share_ty u₂ A) B) (DCC (Σ A'' ((!Λ ⊤ A'' B') (& ∗))))
   | app      : Cc x x' → Cc y y' → Cc (.app x y) (DCC (x' y'))
   | forallE  : Cc A A'
     → A' →ᵦ A''
     → (hv₁ : Value A'')
-    → Abstract ⟨DCC (! (Σ 𝟙 A'')), .bang (.sigma .unit hv₁)⟩ B B' hv₂
-    → Cc (.forallE (.share_ty u A) B) (DCC ((Π (`𝟙 A'') (`𝟙 ((!Λ 𝟙 A'' B') (& ∗)))) ∗))
+    → Abstract ⟨DCC (! (Σ ⊤ A'')), .bang (.sigma .unit hv₁)⟩ B B' hv₂
+    → Cc (.forallE (.share_ty u A) B) (DCC ((Π (`⊤ A'') (`⊤ ((!Λ ⊤ A'' B') (& ∗)))) ∗))
 deriving Repr
 
 def Ctx.mk_var (Γ : Ctx) (n : VarIdx) : Σ (e : Expr) (hv : Value e), AbstractVar Γ n e hv :=
   match Γ with
-  | ⟨.top, .unit⟩ => ⟨(open Dsl in (DCC (Id 𝟙))), _, .init⟩
+  | ⟨.top, .unit⟩ => ⟨(open Dsl in (DCC (Id ⊤))), _, .init⟩
   | ⟨.sigma A B, .sigma hΓ₀ _hv⟩ =>
     match n with
     | 0 => ⟨(open Dsl in (DCC (Snd B))), _, .zero⟩
     | n + 1 => ⟨(open Dsl in (DCC (∘ #((mk_var ⟨A, hΓ₀⟩ n).1) (Fst B)))), _, .succ (mk_var ⟨A, hΓ₀⟩ n).2.2⟩
-  | ⟨.bang A, .bang hΓ₀⟩ => ⟨(open Dsl in (DCC (∘ #((mk_var ⟨A, hΓ₀⟩ n).1) (! A)))), _, .bang (mk_var ⟨A, hΓ₀⟩ n).2.2⟩
+  | ⟨.bang A, .bang hΓ₀⟩ => ⟨(open Dsl in (DCC (∘ #((mk_var ⟨A, hΓ₀⟩ n).1) (* A)))), _, .bang (mk_var ⟨A, hΓ₀⟩ n).2.2⟩
 
 def mk_var (n : VarIdx) : SeekM (Σ (Γ : Ctx) (e : Expr) (hv : Value e), AbstractVar Γ n e hv) :=
   (fun x => ⟨x.2, Ctx.mk_var x.2 n⟩) <$> read
@@ -676,7 +680,7 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
       | (DCC ((Π B₁ C₁) x₁)), (DCC ((Π B₂ C₂) x₂)) =>
         let (hv₃, hv₄) ← Prod.mk <$> (Expr.as_value? (reduce Red (DCC (B₁ x₁))).fst) <*> (Expr.as_value? (reduce Red (DCC (C₁ x₁))).fst)
         match ← (guard_type_error (DCC (∘ y' (Fst #((reduce Red (DCC (C₁ x₁))).fst)))).infer) with
-        | ⟨(DCC ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗)), ht₃⟩ =>
+        | ⟨(DCC ((Π (`⊤ A₃) (`⊤ (Π B₃ C₃))) ∗)), ht₃⟩ =>
           let hv₅ ← Expr.as_value? C₃
           return ⟨_, _, .sigma_mk h₁ h₂ ht₁ ht₂ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₃ hv₄ ht₃ hv₅⟩
         | _ => raise_error (.unexpected () ())
@@ -705,7 +709,7 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
       let ⟨C', hv₂, h₂⟩ ← (seek_to LExpr.sigma₁ ⟨(DCC (Σ Γ B')), .sigma hn_Γ.bang₀ hv₁⟩ *> Ctx.abstract ⟨(DCC (Σ Γ B')), .sigma hn_Γ.bang₀ hv₁⟩ B)
       return ⟨DCC (Σ' B' C'), .points₂ (by point_arity) hv₁ hv₂, .sigma h₁ h₂⟩
     | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
-  | (.lam A M) =>
+  | (.lam (.share_ty _u A) M) =>
     match Γ with
     | ⟨DCC (! Γ), hn_Γ⟩ => do
       let ⟨A', hv₁, h₁⟩ ← (seek_to LExpr.binder_ty ⟨Γ, hn_Γ.bang₀⟩ *> Ctx.abstract ⟨Γ, hn_Γ.bang₀⟩ A)
@@ -714,8 +718,8 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
     | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
   | (.forallE A B) =>
     if heq₁ : (Lean.Expr.hasLooseBVar A.to_expr 0 = false ∧ Lean.Expr.hasLooseBVar B.to_expr 1 = false) then
-      let ⟨A', hv₁, h₁⟩ ← (seek_to LExpr.binder_ty ⟨(DCC (! 𝟙)), (.bang .unit)⟩ *> Ctx.abstract ⟨(DCC (! 𝟙)), (.bang .unit)⟩ A)
-      let ⟨B', hv₂, h₂⟩ ← (seek_to LExpr.binder_body ⟨(DCC (! 𝟙)), (.bang .unit)⟩ *> Ctx.abstract ⟨(DCC (! 𝟙)), (.bang .unit)⟩ B)
+      let ⟨A', hv₁, h₁⟩ ← (seek_to LExpr.binder_ty ⟨(DCC (! ⊤)), (.bang .unit)⟩ *> Ctx.abstract ⟨(DCC (! ⊤)), (.bang .unit)⟩ A)
+      let ⟨B', hv₂, h₂⟩ ← (seek_to LExpr.binder_body ⟨(DCC (! ⊤)), (.bang .unit)⟩ *> Ctx.abstract ⟨(DCC (! ⊤)), (.bang .unit)⟩ B)
       let hv₃ ← Expr.as_value? (reduce Red (DCC (A' (& ∗)))).fst
       let hv₄ ← Expr.as_value? (reduce Red (DCC (B' (& ∗)))).fst
       return ⟨_, _, .forallE' heq₁ h₁ h₂ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₃ hv₄⟩
@@ -738,7 +742,7 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
       | (DCC ((Π B₁ C₁) x₁)), (DCC ((Π B₂ C₂) x₂)) =>
         let (hv₃, hv₄) ← Prod.mk <$> (seek_to LExpr.sigl ⟨Γ, hn_Γ.bang₀⟩ *> Expr.as_value? (reduce Red (DCC (B₁ x₁))).fst) <*> (seek_to LExpr.sigr ⟨Γ, hn_Γ.bang₀⟩ *> Expr.as_value? (reduce Red (DCC (C₂ x₂))).fst)
         match ← (guard_type_error (DCC (∘ y' (Fst (`Γ Γ)))).infer) with
-        | ⟨(DCC ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗)), ht₃⟩ =>
+        | ⟨(DCC ((Π (`⊤ A₃) (`⊤ (Π B₃ C₃))) ∗)), ht₃⟩ =>
           let hv₅ ← Expr.as_value? C₃
           return ⟨_, _, .app h₁ h₂ ht₁ ht₂ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₃ hv₄ ht₃ hv₅⟩
         | _ => raise_error (.unexpected () ())
@@ -767,19 +771,19 @@ def cc (e : LExpr) : SeekM (Σ (e' : Expr), Cc e e') := open Dsl in do
   | .share _u _A x => (⟨_, .share ·.2⟩) <$> (cc x)
   | .lam (.share_ty _u A) M =>
     let ⟨A', hv₁, h₁⟩   ← (seek_to LExpr.binder_ty ⟨.top, .unit⟩ *> Ctx.abstract ⟨.top, .unit⟩ A)
-    let ⟨_M', _hv₂, h₂⟩ ← (seek_to LExpr.binder_body ⟨(DCC (! (Σ 𝟙 A'))), .bang (.sigma .unit hv₁)⟩ *> Ctx.abstract ⟨(DCC (! (Σ 𝟙 A'))), .bang (.sigma .unit hv₁)⟩ M)
+    let ⟨_M', _hv₂, h₂⟩ ← (seek_to LExpr.binder_body ⟨(DCC (! (Σ ⊤ A'))), .bang (.sigma .unit hv₁)⟩ *> Ctx.abstract ⟨(DCC (! (Σ ⊤ A'))), .bang (.sigma .unit hv₁)⟩ M)
     return ⟨_, .lam h₁ h₂⟩
   | .sigma _u _v (.share_ty _u₂ A) B =>
     let ⟨A', h₁⟩ ← (seek_to LExpr.sigma₀ ⟨.top, .unit⟩ *> cc A)
     let hv₁ ← Expr.as_value? (reduce Red A').fst
-    let ⟨_M', _hv₂, h₂⟩ ← (seek_to LExpr.sigma₁ ⟨DCC (! (Σ 𝟙 #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ *> Ctx.abstract ⟨DCC (! (Σ 𝟙 #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ B)
+    let ⟨_M', _hv₂, h₂⟩ ← (seek_to LExpr.sigma₁ ⟨DCC (! (Σ ⊤ #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ *> Ctx.abstract ⟨DCC (! (Σ ⊤ #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ B)
     return ⟨_, .sigma h₁ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₁ h₂⟩
   | .app x y =>
-    (fun ⟨_x', h₁⟩ ⟨_y', h₂⟩ => ⟨_, .app h₁ h₂⟩) <$> (seek_to LExpr.congr_fun ⟨(DCC (! 𝟙)), .bang .unit⟩ *> cc x) <*> (seek_to LExpr.congr_arg ⟨(DCC (! 𝟙)), .bang .unit⟩ *> cc y)
+    (fun ⟨_x', h₁⟩ ⟨_y', h₂⟩ => ⟨_, .app h₁ h₂⟩) <$> (seek_to LExpr.congr_fun ⟨(DCC (! ⊤)), .bang .unit⟩ *> cc x) <*> (seek_to LExpr.congr_arg ⟨(DCC (! ⊤)), .bang .unit⟩ *> cc y)
   | .forallE (.share_ty _u A) B =>
     let ⟨A', h₁⟩ ← (seek_to LExpr.binder_ty ⟨.top, .unit⟩ *> cc A)
     let hv₁ ← Expr.as_value? (reduce Red A').fst
-    let ⟨_B', _hv₂, h₂⟩ ← (seek_to LExpr.binder_body ⟨DCC (! (Σ 𝟙 #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ *> Ctx.abstract ⟨DCC (! (Σ 𝟙 #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ B)
+    let ⟨_B', _hv₂, h₂⟩ ← (seek_to LExpr.binder_body ⟨DCC (! (Σ ⊤ #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ *> Ctx.abstract ⟨DCC (! (Σ ⊤ #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ B)
     return ⟨_, .forallE h₁ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₁ h₂⟩
   | _e => raise_error (.unexpected () ())
 
@@ -806,15 +810,6 @@ def LExpr.n_apps (e : LExpr) : ℕ :=
 
 example : LExpr.n_apps (.lam (.const (.sort 0)) (.app (.bvar 1) (.bvar 0))) = 1 := rfl
 
-open Dsl in
-example : Cc (.lam (.share_ty 1 (.const (.sort 0))) (.bvar 0)) (DCC ((!Λ 𝟙 (`𝟙 (Sort 0)) (∘ (Snd (`𝟙 (Sort 0))) (* (Σ 𝟙 (`𝟙 (Sort 0)))))) (& ∗))) := by
-  apply Cc.lam
-  · apply Abstract.const
-    constructor
-  · apply Abstract.var
-    apply AbstractVar.bang
-    · apply AbstractVar.zero
-
 /-
 Note: this operation is destructive, since it removes
 universe levels and type arguments to Shared.
@@ -824,12 +819,12 @@ def LExpr.shared_n (n : ℕ) (e : LExpr) : LExpr :=
   | .zero => e
   | .succ n => .share_ty 0 (e.shared_n n)
 
-def LExpr.share_all_n_abstr (n : ℕ) (e : LExpr) : LExpr :=
+/-def LExpr.share_all_n_abstr (n : ℕ) (e : LExpr) : LExpr :=
   match n with
   | .zero => e
   | .succ n =>
     match e with
-    | .lam bty bdy => .lam (bty.shared_n n) (bdy.shared_n (.succ n))
+    | .lam bty bdy => .lam (bty.shared_n n) (bdy.shared_n (.succ n))-/
 
-def LExpr.share_all_n (n : ℕ) (e : Expr) : LExpr :=
+--def LExpr.share_all_n (n : ℕ) (e : Expr) : LExpr :=
   

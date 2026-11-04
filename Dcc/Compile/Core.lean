@@ -8,11 +8,6 @@ open Expr (Value Judge point_arity points reduce Red infer reduce_sound_fst redu
 open Lean.Meta (MetaM)
 
 /-
-This version of the compiler allocates memory via bump allocation.
-A maximum memory is specified. Then, each top-level value is shared
-exactly that number of times. Contexts are always curried with !Λ.
-This is done with a preprocessing step, however.
-
 Variable abstraction:
 
 ----------------
@@ -464,7 +459,7 @@ inductive AbstractVar : (Γ : Ctx) → (n : VarIdx) → (e' : Expr) → (Value e
   | succ  : AbstractVar ⟨A, hΓ₀⟩ n f hv₁
     → AbstractVar ⟨.sigma A B, .sigma hΓ₀ hv₂⟩ (n + 1) (DCC (∘ f (Fst B))) (.points₂ (by point_arity) hv₁ (.points₁ (by point_arity) hv₂))
   | zero  : AbstractVar ⟨.sigma A B, .sigma hΓ₀ hv₁⟩ 0 (DCC (Snd B)) (.points₁ (by point_arity) hv₁)
-  | bang  : AbstractVar ⟨A, hΓ₀⟩ n f hv₁ → AbstractVar ⟨.bang A, .bang hΓ₀⟩ n (DCC (∘ f (! A))) (.points₂ (by point_arity) hv₁ (.points₁ (by point_arity) hΓ₀.is_value))
+  | bang  : AbstractVar ⟨A, hΓ₀⟩ n f hv₁ → AbstractVar ⟨.bang A, .bang hΓ₀⟩ n (DCC (∘ f (* A))) (.points₂ (by point_arity) hv₁ (.points₁ (by point_arity) hΓ₀.is_value))
 deriving Repr
 
 open Dsl in
@@ -771,7 +766,7 @@ def cc (e : LExpr) : SeekM (Σ (e' : Expr), Cc e e') := open Dsl in do
   | .share_ty _u A => (⟨_, .share_ty ·.2⟩) <$> (cc A)
   | .share _u _A x => (⟨_, .share ·.2⟩) <$> (cc x)
   | .lam (.share_ty _u A) M =>
-    let ⟨A', hv₁, h₁⟩ ← (seek_to LExpr.binder_ty ⟨.top, .unit⟩ *> Ctx.abstract ⟨.top, .unit⟩ A)
+    let ⟨A', hv₁, h₁⟩   ← (seek_to LExpr.binder_ty ⟨.top, .unit⟩ *> Ctx.abstract ⟨.top, .unit⟩ A)
     let ⟨_M', _hv₂, h₂⟩ ← (seek_to LExpr.binder_body ⟨(DCC (! (Σ 𝟙 A'))), .bang (.sigma .unit hv₁)⟩ *> Ctx.abstract ⟨(DCC (! (Σ 𝟙 A'))), .bang (.sigma .unit hv₁)⟩ M)
     return ⟨_, .lam h₁ h₂⟩
   | .sigma _u _v (.share_ty _u₂ A) B =>
@@ -789,3 +784,52 @@ def cc (e : LExpr) : SeekM (Σ (e' : Expr), Cc e e') := open Dsl in do
   | _e => raise_error (.unexpected () ())
 
 def cc' (e : LExpr) : Except CompileError (Σ (e' : Expr), Cc e e') := ((cc e).run ⟨e, .top, .unit⟩).1
+
+/-
+The number of times any context in a lean term is used is bounded by
+the number of applications in the term.
+
+This is highly inefficient.
+
+After calculating this bound "n + 1", we Share.share all top-level arguments
+n times and map each binder's type τ to (Share^[(n + 1)] τ)
+-/
+
+def LExpr.n_apps (e : LExpr) : ℕ :=
+  match e with
+  | .app x y => (x.n_apps + y.n_apps).succ
+  | .lam bty bdy => max bty.n_apps bdy.n_apps
+  | .forallE bty bdy => max bty.n_apps bdy.n_apps
+  | .sigma _u _v A B => max A.n_apps B.n_apps
+  | .sigma_mk _u _v A B x y => max A.n_apps (max B.n_apps (max x.n_apps y.n_apps))
+  | _ => 0
+
+example : LExpr.n_apps (.lam (.const (.sort 0)) (.app (.bvar 1) (.bvar 0))) = 1 := rfl
+
+open Dsl in
+example : Cc (.lam (.share_ty 1 (.const (.sort 0))) (.bvar 0)) (DCC ((!Λ 𝟙 (`𝟙 (Sort 0)) (∘ (Snd (`𝟙 (Sort 0))) (* (Σ 𝟙 (`𝟙 (Sort 0)))))) (& ∗))) := by
+  apply Cc.lam
+  · apply Abstract.const
+    constructor
+  · apply Abstract.var
+    apply AbstractVar.bang
+    · apply AbstractVar.zero
+
+/-
+Note: this operation is destructive, since it removes
+universe levels and type arguments to Shared.
+-/
+def LExpr.shared_n (n : ℕ) (e : LExpr) : LExpr :=
+  match n with
+  | .zero => e
+  | .succ n => .share_ty 0 (e.shared_n n)
+
+def LExpr.share_all_n_abstr (n : ℕ) (e : LExpr) : LExpr :=
+  match n with
+  | .zero => e
+  | .succ n =>
+    match e with
+    | .lam bty bdy => .lam (bty.shared_n n) (bdy.shared_n (.succ n))
+
+def LExpr.share_all_n (n : ℕ) (e : Expr) : LExpr :=
+  

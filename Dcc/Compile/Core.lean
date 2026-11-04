@@ -458,6 +458,7 @@ deriving Repr
 
 open Dsl in
 inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') → Type
+  | share    : Abstract ⟨Γ, hn_Γ₁⟩ x x' hv₁ → Abstract ⟨DCC (! Γ), .bang hn_Γ₁⟩ (.share u A x) (DCC ($<> x')) (.points₁ (by point_arity) hv₁)
   | const    : AbstractConst Γ c e hv → Abstract Γ (.const c) e hv
   | var      : AbstractVar Γ n e hv   → Abstract Γ (.bvar n) e hv
   | sigma    : Abstract ⟨Γ, h_Γ₁⟩ B B' hv₁
@@ -493,6 +494,36 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → (hv₅ : Value C₃)
     → Abstract ⟨DCC (! Γ), .bang hn_Γ₁⟩ (.app M N) (DCC (∘ (Eval A B M') (⟨,⟩C₃ (Id Γ) (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ)))))))
       (.points₂ (by point_arity) (.points₃ (by point_arity) hv₃ hv₄ hv₁) (.points₃ (by point_arity) hv₅ (.points₁ (by change point_arity (DCC (Id Γ)) = _; point_arity) hn_Γ₁.is_value) (.points₃ (by change point_arity (DCC (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))) = _; grind) hn_Γ₁.is_value (.points₂ (by change (DCC (`Γ Γ)).point_arity = _; grind) hn_Γ₁.is_value hn_Γ₁.is_value) (.points₂ (by change point_arity (DCC (∘ N' (Fst (`Γ Γ)))) =_; grind) hv₂ (.points₁ (by change (DCC (Fst (`Γ Γ))).point_arity = _; grind) (.points₂ (by change (DCC (`Γ Γ)).point_arity = _; grind) hn_Γ₁.is_value hn_Γ₁.is_value))))))
+deriving Repr
+
+open Dsl in
+inductive CcConst : (e : LConst) → (e' : Expr) → (hv : Value e') → Type
+  | bool_true  : CcConst .bool_true (DCC 𝟙₂) .true
+  | bool_false : CcConst .bool_false (DCC 𝟘₂) .false
+  | true       : CcConst .true (DCC 𝟙) .top
+  | false      : CcConst .false (DCC 𝟘) .bot
+  | true_intro : CcConst .true_intro (DCC ∗) .tintro
+  | sort       : CcConst (.sort u) (DCC (Sort u)) .sort
+deriving Repr
+
+open Dsl in
+inductive Cc : (e : LExpr) → (e' : Expr) → Type
+  | const    : CcConst c e' hv → Cc (.const c) e'
+  | share_ty : Cc A A' → Cc (.share_ty _u A) (DCC (! A'))
+  | share    : Cc x x' → Cc (.share _u _A x) (DCC (& x'))
+  | lam      : Abstract ⟨.top, .unit⟩ A A' hv₁
+    → Abstract ⟨DCC (! (Σ 𝟙 A')), .bang (.sigma .unit hv₁)⟩ M M' hv₂
+    → Cc (.lam (.share_ty u A) M) (DCC ((!Λ 𝟙 A' M') (& ∗)))
+  | sigma    : Cc A A'
+    → A' →ᵦ A''
+    → (hv : Value A'')
+    → Abstract ⟨DCC (! (Σ 𝟙 A'')), .bang (.sigma .unit hv)⟩ B B' hv₂
+    → Cc (.sigma u v (.share_ty u₂ A) B) (DCC (Σ A'' ((!Λ 𝟙 A'' B') (& ∗))))
+  | app      : Cc x x' → Cc y y' → Cc (.app x y) (DCC (x' y'))
+  | forallE  : Cc A A'
+    → Abstract ⟨DCC (! (Σ 𝟙 A')), .bang (.sigma .unit hv₁)⟩ B B' hv₂
+    → Cc (.forallE (.share_ty u A) M) (DCC ((Π (`𝟙 A') (`𝟙 ((!Λ 𝟙 A' B') (& ∗)))) ∗))
+deriving Repr
 
 def Ctx.mk_var (Γ : Ctx) (n : VarIdx) : Σ (e : Expr) (hv : Value e), AbstractVar Γ n e hv :=
   match Γ with

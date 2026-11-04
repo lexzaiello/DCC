@@ -527,6 +527,7 @@ deriving Repr
 
 open Dsl in
 inductive CcConst : (e : LConst) → (e' : Expr) → (hv : Value e') → Type
+  | bool       : CcConst .bool (DCC 𝟚) .bool
   | bool_true  : CcConst .bool_true (DCC 𝟙₂) .true
   | bool_false : CcConst .bool_false (DCC 𝟘₂) .false
   | true       : CcConst .true (DCC 𝟙) .top
@@ -550,8 +551,10 @@ inductive Cc : (e : LExpr) → (e' : Expr) → Type
     → Cc (.sigma u v (.share_ty u₂ A) B) (DCC (Σ A'' ((!Λ 𝟙 A'' B') (& ∗))))
   | app      : Cc x x' → Cc y y' → Cc (.app x y) (DCC (x' y'))
   | forallE  : Cc A A'
-    → Abstract ⟨DCC (! (Σ 𝟙 A')), .bang (.sigma .unit hv₁)⟩ B B' hv₂
-    → Cc (.forallE (.share_ty u A) M) (DCC ((Π (`𝟙 A') (`𝟙 ((!Λ 𝟙 A' B') (& ∗)))) ∗))
+    → A' →ᵦ A''
+    → (hv₁ : Value A'')
+    → Abstract ⟨DCC (! (Σ 𝟙 A'')), .bang (.sigma .unit hv₁)⟩ B B' hv₂
+    → Cc (.forallE (.share_ty u A) B) (DCC ((Π (`𝟙 A'') (`𝟙 ((!Λ 𝟙 A'' B') (& ∗)))) ∗))
 deriving Repr
 
 def Ctx.mk_var (Γ : Ctx) (n : VarIdx) : Σ (e : Expr) (hv : Value e), AbstractVar Γ n e hv :=
@@ -719,3 +722,39 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
     | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
   | e => raise_error (.unexpected () ())
 
+def cc_const (c : LConst) : Σ (e' : Expr) (hv : Value e'), CcConst c e' hv :=
+  match c with
+  | .bool_true => ⟨_, _, .bool_true⟩
+  | .bool_false => ⟨_, _, .bool_false⟩
+  | .bool => ⟨_, _, .bool⟩
+  | .sort _u => ⟨_, _, .sort⟩
+  | .true => ⟨_, _, .true⟩
+  | .false => ⟨_, _, .false⟩
+  | .true_intro => ⟨_, _, .true_intro⟩
+
+/-
+TODO: need to add seek_to's for error messasges
+-/
+
+def cc (e : LExpr) : SeekM (Σ (e' : Expr), Cc e e') := open Dsl in do
+  match e with
+  | .const c => return ⟨(cc_const c).1, .const (cc_const c).2.2⟩
+  | .share_ty _u A => (⟨_, .share_ty ·.2⟩) <$> (cc A)
+  | .share _u _A x => (⟨_, .share ·.2⟩) <$> (cc x)
+  | .lam (.share_ty _u A) M =>
+    let ⟨A', hv₁, h₁⟩ ← Ctx.abstract ⟨.top, .unit⟩ A
+    let ⟨_M', _hv₂, h₂⟩ ← Ctx.abstract ⟨(DCC (! (Σ 𝟙 A'))), .bang (.sigma .unit hv₁)⟩ M
+    return ⟨_, .lam h₁ h₂⟩
+  | .sigma _u _v (.share_ty _u₂ A) B =>
+    let ⟨A', h₁⟩ ← cc A
+    let hv₁ ← Expr.as_value? (reduce Red A').fst
+    let ⟨_M', _hv₂, h₂⟩ ← Ctx.abstract ⟨DCC (! (Σ 𝟙 #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ B
+    return ⟨_, .sigma h₁ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₁ h₂⟩
+  | .app x y =>
+    (fun ⟨_x', h₁⟩ ⟨_y', h₂⟩ => ⟨_, .app h₁ h₂⟩) <$> (seek_to LExpr.congr_fun ⟨(DCC (! 𝟙)), .bang .unit⟩ *> cc x) <*> (seek_to LExpr.congr_arg ⟨(DCC (! 𝟙)), .bang .unit⟩ *> cc y)
+  | .forallE (.share_ty _u A) B =>
+    let ⟨A', h₁⟩ ← cc A
+    let hv₁ ← Expr.as_value? (reduce Red A').fst
+    let ⟨_B', _hv₂, h₂⟩ ← Ctx.abstract ⟨DCC (! (Σ 𝟙 #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ B
+    return ⟨_, .forallE h₁ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₁ h₂⟩
+  | _e => raise_error (.unexpected () ())

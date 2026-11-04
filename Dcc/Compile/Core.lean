@@ -787,3 +787,5 @@ def cc (e : LExpr) : SeekM (Σ (e' : Expr), Cc e e') := open Dsl in do
     let ⟨_B', _hv₂, h₂⟩ ← (seek_to LExpr.binder_body ⟨DCC (! (Σ 𝟙 #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ *> Ctx.abstract ⟨DCC (! (Σ 𝟙 #((reduce Red A').fst))), .bang (.sigma .unit hv₁)⟩ B)
     return ⟨_, .forallE h₁ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₁ h₂⟩
   | _e => raise_error (.unexpected () ())
+
+def cc' (e : LExpr) : Except CompileError (Σ (e' : Expr), Cc e e') := ((cc e).run ⟨e, .top, .unit⟩).1

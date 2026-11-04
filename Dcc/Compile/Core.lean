@@ -493,9 +493,9 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
   | sigma    : Abstract ⟨Γ, hn_Γ.bang₀⟩ A B' hv₁
     → Abstract ⟨DCC (Σ Γ B'), .sigma hn_Γ.bang₀ hv₁⟩ B C' hv₂
     → Abstract ⟨DCC (! Γ), hn_Γ⟩ (.sigma u v A B) (DCC (Σ' B' C')) (.points₂ (by point_arity) hv₁ hv₂)
-  | lam      : Abstract ⟨Γ, h_Γ₁⟩ A A' hv₁
-    → Abstract ⟨(DCC (! (Σ Γ A'))), .bang (.sigma h_Γ₁ hv₁)⟩ M M' hv₂
-    → Abstract ⟨DCC (! Γ), .bang h_Γ₁⟩ (.lam A M) (DCC (!Λ Γ A' M')) (.points₃ (by point_arity) h_Γ₁.is_value hv₁ hv₂)
+  | lam      : Abstract ⟨Γ, h_Γ₁.bang₀⟩ A A' hv₁
+    → Abstract ⟨(DCC (! (Σ Γ A'))), .bang (.sigma h_Γ₁.bang₀ hv₁)⟩ M M' hv₂
+    → Abstract ⟨DCC (! Γ), h_Γ₁⟩ (.lam A M) (DCC (!Λ Γ A' M')) (.points₃ (by point_arity) h_Γ₁.bang₀.is_value hv₁ hv₂)
   -- If both the domain and codomain of a function type depend on the context,
   -- we should be a nested Π such that we can capture the context ((Π A' B') Γ)
   | forallE  : (Lean.Expr.hasLooseBVar A.to_expr 0 = true ∨ Lean.Expr.hasLooseBVar B.to_expr 1 = true)
@@ -503,7 +503,7 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → Abstract ⟨(DCC (! (Σ Γ A'))), (.bang (.sigma hn_Γ₁.bang₀ hv₁))⟩ B B' hv₂
     → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.forallE A B) (DCC (Π A' (!Λ Γ A' B'))) (.points₂ (by point_arity) hv₁ (.points₃ (by point_arity) hn_Γ₁.bang₀.is_value hv₁ hv₂))
   -- For arrows. Dom and cod don't depend, so make an arrow
-  | forallE' : (Lean.Expr.hasLooseBVar A.to_expr 0 = false ∧ Lean.Expr.hasLooseBVar B.to_expr 0 = false)
+  | forallE' : (Lean.Expr.hasLooseBVar A.to_expr 0 = false ∧ Lean.Expr.hasLooseBVar B.to_expr 1 = false)
     → Abstract ⟨(DCC (! 𝟙)), (.bang .unit)⟩ A A' hv₁
     → Abstract ⟨(DCC (! 𝟙)), (.bang .unit)⟩ B B' hv₂
     → (A' (& ∗)) →ᵦ A''
@@ -511,8 +511,8 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → (hv₃ : Value A'')
     → (hv₄ : Value B'')
     → Abstract Γ (.forallE A B) (DCC (→ A'' B'')) (.pi (.points₂ (by point_arity) .top hv₃) (.points₂ (by point_arity) .top (.points₂ (by point_arity) hv₃ hv₄)) .tintro)
-  | app      : Abstract ⟨Γ, hn_Γ₁⟩ M M' hv₁
-    → Abstract ⟨Γ, hn_Γ₁⟩ N N' hv₂
+  | app      : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ M M' hv₁
+    → Abstract ⟨Γ, hn_Γ₁.bang₀⟩ N N' hv₂
     → Judge M' (DCC ((Π B₁ C₁) x₁))
     → Judge N' (DCC ((Π B₂ C₂) x₂))
     → (B₁ x₁) →ᵦ A
@@ -521,8 +521,8 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → (hv₄ : Value B)
     → Judge (DCC (∘ N' (Fst (`Γ Γ)))) (DCC ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗))
     → (hv₅ : Value C₃)
-    → Abstract ⟨DCC (! Γ), .bang hn_Γ₁⟩ (.app M N) (DCC (∘ (Eval A B M') (⟨,⟩C₃ (Id Γ) (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ)))))))
-      (.points₂ (by point_arity) (.points₃ (by point_arity) hv₃ hv₄ hv₁) (.points₃ (by point_arity) hv₅ (.points₁ (by change point_arity (DCC (Id Γ)) = _; point_arity) hn_Γ₁.is_value) (.points₃ (by change point_arity (DCC (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))) = _; grind) hn_Γ₁.is_value (.points₂ (by change (DCC (`Γ Γ)).point_arity = _; grind) hn_Γ₁.is_value hn_Γ₁.is_value) (.points₂ (by change point_arity (DCC (∘ N' (Fst (`Γ Γ)))) =_; grind) hv₂ (.points₁ (by change (DCC (Fst (`Γ Γ))).point_arity = _; grind) (.points₂ (by change (DCC (`Γ Γ)).point_arity = _; grind) hn_Γ₁.is_value hn_Γ₁.is_value))))))
+    → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.app M N) (DCC (∘ (Eval A B M') (⟨,⟩C₃ (Id Γ) (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ)))))))
+      (.points₂ (by point_arity) (.points₃ (by point_arity) hv₃ hv₄ hv₁) (.points₃ (by point_arity) hv₅ (.points₁ (by change point_arity (DCC (Id Γ)) = _; point_arity) hn_Γ₁.bang₀.is_value) (.points₃ (by change point_arity (DCC (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))) = _; grind) hn_Γ₁.bang₀.is_value (.points₂ (by change (DCC (`Γ Γ)).point_arity = _; grind) hn_Γ₁.bang₀.is_value hn_Γ₁.bang₀.is_value) (.points₂ (by change point_arity (DCC (∘ N' (Fst (`Γ Γ)))) =_; grind) hv₂ (.points₁ (by change (DCC (Fst (`Γ Γ))).point_arity = _; grind) (.points₂ (by change (DCC (`Γ Γ)).point_arity = _; grind) hn_Γ₁.bang₀.is_value hn_Γ₁.bang₀.is_value))))))
 deriving Repr
 
 open Dsl in
@@ -678,8 +678,44 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
       let ⟨C', hv₂, h₂⟩ ← Ctx.abstract ⟨(DCC (Σ Γ B')), .sigma hn_Γ.bang₀ hv₁⟩ B
       return ⟨DCC (Σ' B' C'), .points₂ (by point_arity) hv₁ hv₂, .sigma h₁ h₂⟩
     | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
-  | (.lam A M) => sorry
-  | (.forallE A B) => sorry
-  | .app x y => sorry
-  | e => raise_error (by sorry)
+  | (.lam A M) =>
+    match Γ with
+    | ⟨DCC (! Γ), hn_Γ⟩ => do
+      let ⟨A', hv₁, h₁⟩ ← Ctx.abstract ⟨Γ, hn_Γ.bang₀⟩ A
+      let ⟨M', hv₂, h₂⟩ ← Ctx.abstract ⟨(DCC (! (Σ Γ A'))), .bang (.sigma hn_Γ.bang₀ hv₁)⟩ M
+      return ⟨_, _, .lam h₁ h₂⟩
+    | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
+  | (.forallE A B) =>
+    if heq₁ : (Lean.Expr.hasLooseBVar A.to_expr 0 = false ∧ Lean.Expr.hasLooseBVar B.to_expr 1 = false) then
+      let ⟨A', hv₁, h₁⟩ ← Ctx.abstract ⟨(DCC (! 𝟙)), (.bang .unit)⟩ A
+      let ⟨B', hv₂, h₂⟩ ← Ctx.abstract ⟨(DCC (! 𝟙)), (.bang .unit)⟩ B
+      let hv₃ ← Expr.as_value? (reduce Red (DCC (A' (& ∗)))).fst
+      let hv₄ ← Expr.as_value? (reduce Red (DCC (B' (& ∗)))).fst
+      return ⟨_, _, .forallE' heq₁ h₁ h₂ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₃ hv₄⟩
+    else
+      have heq₂ : (Lean.Expr.hasLooseBVar A.to_expr 0 = true ∨ Lean.Expr.hasLooseBVar B.to_expr 1 = true) := by
+        grind
+      match Γ with
+      | ⟨DCC (! Γ), hn_Γ⟩ =>
+        let ⟨A', hv₁, h₁⟩ ← Ctx.abstract ⟨(DCC (! Γ)), hn_Γ⟩ A
+        let ⟨B', hv₂, h₂⟩ ← Ctx.abstract ⟨(DCC (! (Σ Γ A'))), (.bang (.sigma hn_Γ.bang₀ hv₁))⟩ B
+        return ⟨_, _, .forallE heq₂ h₁ h₂⟩
+      | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
+  | .app x y =>
+    match Γ with
+    | ⟨DCC (! Γ), hn_Γ⟩ =>
+      let (⟨x', hv₁, h₁⟩, ⟨y', hv₂, h₂⟩) ← Prod.mk <$> (seek_to LExpr.sigl ⟨Γ, hn_Γ.bang₀⟩ *> Ctx.abstract ⟨Γ, hn_Γ.bang₀⟩ x)
+        <*> (seek_to LExpr.sigr ⟨Γ, hn_Γ.bang₀⟩ *> Ctx.abstract ⟨Γ, hn_Γ.bang₀⟩ y)
+      let (⟨τ₁, ht₁⟩, ⟨τ₂, ht₂⟩) ← Prod.mk <$> (guard_type_error x'.infer) <*> (guard_type_error y'.infer)
+      match τ₁, τ₂ with
+      | (DCC ((Π B₁ C₁) x₁)), (DCC ((Π B₂ C₂) x₂)) =>
+        let (hv₃, hv₄) ← Prod.mk <$> (Expr.as_value? (reduce Red (DCC (B₁ x₁))).fst) <*> (Expr.as_value? (reduce Red (DCC (C₂ x₂))).fst)
+        match ← (guard_type_error (DCC (∘ y' (Fst (`Γ Γ)))).infer) with
+        | ⟨(DCC ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗)), ht₃⟩ =>
+          let hv₅ ← Expr.as_value? C₃
+          return ⟨_, _, .app h₁ h₂ ht₁ ht₂ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₃ hv₄ ht₃ hv₅⟩
+        | _ => raise_error (.unexpected () ())
+      | x, y => raise_error (.unexpected () ())
+    | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
+  | e => raise_error (.unexpected () ())
 

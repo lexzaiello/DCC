@@ -1,762 +1,331 @@
-import Dcc.Judge
+import Dcc.Judge3
 import Dcc.Ast
-import Dcc.Judge2
+import Dcc.Ast.Share
+import Dcc.Metatheory.Progress
 import Dcc.Types
-import Dcc.Eta.Reduce
-import Dcc.Tactic.Debug
 
-#eval (DCC *<Snd(`(⊤, Sort 0))>).infer₂'
+open Expr (Value)
+
+/-
+This version of the compiler allocates memory via bump allocation.
+A maximum memory is specified. Then, each top-level value is shared
+exactly that number of times. Contexts are always curried with !Λ.
+This is done with a preprocessing step, however.
+
+Variable abstraction:
+
+----------------
+⟦0⟧_(Σ Γ Δ) := Snd Δ
+
+
+--------------------------------------
+    ⟦n + 1⟧_(Σ Γ Δ) := (∘ ⟦n⟧_Γ (Fst Δ))
+
+----------------------------
+⟦n⟧_(! A) := (∘ ⟦n⟧_A (! A))
+
+where Γ and Δ are a DCC terms.
+
+Variable lookup should never occur on a banged context.
+Rather, a context is dereferenced first.
+A context is either 𝟙 or (Σ Γ Δ).
+
+Nested Σ binders:
+
+------------------------
+⟦Σ A B⟧_(! Γ) := (Σ' ⟦A⟧_Γ ⟦B⟧_(Σ Γ ⟦A⟧_Γ))
+
+-----------------------
+⟦A × B⟧_(! Γ) := (Σ' ⟦A⟧_Γ (Λ Γ ⟦A⟧_Γ (∘ ⟦B⟧_(! 𝟙) (`(Σ Γ ⟦A⟧_Γ) (& ∗)))))
+
+Nested lambda binders:
+
+----------------------------------
+⟦(λ x : A => M)⟧_(! Γ) := (!Λ Γ ⟦A⟧_Γ ⟦M⟧_(! (Σ Γ ⟦A⟧_γ)))
+
+Γ is not a bang
+----------------------------------
+⟦(λ x : A => M)⟧_Γ := (Λ Γ ⟦A⟧_Γ ⟦M⟧_(Σ Γ ⟦A⟧_γ))
+
+Nested Π binders:
+
+If A does not depend on the context
+and if M depends only on x, but not the context
+----------------------------------
+⟦(∀ x : A, M)⟧_(! Γ) := ((Π (`𝟙 (⟦A⟧_(! 𝟙) (& ∗))) (`𝟙 (⟦M⟧_(! (Σ 𝟙 ⟦A⟧_𝟙)) (& ∗)))) ∗)
+
+If A does not depend on the context and M does not depend on the context
+----------------------------------
+⟦(∀ x : A, M)⟧_(! Γ) := ((Π (`𝟙 (⟦A⟧_(! 𝟙) (& ∗))) (`𝟙 (`(⟦A⟧_(! 𝟙) (& ∗)) (⟦M⟧_(! 𝟙) (& ∗))))) ∗)
+
+If either A or M depend on the context
+------------------------------------- TODO: this should be split up for if M does not as well
+⟦(∀ x : A, M)⟧_(! Γ) := (Π ⟦A⟧_(! Γ) (!Λ Γ ⟦A⟧_Γ ⟦M⟧_(! (Σ Γ ⟦A⟧_Γ))))
+
+A and M can be checked to depend on the context by attempting compiling them with their respective
+empty or nondependent contexts, then falling back.
+
+Nested application:
+
+⟦M⟧_Γ : ((Π B₁ C₁) x₁)    ⟦N⟧_Γ : ((Π B₂ C₂) x₂)
+(B₁ x₁) →ᵦ A              (C₂ x) →ᵦ B
+
+(∘ N (Fst (`Γ Γ))) : ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗)
+---------------------------------------------
+⟦M N⟧_(! Γ) := (∘ (Eval A B ⟦M⟧_Γ) (⟨,⟩C₃ (Id Γ) (Λ Γ (`Γ Γ) (∘ ⟦N⟧_Γ (Fst (`Γ Γ)))))
+
+Constants:
+
+--------------------
+⟦Bool.True⟧_Γ := (`Γ 𝟙₂)
+
+--------------------
+⟦Bool.False⟧_Γ := (`Γ 𝟘₂)
+
+--------------------
+⟦True⟧_Γ := (`Γ 𝟙)
+
+--------------------
+⟦False⟧_Γ := (`Γ 𝟘)
+
+--------------------
+⟦True.intro⟧_Γ := (`Γ ∗)
+
+--------------------
+⟦Sort u⟧_Γ := (`Γ (Sort u))
+
+Shared constants:
+
+x is not also shared, and x is a constant
+-----------------------------------------
+⟦Share.share x⟧_(! Γ) := ($<> ⟦x⟧_Γ)
+
+⟦A⟧_𝟙 is not a bang
+-----------------------------------------
+⟦λ x : A => M⟧ := ((Λ 𝟙 ⟦A⟧_𝟙 ⟦M⟧_(Σ 𝟙 ⟦A⟧_𝟙)) ∗)
+
+⟦A⟧_𝟙 is a bang
+-----------------------------------------
+⟦λ x : A => M⟧ := ((!Λ 𝟙 ⟦A⟧_(! 𝟙) ⟦M⟧_(! (Σ 𝟙 ⟦A⟧_(! 𝟙)))) (& ∗))
+
+--------------------
+⟦(M N)⟧ := (⟦M⟧ ⟦N⟧)
+
+Constants:
+
+--------------------
+⟦Bool.True⟧ := 𝟙₂
+
+--------------------
+⟦Bool.False⟧ := 𝟘₂
+
+--------------------
+⟦True⟧ := 𝟙
+
+--------------------
+⟦False⟧ := 𝟘
+
+--------------------
+⟦True.intro⟧ := ∗
+
+--------------------
+⟦Sort u⟧ := Sort u
+
+Shared constants:
+
+x is not also shared, and x is a constant
+-----------------------------------------
+⟦Share.share x⟧ := (& ⟦x⟧)
+
+⟦A⟧_𝟙 is not a bang
+-----------------------------------------
+⟦λ x : A => M⟧ := ((Λ 𝟙 ⟦A⟧_𝟙 ⟦M⟧_(Σ 𝟙 ⟦A⟧_𝟙)) ∗)
+
+⟦A⟧_𝟙 is a bang
+-----------------------------------------
+⟦λ x : A => M⟧ := ((!Λ 𝟙 ⟦A⟧_(! 𝟙) ⟦M⟧_(! (Σ 𝟙 ⟦A⟧_(! 𝟙)))) (& ∗))
+
+--------------------
+⟦(M N)⟧ := (⟦M⟧ ⟦N⟧)
+
+Σ binders:
+
+-------------------
+⟦Σ A B⟧ := ((Σ' ⟦A⟧_𝟙 (Λ 𝟙 ⟦A⟧_𝟙 ⟦B⟧_(Σ 𝟙 ⟦A⟧_𝟙))) (& ∗))
+
+-------------------
+⟦A × B⟧ := (Σ ⟦A⟧ (`⟦A⟧ ⟦B⟧))
+
+TODO:
+- equality
+- shared constants more times than the context we are under
+-/
+
+open Dsl in
+inductive IsCtx : Expr → Type
+  | unit  : IsCtx (DCC 𝟙)
+  | sigma : IsCtx A → Value B → IsCtx (DCC (Σ A B))
+  | bang  : IsCtx A → IsCtx (DCC (! A))
+
+inductive Ctx where
+  | mk : (Γ : Expr) → (hΓ : IsCtx Γ) → Ctx
+
+inductive RawCompileError (δ : Type) : Type
+  | not_a_context : (Δ    : Expr) → (Γ : δ)           → RawCompileError δ
+  | sub           : (at_e : Expr) → (Γ : δ)           → RawCompileError δ → RawCompileError δ
+  | and           : (Γ    : δ)    → RawCompileError δ → RawCompileError δ → RawCompileError δ
+  | not_a_value   : (v    : Expr) → (Γ : δ)           → RawCompileError δ
+
+def RawCompileError.with_ctx (e : RawCompileError Δ) (x : Γ) : RawCompileError Γ :=
+  match e with
+  | .not_a_context Δ _ => .not_a_context Δ x
+  | .not_a_value v _ => .not_a_context v x
+  | .sub x₀ _ x₁ => .sub x₀ x (x₁.with_ctx x)
+  | .and _ x₁ y₂ => .and x (x₁.with_ctx x) (y₂.with_ctx x)
+
+abbrev SimpleError  := RawCompileError Unit
+abbrev CompileError := RawCompileError Ctx
 
 open Lean.Meta (MetaM)
 
 abbrev DebruijnIdx := ℕ
 
-deriving instance Lean.ToExpr for GenericExpr
+deriving instance Lean.ToExpr for Expr
 
-namespace GenericExpr
+abbrev CtxT (m : Type → Type v) (α : Type) := StateT Ctx m α
 
-open Qq in
-open Lean (toExpr) in
-def fvar_expr_to_lean (e : GenericExpr Lean.FVarId) (τ : Lean.Name := ``Unit) : Lean.Expr :=
-  let exp (nm : Lean.Name := ``_root_.GenericExpr) : Lean.Expr := (.app (.const nm [0]) (.const τ []))
-  match e with
-  | (DCC? ⊤)                   => exp ``_root_.GenericExpr.top
-  | (DCC? ⊥)                   => exp ``_root_.GenericExpr.bot
-  | (DCC? ∗)                   => exp ``_root_.GenericExpr.tintro
-  | (DCC? !<f>)                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.map) f'
-  | (DCC? $<f>)                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.fmap) f'
-  | (DCC? &(f))                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.box) f'
-  | (DCC? *(f))                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.unbox) f'
-  | (DCC? *<f>)                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.unmap) f'
-  | (DCC? !(f))                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.bang) f'
-  | (DCC? Eval(α, β, x))       =>
-    let α' := α.fvar_expr_to_lean
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (.app (exp ``_root_.GenericExpr.eval) α') β') x'
-  | (DCC? Λ(α, β, x))       =>
-    let α' := α.fvar_expr_to_lean
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (.app (exp ``_root_.GenericExpr.curr) α') β') x'
-  | (DCC? !Λ(α, β, x))       =>
-    let α' := α.fvar_expr_to_lean
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (.app (exp ``_root_.GenericExpr.curr') α') β') x'
-  | (DCC? `(β, x)) =>
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (exp ``_root_.GenericExpr.quot) β') x'
-  | (DCC? Id(f))                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.id) f'
-  | (DCC? Sort m)              =>
-    .app (exp ``_root_.GenericExpr.sort) (toExpr m)
-  | (DCC? Fst(f))                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.fstc) f'
-  | (DCC? Snd(f))                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.sndc) f'
-  | (DCC? Π(β, x)) =>
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (exp ``_root_.GenericExpr.pi) β') x'
-  | (DCC? ⟦β⟧⟨a, b⟩)       =>
-    let β' := β.fvar_expr_to_lean
-    let a' := a.fvar_expr_to_lean
-    let b' := b.fvar_expr_to_lean
-    .app (.app (.app (exp ``_root_.GenericExpr.pair) β') a') b'
-  | (DCC? ⟦β⟧(a, b))       =>
-    let β' := β.fvar_expr_to_lean
-    let a' := a.fvar_expr_to_lean
-    let b' := b.fvar_expr_to_lean
-    .app (.app (.app (exp ``_root_.GenericExpr.mkc) β') a') b'
-  | (DCC? Coup(f))                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.coup) f'
-  | (DCC? Σ(β, x)) =>
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (exp ``_root_.GenericExpr.sigma) β') x'
-  | (DCC? β = x) =>
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (exp ``_root_.GenericExpr.eq) β') x'
-  | (DCC? Eql(f))                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.eql) f'
-  | (DCC? refl(f))                =>
-    let f' := f.fvar_expr_to_lean
-    .app (exp ``_root_.GenericExpr.refl) f'
-  | (DCC? β ∘ x) =>
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (exp ``_root_.GenericExpr.comp) β') x'
-  | (DCC? β ∘' x) =>
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (exp ``_root_.GenericExpr.comp') β') x'
-  | (DCC? β ∘∘ x) =>
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (exp ``_root_.GenericExpr.comp₂) β') x'
-  | (DCC? (β x))               =>
-    let β' := β.fvar_expr_to_lean
-    let x' := x.fvar_expr_to_lean
-    .app (.app (exp ``_root_.GenericExpr.app) β') x'
-  | .const c => .fvar c
+inductive SeekCtx : Type where
+  | mk : (e : Expr) → (Γ : Ctx) → SeekCtx
 
-end GenericExpr
+abbrev SeekExcept (α : Type u) := Except CompileError α
 
-/-
-Auto-detecting sharing?
+abbrev SeekExcept.map {α β : Type u} (f : α → β) : SeekExcept α → SeekExcept β := Except.map f
 
-λ x => M N
+abbrev SeekExceptT (m : Type → Type) (α : Type) := ExceptT CompileError m α
 
-x should be shared in this scope.
-Just need a stack-like thing.
+def SeekT (m : Type → Type) (α : Type) := SeekExceptT (StateT SeekCtx m) α
 
-every variable access under an app needs sharing.
-a tree. every split under the lambda where the variable is used must be accounted for.
+instance [hM : Applicative m] : Applicative (SeekT m) where
+  map := fun f xM Γ => hM.map (fun ⟨x, _Δ⟩ => ⟨SeekExcept.map f x, Γ⟩) (xM Γ)
+  pure := fun x Γ => hM.pure ⟨pure x, Γ⟩
+  seq  := fun xM g Γ =>
+    hM.seq (hM.map (fun ⟨x, Δ⟩ y => match x, y with
+      | .ok f, ⟨.ok y, _Δ'⟩ => ⟨(pure ∘ f) y, Γ⟩
+      | .error e₁, ⟨.error e₂, Δ'⟩ => ⟨.error
+        (.sub Γ.1 Γ.2 (.and Γ.2 (.sub Δ.1 Δ.2 e₁) (.sub Δ'.1 Δ'.2 e₂))), Γ⟩
+      | .error e₁, _ => ⟨.error (.sub Γ.1 Γ.2 (.sub Δ.1 Δ.2 e₁)), Γ⟩
+      | _, ⟨.error e₂, Δ'⟩ => ⟨.error (.sub Γ.1 Γ.2 (.sub Δ'.1 Δ'.2 e₂)), Γ⟩) (xM Γ)) (fun x => g x Γ)
 
-If a variable occurs in another element that is also shared, then it must also be shared.
--/
+abbrev SeekM (α : Type) := SeekT Id α
 
-partial def occ_shared (depth : Nat) : Lean.Expr → Bool × Nat
-  | .bvar n => (n == depth, 0)
-  | .app M N =>
-    let (oM, sM) := occ_shared depth M
-    let (oN, sN) := occ_shared depth N
-    ((oM || oN),
-      if oM && oN then 1 + sM + sN
-      else if oM then 1 + sM
-      else if oN then 1 + sN
-      else 0)
-  | .lam _ t b _ | .forallE _ t b _ =>
-    let (ot, st) := occ_shared depth t
-    let (ob, sb) := occ_shared depth.succ b
-    (ot || ob, st + sb)
-  | .letE _ t v b _ =>
-    let (ot, st) := occ_shared depth t
-    let (ov, sv) := occ_shared depth v
-    let (ob, sb) := occ_shared depth.succ b
-    (ot || ov || ob, st + sv + sb)
-  | .proj _ _ s => occ_shared depth s
-  | _ => (false, 0)
+instance [hM : Monad m] : Monad (SeekT m) where
+  bind := fun xM f Γ =>
+    hM.bind (xM Γ) (fun ⟨x, Δ⟩ => match x with
+      | .ok x =>
+        hM.map (fun ⟨x, Δ'⟩ => ⟨x.mapError
+          (fun e₂ => (.sub Γ.1 Γ.2 (.sub Δ.1 Δ.2 (.sub Δ'.1 Δ'.2 e₂)))),
+          Δ'⟩) (f x Δ)
+      | .error e₁ => pure ⟨.error (.sub Γ.1 Γ.2 (.sub Δ.1 Δ.2 e₁)), Δ⟩)
 
-def occurs_in (depth : DebruijnIdx) (in_e : Lean.Expr) : Bool :=
-  match in_e with
-  | .bvar n => n == depth
-  | .lam _ bty bdy _ => occurs_in depth bty ∨ occurs_in depth.succ bdy
-  | .forallE _ bty bdy _ => occurs_in depth bty ∨ occurs_in depth.succ bdy
-  | .letE _ ty val bdy _ => occurs_in depth ty ∨ occurs_in depth val ∨ occurs_in depth bdy
-  | .proj _ _ strt => occurs_in depth strt
-  | .mdata _ _ | .lit _ | .const _ _ | .sort _ | .mvar _ | .fvar _ => False
-  | .app M N => occurs_in depth M ∨ occurs_in depth N
+instance [hM : Monad m] : MonadLift m (SeekT m) where
+  monadLift := fun x Γ => hM.map (fun x => ⟨pure x, Γ⟩) x
 
-def shared_in (depth : DebruijnIdx) (in_e : Lean.Expr) : ℕ :=
-  match in_e with
-  | .app M N =>
-    match occurs_in depth M, occurs_in depth N with
-    | .true, .true       => 1 + (shared_in depth M) + (shared_in depth N)
-    | .true, _           => 1 + (shared_in depth M)
-    | _, .true           => 1 + (shared_in depth N)
-    | _, _               => 0
-  | .lam _ bty bdy _     =>
-    -- If the variable being checked occurs in another variable that is shared,
-    (shared_in depth bty) + (shared_in depth.succ bdy)
-  | .forallE _ bty bdy _ =>
-    -- If the variable being checked occurs in another variable that is shared,
-    (shared_in depth bty) + (shared_in depth.succ bdy)
-  | .proj _ _ strt => shared_in depth strt
-  | .letE _ ty val bdy _ => (shared_in depth ty) + (shared_in depth val) + (shared_in depth bdy)
-  | .bvar _ | .mdata _ _ | .lit _ | .const _ _ | .sort _ | .mvar _ | .fvar _ => 0
+instance [Monad m] : MonadReader SeekCtx (SeekT m) where
+  read := fun Γ => pure ⟨.ok Γ, Γ⟩
 
-def Ctx.{u} (τ_c : Type u) := GenericExpr τ_c
-def Ctx.empty.{u} (τ_c : Type u) := ((DCC? !(⊤)) : GenericExpr τ_c)
-def Ctx.empty'.{u} (τ_c : Type u) := ((DCC? ⊤) : GenericExpr τ_c)
+def raise_error (e : SimpleError) : SeekM α := fun Γ => ⟨.error (e.with_ctx Γ.2), Γ⟩
 
-instance [Std.ToFormat τ_c] : ToString (Ctx τ_c) := ⟨toString ∘ GenericExpr.toFormat⟩
-instance [Repr τ_c] : ToString (Ctx τ_c) := ⟨toString ∘ GenericExpr.toFormat (hFmt := ⟨repr⟩)⟩
-
-abbrev ParamInfer (τ_c : Type) := (t_judge : (GenericExpr τ_c → GenericExpr τ_c → Prop)) × (∀ (e : GenericExpr τ_c), Except (TypeError e) ((τ : GenericExpr τ_c) × (PLift (t_judge e τ))))
-
-/-def cc_var (ctx : Ctx) (idx : DebruijnIdx) (infer : ParamInfer := ⟨Expr.Judge, Expr.infer⟩) (reduce : Expr → Expr := Expr.reduce_all) : Lean.MacroM Expr :=
-  match ctx, idx with
-  | DCC Coup(β), .zero => pure <| DCC Snd(β)
-  | DCC !(Coup(β)), .zero => pure <| DCC Snd(β) ∘' *(Coup(β))
-  | DCC !(Coup(β)), .succ n => do
-    match (·.fst) <$> infer.snd β with
-    | .some (DCC (Π(a, _b) x_α)) =>
-      (DCC ((#(·) ∘' Fst(β)) ∘' !(Coup(β)))) <$> cc_var (reduce (DCC (a x_α))) n infer reduce
-    | _ => Lean.Macro.throwError s!"Couple β index is not valid: {β}"
-  | DCC Coup(β), .succ n => do
-    match (·.fst) <$> infer.snd β with
-    | .some (DCC (Π(a, _b) x_α)) =>
-      (·.comp' (DCC (Fst(β)))) <$> (cc_var (reduce (DCC (a x_α))) n infer (reduce := reduce))
-    | _ => Lean.Macro.throwError s!"Couple β index is not valid: {β}"
-  | e, n => Lean.Macro.throwError s!"Cannot be indexed at {n} as a couple: {e}"-/
-
-def cc_var (τ_c : Type) [Repr τ_c] [DecidableEq τ_c] (ctx : Ctx τ_c) (idx : DebruijnIdx) (infer : ParamInfer τ_c := ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩)
-  (reduce : GenericExpr τ_c → GenericExpr τ_c := GenericExpr.reduce_all₂) : Lean.MacroM (GenericExpr τ_c) :=
-  match ctx with
-  | DCC? !(α) => do
-    have h_dec : α.size < α.bang.size := by
-      grind
-    let x ← cc_var (τ_c := τ_c) (ctx := α) idx infer reduce
-    -- TODO: use *(x) instead
-    pure (DCC? *<x>)
-  | _ =>
-    match ctx, idx with
-    | DCC? Coup(β), .zero => pure <| DCC? Snd(β)
-    | DCC? !(Coup(β)), .zero => pure <| DCC? *<Snd(β)>
-    | DCC? !(Coup(β)), .succ n => do
-      match (·.fst) <$> infer.snd β with
-      | .ok (DCC? (Π(a, _b) x_α)) =>
-        --(DCC? ((#(·) ∘' Fst(β)) ∘' !(Coup(β)))) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
-        (DCC? (*<(#(·) ∘' Fst(β))>)) <$> cc_var τ_c (reduce (DCC? (a x_α))) n infer reduce
-      | τ => Lean.Macro.throwError s!"Couple β index is not valid: ({β} : {τ})"
-    | DCC? Coup(β), .succ n => do
-      match (·.fst) <$> infer.snd β with
-      | .ok (DCC? (Π(a, _b) x_α)) =>
-        (·.comp' (DCC? (Fst(β)))) <$> (cc_var τ_c (reduce (DCC? (a x_α))) n infer (reduce := reduce))
-      | τ => Lean.Macro.throwError s!"Couple β index is not valid: ({β} : {τ})"
-    | e, n => Lean.Macro.throwError s!"Cannot be indexed at {n} as a couple: {e}"
-termination_by (idx, GenericExpr.size ctx)
-
-def GenericExpr.deref : GenericExpr τ → GenericExpr τ
-  | DCC? !(Γ) => Γ
-  | Γ => Γ
-
-/-
-TODO: better logic for detecting duplication. Maybe some kind of user marker.
-
-deref needs to see environment, maybe?
-
-e.g.,
-
-deref (α := deref ...) ...
-
-f_α : δ → Sort m
-*(f_α) : ∀ (env : !(δ)) (x : !<f_α> env), f_α (*(
-
-this may not be necessary. think this through.
-
-deref (α is function of environment)
-
-is equivalent to just dereferencing environment, then mutating. I think.
-
-Shared.deref (fun (ctx : Γ) => α)
-
-however, the deref is a standalone function.
-
-deref is only really valid on a variable access.
-
-I think we just have the order flipped or something.
--/
-
-#check Eq.refl
-
-abbrev fallback_expr_cc {τ_c : Type} : Lean.Expr →
-  Lean.MacroM (GenericExpr τ_c) := fun e => Lean.Macro.throwError s!"not a recognized expression: {e}"
-
-def abstract' (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (e : Lean.Expr) (ctx : Ctx τ_c) (infer : ParamInfer τ_c := ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩) (reduce : GenericExpr τ_c → GenericExpr τ_c := GenericExpr.reduce_all₂)
-  (fallback : Lean.Expr → Lean.MacroM (GenericExpr τ_c) := fallback_expr_cc) : Lean.MacroM (GenericExpr τ_c) := do
-  match e with
-  | .fvar v => fallback (.fvar v)
-  --| .app (.app (.const ``Shared.deref _us) _α) (.app (.app (.const ``Shared.share _us₁) _α₁) x) => abstract' τ_c x ctx infer reduce fallback
-  | .app (.app (.const ``Shared.deref _us) _α) f =>
-    let f' ← abstract' τ_c f ctx infer reduce fallback
-    pure f'
-    /-let f' ← abstract' τ_c f ctx.deref infer reduce fallback
-    return (DCC? *(f'))-/
-  | .app (.app (.const ``Shared.share _us) _α) (.sort .zero) => return DCC? (`(ctx, &(Sort 0)))
-  | .app (.const ``Shared _us) (.sort .zero) => return DCC? (`(ctx, !(Sort 0)))
-  | .app (.app (.const ``Shared.share _us) _α) (.sort (.succ m)) => do
-    match ← (abstract' τ_c (.sort m) ctx infer reduce fallback) with
-    | DCC? (`(ctx, &(Sort n)))
-    | DCC? (`(ctx, Sort n)) => return (DCC? (`(ctx, &(Sort (n + 1)))))
-    | m => Lean.Macro.throwError s!"not a valid sort: {m}"
-  | .app (.const ``Shared _us) (.sort (.succ m)) => do
-    match ← (abstract' τ_c (.sort m) ctx infer reduce fallback) with
-    | DCC? (`(ctx, !(Sort n)))
-    | DCC? (`(ctx, Sort n)) => return (DCC? (`(ctx, !(Sort (n + 1)))))
-    | m => Lean.Macro.throwError s!"not a valid sort: {m}"
-  | .app (.const ``Shared _us) (.const ``True []) => return DCC? (`(ctx, !(⊤)))
-  | .app (.app (.const ``Shared.share _us) _α) (.const ``True []) => return DCC? (`(ctx, &(⊤)))
-  | .app (.app (.const ``Shared.share _us) _α) (.const ``True.intro []) => return DCC? (`(ctx, &(∗)))
-  | .app (.app (.const ``Shared.share _us) _α) x =>
-    let x' ← abstract' τ_c x ctx infer reduce fallback
-    return DCC? (`(ctx, &(x')))
-  | .app (.const ``Shared _us) (.const ``False []) => return DCC? (`(ctx, !(⊥)))
-  | .bvar n => cc_var τ_c ctx n (infer := infer) (reduce := reduce)
-  | .app (.app (.const ``Sigma []) α) β => do
-    let α' ← abstract' τ_c α ctx infer reduce fallback
-    let β' ← abstract' τ_c β (DCC? Coup(α')) infer reduce fallback
-    return (DCC? Σ(α', β'))
-  | .lam _a (.app (.const ``Shared _us) α) bdy _binfo => do
-    let α' ← abstract' τ_c α ctx.deref infer reduce fallback
-    let inner ← abstract' τ_c bdy (DCC? !(Coup(α'))) infer reduce fallback
-    return (DCC? !Λ(ctx.deref, α', inner))
-  | .lam _a α bdy _binfo => do
-    let α' ← abstract' τ_c α ctx infer reduce fallback
-    let inner ← abstract' τ_c bdy (DCC? Coup(α')) infer reduce fallback
-    return (DCC? Λ(ctx, α', inner))
-  | .forallE _name (.app (.const ``Shared _us) α) β _binfo => do
-    let α' ← reduce <$> abstract' τ_c α ctx infer reduce fallback
-    let β' ← reduce <$> abstract' τ_c β (DCC? !(Coup(α'))) infer reduce fallback
-
-    return (reduce (DCC? (Π(α', !Λ(ctx.deref, α', β')))))
-  | .forallE _name α β _binfo => do
-    let α' ← reduce <$> abstract' τ_c α ctx infer reduce fallback
-    let β' ← reduce <$> abstract' τ_c β (DCC? Coup(α')) infer reduce fallback
-
-    return reduce (DCC? (Π(α', Λ(ctx, α', β'))))
-  | .app (.const ``Shared _us) α => do
-    let α' ← reduce <$> abstract' τ_c α ctx infer reduce fallback
-    -- could be this one
-    return (DCC? (!<α'>))
-  | (.app (.const ``Eq.refl _us) α) => do
-    let α' ← reduce <$> abstract' τ_c α ctx infer reduce fallback
-    return (DCC? refl(α'))
-  | .app M N => do
-    let ctx' := match ctx with
-      | DCC? !(Γ) => Γ
-      | Γ => Γ
-    let M' ← abstract' τ_c M ctx' infer reduce fallback
-    let N' ← abstract' τ_c N ctx' infer reduce fallback
-
-    --dbg_trace M
-    --dbg_trace N
-    --dbg_trace M'
-    --dbg_trace N'
-
-    /-
-      M : ∀ (x : α) (y : β x)
-    -/
-
-    --dbg_trace Sigma.fst <$> infer.snd M'
-
-    match (·.fst) <$> infer.snd M' with
-    | .ok (DCC? (Π(f_α, f_β) x_α)) =>
-      let α : GenericExpr τ_c := match reduce (f_α.app x_α) with
-        | DCC? !(α) => α
-        | α => α
-      match reduce (f_β.app x_α) with
-      | DCC? Π(β, _γ) =>
-        dbg_trace α
-        dbg_trace N'
-        match (·.fst) <$> infer.snd (DCC? Λ(α, `(α, α), N' ∘' Fst(`(α, α)))) with
-        | .ok (DCC? (Π(_f_α, f_β₀) x_α₀)) =>
-          match reduce (DCC? (f_β₀ x_α₀)) with
-          | DCC? Π(_β₂, x_γ') =>
-            let inner := reduce (DCC? ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fst(`(α, α)))⟩)
-            match (·.fst) <$> infer.snd inner with
-            | .ok (DCC? (Π(_a₁, `(_a₂, Σ(_a₃, Λ(_a₄, _a₅, `(_α₆, _a₇))) ∘' _a₈)) _a₉)) =>
-              -- NOTE: this used to be ∘, but not sure if necessary.
-              return (DCC? Eval(α, β, M') ∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fst(`(α, α)))⟩)
-            | .ok (DCC? (Π(_a₁, `(_a₂, `(_a₃, _a₄))) _a₅)) =>
-              return (DCC? Eval(α, β, M') ∘' ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fst(`(α, α)))⟩)
-            | _ => return (DCC? Eval(α, β, M') ∘∘ ⟦x_γ'⟧⟨Id(α), Λ(α, `(α, α), N' ∘' Fst(`(α, α)))⟩)
-          | _ => Lean.Macro.throwError ("app is not well-typed:"
-            ++ Std.Format.line ++ (.nestD (Std.format (Lean.Expr.app M N)))
-            ++ ("couldn't detect codomain:" ++ Std.Format.line ++ (.nestD (Std.format (reduce (DCC? (f_β₀ x_α₀))))))).pretty
-        | τ => Lean.Macro.throwError ("app is not well-typed [1]:" ++ Std.Format.line ++
-          (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ) ++ Std.Format.line ++
-          "with (M): " ++ (Std.format M') ++ .line ++ "(N): " ++ (Std.format N')).pretty
-      | τ => Lean.Macro.throwError ("app is not well-typed [2]:" ++ Std.Format.line ++
-        "found: " ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "at: " ++ (Std.format τ)).pretty
-    | x => Lean.Macro.throwError ("app is not well-typed [3]:" ++ Std.Format.line ++ (Std.format (Lean.Expr.app M N)) ++ Std.Format.line ++ "in: " ++ (Std.format (DCC? (M' N'))) ++ Std.Format.line ++ "found: " ++ Std.format x).pretty
-  | .const ``True.intro [] => return DCC? (`(ctx, ∗))
-  | .const ``True [] => return DCC? (`(ctx, ⊤))
-  | .const ``False [] => return DCC? (`(ctx, ⊥))
-  | .sort .zero => return DCC? (`(ctx, Sort 0))
-  | .sort (.succ m) => do
-    match ← (abstract' τ_c (.sort m) ctx infer reduce fallback) with
-    | DCC? (`(ctx, Sort n)) => pure (DCC? (`(ctx, Sort (n + 1))))
-    | m => Lean.Macro.throwError s!"not a valid sort: {m}"
-  | e => fallback e
-
-def cc (τ_c : Type) [DecidableEq τ_c] [Repr τ_c] (root : Lean.Expr) (infer : ParamInfer τ_c)
-  (reduce : GenericExpr τ_c → GenericExpr τ_c)
-  (fallback : Lean.Expr → Lean.MacroM (GenericExpr τ_c) := fallback_expr_cc) : Lean.MacroM (GenericExpr τ_c) :=
-  match root with
-  | .app (.const ``Shared _us) x => do
-    let x' ← cc τ_c x infer reduce fallback
-    -- could also be this one
-    -- this one is top level though, so probably right
-    return DCC? !(x')
-  | .app (.app (.const ``Shared.share _us) _α) x => do
-    let x' ← cc τ_c x infer reduce fallback
-    return DCC? &(x')
-  | .app (.lam _a α bdy _binfo) (.app (.app (.const ``Shared.share _us) _α) x) => do
-    let f' ← abstract' τ_c (.lam _a α bdy _binfo) (Ctx.empty τ_c) infer reduce fallback
-    let x' ← cc τ_c x infer reduce fallback
-    return (DCC? (f' &(∗) &(x')))
-  | .app (.forallE _a α bdy _binfo) (.app (.app (.const ``Shared.share _us) _α) x) => do
-    let f' ← abstract' τ_c (.forallE _a α bdy _binfo) (Ctx.empty τ_c) infer reduce fallback
-    let x' ← cc τ_c x infer reduce fallback
-    return (DCC? (f' &(∗) &(x')))
-  | (.lam _a (.app (.const ``Shared _us) α) bdy _binfo) => do
-    let f' ← abstract' τ_c (.lam _a (.app (.const ``Shared _us) α) bdy _binfo) (Ctx.empty τ_c) infer reduce fallback
-    return (DCC? (f' &(∗)))
-  | (.forallE _a (.app (.const ``Shared _us) α) bdy _binfo) => do
-    let f' ← abstract' τ_c (.forallE _a (.app (.const ``Shared _us) α) bdy _binfo) (Ctx.empty τ_c) infer reduce fallback
-    return (DCC? (f' &(∗)))
-  | .app (.lam _a α bdy _binfo) x => do
-    let f' ← abstract' τ_c (.lam _a α bdy _binfo) (Ctx.empty τ_c) infer reduce fallback
-    let x' ← cc τ_c x infer reduce fallback
-    return (DCC? (f' &(∗) x'))
-  | .app (.forallE _a α bdy _binfo) x => do
-    let f' ← abstract' τ_c (.forallE _a α bdy _binfo) (Ctx.empty τ_c) infer reduce fallback
-    let x' ← cc τ_c x infer reduce fallback
-    return (DCC? (f' &(∗) x'))
-  | .app M N => do
-    let M' ← cc τ_c M infer reduce fallback
-    let N' ← cc τ_c N infer reduce fallback
-    match infer.snd M', N' with
-    | .ok ⟨DCC? (Π(_f_α, _f_β) !(_b)), _h⟩, _n =>
-      return (DCC? (M' &(N')))
-    | _, (DCC? &(_n)) =>
-      -- match infer M' to see if we need to wrap &(
-      return (DCC? (M' N'))
-    | .ok ⟨DCC? (Π(!<_f>, _f_β) _b), _h⟩, _n =>
-      return (DCC? (M' &(N')))
-    | _τ, _ =>
-      return (DCC? (M' N'))
-    /-match M' with
-    | DCC? (f &(x)) => return (DCC? (f &(x) &(N')))
-    | _ => return (DCC? (M' N'))-/
-  | .const ``True.intro [] => return DCC? (∗)
-  | .const ``True [] => return DCC? (⊤)
-  | .const ``False [] => return DCC? (⊥)
-  | .sort .zero => return DCC? (Sort 0)
-  | .sort (.succ m) => do
-    match ← (cc τ_c (.sort m) infer reduce fallback) with
-    | DCC? Sort n => pure (DCC? Sort (n + 1))
-    | m => Lean.Macro.throwError s!"not a valid sort: {m}"
-  | (.lam _a α bdy _binfo) => do
-    let f' ← abstract' τ_c (.lam _a α bdy _binfo) (Ctx.empty' τ_c) infer reduce fallback
-    return (DCC? (f' ∗))
-  | (.forallE _a α bdy _binfo) => do
-    let f' ← abstract' τ_c (.forallE _a α bdy _binfo) (Ctx.empty' τ_c) infer reduce fallback
-    return (DCC? (f' ∗))
-  | .fvar v => fallback (.fvar v)
-  | e => (·.app (DCC? (&(∗)))) <$> abstract' τ_c e (Ctx.empty τ_c) infer reduce fallback
-
-def wrap_shares (n : ℕ) (u : Lean.Level) (e : Lean.Expr) : Lean.Expr :=
-  match u with
-  | .zero =>
-    (List.replicate n (Lean.Expr.const ``Shared [0])).foldr .app e
-  | .succ u =>
-    (List.replicate n (Lean.Expr.const ``Shared [u])).foldr .app e
-  | lvl =>
-    (List.replicate n (Lean.Expr.const ``Shared [lvl])).foldr .app e
-
-def n_times_shared (e : Lean.Expr) : (Option Lean.Level) × ℕ × Lean.Expr :=
-  match e with
-  | (.app (.const ``Shared [l]) α) =>
-    let (_l, n, e) := (n_times_shared α)
-    (.some l, n.succ, e)
-  | e => (.none, .zero, e)
-
-def share_n_times (n : ℕ) (lvl : Lean.Level) (α e : Lean.Expr) : Lean.Expr :=
-  Prod.snd <| (List.replicate n (Lean.Expr.const ``Shared.share
-    (match lvl with
-    | .zero => [.zero]
-    | .succ n => [n]
-    | lvl => [lvl]))).foldr (init := (α, e))
-    (f := fun e ((α, x): Lean.Expr × Lean.Expr) =>
-      ((.app (Lean.Expr.const ``Shared [
-        match lvl with
-        | .zero => .zero
-        | .succ n => n
-        | lvl => lvl]) α), (.app (Lean.Expr.app e α) x)))
-
-def deref_n_times (n : ℕ) (lvl : Lean.Level) (base_ty e : Lean.Expr) : Lean.Expr :=
-  match n with
-  | 0 => e
-  | n' + 1 =>
-    let inner_ty := wrap_shares n' lvl base_ty
-    let e' := Lean.Expr.app (Lean.Expr.app (.const ``Shared.deref [
-      match lvl with
-      | .zero => .zero
-      | .succ n => n
-      | lvl => lvl]) inner_ty) e
-    deref_n_times n' lvl base_ty e'
-
-def deref_vars (k depth : ℕ) (lv : Lean.Level) (with_ty in_e : Lean.Expr) : Lean.Expr :=
-  match in_e with
-  | .bvar v => if v == depth then deref_n_times k lv with_ty (.bvar v) else .bvar v
-  | .lam a bty bdy b => .lam a (deref_vars k depth lv with_ty bty) (deref_vars k depth.succ lv with_ty bdy) b
-  | .forallE a bty bdy b => .forallE a (deref_vars k depth lv with_ty bty) (deref_vars k depth.succ lv with_ty bdy) b
-  | .letE a ty val bdy b => .letE a (deref_vars k depth lv with_ty ty) (deref_vars k depth lv with_ty val) (deref_vars k depth lv with_ty bdy) b
-  | .proj a b strt => .proj a b (deref_vars k depth lv with_ty strt)
-  | .mdata _ _ | .lit _ | .const _ _ | .sort _ | .mvar _ | .fvar _ => in_e
-  | .app M N => .app (deref_vars k depth lv with_ty M) (deref_vars k depth lv with_ty N)
-
-def wrap_share_auto (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
-  match e with
-  | .proj a b strt => return .proj a b (← wrap_share_auto strt)
-  | .letE a ty val bdy b =>
-    return .letE a (← wrap_share_auto ty) (← wrap_share_auto val) (← wrap_share_auto bdy) b
-  | .lam a bty bdy b => do
-    let bty' ← wrap_share_auto bty
-    let (_, n_used) := occ_shared 0 bdy
-    match n_used with
-    | 0 => return .lam a bty' (← wrap_share_auto bdy) b
-    | k =>
-      let lv ← Lean.Meta.getLevel bty <|> Lean.Meta.mkFreshLevelMVar
-      let bty' := wrap_shares k lv bty'
-      let bdy' := deref_vars k 0 lv bty (← wrap_share_auto bdy)
-      return .lam a bty' bdy' b
-  | .forallE a bty bdy b => do
-    let bty' ← wrap_share_auto bty
-    let (_, n_used) := occ_shared 0 bdy
-    match n_used with
-    | 0 => return .forallE a bty' (← wrap_share_auto bdy) b
-    | k =>
-      let lv ← Lean.Meta.getLevel bty <|> Lean.Meta.mkFreshLevelMVar
-      let bty' := wrap_shares k lv bty'
-      let bdy' := deref_vars k 0 lv bty (← wrap_share_auto bdy)
-      return .forallE a bty' bdy' b
-  /-| .forallE a bty bdy b => do
-    let bty' ← wrap_share_auto bty
-    let n_used := occ_shared 0 bdy
-    match n_used with
-    | 0 => return .forallE a bty' (← wrap_share_auto bdy) b
-    | k =>
-      let lv ← Lean.Meta.getLevel bty'
-      let bty' := wrap_shares k lv bty'
-      let bdy' := deref_vars k 0 lv bty (← wrap_share_auto bdy)
-      return .forallE a bty' bdy' b-/
-  | .app M N => do
-    let M' ← wrap_share_auto M
-    let N' ← wrap_share_auto N
-    -- try infertype on M' to smartly fetch whether we need to share
-    match M' with
-    | .lam _ α _ _ =>
-      let ⟨lvl, n_shared, α⟩ := n_times_shared α
-      match lvl with
-      | .some lv =>
-        let N'' := share_n_times n_shared lv α N'
-        return .app M' N''
-      | _ => return .app M' N'
-    | _ =>
-      try
-        match ← Lean.Meta.inferType M' with
-        | .forallE _ α _ _ =>
-          let ⟨lvl, n_shared, α⟩ := n_times_shared α
-          match lvl with
-          | .some lv =>
-            let N'' := share_n_times n_shared lv α N'
-            return .app M' N''
-          | _ => return .app M' N'
-        | _ =>
-          throwError "panic"
-      catch _ =>
-        return .app M' N'
-  | e => return e
-
-def wrap_share_auto_trans (e : Lean.Expr) : Lean.Meta.MetaM Lean.Expr := do
-  match e with
-  | .app (.app (.const ``Shared.deref _lvs) _α) _x => return e
-  | .app (.app (.const ``Shared.share _lvs) _α) _x => return e
-  | .proj a b strt => return .proj a b (← wrap_share_auto_trans strt)
-  | .letE a ty val bdy b =>
-    return .letE a (← wrap_share_auto_trans ty) (← wrap_share_auto_trans val) (← wrap_share_auto_trans bdy) b
-  | .lam _a (.app (.const ``Shared _lvs) bty) bdy b => do
-    return .lam _a (.app (.const ``Shared _lvs) bty) (← wrap_share_auto_trans bdy) b
-  | .lam a bty bdy b => do
-    let bty' ← wrap_share_auto_trans bty
-    let (_, n_used) := occ_shared 0 bdy
-    match n_used with
-    | 0 => return .lam a bty' (← wrap_share_auto_trans bdy) b
-    | _k =>
-      let lv ← Lean.Meta.getLevel bty <|> Lean.Meta.mkFreshLevelMVar
-      let bty' := wrap_shares 1 lv bty'
-      let bdy' := deref_vars 1 0 lv bty (← wrap_share_auto_trans bdy)
-      return .lam a bty' bdy' b
-  | .forallE _a (.app (.const ``Shared _lvs) bty) bdy b => do
-    return .forallE _a (.app (.const ``Shared _lvs) bty) (← wrap_share_auto_trans bdy) b
-  | .forallE a bty bdy b => do
-    let bty' ← wrap_share_auto_trans bty
-    let (_, n_used) := occ_shared 0 bdy
-    match n_used with
-    | 0 => return .forallE a bty' (← wrap_share_auto_trans bdy) b
-    | _k =>
-      let lv ← Lean.Meta.getLevel bty'
-      let bty' := wrap_shares 1 lv bty'
-      let bdy' := deref_vars 1 0 lv bty (← wrap_share_auto_trans bdy)
-      return .forallE a bty' bdy' b
-  | .app M N => do
-    let M' ← wrap_share_auto_trans M
-    let N' ← wrap_share_auto_trans N
-    match M', N' with
-    | .lam _ __α _ _, (.app (.app (.const ``Shared.share _u) _α) __x) =>
-      return .app M' N'
-    | .lam _ α _ _, N' =>
-      let ⟨lvl, n_shared, α⟩ := n_times_shared α
-      match lvl with
-      | .some lv =>
-        let N'' := share_n_times n_shared lv α N'
-        return .app M' N''
-      | _ => return .app M' N'
-    | _, _ =>
-    -- try infertype on M' to smartly fetch whether we need to share
-    return .app M' N'
-  | e => return e
-
-open Qq in
-def Lean.Expr.cc' {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) (infer : ParamInfer Unit := ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩)
-  (reduce : _root_.Expr → _root_.Expr := GenericExpr.reduce_all₂) : Lean.MacroM _root_.Expr :=
-  cc Unit root (infer := infer) (reduce := reduce)
-
-open Qq in
-def Lean.Expr.cc'_fvars {u : Lean.Level} {α : Q(Sort u)} (root : Q($α)) (infer : ParamInfer Lean.FVarId := ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩)
-  (reduce : GenericExpr Lean.FVarId → GenericExpr Lean.FVarId := GenericExpr.reduce_all₂) : Lean.MacroM (GenericExpr Lean.FVarId) :=
-  cc Lean.FVarId root (infer := infer) (reduce := reduce)
-
-declare_syntax_cat infer_cmd_param
-
-syntax "{" term "}" : infer_cmd_param
-
-def do_dcc_compile (flags : Lean.TSyntaxArray `infer_cmd_param) (tm : Lean.Expr) : Lean.Elab.TermElabM Lean.Expr := do
-  match flags.toList with
-  | [_infer] =>
-    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc Unit tm ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
-  | [_infer, _reduce] =>
-    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc Unit tm ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
-  | _ =>
-    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc Unit tm ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
-
-def do_dcc_compile_fvars (flags : Lean.TSyntaxArray `infer_cmd_param) (tm : Lean.Expr) : Lean.Elab.TermElabM Lean.Expr := do
-  match flags.toList with
-  | [_infer] =>
-    return GenericExpr.fvar_expr_to_lean (← Lean.Elab.liftMacroM <| cc Lean.FVarId tm ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
-  | [_infer, _reduce] =>
-    return GenericExpr.fvar_expr_to_lean (← Lean.Elab.liftMacroM <| cc Lean.FVarId tm ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
-  | _ =>
-    return GenericExpr.fvar_expr_to_lean (← Lean.Elab.liftMacroM <| cc Lean.FVarId tm ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
-
-elab "dcc_compile'" infer:infer_cmd_param* tm:term : term => do
-  let e_tm ← Lean.Elab.Term.elabTerm tm .none
-  let e_tm ← Lean.instantiateMVars e_tm
-  let e_tm' ← Lean.instantiateExprMVars (← wrap_share_auto_trans (← (wrap_share_auto e_tm)))
-  match infer.toList with
-  | [_infer] =>
-    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc Unit e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
-  | [_infer, _reduce] =>
-    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc Unit e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
-  | _ =>
-    return Lean.toExpr (← Lean.Elab.liftMacroM <| cc Unit e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂)
-
-elab "dcc_compile''" infer:infer_cmd_param* tm:term : term => do
-  let e_tm ← Lean.Elab.Term.elabTerm tm .none
-  let e_tm ← Lean.instantiateMVars e_tm
-  let e_tm' ← Lean.instantiateExprMVars (← wrap_share_auto_trans (← (wrap_share_auto e_tm)))
-
-  let cc_raw_expr (e : Lean.Expr) : Lean.MacroM (GenericExpr Lean.FVarId) :=
+set_option maxHeartbeats 10000000 in
+open Dsl in
+def Expr.as_value? (e : Expr) : SeekM (Value e) := do
+  match cases_point_arity' e with
+  | .inl ⟨_heq⟩ =>
     match e with
-    | .fvar fv => pure (.const fv)
-    | e => Lean.Macro.throwError s!"unrecognized expression: {e}"
+    | DCC ∗      => return .tintro
+    | DCC 𝟙₂     => return .true
+    | DCC 𝟘₂     => return .false
+    | DCC 𝟚      => return .bool
+    | DCC 𝟘      => return .bot
+    | DCC 𝟙      => return .top
+    | DCC Sort u => return .sort
+    | DCC ((refl B) (& x)) => Value.refl₁ <$> B.as_value? <*> x.as_value?
+    | DCC ((refl B) (& x) (& y)) => Value.refl₂ <$> B.as_value? <*> x.as_value? <*> y.as_value?
+    | DCC ((Eql B) (& x)) => Value.eql₁ <$> B.as_value? <*> x.as_value?
+    | DCC ((=' B) x) => Value.eq'₁ <$> B.as_value? <*> x.as_value?
+    | DCC ((=' B) x y) => Value.eq'₂ <$> B.as_value? <*> x.as_value? <*> y.as_value?
+    | DCC ((Λ A B x) y) => Value.curr₁ <$> A.as_value? <*> B.as_value? <*> x.as_value? <*> y.as_value?
+    | DCC ((!Λ A B x) (& y)) => Value.curr'₁ <$> A.as_value? <*> B.as_value? <*> x.as_value? <*> y.as_value?
+    | DCC ((𝟚.Rec motive x y) z) => Value.ind_bool₁ <$> motive.as_value? <*> x.as_value? <*> y.as_value? <*> z.as_value?
+    | DCC ((𝟘.Rec motive) x) => Value.ind_bot₁ <$> motive.as_value? <*> x.as_value?
+    | DCC ((Π B C) x) => Value.pi <$> B.as_value? <*> C.as_value? <*> x.as_value?
+    | e => raise_error (.not_a_value e ())
+  | .inr (.inl ⟨heq⟩) => do
+    have h_dec : sizeOf (e.points.get ⟨0, by grind⟩) < sizeOf e := by
+      cases e <;> (simp [points, Vector.get]; try grind)
+    let h₁ ← (e.points.get ⟨0, by grind⟩).as_value?
+    return Value.points₁ heq h₁
+  | .inr (.inr (.inl ⟨heq⟩)) => do
+    have h_dec₁ : sizeOf (e.points.get ⟨0, by grind⟩) < sizeOf e := by
+      cases e <;> (simp [points, Vector.get]; try grind)
+    have h_dec₂ : sizeOf (e.points.get ⟨1, by grind⟩) < sizeOf e := by
+      cases e <;> (simp [points, Vector.get]; try grind)
+    let h₁ ← (e.points.get ⟨0, by grind⟩).as_value?
+    let h₂ ← (e.points.get ⟨1, by grind⟩).as_value?
+    return Value.points₂ heq h₁ h₂
+  | .inr (.inr (.inr (.inl ⟨heq⟩))) => do
+    have h_dec₁ : sizeOf (e.points.get ⟨0, by grind⟩) < sizeOf e := by
+      cases e <;> (simp [points, Vector.get]; try grind)
+    have h_dec₂ : sizeOf (e.points.get ⟨1, by grind⟩) < sizeOf e := by
+      cases e <;> (simp [points, Vector.get]; try grind)
+    have h_dec₃ : sizeOf (e.points.get ⟨2, by grind⟩) < sizeOf e := by
+      cases e <;> (simp [points, Vector.get]; try grind)
+    let h₁ ← (e.points.get ⟨0, by grind⟩).as_value?
+    let h₂ ← (e.points.get ⟨1, by grind⟩).as_value?
+    let h₃ ← (e.points.get ⟨2, by grind⟩).as_value?
+    return Value.points₃ heq h₁ h₂ h₃
+  | .inr (.inr (.inr (.inr ⟨heq⟩))) => do
+    have h_dec₁ : sizeOf (e.points.get ⟨0, by grind⟩) < sizeOf e := by
+      cases e <;> (simp [points, Vector.get]; try grind)
+    have h_dec₂ : sizeOf (e.points.get ⟨1, by grind⟩) < sizeOf e := by
+      cases e <;> (simp [points, Vector.get]; try grind)
+    have h_dec₃ : sizeOf (e.points.get ⟨2, by grind⟩) < sizeOf e := by
+      cases e <;> (simp [points, Vector.get]; try grind)
+    have h_dec₄ : sizeOf (e.points.get ⟨3, by grind⟩) < sizeOf e := by
+      cases e <;> (simp [points, Vector.get]; try grind)
+    let h₁ ← (e.points.get ⟨0, by grind⟩).as_value?
+    let h₂ ← (e.points.get ⟨1, by grind⟩).as_value?
+    let h₃ ← (e.points.get ⟨2, by simp_all⟩).as_value?
+    let h₄ ← (e.points.get ⟨3, by rw [heq]; simp⟩).as_value?
+    return Value.points₄ heq h₁ h₂ h₃ h₄
+termination_by sizeOf e
 
-  match infer.toList with
-  | [_infer] =>
-    return GenericExpr.fvar_expr_to_lean (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
-  | [_infer, _reduce] =>
-    return GenericExpr.fvar_expr_to_lean (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
-  | _ =>
-    return GenericExpr.fvar_expr_to_lean (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
+def Expr.is_ctx? (Γ : Expr) : SeekM (IsCtx Γ) :=
+  open Dsl in match Γ with
+  | DCC 𝟙 => return .unit
+  | DCC (Σ A B) => IsCtx.sigma <$> A.is_ctx? <*> B.as_value?
+  | DCC (! A) => .bang <$> A.is_ctx?
+  | e => raise_error (.not_a_context e ())
 
-#eval dcc_compile' {Expr.Judge₂} {Expr.infer₂} ((fun (x : Sort 0) => ((fun (x : Sort 0) => x) x)) True)
+def Expr.as_ctx? (Γ : Expr) : SeekM Ctx := do
+  return ⟨Γ, ← Γ.is_ctx?⟩
 
-elab "dcc_infer''" infer:infer_cmd_param* tm:term : term => do
-  let e_tm ← Lean.Elab.Term.elabTerm tm .none
-  let e_tm ← Lean.instantiateMVars e_tm
-  let e_tm' ← Lean.instantiateExprMVars (← wrap_share_auto_trans (← (wrap_share_auto e_tm)))
-  let dcc_e ← do_dcc_compile infer e_tm'
-  return dcc_e
+def cc_var (Γ : Ctx) (n : ℕ) : Expr :=
+  open Dsl in
+  match Γ with
+  | ⟨DCC 𝟙, .unit⟩ => DCC (Id 𝟙)
+  | ⟨(DCC (Σ A B)), .sigma hΓ₀ _hv⟩ =>
+    match n with
+    | 0 => DCC (Snd B)
+    | n + 1 => DCC (∘ #(cc_var ⟨A, hΓ₀⟩ n) (Fst B))
+  | ⟨DCC (! A), .bang hΓ₀⟩ => DCC (∘ #(cc_var ⟨A, hΓ₀⟩ n) (! A))
 
-elab "dcc_infer'" infer:infer_cmd_param* tm:term : term => do
-  let e_tm ← Lean.Elab.Term.elabTerm tm .none
-  let e_tm ← Lean.instantiateMVars e_tm
-  let e_tm' ← Lean.instantiateExprMVars (← wrap_share_auto_trans (← (wrap_share_auto e_tm)))
 
-  let cc_raw_expr (e : Lean.Expr) : Lean.MacroM (GenericExpr Lean.FVarId) :=
-    match e with
-    | .fvar fv => pure (.const fv)
-    | e => Lean.Macro.throwError s!"unrecognized expression: {e}"
 
-  let e' ← match infer.toList with
-  | [_infer] =>
-    pure <| (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
-  | [_infer, _reduce] =>
-    pure <| (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
-  | _ =>
-    pure <| (← Lean.Elab.liftMacroM <| cc Lean.FVarId e_tm' ⟨GenericExpr.Judge₂, GenericExpr.infer₂⟩ GenericExpr.reduce_all₂ cc_raw_expr)
+/-open Dsl in
+inductive Ty : Expr → Type
+  | sort : Ty (DCC Sort u)
+  | eq   : Ty (DCC (= A x y))
+  | top  : Ty (DCC 𝟙)
+  | bot  : Ty (DCC 𝟘)
+  | -/
 
-  match e'.infer₂' with
-  | .ok τ => return GenericExpr.fvar_expr_to_lean τ
-  | .error err => throwError m!"not well-typed {e'}: {err}"
-
-/-macro "dcc_infer'" infer:infer_cmd_param* tm:term : term =>
-  match infer.toList with
-  | [infer] =>
-    match infer with
-    | `(infer_cmd_param| { $infer:term }) =>
-      `(term| do Sigma.fst <$> ($infer:term (dcc_compile' {$infer:term} $tm:term)))
-    | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
-  | [infer, reduce] =>
-    match infer with
-    | `(infer_cmd_param| { $infer:term }) =>
-      match reduce with
-      | `(infer_cmd_param| { $reduce:term }) =>
-        `(term| do Sigma.fst <$> ($infer:term (dcc_compile' {$infer:term} {$reduce:term} $tm:term)))
-      | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
-    | _ => `(term| do Sigma.fst <$> Expr.infer₂ (dcc_compile' $tm:term))
-  | _ =>
-    `(term| do Sigma.fst <$> (dcc_compile' $tm:term).infer)-/
-
-syntax "dcc_compile" infer_cmd_param* term : term
-syntax "dcc_infer" infer_cmd_param* term   : term
-
-open Qq in
-macro_rules
-  | `(dcc_compile $infer:infer_cmd_param* $tm:term) =>
-    match infer.toList with
-    | [_infer] =>
-      `((Lean.Expr.cc' q($tm:term) ⟨Expr.Judge₂, Expr.infer₂⟩))
-    | _ => `((Lean.Expr.cc' q($tm:term)))
-  | `(dcc_infer $infer:infer_cmd_param* $tm:term) =>
-    match infer.toList with
-    | [infer] =>
-      match infer with
-      | `(infer_cmd_param| {$infer:term}) =>
-        `(do Sigma.fst <$> ($infer:term (← (Lean.Expr.cc' q($tm:term)))))
-      | _ => `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))
-    | _ =>
-      `((do Sigma.fst <$> (← (Lean.Expr.cc' q($tm:term))).infer))
-
-/-
-seemingly need to make the compiler less reliant on the lean internal type-checker
-either we are producing a malformed expression, or our compilation requires type inference at some midway
-point that we should be doing syntactically anyway
-
-ideally, the compiler should not even use elabTerm.
-elabTerm does a lot of preprocessing, and it is not exactly compilation if we are using the lean type checker itself.
--/

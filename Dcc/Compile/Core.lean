@@ -4,7 +4,7 @@ import Dcc.Ast.Share
 import Dcc.Metatheory.Progress
 import Dcc.Types
 
-open Expr (Value Judge point_arity points)
+open Expr (Value Judge point_arity points reduce Red infer reduce_sound_fst reduce_norm_fst reduce_sound reduce_norm)
 open Lean.Meta (MetaM)
 
 /-
@@ -222,17 +222,18 @@ inductive Ctx where
 deriving Repr
 
 inductive RawCompileError (α δ : Type) : Type
-  | not_a_context   : (at_e : α) → (Δ    : Expr)       → (Γ : δ)             → RawCompileError α δ
-  | sub             : (at_e : α) → (Γ : δ)             → RawCompileError α δ → RawCompileError α δ
-  | and             : (at_e : α) → (Γ    : δ)          → RawCompileError α δ → RawCompileError α δ → RawCompileError α δ
-  | not_a_value     : (at_e : α) → (v    : Expr)       → (Γ : δ)             → RawCompileError α δ
-  | invalid_level   : (at_e : α) → (u    : Lean.Level) → (Γ : δ)             → RawCompileError α δ
-  | unsupported     : (at_e : Lean.Expr) → (Γ : δ)             → RawCompileError α δ
-  | unexpected      : (at_e : α) → (Γ : δ)             → RawCompileError α δ
-  | type_error      : (at_e : α) → (at_e_tm : Expr)    → TypeError at_e_tm → (Γ : δ) → RawCompileError α δ
-  | expected_binder : (at_e : α) → (found_e : LExpr)   → RawCompileError α δ
-  | expected_app    : (at_e : α) → (found_e : LExpr)   → RawCompileError α δ
-  | expected_bang   : (at_e : α) → (found_e : Expr)    → (Γ : δ) → RawCompileError α δ
+  | not_a_context     : (at_e : α) → (Δ    : Expr)       → (Γ : δ)             → RawCompileError α δ
+  | sub               : (at_e : α) → (Γ : δ)             → RawCompileError α δ → RawCompileError α δ
+  | and               : (at_e : α) → (Γ    : δ)          → RawCompileError α δ → RawCompileError α δ → RawCompileError α δ
+  | not_a_value       : (at_e : α) → (v    : Expr)       → (Γ : δ)             → RawCompileError α δ
+  | invalid_level     : (at_e : α) → (u    : Lean.Level) → (Γ : δ)             → RawCompileError α δ
+  | unsupported       : (at_e : Lean.Expr) → (Γ : δ)             → RawCompileError α δ
+  | unexpected        : (at_e : α) → (Γ : δ)             → RawCompileError α δ
+  | type_error        : (at_e : α) → (at_e_tm : Expr)    → TypeError at_e_tm → (Γ : δ) → RawCompileError α δ
+  | expected_binder   : (at_e : α) → (found_e : LExpr)   → RawCompileError α δ
+  | expected_app      : (at_e : α) → (found_e : LExpr)   → RawCompileError α δ
+  | expected_bang     : (at_e : α) → (found_e : Expr)    → (Γ : δ) → RawCompileError α δ
+  | expected_sigma_tm : (at_e : α) → (found_e : LExpr)   → (Γ : δ) → RawCompileError α δ
 deriving Repr
 
 def RawCompileError.with_ctx (e : RawCompileError α Δ) (x : Γ) : RawCompileError α Γ :=
@@ -248,6 +249,7 @@ def RawCompileError.with_ctx (e : RawCompileError α Δ) (x : Γ) : RawCompileEr
   | .type_error at_e₀ at_e ε _Γ => .type_error at_e₀ at_e ε x
   | .expected_binder at_e found => .expected_binder at_e found
   | .expected_app at_e found => .expected_app at_e found
+  | .expected_sigma_tm at_e found _Γ => .expected_sigma_tm at_e found x
 
 def RawCompileError.with_source (e : RawCompileError α δ) (x : β) : RawCompileError β δ :=
   match e with
@@ -262,6 +264,7 @@ def RawCompileError.with_source (e : RawCompileError α δ) (x : β) : RawCompil
   | .type_error _ at_e ε Γ  => .type_error x at_e ε Γ
   | .expected_binder _at_e found => .expected_binder x found
   | .expected_app _at_e found => .expected_app x found
+  | .expected_sigma_tm _at_e found Γ => .expected_sigma_tm x found Γ
 
 abbrev SimpleError  := RawCompileError Unit Unit
 abbrev CompileError := RawCompileError LExpr Ctx
@@ -468,8 +471,8 @@ deriving Repr
 
 open Dsl in
 inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') → Type
-  | sigma_mk : Abstract ⟨Γ, hn_Γ₁⟩ x x' hv₁
-    → Abstract ⟨Γ, hn_Γ₁⟩ y y' hv₂
+  | sigma_mk : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ x x' hv₁
+    → Abstract ⟨Γ, hn_Γ₁.bang₀⟩ y y' hv₂
     → Judge x' (DCC ((Π B₁ C₁) x₁))
     → Judge y' (DCC ((Π B₂ C₂) x₂))
     → (B₁ x₁) →ᵦ A
@@ -478,7 +481,7 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → (hv₄ : Value B)
     → Judge (DCC (∘ y' (Fst B))) (DCC ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗))
     → (hv₅ : Value C₃)
-    → Abstract ⟨DCC (! Γ), .bang hn_Γ₁⟩ (.sigma_mk u v _A _B x y) (DCC (⟨,⟩C₃ x' (Λ A B (∘ y' (Fst B)))))
+    → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.sigma_mk u v _A _B x y) (DCC (⟨,⟩C₃ x' (Λ A B (∘ y' (Fst B)))))
       (.points₃ (by point_arity) hv₅ hv₁
         (.points₃ (by point_arity) hv₃ hv₄
           (.points₂ (by change point_arity (DCC (∘ y' (Fst B))) = _; grind) hv₂
@@ -575,6 +578,16 @@ def LExpr.binder_ty (e : LExpr) : SeekM LExpr := do
   | .sigma _ _ bty _bdy => pure bty
   | found => raise_error (.expected_binder () found)
 
+def LExpr.sigl (e : LExpr) : SeekM LExpr := do
+  match e with
+  | .sigma_mk _ _ _ _ x _ => pure x
+  | found => raise_error (.expected_sigma_tm () found ())
+
+def LExpr.sigr (e : LExpr) : SeekM LExpr := do
+  match e with
+  | .sigma_mk _ _ _ _ y _ => pure y
+  | found => raise_error (.expected_sigma_tm () found ())
+
 def LExpr.binder_body (e : LExpr) : SeekM LExpr := do
   match e with
   | .lam _bty bdy => pure bdy
@@ -626,7 +639,22 @@ def mk_const (c : LConst) : SeekM (Σ (Γ : Ctx) (e : Expr) (hv : Value e), Abst
 
 def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'), Abstract Γ e e' hv) := open Dsl in do
   match e with
-  | .sigma_mk u v A B x y => by sorry
+  | .sigma_mk u v A B x y =>
+    match Γ with
+    | ⟨DCC (! Γ), hn_Γ⟩ =>
+      let (⟨x', hv₁, h₁⟩, ⟨y', hv₂, h₂⟩) ← Prod.mk <$> (seek_to LExpr.sigl ⟨Γ, hn_Γ.bang₀⟩ *> Ctx.abstract ⟨Γ, hn_Γ.bang₀⟩ x)
+        <*> (seek_to LExpr.sigr ⟨Γ, hn_Γ.bang₀⟩ *> Ctx.abstract ⟨Γ, hn_Γ.bang₀⟩ y)
+      let (⟨τ₁, ht₁⟩, ⟨τ₂, ht₂⟩) ← Prod.mk <$> (guard_type_error x'.infer) <*> (guard_type_error y'.infer)
+      match τ₁, τ₂ with
+      | (DCC ((Π B₁ C₁) x₁)), (DCC ((Π B₂ C₂) x₂)) =>
+        let (hv₃, hv₄) ← Prod.mk <$> (Expr.as_value? (reduce Red (DCC (B₁ x₁))).fst) <*> (Expr.as_value? (reduce Red (DCC (C₁ x₁))).fst)
+        match ← (guard_type_error (DCC (∘ y' (Fst #((reduce Red (DCC (C₁ x₁))).fst)))).infer) with
+        | ⟨(DCC ((Π (`𝟙 A₃) (`𝟙 (Π B₃ C₃))) ∗)), ht₃⟩ =>
+          let hv₅ ← Expr.as_value? C₃
+          return ⟨_, _, .sigma_mk h₁ h₂ ht₁ ht₂ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₃ hv₄ ht₃ hv₅⟩
+        | _ => raise_error (.unexpected () ())
+      | x, y => raise_error (.unexpected () ())
+    | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
   | .share u A x =>
     match Γ with
     | ⟨DCC (! Γ), hn_Γ⟩ =>

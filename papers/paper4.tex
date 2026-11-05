@@ -1453,7 +1453,7 @@ Compilation is distinct at the top level and under binders (\(\lambda\), \(\fora
   \]
 \end{definition}
 
-\begin{definition}
+\begin{definition}\label{def:abstrconst}
   Constant abstraction is as such:
   \[
     \begin{gathered}
@@ -1490,16 +1490,16 @@ Compilation is distinct at the top level and under binders (\(\lambda\), \(\fora
     \begin{gathered}
       \inferrule
       { \llb A \rrb_\Gamma = A' \quad \llb M \rrb_{\comb[!][\comb[\Sigma][\Gamma][A']]} = M'}
-      { \llb \lambda x : (\shared A).M \rrb_{\comb[!][\Gamma]} \coloneq \comb[!\Lambda][\Gamma][A'][M']}\\
+      { \llb \lambda x : (\shared A).M \rrb_{\comb[!][\Gamma]} \coloneq \comb[!\Lambda][\Gamma][A'][M']}\\\\
       \inferrule
       { \text{\(A\) or \(B\) contain free variables} \quad \llb A \rrb_{\comb[!][\Gamma]} = A' \quad \llb B \rrb_{\comb[!][\comb[\Sigma][\Gamma][A']]} = B'}
-      { \llb \forall x : A, B \rrb_{\comb[!][\Gamma]} \coloneq \comb[\Pi][A'][\comb[!\Lambda][\Gamma][A'][B']]}\\
+      { \llb \forall x : A, B \rrb_{\comb[!][\Gamma]} \coloneq \comb[\Pi][A'][\comb[!\Lambda][\Gamma][A'][B']]}\\\\
       \inferrule
       { \text{neither \(A\) nor \(B\) contain free variables} \quad \llb A \rrb_{\comb[!][\mathbb{1}]} = A' \quad \llb B \rrb_{\comb[!][\mathbb{1}]} = B'}
-      { \llb \forall x : A, B \rrb_{\Gamma} \coloneq \comb[`\Gamma][\comb[\rightarrow][A'][B']]}\\
+      { \llb \forall x : A, B \rrb_{\Gamma} \coloneq \comb[`\Gamma][\comb[\rightarrow][A'][B']]}\\\\
       \inferrule
       { \llb A \rrb_\Gamma = A' \quad \llb B \rrb_{\comb[\Sigma][\Gamma][A']} = B'}
-      { \llb \sum_{x : A} B(x) \rrb_{\comb[!][\Gamma]} \coloneq \comb[\Sigma'][A'][B']}
+      { \left\llb \sum_{x : A} B(x) \right\rrb_{\comb[!][\Gamma]} \coloneq \comb[\Sigma'][A'][B']}
     \end{gathered}
   \]
   where \(\rightarrow\) denotes the DCC arrow expansion as in~\ref{def:arrowsimple}.
@@ -1512,31 +1512,102 @@ Applications and \(\Sigma\)-terms under binders duplicate the context across the
   \[
     \begin{gathered}
       \inferrule
-      { \llb x \rrb_\Gamma = x', x' : (\comb[\Pi][B_1][C_1] x_1) \quad \llb y \rrb_\Gamma = y', y' : (\comb[\Pi][B_1][C_1] x_1) \quad \comb[\circ][y'][\comb[Fst][(C_1 x_1)]] : (x : A) \rightarrow (y : B x) \rightarrow C x y}
-      { \llb \langle x, y \rangle_{\comb[!][\gamma]} \coloneq \comb[\langle,\rangle C_3][x'][\comb[\Lambda][(B_1 x_1)][(C_1 x_1)][\comb[\circ][y'][\comb[Fst][(C_1 x_1)]]]]} \\
+      { \llb x \rrb_\Gamma = x', x' : (\comb[\Pi][B_1][C_1] x_1) \quad \llb y \rrb_\Gamma = y', y' : (\comb[\Pi][B_1][C_1] x_1)\\
+        \comb[\circ][y'][\comb[Fst][(C_1 x_1)]] : (x : A) \rightarrow (y : B x) \rightarrow C x y}
+      { \llb \langle x, y \rangle_{\comb[!][\gamma]} \coloneq \comb[\langle,\rangle C_3][x'][\comb[\Lambda][(B_1 x_1)][(C_1 x_1)][\comb[\circ][y'][\comb[Fst][(C_1 x_1)]]]]} \\\\
       \inferrule
-      { \llb M \rrb_\Gamma = M', M' : (\comb[\Pi][B_1][C_1] x_1) \quad \llb N \rrb_\Gamma = N', N' : (\comb[\Pi][B_2][C_2] x_2) \quad \comb[\circ][N'][\comb[Fst][\comb[`\Gamma][\Gamma]]] : (x : A) \rightarrow (y : B x) \rightarrow C x y}
-      { \llb (M N) \rrb_{\comb[!][\Gamma]} \coloneq \comb[\circ][\comb[Eval][(B_1 x_1)][(C_2 x_2)][M']][\comb[\Lambda][\Gamma][\comb[`\Gamma][\Gamma]][\comb[\circ][N'][\comb[Fst][\comb[`\Gamma][\Gamma]]]]]}
+      { \llb M \rrb_\Gamma = M', M' : (\comb[\Pi][B_1][C_1] x_1) \quad \llb N \rrb_\Gamma = N', N' : (\comb[\Pi][B_2][C_2] x_2) \\
+        \comb[\circ][N'][\comb[Fst][\comb[`\Gamma][\Gamma]]] : (x : A) \rightarrow (y : B x) \rightarrow C x y}
+      { \llb (M N) \rrb_{\comb[!][\Gamma]} \coloneq \comb[\circ][\comb[Eval][(B_1 x_1)][(C_2 x_2)][M']][\comb[\Lambda][\Gamma][\comb[`\Gamma][\Gamma]][\comb[\circ][N'][\comb[Fst][\comb[`\Gamma][\Gamma]]]]]}\\\\
+      \inferrule
+      { \llb x \rrb_{\Gamma} \coloneq x'}
+      { \llb \shared A \rrb_{\comb[!][\Gamma]} \coloneq \comb[!<>][x']} \qquad
+      \inferrule
+      { \llb x \rrb_{\Gamma} \coloneq x'}
+      { \llb \share A x \rrb_{\comb[!][\Gamma]} \coloneq \comb[\$<>][x']}
     \end{gathered}
   \]
 \end{definition}
 
-% end with the affine stuff
+Compilation at the top-level differs from abstraction in that the context is empty. So, all top-level binders' binder types are compiled recursively without a context. Also, the topmost \(\lambda\)-binder is always applied the empty context \(\comb[\&][\ast] : \comb[!][\mathbb{1}]\). Finally, all user-supplied top-level values are automatically shared based on the computed maximum context duplication depth (this is done as a preprocessing step by marking values with \(\share\)).
 
-\begin{comment}
-  
-  
-  How we count references
-    - DCC is affine, so we make use of a "Share" datatype defined in Lean to denote banged values (! A).
-    - Reference counts can be automatically estimated before compilation and code is annotated with Shares in a pre-processing step.
-    - The only points where the context needs to be duplicated is in application, \Sigma-types, and \Sigma-terms.
-    - We define a bound on context duplication by the total number of applications, \Sigma-types, and \Sigma-terms present under the top-most applied \(\lambda\)-expression.
-  
-  %Contexts are tracked as DCC terms
-    %- A context in compilation \(\Gamma \in \text{Ctx}\) is a compiled DCC term introduced by a binder of the form
-  Debruijn indices map to composed projection
-  Limitations without \eta
-\end{comment}
+%\begin{definition}
+%  Let \(d : L \rightarrow \mathbb{N}\) and define \(d\) to be the number of applications, \(\Sigma\)-terms, and \(\Sigma\)-types (which all duplicate the context) under a term \(e \in D\). Then, \(d\) represents an approximation of the upper bound on context usage.
+%\end{definition}
+
+\begin{definition}
+  Constants are compiled as in~\ref{def:abstrconst}, except the produced DCC terms are not quoted:
+  \[
+    \begin{gathered}
+      \inferrule
+      { }
+      { \llb \top \rrb \coloneq \mathbb{1}} \qquad
+      \inferrule
+      { }
+      { \llb \ast \rrb \coloneq \ast}\\
+      \inferrule
+      { }
+      { \llb \bot \rrb \coloneq \mathbb{0}} \qquad
+      \inferrule
+      { }
+      { \llb \mathbb{2} \rrb \coloneq \mathbb{2}}\\
+      \inferrule
+      { }
+      { \llb \mathbb{1}_\mathbb{2} \rrb \coloneq \mathbb{1}_\mathbb{2}} \qquad
+      \inferrule
+      { }
+      { \llb \mathbb{0}_\mathbb{2} \rrb \coloneq \mathbb{0}_\mathbb{2}}\\
+      \inferrule
+      { }
+      { \llb \sort{u} \rrb \coloneq \sort{u}}
+    \end{gathered}
+  \]
+\end{definition}
+
+\begin{definition}
+  Shared values are compiled as such:
+  \[
+    \begin{gathered}
+      \inferrule
+      { }
+      { \llb \shared A \rrb \coloneq \comb[!][\llb A \rrb]} \qquad
+      \inferrule
+      { }
+      { \llb \share A x \rrb \coloneq \comb[\&][\llb x \rrb]}
+    \end{gathered}
+  \]
+\end{definition}
+
+\begin{definition}
+  Binders are compiled as such:
+  \[
+    \begin{gathered}
+      \inferrule
+      { \llb A \rrb_{\comb[!][\mathbb{1}]} = A' \quad \llb M \rrb_{\comb[!][\comb[\Sigma][\mathbb{!}][A']]} = M'}
+      { \llb \lambda x : (\shared A).M \rrb \coloneq (\comb[!\Lambda][\mathbb{1}][A'][M'] \comb[\&][\ast])}\\\\
+      \inferrule
+      { \llb A \rrb = A' \quad \llb B \rrb_{\comb[!][\comb[\Sigma][\mathbb{1}][A']]} = B'}
+      { \llb \forall x : (\shared A), B \rrb \coloneq (\comb[\Pi][\comb[`\mathbb{1}][A']][\comb[`\mathbb{1}][(\comb[!\Lambda][\mathbb{1}][A'][B'] \comb[\&][\ast])]] \ast)}\\\\
+      \inferrule
+      { \llb A \rrb = A' \quad \llb B \rrb_{\comb[!][\comb[\Sigma][\mathbb{1}][A']]} = B'}
+      { \left\llb \sum_{x : \shared A} B(x) \right\rrb \coloneq \comb[\Sigma][A'][(\comb[!\Lambda][\mathbb{1}][A'][B'] \comb[\&][\mathbb{1}])]}
+    \end{gathered}
+  \]
+\end{definition}
+
+\begin{definition}
+  Application and \(\Sigma\)-terms are compiled as such:
+  \[
+    \begin{gathered}
+      \inferrule
+      { }
+      { \llb \langle x, y \rangle \rrb \coloneq \llb \langle x, y \rangle \rrb_{\comb[!][\mathbb{1}]}}\\
+      \inferrule
+      { }
+      { \llb (M N) \rrb \coloneq (\llb M \rrb \llb N \rrb)}
+    \end{gathered}
+  \]
+\end{definition}
 
 \section{Examples}
 
@@ -1555,6 +1626,7 @@ Applications and \(\Sigma\)-terms under binders duplicate the context across the
   \item \textbf{Lean 4 formalization repository:} \href{https://github.com/lexzaiello/dcc}{https://github.com/lexzaiello/dcc}
   \item \textbf{Formalized Reduction rules:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Rel.lean#L14}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Rel.lean\#L14}
   \item \textbf{Type-checker implementation:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}
+  \item \textbf{Compiler implementation:} \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Compile/Core.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Compile/Core.lean}
 \end{itemize}
 
 \printbibliography

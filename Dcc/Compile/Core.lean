@@ -565,7 +565,7 @@ inductive Cc : (e : LExpr) → (e' : Expr) → Type
   | forallE  : Cc A A'
     → A' →ᵦ A''
     → (hv₁ : Value A'')
-    → Abstract ⟨DCC (Σ ⊤ A''), (.sigma .unit hv₁)⟩ B B' hv₂
+    → Abstract ⟨DCC (! (Σ ⊤ A'')), (.bang (.sigma .unit hv₁))⟩ B B' hv₂
     → Cc (.forallE (.share_ty u A) B) (DCC ((Π (`⊤ A'') (`⊤ ((!Λ ⊤ A'' B') (& ∗)))) ∗))
 deriving Repr
 
@@ -786,7 +786,7 @@ def cc (e : LExpr) : SeekM (Σ (e' : Expr), Cc e e') := open Dsl in do
   | .forallE (.share_ty _u A) B =>
     let ⟨A', h₁⟩ ← (seek_to A ⟨.top, .unit⟩ (cc A))
     let hv₁ ← Expr.as_value? (reduce Red A').fst
-    let ⟨_B', _hv₂, h₂⟩ ← (seek_to B ⟨DCC (Σ ⊤ #((reduce Red A').fst)), (.sigma .unit hv₁)⟩ (Ctx.abstract ⟨DCC (Σ ⊤ #((reduce Red A').fst)), (.sigma .unit hv₁)⟩ B))
+    let ⟨_B', _hv₂, h₂⟩ ← (seek_to B ⟨DCC (! (Σ ⊤ #((reduce Red A').fst))), (.bang (.sigma .unit hv₁))⟩ (Ctx.abstract ⟨DCC (! (Σ ⊤ #((reduce Red A').fst))), (.bang (.sigma .unit hv₁))⟩ B))
     return ⟨_, .forallE h₁ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₁ h₂⟩
   | .sigma_mk u v A B x y => (fun ⟨_, _, x⟩ => ⟨_, .sigma_mk x⟩) <$> (Ctx.abstract ⟨.bang .top, .bang .unit⟩ (.sigma_mk u v A B x y))
   | _e => raise_error (.unexpected () ())

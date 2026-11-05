@@ -1,5 +1,6 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
+\usepackage{xspace}
 \usepackage[normalem]{ulem} 
 \usepackage[dvipsnames]{xcolor}
 \usepackage{dsfont}
@@ -46,13 +47,13 @@
 \newtheorem{example}{Example}
 \addbibresource{./refs.bib}
 
-\newcommand{\none}{\text{none}\ }
-\newcommand{\congrfun}{\text{congrFun}\ }
-\newcommand{\congrarg}{\text{congrArg}\ }
-\newcommand{\some}{\text{some}\ }
-\newcommand{\option}{\text{Option}\ }
-\newcommand{\shared}{\text{Shared}\ }
-\newcommand{\share}{\text{share}\ }
+\newcommand{\none}{\text{none}}
+\newcommand{\congrfun}{\text{congrFun}}
+\newcommand{\congrarg}{\text{congrArg}}
+\newcommand{\some}{\text{some}}
+\newcommand{\option}{\text{Option}}
+\newcommand{\shared}{\text{Shared}}
+\newcommand{\share}{\text{share}}
 \newcommand{\val}{\text{Val}}
 \newcommand{\ctx}{\text{Ctx}}
 \newcommand{\dcc}{\(\text{DCC}\)}
@@ -733,7 +734,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 
 \subsection{Decision Procedure for \(\beta\)-Equality}
 
-Our \(\beta\)-reduction rules are implemented as a total, terminating \(\beta\)-reduction engine. Reduction proceeds by repeated single-step reduction via a function \(step? : (A : E) \rightarrow \option (\Sigma' (B : E), A \barr B)\) and well-founded recursion by decreasing syntactic size~\ref{thm:sn}. The reducer has has soundness and completeness with respect to \(\barr^{!}\). The reducer is used to decide \(\beta\)-equality and is central to decidable type-checking.
+Our \(\beta\)-reduction rules are implemented as a total, terminating \(\beta\)-reduction engine. Reduction proceeds by repeated single-step reduction via a function \(step? : (A : E) \rightarrow \option\ (\Sigma' (B : E), A \barr B)\) and well-founded recursion by decreasing syntactic size~\ref{thm:sn}. The reducer has has soundness and completeness with respect to \(\barr^{!}\). The reducer is used to decide \(\beta\)-equality and is central to decidable type-checking.
 
 In applications \((f x) \in E\), \(step?\) attempts a head single-step, if it is available:
 
@@ -841,15 +842,17 @@ termination_by t e
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L113}{Expr.reduce}
 
 \begin{theorem}\label{thm:semicomplete}
-  Semi-completeness of single-step reduction: If \(A, B \in E\) and \(A \barr B\), then there exists \(B' \in E\) and \(h' \vdash A \barr B'\) such that \(step? A = \some \langle B, h' \rangle\).
+  Semi-completeness of single-step reduction: If \(A, B \in E\) and \(A \barr B\), then there exists \(B' \in E\) and \(h' \vdash A \barr B'\) such that \(step? A = \some\ \langle B, h' \rangle\).
 \end{theorem}
 
 \begin{proof}
-  Suppose \(A \barr B\). The proof proceeds by induction on \(A\) and analysis on the definition of \(step?\).
+  Suppose \(A \barr B\). The proof proceeds by induction on \(A\) and analysis of the definition of \(step?\).
   \begin{description}
-    \item[\(A\) can make a head step:] If \(A\) can make a head step, then there exists some \(B' \in E\) such that \(step? A = \some \langle B', h \rangle\) where \(h\) is proven by the corresponding single-step rule~\ref{sec:convrules}.
-    \item[\(A\) is of the form \((f x)\) but \(A\) cannot make a head step:] If \(A\) cannot make a head step, then \(A \barr B\) must be given by either function congruence or argument congruence. Suppose there exists \(f' \in E\) such that \(f \barr f'\). Then, by the inductive hypothesis, there exists \(f'_2 \in E\) such that \(h \vdash f \barr f'_2\) and \(step? f = \some \langle f', h \rangle\). So, \(step? (f x) = \some \langle (f' x), \congrfun h\). Suppose \(f\) is in normal form. Then, there exists \(x' \in E\) such that \(x \barr x'\). So, by the inductive hypothesis, there exists \(x'_2 \in E\) such that \(h \vdash x \barr x'_2\). And, since \(f\) is in normal form, then \(step? f = \none\), since a contradiction is derived if \(step? f = \some \langle f', h \rangle\). So, \(step? (f x) = \some \langle (f x'), \congrarg h \rangle\).
-    \item[\(A\) is of the form \((c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\):] By the definition of \(step?\), \(step? (c\ x_0 \ldots x_n) = \none\) if \(step? x_i = \none\) for all \(i < n\). But, since \(A\) is a combinator, \(A \barr B\) is given by the point rule. So, there exists some \(j < n\) such that \(x_j \barr x'_j\). And, by the inductive hypothesis, there exists \(x''_j\) and \(h \vdash x_j \barr x''_j\) such that \(step? x_j = \some \langle x''_j, h \rangle\). Hence, there must exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(step? (c\ x_0 \ldots x_n) = \some \langle B', h \rangle\).
+    \item[\(A\) can make a head step:] If \(A\) can make a head step, then there exists some \(B' \in E\) such that \(step? A = \some\ \langle B', h \rangle\) where \(h\) is proven by the corresponding single-step rule~\ref{sec:convrules}.
+    \item[\(A\) is of the form \((f x)\) but \(A\) cannot make a head step:] If \(A\) cannot make a head step, then \(A \barr B\) must be given by either function congruence or argument congruence. Suppose there exists \(f' \in E\) such that \(f \barr f'\). Then, by the inductive hypothesis, there exists \(f'_2 \in E\) such that \(h \vdash f \barr f'_2\) and \(step? f = \some\ \langle f'_2, h \rangle\). So, \(step? (f x) = \some\ \langle (f'_2 x), \congrfun\ h \rangle\). Suppose \(f\) is in normal form. Then, there exists \(x' \in E\) such that \(x \barr x'\). So, by the inductive hypothesis, there exists \(x'_2 \in E\) such that \(h \vdash x \barr x'_2\). And, since \(f\) is in normal form, then \(step? f = \none\), since a contradiction is derived if \(step? f = \some\ \langle f', h \rangle\). So, \(step? (f x) = \some\ \langle (f x'_2), \congrarg\ h \rangle\).
+    \item[\(A\) is of the form \((c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\):]
+      
+      Note that \(step? (c\ x_0 \ldots x_n) = \none\) if \(step? x_i = \none\) for all \(i < n\). But, since \(A\) is a combinator, \(A \barr B\) must be given by the point rule. So, there exists some \(j < n\) such that \(x_j \barr x'_j\). And, by the inductive hypothesis, there exists \(x''_j\) and \(h \vdash x_j \barr x''_j\) such that \(step? x_j = \some\ \langle x''_j, h \rangle\). Hence, there must exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(step? (c\ x_0 \ldots x_n) = \some\ \langle B', h \rangle\).
     \end{description}
     \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Complete.lean\#L7}{Expr.semi\_complete}
 \end{proof}
@@ -859,19 +862,19 @@ termination_by t e
 \end{theorem}
 
 \begin{proof}
-  The proof proceeds by well-founded recursion with respect to syntactic size and analysis on the definition of \(reduce\). If \(step? A = \none\), then \(A\) is a normal form, since otherwise, \(step? A \neq none\) by~\ref{thm:semicomplete}. If \(step? A = \some \langle B_0, h_0 \rangle\) such that \(h_0 \vdash A \barr B_0\), then \(size(B_0) < size(A)\) by~\ref{thm:sn}. So, by well-founded recursion, \(B_0\) is a normal form.\\
+  The proof proceeds by well-founded recursion with respect to syntactic size and analysis of the definition of \(reduce\). If \(step? A = \none\), then \(A\) is a normal form, since otherwise, \(step? A \neq none\) by~\ref{thm:semicomplete}. If \(step? A = \some \langle B_0, h_0 \rangle\) such that \(h_0 \vdash A \barr B_0\), then \(size(B_0) < size(A)\) by~\ref{thm:sn}. So, by well-founded recursion, \(B_0\) is a normal form.\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L374}{Expr.reduce\_norm}
 \end{proof}
 
 \begin{theorem}\label{thm:reducecomplete}
-  Completeness of \(\beta\)-reduction with respect to normal forms: If \(A, B \in E\) and \(h \vdash A \barr^{*} B\) and \(B\) is a normal form (that is, there does not exist \(C \in E\) such that \(B \barr C\)), then \(reduce Red A = \langle B, h \rangle\).
+  Completeness of \(\beta\)-reduction with respect to normal forms: If \(A, B \in E\) and \(h \vdash A \barr^{!} B\), then \(reduce (\barr) A = \langle B, h \rangle\).
 \end{theorem}
 
 \begin{proof}
-  This fact is shown by case-splitting on the definition of \(reduce\):
+  This fact is shown by induction on \(A\) with respect to size and analysis of the definition of \(reduce\):
   \begin{description}
-    \item[\(step? A = none\):] If no step can be made, then \(h\) must be proven by reflexivity (that is, \(A = B\)). Otherwise, a step would be possible, in which case, by~\ref{thm:semicomplete}, \(step? A \neq none\). By the definition of \(reduce\), \(reduce A = \langle B, refl \rangle\).
-    \item[\(step? A = \langle B', h' \rangle\), where \(h' \vdash A \barr B'\):] If a step can be made, then by confluence \ref{thm:confglobal}, there exists \(D \in E\) such that \(B' \barr^{*} D\) and \(B \barr^{*} D\). In case \(A\) reaches \(B\) in a single step, then \(B = D\), since \(B\) is a normal form. And, since \(size(B') < size(A)\) and \(B' \barr B\), well-founded induction applies. That is, there exists \(h'\) such that \(reduce B' = \langle B, h' \rangle\). So, there exists \(h''\) such that \(reduce A = \langle B, h'' \rangle\), and by propositional extensionality, \(h = h''\).
+    \item[\(step? A = \none\):] If \(step?\ A = \none\), then \(A\) can be shown to be in normal-form: suppose for the sake of contradiction that \(A \barr B\). Then, by semi-completeness \ref{thm:semicomplete}, there exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(step?\ A = \some\ \langle B', h \rangle\). Hence, a contradiction is derived, so \(A\) is in normal form. So, \(h\) must be proven by reflexivity. That is, \(A = B\). Therefore, \(reduce (\barr) A = \langle B, refl \rangle\).
+    \item[\(step? A = \langle B', h' \rangle\), where \(h' \vdash A \barr B'\):] If a step can be made, then by confluence \ref{thm:confglobal}, there exists \(D \in E\) such that \(h_1 \vdash B' \barr^{*} D\) and \(h_2 \vdash B \barr^{*} D\). But since \(B\) is a normal form, \(B = D\), so \(B' \barr^{*} B\). By strong-normalization~\ref{thm:sn}, \(size(B') < size(A)\), so by well-founded induction, \(reduce (\barr) B' = \langle B, h_2 \rangle\). And so, \(reduce (\barr) A = \langle B, trans\ (single\ h') h_2 \rangle\).
     \end{description}
     \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L393}{Expr.reduce\_complete}
 \end{proof}
@@ -881,14 +884,14 @@ termination_by t e
 \end{theorem}
 
 \begin{proof}
-  By completeness of \(\beta\)-reduction~\ref{thm:reducecomplete}, \(reduce A = \langle B, h_1 \rangle\) and \(reduce A = \langle C, h_2 \rangle\), so \(B = C\).\\
+  By completeness of \(\beta\)-reduction~\ref{thm:reducecomplete}, \(reduce (\barr) A = \langle B, h_1 \rangle\) and \(reduce (\barr) A = \langle C, h_2 \rangle\), so \(B = C\).\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L366}{Expr.norm\_unique}
 \end{proof}
 
-Using our reduction function with soundness and completeness, we decide \(\beta\)-equality.
+Using our reduction function with soundness and completeness, we can decide \(\beta\)-equality.
 
 \begin{definition}\label{def:betaeq}
-  If \(A, B \in E\), then \(A =_\beta B\) iff there exists \(C \in E\) such that \(A \barr^{!} C\) and \(B \barr^{!} C\).
+  \(A =_\beta B\) iff there exists \(C \in E\) such that \(A \barr^{!} C\) and \(B \barr^{!} C\) where \(A, B \in E\).
 \end{definition}
 
 \begin{theorem}\label{thm:decidebetaeq}
@@ -896,30 +899,23 @@ Using our reduction function with soundness and completeness, we decide \(\beta\
 \end{theorem}
 
 \begin{proof}
-  Let \(\langle A_1, h_1 \rangle \coloneq reduce A\) and \(\langle B_1, h_2 \rangle \coloneq reduce B\). Then, \(A_1\) and \(B_1\) are normal forms by~\ref{thm:reducenorm}. We proceed by cases:
+  Let \(\langle A_1, h_1 \rangle \coloneq reduce (\barr) A\) and \(\langle B_1, h_2 \rangle \coloneq reduce (\barr) B\). Then, \(A_1\) and \(B_1\) are normal forms by~\ref{thm:reducenorm}. We proceed by cases:
   \begin{description}
     \item[$A_1 = B_1$:]
       If \(A_1 = B_1\), then \(A \barr^{!} A_1\) and \(B \barr^{!} A_1\), so \(A =_\beta B\).
     \item[\(A_{1} \neq B_{1}\):]
-      If \(A_1 \neq B_1\), then \(A \neq_\beta B\), since \(A =_\beta B\) implies that there exists \(C \in E\) such that \(h_3 \vdash A \barr^{!} C\) and \(h_4 \vdash B \barr^{!} C\). But, then \(reduce A = \langle C, h_3 \rangle = \langle C, h_4 \rangle = reduce B\). Hence, a contradiction is derived.
+      If \(A_1 \neq B_1\), then \(A \neq_\beta B\), since \(A =_\beta B\) implies that there exists \(C \in E\) such that \(h_3 \vdash A \barr^{!} C\) and \(h_4 \vdash B \barr^{!} C\). But, then \(reduce (\barr) A = \langle C, h_3 \rangle = \langle C, h_4 \rangle = reduce (\barr) B\) (by propositional extensionality), in which case a contradiction is derived.
   \end{description}
 \end{proof}
 
 \section{Inference Rules}\label{sec:inferrules}
 
-DCC has decidable type-checking, dependent types, and uses affine logic. Every primitive object is well-typed, and function types are quite legible. DCC achieves decidable type-checking by eagerly \(\beta\)-reducing all inferred types to canonical, normal form, and by definining definitional equality as \(\beta\)-equality (\(A \equiv B \coloneq A =_\beta B\)). DCC achieves legible types by encoding \(\Pi\)-types as a first-class combinator which indexes an arbitrary environment denoting a context, which is shuffled down a nested \(\Pi\) chain during application.
+DCC has decidable type-checking, dependent types, and uses affine logic. Every primitive object is well-typed, function types are quite legible, and explicit universe levels do not need to be specified (except in literal \(\sort{u}\) terms). DCC achieves decidable type-checking by eagerly \(\beta\)-reducing all inferred types to canonical, normal form, and by definining definitional equality as \(\beta\)-equality. DCC achieves legible types and universe inference by encoding dependent type arguments as points of the respective combinator which index an applied environment argument, rather than by supplying type arguments as arguments themselves (resembling Martin L\"of's notion of a Tarski universe \autocite[p. 88]{martin1984intuitionistic}).
+
+We proceed by enumerating the inference rules for the core type formers, the rules for constant terms, and then the inference rules for all primitive combinators in the order they were defined in \ref{sec:convrules}.
 
 \begin{definition}\label{def:defeq}
-  If \(A, B \in E\), then \(A \equiv B \coloneq A =_\beta B\) \ref{def:betaeq}.
-\end{definition}
-
-\begin{definition}\label{def:inferpi}
-  The inference rule for \(\Pi\) is as such:
-  \[
-    \inferrule[Pi]
-    { B : A \rightarrow \sort{u} \qquad C : (x : A) \rightarrow (y : B x) \rightarrow \sort{v}}
-    { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}
-  \]
+  \(A \equiv B\) iff \(A =_\beta B\) where \(A, B \in E\)~\ref{def:betaeq}.
 \end{definition}
 
 \begin{definition}\label{def:arrowsimple}
@@ -932,27 +928,50 @@ DCC has decidable type-checking, dependent types, and uses affine logic. Every p
   We use \(\comb[\rightarrow][A][B]\) to explicitly denote the DCC expansion of \(A \rightarrow B\).
 \end{definition}
 
+\begin{definition}\label{def:inferpi}
+  We have the following mutually exclusive inference rules for \(\Pi\):
+  \[
+    \begin{gathered}
+    \inferrule[Pi]
+    { B : A \rightarrow \sort{u} \quad B \barr^{!} B' \quad C : (\comb[\Pi][B_c][C_c] x_C) \quad (B_c x_C) \barr^{!} A \\
+      (C_C x_C) \barr^{!} \comb[\Pi][B'][\comb[\Lambda][A][B'][\comb[`\comb[\Sigma'][A][B']][\sort{v}]]]}
+    { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}\\
+    \inferrule[Pi]
+    { B : \comb[!][A] \rightarrow \sort{u} \quad B \barr^{!} B' \quad C : (\comb[\Pi][B_c][C_c] x_C) \quad (B_c x_C) \barr^{!} \comb[!][A] \\
+      (C_C x_C) \barr^{!} \comb[\Pi][\comb[!<>][B']][\comb[!\Lambda][A][B'][\comb[`\comb[!][\comb[\Sigma'][A][B']]][\sort{v}]]]}
+    { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}\\
+    \inferrule[Pi]
+    { B : A \rightarrow \sort{u} \quad C : A \rightarrow A_2 \rightarrow \sort{v}}
+    { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}\\
+    \inferrule[Pi]
+    { B : A \rightarrow \sort{u} \quad B \barr^{!} B' \quad C : (\comb[\Pi][B_C][C_C] x_C) \quad (B_c x_C) \barr^{!} A \\
+      (C_C x_C) \barr^{!} \comb[\Pi][B'][\comb[`A_2][\comb[`A_3][\sort{v}]]]}
+    { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}
+    \end{gathered}
+  \]
+  We distinguish between four different kinds of indices \(C : (x : A) \rightarrow (y : B x) \rightarrow \sort{v}\), which are all arrows into \(\sort{v}\) whose arguments may or may not depend on the context.
+\end{definition}
+
 \begin{definition}
-  We always use the notation \(\comb[\Sigma][A][B]\) to refer to the \(DCC\) object denoting a \(\Sigma\)-type having a first component \(x\) of type \(A\) and a second component of type \((B x)\):  
-  We make use of a function \(h_{\max} : E \rightarrow \mathbb{N}\) which calculates the maximum hole value contained in a term tree to determine that \(B\) is an arrow from \(A\) to some sort, rather than the syntactic expansion, but only in this particular case.
+  \(\Sigma\)-types are inferred as such:
   \[
     \inferrule[Sigma]
     { A : \sort{u} \quad B : (\comb[\Pi][B][C] env) \quad A \equiv (B env) \quad (C\ env\ \hole{h_{\max}((\comb[\Pi][B][C]\ env)) + 1}) \barr^{!} \sort{v}}
     { \comb[\Sigma][A][B] : \sort{\max(u, v)}}
   \]
+  where \(h_{\max} : E \rightarrow \mathbb{N}\) calculates the maximum ``hole'' in a tree and is used to test if \(B\) is an arrow (but only in this rule).
 \end{definition}
 
 \begin{definition}\label{def:inferapp}
   Application is type-checked as such:
   \[
     \inferrule[App]
-    { f : (\comb[\Pi][B][C]\ env) \qquad x : A \qquad (B\ env) \equiv A \qquad (C\ env\ x) \barr^{!} \tau}
+    { f : (\comb[\Pi][B][C]\ env) \quad x : A \quad (B\ env) \equiv A \quad (C\ env\ x) \barr^{!} \tau}
     { (f x) : \tau }
   \]
   Note that the inferred type of \((f x)\) is in normal form.
 \end{definition}
 
-To see an example of how application type-checks, we shall enumerate the inference rules, in the order that their reduction rules are defined.
 \begin{definition}\label{infer:const}
   Constant terms are inferred like such:
   \[
@@ -980,34 +999,40 @@ To see an example of how application type-checks, we shall enumerate the inferen
 \end{definition}
 
 \begin{definition}
-  The identity, quotation, and composition are as such:
+  The identity, quotation, and composition are inferred as such:
   \[
     \begin{gathered}
       \inferrule[Id]
       { A : \sort{u} \qquad A \barr^{!} A'}
-      { \comb[Id][A] : \comb[\rightarrow][A'][A']} \qquad
+      { \comb[Id][A] : A' \rightarrow A'} \qquad
       \inferrule[Quot]
       { x : A \qquad B : \sort{v} \qquad B \barr^{!} B'}
-      { \comb[`B][x] : \comb[\rightarrow][B'][A]}\\
+      { \comb[`B][x] : B' \rightarrow A'}\\
       \inferrule[Comp]
       { g : A \rightarrow B \qquad f : (\comb[\Pi][\comb[`\mathbb{1}][B]][\comb[`\mathbb{1}][C]] \ast) \qquad g \barr^{!} g'}
       { \comb[\circ][f][g] : (\comb[\Pi][\comb[`\mathbb{1}][A]][\comb[`\mathbb{1}][\comb[\circ][C][g]]] \ast)}
     \end{gathered}
-  \]
-  In the familiar \((x : A) \rightarrow B x\) notation, the inference rule for composition is written as:
-  \[
-    \inferrule[Comp]
-    { g : A \rightarrow B \qquad f : (x : B) \rightarrow C x \qquad g \barr^{!} g'}
-    { \comb[\circ][f][g] : (x : A) \rightarrow C (g x)}
   \]
 \end{definition}
 
 \begin{example}
   \((\comb[Id][\mathbb{1}] \ast) : \mathbb{1}\).\\
 
-  This is since \(\mathbb{1} : \sort{0}\) implies \(\comb[Id][\mathbb{1}] : \comb[\rightarrow][\mathbb{1}][\mathbb{1}]\), and \(\comb[\rightarrow][\mathbb{1}][\mathbb{1}] = (\comb[\Pi][\comb[`\mathbb{1}][\mathbb{1}]][\comb[`\mathbb{1}][\comb[`\mathbb{1}][\mathbb{1}]]] \ast)\) and \(\ast : \mathbb{1}\) and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \equiv \mathbb{1}\), and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \barr^{!} \mathbb{1}\).
+  This is since \(\mathbb{1} : \sort{0}\) implies \(\comb[Id][\mathbb{1}] : \mathbb{1} \rightarrow \mathbb{1}\), and \(\mathbb{1} \rightarrow \mathbb{1} = (\comb[\Pi][\comb[`\mathbb{1}][\mathbb{1}]][\comb[`\mathbb{1}][\comb[`\mathbb{1}][\mathbb{1}]]] \ast)\) and \(\ast : \mathbb{1}\) and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \equiv \mathbb{1}\), and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \barr^{!} \mathbb{1}\).\\
 \end{example}
 
+In the familiar \((x : A) \rightarrow B x\) notation, the inference rule for composition is written as:
+\[
+  \inferrule[Comp]
+  { g : A \rightarrow B \qquad f : (x : B) \rightarrow C x \qquad g \barr^{!} g'}
+  { \comb[\circ][f][g] : (x : A) \rightarrow C (g' x)}
+\]
+Similarly, the inference rule for \(\Pi\) may be written notationally as:
+\[
+  \inferrule[Pi]
+  { B : A \rightarrow \sort{u} \qquad C : (x : A) \rightarrow (y : B x) \rightarrow \sort{v}}
+  { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}
+\]
 From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote dependent products for clarity. Consult the Appendix~\ref{appendix:sup} for the expanded inference rules.
 
 \begin{definition}
@@ -1019,7 +1044,7 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
       { \comb[Fst][B] : \comb[\Sigma][A][B'] \rightarrow A} \qquad
       \inferrule[Snd]
       { B : A \rightarrow \sort{v} \qquad B \barr^{!} B'}
-      { \comb[Snd][B] : (x : \comb[\Sigma][A][B']) \rightarrow B' (\comb[Fst][B'] x)}\\
+      { \comb[Snd][B] : (x : \comb[\Sigma][A][B']) \rightarrow (\comb[\circ][B'][\comb[Fst][B']] x)}\\
       \inferrule[Curry]
       { A : \sort{u} \quad A \barr^{!} A' \quad B : A' \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : \comb[\Sigma][A'][B']) \rightarrow C x}
       { \comb[\Lambda][A][B][x] : (x : A') \rightarrow (y : B' x) \rightarrow (\comb[\Lambda][A'][B'][C] x y)}
@@ -1032,7 +1057,7 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
   \[
     \inferrule[Eval]
     { A : \sort{u} \quad A \barr^{!} A' \quad B : A' \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : A') \rightarrow (y : B' x) \rightarrow C x y}
-    { \comb[Eval][A][B][x] : (x : \comb[\Sigma][A][B]) \rightarrow (\comb[Eval][A'][B'][C] x)}
+    { \comb[Eval][A][B][x] : (x : \comb[\Sigma][A'][B']) \rightarrow (\comb[Eval][A'][B'][C] x)}
   \]
 \end{definition}
 
@@ -1054,7 +1079,7 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
       { \comb[*][A] : \comb[!][A'] \rightarrow A'} \qquad
       \inferrule[Map]
       { x : A \rightarrow \sort{v}}
-      { \comb[!<>][x] : \comb[!][A'] \rightarrow \sort{v}}\qquad
+      { \comb[!<>][x] : \comb[!][A] \rightarrow \sort{v}}\qquad
       \inferrule[Fmap]
       { x : (x : A) \rightarrow B x}
       { \comb[\$<>][x] : (x : \comb[!][A]) \rightarrow (\comb[!<>][B] x)}
@@ -1067,7 +1092,7 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
   \[
     \inferrule[Curry']
     { A : \sort{u} \quad A \barr^{!} A' \quad B : A' \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : \comb[!][\comb[\Sigma][A'][B']]) \rightarrow C x}
-    { \comb[!\Lambda][A][B][x] : (x : \comb[!][A']) \rightarrow (y : (\comb[!<>][B'] x)) \rightarrow (\comb[!\Lambda][A][B][C] x y)}
+    { \comb[!\Lambda][A][B][x] : (x : \comb[!][A']) \rightarrow (y : (\comb[!<>][B'] x)) \rightarrow (\comb[!\Lambda][A'][B'][C] x y)}
   \]
 \end{definition}
 
@@ -1075,8 +1100,8 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
   Pairs are as such:
   \[
     \inferrule[Pair]
-    { C \barr^{!} C' \quad x : (x : A) \rightarrow B x \quad y : (x : A) \rightarrow (y : B x) \rightarrow C' x y \quad c : (x : A) \rightarrow (y : B x) \rightarrow \sort{s}}
-    { \comb[\langle , \rangle C][x][y] : (x : \comb[!][A]) \rightarrow (\comb[\Sigma'][B][C] x)}
+    { C \barr^{!} C' \quad x : (x : A) \rightarrow B x \quad y : (x : A) \rightarrow (y : B x) \rightarrow C' x y \quad C : (x : A) \rightarrow (y : B x) \rightarrow \sort{s}}
+    { \comb[\langle , \rangle C][x][y] : (x : \comb[!][A]) \rightarrow (\comb[\Sigma'][B][C'] x)}
   \]
 \end{definition}
 
@@ -1098,7 +1123,7 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
   The affine \(\Sigma\)-former is as such:
   \[
     \inferrule[Sigma']
-    { B : A \rightarrow \sort{v} \quad B \barr^{!} B' \quad C : (x : A) \rightarrow (y : B' x) \rightarrow \sort{s} \quad C \barr^{!} C'}
+    { B : A \rightarrow \sort{v} \quad B \barr^{!} B' \quad C : (x : A) \rightarrow (y : B' x) \rightarrow \sort{s}}
     { \comb[\Sigma'][B][C] : (x : \comb[!][A]) \rightarrow \sort{\max(v, s)}}
   \]
 \end{definition}
@@ -1121,7 +1146,7 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
   \(\Sigma\)-couples are as such:
   \[
     \inferrule[Couple]
-    { x : A \quad B : A \rightarrow \sort{v} \quad B \barr^{!} B' \quad (B' x) \barr^!{!} \tau_2 \quad y : \tau_2}
+    { x : A \quad B : A \rightarrow \sort{v} \quad B \barr^{!} B' \quad (B' x) \barr^{!} \tau_2 \quad y : \tau_2}
     { \comb[,B][x][y] : \comb[\Sigma][A][B']}
   \]
 \end{definition}

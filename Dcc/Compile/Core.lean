@@ -512,7 +512,7 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
   -- we should be a nested Π such that we can capture the context ((Π A' B') Γ)
   | forallE  : (Lean.Expr.hasLooseBVar A.to_expr 0 = true ∨ Lean.Expr.hasLooseBVar B.to_expr 1 = true)
     → Abstract ⟨(DCC (! Γ)), hn_Γ₁⟩ A A' hv₁
-    → Abstract ⟨(DCC (Σ Γ A')), (.sigma hn_Γ₁.bang₀ hv₁)⟩ B B' hv₂
+    → Abstract ⟨(DCC (! (Σ Γ A'))), (.bang (.sigma hn_Γ₁.bang₀ hv₁))⟩ B B' hv₂
     → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.forallE A B) (DCC (Π A' (!Λ Γ A' B'))) (.points₂ (by point_arity) hv₁ (.points₃ (by point_arity) hn_Γ₁.bang₀.is_value hv₁ hv₂))
   -- For arrows. Dom and cod don't depend, so make an arrow
   | forallE' : (Lean.Expr.hasLooseBVar A.to_expr 0 = false ∧ Lean.Expr.hasLooseBVar B.to_expr 1 = false)
@@ -522,7 +522,7 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → (B' (& ∗)) →ᵦ B''
     → (hv₃ : Value A'')
     → (hv₄ : Value B'')
-    → Abstract Γ (.forallE A B) (DCC (→ A'' B'')) (.pi (.points₂ (by point_arity) .top hv₃) (.points₂ (by point_arity) .top (.points₂ (by point_arity) hv₃ hv₄)) .tintro)
+    → Abstract Γ (.forallE A B) (DCC (`#(Γ.1) (→ A'' B''))) (.points₂ (by point_arity) Γ.2.is_value (.pi (.points₂ (by point_arity) .top hv₃) (.points₂ (by point_arity) .top (.points₂ (by point_arity) hv₃ hv₄)) .tintro))
   | app      : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ M M' hv₁
     → Abstract ⟨Γ, hn_Γ₁.bang₀⟩ N N' hv₂
     → Judge M' (DCC ((Π B₁ C₁) x₁))
@@ -732,7 +732,7 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
       match Γ with
       | ⟨DCC (! Γ), hn_Γ⟩ =>
         let ⟨A', hv₁, h₁⟩ ← (seek_to A ⟨(DCC (! Γ)), hn_Γ⟩ (Ctx.abstract ⟨(DCC (! Γ)), hn_Γ⟩ A))
-        let ⟨B', hv₂, h₂⟩ ← (seek_to B ⟨(DCC (Σ Γ A')), (.sigma hn_Γ.bang₀ hv₁)⟩ (Ctx.abstract ⟨(DCC (Σ Γ A')), (.sigma hn_Γ.bang₀ hv₁)⟩ B))
+        let ⟨B', hv₂, h₂⟩ ← (seek_to B ⟨(DCC (! (Σ Γ A'))), (.bang (.sigma hn_Γ.bang₀ hv₁))⟩ (Ctx.abstract ⟨(DCC (! (Σ Γ A'))), (.bang (.sigma hn_Γ.bang₀ hv₁))⟩ B))
         return ⟨_, _, .forallE heq₂ h₁ h₂⟩
       | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
   | .app x y =>

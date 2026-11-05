@@ -46,6 +46,8 @@
 \newtheorem{example}{Example}
 \addbibresource{./refs.bib}
 
+\newcommand{\shared}{\text{Shared}\ }
+\newcommand{\share}{\text{share}\ }
 \newcommand{\val}{\text{Val}}
 \newcommand{\ctx}{\text{Ctx}}
 \newcommand{\dcc}{\(\text{DCC}\)}
@@ -1095,7 +1097,7 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
   \]
 \end{definition}
 
-\begin{definition}
+\begin{definition}\label{def:pairred}
   Pairs are as such:
   \[
     \inferrule[Pair]
@@ -1411,7 +1413,8 @@ We are most concerned with compiling the subset of Lean with \(\forall\), \(\lam
     \begin{aligned}
       L_c &\subset L & \{ n \in \mathbb{N} \mid \text{\(n\) is a variable}\} &\subset L\\
       \{ (M N) \mid M, N \in L \} &\subset L & \{ \lambda x : A.M \mid A, M \in L \} &\subset L\\
-      \{ \forall x : A.B \mid A, B \in L\} &\subset L & \{ \sum_{x : A} B(x) \mid A, B \in L \} &\subset L
+      \{ \forall x : A.B \mid A, B \in L\} &\subset L & \left\{ \sum_{x : A} B(x) \mid A, B \in L \right\} &\subset L\\
+      \{ \shared A \mid A \in L \} &\subset L & \{ \share A x \mid A, x \in L \} &\subset L\\
     \end{aligned}
     \begin{gathered}
       \{ \langle x, y \rangle \mid x, y \in L\} \subset L
@@ -1423,8 +1426,7 @@ We are most concerned with compiling the subset of Lean with \(\forall\), \(\lam
   We write the set of contexts tracked in compilation and introduced by binders as \(\ctx\):
   \[
     \begin{gathered}
-      \{ \comb[\Sigma][A][B] \in E \mid A \in \ctx, B \in \val\} \subset \ctx \qquad \{ \comb[!][A] \in E \mid A \in \ctx\} \subset \ctx\\
-      \mathbb{1} \in \ctx
+      \mathbb{1} \in \ctx \qquad \{ \comb[\Sigma][A][B] \in E \mid A \in \ctx, B \in \val\} \subset \ctx \qquad \{ \comb[!][A] \in E \mid A \in \ctx\} \subset \ctx
     \end{gathered}
   \]
 \end{definition}
@@ -1434,50 +1436,87 @@ Compilation is distinct at the top level and under binders (\(\lambda\), \(\fora
 \begin{definition}
   Variable abstraction is as such:
   \[
-    \begin{aligned}
+    \begin{gathered}
       \inferrule
       { }
-      { \llb n \rrb_\mathbb{1} \coloneq \comb[Id][\mathbb{1}]} &
+      { \llb n \rrb_\mathbb{1} \coloneq \comb[Id][\mathbb{1}]} \qquad
       \inferrule
       { \llb n \rrb_\Gamma = n'}
-      { \llb n \rrb_\mathbb{\comb[!][\Gamma]} \coloneq \comb[\circ][n'][\comb[*][\Gamma]]}\\
+      { \llb n \rrb_{\comb[!][\Gamma]} \coloneq \comb[\circ][n'][\comb[*][\Gamma]]}\\
       \inferrule
       { }
-      { \llb 0 \rrb_\Gamma \coloneq \comb[Snd][\Gamma]} &
+      { \llb 0 \rrb_\Gamma \coloneq \comb[Snd][\Gamma]} \qquad
       \inferrule
       { \llb n \rrb_\Gamma = n'}
       { \llb n + 1 \rrb_{\comb[\Sigma][\Gamma][\Delta]} \coloneq \comb[\circ][n'][\comb[Fst][\Delta]]}                                                    
-    \end{aligned}
+    \end{gathered}
   \]
 \end{definition}
 
 \begin{definition}
   Constant abstraction is as such:
   \[
-    \begin{aligned}
+    \begin{gathered}
       \inferrule
       { }
-      { \llb \top \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{1}]} &
+      { \llb \top \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{1}]} \qquad
       \inferrule
       { }
       { \llb \ast \rrb_\Gamma \coloneq \comb[`\Gamma][\ast]}\\
       \inferrule
       { }
-      { \llb \bot \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{0}]} &
+      { \llb \bot \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{0}]} \qquad
       \inferrule
       { }
       { \llb \mathbb{2} \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{2}]}\\
       \inferrule
       { }
-      { \llb \mathbb{1}_\mathbb{2} \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{1}_\mathbb{2}]} &
+      { \llb \mathbb{1}_\mathbb{2} \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{1}_\mathbb{2}]} \qquad
       \inferrule
       { }
-      { \llb \mathbb{0}_\mathbb{2} \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{0}_\mathbb{2}]}
-    \end{aligned}
-    \begin{gathered}
+      { \llb \mathbb{0}_\mathbb{2} \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{0}_\mathbb{2}]}\\
       \inferrule
       { }
       { \llb \sort{u} \rrb_\Gamma \coloneq \comb[`\Gamma][\sort{u}]}
+    \end{gathered}
+  \]
+\end{definition}
+
+\(\lambda\)-terms are always abstracted with \(!\Lambda\), since we assume the context is always of the form \(\comb[!][\Gamma] \in \ctx\). \(\forall\)-abstraction distinguishes between \(\forall\)-types which depend on the context and those which do not (i.e., if \(A\) or \(B\) does not depend on the context in \(\forall A, B\)). In case a \(\forall\)-type is nondependent, it is abstracted as a constant arrow discarding the context as in~\ref{def:arrowsimple}. \(\Sigma\)-terms also assume the context is shared, since \(A\) and \(B\) may depend on the context in \(\sum_{x : A} B(x)\) and are compiled to a \(\Sigma'\) type former which duplicates the context across the compilations of \(A\) and \(B\).
+
+\begin{definition}
+  Binder abstraction is as such:
+  \[
+    \begin{gathered}
+      \inferrule
+      { \llb A \rrb_\Gamma = A' \quad \llb M \rrb_{\comb[!][\comb[\Sigma][\Gamma][A']]} = M'}
+      { \llb \lambda x : (\shared A).M \rrb_{\comb[!][\Gamma]} \coloneq \comb[!\Lambda][\Gamma][A'][M']}\\
+      \inferrule
+      { \text{\(A\) or \(B\) contain free variables} \quad \llb A \rrb_{\comb[!][\Gamma]} = A' \quad \llb B \rrb_{\comb[!][\comb[\Sigma][\Gamma][A']]} = B'}
+      { \llb \forall x : A, B \rrb_{\comb[!][\Gamma]} \coloneq \comb[\Pi][A'][\comb[!\Lambda][\Gamma][A'][B']]}\\
+      \inferrule
+      { \text{neither \(A\) nor \(B\) contain free variables} \quad \llb A \rrb_{\comb[!][\mathbb{1}]} = A' \quad \llb B \rrb_{\comb[!][\mathbb{1}]} = B'}
+      { \llb \forall x : A, B \rrb_{\Gamma} \coloneq \comb[`\Gamma][\comb[\rightarrow][A'][B']]}\\
+      \inferrule
+      { \llb A \rrb_\Gamma = A' \quad \llb B \rrb_{\comb[\Sigma][\Gamma][A']} = B'}
+      { \llb \sum_{x : A} B(x) \rrb_{\comb[!][\Gamma]} \coloneq \comb[\Sigma'][A'][B']}
+    \end{gathered}
+  \]
+  where \(\rightarrow\) denotes the DCC arrow expansion as in~\ref{def:arrowsimple}.
+\end{definition}
+
+Applications and \(\Sigma\)-terms under binders duplicate the context across their constituent components (\(M\) and \(N\) in \((M N) \in L\) and \(x\) and \(y\) in \(\langle x, y \rangle \in L\)). So, they are abstracted with the pair combinator~\ref{def:pairred}, assuming the context is of the form \(\comb[!][\Gamma] \in \ctx\). Applications \((M N) \in L\) are abstracted by composing the evaluation combinator on \(M'\) with duplication of the context \(x : \Gamma\) via the pair combinator to yield \(\comb[Eval][A][B][M'] (\comb[,B_2][x][(N' x)]) \barr (M' x (N' x))\).
+
+\begin{definition}
+  Values are abstracted as such:
+  \[
+    \begin{gathered}
+      \inferrule
+      { \llb x \rrb_\Gamma = x', x' : (\comb[\Pi][B_1][C_1] x_1) \quad \llb y \rrb_\Gamma = y', y' : (\comb[\Pi][B_1][C_1] x_1) \quad \comb[\circ][y'][\comb[Fst][(C_1 x_1)]] : (x : A) \rightarrow (y : B x) \rightarrow C x y}
+      { \llb \langle x, y \rangle_{\comb[!][\gamma]} \coloneq \comb[\langle,\rangle C_3][x'][\comb[\Lambda][(B_1 x_1)][(C_1 x_1)][\comb[\circ][y'][\comb[Fst][(C_1 x_1)]]]]} \\
+      \inferrule
+      { \llb M \rrb_\Gamma = M', M' : (\comb[\Pi][B_1][C_1] x_1) \quad \llb N \rrb_\Gamma = N', N' : (\comb[\Pi][B_2][C_2] x_2) \quad \comb[\circ][N'][\comb[Fst][\comb[`\Gamma][\Gamma]]] : (x : A) \rightarrow (y : B x) \rightarrow C x y}
+      { \llb (M N) \rrb_{\comb[!][\Gamma]} \coloneq \comb[\circ][\comb[Eval][(B_1 x_1)][(C_2 x_2)][M']][\comb[\Lambda][\Gamma][\comb[`\Gamma][\Gamma]][\comb[\circ][N'][\comb[Fst][\comb[`\Gamma][\Gamma]]]]]}
     \end{gathered}
   \]
 \end{definition}

@@ -1167,16 +1167,16 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
 
 \subsection{Type-Checking is Decidable}\label{decidable}
 
-Our inference rules do not assume the existence of a catch-all conversion rule. Instead, inferred types are reduced to normal form in each rule individually, and definitional equality of terms \(A, B \in E\) is checked by comparing the normal-form reducts given by \(reduce\). This enables decidable type-checking. We have implemented a type-checker on a deep embedding of DCC in Lean 4, and have shown that it is judgmentally complete, making type-checking decidable.
+Our inference rules do not assume the existence of a catch-all conversion rule. Instead, inferred types are reduced to normal form in each rule individually, and definitional equality of terms is checked by comparing their normal-form reducts given by \(reduce\). This enables decidable type-checking. We have implemented a type-checker on a deep embedding of DCC in Lean 4, and have shown that it to be judgmentally complete, making type-checking decidable.
 
-The source code of the type-checker is available in the Appendix~\ref{appendix:sup}. Of note, judgments carry computational content and live in \(\textbf{Type}\), rather than \(\textbf{Prop}\): \(\text{Judge} : E \rightarrow E \rightarrow Type\). The \href{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Judge3.lean#L599}{type-checker} is total and equipped with soundness: \(\text{infer} : (e : E) \rightarrow \text{Except}\ (\text{TypeError}\ e) (\Sigma' (t : E), \text{Judge}\ e\ t)\). Judgmental completeness is provable from the fact that all the inference rules are mutually exclusive, and there is no catch-all conversion.
+The source code of the type-checker is available in the Appendix~\ref{appendix:sup}. Of note, judgments carry computational content and live in \(\textbf{Type}\), rather than \(\textbf{Prop}\): \(\text{Judge} : E \rightarrow E \rightarrow Type\). The \href{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Judge3.lean#L599}{type-checker} is total and equipped with soundness: \(\text{infer} : (e : E) \rightarrow \text{Except}\ (\text{TypeError}\ e) (\Sigma' (\tau : E), \text{Judge}\ e\ \tau)\). Judgmental completeness is provable from the fact that all the inference rules are mutually exclusive, and there is no catch-all conversion.
 
 \begin{theorem}\label{thm:judgecomplete}
-  Judgmental completeness: If \(e, \tau \in E\) and \(h \vdash e : \tau\), then \(\text{infer} e = ok \langle \tau, h \rangle\).
+  Judgmental completeness: If \(e, \tau \in E\) and \(h \vdash e : \tau\), then \(\text{infer}\ e = ok \langle \tau, h \rangle\).
 \end{theorem}
 
 \begin{proof}
-  By induction on the typing derivation \(h\). Cases are mutually exclusive, so the proof is reduced to checking that each branch implies that its corresponding branch in \(\text{infer}\) is \(ok\). In each case, if a definitional equality is supposed by \(h\), such that \(h_{eq} \vdash A \equiv B\) where \(A, B \in E\), then there exists \(C \in E\) and \(h_{eq,1} \vdash A \barr^{!} C\) and \(h_{eq,2} \vdash B \barr^{!} C\). So, by completeness of \(\beta\)-reduction with respect to normal forms \ref{thm:reducecomplete}, \(reduce A = \langle C, h_{eq,1} \rangle = \langle C, h_{eq,2} \rangle = reduce B\). Hence, \(A \equiv B\) in \(infer A\) as well, in each case.
+  By induction on the typing derivation \(h\). Cases are mutually exclusive and we have soundness, so the proof is reduced to checking that each branch implies that its corresponding branch in \(\text{infer}\) is \(ok\). In each case, if a definitional equality is supposed by \(h\), such that \(A \equiv B\) for some \(A, B \in E\), then there exists \(C \in E\) and \(h_{eq,1} \vdash A \barr^{!} C\) and \(h_{eq,2} \vdash B \barr^{!} C\). So, by completeness of \(\beta\)-reduction with respect to normal forms \ref{thm:reducecomplete}, \(reduce (\barr) A = \langle C, h_{eq,1} \rangle = \langle C, h_{eq,2} \rangle = reduce (\barr) B\). Hence, the corresponding equality check in \(\infer\ e\) passes, and so in each case \(infer\ e = ok\ \langle \tau, h \rangle\).
 
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L135}{Expr.Judge.complete}
 \end{proof}
@@ -1186,7 +1186,7 @@ The source code of the type-checker is available in the Appendix~\ref{appendix:s
 \end{theorem}
 
 \begin{proof}
-  If \(h_1 \vdash e : \tau_1\) and \(h_2 \vdash e : \tau_2\), then by judgmental completeness \ref{thm:judgecomplete}, \(infer e = ok \langle \tau_1, h_1 \rangle = infer e = ok \langle \tau_2, h_2 \rangle\), so \(\tau_1 = \tau_2\).
+  If \(h_1 \vdash e : \tau_1\) and \(h_2 \vdash e : \tau_2\), then by judgmental completeness \ref{thm:judgecomplete}, \(infer\ e = ok\ \langle \tau_1, h_1 \rangle = infer\ e = ok\ \langle \tau_2, h_2 \rangle\), so \(\tau_1 = \tau_2\).
 
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L138}{Expr.Judge.unique}
 \end{proof}
@@ -1196,9 +1196,9 @@ The source code of the type-checker is available in the Appendix~\ref{appendix:s
 \end{theorem}
 
 \begin{proof}
-  We proceed by induction on the typing derivation \(h\):
+  We proceed by induction on the term \(e\):
   \begin{description}
-    \item[\(e \in E_c\):] If \(e\) is a constant, then \(\tau\) is one of \(\{\sort{u + 1}, \sort{0}, \mathbb{0}, \mathbb{1}, \mathbb{2}\}\), in which case \(\tau\) is \(\beta\)-normal.
+    \item[\(e\) is a constant:] If \(e \in E_c\), then \(\tau\) is one of \(\{\sort{u + 1}, \sort{0}, \mathbb{0}, \mathbb{1}, \mathbb{2}\}\), in which case \(\tau\) is \(\beta\)-normal.
     \item[\(e = (c\ x_0 \ldots x_n)\), where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\):] If \(e\) is a combinator, then any point mentioned in its type \(\tau\) has been reduced to \(\beta\)-normal form, or was inferred from the type of a point, in which case it is in \(\beta\)-normal form by the inductive hypothesis. And, if \(e\) is a combinator, it is either a function, a type former, or a boxed term:
       \begin{description}
         \item[\(e\) is a function:] Then \(\tau\) is of the form \((\comb[\Pi][B][C] x)\), where \(B\), \(C\), and \(x\) are in \(\beta\)-normal form due to the above reasoning.

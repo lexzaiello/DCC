@@ -128,72 +128,8 @@
 \maketitle
 
 \begin{abstract}
-  \textit{TODO}
+  We present the Dependent Combinator Calculus (DCC): an extension of the simply-typed categorical combinators \autocite{CURIEN1986188} to affine logic and dependent types. DCC has computable extensional equality reflection and decidable type-checking. The calculus is combinatory and has no contexts and no variables. It is similar in expressivity to the Calculus of Constructions on the \(\lambda\)-cube. We demonstrate that the calculus is consistent and strongly normalizing, in addition to the fundamental theorem: equality reflection. We elucidate that computable equality reflection and decidable type-checking can coincide in affine combinatory dependent type theory, and present DCC as evidence. We also present a procedure for compiling the subset of Lean 4 that maps to the base Calculus of Constructions to the calculus. DCC is formalized fully in the Lean 4 proof assistant.
 \end{abstract}
-
-\section{TODO}
-
-Should be structured around building up to the fundamental theorem: extensional equality reflection.
-
-\begin{itemize}
-  \item \sout{Update results section}
-   \begin{itemize}
-      \item \sout{It should be emphasized that equality reflection and other metatheorems (e.g., subject-reduction, progress) are computable definitions, rather than theorems in \(\textbf{Prop}\).}
-   \end{itemize}
-  \item DCC broad overview for introduction section
-  \item \sout{Syntax}
-    \begin{itemize}
-      \item \sout{Give a presentation in BNF notation}
-    \end{itemize}
-  \item Conversion rules
-  \begin{itemize}
-    \item \sout{Emphasize that we use call by value operational semantics as usual}
-    \item \sout{Explain how \(Eval\) is essentially the recursor for \(\Sigma\)}
-    \item \sout{Congruences}
-    \begin{itemize}
-      \item \sout{Explain combinator points, maybe do this in syntax section though}
-    \end{itemize}
-    \item \sout{\textbf{Proof}: Termination by decreasing syntactic size}
-    \begin{itemize}
-      \item \sout{Sizes should be somewhat justified, rather than the random values found in the formalization}
-    \end{itemize}
-    \item \sout{\textbf{Proof}: Local confluence}
-    \item \sout{\textbf{Proof}: Confluence by newmann's lemma}
-    \item \sout{\textbf{Algorithm}: Reduction}
-    \item \sout{\textbf{Proof}: Completeness of reduction}
-    \item \sout{\textbf{Definition}: Definitional equality}
-    \item \sout{\textbf{Proof}: Decidability of \(\beta\)-equality}
-  \end{itemize}
-  \item \sout{Inference rules}
-    \begin{itemize}
-      \item \sout{Explain how \(\Pi\) indexes an environment, similarly to \(\Lambda\) among others}
-      \item \sout{Must explain arrows, different kinds of arrows, inductives used for representing arrow types. \textit{This can be done through a rule in the main inference rules diagram}.}
-      \item \sout{Constant inference rules}
-      \item \sout{Example of type-checking derivation}
-      \item \sout{Inference rules should be given first as a full page diagram, and then justified for some in particular (\textit{which ones?})}
-      \item \sout{Judgmental completeness and related theorems}
-    \end{itemize}
-  \item \sout{Extensional equality reflection proof --- \textit{note: this requires subject reduction and progress}}
-  \begin{itemize}
-    \item \sout{\textbf{Proof}: Decidability}
-    \item \sout{\textbf{Proof}: Subject-reduction lemma}
-    \item \sout{\textbf{Proof}: Progress theorem}
-      \begin{itemize}
-        \item \sout{Canonical values should be justified}
-        \item \sout{Emphasize that the rule for \(\bot{}.Rec\) is not for \(\bot\), but partial application of its recursor}
-        \item \sout{\textbf{Proof}: Inversion lemmas}
-        \item \sout{\textbf{Proof}: \(\bot\) is not inhabited by any values}
-        \end{itemize}
-     \item \sout{\textbf{Proof}: Bonus --- consistency proof}
-     \item \sout{\textbf{Proof}: Equality reflection for values}
-     \item \sout{\textbf{Proof}: Equality reflection by progress + preservation}
-  \end{itemize}
-  \item \sout{Justification of affine combinator rules}
-  \item Some examples
-  \item Compilation from Lean 4 (calculus of constructions subset) to DCC
-  \item Comparison to SK combinators and prior approaches
-  \item \textit{Last}: conclusion, somewhere in there --- In this paper, we present DCC:\@a dependent combinatory type theory based on affine logic. We demonstrate that it is provably a counter-example to the well-known fact that type-checking is undecidable in extensional type theory (\textit{how well-known?}).
-\end{itemize}
 
 \section{Introduction}
 
@@ -254,24 +190,7 @@ Cartesian-closed categories are known to be a categorical semantics for the \(\l
   \item De Bruijn indices correspond to binary projection in \ccc{} (or ``couple'' projection in \ccl) where \(\cc{0} \coloneq Snd\) and \(\cc{n + 1} \coloneq \cc{n} \circ Fst\).
   \item Currying in \ccc{} corresponds to the \(\Lambda\) combinator in \ccl{} \autocite[p. 176][line 5]{cmachine}, such that \(\cc{\lambda . M} \coloneq \Lambda(\cc{M})\).
   \item Evaluation in \ccc{} corresponds to the \(App\) combinator in \ccl, such that \(\cc{M N} \coloneq \comp{App}{\pair{\cc{M}, \cc{N}}}\).
-  %\item The terminal object \(\mathbbm{1}\) corresponds to an empty couple environment in \ccl{}, such that the first top-level application in a \(\lambda\)-expression is compiled as: \(\cc{(\lambda . M) x} \coloneq \cc{\lambda . M} () \cc{x}\).
 \end{itemize}
-
-% MOVED THIS ABOVE: Due to this correspondence, \(\lambda\)-calculus can be compiled to \ccl. De Bruijn index \(0\) corresponds to \(Snd\) projection where \(\cc{0} \coloneq Snd\). The De Bruijn successor \(n + 1\) corresponds to composition with \(Fst\) projection such that \(\cc{n + 1} \coloneq \cc{n} \circ Fst\). \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine} where \(\cc{\lambda . M} \coloneq \Lambda(\cc{M})\). Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing where \(\cc{M N} \coloneq App \circ \la \cc{M}, \cc{N} \ra\).
-
-% inlnie or in block? \begin{gather*}
-% inlnie or in block?   \cc{0} \coloneq Snd \qquad
-% inlnie or in block?   \cc{n + 1} \coloneq \cc{n} \circ Fst
-% inlnie or in block? \end{gather*}
-
-% inline or in block? \(\lambda\)-abstraction corresponds to currying \autocite[p. 176][line 5]{cmachine}:
-% inline or in block? \begin{equation*}
-% inline or in block?   \cc{\lambda . M} \coloneq \Lambda(\cc{M})
-% inline or in block? \end{equation*}
-% inline or in block? Finally, application under \(\lambda\)-binders corresponds to evaluation composed with pairing:
-% inline or in block? \begin{equation*}
-% inline or in block?   \cc{M N} \coloneq \comp{App}{\pair{\cc{M}, \cc{N}}}
-% inline or in block? \end{equation*}
 
 The correspondence between \ccl{} and the De Bruijn-indexed \(\lambda\)-calculus makes them a more intuitive compilation target compared to \sk{}, producing more legible terms. To illustrate, we contrast the compilation of church numerals zero and one from \(\lambda\)-calculus with De Bruijn indices to \ccl{} and \sk{}:
 
@@ -373,9 +292,9 @@ Affine logic refers to any logic where duplication (``contraction'') is restrict
 \end{gather*}
 Weakning is retained in affine logic. Most importantly, affine logic forms a decidable fragment of first-order logic \cite{ketonen1984decidable}.
 
-\subsection{The Dependent Combinator Calculus}\label{intro:dcc}
+\section{The Dependent Combinator Calculus}\label{intro:dcc}
 
-\textit{TODO later after main sections done}
+The Dependent Combinator Calculus (DCC) is a dependent type theory where types are terms which has no contexts and no variables (it is combinatory). It is based on an extension of the simply-typed categorical combinators to dependent types. DCC uses affine logic, meaning term duplication is restricted in such a way that all programs are provably terminating by syntactic size, even if they are not well-typed. We use this fact to show that DCC is strongly-normalizing, has decidable type-checking, is consistent, and that equality reflection holds as a computable metatheoretic definition.
 
 \section{Term Syntax}
 
@@ -427,7 +346,7 @@ The base objects are a modified superset of the base terms in \cclk{}. Products 
 
 \section{Conversion Rules}\label{sec:convrules}
 
-Conversion uses call-by-value operational semantics and is a modified superset of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms. We do not have a recursor for equality, since DCC is extensional (\textit{TODO:\@reference later section}) and propositional equality coincides with definitional equality, so it is not necessary. When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduction, \(A \barr^{*} B\) to denote star-step \(\beta\)-reduction, and \(A \barr^{!} B\) to denote \(\beta\)-reduction to a normal form.
+Conversion uses call-by-value operational semantics and is a modified superset of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms. We do not have a recursor for equality, since DCC is extensional~\ref{extensional} and propositional equality coincides with definitional equality, so it is not necessary. When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduction, \(A \barr^{*} B\) to denote star-step \(\beta\)-reduction, and \(A \barr^{!} B\) to denote \(\beta\)-reduction to a normal form.
 
 \begin{definition}\label{conv:idquotcomp}
   The identity, quotation, and composition are the same as in \cclk{}:
@@ -1611,13 +1530,25 @@ Compilation at the top-level differs from abstraction in that the context is emp
 
 \section{Examples}
 
+Several examples of type-checking are available in the \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Examples3.lean}{DCC repository}. We have omitted the details here, since the expressions and their inferred types are quite long and not suitable for this medium. We note that DCC with \(\eta\)-reduction is capable of compiling and type-checking an application of the dependent \(K\) combinator written as the lean term:
+
+\begin{leancode}
+def K_example : Expr :=
+  dcc_compile' ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1) (Sort 0))
+\end{leancode}
+\leanlink{https://github.com/lexzaiello/DCC/blob/k-lean-comp-type-check/Dcc/Compile/Examples.lean}{Dcc.Compile.Examples}
+
 \section{Comparison to SK Combinators}
+
+Previous attempts by others at dependent combinatory type theory~\cite{altenkirch} used the \(SK\) combinator calculus. Our approach differs in that it is based on an extension of the simply-typed categorical combinators to dependent types. We believe our success in establishing dependent combinatory type theory is due to the one-to-one correspondence between Curien's categorical combinators~\cite{CURIEN1986188} and cartesian-closed categories. Our approach also differs from prior ones in that we adapted the categorical combinators to affine logic. As we have demonstrated, this combination leads to the desirable property of computable extensional equality reflection, alongside having decidable type-checking.
 
 \section{Limitations}
 
+We note that the type theory presented in this paper does not have \(\eta\)-reduction, and due to its affine nature, we have not succeeded in recovering \(W\)-types. There has been work~\cite{fu2023calculus} on establishing inductive types in linear logic, and they may be possible through a least fixedpoint operator. However, they are out of the scope of this paper. Furthermore, we note that due to our eager normalization strategy in judgments, proofs of equalities always have a type of the form \(\comb[= A][x][x]\). However, theorems about equality such as equality being symmetric are still theoretically provable, since type conversion occurs when type-checking application~\ref{defF:inferapp}.
+
 \section{Conclusion}
 
-\textit{TODO later after main sections done}
+Our formalization gives an extension of the simply-typed categorical combinators \autocite[p. 220]{CURIEN1986188} to a dependently-typed, affine setting. To this date, our presentation is the most complete development in dependent combinatory logic: we have a working type-checker written in Lean 4 with decidable type-checking, a procedure for compiling a subset of Lean 4 to that type theory, all objects are well-typed, there are no contexts and no variables, and preservation, progress, consistency, and strong normalization hold, while our type theory is similar in expressivity to the Calculus of Constructions with rsepect to the \(\lambda\)-cube. We summarize by emphasizing two properties of this type theory: by extending the categorical combinators to dependent types, we get a simple, but powerful combinatory dependent type theory which feelsl categorically canonical; and by restricting that type theory to affine logic, we gain computable extensional equality reflection as a definition, rather than a theorem in \(\textbf{Prop}\), while having decidable type-checking (a property which is known to be close to impossible to achieve).
 
 \appendix
 \section{Supplementary Materials}\label{appendix:sup}

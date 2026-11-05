@@ -1398,9 +1398,9 @@ We are most concerned with compiling the subset of Lean with \(\forall\), \(\lam
 \begin{definition}
   We denote \(L_c\) as the set of compilation candidate constant Lean terms (where \(\top\) denotes the Lean term \(True\), \(\bot\) denotes the Lean term \(False\), and \(\ast\) denotes the Lean term \(True.intro\), \(\mathbb{2}\) denotes \(Bool\), and \(\mathbb{1}_{\mathbb{2}}\) denotes \(Bool.true\) and \(\mathbb{0}_{\mathbb{2}}\) denotes \(Bool.false\)):
   \[
-    \begin{align*}
+    \begin{aligned}
       L_c \coloneq \{ \top, \ast, \bot, \mathbb{2}, \mathbb{1}_\mathbb{2}, \mathbb{0}_\mathbb{2}, \sort{u} \}
-    \end{align*}
+    \end{aligned}
   \]
   where \(u \in \mathbb{N}\) (that is, we only consider concrete universes and not metavariables).
 \end{definition}
@@ -1408,24 +1408,24 @@ We are most concerned with compiling the subset of Lean with \(\forall\), \(\lam
 \begin{definition}
   We denote \(L\) as the set of candidate Lean terms:
   \[
-    \begin{align*}
+    \begin{aligned}
       L_c &\subset L & \{ n \in \mathbb{N} \mid \text{\(n\) is a variable}\} &\subset L\\
       \{ (M N) \mid M, N \in L \} &\subset L & \{ \lambda x : A.M \mid A, M \in L \} &\subset L\\
       \{ \forall x : A.B \mid A, B \in L\} &\subset L & \{ \sum_{x : A} B(x) \mid A, B \in L \} &\subset L
-    \end{align*}
-    \begin{gathered*}
+    \end{aligned}
+    \begin{gathered}
       \{ \langle x, y \rangle \mid x, y \in L\} \subset L
-    \end{gathered*}
+    \end{gathered}
   \]
 \end{definition}
 
 \begin{definition}
   We write the set of contexts tracked in compilation and introduced by binders as \(\ctx\):
   \[
-    \begin{gathered*}
+    \begin{gathered}
       \{ \comb[\Sigma][A][B] \in E \mid A \in \ctx, B \in \val\} \subset \ctx \qquad \{ \comb[!][A] \in E \mid A \in \ctx\} \subset \ctx\\
       \mathbb{1} \in \ctx
-    \end{gathered*}
+    \end{gathered}
   \]
 \end{definition}
 
@@ -1434,7 +1434,7 @@ Compilation is distinct at the top level and under binders (\(\lambda\), \(\fora
 \begin{definition}
   Variable abstraction is as such:
   \[
-    \begin{align*}
+    \begin{aligned}
       \inferrule
       { }
       { \llb n \rrb_\mathbb{1} \coloneq \comb[Id][\mathbb{1}]} &
@@ -1446,15 +1446,15 @@ Compilation is distinct at the top level and under binders (\(\lambda\), \(\fora
       { \llb 0 \rrb_\Gamma \coloneq \comb[Snd][\Gamma]} &
       \inferrule
       { \llb n \rrb_\Gamma = n'}
-      { \llb n + 1 \rrb_\comb[\Sigma][\Gamma][\Delta] \coloneq \comb[\circ][n'][\comb[Fst][\Delta]]}                                                    
-    \end{align*}
+      { \llb n + 1 \rrb_{\comb[\Sigma][\Gamma][\Delta]} \coloneq \comb[\circ][n'][\comb[Fst][\Delta]]}                                                    
+    \end{aligned}
   \]
 \end{definition}
 
 \begin{definition}
   Constant abstraction is as such:
   \[
-    \begin{align*}
+    \begin{aligned}
       \inferrule
       { }
       { \llb \top \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{1}]} &
@@ -1473,12 +1473,12 @@ Compilation is distinct at the top level and under binders (\(\lambda\), \(\fora
       \inferrule
       { }
       { \llb \mathbb{0}_\mathbb{2} \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{0}_\mathbb{2}]}
-    \end{align*}
-    \begin{gathered*}
+    \end{aligned}
+    \begin{gathered}
       \inferrule
       { }
       { \llb \sort{u} \rrb_\Gamma \coloneq \comb[`\Gamma][\sort{u}]}
-    \end{gathered*}
+    \end{gathered}
   \]
 \end{definition}
 

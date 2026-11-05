@@ -38,6 +38,7 @@ inductive Value : Expr → Type
   -- however the recursor applied to something is NOT a value, since bot is not inhabited
   | ind_bot₁    : Value motive → Value x → Value (DCC ((𝟘.Rec motive) x))
   | pi          : Value B → Value C → Value x → Value (DCC ((Π B C) x))
+deriving Repr
 
 def Value.congrFun (hv : Value (DCC (f x))) : Value f := by
   cases hv

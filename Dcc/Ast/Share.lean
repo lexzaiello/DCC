@@ -1,29 +1,29 @@
 import Dcc.Ast.Core
 
-inductive Shared.{u} (α : Sort u) : Type u where
-  | share : α → Shared α
+inductive Share.{u} (α : Sort u) : Type u where
+  | share : α → Share α
 
-def Shared.deref.{u} {α : Sort u} (s : Shared.{u} α) : α :=
+def Share.deref.{u} {α : Sort u} (s : Share.{u} α) : α :=
   match s with
   | ⟨s⟩ => s
 
-def Shared.deref'.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β x) (s : Shared.{u} α) : β s.deref :=
+def Share.deref'.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β x) (s : Share.{u} α) : β s.deref :=
   match s with
   | ⟨s⟩ => f s
 
-def Shared.map.{u, v} {α : Sort u} (f : α → Sort v) (s : Shared.{u} α) : Type v :=
+def Share.map.{u, v} {α : Sort u} (f : α → Sort v) (s : Share.{u} α) : Type v :=
   match s with
-  | ⟨s⟩ => Shared (f s)
+  | ⟨s⟩ => Share (f s)
 
-def Shared.fmap.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β x) (s : Shared.{u} α) : Shared.{v} (β s.deref) :=
+def Share.fmap.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β x) (s : Share.{u} α) : Share.{v} (β s.deref) :=
   match s with
   | ⟨s⟩ => ⟨f s⟩
 
-def Shared.unmap.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β x) (s : Shared.{u} α) : (β s.deref) :=
+def Share.unmap.{u, v} {α : Sort u} {β : α → Sort v} (f : ∀ (x : α), β x) (s : Share.{u} α) : (β s.deref) :=
   match s with
   | ⟨s⟩ => f s
 
-#check Shared.deref
+#check Share.deref
 
 #check PSigma
-#check Shared.share
+#check Share.share

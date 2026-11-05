@@ -1308,7 +1308,7 @@ The extensional equality reflection theorem holds in DCC. This is a result of de
 
 We note that equality reflection is a computable definition in DCC, rather than a theorem in \(\textbf{Prop}\). That is, it has computational content and can be used outside of proofs.
 
-\section{Compiling Lean 4 to DCC}
+\section{Compiling Lean 4 to DCC}\label{compilelean}
 
 The subset of Lean 4 that maps to the base Calculus of Constructions without equality can be compiled to DCC. We note that working examples are somewhat limited, since we refrained from equipping DCC with \(\eta\)-reduction, as it is outside of the scope of this paper and not necessary to demonstrate the fundamental theorems. However, in DCC with \(\eta\)-reduction, the dependent \(K\) combinator written as a Lean term can be compiled to DCC. We do not propose a method of encoding inductive types in DCC, as it is out of scope.
 
@@ -1544,7 +1544,7 @@ Previous attempts by others at dependent combinatory type theory~\cite{altenkirc
 
 \section{Limitations}
 
-We note that the type theory presented in this paper does not have \(\eta\)-reduction, and due to its affine nature, we have not succeeded in recovering \(W\)-types. There has been work~\cite{fu2023calculus} on establishing inductive types in linear logic, and they may be possible through a least fixedpoint operator. However, they are out of the scope of this paper. Furthermore, we note that due to our eager normalization strategy in judgments, proofs of equalities always have a type of the form \(\comb[= A][x][x]\). However, theorems about equality such as equality being symmetric are still theoretically provable, since type conversion occurs when type-checking application~\ref{defF:inferapp}.
+We note that the type theory presented in this paper does not have \(\eta\)-reduction, and due to its affine nature, we have not succeeded in recovering \(W\)-types. There has been work~\cite{fu2023calculus} on establishing inductive types in linear logic, and they may be possible through a least fixedpoint operator. However, they are out of the scope of this paper. Furthermore, we note that due to our eager normalization strategy in judgments, proofs of equalities always have a type of the form \(\comb[= A][x][x]\). However, theorems about equality such as equality being symmetric are still theoretically provable, since type conversion occurs when type-checking applications~\ref{def:inferapp}.
 
 \section{Conclusion}
 

@@ -46,6 +46,8 @@
 \newtheorem{example}{Example}
 \addbibresource{./refs.bib}
 
+\newcommand{\val}{\text{Val}}
+\newcommand{\ctx}{\text{Ctx}}
 \newcommand{\dcc}{\(\text{DCC}\)}
 \newcommand{\dccbf}{\(\textbf{DCC}\)}
 \newcommand{\dcce}{\text{DCC}}
@@ -1209,7 +1211,7 @@ The source code of the type-checker is available in the Appendix~\ref{appendix:s
 
 \subsection{Subject-Reduction, Progress, and Consistency}\label{otherthmsjudge}
 
-The subject-reduction and progress theorems hold in DCC. We show that if \(A : \tau\) and \(A \barr B\), then \(B : \tau\). We define a set of canonical values \(Val \subset E\) syntactically and show that if \(A : \tau\), then there must exist \(B\) such that \(A \barr B\) or \(A \in Val\). Using these results, we show that \(\mathbb{0}\) is uninhabited.
+The subject-reduction and progress theorems hold in DCC. We show that if \(A : \tau\) and \(A \barr B\), then \(B : \tau\). We define a set of canonical values \(\val \subset E\) syntactically and show that if \(A : \tau\), then there must exist \(B\) such that \(A \barr B\) or \(A \in \val\). Using these results, we show that \(\mathbb{0}\) is uninhabited.
 
 \begin{theorem}\label{thm:preservation}
   Preservation: If \(A, B, \tau \in E\), \(ht \vdash A : \tau\), and \(hr \vdash A \barr B\), then \(B : \tau\).
@@ -1227,21 +1229,21 @@ The subject-reduction and progress theorems hold in DCC. We show that if \(A : \
 \end{proof}
 
 \begin{definition}
-  The set of canonical values is defined to be the union of the set of constant terms \(E_c\), the set of combinators whose points are values \(\{(c\ x_0 \ldots x_n) \mid c \in C, \{x_0 \ldots x_n\} \subset Val\}\), application of the reflexivity combinator, and all possible partially applied terms:
+  The set of canonical values is defined to be the union of the set of constant terms \(E_c\), the set of combinators whose points are values \(\{(c\ x_0 \ldots x_n) \mid c \in C, \{x_0 \ldots x_n\} \subset \val\}\), application of the reflexivity combinator, and all possible partially applied terms:
   \begin{align*}
-    E_c &\subset Val & \{(c\ x_0 \ldots x_n) &\mid c \in C, \{x_0 \ldots x_n\} \subset Val\} \subset Val\\
-    \{(\comb[refl][B] \comb[\&][x]) &\mid B, x \in Val\} \subset Val & \{(\comb[Eql][B] \comb[\&][x]) &\mid B, x \in Val\} \subset Val\\
-    \{(\comb[refl][B] \comb[\&][x] \comb[\&][y]) &\mid B, x, y \in Val\} \subset Val & \{(\comb[='][B] x) &\mid B, x \in Val\} \subset Val\\
-    \{(\comb[='][B] x y) &\mid B, x, y \in Val\} \subset Val & \{(\comb[\Pi][B][C] x) &\mid B, C, x \in Val\} \subset Val\\
-    \{(\comb[\Lambda][A][B][x] y) &\mid A, B, x, y \in Val\} \subset Val & \{(\comb[!\Lambda][A][B][x] \comb[\&][y]) &\mid A, B, x, y \in Val\} \subset Val\\
-    \{(\comb[\mathbb{2}.Rec][B][x][y] z) &\mid B, x, y, z \in Val\} \subset Val & \{(\comb[\mathbb{0}.Rec][B] x) &\mid B, x \in Val\} \subset Val
+    E_c &\subset \val & \{(c\ x_0 \ldots x_n) &\mid c \in C, \{x_0 \ldots x_n\} \subset \val\} \subset \val\\
+    \{(\comb[refl][B] \comb[\&][x]) &\mid B, x \in \val\} \subset \val & \{(\comb[Eql][B] \comb[\&][x]) &\mid B, x \in \val\} \subset \val\\
+    \{(\comb[refl][B] \comb[\&][x] \comb[\&][y]) &\mid B, x, y \in \val\} \subset \val & \{(\comb[='][B] x) &\mid B, x \in \val\} \subset \val\\
+    \{(\comb[='][B] x y) &\mid B, x, y \in \val\} \subset \val & \{(\comb[\Pi][B][C] x) &\mid B, C, x \in \val\} \subset \val\\
+    \{(\comb[\Lambda][A][B][x] y) &\mid A, B, x, y \in \val\} \subset \val & \{(\comb[!\Lambda][A][B][x] \comb[\&][y]) &\mid A, B, x, y \in \val\} \subset \val\\
+    \{(\comb[\mathbb{2}.Rec][B][x][y] z) &\mid B, x, y, z \in \val\} \subset \val & \{(\comb[\mathbb{0}.Rec][B] x) &\mid B, x \in \val\} \subset \val
   \end{align*}
 
   Note that \((\comb[\mathbb{0}.Rec][B] x)\) denotes partial application of the recursor for \(\mathbb{0}\) with an environment, not an inhabitant of \(\mathbb{0}\).
 \end{definition}
 
 \begin{lemma}\label{lem:congrFunVal}
-  If \(h \vdash (f x) \in Val\), then \(f \in Val\).
+  If \(h \vdash (f x) \in \val\), then \(f \in \val\).
 \end{lemma}
 
 \begin{proof}
@@ -1251,7 +1253,7 @@ The subject-reduction and progress theorems hold in DCC. We show that if \(A : \
 \end{proof}
 
 \begin{lemma}\label{lem:congrArgVal}
-  If \(h \vdash (f x) \in Val\), then \(x \in Val\).
+  If \(h \vdash (f x) \in \val\), then \(x \in \val\).
 \end{lemma}
 
 \begin{proof}
@@ -1261,7 +1263,7 @@ The subject-reduction and progress theorems hold in DCC. We show that if \(A : \
 \end{proof}
 
 \begin{lemma}\label{lem:valnorm}
-  If \(h \vdash e \in Val\), then \(e\) is a \(\beta\)-normal form.
+  If \(h \vdash e \in \val\), then \(e\) is a \(\beta\)-normal form.
 \end{lemma}
 
 \begin{proof}
@@ -1270,10 +1272,10 @@ The subject-reduction and progress theorems hold in DCC. We show that if \(A : \
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L72}{Expr.Value.is\_norm}
 \end{proof}
 
-Progress may be established by noticing that a partially applied combinator is always a value, unless it expects a boxed argument of the form \(\comb[\&][x]\), a coupled term of the form \(\comb[,B][x][y]\), or an inhabitant of \(\mathbb{2}\). The only circumstance where a reduction gets ``stuck'' is a function is applied the appropriate number of arguments, but they are all in \(\beta\)-normal form and are not the appropriate shape. By inductive reasoning, an argument \(x\) to a function must either be a value, or must make a step. Hence, it suffices to prove inversion lemmas relating functions over bang arguments, \(\Sigma\)-arguments, and booleans to their respective value arguments in case \(x\) cannot make a step to show that \(f x_0 \ldots x_n \in Val\).
+Progress may be established by noticing that a partially applied combinator is always a value, unless it expects a boxed argument of the form \(\comb[\&][x]\), a coupled term of the form \(\comb[,B][x][y]\), or an inhabitant of \(\mathbb{2}\). The only circumstance where a reduction gets ``stuck'' is a function is applied the appropriate number of arguments, but they are all in \(\beta\)-normal form and are not the appropriate shape. By inductive reasoning, an argument \(x\) to a function must either be a value, or must make a step. Hence, it suffices to prove inversion lemmas relating functions over bang arguments, \(\Sigma\)-arguments, and booleans to their respective value arguments in case \(x\) cannot make a step to show that \(f x_0 \ldots x_n \in \val\).
 
 \begin{lemma}\label{inv:box}
-  If \(x \in Val\) and \(h \vdash x : \comb[!][A]\), then there exists \(x_0 \in A\) such that \(x = \comb[\&][x_0]\).
+  If \(x \in \val\) and \(h \vdash x : \comb[!][A]\), then there exists \(x_0 \in A\) such that \(x = \comb[\&][x_0]\).
 \end{lemma}
 
 \begin{proof}
@@ -1311,7 +1313,7 @@ Progress may be established by noticing that a partially applied combinator is a
 \end{proof}
 
 \begin{lemma}\label{inv:bot}
-  If \(ht \vdash e : \mathbb{0}\) and \(hv \vdash e \in Val\), then \(\bot\).
+  If \(ht \vdash e : \mathbb{0}\) and \(hv \vdash e \in \val\), then \(\bot\).
 \end{lemma}
 
 \begin{proof}
@@ -1320,7 +1322,7 @@ Progress may be established by noticing that a partially applied combinator is a
 \end{proof}
 
 \begin{lemma}\label{inv:sigma}
-  If \(ht \vdash e : \comb[A][B]\) and \(hv \vdash e \in Val\), then there exist \(x_0, y_0 \in E\) such that \(e = \comb[,B][x][y]\).
+  If \(ht \vdash e : \comb[A][B]\) and \(hv \vdash e \in \val\), then there exist \(x_0, y_0 \in E\) such that \(e = \comb[,B][x][y]\).
 \end{lemma}
 
 \begin{proof}
@@ -1329,7 +1331,7 @@ Progress may be established by noticing that a partially applied combinator is a
 \end{proof}
 
 \begin{lemma}\label{inv:bool}
-  If \(ht \vdash e : \mathbb{2}\) and \(hv \vdash e \in Val\), then \(e = \mathbb{1}_\mathbb{2}\) or \(e = \mathbb{0}_\mathbb{2}\).
+  If \(ht \vdash e : \mathbb{2}\) and \(hv \vdash e \in \val\), then \(e = \mathbb{1}_\mathbb{2}\) or \(e = \mathbb{0}_\mathbb{2}\).
 \end{lemma}
 
 \begin{proof}
@@ -1340,11 +1342,11 @@ Progress may be established by noticing that a partially applied combinator is a
 Using these facts about inversion, we prove progress.
 
 \begin{theorem}\label{thm:progress}
-  If \(h \vdash e : \tau\), then \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\).
+  If \(h \vdash e : \tau\), then \(e \in \val\) or there exists \(e' \in E\) such that \(e \barr e'\).
 \end{theorem}
 
 \begin{proof}
-  The proof proceeds by induction on \(h\). If \(e \in E_c\), then \(e \in Val\). If \(e = (c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(h\) demonstrates that there exist \(\tau_i\) such that \(x_i : \tau_i\) for all \(i < n\), and so each point of \(e\) is either a value, or can make a step. In case all points of \(e\) are values, \(e \in Val\). If any point can make a step, then so can \(e\) by the point rule. If \(e\) is of the form \((f x)\) where \(f, x \in E\), then \(h\) gives that \(f : (\comb[\Pi][B][C]\ env)\) for some \(B, C, env \in E\), and \(x : A\) and \((B env) \equiv A\). Furthermore, by the inductive hypothesis, both \(f\) and \(x\) must be values or able to make a step. In case either \(f\) or \(x\) can make a step, function congruence and argument congruent respectively give that \(e\) can make a step. In case both \(f\) and \(x\) are values, we perform case analysis on \(f\), and show that \((f x)\) is either a partial application of a combinator, a full application of \(refl\), or, by the established inversion lemmas, \(x\) is of the right shape such that \((f x)\) can make a head-step reduction.\\
+  The proof proceeds by induction on \(h\). If \(e \in E_c\), then \(e \in \val\). If \(e = (c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(h\) demonstrates that there exist \(\tau_i\) such that \(x_i : \tau_i\) for all \(i < n\), and so each point of \(e\) is either a value, or can make a step. In case all points of \(e\) are values, \(e \in \val\). If any point can make a step, then so can \(e\) by the point rule. If \(e\) is of the form \((f x)\) where \(f, x \in E\), then \(h\) gives that \(f : (\comb[\Pi][B][C]\ env)\) for some \(B, C, env \in E\), and \(x : A\) and \((B env) \equiv A\). Furthermore, by the inductive hypothesis, both \(f\) and \(x\) must be values or able to make a step. In case either \(f\) or \(x\) can make a step, function congruence and argument congruent respectively give that \(e\) can make a step. In case both \(f\) and \(x\) are values, we perform case analysis on \(f\), and show that \((f x)\) is either a partial application of a combinator, a full application of \(refl\), or, by the established inversion lemmas, \(x\) is of the right shape such that \((f x)\) can make a head-step reduction.\\
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L957}{Expr.Judge.progress}
 \end{proof}
 
@@ -1353,7 +1355,7 @@ Using these facts about inversion, we prove progress.
 \end{theorem}
 
 \begin{proof}
-  This fact is due to the inversion lemma on values inhabiting \(\mathbb{0}\), well-founded recursion by decreasing size under \(\barr\), progress, and preservation. Suppose \(e \in E\) such that \(h \vdash e : \mathbb{0}\). Then, by progress \ref{thm:progress}, \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in Val\), then by the value bottom inhabitance inversion lemma~\eqref{inv:bot}, a contradiction is derived. If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation \ref{thm:preservation}, \(e' : \mathbb{0}\). So, by well-founded recursion, a contradiction is derived.\\
+  This fact is due to the inversion lemma on values inhabiting \(\mathbb{0}\), well-founded recursion by decreasing size under \(\barr\), progress, and preservation. Suppose \(e \in E\) such that \(h \vdash e : \mathbb{0}\). Then, by progress \ref{thm:progress}, \(e \in \val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in \val\), then by the value bottom inhabitance inversion lemma~\eqref{inv:bot}, a contradiction is derived. If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation \ref{thm:preservation}, \(e' : \mathbb{0}\). So, by well-founded recursion, a contradiction is derived.\\
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Consistent.lean\#L7}{Expr.Judge.elim\_bot}
 \end{proof}
 
@@ -1364,11 +1366,11 @@ We note that the following theorems are proven as computable definitions, rather
 The extensional equality reflection theorem holds in DCC. This is a result of decidable type-checking and strong normalization avoiding a generalized conversion constructor. Since inferred types are always in \(\beta\)-normal form, and since \(refl\) is the canonical inhabitant of equality, \(e : \comb[= A][x][y]\) iff \(x \equiv y\). This fact is provable from progress, preservation, and well-founded recursion by strong normalization.
 
 \begin{lemma}\label{lem:ext}
-  If \(ht \vdash e : \comb[= A][x][y]\) and \(hv \vdash e \in Val\), then \(x \equiv y\).
+  If \(ht \vdash e : \comb[= A][x][y]\) and \(hv \vdash e \in \val\), then \(x \equiv y\).
 \end{lemma}
 
 \begin{proof}
-  The proof proceeds by case analysis on the typing derivation \(ht\). No inference rule can yield \(\comb[= A][x][y]\) in the consequent aside from in application. Hence, \(e\) must be of the form \((f x)\) where \(f, x \in E\) and \(f, x \in Val\). We note that \(\comb[= A][x][y]\) is not a function type. Hence, \((f x)\) cannot be a partial application of a function, but \((f x)\) is not a term with points, nor is it a constant value. So, \((f x)\) must be of the form \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\). We demonstrate this fact by inverting the typing derivation \(ht\) in each case where \(f\) is a value. We demonstrate that in every case except where \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\), \(f\) is a function whose arity is greater than one, and so \((f x)\) must be typed at \(\tau\) where \(\tau\) is of the form \((\comb[\Pi][B][C]\ env)\) where \(B, C, env \in E\), but \((\comb[\Pi][B][C]\ env) \neq \comb[= A][x][y]\) for all \(B, C, env, A, x, y \in E\).
+  The proof proceeds by case analysis on the typing derivation \(ht\). No inference rule can yield \(\comb[= A][x][y]\) in the consequent aside from in application. Hence, \(e\) must be of the form \((f x)\) where \(f, x \in E\) and \(f, x \in \val\). We note that \(\comb[= A][x][y]\) is not a function type. Hence, \((f x)\) cannot be a partial application of a function, but \((f x)\) is not a term with points, nor is it a constant value. So, \((f x)\) must be of the form \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\). We demonstrate this fact by inverting the typing derivation \(ht\) in each case where \(f\) is a value. We demonstrate that in every case except where \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\), \(f\) is a function whose arity is greater than one, and so \((f x)\) must be typed at \(\tau\) where \(\tau\) is of the form \((\comb[\Pi][B][C]\ env)\) where \(B, C, env \in E\), but \((\comb[\Pi][B][C]\ env) \neq \comb[= A][x][y]\) for all \(B, C, env, A, x, y \in E\).
 
   So, if \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\) for some \(B, x, y \in E\), then by inversion on reflexivity values \label{inv:refl}, \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\) must be typed at \(\tau\) where \((B x) \barr^{!} B'\) and \(y \barr^{!} y'\), and \(\tau = (\comb[=][B'] y' y')\). But by uniqueness of judgments \label{inv:judgeunique}, \((\comb[=][B'] y' y') = (\comb[=][A][x][y]\), so \(y' = x\) and \(y' = y\). Hence, \(x \equiv y\) by reflexivity.\\
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L9}{Expr.Value.elim\_eq}
@@ -1379,7 +1381,7 @@ The extensional equality reflection theorem holds in DCC. This is a result of de
 \end{theorem}
 
 \begin{proof}
-  This fact is provable by progress, preservation, well-founded recursion with respect to the reduct of \(e\), in case it is not a value. By progress \ref{thm:progress}, \(e \in Val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in Val\), then by the above~\ref{lem:ext}, \(x \equiv y\). If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation~\ref{thm:preservation}, \(e' : \comb[= A][x][y]\). So, by well-founded recursion, \(x \equiv y\).\\
+  This fact is provable by progress, preservation, well-founded recursion with respect to the reduct of \(e\), in case it is not a value. By progress \ref{thm:progress}, \(e \in \val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in \val\), then by the above~\ref{lem:ext}, \(x \equiv y\). If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation~\ref{thm:preservation}, \(e' : \comb[= A][x][y]\). So, by well-founded recursion, \(x \equiv y\).\\
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L122}{Expr.Judge.elim\_eq}
 \end{proof}
 
@@ -1387,7 +1389,115 @@ We note that equality reflection is a computable definition in DCC, rather than 
 
 \section{Compiling Lean 4 to DCC}
 
-The subset of Lean 4 that maps to the base Calculus of Constructions without equality can be compiled to DCC.
+The subset of Lean 4 that maps to the base Calculus of Constructions without equality can be compiled to DCC. We note that working examples are somewhat limited, since we refrained from equipping DCC with \(\eta\)-reduction, as it is outside of the scope of this paper and not necessary to demonstrate the fundamental theorems. However, in DCC with \(\eta\)-reduction, the dependent \(K\) combinator written as a Lean term can be compiled to DCC. We do not propose a method of encoding inductive types in DCC, as it is out of scope.
+
+Compilation is quite straightforward. Contexts introduced by binders during compilation are represented as \(\Sigma\) or bang \(!\) terms and the program is always initialized at the top-level with the empty context \(\comb[!][\mathbb{1}]\). Debruijn-indexed variables are compiled to composed projections, \(\lambda\)-binders are compiled to \(!\Lambda\)-terms, and \(\forall\)-terms are compiled to \(\Pi\)-terms. The only complication is DCC's affine restriction: Lean terms are preprocessed to annotate code denoting how many times a resource should be banged, and values are boxed appropriately.
+
+We are most concerned with compiling the subset of Lean with \(\forall\), \(\lambda\), sorts, booleans, top and bottom types (and their corresponding introduction rules), \(\Sigma\)-types, and \(\Sigma\)-terms.
+
+\begin{definition}
+  We denote \(L_c\) as the set of compilation candidate constant Lean terms (where \(\top\) denotes the Lean term \(True\), \(\bot\) denotes the Lean term \(False\), and \(\ast\) denotes the Lean term \(True.intro\), \(\mathbb{2}\) denotes \(Bool\), and \(\mathbb{1}_{\mathbb{2}}\) denotes \(Bool.true\) and \(\mathbb{0}_{\mathbb{2}}\) denotes \(Bool.false\)):
+  \[
+    \begin{align*}
+      L_c \coloneq \{ \top, \ast, \bot, \mathbb{2}, \mathbb{1}_\mathbb{2}, \mathbb{0}_\mathbb{2}, \sort{u} \}
+    \end{align*}
+  \]
+  where \(u \in \mathbb{N}\) (that is, we only consider concrete universes and not metavariables).
+\end{definition}
+
+\begin{definition}
+  We denote \(L\) as the set of candidate Lean terms:
+  \[
+    \begin{align*}
+      L_c &\subset L & \{ n \in \mathbb{N} \mid \text{\(n\) is a variable}\} &\subset L\\
+      \{ (M N) \mid M, N \in L \} &\subset L & \{ \lambda x : A.M \mid A, M \in L \} &\subset L\\
+      \{ \forall x : A.B \mid A, B \in L\} &\subset L & \{ \sum_{x : A} B(x) \mid A, B \in L \} &\subset L
+    \end{align*}
+    \begin{gathered*}
+      \{ \langle x, y \rangle \mid x, y \in L\} \subset L
+    \end{gathered*}
+  \]
+\end{definition}
+
+\begin{definition}
+  We write the set of contexts tracked in compilation and introduced by binders as \(\ctx\):
+  \[
+    \begin{gathered*}
+      \{ \comb[\Sigma][A][B] \in E \mid A \in \ctx, B \in \val\} \subset \ctx \qquad \{ \comb[!][A] \in E \mid A \in \ctx\} \subset \ctx\\
+      \mathbb{1} \in \ctx
+    \end{gathered*}
+  \]
+\end{definition}
+
+Compilation is distinct at the top level and under binders (\(\lambda\), \(\forall\), and \(\Sigma\)-types and terms). We write \(\llb M \rrb_\Gamma \in E\) to denote compilation of the term \(M \in L\) under a binder (abstraction). We write \(\llb M \rrb \in E\) to denote compilation of the term \(M \in L\) at the top-level when it is not under a binder. Variables are abstracted by composed projection and unboxing of banged contexts, or the identity if the context is empty. Constants are abstracted by quoting the context, or mapping the context with \(!<>\) if the constant is shared.
+
+\begin{definition}
+  Variable abstraction is as such:
+  \[
+    \begin{align*}
+      \inferrule
+      { }
+      { \llb n \rrb_\mathbb{1} \coloneq \comb[Id][\mathbb{1}]} &
+      \inferrule
+      { \llb n \rrb_\Gamma = n'}
+      { \llb n \rrb_\mathbb{\comb[!][\Gamma]} \coloneq \comb[\circ][n'][\comb[*][\Gamma]]}\\
+      \inferrule
+      { }
+      { \llb 0 \rrb_\Gamma \coloneq \comb[Snd][\Gamma]} &
+      \inferrule
+      { \llb n \rrb_\Gamma = n'}
+      { \llb n + 1 \rrb_\comb[\Sigma][\Gamma][\Delta] \coloneq \comb[\circ][n'][\comb[Fst][\Delta]]}                                                    
+    \end{align*}
+  \]
+\end{definition}
+
+\begin{definition}
+  Constant abstraction is as such:
+  \[
+    \begin{align*}
+      \inferrule
+      { }
+      { \llb \top \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{1}]} &
+      \inferrule
+      { }
+      { \llb \ast \rrb_\Gamma \coloneq \comb[`\Gamma][\ast]}\\
+      \inferrule
+      { }
+      { \llb \bot \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{0}]} &
+      \inferrule
+      { }
+      { \llb \mathbb{2} \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{2}]}\\
+      \inferrule
+      { }
+      { \llb \mathbb{1}_\mathbb{2} \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{1}_\mathbb{2}]} &
+      \inferrule
+      { }
+      { \llb \mathbb{0}_\mathbb{2} \rrb_\Gamma \coloneq \comb[`\Gamma][\mathbb{0}_\mathbb{2}]}
+    \end{align*}
+    \begin{gathered*}
+      \inferrule
+      { }
+      { \llb \sort{u} \rrb_\Gamma \coloneq \comb[`\Gamma][\sort{u}]}
+    \end{gathered*}
+  \]
+\end{definition}
+
+% end with the affine stuff
+
+\begin{comment}
+  
+  
+  How we count references
+    - DCC is affine, so we make use of a "Share" datatype defined in Lean to denote banged values (! A).
+    - Reference counts can be automatically estimated before compilation and code is annotated with Shares in a pre-processing step.
+    - The only points where the context needs to be duplicated is in application, \Sigma-types, and \Sigma-terms.
+    - We define a bound on context duplication by the total number of applications, \Sigma-types, and \Sigma-terms present under the top-most applied \(\lambda\)-expression.
+  
+  %Contexts are tracked as DCC terms
+    %- A context in compilation \(\Gamma \in \text{Ctx}\) is a compiled DCC term introduced by a binder of the form
+  Debruijn indices map to composed projection
+  Limitations without \eta
+\end{comment}
 
 \section{Examples}
 

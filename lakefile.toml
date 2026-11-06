@@ -5,23 +5,6 @@ defaultTargets = ["Dcc"]
 [[lean_lib]]
 name = "Dcc"
 
-[[lean_lib]]
-name = "Dcc2"
-
-[[require]]
-name = "verso-slides"
-git = "https://github.com/leanprover/verso-slides"
-rev = "main"
-
-[[lean_lib]]
-name = "DccSlides"
-needs = ["@Dcc/+Dcc.Ast:highlighted", "@Dcc/+Dcc.Metatheory:highlighted", "@Dcc/+Dcc.Compile:highlighted"]
-
-[[lean_exe]]
-name = "docs"
-root = "Slides"
-srcDir = "."
-
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"

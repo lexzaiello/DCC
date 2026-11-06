@@ -297,7 +297,7 @@ Affine logic refers to any logic where duplication (``contraction'') is restrict
   { \vdash A, ?B}
   { \vdash !A, ?B}
 \end{gather*}
-Weakning is retained in affine logic. Most importantly, affine logic forms a decidable fragment of first-order logic \cite{ketonen1984decidable}.
+Weakening is retained in affine logic. Most importantly, affine logic forms a decidable fragment of first-order logic \cite{ketonen1984decidable}.
 
 \section{The Dependent Combinator Calculus}\label{intro:dcc}
 
@@ -305,7 +305,7 @@ The Dependent Combinator Calculus (DCC) is a dependent type theory where types a
 
 \section{Term Syntax}
 
-The base objects are a modified superset of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), an equality type along its type formers is added, sorts are added, and bottom, top, and boolean types are added with the corresponding introducing terms. The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
+The base objects are a modified super-set of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), an equality type along its type formers is added, sorts are added, and bottom, top, and boolean types are added with the corresponding introducing terms. The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
 
 \begin{definition}\label{def:constants}
   Constants (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)) type and its inhabitant (\(\ast\)), the boolean type (\(\mathbb{2}\)) along with its inhabitants \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\), and an opaque ``hole'' term used internally in type-checking:
@@ -353,7 +353,7 @@ The base objects are a modified superset of the base terms in \cclk{}. Products 
 
 \section{Conversion Rules}\label{sec:convrules}
 
-Conversion uses call-by-value operational semantics and is a modified superset of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms. We do not have a recursor for equality, since DCC is extensional~\ref{extensional} and propositional equality coincides with definitional equality, so it is not necessary.
+Conversion uses call-by-value operational semantics and is a modified super-set of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms. We do not have a recursor for equality, since DCC is extensional~\ref{extensional} and propositional equality coincides with definitional equality, so it is not necessary.
 
 When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduction, \(A \barr^{*} B\) to denote star-step \(\beta\)-reduction, and \(A \barr^{!} B\) to denote \(\beta\)-reduction to a normal form.
 
@@ -655,7 +655,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 
     If \(i = j\), then \(x_i \barr x'_i\) and \(x_i \barr x''_i\), so by the inductive hypothesis, there exists \(y_i\) such that \(x'_i \barr^{*} y_i\) and \(x''_i \barr^{*} y_i\). So, by~\ref{lem:pointstar}, \((c\ x'_0 \ldots x'_n) \barr^{*} (c\ y_0 \ldots y_n)\) and \((c\ x''_0 \ldots x''_n) \barr^{*} (c\ y_0 \ldots y_n)\).
 
-    If \(i \neq j\), then \((c\ x'_0 \ldots x'_n)\) and \((c\ x''_0 \ldots x''_n)\) shares all points besides \(x'_i\) and \(x''_j\). So, their common reduct is \((c\ y_0 \ldots y_n)\), where \(y_i = x'_i\) and \(y_j = i''_j\). And, \((c\ x'_0 \ldots x'_n) \barr^{*} (c\ y_0 \ldots y_n)\) and \((c\ x''_0 \ldots x''_n) \barr^{*} (c\ y_0 \ldots y_n)\) by transitivty of the point rule.
+    If \(i \neq j\), then \((c\ x'_0 \ldots x'_n)\) and \((c\ x''_0 \ldots x''_n)\) shares all points besides \(x'_i\) and \(x''_j\). So, their common reduct is \((c\ y_0 \ldots y_n)\), where \(y_i = x'_i\) and \(y_j = i''_j\). And, \((c\ x'_0 \ldots x'_n) \barr^{*} (c\ y_0 \ldots y_n)\) and \((c\ x''_0 \ldots x''_n) \barr^{*} (c\ y_0 \ldots y_n)\) by transitivity of the point rule.
   \item[\(A = (f x)\) and \((f x)\) can make a head step:] Let \(A'\) denote the head reduct of \((f x)\) and let \(c \in C\) denote the spine of \(f\) (that is, the leftmost combinator which would trigger a head reduction). Then, either \(A' = B = C\), in which case \(B \barr^{*} C\) and \(C \barr^{*} C\) by reflexivity, or \(A' \neq B\) or \(A' \neq C\) (that is, either \(A \barr B\) or \(A \barr C\) are given by congruences).\\
 
         If \(A \barr B\) or \(B \barr C\) are given by congruences, then there exist \(e \in E\) which is a sub-expression contained in \(A\) such that there exists \(e' \in E\) where \(e \barr e'\) and \(e\) is the atomic term reduced by the congruences \(A \barr B\) or \(A \barr C\). And, since \(A \barr B\) or \(A \barr C\) are congruences rather than head-reductions, \(e'\) must be a sub-expression of \(B\) or \(C\).\\
@@ -910,7 +910,7 @@ Using our reduction function with soundness and completeness, we can decide \(\b
 
 \section{Inference Rules}\label{sec:inferrules}
 
-DCC has decidable type-checking, dependent types, and uses affine logic. Every primitive object is well-typed, function types are quite legible, and explicit universe levels do not need to be specified (except in literal \(\sort{u}\) terms). DCC achieves decidable type-checking by eagerly \(\beta\)-reducing all inferred types to canonical, normal form, and by definining definitional equality as \(\beta\)-equality. DCC achieves legible types and universe inference by encoding dependent type arguments as points of the respective combinator which index an applied environment argument, rather than by supplying type arguments as arguments themselves (resembling Martin L\"of's notion of a Tarski universe \autocite[p. 88]{martin1984intuitionistic}).
+DCC has decidable type-checking, dependent types, and uses affine logic. Every primitive object is well-typed, function types are quite legible, and explicit universe levels do not need to be specified (except in literal \(\sort{u}\) terms). DCC achieves decidable type-checking by eagerly \(\beta\)-reducing all inferred types to canonical, normal form, and by defining definitional equality as \(\beta\)-equality. DCC achieves legible types and universe inference by encoding dependent type arguments as points of the respective combinator which index an applied environment argument, rather than by supplying type arguments as arguments themselves (resembling Martin L\"of's notion of a Tarski universe \autocite[p. 88]{martin1984intuitionistic}).
 
 We proceed by enumerating the inference rules for the core type formers, the rules for constant terms, and then the inference rules for all primitive combinators in the order they were defined in \ref{sec:convrules}.
 
@@ -1533,7 +1533,7 @@ Applications and \(\Sigma\)-terms under binders duplicate the context across the
   \]
 \end{definition}
 
-Compilation at the top-level differs from abstraction in that the context is empty. So, all top-level binders' binder types are compiled recursively without a context. Also, the topmost \(\lambda\)-binder is always applied the empty context \(\comb[\&][\ast] : \comb[!][\mathbb{1}]\). Finally, all user-supplied top-level values are automatically shared based on the computed maximum context duplication depth (this is done as a preprocessing step by marking values with \(share\)).
+Compilation at the top-level differs from abstraction in that the context is empty. So, all top-level binders' binder types are compiled recursively without a context. Also, the topmost \(\lambda\)-binder is always applied the empty context \(\comb[\&][\ast] : \comb[!][\mathbb{1}]\). Finally, all user-supplied top-level values are automatically shared based on the computed maximum context duplication depth (this is done as a pre-processing step by marking values with \(share\)).
 
 %\begin{definition}
 %  Let \(d : L \rightarrow \mathbb{N}\) and define \(d\) to be the number of applications, \(\Sigma\)-terms, and \(\Sigma\)-types (which all duplicate the context) under a term \(e \in D\). Then, \(d\) represents an approximation of the upper bound on context usage.
@@ -1633,7 +1633,7 @@ We note that the type theory presented in this paper does not have \(\eta\)-redu
 
 \section{Conclusion}
 
-Our formalization gives an extension of the simply-typed categorical combinators \autocite[p. 220]{CURIEN1986188} to a dependently-typed, affine setting. To this date, our presentation is the most complete development in dependent combinatory logic: we have a working type-checker written in Lean 4 with decidable type-checking, a procedure for compiling a subset of Lean 4 to that type theory, all objects are well-typed, there are no contexts and no variables, and preservation, progress, consistency, and strong normalization hold, while our type theory is similar in expressivity to the Calculus of Constructions with rsepect to the \(\lambda\)-cube. We summarize by emphasizing two properties of this type theory: by extending the categorical combinators to dependent types, we get a simple, but powerful combinatory dependent type theory which feels categorically canonical; and by restricting that type theory to affine logic, we gain computable extensional equality reflection as a definition, rather than a theorem in \(\textbf{Prop}\), while having decidable type-checking (a property which is known to be close to impossible to achieve).
+Our formalization gives an extension of the simply-typed categorical combinators \autocite[p. 220]{CURIEN1986188} to a dependently-typed, affine setting. To this date, our presentation is the most complete development in dependent combinatory logic: we have a working type-checker written in Lean 4 with decidable type-checking, a procedure for compiling a subset of Lean 4 to that type theory, all objects are well-typed, there are no contexts and no variables, and preservation, progress, consistency, and strong normalization hold, while our type theory is similar in expressivity to the Calculus of Constructions with respect to the \(\lambda\)-cube. We summarize by emphasizing two properties of this type theory: by extending the categorical combinators to dependent types, we get a simple, but powerful combinatory dependent type theory which feels categorically canonical; and by restricting that type theory to affine logic, we gain computable extensional equality reflection as a definition, rather than a theorem in \(\textbf{Prop}\), while having decidable type-checking (a property which is known to be close to impossible to achieve).
 
 \appendix
 \section{Supplementary Materials}\label{appendix:sup}

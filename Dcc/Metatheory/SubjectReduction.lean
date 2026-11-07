@@ -1,5 +1,5 @@
 import Dcc.Judge
-import Dcc.Metatheory.Decidability3
+import Dcc.Metatheory.Decidability
 
 namespace Expr
 

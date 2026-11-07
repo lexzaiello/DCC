@@ -1178,7 +1178,7 @@ The source code of the type-checker is available in the Appendix~\ref{appendix:s
 \begin{proof}
   By induction on the typing derivation \(h\). Cases are mutually exclusive and we have soundness, so the proof is reduced to checking that each branch implies that its corresponding branch in \(infer\) is \(ok\). In each case, if a definitional equality is supposed by \(h\), such that \(A \equiv B\) for some \(A, B \in E\) implies \(e : \tau\), then there exists \(C \in E\) such that \(h_{eq,1} \vdash A \barr^{!} C\) and \(h_{eq,2} \vdash B \barr^{!} C\). So, by completeness of \(\beta\)-reduction with respect to normal forms \ref{thm:reducecomplete}, \(reduce (\barr) A = \langle C, h_{eq,1} \rangle = \langle C, h_{eq,2} \rangle = reduce (\barr) B\). Hence, the corresponding equality check in \(infer\ e\) passes, and so in each case, \(infer\ e = ok\ \langle \tau, h \rangle\).
 
-  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L135}{Expr.Judge.complete}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability.lean\#L135}{Expr.Judge.complete}
 \end{proof}
 
 \begin{theorem}\label{thm:judgeunique}
@@ -1188,7 +1188,7 @@ The source code of the type-checker is available in the Appendix~\ref{appendix:s
 \begin{proof}
   If \(h_1 \vdash e : \tau_1\) and \(h_2 \vdash e : \tau_2\), then by judgmental completeness \ref{thm:judgecomplete}, \(infer\ e = ok\ \langle \tau_1, h_1 \rangle = infer\ e = ok\ \langle \tau_2, h_2 \rangle\), so \(\tau_1 = \tau_2\).
 
-  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L138}{Expr.Judge.unique}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability.lean\#L138}{Expr.Judge.unique}
 \end{proof}
 
 \begin{theorem}\label{thm:judgenorm}
@@ -1207,7 +1207,7 @@ The source code of the type-checker is available in the Appendix~\ref{appendix:s
         \end{description}
     \item[\(e = (f x)\), where \(f \in E\) and \(x \in E\):] If \(e\) is an application, then \(f : (\comb[\Pi][B][C]\ env)\) and \(x : A\) where \((B\ env) \equiv A\). So, \(\tau\) is the \(\beta\)-normal reduct of \(C\ env\ x\) (per~\ref{def:inferapp}), and it is in \(\beta\)-normal form.
   \end{description}
-  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L143}{Expr.Judge.is\_norm}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability.lean\#L143}{Expr.Judge.is\_norm}
 \end{proof}
 
 \subsection{Subject-Reduction, Progress, and Consistency}\label{otherthmsjudge}

@@ -191,3 +191,28 @@ open Dsl Expr in
 #eval reduce_all (DCC ((𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟚)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟘₂)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙₂))) ∗ 𝟙₂))
 --#eval infer' (DCC (𝟚.Rec (`𝟙 (`𝟚 𝟚)) (`𝟙 (`𝟚 𝟘₂)) (`𝟙 (`𝟚 𝟙₂))))
 
+open Dsl in
+#eval Expr.infer' (DCC ((𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) (Sort 0))) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙))) ∗))
+
+/-
+(Λ 𝟚 ((𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) (Sort 0))) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟚))) ∗) (Snd ((𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) (Sort 0))) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟚))) ∗)))
+-/
+
+/-
+Identity function whose domain is determined by a boolean. Either 𝟙 or 𝟘
+-/
+def example_curr_bool_select (A B : Expr) : Expr :=
+  -- If true, 𝟙, if false 𝟘
+  let motive     := DCC (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) (Sort 0)))
+  let case_true  := DCC (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) A))
+  let case_false := DCC (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) B))
+  let selector   := (DCC ((𝟚.Rec motive case_true case_false) ∗))
+  DCC (Λ 𝟚 selector (Snd selector))
+
+open Dsl in
+#eval (·.fst) <$> Expr.infer (example_curr_bool_select (DCC 𝟙) (DCC 𝟘))
+
+open Dsl in
+#eval (·.fst) <$> Expr.infer (DCC (#((example_curr_bool_select (DCC 𝟙) (DCC 𝟘))) 𝟙₂ ∗))
+
+#eval Expr.reduce_all (DCC (#((example_curr_bool_select (DCC 𝟙) (DCC 𝟘))) 𝟙₂ ∗))

@@ -45,6 +45,8 @@ Except.ok (DCC (Σ (Sort 0) (Id (Sort 0))))
 -/
 ```
 
+### Boolean negation
+
 This is a function that flips boolean:
 
 ```lisp
@@ -86,6 +88,56 @@ open Dsl Expr in
 Messages here:
 191:0:
 Except.ok (DCC 𝟚)
+-/
+```
+
+### Bool-indexed identity
+
+This is a DCC expression for the identity function indexed by a boolean. If it is applied 𝟙₂, its domain is `A`. If it applied 𝟘₂, its domain is `B`:
+
+```lean
+def example_curr_bool_select (A B : Expr) : Expr :=
+  -- If true, 𝟙, if false 𝟘
+  let motive     := DCC (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) (Sort 0)))
+  let case_true  := DCC (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) A))
+  let case_false := DCC (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) B))
+  let selector   := (DCC ((𝟚.Rec motive case_true case_false) ∗))
+  DCC (Λ 𝟚 selector (Snd selector))
+
+open Dsl in
+#eval (·.fst) <$> Expr.infer (example_curr_bool_select (DCC 𝟙) (DCC 𝟘))
+/-
+Messages here:
+213:0:
+Except.ok (DCC
+ ((Π (`𝟙 𝟚)
+     (`𝟙 (Π ((𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) (Sort 0))) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟘)))
+             ∗)
+            (Λ 𝟚
+               ((𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) (Sort 0))) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙))
+                       (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟘)))
+                ∗)
+               (∘ ((𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) (Sort 0))) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙))
+                          (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟘))) ∗)
+                  (Fst ((𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) (Sort 0))) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙))
+                               (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟘))) ∗)))))))
+  ∗))
+-/
+
+open Dsl in
+#eval (·.fst) <$> Expr.infer (DCC (#((example_curr_bool_select (DCC 𝟙) (DCC 𝟘))) 𝟙₂ ∗))
+/-
+Messages here:
+215:0:
+Except.ok (DCC 𝟙)
+-/
+
+open Dsl in
+#eval Expr.reduce_all (DCC (#((example_curr_bool_select (DCC 𝟙) (DCC 𝟘))) 𝟙₂ ∗))
+/-
+Messages here:
+218:0:
+(DCC ∗)
 -/
 ```
 

@@ -330,7 +330,7 @@ def fst_preservation_head (h : Judge (DCC? ((Fst B) (,B₂ x y))) τ) : Judge x 
       cases a_2 with
       | mk =>
         expose_names
-        have ⟨hn_A, _⟩ := a_1.is_norm a_4.is_norm
+        have hn_A := a_1.is_norm
         replace a_3 := (a_3.push_head (.congrFun .quot)).push_head .quot
         cases a_3.elim_norm hn_A
         replace a := a.push_head .quot
@@ -347,9 +347,9 @@ def snd_preservation_head (h : Judge (DCC? ((Snd B) (,B₂ x y))) τ) : Judge y 
       cases a_2 with
       | mk =>
         expose_names
-        have ⟨hn_A, _⟩ := a_1.is_norm a_2.is_norm
+        have hn_A := a_1.is_norm
         replace a_3 := ((a_3.push_head (.congrFun .quot)).push_head .comp).push_head (.congrArg .fstc)
-        have ⟨hn_A_1, _⟩ := a_5.is_norm a_6.is_norm
+        have hn_A_1 := a_5.is_norm
         cases ((a.push_head .quot).elim_norml (sigma_is_norm hn_A a_4.is_norm)).elim_norm (sigma_is_norm hn_A_1 a_7.is_norm)
         cases a_3.unique a_9
         exact a_10
@@ -405,7 +405,7 @@ def curr_preservation_head (h : Judge (DCC ((Λ A B x) y z)) τ) : Judge (DCC (x
         have heq₁ := elim_reduce_norm_fst a_10.is_norm
         unfold curr.x.type at a_11
         have hn_x_type := a_11.is_norm
-        have hn_curr : IsNorm Red (DCC (Λ α_1 B' C)) := curr_is_norm (a_4.is_norm a_9.is_norm).1 a_10.is_norm
+        have hn_curr : IsNorm Red (DCC (Λ α_1 B' C)) := curr_is_norm a_4.is_norm a_10.is_norm
           (fun ⟨_, h⟩ => hn_x_type ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) h))⟩)
         have heq₂ := elim_reduce_norm_fst hn_curr
         have h := a_6.pi_eq
@@ -422,7 +422,7 @@ def curr_preservation_head (h : Judge (DCC ((Λ A B x) y z)) τ) : Judge (DCC (x
         · apply Judge.mk
           · exact a_5
           · exact a_9
-          · exact a_4.to_arrow'
+          · exact a_4
           · exact a_10
           · exact ⟨.trans (congrArg' (reduce_sound rfl)) a.1, a.2⟩
           · exact a_2
@@ -486,7 +486,15 @@ def curr'_preservation_head (h : Judge (DCC ((!Λ A B x) (& y) (& z))) τ) : Jud
               · apply Judge.mk
                 · exact ht_y
                 · exact a_9
-                · exact a_4.to_arrow'
+                · cases a_4
+                  expose_names
+                  have hn_A_1 : IsNorm Red A_1 := fun ⟨_, h⟩ => a_9.is_norm ⟨_, .congrFun (.point 0 (by point_arity) (.point 1 (by point_arity) h))⟩
+                  have hn_B_1 : IsNorm Red B_1 := fun ⟨_, h⟩ => a_9.is_norm ⟨_, .congrFun (.point 1 (by point_arity) (.point 1 (by point_arity) (.point 1 (by change _ < point_arity (A_1.quot B_1); point_arity) h)))⟩
+                  cases a_1.elim_norm hn_A_1
+                  cases a_2.elim_norm hn_B_1
+                  constructor
+                  · exact ⟨.single .quot, a_1.is_norm⟩
+                  · exact ⟨.trans (.single (.congrFun .quot)) (.single .quot), by grind⟩
                 · exact a_10
                 · exact ⟨.trans (congrArg' (reduce_sound rfl)) a'.1, a'.2⟩
                 · exact ht_z
@@ -764,8 +772,8 @@ def swap_preservation_head (h : Judge (DCC ((Swap A B) (,B₂ x y))) τ) : Judge
           · assumption
           · assumption
         · constructor
-          · exact ⟨.refl, a_6.is_norm⟩
-          · exact ⟨.refl, fun ⟨_, h⟩ => nomatch h⟩
+          · exact ⟨.single .quot, a_6.is_norm⟩
+          · exact ⟨.trans (.single (.congrFun .quot)) (.single .quot), fun ⟨_, h⟩ => nomatch h⟩
         · exact ⟨.trans (aff_mk_point' (n := 0) a_6.1) (aff_mk_point' (n := 1) a_4.1), quot_is_norm a_6.is_norm a_4.is_norm⟩
         · exact ⟨.single .quot, a_4.is_norm⟩
         · assumption
@@ -849,7 +857,7 @@ def preservation_pair_head (h : Judge (DCC ((⟨,⟩B x y) (& z))) τ) : Judge (
           · simp [heq_pi]
             constructor
             · exact congr_app_arg
-            · exact ⟨.refl, by grind⟩
+            · exact ⟨.trans (.single .curr) (.single .quot), by grind⟩
           · exact ⟨.trans (congrFun' a_5.1) (reduce_sound rfl), reduce_norm rfl⟩
           · exact ⟨reduce_sound rfl, reduce_norm rfl⟩
           · apply Judge.app

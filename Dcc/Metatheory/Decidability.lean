@@ -207,13 +207,11 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
     have ⟨hn_δ, _⟩ := h
     exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (by assumption)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (pi_is_norm₀ (RedNorm.is_norm (by assumption)) (curr_is_norm (by assumption) (RedNorm.is_norm (by assumption)) (pi_is_norm₀ (comp_is_norm (RedNorm.is_norm (by assumption)) (fst_is_norm (RedNorm.is_norm (by assumption)))) (curr_is_norm (sigma_is_norm (by assumption) (RedNorm.is_norm (by assumption))) (comp_is_norm (RedNorm.is_norm (by assumption)) (fst_is_norm (RedNorm.is_norm (by assumption)))) (quot_is_norm (sigma_is_norm (sigma_is_norm (by assumption) (RedNorm.is_norm (by assumption))) (comp_is_norm (RedNorm.is_norm (by assumption)) (fst_is_norm (RedNorm.is_norm (by assumption))))) (fun ⟨_, h⟩ => nomatch h))))))) (fun ⟨_, h⟩ => nomatch h)
   case fstc =>
-    have h := Arrow.is_norm (by assumption) (by assumption)
-    have ⟨hn_A, _⟩ := h
+    have hn_A := ArrowSort.is_norm (by assumption)
     exact arr_is_norm (sigma_is_norm hn_A (RedNorm.is_norm (by assumption))) hn_A
   case sndc =>
     unfold sndc.type
-    have h := Arrow.is_norm (by assumption) (by assumption)
-    have ⟨hn_A, _⟩ := h
+    have hn_A := ArrowSort.is_norm (by assumption)
     exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (sigma_is_norm hn_A (RedNorm.is_norm (by assumption)))) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (comp_is_norm (RedNorm.is_norm (by assumption)) (fst_is_norm (RedNorm.is_norm (by assumption))))) (fun ⟨_, h⟩ => nomatch h)
   case mk =>
     expose_names

@@ -323,7 +323,7 @@ def Value.inv_box (hv : Value x) (ht : Judge x (open Dsl in (DCC (! A)))) : Σ' 
       | curr =>
         expose_names
         replace a_4 := a_4.push_head .quot
-        have ⟨hn_δ, _⟩ := a_5.is_norm a_10.is_norm
+        have hn_δ := a_5.is_norm
         cases (a_4.elim_norml hn_δ).elim_norm a_6.is_norm
         replace a_7 := a_7.push_head (.congrFun .quot)
         have pi_eq := a_7.pi_eq
@@ -868,8 +868,8 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
           cases a
           case _ =>
             expose_names
-            have h := Arrow.is_norm (by assumption) (Judge.is_norm (by assumption))
-            have ⟨hn_δ, _⟩ := h
+            have h := ArrowSort.is_norm (by assumption)
+            have hn_δ := h
             cases ((DefEq.push_head (by assumption) .quot).elim_norml (sigma_is_norm hn_δ a_7.is_norm)).elim_norm (Judge.is_norm (by assumption))
             have ⟨x, y, heq⟩ := Value.inv_sigma h₂ a_2
             cases heq

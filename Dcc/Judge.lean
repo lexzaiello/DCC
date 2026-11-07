@@ -123,6 +123,58 @@ inductive Arrow : Expr → Expr → Expr → Type
 deriving Repr
 
 open Dsl in
+inductive ArrowSort : Expr → Level → Expr → Type
+  | mk : (B xA) →ᵦ A' → (C xA (hole (C.max_hole))) →ᵦ (Sort v) → ArrowSort A' v (DCC ((Π B C) xA))
+deriving Repr
+
+def ArrowSort.is_norm (h : ArrowSort A u τ) : IsNorm Red A :=
+  match h with
+  | ⟨h₁, h₂⟩ => h₁.is_norm
+
+def read_arrow_sort (τ : Expr) : Except (TypeError τ) (Σ (A : Expr) (v : Level), ArrowSort A v τ) :=
+  open Dsl in match τ with
+  | (DCC ((Π _B C) x)) =>
+    match heq₁ : (reduce_all (DCC (C x (hole C.max_hole)))) with
+    | DCC Sort _v =>
+      .ok ⟨_, _, (reduce_reduces rfl), (reduce_reduces heq₁)⟩
+    | τ₀ => .error (.unexpected τ₀ τ)
+  | τ => .error (.unexpected τ τ)
+
+def view_arrow_sort₁ (τ A : Expr) : Except (TypeError τ) (Σ (v : Level), ArrowSort A v τ) :=
+  match read_arrow_sort τ with
+  | .ok ⟨A', _v, h⟩ =>
+    if heq : A' = A then
+      .ok ⟨_, heq ▸ h⟩
+    else
+      .error (.sub τ (.mismatch A' A τ))
+  | .error e => .error e
+
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
+def ArrowSort.read_complete (h : ArrowSort A v τ) : read_arrow_sort τ = .ok ⟨A, v, h⟩ := by
+  cases h with
+  | mk hrt₁ hrt₂ =>
+    have h₁ := hrt₁.complete_fst
+    have h₂ := hrt₂.complete_fst
+    simp [read_arrow_sort, reduce_all]
+    split
+    case h_1 heq' =>
+      cases heq'.symm.trans h₂
+      cases h₁
+      simp [reduce_reduces]
+    case h_2 hn =>
+      exact (hn _ (by assumption)).elim
+
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
+def ArrowSort.view_complete (h : ArrowSort A v τ) : view_arrow_sort₁ τ A = .ok ⟨v, h⟩ := by
+  have heq := ArrowSort.read_complete h
+  cases h with
+  | mk hrt₁ hrt₂ =>
+    have h₁ := hrt₁.complete_fst
+    have h₂ := hrt₂.complete_fst
+    cases h₁
+    simp [view_arrow_sort₁, heq]
+
+open Dsl in
 inductive Arrow' : Expr → Expr → Expr → Type
   | simple : A →ᵦ A' → B →ᵦ B' → Arrow' A' B' (DCC (→ A B))
   | curr   : (fB xA) →ᵦ A' → B →ᵦ B' → Arrow' A' B' (DCC ((Π fB (Λ τA fB (`(Σ τA fB) B))) xA))
@@ -500,16 +552,16 @@ inductive Judge : Expr → Expr → Type where
     → (fC xA (#(.hole (DCC ((Π fB fC) xA)).max_hole.succ))) →ᵦ (Sort v)
     → Judge (DCC (Σ A B)) (DCC (Sort (max u v)))
   | fstc   : Judge B τ_B
-    → Arrow A (DCC Sort n) τ_B
+    → ArrowSort A n τ_B
     → B →ᵦ B'
     → Judge (DCC (Fst B)) (fstc.type A B')
   | sndc    : Judge B τ_B
-    → Arrow A (DCC Sort n) τ_B
+    → ArrowSort A n τ_B
     → B →ᵦ B'
     → Judge (DCC (Snd B)) (sndc.type A B')
   | mk     : Judge x A
     → Judge B τ_B
-    → Arrow' A (DCC Sort n) τ_B
+    → ArrowSort A n τ_B
     → B →ᵦ B'
     → #(DCC (B' x)) →ᵦ τ₂
     → Judge y τ₂
@@ -522,7 +574,7 @@ inductive Judge : Expr → Expr → Type where
   | curr   : Judge A (DCC Sort u)
     → Judge B τ_β
     → A →ᵦ A'
-    → Arrow A' (DCC Sort v) τ_β
+    → ArrowSort A' v τ_β
     → Judge x (curr.x.type A' B' C)
     → B →ᵦ B'
     → Judge (DCC (Λ A B x)) (curr.type A' B' C)
@@ -883,8 +935,8 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
       | .ok ⟨Bxm, ht₂⟩ =>
         match B.infer with
         | .ok ⟨τ_B, h₃⟩ =>
-          match τ_B.read_arrow'₁ α with
-          | .ok ⟨DCC Sort _n, harr⟩ =>
+          match τ_B.view_arrow_sort₁ α with
+          | .ok ⟨_n, harr⟩ =>
             if heq₂ : reduce_all (DCC (#(reduce_all B) x)) = Bxm then
               .ok ⟨_, .mk ht₁ h₃ harr
                 (reduce_reduces rfl) (reduce_reduces (B := Bxm) (heq₂ ▸ rfl)) ht₂⟩
@@ -896,26 +948,26 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
   | DCC (Fst B) =>
     match (infer B) with
     | .ok ⟨τ_β, ht₁⟩ =>
-      match τ_β.read_arrow with
-      | .ok ⟨_α, DCC Sort _n, harr⟩ =>
+      match τ_β.read_arrow_sort with
+      | .ok ⟨_α, _n, harr⟩ =>
         .ok ⟨_, .fstc ht₁ harr (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ_β B)
     | .error ε => .error (.sub B ε)
   | DCC (Snd B) =>
     match (infer B) with
     | .ok ⟨τ_β, ht₁⟩ =>
-      match τ_β.read_arrow with
-      | .ok ⟨_α, DCC Sort _n, harr⟩ =>
+      match τ_β.read_arrow_sort with
+      | .ok ⟨_α, _n, harr⟩ =>
         .ok ⟨_, .sndc ht₁ harr (reduce_reduces rfl)⟩
-      | _ => .error (.unexpected τ_β B)
+      | .error e => .error (.sub B (.sub τ_β e))
     | .error ε => .error (.sub B ε)
   | DCC (Λ A B x) =>
     match A.infer with
     | .ok ⟨DCC Sort _m, ht⟩ =>
       match B.infer with
       | .ok ⟨τ_β, ht_β⟩ =>
-        match τ_β.read_arrow₁ (reduce_all A) with
-        | .ok ⟨DCC Sort _n, h⟩ =>
+        match τ_β.view_arrow_sort₁ (reduce_all A) with
+        | .ok ⟨_n, h⟩ =>
           match infer x with
           | .ok ⟨DCC ((Π _A (`_B C)) _D), ht₂⟩ =>
             if heq : (DCC ((Π _A (`_B C)) _D)) = (curr.x.type (reduce_all A) (reduce_all B) C) then

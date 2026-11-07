@@ -40,18 +40,39 @@ Except.ok (DCC (Σ (Sort 0) (Id (Sort 0))))
 -/
 ```
 
+## Lean Compiler
+
+The current version of DCC does not have η-reduction, so some examples of the Lean compiler do not work. However, here is the identity function on 𝟚:
+
+```lean
+#eval Std.format (dcc_compile (fun (x : Bool) => x))
+/-
+Messages here:
+24:0:
+((!Λ 𝟙 (`𝟙 𝟚) (∘ (Snd (`𝟙 𝟚)) (* (Σ 𝟙 (`𝟙 𝟚))))) (& ∗))
+-/
+```
+
+It type-checks as such:
+
+```lean
+#eval (·.fst) <$> Expr.infer (dcc_compile (fun (x : Bool) => x))
+Messages here:
+25:0:
+Except.ok (DCC ((Π (!<> (`𝟙 𝟚)) (!Λ 𝟙 (`𝟙 𝟚) (∘ (∘ (`𝟙 𝟚) (Fst (`𝟙 𝟚))) (* (Σ 𝟙 (`𝟙 𝟚)))))) (& ∗)))
+```
+
+Past versions of DCC had more powerful η-reduction. However, we have omitted it in this version so as to achieve these metatheoretic results:
+
+- Subject-reduction: [proof](https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/SubjectReduction.lean#L965)
+- Progress: [proof](https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean#L957)
+- Consistency: [proof](https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Consistent.lean#L7)
+- Equality reflection: [proof](https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean#L122)
+
+We hope to add back η-reduction and more powerful type conversion in a later paper.
+
 ## Lean Toolchain
 
 I am using Lean4 with the toolchain `leanprover/lean4:v4.30.0-rc2`. Lean support with Nix is not well-maintained, so you will have to install it manually.
-
-## Docs
-
-To view the documentation, use:
-
-```shell
-nix run .#serve
-```
-
-If the docs are not up-to-date, please run `lake build`.
 
 By *Lexi Aiello*.

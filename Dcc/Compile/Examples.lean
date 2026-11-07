@@ -19,9 +19,10 @@ example : Cc (.lam (.share_ty 1 (.const (.sort 0))) (.lam (.share_ty 1 (.const (
                               (* (Σ (Σ ⊤ (`⊤ (Sort 0))) (`(Σ ⊤ (`⊤ (Sort 0))) (Sort 0))))))) (& ∗)))) :=
   .lam (.const (.sort)) (.lam (.const .sort) (.var (.bang (.succ .zero))))
 
-#eval (dcc_share (fun (x : Sort 0) => x))
+#eval (dcc_share (fun (x : Bool) => x))
 #eval (LExpr.lam (.share_ty 1 (.const (.sort 0))) (.bvar 0))
-#eval Std.format (dcc_compile (fun (x : Sort 0) => x))
+#eval Std.format (dcc_compile (fun (x : Bool) => x))
+#eval (·.fst) <$> Expr.infer (dcc_compile (fun (x : Bool) => x))
 #eval Expr.infer' (dcc_compile (fun (x : Sort 0) => x))
 #eval dcc_share (fun (α : Type) (x : α) => x)
 #eval (dcc_share (fun (α : Type) (x : α) => x))

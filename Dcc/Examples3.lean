@@ -10,6 +10,11 @@ Can quot be derived?
 
 open Dsl
 
+#eval (DCC ((∘ (Snd (Id (Sort 1))) (Λ (Sort 1) (Id (Sort 1)) (Id (Σ (Sort 1) (Id (Sort 1)))))) 𝟙 ∗))
+
+open Expr in
+#eval (·.fst) <$> infer (DCC ((Λ (Sort 0) (Id (Sort 0)) (Id (Σ (Sort 0) (Id (Sort 0))))) 𝟙 ∗))
+
 #eval (Std.format ∘ (·.fst)) <$> (DCC (∘ (Id Sort 1) (Id Sort 1))).infer
 #eval (Std.format ∘ (·.fst)) <$> (DCC ((Id Sort 1) (Sort 0))).infer
 #eval (DCC (`(Sort 1) Sort 1)).infer'

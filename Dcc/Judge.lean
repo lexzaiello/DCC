@@ -572,6 +572,72 @@ open Dsl in
 abbrev comp.g.type := Arrow
 
 open Dsl in
+inductive Curr.x.type : Expr → Expr → Expr → Expr → Type where
+  | mk : (B xA) →ᵦ (Σ A' B') → (C xA) →ᵦ C' → Curr.x.type A' B' C' (DCC ((Π B C) xA))
+deriving Repr
+
+def read_curr_x_type (τ : Expr) : Except (TypeError τ) (Σ (A B C : Expr), Curr.x.type A B C τ) :=
+  open Dsl in match τ with
+  | (DCC ((Π B _C) xA)) =>
+    match heq₁ : (DCC (B xA)).reduce_all with
+    | (DCC (Σ _A' _B')) =>
+      .ok ⟨_, _, _, .mk (reduce_reduces heq₁) (reduce_reduces rfl)⟩
+    | τ₀ => .error (.unexpected τ₀ τ)
+  | τ => .error (.unexpected τ τ)
+
+def view_curr_x_type (τ A B C : Expr) : Except (TypeError τ) (Curr.x.type A B C τ) :=
+  match read_curr_x_type τ with
+  | .ok ⟨A', B', C', h⟩ =>
+    if heq₁ : A' = A then
+      if heq₂ : B' = B then
+        if heq₃ : C' = C then
+          .ok (heq₁ ▸ heq₂ ▸ heq₃ ▸ h)
+        else .error (.mismatch C C' τ)
+      else .error (.mismatch B B' τ)
+    else .error (.mismatch A A' τ)
+  | .error e => .error e
+
+def view_curr_x_type₂ (τ A B : Expr) : Except (TypeError τ) (Σ (C : Expr), Curr.x.type A B C τ) :=
+  match read_curr_x_type τ with
+  | .ok ⟨A', B', _C', h⟩ =>
+    if heq₁ : A' = A then
+      if heq₂ : B' = B then
+        .ok ⟨_, heq₁ ▸ heq₂ ▸ h⟩
+      else .error (.mismatch B B' τ)
+    else .error (.mismatch A A' τ)
+  | .error e => .error e
+
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce]), aesop safe forward (rule_sets := [DccReduce])]
+def Curr.x.type.complete (h : Curr.x.type A B C τ) : read_curr_x_type τ = .ok ⟨A, B, C, h⟩ := by
+  cases h with
+  | mk h₁ h₂ =>
+    have heq₁ := reduce_all_complete h₁
+    have heq₂ := reduce_all_complete h₂
+    simp [read_curr_x_type]
+    split
+    case h_1 heq' =>
+      cases heq'.symm.trans heq₁
+      simp [heq₂]
+      congr!
+      apply HEq.symm
+      apply h₂.heq
+    · grind
+
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce]), aesop safe forward (rule_sets := [DccReduce])]
+def Curr.x.type.complete₃ (h : Curr.x.type A B C τ) : view_curr_x_type τ A B C = .ok h := by
+  have heq := h.complete
+  simp [view_curr_x_type, heq]
+
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce]), aesop safe forward (rule_sets := [DccReduce])]
+def Curr.x.type.complete₂ (h : Curr.x.type A B C τ) : view_curr_x_type₂ τ A B = .ok ⟨C, h⟩ := by
+  have heq := h.complete
+  simp [view_curr_x_type₂, heq]
+
+def Curr.x.type.is_norm (h : Curr.x.type A B C τ) (h₁ : IsNorm Red τ) : IsNorm Red A ×' IsNorm Red B ×' IsNorm Red C :=
+  match h with
+  | ⟨h₁, h₂⟩ => ⟨fun ⟨_, h⟩ => h₁.is_norm ⟨_, .point 0 (by grind) h⟩, fun ⟨_, h⟩ => h₁.is_norm ⟨_, .point 1 (by grind) h⟩, h₂.is_norm⟩
+
+open Dsl in
 inductive Judge : Expr → Expr → Type where
   | eq     : Judge A (DCC (Sort u))
     → Judge x τ₁
@@ -634,7 +700,8 @@ inductive Judge : Expr → Expr → Type where
     → Judge B τ_β
     → A →ᵦ A'
     → ArrowSort A' v τ_β
-    → Judge x (curr.x.type A' B' C)
+    → Judge x τ_x
+    → Curr.x.type A' B' C τ_x
     → B →ᵦ B'
     → Judge (DCC (Λ A B x)) (curr.type A' B' C)
   | curr'  : Judge A (DCC Sort u)
@@ -1027,12 +1094,12 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         match τ_β.view_arrow_sort₁ (reduce_all A) with
         | .ok ⟨_n, h⟩ =>
           match infer x with
-          | .ok ⟨DCC ((Π _A (`_B C)) _D), ht₂⟩ =>
-            if heq : (DCC ((Π _A (`_B C)) _D)) = (curr.x.type (reduce_all A) (reduce_all B) C) then
-              .ok ⟨_, .curr ht ht_β (reduce_reduces rfl) h (heq ▸ ht₂) (reduce_reduces rfl)⟩
-            else .error (.sub x (.unexpected (DCC ((Π _A (`_B C)) _D)) e))
+          | .ok ⟨τ_x, ht₂⟩ =>
+            match τ_x.view_curr_x_type₂ (reduce_all A) (reduce_all B) with
+            | .ok ⟨_C, h_x⟩ =>
+              .ok ⟨_, .curr ht ht_β (reduce_reduces rfl) h ht₂ h_x (reduce_reduces rfl)⟩
+            | .error e => .error (.sub x (.sub τ_x e))
           | .error e => .error (.sub x e)
-          | .ok ⟨τ, _⟩ => .error (.sub x (.unexpected τ e))
         | _ => .error (.unexpected τ_β B)
       | .error ε => .error (.sub B ε)
     | .ok ⟨t, _⟩ => .error (.unexpected t A)

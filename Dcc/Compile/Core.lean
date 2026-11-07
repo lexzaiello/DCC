@@ -1,4 +1,4 @@
-import Dcc.Judge3
+import Dcc.Judge
 import Dcc.Ast
 import Dcc.Ast.Share
 import Dcc.Metatheory.Progress

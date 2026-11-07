@@ -1169,7 +1169,7 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
 
 Our inference rules do not assume the existence of a catch-all conversion rule. Instead, inferred types are reduced to normal form in each rule individually, and definitional equality of terms is checked by comparing their normal-form reducts given by \(reduce\). This enables decidable type-checking. We have implemented a type-checker on a deep embedding of DCC in Lean 4, and have shown that it to be judgmentally complete, making type-checking decidable.
 
-The source code of the type-checker is available in the Appendix~\ref{appendix:sup}. Of note, judgments carry computational content and live in \(\textbf{Type}\), rather than \(\textbf{Prop}\): \(\text{Judge} : E \rightarrow E \rightarrow Type\). The \href{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Judge3.lean#L599}{type-checker} is total and equipped with soundness: \(infer : (e : E) \rightarrow \text{Except}\ (\text{TypeError}\ e) (\Sigma' (\tau : E), \text{Judge}\ e\ \tau)\). Judgmental completeness is provable from the fact that all the inference rules are mutually exclusive, and there is exactly one canonical type for a given term since catch-all conversion is not permitted.
+The source code of the type-checker is available in the Appendix~\ref{appendix:sup}. Of note, judgments carry computational content and live in \(\textbf{Type}\), rather than \(\textbf{Prop}\): \(\text{Judge} : E \rightarrow E \rightarrow Type\). The \href{https://github.com/lexzaiello/DCC/blob/Dcc/Judge.lean#L599}{type-checker} is total and equipped with soundness: \(infer : (e : E) \rightarrow \text{Except}\ (\text{TypeError}\ e) (\Sigma' (\tau : E), \text{Judge}\ e\ \tau)\). Judgmental completeness is provable from the fact that all the inference rules are mutually exclusive, and there is exactly one canonical type for a given term since catch-all conversion is not permitted.
 
 \begin{theorem}\label{thm:judgecomplete}
   Judgmental completeness: If \(e, \tau \in E\) and \(h \vdash e : \tau\), then \(\text{infer}\ e = ok \langle \tau, h \rangle\).
@@ -1644,7 +1644,7 @@ Our formalization gives an extension of the simply-typed categorical combinators
   \item \textbf{Formalized Reduction rules:}\\
     \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Rel.lean#L14}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Rel.lean\#L14}
   \item \textbf{Type-checker implementation:}\\
-    \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}
+    \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge.lean}
   \item \textbf{Compiler implementation:}\\
     \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Compile/Core.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Compile/Core.lean}
 \end{itemize}

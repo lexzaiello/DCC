@@ -1,4 +1,4 @@
-import Dcc.Judge3
+import Dcc.Judge
 
 universe u
 variable {τ_c : Type u}

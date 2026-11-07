@@ -1,5 +1,5 @@
 import Dcc.Ast
-import Dcc.Judge3
+import Dcc.Judge
 import Dcc.Types
 
 /-

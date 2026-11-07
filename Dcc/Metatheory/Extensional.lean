@@ -1,4 +1,4 @@
-import Dcc.Judge3
+import Dcc.Judge
 import Dcc.Metatheory.SubjectReduction
 import Dcc.Metatheory.Progress
 

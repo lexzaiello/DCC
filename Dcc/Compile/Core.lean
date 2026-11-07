@@ -803,16 +803,24 @@ After calculating this bound "n + 1", we Share.share all top-level arguments
 n times and map each binder's type τ to (Share^[(n + 1)] τ)
 -/
 
-def LExpr.n_apps (e : LExpr) : ℕ :=
+def LExpr.n_apps_abstr (e : LExpr) : ℕ :=
   match e with
-  | .app x y => (x.n_apps + y.n_apps).succ
-  | .lam bty bdy => max bty.n_apps bdy.n_apps
-  | .forallE bty bdy => max bty.n_apps bdy.n_apps
-  | .sigma _u _v A B => (A.n_apps + B.n_apps).succ
-  | .sigma_mk _u _v A B x y => (max (A.n_apps + B.n_apps) (x.n_apps + y.n_apps)).succ
+  | .app x y => (x.n_apps_abstr + y.n_apps_abstr).succ
+  | .lam bty bdy => max bty.n_apps_abstr bdy.n_apps_abstr
+  | .forallE bty bdy => max bty.n_apps_abstr bdy.n_apps_abstr
+  | .sigma _u _v A B => (A.n_apps_abstr + B.n_apps_abstr).succ
+  | .sigma_mk _u _v A B x y => (max (A.n_apps_abstr + B.n_apps_abstr) (x.n_apps_abstr + y.n_apps_abstr)).succ
   | _ => 0
 
-example : LExpr.n_apps (.lam (.const (.sort 0)) (.app (.bvar 1) (.bvar 0))) = 1 := rfl
+def LExpr.n_apps (e : LExpr) : ℕ :=
+  match e with
+  | .app (.lam bty bdy) _x => LExpr.n_apps_abstr (.lam bty bdy)
+  | .app x y => max x.n_apps y.n_apps
+  | .lam bty bdy => max bty.n_apps bdy.n_apps
+  | .forallE bty bdy => max bty.n_apps bdy.n_apps
+  | .sigma _u _v A B => max A.n_apps B.n_apps
+  | .sigma_mk _u _v A B x y => (max (max A.n_apps B.n_apps) (x.n_apps + y.n_apps))
+  | _ => 0
 
 /-
 Note: this operation is destructive, since it removes

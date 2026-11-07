@@ -521,15 +521,15 @@ inductive Judge : Expr → Expr → Type where
     → τ₂ ≡ A
     → Judge (DCC (= A x y)) (DCC Sort 0)
   | refl    : Judge f_α τ_f_α
-    → Arrow δ (DCC Sort m) τ_f_α
+    → ArrowSort δ m τ_f_α
     → f_α →ᵦ f_α'
     → Judge (DCC (refl f_α)) (Expr.refl.type f_α' δ)
   | eql    : Judge f_α τ_f_α
-    → Arrow δ (DCC Sort m) τ_f_α
+    → Arrow δ (DCC (Sort m)) τ_f_α
     → f_α →ᵦ f_α'
     → Judge (DCC (Eql f_α)) (eql.type f_α' δ)
   | eq_mk  : Judge f_α τ_f_α
-    → Arrow δ (DCC Sort m) τ_f_α
+    → Arrow δ (DCC (Sort m)) τ_f_α
     → f_α →ᵦ f_α'
     → Judge (DCC (=' f_α)) (eq_mk.type f_α' δ)
   | id     : Judge α (DCC Sort m)
@@ -602,7 +602,7 @@ inductive Judge : Expr → Expr → Type where
     → Judge (DCC (* A)) (open Dsl in (DCC (→ (! A') A')))
   | eval   : Judge A (DCC Sort u)
     → Judge B τ_β
-    → Arrow A' (DCC Sort v) τ_β
+    → ArrowSort A' v τ_β
     → Judge x (Expr.Eval.x.type A' B' C)
     → A →ᵦ A'
     → B →ᵦ B'
@@ -639,7 +639,7 @@ inductive Judge : Expr → Expr → Type where
     Π(f_α, f_β)
   -/
   | pi     : Judge B τ_B
-    → Arrow A (DCC Sort v) τ_B
+    → ArrowSort A v τ_B
     → Judge C τ_C
     → B →ᵦ B'
     → Pi.C.type B' A s τ_C
@@ -869,7 +869,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     match infer f_α with
     | .ok ⟨τ, ht₁⟩ =>
       match τ.read_arrow with
-      | .ok ⟨_δ, DCC Sort _m, h⟩ =>
+      | .ok ⟨_δ, DCC (Sort _m), h⟩ =>
         .ok ⟨_, .eql ht₁ h (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ f_α)
     | .error ε => .error (.sub f_α ε)
@@ -877,15 +877,15 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     match infer f_α with
     | .ok ⟨τ, ht₁⟩ =>
       match τ.read_arrow with
-      | .ok ⟨_δ, DCC Sort _m, h⟩ =>
+      | .ok ⟨_δ, DCC (Sort _m), h⟩ =>
         .ok ⟨_, .eq_mk ht₁ h (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ f_α)
     | .error ε => .error (.sub f_α ε)
   | DCC (refl f_α) =>
     match infer f_α with
     | .ok ⟨τ, ht₁⟩ =>
-      match τ.read_arrow with
-      | .ok ⟨_δ, DCC Sort _m, h⟩ =>
+      match τ.read_arrow_sort with
+      | .ok ⟨_δ, _m, h⟩ =>
         .ok ⟨_, .refl ht₁ h (reduce_reduces rfl)⟩
       | _ => .error (.unexpected τ f_α)
     | .error ε => .error (.sub f_α ε)
@@ -916,7 +916,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     match B.infer with
     | .ok ⟨τ_B, h₁⟩ =>
       match read_arrow τ_B with
-      | .ok ⟨A, DCC Sort _v, harr₁⟩ =>
+      | .ok ⟨A, DCC (Sort _v), harr₁⟩ =>
         match C.infer with
         | .ok ⟨τ_C, h₂⟩ =>
           match τ_C.view_sigma'_C_type A (reduce_all B) with
@@ -924,8 +924,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
             .ok ⟨_, .sigma' h₁ harr₁ (reduce_reduces rfl) h₂ h⟩
           | .error e => .error (.sub C (.sub τ_C e))
         | .error e => .error (.sub C e)
-      | .ok ⟨_A, τ₂, _h⟩ =>
-        .error (.sub B (.unexpected τ₂ τ_B))
+      | .ok ⟨_, τ, _⟩ => .error (.sub B (.unexpected τ τ_B))
       | .error e => .error (.sub B (.sub τ_B e))
     | .error e => .error (.sub B e)
   | DCC (,B x y) =>
@@ -1002,8 +1001,8 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     | .ok ⟨DCC Sort _u, ht⟩ =>
       match B.infer with
       | .ok ⟨τ_β, ht_β⟩ =>
-        match τ_β.read_arrow₁ (reduce_all A) with
-        | .ok ⟨DCC Sort _v, h⟩ =>
+        match τ_β.view_arrow_sort₁ (reduce_all A) with
+        | .ok ⟨_v, h⟩ =>
             match infer x with
             | .ok ⟨DCC ((Π _A (`_B (Π _C C))) _D), ht₂⟩ =>
               if heq : (DCC ((Π _A (`_B (Π _C C))) _D)) = (Expr.Eval.x.type (reduce_all A) (reduce_all B) C) then
@@ -1047,8 +1046,8 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
   | DCC (Π B C) =>
     match B.infer with
     | .ok ⟨τ_B, ht₁⟩ =>
-      match τ_B.read_arrow with
-      | .ok ⟨A, DCC Sort _v, harr⟩ =>
+      match τ_B.read_arrow_sort with
+      | .ok ⟨A, _v, harr⟩ =>
         match infer C with
         | .ok ⟨τ_C, ht₂⟩ =>
           match τ_C.view_pi_f_β (reduce_all B) A with

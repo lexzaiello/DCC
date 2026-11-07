@@ -551,7 +551,7 @@ def eql_preservation_head (h : Judge (DCC ((Eql B) (& x) (& y))) τ) : Judge (DC
       cases a_4 with
       | eql =>
         expose_names
-        have ⟨hn_δ, _⟩ := a_4.is_norm a_7.is_norm
+        have ⟨hn_δ, _⟩ := a_4.is_norm (Judge.is_norm (by assumption))
         replace a_1 := a_1.push_head .quot
         cases (a_1.elim_norml (bang_is_norm hn_δ)).elim_norm a_5.is_norm
         replace a_6 := a_6.push_head (.congrFun .quot)
@@ -595,7 +595,7 @@ def eql_preservation_head (h : Judge (DCC ((Eql B) (& x) (& y))) τ) : Judge (DC
             apply Judge.eq
             · apply Judge.app
               · assumption
-              · exact ⟨⟨.single .quot, hn_A⟩, ⟨.refl, hn_A⟩⟩
+              · exact ⟨⟨.single .quot, a_1.is_norm⟩, ⟨.refl, a_1.is_norm⟩⟩
               · assumption
               · exact ⟨.trans (.single (.congrFun .quot)) (.trans (.single .quot) a_2.1), a_2.2⟩
             · exact h_t_y
@@ -671,7 +671,7 @@ def preservation_eq_mk (h : Judge (DCC ((=' B) x y z)) τ) : Judge (DCC (= (B x)
         cases a_7 with
         | eq_mk =>
           expose_names
-          have ⟨hn_δ, _⟩ := a_7.is_norm a_10.is_norm
+          have ⟨hn_δ, _⟩ := a_7.is_norm (Judge.is_norm (by assumption))
           cases ((a_4.push_head .quot).elim_norml hn_δ).elim_norm a_8.is_norm
           clear a_4
           replace a_9 := a_9.push_head (.congrFun .quot)
@@ -782,7 +782,7 @@ def sigma'_preservation_head (h : Judge (DCC ((Σ' B C) (& x))) τ) : Judge (DCC
       | box ht_x =>
         expose_names
         replace a := a.push_head .quot
-        have ⟨hn_A, _⟩ := a_1.is_norm a_4.is_norm
+        have ⟨hn_A, _⟩ := a_1.is_norm (Judge.is_norm (by assumption))
         cases (a.elim_norml (bang_is_norm hn_A)).elim_norm (bang_is_norm ht_x.is_norm)
         clear a
         replace a_3 := (a_3.push_head (.congrFun .quot)).push_head .quot
@@ -791,16 +791,17 @@ def sigma'_preservation_head (h : Judge (DCC ((Σ' B C) (& x))) τ) : Judge (DCC
         match a_1 with
         | ⟨h₁, h₂, h₃⟩ =>
           expose_names
-          have hn_B_1 : IsNorm Red B_1 := fun ⟨_, h⟩ => a_4.is_norm ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) (.point 1 (by change 1 < (A_1.quot B_1).point_arity; grind) h)))⟩
-          cases h₂.elim_norm hn_B_1
+          have hn_B_1 : IsNorm Red B_1 := fun ⟨_, h⟩ => a_4.is_norm ⟨_, .congrFun (.point 1 (by point_arity) (.point 1 (by point_arity) (.point 1 (by change _ < point_arity (A_1.quot B_1); grind) h)))⟩
+          have hn_A_1 : IsNorm Red A_1 := fun ⟨_, h⟩ => a_4.is_norm ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩
+          cases h₁.elim_norm hn_A_1
           cases a_2 with
           | mk =>
             apply Judge.sigma
             · apply Judge.app
               · assumption
-              · exact ⟨⟨.trans (.single .quot) h₁.1, h₁.2⟩, ⟨.refl, h₁.2⟩⟩
+              · exact ⟨⟨.single .quot, hn_A_1⟩, ⟨.refl, hn_A_1⟩⟩
               · assumption
-              · exact ⟨.trans (.single (.congrFun .quot)) (.single .quot), fun ⟨_, h⟩ => nomatch h⟩
+              · exact ⟨.trans (.single (.congrFun .quot)) (.trans (.single .quot) h₂), fun ⟨_, h⟩ => nomatch h⟩
             · apply Judge.app
               · assumption
               · exact ⟨⟨.single .quot, hn_A⟩, ⟨.refl, RedNorm.is_norm (by assumption)⟩⟩

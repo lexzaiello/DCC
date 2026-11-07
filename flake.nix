@@ -180,14 +180,21 @@
             runtimeInputs = [ pkgs.python3 ];
             text = "python3 -m http.server 8000 -d ./_out/html-multi";
           };
+        } // {
+          default = pkgs.leanPackages.buildLakePackage {
+            pname = "Dcc";
+            version = "0.1.0";
+            src = ./.;
+            leanDeps = with pkgs.leanPackages; [ mathlib ];
+          };
+          tex = pkgs.linkFarm "all-documents" ((builtins.map (paper: {
+            name = paper.name;
+            path = packages.${paper.name};
+          }) papers) ++ (builtins.map (slide: {
+            name = slide.name;
+            path = packages.${slide.name};
+          }) slides));
         };
-        defaultPackage = pkgs.linkFarm "all-documents" ((builtins.map (paper: {
-          name = paper.name;
-          path = packages.${paper.name};
-        }) papers) ++ (builtins.map (slide: {
-          name = slide.name;
-          path = packages.${slide.name};
-        }) slides));
         apps.serve = {
           type = "app";
           program = "${self.packages.${system}.serve}/bin/serve";

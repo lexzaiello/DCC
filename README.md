@@ -14,11 +14,11 @@ DCC uses a Lisp-like S-expression syntax. A DCC program looks like this:
 
 ```lisp
 (DCC ((Λ (Sort 0)
-	     (Id (Sort 0))
-		 (Id (Σ (Sort 0)
-			 (Id (Sort 0)))))
-	  𝟙
-	  ∗))
+         (Id (Sort 0))
+         (Id (Σ (Sort 0)
+             (Id (Sort 0)))))
+      𝟙
+      ∗))
 ```
 
 This is a program that applies a type `𝟙` (the top / unit type) and its inhabitant `∗` to a function which accepts a type and an inhabitant of its type `(Λ (Sort 1) (Id (Sort 0)) (Id (Σ (Sort 0) (Id (Sort 0)))))`. Its output is as such:

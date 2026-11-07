@@ -133,17 +133,51 @@ inductive Sigma'.C.type : Expr → Expr → Level → Expr → Type
   | mk : Sigma'.C.type A B s (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ A B (`(Σ A B) (Sort s)))))) ∗))
 deriving Repr
 
-def read_sigma'_C_type (τ A B : Expr) : Except (TypeError τ) ((u : Level) × Sigma'.C.type A B u τ) :=
+open Dsl in
+def Sigma'.C.type.is_norm (h : Sigma'.C.type A B s τ) (hn : IsNorm Red τ) : (IsNorm Red A) ×' (IsNorm Red B) :=
+  match h with
+  | .mk => ⟨fun ⟨_, h⟩ => hn ⟨_, .congrFun (.point 0 (by point_arity) (.point 1 (by point_arity) h))⟩, fun ⟨_, h⟩ => hn ⟨_, .congrFun (.point 1 (by point_arity) (.point 1 (by point_arity) (.point 0 (by change 0 < point_arity (DCC (Π B (Λ A B (`(Σ A B) (Sort s))))); grind) h)))⟩⟩
+
+def read_sigma'_C_type (τ : Expr) : Except (TypeError τ) ((A : Expr) × (B : Expr) × (u : Level) × Sigma'.C.type A B u τ) :=
   open Dsl in match τ with
-  | (DCC ((Π (`𝟙 _A) (`𝟙 (Π _B (Λ __A __B (`(Σ ___A _____B) (Sort s)))))) ∗)) =>
-    if heq : (DCC ((Π (`𝟙 _A) (`𝟙 (Π _B (Λ __A __B (`(Σ ___A _____B) (Sort s)))))) ∗)) = (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ A B (`(Σ A B) (Sort s)))))) ∗)) then
-      .ok ⟨_, heq ▸ Sigma'.C.type.mk⟩
+  | (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ __A __B (`(Σ ___A _____B) (Sort s)))))) ∗)) =>
+    if heq : (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ __A __B (`(Σ ___A _____B) (Sort s)))))) ∗)) = (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ A B (`(Σ A B) (Sort s)))))) ∗)) then
+      .ok ⟨_, _, _, heq ▸ Sigma'.C.type.mk⟩
     else
       .error (.unexpected τ (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ __A __B (`(Σ ___A _____B) (Sort s)))))) ∗)))
   | τ => .error (.unexpected τ τ)
 
+def view_sigma'_C_type (τ A B : Expr) : Except (TypeError τ) ((u : Level) × Sigma'.C.type A B u τ) :=
+  match read_sigma'_C_type τ with
+  | .ok ⟨A', B', _u, h⟩ =>
+    if heq₁ : A = A' then
+      if heq₂ : B = B' then
+        .ok ⟨_, heq₁ ▸ heq₂ ▸ h⟩
+      else .error (.mismatch B B' τ)
+    else
+      .error (.mismatch A A' τ)
+  | .error e => .error e
+
+def view_sigma'_C_type₁ (τ B : Expr) : Except (TypeError τ) ((A : Expr) × (u : Level) × Sigma'.C.type A B u τ) :=
+  match read_sigma'_C_type τ with
+  | .ok ⟨_A, B', _u, h⟩ =>
+    if heq₁ : B = B' then
+      .ok ⟨_, _, heq₁ ▸ h⟩
+    else .error (.mismatch B B' τ)
+  | .error e => .error e
+
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
-def Sigma'.C.type.complete (h : Sigma'.C.type A B s τ) : read_sigma'_C_type τ A B = .ok ⟨s, h⟩ := by
+def Sigma'.C.type.complete₂ (h : Sigma'.C.type A B s τ) : view_sigma'_C_type τ A B = .ok ⟨s, h⟩ := by
+  cases h
+  · simp [view_sigma'_C_type, read_sigma'_C_type]
+
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
+def Sigma'.C.type.complete₁ (h : Sigma'.C.type A B s τ) : view_sigma'_C_type₁ τ B = .ok ⟨A, s, h⟩ := by
+  cases h
+  · simp [view_sigma'_C_type₁, read_sigma'_C_type]
+
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
+def Sigma'.C.type.complete₀ (h : Sigma'.C.type A B s τ) : read_sigma'_C_type τ = .ok ⟨A, B, s, h⟩ := by
   cases h
   · simp [read_sigma'_C_type]
 
@@ -579,8 +613,7 @@ inductive Judge : Expr → Expr → Type where
     → motive →ᵦ motive'
     → Judge (DCC (𝟘.Rec motive)) (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟘) motive'))) ∗))
   | ind_bool : Judge motive τ_motive
-    → Arrow A τ_motive₂ τ_motive
-    → Arrow (DCC 𝟚) (DCC Sort v) τ_motive₂
+    → Sigma'.C.type A (DCC (`A 𝟚)) _v τ_motive
     → Judge x (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive'))) ∗))
     → Judge y (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive'))) ∗))
     → motive →ᵦ motive'
@@ -600,6 +633,34 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
   open Dsl in match e with
   | DCC (𝟚.Rec motive x y) =>
     match infer motive with
+    | .ok ⟨τ_motive, h₁⟩ =>
+      match τ_motive.read_sigma'_C_type with
+      | .ok ⟨A, (DCC (`A₂ 𝟚)), _s, h₂⟩ =>
+        if heq₁ : A₂ = A then
+          match x.infer with
+          | .ok ⟨τ_x, h₃⟩ =>
+            match y.infer with
+            | .ok ⟨τ_y, h₄⟩ =>
+              if heq₂ : τ_x = (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) #(reduce_all motive)))) ∗)) then
+                if heq₃ : τ_y = (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) #(reduce_all motive)))) ∗)) then
+                  .ok ⟨_, .ind_bool h₁ (heq₁ ▸ h₂) (heq₂ ▸ h₃) (heq₃ ▸ h₄) (reduce_reduces rfl)⟩
+                else .error (.sub y (.unexpected y τ_y))
+              else .error (.sub x (.unexpected x τ_x))
+              /-match def_eq? τ_x (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) #(reduce_all motive)))) ∗)) with
+              | .ok h_defeq₁ =>
+                match def_eq? τ_y (DCC ((Π (`𝟙 A) (`𝟙 (Π (`A 𝟚) motive))) ∗)) with
+                | .ok h_defeq₂ =>
+                  .ok ⟨_, .ind_bool h₁ h_arr₁ h_arr₂ h₂ h_defeq₁ h₃ h_defeq₂ (reduce_reduces rfl)⟩
+                | .error e => .error (.sub y (.def_eq e))
+              | .error e => .error (.sub x (.def_eq e))-/
+            | .error e => .error (.sub y e)
+          | .error e => .error (.sub x e)
+        else .error (.sub motive (.mismatch A₂ A τ_motive))
+      | .ok ⟨_A, B, _s, _h₂⟩ =>
+        .error (.sub motive (.unexpected B τ_motive))
+      | .error e => .error (.sub motive (.sub τ_motive e))
+    | .error e => .error (.sub motive e)
+    /-match infer motive with
     | .ok ⟨τ_motive, h₁⟩ =>
       match read_arrow τ_motive with
       | .ok ⟨A, τ_motive₂, h_arr₁⟩ =>
@@ -626,7 +687,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
         | .ok ⟨τ_elim, _⟩ => .error (.sub τ_motive (.unexpected τ_elim τ_motive₂))
         | .error e => .error (.sub motive (.sub τ_motive (.sub τ_motive₂ e)))
       | .error e => .error (.sub motive (.sub τ_motive e))
-    | .error e => .error (.sub motive e)
+    | .error e => .error (.sub motive e)-/
   | DCC (𝟘.Rec motive) =>
     match infer motive with
     | .ok ⟨τ_motive, h₁⟩ =>
@@ -736,7 +797,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     | .error ε => .error (.sub g ε)
   | DCC (= A x y) =>
     match infer A with
-    | .ok ⟨DCC Sort u, ht₀⟩ =>
+    | .ok ⟨DCC Sort _u, ht₀⟩ =>
       match infer x with
       | .ok ⟨t_x, ht₁⟩ =>
         match infer y with
@@ -806,7 +867,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
       | .ok ⟨A, DCC Sort _v, harr₁⟩ =>
         match C.infer with
         | .ok ⟨τ_C, h₂⟩ =>
-          match τ_C.read_sigma'_C_type A (reduce_all B) with
+          match τ_C.view_sigma'_C_type A (reduce_all B) with
           | .ok ⟨_, h⟩ =>
             .ok ⟨_, .sigma' h₁ harr₁ (reduce_reduces rfl) h₂ h⟩
           | .error e => .error (.sub C (.sub τ_C e))
@@ -920,7 +981,7 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
           match infer N with
           | .ok ⟨τ_N, ht_N⟩ =>
             if heq₂ : τ_N = (Pair.g.type A B (reduce_all C)) then
-              match τ_C.read_sigma'_C_type A B with
+              match τ_C.view_sigma'_C_type A B with
               | .ok ⟨_, h_τ_C⟩ =>
                 .ok ⟨_, .pair (heq ▸ ht_M) ht_C (reduce_reduces rfl) (heq₂ ▸ ht_N) h_τ_C⟩
               | .error e => .error (.sub τ_C e)

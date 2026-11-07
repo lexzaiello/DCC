@@ -351,7 +351,7 @@ def Value.inv_box (hv : Value x) (ht : Judge x (open Dsl in (DCC (! A)))) : Σ' 
       | ind_bool =>
         expose_names
         replace a_4 := a_4.push_head .quot
-        have ⟨hn_δ, _⟩ := a_5.is_norm a_9.is_norm
+        have ⟨hn_δ, _⟩ := (Sigma'.C.type.is_norm a_5 (Judge.is_norm (by assumption)))
         cases (a_4.elim_norml hn_δ).elim_norm a_6.is_norm
         clear a_4
         replace a_7 := a_7.push_head (.congrFun .quot)
@@ -712,8 +712,7 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
           cases ht
           case _ =>
             expose_names
-            have h := Arrow.is_norm a_8 (Judge.is_norm (by assumption))
-            have ⟨hn_δ, _⟩ := h
+            have ⟨hn_δ, _⟩ := (Sigma'.C.type.is_norm a_8 (Judge.is_norm (by assumption)))
             cases ((DefEq.push_head (by assumption) .quot).elim_norml hn_δ).elim_norm (Judge.is_norm (by assumption))
             have heq := (RedNorm.push_head (by assumption) (.congrFun .quot)).pi_eq
             simp [congr_reduce₂ (e := (α_1.quot Expr.bool)) (by grind),

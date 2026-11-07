@@ -885,14 +885,13 @@ def ind_bool_true_preservation_head (h : Judge (DCC ((𝟚.Rec motive x y) env �
         | ind_bool =>
           expose_names
           replace a_1 := a_1.push_head .quot
-          have hn_A : IsNorm Red A := fun ⟨_, h⟩ => a_10.is_norm
-            ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩
+          have hn_A : IsNorm Red A := (Sigma'.C.type.is_norm (by assumption) (Judge.is_norm (by assumption))).1
           cases (a_1.elim_norml hn_A).elim_norm a_4.is_norm
           clear a_1
           replace a_5 := (a_5.push_head (.congrFun .quot))
           have pi_eq₁ := a_5.pi_eq
           have hn₁ : IsNorm Red (DCC (`α 𝟚)) := quot_is_norm a_4.is_norm (by grind)
-          have hn₂ : IsNorm Red motive' := a_8.is_norm
+          have hn₂ : IsNorm Red motive' := a_7.is_norm
           have heq₁ := elim_reduce_norm_fst hn₁
           have heq₂ := elim_reduce_norm_fst hn₂
           simp [heq₁, heq₂] at pi_eq₁
@@ -929,14 +928,13 @@ def ind_bool_false_preservation_head (h : Judge (DCC ((𝟚.Rec motive x y) env 
         | ind_bool =>
           expose_names
           replace a_1 := a_1.push_head .quot
-          have hn_A : IsNorm Red A := fun ⟨_, h⟩ => a_10.is_norm
-            ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) h))⟩
+          have hn_A : IsNorm Red A := (Sigma'.C.type.is_norm (by assumption) (Judge.is_norm (by assumption))).1
           cases (a_1.elim_norml hn_A).elim_norm a_4.is_norm
           clear a_1
           replace a_5 := (a_5.push_head (.congrFun .quot))
           have pi_eq₁ := a_5.pi_eq
           have hn₁ : IsNorm Red (DCC (`α 𝟚)) := quot_is_norm a_4.is_norm (by grind)
-          have hn₂ : IsNorm Red motive' := a_8.is_norm
+          have hn₂ : IsNorm Red motive' := a_7.is_norm
           have heq₁ := elim_reduce_norm_fst hn₁
           have heq₂ := elim_reduce_norm_fst hn₂
           simp [heq₁, heq₂] at pi_eq₁

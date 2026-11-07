@@ -4,4 +4,5 @@ import Dcc.Metatheory.Decidability
 import Dcc.Metatheory.SubjectReduction
 import Dcc.Metatheory.Progress
 import Dcc.Metatheory.Extensional
+import Dcc.Metatheory.Consistent
 

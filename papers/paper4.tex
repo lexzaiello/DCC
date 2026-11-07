@@ -20,6 +20,7 @@
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\DeclareUnicodeCharacter{1D7D9}{$\bm{1}$}
 \usepackage[bb=boondox]{mathalfa}
 \usepackage{xparse}
 \usepackage{fontawesome5}
@@ -1588,10 +1589,10 @@ Compilation at the top-level differs from abstraction in that the context is emp
     \begin{gathered}
       \inferrule
       { \llb A \rrb_{\comb[!][\mathbb{1}]} = A' \quad \llb M \rrb_{\comb[!][\comb[\Sigma][\mathbb{1}][A']]} = M'}
-      { \llb \lambda x : (\shared A).M \rrb \coloneq (\comb[!\Lambda][\mathbb{1}][A'][M'] \comb[\&][\ast])}\\\\
+      { \llb \lambda x : (\shared\ A).M \rrb \coloneq (\comb[!\Lambda][\mathbb{1}][A'][M'] \comb[\&][\ast])}\\\\
       \inferrule
       { \llb A \rrb = A' \quad \llb B \rrb_{\comb[!][\comb[\Sigma][\mathbb{1}][A']]} = B'}
-      { \llb \forall x : (\shared A), B \rrb \coloneq (\comb[\Pi][\comb[`\mathbb{1}][A']][\comb[`\mathbb{1}][(\comb[!\Lambda][\mathbb{1}][A'][B'] \comb[\&][\ast])]] \ast)}\\\\
+      { \llb \forall x : (\shared\ A), B \rrb \coloneq (\comb[\Pi][\comb[`\mathbb{1}][A']][\comb[`\mathbb{1}][(\comb[!\Lambda][\mathbb{1}][A'][B'] \comb[\&][\ast])]] \ast)}\\\\
       \inferrule
       { \llb A \rrb = A' \quad \llb B \rrb_{\comb[!][\comb[\Sigma][\mathbb{1}][A']]} = B'}
       { \left\llb \sum_{x : \shared\ A} B(x) \right\rrb \coloneq \comb[\Sigma][A'][(\comb[!\Lambda][\mathbb{1}][A'][B'] \comb[\&][\mathbb{1}])]}
@@ -1621,6 +1622,35 @@ Several examples of type-checking are available in the \href{https://github.com/
 def K_example : Expr :=
   dcc_compile' ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1) (Sort 0))
 \end{leancode}
+\leanlink{https://github.com/lexzaiello/DCC/blob/k-lean-comp-type-check/Dcc/Compile/Examples.lean}{Dcc.Compile.Examples}
+
+Also, some of the usual dependent functions type-check in DCC. For example, let \(f : (x : \mathbb{2}) \rightarrow (y : \text{if}\ x\ \text{then}\ A\ \text{else}\ B) \rightarrow y\) where \(A : \sort{u}\) and \(B : \sort{v}\). Then, \(f\) is expressed in DCC as:
+
+\[
+  \begin{aligned}
+    &\text{Let } motive \coloneq \comb[\Lambda][\mathbb{1}][\comb[`\mathbb{1}][\mathbb{2}]][\comb[`\comb[\Sigma][\mathbb{1}][\mathbb{2}]][\sort{u}]]\\
+    &\text{Let } case_1 \coloneq \comb[\Lambda][\mathbb{1}][\comb[`\mathbb{1}][\mathbb{2}]][\comb[`\comb[\Sigma][\mathbb{1}][\mathbb{2}]][A]]\\
+    &\text{Let } case_2 \coloneq \comb[\Lambda][\mathbb{1}][\comb[`\mathbb{1}][\mathbb{2}]][\comb[`\comb[\Sigma][\mathbb{1}][\mathbb{2}]][B]]\\
+    &f_{A,B} \coloneq  \comb[\Lambda][\mathbb{2}][(\comb[\mathbb{2}.Rec][motive][case_1][case_-2] \ast)][\comb[Snd][(\comb[\mathbb{2}.Rec][motive][case_1][case_2] \ast)]]
+  \end{aligned}
+\]
+
+\noindent The application \((f_{\mathbb{1},\comb[=][\comb[`\mathbb{1}][\mathbb{1}]][\ast][\ast]} \mathbb{1}_\mathbb{2} \ast)\) type-checks:
+
+\begin{leancode}
+Messages here:
+216:0:
+Except.ok (DCC 𝟙)
+\end{leancode}
+
+\noindent Similarly, the application \((f_{\mathbb{1},\comb[=][\comb[`\mathbb{1}][\mathbb{1}]][\ast][\ast]} \mathbb{0}_\mathbb{2} (\comb[refl][\comb[`\mathbb{1}][\mathbb{1}]] \comb[\&][\ast] \comb[\&][\ast]))\) type-checks:
+
+\begin{leancode}
+Messages here:
+224:0:
+Except.ok (DCC (= 𝟙 ∗ ∗))
+\end{leancode}
+
 \leanlink{https://github.com/lexzaiello/DCC/blob/k-lean-comp-type-check/Dcc/Compile/Examples.lean}{Dcc.Compile.Examples}
 
 \section{Comparison to SK Combinators}

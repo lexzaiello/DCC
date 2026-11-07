@@ -581,7 +581,7 @@ inductive Judge : Expr → Expr → Type where
   | curr'  : Judge A (DCC Sort u)
     → Judge B τ_B
     → A →ᵦ A'
-    → Arrow A' (DCC Sort v) τ_B
+    → ArrowSort A' v τ_B
     → Judge x (curr'.x.type A' B' C)
     → B →ᵦ B'
     → Judge (DCC (!Λ A B x)) (curr'.type A' B' C)
@@ -984,8 +984,8 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
     | .ok ⟨DCC Sort _m, ht⟩ =>
       match B.infer with
       | .ok ⟨τ_β, ht_β⟩ =>
-        match τ_β.read_arrow₁ (reduce_all A) with
-        | .ok ⟨DCC Sort _n, h⟩ =>
+        match τ_β.view_arrow_sort₁ (reduce_all A) with
+        | .ok ⟨_n, h⟩ =>
           match infer x with
           | .ok ⟨DCC ((Π _A (`_B C)) _D), ht₂⟩ =>
             if heq : (DCC ((Π _A (`_B C)) _D)) = (curr'.x.type (reduce_all A) (reduce_all B) C) then

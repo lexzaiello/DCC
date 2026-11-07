@@ -210,9 +210,33 @@ def example_curr_bool_select (A B : Expr) : Expr :=
   DCC (Λ 𝟚 selector (Snd selector))
 
 open Dsl in
-#eval (·.fst) <$> Expr.infer (example_curr_bool_select (DCC 𝟙) (DCC 𝟘))
+#eval (·.fst) <$> Expr.infer (example_curr_bool_select (DCC 𝟙) (DCC (= 𝟙 ∗ ∗)))
 
 open Dsl in
-#eval (·.fst) <$> Expr.infer (DCC (#((example_curr_bool_select (DCC 𝟙) (DCC 𝟘))) 𝟙₂ ∗))
+#eval (·.fst) <$> Expr.infer (DCC (#((example_curr_bool_select (DCC 𝟙) (DCC (= 𝟙 ∗ ∗)))) 𝟙₂ ∗))
+/-
+Messages here:
+216:0:
+Except.ok (DCC 𝟙)
+-/
+
+open Dsl in
+#eval (·.fst) <$> Expr.infer (DCC (#((example_curr_bool_select (DCC 𝟙) (DCC (= 𝟙 ∗ ∗)))) 𝟘₂ ((refl (`𝟙 𝟙)) (& ∗) (& ∗))))
+/-
+Messages here:
+216:0:
+Except.ok (DCC 𝟙)
+-/
+
+/-
+Messages here:
+216:0:
+Except.ok (DCC 𝟙)
+-/
 
 #eval Expr.reduce_all (DCC (#((example_curr_bool_select (DCC 𝟙) (DCC 𝟘))) 𝟙₂ ∗))
+/-
+Messages here:
+223:0:
+(DCC ∗)
+-/

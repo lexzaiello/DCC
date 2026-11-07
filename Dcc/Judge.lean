@@ -355,6 +355,74 @@ def view_arrow (τ A B : Expr) : Except (TypeError τ) (Arrow A B τ) :=
       .error (.mismatch B B' τ)
   | .error e => .error e
 
+open Dsl in
+inductive Pi.C.type' : Expr → Expr → Level → Expr → Type
+  | mk : (B xA) →ᵦ A'
+    → (C xA (hole (C.max_hole.succ))) →ᵦ ((Π B₂ C₂) xA₂)
+    → (C₂ xA₂ (hole (C₂.max_hole.succ))) →ᵦ (Sort v)
+    → Pi.C.type' A' B₂ v (DCC ((Π B C) xA))
+deriving Repr
+
+def read_pi_C_type (τ : Expr) : Except (TypeError τ) (Σ (A B : Expr) (v : Level), Pi.C.type' A B v τ) :=
+  open Dsl in
+  match τ with
+  | DCC ((Π _B C) xA) =>
+    match heq₁ : reduce_all (DCC (C xA (hole (C.max_hole.succ)))) with
+    | (DCC ((Π _B₂ C₂) xA₂)) =>
+      match heq₂ : reduce_all (DCC (C₂ xA₂ (hole (C₂.max_hole.succ)))) with
+      | DCC Sort _v =>
+        .ok ⟨_, _, _, .mk (reduce_reduces rfl) (reduce_reduces heq₁) (reduce_reduces heq₂)⟩
+      | τ' => .error (.unexpected τ τ')
+    | τ' => .error (.unexpected τ τ')
+  | τ' => .error (.unexpected τ τ')
+
+def view_pi_C_type (τ A B : Expr) : Except (TypeError τ) (Σ (v : Level), Pi.C.type' A B v τ) :=
+  match read_pi_C_type τ with
+  | .ok ⟨A', B', _s, h⟩ =>
+    if heq₁ : A' = A then
+      if heq₂ : B' = B then
+        .ok ⟨_, heq₁ ▸ heq₂ ▸ h⟩
+      else .error (.mismatch B B' τ)
+    else .error (.mismatch A A' τ)
+  | .error e => .error e
+
+@[dcc_force_reduce, aesop safe forward (rule_sets := [DccReduce])]
+theorem reduce_all_complete (h : A →ᵦ B) : reduce_all A = B := by
+  have h := RedNorm.complete_fst h
+  grind
+
+@[dcc_force_reduce, aesop safe apply (rule_sets := [DccReduce])]
+theorem reduce_all_complete_eq (h : A →ᵦ B) : reduce_reduces heq = h := by
+  simp [reduce_reduces]
+
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
+def Pi.C.type'.complete (h : Pi.C.type' A B v τ) : read_pi_C_type τ = .ok ⟨A, B, v, h⟩ := by
+  cases h with
+  | mk h₁ h₂ h₃ =>
+    have heq₁ := reduce_all_complete h₁
+    have heq₂ := reduce_all_complete h₂
+    have heq₃ := reduce_all_complete h₃
+    simp [read_pi_C_type]
+    split
+    case h_1 heq' =>
+      cases heq'.symm.trans heq₂
+      split
+      case h_1 heq' =>
+        cases heq'.symm.trans heq₃
+        cases heq₁
+        simp_all
+        constructor
+        · simp [reduce_reduces]
+        · constructor <;> simp [reduce_reduces]
+      · grind
+    · grind
+
+@[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
+def Pi.C.type'.complete₁ (h : Pi.C.type' A B v τ) : view_pi_C_type τ A B = .ok ⟨v, h⟩ := by
+  have heq := h.complete
+  cases h with
+  | mk h₁ h₂ h₃ => simp [view_pi_C_type, heq]
+
 -- (Π(Id(Sort 0), `(Sort 0, Π(`(𝟙, Sort 0), `(𝟙, `(Sort 0, Sort 1))))) 𝟙)
 open Dsl in inductive Pi.C.type :
   Expr → Expr → Level → Expr → Type
@@ -499,15 +567,6 @@ theorem Arrow.read_complete {A B τ : Expr}
     simp
     constructor <;> simp [reduce_reduces]
 
-@[dcc_force_reduce, aesop safe forward (rule_sets := [DccReduce])]
-theorem reduce_all_complete (h : A →ᵦ B) : reduce_all A = B := by
-  have h := RedNorm.complete_fst h
-  grind
-
-@[dcc_force_reduce, aesop safe apply (rule_sets := [DccReduce])]
-theorem reduce_all_complete_eq (h : A →ᵦ B) : reduce_reduces heq = h := by
-  simp [reduce_reduces]
-
 open Dsl in
 @[dcc_judge, inline]
 abbrev comp.g.type := Arrow
@@ -642,7 +701,7 @@ inductive Judge : Expr → Expr → Type where
     → ArrowSort A v τ_B
     → Judge C τ_C
     → B →ᵦ B'
-    → Pi.C.type B' A s τ_C
+    → Pi.C.type' A B' s τ_C
     → Judge (open Dsl in (DCC (Π B C))) (Pi.type A v s)
   | sort    : Judge (DCC Sort m) (DCC Sort m.succ)
   | top     : Judge (DCC 𝟙) Top.type
@@ -1050,10 +1109,10 @@ def infer (e : Expr) : Except (TypeError e) (Σ' (t : Expr), Judge e t) :=
       | .ok ⟨A, _v, harr⟩ =>
         match infer C with
         | .ok ⟨τ_C, ht₂⟩ =>
-          match τ_C.view_pi_f_β (reduce_all B) A with
+          match τ_C.view_pi_C_type A (reduce_all B) with
           | .ok ⟨_s, h₂⟩ =>
             .ok ⟨_, .pi ht₁ harr ht₂ (reduce_reduces rfl) h₂⟩
-          | _ => .error (.mark 4 (.unexpected τ_C C))
+          | .error e => .error (.mark 4 (.sub τ_C e))
         | .error ε => .error (.mark 3 (.sub C ε))
       | _ => .error (.mark 2 (.unexpected τ_B B))
     | .error ε => .error (.mark 1 (.sub B ε))

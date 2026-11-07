@@ -9,6 +9,8 @@ open Expr (Value Judge point_arity points reduce Red infer reduce_sound_fst redu
 open Lean.Meta (MetaM)
 open Lean.Elab
 open Lean.Elab.Term
+open Std (Format ToFormat)
+open Std.ToFormat
 
 /-
 Variable abstraction:
@@ -173,6 +175,19 @@ inductive LConst where
   | bool       : LConst
 deriving Repr, Lean.ToExpr
 
+def LConst.toFormat (e : LConst) : Format :=
+  match e with
+  | .true => "True"
+  | .false => "False"
+  | .true_intro => "True.intro"
+  | .sort n => s!"Sort {n}"
+  | .bool_true => s!"Bool.true"
+  | .bool_false => s!"Bool.false"
+  | .bool => s!"Bool"
+
+instance : ToFormat LConst := ⟨LConst.toFormat⟩
+instance : Repr LConst := ⟨fun x _ => LConst.toFormat x⟩
+
 abbrev VarIdx := ℕ
 
 inductive LExpr where
@@ -186,7 +201,23 @@ inductive LExpr where
   | share_ty : (u : Level)       → (A : LExpr)   → LExpr
   | share    : (u : Level)       → (A x : LExpr) → LExpr
   | deref    : (u : Level)       → (A : LExpr)   → LExpr
-deriving Repr, Lean.ToExpr
+deriving Lean.ToExpr
+
+def LExpr.toFormat (e : LExpr) : Format :=
+  match e with
+  | .bvar n => s!"{n}"
+  | .const c => format c
+  | .app x y => .paren (x.toFormat ++ " " ++ y.toFormat)
+  | .lam A M => "λ " ++ .paren ("_ : " ++ A.toFormat) ++ " =>" ++ " " ++ M.toFormat
+  | .forallE A M => "∀ _ : " ++ A.toFormat ++ "," ++ " " ++ M.toFormat
+  | .sigma _u _v A B => "Σ " ++ A.toFormat ++ ", " ++ B.toFormat
+  | .sigma_mk _u _v A B x y => .paren ("⟨" ++ x.toFormat ++ "," ++ y.toFormat ++ "⟩ :" ++ " " ++ "Σ " ++ A.toFormat ++ ", " ++ B.toFormat)
+  | .share_ty _u A => "Shared " ++ A.toFormat
+  | .share _u A x => .paren ("share " ++ x.toFormat ++ " :" ++ " " ++ "Shared " ++ A.toFormat)
+  | .deref _u A => "deref " ++ A.toFormat
+
+instance : ToFormat LExpr := ⟨LExpr.toFormat⟩
+instance : Repr LExpr := ⟨fun x _ => LExpr.toFormat x⟩
 
 open Expr in
 inductive TypedExpr : Type
@@ -198,6 +229,8 @@ inductive IsCtx : Expr → Type
   | sigma : IsCtx A → Value B → IsCtx (DCC (Σ A B))
   | bang  : IsCtx A → IsCtx (DCC (! A))
 deriving Repr
+
+def IsCtx.toFormat (_hΓ : IsCtx Γ) : Format := Γ.toFormat
 
 open Dsl in
 def IsCtx.bang₀ (h : IsCtx (DCC (! A))) : IsCtx A :=
@@ -219,6 +252,10 @@ inductive Ctx where
   | mk : (Γ : Expr) → (hΓ : IsCtx Γ) → Ctx
 deriving Repr
 
+def Ctx.toFormat (c : Ctx) : Std.Format := c.1.toFormat
+
+instance : ToFormat Ctx := ⟨Ctx.toFormat⟩
+
 inductive RawCompileError (α δ : Type) : Type
   | not_a_context     : (at_e : α) → (Δ    : Expr)       → (Γ : δ)             → RawCompileError α δ
   | sub               : (at_e : α) → (Γ : δ)             → RawCompileError α δ → RawCompileError α δ
@@ -235,7 +272,28 @@ inductive RawCompileError (α δ : Type) : Type
   | expected_sigma_ty : (at_e : α) → (found_e : LExpr)   → (Γ : δ) → RawCompileError α δ
   | expected_box      : (at_e : α) → (found_e : LExpr)   → (Γ : δ) → RawCompileError α δ
   | expected_bang_tm  : (at_e : α) → (found_e : LExpr)   → (Γ : δ) → RawCompileError α δ
-deriving Repr
+
+def RawCompileError.toFormat [ToFormat α] [ToFormat δ] (e : RawCompileError α δ) : Format :=
+  let footer (at_e : α) (Γ : δ) : Format := "at " ++ format Γ ++ ": " ++ format at_e
+  match e with
+  | .not_a_context at_e Δ Γ => "- expected a context, but found: " ++ (.nest 1 (format Δ))-- ++ .line ++ footer at_e Γ
+  | .sub at_e Γ e => (toFormat e) ++ .line ++ footer at_e Γ
+  | .and at_e Γ e₁ e₂ => (.nest 1 (toFormat e₁)) ++ .line ++ (.nest 1 (toFormat e₂)) ++ .line ++ footer at_e Γ
+  | .not_a_value at_e v Γ => "- expected a value, but found: " ++ (.nest 1 (format v))-- ++ .line ++ footer at_e Γ
+  | .invalid_level at_e u Γ => "- expected a level, but found: " ++ (.nest 1 (format u))-- ++ .line ++ footer at_e Γ
+  | .unsupported at_e Γ => "- not supported: " ++ (.nest 1 (format at_e)) ++ .line ++ "at: " ++ (format Γ)
+  | .type_error at_e at_e_tm e Γ => "- type error: " ++ (.nest 1 ((.nest 1 (format e)) ++ .line ++ "at: " ++ (format at_e_tm)))-- ++ .line ++ footer at_e Γ
+  | .expected_binder at_e found_e => "- expected binder, but found: " ++ (.nest 1 (format found_e)) ++ .line ++ "at: " ++ (format at_e)
+  | .expected_app at_e found_e => "- expected an app, but found: " ++ (.nest 1 (format found_e)) ++ .line ++ "at: " ++ (format at_e)
+  | .expected_sigma_tm at_e found_e Γ => "- expected a Σ-term, but found: " ++ (.nest 1 (format found_e))-- ++ .line ++ footer at_e Γ
+  | .expected_sigma_ty at_e found_e Γ => "- expected a Σ-type, but found: " ++ (.nest 1 (format found_e))-- ++ .line ++ footer at_e Γ
+  | .expected_box at_e found_e Γ => "- expected a boxed value, but found: " ++ (.nest 1 (format found_e))-- ++ .line ++ footer at_e Γ
+  | .expected_bang at_e found_e Γ => "- expected a bang type, but found: " ++ (.nest 1 (format found_e))-- ++ .line ++ footer at_e Γ
+  | .expected_bang_tm at_e found_e Γ => "- expected a bang-type, but found: " ++ (.nest 1 (format found_e))-- ++ .line ++ footer at_e Γ
+  | .unexpected at_e Γ => "- unexpected value" ++ .line ++ footer at_e Γ
+
+instance [ToFormat α] [ToFormat δ] : ToFormat (RawCompileError α δ) := ⟨RawCompileError.toFormat⟩
+instance [ToFormat α] [ToFormat δ] : Repr (RawCompileError α δ) := ⟨fun x _ => RawCompileError.toFormat x⟩
 
 def RawCompileError.with_ctx (e : RawCompileError α Δ) (x : Γ) : RawCompileError α Γ :=
   match e with
@@ -483,7 +541,7 @@ def app_is_value (hn_Γ₁ : IsCtx (DCC (! Γ))) (hv₁ : Value M') (hv₂ : Val
 
 open Dsl in
 inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') → Type
-  | sigma_mk : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ x x' hv₁
+  | sigma_mk  : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ x x' hv₁
     → Abstract ⟨Γ, hn_Γ₁.bang₀⟩ y y' hv₂
     → Judge x' (DCC ((Π B₁ C₁) x₁))
     → Judge y' (DCC ((Π B₂ C₂) x₂))
@@ -498,24 +556,31 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
         (.points₃ (by point_arity) hv₃ hv₄
           (.points₂ (by change point_arity (DCC (∘ y' (Fst B))) = _; grind) hv₂
             (.points₁ (by change point_arity (DCC (Fst B)) = _; grind) hv₄))))
-  | share    : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ x x' hv₁ → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.share u A x) (DCC ($<> x')) (.points₁ (by point_arity) hv₁)
-  | share_ty : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ x x' hv₁ → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.share_ty u A) (DCC (!<> x')) (.points₁ (by point_arity) hv₁)
-  | const    : AbstractConst Γ c e hv → Abstract Γ (.const c) e hv
-  | var      : AbstractVar Γ n e hv   → Abstract Γ (.bvar n) e hv
-  | sigma    : Abstract ⟨Γ, hn_Γ.bang₀⟩ A B' hv₁
+  | share     : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ x x' hv₁ → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.share u A x) (DCC ($<> x')) (.points₁ (by point_arity) hv₁)
+  | share_ty  : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ x x' hv₁ → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.share_ty u A) (DCC (!<> x')) (.points₁ (by point_arity) hv₁)
+  | const     : AbstractConst Γ c e hv → Abstract Γ (.const c) e hv
+  | var       : AbstractVar Γ n e hv   → Abstract Γ (.bvar n) e hv
+  | sigma     : Abstract ⟨Γ, hn_Γ.bang₀⟩ A B' hv₁
     → Abstract ⟨DCC (Σ Γ B'), .sigma hn_Γ.bang₀ hv₁⟩ B C' hv₂
     → Abstract ⟨DCC (! Γ), hn_Γ⟩ (.sigma u v A B) (DCC (Σ' B' C')) (.points₂ (by point_arity) hv₁ hv₂)
-  | lam      : Abstract ⟨Γ, h_Γ₁.bang₀⟩ A A' hv₁
+  | lam       : Abstract ⟨Γ, h_Γ₁.bang₀⟩ A A' hv₁
     → Abstract ⟨(DCC (! (Σ Γ A'))), .bang (.sigma h_Γ₁.bang₀ hv₁)⟩ M M' hv₂
     → Abstract ⟨DCC (! Γ), h_Γ₁⟩ (.lam (.share_ty _u A) M) (DCC (!Λ Γ A' M')) (.points₃ (by point_arity) h_Γ₁.bang₀.is_value hv₁ hv₂)
+  | lam'      : Abstract ⟨Γ, h_Γ₁⟩ A A' hv₁
+    → Abstract ⟨(DCC (Σ Γ A')), (.sigma h_Γ₁ hv₁)⟩ M M' hv₂
+    → Abstract ⟨DCC Γ, h_Γ₁⟩ (.lam A M) (DCC (Λ Γ A' M')) (.points₃ (by point_arity) h_Γ₁.is_value hv₁ hv₂)
   -- If both the domain and codomain of a function type depend on the context,
   -- we should be a nested Π such that we can capture the context ((Π A' B') Γ)
-  | forallE  : (Lean.Expr.hasLooseBVar A.to_expr 0 = true ∨ Lean.Expr.hasLooseBVar B.to_expr 1 = true)
+  | forallE   : (Lean.Expr.hasLooseBVar (LExpr.share_ty _u A).to_expr 0 = true ∨ Lean.Expr.hasLooseBVar B.to_expr 1 = true)
     → Abstract ⟨(DCC (! Γ)), hn_Γ₁⟩ A A' hv₁
     → Abstract ⟨(DCC (! (Σ Γ A'))), (.bang (.sigma hn_Γ₁.bang₀ hv₁))⟩ B B' hv₂
-    → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.forallE A B) (DCC (Π A' (!Λ Γ A' B'))) (.points₂ (by point_arity) hv₁ (.points₃ (by point_arity) hn_Γ₁.bang₀.is_value hv₁ hv₂))
+    → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.forallE (.share_ty _u A) B) (DCC (Π A' (!Λ Γ A' B'))) (.points₂ (by point_arity) hv₁ (.points₃ (by point_arity) hn_Γ₁.bang₀.is_value hv₁ hv₂))
+  | forallE'' : (Lean.Expr.hasLooseBVar A.to_expr 0 = true ∨ Lean.Expr.hasLooseBVar B.to_expr 1 = true)
+    → Abstract ⟨(DCC Γ), hn_Γ₁⟩ A A' hv₁
+    → Abstract ⟨(DCC (Σ Γ A')), (.sigma hn_Γ₁ hv₁)⟩ B B' hv₂
+    → Abstract ⟨DCC Γ, hn_Γ₁⟩ (.forallE A B) (DCC (Π A' (Λ Γ A' B'))) (.points₂ (by point_arity) hv₁ (.points₃ (by point_arity) hn_Γ₁.is_value hv₁ hv₂))
   -- For arrows. Dom and cod don't depend, so make an arrow
-  | forallE' : (Lean.Expr.hasLooseBVar A.to_expr 0 = false ∧ Lean.Expr.hasLooseBVar B.to_expr 1 = false)
+  | forallE'  : (Lean.Expr.hasLooseBVar A.to_expr 0 = false ∧ Lean.Expr.hasLooseBVar B.to_expr 1 = false)
     → Abstract ⟨(DCC (! ⊤)), (.bang .unit)⟩ A A' hv₁
     → Abstract ⟨(DCC (! ⊤)), (.bang .unit)⟩ B B' hv₂
     → (A' (& ∗)) →ᵦ A''
@@ -523,7 +588,7 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → (hv₃ : Value A'')
     → (hv₄ : Value B'')
     → Abstract Γ (.forallE A B) (DCC (`#(Γ.1) (→ A'' B''))) (.points₂ (by point_arity) Γ.2.is_value (.pi (.points₂ (by point_arity) .top hv₃) (.points₂ (by point_arity) .top (.points₂ (by point_arity) hv₃ hv₄)) .tintro))
-  | app      : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ M M' hv₁
+  | app       : Abstract ⟨Γ, hn_Γ₁.bang₀⟩ M M' hv₁
     → Abstract ⟨Γ, hn_Γ₁.bang₀⟩ N N' hv₂
     → Judge M' (DCC ((Π B₁ C₁) x₁))
     → Judge N' (DCC ((Π B₂ C₂) x₂))
@@ -531,7 +596,7 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → (C₂ x₂) →ᵦ B
     → (hv₃ : Value A)
     → (hv₄ : Value B)
-    → Judge (DCC (∘ N' (Fst (`Γ Γ)))) (DCC ((Π (`⊤ A₃) (`⊤ (Π B₃ C₃))) ∗))
+    → Judge (DCC (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))) (DCC ((Π (`⊤ A₃) C₃) ∗))
     → (hv₅ : Value C₃)
     → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.app M N) (DCC (∘ (Eval A B M') (⟨,⟩C₃ (Id Γ) (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))))) (app_is_value hn_Γ₁ hv₁ hv₂ hv₃ hv₄ hv₅)
 deriving Repr
@@ -556,6 +621,9 @@ inductive Cc : (e : LExpr) → (e' : Expr) → Type
   | lam      : Abstract ⟨.top, .unit⟩ A A' hv₁
     → Abstract ⟨DCC (! (Σ ⊤ A')), .bang (.sigma .unit hv₁)⟩ M M' hv₂
     → Cc (.lam (.share_ty u A) M) (DCC ((!Λ ⊤ A' M') (& ∗)))
+  | lam'     : Abstract ⟨.top, .unit⟩ A A' hv₁
+    → Abstract ⟨DCC (Σ ⊤ A'), (.sigma .unit hv₁)⟩ M M' hv₂
+    → Cc (.lam A M) (DCC ((Λ ⊤ A' M') ∗))
   | sigma    : Cc A A'
     → A' →ᵦ A''
     → (hv : Value A'')
@@ -567,6 +635,11 @@ inductive Cc : (e : LExpr) → (e' : Expr) → Type
     → (hv₁ : Value A'')
     → Abstract ⟨DCC (! (Σ ⊤ A'')), (.bang (.sigma .unit hv₁))⟩ B B' hv₂
     → Cc (.forallE (.share_ty u A) B) (DCC ((Π (`⊤ A'') (`⊤ ((!Λ ⊤ A'' B') (& ∗)))) ∗))
+  | forallE'  : Cc A A'
+    → A' →ᵦ A''
+    → (hv₁ : Value A'')
+    → Abstract ⟨DCC (Σ ⊤ A''), (.sigma .unit hv₁)⟩ B B' hv₂
+    → Cc (.forallE A B) (DCC ((Π (`⊤ A'') (`⊤ ((Λ ⊤ A'' B') ∗))) ∗))
 deriving Repr
 
 def Ctx.mk_var (Γ : Ctx) (n : VarIdx) : Σ (e : Expr) (hv : Value e), AbstractVar Γ n e hv :=
@@ -719,6 +792,12 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
       let ⟨M', hv₂, h₂⟩ ← (seek_to M ⟨(DCC (! (Σ Γ A'))), .bang (.sigma hn_Γ.bang₀ hv₁)⟩ (Ctx.abstract ⟨(DCC (! (Σ Γ A'))), .bang (.sigma hn_Γ.bang₀ hv₁)⟩ M))
       return ⟨_, _, .lam h₁ h₂⟩
     | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
+  | (.lam A M) =>
+    match Γ with
+    | ⟨Γ, hn_Γ⟩ => do
+      let ⟨A', hv₁, h₁⟩ ← (seek_to A ⟨Γ, hn_Γ⟩ (Ctx.abstract ⟨Γ, hn_Γ⟩ A))
+      let ⟨M', hv₂, h₂⟩ ← (seek_to M ⟨(DCC (Σ Γ A')), (.sigma hn_Γ hv₁)⟩ (Ctx.abstract ⟨(DCC (Σ Γ A')), (.sigma hn_Γ hv₁)⟩ M))
+      return ⟨_, _, .lam' h₁ h₂⟩
   | (.forallE A B) =>
     if heq₁ : (Lean.Expr.hasLooseBVar A.to_expr 0 = false ∧ Lean.Expr.hasLooseBVar B.to_expr 1 = false) then
       let ⟨A', hv₁, h₁⟩ ← (seek_to A ⟨(DCC (! ⊤)), (.bang .unit)⟩ (Ctx.abstract ⟨(DCC (! ⊤)), (.bang .unit)⟩ A))
@@ -729,12 +808,15 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
     else
       have heq₂ : (Lean.Expr.hasLooseBVar A.to_expr 0 = true ∨ Lean.Expr.hasLooseBVar B.to_expr 1 = true) := by
         grind
-      match Γ with
-      | ⟨DCC (! Γ), hn_Γ⟩ =>
+      match A, Γ with
+      | .share_ty _u A, ⟨DCC (! Γ), hn_Γ⟩ =>
         let ⟨A', hv₁, h₁⟩ ← (seek_to A ⟨(DCC (! Γ)), hn_Γ⟩ (Ctx.abstract ⟨(DCC (! Γ)), hn_Γ⟩ A))
         let ⟨B', hv₂, h₂⟩ ← (seek_to B ⟨(DCC (! (Σ Γ A'))), (.bang (.sigma hn_Γ.bang₀ hv₁))⟩ (Ctx.abstract ⟨(DCC (! (Σ Γ A'))), (.bang (.sigma hn_Γ.bang₀ hv₁))⟩ B))
         return ⟨_, _, .forallE heq₂ h₁ h₂⟩
-      | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())
+      | A, ⟨Γ, hn_Γ⟩ =>
+        let ⟨A', hv₁, h₁⟩ ← (seek_to A ⟨(DCC Γ), hn_Γ⟩ (Ctx.abstract ⟨(DCC Γ), hn_Γ⟩ A))
+        let ⟨B', hv₂, h₂⟩ ← (seek_to B ⟨(DCC (Σ Γ A')), (.sigma hn_Γ hv₁)⟩ (Ctx.abstract ⟨(DCC (Σ Γ A')), (.sigma hn_Γ hv₁)⟩ B))
+        return ⟨_, _, .forallE'' heq₂ h₁ h₂⟩
   | .app x y =>
     match Γ with
     | ⟨DCC (! Γ), hn_Γ⟩ =>
@@ -744,8 +826,8 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
       match τ₁, τ₂ with
       | (DCC ((Π B₁ C₁) x₁)), (DCC ((Π B₂ C₂) x₂)) =>
         let (hv₃, hv₄) ← Prod.mk <$> (seek_to x ⟨Γ, hn_Γ.bang₀⟩ (Expr.as_value? (reduce Red (DCC (B₁ x₁))).fst)) <*> (seek_to y ⟨Γ, hn_Γ.bang₀⟩ (Expr.as_value? (reduce Red (DCC (C₂ x₂))).fst))
-        match ← (guard_type_error (DCC (∘ y' (Fst (`Γ Γ)))).infer) with
-        | ⟨(DCC ((Π (`⊤ A₃) (`⊤ (Π B₃ C₃))) ∗)), ht₃⟩ =>
+        match ← (guard_type_error (DCC (Λ Γ (`Γ Γ) (∘ y' (Fst (`Γ Γ))))).infer) with
+        | ⟨(DCC ((Π (`⊤ A₃) C₃) ∗)), ht₃⟩ =>
           let hv₅ ← Expr.as_value? C₃
           return ⟨_, _, .app h₁ h₂ ht₁ ht₂ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₃ hv₄ ht₃ hv₅⟩
         | _ => raise_error (.unexpected () ())
@@ -776,6 +858,10 @@ def cc (e : LExpr) : SeekM (Σ (e' : Expr), Cc e e') := open Dsl in do
     let ⟨A', hv₁, h₁⟩   ← (seek_to A ⟨.top, .unit⟩ (Ctx.abstract ⟨.top, .unit⟩ A))
     let ⟨_M', _hv₂, h₂⟩ ← (seek_to M ⟨(DCC (! (Σ ⊤ A'))), .bang (.sigma .unit hv₁)⟩ (Ctx.abstract ⟨(DCC (! (Σ ⊤ A'))), .bang (.sigma .unit hv₁)⟩ M))
     return ⟨_, .lam h₁ h₂⟩
+  | .lam A M =>
+    let ⟨A', hv₁, h₁⟩   ← (seek_to A ⟨.top, .unit⟩ (Ctx.abstract ⟨.top, .unit⟩ A))
+    let ⟨_M', _hv₂, h₂⟩ ← (seek_to M ⟨(DCC (Σ ⊤ A')), (.sigma .unit hv₁)⟩ (Ctx.abstract ⟨(DCC (Σ ⊤ A')), (.sigma .unit hv₁)⟩ M))
+    return ⟨_, .lam' h₁ h₂⟩
   | .sigma _u _v (.share_ty _u₂ A) B =>
     let ⟨A', h₁⟩ ← (seek_to A ⟨.top, .unit⟩ (cc A))
     let hv₁ ← Expr.as_value? (reduce Red A').fst
@@ -788,6 +874,11 @@ def cc (e : LExpr) : SeekM (Σ (e' : Expr), Cc e e') := open Dsl in do
     let hv₁ ← Expr.as_value? (reduce Red A').fst
     let ⟨_B', _hv₂, h₂⟩ ← (seek_to B ⟨DCC (! (Σ ⊤ #((reduce Red A').fst))), (.bang (.sigma .unit hv₁))⟩ (Ctx.abstract ⟨DCC (! (Σ ⊤ #((reduce Red A').fst))), (.bang (.sigma .unit hv₁))⟩ B))
     return ⟨_, .forallE h₁ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₁ h₂⟩
+  | .forallE A B =>
+    let ⟨A', h₁⟩ ← (seek_to A ⟨.top, .unit⟩ (cc A))
+    let hv₁ ← Expr.as_value? (reduce Red A').fst
+    let ⟨_B', _hv₂, h₂⟩ ← (seek_to B ⟨DCC (Σ ⊤ #((reduce Red A').fst)), (.sigma .unit hv₁)⟩ (Ctx.abstract ⟨DCC (Σ ⊤ #((reduce Red A').fst)), (.sigma .unit hv₁)⟩ B))
+    return ⟨_, .forallE' h₁ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₁ h₂⟩
   | .sigma_mk u v A B x y => (fun ⟨_, _, x⟩ => ⟨_, .sigma_mk x⟩) <$> (Ctx.abstract ⟨.bang .top, .bang .unit⟩ (.sigma_mk u v A B x y))
   | _e => raise_error (.unexpected () ())
 
@@ -803,24 +894,18 @@ After calculating this bound "n + 1", we Share.share all top-level arguments
 n times and map each binder's type τ to (Share^[(n + 1)] τ)
 -/
 
-def LExpr.n_apps_abstr (e : LExpr) : ℕ :=
+def LExpr.is_free (e : LExpr) (lv : ℕ) : Bool :=
   match e with
-  | .app x y => (x.n_apps_abstr + y.n_apps_abstr).succ
-  | .lam bty bdy => max bty.n_apps_abstr bdy.n_apps_abstr
-  | .forallE bty bdy => max bty.n_apps_abstr bdy.n_apps_abstr
-  | .sigma _u _v A B => (A.n_apps_abstr + B.n_apps_abstr).succ
-  | .sigma_mk _u _v A B x y => (max (A.n_apps_abstr + B.n_apps_abstr) (x.n_apps_abstr + y.n_apps_abstr)).succ
-  | _ => 0
-
-def LExpr.n_apps (e : LExpr) : ℕ :=
-  match e with
-  | .app (.lam bty bdy) _x => LExpr.n_apps_abstr (.lam bty bdy)
-  | .app x y => max x.n_apps y.n_apps
-  | .lam bty bdy => max bty.n_apps bdy.n_apps
-  | .forallE bty bdy => max bty.n_apps bdy.n_apps
-  | .sigma _u _v A B => max A.n_apps B.n_apps
-  | .sigma_mk _u _v A B x y => (max (max A.n_apps B.n_apps) (x.n_apps + y.n_apps))
-  | _ => 0
+  | .bvar n => n ≠ lv
+  | .app x y => (x.is_free lv) ∧ (y.is_free lv)
+  | .deref _ x => x.is_free lv
+  | .share _ A x => A.is_free lv ∧ x.is_free lv
+  | .share_ty _ A => A.is_free lv
+  | .sigma_mk _ _ _ _ x y => x.is_free lv ∧ y.is_free lv
+  | .sigma _ _ A B => A.is_free lv ∧ B.is_free lv
+  | .forallE A bdy => A.is_free lv ∧ bdy.is_free lv.succ
+  | .lam A bdy => A.is_free lv ∧ bdy.is_free lv.succ
+  | _ => true
 
 /-
 Note: this operation is destructive, since it removes
@@ -831,50 +916,84 @@ def LExpr.shared_n (n : ℕ) (e : LExpr) : LExpr :=
   | .zero => e
   | .succ n => .share_ty 0 (e.shared_n n)
 
-def LExpr.share_n (n : ℕ) (e : LExpr) : LExpr :=
-  match n with
-  | .zero => e
-  | .succ n => .share 0 (.const .true) (e.share_n n)
+def LExpr.n_uses (e : LExpr) (lv : ℕ) : ℕ :=
+  match e with
+  | .app x y => if (is_free (.app x y) lv) then 0 else (max (x.n_uses lv) (y.n_uses lv)).succ
+  | .deref _ x => x.n_uses lv
+  | .share _ _A x => x.n_uses lv
+  | .share_ty _ A => A.n_uses lv
+  | .sigma_mk _ _ _ _ x y => max (x.n_uses lv) (y.n_uses lv)
+  | .sigma _ _ A B => max (A.n_uses lv) (B.n_uses lv)
+  | .forallE A bdy => max (A.n_uses lv) (bdy.n_uses lv.succ)
+  | .lam A bdy => max (A.n_uses lv) (bdy.n_uses lv.succ)
+  | _ => 0
 
-def LExpr.share_all_n_abstr (n : ℕ) (e : LExpr) : LExpr :=
-  match n with
-  | .zero => e
+/-
+Sharing with context.
+The first time a variable is introduced,
+it is shared the number of times it occurs under the binderu
+but always at least once if it introduced the first time.
+
+If it already exists in the context, it is not shared.
+
+We also output the context so we can determine how many times
+to share arguments.
+
+TODO: auto share values from infer on M in M N.
+-/
+def LExpr.share_ty_lean (e : LExpr) : LExpr :=
+  match e with
+  | .lam bty bdy =>
+    let n := (bdy.n_uses 0)
+    let bdy' := bdy.share_ty_lean
+    .lam (bty.shared_n n) bdy'
+  | .forallE bty bdy =>
+    .forallE (bty.shared_n (bdy.n_uses 0)) bdy.share_ty_lean
+  | .sigma u v A B => .sigma u v (A.shared_n (B.n_uses 0)) B.share_ty_lean
+  | .sigma_mk u v A B x y => .sigma_mk u v A.share_ty_lean B.share_ty_lean x.share_ty_lean y.share_ty_lean
+  | .app x y => .app x.share_ty_lean y.share_ty_lean
+  | e => e
+
+def LExpr.arg_binder (e : LExpr) (nth_arg : ℕ) : Option LExpr :=
+  match nth_arg with
+  | .zero => pure e
   | .succ n =>
     match e with
-    | .lam bty bdy => .lam (bty.shared_n n.succ) (bdy.share_all_n_abstr (.succ n))
-    | .forallE bty bdy => .forallE (bty.share_all_n_abstr (n + 1))
-      (if (Lean.Expr.hasLooseBVar bty.to_expr 0 = true ∨ Lean.Expr.hasLooseBVar bdy.to_expr 1 = true) then
-        (bdy.share_all_n_abstr n.succ)
-      else (bdy.share_all_n_abstr (n + 1)))
-    | .app x y => .app (x.share_all_n_abstr n.succ) (y.share_all_n_abstr n.succ)
-    | .sigma u v A B => .sigma u v (A.share_all_n_abstr n.succ) (B.share_all_n_abstr n.succ)
-    | .sigma_mk u v A B x y => .sigma_mk u v (A.share_all_n_abstr n.succ) (B.share_all_n_abstr n.succ) (x.share_all_n_abstr n.succ) (y.share_all_n_abstr n.succ)
+    | .sigma _u _v bty bdy | .forallE bty bdy | .lam bty bdy => (bty.arg_binder nth_arg) <|> (bdy.arg_binder nth_arg)
+    | .sigma_mk _u _v _A _B x y => x.arg_binder nth_arg <|> y.arg_binder nth_arg
+    | .app x y => (x.arg_binder n) <|> (y.arg_binder nth_arg)
     | e => e
 
-def LExpr.share_all_n (n : ℕ) (e : LExpr) : LExpr :=
-  match n with
-  | .zero => e
-  | .succ n =>
-    match e with
-    | .app x y => .app (x.share_all_n n.succ) (.share 0 (.const .true) (y.share_all_n n))
-    | .lam bty bdy => .lam (bty.shared_n n.succ) (bdy.share_all_n_abstr n.succ)
-    | .forallE bty bdy => .forallE (bty.share_all_n n.succ) (bdy.share_all_n_abstr n.succ)
-    | .sigma u v A B => .sigma u v (A.share_all_n n.succ) (B.share_all_n_abstr n.succ)
-    | .sigma_mk u v A B  x y => .sigma_mk u v (A.share_all_n n.succ) (B.share_all_n_abstr n.succ) (x.share_all_n_abstr n.succ) (y.share_all_n_abstr n.succ)
-    | e => e
+def LExpr.n_shared (e : LExpr) : ℕ :=
+  match e with
+  | .share_ty _ A => A.n_shared.succ
+  | _e => 0
+
+def LExpr.share_n (e : LExpr) (n : ℕ) : LExpr :=
+  (List.replicate n (LExpr.share 0 (.const .true))).foldr id e
+
+def LExpr.share_val_lean (e : LExpr) : LExpr :=
+  match e with
+  | .lam bty bdy => .lam bty.share_val_lean bdy.share_val_lean
+  | .forallE bty bdy => .forallE bty.share_val_lean bdy.share_val_lean
+  | .sigma u v A B => .sigma u v A.share_val_lean B.share_val_lean
+  | .sigma_mk u v A B x y => .sigma_mk u v A.share_val_lean B.share_val_lean x.share_val_lean y.share_val_lean
+  | .app x y =>
+    match x.arg_binder 0 with
+    | .some (.lam bty _bdy) => .app x.share_val_lean (y.share_val_lean.share_n bty.n_shared)
+    | _ => .app x.share_val_lean y.share_val_lean
+  | e => e
 
 def share_lean (e : Lean.Expr) : Except CompileError LExpr :=
   let e : SeekM LExpr := do
     let l_exp   ← LExpr.of_expr e
-    let n_share := l_exp.n_apps
-    return l_exp.share_all_n n_share.succ
+    return l_exp.share_ty_lean.share_val_lean
   (e.run ⟨.const .true, .top, .unit⟩).1
 
 def cc_lean (e : Lean.Expr) : Except CompileError Expr :=
   let e : SeekM Expr := do
     let l_exp   ← LExpr.of_expr e
-    let n_share := l_exp.n_apps
-    let l_exp'  := l_exp.share_all_n n_share.succ
+    let l_exp'  := l_exp.share_ty_lean.share_val_lean
     (·.1) <$> cc l_exp'
   (e.run ⟨.const .true, .top, .unit⟩).1
 
@@ -882,6 +1001,8 @@ elab "dcc_share" tm:term : term => do
   match ← share_lean <$> (elabTerm tm .none >>= Lean.instantiateMVars) with
   | .ok tm' => return Lean.ToExpr.toExpr tm'
   | .error e => throwError m!"{repr e}"
+
+#eval dcc_share ((fun (α : Sort 2) (x : α) => (fun (x : α) => x) x) (Sort 1))
 
 elab "dcc_compile" tm:term : term => do
   match ← cc_lean <$> (elabTerm tm .none >>= Lean.instantiateMVars) with

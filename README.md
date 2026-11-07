@@ -45,6 +45,50 @@ Except.ok (DCC (Σ (Sort 0) (Id (Sort 0))))
 -/
 ```
 
+This is a function that flips boolean:
+
+```lisp
+(DCC (𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟚))
+            (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟘₂))
+            (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙₂))))
+```
+
+It type-checks as such:
+
+```lean
+open Dsl Expr in
+#eval (·.fst) <$> infer (DCC (𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟚)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟘₂)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙₂))))
+/-
+Messages here:
+191:0:
+Except.ok (DCC ((Π (`𝟙 𝟙) (`𝟙 (Π (`𝟙 𝟚) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟚))))) ∗))
+-/
+```
+
+It runs as such:
+
+```lean
+open Dsl Expr in
+#eval reduce_all (DCC ((𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟚)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟘₂)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙₂))) ∗ 𝟙₂))
+/-
+Messages here:
+191:0:
+(DCC 𝟘₂)
+-/
+```
+
+And type-checks correctly:
+
+```lean
+open Dsl Expr in
+#eval (·.fst) <$> infer (DCC ((𝟚.Rec (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟚)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟘₂)) (Λ 𝟙 (`𝟙 𝟚) (`(Σ 𝟙 (`𝟙 𝟚)) 𝟙₂))) ∗ 𝟙₂))
+/-
+Messages here:
+191:0:
+Except.ok (DCC 𝟚)
+-/
+```
+
 ## Lean Compiler
 
 The current version of DCC does not have η-reduction, so some examples of the Lean compiler do not work. However, here is the identity function on 𝟚:

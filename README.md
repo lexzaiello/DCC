@@ -80,4 +80,4 @@ We hope to add back η-reduction and more powerful type conversion in a later pa
 
 I am using Lean4 with the toolchain `leanprover/lean4:v4.30.0-rc2`. Lean support with Nix is not well-maintained, so you will have to install it manually.
 
-By *Lexi Aiello*.
+By [*Lexi Aiello*](https://lexzaiello.com/).

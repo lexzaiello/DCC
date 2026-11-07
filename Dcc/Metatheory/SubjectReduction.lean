@@ -441,17 +441,16 @@ def curr'_preservation_head (h : Judge (DCC ((!Λ A B x) (& y) (& z))) τ) : Jud
       cases a_4 with
       | curr' =>
         expose_names
-        cases ((a_1.push_head .quot).elim_norml (bang_is_norm a_8.is_norm)).elim_norm a_5.is_norm
+        have ⟨hn₁, hn₂, hn₃⟩ := a_7.is_norm (Judge.is_norm (by assumption))
+        cases ((a_1.push_head .quot).elim_norml (bang_is_norm hn₁)).elim_norm a_5.is_norm
         replace a_6 := a_6.push_head (.congrFun .quot)
         clear a_1
         have heq₁ := elim_reduce_norm_fst (map_is_norm a_10.is_norm)
-        unfold curr'.x.type at a_11
         have hn_x_type := a_11.is_norm
-        have hn_curr : IsNorm Red (DCC (!Λ A' B' C)) := curr'_is_norm a_4.is_norm a_10.is_norm
-          (fun ⟨_, h⟩ => hn_x_type ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) h))⟩)
+        have hn_curr : IsNorm Red (DCC (!Λ A' B' C)) := curr'_is_norm a_4.is_norm hn₂ hn₃
         have heq₂ := elim_reduce_norm_fst hn_curr
         have h := a_6.pi_eq
-        simp [heq₁, heq₂] at h
+        simp [heq₂] at h
         cases h.left.left
         cases h.left.right
         cases h.right
@@ -462,6 +461,8 @@ def curr'_preservation_head (h : Judge (DCC ((!Λ A B x) (& y) (& z))) τ) : Jud
         simp [heq₃] at a_3
         simp [heq₃] at a_6
         replace a_3 := a_3.push_head .curr'
+        simp [set_points, points] at a
+        simp [congr_reduce₁ (e := B'.map) (by point_arity)] at a
         replace a := a.push_head .map
         simp [points] at a
         cases a_2 with
@@ -472,24 +473,26 @@ def curr'_preservation_head (h : Judge (DCC ((!Λ A B x) (& y) (& z))) τ) : Jud
             have a' : (B'.app (reduce Red y).fst).RedNorm τ_1 := by
               have heq₁ := congr_reduce₁ (e := (B'.app (reduce Red y).fst).bang) (by point_arity)
               have h := a.complete_fst
-              simp [heq₁, points, set_points] at h
+              simp [congr_reduce₁ (e := ((reduce Red B').fst.app (reduce Red y).fst).bang) (by point_arity), points, set_points] at h
               cases h
-              exact ⟨reduce_sound rfl, reduce_norm rfl⟩
+              exact ⟨.trans (congrFun' (reduce_sound rfl)) (reduce_sound rfl), reduce_norm rfl⟩
+            cases a_7
             apply Judge.app
-            · exact a_11
-            · exact ⟨⟨.single .quot, bang_is_norm (sigma_is_norm a_8.is_norm a_10.is_norm)⟩, .refl, bang_is_norm (sigma_is_norm a_8.is_norm a_10.is_norm)⟩
+            · assumption
+            · exact ⟨by assumption, ⟨.refl, bang_is_norm (sigma_is_norm hn₁ hn₂)⟩⟩
             · apply Judge.box
               · apply Judge.mk
                 · exact ht_y
-                · exact a_9
                 · assumption
-                · exact a_10
+                · assumption
+                · assumption
                 · exact ⟨.trans (congrArg' (reduce_sound rfl)) a'.1, a'.2⟩
                 · exact ht_z
             · simp [points] at a_3
-              exact ⟨.trans (.single (.congrFun .quot)) (.trans
-                (congrArg' (aff_mk_point' (n := 0) (aff_mk_point' (e := (B.mkc y z)) (x := B) (n := 0) a_10.1) (by grind)))
-                (.trans (congrArg' (aff_mk_point' (n := 0) (aff_mk_point' (e := (B'.mkc y z)) (n := 1) (reduce_sound rfl)))) a_3.1)), a_3.is_norm⟩
+              expose_names
+              have h := a_2.congrFun' a_3
+              exact ⟨.trans (.trans (congrArg' (aff_mk_point' (e := (B.mkc y z).box) (n := 0) (aff_mk_point' (e := B.mkc y z) (n := 0) a_11.1)))
+                (congrArg' (by simp [points, set_points]; exact (aff_mk_point' (e := (B'.mkc y z).box) (n := 0) (aff_mk_point' (e := B'.mkc y z) (n := 1) (reduce_sound rfl)))))) h.1, h.2⟩
 
 @[aesop safe forward (rule_sets := [DccJudge])]
 def fmap_preservation_head (h : Judge (DCC (($<> x) (& y))) τ) : Judge (DCC (& (x y))) τ := by

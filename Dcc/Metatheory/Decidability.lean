@@ -243,8 +243,8 @@ def is_norm {e τ : Expr} (h : Judge e τ) : IsNorm Red τ := by
     exact arr_is_norm hn_A (by grind)
   case curr' =>
     expose_names
-    unfold curr'.type
-    exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (bang_is_norm a_2.is_norm)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (pi_is_norm₀ (fun ⟨_, .point 0 hn h⟩ => a_ih_2 ⟨_, .congrFun (.point 0 (by grind) (.point 1 (by point_arity) (.point 0 (by point_arity) (.point 1 (by change 1 < (A'.sigma B').point_arity; grind) h))))⟩) (curr'_is_norm a_2.is_norm a_5.is_norm (fun ⟨_, h⟩ => a_ih_2 ⟨_, .congrFun (.point 1 (by grind) (.point 1 (by point_arity) h))⟩)))) (fun ⟨_, h⟩ => nomatch h)
+    have ⟨hn₁, hn₂, hn₃⟩ := a_5.is_norm (by assumption)
+    exact pi_is_norm (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (bang_is_norm a_2.is_norm)) (quot_is_norm (fun ⟨_, h⟩ => nomatch h) (pi_is_norm₀ (map_is_norm hn₂) (curr'_is_norm a_2.is_norm hn₂ hn₃))) (fun ⟨_, h⟩ => nomatch h)
 
 end Judge
 

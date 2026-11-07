@@ -338,7 +338,8 @@ def Value.inv_box (hv : Value x) (ht : Judge x (open Dsl in (DCC (! A)))) : Σ' 
         expose_names
         replace a_4 := a_4.push_head .quot
         have hn_δ := a_5.is_norm
-        cases (a_4.elim_norml (bang_is_norm a_9.is_norm)).elim_norm a_6.is_norm
+        have ⟨hn₁, hn₂, hn₃⟩ := a_8.is_norm (Judge.is_norm (by assumption))
+        cases (a_4.elim_norml (bang_is_norm hn₁)).elim_norm a_6.is_norm
         replace a_7 := a_7.push_head (.congrFun .quot)
         have pi_eq := a_7.pi_eq
         cases pi_eq

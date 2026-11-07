@@ -596,9 +596,10 @@ inductive Abstract : (Γ : Ctx) → (e : LExpr) → (e' : Expr) → (Value e') �
     → (C₂ x₂) →ᵦ B
     → (hv₃ : Value A)
     → (hv₄ : Value B)
-    → Judge (DCC (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))) (DCC ((Π (`⊤ A₃) C₃) ∗))
-    → (hv₅ : Value C₃)
-    → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.app M N) (DCC (∘ (Eval A B M') (⟨,⟩C₃ (Id Γ) (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))))) (app_is_value hn_Γ₁ hv₁ hv₂ hv₃ hv₄ hv₅)
+    → Judge (DCC (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))) (DCC ((Π B₃ C₃) x₃))
+    → (C₃ x₃ (hole C₃.max_hole.succ)) →ᵦ ((Π B₄ C₄) x₄)
+    → (hv₅ : Value C₄)
+    → Abstract ⟨DCC (! Γ), hn_Γ₁⟩ (.app M N) (DCC (∘ (Eval A B M') (⟨,⟩C₄ (Id Γ) (Λ Γ (`Γ Γ) (∘ N' (Fst (`Γ Γ))))))) (app_is_value hn_Γ₁ hv₁ hv₂ hv₃ hv₄ hv₅)
 deriving Repr
 
 open Dsl in
@@ -827,9 +828,12 @@ def Ctx.abstract (Γ : Ctx) (e : LExpr) : SeekM (Σ (e' : Expr) (hv : Value e'),
       | (DCC ((Π B₁ C₁) x₁)), (DCC ((Π B₂ C₂) x₂)) =>
         let (hv₃, hv₄) ← Prod.mk <$> (seek_to x ⟨Γ, hn_Γ.bang₀⟩ (Expr.as_value? (reduce Red (DCC (B₁ x₁))).fst)) <*> (seek_to y ⟨Γ, hn_Γ.bang₀⟩ (Expr.as_value? (reduce Red (DCC (C₂ x₂))).fst))
         match ← (guard_type_error (DCC (Λ Γ (`Γ Γ) (∘ y' (Fst (`Γ Γ))))).infer) with
-        | ⟨(DCC ((Π (`⊤ A₃) C₃) ∗)), ht₃⟩ =>
-          let hv₅ ← Expr.as_value? C₃
-          return ⟨_, _, .app h₁ h₂ ht₁ ht₂ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₃ hv₄ ht₃ hv₅⟩
+        | ⟨(DCC ((Π B₃ C₃) x₃)), ht₃⟩ =>
+          match heq : Expr.reduce_all (DCC (C₃ x₃ (hole C₃.max_hole.succ))) with
+          | DCC ((Π B₄ C₄) x₄) =>
+            let hv₅ ← Expr.as_value? C₄
+            return ⟨_, _, .app h₁ h₂ ht₁ ht₂ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ ⟨reduce_sound_fst rfl, reduce_norm_fst rfl⟩ hv₃ hv₄ ht₃ (Expr.reduce_reduces heq) hv₅⟩
+          | x => raise_error (.unexpected () ())
         | _ => raise_error (.unexpected () ())
       | x, y => raise_error (.unexpected () ())
     | ⟨Γ, hn_Γ⟩ => raise_error (.expected_bang () Γ ())

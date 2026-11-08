@@ -1,7 +1,8 @@
 import Dcc.Ast
-import Dcc.Judge3
-import Dcc.Metatheory.Decidability3
+import Dcc.Judge
+import Dcc.Metatheory.Decidability
 import Dcc.Metatheory.SubjectReduction
 import Dcc.Metatheory.Progress
 import Dcc.Metatheory.Extensional
+import Dcc.Metatheory.Consistent
 

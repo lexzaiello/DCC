@@ -18,6 +18,7 @@
             biblatex
             biber
             xetex
+            juliamono
             tikz-inet
             pgf
             graphbox
@@ -56,17 +57,18 @@
             preBuild = ''
               export HOME=$(mktemp -d)
               export XDG_CACHE_HOME="$HOME/.cache"
+              install -D -t build/ ./papers/*.cls
             '';
             buildPhase = ''
               runHook preBuild
               export PATH="${pkgs.python313Packages.pygments}/bin:$PATH"
               install -D -t build/ ./papers/*.bib
-              xelatex -shell-escape -interaction=nonstopmode -output-directory=build ${pkg-name}
+              xelatex -shell-escape -file-line-error -interaction=scrollmode -output-directory=build ${pkg-name}
               biber --input-directory=build -output-directory=build ${
                 builtins.baseNameOf pkg-name
               }
-              xelatex -shell-escape -interaction=nonstopmode -output-directory=build ${pkg-name}
-              xelatex -shell-escape -interaction=nonstopmode -output-directory=build ${pkg-name}
+              xelatex -shell-escape -file-line-error -interaction=scrollmode -output-directory=build ${pkg-name}
+              xelatex -shell-escape -file-line-error -interaction=scrollmode -output-directory=build ${pkg-name}
             '';
             installPhase = ''
               mkdir -p $out
@@ -180,14 +182,21 @@
             runtimeInputs = [ pkgs.python3 ];
             text = "python3 -m http.server 8000 -d ./_out/html-multi";
           };
+        } // {
+          default = pkgs.leanPackages.buildLakePackage {
+            pname = "Dcc";
+            version = "0.1.0";
+            src = ./.;
+            leanDeps = with pkgs.leanPackages; [ mathlib ];
+          };
+          tex = pkgs.linkFarm "all-documents" ((builtins.map (paper: {
+            name = paper.name;
+            path = packages.${paper.name};
+          }) papers) ++ (builtins.map (slide: {
+            name = slide.name;
+            path = packages.${slide.name};
+          }) slides));
         };
-        defaultPackage = pkgs.linkFarm "all-documents" ((builtins.map (paper: {
-          name = paper.name;
-          path = packages.${paper.name};
-        }) papers) ++ (builtins.map (slide: {
-          name = slide.name;
-          path = packages.${slide.name};
-        }) slides));
         apps.serve = {
           type = "app";
           program = "${self.packages.${system}.serve}/bin/serve";

@@ -1,21 +1,10 @@
-\documentclass{article}
+\documentclass{lmcs}
+\keywords{combinatory logic, type theory, dependent types, Lean 4}
 \usepackage[utf8]{inputenc}
-\usepackage{xspace}
-\usepackage[normalem]{ulem} 
 \usepackage[dvipsnames]{xcolor}
-\usepackage{dsfont}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
 \definecolor{leanblue}{RGB}{28, 54, 86}
-\newcommand{\comment}[1]{}
-\usepackage{tabularx}
-\usepackage{verbatim}
 \usepackage{hyperref}
 \usepackage{mathtools}
-\usepackage{float}
-\usepackage{subcaption}
-\usepackage{textcomp}
-\usepackage[a4paper, margin={1in}]{geometry}
 \usepackage[english]{babel}
 \usepackage{graphicx}
 \usepackage{amsmath}
@@ -26,27 +15,22 @@
 \usepackage{amsfonts}
 \usepackage{fontspec}
 \usepackage{bbm}
-\setmonofont{FreeMono}
+\newfontfamily\exfont{JuliaMono}[
+  NFSSFamily=LeanCodeFont,
+  Scale=MatchLowercase,
+]
 \usepackage{minted}
 \setminted{breaklines=true, breakanywhere=true}
 \fvset{breaklines=true, breakanywhere=true}
-\newminted[leancode]{lean4}{fontsize=\footnotesize}
+\newminted[leancode]{lean4}{fontfamily=LeanCodeFont, fontsize=\footnotesize, linenos}
 \usemintedstyle{tango}
-
-\newcolumntype{Y}{>{\centering\arraybackslash}X}
-
-\usepackage{amsthm}
-\usepackage{authblk}
-\usepackage{biblatex}
+\usepackage[backend=biber, style=alphabetic, url=true, doi=true]{biblatex}
+\setcounter{biburlnumpenalty}{9000}
+\setcounter{biburlucpenalty}{9000}
+\setcounter{biburllcpenalty}{9000}
 \usepackage{mathpartir}
 \usepackage{stmaryrd}
-\usepackage{amssymb}
-\newtheorem{lemma}{Lemma}
-\newtheorem{theorem}{Theorem}
-\newtheorem{definition}{Definition}
-\newtheorem{example}{Example}
 \addbibresource{./refs.bib}
-
 \newcommand{\none}{\text{none}}
 \newcommand{\congrfun}{\text{congrFun}}
 \newcommand{\congrarg}{\text{congrArg}}
@@ -58,8 +42,6 @@
 \newcommand{\ctx}{\text{Ctx}}
 \newcommand{\dcc}{\(\text{DCC}\)}
 \newcommand{\dccbf}{\(\textbf{DCC}\)}
-\newcommand{\dcce}{\text{DCC}}
-\newcommand{\dccebf}{\textbf{DCC}}
 \newcommand{\ccc}{\(\text{CCC}\)} % Cartesian-closed category
 \newcommand{\cccbf}{\(\textbf{CCC}\)} % Cartesian-closed category
 \newcommand{\ccl}{\(\text{CCL}\)} % Categorical combinatory logic
@@ -98,12 +80,8 @@
     }
   }
 }
-\NewDocumentCommand{\cc}{o m}{
+\NewDocumentCommand{\compile}{o m}{
   \IfNoValueTF{#1}{\llb #2 \rrb}{\llb #2 \rrb_{#1}}
-}
-\NewDocumentCommand{\coup}{o m}{
-  \IfNoValueTF{#1}{(#2)
-  }{\llb #1 \rrb (#2)}
 }
 \newcommand{\arr}{\rightarrow}
 \newcommand{\sort}[1]{\text{Sort}\ #1}
@@ -111,35 +89,24 @@
 \newcommand{\type}[1]{\text{Type}_{#1}}
 \newcommand{\barr}{\arr_{\beta}}
 \newcommand{\barrc}[1]{\arr_{\beta^{#1}}}
-\newcommand{\barrn}{\arr_{\beta}^{!}}
-\newcommand{\earr}{\arr_{\eta}}
-\newcommand{\affarr}{\rightarrowtail}
-\newcommand{\affetaarr}{\rightarrowtail_{\eta}}
-\newcommand{\etaarr}{\rightarrow_{\eta}}
-\newcommand{\dom}[1]{\text{dom} (#1)}
-\newcommand{\domtwo}[1]{\text{dom}_{2} (#1)}
-\newcommand{\arity}[2]{\text{arity} #1 = #2}
-\newcommand{\efn}[2]{\text{F}_{\eta}\ #1\ #2}
-\newcommand{\ddom}{\text{Domain}\ }
-\newcommand{\dddom}{\text{Domain}_{2}\ }
-
-\title{Combinator Calculus: Decidable Type Checking in Extensional Type Theory}
-\author[1]{Lexi Aiello}
-\author[2]{Eric Klavins}
-\affil[1]{Department of Philosophy, University of Washington}
-\affil[2]{Electrical \& Computer Engineering Department, University of Washington}
 
 \begin{document}
 
-\maketitle
+\title{Combinator Calculus: Decidable Type Checking in Extensional Type Theory}
+\author[L.~Aiello]{Lexi Z.~Aiello\lmcsorcid{0000-0003-4619-0885}}[a]
+\author[E.~Klavins]{Eric Klavins\lmcsorcid{0000-0002-3805-5117}}[b]
+\address{University of Washington, Department of Philosophy}
+\address{University of Washington, Electrical \& Computer Engineering Department}
 
 \begin{abstract}
-  We present the Dependent Combinator Calculus (DCC): an extension of the simply-typed categorical combinators \autocite{CURIEN1986188} to affine logic and dependent types. DCC has computable extensional equality reflection and decidable type-checking. The calculus is combinatory and has no contexts and no variables. It is similar in expressivity to the Calculus of Constructions on the \(\lambda\)-cube. We demonstrate that the calculus is consistent and strongly normalizing, in addition to the fundamental theorem: equality reflection. We elucidate that computable equality reflection and decidable type-checking can coincide in affine combinatory dependent type theory, and present DCC as evidence. We also present a procedure for compiling the subset of Lean 4 that maps to the base Calculus of Constructions to the calculus. DCC is formalized fully in the Lean 4 proof assistant.
+  In this paper, we present a new approach for achieving decidable type-checking in extensional type theory. Our approach is based on affine categorical combinators. We show that type-checking is decidable in affine combinatory type theory with dependent types. We present our construction of this kind of combinatory type theory: the Dependent Combinator Calculus (DCC). We show that equality reflection holds as a computable metatheorem in DCC, while type-checking is decidable. We believe DCC is the most complete development of combinatory dependent type theory thus far: it has no contexts or variables; it is extensional by equality reflection; it is strongly-normalizing; it is consistent; and it is similar in expressivity to the Calculus of Constructions on the lambda-cube. We also present a procedure for compiling the subset of Lean 4 that maps to the base Calculus of Constructions to the calculus. DCC is formalized fully in the Lean 4 proof assistant.
 \end{abstract}
 
-\section{Introduction}
+\maketitle
 
-\subsection{Results}
+\section*{Introduction}\label{S:one}
+
+\subsection*{Results}
 
 \begin{itemize}
   \item In~\ref{intro:dcc}, we present the dependent combinator calculus (\dccbf): our extension of the categorical combinators \autocite{cmachine} \autocite{CURIEN1986188} to extensional dependent type theory and affine logic. We have no variables and no contexts. Types are terms in DCC, as in the Calculus of Constructions with respect to the \(\lambda\)-cube \autocite{Barendregt_1991}. We describe our \(\beta\)-reduction rules and inference rules.
@@ -153,17 +120,19 @@
 
 All of our results have been formalized in the Lean 4 proof assistant. To this date, DCC is the only calculus with extensional equality reflection and decidable type-checking. However, due to our choice of affine logic and categorical combinators, we inherit these features by construction.
 
-\subsection{Background}
+\subsection*{Background}
 
-\subsection{\label{skcomp}The SK Combinator Calculus}
+\subsection*{The SK Combinator Calculus}
 
-Previous attempts by others at combinatory dependent type theory have used the \skbf{} combinator calculus \autocite[p. 10:14]{altenkirch}. The \sk{} combinators are a Turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\). Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
+Previous attempts by others at combinatory dependent type theory have used the \skbf{} combinator calculus \autocite[p. 10:14]{altenkirch}.
+The \sk{} combinators are a Turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\).
+Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
 
 By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
 
-\subsection{Categorical Combinators (\ccl)}
+\subsection*{Categorical Combinators (\texorpdfstring{\ccl}{CCL})}
 
-Categorical combinators \cite{cmachine} \cite{CURIEN1986188} are a combinatory logic based on cartesian-closed categories (\cccbf) \cite{nlab:ccc}. They are equivalent to the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188}. \ccl{} has the following rewrite rules:
+Categorical combinators~\cite{cmachine,CURIEN1986188} are a combinatory logic based on cartesian-closed categories (\cccbf) \cite{nlab:ccc}. They are equivalent to the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188}. \ccl{} has the following rewrite rules:
 
 \begin{gather*}
   \inferrule[Fst]
@@ -172,7 +141,7 @@ Categorical combinators \cite{cmachine} \cite{CURIEN1986188} are a combinatory l
   \inferrule[Snd]
   { }
   { Snd (x, y) \barrc{\ccle} y} \qquad
-  \inferrule[Ass]
+  \inferrule[Comp]
   { }
   {(x \circ y) z \barrc{\ccle} x (y z)}\qquad
   \inferrule[Id]
@@ -194,18 +163,22 @@ Cartesian-closed categories are known to be a categorical semantics for the \(\l
 \begin{itemize}\label{coup}
   \item Composition in \ccc{} corresponds to the composition combinator in \ccl.
   \item Identity morphisms in \ccc{} correspond to the \(Id\) combinator in \ccl.
-  \item De Bruijn indices correspond to binary projection in \ccc{} (or ``couple'' projection in \ccl) where \(\cc{0} \coloneq Snd\) and \(\cc{n + 1} \coloneq \cc{n} \circ Fst\).
-  \item Currying in \ccc{} corresponds to the \(\Lambda\) combinator in \ccl{} \autocite[p. 176][line 5]{cmachine}, such that \(\cc{\lambda . M} \coloneq \Lambda(\cc{M})\).
-  \item Evaluation in \ccc{} corresponds to the \(App\) combinator in \ccl, such that \(\cc{M N} \coloneq \comp{App}{\pair{\cc{M}, \cc{N}}}\).
+  \item De Bruijn indices correspond to binary projection in \ccc{} (or ``couple'' projection in \ccl) where \(\compile{0} \coloneq Snd\) and \(\compile{n + 1} \coloneq \compile{n} \circ Fst\).
+  \item Currying in \ccc{} corresponds to the \(\Lambda\) combinator in \ccl{} \autocite[p. 176][line 5]{cmachine}, such that \(\compile{\lambda . M} \coloneq \Lambda(\compile{M})\).
+  \item Evaluation in \ccc{} corresponds to the \(App\) combinator in \ccl, such that \(\compile{M N} \coloneq \comp{App}{\pair{\compile{M}, \compile{N}}}\).
 \end{itemize}
 
 The correspondence between \ccl{} and the De Bruijn-indexed \(\lambda\)-calculus makes them a more intuitive compilation target compared to \sk{}, producing more legible terms. To illustrate, we contrast the compilation of church numerals zero and one from \(\lambda\)-calculus with De Bruijn indices to \ccl{} and \sk{}:
 
 \begin{align*}
-  0_{\lambda} &\coloneq \lambda . \lambda . 0 & \cc{0_{\lambda}} &= \Lambda(Snd) & \cc[\ske]{0_{\lambda}} &= K (S K K)\\
-  1_{\lambda} &\coloneq \lambda . \lambda . 1 0 & \cc{1_{\lambda}} &= \Lambda(App \circ \la Fst, Snd \ra) & \cc[\ske]{1_{\lambda}} &= S (S (K S) (S (K K) (S K K))) (K (S K K))
+  0_{\lambda} &\coloneq \lambda . \lambda . 0 & \compile{0_{\lambda}} &= \Lambda(Snd) \\
+  1_{\lambda} &\coloneq \lambda . \lambda . 1 0 & \compile{1_{\lambda}} &= \Lambda(App \circ \la Fst, Snd \ra)
 \end{align*}
-The reductions of \(1_{\lambda} x y\), \(\cc{1_{\lambda}} x y\), and \(\cc[\ske]{1_{\lambda}} x y\) are as such:
+\begin{align*}
+  \compile[\ske]{0_{\lambda}} &= K (S K K)\\
+  \compile[\ske]{1_{\lambda}} &= S (S (K S) (S (K K) (S K K))) (K (S K K))
+\end{align*}
+The reductions of \(1_{\lambda} x y\), \(\compile{1_{\lambda}} x y\), and \(\compile[\ske]{1_{\lambda}} x y\) are as such:
 
 \begin{equation*}
   \begin{aligned}[t]
@@ -215,7 +188,7 @@ The reductions of \(1_{\lambda} x y\), \(\cc{1_{\lambda}} x y\), and \(\cc[\ske]
   \end{aligned}
   \qquad
   \begin{aligned}[t]
-    \cc{1_{\lambda}} x y &= \Lambda(App \circ \la Fst, Snd \ra) x y\\
+    \compile{1_{\lambda}} x y &= \Lambda(App \circ \la Fst, Snd \ra) x y\\
     &= App \circ \la Fst, Snd \ra (x, y)\\
     &= App (x, y)\\
     &= x y
@@ -223,7 +196,7 @@ The reductions of \(1_{\lambda} x y\), \(\cc{1_{\lambda}} x y\), and \(\cc[\ske]
 \end{equation*}
 \begin{equation*}
   \begin{aligned}[t]
-    \cc[\ske]{1_{\lambda}} x y &= S (S (K S) (S (K K) (S K K))) (K (S K K)) x y\\
+    \compile[\ske]{1_{\lambda}} x y &= S (S (K S) (S (K K) (S K K))) (K (S K K)) x y\\
                                &= S (K S) (S (K K) (S K K)) x (K (S K K) x) y\\
                                &= K S x (S (K K) (S K K) x) (K (S K K) x) y\\
                                &= S (K K) (S K K) x y (K (S K K) x y)\\
@@ -307,7 +280,7 @@ The Dependent Combinator Calculus (DCC) is a dependent type theory where types a
 
 The base objects are a modified super-set of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), an equality type along its type formers is added, sorts are added, and bottom, top, and boolean types are added with the corresponding introducing terms. The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
 
-\begin{definition}\label{def:constants}
+\begin{defi}\label{def:constants}
   Constants (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)) type and its inhabitant (\(\ast\)), the boolean type (\(\mathbb{2}\)) along with its inhabitants \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\), and an opaque ``hole'' term used internally in type-checking:
   \[
     \begin{gathered}
@@ -315,41 +288,42 @@ The base objects are a modified super-set of the base terms in \cclk{}. Products
     \end{gathered}
   \]
   where \(u, n \in \mathbb{N}\).
-\end{definition}\label{def:constants}
+\end{defi}\label{def:constants}
 
-\begin{definition}\label{def:combinator}
+\begin{defi}\label{def:combinator}
   Combinators are identified by the set of names \(C\):
   \[
-    \begin{gathered}
-      C \coloneq \{\mathbb{0}.Rec, \mathbb{2}.Rec, !<>, \$<>, *, !, \&, =, Eval, Eql, =', refl, `, Id, Fst, Snd, Swap, \Sigma, \Sigma', \Lambda, !\Lambda, \Pi, \circ, \langle \, \rangle, ,\}
-      \end{gathered}
+    \begin{aligned}
+      C \coloneq \{&\mathbb{0}.Rec, \mathbb{2}.Rec, !<>, \$<>, *, !, \&, =, Eval, Eql, =', refl, `, Id, Fst, Snd, Swap,\\
+      &\Sigma, \Sigma', \Lambda, !\Lambda, \Pi, \circ, \langle \, \rangle, ,\}
+      \end{aligned}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}\label{def:syntax}
+\begin{defi}\label{def:syntax}
   A term (\(E\)) is either a constant \(E_c\):
   \[E_c \subset E\]
   or a parenthesized combinator \(C\) juxtaposed by its points which are also terms:
   \[\{ (c\ x_0 \ldots x_n) \mid c \in C, \{ x_0 \ldots x_n\} \subset E \}\ \subset E\]
   or a parenthesized application of a list of juxtaposed terms:
   \[\{(f\ x_0 \ldots x_n) \mid f \in E, \{ x_0 \ldots x_n\} \subset E\} \subset E\]
-\end{definition}
+\end{defi}
 
-\begin{example}
+\begin{exa}
   If \(A \in E\), then \(\comb[Id][A] \in E\).
-\end{example}
+\end{exa}
 
-\begin{example}
+\begin{exa}
   If \(A, x \in E\), then \((\comb[Id][A] x) \in E\).
-\end{example}
+\end{exa}
 
-\begin{example}
+\begin{exa}
   If \(u \in \mathbb{N}\), then \(\sort{u} \in E\).
-\end{example}
+\end{exa}
 
-\begin{example}
+\begin{exa}
   If \(B, x, y \in E\), then \(\comb[,B][x][y] \in E\).
-\end{example}
+\end{exa}
 
 \section{Conversion Rules}\label{sec:convrules}
 
@@ -357,7 +331,7 @@ Conversion uses call-by-value operational semantics and is a modified super-set 
 
 When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduction, \(A \barr^{*} B\) to denote star-step \(\beta\)-reduction, and \(A \barr^{!} B\) to denote \(\beta\)-reduction to a normal form.
 
-\begin{definition}\label{conv:idquotcomp}
+\begin{defi}\label{conv:idquotcomp}
   The identity, quotation, and composition are the same as in \cclk{}:
   
   \[
@@ -373,9 +347,9 @@ When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduct
   { (\comb[\circ][x][y] z) \barr (x (y z))}
   \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Projection over couples and currying are the same as in \ccl{}, but with type arguments added:
 
   \[
@@ -389,9 +363,9 @@ When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduct
   { }
   { (\comb[\Lambda][A][B][x] y z) \barr x \comb[,B][y][z]}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Evaluation of couples is similar to the usual recursor for \(\Sigma\):
 
   \[
@@ -399,18 +373,18 @@ When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduct
     { }
     { (\comb[Eval][A][B][x] \comb[,B_2][y][z]) \barr (x y z)}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Exchange is permitted on nondependent couples as an optimization, yielding a couple quoting the first component:
   \[
     \inferrule[Swap]
     { }
     { (\comb[Swap][A][B] \comb[,B_2][x][y]) \barr \comb[\comb[`B][A]][y][x]}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Boxed terms may be unboxed, mapped into banged types, and mapped over into other boxed terms:
   \[
     \inferrule[Unbox]
@@ -423,27 +397,27 @@ When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduct
     { }
     { (\comb[\$<>][x] \comb[\&][y]) \barr \comb[\&][(x y)]}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Boxed terms can also be curried:
   \[
     \inferrule[Curry']
     { }
     { (\comb[!\Lambda][A][B][x] \comb[\&][y] \comb[\&][z]) \barr (x \comb[\&][\comb[,B][y][z]])}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   As opposed to its usual behavior in \ccl{}, the pair combinator consumes boxed terms and duplicates its argument so as to be fully dependent:
   \[
     \inferrule[Pair]
     { }
     { (\comb[\langle , \rangle B][x][y] \comb[\&][z]) \barr \comb[,(B z)][(x z)][(y z (x z))]}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Equality types can also be formed by the combinators \(='\) and \(Eql\), which index an environment determining the arguments' types:
   \[
     \inferrule[Eq']
@@ -453,18 +427,18 @@ When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduct
     { }
     {(\comb[Eql][B] \comb[\&][x] \comb[\&][y]) \barr \comb[=(B x)][y][y]}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   \(\Sigma\)-types can be formed from boxes:
   \[
     \inferrule[Sigma']
     { }
     {(\comb[\Sigma'][B][C] \comb[\&][x]) \barr \comb[\Sigma][(B x)][(C x)]}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   We have a recursor for \(\mathbb{2}\):
   \[
     \inferrule[Bool Recl.]
@@ -474,9 +448,9 @@ When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduct
     { }
     { (\comb[\mathbb{2}.Rec][B][x][y] z \mathbb{0}_\mathbb{2}) \barr (y z \mathbb{0}_\mathbb{2})}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}\label{red:congr}
+\begin{defi}\label{red:congr}
   Finally, there are pointwise congruences for combinators and congruences for application:
   \[
     \inferrule[Point]
@@ -489,174 +463,191 @@ When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduct
     { x \barr x'}
     { (f x) \barr (f x')}
   \]
-\end{definition}
+\end{defi}
 
 \subsection{Some Properties of Conversion}\label{sec:thmsconv}
 
 DCC is provably strongly normalizing due to our choice of affine logic. DCC is also locally confluent, and thus globally confluent by Newmann's lemma~\cite{newman1942theories}. As such, normal forms are unique and \(\beta\)-equality is decidable. We use this fact to establish judgmental decidability.
 
-\subsubsection{Strong Normalization by Decreasing Measure}
+\subsubsection{Strong-Normalization by Decreasing Measure}
 
 We show strong normalization by defining a function \(size : E \rightarrow \mathbb{N}\) such that \(A \barr B\) implies \(size(B) < size(A)\).
 
-\begin{definition}
+\begin{defi}
   If \(e \in E_c\), then \(size(e) = 1\), and if \((f x) \in E\) and \((f x)\) is an application, then \(size((f x)) = size(f) + size(x)\). Otherwise, combinator sizes are defined as:
+  \begin{gather*}
+    size(\comb[Id][A]) = size(A) + 1 \quad size(\comb[\circ][x][y]) = size(x) + size(y) + 1\\
+    size(\comb[`B][x]) = size(B) + size(x) + 1
+  \end{gather*}
   \begin{align*}
-    size(\comb[Eql][B]) &= size(B) + 2 & size(\comb[='][B]) &= size(B) + 2\\
-    size(\comb[Id][A]) &= size(A) + 1 & size(\comb[refl][B]) &= size(B) + 1\\
-    size(\comb[\Sigma][A][B]) &= size(A) + size(B) + 1 & size(\comb[\Sigma'][B][C]) &= size(B) + size(C) + 1 \\
-    size(\comb[`B][x]) &= size(B) + size(x) + 1 & size(\comb[,B][x][y]) &= size(B) + size(x) + size(y) + 1\\
-    size(\comb[Fst][B]) &= size(B) + 1 & size(\comb[Snd][B]) &= size(B) + 1\\
-    size(\comb[Swap][B][C]) &= size(B) + size(C) + 2 & size(\comb[\circ][x][y]) &= size(x) + size(y) + 1\\
-    size(\comb[!][x]) &= size(x) + 1 & size(\comb[*][A]) &= size(A) + 1\\
-    size(\comb[\&][x]) &= size(x) * 5 + 1 & size(\comb[!<>][x]) &= size(x) + 2 \\
-    size(\comb[\Pi][B][C]) &= size(B) + size(C) + 1 & size(\comb[\$<>][x]) &= size(x) * 5 + 1
+    size(\comb[,B][x][y]) &= size(B) + size(x) + size(y) + 1\\
+    size(\comb[Fst][B]) &= size(B) + 1\\
+    size(\comb[Snd][B]) &= size(B) + 1\\
+    size(\comb[Swap][B][C]) &= size(B) + size(C) + 2
   \end{align*}
   \begin{align*}
-    size(\comb[=][A][x][y]) &= size(A) + size(x) + size(y) + 1\\
-    size(\comb[\mathbb{2}.Rec][x][y][z]) &= size(x) + size(y) + size(z) + 1\\
-    size(\comb[\mathbb{0}.Rec][x]) &= size(x) + 1\\
+    size(\comb[= A][x][y]) &= size(A) + size(x) + size(y) + 1\\
+    size(\comb[Eql][B]) &= size(B) + 2 \\
+    size(\comb[='][B]) &= size(B) + 2\\
+    size(\comb[refl][B]) &= size(B) + 1
+  \end{align*}
+  \begin{align*}
+    size(\comb[\Pi][B][C]) &= size(B) + size(C) + 1\\
+    size(\comb[\Sigma][A][B]) &= size(A) + size(B) + 1 \\
+    size(\comb[\Sigma'][B][C]) &= size(B) + size(C) + 1
+  \end{align*}
+  \begin{align*}
+    size(\comb[!][x]) &= size(x) + 1 & size(\comb[*][A]) &= size(A) + 1\\
+    size(\comb[!<>][x]) &= size(x) + 2 & size(\comb[\$<>][x]) &= size(x) * 5 + 1\\
+    size(\comb[\&][x]) & = size(x) * 5 + 1 & &
+  \end{align*}
+  \begin{align*}
+    size(\comb[\Lambda][A][B][x]) &= size(A) + size(B) + size(x) + 2\\
     size(\comb[\langle , \rangle B][x][y]) &= 3 * (size(B) + (2 + size(x)) + size(y) + 3)\\
     size(\comb[!\Lambda][A][B][x]) &= 2 * size(A) + 6 * (size(B) + 1) + 2 * size(x) + 5\\
-    size(\comb[\Lambda][A][B][x]) &= size(A) + size(B) + size(x) + 2\\
     size(\comb[Eval][A][B][x]) &= size(A) + size(B) + size(x) + 1
   \end{align*}
-\end{definition}
+  \begin{align*}
+    size(\comb[\mathbb{2}.Rec][x][y][z]) &= size(x) + size(y) + size(z) + 1\\
+    size(\comb[\mathbb{0}.Rec][x]) &= size(x) + 1
+  \end{align*}
+\end{defi}
 
-\begin{lemma}\label{lem:pointsize}
+\begin{lem}\label{lem:pointsize}
   If \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(size(x_i) < size((c\ x_0 \ldots x_n))\) for all \(i < n\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
-  By induction on the structure of expressions.\\
+  By induction on the structure of expressions.
 \end{proof}
 
-\begin{theorem}\label{thm:sn}
+\begin{thm}\label{thm:sn}
   Strong-normalization: If \(A, B \in E\) and \(A \barr B\), then \(size(B) < size(A)\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   We proceed by induction on the reduction relation.\\
 
   \begin{description}
-  \item[Id:] \(size((\comb[Id][A] x)) = size(A) + 1 + size(x) > size(x)\)
-  \item[Quot:] \(size((\comb[`B][x] y)) = size(B) + size(x) + 1 + size(y) > size(x)\)
-  \item[Comp:] \(size((\comb[\circ][x][y] z)) = size(x) + size(y) + 1 + size(z) > size(x) + size(y) + size(z)\)
-  \item[Fst:] \(size((\comb[Fst][B] \comb[,B_2][x][y])) = size(B) + 1 + size(B_2) + size(x) + size(y) + 1 > size(x)\)
-  \item[Snd:] \(size((\comb[Snd][B] \comb[,B_2][x][y])) = size(B) + 1 + size(B_2) + size(x) + size(y) + 1 > size(y)\)
-  \item[Curry:]
+  \item[Id] \(size((\comb[Id][A] x)) = size(A) + 1 + size(x) > size(x)\)
+  \item[Quot] \(size((\comb[`B][x] y)) = size(B) + size(x) + 1 + size(y) > size(x)\)
+  \item[Comp] \(size((\comb[\circ][x][y] z)) = size(x) + size(y) + 1 + size(z) > size(x) + size(y) + size(z)\)
+  \item[Fst] \(size((\comb[Fst][B] \comb[,B_2][x][y])) = size(B) + 1 + size(B_2) + size(x) + size(y) + 1 > size(x)\)
+  \item[Snd] \(size((\comb[Snd][B] \comb[,B_2][x][y])) = size(B) + 1 + size(B_2) + size(x) + size(y) + 1 > size(y)\)
+  \item[Curry]
   \begin{align*}
     size((\comb[\Lambda][A][B][x] y z)) &= size(A) + size(B) + size(x) + 2 + size(y) + size(z)\\
                                         & > size(x) + size(B) + size(y) + size(z)
   \end{align*}
-  \item[Eval:]
+  \item[Eval]
   \begin{align*}
-    size((\comb[Eval][A][B][x] \comb[,B_2][y][z])) &= size(A) + size(B) + size(x) + 1 + size(B_2) + size(y) + size(z) + 1\\
-    & > size(x) + size(y) + size(z)
+    size((\comb[Eval][A][B][x] \comb[,B_2][y][z])) &= size(A) + size(B) + size(x) + 1 + size(B_2)\\
+                                                   & + size(y) + size(z) + 1\\
+                                                   & > size(x) + size(y) + size(z)
   \end{align*}
-  \item[Swap:] \begin{align*}
+  \item[Swap] \begin{align*}
     size((\comb[Swap][A][B] \comb[,B_2][x][y])) &= size(A) + size(B) + 2 + size(B_2) + size(x) + size(y) + 1\\
     & > size(B) + size(A) + size(y) + size(x) + 1
     \end{align*}
-  \item[Unbox:] \(size((\comb[*][A] \comb[\&][x])) = size(A) + 1 + (size(x) * 5 + 1) > size(x)\)
-  \item[Map:] \(size((\comb[!<>][x] \comb[\&][y])) = size(x) + 2 + (size(y) * 5 + 1) > size((x y)) + 1\)
-  \item[Fmap:] \(size((\comb[\$<>][x] \comb[\&][y])) = (size(x) * 5 + 1) + (size(y) * 5 + 1) > size((x y) * 5 + 1)\)
-  \item[Curry':]
+  \item[Unbox] \(size((\comb[*][A] \comb[\&][x])) = size(A) + 1 + (size(x) * 5 + 1) > size(x)\)
+  \item[Map] \(size((\comb[!<>][x] \comb[\&][y])) = size(x) + 2 + (size(y) * 5 + 1) > size((x y)) + 1\)
+  \item[Fmap] \(size((\comb[\$<>][x] \comb[\&][y])) = (size(x) * 5 + 1) + (size(y) * 5 + 1) > size((x y) * 5 + 1)\)
+  \item[Curry']
     \begin{align*}
       size((\comb[!\Lambda][A][B][x] \comb[\&][y] \comb[\&][z])) &= 2 * size(A) + 6 * (size(B) + 1) &\\
       & + 2*size(x) + 5 + size(y) * 5 + 1 + size(y) * z + 1\\
       & > size(x) + 5 * (size(B) + size(y) + size(z)) + 1
     \end{align*}
-  \item[Pair:]
+  \item[Pair]
       \begin{align*}
         size((\comb[\langle , \rangle B][x][y] \comb[\&][z])) &= 3 * (size(B) + (size(x) + 2) + size(y) + 3) + (5 * size(z) + 1)\\
         & > 5 * (size(B) + 4 * size(z) + 2 * size(x) + size(y)) + 1
       \end{align*}
-  \item[Eq':]
+  \item[Eq']
   \begin{align*}
     size((\comb[='][B] x y z)) &= size(B) + 2 + size(x) + size(y) + size(z)\\
     & > (size(B) + size(x)) + size(y) + size(z) + 1
   \end{align*}
-  \item[Eql:]
+  \item[Eql]
   \begin{align*}
     size((\comb[Eql][B] \comb[\&][x] \comb[\&][y])) &= size(B) + 2 + (size(x) * 5 + 1) (size(y) * 5 + 1)\\
     & > (size(B) + size(x)) + size(y) + size(y) + 1
   \end{align*}
-  \item[Sigma':]
+  \item[Sigma']
   \begin{align*}
     size((\comb[\Sigma'][B][C] \comb[\&][x])) &= size(B) + size(C) + 1 + size(x) * 5 + 1\\
     &> (size(B) + size(x)) + (size(C) + size(x)) + 1
   \end{align*}
-  \item[Bool Recl.:]
+  \item[Bool Recl.]
   \begin{align*}
     size((\comb[\mathbb{2}.Rec][B][x][y] z \mathbb{1}_\mathbb{2})) &= size(B) + size(x) + size(y) + 1 + size(z)\\
     &> size(x) + size(z) + size(\mathbb{1}_\mathbb{2})
   \end{align*}
-  \item[Bool Recr.:]
+  \item[Bool Recr.]
   \begin{align*}
     size((\comb[\mathbb{2}.Rec][B][x][y] z \mathbb{1}_\mathbb{2})) &= size(B) + size(x) + size(y) + 1 + size(z)\\
     &> size(y) + size(z) + size(\mathbb{0}_\mathbb{2})
   \end{align*}
-  \item[Point:]
+  \item[Point]
   If \((c\ x_0 \ldots x_n) \in E\) and \(i < n\), then \(size(x_i) < size((c\ x_0 \ldots x_n))\)~\ref{lem:pointsize}. And if \(x_i \barr x'_i\), then, by the inductive hypothesis, \(size(x'_i) < size(x_i)\), so \(size((c\ x_0 \ldots x_n)) > size((c\ x'_0 \ldots x'_n))\).
-  \item[Congr. Fun.:]
+  \item[Congr. Fun.]
   If \((f x) \in E\) and \(f \barr f'\), then, by the inductive hypothesis, \(size(f') < size(f)\), and \(size((f x)) = size(f) + size(x) > (size((f' x)) = size(f') + size(x))\).
-  \item[Congr. Arg.:]
+  \item[Congr. Arg.]
   If \((f x) \in E\) and \(x \barr x'\), then, by the inductive hypothesis, \(size(x') < size(x)\), and \(size((f x)) = size(f) + size(x) > (size((f x')) = size(f) + size(x'))\).\\
 \end{description}
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Rel.lean\#L82}{Expr.Red.decreasing}
 \end{proof}
 
-\begin{lemma}\label{lem:decstar}
+\begin{lem}\label{lem:decstar}
   If \(A, B \in E\) and \(A \barr^{*} B\), then \(size(B) \le size(A)\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   We proceed by induction on the reduction relation: Suppose \(A = B\). Then, \(size(A) = size(B)\), so \(size(B) \le size(A)\). If \(A \neq B\), then there exists \(B_0 \in E\) such that \(A \barr B_0\) and \(B_0 \barr^{*} B\). So, by~\ref{thm:sn}, \(size(B_0) < size(A)\), and by the inductive hypothesis, \(size(B) \le size(B_0)\), so \(size(B) \le size(A)\).\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L507}{Expr.decreasing?}
 \end{proof}
 
-\begin{lemma}\label{lem:pointstar}
+\begin{lem}\label{lem:pointstar}
   Point congruences are closed under star-step reduction: If \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\) and \(i < n\) and \(x_i \barr^{*} x'_i\), then \((c\ x_0 \ldots x_n) \barr^{*} (c\ x'_0 \ldots x'_n)\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   Suppose \(x_i \barr^{*} x'_i\). Then, if \(x_i = x'_i\), then \((c\ x_0 \ldots x_n) \barr^{*} (c\ x'_0 \ldots x'_n)\) by reflexivity. If \(x_i \neq x'_i\), then there must exist \(x'_{0,i}\) such that \(x_i \barr x'_{0,i}\) and \(x'_{0,i} \barr^{*} x'_{i}\). And, by~\ref{thm:sn}, \(size(x'_{0,i}) < size(x_i)\). So, by induction, \((c\ x_{0,0} \ldots x_{0,n}) \barr^{*} (c\ x'_0 \ldots x'_n)\). Hence, \((c\ x_0 \ldots x_n) \barr^{*} (c\ x'_0 \ldots x'_n)\) by transitivity of single-step application of the point rule.\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L307}{Expr.aff\_mk\_point'}
 \end{proof}
 
-\begin{lemma}\label{lem:congrfunstar}
+\begin{lem}\label{lem:congrfunstar}
   Function congruence is closed under star-step reduction: If \((f x) \in E\) and \(f \barr^{*} f'\), then \((f x) \barr^{*} (f' x)\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   The proof proceeds similarly as in~\ref{lem:pointstar}, but with the function congruence single-step rule.\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L232}{Expr.congrFun'}
 \end{proof}
 
-\begin{lemma}\label{lem:congrargstar}
+\begin{lem}\label{lem:congrargstar}
   Argument congruence is closed under star-step reduction: If \((f x) \in E\) and \(x \barr^{*} x'\), then \((f x) \barr^{*} (f x')\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   The proof proceeds similarly as in~\ref{lem:pointstar}, but with the argument congruence single-step rule.\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Run.lean\#L262}{Expr.congrArg'}
 \end{proof}
 
-\begin{theorem}\label{thm:conflocal}
+\begin{thm}\label{thm:conflocal}
   Local confluence: If \(A, B, C \in E\) and \(A \barr B\) and \(A \barr C\), then there exists \(D \in E\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   The proof proceeds by induction on \(A \barr B\) and parallel case analysis on \(A \barr C\). We handle three possible cases: \(A\) is a combinator with points; \(A\) is of the form \((f x)\), and \((f x)\) can choose to make a head-reduction step (that is, there exists \(h \vdash A \barr A'\) where \(h\) is not proven by the point, or function, or argument congruence rules); or \(A\) is of the form \((f x)\), but \((f x)\) has no possible head-reduction step.
 
   \begin{description}
-  \item[\(A\) is a combinator:] Suppose \(A = (c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\). Then, \(A\) is not an application, nor can it make a head reduction step, so both \(A \barr B\) and \(A \barr C\) must be proven by the point rule. Hence, let \(B = (c\ x'_0 \ldots x'_n)\) and let \(C = (c\ x''_0 \ldots x''_n)\). Then, there exist \(i, j \in \mathbb{N}\) such that \(i < n\) and \(j < n\) and \(x_i \barr x'_i\) and \(x_j \barr x''_j\). It suffices to show that if either \(i = j\) or \(i \neq j\), then there exists \((c\ y_0 \ldots y_n)\) such that \((c\ x'_0 \ldots x'_n) \barr^{*} (c\ y_0 \ldots y_n)\) and \((c\ x''_0 \ldots x''_n) \barr^{*} (c\ y_0 \ldots y_n)\) to prove the goal.
+  \item[\(A\) is a combinator] Suppose \(A = (c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\). Then, \(A\) is not an application, nor can it make a head reduction step, so both \(A \barr B\) and \(A \barr C\) must be proven by the point rule. Hence, let \(B = (c\ x'_0 \ldots x'_n)\) and let \(C = (c\ x''_0 \ldots x''_n)\). Then, there exist \(i, j \in \mathbb{N}\) such that \(i < n\) and \(j < n\) and \(x_i \barr x'_i\) and \(x_j \barr x''_j\). It suffices to show that if either \(i = j\) or \(i \neq j\), then there exists \((c\ y_0 \ldots y_n)\) such that \((c\ x'_0 \ldots x'_n) \barr^{*} (c\ y_0 \ldots y_n)\) and \((c\ x''_0 \ldots x''_n) \barr^{*} (c\ y_0 \ldots y_n)\) to prove the goal.
 
     If \(i = j\), then \(x_i \barr x'_i\) and \(x_i \barr x''_i\), so by the inductive hypothesis, there exists \(y_i\) such that \(x'_i \barr^{*} y_i\) and \(x''_i \barr^{*} y_i\). So, by~\ref{lem:pointstar}, \((c\ x'_0 \ldots x'_n) \barr^{*} (c\ y_0 \ldots y_n)\) and \((c\ x''_0 \ldots x''_n) \barr^{*} (c\ y_0 \ldots y_n)\).
 
     If \(i \neq j\), then \((c\ x'_0 \ldots x'_n)\) and \((c\ x''_0 \ldots x''_n)\) shares all points besides \(x'_i\) and \(x''_j\). So, their common reduct is \((c\ y_0 \ldots y_n)\), where \(y_i = x'_i\) and \(y_j = i''_j\). And, \((c\ x'_0 \ldots x'_n) \barr^{*} (c\ y_0 \ldots y_n)\) and \((c\ x''_0 \ldots x''_n) \barr^{*} (c\ y_0 \ldots y_n)\) by transitivity of the point rule.
-  \item[\(A = (f x)\) and \((f x)\) can make a head step:] Let \(A'\) denote the head reduct of \((f x)\) and let \(c \in C\) denote the spine of \(f\) (that is, the leftmost combinator which would trigger a head reduction). Then, either \(A' = B = C\), in which case \(B \barr^{*} C\) and \(C \barr^{*} C\) by reflexivity, or \(A' \neq B\) or \(A' \neq C\) (that is, either \(A \barr B\) or \(A \barr C\) are given by congruences).\\
+  \item[\(A = (f x)\) and \((f x)\) can make a head step] Let \(A'\) denote the head reduct of \((f x)\) and let \(c \in C\) denote the spine of \(f\) (that is, the leftmost combinator which would trigger a head reduction). Then, either \(A' = B = C\), in which case \(B \barr^{*} C\) and \(C \barr^{*} C\) by reflexivity, or \(A' \neq B\) or \(A' \neq C\) (that is, either \(A \barr B\) or \(A \barr C\) are given by congruences).\\
 
         If \(A \barr B\) or \(B \barr C\) are given by congruences, then there exist \(e \in E\) which is a sub-expression contained in \(A\) such that there exists \(e' \in E\) where \(e \barr e'\) and \(e\) is the atomic term reduced by the congruences \(A \barr B\) or \(A \barr C\). And, since \(A \barr B\) or \(A \barr C\) are congruences rather than head-reductions, \(e'\) must be a sub-expression of \(B\) or \(C\).\\
 
@@ -665,74 +656,51 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
         If \(A \barr B\) is a congruence, but \(A \barr C\) is a head-reduction, then \(A' = C\) and \(e\) must be a sub-expression of \(B\). Note that the spine \(c\) of an application \((f x)\) cannot be modified by congruence, unless \(c\) is the spine of an application contained in \(f\) which can make a head-reduction. But since \((f x)\) can make a head step, \(c\) cannot be modified by congruence. And, since \(A\) is of the form \((f x)\), then \(A \barr B\) must be given by function congruence or argument congruence. In either case, \(B\) is of the form \((g y) \in E\) where \(c\) is the spine of \(g\) and \(g = f\) while \(x \barr y\) or \(y = x\) while \(f \barr g\).
 
         \begin{description}
-          \item[\(A \barr B\) is given by argument congruence:]
+          \item[\(A \barr B\) is given by argument congruence]
             In case \(A \barr B\) is given by argument congruence, then \(y\) is of the correct shape, such that \((g y)\) can make a head reduction to a reduct \(B'\) and \(e\) is also a sub-expression of \(C\). This is due to the fact that head-reduction rules only match on combinators with points, not partial applications~\ref{sec:convrules}. So, there exists \(D \in E\) such that \(B \barr D\) by head-reduction and \(C \barr^{*} D\) by repeated congruence through \(e \barr e'\) under transitivity.
-          \item[\(A \barr B\) is given by function congruence:]
+          \item[\(A \barr B\) is given by function congruence]
             In case \(A \barr B\) is given by function congruence, we note that the spine \(c\) is preserved in \(g\). Also, \(e\) must either be a point of \(c\) or an inner term in argument position. In case \(e\) is in argument position, the same logic as above applies. In case \(e\) is a point of \(c\), then, we note that \((g y)\) can still make a head-reduction, as per~\ref{sec:convrules}. So, there exists \(D \in E\) such that \(B \barr D\) by head-reduction and \(C \barr^{*} D\) by repeated congruence under transitivity through \(e \barr e'\).
           \end{description}
 
       If \(A \barr C\) is a congruence, but \(A \barr B\) is a head-reduction, then the same reasoning as above applies in opposite order.
-  \item[\(A = (f x)\) and \((f x)\) cannot make a head step:]
+  \item[\(A = (f x)\) and \((f x)\) cannot make a head step]
     In case \((f x)\) cannot make a head step, then \(A \barr B\) and \(A \barr C\) are given by congruences. In either case, their atomic reducts \(e\) are different, so by transitivity of congruence there exists \(D\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
   \end{description}
 
   To illustrate this approach, suppose \((\comb[Id][A] x) \in E\) and \(h_1 \vdash (\comb[Id][A] x) \barr B\) and \(h_2 \vdash (\comb[Id][A] x) \barr C\):
   \begin{description}
-  \item[Function congruence in $h_1$ on $(Id\ A)$:]
+  \item[Function congruence in $h_1$ on $(Id\ A)$]
     Suppose \(B\) is of the form \((f' x)\) where \(\comb[Id][A] \barr f'\). Then, \(f'\) must be constructed by the point rule~\eqref{red:congr}, so there exists \(A'\) such that \(A \barr A'\). We proceed by case-splitting on \(h_2\):
     \begin{description}
-      \item[Function congruence in $h_2$ on $(Id\ A)$:]
-        Suppose \(C\) is of the form \((f'_2 x)\) where \(\comb[Id][A] \barr f'_2\). Then, \(f'_2\) must be constructed by the point rule~\eqref{red:congr}, so there exists \(A'_2\) such that \(A \barr A'_2\). So, by the inductive hypothesis, there exists \(A'' \in E\) such that \(A' \barr^{*} A''\) and \(A'_2 \barr^{*} A''\). And, by~\ref{lem:pointstar}, \(\comb[Id][A'] \barr^{*} \comb[Id][A'']\) and \(\comb[Id][A'_2] \barr^{*} \comb[Id][A'']\). So, by~\ref{lem:congrfunstar}, \((\comb[Id][A'] x) \barr^{*} (\comb[Id][A''] x)\) and \((\comb[Id][A'_2] x) \barr^{*} (\comb[Id][A''] x)\).
-      \item[Argument congruence in $h_2$ on $x$:]
+      \item[Function congruence in $h_2$ on $(Id\ A)$]
+        Suppose \(C\) is of the form \((f'_2 x)\) \\where \(\comb[Id][A] \barr f'_2\). Then, \(f'_2\) must be constructed by the point rule~\eqref{red:congr}, so there exists \(A'_2\) such that \(A \barr A'_2\). So, by the inductive hypothesis, there exists \(A'' \in E\) such that \(A' \barr^{*} A''\) and \(A'_2 \barr^{*} A''\). And, by~\ref{lem:pointstar}, \(\comb[Id][A'] \barr^{*} \comb[Id][A'']\) and \(\comb[Id][A'_2] \barr^{*} \comb[Id][A'']\). So, by~\ref{lem:congrfunstar}, \((\comb[Id][A'] x) \barr^{*} (\comb[Id][A''] x)\) and \((\comb[Id][A'_2] x) \barr^{*} (\comb[Id][A''] x)\).
+      \item[Argument congruence in $h_2$ on $x$]
         Suppose \(C\) is of the form \((\comb[Id][A] x')\) where \(x \barr x'\). Then, by the single-step rule \(Id\)~\ref{conv:idquotcomp}, \((\comb[Id][A'] x) \barr x \barr x'\) and \((\comb[Id][A] x) \barr (\comb[Id][A] x') \barr x'\), so \(B \barr^{*} x'\) and \(C \barr^{*} x'\).
     \end{description}
-  \item[Argument congruence in $h_1$ on $x$:]
+  \item[Argument congruence in $h_1$ on $x$]
     Suppose \(B\) is of the form \((\comb[Id][A] x')\) where \(x \barr x'\). Then, the proof is as above, except \(h_1\) and \(h_2\) are inverted.
-  \item[Head reduction in $h_1$ on $((Id\ A) x)$:]
+  \item[Head reduction in $h_1$ on $((Id\ A) x)$]
     Suppose \(B = x\). Then, if \(h_2\) is a function congruence such that \(\comb[Id][A] \barr f'\), \(f'\) must be of the form \(\comb[Id][A']\) where \(A \barr A'\), so \(B \barr x\) and \(C \barr x\). If \(h_2\) is an argument congruence such that \(h \vdash x \barr x'\), then \(B \barr x'\) by \(h\) and \(C \barr x'\) by reflexivity.\\
   \end{description}
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Conf.lean\#L131}{Expr.Red.conf}
 \end{proof}
 
-%\begin{proof}
-%  The proof proceeds by induction on \(A \barr B\) and parallel case analysis on \(A \barr C\). We handle three possible cases: head-reduction where \(B\) and \(C\) are the head-reducts of \(A\); point-reduction where \(A\) is not an application but a combinator with points; congruences where \(A\) is of the form \((f x) \in E\) and where either \(B\) or \(C\) are of the form \((f' x)\) where \(f \barr f'\) or \((f x')\) where \(x \barr x'\).
-%
-%  In the head step cases where \(f, x \in E\) and \(A = (f x) \in E\), the step \(A \barr B\) or \(A \barr C\), respectively, is destructed until atomic terms which are not combinators with points or further applications are met. Then, a step is reconstructed for some \(D \in E\) such that \(B \barr D\) and \(C \barr D\). In the case where \(A = (c\ x_0 \ldots x_n) \in E\) (i.e., where \(A\) is a term with points), the step \(A \barr B\) or \(A \barr C\) is destructed, respectively, into its atomic point steps and a step is reconstructed similarly. In the case where \(A = (f x) \in E\) and \(f\) is not obviously a combinator, we case split on \(f\) and perform the same steps as in the head reduction case until an atomic \(f\) is reached, such that, by the inductive hypothesis and the function congruence rule, we may reconstruct a step. We do similarly for \(x\) and handle all point-term cases until an atomic \(x\) is reached, in which case the inductive hypothesis applies.
-%
-%  To illustrate, suppose \((\comb[Id][A] x) \in E\) and \(h_1 \vdash (\comb[Id][A] x) \barr B\) and \(h_2 \vdash (\comb[Id][A] x) \barr C\):
-%  \begin{description}
-%  \item[Function congruence in $h_1$ on $(Id\ A)$:]
-%    Suppose \(B\) is of the form \((f' x)\) where \(\comb[Id][A] \barr f'\). Then, \(f'\) must be constructed by the point rule~\eqref{red:congr}, so there exists \(A'\) such that \(A \barr A'\). We proceed by case-splitting on \(h_2\):
-%    \begin{description}
-%      \item[Function congruence in $h_2$ on $(Id\ A)$:]
-%        Suppose \(C\) is of the form \((f'_2 x)\) where \(\comb[Id][A] \barr f'_2\). Then, \(f'_2\) must be constructed by the point rule~\eqref{red:congr}, so there exists \(A'_2\) such that \(A \barr A'_2\). So, by the inductive hypothesis, there exists \(A'' \in E\) such that \(A' \barr^{*} A''\) and \(A'_2 \barr^{*} A''\). And, by~\ref{lem:pointstar}, \(\comb[Id][A'] \barr^{*} \comb[Id][A'']\) and \(\comb[Id][A'_2] \barr^{*} \comb[Id][A'']\). So, by~\ref{lem:congrfunstar}, \((\comb[Id][A'] x) \barr^{*} (\comb[Id][A''] x)\) and \((\comb[Id][A'_2] x) \barr^{*} (\comb[Id][A''] x)\).
-%      \item[Argument congruence in $h_2$ on $x$:]
-%        Suppose \(C\) is of the form \((\comb[Id][A] x')\) where \(x \barr x'\). Then, by the single-step rule \(Id\)~\ref{conv:idquotcomp}, \((\comb[Id][A'] x) \barr x \barr x'\) and \((\comb[Id][A] x) \barr (\comb[Id][A] x') \barr x'\), so \(B \barr^{*} x'\) and \(C \barr^{*} x'\).
-%    \end{description}
-%  \item[Argument congruence in $h_1$ on $x$:]
-%    Suppose \(B\) is of the form \((\comb[Id][A] x')\) where \(x \barr x'\). Then, the proof is as above, except \(h_1\) and \(h_2\) are inverted.
-%  \item[Head reduction in $h_1$ on $((Id\ A) x)$:]
-%    Suppose \(B = x\). Then, if \(h_2\) is a function congruence such that \(\comb[Id][A] \barr f'\), \(f'\) must be of the form \(\comb[Id][A']\) where \(A \barr A'\), so \(B \barr x\) and \(C \barr x\). If \(h_2\) is an argument congruence such that \(h \vdash x \barr x'\), then \(B \barr x'\) by \(h\) and \(C \barr x'\) by reflexivity.\\
-%  \end{description}
-%  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Conf.lean\#L131}{Expr.Red.conf}
-%\end{proof}
-
-\begin{theorem}\label{thm:confglobal}
+\begin{thm}\label{thm:confglobal}
   Global confluence: If \(A, B, C \in E\) and \(A \barr^{*} B\) and \(A \barr^{*} C\), then there exists \(D \in E\) such that \(B \barr^{*} D\) and \(C \barr^{*} D\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   The proof proceeds by Newmann's lemma:
   \begin{description}
-    \item[$A = B$ and $A = C$:] By reflexivity, \(B \barr^{*} B\) and \(C \barr^{*} B\).
-    \item[$A = B$ but $A \neq C$:] Since \(A = B\), \(B \barr^{*} C\), and by reflexivity, \(C \barr^{*} C\).
-    \item[$A \neq B$ and $A = C$:] Since \(A = C\), \(C \barr^{*} B\), and by reflexivity, \(B \barr^{*} B\).
-    \item[$A \neq B$ and $A \neq C$:] Then, there exist \(B_0, C_0 \in E\) such that \(A \barr B_0\) and \(A \barr C_0\) and \(B_0 \barr^{*} B\) and \(C_0 \barr^{*} C\), so, by~\ref{thm:conflocal}, there exists \(D \in E\) such that \(B_0 \barr^{*} D\) and \(C_0 \barr^{*} D\). And, due to~\ref{thm:sn} and~\ref{lem:decstar}, \(size(B) \le size(B_0) < size(A)\) and \(size(C) \le size(C_0) < size(A)\). So, by well-founded induction given \(B_0 \barr^{*} B\), \(B_0 \barr^{*} D\), \(C_0 \barr^{*} C\), and \(C_0 \barr^{*} D\), there exist \(B_2, C_2 \in E\) such that \(B \barr^{*} B_2\) and \(D \barr^{*} B_2\) and \(C \barr^{*} C_2\) and \(D \barr^{*} C_2\). And, similarly, since \(B \barr^{*} B_2\) and \(B \barr^{*} C_2\) (via \(D\)), there exists \(D' \in E\) such that \(B_2 \barr^{*} D'\) and \(C_2 \barr^{*} D'\), so \(B \barr^{*} D'\) and \(C \barr^{*} D'\).\\
+    \item[$A = B$ and $A = C$] By reflexivity, \(B \barr^{*} B\) and \(C \barr^{*} B\).
+    \item[$A = B$ but $A \neq C$] Since \(A = B\), \(B \barr^{*} C\), and by reflexivity, \(C \barr^{*} C\).
+    \item[$A \neq B$ and $A = C$] Since \(A = C\), \(C \barr^{*} B\), and by reflexivity, \(B \barr^{*} B\).
+    \item[$A \neq B$ and $A \neq C$] Then, there exist \(B_0, C_0 \in E\) such that \(A \barr B_0\) and \(A \barr C_0\) and \(B_0 \barr^{*} B\) and \(C_0 \barr^{*} C\), so, by~\ref{thm:conflocal}, there exists \(D \in E\) such that \(B_0 \barr^{*} D\) and \(C_0 \barr^{*} D\). And, due to~\ref{thm:sn} and~\ref{lem:decstar}, \(size(B) \le size(B_0) < size(A)\) and \(size(C) \le size(C_0) < size(A)\). So, by well-founded induction given \(B_0 \barr^{*} B\), \(B_0 \barr^{*} D\), \(C_0 \barr^{*} C\), and \(C_0 \barr^{*} D\), there exist \(B_2, C_2 \in E\) such that \(B \barr^{*} B_2\) and \(D \barr^{*} B_2\) and \(C \barr^{*} C_2\) and \(D \barr^{*} C_2\). And, similarly, since \(B \barr^{*} B_2\) and \(B \barr^{*} C_2\) (via \(D\)), there exists \(D' \in E\) such that \(B_2 \barr^{*} D'\) and \(C_2 \barr^{*} D'\), so \(B \barr^{*} D'\) and \(C \barr^{*} D'\).\\
   \end{description} 
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L288}{Expr.RedRel.globally\_confluent}
 \end{proof}
 
-\subsection{Decision Procedure for \(\beta\)-Equality}
+\subsection{Decision Procedure for \texorpdfstring{\(\beta\)}{beta}-Equality}
 
 Our \(\beta\)-reduction rules are implemented as a total, terminating \(\beta\)-reduction engine. Reduction proceeds by repeated single-step reduction via a function \(step? : (A : E) \rightarrow \option\ (\Sigma' (B : E), A \barr B)\) and well-founded recursion by decreasing syntactic size~\ref{thm:sn}. The reducer has has soundness and completeness with respect to \(\barr^{!}\). The reducer is used to decide \(\beta\)-equality and is central to decidable type-checking.
 
@@ -764,7 +732,7 @@ def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :
   | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
   | _ => .none
 \end{leancode}
-\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L10}{Expr.step\_head?}
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L10}{Expr.step\_head?}\\
 
 If no head step is available, it attempts to step \(f\), then if \(f\) cannot be stepped, it attempts to step \(x\). If \(e\) is a combinator of the form \((c\ x_0 \ldots x_n)\) such that \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), the first point \(x_i\) where \(i < n\) which can make a step is used:
 
@@ -823,7 +791,7 @@ termination_by (e.size, sizeOf e)
 decreasing_by
   any_goals (grind)
 \end{leancode}
-\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L59}{Expr.step?}
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L59}{Expr.step?}\\
 
 Reduction to a normal form proceeds by repeated single-step reduction and well-founded recursion given strong-normalization~\ref{thm:sn} until no step is available:
 
@@ -841,47 +809,47 @@ termination_by t e
 \end{leancode}
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L113}{Expr.reduce}
 
-\begin{theorem}\label{thm:semicomplete}
+\begin{thm}\label{thm:semicomplete}
   Semi-completeness of single-step reduction: If \(A, B \in E\) and \(A \barr B\), then there exists \(B' \in E\) and \(h' \vdash A \barr B'\) such that \(step? A = \some\ \langle B, h' \rangle\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   Suppose \(A \barr B\). The proof proceeds by induction on \(A\) and analysis of the definition of \(step?\).
   \begin{description}
-    \item[\(A\) can make a head step:] If \(A\) can make a head step, then there exists some \(B' \in E\) such that \(step? A = \some\ \langle B', h \rangle\) where \(h\) is proven by the corresponding single-step rule~\ref{sec:convrules}.
-    \item[\(A\) is of the form \((f x)\) but \(A\) cannot make a head step:] If \(A\) cannot make a head step, then \(A \barr B\) must be given by either function congruence or argument congruence. Suppose there exists \(f' \in E\) such that \(f \barr f'\). Then, by the inductive hypothesis, there exists \(f'_2 \in E\) such that \(h \vdash f \barr f'_2\) and \(step? f = \some\ \langle f'_2, h \rangle\). So, \(step? (f x) = \some\ \langle (f'_2 x), \congrfun\ h \rangle\). Suppose \(f\) is in normal form. Then, there exists \(x' \in E\) such that \(x \barr x'\). So, by the inductive hypothesis, there exists \(x'_2 \in E\) such that \(h \vdash x \barr x'_2\). And, since \(f\) is in normal form, then \(step? f = \none\), since a contradiction is derived if \(step? f = \some\ \langle f', h \rangle\). So, \(step? (f x) = \some\ \langle (f x'_2), \congrarg\ h \rangle\).
-    \item[\(A\) is of the form \((c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\):]
+    \item[\(A\) can make a head step] If \(A\) can make a head step, then there exists some \(B' \in E\) such that \(step?\ A = \some\ \langle B', h \rangle\) where \(h\) is proven by the corresponding single-step rule~\ref{sec:convrules}.
+    \item[\(A\) is of the form \((f x)\) but \(A\) cannot make a head step] If \(A\) cannot make a head step, then \(A \barr B\) must be given by either function congruence or argument congruence. Suppose there exists \(f' \in E\) such that \(f \barr f'\). Then, by the inductive hypothesis, there exists \(f'_2 \in E\) such that \(h \vdash f \barr f'_2\) and \(step?\ f = \some\ \langle f'_2, h \rangle\). So, \(step?\ (f x) = \some\ \langle (f'_2 x), \congrfun\ h \rangle\). Suppose \(f\) is in normal form. Then, there exists \(x' \in E\) such that \(x \barr x'\). So, by the inductive hypothesis, there exists \(x'_2 \in E\) such that \(h \vdash x \barr x'_2\). And, since \(f\) is in normal form, then \(step?\ f = \none\), since a contradiction is derived if \(step?\ f = \some\ \langle f', h \rangle\). So, \(step?\ (f x) = \some\ \langle (f x'_2), \congrarg\ h \rangle\).
+    \item[\(A\) is of the form \((c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\)]
       
-      Note that \(step? (c\ x_0 \ldots x_n) = \none\) if \(step? x_i = \none\) for all \(i < n\). But, since \(A\) is a combinator, \(A \barr B\) must be given by the point rule. So, there exists some \(j < n\) such that \(x_j \barr x'_j\). And, by the inductive hypothesis, there exists \(x''_j\) and \(h \vdash x_j \barr x''_j\) such that \(step? x_j = \some\ \langle x''_j, h \rangle\). Hence, there must exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(step? (c\ x_0 \ldots x_n) = \some\ \langle B', h \rangle\).
+      Note that \(step?\ A = \none\) if \(step?\ x_i = \none\) for all \(i < n\). But, since \(A\) is a combinator, \(A \barr B\) must be given by the point rule. So, there exists some \(j < n\) such that \(x_j \barr x'_j\). And, by the inductive hypothesis, there exists \(x''_j\) and \(h \vdash x_j \barr x''_j\) such that \(step?\ x_j = \some\ \langle x''_j, h \rangle\). Hence, there must exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(step?\ (c\ x_0 \ldots x_n) = \some\ \langle B', h \rangle\).
     \end{description}
     \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Complete.lean\#L7}{Expr.semi\_complete}
 \end{proof}
 
-\begin{theorem}\label{thm:reducenorm}
+\begin{thm}\label{thm:reducenorm}
   Reducts given by \(reduce\) are normal forms: If \(A, B \in E\) and \(h \vdash A \barr^{*} B\) and \(reduce A = \langle B, h \rangle\), then \(B\) is a normal form.
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   The proof proceeds by well-founded recursion with respect to syntactic size and analysis of the definition of \(reduce\). If \(step? A = \none\), then \(A\) is a normal form, since otherwise, \(step? A \neq none\) by~\ref{thm:semicomplete}. If \(step? A = \some \langle B_0, h_0 \rangle\) such that \(h_0 \vdash A \barr B_0\), then \(size(B_0) < size(A)\) by~\ref{thm:sn}. So, by well-founded recursion, \(B_0\) is a normal form.\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L374}{Expr.reduce\_norm}
 \end{proof}
 
-\begin{theorem}\label{thm:reducecomplete}
+\begin{thm}\label{thm:reducecomplete}
   Completeness of \(\beta\)-reduction with respect to normal forms: If \(A, B \in E\) and \(h \vdash A \barr^{!} B\), then \(reduce (\barr) A = \langle B, h \rangle\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   This fact is shown by induction on \(A\) with respect to size and analysis of the definition of \(reduce\):
   \begin{description}
-    \item[\(step? A = \none\):] If \(step?\ A = \none\), then \(A\) can be shown to be in normal-form: suppose for the sake of contradiction that \(A \barr B\). Then, by semi-completeness \ref{thm:semicomplete}, there exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(step?\ A = \some\ \langle B', h \rangle\). Hence, a contradiction is derived, so \(A\) is in normal form. So, \(h\) must be proven by reflexivity. That is, \(A = B\). Therefore, \(reduce (\barr) A = \langle B, refl \rangle\).
-    \item[\(step? A = \langle B', h' \rangle\), where \(h' \vdash A \barr B'\):] If a step can be made, then by confluence \ref{thm:confglobal}, there exists \(D \in E\) such that \(h_1 \vdash B' \barr^{*} D\) and \(h_2 \vdash B \barr^{*} D\). But since \(B\) is a normal form, \(B = D\), so \(B' \barr^{*} B\). By strong-normalization~\ref{thm:sn}, \(size(B') < size(A)\), so by well-founded induction, \(reduce (\barr) B' = \langle B, h_2 \rangle\). And so, \(reduce (\barr) A = \langle B, trans\ (single\ h') h_2 \rangle\).
+    \item[\(step? A = \none\)] If \(step?\ A = \none\), then \(A\) can be shown to be in normal-form: suppose for the sake of contradiction that \(A \barr B\). Then, by semi-completeness \ref{thm:semicomplete}, there exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(step?\ A = \some\ \langle B', h \rangle\). Hence, a contradiction is derived, so \(A\) is in normal form. So, \(h\) must be proven by reflexivity. That is, \(A = B\). Therefore, \(reduce (\barr) A = \langle B, refl \rangle\).
+    \item[\(step? A = \langle B', h' \rangle\), where \(h' \vdash A \barr B'\)] If a step can be made, then by confluence \ref{thm:confglobal}, there exists \(D \in E\) such that \(h_1 \vdash B' \barr^{*} D\) and \(h_2 \vdash B \barr^{*} D\). But since \(B\) is a normal form, \(B = D\), so \(B' \barr^{*} B\). By strong-normalization~\ref{thm:sn}, \(size(B') < size(A)\), so by well-founded induction, \(reduce (\barr) B' = \langle B, h_2 \rangle\). And so, \(reduce (\barr) A = \langle B, trans\ (single\ h') h_2 \rangle\).
     \end{description}
     \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L393}{Expr.reduce\_complete}
 \end{proof}
 
-\begin{theorem}\label{thm:normunique}
+\begin{thm}\label{thm:normunique}
   Uniqueness of normal forms: if \(A, B, C \in E\) and \(h_1 \vdash A \barr^{!} B\) and \(h_2 \vdash A \barr^{!} C\), then \(B = C\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   By completeness of \(\beta\)-reduction~\ref{thm:reducecomplete}, \(reduce (\barr) A = \langle B, h_1 \rangle\) and \(reduce (\barr) A = \langle C, h_2 \rangle\), so \(B = C\).\\
@@ -890,20 +858,20 @@ termination_by t e
 
 Using our reduction function with soundness and completeness, we can decide \(\beta\)-equality.
 
-\begin{definition}\label{def:betaeq}
+\begin{defi}\label{def:betaeq}
   \(A =_\beta B\) iff there exists \(C \in E\) such that \(A \barr^{!} C\) and \(B \barr^{!} C\) where \(A, B \in E\).
-\end{definition}
+\end{defi}
 
-\begin{theorem}\label{thm:decidebetaeq}
+\begin{thm}\label{thm:decidebetaeq}
   If \(A, B \in E\), then \(A =_\beta B\) or \(A \neq_\beta B\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   Let \(\langle A_1, h_1 \rangle \coloneq reduce (\barr) A\) and \(\langle B_1, h_2 \rangle \coloneq reduce (\barr) B\). Then, \(A_1\) and \(B_1\) are normal forms by~\ref{thm:reducenorm}. We proceed by cases:
   \begin{description}
-    \item[$A_1 = B_1$:]
+    \item[$A_1 = B_1$]
       If \(A_1 = B_1\), then \(A \barr^{!} A_1\) and \(B \barr^{!} A_1\), so \(A =_\beta B\).
-    \item[\(A_{1} \neq B_{1}\):]
+    \item[\(A_{1} \neq B_{1}\)]
       If \(A_1 \neq B_1\), then \(A \neq_\beta B\), since \(A =_\beta B\) implies that there exists \(C \in E\) such that \(h_3 \vdash A \barr^{!} C\) and \(h_4 \vdash B \barr^{!} C\). But, then \(reduce (\barr) A = \langle C, h_3 \rangle = \langle C, h_4 \rangle = reduce (\barr) B\) (by propositional extensionality), in which case a contradiction is derived.
   \end{description}
 \end{proof}
@@ -914,11 +882,11 @@ DCC has decidable type-checking, dependent types, and uses affine logic. Every p
 
 We proceed by enumerating the inference rules for the core type formers, the rules for constant terms, and then the inference rules for all primitive combinators in the order they were defined in \ref{sec:convrules}.
 
-\begin{definition}\label{def:defeq}
+\begin{defi}\label{def:defeq}
   \(A \equiv B\) iff \(A =_\beta B\) where \(A, B \in E\)~\ref{def:betaeq}.
-\end{definition}
+\end{defi}
 
-\begin{definition}\label{def:arrowsimple}
+\begin{defi}\label{def:arrowsimple}
   Arrows, written in the meta-level as \(A \rightarrow B\) are identified by the rule:
   \[
     \inferrule[Arrow Def.]
@@ -926,9 +894,9 @@ We proceed by enumerating the inference rules for the core type formers, the rul
     { A' \rightarrow B' \coloneq (\comb[\Pi][\comb[`\mathbb{1}][A]][\comb[`\mathbb{1}][\comb[`A][B]]] \ast)}
   \]
   We use \(\comb[\rightarrow][A][B]\) to explicitly denote the DCC expansion of \(A \rightarrow B\).
-\end{definition}
+\end{defi}
 
-\begin{definition}\label{def:inferpi}
+\begin{defi}\label{def:inferpi}
   We have the following mutually exclusive inference rules for \(\Pi\):
   \[
     \begin{gathered}
@@ -950,19 +918,20 @@ We proceed by enumerating the inference rules for the core type formers, the rul
     \end{gathered}
   \]
   We distinguish between four different kinds of indices \(C : (x : A) \rightarrow (y : B x) \rightarrow \sort{v}\), which are all arrows into \(\sort{v}\) whose arguments may or may not depend on the context.
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   \(\Sigma\)-types are inferred as such:
   \[
     \inferrule[Sigma]
-    { A : \sort{u} \quad B : (\comb[\Pi][B][C] env) \quad A \equiv (B env) \quad (C\ env\ \hole{h_{\max}((\comb[\Pi][B][C]\ env)) + 1}) \barr^{!} \sort{v}}
+    { A : \sort{u} \quad B : (\comb[\Pi][B][C] env) \quad A \equiv (B env) \\
+      (C\ env\ \hole{h_{\max}((\comb[\Pi][B][C]\ env)) + 1}) \barr^{!} \sort{v}}
     { \comb[\Sigma][A][B] : \sort{\max(u, v)}}
   \]
   where \(h_{\max} : E \rightarrow \mathbb{N}\) calculates the maximum ``hole'' in a tree and is used to test if \(B\) is an arrow (but only in this rule).
-\end{definition}
+\end{defi}
 
-\begin{definition}\label{def:inferapp}
+\begin{defi}\label{def:inferapp}
   Application is type-checked as such:
   \[
     \inferrule[App]
@@ -970,9 +939,9 @@ We proceed by enumerating the inference rules for the core type formers, the rul
     { (f x) : \tau }
   \]
   Note that the inferred type of \((f x)\) is in normal form.
-\end{definition}
+\end{defi}
 
-\begin{definition}\label{infer:const}
+\begin{defi}\label{infer:const}
   Constant terms are inferred like such:
   \[
     \begin{gathered}
@@ -996,9 +965,9 @@ We proceed by enumerating the inference rules for the core type formers, the rul
       { \mathbb{0}_\mathbb{2} : \mathbb{2}}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   The identity, quotation, and composition are inferred as such:
   \[
     \begin{gathered}
@@ -1013,13 +982,13 @@ We proceed by enumerating the inference rules for the core type formers, the rul
       { \comb[\circ][f][g] : (\comb[\Pi][\comb[`\mathbb{1}][A]][\comb[`\mathbb{1}][\comb[\circ][C][g]]] \ast)}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{example}
+\begin{exa}
   \((\comb[Id][\mathbb{1}] \ast) : \mathbb{1}\).\\
 
   This is since \(\mathbb{1} : \sort{0}\) implies \(\comb[Id][\mathbb{1}] : \mathbb{1} \rightarrow \mathbb{1}\), and \(\mathbb{1} \rightarrow \mathbb{1} = (\comb[\Pi][\comb[`\mathbb{1}][\mathbb{1}]][\comb[`\mathbb{1}][\comb[`\mathbb{1}][\mathbb{1}]]] \ast)\) and \(\ast : \mathbb{1}\) and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \equiv \mathbb{1}\), and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \barr^{!} \mathbb{1}\).\\
-\end{example}
+\end{exa}
 
 In the familiar \((x : A) \rightarrow B x\) notation, the inference rule for composition is written as:
 \[
@@ -1035,7 +1004,7 @@ Similarly, the inference rule for \(\Pi\) may be written notationally as:
 \]
 From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote dependent products for clarity. Consult the Appendix~\ref{appendix:sup} for the expanded inference rules.
 
-\begin{definition}
+\begin{defi}
   Projections and currying are as such:
   \[
     \begin{gathered}
@@ -1046,31 +1015,32 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
       { B : A \rightarrow \sort{v} \qquad B \barr^{!} B'}
       { \comb[Snd][B] : (x : \comb[\Sigma][A][B']) \rightarrow (\comb[\circ][B'][\comb[Fst][B']] x)}\\
       \inferrule[Curry]
-      { A : \sort{u} \quad A \barr^{!} A' \quad B : A' \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : \comb[\Sigma][A'][B']) \rightarrow C x}
+      { A : \sort{u} \quad A \barr^{!} A' \qquad B : A' \rightarrow \sort{v} \qquad B \barr^{!} B' \\
+        x : (x : \comb[\Sigma][A'][B']) \rightarrow C x}
       { \comb[\Lambda][A][B][x] : (x : A') \rightarrow (y : B' x) \rightarrow (\comb[\Lambda][A'][B'][C] x y)}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Evaluation is as such:
   \[
     \inferrule[Eval]
     { A : \sort{u} \quad A \barr^{!} A' \quad B : A' \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : A') \rightarrow (y : B' x) \rightarrow C x y}
     { \comb[Eval][A][B][x] : (x : \comb[\Sigma][A'][B']) \rightarrow (\comb[Eval][A'][B'][C] x)}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Exchange is as such:
   \[
     \inferrule[Swap]
     { A : \sort{u} \quad B : \sort{v} \quad A \barr^{!} A' \quad B \barr^{!} B' }
     { \comb[Swap][A][B] : \comb[\Sigma][A'][\comb[`A'][B']] \rightarrow \comb[\Sigma][B'][\comb[`B'][A']]}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   The basic operations on boxed terms are as such:
   \[
     \begin{gathered}
@@ -1079,79 +1049,81 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
       { \comb[*][A] : \comb[!][A'] \rightarrow A'} \qquad
       \inferrule[Map]
       { x : A \rightarrow \sort{v}}
-      { \comb[!<>][x] : \comb[!][A] \rightarrow \sort{v}}\qquad
+      { \comb[!<>][x] : \comb[!][A] \rightarrow \sort{v}}\\
       \inferrule[Fmap]
       { x : (x : A) \rightarrow B x}
       { \comb[\$<>][x] : (x : \comb[!][A]) \rightarrow (\comb[!<>][B] x)}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Currying on boxes is as such:
   \[
     \inferrule[Curry']
     { A : \sort{u} \quad A \barr^{!} A' \quad B : A' \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : \comb[!][\comb[\Sigma][A'][B']]) \rightarrow C x}
     { \comb[!\Lambda][A][B][x] : (x : \comb[!][A']) \rightarrow (y : (\comb[!<>][B'] x)) \rightarrow (\comb[!\Lambda][A'][B'][C] x y)}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}\label{def:pairred}
+\begin{defi}\label{def:pairred}
   Pairs are as such:
   \[
     \inferrule[Pair]
-    { C \barr^{!} C' \quad x : (x : A) \rightarrow B x \quad y : (x : A) \rightarrow (y : B x) \rightarrow C' x y \quad C : (x : A) \rightarrow (y : B x) \rightarrow \sort{s}}
+    { C \barr^{!} C' \qquad x : (x : A) \rightarrow B x \qquad y : (x : A) \rightarrow (y : B x) \rightarrow C' x y \\
+      C : (x : A) \rightarrow (y : B x) \rightarrow \sort{s}}
     { \comb[\langle , \rangle C][x][y] : (x : \comb[!][A]) \rightarrow (\comb[\Sigma'][B][C'] x)}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Equality formers are as such:
   \[
     \begin{gathered}
       \inferrule[Eq']
       { B : A \rightarrow \sort{v} \quad B \barr^{!} B'}
-      { \comb[='][B] : (x : A) \rightarrow (y : B' x) \rightarrow (z : B' x) \rightarrow \sort{0}} \qquad
+      { \comb[='][B] : (x : A) \rightarrow (y : B' x) \rightarrow (z : B' x) \rightarrow \sort{0}} \\
       \inferrule[Eql]
       { B : A \rightarrow \sort{v} \quad B \barr^{!} B'}
       { \comb[Eql][B] : (x : \comb[!][A]) \rightarrow (y : (\comb[!<>][B'] x)) \rightarrow \sort{0}}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   The affine \(\Sigma\)-former is as such:
   \[
     \inferrule[Sigma']
     { B : A \rightarrow \sort{v} \quad B \barr^{!} B' \quad C : (x : A) \rightarrow (y : B' x) \rightarrow \sort{s}}
     { \comb[\Sigma'][B][C] : (x : \comb[!][A]) \rightarrow \sort{\max(v, s)}}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   The recursors for \(\mathbb{2}\) and \(\mathbb{0}\) are as such:
   \[
     \begin{gathered}
       \inferrule[Bool Rec]
-      { B : A \rightarrow \mathbb{2} \rightarrow \sort{v} \quad B \barr^{!} B' \quad x : (x : A) \rightarrow (y : \mathbb{2}) \rightarrow B' x y \quad y : (x : A) \rightarrow (y : \mathbb{2}) \rightarrow B' x y}
+      { B : A \rightarrow \mathbb{2} \rightarrow \sort{v} \quad B \barr^{!} B' \qquad x : (x : A) \rightarrow (y : \mathbb{2}) \rightarrow B' x y \\
+        y : (x : A) \rightarrow (y : \mathbb{2}) \rightarrow B' x y}
       { \comb[\mathbb{2}.Rec][x][y] : (x : A) \rightarrow (y : \mathbb{2}) \rightarrow B' x y}\\
       \inferrule[Bot Rec]
       { B : A \rightarrow \mathbb{0} \rightarrow \sort{v} \quad B \barr^{!} B'}
       { \comb[\mathbb{0}.Rec][B] : (x : A) \rightarrow (y : \mathbb{0}) \rightarrow B' x y}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   \(\Sigma\)-couples are as such:
   \[
     \inferrule[Couple]
-    { x : A \quad B : A \rightarrow \sort{v} \quad B \barr^{!} B' \quad (B' x) \barr^{!} \tau_2 \quad y : \tau_2}
+    { x : A \quad B : A \rightarrow \sort{v} \quad B \barr^{!} B' \qquad (B' x) \barr^{!} \tau_2 \quad y : \tau_2}
     { \comb[,B][x][y] : \comb[\Sigma][A][B']}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Finally, affine terms are as such:
   \[
     \begin{gathered}
@@ -1163,89 +1135,96 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
       { \comb[\&][x] : \comb[!][A]}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
 \subsection{Type-Checking is Decidable}\label{decidable}
 
 Our inference rules do not assume the existence of a catch-all conversion rule. Instead, inferred types are reduced to normal form in each rule individually, and definitional equality of terms is checked by comparing their normal-form reducts given by \(reduce\). This enables decidable type-checking. We have implemented a type-checker on a deep embedding of DCC in Lean 4, and have shown that it to be judgmentally complete, making type-checking decidable.
 
-The source code of the type-checker is available in the Appendix~\ref{appendix:sup}. Of note, judgments carry computational content and live in \(\textbf{Type}\), rather than \(\textbf{Prop}\): \(\text{Judge} : E \rightarrow E \rightarrow Type\). The \href{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Judge3.lean#L599}{type-checker} is total and equipped with soundness: \(infer : (e : E) \rightarrow \text{Except}\ (\text{TypeError}\ e) (\Sigma' (\tau : E), \text{Judge}\ e\ \tau)\). Judgmental completeness is provable from the fact that all the inference rules are mutually exclusive, and there is exactly one canonical type for a given term since catch-all conversion is not permitted.
+The source code of the type-checker is available in the Appendix~\ref{appendix:sup}. Of note, judgments carry computational content and live in \(\textbf{Type}\), rather than \(\textbf{Prop}\): \(\text{Judge} : E \rightarrow E \rightarrow Type\). The \href{https://github.com/lexzaiello/DCC/blob/Dcc/Judge.lean#L599}{type-checker} is total and equipped with soundness: \(infer : (e : E) \rightarrow \text{Except}\ (\text{TypeError}\ e) (\Sigma' (\tau : E), \text{Judge}\ e\ \tau)\). Judgmental completeness is provable from the fact that all the inference rules are mutually exclusive, and there is exactly one canonical type for a given term since catch-all conversion is not permitted.
 
-\begin{theorem}\label{thm:judgecomplete}
+\begin{thm}\label{thm:judgecomplete}
   Judgmental completeness: If \(e, \tau \in E\) and \(h \vdash e : \tau\), then \(\text{infer}\ e = ok \langle \tau, h \rangle\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   By induction on the typing derivation \(h\). Cases are mutually exclusive and we have soundness, so the proof is reduced to checking that each branch implies that its corresponding branch in \(infer\) is \(ok\). In each case, if a definitional equality is supposed by \(h\), such that \(A \equiv B\) for some \(A, B \in E\) implies \(e : \tau\), then there exists \(C \in E\) such that \(h_{eq,1} \vdash A \barr^{!} C\) and \(h_{eq,2} \vdash B \barr^{!} C\). So, by completeness of \(\beta\)-reduction with respect to normal forms \ref{thm:reducecomplete}, \(reduce (\barr) A = \langle C, h_{eq,1} \rangle = \langle C, h_{eq,2} \rangle = reduce (\barr) B\). Hence, the corresponding equality check in \(infer\ e\) passes, and so in each case, \(infer\ e = ok\ \langle \tau, h \rangle\).
 
-  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L135}{Expr.Judge.complete}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability.lean\#L135}{Expr.Judge.complete}
 \end{proof}
 
-\begin{theorem}\label{thm:judgeunique}
+\begin{thm}\label{thm:judgeunique}
   If \(A, \tau_1, \tau_2 \in E\) and \(e : \tau_1\) and \(e : \tau_2\), then \(\tau_1 = \tau_2\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   If \(h_1 \vdash e : \tau_1\) and \(h_2 \vdash e : \tau_2\), then by judgmental completeness \ref{thm:judgecomplete}, \(infer\ e = ok\ \langle \tau_1, h_1 \rangle = infer\ e = ok\ \langle \tau_2, h_2 \rangle\), so \(\tau_1 = \tau_2\).
 
-  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L138}{Expr.Judge.unique}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability.lean\#L138}{Expr.Judge.unique}
 \end{proof}
 
-\begin{theorem}\label{thm:judgenorm}
+\begin{thm}\label{thm:judgenorm}
   Inferred types are normal: If \(e, \tau \in E\) and \(h \vdash e : \tau\), then \(\tau\) is a \(\beta\)-normal form.
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   We proceed by induction on the term \(e\):
   \begin{description}
-    \item[\(e\) is a constant:] If \(e \in E_c\), then \(\tau\) is one of \(\{\sort{u + 1}, \sort{0}, \mathbb{0}, \mathbb{1}, \mathbb{2}\}\), in which case \(\tau\) is \(\beta\)-normal.
-    \item[\(e = (c\ x_0 \ldots x_n)\), where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\):] If \(e\) is a combinator, then any point mentioned in its type \(\tau\) has been reduced to \(\beta\)-normal form, or was inferred from the type of a point, in which case it is in \(\beta\)-normal form by the inductive hypothesis. And, if \(e\) is a combinator, it is either a function, a type former, or a boxed term:
+    \item[\(e\) is a constant] If \(e \in E_c\), then \(\tau\) is one of \(\{\sort{u + 1}, \sort{0}, \mathbb{0}, \mathbb{1}, \mathbb{2}\}\), in which case \(\tau\) is \(\beta\)-normal.
+    \item[\(e = (c\ x_0 \ldots x_n)\), where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\)] If \(e\) is a combinator, then any point mentioned in its type \(\tau\) has been reduced to \(\beta\)-normal form, or was inferred from the type of a point, in which case it is in \(\beta\)-normal form by the inductive hypothesis. And, if \(e\) is a combinator, it is either a function, a type former, or a boxed term:
       \begin{description}
-        \item[\(e\) is a function:] Then \(\tau\) is of the form \((\comb[\Pi][B][C] x)\), where \(B\), \(C\), and \(x\) are in \(\beta\)-normal form due to the above reasoning.
-        \item[\(e\) is a type former:] Then \(\tau\) is of the form \(\sort{u}\), in which case it is in \(\beta\)-normal form.
-        \item[\(e\) is a boxed term:] Then \(\tau\) is of the form \(\comb[!][A]\), where \(A\) is inferred by a point of \(e\), in which case \(A\) is in \(\beta\)-normal form by the inductive hypothesis. Hence, \(\tau\) is in \(\beta\)-normal form.
+        \item[\(e\) is a function] Then \(\tau\) is of the form \((\comb[\Pi][B][C] x)\), where \(B\), \(C\), and \(x\) are in \(\beta\)-normal form due to the above reasoning.
+        \item[\(e\) is a type former] Then \(\tau\) is of the form \(\sort{u}\), in which case it is in \(\beta\)-normal form.
+        \item[\(e\) is a boxed term] Then \(\tau\) is of the form \(\comb[!][A]\), where \(A\) is inferred by a point of \(e\), in which case \(A\) is in \(\beta\)-normal form by the inductive hypothesis. Hence, \(\tau\) is in \(\beta\)-normal form.
         \end{description}
-    \item[\(e = (f x)\), where \(f \in E\) and \(x \in E\):] If \(e\) is an application, then \(f : (\comb[\Pi][B][C]\ env)\) and \(x : A\) where \((B\ env) \equiv A\). So, \(\tau\) is the \(\beta\)-normal reduct of \(C\ env\ x\) (per~\ref{def:inferapp}), and it is in \(\beta\)-normal form.
+    \item[\(e = (f x)\), where \(f \in E\) and \(x \in E\)] If \(e\) is an application, then \(f : (\comb[\Pi][B][C]\ env)\) and \(x : A\) where \((B\ env) \equiv A\). So, \(\tau\) is the \(\beta\)-normal reduct of \(C\ env\ x\) (per~\ref{def:inferapp}), and it is in \(\beta\)-normal form.
   \end{description}
-  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability3.lean\#L143}{Expr.Judge.is\_norm}
+  \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability.lean\#L143}{Expr.Judge.is\_norm}
 \end{proof}
 
 \subsection{Subject-Reduction, Progress, and Consistency}\label{otherthmsjudge}
 
 The subject-reduction and progress theorems hold in DCC. We show that if \(A : \tau\) and \(A \barr B\), then \(B : \tau\). We define a set of canonical values \(\val \subset E\) syntactically and show that if \(A : \tau\), then there must exist \(B\) such that \(A \barr B\) or \(A \in \val\). Using these results, we show that \(\mathbb{0}\) is uninhabited.
 
-\begin{theorem}\label{thm:preservation}
+\begin{thm}\label{thm:preservation}
   Preservation: If \(A, B, \tau \in E\), \(ht \vdash A : \tau\), and \(hr \vdash A \barr B\), then \(B : \tau\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   We proceed by induction on \(A\):
   \begin{description}
-    \item[\(A\) is of the form \((f x)\) and \(B\) is of the form \((f' x)\) where \(hr_f \vdash f \barr f'\):] Then \(f : (\comb[\Pi][B][C]\ env)\) and \(x : A\) such that \((B\ env) \equiv A\). Hence, the inductive hypothesis via \(hr_f\) that \(f' : (\comb[\Pi][B][C]\ env)\). So, by the inference rule for application, \((f' x) : \tau\).
-    \item[\(A\) is of the form \((f x)\) and \(B\) is of the form \((f x')\) where \(hr_x \vdash x \barr x'\):] Then \(f : (\comb[\Pi][B][C]\ env)\) and \(x : A\) such that \((B env) \equiv A\) and \(C\ env\ x \barr^{!} \tau\). Hence, the inductive hypothesis via \(hr_x\) that \(x' : A\), and by confluence and argument congruence, \((C\ env\ x') \barr^{!} \tau\), so \((f x') : \tau\).
-    \item[\(A\) is of the form \((c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\):]  If \((c\ x_0 \ldots x_n) : \tau\), then each point \(x_i\) for all \(i < n\) is asserted by \(ht\) to have a type \(\tau_{i}\) and may appear as a sub-expression of \(\tau\). And, since \((c\ x_0 \ldots x_n) \barr B\), \(B\) must be of the form \((c\ x'_0 \ldots x'_n)\) where \(x_j \barr x'_j\) for some \(j < n\). So, by the inductive hypothesis, \(x'_j : \tau_j\). Therefore, \((c\ x'_0 \ldots x'_n) : \tau\) by the inference rule for the combinator \(c\).
-    \item[\(A\) is of the form \((f x)\) and \(hr\) is given by a head step:] In case \(hr\) is given by a head reduction step, we proceed by cases. In each head-reduction case, the typing relation is inverted until we reach the leftmost combinator \(ht_1 \vdash (c\ x_0 \ldots x_n) : \tau_1\) which is a sub-expression of \(f\). We invert \(ht_1\) and destruct all available definitional equalities and reductions to \(\beta\)-normal form. Then, we reconstruct the judgment \(B : \tau\) from the available equalities. See the \href{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/SubjectReduction.lean\#L965}{formalized lean proof} for an exhaustive technical presentation of this technique.
+    \item[\(A\) is of the form \((f x)\) and \(B\) is of the form \((f' x)\) where \(hr_f \vdash f \barr f'\)] \hfill \\ Then \(f : (\comb[\Pi][B][C]\ env)\) and \(x : A\) such that \((B\ env) \equiv A\). Hence, the inductive hypothesis via \(hr_f\) that \(f' : (\comb[\Pi][B][C]\ env)\). So, by the inference rule for application, \((f' x) : \tau\).
+    \item[\(A\) is of the form \((f x)\) and \(B\) is of the form \((f x')\) where \(hr_x \vdash x \barr x'\)] \hfill \\ Then \(f : (\comb[\Pi][B][C]\ env)\) and \(x : A\) such that \((B env) \equiv A\) and \(C\ env\ x \barr^{!} \tau\). Hence, the inductive hypothesis via \(hr_x\) that \(x' : A\), and by confluence and argument congruence, \((C\ env\ x') \barr^{!} \tau\), so \((f x') : \tau\).
+    \item[\(A\) is of the form \((c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\)]  If \((c\ x_0 \ldots x_n) : \tau\), then each point \(x_i\) for all \(i < n\) is asserted by \(ht\) to have a type \(\tau_{i}\) and may appear as a sub-expression of \(\tau\). And, since \((c\ x_0 \ldots x_n) \barr B\), \(B\) must be of the form \((c\ x'_0 \ldots x'_n)\) where \(x_j \barr x'_j\) for some \(j < n\). So, by the inductive hypothesis, \(x'_j : \tau_j\). Therefore, \((c\ x'_0 \ldots x'_n) : \tau\) by the inference rule for the combinator \(c\).
+    \item[\(A\) is of the form \((f x)\) and \(hr\) is given by a head step] In case \(hr\) is given by a head reduction step, we proceed by cases. In each head-reduction case, the typing relation is inverted until we reach the leftmost combinator \(ht_1 \vdash (c\ x_0 \ldots x_n) : \tau_1\) which is a sub-expression of \(f\). We invert \(ht_1\) and destruct all available definitional equalities and reductions to \(\beta\)-normal form. Then, we reconstruct the judgment \(B : \tau\) from the available equalities. See the \href{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/SubjectReduction.lean\#L965}{formalized lean proof} for an exhaustive technical presentation of this technique.
     \end{description}
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/SubjectReduction.lean\#L965}{Expr.Judge.preservation}
 \end{proof}
 
-\begin{definition}
+\begin{defi}
   The set of canonical values is defined to be the union of the set of constant terms \(E_c\), the set of combinators whose points are values \(\{(c\ x_0 \ldots x_n) \mid c \in C, \{x_0 \ldots x_n\} \subset \val\}\), application of the reflexivity combinator, and all possible partially applied terms:
+  \begin{gather*}
+    E_c \subset \val\\
+    \{(c\ x_0 \ldots x_n) \mid c \in C, \{x_0 \ldots x_n\} \subset \val\} \subset \val
+  \end{gather*}
   \begin{align*}
-    E_c &\subset \val & \{(c\ x_0 \ldots x_n) &\mid c \in C, \{x_0 \ldots x_n\} \subset \val\} \subset \val\\
+    \{(\comb[\Pi][B][C] x) &\mid B, C, x \in \val\} \subset \val\\
+    \{(\comb[!\Lambda][A][B][x] \comb[\&][y]) &\mid A, B, x, y \in \val\} \subset \val\\
+    \{(\comb[\Lambda][A][B][x] y) &\mid A, B, x, y \in \val\} \subset \val\\
+    \{(\comb[='][B] x y) &\mid B, x, y \in \val\} \subset \val
+  \end{align*}
+  \begin{align*}
     \{(\comb[refl][B] \comb[\&][x]) &\mid B, x \in \val\} \subset \val & \{(\comb[Eql][B] \comb[\&][x]) &\mid B, x \in \val\} \subset \val\\
     \{(\comb[refl][B] \comb[\&][x] \comb[\&][y]) &\mid B, x, y \in \val\} \subset \val & \{(\comb[='][B] x) &\mid B, x \in \val\} \subset \val\\
-    \{(\comb[='][B] x y) &\mid B, x, y \in \val\} \subset \val & \{(\comb[\Pi][B][C] x) &\mid B, C, x \in \val\} \subset \val\\
-    \{(\comb[\Lambda][A][B][x] y) &\mid A, B, x, y \in \val\} \subset \val & \{(\comb[!\Lambda][A][B][x] \comb[\&][y]) &\mid A, B, x, y \in \val\} \subset \val\\
     \{(\comb[\mathbb{2}.Rec][B][x][y] z) &\mid B, x, y, z \in \val\} \subset \val & \{(\comb[\mathbb{0}.Rec][B] x) &\mid B, x \in \val\} \subset \val
   \end{align*}
 
   Note that \((\comb[\mathbb{0}.Rec][B] x)\) denotes partial application of the recursor for \(\mathbb{0}\) with an environment, not an inhabitant of \(\mathbb{0}\).
-\end{definition}
+\end{defi}
 
-\begin{lemma}\label{lem:congrFunVal}
+\begin{lem}\label{lem:congrFunVal}
   If \(h \vdash (f x) \in \val\), then \(f \in \val\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   By case analysis on \(h\).
@@ -1253,9 +1232,9 @@ The subject-reduction and progress theorems hold in DCC. We show that if \(A : \
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L42}{Expr.Value.congrFun}
 \end{proof}
 
-\begin{lemma}\label{lem:congrArgVal}
+\begin{lem}\label{lem:congrArgVal}
   If \(h \vdash (f x) \in \val\), then \(x \in \val\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   By case analysis on \(h\).
@@ -1263,21 +1242,20 @@ The subject-reduction and progress theorems hold in DCC. We show that if \(A : \
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L62}{Expr.Value.congrArg}
 \end{proof}
 
-\begin{lemma}\label{lem:valnorm}
+\begin{lem}\label{lem:valnorm}
   If \(h \vdash e \in \val\), then \(e\) is a \(\beta\)-normal form.
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   By induction on \(h\).
 
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L72}{Expr.Value.is\_norm}
 \end{proof}
-%a partially applied combinator is always a value, unless it expects a boxed argument of the form \(\comb[\&][x]\), a coupled term of the form \(\comb[,B][x][y]\), or an inhabitant of \(\mathbb{2}\) and was . T
 Progress may be established by noticing that the only circumstance where a reduction gets ``stuck'' is when a function is applied the appropriate number of arguments, but they are all in \(\beta\)-normal form but are not the appropriate shape (i.e., \(\comb[\&][x]\), \(\comb[,B][x][y]\), \(\mathbb{1}_{\mathbb{2}}\), or \(\mathbb{0}_{\mathbb{2}}\)). By inductive reasoning, an argument \(x\) to a function in the term \((f x)\) must either be a value, or must make a step. And, since the leftmost combinator \((c\ cx_0 \ldots cx_n)\) which is a sub-expression of \(f\) has type \((x_0 : \tau_0) \rightarrow (x_1 : \tau_0 x) \rightarrow \ldots\), then \(x_0 : \tau_0\) and \(x_{i + 1} : (\tau_{i + 1}\ x_0 \ldots x_{i})\) for all arguments \(i < n\). It suffices to show that this fact implies \(x_i\) has the expected shape of an inhabitant of \(\tau_i \ldots\), in which case, \((f x)\) is a value by the appropriate rule. We do so by proving inversion lemmas relating judgments to the shapes of their expected inhabitants.
 
-\begin{lemma}\label{inv:box}
+\begin{lem}\label{inv:box}
   If \(x \in \val\) and \(h \vdash x : \comb[!][A]\), then there exists \(x_0 \in E\) such that \(x = \comb[\&][x_0]\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   We proceed by case analysis on the value \(x\). In any case where \(x\) is not of the form \(\comb[\&][x_0]\), the judgment \(h\) may be inverted to show that \(x : \tau\) and \(\tau\) is not of the form \(\comb[!][A]\). For example, combinators which are functions never have a type of the form \(\comb[!][A]\). For the type-formers, \(x : \sort{u}\) for some \(u \in \mathbb{N}\), but \(\sort{u} \neq \comb[\!][A]\) for all \(A \in E\). In the case of the canonical partially applied combinators, \(h\) is similarly inverted to show that \(x : \tau\) and \(\tau\) is of the form \((\comb[\Pi][B][C]\ env)\), but \((\comb[\Pi][B][C]\ env) \neq \comb[!][A]\) for all \(A \in E\).
@@ -1285,9 +1263,9 @@ Progress may be established by noticing that the only circumstance where a reduc
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L188}{Expr.Value.inv\_box}
 \end{proof}
 
-\begin{lemma}\label{inv:pi}
+\begin{lem}\label{inv:pi}
   If \(h \vdash (\comb[\Pi][B][C] x) : \tau\), then there exists \(u \in \mathbb{N}\) such that \(\tau = \sort{u}\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   By inversion on \(h\).\\
@@ -1295,45 +1273,45 @@ Progress may be established by noticing that the only circumstance where a reduc
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L375}{Expr.Judge.inv\_pi}
 \end{proof}
 
-\begin{lemma}\label{inv:eq}
+\begin{lem}\label{inv:eq}
   If \(h \vdash (\comb[Eql][B] \comb[\&][x] \comb[\&][y]) : \tau\), then \(\tau = \sort{0}\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   By inversion on \(h\).\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L384}{Expr.Judge.inv\_eql}
 \end{proof}
 
-\begin{lemma}\label{inv:refl}
+\begin{lem}\label{inv:refl}
   If \(h \vdash (\comb[refl][B] \comb[\&][x] \comb[\&][y]) : \tau\), and \((B x) \barr^{!} B'\) and \(y \barr^{!} y'\), then \(\tau = (\comb[=][B'] y' y')\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   By inversion on \(h\).\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L409}{Expr.Judge.inv\_refl}
 \end{proof}
 
-\begin{lemma}\label{inv:bot}
+\begin{lem}\label{inv:bot}
   If \(ht \vdash e : \mathbb{0}\) and \(hv \vdash e \in \val\), then \(\bot\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   We proceed by case analysis on \(ht\). The proof can be reduced to checking that no partial application of a combinator can inhabit \(\mathbb{0}\), since no inference rule could yield \(\mathbb{0}\) in the consequent besides application. In case \(e = (f x)\) where \(f, x \in E\), we observe that \((f x)\) is a value, so it must be a partial application of a function, or a full application of \(refl\). In case \(f\) is a function value whose arity is greater than one, inversion shows that there must exist \(B, C, env \in E\) such that \((f x) : (\comb[\Pi][B][C]\ env)\), but \((\comb[\Pi][B][C]\ env) \neq \mathbb{0}\) for all \(B, C, env \in E\). In case \((f x)\) is a full application of \(refl\), we know by \ref{inv:refl} that there must exist \(B, y \in E\) such that \((f x) : (\comb[=][B] y y)\), but \((\comb[=][B] y y) \neq \mathbb{0}\) for all \(B, y \in E\), so \(\neg e : \mathbb{0}\) and thus a contradiction is derived.\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L444}{Expr.Judge.elim\_bot\_value}
 \end{proof}
 
-\begin{lemma}\label{inv:sigma}
+\begin{lem}\label{inv:sigma}
   If \(ht \vdash e : \comb[\Sigma][A][B]\) and \(hv \vdash e \in \val\), then there exist \(x_0, y_0 \in E\) such that \(e = \comb[,B][x][y]\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   By case analysis on \(hv\) and parallel inversion on \(ht\).\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L565}{Expr.Value.inv\_sigma}
 \end{proof}
 
-\begin{lemma}\label{inv:bool}
+\begin{lem}\label{inv:bool}
   If \(ht \vdash e : \mathbb{2}\) and \(hv \vdash e \in \val\), then \(e = \mathbb{1}_\mathbb{2}\) or \(e = \mathbb{0}_\mathbb{2}\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   By case analysis on \(hv\) and parallel inversion on \(ht\).\\
@@ -1342,18 +1320,18 @@ Progress may be established by noticing that the only circumstance where a reduc
 
 Using these facts about inversion, we prove progress.
 
-\begin{theorem}\label{thm:progress}
+\begin{thm}\label{thm:progress}
   Progress: If \(h \vdash e : \tau\), then \(e \in \val\) or there exists \(e' \in E\) such that \(e \barr e'\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   The proof proceeds by induction on \(E\). If \(e \in E_c\), then \(e \in \val\). If \(e = (c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), then \(h\) demonstrates that there exist \(\tau_i\) such that \(x_i : \tau_i\) for all \(i < n\), and so each point of \(e\) is either a value, or can make a step. In case all points of \(e\) are values, \(e \in \val\). If any point can make a step, then so can \(e\) by the point rule. If \(e\) is of the form \((f x)\) where \(f, x \in E\), then \(h\) gives that \(f : (\comb[\Pi][B][C]\ env)\) for some \(B, C, env \in E\), and \(x : A\) and \((B\ env) \equiv A\). Furthermore, by the inductive hypothesis, both \(f\) and \(x\) must be values or able to make a step. In case either \(f\) or \(x\) can make a step, function congruence and argument congruent respectively give that \(e\) can make a step. In case both \(f\) and \(x\) are values, we perform case analysis on \(f\), and show that \((f x)\) is either a partial application of a combinator, a full application of \(refl\), or, by the established inversion lemmas, \(x\) is of the right shape such that \((f x)\) can make a head-step reduction.\\
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Progress.lean\#L957}{Expr.Judge.progress}
 \end{proof}
 
-\begin{theorem}
+\begin{thm}
   Consistency: There does not exist \(e \in E\) such that \(e : \mathbb{0}\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   This fact is due to the inversion lemma on values inhabiting \(\mathbb{0}\)~\ref{inv:bot}, well-founded induction by decreasing size under \(\barr\), progress, and preservation.
@@ -1368,20 +1346,20 @@ We note that the subject-reduction, progress, and consistency are proven as comp
 
 The extensional equality reflection theorem holds in DCC. This is a result of decidable type-checking and strong normalization avoiding a generalized conversion constructor. Since inferred types are always in \(\beta\)-normal form, and since \(refl\) is the canonical inhabitant of equality, \(e : \comb[= A][x][y]\) iff \(x \equiv y\). This fact is provable from progress, preservation, and well-founded recursion by strong normalization.
 
-\begin{lemma}\label{lem:ext}
+\begin{lem}\label{lem:ext}
   If \(ht \vdash e : \comb[= A][x][y]\) and \(hv \vdash e \in \val\), then \(x \equiv y\).
-\end{lemma}
+\end{lem}
 
 \begin{proof}
   The proof proceeds by case analysis on the typing derivation \(ht\). No inference rule can yield \(\comb[= A][x][y]\) in the consequent aside from application. Hence, \(e\) must be of the form \((f x)\) where \(f, x \in E\) and \(f, x \in \val\). We note that \(\comb[= A][x][y]\) is not a function type. Hence, \((f x)\) cannot be a partial application of a function, but \((f x)\) is not a term with points, nor is it a constant value. So, \((f x)\) must be of the form \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\). We demonstrate this fact by inverting the typing derivation \(ht\) in each case where \(f\) is a value. We demonstrate that in every case except where \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\), \(f\) is a function whose arity is greater than one, and so \((f x)\) must be typed at \(\tau\) where \(\tau\) is of the form \((\comb[\Pi][B][C]\ env)\) where \(B, C, env \in E\), but \((\comb[\Pi][B][C]\ env) \neq \comb[= A][x][y]\) for all \(B, C, env, A, x, y \in E\).
 
-  So, if \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\) for some \(B, x, y \in E\), then by inversion on \(refl\) values~\ref{inv:refl}, \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\) must be typed at \(\tau\) where \((B x) \barr^{!} B'\) and \(y \barr^{!} y'\), and \(\tau = (\comb[=][B'] y' y')\). But by uniqueness of judgments~\ref{inv:judgeunique}, \((\comb[=][B'] y' y') = (\comb[=][A][x][y]\), so \(y' = x\) and \(y' = y\). Hence, \(x \equiv y\) by reflexivity.\\
+  So, if \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\) for some \(B, x, y \in E\), then by inversion on \(refl\) values~\ref{inv:refl}, \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\) must be typed at \(\tau\) where \((B x) \barr^{!} B'\) and \(y \barr^{!} y'\), and \(\tau = (\comb[=][B'] y' y')\). But by uniqueness of judgments~\ref{thm:judgeunique}, \(\comb[=][B'][y'][y'] = \comb[=][A][x][y]\), so \(y' = x\) and \(y' = y\). Hence, \(x \equiv y\) by reflexivity.\\
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L9}{Expr.Value.elim\_eq}
 \end{proof}
 
-\begin{theorem}
+\begin{thm}
   Equality reflection: If \(e : \comb[= A][x][y]\), then \(x \equiv y\).
-\end{theorem}
+\end{thm}
 
 \begin{proof}
   This fact is provable by progress, preservation, and well-founded induction with respect to the reduct of \(e\), in case it is not a value. By progress \ref{thm:progress}, \(e \in \val\) or there exists \(e' \in E\) such that \(e \barr e'\). If \(e \in \val\), then by the above~\ref{lem:ext}, \(x \equiv y\). If \(e \barr e'\), then \(size(e') < size(e)\) by strong normalization \ref{thm:sn}. And, by preservation~\ref{thm:preservation}, \(e' : \comb[= A][x][y]\). So, by well-founded induction, \(x \equiv y\).\\
@@ -1398,7 +1376,7 @@ Compilation is quite straightforward. Contexts introduced by binders during comp
 
 We are most concerned with compiling the subset of Lean with \(\forall\), \(\lambda\), sorts, booleans, top and bottom types (and their corresponding introduction rules), \(\Sigma\)-types, and \(\Sigma\)-terms.
 
-\begin{definition}
+\begin{defi}
   We denote \(L_c\) as the set of compilation candidate constant Lean terms (where \(\top\) denotes the Lean term \(True\), \(\bot\) denotes the Lean term \(False\), and \(\ast\) denotes the Lean term \(True.intro\), \(\mathbb{2}\) denotes \(Bool\), and \(\mathbb{1}_{\mathbb{2}}\) denotes \(Bool.true\) and \(\mathbb{0}_{\mathbb{2}}\) denotes \(Bool.false\)):
   \[
     \begin{aligned}
@@ -1406,9 +1384,9 @@ We are most concerned with compiling the subset of Lean with \(\forall\), \(\lam
     \end{aligned}
   \]
   where \(u \in \mathbb{N}\) (that is, we only consider concrete universes and not metavariables).
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   We denote \(L\) as the set of candidate Lean terms:
   \[
     \begin{aligned}
@@ -1424,20 +1402,20 @@ We are most concerned with compiling the subset of Lean with \(\forall\), \(\lam
     \end{gathered}
   \]
   where \(\shared\) is a marker denoting a bang-type and \(\share\) is a marker denoting a box-value.
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   We write the set of contexts tracked in compilation and introduced by binders as \(\ctx\):
   \[
     \begin{gathered}
       \mathbb{1} \in \ctx \qquad \{ \comb[\Sigma][A][B] \in E \mid A \in \ctx, B \in \val\} \subset \ctx \qquad \{ \comb[!][A] \in E \mid A \in \ctx\} \subset \ctx
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
 Compilation is distinct at the top level and under binders (\(\lambda\), \(\forall\), and \(\Sigma\)-types and terms). We write \(\llb M \rrb_\Gamma \in E\) to denote compilation of the term \(M \in L\) under a binder (abstraction). We write \(\llb M \rrb \in E\) to denote compilation of the term \(M \in L\) at the top-level when it is not under a binder. Variables are abstracted by composed projection and unboxing of banged contexts, or the identity if the context is empty. Constants are abstracted by quoting the context, or mapping the context with \(!<>\) if the constant is shared.
 
-\begin{definition}
+\begin{defi}
   Variable abstraction is as such:
   \[
     \begin{gathered}
@@ -1455,9 +1433,9 @@ Compilation is distinct at the top level and under binders (\(\lambda\), \(\fora
       { \llb n + 1 \rrb_{\comb[\Sigma][\Gamma][\Delta]} \coloneq \comb[\circ][n'][\comb[Fst][\Delta]]}                                                    
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}\label{def:abstrconst}
+\begin{defi}\label{def:abstrconst}
   Constant abstraction is as such:
   \[
     \begin{gathered}
@@ -1484,17 +1462,23 @@ Compilation is distinct at the top level and under binders (\(\lambda\), \(\fora
       { \llb \sort{u} \rrb_\Gamma \coloneq \comb[`\Gamma][\sort{u}]}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
 \(\lambda\)-terms are always abstracted with \(!\Lambda\), since we assume the context is always of the form \(\comb[!][\Gamma] \in \ctx\). \(\forall\)-abstraction distinguishes between \(\forall\)-types which depend on the context and those which do not (i.e., if \(A\) or \(B\) does not depend on the context in \(\forall A, B\)). In case a \(\forall\)-type is nondependent, it is abstracted as a constant arrow discarding the context as in~\ref{def:arrowsimple}. \(\Sigma\)-terms also assume the context is shared, since \(A\) and \(B\) may depend on the context in \(\sum_{x : A} B(x)\) and are compiled to a \(\Sigma'\) type former which duplicates the context across the abstractions of \(A\) and \(B\).
 
-\begin{definition}
+\begin{defi}
   Binder abstraction is as such:
   \[
     \begin{gathered}
       \inferrule
+      { \text{\(\Gamma\) is not banged} \quad \llb A \rrb_\Gamma = A' \quad \llb M \rrb_{\comb[\Sigma][\Gamma][A']} = M'}
+      { \llb \lambda x : A.M \rrb_{\Gamma} \coloneq \comb[\Lambda][\Gamma][A'][M']}\\\\
+      \inferrule
       { \llb A \rrb_\Gamma = A' \quad \llb M \rrb_{\comb[!][\comb[\Sigma][\Gamma][A']]} = M'}
       { \llb \lambda x : (\shared\ A).M \rrb_{\comb[!][\Gamma]} \coloneq \comb[!\Lambda][\Gamma][A'][M']}\\\\
+      \inferrule
+      { \text{\(\Gamma\) is not banged} \quad \text{\(A\) or \(B\) contain free variables} \quad \llb A \rrb_{\Gamma} = A' \quad \llb B \rrb_{\comb[\Sigma][\Gamma][A']} = B'}
+      { \llb \forall x : A, B \rrb_{\Gamma} \coloneq \comb[\Pi][A'][\comb[\Lambda][\Gamma][A'][B']]}\\\\
       \inferrule
       { \text{\(A\) or \(B\) contain free variables} \quad \llb A \rrb_{\comb[!][\Gamma]} = A' \quad \llb B \rrb_{\comb[!][\comb[\Sigma][\Gamma][A']]} = B'}
       { \llb \forall x : A, B \rrb_{\comb[!][\Gamma]} \coloneq \comb[\Pi][A'][\comb[!\Lambda][\Gamma][A'][B']]}\\\\
@@ -1507,11 +1491,11 @@ Compilation is distinct at the top level and under binders (\(\lambda\), \(\fora
     \end{gathered}
   \]
   where \(\rightarrow\) denotes the DCC arrow expansion as in~\ref{def:arrowsimple}.
-\end{definition}
+\end{defi}
 
 Applications and \(\Sigma\)-terms under binders duplicate the context across their constituent components (\(M\) and \(N\) in \((M N) \in L\) and \(x\) and \(y\) in \(\langle x, y \rangle \in L\)). So, they are abstracted with the pair combinator~\ref{def:pairred}, assuming the context is of the form \(\comb[!][\Gamma] \in \ctx\). Applications \((M N) \in L\) are abstracted by composing the evaluation combinator on \(M'\) with duplication of the context \(x : \Gamma\) via the pair combinator to yield \(\comb[Eval][A][B][M'] (\comb[,B_2][x][(N' x)]) \barr (M' x (N' x))\).
 
-\begin{definition}
+\begin{defi}
   Values are abstracted as such:
   \[
     \begin{gathered}
@@ -1531,15 +1515,11 @@ Applications and \(\Sigma\)-terms under binders duplicate the context across the
       { \llb \share\ A x \rrb_{\comb[!][\Gamma]} \coloneq \comb[\$<>][x']}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
 Compilation at the top-level differs from abstraction in that the context is empty. So, all top-level binders' binder types are compiled recursively without a context. Also, the topmost \(\lambda\)-binder is always applied the empty context \(\comb[\&][\ast] : \comb[!][\mathbb{1}]\). Finally, all user-supplied top-level values are automatically shared based on the computed maximum context duplication depth (this is done as a pre-processing step by marking values with \(share\)).
 
-%\begin{definition}
-%  Let \(d : L \rightarrow \mathbb{N}\) and define \(d\) to be the number of applications, \(\Sigma\)-terms, and \(\Sigma\)-types (which all duplicate the context) under a term \(e \in D\). Then, \(d\) represents an approximation of the upper bound on context usage.
-%\end{definition}
-
-\begin{definition}
+\begin{defi}
   Constants are compiled as in~\ref{def:abstrconst}, except the produced DCC terms are not quoted:
   \[
     \begin{gathered}
@@ -1566,9 +1546,9 @@ Compilation at the top-level differs from abstraction in that the context is emp
       { \llb \sort{u} \rrb \coloneq \sort{u}}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Shared values are compiled as such:
   \[
     \begin{gathered}
@@ -1580,48 +1560,98 @@ Compilation at the top-level differs from abstraction in that the context is emp
       { \llb \share\ A x \rrb \coloneq \comb[\&][\llb x \rrb]}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Binders are compiled as such:
   \[
     \begin{gathered}
       \inferrule
       { \llb A \rrb_{\comb[!][\mathbb{1}]} = A' \quad \llb M \rrb_{\comb[!][\comb[\Sigma][\mathbb{1}][A']]} = M'}
-      { \llb \lambda x : (\shared A).M \rrb \coloneq (\comb[!\Lambda][\mathbb{1}][A'][M'] \comb[\&][\ast])}\\\\
+      { \llb \lambda x : (\shared\ A).M \rrb \coloneq (\comb[!\Lambda][\mathbb{1}][A'][M'] \comb[\&][\ast])}\\\\
       \inferrule
       { \llb A \rrb = A' \quad \llb B \rrb_{\comb[!][\comb[\Sigma][\mathbb{1}][A']]} = B'}
-      { \llb \forall x : (\shared A), B \rrb \coloneq (\comb[\Pi][\comb[`\mathbb{1}][A']][\comb[`\mathbb{1}][(\comb[!\Lambda][\mathbb{1}][A'][B'] \comb[\&][\ast])]] \ast)}\\\\
+      { \llb \forall x : (\shared\ A), B \rrb \coloneq (\comb[\Pi][\comb[`\mathbb{1}][A']][\comb[`\mathbb{1}][(\comb[!\Lambda][\mathbb{1}][A'][B'] \comb[\&][\ast])]] \ast)}\\\\
       \inferrule
       { \llb A \rrb = A' \quad \llb B \rrb_{\comb[!][\comb[\Sigma][\mathbb{1}][A']]} = B'}
       { \left\llb \sum_{x : \shared\ A} B(x) \right\rrb \coloneq \comb[\Sigma][A'][(\comb[!\Lambda][\mathbb{1}][A'][B'] \comb[\&][\mathbb{1}])]}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
-\begin{definition}
+\begin{defi}
   Application and \(\Sigma\)-terms are compiled as such:
   \[
     \begin{gathered}
       \inferrule
       { }
-      { \llb \langle x, y \rangle \rrb \coloneq \llb \langle x, y \rangle (\rrb_{\comb[!][\mathbb{1}]} \comb[\&][\ast])}\\
+      { \llb \langle x, y \rangle \rrb \coloneq (\llb \langle x, y \rangle \rrb_{\comb[!][\mathbb{1}]} \comb[\&][\ast])}\\
       \inferrule
       { }
       { \llb (M N) \rrb \coloneq (\llb M \rrb \llb N \rrb)}
     \end{gathered}
   \]
-\end{definition}
+\end{defi}
 
 \section{Examples}
 
-Several examples of type-checking are available in the \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Examples3.lean}{DCC repository}. We have omitted the details here, since the expressions and their inferred types are quite long and not suitable for this medium. We note that DCC with \(\eta\)-reduction is capable of compiling and type-checking an application of the dependent \(K\) combinator written as the lean term:
+Several examples of type-checking are available in the \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Examples3.lean}{DCC repository}. We have omitted the details here, since the expressions and their inferred types are quite long and not suitable for this medium. We note that DCC is capable of compiling and type-checking the dependent identity function \(id : (A : \sort{u}) \rightarrow (x : A) \rightarrow x\):
 
 \begin{leancode}
-def K_example : Expr :=
-  dcc_compile' ((fun (α : Sort 3) (β : α → Sort 2) (x : α) (_y : β x) => x) (Sort 2) (fun x => x) (Sort 1) (Sort 0))
+#eval Std.format (dcc_compile (fun (α : Type) (x : α) => x))
+/-
+Messages here:
+30:0:
+((!Λ 𝟙 (`𝟙 (Sort 1))
+     (!Λ (Σ 𝟙 (`𝟙 (Sort 1))) (Snd (`𝟙 (Sort 1)))
+         (∘ (Snd (Snd (`𝟙 (Sort 1)))) (* (Σ (Σ 𝟙 (`𝟙 (Sort 1))) (Snd (`𝟙 (Sort 1))))))))
+ (& ∗))
+-/
+
+#eval (·.fst) <$> Expr.infer (dcc_compile (fun (α : Type) (x : α) => x))
+/-
+Messages here:
+31:0:
+Except.ok (DCC
+ ((Π (!<> (`𝟙 (Sort 1)))
+     (!Λ 𝟙 (`𝟙 (Sort 1))
+         (Π (!<> (Snd (`𝟙 (Sort 1))))
+            (!Λ (Σ 𝟙 (`𝟙 (Sort 1))) (Snd (`𝟙 (Sort 1)))
+                (∘ (∘ (Snd (`𝟙 (Sort 1))) (Fst (Snd (`𝟙 (Sort 1)))))
+                   (* (Σ (Σ 𝟙 (`𝟙 (Sort 1))) (Snd (`𝟙 (Sort 1))))))))))
+  (& ∗)))
+-/
 \end{leancode}
-\leanlink{https://github.com/lexzaiello/DCC/blob/k-lean-comp-type-check/Dcc/Compile/Examples.lean}{Dcc.Compile.Examples}
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/k-lean-comp-type-check/Dcc/Compile/Examples.lean}{Dcc.Compile.Examples}
+
+Also, some of the usual dependent functions type-check in hand-written DCC. For example, let \(f : (x : \mathbb{2}) \rightarrow (y : \text{if}\ x\ \text{then}\ A\ \text{else}\ B) \rightarrow y\) where \(A : \sort{u}\) and \(B : \sort{v}\). Then, \(f\) is expressed in DCC as:
+
+\[
+  \begin{aligned}
+    &\text{Let } motive \coloneq \comb[\Lambda][\mathbb{1}][\comb[`\mathbb{1}][\mathbb{2}]][\comb[`\comb[\Sigma][\mathbb{1}][\mathbb{2}]][\sort{u}]]\\
+    &\text{Let } case_1 \coloneq \comb[\Lambda][\mathbb{1}][\comb[`\mathbb{1}][\mathbb{2}]][\comb[`\comb[\Sigma][\mathbb{1}][\mathbb{2}]][A]]\\
+    &\text{Let } case_2 \coloneq \comb[\Lambda][\mathbb{1}][\comb[`\mathbb{1}][\mathbb{2}]][\comb[`\comb[\Sigma][\mathbb{1}][\mathbb{2}]][B]]\\
+    &f_{A,B} \coloneq  \comb[\Lambda][\mathbb{2}][(\comb[\mathbb{2}.Rec][motive][case_1][case_2] \ast)][\comb[Snd][(\comb[\mathbb{2}.Rec][motive][case_1][case_2] \ast)]]
+  \end{aligned}
+\]
+
+\noindent The application \((f_{\mathbb{1},\comb[=][\comb[`\mathbb{1}][\mathbb{1}]][\ast][\ast]} \mathbb{1}_\mathbb{2} \ast)\) type-checks:
+
+\begin{leancode}
+Messages here:
+216:0:
+Except.ok (DCC 𝟙)
+\end{leancode}
+
+\noindent Similarly, the application \((f_{\mathbb{1},\comb[=][\comb[`\mathbb{1}][\mathbb{1}]][\ast][\ast]} \mathbb{0}_\mathbb{2} (\comb[refl][\comb[`\mathbb{1}][\mathbb{1}]] \comb[\&][\ast] \comb[\&][\ast]))\) type-checks:
+
+\begin{leancode}
+Messages here:
+224:0:
+Except.ok (DCC (= 𝟙 ∗ ∗))
+\end{leancode}
+
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/k-lean-comp-type-check/Dcc/Examples.lean}{Dcc.Examples}
 
 \section{Comparison to SK Combinators}
 
@@ -1644,7 +1674,7 @@ Our formalization gives an extension of the simply-typed categorical combinators
   \item \textbf{Formalized Reduction rules:}\\
     \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Rel.lean#L14}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Rel.lean\#L14}
   \item \textbf{Type-checker implementation:}\\
-    \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge3.lean}
+    \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge.lean}
   \item \textbf{Compiler implementation:}\\
     \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Compile/Core.lean}{https://github.com/lexzaiello/DCC/blob/master/Dcc/Compile/Core.lean}
 \end{itemize}

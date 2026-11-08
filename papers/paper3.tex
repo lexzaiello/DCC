@@ -124,62 +124,7 @@
 
 \maketitle
 
-\begin{abstract}
-  \textit{TODO}
-\end{abstract}
-
-\section{TODO:}
-
-\begin{itemize}
-  \item Made changes to background wording we covered last time, but still needs polishing
-  \item New reduction rules added since last session: congruences inside combinators with respect to their points. Diagrams need to be updated.
-    For example:
-    \begin{equation}
-      \inferrule[Curr0]
-      {A \barr A'}
-      {\Lambda(A, B, x) \barr \Lambda(A', B, x)}
-    \end{equation}
-    Every combinator \(C(x_0, \ldots, x_n)\) has a ``inner'' congruences that reduce all of its points. Confluence still holds. I made this change to force all types to be in \(\beta\)-normal form even prior to \(\eta\)-reduction. This cleans up the info view in several metatheory proofs. I believe this is the more correct behavior, since we already assume call-by-value. e.g.: in \(\Lambda(A, B, x) : (x : A) \arr (y : B x) \arr C \ldots\), \(A\) and \(B\) would have been un-normalized (even up to \(\beta\)-normal form) until being \(\eta\)-reduced or type-checked in an app.
-  \item Formatting on the inference rules diagram is not nice (the diagram is still up to date since the judgment rules are not defined caring about inner congruences)
-  \item \textbf{Critical:} hole in extensional equality elimination and funext theorems
-    \begin{itemize}
-      \item Extensional eq. elim. assumes preservation (subject-reduction) but we still do not have it
-      \item Funext proof is not general enough and assumes some invariants about what an ``eta-reducible'' function is that is not generalizable easily enough
-    \end{itemize}
-\end{itemize}
-
-\subsection{The Hole in Extensional Equality Elimination}
-
-Recall the theorem statement:
-
-\begin{equation}
-  \inferrule[ ]
-  { p : x = y }
-  { x \equiv y }
-\end{equation}
-
-where \(p\) is a DCC term proving \(x = y\) and \(x \equiv y\) denotes definitional equality with respect to the DCC type-checker (not the Lean type-checker, that is \(x \equiv y\) is a relation on DCC terms not Lean expressions representing the AST).
-
-My past proof has a hole in it. In several places, it requires progress and subject reduction. This is because I was proving \(p : x = y \vdash x \equiv_{lean} y\) instead. That is, a DCC term of type \(x = y\) (that being a DCC term) induces a definitional equality on the Lean expressions representing the DCC AST. This is far too strong of a strong property and not what the theorem statement usually is. This also prevents leveraging confluence. Proving the proper theorem statement allows using all of my lemmas about reduction in order to close the proof, rather than inverting the judgment with preservation.
-
-\subsection{The Hole in Funext Proof}
-
-I did a similar thing as in ext. eq. elim. with funext, attempting to prove a Lean-level equality instead of a DCC definitional equality. This required extra invariants that made generalizing my proof to all well-typed functions, rather than my notion of an \(\eta\)-reducible function possible.
-
-The changes I described to the extensional equality reflection / elimination and funext proofs are still in progress, although it shouldn't be much longer.
-
-\subsection{Questions}
-
-\begin{itemize}
-\item Is there any impending deadline I should be concerned with? I think things are nearing the end, but it unfortunately takes trial and error.
-\item How do I parallelize my work? I was attempting to do so prior but then discovered the holes in my two proofs which derailed drafting the paper. The changes ultimately didn't amount to much more than engineering implementation details. I worry about spending too long perfecting something such that it will never be released.
-\item What is one organizational / project management tool or skill you recommend or advise? Specifically practical, algorithmic things are helpful. I want to improve the quality of my lean to make maintaining it easier in the future. I also want to improve the quality of my writing in general.
-\item How does one mitigate burnout risk? I am dissatisfied with the consistency of my progress.
-\end{itemize}
-
 \section{Introduction}
-
-\textit{TODO later after main sections done}
 
 \subsection{Results}
 
@@ -1753,8 +1698,8 @@ def Judge.complete (h : Judge (τ_c := τ_c) e τ) : e.infer = .ok ⟨τ, h⟩ :
     cases a_4.complete
     simp only [h.complete]
 \end{leancode}
-  \textit{Cases omitted above are available on \href{https://github.com/lexzaiello/DCC/blob/0c0d1e06e022b0f7d11b2182cd9ce027add2dc45/Dcc/Metatheory/Decidability3.lean\#L11}{GitHub}.}
-\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/0c0d1e06e022b0f7d11b2182cd9ce027add2dc45/Dcc/Metatheory/Decidability3.lean\#L11}{\lean{Dcc.GenericExpr.Judge.complete}}
+  \textit{Cases omitted above are available on \href{https://github.com/lexzaiello/DCC/blob/0c0d1e06e022b0f7d11b2182cd9ce027add2dc45/Dcc/Metatheory/Decidability.lean\#L11}{GitHub}.}
+\noindent \hfill\leanlink{https://github.com/lexzaiello/DCC/blob/0c0d1e06e022b0f7d11b2182cd9ce027add2dc45/Dcc/Metatheory/Decidability.lean\#L11}{\lean{Dcc.GenericExpr.Judge.complete}}
 \end{proof}
 
 \subsection{Judgments are Canonical}

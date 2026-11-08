@@ -1,4 +1,4 @@
-import Dcc.Judge3
+import Dcc.Judge
 import Dcc.Metatheory.SubjectReduction
 import Lean.Elab.Tactic
 import Qq
@@ -210,7 +210,7 @@ def Value.inv_box (hv : Value x) (ht : Judge x (open Dsl in (DCC (! A)))) : Σ' 
       | refl =>
         expose_names
         replace a_2 := a_2.push_head .quot
-        have ⟨hn_δ, _⟩ := a_3.is_norm a_6.is_norm
+        have hn_δ := a_3.is_norm
         cases (a_2.elim_norml (bang_is_norm hn_δ)).elim_norm a_4.is_norm
         clear a_2
         replace a_5 := a_5.push_head (.congrFun .quot)
@@ -226,7 +226,7 @@ def Value.inv_box (hv : Value x) (ht : Judge x (open Dsl in (DCC (! A)))) : Σ' 
         cases a_7 with
         | refl =>
           expose_names
-          have ⟨hn_δ, _⟩ := a_7.is_norm a_10.is_norm
+          have hn_δ := a_7.is_norm
           replace a_4 := a_4.push_head .quot
           cases (a_4.elim_norml (bang_is_norm hn_δ)).elim_norm a_8.is_norm
           clear a_4
@@ -323,7 +323,7 @@ def Value.inv_box (hv : Value x) (ht : Judge x (open Dsl in (DCC (! A)))) : Σ' 
       | curr =>
         expose_names
         replace a_4 := a_4.push_head .quot
-        have ⟨hn_δ, _⟩ := a_5.is_norm a_10.is_norm
+        have hn_δ := a_5.is_norm
         cases (a_4.elim_norml hn_δ).elim_norm a_6.is_norm
         replace a_7 := a_7.push_head (.congrFun .quot)
         have pi_eq := a_7.pi_eq
@@ -337,8 +337,9 @@ def Value.inv_box (hv : Value x) (ht : Judge x (open Dsl in (DCC (! A)))) : Σ' 
       | curr' =>
         expose_names
         replace a_4 := a_4.push_head .quot
-        have ⟨hn_δ, _⟩ := a_5.is_norm a_10.is_norm
-        cases (a_4.elim_norml (bang_is_norm a_9.is_norm)).elim_norm a_6.is_norm
+        have hn_δ := a_5.is_norm
+        have ⟨hn₁, hn₂, hn₃⟩ := a_8.is_norm (Judge.is_norm (by assumption))
+        cases (a_4.elim_norml (bang_is_norm hn₁)).elim_norm a_6.is_norm
         replace a_7 := a_7.push_head (.congrFun .quot)
         have pi_eq := a_7.pi_eq
         cases pi_eq
@@ -351,7 +352,7 @@ def Value.inv_box (hv : Value x) (ht : Judge x (open Dsl in (DCC (! A)))) : Σ' 
       | ind_bool =>
         expose_names
         replace a_4 := a_4.push_head .quot
-        have ⟨hn_δ, _⟩ := a_5.is_norm a_9.is_norm
+        have ⟨hn_δ, _⟩ := (Sigma'.C.type.is_norm a_5 (Judge.is_norm (by assumption)))
         cases (a_4.elim_norml hn_δ).elim_norm a_6.is_norm
         clear a_4
         replace a_7 := a_7.push_head (.congrFun .quot)
@@ -366,7 +367,7 @@ def Value.inv_box (hv : Value x) (ht : Judge x (open Dsl in (DCC (! A)))) : Σ' 
       | pi =>
         expose_names
         replace a_3 := a_3.push_head .quot
-        have ⟨hn_δ, _⟩ := a_4.is_norm a_8.is_norm
+        have hn_δ := a_4.is_norm
         cases (a_3.elim_norml hn_δ).elim_norm a_5.is_norm
         replace a_6 := (a_6.push_head (.congrFun .quot)).push_head .quot
         cases a_6.elim_norm (by grind)
@@ -417,7 +418,7 @@ def inv_refl (h : Judge (DCC ((refl B) (& x) (& y))) τ) : τ = (DCC (= #((reduc
       cases a_4 with
       | refl =>
         expose_names
-        have ⟨hn_δ, _⟩ := a_4.is_norm a_7.is_norm
+        have hn_δ := a_4.is_norm
         cases ((a_1.push_head .quot).elim_norml (bang_is_norm hn_δ)).elim_norm a_5.is_norm
         clear a_1
         replace a_6 := a_6.push_head (.congrFun .quot)
@@ -462,7 +463,7 @@ def elim_bot_value (ht : Judge e (DCC 𝟘)) (hv : Value e) : False := by
         | refl =>
           expose_names
           replace a := a.push_head .quot
-          have ⟨hn_δ, _⟩ := a_6.is_norm a_9.is_norm
+          have hn_δ := a_6.is_norm
           cases (a.elim_norml (bang_is_norm hn_δ)).elim_norm a_7.is_norm
           clear a
           replace a_8 := a_8.push_head (.congrFun .quot)
@@ -498,7 +499,18 @@ def elim_bot_value (ht : Judge e (DCC 𝟘)) (hv : Value e) : False := by
           replace a_3 := a_3.push_head (.congrFun .quot)
           have heq := a_3.pi_eq
           cases heq
-      case refl₁ | eql₁ =>
+      case refl₁ =>
+        cases a with
+        | _ =>
+          expose_names
+          replace a_1 := a_1.push_head .quot
+          have hn_δ := a_6.is_norm
+          cases (a_1.elim_norml (bang_is_norm hn_δ)).elim_norm a_2.is_norm
+          clear a
+          replace a_8 := a_3.push_head (.congrFun .quot)
+          have pi_eq := a_8.pi_eq
+          simp [congr_reduce₁ (e := f_α'.map) (by grind),  congr_reduce₁ (e := f_α'.eql) (by grind), congr_reduce₁ (e := x.box) (by grind), points, set_points] at pi_eq
+      case eql₁ =>
         cases a with
         | _ =>
           expose_names
@@ -508,7 +520,7 @@ def elim_bot_value (ht : Judge e (DCC 𝟘)) (hv : Value e) : False := by
           clear a
           replace a_8 := a_3.push_head (.congrFun .quot)
           have pi_eq := a_8.pi_eq
-          simp [congr_reduce₁ (e := f_α'.map) (by grind),  congr_reduce₁ (e := f_α'.eql) (by grind), congr_reduce₁ (e := x.box) (by grind), points, set_points] at pi_eq
+          simp [congr_reduce₁ (e := f_α'.map) (by grind), congr_reduce₁ (e := x.box) (by grind), points, set_points] at pi_eq
       any_goals (grind [point_arity])
       case eq'₁ =>
         cases a with
@@ -712,8 +724,7 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
           cases ht
           case _ =>
             expose_names
-            have h := Arrow.is_norm a_8 (Judge.is_norm (by assumption))
-            have ⟨hn_δ, _⟩ := h
+            have ⟨hn_δ, _⟩ := (Sigma'.C.type.is_norm a_8 (Judge.is_norm (by assumption)))
             cases ((DefEq.push_head (by assumption) .quot).elim_norml hn_δ).elim_norm (Judge.is_norm (by assumption))
             have heq := (RedNorm.push_head (by assumption) (.congrFun .quot)).pi_eq
             simp [congr_reduce₂ (e := (α_1.quot Expr.bool)) (by grind),
@@ -739,8 +750,7 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
           cases ht
           case _ =>
             expose_names
-            have h := Arrow.is_norm (by assumption) (Judge.is_norm (by assumption))
-            have ⟨hn_δ, _⟩ := h
+            have hn_δ := ArrowSort.is_norm (by assumption)
             cases ((DefEq.push_head (by assumption) .quot).elim_norml (bang_is_norm (by assumption))).elim_norm (Judge.is_norm (by assumption))
             have heq := (RedNorm.push_head (by assumption) (.congrFun .quot)).pi_eq
             simp [congr_reduce₁ (e := B'.map) (by grind),
@@ -787,7 +797,7 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
           cases a_6 with
           | refl =>
             expose_names
-            have ⟨hn_δ, _⟩ := a_6.is_norm a_9.is_norm
+            have hn_δ := a_6.is_norm
             replace a_5 := a_5.push_head .quot
             cases (a_5.elim_norml (bang_is_norm hn_δ)).elim_norm a_7.is_norm
             clear a_5
@@ -846,13 +856,29 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
           focus
           cases a
           done)
-        case eql | refl =>
+        case eql =>
           expose_names
           cases a
           case _ =>
             expose_names
             have h := Arrow.is_norm (by assumption) (Judge.is_norm (by assumption))
             have ⟨hn_δ, _⟩ := h
+            cases ((DefEq.push_head (by assumption) .quot).elim_norml (bang_is_norm (by assumption))).elim_norm (Judge.is_norm (by assumption))
+            have a_3' := RedNorm.push_head (by assumption) (.congrFun .quot)
+            have heq := a_3'.pi_eq
+            cases heq
+            have ⟨x₀, heq⟩ := Value.inv_box h₂ (by assumption)
+            cases heq
+            refine .inl ?_
+            cases h₂
+            exact .eql₁ (by assumption) (by assumption)
+            any_goals (grind [point_arity])
+        case refl =>
+          expose_names
+          cases a
+          case _ =>
+            expose_names
+            have hn_δ := ArrowSort.is_norm (by assumption)
             cases ((DefEq.push_head (by assumption) .quot).elim_norml (bang_is_norm (by assumption))).elim_norm (Judge.is_norm (by assumption))
             have a_3' := RedNorm.push_head (by assumption) (.congrFun .quot)
             have heq := a_3'.pi_eq
@@ -869,8 +895,8 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
           cases a
           case _ =>
             expose_names
-            have h := Arrow.is_norm (by assumption) (Judge.is_norm (by assumption))
-            have ⟨hn_δ, _⟩ := h
+            have h := ArrowSort.is_norm (by assumption)
+            have hn_δ := h
             cases ((DefEq.push_head (by assumption) .quot).elim_norml (sigma_is_norm hn_δ a_7.is_norm)).elim_norm (Judge.is_norm (by assumption))
             have ⟨x, y, heq⟩ := Value.inv_sigma h₂ a_2
             cases heq
@@ -930,8 +956,7 @@ def progress_app (a : Judge f (Expr.app (.pi f_α f_β) x_α))
           cases a
           case _ =>
             expose_names
-            have h := Arrow.is_norm (by assumption) (Judge.is_norm (by assumption))
-            have ⟨hn_δ, _⟩ := h
+            have hn_δ := ArrowSort.is_norm (by assumption)
             cases ((DefEq.push_head (by assumption) .quot).elim_norml (bang_is_norm (by assumption))).elim_norm (Judge.is_norm (by assumption))
             have ⟨x₀, heq⟩ := h₂.inv_box a_2
             cases heq

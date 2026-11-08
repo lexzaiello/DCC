@@ -1,4 +1,4 @@
-import Dcc.Judge3
+import Dcc.Judge
 
 variable {τ_c : Type u}
 variable [DecidableEq τ_c]

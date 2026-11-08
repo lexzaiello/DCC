@@ -141,7 +141,7 @@ Categorical combinators~\cite{cmachine,CURIEN1986188} are a combinatory logic ba
   \inferrule[Snd]
   { }
   { Snd (x, y) \barrc{\ccle} y} \qquad
-  \inferrule[Ass]
+  \inferrule[Assoc]
   { }
   {(x \circ y) z \barrc{\ccle} x (y z)}\qquad
   \inferrule[Id]
@@ -1631,7 +1631,7 @@ Also, some of the usual dependent functions type-check in hand-written DCC. For 
     &\text{Let } motive \coloneq \comb[\Lambda][\mathbb{1}][\comb[`\mathbb{1}][\mathbb{2}]][\comb[`\comb[\Sigma][\mathbb{1}][\mathbb{2}]][\sort{u}]]\\
     &\text{Let } case_1 \coloneq \comb[\Lambda][\mathbb{1}][\comb[`\mathbb{1}][\mathbb{2}]][\comb[`\comb[\Sigma][\mathbb{1}][\mathbb{2}]][A]]\\
     &\text{Let } case_2 \coloneq \comb[\Lambda][\mathbb{1}][\comb[`\mathbb{1}][\mathbb{2}]][\comb[`\comb[\Sigma][\mathbb{1}][\mathbb{2}]][B]]\\
-    &f_{A,B} \coloneq  \comb[\Lambda][\mathbb{2}][(\comb[\mathbb{2}.Rec][motive][case_1][case_-2] \ast)][\comb[Snd][(\comb[\mathbb{2}.Rec][motive][case_1][case_2] \ast)]]
+    &f_{A,B} \coloneq  \comb[\Lambda][\mathbb{2}][(\comb[\mathbb{2}.Rec][motive][case_1][case_2] \ast)][\comb[Snd][(\comb[\mathbb{2}.Rec][motive][case_1][case_2] \ast)]]
   \end{aligned}
 \]
 

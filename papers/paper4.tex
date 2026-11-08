@@ -1353,7 +1353,7 @@ The extensional equality reflection theorem holds in DCC. This is a result of de
 \begin{proof}
   The proof proceeds by case analysis on the typing derivation \(ht\). No inference rule can yield \(\comb[= A][x][y]\) in the consequent aside from application. Hence, \(e\) must be of the form \((f x)\) where \(f, x \in E\) and \(f, x \in \val\). We note that \(\comb[= A][x][y]\) is not a function type. Hence, \((f x)\) cannot be a partial application of a function, but \((f x)\) is not a term with points, nor is it a constant value. So, \((f x)\) must be of the form \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\). We demonstrate this fact by inverting the typing derivation \(ht\) in each case where \(f\) is a value. We demonstrate that in every case except where \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\), \(f\) is a function whose arity is greater than one, and so \((f x)\) must be typed at \(\tau\) where \(\tau\) is of the form \((\comb[\Pi][B][C]\ env)\) where \(B, C, env \in E\), but \((\comb[\Pi][B][C]\ env) \neq \comb[= A][x][y]\) for all \(B, C, env, A, x, y \in E\).
 
-  So, if \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\) for some \(B, x, y \in E\), then by inversion on \(refl\) values~\ref{inv:refl}, \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\) must be typed at \(\tau\) where \((B x) \barr^{!} B'\) and \(y \barr^{!} y'\), and \(\tau = (\comb[=][B'] y' y')\). But by uniqueness of judgments~\ref{inv:judgeunique}, \(\comb[=][B'][y'][y'] = \comb[=][A][x][y]\), so \(y' = x\) and \(y' = y\). Hence, \(x \equiv y\) by reflexivity.\\
+  So, if \((f x) = (\comb[refl][B] \comb[\&][x] \comb[\&][y])\) for some \(B, x, y \in E\), then by inversion on \(refl\) values~\ref{inv:refl}, \((\comb[refl][B] \comb[\&][x] \comb[\&][y])\) must be typed at \(\tau\) where \((B x) \barr^{!} B'\) and \(y \barr^{!} y'\), and \(\tau = (\comb[=][B'] y' y')\). But by uniqueness of judgments~\ref{thm:judgeunique}, \(\comb[=][B'][y'][y'] = \comb[=][A][x][y]\), so \(y' = x\) and \(y' = y\). Hence, \(x \equiv y\) by reflexivity.\\
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Extensional.lean\#L9}{Expr.Value.elim\_eq}
 \end{proof}
 
@@ -1622,7 +1622,7 @@ Except.ok (DCC
   (& ∗)))
 -/
 \end{leancode}
-\leanlink{https://github.com/lexzaiello/DCC/blob/k-lean-comp-type-check/Dcc/Compile/Examples.lean}{Dcc.Compile.Examples}
+\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/k-lean-comp-type-check/Dcc/Compile/Examples.lean}{Dcc.Compile.Examples}
 
 Also, some of the usual dependent functions type-check in hand-written DCC. For example, let \(f : (x : \mathbb{2}) \rightarrow (y : \text{if}\ x\ \text{then}\ A\ \text{else}\ B) \rightarrow y\) where \(A : \sort{u}\) and \(B : \sort{v}\). Then, \(f\) is expressed in DCC as:
 

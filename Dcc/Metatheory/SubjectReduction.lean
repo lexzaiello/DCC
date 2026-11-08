@@ -805,10 +805,14 @@ def sigma'_preservation_head (h : Judge (DCC ((Σ' B C) (& x))) τ) : Judge (DCC
               · assumption
               · exact ⟨⟨.single .quot, hn_A⟩, ⟨.refl, RedNorm.is_norm (by assumption)⟩⟩
               · assumption
-              · exact ⟨.trans (.single (.congrFun .quot)) (congrArg' (reduce_sound rfl)),
-                pi_is_norm a_5.is_norm (curr_is_norm hn_A a_5.is_norm (quot_is_norm (sigma_is_norm hn_A a_5.is_norm) (fun ⟨_, h⟩ => nomatch h))) (reduce_norm rfl)⟩
+              · expose_names
+                have hn_C_1 : IsNorm Red C_1 := fun ⟨_, h⟩ => a_6.is_norm ⟨_, .congrFun (.point 1 (by grind) (by simp [points, Vector.get]; exact (.point 1 (by grind) (by simp [points, Vector.get]; exact .point 1 (by grind) (by simp [points, Vector.get]; exact .point 2 (by grind) h)))))⟩
+                have hn_sigma := a.is_norm hn_C_1
+                exact ⟨.trans (.single (.congrFun .quot)) (congrArg' (reduce_sound rfl)),
+                  pi_is_norm a_5.is_norm (curr_is_norm hn_A a_5.is_norm hn_C_1) (reduce_norm rfl)⟩
             · exact ⟨⟨.trans (.trans (congrFun' a_5.1) (congrArg' (reduce_sound rfl))) (reduce_sound rfl), reduce_norm rfl⟩, ⟨reduce_sound rfl, reduce_norm rfl⟩⟩
-            · exact ⟨.trans (.single .curr) (.single .quot), fun ⟨_, h⟩ => nomatch h⟩
+            · expose_names
+              exact ⟨.trans (.single .curr) a.app.1, fun ⟨_, h⟩ => nomatch h⟩
 
 @[aesop safe forward (rule_sets := [DccJudge])]
 def preservation_pair_head (h : Judge (DCC ((⟨,⟩B x y) (& z))) τ) : Judge (DCC? (,(B z) (x z) (y z (x z)))) τ := by
@@ -832,8 +836,10 @@ def preservation_pair_head (h : Judge (DCC ((⟨,⟩B x y) (& z))) τ) : Judge (
       | box h_t_z =>
         cases a_1 with
         | mk =>
-          have hr_pi : ((B_1.pi (A.curr B_1 ((A.sigma B_1).quot (Expr.sort _v)))).app z).RedNorm ((B_1.pi (A.curr B_1 ((A.sigma B_1).quot (Expr.sort _v)))).app (reduce Red z).fst) :=
-            ⟨congrArg' (reduce_sound rfl), pi_is_norm hn_B_1 (curr_is_norm hn_A hn_B_1 (quot_is_norm (sigma_is_norm hn_A hn_B_1) (by grind))) (reduce_norm rfl)⟩
+          expose_names
+          have hn_C : IsNorm Red C := fun ⟨_, h⟩ => a_4.is_norm ⟨_, .congrFun (.point 1 (by grind) (by simp [points, Vector.get]; exact (.point 1 (by grind) (by simp [points, Vector.get]; exact .point 1 (by grind) (by simp [points, Vector.get]; exact .point 2 (by grind) h)))))⟩
+          have hr_pi : ((B_1.pi (A.curr B_1 C)).app z).RedNorm ((B_1.pi (A.curr B_1 C)).app (reduce Red z).fst) :=
+            ⟨congrArg' (reduce_sound rfl), pi_is_norm hn_B_1 (curr_is_norm hn_A hn_B_1 hn_C) (reduce_norm rfl)⟩
           have heq_pi := hr_pi.complete_fst
           apply Judge.mk
           · apply Judge.app
@@ -849,7 +855,7 @@ def preservation_pair_head (h : Judge (DCC ((⟨,⟩B x y) (& z))) τ) : Judge (
           · simp [heq_pi]
             constructor
             · exact congr_app_arg
-            · exact ⟨.trans (.single .curr) (.single .quot), by grind⟩
+            · exact ⟨.trans (.single .curr) a.app.1, by grind⟩
           · exact ⟨.trans (congrFun' a_5.1) (reduce_sound rfl), reduce_norm rfl⟩
           · exact ⟨reduce_sound rfl, reduce_norm rfl⟩
           · apply Judge.app

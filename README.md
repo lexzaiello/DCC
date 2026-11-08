@@ -143,24 +143,35 @@ Messages here:
 
 ## Lean Compiler
 
-The current version of DCC does not have η-reduction, so some examples of the Lean compiler do not work. However, here is the identity function on 𝟚:
+The current version of DCC does not have η-reduction, so some examples of the Lean compiler do not work. However, here is the dependent identity function:
 
 ```lean
-#eval Std.format (dcc_compile (fun (x : Bool) => x))
+#eval Std.format (dcc_compile (fun (α : Type) (x : α) => x))
 /-
 Messages here:
-24:0:
-((!Λ 𝟙 (`𝟙 𝟚) (∘ (Snd (`𝟙 𝟚)) (* (Σ 𝟙 (`𝟙 𝟚))))) (& ∗))
+10:0:
+((Λ 𝟙 (`𝟙 (Sort 1)) (Λ (Σ 𝟙 (`𝟙 (Sort 1))) (Snd (`𝟙 (Sort 1))) (Snd (Snd (`𝟙 (Sort 1)))))) ∗)
 -/
 ```
 
 It type-checks as such:
 
 ```lean
-#eval (·.fst) <$> Expr.infer (dcc_compile (fun (x : Bool) => x))
+#eval (·.fst) <$> Expr.infer (dcc_compile (fun (α : Type) (x : α) => x))
+#eval (·.fst) <$> Expr.infer (dcc_compile ((fun (α : Prop) (x : α) => x) True True.intro))
+/-
 Messages here:
-25:0:
-Except.ok (DCC ((Π (!<> (`𝟙 𝟚)) (!Λ 𝟙 (`𝟙 𝟚) (∘ (∘ (`𝟙 𝟚) (Fst (`𝟙 𝟚))) (* (Σ 𝟙 (`𝟙 𝟚)))))) (& ∗)))
+12:0:
+Except.ok (DCC
+ ((Π (`𝟙 (Sort 1))
+     (Λ 𝟙 (`𝟙 (Sort 1))
+        (Π (Snd (`𝟙 (Sort 1)))
+           (Λ (Σ 𝟙 (`𝟙 (Sort 1))) (Snd (`𝟙 (Sort 1))) (∘ (Snd (`𝟙 (Sort 1))) (Fst (Snd (`𝟙 (Sort 1)))))))))
+  ∗))
+Messages below:
+13:0:
+Except.ok (DCC 𝟙)
+-/
 ```
 
 Past versions of DCC had more powerful η-reduction. However, we have omitted it in this version so as to achieve these metatheoretic results:

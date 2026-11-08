@@ -1,6 +1,6 @@
 # DCC - The Dependent Combinator Calculus
 
-See the paper [here](https://lexzaiello.com/dcc/dcc_paper). It will be submitted to a journal in the coming months.
+See the paper [here](http://lexzaiello.com/DCC/dcc_paper.pdf). It will be submitted to a journal in the coming months.
 
 ## Overview
 
@@ -8,7 +8,7 @@ The dependent combinator calculus (DCC) is a dependently-typed calculus based on
 
 DCC is quite minimal, aiming to have sound metatheory. It is implemented entirely in Lean with a [type-checker](https://github.com/lexzaiello/DCC/blob/master/Dcc/Judge.lean) with soundness and completeness. You can import the type-checker (`Expr.infer`) by importing `Dcc.Judge`. The β-reduction engine can be imported with `import Dcc.Red`.
 
-See the [paper](https://lexzaiello.com/dcc/dcc_paper.pdf) for a formal presentation of DCC.
+See the [paper](http://lexzaiello.com/DCC/dcc_paper.pdf) for a formal presentation of DCC.
 
 ## Examples
 

@@ -63,12 +63,12 @@
               runHook preBuild
               export PATH="${pkgs.python313Packages.pygments}/bin:$PATH"
               install -D -t build/ ./papers/*.bib
-              xelatex -shell-escape -interaction=nonstopmode -output-directory=build ${pkg-name}
+              xelatex -shell-escape -file-line-error -interaction=scrollmode -output-directory=build ${pkg-name}
               biber --input-directory=build -output-directory=build ${
                 builtins.baseNameOf pkg-name
               }
-              xelatex -shell-escape -interaction=nonstopmode -output-directory=build ${pkg-name}
-              xelatex -shell-escape -interaction=nonstopmode -output-directory=build ${pkg-name}
+              xelatex -shell-escape -file-line-error -interaction=scrollmode -output-directory=build ${pkg-name}
+              xelatex -shell-escape -file-line-error -interaction=scrollmode -output-directory=build ${pkg-name}
             '';
             installPhase = ''
               mkdir -p $out

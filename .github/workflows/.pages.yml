@@ -19,7 +19,7 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
       - name: Build with Nix
-        run: mkdir -p /public && nix build .#tex && sudo cp $(nix build .#tex --print-out-paths)/paper4/paper4.pdf /public/dcc_paper.pdf
+        run: sudo mkdir -p /public && nix build .#tex && sudo cp $(nix build .#tex --print-out-paths)/paper4/paper4.pdf /public/dcc_paper.pdf
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

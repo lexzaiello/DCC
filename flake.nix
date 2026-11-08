@@ -57,6 +57,7 @@
             preBuild = ''
               export HOME=$(mktemp -d)
               export XDG_CACHE_HOME="$HOME/.cache"
+              install -D -t build/ ./papers/*.cls
             '';
             buildPhase = ''
               runHook preBuild

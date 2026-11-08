@@ -26,7 +26,7 @@
 \usepackage{amsfonts}
 \usepackage{fontspec}
 \usepackage{bbm}
-\setmonofont{FreeMono}
+\setmonofont{DejaVu Sans Mono}
 \usepackage{minted}
 \setminted{breaklines=true, breakanywhere=true}
 \fvset{breaklines=true, breakanywhere=true}
@@ -1493,8 +1493,14 @@ Compilation is distinct at the top level and under binders (\(\lambda\), \(\fora
   \[
     \begin{gathered}
       \inferrule
+      { \text{\(\Gamma\) is not banged} \quad \llb A \rrb_\Gamma = A' \quad \llb M \rrb_{\comb[\Sigma][\Gamma][A']} = M'}
+      { \llb \lambda x : A.M \rrb_{\Gamma} \coloneq \comb[\Lambda][\Gamma][A'][M']}\\\\
+      \inferrule
       { \llb A \rrb_\Gamma = A' \quad \llb M \rrb_{\comb[!][\comb[\Sigma][\Gamma][A']]} = M'}
       { \llb \lambda x : (\shared\ A).M \rrb_{\comb[!][\Gamma]} \coloneq \comb[!\Lambda][\Gamma][A'][M']}\\\\
+      \inferrule
+      { \text{\(\Gamma\) is not banged} \quad \text{\(A\) or \(B\) contain free variables} \quad \llb A \rrb_{\Gamma} = A' \quad \llb B \rrb_{\comb[\Sigma][\Gamma][A']} = B'}
+      { \llb \forall x : A, B \rrb_{\Gamma} \coloneq \comb[\Pi][A'][\comb[\Lambda][\Gamma][A'][B']]}\\\\
       \inferrule
       { \text{\(A\) or \(B\) contain free variables} \quad \llb A \rrb_{\comb[!][\Gamma]} = A' \quad \llb B \rrb_{\comb[!][\comb[\Sigma][\Gamma][A']]} = B'}
       { \llb \forall x : A, B \rrb_{\comb[!][\Gamma]} \coloneq \comb[\Pi][A'][\comb[!\Lambda][\Gamma][A'][B']]}\\\\

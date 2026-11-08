@@ -18,6 +18,7 @@
             biblatex
             biber
             xetex
+            juliamono
             tikz-inet
             pgf
             graphbox

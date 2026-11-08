@@ -24,14 +24,12 @@
 \fvset{breaklines=true, breakanywhere=true}
 \newminted[leancode]{lean4}{fontfamily=LeanCodeFont, fontsize=\footnotesize, linenos}
 \usemintedstyle{tango}
-\usepackage{amsthm}
 \usepackage[backend=biber, style=alphabetic, url=true, doi=true]{biblatex}
 \setcounter{biburlnumpenalty}{9000}
 \setcounter{biburlucpenalty}{9000}
 \setcounter{biburllcpenalty}{9000}
 \usepackage{mathpartir}
 \usepackage{stmaryrd}
-\usepackage{amssymb}
 \addbibresource{./refs.bib}
 \newcommand{\none}{\text{none}}
 \newcommand{\congrfun}{\text{congrFun}}
@@ -91,17 +89,6 @@
 \newcommand{\type}[1]{\text{Type}_{#1}}
 \newcommand{\barr}{\arr_{\beta}}
 \newcommand{\barrc}[1]{\arr_{\beta^{#1}}}
-\newcommand{\barrn}{\arr_{\beta}^{!}}
-\newcommand{\earr}{\arr_{\eta}}
-\newcommand{\affarr}{\rightarrowtail}
-\newcommand{\affetaarr}{\rightarrowtail_{\eta}}
-\newcommand{\etaarr}{\rightarrow_{\eta}}
-\newcommand{\dom}[1]{\text{dom} (#1)}
-\newcommand{\domtwo}[1]{\text{dom}_{2} (#1)}
-\newcommand{\arity}[2]{\text{arity} #1 = #2}
-\newcommand{\efn}[2]{\text{F}_{\eta}\ #1\ #2}
-\newcommand{\ddom}{\text{Domain}\ }
-\newcommand{\dddom}{\text{Domain}_{2}\ }
 
 \begin{document}
 

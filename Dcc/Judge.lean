@@ -76,6 +76,55 @@ def reduce_reduces {A B : Expr} (h : reduce_all A = B) : A →ᵦ B := by
 def RedNorm.eq' (h : RedNorm A (reduce Red A).fst) : reduce_reduces heq₀ = h := by
   simp [reduce_reduces]
 
+/-
+Need an inductive to detect quotation that also includes
+∘ quot
+-/
+
+open Dsl in
+inductive QuotSort : Expr → Expr → Level → Type
+  | mk   : QuotSort (DCC (`B (Sort u))) B u
+  | nest : QuotSort x B u → QuotSort (DCC (∘ x y)) B u
+deriving Repr
+
+def QuotSort.app (h : QuotSort e B u) : RedNorm (DCC (e x)) (DCC (Sort u)) :=
+  match h with
+  | .mk => ⟨.single .quot, fun ⟨_, h⟩ => nomatch h⟩
+  | .nest (x := f) (y := g) h =>
+    have h := h.app (x := (g.app x))
+    ⟨.trans (.single .comp) h.1, h.2⟩
+
+def QuotSort.is_norm (h : QuotSort e B u) (hn : IsNorm Red e) : IsNorm Red B :=
+  match h with
+  | .mk => fun ⟨_, h⟩ => hn ⟨_, .point 0 (by grind) h⟩
+  | .nest h₀ => h₀.is_norm (fun ⟨_, h⟩ => hn ⟨_, .point 0 (by grind) h⟩)
+
+def read_quot_sort (e : Expr) : Except (TypeError e) (Σ (B : Expr) (u : Level), QuotSort e B u) :=
+  open Dsl in match e with
+  | DCC (`_B (Sort _u)) => .ok ⟨_, _, .mk⟩
+  | DCC (∘ x _y) =>
+    match x.read_quot_sort with
+    | .ok ⟨_, _, h⟩ => .ok ⟨_, _, .nest h⟩
+    | .error e => .error (.sub x e)
+  | e => .error (.unexpected e e)
+
+def view_quot_sort (e B : Expr) : Except (TypeError e) (Σ (u : Level), QuotSort e B u) :=
+  match read_quot_sort e with
+  | .ok ⟨B', _u, h⟩ =>
+    if heq : B' = B then
+      .ok ⟨_, heq ▸ h⟩
+    else .error (.mismatch B B' e)
+  | .error e => .error e
+
+def QuotSort.complete (h : QuotSort e B u) : read_quot_sort e = .ok ⟨B, u, h⟩ := by
+  induction h with
+  | mk => simp [read_quot_sort]
+  | nest h ih => simp [read_quot_sort, ih]
+
+def QuotSort.complete₁ (h : QuotSort e B u) : view_quot_sort e B = .ok ⟨u, h⟩ := by
+  have heq := h.complete
+  simp [view_quot_sort, heq]
+
 #eval Std.format <| pair.β.type (DCC (Sort 30)) 10 20
 
 -- For checking arguments under apps
@@ -182,21 +231,24 @@ deriving Repr
 
 open Dsl in
 inductive Sigma'.C.type : Expr → Expr → Level → Expr → Type
-  | mk : Sigma'.C.type A B s (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ A B (`(Σ A B) (Sort s)))))) ∗))
+  | mk : QuotSort C (DCC (Σ A B)) s → Sigma'.C.type A B s (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ A B C)))) ∗))
 deriving Repr
 
 open Dsl in
 def Sigma'.C.type.is_norm (h : Sigma'.C.type A B s τ) (hn : IsNorm Red τ) : (IsNorm Red A) ×' (IsNorm Red B) :=
   match h with
-  | .mk => ⟨fun ⟨_, h⟩ => hn ⟨_, .congrFun (.point 0 (by point_arity) (.point 1 (by point_arity) h))⟩, fun ⟨_, h⟩ => hn ⟨_, .congrFun (.point 1 (by point_arity) (.point 1 (by point_arity) (.point 0 (by change 0 < point_arity (DCC (Π B (Λ A B (`(Σ A B) (Sort s))))); grind) h)))⟩⟩
+  | .mk _h_quot => ⟨fun ⟨_, h⟩ => hn ⟨_, .congrFun (.point 0 (by point_arity) (.point 1 (by point_arity) h))⟩, fun ⟨_, h⟩ => hn ⟨_, .congrFun (.point 1 (by point_arity) (.point 1 (by point_arity) (.point 0 (by change 0 < point_arity (DCC (Π B (Λ A B (`(Σ A B) (Sort s))))); grind) h)))⟩⟩
 
 def read_sigma'_C_type (τ : Expr) : Except (TypeError τ) ((A : Expr) × (B : Expr) × (u : Level) × Sigma'.C.type A B u τ) :=
   open Dsl in match τ with
-  | (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ __A __B (`(Σ ___A _____B) (Sort s)))))) ∗)) =>
-    if heq : (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ __A __B (`(Σ ___A _____B) (Sort s)))))) ∗)) = (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ A B (`(Σ A B) (Sort s)))))) ∗)) then
-      .ok ⟨_, _, _, heq ▸ Sigma'.C.type.mk⟩
+  | (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ __A __B C)))) ∗)) =>
+    if heq : (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ __A __B C)))) ∗)) = (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ A B C)))) ∗)) then
+      match C.view_quot_sort (DCC (Σ A B)) with
+      | .ok ⟨_, h_quot⟩ =>
+        .ok ⟨_, _, _, heq ▸ (Sigma'.C.type.mk h_quot)⟩
+      | .error e => .error (.sub C e)
     else
-      .error (.unexpected τ (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ __A __B (`(Σ ___A _____B) (Sort s)))))) ∗)))
+      .error (.unexpected τ (DCC ((Π (`𝟙 A) (`𝟙 (Π B (Λ __A __B C)))) ∗)))
   | τ => .error (.unexpected τ τ)
 
 def view_sigma'_C_type (τ A B : Expr) : Except (TypeError τ) ((u : Level) × Sigma'.C.type A B u τ) :=
@@ -220,18 +272,18 @@ def view_sigma'_C_type₁ (τ B : Expr) : Except (TypeError τ) ((A : Expr) × (
 
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
 def Sigma'.C.type.complete₂ (h : Sigma'.C.type A B s τ) : view_sigma'_C_type τ A B = .ok ⟨s, h⟩ := by
-  cases h
-  · simp [view_sigma'_C_type, read_sigma'_C_type]
+  match h with
+  | ⟨h⟩ => simp [view_sigma'_C_type, read_sigma'_C_type, h.complete₁]
 
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
 def Sigma'.C.type.complete₁ (h : Sigma'.C.type A B s τ) : view_sigma'_C_type₁ τ B = .ok ⟨A, s, h⟩ := by
-  cases h
-  · simp [view_sigma'_C_type₁, read_sigma'_C_type]
+  match h with
+  | ⟨h⟩ => simp [view_sigma'_C_type₁, read_sigma'_C_type, h.complete₁]
 
 @[dcc_judge, aesop safe destruct (rule_sets := [DccReduce])]
 def Sigma'.C.type.complete₀ (h : Sigma'.C.type A B s τ) : read_sigma'_C_type τ = .ok ⟨A, B, s, h⟩ := by
-  cases h
-  · simp [read_sigma'_C_type]
+  match h with
+  | ⟨h⟩ => simp [read_sigma'_C_type, h.complete₁]
 
 def Arrow.is_norm (h : Arrow A B τ) (hn : IsNorm Red τ) : (IsNorm Red A) ×' (IsNorm Red B) :=
   match h with

@@ -294,15 +294,6 @@ theorem point' (hr : Relation.ReflTransGen Red ((points e).get ⟨n, h⟩) p') :
     exact Relation.ReflTransGen.trans (.single (.point n h h₁)) hrt'
 termination_by e.size
 
-syntax "point_arity" : tactic
-
-macro_rules
-  | `(tactic| point_arity) => `(tactic|
-    first
-    | (grind only [points, point_arity])
-    | (simp [points, Vector.get, point_arity, set_points]; try (grind only [points, point_arity]); try rfl)
-    | (simp_all [points, Vector.get, point_arity, set_points]; try (grind only [points, point_arity]); try rfl))
-
 set_option maxHeartbeats 100000000000 in
 theorem aff_mk_point' {x y e : Expr} (hr : Relation.ReflTransGen Red x y) (hn : n < point_arity e := by point_arity) (heq : (points e)[(Fin.mk n hn)] = x := by first | rfl | grind | (dcc_simp; rfl)) : Relation.ReflTransGen Red e (e.set_points ((points e).set n y)) := by
   match hr.cases_head with

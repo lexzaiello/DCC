@@ -396,4 +396,13 @@ theorem get_unset_point (hneq : m ≠ n) : ((set_points e (e.points.set m x' h�
       done)
     all_goals (simp [point_arity] at h₁)
 
+syntax "point_arity" : tactic
+
+macro_rules
+  | `(tactic| point_arity) => `(tactic|
+    first
+    | (grind only [points, point_arity])
+    | (simp [points, Vector.get, point_arity, set_points]; try (grind only [points, point_arity]); try rfl)
+    | (simp_all [points, Vector.get, point_arity, set_points]; try (grind only [points, point_arity]); try rfl))
+
 end Expr

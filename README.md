@@ -93,7 +93,7 @@ Except.ok (DCC 𝟚)
 
 ### Bool-indexed identity
 
-This is a DCC expression for the identity function indexed by a boolean. If it is applied 𝟙₂, its domain is `A`. If it applied 𝟘₂, its domain is `B`:
+This is a DCC expression for the identity function indexed by a boolean. If it is applied 𝟙₂, its domain is `A`. If it is applied 𝟘₂, its domain is `B`:
 
 ```lean
 def example_curr_bool_select (A B : Expr) : Expr :=

@@ -122,15 +122,17 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 
 \subsection*{Background}
 
-\subsection*{\label{skcomp}The SK Combinator Calculus}
+\subsection*{The SK Combinator Calculus}
 
-Previous attempts by others at combinatory dependent type theory have used the \skbf{} combinator calculus \autocite[p. 10:14]{altenkirch}. The \sk{} combinators are a Turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\). Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
+Previous attempts by others at combinatory dependent type theory have used the \skbf{} combinator calculus \autocite[p. 10:14]{altenkirch}.
+The \sk{} combinators are a Turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\).
+Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
 
 By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
 
 \subsection*{Categorical Combinators (\texorpdfstring{\ccl}{CCL})}
 
-Categorical combinators \cite{cmachine} \cite{CURIEN1986188} are a combinatory logic based on cartesian-closed categories (\cccbf) \cite{nlab:ccc}. They are equivalent to the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188}. \ccl{} has the following rewrite rules:
+Categorical combinators~\cite{cmachine,CURIEN1986188} are a combinatory logic based on cartesian-closed categories (\cccbf) \cite{nlab:ccc}. They are equivalent to the \(\lambda\)-calculus \autocite[p. 205][theorem 2.20]{CURIEN1986188}. \ccl{} has the following rewrite rules:
 
 \begin{gather*}
   \inferrule[Fst]
@@ -169,8 +171,12 @@ Cartesian-closed categories are known to be a categorical semantics for the \(\l
 The correspondence between \ccl{} and the De Bruijn-indexed \(\lambda\)-calculus makes them a more intuitive compilation target compared to \sk{}, producing more legible terms. To illustrate, we contrast the compilation of church numerals zero and one from \(\lambda\)-calculus with De Bruijn indices to \ccl{} and \sk{}:
 
 \begin{align*}
-  0_{\lambda} &\coloneq \lambda . \lambda . 0 & \compile{0_{\lambda}} &= \Lambda(Snd) & \compile[\ske]{0_{\lambda}} &= K (S K K)\\
-  1_{\lambda} &\coloneq \lambda . \lambda . 1 0 & \compile{1_{\lambda}} &= \Lambda(App \circ \la Fst, Snd \ra) & \compile[\ske]{1_{\lambda}} &= S (S (K S) (S (K K) (S K K))) (K (S K K))
+  0_{\lambda} &\coloneq \lambda . \lambda . 0 & \compile{0_{\lambda}} &= \Lambda(Snd) \\
+  1_{\lambda} &\coloneq \lambda . \lambda . 1 0 & \compile{1_{\lambda}} &= \Lambda(App \circ \la Fst, Snd \ra)
+\end{align*}
+\begin{align*}
+  \compile[\ske]{0_{\lambda}} &= K (S K K)\\
+  \compile[\ske]{1_{\lambda}} &= S (S (K S) (S (K K) (S K K))) (K (S K K))
 \end{align*}
 The reductions of \(1_{\lambda} x y\), \(\compile{1_{\lambda}} x y\), and \(\compile[\ske]{1_{\lambda}} x y\) are as such:
 
@@ -493,7 +499,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
   \begin{align*}
     size(\comb[!][x]) &= size(x) + 1 & size(\comb[*][A]) &= size(A) + 1\\
     size(\comb[!<>][x]) &= size(x) + 2 & size(\comb[\$<>][x]) &= size(x) * 5 + 1\\
-    size(\comb[\&][x]) & = size(x) * 5 + 1 & &\\
+    size(\comb[\&][x]) & = size(x) * 5 + 1 & &
   \end{align*}
   \begin{align*}
     size(\comb[\Lambda][A][B][x]) &= size(A) + size(B) + size(x) + 2\\

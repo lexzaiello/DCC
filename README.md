@@ -177,3 +177,7 @@ We hope to add back η-reduction and more powerful type conversion in a later pa
 I am using Lean4 with the toolchain `leanprover/lean4:v4.30.0-rc2`. Lean support with Nix is not well-maintained, so you will have to install it manually.
 
 By [*Lexi Aiello*](https://lexzaiello.com/).
+
+# AI (Anti)-Disclosure
+
+No LLM software was used in this paper and I am morally opposed to the existence of LLM-based intelligence. This paper is licensed under the GNU GPL-3.0 license. Attribution **must** be provided in any derivative works, including LLM-assisted ones, and the GNU GPL-3.0 license must be appropriately used.

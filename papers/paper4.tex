@@ -126,9 +126,9 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 
 Previous attempts by others at combinatory dependent type theory have used the \skbf{} combinator calculus \autocite[p. 10:14]{altenkirch}.
 The \sk{} combinators are a Turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\).
-Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
+Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper combinators to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
 
-By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
+By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper combinators are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
 
 \subsection*{Categorical Combinators (\texorpdfstring{\ccl}{CCL})}
 
@@ -272,16 +272,28 @@ Affine logic refers to any logic where duplication (``contraction'') is restrict
 \end{gather*}
 Weakening is retained in affine logic. Most importantly, affine logic forms a decidable fragment of first-order logic \cite{ketonen1984decidable}.
 
+\subsection{Extensional Type Theory}
+
+A type theory is said to be extensional if the equality reflection rule holds \autocite[p. 16]{hofmann1995extensional}:
+
+\[
+  \inferrule
+  { \Gamma \vdash P : \text{Id}_\delta(X, Y)}
+  { \Gamma \vdash X = Y : \delta }
+\]
+
+That is, a type theory is extensional if propositional equalities between terms induce a syntactic, definitional equality between the same terms. Extensional equality reflection is desirable for type theories to have, since its presence may induce other useful properties such as propositional extensionality, proof-irrelevance, uniqueness of identity proofs, and function extensionality in case quotient types are present \autocite[18]{hofmann1995extensional}. However, the axiomatic presence of this rule is thought to result in undecidable type-checking, since checking that \(e : \text{Id}_\delta(X, Y)\) thus requires deciding whether \(X\) and \(Y\) are definitionally equal (a procedure which may not terminate).
+
 \section{The Dependent Combinator Calculus}\label{intro:dcc}
 
-The Dependent Combinator Calculus (DCC) is a dependent type theory where types are terms which is combinatory (it has no contexts and no variables). It is based on an extension of the simply-typed categorical combinators to dependent types. DCC uses affine logic, meaning term duplication is restricted in such a way that all programs are provably terminating by syntactic size, even if they are not well-typed. We use this fact to show that DCC is strongly-normalizing, has decidable type-checking, is consistent, and that equality reflection holds as a computable metatheoretic definition.
+The Dependent Combinator Calculus (DCC) is a combinatory dependent type theory where types are terms. It is based on an extension of the simply-typed categorical combinators to dependent types and has no variables and no contexts. DCC uses affine logic, meaning term duplication is restricted in such a way that all programs are provably terminating by syntactic size, even if they are not well-typed. We use this fact to show that DCC is strongly-normalizing, has decidable type-checking, is consistent, and that equality reflection holds as a computable metatheoretic definition.
 
 \section{Term Syntax}
 
-The base objects are a modified super-set of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), an equality type along its type formers is added, sorts are added, and bottom, top, and boolean types are added with the corresponding introducing terms. The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
+The base objects are a modified super-set of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), an equality type along with its type formers is added, an infinite sort hierarchy is added, bottom, top, and boolean types are added with their corresponding introducing terms and recursors, and a type to represent affine resources is added along with some basic affine combinators. The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
 
 \begin{defi}\label{def:constants}
-  Constants (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)) type and its inhabitant (\(\ast\)), the boolean type (\(\mathbb{2}\)) along with its inhabitants \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\), and an opaque ``hole'' term used internally in type-checking:
+  Constant terms (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)) type and its inhabitant (\(\ast\)), the boolean type (\(\mathbb{2}\)) along with its inhabitants \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\), and an opaque ``hole'' term used internally in type-checking:
   \[
     \begin{gathered}
       E_c \coloneq \{\sort{u}, \mathbb{0}, \mathbb{1}, \mathbb{2}, \ast, \mathbb{1}_{\mathbb{2}}, \mathbb{0}_{\mathbb{2}}, \hole{n}\}
@@ -329,7 +341,7 @@ The base objects are a modified super-set of the base terms in \cclk{}. Products
 
 Conversion uses call-by-value operational semantics and is a modified super-set of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms. We do not have a recursor for equality, since DCC is extensional~\ref{extensional} and propositional equality coincides with definitional equality, so it is not necessary.
 
-When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduction, \(A \barr^{*} B\) to denote star-step \(\beta\)-reduction, and \(A \barr^{!} B\) to denote \(\beta\)-reduction to a normal form.
+When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduction, \(A \barr^{*} B\) to denote the reflexive transitive closure of \(\beta\)-reduction, and \(A \barr^{!} B\) to denote \(\beta\)-reduction to a normal form.
 
 \begin{defi}\label{conv:idquotcomp}
   The identity, quotation, and composition are the same as in \cclk{}:
@@ -1557,7 +1569,7 @@ Compilation at the top-level differs from abstraction in that the context is emp
       { \llb \shared\ A \rrb \coloneq \comb[!][\llb A \rrb]} \qquad
       \inferrule
       { }
-      { \llb \share\ A x \rrb \coloneq \comb[\&][\llb x \rrb]}
+      { \llb \share\ A\ x \rrb \coloneq \comb[\&][\llb x \rrb]}
     \end{gathered}
   \]
 \end{defi}

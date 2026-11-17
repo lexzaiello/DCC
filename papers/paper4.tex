@@ -1239,7 +1239,7 @@ We note that equality reflection is a computable definition in DCC, rather than 
 
 \section{Compiling Lean 4 to DCC}\label{compilelean}
 
-The subset of Lean 4 that maps to the base Calculus of Constructions without equality can be compiled to DCC. We note that working examples are somewhat limited, since we refrained from equipping DCC with \(\eta\)-reduction, as it is outside of the scope of this paper and not necessary to demonstrate the fundamental theorems. However, in DCC with \(\eta\)-reduction, the dependent \(K\) combinator written as a Lean term can be compiled to DCC. We do not propose a method for encoding inductive types in DCC, as it is out of scope.
+The subset of Lean 4 that maps to the base Calculus of Constructions without equality can be compiled to DCC. We note that working examples are somewhat limited, since we refrained from equipping DCC with \(\eta\)-reduction, as it is outside of the scope of this paper and not necessary to demonstrate the fundamental theorems. We do not propose a method for encoding inductive types in DCC, as it is out of scope.
 
 Compilation is quite straightforward. Contexts introduced by binders during compilation are represented as \(\Sigma\) or bang \(!\) terms and the program is always initialized at the top-level with the empty context \(\comb[!][\mathbb{1}]\). Debruijn-indexed variables are compiled to composed projections, \(\lambda\)-binders are compiled to \(!\Lambda\)-terms, and \(\forall\)-terms are compiled to \(\Pi\)-terms. The only complication is DCC's affine restriction: Lean terms are preprocessed to annotate code denoting how many times a resource should be banged, and values are boxed appropriately.
 
@@ -1261,8 +1261,8 @@ We are most concerned with compiling the subset of Lean with \(\forall\), \(\lam
     \begin{aligned}
       L_c &\subset L & \{ n \in \mathbb{N} \mid \text{\(n\) is a variable}\} &\subset L\\
       \{ (M N) \mid M, N \in L \} &\subset L & \{ \lambda x : A.M \mid A, M \in L \} &\subset L\\
-      \{ \forall x : A.B \mid A, B \in L\} &\subset L & \left\{ \sum_{x : A} B(x) \mid A, B \in L \right\} &\subset L\\
-      \{ \shared\ A \mid A \in L \} &\subset L & \{ \share\ A x \mid A, x \in L \} &\subset L
+      \{ \forall x : A,B \mid A, B \in L\} &\subset L & \left\{ \sum_{x : A} B(x) \mid A, B \in L \right\} &\subset L\\
+      \{ \shared\ A \mid A \in L \} &\subset L & \{ \share\ A\ x \mid A, x \in L \} &\subset L
     \end{aligned}
   \]
   \[
@@ -1381,7 +1381,7 @@ Applications and \(\Sigma\)-terms under binders duplicate the context across the
       { \llb \shared\ A \rrb_{\comb[!][\Gamma]} \coloneq \comb[!<>][x']} \qquad
       \inferrule
       { \llb x \rrb_{\Gamma} \coloneq x'}
-      { \llb \share\ A x \rrb_{\comb[!][\Gamma]} \coloneq \comb[\$<>][x']}
+      { \llb \share\ A\ x \rrb_{\comb[!][\Gamma]} \coloneq \comb[\$<>][x']}
     \end{gathered}
   \]
 \end{defi}
